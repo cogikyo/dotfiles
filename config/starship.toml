@@ -1,0 +1,93 @@
+format = """
+[╭╼╾ $username ╼╾ $hostname ╼╾ $time$python$golang ╼╾](#f5b17a) $cmd_duration
+[╞╾ ](#f5b17a)$directory$git_branch$git_commit$git_state$git_status$hg_branch
+[╰╼╾](#f5b17a) $status$character"""
+
+[directory]
+truncation_length = 2
+truncation_symbol = " "
+style = "bold #7abef5"
+read_only = " "
+disabled = false
+
+[username]
+style_user = "bold #ff9e4f"
+style_root = "bold #eb4972"
+show_always = true
+format = "[$user]($style)"
+disabled = false
+
+[hostname]
+ssh_only = false
+format = "[$hostname]($style)"
+trim_at = "."
+style = "bold #f5b17a"
+disabled = false
+
+[character]
+success_symbol = "[◈](bold #f5b17a)"
+error_symbol = "[◈](bold #f5736c)"
+disabled = false
+
+[cmd_duration]
+min_time = 420
+show_milliseconds = false
+format = "[$duration](dimmed #f5b17a)"
+disabled = false
+
+[git_branch]
+truncation_length = 12
+style = "bold #b0d0eb"
+truncation_symbol = "..."
+disabled = false
+
+[git_commit]
+commit_hash_length = 4
+tag_symbol = "🔖 "
+tag_disabled = false
+only_detached = true
+disabled = false
+
+[git_status]
+format = '([ $conflicted$staged$untracked$ahead_behind$renamed$deleted$stashed$modified]($style))'
+conflicted = "[ ](bold #eb4972)"
+stashed = " "
+modified = " "
+staged = '[ ${count} ](bold #99e09b)'
+untracked = '[‍ ${count} ](bold #f0dd86)'
+renamed = " "
+deleted = " "
+ahead = "[ ${count} ](bold #57d9c3)"
+diverged = '[ [${ahead_count}](bold #57d9c3) [${behind_count} ](bold #eb4972)](bold #c28bf0)'
+behind = '[ ${count} ](bold #eb4972)'
+style = "bold #cedeeb"
+disabled = false
+
+[memory_usage]
+format = "[${ram}]($style)"
+threshold = -1
+symbol = ""
+style = "dimmed #f5b17a"
+disabled = true
+
+[time]
+disabled = false
+format = '[$time]($style)'
+time_format = "%R"
+style = "#f5b17a"
+
+[status]
+format = '[$symbol$status]($style) '
+style = "bold #f5736c"
+symbol = " "
+disabled = false
+
+[python]
+format = '[${symbol}${pyenv_prefix}(${version})( \($virtualenv\))]($style)'
+symbol = " ╼╾  "
+style = "#f5b17a"
+
+[golang]
+format = "[$symbol($version)]($style)"
+symbol = " ╼╾ ﳑ "
+style = "#f5b17a"

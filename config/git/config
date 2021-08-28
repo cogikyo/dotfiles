@@ -1,0 +1,5 @@
+[user]
+	name = cullyn
+	email = culyn.newman@gmail.com
+[core]
+	editor = nvim
