@@ -1,7 +1,7 @@
 format = """
-[╭╼╾ $username ╼╾ $time$python$golang ╼╾](blue) $cmd_duration
-[╞╾ ](blue)$directory$git_branch$git_commit$git_state$git_status$hg_branch
-[╰╼╾](blue) $status$character"""
+[╭╼╾ $username ╼╾ $time$python$golang ╼╾](bold blue) $cmd_duration
+[╞╾ ](bold blue)$directory$git_branch$git_commit$git_state$git_status$hg_branch
+[╰╼╾](bold blue) $status$character"""
 
 [directory]
 truncation_length = 2
@@ -49,17 +49,17 @@ only_detached = true
 disabled = false
 
 [git_status]
-format = '([ $conflicted$staged$untracked$ahead_behind$renamed$deleted$stashed$modified ]($style))'
-conflicted = "[ ](bold #red)"
+format = '([ $conflicted$staged$untracked$ahead_behind$renamed$deleted$stashed$modified]($style))'
+conflicted = "[ ](bold red)"
 stashed = " "
-modified = " "
-staged = '[ ${count} ](bold #green)'
-untracked = '[‍ ${count} ](bold #magenta)'
+modified = "[ ](bold yellow)"
+staged = '[ ${count} ](bold yellow)'
+untracked = '[‍ ${count} ](bold purple)'
 renamed = " "
-deleted = " "
-ahead = "[ ${count} ](bold cyan)"
-diverged = '[ [${ahead_count}](bold cyan) [${behind_count} ](bold #red)](bold #c28bf0)'
-behind = '[ ${count} ](bold #red)'
+deleted = "[ ](bold red)"
+ahead = "[ ${count} ](bold green)"
+diverged = '[ [${ahead_count}](bold green) [${behind_count} ](bold red)](bold purple)'
+behind = '[ ${count} ](bold red)'
 style = "bold blue"
 disabled = false
 
