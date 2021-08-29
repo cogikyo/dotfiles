@@ -1,18 +1,18 @@
 format = """
-[╭╼╾ $username ╼╾ $hostname ╼╾ $time$python$golang ╼╾](#f5b17a) $cmd_duration
-[╞╾ ](#f5b17a)$directory$git_branch$git_commit$git_state$git_status$hg_branch
-[╰╼╾](#f5b17a) $status$character"""
+[╭╼╾ $username ╼╾ $time$python$golang ╼╾](blue) $cmd_duration
+[╞╾ ](blue)$directory$git_branch$git_commit$git_state$git_status$hg_branch
+[╰╼╾](blue) $status$character"""
 
 [directory]
 truncation_length = 2
 truncation_symbol = " "
-style = "bold #7abef5"
+style = "cyan"
 read_only = " "
 disabled = false
 
 [username]
-style_user = "bold #ff9e4f"
-style_root = "bold #eb4972"
+style_user = "blue"
+style_root = "red"
 show_always = true
 format = "[$user]($style)"
 disabled = false
@@ -21,23 +21,23 @@ disabled = false
 ssh_only = false
 format = "[$hostname]($style)"
 trim_at = "."
-style = "bold #f5b17a"
-disabled = false
+style = "blue"
+disabled = true
 
 [character]
-success_symbol = "[◈](bold #f5b17a)"
-error_symbol = "[◈](bold #f5736c)"
+success_symbol = "[◈](bold cyan)"
+error_symbol = "[◈](bold red)"
 disabled = false
 
 [cmd_duration]
 min_time = 420
 show_milliseconds = false
-format = "[$duration](dimmed #f5b17a)"
+format = "[$duration](cyan)"
 disabled = false
 
 [git_branch]
 truncation_length = 12
-style = "bold #b0d0eb"
+style = "bold cyan"
 truncation_symbol = "..."
 disabled = false
 
@@ -49,45 +49,45 @@ only_detached = true
 disabled = false
 
 [git_status]
-format = '([ $conflicted$staged$untracked$ahead_behind$renamed$deleted$stashed$modified]($style))'
-conflicted = "[ ](bold #eb4972)"
+format = '([ $conflicted$staged$untracked$ahead_behind$renamed$deleted$stashed$modified ]($style))'
+conflicted = "[ ](bold #red)"
 stashed = " "
 modified = " "
-staged = '[ ${count} ](bold #99e09b)'
-untracked = '[‍ ${count} ](bold #f0dd86)'
+staged = '[ ${count} ](bold #green)'
+untracked = '[‍ ${count} ](bold #magenta)'
 renamed = " "
 deleted = " "
-ahead = "[ ${count} ](bold #57d9c3)"
-diverged = '[ [${ahead_count}](bold #57d9c3) [${behind_count} ](bold #eb4972)](bold #c28bf0)'
-behind = '[ ${count} ](bold #eb4972)'
-style = "bold #cedeeb"
+ahead = "[ ${count} ](bold cyan)"
+diverged = '[ [${ahead_count}](bold cyan) [${behind_count} ](bold #red)](bold #c28bf0)'
+behind = '[ ${count} ](bold #red)'
+style = "bold blue"
 disabled = false
 
 [memory_usage]
 format = "[${ram}]($style)"
 threshold = -1
 symbol = ""
-style = "dimmed #f5b17a"
+style = "dimmed blue"
 disabled = true
 
 [time]
 disabled = false
 format = '[$time]($style)'
 time_format = "%R"
-style = "#f5b17a"
+style = "blue"
 
 [status]
 format = '[$symbol$status]($style) '
-style = "bold #f5736c"
+style = "bold red"
 symbol = " "
 disabled = false
 
 [python]
 format = '[${symbol}${pyenv_prefix}(${version})( \($virtualenv\))]($style)'
 symbol = " ╼╾  "
-style = "#f5b17a"
+style = "blue"
 
 [golang]
 format = "[$symbol($version)]($style)"
 symbol = " ╼╾ ﳑ "
-style = "#f5b17a"
+style = "blue"

@@ -38,13 +38,13 @@ super + t
     firefox
 
 #floating terminal, filemanger, editor
-super + {d,f,g}
-    bspc rule -a alacritty -o state=floating rectangle=1920x1080+1080+540 \
-    && {alacritty, alacritty -e lf, alacritty -e nvim .}
+#super + {d,f,g}
+ #   bspc rule -a alacritty -o state=floating rectangle=1920x1080+1080+540 \
+ #  && {alacritty, alacritty -e lf, alacritty -e nvim .}
 
 #zathura
-super + r
-    zathura
+#super + r
+ #   zathura
 
 
 # ╦═╗┌─┐┌─┐┬

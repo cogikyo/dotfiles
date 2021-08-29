@@ -3,9 +3,9 @@
 # needs https://github.com/wmutils/opt
 # see https://github.com/wmutils/opt/issues/48 if issue with borders.
 
-outer='0x121317'   # outer
-inner1='0xff9430'  # focused
-inner2='0x9ecbf7'  # normal
+outer='0x161821'   # outer
+inner1='0xe2a478'  # focused
+inner2='0x84a0c6'  # normal
 
 targets() {
 	case $1 in
@@ -15,7 +15,7 @@ targets() {
 	esac
 }
 
-draw() { chwb2 -I "$i" -O "$o" -i "1" -o "10" $@ 2> /dev/null; }
+draw() { chwb2 -I "$i" -O "$o" -i "1" -o "12" $@ 2> /dev/null; }
 
 # initial draw, and then subscribe to events
 { echo; bspc subscribe node_geometry node_focus; } |

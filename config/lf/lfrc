@@ -1,3 +1,6 @@
+set hidden true
+set color256 true
+
 # interpreter for shell commands
 set shell sh
 

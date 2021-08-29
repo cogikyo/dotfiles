@@ -41,7 +41,7 @@ bspc rule -a zoom state=floating
 # ║  │ ││││├┤ ││ ┬
 # ╚═╝└─┘┘└┘└  ┴└─┘
 bspc config split_ratio             0.52
-bspc config border_width            10
+bspc config border_width            12
 bspc config window_gap              16
 bspc config top_padding             48
 bspc config right_padding           8
