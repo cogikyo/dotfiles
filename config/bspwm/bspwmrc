@@ -25,13 +25,12 @@ lxsession &
 killall "borders"
 ~/.config/bspwm/borders &
 ytmdesktop &
-notify-send -u low hello, hello &
 
 # ╦═╗┬ ┬┬  ┌─┐┌─┐
 # ╠╦╝│ ││  ├┤ └─┐
 # ╩╚═└─┘┴─┘└─┘└─┘
 bspc monitor -d 1 2 3 4 5
-bspc rule -a youtube-music-desktop-app desktop='^5' state=floating
+bspc rule -a youtube-music-desktop-app desktop='^5'
 bspc rule -a Gpick state=floating
 bspc rule -a Zathura state=tiled 
 bspc rule -a vlc state=floating
@@ -42,11 +41,11 @@ bspc rule -a zoom state=floating
 # ╚═╝└─┘┘└┘└  ┴└─┘
 bspc config split_ratio             0.52
 bspc config border_width            10
-bspc config window_gap              16
-bspc config top_padding             48
-bspc config right_padding           8
-bspc config left_padding            8
-bspc config bottom_padding          8
+bspc config window_gap              12
+bspc config top_padding             52
+bspc config right_padding           6
+bspc config left_padding            6
+bspc config bottom_padding          12
 
 bspc config borderless_monocle      false
 bspc config gapless_monocle         false
@@ -57,3 +56,5 @@ bspc config left_monocle_padding    420
 bspc config bottom_monocle_padding  169
 
 bspc config focus_follows_pointer   true
+
+sleep 1 && notify-send -u low hello hello &

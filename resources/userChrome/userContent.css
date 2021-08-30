@@ -1,0 +1,51 @@
+@import '_variables.css';
+@import '_dev-tools.css';
+
+
+@-moz-document url(about:blank), url(about:newtab), url(about:home) {
+    html:not(#ublock0-epicker),
+    html:not(#ublock0-epicker) body,
+    #newtab-customize-overlay {
+        background: var(--bg) !important;
+    }
+
+    .outer-wrapper {
+        background-image: url(https://raw.githubusercontent.com/nosvagor/.dotfiles/master/resources/wallpapers/jelly-3840x2160.jpg) !important;
+        background-position: 80% !important;
+        background-repeat: no-repeat !important;
+        background-size: cover !important;
+    }
+
+    .search-wrapper input {
+        background-color: var(--black) !important;
+        color: var(--blue) !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .search-wrapper input:focus {
+        color: var(--fg) !important;
+    }
+
+    .search-wrapper .search-button {
+        fill: var(--blue) !important;
+    }
+
+    .search-wrapper .search-button:focus,
+    .search-wrapper .search-button:hover {
+        background-color: transparent !important;
+        fill: var(--fg) !important;
+    }
+}
+
+
+/* goodbye scrollbar */
+*:not(select) {
+    scrollbar-width: none !important;
+}
+
+@-moz-document url(about:privatebrowsing) {
+	:root{
+		scrollbar-width: none !important;
+	}
+}
