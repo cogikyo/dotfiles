@@ -25,7 +25,7 @@ style = "blue"
 disabled = true
 
 [character]
-success_symbol = "[◈](bold cyan)"
+success_symbol = "[◈](bold blue)"
 error_symbol = "[◈](bold red)"
 disabled = false
 

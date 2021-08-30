@@ -12,8 +12,9 @@
 
 # Window padding (changes require restart)
 window:
-  x: 8
-  y: 8
+  padding:
+    x: 4
+    y: 4
 
 font:
   normal:
@@ -32,7 +33,7 @@ font:
     family: Hack Nerd Font
     style: Bold Italic
 
-  size: 12
+  size: 11
 
 # Colors (Iceberg Dark)
 colors:
