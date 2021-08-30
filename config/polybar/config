@@ -30,13 +30,13 @@ margin-bottom = 0
 ; ║  │ ││  │ │├┬┘└─┐
 ; ╚═╝└─┘┴─┘└─┘┴└─└─┘
 [colors]
-foreground  = #e0e0e0 
-minor       = #b0b0b0 
-minimal     = #6b6b6b 
-inactive    = #3f3f3f
-background  = #1f1f1f 
-emphasis    = #f5b17a
-stress      = #ff9e4f 
+foreground  = #c6c8d1 
+minor       = #6b7089
+minimal     = #3d4364
+inactive    = #1e2132
+background  = #161821 
+emphasis    = #e2a478
+stress      = #e9b189
 main        = #4ca9f5 
 sec         = #7abef5 
 sub         = #b0d0eb 
@@ -143,7 +143,7 @@ format-margin = 1
 format-font = 5
 
 hook-0 = echo "%{A1:polybar-msg hook dunst 2 && killall -SIGUSR1 dunst:}%{O-2}  %{A}" &
-hook-1 = echo "%{A1:killall -SIGUSR2 dunst && notify-send -t 3000 Resumed Dunst &&  polybar-msg hook dunst 1:}%{F#4f4f4f}%{O-2}  %{A}" &
+hook-1 = echo "%{A1:killall -SIGUSR2 dunst && notify-send -t 3000 Resumed Dunst &&  polybar-msg hook dunst 1:}%{F#1e2132}%{O-2}  %{A}" &
 
 [module/spacer]
 type = custom/text
@@ -192,11 +192,12 @@ label-occupied-font = 7
 label-occupied-foreground = ${colors.sub}
 label-occupied-margin = 3
 
-ws-icon-0 = 1;%{O1}%{A1:bspc desktop -f \^1 & feh --bg-scale ~/resources/wallpapers/'spirited-3840x2160.png':}%{A}
+ws-icon-0 = 1;%{O1}%{A1:bspc desktop -f \^1 :}%{A}
 ws-icon-1 = 1;
-ws-icon-2 = 2;%{O1}%{A1:bspc desktop -f \^2 & feh --bg-scale ~/resources/wallpapers/'jelly-3840x2160.jpg':}%{A}
-ws-icon-3 = 3;%{O5}%{A1:bspc desktop -f \^3 & feh --bg-scale ~/resources/wallpapers/'arrival-3840x2160.jpg':}﬏%{A}
-ws-icon-4 = 4;%{O-3}%{A1:bspc desktop -f \^4 & feh --bg-scale ~/resources/wallpapers/'girl-3840x2160.png':}%{A}
+ws-icon-2 = 2;%{O1}%{A1:bspc desktop -f \^2 :}%{A}
+ws-icon-3 = 3;%{O5}%{A1:bspc desktop -f \^3:}%{A}
+ws-icon-4 = 4;%{O-4}%{A1:bspc desktop -f \^4 :}ﲹ%{A}
+ws-icon-5 = 5;%{O-12}%{A1:bspc desktop -f \^5:}%{A}
 
 ; ╔═╗┬ ┬┌┬┐┬┌─┐
 ; ╠═╣│ │ ││││ │
@@ -250,7 +251,7 @@ bar-volume-empty-font = 4
 bar-volume-empty-foreground = ${colors.inactive}
 
 click-right = pavucontrol
-click-middle = kitty -e alsamixer
+click-middle = alacritty -e alsamixer
 
 ; ╔═╗┌─┐┬ ┬
 ; ║  ├─┘│ │
@@ -264,7 +265,7 @@ format-margin = 1
 
 ramp-coreload-font = 12
 ramp-coreload-spacing = 1
-ramp-coreload-0 = %{F#4f4f4f}▁%{F-}
+ramp-coreload-0 = %{F#3d4364}▁%{F-}
 ramp-coreload-1 = %{F#cedeeb}▂%{F-}
 ramp-coreload-2 = %{F#b0d0eb}▃%{F-}
 ramp-coreload-3 = %{F#7abef5}▄%{F-}
@@ -292,7 +293,7 @@ bar-used-foreground-2 = ${colors.emphasis}
 bar-used-foreground-3 = ${colors.positive}
 bar-used-fill = ⏽
 bar-used-empty = ⏽
-bar-used-empty-foreground = ${colors.inactive}
+bar-used-empty-foreground = ${colors.minimal}
 
 ; ╔╦╗┌─┐┌┬┐┌─┐
 ;  ║ ├┤ │││├─┘
@@ -336,4 +337,4 @@ time = "%{T3}%H:%M%{T-}"
 
 label-background = ${colors.background}
 label-foreground = ${colors.foreground}
-label = %date%   %{F#7abef5}%{T13}%{O6}%{T-}%{F-} %time%p
+label = %date%   %{F#7abef5}%{T13}%{O6}%{T-}%{F-} %time%

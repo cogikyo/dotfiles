@@ -10,3 +10,5 @@ SAVEHIST=1000
 setopt appendhistory
 
 eval "$(starship init zsh)"
+
+~/.config/zsh/greeting.sh

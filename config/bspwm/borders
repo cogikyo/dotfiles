@@ -15,7 +15,7 @@ targets() {
 	esac
 }
 
-draw() { chwb2 -I "$i" -O "$o" -i "1" -o "12" $@ 2> /dev/null; }
+draw() { chwb2 -I "$i" -O "$o" -i "1" -o "10" $@ 2> /dev/null; }
 
 # initial draw, and then subscribe to events
 { echo; bspc subscribe node_geometry node_focus; } |

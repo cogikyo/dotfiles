@@ -21,9 +21,9 @@ super + v
 
 # volume
 XF86AudioRaiseVolume
-	pactl set-sink-volume @DEFAULT_SINK@ +5%
+	pactl set-sink-volume @DEFAULT_SINK@ +10%
 XF86AudioLowerVolume
-	pactl set-sink-volume @DEFAULT_SINK@ -5%
+	pactl set-sink-volume @DEFAULT_SINK@ -10%
 
 
 # ╔═╗┌─┐┌─┐┌─┐
@@ -63,7 +63,7 @@ super + alt + {q,r}
 	bspc {quit,wm -r}
 
 # close/kill node
-super + {_,shift + }w
+super + {_,shift + }x
 	bspc node -{c,k}
 
 # alternate between the tiled and monocle layout

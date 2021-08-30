@@ -30,8 +30,8 @@ notify-send -u low hello, hello &
 # ╦═╗┬ ┬┬  ┌─┐┌─┐
 # ╠╦╝│ ││  ├┤ └─┐
 # ╩╚═└─┘┴─┘└─┘└─┘
-bspc monitor -d 1 2 3 4
-bspc rule -a youtube-music-desktop-app desktop='^4' state=floating
+bspc monitor -d 1 2 3 4 5
+bspc rule -a youtube-music-desktop-app desktop='^5' state=floating
 bspc rule -a Gpick state=floating
 bspc rule -a Zathura state=tiled 
 bspc rule -a vlc state=floating
@@ -41,7 +41,7 @@ bspc rule -a zoom state=floating
 # ║  │ ││││├┤ ││ ┬
 # ╚═╝└─┘┘└┘└  ┴└─┘
 bspc config split_ratio             0.52
-bspc config border_width            12
+bspc config border_width            10
 bspc config window_gap              16
 bspc config top_padding             48
 bspc config right_padding           8
