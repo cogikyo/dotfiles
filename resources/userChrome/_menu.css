@@ -121,6 +121,9 @@ panel {
   --panel-width: initial;
 }
 
+panelview {
+    background: var(--bg) !important;
+}
 
 /* Context navigation buttons (right-click page) */
 #context-navigation menuitem {
