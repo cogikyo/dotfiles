@@ -124,7 +124,7 @@ content-margin = 1
 content-font = 6
 content-foreground = ${colors.sub}
 content-background = ${colors.background}
-click-left = bsc rule -a kitty -o state=floating rectangle=1920x1080+1080+540 && kitty -e htop
+click-left = bspc rule -a Alacritty -o state=floating rectangle=1920x1080+1080+540 && alacritty -e htop
 
 [module/layout]
 type=custom/text
@@ -259,7 +259,7 @@ click-middle = alacritty -e alsamixer
 [module/cpu]
 type = internal/cpu
 interval = 0.2
-format = %{A1:bspc rule -a kitty -o state=floating rectangle=1920x1080+1080+540 && kitty -e s-tui:}<label> <ramp-coreload>%{Ar}
+format = %{A1:bspc rule -a Alacritty -o state=floating rectangle=1920x1080+1080+540 && alacritty -e s-tui:}<label> <ramp-coreload>%{Ar}
 label = "%{F#b0d0eb}%{T5}﬙%{T-}%{F-}  %percentage%% "
 format-margin = 1
 
@@ -280,7 +280,7 @@ ramp-coreload-7 = %{F#eb4972}█%{F-}
 [module/memory]
 type = internal/memory
 interval = 1
-format = %{A1:bspc rule -a kitty -o state=floating rectangle=1920x1080+1080+540 && kitty -e s-tui:}<label> <bar-used>%{A}
+format = %{A1:bspc rule -a Alacritty -o state=floating rectangle=1920x1080+1080+540 && alacritty -e s-tui:}<label> <bar-used>%{A}
 label = "%{F#b0d0eb}%{T6}%{T-}%{F-}  %gb_used% "
 format-background = ${colors.background}
 format-margin = 2
@@ -308,7 +308,7 @@ base-temperature = 25
 thermal-zone = 0
 warn-temperature = 69
 
-format = %{A1:bspc rule -a kitty -o state=floating rectangle=1920x1080+1080+540 && kitty -e s-tui:}<ramp>  <label>%{A}
+format = %{A1:bspc rule -a Alacritty -o state=floating rectangle=1920x1080+1080+540 && alacritty -e s-tui:}<ramp>  <label>%{A}
 format-warn = <ramp> <label-warn> 
 
 label = %temperature-c%
