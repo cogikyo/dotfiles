@@ -1,0 +1,26 @@
+* {
+    foreground:	#c6c8d1;
+    background: #161821;
+    black:	    #1e2132;
+    black-br:	#6b7089;
+    grey:	    #818596;
+    red:        #e27878;
+    red-br:	    #e98989;
+    pink:	    #e278ad;
+    pink-br:    #e889b8;
+    green:	    #b4be82;
+    green-br:   #c0ca8e;
+    yellow:	    #e2d078;
+    yellow-br:  #e8d889;
+    orange:	    #e2a478;
+    orange-br:  #e9b189;
+    blue:	    #84a0c6;
+    blue-grey:  #8499b6;
+    blue-br:	#91acd1;
+    purple:	    #a093c7;
+    purple-br:  #ada0d3;
+    cyan:	    #89b8c2;
+    cyan-br:	#95c4c3;
+    white:	    #c6c8d1;
+    white-br:	#d2d4de;
+}

@@ -37,15 +37,14 @@ super + Return
 super + t
     firefox
 
-#floating terminal, filemanger, editor
-#super + {d,f,g}
- #   bspc rule -a alacritty -o state=floating rectangle=1920x1080+1080+540 \
- #  && {alacritty, alacritty -e lf, alacritty -e nvim .}
+floating terminal, filemanger, editor
+super + {d,f,g}
+    bspc rule -a Alacritty -o state=floating rectangle=1920x1080+1080+540 \
+    && {alacritty, alacritty -e lf, alacritty -e nvim .}
 
-#zathura
-#super + r
- #   zathura
-
+#pdf 
+super + comma
+   zathura
 
 # ╦═╗┌─┐┌─┐┬
 # ╠╦╝│ │├┤ │
@@ -54,6 +53,9 @@ super + t
 super + @space
 	rofi -show run
 
+#emoji
+super + z
+    rofi -show emoji -modi emoji -theme ~/.config/rofi/emoji.rasi
 
 # ╔╗ ┌─┐┌─┐┬ ┬┌┬┐
 # ╠╩╗└─┐├─┘││││││
@@ -104,9 +106,9 @@ super + c
 ##super + b
 #	maim -u -i $(xdotool getactivewindow) ~/screenshots/$(date +%m-%d-%y__%H':'%M':'%S).png    
 
-# screensshot of entire screen
-#super + ,
-#	maim -u ~/screenshots/$(date +%m-%d-%y_%H':'%M':'%S).png
+#screensshot of entire screen
+super + shift + ctrl + b
+	aim -u ~/screenshots/$(date +%m-%d-%y_%H':'%M':'%S).png
 
 # ╔═╗┌─┐┌┬┐┌─┐┌─┐┌─┐
 # ╠╣ ├┤ │││├─┘├┤ │ ┬
