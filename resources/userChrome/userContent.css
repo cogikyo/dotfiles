@@ -2,7 +2,7 @@
 @import '_dev-tools.css';
 
 
-@-moz-document url(about:blank), url(about:newtab), url(about:home) {
+@-moz-document url-prefix(about:) {
     html:not(#ublock0-epicker),
     html:not(#ublock0-epicker) body,
     #newtab-customize-overlay {
@@ -10,34 +10,51 @@
     }
 
     .outer-wrapper {
-        background-image: url(https://raw.githubusercontent.com/nosvagor/.dotfiles/master/resources/wallpapers/jelly-3840x2160.jpg) !important;
-        background-position: 80% !important;
+        background-image: url(https://raw.githubusercontent.com/nosvagor/.dotfiles/main/resources/wallpapers/jelly-3840x2160.jpg) !important;
+        background-position: 50% !important;
         background-repeat: no-repeat !important;
         background-size: cover !important;
     }
 
-    .search-wrapper input {
-        background-color: var(--black) !important;
-        color: var(--blue) !important;
-        border: none !important;
-        box-shadow: none !important;
+    #search-container,#toolbar {
+        background-color: var(--bg) !important;
     }
 
-    .search-wrapper input:focus {
+    #about-config-search {
+        background: var(--bg) !important;
+        border: 1px inset var(--blue-grey) !important;
+        border-radius: 6px !important;
         color: var(--fg) !important;
+        transition: var(--in-out);
     }
 
-    .search-wrapper .search-button {
-        fill: var(--blue) !important;
+    #prefs {
+        background-color: var(--bg) !important;
+        border: 1px inset var(--blue-grey) !important;
+        border-radius: 6px !important;
     }
 
-    .search-wrapper .search-button:focus,
-    .search-wrapper .search-button:hover {
-        background-color: transparent !important;
-        fill: var(--fg) !important;
+    .ghost-button {
+        background: var(--black) !important;
+        border: 1px outset var(--blue-grey) !important;
+        border-radius: 6px !important;
+        transition: all var(--in-out);
+    }
+
+    .ghost-button:hover,
+    .ghost-button[open=true] {
+        background: var(--bg) !important;
+        border: 1px inset var(--blue-grey) !important;
+    }
+
+    .sticky-container {
+        background-color: var(--black) !important;
+    }
+
+    .personalize-button {
+        visibility: collapse !important;
     }
 }
-
 
 /* goodbye scrollbar */
 *:not(select) {

@@ -1,4 +1,5 @@
 :root {
+    --dark: #0f1117; 
     --bg: #161821;
     --fg: #c6c8d1;
     --black: #1e2132;
@@ -24,6 +25,6 @@
     --white: #c6c8d1;
     --white-br: #d2d4de;
 
-    --in-out: cubic-bezier(.69,.042,.66,.96)
+    --in-out: 324ms cubic-bezier(.42,.05,.42,.95)
 }
 
