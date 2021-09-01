@@ -12,17 +12,17 @@ window {
     location:                       north east;
     background-color:               @background;
     text-color:                     @foreground;
-	border:							0% 0.2% 0.3% 0.2%;
+	border:							0% 0% 0.3% 0.2%;
 	border-color:					@blue;
     border-radius:                  8% 0% 8% 3%;
-    x-offset:                       20;
+    x-offset:                       8;
     y-offset:                       48;
     width:                          30%;
 }
 
 mainbox {
     background-color:               @background;
-	border:							0% 0.15% 0.25% 0.15%;
+	border:							0% 0% 0.25% 0.15%;
     border-radius:                  7.7% 0% 7.7% 2.7%;
 	border-color:					@cyan;
     children:                       [ inputbar, listview ];

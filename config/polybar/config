@@ -133,7 +133,7 @@ content-margin = 1
 content-font = 6
 content-foreground = ${colors.sub}
 content-background = ${colors.background}
-click-left = ./.config/rofi/layouts.sh
+click-left = ./scripts/layouts.sh 
 
 [module/dunst]
 type = custom/ipc
