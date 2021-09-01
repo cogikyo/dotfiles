@@ -115,7 +115,7 @@ content-margin = 3
 content-foreground = ${colors.sec}
 content-background = ${colors.background}
 content-font = 8
-click-left = ~/.config/rofi/powermenu.sh
+click-left = ~/scripts/powermenu.sh
 
 [module/htop]
 type=custom/text

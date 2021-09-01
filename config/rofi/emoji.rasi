@@ -1,9 +1,7 @@
 configuration {
-	font:							"Open Sans 16";
+	font:							"Hack Nerd Font 16";
     show-icons:                     true;
     disable-history:                false;
-    fullscreen:                     false;
-	hide-scrollbar: 				true;
 	sidebar-mode: 					false;
 }
 
@@ -15,20 +13,21 @@ window {
     text-color:                     @foreground;
 	border:							0.3% 0.2% 0.3% 0.2%;
 	border-color:					@blue;
-    border-radius:                  5% 8% 6% 9%;
+    border-radius:                  5% 8% 7% 9%;
     location:                       center;
     width:                          24%;
-    height:                         22%;
+    height:                         23%;
+    y-offset:                       -5%;
 }
 
 
 mainbox {
     background-color:               @background;
 	border:							0.25% 0.15% 0.25% 0.15%;
-    border-radius:                  4.7% 7.7% 5.7% 8.7%;
+    border-radius:                  4.7% 7.7% 6.7% 8.7%;
 	border-color:					@cyan-br;
     children:                       [ inputbar, listview ];
-    spacing:                        -4%;
+    spacing:                        -5%;
     padding:                        0% 2% 2% 1%;
 }
 
@@ -40,8 +39,8 @@ inputbar {
 	border:							0% 0% 0.1% 0%;
     border-radius:                  0% 1% 1% 2%;
 	border-color:					@blue;
-    margin:                         5% 17% -0.2% 0.2%;
-    padding:                        1.5% 0% 0.3% 0.5%;
+    margin:                         5% 16.6% -0.2% 0.2%;
+    padding:                        1.5% 0% 0.3% 0.7%;
 }
 
 prompt {
@@ -74,7 +73,7 @@ listview {
     cycle:                          true;
     dynamic:                        false;
     layout:                         vertical;
-    margin:                         -1% 0.8% -2% 4%;
+    margin:                         -1% 2% -2% 4%;
 }
 
 
@@ -84,20 +83,24 @@ element {
 }
 
 element-icon {
+    background-color:               @background;
+    text-color:                     @foreground;
     horizontal-align:               0.5;
     vertical-align:                 0.5;
 }
 
 element-text {
+    background-color:               @background;
+    text-color:                     @foreground;
     horizontal-align:               0.5;
     vertical-align:                 0.5;
-    padding:                        12px 16px 12px 6px;
+    padding:                        12px 18px 12px 18px;
     highlight:                      Bold #e2a478;
     font:							"Hack Nerd Font 20";
 }
 
 
-element selected {
+element-text selected {
     background-color:               @background;
 	border:							0% 0.1% 0% 0.1%;
     border-radius:                  0.7% 1% 0.7% 1%;
