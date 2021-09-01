@@ -25,11 +25,14 @@ Plug 'nvim-telescope/telescope.nvim'
 Plug 'cocopon/iceberg.vim'
 Plug 'chrisbra/Colorizer'
 Plug 'tpope/vim-commentary'
+Plug 'vim-airline/vim-airline'
+Plug 'gkeep/iceberg-dark'
 call plug#end()
 
 colorscheme iceberg
-let g:colorizer_auto_filetype='css,html,tex,txt'
+let g:colorizer_auto_filetype='css,scss,html,tex,txt,cls'
 let g:colorizer_colornames = 0
+let g:airline_theme='icebergDark'
 
 if has ('autocmd') " Remain compatible with earlier versions
  augroup vimrc     " Source vim configuration upon save
