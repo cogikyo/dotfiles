@@ -13,12 +13,6 @@
 # ╔╗ ┌─┐┌─┐┬┌─┐┌─┐
 # ╠╩╗├─┤└─┐││  └─┐
 # ╚═╝┴ ┴└─┘┴└─┘└─┘
-#lock screen
-super + v
-    env XSECURELOCK_SAVER=saver_mplayer \ 
-    XSECURELOCK_LIST_VIDEOS_COMMAND="find ~/resources/videos -type f" \
-    XSECURELOCK_SHOW_HOSTNAME=0 xsecurelock
-
 # volume
 XF86AudioRaiseVolume
 	pactl set-sink-volume @DEFAULT_SINK@ +10%
@@ -37,7 +31,7 @@ super + Return
 super + t
     firefox
 
-floating terminal, filemanger, editor
+# floating terminal, filemanger, editor
 super + {d,f,g}
     bspc rule -a Alacritty -o state=floating rectangle=1920x1080+1080+540 \
     && {alacritty, alacritty -e lf, alacritty -e nvim .}
@@ -49,13 +43,21 @@ super + comma
 # ╦═╗┌─┐┌─┐┬
 # ╠╦╝│ │├┤ │
 # ╩╚═└─┘└  ┴
-# program launcher
-super + @space
-	rofi -show run
+# programs
+super + p
+	rofi -no-lazy-grab -show drun -theme ~/.config/rofi/launcher.rasi
 
-#emoji
+# layouts
+super + u
+    ./scripts/layouts.sh
+
+# emoji
 super + z
     rofi -show emoji -modi emoji -theme ~/.config/rofi/emoji.rasi
+
+# power
+super + v
+    ./scripts/powermenu.sh
 
 # ╔╗ ┌─┐┌─┐┬ ┬┌┬┐
 # ╠╩╗└─┐├─┘││││││

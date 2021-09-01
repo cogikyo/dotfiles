@@ -10,7 +10,7 @@ reboot="累"
 lock=""
 
 # Variable passed to rofi
-options="$lock\n$shutdown\n$reboot"
+options="$shutdown\n$lock\n$reboot"
 
 chosen="$(echo -e "$options" | $rofi_command -p "$uptime" -dmenu -selected-row 1)"
 case $chosen in
