@@ -61,5 +61,8 @@ colors:
     cyan:    '#95c4ce'
     white:   '#d2d4de'
 
+env:
+  TERM: xterm-256color
+
 mouse: 
   hide_when_typing: true
