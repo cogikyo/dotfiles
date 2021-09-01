@@ -26,7 +26,7 @@ window {
 mainbox {
     background-color:               @background;
 	border:							0% 0.15% 0.25% 0%;
-    border-radius:                  0% 8.8% 5.7% 5.8%;
+    border-radius:                  0% 8.7% 5.7% 5.7%;
 	border-color:					@cyan;
     children:                       [ inputbar, listview ];
     spacing:                        2%;
@@ -38,7 +38,7 @@ prompt {
 	padding: 						-0.25% 0.69% 0% 0.4%;
 	background-color: 				@background;
 	text-color: 					@blue-br;
-	font:							"Hack Nerd Font 24";
+	font:							"Hack Nerd Font 20";
 }
 
 entry {
@@ -57,11 +57,11 @@ inputbar {
     background-color:               @background;
     text-color:                     @foreground;
     expand:                         false;
-	border:							0% 0.05% 0.1% 0%;
-    border-radius:                  0% 1% 1.5% 1.5%;
+	border:							0% 0% 0.1% 0%;
+    border-radius:                  0% 0% 1.5% 1.5%;
 	border-color:					@blue;
-    margin:                         0% 19.5% 0% 0%;
-    padding:                        1% 0% 1% 0.3%;
+    margin:                         0% 19% 0% 0.5%;
+    padding:                        1% 0% 0.6% 0.3%;
 }
 
 listview {
