@@ -1,7 +1,7 @@
 format = """
-[╭╼╾ $username ╼╾ $time$python$golang ╼╾](bold blue) $status $cmd_duration
+[╭╼╾ $username ╼╾ $time$python$golang ╼╾ ](bold blue) $cmd_duration
 [╞╾פּ ](bold blue)$directory$git_branch$git_commit$git_state$git_status$hg_branch
-[╰╼╾](bold blue)$character"""
+[╰╼╾](bold blue) $status$character"""
 
 [directory]
 truncation_length = 2
@@ -25,8 +25,8 @@ style = "blue"
 disabled = true
 
 [character]
-success_symbol = "[](bold blue)"
-error_symbol = "[](bold blue)"
+success_symbol = "[](bold blue)"
+error_symbol = "[](bold red)"
 disabled = false
 
 [cmd_duration]
