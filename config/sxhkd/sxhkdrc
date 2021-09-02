@@ -110,7 +110,7 @@ super + c
 
 #screensshot of entire screen
 super + shift + ctrl + b
-	aim -u ~/screenshots/$(date +%m-%d-%y_%H':'%M':'%S).png
+	maim -u ~/screenshots/$(date +%m-%d-%y_%H':'%M':'%S).png
 
 # ╔═╗┌─┐┌┬┐┌─┐┌─┐┌─┐
 # ╠╣ ├┤ │││├─┘├┤ │ ┬

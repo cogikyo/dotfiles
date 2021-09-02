@@ -1,0 +1,65 @@
+# ╔═╗┌─┐┌┐┌┌─┐┬─┐┌─┐┬  
+# ║ ╦├┤ │││├┤ ├┬┘├─┤│  
+# ╚═╝└─┘┘└┘└─┘┴└─┴ ┴┴─┘
+
+set selection-clipboard "clipboard"
+set guioptions ""
+set window-title-basename "true"
+
+set link-hadjust "false"
+set search-hadjust "false"
+
+set scroll-page-aware "true"
+set scroll-step 200
+
+set adjust-open width
+set zoom-step 5
+
+# ╔╦╗┬┌─┐┌─┐┬  ┌─┐┬ ┬
+#  ║║│└─┐├─┘│  ├─┤└┬┘
+# ═╩╝┴└─┘┴  ┴─┘┴ ┴ ┴
+
+set font "Hack Nerd Font 12"
+
+set default-bg "#161821" 
+set default-fg "#c6c8d1" 
+
+set statusbar-bg "#1e2132" 
+set statusbar-fg "#6b7089" 
+
+set inputbar-bg "#1e2132" 
+set inputbar-fg "#c6c8d1" 
+
+set notification-error-bg "#e27878" 
+set notification-error-fg "#161821" 
+
+set notification-warning-bg "#e27878" 
+set notification-warning-fg "#161821" 
+
+set highlight-color "#84a0c6" 
+set highlight-active-color "#e2a478" 
+set highlight-transparency 0.69
+
+
+set completion-highlight-bg "#89b8c2" 
+set completion-highlight-fg "#161821" 
+
+set completion-bg "#6b7089" 
+set completion-fg "#c6c8d1" 
+
+set notification-bg "#b4be82" 
+set notification-fg "#161821" 
+
+set index-bg "#161821"
+set index-fg "#c6c8d1"
+
+set index-active-bg "#e2a478"
+set index-active-fg "#161821"
+
+set recolor "false"
+set recolor-lightcolor "#161821" 
+set recolor-darkcolor "#c6c8d1" 
+set recolor-reverse-video "true"
+set recolor-keephue "true"
+
+set render-loading "false"
