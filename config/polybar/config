@@ -30,23 +30,23 @@ margin-bottom = 0
 ; ║  │ ││  │ │├┬┘└─┐
 ; ╚═╝└─┘┴─┘└─┘┴└─└─┘
 [colors]
-foreground  = #c6c8d1 
+foreground  = #c6c8d1
 minor       = #6b7089
 minimal     = #3d4364
 inactive    = #1e2132
-background  = #161821 
+background  = #161821
 emphasis    = #e2a478
 stress      = #e9b189
-main        = #4ca9f5 
-sec         = #7abef5 
-sub         = #b0d0eb 
-bold        = #cedeeb 
-link        = #99e09b 
+main        = #4ca9f5
+sec         = #7abef5
+sub         = #b0d0eb
+bold        = #cedeeb
+link        = #99e09b
 sucess      = #57d9c3
 warn        = #eb4972
 positive    = #f5736c
 negative    = #5f89f5
-trans       = #00ff0000 
+trans       = #00ff0000
 
 ; ╔╗ ┌─┐┬─┐
 ; ╠╩╗├─┤├┬┘
@@ -65,7 +65,7 @@ background = ${colors.background}
 foreground = ${colors.foreground}
 border-bottom-size = 0
 border-color = ${colors.sub}
-bottom = false 
+bottom = false
 
 font-0 = "Open Sans:pixelsize=16;3"
 font-1 = "Open Sans:pixelsize=18;4"
@@ -92,13 +92,13 @@ modules-right = temperature cpu memory htop power
 
 pseudo-transparency = false
 
-tray-position = none 
+tray-position = none
 tray-maxsize = 24
 tray-offset-x = 3%
 
 ; ╔═╗┬ ┬┌─┐┌┬┐┌─┐┌┬┐
 ; ║  │ │└─┐ │ │ ││││
-; ╚═╝└─┘└─┘ ┴ └─┘┴ ┴                       
+; ╚═╝└─┘└─┘ ┴ └─┘┴ ┴
 [module/launcher]
 type=custom/text
 content = %{O2}
@@ -133,7 +133,7 @@ content-margin = 1
 content-font = 6
 content-foreground = ${colors.sub}
 content-background = ${colors.background}
-click-left = ./scripts/layouts.sh 
+click-left = ./scripts/layouts.sh
 
 [module/dunst]
 type = custom/ipc
@@ -156,7 +156,7 @@ content-margin = 7
 ; content-foreground = ${colors.background}
 ; content-background = ${colors.trans}
 ; content-font = 6
-; 
+;
 ; [module/arrow2]
 ; type = custom/text
 ; content = "              "
@@ -170,7 +170,7 @@ content-margin = 7
 ; ╚═╝└─┘┴  └┴┘┴ ┴
 [module/bspwm]
 type = internal/bspwm
-format = <label-state> 
+format = <label-state>
 format-margin = 0
 format-background = ${colors.background}
 enable-click = true
@@ -223,7 +223,7 @@ ramp-volume-3-foreground= ${colors.sec}
 ramp-volume-4 = " "
 ramp-volume-4-foreground= ${colors.main}
 
-label-muted = "%{T0}    %{O2}%{T-}%{T3}━━━━━━━━━━━%{T-}"  
+label-muted = "%{T0}    %{O2}%{T-}%{T3}━━━━━━━━━━━%{T-}"
 format-muted-margin = 3
 format-muted-foreground = ${colors.inactive}
 format-muted-font = 7
@@ -242,7 +242,7 @@ bar-volume-foreground-8 = ${colors.main}
 bar-volume-foreground-9 = ${colors.main}
 bar-volume-foreground-10 = ${colors.main}
 bar-volume-gradient = false
-bar-volume-indicator = 
+bar-volume-indicator =
 bar-volume-indicator-font = 4
 bar-volume-fill = ━
 bar-volume-fill-font = 4
@@ -285,7 +285,7 @@ label = "%{F#b0d0eb}%{T6}%{T-}%{F-}  %gb_used% "
 format-background = ${colors.background}
 format-margin = 2
 
-bar-used-indicator =  
+bar-used-indicator =
 bar-used-width = 16
 bar-used-foreground-0 = ${colors.sub}
 bar-used-foreground-1 = ${colors.sec}
@@ -297,7 +297,7 @@ bar-used-empty-foreground = ${colors.minimal}
 
 ; ╔╦╗┌─┐┌┬┐┌─┐
 ;  ║ ├┤ │││├─┘
-;  ╩ └─┘┴ ┴┴ 
+;  ╩ └─┘┴ ┴┴
 [module/temperature]
 type = internal/temperature
 hwmon-path = /sys/devices/pci0000:00/0000:00:01.1/0000:01:00.0/nvme/nvme0/hwmon0/temp1_input
@@ -309,7 +309,7 @@ thermal-zone = 0
 warn-temperature = 69
 
 format = %{A1:bspc rule -a Alacritty -o state=floating rectangle=1920x1080+1080+540 && alacritty -e s-tui:}<ramp>  <label>%{A}
-format-warn = <ramp> <label-warn> 
+format-warn = <ramp> <label-warn>
 
 label = %temperature-c%
 label-warn = " %temperature-c%"
@@ -322,7 +322,7 @@ ramp-foreground = ${colors.foreground}
 ramp-font = 5
 
 ; ╔╦╗┌─┐┌┬┐┌─┐
-;  ║║├─┤ │ ├┤ 
+;  ║║├─┤ │ ├┤
 ; ═╩╝┴ ┴ ┴ └─┘
 [module/date]
 type = internal/date
@@ -333,7 +333,7 @@ date = "%{T2}%A, %B %d%{T-}"
 time = "%{T3}%H:%M%{T-}"
 
 ; date-alt = "%m-%d-%y"
-; time-alt = "%H:%M:%S" 
+; time-alt = "%H:%M:%S"
 
 label-background = ${colors.background}
 label-foreground = ${colors.foreground}

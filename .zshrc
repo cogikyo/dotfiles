@@ -16,6 +16,7 @@
 
 # load starship prompt ~/.config/starship.toml
 eval "$(starship init zsh)"
+eval "$(thefuck --alias)"
 ~/.config/zsh/greeting.sh
 
 # autostart startx after login
@@ -38,6 +39,10 @@ setopt share_history
 alias dd="cd ~/downloads"
 alias notes="cd ~/notes"
 alias dot="cd ~/.dotfiles"
+
+# common commands
+alias sps="sudo pacman -S"
+alias spr="sudo pacman -R"
 
 # ╔═╗┬  ┬ ┬┌─┐┬┌┐┌┌─┐
 # ╠═╝│  │ ││ ┬││││└─┐
