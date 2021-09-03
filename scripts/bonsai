@@ -22,21 +22,21 @@ nfetch=0
 
 termSize=1
 termColors=1
-leafStrs=''
+leafStrs='𝀲 ,𝀽,,𝀡'
 baseType=1
 message="I use arch, btw"
 
-multiplier=9
+multiplier=7
 lifeStart=42
 
 timeStep=0.01
 timeWait=2
 
-flag_m=1
+flag_m=0
 flag_h=0
 
 # non-CLI options
-messageWidth=20
+messageWidth=15
 verbose=0
 seed="$RANDOM"
 
@@ -245,10 +245,10 @@ case "$baseType" in
 	1)
 		width=15
 		art="\
-${GRAY}:${GREEN}___________${DARK_BROWN}./~~\\.${GREEN}___________${GRAY}:
- \\                          /
-  \\________________________/
-  (_)                    (_)"
+${GRAY}╟${GREEN}𝁌𝁌𝁌𝁌𝁌𝁌𝁌𝁌𝁌𝁌𝁌${DARK_BROWN}𝁗𝀃𝀷.𝀅𝁗${GREEN}𝁌𝁌𝁌𝁌𝁌𝁌𝁌𝁌𝁌𝁌𝁌${GRAY}╢
+╚╗⏚⏚⏚⏚⏚⏚⏚⏚⏚⏚⏚⏚⏚⏚⏚⏚⏚⏚⏚⏚⏚⏚⏚⏚⏚⏚╔╝
+ ╚══════════════════════════╝
+    ⼉                   ⼉"
 		;;
 
 	2)
@@ -524,37 +524,37 @@ branch() {
 		case $type in
 			trunk)
 				if [ $dx -lt 0 ]; then
-					chars=('\\')
+					chars=('𝀷.')
 				elif [ $dx -eq 0 ]; then
-					chars=('/' '|')
+					chars=('𝀍' '᭢')
 				elif [ $dx -gt 0 ]; then
-					chars=('/')
+					chars=('𝀍')
 				fi
-				[ $dy -eq 0 ] && chars=('/' '~')	# not growing
+				[ $dy -eq 0 ] && chars=('𝀉' '𝀈')	# not growing
 				#[ $dy -lt 0 ] && chars=('/' '~')	# growing
 				;;
 
 			# shoots tend to look horizontal
 			shootLeft)
 				case $dx in
-					[-3,-1]) 	chars=('\\' '|') ;;
-					[0]) 		chars=('/' '|') ;;
-					[1,3]) 		chars=('/') ;;
+					[-3,-1]) 	chars=('𝀅' '') ;;
+					[0]) 		chars=('𝀍' '᭢') ;;
+					[1,3]) 		chars=('𝀍') ;;
 				esac
 				#[ $dy -lt 0 ] && chars=('/' '~')	# growing up
-				[ $dy -gt 0 ] && chars=('/')	# growing down
-				[ $dy -eq 0 ] && chars=('\\' '_')	# not growing
+				[ $dy -gt 0 ] && chars=('𝀉')	# growing down
+				[ $dy -eq 0 ] && chars=('𝀍' '𝀪')	# not growing
 				;;
 
 			shootRight)
 				case $dx in
-					[-3,-1]) 	chars=('\\' '|') ;;
-					[0]) 		chars=('/' '|') ;;
-					[1,3]) 		chars=('/') ;;
+					[-3,-1]) 	chars=('𝀅' '᭢') ;;
+					[0]) 		chars=('𝀍' '᭢') ;;
+					[1,3]) 		chars=('𝀍') ;;
 				esac
 				#[ $dy -lt 0 ] && chars=('')	# growing up
-				[ $dy -gt 0 ] && chars=('\\')	# growing down
-				[ $dy -eq 0 ] && chars=('_' '/')	# not growing
+				[ $dy -gt 0 ] && chars=('𝀅')	# growing down
+				[ $dy -eq 0 ] && chars=('𝀧' '𝀍')	# not growing
 				;;
 		esac
 
