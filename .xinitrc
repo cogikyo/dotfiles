@@ -34,6 +34,7 @@ fi
 
 xsetroot -cursor_name left_ptr
 export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
 export EDITOR="/usr/bin/nvim"
-feh --bg-scale --no-fehbg ~/resources/wallpapers/jelly-3840x2160.jpg 
+feh --bg-scale --no-fehbg ~/resources/wallpapers/jelly-3840x2160.jpg
 exec bspwm
