@@ -17,15 +17,18 @@ set nobackup
 set undodir=~/.vim/undodir
 set undofile
 set incsearch
-set scrolloff=9
+set scrolloff=16
 set signcolumn=yes
 set colorcolumn=80
 set nowrap
+
 
 " ╔═╗┬  ┬ ┬┌─┐┬┌┐┌┌─┐
 " ╠═╝│  │ ││ ┬││││└─┐
 " ╩  ┴─┘└─┘└─┘┴┘└┘└─┘
 call plug#begin('~/.vim/plugged')
+Plug 'neovim/nvim-lspconfig'
+Plug 'nvim-lua/completion-nvim'
 Plug 'nvim-lua/plenary.nvim'
 Plug 'nvim-telescope/telescope.nvim'
 Plug 'cocopon/iceberg.vim'
@@ -34,21 +37,10 @@ Plug 'tpope/vim-commentary'
 Plug 'nosvagor/iceberg-dark'
 Plug 'itchyny/lightline.vim'
 Plug 'tpope/vim-fugitive'
-Plug 'vim-syntastic/syntastic'
+Plug 'mattn/emmet-vim'
+Plug 'L3MON4D3/LuaSnip'
 call plug#end()
 
-" ╔═╗┬  ┬ ┬┌─┐╦═╗╔═╗
-" ╠═╝│  │ ││ ┬╠╦╝║
-" ╩  ┴─┘└─┘└─┘╩╚═╚═╝
-" syntastic
-set statusline+=%#warningmsg#
-set statusline+=%{SyntasticStatuslineFlag()}
-set statusline+=%*
-
-let g:syntastic_always_populate_loc_list = 1
-let g:syntastic_auto_loc_list = 1
-let g:syntastic_check_on_open = 1
-let g:syntastic_check_on_wq = 0
 
 " ╔╦╗┬ ┬┌─┐┌┬┐┌─┐
 "  ║ ├─┤├┤ │││├┤
@@ -63,7 +55,7 @@ let g:lightline = {
 \ 'active': {
 \   'left': [ [ 'mode', 'paste' ],
 \             [ 'fugitive', 'readonly', 'filename', 'modified' ] ],
-\   'right': [ [ 'syntastic', 'lineinfo' ],
+\   'right': [ [ 'lineinfo' ],
 \              [ 'percent' ],
 \              [ 'bufnum', ] ]
 \ },
@@ -73,12 +65,6 @@ let g:lightline = {
 \   'readonly': 'LightlineReadonly',
 \   'modified': 'LightlineModified',
 \ },
-\ 'component_expand': {
-\   'syntastic': 'SyntasticStatuslineFlag',
-\ },
-\ 'component_type': {
-\   'syntastic': 'error',
-\ }
 \ }
 
 " this is fun
@@ -126,19 +112,68 @@ function! SyntasticCheckHook(errors)
     call lightline#update()
 endfunction
 
+
+" ╔═╗┬  ┬ ┬┌─┐╦═╗╔═╗
+" ╠═╝│  │ ││ ┬╠╦╝║
+" ╩  ┴─┘└─┘└─┘╩╚═╚═╝
+" emmet
+let g:user_emmet_install_global = 0
+autocmd FileType html,css EmmetInstall
+
+
+" ╦  ╔═╗╔═╗┌─┐┌─┐┌┐┌┌─┐┬┌─┐
+" ║  ╚═╗╠═╝│  │ ││││├┤ ││ ┬
+" ╩═╝╚═╝╩  └─┘└─┘┘└┘└  ┴└─┘
+" enable servers
+lua << EOF
+--python
+require'lspconfig'.pyright.setup{on_attach=require'completion'.on_attach}
+
+--html/css
+local capabilities = vim.lsp.protocol.make_client_capabilities()
+capabilities.textDocument.completion.completionItem.snippetSupport = true
+require'lspconfig'.html.setup {
+    capabilities = capabilities,
+    on_attach=require'completion'.on_attach
+  }
+require'lspconfig'.cssls.setup {
+    capabilities = capabilities,
+    on_attach=require'completion'.on_attach
+}
+
+--vim
+require'lspconfig'.vimls.setup{on_attach=require'completion'.on_attach}
+
+--typescript/javascript
+require'lspconfig'.tsserver.setup{on_attach=require'completion'.on_attach}
+
+--tex
+require'lspconfig'.texlab.setup{on_attach=require'completion'.on_attach}
+EOF
+
+
+" autocompletion
+set completeopt=menuone,noinsert,noselect
+set shortmess+=c
+
+let g:completion_matching_strategy_list = ['exact','substring', 'fuzzy']
+let g:completion_trigger_keyword_length = 3 " default = 1
+
+
 " ╔═╗┌┬┐┌┬┐┌─┐
 " ║  │││ ││└─┐
 " ╚═╝┴ ┴─┴┘└─┘
 " auto source config on change
-if has ('autocmd') " Remain compatible with earlier versions
- augroup vimrc     " Source vim configuration upon save
-    autocmd! BufWritePost $MYVIMRC source % | echom "Reloaded " . $MYVIMRC | redraw
-    autocmd! BufWritePost $MYGVIMRC if has('gui_running') | so % | echom "Reloaded " . $MYGVIMRC | endif | redraw
-  augroup END
-endif " has autocmd
+" if has ('autocmd') " Remain compatible with earlier versions
+"  augroup vimrc     " Source vim configuration upon save
+"     autocmd! BufWritePost $MYVIMRC source % | echom "Reloaded " . $MYVIMRC | redraw
+"     autocmd! BufWritePost $MYGVIMRC if has('gui_running') | so % | echom "Reloaded " . $MYGVIMRC | endif | redraw
+"   augroup END
+" endif " has autocmd
 
 " auto remove trailing whitespace on save
 autocmd BufWritePre * :%s/\s\+$//e
+
 
 " ╦═╗┌─┐┌┬┐┌─┐┌─┐┌─┐
 " ╠╦╝├┤ │││├─┤├─┘└─┐
@@ -150,10 +185,6 @@ nnoremap <C-s> :w<CR>
 
 " copy to end of line
 nnoremap Y y$
-
-nnoremap qq <esc>
-inoremap qq <esc>
-vnoremap qq <esc>
 
 " keep cursor centered
 nnoremap n nzzzv
