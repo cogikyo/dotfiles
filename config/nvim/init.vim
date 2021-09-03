@@ -149,6 +149,9 @@ require'lspconfig'.tsserver.setup{on_attach=require'completion'.on_attach}
 
 --tex
 require'lspconfig'.texlab.setup{on_attach=require'completion'.on_attach}
+
+--bash
+require'lspconfig'.bashls.setup{on_attach=require'completion'.on_attach}
 EOF
 
 
