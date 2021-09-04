@@ -1,7 +1,6 @@
 " ╔═╗┌─┐┌┬┐┌─┐
 " ╚═╗├┤  │ └─┐
 " ╚═╝└─┘ ┴ └─┘
-set exrc
 set relativenumber
 set nu
 set nohlsearch
@@ -31,6 +30,8 @@ Plug 'neovim/nvim-lspconfig'
 Plug 'nvim-lua/completion-nvim'
 Plug 'nvim-lua/plenary.nvim'
 Plug 'nvim-telescope/telescope.nvim'
+Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
+Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
 Plug 'cocopon/iceberg.vim'
 Plug 'chrisbra/Colorizer'
 Plug 'tpope/vim-commentary'
@@ -121,6 +122,11 @@ let g:user_emmet_install_global = 0
 autocmd FileType html,css EmmetInstall
 
 
+" ╔╦╗┌─┐┬  ┌─┐┌─┐┌─┐┌─┐┌─┐┌─┐
+"  ║ ├┤ │  ├┤ └─┐│  │ │├─┘├┤
+"  ╩ └─┘┴─┘└─┘└─┘└─┘└─┘┴  └─┘
+
+
 " ╦  ╔═╗╔═╗┌─┐┌─┐┌┐┌┌─┐┬┌─┐
 " ║  ╚═╗╠═╝│  │ ││││├┤ ││ ┬
 " ╩═╝╚═╝╩  └─┘└─┘┘└┘└  ┴└─┘
@@ -150,8 +156,41 @@ require'lspconfig'.tsserver.setup{on_attach=require'completion'.on_attach}
 --tex
 require'lspconfig'.texlab.setup{on_attach=require'completion'.on_attach}
 
+cmd = { "texlab" }
+filetypes = { "tex", "bib" }
+root_dir = "$HOME/notes/"
+settings = {
+    texlab = {
+        auxDirectory = ".",
+        bibtexFormatter = "texlab",
+        build = {
+          args = { "-pdf", "-interaction=nonstopmode", "-synctex=1", "%f" },
+          executable = "latexmk",
+          forwardSearchAfter = false,
+          onSave = false
+        },
+        chktex = {
+          onEdit = true,
+          onOpenAndSave = true
+        },
+        diagnosticsDelay = 300,
+        formatterLineLength = 80,
+        forwardSearch = {
+          args = {}
+        },
+        latexFormatter = "latexindent",
+        latexindent = {
+          modifyLineBreaks = false
+        }
+    }
+}
+
 --bash
 require'lspconfig'.bashls.setup{on_attach=require'completion'.on_attach}
+
+--go
+require'lspconfig'.gopls.setup{on_attach=require'completion'.on_attach}
+
 EOF
 
 
@@ -166,13 +205,6 @@ let g:completion_trigger_keyword_length = 3 " default = 1
 " ╔═╗┌┬┐┌┬┐┌─┐
 " ║  │││ ││└─┐
 " ╚═╝┴ ┴─┴┘└─┘
-" auto source config on change
-" if has ('autocmd') " Remain compatible with earlier versions
-"  augroup vimrc     " Source vim configuration upon save
-"     autocmd! BufWritePost $MYVIMRC source % | echom "Reloaded " . $MYVIMRC | redraw
-"     autocmd! BufWritePost $MYGVIMRC if has('gui_running') | so % | echom "Reloaded " . $MYGVIMRC | endif | redraw
-"   augroup END
-" endif " has autocmd
 
 " auto remove trailing whitespace on save
 autocmd BufWritePre * :%s/\s\+$//e
@@ -189,7 +221,14 @@ nnoremap <C-s> :w<CR>
 " copy to end of line
 nnoremap Y y$
 
+" jumplist mutations
+nnoremap <expr> k (v:count > 5? "m'" . v:count : "") . 'k'
+nnoremap <expr> j (v:count > 5? "m'" . v:count : "") . 'j'
+
 " keep cursor centered
+nnoremap j jzz
+nnoremap k kzz
+nnoremap G Gzz
 nnoremap n nzzzv
 nnoremap N Nzzzv
 nnoremap J mzJ`z
@@ -197,14 +236,10 @@ nnoremap J mzJ`z
 " undo break points
 inoremap , ,<c-g>u
 inoremap . .<c-g>u
-inoremap ! !<c-g>u
+inoremap ! !<-g>u
 inoremap ? ?<c-g>u
 inoremap ; ;<c-g>u
 inoremap : :<c-g>u
-
-" jumplist mutations
-nnoremap <expr> k (v:count > 5? "m'" . v:count : "") . 'k'
-nnoremap <expr> j (v:count > 5? "m'" . v:count : "") . 'j'
 
 " moving text
 vnoremap J :m '>+1<CR>gv=gv
@@ -213,3 +248,9 @@ inoremap <C-j> <esc> :m .+1<CR>==
 inoremap <C-k> <esc> :m .-2<CR>==
 nnoremap <leader>j :m .+1<CR>==
 nnoremap <leader>k :m .-2<CR>==
+
+"telescope
+nnoremap <leader>ff <cmd>Telescope find_files<cr>
+nnoremap <leader>fg <cmd>Telescope live_grep<cr>
+nnoremap <leader>fb <cmd>Telescope buffers<cr>
+nnoremap <leader>fh <cmd>Telescope help_tags<cr>

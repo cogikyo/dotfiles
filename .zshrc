@@ -43,6 +43,8 @@ alias dot="cd ~/.dotfiles"
 # common commands
 alias sps="sudo pacman -S"
 alias spr="sudo pacman -R"
+alias MYEYES='(){xrandr --output HDMI-A-0 --brightness $1;}'
+alias niol='clear && zsh'
 
 # ╔═╗┬  ┬ ┬┌─┐┬┌┐┌┌─┐
 # ╠═╝│  │ ││ ┬││││└─┐
