@@ -30,7 +30,8 @@ Plug 'mbbill/undotree'
 Plug 'mattn/emmet-vim'
 
 " snippets
-Plug 'L3MON4D3/LuaSnip'
+Plug 'SirVer/ultisnips'
+Plug 'honza/vim-snippets'
 
 call plug#end()
 
@@ -44,6 +45,10 @@ let g:user_emmet_install_global = 0
 " undotree
 nnoremap <leader>ut :UndotreeToggle<CR>
 
+" snippets
+let g:UltiSnipsExpandTrigger="<c-l>"
+let g:UltiSnipsJumpForwardTrigger="<c-b>"
+let g:UltiSnipsJumpBackwardTrigger="<c-z>"
 
 " ╔═╗┌┬┐┌┬┐┌─┐
 " ║  │││ ││└─┐
@@ -56,6 +61,10 @@ augroup AUTO_COMMANDS
     autocmd TermOpen * setlocal nonumber norelativenumber signcolumn=no
 augroup END
 
+augroup highlight_yank
+    autocmd!
+    autocmd TextYankPost * silent! lua require'vim.highlight'.on_yank({timeout = 69})
+augroup END
 
 " ╦═╗┌─┐┌┬┐┌─┐┌─┐┌─┐
 " ╠╦╝├┤ │││├─┤├─┘└─┐
@@ -80,9 +89,13 @@ xnoremap <leader>p "_dP
 nnoremap <leader>d "_d
 vnoremap <leader>d "_d
 
+" 🍉 terminal
+tnoremap <C-y> <C-\><C-n>i
+nnoremap <leader>a :term<CR>
+
 " 🦘 jumplist mutations
 nnoremap <expr> k (v:count > 5? "u" . v:count : "") . 'k'
-nnoremap <expr> j (v:count > 5? "m'" . v:count : "") . 'j'
+nnoremap <expr> j (v:count > 5? "m" . v:count : "") . 'j'
 
 " 🎯 keep cursor 'centered'
 nnoremap j jzt
