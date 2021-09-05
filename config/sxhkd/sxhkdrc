@@ -1,14 +1,14 @@
-# ███████╗██╗  ██╗██╗  ██╗██╗  ██╗██████╗ 
+# ███████╗██╗  ██╗██╗  ██╗██╗  ██╗██████╗
 # ██╔════╝╚██╗██╔╝██║  ██║██║ ██╔╝██╔══██╗
 # ███████╗ ╚███╔╝ ███████║█████╔╝ ██║  ██║
 # ╚════██║ ██╔██╗ ██╔══██║██╔═██╗ ██║  ██║
 # ███████║██╔╝ ██╗██║  ██║██║  ██╗██████╔╝
 # ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝
 # →-.   →  .-'.   →  .--.   →  .--.   →  .--.   →  .-→
-# →::.\::::::::.\::::::::.\::::::::.\::::::::.\::::::: → → 
-# → →:.\ https://github.com/nosvagor/.dotfiles \::: → →  →  → 
+# →::.\::::::::.\::::::::.\::::::::.\::::::::.\::::::: → →
+# → →:.\ https://github.com/nosvagor/.dotfiles \::: → →  →  →
 # →::::.\::::::::.\::::::::.\::::::::.\::::::::.\::::→  →
-#   → →   `--'  →   `.-'  →   `--'  →   `--'  →   `--' → → 
+#   → →   `--'  →   `.-'  →   `--'  →   `--'  →   `--' → →
 
 # ╔╗ ┌─┐┌─┐┬┌─┐┌─┐
 # ╠╩╗├─┤└─┐││  └─┐
@@ -18,7 +18,6 @@ XF86AudioRaiseVolume
 	pactl set-sink-volume @DEFAULT_SINK@ +10%
 XF86AudioLowerVolume
 	pactl set-sink-volume @DEFAULT_SINK@ -10%
-
 
 # ╔═╗┌─┐┌─┐┌─┐
 # ╠═╣├─┘├─┘└─┐
@@ -36,7 +35,7 @@ super + {d,f,g}
     bspc rule -a Alacritty -o state=floating rectangle=1920x1080+1080+540 \
     && {alacritty, alacritty -e lf, alacritty -e nvim .}
 
-#pdf 
+#pdf
 super + comma
    zathura
 
@@ -106,7 +105,7 @@ super + c
 
 #screenshot of active window
 ##super + b
-#	maim -u -i $(xdotool getactivewindow) ~/screenshots/$(date +%m-%d-%y__%H':'%M':'%S).png    
+#	maim -u -i $(xdotool getactivewindow) ~/screenshots/$(date +%m-%d-%y__%H':'%M':'%S).png
 
 #screensshot of entire screen
 super + shift + ctrl + b
@@ -115,3 +114,11 @@ super + shift + ctrl + b
 # ╔═╗┌─┐┌┬┐┌─┐┌─┐┌─┐
 # ╠╣ ├┤ │││├─┘├┤ │ ┬
 # ╚  └  ┴ ┴┴  └─┘└─┘
+
+# stop ffmpeg
+ctrl + shift + super + d
+	killall --user $USER  --ignore-case  --signal INT  ffmpeg & notify-send -u Critical -t 3000 ended Recording
+
+# generate gif of selected area
+ctrl + shift + super + g
+	~/scripts/gif.sh

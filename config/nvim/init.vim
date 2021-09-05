@@ -22,12 +22,16 @@ Plug 'kyazdani42/nvim-web-devicons'
 Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
 Plug 'nvim-treesitter/playground'
 
+" latex
+
 " utility
 Plug 'tpope/vim-commentary'
 Plug 'vim-utils/vim-man'
 Plug 'tpope/vim-fugitive'
 Plug 'mbbill/undotree'
 Plug 'mattn/emmet-vim'
+Plug 'folke/todo-comments.nvim'
+Plug 'folke/trouble.nvim'
 
 " snippets
 Plug 'SirVer/ultisnips'
@@ -47,8 +51,22 @@ nnoremap <leader>ut :UndotreeToggle<CR>
 
 " snippets
 let g:UltiSnipsExpandTrigger="<c-l>"
-let g:UltiSnipsJumpForwardTrigger="<c-b>"
-let g:UltiSnipsJumpBackwardTrigger="<c-z>"
+let g:UltiSnipsJumpForwardTrigger="<c-b>" " default
+let g:UltiSnipsJumpBackwardTrigger="<c-z>" " default
+
+" todo / trouble
+lua << EOF
+require("todo-comments").setup {
+    colors = {
+        error = { "LspDiagnosticsDefaultError", "ErrorMsg", "#e98989" },
+        warning = { "LspDiagnosticsDefaultWarning", "WarningMsg", "#e9b189" },
+        info = { "LspDiagnosticsDefaultInformation", "#91acd1" },
+        hint = { "LspDiagnosticsDefaultHint", "#c0ca8e" },
+        default = { "Identifier", "#ada0d3" },
+    },
+}
+require("trouble").setup {}
+EOF
 
 " ╔═╗┌┬┐┌┬┐┌─┐
 " ║  │││ ││└─┐
@@ -72,12 +90,10 @@ augroup END
 nnoremap <SPACE> <Nop>
 let mapleader = " "
 
-" 🕶️  switch buffers
+" 🦬 buffers
 nnoremap <leader>w :bp<CR>
 nnoremap <leader>v :bn<CR>
-
-" 💾 cant stop wont stop
-nnoremap <C-s> :w<CR>
+nnoremap <leader>bd :bd!<CR>
 
 " 🤖 copy copy
 nnoremap <leader>y "+y
@@ -90,8 +106,8 @@ nnoremap <leader>d "_d
 vnoremap <leader>d "_d
 
 " 🍉 terminal
-tnoremap <C-y> <C-\><C-n>i
-nnoremap <leader>a :term<CR>
+tnoremap <C-y> <C-\><C-n>
+nnoremap <leader>a :term<CR>i
 
 " 🦘 jumplist mutations
 nnoremap <expr> k (v:count > 5? "u" . v:count : "") . 'k'
