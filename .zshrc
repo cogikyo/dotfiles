@@ -59,3 +59,9 @@ source ~/.local/zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source ~/.local/zsh/zsh-autocomplete/zsh-autocomplete.plugin.zsh
 source ~/.local/zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
 source ~/.local/zsh/zsh-colored-man-pages/colored-man-pages.plugin.zsh
+
+PATH="/home/cullyn/perl5/bin${PATH:+:${PATH}}"; export PATH;
+PERL5LIB="/home/cullyn/perl5/lib/perl5${PERL5LIB:+:${PERL5LIB}}"; export PERL5LIB;
+PERL_LOCAL_LIB_ROOT="/home/cullyn/perl5${PERL_LOCAL_LIB_ROOT:+:${PERL_LOCAL_LIB_ROOT}}"; export PERL_LOCAL_LIB_ROOT;
+PERL_MB_OPT="--install_base \"/home/cullyn/perl5\""; export PERL_MB_OPT;
+PERL_MM_OPT="INSTALL_BASE=/home/cullyn/perl5"; export PERL_MM_OPT;
