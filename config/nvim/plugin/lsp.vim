@@ -38,4 +38,4 @@ set shortmess+=c
 
 let g:completion_matching_strategy_list = ['exact','substring', 'fuzzy']
 let g:completion_trigger_keyword_length = 3 " default = 1
-
+let g:completion_enable_snippet = 'UltiSnips'

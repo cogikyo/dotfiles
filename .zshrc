@@ -31,6 +31,10 @@ SAVEHIST=10000
 setopt appendhistory
 setopt share_history
 
+# path
+export GOPATH="$HOME/go"
+export PATH="$PATH:$HOME/go/bin"
+
 # ╔═╗┬  ┬┌─┐┌─┐┌─┐┌─┐
 # ╠═╣│  │├─┤└─┐├┤ └─┐
 # ╩ ╩┴─┘┴┴ ┴└─┘└─┘└─┘
@@ -45,6 +49,7 @@ alias sps="sudo pacman -S"
 alias spr="sudo pacman -R"
 alias MYEYES='(){xrandr --output HDMI-A-0 --brightness $1;}'
 alias niol='clear && zsh'
+alias kurmit='(){git add . && git commit -m"$1";}'
 
 # ╔═╗┬  ┬ ┬┌─┐┬┌┐┌┌─┐
 # ╠═╝│  │ ││ ┬││││└─┐
