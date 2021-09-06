@@ -19,10 +19,11 @@ Plug 'chrisbra/Colorizer'
 Plug 'kyazdani42/nvim-web-devicons'
 
 " treesitter
-Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
-Plug 'nvim-treesitter/playground'
+" Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+" Plug 'nvim-treesitter/playground'
 
 " latex
+Plug 'lervag/vimtex'
 
 " utility
 Plug 'tpope/vim-commentary'
@@ -35,7 +36,6 @@ Plug 'folke/trouble.nvim'
 
 " snippets
 Plug 'SirVer/ultisnips'
-Plug 'honza/vim-snippets'
 
 call plug#end()
 
@@ -104,7 +104,6 @@ vnoremap <leader>Y gg"+yG
 xnoremap <leader>p "_dP
 nnoremap <leader>d "_d
 vnoremap <leader>d "_d
-
 " 🍉 terminal
 tnoremap <C-y> <C-\><C-n>
 nnoremap <leader>a :term<CR>i
@@ -138,3 +137,9 @@ inoremap <C-j> <esc> :m .+1<CR>==
 inoremap <C-k> <esc> :m .-2<CR>==
 nnoremap <leader>j :m .+1<CR>==
 nnoremap <leader>k :m .-2<CR>==
+
+" 🔭 telescope
+nnoremap <leader>nn <cmd>Telescope find_files<cr>
+nnoremap <leader>ng <cmd>Telescope live_grep<cr>
+nnoremap <leader>ni <cmd>Telescope buffers<cr>
+nnoremap <leader>nh <cmd>Telescope help_tags<cr>

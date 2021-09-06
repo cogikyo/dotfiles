@@ -1,4 +1,4 @@
-set hidden true
+set hidden false
 
 # interpreter for shell commands
 set shell sh
