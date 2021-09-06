@@ -59,10 +59,6 @@ require'lspconfig'.bashls.setup{}
 require'lspconfig'.gopls.setup{}
 EOF
 
-" autocompletion
-set completeopt=menuone,noselect
-set shortmess+=c
-
 let g:completion_matching_strategy_list = ['exact','substring', 'fuzzy']
 let g:completion_trigger_keyword_length = 2 " default = 1
 let g:completion_enable_snippet = 'UltiSnips'

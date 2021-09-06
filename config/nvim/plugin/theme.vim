@@ -3,14 +3,7 @@
 "  ╩ ┴ ┴└─┘┴ ┴└─┘
 colorscheme iceberg
 
-" colorizer
-let g:colorizer_auto_filetype='vim,css,scss,html,tex,txt,cls,sty,rasi,conf'
-let g:colorizer_colornames = 0
-nnoremap <leader>ct :ColorToggle<CR>
-
-" ╦  ┬┌─┐┬ ┬┌┬┐┬  ┌┐┌┌─┐
-" ║  ││ ┬├─┤ │ │  │││├┤
-" ╩═╝┴└─┘┴ ┴ ┴ ┴─┘┘└┘└─┘
+" 🛳 lightline
 let g:lightline = {
 \ 'separator': { 'left': '', 'right': '' },
 \ 'subseparator': { 'left': '╼╾', 'right': '╼╾'},
@@ -20,13 +13,19 @@ let g:lightline = {
 \             [ 'fugitive', 'readonly', 'filename', 'modified' ] ],
 \   'right': [ [ 'lineinfo' ],
 \              [ 'percent' ],
-\              [ 'bufnum', ] ]
+\              [ 'syntastic', ] ]
 \ },
-\ 'component_function': {
+\ 'component_fun': {
 \   'fugitive': 'LightlineFugitive',
 \   'filename': 'LightlineFilename',
 \   'readonly': 'LightlineReadonly',
 \   'modified': 'LightlineModified',
+\ },
+\ 'component_expand': {
+\   'syntastic': 'SyntasticStatuslineFlag',
+\ },
+\ 'component_type': {
+\   'syntastic': 'error',
 \ },
 \ }
 
@@ -45,7 +44,7 @@ let g:lightline.mode_map = {
 \ 't': 'ターミナル',
 \ }
 
-function! LightlineFugitive()
+fun! LightlineFugitive()
     try
 	    if expand('%:t') !~? 'Tagbar\|Gundo\|NERD' && &ft !~? 'vimfiler' && exists('*FugitiveHead')
 	        let mark = ' '   " edit here for cool mark
@@ -55,31 +54,48 @@ function! LightlineFugitive()
     catch
     endtry
     return ''
-endfunction
+endfun
 
-function! LightlineFilename()
+fun! LightlineFilename()
 	return &ft ==# 'vimfiler' ? vimfiler#get_status_string() :
 	      \  &ft ==# 'unite' ? unite#get_status_string() :
 	      \ expand('%:t') !=# '' ? expand('%:t') : '名前?'
-endfunction
+endfun
 
-function! LightlineReadonly()
+fun! LightlineReadonly()
 	return &ft !~? 'help\|vimfiler' && &readonly ? '' : ''
-endfunction
+endfun
 
-function! LightlineModified()
+fun! LightlineModified()
 	return &modifiable && &modified ? '' : ''
-endfunction
+endfun
 
-function! SyntasticCheckHook(errors)
+fun! SyntasticCheckHook(errors)
     call lightline#update()
-endfunction
+endfun
 
-" ╔╦╗┌─┐┬  ┬┬┌─┐┌─┐┌┐┌┌─┐
-"  ║║├┤ └┐┌┘││  │ ││││└─┐
-" ═╩╝└─┘ └┘ ┴└─┘└─┘┘└┘└─┘
 lua << EOF
 require'nvim-web-devicons'.setup {
  default = true;
 }
 EOF
+
+lua << EOF
+require("todo-comments").setup {
+    colors = {
+        error = { "LspDiagnosticsDefaultError", "ErrorMsg", "#e98989" },
+        warning = { "LspDiagnosticsDefaultWarning", "WarningMsg", "#e9b189" },
+        info = { "LspDiagnosticsDefaultInformation", "#91acd1" },
+        hint = { "LspDiagnosticsDefaultHint", "#c0ca8e" },
+        default = { "Identifier", "#ada0d3" },
+    },
+}
+require("trouble").setup {}
+EOF
+
+hi clear SpellBad
+hi clear SpellCap
+hi SpellBad guifg=#e27878
+hi SpellCap guifg=#e278ad
+hi SpllRare guifg=#e278ad
+hi SpellLocal guifg=#e278ad
