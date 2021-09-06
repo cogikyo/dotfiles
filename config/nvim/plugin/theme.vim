@@ -3,7 +3,7 @@
 "  ╩ ┴ ┴└─┘┴ ┴└─┘
 colorscheme iceberg
 
-" 🛳 lightline
+" ⚓ lightline
 let g:lightline = {
 \ 'separator': { 'left': '', 'right': '' },
 \ 'subseparator': { 'left': '╼╾', 'right': '╼╾'},
@@ -90,7 +90,6 @@ require("todo-comments").setup {
         default = { "Identifier", "#ada0d3" },
     },
 }
-require("trouble").setup {}
 EOF
 
 hi clear SpellBad
