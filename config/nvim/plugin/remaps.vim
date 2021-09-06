@@ -1,0 +1,69 @@
+" ╦═╗┌─┐┌┬┐┌─┐┌─┐┌─┐
+" ╠╦╝├┤ │││├─┤├─┘└─┐
+" ╩╚═└─┘┴ ┴┴ ┴┴  └─┘
+nnoremap <SPACE> <Nop>
+let mapleader = " "
+
+" 🦬 buffers
+nnoremap <leader>w :bp<CR>
+nnoremap <leader>v :bn<CR>
+nnoremap <leader>dd :bd!<CR>
+
+" 🤖 copy copy
+nnoremap <leader>y "+y
+vnoremap <leader>y "+y
+vnoremap <leader>Y gg"+yG
+
+" 🍉 terminal
+tnoremap <C-t> <C-\><C-n>
+nnoremap <leader>a :term<CR>i
+
+" 🦘 jump list mutations
+nnoremap <expr> k (v:count > 5? "u" . v:count : "") . 'k'
+nnoremap <expr> j (v:count > 5? "m" . v:count : "") . 'j'
+
+" 🎯 keep cursor 'centered'
+nnoremap j jzt
+nnoremap k kzt
+nnoremap } }zt
+nnoremap { {zt
+nnoremap G Gzt
+nnoremap n nztzv
+nnoremap N Nztzv
+nnoremap J mzJ`z
+
+" 👈 undo break points
+inoremap , ,<c-g>u
+inoremap . .<c-g>u
+inoremap ! !<c-g>u
+inoremap ? ?<c-g>u
+inoremap ; ;<c-g>u
+inoremap : :<c-g>u
+
+" 🚙 moving text
+vnoremap J :m '>+1<CR>gv=gv
+vnoremap K :m '<-2<CR>gv=gv
+inoremap <C-j> <esc> :m .+1<CR>==
+inoremap <C-k> <esc> :m .-2<CR>==
+nnoremap <leader>j :m .+1<CR>==
+nnoremap <leader>k :m .-2<CR>==
+
+" 🪟 window movement
+nnoremap <C-j> <C-w>j
+nnoremap <C-k> <C-w>k
+
+" 🔭 telescope
+nnoremap <leader>tf <cmd>Telescope find_files<cr>
+nnoremap <leader>tg <cmd>Telescope live_grep<cr>
+nnoremap <leader>tt <cmd>Telescope buffers<cr>
+nnoremap <leader>th <cmd>Telescope help_tags<cr>
+
+" 🤲 toggle
+nnoremap <leader>ut :UndotreeToggle<CR>
+nnoremap <leader>ct :ColorToggle<CR>
+
+" 🔤 spelling
+inoremap <C-l> <c-g>u<Esc>[s1z=`]a<c-g>u
+nnoremap <C-l> [s1z=<c-o>
+vnoremap <leader>ss :LanguageToolCheck<CR>
+nnoremap <leader>ss :LanguageToolClear<CR>
