@@ -21,7 +21,7 @@ augroup AUTO_COMMANDS
     autocmd!
     autocmd BufWritePre * :call TrimWhitespace()
     autocmd FileType html,css EmmetInstall
-    autocmd BufEnter * lua require'completion'.on_attach()
+    " autocmd BufEnter * lua require'completion'.on_attach()
     autocmd TermOpen * setlocal nonumber norelativenumber signcolumn=no
 augroup END
 

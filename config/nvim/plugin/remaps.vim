@@ -49,8 +49,8 @@ nnoremap <leader>j :m .+1<CR>==
 nnoremap <leader>k :m .-2<CR>==
 
 " 🪟 window movement
-nnoremap <C-j> <C-w>j
-nnoremap <C-k> <C-w>k
+nnoremap <Up> <C-w>j
+nnoremap <Down> <C-w>k
 
 " 🔭 telescope
 nnoremap <leader>tf <cmd>Telescope find_files<cr>
@@ -59,7 +59,7 @@ nnoremap <leader>tt <cmd>Telescope buffers<cr>
 nnoremap <leader>th <cmd>Telescope help_tags<cr>
 
 " 🤲 toggle
-nnoremap <leader>ut :UndotreeToggle<CR>
+" nnoremap <leader>ut :UndotreeToggle<CR>
 nnoremap <leader>ct :ColorToggle<CR>
 
 " 🔤 spelling

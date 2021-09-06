@@ -35,5 +35,5 @@ set statusline+=%*
 set conceallevel=2
 
 "💨 completion
-set completeopt=menuone,noselect,noinsert
-set shortmess+=c
+" set completeopt=menuone,noselect,noinsert
+" set shortmess+=c
