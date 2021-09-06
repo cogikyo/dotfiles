@@ -22,35 +22,35 @@ require'lspconfig'.vimls.setup{}
 require'lspconfig'.tsserver.setup{}
 
 --tex
-require'lspconfig'.texlab.setup{
-    cmd = { "texlab" },
-    filetypes = { "tex", "bib" },
-    settings = {
-      texlab = {
-        auxDirectory = ".",
-        bibtexFormatter = "texlab",
-        build = {
-          args = { "-pdflatex=lualatex", "-pdf", "-interaction=nonstopmode", "-synctex=1", "%f" },
-          executable = "latexmk",
-          forwardSearchAfter = false,
-          onSave = true
-        },
-        chktex = {
-          onEdit = false,
-          onOpenAndSave = true
-        },
-        diagnosticsDelay = 300,
-        formatterLineLength = 80,
-        forwardSearch = {
-          args = {}
-        },
-        latexFormatter = "latexindent",
-        latexindent = {
-          modifyLineBreaks = false
-        }
-      }
-    }
-}
+-- require'lspconfig'.texlab.setup{
+--     cmd = { "texlab" },
+--     filetypes = { "tex", "bib" },
+--     settings = {
+--       texlab = {
+--         auxDirectory = ".",
+--         bibtexFormatter = "texlab",
+--         build = {
+--           args = { "-pdflatex=lualatex", "-pdf", "-interaction=nonstopmode", "-synctex=1", "%f" },
+--           executable = "latexmk",
+--           forwardSearchAfter = false,
+--           onSave = false
+--         },
+--         chktex = {
+--           onEdit = false,
+--           onOpenAndSave = true
+--         },
+--         diagnosticsDelay = 300,
+--         formatterLineLength = 80,
+--         forwardSearch = {
+--           args = {}
+--         },
+--         latexFormatter = "latexindent",
+--         latexindent = {
+--           modifyLineBreaks = false
+--         }
+--       }
+--     }
+-- }
 
 --bash
 require'lspconfig'.bashls.setup{}
