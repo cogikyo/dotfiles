@@ -16,7 +16,7 @@
 # ═╩╝┴└─┘┴  ┴ ┴┴─┘┴
 monitor = 0
 follow = mouse
-geometry = "1200x1+542+8"
+geometry = "1169x1+542+8"
 progress_bar = false
 indicate_hidden = true
 shrink = true
@@ -86,7 +86,7 @@ max_icon_size = 24
 [urgency_low]
 background = "#161821"
 foreground = "#c6c8d1"
-timeout = 6
+timeout = 30
 
 [urgency_normal]
 background = "#161821"
