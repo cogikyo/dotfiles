@@ -43,7 +43,7 @@ inoremap : :<c-g>u
 " 🚙 moving text
 vnoremap J :m '>+1<CR>gv=gv
 vnoremap K :m '<-2<CR>gv=gv
-inoremap <C-m> <esc> :m .+1<CR>==
+inoremap <C-j> <esc> :m .+1<CR>==
 inoremap <C-k> <esc> :m .-2<CR>==
 nnoremap <leader>m :m .+1<CR>==
 nnoremap <leader>k :m .-2<CR>==
@@ -62,10 +62,10 @@ nnoremap <leader>te <cmd>Telescope file_browser<cr>
 " 🤲 toggle
 " nnoremap <leader>ut :UndotreeToggle<CR>
 nnoremap <leader>ct :ColorToggle<CR>
-nnoremap <leader>pp :MarkdownPreviewToggle
+nnoremap <leader>mp :MarkdownPreviewToggle<CR>
 
 " 🔤 spelling
 inoremap <C-l> <c-g>u<Esc>[s1z=`]a<c-g>u
 nnoremap <C-l> [s1z=<c-o>
-vnoremap <leader>ss :LanguageToolCheck<CR>
-nnoremap <leader>ss :LanguageToolClear<CR>
+vnoremap <leader>lt :LanguageToolCheck<CR>
+nnoremap <leader>lt :LanguageToolClear<CR>

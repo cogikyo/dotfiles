@@ -8,35 +8,17 @@ def comment():
 def env(name):
 	[x,y] = vim.eval("vimtex#env#is_inside('" + name + "')")
 	return x != '0' and y != '0'
-
 endglobal
 
 
 snippet template "Basic template" b
 \documentclass[a4paper]{article}
-
-\usepackage[utf8]{inputenc}
-\usepackage[T1]{fontenc}
-\usepackage{textcomp}
-\usepackage[dutch]{babel}
-\usepackage{amsmath, amssymb}
-
-
-% figure support
-\usepackage{import}
-\usepackage{xifthen}
-\pdfminorversion=7
-\usepackage{pdfpages}
-\usepackage{transparent}
-\newcommand{\incfig}[1]{%
-	\def\svgwidth{\columnwidth}
-	\import{./figures/}{#1.pdf_tex}
-}
-
-\pdfsuppresswarningpagegroup=1
+\usepackage{nosvagor-math}
 
 \begin{document}
-	$0
+\hypertarget{ToC}{\tableofcontents}
+{\pagestyle{plain}
+\cleardoublepage}
 \end{document}
 endsnippet
 

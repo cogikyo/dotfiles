@@ -13,9 +13,9 @@ let g:lightline = {
 \             [ 'fugitive', 'readonly', 'filename', 'modified' ] ],
 \   'right': [ [ 'lineinfo' ],
 \              [ 'percent' ],
-\              [ 'syntastic', ] ]
+\              [ 'syntastic'] ]
 \ },
-\ 'component_fun': {
+\ 'component_function': {
 \   'fugitive': 'LightlineFugitive',
 \   'filename': 'LightlineFilename',
 \   'readonly': 'LightlineReadonly',
