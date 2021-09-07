@@ -49,14 +49,15 @@ nnoremap <leader>j :m .+1<CR>==
 nnoremap <leader>k :m .-2<CR>==
 
 " 🪟 window movement
-nnoremap <Up> <C-w>j
-nnoremap <Down> <C-w>k
+nnoremap <Down> <C-w>j
+nnoremap <Up> <C-w>k
 
 " 🔭 telescope
 nnoremap <leader>tf <cmd>Telescope find_files<cr>
-nnoremap <leader>tg <cmd>Telescope live_grep<cr>
-nnoremap <leader>tt <cmd>Telescope buffers<cr>
-nnoremap <leader>th <cmd>Telescope help_tags<cr>
+nnoremap <leader>tt <cmd>Telescope live_grep<cr>
+nnoremap <leader>tg <cmd>Telescope buffers<cr>
+nnoremap <leader>td <cmd>Telescope help_tags<cr>
+nnoremap <leader>te <cmd>Telescope file_browser<cr>
 
 " 🤲 toggle
 " nnoremap <leader>ut :UndotreeToggle<CR>

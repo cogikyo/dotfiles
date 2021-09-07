@@ -6,7 +6,7 @@ let g:syntastic_check_on_open = 1
 let g:syntastic_check_on_wq = 0
 
 " ⚙  misc-lets
-" let g:user_emmet_install_global = 0
+let g:user_emmet_install_global = 0
 let g:languagetool_cmd='/usr/bin/languagetool'
 
 " 🌈 colorizer-
@@ -27,11 +27,11 @@ if empty(v:servername) && exists('*remote_startserver')
 endif
 
 " ✂  snippets/completions
-let g:UltiSnipsExpandTrigger="<tab>"
-let g:UltiSnipsJumpForwardTrigger="<tab>"
-let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
+let g:UltiSnipsExpandTrigger="<Right>"
+let g:UltiSnipsJumpForwardTrigger="<Right>"
+let g:UltiSnipsJumpBackwardTrigger="<Left>"
+let g:UltiSnipsSnippetsDir=[$HOME.'/.config/nvim/UltiSnips']
 let g:UltiSnipsSnippetDirectories=[$HOME.'/.config/nvim/UltiSnips']
-
 
 " let g:completion_matching_strategy_list = ['exact','substring', 'fuzzy']
 " let g:completion_enable_snippet = 'UltiSnips'
