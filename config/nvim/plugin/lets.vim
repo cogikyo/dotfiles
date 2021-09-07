@@ -4,10 +4,25 @@
 "❕syntastic-lets
 let g:syntastic_check_on_open = 1
 let g:syntastic_check_on_wq = 0
+let g:vimtex_compiler_latexmk = {
+  \ 'build_dir' : '',
+  \ 'callback' : 1,
+  \ 'continuous' : 1,
+  \ 'executable' : 'latexmk',
+  \ 'hooks' : [],
+  \ 'options' : [
+  \   '-verbose',
+  \   '-file-line-error',
+  \   '-synctex=1',
+  \   '-interaction=nonstopmode',
+  \ ],
+\}
 
 " ⚙  misc-lets
 let g:user_emmet_install_global = 0
 let g:languagetool_cmd='/usr/bin/languagetool'
+let g:syntastic_tex_checkers = ['chktex']
+
 
 " 🌈 colorizer-
 let g:colorizer_colornames = 0
@@ -22,14 +37,15 @@ let g:tex_superscripts= "[0-9a-zA-W.,:;+-<>/()=]"
 let g:tex_subscripts= "[0-9aehijklmnoprstuvx,+-/().]"
 let g:tex_conceal_frac=1
 
+
 if empty(v:servername) && exists('*remote_startserver')
     call remote_startserver('VIM')
 endif
 
 " ✂  snippets/completions
-let g:UltiSnipsExpandTrigger="<Right>"
-let g:UltiSnipsJumpForwardTrigger="<Right>"
-let g:UltiSnipsJumpBackwardTrigger="<Left>"
+let g:UltiSnipsExpandTrigger="<tab>"
+let g:UltiSnipsJumpForwardTrigger="<tab>"
+let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
 let g:UltiSnipsSnippetsDir=[$HOME.'/.config/nvim/UltiSnips']
 let g:UltiSnipsSnippetDirectories=[$HOME.'/.config/nvim/UltiSnips']
 
