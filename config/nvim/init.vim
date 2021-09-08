@@ -3,8 +3,8 @@
 " ╩  ┴─┘└─┘└─┘┴┘└┘└─┘
 call plug#begin('~/.vim/plugged')
 
-" Plug 'neovim/nvim-lspconfig'
-" Plug 'nvim-lua/completion-nvim'
+Plug 'neovim/nvim-lspconfig'
+Plug 'nvim-lua/completion-nvim'
 
 Plug 'nvim-lua/plenary.nvim'
 Plug 'nvim-telescope/telescope.nvim'
@@ -33,7 +33,7 @@ Plug 'tpope/vim-commentary'
 Plug 'vim-utils/vim-man'
 Plug 'vim-syntastic/syntastic'
 " Plug 'folke/trouble.nvim'
-Plug 'mbbill/undotree'
+" Plug 'mbbill/undotree'
 " Plug 'mattn/emmet-vim'
 Plug 'folke/todo-comments.nvim'
 Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app && yarn install'  }
