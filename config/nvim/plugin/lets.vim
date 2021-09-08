@@ -13,7 +13,6 @@ let syntastic_style_warning_symbol = "⏿"
 let g:user_emmet_install_global = 0
 let g:languagetool_cmd='/usr/bin/languagetool'
 
-
 " 🌈 colorizer
 let g:colorizer_colornames = 0
 
