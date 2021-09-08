@@ -19,8 +19,8 @@ tnoremap <C-t> <C-\><C-n>
 nnoremap <leader>a :term<CR>i
 
 " 🦘 jump list mutations
-nnoremap <expr> j (v:count > 5? "m" . v:count : "") . 'j'
-nnoremap <expr> k (v:count > 5? "u" . v:count : "") . 'k'
+nnoremap <expr> j (v:count > 5 ? "m`" . v:count : "") . 'j'
+nnoremap <expr> k (v:count > 5 ? "m`" . v:count : "") . 'k'
 
 " 🎯 keep cursor 'centered'
 nnoremap } }zt

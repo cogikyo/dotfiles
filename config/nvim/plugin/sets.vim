@@ -22,18 +22,14 @@ set signcolumn=yes
 set colorcolumn=80
 set nowrap
 
-setlocal spell
-set spelllang=en_us
-set spelloptions=camel
-
-"❗syntastic-sets
+""❗syntastic-sets
 set statusline+=%#warningmsg#
 set statusline+=%{SyntasticStatuslineFlag()}
 set statusline+=%*
 
-"⚙  utility-sets
+""⚙  utility-sets
 set conceallevel=2
 
-"💨 completion
-" set completeopt=menuone,noselect,noinsert
-" set shortmess+=c
+""💨 completion
+"" set completeopt=menuone,noselect,noinsert
+"" set shortmess+=c
