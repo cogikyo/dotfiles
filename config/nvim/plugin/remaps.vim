@@ -23,8 +23,6 @@ nnoremap <expr> k (v:count > 5? "u" . v:count : "") . 'k'
 nnoremap <expr> j (v:count > 5? "m" . v:count : "") . 'j'
 
 " 🎯 keep cursor 'centered'
-nnoremap j jzt
-nnoremap k kzt
 nnoremap } }zt
 nnoremap { {zt
 nnoremap G Gzt
@@ -60,7 +58,7 @@ nnoremap <leader>td <cmd>Telescope help_tags<cr>
 nnoremap <leader>te <cmd>Telescope file_browser<cr>
 
 " 🤲 toggle
-" nnoremap <leader>ut :UndotreeToggle<CR>
+nnoremap <leader>ut :UndotreeToggle<CR>
 nnoremap <leader>ct :ColorToggle<CR>
 nnoremap <leader>mp :MarkdownPreviewToggle<CR>
 

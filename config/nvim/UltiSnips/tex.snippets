@@ -10,15 +10,24 @@ def env(name):
 	return x != '0' and y != '0'
 endglobal
 
-
+# ╔╗ ┌─┐┌─┐┬┌─┐┌─┐
+# ╠╩╗├─┤└─┐││  └─┐
+# ╚═╝┴ ┴└─┘┴└─┘└─┘
 snippet template "Basic template" b
-\documentclass[a4paper]{article}
+\documentclass[a4paper]{nosvagor-notes}
 \usepackage{nosvagor-math}
 
+\definecolor{title-color}{HTML}{f57067}
+\newcommand{\theTitle}{\href{https://github.com/nosvagor/notes/tree/master/$1}{$2}}
+
 \begin{document}
+
 \hypertarget{ToC}{\tableofcontents}
 {\pagestyle{plain}
 \cleardoublepage}
+
+$0
+
 \end{document}
 endsnippet
 
@@ -65,15 +74,6 @@ snippet item "Itemize" bA
 \end{itemize}
 endsnippet
 
-snippet desc "Description" b
-\begin{description}
-	\item[$1] $0
-\end{description}
-endsnippet
-
-snippet pac "Package" b
-\usepackage[${1:options}]{${2:package}}$0
-endsnippet
 
 snippet => "implies" Ai
 \implies
@@ -108,7 +108,6 @@ snippet ali "Align" bA
 	${1:${VISUAL}}
 .\end{align*}
 endsnippet
-
 
 context "math()"
 snippet // "Fraction" iA
@@ -491,7 +490,7 @@ snippet set "set" wA
 endsnippet
 
 snippet || "mid" iA
- \mid
+\mid
 endsnippet
 
 
