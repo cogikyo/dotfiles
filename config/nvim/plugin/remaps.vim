@@ -19,8 +19,8 @@ tnoremap <C-t> <C-\><C-n>
 nnoremap <leader>a :term<CR>i
 
 " 🦘 jump list mutations
-nnoremap <expr> k (v:count > 5? "u" . v:count : "") . 'k'
 nnoremap <expr> j (v:count > 5? "m" . v:count : "") . 'j'
+nnoremap <expr> k (v:count > 5? "u" . v:count : "") . 'k'
 
 " 🎯 keep cursor 'centered'
 nnoremap } }zt
@@ -43,7 +43,7 @@ vnoremap J :m '>+1<CR>gv=gv
 vnoremap K :m '<-2<CR>gv=gv
 inoremap <C-j> <esc> :m .+1<CR>==
 inoremap <C-k> <esc> :m .-2<CR>==
-nnoremap <leader>m :m .+1<CR>==
+nnoremap <leader>j :m .+1<CR>==
 nnoremap <leader>k :m .-2<CR>==
 
 " 🪟 window movement
@@ -55,7 +55,6 @@ nnoremap <leader>tf <cmd>Telescope find_files<cr>
 nnoremap <leader>tt <cmd>Telescope live_grep<cr>
 nnoremap <leader>tg <cmd>Telescope buffers<cr>
 nnoremap <leader>td <cmd>Telescope help_tags<cr>
-nnoremap <leader>te <cmd>Telescope file_browser<cr>
 
 " 🤲 toggle
 nnoremap <leader>ut :UndotreeToggle<CR>

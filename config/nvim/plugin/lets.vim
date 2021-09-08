@@ -14,7 +14,7 @@ let g:user_emmet_install_global = 0
 let g:languagetool_cmd='/usr/bin/languagetool'
 
 
-" 🌈 colorizer-
+" 🌈 colorizer
 let g:colorizer_colornames = 0
 
 " 📓 latex
