@@ -26,7 +26,7 @@ case $chosen in
 		./scripts/basic-launch.sh notes
         ;;
     $dotfiles)
-		./scripts/basic-launch.sh dotfiles
+		./scripts/basic-launch.sh .dotfiles
         ;;
     $golang)
 		./scripts/code-launch.sh golang
@@ -38,7 +38,7 @@ case $chosen in
         ./scripts/code-launch.sh bash
         ;;
     $calc)
-        ./scripts/tex-launch.sh python/calculus calculus
+        ./scripts/tex-launch.sh fire/calculus calculus
         ;;
     $solidity)
         ./scripts/code-launch.sh solidity
@@ -50,12 +50,12 @@ case $chosen in
         ./scripts/code-launch.sh javascript
         ;;
     $pandas)
-		./scripts/code-launch.sh python/pandas
+		./scripts/code-launch.sh water/python/pandas
         ;;
     $linear)
-		./scripts/code-launch.sh python/linear
+		./scripts/code-launch.sh fire/linear
         ;;
     $stat)
-		./scripts/code-launch.sh python/statistics
+		./scripts/code-launch.sh fire/statistics
         ;;
 esac
