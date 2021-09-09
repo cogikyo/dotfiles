@@ -18,6 +18,10 @@ vnoremap <leader>Y gg"+yG
 tnoremap <C-t> <C-\><C-n>
 nnoremap <leader>a :term<CR>i
 
+" 🌌 gimmie space please
+nnoremap <Leader>o o<Esc>0"_D
+nnoremap <Leader>O O<Esc>0"_D
+
 " 🦘 jump list mutations
 nnoremap <expr> j (v:count > 5 ? "m`" . v:count : "") . 'j'
 nnoremap <expr> k (v:count > 5 ? "m`" . v:count : "") . 'k'
