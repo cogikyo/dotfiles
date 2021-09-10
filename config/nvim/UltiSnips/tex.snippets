@@ -14,17 +14,14 @@ endglobal
 # ╠╩╗├─┤└─┐││  └─┐
 # ╚═╝┴ ┴└─┘┴└─┘└─┘
 snippet template "Basic template" b
-\documentclass[a4paper]{nosvagor-notes}
+\documentclass{nosvagor-notes}
 \usepackage{nosvagor-math}
+\usepackage{nosvagor-commands}
 
 \definecolor{title-color}{HTML}{f57067}
-\newcommand{\theTitle}{\href{https://github.com/nosvagor/notes/tree/master/$1}{$2}}
+\newcommand{\theTitle}{\href{https://github.com/nosvagor/notes/tree/main/$1}{$2}}
 
 \begin{document}
-
-\hypertarget{ToC}{\tableofcontents}
-{\pagestyle{plain}
-\cleardoublepage}
 
 $0
 
@@ -524,26 +521,6 @@ snippet uuu "bigcup" iA
 \bigcup_{${1:i \in ${2: I}}} $0
 endsnippet
 
-snippet nnn "bigcap" iA
-\bigcap_{${1:i \in ${2: I}}} $0
-endsnippet
-
-snippet OO "emptyset" iA
-\O
-endsnippet
-
-snippet RR "real" iA
-\R
-endsnippet
-
-snippet QQ "Q" iA
-\Q
-endsnippet
-
-snippet ZZ "Z" iA
-\Z
-endsnippet
-
 snippet <! "normal" iA
 \triangleleft
 endsnippet
@@ -551,7 +528,6 @@ endsnippet
 snippet <> "hokje" iA
 \diamond
 endsnippet
-
 
 context "math()"
 snippet '(?<!i)sts' "text subscript" irA
@@ -611,15 +587,6 @@ endsnippet
 
 snippet letw "let omega" iA
 Let $\Omega \subset \C$ be open.
-endsnippet
-
-
-snippet HH "H" iA
-\mathbb{H}
-endsnippet
-
-snippet DD "D" iA
-\mathbb{D}
 endsnippet
 
 # vim:ft=snippets

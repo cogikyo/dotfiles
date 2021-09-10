@@ -18,7 +18,7 @@ window {
     border-radius:                  0% 9% 5.5% 6%;
     location:                       north west;
     width:                          28%;
-    height:                         16.5%;
+    height:                         11%;
     x-offset:                       -6;
     y-offset:                       48;
 }
@@ -68,7 +68,7 @@ inputbar {
 listview {
     background-color:               @background;
     columns:                        3;
-    lines:                          2;
+    lines:                          1;
     fixed-height:                   true;
     spacing:                        1%;
     cycle:                          false;

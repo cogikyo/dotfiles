@@ -56,8 +56,8 @@ nnoremap <Up> <C-w>k
 
 " 🔭 telescope
 nnoremap <leader>tf <cmd>Telescope find_files<cr>
-nnoremap <leader>tt <cmd>Telescope live_grep<cr>
-nnoremap <leader>tg <cmd>Telescope buffers<cr>
+nnoremap <leader>tg <cmd>Telescope live_grep<cr>
+nnoremap <leader>tt <cmd>Telescope buffers<cr>
 nnoremap <leader>td <cmd>Telescope help_tags<cr>
 
 " 🤲 toggle
