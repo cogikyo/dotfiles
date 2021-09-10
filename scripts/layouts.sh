@@ -17,8 +17,8 @@ c="c++"
 stat="statistics"
 
 # Variable passed to rofi
-options="$golang\n$solidity\n$javascript\n$bash\n$c\n$python\n\
-$notes\n$dotfiles\n$calc\n$linear\n$pandas\n$stat"
+options="$calc\n$linear\n$c\n$golang\n$solidity\n$javascript\n$bash\n$python\n\
+  $notes\n$dotfiles\n$pandas\n$stat"
 
 chosen="$(echo -e "$options" | $rofi_command -p "" -dmenu)"
 case $chosen in
@@ -29,33 +29,33 @@ case $chosen in
 		./scripts/basic-launch.sh .dotfiles
         ;;
     $golang)
-		./scripts/code-launch.sh golang
+		./scripts/code-launch.sh water/golang golang
         ;;
     $c)
-		./scripts/code-launch.sh c++
+		./scripts/code-launch.sh water/c++ c++
         ;;
     $bash)
-        ./scripts/code-launch.sh bash
+        ./scripts/code-launch.sh water/bash bash
         ;;
     $calc)
         ./scripts/tex-launch.sh fire/calculus calculus
         ;;
     $solidity)
-        ./scripts/code-launch.sh solidity
+        ./scripts/code-launch.sh water/solidity
         ;;
     $python)
-        ./scripts/code-launch.sh python
+        ./scripts/code-launch.sh water/python python
         ;;
     $javascript)
-        ./scripts/code-launch.sh javascript
+        ./scripts/code-launch.sh water/javascript javascript
         ;;
     $pandas)
 		./scripts/code-launch.sh water/python/pandas
         ;;
     $linear)
-		./scripts/code-launch.sh fire/linear
+		./scripts/code-launch.sh fire/linear linear
         ;;
     $stat)
-		./scripts/code-launch.sh fire/statistics
+		./scripts/code-launch.sh fire/statistics statistics
         ;;
 esac
