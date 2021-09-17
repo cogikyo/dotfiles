@@ -1,5 +1,3 @@
-set hidden false
-
 # interpreter for shell commands
 set shell sh
 
@@ -23,7 +21,7 @@ set ifs "\n"
 set scrolloff 10
 
 # use enter for shell commands
-map <enter> shell
+# map <enter> shell
 
 # execute current file (must be executable)
 map x $$f

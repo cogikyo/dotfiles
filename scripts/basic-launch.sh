@@ -10,7 +10,7 @@ bspc config split_ratio 0.3015 && \
 firefox --new-window https://github.com/nosvagor/$1 &
 sleep 1
 
-bspc config split_ratio 0.645 && \
+bspc config split_ratio 0.642 && \
 firefox --newwindow &
 sleep 0.25
 
