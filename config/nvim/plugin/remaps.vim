@@ -4,6 +4,8 @@
 nnoremap <SPACE> <Nop>
 let mapleader = " "
 
+nnoremap <leader>s :w<CR>
+
 " 🦬 buffers
 nnoremap <leader>w :bp<CR>
 nnoremap <leader>v :bn<CR>
@@ -19,8 +21,9 @@ tnoremap <C-t> <C-\><C-n>
 nnoremap <leader>a :term<CR>i
 
 " 🌌 gimmie space please
-nnoremap <Leader>o o<Esc>0"_D
-nnoremap <Leader>O O<Esc>0"_D
+nnoremap <Leader>o o<Esc>"_Dk$
+nnoremap <Leader>O O<Esc>"_Dj$
+inoremap <C-Space> <Esc>o<Esc>"_DkO<Esc>_DjA
 
 " 🦘 jump list mutations
 nnoremap <expr> j (v:count > 5 ? "m`" . v:count : "") . 'j'
@@ -33,6 +36,8 @@ nnoremap G Gzt
 nnoremap n nztzv
 nnoremap N Nztzv
 nnoremap J mzJ`z
+nnoremap <C-d> <C-d>zt
+nnoremap <C-u> <C-u>zt
 
 " 👈 undo break points
 inoremap , ,<c-g>u
@@ -70,3 +75,15 @@ inoremap <C-l> <c-g>u<Esc>[s1z=`]a<c-g>u
 nnoremap <C-l> [s1z=<c-o>
 vnoremap <leader>lt :LanguageToolCheck<CR>
 nnoremap <leader>lt :LanguageToolClear<CR>
+
+" 📓 latex
+inoremap <C-y> <CR>\item<Space>
+nnoremap <C-y> A<CR>\item<Space>
+nnoremap <leader>ni /\\item<CR>zt
+nnoremap <leader>ny ?\\item<CR>zt
+nnoremap <leader>na /\\item<CR><esc>0ztA
+
+" ⛵ reflow
+inoremap <C-h> <esc>VgwzHzzA
+nnoremap <C-h> VgwzHzzg_
+
