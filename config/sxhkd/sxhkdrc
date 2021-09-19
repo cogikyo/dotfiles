@@ -92,6 +92,10 @@ super + ctrl + {h,l}
     DIR={prev,next}; \
 	bspc desktop -f "$DIR"
 
+# makeshift tab swap
+super + alt + shift + p
+	bspc node -s south; bspc node -f north
+
 # ╔╦╗┌─┐┬┌┬┐
 # ║║║├─┤││││
 # ╩ ╩┴ ┴┴┴ ┴

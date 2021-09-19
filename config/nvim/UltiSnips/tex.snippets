@@ -18,14 +18,22 @@ snippet template "Basic template" b
 \usepackage{nosvagor-math}
 \usepackage{nosvagor-commands}
 
-\definecolor{title-color}{HTML}{f57067}
-\newcommand{\theTitle}{\href{https://github.com/nosvagor/notes/tree/main/$1}{$2}}
+\definecolor{title-color}{HTML}{${1:red}}
+\newcommand{\theTitle}{\href{https://github.com/nosvagor/notes/tree/main/$2}{$3}}
 
 \begin{document}
 
 $0
 
 \end{document}
+endsnippet
+
+snippet chkk "annoying chktex" bA
+% chktex-file 1
+% chktex-file 3
+% chktex-file 21
+% chktex-file 36
+% chktex-file 27
 endsnippet
 
 snippet beg "begin{} / end{}" bA
@@ -37,6 +45,20 @@ endsnippet
 priority 100
 snippet ... "ldots" iA
 \ldots
+endsnippet
+
+snippet sec "section" bA
+\section{$1}
+\begin{itemize}
+	\item $0
+\end{itemize}
+endsnippet
+
+snippet ssec "subsection" bA
+\subsection{$1}
+\begin{itemize}
+	\item $0
+\end{itemize}
 endsnippet
 
 snippet table "Table environment" b
@@ -69,24 +91,105 @@ snippet item "Itemize" bA
 \begin{itemize}
 	\item $0
 \end{itemize}
+
 endsnippet
 
-
-snippet => "implies" Ai
-\implies
+snippet -- "\item" bA
+\item $0
 endsnippet
 
-snippet =< "implied by" Ai
-\impliedby
+snippet ali "Align" bA
+\begin{align*}
+	${1:${VISUAL}}
+\end{align*}
 endsnippet
 
-context "math()"
-snippet iff "iff" Ai
-\iff
+snippet src "source links" bA
+\src{
+	$1
+}
 endsnippet
 
-snippet mk "Math" wA
-$${1}$`!p
+snippet lnk "link" wA
+\link{$1}{$2}
+endsnippet
+
+snippet mti "multicolum" wA
+\begin{multicols}{2}
+	${1:${VISUAL}}
+\end{multicols}
+endsnippet
+
+# ╦┌┐┌┬  ┬┌┐┌┌─┐  ╔╦╗┌─┐─┐ ┬┌┬┐
+# ║││││  ││││├┤    ║ ├┤ ┌┴┬┘ │
+# ╩┘└┘┴─┘┴┘└┘└─┘   ╩ └─┘┴ └─ ┴
+
+snippet bcd "definition" wA
+\dd{$1}: $0
+endsnippet
+
+snippet prn "(context)" wA
+\prn{$1} $0
+endsnippet
+
+snippet dli "dlink" wA
+\dlink{${1}}{${2:${VISUAL}}}
+endsnippet
+
+snippet uli "ulink" wA
+\ulink{${1}}{${2:${VISUAL}}}
+endsnippet
+
+snippet aset "accent" wA
+\aset{${1:${VISUAL}}}
+endsnippet
+
+snippet ctr "positive" wA
+\RR{${1:${VISUAL}}}
+endsnippet
+
+snippet ctb "negative" wA
+\BB{${1:${VISUAL}}}
+endsnippet
+
+snippet ctm "independent" wA
+\MM{${1:${VISUAL}}}
+endsnippet
+
+snippet cty "dependent" wA
+\YY{${1:${VISUAL}}}
+endsnippet
+
+snippet ctp "number" wA
+\PP{${1:${VISUAL}}}
+endsnippet
+
+snippet ctf "false" wA
+\FF{${1:${VISUAL}}}
+endsnippet
+
+snippet ctt "true" wA
+\TT{${1:${VISUAL}}}
+endsnippet
+
+snippet `` "quotes" wA
+\`\`$1'' $0
+endsnippet
+
+snippet \it "italic" wA
+\textit{$1}
+endsnippet
+
+snippet \bf "bold" wA
+\textbf{$1}
+endsnippet
+
+# ╔╦╗┌─┐┌┬┐┬ ┬
+# ║║║├─┤ │ ├─┤
+# ╩ ╩┴ ┴ ┴ ┴ ┴
+
+snippet mk "Inline Math" wA
+\( ${1} \)`!p
 if t[2] and t[2][0] not in [',', '.', '?', '-', ' ']:
 	snip.rv = ' '
 else:
@@ -94,16 +197,41 @@ else:
 `$2
 endsnippet
 
-snippet dm "Math" wA
+snippet deq "Display Math" wA
+
 \[
 ${1:${VISUAL}}
-.\] $0
+\]
 endsnippet
 
-snippet ali "Align" bA
-\begin{align*}
-	${1:${VISUAL}}
-.\end{align*}
+context "math()"
+snippet por "colored or notation" iA
+\por{$1}{$2} $0
+endsnippet
+
+context "math()"
+snippet or "lor" iA
+\lor $0
+endsnippet
+
+context "math()"
+snippet pand "colored and notation" iA
+\pand{$1}{$2} $0
+endsnippet
+
+context "math()"
+snippet pand "colored or notation" iA
+\land $0
+endsnippet
+
+context "math()"
+snippet deg "degree" iA
+^\circ
+endsnippet
+
+context "math()"
+snippet ddx "derivative" iA
+\\frac{d$1}{d${2:x}} $0
 endsnippet
 
 context "math()"
@@ -136,6 +264,11 @@ snip.rv = stripped[0:i] + "\\frac{" + stripped[i+1:-1] + "}"
 `{$1}$0
 endsnippet
 
+# ╔═╗┬┬  ┬  ┌─┐┌─┐
+# ║ ╦││  │  ├┤ └─┐
+# ╚═╝┴┴─┘┴─┘└─┘└─┘
+# Uncatagorized / not used
+
 context "math()"
 snippet '([A-Za-z])(\d)' "auto subscript" wrA
 `!p snip.rv = match.group(1)`_`!p snip.rv = match.group(2)`
@@ -145,7 +278,6 @@ context "math()"
 snippet '([A-Za-z])_(\d\d)' "auto subscript2" wrA
 `!p snip.rv = match.group(1)`_{`!p snip.rv = match.group(2)`}
 endsnippet
-
 
 snippet sympy "sympyblock " w
 sympy $1 sympy$0
@@ -160,21 +292,6 @@ k, m, n = symbols('k m n', integer=True)
 f, g, h = symbols('f g h', cls=Function)
 init_printing()
 snip.rv = eval('latex(' + match.group(1).replace('\\', '').replace('^', '**').replace('{', '(').replace('}', ')') + ')')
-`
-endsnippet
-
-priority 1000
-snippet math "mathematicablock" w
-math $1 math$0
-endsnippet
-
-priority 10000
-snippet 'math(.*)math' "math" wr
-`!p
-import subprocess
-code = match.group(1)
-code = 'ToString[' + code + ', TeXForm]'
-snip.rv = subprocess.check_output(['wolframscript', '-code', code])
 `
 endsnippet
 
@@ -242,33 +359,44 @@ snippet conj "conjugate" iA
 \overline{$1}$0
 endsnippet
 
-snippet sum "sum" w
+context "math()"
+snippet sum "sum" iA
 \sum_{n=${1:1}}^{${2:\infty}} ${3:a_n z^n}
 endsnippet
 
-snippet taylor "taylor" w
+context "math()"
+snippet taylor "taylor" iA
 \sum_{${1:k}=${2:0}}^{${3:\infty}} ${4:c_$1} (x-a)^$1 $0
 endsnippet
 
-snippet lim "limit" w
+context "math()"
+snippet lim "limit" iA
 \lim_{${1:n} \to ${2:\infty}}
 endsnippet
 
-snippet limsup "limsup" w
+context "math()"
+snippet limsup "limsup" iA
 \limsup_{${1:n} \to ${2:\infty}}
 endsnippet
 
-snippet prod "product" w
+context "math()"
+snippet prod "product" iA
 \prod_{${1:n=${2:1}}}^{${3:\infty}} ${4:${VISUAL}} $0
 endsnippet
 
-snippet part "d/dx" w
+context "math()"
+snippet part "d/dx" iA
 \frac{\partial ${1:V}}{\partial ${2:x}} $0
 endsnippet
 
 context "math()"
 snippet sq "\sqrt{}" iA
 \sqrt{${1:${VISUAL}}} $0
+endsnippet
+
+context "math()"
+snippet inv "^{-1}" iA
+^{-1}
 endsnippet
 
 context "math()"
@@ -303,14 +431,6 @@ snippet rij "mrij" i
 (${1:x}_${2:n})_{${3:$2}\\in${4:\\N}}$0
 endsnippet
 
-snippet <= "leq" iA
-\le
-endsnippet
-
-snippet >= "geq" iA
-\ge
-endsnippet
-
 context "math()"
 snippet EE "geq" iA
 \exists
@@ -330,7 +450,6 @@ context "math()"
 snippet ynn "yn" iA
 y_{n}
 endsnippet
-
 
 context "math()"
 snippet xii "xi" iA
@@ -419,8 +538,8 @@ endsnippet
 
 priority 100
 context "math()"
-snippet '(?<!\\)(sin|cos|arccot|cot|csc|ln|log|exp|star|perp)' "ln" rwA
-\\`!p snip.rv = match.group(1)`
+snippet '(?<!\\)(sin|cos|tan|sec|cot|csc|ln|log|exp|star|perp)' "ln" rwA
+\\`!p snip.rv = match.group(1)`($1)
 endsnippet
 
 priority 300
@@ -432,14 +551,7 @@ endsnippet
 priority 200
 context "math()"
 snippet '(?<!\\)(arcsin|arccos|arctan|arccot|arccsc|arcsec|pi|zeta|int)' "ln" rwA
-\\`!p snip.rv = match.group(1)`
-endsnippet
-
-
-priority 100
-context "math()"
-snippet -> "to" iA
-\to
+\\`!p snip.rv = match.group(1)`($1)
 endsnippet
 
 priority 200
@@ -451,11 +563,6 @@ endsnippet
 context "math()"
 snippet !> "mapsto" iA
 \mapsto
-endsnippet
-
-context "math()"
-snippet invs "inverse" iA
-^{-1}
 endsnippet
 
 context "math()"
@@ -476,7 +583,6 @@ snippet << "<<" iA
 \ll
 endsnippet
 
-
 snippet ~~ "~" iA
 \sim
 endsnippet
@@ -486,45 +592,52 @@ snippet set "set" wA
 \\{$1\\} $0
 endsnippet
 
+context "math()"
 snippet || "mid" iA
 \mid
 endsnippet
 
-
 context "math()"
-snippet cc "subset" Ai
+snippet sset "subset" Ai
 \subset
 endsnippet
 
+context "math()"
+snippet inn "in" iA
+\in
+endsnippet
+
+context "math()"
 snippet notin "not in " iA
 \not\in
 endsnippet
 
 context "math()"
-snippet inn "in " iA
-\in
-endsnippet
-
 snippet NN "n" iA
 \N
 endsnippet
 
+context "math()"
 snippet Nn "cap" iA
 \cap
 endsnippet
 
+context "math()"
 snippet UU "cup" iA
 \cup
 endsnippet
 
+context "math()"
 snippet uuu "bigcup" iA
 \bigcup_{${1:i \in ${2: I}}} $0
 endsnippet
 
+context "math()"
 snippet <! "normal" iA
 \triangleleft
 endsnippet
 
+context "math()"
 snippet <> "hokje" iA
 \diamond
 endsnippet
@@ -587,6 +700,130 @@ endsnippet
 
 snippet letw "let omega" iA
 Let $\Omega \subset \C$ be open.
+endsnippet
+
+# ╔═╗┬─┐┌─┐┌─┐┬┌─
+# ║ ╦├┬┘├┤ ├┤ ├┴┐
+# ╚═╝┴└─└─┘└─┘┴ ┴
+
+snippet @a "alpha" wA
+\alpha
+endsnippet
+
+snippet @b "beta" wA
+\beta
+endsnippet
+
+snippet @g "gamma" wA
+\gamma
+endsnippet
+
+snippet @G "Gamma" wA
+\Gamma
+endsnippet
+
+snippet @d "delta" wA
+\delta
+endsnippet
+
+snippet @D "Delta" wA
+\Delta
+endsnippet
+
+snippet @e "epsilon" wA
+\epsilon
+endsnippet
+
+snippet @ve "varepsilin" wA
+\varepsilon
+endsnippet
+
+snippet @z "zeta" wA
+\zeta
+endsnippet
+
+snippet @t "theta" wA
+\theta
+endsnippet
+
+snippet @T "Theta" wA
+\Theta
+endsnippet
+
+snippet @i "iota" wA
+\iota
+endsnippet
+
+snippet @k "kappa" wA
+\kappa
+endsnippet
+
+snippet @l "lambda" wA
+\lambda
+endsnippet
+
+snippet @L "Lambda" wA
+\Lambda
+endsnippet
+
+snippet @n "nu" wA
+\nu
+endsnippet
+
+snippet @x "xi" wA
+\xi
+endsnippet
+
+snippet @X "Xi" wA
+\Xi
+endsnippet
+
+snippet @p "phi" wA
+\phi
+endsnippet
+
+snippet @P "Phi" wA
+\Phi
+endsnippet
+
+snippet @r "rho" wA
+\rho
+endsnippet
+
+snippet @s "sigma" wA
+\sigma
+endsnippet
+
+snippet @S "Sigma" wA
+\Sigma
+endsnippet
+
+snippet @u "upsilon" wA
+\upsilon
+endsnippet
+
+snippet @U "Upsilon" wA
+\Upsilon
+endsnippet
+
+snippet @c "chi" wA
+\chi
+endsnippet
+
+snippet @C "Chi" wA
+\Chi
+endsnippet
+
+snippet @y "psi" wA
+\psi
+endsnippet
+
+snippet @Y "Psi" wA
+\Psi
+endsnippet
+
+snippet @o "omega" wA
+\omega
 endsnippet
 
 # vim:ft=snippets
