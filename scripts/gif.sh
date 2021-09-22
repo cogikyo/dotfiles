@@ -2,6 +2,7 @@
 TMPFILE="$(mktemp -t screencast-XXXXXXX).mkv"
 OUTPUT="$HOME/recordings/gifs/$(date +%m-%d-%y__%H':'%M':'%S)"
 
+mkdir -p "$HOME/recordings/gifs"
 read -r X Y W H G ID < <(slop -f "%x %y %w %h %g %i")
 notify-send -u Critical -t 3000 started Recording
 

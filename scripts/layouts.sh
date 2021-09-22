@@ -20,7 +20,7 @@ stat="statistics"
 options="$calc\n$linear\n$c\n$golang\n$solidity\n$javascript\n$bash\n$python\n\
   $notes\n$dotfiles\n$pandas\n$stat"
 
-chosen="$(echo -e "$options" | $rofi_command -p "" -dmenu)"
+chosen="$(echo -e "$options" | $rofi_command -p "ﱖ" -dmenu)"
 case $chosen in
     $notes)
 		./scripts/basic-launch.sh notes

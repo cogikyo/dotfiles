@@ -16,9 +16,8 @@ Plug 'nosvagor/iceberg-dark'
 Plug 'chrisbra/Colorizer'
 Plug 'kyazdani42/nvim-web-devicons'
 
-" treesitter
-" Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
-" Plug 'nvim-treesitter/playground'
+Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+Plug 'nvim-treesitter/playground'
 
 Plug 'lervag/vimtex'
 Plug 'KeitaNakamura/tex-conceal.vim', {'for': 'tex'}
