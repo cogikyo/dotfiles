@@ -1,19 +1,19 @@
 #! /bin/sh
 # ██████╗ ███████╗██████╗ ██╗    ██╗███╗   ███╗██████╗  ██████╗
 # ██╔══██╗██╔════╝██╔══██╗██║    ██║████╗ ████║██╔══██╗██╔════╝
-# ██████╔╝███████╗██████╔╝██║ █╗ ██║██╔████╔██║██████╔╝██║     
-# ██╔══██╗╚════██║██╔═══╝ ██║███╗██║██║╚██╔╝██║██╔══██╗██║     
+# ██████╔╝███████╗██████╔╝██║ █╗ ██║██╔████╔██║██████╔╝██║
+# ██╔══██╗╚════██║██╔═══╝ ██║███╗██║██║╚██╔╝██║██╔══██╗██║
 # ██████╔╝███████║██║     ╚███╔███╔╝██║ ╚═╝ ██║██║  ██║╚██████╗
 # ╚═════╝ ╚══════╝╚═╝      ╚══╝╚══╝ ╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝
 # →-.   →  .-'.   →  .--.   →  .--.   →  .--.   →  .-→
-# →::.\::::::::.\::::::::.\::::::::.\::::::::.\::::::: → → 
-# → →:.\ https://github.com/nosvagor/.dotfiles \::: → →  →  → 
+# →::.\::::::::.\::::::::.\::::::::.\::::::::.\::::::: → →
+# → →:.\ https://github.com/nosvagor/.dotfiles \::: → →  →  →
 # →::::.\::::::::.\::::::::.\::::::::.\::::::::.\::::→  →
-#   → →   `--'  →   `.-'  →   `--'  →   `--'  →   `--' → → 
+#   → →   `--'  →   `.-'  →   `--'  →   `--'  →   `--' → →
 
 # ╔═╗┬ ┬┌┬┐┌─┐┌─┐┌┬┐┌─┐┬─┐┌┬┐
-# ╠═╣│ │ │ │ │└─┐ │ ├─┤├┬┘ │ 
-# ╩ ╩└─┘ ┴ └─┘└─┘ ┴ ┴ ┴┴└─ ┴ 
+# ╠═╣│ │ │ │ │└─┐ │ ├─┤├┬┘ │
+# ╩ ╩└─┘ ┴ └─┘└─┘ ┴ ┴ ┴┴└─ ┴
 bspc rule -r '*'
 killall "dunst"
 dunst &
@@ -32,7 +32,7 @@ ytmdesktop &
 bspc monitor -d 1 2 3 4 5
 bspc rule -a youtube-music-desktop-app desktop='^5'
 bspc rule -a Gpick state=floating
-bspc rule -a Zathura state=tiled 
+bspc rule -a Zathura state=tiled
 bspc rule -a vlc state=floating
 bspc rule -a zoom state=floating
 
@@ -47,6 +47,8 @@ bspc config right_padding           6
 bspc config left_padding            6
 bspc config bottom_padding          12
 
+bspc config presel_feedback         false
+
 bspc config borderless_monocle      false
 bspc config gapless_monocle         false
 bspc config paddingless_monocle     false
@@ -57,4 +59,4 @@ bspc config bottom_monocle_padding  169
 
 bspc config focus_follows_pointer   true
 
-sleep 1 && notify-send -u low hello hello &
+sleep 1 && notify-send -t 3000 hello hello

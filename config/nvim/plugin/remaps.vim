@@ -4,7 +4,9 @@
 nnoremap <SPACE> <Nop>
 let mapleader = " "
 
+" temp:, : needs to be on base layer of keyboard
 nnoremap <leader>s :w<CR>
+nnoremap <leader>x :q<CR>
 
 " 🦬 buffers
 nnoremap <leader>w :bp<CR>

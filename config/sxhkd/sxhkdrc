@@ -13,41 +13,39 @@
 # ╔╗ ┌─┐┌─┐┬┌─┐┌─┐
 # ╠╩╗├─┤└─┐││  └─┐
 # ╚═╝┴ ┴└─┘┴└─┘└─┘
+
 # volume
-XF86AudioRaiseVolume
-	pactl set-sink-volume @DEFAULT_SINK@ +10%
-XF86AudioLowerVolume
-	pactl set-sink-volume @DEFAULT_SINK@ -10%
+XF86Audio{Raise,Lower}Volume
+	pactl set-sink-volume @DEFAULT_SINK@ {+10,-10}%
+super + shift + {j,period,m}
+  pactl set-sink-volume @DEFAULT_SINK@ {+10,-10,0}%
 
 # ╔═╗┌─┐┌─┐┌─┐
 # ╠═╣├─┘├─┘└─┐
 # ╩ ╩┴  ┴  └─┘
+
 # terminal emulator
 super + Return
 	alacritty
 
 #browser
-super + t
+super + f
     firefox
 
-# floating terminal, filemanger, editor
-super + {d,f,g}
-    bspc rule -a Alacritty -o state=floating rectangle=1920x1080+1080+540 \
-    && {alacritty, alacritty -e lf, alacritty -e nvim .}
-
 #pdf
-super + comma
+super + g
    zathura
 
 # ╦═╗┌─┐┌─┐┬
 # ╠╦╝│ │├┤ │
 # ╩╚═└─┘└  ┴
+
 # programs
 super + p
 	rofi -no-lazy-grab -show drun -theme ~/.config/rofi/launcher.rasi
 
 # layouts
-super + u
+super + j
     ./scripts/layouts.sh
 
 # emoji
@@ -61,6 +59,7 @@ super + v
 # ╔╗ ┌─┐┌─┐┬ ┬┌┬┐
 # ╠╩╗└─┐├─┘││││││
 # ╚═╝└─┘┴  └┴┘┴ ┴
+
 # quit/restart bspwm
 super + alt + {q,r}
 	bspc {quit,wm -r}
@@ -74,55 +73,59 @@ super + y
 	bspc desktop -l next
 
 # set the window state
-super + {m,w}
+super + {m,k}
 	bspc node -t {tiled,floating}
 
 # focus the node in the given direction
-super + {h,j,k,l}
-	bspc node -f {west,south,north,east}.local
+super + {n,i,u,o}
+ 	bspc node -f {west,south,north,east}.local
 
 # moved focused window to prev/next desktop then switch
-super + shift + {h,l}
+super + shift + {e,t}
     DIR={prev,next}; \
     bspc node -d "$DIR"; \
     bspc desktop -f "$DIR"
 
 # switch destkops
-super + ctrl + {h,l}
+super + {e,t}
     DIR={prev,next}; \
 	bspc desktop -f "$DIR"
 
 # makeshift tab swap
-super + alt + shift + p
+super + h
 	bspc node -s south; bspc node -f north
 
 # ╔╦╗┌─┐┬┌┬┐
 # ║║║├─┤││││
 # ╩ ╩┴ ┴┴┴ ┴
+
 # selection then copy to clipboard
 super + b
 	maim -s -u | xclip -selection clipboard -t image/png
 
 #selection then save
 super + c
-	maim -s -u ~/screenshots/$(date +%m-%d-%y__%H':'%M':'%S).png
+	maim -s -u ~/screenshots/$(date +%m-%d-%y__%H':'%M':'%S).png && \
+  notify-send -u low -t 3000 "selected area" "screenshot saved"
 
 #screenshot of active window
-##super + b
-#	maim -u -i $(xdotool getactivewindow) ~/screenshots/$(date +%m-%d-%y__%H':'%M':'%S).png
+super + d
+	maim -u -i $(xdotool getactivewindow) ~/screenshots/$(date +%m-%d-%y__%H':'%M':'%S).png && \
+  notify-send -u low -t 3000 "active window" "screenshot saved"
 
 #screensshot of entire screen
-super + shift + ctrl + b
-	maim -u ~/screenshots/$(date +%m-%d-%y_%H':'%M':'%S).png
+super + comma
+	maim -u ~/screenshots/$(date +%m-%d-%y_%H':'%M':'%S).png && \
+  notify-send -u low -t 3000 "entire screen" "screenshot saved"
 
 # ╔═╗┌─┐┌┬┐┌─┐┌─┐┌─┐
 # ╠╣ ├┤ │││├─┘├┤ │ ┬
 # ╚  └  ┴ ┴┴  └─┘└─┘
 
 # stop ffmpeg
-ctrl + shift + super + d
+ctrl + shift + super + c
 	killall --user $USER  --ignore-case  --signal INT  ffmpeg & notify-send -u Critical -t 3000 ended Recording
 
 # generate gif of selected area
-ctrl + shift + super + g
+ctrl + shift + super + b
 	~/scripts/gif.sh

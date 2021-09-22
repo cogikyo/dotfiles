@@ -31,21 +31,20 @@ margin-bottom = 0
 ; ╚═╝└─┘┴─┘└─┘┴└─└─┘
 [colors]
 foreground  = #c6c8d1
-minor       = #6b7089
-minimal     = #3d4364
-inactive    = #1e2132
+minor       = #a2a5ba
+minimal     = #7b839e
+inactive    = #3e496b
 background  = #161821
-emphasis    = #e2a478
-stress      = #e9b189
+emphasis    = #e39866
 main        = #4ca9f5
 sec         = #7abef5
 sub         = #b0d0eb
 bold        = #cedeeb
-link        = #99e09b
+green       = #95cf78
 sucess      = #57d9c3
-warn        = #eb4972
-positive    = #f5736c
-negative    = #5f89f5
+warn        = #f54088
+positive    = #e36866
+negative    = #6685e3
 trans       = #00ff0000
 
 ; ╔╗ ┌─┐┬─┐
@@ -88,7 +87,7 @@ override-redirect = true
 
 modules-left = launcher layout bspwm pulseaudio dunst
 modules-center = date
-modules-right = temperature cpu memory htop power
+modules-right = temperature cpu memory terminal power
 
 pseudo-transparency = false
 
@@ -117,14 +116,14 @@ content-background = ${colors.background}
 content-font = 8
 click-left = ~/scripts/powermenu.sh
 
-[module/htop]
+[module/terminal]
 type=custom/text
 content = %{O1}╼╾
 content-margin = 1
 content-font = 6
 content-foreground = ${colors.sub}
 content-background = ${colors.background}
-click-left = bspc rule -a Alacritty -o state=floating rectangle=1920x1080+1080+540 && alacritty -e htop
+click-left = bspc rule -a Alacritty -o state=floating rectangle=1118x1960+1361+100 && alacritty
 
 [module/layout]
 type=custom/text
@@ -280,7 +279,7 @@ ramp-coreload-7 = %{F#eb4972}█%{F-}
 [module/memory]
 type = internal/memory
 interval = 1
-format = %{A1:bspc rule -a Alacritty -o state=floating rectangle=1920x1080+1080+540 && alacritty -e s-tui:}<label> <bar-used>%{A}
+format = %{A1:bspc rule -a Alacritty -o state=floating rectangle=1920x1080+1080+540 && alacritty -e htop:}<label> <bar-used>%{A}
 label = "%{F#b0d0eb}%{T6}%{T-}%{F-}  %gb_used% "
 format-background = ${colors.background}
 format-margin = 2
