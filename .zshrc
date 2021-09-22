@@ -51,7 +51,7 @@ bindkey -s '^o' 'lfcd\n'
 
 # common navigation
 alias dd="cd ~/downloads"
-alias notes="cd ~/notes"
+alias not="cd ~/notes"
 alias dot="cd ~/.dotfiles"
 
 # common commands
@@ -61,14 +61,24 @@ alias kurmit='(){git add . && git commit -m"$1";}'
 alias n='nvim .'
 
 # tmux
-alias ta='()tmux-session restore && tmux attach'
+alias tls='tmux ls'
+alias ta='(){tmux attach -t \ $1;}'
+alias taf='tmux attach -t \ 🔥'
+alias taw='tmux attach -t \ 🌊'
+alias tae='tmux attach -t \ 🌳'
+alias taa='tmux attach -t \ ☁ '
+alias tad='tmux attach -t \ 🪙'
+alias tan='tmux attach -t \ 📓'
+alias td='(){tmux detach}'
+alias tr='()tmux-session restore'
 alias ts='tmux-session save'
 alias tk='tmux kill-session'
 alias water='tmux new-session -c ~/notes/water -s \ 🌊 -n nvim "nvim ."'
 alias earth='tmux new-session -c ~/notes/earth -s \ 🌳 -n nvim "nvim ."'
 alias fire='tmux new-session -c ~/notes/fire -s \ 🔥 -n nvim "nvim ."'
-alias air='tmux new-session -c ~/notes/air -s \ ☁  -n nvim "nvim ."'
+alias air='tmux new-session -c ~/notes/air -s \ ☁️\    -n nvim "nvim ."'
 alias dotfiles='tmux new-session -c ~/.dotfiles/ -s \ 🪙 -n dotfiles "nvim ."'
+alias notes='tmux new-session -c ~/notes/ -s \ 📓 -n notes "nvim ."'
 
 # ╔═╗┬  ┬ ┬┌─┐┬┌┐┌┌─┐
 # ╠═╝│  │ ││ ┬││││└─┐

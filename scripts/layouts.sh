@@ -17,8 +17,7 @@ c="c++"
 stat="statistics"
 
 # Variable passed to rofi
-options="$calc\n$linear\n$c\n$golang\n$solidity\n$javascript\n$bash\n$python\n\
-  $notes\n$dotfiles\n$pandas\n$stat"
+options="$calc\n$linear\n$c\n$golang\n$solidity\n$javascript\n$bash\n$python\n$notes\n$dotfiles\n$pandas\n$stat"
 
 chosen="$(echo -e "$options" | $rofi_command -p "ﱖ" -dmenu)"
 case $chosen in
