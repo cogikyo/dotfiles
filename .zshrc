@@ -57,7 +57,8 @@ alias dot="cd ~/.dotfiles"
 # common commands
 alias MYEYES='(){xrandr --output HDMI-A-0 --brightness $1;}'
 alias niol='clear && zsh'
-alias kurmit='(){git add . && git commit -m"$1";}'
+alias gs='git status'
+alias kurmit='(){git add . && git commit -m"$1" && git push;}'
 alias n='nvim .'
 
 # tmux
