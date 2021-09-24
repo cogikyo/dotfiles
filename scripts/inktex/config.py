@@ -25,7 +25,7 @@ def latex_document(latex):
 config = {
     'rofi_theme': None,
     'font': 'monospace',
-    'font_size': 10,
+    'font_size': 12,
     'open_editor': open_editor,
     'latex_document': latex_document,
 }
