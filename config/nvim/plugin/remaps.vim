@@ -66,11 +66,16 @@ nnoremap <leader>tf <cmd>Telescope find_files<cr>
 nnoremap <leader>tg <cmd>Telescope live_grep<cr>
 nnoremap <leader>tt <cmd>Telescope buffers<cr>
 nnoremap <leader>td <cmd>Telescope help_tags<cr>
+nnoremap <leader>te <cmd>Telescope git_files<cr>
+nnoremap <leader>tm <cmd>Telescope man_pages<cr>
+nnoremap <leader>tx <cmd>Telescope man_pages<cr>
 
 " 🤲 toggle
 nnoremap <leader>ut :UndotreeToggle<CR>
 nnoremap <leader>ct :ColorToggle<CR>
 nnoremap <leader>mp :MarkdownPreviewToggle<CR>
+nnoremap <leader>ei :TroubleToggle<CR>
+
 
 " 🔤 spelling
 inoremap <C-l> <c-g>u<Esc>[s1z=`]a<c-g>u
@@ -84,6 +89,9 @@ nnoremap <C-y> A<CR>\item<Space>
 nnoremap <leader>ni /\\item<CR>zt
 nnoremap <leader>ny ?\\item<CR>zt
 nnoremap <leader>na /\\item<CR><esc>0ztA
+inoremap <C-f> <Esc>: silent exec '.!inkscape-figures create "'.getline('.').'" "'.b:vimtex.root.'/figures/"'<CR><CR>:w<CR>
+nnoremap <C-f> : silent exec '!inkscape-figures edit "'.b:vimtex.root.'/figures/" > /dev/null 2>&1 &'<CR><CR>:redraw!<CR>
+
 
 " ⛵ reflow
 inoremap <C-h> <esc>VgwzHzzA

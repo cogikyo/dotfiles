@@ -55,11 +55,14 @@ alias not="cd ~/notes"
 alias dot="cd ~/.dotfiles"
 
 # common commands
+alias pac='(){sudo pacman -S $1;}'
 alias MYEYES='(){xrandr --output HDMI-A-0 --brightness $1;}'
 alias niol='clear && zsh'
-alias gs='git status'
+alias st='git status'
 alias kurmit='(){git add . && git commit -m"$1" && git push;}'
 alias n='nvim .'
+alias inkwatch='inkscape-figures watch'
+alias inktex='python3 $HOME/.local/inktex/main.py'
 
 # tmux
 alias tls='tmux ls'

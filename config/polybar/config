@@ -149,21 +149,6 @@ type = custom/text
 content = "    "
 content-margin = 7
 
-; [module/arrow1]
-; type = custom/text
-; content = "           "
-; content-foreground = ${colors.background}
-; content-background = ${colors.trans}
-; content-font = 6
-;
-; [module/arrow2]
-; type = custom/text
-; content = "              "
-; content-foreground = ${colors.background}
-; content-background = ${colors.trans}
-; content-font = 5
-; nerd fonts buged, cutting off icons if background != #1f1f1f... not sure why.
-
 ; ╔╗ ┌─┐┌─┐┬ ┬┌┬┐
 ; ╠╩╗└─┐├─┘││││││
 ; ╚═╝└─┘┴  └┴┘┴ ┴
@@ -195,8 +180,8 @@ ws-icon-0 = 1;%{O1}%{A1:bspc desktop -f \^1 :}%{A}
 ws-icon-1 = 1;
 ws-icon-2 = 2;%{O1}%{A1:bspc desktop -f \^2 :}%{A}
 ws-icon-3 = 3;%{O5}%{A1:bspc desktop -f \^3:}%{A}
-ws-icon-4 = 4;%{O-4}%{A1:bspc desktop -f \^4 :}ﲹ%{A}
-ws-icon-5 = 5;%{O-12}%{A1:bspc desktop -f \^5:}%{A}
+ws-icon-4 = 4;%{O-4}%{A1:bspc desktop -f \^4 :}ﯟ%{A}
+ws-icon-5 = 5;%{O-8}%{A1:bspc desktop -f \^5:}%{A}
 
 ; ╔═╗┬ ┬┌┬┐┬┌─┐
 ; ╠═╣│ │ ││││ │
