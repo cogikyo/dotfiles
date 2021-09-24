@@ -35,6 +35,7 @@ bspc rule -a Gpick state=floating
 bspc rule -a Zathura state=tiled
 bspc rule -a vlc state=floating
 bspc rule -a zoom state=floating
+bspc rule -a Inkscape state=floating
 
 # ╔═╗┌─┐┌┐┌┌─┐┬┌─┐
 # ║  │ ││││├┤ ││ ┬
