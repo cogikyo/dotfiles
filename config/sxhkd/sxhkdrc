@@ -82,13 +82,13 @@ super + {n,i,u,o}
 
 # moved focused window to prev/next desktop then switch
 super + shift + {e,t}
-    DIR={prev,next}; \
-    bspc node -d "$DIR"; \
-    bspc desktop -f "$DIR"
+  DIR={prev,next}; \
+  bspc node -d "$DIR"; \
+  bspc desktop -f "$DIR"
 
 # switch destkops
 super + {e,t}
-    DIR={prev,next}; \
+  DIR={prev,next}; \
 	bspc desktop -f "$DIR"
 
 # makeshift tab swap

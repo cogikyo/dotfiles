@@ -23,8 +23,6 @@ data_dirs = {
 
 rofi_theme_params = ['-theme', config['rofi_theme']] if ('rofi_theme' in config and config['rofi_theme'] is not None) else []
 
-print(data_dirs)
-
 def check(type_, self, name):
     files = list(data_dirs[type_].iterdir())
     names = [f.stem for f in files]

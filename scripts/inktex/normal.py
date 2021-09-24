@@ -42,10 +42,10 @@ def normal_mode(self, event, char):
 
     if event.type == X.KeyPress and char:
         pressed.add(event_to_string(self, event))
-        return 
+        return
 
     if event.type != X.KeyRelease:
-        return 
+        return
 
     handled = False
     if len(pressed) > 1:
@@ -55,7 +55,7 @@ def normal_mode(self, event, char):
         # Get the only element in pressed
         ev = next(iter(pressed))
         handled = handle_single_key(self, ev)
-        
+
     # replay events to Inkscape if we couldn't handle them
     if not handled:
         replay(self)
@@ -63,6 +63,7 @@ def normal_mode(self, event, char):
     events.clear()
     pressed.clear()
 
+# TODO: update to match keyboard layout
 def handle_single_key(self, ev):
     if ev == 't':
         # Vim mode
@@ -91,12 +92,12 @@ def handle_single_key(self, ev):
     elif ev == 'f':
         # Bezier
         self.press('b')
-    elif ev == 'z':
+    elif ev == 'd':
         # Undo
         self.press('z', X.ControlMask)
-    elif ev == 'Shift+z':
+    elif ev == 'Shift+d':
         # Delete
-        self.press('Delete')
+        self.press('y', X.ControlMask)
     elif ev == '`':
         # Disabled mode
         self.press('t')
@@ -106,6 +107,7 @@ def handle_single_key(self, ev):
         return False
     return True
 
+# TODO: update to match theme
 def paste_style(self, combination):
     """
 
@@ -124,7 +126,7 @@ def paste_style(self, combination):
     }
 
     if {'s', 'a', 'd', 'g', 'h', 'x', 'e'} & combination:
-        style['stroke'] = 'black'
+        style['stroke'] = '#c6c8d1'
         style['stroke-width'] = w
         style['marker-end'] = 'none'
         style['marker-start'] = 'none'
@@ -154,7 +156,7 @@ def paste_style(self, combination):
         style['stroke-dasharray'] = f'{3*pt},{3*pt}'
 
     if 'f' in combination:
-        style['fill'] = 'black'
+        style['fill'] = '#c6c8d1'
         style['fill-opacity'] = 0.12
 
     if 'b' in combination:
@@ -162,7 +164,7 @@ def paste_style(self, combination):
         style['fill-opacity'] = 1
 
     if 'w' in combination:
-        style['fill'] = 'white'
+        style['fill'] = '#c6c8d1'
         style['fill-opacity'] = 1
 
     if {'f', 'b', 'w'} & combination:
