@@ -5,6 +5,7 @@
 ln -sfn $HOME/.dotfiles/.Xresources $HOME/
 ln -sfn $HOME/.dotfiles/.xinitrc $HOME/
 ln -sfn $HOME/.dotfiles/.latexmkrc $HOME/
+ln -sfn $HOME/.dotfiles/.tmux-session $HOME/
 ln -sfn $HOME/.dotfiles/.zshrc $HOME/
 ln -sfn $HOME/.dotfiles/config/* $HOME/.config/
 ln -sfn $HOME/.dotfiles/resources $HOME/
