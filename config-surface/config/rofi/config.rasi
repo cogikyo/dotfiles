@@ -1,0 +1,3 @@
+configuration {
+  theme: "~/.config/rofi/inktex.rasi";
+}

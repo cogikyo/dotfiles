@@ -1,4 +1,5 @@
-#!/bin/bash
+#!/usr/bin/env bash
+
 TMPFILE="$(mktemp -t screencast-XXXXXXX).mkv"
 OUTPUT="$HOME/recordings/gifs/$(date +%m-%d-%y__%H':'%M':'%S)"
 

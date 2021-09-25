@@ -1,0 +1,58 @@
+#! /bin/sh
+# ██████╗ ███████╗██████╗ ██╗    ██╗███╗   ███╗██████╗  ██████╗
+# ██╔══██╗██╔════╝██╔══██╗██║    ██║████╗ ████║██╔══██╗██╔════╝
+# ██████╔╝███████╗██████╔╝██║ █╗ ██║██╔████╔██║██████╔╝██║
+# ██╔══██╗╚════██║██╔═══╝ ██║███╗██║██║╚██╔╝██║██╔══██╗██║
+# ██████╔╝███████║██║     ╚███╔███╔╝██║ ╚═╝ ██║██║  ██║╚██████╗
+# ╚═════╝ ╚══════╝╚═╝      ╚══╝╚══╝ ╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝
+# →-.   →  .-'.   →  .--.   →  .--.   →  .--.   →  .-→
+# →::.\::::::::.\::::::::.\::::::::.\::::::::.\::::::: → →
+# → →:.\ https://github.com/nosvagor/.dotfiles \::: → →  →  →
+# →::::.\::::::::.\::::::::.\::::::::.\::::::::.\::::→  →
+#   → →   `--'  →   `.-'  →   `--'  →   `--'  →   `--' → →
+
+# ╔═╗┬ ┬┌┬┐┌─┐┌─┐┌┬┐┌─┐┬─┐┌┬┐
+# ╠═╣│ │ │ │ │└─┐ │ ├─┤├┬┘ │
+# ╩ ╩└─┘ ┴ └─┘└─┘ ┴ ┴ ┴┴└─ ┴
+
+bspc rule -r '*'
+killall "dunst"
+dunst &
+killall "sxhkd"
+sxhkd &
+killall "lxsession"
+lxsession &
+~/.config/polybar/launch.sh &
+killall "borders"
+~/.config/bspwm/borders &
+
+
+# ╦═╗┬ ┬┬  ┌─┐┌─┐
+# ╠╦╝│ ││  ├┤ └─┐
+# ╩╚═└─┘┴─┘└─┘└─┘
+
+bspc monitor -d 1 2 3 4 5
+bspc rule -a youtube-music-desktop-app desktop='^5'
+bspc rule -a Gpick state=floating
+bspc rule -a Zathura state=tiled
+bspc rule -a vlc state=floating
+bspc rule -a zoom state=floating
+bspc rule -a Inkscape state=floating
+
+
+# ╔═╗┌─┐┌┐┌┌─┐┬┌─┐
+# ║  │ ││││├┤ ││ ┬
+# ╚═╝└─┘┘└┘└  ┴└─┘
+
+bspc config split_ratio             0.547
+bspc config border_width            10
+bspc config window_gap              8
+bspc config top_padding             52
+bspc config right_padding           0
+bspc config left_padding            0
+bspc config bottom_padding          12
+bspc config presel_feedback         false
+
+bspc config focus_follows_pointer   true
+
+sleep 1 && notify-send -u low hello hello

@@ -1,4 +1,5 @@
-#! /usr/bin/env bash
+#!/usr/bin/env bash
+
 languages=`echo "go lua cpp javascript typescript python rust slidity" | tr ' ' '\n'`
 core_utils=`echo "cd ls cat mkdir rmdir rm cp mv ln chown chmod dd tar less find diff grep sed awk dmesg lsblk mount umount su kill" | tr ' ' '\n'`
 
