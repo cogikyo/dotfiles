@@ -1,0 +1,108 @@
+configuration {
+    font:		              					"Hack Nerd Font 16";
+    show-icons:                     false;
+    disable-history:                false;
+    sidebar-mode: 				        	false;
+}
+
+@import "variables.rasi"
+
+window {
+    transparency:                   "screenshot";
+    background-color:               @background;
+    text-color:                     @foreground;
+    border:							            0.3% 0.2% 0.3% 0.2%;
+    border-color:					          @blue;
+    border-radius:                  5% 8% 7% 9%;
+    location:                       west;
+    width:                          28%;
+    height:                         23%;
+    y-offset:                       -25%;
+    x-offset:                       15%;
+}
+
+
+mainbox {
+    background-color:               @background;
+    border:							            0.25% 0.15% 0.25% 0.15%;
+    border-radius:                  4.7% 7.7% 6.7% 8.7%;
+    border-color:					          @cyan-br;
+    children:                       [ inputbar, listview ];
+    spacing:                        -5%;
+    padding:                        0% 2% 2% 1%;
+}
+
+inputbar {
+    children:            						[ prompt, entry ];
+    background-color:               @background;
+    text-color:                     @foreground;
+    expand:                         false;
+    border:							            0% 0% 0.1% 0%;
+    border-radius:                  0% 1% 1% 2%;
+    border-color:				          	@blue;
+    margin:                         5% 16.8% -0.2% 0.2%;
+    padding:                        1.5% 1% 0.3% 1.5%;
+}
+
+prompt {
+    enabled: 			            			false;
+    vertical-align:                 0.5;
+    horizontal-align:               0.5;
+    background-color: 				      @background;
+    text-color: 					          @blue;
+    font:					              		"Hack Nerd Font 16";
+}
+
+entry {
+    background-color:               @background;
+    text-color:                     @blue-br;
+    placeholder-color:              @black-br;
+    expand:                         true;
+    placeholder:                    "edit";
+    font:				              			"Hack Nerd Font 16";
+    blink:                          true;
+}
+
+listview {
+    background-color:               @background;
+    columns:                        1;
+    lines:                          6;
+    fixed-height:                   true;
+    spacing:                        0.1%;
+    cycle:                          true;
+    dynamic:                        true;
+    layout:                         vertical;
+    margin:                         -1% 2% -2% 4%;
+}
+
+
+element {
+    background-color:               @background;
+    text-color:                     @foreground;
+}
+
+element-icon {
+    background-color:               @background;
+    text-color:                     @foreground;
+    horizontal-align:               0.5;
+    vertical-align:                 0.5;
+}
+
+element-text {
+    background-color:               @background;
+    text-color:                     @foreground;
+    horizontal-align:               0.5;
+    vertical-align:                 0.5;
+    padding:                        12px 18px 12px 18px;
+    highlight:                      Bold #e2a478;
+    font:							              "Hack Nerd Font 20";
+}
+
+
+element-text selected {
+    background-color:               @background;
+    border:					            		0% 0.1% 0% 0.1%;
+    border-radius:                  0.7% 1% 0.7% 1%;
+    border-color:                  	@cyan;
+    text-color:                     @cyan-br;
+}

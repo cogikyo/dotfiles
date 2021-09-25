@@ -1,4 +1,3 @@
-
 #!/usr/bin/env bash
 
 uptime=$(uptime -p | sed -e 's/up //g')
@@ -21,6 +20,6 @@ case $chosen in
 		systemctl reboot
         ;;
     $lock)
-		env XSECURELOCK_SAVER=saver_mplayer XSECURELOCK_LIST_VIDEOS_COMMAND="find ~/resources/videos -type f" XSECURELOCK_SHOW_HOSTNAME=0 xsecurelock
+		env XSECURELOCK_SAVER=saver_mplayer XSECURELOCK_LIST_VIDEOS_COMMAND="find ~/resources/videos -type f" XSECURELOCK_SHOW_HOSTNAME=0 xsecurelock & systemctl suspend
         ;;
 esac

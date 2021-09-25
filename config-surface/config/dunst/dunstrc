@@ -1,0 +1,99 @@
+# ██████╗ ██╗   ██╗███╗   ██╗███████╗████████╗
+# ██╔══██╗██║   ██║████╗  ██║██╔════╝╚══██╔══╝
+# ██║  ██║██║   ██║██╔██╗ ██║███████╗   ██║
+# ██║  ██║██║   ██║██║╚██╗██║╚════██║   ██║
+# ██████╔╝╚██████╔╝██║ ╚████║███████║   ██║
+# ╚═════╝  ╚═════╝ ╚═╝  ╚═══╝╚══════╝   ╚═╝
+# →-.   →  .-'.   →  .--.   →  .--.   →  .--.   →  .-→
+# →::.\::::::::.\::::::::.\::::::::.\::::::::.\::::::: → →
+# → →:.\ https://github.com/nosvagor/.dotfiles \::: → →  →  →
+# →::::.\::::::::.\::::::::.\::::::::.\::::::::.\::::→  →
+#   → →   `--'  →   `.-'  →   `--'  →   `--'  →   `--' → →
+
+[global]
+# ╔╦╗┬┌─┐┌─┐┌─┐┬ ┬ ┬
+#  ║║│└─┐├─┘├─┤│ └┬┘
+# ═╩╝┴└─┘┴  ┴ ┴┴─┘┴
+monitor = 0
+follow = mouse
+geometry = "628x1+542+6"
+progress_bar = false
+indicate_hidden = true
+shrink = true
+transparency = 1
+notification_height = 0
+separator_height = 2
+padding = 0
+separator_color = frame
+horizontal_padding = 11
+frame_color = "#f5b17a"
+frame_width = 0
+sort = yes
+idle_threshold = 0
+
+# ╔╦╗┌─┐─┐ ┬┌┬┐
+#  ║ ├┤ ┌┴┬┘ │
+#  ╩ └─┘┴ └─ ┴
+font = "Open Sans 10"
+line_height = 0
+markup = full
+format = <span foreground="#b0d0eb"><b>%b</b></span> · %s
+alignment = left
+vertical_alignment = center
+show_age_threshold = -1
+word_wrap = no
+ignore_newline = yes
+stack_duplicates = false
+show_indicators = no
+
+# ╦ ╦┬┌─┐┌┬┐┌─┐┬─┐┬ ┬
+# ╠═╣│└─┐ │ │ │├┬┘└┬┘
+# ╩ ╩┴└─┘ ┴ └─┘┴└─ ┴
+sticky_history = false
+history_length = 10
+
+# ╔╦╗┬┌─┐┌─┐
+# ║║║│└─┐│
+# ╩ ╩┴└─┘└─┘
+dmenu = /usr/bin/dmenu -p dunst:
+browser = /usr/bin/firefox -new-tab
+always_run_script = true
+title = Dunst
+class = Dunst
+startup_notification = false
+verbosity = mesg
+corner_radius = 0
+ignore_dbusclose = false
+force_xinerama = false
+
+# ╔╦╗┌─┐┬ ┬┌─┐┌─┐
+# ║║║│ ││ │└─┐├┤
+# ╩ ╩└─┘└─┘└─┘└─┘
+mouse_left_click = close_current
+mouse_middle_click = do_action, close_current
+mouse_right_click = close_all
+
+# ╦┌─┐┌─┐┌┐┌┌─┐
+# ║│  │ ││││└─┐
+# ╩└─┘└─┘┘└┘└─┘
+icon_position = left
+min_icon_size = 4
+max_icon_size = 24
+
+# ╔═╗┌─┐┬  ┌─┐┬─┐┌─┐
+# ║  │ ││  │ │├┬┘└─┐
+# ╚═╝└─┘┴─┘└─┘┴└─└─┘
+[urgency_low]
+background = "#161821"
+foreground = "#c6c8d1"
+timeout = 30
+
+[urgency_normal]
+background = "#161821"
+foreground = "#84a0c6"
+timeout = 30
+
+[urgency_critical]
+background = "#161821"
+foreground = "#eb4972"
+timeout = 0
