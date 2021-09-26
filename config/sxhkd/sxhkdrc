@@ -25,8 +25,8 @@ super + shift + {j,period,m}
 # ╩ ╩┴  ┴  └─┘
 
 # terminal emulator
-super + Return
-	alacritty
+super + {_,shift +}Return
+  {alacritty,bspc rule -a Alacritty -o state=floating rectangle=1118x1960+1361+100 && alacritty}
 
 #browser
 super + f
