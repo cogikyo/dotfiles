@@ -25,7 +25,7 @@ def open_vim(self, compile_latex):
             svg = f"""<?xml version="1.0" encoding="UTF-8" standalone="no"?>
             <svg>
               <text
-                 style="font-size:{config['font_size']}px; font-family:'{config['font']}';-inkscape-font-specification:'{config['font']}, Normal';fill:#000000;fill-opacity:1;stroke:none;"
+                 style="font-size:{config['font_size']}px; font-family:'{config['font']}';-inkscape-font-specification:'{config['font']}, Normal';fill:#c6c8d1;fill-opacity:1;stroke:none;"
                  xml:space="preserve"><tspan sodipodi:role="line" >{latex}</tspan></text>
             </svg> """
             copy(svg, target=TARGET)
