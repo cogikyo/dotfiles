@@ -29,22 +29,6 @@ SAVEHIST=10000
 setopt appendhistory
 setopt share_history
 
-# change wd to last lf on quit
-lfcd () {
-    tmp="$(mktemp)"
-    lf -last-dir-path="$tmp" "$@"
-    if [ -f "$tmp" ]; then
-        dir="$(cat "$tmp")"
-        rm -f "$tmp"
-        if [ -d "$dir" ]; then
-            if [ "$dir" != "$(pwd)" ]; then
-                cd "$dir"
-            fi
-        fi
-    fi
-}
-bindkey -s '^o' 'lfcd\n'
-
 # ╔═╗┬  ┬┌─┐┌─┐┌─┐┌─┐
 # ╠═╣│  │├─┤└─┐├┤ └─┐
 # ╩ ╩┴─┘┴┴ ┴└─┘└─┘└─┘
@@ -79,12 +63,6 @@ alias td='(){tmux detach}'
 alias tr='()tmux-session restore'
 alias ts='tmux-session save'
 alias tk='tmux kill-session'
-alias water='tmux new-session -c ~/notes/water -s \ 🌊 -n nvim "nvim ."'
-alias earth='tmux new-session -c ~/notes/earth -s \ 🌳 -n nvim "nvim ."'
-alias fire='tmux new-session -c ~/notes/fire -s \ 🔥 -n nvim "nvim ."'
-alias air='tmux new-session -c ~/notes/air -s \ ☁️\    -n nvim "nvim ."'
-alias dotfiles='tmux new-session -c ~/.dotfiles/ -s \ 🪙 -n dotfiles "nvim ."'
-alias notes='tmux new-session -c ~/notes/ -s \ 📓 -n notes "nvim ."'
 
 # ╔═╗┬  ┬ ┬┌─┐┬┌┐┌┌─┐
 # ╠═╝│  │ ││ ┬││││└─┐
