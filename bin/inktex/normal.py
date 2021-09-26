@@ -63,7 +63,6 @@ def normal_mode(self, event, char):
     events.clear()
     pressed.clear()
 
-# TODO: update to match keyboard layout
 def handle_single_key(self, ev):
     if ev == 't':
         # Vim mode
@@ -77,10 +76,10 @@ def handle_single_key(self, ev):
     elif ev == 'Shift+a':
         # Save objects mode
         styles.save_object_mode(self)
-    elif ev == 's':
+    elif ev == '4':
         # Apply style mode
         self.mode = styles.style_mode
-    elif ev == 'Shift+s':
+    elif ev == 'Shift+c':
         # Save style mode
         styles.save_style_mode(self)
     elif ev == 'w':
@@ -89,14 +88,14 @@ def handle_single_key(self, ev):
     elif ev == 'x':
         # Snap
         self.press('percent', X.ShiftMask)
-    elif ev == 'f':
-        # Bezier
-        self.press('b')
+    elif ev == 's':
+        # Select
+        self.press('s')
     elif ev == 'd':
         # Undo
         self.press('z', X.ControlMask)
     elif ev == 'Shift+d':
-        # Delete
+        # Redo
         self.press('y', X.ControlMask)
     elif ev == '`':
         # Disabled mode
@@ -107,7 +106,6 @@ def handle_single_key(self, ev):
         return False
     return True
 
-# TODO: update to match theme
 def paste_style(self, combination):
     """
 
@@ -120,19 +118,49 @@ def paste_style(self, combination):
     w = 0.4 * pt
     thick_width = 0.8 * pt
     very_thick_width = 1.2 * pt
+    fg3 =       '#484e6b'
+    fg2 =       '#7b839e'
+    fg1 =       '#a2a5ba'
+    fg =        '#c6c8d1'
+    fgBr =      '#e9ebf5'
+
+    bg1 =       '#010103'
+    bg =        '#161821'
+    bgBr =      '#292e47'
+
+    primary2 =  '#cedeeb'
+    primary1 =  '#b0d0eb'
+    primar =    '#7abef5'
+
+    red =       '#e36866'
+    redBr =     '#fa4441'
+    orange =    '#e39866'
+    orangeBr =  '#fa8b41'
+    yellow =    '#e3d178'
+    yellowBr =  '#f5d94c'
+    green =     '#95cf78'
+    greenBr =   '#84f54c'
+    cyan =      '#7bd4b8'
+    cyanBr =    '#41fadb'
+    blue =      '#6685e3'
+    blueBr =    '#4271ff'
+    magenta =   '#a376b8'
+    magentaBr = '#bb5fe3'
+    pink =      '#e278ad'
+    pinkBr =    '#f54088'
 
     style = {
         'stroke-opacity': 1
     }
 
     if {'s', 'a', 'd', 'g', 'h', 'x', 'e'} & combination:
-        style['stroke'] = '#c6c8d1'
+        style['stroke'] = fg
         style['stroke-width'] = w
         style['marker-end'] = 'none'
         style['marker-start'] = 'none'
         style['stroke-dasharray'] = 'none'
     else:
-        style['stroke'] = 'none'
+        style['stroke'] = fg
 
     if 'g' in combination:
         w = thick_width
@@ -156,7 +184,7 @@ def paste_style(self, combination):
         style['stroke-dasharray'] = f'{3*pt},{3*pt}'
 
     if 'f' in combination:
-        style['fill'] = '#c6c8d1'
+        style['fill'] = fg
         style['fill-opacity'] = 0.12
 
     if 'b' in combination:
@@ -164,7 +192,7 @@ def paste_style(self, combination):
         style['fill-opacity'] = 1
 
     if 'w' in combination:
-        style['fill'] = '#c6c8d1'
+        style['fill'] = fg
         style['fill-opacity'] = 1
 
     if {'f', 'b', 'w'} & combination:
@@ -200,7 +228,7 @@ def paste_style(self, combination):
                   <g transform="scale({(2.40 * w + 3.87)/(4.5*w)})">
                     <path
                        d="M -1.55415,2.0722 C -1.42464,1.29512 0,0.1295 0.38852,0 0,-0.1295 -1.42464,-1.29512 -1.55415,-2.0722"
-                       style="fill:none;stroke:#000000;stroke-width:{0.6};stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
+                       style="fill:none;stroke:{fg};stroke-width:{0.6};stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:10;stroke-dasharray:none;stroke-opacity:1"
                        inkscape:connector-curvature="0" />
                    </g>
                 </marker>
