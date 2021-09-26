@@ -48,7 +48,7 @@ alias gp='git pull'
 alias wifi='(){sudo ~/scripts/wifi.sh "$1";}'
 alias n='nvim .'
 alias inkwatch='inkscape-figures watch'
-alias inktex='python3 $HOME/.local/inktex/main.py'
+alias inktex='python3 $HOME/.local/bin/inktex/main.py'
 
 # tmux
 alias tls='tmux ls'
