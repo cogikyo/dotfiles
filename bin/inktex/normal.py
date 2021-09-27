@@ -76,10 +76,10 @@ def handle_single_key(self, ev):
     elif ev == 'Shift+a':
         # Save objects mode
         styles.save_object_mode(self)
-    elif ev == '4':
+    elif ev == 'g':
         # Apply style mode
         self.mode = styles.style_mode
-    elif ev == 'Shift+c':
+    elif ev == 'Shift+Contrl+g':
         # Save style mode
         styles.save_style_mode(self)
     elif ev == 'w':
@@ -91,6 +91,9 @@ def handle_single_key(self, ev):
     elif ev == 's':
         # Select
         self.press('s')
+    elif ev == 'Shift+g':
+        # Gradient
+        self.press('g')
     elif ev == 'd':
         # Undo
         self.press('z', X.ControlMask)
@@ -101,6 +104,17 @@ def handle_single_key(self, ev):
         # Disabled mode
         self.press('t')
         self.mode = text.text_mode
+    elif ev == 'c':
+        # Copy
+        self.press('c', X.ControlMask)
+    elif ev == 'Shift+c':
+        # Paste
+        self.press('v', X.ControlMask)
+    elif ev == 'r':
+        # Enter
+        self.press('Return')
+    elif ev == 'q':
+        self.press('Delete')
     else:
         # Not handled
         return False
@@ -118,6 +132,7 @@ def paste_style(self, combination):
     w = 0.4 * pt
     thick_width = 0.8 * pt
     very_thick_width = 1.2 * pt
+    # Might turn colors into chords... currently saved as styles instead.
     fg3 =       '#484e6b'
     fg2 =       '#7b839e'
     fg1 =       '#a2a5ba'
@@ -130,7 +145,7 @@ def paste_style(self, combination):
 
     primary2 =  '#cedeeb'
     primary1 =  '#b0d0eb'
-    primar =    '#7abef5'
+    primary =   '#7abef5'
 
     red =       '#e36866'
     redBr =     '#fa4441'
@@ -166,7 +181,7 @@ def paste_style(self, combination):
         w = thick_width
         style['stroke-width'] = w
 
-    if 'h' in combination:
+    if 't' in combination:
         w = very_thick_width
         style['stroke-width'] = w
 
@@ -184,11 +199,11 @@ def paste_style(self, combination):
         style['stroke-dasharray'] = f'{3*pt},{3*pt}'
 
     if 'f' in combination:
-        style['fill'] = fg
-        style['fill-opacity'] = 0.12
+        style['fill'] = fg3
+        style['fill-opacity'] = 0.15
 
     if 'b' in combination:
-        style['fill'] = 'black'
+        style['fill'] = bg1
         style['fill-opacity'] = 1
 
     if 'w' in combination:

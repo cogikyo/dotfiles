@@ -54,9 +54,9 @@ basic_smol () {
 basic_phat () {
 
   basic () {
-    bspc config split_ratio 0.3015
+    bspc config split_ratio 0.3005
     alacritty -e cava & sleep 0.5
-    bspc config split_ratio 0.894
+    bspc config split_ratio 0.896
     bspc node -p north
   }
 
@@ -76,24 +76,24 @@ basic_phat () {
       & sleep 1
       ;;
     calculus)
-      bspc config split_ratio 0.3015
+      bspc config split_ratio 0.3005
       firefox --new-window https://calendar.google.com/calendar/u/0/r \
       & sleep 1
-      bspc config split_ratio 0.642
+      bspc config split_ratio 0.6439
       bspc node -p east
       zathura ~/notes/fire/$1/$1.pdf & sleep 0.5
-      bspc config split_ratio 0.777
+      bspc config split_ratio 0.78
       bspc node -p south
       alacritty -e cava & sleep 0.25
       bspc node -f west
-      bspc config split_ratio 0.952
+      bspc config split_ratio 0.954
       bspc node -p south
       zathura & sleep 0.25
       ;;
   esac
 
   bspc node -f west.local
-  bspc config split_ratio 0.3015
+  bspc config split_ratio 0.3005
 }
 
 ###
