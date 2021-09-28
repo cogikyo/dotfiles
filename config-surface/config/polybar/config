@@ -317,7 +317,8 @@ bar-used-empty-foreground = ${colors.minimal}
 [module/network]
 type = internal/network
 interface = wlp1s0
-interval = 1
+interval = 0.1
+ping-interval = 1
 
 format-connected = %{T6}<ramp-signal>%{T-}%{O2} <label-connected>
 format-disconnected = %{T6}<label-disconnected>%{T-}

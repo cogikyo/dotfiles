@@ -55,4 +55,4 @@ bspc config presel_feedback         false
 
 bspc config focus_follows_pointer   true
 
-sleep 1 && notify-send -u low hello hello
+sleep 1 && notify-send -u low -t 3000 $USER hello
