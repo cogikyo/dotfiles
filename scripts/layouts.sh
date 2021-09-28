@@ -107,7 +107,7 @@ end () {
 open () {
   begin
   basic_$size $1
-  end
+  end $1
 }
 
 
