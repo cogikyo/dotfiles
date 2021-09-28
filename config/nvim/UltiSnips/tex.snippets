@@ -50,15 +50,19 @@ endsnippet
 snippet sec "section" bA
 \section{$1}
 \begin{itemize}
-	\item $0
+	\item []
+
+	$0
 \end{itemize}
 endsnippet
 
 snippet ssec "subsection" bA
 \subsection{$1}
 \begin{itemize}
-	\item $0
+	\item
 \end{itemize}
+
+$0
 endsnippet
 
 snippet table "Table environment" b
@@ -106,12 +110,13 @@ endsnippet
 
 snippet src "source links" bA
 \src{
-	$1
+	\link{$1}{$2} |
 }
 endsnippet
 
 snippet lnk "link" wA
-\link{$1}{$2}
+\link{$1}{$2} |
+$0
 endsnippet
 
 snippet mti "multicolum" wA
