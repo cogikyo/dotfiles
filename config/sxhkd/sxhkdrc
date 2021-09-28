@@ -20,6 +20,11 @@ XF86Audio{Raise,Lower}Volume
 super + shift + {j,period,m}
   pactl set-sink-volume @DEFAULT_SINK@ {+10,-10,0}%
 
+# I can't figure out a better option
+shift + super + control + {w,r}
+  notify-send -t 3000 {connecting "bluetooth & wifi", reconnecting wifi} \
+  & {wifi psu & blt, wifi psu}
+
 # ╔═╗┌─┐┌─┐┌─┐
 # ╠═╣├─┘├─┘└─┐
 # ╩ ╩┴  ┴  └─┘
