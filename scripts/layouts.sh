@@ -88,7 +88,7 @@ basic_phat () {
       bspc node -f west
       bspc config split_ratio 0.954
       bspc node -p south
-      zathura & sleep 0.25
+      zathura ~/textbooks/thomas.pdf & sleep 0.25
       ;;
   esac
 
