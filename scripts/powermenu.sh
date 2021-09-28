@@ -6,10 +6,11 @@ rofi_command="rofi -theme ~/.config/rofi/powermenu.rasi"
 # Options
 shutdown="襤"
 reboot="累"
-lock=""
+lock=" "
+sus="⏾ "
 
 # Variable passed to rofi
-options="$shutdown\n$lock\n$reboot"
+options="$shutdown\n$lock\n$reboot\n$sus"
 
 chosen="$(echo -e "$options" | $rofi_command -p "$uptime" -dmenu -selected-row 1)"
 case $chosen in
@@ -20,6 +21,9 @@ case $chosen in
 		systemctl reboot
         ;;
     $lock)
+		env XSECURELOCK_SAVER=saver_mplayer XSECURELOCK_LIST_VIDEOS_COMMAND="find ~/resources/videos -type f" XSECURELOCK_SHOW_HOSTNAME=0 xsecurelock
+        ;;
+    $sus)
 		env XSECURELOCK_SAVER=saver_mplayer XSECURELOCK_LIST_VIDEOS_COMMAND="find ~/resources/videos -type f" XSECURELOCK_SHOW_HOSTNAME=0 xsecurelock & systemctl suspend
         ;;
 esac
