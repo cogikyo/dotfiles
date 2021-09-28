@@ -15,9 +15,9 @@ window {
     border-color:					          @blue;
     border-radius:                  5% 8% 7% 9%;
     location:                       center;
-    width:                          38%;
-    height:                         24%;
-    y-offset:                       -5%;
+    width:                          30%;
+    height:                         92%;
+    y-offset:                       1%;
 }
 
 
@@ -39,8 +39,8 @@ inputbar {
     border:							            0% 0% 0.1% 0%;
     border-radius:                  0% 1% 1% 2%;
     border-color:					          @blue;
-    margin:                         5% 16.6% -0.2% -0.5%;
-    padding:                        1.5% 0% 0.3% 1.5%;
+    margin:                         0% 16.6% -0.2% 2%;
+    padding:                        1.5% 0% 0.3% 1.6%;
 }
 
 prompt {
@@ -57,8 +57,8 @@ entry {
     text-color:                     @blue-br;
     placeholder-color:              @black-br;
     expand:                         true;
-    placeholder:                    " emoji";
-    font:							              "Hack Nerd Font 14";
+    placeholder:                    " zoomer";
+    font:							              "Hack Nerd Font 24";
     blink:                          true;
     vertical-align:                 0.5;
     horizontal-align:               0;
@@ -67,13 +67,12 @@ entry {
 listview {
     background-color:               @background;
     columns:                        1;
-    lines:                          6;
     fixed-height:                   true;
     spacing:                        0.1%;
     cycle:                          true;
     dynamic:                        false;
     layout:                         vertical;
-    margin:                         -1% 2% -2% 4%;
+    margin:                         6.1% 2% -2% 4%;
 }
 
 
@@ -96,7 +95,7 @@ element-text {
     vertical-align:                 0.5;
     padding:                        12px 18px 12px 18px;
     highlight:                      Bold #e2a478;
-    font:							              "Hack Nerd Font 20";
+    font:							              "Hack Nerd Font 30";
 }
 
 element-text selected {
