@@ -18,12 +18,26 @@ snippet template "Basic template" b
 \usepackage{nosvagor-math}
 \usepackage{nosvagor-commands}
 
-\definecolor{title-color}{HTML}{${1:red}}
-\newcommand{\theTitle}{\href{https://github.com/nosvagor/notes/tree/main/$2}{$3}}
+\colorlet{title-color}{${1:red}}
+\newcommand{\theTitle}{\href{https://github.com/nosvagor/notes/tree/main/${2:element}}/${3:subject}}{${4:Title}}
 
 \begin{document}
 
-$0
+\include{chapters/}
+\include{chapters/}
+\include{chapters/}
+\include{chapters/}
+\include{chapters/}
+\include{chapters/}
+\include{chapters/}
+\include{chapters/}
+\include{chapters/}
+\include{chapters/}
+\include{chapters/}
+\include{chapters/}
+\include{chapters/}
+\include{chapters/}
+\include{chapters/}
 
 \end{document}
 endsnippet
