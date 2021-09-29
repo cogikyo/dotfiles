@@ -1,5 +1,4 @@
 syntastic
-#es
 wikipedia
 https
 lightline
@@ -27,5 +26,6 @@ DEQ
 LDEs
 ODEs
 Eigenvectors
-z
 Transcendentals
+Rogawski
+Edfinity

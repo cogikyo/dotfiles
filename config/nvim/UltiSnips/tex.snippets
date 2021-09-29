@@ -13,21 +13,22 @@ endglobal
 # ╔╗ ┌─┐┌─┐┬┌─┐┌─┐
 # ╠╩╗├─┤└─┐││  └─┐
 # ╚═╝┴ ┴└─┘┴└─┘└─┘
-snippet template "Basic template" b
+snippet template "Basic template" bA
 \documentclass{nosvagor-notes}
 \usepackage{nosvagor-math}
 \usepackage{nosvagor-commands}
 
 \colorlet{title-color}{${1:red}}
-\newcommand{\theTitle}{\href{https://github.com/nosvagor/notes/tree/main/${2:element}}/${3:subject}}{${4:Title}}
+\newcommand{\theTitle}{%
+	\href{https://github.com/nosvagor/notes/tree/main/${2:fire}/${3:calculus}}%
+	{${4:Title}}%
+}
 
 \begin{document}
 
-\include{chapters/}
-\include{chapters/}
-\include{chapters/}
-\include{chapters/}
-\include{chapters/}
+\chapter{$5}
+
+$0
 
 \end{document}
 endsnippet
@@ -195,7 +196,7 @@ endsnippet
 # ║║║├─┤ │ ├─┤
 # ╩ ╩┴ ┴ ┴ ┴ ┴
 
-snippet mk "Inline Math" wA
+snippet nio "Inline Math" wA
 \( ${1} \)`!p
 if t[2] and t[2][0] not in [',', '.', '?', '-', ' ']:
 	snip.rv = ' '
@@ -303,7 +304,7 @@ snip.rv = eval('latex(' + match.group(1).replace('\\', '').replace('^', '**').re
 endsnippet
 
 snippet == "equals" iA
-&= $1 \\\\
+&=
 endsnippet
 
 snippet != "equals" iA
