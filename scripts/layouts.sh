@@ -60,6 +60,22 @@ basic_phat () {
     bspc node -p north
   }
 
+  tex () {
+    bspc config split_ratio 0.3005
+    firefox --new-window https://calendar.google.com/calendar/u/0/r \
+    & sleep 1
+    bspc config split_ratio 0.6439
+    bspc node -p east
+    zathura ~/notes/fire/$1/$1.pdf & sleep 0.5
+    bspc config split_ratio 0.78
+    bspc node -p south
+    alacritty -e cava & sleep 0.25
+    bspc node -f west
+    bspc config split_ratio 0.954
+    bspc node -p south
+    zathura ~/textbooks/$2.pdf & sleep 0.25
+  }
+
   case $1 in
     dotfiles|notes)
       basic
@@ -71,24 +87,10 @@ basic_phat () {
       & sleep 1
       ;;
     linear)
-      basic
-      firefox --new-window https://github.com/nosvagor/notes/tree/main/fire/$1 \
-      & sleep 1
+      tex linear strang
       ;;
     calculus)
-      bspc config split_ratio 0.3005
-      firefox --new-window https://calendar.google.com/calendar/u/0/r \
-      & sleep 1
-      bspc config split_ratio 0.6439
-      bspc node -p east
-      zathura ~/notes/fire/$1/$1.pdf & sleep 0.5
-      bspc config split_ratio 0.78
-      bspc node -p south
-      alacritty -e cava & sleep 0.25
-      bspc node -f west
-      bspc config split_ratio 0.954
-      bspc node -p south
-      zathura ~/textbooks/thomas.pdf & sleep 0.25
+      tex calculus thomas
       ;;
   esac
 
@@ -100,7 +102,7 @@ basic_phat () {
 
 end () {
   bspc config focus_follows_pointer true
-  notify-send -u low -t 3000 init $1 &
+  notify-send -u low -t 3000 init $1
   exit 0
 }
 

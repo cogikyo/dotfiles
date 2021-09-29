@@ -50,7 +50,7 @@ alias wifi='(){sudo ~/scripts/wifi.sh "$1";}'
 alias cn='bltm && wifi psu'
 alias n='nvim .'
 alias inkwatch='inkscape-figures watch'
-alias inktex='python3 $HOME/.local/bin/inktex/main.py'
+alias inktex='setsid python3 $HOME/.local/bin/inktex/main.py &'
 
 # tmux
 alias tls='tmux ls'
@@ -75,11 +75,12 @@ source ~/.local/zsh/zsh-autocomplete/zsh-autocomplete.plugin.zsh
 source ~/.local/zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
 source ~/.local/zsh/zsh-colored-man-pages/colored-man-pages.plugin.zsh
 
+# ╔═╗─┐ ┬┌─┐┌─┐┬─┐┌┬┐┌─┐
+# ║╣ ┌┴┬┘├─┘│ │├┬┘ │ └─┐
+# ╚═╝┴ └─┴  └─┘┴└─ ┴ └─┘
 
-# ╔═╗┌─┐┌┬┐┬ ┬
-# ╠═╝├─┤ │ ├─┤
-# ╩  ┴ ┴ ┴ ┴ ┴
-
+export EDITOR=nvim
+export VISUAL=nvim
 export GOPATH="$HOME/.go"
 export PATH="$PATH:$HOME/.go/bin"
 

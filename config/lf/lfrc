@@ -41,10 +41,7 @@ cmd trash %set -f; mv $fx ~/.trash
 # define a custom 'delete' command
 cmd delete ${{
     set -f
-    printf "$fx\n"
-    printf "delete?[y/n]"
-    read ans
-    [ $ans = "y" ] && rm -rf $fx
+    rm -rf $fx
 }}
 
 # use '<delete>' key for either 'trash' or 'delete' command
