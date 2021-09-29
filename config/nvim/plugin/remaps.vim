@@ -60,6 +60,8 @@ nnoremap <leader>k :m .-2<CR>==
 " 🪟 window movement
 nnoremap <Down> <C-w>j
 nnoremap <Up> <C-w>k
+nnoremap <C-Left> <C-w>h
+nnoremap <C-Right> <C-w>l
 
 " 🔭 telescope
 nnoremap <leader>tf <cmd>Telescope find_files<cr>

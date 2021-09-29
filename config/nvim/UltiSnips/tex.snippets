@@ -28,16 +28,6 @@ snippet template "Basic template" b
 \include{chapters/}
 \include{chapters/}
 \include{chapters/}
-\include{chapters/}
-\include{chapters/}
-\include{chapters/}
-\include{chapters/}
-\include{chapters/}
-\include{chapters/}
-\include{chapters/}
-\include{chapters/}
-\include{chapters/}
-\include{chapters/}
 
 \end{document}
 endsnippet
@@ -83,7 +73,6 @@ snippet table "Table environment" b
 \begin{table}[${1:htpb}]
 	\centering
 	\caption{${2:caption}}
-	\label{tab:${3:label}}
 	\begin{tabular}{${5:c}}
 	$0${5/((?<=.)c|l|r)|./(?1: & )/g}
 	\end{tabular}
@@ -95,7 +84,6 @@ snippet fig "Figure environment" b
 	\centering
 	${2:\includegraphics[width=0.8\textwidth]{$3}}
 	\caption{${4:$3}}
-	\label{fig:${5:${3/\W+/-/g}}}
 \end{figure}
 endsnippet
 
@@ -154,8 +142,8 @@ endsnippet
 snippet dli "dlink" wA
 \dlink{${1}}{${2:${VISUAL}}}
 endsnippet
-
 snippet uli "ulink" wA
+
 \ulink{${1}}{${2:${VISUAL}}}
 endsnippet
 
@@ -286,7 +274,7 @@ endsnippet
 # ╔═╗┬┬  ┬  ┌─┐┌─┐
 # ║ ╦││  │  ├┤ └─┐
 # ╚═╝┴┴─┘┴─┘└─┘└─┘
-# Uncatagorized / not used
+# Uncatagorized / not used frequently
 
 context "math()"
 snippet '([A-Za-z])(\d)' "auto subscript" wrA
