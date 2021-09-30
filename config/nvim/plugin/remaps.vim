@@ -78,7 +78,6 @@ nnoremap <leader>ct :ColorToggle<CR>
 nnoremap <leader>mp :MarkdownPreviewToggle<CR>
 nnoremap <leader>ei :TroubleToggle<CR>
 
-
 " 🔤 spelling
 inoremap <C-l> <c-g>u<Esc>[s1z=`]a<c-g>u
 nnoremap <C-l> [s1z=<c-o>
@@ -94,11 +93,13 @@ nnoremap <leader>na /\\item<CR><esc>0ztA
 inoremap <C-f> <Esc>: silent exec '.!inkscape-figures create "'.getline('.').'" "'.b:vimtex.root.'/figures/"'<CR><CR>:w<CR>
 nnoremap <C-f> : silent exec '!inkscape-figures edit "'.b:vimtex.root.'/figures/" > /dev/null 2>&1 &'<CR><CR>:redraw!<CR>
 
+" 🐍 python
+nnoremap <buffer> <leader>rr :w<CR>:exec '!python3' shellescape(@%, 1)<CR>
+
 " 🔃 reload
 nnoremap <leader>rs :call UltiSnips#RefreshSnippets()<CR>
-nnoremap <leader>rv :source $MYVIMRC<CR>
+nnoremap <leader>rm :source $HOME/.config/nvim/plugin/remaps.vim<CR>
 
 " ⛵ reflow
 inoremap <C-h> <esc>VgwzHzzA
 nnoremap <C-h> VgwzHzzg_
-
