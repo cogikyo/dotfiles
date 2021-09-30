@@ -132,7 +132,7 @@ def paste_style(self, combination):
     w = 0.4 * pt
     thick_width = 0.8 * pt
     very_thick_width = 1.2 * pt
-    # Might turn colors into chords... currently saved as styles instead.
+    # Might turn colors into chords... currently saved as styles.
     fg3 =       '#484e6b'
     fg2 =       '#7b839e'
     fg1 =       '#a2a5ba'
