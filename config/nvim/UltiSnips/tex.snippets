@@ -26,8 +26,6 @@ snippet template "Basic template" bA
 
 \begin{document}
 
-\chapter{$5}
-
 $0
 
 \end{document}
@@ -150,8 +148,24 @@ snippet uli "ulink" wA
 \ulink{${1}}{${2:${VISUAL}}}
 endsnippet
 
+snippet ct1 "primary" wA
+\1{${1:${VISUAL}}}
+endsnippet
+
+snippet ct2 "primary-1" wA
+\2{${1:${VISUAL}}}
+endsnippet
+
+snippet ct3 "primary-2" wA
+\3{${1:${VISUAL}}}
+endsnippet
+
 snippet aset "accent" wA
 \aset{${1:${VISUAL}}}
+endsnippet
+
+snippet aseg "accent" wA
+\aseg{${1:${VISUAL}}}
 endsnippet
 
 snippet ctr "positive" wA
@@ -199,7 +213,7 @@ endsnippet
 # ╩ ╩┴ ┴ ┴ ┴ ┴
 
 snippet nio "Inline Math" wA
-\( ${1} \)`!p
+\( ${1:${VISUAL}} \)`!p
 if t[2] and t[2][0] not in [',', '.', '?', '-', ' ']:
 	snip.rv = ' '
 else:

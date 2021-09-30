@@ -66,14 +66,17 @@ basic_phat () {
     & sleep 1
     bspc config split_ratio 0.6439
     bspc node -p east
-    zathura ~/notes/fire/$1/$1.pdf & sleep 0.5
+    zathura ~/notes/fire/$1/$2.pdf & sleep 0.5
     bspc config split_ratio 0.78
     bspc node -p south
     alacritty -e cava & sleep 0.25
+    bspc config split_ratio 0.295
+    bspc node -p north
+    zathura ~/notes/fire/$1/$1.pdf & sleep 0.5
     bspc node -f west
     bspc config split_ratio 0.954
     bspc node -p south
-    zathura ~/textbooks/$2.pdf & sleep 0.25
+    zathura ~/textbooks/$3.pdf & sleep 0.25
   }
 
   case $1 in
@@ -87,10 +90,10 @@ basic_phat () {
       & sleep 1
       ;;
     linear)
-      tex linear strang
+      tex linear mth-343/applied-linear strang
       ;;
     calculus)
-      tex calculus thomas
+      tex calculus mth-253/calc-iii rogawski
       ;;
   esac
 
