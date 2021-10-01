@@ -101,6 +101,25 @@ snippet item "Itemize" bA
 
 endsnippet
 
+snippet awi "answer" bA
+\begin{itemize}\color{foreground}
+	\item $0
+\end{itemize}
+
+endsnippet
+
+snippet awa "answer align" bA
+\fg{\begin{align*}
+	$1
+\end{align*}}
+endsnippet
+
+snippet daq "answer align" bA
+\fg{\[
+	$1
+\]}
+endsnippet
+
 snippet -- "\item" bA
 \item $0
 endsnippet
@@ -109,6 +128,10 @@ snippet ali "Align" bA
 \begin{align*}
 	${1:${VISUAL}}
 \end{align*}
+endsnippet
+
+snippet vsp "vsapce" bA
+\vspace{${1:-30}pt}
 endsnippet
 
 snippet src "source links" bA
@@ -288,10 +311,37 @@ snip.rv = stripped[0:i] + "\\frac{" + stripped[i+1:-1] + "}"
 `{$1}$0
 endsnippet
 
-# ╔═╗┬┬  ┬  ┌─┐┌─┐
-# ║ ╦││  │  ├┤ └─┐
-# ╚═╝┴┴─┘┴─┘└─┘└─┘
-# Uncatagorized / not used frequently
+context "math()"
+snippet cvec "column vector" iA
+\begin{bmatrix} $1 \\\\ $2 \\\\ $3 \end{bmatrix}
+endsnippet
+
+context "math()"
+snippet mtx "matrix" iA
+\\begin{bmatrix}
+$1 & $2 & $3 \\\\
+$4 & $5 & $6 \\\\
+$7 & $8 & $9
+\\end{bmatrix}
+endsnippet
+
+context "math()"
+snippet amx "matrix" iA
+\\begin{bmatrix}[ccc|c]
+$1 & $2 & $3 & $4 \\\\
+$5 & $6 & $7 & $8 \\\\
+$9 & $10 & $11 & $12
+\\end{bmatrix}
+endsnippet
+
+context "math()"
+snippet bm "bold face" iA
+\bm{$1}
+endsnippet
+
+snippet tbm "bold face math inline" wA
+\tbm{$1}
+endsnippet
 
 context "math()"
 snippet '([A-Za-z])(\d)' "auto subscript" wrA
@@ -694,9 +744,6 @@ snippet bigfun "Big function" iA
 .\end{align*}
 endsnippet
 
-snippet cvec "column vector" iA
-\begin{pmatrix} ${1:x}_${2:1}\\\\ \vdots\\\\ $1_${2:n} \end{pmatrix}
-endsnippet
 
 priority 10
 context "math()"

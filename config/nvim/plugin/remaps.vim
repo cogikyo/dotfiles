@@ -17,10 +17,11 @@ nnoremap <leader>dd :bd!<CR>
 nnoremap <leader>y "+y
 vnoremap <leader>y "+y
 vnoremap <leader>Y gg"+yG
+inoremap <C-g> <Esc>"+pa<Esc>02w
 
 " 🍉 terminal
 tnoremap <C-t> <C-\><C-n>
-nnoremap <leader>a :term<CR>i
+nnoremap <leader>al :term<CR>i
 
 " 🌌 gimmie space please
 nnoremap <Leader>o o<Esc>"_Dk$
@@ -86,7 +87,7 @@ nnoremap <leader>lt :LanguageToolClear<CR>
 
 " 📓 latex
 inoremap <C-y> <CR>\item<Space>
-nnoremap <C-y> A<CR>\item<Space>
+nnoremap <C-y> }i\item<Space><Esc>o<Esc>"_DkO<Esc>_DjA
 nnoremap <leader>ni /\\item<CR>zt
 nnoremap <leader>ny ?\\item<CR>zt
 nnoremap <leader>na /\\item<CR><esc>0ztA
