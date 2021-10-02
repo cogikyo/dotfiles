@@ -101,6 +101,11 @@ snippet item "Itemize" bA
 
 endsnippet
 
+snippet -- "\item" bA
+\\item $0
+endsnippet
+
+
 snippet awi "answer" bA
 \begin{itemize}\color{foreground}
 	\item $0
@@ -248,26 +253,6 @@ ${1:${VISUAL}}
 endsnippet
 
 context "math()"
-snippet por "colored or notation" iA
-\por{$1}{$2} $0
-endsnippet
-
-context "math()"
-snippet or "lor" iA
-\lor $0
-endsnippet
-
-context "math()"
-snippet pand "colored and notation" iA
-\pand{$1}{$2} $0
-endsnippet
-
-context "math()"
-snippet pand "colored or notation" iA
-\land $0
-endsnippet
-
-context "math()"
 snippet deg "degree" iA
 ^\circ
 endsnippet
@@ -275,6 +260,16 @@ endsnippet
 context "math()"
 snippet ddx "derivative" iA
 \\frac{d$1}{d${2:x}} $0
+endsnippet
+
+context "math()"
+snippet ddy "derivative" iA
+\\frac{dy}{dx} $0
+endsnippet
+
+context "math()"
+snippet ddt "derivative" iA
+\\frac{dx}{dt} $0
 endsnippet
 
 context "math()"
@@ -609,7 +604,7 @@ endsnippet
 priority 100
 context "math()"
 snippet '(?<!\\)(sin|cos|tan|sec|cot|csc|ln|log|exp|star|perp)' "ln" rwA
-\\`!p snip.rv = match.group(1)`($1)
+\\`!p snip.rv = match.group(1)` $1
 endsnippet
 
 priority 300
@@ -621,7 +616,7 @@ endsnippet
 priority 200
 context "math()"
 snippet '(?<!\\)(arcsin|arccos|arctan|arccot|arccsc|arcsec|pi|zeta|int)' "ln" rwA
-\\`!p snip.rv = match.group(1)`($1)
+\\`!p snip.rv = match.group(1)`$1
 endsnippet
 
 priority 200
