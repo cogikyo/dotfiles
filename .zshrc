@@ -50,7 +50,7 @@ alias wifi='(){sudo ~/scripts/wifi.sh "$1";}'
 alias cn='bltm && wifi psu'
 alias n='nvim .'
 alias inkwatch='inkscape-figures watch'
-alias inktex='setsid python3 $HOME/.local/bin/inktex/main.py &'
+alias inktex='python3 $HOME/.local/bin/inktex/main.py'
 alias sl='source ~/notes/fire/linear/linear-venv/bin/activate'
 
 # tmux
