@@ -94,7 +94,7 @@ nnoremap <leader>na /\\item<CR><esc>0ztA
 inoremap <C-f> <Esc>: silent exec '.!inkscape-figures create "'.getline('.').'" "'.b:vimtex.root.'/figures/"'<CR><CR>:w<CR>
 nnoremap <C-f> : silent exec '!inkscape-figures edit "'.b:vimtex.root.'/figures/" > /dev/null 2>&1 &'<CR><CR>:redraw!<CR>
 inoremap <C-a> <Esc>A<Space>\\<Esc>o-
-inoremap <C-A> <Esc>F=i&<Esc>A<Space>\\<Esc>o-
+inoremap <C-q> <Esc>F=i&<Esc>A<Space>\\<Esc>o-
 
 " 🐍 python
 nnoremap <buffer> <leader>rr :w<CR>:exec '!python3' shellescape(@%, 1)<CR>
