@@ -18,6 +18,8 @@ nnoremap <leader>y "+y
 vnoremap <leader>y "+y
 vnoremap <leader>Y gg"+yG
 inoremap <C-g> <Esc>"+pa<Esc>03w
+nnoremap gp gpk$
+nnoremap gy `]
 
 " 🍉 terminal
 tnoremap <C-t> <C-\><C-n>
@@ -89,8 +91,9 @@ inoremap <C-y> <CR>\item<Space>
 nnoremap <C-y> }i\item<Space><Esc>o<Esc>"_DkO<Esc>_DjA
 nnoremap <leader>al }koali
 nnoremap <leader>ni /\\item<CR>zt
-nnoremap <leader>ny ?\\item<CR>zt
-nnoremap <leader>na /\\item<CR><esc>0ztA
+nnoremap <leader>pi ?\\item<CR>zt
+nnoremap <leader>na /\\item<CR><esc>0ztA<Space>
+nnoremap <leader>pa ?\\item<CR>n<esc>0ztA<Space>
 inoremap <C-f> <Esc>: silent exec '.!inkscape-figures create "'.getline('.').'" "'.b:vimtex.root.'/figures/"'<CR><CR>:w<CR>
 nnoremap <C-f> : silent exec '!inkscape-figures edit "'.b:vimtex.root.'/figures/" > /dev/null 2>&1 &'<CR><CR>:redraw!<CR>
 inoremap <C-a> <Esc>A<Space>\\<Esc>o-
