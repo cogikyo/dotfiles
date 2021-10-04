@@ -16,7 +16,7 @@
 # ═╩╝┴└─┘┴  ┴ ┴┴─┘┴
 monitor = 0
 follow = mouse
-geometry = "1169x1+542+8"
+geometry = "1128x1+590+9"
 progress_bar = false
 indicate_hidden = true
 shrink = true

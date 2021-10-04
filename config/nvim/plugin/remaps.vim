@@ -17,7 +17,7 @@ nnoremap <leader>dd :bd!<CR>
 nnoremap <leader>y "+y
 vnoremap <leader>y "+y
 vnoremap <leader>Y gg"+yG
-inoremap <C-g> <Esc>"+pa<Esc>02w
+inoremap <C-g> <Esc>"+pa<Esc>03w
 
 " 🍉 terminal
 tnoremap <C-t> <C-\><C-n>

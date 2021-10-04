@@ -16,8 +16,8 @@ echo $size
 
 begin () {
   bspc config focus_follows_pointer false
+  bspc desktop -f ^$1
   bspc desktop -l tiled
-
   alacritty & sleep 0.25
 }
 
@@ -110,27 +110,43 @@ end () {
 }
 
 open () {
-  begin
-  basic_$size $1
-  end $1
+  begin $1
+  basic_$size $2
+  end $2
+}
+
+pdf () {
+  bspc desktop -f 2
+  case $1 in
+    strang-solutions)
+    bspc rule -a Zathura -o state=floating rectangle=1160x1960+1361+69
+    ;;
+    thomas)
+    bspc rule -a Zathura -o state=floating rectangle=1520x2000+1161+69
+    ;;
+  esac
+  zathura ~/textbooks/$1.pdf & sleep 0.25
+  bspc desktop -f 3
 }
 
 
 chosen="$(echo -e "$options" | $rofi_command -p "ﱖ" -dmenu)"
 case $chosen in
   notes)
-    open notes
+    open 5 notes
     ;;
   dotfiles)
-    open dotfiles
+    open 4 dotfiles
     ;;
   cpp)
-    open cpp
+    open 3 cpp
     ;;
   calculus)
-    open calculus
+    open 3 calculus & sleep 3
+    pdf thomas
     ;;
   linear)
-    open linear
+    open 3 linear & sleep 3
+    pdf strang-solutions
     ;;
 esac
