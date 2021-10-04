@@ -317,6 +317,14 @@ $7 & $8 & $9
 endsnippet
 
 context "math()"
+snippet 2mx "matrix" iA
+\\begin{bmatrix}
+$1 & $2 \\\\
+$3 & $4
+\\end{bmatrix}$0
+endsnippet
+
+context "math()"
 snippet amx "matrix" iA
 \\begin{bmatrix}[ccc|c]
 $1 & $2 & $3 & $4 \\\\
@@ -333,6 +341,7 @@ endsnippet
 snippet tbm "bold face math inline" wA
 \tbm{$1}
 endsnippet
+
 
 context "math()"
 snippet '([A-Za-z])(\d)' "auto subscript" wrA
