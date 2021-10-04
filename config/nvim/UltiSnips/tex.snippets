@@ -246,10 +246,9 @@ else:
 endsnippet
 
 snippet deq "Display Math" wA
-
-\[
+\[%%%%%%%%%%
 ${1:${VISUAL}}
-\]
+\]%%%%%%%%%%
 endsnippet
 
 context "math()"
@@ -317,7 +316,7 @@ $7 & $8 & $9
 endsnippet
 
 context "math()"
-snippet 2mx "matrix" iA
+snippet 2mx "2x2 matrix" iA
 \\begin{bmatrix}
 $1 & $2 \\\\
 $3 & $4
@@ -334,14 +333,13 @@ $9 & $10 & $11 & $12
 endsnippet
 
 context "math()"
-snippet bm "bold face" iA
-\bm{$1}
+snippet '([A-Za-z]*)bm' "bold face" wrA
+\\bm{`!p snip.rv = match.group(1)`}
 endsnippet
 
 snippet tbm "bold face math inline" wA
 \tbm{$1}
 endsnippet
-
 
 context "math()"
 snippet '([A-Za-z])(\d)' "auto subscript" wrA

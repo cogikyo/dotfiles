@@ -176,13 +176,13 @@ label-occupied-font = 7
 label-occupied-foreground = ${colors.sub}
 label-occupied-margin = 3
 
-ws-icon-0 = 1;%{O1}%{A1:bspc desktop -f \^1 :}%{A}
+ws-icon-0 = 1;%{O1}%{A1:bspc desktop -f \^1 :}%{A}
 ws-icon-1 = 1;
-ws-icon-2 = 2;%{O-4}%{A1:bspc desktop -f \^2 :}%{A}
+ws-icon-2 = 2;%{O-1}%{A1:bspc desktop -f \^2 :}%{A}
 ws-icon-3 = 3;%{O-2}%{A1:bspc desktop -f \^3 :}%{A}
-ws-icon-4 = 4;%{O4}%{A1:bspc desktop -f \^4:}%{A}
-ws-icon-5 = 5;%{O-5}%{A1:bspc desktop -f \^5 :}ﯟ%{A}
-ws-icon-6 = 6;%{O-6}%{A1:bspc desktop -f \^6:}%{A}
+ws-icon-4 = 4;%{O3}%{A1:bspc desktop -f \^4:}漣%{A}
+ws-icon-5 = 5;%{O-6}%{A1:bspc desktop -f \^5 :}ﯟ%{A}
+ws-icon-6 = 6;%{O-8}%{A1:bspc desktop -f \^6:}%{A}
 
 ; ╔═╗┬ ┬┌┬┐┬┌─┐
 ; ╠═╣│ │ ││││ │
