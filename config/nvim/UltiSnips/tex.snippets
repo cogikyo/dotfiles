@@ -337,8 +337,8 @@ snippet '([A-Za-z]*)bm' "bold face" wrA
 \\bm{`!p snip.rv = match.group(1)`}
 endsnippet
 
-snippet tbm "bold face math inline" wA
-\tbm{$1}
+snippet '([A-Za-z]*)tbm' "bold face math inline" wrA
+\\tbm{`!p snip.rv = match.group(1)`}
 endsnippet
 
 context "math()"

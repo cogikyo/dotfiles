@@ -18,7 +18,6 @@ nnoremap <leader>y "+y
 vnoremap <leader>y "+y
 vnoremap <leader>Y gg"+yG
 inoremap <C-g> <Esc>"+pa<Esc>03w
-nnoremap gp gpk$
 nnoremap gy `]
 
 " 🍉 terminal
@@ -39,7 +38,7 @@ nnoremap { {zt
 nnoremap G Gzt
 nnoremap n nztzv
 nnoremap N Nztzv
-nnoremap J mzJ`z
+nnoremap <C-j> mzJ`z
 nnoremap <C-d> <C-d>zt
 nnoremap <C-u> <C-u>zt
 
