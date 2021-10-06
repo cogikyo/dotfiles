@@ -342,6 +342,11 @@ snippet '([A-Za-z]*)tbm' "bold face math inline" wrA
 endsnippet
 
 context "math()"
+snippet .t "transpose" iA
+^T
+endsnippet
+
+context "math()"
 snippet '([A-Za-z])(\d)' "auto subscript" wrA
 `!p snip.rv = match.group(1)`_`!p snip.rv = match.group(2)`
 endsnippet
@@ -367,6 +372,7 @@ snip.rv = eval('latex(' + match.group(1).replace('\\', '').replace('^', '**').re
 `
 endsnippet
 
+context "math()"
 snippet == "equals" iA
 &=
 endsnippet
