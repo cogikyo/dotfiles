@@ -86,7 +86,7 @@ vnoremap <leader>lt :LanguageToolCheck<CR>
 nnoremap <leader>lt :LanguageToolClear<CR>
 
 " 📓 latex
-inoremap <C-y> <CR>\item<Space>
+inoremap <C-y> <Esc>o\item<Space>
 nnoremap <C-y> }i\item<Space><Esc>o<Esc>"_DkO<Esc>_DjA
 nnoremap <leader>al }koali
 nnoremap <leader>ni /\\item<CR>zt
