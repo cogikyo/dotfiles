@@ -74,8 +74,14 @@ snippet table "Table environment" b
 \begin{table}[${1:htpb}]
 	\centering
 	\caption{${2:caption}}
-	\begin{tabular}{${5:c}}
-	$0${5/((?<=.)c|l|r)|./(?1: & )/g}
+	\begin{tabular}{${3:ccc}}
+		\toprule
+		$4 & $5 & $6 \\\\
+		\midrule
+			&  &  \\\\
+			&  &  \\\\
+			&  &  \\\\
+		\bottomrule
 	\end{tabular}
 \end{table}
 endsnippet
@@ -257,6 +263,11 @@ snippet deq "Display Math" wA
 \[%%%%%%%%%%
 ${1:${VISUAL}}
 \]%%%%%%%%%%
+endsnippet
+
+context "math()"
+snippet ~= "approx" iA
+\approx
 endsnippet
 
 context "math()"
@@ -518,7 +529,17 @@ snippet rij "mrij" i
 endsnippet
 
 context "math()"
-snippet EE "geq" iA
+snippet >= "greater than eq" iA
+\geq
+endsnippet
+
+context "math()"
+snippet <= "less than eq" iA
+\leq
+endsnippet
+
+context "math()"
+snippet EE "exists" iA
 \exists
 endsnippet
 
