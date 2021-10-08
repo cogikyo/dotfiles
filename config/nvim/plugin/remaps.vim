@@ -17,8 +17,11 @@ nnoremap <leader>dd :bd!<CR>
 nnoremap <leader>y "+y
 vnoremap <leader>y "+y
 vnoremap <leader>Y gg"+yG
-inoremap <C-g> <Esc>"+pa<Esc>03w
 nnoremap gy `]
+
+" 🤯 comment headers
+nnoremap <leader>hs :.! figlet -fshadow<CR>O<Esc>j:.,.+5Commentary<CR>5jo<Esc>x
+nnoremap <leader>hc :.! figlet -fcalvin<CR>O<Esc>j:.,.+2Commentary<CR>2jo<Esc>x
 
 " 🍉 terminal
 tnoremap <C-t> <C-\><C-n>
@@ -65,13 +68,15 @@ nnoremap <C-Left> <C-w>h
 nnoremap <C-Right> <C-w>l
 
 " 🔭 telescope
-nnoremap <leader>tf <cmd>Telescope find_files<cr>
+nnoremap <leader>tb <cmd>Telescope buffers<cr>
 nnoremap <leader>tg <cmd>Telescope live_grep<cr>
-nnoremap <leader>tt <cmd>Telescope buffers<cr>
-nnoremap <leader>td <cmd>Telescope help_tags<cr>
-nnoremap <leader>te <cmd>Telescope git_files<cr>
+nnoremap <leader>tt <cmd>Telescope find_files<cr>
+nnoremap <leader>th <cmd>Telescopehhelp_tags<cr>
+nnoremap <leader>t. <cmd>Telescope git_files<cr>
 nnoremap <leader>tm <cmd>Telescope man_pages<cr>
-nnoremap <leader>tx <cmd>Telescope man_pages<cr>
+nnoremap <leader>tf <cmd>Telescope file_browser<cr>
+nnoremap <leader>tr <cmd>Telescope commands<cr>
+nnoremap <leader>ts <cmd>Telescope search_history<cr>
 
 " 🤲 toggle
 nnoremap <leader>ut :UndotreeToggle<CR>
@@ -96,7 +101,8 @@ nnoremap <leader>pa ?\\item<CR>n<esc>0ztA<Space>
 inoremap <C-f> <Esc>: silent exec '.!inkscape-figures create "'.getline('.').'" "'.b:vimtex.root.'/figures/"'<CR><CR>:w<CR>
 nnoremap <C-f> : silent exec '!inkscape-figures edit "'.b:vimtex.root.'/figures/" > /dev/null 2>&1 &'<CR><CR>:redraw!<CR>
 inoremap <C-a> <Esc>A<Space>\\<Esc>o-
-inoremap <C-q> <Esc>F=i&<Esc>A<Space>\\<Esc>o-
+inoremap <C-e> <Esc>F=i&<Esc>A<Space>\\<Esc>o-
+inoremap <C-g> <Esc>"+pa<Esc>03w
 
 " 🐍 python
 nnoremap <buffer> <leader>rr :w<CR>:exec '!python3' shellescape(@%, 1)<CR>

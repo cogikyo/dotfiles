@@ -49,13 +49,10 @@ alias bltm='sudo systemctl start bluetooth && bluetoothctl connect DF:C5:8D:53:1
 alias wifi='(){sudo ~/scripts/wifi.sh "$1";}'
 alias cn='wifi psu'
 alias n='nvim .'
-alias inkwatch='inkscape-figures watch'
-alias inktex='python3 $HOME/.local/bin/inktex/main.py'
 alias sl='source ~/notes/fire/linear/linear-venv/bin/activate'
 
 # tmux
 alias tls='tmux ls'
-alias ta='(){tmux attach -t \ $1;}'
 alias taf='tmux attach -t \ 🔥'
 alias taw='tmux attach -t \ 🌊'
 alias tae='tmux attach -t \ 🌳'

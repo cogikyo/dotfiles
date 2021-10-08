@@ -27,7 +27,7 @@ augroup END
 
 augroup LATEX
     autocmd!
-    autocmd FileType latex,tex,md,markdown setlocal spell spelllang=en_us
+    autocmd FileType latex,tex,md,markdown,python,cpp setlocal spell spelllang=en_us
 augroup END
 
 augroup HIGHLIGHT_YANK
