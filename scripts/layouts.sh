@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 
-rofi_command="rofi -theme ~/.config/rofi/layouts.rasi"
+# ╦  ╦┌─┐┬─┐
+# ╚╗╔╝├─┤├┬┘
+#  ╚╝ ┴ ┴┴└─
 
+rofi_command="rofi -theme ~/.config/rofi/layouts.rasi"
 options=`echo "calculus linear cpp notes dotfiles\n" | tr ' ' '\n'`
 
 # smol = surface pro, phat = 3840 x 2160
@@ -12,7 +15,9 @@ else
   size=phat
 fi
 
-echo $size
+# ╔═╗┬ ┬┌┐┌┌─┐
+# ╠╣ │ │││││
+# ╚  └─┘┘└┘└─┘
 
 begin () {
   bspc config focus_follows_pointer false
@@ -21,12 +26,41 @@ begin () {
   alacritty & sleep 0.25
 }
 
-###
+end () {
+  bspc config focus_follows_pointer true
+  notify-send -u low -t 3000 init $1
+  exit 0
+}
+
+open () {
+  begin $1
+  basic_$size $2
+  end $2
+}
+
+pdf () {
+  bspc desktop -f 2
+  case $1 in
+    strang-solutions)
+    bspc rule -a Zathura -o state=floating rectangle=1160x1960+1361+69
+    ;;
+    thomas)
+    bspc rule -a Zathura -o state=floating rectangle=1520x2000+1161+69
+    ;;
+  esac
+  zathura ~/textbooks/$1.pdf & sleep 0.25
+  bspc desktop -f 3
+}
+
+# ╦  ┌─┐┬ ┬┌─┐┬ ┬┌┬┐┌─┐
+# ║  ├─┤└┬┘│ ││ │ │ └─┐
+# ╩═╝┴ ┴ ┴ └─┘└─┘ ┴ └─┘
 
 basic_smol () {
   bspc config split_ratio 0.547
   bspc node -p east
   alacritty -e cava & sleep 0.5
+
 
   bspc config split_ratio 0.851
   bspc node -p north
@@ -103,31 +137,6 @@ basic_phat () {
 
 ###
 
-end () {
-  bspc config focus_follows_pointer true
-  notify-send -u low -t 3000 init $1
-  exit 0
-}
-
-open () {
-  begin $1
-  basic_$size $2
-  end $2
-}
-
-pdf () {
-  bspc desktop -f 2
-  case $1 in
-    strang-solutions)
-    bspc rule -a Zathura -o state=floating rectangle=1160x1960+1361+69
-    ;;
-    thomas)
-    bspc rule -a Zathura -o state=floating rectangle=1520x2000+1161+69
-    ;;
-  esac
-  zathura ~/textbooks/$1.pdf & sleep 0.25
-  bspc desktop -f 3
-}
 
 
 chosen="$(echo -e "$options" | $rofi_command -p "ﱖ" -dmenu)"

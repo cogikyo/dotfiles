@@ -24,6 +24,9 @@ lxsession &
 ~/.config/polybar/launch.sh &
 killall "borders"
 ~/.config/bspwm/borders &
+pkill "inkscape-figures"
+inkscape-figures watch &
+python3 $HOME/.local/bin/inktex/main.py &
 ytmdesktop &
 
 # ╦═╗┬ ┬┬  ┌─┐┌─┐
@@ -40,7 +43,7 @@ bspc rule -a Inkscape state=floating
 # ╔═╗┌─┐┌┐┌┌─┐┬┌─┐
 # ║  │ ││││├┤ ││ ┬
 # ╚═╝└─┘┘└┘└  ┴└─┘
-bspc config split_ratio             0.3005
+bspc config split_ratio             0.75
 bspc config border_width            10
 bspc config window_gap              9
 bspc config top_padding             52
