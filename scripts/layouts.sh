@@ -61,7 +61,6 @@ basic_smol () {
   bspc node -p east
   alacritty -e cava & sleep 0.5
 
-
   bspc config split_ratio 0.851
   bspc node -p north
   case $1 in
@@ -132,12 +131,12 @@ basic_phat () {
   esac
 
   bspc node -f west.local
-  bspc config split_ratio 0.3005
+  bspc config split_ratio 0.75
 }
 
-###
-
-
+# ╔═╗┌─┐┬  ┌─┐┌─┐┌┬┐┬┌─┐┌┐┌
+# ╚═╗├┤ │  ├┤ │   │ ││ ││││
+# ╚═╝└─┘┴─┘└─┘└─┘ ┴ ┴└─┘┘└┘
 
 chosen="$(echo -e "$options" | $rofi_command -p "ﱖ" -dmenu)"
 case $chosen in

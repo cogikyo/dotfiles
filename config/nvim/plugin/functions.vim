@@ -30,6 +30,11 @@ augroup LATEX
     autocmd FileType latex,tex,md,markdown,python,cpp setlocal spell spelllang=en_us
 augroup END
 
+augroup LATEX
+    autocmd!
+    autocmd FileType c,cpp,cs,java setlocal commentstring=//\ %s
+augroup END
+
 augroup HIGHLIGHT_YANK
     autocmd!
     autocmd TextYankPost * silent! lua require'vim.highlight'.on_yank({timeout = 69})
