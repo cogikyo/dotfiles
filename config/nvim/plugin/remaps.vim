@@ -20,8 +20,8 @@ vnoremap <leader>Y gg"+yG
 nnoremap gy `]
 
 " 🤯 comment headers
-nnoremap <leader>hs :.! figlet -fshadow<CR>O<Esc>j:.,.+5Commentary<CR>5jo<Esc>x
-nnoremap <leader>hc :.! figlet -fcalvin<CR>O<Esc>j:.,.+2Commentary<CR>2jo<Esc>x
+nnoremap <leader>hs :.! figlet -fshadow<CR>O<Esc>j:.,.+5Commentary<CR>5jo<Esc>d0
+nnoremap <leader>hc :.! figlet -fcalvin<CR>O<Esc>j:.,.+2Commentary<CR>2jo<Esc>d0
 
 " 🍉 terminal
 tnoremap <C-t> <C-\><C-n>
