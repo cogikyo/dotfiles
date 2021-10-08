@@ -16,6 +16,7 @@ Plug 'nosvagor/iceberg-dark'
 Plug 'chrisbra/Colorizer'
 Plug 'kyazdani42/nvim-web-devicons'
 
+" TODO: do I need this?
 Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
 Plug 'nvim-treesitter/playground'
 
@@ -25,15 +26,23 @@ Plug 'dpelle/vim-LanguageTool'
 
 Plug 'SirVer/ultisnips'
 
-" TODO: formatters
+" TODO: formatters/linting?
 
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-commentary'
 Plug 'vim-syntastic/syntastic'
+
+" TODO: figure out how to use trouble
 Plug 'folke/trouble.nvim'
 Plug 'mbbill/undotree'
+
+" TODO: figure out css/hmtl/javascript worflow
 " Plug 'mattn/emmet-vim'
+
+" TODO: change color red
 Plug 'folke/todo-comments.nvim'
 Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app && yarn install'  }
 
+" TODO: python stuff
+" ---
 call plug#end()
