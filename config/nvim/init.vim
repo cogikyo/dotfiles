@@ -25,6 +25,7 @@ Plug 'vim-syntastic/syntastic'
 Plug 'folke/trouble.nvim'
 Plug 'mbbill/undotree'
 Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app && yarn install'  }
+Plug 'mhinz/vim-startify'
 
 call plug#end()
 
