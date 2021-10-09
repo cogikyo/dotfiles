@@ -85,6 +85,9 @@ super + {m,k}
 super + {n,i,u,o}
  	bspc node -f {west,south,north,east}.local
 
+super + {Left,Down,Up,Right}
+ 	bspc node -f {west,south,north,east}.local
+
 # moved focused window to prev/next desktop then switch
 super + shift + {e,t}
   DIR={prev,next}; \

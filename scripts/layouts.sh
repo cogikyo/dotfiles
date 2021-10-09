@@ -78,7 +78,7 @@ basic_smol () {
     calculus)
       zathura ~/notes/fire/calculus/$1.pdf & sleep 1
       ;;
-  esac
+ esac
 
   bspc node -f west.local
   bspc config split_ratio 0.547
@@ -110,17 +110,22 @@ basic_phat () {
     bspc config split_ratio 0.954
     bspc node -p south
     zathura ~/textbooks/$3.pdf & sleep 0.25
+    bspc node -f west.local
+    bspc config split_ratio 0.725
+    alacritty & sleep 0.25
   }
 
   case $1 in
     dotfiles|notes)
       basic
       firefox --new-window & sleep 1
+      bspc node -f west.local
       ;;
     cpp)
       basic
       firefox --new-window https://github.com/nosvagor/notes/tree/main/water/$1 \
       & sleep 1
+      bspc node -f west.local
       ;;
     linear)
       tex linear mth-343/applied-linear strang
@@ -130,7 +135,6 @@ basic_phat () {
       ;;
   esac
 
-  bspc node -f west.local
   bspc config split_ratio 0.75
 }
 

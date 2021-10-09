@@ -26,7 +26,7 @@ augroup AUTO_COMMANDS
     autocmd TermOpen * setlocal nonumber norelativenumber signcolumn=no
 augroup END
 
-augroup LATEX
+augroup SPELLING
     autocmd!
     autocmd FileType latex,tex,md,markdown,python,cpp setlocal spell spelllang=en_us
 augroup END
@@ -34,6 +34,13 @@ augroup END
 augroup COMMENTARY
     autocmd!
     autocmd FileType c,cpp,cs,java setlocal commentstring=//\ %s
+augroup END
+
+augroup PYTHON
+    autocmd!
+    autocmd FileType python setlocal tabstop=4 softtabstop=4
+    autocmd FileType python setlocal shiftwidth=4
+    autocmd FileTYpe python nnoremap <buffer> <leader>rr :w<CR>:exec '!python3' shellescape(@%, 1)<CR>
 augroup END
 
 augroup HIGHLIGHT_YANK

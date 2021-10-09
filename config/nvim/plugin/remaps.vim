@@ -3,6 +3,9 @@
 " ╩╚═└─┘┴ ┴┴ ┴┴  └─┘
 nnoremap <SPACE> <Nop>
 let mapleader = " "
+inoremap <C-s> <esc>
+nnoremap <C-s> <esc>
+vnoremap <C-s> <esc>
 
 " 🔍 go to letter(s)
 nmap t <Plug>(easymotion-bd-f)
@@ -22,7 +25,8 @@ nnoremap <leader>dd :bd!<CR>
 nnoremap <leader>y "+y
 vnoremap <leader>y "+y
 vnoremap <leader>Y gg"+yG
-nnoremap gy `]
+nmap gy `]
+vnoremap <leader>p y']o<Esc>p
 
 " 🤯 comment headers
 nnoremap <leader>hs :.! figlet -fshadow<CR>O<Esc>j:.,.+5Commentary<CR>5jo<Esc>d0
@@ -33,10 +37,6 @@ nnoremap <Leader>o o<Esc>"_Dk$
 nnoremap <Leader>O O<Esc>"_Dj$
 inoremap <C-Space> <Esc>o<Esc>"_DkO<Esc>_DjA
 
-" 🦘 jump list mutations
-nnoremap <expr> j (v:count > 5 ? "m`" . v:count : "") . 'j'
-nnoremap <expr> k (v:count > 5 ? "m`" . v:count : "") . 'k'
-
 " 🎯 keep cursor 'centered'
 nnoremap } }zt
 nnoremap { {zt
@@ -44,8 +44,6 @@ nnoremap G Gzt
 nnoremap n nztzv
 nnoremap N Nztzv
 nnoremap <C-j> mzJ`z
-nnoremap <C-d> <C-d>zt
-nnoremap <C-u> <C-u>zt
 
 " 👈 undo break points
 inoremap , ,<c-g>u
@@ -56,17 +54,17 @@ inoremap ; ;<c-g>u
 inoremap : :<c-g>u
 
 " 🚙 moving text
-vnoremap J :m '>+1<CR>gv=gv
-vnoremap K :m '<-2<CR>gv=gv
-inoremap <C-j> <esc> :m .+1<CR>==
-inoremap <C-k> <esc> :m .-2<CR>==
-nnoremap <leader>j :m .+1<CR>==
-nnoremap <leader>k :m .-2<CR>==
+vnoremap u :m '<-2<CR>gv=gv
+vnoremap m :m '>+1<cr>gv=gv
+inoremap <C-k> <esc> :m .-2<CR>==i
+inoremap <C-j> <esc> :m .+1<CR>==i
+nnoremap <leader>uu :m .-2<CR>==
+nnoremap <leader>mm :m .+1<CR>==
 
 " 🍉 terminal
-tnoremap <C-t> <C-\><C-n>:bp<CR>
-nnoremap <leader>tp :term<CR>isl<CR>niol<CR>python3<CR>
-nnoremap <leader>tz :term<CR>i
+tnoremap <C-t> <C-\><C-n>:bd!<CR>
+nnoremap <leader>tp :term<CR>isl<CR>niol<CR>
+nnoremap <leader>ta :term<CR>i
 
 " 🪟 window movement
 nnoremap <Down> <C-w>j
@@ -106,9 +104,6 @@ nnoremap <C-f> : silent exec '!inkscape-figures edit "'.b:vimtex.root.'/figures/
 inoremap <C-a> <Esc>F=i&<Esc>A<Space>\\<Esc><C-s>o
 inoremap <C-g> <Esc>"+pa<Esc>03w
 
-" 🐍 python
-nnoremap <buffer> <leader>rr :w<CR>:exec '!python3' shellescape(@%, 1)<CR>
-
 " 🔃 reload
 nnoremap <leader>rs :call UltiSnips#RefreshSnippets()<CR>
 nnoremap <leader>rm :source $HOME/.config/nvim/plugin/remaps.vim<CR>
@@ -117,6 +112,6 @@ nnoremap <leader>rm :source $HOME/.config/nvim/plugin/remaps.vim<CR>
 inoremap <C-h> <esc>VgwzHzzA
 nnoremap <C-h> VgwzHzzg_
 
-" scrolling w/ mouse
-nnoremap <silent> <ScrollWheelDown> :call comfortable_motion#flick(40)<CR>
-nnoremap <silent> <ScrollWheelUp>   :call comfortable_motion#flick(-40)<CR>
+" 🖱️ scrolling w/ mouse
+nnoremap <silent> <ScrollWheelDown> :call comfortable_motion#flick(69)<CR>
+nnoremap <silent> <ScrollWheelUp>   :call comfortable_motion#flick(-69)<CR>
