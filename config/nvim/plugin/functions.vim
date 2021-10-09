@@ -20,8 +20,9 @@ endfun
 augroup AUTO_COMMANDS
     autocmd!
     autocmd BufWritePre * :call TrimWhitespace()
+    autocmd BufEnter * set scrolloff=19
     " autocmd FileType html,css EmmetInstall
-  " autocmd BufEnter * lua require'completion'.on_attach()
+    " autocmd BufEnter * lua require'completion'.on_attach()
     autocmd TermOpen * setlocal nonumber norelativenumber signcolumn=no
 augroup END
 
@@ -30,7 +31,7 @@ augroup LATEX
     autocmd FileType latex,tex,md,markdown,python,cpp setlocal spell spelllang=en_us
 augroup END
 
-augroup LATEX
+augroup COMMENTARY
     autocmd!
     autocmd FileType c,cpp,cs,java setlocal commentstring=//\ %s
 augroup END

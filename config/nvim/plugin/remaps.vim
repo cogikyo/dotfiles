@@ -4,9 +4,14 @@
 nnoremap <SPACE> <Nop>
 let mapleader = " "
 
+" 🔍 go to letter(s)
+nmap t <Plug>(easymotion-bd-f)
+nmap T <Plug>(easymotion-bd-f2)
+
 " temp:, : needs to be on base layer of keyboard
 nnoremap <leader>s :w<CR>
 nnoremap <leader>x :q<CR>
+nnoremap <leader>q :wq<CR>
 
 " 🦬 buffers
 nnoremap <leader>w :bp<CR>
@@ -22,9 +27,6 @@ nnoremap gy `]
 " 🤯 comment headers
 nnoremap <leader>hs :.! figlet -fshadow<CR>O<Esc>j:.,.+5Commentary<CR>5jo<Esc>d0
 nnoremap <leader>hc :.! figlet -fcalvin<CR>O<Esc>j:.,.+2Commentary<CR>2jo<Esc>d0
-
-" 🍉 terminal
-tnoremap <C-t> <C-\><C-n>
 
 " 🌌 gimmie space please
 nnoremap <Leader>o o<Esc>"_Dk$
@@ -61,20 +63,24 @@ inoremap <C-k> <esc> :m .-2<CR>==
 nnoremap <leader>j :m .+1<CR>==
 nnoremap <leader>k :m .-2<CR>==
 
+" 🍉 terminal
+tnoremap <C-t> <C-\><C-n>:bp<CR>
+nnoremap <leader>tp :term<CR>isl<CR>niol<CR>python3<CR>
+nnoremap <leader>tz :term<CR>i
+
 " 🪟 window movement
 nnoremap <Down> <C-w>j
 nnoremap <Up> <C-w>k
-nnoremap <C-Left> <C-w>h
-nnoremap <C-Right> <C-w>l
+nnoremap <Left> <C-w>h
+nnoremap <Right> <C-w>l
 
 " 🔭 telescope
-nnoremap <leader>tb <cmd>Telescope buffers<cr>
+nnoremap <leader>tf <cmd>Telescope buffers<cr>
 nnoremap <leader>tg <cmd>Telescope live_grep<cr>
 nnoremap <leader>tt <cmd>Telescope find_files<cr>
-nnoremap <leader>th <cmd>Telescopehhelp_tags<cr>
-nnoremap <leader>t. <cmd>Telescope git_files<cr>
+nnoremap <leader>th <cmd>Telescope help_tags<cr>
+nnoremap <leader>te <cmd>Telescope git_files<cr>
 nnoremap <leader>tm <cmd>Telescope man_pages<cr>
-nnoremap <leader>tf <cmd>Telescope file_browser<cr>
 nnoremap <leader>tr <cmd>Telescope commands<cr>
 nnoremap <leader>ts <cmd>Telescope search_history<cr>
 
@@ -82,17 +88,14 @@ nnoremap <leader>ts <cmd>Telescope search_history<cr>
 nnoremap <leader>ut :UndotreeToggle<CR>
 nnoremap <leader>ct :ColorToggle<CR>
 nnoremap <leader>mp :MarkdownPreviewToggle<CR>
-nnoremap <leader>ei :TroubleToggle<CR>
 
 " 🔤 spelling
 inoremap <C-l> <c-g>u<Esc>[s1z=`]a<c-g>u
 nnoremap <C-l> [s1z=<c-o>
-vnoremap <leader>lt :LanguageToolCheck<CR>
-nnoremap <leader>lt :LanguageToolClear<CR>
 
 " 📓 latex
-inoremap <C-y> <Esc>o<CR>\item<Space>
-nnoremap <C-y> }i\item<Space><Esc>o<Esc>"_DkO<Esc>_DjA
+inoremap <C-t> <Esc>o<CR>\item<Space>
+nnoremap <C-t> }i\item<Space><Esc>o<Esc>"_DkO<Esc>_DjA
 nnoremap <leader>al }koali
 nnoremap <leader>ni /\\item<CR>zt
 nnoremap <leader>pi ?\\item<CR>zt
@@ -100,8 +103,7 @@ nnoremap <leader>na /\\item<CR><esc>0ztA<Space>
 nnoremap <leader>pa ?\\item<CR>n<esc>0ztA<Space>
 inoremap <C-f> <Esc>: silent exec '.!inkscape-figures create "'.getline('.').'" "'.b:vimtex.root.'/figures/"'<CR><CR>:w<CR>
 nnoremap <C-f> : silent exec '!inkscape-figures edit "'.b:vimtex.root.'/figures/" > /dev/null 2>&1 &'<CR><CR>:redraw!<CR>
-inoremap <C-a> <Esc>A<Space>\\<Esc>o-
-inoremap <C-e> <Esc>F=i&<Esc>A<Space>\\<Esc>o-
+inoremap <C-a> <Esc>F=i&<Esc>A<Space>\\<Esc><C-s>o
 inoremap <C-g> <Esc>"+pa<Esc>03w
 
 " 🐍 python
@@ -114,3 +116,7 @@ nnoremap <leader>rm :source $HOME/.config/nvim/plugin/remaps.vim<CR>
 " ⛵ reflow
 inoremap <C-h> <esc>VgwzHzzA
 nnoremap <C-h> VgwzHzzg_
+
+" scrolling w/ mouse
+nnoremap <silent> <ScrollWheelDown> :call comfortable_motion#flick(40)<CR>
+nnoremap <silent> <ScrollWheelUp>   :call comfortable_motion#flick(-40)<CR>

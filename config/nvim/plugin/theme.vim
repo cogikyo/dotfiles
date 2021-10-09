@@ -11,8 +11,8 @@ let g:lightline = {
 \ 'active': {
 \   'left': [ [ 'mode', 'paste' ],
 \             [ 'fugitive', 'readonly', 'filename', 'modified' ] ],
-\   'right': [ [ 'lineinfo' ],
-\              [ 'percent' ],
+\   'right': [ [ 'filetype' ],
+\              [ 'charvalue' ],
 \              [ 'syntastic'] ]
 \ },
 \ 'component_function': {
@@ -77,18 +77,6 @@ endfun
 lua << EOF
 require'nvim-web-devicons'.setup {
  default = true;
-}
-EOF
-
-lua << EOF
-require("todo-comments").setup {
-    colors = {
-        error = { "LspDiagnosticsDefaultError", "ErrorMsg", "#e98989" },
-        warning = { "LspDiagnosticsDefaultWarning", "WarningMsg", "#e9b189" },
-        info = { "LspDiagnosticsDefaultInformation", "#91acd1" },
-        hint = { "LspDiagnosticsDefaultHint", "#c0ca8e" },
-        default = { "Identifier", "#ada0d3" },
-    },
 }
 EOF
 
