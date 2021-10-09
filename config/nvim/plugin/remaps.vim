@@ -3,9 +3,16 @@
 " ╩╚═└─┘┴ ┴┴ ┴┴  └─┘
 nnoremap <SPACE> <Nop>
 let mapleader = " "
+
+" ⚕  esc
+inoremap <C-c> <esc>
 inoremap <C-s> <esc>
 nnoremap <C-s> <esc>
 vnoremap <C-s> <esc>
+
+" 💨 completion
+inoremap <expr> <CR> (pumvisible() ? "\<c-y>\<cr>" : "\<CR>")
+inoremap <silent> <expr> <CR> ncm2_ultisnips#expand_or("\<CR>", 'n')
 
 " 🔍 go to letter(s)
 nmap t <Plug>(easymotion-bd-f)
@@ -33,8 +40,8 @@ nnoremap <leader>hs :.! figlet -fshadow<CR>O<Esc>j:.,.+5Commentary<CR>5jo<Esc>d0
 nnoremap <leader>hc :.! figlet -fcalvin<CR>O<Esc>j:.,.+2Commentary<CR>2jo<Esc>d0
 
 " 🌌 gimmie space please
-nnoremap <Leader>o o<Esc>"_Dk$
-nnoremap <Leader>O O<Esc>"_Dj$
+nnoremap <leader>o o<Esc>"_Dk$
+nnoremap <leader>O O<Esc>"_Dj$
 inoremap <C-Space> <Esc>o<Esc>"_DkO<Esc>_DjA
 
 " 🎯 keep cursor 'centered'
@@ -80,12 +87,12 @@ nnoremap <leader>th <cmd>Telescope help_tags<cr>
 nnoremap <leader>te <cmd>Telescope git_files<cr>
 nnoremap <leader>tm <cmd>Telescope man_pages<cr>
 nnoremap <leader>tr <cmd>Telescope commands<cr>
-nnoremap <leader>ts <cmd>Telescope search_history<cr>
 
 " 🤲 toggle
 nnoremap <leader>ut :UndotreeToggle<CR>
 nnoremap <leader>ct :ColorToggle<CR>
 nnoremap <leader>mp :MarkdownPreviewToggle<CR>
+nnoremap <silent> <leader>ts :call ToggleSpellCheck()<CR>
 
 " 🔤 spelling
 inoremap <C-l> <c-g>u<Esc>[s1z=`]a<c-g>u
@@ -111,7 +118,3 @@ nnoremap <leader>rm :source $HOME/.config/nvim/plugin/remaps.vim<CR>
 " ⛵ reflow
 inoremap <C-h> <esc>VgwzHzzA
 nnoremap <C-h> VgwzHzzg_
-
-" 🖱️ scrolling w/ mouse
-nnoremap <silent> <ScrollWheelDown> :call comfortable_motion#flick(69)<CR>
-nnoremap <silent> <ScrollWheelUp>   :call comfortable_motion#flick(-69)<CR>

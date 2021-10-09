@@ -46,8 +46,13 @@ if empty(v:servername) && exists('*remote_startserver')
 endif
 
 " ✂  snippets/completions
-let g:UltiSnipsExpandTrigger="<tab>"
-let g:UltiSnipsJumpForwardTrigger="<tab>"
-let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
+let g:UltiSnipsExpandTrigger="<C-n>"
+let g:UltiSnipsJumpForwardTrigger="<C-n>"
+let g:UltiSnipsJumpBackwardTrigger="<C-p>"
 let g:UltiSnipsSnippetsDir=[$HOME.'/.config/nvim/UltiSnips']
 let g:UltiSnipsSnippetDirectories=[$HOME.'/.config/nvim/UltiSnips']
+
+let g:AutoPairsShortcutToggle = '<C-x>'
+let g:AutoPairsShortcutFastWrap = '<C-e>'
+let g:AutoPairsShortcutJump = '<C-z>'
+let g:AutoPairsShortcutBackInsert = '<C-b>'
