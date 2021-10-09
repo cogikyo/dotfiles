@@ -51,6 +51,3 @@ let g:UltiSnipsJumpForwardTrigger="<tab>"
 let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
 let g:UltiSnipsSnippetsDir=[$HOME.'/.config/nvim/UltiSnips']
 let g:UltiSnipsSnippetDirectories=[$HOME.'/.config/nvim/UltiSnips']
-
-" let g:completion_matching_strategy_list = ['exact','substring', 'fuzzy']
-" let g:completion_enable_snippet = 'UltiSnips'

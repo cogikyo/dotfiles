@@ -21,6 +21,9 @@ set scrolloff=19
 set signcolumn=yes
 set colorcolumn=80
 set nowrap
+set splitbelow
+set laststatus=2
+set mouse=a
 
 ""❗syntastic-sets
 set statusline+=%#warningmsg#
