@@ -23,16 +23,12 @@ set colorcolumn=80
 set nowrap
 set splitbelow
 set laststatus=2
-set mouse=a
 
-""❗syntastic-sets
 set statusline+=%#warningmsg#
 set statusline+=%{SyntasticStatuslineFlag()}
 set statusline+=%*
 
-""⚙  utility-sets
 set conceallevel=2
 
-""💨 completion
-"" set completeopt=menuone,noselect,noinsert
-"" set shortmess+=c
+set completeopt=menuone,noselect,noinsert
+set shortmess+=c

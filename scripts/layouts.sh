@@ -123,8 +123,7 @@ basic_phat () {
       ;;
     cpp)
       basic
-      firefox --new-window https://github.com/nosvagor/notes/tree/main/water/$1 \
-      & sleep 1
+      firefox --new-window https://github.com/nosvagor/notes/tree/main/water/$1 \ & sleep 1
       bspc node -f west.local
       ;;
     linear)
