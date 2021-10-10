@@ -1,7 +1,6 @@
 " ╦  ┌─┐┌┬┐┌─┐
 " ║  ├┤  │ └─┐
 " ╩═╝└─┘ ┴ └─┘
-"❕syntastic-lets
 let g:syntastic_tex_checkers = ['chktex']
 let g:syntastic_ignore_files = ['\m\c\.cls$', '\m\c\.sty$']
 let g:syntastic_error_symbol = "✗"
@@ -9,14 +8,8 @@ let syntastic_style_error_symbol = "✗"
 let g:syntastic_warning_symbol = "⏿"
 let syntastic_style_warning_symbol = "⏿"
 
-" ⚙  misc-lets
-let g:user_emmet_install_global = 0
-let g:languagetool_cmd='/usr/bin/languagetool'
-
-" 🌈 colorizer
 let g:colorizer_colornames = 0
 
-" 📓 latex
 let g:tex_flavor='latex'
 let g:vimtex_view_method='zathura'
 let g:vimtex_quickfix_mode=0
@@ -46,9 +39,9 @@ if empty(v:servername) && exists('*remote_startserver')
 endif
 
 " ✂  snippets/completions
-let g:UltiSnipsExpandTrigger="<C-n>"
-let g:UltiSnipsJumpForwardTrigger="<C-n>"
-let g:UltiSnipsJumpBackwardTrigger="<C-p>"
+let g:UltiSnipsExpandTrigger="<tab>"
+let g:UltiSnipsJumpForwardTrigger="<tab>"
+let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
 let g:UltiSnipsSnippetsDir=[$HOME.'/.config/nvim/UltiSnips']
 let g:UltiSnipsSnippetDirectories=[$HOME.'/.config/nvim/UltiSnips']
 
@@ -56,3 +49,4 @@ let g:AutoPairsShortcutToggle = '<C-x>'
 let g:AutoPairsShortcutFastWrap = '<C-e>'
 let g:AutoPairsShortcutJump = '<C-z>'
 let g:AutoPairsShortcutBackInsert = '<C-b>'
+
