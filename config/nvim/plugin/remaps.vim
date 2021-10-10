@@ -116,5 +116,5 @@ nnoremap <leader>rs :call UltiSnips#RefreshSnippets()<CR>
 nnoremap <leader>rm :source $HOME/.config/nvim/plugin/remaps.vim<CR>
 
 " ⛵ reflow
-inoremap <C-h> <esc>VgwzHzzA
+inoremap <C-h> <Esc>VgwzHzzA
 nnoremap <C-h> VgwzHzzg_
