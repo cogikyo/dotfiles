@@ -36,7 +36,7 @@ snippet smtx "symbolic matrix" bA
 $1 = sp.Matrix(
 		[
 				[$2, $3, $4],
-				[$5, $6, $7],
+				[$5, $6, $7]k
 				[$8, $9, $10],
 		]
 )
@@ -45,17 +45,25 @@ $0
 endsnippet
 
 snippet ptt "print" bA
-print($1)
+print($1, "\n")
 $0
 endsnippet
 
 snippet ptsm "print symbolic matrix" bA
-print(np.array($1))
+print(np.array($1), "\n")
 $0
+endsnippet
+
+snippet rref "rref" iA
+.rref()[0]
 endsnippet
 
 snippet fixfrac "fix fractions" bA
 with np.printoptions(formatter={'all':lambda x: str(Fraction(x).limit_denominator())}):
 		print($1)
-$0
 endsnippet
+
+snippet '([A-Za-z]*)nin' "numpy inverse" wrA
+np.linalg.inv(`!p snip.rv = match.group(1)`)
+endsnippet
+

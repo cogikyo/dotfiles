@@ -103,7 +103,7 @@ inoremap <C-t> <Esc>o<CR>\item<Space>
 nnoremap <C-t> }i\item<Space><Esc>o<Esc>"_DkO<Esc>_DjA
 nnoremap <leader>al }koali
 nnoremap <leader>ni /\\item<CR>zt
-nnoremap <leader>pi ?\\item<CR>zt
+nnoremap <leader>pu ?\\item<CR>zt
 nnoremap <leader>na /\\item<CR><esc>0ztA<Space>
 nnoremap <leader>pa ?\\item<CR>n<esc>0ztA<Space>
 inoremap <C-f> <Esc>: silent exec '.!inkscape-figures create "'.getline('.').'" "'.b:vimtex.root.'/figures/"'<CR><CR>:w<CR>
