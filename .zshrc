@@ -56,7 +56,7 @@ alias wifi='(){sudo ~/scripts/wifi.sh "$1";}'
 alias psu='wifi psu'
 alias n='nvim'
 alias sl='source ~/notes/fire/linear/linear-venv/bin/activate'
-alias p='python3 *.py'
+alias p='(){python3 $1.py}'
 
 # tmux
 alias tls='tmux ls'
