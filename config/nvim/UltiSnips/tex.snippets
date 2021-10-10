@@ -119,7 +119,6 @@ snippet -- "\item" bA
 \\item $0
 endsnippet
 
-
 snippet awi "answer" bA
 \begin{itemize}\color{foreground}
 	\item $0
@@ -134,9 +133,9 @@ snippet awa "answer align" bA
 endsnippet
 
 snippet daq "answer align" bA
-\fg{\[
-	$1
-\]}
+\fg{\[%%%%%%%
+$0
+\]}%%%%%%%%%%
 endsnippet
 
 snippet ali "Align" bA
@@ -146,7 +145,11 @@ snippet ali "Align" bA
 endsnippet
 
 snippet vsp "vsapce" bA
-\vspace{${1:-30}pt}
+\vspace{${1:-24}pt}
+endsnippet
+
+snippet ml "hspace" bA
+\hspace{${1:-24}pt}
 endsnippet
 
 snippet src "source links" bA
@@ -158,6 +161,10 @@ endsnippet
 snippet lnk "link" wA
 \link{$1}{$2} |
 $0
+endsnippet
+
+snippet py "link" bA
+\linkpy{$1}{$2--$3}
 endsnippet
 
 snippet mti "multicolum" wA
@@ -250,18 +257,28 @@ endsnippet
 # ║║║├─┤ │ ├─┤
 # ╩ ╩┴ ┴ ┴ ┴ ┴
 
-snippet nio "Inline Math" wA
-\( ${1:${VISUAL}} \)`!p
-if t[2] and t[2][0] not in [',', '.', '?', '-', ' ']:
-	snip.rv = ' '
-else:
-	snip.rv = ''
-`$2
+snippet nio "inline math" wA
+\($1\)$0
+endsnippet
+
+priority 1000
+snippet '^.*\)n' "() inline math" wrA
+`!p
+stripped = match.string[:-1]
+depth = 0
+i = len(stripped) - 1
+while True:
+	if stripped[i] == ')': depth += 1
+	if stripped[i] == '(': depth -= 1
+	if depth == 0: break;
+	i-=1
+snip.rv = stripped[0:i] + "\\(" + stripped[i+1:-1] + "\\)"
+`$0
 endsnippet
 
 snippet deq "Display Math" wA
 \[%%%%%%%%%%
-${1:${VISUAL}}
+$0
 \]%%%%%%%%%%
 endsnippet
 
@@ -276,27 +293,23 @@ snippet deg "degree" iA
 endsnippet
 
 context "math()"
-snippet ddx "derivative" iA
-\\frac{d$1}{d${2:x}} $0
+snippet '([A-Za-z]*)ddx' "ddx" wrA
+\\frac{d`!p snip.rv = match.group(1)`}{dx} $0
 endsnippet
 
 context "math()"
-snippet ddy "derivative" iA
-\\frac{dy}{dx} $0
+snippet '([A-Za-z]*)ddy' "ddy" wrA
+\\frac{d`!p snip.rv = match.group(1)`}{dt} $0
 endsnippet
 
 context "math()"
-snippet ddt "derivative" iA
-\\frac{dx}{dt} $0
+snippet '([A-Za-z]*)ddt' "ddt" wrA
+\\frac{d`!p snip.rv = match.group(1)`}{dt} $0
 endsnippet
 
 context "math()"
 snippet // "Fraction" iA
 \\frac{$1}{$2}$0
-endsnippet
-
-snippet / "Fraction" i
-\\frac{${VISUAL}}{$1}$0
 endsnippet
 
 context "math()"
@@ -321,33 +334,42 @@ snip.rv = stripped[0:i] + "\\frac{" + stripped[i+1:-1] + "}"
 endsnippet
 
 context "math()"
-snippet cvec "column vector" iA
+snippet cvc "column vector" iA
 \begin{bmatrix} $1 \\\\ $2 \\\\ $3 \end{bmatrix}
 endsnippet
 
 context "math()"
 snippet mtx "matrix" iA
 \\begin{bmatrix}
-$1 & $2 & $3 \\\\
-$4 & $5 & $6 \\\\
-$7 & $8 & $9
+	$1 & $2 & $3 \\\\
+	$4 & $5 & $6 \\\\
+	$7 & $8 & $9
+\\end{bmatrix}
+endsnippet
+
+context "math()"
+snippet imx "matrix" iA
+\\begin{bmatrix}
+	1 & 0 & 0 \\\\
+	0 & 1 & 0 \\\\
+	0 & 0 & 1
 \\end{bmatrix}
 endsnippet
 
 context "math()"
 snippet 2mx "2x2 matrix" iA
 \\begin{bmatrix}
-$1 & $2 \\\\
-$3 & $4
+	$1 & $2 \\\\
+	$3 & $4
 \\end{bmatrix}$0
 endsnippet
 
 context "math()"
 snippet amx "matrix" iA
 \\begin{bmatrix}[ccc|c]
-$1 & $2 & $3 & $4 \\\\
-$5 & $6 & $7 & $8 \\\\
-$9 & $10 & $11 & $12
+	$1 & $2 & $3 & $4 \\\\
+	$5 & $6 & $7 & $8 \\\\
+	$9 & $10 & $11 & $12
 \\end{bmatrix}
 endsnippet
 
@@ -408,14 +430,6 @@ endsnippet
 context "math()"
 snippet floor "floor" iA
 \left\lfloor $1 \right\rfloor$0
-endsnippet
-
-snippet pmat "pmat" iA
-\begin{pmatrix} $1 \end{pmatrix} $0
-endsnippet
-
-snippet bmat "bmat" iA
-\begin{bmatrix} $1 \end{bmatrix} $0
 endsnippet
 
 context "math()"
@@ -494,16 +508,6 @@ endsnippet
 context "math()"
 snippet inv "^{-1}" iA
 ^{-1}
-endsnippet
-
-context "math()"
-snippet sr "^2" iA
-^2
-endsnippet
-
-context "math()"
-snippet cb "^3" iA
-^3
 endsnippet
 
 context "math()"
@@ -663,7 +667,7 @@ endsnippet
 
 priority 200
 context "math()"
-snippet <-> "leftrightarrow" iA
+snippet <> "leftrightarrow" iA
 \leftrightarrow
 endsnippet
 
@@ -675,11 +679,6 @@ endsnippet
 context "math()"
 snippet compl "complement" iA
 ^{c}
-endsnippet
-
-context "math()"
-snippet \\\ "setminus" iA
-\setminus
 endsnippet
 
 snippet >> ">>" iA
@@ -745,18 +744,13 @@ snippet <! "normal" iA
 endsnippet
 
 context "math()"
-snippet <> "hokje" iA
-\diamond
-endsnippet
-
-context "math()"
 snippet '(?<!i)sts' "text subscript" irA
 _\text{$1} $0
 endsnippet
 
 context "math()"
 snippet tt "text" iA
-\text{$1}$0
+~\text{$1}~$0
 endsnippet
 
 context "math()"
@@ -766,7 +760,7 @@ snippet case "cases" wA
 \end{cases}
 endsnippet
 
-snippet SI "SI" iA
+snippet sii "SI" iA
 \SI{$1}{$2}
 endsnippet
 

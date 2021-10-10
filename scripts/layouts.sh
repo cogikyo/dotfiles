@@ -64,8 +64,9 @@ basic_smol () {
   bspc config split_ratio 0.851
   bspc node -p north
   case $1 in
-    dotfiles|notes)
-      firefox --new-window & sleep 2
+    .dotfiles|notes)
+      firefox --new-window https://github.com/nosvagor/$1 \
+      & sleep 2
       ;;
     cpp)
       firefox --new-window https://github.com/nosvagor/notes/tree/main/water/$1 \
@@ -116,9 +117,9 @@ basic_phat () {
   }
 
   case $1 in
-    dotfiles|notes)
+    .dotfiles|notes)
       basic
-      firefox --new-window & sleep 1
+      firefox --new-window https://github.com/nosvagor/$1 & sleep 1
       bspc node -f west.local
       ;;
     cpp)
@@ -147,7 +148,7 @@ case $chosen in
     open 5 notes
     ;;
   dotfiles)
-    open 4 dotfiles
+    open 4 '.dotfiles'
     ;;
   cpp)
     open 3 cpp
