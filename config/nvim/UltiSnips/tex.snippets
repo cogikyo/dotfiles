@@ -276,6 +276,7 @@ snip.rv = stripped[0:i] + "\\(" + stripped[i+1:-1] + "\\)"
 ` $0
 endsnippet
 
+
 snippet deq "Display Math" wA
 \[%%%%%%%%%%
 $0
@@ -295,6 +296,11 @@ endsnippet
 context "math()"
 snippet '([A-Za-z]*)ddx' "ddx" wrA
 \\frac{d`!p snip.rv = match.group(1)`}{dx} $0
+endsnippet
+
+context "math()"
+snippet '([A-Za-z]*)ol' "(x)" wrA
+(`!p snip.rv = match.group(1)`) $0
 endsnippet
 
 context "math()"
@@ -433,35 +439,23 @@ snippet floor "floor" iA
 endsnippet
 
 context "math()"
-snippet () "left( right)" iA
+snippet ()) "left( right)" iA
 \left( ${1:${VISUAL}} \right) $0
 endsnippet
 
-snippet lr "left( right)" i
-\left( ${1:${VISUAL}} \right) $0
-endsnippet
-
-snippet lr( "left( right)" i
-\left( ${1:${VISUAL}} \right) $0
-endsnippet
-
-snippet lr| "left| right|" i
+snippet lrp "left| right|" iA
 \left| ${1:${VISUAL}} \right| $0
 endsnippet
 
-snippet lr{ "left\{ right\}" i
+snippet lrs "left\{ right\}" iA
 \left\\{ ${1:${VISUAL}} \right\\} $0
 endsnippet
 
-snippet lrb "left\{ right\}" i
-\left\\{ ${1:${VISUAL}} \right\\} $0
-endsnippet
-
-snippet lr[ "left[ right]" i
+snippet lrb "left[ right]" iA
 \left[ ${1:${VISUAL}} \right] $0
 endsnippet
 
-snippet lra "leftangle rightangle" iA
+snippet <>> "leftangle rightangle" iA
 \left<${1:${VISUAL}} \right>$0
 endsnippet
 
@@ -677,7 +671,7 @@ endsnippet
 
 priority 200
 context "math()"
-snippet <> "leftrightarrow" iA
+snippet <-> "leftrightarrow" iA
 \leftrightarrow
 endsnippet
 

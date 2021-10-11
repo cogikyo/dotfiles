@@ -1,7 +1,7 @@
 " ╦  ┌─┐┌┬┐┌─┐
 " ║  ├┤  │ └─┐
 " ╩═╝└─┘ ┴ └─┘
-let g:syntastic_tex_checkers = ['chktex']
+let g:syntastic_tex_checkers = ['lacheck']
 let g:syntastic_ignore_files = ['\m\c\.cls$', '\m\c\.sty$']
 let g:syntastic_error_symbol = "✗"
 let syntastic_style_error_symbol = "✗"
