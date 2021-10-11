@@ -6,9 +6,9 @@ let mapleader = " "
 
 " ⚕  esc
 inoremap <C-c> <esc>
-inoremap <C-s> <esc>:w<Cr>
-nnoremap <C-s> <esc>:w<Cr>
-vnoremap <C-s> <esc>:w<Cr>
+inoremap <C-s> <esc>:w<CR>
+nnoremap <C-s> <esc>:w<CR>
+vnoremap <C-s> <esc>:w<CR>
 
 " 💨 completion
 inoremap <expr> <CR> (pumvisible() ? "\<c-y>\<cr>" : "\<CR>")
@@ -108,7 +108,7 @@ nnoremap <leader>na /\\item<CR><esc>0ztA<Space>
 nnoremap <leader>pa ?\\item<CR>n<esc>0ztA<Space>
 inoremap <C-f> <Esc>: silent exec '.!inkscape-figures create "'.getline('.').'" "'.b:vimtex.root.'/figures/"'<CR><CR>:w<CR>
 nnoremap <C-f> : silent exec '!inkscape-figures edit "'.b:vimtex.root.'/figures/" > /dev/null 2>&1 &'<CR><CR>:redraw!<CR>
-inoremap <C-a> <Esc>F=i&<Esc>A<Space>\\<Esc><C-s>o
+inoremap <C-a> <Esc>F=i&<Esc>A<Space>\\<Esc>:w<cr>o
 inoremap <C-g> <Esc>"+pa<Esc>03w
 
 " 🔃 reload
