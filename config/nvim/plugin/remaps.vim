@@ -6,9 +6,9 @@ let mapleader = " "
 
 " ⚕  esc
 inoremap <C-c> <esc>
-inoremap <C-s> <esc>
-nnoremap <C-s> <esc>
-vnoremap <C-s> <esc>
+inoremap <C-s> <esc>:w<Cr>
+nnoremap <C-s> <esc>:w<Cr>
+vnoremap <C-s> <esc>:w<Cr>
 
 " 💨 completion
 inoremap <expr> <CR> (pumvisible() ? "\<c-y>\<cr>" : "\<CR>")

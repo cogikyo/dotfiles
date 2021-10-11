@@ -1,11 +1,10 @@
-snippet "([0-9]*)qq" "question" rwA
+snippet "([0-9].*)qq" "question" rwA
 # --- Question `!p snip.rv=match.group(1)` --- #
 print("\n" + "-" * 19)
 print("Question `!p snip.rv=match.group(1)`:\n")
 
 $0
-
-print("\n" + "-" * 19)
+print("-" * 19)
 endsnippet
 
 snippet symbols "sympy sybmlols" bA
@@ -32,15 +31,30 @@ $1 = np.array(
 $0
 endsnippet
 
+snippet cvc "column vectoor" bA
+$1 = np.array([[$2, $3, $4]]).T
+$0
+endsnippet
+
+snippet imx "identity matrix" bA
+$1 = np.array(
+		[
+				[1, 0, 0],
+				[0, 1, 0],
+				[0, 0, 1],
+		]
+)
+$0
+endsnippet
+
 snippet smtx "symbolic matrix" bA
 $1 = sp.Matrix(
 		[
 				[$2, $3, $4],
-				[$5, $6, $7]k
+				[$5, $6, $7],
 				[$8, $9, $10],
 		]
 )
-
 $0
 endsnippet
 
