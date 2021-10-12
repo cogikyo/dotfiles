@@ -10,10 +10,6 @@ inoremap <C-s> <esc>:w<CR>
 nnoremap <C-s> <esc>:w<CR>
 vnoremap <C-s> <esc>:w<CR>
 
-" 💨 completion
-inoremap <expr> <CR> (pumvisible() ? "\<c-y>\<cr>" : "\<CR>")
-inoremap <silent> <expr> <CR> ncm2_ultisnips#expand_or("\<CR>", 'n')
-
 " 🔍 go to letter(s)
 nmap t <Plug>(easymotion-bd-f)
 nmap T <Plug>(easymotion-bd-f2)
