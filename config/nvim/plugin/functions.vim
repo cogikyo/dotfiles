@@ -56,7 +56,7 @@ augroup END
 
 augroup SPELLING
   autocmd!
-  autocmd FileType latex,markdown,cpp,python setlocal spell spelllang=en_us
+  autocmd FileType latex,tex,markdown,md,cpp,python setlocal spell spelllang=en_us
 augroup END
 
 augroup COMMENTARY
