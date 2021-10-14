@@ -95,7 +95,7 @@ inoremap <C-l> <c-g>u<Esc>[s1z=`]a<c-g>u
 nnoremap <C-l> [s1z=<c-o>
 
 " 📓 latex
-inoremap <C-t> <Esc>o<CR>\item<Space>
+inoremap <C-t> <Esc>o\item<Space>
 nnoremap <C-t> }i\item<Space><Esc>o<Esc>"_DkO<Esc>_DjA
 nnoremap <leader>al }koali
 nnoremap <leader>ni /\\item<CR>zt
