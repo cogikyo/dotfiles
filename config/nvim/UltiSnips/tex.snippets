@@ -96,8 +96,13 @@ snippet setcount "counter" iA
 \setcounter{enumi}{$1}
 endsnippet
 
-snippet minorfg "color minor" iA
-\color{foreground-2}
+snippet mnr "color minor" iA
+\minor{$1} $0
+endsnippet
+
+priority 1000
+snippet -mnr "color minor" bA
+\minor{\item[$1.] $0}
 endsnippet
 
 snippet item "Itemize" bA
