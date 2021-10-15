@@ -242,12 +242,12 @@ snippet `` "quotes" wA
 \`\`$1'' $0
 endsnippet
 
-snippet \it "italic" wA
-\textit{$1}
+snippet *it "italic" wA
+\textit{$1} $0
 endsnippet
 
-snippet \bf "bold" wA
-\textbf{$1}
+snippet *bf "bold" wA
+\textbf{$1} $0
 endsnippet
 
 # ╔╦╗┌─┐┌┬┐┬ ┬
@@ -390,6 +390,10 @@ snippet .t "transpose" iA
 ^T
 endsnippet
 
+snippet 'R(\d)' "dimension in R" wrA
+\(\R^`!p snip.rv = match.group(1)`\) $0
+endsnippet
+
 context "math()"
 snippet '([A-Za-z])(\d)' "auto subscript" wrA
 `!p snip.rv = match.group(1)`_`!p snip.rv = match.group(2)`
@@ -502,12 +506,12 @@ snippet inv "^{-1}" iA
 endsnippet
 
 context "math()"
-snippet ss "squared ^2" iA
+snippet ^^ "squared ^2" iA
 ^2
 endsnippet
 
 context "math()"
-snippet cc "cb ^3" iA
+snippet ^^^ "cb ^3" iA
 ^3
 endsnippet
 
