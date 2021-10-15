@@ -105,12 +105,12 @@ nnoremap <leader>pa ?\\item<CR>n<esc>0ztA<Space>
 inoremap <C-f> <Esc>: silent exec '.!inkscape-figures create "'.getline('.').'" "'.b:vimtex.root.'/figures/"'<CR><CR>:w<CR>
 nnoremap <C-f> : silent exec '!inkscape-figures edit "'.b:vimtex.root.'/figures/" > /dev/null 2>&1 &'<CR><CR>:redraw!<CR>
 inoremap <C-a> <Esc>F=i&<Esc>A<Space>\\<Esc>:w<cr>o
-inoremap <C-g> <Esc>"+pa<Esc>03w
+inoremap <C-g>g <Esc>"+pa<Esc>VgwzHztA<Esc>
 
 " 🔃 reload
 nnoremap <leader>rs :call UltiSnips#RefreshSnippets()<CR>
 nnoremap <leader>rm :source $HOME/.config/nvim/plugin/remaps.vim<CR>
 
 " ⛵ reflow
-inoremap <C-h> <Esc>VgwzHzzA
-nnoremap <C-h> VgwzHzzg_
+inoremap <C-h> <Esc>VgwzHztA<Esc>
+nnoremap <C-h> VgwzHztg_
