@@ -45,3 +45,9 @@ invertible
 tridiagonal
 nullspace
 orthonormal
+columnspace
+len
+#owspace
+rowspace
+cokernel
+dimensionality
