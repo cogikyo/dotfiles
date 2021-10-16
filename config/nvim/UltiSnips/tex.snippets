@@ -387,7 +387,7 @@ endsnippet
 
 context "math()"
 snippet .t "transpose" iA
-^T
+^T $0
 endsnippet
 
 snippet 'R(\d)' "dimension in R" wrA
@@ -668,6 +668,15 @@ priority 200
 context "math()"
 snippet '(?<!\\)(arcsin|arccos|arctan|arccot|arccsc|arcsec|pi|zeta|int)' "ln" rwA
 \\`!p snip.rv = match.group(1)`$1
+endsnippet
+
+context "math()"
+snippet '(?<!\\)(rank)' "operators" rwA
+\\`!p snip.rv = match.group(1)`{\bm{$1}} $0
+endsnippet
+
+snippet '(?<!\\)(true|false)' "boolean" rw
+\\`!p snip.rv = match.group(1)`{`!p snip.rv = match.group(1)`}; $0
 endsnippet
 
 priority 200
