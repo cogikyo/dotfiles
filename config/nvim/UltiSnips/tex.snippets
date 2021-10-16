@@ -390,7 +390,7 @@ snippet .t "transpose" iA
 ^T $0
 endsnippet
 
-snippet 'R(\d)' "dimension in R" wrA
+snippet 'R(\d|n|m)' "dimension in R" wrA
 \(\R^`!p snip.rv = match.group(1)`\) $0
 endsnippet
 
@@ -508,11 +508,6 @@ endsnippet
 context "math()"
 snippet ^^ "squared ^2" iA
 ^2
-endsnippet
-
-context "math()"
-snippet ^^^ "cb ^3" iA
-^3
 endsnippet
 
 context "math()"

@@ -10,6 +10,11 @@ let syntastic_style_warning_symbol = "⏿"
 
 let g:colorizer_colornames = 0
 
+let g:black#settings = {
+  \ 'fast': 1,
+  \ 'line_length': 80
+\}
+
 let g:tex_flavor='latex'
 let g:vimtex_view_method='zathura'
 let g:vimtex_quickfix_mode=0
