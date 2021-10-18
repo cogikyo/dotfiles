@@ -32,8 +32,8 @@ nmap gy `]
 vnoremap <leader>p y']o<Esc>p
 
 " 🤯 comment headers
-nnoremap <leader>hs :.! figlet -fshadow<CR>O<Esc>j:.,.+5Commentary<CR>5jo<Esc>d0
-nnoremap <leader>hc :.! figlet -fcalvin<CR>O<Esc>j:.,.+2Commentary<CR>2jo<Esc>d0
+nnoremap <leader>hs :.! figlet -fshadow<CR>O<Esc>j:.,.+5Commentary<CR>5jo<Esc>0d$
+nnoremap <leader>hc :.! figlet -fcalvin<CR>O<Esc>j:.,.+2Commentary<CR>2jo<Esc>0d$
 
 " 🌌 gimmie space please
 nnoremap <leader>o o<Esc>"_Dk$
