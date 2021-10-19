@@ -237,7 +237,7 @@ snippet `` "quotes" wA
 \`\`$1'' $0
 endsnippet
 
-snippet *it "italic" wA
+snippet *it "italic" iA
 \textit{$1} $0
 endsnippet
 
@@ -473,6 +473,11 @@ endsnippet
 context "math()"
 snippet lim "limit" iA
 \lim_{${1:n} \to ${2:\infty}}
+endsnippet
+
+context "math()"
+snippet eval "evaluated at" iA
+\bigg|_{$1}^{$2} $0
 endsnippet
 
 context "math()"
