@@ -155,7 +155,6 @@ case $chosen in
     ;;
   calculus)
     open 3 calculus & sleep 3
-    pdf thomas
     ;;
   linear)
     open 3 linear & sleep 3

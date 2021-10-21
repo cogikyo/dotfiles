@@ -25,7 +25,7 @@ nnoremap <leader>v :bn<CR>
 nnoremap <leader>dd :bd!<CR>
 
 " 🤖 copy copy
-nnoremap <leader>y "+y
+nnoremap <leader>y ^"+y$
 vnoremap <leader>y "+y
 vnoremap <leader>Y gg"+yG
 nmap gy `]
