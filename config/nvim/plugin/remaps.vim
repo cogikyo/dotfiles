@@ -59,8 +59,6 @@ inoremap : :<c-g>u
 " 🚙 moving text
 vnoremap u :m '<-2<CR>gv=gv
 vnoremap m :m '>+1<cr>gv=gv
-inoremap <C-k> <esc> :m .-2<CR>==i
-inoremap <C-j> <esc> :m .+1<CR>==i
 nnoremap <leader>uu :m .-2<CR>==
 nnoremap <leader>mm :m .+1<CR>==
 
