@@ -19,9 +19,9 @@ follow = keyboard
 origin = top-left
 offset = 580x7
 width = (0, 769)
+height = 48
 progress_bar = false
 indicate_hidden = yes
-shrink = true
 notification_limit = 1
 transparency = 1
 separator_height = 0
@@ -38,14 +38,15 @@ idle_threshold = 120
 font = "Open Sans 10"
 line_height = 0
 markup = full
-format = <span foreground="#b0d0eb"><b>%b</b></span> · %s
+format = <span foreground="#b0d0eb"><b>%s</b></span> · %b
 alignment = left
 vertical_alignment = center
 show_age_threshold = -1
-word_wrap = no
-ignore_newline = yes
+word_wrap = false
+ignore_newline = true
 stack_duplicates = true
 show_indicators = false
+ellipsize = end
 
 # ╦ ╦┬┌─┐┌┬┐┌─┐┬─┐┬ ┬
 # ╠═╣│└─┐ │ │ │├┬┘└┬┘
@@ -86,12 +87,12 @@ icon_path = /usr/share/icons/Vimix/22/actions/:/usr/share/icons/Vimix/22/devices
 [urgency_low]
 background = "#161821"
 foreground = "#c6c8d1"
-timeout = 10
+timeout = 69
 
 [urgency_normal]
 background = "#161821"
-foreground = "#84a0c6"
-timeout = 60
+foreground = "#b0d0eb"
+timeout = 10
 
 [urgency_critical]
 background = "#161821"
