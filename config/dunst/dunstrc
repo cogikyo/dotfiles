@@ -30,7 +30,7 @@ horizontal_padding = 11
 frame_color = "#f5b17a"
 frame_width = 0
 sort = yes
-idle_threshold = 120
+idle_threshold = 10
 
 # ╔╦╗┌─┐─┐ ┬┌┬┐
 #  ║ ├┤ ┌┴┬┘ │

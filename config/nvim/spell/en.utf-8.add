@@ -54,3 +54,6 @@ dimensionality
 vectorSpaces
 designator
 designators
+boolean
+isocline
+integrable
