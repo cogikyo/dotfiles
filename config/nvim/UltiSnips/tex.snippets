@@ -774,6 +774,10 @@ snippet sii "SI" iA
 \SI{$1}{$2}
 endsnippet
 
+snippet "([\d]*)cc" "SI celsius" irA
+\SI{`!p snip.rv=match.group(1)`}{\celsius}
+endsnippet
+
 snippet bigfun "Big function" iA
 \begin{align*}
 	$1: $2 &\longrightarrow $3 \\\\
