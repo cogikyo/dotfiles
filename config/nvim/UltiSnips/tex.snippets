@@ -671,6 +671,11 @@ snippet '(?<!\\)(rank)' "operators" rwA
 \\`!p snip.rv = match.group(1)`{\bm{$1}} $0
 endsnippet
 
+context "math()"
+snippet '(?<!\\)(det)' "operators" rwA
+\\`!p snip.rv = match.group(1)`{\bm{$1}} $0
+endsnippet
+
 snippet '(?<!\\)(true|false)' "boolean" rw
 \\`!p snip.rv = match.group(1)`{`!p snip.rv = match.group(1)`}; $0
 endsnippet
