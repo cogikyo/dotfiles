@@ -7,6 +7,7 @@ Plug 'nvim-treesitter/nvim-treesitter'
 Plug 'nvim-lua/plenary.nvim'
 Plug 'nvim-telescope/telescope.nvim'
 Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
+Plug 'ThePrimeagen/harpoon'
 
 Plug 'cocopon/iceberg.vim'
 Plug 'itchyny/lightline.vim'

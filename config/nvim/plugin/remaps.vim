@@ -14,8 +14,7 @@ vnoremap <C-s> <esc>:w<CR>
 nmap t <Plug>(easymotion-bd-f)
 nmap T <Plug>(easymotion-bd-f2)
 
-" temp:, : needs to be on base layer of keyboard
-nnoremap <leader>s :w<CR>
+" quit
 nnoremap <leader>x :q<CR>
 nnoremap <leader>q :wq<CR>
 
@@ -97,9 +96,7 @@ inoremap <C-t> <Esc>o\item<Space>
 nnoremap <C-t> }i\item<Space><Esc>o<Esc>"_DkO<Esc>_DjA
 nnoremap <leader>al }koali
 nnoremap <leader>ni /\\item<CR>zt
-nnoremap <leader>pu ?\\item<CR>zt
-nnoremap <leader>na /\\item<CR><esc>0ztA<Space>
-nnoremap <leader>pa ?\\item<CR>n<esc>0ztA<Space>
+nnoremap <leader>in ?\\item<CR>zt
 inoremap <C-f> <Esc>: silent exec '.!inkscape-figures create "'.getline('.').'" "'.b:vimtex.root.'/figures/"'<CR><CR>:w<CR>
 nnoremap <C-f> : silent exec '!inkscape-figures edit "'.b:vimtex.root.'/figures/" > /dev/null 2>&1 &'<CR><CR>:redraw!<CR>
 inoremap <C-a> <Esc>F=i&<Esc>A<Space>\\<Esc>:w<cr>o
@@ -112,3 +109,11 @@ nnoremap <leader>rm :source $HOME/.config/nvim/plugin/remaps.vim<CR>
 " ⛵ reflow
 inoremap <C-h> <Esc>VgwzHztA<Esc>
 nnoremap <C-h> VgwzHztg_
+
+" 🔱 harpoon
+nnoremap <leader>nn :lua require("harpoon.mark").add_file()<CR>
+nnoremap <leader>nt :lua require("harpoon.ui").nav_file(1)<CR>
+nnoremap <leader>ne :lua require("harpoon.ui").nav_file(2)<CR>
+nnoremap <leader>ns :lua require("harpoon.ui").nav_file(3)<CR>
+nnoremap <leader>na :lua require("harpoon.ui").nav_file(4)<CR>
+nnoremap <leader>nf :lua require("harpoon.ui").toggle_quick_menu()<CR>
