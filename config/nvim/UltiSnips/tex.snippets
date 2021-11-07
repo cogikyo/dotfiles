@@ -250,7 +250,7 @@ endsnippet
 # ║║║├─┤ │ ├─┤
 # ╩ ╩┴ ┴ ┴ ┴ ┴
 
-snippet nio "inline math" wA
+snippet ni "inline math" wA
 \($1\)$0
 endsnippet
 
@@ -302,11 +302,6 @@ endsnippet
 context "math()"
 snippet '([A-Za-z]*)ddx' "ddx" wrA
 \\frac{d`!p snip.rv = match.group(1)`}{dx} $0
-endsnippet
-
-context "math()"
-snippet '([A-Za-z]*)ol' "(x)" wrA
-(`!p snip.rv = match.group(1)`) $0
 endsnippet
 
 context "math()"
@@ -520,22 +515,22 @@ snippet inv "^{-1}" iA
 endsnippet
 
 context "math()"
-snippet ^^ "squared ^2" iA
-^2
+snippet ^^ "to the ... power" iA
+^{$1} $0
 endsnippet
 
 context "math()"
-snippet td "to the ... power" iA
-^{$1}$0
+snippet -^ "to the ... - power" iA
+^{-$1} $0
 endsnippet
 
 context "math()"
-snippet rd "to the ... power" iA
-^{($1)}$0
+snippet ^) "to the ... power" iA
+^{($1)} $0
 endsnippet
 
 snippet __ "subscript" iA
-_{$1}$0
+_{$1} $0
 endsnippet
 
 snippet ooo "\infty" iA
