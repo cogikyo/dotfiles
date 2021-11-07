@@ -269,7 +269,6 @@ snip.rv = stripped[0:i] + "\\(" + stripped[i+1:-1] + "\\)"
 ` $0
 endsnippet
 
-
 snippet deq "Display Math" wA
 \[%%%%%%%%%%
 $0
@@ -279,6 +278,15 @@ endsnippet
 context "math()"
 snippet ~= "approx" iA
 \approx
+endsnippet
+
+context "math()"
+snippet dsps "display style" iA
+\displaystyle $0
+endsnippet
+
+snippet dsps "display style" iA
+\(\displaystyle $1 \) $0
 endsnippet
 
 context "math()"
