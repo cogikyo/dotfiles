@@ -43,7 +43,7 @@ bspc rule -a Inkscape state=floating
 # ╔═╗┌─┐┌┐┌┌─┐┬┌─┐
 # ║  │ ││││├┤ ││ ┬
 # ╚═╝└─┘┘└┘└  ┴└─┘
-bspc config split_ratio             0.75
+bspc config split_ratio             0.52
 bspc config border_width            10
 bspc config window_gap              9
 bspc config top_padding             52
