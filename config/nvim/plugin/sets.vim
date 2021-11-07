@@ -28,7 +28,7 @@ set statusline+=%#warningmsg#
 set statusline+=%{SyntasticStatuslineFlag()}
 set statusline+=%*
 
-set conceallevel=2
+" set conceallevel=2
 
 set completeopt=menuone,noselect,noinsert
 set shortmess+=c
