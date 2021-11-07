@@ -20,16 +20,7 @@ XF86Audio{Raise,Lower}Volume
 super + shift + {j,period,m}
   pactl set-sink-volume @DEFAULT_SINK@ {+10,-10,0}%
 
-# I can't figure out a better option
-shift + super + control + {w,r}
-  notify-send -t 3000 {connecting "bluetooth & wifi", reconnecting wifi} \
-  & {wifi psu & blt, wifi psu}
-
-# ╔═╗┌─┐┌─┐┌─┐
-# ╠═╣├─┘├─┘└─┐
-# ╩ ╩┴  ┴  └─┘
-
-# terminal emulator
+# terminal
 super + {_,shift +}Return
   {alacritty,bspc rule -a Alacritty -o state=floating rectangle=1118x1960+1361+100 && alacritty}
 
@@ -50,40 +41,41 @@ super + p
 	rofi -no-lazy-grab -show drun -theme ~/.config/rofi/launcher.rasi
 
 # layouts
-super + j
+super + n
     ./scripts/layouts.sh
 
 # emoji
-super + z
+super + m
     rofi -show emoji -modi emoji -theme ~/.config/rofi/emoji.rasi
 
 # power
-super + v
+super + BackSpace
     ./scripts/powermenu.sh
+
 
 # ╔╗ ┌─┐┌─┐┬ ┬┌┬┐
 # ╠╩╗└─┐├─┘││││││
 # ╚═╝└─┘┴  └┴┘┴ ┴
 
-# quit/restart bspwm
-super + alt + {q,r}
-	bspc {quit,wm -r}
+# restart bspwm
+alt + z + k
+	bspc wm -r
 
 # close/kill node
 super + {_,shift + }x
 	bspc node -{c,k}
 
 # alternate between the tiled and monocle layout
-super + y
-	bspc desktop -l next
+shift + ctrl + Tab
+  bspc desktop -l next
 
-# set the window state
-super + {m,k}
-	bspc node -t {tiled,floating}
-
-# focus the node in the given direction
-super + {n,i,u,o}
- 	bspc node -f {west,south,north,east}.local
+# toggle floating
+super + l
+  if [ -z "$(bspc query -N -n focused.floating)" ]; then \
+    bspc node focused -t floating; \
+  else \
+    bspc node focused -t tiled; \
+  fi
 
 super + {Left,Down,Up,Right}
  	bspc node -f {west,south,north,east}.local
@@ -99,9 +91,17 @@ super + {e,t}
   DIR={prev,next}; \
 	bspc desktop -f "$DIR"
 
+# focus last dektop
+super + s
+  bspc desktop -f last
+
 # makeshift tab swap
 super + h
 	bspc node -s south; bspc node -f north
+
+# preselect the direction
+super + shift + {n,i,u,l}
+	bspc node -p {west,south,north,east}
 
 # ╔╦╗┌─┐┬┌┬┐
 # ║║║├─┤││││

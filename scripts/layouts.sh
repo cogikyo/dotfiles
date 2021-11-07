@@ -135,7 +135,7 @@ basic_phat () {
       ;;
   esac
 
-  bspc config split_ratio 0.75
+  bspc config split_ratio 0.52
 }
 
 # ╔═╗┌─┐┬  ┌─┐┌─┐┌┬┐┬┌─┐┌┐┌
