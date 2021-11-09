@@ -49,7 +49,7 @@ super + m
     rofi -show emoji -modi emoji -theme ~/.config/rofi/emoji.rasi
 
 # power
-super + BackSpace
+alt + z + k
     ./scripts/powermenu.sh
 
 
@@ -58,7 +58,7 @@ super + BackSpace
 # ╚═╝└─┘┴  └┴┘┴ ┴
 
 # restart bspwm
-alt + z + k
+alt + Esc
 	bspc wm -r
 
 # close/kill node
