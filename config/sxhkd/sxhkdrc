@@ -58,7 +58,7 @@ alt + z + k
 # ╚═╝└─┘┴  └┴┘┴ ┴
 
 # restart bspwm
-alt + Esc
+alt + Escape
 	bspc wm -r
 
 # close/kill node
@@ -66,7 +66,7 @@ super + {_,shift + }x
 	bspc node -{c,k}
 
 # alternate between the tiled and monocle layout
-shift + ctrl + Tab
+super + a
   bspc desktop -l next
 
 # toggle floating
