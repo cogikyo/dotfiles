@@ -107,8 +107,9 @@ nnoremap <leader>rs :call UltiSnips#RefreshSnippets()<CR>
 nnoremap <leader>rm :source $HOME/.config/nvim/plugin/remaps.vim<CR>
 
 " ⛵ reflow
-inoremap <C-h> <Esc>VgwzHztA<Esc>
-nnoremap <C-h> VgwzHztg_
+inoremap <C-h> <Esc>VgwzHzt_<Esc>
+nnoremap <C-h> VgwzHzt_
+nnoremap <leader>rf mzJ`zVgwzHzt_
 
 " 🔱 harpoon
 nnoremap <leader>nn :lua require("harpoon.mark").add_file()<CR>
