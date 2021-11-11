@@ -75,3 +75,7 @@ bool
 const
 str
 Strang
+diagonalizable
+eigenvector
+eigenvectors
+Hermitian

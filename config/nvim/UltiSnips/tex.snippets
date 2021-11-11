@@ -87,6 +87,21 @@ snippet enum "Enumerate" bA
 \end{enumerate}
 endsnippet
 
+snippet problems "enumerate selected problems" bA
+\subsection{Problems $1, $2, $3}
+\begin{enumerate}
+	\minor{\item[$1.] $0
+	}
+
+	\minor{\item[$2.]
+	}
+
+	\minor{\item[$3.]
+	}
+
+\end{enumerate}
+endsnippet
+
 snippet setcount "counter" iA
 \setcounter{enumi}{$1}
 endsnippet
@@ -116,7 +131,6 @@ snippet awi "answer" bA
 \begin{itemize}\color{foreground}
 	\item $0
 \end{itemize}
-
 endsnippet
 
 snippet awa "answer align" bA
@@ -341,6 +355,16 @@ snip.rv = stripped[0:i] + "\\frac{" + stripped[i+1:-1] + "}"
 endsnippet
 
 context "math()"
+snippet VAV "diagonlized A" iA
+\bm{V\Lambda V}^{-1}
+endsnippet
+
+context "math()"
+snippet UAU "orthonormal diagonlized A" iA
+\bm{U\Lambda U}^{-1}
+endsnippet
+
+context "math()"
 snippet cvc "column vector" iA
 \begin{bmatrix} $1 \\\\ $2 \\\\ $3 \end{bmatrix}
 endsnippet
@@ -380,9 +404,28 @@ snippet amx "matrix" iA
 \\end{bmatrix}
 endsnippet
 
+priority 100
 context "math()"
 snippet '([A-Za-z]*)bm' "bold face" wrA
 \\bm{`!p snip.rv = match.group(1)`}
+endsnippet
+
+priority 200
+context "math()"
+snippet '([A-Za-z]*)ibm' "bold face inverse" wrA
+\\bm{`!p snip.rv = match.group(1)`}^{-1}
+endsnippet
+
+priority 300
+context "math()"
+snippet '([A-Za-z]*)cibm' "bold face complex inverse" wrA
+\\bm{`!p snip.rv = match.group(1)`}^{\t}
+endsnippet
+
+priority 400
+context "math()"
+snippet '([A-Za-z]*)tbm' "bold face transpose" wrA
+\\bm{`!p snip.rv = match.group(1)`}^T $0
 endsnippet
 
 snippet '([A-Za-z]*)tbm' "bold face math inline" wrA
@@ -392,6 +435,11 @@ endsnippet
 context "math()"
 snippet .t "transpose" iA
 ^T $0
+endsnippet
+
+context "math()"
+snippet .ct "complex transpose" iA
+^{\t} $0
 endsnippet
 
 snippet 'R(\d|n|m)' "dimension in R" wrA
@@ -557,7 +605,7 @@ snippet EE "exists" iA
 endsnippet
 
 context "math()"
-snippet AA "forall" iA
+snippet fall "forall" iA
 \forall
 endsnippet
 
@@ -802,7 +850,6 @@ snippet bigfun "Big function" iA
 	$4 &\longmapsto $1($4) = $0
 .\end{align*}
 endsnippet
-
 
 priority 10
 context "math()"
