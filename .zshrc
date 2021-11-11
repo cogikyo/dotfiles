@@ -71,6 +71,7 @@ alias td='(){tmux detach}'
 alias tr='()tmux-session restore'
 alias ts='tmux-session save'
 alias tk='tmux kill-session'
+alias tks='tmux kill-server'
 
 
 # ╔═╗┬  ┬ ┬┌─┐┬┌┐┌┌─┐
