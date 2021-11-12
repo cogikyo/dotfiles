@@ -728,7 +728,7 @@ snippet '(?<!\\)(rank)' "operators" rwA
 endsnippet
 
 context "math()"
-snippet '(?<!\\)(det)' "operators" rwA
+snippet '(?<!\\)(det|tr)' "operators" rwA
 \\`!p snip.rv = match.group(1)`{\bm{$1}} $0
 endsnippet
 
@@ -754,6 +754,11 @@ endsnippet
 
 snippet >> ">>" iA
 \gg
+endsnippet
+
+context "math()"
+snippet +- "plus minus" iA
+\pm
 endsnippet
 
 snippet << "<<" iA
