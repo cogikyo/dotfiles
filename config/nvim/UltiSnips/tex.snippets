@@ -268,7 +268,11 @@ snippet ni "inline math" wA
 \($1\)$0
 endsnippet
 
-priority 1000
+context "math()"
+snippet zvc "zero vec" wA
+\nil
+endsnippet
+
 snippet '^.*\)n' "() inline math" wrA
 `!p
 stripped = match.string[:-1]
@@ -845,7 +849,7 @@ snippet sii "SI" iA
 \SI{$1}{$2}
 endsnippet
 
-snippet "([\d]*)cc" "SI celsius" irA
+snippet "([\d]+)cc" "SI celsius" wrA
 \SI{`!p snip.rv=match.group(1)`}{\celsius}
 endsnippet
 
