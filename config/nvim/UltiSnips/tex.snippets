@@ -31,6 +31,14 @@ $0
 \end{document}
 endsnippet
 
+snippet newpage "newpage" bA
+
+%%%%%%%%%%%%%
+\newpage %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%
+
+endsnippet
+
 snippet beg "begin{} / end{}" bA
 \\begin{$1}
 	$0
@@ -299,7 +307,7 @@ snippet ~= "approx" iA
 endsnippet
 
 context "math()"
-snippet then "algined implies" iA
+snippet then "algined implies" bA
 &\then
 endsnippet
 
@@ -845,12 +853,12 @@ snippet case "cases" wA
 \end{cases}
 endsnippet
 
-snippet sii "SI" iA
-\SI{$1}{$2}
+snippet "([\d]+)si" "SI" wrA
+\SI{`!p snip.rv=match.group(1)`$1}{$2} $0
 endsnippet
 
 snippet "([\d]+)cc" "SI celsius" wrA
-\SI{`!p snip.rv=match.group(1)`}{\celsius}
+\SI{`!p snip.rv=match.group(1)`}{\celsius} $0
 endsnippet
 
 snippet bigfun "Big function" iA
