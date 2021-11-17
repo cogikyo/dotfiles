@@ -201,11 +201,11 @@ snippet prn "(context)" wA
 endsnippet
 
 snippet dlink "down link" wA
-\dlink{${1}}{${2:${VISUAL}}}
+\dlink{$1}{$2}
 endsnippet
 
 snippet ulink "up link" wA
-\ulink{${1}}{${2:${VISUAL}}}
+\ulink{$1}{$2}
 endsnippet
 
 snippet ct1 "primary" wA
@@ -279,20 +279,6 @@ endsnippet
 context "math()"
 snippet zvc "zero vec" wA
 \nil
-endsnippet
-
-snippet '^.*\)n' "() inline math" wrA
-`!p
-stripped = match.string[:-1]
-depth = 0
-i = len(stripped) - 1
-while True:
-	if stripped[i] == ')': depth += 1
-	if stripped[i] == '(': depth -= 1
-	if depth == 0: break;
-	i-=1
-snip.rv = stripped[0:i] + "\\(" + stripped[i+1:-1] + "\\)"
-` $0
 endsnippet
 
 snippet deq "Display Math" wA
