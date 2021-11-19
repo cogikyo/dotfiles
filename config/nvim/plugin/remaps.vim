@@ -1,4 +1,4 @@
-" ╦═╗┌─┐┌┬┐┌─┐┌─┐┌─┐
+"👾 ╦═╗┌─┐┌┬┐┌─┐┌─┐┌─┐
 " ╠╦╝├┤ │││├─┤├─┘└─┐
 " ╩╚═└─┘┴ ┴┴ ┴┴  └─┘
 nnoremap <SPACE> <Nop>
@@ -47,6 +47,10 @@ nnoremap n nztzv
 nnoremap N Nztzv
 nnoremap <C-j> mzJ`z
 
+" 🔖 temp mark
+nnoremap <leader>ss m0
+nnoremap <leader>rr `0zt
+
 " 👈 undo break points
 inoremap , ,<c-g>u
 inoremap . .<c-g>u
@@ -55,11 +59,13 @@ inoremap ? ?<c-g>u
 inoremap ; ;<c-g>u
 inoremap : :<c-g>u
 
+" 📢 capilization
+nnoremap <leader>el gue
+nnoremap <leader>eu gUe
+
 " 🚙 moving text
-vnoremap u :m '<-2<CR>gv=gv
-vnoremap m :m '>+1<cr>gv=gv
-nnoremap <leader>uu :m .-2<CR>==
-nnoremap <leader>mm :m .+1<CR>==
+vnoremap <Up> :m '<-2<CR>gv=gv
+vnoremap <Down> :m '>+1<cr>gv=gv
 
 " 🍉 terminal
 tnoremap <C-t> <C-\><C-n>:bd!<CR>
@@ -113,8 +119,13 @@ nnoremap <leader>rf mzJ`zVgwzHzt_
 
 " 🔱 harpoon
 nnoremap <leader>nn :lua require("harpoon.mark").add_file()<CR>
+nnoremap <leader>nf :lua require("harpoon.ui").toggle_quick_menu()<CR>
 nnoremap <leader>nt :lua require("harpoon.ui").nav_file(1)<CR>
 nnoremap <leader>ne :lua require("harpoon.ui").nav_file(2)<CR>
 nnoremap <leader>ns :lua require("harpoon.ui").nav_file(3)<CR>
 nnoremap <leader>na :lua require("harpoon.ui").nav_file(4)<CR>
-nnoremap <leader>nf :lua require("harpoon.ui").toggle_quick_menu()<CR>
+nnoremap <leader>nd :lua require("harpoon.ui").nav_file(5)<CR>
+
+" 👾 regex
+vnoremap s :<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
+nnoremap <leader>sa m0ggVG:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
