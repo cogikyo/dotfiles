@@ -1,4 +1,4 @@
-"👾 ╦═╗┌─┐┌┬┐┌─┐┌─┐┌─┐
+" ╦═╗┌─┐┌┬┐┌─┐┌─┐┌─┐
 " ╠╦╝├┤ │││├─┤├─┘└─┐
 " ╩╚═└─┘┴ ┴┴ ┴┴  └─┘
 nnoremap <SPACE> <Nop>
@@ -14,7 +14,7 @@ vnoremap <C-s> <esc>:w<CR>
 nmap t <Plug>(easymotion-bd-f)
 nmap T <Plug>(easymotion-bd-f2)
 
-" quit
+" ✍  quit/write
 nnoremap <leader>x :q<CR>
 nnoremap <leader>q :wq<CR>
 
@@ -28,7 +28,7 @@ nnoremap <leader>y ^"+y$
 vnoremap <leader>y "+y
 vnoremap <leader>Y gg"+yG
 nmap gy `]
-vnoremap <leader>p y']o<Esc>p
+vnoremap <leader>p y']o<Esc>p`]o<Esc>
 
 " 🤯 comment headers
 nnoremap <leader>hs :.! figlet -fshadow<CR>O<Esc>j:.,.+5Commentary<CR>5jo<Esc>0d$
