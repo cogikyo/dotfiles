@@ -517,7 +517,7 @@ endsnippet
 
 context "math()"
 snippet sum "sum" wA
-\sum_{n=${1:1}}^{${2:\infty}} ${3:a_n z^n}
+\sum_{n=1}^{\infty} $1
 endsnippet
 
 context "math()"
@@ -527,7 +527,7 @@ endsnippet
 
 context "math()"
 snippet lim "limit" iA
-\lim_{${1:n} \to ${2:\infty}}
+\lim_{n \to \infty} $0
 endsnippet
 
 context "math()"
@@ -551,8 +551,8 @@ snippet part "d/dx" iA
 endsnippet
 
 context "math()"
-snippet sq "\sqrt{}" iA
-\sqrt{${1:${VISUAL}}} $0
+snippet root "\sqrt{}" iA
+\sqrt{$1} $0
 endsnippet
 
 context "math()"
