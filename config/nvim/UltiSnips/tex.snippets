@@ -264,7 +264,7 @@ snippet *it "italic" iA
 \textit{$1} $0
 endsnippet
 
-snippet *bf "bold" wA
+snippet *bf "bold" iA
 \textbf{$1} $0
 endsnippet
 
@@ -296,7 +296,7 @@ endsnippet
 
 snippet deq "Display Math" wA
 \[%%%%%%%%%%
-$0
+  $0
 \]%%%%%%%%%%
 endsnippet
 
@@ -309,6 +309,17 @@ context "math()"
 snippet then "algined implies" bA
 &\then
 endsnippet
+
+context "math()"
+snippet sgiv "spaced given" wA
+\qquad \given $0
+endsnippet
+
+context "math()"
+snippet &giv "alinged given" wA
+&& \given $0
+endsnippet
+
 
 context "math()"
 snippet dsps "display style" iA
@@ -565,7 +576,12 @@ endsnippet
 
 context "math()"
 snippet root "\sqrt{}" iA
-\sqrt{$1} $0
+\sqrt{$1}
+endsnippet
+
+context "math()"
+snippet fox "f(x)" iA
+f(x)
 endsnippet
 
 context "math()"
@@ -718,7 +734,7 @@ endsnippet
 priority 100
 context "math()"
 snippet '(?<!\\)(sin|cos|tan|sec|cot|csc|ln|log|exp|star|perp)' "ln" rwA
-\\`!p snip.rv = match.group(1)` $1
+\\`!p snip.rv = match.group(1)`$0
 endsnippet
 
 priority 300
@@ -730,7 +746,7 @@ endsnippet
 priority 200
 context "math()"
 snippet '(?<!\\)(arcsin|arccos|arctan|arccot|arccsc|arcsec|pi|zeta|int)' "ln" rwA
-\\`!p snip.rv = match.group(1)`$1
+\\`!p snip.rv = match.group(1)`$0
 endsnippet
 
 context "math()"
