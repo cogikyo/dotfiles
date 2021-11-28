@@ -100,6 +100,7 @@ nnoremap <C-l> [s1z=<c-o>
 " 📓 latex
 inoremap <C-t> <Esc>}i\item<Space><Esc>o<Esc>"_DkO<Esc>_DjA
 nnoremap <C-t> }i\item<Space><Esc>o<Esc>"_DkO<Esc>_DjA
+nnoremap <leader><CR> o<CR>\item<Space>
 nnoremap <leader>al }koali
 nnoremap <leader>ni /\\item<CR>zt
 nnoremap <leader>in ?\\item<CR>zt

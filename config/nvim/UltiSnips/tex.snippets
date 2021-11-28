@@ -272,8 +272,21 @@ endsnippet
 # ║║║├─┤ │ ├─┤
 # ╩ ╩┴ ┴ ┴ ┴ ┴
 
-snippet ni "inline math" wA
+
+snippet nio "inline math" wA
 \($1\)$0
+endsnippet
+
+priority 1
+context "math()"
+snippet '([  ]{2}ss)' "space" wrA
+ \quad $0
+endsnippet
+
+priority 2
+context "math()"
+snippet '([  ]{3,}ss)' "more space" wrA
+ \qquad $0
 endsnippet
 
 context "math()"
@@ -567,7 +580,7 @@ endsnippet
 
 context "math()"
 snippet ^- "to the ... - power" iA
-^{-$1} $0
+^{-$1}
 endsnippet
 
 context "math()"
@@ -588,12 +601,12 @@ snippet rij "mrij" i
 endsnippet
 
 context "math()"
-snippet >= "greater than eq" iA
+snippet g= "greater than eq" iA
 \geq
 endsnippet
 
 context "math()"
-snippet <= "less than eq" iA
+snippet l= "less than eq" iA
 \leq
 endsnippet
 
