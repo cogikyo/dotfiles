@@ -70,8 +70,9 @@ alias tks='tmux kill-server'
 # ╩  ┴─┘└─┘└─┘┴┘└┘└─┘
 
 source ~/.local/zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-source ~/.local/zsh/zsh-autocomplete/zsh-autocomplete.plugin.zsh
 source ~/.local/zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
+source ~/.local/zsh/zsh-autocomplete/zsh-autocomplete.plugin.zsh
+  zstyle ':autocomplete:*' min-input 2
 source ~/.local/zsh/zsh-colored-man-pages/colored-man-pages.plugin.zsh
 
 
@@ -95,3 +96,5 @@ bindkey  "^[[3~"    delete-char
 bindkey  "^[[4~"    end-of-line
 bindkey  "^[[1;5C"  forward-word
 bindkey  "^[[1;5D"  backward-word
+bindkey  "^S"       history-incremental-search-forward
+bindkey  "^R"       history-incremental-search-backward
