@@ -12,4 +12,4 @@ ln -sfn $HOME/dotfiles/resources $HOME/
 ln -sfn $HOME/dotfiles/scripts $HOME/
 
 mkdir -pv $HOME/.local/bin/
-ln -sfn $HOME/.dotfiles/bin/* $HOME/.local/bin/
+ln -sfn $HOME/dotfiles/bin/* $HOME/.local/bin/
