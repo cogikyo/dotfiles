@@ -1,0 +1,7 @@
+-maxdepth 1 -name pattern
+-maxdepth 1 -size +100M
+$fd -0 pattern
+$fd -0 -d 2 -S +100M
+$grep -rlZ pattern
+$rg -l0 pattern
+$fzf -m | tr '\n' '\0'
