@@ -15,9 +15,10 @@
 # ║││││ │
 # ╩┘└┘┴ ┴
 
+~/.config/zsh/greeting.sh
 eval "$(starship init zsh)"
 eval "$(thefuck --alias)"
-~/.config/zsh/greeting.sh
+eval "$(jump shell)"
 
 # autostart startx after login
 if [[ -z $DISPLAY ]] && [[ $(tty) = /dev/tty1 ]]; then
@@ -32,19 +33,40 @@ setopt appendhistory
 setopt share_history
 
 
+# ┌┐┌┌┐┌┌┐┌
+# │││││││││
+# ┘└┘┘└┘┘└┘
+
+f ()
+{
+  if [ -n $NNNLVL ] && [ "${NNNLVL:-0}" -ge 1 ]; then
+    echo "nnn is already running"
+    return
+  fi
+
+  export NNN_TMPFILE="${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.lastd"
+
+  nnn -e "$@"
+
+  if [ -f "$NNN_TMPFILE" ]; then
+    . "$NNN_TMPFILE"
+    rm -f "$NNN_TMPFILE" > /dev/null
+  fi
+}
+
+export NNN_PLUG='t:autojump;f:bulknew;'
+alias ls="nnn -de"
+set --export NNN_FIFO "/tmp/nnn.fifo"
+
+
 # ╔═╗┬  ┬┌─┐┌─┐┌─┐┌─┐
 # ╠═╣│  │├─┤└─┐├┤ └─┐
 # ╩ ╩┴─┘┴┴ ┴└─┘└─┘└─┘
 
-# common navigation
-alias dl="cd ~/downloads"
-alias not="cd ~/notes"
-alias dot="cd ~/dotfiles"
-
-# common commands
 alias pac='(){sudo pacman -S $1;}'
 alias niol='clear && zsh'
 
+# git
 alias gts='git status'
 alias kurmit='(){git add . && git commit -m"$1" && git push;}'
 alias ammend='(){git add . && git commit --ammend --no-edit;}'
