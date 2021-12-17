@@ -37,36 +37,27 @@ setopt share_history
 # ╩ ╩┴─┘┴┴ ┴└─┘└─┘└─┘
 
 # common navigation
-alias dd="cd ~/downloads"
+alias dl="cd ~/downloads"
 alias not="cd ~/notes"
-alias dot="cd ~/.dotfiles"
-alias cs="cd ~/notes/water/cpp/cs162"
+alias dot="cd ~/dotfiles"
 
 # common commands
 alias pac='(){sudo pacman -S $1;}'
-alias eyes='(){xrandr --output HDMI-A-0 --brightness $1;}'
-alias eyess='(){xrandr --output eDP-1 --brightness $1;}'
 alias niol='clear && zsh'
+
 alias gts='git status'
 alias kurmit='(){git add . && git commit -m"$1" && git push;}'
 alias gp='git pull'
-alias bt='sudo systemctl start bluetooth'
-alias btc='bluetoothctl connect DF:C5:8D:53:1B:94'
-alias wifi='(){sudo ~/scripts/wifi.sh "$1";}'
-alias psu='wifi psu'
 alias n='nvim'
-alias sl='source ~/notes/fire/linear/linear-venv/bin/activate'
 alias p='(){python3 $1.py}'
+
+alias eyes='(){xrandr --output HDMI-A-0 --brightness $1;}'
+alias eyess='(){xrandr --output eDP-1 --brightness $1;}'
 
 # tmux
 alias tls='tmux ls'
-alias taf='tmux attach -t \ 🔥'
-alias taw='tmux attach -t \ 🌊'
-alias tae='tmux attach -t \ 🌳'
-alias taa='tmux attach -t \ ☁ '
 alias tad='tmux attach -t \ 🪙'
 alias tan='tmux attach -t \ 📓'
-alias tap='tmux attach -t \ 🐍'
 alias td='(){tmux detach}'
 alias tr='()tmux-session restore'
 alias ts='tmux-session save'
@@ -82,7 +73,6 @@ source ~/.local/zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source ~/.local/zsh/zsh-autocomplete/zsh-autocomplete.plugin.zsh
 source ~/.local/zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
 source ~/.local/zsh/zsh-colored-man-pages/colored-man-pages.plugin.zsh
-
 
 # ╔═╗─┐ ┬┌─┐┌─┐┬─┐┌┬┐┌─┐
 # ║╣ ┌┴┬┘├─┘│ │├┬┘ │ └─┐
