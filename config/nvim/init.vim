@@ -8,7 +8,6 @@ Plug 'nvim-lua/plenary.nvim'
 Plug 'nvim-telescope/telescope.nvim'
 Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
 Plug 'ThePrimeagen/harpoon'
-Plug 'mcchrish/nnn.vim'
 
 Plug 'nosvagor/errant'
 Plug 'cocopon/iceberg.vim'
@@ -21,7 +20,7 @@ Plug 'SirVer/ultisnips'
 
 Plug 'easymotion/vim-easymotion'
 Plug 'yuttie/comfortable-motion.vim'
-Plug 'tpope/vim-commentary'
+Plug 'numToStr/Comment.nvim'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-surround'
 Plug 'jiangmiao/auto-pairs'
@@ -34,8 +33,8 @@ Plug 'mhinz/vim-startify'
 Plug 'ncm2/ncm2'
 Plug 'roxma/nvim-yarp'
 Plug 'ncm2/ncm2-bufword'
+Plug 'tpope/vim-commentary'
 Plug 'ncm2/ncm2-path'
-Plug 'subnut/ncm2-github-emoji'
 Plug 'ncm2/ncm2-go'
 Plug 'ncm2/ncm2-ultisnips'
 Plug 'ncm2/ncm2-match-highlight'
@@ -46,3 +45,6 @@ Plug 'fisadev/vim-isort'
 
 call plug#end()
 
+lua << EOF
+require('Comment').setup()
+EOF

@@ -5,15 +5,7 @@
 #  ╚╝ ┴ ┴┴└─
 
 rofi_command="rofi -theme ~/.config/rofi/layouts.rasi"
-options=`echo "calculus linear cpp notes dotfiles\n" | tr ' ' '\n'`
-
-# smol = surface pro, phat = 3840 x 2160
-if xrandr | grep "eDP-1"
-then
-  size=smol
-else
-  size=phat
-fi
+options=`echo "notes dotfiles latex\n" | tr ' ' '\n'`
 
 # ╔═╗┬ ┬┌┐┌┌─┐
 # ╠╣ │ │││││
@@ -34,7 +26,7 @@ end () {
 
 open () {
   begin $1
-  basic_$size $2
+  basic_phat $2
   end $2
 }
 
@@ -55,35 +47,6 @@ pdf () {
 # ╦  ┌─┐┬ ┬┌─┐┬ ┬┌┬┐┌─┐
 # ║  ├─┤└┬┘│ ││ │ │ └─┐
 # ╩═╝┴ ┴ ┴ └─┘└─┘ ┴ └─┘
-
-basic_smol () {
-  bspc config split_ratio 0.547
-  bspc node -p east
-  alacritty -e cava & sleep 0.5
-
-  bspc config split_ratio 0.851
-  bspc node -p north
-  case $1 in
-    .dotfiles|notes)
-      firefox --new-window https://github.com/nosvagor/$1 \
-      & sleep 2
-      ;;
-    cpp)
-      firefox --new-window https://github.com/nosvagor/notes/tree/main/water/$1 \
-      & sleep 2
-      ;;
-    linear)
-      firefox --new-window https://github.com/nosvagor/notes/tree/main/fire/$1 \
-      & sleep 2
-      ;;
-    calculus)
-      zathura ~/notes/fire/calculus/$1.pdf & sleep 1
-      ;;
- esac
-
-  bspc node -f west.local
-  bspc config split_ratio 0.547
-}
 
 basic_phat () {
 
@@ -117,21 +80,10 @@ basic_phat () {
   }
 
   case $1 in
-    .dotfiles|notes)
+    dotfiles|notes|latex)
       basic
       firefox --new-window https://github.com/nosvagor/$1 & sleep 1
       bspc node -f west.local
-      ;;
-    cpp)
-      basic
-      firefox --new-window https://github.com/nosvagor/notes/tree/main/water/$1 & sleep 1
-      bspc node -f west.local
-      ;;
-    linear)
-      tex linear mth-343/applied-linear strang
-      ;;
-    calculus)
-      tex calculus mth-253/calc-iii rogawski
       ;;
   esac
 
@@ -145,19 +97,12 @@ basic_phat () {
 chosen="$(echo -e "$options" | $rofi_command -p "ﱖ" -dmenu)"
 case $chosen in
   notes)
-    open 5 notes
+    open 3 notes
     ;;
   dotfiles)
-    open 4 '.dotfiles'
+    open 4 dotfiles
     ;;
-  cpp)
-    open 3 cpp
-    ;;
-  calculus)
-    open 3 calculus & sleep 3
-    ;;
-  linear)
-    open 3 linear & sleep 3
-    pdf strang-solutions
+  latex)
+    open 5 latex
     ;;
 esac

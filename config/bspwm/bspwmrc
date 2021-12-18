@@ -7,7 +7,7 @@
 # ╚═════╝ ╚══════╝╚═╝      ╚══╝╚══╝ ╚═╝     ╚═╝╚═╝  ╚═╝ ╚═════╝
 # →-.   →  .-'.   →  .--.   →  .--.   →  .--.   →  .-→
 # →::.\::::::::.\::::::::.\::::::::.\::::::::.\::::::: → →
-# → →:.\ https://github.com/nosvagor/.dotfiles \::: → →  →  →
+# → →:.\ https://github.com/nosvagor/dotfiles \::: → →  →  →
 # →::::.\::::::::.\::::::::.\::::::::.\::::::::.\::::→  →
 #   → →   `--'  →   `.-'  →   `--'  →   `--'  →   `--' → →
 
@@ -35,6 +35,7 @@ ytmdesktop &
 bspc monitor -d 1 2 3 4 5 6
 bspc rule -a youtube-music-desktop-app desktop='^6'
 bspc rule -a Gpick state=floating
+bspc rule -a Peek state=floating
 bspc rule -a Zathura state=tiled
 bspc rule -a vlc state=floating
 bspc rule -a zoom state=floating
