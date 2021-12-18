@@ -8,15 +8,15 @@ Plug 'nvim-lua/plenary.nvim'
 Plug 'nvim-telescope/telescope.nvim'
 Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
 Plug 'ThePrimeagen/harpoon'
+Plug 'mcchrish/nnn.vim'
 
+Plug 'nosvagor/errant'
 Plug 'cocopon/iceberg.vim'
 Plug 'itchyny/lightline.vim'
-Plug 'nosvagor/iceberg-dark'
 Plug 'chrisbra/Colorizer'
 Plug 'kyazdani42/nvim-web-devicons'
 
 Plug 'lervag/vimtex'
-Plug 'KeitaNakamura/tex-conceal.vim', {'for': 'tex'}
 Plug 'SirVer/ultisnips'
 
 Plug 'easymotion/vim-easymotion'

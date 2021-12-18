@@ -7,7 +7,7 @@ colorscheme iceberg
 let g:lightline = {
 \ 'separator': { 'left': '', 'right': '' },
 \ 'subseparator': { 'left': '╼╾', 'right': '╼╾'},
-\ 'colorscheme': 'icebergDark',
+\ 'colorscheme': 'errant',
 \ 'active': {
 \   'left': [ [ 'mode', 'paste' ],
 \             [ 'fugitive', 'readonly', 'filename', 'modified' ] ],

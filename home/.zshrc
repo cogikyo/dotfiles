@@ -41,7 +41,7 @@ f ()
     return
   fi
 
-  export NNN_TMPFILE="${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.lastd"
+  NNN_TMPFILE="${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.lastd"
 
   nnn -e "$@"
 
@@ -51,8 +51,16 @@ f ()
   fi
 }
 
+export NNN_COLORS='4321'
+BLK="00" CHR="00" REG="00"
+DIR="04" EXE="02"
+HARDLINK="00" SYMLINK="06"
+MISSING="00"  ORPHAN="09"
+FIFO="00" SOCK="00" OTHER="01"
+export NNN_FCOLORS="$BLK$CHR$DIR$EXE$REG$HARDLINK$SYMLINK$MISSING$ORPHAN$FIFO$SOCK$OTHER"
 export NNN_PLUG='t:autojump;f:bulknew;z:preview-tui'
 export NNN_FIFO='/tmp/nnn.fifo'
+export EDITOR=nvim
 alias ls="nnn -de"
 
 
@@ -60,8 +68,7 @@ alias ls="nnn -de"
 # ╠═╣│  │├─┤└─┐├┤ └─┐
 # ╩ ╩┴─┘┴┴ ┴└─┘└─┘└─┘
 
-alias pac='(){sudo pacman -S $1;}'
-alias niol='clear && zsh'
+alias pac='(){sudo pacman -S $1;}' alias niol='clear && zsh'
 
 # git
 alias gts='git status'
@@ -119,6 +126,9 @@ bindkey  "^S"       history-incremental-search-forward
 bindkey  "^R"       history-incremental-search-backward
 
 
+# ┌─┐┬  ┬┌─┐┬
+# ├┤ └┐┌┘├─┤│
+# └─┘ └┘ ┴ ┴┴─┘
 
 eval "$(starship init zsh)"
 eval "$(thefuck --alias)"
