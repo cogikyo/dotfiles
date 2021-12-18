@@ -15,15 +15,12 @@
 # ║││││ │
 # ╩┘└┘┴ ┴
 
-~/.config/zsh/greeting.sh
-eval "$(starship init zsh)"
-eval "$(thefuck --alias)"
-eval "$(jump shell)"
-
 # autostart startx after login
 if [[ -z $DISPLAY ]] && [[ $(tty) = /dev/tty1 ]]; then
 startx
 fi
+
+~/.config/zsh/greeting.sh
 
 # history
 HISTFILE=~/.histfile
@@ -54,9 +51,9 @@ f ()
   fi
 }
 
-export NNN_PLUG='t:autojump;f:bulknew;'
+export NNN_PLUG='t:autojump;f:bulknew;z:preview-tui'
+export NNN_FIFO='/tmp/nnn.fifo'
 alias ls="nnn -de"
-set --export NNN_FIFO "/tmp/nnn.fifo"
 
 
 # ╔═╗┬  ┬┌─┐┌─┐┌─┐┌─┐
@@ -120,3 +117,9 @@ bindkey  "^[[1;5C"  forward-word
 bindkey  "^[[1;5D"  backward-word
 bindkey  "^S"       history-incremental-search-forward
 bindkey  "^R"       history-incremental-search-backward
+
+
+
+eval "$(starship init zsh)"
+eval "$(thefuck --alias)"
+eval "$(jump shell)"
