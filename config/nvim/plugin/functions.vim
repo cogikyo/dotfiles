@@ -59,11 +59,6 @@ augroup SPELLING
   autocmd FileType latex,tex,markdown,md,cpp,python setlocal spell spelllang=en_us
 augroup END
 
-augroup COMMENTARY
-  autocmd!
-  autocmd FileType c,cpp,cs,java setlocal commentstring=//\ %s
-augroup END
-
 augroup PYTHON
   autocmd!
   autocmd FileType python setlocal tabstop=4 softtabstop=4

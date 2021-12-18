@@ -114,7 +114,7 @@ content-margin = 3
 content-foreground = ${colors.sec}
 content-background = ${colors.background}
 content-font = 8
-click-left = ~/scripts/powermenu.sh
+click-left = ~/dotfiles/scripts/powermenu.sh
 
 [module/terminal]
 type=custom/text
@@ -132,7 +132,7 @@ content-margin = 1
 content-font = 6
 content-foreground = ${colors.sub}
 content-background = ${colors.background}
-click-left = ./scripts/layouts.sh
+click-left = ~/dotfiles/scripts/layouts.sh
 
 [module/dunst]
 type = custom/ipc

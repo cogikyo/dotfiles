@@ -1,7 +1,4 @@
-# ███████╗██╗  ██╗██╗  ██╗██╗  ██╗██████╗
-# ██╔════╝╚██╗██╔╝██║  ██║██║ ██╔╝██╔══██╗
-# ███████╗ ╚███╔╝ ███████║█████╔╝ ██║  ██║
-# ╚════██║ ██╔██╗ ██╔══██║██╔═██╗ ██║  ██║
+# ███████╗██╗  ██╗██╗  ██╗██╗  ██╗██████╗ ██╔════╝╚██╗██╔╝██║  ██║██║ ██╔╝██╔══██╗ ███████╗ ╚███╔╝ ███████║█████╔╝ ██║  ██║ ╚════██║ ██╔██╗ ██╔══██║██╔═██╗ ██║  ██║
 # ███████║██╔╝ ██╗██║  ██║██║  ██╗██████╔╝
 # ╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═════╝
 # →-.   →  .-'.   →  .--.   →  .--.   →  .--.   →  .-→
@@ -37,20 +34,20 @@ super + g
 # ╩╚═└─┘└  ┴
 
 # programs
-super + p
+super + y
 	rofi -no-lazy-grab -show drun -theme ~/.config/rofi/launcher.rasi
 
 # layouts
 super + n
-    ./scripts/layouts.sh
+    ./dotfiles/scripts/layouts.sh
 
 # emoji
-super + m
+super + o
     rofi -show emoji -modi emoji -theme ~/.config/rofi/emoji.rasi
 
 # power
 alt + z + k
-    ./scripts/powermenu.sh
+    ./dotfiles/scripts/powermenu.sh
 
 
 # ╔╗ ┌─┐┌─┐┬ ┬┌┬┐
@@ -91,10 +88,6 @@ super + {e,t}
   DIR={prev,next}; \
 	bspc desktop -f "$DIR"
 
-# focus last dektop
-super + s
-  bspc desktop -f last
-
 # makeshift tab swap
 super + h
 	bspc node -s south; bspc node -f north
@@ -131,9 +124,9 @@ super + comma
 # ╚  └  ┴ ┴┴  └─┘└─┘
 
 # stop ffmpeg
-ctrl + shift + super + c
+ctrl + super + s
 	killall --user $USER  --ignore-case  --signal INT  ffmpeg & notify-send -u Critical -t 3000 ended Recording
 
 # generate gif of selected area
-ctrl + shift + super + b
-	~/scripts/gif.sh
+ctrl + super + g
+	~/dotfiles/scripts/gif.sh

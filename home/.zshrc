@@ -6,10 +6,9 @@
 # ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝
 # →-.   →  .-'.   →  .--.   →  .--.   →  .--.   →  .-→
 # →::.\::::::::.\::::::::.\::::::::.\::::::::.\::::::: → →
-# → →:.\ https://github.com/nosvagor/.dotfiles \::: → →  →  →
+# → →:.\ https://github.com/nosvagor/dotfiles \::: → →  →  →
 # →::::.\::::::::.\::::::::.\::::::::.\::::::::.\::::→  →
 #   → →   `--'  →   `.-'  →   `--'  →   `--'  →   `--' → →
-
 
 # ╦┌┐┌┬┌┬┐
 # ║││││ │
@@ -84,6 +83,14 @@ alias eyess='(){xrandr --output eDP-1 --brightness $1;}'
 alias tls='tmux ls'
 alias tad='tmux attach -t \ 🪙'
 alias tan='tmux attach -t \ 📓'
+alias tal='tmux attach -t \ 🌒'
+alias tab='tmux attach -t \ 🐚'
+alias tap='tmux attach -t \ 🐍'
+alias tar='tmux attach -t \ 🦀'
+alias tas='tmux attach -t \ 🦄'
+alias tag='tmux attach -t \ 🦦'
+alias tat='tmux attach -t \ 🎏'
+alias tax='tmux attach -t \ 📚'
 alias td='(){tmux detach}'
 alias tr='()tmux-session restore'
 alias ts='tmux-session save'
@@ -118,8 +125,10 @@ export PATH="$HOME/.cargo/bin:$PATH"
 # └  ┴┴ └─  ┴ ┴└─┘ ┴ └─┘
 
 bindkey  "^[[1~"    beginning-of-line
-bindkey  "^[[3~"    delete-char
+bindkey  "^[[H"    beginning-of-line
 bindkey  "^[[4~"    end-of-line
+bindkey  "^[[F"    end-of-line
+bindkey  "^[[3~"    delete-char
 bindkey  "^[[1;5C"  forward-word
 bindkey  "^[[1;5D"  backward-word
 bindkey  "^S"       history-incremental-search-forward
