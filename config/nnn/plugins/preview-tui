@@ -73,7 +73,7 @@
 # Authors: Todd Yamakawa, Léo Villeveygoux, @Recidiviste, Mario Ortiz Manero, Luuk van Baal
 
 #SPLIT="$SPLIT"  # you can set a permanent split here
-#TERMINAL="$TERMINAL"  # same goes for the terminal
+TERMINAL="$TERMINAL"  # same goes for the terminal
 USE_SCOPE="${USE_SCOPE:-0}"
 USE_PISTOL="${USE_PISTOL:-0}"
 ICONLOOKUP="${ICONLOOKUP:-0}"
