@@ -31,7 +31,6 @@ HISTSIZE=10000
 SAVEHIST=10000
 setopt appendhistory
 setopt share_history
-setopt no_complete_aliases
 
 
 # ┌┐┌┌┐┌┌┐┌
@@ -94,7 +93,6 @@ alias tar='tmux attach -t \ 🦀'
 alias tas='tmux attach -t \ 🦄'
 alias tag='tmux attach -t \ 🦦'
 alias tat='tmux attach -t \ 🎏'
-alias tax='tmux attach -t \ 📚'
 alias td='(){tmux detach}'
 alias tr='()tmux-session restore'
 alias ts='tmux-session save'
@@ -130,9 +128,9 @@ export TEXINPUTS="$HOME/notes/.assets/tex//:"
 # └  ┴┴ └─  ┴ ┴└─┘ ┴ └─┘
 
 bindkey  "^[[1~"    beginning-of-line
-bindkey  "^[[H"    beginning-of-line
+bindkey  "^[[H"     beginning-of-line
 bindkey  "^[[4~"    end-of-line
-bindkey  "^[[F"    end-of-line
+bindkey  "^[[F"     end-of-line
 bindkey  "^[[3~"    delete-char
 bindkey  "^[[1;5C"  forward-word
 bindkey  "^[[1;5D"  backward-word
