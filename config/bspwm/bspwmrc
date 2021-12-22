@@ -47,19 +47,19 @@ bspc rule -a Inkscape state=floating
 bspc config split_ratio             0.52
 bspc config border_width            10
 bspc config window_gap              9
-bspc config top_padding             52
+bspc config top_padding             56
 bspc config right_padding           6
 bspc config left_padding            6
-bspc config bottom_padding          4
+bspc config bottom_padding          10
 
 bspc config presel_feedback         false
 
 bspc config borderless_monocle      false
 bspc config gapless_monocle         false
 bspc config paddingless_monocle     false
-bspc config top_monocle_padding     100
-bspc config right_monocle_padding   400
-bspc config left_monocle_padding    400
+bspc config top_monocle_padding     147
+bspc config right_monocle_padding   302
+bspc config left_monocle_padding    302
 bspc config bottom_monocle_padding  100
 
 bspc config focus_follows_pointer   true

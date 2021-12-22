@@ -23,6 +23,7 @@ set colorcolumn=80
 set nowrap
 set splitbelow
 set laststatus=2
+set noshowmode
 
 set statusline+=%#warningmsg#
 set statusline+=%{SyntasticStatuslineFlag()}
