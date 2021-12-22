@@ -17,6 +17,7 @@ Plug 'kyazdani42/nvim-web-devicons'
 Plug 'lervag/vimtex'
 Plug 'SirVer/ultisnips'
 
+Plug 'mattn/emmet-vim'
 Plug 'easymotion/vim-easymotion'
 Plug 'yuttie/comfortable-motion.vim'
 Plug 'numToStr/Comment.nvim'
