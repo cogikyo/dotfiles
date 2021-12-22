@@ -5,7 +5,7 @@
 #  ╚╝ ┴ ┴┴└─
 
 rofi_command="rofi -theme ~/.config/rofi/layouts.rasi"
-options=`echo "notes dotfiles latex\n" | tr ' ' '\n'`
+options=`echo "notes dotfiles" | tr ' ' '\n'`
 
 # ╔═╗┬ ┬┌┐┌┌─┐
 # ╠╣ │ │││││

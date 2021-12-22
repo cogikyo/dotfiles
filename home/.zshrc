@@ -21,6 +21,13 @@ fi
 
 ~/.config/zsh/greeting.sh
 
+export GOPATH="$HOME/.go"
+export PATH="$PATH:$HOME/.go/bin"
+export PATH="$PATH:$HOME/.local/bin"
+export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.cargo/bin:$PATH"
+export TEXINPUTS="$HOME/notes/.assets/tex//:"
+
 eval "$(starship init zsh)"
 eval "$(thefuck --alias)"
 eval "$(jump shell)"
@@ -110,18 +117,6 @@ source ~/.local/zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
 source ~/.local/zsh/zsh-autocomplete/zsh-autocomplete.plugin.zsh
   zstyle ':autocomplete:*' min-input 2
 source ~/.local/zsh/zsh-colored-man-pages/colored-man-pages.plugin.zsh
-
-
-# ╔═╗─┐ ┬┌─┐┌─┐┬─┐┌┬┐┌─┐
-# ║╣ ┌┴┬┘├─┘│ │├┬┘ │ └─┐
-# ╚═╝┴ └─┴  └─┘┴└─ ┴ └─┘
-
-export GOPATH="$HOME/.go"
-export PATH="$PATH:$HOME/.go/bin"
-export PATH="$PATH:$HOME/.local/bin"
-export PATH="$HOME/.local/bin:$PATH"
-export PATH="$HOME/.cargo/bin:$PATH"
-export TEXINPUTS="$HOME/notes/.assets/tex//:"
 
 
 # ┌─┐┬─┐ ┬  ┬┌─┌─┐┬ ┬┌─┐
