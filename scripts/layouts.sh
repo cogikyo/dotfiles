@@ -53,7 +53,7 @@ basic_phat () {
   basic () {
     bspc config split_ratio 0.3005
     alacritty -e cava & sleep 0.5
-    bspc config split_ratio 0.896
+    bspc config split_ratio 0.895
     bspc node -p north
   }
 

@@ -21,12 +21,17 @@ fi
 
 ~/.config/zsh/greeting.sh
 
+eval "$(starship init zsh)"
+eval "$(thefuck --alias)"
+eval "$(jump shell)"
+
 # history
 HISTFILE=~/.histfile
 HISTSIZE=10000
 SAVEHIST=10000
 setopt appendhistory
 setopt share_history
+setopt no_complete_aliases
 
 
 # ┌┐┌┌┐┌┌┐┌
@@ -60,7 +65,6 @@ export NNN_FCOLORS="$BLK$CHR$DIR$EXE$REG$HARDLINK$SYMLINK$MISSING$ORPHAN$FIFO$SO
 export NNN_PLUG='t:autojump;f:bulknew;z:preview-tui'
 export NNN_FIFO='/tmp/nnn.fifo'
 export EDITOR=nvim
-alias ls="nnn -de"
 
 
 # ╔═╗┬  ┬┌─┐┌─┐┌─┐┌─┐
@@ -72,7 +76,7 @@ alias pac='(){sudo pacman -S $1;}' alias niol='clear && zsh'
 # git
 alias gts='git status'
 alias kurmit='(){git add . && git commit -m"$1" && git push;}'
-alias ammend='(){git add . && git commit --ammend --no-edit;}'
+alias amend='(){git add . && git commit --amend --no-edit;}'
 alias gp='git pull'
 alias n='nvim'
 
@@ -118,6 +122,7 @@ export PATH="$PATH:$HOME/.go/bin"
 export PATH="$PATH:$HOME/.local/bin"
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
+export TEXINPUTS="$HOME/notes/.assets/tex//:"
 
 
 # ┌─┐┬─┐ ┬  ┬┌─┌─┐┬ ┬┌─┐
@@ -133,12 +138,3 @@ bindkey  "^[[1;5C"  forward-word
 bindkey  "^[[1;5D"  backward-word
 bindkey  "^S"       history-incremental-search-forward
 bindkey  "^R"       history-incremental-search-backward
-
-
-# ┌─┐┬  ┬┌─┐┬
-# ├┤ └┐┌┘├─┤│
-# └─┘ └┘ ┴ ┴┴─┘
-
-eval "$(starship init zsh)"
-eval "$(thefuck --alias)"
-eval "$(jump shell)"
