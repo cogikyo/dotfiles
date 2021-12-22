@@ -1,0 +1,35 @@
+:root[tabsintitlebar][sizemode="maximized"] #navigator-toolbox {
+    -moz-appearance: none !important;
+    padding-top: 12px !important;
+}
+/* Fix the FUllscreen changing padding on other bars. */
+:root[tabsintitlebar][sizemode="maximized"] #titlebar {
+    -moz-appearance: none !important;
+}
+
+/* Change bars order */
+#PersonalToolbar {
+    -moz-box-ordinal-group: 3 !important;
+}
+#titlebar {
+    -moz-box-ordinal-group: 2 !important;
+}
+#nav-bar {
+    -moz-box-ordinal-group: 1 !important;
+}
+
+/* Change bottom border color */
+#navigator-toolbox {
+    background-color: var(--bg) !important;
+    padding: 2px !important;
+}
+
+#tabbrowser-tabpanels {
+    background-color: var(--bg) !important;
+}
+
+#minimize-button,
+#close-button,
+#restore-button { 
+    visibility: collapse !important;
+}

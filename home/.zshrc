@@ -73,6 +73,7 @@ export EDITOR=nvim
 alias pac='(){sudo pacman -S $1;}' alias niol='clear && zsh'
 
 # git
+alias g='lazygit'
 alias gts='git status'
 alias kurmit='(){git add . && git commit -m"$1" && git push;}'
 alias amend='(){git add . && git commit --amend --no-edit;}'

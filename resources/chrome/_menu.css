@@ -1,0 +1,202 @@
+/* Separator */
+menuseparator,
+#contentAreaContextMenu menuseparator,
+toolbarseparator,
+.bookmarks-actions-menuseparator {
+    -moz-appearance: none !important;
+    border-color: var(--cyan) !important;
+    border-width: 1px !important;
+    padding-top: 0px !important;
+    padding-bottom: 0px !important;
+    margin-top: 2px !important;
+    margin-bottom: 2px !important;
+}
+
+/* Reset form elements appereance */
+panel richlistbox,
+panel tree,
+panel button,
+panel menulist,
+panel textbox,
+menupopup,
+menu,
+menuitem {
+    -moz-appearance: none !important;
+}
+
+/* Spacing between menu items */
+menulist,
+menuitem,
+menu {
+    min-height: 2.5em;
+}
+
+/* Menus */
+#sidebarMenu-popup toolbarbutton,
+panel richlistbox,
+panel tree,
+panel button,
+panel menulist,
+panel textbox,
+menupopup:not(#BMB_bookmarksPopup),
+#main-menubar > menu > menupopup,
+#context-navigation {
+    color: var(--fg) !important;
+    background-color: var(--bg) !important;
+}
+#sidebarMenu-popup toolbarbutton:hover,
+panel treechildren::-moz-tree-row(selected),
+panel button:hover,
+menu:hover,
+menu[_moz-menuactive],
+menu[open],
+menuitem:hover,
+menuitem[_moz-menuactive] {
+    background-color: var(--bg) !important;
+    color: var(--orange-br) !important;
+}
+
+menu[disabled="true"] {
+    color: var(--grey) !important;
+}
+menuitem[disabled="true"] {
+    color: var(--grey) !important;
+}
+
+menulist > menupopup > menuitem,
+menulist > menupopup > menucaption,
+menulist > menupopup > menu {
+  color: var(--fg) !important;
+}
+
+.openintabs-menuitem {
+    visibility: collapse !important;
+}
+
+.menuitem-with-favicon image {
+    display: none !important;
+}
+
+
+.menuitem-iconic {
+    margin-left: -5px !important; 
+}
+
+.bookmark-item:hover {
+    color: var(--orange-br) !important;
+    background: none !important;
+}
+
+.panel-subview-footer {
+    display: none !important;
+}
+
+.subviewbutton:hover {
+    color: var(--orange-br) !important;
+    background-color: var(--bg)  !important;
+}
+.panel-arrowcontent {
+    background-color: var(--bg)  !important;
+}
+.panel-arrowcontainer .panel-arrowbox .panel-arrow {
+    fill: var(--orange-br) !important;
+}
+.panel-arrowcontainer .panel-arrowcontent {
+    border-color: var(--black) !important;
+}
+
+.menuitem-with-favicon {
+    padding-left: 13px !important;
+    margin-bottom: -2px !important;
+}
+
+menupopup,
+panel {
+  min-width: 1px;
+  --panel-padding: 0;
+  --panel-color: var(--blue) !important;
+  --panel-background: none !important;
+  --panel-border-radius: 0;
+  --panel-border-color: ThreeDShadow;
+  --panel-width: initial;
+}
+
+panelview {
+    background: var(--bg) !important;
+}
+
+/* Context navigation buttons (right-click page) */
+#context-navigation menuitem {
+    color: var(--blue-grey) !important;
+    background: none !important;
+    transition: var(--in-out) !important;
+}
+
+#context-navigation menuitem:hover,
+#contentAreaContextMenu menu:hover {
+    color: var(--orange-br) !important;
+}
+
+#context-navigation #context-back,
+#context-navigation #context-forward,
+#context-navigation #context-reload,
+#context-navigation #context-bookmarkpage {
+   display: none !important;
+}
+
+#toolbar-menubar {
+    visibility: collapse !important;
+}
+
+#contentAreaContextMenu{ 
+    margin: 5px 0px 0px 5px !imporltant;
+}
+
+#contentAreaContextMenu menuitem label {
+    margin-left: 15px !important;   
+}
+
+#contentAreaContextMenu image{
+    visibility: collapse !important;
+}
+
+/* Bitwarden is messed up? */
+#contentAreaContextMenu menu {
+   margin-left: 4px !important;
+   margin-right: 10px !important;
+   color:  var(--blue) !important;
+}
+
+#_446900e4-71c2-419f-a6a7-df9c091e268b_-menuitem-_generate-password {
+   color:  var(--blue) !important;
+   margin-left: 3px !important;
+   margin-top: -8px !important;
+}
+
+
+#ublock0_raymondhill_net-menuitem-_uBlock0-blockElement {
+   color:  var(--blue) !important;
+}
+
+/* Waste of space */
+#screenshots_mozilla_org-menuitem-_create-screenshot, 
+#context-print-selection,
+#context-copy,    
+#context-selectall {
+    visibility: collapse !important;
+}
+
+.menuitem-iconic {
+   margin-left: -18px !important;
+}
+
+#appMenu-zoomReset-button {
+    background-color: var(--bg) !important;
+    border: 1px solid var(--blue-br) !important;
+    color: var(--blue) !important;
+    transition: var(--in-out) !important;
+}
+#appMenu-zoomReset-button:hover {
+    color: var(--orange) !important;
+    border: 1px solid var(--orange-br) !important;
+}
