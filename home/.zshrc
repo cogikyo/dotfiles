@@ -70,6 +70,7 @@ FIFO="00" SOCK="00" OTHER="01"
 export NNN_FCOLORS="$BLK$CHR$DIR$EXE$REG$HARDLINK$SYMLINK$MISSING$ORPHAN$FIFO$SOCK$OTHER"
 export NNN_PLUG='t:autojump;f:bulknew;z:preview-tui'
 export NNN_FIFO='/tmp/nnn.fifo'
+export NNN_OPENER=nuke
 export EDITOR=nvim
 
 
@@ -92,7 +93,7 @@ alias eyess='(){xrandr --output eDP-1 --brightness $1;}'
 
 # tmux
 alias tls='tmux ls'
-alias tad='tmux attach -t \ 🪙'
+alias tad='tmux attach -t \ ⚙️'
 alias tan='tmux attach -t \ 📓'
 alias tal='tmux attach -t \ 🌒'
 alias tab='tmux attach -t \ 🐚'
