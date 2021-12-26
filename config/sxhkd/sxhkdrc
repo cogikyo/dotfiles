@@ -132,4 +132,4 @@ ctrl + super + s
 
 # generate gif of selected area
 ctrl + super + g
-	peek
+	./dotfiles/scripts/gif.sh
