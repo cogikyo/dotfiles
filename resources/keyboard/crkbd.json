@@ -4,13 +4,13 @@
   "macros": ["", "", "", "", "", "", "", "", "", "", "", "", "", "", "", ""],
   "layers": [
     [
-      "KC_ESC",
+      "KC_TAB",
       "KC_Q",
       "KC_W",
       "KC_R",
       "KC_F",
       "KC_X",
-      "KC_TAB",
+      "KC_ESC",
       "KC_A",
       "KC_S",
       "KC_E",
