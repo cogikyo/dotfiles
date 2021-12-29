@@ -64,8 +64,8 @@ augroup PYTHON
   autocmd FileType python setlocal tabstop=4 softtabstop=4
   autocmd FileType python setlocal shiftwidth=4
   autocmd FileTYpe python nnoremap <buffer> <leader>rr :w<Cr> :exec '!python3' shellescape(@%, 1)<CR>
-  autocmd FileType python nnoremap <leader>is :Isort<CR>
-  autocmd BufWritePre *.py :call Black()
+  autocmd BufWritePre *.py :Isort
+  autocmd BufWritePre *.py :Autoformat
 augroup END
 
 augroup HIGHLIGHT_YANK

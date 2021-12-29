@@ -20,7 +20,7 @@ Plug 'SirVer/ultisnips'
 Plug 'mattn/emmet-vim'
 Plug 'easymotion/vim-easymotion'
 Plug 'yuttie/comfortable-motion.vim'
-Plug 'numToStr/Comment.nvim'
+Plug 'tpope/vim-commentary'
 Plug 'mhinz/vim-signify'
 Plug 'tpope/vim-fugitive'
 Plug 'tpope/vim-surround'
@@ -29,23 +29,18 @@ Plug 'vim-syntastic/syntastic'
 Plug 'folke/trouble.nvim'
 Plug 'mbbill/undotree'
 Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app && yarn install'  }
+Plug 'Chiel92/vim-autoformat'
 Plug 'mhinz/vim-startify'
 
 Plug 'ncm2/ncm2'
 Plug 'roxma/nvim-yarp'
 Plug 'ncm2/ncm2-bufword'
-Plug 'tpope/vim-commentary'
 Plug 'ncm2/ncm2-path'
 Plug 'ncm2/ncm2-go'
 Plug 'ncm2/ncm2-ultisnips'
 Plug 'ncm2/ncm2-match-highlight'
 
 Plug 'ncm2/ncm2-jedi'
-Plug 'averms/black-nvim', {'do': ':UpdateRemotePlugins'}
 Plug 'fisadev/vim-isort'
 
 call plug#end()
-
-lua << EOF
-require('Comment').setup()
-EOF
