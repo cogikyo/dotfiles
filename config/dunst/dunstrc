@@ -18,7 +18,7 @@ monitor = 0
 follow = keyboard
 origin = top-left
 offset = 580x7
-width = (0, 769)
+width = (0, 749)
 height = 48
 progress_bar = false
 indicate_hidden = yes
@@ -87,12 +87,12 @@ icon_path = /usr/share/icons/Vimix/22/actions/:/usr/share/icons/Vimix/22/devices
 [urgency_low]
 background = "#161821"
 foreground = "#c6c8d1"
-timeout = 69
+timeout = 18
 
 [urgency_normal]
 background = "#161821"
 foreground = "#b0d0eb"
-timeout = 10
+timeout = 6
 
 [urgency_critical]
 background = "#161821"
