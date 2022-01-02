@@ -16,12 +16,10 @@ endglobal
 snippet template "Basic template" bA
 \documentclass{nosvagor-notes}
 \usepackage{nosvagor-math}
-\usepackage{nosvagor-commands}
 
-\colorlet{title-color}{${1:red}}
 \newcommand{\theTitle}{%
-	\href{https://github.com/nosvagor/notes/tree/main/${2:fire}/${3:calculus}}%
-	{${4:Title}}%
+	\href{https://github.com/nosvagor/notes}%
+	{${1:Title}}%
 }
 
 \begin{document}
@@ -46,6 +44,7 @@ snippet beg "begin{} / end{}" bA
 endsnippet
 
 priority 100
+\colorlet{title-color}{${1:red}}
 snippet ... "ldots" iA
 \ldots
 endsnippet

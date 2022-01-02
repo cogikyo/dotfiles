@@ -81,6 +81,7 @@ export EDITOR=nvim
 alias pac='(){sudo pacman -S $1;}' alias niol='clear && zsh'
 alias dot='cd ~/dotfiles'
 alias not='cd ~/notes'
+alias x='exit'
 
 # git
 alias g='lazygit'

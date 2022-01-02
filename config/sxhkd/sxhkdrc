@@ -81,22 +81,25 @@ super + {Left,Down,Up,Right}
  	bspc node -f {west,south,north,east}.local
 
 # moved focused window to prev/next desktop then switch
-super + shift + {e,t}
+super + shift + {h,l}
   DIR={prev,next}; \
   bspc node -d "$DIR"; \
   bspc desktop -f "$DIR"
 
-# switch destkops
+# switch desktops
 super + {e,t}
   DIR={prev,next}; \
 	bspc desktop -f "$DIR"
+
+super + shift + {s, e, t}
+  bspc desktop -f {3,4,5}
 
 # makeshift tab swap
 super + h
 	bspc node -s south; bspc node -f north
 
 # preselect the direction
-super + shift + {n,i,u,l}
+super + shift + {n,i,u,o}
 	bspc node -p {west,south,north,east}
 
 # ╔╦╗┌─┐┬┌┬┐
