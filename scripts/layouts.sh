@@ -5,7 +5,8 @@
 #  ╚╝ ┴ ┴┴└─
 
 rofi_command="rofi -theme ~/.config/rofi/layouts.rasi"
-options=`echo "notes dotfiles" | tr ' ' '\n'`
+options=`echo "notes dotfiles statistics data" | tr ' ' '\n'`
+statPath='stat-361/homework/hw_review/hw_review'
 
 # ╔═╗┬ ┬┌┐┌┌─┐
 # ╠╣ │ │││││
@@ -33,11 +34,8 @@ open () {
 pdf () {
   bspc desktop -f 2
   case $1 in
-    strang-solutions)
-    bspc rule -a Zathura -o state=floating rectangle=1160x1960+1361+69
-    ;;
-    thomas)
-    bspc rule -a Zathura -o state=floating rectangle=1520x2000+1161+69
+    stat-solutions)
+    bspc rule -a Zathura -o state=floating rectangle=1550x2008+1145+87
     ;;
   esac
   zathura ~/textbooks/$1.pdf & sleep 0.25
@@ -50,41 +48,58 @@ pdf () {
 
 basic_phat () {
 
-  basic () {
+  basic_down () {
     bspc config split_ratio 0.3005
     alacritty -e cava & sleep 0.5
     bspc config split_ratio 0.895
     bspc node -p north
+    firefox --new-window https://calendar.google.com/calendar/u/0/r \
+    & sleep 1
+    bspc node -f west.local
   }
+
+  basic_up () {
+    bspc config split_ratio 0.3005
+    firefox --new-window https://calendar.google.com/calendar/u/0/r \
+    & sleep 1
+    bspc config split_ratio 0.105
+    bspc node -p north
+    alacritty -e cava & sleep 0.5
+    bspc node -f west.local
+  }
+
 
   tex () {
     bspc config split_ratio 0.3005
     firefox --new-window https://calendar.google.com/calendar/u/0/r \
     & sleep 1
-    bspc config split_ratio 0.6439
+    bspc config split_ratio 0.605
     bspc node -p east
-    zathura ~/notes/fire/$1/$2.pdf & sleep 0.5
-    bspc config split_ratio 0.78
+    zathura ~/notes/$1/$2.pdf & sleep 0.5
+    bspc config split_ratio 0.8307
     bspc node -p south
     alacritty -e cava & sleep 0.25
-    bspc config split_ratio 0.295
-    bspc node -p north
-    zathura ~/notes/fire/$1/$1.pdf & sleep 0.5
     bspc node -f west
     bspc config split_ratio 0.954
     bspc node -p south
     zathura ~/textbooks/$3.pdf & sleep 0.25
     bspc node -f west.local
-    bspc config split_ratio 0.725
-    alacritty & sleep 0.25
   }
 
   case $1 in
-    dotfiles|notes|latex)
-      basic
-      firefox --new-window https://github.com/nosvagor/$1 & sleep 1
-      bspc node -f west.local
+    dotfiles)
+      basic_down
       ;;
+    notes)
+      basic_up
+      ;;
+    stat)
+      tex python $statPath stat
+      bspc node -f west.local
+      pdf stat-solutions
+      ;;
+     data)
+      basic_down
   esac
 
   bspc config split_ratio 0.52
@@ -96,13 +111,16 @@ basic_phat () {
 
 chosen="$(echo -e "$options" | $rofi_command -p "ﱖ" -dmenu)"
 case $chosen in
-  notes)
-    open 3 notes
-    ;;
   dotfiles)
     open 4 dotfiles
     ;;
-  latex)
-    open 5 latex
+  notes)
+    open 5 notes
+    ;;
+  statistics)
+    open 3 stat
+    ;;
+  data)
+    open 3 data
     ;;
 esac
