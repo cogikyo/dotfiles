@@ -40,6 +40,7 @@ bspc rule -a Zathura state=tiled
 bspc rule -a vlc state=floating
 bspc rule -a zoom state=floating
 bspc rule -a Inkscape state=floating
+bspc rule -a discord desktop='^1'
 
 # ╔═╗┌─┐┌┐┌┌─┐┬┌─┐
 # ║  │ ││││├┤ ││ ┬
@@ -54,6 +55,7 @@ bspc config bottom_padding          10
 
 bspc config presel_feedback         false
 
+bspc config single_monocle          true
 bspc config borderless_monocle      false
 bspc config gapless_monocle         false
 bspc config paddingless_monocle     false

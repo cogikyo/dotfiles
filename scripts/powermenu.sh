@@ -21,9 +21,9 @@ case $chosen in
 		systemctl reboot
         ;;
     $lock)
-		env XSECURELOCK_SAVER=saver_mplayer XSECURELOCK_LIST_VIDEOS_COMMAND="find ~/resources/videos -type f" XSECURELOCK_SHOW_HOSTNAME=0 xsecurelock
+		env XSECURELOCK_SAVER=saver_mplayer XSECURELOCK_LIST_VIDEOS_COMMAND="find ~/dotfiles/resources/videos -type f" XSECURELOCK_SHOW_HOSTNAME=0 xsecurelock
         ;;
     $sus)
-		env XSECURELOCK_SAVER=saver_mplayer XSECURELOCK_LIST_VIDEOS_COMMAND="find ~/resources/videos -type f" XSECURELOCK_SHOW_HOSTNAME=0 xsecurelock & systemctl suspend
+		env XSECURELOCK_SAVER=saver_mplayer XSECURELOCK_LIST_VIDEOS_COMMAND="find ~/dotfiles/resources/videos -type f" XSECURELOCK_SHOW_HOSTNAME=0 xsecurelock & systemctl suspend
         ;;
 esac
