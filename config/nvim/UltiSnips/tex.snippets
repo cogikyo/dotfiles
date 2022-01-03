@@ -14,13 +14,18 @@ endglobal
 # ╠╩╗├─┤└─┐││  └─┐
 # ╚═╝┴ ┴└─┘┴└─┘└─┘
 snippet template "Basic template" bA
-\documentclass{nosvagor-notes}
+\documentclass[basic, header]{nosvagor-notes}
 \usepackage{nosvagor-math}
 
+\colorlet{title-color}{${1:red}}
 \newcommand{\theTitle}{%
 	\href{https://github.com/nosvagor/notes}%
-	{${1:Title}}%
+	{${2:Title}}%
 }
+
+\newcommand{\userName}{${3:Cullyn Newman}}
+\newcommand{\class}{${4:Class}}
+\newcommand{\institution}{${5:Portland State}}
 
 \begin{document}
 
@@ -37,6 +42,11 @@ snippet newpage "newpage" bA
 
 endsnippet
 
+
+snippet alph "enumerate alph" i
+[label=(\alph*)]
+endsnippet
+
 snippet beg "begin{} / end{}" bA
 \\begin{$1}
 	$0
@@ -44,7 +54,6 @@ snippet beg "begin{} / end{}" bA
 endsnippet
 
 priority 100
-\colorlet{title-color}{${1:red}}
 snippet ... "ldots" iA
 \ldots
 endsnippet
