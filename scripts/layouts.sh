@@ -5,7 +5,7 @@
 #  ╚╝ ┴ ┴┴└─
 
 rofi_command="rofi -theme ~/.config/rofi/layouts.rasi"
-options=`echo "notes dotfiles statistics data" | tr ' ' '\n'`
+options=`echo "notes dotfiles statistics algos discrete" | tr ' ' '\n'`
 statPath='stat-361/homework/hw_review/hw_review'
 
 # ╔═╗┬ ┬┌┐┌┌─┐
@@ -98,7 +98,10 @@ basic_phat () {
       bspc node -f west.local
       pdf stat-solutions
       ;;
-     data)
+     algos)
+      basic_down
+      ;;
+     discrete)
       basic_down
   esac
 
@@ -120,7 +123,10 @@ case $chosen in
   statistics)
     open 3 stat
     ;;
-  data)
-    open 3 data
+  algos)
+    open 3 algos
+    ;;
+  discrete)
+    open 3 discrete
     ;;
 esac
