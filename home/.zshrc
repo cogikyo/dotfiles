@@ -79,7 +79,8 @@ export EDITOR=nvim
 # ╠═╣│  │├─┤└─┐├┤ └─┐
 # ╩ ╩┴─┘┴┴ ┴└─┘└─┘└─┘
 
-alias pac='(){sudo pacman -S $1;}' alias niol='clear && zsh'
+alias pac='(){sudo pacman -S $1;}'
+alias niol='clear && source ~/.zshrc'
 alias dot='cd ~/dotfiles'
 alias not='cd ~/notes'
 alias x='exit'
@@ -87,7 +88,11 @@ alias x='exit'
 # git
 alias g='lazygit'
 alias gts='git status'
-alias kurmit='(){git add . && git commit -m"$1" && git push;}'
+kurmit () {
+  git add .
+  read commit && git commit -m "$commit"
+  git push
+}
 alias amend='(){git add . && git commit --amend --no-edit;}'
 alias gp='git pull'
 alias n='nvim'
