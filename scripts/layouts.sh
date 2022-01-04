@@ -7,6 +7,7 @@
 rofi_command="rofi -theme ~/.config/rofi/layouts.rasi"
 options=`echo "notes dotfiles statistics algos discrete" | tr ' ' '\n'`
 statPath='stat-361/homework/hw_review/hw_review'
+discretePath=''
 
 # ╔═╗┬ ┬┌┐┌┌─┐
 # ╠╣ │ │││││
@@ -34,7 +35,7 @@ open () {
 pdf () {
   bspc desktop -f 2
   case $1 in
-    stat-solutions)
+    stat-solutions|discrete)
     bspc rule -a Zathura -o state=floating rectangle=1550x2008+1145+87
     ;;
   esac
@@ -103,6 +104,7 @@ basic_phat () {
       ;;
      discrete)
       basic_down
+      pdf discrete
   esac
 
   bspc config split_ratio 0.52

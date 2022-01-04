@@ -38,6 +38,7 @@ HISTSIZE=10000
 SAVEHIST=10000
 setopt appendhistory
 setopt share_history
+setopt histignorealldups
 
 
 # ┌┐┌┌┐┌┌┐┌
@@ -122,7 +123,10 @@ alias tks='tmux kill-server'
 source ~/.local/zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source ~/.local/zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
 source ~/.local/zsh/zsh-autocomplete/zsh-autocomplete.plugin.zsh
-  zstyle ':autocomplete:*' min-input 2
+  zstyle ':autocomplete:*' fzf-completion yes
+  zstyle ':autocomplete:*' add-space
+  zstyle ':autocomplete:*' list-lines 6
+  zstyle ':autocomplete:*' min-input 1
 source ~/.local/zsh/zsh-colored-man-pages/colored-man-pages.plugin.zsh
 
 
@@ -135,7 +139,7 @@ bindkey  "^[[H"     beginning-of-line
 bindkey  "^[[4~"    end-of-line
 bindkey  "^[[F"     end-of-line
 bindkey  "^[[3~"    delete-char
-bindkey  "^[[1;5C"  forward-word
-bindkey  "^[[1;5D"  backward-word
-bindkey  "^S"       history-incremental-search-forward
-bindkey  "^R"       history-incremental-search-backward
+bindkey  "^[[1;5C"  forward-word   # C->
+bindkey  "^[[1;5D"  backward-word  # C-<
+bindkey  "^[[1;5A"  history-incremental-search-backward # C-^
+bindkey  "^[[1;5B"  history-incremental-search-forward  # C-v
