@@ -90,7 +90,8 @@ alias g='lazygit'
 alias gts='git status'
 kurmit () {
   git add .
-  read commit && git commit -m "$commit"
+  commit=""
+  vared -p "Commit message: " commit && git commit -m "$commit"
   git push
 }
 alias amend='(){git add . && git commit --amend --no-edit;}'
