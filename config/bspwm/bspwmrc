@@ -24,9 +24,10 @@ lxsession &
 ~/.config/polybar/launch.sh &
 killall "borders"
 ~/.config/bspwm/borders &
-pkill "inkscape-figures"
-inkscape-figures watch &
-python3 $HOME/.local/bin/inktex/main.py &
+killall "discord"
+killall "ytmdesktop"
+killall "electron"
+discord &
 ytmdesktop &
 
 # ╦═╗┬ ┬┬  ┌─┐┌─┐
@@ -66,4 +67,4 @@ bspc config bottom_monocle_padding  100
 
 bspc config focus_follows_pointer   true
 
-sleep 1 && notify-send -t 3000 $USER hello
+sleep 1 && notify-send -t 3000 $USER hello && bspc desktop -f '^6'
