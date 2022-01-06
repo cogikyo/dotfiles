@@ -67,4 +67,4 @@ bspc config bottom_monocle_padding  100
 
 bspc config focus_follows_pointer   true
 
-sleep 1 && notify-send -t 3000 $USER hello && bspc desktop -f '^6'
+sleep 1 && notify-send -t 3000 $USER hello & bspc desktop -f '^6'
