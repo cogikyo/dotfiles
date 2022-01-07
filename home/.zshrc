@@ -95,6 +95,7 @@ kurmit () {
   git push
 }
 alias amend='(){git add . && git commit --amend --no-edit;}'
+alias gpf='git push --force'
 alias gp='git pull'
 alias n='nvim'
 
