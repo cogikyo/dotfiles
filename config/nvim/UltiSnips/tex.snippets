@@ -549,7 +549,7 @@ endsnippet
 
 context "math()"
 snippet sum "sum" wA
-\sum_{n=1}^{\infty} $1
+\sum_{${1:n=1}}^{${2:\infty}} $0
 endsnippet
 
 context "math()"
@@ -748,7 +748,7 @@ endsnippet
 priority 300
 context "math()"
 snippet dint "integral" wA
-\int_{${1:-\infty}}^{${2:\infty}} ${3:${VISUAL}} $0
+\int_{${1:-\infty}}^{${2:\infty}} $0
 endsnippet
 
 priority 200
@@ -1041,6 +1041,34 @@ endsnippet
 
 snippet @o "omega" iA
 \omega
+endsnippet
+
+
+# ┌─┐┬┌─┐┬ ┬┬─┐┌─┐┌─┐
+# ├┤ ││ ┬│ │├┬┘├┤ └─┐
+# └  ┴└─┘└─┘┴└─└─┘└─┘
+
+snippet 2dgraph "2d graph" bA
+\begin{center}
+\begin{tikzpicture}
+	\begin{axis}[
+		height=7cm,
+		width=12cm,
+		xmin=-10,ymin=-10,
+		xmax=10,ymax=10,
+		samples=100,
+		axis lines = center,
+		axis line style=<->,
+		xlabel = {\(x\)},
+		ylabel = {\(f(x)\)},
+		ticklabel style = {font=\scriptsize},
+		]
+		\addplot[blue+1, thick, domain=-0.5:0] (x,2*x);
+		\addplot[red+1,  thick, domain=-10:-0.5] (x, 0*x);
+		\addplot[red+1,  thick, domain=0:10] (x, 0*x);
+	\end{axis}
+\end{tikzpicture}
+\end{center}
 endsnippet
 
 # vim:ft=snippets
