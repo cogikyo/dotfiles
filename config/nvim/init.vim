@@ -30,6 +30,7 @@ Plug 'folke/trouble.nvim'
 Plug 'mbbill/undotree'
 Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app && yarn install'  }
 Plug 'Chiel92/vim-autoformat'
+Plug 'junegunn/vim-easy-align'
 Plug 'mhinz/vim-startify'
 
 Plug 'ncm2/ncm2'
