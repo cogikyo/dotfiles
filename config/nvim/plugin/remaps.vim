@@ -26,13 +26,13 @@ nnoremap <leader>dd :bd!<CR>
 " 🤖 copy copy
 nnoremap <leader>y ^"+y$
 vnoremap <leader>y "+y
-vnoremap <leader>Y gg"+yG
+nnoremap <leader>ay gg"+yG
 nmap gy `]
 vnoremap <leader>p y']o<Esc>p`]o<Esc>
 
 " 🤯 comment headers
-nnoremap <leader>hs :.! figlet -fshadow<CR>O<Esc>j:.,.+5Commentary<CR>5jo<Esc>0d$
-nnoremap <leader>hc :.! figlet -fcalvin<CR>O<Esc>j:.,.+2Commentary<CR>2jo<Esc>0d$
+nnoremap <leader>hs :.! figlet -fshadow <Esc>:.,.+5Commentary<CR>5jo<Esc>0d$
+nnoremap <leader>hc :.! figlet -fcalvin <Esc>:.,.+2Commentary<CR>2jo<Esc>0d$
 
 " 🌌 gimmie space please
 nnoremap <leader>o o<Esc>"_Dk$
@@ -130,3 +130,7 @@ nnoremap <leader>nd :lua require("harpoon.ui").nav_file(5)<CR>
 " 👾 regex
 vnoremap s :<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
 nnoremap <leader>sa m0ggVG:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
+
+" 🛰 easy align
+vnoremap <leader>et :EasyAlign<CR>
+nnoremap <leader>eta <ESC>vip:EasyAlign<CR>**&<CR>

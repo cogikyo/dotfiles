@@ -7,7 +7,7 @@
 rofi_command="rofi -theme ~/.config/rofi/layouts.rasi"
 options=`echo "notes dotfiles statistics algos discrete" | tr ' ' '\n'`
 statPath='stat-361/homework/hw_review/hw_review'
-discretePath=''
+discPath='cs-250/hw_tex/hw1'
 
 # ╔═╗┬ ┬┌┐┌┌─┐
 # ╠╣ │ │││││
@@ -103,8 +103,8 @@ basic_phat () {
       basic_down
       ;;
      discrete)
-      basic_down
-      pdf discrete
+      tex python $discPath discrete
+      bspc node -f west.local
   esac
 
   bspc config split_ratio 0.52
