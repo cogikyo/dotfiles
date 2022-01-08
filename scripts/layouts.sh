@@ -54,15 +54,13 @@ basic_phat () {
     alacritty -e cava & sleep 0.5
     bspc config split_ratio 0.895
     bspc node -p north
-    firefox --new-window https://calendar.google.com/calendar/u/0/r \
-    & sleep 1
+    firefox --new-window & sleep 1
     bspc node -f west.local
   }
 
   basic_up () {
     bspc config split_ratio 0.3005
-    firefox --new-window https://calendar.google.com/calendar/u/0/r \
-    & sleep 1
+    firefox --new-window & sleep 1
     bspc config split_ratio 0.105
     bspc node -p north
     alacritty -e cava & sleep 0.5
@@ -77,7 +75,7 @@ basic_phat () {
     bspc config split_ratio 0.605
     bspc node -p east
     zathura ~/notes/$1/$2.pdf & sleep 0.5
-    bspc config split_ratio 0.8307
+    bspc config split_ratio 0.857
     bspc node -p south
     alacritty -e cava & sleep 0.25
     bspc node -f west
