@@ -6,8 +6,8 @@
 
 rofi_command="rofi -theme ~/.config/rofi/layouts.rasi"
 options=`echo "notes dotfiles statistics algos discrete" | tr ' ' '\n'`
-statPath='stat-361/homework/hw_review/hw_review'
-discPath='cs-250/hw_tex/hw1'
+statPath='stat-361/homework/hw1'
+discPath='cs-250/hw_tex/hw2'
 
 # ╔═╗┬ ┬┌┐┌┌─┐
 # ╠╣ │ │││││
