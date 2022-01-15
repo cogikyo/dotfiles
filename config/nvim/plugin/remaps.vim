@@ -26,9 +26,10 @@ nnoremap <leader>dd :bd!<CR>
 " 🤖 copy copy
 nnoremap <leader>y ^"+y$
 vnoremap <leader>y "+y
-nnoremap <leader>ay gg"+yG
+nnoremap <leader>ay g"+yG
 nmap gy `]
 vnoremap <leader>p y']o<Esc>p`]o<Esc>
+inoremap <C-g>g <Esc>"+pa<Esc>VgwzHztA<Esc>vipgq
 
 " 🤯 comment headers
 nnoremap <leader>hs :.! figlet -fshadow <Esc>:.,.+5Commentary<CR>5jo<Esc>0d$
@@ -43,9 +44,12 @@ inoremap <C-Space> <Esc>o<Esc>"_DkO<Esc>_DjA
 nnoremap } }zt
 nnoremap { {zt
 nnoremap G Gzt
+nnoremap <leader>gg Gzt
 nnoremap n nztzv
 nnoremap N Nztzv
 nnoremap <C-j> mzJ`z
+" noremap j jzt
+" noremap k kzt
 
 " 🔖 temp mark
 nnoremap <leader>ss m0
@@ -98,25 +102,26 @@ inoremap <C-l> <c-g>u<Esc>[s1z=`]a<c-g>u
 nnoremap <C-l> [s1z=<c-o>
 
 " 📓 latex
-inoremap <C-t> <Esc>}i\item<Space><Esc>o<Esc>"_DkO<Esc>_DjA
-nnoremap <C-t> }i\item<Space><Esc>o<Esc>"_DkO<Esc>_DjA
-nnoremap <leader><CR> o<CR>\item<Space>
-nnoremap <leader>al }koali
-nnoremap <leader>ni /\\item<CR>zt
-nnoremap <leader>in ?\\item<CR>zt
-inoremap <C-f> <Esc>: silent exec '.!inkscape-figures create "'.getline('.').'" "'.b:vimtex.root.'/figures/"'<CR><CR>:w<CR>
-nnoremap <C-f> : silent exec '!inkscape-figures edit "'.b:vimtex.root.'/figures/" > /dev/null 2>&1 &'<CR><CR>:redraw!<CR>
-inoremap <C-a> <Esc>F=i&<Esc>A<Space>\\<Esc>:w<cr>o
-inoremap <C-g>g <Esc>"+pa<Esc>VgwzHztA<Esc>
+augroup LATEX
+  autocmd!
+  autocmd FileType tex inoremap <C-t> <Esc>}i\item<Space><Esc>o<Esc>"_DkO<Esc>_DjA
+  autocmd FileType tex nnoremap <C-t> }i\item<Space><Esc>o<Esc>"_DkO<Esc>_DjA
+  autocmd FileType tex nnoremap <leader><CR> o<CR>\item<Space>
+  autocmd FileType tex nnoremap <leader>al }koali
+  autocmd FileType tex nnoremap <leader>ni /\\item<CR>zt
+  autocmd FileType tex nnoremap <leader>in ?\\item<CR>zt
+  "autocmd FiletYpe tex inoremap <C-f> <Esc>: silent exec '.!inkscape-figures create "'.getline('.').'" "'.b:vimtex.root.'/figures/"'<CR><CR>:w<CR>
+  "autocmd FiletYpe tex nnoremap <C-f> : silent exec '!inkscape-figures edit "'.b:vimtex.root.'/figures/" > /dev/null 2>&1 &'<CR><CR>:redraw!<CR>
+  autocmd FileType tex inoremap <C-a> <Esc>F=i&<Esc>A<Space>\\<Esc>:w<cr>o
+  autocmd FileType tex nnoremap <leader>np }inewpage
+augroup END
 
 " 🔃 reload
 nnoremap <leader>rs :call UltiSnips#RefreshSnippets()<CR>
 nnoremap <leader>rm :source $HOME/.config/nvim/plugin/remaps.vim<CR>
 
 " ⛵ reflow
-inoremap <C-h> <Esc>VgwzHzt_<Esc>
-nnoremap <C-h> VgwzHzt_
-nnoremap <leader>rf mzJ`zVgwzHzt_
+nnoremap <leader>rf vipgqzz
 
 " 🔱 harpoon
 nnoremap <leader>nn :lua require("harpoon.mark").add_file()<CR>
@@ -131,6 +136,16 @@ nnoremap <leader>nd :lua require("harpoon.ui").nav_file(5)<CR>
 vnoremap s :<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
 nnoremap <leader>sa m0ggVG:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
 
-" 🛰 easy align
+" 🛰 eeasy align
 vnoremap <leader>et :EasyAlign<CR>
 nnoremap <leader>eta <ESC>vip:EasyAlign<CR>**&<CR>
+
+" 📜 comfortable motion
+let g:comfortable_motion_scroll_down_key = "j"
+let g:comfortable_motion_scroll_up_key = "k"
+let g:comfortable_motion_friction = 150
+let g:comfortable_motion_air_drag = 0.5
+nnoremap <silent> <C-d> :call comfortable_motion#flick(75)<CR>zt
+nnoremap <silent> <C-u> :call comfortable_motion#flick(-75)<CR>zt
+noremap <silent> <ScrollWheelDown> :call comfortable_motion#flick(100)<CR>
+noremap <silent> <ScrollWheelUp>   :call comfortable_motion#flick(-100)<CR>
