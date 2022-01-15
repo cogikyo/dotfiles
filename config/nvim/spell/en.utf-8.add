@@ -94,3 +94,9 @@ parametrizations
 ss
 parametrization
 satisfiable
+solve
+linalg
+np
+antisymmetric
+DeMorgan's
+Mathologer

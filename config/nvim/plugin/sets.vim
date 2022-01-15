@@ -24,6 +24,7 @@ set nowrap
 set splitbelow
 set laststatus=2
 set noshowmode
+set mouse=a
 
 set statusline+=%#warningmsg#
 set statusline+=%{SyntasticStatuslineFlag()}

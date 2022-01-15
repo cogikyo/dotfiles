@@ -39,7 +39,7 @@ snippet newpage "newpage" bA
 %%%%%%%%%%%%%
 	\newpage %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%
-
+		$0
 endsnippet
 
 
@@ -50,6 +50,11 @@ endsnippet
 snippet indent "enumerate indent" i
 [leftmargin=2em]
 endsnippet
+
+snippet itemsep "enumerate indent" i
+[itemsep=4em]
+endsnippet
+
 
 snippet beg "begin{} / end{}" bA
 \begin{$1}
@@ -307,11 +312,6 @@ priority 2
 context "math()"
 snippet '([  ]{3,}ss)' "more space" wrA
  \qquad $0
-endsnippet
-
-context "math()"
-snippet zvc "zero vec" wA
-\nil
 endsnippet
 
 snippet deq "Display Math" wA
@@ -795,8 +795,13 @@ snippet !> "mapsto" iA
 endsnippet
 
 context "math()"
-snippet compl "complement" iA
-^{c}
+snippet scomp "complement" iA
+^{'}
+endsnippet
+
+context "math()"
+snippet bdd "boxed" wA
+\boxed{
 endsnippet
 
 snippet >> ">>" iA
@@ -842,17 +847,12 @@ snippet notin "not in " iA
 endsnippet
 
 context "math()"
-snippet NN "n" iA
-\N
-endsnippet
-
-context "math()"
-snippet Nn "cap" iA
+snippet sor "cap" iA
 \cap
 endsnippet
 
 context "math()"
-snippet UU "cup" iA
+snippet sand "cup" iA
 \cup
 endsnippet
 
@@ -1082,6 +1082,10 @@ endsnippet
 
 snippet @o "omega" iA
 \omega
+endsnippet
+
+snippet @O "omega" iA
+\Omega
 endsnippet
 
 

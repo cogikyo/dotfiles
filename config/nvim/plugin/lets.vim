@@ -39,6 +39,7 @@ if empty(v:servername) && exists('*remote_startserver')
     call remote_startserver('VIM')
 endif
 
+
 " ✂  snippets/completions
 let g:UltiSnipsExpandTrigger="<tab>"
 let g:UltiSnipsJumpForwardTrigger="<tab>"
