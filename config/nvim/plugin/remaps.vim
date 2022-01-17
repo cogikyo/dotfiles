@@ -48,8 +48,8 @@ nnoremap <leader>gg Gzt
 nnoremap n nztzv
 nnoremap N Nztzv
 nnoremap <C-j> mzJ`z
-" noremap j jzt
-" noremap k kzt
+noremap j jzt
+noremap k kzt
 
 " 🔖 temp mark
 nnoremap <leader>ss m0
@@ -121,7 +121,10 @@ nnoremap <leader>rs :call UltiSnips#RefreshSnippets()<CR>
 nnoremap <leader>rm :source $HOME/.config/nvim/plugin/remaps.vim<CR>
 
 " ⛵ reflow
-nnoremap <leader>rf vipgqzz
+nnoremap <leader>rx vipgqzz
+inoremap <C-h> <Esc>VgwzHzt_<Esc>
+nnoremap <C-h> VgwzHzt_
+nnoremap <leader>rf mzJ`zVgwzHzt_
 
 " 🔱 harpoon
 nnoremap <leader>nn :lua require("harpoon.mark").add_file()<CR>
