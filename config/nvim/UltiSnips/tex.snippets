@@ -199,8 +199,7 @@ snippet src "source links" bA
 endsnippet
 
 snippet lnk "link" wA
-\link{$1}{$2} |
-$0
+\link{$1}{$2}
 endsnippet
 
 snippet py "link" bA
@@ -326,13 +325,18 @@ snippet ~= "approx" iA
 endsnippet
 
 context "math()"
-snippet then "algined implies" bA
-&\then
+snippet thn "then" iA
+\then
 endsnippet
 
 context "math()"
 snippet sgiv "spaced given" wA
 \qquad \given $0
+endsnippet
+
+context "math()"
+snippet ,s "spaced post comma" iA
+, \quad
 endsnippet
 
 context "math()"
@@ -600,8 +604,8 @@ snippet root "\sqrt{}" iA
 endsnippet
 
 context "math()"
-snippet fox "f(x)" iA
-f(x)
+snippet '(f|g|h)o(x|y|z)' "function" irA
+`!p snip.rv = match.group(1)`(`!p snip.rv = match.group(2)`)
 endsnippet
 
 context "math()"
@@ -779,8 +783,8 @@ snippet '(?<!\\)(det|tr)' "operators" rwA
 \\`!p snip.rv = match.group(1)`{\bm{$1}} $0
 endsnippet
 
-snippet '(?<!\\)(true|false)' "boolean" rw
-\\`!p snip.rv = match.group(1)`{`!p snip.rv = match.group(1)`}; $0
+snippet '(?<!\\)(a)(true|false)' "boolean" rwA
+\\`!p snip.rv = match.group(2)`{`!p snip.rv = match.group(2)`}: $0
 endsnippet
 
 priority 200
@@ -821,6 +825,10 @@ snippet ~~ "~" iA
 \sim
 endsnippet
 
+snippet !~ "~" iA
+\nsim
+endsnippet
+
 context "math()"
 snippet set "set" wA
 \\{$1\\} $0
@@ -837,8 +845,18 @@ snippet sset "subset" Ai
 endsnippet
 
 context "math()"
-snippet inn "in" iA
-\in
+snippet inr "in R" iA
+\in \R
+endsnippet
+
+context "math()"
+snippet inn "in N" iA
+\in \N
+endsnippet
+
+context "math()"
+snippet inx "in X" iA
+\in X
 endsnippet
 
 context "math()"
@@ -881,7 +899,7 @@ snippet land "land" wA
 endsnippet
 
 context "math()"
-snippet not "lnot" wA
+snippet lnot "lnot" wA
 \lnot
 endsnippet
 
