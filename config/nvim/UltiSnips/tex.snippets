@@ -292,10 +292,15 @@ snippet *bf "bold" iA
 \textbf{$1} $0
 endsnippet
 
+
 # ╔╦╗┌─┐┌┬┐┬ ┬
 # ║║║├─┤ │ ├─┤
 # ╩ ╩┴ ┴ ┴ ┴ ┴
 
+context "math()"
+snippet *t "text" iA
+\text{$1}
+endsnippet
 
 snippet nio "inline math" wA
 \($1\)$0
@@ -357,6 +362,11 @@ endsnippet
 context "math()"
 snippet deg "degree" iA
 ^\circ
+endsnippet
+
+context "math()"
+snippet *o "composition" iA
+\circ
 endsnippet
 
 context "math()"
@@ -650,9 +660,16 @@ snippet l= "less than eq" iA
 \leq
 endsnippet
 
+priority 100
 context "math()"
 snippet EE "exists" iA
 \exists
+endsnippet
+
+priority 200
+context "math()"
+snippet nEE "nexists" iA
+\nexists
 endsnippet
 
 context "math()"
@@ -799,7 +816,7 @@ snippet !> "mapsto" iA
 endsnippet
 
 context "math()"
-snippet scomp "complement" iA
+snippet ^cc "complement" iA
 ^{'}
 endsnippet
 
@@ -830,18 +847,23 @@ snippet !~ "~" iA
 endsnippet
 
 context "math()"
-snippet set "set" wA
-\\{$1\\} $0
-endsnippet
-
-context "math()"
 snippet || "mid" iA
 \mid
 endsnippet
 
 context "math()"
-snippet sset "subset" Ai
+snippet bset "subset" Ai
 \subset
+endsnippet
+
+context "math()"
+snippet sset "subset" Ai
+\\{ $1 \\}$0
+endsnippet
+
+context "math()"
+snippet pset "set" Ai
+\supset
 endsnippet
 
 context "math()"
@@ -865,13 +887,13 @@ snippet notin "not in " iA
 endsnippet
 
 context "math()"
-snippet sor "cap" iA
-\cap
+snippet sor "cup" iA
+\cup
 endsnippet
 
 context "math()"
-snippet sand "cup" iA
-\cup
+snippet sand "cap" iA
+\cap
 endsnippet
 
 context "math()"
@@ -899,9 +921,10 @@ snippet land "land" wA
 endsnippet
 
 context "math()"
-snippet lnot "lnot" wA
-\lnot
+snippet xor "lnot" wA
+\oplus
 endsnippet
+
 
 context "math()"
 snippet uuu "bigcup" iA
