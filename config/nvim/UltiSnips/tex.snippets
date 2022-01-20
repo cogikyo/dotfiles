@@ -86,6 +86,7 @@ snippet ssec "subsection" bA
 \subsection{$1}
 \begin{itemize}
 	\item
+
 \end{itemize}
 endsnippet
 
@@ -97,9 +98,9 @@ snippet table "Table environment" b
 		\toprule
 		$4 & $5 & $6 \\\\
 		\midrule
-			&  &  \\\\
-			&  &  \\\\
-			&  &  \\\\
+       &    &    \\\\
+       &    &    \\\\
+       &    &    \\\\
 		\bottomrule
 	\end{tabular}
 \end{table}
@@ -115,6 +116,7 @@ endsnippet
 
 snippet enum "Enumerate" bA
 \begin{enumerate}
+
 	\item $0
 
 \end{enumerate}
@@ -152,8 +154,8 @@ endsnippet
 snippet item "Itemize" bA
 \begin{itemize}
 	\item $0
-\end{itemize}
 
+\end{itemize}
 endsnippet
 
 snippet -- "\item" bA
@@ -528,11 +530,6 @@ snip.rv = eval('latex(' + match.group(1).replace('\\', '').replace('^', '**').re
 `
 endsnippet
 
-context "math()"
-snippet == "equals" iA
-&=
-endsnippet
-
 snippet != "equals" iA
 \neq
 endsnippet
@@ -816,11 +813,6 @@ snippet !> "mapsto" iA
 endsnippet
 
 context "math()"
-snippet ^cc "complement" iA
-^{'}
-endsnippet
-
-context "math()"
 snippet bdd "boxed" wA
 \boxed{
 endsnippet
@@ -960,6 +952,10 @@ endsnippet
 
 snippet "([\d]+)si" "SI" wrA
 \SI{`!p snip.rv=match.group(1)`$1}{$2} $0
+endsnippet
+
+snippet "([\d]+)num" "num" wrA
+\num{`!p snip.rv=match.group(1)`$1}
 endsnippet
 
 snippet "([\d]+)cc" "SI celsius" wrA
