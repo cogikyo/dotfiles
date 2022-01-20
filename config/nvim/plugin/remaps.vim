@@ -52,8 +52,8 @@ noremap j jzt
 noremap k kzt
 
 " 🔖 temp mark
-nnoremap <leader>ss m0
-nnoremap <leader>rr `0zt
+nnoremap <leader>mk m0
+nnoremap <leader>mh `0zt
 
 " 👈 undo break points
 inoremap , ,<c-g>u
@@ -108,8 +108,8 @@ augroup LATEX
   autocmd FileType tex nnoremap <C-t> }i\item<Space><Esc>o<Esc>"_DkO<Esc>_DjA
   autocmd FileType tex nnoremap <leader><CR> o<CR>\item<Space>
   autocmd FileType tex nnoremap <leader>al }koali
-  autocmd FileType tex nnoremap <leader>ni /\\item<CR>zt
-  autocmd FileType tex nnoremap <leader>in ?\\item<CR>zt
+  autocmd FileType tex nnoremap <leader>ni /\\item<CR>zt$
+  autocmd FileType tex nnoremap <leader>in ?\\item<CR>zt$
   "autocmd FiletYpe tex inoremap <C-f> <Esc>: silent exec '.!inkscape-figures create "'.getline('.').'" "'.b:vimtex.root.'/figures/"'<CR><CR>:w<CR>
   "autocmd FiletYpe tex nnoremap <C-f> : silent exec '!inkscape-figures edit "'.b:vimtex.root.'/figures/" > /dev/null 2>&1 &'<CR><CR>:redraw!<CR>
   autocmd FileType tex inoremap <C-a> <Esc>F=i&<Esc>A<Space>\\<Esc>:w<cr>o
@@ -121,7 +121,7 @@ nnoremap <leader>rs :call UltiSnips#RefreshSnippets()<CR>
 nnoremap <leader>rm :source $HOME/.config/nvim/plugin/remaps.vim<CR>
 
 " ⛵ reflow
-nnoremap <leader>rx vipgqzz
+nnoremap <leader>rx vipgqzt{j^
 inoremap <C-h> <Esc>VgwzHzt_<Esc>
 nnoremap <C-h> VgwzHzt_
 nnoremap <leader>rf mzJ`zVgwzHzt_
@@ -139,7 +139,7 @@ nnoremap <leader>nd :lua require("harpoon.ui").nav_file(5)<CR>
 vnoremap s :<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
 nnoremap <leader>sa m0ggVG:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
 
-" 🛰 eeasy align
+" 🛰 easy align
 vnoremap <leader>et :EasyAlign<CR>
 nnoremap <leader>eta <ESC>vip:EasyAlign<CR>**&<CR>
 
