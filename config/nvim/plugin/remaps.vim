@@ -104,12 +104,13 @@ nnoremap <C-l> [s1z=<c-o>
 " 📓 latex
 augroup LATEX
   autocmd!
-  autocmd FileType tex inoremap <C-t> <Esc>}i\item<Space><Esc>o<Esc>"_DkO<Esc>_DjA
-  autocmd FileType tex nnoremap <C-t> }i\item<Space><Esc>o<Esc>"_DkO<Esc>_DjA
+  autocmd FileType tex inoremap <C-t> <Esc>/end<CR>O<ESC>O\item<Space>
+  autocmd FileType tex nnoremap <C-t> /end<CR>O<ESC>O\item<Space>
   autocmd FileType tex nnoremap <leader><CR> o<CR>\item<Space>
   autocmd FileType tex nnoremap <leader>al }koali
-  autocmd FileType tex nnoremap <leader>ni /\\item<CR>zt$
-  autocmd FileType tex nnoremap <leader>in ?\\item<CR>zt$
+  autocmd FileType tex nnoremap <leader>en }koenum
+  autocmd FileType tex nnoremap <leader>ni /\\item<CR>ztfm
+  autocmd FileType tex nnoremap <leader>in ?\\item<CR>nztfm
   "autocmd FiletYpe tex inoremap <C-f> <Esc>: silent exec '.!inkscape-figures create "'.getline('.').'" "'.b:vimtex.root.'/figures/"'<CR><CR>:w<CR>
   "autocmd FiletYpe tex nnoremap <C-f> : silent exec '!inkscape-figures edit "'.b:vimtex.root.'/figures/" > /dev/null 2>&1 &'<CR><CR>:redraw!<CR>
   autocmd FileType tex inoremap <C-a> <Esc>F=i&<Esc>A<Space>\\<Esc>:w<cr>o
