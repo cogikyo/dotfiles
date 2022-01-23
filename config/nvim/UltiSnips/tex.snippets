@@ -145,12 +145,6 @@ snippet mnr "color minor" iA
 \minor{$1} $0
 endsnippet
 
-priority 1000
-snippet -mnr "color minor" bA
-\minor{\item[$1.]
-$0}
-endsnippet
-
 snippet item "Itemize" bA
 \begin{itemize}
 	\item $0
@@ -160,24 +154,6 @@ endsnippet
 
 snippet -- "\item" bA
 \\item $0
-endsnippet
-
-snippet awi "answer" bA
-\begin{itemize}\color{foreground}
-	\item $0
-\end{itemize}
-endsnippet
-
-snippet awa "answer align" bA
-\fg{\begin{align*}
-	$1
-\end{align*}}
-endsnippet
-
-snippet daq "answer align" bA
-\fg{\[%%%%%%%
-$0
-\]}%%%%%%%%%%
 endsnippet
 
 snippet ali "Align" bA
@@ -321,9 +297,9 @@ snippet '([  ]{3,}ss)' "more space" wrA
 endsnippet
 
 snippet deq "Display Math" wA
-\[%%%%%%%%%%
+\[%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 	$0
-\]%%%%%%%%%%
+\]%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 endsnippet
 
 context "math()"
@@ -334,6 +310,11 @@ endsnippet
 context "math()"
 snippet thn "then" iA
 \then
+endsnippet
+
+context "math()"
+snippet sif "then" iA
+\given
 endsnippet
 
 context "math()"
@@ -350,7 +331,6 @@ context "math()"
 snippet &giv "alinged given" wA
 && \given $0
 endsnippet
-
 
 context "math()"
 snippet dsps "display style" iA
@@ -605,9 +585,16 @@ snippet part "d/dx" iA
 \frac{\partial ${1:V}}{\partial ${2:x}} $0
 endsnippet
 
+priority 100
 context "math()"
 snippet root "\sqrt{}" iA
 \sqrt{$1}
+endsnippet
+
+priority 200
+context "math()"
+snippet nroot "\sqrt{}" iA
+\sqrt[${1:n}]{$2}
 endsnippet
 
 context "math()"
@@ -1039,6 +1026,10 @@ endsnippet
 
 snippet @t "theta" iA
 \theta
+endsnippet
+
+snippet tau "tau" iA
+\tau
 endsnippet
 
 snippet @T "Theta" iA
