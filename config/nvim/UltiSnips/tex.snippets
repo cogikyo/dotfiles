@@ -494,7 +494,8 @@ snippet '([A-Za-z])_(\d\d)' "auto subscript2" wrA
 `!p snip.rv = match.group(1)`_{`!p snip.rv = match.group(2)`}
 endsnippet
 
-snippet sympy "sympyblock " w
+context "math()"
+snippet symp "sympyblock " wA
 sympy $1 sympy$0
 endsnippet
 
@@ -746,8 +747,7 @@ snippet xx "cross" iA
 \times
 endsnippet
 
-priority 100
-snippet ** "cdot" iA
+snippet *. "cdot" iA
 \cdot $0
 endsnippet
 
@@ -770,17 +770,12 @@ endsnippet
 
 priority 200
 context "math()"
-snippet '(?<!\\)(arcsin|arccos|arctan|arccot|arccsc|arcsec|pi|zeta|int)' "ln" rwA
+snippet '(?<!\\)(arcsin|arccos|arctan|arccot|arccsc|arcsec|pi|zeta|int|id)' "ln" rwA
 \\`!p snip.rv = match.group(1)`$0
 endsnippet
 
 context "math()"
-snippet '(?<!\\)(rank)' "operators" rwA
-\\`!p snip.rv = match.group(1)`{\bm{$1}} $0
-endsnippet
-
-context "math()"
-snippet '(?<!\\)(det|tr)' "operators" rwA
+snippet '(?<!\\)(det|tr|rank)' "operators" rwA
 \\`!p snip.rv = match.group(1)`{\bm{$1}} $0
 endsnippet
 
@@ -851,6 +846,11 @@ snippet inr "in R" iA
 endsnippet
 
 context "math()"
+snippet inz "in Z" iA
+\in \Z
+endsnippet
+
+context "math()"
 snippet inn "in N" iA
 \in \N
 endsnippet
@@ -868,6 +868,11 @@ endsnippet
 context "math()"
 snippet sor "cup" iA
 \cup
+endsnippet
+
+context "math()"
+snippet mod "modulus" wA
+\bmod
 endsnippet
 
 context "math()"
