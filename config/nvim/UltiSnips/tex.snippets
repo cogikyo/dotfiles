@@ -194,8 +194,12 @@ endsnippet
 # ║││││  ││││├┤    ║ ├┤ ┌┴┬┘ │
 # ╩┘└┘┴─┘┴┘└┘└─┘   ╩ └─┘┴ └─ ┴
 
-snippet bcd "definition" wA
+snippet wrf "definition" wA
 \dd{$1}: $0
+endsnippet
+
+snippet vup "italic definition" wA
+\dt{$1}: $0
 endsnippet
 
 snippet prn "(context)" wA
@@ -349,6 +353,10 @@ endsnippet
 context "math()"
 snippet *o "composition" iA
 \circ
+endsnippet
+
+snippet '(\d*)bthm' "by theorem" wrA
+\quad \dt{by theorem `!p snip.rv = match.group(1)`}
 endsnippet
 
 context "math()"
@@ -883,6 +891,16 @@ endsnippet
 context "math()"
 snippet lor "or" wA
 \lor
+endsnippet
+
+context "math()"
+snippet qed "qed" wA
+\qed
+endsnippet
+
+context "math()"
+snippet let "let" wA
+\plet
 endsnippet
 
 context "math()"
