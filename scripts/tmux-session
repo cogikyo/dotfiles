@@ -47,6 +47,7 @@ restore() {
   done < ~/.tmux-session
 
   echo "restored $count sessions"
+  notify-send tmux "$count sessions restored" -i "$HOME/dotfiles/resources/icons/tmux_icon.svg"
 }
 
 case "$1" in

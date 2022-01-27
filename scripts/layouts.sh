@@ -5,7 +5,7 @@
 #  ╚╝ ┴ ┴┴└─
 
 rofi_command="rofi -theme ~/.config/rofi/layouts.rasi"
-options=`echo "notes dotfiles statistics algos discrete" | tr ' ' '\n'`
+options=`echo "statistics algos discrete nio notes dotfiles" | tr ' ' '\n'`
 statPath='stat-361/homework/hw4'
 discPath='cs-250/hw_tex/hw4'
 
@@ -22,8 +22,7 @@ begin () {
 
 end () {
   bspc config focus_follows_pointer true
-  notify-send -u low -t 3000 init $1
-  exit 0
+  notify-send -u low -t 1500 init $1 -i "$HOME/dotfiles/resources/icons/tmux_icon.svg"
 }
 
 open () {
@@ -129,4 +128,11 @@ case $chosen in
   discrete)
     open 3 discrete
     ;;
+  nio)
+    open 4 dotfiles
+    open 5 notes
+    bspc desktop -f 6
+    ;;
 esac
+
+exit 0

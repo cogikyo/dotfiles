@@ -48,6 +48,7 @@ bspc rule -a discord desktop='^1'
 # ╚═╝└─┘┘└┘└  ┴└─┘
 bspc config split_ratio             0.52
 bspc config border_width            10
+bspc config focused_border_color    '#161821'
 bspc config window_gap              9
 bspc config top_padding             56
 bspc config right_padding           6
@@ -55,6 +56,7 @@ bspc config left_padding            6
 bspc config bottom_padding          10
 
 bspc config presel_feedback         false
+bspc config focus_follows_pointer   true
 
 bspc config single_monocle          true
 bspc config borderless_monocle      false
@@ -65,6 +67,4 @@ bspc config right_monocle_padding   302
 bspc config left_monocle_padding    302
 bspc config bottom_monocle_padding  100
 
-bspc config focus_follows_pointer   true
-
-sleep 1 && notify-send -t 3000 $USER hello & bspc desktop -f '^6'
+sleep 1 && notify-send -t 6000 "$USER@$HOSTNAME" "こんにちは" --icon="$HOME/dotfiles/resources/nosvagor.png"
