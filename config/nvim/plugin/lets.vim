@@ -52,4 +52,3 @@ let g:AutoPairsShortcutFastWrap = '<C-e>'
 let g:AutoPairsShortcutJump = '<C-z>'
 let g:AutoPairsShortcutBackInsert = '<C-b>'
 let g:AutoPairsMapCh = 0
-let g:AutoPairsFlyMode = 1
