@@ -1,10 +1,10 @@
 snippet "([0-9].*)qq" "question" rwA
 # --- Question `!p snip.rv=match.group(1)` --- #
-print("\n" + "-" * 19)
+print("\n" + "-" * 42)
 print("Question `!p snip.rv=match.group(1)`:\n")
 
 $0
-print("-" * 19)
+print("-" * 42)
 endsnippet
 
 snippet symbols "sympy sybmlols" bA
@@ -12,11 +12,6 @@ a, b, c, d, e, x, y, z, t = sp.symbols('a b c d e x y z t')
 k, m, n = sp.symbols('k m n', integer=True)
 f, g, h = sp.symbols('f g h', cls=sp.Function)
 $0
-endsnippet
-
-snippet bimport "basic import" bA
-import numpy as np
-import sympy as sp
 endsnippet
 
 snippet mtx "matrix" bA
@@ -58,26 +53,7 @@ $1 = sp.Matrix(
 $0
 endsnippet
 
-snippet ptt "print" bA
-print($1, "\n")
-$0
-endsnippet
-
-snippet ptsm "print symbolic matrix" bA
-print(np.array($1), "\n")
-$0
-endsnippet
-
-snippet rref "rref" iA
-.rref()[0]
-endsnippet
-
 snippet fixfrac "fix fractions" bA
 with np.printoptions(formatter={'all':lambda x: str(Fraction(x).limit_denominator())}):
 		print($1)
 endsnippet
-
-snippet '([A-Za-z]*)nin' "numpy inverse" wrA
-np.linalg.inv(`!p snip.rv = match.group(1)`)
-endsnippet
-
