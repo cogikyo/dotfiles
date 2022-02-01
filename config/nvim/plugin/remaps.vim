@@ -48,8 +48,6 @@ nnoremap <leader>gg Gzt
 nnoremap n nztzv
 nnoremap N Nztzv
 nnoremap <C-j> mzJ`z
-noremap j jzt
-noremap k kzt
 
 " 🔖 temp mark
 nnoremap <leader>mk m0
@@ -123,8 +121,8 @@ nnoremap <leader>rm :source $HOME/.config/nvim/plugin/remaps.vim<CR>
 
 " ⛵ reflow
 nnoremap <leader>rx vipgqzt{j^
-inoremap <C-h> <Esc>VgwzHzt_<Esc>
-nnoremap <C-h> VgwzHzt_
+inoremap <C-h> <Esc>VgwzHztA
+nnoremap <C-h> VgwzHzt$
 nnoremap <leader>rf mzJ`zVgwzHzt_
 
 " 🔱 harpoon
