@@ -22,12 +22,13 @@ nnoremap <leader>X :q!<CR>
 " 🦬 buffers
 nnoremap <leader>w :bp<CR>
 nnoremap <leader>v :bn<CR>
-nnoremap <leader>dd :bd!<CR>
+nnoremap <leader>bd :bd!<CR>
 
 " 🤖 copy copy
-nnoremap <leader>y ^"+y$
+nnoremap <leader>d "_d
+vnoremap <leader>d "_d
 vnoremap <leader>y "+y
-nnoremap <leader>ay g"+yG
+nnoremap <leader>Y gg"+yG
 nmap gy `]
 vnoremap <leader>p y']o<Esc>p`]o<Esc>
 inoremap <C-g>g <Esc>"+pa<Esc>VgwzHztA<Esc>vipgq
@@ -49,6 +50,8 @@ nnoremap <leader>gg Gzt
 nnoremap n nztzv
 nnoremap N Nztzv
 nnoremap <C-j> mzJ`z
+nnoremap <C-o> <C-o>zt
+nnoremap <C-i> <C-i>zt
 
 " 🔖 temp mark
 nnoremap <leader>mk m0
@@ -66,13 +69,8 @@ inoremap : :<c-g>u
 nnoremap <leader>el gue
 nnoremap <leader>eu gUe
 
-" 🚙 moving text
-vnoremap <Up> :m '<-2<CR>gv=gv
-vnoremap <Down> :m '>+1<cr>gv=gv
-
 " 🍉 terminal
 tnoremap <C-t> <C-\><C-n>:bd!<CR>
-nnoremap <leader>tp :term<CR>isl<CR>niol<CR>
 nnoremap <leader>ta :term<CR>i
 
 " 🪟 window movement
@@ -139,7 +137,7 @@ nnoremap <leader>nd :lua require("harpoon.ui").nav_file(5)<CR>
 vnoremap s :<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
 nnoremap <leader>sa m0ggVG:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
 
-" 🛰 easy align
+" 🛰  easy align
 vnoremap <leader>et :EasyAlign<CR>
 nnoremap <leader>eta <ESC>vip:EasyAlign<CR>**&<CR>
 
