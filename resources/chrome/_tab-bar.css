@@ -67,6 +67,10 @@ toolbarbutton#new-tab-button, toolbarbutton#alltabs-button {
   --tab-min-height: 24px; 
 }
 
+#TabsToolbar {
+    height: 40px !important;
+}
+
 .tab-icon-sound-label {
     visibility: collapse !important;
 }
