@@ -28,10 +28,11 @@ nnoremap <leader>bd :bd!<CR>
 nnoremap <leader>d "_d
 vnoremap <leader>d "_d
 vnoremap <leader>y "+y
+nnoremap <leader>y ^"+y$
 nnoremap <leader>Y gg"+yG
 nmap gy `]
 vnoremap <leader>p y']o<Esc>p`]o<Esc>
-inoremap <C-g>g <Esc>"+pa<Esc>VgwzHztA<Esc>vipgq
+inoremap <C-g>g <Esc>"+pa<Esc>o<Esc>kmzJ`zVgwzHzt_2w
 
 " 🤯 comment headers
 nnoremap <leader>hs :.! figlet -fshadow <Esc>:.,.+5Commentary<CR>5jo<Esc>0d$

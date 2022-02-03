@@ -67,9 +67,6 @@ toolbarbutton#new-tab-button, toolbarbutton#alltabs-button {
   --tab-min-height: 24px; 
 }
 
-#TabsToolbar {
-    height: 40px !important;
-}
 
 .tab-icon-sound-label {
     visibility: collapse !important;
@@ -88,3 +85,5 @@ toolbarbutton#new-tab-button, toolbarbutton#alltabs-button {
   transition: all var(--in-out) !important;
   visibility: collapse !important;
 }
+
+#tabbrowser-tabs .tabbrowser-tab{ height: 38px !important; }
