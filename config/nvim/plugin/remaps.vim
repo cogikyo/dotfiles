@@ -17,6 +17,7 @@ nmap T <Plug>(easymotion-bd-f2)
 " ✍  quit/write
 nnoremap <leader>x :q<CR>
 nnoremap <leader>q :wq<CR>
+nnoremap <leader>X :q!<CR>
 
 " 🦬 buffers
 nnoremap <leader>w :bp<CR>
