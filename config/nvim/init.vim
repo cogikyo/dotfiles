@@ -43,5 +43,6 @@ Plug 'ncm2/ncm2-match-highlight'
 
 Plug 'ncm2/ncm2-jedi'
 Plug 'fisadev/vim-isort'
+Plug 'jpalardy/vim-slime'
 
 call plug#end()
