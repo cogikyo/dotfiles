@@ -556,7 +556,7 @@ endsnippet
 
 context "math()"
 snippet ()) "left( right)" iA
-\left( ${1:${VISUAL}} \right) $0
+\left( ${1:${VISUAL}} \right)
 endsnippet
 
 snippet lrp "left| right|" iA
@@ -581,8 +581,13 @@ snippet conj "conjugate" iA
 endsnippet
 
 context "math()"
-snippet sum "sum" wA
+snippet sumn "sum" wA
 \sum_{${1:n=1}}^{${2:\infty}} $0
+endsnippet
+
+context "math()"
+snippet sumi "sum" wA
+\sum_{i=1}^{n} $0
 endsnippet
 
 context "math()"
@@ -639,7 +644,7 @@ endsnippet
 
 context "math()"
 snippet ^^ "to the ... power" iA
-^{$1} $0
+^{$1}
 endsnippet
 
 context "math()"
@@ -649,11 +654,11 @@ endsnippet
 
 context "math()"
 snippet ^) "to the ... power" iA
-^{($1)} $0
+^{($1)}
 endsnippet
 
 snippet __ "subscript" iA
-_{$1} $0
+_{$1}
 endsnippet
 
 snippet ooo "\infty" iA
