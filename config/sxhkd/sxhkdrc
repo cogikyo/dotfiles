@@ -26,18 +26,14 @@ super + {_,shift +}Return
 
 #browser
 super + f
-    firefox
-
-#pdf
-super + g
-   zathura
+    firefox --new-window
 
 # ╦═╗┌─┐┌─┐┬
 # ╠╦╝│ │├┤ │
 # ╩╚═└─┘└  ┴
 
 # programs
-super + y
+super + p
 	rofi -no-lazy-grab -show drun -theme ~/.config/rofi/launcher.rasi
 
 # layouts
@@ -77,8 +73,12 @@ super + l
     bspc node focused -t tiled; \
   fi
 
-super + {Left,Down,Up,Right}
+# move current focused window
+alt + {s,e,r,t}
  	bspc node -f {west,south,north,east}.local
+
+super + g
+  bspc node -f next.local.window
 
 # moved focused window to prev/next desktop then switch
 super + shift + {h,l}
