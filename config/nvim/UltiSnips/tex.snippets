@@ -376,6 +376,22 @@ snippet prf "proof" bA
 \end{align*}
 endsnippet
 
+snippet iprf "inductive proof" bA
+
+\dt{Proof.}\\\\
+Base case: \\($1\\) \\\\
+Inductive hypothesis: \\(\\displaystyle
+$2
+\then
+$3 \\)
+\begin{align*}
+	\then $3
+	& \\text{by I.H.} \\\\
+	&=
+	& \\qed
+\end{align*}
+endsnippet
+
 snippet '(\d*\.?\d*)thm' "theorem" brA
 \dd{Theorem `!p snip.rv = match.group(1)`}:
 endsnippet
@@ -587,6 +603,11 @@ snippet sum "sum" wA
 endsnippet
 
 context "math()"
+snippet isum "sum" wA
+\sum_{i=1}^{n}
+endsnippet
+
+context "math()"
 snippet taylor "taylor" iA
 \sum_{${1:k}=${2:0}}^{${3:\infty}} ${4:c_$1} (x-a)^$1 $0
 endsnippet
@@ -629,7 +650,7 @@ snippet nroot "\sqrt{}" iA
 endsnippet
 
 context "math()"
-snippet '(f|g|h)o(x|y|z)' "function" irA
+snippet '(f|g|h|E)o(x|X|y|Y|z|Z)' "function" irA
 `!p snip.rv = match.group(1)`(`!p snip.rv = match.group(2)`)
 endsnippet
 
@@ -988,7 +1009,8 @@ endsnippet
 context "math()"
 snippet case "cases" wA
 \begin{cases}
-	$1
+	$1,			& $2, \\\\
+	${3:0}, & \text{elsewhere}
 \end{cases}
 endsnippet
 
