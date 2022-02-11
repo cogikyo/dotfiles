@@ -369,9 +369,10 @@ snippet '(\d*\.?\d*)bdef' "by definition" wrA
 endsnippet
 
 snippet prf "proof" bA
+
 \dt{Proof.}
 \begin{align*}
-	$0
+	${1: x &= y }
 \end{align*}
 endsnippet
 
@@ -556,7 +557,7 @@ endsnippet
 
 context "math()"
 snippet ()) "left( right)" iA
-\left( ${1:${VISUAL}} \right)
+\left( ${1:${VISUAL}} \right) $0
 endsnippet
 
 snippet lrp "left| right|" iA
@@ -581,13 +582,8 @@ snippet conj "conjugate" iA
 endsnippet
 
 context "math()"
-snippet sumn "sum" wA
+snippet sum "sum" wA
 \sum_{${1:n=1}}^{${2:\infty}} $0
-endsnippet
-
-context "math()"
-snippet sumi "sum" wA
-\sum_{i=1}^{n} $0
 endsnippet
 
 context "math()"
@@ -644,7 +640,7 @@ endsnippet
 
 context "math()"
 snippet ^^ "to the ... power" iA
-^{$1}
+^{$1} $0
 endsnippet
 
 context "math()"
@@ -654,11 +650,11 @@ endsnippet
 
 context "math()"
 snippet ^) "to the ... power" iA
-^{($1)}
+^{($1)} $0
 endsnippet
 
 snippet __ "subscript" iA
-_{$1}
+_{$1} $0
 endsnippet
 
 snippet ooo "\infty" iA
