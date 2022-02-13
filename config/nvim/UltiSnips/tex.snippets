@@ -383,13 +383,21 @@ Base case: \\($1\\) \\\\
 Inductive hypothesis: \\(\\displaystyle
 $2
 \then
-$3 \\)
+$3
+\\)
+
+Inductive case:
 \begin{align*}
-	\then $3
-	& \\text{by I.H.} \\\\
+	&$3 \\\\
+	&= \BB{$4} & \\text{\BB{by I.H.}} \\\\
 	&=
 	& \\qed
 \end{align*}
+endsnippet
+
+context "math()"
+snippet byih "byIH" iA
+&= \BB{$1} & \\text{\BB{by I.H.}} \\\\
 endsnippet
 
 snippet '(\d*\.?\d*)thm' "theorem" brA
@@ -597,14 +605,22 @@ snippet conj "conjugate" iA
 \overline{$1}$0
 endsnippet
 
+priority 10
 context "math()"
 snippet sum "sum" wA
 \sum_{${1:n=1}}^{${2:\infty}} $0
 endsnippet
 
+priority 100
 context "math()"
-snippet isum "sum" wA
-\sum_{i=1}^{n}
+snippet '(k|n)(sum|prod)' "1 to k sum" riA
+\\`!p snip.rv = match.group(2)`_{i=1}^{`!p snip.rv = match.group(1)`}
+endsnippet
+
+priority 10
+context "math()"
+snippet prod "product" iA
+\prod_{${1:n=${2:1}}}^{${3:\infty}} ${4:${VISUAL}} $0
 endsnippet
 
 context "math()"
@@ -625,11 +641,6 @@ endsnippet
 context "math()"
 snippet limsup "limsup" iA
 \limsup_{${1:n} \to ${2:\infty}}
-endsnippet
-
-context "math()"
-snippet prod "product" iA
-\prod_{${1:n=${2:1}}}^{${3:\infty}} ${4:${VISUAL}} $0
 endsnippet
 
 context "math()"
@@ -919,6 +930,11 @@ endsnippet
 context "math()"
 snippet notin "not in " iA
 \not\in
+endsnippet
+
+context "math()"
+snippet not| "not divide " iA
+\not|
 endsnippet
 
 context "math()"
