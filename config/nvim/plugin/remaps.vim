@@ -28,6 +28,8 @@ nnoremap <leader>bd :bd!<CR>
 nnoremap <leader>d "_d
 vnoremap <leader>d "_d
 vnoremap <leader>y "+y
+nnoremap <leader>ly v$y
+nnoremap <leader>Ly v$"+y
 nnoremap <leader>y ^"+y$
 nnoremap <leader>Y gg"+yG
 nmap gy `]

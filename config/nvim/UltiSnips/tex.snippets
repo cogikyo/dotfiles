@@ -832,7 +832,7 @@ endsnippet
 
 priority 200
 context "math()"
-snippet '(?<!\\)(arcsin|arccos|arctan|arccot|arccsc|arcsec|pi|zeta|int|id)' "ln" rwA
+snippet '(?<!\\)(arcsin|arccos|arctan|arccot|arccsc|arcsec|pi|mu|zeta|int|id)' "ln" rwA
 \\`!p snip.rv = match.group(1)`$0
 endsnippet
 
@@ -854,6 +854,11 @@ endsnippet
 context "math()"
 snippet !> "mapsto" iA
 \mapsto
+endsnippet
+
+context "math()"
+snippet ,dx "dx" iA
+\, dx
 endsnippet
 
 context "math()"
