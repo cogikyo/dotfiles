@@ -34,7 +34,6 @@ nnoremap <leader>y ^"+y$
 nnoremap <leader>Y gg"+yG
 nmap gy `]
 vnoremap <leader>p y']o<Esc>p`]o<Esc>
-inoremap <C-g>g <Esc>"+pa<Esc>o<Esc>kmzJ`zVgwzHzt_2w
 
 " 🤯 comment headers
 nnoremap <leader>hs :.! figlet -fshadow <Esc>:.,.+5Commentary<CR>5jo<Esc>0d$
@@ -126,6 +125,7 @@ nnoremap <leader>rx vipgqzt{j^
 inoremap <C-h> <Esc>VgwzHztA
 nnoremap <C-h> VgwzHzt$
 nnoremap <leader>rf mzJ`zVgwzHzt_
+inoremap <C-g>g <Esc>"+pa<Esc>o<Esc>{j mzJ`zVgwzHzt_
 
 " 🔱 harpoon
 nnoremap <leader>nn :lua require("harpoon.mark").add_file()<CR>

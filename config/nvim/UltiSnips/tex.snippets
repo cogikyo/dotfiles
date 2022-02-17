@@ -64,7 +64,7 @@ endsnippet
 
 snippet center "center" bA
 \begin{center}
-	$0
+	${1:${VISUAL}}
 \end{center}
 endsnippet
 
@@ -537,6 +537,11 @@ snippet 'R(\d|n|m)' "dimension in R" wrA
 \(\R^`!p snip.rv = match.group(1)`\) $0
 endsnippet
 
+priority 1000
+snippet '(\d*|[a-z]),(\d*|[a-z])c' "n choose k" wrA
+\{`!p snip.rv = match.group(1)` \choose `!p snip.rv = match.group(2)`\}
+endsnippet
+
 context "math()"
 snippet '([A-Za-z])(\d)' "auto subscript" wrA
 `!p snip.rv = match.group(1)`_`!p snip.rv = match.group(2)`
@@ -613,8 +618,8 @@ endsnippet
 
 priority 100
 context "math()"
-snippet '(k|n)(sum|prod)' "1 to k sum" riA
-\\`!p snip.rv = match.group(2)`_{i=1}^{`!p snip.rv = match.group(1)`}
+snippet '([a-z]),([a-z])(sum|prod)' "index = 1 to n sum/prod" riA
+\\`!p snip.rv = match.group(3)`_{`!p snip.rv = match.group(1)`=1}^{`!p snip.rv = match.group(2)`}
 endsnippet
 
 priority 10
