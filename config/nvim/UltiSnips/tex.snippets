@@ -121,6 +121,15 @@ snippet enum "Enumerate" bA
 \end{enumerate}
 endsnippet
 
+snippet resume "resume enumerate" bA
+\begin{enumerate}[resume]
+
+	\item $0
+
+\end{enumerate}
+endsnippet
+
+
 snippet problems "enumerate selected problems" bA
 \subsection{Problems $1, $2, $3}
 \begin{enumerate}
@@ -537,9 +546,14 @@ snippet 'R(\d|n|m)' "dimension in R" wrA
 \(\R^`!p snip.rv = match.group(1)`\) $0
 endsnippet
 
-priority 1000
-snippet '(\d*|[a-z]),(\d*|[a-z])c' "n choose k" wrA
+context "math()"
+snippet '(\d*|[a-z]*),(\d*|[a-z]*)c' "n choose k" wrA
 \{`!p snip.rv = match.group(1)` \choose `!p snip.rv = match.group(2)`\}
+endsnippet
+
+context "math()"
+snippet choose "n choose k" wA
+\{${1:n} \choose ${2:k}\}
 endsnippet
 
 context "math()"
