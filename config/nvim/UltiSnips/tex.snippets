@@ -547,7 +547,7 @@ snippet 'R(\d|n|m)' "dimension in R" wrA
 endsnippet
 
 context "math()"
-snippet '(\d*|[a-z]*),(\d*|[a-z]*)c' "n choose k" wrA
+snippet '(\d+|[a-z]+),(\d+|[a-z]+)c' "n choose k" wrA
 \{`!p snip.rv = match.group(1)` \choose `!p snip.rv = match.group(2)`\}
 endsnippet
 
