@@ -125,7 +125,7 @@ nnoremap <leader>rx vipgqzt{j^
 inoremap <C-h> <Esc>VgwzHztA
 nnoremap <C-h> VgwzHzt$
 nnoremap <leader>rf mzJ`zVgwzHzt_
-inoremap <C-g>g <Esc>"+pa<Esc>o<Esc>{j mzJ`zVgwzHzt_
+inoremap <C-g>g <Esc>"+pvipgqzt{j^
 
 " 🔱 harpoon
 nnoremap <leader>nn :lua require("harpoon.mark").add_file()<CR>
