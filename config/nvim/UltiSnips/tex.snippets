@@ -680,8 +680,13 @@ snippet nroot "\sqrt{}" iA
 endsnippet
 
 context "math()"
-snippet '(f|g|h|E)o(x|X|y|Y|z|Z)' "function" irA
+snippet '(f|g|h|E)o(x|X|y|Y|z|Z|n)' "function" irA
 `!p snip.rv = match.group(1)`(`!p snip.rv = match.group(2)`)
+endsnippet
+
+context "math()"
+snippet bigt "big theta" iA
+\in \Theta($1)
 endsnippet
 
 context "math()"
