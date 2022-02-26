@@ -5,9 +5,9 @@
 #  ╚╝ ┴ ┴┴└─
 
 rofi_command="rofi -theme ~/.config/rofi/layouts.rasi"
-options=`echo "statistics algos discrete nio notes dotfiles" | tr ' ' '\n'`
-statPath='stat-361/homework/hw5'
-discPath='cs-250/hw_tex/hw6'
+options=`echo "statistics discrete nio notes dotfiles" | tr ' ' '\n'`
+statPath='stat-361/homework/hw6'
+discPath='cs-250/hw_tex/hw7'
 
 # ╔═╗┬ ┬┌┐┌┌─┐
 # ╠╣ │ │││││
@@ -96,9 +96,6 @@ basic_phat () {
       bspc node -f west.local
       pdf stat-solutions
       ;;
-     algos)
-      basic_down
-      ;;
      discrete)
       tex python $discPath discrete
       bspc node -f west.local
@@ -121,9 +118,6 @@ case $chosen in
     ;;
   statistics)
     open 3 stat
-    ;;
-  algos)
-    open 3 algos
     ;;
   discrete)
     open 3 discrete
