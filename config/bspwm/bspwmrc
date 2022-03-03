@@ -27,7 +27,7 @@ killall "borders"
 killall "discord"
 killall "ytmdesktop"
 killall "electron"
-discord &
+# discord &
 ytmdesktop &
 
 # ╦═╗┬ ┬┬  ┌─┐┌─┐
