@@ -33,13 +33,9 @@ Plug 'Chiel92/vim-autoformat'
 Plug 'junegunn/vim-easy-align'
 Plug 'mhinz/vim-startify'
 
-Plug 'ncm2/ncm2'
-Plug 'roxma/nvim-yarp'
-Plug 'ncm2/ncm2-bufword'
-Plug 'ncm2/ncm2-path'
-Plug 'ncm2/ncm2-go'
-Plug 'ncm2/ncm2-ultisnips'
-Plug 'ncm2/ncm2-jedi'
+" ┌─┐┬ ┬┌┬┐┬ ┬┌─┐┌┐┌
+" ├─┘└┬┘ │ ├─┤│ ││││
+" ┴   ┴  ┴ ┴ ┴└─┘┘└┘
 Plug 'fisadev/vim-isort'
 Plug 'jpalardy/vim-slime'
 
