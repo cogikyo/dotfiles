@@ -39,8 +39,6 @@ Plug 'ncm2/ncm2-bufword'
 Plug 'ncm2/ncm2-path'
 Plug 'ncm2/ncm2-go'
 Plug 'ncm2/ncm2-ultisnips'
-Plug 'ncm2/ncm2-match-highlight'
-
 Plug 'ncm2/ncm2-jedi'
 Plug 'fisadev/vim-isort'
 Plug 'jpalardy/vim-slime'
