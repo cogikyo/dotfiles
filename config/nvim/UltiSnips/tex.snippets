@@ -856,7 +856,7 @@ endsnippet
 
 priority 200
 context "math()"
-snippet '(?<!\\)(arcsin|arccos|arctan|arccot|arccsc|arcsec|pi|mu|zeta|int|id)' "ln" rwA
+snippet '(?<!\\)(arcsin|arccos|arctan|arccot|arccsc|arcsec|pi|mu|zeta|int|id|mode)' "ln" rwA
 \\`!p snip.rv = match.group(1)`$0
 endsnippet
 
@@ -972,7 +972,7 @@ snippet sor "cup" iA
 endsnippet
 
 context "math()"
-snippet mod "modulus" wA
+snippet b% "modulus" wA
 \bmod
 endsnippet
 
@@ -1086,7 +1086,7 @@ endsnippet
 
 priority 100
 context "math()"
-snippet "([a-zA-Z])(bar|overline)" "bar" riA
+snippet "([a-zA-Z])(bar|overline|tilde)" "bar" riA
 \\`!p snip.rv = match.group(2)`{`!p snip.rv=match.group(1)`}
 endsnippet
 

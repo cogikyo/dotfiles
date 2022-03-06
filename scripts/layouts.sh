@@ -5,9 +5,9 @@
 #  ╚╝ ┴ ┴┴└─
 
 rofi_command="rofi -theme ~/.config/rofi/layouts.rasi"
-options=`echo "statistics discrete nio notes dotfiles" | tr ' ' '\n'`
-statPath='stat-361/homework/hw6'
-discPath='cs-250/hw_tex/hw7'
+options=`echo "statistics react nio notes dotfiles" | tr ' ' '\n'`
+statPath='stat-361/homework/hw7'
+reactPath='ts/react'
 
 # ╔═╗┬ ┬┌┐┌┌─┐
 # ╠╣ │ │││││
@@ -91,14 +91,14 @@ basic_phat () {
     notes)
       basic_up
       ;;
+    react)
+      basic_down
+      ;;
     stat)
       tex python $statPath stat
       bspc node -f west.local
       pdf stat-solutions
       ;;
-     discrete)
-      tex python $discPath discrete
-      bspc node -f west.local
   esac
 
   bspc config split_ratio 0.52
@@ -119,8 +119,8 @@ case $chosen in
   statistics)
     open 3 stat
     ;;
-  discrete)
-    open 3 discrete
+  react)
+    open 3 react
     ;;
   nio)
     open 4 dotfiles
