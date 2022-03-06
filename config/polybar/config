@@ -244,7 +244,7 @@ click-middle = alacritty -e alsamixer
 [module/cpu]
 type = internal/cpu
 interval = 0.2
-format = %{A1:bspc rule -a Alacritty -o state=floating rectangle=1920x1080+1080+540 && alacritty -e s-tui:}<label> <ramp-coreload>%{Ar}
+format = %{A1:bspc rule -a Alacritty -o state=floating rectangle=1920x1080+1080+540 && alacritty -e s-tui:}<label> <ramp-coreload>%{A1}
 label = "%{F#b0d0eb}%{T5}﬙%{T-}%{F-}  %percentage%% "
 format-margin = 1
 
