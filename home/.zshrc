@@ -87,6 +87,7 @@ alias x='exit'
 
 # git
 alias g='lazygit'
+alias gck='(){git checkout $1}'
 alias gts='git status'
 kurmit () {
   git add .
