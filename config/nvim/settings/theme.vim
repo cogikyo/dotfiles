@@ -1,9 +1,6 @@
 " ╔╦╗┬ ┬┌─┐┌┬┐┌─┐
 "  ║ ├─┤├┤ │││├┤
 "  ╩ ┴ ┴└─┘┴ ┴└─┘
-set background=dark
-colorscheme iceberg
-
 let s:save_cpo = &cpo
 set cpo&vim
 
@@ -157,6 +154,5 @@ EOF
 hi clear SpellBad
 hi clear SpellCap
 hi SpellBad guifg=#e27878
-hi SpellCap guifg=#f0c674
 hi SpllRare guifg=#e278ad
 hi SpellLocal guifg=#e278ad

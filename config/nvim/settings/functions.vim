@@ -23,31 +23,51 @@ function! ToggleSpellCheck()
   endif
 endfunction
 
+function! ToggleWrap()
+ if (&wrap == 1)
+   set nowrap
+   echo "WRAP OFF{}"
+ else
+   set wrap
+   echo "WRAP ON"
+ endif
+endfunction
+
+let g:last_pos = 0
+function s:Cursor_Moved()
+  let cur_pos = winline()
+  if g:last_pos == 0
+    set cul
+    let g:last_pos = cur_pos
+    return
+  endif
+  let diff = g:last_pos - cur_pos
+  if diff > 6 || diff < -6
+    set cul
+  else
+    set nocul
+  endif
+  let g:last_pos = cur_pos
+endfunction
+
 " ╔═╗┌┬┐┌┬┐┌─┐
 " ║  │││ ││└─┐
 " ╚═╝┴ ┴─┴┘└─┘
 augroup AUTO_COMMANDS
   autocmd!
   autocmd BufWritePre * :call TrimWhitespace()
-  autocmd BufEnter * set scrolloff=19
   autocmd TermOpen * setlocal nonumber norelativenumber signcolumn=no
-augroup END
-
-augroup SPELLING
-  autocmd!
-  autocmd FileType latex,tex,markdown,md,cpp,python setlocal spell spelllang=en_us
 augroup END
 
 augroup PYTHON
   autocmd!
-  autocmd FileType python setlocal tabstop=4 softtabstop=4
-  autocmd FileType python setlocal shiftwidth=4
-  autocmd FileType python nnoremap <buffer> <leader>rr :w<Cr> :exec '!python3' shellescape(@%, 1)<CR>
+  autocmd FileType python nnoremap <buffer> <C-e> :w<Cr> :exec '!python3' shellescape(@%, 1)<CR>
   autocmd BufWritePre *.py :Isort
   autocmd BufWritePre *.py :Autoformat
 augroup END
 
-augroup HIGHLIGHT_YANK
+augroup HIGHLIGHT
   autocmd!
+  autocmd CursorMoved,CursorMovedI * call s:Cursor_Moved()
   autocmd TextYankPost * silent! lua require'vim.highlight'.on_yank({timeout = 69})
 augroup END
