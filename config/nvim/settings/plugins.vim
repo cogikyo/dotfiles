@@ -12,6 +12,7 @@ call plug#begin('~/.vim/plugged')
 " └┐┌┘││││
 "  └┘ ┴┴ ┴
 Plug 'nvim-treesitter/nvim-treesitter', {'do': ':TSUpdate'}
+Plug 'nvim-treesitter/playground'
 Plug 'nvim-lua/plenary.nvim'
 Plug 'nvim-telescope/telescope.nvim'
 Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
@@ -50,7 +51,8 @@ Plug 'mbbill/undotree'
 "  │ ├─┤├┤ │││├┤
 "  ┴ ┴ ┴└─┘┴ ┴└─┘
 Plug 'cocopon/iceberg.vim'
-Plug 'elianiva/icy.nvim'
+Plug 'morhetz/gruvbox'
+Plug 'nosvagor/onedark.vim'
 Plug 'itchyny/lightline.vim'
 Plug 'chrisbra/Colorizer'
 Plug 'kyazdani42/nvim-web-devicons'
@@ -108,8 +110,9 @@ require'nvim-treesitter.configs'.setup {
     -- Set this to `true` if you depend on 'syntax' being enabled (like for indentation).
     -- Using this option may slow down your editor, and you may see some duplicate highlights.
     -- Instead of true it can also be a list of languages
-    additional_vim_regex_highlighting = false,
+    additional_vim_regex_highlighting = true,
   },
+
   incremental_selection = {
      enable = true,
      keymaps = {
@@ -118,6 +121,25 @@ require'nvim-treesitter.configs'.setup {
          scope_incremental = "grc",
          node_decremental = "grm",
          },
+  },
+
+  playground = {
+  enable = true,
+  disable = {},
+  updatetime = 25, -- Debounced time for highlighting nodes in the playground from source code
+  persist_queries = false, -- Whether the query persists across vim sessions
+  keybindings = {
+      toggle_query_editor = 'o',
+      toggle_hl_groups = 'i',
+      toggle_injected_languages = 't',
+      toggle_anonymous_nodes = 'a',
+      toggle_language_display = 'I',
+      focus_language = 'f',
+      unfocus_language = 'F',
+      update = 'R',
+      goto_node = '<cr>',
+      show_help = '?',
+      },
   },
 }
 EOF
