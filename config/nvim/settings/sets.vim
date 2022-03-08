@@ -28,7 +28,8 @@ set display+=lastline          " Always try to show a paragraph’s last line.
 set encoding=utf-8             " Use an encoding that supports unicode.
 set nowrap                     " Disable line wrapping.
 set linebreak                  " Avoid wrapping a line in the middle of a word.
-set scrolloff=18               " The number of screen lines to keep above and below the cursor.
+set scrolloff=16               " The number of screen lines to keep above and below the cursor.
+set spell spl=en_us            " Basic spell check
 " =============================================================================
 
 " 💃 performance ==============================================================
@@ -42,12 +43,11 @@ set wildmenu                   " Display command line’s tab complete options a
 set wildmode=longest:full,full " Display
 set number                     " Show line numbers on the sidebar.
 set nu                         " Print the line number in front of each line.
+set cul                        " Highlight the text line of the cursor with CursorLine.
 set relativenumber             " Show line number on the current line and relative numbers on all other lines.
 set noerrorbells               " Disable beep on errors.
 set mouse=a                    " Enable mouse for scrolling and resizing.
 set termguicolors              " Enables 24-bit RGB colors; requires an ISO-8613-3 compatible terminal.s
-set background=dark            " Enable syntax highlighting.
-colorscheme icy                " Select colorscheme
 set signcolumn=yes             " Always enable sign column
 set colorcolumn=80             " Color the sign column
 set splitbelow                 " Split below by default
@@ -59,8 +59,8 @@ set completeopt=menuone,noselect,noinsert " Inline text completion
 
 " 🥷 miscellaneous ============================================================
 set backspace=indent,eol,start " Allow backspacing over indention, line breaks and insertion start.
-set nobackup                   " Disable backup files.
-set noswapfile                 " Disable swap files.
+set nobackup                   " Disable backup files
+set noswapfile                 " Disable swap files
 set undofile                   " Enable undofile
 set undodir=~/.vim/undodir     " Set undofile location
 set formatoptions+=j           " Delete comment characters when joining lines.

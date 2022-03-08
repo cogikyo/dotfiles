@@ -4,7 +4,7 @@
 nnoremap <SPACE> <Nop>
 let mapleader = " "
 
-" ⚕  esc
+" ⚕  ec
 inoremap <C-c> <esc>
 inoremap <C-s> <esc>:w<CR>
 nnoremap <C-s> <esc>:w<CR>
@@ -17,7 +17,6 @@ nmap T <Plug>(easymotion-bd-f2)
 " ✍  quit/write
 nnoremap <leader>x :q<CR>
 nnoremap <leader>q :q!<CR>
-nnoremap <leader>X :q!<CR>
 
 " 🦬 buffers
 nnoremap <leader>w :bp<CR>
@@ -28,9 +27,8 @@ nnoremap <leader>bd :bd!<CR>
 nnoremap <leader>d "_d
 vnoremap <leader>d "_d
 vnoremap <leader>y "+y
-nnoremap <leader>ly v$y
-nnoremap <leader>Ly v$"+y
-nnoremap <leader>y ^"+y$
+nnoremap <leader>ly y$
+nnoremap <leader>yl "+y$
 nnoremap <leader>Y gg"+yG
 vnoremap <leader>p y']o<Esc>p`]o<Esc>
 
@@ -44,22 +42,20 @@ nnoremap <leader>O O<Esc>"_Di
 inoremap <C-Space> <Esc>o<Esc>"_DkO<Esc>_DjA
 
 " 🎯 keep cursor 'centered'
-nnoremap } }zt
-nnoremap { {zt
-nnoremap G Gzt
-nnoremap n nztzv
-nnoremap N Nztzv
-nnoremap <C-j> mzJ`z
-nnoremap <C-o> <C-o>zt
-nnoremap <C-i> <C-i>zt
-nnoremap <C-f> <C-f>zt
-nnoremap <C-b> <C-b>zt
-nnoremap <C-u> <C-u>zt
-nnoremap <C-d> <C-d>zt
+nmap G Gzt
+nmap n nzt
+nmap N Nzt
+nmap <C-j> mzJ`z
+nmap <C-o> <C-o>zt
+nmap <C-i> <C-i>zt
+nmap <C-f> <C-f>zt
+nmap <C-b> <C-b>zt
+nmap <C-d> <C-d>zt
+nmap <C-u> <C-u>zt
 
 " 🔖 temp mark
-nnoremap <leader>mk m0
-nnoremap <leader>mh `0zt
+nnoremap <leader>ns m0
+nnoremap <leader>ni `0zt
 
 " 👈 undo break points
 inoremap , ,<c-g>u
@@ -70,8 +66,8 @@ inoremap ; ;<c-g>u
 inoremap : :<c-g>u
 
 " 📢 capitalization
-nnoremap <leader>el gue
-nnoremap <leader>eu gUe
+nnoremap <leader>ll guiw
+nnoremap <leader>uu gUiw
 
 " 🍉 terminal
 tnoremap <C-a> <C-\><C-n>:bd!<CR>
@@ -93,17 +89,18 @@ nnoremap <leader>th <cmd>Telescope help_tags<cr>
 nnoremap <leader>te <cmd>Telescope git_files<cr>
 nnoremap <leader>tm <cmd>Telescope man_pages<cr>
 nnoremap <leader>tr <cmd>Telescope commands<cr>
+nnoremap <leader>tc <cmd>Telescope colorscheme<cr>
 
 " 🤲 toggle
 nnoremap <leader>ut :UndotreeToggle<CR>
+nnoremap <leader>pt :TSPlaygroundToggle<CR>
 nnoremap <leader>ct :ColorToggle<CR>
-nnoremap <leader>wt :call ToggleWrap()<CR>
-nnoremap <leader>mp :MarkdownPreviewToggle<CR>
+nnoremap <leader>tw :call ToggleWrap()<CR>
 nnoremap <leader>st :call ToggleSpellCheck()<CR>
+nnoremap <leader>mp :MarkdownPreviewToggle<CR>
 
-" 🔤 spelling
+" 🔤 spelling auto correct
 inoremap <C-l> <c-g>u<Esc>[s1z=`]a<c-g>u
-nnoremap <C-l> [s1z=<c-o>
 
 " 📓 latex
 augroup LATEX
@@ -121,7 +118,7 @@ augroup END
 
 " 🔃 reload
 nnoremap <leader>rs :call UltiSnips#RefreshSnippets()<CR>
-nnoremap <leader>rm :source $MYVIMRC<CR>
+nnoremap <leader>rm :source $MYVIMRC<CR>:w<CR>
 
 " ⛵ reflow
 nnoremap <leader>rx vipgqzt{j^
@@ -133,11 +130,11 @@ inoremap <C-g>g <Esc>"+pvipgqzt{j^
 " 🔱 harpoon
 nnoremap <leader>nn :lua require("harpoon.mark").add_file()<CR>
 nnoremap <leader>nf :lua require("harpoon.ui").toggle_quick_menu()<CR>
-nnoremap <leader>nt :lua require("harpoon.ui").nav_file(1)<CR>
-nnoremap <leader>ne :lua require("harpoon.ui").nav_file(2)<CR>
-nnoremap <leader>ns :lua require("harpoon.ui").nav_file(3)<CR>
-nnoremap <leader>na :lua require("harpoon.ui").nav_file(4)<CR>
-nnoremap <leader>nd :lua require("harpoon.ui").nav_file(5)<CR>
+nnoremap <leader>nt :lua require("harpoon.ui").nav_file(1)<CR>zt
+nnoremap <leader>ne :lua require("harpoon.ui").nav_file(2)<CR>zt
+nnoremap <leader>ns :lua require("harpoon.ui").nav_file(3)<CR>zt
+nnoremap <leader>na :lua require("harpoon.ui").nav_file(4)<CR>zt
+nnoremap <leader>nd :lua require("harpoon.ui").nav_file(5)<CR>zt
 
 " 👾 regex
 vnoremap s :<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
