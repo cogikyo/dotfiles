@@ -51,8 +51,6 @@ Plug 'mbbill/undotree'
 "  │ ├─┤├┤ │││├┤
 "  ┴ ┴ ┴└─┘┴ ┴└─┘
 Plug 'cocopon/iceberg.vim'
-Plug 'morhetz/gruvbox'
-Plug 'nosvagor/onedark.vim'
 Plug 'itchyny/lightline.vim'
 Plug 'chrisbra/Colorizer'
 Plug 'kyazdani42/nvim-web-devicons'

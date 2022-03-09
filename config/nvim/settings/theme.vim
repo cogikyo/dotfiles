@@ -157,35 +157,3 @@ require'nvim-web-devicons'.setup {
  default = true;
 }
 EOF
-
-" ┌─┐┌┐┌┌─┐┌┬┐┌─┐┬─┐┬┌─  ┬ ┬┌─┐┌─┐┬┌─
-" │ ││││├┤  ││├─┤├┬┘├┴┐  ├─┤├─┤│  ├┴┐
-" └─┘┘└┘└─┘─┴┘┴ ┴┴└─┴ ┴  ┴ ┴┴ ┴└─┘┴ ┴
-
-set background=dark
-colorscheme onedark
-
-" Doesn't actually apply, since the onedark plugin runs after... but used here
-" for easier editing.
-let s:overrides = get(g:, "onedark_color_overrides", {})
-let s:colors = {
-      \ "red": get(s:overrides, "red", { "gui": "#e4a97c", "cterm": "204", "cterm16": "1" }),
-      \ "dark_red": get(s:overrides, "dark_red", { "gui": "#de9463", "cterm": "196", "cterm16": "9" }),
-      \ "green": get(s:overrides, "green", { "gui": "#95d18f", "cterm": "114", "cterm16": "2" }),
-      \ "yellow": get(s:overrides, "yellow", { "gui": "#e9dc89", "cterm": "180", "cterm16": "3" }),
-      \ "dark_yellow": get(s:overrides, "dark_yellow", { "gui": "#e27878", "cterm": "173", "cterm16": "11" }),
-      \ "blue": get(s:overrides, "blue", { "gui": "#7abef5", "cterm": "39", "cterm16": "4" }),
-      \ "purple": get(s:overrides, "purple", { "gui": "#a376b8", "cterm": "170", "cterm16": "5" }),
-      \ "cyan": get(s:overrides, "cyan", { "gui": "#7bd4b8", "cterm": "38", "cterm16": "6" }),
-      \ "white": get(s:overrides, "white", { "gui": "#c6c8d1", "cterm": "145", "cterm16": "15" }),
-      \ "black": get(s:overrides, "black", { "gui": "#161821", "cterm": "235", "cterm16": "0" }),
-      \ "foreground": get(s:overrides, "foreground", { "gui": "#c6c8d1", "cterm": "145", "cterm16": "NONE" }),
-      \ "background": get(s:overrides, "background", { "gui": "#161821", "cterm": "235", "cterm16": "NONE" }),
-      \ "comment_grey": get(s:overrides, "comment_grey", { "gui": "#7B839E", "cterm": "59", "cterm16": "7" }),
-      \ "gutter_fg_grey": get(s:overrides, "gutter_fg_grey", { "gui": "#484e6b", "cterm": "238", "cterm16": "8" }),
-      \ "cursor_grey": get(s:overrides, "cursor_grey", { "gui": "#1E2132", "cterm": "236", "cterm16": "0" }),
-      \ "visual_grey": get(s:overrides, "visual_grey", { "gui": "#3E496B", "cterm": "237", "cterm16": "8" }),
-      \ "menu_grey": get(s:overrides, "menu_grey", { "gui": "#7b839e", "cterm": "237", "cterm16": "7" }),
-      \ "special_grey": get(s:overrides, "special_grey", { "gui": "#7b839e", "cterm": "238", "cterm16": "7" }),
-      \ "vertsplit": get(s:overrides, "vertsplit", { "gui": "#1E2132", "cterm": "59", "cterm16": "7" }),
-      \}
