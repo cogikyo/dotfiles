@@ -1,66 +1,79 @@
-" ┌─┐┌┐┌┌─┐┌┬┐┌─┐┬─┐┬┌─
-" │ ││││├┤  ││├─┤├┬┘├┴┐
-" └─┘┘└┘└─┘─┴┘┴ ┴┴└─┴ ┴
-let s:overrides = get(g:, "onedark_color_overrides", {})
+" Overrides {{{
+let s:overrides = get(g:, "wanderer_color_overrides", {})
 
 let s:colors = {
-      \ "red": get(s:overrides, "red", { "gui": "#E06C75", "cterm": "204", "cterm16": "1" }),
-      \ "dark_red": get(s:overrides, "dark_red", { "gui": "#BE5046", "cterm": "196", "cterm16": "9" }),
-      \ "green": get(s:overrides, "green", { "gui": "#98C379", "cterm": "114", "cterm16": "2" }),
-      \ "yellow": get(s:overrides, "yellow", { "gui": "#E5C07B", "cterm": "180", "cterm16": "3" }),
-      \ "dark_yellow": get(s:overrides, "dark_yellow", { "gui": "#D19A66", "cterm": "173", "cterm16": "11" }),
-      \ "blue": get(s:overrides, "blue", { "gui": "#61AFEF", "cterm": "39", "cterm16": "4" }),
-      \ "purple": get(s:overrides, "purple", { "gui": "#C678DD", "cterm": "170", "cterm16": "5" }),
-      \ "cyan": get(s:overrides, "cyan", { "gui": "#56B6C2", "cterm": "38", "cterm16": "6" }),
-      \ "white": get(s:overrides, "white", { "gui": "#ABB2BF", "cterm": "145", "cterm16": "15" }),
-      \ "black": get(s:overrides, "black", { "gui": "#282C34", "cterm": "235", "cterm16": "0" }),
-      \ "foreground": get(s:overrides, "foreground", { "gui": "#ABB2BF", "cterm": "145", "cterm16": "NONE" }),
-      \ "background": get(s:overrides, "background", { "gui": "#282C34", "cterm": "235", "cterm16": "NONE" }),
-      \ "comment_grey": get(s:overrides, "comment_grey", { "gui": "#5C6370", "cterm": "59", "cterm16": "7" }),
-      \ "gutter_fg_grey": get(s:overrides, "gutter_fg_grey", { "gui": "#4B5263", "cterm": "238", "cterm16": "8" }),
-      \ "cursor_grey": get(s:overrides, "cursor_grey", { "gui": "#2C323C", "cterm": "236", "cterm16": "0" }),
-      \ "visual_grey": get(s:overrides, "visual_grey", { "gui": "#3E4452", "cterm": "237", "cterm16": "8" }),
-      \ "menu_grey": get(s:overrides, "menu_grey", { "gui": "#3E4452", "cterm": "237", "cterm16": "7" }),
-      \ "special_grey": get(s:overrides, "special_grey", { "gui": "#3B4048", "cterm": "238", "cterm16": "7" }),
-      \ "vertsplit": get(s:overrides, "vertsplit", { "gui": "#3E4452", "cterm": "59", "cterm16": "7" }),
-      \}
+\ "foreground":     get(s:overrides, "foreground",     { "gui": "#d3d5df" }),
+\ "background":     get(s:overrides, "background",     { "gui": "#1b1d27" }),
+\ "red":            get(s:overrides, "red",            { "gui": "#e67979" }),
+\ "yellow":         get(s:overrides, "yellow",         { "gui": "#e6a579" }),
+\ "dark_yellow":    get(s:overrides, "dark_yellow",    { "gui": "#e6d079" }),
+\ "green":          get(s:overrides, "green",          { "gui": "#94b47e" }),
+\ "cyan":           get(s:overrides, "cyan",           { "gui": "#7fb5b1" }),
+\ "blue":           get(s:overrides, "blue",           { "gui": "#799fc8" }),
+\ "purple":         get(s:overrides, "purple",         { "gui": "#a98fd1" }),
+\ "white":          get(s:overrides, "white",          { "gui": "#d3d5df" }),
+\ "black":          get(s:overrides, "black",          { "gui": "#1b1d27" }),
+\ "comment_grey":   get(s:overrides, "comment_grey",   { "gui": "#5C6370" }),
+\ "gutter_fg_grey": get(s:overrides, "gutter_fg_grey", { "gui": "#4B5263" }),
+\ "cursor_grey":    get(s:overrides, "cursor_grey",    { "gui": "#1E2132" }),
+\ "visual_grey":    get(s:overrides, "visual_grey",    { "gui": "#3E4452" }),
+\ "menu_grey":      get(s:overrides, "menu_grey",      { "gui": "#3E4452" }),
+\ "special_grey":   get(s:overrides, "special_grey",   { "gui": "#3B4048" }),
+\ "vertsplit":      get(s:overrides, "vertsplit",      { "gui": "#3E4452" }),
+\ "dark_red":       get(s:overrides, "dark_red",       { "gui": "#99373C" }),
+\}
 
-function! onedark#GetColors()
+" \ "foreground": get(s:overrides, "foreground", { "gui": "#d3d5df" }),
+" \ "background": get(s:overrides, "background", { "gui": "#1b1d27" }),
+" \
+" \ "black-1":    get(s:overrides, "black-1",    { "gui": "#090b18" }),
+" \ "black":      get(s:overrides, "black",      { "gui": "#1b1d27" }),
+" \
+" \ "grey-2":     get(s:overrides, "grey-2",     { "gui": "#1e2132" }),
+" \ "grey-1":     get(s:overrides, "grey-1",     { "gui": "#282b3c" }),
+" \ "grey":       get(s:overrides, "grey",       { "gui": "#3D3F52" }),
+" \ "grey+1":     get(s:overrides, "grey+1",     { "gui": "#454B68" }),
+" \ "grey+2":     get(s:overrides, "grey+2",     { "gui": "#676D8C" }),
+" \
+" \ "white":      get(s:overrides, "white",      { "gui": "#d3d5df" }),
+" \ "white+1":    get(s:overrides, "white+1",    { "gui": "#e0e3f0" }),
+" \
+" \ "red":        get(s:overrides, "red-1",      { "gui": "" }),
+" \ "red":        get(s:overrides, "red",        { "gui": "#e67979" }),
+" \ "red":        get(s:overrides, "red+1",      { "gui": "" }),
+" \
+" \ "orange":     get(s:overrides, "orange-1",   { "gui": "" }),
+" \ "orange":     get(s:overrides, "orange",     { "gui": "#e6a579" }),
+" \ "orange":     get(s:overrides, "orange+1",   { "gui": "" }),
+" \
+" \ "yellow":     get(s:overrides, "yellow-1",   { "gui": "" }),
+" \ "yellow":     get(s:overrides, "yellow",     { "gui": "#e6d079" }),
+" \ "yellow":     get(s:overrides, "yellow+1",   { "gui": "" }),
+" \
+" \ "green":      get(s:overrides, "green-1",    { "gui": "" }),
+" \ "green":      get(s:overrides, "green",      { "gui": "#94b47e" }),
+" \ "green":      get(s:overrides, "green+1",    { "gui": "" }),
+" \
+" \ "cyan":       get(s:overrides, "cyan-1",     { "gui": "#639894" }),
+" \ "cyan":       get(s:overrides, "cyan",       { "gui": "#7fb5b1" }),
+" \ "cyan":       get(s:overrides, "cyan+1",     { "gui": "#9cd3ce" }),
+" \
+" \ "blue-1":     get(s:overrides, "blue-1",     { "gui": "" }),
+" \ "blue":       get(s:overrides, "blue",       { "gui": "#7596c7" }),
+" \ "blue+1":     get(s:overrides, "blue+1",     { "gui": "" }),
+" \
+" \ "purple-1":   get(s:overrides, "purple-1",   { "gui": "" }),
+" \ "purple":     get(s:overrides, "purple",     { "gui": "#a98fd1" }),
+" \ "purple+1":   get(s:overrides, "purple+1",   { "gui": "" }),
+" \
+" \ "pink-1":     get(s:overrides, "pink-1",     { "gui": "" }),
+" \ "pink":       get(s:overrides, "pink",       { "gui": "#e46c9c" }),
+" \ "pink+1":     get(s:overrides, "pink+1",     { "gui": "" }),
+" \}
+
+function! wanderer#GetColors()
   return s:colors
 endfunction
-
-
-" Color Reference {{{
-
-" The following colors were measured inside Atom using its built-in inspector.
-
-" +---------------------------------------------+
-" |  Color Name  |         RGB        |   Hex   |
-" |--------------+--------------------+---------|
-" | Black        | rgb(40, 44, 52)    | #282c34 |
-" |--------------+--------------------+---------|
-" | White        | rgb(171, 178, 191) | #abb2bf |
-" |--------------+--------------------+---------|
-" | Light Red    | rgb(224, 108, 117) | #e06c75 |
-" |--------------+--------------------+---------|
-" | Dark Red     | rgb(190, 80, 70)   | #be5046 |
-" |--------------+--------------------+---------|
-" | Green        | rgb(152, 195, 121) | #98c379 |
-" |--------------+--------------------+---------|
-" | Light Yellow | rgb(229, 192, 123) | #e5c07b |
-" |--------------+--------------------+---------|
-" | Dark Yellow  | rgb(209, 154, 102) | #d19a66 |
-" |--------------+--------------------+---------|
-" | Blue         | rgb(97, 175, 239)  | #61afef |
-" |--------------+--------------------+---------|
-" | Magenta      | rgb(198, 120, 221) | #c678dd |
-" |--------------+--------------------+---------|
-" | Cyan         | rgb(86, 182, 194)  | #56b6c2 |
-" |--------------+--------------------+---------|
-" | Gutter Grey  | rgb(76, 82, 99)    | #4b5263 |
-" |--------------+--------------------+---------|
-" | Comment Grey | rgb(92, 99, 112)   | #5c6370 |
-" +---------------------------------------------+
 
 " }}}
 
@@ -72,29 +85,18 @@ if exists("syntax_on")
   syntax reset
 endif
 
-set t_Co=256
-
-let g:colors_name="onedark"
-
-" Set to "256" for 256-color terminals, or
-" set to "16" to use your terminal emulator's native colors
-" (a 16-color palette for this color scheme is available; see
-" < https://github.com/joshdick/onedark.vim/blob/main/README.md >
-" for more information.)
-if !exists("g:onedark_termcolors")
-  let g:onedark_termcolors = 256
-endif
+let g:colors_name="wanderer"
 
 " Not all terminals support italics properly. If yours does, opt-in.
-if !exists("g:onedark_terminal_italics")
-  let g:onedark_terminal_italics = 0
+if !exists("g:wanderer_terminal_italics")
+  let g:wanderer_terminal_italics = 1
 endif
 
 " This function is based on one from FlatColor: https://github.com/MaxSt/FlatColor/
 " Which in turn was based on one found in hemisu: https://github.com/noahfrederick/vim-hemisu/
-let s:group_colors = {} " Cache of default highlight group settings, for later reference via `onedark#extend_highlight`
+let s:group_colors = {} " Cache of default highlight group settings, for later reference via `wanderer#extend_highlight`
 function! s:h(group, style, ...)
-  if (a:0 > 0) " Will be true if we got here from onedark#extend_highlight
+  if (a:0 > 0)
     let s:highlight = s:group_colors[a:group]
     for style_type in ["fg", "bg", "sp"]
       if (has_key(a:style, style_type))
@@ -110,7 +112,7 @@ function! s:h(group, style, ...)
     let s:group_colors[a:group] = s:highlight " Cache default highlight group settings
   endif
 
-  if g:onedark_terminal_italics == 0
+  if g:wanderer_terminal_italics == 0
     if has_key(s:highlight, "cterm") && s:highlight["cterm"] == "italic"
       unlet s:highlight.cterm
     endif
@@ -119,31 +121,20 @@ function! s:h(group, style, ...)
     endif
   endif
 
-  if g:onedark_termcolors == 16
-    let l:ctermfg = (has_key(s:highlight, "fg") ? s:highlight.fg.cterm16 : "NONE")
-    let l:ctermbg = (has_key(s:highlight, "bg") ? s:highlight.bg.cterm16 : "NONE")
-  else
-    let l:ctermfg = (has_key(s:highlight, "fg") ? s:highlight.fg.cterm : "NONE")
-    let l:ctermbg = (has_key(s:highlight, "bg") ? s:highlight.bg.cterm : "NONE")
-  endif
-
   execute "highlight" a:group
     \ "guifg="   (has_key(s:highlight, "fg")    ? s:highlight.fg.gui   : "NONE")
     \ "guibg="   (has_key(s:highlight, "bg")    ? s:highlight.bg.gui   : "NONE")
     \ "guisp="   (has_key(s:highlight, "sp")    ? s:highlight.sp.gui   : "NONE")
     \ "gui="     (has_key(s:highlight, "gui")   ? s:highlight.gui      : "NONE")
-    \ "ctermfg=" . l:ctermfg
-    \ "ctermbg=" . l:ctermbg
-    \ "cterm="   (has_key(s:highlight, "cterm") ? s:highlight.cterm    : "NONE")
 endfunction
 
 " public {{{
 
-function! onedark#set_highlight(group, style)
+function! wanderer#set_highlight(group, style)
   call s:h(a:group, a:style)
 endfunction
 
-function! onedark#extend_highlight(group, style)
+function! wanderer#extend_highlight(group, style)
   call s:h(a:group, a:style, 1)
 endfunction
 
@@ -153,7 +144,7 @@ endfunction
 
 " Color Variables {{{
 
-let s:colors = onedark#GetColors()
+let s:colors = wanderer#GetColors()
 
 let s:red = s:colors.red
 let s:dark_red = s:colors.dark_red
@@ -174,36 +165,6 @@ let s:visual_grey = s:colors.visual_grey
 let s:menu_grey = s:colors.menu_grey
 let s:special_grey = s:colors.special_grey
 let s:vertsplit = s:colors.vertsplit
-
-" }}}
-
-" Terminal Colors {{{
-
-if has('nvim')
-  let g:terminal_color_0 = s:black.gui
-  let g:terminal_color_1 = s:red.gui
-  let g:terminal_color_2 = s:green.gui
-  let g:terminal_color_3 = s:yellow.gui
-  let g:terminal_color_4 = s:blue.gui
-  let g:terminal_color_5 = s:purple.gui
-  let g:terminal_color_6 = s:cyan.gui
-  let g:terminal_color_7 = s:comment_grey.gui
-  let g:terminal_color_8 = s:visual_grey.gui
-  let g:terminal_color_9 = s:red.gui
-  let g:terminal_color_10 = s:green.gui
-  let g:terminal_color_11 = s:yellow.gui
-  let g:terminal_color_12 = s:blue.gui
-  let g:terminal_color_13 = s:purple.gui
-  let g:terminal_color_14 = s:cyan.gui
-  let g:terminal_color_15 = s:white.gui
-else
-  let g:terminal_ansi_colors = [
-    \ s:black.gui, s:red.gui, s:green.gui, s:yellow.gui,
-    \ s:blue.gui, s:purple.gui, s:cyan.gui, s:comment_grey.gui,
-    \ s:visual_grey.gui, s:red.gui, s:green.gui, s:yellow.gui,
-    \ s:blue.gui, s:purple.gui, s:cyan.gui, s:white.gui
-  \]
-endif
 
 " }}}
 
@@ -264,7 +225,7 @@ call s:h("DiffAdd", { "bg": s:green, "fg": s:black }) " diff mode: Added line
 call s:h("DiffChange", { "fg": s:yellow, "gui": "underline", "cterm": "underline" }) " diff mode: Changed line
 call s:h("DiffDelete", { "bg": s:red, "fg": s:black }) " diff mode: Deleted line
 call s:h("DiffText", { "bg": s:yellow, "fg": s:black }) " diff mode: Changed text within a changed line
-if get(g:, 'onedark_hide_endofbuffer', 0)
+if get(g:, 'wanderer_hide_endofbuffer', 0)
     " If enabled, will style end-of-buffer filler lines (~) to appear to be hidden.
     call s:h("EndOfBuffer", { "fg": s:black }) " filler lines (~) after the last line in the buffer
 endif
@@ -272,10 +233,10 @@ call s:h("ErrorMsg", { "fg": s:red }) " error messages on the command line
 call s:h("VertSplit", { "fg": s:vertsplit }) " the column separating vertically split windows
 call s:h("Folded", { "fg": s:comment_grey }) " line used for closed folds
 call s:h("FoldColumn", {}) " 'foldcolumn'
-call s:h("SignColumn", {}) " column where signs are displayed
+call s:h("SignColumn", {"bg": s:cursor_grey }) " column where signs are displayed
 call s:h("IncSearch", { "fg": s:yellow, "bg": s:comment_grey }) " 'incsearch' highlighting; also used for the text replaced with ":s///c"
-call s:h("LineNr", { "fg": s:gutter_fg_grey }) " Line number for ":number" and ":#" commands, and when 'number' or 'relativenumber' option is set.
-call s:h("CursorLineNr", {}) " Like LineNr when 'cursorline' or 'relativenumber' is set for the cursor line.
+call s:h("LineNr", { "fg": s:gutter_fg_grey, "bg": s:cursor_grey }) " Line number for ":number" and ":#" commands, and when 'number' or 'relativenumber' option is set.
+call s:h("CursorLineNr", {"fg": s:yellow, "bg": s:cursor_grey, "gui": "bold"}) " Like LineNr when 'cursorline' or 'relativenumber' is set for the cursor line.
 call s:h("MatchParen", { "fg": s:blue, "gui": "underline", "cterm": "underline" }) " The character under the cursor or just before it, if it is a paired bracket, and its match.
 call s:h("ModeMsg", {}) " 'showmode' message (e.g., "-- INSERT --")
 call s:h("MoreMsg", {}) " more-prompt
@@ -309,14 +270,6 @@ call s:h("WildMenu", { "fg": s:black, "bg": s:blue }) " current match in 'wildme
 
 " }}}
 
-" Termdebug highlighting for Vim 8.1+ {{{
-
-" See `:h hl-debugPC` and `:h hl-debugBreakpoint`.
-call s:h("debugPC", { "bg": s:special_grey }) " the current position
-call s:h("debugBreakpoint", { "fg": s:black, "bg": s:red }) " a breakpoint
-
-" }}}
-
 " Language-Specific Highlighting {{{
 
 " CSS
@@ -339,10 +292,6 @@ call s:h("cssPseudoClassId", { "fg": s:dark_yellow })
 call s:h("cssSelectorOp", { "fg": s:purple })
 call s:h("cssSelectorOp2", { "fg": s:purple })
 call s:h("cssTagName", { "fg": s:red })
-
-" Fish Shell
-call s:h("fishKeyword", { "fg": s:purple })
-call s:h("fishConditional", { "fg": s:purple })
 
 " Go
 call s:h("goDeclaration", { "fg": s:purple })
@@ -385,7 +334,6 @@ call s:h("javaScriptNull", { "fg": s:dark_yellow })
 call s:h("javaScriptNumber", { "fg": s:dark_yellow })
 call s:h("javaScriptRequire", { "fg": s:cyan })
 call s:h("javaScriptReserved", { "fg": s:purple })
-" https://github.com/pangloss/vim-javascript
 call s:h("jsArrowFunction", { "fg": s:purple })
 call s:h("jsClassKeyword", { "fg": s:purple })
 call s:h("jsClassMethodType", { "fg": s:purple })
@@ -411,7 +359,6 @@ call s:h("jsTemplateBraces", { "fg": s:dark_red })
 call s:h("jsTemplateVar", { "fg": s:green })
 call s:h("jsThis", { "fg": s:red })
 call s:h("jsUndefined", { "fg": s:dark_yellow })
-" https://github.com/othree/yajs.vim
 call s:h("javascriptArrowFunc", { "fg": s:purple })
 call s:h("javascriptClassExtends", { "fg": s:purple })
 call s:h("javascriptClassKeyword", { "fg": s:purple })
@@ -533,7 +480,6 @@ call s:h("rubyStringDelimiter", { "fg": s:green})
 call s:h("rubySymbol", { "fg": s:cyan})
 
 " Sass
-" https://github.com/tpope/vim-haml
 call s:h("sassAmpersand", { "fg": s:red })
 call s:h("sassClass", { "fg": s:dark_yellow })
 call s:h("sassControl", { "fg": s:purple })
@@ -548,7 +494,6 @@ call s:h("sassMixin", { "fg": s:purple })
 call s:h("sassMixinName", { "fg": s:blue })
 call s:h("sassMixing", { "fg": s:purple })
 call s:h("sassVariable", { "fg": s:purple })
-" https://github.com/cakebaker/scss-syntax.vim
 call s:h("scssExtend", { "fg": s:purple })
 call s:h("scssImport", { "fg": s:purple })
 call s:h("scssInclude", { "fg": s:purple })
@@ -586,9 +531,9 @@ call s:h("xmlTagName", { "fg": s:red })
 " Plugin Highlighting {{{
 
 " airblade/vim-gitgutter
-call s:h("GitGutterAdd", { "fg": s:green })
-call s:h("GitGutterChange", { "fg": s:yellow })
-call s:h("GitGutterDelete", { "fg": s:red })
+call s:h("GitGutterAdd",    {"bg": s:cursor_grey, "fg": s:green })
+call s:h("GitGutterChange", {"bg": s:cursor_grey, "fg": s:yellow })
+call s:h("GitGutterDelete", {"bg": s:cursor_grey, "fg": s:red })
 
 " dense-analysis/ale
 call s:h("ALEError", { "fg": s:red, "gui": "underline", "cterm": "underline" })
@@ -610,12 +555,6 @@ hi link GitSignsDelete GitGutterDelete
 hi link SignifySignAdd    GitGutterAdd
 hi link SignifySignChange GitGutterChange
 hi link SignifySignDelete GitGutterDelete
-
-" neoclide/coc.nvim
-call s:h("CocErrorSign", { "fg": s:red })
-call s:h("CocWarningSign", { "fg": s:yellow })
-call s:h("CocInfoSign", { "fg": s:blue })
-call s:h("CocHintSign", { "fg": s:cyan })
 
 " neomake/neomake
 call s:h("NeomakeErrorSign", { "fg": s:red })
@@ -669,28 +608,6 @@ hi link gitcommitUnmergedArrow gitcommitUnmergedFile
 " Neovim-Specific Highlighting {{{
 
 if has("nvim")
-  " Neovim terminal colors {{{
-  let g:terminal_color_0 =  s:black.gui
-  let g:terminal_color_1 =  s:red.gui
-  let g:terminal_color_2 =  s:green.gui
-  let g:terminal_color_3 =  s:yellow.gui
-  let g:terminal_color_4 =  s:blue.gui
-  let g:terminal_color_5 =  s:purple.gui
-  let g:terminal_color_6 =  s:cyan.gui
-  let g:terminal_color_7 =  s:white.gui
-  let g:terminal_color_8 =  s:visual_grey.gui
-  let g:terminal_color_9 =  s:dark_red.gui
-  let g:terminal_color_10 = s:green.gui " No dark version
-  let g:terminal_color_11 = s:dark_yellow.gui
-  let g:terminal_color_12 = s:blue.gui " No dark version
-  let g:terminal_color_13 = s:purple.gui " No dark version
-  let g:terminal_color_14 = s:cyan.gui " No dark version
-  let g:terminal_color_15 = s:comment_grey.gui
-  let g:terminal_color_background = s:background.gui
-  let g:terminal_color_foreground = s:foreground.gui
-  " }}}
-
-  " Neovim Diagnostics {{{
   call s:h("DiagnosticError", { "fg": s:red })
   call s:h("DiagnosticWarn", { "fg": s:yellow })
   call s:h("DiagnosticInfo", { "fg": s:blue })
@@ -699,24 +616,9 @@ if has("nvim")
   call s:h("DiagnosticUnderlineWarn", { "fg": s:yellow, "gui": "underline", "cterm": "underline" })
   call s:h("DiagnosticUnderlineInfo", { "fg": s:blue, "gui": "underline", "cterm": "underline" })
   call s:h("DiagnosticUnderlineHint", { "fg": s:cyan, "gui": "underline", "cterm": "underline" })
-  " }}}
-
-  " Neovim LSP (for versions < 0.5.1) {{{
-  hi link LspDiagnosticsDefaultError DiagnosticError
-  hi link LspDiagnosticsDefaultWarning DiagnosticWarn
-  hi link LspDiagnosticsDefaultInformation DiagnosticInfo
-  hi link LspDiagnosticsDefaultHint DiagnosticHint
-  hi link LspDiagnosticsUnderlineError DiagnosticUnderlineError
-  hi link LspDiagnosticsUnderlineWarning DiagnosticUnderlineWarn
-  hi link LspDiagnosticsUnderlineInformation DiagnosticUnderlineInfo
-  hi link LspDiagnosticsUnderlineHint DiagnosticUnderlineHint
-  " }}}
 endif
 
 " }}}
 
-" Must appear at the end of the file to work around this oddity:
-" https://groups.google.com/forum/#!msg/vim_dev/afPqwAFNdrU/nqh6tOM87QUJ
 set background=dark
-highlight LineNr guibg=#1E2132
-highlight SignColumn guibg=#1E2132
+lua require 'colorizer'.setup()

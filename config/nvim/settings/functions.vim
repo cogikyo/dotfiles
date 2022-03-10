@@ -26,10 +26,10 @@ endfunction
 function! ToggleWrap()
  if (&wrap == 1)
    set nowrap
-   echo "WRAP OFF{}"
+   echo "Wrap OFF"
  else
    set wrap
-   echo "WRAP ON"
+   echo "Wrap ON"
  endif
 endfunction
 
@@ -40,6 +40,8 @@ augroup AUTO_COMMANDS
   autocmd!
   autocmd BufWritePre * :call TrimWhitespace()
   autocmd TermOpen * setlocal nonumber norelativenumber signcolumn=no
+  autocmd FileType help setlocal cc=
+  autocmd TextYankPost * silent! lua require'vim.highlight'.on_yank({timeout = 69})
 augroup END
 
 augroup PYTHON
@@ -47,9 +49,4 @@ augroup PYTHON
   autocmd FileType python nnoremap <buffer> <C-e> :w<Cr> :exec '!python3' shellescape(@%, 1)<CR>
   autocmd BufWritePre *.py :Isort
   autocmd BufWritePre *.py :Autoformat
-augroup END
-
-augroup HIGHLIGHT
-  autocmd!
-  autocmd TextYankPost * silent! lua require'vim.highlight'.on_yank({timeout = 69})
 augroup END

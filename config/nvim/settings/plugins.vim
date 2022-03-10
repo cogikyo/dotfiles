@@ -42,6 +42,7 @@ Plug 'quangnguyen30192/cmp-nvim-ultisnips'
 " └─┘ ┴ ┴┴─┘└─┘
 Plug 'easymotion/vim-easymotion'
 Plug 'mattn/emmet-vim'
+Plug 'preservim/vim-markdown'
 Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app && yarn install'  }
 Plug 'Chiel92/vim-autoformat'
 Plug 'junegunn/vim-easy-align'
@@ -52,8 +53,8 @@ Plug 'mbbill/undotree'
 "  ┴ ┴ ┴└─┘┴ ┴└─┘
 Plug 'cocopon/iceberg.vim'
 Plug 'itchyny/lightline.vim'
-Plug 'chrisbra/Colorizer'
 Plug 'kyazdani42/nvim-web-devicons'
+Plug 'norcalli/nvim-colorizer.lua'
 
 " ┌┬┐┬┌─┐┌─┐
 " ││││└─┐│
@@ -220,5 +221,4 @@ end
 -- Add additional capabilities supported by nvim-cmp
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 capabilities = require('cmp_nvim_lsp').update_capabilities(capabilities)
-
 EOF
