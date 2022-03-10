@@ -1,10 +1,14 @@
-" ╦═╗┌─┐┌┬┐┌─┐┌─┐┌─┐
-" ╠╦╝├┤ │││├─┤├─┘└─┐
-" ╩╚═└─┘┴ ┴┴ ┴┴  └─┘
+" ██████╗ ███████╗███╗   ███╗ █████╗ ██████╗ ███████╗
+" ██╔══██╗██╔════╝████╗ ████║██╔══██╗██╔══██╗██╔════╝
+" ██████╔╝█████╗  ██╔████╔██║███████║██████╔╝███████╗
+" ██╔══██╗██╔══╝  ██║╚██╔╝██║██╔══██║██╔═══╝ ╚════██║
+" ██║  ██║███████╗██║ ╚═╝ ██║██║  ██║██║     ███████║
+" ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝╚═╝  ╚═╝╚═╝     ╚══════╝
+
 nnoremap <SPACE> <Nop>
 let mapleader = " "
 
-" ⚕  ec
+" ⚕  esc
 inoremap <C-c> <esc>
 inoremap <C-s> <esc>:w<CR>
 nnoremap <C-s> <esc>:w<CR>
@@ -27,8 +31,8 @@ nnoremap <leader>bd :bd!<CR>
 nnoremap <leader>d "_d
 vnoremap <leader>d "_d
 vnoremap <leader>y "+y
-nnoremap <leader>ly y$
-nnoremap <leader>yl "+y$
+nnoremap <leader>y ml^"+y$<Esc>`l
+nnoremap <leader>ly "+y$
 nnoremap <leader>Y gg"+yG
 vnoremap <leader>p y']o<Esc>p`]o<Esc>
 
@@ -42,16 +46,16 @@ nnoremap <leader>O O<Esc>"_Di
 inoremap <C-Space> <Esc>o<Esc>"_DkO<Esc>_DjA
 
 " 🎯 keep cursor 'centered'
-nmap G Gzt
-nmap n nzt
-nmap N Nzt
-nmap <C-j> mzJ`z
-nmap <C-o> <C-o>zt
-nmap <C-i> <C-i>zt
-nmap <C-f> <C-f>zt
-nmap <C-b> <C-b>zt
-nmap <C-d> <C-d>zt
-nmap <C-u> <C-u>zt
+nnoremap G Gzt
+nnoremap n nzt
+nnoremap N Nzt
+nnoremap <C-j> mzJ`z
+nnoremap <C-o> <C-o>zt
+nnoremap <C-i> <C-i>zt
+nnoremap <C-f> <C-f>zt
+nnoremap <C-b> <C-b>zt
+nnoremap <C-d> <C-d>zt
+nnoremap <C-u> <C-u>zt
 
 " 🔖 temp mark
 nnoremap <leader>ns m0
@@ -94,12 +98,12 @@ nnoremap <leader>tc <cmd>Telescope colorscheme<cr>
 " 🤲 toggle
 nnoremap <leader>ut :UndotreeToggle<CR>
 nnoremap <leader>pt :TSPlaygroundToggle<CR>
-nnoremap <leader>ct :ColorToggle<CR>
+nnoremap <leader>ct :ColorizerToggle<CR>
 nnoremap <leader>tw :call ToggleWrap()<CR>
 nnoremap <leader>st :call ToggleSpellCheck()<CR>
 nnoremap <leader>mp :MarkdownPreviewToggle<CR>
 
-" 🔤 spelling auto correct
+" 🔤 spelling
 inoremap <C-l> <c-g>u<Esc>[s1z=`]a<c-g>u
 
 " 📓 latex
@@ -140,6 +144,6 @@ nnoremap <leader>nd :lua require("harpoon.ui").nav_file(5)<CR>zt
 vnoremap s :<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
 nnoremap <leader>sa m0ggVG:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
 
-" 🛰  easy align
+" 🚦 easy align
 vnoremap <leader>et :EasyAlign<CR>
 nnoremap <leader>eta <ESC>vip:EasyAlign<CR>**&<CR>

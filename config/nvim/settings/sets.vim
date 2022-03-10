@@ -15,13 +15,13 @@ set tabstop=4                  " Indent using four spaces.
 set smarttab                   " Insert “tabstop” number of spaces when the <Tab> key is pressed.
 " =============================================================================
 
-" 🔍 search ===================================================================
-set nohlsearch                 " Enable search highlighting.
+" 🔍 search ================================================================{{{
+set nohlsearch                 " Disable search highlighting.
 set ignorecase                 " Ignore case when searching.
 set incsearch                  " Incremental search that shows partial matches.
 set smartcase                  " Automatically switch search to case-sensitive when search query contains an uppercase letter.
 set shortmess+=c               " Don't give ins-completion-menu messages.
-" =============================================================================
+" ==========================================================================}}}
 
 " 📃 text =====================================================================
 set display+=lastline          " Always try to show a paragraph’s last line.
@@ -29,7 +29,6 @@ set encoding=utf-8             " Use an encoding that supports unicode.
 set nowrap                     " Disable line wrapping.
 set linebreak                  " Avoid wrapping a line in the middle of a word.
 set scrolloff=16               " The number of screen lines to keep above and below the cursor.
-set spell spl=en_us            " Basic spell check
 " =============================================================================
 
 " 💃 performance ==============================================================
@@ -51,9 +50,6 @@ set termguicolors              " Enables 24-bit RGB colors; requires an ISO-8613
 set signcolumn=yes             " Always enable sign column
 set colorcolumn=80             " Color the sign column
 set splitbelow                 " Split below by default
-set statusline+=%#warningmsg#
-set statusline+=%{SyntasticStatuslineFlag()}
-set statusline+=%*
 set completeopt=menuone,noselect,noinsert " Inline text completion
 " =============================================================================
 
