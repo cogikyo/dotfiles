@@ -17,9 +17,7 @@ set smarttab                   " Insert “tabstop” number of spaces when the 
 
 " 🔍 search ================================================================{{{
 set nohlsearch                 " Disable search highlighting.
-set ignorecase                 " Ignore case when searching.
 set incsearch                  " Incremental search that shows partial matches.
-set smartcase                  " Automatically switch search to case-sensitive when search query contains an uppercase letter.
 set shortmess+=c               " Don't give ins-completion-menu messages.
 " ==========================================================================}}}
 

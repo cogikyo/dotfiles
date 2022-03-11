@@ -57,10 +57,6 @@ nnoremap <C-b> <C-b>zt
 nnoremap <C-d> <C-d>zt
 nnoremap <C-u> <C-u>zt
 
-" 🔖 temp mark
-nnoremap <leader>ns m0
-nnoremap <leader>ni `0zt
-
 " 👈 undo break points
 inoremap , ,<c-g>u
 inoremap . .<c-g>u
@@ -147,3 +143,12 @@ nnoremap <leader>sa m0ggVG:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
 " 🚦 easy align
 vnoremap <leader>et :EasyAlign<CR>
 nnoremap <leader>eta <ESC>vip:EasyAlign<CR>**&<CR>
+nnoremap <leader>etc <ESC>vip:EasyAlign<CR>:<CR>
+nnoremap <leader>etp <ESC>vip:EasyAlign<CR>"<CR>
+
+" 🙏 folds
+nnoremap <leader>bf t{zf%
+nnoremap <leader>cf vipzf
+nnoremap <leader>mk :mkview<CR>
+nnoremap <leader>lv :loadview<CR>
+
