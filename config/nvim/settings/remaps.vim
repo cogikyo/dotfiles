@@ -89,7 +89,6 @@ nnoremap <leader>th <cmd>Telescope help_tags<cr>
 nnoremap <leader>te <cmd>Telescope git_files<cr>
 nnoremap <leader>tm <cmd>Telescope man_pages<cr>
 nnoremap <leader>tr <cmd>Telescope commands<cr>
-nnoremap <leader>tc <cmd>Telescope colorscheme<cr>
 
 " 🤲 toggle
 nnoremap <leader>ut :UndotreeToggle<CR>
@@ -98,6 +97,7 @@ nnoremap <leader>ct :ColorizerToggle<CR>
 nnoremap <leader>tw :call ToggleWrap()<CR>
 nnoremap <leader>st :call ToggleSpellCheck()<CR>
 nnoremap <leader>mp :MarkdownPreviewToggle<CR>
+nnoremap <leader>tk :TSHighlightCapturesUnderCursor<CR>
 
 " 🔤 spelling
 inoremap <C-l> <c-g>u<Esc>[s1z=`]a<c-g>u

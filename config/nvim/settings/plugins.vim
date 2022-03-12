@@ -19,6 +19,7 @@ Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
 Plug 'ThePrimeagen/harpoon'
 Plug 'tpope/vim-commentary'
 Plug 'tpope/vim-fugitive'
+Plug 'tpope/vim-repeat'
 Plug 'tpope/vim-surround'
 Plug 'mhinz/vim-startify'
 Plug 'mhinz/vim-signify'
@@ -47,6 +48,7 @@ Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app && yarn install'  }
 Plug 'Chiel92/vim-autoformat'
 Plug 'junegunn/vim-easy-align'
 Plug 'mbbill/undotree'
+
 
 " ┌┬┐┬ ┬┌─┐┌┬┐┌─┐
 "  │ ├─┤├┤ │││├┤

@@ -15,11 +15,14 @@ set tabstop=4                  " Indent using four spaces.
 set smarttab                   " Insert “tabstop” number of spaces when the <Tab> key is pressed.
 " =============================================================================
 
-" 🔍 search ================================================================{{{
+" 🔍 search
+=" ===================================================================
 set nohlsearch                 " Disable search highlighting.
 set incsearch                  " Incremental search that shows partial matches.
+set ignorecase                 " Ignore case when searching.
+set smartcase                  " Automatically switch search to case-sensitive when search query contains an uppercase letter.
 set shortmess+=c               " Don't give ins-completion-menu messages.
-" ==========================================================================}}}
+" =============================================================================
 
 " 📃 text =====================================================================
 set display+=lastline          " Always try to show a paragraph’s last line.
@@ -49,6 +52,8 @@ set signcolumn=yes             " Always enable sign column
 set colorcolumn=80             " Color the sign column
 set splitbelow                 " Split below by default
 set completeopt=menuone,noselect,noinsert " Inline text completion
+set noshowmode                 " If in Insert, Replace or Visual mode <do not> put a message on the last line.
+
 " =============================================================================
 
 " 🥷 miscellaneous ============================================================
@@ -69,15 +74,14 @@ set iskeyword +=-              " Include dash as word separator
 " ██║     ██╔══╝     ██║   ╚════██║
 " ███████╗███████╗   ██║   ███████║
 " ╚══════╝╚══════╝   ╚═╝   ╚══════╝
+"
 
-let gsyntastic_tex_checkers = ['']
-let g:syntastic_ignore_files = ['\m\c\.cls$', '\m\c\.sty$']
+let g:syntastic_tex_checkers = ['']
+let g:syntastic_enable_signs = 1
 let g:syntastic_error_symbol = "✗"
-let syntastic_style_error_symbol = "✗"
+let g:syntastic_style_error_symbol = "✗"
 let g:syntastic_warning_symbol = "⏿"
-let syntastic_style_warning_symbol = "⏿"
-
-let g:colorizer_colornames = 0
+let g:syntastic_style_warning_symbol = "⏿"
 
 let g:python3_host_prog="/usr/bin/python3"
 
