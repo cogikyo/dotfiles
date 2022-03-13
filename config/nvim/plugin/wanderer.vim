@@ -12,7 +12,7 @@ let s:colors = {
 \ "grey_d":     get(s:overrides, "grey_d",     { "gui": "#282b3c" }),
 \ "grey":       get(s:overrides, "grey",       { "gui": "#3D3F52" }),
 \ "grey_l":     get(s:overrides, "grey_l",     { "gui": "#454B68" }),
-\ "grey_L":     get(s:overrides, "grey_L",     { "gui": "#676D8C" }),
+\ "grey_L":     get(s:overrides, "grey_L",     { "gui": "#6c749d" }),
 \
 \ "white":      get(s:overrides, "white",      { "gui": "#d3d5df" }),
 \ "white_L":    get(s:overrides, "white_L",    { "gui": "#e0e3f0" }),
@@ -252,13 +252,13 @@ call s:h("IncSearch",        { "fg": s:orange_L, "gui": "bold", }) " 'incsearch'
 call s:h("LineNr",           { "fg": s:grey, "bg": s:grey_D }) " Line number for ":number" and ":#" commands, and when 'number' or 'relativenumber' option is set.
 call s:h("CursorLineNr",     { "fg": s:orange, "bg": s:grey_D, "gui": "bold"}) " Like LineNr when 'cursorline' or 'relativenumber' is set for the cursor line.
 call s:h("MatchParen",       { "fg": s:azure_L, "gui": "bold", }) " The character under the cursor or just before it, if it is a paired bracket, and its match.
-call s:h("MsgArea",          { "fg": s:grey_l, }) " The character under the cursor or just before it, if it is a paired bracket, and its match.
+call s:h("MsgArea",          { "fg": s:grey_L, })
 call s:h("ModeMsg",          { }) " 'showmode' message (e.g., "-- INSERT --")
 call s:h("MoreMsg",          { "fg": s:red, "bg": s:background,}) " more-prompt
 call s:h("NonText",          { "fg": s:grey_L }) " '~' and '@' at the end of the window, characters from 'showbreak' and other characters that do not really exist in the text (e.g., ">" displayed when a double-wide character doesn't fit at the end of the line).
 call s:h("Normal",           { "fg": s:foreground, "bg": s:background }) " normal text
 call s:h("Pmenu",            { "fg": s:grey_L, "bg": s:grey_D }) " Popup menu: normal item.
-call s:h("PmenuSel",         { "fg": s:orange_L, "bg": s:grey_D }) " Popup menu: selected item.
+call s:h("PmenuSel",         { "fg": s:orange, "bg": s:grey_D }) " Popup menu: selected item.
 call s:h("PmenuSbar",        { "bg": s:grey_D }) " Popup menu: scrollbar.
 call s:h("PmenuThumb",       { "bg": s:grey_d }) " Popup menu: Thumb of the scrollbar.
 call s:h("Question",         { "fg": s:blue, "gui": "bold", }) " hit-enter prompt and yes/no questions
@@ -479,6 +479,8 @@ call s:h("StartifyBracket",         {"fg": s:grey_l, })
 " vim-syntastic/syntastic
 call s:h("SyntasticError",          { "fg": s:red, "bg": s:grey_D,"gui": "underline", })
 call s:h("SyntasticWarning",        { "fg": s:yellow, "bg": s:grey_D,"gui": "underline",})
+call s:h("SyntasticErrorSign",      { "fg": s:red, "bg": s:grey_D,"gui": "bold",})
+call s:h("SyntasticWarningSign",    { "fg": s:yellow, "bg": s:grey_D,"gui": "bold",})
 
 " easymotion/vim-easymotion
 call s:h("EasyMotionTarget",        { "fg": s:orange, "gui": "bold", })
@@ -500,7 +502,7 @@ call s:h("diffRemoved",             { "fg": s:red })
 call s:h("TelescopeTitle",           { "fg": s:azure_L, "gui": "bold", })
 call s:h("TelescopePromptPrefix",    { "fg": s:azure_L, "gui": "bold", })
 call s:h("TelescopeMatching",        { "fg": s:orange_L, "gui": "bold", })
-call s:h("TelescopeSelection",       { "fg": s:azure_L, "gui": "bold", })
+call s:h("TelescopeSelection",       { "bg": s:grey_D, })
 
 " }}}
 
@@ -547,3 +549,127 @@ endif
 
 set background=dark
 lua require 'colorizer'.setup()
+
+let s:_white   = '#d3d5df'
+let s:_black_D = '#090b18'
+let s:_black   = '#1b1d27'
+let s:_grey_D  = '#1e2132'
+let s:_grey_d  = '#282b3c'
+let s:_grey    = '#3d3f52'
+let s:_grey_l  = '#454B68'
+let s:_grey_L  = '#6c749d'
+let s:_red     = '#e67979'
+let s:_orange  = '#e6a579'
+let s:_yellow  = '#d3bf6f'
+let s:_green   = '#94b47e'
+let s:_cyan    = '#7fb5b1'
+let s:_azure   = '#b4e0f8'
+let s:_blue    = '#77a2cf'
+let s:_purple  = '#a98fd1'
+let s:_pink    = '#e46c9c'
+
+let s:p = {'normal': {}, 'inactive': {}, 'insert': {}, 'replace': {}, 'visual': {}, 'tabline': {}}
+
+let s:p.normal.left     = [ [s:_black, s:_blue, 'bold'   ], [s:_blue, s:_grey_d   ] ]
+let s:p.insert.left     = [ [s:_black, s:_azure, 'bold'  ], [s:_azure, s:_grey_d  ] ]
+let s:p.visual.left     = [ [s:_black, s:_green, 'bold'  ], [s:_green,  s:_grey_d ] ]
+let s:p.replace.left    = [ [s:_black, s:_purple, 'bold' ], [s:_purple, s:_grey_d ] ]
+let s:p.inactive.left   = [ [s:_pink, s:_grey_D, 'bold'   ], [s:_pink, s:_black   ] ]
+
+let s:p.normal.middle   = [ [s:_white, s:_grey_D ] ]
+let s:p.inactive.middle   = [ [s:_white, s:_black_D ] ]
+
+let s:p.normal.right    = [ [s:_black, s:_blue   ], [s:_blue, s:_grey_d  ] ]
+let s:p.insert.right    = [ [s:_black, s:_azure  ], [s:_azure, s:_grey_d ] ]
+let s:p.visual.right    = [ [s:_black, s:_green  ], [s:_green, s:_grey_d ] ]
+let s:p.replace.right   = [ [s:_black, s:_purple ], [s:_green, s:_grey_d ] ]
+let s:p.inactive.right  = [ [s:_grey_D, s:_pink   ], [s:_pink, s:_grey_D  ] ]
+
+let s:p.normal.error    = [ [s:_red, s:_grey_D    ] ]
+let s:p.normal.warning  = [ [s:_yellow, s:_grey_D ] ]
+
+let s:p.tabline.left    = [ [s:_grey_L, s:_grey_D ] ]
+let s:p.tabline.tabsel  = [ [s:_orange, s:_grey_D ] ]
+let s:p.tabline.middle  = [ [s:_grey_d, s:_grey_D ] ]
+let s:p.tabline.right   = [ [s:_grey_D, s:_grey_D ] ]
+
+let g:lightline#colorscheme#wanderer#palette = lightline#colorscheme#fill(s:p)
+
+" ⚓ lightline
+let g:lightline = {
+\ 'separator': { 'left': '', 'right': '' },
+\ 'subseparator': { 'left': '╼╾', 'right': '╼╾'},
+\ 'colorscheme': 'wanderer',
+\ 'active': {
+\   'left': [ [ 'mode', ],
+\             [ 'fugitive', 'readonly', 'filename', 'modified' ] ],
+\   'right': [ [ 'filetype' ],
+\              [ 'bufnum' ],
+\              [ 'syntastic'] ]
+\ },
+\ 'inactive': {
+\   'left': [ [ 'filename', 'redonly', 'modified' ],
+\             [ 'fugitive', ] ],
+\   'right': [ [ 'filetype' ],
+\              [ 'charvalue' ],
+\              [ 'syntastic'] ]
+\ },
+\ 'component_function': {
+\   'fugitive': 'LightlineFugitive',
+\   'filename': 'LightlineFilename',
+\   'readonly': 'LightlineReadonly',
+\   'modified': 'LightlineModified',
+\ },
+\ 'component_expand': {
+\   'syntastic': 'SyntasticStatuslineFlag',
+\ },
+\ 'component_type': {
+\   'syntastic': 'error',
+\ },
+\ }
+
+let g:lightline.mode_map = {
+\ 'n' : '⟂',
+\ 'i' : '⊢',
+\ 'R' : '﯒',
+\ 'v' : '∋',
+\ 'V' : 'λ',
+\ "\<C-v>": 'β',
+\ 'c' : '',
+\ }
+
+fun! LightlineFugitive()
+    try
+	    if expand('%:t') !~? 'Tagbar\|Gundo\|NERD' && &ft !~? 'vimfiler' && exists('*FugitiveHead')
+	        let mark = ' '   " edit here for cool mark
+            let branch = FugitiveHead()
+	        return branch !=# '' ? mark.branch : ''
+	    endif
+    catch
+    endtry
+    return ''
+endfun
+
+fun! LightlineFilename()
+	return &ft ==# 'vimfiler' ? vimfiler#get_status_string() :
+	      \  &ft ==# 'unite' ? unite#get_status_string() :
+	      \ expand('%:t') !=# '' ? expand('%:t') : '名前?'
+endfun
+
+fun! LightlineReadonly()
+	return &ft !~? 'help\|vimfiler' && &readonly ? '' : ''
+endfun
+
+fun! LightlineModified()
+	return &modifiable && &modified ? '' : ''
+endfun
+
+fun! SyntasticCheckHook(errors)
+    call lightline#update()
+endfun
+
+lua << EOF
+require'nvim-web-devicons'.setup {
+ default = true;
+}
+EOF
