@@ -69,12 +69,6 @@ inoremap : :<c-g>u
 nnoremap <leader>ll guiw
 nnoremap <leader>uu gUiw
 
-" 🍉 terminal
-tnoremap <C-a> <C-\><C-n>:bd!<CR>
-tnoremap <C-e> <C-\><C-n>:bp<CR>
-tnoremap <C-t> <C-\><C-n>:bd!<CR>
-nnoremap <leader>ta :term<CR>i
-
 " 🪟 window movement
 nnoremap <Down> <C-w>j
 nnoremap <Up> <C-w>k
@@ -141,10 +135,9 @@ vnoremap s :<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
 nnoremap <leader>sa m0ggVG:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
 
 " 🚦 easy align
-vnoremap <leader>et :EasyAlign<CR>
-nnoremap <leader>eta <ESC>vip:EasyAlign<CR>**&<CR>
-nnoremap <leader>etc <ESC>vip:EasyAlign<CR>:<CR>
-nnoremap <leader>etp <ESC>vip:EasyAlign<CR>"<CR>
+nmap gl <Plug>(EasyAlign)
+nmap <leader>et vip<Plug>(EasyAlign)
+xmap gl <Plug>(EasyAlign)
 
 " 🙏 folds
 nnoremap <leader>bf t{zf%

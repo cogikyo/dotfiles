@@ -19,8 +19,6 @@ set smarttab                   " Insert “tabstop” number of spaces when the 
 =" ===================================================================
 set nohlsearch                 " Disable search highlighting.
 set incsearch                  " Incremental search that shows partial matches.
-set ignorecase                 " Ignore case when searching.
-set smartcase                  " Automatically switch search to case-sensitive when search query contains an uppercase letter.
 set shortmess+=c               " Don't give ins-completion-menu messages.
 " =============================================================================
 
@@ -51,9 +49,8 @@ set termguicolors              " Enables 24-bit RGB colors; requires an ISO-8613
 set signcolumn=yes             " Always enable sign column
 set colorcolumn=80             " Color the sign column
 set splitbelow                 " Split below by default
-set completeopt=menuone,noselect,noinsert " Inline text completion
 set noshowmode                 " If in Insert, Replace or Visual mode <do not> put a message on the last line.
-
+set completeopt=menuone,noselect,noinsert " Inline text completion
 " =============================================================================
 
 " 🥷 miscellaneous ============================================================
@@ -76,12 +73,18 @@ set iskeyword +=-              " Include dash as word separator
 " ╚══════╝╚══════╝   ╚═╝   ╚══════╝
 "
 
+set statusline+=%#warningmsg#
+set statusline+=%{SyntasticStatuslineFlag()}
+set statusline+=%*
+let g:syntastic_always_populate_loc_list = 1
+let g:syntastic_auto_loc_list = 0
+let g:syntastic_check_on_open = 0
 let g:syntastic_tex_checkers = ['']
 let g:syntastic_enable_signs = 1
-let g:syntastic_error_symbol = "✗"
-let g:syntastic_style_error_symbol = "✗"
-let g:syntastic_warning_symbol = "⏿"
-let g:syntastic_style_warning_symbol = "⏿"
+let g:syntastic_error_symbol = "ﲅ"
+let g:syntastic_style_error_symbol = "ﲅ"
+let g:syntastic_warning_symbol = ""
+let g:syntastic_style_warning_symbol = ""
 
 let g:python3_host_prog="/usr/bin/python3"
 
@@ -122,3 +125,28 @@ let g:slime_target = "tmux"
 let g:slime_paste_file = "$HOME/.slime_paste"
 let g:slime_default_config = {"socket_name": "default", "target_pane": "{last}"}
 let g:slime_python_ipython=1
+
+let g:easy_align_delimiters = {
+\ '>': { 'pattern': '>>\|=>\|>' },
+\ '/': {
+\     'pattern':         '//\+\|/\*\|\*/',
+\     'delimiter_align': 'l',
+\     'ignore_groups':   ['!Comment'] },
+\ ']': {
+\     'pattern':       '[[\]]',
+\     'left_margin':   1,
+\     'right_margin':  0,
+\     'stick_to_left': 0
+\   },
+\ ')': {
+\     'pattern':       '[()]',
+\     'left_margin':   0,
+\     'right_margin':  0,
+\     'stick_to_left': 0
+\   },
+\ 'd': {
+\     'pattern':      ' \(\S\+\s*[;=]\)\@=',
+\     'left_margin':  0,
+\     'right_margin': 0
+\   }
+\ }
