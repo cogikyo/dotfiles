@@ -73,7 +73,7 @@ Plug 'folke/trouble.nvim'
 " ├─┘└┬┘ │ ├─┤│ ││││
 " ┴   ┴  ┴ ┴ ┴└─┘┘└┘
 Plug 'fisadev/vim-isort'
-Plug 'jpalardy/vim-slime'
+" Plug 'jpalardy/vim-slime'
 
 " =============================================================================
 call plug#end()

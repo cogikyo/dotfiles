@@ -37,6 +37,7 @@ set lazyredraw                 " Don’t update screen during macro and script e
 
 " 👀 UI/UX ====================================================================
 set laststatus=2               " Always display the status bar.
+set showtabline=0              " Always hide tabline.
 set wildmenu                   " Display command line’s tab complete options as a menu.
 set wildmode=longest:full,full " Display
 set number                     " Show line numbers on the sidebar.
@@ -88,8 +89,13 @@ let g:syntastic_style_warning_symbol = ""
 
 let g:python3_host_prog="/usr/bin/python3"
 
+let g:signify_sign_add               = ''
+let g:signify_sign_delete            = ''
+let g:signify_sign_delete_first_line = '⎴'
+let g:signify_sign_change            = ''
+let g:signify_sign_change_delete     = ''
+
 let g:tex_flavor='latex'
-let g:vimtex_view_method='zathura'
 let g:vimtex_quickfix_mode=0
 let g:vimtex_compiler_progname = 'nvr'
 let g:tex_conceal='abdmgs'
@@ -121,10 +127,10 @@ let g:UltiSnipsJumpBackwardTrigger="<s-tab>"
 let g:UltiSnipsSnippetsDir=[$HOME.'/.config/nvim/UltiSnips']
 let g:UltiSnipsSnippetDirectories=[$HOME.'/.config/nvim/UltiSnips']
 
-let g:slime_target = "tmux"
-let g:slime_paste_file = "$HOME/.slime_paste"
-let g:slime_default_config = {"socket_name": "default", "target_pane": "{last}"}
-let g:slime_python_ipython=1
+" let g:slime_target = "tmux"
+" let g:slime_paste_file = "$HOME/.slime_paste"
+" let g:slime_default_config = {"socket_name": "default", "target_pane": "{last}"}
+" let g:slime_python_ipython=1
 
 let g:easy_align_delimiters = {
 \ '>': { 'pattern': '>>\|=>\|>' },

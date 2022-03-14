@@ -273,9 +273,9 @@ call s:h("StatusLine",       { "fg": s:white, "bg": s:grey_D }) " status line of
 call s:h("StatusLineNC",     { "fg": s:grey_l }) " status lines of not-current windows Note: if this is equal to "StatusLine" Vim will use "^^^" in the status line of the current window.
 call s:h("StatusLineTerm",   { "fg": s:white, "bg": s:grey_D }) " status line of current :terminal window
 call s:h("StatusLineTermNC", { "fg": s:grey_l }) " status line of non-current :terminal window
-call s:h("TabLine",          { "fg": s:grey_l }) " tab pages line, not active tab page label
+call s:h("TabLine",          { }) " tab pages line, not active tab page label
 call s:h("TabLineFill",      { }) " tab pages line, where there are no labels
-call s:h("TabLineSel",       { "fg": s:white }) " tab pages line, active tab page label
+call s:h("TabLineSel",       { "bg": s:red,}) " tab pages line, active tab page label
 call s:h("Terminal",         { "fg": s:white, "bg": s:black }) " terminal window (see terminal-size-color)
 call s:h("Title",            { "fg": s:azure }) " titles for output from ":set all", ":autocmd" etc.
 call s:h("Visual",           { "bg": s:grey_d }) " Visual mode selection
@@ -455,26 +455,17 @@ call s:h("WildMenu",         { "fg": s:black, "bg": s:blue }) " current match in
 " }}}
 
 " Plugin Highlighting {{{
+"
 
 " airblade/vim-gitgutter
-call s:h("GitGutterAdd",            { "bg": s:grey_D, "fg": s:green })
-call s:h("GitGutterChange",         { "bg": s:grey_D, "fg": s:cyan_L })
-call s:h("GitGutterDelete",         { "bg": s:grey_D, "fg": s:red })
-
-" lewis6991/gitsigns.nvim
-hi link GitSignsAdd    GitGutterAdd
-hi link GitSignsChange GitGutterChange
-hi link GitSignsDelete GitGutterDelete
-
-" mhinz/vim-signify
-hi link SignifySignAdd    GitGutterAdd
-hi link SignifySignChange GitGutterChange
-hi link SignifySignDelete GitGutterDelete
+call s:h("SignifySignAdd",          { "bg": s:grey_D, "fg": s:green })
+call s:h("SignifySignChange",       { "bg": s:grey_D, "fg": s:cyan })
+call s:h("SignifySignDelete",       { "bg": s:grey_D, "fg": s:red })
 
 " mhinz/vim-startify
-call s:h("StartifyFile",            {"fg": s:orange, })
-call s:h("StartifySection",         {"fg": s:azure, })
-call s:h("StartifyBracket",         {"fg": s:grey_l, })
+call s:h("StartifyFile",            { "fg": s:orange, })
+call s:h("StartifySection",         { "fg": s:azure, })
+call s:h("StartifyBracket",         { "fg": s:grey_l, })
 
 " vim-syntastic/syntastic
 call s:h("SyntasticError",          { "fg": s:red, "bg": s:grey_D,"gui": "underline", })
@@ -499,29 +490,29 @@ call s:h("diffAdded",               { "fg": s:green })
 call s:h("diffRemoved",             { "fg": s:red })
 
 " nvim-telescope/telescope.nvim
-call s:h("TelescopeTitle",           { "fg": s:azure_L, "gui": "bold", })
-call s:h("TelescopePromptPrefix",    { "fg": s:azure_L, "gui": "bold", })
-call s:h("TelescopeMatching",        { "fg": s:orange_L, "gui": "bold", })
-call s:h("TelescopeSelection",       { "bg": s:grey_D, })
+call s:h("TelescopeTitle",          { "fg": s:azure_L, "gui": "bold", })
+call s:h("TelescopePromptPrefix",   { "fg": s:azure_L, "gui": "bold", })
+call s:h("TelescopeMatching",       { "fg": s:orange_L, "gui": "bold", })
+call s:h("TelescopeSelection",      { "bg": s:grey_D, })
 
 " }}}
 
 " Git Highlighting {{{
 
-call s:h("gitcommitComment", { "fg": s:grey_l })
-call s:h("gitcommitUnmerged", { "fg": s:green })
-call s:h("gitcommitOnBranch", {})
-call s:h("gitcommitBranch", { "fg": s:cyan })
+call s:h("gitcommitComment",       { "fg": s:grey_l })
+call s:h("gitcommitUnmerged",      { "fg": s:green })
+call s:h("gitcommitOnBranch",      { })
+call s:h("gitcommitBranch",        { "fg": s:cyan })
 call s:h("gitcommitDiscardedType", { "fg": s:red })
-call s:h("gitcommitSelectedType", { "fg": s:green })
-call s:h("gitcommitHeader", {})
+call s:h("gitcommitSelectedType",  { "fg": s:green })
+call s:h("gitcommitHeader",        { })
 call s:h("gitcommitUntrackedFile", { "fg": s:yellow })
 call s:h("gitcommitDiscardedFile", { "fg": s:red })
-call s:h("gitcommitSelectedFile", { "fg": s:green })
-call s:h("gitcommitUnmergedFile", { "fg": s:yellow_D })
-call s:h("gitcommitFile", {})
-call s:h("gitcommitSummary", { "fg": s:white })
-call s:h("gitcommitOverflow", { "fg": s:red })
+call s:h("gitcommitSelectedFile",  { "fg": s:azure })
+call s:h("gitcommitUnmergedFile",  { "fg": s:yellow_D })
+call s:h("gitcommitFile",          { "fg": s:orange })
+call s:h("gitcommitSummary",       { "fg": s:white })
+call s:h("gitcommitOverflow",      { "fg": s:red })
 hi link gitcommitNoBranch gitcommitBranch
 hi link gitcommitUntracked gitcommitComment
 hi link gitcommitDiscarded gitcommitComment
@@ -574,45 +565,38 @@ let s:p.normal.left     = [ [s:_black, s:_blue, 'bold'   ], [s:_blue, s:_grey_d 
 let s:p.insert.left     = [ [s:_black, s:_azure, 'bold'  ], [s:_azure, s:_grey_d  ] ]
 let s:p.visual.left     = [ [s:_black, s:_green, 'bold'  ], [s:_green,  s:_grey_d ] ]
 let s:p.replace.left    = [ [s:_black, s:_purple, 'bold' ], [s:_purple, s:_grey_d ] ]
-let s:p.inactive.left   = [ [s:_pink, s:_grey_D, 'bold'   ], [s:_pink, s:_black   ] ]
+let s:p.inactive.left   = [ [s:_black, s:_pink, 'bold'   ], [s:_pink, s:_grey_d   ] ]
 
 let s:p.normal.middle   = [ [s:_white, s:_grey_D ] ]
-let s:p.inactive.middle   = [ [s:_white, s:_black_D ] ]
 
-let s:p.normal.right    = [ [s:_black, s:_blue   ], [s:_blue, s:_grey_d  ] ]
+let s:p.normal.right    = [ [s:_black, s:_blue   ], [s:_blue,  s:_grey_d  ] ]
 let s:p.insert.right    = [ [s:_black, s:_azure  ], [s:_azure, s:_grey_d ] ]
 let s:p.visual.right    = [ [s:_black, s:_green  ], [s:_green, s:_grey_d ] ]
 let s:p.replace.right   = [ [s:_black, s:_purple ], [s:_green, s:_grey_d ] ]
-let s:p.inactive.right  = [ [s:_grey_D, s:_pink   ], [s:_pink, s:_grey_D  ] ]
+let s:p.inactive.right  = [ [s:_black, s:_pink   ], [s:_pink, s:_grey_d  ] ]
 
 let s:p.normal.error    = [ [s:_red, s:_grey_D    ] ]
 let s:p.normal.warning  = [ [s:_yellow, s:_grey_D ] ]
-
-let s:p.tabline.left    = [ [s:_grey_L, s:_grey_D ] ]
-let s:p.tabline.tabsel  = [ [s:_orange, s:_grey_D ] ]
-let s:p.tabline.middle  = [ [s:_grey_d, s:_grey_D ] ]
-let s:p.tabline.right   = [ [s:_grey_D, s:_grey_D ] ]
 
 let g:lightline#colorscheme#wanderer#palette = lightline#colorscheme#fill(s:p)
 
 " ⚓ lightline
 let g:lightline = {
 \ 'separator': { 'left': '', 'right': '' },
-\ 'subseparator': { 'left': '╼╾', 'right': '╼╾'},
+\ 'subseparator': { 'left': '⊸', 'right': ''},
 \ 'colorscheme': 'wanderer',
 \ 'active': {
 \   'left': [ [ 'mode', ],
-\             [ 'fugitive', 'readonly', 'filename', 'modified' ] ],
+\             [ 'fugitive', 'filename', 'modified',] ],
 \   'right': [ [ 'filetype' ],
-\              [ 'bufnum' ],
+\              [ 'readonly'],
 \              [ 'syntastic'] ]
 \ },
 \ 'inactive': {
-\   'left': [ [ 'filename', 'redonly', 'modified' ],
-\             [ 'fugitive', ] ],
+\   'left': [ [ 'relativepath' ],
+\             [ 'modified' ] ],
 \   'right': [ [ 'filetype' ],
-\              [ 'charvalue' ],
-\              [ 'syntastic'] ]
+\              [ 'readonly'] ]
 \ },
 \ 'component_function': {
 \   'fugitive': 'LightlineFugitive',
@@ -622,6 +606,7 @@ let g:lightline = {
 \ },
 \ 'component_expand': {
 \   'syntastic': 'SyntasticStatuslineFlag',
+\   'filename': 'LightlineFilename',
 \ },
 \ 'component_type': {
 \   'syntastic': 'error',
@@ -651,17 +636,15 @@ fun! LightlineFugitive()
 endfun
 
 fun! LightlineFilename()
-	return &ft ==# 'vimfiler' ? vimfiler#get_status_string() :
-	      \  &ft ==# 'unite' ? unite#get_status_string() :
-	      \ expand('%:t') !=# '' ? expand('%:t') : '名前?'
+	return expand('%:t') !=# '' ? expand('%:t') : '名前?'
 endfun
 
 fun! LightlineReadonly()
-	return &ft !~? 'help\|vimfiler' && &readonly ? '' : ''
+	return &readonly ? '' : ''
 endfun
 
 fun! LightlineModified()
-	return &modifiable && &modified ? '' : ''
+   return &modifiable && &modified ? '' : ''
 endfun
 
 fun! SyntasticCheckHook(errors)
