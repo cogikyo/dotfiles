@@ -65,10 +65,6 @@ inoremap ? ?<c-g>u
 inoremap ; ;<c-g>u
 inoremap : :<c-g>u
 
-" 📢 capitalization
-nnoremap <leader>ll guiw
-nnoremap <leader>uu gUiw
-
 " 🪟 window movement
 nnoremap <Down> <C-w>j
 nnoremap <Up> <C-w>k
