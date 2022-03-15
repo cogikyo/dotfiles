@@ -1,12 +1,10 @@
 #!/usr/bin/env bash
-
 # ╦  ╦┌─┐┬─┐
 # ╚╗╔╝├─┤├┬┘
 #  ╚╝ ┴ ┴┴└─
 
 rofi_command="rofi -theme ~/.config/rofi/layouts.rasi"
-options=`echo "statistics react nio notes dotfiles" | tr ' ' '\n'`
-statPath='stat-361/homework/hw7'
+options=`echo "go python typescript solidity react nio notes dotfiles" | tr ' ' '\n'`
 reactPath='ts/react'
 
 # ╔═╗┬ ┬┌┐┌┌─┐
@@ -14,94 +12,66 @@ reactPath='ts/react'
 # ╚  └─┘┘└┘└─┘
 
 begin () {
-  bspc config focus_follows_pointer false
-  bspc desktop -f ^$1
-  bspc desktop -l tiled
-  alacritty & sleep 0.25
+    bspc config focus_follows_pointer false
+    bspc desktop -f ^$1
+    bspc desktop -l tiled
+    alacritty & sleep 0.25
 }
 
 end () {
-  bspc config focus_follows_pointer true
-  notify-send -u low -t 1500 init $1 -i "$HOME/dotfiles/resources/icons/tmux_icon.svg"
+    bspc config focus_follows_pointer true
+    notify-send -u low -t 1500 init $1 -i "$HOME/dotfiles/resources/icons/tmux_icon.svg"
 }
 
 open () {
-  begin $1
-  basic_phat $2
-  end $2
+    begin $1
+    basics $2
+    end $2
 }
 
-pdf () {
-  bspc desktop -f 2
-  case $1 in
-    stat-solutions|discrete)
-    bspc rule -a Zathura -o state=floating rectangle=1550x2008+1145+87
-    ;;
-  esac
-  zathura ~/textbooks/$1.pdf & sleep 0.25
-  bspc desktop -f 3
+web () {
+    firefox --new-window & sleep 1
+}
+
+term () {
+    alacritty -e cava & sleep 0.5
 }
 
 # ╦  ┌─┐┬ ┬┌─┐┬ ┬┌┬┐┌─┐
 # ║  ├─┤└┬┘│ ││ │ │ └─┐
 # ╩═╝┴ ┴ ┴ └─┘└─┘ ┴ └─┘
 
-basic_phat () {
-
-  basic_down () {
+basics () {
     bspc config split_ratio 0.3005
-    alacritty -e cava & sleep 0.5
+
+basic_down () {
+    term
     bspc config split_ratio 0.895
     bspc node -p north
-    firefox --new-window & sleep 1
-    bspc node -f west.local
-  }
+    web
+}
 
-  basic_up () {
-    bspc config split_ratio 0.3005
-    firefox --new-window & sleep 1
+basic_up () {
+    web
     bspc config split_ratio 0.105
     bspc node -p north
-    alacritty -e cava & sleep 0.5
-    bspc node -f west.local
-  }
+    term
+}
 
-
-  tex () {
-    bspc config split_ratio 0.3005
-    firefox --new-window https://calendar.google.com/calendar/u/0/r \
-    & sleep 1
-    bspc config split_ratio 0.605
-    bspc node -p east
-    zathura ~/notes/$1/$2.pdf & sleep 0.5
-    bspc config split_ratio 0.857
-    bspc node -p south
-    alacritty -e cava & sleep 0.25
-    bspc node -f west
-    bspc config split_ratio 0.954
-    bspc node -p south
-    zathura ~/textbooks/$3.pdf & sleep 0.25
-    bspc node -f west.local
-  }
-
-  case $1 in
+case $1 in
     dotfiles)
-      basic_down
-      ;;
+        basic_down
+        ;;
     notes)
-      basic_up
-      ;;
-    react)
-      basic_down
-      ;;
-    stat)
-      tex python $statPath stat
-      bspc node -f west.local
-      pdf stat-solutions
-      ;;
-  esac
+        basic_up
+        ;;
+    react|go|typescript|solidity|python)
+        basic_down
+        ;;
+esac
 
-  bspc config split_ratio 0.52
+bspc node -f west.local
+bspc config split_ratio 0.52
 }
 
 # ╔═╗┌─┐┬  ┌─┐┌─┐┌┬┐┬┌─┐┌┐┌
@@ -110,23 +80,23 @@ basic_phat () {
 
 chosen="$(echo -e "$options" | $rofi_command -p "ﱖ" -dmenu)"
 case $chosen in
-  dotfiles)
-    open 4 dotfiles
-    ;;
-  notes)
-    open 5 notes
-    ;;
-  statistics)
-    open 3 stat
-    ;;
-  react)
-    open 3 react
-    ;;
-  nio)
-    open 4 dotfiles
-    open 5 notes
-    bspc desktop -f 6
-    ;;
+    dotfiles)
+        open 4 $chosen
+        ;;
+    notes)
+        open 5 $chosen
+        ;;
+    go|typescript|solidity|python)
+        open 3 $chosen
+        ;;
+    react)
+        open 3 $chosen
+        ;;
+    nio)
+        open 4 dotfiles
+        open 5 notes
+        bspc desktop -f 6
+        ;;
 esac
 
 exit 0

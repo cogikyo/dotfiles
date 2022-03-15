@@ -24,9 +24,9 @@ lxsession &
 ~/.config/polybar/launch.sh &
 killall "borders"
 ~/.config/bspwm/borders &
-killall "discord"
-killall "ytmdesktop"
-killall "electron"
+# killall "discord"
+# killall "ytmdesktop"
+# killall "electron"
 # discord &
 ytmdesktop &
 
