@@ -33,14 +33,12 @@ margin-bottom = 0
 foreground  = #d3d5df
 minor       = #6c749d
 minimal     = #454B68
-inactive    = #1e2132
-background  = #161821
+inactive    = #2a2d3c
+background  = #1b1d27
 emphasis    = #e6a579
 main        = #4ca9f5
 sec         = #7abef5
 sub         = #b0d0eb
-green       = #95cf78
-sucess      = #57d9c3
 warn        = #f54088
 positive    = #e67979
 trans       = #00ff0000
@@ -296,7 +294,7 @@ format-warn = <ramp> <label-warn>
 
 label = %temperature-c%
 label-warn = " %temperature-c%"
-label-warn-foreground = ${colors.warn}
+label-warn-foreground = ${colors.positive}
 
 ramp-0 = "%{F#5f89f5}%{F-}"
 ramp-1 = "%{F#b0d0eb}%{F-}"
