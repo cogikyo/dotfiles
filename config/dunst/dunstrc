@@ -27,7 +27,7 @@ transparency = 1
 separator_height = 0
 padding = 0
 horizontal_padding = 11
-frame_color = "#f5b17a"
+frame_color = "#ffc295"
 frame_width = 0
 sort = yes
 idle_threshold = 10
@@ -38,7 +38,7 @@ idle_threshold = 10
 font = "Open Sans 10"
 line_height = 0
 markup = full
-format = <span foreground="#b0d0eb"><b>%s</b></span> · %b
+format = <span foreground="#b4e0f8"><b>%s</b></span> · %b
 alignment = left
 vertical_alignment = center
 show_age_threshold = -1
@@ -86,15 +86,15 @@ icon_path = /usr/share/icons/Vimix/22/actions/:/usr/share/icons/Vimix/22/devices
 # ╚═╝└─┘┴─┘└─┘┴└─└─┘
 [urgency_low]
 background = "#161821"
-foreground = "#c6c8d1"
+foreground = "#454B68"
 timeout = 18
 
 [urgency_normal]
 background = "#161821"
-foreground = "#b0d0eb"
-timeout = 6
+foreground = "#b4e0f8"
+timeout = 6c
 
 [urgency_critical]
 background = "#161821"
-foreground = "#eb4972"
+foreground = "#ff9695"
 timeout = 0

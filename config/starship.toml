@@ -50,11 +50,11 @@ disabled = false
 
 [git_status]
 format = '([ $conflicted$staged$untracked$ahead_behind$renamed$deleted$stashed$modified]($style))'
-conflicted = "[ ](bold #e278ad)"
+conflicted = "[ ](bold #e46c9c)"
 stashed = "[ ${count} ](bold birght-black)"
 modified = "[ ${count} ](bold cyan)"
 staged = '[ ${count} ](bold yellow)'
-untracked = '[ ${count} ](bold #e2d078)'
+untracked = '[ ${count} ](bold #d3bf6f)'
 renamed = "[ ${count} ](bold purple)"
 deleted = "[ ${count} ](bold red)"
 ahead = "[⯭ ${count} ](bold green)"

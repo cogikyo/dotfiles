@@ -30,21 +30,19 @@ margin-bottom = 0
 ; ║  │ ││  │ │├┬┘└─┐
 ; ╚═╝└─┘┴─┘└─┘┴└─└─┘
 [colors]
-foreground  = #c6c8d1
-minor       = #a2a5ba
-minimal     = #7b839e
-inactive    = #3e496b
+foreground  = #d3d5df
+minor       = #6c749d
+minimal     = #454B68
+inactive    = #1e2132
 background  = #161821
-emphasis    = #e39866
+emphasis    = #e6a579
 main        = #4ca9f5
 sec         = #7abef5
 sub         = #b0d0eb
-bold        = #cedeeb
 green       = #95cf78
 sucess      = #57d9c3
 warn        = #f54088
-positive    = #e36866
-negative    = #6685e3
+positive    = #e67979
 trans       = #00ff0000
 
 ; ╔╗ ┌─┐┬─┐

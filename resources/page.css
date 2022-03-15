@@ -1,13 +1,13 @@
-/** 
- * Custom css for ytmusic desktop 
+/**
+ * Custom css for ytmusic desktop
  * https://github.com/ytmdesktop/ytmdesktop
  * ~/.config/ytmusic-desktop-desktop-app/custom/css/
  *    the config.json needs > "settings-custom-css-page": true
 */
 
 html, body {
-    color: #c6c8d1 !important;
-    background-color: #161821 !important;
+    color: #ded5df !important;
+    background-color: #1b1d27 !important;
 }
 
 ::-webkit-scrollbar {
@@ -15,7 +15,7 @@ html, body {
 }
 
 .ytmusic-player-page {
-    background-color: #161821 !important;
+    background-color: #1b1d27 !important;
 }
 
 #nav-bar-background {

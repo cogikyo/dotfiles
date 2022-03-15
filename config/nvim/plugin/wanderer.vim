@@ -188,7 +188,7 @@ call s:h("Constant",       { "fg": s:purple_D,  "gui": "bold", }) " any constant
 call s:h("String",         { "fg": s:green }) " a string constant: "this is a string"
 call s:h("Character",      { "fg": s:green_L, }) " a character constant: 'c', '\n'
 call s:h("Number",         { "fg": s:pink }) " a number constant: 234, 0xff
-call s:h("Boolean",        { "fg": s:pink_D, "gui": "bold", }) " a boolean constant: TRUE, false
+call s:h("Boolean",        { "fg": s:pink_D, "gui": "italic", }) " a boolean constant: TRUE, false
 call s:h("Float",          { "fg": s:pink_L }) " a floating point constant: 2.3e10
 call s:h("Identifier",     { "fg": s:purple }) " any variable name
 call s:h("Function",       { "fg": s:orange }) " function name (also: methods for classes)

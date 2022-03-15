@@ -12,38 +12,38 @@ Xft.hintstyle: flase
 Xft.lcdfilter: lcdefault
 
 ! special
-*.foreground:   #c6c8d1
-*.background:   #161821
-*.cursorColor:  #c6c8d1
+*.foreground:   #d3d5df
+*.background:   #1b1d27
+*.cursorColor:  #d3d5df
 
 ! black
-*.color0:       #1e2132
-*.color8:       #6b7089
+*.color0:       #1b1d27
+*.color8:       #3D3F52
 
 ! red
-*.color1:       #e27878
-*.color9:       #e98989
+*.color1:       #e67979
+*.color9:       #ff9695
 
 ! green
-*.color2:       #b4be82
-*.color10:      #c0ca8e
+*.color2:       #94b47e
+*.color10:      #b1d29a
 
 ! yellow
-*.color3:       #e2a478
-*.color11:      #e9b189
+*.color3:       #e6a579
+*.color11:      #ffc295
 
 ! blue
-*.color4:       #84a0c6
-*.color12:      #91acd1
+*.color4:       #77a2cf
+*.color12:      #94bfed
 
 ! magenta
-*.color5:       #a093c7
-*.color13:      #ada0d3
+*.color5:       #a98fd1
+*.color13:      #c7abef
 
 ! cyan
-*.color6:       #89b8c2
-*.color14:      #95c4ce
+*.color6:       #7fb5b1
+*.color14:      #9cd3ce
 
 ! white
-*.color7:       #c6c8d1
-*.color15:      #d2d4de
+*.color7:       #d3d5df
+*.color15:      #6c749d
