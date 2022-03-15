@@ -50,7 +50,7 @@
 }    
 
 #urlbar #urlbar-background {
-    background-color: var(--black) !important;
+    background-color: var(--black-dr) !important;
     border-radius: 6px !important;
     box-shadow: none !important;
 }
@@ -116,7 +116,7 @@
 }
 
 #star-button {
-    background: var(--dark) !important;
+    background: var(--black-br) !important;
 }   
 
 .urlbar-icon:hover, 
@@ -125,8 +125,13 @@
 #star-button[starred]:hover,
 #tracking-protection-icon-container:hover
 {
-    fill-opacity: 0.9 !important;
+    background-color: var(--black-br) !important;
     fill: var(--orange-br) !important;
+}
+
+.urlbar-page-action:not([disabled]):hover, #urlbar-go-button:hover, .search-go-button:hover {
+  background-color: var(--black-br) !important;
+  color: var(--bg) !important;
 }
 
 #urlbar[focused="true"]:not([suppress-focus-border]) > #urlbar-background,
