@@ -321,6 +321,17 @@ call s:h("WildMenu",         { "fg": s:black, "bg": s:blue }) " current match in
 " call s:h("goDeclType",                { "fg": s:cyan })
 " call s:h("goTypeDecl",                { "fg": s:purple })
 
+" " Python
+
+" " Solditiy
+
+" ╔═╗┬ ┬┌─┐┬  ┬
+" ╚═╗├─┤├┤ │  │
+" ╚═╝┴ ┴└─┘┴─┘┴─┘
+call s:h("bashTSNone", { "fg": s:purple })
+call s:h("bashTSParameter", { "fg": s:white })
+call s:h("shDerefSimple", { "fg": s:purple })
+
 " " HTML (keep consistent with Markdown, below)
 " call s:h("htmlArg",                   { "fg": s:yellow_D })
 " call s:h("htmlBold",                  { "fg": s:yellow_D, "gui": "bold", "cterm": "bold" })
@@ -424,19 +435,6 @@ call s:h("WildMenu",         { "fg": s:black, "bg": s:blue }) " current match in
 " call s:h("javascriptPropertyName",    { "fg": s:green })
 " call s:h("javascriptTemplateSB",      { "fg": s:red_D })
 " call s:h("javascriptVariable",        { "fg": s:purple })
-
-" " JSON
-" call s:h("jsonCommentError",          { "fg": s:white })
-" call s:h("jsonKeyword",               { "fg": s:red })
-" call s:h("jsonBoolean",               { "fg": s:yellow_D })
-" call s:h("jsonNumber",                { "fg": s:yellow_D })
-" call s:h("jsonQuote",                 { "fg": s:white })
-" call s:h("jsonMissingCommaError",     { "fg": s:red, "gui": "reverse" })
-" call s:h("jsonNoQuotesError",         { "fg": s:red, "gui": "reverse" })
-" call s:h("jsonNumError",              { "fg": s:red, "gui": "reverse" })
-" call s:h("jsonString",                { "fg": s:green })
-" call s:h("jsonStringSQError",         { "fg": s:red, "gui": "reverse" })
-" call s:h("jsonSemicolonError",        { "fg": s:red, "gui": "reverse" })
 
 " " TeX
 " call s:h("texStatement",              { "fg": s:purple })

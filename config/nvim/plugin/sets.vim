@@ -16,7 +16,7 @@ set smarttab                   " Insert “tabstop” number of spaces when the 
 " =============================================================================
 
 " 🔍 search
-=" ===================================================================
+" =============================================================================
 set nohlsearch                 " Disable search highlighting.
 set incsearch                  " Incremental search that shows partial matches.
 set shortmess+=c               " Don't give ins-completion-menu messages.
@@ -72,7 +72,6 @@ set iskeyword +=-              " Include dash as word separator
 " ██║     ██╔══╝     ██║   ╚════██║
 " ███████╗███████╗   ██║   ███████║
 " ╚══════╝╚══════╝   ╚═╝   ╚══════╝
-"
 
 set statusline+=%#warningmsg#
 set statusline+=%{SyntasticStatuslineFlag()}

@@ -85,16 +85,16 @@ icon_path = /usr/share/icons/Vimix/22/actions/:/usr/share/icons/Vimix/22/devices
 # ║  │ ││  │ │├┬┘└─┐
 # ╚═╝└─┘┴─┘└─┘┴└─└─┘
 [urgency_low]
-background = "#161821"
-foreground = "#454B68"
+background = "#1b1d27"
+foreground = "#6c749d"
 timeout = 18
 
 [urgency_normal]
-background = "#161821"
+background = "#1b1d27"
 foreground = "#b4e0f8"
 timeout = 6c
 
 [urgency_critical]
-background = "#161821"
+background = "#1b1d27"
 foreground = "#ff9695"
 timeout = 0

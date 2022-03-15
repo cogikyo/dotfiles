@@ -28,6 +28,10 @@ super + {_,shift +}Return
 super + f
     firefox --new-window
 
+# bluetooth
+alt + {c,d}
+    bluetoothctl {connect,disconnect} 14:3F:A6:10:A1:B5
+
 # ╦═╗┌─┐┌─┐┬
 # ╠╦╝│ │├┤ │
 # ╩╚═└─┘└  ┴

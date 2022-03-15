@@ -165,7 +165,7 @@ label-focused-margin = 3
 label-empty = %icon%
 label-empty-margin = 3
 label-empty-font = 7
-label-empty-foreground = ${colors.minimal}
+label-empty-foreground = ${colors.minor}
 
 label-occupied = %icon%
 label-occupied-font = 7

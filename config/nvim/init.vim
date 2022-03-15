@@ -95,7 +95,7 @@ require'nvim-treesitter.configs'.setup {
   ensure_installed = "maintained",
 
   -- Install languages synchronously (only applied to `ensure_installed`)
-  sync_install = false,
+  sync_install = true,
 
   -- List of parsers to ignore installing
   ignore_install = {},
@@ -118,9 +118,9 @@ require'nvim-treesitter.configs'.setup {
      enable = true,
      keymaps = {
          init_selection = "gnn",
-         node_incremental = "grn",
-         scope_incremental = "grc",
-         node_decremental = "grm",
+         node_incremental = "gnt",
+         scope_incremental = "gns",
+         node_decremental = "gne",
          },
   },
 
@@ -130,8 +130,8 @@ require'nvim-treesitter.configs'.setup {
   updatetime = 25, -- Debounced time for highlighting nodes in the playground from source code
   persist_queries = false, -- Whether the query persists across vim sessions
   keybindings = {
-      toggle_query_editor = 'o',
-      toggle_hl_groups = 'i',
+      toggle_query_editor = 'q',
+      toggle_hl_groups = 'h',
       toggle_injected_languages = 't',
       toggle_anonymous_nodes = 'a',
       toggle_language_display = 'I',
@@ -140,7 +140,7 @@ require'nvim-treesitter.configs'.setup {
       update = 'R',
       goto_node = '<cr>',
       show_help = '?',
-      },
+    },
   },
 }
 EOF
