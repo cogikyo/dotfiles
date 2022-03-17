@@ -30,7 +30,7 @@ super + f
 
 # bluetooth
 alt + {c,d}
-    bluetoothctl {connect,disconnect} 14:3F:A6:10:A1:B5
+  bluetoothctl {connect,disconnect} 14:3F:A6:10:A1:B5
 
 # ╦═╗┌─┐┌─┐┬
 # ╠╦╝│ │├┤ │
@@ -117,17 +117,17 @@ super + b
 #selection then save
 super + c
 	maim -s -u ~/screenshots/$(date +%m-%d-%y__%H':'%M':'%S).png && \
-  notify-send -u low -t 3000 "selected area" "screenshot saved"
+    notify-send -u low -t 3000 "selected area" "screenshot saved"
 
 #screenshot of active window
 super + d
 	maim -u -i $(xdotool getactivewindow) ~/screenshots/$(date +%m-%d-%y__%H':'%M':'%S).png && \
-  notify-send -u low -t 3000 "active window" "screenshot saved"
+    notify-send -u low -t 3000 "active window" "screenshot saved"
 
 #screensshot of entire screen
 super + comma
 	maim -u ~/screenshots/$(date +%m-%d-%y_%H':'%M':'%S).png && \
-  notify-send -u low -t 3000 "entire screen" "screenshot saved"
+    notify-send -u low -t 3000 "entire screen" "screenshot saved"
 
 # ╔═╗┌─┐┌┬┐┌─┐┌─┐┌─┐
 # ╠╣ ├┤ │││├─┘├┤ │ ┬
