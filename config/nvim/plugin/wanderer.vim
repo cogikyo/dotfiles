@@ -199,7 +199,7 @@ call s:h("Label",          { "fg": s:blue_L }) " case, default, etc.
 call s:h("Operator",       { "fg": s:cyan_L, "gui": "bold", }) " sizeof", "+", "*", etc.
 call s:h("Keyword",        { "fg": s:blue_D, "gui": "bold", }) " any other keyword
 call s:h("Exception",      { "fg": s:cyan_D, "gui": "italic", }) " try, catch, throw
-call s:h("PreProc",        { "fg": s:white_L, "gui": "italic", }) " generic Preprocessor
+call s:h("PreProc",        { "fg": s:purple_L, }) " generic Preprocessor
 call s:h("Include",        { "fg": s:blue, "gui": "italic", }) " preprocessor #include
 call s:h("Define",         { "fg": s:purple, "gui": "italic", }) " preprocessor #define
 call s:h("Macro",          { "fg": s:purple, "gui": "italic", }) " same as Define
@@ -251,7 +251,7 @@ call s:h("SignColumn",       { "bg": s:grey_D }) " column where signs are displa
 call s:h("IncSearch",        { "fg": s:orange_L, "gui": "bold", }) " 'incsearch' highlighting; also used for the text replaced with ":s///c"
 call s:h("LineNr",           { "fg": s:grey, "bg": s:grey_D }) " Line number for ":number" and ":#" commands, and when 'number' or 'relativenumber' option is set.
 call s:h("CursorLineNr",     { "fg": s:orange, "bg": s:grey_D, "gui": "bold"}) " Like LineNr when 'cursorline' or 'relativenumber' is set for the cursor line.
-call s:h("MatchParen",       { "fg": s:azure_L, "gui": "bold", }) " The character under the cursor or just before it, if it is a paired bracket, and its match.
+call s:h("MatchParen",       { "fg": s:azure_L, "gui": "bold,underline", }) " The character under the cursor or just before it, if it is a paired bracket, and its match.
 call s:h("MsgArea",          { "fg": s:grey_L, })
 call s:h("ModeMsg",          { }) " 'showmode' message (e.g., "-- INSERT --")
 call s:h("MoreMsg",          { "fg": s:red, "bg": s:background,}) " more-prompt

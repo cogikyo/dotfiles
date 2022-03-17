@@ -4,7 +4,7 @@
 #  ╚╝ ┴ ┴┴└─
 
 rofi_command="rofi -theme ~/.config/rofi/layouts.rasi"
-options=`echo "go python typeScript solidity react nio notes dotfiles" | tr ' ' '\n'`
+options=`echo "go python typeScript solidity bash lua rust react nio notes dotfiles" | tr ' ' '\n'`
 reactPath='typeScript/react'
 
 # ╔═╗┬ ┬┌┐┌┌─┐
@@ -30,11 +30,25 @@ open () {
 }
 
 web () {
-    firefox --new-window & sleep 1
+    firefox --new-window $1 & sleep 1
 }
 
-term () {
+cava () {
     alacritty -e cava & sleep 0.5
+}
+
+basic_down () {
+    cava
+    bspc config split_ratio 0.895
+    bspc node -p north
+    web $1
+}
+
+basic_up () {
+    web $1
+    bspc config split_ratio 0.105
+    bspc node -p north
+    cava
 }
 
 # ╦  ┌─┐┬ ┬┌─┐┬ ┬┌┬┐┌─┐
@@ -44,34 +58,20 @@ term () {
 basics () {
     bspc config split_ratio 0.3005
 
-basic_down () {
-    term
-    bspc config split_ratio 0.895
-    bspc node -p north
-    web
-}
+    case $1 in
+        dotfiles)
+            basic_down https://github.com/nosvagor/$1
+            ;;
+        notes)
+            basic_up https://github.com/nosvagor/$1
+            ;;
+        react|go|typeScript|solidity|python|lua|bash|rust)
+            basic_down
+            ;;
+    esac
 
-basic_up () {
-    web
-    bspc config split_ratio 0.105
-    bspc node -p north
-    term
-}
-
-case $1 in
-    dotfiles)
-        basic_down
-        ;;
-    notes)
-        basic_up
-        ;;
-    react|go|typescript|solidity|python)
-        basic_down
-        ;;
-esac
-
-bspc node -f west.local
-bspc config split_ratio 0.52
+    bspc node -f west.local
+    bspc config split_ratio 0.52
 }
 
 # ╔═╗┌─┐┬  ┌─┐┌─┐┌┬┐┬┌─┐┌┐┌
@@ -86,10 +86,7 @@ case $chosen in
     notes)
         open 5 $chosen
         ;;
-    go|typeScript|solidity|python)
-        open 3 $chosen
-        ;;
-    react)
+    go|typeScript|solidity|python|bash|lua|rust|react)
         open 3 $chosen
         ;;
     nio)
