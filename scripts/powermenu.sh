@@ -24,6 +24,7 @@ case $chosen in
 		env XSECURELOCK_SAVER=saver_mplayer XSECURELOCK_LIST_VIDEOS_COMMAND="find ~/dotfiles/resources/videos -type f" XSECURELOCK_SHOW_HOSTNAME=0 xsecurelock
         ;;
     $sus)
+        bluetoothctl disconnect 14:3F:A6:10:A1:B5
 		env XSECURELOCK_SAVER=saver_mplayer XSECURELOCK_LIST_VIDEOS_COMMAND="find ~/dotfiles/resources/videos -type f" XSECURELOCK_SHOW_HOSTNAME=0 xsecurelock & systemctl suspend
         ;;
 esac
