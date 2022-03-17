@@ -4,8 +4,8 @@
 #  ╚╝ ┴ ┴┴└─
 
 rofi_command="rofi -theme ~/.config/rofi/layouts.rasi"
-options=`echo "go python typescript solidity react nio notes dotfiles" | tr ' ' '\n'`
-reactPath='ts/react'
+options=`echo "go python typeScript solidity react nio notes dotfiles" | tr ' ' '\n'`
+reactPath='typeScript/react'
 
 # ╔═╗┬ ┬┌┐┌┌─┐
 # ╠╣ │ │││││
@@ -86,7 +86,7 @@ case $chosen in
     notes)
         open 5 $chosen
         ;;
-    go|typescript|solidity|python)
+    go|typeScript|solidity|python)
         open 3 $chosen
         ;;
     react)
