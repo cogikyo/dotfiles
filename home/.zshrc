@@ -25,7 +25,7 @@ export GOPATH="$HOME/.go"
 export PATH="$PATH:$HOME/.go/bin"
 export PATH="$PATH:$HOME/.local/bin"
 export PATH="$PATH:$HOME/dotfiles/scripts"
-export PATH="$PATH:$HOME/notes/bash/bash_course"
+export PATH="$PATH:$HOME/notes/bash/bash_course" #temporary
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 export TEXINPUTS="$HOME/notes/.assets/tex//:"
@@ -36,12 +36,11 @@ eval "$(jump shell)"
 
 # history
 HISTFILE=~/.histfile
-HISTSIZE=10000
-SAVEHIST=10000
-setopt appendhistory
-setopt share_history
-setopt histignorealldups
-
+HISTSIZE=1000
+SAVEHIST=1000
+setopt APPEND_HISTORY
+setopt HIST_IGNORE_ALL_DUPS
+setopt HIST_IGNORE_DUPS
 
 # ┌┐┌┌┐┌┌┐┌
 # │││││││││
@@ -114,6 +113,7 @@ alias tas='tmux attach -t ﲹ'
 alias tag='tmux attach -t ﳑ'
 alias tat='tmux attach -t ﯤ'
 alias tac='tmux attach -t '
+alias tab='tmux attach -t '
 alias td='(){tmux detach}'
 alias tr='()tmux-session restore'
 alias ts='tmux-session save'
@@ -139,12 +139,12 @@ source ~/.local/zsh/zsh-colored-man-pages/colored-man-pages.plugin.zsh
 # ├┤ │┌┴┬┘  ├┴┐├┤ └┬┘└─┐
 # └  ┴┴ └─  ┴ ┴└─┘ ┴ └─┘
 
-bindkey  "^[[1~"    beginning-of-line
-bindkey  "^[[H"     beginning-of-line
-bindkey  "^[[4~"    end-of-line
-bindkey  "^[[F"     end-of-line
-bindkey  "^[[3~"    delete-char
-bindkey  "^[[1;5C"  forward-word   # C->
-bindkey  "^[[1;5D"  backward-word  # C-<
-bindkey  "^[[1;5A"  history-incremental-search-backward # C-^
-bindkey  "^[[1;5B"  history-incremental-search-forward  # C-v
+bindkey '^[[1~'    beginning-of-line
+bindkey '^[[H'     beginning-of-line
+bindkey '^[[4~'    end-of-line
+bindkey '^[[F'     end-of-line
+bindkey '^[[3~'    delete-char
+bindkey '^[[1;5C'  forward-word   # C-left
+bindkey '^[[1;5D'  backward-word  # C-right
+bindkey '^[[1;5A'  history-incremental-search-backward # C-up
+bindkey '^[[1;5B'  history-incremental-search-forward  # C-down
