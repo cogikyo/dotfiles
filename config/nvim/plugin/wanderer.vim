@@ -286,6 +286,7 @@ call s:h("WildMenu",         { "fg": s:black, "bg": s:blue }) " current match in
 " }}}
 
 " Language-Specific Highlighting {{{
+"
 
 " " CSS
 " call s:h("cssAttrComma",              { "fg": s:purple })
