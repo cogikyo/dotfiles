@@ -21,6 +21,7 @@ nmap T <Plug>(easymotion-bd-f2)
 " ✍  quit/write
 nnoremap <leader>x :q<CR>
 nnoremap <leader>q :q!<CR>
+nnoremap <leader>sh ms?Last Modified:<CR>^d$amod
 
 " 🦬 buffers
 nnoremap <leader>w :bp<CR>

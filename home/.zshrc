@@ -24,6 +24,8 @@ fi
 export GOPATH="$HOME/.go"
 export PATH="$PATH:$HOME/.go/bin"
 export PATH="$PATH:$HOME/.local/bin"
+export PATH="$PATH:$HOME/dotfiles/scripts"
+export PATH="$PATH:$HOME/notes/bash/bash_course"
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 export TEXINPUTS="$HOME/notes/.assets/tex//:"

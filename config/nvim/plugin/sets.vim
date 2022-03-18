@@ -28,6 +28,7 @@ set encoding=utf-8             " Use an encoding that supports unicode.
 set nowrap                     " Disable line wrapping.
 set linebreak                  " Avoid wrapping a line in the middle of a word.
 set scrolloff=16               " The number of screen lines to keep above and below the cursor.
+set spell spelllang=en_us      " Turn on spelling.
 " =============================================================================
 
 " 💃 performance ==============================================================
