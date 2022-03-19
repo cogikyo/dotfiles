@@ -39,6 +39,12 @@ case ${1:word} in
 esac
 endsnippet
 
+snippet /ne(xt)?|pat(tern)?/ "add new case" rb
+${1:pattern} )
+	${0:${VISUAL}}
+	;;
+endsnippet
+
 snippet elif "elif .. (elif)" b
 elif ${2:[[ ${1:condition} ]]}; then
 	${0:${VISUAL}}
@@ -71,6 +77,10 @@ snippet if "if ... then (if)" b
 if [[ ${1:condition} ]]; then
 	${0:${VISUAL}}
 fi
+endsnippet
+
+snippet cond "condition" iA
+[[ ${1:condition} ]]
 endsnippet
 
 snippet until "until ... (done)" b
