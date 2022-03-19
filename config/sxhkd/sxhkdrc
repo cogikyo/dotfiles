@@ -16,9 +16,9 @@
 
 # volume
 XF86Audio{Raise,Lower}Volume
-	pactl set-sink-volume @DEFAULT_SINK@ {+10,-10}%
-super + shift + {j,period,m}
-  pactl set-sink-volume @DEFAULT_SINK@ {+10,-10,0}%
+    pactl set-sink-volume @DEFAULT_SINK@ {+10,-10}%
+super + shift + {j,k}
+    pactl set-sink-volume @DEFAULT_SINK@ {+10,-10}%
 
 # terminal
 super + {_,shift +}Return
@@ -29,7 +29,7 @@ super + f
     firefox --new-window
 
 # bluetooth
-alt + {c,d}
+alt + {a,d}
   bluetoothctl {connect,disconnect} 14:3F:A6:10:A1:B5
 
 # ╦═╗┌─┐┌─┐┬
