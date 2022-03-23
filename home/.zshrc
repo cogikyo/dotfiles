@@ -37,8 +37,8 @@ eval "$(jump shell)"
 # history
 HISTFILE=~/.histfile
 HISTSIZE=1000
-SAVEHIST=1000
-setopt APPEND_HISTORY
+SAVEHIST=800
+setopt INC_APPEND_HISTORY
 setopt HIST_IGNORE_ALL_DUPS
 setopt HIST_IGNORE_DUPS
 
