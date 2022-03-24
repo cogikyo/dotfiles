@@ -43,37 +43,20 @@ Plug 'quangnguyen30192/cmp-nvim-ultisnips'
 " └─┘ ┴ ┴┴─┘└─┘
 Plug 'easymotion/vim-easymotion'
 Plug 'mattn/emmet-vim'
-Plug 'preservim/vim-markdown'
 Plug 'iamcco/markdown-preview.nvim', { 'do': 'cd app && yarn install'  }
-Plug 'Chiel92/vim-autoformat'
 Plug 'junegunn/vim-easy-align'
 Plug 'mbbill/undotree'
-
+Plug 'sbdchd/neoformat'
+Plug 'vim-syntastic/syntastic'
+Plug 'folke/trouble.nvim'
 
 " ┌┬┐┬ ┬┌─┐┌┬┐┌─┐
 "  │ ├─┤├┤ │││├┤
 "  ┴ ┴ ┴└─┘┴ ┴└─┘
-Plug 'cocopon/iceberg.vim'
 Plug 'itchyny/lightline.vim'
 Plug 'kyazdani42/nvim-web-devicons'
 Plug 'norcalli/nvim-colorizer.lua'
-
-" ┌┬┐┬┌─┐┌─┐
-" ││││└─┐│
-" ┴ ┴┴└─┘└─┘
-Plug 'lervag/vimtex'
-
-" ┬  ┬┌┐┌┌┬┐┬┌┐┌┌─┐
-" │  ││││ │ │││││ ┬
-" ┴─┘┴┘└┘ ┴ ┴┘└┘└─┘
-Plug 'vim-syntastic/syntastic'
-Plug 'folke/trouble.nvim'
-
-" ┌─┐┬ ┬┌┬┐┬ ┬┌─┐┌┐┌
-" ├─┘└┬┘ │ ├─┤│ ││││
-" ┴   ┴  ┴ ┴ ┴└─┘┘└┘
-Plug 'fisadev/vim-isort'
-" Plug 'jpalardy/vim-slime'
+Plug 'folke/lsp-colors.nvim'
 
 " =============================================================================
 call plug#end()
