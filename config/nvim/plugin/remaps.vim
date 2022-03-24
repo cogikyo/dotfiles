@@ -66,7 +66,7 @@ inoremap ? ?<c-g>u
 inoremap ; ;<c-g>u
 inoremap : :<c-g>u
 
-" 🪟 window movement
+" 🪟 windows
 nnoremap <Down> <C-w>j
 nnoremap <Up> <C-w>k
 nnoremap <Left> <C-w>h
@@ -93,23 +93,11 @@ nnoremap <leader>tk :TSHighlightCapturesUnderCursor<CR>
 " 🔤 spelling
 inoremap <C-l> <c-g>u<Esc>[s1z=`]a<c-g>u
 
-" 📓 latex
-augroup LATEX
-  autocmd!
-  autocmd FileType tex inoremap <C-t> <Esc>/end<CR>O<ESC>O\item<Space>
-  autocmd FileType tex nnoremap <C-t> /end<CR>O<ESC>O\item<Space>
-  autocmd FileType tex nnoremap <leader><CR> o<CR>\item<Space>
-  autocmd FileType tex nnoremap <leader>al }koali
-  autocmd FileType tex nnoremap <leader>en }koenum
-  autocmd FileType tex nnoremap <leader>ni /\\item<CR>ztfm
-  autocmd FileType tex nnoremap <leader>in ?\\item<CR>nztfm
-  autocmd FileType tex inoremap <C-a> <Esc>F=i&<Esc>A<Space>\\<Esc>:w<cr>o
-  autocmd FileType tex nnoremap <leader>np }inewpage
-augroup END
-
 " 🔃 reload
 nnoremap <leader>rs :call UltiSnips#RefreshSnippets()<CR>
-nnoremap <leader>rm :source $MYVIMRC<CR>:w<CR>
+nnoremap <leader>rv :source $MYVIMRC<CR>:w<CR>
+nnoremap <leader>rt :source $HOME/.config/nvim/plugin/remaps.vim<CR>
+nnoremap <leader>rt :source $HOME/.config/nvim/plugin/wanderer.vim<CR>
 
 " ⛵ reflow
 nnoremap <leader>rx vipgqzt{j^
@@ -142,3 +130,5 @@ nnoremap <leader>cf vipzf
 nnoremap <leader>mk :mkview<CR>
 nnoremap <leader>lv :loadview<CR>
 
+" ﯤ typeScript
+nnoremap <leader>cc :! tsc app.ts<CR>
