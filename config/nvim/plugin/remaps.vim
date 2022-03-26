@@ -106,6 +106,9 @@ nnoremap <C-h> VgwzHzt$
 nnoremap <leader>rf mzJ`zVgwzHzt_
 inoremap <C-g>g <Esc>"+pvipgqzt{j^
 
+" 📜 format
+nnoremap <leader>f :Neoformat<CR>
+
 " 🔱 harpoon
 nnoremap <leader>nn :lua require("harpoon.mark").add_file()<CR>
 nnoremap <leader>nf :lua require("harpoon.ui").toggle_quick_menu()<CR>
