@@ -96,7 +96,7 @@ inoremap <C-l> <c-g>u<Esc>[s1z=`]a<c-g>u
 " 🔃 reload
 nnoremap <leader>rs :call UltiSnips#RefreshSnippets()<CR>
 nnoremap <leader>rv :source $MYVIMRC<CR>:w<CR>
-nnoremap <leader>rt :source $HOME/.config/nvim/plugin/remaps.vim<CR>
+nnoremap <leader>rm :source $HOME/.config/nvim/plugin/remaps.vim<CR>
 nnoremap <leader>rt :source $HOME/.config/nvim/plugin/wanderer.vim<CR>
 
 " ⛵ reflow

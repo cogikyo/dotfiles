@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 # ╦  ╦┌─┐┬─┐
 # ╚╗╔╝├─┤├┬┘
 #  ╚╝ ┴ ┴┴└─
@@ -14,12 +15,14 @@ reactPath='typeScript/react'
 begin () {
     bspc config focus_follows_pointer false
     bspc desktop -f ^$1
+    bspc config single_monocle  false
     bspc desktop -l tiled
     alacritty & sleep 0.25
 }
 
 end () {
     bspc config focus_follows_pointer true
+    bspc config single_monocle  true
     notify-send -u low -t 1500 init $1 -i "$HOME/dotfiles/resources/icons/tmux_icon.svg"
 }
 
@@ -56,7 +59,7 @@ basic_up () {
 # ╩═╝┴ ┴ ┴ └─┘└─┘ ┴ └─┘
 
 basics () {
-    bspc config split_ratio 0.3005
+    bspc config split_ratio 0.321
 
     case $1 in
         dotfiles)
@@ -71,7 +74,7 @@ basics () {
     esac
 
     bspc node -f west.local
-    bspc config split_ratio 0.52
+    bspc config split_ratio 0.528
 }
 
 # ╔═╗┌─┐┬  ┌─┐┌─┐┌┬┐┬┌─┐┌┐┌
