@@ -1,44 +1,149 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-a='\033[0;31m' # red
-t='\033[0;32m' # green
-c='\033[0;33m' # orange
-g='\033[0;34m' # blue
-w='\033[0m' # No Color
+###############################################################################
+# Author: cullyn
+# Date Created: March, 25 2022
+# Last Modified: March, 25 2022
 
-l='\033[0m/'
-r='\033[0m\\'
+# Description:
+# Custom DNA shell greeter, responds to terminal width (poorly)
 
-bases=(${a}'|' ${t}'|' ${c}'|' ${g}'|')
-entries=($(shuf -r -i 0-3 -n 54))
+# Usage:
+# call script on load (.zshrc)
+###############################################################################
+
+
+a='\033[0;31m' # red |
+t='\033[0;32m' # green |
+c='\033[0;33m' # orange |
+g='\033[0;34m' # blue |
+w='\033[0m' # white |
+
+l='\033[0m⨓' # white \
+r='\033[0m༽' # white /
+
+cols=$(tput cols)
+entry_num=$(( (${cols} / 2) + (${cols} / 10) + (${cols} / 16) - 3*(${cols} / 75) - 2*(${cols} / 100) )) entries=($(shuf -r -i 0-3 -n "$entry_num"))
 fp=()
 tp=()
+ooppnn=()
 
-for i in ${entries[@]}
-do
-    fp+=(${bases[$i]})
+#       red 0  grn 1    blu 2   yel 3
+bases=(${a}"|" ${t}"|" ${c}"|" ${g}"|")
+okazaki=1
+okazaki_frag () {
 
-    if [[ $i -eq 0 ]]
-    then
-        tp+=(${bases[1]})
-    elif [[ $i -eq 1 ]]
-    then
-        tp+=(${bases[0]})
-    elif [[ $i -eq 2 ]]
-    then
-        tp+=(${bases[3]})
-    else
-        tp+=(${bases[2]})
+    base=${entries[$1]}
+
+    case $base in
+        0 )
+            tp+=(${bases[1]}) # red -> green
+            ;;
+        1 )
+            tp+=(${bases[0]}) # green -> red
+            ;;
+        2 )
+            tp+=(${bases[3]}) # blue -> orange
+            ;;
+        3 )
+            tp+=(${bases[2]}) # orange -> blue
+            ;;
+    esac
+}
+
+for (( i = 0; i < ${#entries[@]}; i++ )); do
+
+    e=${entries[$i]}
+
+    fp+=(${bases[$e]})
+
+    case $okazaki in
+        1 )
+            okazaki_frag $i
+            (( okazaki++ ))
+            ;;
+        2 )
+            okazaki_frag $i
+            (( okazaki++ ))
+            ;;
+        3 )
+            okazaki_frag $(( $i + 2 ))
+            (( okazaki++ ))
+            ;;
+        4 )
+            okazaki_frag $(( $i + 2 ))
+            (( okazaki++ ))
+            ;;
+        5 )
+            okazaki_frag $(( $i - 2 ))
+            (( okazaki++ ))
+            ;;
+        6 )
+            okazaki_frag $(( $i - 2 ))
+            okazaki=1
+            ;;
+    esac
+done
+
+s1=' '
+s1=' '
+s2='  '
+top_chars=(𝁚 𝀢 𝀕)
+bot_chars=(𝀾  ' ' 𝁖)
+
+for (( i = 0; i < ${entry_num}; i++ )); do
+    top=$top${top_chars[$(( $i % 3 ))]}
+    base1=$base1${fp[$i]}
+    base2=$base2${tp[$i]}
+    bot=$bot${bot_chars[$(( $i % 3 ))]}
+
+    if [[ $((${i} % 6 )) -eq 1 ]]; then
+        base2=$base2${l}${s1}
+        bot=$bot${s2}
+    fi
+
+    if [[ $((${i} % 3 )) -eq 2 ]]; then
+        base1=$base1${r}
+        top=$top${s1}
+    fi
+
+    if [[ $((${i} % 6 )) -eq 5 ]]; then
+        base1=$base1${s1}${l}
+        top=$top${s2}
+    fi
+
+    if [[ $((${i} % 3 )) -eq 1 ]]; then
+        base2=$base2${r}
+        bot=$bot${s1}
     fi
 done
 
-#01-23-45-67-89-01
-#01-45-23-67-01-89-
 
-echo -e "
-𝁚𝀢𝀕 𝁚𝀢𝀕   𝁚𝀢𝀕 𝁚𝀢𝀕   𝁚𝀢𝀕 𝁚𝀢𝀕   𝁚𝀢𝀕 𝁚𝀢𝀕   𝁚𝀢𝀕 𝁚𝀢𝀕   𝁚𝀢𝀕 𝁚𝀢𝀕   𝁚𝀢𝀕 𝁚𝀢𝀕   𝁚𝀢𝀕 𝁚𝀢𝀕   𝁚𝀢𝀕 𝁚𝀢
-${fp[0]}${fp[1]}${fp[2]}${r}${fp[3]}${fp[4]}${fp[5]}${r} ${l}${fp[6]}${fp[7]}${fp[8]}${r}${fp[9]}${fp[10]}${fp[11]}${r} ${l}${fp[12]}${fp[13]}${fp[14]}${r}${fp[15]}${fp[16]}${fp[17]}${r} ${l}${fp[18]}${fp[19]}${fp[20]}${r}${fp[21]}${fp[22]}${fp[23]}${r} ${l}${fp[24]}${fp[25]}${fp[26]}${r}${fp[27]}${fp[28]}${fp[29]}${r} ${l}${fp[30]}${fp[31]}${fp[32]}${r}${fp[33]}${fp[34]}${fp[35]}${r} ${l}${fp[36]}${fp[37]}${fp[38]}${r}${fp[39]}${fp[40]}${fp[41]}${r} ${l}${fp[42]}${fp[43]}${fp[44]}${r}${fp[46]}${fp[47]}${fp[48]}${r} ${l}${fp[49]}${fp[50]}${fp[51]}${r}${fp[52]}${fp[53]}
-${tp[0]}${tp[1]}${l} ${r}${tp[2+2]}${tp[3+2]}${tp[4-2]}${r}${tp[5-2]}${tp[6]}${tp[7]}${l} ${r}${tp[8+2]}${tp[9+2]}${tp[10-2]}${r}${tp[11-2]}${tp[12]}${tp[13]}${l} ${r}${tp[14+2]}${tp[15+2]}${tp[16-2]}${r}${tp[17-2]}${tp[18]}${tp[19]}${l} ${r}${tp[20+2]}${tp[21+2]}${tp[22-2]}${r}${tp[23-2]}${tp[24]}${tp[25]}${l} ${r}${tp[26+2]}${tp[27+2]}${tp[28-2]}${r}${tp[29-2]}${tp[30]}${tp[31]}${l} ${r}${tp[32+2]}${tp[33+2]}${tp[34-2]}${r}${tp[35-2]}${tp[36]}${tp[37]}${l} ${r}${tp[38+2]}${tp[39+2]}${tp[40-2]}${r}${tp[41-2]}${tp[42]}${tp[43]}${l} ${r}${tp[44+2]}${tp[45+2]}${tp[46-2]}${r}${tp[47-2]}${tp[48]}${tp[49]}${l} ${r}${tp[50+2]}
-${w}𝀾    𝀕𝀾  𝀕𝀾    𝀕𝀾  𝀕𝀾    𝀕𝀾  𝀕𝀾    𝀕𝀾  𝀕𝀾    𝀕𝀾  𝀕𝀾    𝀕𝀾  𝀕𝀾    𝀕𝀾  𝀕𝀾    𝀕𝀾  𝀕𝀾    𝀕"
+echo
 
-
+if [[ $cols -eq 246 ]]; then
+    echo -e "${top:0:$(( ${#top} ))}"
+    echo -e "${base1:0:$(( ${#base1} ))}"
+    echo -e "${base2:0:$(( ${#base2} - 12 ))}${w}"
+    echo -e "${bot:0:$(( ${#bot} - 3 ))}"
+elif [[ $cols -eq 291 ]]; then
+    echo -e "${top:0:92}"
+    echo -e "${base1:0:845}"
+    echo -e "${base2:0:845}${w}"
+    echo -e "${bot:0:91}"
+elif [[ $cols -eq 92 ]]; then
+    echo -e "${top:0:$(( ${#top} - 2 ))}"
+    echo -e "${base1:0:$(( ${#base1} - 12 ))}"
+    echo -e "${base2:0:$(( ${#base2} - 12 ))}${w}"
+    echo -e "${bot:0:$(( ${#bot} - 5 ))}"
+elif [[ $cols -lt 92 && $cols -gt 40 ]]; then
+    echo -e "${top:0:$(( ${#top} - 2 ))}"
+    echo -e "${base1:0:$(( ${#base1} - 12 ))}"
+    echo -e "${base2:0:$(( ${#base2} - 12 ))}${w}"
+    echo -e "${bot:0:$(( ${#bot} - 5 ))}"
+else
+    echo -e "${top:0:36}"
+    echo -e "${base1:0:350}"
+    echo -e "${base2:0:340}${w}"
+    echo -e "${bot:0:36}"
+fi
