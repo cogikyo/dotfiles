@@ -86,6 +86,7 @@ return packer.startup(function(use)
 
   use 'folke/tokyonight.nvim'
   use 'LunarVim/darkplus.nvim'
+  use 'itchyny/lightline.vim'
   use 'kyazdani42/nvim-web-devicons'
   use 'norcalli/nvim-colorizer.lua'
   use 'folke/lsp-colors.nvim'
