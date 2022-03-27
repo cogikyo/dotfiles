@@ -9,7 +9,6 @@ nnoremap <SPACE> <Nop>
 let mapleader = " "
 
 " ⚕  esc
-inoremap <C-c> <esc>
 inoremap <C-s> <esc>:w<CR>
 nnoremap <C-s> <esc>:w<CR>
 vnoremap <C-s> <esc>:w<CR>
@@ -32,7 +31,7 @@ nnoremap <leader>bd :bd!<CR>
 nnoremap <leader>d "_d
 vnoremap <leader>d "_d
 vnoremap <leader>y "+y
-nnoremap <leader>y ml^"+y$<Esc>`l
+nnoremap <leader>y ^"+y$<Esc>`l
 nnoremap <leader>ly "+y$
 nnoremap <leader>Y gg"+yG
 vnoremap <leader>p y']o<Esc>p`]o<Esc>
@@ -42,8 +41,8 @@ nnoremap <leader>hs :.! figlet -fshadow <Esc>:.,.+5Commentary<CR>5jo<Esc>0d$
 nnoremap <leader>hc :.! figlet -fcalvin <Esc>:.,.+2Commentary<CR>2jo<Esc>0d$
 
 " 🌌 gimmie space please
-nnoremap <leader>o o<Esc>"_Di
-nnoremap <leader>O O<Esc>"_Di
+nnoremap <silent> <leader>o :<C-u>call append(line("."),   repeat([""], v:count1))<CR>
+nnoremap o o<Esc>cc
 inoremap <C-Space> <Esc>o<Esc>"_DkO<Esc>_DjA
 
 " 🎯 keep cursor 'centered'
