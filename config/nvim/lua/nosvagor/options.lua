@@ -27,15 +27,17 @@ smartcase      = true,
 -- ============================================================================
 
 -- 📃 text ====================================================================
-display        = { "lastline", "msgsep" },
-wrap           = false,
-linebreak      = true,
-scrolloff      = 16,
-sidescrolloff  = 6,
+display       = { "lastline", "msgsep" },
+wrap          = false,
+linebreak     = true,
+scrolloff     = 16,
+sidescrolloff = 6,
+-- spell         = true,
+-- spelllang     = en_us,
 -- ============================================================================
 
 -- 👀 UI ======================================================================
-shortmess       = "filnxtToOFcs",
+shortmess      = "filnxtToOFcs",
 laststatus     = 2,
 showtabline    = 0,
 number         = true,
@@ -69,7 +71,7 @@ wildignore     = ".bak,~,.o,.h,.info,.swp,.obj,.pyc",
 
 }
 
-vim.cmd [[ ]]
+vim.cmd [[ set undodir=~/.local/share/nvim/undodir ]]
 
 for k, v in pairs(options) do
     vim.opt[k] = v
