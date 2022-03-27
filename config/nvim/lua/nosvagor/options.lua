@@ -64,11 +64,12 @@ iskeyword      = "@,48-57,_,-,192-255",
 backup         = false,
 swapfile       = false,
 undofile       = true,
-undodir        = "$HOME/.vim/undodir",
 wildignore     = ".bak,~,.o,.h,.info,.swp,.obj,.pyc",
 -- ============================================================================
 
 }
+
+vim.cmd [[ ]]
 
 for k, v in pairs(options) do
     vim.opt[k] = v

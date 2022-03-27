@@ -19,7 +19,7 @@ map("n", "<C-s>", "<Esc>:w<CR>", opts)
 map("v", "<C-s>", "<Esc>:w<CR>", opts)
 
 -- ✍  quit
-map("n", "<leader>x", ":wq<CR>", opts)
+map("n", "<leader>x", ":q<CR>", opts)
 map("n", "<leader>q", ":q!<CR>", opts)
 
 -- 🤖 copy copy (system clipboard)
