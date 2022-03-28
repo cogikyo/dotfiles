@@ -23,7 +23,8 @@ tabstop        = 4,
 -- 🔍 search ==================================================================
 hlsearch       = false,
 incsearch      = true,
-smartcase      = true,
+ignorecase     = false,
+smartcase      = false,
 -- ============================================================================
 
 -- 📃 text ====================================================================
@@ -51,7 +52,7 @@ colorcolumn    = "80",
 
 -- ⌨  UX ======================================================================
 wildmenu       = true,
-wildmode       = "longest:full,full",
+wildmode       = { "longest:full", "full", },
 mouse          = "a",
 updatetime     = 250,
 splitbelow     = true,
@@ -73,9 +74,6 @@ wildignore     = ".bak,~,.o,.h,.info,.swp,.obj,.pyc",
 
 vim.cmd [[
 set undodir=~/.local/share/nvim/undodir
-set statusline+=%#warningmsg#
-set statusline+=%{SyntasticStatuslineFlag()}
-set statusline+=%*
 ]]
 
 for k, v in pairs(options) do
