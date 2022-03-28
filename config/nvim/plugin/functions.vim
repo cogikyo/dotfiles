@@ -43,11 +43,3 @@ augroup AUTO_COMMANDS
   autocmd FileType help setlocal cc=
   autocmd TextYankPost * silent! lua require'vim.highlight'.on_yank({timeout = 69})
 augroup END
-
-augroup PYTHON
-  autocmd!
-  autocmd FileType python nnoremap <buffer> <C-e> :w<Cr> :exec '!python3' shellescape(@%, 1)<CR>
-  autocmd BufWritePre *.py :Isort
-  autocmd BufWritePre *.py :Autoformat
-augroup END
-

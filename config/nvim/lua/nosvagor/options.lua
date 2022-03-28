@@ -32,8 +32,8 @@ wrap          = false,
 linebreak     = true,
 scrolloff     = 16,
 sidescrolloff = 6,
--- spell         = true,
--- spelllang     = en_us,
+spell         = false,
+spelllang     = { 'en_us' },
 -- ============================================================================
 
 -- 👀 UI ======================================================================
@@ -71,7 +71,12 @@ wildignore     = ".bak,~,.o,.h,.info,.swp,.obj,.pyc",
 
 }
 
-vim.cmd [[ set undodir=~/.local/share/nvim/undodir ]]
+vim.cmd [[
+set undodir=~/.local/share/nvim/undodir
+set statusline+=%#warningmsg#
+set statusline+=%{SyntasticStatuslineFlag()}
+set statusline+=%*
+]]
 
 for k, v in pairs(options) do
     vim.opt[k] = v
