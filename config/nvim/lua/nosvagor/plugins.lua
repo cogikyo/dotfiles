@@ -51,7 +51,7 @@ packer.init {
 
 return packer.startup(function(use)
 
-    -- Utils
+    -- Utility
     use "wbthomason/packer.nvim"
     use "nvim-lua/popup.nvim"
     use "nvim-lua/plenary.nvim"
@@ -59,23 +59,27 @@ return packer.startup(function(use)
     -- Completion
     use 'hrsh7th/nvim-cmp'
     use 'hrsh7th/cmp-nvim-lsp'
+    use 'hrsh7th/cmp-nvim-lua'
     use 'hrsh7th/cmp-nvim-lsp-signature-help'
     use 'hrsh7th/cmp-buffer'
     use 'hrsh7th/cmp-path'
     use 'hrsh7th/cmp-cmdline'
     use 'hrsh7th/cmp-calc'
     use 'hrsh7th/cmp-emoji'
-    use 'hrsh7th/cmp-nvim-lua'
     use 'max397574/cmp-greek'
     use "saadparwaiz1/cmp_luasnip"
+
+    -- LSP
+    use "neovim/nvim-lspconfig"
+    use "williamboman/nvim-lsp-installer"
+    use "tamago324/nlsp-settings.nvim"
+    use "jose-elias-alvarez/null-ls.nvim"
 
     -- Snippets
     use "L3MON4D3/LuaSnip"
     use "rafamadriz/friendly-snippets"
 
-    -- REVEIW
-    use 'neovim/nvim-lspconfig'
-    use 'williamboman/nvim-lsp-installer'
+    -- REVIEW
     use 'nvim-treesitter/nvim-treesitter'
     use 'nvim-treesitter/playground'
     use 'ThePrimeagen/harpoon'
@@ -94,16 +98,14 @@ return packer.startup(function(use)
     use 'junegunn/vim-easy-align'
     use 'mbbill/undotree'
 
-    -- EXTRA REVIEW
-    use 'sbdchd/neoformat'
-    use 'vim-syntastic/syntastic'
-    use 'folke/trouble.nvim'
-
     -- Theme
     use 'folke/tokyonight.nvim'
     use 'itchyny/lightline.vim'
     use 'kyazdani42/nvim-web-devicons'
     use 'norcalli/nvim-colorizer.lua'
+
+    -- MAYBE?
+    -- nvim-notify
 
     -- Automatically set up configuration after cloning packer.nvim -------------
     if PACKER_BOOTSTRAP then

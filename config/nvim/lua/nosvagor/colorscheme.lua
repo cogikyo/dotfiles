@@ -6,4 +6,7 @@ if not status_ok then
   return
 end
 
--- TODO: stop using personal colorscheme hack and use forked tokyonight version
+vim.cmd [[
+highlight ColorColumn guibg=#1e2132
+highlight CursorLine guibg=#1e2132
+]]
