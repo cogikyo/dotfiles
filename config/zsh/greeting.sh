@@ -23,11 +23,10 @@ l='\033[0m⨓' # white \
 r='\033[0m༽' # white /
 
 cols=$(tput cols)
-entry_num=$(( (${cols} / 2) + (${cols} / 10) + (${cols} / 16) - 3*(${cols} / 75) - 2*(${cols} / 100) )) entries=($(shuf -r -i 0-3 -n "$entry_num"))
+entry_num=$(( (${cols} / 2) + (${cols} / 10) + (${cols} / 16) - 3*(${cols} / 75) - 2*(${cols} / 100) ))
+entries=($(shuf -r -i 0-3 -n "$entry_num"))
 fp=()
 tp=()
-ooppnn=()
-
 #       red 0  grn 1    blu 2   yel 3
 bases=(${a}"|" ${t}"|" ${c}"|" ${g}"|")
 okazaki=1

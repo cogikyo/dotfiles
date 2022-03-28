@@ -24,7 +24,7 @@ vim.g.mapleader = " "
 
 -- ⚕  save
 keymap("i", "<C-s>", "<Esc>:w<CR>", opts)
-keymap("n", "<C-s>", "<Esc>:w<CR>", opts)
+keymap("n", "<C-s>", ":w<CR>", opts)
 keymap("v", "<C-s>", "<Esc>:w<CR>", opts)
 
 -- ✍  quit
@@ -88,22 +88,35 @@ keymap("n", "<Left>", "<C-w>h", opts)
 keymap("n", "<Right>", "<C-w>l", opts)
 
 -- 🔭 telescope
-keymap("n", "<leader>tf", "<cmd>Telescope buffers<CR>", opts)
-keymap("n", "<leader>tg", "<cmd>Telescope live_grep<CR>", opts)
-keymap("n", "<leader>tt", "<cmd>Telescope find_files<CR>", opts)
-keymap("n", "<leader>th", "<cmd>Telescope help_tags<CR>", opts)
-keymap("n", "<leader>te", "<cmd>Telescope git_files<CR>", opts)
-keymap("n", "<leader>tm", "<cmd>Telescope man_pages<CR>", opts)
-keymap("n", "<leader>tr", "<cmd>Telescope commands<CR>", opts)
+keymap("n", "<leader>t", "<cmd>lua require('telescope.builtin').find_files()<CR>", opts)
+keymap("n", "<leader>T", "<cmd>lua require('telescope.builtin').live_grep()<CR>", opts)
+keymap("n", "<leader>H", "<cmd>lua require('telescope.builtin').help_tags()<CR>", opts)
+keymap("n", "<leader>E", "<cmd>lua require('telescope.builtin').git_files()<CR>", opts)
+keymap("n", "<leader>M", "<cmd>lua require('telescope.builtin').man_pages()<CR>", opts)
+keymap("n", "<leader>F", "<cmd>lua require('telescope.builtin').quickfix()<CR>", opts)
+keymap("n", "<leader>L", "<cmd>lua require('telescope.builtin').loclist()<CR>", opts)
+keymap("n", "<leader>:", "<cmd>lua require('telescope.builtin').commands()<CR>", opts)
+keymap("n", "<leader>B", "<cmd>lua require('telescope.builtin').builtin()<CR>", opts)
+
+keymap("n", "<leader>gr", "<cmd>lua require('telescope.builtin').lsp_references()<CR>", opts)
+keymap("n", "<leader>gs", "<cmd>lua require('telescope.builtin').lsp_document_symbols()<CR>", opts)
+keymap("n", "<leader>gS", "<cmd>lua require('telescope.builtin').lsp_dynamic_workspace_symbols()<CR>", opts)
+keymap("n", "<leader>gi", "<cmd>lua require('telescope.builtin').lsp_implementations()<CR>", opts)
+keymap("n", "<leader>gd", "<cmd>lua require('telescope.builtin').lsp_definitions()<CR>", opts)
+keymap("n", "<leader>D", "<cmd>lua require('telescope.builtin').lsp_type_definitions()<CR>", opts)
+
+keymap("n", "<leader>k", "<cmd>lua require('telescope.builtin').treesitter()<CR>", opts)
+keymap("n", "<leader>P", "<cmd>lua require('telescope').extensions.media_files.media_files()<CR>", opts)
 
 -- 🤲 toggle
 keymap("n", "<leader>ut", ":UndotreeToggle<CR>", opts)
 keymap("n", "<leader>pt", ":TSPlaygroundToggle<CR>", opts)
 keymap("n", "<leader>ct", ":ColorizerToggle<CR>", opts)
-keymap("n", "<leader>tw", ":call ToggleWrap()<CR>", opts)
+keymap("n", "<leader>lt", ":call ToggleWrap()<CR>", opts)
 keymap("n", "<leader>st", ":call ToggleSpellCheck()<CR>", opts)
-keymap("n", "<leader>mp", ":MarkdownPreviewToggle<CR>,", opts)
-keymap("n", "<leader>tk", ":TSHighlightCapturesUnderCursor<CR>", opts)
+keymap("n", "<leader>mt", ":MarkdownPreviewToggle<CR>,", opts)
+keymap("n", "<leader>ht", ":TSHighlightCapturesUnderCursor<CR>", opts)
+keymap("n", "<leader>lt", ":LspInstallInfo<CR>", opts)
 
 -- 🔤 spelling
 keymap("i", "<C-l>", "<c-g>u<Esc>[s1z=`]a<c-g>u", opts)
