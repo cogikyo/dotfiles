@@ -102,11 +102,13 @@ cmp.setup {
               greek = "",
               nvim_lua = "",
               nvim_lsp_signature_help = "",
+              nvim_lsp = "",
           })[entry.source.name]
           return vim_item
       end,
   },
   sources = {
+      { name = "nvim_lsp" },
       { name = 'nvim_lsp_signature_help' },
       { name = 'nvim_lua' },
       { name = "luasnip" },
