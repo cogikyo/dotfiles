@@ -174,7 +174,7 @@ label-occupied-margin = 3
 
 ws-icon-0 = 1;%{O1}%{A1:bspc desktop -f \^1 :}%{A}
 ws-icon-1 = 1;
-ws-icon-2 = 2;%{O}%{A1:bspc desktop -f \^2 :}%{A}
+ws-icon-2 = 2;%{O1}%{A1:bspc desktop -f \^2 :}%{A}
 ws-icon-3 = 3;%{O-8}%{A1:bspc desktop -f \^3 :}%{A}
 ws-icon-4 = 4;%{O6}%{A1:bspc desktop -f \^4:}漣%{A}
 ws-icon-5 = 5;%{O-4}%{A1:bspc desktop -f \^5 :}ﯟ%{A}
