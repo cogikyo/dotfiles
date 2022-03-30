@@ -2,7 +2,6 @@ local status_ok, npairs = pcall(require, "nvim-autopairs")
 if not status_ok then
   return
 end
-
 npairs.setup {
   check_ts = true,
   ts_config = {
@@ -21,6 +20,7 @@ npairs.setup {
     highlight = "Search",
     highlight_grey = "Comment",
   },
+  enable_check_bracket_line = true,
 }
 
 local cmp_autopairs = require "nvim-autopairs.completion.cmp"

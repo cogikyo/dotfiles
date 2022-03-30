@@ -89,7 +89,8 @@ return packer.startup(function(use)
     use 'JoosepAlviste/nvim-ts-context-commentstring'
     use 'mfussenegger/nvim-ts-hint-textobject'
     use 'andymass/vim-matchup'
-    use { 'lewis6991/spellsitter.nvim',
+    use {
+		'lewis6991/spellsitter.nvim',
         config = function()
             require('spellsitter').setup()
         end
@@ -110,6 +111,10 @@ return packer.startup(function(use)
     use 'itchyny/lightline.vim'
     use 'kyazdani42/nvim-web-devicons'
     use 'norcalli/nvim-colorizer.lua'
+    use {
+        'lewis6991/gitsigns.nvim',
+        tag = 'release'
+    }
     ---------------------------------------------------------------------------
 
     -- ✋ UX ------------------------------------------------------------------
@@ -126,7 +131,6 @@ return packer.startup(function(use)
     use 'tpope/vim-repeat'
     use 'tpope/vim-surround'
     use 'mhinz/vim-startify'
-    use 'mhinz/vim-signify'
     use 'easymotion/vim-easymotion'
     use 'mattn/emmet-vim'
     use 'mbbill/undotree'

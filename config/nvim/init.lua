@@ -9,6 +9,7 @@ local config_files = {
     "treesitter",
     "autopairs",
     "comment",
+    "gitsigns",
 }
 for _, file in ipairs(config_files) do
     require("user."..file)
