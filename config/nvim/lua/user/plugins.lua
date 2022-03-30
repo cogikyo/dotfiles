@@ -52,40 +52,40 @@ packer.init {
 return packer.startup(function(use)
 
     -- 🔧 Utility -------------------------------------------------------------
-    use "wbthomason/packer.nvim"
-    use "nvim-lua/popup.nvim"
-    use "nvim-lua/plenary.nvim"
+    use 'wbthomason/packer.nvim'
+    use 'nvim-lua/popup.nvim'
+    use 'nvim-lua/plenary.nvim'
     ---------------------------------------------------------------------------
 
     -- 🪄 Completion ----------------------------------------------------------
-    use "hrsh7th/nvim-cmp"
-    use "hrsh7th/cmp-nvim-lsp"
-    use "hrsh7th/cmp-nvim-lua"
-    use "hrsh7th/cmp-nvim-lsp-signature-help"
-    use "hrsh7th/cmp-buffer"
-    use "hrsh7th/cmp-path"
-    use "hrsh7th/cmp-cmdline"
-    use "hrsh7th/cmp-calc"
-    use "hrsh7th/cmp-emoji"
-    use "max397574/cmp-greek"
-    use "saadparwaiz1/cmp_luasnip"
+    use 'hrsh7th/nvim-cmp'
+    use 'hrsh7th/cmp-nvim-lsp'
+    use 'hrsh7th/cmp-nvim-lua'
+    use 'hrsh7th/cmp-nvim-lsp-signature-help'
+    use 'hrsh7th/cmp-buffer'
+    use 'hrsh7th/cmp-path'
+    use 'hrsh7th/cmp-cmdline'
+    use 'hrsh7th/cmp-calc'
+    use 'hrsh7th/cmp-emoji'
+    use 'max397574/cmp-greek'
+    use 'saadparwaiz1/cmp_luasnip'
     ---------------------------------------------------------------------------
 
     -- 📚 LSP -----------------------------------------------------------------
-    use "neovim/nvim-lspconfig"
-    use "williamboman/nvim-lsp-installer"
-    use "tamago324/nlsp-settings.nvim"
-    use "jose-elias-alvarez/null-ls.nvim"
+    use 'neovim/nvim-lspconfig'
+    use 'williamboman/nvim-lsp-installer'
+    use 'tamago324/nlsp-settings.nvim'
+    use 'jose-elias-alvarez/null-ls.nvim'
     ---------------------------------------------------------------------------
 
     -- ✂️  Snippets ------------------------------------------------------------
-    use "L3MON4D3/LuaSnip" -- TODO: expand on this
-    use "rafamadriz/friendly-snippets"
+    use 'L3MON4D3/LuaSnip' -- TODO: expand on this
+    use 'rafamadriz/friendly-snippets'
     ---------------------------------------------------------------------------
 
     -- 🌲 Treesitter ----------------------------------------------------------
     use {'nvim-treesitter/nvim-treesitter', run = ':TSUpdate' }
-    use "nvim-treesitter/playground"
+    use 'nvim-treesitter/playground'
     use 'JoosepAlviste/nvim-ts-context-commentstring'
     use 'mfussenegger/nvim-ts-hint-textobject'
     use 'andymass/vim-matchup'
@@ -94,46 +94,51 @@ return packer.startup(function(use)
             require('spellsitter').setup()
         end
     }
+    -- TODO:
     -- theHamsta/nvim-dap-virtual-text -- debugging
     -- SmiteshP/nvim-gps -- status line
     ---------------------------------------------------------------------------
 
     -- 🔭 Telescope -----------------------------------------------------------
-    use "nvim-telescope/telescope.nvim"
+    use 'nvim-telescope/telescope.nvim'
     use {'nvim-telescope/telescope-fzf-native.nvim', run = 'make' }
-    use "nvim-telescope/telescope-media-files.nvim"
+    use 'nvim-telescope/telescope-media-files.nvim'
     ---------------------------------------------------------------------------
 
     -- 👀 UI ------------------------------------------------------------------
-    use "folke/tokyonight.nvim"
-    use "itchyny/lightline.vim"
-    use "kyazdani42/nvim-web-devicons"
-    use "norcalli/nvim-colorizer.lua"
+    use 'folke/tokyonight.nvim'
+    use 'itchyny/lightline.vim'
+    use 'kyazdani42/nvim-web-devicons'
+    use 'norcalli/nvim-colorizer.lua'
     ---------------------------------------------------------------------------
 
     -- ✋ UX ------------------------------------------------------------------
-    use "iamcco/markdown-preview.nvim"
+    use 'iamcco/markdown-preview.nvim'
+    use 'windwp/nvim-autopairs'
+    use 'numToStr/Comment.nvim'
+    -- TODO:
+    -- use 'nvim-pack/nvim-spectre'
     ---------------------------------------------------------------------------
 
     -- REVIEW -----------------------------------------------------------------
-    use "ThePrimeagen/harpoon"
-    use "tpope/vim-commentary"
-    use "tpope/vim-fugitive"
-    use "tpope/vim-repeat"
-    use "tpope/vim-surround"
-    use "mhinz/vim-startify"
-    use "mhinz/vim-signify"
-    use "easymotion/vim-easymotion"
-    use "mattn/emmet-vim"
-    use "mbbill/undotree"
-    use "junegunn/vim-easy-align"
+    use 'ThePrimeagen/harpoon'
+    use 'tpope/vim-fugitive'
+    use 'tpope/vim-repeat'
+    use 'tpope/vim-surround'
+    use 'mhinz/vim-startify'
+    use 'mhinz/vim-signify'
+    use 'easymotion/vim-easymotion'
+    use 'mattn/emmet-vim'
+    use 'mbbill/undotree'
+    use 'junegunn/vim-easy-align'
     ---------------------------------------------------------------------------
 
     -- MAYBE?
     -- nvim-notify
+    -- minimap
 
     -- Automatically set up configuration after cloning packer.nvim
     if PACKER_BOOTSTRAP then
-        require("packer").sync()
+        require('packer').sync()
     end
 end)

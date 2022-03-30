@@ -54,7 +54,7 @@ configs.setup {
 
     context_commentstring = {
         enable = true,
-        enable_autocmd = false, -- using vim-commentary, not needed.
+        enable_autocmd = false, -- integration with Comment.nvim
     },
 
     autopairs = { enable = true },

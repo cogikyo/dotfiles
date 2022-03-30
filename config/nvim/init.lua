@@ -1,8 +1,15 @@
-require "user.plugins"
-require "user.options"
-require "user.keymaps"
-require "user.completions"
-require "user.colorscheme"
-require "user.lsp"
-require "user.telescope"
-require "user.treesitter"
+local config_files = {
+    "plugins",
+    "options",
+    "keymaps",
+    "completions",
+    "colorscheme",
+    "lsp",
+    "telescope",
+    "treesitter",
+    "autopairs",
+    "comment",
+}
+for _, file in ipairs(config_files) do
+    require("user."..file)
+end
