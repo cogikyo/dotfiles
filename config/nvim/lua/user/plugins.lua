@@ -39,7 +39,7 @@ if not status_ok then
   return
 end
 
--- Have packer use a popup window
+-- Have packer use a pop up window
 packer.init {
   display = {
     open_fn = function()
@@ -51,12 +51,13 @@ packer.init {
 
 return packer.startup(function(use)
 
-    -- 🔧 Utility
+    -- 🔧 Utility -------------------------------------------------------------
     use "wbthomason/packer.nvim"
     use "nvim-lua/popup.nvim"
     use "nvim-lua/plenary.nvim"
+    ---------------------------------------------------------------------------
 
-    -- 🪄 Completion
+    -- 🪄 Completion ----------------------------------------------------------
     use "hrsh7th/nvim-cmp"
     use "hrsh7th/cmp-nvim-lsp"
     use "hrsh7th/cmp-nvim-lua"
@@ -68,27 +69,53 @@ return packer.startup(function(use)
     use "hrsh7th/cmp-emoji"
     use "max397574/cmp-greek"
     use "saadparwaiz1/cmp_luasnip"
+    ---------------------------------------------------------------------------
 
-    -- 📚 LSP
+    -- 📚 LSP -----------------------------------------------------------------
     use "neovim/nvim-lspconfig"
     use "williamboman/nvim-lsp-installer"
     use "tamago324/nlsp-settings.nvim"
     use "jose-elias-alvarez/null-ls.nvim"
+    ---------------------------------------------------------------------------
 
-    -- ✂️  Snippets
-    use "L3MON4D3/LuaSnip"
+    -- ✂️  Snippets ------------------------------------------------------------
+    use "L3MON4D3/LuaSnip" -- TODO: expand on this
     use "rafamadriz/friendly-snippets"
+    ---------------------------------------------------------------------------
 
-    -- 🌲 Treesitter
-    use "nvim-treesitter/nvim-treesitter"
+    -- 🌲 Treesitter ----------------------------------------------------------
+    use {'nvim-treesitter/nvim-treesitter', run = ':TSUpdate' }
     use "nvim-treesitter/playground"
+    use 'JoosepAlviste/nvim-ts-context-commentstring'
+    use 'mfussenegger/nvim-ts-hint-textobject'
+    use 'andymass/vim-matchup'
+    use { 'lewis6991/spellsitter.nvim',
+        config = function()
+            require('spellsitter').setup()
+        end
+    }
+    -- theHamsta/nvim-dap-virtual-text -- debugging
+    -- SmiteshP/nvim-gps -- status line
+    ---------------------------------------------------------------------------
 
-    -- 🔭 Telescope
+    -- 🔭 Telescope -----------------------------------------------------------
     use "nvim-telescope/telescope.nvim"
     use {'nvim-telescope/telescope-fzf-native.nvim', run = 'make' }
     use "nvim-telescope/telescope-media-files.nvim"
+    ---------------------------------------------------------------------------
 
-    -- REVIEW
+    -- 👀 UI ------------------------------------------------------------------
+    use "folke/tokyonight.nvim"
+    use "itchyny/lightline.vim"
+    use "kyazdani42/nvim-web-devicons"
+    use "norcalli/nvim-colorizer.lua"
+    ---------------------------------------------------------------------------
+
+    -- ✋ UX ------------------------------------------------------------------
+    use "iamcco/markdown-preview.nvim"
+    ---------------------------------------------------------------------------
+
+    -- REVIEW -----------------------------------------------------------------
     use "ThePrimeagen/harpoon"
     use "tpope/vim-commentary"
     use "tpope/vim-fugitive"
@@ -96,23 +123,16 @@ return packer.startup(function(use)
     use "tpope/vim-surround"
     use "mhinz/vim-startify"
     use "mhinz/vim-signify"
-
     use "easymotion/vim-easymotion"
     use "mattn/emmet-vim"
-    use "iamcco/markdown-preview.nvim"
-    use "junegunn/vim-easy-align"
     use "mbbill/undotree"
-
-    -- Theme
-    use "folke/tokyonight.nvim"
-    use "itchyny/lightline.vim"
-    use "kyazdani42/nvim-web-devicons"
-    use "norcalli/nvim-colorizer.lua"
+    use "junegunn/vim-easy-align"
+    ---------------------------------------------------------------------------
 
     -- MAYBE?
     -- nvim-notify
 
-    -- Automatically set up configuration after cloning packer.nvim -------------
+    -- Automatically set up configuration after cloning packer.nvim
     if PACKER_BOOTSTRAP then
         require("packer").sync()
     end

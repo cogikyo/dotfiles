@@ -32,10 +32,10 @@ keymap("n", "<leader>x", ":q<CR>", opts)
 keymap("n", "<leader>q", ":q!<CR>", opts)
 
 -- 🤖 copy copy (system clipboard)
-keymap("v", "<leader>y", '"+y', opts) -- yank selection x:q
-keymap("n", "<leader>y", 'ml^"+y$<Esc>`l', opts) -- yank whole line
-keymap("n", "<leader>ly", '"+y$', opts) -- yank to the end of line only
-keymap("n", "<leader>Y", 'gg"+yG', opts) -- yank whole file
+keymap("v", "<leader>y", 'ml"+y`l', opts)
+keymap("n", "<leader>y", '"+y', opts)
+keymap("n", "<leader>Y", '"+y$', opts)
+keymap("n", "<leader>gy", 'mlgg"+yG`lzt', opts)
 
 -- 🦬 buffers
 keymap("n", "<leader>w", ":bp<CR>", opts)
@@ -46,7 +46,7 @@ keymap("n", "<leader>bd", ":bd!<CR>", opts)
 keymap("n", "<leader>hs", ":.! figlet -fshadow <Esc>:.,.+5Commentary<CR>5jo<Esc>0d$", opts)
 keymap("n", "<leader>hc", ":.! figlet -fcalvin <Esc>:.,.+2Commentary<CR>2jo<Esc>0d$", opts)
 
--- 🌌 gimmie space please (keep auto comments)
+-- 🌌 gimme space please (keep auto comments)
 keymap("n", "o", "o<Esc>cc", opts)
 keymap("n", "O", "O<Esc>cc", opts)
 keymap("n", "<leader>o", ':<C-u>call append(line("."),   repeat([""], v:count1))<CR>', opts)
@@ -55,16 +55,17 @@ keymap("n", "<leader>O", ':<C-u>call append(line("."),   repeat([""], v:count1))
 -- 💎 don't let go
 keymap("n", "<leader>d", '"_d', opts)
 keymap("v", "<leader>d", '"_d', opts)
-keymap("v", "p", '"_dP', opts)
 keymap("v", "<", "<gv", opts)
 keymap("v", ">", ">gv", opts)
-keymap("x", "<Down>", ":m '>+1<CR>gv-gv", opts)
-keymap("x", "<Up>", ":m '<-2<CR>gv-gv", opts)
+keymap("v", "<Up>", ":m '<-2<CR>gv-gv", opts)
+keymap("v", "<Down>", ":m '>+1<CR>gv-gv", opts)
 
 -- 🎯 keep cursor 'centered'
 keymap("n", "G", "Gzt,", opts)
 keymap("n", "n", "nzt,", opts)
 keymap("n", "N", "Nzt,", opts)
+keymap("n", "}", "}zt,", opts)
+keymap("n", "{", "{zt,", opts)
 keymap("n", "<C-j>", "mzJ`z", opts)
 keymap("n", "<C-o>", "<C-o>zt", opts)
 keymap("n", "<C-i>", "<C-i>zt", opts)
@@ -86,12 +87,20 @@ keymap("n", "<Down>", "<C-w>j", opts)
 keymap("n", "<Up>", "<C-w>k", opts)
 keymap("n", "<Left>", "<C-w>h", opts)
 keymap("n", "<Right>", "<C-w>l", opts)
+keymap("n", "<C-Up>", ":resize -2<CR>", opts)
+keymap("n", "<C-Down>", ":resize +2<CR>", opts)
+keymap("n", "<C-Left>", ":vertical resize -2<CR>", opts)
+keymap("n", "<C-Right>", ":vertical resize +2<CR>", opts)
+
+-- 👉 indent
+keymap("n", "<leader>==", "ml=ip`lzt", opts)
+keymap("n", "<leader>=y", "mlgg=G`lzt", opts)
 
 -- 🔭 telescope
 keymap("n", "<leader>t", "<cmd>lua require('telescope.builtin').find_files()<CR>", opts)
 keymap("n", "<leader>T", "<cmd>lua require('telescope.builtin').live_grep()<CR>", opts)
 keymap("n", "<leader>H", "<cmd>lua require('telescope.builtin').help_tags()<CR>", opts)
-keymap("n", "<leader>E", "<cmd>lua require('telescope.builtin').git_files()<CR>", opts)
+keymap("n", "<leader>G", "<cmd>lua require('telescope.builtin').git_files()<CR>", opts)
 keymap("n", "<leader>M", "<cmd>lua require('telescope.builtin').man_pages()<CR>", opts)
 keymap("n", "<leader>F", "<cmd>lua require('telescope.builtin').quickfix()<CR>", opts)
 keymap("n", "<leader>L", "<cmd>lua require('telescope.builtin').loclist()<CR>", opts)
@@ -105,28 +114,27 @@ keymap("n", "<leader>gi", "<cmd>lua require('telescope.builtin').lsp_implementat
 keymap("n", "<leader>gd", "<cmd>lua require('telescope.builtin').lsp_definitions()<CR>", opts)
 keymap("n", "<leader>D", "<cmd>lua require('telescope.builtin').lsp_type_definitions()<CR>", opts)
 
-keymap("n", "<leader>k", "<cmd>lua require('telescope.builtin').treesitter()<CR>", opts)
+keymap("n", "<leader>K", "<cmd>lua require('telescope.builtin').treesitter()<CR>", opts)
 keymap("n", "<leader>P", "<cmd>lua require('telescope').extensions.media_files.media_files()<CR>", opts)
 
 -- 🤲 toggle
 keymap("n", "<leader>ut", ":UndotreeToggle<CR>", opts)
 keymap("n", "<leader>pt", ":TSPlaygroundToggle<CR>", opts)
 keymap("n", "<leader>ct", ":ColorizerToggle<CR>", opts)
-keymap("n", "<leader>lt", ":call ToggleWrap()<CR>", opts)
+keymap("n", "<leader>rt", ":call ToggleWrap()<CR>", opts)
 keymap("n", "<leader>st", ":call ToggleSpellCheck()<CR>", opts)
 keymap("n", "<leader>mt", ":MarkdownPreviewToggle<CR>,", opts)
-keymap("n", "<leader>ht", ":TSHighlightCapturesUnderCursor<CR>", opts)
+keymap("n", "<leader>hl", ":TSHighlightCapturesUnderCursor<CR>", opts)
 keymap("n", "<leader>lt", ":LspInstallInfo<CR>", opts)
 
 -- 🔤 spelling
-keymap("i", "<C-l>", "<c-g>u<Esc>[s1z=`]a<c-g>u", opts)
+keymap("i", "<C-l>", "<c-g>u<Esc>[s1z=`]a<c-g>u", ff)
 
 -- 🔃 reload
-keymap("n", "<leader>rs", ":call UltiSnips#RefreshSnippets()<CR>", opts)
-keymap("n", "<leader>rv", ":source $MYVIMRC<CR>:w<CR>", opts)
+keymap("n", "<leader>rk", ":source ~/.config/nvim/lua/user/keymaps.lua<CR>", opts)
 
 -- ⛵ reflow
-keymap("n", "<leader>rx", "vipgqzt{j^", opts) -- reflow line
+keymap("n", "<leader>rx", "vipgqzt{j^", opts)
 keymap("n", "<leader>rf", "mzJ`zVgwzHzt_", opts)
 
 -- 🔱 harpoon

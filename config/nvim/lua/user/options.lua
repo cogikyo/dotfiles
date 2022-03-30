@@ -33,7 +33,7 @@ wrap          = false,
 linebreak     = true,
 scrolloff     = 16,
 sidescrolloff = 6,
-spell         = false,
+spell         = true,
 spelllang     = { 'en_us' },
 -- ============================================================================
 
