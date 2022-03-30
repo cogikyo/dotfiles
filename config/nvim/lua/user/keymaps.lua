@@ -42,15 +42,15 @@ keymap("n", "<leader>w", ":bp<CR>", opts)
 keymap("n", "<leader>v", ":bn<CR>", opts)
 keymap("n", "<leader>bd", ":bd!<CR>", opts)
 
--- 🤯 comment headers
-keymap("n", "<leader>hs", ":.! figlet -fshadow <Esc>:.,.+5Commentary<CR>5jo<Esc>0d$", opts)
-keymap("n", "<leader>hc", ":.! figlet -fcalvin <Esc>:.,.+2Commentary<CR>2jo<Esc>0d$", opts)
+-- 🤯 comment headers TODO: no longer using commentary, update
+-- keymap("n", "<leader>hs", ":.! figlet -fshadow <Esc>:.,.+5Commentary<CR>5jo<Esc>0d$", opts)
+-- keymap("n", "<leader>hc", ":.! figlet -fcalvin <Esc>:.,.+2Commentary<CR>2jo<Esc>0d$", opts)
 
 -- 🌌 gimme space please (keep auto comments)
 keymap("n", "o", "o<Esc>cc", opts)
 keymap("n", "O", "O<Esc>cc", opts)
 keymap("n", "<leader>o", ':<C-u>call append(line("."),   repeat([""], v:count1))<CR>', opts)
-keymap("n", "<leader>O", ':<C-u>call append(line("."),   repeat([""], v:count1))<CR>', opts)
+keymap("n", "<leader>O", ':<C-u>call append(line(".")-1,   repeat([""], v:count1))<CR>', opts)
 
 -- 💎 don't let go
 keymap("n", "<leader>d", '"_d', opts)
@@ -93,14 +93,14 @@ keymap("n", "<C-Left>", ":vertical resize -2<CR>", opts)
 keymap("n", "<C-Right>", ":vertical resize +2<CR>", opts)
 
 -- 👉 indent
-keymap("n", "<leader>==", "ml=ip`lzt", opts)
-keymap("n", "<leader>=y", "mlgg=G`lzt", opts)
+keymap("n", "<leader>=p", "ml=ip`lzt", opts)
+keymap("n", "<leader>=f", "mlgg=G`lzt", opts)
 
 -- 🔭 telescope
 keymap("n", "<leader>t", "<cmd>lua require('telescope.builtin').find_files()<CR>", opts)
 keymap("n", "<leader>T", "<cmd>lua require('telescope.builtin').live_grep()<CR>", opts)
 keymap("n", "<leader>H", "<cmd>lua require('telescope.builtin').help_tags()<CR>", opts)
-keymap("n", "<leader>G", "<cmd>lua require('telescope.builtin').git_files()<CR>", opts)
+keymap("n", "<leader>E", "<cmd>lua require('telescope.builtin').git_files()<CR>", opts)
 keymap("n", "<leader>M", "<cmd>lua require('telescope.builtin').man_pages()<CR>", opts)
 keymap("n", "<leader>F", "<cmd>lua require('telescope.builtin').quickfix()<CR>", opts)
 keymap("n", "<leader>L", "<cmd>lua require('telescope.builtin').loclist()<CR>", opts)
