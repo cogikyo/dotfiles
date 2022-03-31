@@ -24,7 +24,7 @@ let s:p.normal.left     = [ [s:_black, s:_blue, 'bold'   ], [s:_blue, s:_grey_d 
 let s:p.insert.left     = [ [s:_black, s:_azure, 'bold'  ], [s:_azure, s:_grey_d  ] ]
 let s:p.visual.left     = [ [s:_black, s:_green, 'bold'  ], [s:_green,  s:_grey_d ] ]
 let s:p.replace.left    = [ [s:_black, s:_purple, 'bold' ], [s:_purple, s:_grey_d ] ]
-let s:p.inactive.left   = [ [s:_black, s:_pink, 'bold'   ], [s:_pink, s:_grey_d   ] ]
+let s:p.inactive.left   = [ [s:_black, s:_grey, 'bold'   ], [s:_grey, s:_grey_d   ] ]
 
 let s:p.normal.middle   = [ [s:_white, s:_grey_D ] ]
 
@@ -32,7 +32,7 @@ let s:p.normal.right    = [ [s:_black, s:_blue   ], [s:_blue,  s:_grey_d  ] ]
 let s:p.insert.right    = [ [s:_black, s:_azure  ], [s:_azure, s:_grey_d ] ]
 let s:p.visual.right    = [ [s:_black, s:_green  ], [s:_green, s:_grey_d ] ]
 let s:p.replace.right   = [ [s:_black, s:_purple ], [s:_green, s:_grey_d ] ]
-let s:p.inactive.right  = [ [s:_black, s:_pink   ], [s:_pink, s:_grey_d  ] ]
+let s:p.inactive.right  = [ [s:_black, s:_grey   ], [s:_grey, s:_grey_d  ] ]
 
 let s:p.normal.error    = [ [s:_red, s:_grey_D    ] ]
 let s:p.normal.warning  = [ [s:_yellow, s:_grey_D ] ]

@@ -1,6 +1,3 @@
-" ╔═╗┬ ┬┌┐┌┌─┐┌┬┐┬┌─┐┌┐┌┌─┐
-" ╠╣ │ │││││   │ ││ ││││└─┐
-" ╚  └─┘┘└┘└─┘ ┴ ┴└─┘┘└┘└─┘
 fun! TrimWhitespace()
   let l:save = winsaveview()
   keeppatterns %s/\s\+$//e
@@ -33,13 +30,13 @@ function! ToggleWrap()
  endif
 endfunction
 
-" ╔═╗┌┬┐┌┬┐┌─┐
-" ║  │││ ││└─┐
-" ╚═╝┴ ┴─┴┘└─┘
 augroup AUTO_COMMANDS
   autocmd!
   autocmd BufWritePre * :call TrimWhitespace()
-  autocmd TermOpen * setlocal nonumber norelativenumber signcolumn=no
+  autocmd TermOpen * setlocal nonumber norelativenumber signcolumn=no spell!
   autocmd FileType help setlocal cc=
   autocmd TextYankPost * silent! lua require'vim.highlight'.on_yank({timeout = 69})
 augroup END
+
+" misc vim script settings
+let g:switch_mapping = ""

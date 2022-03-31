@@ -121,6 +121,9 @@ return packer.startup(function(use)
     use 'iamcco/markdown-preview.nvim'
     use 'windwp/nvim-autopairs'
     use 'numToStr/Comment.nvim'
+    use 'kyazdani42/nvim-tree.lua'
+    use 'AndrewRadev/switch.vim'
+
     -- TODO:
     -- use 'nvim-pack/nvim-spectre'
     ---------------------------------------------------------------------------

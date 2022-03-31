@@ -10,6 +10,7 @@ local config_files = {
     "autopairs",
     "comment",
     "gitsigns",
+    "nvim-tree"
 }
 for _, file in ipairs(config_files) do
     require("user."..file)

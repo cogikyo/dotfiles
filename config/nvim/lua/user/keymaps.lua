@@ -73,8 +73,8 @@ map("n", "<Down>", "<C-w>j")
 map("n", "<Up>", "<C-w>k")
 map("n", "<Left>", "<C-w>h")
 map("n", "<Right>", "<C-w>l")
-map("n", "<C-Up>", ":resize -2<CR>")
-map("n", "<C-Down>", ":resize +2<CR>")
+map("n", "<C-Up>", ":resize +2<CR>")
+map("n", "<C-Down>", ":resize -2<CR>")
 map("n", "<C-Left>", ":vertical resize -2<CR>")
 map("n", "<C-Right>", ":vertical resize +2<CR>")
 
@@ -112,6 +112,8 @@ map("n", "<leader>st", ":call ToggleSpellCheck()<CR>")
 map("n", "<leader>mt", ":MarkdownPreviewToggle<CR>,")
 map("n", "<leader>hl", ":TSHighlightCapturesUnderCursor<CR>")
 map("n", "<leader>lt", ":LspInstallInfo<CR>")
+map("n", "<leader>et", ":NvimTreeToggle<CR>")
+map("n", "<leader>bt", ":Switch<CR>")
 
 -- 🔃 reload
 map("n", "<leader>rk", ":source ~/.config/nvim/lua/user/maps.lua<CR>")
@@ -121,6 +123,7 @@ map("n", "<leader>rx", "vipgqzt{j^")
 map("n", "<leader>rf", "mzJ`zVgwzHzt_")
 
 -- 🔱 harpoon
+map("n", "<leader>n", "<Nop>")
 map("n", "<leader>nn", ":lua require('harpoon.mark').add_file()<CR>")
 map("n", "<leader>nf", ":lua require('harpoon.ui').toggle_quick_menu()<CR>")
 map("n", "<leader>nt", ":lua require('harpoon.ui').nav_file(1)<CR>zt")
