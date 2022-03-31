@@ -14,8 +14,8 @@ telescope.setup {
 
     mappings = {
       i = {
-        ["<C-n>"] = actions.cycle_history_next,
-        ["<C-p>"] = actions.cycle_history_prev,
+        ["<C-Down>"] = actions.cycle_history_next,
+        ["<C-Up>"] = actions.cycle_history_prev,
 
         ["<C-c>"] = actions.close,
         ["<C-s>"] = actions.close,

@@ -2,6 +2,7 @@ local status_ok, npairs = pcall(require, "nvim-autopairs")
 if not status_ok then
   return
 end
+
 npairs.setup {
   check_ts = true,
   ts_config = {
@@ -11,7 +12,7 @@ npairs.setup {
   disable_filetype = { "TelescopePrompt", "spectre_panel" },
   fast_wrap = {
     map = "<C-e>",
-    chars = { "{", "[", "(", '"', "'", "`" },
+    chars = { "{", "[", "(", '"', "'", "`", "<", },
     pattern = string.gsub([[ [%'%"%)%>%]%)%}%,] ]], "%s+", ""),
     offset = 0, -- Offset from pattern match
     end_key = "$",
