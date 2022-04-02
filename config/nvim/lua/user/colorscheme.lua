@@ -1,4 +1,4 @@
-vim.g.tokyonight_sidebars = { "undotree" }
+vim.g.tokyonight_sidebars = { "undotree", "NvimTreee" }
 
 local colorscheme = "tokyonight"
 
