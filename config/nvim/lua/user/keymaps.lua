@@ -1,6 +1,6 @@
 local function map(mode, lhs, rhs, opts)
-    opts = vim.tbl_extend('force', {noremap = true, silent = true}, opts or {})
-    vim.api.nvim_set_keymap(mode, lhs, rhs, opts)
+	opts = vim.tbl_extend("force", { noremap = true, silent = true }, opts or {})
+	vim.api.nvim_set_keymap(mode, lhs, rhs, opts)
 end
 
 local rec = { noremap = false, silent = true }
@@ -103,6 +103,10 @@ map("n", "<leader>D", "<cmd>lua require('telescope.builtin').lsp_type_definition
 map("n", "<leader>ts", "<cmd>lua require('telescope.builtin').treesitter()<CR>")
 map("n", "<leader>ti", "<cmd>lua require('telescope').extensions.media_files.media_files()<CR>")
 
+-- ℹ️  null_ls
+map("n", "<leader>ca", ": lua vim.lsp.buf.code_action()<CR>")
+map("n", "<leader>hi", ": lua vim.lsp.buf.hover()<CR>")
+
 -- 🤲 toggle
 map("n", "<leader>ut", ":UndotreeToggle<CR>")
 map("n", "<leader>pt", ":TSPlaygroundToggle<CR>")
@@ -114,6 +118,7 @@ map("n", "<leader>hl", ":TSHighlightCapturesUnderCursor<CR>")
 map("n", "<leader>lt", ":LspInstallInfo<CR>")
 map("n", "<leader>et", ":NvimTreeToggle<CR>")
 map("n", "<leader>bt", ":Switch<CR>")
+map("n", "<leader>it", ":NullLsInfo<CR>")
 
 -- 🔃 reload
 map("n", "<leader>rk", ":source ~/.config/nvim/lua/user/maps.lua<CR>")
@@ -133,10 +138,10 @@ map("n", "<leader>na", ":lua require('harpoon.ui').nav_file(4)<CR>zt")
 map("n", "<leader>nd", ":lua require('harpoon.ui').nav_file(5)<CR>zt")
 
 -- 👾 search and replace (better way to do this?)
-vim.cmd [[
+vim.cmd([[
 vnoremap s :<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
 nnoremap <leader>sa m0ggVG:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
-]]
+]])
 
 -- 🙏 folds
 map("n", "<leader>bf", "zf%")
