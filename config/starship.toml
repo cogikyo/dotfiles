@@ -38,6 +38,7 @@ disabled = false
 [git_branch]
 truncation_length = 12
 style = "bold cyan"
+symbol = " "
 truncation_symbol = "..."
 disabled = false
 
@@ -50,7 +51,7 @@ disabled = false
 
 [git_status]
 format = '([ $conflicted$staged$untracked$ahead_behind$renamed$deleted$stashed$modified]($style))'
-conflicted = "[ ](bold #e46c9c)"
+conflicted = "[ ](bold #e46c9c)"
 stashed = "[ ${count} ](bold birght-black)"
 modified = "[🞊 ${count} ](bold cyan)"
 staged = '[ ${count} ](bold yellow)'
