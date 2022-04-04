@@ -5,7 +5,7 @@
 -- ██║     ███████╗╚██████╔╝╚██████╔╝██║██║ ╚████║███████║
 -- ╚═╝     ╚══════╝ ╚═════╝  ╚═════╝ ╚═╝╚═╝  ╚═══╝╚══════╝
 
--- Plugins & Packer Setup {{{
+-- Plugins & Packer Setup
 local fn = vim.fn
 
 -- Automatically install packer
@@ -47,7 +47,6 @@ packer.init({
 		end,
 	},
 })
---- }}}
 
 return packer.startup(function(use)
 	-- 🔧 Utility -------------------------------------------------------------
@@ -60,7 +59,6 @@ return packer.startup(function(use)
 	use("hrsh7th/nvim-cmp")
 	use("hrsh7th/cmp-nvim-lsp")
 	use("hrsh7th/cmp-nvim-lua")
-	use("hrsh7th/cmp-nvim-lsp-signature-help")
 	use("hrsh7th/cmp-buffer")
 	use("hrsh7th/cmp-path")
 	use("hrsh7th/cmp-cmdline")
@@ -76,7 +74,7 @@ return packer.startup(function(use)
 	use("tamago324/nlsp-settings.nvim")
 	use("jose-elias-alvarez/null-ls.nvim")
 	use("ThePrimeagen/refactoring.nvim")
-	---------------------------------------------------------------------------
+	--------------------------------------------------------------------------
 
 	-- ✂️  Snippets ------------------------------------------------------------
 	use("L3MON4D3/LuaSnip") -- TODO: expand on this
@@ -108,13 +106,25 @@ return packer.startup(function(use)
 
 	-- 👀 UI ------------------------------------------------------------------
 	use("folke/tokyonight.nvim")
-	use("itchyny/lightline.vim")
-	use("kyazdani42/nvim-web-devicons")
-	use("norcalli/nvim-colorizer.lua")
+	use({
+		"kyazdani42/nvim-web-devicons",
+		config = function()
+			require("nvim-web-devicons").setup({
+				default = true,
+			})
+		end,
+	})
+	use({
+		"norcalli/nvim-colorizer.lua",
+		config = function()
+			require("colorizer").setup()
+		end,
+	})
 	use({
 		"lewis6991/gitsigns.nvim",
 		tag = "release",
 	})
+	use("nvim-lualine/lualine.nvim")
 	---------------------------------------------------------------------------
 
 	-- ✋ UX ------------------------------------------------------------------
@@ -123,6 +133,7 @@ return packer.startup(function(use)
 	use("numToStr/Comment.nvim")
 	use("kyazdani42/nvim-tree.lua")
 	use("AndrewRadev/switch.vim")
+	use("akinsho/toggleterm.nvim")
 
 	-- TODO:
 	-- use 'nvim-pack/nvim-spectre'

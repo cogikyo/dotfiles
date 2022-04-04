@@ -25,8 +25,8 @@ null_ls.setup({
 			extra_args = { "--globals" },
 		}),
 
+		code_actions.refactoring,
 		code_actions.eslint,
-		code_actions.gitsigns,
 		code_actions.proselint.with({
 			filetypes = { "markdown", "tex", "txt" },
 		}),
