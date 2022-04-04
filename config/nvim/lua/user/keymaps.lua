@@ -51,11 +51,11 @@ map("v", "<Up>", ":m '<-2<CR>gv-gv")
 map("v", "<Down>", ":m '>+1<CR>gv-gv")
 
 -- 🎯 keep cursor 'centered'
-map("n", "G", "Gzt,")
-map("n", "n", "nzt,")
-map("n", "N", "Nzt,")
-map("n", "}", "}zt,")
-map("n", "{", "{zt,")
+map("n", "G", "Gzt")
+map("n", "n", "nzt")
+map("n", "N", "Nzt")
+map("n", "}", "}zt")
+map("n", "{", "{zt")
 map("n", "<C-j>", "mzJ`z")
 map("n", "<C-o>", "<C-o>zt")
 map("n", "<C-i>", "<C-i>zt")
@@ -114,7 +114,7 @@ map("n", "<leader>hi", ": lua vim.lsp.buf.hover()<CR>")
 
 -- 🤲 toggle
 map("n", "<leader>ut", ":UndotreeToggle<CR>")
-map("n", "<leader>HT", ":TSPlaygroundToggle<CR>")
+map("n", "<leader>tt", ":TSPlaygroundToggle<CR>")
 map("n", "<leader>ct", ":ColorizerToggle<CR>")
 map("n", "<leader>rt", ":call ToggleWrap()<CR>")
 map("n", "<leader>st", ":call ToggleSpellCheck()<CR>")
@@ -127,6 +127,7 @@ map("n", "<leader>it", ":NullLsInfo<CR>")
 
 -- 🔃 reload
 map("n", "<leader>rk", ":source ~/.config/nvim/lua/user/maps.lua<CR>")
+map("n", "<leader>rs", ":w | source %<CR>")
 
 -- ⛵ reflow
 map("n", "<leader>rx", "vipgqzt{j^")
@@ -142,10 +143,11 @@ map("n", "<leader>ns", ":lua require('harpoon.ui').nav_file(3)<CR>zt")
 map("n", "<leader>na", ":lua require('harpoon.ui').nav_file(4)<CR>zt")
 map("n", "<leader>nd", ":lua require('harpoon.ui').nav_file(5)<CR>zt")
 
--- 👾 search and replace (better way to do this?)
+-- 👾 search
 vim.cmd([[
 vnoremap s :<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
 nnoremap <leader>sa m0ggVG:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
+nnoremap <silent> <leader>N :call setreg("/", ['空'])<CR>
 ]])
 
 -- 🙏 folds

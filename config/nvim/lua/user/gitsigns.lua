@@ -72,7 +72,7 @@ gitsigns.setup({
 		map("n", "<leader>hR", "<cmd>Gitsigns reset_buffer<CR>")
 		map("n", "<leader>hp", "<cmd>Gitsigns preview_hunk<CR>")
 		map("n", "<leader>hb", '<cmd>lua require"gitsigns".blame_line{full=true}<CR>')
-		map("n", "<leader>bt", "<cmd>Gitsigns toggle_current_line_blame<CR>")
+		map("n", "<leader>bl", "<cmd>Gitsigns toggle_current_line_blame<CR>")
 		map("n", "<leader>hd", "<cmd>Gitsigns diffthis<CR>")
 		map("n", "<leader>hD", '<cmd>lua require"gitsigns".diffthis("~")<CR>')
 		map("n", "<leader>dt", "<cmd>Gitsigns toggle_deleted<CR>")

@@ -28,7 +28,7 @@ local options = {
 	-- ========================================================================
 
 	-- 👀 UI ==================================================================
-	shortmess = "filnxtToOFcs",
+	shortmess = "filnxtToOFcsS",
 	laststatus = 2,
 	showtabline = 0,
 	number = true,
@@ -44,12 +44,12 @@ local options = {
 	wildmenu = true,
 	wildmode = { "longest:full", "full" },
 	mouse = "a",
-	updatetime = 250,
+	updatetime = 1420,
 	splitbelow = true,
 	splitright = true,
 	showmode = false,
 	completeopt = { "menuone", "noselect", "noinsert" },
-	formatoptions = "tcrqj",
+	formatoptions = "tcrqnj",
 	iskeyword = "@,48-57,_,-,192-255",
 	-- ========================================================================
 
