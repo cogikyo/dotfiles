@@ -2,7 +2,7 @@ local config_files = {
 	"plugins",
 	"options",
 	"keymaps",
-	"completions",
+	"cmp",
 	"colorscheme",
 	"lsp",
 	"telescope",
@@ -11,6 +11,8 @@ local config_files = {
 	"comment",
 	"gitsigns",
 	"nvim-tree",
+	"toggleterm",
+	"lualine",
 }
 for _, file in ipairs(config_files) do
 	require("user." .. file)

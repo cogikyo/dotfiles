@@ -19,11 +19,15 @@ map("n", "<leader>x", ":q<CR>")
 map("n", "<leader>q", ":q!<CR>")
 map("n", "<C-c>", "<Esc>")
 
--- 🤖 copy copy (system clipboard)
+-- 🤖 copy copy
 map("v", "<leader>y", 'ml"+y`l')
 map("n", "<leader>y", '"+y')
 map("n", "<leader>Y", '"+y$')
 map("n", "<leader>gy", 'mlgg"+yG`lzt')
+
+map("n", "<leader>p", "`]p`]")
+map("v", "<leader>p", "y`]p`]ml`[O<Esc>'lo<Esc>")
+map("v", "<leader>P", "yP`]o<Esc>j")
 
 -- 🦬 buffers
 map("n", "<leader>w", ":bp<CR>")
@@ -92,6 +96,7 @@ map("n", "<leader>F", "<cmd>lua require('telescope.builtin').quickfix()<CR>")
 map("n", "<leader>tl", "<cmd>lua require('telescope.builtin').loclist()<CR>")
 map("n", "<leader>:", "<cmd>lua require('telescope.builtin').commands()<CR>")
 map("n", "<leader>tp", "<cmd>lua require('telescope.builtin').builtin()<CR>")
+map("n", "<leader>tb", "<cmd>lua require('telescope.builtin').buffers()<CR>")
 
 map("n", "<leader>gr", "<cmd>lua require('telescope.builtin').lsp_references()<CR>")
 map("n", "<leader>gs", "<cmd>lua require('telescope.builtin').lsp_document_symbols()<CR>")
@@ -109,7 +114,7 @@ map("n", "<leader>hi", ": lua vim.lsp.buf.hover()<CR>")
 
 -- 🤲 toggle
 map("n", "<leader>ut", ":UndotreeToggle<CR>")
-map("n", "<leader>pt", ":TSPlaygroundToggle<CR>")
+map("n", "<leader>HT", ":TSPlaygroundToggle<CR>")
 map("n", "<leader>ct", ":ColorizerToggle<CR>")
 map("n", "<leader>rt", ":call ToggleWrap()<CR>")
 map("n", "<leader>st", ":call ToggleSpellCheck()<CR>")
@@ -151,7 +156,3 @@ map("n", "<leader>lv", ":loadview<CR>")
 
 -- 🔤 spelling
 map("i", "<C-l>", "<c-g>u<Esc>[s1z=`]a<c-g>u", rec)
-
--- 🚦 easy align
-map("x", "<leader>ea", "<Plug>(EasyAlign)", rec)
-map("n", "<leader>ea", "<Plug>(EasyAlign)", rec)
