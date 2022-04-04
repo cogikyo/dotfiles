@@ -3,7 +3,6 @@
 ###############################################################################
 # Author: cullyn
 # Date Created: March, 25 2022
-# Last Modified: March, 25 2022
 
 # Description:
 # Custom DNA shell greeter, responds to terminal width (poorly)
@@ -117,7 +116,6 @@ for (( i = 0; i < ${entry_num}; i++ )); do
     fi
 done
 
-
 echo
 
 if [[ $cols -eq 246 ]]; then
@@ -125,6 +123,11 @@ if [[ $cols -eq 246 ]]; then
     echo -e "${base1:0:$(( ${#base1} ))}"
     echo -e "${base2:0:$(( ${#base2} - 12 ))}${w}"
     echo -e "${bot:0:$(( ${#bot} - 3 ))}"
+elif [[ $cols -eq 226 ]]; then
+    echo -e "${top:0:$(( ${#top} ))}"
+    echo -e "${base1:0:$(( ${#base1} ))}"
+    echo -e "${base2:0:$(( ${#base2}  ))}${w}"
+    echo -e "${bot:0:$(( ${#bot} - 1 ))}"
 elif [[ $cols -eq 291 ]]; then
     echo -e "${top:0:92}"
     echo -e "${base1:0:845}"
@@ -134,6 +137,11 @@ elif [[ $cols -eq 92 ]]; then
     echo -e "${top:0:$(( ${#top} - 2 ))}"
     echo -e "${base1:0:$(( ${#base1} - 12 ))}"
     echo -e "${base2:0:$(( ${#base2} - 12 ))}${w}"
+    echo -e "${bot:0:$(( ${#bot} - 5 ))}"
+elif [[ $cols -eq 80 ]]; then
+    echo -e "${top:0:$(( ${#top} - 2 ))}"
+    echo -e "${base1:0:$(( ${#base1} - 12 ))}"
+    echo -e "${base2:0:$(( ${#base2} - 30 ))}${w}"
     echo -e "${bot:0:$(( ${#bot} - 5 ))}"
 elif [[ $cols -lt 92 && $cols -gt 40 ]]; then
     echo -e "${top:0:$(( ${#top} - 2 ))}"
