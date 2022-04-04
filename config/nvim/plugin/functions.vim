@@ -1,10 +1,10 @@
-fun! TrimWhitespace()
+function! TrimWhitespace()
   let l:save = winsaveview()
   keeppatterns %s/\s\+$//e
   call winrestview(l:save)
 endfun
 
-fun! EmptyReg()
+function! EmptyReg()
   let regs=split('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/-"', '\zs')
   for r in regs
     call setreg(r, [])
@@ -36,7 +36,8 @@ augroup AUTO_COMMANDS
   autocmd TermOpen * setlocal nonumber norelativenumber signcolumn=no nospell
   autocmd FileType help setlocal cc=
   autocmd TextYankPost * silent! lua require'vim.highlight'.on_yank({timeout = 69})
+  autocmd CursorHold * :echo
 augroup END
 
-" misc vim script settings
+" some random fix, not sure what for.
 let g:switch_mapping = ""

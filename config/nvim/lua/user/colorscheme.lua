@@ -13,4 +13,5 @@ highlight ColorColumn guibg=#1e2132
 highlight CursorLine guibg=#1e2132
 highlight helpExample guifg=#7aa2f7
 hi link   helpCommand Constant
+highlight MsgArea guifg=#565f89
 ]])
