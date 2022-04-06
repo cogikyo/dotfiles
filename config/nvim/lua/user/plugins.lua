@@ -25,12 +25,12 @@ end
 
 -- Autocommand that reloads neovim whenever you save the plugins.lua file
 vim.cmd([[
-  augroup packer_user_config
-    autocmd!
-    autocmd BufWritePost plugins.lua source <afile> | PackerSync
-    autocmd BufWinLeave plugins.lua mkview
-    autocmd BufWinEnter plugins.lua loadview
-  augroup end
+augroup packer_user_config
+autocmd!
+autocmd BufWritePost plugins.lua source <afile> | PackerSync
+autocmd BufWinLeave plugins.lua mkview
+autocmd BufWinEnter plugins.lua loadview
+augroup end
 ]])
 
 -- Use a protected call so we don"t error out on first use
@@ -75,7 +75,7 @@ return packer.startup(function(use)
 	use("tamago324/nlsp-settings.nvim")
 	use("jose-elias-alvarez/null-ls.nvim")
 	use("ThePrimeagen/refactoring.nvim")
-	--------------------------------------------------------------------------
+	---------------------------------------------------------------------------
 
 	-- ✂️  Snippets ------------------------------------------------------------
 	use("L3MON4D3/LuaSnip") -- TODO: expand on this
@@ -125,7 +125,6 @@ return packer.startup(function(use)
 		tag = "release",
 	})
 	use("nvim-lualine/lualine.nvim")
-	use("goolord/alpha-nvim")
 	---------------------------------------------------------------------------
 
 	-- ✋ UX ------------------------------------------------------------------
@@ -135,14 +134,13 @@ return packer.startup(function(use)
 	use("kyazdani42/nvim-tree.lua")
 	use("AndrewRadev/switch.vim")
 	use("akinsho/toggleterm.nvim")
-
+	use("goolord/alpha-nvim")
 	-- TODO:
 	-- use 'nvim-pack/nvim-spectre'
 	---------------------------------------------------------------------------
 
 	-- REVIEW -----------------------------------------------------------------
 	use("ThePrimeagen/harpoon")
-	use("tpope/vim-fugitive")
 	use("tpope/vim-repeat")
 	use("tpope/vim-surround")
 	use("easymotion/vim-easymotion")
