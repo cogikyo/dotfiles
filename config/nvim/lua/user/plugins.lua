@@ -125,6 +125,7 @@ return packer.startup(function(use)
 		tag = "release",
 	})
 	use("nvim-lualine/lualine.nvim")
+	use("goolord/alpha-nvim")
 	---------------------------------------------------------------------------
 
 	-- ✋ UX ------------------------------------------------------------------
@@ -144,7 +145,6 @@ return packer.startup(function(use)
 	use("tpope/vim-fugitive")
 	use("tpope/vim-repeat")
 	use("tpope/vim-surround")
-	use("mhinz/vim-startify")
 	use("easymotion/vim-easymotion")
 	use("mattn/emmet-vim")
 	use("mbbill/undotree")
