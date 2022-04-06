@@ -1,3 +1,5 @@
+require("impatient")
+
 local config_files = {
 	"plugins",
 	"options",

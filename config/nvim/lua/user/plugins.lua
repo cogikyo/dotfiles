@@ -50,6 +50,7 @@ packer.init({
 
 return packer.startup(function(use)
 	-- 🔧 Utility -------------------------------------------------------------
+	use("lewis6991/impatient.nvim")
 	use("wbthomason/packer.nvim")
 	use("nvim-lua/popup.nvim")
 	use("nvim-lua/plenary.nvim")
@@ -95,7 +96,6 @@ return packer.startup(function(use)
 	})
 	-- TODO:
 	-- theHamsta/nvim-dap-virtual-text -- debugging
-	-- SmiteshP/nvim-gps -- status line
 	---------------------------------------------------------------------------
 
 	-- 🔭 Telescope -----------------------------------------------------------

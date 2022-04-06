@@ -114,7 +114,7 @@ map("n", "<leader>hi", ": lua vim.lsp.buf.hover()<CR>")
 
 -- 🤲 toggle
 map("n", "<leader>ut", ":UndotreeToggle<CR>")
-map("n", "<leader>tt", ":TSPlaygroundToggle<CR>")
+map("n", "<leader>HT", ":TSPlaygroundToggle<CR>")
 map("n", "<leader>ct", ":ColorizerToggle<CR>")
 map("n", "<leader>rt", ":call ToggleWrap()<CR>")
 map("n", "<leader>st", ":call ToggleSpellCheck()<CR>")
