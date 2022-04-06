@@ -15,7 +15,9 @@ local config_files = {
 	"nvim-tree",
 	"toggleterm",
 	"lualine",
+	"alpha",
 }
+
 for _, file in ipairs(config_files) do
 	require("user." .. file)
 end
