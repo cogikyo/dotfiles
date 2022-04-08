@@ -78,7 +78,7 @@ return packer.startup(function(use)
 	---------------------------------------------------------------------------
 
 	-- ✂️  Snippets ------------------------------------------------------------
-	use("L3MON4D3/LuaSnip") -- TODO: expand on this
+	use("L3MON4D3/LuaSnip") -- TODO: add custom snippets
 	use("rafamadriz/friendly-snippets")
 	---------------------------------------------------------------------------
 
@@ -94,8 +94,6 @@ return packer.startup(function(use)
 			require("spellsitter").setup()
 		end,
 	})
-	-- TODO:
-	-- theHamsta/nvim-dap-virtual-text -- debugging
 	---------------------------------------------------------------------------
 
 	-- 🔭 Telescope -----------------------------------------------------------
@@ -129,6 +127,7 @@ return packer.startup(function(use)
 
 	-- ✋ UX ------------------------------------------------------------------
 	use("iamcco/markdown-preview.nvim")
+	use("mattn/emmet-vim")
 	use("windwp/nvim-autopairs")
 	use("numToStr/Comment.nvim")
 	use("kyazdani42/nvim-tree.lua")
@@ -136,21 +135,18 @@ return packer.startup(function(use)
 	use("akinsho/toggleterm.nvim")
 	use("goolord/alpha-nvim")
 	use("nvim-pack/nvim-spectre")
-	---------------------------------------------------------------------------
-
-	-- REVIEW -----------------------------------------------------------------
 	use("ThePrimeagen/harpoon")
 	use("tpope/vim-repeat")
 	use("tpope/vim-surround")
-	use("easymotion/vim-easymotion") -- Lightspeed
-	use("mattn/emmet-vim")
 	use("mbbill/undotree")
-	use("junegunn/vim-easy-align")
+	use("ggandor/lightspeed.nvim")
 	---------------------------------------------------------------------------
 
+	-- REVIEW -----------------------------------------------------------------
 	-- MAYBE?
 	-- nvim-notify
 	-- minimap
+	---------------------------------------------------------------------------
 
 	-- Automatically set up configuration after cloning packer.nvim
 	if PACKER_BOOTSTRAP then
