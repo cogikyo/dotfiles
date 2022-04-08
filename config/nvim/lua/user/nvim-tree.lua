@@ -87,7 +87,7 @@ nvim_tree.setup({
 		mappings = {
 			custom_only = true,
 			list = {
-				{ key = { "o", "<CR>" }, action = "edit" },
+				{ key = { "o" }, action = "edit" },
 				{ key = "]]", action = "cd" },
 				{ key = "<C-v>", action = "vsplit" },
 				{ key = "<C-h>", action = "split" },
@@ -96,7 +96,7 @@ nvim_tree.setup({
 				{ key = "<Down>", action = "next_sibling" },
 				{ key = "P", action = "parent_node" },
 				{ key = "h", action = "close_node" },
-				{ key = "<Tab>", action = "preview" },
+				{ key = "<CR>", action = "preview" },
 				{ key = "K", action = "first_sibling" },
 				{ key = "J", action = "last_sibling" },
 				{ key = "I", action = "toggle_git_ignored" },

@@ -16,6 +16,7 @@ local config_files = {
 	"toggleterm",
 	"lualine",
 	"alpha",
+	"spectre",
 }
 
 for _, file in ipairs(config_files) do

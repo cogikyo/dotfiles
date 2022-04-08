@@ -159,6 +159,17 @@ local tsplayground = {
 	filetypes = { "tsplayground" },
 }
 
+local spectre = {
+	sections = {
+		lualine_a = { mode },
+		lualine_y = { filetype },
+	},
+	inactive_sections = {
+		lualine_z = { filetype },
+	},
+	filetypes = { "spectre" },
+}
+
 local search = {
 	function()
 		local last_search = vim.fn.getreg("/")
@@ -205,5 +216,6 @@ lualine.setup({
 		"quickfix",
 		"toggleterm",
 		tsplayground,
+		spectre,
 	},
 })
