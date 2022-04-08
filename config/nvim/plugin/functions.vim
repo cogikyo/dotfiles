@@ -33,7 +33,8 @@ endfunction
 augroup AUTO_COMMANDS
     autocmd!
     autocmd BufWritePre * :call TrimWhitespace()
-    autocmd TermOpen * setlocal nonumber norelativenumber signcolumn=no nospell
+    autocmd TermOpen * setlocal nonu nornu scl=no nospell
+    autocmd FileType spectre setlocal scl=no nospell cc= nonu nornu nocul
     autocmd FileType help setlocal cc=
     autocmd TextYankPost * silent! lua require'vim.highlight'.on_yank({timeout = 69})
     autocmd CursorHold * :echo

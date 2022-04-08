@@ -30,9 +30,9 @@ map("v", "<leader>p", "y`]p`]ml`[O<Esc>'lo<Esc>")
 map("v", "<leader>P", "yP`]o<Esc>j")
 
 -- 🦬 buffers
-map("n", "<leader>w", ":bp<CR>")
-map("n", "<leader>v", ":bn<CR>")
-map("n", "<leader>bd", ":bd!<CR>")
+map("n", "<leader>w", ":bp<CR>zt")
+map("n", "<leader>v", ":bn<CR>zt")
+map("n", "<leader>bd", ":bd!<CR>zt")
 
 -- 🤯 comment headers
 map("n", "<leader>HS", ":.! figlet -fshadow <CR> gcip", rec)
@@ -92,9 +92,10 @@ map("n", "<leader>T", "<cmd>lua require('telescope.builtin').live_grep()<CR>")
 map("n", "<leader>th", "<cmd>lua require('telescope.builtin').help_tags()<CR>")
 map("n", "<leader>te", "<cmd>lua require('telescope.builtin').git_files()<CR>")
 map("n", "<leader>tm", "<cmd>lua require('telescope.builtin').man_pages()<CR>")
-map("n", "<leader>F", "<cmd>lua require('telescope.builtin').quickfix()<CR>")
+map("n", "<leader>L", "<cmd>lua require('telescope.builtin').quickfix()<CR>")
 map("n", "<leader>tl", "<cmd>lua require('telescope.builtin').loclist()<CR>")
-map("n", "<leader>:", "<cmd>lua require('telescope.builtin').commands()<CR>")
+map("n", "<leader>tc", "<cmd>lua require('telescope.builtin').commands()<CR>")
+map("n", "<leader>tr", "<cmd>lua require('telescope.builtin').old()<CR>")
 map("n", "<leader>tp", "<cmd>lua require('telescope.builtin').builtin()<CR>")
 map("n", "<leader>tb", "<cmd>lua require('telescope.builtin').buffers()<CR>")
 
@@ -143,12 +144,14 @@ map("n", "<leader>ns", ":lua require('harpoon.ui').nav_file(3)<CR>zt")
 map("n", "<leader>na", ":lua require('harpoon.ui').nav_file(4)<CR>zt")
 map("n", "<leader>nd", ":lua require('harpoon.ui').nav_file(5)<CR>zt")
 
--- 👾 search
+-- 👾 spectre
 vim.cmd([[
-vnoremap s :<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
-nnoremap <leader>sa m0ggVG:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
+vnoremap s :<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left><Left>
 nnoremap <silent> <leader>N :call setreg("/", ['空'])<CR>
 ]])
+map("n", "<leader>S", "<cmd>lua require('spectre').open()<CR>")
+map("n", "<leader>sw", "<cmd>lua require('spectre').open_visual({select_word=true})<CR><Esc>2j")
+map("n", "<leader>sa", "<cmd>lua require('spectre').open_file_search()<CR>")
 
 -- 🙏 folds
 map("n", "<leader>bf", "zf%")

@@ -135,15 +135,14 @@ return packer.startup(function(use)
 	use("AndrewRadev/switch.vim")
 	use("akinsho/toggleterm.nvim")
 	use("goolord/alpha-nvim")
-	-- TODO:
-	-- use 'nvim-pack/nvim-spectre'
+	use("nvim-pack/nvim-spectre")
 	---------------------------------------------------------------------------
 
 	-- REVIEW -----------------------------------------------------------------
 	use("ThePrimeagen/harpoon")
 	use("tpope/vim-repeat")
 	use("tpope/vim-surround")
-	use("easymotion/vim-easymotion")
+	use("easymotion/vim-easymotion") -- Lightspeed
 	use("mattn/emmet-vim")
 	use("mbbill/undotree")
 	use("junegunn/vim-easy-align")
