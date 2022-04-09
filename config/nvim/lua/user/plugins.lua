@@ -142,12 +142,6 @@ return packer.startup(function(use)
 	use("ggandor/lightspeed.nvim")
 	---------------------------------------------------------------------------
 
-	-- REVIEW -----------------------------------------------------------------
-	-- MAYBE?
-	-- nvim-notify
-	-- minimap
-	---------------------------------------------------------------------------
-
 	-- Automatically set up configuration after cloning packer.nvim
 	if PACKER_BOOTSTRAP then
 		require("packer").sync()
