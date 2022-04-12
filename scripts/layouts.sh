@@ -1,12 +1,7 @@
 #!/usr/bin/env bash
 
-# ╦  ╦┌─┐┬─┐
-# ╚╗╔╝├─┤├┬┘
-#  ╚╝ ┴ ┴┴└─
-
-rofi_command="rofi -theme ~/.config/rofi/layouts.rasi"
-options=`echo "go python typeScript solidity bash lua rust react nio notes dotfiles" | tr ' ' '\n'`
-reactPath='typeScript/react'
+options=$(echo "go python typeScript solidity bash lua rust react nio notes dotfiles" | tr ' ' '\n')
+# reactPath='typeScript/react'
 
 # ╔═╗┬ ┬┌┐┌┌─┐
 # ╠╣ │ │││││
@@ -14,7 +9,7 @@ reactPath='typeScript/react'
 
 begin () {
     bspc config focus_follows_pointer false
-    bspc desktop -f ^$1
+    bspc desktop -f ^"$1"
     bspc config single_monocle  false
     bspc desktop -l tiled
     alacritty & sleep 0.25
@@ -23,17 +18,17 @@ begin () {
 end () {
     bspc config focus_follows_pointer true
     bspc config single_monocle  true
-    notify-send -u low -t 1500 init $1 -i "$HOME/dotfiles/resources/icons/tmux_icon.svg"
+    notify-send -u low -t 1500 init "$1" -i "$HOME/dotfiles/resources/icons/tmux_icon.svg"
 }
 
 open () {
-    begin $1
-    basics $2
-    end $2
+    begin "$1"
+    layout "$2"
+    end "$2"
 }
 
 web () {
-    firefox --new-window $1 & sleep 1
+    firefox --new-window "$1" & sleep 1
 }
 
 cava () {
@@ -44,11 +39,11 @@ basic_down () {
     cava
     bspc config split_ratio 0.895
     bspc node -p north
-    web $1
+    web "$1"
 }
 
 basic_up () {
-    web $1
+    web "$1"
     bspc config split_ratio 0.105
     bspc node -p north
     cava
@@ -58,18 +53,24 @@ basic_up () {
 # ║  ├─┤└┬┘│ ││ │ │ └─┐
 # ╩═╝┴ ┴ ┴ └─┘└─┘ ┴ └─┘
 
-basics () {
+layout () {
     bspc config split_ratio 0.321
 
     case $1 in
         dotfiles)
-            basic_down https://github.com/nosvagor/$1
+            basic_down https://github.com/nosvagor/"$1"
             ;;
         notes)
-            basic_up https://github.com/nosvagor/$1
+            basic_up https://github.com/nosvagor/"$1"
             ;;
-        react|go|typeScript|solidity|python|lua|bash|rust)
+        react|go|solidity|python|lua|bash|rust)
             basic_down
+            ;;
+        typeScript)
+            web https://www.udemy.com/home/my-courses/learning/
+            bspc config split_ratio 0.60
+            bspc node -p south
+            web localhost:3000
             ;;
     esac
 
@@ -81,16 +82,16 @@ basics () {
 # ╚═╗├┤ │  ├┤ │   │ ││ ││││
 # ╚═╝└─┘┴─┘└─┘└─┘ ┴ ┴└─┘┘└┘
 
-chosen="$(echo -e "$options" | $rofi_command -p "ﱖ" -dmenu)"
+chosen="$(echo -e "$options" | rofi -theme ~/.config/rofi/layouts.rasi -p "ﱖ" -dmenu)"
 case $chosen in
     dotfiles)
-        open 4 $chosen
+        open 4 "$chosen"
         ;;
     notes)
-        open 5 $chosen
+        open 5 "$chosen"
         ;;
     go|typeScript|solidity|python|bash|lua|rust|react)
-        open 3 $chosen
+        open 3 "$chosen"
         ;;
     nio)
         open 4 dotfiles
