@@ -40,5 +40,12 @@ augroup AUTO_COMMANDS
     autocmd CursorHold * :echo
 augroup END
 
+
+augroup TYPESCRIPT
+    autocmd!
+    autocmd FileType typescript nnoremap <silent> F :! tsc app.ts <CR>
+    autocmd FileType typescript setlocal nospell shiftwidth=2 softtabstop=2 tabstop=2
+augroup END
+
 " some random fix, not sure what for.
 let g:switch_mapping = ""

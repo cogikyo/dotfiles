@@ -12,19 +12,22 @@ null_ls.setup({
 	debug = false,
 	sources = {
 		formatting.prettier.with({
-			extra_args = { "--no-semi", "--single-quote", "--jsx-single-quote" },
+			extra_args = { "--single-quote", "--jsx-single-quote" },
 		}),
 		formatting.black.with({
 			extra_args = { "--fast" },
 		}),
 		formatting.stylua,
+		formatting.shellharden,
 
 		diagnostics.flake8,
+		diagnostics.shellcheck,
 		diagnostics.eslint,
 		diagnostics.luacheck.with({
 			extra_args = { "--globals" },
 		}),
 
+		code_actions.shellcheck,
 		code_actions.refactoring,
 		code_actions.eslint,
 		code_actions.proselint.with({
