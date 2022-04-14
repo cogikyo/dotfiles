@@ -16,8 +16,6 @@ null_ls.setup({
 				"--single-quote",
 				"--jsx-single-quote",
 				"--print-width 80",
-				"--tab-width 4",
-				"--use-tabs",
 			},
 		}),
 		formatting.black.with({
@@ -29,6 +27,7 @@ null_ls.setup({
 		diagnostics.flake8,
 		diagnostics.shellcheck,
 		diagnostics.eslint,
+		diagnostics.jsonlint,
 		diagnostics.luacheck.with({
 			extra_args = { "--globals" },
 		}),
