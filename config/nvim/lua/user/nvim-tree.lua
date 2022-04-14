@@ -28,7 +28,6 @@ vim.g.nvim_tree_special_files = {
 	["README.md"] = true,
 	["readme.md"] = true,
 }
-vim.g.nvim_tree_indent_markers = 1
 
 local status_ok, nvim_tree = pcall(require, "nvim-tree")
 if not status_ok then
@@ -50,6 +49,16 @@ nvim_tree.setup({
 		auto_open = true,
 	},
 	hijack_cursor = true,
+	renderer = {
+		indent_markers = {
+			enable = true,
+			icons = {
+				corner = "└╾ ",
+				edge = "│ ",
+				none = "  ",
+			},
+		},
+	},
 	update_cwd = false,
 	update_focused_file = {
 		enable = true,

@@ -6,7 +6,7 @@ end
 configs.setup({
 
 	-- Auto install
-	ensure_installed = "maintained",
+	ensure_installed = "all",
 	sync_install = false,
 	ignore_install = {}, -- Name of parser, not filetype.
 
