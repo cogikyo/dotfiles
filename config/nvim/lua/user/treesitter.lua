@@ -8,7 +8,7 @@ configs.setup({
 	-- Auto install
 	ensure_installed = "all",
 	sync_install = false,
-	ignore_install = {}, -- Name of parser, not filetype.
+	ignore_install = { "help" }, -- Name of parser, not filetype.
 
 	-- ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐
 	-- ││││ │ │││ ││  ├┤ └─┐

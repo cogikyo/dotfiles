@@ -3,14 +3,19 @@ if not status_ok then
 	return
 end
 
-local path_ok, path = pcall(require, "plenary.path")
+local path_ok, plenary_path = pcall(require, "plenary.path")
 if not path_ok then
 	return
 end
 
 local dashboard = require("alpha.themes.dashboard")
-local nvim_web_devicons = require("nvim-web-devicons")
 local cdir = vim.fn.getcwd()
+local if_nil = vim.F.if_nil
+
+local nvim_web_devicons = {
+	enabled = true,
+	highlight = true,
+}
 
 local function get_extension(fn)
 	local match = fn:match("^.+(%..+)$")
@@ -32,22 +37,25 @@ local function file_button(fn, sc, short_fn)
 	local ico_txt
 	local fb_hl = {}
 
-	local ico, hl = icon(fn)
-	local hl_option_type = type(nvim_web_devicons.highlight)
-	if hl_option_type == "boolean" then
-		if hl and nvim_web_devicons.highlight then
-			table.insert(fb_hl, { hl, 0, 1 })
+	if nvim_web_devicons.enabled then
+		local ico, hl = icon(fn)
+		local hl_option_type = type(nvim_web_devicons.highlight)
+		if hl_option_type == "boolean" then
+			if hl and nvim_web_devicons.highlight then
+				table.insert(fb_hl, { hl, 0, 3 })
+			end
 		end
+		if hl_option_type == "string" then
+			table.insert(fb_hl, { nvim_web_devicons.highlight, 0, 3 })
+		end
+		ico_txt = ico .. "  "
+	else
+		ico_txt = ""
 	end
-	if hl_option_type == "string" then
-		table.insert(fb_hl, { nvim_web_devicons.highlight, 0, 1 })
-	end
-	ico_txt = ico .. "  "
-
 	local file_button_el = dashboard.button(sc, ico_txt .. short_fn, "<cmd>e " .. fn .. " <CR>")
-	local fn_start = short_fn:match(".*/")
+	local fn_start = short_fn:match(".*[/\\]")
 	if fn_start ~= nil then
-		table.insert(fb_hl, { "Comment", #ico_txt - 2, #fn_start + #ico_txt - 2 })
+		table.insert(fb_hl, { "Comment", #ico_txt - 2, #fn_start + #ico_txt })
 	end
 	file_button_el.opts.hl = fb_hl
 	return file_button_el
@@ -61,12 +69,9 @@ local mru_opts = {
 	end,
 }
 
---- @param start number
---- @param cwd string optional
---- @param items_number number optional number of items to generate, default = 10
 local function mru(start, cwd, items_number, opts)
 	opts = opts or mru_opts
-	items_number = items_number or 9
+	items_number = if_nil(items_number, 10)
 
 	local oldfiles = {}
 	for _, v in pairs(vim.v.oldfiles) do
@@ -84,8 +89,6 @@ local function mru(start, cwd, items_number, opts)
 			oldfiles[#oldfiles + 1] = v
 		end
 	end
-
-	local special_shortcuts = { "a", "s", "d" }
 	local target_width = 35
 
 	local tbl = {}
@@ -98,20 +101,15 @@ local function mru(start, cwd, items_number, opts)
 		end
 
 		if #short_fn > target_width then
-			short_fn = path.new(short_fn):shorten(1, { -2, -1 })
+			short_fn = plenary_path.new(short_fn):shorten(1, { -2, -1 })
 			if #short_fn > target_width then
-				short_fn = path.new(short_fn):shorten(1, { -1 })
+				short_fn = plenary_path.new(short_fn):shorten(1, { -1 })
 			end
 		end
 
-		local shortcut = ""
-		if i <= #special_shortcuts then
-			shortcut = special_shortcuts[i]
-		else
-			shortcut = tostring(i + start - 1 - #special_shortcuts)
-		end
+		local shortcut = tostring(i + start - 1)
 
-		local file_button_el = file_button(fn, " " .. shortcut, short_fn)
+		local file_button_el = file_button(fn, shortcut, short_fn)
 		tbl[i] = file_button_el
 	end
 	return {
@@ -119,6 +117,10 @@ local function mru(start, cwd, items_number, opts)
 		val = tbl,
 		opts = {},
 	}
+end
+
+local function mru_title()
+	return "MRU פּ " .. cdir
 end
 
 local header = {
@@ -150,9 +152,9 @@ local section_mru = {
 	val = {
 		{
 			type = "text",
-			val = "Recent files",
+			val = mru_title(),
 			opts = {
-				hl = "SpecialComment",
+				hl = "Function",
 				shrink_margin = false,
 				position = "center",
 			},
@@ -171,17 +173,15 @@ local section_mru = {
 local buttons = {
 	type = "group",
 	val = {
-		{ type = "text", val = "Quick actions", opts = { hl = "SpecialComment", position = "center" } },
+		{ type = "text", val = "Quick Actions", opts = { hl = "Function", position = "center" } },
 		{ type = "padding", val = 1 },
 		dashboard.button("t", "  Find file", ":Telescope find_files <CR>"),
-		dashboard.button("r", "  Recently used files", ":Telescope oldfiles <CR>"),
 		dashboard.button("T", "  Live grep", ":Telescope live_grep <CR>"),
+		dashboard.button("r", "  Recently used files", ":Telescope oldfiles <CR>"),
 		dashboard.button("c", "  Neovim config", ":cd ~/dotfiles/config/nvim/<CR> :e lua/user/plugins.lua<CR>"),
-		dashboard.button("C", "  Dotfiles config", ":cd ~/dotfiles<CR>"),
-		dashboard.button("u", "  Update plugins", ":PackerSync<CR>"),
+		dashboard.button("C", "  Dotfiles config", ":cd ~/dotfiles/<CR> :e home/.zshrc"),
 		dashboard.button("q", "  Quit neovim", ":qa<CR>"),
 	},
-	position = "center",
 }
 
 local opts = {

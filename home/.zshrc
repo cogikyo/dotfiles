@@ -1,18 +1,3 @@
-# ███████╗███████╗██╗  ██╗██████╗  ██████╗
-# ╚══███╔╝██╔════╝██║  ██║██╔══██╗██╔════╝
-#   ███╔╝ ███████╗███████║██████╔╝██║
-#  ███╔╝  ╚════██║██╔══██║██╔══██╗██║
-# ███████╗███████║██║  ██║██║  ██║╚██████╗
-# ╚══════╝╚══════╝╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝
-# →-.   →  .-'.   →  .--.   →  .--.   →  .--.   →  .-→
-# →::.\::::::::.\::::::::.\::::::::.\::::::::.\::::::: → →
-# → →:.\ https://github.com/nosvagor/dotfiles \::: → →  →  →
-# →::::.\::::::::.\::::::::.\::::::::.\::::::::.\::::→  →
-#   → →   `--'  →   `.-'  →   `--'  →   `--'  →   `--' → →
-
-# ╦┌┐┌┬┌┬┐
-# ║││││ │
-# ╩┘└┘┴ ┴
 
 # autostart startx after login
 if [[ -z $DISPLAY ]] && [[ $(tty) = /dev/tty1 ]]; then
@@ -23,7 +8,6 @@ export GOPATH="$HOME/.go"
 export PATH="$PATH:$HOME/.go/bin"
 export PATH="$PATH:$HOME/.local/bin"
 export PATH="$PATH:$HOME/dotfiles/scripts"
-export PATH="$PATH:$HOME/notes/bash/bash_course" #temporary
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 export TEXINPUTS="$HOME/notes/.assets/tex//:"
