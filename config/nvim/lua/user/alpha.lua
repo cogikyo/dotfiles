@@ -179,7 +179,7 @@ local buttons = {
 		dashboard.button("T", "  Live grep", ":Telescope live_grep <CR>"),
 		dashboard.button("r", "  Recently used files", ":Telescope oldfiles <CR>"),
 		dashboard.button("c", "  Neovim config", ":cd ~/dotfiles/config/nvim/<CR> :e lua/user/plugins.lua<CR>"),
-		dashboard.button("C", "  Dotfiles config", ":cd ~/dotfiles/<CR> :e home/.zshrc"),
+		dashboard.button("C", "  Dotfiles config", ":cd ~/dotfiles/<CR> :e scripts/layouts.sh<CR>"),
 		dashboard.button("q", "  Quit neovim", ":qa<CR>"),
 	},
 }

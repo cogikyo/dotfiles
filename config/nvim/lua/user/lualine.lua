@@ -55,6 +55,7 @@ local modes = {
 	["NORMAL"] = "ﯢ",
 	["INSERT"] = "",
 	["VISUAL"] = "﯎",
+	["SELECT"] = "",
 	["V-LINE"] = "",
 	["V-BLOCK"] = "",
 	["COMMAND"] = "גּ",
@@ -114,8 +115,8 @@ local filename = {
 			V = utils.brighten(colors.magenta, 0.33),
 			c = utils.brighten(colors.orange, 0.3),
 			R = utils.brighten(colors.red, 0.2),
-			s = utils.brighten(colors.orange, 0.3),
-			S = utils.brighten(colors.orange, 0.3),
+			s = utils.brighten(colors.teal, 0.3),
+			S = utils.brighten(colors.teal, 0.3),
 		}
 		return { fg = mode_color[vim.fn.mode()] }
 	end,
