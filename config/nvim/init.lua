@@ -2,8 +2,6 @@ require("impatient")
 
 local config_files = {
 	"plugins",
-	"options",
-	"keymaps",
 	"cmp",
 	"colorscheme",
 	"lsp",
@@ -17,6 +15,8 @@ local config_files = {
 	"lualine",
 	"alpha",
 	"spectre",
+	"options",
+	"keymaps",
 }
 
 for _, file in ipairs(config_files) do

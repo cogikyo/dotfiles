@@ -102,7 +102,7 @@ map("n", "<leader>tm", "<cmd>lua require('telescope.builtin').man_pages()<CR>")
 map("n", "<leader>L", "<cmd>lua require('telescope.builtin').quickfix()<CR>")
 map("n", "<leader>tl", "<cmd>lua require('telescope.builtin').loclist()<CR>")
 map("n", "<leader>tc", "<cmd>lua require('telescope.builtin').commands()<CR>")
-map("n", "<leader>tr", "<cmd>lua require('telescope.builtin').old()<CR>")
+map("n", "<leader>tr", "<cmd>lua require('telescope.builtin').oldfiles()<CR>")
 map("n", "<leader>tp", "<cmd>lua require('telescope.builtin').builtin()<CR>")
 map("n", "<leader>tb", "<cmd>lua require('telescope.builtin').buffers()<CR>")
 
