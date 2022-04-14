@@ -153,7 +153,7 @@ map("n", "<leader>nd", ":lua require('harpoon.ui').nav_file(5)<CR>zt")
 
 -- 👾 spectre
 vim.cmd([[
-vnoremap s :<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
+vnoremap <leader>s :<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
 nnoremap <silent> <leader>N :call setreg("/", ['空'])<CR>
 ]])
 map("n", "<leader>S", "<cmd>lua require('spectre').open()<CR>")

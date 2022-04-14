@@ -44,7 +44,7 @@ augroup END
 augroup TYPESCRIPT
     autocmd!
     autocmd FileType typescript nnoremap <silent> F :! tsc % <CR>
-    autocmd FileType typescript setlocal nospell shiftwidth=2 softtabstop=2 tabstop=2
+    autocmd FileType typescript setlocal nospell
 augroup END
 
 " some random fix, not sure what for.

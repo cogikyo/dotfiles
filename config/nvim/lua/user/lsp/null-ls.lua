@@ -12,7 +12,13 @@ null_ls.setup({
 	debug = false,
 	sources = {
 		formatting.prettier.with({
-			extra_args = { "--single-quote", "--jsx-single-quote" },
+			extra_args = {
+				"--single-quote",
+				"--jsx-single-quote",
+				"--print-width 80",
+				"--tab-width 4",
+				"--use-tabs",
+			},
 		}),
 		formatting.black.with({
 			extra_args = { "--fast" },
