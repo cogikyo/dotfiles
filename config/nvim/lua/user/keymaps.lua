@@ -129,7 +129,7 @@ map("n", "<leader>st", ":call ToggleSpellCheck()<CR>")
 map("n", "<leader>mt", ":MarkdownPreviewToggle<CR>,")
 map("n", "<leader>hl", ":TSHighlightCapturesUnderCursor<CR>")
 map("n", "<leader>lt", ":LspInstallInfo<CR>")
-map("n", "<leader>et", ":NvimTreeToggle<CR>")
+map("n", "<leader>et", ":NvimTreeToggle<CR> :NvimTreeRefresh<CR>")
 map("n", "<leader>bt", ":Switch<CR>")
 map("n", "<leader>it", ":NullLsInfo<CR>")
 

@@ -8,7 +8,7 @@ vim.g.nvim_tree_icons = {
 		renamed = "",
 		deleted = "",
 		untracked = "⧂",
-		ignored = "",
+		ignored = "",
 	},
 	folder = {
 		arrow_open = "",
@@ -81,7 +81,7 @@ nvim_tree.setup({
 	},
 	git = {
 		enable = true,
-		ignore = true,
+		ignore = false,
 		timeout = 420,
 	},
 	view = {
@@ -110,7 +110,7 @@ nvim_tree.setup({
 				{ key = "J", action = "last_sibling" },
 				{ key = "I", action = "toggle_git_ignored" },
 				{ key = ".", action = "toggle_dotfiles" },
-				{ key = "R", action = "refresh" },
+				{ key = "<C-r>", action = "refresh" },
 				{ key = "t", action = "create" },
 				{ key = "d", action = "trash" },
 				{ key = "D", action = "remove" },

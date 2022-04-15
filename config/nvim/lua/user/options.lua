@@ -56,7 +56,6 @@ local options = {
 	splitright = true,
 	showmode = false,
 	completeopt = { "menuone", "noselect", "noinsert" },
-	formatoptions = "tcrqnj",
 	iskeyword = "@,48-57,_,-,192-255",
 	-- ========================================================================
 
