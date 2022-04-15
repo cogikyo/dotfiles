@@ -9,7 +9,7 @@ if not path_ok then
 end
 
 local dashboard = require("alpha.themes.dashboard")
-local cdir = vim.fn.getcwd()
+local cdir = vim.fn.fnamemodify(vim.fn.getcwd(), ":~")
 local if_nil = vim.F.if_nil
 
 local nvim_web_devicons = {
