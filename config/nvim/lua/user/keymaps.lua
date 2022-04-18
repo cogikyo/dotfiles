@@ -42,8 +42,8 @@ map("n", "<leader>v", ":bn<CR>zt")
 map("n", "<leader>bd", ":bd!<CR>zt")
 
 -- 🤯 comment headers
-map("n", "<leader>HS", ":.! figlet -fshadow <CR> gcip", rec)
-map("n", "<leader>HC", ":.! figlet -fcalvin <CR> gcip", rec)
+map("n", "HS", ":.! figlet -fshadow <CR> gcip", rec)
+map("n", "HC", ":.! figlet -fcalvin <CR> gcip", rec)
 
 -- 🌌 gimme space please
 map("n", "<leader>o", ':<C-u>call append(line("."),   repeat([""], v:count1))<CR>')
@@ -54,8 +54,6 @@ map("n", "<leader>d", '"_d')
 map("v", "<leader>d", '"_d')
 map("v", "<", "<gv")
 map("v", ">", ">gv")
-map("v", "<Up>", ":m '<-2<CR>gv-gv")
-map("v", "<Down>", ":m '>+1<CR>gv-gv")
 
 -- 🎯 keep cursor 'centered'
 map("n", "G", "Gzt")
