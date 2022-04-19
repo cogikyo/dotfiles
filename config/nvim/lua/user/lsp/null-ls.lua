@@ -33,7 +33,7 @@ null_ls.setup({
 		}),
 
 		code_actions.shellcheck,
-		code_actions.refactoring,
+		-- code_actions.refactoring,
 		code_actions.eslint,
 		code_actions.proselint.with({
 			filetypes = { "markdown", "tex", "txt" },

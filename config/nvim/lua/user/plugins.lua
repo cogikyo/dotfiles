@@ -74,7 +74,7 @@ return packer.startup(function(use)
 	use("williamboman/nvim-lsp-installer")
 	use("tamago324/nlsp-settings.nvim")
 	use("jose-elias-alvarez/null-ls.nvim")
-	use("ThePrimeagen/refactoring.nvim")
+	-- use("ThePrimeagen/refactoring.nvim") TODO: fix
 	---------------------------------------------------------------------------
 
 	-- ✂️  Snippets ------------------------------------------------------------
