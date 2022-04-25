@@ -77,8 +77,9 @@ if not tsht_ok then
 end
 
 vim.cmd([[
-omap     <silent> m :<C-U>lua require('tsht').nodes()<CR>
-vnoremap <silent> m :lua require('tsht').nodes()<CR>
+omap     <silent> <leader><C-v> :<C-U>lua require('tsht').nodes()<CR>
+vnoremap <silent> <leader><C-v> :lua require('tsht').nodes()<CR>
+nnoremap <silent> <leader><C-v> v :lua require('tsht').nodes()<CR>
 ]])
 
 tsht.config.hint_keys = { "a", "s", "e", "t", "n", "i", "o", "l" }
