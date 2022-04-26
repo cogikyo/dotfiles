@@ -54,6 +54,8 @@ map("n", "<leader>d", '"_d')
 map("v", "<leader>d", '"_d')
 map("v", "<", "<gv")
 map("v", ">", ">gv")
+map("v", "<Up>", ":m '<-2<CR>gv-gv")
+map("v", "<Down>", ":m '>+1<CR>gv-gv")
 
 -- 🎯 keep cursor 'centered'
 map("n", "G", "Gzt")
@@ -154,10 +156,10 @@ vim.cmd([[
 vnoremap <leader>r :<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
 nnoremap <silent> <leader>N :call setreg("/", ['空'])<CR>
 ]])
-map("n", "<leader>S", "<cmd>lua require('spectre').open()<CR>")
-map("n", "<leader>sw", "yiw: lua require('spectre').open_file_search()<CR>p")
-map("v", "<leader>sv", "y: lua require('spectre').open_file_search()<CR>p")
-map("n", "<leader>sa", "<cmd>lua require('spectre').open_file_search()<CR>")
+map("n", "<leader>S", ":w<CR> <cmd>lua require('spectre').open()<CR>")
+map("n", "<leader>sw", ":w<CR> yiw: lua require('spectre').open_file_search()<CR>p")
+map("v", "<leader>sw", "yiw :w<CR> : lua require('spectre').open_file_search()<CR>p")
+map("n", "<leader>sa", ":w<CR> <cmd>lua require('spectre').open_file_search()<CR>")
 
 -- 🙏 folds
 map("n", "<leader>bf", "zf%")
