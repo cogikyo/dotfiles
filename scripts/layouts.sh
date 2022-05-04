@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 options=$(echo "go python typeScript solidity bash lua rust react nio notes dotfiles" | tr ' ' '\n')
-# reactPath='typeScript/react'
 
 # ╔═╗┬ ┬┌┐┌┌─┐
 # ╠╣ │ │││││
@@ -36,7 +35,6 @@ cava () {
 }
 
 basic_down () {
-    cava
     bspc config split_ratio 0.895
     bspc node -p north
     web "$1"
@@ -46,7 +44,6 @@ basic_up () {
     web "$1"
     bspc config split_ratio 0.105
     bspc node -p north
-    cava
 }
 
 # ╦  ┌─┐┬ ┬┌─┐┬ ┬┌┬┐┌─┐
@@ -67,7 +64,7 @@ layout () {
             basic_down
             ;;
         typeScript)
-            web https://www.udemy.com/home/my-courses/learning/
+            web https://fireship.io/courses/react/
             bspc config split_ratio 0.60
             bspc node -p south
             web localhost:3000
