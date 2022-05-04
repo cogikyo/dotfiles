@@ -35,6 +35,7 @@ cava () {
 }
 
 basic_down () {
+    cava
     bspc config split_ratio 0.895
     bspc node -p north
     web "$1"
@@ -44,6 +45,7 @@ basic_up () {
     web "$1"
     bspc config split_ratio 0.105
     bspc node -p north
+    cava
 }
 
 # ╦  ┌─┐┬ ┬┌─┐┬ ┬┌┬┐┌─┐
