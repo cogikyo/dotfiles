@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 options=$(echo "go python typeScript solidity bash lua rust react nio notes dotfiles" | tr ' ' '\n')
+tsLearn="https://fireship.io/courses/react-next-firebase/"
 
 # ╔═╗┬ ┬┌┐┌┌─┐
 # ╠╣ │ │││││
@@ -66,7 +67,7 @@ layout () {
             basic_down
             ;;
         typeScript)
-            web https://fireship.io/courses/react/
+            web "$tsLearn"
             bspc config split_ratio 0.60
             bspc node -p south
             web localhost:3000
