@@ -126,7 +126,6 @@ return packer.startup(function(use)
 	---------------------------------------------------------------------------
 
 	-- ✋ UX ------------------------------------------------------------------
-	use("iamcco/markdown-preview.nvim")
 	use("mattn/emmet-vim")
 	use("windwp/nvim-autopairs")
 	use("numToStr/Comment.nvim")
@@ -134,6 +133,10 @@ return packer.startup(function(use)
 	use("AndrewRadev/switch.vim")
 	use("akinsho/toggleterm.nvim")
 	use("goolord/alpha-nvim")
+	use({
+		"iamcco/markdown-preview.nvim",
+		run = "cd app && yarn install",
+	})
 	use("nvim-pack/nvim-spectre")
 	use("ThePrimeagen/harpoon")
 	use("tpope/vim-repeat")
