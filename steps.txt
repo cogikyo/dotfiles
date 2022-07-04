@@ -1,0 +1,166 @@
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                             ██████╗ ██████╗ ███████╗
+                             ██╔══██╗██╔══██╗██╔════╝
+                             ██████╔╝██████╔╝█████╗
+                             ██╔═══╝ ██╔══██╗██╔══╝
+                             ██║     ██║  ██║███████╗
+                             ╚═╝     ╚═╝  ╚═╝╚══════╝
+
+https://wiki.archlinux.org/title/installation_guide
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+┬┌┐┌┌─┐┌┬┐┌─┐┬  ┬  ┌─┐┌┬┐┬┌─┐┌┐┌
+││││└─┐ │ ├─┤│  │  ├─┤ │ ││ ││││
+┴┘└┘└─┘ ┴ ┴ ┴┴─┘┴─┘┴ ┴ ┴ ┴└─┘┘└┘
+###############################################################################
+
+1.1 Acquire an installation image
+    - get latest arch iso:
+        https://archlinux.org/download/
+
+1.2 Verify signature (downloaded from official torrent, not needed)
+
+1.3 Prepare an installation medium
+
+    - find USB device:
+        lsblk -f
+    - write to usb using dd (sd"x", do not use partition number):
+        dd bs=4M if=path/to/archlinux-version-x86_64.iso of=/dev/sdx conv=fsync oflag=direct status=progress
+
+1.4 Boot to iso
+    - run archinstall
+
+###############################################################################
+
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        ██████╗  ██████╗ ███████╗████████╗
+                        ██╔══██╗██╔═══██╗██╔════╝╚══██╔══╝
+                        ██████╔╝██║   ██║███████╗   ██║
+                        ██╔═══╝ ██║   ██║╚════██║   ██║
+                        ██║     ╚██████╔╝███████║   ██║
+                        ╚═╝      ╚═════╝ ╚══════╝   ╚═╝
+
+https://wiki.archlinux.org/title/General_recommendations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+╔═╗┌┬┐┌┬┐┬┌┐┌┬┌─┐┌┬┐┬─┐┌─┐┌┬┐┬┌─┐┌┐┌
+╠═╣ ││││││││││└─┐ │ ├┬┘├─┤ │ ││ ││││
+╩ ╩─┴┘┴ ┴┴┘└┘┴└─┘ ┴ ┴└─┴ ┴ ┴ ┴└─┘┘└┘
+###############################################################################
+
+
+###############################################################################
+
+
+
+
+
+
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                         █████╗ ██████╗ ██████╗ ███████╗
+                        ██╔══██╗██╔══██╗██╔══██╗██╔════╝
+                        ███████║██████╔╝██████╔╝███████╗
+                        ██╔══██║██╔═══╝ ██╔═══╝ ╚════██║
+                        ██║  ██║██║     ██║     ███████║
+                        ╚═╝  ╚═╝╚═╝     ╚═╝     ╚══════╝
+
+https://wiki.archlinux.org/title/List_of_applications
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+CORE:
+base
+git
+sudo
+tmux
+urxvt
+wget
+curl
+coreutils
+bat
+vim
+basel-devel
+nnn
+fzf
+zsh
+gzip
+unzip
+btop
+bluez
+bluez-utils
+
+DEPENDENCIES:
+libevdev
+libconfig
+pkgconf
+gtk3
+gtk2
+
+LANGUAGES:
+typescript/javascript
+python
+rust
+go
+cmake
+sassc
+
+
+AUR (or not):
+paru: https://github.com/morganamilo/paru
+dwl
+dunst
+oguri
+qeh
+bemenu
+wofi
+swhkd
+zoom
+wf-recorder
+gpick
+grim
+slurp
+glava
+mpv
+ffmpeg
+neovim
+zathura
+zathura-djvu
+zathura-pdf-mupdf
+wlogout
+figlet
+cbonsai
+bitwarden
+openssh
+noto-fonts
+noto-fonts-cjk
+noto-fonts-emoji
+noto-fonts-extra
+nerd-fonts-complete
+lightly-qt
+vimix-gtk-themes
+nordzy-icon-theme-git
+nordzy-cursors
+
+
+chromium
+firefox-developer-edition
+qbittorrent
+
+wl-clipboard
+
+gimp
+rawtherapee
+inkscape
+blender
+sweep
+olive
+libreoffice-fresh
+texlive-most
+texlive-fontsextra
+
+
+go-ipfs
+
+
+
+
+
