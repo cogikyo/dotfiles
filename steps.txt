@@ -19,6 +19,7 @@ https://wiki.archlinux.org/title/installation_guide
 
 1.4 Boot to iso
     archinstall
+    - git, openssh
 
 1.5 Install AUR helper
     sudo pacman -S --needed base-devel
