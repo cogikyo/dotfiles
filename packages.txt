@@ -32,6 +32,7 @@ rust
 go
 cmake
 sassc
+dwl
 wl-clipboard
 paru
 dwl
