@@ -17,7 +17,6 @@ unzip
 btop
 bluez
 bluez-utils
-stow
 
 libevdev
 libconfig
