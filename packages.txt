@@ -2,8 +2,9 @@ base
 git
 stow
 sudo
+dkms
+linux-headers
 tmux
-urxvt
 wget
 curl
 coreutils
@@ -26,16 +27,12 @@ gtk3
 gtk2
 npm
 typescript
-javascript
 python
 rust
 go
 cmake
 sassc
-dwl
 wl-clipboard
-paru
-dwl
 dunst
 oguri
 qeh
@@ -63,7 +60,7 @@ noto-fonts
 noto-fonts-cjk
 noto-fonts-emoji-git
 noto-fonts-extra
-nerd-fonts-complete
+nerd-fonts-complete-starship
 lightly-qt
 vimix-gtk-themes
 nordzy-icon-theme-git
@@ -78,9 +75,6 @@ blender
 sweep
 olive
 libreoffice-fresh
-texlive-most
-texlive-fontsextra
 lazygit
 nvim-packer-git
-nerd-fonts-complete-starship
 thefuck
