@@ -1,17 +1,7 @@
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                             ██████╗ ██████╗ ███████╗
-                             ██╔══██╗██╔══██╗██╔════╝
-                             ██████╔╝██████╔╝█████╗
-                             ██╔═══╝ ██╔══██╗██╔══╝
-                             ██║     ██║  ██║███████╗
-                             ╚═╝     ╚═╝  ╚═╝╚══════╝
-
-https://wiki.archlinux.org/title/installation_guide
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
 ┬┌┐┌┌─┐┌┬┐┌─┐┬  ┬  ┌─┐┌┬┐┬┌─┐┌┐┌
 ││││└─┐ │ ├─┤│  │  ├─┤ │ ││ ││││
 ┴┘└┘└─┘ ┴ ┴ ┴┴─┘┴─┘┴ ┴ ┴ ┴└─┘┘└┘
+https://wiki.archlinux.org/title/installation_guide
 ###############################################################################
 
 1.1 Acquire an installation image
@@ -30,137 +20,13 @@ https://wiki.archlinux.org/title/installation_guide
 1.4 Boot to iso
     - run archinstall
 
-###############################################################################
+1.5 Install AUR helper
+    sudo pacman -S --needed base-devel
+    git clone https://aur.archlinux.org/paru.git
+    cd paru
+    makepkg -see
+
+1.6 clone dotfiles
 
 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                        ██████╗  ██████╗ ███████╗████████╗
-                        ██╔══██╗██╔═══██╗██╔════╝╚══██╔══╝
-                        ██████╔╝██║   ██║███████╗   ██║
-                        ██╔═══╝ ██║   ██║╚════██║   ██║
-                        ██║     ╚██████╔╝███████║   ██║
-                        ╚═╝      ╚═════╝ ╚══════╝   ╚═╝
-
-https://wiki.archlinux.org/title/General_recommendations
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-╔═╗┌┬┐┌┬┐┬┌┐┌┬┌─┐┌┬┐┬─┐┌─┐┌┬┐┬┌─┐┌┐┌
-╠═╣ ││││││││││└─┐ │ ├┬┘├─┤ │ ││ ││││
-╩ ╩─┴┘┴ ┴┴┘└┘┴└─┘ ┴ ┴└─┴ ┴ ┴ ┴└─┘┘└┘
-###############################################################################
-
-
-###############################################################################
-
-
-
-
-
-
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-                         █████╗ ██████╗ ██████╗ ███████╗
-                        ██╔══██╗██╔══██╗██╔══██╗██╔════╝
-                        ███████║██████╔╝██████╔╝███████╗
-                        ██╔══██║██╔═══╝ ██╔═══╝ ╚════██║
-                        ██║  ██║██║     ██║     ███████║
-                        ╚═╝  ╚═╝╚═╝     ╚═╝     ╚══════╝
-
-https://wiki.archlinux.org/title/List_of_applications
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-CORE:
-base
-git
-sudo
-tmux
-urxvt
-wget
-curl
-coreutils
-bat
-vim
-basel-devel
-nnn
-fzf
-zsh
-gzip
-unzip
-btop
-bluez
-bluez-utils
-
-DEPENDENCIES:
-libevdev
-libconfig
-pkgconf
-gtk3
-gtk2
-
-LANGUAGES:
-typescript/javascript
-python
-rust
-go
-cmake
-sassc
-
-
-AUR (or not):
-paru: https://github.com/morganamilo/paru
-dwl
-dunst
-oguri
-qeh
-bemenu
-wofi
-swhkd
-zoom
-wf-recorder
-gpick
-grim
-slurp
-glava
-mpv
-ffmpeg
-neovim
-zathura
-zathura-djvu
-zathura-pdf-mupdf
-wlogout
-figlet
-cbonsai
-bitwarden
-openssh
-noto-fonts
-noto-fonts-cjk
-noto-fonts-emoji
-noto-fonts-extra
-nerd-fonts-complete
-lightly-qt
-vimix-gtk-themes
-nordzy-icon-theme-git
-nordzy-cursors
-
-
-chromium
-firefox-developer-edition
-qbittorrent
-
-wl-clipboard
-
-gimp
-rawtherapee
-inkscape
-blender
-sweep
-olive
-libreoffice-fresh
-texlive-most
-texlive-fontsextra
-
-
-go-ipfs
-
-
-
-
-
+1.7 Install Packages
