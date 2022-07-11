@@ -81,6 +81,7 @@ kurmit () {
 alias amend='(){git add . && git commit --amend --no-edit;}'
 alias gpf='git push --force'
 alias gp='git pull'
+alias gsync='git fetch -p && git branch -vv | awk "/: gone]/{print \$1}" | xargs git branch -D'
 alias n='nvim'
 
 alias eyes='(){xrandr --output HDMI-A-0 --brightness $1;}'
