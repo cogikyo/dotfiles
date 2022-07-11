@@ -33,7 +33,6 @@ go
 cmake
 sassc
 wl-clipboard
-dunst
 oguri
 qeh
 bemenu-wayland
@@ -78,3 +77,6 @@ libreoffice-fresh
 lazygit
 nvim-packer-git
 thefuck
+gdm
+river
+rxvt-unicode
