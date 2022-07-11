@@ -80,3 +80,7 @@ olive
 libreoffice-fresh
 texlive-most
 texlive-fontsextra
+lazygit
+nvim-packer-git
+nerd-fonts-complete-starship
+thefuck
