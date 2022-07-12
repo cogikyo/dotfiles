@@ -1,3 +1,0 @@
-XDG_DESTOP_DIR=$HOME
-XDG_DOWNLOAD_DIR="$HOME/downloads"
-
