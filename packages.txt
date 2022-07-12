@@ -47,13 +47,14 @@ slurp
 glava
 mpv
 ffmpeg
-neovim
+neovim-nightly-bin
 zathura
 zathura-djvu
 zathura-pdf-mupdf
 wlogout
 figlet
 cbonsai
+bc
 bitwarden
 noto-fonts
 noto-fonts-cjk
