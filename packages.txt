@@ -77,6 +77,6 @@ libreoffice-fresh
 lazygit
 nvim-packer-git
 thefuck
-gdm
-river
-rxvt-unicode
+sddm-git
+hyprland-bin
+alacritty 
