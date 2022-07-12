@@ -10,7 +10,7 @@ curl
 coreutils
 bat
 vim
-basel-devel
+base-devel
 nnn
 fzf
 zsh
@@ -80,4 +80,4 @@ nvim-packer-git
 thefuck
 sddm-git
 hyprland-bin
-alacritty 
+alacritty
