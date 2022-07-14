@@ -135,7 +135,11 @@ return packer.startup(function(use)
 	use("goolord/alpha-nvim")
 	use({
 		"iamcco/markdown-preview.nvim",
-		run = "cd app && yarn install",
+		run = "cd app && npm install",
+		setup = function()
+			vim.g.mkdp_filetypes = { "markdown" }
+		end,
+		ft = { "markdown" },
 	})
 	use("nvim-pack/nvim-spectre")
 	use("ThePrimeagen/harpoon")

@@ -1,4 +1,4 @@
-local status_ok, impatient = pcall(require,"impatient")
+local status_ok, impatient = pcall(require, "impatient")
 if not status_ok then
 	return
 end
@@ -15,7 +15,7 @@ local config_files = {
 	"autopairs",
 	"comment",
 	"gitsigns",
-	"nvim-tree",
+	-- "nvim-tree",
 	"toggleterm",
 	"lualine",
 	"alpha",

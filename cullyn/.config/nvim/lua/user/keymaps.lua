@@ -94,7 +94,7 @@ map("n", "<leader>==", "ml=ip`lzt")
 map("n", "<leader>=y", "mlgg=G`lzt")
 
 -- 🔭 telescope
-map("n", "<leader>t<leader>", "<cmd>lua require('telescope.builtin').find_files()<CR>")
+map("n", "<leader>t<leader>", "<cmd>lua require('telescope.builtin').find_files({hidden = true})<CR>")
 map("n", "<leader>T", "<cmd>lua require('telescope.builtin').live_grep()<CR>")
 map("n", "<leader>th", "<cmd>lua require('telescope.builtin').help_tags()<CR>")
 map("n", "<leader>te", "<cmd>lua require('telescope.builtin').git_files()<CR>")
