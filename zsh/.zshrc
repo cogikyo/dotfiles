@@ -5,7 +5,6 @@ export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 
 eval "$(starship init zsh)"
-eval "$(thefuck --alias)"
 eval "$(jump shell)"
 
 # history
@@ -80,21 +79,25 @@ alias eyes='(){xrandr --output HDMI-A-0 --brightness $1;}'
 alias eyess='(){xrandr --output eDP-1 --brightness $1;}'
 
 # tmux
+alias tmux='TERM=xterm-256color tmux'
 alias tls='tmux ls'
-alias tad='tmux attach -t '
-alias tan='tmux attach -t '
-alias tap='tmux attach -t '
-alias tas='tmux attach -t ﲹ'
-alias tag='tmux attach -t ﳑ'
-alias tat='tmux attach -t ﯤ'
-alias tac='tmux attach -t '
-alias tab='tmux attach -t '
 alias td='(){tmux detach}'
-alias tr='()tmux-session restore'
-alias ts='tmux-session save'
 alias tk='tmux kill-session'
 alias tks='tmux kill-server'
 
+
+
+# ╔═╗┬  ┬ ┬┌─┐┬┌┐┌┌─┐
+# ╠═╝│  │ ││ ┬││││└─┐
+# ╩  ┴─┘└─┘└─┘┴┘└┘└─┘
+
+source ~/.local/zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+source ~/.local/zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
+source ~/.local/zsh/zsh-autocomplete/zsh-autocomplete.plugin.zsh
+  zstyle ':autocomplete:*' fzf-completion yes
+  zstyle ':autocomplete:*' add-space
+  zstyle ':autocomplete:*' min-input 1
+source ~/.local/zsh/zsh-colored-man-pages/colored-man-pages.plugin.zsh
 
 # ┌─┐┬─┐ ┬  ┬┌─┌─┐┬ ┬┌─┐
 # ├┤ │┌┴┬┘  ├┴┐├┤ └┬┘└─┐
