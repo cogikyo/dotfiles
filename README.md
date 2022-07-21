@@ -3,7 +3,7 @@
 <p align="center">
 <kbd>
 <img
-    alt="dotfiles neonlights banner" width="690"
+    alt="dotfiles neonlights banner"
     src="https://github.com/nosvagor/dotfiles/blob/main/resources/share/dotfiles-banner.gif?raw=true" />
 </kbd>
 </p>
@@ -19,10 +19,10 @@
 
 &nbsp;
 
-# Overview 👾
+## Overview 👾
 
 <details>
-<font size="+2"><summary><b> Essentials 📦 </b></font></summary>
+<summary><b> Essentials 📦 </b></summary>
 
 - Operating System: [Arch Linux](https://wiki.archlinux.org/title/Arch_Linux)
 - Display Server: [Wayland](https://wiki.archlinux.org/title/Wayland), with display manager: [SDDM](https://wiki.archlinux.org/title/SDDM)
@@ -33,18 +33,19 @@
   - Prompt: custom [starship](https://starship.rs/) + [custom DNA greeter](cullyn/.local/bin/dna)
   - Quick navigation: [jump](https://github.com/gsamokovarov/jump)
 - Editor: [neovim-nightly](https://github.com/neovim/neovim),
-  - [config files and instructions](cullyn/.config/nvim/) _(work in progress)_ 🔨
+  - [config files](cullyn/.config/nvim/) _(work in progress)_ 🔨
 - Browser: [firefox-developer-eddition](https://www.mozilla.org/en-US/firefox/developer/), with keyboard focused usage via:
   - [vimium](https://github.com/philc/vimium)
   - and a custom, minimal css theme: [errant]() _(work in progress)_ 🔨
 - File manager: [nnn](https://github.com/jarun/nnn)
-  - [config files and instructions](cullyn/.config/nnn/) _(work in progress)_ 🔨
+  - [config files](cullyn/.config/nnn/) _(work in progress)_ 🔨
 
 </details>
 &nbsp;
 <details>
-<font size="+2"><summary><b> Aesthetics 👓 </b></font></summary>
+<summary><b> Aesthetics 🕶️</b></summary>
 
+- General theme: [Tokyo Night Storm](https://github.com/folke/tokyonight.nvim)
 - Status bar: [waybar](https://github.com/Alexays/Waybar)
 - Launcher: [rofi](https://github.com/davatorium/rofi)
 - PDF viewer: [zathura](https://pwmt.org/projects/zathura/)
@@ -63,7 +64,7 @@
 </details>
 &nbsp;
 <details>
-<font size="+2"><summary><b> Hardware 🖥️ </b></font></summary>
+<summary><b> Hardware 🖥️ </b></summary>
 
 - **Mouse**: MX Master 3S
 - **CPU**: AMD Ryzen 7 3700X (16) @ 3.600GHz
@@ -75,31 +76,25 @@
 
 &nbsp;
 
-# Installation 🛠️
+## Installation 🛠️
 
 <details>
-<font size="+2"><summary><b>1. Installing Linux 🐧 </b></font></summary>
-
----
-
----
+<summary><b>1. Installing Linux 🐧 </b></summary>
 
 ##### [Official ArchWiki Installation Guide](https://wiki.archlinux.org/title/installation_guide)
 
 ##### [Please do read the FAQ](https://wiki.archlinux.org/title/Frequently_asked_questions)
 
-#### Quick Start ☕
-
-<font size="-1">Note: the following is essentially what I did if you want to start from scratch and
+**⚠️ Note:** _the following is essentially what I did if you want to start from scratch and
 follow along. Installation does not have to be exactly like I describe; these
 instructions are mostly just here for personal reference to debug what I might be
-doing wrong, or did wrong. Some minor steps or, reason behind my choices, are not explicitly stated. </font>
+doing wrong, or did wrong. Some minor steps or, reason behind my choices, are not explicitly stated._
 
 **1.1 Acquire an installation image**: https://archlinux.org/download/
 
 **1.2 Prepare an installation medium:**
 
-- find USB device partition (**sdb** probably):
+- find USB device partition (**sda** or **sdb**, probably):
 
       lsblk -f
 
@@ -113,7 +108,7 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
       archinstall
 
-- some base packages needed for now:
+- nice to install some base packages needed for now:
 
       base base-devel linux-headers git stow dkms coreutils vim bat btop go rust python
 
@@ -124,11 +119,7 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 </details>
 &nbsp;
 <details>
-<font size="+2"><summary><b>2. Post-Installation 🧰 </b></font></summary>
-
----
-
----
+<summary><b>2. Post-Installation 🧰 </b></summary>
 
 ##### [ArchWiki General Recommendations](https://wiki.archlinux.org/title/General_recommendations)
 
@@ -138,10 +129,14 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
     cd yay-bin
     makepkg -si
 
+&nbsp;
+
 2.2 Install packages:
 
     cd $HOME && git clone https://github.com/nosvagor/dotfiles.git
     yay -S - < $HOME/dotfiles/resources/packages.txt
+
+&nbsp;
 
 2.3 Configure shell and link config files:
 
@@ -151,27 +146,102 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
 - Install shell related packages:
 
-        go install github.com/gsamokovarov/jump@latest
-        curl -sS https://starship.rs/install.sh | sh
-        $HOME/dotfiles/cullyn/.local/bin/zsh-install
+      go install github.com/gsamokovarov/jump@latest
+      curl -sS https://starship.rs/install.sh | sh
+      $HOME/dotfiles/cullyn/.local/bin/zsh-install
 
-- Link config files:
+- Link config files using [GNU stow](https://brandon.invergo.net/news/2012-05-26-using-gnu-stow-to-manage-your-dotfiles.html):
 
-      cd $HOME/dotfiles && stow cullyn
+      cd $HOME/dotfiles
+      mv cullyn $USER
+      stow $USER
       stow zsh
 
 **⚠️ Note:** _you probably don't want my zsh config, or many of my personal configs, and should update them now._
 
+&nbsp;
+
 2.5 Configure SSH for GitHub _(here for personal reference)_:
 
-      ssh-keygen -t ed25519 -C "your_email@example.com"
-      eval "$(ssh-agent -s)"
-      ssh-add ~/.ssh/id_ed25519
-      bat ~/.ssh/id_ed25519.pub
+    ssh-keygen -t ed25519 -C "your_email@example.com"
+    eval "$(ssh-agent -s)"
+    ssh-add ~/.ssh/id_ed25519
+    bat ~/.ssh/id_ed25519.pub
+    # Add ssh key to github, then update remote origin:
+    git remote set-url origin git@github.com:USERNAME/REPOSITORY.git
 
-- add ssh key to github, then update remote origin:
+&nbsp;
 
-      git remote set-url origin git@github.com:USERNAME/REPOSITORY.git
+2.6 Update [bluetooth](https://wiki.archlinux.org/title/bluetooth):
+
+    systemctl enable bluetooth.service
+    systemctl start bluetooth.service #(if before reboot)
+
+- pair device
+
+      bluetoothctl
+      power on
+      scan on
+      pair DEVICE
+      trust DEVICE
+      connect DEVICE
+
+- auto power-on:
+
+      /etc/bluetooth/main.conf
+      ---
+      [Policy]
+      AutoEnable=true
+
+- disable shitty built in bluetooth:
+
+      lsusb | grep "Bluetooth"
+
+      # yields
+      Bus 001 Device 004: ID 0b05:18ea ASUSTek Computer, Inc. Bluetooth Radio
+
+      touch /etc/udev/rules.d/81-bluetooth-hci.rules
+      ---
+      SUBSYSTEM=="usb", ATTRS{idVendor}=="0b05", ATTRS{idProduct}=="18ea", ATTR{authorized}="0"
+
+- verify by checking available agents (should just be one, preferably):
+
+      bluetoothctl list
+
+      # yields
+      Controller 3C:7C:3F:A2:38:10 costello [default]
+
+&nbsp;
+
+2.7 Create default directories (personal preference, see [user-dirs.dir](https://github.com/nosvagor/dotfiles/blob/main/cullyn/.config/user-dirs.dirs)):
+
+    #simple script to edit if you want something different
+    dir-setup
+
+    # yields
+    ├── documents
+    │   ├── papers
+    │   ├── share
+    │   ├── templates
+    │   └── textbooks
+    ├── downloads
+    ├── media
+    │   ├── gifs
+    │   ├── images
+    │   ├── music
+    │   ├── recordings
+    │   ├── video
+    │   └── videos
+
+&nbsp;
+
+2.8 Edit boot config (skip boot menu):
+
+    ──────┬─────────────────────────────────────────────────────────────────────────────
+          │ File: /boot/loader/loader.conf
+    ──────┼─────────────────────────────────────────────────────────────────────────────
+      1   │ timeout 0
+    ──────┴─────────────────────────────────────────────────────────────────────────────
 
 ---
 
@@ -181,17 +251,19 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 &nbsp;
 <details>
 
----
+<summary><b>3. Customization 🖌️</b></summary>
 
----
+#### Firefox 🦊
 
-<font size="+2"><summary><b>3. Customization 🖌️</b></font></summary>
-
-3.1 Firefox 🦊 `about:config`
+3.1 update various `about:config` options:
 
 - Update scaling factor if in HiDPI environment:
 
       layout.css.devPixelsPerPx = 1.25
+
+- Stop asking to restore session (I often just kill the window and don't want the prompt later)
+
+      browser.sessionstore.resume_from_crash = false
 
 ---
 
@@ -201,11 +273,12 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
 &nbsp;
 
-# Gallery 🎨
+## Gallery 🎨
 
 &nbsp;
 
-# Support 🤝
+## Support 🤝
 
-- Personal: `cullyn.eth`
+- Personal: [cullyn.eth](https://cullyn.eth/)
+  - ETH `0xe377b77E7177c236EDE5abD317960Fc023efD841`
 - Open source: [gitcoin.co](https://gitcoin.co/)
