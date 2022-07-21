@@ -24,31 +24,37 @@ font:
 
   size: 14
 
-# Colors
 colors:
+  # Default colors
   primary:
-    background: '#1b1d27'
-    foreground: '#d3d5df'
+    background: '0x24283b'
+    foreground: '0xc0caf5'
 
+  # Normal colors
   normal:
-    black: '#1b1d27'
-    red: '#e67979'
-    green: '#94b47e'
-    yellow: '#e6a579'
-    blue: '#77a2cf'
-    magenta: '#a98fd1'
-    cyan: '#7fb5b1'
-    white: '#d3d5df'
+    black: '0x1D202F'
+    red: '0xf7768e'
+    green: '0x9ece6a'
+    yellow: '0xe0af68'
+    blue: '0x7aa2f7'
+    magenta: '0xbb9af7'
+    cyan: '0x7dcfff'
+    white: '0xa9b1d6'
 
+  # Bright colors
   bright:
-    black: '#6c749d'
-    red: '#ff9695'
-    green: '#b1d29a'
-    yellow: '#ffc295'
-    blue: '#94bfed'
-    magenta: '#c7abef'
-    cyan: '#7fb5b1'
-    white: '#e0e3f0'
+    black: '0x414868'
+    red: '0xf7768e'
+    green: '0x9ece6a'
+    yellow: '0xe0af68'
+    blue: '0x7aa2f7'
+    magenta: '0xbb9af7'
+    cyan: '0x7dcfff'
+    white: '0xc0caf5'
+
+  indexed_colors:
+    - { index: 16, color: '0xff9e64' }
+    - { index: 17, color: '0xdb4b4b' }
 
 mouse:
   hide_when_typing: true
