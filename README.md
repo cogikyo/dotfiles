@@ -123,7 +123,7 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
 ##### [ArchWiki General Recommendations](https://wiki.archlinux.org/title/General_recommendations)
 
-2.1 Install AUR helper ([paru](https://github.com/Morganamilo/paru) is nice too)
+2.1 Install AUR helper ([paru](https://github.com/Morganamilo/paru) is nice too and my current preference)
 
     git clone https://aur.archlinux.org/yay-bin.git
     cd yay-bin
@@ -249,13 +249,13 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
 </details>
 &nbsp;
-<details>
+<!-- <details> -->
 
 <summary><b>3. Customization 🖌️</b></summary>
 
-#### Firefox 🦊
+#### [Firefox](https://www.mozilla.org/en-US/firefox/developer/) 🦊
 
-3.1 update various `about:config` options:
+🦊.1 update various `about:config` options:
 
 - Update scaling factor if in HiDPI environment:
 
@@ -264,6 +264,14 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 - Stop asking to restore session (I often just kill the window and don't want the prompt later)
 
       browser.sessionstore.resume_from_crash = false
+
+&nbsp;
+
+🦊.2 Firefox basic options options:
+
+- Disable hardware acceleration (firefox keeps seizing, first idea for fix)
+
+#### [Hyprland](https://github.com/hyprwm/Hyprland) 🪟
 
 ---
 
