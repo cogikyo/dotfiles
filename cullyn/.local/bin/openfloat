@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+###############################################################################
+# Author: cullyn
+# Date Created: 2022 August 3
+
+# Description:
+# open a temp floating terminal at preferred eye level
+###############################################################################
+
+alacritty & sleep 0.2 &&
+hyprctl dispatch togglefloating x;
+hyprctl dispatch resizeactive "exact 1530 1800";
+hyprctl dispatch moveactive "exact 1125 215";

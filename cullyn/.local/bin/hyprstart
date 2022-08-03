@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+###############################################################################
+# Author: cullyn | https://github.com/nosvagor/dotfiles
+# Date Created: 2022 August 3
+
+# Description:
+# simple set of commands to run upon hyprland startup
+
+# Usage:
+# place "exec-once=hyprstart" in hyprland.conf
+###############################################################################
+
+killall hyprpaper
+hyprpaper </dev/null &>/dev/null & disown
+hyprctl dispatch workspace 3
+
+exit 0
