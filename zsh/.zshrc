@@ -82,6 +82,7 @@ alias eyess='(){xrandr --output eDP-1 --brightness $1;}'
 alias tmux='TERM=xterm-256color tmux'
 alias tls='tmux ls'
 alias td='(){tmux detach}'
+alias ta='(){tmux attach}'
 alias tk='tmux kill-session'
 alias tks='tmux kill-server'
 

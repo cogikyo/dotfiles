@@ -10,5 +10,5 @@
 
 alacritty & sleep 0.2 &&
 hyprctl dispatch togglefloating x;
-hyprctl dispatch resizeactive "exact 1530 1800";
-hyprctl dispatch moveactive "exact 1125 215";
+hyprctl dispatch resizeactive "exact 1600 1900";
+hyprctl dispatch moveactive "exact 1120 186";

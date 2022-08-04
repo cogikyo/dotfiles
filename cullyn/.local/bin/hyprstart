@@ -8,11 +8,17 @@
 # simple set of commands to run upon hyprland startup
 
 # Usage:
-# place "exec-once=hyprstart" in hyprland.conf
+# place "exec-once=~/path/to/script" in hyprland.conf
 ###############################################################################
 
+# set wallpaper
 killall hyprpaper
 hyprpaper </dev/null &>/dev/null & disown
+
+# open applications
+ytmdesktop & sleep 10 # sleep long enough to select music before switch
+
+# end with switching to main workspace
 hyprctl dispatch workspace 3
 
 exit 0
