@@ -26,7 +26,7 @@
 
 - Operating System: [Arch Linux](https://wiki.archlinux.org/title/Arch_Linux)
 - Display Server: [Wayland](https://wiki.archlinux.org/title/Wayland), with display manager: [SDDM](https://wiki.archlinux.org/title/SDDM)
-- Window manager: [Hyprland](https://github.com/hyprwm/Hyprland), with hotkey daemon: [swhkd](https://github.com/waycrate/swhkd)
+- Window manager: [Hyprland](https://github.com/hyprwm/Hyprland)
 - Terminal: [alacritty](https://github.com/alacritty/alacritty), with terminal multiplexer: [tmux](https://en.wikipedia.org/wiki/Tmux)
 - Shell: [zsh](https://wiki.archlinux.org/title/zsh),
   - Plugins: [syntax highlighting](https://github.com/zsh-users/zsh-syntax-highlighting), [auto suggestions](https://github.com/zsh-users/zsh-autosuggestions), [auto complete](https://github.com/marlonrichert/zsh-autocomplete), [colored man pages](https://github.com/ael-code/zsh-colored-man-pages)
@@ -242,6 +242,12 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
     ──────┼─────────────────────────────────────────────────────────────────────────────
       1   │ timeout 0
     ──────┴─────────────────────────────────────────────────────────────────────────────
+
+&nbsp;
+
+2.9 Add extra figlet fonts (I sometimes use for visual headers in files):
+
+    cp -va  "$HOME/dotfiles/resources/ascii-fonts/." "/usr/share/figlet/fonts/"
 
 ---
 
