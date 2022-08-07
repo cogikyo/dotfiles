@@ -12,13 +12,26 @@
 ###############################################################################
 
 # set wallpaper
-killall hyprpaper
 hyprpaper </dev/null &>/dev/null & disown
+#
+# # start status bar
+exec waybar </dev/null &>/dev/null & disown
 
-# open applications
-ytmdesktop & sleep 10 # sleep long enough to select music before switch
+# # start notifications
+exec dunst </dev/null &>/dev/null & disown
+
+# start music player
+ytmdesktop </dev/null &>/dev/null & disown
 
 # end with switching to main workspace
-hyprctl dispatch workspace 3
+hyprctl dispatch workspace 2 && sleep 1
+notify-send "swap to 2"
+
+alacritty </dev/null &>/dev/null & sleep 0.5
+firefox-developer-edition --new-window  </dev/null &>/dev/null & sleep 0.5
+hyprctl dispatch resizeactive,exact 1659 1552
+notify-send "working"
+firefox-developer-edition --new-window </dev/null &>/dev/null & sleep 0.5
+notify-send "end"
 
 exit 0
