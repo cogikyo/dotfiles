@@ -6,8 +6,8 @@
 -- ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝     ╚══════╝
 
 local function map(mode, lhs, rhs, opts)
-	opts = vim.tbl_extend("force", { noremap = true, silent = true }, opts or {})
-	vim.api.nvim_set_keymap(mode, lhs, rhs, opts)
+    opts = vim.tbl_extend("force", { noremap = true, silent = true }, opts or {})
+    vim.api.nvim_set_keymap(mode, lhs, rhs, opts)
 end
 
 local rec = { noremap = false, silent = true }
@@ -37,9 +37,9 @@ map("v", "<leader>p", "y`]p`]ml`[O<Esc>'lo<Esc>")
 map("v", "<leader>P", "yP`]o<Esc>j")
 
 -- 🦬 buffers
-map("n", "<leader>w", ":bp<CR>zt")
-map("n", "<leader>v", ":bn<CR>zt")
-map("n", "<leader>bd", ":bd!<CR>zt")
+map("n", "<leader>b", ":bp<CR>zt")
+map("n", "<leader>B", ":bn<CR>zt")
+map("n", "<leader><C-b>", ":bd!<CR>zt")
 
 -- 🤯 comment headers
 map("n", "HS", ":.! figlet -fshadow <CR> gcip", rec)
@@ -128,9 +128,9 @@ map("n", "<leader>rt", ":call ToggleWrap()<CR>")
 map("n", "<leader>st", ":call ToggleSpellCheck()<CR>")
 map("n", "<leader>mt", ":MarkdownPreviewToggle<CR>,")
 map("n", "<leader>hl", ":TSHighlightCapturesUnderCursor<CR>")
-map("n", "<leader>lt", ":LspInstallInfo<CR>")
+map("n", "<leader>ls", ":LspInstallInfo<CR>")
 map("n", "<leader>et", ":NvimTreeToggle<CR> :NvimTreeRefresh<CR>")
-map("n", "<leader>bt", ":Switch<CR>")
+map("n", "<leader>ft", ":Switch<CR>")
 map("n", "<leader>it", ":NullLsInfo<CR>")
 
 -- 🔃 reload
@@ -162,9 +162,7 @@ map("v", "<leader>sw", "yiw :w<CR> : lua require('spectre').open_file_search()<C
 map("n", "<leader>sa", ":w<CR> <cmd>lua require('spectre').open_file_search()<CR>")
 
 -- 🙏 folds
-map("n", "<leader>bf", "zf%")
-map("n", "<leader>cf", "zfip")
-map("n", "<leader>mk", ":mkview<CR>")
+map("n", "<leader>mv", ":mkview<CR>")
 map("n", "<leader>lv", ":loadview<CR>")
 
 -- 🔤 spelling
