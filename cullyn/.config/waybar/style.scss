@@ -1,3 +1,144 @@
+// ┬  ┬┌─┐┬─┐┬┌─┐┌┐ ┬  ┌─┐┌─┐
+// └┐┌┘├─┤├┬┘│├─┤├┴┐│  ├┤ └─┐
+//  └┘ ┴ ┴┴└─┴┴ ┴└─┘┴─┘└─┘└─┘
+// fonts
+$sans-serif: Albert Sans, sans-serif;
+$monospace: Hack Nerd Font, monospace;
+
+// wallpaper colors
+$main: #f2a0a7;
+$sec: #d982ab;
+$tert: #7b6cb1;
+$minor: #7e88bf;
+$minimal: #3d4f73;
+$dark: #0d1826;
+
+// relevant tokyo night colors:
+// https://github.com/folke/tokyonight.nvim/blob/main/lua/tokyonight/colors.lua
+$bg_dark: #1f2335;
+$bg: #24283b;
+$bg_highlight: #292e42;
+$terminal_black: #414868;
+$fg: #c0caf5;
+$fg_dark: #a9b1d6;
+$fg_gutter: #3b4261;
+$dark3: #545c7e;
+$comment: #565f89;
+$dark5: #737aa2;
+$blue0: #3d59a1;
+$blue: #7aa2f7;
+$cyan: #7dcfff;
+$blue1: #2ac3de;
+$blue2: #0db9d7;
+$blue5: #89ddff;
+$blue6: #b4f9f8;
+$blue7: #394b70;
+$magenta: #bb9af7;
+$magenta2: #ff0p07c;
+$purple: #9d7cd8;
+$orange: #ff9e64;
+$yellow: #e0af68;
+$green: #9ece6a;
+$green1: #73daca;
+$green2: #41a6b5;
+$teal: #1abc9c;
+$red: #f7768e;
+$red1: #db4b4b;
+
+* {
+  border: none;
+  border-radius: 0;
+  font-family: $monospace $sans-serif;
+  font-size: 18px;
+  min-height: 0;
+}
+
+window#waybar {
+  background: transparent;
+}
+
+#workspaces {
+  button {
+    padding: 0 5px;
+    background-color: transparent;
+    color: #ffffff;
+    box-shadow: inset 0 -3px transparent;
+    border: none;
+    border-radius: 0;
+  }
+
+  button:hover {
+    color: red;
+    box-shadow: inset 0 -3px pink;
+  }
+
+  button.focused {
+    background-color: #64727d;
+    box-shadow: inset 0 -3px #ffffff;
+  }
+
+  button.urgent {
+    background-color: #eb4d4b;
+  }
+}
+
+#mode {
+  background-color: pink;
+  border-bottom: 3px solid #ffffff;
+}
+
+#clock,
+#battery,
+#cpu,
+#memory,
+#disk,
+#temperature,
+#network,
+#pulseaudio,
+#custom-gpu,
+#custom-media,
+#custom-weather,
+#tray,
+#idle_inhibitor {
+  padding: 0 10px;
+  color: $fg;
+}
+
+#custom-media.status {
+  font-size: 2em;
+}
+
+#window,
+#workspaces {
+  margin: 0 4px;
+}
+
+/* If workspaces is the leftmost module, omit left margin */
+.modules-left > widget:first-child > #workspaces {
+  margin-left: 0;
+}
+
+/* If workspaces is the rightmost module, omit right margin */
+.modules-right > widget:last-child > #workspaces {
+  margin-right: 0;
+}
+
+@keyframes blink {
+  to {
+    background-color: #ffffff;
+    color: #000000;
+  }
+}
+
+label:focus {
+  background-color: #000000;
+}
+
+#cpu {
+  background-color: #2ecc71;
+  color: #000000;
+}
+
 #memory {
   background-color: #9b59b6;
 }
@@ -16,6 +157,14 @@
 
 #network.disconnected {
   background-color: #f53c3c;
+}
+
+#custom-gpu {
+  background-color: $tert;
+}
+
+#clock {
+  background-color: $tert;
 }
 
 #pulseaudio {
@@ -60,6 +209,10 @@
 
 #custom-weather.clearNight {
   color: #2b2b2a;
+}
+
+#custom-weather {
+  background-color: $bg;
 }
 
 #custom-weather.cloudyFoggyDay,

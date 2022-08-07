@@ -56,9 +56,10 @@
     "return-type": "json",
     "on-click": "playerctl play-pause",
     "on-click-right": "playerctl next",
+    "on-click-middle": "playerctl previous",
     "on-scroll-up": "playerctl volume 1",
     "on-scroll-down": "playerctl volume 0.01",
-    "exec": "playerctl -a metadata --format '{\"text\": \"ﴁ {{artist}}  {{album}}  {{title}} 神 {{duration(mpris:length - position)}}\", \"tooltip\": \"{{playerName}} : {{markup_escape(title)}}\", \"alt\": \"{{status}}\", \"class\": \"{{status}}\"}' -F",
+    "exec": "playerctl -a metadata --format '{\"text\": \"ﴁ {{markup_escape(artist)}}  {{markup_escape(album)}}  {{markup_escape(title)}} 神 {{duration(mpris:length - position)}}\", \"tooltip\": \"{{playerName}} : {{markup_escape(title)}}\", \"alt\": \"{{status}}\", \"class\": \"{{status}}\"}' -F",
     "format-icons": {
       "Playing": "",
       "Paused": ""
@@ -69,17 +70,11 @@
   // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
   // ││││ │ │││ ││  ├┤ └─┐───│  ├┤ │││ │ ├┤ ├┬┘
   // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   └─┘└─┘┘└┘ ┴ └─┘┴└─
-  "modules-center": ["custom/github", "clock", "custom/weather"],
-  "custom/github": {
-    "format": "{} ",
-    "return-type": "json",
-    "interval": 60,
-    "exec": "$HOME/.config/waybar/github.sh",
-    "on-click": "xdg-open https://github.com/notifications"
-  },
+  "modules-center": ["clock", "custom/weather"],
+
   "clock": {
     "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
-    "format-alt": "{:%Y-%m-%d}"
+    "format": "{: %A, %B %d  %H:%M}"
   },
 
   "custom/weather": {
