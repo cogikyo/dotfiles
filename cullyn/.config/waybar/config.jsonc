@@ -1,0 +1,142 @@
+{
+  // ┌─┐┌─┐┌┐┌┌─┐┬─┐┌─┐┬
+  // │ ┬├┤ │││├┤ ├┬┘├─┤│
+  // └─┘└─┘┘└┘└─┘┴└─┴ ┴┴─┘
+
+  "layer": "top",
+  "position": "top",
+  "height": 22,
+  "spacing": 18,
+
+  // ┌─┐┌─┐┌─┐┬┌┬┐┬┌─┐┌┐┌
+  // ├─┘│ │└─┐│ │ ││ ││││
+  // ┴  └─┘└─┘┴ ┴ ┴└─┘┘└┘
+
+  "modules-left": [
+    // "launcher",
+    // "layout",
+    "wlr/workspaces",
+    "pulseaudio",
+    "custom/media"
+  ],
+
+  "modules-center": ["clock"],
+
+  "modules-right": [
+    "network",
+    "cpu",
+    "memory",
+    "temperature",
+    "clock"
+    // "tray",
+    // "idle_inhibitor"
+    // "terminal"
+    // "power"
+  ],
+
+  // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┬  ┌─┐┌─┐┌┬┐
+  // ││││ │ │││ ││  ├┤ └─┐───│  ├┤ ├┤  │
+  // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   ┴─┘└─┘└   ┴
+
+  "wlr/workspaces": {
+    "format": "{icon}",
+    "on-click": "activate",
+    "active-only": false,
+    "format-icons": {
+      "1": "ﭮ",
+      "2": "",
+      "3": "ﯟ",
+      "4": "輸"
+    }
+  },
+
+  "pulseaudio": {
+    "format": "{volume}% {icon} {format_source}",
+    "format-bluetooth": "{volume}% {icon} {format_source}",
+    "format-bluetooth-muted": " {icon} {format_source}",
+    "format-muted": " {format_source}",
+    "format-source": "{volume}% ",
+    "format-source-muted": "",
+    "format-icons": {
+      "headphone": "",
+      "hands-free": "",
+      "headset": "",
+      "phone": "",
+      "portable": "",
+      "car": "",
+      "default": ["", "", ""]
+    },
+    "on-click": "pavucontrol"
+  },
+
+  "custom/media": {
+    "format": "⌊{icon}⌉ {}",
+    // "escape": true,
+    // "smooth-scrolling-threshold": 10, // This value was tested using a trackpad, it should be lowered if using a mouse.
+    "max-length": 140,
+    "return-type": "json",
+    "on-click": "playerctl play-pause",
+    "on-click-right": "playerctl stop",
+    "on-scroll-up": "playerctl volume 1",
+    "on-scroll-down": "playerctl volume 0.01",
+    "exec": "playerctl -a metadata --format '{\"text\": \"ﴁ {{artist}}  {{album}}  {{title}} 神 {{duration(position)}}\", \"tooltip\": \"{{playerName}} : {{markup_escape(title)}}\", \"alt\": \"{{status}}\", \"class\": \"{{status}}\"}' -F",
+    "format-icons": {
+      "Playing": "",
+      "Paused": ""
+    }
+  },
+
+  // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
+  // ││││ │ │││ ││  ├┤ └─┐───│  ├┤ │││ │ ├┤ ├┬┘
+  // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   └─┘└─┘┘└┘ ┴ └─┘┴└─
+
+  "clock": {
+    "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
+    "format-alt": "{:%Y-%m-%d}"
+  },
+
+  // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┬─┐┬┌─┐┬ ┬┌┬┐
+  // ││││ │ │││ ││  ├┤ └─┐───├┬┘││ ┬├─┤ │
+  // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   ┴└─┴└─┘┴ ┴ ┴
+
+  "tray": {
+    // "icon-size": 21,
+    "spacing": 10
+  },
+
+  "cpu": {
+    "format": "{usage}% ",
+    "tooltip": false
+  },
+
+  "memory": {
+    "format": "{}% "
+  },
+
+  "temperature": {
+    // "thermal-zone": 2,
+    // "hwmon-path": "/sys/class/hwmon/hwmon2/temp1_input",
+    "critical-threshold": 80,
+    // "format-critical": "{temperatureC}°C {icon}",
+    "format": "{temperatureC}°C {icon}",
+    "format-icons": ["", "", ""]
+  },
+
+  "network": {
+    // "interface": "wlp2*", // (Optional) To force the use of this interface
+    "format-wifi": "{essid} ({signalStrength}%) ",
+    "format-ethernet": "{ipaddr}/{cidr} ",
+    "tooltip-format": "{ifname} via {gwaddr} ",
+    "format-linked": "{ifname} (No IP) ",
+    "format-disconnected": "Disconnected ⚠",
+    "format-alt": "{ifname}: {ipaddr}/{cidr}"
+  },
+
+  "idle_inhibitor": {
+    "format": "{icon}",
+    "format-icons": {
+      "activated": "",
+      "deactivated": ""
+    }
+  }
+}
