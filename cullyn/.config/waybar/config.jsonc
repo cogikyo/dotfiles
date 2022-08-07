@@ -2,16 +2,15 @@
   // ┌─┐┌─┐┌┐┌┌─┐┬─┐┌─┐┬
   // │ ┬├┤ │││├┤ ├┬┘├─┤│
   // └─┘└─┘┘└┘└─┘┴└─┴ ┴┴─┘
-
   "layer": "top",
   "position": "top",
   "height": 22,
   "spacing": 18,
+  //-------------------------------------------------------------------------//
 
-  // ┌─┐┌─┐┌─┐┬┌┬┐┬┌─┐┌┐┌
-  // ├─┘│ │└─┐│ │ ││ ││││
-  // ┴  └─┘└─┘┴ ┴ ┴└─┘┘└┘
-
+  // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┬  ┌─┐┌─┐┌┬┐
+  // ││││ │ │││ ││  ├┤ └─┐───│  ├┤ ├┤  │
+  // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   ┴─┘└─┘└   ┴
   "modules-left": [
     // "launcher",
     // "layout",
@@ -19,24 +18,6 @@
     "pulseaudio",
     "custom/media"
   ],
-
-  "modules-center": ["clock"],
-
-  "modules-right": [
-    "network",
-    "cpu",
-    "memory",
-    "temperature",
-    "clock"
-    // "tray",
-    // "idle_inhibitor"
-    // "terminal"
-    // "power"
-  ],
-
-  // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┬  ┌─┐┌─┐┌┬┐
-  // ││││ │ │││ ││  ├┤ └─┐───│  ├┤ ├┤  │
-  // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   ┴─┘└─┘└   ┴
 
   "wlr/workspaces": {
     "format": "{icon}",
@@ -71,33 +52,58 @@
 
   "custom/media": {
     "format": "⌊{icon}⌉ {}",
-    // "escape": true,
-    // "smooth-scrolling-threshold": 10, // This value was tested using a trackpad, it should be lowered if using a mouse.
     "max-length": 140,
     "return-type": "json",
     "on-click": "playerctl play-pause",
-    "on-click-right": "playerctl stop",
+    "on-click-right": "playerctl next",
     "on-scroll-up": "playerctl volume 1",
     "on-scroll-down": "playerctl volume 0.01",
-    "exec": "playerctl -a metadata --format '{\"text\": \"ﴁ {{artist}}  {{album}}  {{title}} 神 {{duration(position)}}\", \"tooltip\": \"{{playerName}} : {{markup_escape(title)}}\", \"alt\": \"{{status}}\", \"class\": \"{{status}}\"}' -F",
+    "exec": "playerctl -a metadata --format '{\"text\": \"ﴁ {{artist}}  {{album}}  {{title}} 神 {{duration(mpris:length - position)}}\", \"tooltip\": \"{{playerName}} : {{markup_escape(title)}}\", \"alt\": \"{{status}}\", \"class\": \"{{status}}\"}' -F",
     "format-icons": {
       "Playing": "",
       "Paused": ""
     }
   },
+  //-------------------------------------------------------------------------//
 
   // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
   // ││││ │ │││ ││  ├┤ └─┐───│  ├┤ │││ │ ├┤ ├┬┘
   // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   └─┘└─┘┘└┘ ┴ └─┘┴└─
-
+  "modules-center": ["custom/github", "clock", "custom/weather"],
+  "custom/github": {
+    "format": "{} ",
+    "return-type": "json",
+    "interval": 60,
+    "exec": "$HOME/.config/waybar/github.sh",
+    "on-click": "xdg-open https://github.com/notifications"
+  },
   "clock": {
     "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
     "format-alt": "{:%Y-%m-%d}"
   },
 
+  "custom/weather": {
+    "exec": "python ~/.config/waybar/weather.py",
+    "restart-interval": 300,
+    "return-type": "json",
+    "on-click": "xdg-open https://weather.com/en-IN/weather/today/l/7fd2c8d5fd5c6067bccab7955d643755478de23380fa548b657e63b2765cf519"
+  },
+  //-------------------------------------------------------------------------//
+
   // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┬─┐┬┌─┐┬ ┬┌┬┐
   // ││││ │ │││ ││  ├┤ └─┐───├┬┘││ ┬├─┤ │
   // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   ┴└─┴└─┘┴ ┴ ┴
+  "modules-right": [
+    "network",
+    "cpu",
+    "memory",
+    "custom/gpu",
+    "temperature",
+    // "tray",
+    "idle_inhibitor"
+    // "terminal"
+    // "power"
+  ],
 
   "tray": {
     // "icon-size": 21,
@@ -106,7 +112,8 @@
 
   "cpu": {
     "format": "{usage}% ",
-    "tooltip": false
+    "tooltip": false,
+    "interval": 1
   },
 
   "memory": {
@@ -115,9 +122,9 @@
 
   "temperature": {
     // "thermal-zone": 2,
-    // "hwmon-path": "/sys/class/hwmon/hwmon2/temp1_input",
+    "hwmon-path": "/sys/class/hwmon/hwmon3/temp1_input",
     "critical-threshold": 80,
-    // "format-critical": "{temperatureC}°C {icon}",
+    "format-critical": "{temperatureC}°C {icon}",
     "format": "{temperatureC}°C {icon}",
     "format-icons": ["", "", ""]
   },
@@ -138,5 +145,12 @@
       "activated": "",
       "deactivated": ""
     }
+  },
+
+  "custom/gpu": {
+    "exec": "cat /sys/class/hwmon/hwmon3/device/gpu_busy_percent",
+    "format": "GPU: {}%",
+    "return-type": "",
+    "interval": 1
   }
 }

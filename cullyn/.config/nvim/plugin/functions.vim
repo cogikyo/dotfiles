@@ -46,7 +46,8 @@ augroup TEMP
 
     " for waybar config
     autocmd BufWritePost config.jsonc execute 'silent !' 'killall waybar && exec waybar </dev/null &>/dev/null & disown'
-    autocmd BufWritePost style.scss execute 'silent !' 'sleep 1 && killall waybar && exec waybar </dev/null &>/dev/null & disown'
+    autocmd BufWritePost style.scss execute 'silent !' 'sleep 0.25 && killall waybar && exec waybar </dev/null &>/dev/null & disown'
+    autocmd BufWritePost *.py execute 'silent !' 'sleep 0.25 && killall waybar && exec waybar </dev/null &>/dev/null & disown'
 augroup END
 
 augroup TYPESCRIPT
