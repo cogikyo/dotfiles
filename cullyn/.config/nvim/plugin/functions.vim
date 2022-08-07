@@ -41,10 +41,17 @@ augroup AUTO_COMMANDS
     autocmd CursorHold * :echo
 augroup END
 
+augroup TEMP
+    autocmd!
+
+    " for waybar config
+    autocmd BufWritePost config.jsonc execute 'silent !' 'killall waybar && exec waybar </dev/null &>/dev/null & disown'
+    autocmd BufWritePost style.scss execute 'silent !' 'sleep 1 && killall waybar && exec waybar </dev/null &>/dev/null & disown'
+augroup END
 
 augroup TYPESCRIPT
     autocmd!
-    autocmd FileType typescript,javascript,html,javascriptreact,typescriptreact setlocal nospell shiftwidth=2 softtabstop=2 tabstop=2
+    autocmd FileType jsonc,typescript,javascript,html,javascriptreact,typescriptreact,css,scss setlocal nospell shiftwidth=2 softtabstop=2 tabstop=2
 augroup END
 
 " some random fix, not sure what for.
