@@ -1,12 +1,13 @@
 * {
-  font-family: Hack Nerd Font, Albert Sans, monospace, sans-serif;
+  border: none;
+  border-radius: 0;
+  font-family: Hack Nerd Font, monospace Albert Sans, sans-serif;
   font-size: 18px;
   min-height: 0;
 }
 
 window#waybar {
   background: transparent;
-  /* background colors */
 }
 
 #workspaces button {
@@ -17,17 +18,14 @@ window#waybar {
   border: none;
   border-radius: 0;
 }
-
 #workspaces button:hover {
-  color: orange;
+  color: red;
   box-shadow: inset 0 -3px pink;
 }
-
 #workspaces button.focused {
   background-color: #64727d;
   box-shadow: inset 0 -3px #ffffff;
 }
-
 #workspaces button.urgent {
   background-color: #eb4d4b;
 }
@@ -42,6 +40,7 @@ window#waybar {
 #cpu,
 #memory,
 #disk,
+#custom-gpu,
 #temperature,
 #backlight,
 #network,
@@ -49,8 +48,7 @@ window#waybar {
 #custom-media,
 #tray,
 #mode,
-#idle_inhibitor,
-#mpd {
+#idle_inhibitor {
   padding: 0 10px;
   color: #ffffff;
 }
@@ -166,67 +164,35 @@ label:focus {
   background-color: #eb4d4b;
 }
 
-#tray {
-  background-color: #2980b9;
+#custom-weather.severe {
+  color: #eb937d;
 }
 
-#tray > .passive {
-  -gtk-icon-effect: dim;
+#custom-weather.sunnyDay {
+  color: #c2ca76;
 }
 
-#tray > .needs-attention {
-  -gtk-icon-effect: highlight;
-  background-color: #eb4d4b;
+#custom-weather.clearNight {
+  color: #2b2b2a;
 }
 
-#idle_inhibitor {
-  background-color: #2d3436;
+#custom-weather.cloudyFoggyDay,
+#custom-weather.cloudyFoggyNight {
+  color: #c2ddda;
 }
 
-#idle_inhibitor.activated {
-  background-color: #ecf0f1;
-  color: #2d3436;
+#custom-weather.rainyDay,
+#custom-weather.rainyNight {
+  color: #5aaca5;
 }
 
-#mpd {
-  background-color: #66cc99;
-  color: #2a5c45;
+#custom-weather.showyIcyDay,
+#custom-weather.snowyIcyNight {
+  color: #d6e7e5;
 }
 
-#mpd.disconnected {
-  background-color: #f53c3c;
-}
-
-#mpd.stopped {
-  background-color: #90b1b1;
-}
-
-#mpd.paused {
-  background-color: #51a37a;
-}
-
-#language {
-  background: #00b093;
-  color: #740864;
-  padding: 0 5px;
-  margin: 0 5px;
-  min-width: 16px;
-}
-
-#keyboard-state {
-  background: #97e1ad;
-  color: #000000;
-  padding: 0 0px;
-  margin: 0 5px;
-  min-width: 16px;
-}
-
-#keyboard-state > label {
-  padding: 0 5px;
-}
-
-#keyboard-state > label.locked {
-  background: rgba(0, 0, 0, 0.2);
+#custom-weather.default {
+  color: #dbd9d8;
 }
 
 /*# sourceMappingURL=style.css.map */

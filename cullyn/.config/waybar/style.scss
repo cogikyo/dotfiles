@@ -1,158 +1,3 @@
-* {
-  font-family: Hack Nerd Font, Albert Sans, monospace, sans-serif;
-  font-size: 18px;
-  min-height: 0;
-}
-
-window#waybar {
-  background: transparent;
-  /* background colors */
-  // --emphasis: #f2a0a7;
-  // --emphasis-alt: #d982ab;
-  // --emphasis-alt2: #7b6cb1;
-  //
-  // --minor: #7e88bf;
-  // --minimal: #3d4f73;
-  // --dark: #0d1826;
-  //
-  // /* relevant tokyo night colors:
-  // https://github.com/folke/tokyonight.nvim/blob/main/lua/tokyonight/colors.lua */
-  // --bg_dark: #1f2335;
-  // --bg: #24283b;
-  // --bg_highlight: #292e42;
-  // --terminal_black: #414868;
-  // --fg: #c0caf5;
-  // --fg_dark: #a9b1d6;
-  // --fg_gutter: #3b4261;
-  // --dark3: #545c7e;
-  // --comment: #565f89;
-  // --dark5: #737aa2;
-  // --blue0: #3d59a1;
-  // --blue: #7aa2f7;
-  // --cyan: #7dcfff;
-  // --blue1: #2ac3de;
-  // --blue2: #0db9d7;
-  // --blue5: #89ddff;
-  // --blue6: #b4f9f8;
-  // --blue7: #394b70;
-  // --magenta: #bb9af7;
-  // --magenta2: #ff007c;
-  // --purple: #9d7cd8;
-  // --orange: #ff9e64;
-  // --yellow: #e0af68;
-  // --green: #9ece6a;
-  // --green1: #73daca;
-  // --green2: #41a6b5;
-  // --teal: #1abc9c;
-  // --red: #f7768e;
-  // --red1: #db4b4b;
-}
-
-#workspaces button {
-  padding: 0 5px;
-  background-color: transparent;
-  color: #ffffff;
-  box-shadow: inset 0 -3px transparent;
-  border: none;
-  border-radius: 0;
-}
-
-#workspaces button:hover {
-  color: orange;
-  box-shadow: inset 0 -3px pink;
-}
-
-#workspaces button.focused {
-  background-color: #64727d;
-  box-shadow: inset 0 -3px #ffffff;
-}
-
-#workspaces button.urgent {
-  background-color: #eb4d4b;
-}
-
-#mode {
-  background-color: pink;
-  border-bottom: 3px solid #ffffff;
-}
-
-#clock,
-#battery,
-#cpu,
-#memory,
-#disk,
-#temperature,
-#backlight,
-#network,
-#pulseaudio,
-#custom-media,
-#tray,
-#mode,
-#idle_inhibitor {
-  padding: 0 10px;
-  color: #ffffff;
-}
-
-#custom-media.status {
-  font-size: 2em;
-}
-
-#window,
-#workspaces {
-  margin: 0 4px;
-}
-
-/* If workspaces is the leftmost module, omit left margin */
-.modules-left > widget:first-child > #workspaces {
-  margin-left: 0;
-}
-
-/* If workspaces is the rightmost module, omit right margin */
-.modules-right > widget:last-child > #workspaces {
-  margin-right: 0;
-}
-
-#clock {
-  background-color: #64727d;
-}
-
-#battery {
-  background-color: #ffffff;
-  color: #000000;
-}
-
-#battery.charging,
-#battery.plugged {
-  color: #ffffff;
-  background-color: #26a65b;
-}
-
-@keyframes blink {
-  to {
-    background-color: #ffffff;
-    color: #000000;
-  }
-}
-
-#battery.critical:not(.charging) {
-  background-color: #f53c3c;
-  color: #ffffff;
-  animation-name: blink;
-  animation-duration: 0.5s;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-  animation-direction: alternate;
-}
-
-label:focus {
-  background-color: #000000;
-}
-
-#cpu {
-  background-color: #2ecc71;
-  color: #000000;
-}
-
 #memory {
   background-color: #9b59b6;
 }
@@ -205,65 +50,33 @@ label:focus {
   background-color: #eb4d4b;
 }
 
-#tray {
-  background-color: #2980b9;
+#custom-weather.severe {
+  color: #eb937d;
 }
 
-#tray > .passive {
-  -gtk-icon-effect: dim;
+#custom-weather.sunnyDay {
+  color: #c2ca76;
 }
 
-#tray > .needs-attention {
-  -gtk-icon-effect: highlight;
-  background-color: #eb4d4b;
+#custom-weather.clearNight {
+  color: #2b2b2a;
 }
 
-#idle_inhibitor {
-  background-color: #2d3436;
+#custom-weather.cloudyFoggyDay,
+#custom-weather.cloudyFoggyNight {
+  color: #c2ddda;
 }
 
-#idle_inhibitor.activated {
-  background-color: #ecf0f1;
-  color: #2d3436;
+#custom-weather.rainyDay,
+#custom-weather.rainyNight {
+  color: #5aaca5;
 }
 
-#mpd {
-  background-color: #66cc99;
-  color: #2a5c45;
+#custom-weather.showyIcyDay,
+#custom-weather.snowyIcyNight {
+  color: #d6e7e5;
 }
 
-#mpd.disconnected {
-  background-color: #f53c3c;
-}
-
-#mpd.stopped {
-  background-color: #90b1b1;
-}
-
-#mpd.paused {
-  background-color: #51a37a;
-}
-
-#language {
-  background: #00b093;
-  color: #740864;
-  padding: 0 5px;
-  margin: 0 5px;
-  min-width: 16px;
-}
-
-#keyboard-state {
-  background: #97e1ad;
-  color: #000000;
-  padding: 0 0px;
-  margin: 0 5px;
-  min-width: 16px;
-}
-
-#keyboard-state > label {
-  padding: 0 5px;
-}
-
-#keyboard-state > label.locked {
-  background: rgba(0, 0, 0, 0.2);
+#custom-weather.default {
+  color: #dbd9d8;
 }

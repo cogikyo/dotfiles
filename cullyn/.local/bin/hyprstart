@@ -24,14 +24,14 @@ exec dunst </dev/null &>/dev/null & disown
 ytmdesktop </dev/null &>/dev/null & disown
 
 # end with switching to main workspace
-hyprctl dispatch workspace 2 && sleep 1
-notify-send "swap to 2"
+# hyprctl dispatch workspace 2 && sleep 1
+# notify-send "swap to 2"
 
-alacritty </dev/null &>/dev/null & sleep 0.5
-firefox-developer-edition --new-window  </dev/null &>/dev/null & sleep 0.5
-hyprctl dispatch resizeactive,exact 1659 1552
-notify-send "working"
-firefox-developer-edition --new-window </dev/null &>/dev/null & sleep 0.5
-notify-send "end"
+# alacritty </dev/null &>/dev/null & sleep 0.5
+# firefox-developer-edition --new-window  </dev/null &>/dev/null & sleep 0.5
+# hyprctl dispatch resizeactive,exact 1659 1552
+# notify-send "working"
+# firefox-developer-edition --new-window </dev/null &>/dev/null & sleep 0.5
+# notify-send "end"
 
 exit 0
