@@ -96,7 +96,7 @@ air_quality_index = html_data(
 ).text()
 
 
-def air_quality_value_icon(air_quality_index):
+def get_air_quality_value_icon(air_quality_index):
     val = int(air_quality_index)
     res = "?"
     if val > 0 & val <= 50:
@@ -114,7 +114,7 @@ def air_quality_value_icon(air_quality_index):
     return res
 
 
-air_quality_icon = air_quality_value_icon(air_quality_index)
+air_quality_icon = get_air_quality_value_icon(air_quality_index)
 air_quality_text = f"{air_quality_index}|<small>{air_quality_icon}</small>"
 
 # wind details
@@ -133,6 +133,37 @@ humidity = html_data(
 ).text()
 humidity_text = f" {humidity}"
 
+# moon phase
+moon_phase = html_data(
+    "div.ListItem--listItem--2wQRK:nth-child(8) > div:nth-child(3)"
+).text()
+
+
+def get_mooon_phase_icon(moon_phase):
+    match moon_phase:
+        case "New Moon":
+            return ""
+        case "Waning Crescent":
+            return ""
+        case "Third Quarter":
+            return ""
+        case "Waning Gibbous":
+            return ""
+        case "Full Moon":
+            return ""
+        case "Waxing Gibbous":
+            return ""
+        case "First Quarter":
+            return ""
+        case "Waxing Crescent":
+            return ""
+        case _:
+            return "?"
+
+
+moon_phase_icon = get_mooon_phase_icon(moon_phase)
+
+
 # humidity
 uv_index = (
     html_data(
@@ -146,13 +177,15 @@ uv_index_text = f"履  {uv_index}"
 
 # tooltip text
 tooltip_text = str.format(
-    "{}\n{}\n{}\n{}\n{}\n{}{}",
+    "{}\t\t{} {}\n{}\n{}\n{}\n{}\n{}{}",
     f"<big>{status}</big>",
+    f"<span size='xx-large'>{moon_phase_icon}</span>",
+    f"<small><i>{moon_phase}</i></small>",
     f"<small>{temp_feel_text}</small>",
     f"    ⮩ <small><i>{temp_dist}</i></small>\n",
-    f"<span size='x-large'>{time_sunrise_sunset}</span>\n",
-    f"{wind_text}\t{humidity_text}",
-    f"{uv_index_text}\t\t {air_quality_text}",
+    f"<span size='xx-large'>{time_sunrise_sunset}</span>\n",
+    f"{wind_text} \t{humidity_text}",
+    f"{uv_index_text}  \t {air_quality_text}",
     f"<i>{prediction}</i>",
 )
 
@@ -160,7 +193,7 @@ tooltip_text = str.format(
 
 # print waybar module data
 out_data = {
-    "text": f"{icon} {temp}",
+    "text": f"{icon} {temp}   {time_to_sunset}",
     "alt": status,
     "tooltip": tooltip_text,
     "class": status_code,

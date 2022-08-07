@@ -40,17 +40,16 @@ window#waybar {
 #cpu,
 #memory,
 #disk,
-#custom-gpu,
 #temperature,
-#backlight,
 #network,
 #pulseaudio,
+#custom-gpu,
 #custom-media,
+#custom-weather,
 #tray,
-#mode,
 #idle_inhibitor {
   padding: 0 10px;
-  color: #ffffff;
+  color: #c0caf5;
 }
 
 #custom-media.status {
@@ -72,37 +71,12 @@ window#waybar {
   margin-right: 0;
 }
 
-#clock {
-  background-color: #64727d;
-}
-
-#battery {
-  background-color: #ffffff;
-  color: #000000;
-}
-
-#battery.charging,
-#battery.plugged {
-  color: #ffffff;
-  background-color: #26a65b;
-}
-
 @keyframes blink {
   to {
     background-color: #ffffff;
     color: #000000;
   }
 }
-#battery.critical:not(.charging) {
-  background-color: #f53c3c;
-  color: #ffffff;
-  animation-name: blink;
-  animation-duration: 0.5s;
-  animation-timing-function: linear;
-  animation-iteration-count: infinite;
-  animation-direction: alternate;
-}
-
 label:focus {
   background-color: #000000;
 }
@@ -130,6 +104,14 @@ label:focus {
 
 #network.disconnected {
   background-color: #f53c3c;
+}
+
+#custom-gpu {
+  background-color: #7b6cb1;
+}
+
+#clock {
+  background-color: #7b6cb1;
 }
 
 #pulseaudio {
@@ -174,6 +156,10 @@ label:focus {
 
 #custom-weather.clearNight {
   color: #2b2b2a;
+}
+
+#custom-weather {
+  background-color: #24283b;
 }
 
 #custom-weather.cloudyFoggyDay,
