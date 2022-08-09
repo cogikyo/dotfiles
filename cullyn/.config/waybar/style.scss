@@ -11,12 +11,11 @@ $sec: #d982ab;
 $tert: #7b6cb1;
 $minor: #7e88bf;
 $minimal: #3d4f73;
+$bg: #24283b;
 $dark: #0d1826;
 
-// relevant tokyo night colors:
-// https://github.com/folke/tokyonight.nvim/blob/main/lua/tokyonight/colors.lua
+// theme colors (https://github.com/folke/tokyonight.nvim/blob/main/lua/tokyonight/colors.lua)
 $bg_dark: #1f2335;
-$bg: #24283b;
 $bg_highlight: #292e42;
 $terminal_black: #414868;
 $fg: #c0caf5;
@@ -34,7 +33,7 @@ $blue5: #89ddff;
 $blue6: #b4f9f8;
 $blue7: #394b70;
 $magenta: #bb9af7;
-$magenta2: #ff0p07c;
+$magenta2: #ff007c;
 $purple: #9d7cd8;
 $orange: #ff9e64;
 $yellow: #e0af68;
@@ -45,191 +44,51 @@ $teal: #1abc9c;
 $red: #f7768e;
 $red1: #db4b4b;
 
-* {
-  border: none;
-  border-radius: 0;
-  font-family: $monospace $sans-serif;
-  font-size: 18px;
-  min-height: 0;
-}
-
-window#waybar {
-  background: transparent;
-}
-
-#workspaces {
-  button {
-    padding: 0 5px;
-    background-color: transparent;
-    color: #ffffff;
-    box-shadow: inset 0 -3px transparent;
-    border: none;
-    border-radius: 0;
-  }
-
-  button:hover {
-    color: red;
-    box-shadow: inset 0 -3px pink;
-  }
-
-  button.focused {
-    background-color: #64727d;
-    box-shadow: inset 0 -3px #ffffff;
-  }
-
-  button.urgent {
-    background-color: #eb4d4b;
+// ┌┐ ┌─┐┌─┐┌─┐
+// ├┴┐├─┤└─┐├┤
+// └─┘┴ ┴└─┘└─┘
+window {
+  &#waybar {
+    font-family: $monospace;
+    font-size: 20px;
+    background: transparent;
+    color: $fg;
   }
 }
 
-#mode {
-  background-color: pink;
-  border-bottom: 3px solid #ffffff;
-}
-
-#clock,
-#battery,
-#cpu,
-#memory,
-#disk,
-#temperature,
-#network,
-#pulseaudio,
-#custom-gpu,
-#custom-media,
-#custom-weather,
-#tray,
-#idle_inhibitor {
-  padding: 0 10px;
-  color: $fg;
-}
-
-#custom-media.status {
-  font-size: 2em;
-}
-
-#window,
-#workspaces {
-  margin: 0 4px;
-}
+// ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐  ┬  ┌─┐┌─┐┌┬┐
+// ││││ │ │││ ││  ├┤ └─┐  │  ├┤ ├┤  │
+// ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘  ┴─┘└─┘└   ┴
 
 /* If workspaces is the leftmost module, omit left margin */
 .modules-left > widget:first-child > #workspaces {
   margin-left: 0;
 }
 
-/* If workspaces is the rightmost module, omit right margin */
-.modules-right > widget:last-child > #workspaces {
-  margin-right: 0;
-}
+#workspaces {
+  button {
+    color: $fg;
+    box-shadow: inset 0 -3px transparent;
 
-@keyframes blink {
-  to {
-    background-color: #ffffff;
-    color: #000000;
+    &:hover {
+      color: red;
+      box-shadow: inset 0 -3px pink;
+    }
+
+    &.focused {
+      background-color: #64727d;
+      box-shadow: inset 0 -3px #ffffff;
+    }
+
+    &.urgent {
+      background-color: #eb4d4b;
+    }
   }
 }
+// ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐  ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
+// ││││ │ │││ ││  ├┤ └─┐  │  ├┤ │││ │ ├┤ ├┬┘
+// ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘  └─┘└─┘┘└┘ ┴ └─┘┴└─
 
-label:focus {
-  background-color: #000000;
-}
-
-#cpu {
-  background-color: #2ecc71;
-  color: #000000;
-}
-
-#memory {
-  background-color: #9b59b6;
-}
-
-#disk {
-  background-color: #964b00;
-}
-
-#backlight {
-  background-color: #90b1b1;
-}
-
-#network {
-  background-color: #2980b9;
-}
-
-#network.disconnected {
-  background-color: #f53c3c;
-}
-
-#custom-gpu {
-  background-color: $tert;
-}
-
-#clock {
-  background-color: $tert;
-}
-
-#pulseaudio {
-  background-color: #f1c40f;
-  color: #000000;
-}
-
-#pulseaudio.muted {
-  background-color: #90b1b1;
-  color: #2a5c45;
-}
-
-#custom-media {
-  background-color: #66cc99;
-  color: #2a5c45;
-  min-width: 100px;
-}
-
-#custom-media.custom-spotify {
-  background-color: #66cc99;
-}
-
-#custom-media.custom-vlc {
-  background-color: #ffa000;
-}
-
-#temperature {
-  background-color: #f0932b;
-}
-
-#temperature.critical {
-  background-color: #eb4d4b;
-}
-
-#custom-weather.severe {
-  color: #eb937d;
-}
-
-#custom-weather.sunnyDay {
-  color: #c2ca76;
-}
-
-#custom-weather.clearNight {
-  color: #2b2b2a;
-}
-
-#custom-weather {
-  background-color: $bg;
-}
-
-#custom-weather.cloudyFoggyDay,
-#custom-weather.cloudyFoggyNight {
-  color: #c2ddda;
-}
-
-#custom-weather.rainyDay,
-#custom-weather.rainyNight {
-  color: #5aaca5;
-}
-
-#custom-weather.showyIcyDay,
-#custom-weather.snowyIcyNight {
-  color: #d6e7e5;
-}
-
-#custom-weather.default {
-  color: #dbd9d8;
-}
+// ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐  ┬─┐┬┌─┐┬ ┬┌┬┐
+// ││││ │ │││ ││  ├┤ └─┐  ├┬┘││ ┬├─┤ │
+// ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘  ┴└─┴└─┘┴ ┴ ┴

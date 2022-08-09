@@ -4,25 +4,34 @@
   // └─┘└─┘┘└┘└─┘┴└─┴ ┴┴─┘
   "layer": "top",
   "position": "top",
-  "height": 22,
+  "height": 34,
   "spacing": 18,
-  //-------------------------------------------------------------------------//
 
   // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┬  ┌─┐┌─┐┌┬┐
   // ││││ │ │││ ││  ├┤ └─┐───│  ├┤ ├┤  │
   // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   ┴─┘└─┘└   ┴
   "modules-left": [
-    // "launcher",
-    // "layout",
     "wlr/workspaces",
-    "pulseaudio",
-    "custom/media"
+    "custom/layout",
+    "custom/pacman",
+    "pulseaudio"
+    // "custom/media"
   ],
+
+  "custom/pacman": {
+    "format": " {}",
+    "interval": 3600, // every hour
+    "exec": "paru -Qu | wc -l", // # of updates
+    "exec-if": "exit 0", // always run; consider advanced run conditions
+    "on-click": "alacritty -e paru -Syu ", // update system
+    "signal": 8
+  },
 
   "wlr/workspaces": {
     "format": "{icon}",
     "on-click": "activate",
     "active-only": false,
+    "all-output": false,
     "format-icons": {
       "1": "ﭮ",
       "2": "",
@@ -54,23 +63,23 @@
     "format": "⌊{icon}⌉ {}",
     "max-length": 140,
     "return-type": "json",
+    "interval": 1,
     "on-click": "playerctl play-pause",
     "on-click-right": "playerctl next",
     "on-click-middle": "playerctl previous",
     "on-scroll-up": "playerctl volume 1",
     "on-scroll-down": "playerctl volume 0.01",
-    "exec": "playerctl -a metadata --format '{\"text\": \"ﴁ {{markup_escape(artist)}}  {{markup_escape(album)}}  {{markup_escape(title)}} 神 {{duration(mpris:length - position)}}\", \"tooltip\": \"{{playerName}} : {{markup_escape(title)}}\", \"alt\": \"{{status}}\", \"class\": \"{{status}}\"}' -F",
+    "exec": "playerctl --player=youtube-music-desktop-app metadata --format '{\"text\": \"ﴁ {{markup_escape(artist)}}  {{markup_escape(album)}}  {{markup_escape(title)}} 神 {{duration(mpris:length - position)}}\", \"tooltip\": \"{{playerName}} : {{markup_escape(title)}}\", \"alt\": \"{{status}}\", \"class\": \"{{status}}\"}'",
     "format-icons": {
       "Playing": "",
       "Paused": ""
     }
   },
-  //-------------------------------------------------------------------------//
 
   // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
   // ││││ │ │││ ││  ├┤ └─┐───│  ├┤ │││ │ ├┤ ├┬┘
   // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   └─┘└─┘┘└┘ ┴ └─┘┴└─
-  "modules-center": ["clock", "custom/weather"],
+  "modules-center": ["clock", "custom/weather", "custom/dunst"],
 
   "clock": {
     "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
@@ -83,7 +92,12 @@
     "return-type": "json",
     "on-click": "xdg-open https://weather.com/en-IN/weather/today/l/7fd2c8d5fd5c6067bccab7955d643755478de23380fa548b657e63b2765cf519"
   },
-  //-------------------------------------------------------------------------//
+
+  "custom/dunst": {
+    "exec": "~/.config/waybar/dunst.sh",
+    "on-click": "dunstctl set-paused toggle",
+    "restart-interval": 1
+  },
 
   // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┬─┐┬┌─┐┬ ┬┌┬┐
   // ││││ │ │││ ││  ├┤ └─┐───├┬┘││ ┬├─┤ │
@@ -135,7 +149,7 @@
   },
 
   "idle_inhibitor": {
-    "format": "{icon}",
+    "format": "{icon} ",
     "format-icons": {
       "activated": "",
       "deactivated": ""
