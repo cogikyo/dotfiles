@@ -193,7 +193,7 @@ tooltip_text = str.format(
 
 # print waybar module data
 out_data = {
-    "text": f"{icon} {temp}   {time_to_sunset}",
+    "text": f"{icon} {temp}",
     "alt": status,
     "tooltip": tooltip_text,
     "class": status_code,
