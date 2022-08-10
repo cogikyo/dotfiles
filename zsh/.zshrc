@@ -66,21 +66,23 @@ alias gck='(){git checkout $1}'
 alias gts='git status'
 kurmit () {
     commit_msg="$*"
-    if [[ -z $commit_msg ]]; then
-        vared -p "Commit message: " commit_msg
-    fi
-    printf "\nAdding all the following changes (git status):\n"
+    echo "git status:\n"
     git status
-
-    echo
     while true; do
     yn=""
     vared -p "Are you sure you want to kurmit all files? [y/n]: " yn
     case $yn in
         [Yy]* )
+            if [[ -z $commit_msg ]]; then
+                vared -p "Commit message: " commit_msg
+            fi
             git commit --all --message="'$commit_msg'"
-            git status;;
-        [Nn]* ) echo "fine, be that way.";;
+            git push
+            printf "\nThnaks for kurmiting!"
+            return;;
+        [Nn]* )
+            echo "\nAll right, then. Keep your secrets."
+            return;;
         * ) echo "Please answer (y)es or (n)o.";;
     esac
     done
