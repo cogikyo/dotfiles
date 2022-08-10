@@ -22,9 +22,13 @@ dunst & disown
 # start music player
 ytmdesktop & disown
 
+notify-send -t 6000 "$USER@$HOSTNAME" "こんにちは" --icon="$HOME/dotfiles/resources/share/nosvagor.png"
+
+# enough time to select a song
+sleep 10
+
 # open default layout
 layout default 3
 
-notify-send -t 6000 "$USER@$HOSTNAME" "こんにちは" --icon="$HOME/dotfiles/resources/nosvagor.png"
 
 exit 0
