@@ -1,58 +1,26 @@
 [
-
-  top
-
+  // ████████╗ ██████╗ ██████╗
+  // ╚══██╔══╝██╔═══██╗██╔══██╗
+  //    ██║   ██║   ██║██████╔╝
+  //    ██║   ██║   ██║██╔═══╝
+  //    ██║   ╚██████╔╝██║
+  //    ╚═╝    ╚═════╝ ╚═╝
   {
-    // ┌─┐┌─┐┌┐┌┌─┐┬─┐┌─┐┬
-    // │ ┬├┤ │││├┤ ├┬┘├─┤│
-    // └─┘└─┘┘└┘└─┘┴└─┴ ┴┴─┘
+    // ┌─┐┌─┐┌┐┌┌─┐┬─┐┌─┐┬  ┌┬┐┌─┐┌─┐
+    // │ ┬├┤ │││├┤ ├┬┘├─┤│───│ │ │├─┘
+    // └─┘└─┘┘└┘└─┘┴└─┴ ┴┴─┘ ┴ └─┘┴
+    //=========================================================================
     "layer": "top",
     "position": "top",
     "height": 34,
     "spacing": 12,
+    //=========================================================================
 
-    // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┬  ┌─┐┌─┐┌┬┐
-    // ││││ │ │││ ││  ├┤ └─┐───│  ├┤ ├┤  │
-    // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   ┴─┘└─┘└   ┴
-    "modules-left": [
-      "custom/launcher",
-      "custom/pacman",
-      "custom/layout",
-      "custom/ws1",
-      "custom/ws2",
-      "custom/ws3",
-      "custom/ws4",
-      "pulseaudio",
-      "custom/media"
-    ],
-
-    "custom/launcher": {
-      "format": " "
-    },
-    "custom/layout": {
-      "format": " "
-    },
-
-    "custom/ws1": {
-      "format": " ﭮ"
-    },
-    "custom/ws2": {
-      "format": " "
-    },
-    "custom/ws3": {
-      "format": " ﯟ"
-    },
-    "custom/ws4": {
-      "format": "輸 "
-    },
-
-    "custom/pacman": {
-      "format": " {}",
-      "interval": 3600, // every hour
-      "exec": "paru -Qu | wc -l", // # of updates
-      "exec-if": "exit 0", // always run; consider advanced run conditions
-      "on-click": "alacritty -e paru -Syu " // update system
-    },
+    // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐  ┌┬┐┌─┐┌─┐   ┬  ┌─┐┌─┐┌┬┐
+    // ││││ │ │││ ││  ├┤ └─┐───│ │ │├─┘───│  ├┤ ├┤  │
+    // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   ┴ └─┘┴     ┴─┘└─┘└   ┴
+    //=========================================================================
+    "modules-left": ["pulseaudio", "custom/media"],
 
     "pulseaudio": {
       "format": "{volume}% {icon} {format_source}",
@@ -89,11 +57,14 @@
         "Paused": ""
       }
     },
+    //=========================================================================
 
-    // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
-    // ││││ │ │││ ││  ├┤ └─┐───│  ├┤ │││ │ ├┤ ├┬┘
-    // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   └─┘└─┘┘└┘ ┴ └─┘┴└─
-    "modules-center": ["clock", "custom/weather"],
+    // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐  ┌┬┐┌─┐┌─┐   ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
+    // ││││ │ │││ ││  ├┤ └─┐───│ │ │├─┘───│  ├┤ │││ │ ├┤ ├┬┘
+    // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   ┴ └─┘┴     └─┘└─┘┘└┘ ┴ └─┘┴└─
+    //=========================================================================
+    "modules-center": ["custom/weather", "clock", "custom/dunst", "tray"],
+    //=========================================================================
     "clock": {
       "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
       "format": "{: %A, %B %d  %H:%M}"
@@ -112,24 +83,21 @@
       "restart-interval": 1
     },
 
-    // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┬─┐┬┌─┐┬ ┬┌┬┐
-    // ││││ │ │││ ││  ├┤ └─┐───├┬┘││ ┬├─┤ │
-    // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   ┴└─┴└─┘┴ ┴ ┴
-    "modules-right": [
-      "network",
-      "cpu",
-      "memory",
-      "custom/gpu",
-      "temperature",
-      // "tray",
-      "idle_inhibitor",
-      // "terminal"
-      // "power"
-      "custom/dunst"
-    ],
+    "tray": {
+      "icon-size": 21,
+      "spacing": 10,
+      "show-passive-items": true
+    },
+
+    // ┌┬┐┌─┐┌┬┐┬ ┬┌─┐┬  ┌─┐┌─┐  ┌┬┐┌─┐┌─┐   ┬─┐┬┌─┐┬ ┬┌┬┐
+    // ││││ │ │││ │├┤ │  ├┤ └─┐───│ │ │├─┘───├┬┘││ ┬├─┤ │
+    // ┴ ┴└─┘─┴┘└─┘└─┘┴─┘└─┘└─┘   ┴ └─┘┴     ┴└─┴└─┘┴ ┴ ┴
+    //=========================================================================
+    "modules-right": ["cpu", "memory", "custom/gpu", "temperature"],
+    //=========================================================================
 
     "tray": {
-      // "icon-size": 21,
+      "icon-size": 21,
       "spacing": 10
     },
 
@@ -150,16 +118,6 @@
       "format-critical": "{temperatureC}°C {icon}",
       "format": "{temperatureC}°C {icon}",
       "format-icons": ["", "", ""]
-    },
-
-    "network": {
-      // "interface": "wlp2*", // (Optional) To force the use of this interface
-      "format-wifi": "{essid} ({signalStrength}%) ",
-      "format-ethernet": "{ipaddr}/{cidr} ",
-      "tooltip-format": "{ifname} via {gwaddr} ",
-      "format-linked": "{ifname} (No IP) ",
-      "format-disconnected": "Disconnected ⚠",
-      "format-alt": "{ifname}: {ipaddr}/{cidr}"
     },
 
     "idle_inhibitor": {
@@ -178,48 +136,35 @@
     }
   },
 
+  // ██████╗  ██████╗ ████████╗
+  // ██╔══██╗██╔═══██╗╚══██╔══╝
+  // ██████╔╝██║   ██║   ██║
+  // ██╔══██╗██║   ██║   ██║
+  // ██████╔╝╚██████╔╝   ██║
+  // ╚═════╝  ╚═════╝    ╚═╝
   {
-    // ┌─┐┌─┐┌┐┌┌─┐┬─┐┌─┐┬
-    // │ ┬├┤ │││├┤ ├┬┘├─┤│
-    // └─┘└─┘┘└┘└─┘┴└─┴ ┴┴─┘
+    // ┌─┐┌─┐┌┐┌┌─┐┬─┐┌─┐┬   ┌┐ ┌─┐┌┬┐
+    // │ ┬├┤ │││├┤ ├┬┘├─┤│───├┴┐│ │ │
+    // └─┘└─┘┘└┘└─┘┴└─┴ ┴┴─┘ └─┘└─┘ ┴
+    //=========================================================================
     "layer": "top",
     "position": "bottom",
     "height": 34,
     "spacing": 12,
+    //=========================================================================
 
-    // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┬  ┌─┐┌─┐┌┬┐
-    // ││││ │ │││ ││  ├┤ └─┐───│  ├┤ ├┤  │
-    // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   ┴─┘└─┘└   ┴
-    "modules-left": [
-      "custom/launcher",
-      "custom/pacman",
-      "custom/layout",
-      "custom/ws1",
-      "custom/ws2",
-      "custom/ws3",
-      "custom/ws4",
-      "pulseaudio",
-      "custom/media"
-    ],
+    // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┌┐ ┌─┐┌┬┐  ┬  ┌─┐┌─┐┌┬┐
+    // ││││ │ │││ ││  ├┤ └─┐───├┴┐│ │ │───│  ├┤ ├┤  │
+    // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   └─┘└─┘ ┴   ┴─┘└─┘└   ┴
+    //=========================================================================
+    "modules-left": ["custom/launcher", "custom/layout", "custom/pacman"],
 
     "custom/launcher": {
-      "format": " "
-    },
-    "custom/layout": {
-      "format": " "
+      "format": " "
     },
 
-    "custom/ws1": {
-      "format": " ﭮ"
-    },
-    "custom/ws2": {
-      "format": " "
-    },
-    "custom/ws3": {
-      "format": " ﯟ"
-    },
-    "custom/ws4": {
-      "format": "輸 "
+    "custom/layout": {
+      "format": " "
     },
 
     "custom/pacman": {
@@ -229,112 +174,38 @@
       "exec-if": "exit 0", // always run; consider advanced run conditions
       "on-click": "alacritty -e paru -Syu " // update system
     },
+    //=========================================================================
 
-    "pulseaudio": {
-      "format": "{volume}% {icon} {format_source}",
-      "format-bluetooth": "{volume}% {icon} {format_source}",
-      "format-bluetooth-muted": " {icon} {format_source}",
-      "format-muted": " {format_source}",
-      "format-source": "{volume}% ",
-      "format-source-muted": "",
-      "format-icons": {
-        "headphone": "",
-        "hands-free": "",
-        "headset": "",
-        "phone": "",
-        "portable": "",
-        "car": "",
-        "default": ["", "", ""]
-      },
-      "on-click": "pavucontrol"
-    },
+    // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┌┐ ┌─┐┌┬┐  ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
+    // ││││ │ │││ ││  ├┤ └─┐───├┴┐│ │ │───│  ├┤ │││ │ ├┤ ├┬┘
+    // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   └─┘└─┘ ┴   └─┘└─┘┘└┘ ┴ └─┘┴└─
+    //=========================================================================
+    "modules-center": ["wlr/workspaces"],
 
-    "custom/media": {
-      "format": "⌊{icon}⌉ {}",
-      "max-length": 100,
-      "return-type": "json",
-      "interval": 1,
-      "on-click": "playerctl play-pause",
-      "on-click-right": "playerctl next",
-      "on-click-middle": "playerctl previous",
-      "on-scroll-up": "playerctl volume 1",
-      "on-scroll-down": "playerctl volume 0.01",
-      "exec": "playerctl --player=youtube-music-desktop-app metadata --format '{\"text\": \"ﴁ {{markup_escape(artist)}}  {{markup_escape(album)}}  {{markup_escape(title)}} 神 {{duration(mpris:length - position)}}\", \"tooltip\": \"{{playerName}} : {{markup_escape(title)}}\", \"alt\": \"{{status}}\", \"class\": \"{{status}}\"}'",
+    "wlr/workspaces": {
+      "format": "{icon}",
+      "on-click": "hyprctl dispatch workspace {name}",
       "format-icons": {
-        "Playing": "",
-        "Paused": ""
+        "1": "ﭮ",
+        "2": "",
+        "3": "⌬",
+        "4": "輸"
       }
     },
+    //=========================================================================
 
-    // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
-    // ││││ │ │││ ││  ├┤ └─┐───│  ├┤ │││ │ ├┤ ├┬┘
-    // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   └─┘└─┘┘└┘ ┴ └─┘┴└─
-    "modules-center": ["clock", "custom/weather"],
-    "clock": {
-      "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
-      "format": "{: %A, %B %d  %H:%M}"
-    },
-
-    "custom/weather": {
-      "exec": "python ~/.config/waybar/weather.py",
-      "restart-interval": 300,
-      "return-type": "json",
-      "on-click": "xdg-open https://weather.com/en-IN/weather/today/l/7fd2c8d5fd5c6067bccab7955d643755478de23380fa548b657e63b2765cf519"
-    },
-
-    "custom/dunst": {
-      "exec": "~/.config/waybar/dunst.sh",
-      "on-click": "dunstctl set-paused toggle",
-      "restart-interval": 1
-    },
-
-    // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┬─┐┬┌─┐┬ ┬┌┬┐
-    // ││││ │ │││ ││  ├┤ └─┐───├┬┘││ ┬├─┤ │
-    // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   ┴└─┴└─┘┴ ┴ ┴
-    "modules-right": [
-      "network",
-      "cpu",
-      "memory",
-      "custom/gpu",
-      "temperature",
-      // "tray",
-      "idle_inhibitor",
-      // "terminal"
-      // "power"
-      "custom/dunst"
-    ],
-
-    "tray": {
-      // "icon-size": 21,
-      "spacing": 10
-    },
-
-    "cpu": {
-      "format": "{usage}% ",
-      "tooltip": false,
-      "interval": 1
-    },
-
-    "memory": {
-      "format": "{}% "
-    },
-
-    "temperature": {
-      // "thermal-zone": 2,
-      "hwmon-path": "/sys/class/hwmon/hwmon3/temp1_input",
-      "critical-threshold": 80,
-      "format-critical": "{temperatureC}°C {icon}",
-      "format": "{temperatureC}°C {icon}",
-      "format-icons": ["", "", ""]
-    },
+    // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┌┐ ┌─┐┌┬┐  ┬─┐┬┌─┐┬ ┬┌┬┐
+    // ││││ │ │││ ││  ├┤ └─┐───├┴┐│ │ │───├┬┘││ ┬├─┤ │
+    // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   └─┘└─┘ ┴   ┴└─┴└─┘┴ ┴ ┴
+    //=========================================================================
+    "modules-right": ["network", "terminal", "power"],
 
     "network": {
-      // "interface": "wlp2*", // (Optional) To force the use of this interface
-      "format-wifi": "{essid} ({signalStrength}%) ",
-      "format-ethernet": "{ipaddr}/{cidr} ",
-      "tooltip-format": "{ifname} via {gwaddr} ",
-      "format-linked": "{ifname} (No IP) ",
-      "format-disconnected": "Disconnected ⚠",
+      "format-wifi": "{essid} ({signalStrength}%)  ",
+      "format-ethernet": "{ipaddr}/{cidr}  ",
+      "tooltip-format": "{ifname} via {gwaddr}  ",
+      "format-linked": "{ifname} (No IP)  ",
+      "format-disconnected": "Disconnected ⚠ ",
       "format-alt": "{ifname}: {ipaddr}/{cidr}"
     },
 
@@ -344,13 +215,8 @@
         "activated": "",
         "deactivated": ""
       }
-    },
-
-    "custom/gpu": {
-      "exec": "cat /sys/class/hwmon/hwmon3/device/gpu_busy_percent",
-      "format": "GPU: {}%",
-      "return-type": "",
-      "interval": 1
     }
+
+    //=========================================================================
   }
 ]

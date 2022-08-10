@@ -5,17 +5,31 @@ import json
 
 # weather icons
 weather_icons = {
-    "sunnyDay": "滛",
+    "sunnyDay": "盛",
     "clearNight": "望",
-    "cloudyFoggyDay": "",
-    "cloudyFoggyNight": "",
-    "rainyDay": "",
-    "rainyNight": "",
-    "snowyIcyDay": "",
-    "snowyIcyNight": "",
-    "severe": "",
-    "default": "",
+    "cloudyFoggyDay": " ",
+    "cloudyFoggyNight": " ",
+    "rainyDay": " ",
+    "rainyNight": " ",
+    "snowyIcyDay": " ",
+    "snowyIcyNight": " ",
+    "severe": " ",
+    "default": "?",
 }
+
+weather_icons_emoji = {
+    "sunnyDay": "☀️",
+    "clearNight": "🌃",
+    "cloudyFoggyDay": "🌁",
+    "cloudyFoggyNight": "🌁 ",
+    "rainyDay": "🌧️",
+    "rainyNight": "☔ ",
+    "snowyIcyDay": "❄️,",
+    "snowyIcyNight": "❄️,",
+    "severe": "👽",
+    "default": "❓ ",
+}
+
 
 # get location_id
 # to get your own location_id, go to https://weather.com & search your location.
@@ -48,10 +62,16 @@ icon = (
     else weather_icons["default"]
 )
 
+icon_emoji = (
+    weather_icons_emoji[status_code]
+    if status_code in weather_icons
+    else weather_icons["default"]
+)
+
 # prediction phrase
 prediction = html_data(".CurrentConditions--precipValue--3nxCj").text()
-prediction = prediction.replace("chance of rain", "  ")
-prediction = f"\n\n   {prediction}" if len(prediction) > 0 else prediction
+# prediction = prediction.replace("chance of rain", "  ")
+# prediction = f"\n\n   {prediction}" if len(prediction) > 0 else prediction
 
 # temperature feels like
 temp_feel = html_data(".TodayDetailsCard--feelsLikeTempValue--Cf9Sl").text()
@@ -79,7 +99,9 @@ temp_evening = html_data(
 temp_overnight = html_data(
     ".WeatherTable--wide--3dFXu > li:nth-child(4) > a:nth-child(1) > div:nth-child(2) > span:nth-child(1)"
 ).text()
-temp_dist = f"🌄 {temp_morning} 🔆 {temp_afternoon} 🌃 {temp_evening} 🌘 {temp_overnight}"
+temp_dist = (
+    f"🌄 {temp_morning}   🔆 {temp_afternoon}   🌃 {temp_evening}   🌘 {temp_overnight}"
+)
 
 # sunrise and sunset time
 time_to_sunrise = html_data(
@@ -88,7 +110,7 @@ time_to_sunrise = html_data(
 time_to_sunset = html_data(
     "#SunriseSunsetContainer-fd88de85-7aa1-455f-832a-eacb037c140a > div > div > div > div:nth-child(2) > p"
 ).text()
-time_sunrise_sunset = f"  {time_to_sunrise} |   {time_to_sunset}"
+time_sunrise_sunset = f"🌅 {time_to_sunrise}\t🌇 {time_to_sunset}"
 
 # air quality index
 air_quality_index = html_data(
@@ -99,23 +121,23 @@ air_quality_index = html_data(
 def get_air_quality_value_icon(air_quality_index):
     val = int(air_quality_index)
     res = "?"
-    if val > 0 & val <= 50:
-        res = "🟢"
-    elif val > 50 & val <= 100:
-        res = "🟡"
-    elif val > 100 & val <= 200:
-        res = "🟠"
-    elif val > 150 & val <= 200:
-        res = "🔴"
-    elif val > 200 & val <= 300:
-        res = "🟣"
+    if val > 0 and val <= 50:
+        res = " "
+    elif val > 50 and val <= 100:
+        res = ""
+    elif val > 100 and val <= 200:
+        res = ""
+    elif val > 150 and val <= 200:
+        res = ""
+    elif val > 200 and val <= 300:
+        res = "⚠️"
     else:
         res = "☣️"
     return res
 
 
 air_quality_icon = get_air_quality_value_icon(air_quality_index)
-air_quality_text = f"{air_quality_index}|<small>{air_quality_icon}</small>"
+air_quality_text = f"{air_quality_icon} {air_quality_index}"
 
 # wind details
 wind_speed = html_data(".Wind--windWrapper--3aqXJ").text().split("\n")[1]
@@ -130,7 +152,7 @@ visbility_text = f"  {visbility}"
 # humidity
 humidity = html_data(
     "div.ListItem--listItem--2wQRK:nth-child(3) > div:nth-child(3) > span:nth-child(1)"
-).text()
+).text()[:2]
 humidity_text = f" {humidity}"
 
 # moon phase
@@ -177,16 +199,14 @@ uv_index_text = f"履  {uv_index}"
 
 # tooltip text
 tooltip_text = str.format(
-    "{}\t\t{} {}\n{}\n{}\n{}\n{}\n{}{}",
-    f"<big>{status}</big>",
-    f"<span size='xx-large'>{moon_phase_icon}</span>",
-    f"<small><i>{moon_phase}</i></small>",
-    f"<small>{temp_feel_text}</small>",
-    f"    ⮩ <small><i>{temp_dist}</i></small>\n",
-    f"<span size='xx-large'>{time_sunrise_sunset}</span>\n",
-    f"{wind_text} \t{humidity_text}",
-    f"{uv_index_text}  \t {air_quality_text}",
-    f"<i>{prediction}</i>",
+    "{}{}{}{}{}{}{}",
+    f"<big>{icon_emoji} {status}</big>",
+    f"\t\t<span size='xx-large'>{moon_phase_icon}</span>",
+    f" <small><i>{moon_phase}</i></small>\n",
+    f"<small>{temp_feel_text}</small>\n",
+    f"    ⮩ <small><i>{temp_dist}</i></small>\n\n",
+    f"<span size='xx-large'>{time_sunrise_sunset}</span>\n\n",
+    f"{wind_text}\t\t\t{humidity_text}\n{uv_index_text}\t\t\t{air_quality_text}",
 )
 
 # tooltip_text += f'{temp_dist_icons}\n{temp_dist}\n\n{time_sunrise_sunset}'
