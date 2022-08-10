@@ -70,9 +70,10 @@ kurmit () {
     vared -p "Commit message: " commit_input
   fi
   commit_msg="batch commit: $commit_input "
+  echo "commit message: $commit_msg\n adding all commits and pushing..."
   git add .
   git commit -m "$commit"
-  git push
+  # git push
 }
 touchsh () {
     file="$1"
