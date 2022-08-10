@@ -70,7 +70,7 @@ kurmit () {
     vared -p "Commit message: " commit_input
   fi
   commit_msg="batch commit: $commit_input "
-  echo "commit message: $commit_msg\n adding all commits and pushing..."
+  echo "$commit_msg \n\n adding all commits and pushing...\n"
   git add .
   git commit -m "$commit"
   # git push
