@@ -70,7 +70,7 @@ kurmit () {
     git status
     while true; do
     yn=""
-    vared -p "Are you sure you want to kurmit all files? [y/n]: " yn
+    vared -p "\nAre you sure you want to kurmit all files? [y/n]: " yn
     case $yn in
         [Yy]* )
             if [[ -z $commit_msg ]]; then
@@ -78,7 +78,6 @@ kurmit () {
             fi
             git commit --all --message="'$commit_msg'"
             git push
-            printf "\nThnaks for kurmiting!"
             return;;
         [Nn]* )
             echo "\nAll right, then. Keep your secrets."
