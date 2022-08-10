@@ -5,25 +5,83 @@ window#waybar {
   color: #c0caf5;
 }
 
-/* If workspaces is the leftmost module, omit left margin */
-.modules-left > widget:first-child > #workspaces {
-  margin-left: 0;
+tooltip {
+  background: #24283b;
+  border-radius: 16px;
+  font-size: 2em;
+}
+
+tooltip label {
+  color: white;
+}
+
+.modules-left:first-child {
+  padding-left: 1em;
+}
+
+#custom-launcher {
+  font-size: 1.4em;
+}
+
+#custom-layout {
+  font-size: 1.2em;
+  margin-left: -13px;
+}
+
+#custom-pacman {
+  font-size: 1.1em;
+  margin-top: 1px;
+  margin-left: -2px;
+}
+
+#clock {
+  background-color: #24283b;
+  border-radius: 16px;
+  padding: 0 1em;
 }
 
 #workspaces button {
+  padding: 0 0.5em;
+  font-size: 1.5em;
   color: #c0caf5;
-  box-shadow: inset 0 -3px transparent;
+  border: none;
+  box-shadow: none;
 }
 #workspaces button:hover {
-  color: red;
-  box-shadow: inset 0 -3px pink;
+  color: #7b6cb1;
+  background: none;
+  border: none;
 }
-#workspaces button.focused {
-  background-color: #64727d;
-  box-shadow: inset 0 -3px #ffffff;
+#workspaces button.active {
+  color: #f2a0a7;
 }
 #workspaces button.urgent {
-  background-color: #eb4d4b;
+  color: #f7768e;
+}
+#workspaces button:nth-child(3) {
+  font-size: 1.7em;
+}
+#workspaces button:nth-child(4) {
+  padding-left: 2px;
+  font-size: 1.9em;
+}
+
+#custom-dunst {
+  font-size: 0.9em;
+  margin-top: 5px;
+  margin-right: -6px;
+}
+
+#tray {
+  margin-top: 6px;
+}
+#tray menu {
+  background-color: #24283b;
+  color: #c0caf5;
+}
+
+.modules-right:last-child {
+  padding-right: 1em;
 }
 
 /*# sourceMappingURL=style.css.map */
