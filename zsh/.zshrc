@@ -58,16 +58,29 @@ alias niol='clear && source ~/.zshrc'
 alias dot='cd ~/dotfiles'
 alias not='cd ~/notes'
 alias x='exit'
+alias cat='bat'
 
 # git
 alias g='lazygit'
 alias gck='(){git checkout $1}'
 alias gts='git status'
 kurmit () {
+  commit="$1"
+  if [[ -z "$1" ]]; then
+      vared -p "Commit message: " commit
+  fi
   git add .
-  commit=""
-  vared -p "Commit message: " commit && git commit -m "$commit"
+  git commit -m "$commit"
   git push
+}
+touchsh () {
+    file="$1"
+    if [[ -z "$1" ]]; then
+        vared -p "script name: " file
+    fi
+    touch $file
+    chmod +x $file
+    echo "#!/usr/bin/env bash" >> $file
 }
 alias amend='(){git add . && git commit --amend --no-edit;}'
 alias gpf='git push --force'
