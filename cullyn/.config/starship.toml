@@ -4,10 +4,11 @@ format = """
 [╰╼╾](bold blue) $status$character"""
 
 [directory]
-truncation_length = 2
-truncation_symbol = " "
+truncation_length = 6
+truncation_symbol = " "
 style = "cyan"
 read_only = " "
+home_symbol = " ~"
 disabled = false
 
 [username]
