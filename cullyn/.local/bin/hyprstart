@@ -2,7 +2,6 @@
 
 ###############################################################################
 # Author: cullyn | https://github.com/nosvagor/dotfiles
-# Date Created: 2022 August 3
 
 # Description:
 # simple set of commands to run upon hyprland startup
@@ -11,30 +10,21 @@
 # place "exec-once=~/path/to/script" in hyprland.conf
 ###############################################################################
 
-# set wallpaper
-hyprpaper &
+#set wallpaper
+hyprpaper & disown
 
 # start status bar
-# start waybar </dev/null &>/dev/null & disown
-# killall waybar
+waybar & disown
 
-(waybar & disown)
-
-# # start notifications
-dunst &
+# start notifications
+dunst & disown
 
 # start music player
-ytmdesktop &
+ytmdesktop & disown
 
-# end with switching to main workspace
-# hyprctl dispatch workspace 2 && sleep 1
-notify-send "welcome"
+# open default layout
+layout default 3
 
-# alacritty </dev/null &>/dev/null & sleep 0.5
-# firefox-developer-edition --new-window  </dev/null &>/dev/null & sleep 0.5
-# hyprctl dispatch resizeactive,exact 1659 1552
-# notify-send "working"
-# firefox-developer-edition --new-window </dev/null &>/dev/null & sleep 0.5
-# notify-send "end"
+notify-send -t 6000 "$USER@$HOSTNAME" "こんにちは" --icon="$HOME/dotfiles/resources/nosvagor.png"
 
 exit 0
