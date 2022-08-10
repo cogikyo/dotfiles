@@ -65,13 +65,14 @@ alias g='lazygit'
 alias gck='(){git checkout $1}'
 alias gts='git status'
 kurmit () {
-  commit="$1"
-  if [[ -z "$1" ]]; then
-      vared -p "Commit message: " commit
+  commit_input="$*"
+  if [[ -z $commit_input ]]; then
+    vared -p "Commit message: " commit_input
   fi
+  commit_msg="batch commit: $commit_input "
   git add .
   git commit -m "$commit"
-  git push
+  # git push
 }
 touchsh () {
     file="$1"

@@ -122,7 +122,7 @@ def get_air_quality_value_icon(air_quality_index):
     val = int(air_quality_index)
     res = "?"
     if val > 0 and val <= 50:
-        res = " "
+        res = ""
     elif val > 50 and val <= 100:
         res = ""
     elif val > 100 and val <= 200:
@@ -206,7 +206,7 @@ tooltip_text = str.format(
     f"<small>{temp_feel_text}</small>\n",
     f"    ⮩ <small><i>{temp_dist}</i></small>\n\n",
     f"<span size='xx-large'>{time_sunrise_sunset}</span>\n\n",
-    f"{wind_text}\t\t\t{humidity_text}\n{uv_index_text}\t\t\t{air_quality_text}",
+    f"{wind_text}\t\t{humidity_text}\n{uv_index_text}\t\t\t{air_quality_text}",
 )
 
 # tooltip_text += f'{temp_dist_icons}\n{temp_dist}\n\n{time_sunrise_sunset}'

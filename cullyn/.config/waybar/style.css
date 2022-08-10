@@ -6,17 +6,13 @@ window#waybar {
 }
 
 tooltip {
-  background: #24283b;
+  background: rgba(36, 40, 59, 0.87);
   border-radius: 16px;
   font-size: 2em;
 }
 
 tooltip label {
   color: white;
-}
-
-.modules-left:first-child {
-  padding-left: 1em;
 }
 
 #custom-launcher {
@@ -58,11 +54,12 @@ tooltip label {
 #workspaces button.urgent {
   color: #f7768e;
 }
-#workspaces button:nth-child(3) {
-  font-size: 1.7em;
+#workspaces button:nth-last-child(2) {
+  font-size: 1.75em;
+  margin-left: -2px;
 }
-#workspaces button:nth-child(4) {
-  padding-left: 2px;
+#workspaces button:last-child {
+  padding-left: 1px;
   font-size: 1.9em;
 }
 
@@ -78,10 +75,6 @@ tooltip label {
 #tray menu {
   background-color: #24283b;
   color: #c0caf5;
-}
-
-.modules-right:last-child {
-  padding-right: 1em;
 }
 
 /*# sourceMappingURL=style.css.map */
