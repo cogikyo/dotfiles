@@ -72,7 +72,7 @@ kurmit () {
   commit_msg="batch commit: $commit_input "
   git add .
   git commit -m "$commit"
-  # git push
+  git push
 }
 touchsh () {
     file="$1"
