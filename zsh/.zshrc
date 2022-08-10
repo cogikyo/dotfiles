@@ -72,8 +72,8 @@ kurmit () {
   commit_msg="batch commit: $commit_input "
   echo "$commit_msg \n\n adding all commits and pushing...\n"
   git add .
-  git commit -m "$commit"
-  # git push
+  git commit -m "$commit_msg"
+  git push
 }
 touchsh () {
     file="$1"
