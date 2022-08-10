@@ -1,45 +1,15 @@
 [
-  // ████████╗ ██████╗ ██████╗
-  // ╚══██╔══╝██╔═══██╗██╔══██╗
-  //    ██║   ██║   ██║██████╔╝
-  //    ██║   ██║   ██║██╔═══╝
-  //    ██║   ╚██████╔╝██║
-  //    ╚═╝    ╚═════╝ ╚═╝
   {
-    // ┌─┐┌─┐┌┐┌┌─┐┬─┐┌─┐┬  ┌┬┐┌─┐┌─┐
-    // │ ┬├┤ │││├┤ ├┬┘├─┤│───│ │ │├─┘
-    // └─┘└─┘┘└┘└─┘┴└─┴ ┴┴─┘ ┴ └─┘┴
-    //=========================================================================
+    // ┌┬┐┌─┐┌─┐
+    //  │ │ │├─┘
+    //  ┴ └─┘┴
     "layer": "top",
     "position": "top",
-    "height": 34,
     "spacing": 12,
-    //=========================================================================
 
-    // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐  ┌┬┐┌─┐┌─┐   ┬  ┌─┐┌─┐┌┬┐
-    // ││││ │ │││ ││  ├┤ └─┐───│ │ │├─┘───│  ├┤ ├┤  │
-    // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   ┴ └─┘┴     ┴─┘└─┘└   ┴
-    //=========================================================================
-    "modules-left": ["pulseaudio", "custom/media"],
-
-    "pulseaudio": {
-      "format": "{volume}% {icon} {format_source}",
-      "format-bluetooth": "{volume}% {icon} {format_source}",
-      "format-bluetooth-muted": " {icon} {format_source}",
-      "format-muted": " {format_source}",
-      "format-source": "{volume}% ",
-      "format-source-muted": "",
-      "format-icons": {
-        "headphone": "",
-        "hands-free": "",
-        "headset": "",
-        "phone": "",
-        "portable": "",
-        "car": "",
-        "default": ["", "", ""]
-      },
-      "on-click": "pavucontrol"
-    },
+    "modules-left": ["custom/media"],
+    "modules-center": ["custom/weather", "clock", "custom/dunst", "tray"],
+    "modules-right": ["cpu", "memory", "custom/gpu", "temperature"],
 
     "custom/media": {
       "format": "⌊{icon}⌉ {}",
@@ -57,14 +27,7 @@
         "Paused": ""
       }
     },
-    //=========================================================================
 
-    // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐  ┌┬┐┌─┐┌─┐   ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
-    // ││││ │ │││ ││  ├┤ └─┐───│ │ │├─┘───│  ├┤ │││ │ ├┤ ├┬┘
-    // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   ┴ └─┘┴     └─┘└─┘┘└┘ ┴ └─┘┴└─
-    //=========================================================================
-    "modules-center": ["custom/weather", "clock", "custom/dunst", "tray"],
-    //=========================================================================
     "clock": {
       "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
       "format": "{: %A, %B %d  %H:%M}"
@@ -82,19 +45,6 @@
       "on-click": "dunstctl set-paused toggle",
       "restart-interval": 1
     },
-
-    "tray": {
-      "icon-size": 21,
-      "spacing": 10,
-      "show-passive-items": true
-    },
-
-    // ┌┬┐┌─┐┌┬┐┬ ┬┌─┐┬  ┌─┐┌─┐  ┌┬┐┌─┐┌─┐   ┬─┐┬┌─┐┬ ┬┌┬┐
-    // ││││ │ │││ │├┤ │  ├┤ └─┐───│ │ │├─┘───├┬┘││ ┬├─┤ │
-    // ┴ ┴└─┘─┴┘└─┘└─┘┴─┘└─┘└─┘   ┴ └─┘┴     ┴└─┴└─┘┴ ┴ ┴
-    //=========================================================================
-    "modules-right": ["cpu", "memory", "custom/gpu", "temperature"],
-    //=========================================================================
 
     "tray": {
       "icon-size": 21,
@@ -120,14 +70,6 @@
       "format-icons": ["", "", ""]
     },
 
-    "idle_inhibitor": {
-      "format": "{icon} ",
-      "format-icons": {
-        "activated": "",
-        "deactivated": ""
-      }
-    },
-
     "custom/gpu": {
       "exec": "cat /sys/class/hwmon/hwmon3/device/gpu_busy_percent",
       "format": "GPU: {}%",
@@ -136,28 +78,17 @@
     }
   },
 
-  // ██████╗  ██████╗ ████████╗
-  // ██╔══██╗██╔═══██╗╚══██╔══╝
-  // ██████╔╝██║   ██║   ██║
-  // ██╔══██╗██║   ██║   ██║
-  // ██████╔╝╚██████╔╝   ██║
-  // ╚═════╝  ╚═════╝    ╚═╝
   {
-    // ┌─┐┌─┐┌┐┌┌─┐┬─┐┌─┐┬   ┌┐ ┌─┐┌┬┐
-    // │ ┬├┤ │││├┤ ├┬┘├─┤│───├┴┐│ │ │
-    // └─┘└─┘┘└┘└─┘┴└─┴ ┴┴─┘ └─┘└─┘ ┴
-    //=========================================================================
+    // ┌┐ ┌─┐┌┬┐┌┬┐┌─┐┌┬┐
+    // ├┴┐│ │ │  │ │ ││││
+    // └─┘└─┘ ┴  ┴ └─┘┴ ┴
     "layer": "top",
     "position": "bottom",
-    "height": 34,
     "spacing": 12,
-    //=========================================================================
 
-    // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┌┐ ┌─┐┌┬┐  ┬  ┌─┐┌─┐┌┬┐
-    // ││││ │ │││ ││  ├┤ └─┐───├┴┐│ │ │───│  ├┤ ├┤  │
-    // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   └─┘└─┘ ┴   ┴─┘└─┘└   ┴
-    //=========================================================================
     "modules-left": ["custom/launcher", "custom/layout", "custom/pacman"],
+    "modules-center": ["wlr/workspaces"],
+    "modules-right": ["network", "terminal", "power"],
 
     "custom/launcher": {
       "format": " "
@@ -169,22 +100,14 @@
 
     "custom/pacman": {
       "format": " {}",
-      "interval": 3600, // every hour
+      "interval": 60,
       "exec": "paru -Qu | wc -l", // # of updates
-      "exec-if": "exit 0", // always run; consider advanced run conditions
       "on-click": "alacritty -e paru -Syu " // update system
     },
-    //=========================================================================
-
-    // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┌┐ ┌─┐┌┬┐  ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
-    // ││││ │ │││ ││  ├┤ └─┐───├┴┐│ │ │───│  ├┤ │││ │ ├┤ ├┬┘
-    // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   └─┘└─┘ ┴   └─┘└─┘┘└┘ ┴ └─┘┴└─
-    //=========================================================================
-    "modules-center": ["wlr/workspaces"],
 
     "wlr/workspaces": {
       "format": "{icon}",
-      "on-click": "hyprctl dispatch workspace {name}",
+      "on-click": "activate",
       "format-icons": {
         "1": "ﭮ",
         "2": "",
@@ -192,22 +115,26 @@
         "4": "輸"
       }
     },
-    //=========================================================================
-
-    // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐   ┌┐ ┌─┐┌┬┐  ┬─┐┬┌─┐┬ ┬┌┬┐
-    // ││││ │ │││ ││  ├┤ └─┐───├┴┐│ │ │───├┬┘││ ┬├─┤ │
-    // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘   └─┘└─┘ ┴   ┴└─┴└─┘┴ ┴ ┴
-    //=========================================================================
-    "modules-right": ["network", "terminal", "power"],
 
     "network": {
-      "format-wifi": "{essid} ({signalStrength}%)  ",
-      "format-ethernet": "{ipaddr}/{cidr}  ",
-      "tooltip-format": "{ifname} via {gwaddr}  ",
-      "format-linked": "{ifname} (No IP)  ",
-      "format-disconnected": "Disconnected ⚠ ",
-      "format-alt": "{ifname}: {ipaddr}/{cidr}"
-    },
+      "interval": 1,
+      "format-ethernet": " {ipaddr}",
+      "format-disconnected": " disconnected",
+      "tooltip-format": "{ifname} via {gwaddr}"
+    }
+  },
+
+  {
+    // ┬─┐┬┌─┐┬ ┬┌┬┐
+    // ├┬┘││ ┬├─┤ │
+    // ┴└─┴└─┘┴ ┴ ┴
+    "layer": "top",
+    "position": "right",
+    "spacing": 12,
+
+    "modules-left": [],
+    "modules-center": ["idle_inhibitor"],
+    "modules-right": [],
 
     "idle_inhibitor": {
       "format": "{icon} ",
@@ -216,7 +143,32 @@
         "deactivated": ""
       }
     }
+  },
 
-    //=========================================================================
+  {
+    // ┬  ┌─┐┌─┐┌┬┐
+    // │  ├┤ ├┤  │
+    // ┴─┘└─┘└   ┴
+    "layer": "top",
+    "position": "left",
+    "spacing": 12,
+
+    "modules-left": [],
+    "modules-center": ["pulseaudio#speaker", "pulseaudio#mic"],
+    "modules-right": [],
+
+    "pulseaudio#speaker": {
+      "rotate": 90,
+      "format": "{volume}%",
+      "on-click": "pavucontrol"
+    },
+
+    "pulseaudio#mic": {
+      "rotate": 90,
+      "format": "{format_source}",
+      "format-source": "{volume}% ",
+      "format-source-muted": "",
+      "on-click": "pavucontrol"
+    }
   }
 ]
