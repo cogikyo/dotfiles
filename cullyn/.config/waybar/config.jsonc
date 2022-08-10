@@ -13,7 +13,7 @@
 
     "custom/media": {
       "format": "⌊{icon}⌉ {}",
-      "max-length": 100,
+      "max-length": 80,
       "return-type": "json",
       "interval": 1,
       "on-click": "playerctl play-pause",

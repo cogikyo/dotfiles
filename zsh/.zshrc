@@ -69,20 +69,21 @@ kurmit () {
     if [[ -z $commit_msg ]]; then
         vared -p "Commit message: " commit_msg
     fi
-    echo "$commit_msg \n\nAdding all the following changes:\n"
+    printf "\nAdding all the following changes (git status):\n"
     git status
-    echo "Commit all changes? (kurmit)"
-    select yn in "Yes" "No"; do
+
+    echo
+    while true; do
+    yn=""
+    vared -p "Are you sure you want to kurmit all files? [y/n]: " yn
     case $yn in
-        Yes )
-            git add .
-            git commit -m "$commit_msg"
-            git push
-            ;;
-        No ) exit;;
+        [Yy]* )
+            git commit --all --message="'$commit_msg'"
+            git status;;
+        [Nn]* ) echo "fine, be that way.";;
+        * ) echo "Please answer (y)es or (n)o.";;
     esac
     done
-    exit 0
 }
 touchsh () {
     file="$1"
