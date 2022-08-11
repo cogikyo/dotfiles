@@ -38,7 +38,7 @@ tooltip label {
 
 #workspaces button {
   padding: 0 0.5em;
-  font-size: 1.5em;
+  font-size: 1.6em;
   color: #c0caf5;
   border: none;
   box-shadow: none;
@@ -54,19 +54,11 @@ tooltip label {
 #workspaces button.urgent {
   color: #f7768e;
 }
-#workspaces button:nth-last-child(2) {
-  font-size: 1.75em;
-  margin-left: -2px;
-}
-#workspaces button:last-child {
-  padding-left: 1px;
-  font-size: 1.9em;
-}
 
 #custom-dunst {
   font-size: 0.9em;
   margin-top: 5px;
-  margin-right: -6px;
+  margin-right: -5px;
 }
 
 #tray {
@@ -75,6 +67,13 @@ tooltip label {
 #tray menu {
   background-color: #24283b;
   color: #c0caf5;
+}
+
+#network.ethernet {
+  color: #9ece6a;
+}
+#network.disconnected {
+  color: #f7768e;
 }
 
 /*# sourceMappingURL=style.css.map */

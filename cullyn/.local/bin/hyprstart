@@ -10,25 +10,13 @@
 # place "exec-once=~/path/to/script" in hyprland.conf
 ###############################################################################
 
-#set wallpaper
 hyprpaper & disown
-
-# start status bar
 waybar & disown
-
-# start notifications
 dunst & disown
-
-# start music player
 ytmdesktop & disown
 
+sleep 1
+
 notify-send -t 6000 "$USER@$HOSTNAME" "こんにちは" --icon="$HOME/dotfiles/resources/share/nosvagor.png"
-
-# enough time to select a song
-sleep 10
-
-# open default layout
-layout default 3
-
 
 exit 0
