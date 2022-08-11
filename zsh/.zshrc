@@ -59,6 +59,15 @@ alias dot='cd ~/dotfiles'
 alias not='cd ~/notes'
 alias x='exit'
 alias cat='bat'
+touchsh () {
+    file="$1"
+    if [[ -z "$1" ]]; then
+        vared -p "script name: " file
+    fi
+    touch $file
+    chmod +x $file
+    echo "#!/usr/bin/env bash" >> $file
+}
 
 # git
 alias g='lazygit'
@@ -68,9 +77,10 @@ kurmit () {
     commit_msg="$*"
     echo "git status:\n"
     git status
+    echo
     while true; do
     yn=""
-    vared -p "\nAre you sure you want to kurmit all files? [y/n]: " yn
+    vared -p "Are you sure you want to kurmit all files? [y/n]: " yn
     case $yn in
         [Yy]* )
             if [[ -z $commit_msg ]]; then
@@ -85,15 +95,6 @@ kurmit () {
         * ) echo "Please answer (y)es or (n)o.";;
     esac
     done
-}
-touchsh () {
-    file="$1"
-    if [[ -z "$1" ]]; then
-        vared -p "script name: " file
-    fi
-    touch $file
-    chmod +x $file
-    echo "#!/usr/bin/env bash" >> $file
 }
 alias amend='(){git add . && git commit --amend --no-edit;}'
 alias gpf='git push --force'

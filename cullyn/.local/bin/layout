@@ -19,11 +19,11 @@ workspace="$2"
 default () {
     hyprctl dispatch workspace "$1"
     alacritty </dev/null &>/dev/null & sleep 0.25
-    firefox-developer-edition --new-window </dev/null &>/dev/null & sleep 0.25
+    firefox-developer-edition --new-window </dev/null &>/dev/null & sleep 1
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive 'exact 1023 1811'
     hyprctl dispatch movefocus r
-    firefox-developer-edition --new-window </dev/null &>/dev/null & sleep 0.25
+    firefox-developer-edition --new-window </dev/null &>/dev/null & sleep 1
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive 'exact 1659 1552'
     hyprctl dispatch movefocus l & sleep 0.5

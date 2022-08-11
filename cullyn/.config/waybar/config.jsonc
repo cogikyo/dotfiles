@@ -7,20 +7,32 @@
     "position": "top",
     "spacing": 12,
 
-    "modules-left": ["custom/media"],
+    "modules-left": ["pulseaudio#speaker", "pulseaudio#mic", "custom/media"],
     "modules-center": ["custom/weather", "clock", "custom/dunst", "tray"],
     "modules-right": ["cpu", "memory", "custom/gpu", "temperature"],
 
+    "pulseaudio#speaker": {
+      "format": "{volume}%",
+      "on-click": "pavucontrol"
+    },
+
+    "pulseaudio#mic": {
+      "format": "{format_source}",
+      "format-source": "{volume}% ",
+      "format-source-muted": "",
+      "on-click": "pavucontrol"
+    },
+
     "custom/media": {
       "format": "⌊{icon}⌉ {}",
-      "max-length": 80,
+      "max-length": 100,
       "return-type": "json",
       "interval": 1,
-      "on-click": "playerctl play-pause",
-      "on-click-right": "playerctl next",
-      "on-click-middle": "playerctl previous",
-      "on-scroll-up": "playerctl volume 1",
-      "on-scroll-down": "playerctl volume 0.01",
+      "on-click": "playerctl --player=youtube-music-desktop-app play-pause",
+      "on-click-right": "playerctl --player=youtube-music-desktop-app next",
+      "on-click-middle": "playerctl --player=youtube-music-desktop-app previous",
+      "on-scroll-up": "playerctl --player=youtube-music-desktop-app volume 1",
+      "on-scroll-down": "playerctl --player=youtube-music-desktop-app volume 0.01",
       "exec": "playerctl --player=youtube-music-desktop-app metadata --format '{\"text\": \"ﴁ {{markup_escape(artist)}}  {{markup_escape(album)}}  {{markup_escape(title)}} 神 {{duration(mpris:length - position)}}\", \"tooltip\": \"{{playerName}} : {{markup_escape(title)}}\", \"alt\": \"{{status}}\", \"class\": \"{{status}}\"}'",
       "format-icons": {
         "Playing": "",
@@ -88,7 +100,12 @@
 
     "modules-left": ["custom/launcher", "custom/layout", "custom/pacman"],
     "modules-center": ["wlr/workspaces"],
-    "modules-right": ["network", "terminal", "power"],
+    "modules-right": [
+      "network",
+      "idle_inhibitor",
+      "custom/terminal",
+      "custom/power"
+    ],
 
     "custom/launcher": {
       "format": " "
@@ -96,6 +113,14 @@
 
     "custom/layout": {
       "format": " "
+    },
+
+    "custom/terminal": {
+      "format": " "
+    },
+
+    "custom/power": {
+      "format": "拉 "
     },
 
     "custom/pacman": {
@@ -107,12 +132,12 @@
 
     "wlr/workspaces": {
       "format": "{icon}",
-      "on-click": "activate",
       "format-icons": {
-        "1": "ﭮ",
-        "2": "",
-        "3": "⌬",
-        "4": "輸"
+        "1": "",
+        "2": "",
+        "3": "ﮂ",
+        "4": "",
+        "5": "阮"
       }
     },
 
@@ -121,6 +146,14 @@
       "format-ethernet": " {ipaddr}",
       "format-disconnected": " disconnected",
       "tooltip-format": "{ifname} via {gwaddr}"
+    },
+
+    "idle_inhibitor": {
+      "format": "{icon} ",
+      "format-icons": {
+        "activated": "",
+        "deactivated": ""
+      }
     }
   },
 
@@ -133,16 +166,8 @@
     "spacing": 12,
 
     "modules-left": [],
-    "modules-center": ["idle_inhibitor"],
-    "modules-right": [],
-
-    "idle_inhibitor": {
-      "format": "{icon} ",
-      "format-icons": {
-        "activated": "",
-        "deactivated": ""
-      }
-    }
+    "modules-center": [],
+    "modules-right": []
   },
 
   {
@@ -154,21 +179,7 @@
     "spacing": 12,
 
     "modules-left": [],
-    "modules-center": ["pulseaudio#speaker", "pulseaudio#mic"],
-    "modules-right": [],
-
-    "pulseaudio#speaker": {
-      "rotate": 90,
-      "format": "{volume}%",
-      "on-click": "pavucontrol"
-    },
-
-    "pulseaudio#mic": {
-      "rotate": 90,
-      "format": "{format_source}",
-      "format-source": "{volume}% ",
-      "format-source-muted": "",
-      "on-click": "pavucontrol"
-    }
+    "modules-center": [],
+    "modules-right": []
   }
 ]
