@@ -28,6 +28,7 @@
       "max-length": 100,
       "return-type": "json",
       "interval": 1,
+      "exec-on-event": true,
       "on-click": "playerctl --player=youtube-music-desktop-app play-pause",
       "on-click-right": "playerctl --player=youtube-music-desktop-app next",
       "on-click-middle": "playerctl --player=youtube-music-desktop-app previous",
@@ -46,14 +47,14 @@
     },
 
     "custom/weather": {
-      "exec": "python ~/.config/waybar/weather.py",
-      "restart-interval": 300,
+      "exec": "~/.config/waybar/scripts/weather.py",
+      "restart-interval": 60,
       "return-type": "json",
       "on-click": "xdg-open https://weather.com/en-IN/weather/today/l/7fd2c8d5fd5c6067bccab7955d643755478de23380fa548b657e63b2765cf519"
     },
 
     "custom/dunst": {
-      "exec": "~/.config/waybar/dunst.sh",
+      "exec": "~/.config/waybar/scripts/dunst.sh",
       "on-click": "dunstctl set-paused toggle",
       "restart-interval": 1
     },
@@ -124,14 +125,16 @@
     },
 
     "custom/pacman": {
-      "format": " {}",
-      "interval": 60,
-      "exec": "paru -Qu | wc -l", // # of updates
+      "restart-interval": 1,
+      "return-type": "json",
+      "exec": "~/.config/waybar/scripts/pacman.py", // # of updates
       "on-click": "alacritty -e paru -Syu " // update system
     },
 
     "wlr/workspaces": {
       "format": "{icon}",
+      "on-click": "activate",
+      "on-click-right": "close",
       "format-icons": {
         "1": "",
         "2": "",
@@ -155,31 +158,5 @@
         "deactivated": ""
       }
     }
-  },
-
-  {
-    // ┬─┐┬┌─┐┬ ┬┌┬┐
-    // ├┬┘││ ┬├─┤ │
-    // ┴└─┴└─┘┴ ┴ ┴
-    "layer": "top",
-    "position": "right",
-    "spacing": 12,
-
-    "modules-left": [],
-    "modules-center": [],
-    "modules-right": []
-  },
-
-  {
-    // ┬  ┌─┐┌─┐┌┬┐
-    // │  ├┤ ├┤  │
-    // ┴─┘└─┘└   ┴
-    "layer": "top",
-    "position": "left",
-    "spacing": 12,
-
-    "modules-left": [],
-    "modules-center": [],
-    "modules-right": []
   }
 ]
