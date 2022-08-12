@@ -1,35 +1,49 @@
 // ┬  ┬┌─┐┬─┐┬┌─┐┌┐ ┬  ┌─┐┌─┐
 // └┐┌┘├─┤├┬┘│├─┤├┴┐│  ├┤ └─┐
 //  └┘ ┴ ┴┴└─┴┴ ┴└─┘┴─┘└─┘└─┘
-// fonts
 $sans-serif: Albert Sans, sans-serif;
 $monospace: Hack Nerd Font, monospace;
+$border-radius: 16px;
 
 $fg: #c0caf5;
 $bg: #24283b;
 $tbg: rgb(36, 40, 59, 0.87);
 $dark: #0d1826;
 
+// TODO: set up dynamic colors
+// wallpaper colors:
 $pri: #f2a0a7;
 $sec: #d982ab;
 $tert: #7b6cb1;
 $minor: #7e88bf;
 $minimal: #3d4f73;
 
-$blue: #7aa2f7;
-$cyan: #7dcfff;
+// subset of tokyo night: (https://github.com/folke/tokyonight.nvim/blob/main/lua/tokyonight/colors.lua)
+$red: #f7768e;
 $orange: #ff9e64;
 $yellow: #e0af68;
 $green: #9ece6a;
-$red: #f7768e;
+$cyan: #7dcfff;
+$blue: #7aa2f7;
+$magenta: #bb9af7;
 
-// ┌┐ ┌─┐┌─┐┌─┐
-// ├┴┐├─┤└─┐├┤
-// └─┘┴ ┴└─┘└─┘
+@keyframes fade {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+* {
+  all: unset;
+}
+
 window {
   &#waybar {
-    font-family: $monospace;
-    font-size: 20px;
+    font-family: $monospace $sans-serif;
+    font-size: 22px;
     background: transparent;
     color: $fg;
   }
@@ -37,17 +51,22 @@ window {
 
 tooltip {
   background: $tbg;
-  border-radius: 16px;
+  border-radius: $border-radius;
   font-size: 2em;
-}
-
-tooltip label {
-  color: white;
 }
 
 // ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐  ┬  ┌─┐┌─┐┌┬┐
 // ││││ │ │││ ││  ├┤ └─┐  │  ├┤ ├┤  │
 // ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘  ┴─┘└─┘└   ┴
+
+#custom-media {
+  &.Playing {
+    color: $blue;
+  }
+  &.Paused {
+    color: $minor;
+  }
+}
 
 #custom-launcher {
   font-size: 1.4em;
@@ -59,6 +78,9 @@ tooltip label {
 }
 
 #custom-pacman {
+  &.tooltip {
+    font-size: 1em;
+  }
   font-size: 1.1em;
   margin-top: 1px;
   margin-left: -2px;
@@ -82,18 +104,30 @@ tooltip label {
     border: none;
     box-shadow: none;
 
-    &:hover {
-      color: $tert;
-      background: none;
-      border: none;
+    &.active {
+      color: $orange;
+      animation: fade 0.5s;
+      font-size: 1.9em;
     }
 
-    &.active {
-      color: $pri;
+    &:hover {
+      color: $red;
     }
 
     &.urgent {
       color: $red;
+    }
+
+    &:nth-last-child(2) {
+      margin-left: -12px;
+    }
+
+    &:nth-last-child(2) {
+      margin-left: -12px;
+    }
+
+    &:last-child {
+      margin-left: -6px;
     }
   }
 }

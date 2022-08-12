@@ -1,6 +1,18 @@
+@keyframes fade {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+* {
+  all: unset;
+}
+
 window#waybar {
-  font-family: Hack Nerd Font, monospace;
-  font-size: 20px;
+  font-family: Hack Nerd Font, monospace Albert Sans, sans-serif;
+  font-size: 22px;
   background: transparent;
   color: #c0caf5;
 }
@@ -11,8 +23,11 @@ tooltip {
   font-size: 2em;
 }
 
-tooltip label {
-  color: white;
+#custom-media.Playing {
+  color: #7aa2f7;
+}
+#custom-media.Paused {
+  color: #7e88bf;
 }
 
 #custom-launcher {
@@ -29,6 +44,9 @@ tooltip label {
   margin-top: 1px;
   margin-left: -2px;
 }
+#custom-pacman.tooltip {
+  font-size: 1em;
+}
 
 #clock {
   background-color: #24283b;
@@ -43,16 +61,25 @@ tooltip label {
   border: none;
   box-shadow: none;
 }
-#workspaces button:hover {
-  color: #7b6cb1;
-  background: none;
-  border: none;
-}
 #workspaces button.active {
-  color: #f2a0a7;
+  color: #ff9e64;
+  animation: fade 0.5s;
+  font-size: 1.9em;
+}
+#workspaces button:hover {
+  color: #f7768e;
 }
 #workspaces button.urgent {
   color: #f7768e;
+}
+#workspaces button:nth-last-child(2) {
+  margin-left: -12px;
+}
+#workspaces button:nth-last-child(2) {
+  margin-left: -12px;
+}
+#workspaces button:last-child {
+  margin-left: -6px;
 }
 
 #custom-dunst {
