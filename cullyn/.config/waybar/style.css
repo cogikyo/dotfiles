@@ -64,21 +64,29 @@ tooltip {
 #workspaces button.active {
   color: #ff9e64;
   animation: fade 0.5s;
-  font-size: 1.9em;
 }
 #workspaces button:hover {
-  color: #f7768e;
+  color: #7b6cb1;
 }
 #workspaces button.urgent {
   color: #f7768e;
 }
-#workspaces button:nth-last-child(2) {
-  margin-left: -12px;
+#workspaces button:first-child {
+  margin-bottom: 1px;
 }
-#workspaces button:nth-last-child(2) {
-  margin-left: -12px;
+#workspaces button:nth-child(2) {
+  font-size: 1.5em;
+}
+#workspaces button:nth-child(3) {
+  margin-left: 8px;
+  margin-bottom: 1px;
+}
+#workspaces button:nth-child(4) {
+  margin-bottom: 2px;
+  margin-left: -9px;
 }
 #workspaces button:last-child {
+  margin-bottom: 1px;
   margin-left: -6px;
 }
 

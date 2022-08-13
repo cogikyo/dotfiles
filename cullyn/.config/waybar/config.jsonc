@@ -7,21 +7,15 @@
     "position": "top",
     "spacing": 12,
 
-    "modules-left": ["pulseaudio#speaker", "pulseaudio#mic", "custom/media"],
-    "modules-center": ["custom/weather", "clock", "custom/dunst", "tray"],
+    "modules-left": ["custom/media"],
+    "modules-center": [
+      "custom/weather",
+      "clock",
+      "custom/dunst",
+      "pulseaudio#speaker",
+      "pulseaudio#mic"
+    ],
     "modules-right": ["cpu", "memory", "custom/gpu", "temperature"],
-
-    "pulseaudio#speaker": {
-      "format": "{volume}%",
-      "on-click": "pavucontrol"
-    },
-
-    "pulseaudio#mic": {
-      "format": "{format_source}",
-      "format-source": "{volume}% ",
-      "format-source-muted": "",
-      "on-click": "pavucontrol"
-    },
 
     "custom/media": {
       "format": "⌊{icon}⌉ {}",
@@ -59,11 +53,6 @@
       "restart-interval": 1
     },
 
-    "tray": {
-      "icon-size": 21,
-      "spacing": 10
-    },
-
     "cpu": {
       "format": "{usage}% ",
       "tooltip": false,
@@ -99,36 +88,15 @@
     "position": "bottom",
     "spacing": 12,
 
-    "modules-left": ["custom/launcher", "custom/layout", "custom/pacman"],
+    "modules-left": ["custom/pacman"],
     "modules-center": ["wlr/workspaces"],
-    "modules-right": [
-      "network",
-      "idle_inhibitor",
-      "custom/terminal",
-      "custom/power"
-    ],
-
-    "custom/launcher": {
-      "format": " "
-    },
-
-    "custom/layout": {
-      "format": " "
-    },
-
-    "custom/terminal": {
-      "format": " "
-    },
-
-    "custom/power": {
-      "format": "拉 "
-    },
+    "modules-right": ["network"],
 
     "custom/pacman": {
-      "restart-interval": 1,
+      "interval": 1,
       "return-type": "json",
       "exec": "~/.config/waybar/scripts/pacman.py", // # of updates
-      "on-click": "alacritty -e paru -Syu " // update system
+      "on-click": "~/.local/bin/openfloat paru -Syu" // update system
     },
 
     "wlr/workspaces": {
@@ -151,12 +119,16 @@
       "tooltip-format": "{ifname} via {gwaddr}"
     },
 
-    "idle_inhibitor": {
-      "format": "{icon} ",
-      "format-icons": {
-        "activated": "",
-        "deactivated": ""
-      }
+    "pulseaudio#speaker": {
+      "format": "{volume}%",
+      "on-click": "pavucontrol"
+    },
+
+    "pulseaudio#mic": {
+      "format": "{format_source}",
+      "format-source": "{volume}% ",
+      "format-source-muted": "",
+      "on-click": "pavucontrol"
     }
   }
 ]

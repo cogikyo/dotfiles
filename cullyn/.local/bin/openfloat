@@ -8,7 +8,16 @@
 # open a temp floating terminal at preferred eye level
 ###############################################################################
 
-alacritty & sleep 0.2 &&
-hyprctl dispatch togglefloating x;
-hyprctl dispatch resizeactive "exact 1600 1900";
-hyprctl dispatch moveactive "exact 1120 186";
+if [[ -z "$1" ]]; then
+    alacritty & sleep 0.5
+    hyprctl dispatch togglefloating x;
+    hyprctl dispatch resizeactive "exact 1600 1900";
+    hyprctl dispatch moveactive "exact 1120 186";
+elif [ "$*" = "tt" ]; then
+    echo "working"
+else
+    alacritty -e "$@" & sleep 0.5
+    hyprctl dispatch togglefloating x;
+    hyprctl dispatch resizeactive "exact 900 682";
+    hyprctl dispatch moveactive "exact 70 1452";
+fi
