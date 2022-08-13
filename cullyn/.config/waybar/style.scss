@@ -107,26 +107,37 @@ tooltip {
     &.active {
       color: $orange;
       animation: fade 0.5s;
-      font-size: 1.9em;
     }
 
     &:hover {
-      color: $red;
+      color: $tert;
     }
 
     &.urgent {
       color: $red;
     }
 
-    &:nth-last-child(2) {
-      margin-left: -12px;
+    // nerd font OCD fix. Workspace class name select how?
+    &:first-child {
+      margin-bottom: 1px;
     }
 
-    &:nth-last-child(2) {
-      margin-left: -12px;
+    &:nth-child(2) {
+      font-size: 1.5em;
+    }
+
+    &:nth-child(3) {
+      margin-left: 8px;
+      margin-bottom: 1px;
+    }
+
+    &:nth-child(4) {
+      margin-bottom: 2px;
+      margin-left: -9px;
     }
 
     &:last-child {
+      margin-bottom: 1px;
       margin-left: -6px;
     }
   }

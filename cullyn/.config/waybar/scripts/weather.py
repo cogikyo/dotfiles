@@ -172,7 +172,7 @@ def get_mooon_phase_icon(moon_phase):
         case "Waning Gibbous":
             return ""
         case "Full":
-            return "\t\t"
+            return ""
         case "Waxing Gibbous":
             return ""
         case "First Quarter":
@@ -199,14 +199,13 @@ uv_index_text = f"履  {uv_index}"
 
 # tooltip text
 tooltip_text = str.format(
-    "{}{}{}{}{}{}{}",
+    "{}{}{}{}{}{}",
     f"<big>{icon_emoji} {status}</big>",
     f"\t\t<span size='xx-large'>{moon_phase_icon}</span>",
-    f" <small><i>{moon_phase}</i></small>\n",
-    f"<small>{temp_feel_text}</small>\n",
+    f"\n<small>{temp_feel_text}</small>\n",
     f"    ⮩ <small><i>{temp_dist}</i></small>\n\n",
-    f"<span size='xx-large'>{time_sunrise_sunset}</span>\n\n",
-    f"{wind_text}\t\t\t\t{humidity_text}\n{uv_index_text}\t\t\t\t{air_quality_text}",
+    f"<span size='xx-large'>{time_sunrise_sunset}</span>\n",
+    f"\n{wind_text}\t\t\t{humidity_text}\n{uv_index_text}\t\t\t{air_quality_text}",
 )
 
 # tooltip_text += f'{temp_dist_icons}\n{temp_dist}\n\n{time_sunrise_sunset}'

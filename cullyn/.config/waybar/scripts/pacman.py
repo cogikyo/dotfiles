@@ -14,7 +14,7 @@ upgrade_count = (
 tooltip = packages.stdout.decode("utf8").strip()
 
 if int(upgrade_count) > 10:
-    tooltip = "lots to display; run 'paru -Qt' for more info"
+    tooltip = "lots to display; run 'paru -Qu' for more info"
 
 if int(upgrade_count) == 0:
     upgrade_count = " "
