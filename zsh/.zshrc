@@ -86,7 +86,7 @@ kurmit () {
             if [[ -z $commit_msg ]]; then
                 vared -p "Commit message: " commit_msg
             fi
-            git commit --all --message="'$commit_msg'"
+            git commit --all --message="$commit_msg"
             git push
             return;;
         [Nn]* )
