@@ -35,6 +35,19 @@
       }
     },
 
+    "pulseaudio#speaker": {
+      "format": "{volume}%",
+      "on-click": "pulsemixer"
+    },
+
+    "pulseaudio#mic": {
+      "format": "{format_source}",
+      "format-source": "{volume}%  ",
+      "format-source-muted": " ",
+      "on-click": "pulsemixer"
+    },
+
+    // TODO: script json output
     "clock": {
       "tooltip-format": "<big>{:%Y %B}</big>\n<tt><small>{calendar}</small></tt>",
       "format": "{: %A, %B %d  %H:%M}"
@@ -117,18 +130,6 @@
       "format-ethernet": " {ipaddr}",
       "format-disconnected": " disconnected",
       "tooltip-format": "{ifname} via {gwaddr}"
-    },
-
-    "pulseaudio#speaker": {
-      "format": "{volume}%",
-      "on-click": "pavucontrol"
-    },
-
-    "pulseaudio#mic": {
-      "format": "{format_source}",
-      "format-source": "{volume}% ",
-      "format-source-muted": "",
-      "on-click": "pavucontrol"
     }
   }
 ]

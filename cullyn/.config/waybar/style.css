@@ -92,16 +92,16 @@ tooltip {
 
 #custom-dunst {
   font-size: 0.9em;
-  margin-top: 5px;
+  margin-top: 2px;
   margin-right: -5px;
+  color: #e0af68;
 }
 
-#tray {
-  margin-top: 6px;
+#pulseaudio.mic {
+  color: #7b6cb1;
 }
-#tray menu {
-  background-color: #24283b;
-  color: #c0caf5;
+#pulseaudio.speaker {
+  color: #d982ab;
 }
 
 #network.ethernet {
