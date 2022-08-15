@@ -10,6 +10,8 @@
 # place "exec-once=~/path/to/script" in hyprland.conf
 ###############################################################################
 
+sleep 5
+ytmdesktop & disown
 
 notify-send -t 6000 "$USER@$HOSTNAME" "こんにちは" --icon="$HOME/dotfiles/resources/share/nosvagor.png"
 

@@ -6,8 +6,8 @@
 -- ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝     ╚══════╝
 
 local function map(mode, lhs, rhs, opts)
-    opts = vim.tbl_extend("force", { noremap = true, silent = true }, opts or {})
-    vim.api.nvim_set_keymap(mode, lhs, rhs, opts)
+	opts = vim.tbl_extend("force", { noremap = true, silent = true }, opts or {})
+	vim.api.nvim_set_keymap(mode, lhs, rhs, opts)
 end
 
 local rec = { noremap = false, silent = true }
@@ -22,7 +22,6 @@ map("n", "<C-s>", ":w<CR>")
 map("v", "<C-s>", "<Esc>:w<CR>")
 
 -- ✍️  quit
-map("n", "<leader>x", ":q<CR>")
 map("n", "<leader>q", ":q!<CR>")
 map("n", "<C-c>", "<Esc>")
 

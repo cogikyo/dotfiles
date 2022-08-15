@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 dotfiles () {
-    hyprctl dispatch workspace 3
-    alacritty --working-directory=dotfiles -e tmux -c nvim & sleep 0.25
+    hyprctl dispatch workspace 4
+    alacritty --working-directory=dotfiles & sleep 0.25
     firefox-developer-edition --new-window https://calendar.google.com/calendar/u/0/r & sleep 1
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive 'exact 1023 1811'
@@ -13,4 +13,32 @@ dotfiles () {
     hyprctl dispatch movefocus l & sleep 0.5
 }
 
+zoom () {
+    hyprctl dispatch workspace 2
+    firefox-developer-edition --new-window https://calendar.google.com/calendar/u/0/r & sleep 1
+    exec zoom & sleep 3
+    hyprctl dispatch movefocus l
+    hyprctl dispatch movefocus r
+    alacritty -e asciiquarium & sleep 0.5
+    hyprctl dispatch movefocus u
+    hyprctl dispatch resizeactive 'exact 2069 1080'
+
+    hyprctl dispatch movefocus l
+    hyprctl dispatch resizeactive 'exact 2055 2048'
+    hyprctl dispatch movefocus r
+
+    alacritty -e bonsai & sleep 0.5
+    hyprctl dispatch movefocus l
+    hyprctl dispatch movefocus r
+    alacritty -e cava & sleep 0.5
+    hyprctl dispatch movefocus u
+    hyprctl dispatch resizeactive 'exact 916 787'
+
+ notify-send "zoom layout"
+}
+
+hyprctl keyword input:follow_mouse 0
 "$1"
+hyprctl keyword input:follow_mouse 1
+
+exit 0
