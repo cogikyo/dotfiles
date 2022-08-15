@@ -18,7 +18,7 @@
     "modules-right": ["cpu", "memory", "custom/gpu", "temperature"],
 
     "custom/media": {
-      "format": "⌊{icon}⌉ {}",
+      "format": "{icon} {}",
       "max-length": 100,
       "return-type": "json",
       "interval": 1,
@@ -127,9 +127,9 @@
 
     "network": {
       "interval": 1,
-      "format-ethernet": " {ipaddr}",
-      "format-disconnected": " disconnected",
-      "tooltip-format": "{ifname} via {gwaddr}"
+      "format-ethernet": " ",
+      "format-disconnected": " ",
+      "tooltip-format": "{ifname} via {gwaddr}\n{ipaddr}"
     }
   }
 ]
