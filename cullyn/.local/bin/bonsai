@@ -29,7 +29,7 @@ message="I use arch, btw"
 multiplier=7
 lifeStart=42
 
-timeStep=0.1
+timeStep=0.03
 timeWait=2
 
 flag_m=0
