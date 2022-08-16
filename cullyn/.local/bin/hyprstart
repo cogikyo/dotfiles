@@ -1,16 +1,28 @@
 #!/usr/bin/env bash
 
-###############################################################################
-# Author: cullyn | https://github.com/nosvagor/dotfiles
+#!/bin/bash
 
-# Description:
-# simple set of commands to run upon hyprland startup
+go=false
 
-# Usage:
-# place "exec-once=~/path/to/script" in hyprland.conf
-###############################################################################
+conneciton () {
+    if wget -q --spider http://google.com; then
+        go=true
+    else
+        go=false
+    fi
+}
 
-sleep 5
+while [ "$go" = false ]; do
+    conneciton
+    notify-send "connection not found... retrying in 5 seconds"
+    sleep 5
+done
+
+~/.local/bin/layout discord
+~/.local/bin/layout zoom
+~/.local/bin/layout code
+~/.local/bin/layout dotfiles
+
 ytmdesktop & disown
 
 notify-send -t 6000 "$USER@$HOSTNAME" "こんにちは" --icon="$HOME/dotfiles/resources/share/nosvagor.png"
