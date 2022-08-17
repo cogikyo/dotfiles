@@ -19,6 +19,7 @@ vim.g.mapleader = " "
 -- ⚕  save
 map("i", "<C-s>", "<Esc>:w<CR>")
 map("n", "<C-s>", ":w<CR>")
+map("n", "<leader><C-s>", ":noa w<CR>")
 map("v", "<C-s>", "<Esc>:w<CR>")
 
 -- ✍️  quit

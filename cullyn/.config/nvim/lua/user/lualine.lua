@@ -101,10 +101,11 @@ local filename = {
 	"filename",
 	file_status = true,
 	path = 0,
+	icon = "",
 	symbols = {
 		modified = " 🞊",
 		readonly = " ",
-		unnamed = "名前?",
+		unnamed = "--名前?--",
 	},
 	color = function()
 		local mode_color = {
