@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+
+dump() {
+  local d=$'\t'
+  tmux list-windows -a -F "#S${d}#W${d}#{pane_current_path}"
+}
+
+save() {
+  dump > "$session"
+}
+
+session_exists() {
+  tmux has-session -t "$1" 2>/dev/null
+}
+
+new_window() {
+  tmux new-window -d -t "$1" -n "$2" -c "$3" "$4"
+}
+
+new_session() {
+  tmux new-session -d -s "$1" -n "$2" -c "$3" "$4"
+}
+
+restore() {
+  tmux start-server
+  local count=0
+  local session=$HOME/.config/tmux/.tmux-session
+
+    while read -r session_name window_name dir command; do
+        if session_exists "$session_name"; then
+            new_window "$session_name" "$window_name" "$dir" "$command"
+        else
+            new_session "$session_name" "$window_name" "$dir" "$command"
+            count=$(( count + 1 ))
+        fi
+    done < "$session"
+
+    echo "restored $count sessions"
+    notify-send tmux "$count sessions restored" -i "$HOME/dotfiles/resources/icons/tmux_icon.svg"
+}
+
+case "$1" in
+    save | restore )
+        "$1";;
+    * )
+        echo "valid commands: save, restore" >&2
+        exit 1;;
+esac
