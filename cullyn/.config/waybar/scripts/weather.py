@@ -140,8 +140,8 @@ air_quality_icon = get_air_quality_value_icon(air_quality_index)
 air_quality_text = f"{air_quality_icon} {air_quality_index}"
 
 # wind details
-wind_speed = html_data(".Wind--windWrapper--3aqXJ").text().split("\n")[1]
-wind_text = f"煮  {wind_speed}"
+wind_speed = html_data(".Wind--windWrapper--3aqXJ").text().split("\n")[1].split(" ")[0]
+wind_text = f"煮 {wind_speed}"
 
 # visibility
 visbility = html_data(
@@ -192,20 +192,19 @@ uv_index = (
         "div.ListItem--listItem--2wQRK:nth-child(6) > div:nth-child(3) > span:nth-child(1)"
     )
     .text()
-    .replace(" of ", "/")
+    .split(" ")[0]
 )
-uv_index_text = f"履  {uv_index}"
+uv_index_text = f"履 {uv_index}"
 
 
 # tooltip text
 tooltip_text = str.format(
-    "{}{}{}{}{}{}",
+    "{}{}{}{}{}",
     f"<big>{icon_emoji} {status}</big>",
-    f"\t\t<span size='xx-large'>{moon_phase_icon}</span>",
-    f"\n<small>{temp_feel_text}</small>\n",
-    f"    ⮩ <small><i>{temp_dist}</i></small>\n\n",
-    f"<span size='xx-large'>{time_sunrise_sunset}</span>\n",
-    f"\n{wind_text}\t\t\t{humidity_text}\n{uv_index_text}\t\t\t{air_quality_text}",
+    f"\t\t\t\t\t<span size='xx-large'>{moon_phase_icon}</span>",
+    f"\n<small>{temp_feel_text}  ➟ {air_quality_text}   {humidity_text}   {uv_index_text}  {wind_text}</small>\n",
+    f"    ⮩ <small><i>{temp_dist}</i></small>\n",
+    f"<span size='xx-large'>{time_sunrise_sunset}</span>",
 )
 
 # tooltip_text += f'{temp_dist_icons}\n{temp_dist}\n\n{time_sunrise_sunset}'

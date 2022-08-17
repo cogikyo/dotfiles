@@ -21,7 +21,7 @@ center-float () {
 }
 
 if [[ -z "$1" ]]; then
-    alacritty & sleep 0.5
+    alacritty --working-directory=dotfiles & sleep 0.5
     center-float
 elif [ "$*" = "paru -Syu" ]; then
     alacritty -e "$@" & sleep 0.5

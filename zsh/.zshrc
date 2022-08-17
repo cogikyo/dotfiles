@@ -5,6 +5,7 @@ export PATH="$PATH:$HOME/.go/bin"
 export PATH="$PATH:$HOME/.local/bin"
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
+export TERM=xterm-256color
 
 eval "$(starship init zsh)"
 eval "$(jump shell)"
@@ -103,13 +104,14 @@ alias gp='git pull'
 alias gsync='git fetch -p && git branch -vv | awk "/: gone]/{print \$1}" | xargs git branch -D'
 
 # tmux
-alias tmux='TERM=xterm-256color tmux'
 alias tls='tmux ls'
 alias tk='tmux kill-session'
 alias tks='tmux kill-server'
 alias tr='tmux-session restore'
 alias tad='tmux attach -t '
 alias tan='tmux attach -t '
+alias tap='tmux attach -t ﳣ'
+alias tat='tmux attach -t פּ'
 
 # ╔═╗┬  ┬ ┬┌─┐┬┌┐┌┌─┐
 # ╠═╝│  │ ││ ┬││││└─┐

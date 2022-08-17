@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-notify-send -t 3000 "$USER@$HOSTNAME" "こんにちは" --icon="$HOME/dotfiles/resources/share/nosvagor.png"
-sleep 3 # enough time to get initial connection
+notify-send -t 5000 "$USER@$HOSTNAME" "こんにちは" --icon="$HOME/dotfiles/resources/share/nosvagor.png"
+~/.local/bin/tmux-session restore
 
 go=false
 conneciton () {
@@ -14,8 +14,7 @@ conneciton () {
 
 while [ "$go" = false ]; do
     conneciton
-    notify-send "connection not found... retrying in 5 seconds"
-    sleep 5
+    sleep 1
 done
 
 ~/.local/bin/layout discord
