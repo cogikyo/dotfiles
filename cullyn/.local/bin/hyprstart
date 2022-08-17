@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-#!/bin/bash
+notify-send -t 3000 "$USER@$HOSTNAME" "こんにちは" --icon="$HOME/dotfiles/resources/share/nosvagor.png"
+sleep 3 # enough time to get initial connection
 
 go=false
-
 conneciton () {
     if wget -q --spider http://google.com; then
         go=true
@@ -22,9 +22,4 @@ done
 ~/.local/bin/layout zoom
 ~/.local/bin/layout code
 ~/.local/bin/layout dotfiles
-
-ytmdesktop & disown
-
-notify-send -t 6000 "$USER@$HOSTNAME" "こんにちは" --icon="$HOME/dotfiles/resources/share/nosvagor.png"
-
-exit 0
+exec ytmdesktop

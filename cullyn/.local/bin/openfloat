@@ -16,8 +16,8 @@ bottom-left-float () {
 
 center-float () {
     hyprctl dispatch togglefloating x;
-    hyprctl dispatch resizeactive "exact 1850 1600";
-    hyprctl dispatch moveactive "exact 995 280";
+    hyprctl dispatch resizeactive "exact 1600 1900";
+    hyprctl dispatch moveactive "exact 1087 175";
 }
 
 if [[ -z "$1" ]]; then

@@ -1,3 +1,5 @@
+
+# paths
 export GOPATH="$HOME/.go"
 export PATH="$PATH:$HOME/.go/bin"
 export PATH="$PATH:$HOME/.local/bin"
@@ -53,11 +55,11 @@ export EDITOR=nvim
 # ╠═╣│  │├─┤└─┐├┤ └─┐
 # ╩ ╩┴─┘┴┴ ┴└─┘└─┘└─┘
 
-alias pac='(){sudo pacman -S $1;}'
 alias niol='clear && source ~/.zshrc'
 alias dot='cd ~/dotfiles'
 alias not='cd ~/notes'
 alias x='exit'
+alias n='nvim'
 alias cat='bat'
 touchsh () {
     file="$1"
@@ -71,7 +73,6 @@ touchsh () {
 
 # git
 alias g='lazygit'
-alias gck='(){git checkout $1}'
 alias gts='git status'
 kurmit () {
     commit_msg="$*"
@@ -100,25 +101,19 @@ alias amend='(){git add . && git commit --amend --no-edit;}'
 alias gpf='git push --force'
 alias gp='git pull'
 alias gsync='git fetch -p && git branch -vv | awk "/: gone]/{print \$1}" | xargs git branch -D'
-alias n='nvim'
-
-alias eyes='(){xrandr --output HDMI-A-0 --brightness $1;}'
-alias eyess='(){xrandr --output eDP-1 --brightness $1;}'
 
 # tmux
 alias tmux='TERM=xterm-256color tmux'
 alias tls='tmux ls'
-alias td='(){tmux detach}'
-alias ta='(){tmux attach}'
 alias tk='tmux kill-session'
 alias tks='tmux kill-server'
-
-
+alias tr='tmux-session restore'
+alias tad='tmux attach -t '
+alias tan='tmux attach -t '
 
 # ╔═╗┬  ┬ ┬┌─┐┬┌┐┌┌─┐
 # ╠═╝│  │ ││ ┬││││└─┐
 # ╩  ┴─┘└─┘└─┘┴┘└┘└─┘
-
 source ~/.local/zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source ~/.local/zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
 source ~/.local/zsh/zsh-autocomplete/zsh-autocomplete.plugin.zsh
@@ -130,7 +125,6 @@ source ~/.local/zsh/zsh-colored-man-pages/colored-man-pages.plugin.zsh
 # ┌─┐┬─┐ ┬  ┬┌─┌─┐┬ ┬┌─┐
 # ├┤ │┌┴┬┘  ├┴┐├┤ └┬┘└─┐
 # └  ┴┴ └─  ┴ ┴└─┘ ┴ └─┘
-
 bindkey '^[[1~'    beginning-of-line
 bindkey '^[[H'     beginning-of-line
 bindkey '^[[4~'    end-of-line
