@@ -39,7 +39,7 @@ map("v", "<leader>P", "yP`]o<Esc>j")
 -- 🦬 buffers
 map("n", "<leader>b", ":bp<CR>zt")
 map("n", "<leader>B", ":bn<CR>zt")
-map("n", "<leader><C-w>", ":bd!<CR>zt")
+map("n", "<leader><C-b>", ":bd!<CR>zt")
 
 -- 🤯 comment headers
 map("n", "HS", ":.! figlet -fshadow <CR> gcip", rec)

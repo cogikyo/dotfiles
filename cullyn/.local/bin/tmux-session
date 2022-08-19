@@ -1,20 +1,24 @@
 #!/usr/bin/env bash
 
 dump() {
-  local d=$'\t'
-  tmux list-windows -a -F "#S${d}#W${d}#{pane_current_path}"
+    local d=$'\t'
+    tmux list-windows -a -F "#S${d}#W${d}#{pane_current_path}"
 }
 
 save() {
-  dump > "$session"
+    dump > "$session"
 }
 
 session_exists() {
-  tmux has-session -t "$1" 2>/dev/null
+    tmux has-session -t "$1" 2>/dev/null
 }
 
 new_window() {
-  tmux new-window -da -t "$1" -n "$2" -c "$3" "$4"
+    if [[ -z $4 ]]; then
+        tmux new-window -da -t "$1" -n "$2" -c "$3"
+    else
+        tmux new-window -da -t "$1" -n "$2" -c "$3" "$4"
+    fi
 }
 
 new_session() {

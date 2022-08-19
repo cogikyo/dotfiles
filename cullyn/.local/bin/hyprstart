@@ -1,20 +1,6 @@
 #!/usr/bin/env bash
 
-alacritty -e ~/.local/bin/tmux-session restore
-
-go=false
-conneciton () {
-    if wget -q --spider http://google.com; then
-        go=true
-    else
-        go=false
-    fi
-}
-
-while [ "$go" = false ]; do
-    conneciton
-    sleep 1
-done
+~/.local/bin/tmux-session restore
 
 hyprctl keyword input:follow_mouse 0
 ~/.local/bin/layout code
