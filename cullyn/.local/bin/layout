@@ -28,7 +28,7 @@ zoom () {
 
 code () {
     hyprctl dispatch workspace 3
-    alacritty --working-directory=notes -e tmux attach -t  & sleep 0.5
+    alacritty --hold --working-directory=notes -e tmux attach -t  & sleep 0.5
     firefox-developer-edition --new-window https://calendar.google.com/calendar/u/0/r & sleep 1
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive 'exact 1023 1811'
@@ -46,7 +46,7 @@ code () {
 
 dotfiles () {
     hyprctl dispatch workspace 4
-    alacritty --working-directory=dotfiles -e tmux attach -t  & sleep 0.5
+    alacritty --hold --working-directory=dotfiles -e tmux attach -t  & sleep 0.5
     firefox-developer-edition --new-window https://github.com/nosvagor & sleep 1
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive 'exact 1023 1811'
@@ -62,8 +62,22 @@ dotfiles () {
     hyprctl dispatch movefocus l
 }
 
+# internet randomly goes out for a few seconds and fucks up opening windows
+go=false
+conneciton () {
+    if wget -q --spider http://google.com; then
+        go=true
+    else
+        go=false
+    fi
+
+}
 
 hyprctl keyword input:follow_mouse 0
+while [ "$go" = false ]; do
+    conneciton
+    sleep 1
+done
 "$1"
 hyprctl keyword input:follow_mouse 1
 

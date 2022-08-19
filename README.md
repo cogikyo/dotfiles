@@ -110,7 +110,7 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
 - nice to install some base packages needed for now:
 
-      base base-devel linux-headers git stow dkms coreutils vim bat btop go rust python
+      base base-devel linux-headers git stow coreutils bat btop go rustup python
 
 ---
 
@@ -230,24 +230,42 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
     │   ├── images
     │   ├── music
     │   ├── recordings
-    │   ├── video
     │   └── videos
 
 &nbsp;
 
 2.8 Edit boot config (skip boot menu):
 
-    ──────┬─────────────────────────────────────────────────────────────────────────────
+    ──────┬────────────────────────────────────────────────────────────────────
           │ File: /boot/loader/loader.conf
-    ──────┼─────────────────────────────────────────────────────────────────────────────
+    ──────┼────────────────────────────────────────────────────────────────────
       1   │ timeout 0
-    ──────┴─────────────────────────────────────────────────────────────────────────────
+    ──────┴────────────────────────────────────────────────────────────────────
 
 &nbsp;
 
 2.9 Add extra figlet fonts (I sometimes use for visual headers in files):
 
     cp -va  "$HOME/dotfiles/resources/ascii-fonts/." "/usr/share/figlet/fonts/"
+
+&nbsp;
+
+2.10 Update some environment variables (might be a better way to do this, working as of now)
+
+    ────┬──────────────────────────────────────────────────────────────────────
+        │ File: /etc/environment
+    ────┼──────────────────────────────────────────────────────────────────────
+    1   │ #
+    2   │ # This file is parsed by pam_env module
+    3   │ #
+    4   │ # Syntax: simple "KEY=VAL" pairs on separate lines
+    5   │
+    6   │ # X11 vars (for QT applications)
+    7   │ XCURSOR_SIZE=12
+    8   │
+    9   │ # misc (for tmux colors)
+    10  │ TERM=xterm-256color
+    ────┴──────────────────────────────────────────────────────────────────────
 
 ---
 

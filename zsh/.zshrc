@@ -1,4 +1,3 @@
-
 # paths
 export GOPATH="$HOME/.go"
 export PATH="$PATH:$HOME/.go/bin"
@@ -6,6 +5,7 @@ export PATH="$PATH:$HOME/.local/bin"
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 
+# evals (shell "apps")
 eval "$(starship init zsh)"
 eval "$(jump shell)"
 
@@ -61,6 +61,7 @@ alias not='cd ~/notes'
 alias x='exit'
 alias n='nvim'
 alias cat='bat'
+alias man='man -r=""'
 touchsh () {
     file="$1"
     if [[ -z "$1" ]]; then
