@@ -255,7 +255,7 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
 </details>
 &nbsp;
-<!-- <details> -->
+<details>
 
 <summary><b>3. Customization 🖌️</b></summary>
 
@@ -275,9 +275,7 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
 🦊.2 Firefox basic options options:
 
-- Disable hardware acceleration (firefox keeps seizing, first idea for fix)
-
-#### [Hyprland](https://github.com/hyprwm/Hyprland) 🪟
+- Disable hardware acceleration (firefox keeps seizing)
 
 ---
 
