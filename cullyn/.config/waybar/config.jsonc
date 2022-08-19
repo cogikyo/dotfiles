@@ -27,7 +27,7 @@
       "on-click-right": "playerctl --player=youtube-music-desktop-app next",
       "on-click-middle": "playerctl --player=youtube-music-desktop-app previous",
       "on-scroll-up": "playerctl --player=youtube-music-desktop-app volume 1",
-      "on-scroll-down": "playerctl --player=youtube-music-desktop-app volume 0.01",
+      "on-scroll-down": "playerctl --player=youtube-music-desktop-app volume 0.05",
       "exec": "playerctl --player=youtube-music-desktop-app metadata --format '{\"text\": \"ﴁ {{markup_escape(artist)}}  {{markup_escape(album)}}  {{markup_escape(title)}} 神 {{duration(mpris:length - position)}}\", \"tooltip\": \"{{playerName}} : {{markup_escape(title)}}\", \"alt\": \"{{status}}\", \"class\": \"{{status}}\"}'",
       "format-icons": {
         "Playing": "",
@@ -36,15 +36,15 @@
     },
 
     "pulseaudio#speaker": {
-      "format": "{volume}%",
-      "on-click": "pulsemixer"
+      "format": "墳 {volume}%",
+      "on-click": "~/.local/bin/openfloat pulsemixer"
     },
 
     "pulseaudio#mic": {
       "format": "{format_source}",
-      "format-source": "{volume}%  ",
+      "format-source": " {volume}%",
       "format-source-muted": " ",
-      "on-click": "pulsemixer"
+      "on-click": "~/.local/bin/openfloat pulsemixer"
     },
 
     // TODO: script json output
@@ -58,12 +58,6 @@
       "restart-interval": 60,
       "return-type": "json",
       "on-click": "xdg-open https://weather.com/en-IN/weather/today/l/7fd2c8d5fd5c6067bccab7955d643755478de23380fa548b657e63b2765cf519"
-    },
-
-    "custom/dunst": {
-      "exec": "~/.config/waybar/scripts/dunst.sh",
-      "on-click": "dunstctl set-paused toggle",
-      "restart-interval": 1
     },
 
     "cpu": {

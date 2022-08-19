@@ -100,7 +100,7 @@ temp_overnight = html_data(
     ".WeatherTable--wide--3dFXu > li:nth-child(4) > a:nth-child(1) > div:nth-child(2) > span:nth-child(1)"
 ).text()
 temp_dist = (
-    f"🌄 {temp_morning}   🔆 {temp_afternoon}   🌃 {temp_evening}   🌘 {temp_overnight}"
+    f"🌄 {temp_morning}    🔆 {temp_afternoon}    🌃 {temp_evening}    🌘 {temp_overnight}"
 )
 
 # sunrise and sunset time
@@ -110,7 +110,7 @@ time_to_sunrise = html_data(
 time_to_sunset = html_data(
     "#SunriseSunsetContainer-fd88de85-7aa1-455f-832a-eacb037c140a > div > div > div > div:nth-child(2) > p"
 ).text()
-time_sunrise_sunset = f"🌅 {time_to_sunrise}\t🌇 {time_to_sunset}"
+time_sunrise_sunset = f"🌅 {time_to_sunrise}\t\t    🌇 {time_to_sunset}"
 
 # air quality index
 air_quality_index = html_data(
@@ -124,7 +124,7 @@ def get_air_quality_value_icon(air_quality_index):
     if val > 0 and val <= 50:
         res = ""
     elif val > 50 and val <= 100:
-        res = ""
+        res = "<span foreground='#e0af68'></span>"
     elif val > 100 and val <= 200:
         res = ""
     elif val > 150 and val <= 200:
@@ -199,12 +199,13 @@ uv_index_text = f"履 {uv_index}"
 
 # tooltip text
 tooltip_text = str.format(
-    "{}{}{}{}{}",
+    "{}{}{}{}{}{}",
     f"<big>{icon_emoji} {status}</big>",
-    f"\t\t\t\t\t<span size='xx-large'>{moon_phase_icon}</span>",
-    f"\n<small>{temp_feel_text}  ➟ {air_quality_text}   {humidity_text}   {uv_index_text}  {wind_text}</small>\n",
+    f"\t\t<sup>{moon_phase} </sup><span size='xx-large'>{moon_phase_icon}</span>",
+    f"\n<small>{temp_feel_text}<tt> ➟ {air_quality_text} {humidity_text} {uv_index_text} {wind_text}</tt></small>\n",
     f"    ⮩ <small><i>{temp_dist}</i></small>\n",
-    f"<span size='xx-large'>{time_sunrise_sunset}</span>",
+    f"<span size='x-large'>{time_sunrise_sunset}</span>",
+    f"<span size='x-large'>{prediction}</span>",
 )
 
 # tooltip_text += f'{temp_dist_icons}\n{temp_dist}\n\n{time_sunrise_sunset}'

@@ -2,9 +2,10 @@
 		/home/cullyn/dotfiles   nnn
 		/home/cullyn/notes  nvim
 		/home/cullyn/notes  nnn
-ﳣ		/home/cullyn  pipes-rs
-ﳣ   	/home/cullyn  nvim
-ﳣ   	/home/cullyn  nnn
-פּ		/home/cullyn  bonsai
-פּ   	/home/cullyn  nvim
-פּ   	/home/cullyn  nnn
+ﳣ	ﳣ   /home/cullyn  pipes-rs
+ﳣ      /home/cullyn
+ﳣ      /home/cullyn  nvim
+פּ   פּ   /home/cullyn  ~/.local/bin/bonsai
+פּ      /home/cullyn  nnn
+      /home/cullyn  ~/.local/bin/asciiquarium
+      /home/cullyn  nvim
