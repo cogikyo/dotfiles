@@ -1,55 +1,39 @@
 #!/usr/bin/env bash
 
-tmux256 () {
-    TERM=xterm-256color
-    tmux attach -t "$1"
-}
-
 discord () {
     hyprctl dispatch workspace 1
-    alacritty -e layout tmux256  & sleep 0.25
-    firefox-developer-edition --new-window https://calendar.google.com/calendar/u/0/r & sleep 1
-    hyprctl dispatch movefocus l
-    hyprctl dispatch resizeactive 'exact 1023 1811'
+    firefox-developer-edition --new-window https://www.twitch.tv/directory/following & sleep 1
+    hyprctl dispatch movecursortocorner 0
+    exec discord & sleep 5.5
+    hyprctl dispatch resizeactive 'exact 2202 2048'
     hyprctl dispatch movefocus r
-    exec discord & sleep 5
-    hyprctl dispatch movefocus r
-    firefox-developer-edition --new-window https://github.com/nosvagor/dotfiles & sleep 1
-    hyprctl dispatch movefocus l
-    alacritty --hold -e cava & sleep 1
-    hyprctl dispatch movewindow u & sleep 0.5
-    hyprctl dispatch resizeactive 'exact 1354 162'
+    alacritty --hold -e tmux attach -t  & sleep 0.5
+    hyprctl dispatch movefocus u
+    hyprctl dispatch resizeactive 'exact 1573 1058'
     hyprctl dispatch movefocus l
 }
 
 zoom () {
     hyprctl dispatch workspace 2
-    firefox-developer-edition --new-window https://calendar.google.com/calendar/u/0/r & sleep 1
-    exec zoom & sleep 5
+    firefox-developer-edition --new-window https://www.youtube.com/feed/subscriptions & sleep 1
+    exec zoom & sleep 5.5
     hyprctl dispatch movefocus l
+    hyprctl dispatch resizeactive 'exact 2202 2048'
     hyprctl dispatch movefocus r
-    alacritty --hold -e ~/.local/bin/asciiquarium & sleep 0.5
+    alacritty --hold -e tmux attach -t  & sleep 0.5
     hyprctl dispatch movefocus u
-    hyprctl dispatch resizeactive 'exact 2069 1080'
+    hyprctl dispatch resizeactive 'exact 1573 1058'
     hyprctl dispatch movefocus l
-    hyprctl dispatch resizeactive 'exact 2055 2048'
-    hyprctl dispatch movefocus r
-    alacritty --hold -e ~/.local/bin/bonsai & sleep 0.5
-    hyprctl dispatch movefocus l
-    hyprctl dispatch movefocus r
-    alacritty --hold -e cava & sleep 0.5
-    hyprctl dispatch movefocus u
-    hyprctl dispatch resizeactive 'exact 908 781'
 }
 
 code () {
     hyprctl dispatch workspace 3
-    alacritty --working-directory=notes -e layout tmux256  & sleep 0.25
+    alacritty --working-directory=notes -e tmux attach -t  & sleep 0.5
     firefox-developer-edition --new-window https://calendar.google.com/calendar/u/0/r & sleep 1
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive 'exact 1023 1811'
     hyprctl dispatch movefocus r
-    alacritty --hold -e pipes-rs & sleep 0.5
+    alacritty --hold -e tmux attach -t ﳣ & sleep 0.5
     hyprctl dispatch movefocus r
     hyprctl dispatch movefocus l
     hyprctl dispatch movefocus r
@@ -62,8 +46,8 @@ code () {
 
 dotfiles () {
     hyprctl dispatch workspace 4
-    alacritty --working-directory=dotfiles layout tmux256  & sleep 0.25
-    firefox-developer-edition --new-window https://calendar.google.com/calendar/u/0/r & sleep 1
+    alacritty --working-directory=dotfiles -e tmux attach -t  & sleep 0.5
+    firefox-developer-edition --new-window https://github.com/nosvagor & sleep 1
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive 'exact 1023 1811'
     hyprctl dispatch movefocus r

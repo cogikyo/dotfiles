@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-notify-send -t 5000 "$USER@$HOSTNAME" "こんにちは" --icon="$HOME/dotfiles/resources/share/nosvagor.png"
-~/.local/bin/tmux-session restore
+alacritty -e ~/.local/bin/tmux-session restore
 
 go=false
 conneciton () {
@@ -17,8 +16,13 @@ while [ "$go" = false ]; do
     sleep 1
 done
 
-~/.local/bin/layout discord
-~/.local/bin/layout zoom
+hyprctl keyword input:follow_mouse 0
 ~/.local/bin/layout code
+~/.local/bin/layout zoom
 ~/.local/bin/layout dotfiles
+~/.local/bin/layout discord
+hyprctl keyword input:follow_mouse 1
+
+notify-send -t 5000 "$USER@$HOSTNAME" "こんにちは" --icon="$HOME/dotfiles/resources/share/nosvagor.png"
+
 exec ytmdesktop

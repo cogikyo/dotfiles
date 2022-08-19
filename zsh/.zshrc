@@ -5,7 +5,6 @@ export PATH="$PATH:$HOME/.go/bin"
 export PATH="$PATH:$HOME/.local/bin"
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
-export TERM=xterm-256color
 
 eval "$(starship init zsh)"
 eval "$(jump shell)"
@@ -111,7 +110,8 @@ alias tr='tmux-session restore'
 alias tad='tmux attach -t '
 alias tan='tmux attach -t '
 alias tap='tmux attach -t ﳣ'
-alias tat='tmux attach -t פּ'
+alias tab='tmux attach -t פּ'
+alias taa='tmux attach -t '
 
 # ╔═╗┬  ┬ ┬┌─┐┬┌┐┌┌─┐
 # ╠═╝│  │ ││ ┬││││└─┐
