@@ -51,6 +51,12 @@ use Curses;
 use Getopt::Std;
 use strict;
 use warnings;
+use sigtrap 'handler' => \&size_change, qw(WINCH);
+
+my $size_changed = 0;
+sub size_change {
+    $size_changed = 1
+}
 
 my $version = "1.1";
 my $new_fish = 1;
@@ -116,19 +122,19 @@ sub main {
 
 		$anim->redraw_screen();
 
-		my $nexttime = 0;
-
 		while(1) {
 			my $in = lc(getch());
 
 			if   ( $in eq 'q' ) { quit(); }   # Exit
 			elsif( $in eq 'r' ) { last; }     # Redraw (will recreate all objects)
+            elsif( $size_changed ) { last; }
 			elsif( $in eq 'p' ) { $paused = !$paused; }
 
 			$anim->animate() unless($paused);
 		}
 		$anim->update_term_size();
 		$anim->remove_all_entities();
+        $size_changed = 0;
 
 	}
 
@@ -1436,29 +1442,10 @@ sub dprint {
 	close(D);
 }
 
-sub sighandler {
-	my ($sig) = @_;
-	if($sig eq 'INT') { quit(); }
-	elsif($sig eq 'WINCH') {
-		# ignore SIGWINCH, only redraw when requested
-	}
-	else { quit("Exiting with SIG$sig"); }
-}
-
 sub quit {
 	my ($mesg) = @_;
 	print STDERR $mesg, "\n" if(defined($mesg));
 	exit;
-}
-
-
-sub initialize {
-	# this may be paranoid, but i don't want to leave
-	# the user's terminal in a state that they might not
-	# know how to fix if we die badly
-	foreach my $sig (keys %SIG) {
-		$SIG{$sig} = 'sighandler' unless(defined($SIG{$sig}));
-	}
 }
 
 
