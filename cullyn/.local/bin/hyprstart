@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-~/.local/bin/tmux-session restore
+alacritty -e ~/.local/bin/tmux-session restore
 
 hyprctl keyword input:follow_mouse 0
 ~/.local/bin/layout code

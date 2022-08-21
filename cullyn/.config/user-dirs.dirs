@@ -5,4 +5,4 @@ XDG_MUSIC_DIR="$HOME/media/music"
 XDG_PICTURES_DIR="$HOME/media/images"
 XDG_VIDEOS_DIR="$HOME/media/videos"
 XDG_PUBLICSHARE_DIR="$HOME/documents/share"
-XDG_TEMPLATES_DIR="$HOME/documents/templates
+XDG_TEMPLATES_DIR="$HOME/documents/templates"
