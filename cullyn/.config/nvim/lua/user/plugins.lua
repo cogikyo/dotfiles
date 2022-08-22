@@ -147,6 +147,7 @@ return packer.startup(function(use)
 	use("tpope/vim-surround")
 	use("mbbill/undotree")
 	use("ggandor/lightspeed.nvim")
+	use("elkowar/yuck.vim")
 	---------------------------------------------------------------------------
 
 	-- Automatically set up configuration after cloning packer.nvim

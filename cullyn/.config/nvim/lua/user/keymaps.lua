@@ -24,6 +24,7 @@ map("v", "<C-s>", "<Esc>:w<CR>")
 
 -- ✍️  quit
 map("n", "<leader>q", ":q!<CR>")
+map("n", "<leader>x", ":q<CR>")
 map("n", "<C-c>", "<Esc>")
 
 -- 🤖 copy copy

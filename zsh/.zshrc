@@ -8,6 +8,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 # evals (shell "apps")
 eval "$(starship init zsh)"
 eval "$(jump shell)"
+eval "$(thefuck --alias)"
 
 # history
 HISTFILE=~/.histfile
