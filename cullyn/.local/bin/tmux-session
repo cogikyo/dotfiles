@@ -1,14 +1,5 @@
 #!/usr/bin/env bash
 
-dump() {
-    local d=$'\t'
-    tmux list-windows -a -F "#S${d}#W${d}#{pane_current_path}"
-}
-
-save() {
-    dump > "$session"
-}
-
 session_exists() {
     tmux has-session -t "$1" 2>/dev/null
 }
@@ -22,7 +13,11 @@ new_window() {
 }
 
 new_session() {
-  tmux new-session -d -s "$1" -n "$2" -c "$3" "$4"
+    if [[ -z $4 ]]; then
+        tmux new-session -d -s "$1" -n "$2" -c "$3"
+    else
+        tmux new-session -d -s "$1" -n "$2" -c "$3" "$4"
+    fi
 }
 
 restore() {
@@ -39,14 +34,9 @@ restore() {
         fi
     done < "$session"
 
-    echo "restored $count sessions"
     notify-send tmux "$count sessions restored" -i "$HOME/dotfiles/resources/icons/tmux_icon.svg"
 }
 
-case "$1" in
-    save | restore )
-        "$1";;
-    * )
-        echo "valid commands: save, restore" >&2
-        exit 1;;
-esac
+"$1"
+
+exit 0
