@@ -329,7 +329,7 @@ StScrollBar StButton#hhandle:active {
 .popup-combo-menu {
   padding: 3px;
   color: #eff0f2;
-  background-color: rgba(26, 27, 38, 0.95);
+  background-color: rgba(36, 40, 59, 0.95);
   border-radius: 12px;
   margin: 6px;
   box-shadow: 0 5px 12px rgba(0, 0, 0, 0.35);
@@ -560,7 +560,7 @@ StScrollBar StButton#hhandle:active {
   color: rgba(239, 240, 242, 0.7);
   font-size: 1em;
   padding: 0px;
-  background-color: rgba(26, 27, 38, 0.95);
+  background-color: rgba(36, 40, 59, 0.95);
   box-shadow: 0 0 5px rgba(0, 0, 0, 0.5), 0 0 16px rgba(0, 0, 0, 0.24);
 }
 
@@ -1513,7 +1513,7 @@ StScrollBar StButton#hhandle:active {
   spacing: 1em;
   padding: 16px;
   color: rgba(239, 240, 242, 0.7);
-  background-color: rgba(26, 27, 38, 0.85);
+  background-color: rgba(36, 40, 59, 0.85);
 }
 
 .osd-window {
@@ -1525,7 +1525,7 @@ StScrollBar StButton#hhandle:active {
   min-height: 64px;
   color: rgba(239, 240, 242, 0.7);
   border-radius: 0;
-  background-color: rgba(26, 27, 38, 0.85);
+  background-color: rgba(36, 40, 59, 0.85);
   border: none;
 }
 
