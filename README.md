@@ -4,7 +4,7 @@
     <img src="https://img.shields.io/badge/OS-Arch Linux-984D55?style=flat-sqaure&labelColor=1a1b26"/>
     <img src="https://img.shields.io/badge/Display Server-Wayland-5454B9?style=flat-sqaure&labelColor=1a1b26"/>
     <img src="https://img.shields.io/badge/Window Manager-Hyprland-774989?style=flat-sqaure&labelColor=1a1b26"/>
-    <img src="https://img.shields.io/badge/Theme-Tokyo Night-DF6BC0?style=flat-sqaure&labelColor=1a1b26"/>
+    <img src="https://img.shields.io/badge/Theme-Tokyo Night Storm-DF6BC0?style=flat-sqaure&labelColor=1a1b26"/>
     <kbd>
         <img
             alt="dotfiles neonlights banner"
@@ -26,8 +26,6 @@
 
 ## Overview 👾
 
-#### Essentials 📦
-
 - Operating System: [Arch Linux](https://wiki.archlinux.org/title/Arch_Linux)
 - Display Server: [Wayland](https://wiki.archlinux.org/title/Wayland), with display manager: [SDDM](https://wiki.archlinux.org/title/SDDM)
 - Window manager/compositor: [Hyprland](https://github.com/hyprwm/Hyprland)
@@ -37,6 +35,7 @@
   - Prompt: custom [starship](https://starship.rs/) + [custom DNA greeter](cullyn/.local/bin/dna)
   - Quick navigation: [jump](https://github.com/gsamokovarov/jump)
 - Editor: [neovim-nightly](https://github.com/neovim/neovim),
+  - Theme: [Tokyo Night Storm](https://github.com/folke/tokyonight.nvim)
   - [config files](cullyn/.config/nvim/) _(work in progress)_ 🔨
 - Browser: [firefox-developer-eddition](https://www.mozilla.org/en-US/firefox/developer/), with keyboard focused usage via:
   - [vimium](https://github.com/philc/vimium)
@@ -44,12 +43,8 @@
 - File manager: [nnn](https://github.com/jarun/nnn)
   - [config files](cullyn/.config/nnn/) _(work in progress)_ 🔨
 - Music: [YouTube Music](https://aur.archlinux.org/packages/ytmdesktop-git)
-  - I might try to write a CLI app for YouTube Music (the electron web emulator pretty bad).
+  - I might try to write a CLI app for YouTube Music (the electron web emulator is pretty bad).
   - However, [playerctl](https://github.com/altdesktop/playerctl) solves most usage issues, for now.
-
-#### Aesthetics 🕶️
-
-- General theme: [Tokyo Night Storm](https://github.com/folke/tokyonight.nvim)
 - Status bar (widgets): [eww](https://github.com/elkowar/eww)
 - Launcher: [rofi](https://github.com/davatorium/rofi)
 - PDF viewer: [zathura](https://pwmt.org/projects/zathura/)
@@ -127,7 +122,7 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
 ##### [ArchWiki General Recommendations](https://wiki.archlinux.org/title/General_recommendations)
 
-2.1 Install AUR helper ([paru](https://github.com/Morganamilo/paru)
+2.1 Install AUR helper ([paru](https://github.com/Morganamilo/paru))
 
     git clone https://aur.archlinux.org/paru.git
     cd paru
@@ -159,7 +154,7 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
       cd $HOME/dotfiles
       mv cullyn $USER
       stow $USER
-      stow zsh
+      stow home
 
 **⚠️ Note:** _you probably don't want my zsh config, or many of my personal configs, and should update them now._
 
