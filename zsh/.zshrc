@@ -109,11 +109,11 @@ alias tls='tmux ls'
 alias tk='tmux kill-session'
 alias tks='tmux kill-server'
 alias tr='tmux-session restore'
-alias tad='tmux attach -t '
-alias tan='tmux attach -t '
-alias tap='tmux attach -t ﳣ'
-alias tab='tmux attach -t פּ'
-alias taa='tmux attach -t '
+alias tad='tmux select-window -t :1; tmux attach -t '
+alias tan='tmux select-window -t :1; tmux attach -t '
+alias tac='tmux select-window -t ﮂ:1; tmux attach -t ﮂ'
+alias tap='tmux select-window -t ﳣ:1; tmux attach -t ﳣ'
+alias taa='tmux select-window -t :1; tmux attach -t '
 
 # ╔═╗┬  ┬ ┬┌─┐┬┌┐┌┌─┐
 # ╠═╝│  │ ││ ┬││││└─┐
