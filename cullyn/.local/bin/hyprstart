@@ -9,6 +9,8 @@ hyprctl keyword input:follow_mouse 0
 ~/.local/bin/layout discord
 hyprctl keyword input:follow_mouse 1
 
+ytmdesktop & sleep 1
 notify-send -t 5000 "$USER@$HOSTNAME" "こんにちは" --icon="$HOME/dotfiles/resources/share/nosvagor.png"
+hyprctl dispatch focuswindow youtube-music-desktop-app
 
-exec ytmdesktop
+exit 0

@@ -1,0 +1,51 @@
+// ┬  ┬┌─┐┬─┐┬┌─┐┌┐ ┬  ┌─┐┌─┐
+// └┐┌┘├─┤├┬┘│├─┤├┴┐│  ├┤ └─┐
+//  └┘ ┴ ┴┴└─┴┴ ┴└─┘┴─┘└─┘└─┘
+$sans-serif: Albert Sans, sans-serif;
+$monospace: Hack Nerd Font, monospace;
+$border-radius: 16px;
+
+$fg: #c0caf5;
+$bg: #24283b;
+$tbg: rgb(36, 40, 59, 0.87);
+$dark: #0d1826;
+
+// TODO: set up dynamic colors
+// wallpaper colors:
+$pri: #f2a0a7;
+$sec: #d982ab;
+$tert: #7b6cb1;
+$minor: #7e88bf;
+$minimal: #3d4f73;
+
+// subset of tokyo night: (https://github.com/folke/tokyonight.nvim/blob/main/lua/tokyonight/colors.lua)
+$red: #f7768e;
+$orange: #ff9e64;
+$yellow: #e0af68;
+$green: #9ece6a;
+$cyan: #7dcfff;
+$blue: #7aa2f7;
+$magenta: #bb9af7;
+
+// ┌┬┐┬─┐ ┬┬┌┐┌┌─┐
+// ││││┌┴┬┘││││└─┐
+// ┴ ┴┴┴ └─┴┘└┘└─┘
+
+// ┌─┐┌┐┌┬┌┬┐┌─┐┌┬┐┬┌─┐┌┐┌┌─┐
+// ├─┤│││││││├─┤ │ ││ ││││└─┐
+// ┴ ┴┘└┘┴┴ ┴┴ ┴ ┴ ┴└─┘┘└┘└─┘
+@keyframes fade {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+// ┌┐ ┌─┐┌─┐┌─┐
+// ├┴┐├─┤└─┐├┤
+// └─┘┴ ┴└─┘└─┘
+* {
+  all: unset;
+}
