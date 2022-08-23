@@ -58,6 +58,7 @@ export EDITOR=nvim
 
 alias niol='clear && source ~/.zshrc'
 alias dot='cd ~/dotfiles'
+alias d='cd ~/downloads'
 alias not='cd ~/notes'
 alias x='exit'
 alias n='nvim'
