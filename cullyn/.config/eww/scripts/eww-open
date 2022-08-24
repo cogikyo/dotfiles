@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+pkill eww
+eww daemon
+
+eww open top-left
+eww open top-center
+eww open top-right
+
+eww open bot-left
+eww open bot-center
+eww open bot-right
