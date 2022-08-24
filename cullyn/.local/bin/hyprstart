@@ -3,10 +3,10 @@
 alacritty -e ~/.local/bin/tmux-session restore
 
 hyprctl keyword input:follow_mouse 0
-~/.local/bin/layout code
-~/.local/bin/layout zoom
+# ~/.local/bin/layout code
+# ~/.local/bin/layout zoom
 ~/.local/bin/layout dotfiles
-~/.local/bin/layout discord
+# ~/.local/bin/layout discord
 hyprctl keyword input:follow_mouse 1
 
 ytmdesktop & sleep 1

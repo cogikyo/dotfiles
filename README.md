@@ -1,23 +1,22 @@
 <h1 align="center">⚙️ dotfiles ⚙️</h1>
 
 <p align="center">
-    <img src="https://img.shields.io/badge/OS-Arch Linux-984D55?style=flat-sqaure&labelColor=1a1b26"/>
-    <img src="https://img.shields.io/badge/Display Server-Wayland-5454B9?style=flat-sqaure&labelColor=1a1b26"/>
-    <img src="https://img.shields.io/badge/Window Manager-Hyprland-774989?style=flat-sqaure&labelColor=1a1b26"/>
-    <img src="https://img.shields.io/badge/Theme-Tokyo Night Storm-DF6BC0?style=flat-sqaure&labelColor=1a1b26"/>
+    <img src="https://img.shields.io/badge/OS-Arch Linux-883330?style=plastic&labelColor=24283b"/>&nbsp;&nbsp;
+    <img src="https://img.shields.io/badge/DS-Wayland-5454B9?style=plastic&labelColor=24283b"/>&nbsp;&nbsp;
+    <img src="https://img.shields.io/badge/WM-Hyprland-7c4592?style=plastic&labelColor=24283b"/>&nbsp;&nbsp;
+    <img src="https://img.shields.io/badge/CS-Tokyo Night-ae477a?style=plastic&labelColor=24283b"/>
+    <br>
     <kbd>
         <img
             alt="dotfiles neonlights banner"
             src="https://github.com/nosvagor/dotfiles/blob/main/resources/share/dotfiles-banner.gif?raw=true"/>
     </kbd>
 </p>
-
 <p align="center">
-    <img src="https://img.shields.io/github/stars/nosvagor/dotfiles?color=e0af68&logo=github&labelColor=1a1b26&logoColor=e0af68&style=for-the-badge">&nbsp;&nbsp;
-    <img src="https://img.shields.io/github/issues/nosvagor/dotfiles?color=9ece6a&logo=gitbook&labelColor=1a1b26&logoColor=9ece6a&style=for-the-badge">&nbsp;&nbsp;
-    <img src="https://visitor-badge-reloaded.herokuapp.com/badge?color=b4f9f8&logoColor=b4f9f8&page_id=nosvagor/dotfiles&logo=linux&style=for-the-badge&lcolor=1a1b26"/>&nbsp;&nbsp;
-    <img src="https://img.shields.io/github/forks/nosvagor/dotfiles?color=7aa2f7&logo=git&labelColor=1a1b26&logoColor=7aa2f7&style=for-the-badge">&nbsp;&nbsp;
-    <img src="https://img.shields.io/github/license/nosvagor/dotfiles?color=bb9af7&logo=gnu&labelColor=1a1b26&logoColor=bb9af7&style=for-the-badge">&nbsp;&nbsp;
+    <img src="https://img.shields.io/github/stars/nosvagor/dotfiles?color=e0af68&logo=github&labelColor=24283b&logoColor=e0af68&style=for-the-badge">&nbsp;&nbsp;
+    <img src="https://visitor-badge-reloaded.herokuapp.com/badge?color=b4f9f8&logoColor=b4f9f8&page_id=nosvagor/dotfiles&logo=linux&style=for-the-badge&lcolor=24283b"/>&nbsp;&nbsp;
+    <img src="https://img.shields.io/github/forks/nosvagor/dotfiles?color=7aa2f7&logo=git&labelColor=24283b&logoColor=7aa2f7&style=for-the-badge">&nbsp;&nbsp;
+    <img src="https://img.shields.io/github/license/nosvagor/dotfiles?color=bb9af7&logo=gnu&labelColor=24283b&logoColor=bb9af7&style=for-the-badge">
 </p>
 
 ---
@@ -26,39 +25,40 @@
 
 ## Overview 👾
 
-- Operating System: [Arch Linux](https://wiki.archlinux.org/title/Arch_Linux)
-- Display Server: [Wayland](https://wiki.archlinux.org/title/Wayland), with display manager: [SDDM](https://wiki.archlinux.org/title/SDDM)
-- Window manager/compositor: [Hyprland](https://github.com/hyprwm/Hyprland)
-- Terminal: [alacritty](https://github.com/alacritty/alacritty), with terminal multiplexer: [tmux](https://en.wikipedia.org/wiki/Tmux)
-- Shell: [zsh](https://wiki.archlinux.org/title/zsh),
+- **Operating System**: [Arch Linux](https://wiki.archlinux.org/title/Arch_Linux)
+- **Display Server**: [Wayland](https://wiki.archlinux.org/title/Wayland), with display manager: [SDDM](https://wiki.archlinux.org/title/SDDM)
+- **Window manager/compositor**: [Hyprland](https://github.com/hyprwm/Hyprland)
+- **Color Scheme**: various ports of [Tokyo Night (storm)](https://github.com/enkia/tokyo-night-vscode-theme)
+- **Terminal**: [alacritty](https://github.com/alacritty/alacritty), with terminal multiplexer: [tmux](https://en.wikipedia.org/wiki/Tmux)
+- **Shell**: [zsh](https://wiki.archlinux.org/title/zsh),
   - Plugins: [syntax highlighting](https://github.com/zsh-users/zsh-syntax-highlighting), [auto suggestions](https://github.com/zsh-users/zsh-autosuggestions), [auto complete](https://github.com/marlonrichert/zsh-autocomplete), [colored man pages](https://github.com/ael-code/zsh-colored-man-pages)
   - Prompt: custom [starship](https://starship.rs/) + [custom DNA greeter](cullyn/.local/bin/dna)
   - Quick navigation: [jump](https://github.com/gsamokovarov/jump)
-- Editor: [neovim-nightly](https://github.com/neovim/neovim),
-  - Theme: [Tokyo Night Storm](https://github.com/folke/tokyonight.nvim)
+- **Editor**: [neovim-nightly](https://github.com/neovim/neovim),
+  - Theme: [Tokyo Night (storm)](https://github.com/folke/tokyonight.nvim)
   - [config files](cullyn/.config/nvim/) _(work in progress)_ 🔨
-- Browser: [firefox-developer-eddition](https://www.mozilla.org/en-US/firefox/developer/), with keyboard focused usage via:
+- **Browser**: [firefox-developer-eddition](https://www.mozilla.org/en-US/firefox/developer/), with keyboard focused usage via:
   - [vimium](https://github.com/philc/vimium)
   - and a custom, minimal css theme: [tokyo night]() _(work in progress)_ 🔨
-- File manager: [nnn](https://github.com/jarun/nnn)
+- **File manager**: [nnn](https://github.com/jarun/nnn)
   - [config files](cullyn/.config/nnn/) _(work in progress)_ 🔨
-- Music: [YouTube Music](https://aur.archlinux.org/packages/ytmdesktop-git)
+- **Music**: [YouTube Music](https://aur.archlinux.org/packages/ytmdesktop-git)
   - I might try to write a CLI app for YouTube Music (the electron web emulator is pretty bad).
   - However, [playerctl](https://github.com/altdesktop/playerctl) solves most usage issues, for now.
-- Status bar (widgets): [eww](https://github.com/elkowar/eww)
-- Launcher: [rofi](https://github.com/davatorium/rofi)
-- PDF viewer: [zathura](https://pwmt.org/projects/zathura/)
-- Notifications: [dunst](https://github.com/dunst-project/dunst)
-- Music visualizer: [cava](https://github.com/karlstav/cava)
-- Fonts: [google fonts](https://aur.archlinux.org/packages/ttf-google-fonts-git/) / [nerd fonts](https://github.com/ryanoasis/nerd-fonts)
+- **Status bar (widgets)**: [eww](https://github.com/elkowar/eww)
+- **Launcher**: [rofi](https://github.com/davatorium/rofi)
+- **PDF viewer**: [zathura](https://pwmt.org/projects/zathura/)
+- **Notifications**: [dunst](https://github.com/dunst-project/dunst)
+- **Music visualizer**: [cava](https://github.com/karlstav/cava)
+- **Fonts**: [google fonts](https://aur.archlinux.org/packages/ttf-google-fonts-git/) / [nerd fonts](https://github.com/ryanoasis/nerd-fonts)
   - [Albert Sans (serif)](https://fonts.google.com/specimen/Albert+Sans?query=Albert)
   - [Roboto Slab (serif)](https://fonts.google.com/specimen/Roboto+Slab?query=Roboto+S)
   - [Hack Nerd Font (monospace)](https://github.com/ryanoasis/nerd-fonts)
   - Noto Color Emoji and Noto Emoji
-- GTK: [Tokyo Night GTK (storm)](https://github.com/Fausto-Korpsvart/Tokyo-Night-GTK-Theme)
+- **GTK**: [Tokyo Night GTK (storm)](https://github.com/Fausto-Korpsvart/Tokyo-Night-GTK-Theme)
   - TODO: maybe customize it further, see [.local/share/themes](https://github.com/nosvagor/dotfiles/tree/main/cullyn/.local/share/themes) 🔨
-- Cursor: [Nordzy Cursors](https://github.com/alvatip/Nordzy-cursors)
-- Icons: [Nordzy Icon Theme](https://github.com/alvatip/Nordzy-icon)
+- **Cursor**: [Nordzy Cursors](https://github.com/alvatip/Nordzy-cursors)
+- **Icons**: [Nordzy Icon Theme](https://github.com/alvatip/Nordzy-icon)
 
 </details>
 &nbsp;
