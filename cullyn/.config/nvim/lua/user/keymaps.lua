@@ -155,12 +155,9 @@ map("n", "<leader>nd", ":lua require('harpoon.ui').nav_file(5)<CR>zt")
 -- 👾 spectre
 vim.cmd([[
 vnoremap <leader>r :<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
+nnoremap <leader>R :%s//g<Left><Left>
 nnoremap <silent> <leader>N :call setreg("/", ['空'])<CR>
 ]])
-map("n", "<leader>S", ":w<CR> <cmd>lua require('spectre').open()<CR>")
-map("n", "<leader>sw", ":w<CR> yiw: lua require('spectre').open_file_search()<CR>p")
-map("v", "<leader>sw", "yiw :w<CR> : lua require('spectre').open_file_search()<CR>p")
-map("n", "<leader>sa", ":w<CR> <cmd>lua require('spectre').open_file_search()<CR>")
 
 -- 🙏 folds
 map("n", "<leader>mv", ":mkview<CR>")
