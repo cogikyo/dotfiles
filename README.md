@@ -289,11 +289,15 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
 - Update scaling factor if in HiDPI environment:
 
-      layout.css.devPixelsPerPx = 1.25
+      layout.css.devPixelsPerPx = 1.3
 
 - Stop asking to restore session (I often just kill the window and don't want the prompt later)
 
       browser.sessionstore.resume_from_crash = false
+
+- Hide PDF sidebar by default
+
+      pdfjs.sidebarViewOnLoad = 0
 
 &nbsp;
 

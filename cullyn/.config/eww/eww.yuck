@@ -107,7 +107,10 @@
 (defwindow top-left
   :monitor 0
   :geometry (geometry
-    :y "-16px"
+    :x "36px"
+    :y "-36px"
+    :width "1000px"
+    :height "36px"
     :anchor "top left"
   )
   :stacking "fg"
@@ -119,7 +122,10 @@
 (defwindow top-center
   :monitor 0
   :geometry (geometry
-    :y "16px"
+    :x "0%"
+    :y "18px"
+    :width "30%"
+    :height "36px"
     :anchor "top center"
   )
   :stacking "fg"
@@ -131,7 +137,10 @@
 (defwindow top-right
   :monitor 0
   :geometry (geometry
-    :y "-16px"
+    :x "0%"
+    :y "-36px"
+    :width "30%"
+    :height "36px"
     :anchor "top right"
   )
   :stacking "fg"
@@ -149,7 +158,10 @@
 (defwindow bot-left
   :monitor 0
   :geometry (geometry
-    :y "-16px"
+    :x "0%"
+    :y "-36px"
+    :width "30%"
+    :height "36px"
     :anchor "bottom left"
   )
   :stacking "fg"
@@ -161,7 +173,10 @@
 (defwindow bot-center
   :monitor 0
   :geometry (geometry
-    :y "16px"
+    :x "0%"
+    :y "0"
+    :width "30%"
+    :height "36px"
     :anchor "bottom center"
   )
   :stacking "fg"
@@ -173,7 +188,10 @@
 (defwindow bot-right
   :monitor 0
   :geometry (geometry
-    :y "-16px"
+    :x "0%"
+    :y "-36px"
+    :width "30%"
+    :height "36px"
     :anchor "bottom right"
   )
   :stacking "fg"

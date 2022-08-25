@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+pkill eww
+eww daemon
+eww open-many top-left top-center top-right bot-left bot-center bot-right
+
+notify-send "eww restarted"
+
+exit
