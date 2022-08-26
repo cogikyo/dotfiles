@@ -2,7 +2,7 @@
 
 pkill eww
 eww daemon
-eww open-many top-left top-center top-right bot-left bot-center bot-right
+eww open-many top-bar bot-bar
 
 notify-send "eww restarted"
 

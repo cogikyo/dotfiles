@@ -141,6 +141,7 @@ map("n", "<leader>rs", ":w | source %<CR>")
 -- ⛵ reflow
 map("n", "<leader>rx", "vipgqzt{j^")
 map("n", "<leader>rf", "mzJ`zVgwzHzt_")
+map("n", "<leader>rp", "<cmd>call Black()<cr>")
 
 -- 🔱 harpoon
 map("n", "<leader>n", "<Nop>")
@@ -152,8 +153,8 @@ map("n", "<leader>ns", ":lua require('harpoon.ui').nav_file(3)<CR>zt")
 map("n", "<leader>na", ":lua require('harpoon.ui').nav_file(4)<CR>zt")
 map("n", "<leader>nd", ":lua require('harpoon.ui').nav_file(5)<CR>zt")
 
--- 👾 spectre
 vim.cmd([[
+nnoremap <leader>ir vip:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
 vnoremap <leader>r :<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
 nnoremap <leader>R :%s//g<Left><Left>
 nnoremap <silent> <leader>N :call setreg("/", ['空'])<CR>

@@ -7,9 +7,9 @@ $font-size: 20px;
 $border-radius: 16px;
 
 // wallpaper colors:
-$accent: #f2a0a7;
-$seconcary: #d982ab;
-$primray: #7b6cb1;
+$accent1: #f2a0a7;
+$accent2: #d982ab;
+$accent3: #7b6cb1;
 $minor: #7e88bf;
 $minimal: #3d4f73;
 
@@ -51,16 +51,25 @@ $magenta: #bb9af7;
   all: unset;
 }
 
-// pseudo root (all window classes)
-.top,
-.bot {
-  &-center,
-  &-left,
-  &-right {
+// main parent
+.top-bar,
+.bot-bar {
+  color: $fg;
+  font-family: $monospace;
+  font-size: $font-size;
+}
+
+.music {
+  &-box {
     background: $bg;
-    color: $fg;
-    font-family: $monospace;
-    font-size: $font-size;
+    color: $red;
     border-radius: $border-radius;
+    padding: 0px 1em;
+  }
+  &-cover {
+    margin-left: 8px;
+  }
+  &-status {
+    font-size: 30px;
   }
 }

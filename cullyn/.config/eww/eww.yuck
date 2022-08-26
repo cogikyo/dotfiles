@@ -2,18 +2,20 @@
 ;  ││├─┤ │ ├┤
 ; ─┴┘┴ ┴ ┴ └─┘
 ; --------------------------------------------------------------------------vvv
-; --------------------------------------------------------------------------^^^
+(defpoll date :interval "1s"
+  "date '+ %A, %B %d'"
+)
 
-; ┌┬┐┬┌┬┐┌─┐
-;  │ ││││├┤
-;  ┴ ┴┴ ┴└─┘
-; --------------------------------------------------------------------------vvv
+(defpoll time :interval "1s"
+  "date '+ %H:%M'"
+)
 ; --------------------------------------------------------------------------^^^
 
 ; ┬ ┬┌─┐┌─┐┌┬┐┬ ┬┌─┐┬─┐
 ; │││├┤ ├─┤ │ ├─┤├┤ ├┬┘
 ; └┴┘└─┘┴ ┴ ┴ ┴ ┴└─┘┴└─
 ; --------------------------------------------------------------------------vvv
+(defpoll weather :interval "1m"  "python ~/.config/eww/scripts/weather.py")
 ; --------------------------------------------------------------------------^^^
 
 
@@ -21,8 +23,27 @@
 ; ││││ │└─┐││
 ; ┴ ┴└─┘└─┘┴└─┘
 ; --------------------------------------------------------------------------vvv
+(defpoll status :interval "0.2s"  "~/.config/eww/scripts/music_info status")
+(defpoll cover :interval "1s"  "~/.config/eww/scripts/music_info cover")
+(defpoll song :interval "1s"  "~/.config/eww/scripts/music_info song")
+(defpoll artist :interval "1s"  "~/.config/eww/scripts/music_info artist")
+(defpoll duration :interval "1s"  "~/.config/eww/scripts/music_info duration")
+(defpoll volume :interval "1s"  "~/.config/eww/scripts/music_info volume")
+
 (defwidget music []
-  "music"
+  (box
+    :class "music-box"
+    :orientation "h"
+    :haligh "center"
+    :spacing 16
+    :space-evenly false
+    (label :class "music-status" :text status)
+    (image :class "music-cover" :path cover :image-width 32 :image-height 32)
+    song
+    (label :markup artist)
+    duration
+    (label :markup volume )
+  )
 )
 ; --------------------------------------------------------------------------^^^
 
@@ -31,6 +52,9 @@
 ; └─┐├─┘├┤ ├─┤├┴┐├┤ ├┬┘
 ; └─┘┴  └─┘┴ ┴┴ ┴└─┘┴└─
 ; --------------------------------------------------------------------------vvv
+(defwidget speaker []
+  "speaker"
+)
 ; --------------------------------------------------------------------------^^^
 
 
@@ -38,6 +62,9 @@
 ; │││││
 ; ┴ ┴┴└─┘
 ; --------------------------------------------------------------------------vvv
+(defwidget mic []
+  "mic"
+)
 ; --------------------------------------------------------------------------^^^
 
 
@@ -45,6 +72,9 @@
 ; │  ├─┘│ │
 ; └─┘┴  └─┘
 ; --------------------------------------------------------------------------vvv
+(defwidget cpu []
+  "cpu"
+)
 ; --------------------------------------------------------------------------^^^
 
 
@@ -52,6 +82,9 @@
 ; │││├┤ ││││ │├┬┘└┬┘
 ; ┴ ┴└─┘┴ ┴└─┘┴└─ ┴
 ; --------------------------------------------------------------------------vvv
+(defwidget memory []
+  "memory"
+)
 ; --------------------------------------------------------------------------^^^
 
 
@@ -59,6 +92,9 @@
 ; │ ┬├─┘│ │
 ; └─┘┴  └─┘
 ; --------------------------------------------------------------------------vvv
+(defwidget gpu []
+  "gpu"
+)
 ; --------------------------------------------------------------------------^^^
 
 
@@ -66,6 +102,9 @@
 ;  │ ├┤ │││├─┘
 ;  ┴ └─┘┴ ┴┴
 ; --------------------------------------------------------------------------vvv
+(defwidget temp []
+  "temp"
+)
 ; --------------------------------------------------------------------------^^^
 
 
@@ -74,7 +113,7 @@
 ; ┴  ┴ ┴└─┘┴ ┴┴ ┴┘└┘
 ; --------------------------------------------------------------------------vvv
 (defwidget pacman []
-  (literal :content "pacman")
+  "pacman"
 )
 ; --------------------------------------------------------------------------^^^
 
@@ -84,119 +123,151 @@
 ; └┴┘└─┘┴└─┴ ┴└─┘┴  ┴ ┴└─┘└─┘└─┘
 ; --------------------------------------------------------------------------vvv
 (defwidget workspaces []
-  (literal :content "workspaces")
+  "workspaces"
 )
 ; --------------------------------------------------------------------------^^^
-
 
 
 ; ┌┐┌┌─┐┌┬┐┬ ┬┌─┐┬─┐┬┌─
 ; │││├┤  │ ││││ │├┬┘├┴┐
 ; ┘└┘└─┘ ┴ └┴┘└─┘┴└─┴ ┴
 ; --------------------------------------------------------------------------vvv
-(defwidget connection []
-  (literal :content "connection")
+(defwidget network []
+  "network"
 )
 ; --------------------------------------------------------------------------^^^
 
 
-; ┌┐ ┌─┐┬─┐  ┌┬┐┌─┐┌─┐
-; ├┴┐├─┤├┬┘   │ │ │├─┘
-; └─┘┴ ┴┴└─   ┴ └─┘┴
+; ████████╗ ██████╗ ██████╗
+; ╚══██╔══╝██╔═══██╗██╔══██╗
+;    ██║   ██║   ██║██████╔╝
+;    ██║   ██║   ██║██╔═══╝
+;    ██║   ╚██████╔╝██║
+;    ╚═╝    ╚═════╝ ╚═╝
 ; --------------------------------------------------------------------------vvv
-(defwindow top-left
+(defwindow top-bar
   :monitor 0
   :geometry (geometry
-    :x "36px"
-    :y "-36px"
-    :width "1000px"
-    :height "36px"
-    :anchor "top left"
-  )
-  :stacking "fg"
-  :exclusive true
-  :focusable false
-  "left"
-)
-
-(defwindow top-center
-  :monitor 0
-  :geometry (geometry
-    :x "0%"
-    :y "18px"
-    :width "30%"
+    :y "6px"
+    :width "100%"
     :height "36px"
     :anchor "top center"
   )
   :stacking "fg"
   :exclusive true
   :focusable false
-  "center"
+  (box
+    :class "top-bar-box"
+    :orientation "h"
+    :haligh "center"
+    :space-evenly true
+    (top-left)
+    (top-center)
+    (top-right)
+  )
 )
 
-(defwindow top-right
-  :monitor 0
-  :geometry (geometry
-    :x "0%"
-    :y "-36px"
-    :width "30%"
-    :height "36px"
-    :anchor "top right"
+(defwidget top-left []
+  (box
+    :class "top-left"
+    :orientation "h"
+    :haligh "start"
+    :spacing 16
+    :space-evenly false
+    date
+    time
+    weather
   )
-  :stacking "fg"
-  :exclusive true
-  :focusable false
-  "right"
+)
+
+(defwidget top-center []
+  (box
+    :class "top-center"
+    :orientation "h"
+    :halign "center"
+    :spacing 16
+    :space-evenly false
+    (mic)
+    (music)
+    (speaker)
+  )
+)
+
+(defwidget top-right []
+  (box
+    :class "top-right"
+    :orientation "h"
+    :halign "end"
+    :spacing 16
+    :space-evenly false
+    (cpu)
+    (memory)
+    (gpu)
+    (temp)
+  )
 )
 ; --------------------------------------------------------------------------^^^
 
 
-; ┌┐ ┌─┐┬─┐  ┌┐ ┌─┐┌┬┐
-; ├┴┐├─┤├┬┘  ├┴┐│ │ │
-; └─┘┴ ┴┴└─  └─┘└─┘ ┴
+; ██████╗  ██████╗ ████████╗
+; ██╔══██╗██╔═══██╗╚══██╔══╝
+; ██████╔╝██║   ██║   ██║
+; ██╔══██╗██║   ██║   ██║
+; ██████╔╝╚██████╔╝   ██║
+; ╚═════╝  ╚═════╝    ╚═╝
 ; --------------------------------------------------------------------------vvv
-(defwindow bot-left
+(defwindow bot-bar
   :monitor 0
   :geometry (geometry
-    :x "0%"
-    :y "-36px"
-    :width "30%"
-    :height "36px"
-    :anchor "bottom left"
-  )
-  :stacking "fg"
-  :exclusive true
-  :focusable false
-  "left"
-)
-
-(defwindow bot-center
-  :monitor 0
-  :geometry (geometry
-    :x "0%"
-    :y "0"
-    :width "30%"
+    :y "6px"
+    :width "100%"
     :height "36px"
     :anchor "bottom center"
   )
   :stacking "fg"
   :exclusive true
   :focusable false
-  "center"
+  (box
+    :class "bot-bar-box"
+    :orientation "h"
+    :haligh "center"
+    :space-evenly true
+    (bot-left)
+    (bot-center)
+    (bot-right)
+  )
 )
 
-(defwindow bot-right
-  :monitor 0
-  :geometry (geometry
-    :x "0%"
-    :y "-36px"
-    :width "30%"
-    :height "36px"
-    :anchor "bottom right"
+(defwidget bot-left []
+  (box
+    :class "bot-left"
+    :orientation "h"
+    :haligh "start"
+    :spacing 16
+    :space-evenly false
+    (pacman)
   )
-  :stacking "fg"
-  :exclusive true
-  :focusable false
-  "right"
+)
+
+(defwidget bot-center []
+  (box
+    :class "bot-center"
+    :orientation "h"
+    :halign "center"
+    :spacing 16
+    :space-evenly false
+    (workspaces)
+  )
+)
+
+(defwidget bot-right []
+  (box
+    :class "bot-right"
+    :orientation "h"
+    :halign "end"
+    :spacing 16
+    :space-evenly false
+    (network)
+  )
 )
 ; --------------------------------------------------------------------------^^^

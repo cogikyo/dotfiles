@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+status="$(playerctl status)"
+
+status() {
+    case "$status" in
+        "Playing") echo ""
+        ;;
+        "Paused") echo "奈"
+        ;;
+        *) echo "ﭦ"
+        ;;
+    esac
+}
+
+song() {
+    song=$(playerctl --player=youtube-music-desktop-app metadata --format \
+        '{{title}}' | sed -e 's/([^()]*)//g')
+    album=$(playerctl --player=youtube-music-desktop-app metadata --format \
+        '{{album}}' | sed -e 's/([^()]*)//g' -e 's/ - EP//g')
+
+    if [[ "$song" == "$album" ]]; then
+        echo " $album"
+    else
+        echo " $album  $song"
+    fi
+}
+
+artist() {
+    artist=$(playerctl --player=youtube-music-desktop-app metadata --format \
+        '{{artist}}')
+
+    echo " <b>$artist</b>"
+}
+
+duration() {
+    duration=$(playerctl --player=youtube-music-desktop-app metadata --format \
+        '{{duration(mpris:length - position)}}')
+
+    echo "神 $duration"
+}
+
+cover() {
+    artUrl=$(playerctl --player=youtube-music-desktop-app metadata --format \
+        '{{mpris:artUrl}}')
+
+    tempfile="$HOME/.config/eww/assets/ytm.png"
+    if [[ "$status" == "Playing" ]] || [[ $status == "Paused" ]]; then
+        tempfile="/tmp/.album_art.png"
+        wget --output-document="$tempfile" "$artUrl"
+    fi
+    echo "$tempfile"
+}
+
+volume() {
+    volume=$(playerctl volume)
+    level=$(echo "$volume * 10 / 1" | bc)
+    echo "墳 $level"
+}
+
+"$1"
