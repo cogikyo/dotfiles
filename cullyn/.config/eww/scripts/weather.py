@@ -217,4 +217,5 @@ out_data = {
     "tooltip": tooltip_text,
     "class": status_code,
 }
-print(json.dumps(out_data))
+
+print(f"{icon} {temp}")
