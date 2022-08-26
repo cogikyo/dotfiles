@@ -4,7 +4,7 @@
 $sans-serif: Albert Sans, sans-serif;
 $monospace: Hack Nerd Font, monospace;
 $font-size: 20px;
-$border-radius: 16px;
+$br: 16px;
 
 // wallpaper colors:
 $accent1: #f2a0a7;
@@ -31,6 +31,11 @@ $magenta: #bb9af7;
 // ┌┬┐┬─┐ ┬┬┌┐┌┌─┐
 // ││││┌┴┬┘││││└─┐
 // ┴ ┴┴┴ └─┴┘└┘└─┘
+@mixin basics($background, $foreground, $radius) {
+  background: $background;
+  color: $foreground;
+  border-radius: $radius;
+}
 
 // ┌─┐┌┐┌┬┌┬┐┌─┐┌┬┐┬┌─┐┌┐┌┌─┐
 // ├─┤│││││││├─┤ │ ││ ││││└─┐
@@ -59,11 +64,13 @@ $magenta: #bb9af7;
   font-size: $font-size;
 }
 
+.top-bar-box {
+  background: $red;
+}
+
 .music {
   &-box {
-    background: $bg;
-    color: $red;
-    border-radius: $border-radius;
+    @include basics($bg, $red, $br);
     padding: 0px 1em;
   }
   &-cover {
@@ -72,4 +79,22 @@ $magenta: #bb9af7;
   &-status {
     font-size: 30px;
   }
+}
+
+.workspaces {
+  @include basics($bg, $orange, $br);
+}
+
+.top-left,
+.bot-left {
+  @include basics($bg, $magenta, $br);
+  padding: 0px 1em;
+  margin-left: 84px;
+}
+
+.top-right,
+.bot-right {
+  @include basics($bg, $blue, $br);
+  padding: 0px 1em;
+  margin-right: 84px;
 }

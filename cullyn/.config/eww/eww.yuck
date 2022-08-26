@@ -1,150 +1,9 @@
-; ┌┬┐┌─┐┌┬┐┌─┐
-;  ││├─┤ │ ├┤
-; ─┴┘┴ ┴ ┴ └─┘
-; --------------------------------------------------------------------------vvv
-(defpoll date :interval "1s"
-  "date '+ %A, %B %d'"
-)
-
-(defpoll time :interval "1s"
-  "date '+ %H:%M'"
-)
-; --------------------------------------------------------------------------^^^
-
-; ┬ ┬┌─┐┌─┐┌┬┐┬ ┬┌─┐┬─┐
-; │││├┤ ├─┤ │ ├─┤├┤ ├┬┘
-; └┴┘└─┘┴ ┴ ┴ ┴ ┴└─┘┴└─
-; --------------------------------------------------------------------------vvv
-(defpoll weather :interval "1m"  "python ~/.config/eww/scripts/weather.py")
-; --------------------------------------------------------------------------^^^
-
-
-; ┌┬┐┬ ┬┌─┐┬┌─┐
-; ││││ │└─┐││
-; ┴ ┴└─┘└─┘┴└─┘
-; --------------------------------------------------------------------------vvv
-(defpoll status :interval "0.2s"  "~/.config/eww/scripts/music_info status")
-(defpoll cover :interval "1s"  "~/.config/eww/scripts/music_info cover")
-(defpoll song :interval "1s"  "~/.config/eww/scripts/music_info song")
-(defpoll artist :interval "1s"  "~/.config/eww/scripts/music_info artist")
-(defpoll duration :interval "1s"  "~/.config/eww/scripts/music_info duration")
-(defpoll volume :interval "1s"  "~/.config/eww/scripts/music_info volume")
-
-(defwidget music []
-  (box
-    :class "music-box"
-    :orientation "h"
-    :haligh "center"
-    :spacing 16
-    :space-evenly false
-    (label :class "music-status" :text status)
-    (image :class "music-cover" :path cover :image-width 32 :image-height 32)
-    song
-    (label :markup artist)
-    duration
-    (label :markup volume )
-  )
-)
-; --------------------------------------------------------------------------^^^
-
-
-; ┌─┐┌─┐┌─┐┌─┐┬┌─┌─┐┬─┐
-; └─┐├─┘├┤ ├─┤├┴┐├┤ ├┬┘
-; └─┘┴  └─┘┴ ┴┴ ┴└─┘┴└─
-; --------------------------------------------------------------------------vvv
-(defwidget speaker []
-  "speaker"
-)
-; --------------------------------------------------------------------------^^^
-
-
-; ┌┬┐┬┌─┐
-; │││││
-; ┴ ┴┴└─┘
-; --------------------------------------------------------------------------vvv
-(defwidget mic []
-  "mic"
-)
-; --------------------------------------------------------------------------^^^
-
-
-; ┌─┐┌─┐┬ ┬
-; │  ├─┘│ │
-; └─┘┴  └─┘
-; --------------------------------------------------------------------------vvv
-(defwidget cpu []
-  "cpu"
-)
-; --------------------------------------------------------------------------^^^
-
-
-; ┌┬┐┌─┐┌┬┐┌─┐┬─┐┬ ┬
-; │││├┤ ││││ │├┬┘└┬┘
-; ┴ ┴└─┘┴ ┴└─┘┴└─ ┴
-; --------------------------------------------------------------------------vvv
-(defwidget memory []
-  "memory"
-)
-; --------------------------------------------------------------------------^^^
-
-
-; ┌─┐┌─┐┬ ┬
-; │ ┬├─┘│ │
-; └─┘┴  └─┘
-; --------------------------------------------------------------------------vvv
-(defwidget gpu []
-  "gpu"
-)
-; --------------------------------------------------------------------------^^^
-
-
-; ┌┬┐┌─┐┌┬┐┌─┐
-;  │ ├┤ │││├─┘
-;  ┴ └─┘┴ ┴┴
-; --------------------------------------------------------------------------vvv
-(defwidget temp []
-  "temp"
-)
-; --------------------------------------------------------------------------^^^
-
-
-; ┌─┐┌─┐┌─┐┌┬┐┌─┐┌┐┌
-; ├─┘├─┤│  │││├─┤│││
-; ┴  ┴ ┴└─┘┴ ┴┴ ┴┘└┘
-; --------------------------------------------------------------------------vvv
-(defwidget pacman []
-  "pacman"
-)
-; --------------------------------------------------------------------------^^^
-
-
-; ┬ ┬┌─┐┬─┐┬┌─┌─┐┌─┐┌─┐┌─┐┌─┐┌─┐
-; ││││ │├┬┘├┴┐└─┐├─┘├─┤│  ├┤ └─┐
-; └┴┘└─┘┴└─┴ ┴└─┘┴  ┴ ┴└─┘└─┘└─┘
-; --------------------------------------------------------------------------vvv
-(defwidget workspaces []
-  "workspaces"
-)
-; --------------------------------------------------------------------------^^^
-
-
-; ┌┐┌┌─┐┌┬┐┬ ┬┌─┐┬─┐┬┌─
-; │││├┤  │ ││││ │├┬┘├┴┐
-; ┘└┘└─┘ ┴ └┴┘└─┘┴└─┴ ┴
-; --------------------------------------------------------------------------vvv
-(defwidget network []
-  "network"
-)
-; --------------------------------------------------------------------------^^^
-
-
 ; ████████╗ ██████╗ ██████╗
 ; ╚══██╔══╝██╔═══██╗██╔══██╗
 ;    ██║   ██║   ██║██████╔╝
 ;    ██║   ██║   ██║██╔═══╝
 ;    ██║   ╚██████╔╝██║
 ;    ╚═╝    ╚═════╝ ╚═╝
-; --------------------------------------------------------------------------vvv
 (defwindow top-bar
   :monitor 0
   :geometry (geometry
@@ -156,23 +15,22 @@
   :stacking "fg"
   :exclusive true
   :focusable false
-  (box
-    :class "top-bar-box"
-    :orientation "h"
-    :haligh "center"
-    :space-evenly true
+  (centerbox
     (top-left)
     (top-center)
     (top-right)
   )
 )
 
+
+; ┌┬┐┌─┐┌─┐   ┬  ┌─┐┌─┐┌┬┐
+;  │ │ │├─┘───│  ├┤ ├┤  │
+;  ┴ └─┘┴     ┴─┘└─┘└   ┴
 (defwidget top-left []
   (box
     :class "top-left"
-    :orientation "h"
-    :haligh "start"
-    :spacing 16
+    :halign "start"
+    :spacing 36
     :space-evenly false
     date
     time
@@ -180,10 +38,18 @@
   )
 )
 
+(defpoll date :interval "1s" "date '+ %A, %B %d, %Y'")
+(defpoll time :interval "1s" "date '+ %H:%M'")
+(defpoll weather :interval "1m"  "python ~/.config/eww/scripts/weather.py")
+
+
+
+; ┌┬┐┌─┐┌─┐   ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
+;  │ │ │├─┘───│  ├┤ │││ │ ├┤ ├┬┘
+;  ┴ └─┘┴     └─┘└─┘┘└┘ ┴ └─┘┴└─
 (defwidget top-center []
   (box
     :class "top-center"
-    :orientation "h"
     :halign "center"
     :spacing 16
     :space-evenly false
@@ -193,6 +59,37 @@
   )
 )
 
+(defpoll status :interval "0.2s"  "~/.config/eww/scripts/music_info status")
+(defpoll cover :interval "1s"  "~/.config/eww/scripts/music_info cover")
+(defpoll song :interval "1s"  "~/.config/eww/scripts/music_info song")
+(defpoll artist :interval "1s"  "~/.config/eww/scripts/music_info artist")
+(defpoll duration :interval "1s"  "~/.config/eww/scripts/music_info duration")
+(defpoll volume :interval "1s"  "~/.config/eww/scripts/music_info volume")
+
+(defwidget mic [] "mic")
+
+(defwidget music []
+  (box
+    :class "music-box"
+    :haligh "center"
+    :spacing 16
+    :space-evenly false
+    (label :class "music-status" :text status)
+    (image :class "music-cover" :path cover :image-width 32)
+    song
+    (label :markup artist)
+    duration
+    (label :markup volume )
+  )
+)
+
+(defwidget speaker [] "speaker")
+
+
+
+; ┌┬┐┌─┐┌─┐   ┬─┐┬┌─┐┬ ┬┌┬┐
+;  │ │ │├─┘───├┬┘││ ┬├─┤ │
+;  ┴ └─┘┴     ┴└─┴└─┘┴ ┴ ┴
 (defwidget top-right []
   (box
     :class "top-right"
@@ -206,7 +103,11 @@
     (temp)
   )
 )
-; --------------------------------------------------------------------------^^^
+
+(defwidget cpu [] "cpu")
+(defwidget memory [] "memory")
+(defwidget gpu [] "gpu")
+(defwidget temp [] "temp")
 
 
 ; ██████╗  ██████╗ ████████╗
@@ -215,7 +116,6 @@
 ; ██╔══██╗██║   ██║   ██║
 ; ██████╔╝╚██████╔╝   ██║
 ; ╚═════╝  ╚═════╝    ╚═╝
-; --------------------------------------------------------------------------vvv
 (defwindow bot-bar
   :monitor 0
   :geometry (geometry
@@ -233,33 +133,49 @@
     :haligh "center"
     :space-evenly true
     (bot-left)
-    (bot-center)
+    (workspaces)
     (bot-right)
   )
 )
 
+
+
+; ┌┐ ┌─┐┌┬┐  ┬  ┌─┐┌─┐┌┬┐
+; ├┴┐│ │ │───│  ├┤ ├┤  │
+; └─┘└─┘ ┴   ┴─┘└─┘└   ┴
 (defwidget bot-left []
   (box
     :class "bot-left"
-    :orientation "h"
-    :haligh "start"
-    :spacing 16
+    :halign "start"
+    :spacing 36
     :space-evenly false
     (pacman)
   )
 )
 
-(defwidget bot-center []
+(defwidget pacman [] "pacman")
+
+
+
+; ┌┐ ┌─┐┌┬┐  ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
+; ├┴┐│ │ │───│  ├┤ │││ │ ├┤ ├┬┘
+; └─┘└─┘ ┴   └─┘└─┘┘└┘ ┴ └─┘┴└─
+(defwidget workspaces []
   (box
-    :class "bot-center"
-    :orientation "h"
+    :class "workspaces"
     :halign "center"
-    :spacing 16
     :space-evenly false
-    (workspaces)
+  (label :text workspace)
   )
 )
 
+(deflisten workspace :initial "-4-"
+  'tail -f /tmp/.active_workspace'
+)
+
+; ┌┐ ┌─┐┌┬┐  ┬─┐┬┌─┐┬ ┬┌┬┐
+; ├┴┐│ │ │───├┬┘││ ┬├─┤ │
+; └─┘└─┘ ┴   ┴└─┴└─┘┴ ┴ ┴
 (defwidget bot-right []
   (box
     :class "bot-right"
@@ -270,4 +186,5 @@
     (network)
   )
 )
-; --------------------------------------------------------------------------^^^
+
+(defwidget network [] "network")

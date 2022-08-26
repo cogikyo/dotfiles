@@ -15,9 +15,9 @@ status() {
 
 song() {
     song=$(playerctl --player=youtube-music-desktop-app metadata --format \
-        '{{title}}' | sed -e 's/([^()]*)//g')
+        '{{title}}' | sed -e 's/([^()]*)//g' -e 's/ $//g')
     album=$(playerctl --player=youtube-music-desktop-app metadata --format \
-        '{{album}}' | sed -e 's/([^()]*)//g' -e 's/ - EP//g')
+        '{{album}}' | sed -e 's/([^()]*)//g' -e 's/ - EP//g' -e 's/ $//g')
 
     if [[ "$song" == "$album" ]]; then
         echo " $album"
