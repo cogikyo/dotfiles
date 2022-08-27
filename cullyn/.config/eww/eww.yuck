@@ -30,31 +30,10 @@
   (box
     :class "top-left"
     :halign "start"
-    :spacing 36
-    :space-evenly false
-    date
-    time
-    weather
-  )
-)
-
-(defpoll date :interval "1s" "date '+ %A, %B %d, %Y'")
-(defpoll time :interval "1s" "date '+ %H:%M'")
-(defpoll weather :interval "1m"  "python ~/.config/eww/scripts/weather.py")
-
-
-
-; ┌┬┐┌─┐┌─┐   ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
-;  │ │ │├─┘───│  ├┤ │││ │ ├┤ ├┬┘
-;  ┴ └─┘┴     └─┘└─┘┘└┘ ┴ └─┘┴└─
-(defwidget top-center []
-  (box
-    :class "top-center"
-    :halign "center"
     :spacing 16
     :space-evenly false
-    (mic)
     (music)
+    (mic)
     (speaker)
   )
 )
@@ -86,6 +65,25 @@
 (defwidget speaker [] "speaker")
 
 
+; ┌┬┐┌─┐┌─┐   ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
+;  │ │ │├─┘───│  ├┤ │││ │ ├┤ ├┬┘
+;  ┴ └─┘┴     └─┘└─┘┘└┘ ┴ └─┘┴└─
+(defwidget top-center []
+  (box
+    :class "top-center"
+    :halign "start"
+    :spacing 36
+    :space-evenly false
+    date
+    time
+    weather
+  )
+)
+
+(defpoll date :interval "1s" "date '+ %A, %B %d, %Y'")
+(defpoll time :interval "1s" "date '+ %H:%M'")
+(defpoll weather :interval "1m"  "python ~/.config/eww/scripts/weather.py")
+
 
 ; ┌┬┐┌─┐┌─┐   ┬─┐┬┌─┐┬ ┬┌┬┐
 ;  │ │ │├─┘───├┬┘││ ┬├─┤ │
@@ -93,7 +91,6 @@
 (defwidget top-right []
   (box
     :class "top-right"
-    :orientation "h"
     :halign "end"
     :spacing 16
     :space-evenly false
@@ -127,13 +124,9 @@
   :stacking "fg"
   :exclusive true
   :focusable false
-  (box
-    :class "bot-bar-box"
-    :orientation "h"
-    :haligh "center"
-    :space-evenly true
+  (centerbox
     (bot-left)
-    (workspaces)
+    (bot-center)
     (bot-right)
   )
 )
@@ -160,18 +153,53 @@
 ; ┌┐ ┌─┐┌┬┐  ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
 ; ├┴┐│ │ │───│  ├┤ │││ │ ├┤ ├┬┘
 ; └─┘└─┘ ┴   └─┘└─┘┘└┘ ┴ └─┘┴└─
-(defwidget workspaces []
-  (box
-    :class "workspaces"
-    :halign "center"
-    :space-evenly false
-  (label :text workspace)
-  )
+(deflisten active_workspace
+  'tail -F /tmp/.active_workspace'
 )
 
-(deflisten workspace :initial "-4-"
-  'tail -f /tmp/.active_workspace'
+(defwidget bot-center []
+  (box
+    :class "bot-center"
+    :halign "center"
+    :space-evenly false
+  (box
+    :class "workspace"
+    :halign "center"
+    :spacing 16
+    :space-evenly false
+  (eventbox
+    :onclick "hyprctl dispatch workspace 1"
+    (label :text ""
+      :class {matches(active_workspace,1) ? 'workspace-1 active' : 'workspace-1'}
+    )
+  )
+  (eventbox
+    :onclick "hyprctl dispatch workspace 2"
+    (label :text ""
+      :class {matches(active_workspace,2) ? 'workspace-2 active' : 'workspace-2'}
+    )
+  )
+  (eventbox
+    :onclick "hyprctl dispatch workspace 3"
+    (label :text "ﮂ"
+      :class {matches(active_workspace,3) ? 'workspace-3 active' : 'workspace-3'}
+    )
+  )
+  (eventbox
+    :onclick "hyprctl dispatch workspace 4"
+    (label :text ""
+      :class {matches(active_workspace,4) ? 'workspace-4 active' : 'workspace-4'}
+    )
+  )
+  (eventbox
+    :onclick "hyprctl dispatch workspace 5"
+    (label :text "輸"
+      :class {matches(active_workspace,5) ? 'workspace-5 active' : 'workspace-5'}
+    )
+  )))
 )
+
+
 
 ; ┌┐ ┌─┐┌┬┐  ┬─┐┬┌─┐┬ ┬┌┬┐
 ; ├┴┐│ │ │───├┬┘││ ┬├─┤ │
@@ -179,7 +207,6 @@
 (defwidget bot-right []
   (box
     :class "bot-right"
-    :orientation "h"
     :halign "end"
     :spacing 16
     :space-evenly false
