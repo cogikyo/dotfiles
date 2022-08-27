@@ -4,39 +4,39 @@
 $sans-serif: Albert Sans, sans-serif;
 $monospace: Hack Nerd Font, monospace;
 $font-size: 20px;
-$br: 16px;
+$border-radius: 16px;
 
-// wallpaper colors:
-$accent1: #f2a0a7;
-$accent2: #d982ab;
-$accent3: #7b6cb1;
-$minor: #7e88bf;
-$minimal: #3d4f73;
+$ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 
-// subset of tokyo night: (https://github.com/enkia/tokyo-night-vscode-theme)
-$fg: #c0caf5;
-$grey_l: #9aa5ce;
-$grey_d: #565f89;
-$dark: #1a1b26;
+// custom super set of tokyo nihgt
+// (https://github.com/enkia/tokyo-night-vscode-theme)
+$white: #c0caf5;
+$fg: #a9b1d6;
+$fg-alt: #9aa5ce;
+$highlight: #cfc9c2;
+$grey: #565f89;
+$black: #414868;
 $bg: #24283b;
-$trans_bg: hsla(230, 24, 19, 0.5);
+$trans_bg: hsla(230, 24, 19, 0.05);
+$bg: #1a1b26;
+
 $red: #f7768e;
 $orange: #ff9e64;
 $yellow: #e0af68;
 $green: #9ece6a;
-$cyan: #7dcfff;
+$cyan: #73daca;
+$celeste: #b4f9f8;
+$turqoise: #2ac3de;
+$sky-blue: #7dcfff;
 $blue: #7aa2f7;
+$blue-alt: #5784d5;
+$blue-grey: #3f4e74;
+$dark_blue: #222d56;
 $magenta: #bb9af7;
+$pink: #f08ccd;
 
-// ┌┬┐┬─┐ ┬┬┌┐┌┌─┐
-// ││││┌┴┬┘││││└─┐
-// ┴ ┴┴┴ └─┴┘└┘└─┘
-@mixin container($background, $foreground, $radius) {
-  background: $background;
-  color: $foreground;
-  border-radius: $radius;
-  padding: 0 1em;
-}
+// custom colors
+$minor: #7e88bf;
 
 // ┌─┐┌┐┌┬┌┬┐┌─┐┌┬┐┬┌─┐┌┐┌┌─┐
 // ├─┤│││││││├─┤ │ ││ ││││└─┐
@@ -84,35 +84,64 @@ $magenta: #bb9af7;
   }
 }
 
+@mixin active_ws {
+  font-size: 42px;
+  margin-top: -8px;
+}
+
 .workspace {
+  background: linear-gradient(to bottom, $trans_bg 55%, $dark_blue 100%);
+  border-radius: 60%;
+  padding: 0 2em;
+  padding-bottom: 4px;
+
   & > * {
-    font-size: 36px;
+    & > * {
+      transition: all 0.25s $ease-out-snap;
+    }
     &:hover {
       & > * {
-        color: $red;
-        font-size: 42px;
+        color: $blue;
+        text-shadow: 0px 2px 3px $blue-grey;
+        @include active_ws();
+      }
+    }
+    &:active {
+      & > * {
+        color: $blue-alt;
+        transition: all 0.1s ease-out;
       }
     }
   }
-  // nerd font fixes
   &-1 {
+    font-size: 30px;
+    margin-left: 3px;
     margin-right: 20px;
+    margin-bottom: 0px;
   }
   &-2 {
-    margin-right: 20px;
+    font-size: 32px;
+    margin-right: 26px;
+    margin-bottom: -12px;
   }
   &-3 {
-    margin-right: 10px;
+    font-size: 36px;
+    margin-right: 14px;
+    margin-bottom: -14px;
   }
   &-4 {
-    margin-right: 18px;
+    font-size: 32px;
+    margin-right: 20px;
+    margin-bottom: -10px;
   }
   &-5 {
+    font-size: 30px;
     margin-right: 11px;
+    margin-bottom: 2px;
   }
 }
 
 .active {
   color: $orange;
-  font-size: 42px;
+  @include active_ws();
 }

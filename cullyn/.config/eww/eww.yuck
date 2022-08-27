@@ -118,7 +118,7 @@
   :geometry (geometry
     :y "6px"
     :width "100%"
-    :height "36px"
+    :height "50px"
     :anchor "bottom center"
   )
   :stacking "fg"
@@ -164,8 +164,7 @@
     :space-evenly false
   (box
     :class "workspace"
-    :halign "center"
-    :spacing 16
+    :spacing 12
     :space-evenly false
   (eventbox
     :onclick "hyprctl dispatch workspace 1"
