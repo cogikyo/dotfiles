@@ -19,7 +19,7 @@ $grey_l: #9aa5ce;
 $grey_d: #565f89;
 $dark: #1a1b26;
 $bg: #24283b;
-$trans_bg: hsla(230, 24, 19, 0.87);
+$trans_bg: hsla(230, 24, 19, 0.5);
 $red: #f7768e;
 $orange: #ff9e64;
 $yellow: #e0af68;
@@ -31,10 +31,11 @@ $magenta: #bb9af7;
 // ┌┬┐┬─┐ ┬┬┌┐┌┌─┐
 // ││││┌┴┬┘││││└─┐
 // ┴ ┴┴┴ └─┴┘└┘└─┘
-@mixin basics($background, $foreground, $radius) {
+@mixin container($background, $foreground, $radius) {
   background: $background;
   color: $foreground;
   border-radius: $radius;
+  padding: 0 1em;
 }
 
 // ┌─┐┌┐┌┬┌┬┐┌─┐┌┬┐┬┌─┐┌┐┌┌─┐
@@ -56,22 +57,24 @@ $magenta: #bb9af7;
   all: unset;
 }
 
-// main parent
-.top-bar,
-.bot-bar {
-  color: $fg;
-  font-family: $monospace;
-  font-size: $font-size;
-}
-
-.top-bar-box {
-  background: $red;
+.top,
+.bot {
+  &-bar {
+    color: $fg;
+    font-family: $monospace;
+    font-size: $font-size;
+  }
+  &-left {
+    margin-left: 84px;
+  }
+  &-right {
+    margin-right: 84px;
+  }
 }
 
 .music {
   &-box {
-    @include basics($bg, $red, $br);
-    padding: 0px 1em;
+    color: $red;
   }
   &-cover {
     margin-left: 8px;
@@ -81,20 +84,35 @@ $magenta: #bb9af7;
   }
 }
 
-.workspaces {
-  @include basics($bg, $orange, $br);
+.workspace {
+  & > * {
+    font-size: 36px;
+    &:hover {
+      & > * {
+        color: $red;
+        font-size: 42px;
+      }
+    }
+  }
+  // nerd font fixes
+  &-1 {
+    margin-right: 20px;
+  }
+  &-2 {
+    margin-right: 20px;
+  }
+  &-3 {
+    margin-right: 10px;
+  }
+  &-4 {
+    margin-right: 18px;
+  }
+  &-5 {
+    margin-right: 11px;
+  }
 }
 
-.top-left,
-.bot-left {
-  @include basics($bg, $magenta, $br);
-  padding: 0px 1em;
-  margin-left: 84px;
-}
-
-.top-right,
-.bot-right {
-  @include basics($bg, $blue, $br);
-  padding: 0px 1em;
-  margin-right: 84px;
+.active {
+  color: $orange;
+  font-size: 42px;
 }
