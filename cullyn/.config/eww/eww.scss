@@ -71,12 +71,31 @@ $pink-alt: #d876b6;
   font-size: $font-size;
 }
 
-.music {
-  &-box {
+.icon {
+  &-progress {
+    font-size: 1.5em;
+    margin: 5px 12px 4px 5px;
     color: $red;
   }
+}
+
+.music {
+  &-progress {
+    color: $red-alt;
+  }
+  &-box {
+    color: $red;
+    margin-left: 20px;
+    margin-top: 6px;
+    margin-bottom: 6px;
+  }
   &-cover {
-    margin-left: 8px;
+    background-size: cover;
+    background-position: center;
+    min-height: 1.3em;
+    min-width: 2em;
+    border-radius: 16px 12px 16px 4px;
+    box-shadow: 0px 0px 4px 1px $red-alt;
   }
   &-status {
     font-size: 30px;
@@ -89,15 +108,17 @@ $pink-alt: #d876b6;
 }
 
 .workspace {
-  background: linear-gradient(
-    to bottom,
-    $trans-bg 55%,
-    $dark-blue 95%,
-    $blue 100%
-  );
-  border-radius: 60%;
-  padding: 0 2em;
-  padding-bottom: 6px;
+  &-box {
+    background: linear-gradient(
+      to bottom,
+      $trans-bg 55%,
+      $dark-blue 95%,
+      $blue 100%
+    );
+    border-radius: 60%;
+    padding: 0 2em;
+    padding-bottom: 6px;
+  }
 
   & > * {
     & > * {
@@ -123,7 +144,7 @@ $pink-alt: #d876b6;
     margin-right: 20px;
   }
   &-2 {
-    font-size: 32px;
+    font-size: 30px;
     margin-right: 26px;
     margin-bottom: -10px;
   }
@@ -133,12 +154,12 @@ $pink-alt: #d876b6;
     margin-bottom: -12px;
   }
   &-4 {
-    font-size: 32px;
+    font-size: 34px;
     margin-right: 20px;
     margin-bottom: -10px;
   }
   &-5 {
-    font-size: 30px;
+    font-size: 28px;
     margin-right: 11px;
   }
 }

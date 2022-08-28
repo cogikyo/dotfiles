@@ -34,10 +34,12 @@ artist() {
 }
 
 duration() {
-    duration=$(playerctl --player=youtube-music-desktop-app metadata --format \
-        '{{duration(mpris:length - position)}}')
-
-    echo "神 $duration"
+    length=$(playerctl --player=youtube-music-desktop-app metadata --format \
+        '{{mpris:length}} / 10^6' | bc )
+    position=$(playerctl --player=youtube-music-desktop-app metadata --format \
+        '{{position}} / 10^6' | bc)
+    progress=$(echo "scale=2; (($position / $length) * 100) + 1" | bc)
+    echo "$progress"
 }
 
 cover() {

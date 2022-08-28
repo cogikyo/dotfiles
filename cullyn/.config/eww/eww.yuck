@@ -1,21 +1,63 @@
+; ██╗    ██╗██╗███╗   ██╗██████╗  ██████╗ ██╗    ██╗███████╗
+; ██║    ██║██║████╗  ██║██╔══██╗██╔═══██╗██║    ██║██╔════╝
+; ██║ █╗ ██║██║██╔██╗ ██║██║  ██║██║   ██║██║ █╗ ██║███████╗
+; ██║███╗██║██║██║╚██╗██║██║  ██║██║   ██║██║███╗██║╚════██║
+; ╚███╔███╔╝██║██║ ╚████║██████╔╝╚██████╔╝╚███╔███╔╝███████║
+;  ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝╚═════╝  ╚═════╝  ╚══╝╚══╝ ╚══════╝
+; =============================================================================
 (defwindow top-bar
   :monitor 0
   :geometry (geometry
-    :y "6px"
     :width "100%"
-    :height "36px"
     :anchor "top center"
   )
   :stacking "fg"
-  :exclusive true
+  :exclusive false
   :focusable false
-  (centerbox
-    (top-left)
-    (top-center)
-    (top-right)
+  (centerbox :class "top-bar-box"
+    (top-left) (top-center) (top-right)
   )
 )
 
+(defwindow bot-bar
+  :monitor 0
+  :geometry (geometry
+    :width "100%"
+    :anchor "bottom center"
+  )
+  :stacking "fg"
+  :exclusive false
+  :focusable false
+  (centerbox :class "bot-bar-box"
+    (bot-left) (bot-center) (bot-right)
+  )
+)
+
+; redefine deffualts for box widget
+(defwidget mybox [box-class]
+  (box
+    :class "${box-class}-box"
+    :spacing 16
+    :orientation "h"
+    :space-evenly false
+    (children)
+  )
+)
+; =============================================================================
+
+
+
+
+; ████████╗ ██████╗ ██████╗
+; ╚══██╔══╝██╔═══██╗██╔══██╗
+;    ██║   ██║   ██║██████╔╝
+;    ██║   ██║   ██║██╔═══╝
+;    ██║   ╚██████╔╝██║
+;    ╚═╝    ╚═════╝ ╚═╝
+; =============================================================================
+; ┌┬┐┌─┐┌─┐   ┬  ┌─┐┌─┐┌┬┐
+;  │ │ │├─┘───│  ├┤ ├┤  │
+;  ┴ └─┘┴     ┴─┘└─┘└   ┴
 (defwidget top-left []
   (box
     :class "top-left"
@@ -23,57 +65,74 @@
     :spacing 16
     :space-evenly false
     (music)
-    (mic :volume default_source)
-    (speaker :volume default_sink)
+    (audio-in)
+    (audio-out)
   )
 )
 
-(defpoll status :interval "0.2s"  "scripts/music_info status")
+; ┌┬┐┬ ┬┌─┐┬┌─┐
+; ││││ │└─┐││
+; ┴ ┴└─┘└─┘┴└─┘
+(defpoll status :interval "0.15s"  "scripts/music_info status")
+(defpoll progress :interval "1s"  "scripts/music_info duration")
 (defpoll cover :interval "1s"  "scripts/music_info cover")
 (defpoll song :interval "1s"  "scripts/music_info song")
 (defpoll artist :interval "1s"  "scripts/music_info artist")
-(defpoll duration :interval "1s"  "scripts/music_info duration")
+(defwidget music-progress-indicator []
+  (mybox :box-class "music-progress"
+      (circular-progress
+      :class "music-progress"
+      :value progress
+      :start-at 75
+      :thickness 2
+      :clockwise true
+      (button :class "icon-progress" "${status}")
+    )
+  )
+)
 (defpoll volume :interval "1s"  "scripts/music_info volume")
 (defwidget music []
   (box
     :class "music-box"
-    :haligh "center"
     :spacing 16
     :space-evenly false
-    (label :class "music-status" :text status)
-    (image :class "music-cover" :path cover :image-width 32)
+    (music-progress-indicator)
+    (box :class "music-cover" :style "background-image: url('${cover}');")
     song
     (label :markup artist)
-    duration
     (label :markup volume )
   )
 )
 
-(defwidget mic [volume]
+; ┌─┐┬ ┬┌┬┐┬┌─┐   ┬┌┐┌
+; ├─┤│ │ ││││ │───││││
+; ┴ ┴└─┘─┴┘┴└─┘   ┴┘└┘
+(defpoll default-source :interval "1s" "pulsemixer --list-sources | grep \"Default\" | gawk '{print $6}' FPAT='[0-9]+'")
+(defwidget audio-in []
   (box
   (label :text "")
-  (label :text volume)
+  (label :text default-source)
   )
 )
 
-(defwidget speaker [volume]
+; ┌─┐┬ ┬┌┬┐┬┌─┐   ┌─┐┬ ┬┌┬┐
+; ├─┤│ │ ││││ │───│ ││ │ │
+; ┴ ┴└─┘─┴┘┴└─┘   └─┘└─┘ ┴
+(defpoll default-sink :interval "1s" "pulsemixer --list-sink | grep \"Default\" | gawk '{print $6}' FPAT='[0-9]+'")
+(defwidget audio-out []
   (box
   (label :text "墳 ")
-  (label :text volume)
+  (label :text default-sink)
   )
 )
+; =============================================================================
 
 
 
-(defpoll default_source :interval "1s"
-  "pulsemixer --list-sources | grep \"Default\" | gawk '{print $6}' FPAT='[0-9]+'"
-)
-(defpoll default_sink :interval "1s"
-  "pulsemixer --list-sink | grep \"Default\" | gawk '{print $6}' FPAT='[0-9]+'"
-)
-
-
-
+; =============================================================================
+; ┌┬┐┌─┐┌─┐   ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
+;  │ │ │├─┘───│  ├┤ │││ │ ├┤ ├┬┘
+;  ┴ └─┘┴     └─┘└─┘┘└┘ ┴ └─┘┴└─
 (defwidget top-center []
   (box
     :class "top-center"
@@ -86,10 +145,28 @@
   )
 )
 
+; ┌┬┐┌─┐┌┬┐┌─┐
+;  ││├─┤ │ ├┤
+; ─┴┘┴ ┴ ┴ └─┘
 (defpoll date :interval "1s" "date '+ %A, %B %d, %Y'")
-(defpoll time :interval "1s" "date '+ %H:%M'")
-(defpoll weather :interval "1m"  "scripts/weather.py")
 
+; ┌┬┐┬┌┬┐┌─┐
+;  │ ││││├┤
+;  ┴ ┴┴ ┴└─┘
+(defpoll time :interval "1s" "date '+ %H:%M'")
+
+; ┬ ┬┌─┐┌─┐┌┬┐┬ ┬┌─┐┬─┐
+; │││├┤ ├─┤ │ ├─┤├┤ ├┬┘
+; └┴┘└─┘┴ ┴ ┴ ┴ ┴└─┘┴└─
+(defpoll weather :interval "1m"  "scripts/weather.py")
+; =============================================================================
+
+
+
+; =============================================================================
+; ┌┬┐┌─┐┌─┐   ┬─┐┬┌─┐┬ ┬┌┬┐
+;  │ │ │├─┘───├┬┘││ ┬├─┤ │
+;  ┴ └─┘┴     ┴└─┴└─┘┴ ┴ ┴
 (defwidget top-right []
   (box
     :class "top-right"
@@ -103,28 +180,40 @@
   )
 )
 
+; ┌─┐┌─┐┬ ┬
+; │  ├─┘│ │
+; └─┘┴  └─┘
 (defwidget cpu [] "cpu")
+
+; ┌┬┐┌─┐┌┬┐┌─┐┬─┐┬ ┬
+; │││├┤ ││││ │├┬┘└┬┘
+; ┴ ┴└─┘┴ ┴└─┘┴└─ ┴
 (defwidget memory [] "memory")
+
+; ┌─┐┌─┐┬ ┬
+; │ ┬├─┘│ │
+; └─┘┴  └─┘
 (defwidget gpu [] "gpu")
+
+; ┌┬┐┌─┐┌┬┐┌─┐
+;  │ ├┤ │││├─┘
+;  ┴ └─┘┴ ┴┴
 (defwidget temp [] "temp")
+; =============================================================================
 
-(defwindow bot-bar
-  :monitor 0
-  :geometry (geometry
-    :width "100%"
-    :height "50px"
-    :anchor "bottom center"
-  )
-  :stacking "fg"
-  :exclusive true
-  :focusable false
-  (centerbox
-    (bot-left)
-    (bot-center)
-    (bot-right)
-  )
-)
 
+
+
+; ██████╗  ██████╗ ████████╗
+; ██╔══██╗██╔═══██╗╚══██╔══╝
+; ██████╔╝██║   ██║   ██║
+; ██╔══██╗██║   ██║   ██║
+; ██████╔╝╚██████╔╝   ██║
+; ╚═════╝  ╚═════╝    ╚═╝
+; =============================================================================
+; ┌┐ ┌─┐┌┬┐  ┬  ┌─┐┌─┐┌┬┐
+; ├┴┐│ │ │───│  ├┤ ├┤  │
+; └─┘└─┘ ┴   ┴─┘└─┘└   ┴
 (defwidget bot-left []
   (box
     :class "bot-left"
@@ -135,53 +224,67 @@
   )
 )
 
+; ┌─┐┌─┐┌─┐┌┬┐┌─┐┌┐┌
+; ├─┘├─┤│  │││├─┤│││
+; ┴  ┴ ┴└─┘┴ ┴┴ ┴┘└┘
 (defwidget pacman [] "pacman")
+; =============================================================================
 
 
-(deflisten active_workspace
-  'tail -F /tmp/.active_workspace'
-)
 
+; =============================================================================
+; ┌┐ ┌─┐┌┬┐  ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
+; ├┴┐│ │ │───│  ├┤ │││ │ ├┤ ├┬┘
+; └─┘└─┘ ┴   └─┘└─┘┘└┘ ┴ └─┘┴└─
 (defwidget bot-center []
   (box
     :class "bot-center"
     :halign "center"
+    :spacing 16
     :space-evenly false
-  (box
-    :class "workspace"
-    :spacing 12
-    :space-evenly false
-  (eventbox
-    :onclick "hyprctl dispatch workspace 1"
-    (label :text ""
-      :class {matches(active_workspace,1) ? 'workspace-1 active' : 'workspace-1'}
-    )
+    (workspaces)
   )
-  (eventbox
-    :onclick "hyprctl dispatch workspace 2"
-    (label :text ""
-      :class {matches(active_workspace,2) ? 'workspace-2 active' : 'workspace-2'}
-    )
-  )
-  (eventbox
-    :onclick "hyprctl dispatch workspace 3"
-    (label :text "ﮂ"
-      :class {matches(active_workspace,3) ? 'workspace-3 active' : 'workspace-3'}
-    )
-  )
-  (eventbox
-    :onclick "hyprctl dispatch workspace 4"
-    (label :text ""
-      :class {matches(active_workspace,4) ? 'workspace-4 active' : 'workspace-4'}
-    )
-  )
-  (eventbox
-    :onclick "hyprctl dispatch workspace 5"
-    (label :text "輸"
-      :class {matches(active_workspace,5) ? 'workspace-5 active' : 'workspace-5'}
-    )
-  )))
 )
+
+; ┬ ┬┌─┐┬─┐┬┌─┌─┐┌─┐┌─┐┌─┐┌─┐┌─┐
+; ││││ │├┬┘├┴┐└─┐├─┘├─┤│  ├┤ └─┐
+; └┴┘└─┘┴└─┴ ┴└─┘┴  ┴ ┴└─┘└─┘└─┘
+(deflisten active_workspace 'tail -F /tmp/.active_workspace')
+(defwidget workspaces []
+  (box :class "workspace-box" :spacing 12 :space-evenly false
+    (eventbox
+      :onclick "hyprctl dispatch workspace 1"
+      (label :text ""
+        :class {matches(active_workspace,1) ? 'workspace-1 active' : 'workspace-1'}
+      )
+    )
+    (eventbox
+      :onclick "hyprctl dispatch workspace 2"
+      (label :text ""
+        :class {matches(active_workspace,2) ? 'workspace-2 active' : 'workspace-2'}
+      )
+    )
+    (eventbox
+      :onclick "hyprctl dispatch workspace 3"
+      (label :text "ﮂ"
+        :class {matches(active_workspace,3) ? 'workspace-3 active' : 'workspace-3'}
+      )
+    )
+    (eventbox
+      :onclick "hyprctl dispatch workspace 4"
+      (label :text ""
+        :class {matches(active_workspace,4) ? 'workspace-4 active' : 'workspace-4'}
+      )
+    )
+    (eventbox
+      :onclick "hyprctl dispatch workspace 5"
+      (label :text "輸"
+        :class {matches(active_workspace,5) ? 'workspace-5 active' : 'workspace-5'}
+      )
+    )
+  )
+)
+; =============================================================================
 
 (defwidget bot-right []
   (box
