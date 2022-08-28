@@ -17,26 +17,33 @@ $highlight: #cfc9c2;
 $grey: #565f89;
 $black: #414868;
 $bg: #24283b;
-$trans_bg: hsla(230, 24, 19, 0.05);
-$bg: #1a1b26;
+$trans-bg: hsla(230, 24, 19, 0.05);
+$dark: #1a1b26;
 
 $red: #f7768e;
+$red-alt: #e0617a;
 $orange: #ff9e64;
+$orange-alt: #e4874e;
 $yellow: #e0af68;
+$yellow-alt: #c79852;
 $green: #9ece6a;
+$green-alt: #85b553;
 $cyan: #73daca;
+$cyan-alt: #58c0b0;
 $celeste: #b4f9f8;
 $turqoise: #2ac3de;
 $sky-blue: #7dcfff;
 $blue: #7aa2f7;
 $blue-alt: #5784d5;
-$blue-grey: #3f4e74;
-$dark_blue: #222d56;
+$blue-grey: #7e88bf;
+$grey-blue: #3f4e74;
+$dark-blue: #222d56;
 $magenta: #bb9af7;
+$magenta-alt: #997ad4;
 $pink: #f08ccd;
+$pink-alt: #d876b6;
 
 // custom colors
-$minor: #7e88bf;
 
 // ┌─┐┌┐┌┬┌┬┐┌─┐┌┬┐┬┌─┐┌┐┌┌─┐
 // ├─┤│││││││├─┤ │ ││ ││││└─┐
@@ -57,19 +64,11 @@ $minor: #7e88bf;
   all: unset;
 }
 
-.top,
-.bot {
-  &-bar {
-    color: $fg;
-    font-family: $monospace;
-    font-size: $font-size;
-  }
-  &-left {
-    margin-left: 84px;
-  }
-  &-right {
-    margin-right: 84px;
-  }
+.top-bar,
+.bot-bar {
+  color: $fg;
+  font-family: $monospace;
+  font-size: $font-size;
 }
 
 .music {
@@ -85,15 +84,20 @@ $minor: #7e88bf;
 }
 
 @mixin active_ws {
-  font-size: 42px;
+  font-size: 40px;
   margin-top: -8px;
 }
 
 .workspace {
-  background: linear-gradient(to bottom, $trans_bg 55%, $dark_blue 100%);
+  background: linear-gradient(
+    to bottom,
+    $trans-bg 55%,
+    $dark-blue 95%,
+    $blue 100%
+  );
   border-radius: 60%;
   padding: 0 2em;
-  padding-bottom: 4px;
+  padding-bottom: 6px;
 
   & > * {
     & > * {
@@ -102,7 +106,7 @@ $minor: #7e88bf;
     &:hover {
       & > * {
         color: $blue;
-        text-shadow: 0px 2px 3px $blue-grey;
+        text-shadow: 0px 2px 3px $grey-blue;
         @include active_ws();
       }
     }
@@ -117,17 +121,16 @@ $minor: #7e88bf;
     font-size: 30px;
     margin-left: 3px;
     margin-right: 20px;
-    margin-bottom: 0px;
   }
   &-2 {
     font-size: 32px;
     margin-right: 26px;
-    margin-bottom: -12px;
+    margin-bottom: -10px;
   }
   &-3 {
     font-size: 36px;
     margin-right: 14px;
-    margin-bottom: -14px;
+    margin-bottom: -12px;
   }
   &-4 {
     font-size: 32px;
@@ -137,7 +140,6 @@ $minor: #7e88bf;
   &-5 {
     font-size: 30px;
     margin-right: 11px;
-    margin-bottom: 2px;
   }
 }
 
