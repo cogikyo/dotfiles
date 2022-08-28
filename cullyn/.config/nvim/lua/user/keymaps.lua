@@ -43,8 +43,8 @@ map("n", "<leader>B", ":bn<CR>zt")
 map("n", "<leader><C-b>", ":bd!<CR>zt")
 
 -- 🤯 comment headers
-map("n", "HS", ":.! figlet -fshadow <CR> gcip", rec)
-map("n", "HC", ":.! figlet -fcalvin <CR> gcip", rec)
+map("n", "HS", '<leader>o<leader>O:.! figlet -fshadow <CR> gcip6j2"_dd', rec)
+map("n", "HC", '<leader>o<leader>O:.! figlet -fcalvin <CR> gcip3j"_dd', rec)
 
 -- 🌌 gimme space please
 map("n", "<leader>o", ':<C-u>call append(line("."),   repeat([""], v:count1))<CR>')
@@ -135,7 +135,7 @@ map("n", "<leader>ft", ":Switch<CR>")
 map("n", "<leader>it", ":NullLsInfo<CR>")
 
 -- 🔃 reload
-map("n", "<leader>rk", ":source ~/.config/nvim/lua/user/maps.lua<CR>")
+map("n", "<leader>rk", ":source ~/.config/nvim/lua/user/keymaps.lua<CR>")
 map("n", "<leader>rs", ":w | source %<CR>")
 
 -- ⛵ reflow
