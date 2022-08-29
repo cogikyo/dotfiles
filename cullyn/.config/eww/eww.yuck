@@ -1,4 +1,4 @@
-; ██╗    ██╗██╗███╗   ██╗██████╗  ██████╗ ██╗    ██╗███████╗
+; ██╗    ██╗██╗███╗   ██╗██████╗  █████ ╗ ██╗    ██╗███████╗
 ; ██║    ██║██║████╗  ██║██╔══██╗██╔═══██╗██║    ██║██╔════╝
 ; ██║ █╗ ██║██║██╔██╗ ██║██║  ██║██║   ██║██║ █╗ ██║███████╗
 ; ██║███╗██║██║██║╚██╗██║██║  ██║██║   ██║██║███╗██║╚════██║
@@ -34,10 +34,10 @@
 )
 
 ; redefine deffualts for box widget
-(defwidget mybox [box-class]
+(defwidget mybox [box-class ?spacing]
   (box
     :class "${box-class}-box"
-    :spacing 16
+    :spacing {strlength("${spacing}") > 0 ? '${spacing}' : '16'}
     :orientation "h"
     :space-evenly false
     (children)
@@ -64,9 +64,14 @@
     :halign "start"
     :spacing 16
     :space-evenly false
+    (transform
+      :translate-y "-3px"
+      (box :class "music-cover" :style "background-image: url('${cover}');")
+    )
     (music)
-    (audio-in)
-    (audio-out)
+    (mybox :box-class "audio"
+    (audio-in) (audio-out)
+    )
   )
 )
 
@@ -92,12 +97,8 @@
 )
 (defpoll volume :interval "1s"  "scripts/music_info volume")
 (defwidget music []
-  (box
-    :class "music-box"
-    :spacing 16
-    :space-evenly false
+  (mybox :box-class "music"
     (music-progress-indicator)
-    (box :class "music-cover" :style "background-image: url('${cover}');")
     song
     (label :markup artist)
     (label :markup volume )
@@ -251,7 +252,7 @@
 ; └┴┘└─┘┴└─┴ ┴└─┘┴  ┴ ┴└─┘└─┘└─┘
 (deflisten active_workspace 'tail -F /tmp/.active_workspace')
 (defwidget workspaces []
-  (box :class "workspace-box" :spacing 12 :space-evenly false
+  (mybox :box-class "workspace" :spacing 12
     (eventbox
       :onclick "hyprctl dispatch workspace 1"
       (label :text ""
