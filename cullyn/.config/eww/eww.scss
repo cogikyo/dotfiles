@@ -10,40 +10,41 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 
 // custom super set of tokyo nihgt
 // (https://github.com/enkia/tokyo-night-vscode-theme)
+
+/* prettier-ignore */
 $white: #c0caf5;
+$black: #1a1b26;
 $fg: #a9b1d6;
 $fg-alt: #9aa5ce;
-$highlight: #cfc9c2;
 $grey: #565f89;
-$black: #414868;
+$grey-alt: #414868;
 $bg: #24283b;
-$trans-bg: hsla(230, 24, 19, 0.05);
-$dark: #1a1b26;
-
+$bg-alt: #222d56;
 $red: #f7768e;
 $red-alt: #e0617a;
 $orange: #ff9e64;
 $orange-alt: #e4874e;
 $yellow: #e0af68;
 $yellow-alt: #c79852;
+$beige: #cfc9c2;
 $green: #9ece6a;
 $green-alt: #85b553;
 $cyan: #73daca;
 $cyan-alt: #58c0b0;
 $celeste: #b4f9f8;
-$turqoise: #2ac3de;
 $sky-blue: #7dcfff;
+$turqoise: #2ac3de;
 $blue: #7aa2f7;
 $blue-alt: #5784d5;
-$blue-grey: #7e88bf;
-$grey-blue: #3f4e74;
-$dark-blue: #222d56;
+$blue-g: #7e88bf;
+$blue-g-alt: #3f4e74;
 $magenta: #bb9af7;
 $magenta-alt: #997ad4;
 $pink: #f08ccd;
 $pink-alt: #d876b6;
 
-// custom colors
+$trans-bg: hsla(230, 24, 19, 0.05);
+$shadow: hsla(235, 19, 13, 0.69);
 
 // ┌─┐┌┐┌┬┌┬┐┌─┐┌┬┐┬┌─┐┌┐┌┌─┐
 // ├─┤│││││││├─┤ │ ││ ││││└─┐
@@ -74,9 +75,24 @@ $pink-alt: #d876b6;
 .icon {
   &-progress {
     font-size: 1.5em;
-    margin: 5px 12px 4px 5px;
+    margin: 6px 12px 4px 5px;
     color: $red;
   }
+}
+
+.top-left {
+  margin-bottom: 6px;
+}
+
+@mixin box-decor() {
+  background: $bg;
+  margin: 10px 0 10px -13px;
+  border-radius: 420px 13px 300px 13px;
+  box-shadow: 2px 2px 3px 2px $shadow;
+}
+.audio-box {
+  padding: 0 1em 0 0.5em;
+  @include box-decor();
 }
 
 .music {
@@ -84,18 +100,17 @@ $pink-alt: #d876b6;
     color: $red-alt;
   }
   &-box {
+    background: $bg;
     color: $red;
-    margin-left: 20px;
-    margin-top: 6px;
-    margin-bottom: 6px;
+    padding: 2px 1em;
+    @include box-decor();
   }
   &-cover {
     background-size: cover;
     background-position: center;
-    min-height: 1.3em;
-    min-width: 2em;
-    border-radius: 16px 12px 16px 4px;
-    box-shadow: 0px 0px 4px 1px $red-alt;
+    min-width: 59px;
+    border-radius: 0px 27px 69px 17px;
+    box-shadow: 2px 0px 5px -1px $red-alt;
   }
   &-status {
     font-size: 30px;
@@ -112,29 +127,29 @@ $pink-alt: #d876b6;
     background: linear-gradient(
       to bottom,
       $trans-bg 55%,
-      $dark-blue 95%,
+      $bg-alt 95%,
       $blue 100%
     );
     border-radius: 60%;
     padding: 0 2em;
     padding-bottom: 6px;
-  }
 
-  & > * {
     & > * {
-      transition: all 0.25s $ease-out-snap;
-    }
-    &:hover {
       & > * {
-        color: $blue;
-        text-shadow: 0px 2px 3px $grey-blue;
-        @include active_ws();
+        transition: all 0.25s $ease-out-snap;
       }
-    }
-    &:active {
-      & > * {
-        color: $blue-alt;
-        transition: all 0.1s ease-out;
+      &:hover {
+        & > * {
+          color: $blue;
+          text-shadow: 0px 2px 3px $blue-g-alt;
+          @include active_ws();
+        }
+      }
+      &:active {
+        & > * {
+          color: $blue-alt;
+          transition: all 0.1s ease-out;
+        }
       }
     }
   }

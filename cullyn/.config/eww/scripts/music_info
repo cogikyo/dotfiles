@@ -47,10 +47,12 @@ cover() {
         '{{mpris:artUrl}}')
 
     tempfile="$HOME/.config/eww/assets/ytm.png"
+
     if [[ "$status" == "Playing" ]] || [[ $status == "Paused" ]]; then
         tempfile="/tmp/.album_art.png"
         wget --output-document="$tempfile" "$artUrl"
     fi
+
     echo "$tempfile"
 }
 
