@@ -3,7 +3,7 @@
 ; ██║ █╗ ██║██║██╔██╗ ██║██║  ██║██║   ██║██║ █╗ ██║███████╗
 ; ██║███╗██║██║██║╚██╗██║██║  ██║██║   ██║██║███╗██║╚════██║
 ; ╚███╔███╔╝██║██║ ╚████║██████╔╝╚██████╔╝╚███╔███╔╝███████║
-;  ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝╚═════╝  ╚═════╝  ╚══╝╚══╝ ╚══════╝
+;  ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝╚═════╝  ╚═════╝  ╚══╝╚══╝ ╚══════╝+ other defaults...
 ; =============================================================================
 (defwindow top-bar
   :monitor 0
@@ -33,7 +33,7 @@
   )
 )
 
-; redefine deffualts for box widget
+; redefine defualts for box widget
 (defwidget mybox [box-class ?spacing]
   (box
     :class "${box-class}-box"
@@ -59,18 +59,14 @@
 ;  │ │ │├─┘───│  ├┤ ├┤  │
 ;  ┴ └─┘┴     ┴─┘└─┘└   ┴
 (defwidget top-left []
-  (box
-    :class "top-left"
-    :halign "start"
-    :spacing 16
-    :space-evenly false
+  (mybox :box-class "top-left"
     (transform
       :translate-y "-3px"
       (box :class "music-cover" :style "background-image: url('${cover}');")
     )
     (music)
     (mybox :box-class "audio"
-    (audio-in) (audio-out)
+      (audio-in) (audio-out)
     )
   )
 )
@@ -108,22 +104,24 @@
 ; ┌─┐┬ ┬┌┬┐┬┌─┐   ┬┌┐┌
 ; ├─┤│ │ ││││ │───││││
 ; ┴ ┴└─┘─┴┘┴└─┘   ┴┘└┘
-(defpoll default-source :interval "1s" "pulsemixer --list-sources | grep \"Default\" | gawk '{print $6}' FPAT='[0-9]+'")
+(deflisten source_volume 'tail -F /tmp/.source_volume')
 (defwidget audio-in []
-  (box
-  (label :text "")
-  (label :text default-source)
+  (eventbox
+    :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
+    :onscroll "scripts/pulse_info change_volume source {}"
+    (label :text " ${source_volume}")
   )
 )
 
 ; ┌─┐┬ ┬┌┬┐┬┌─┐   ┌─┐┬ ┬┌┬┐
 ; ├─┤│ │ ││││ │───│ ││ │ │
 ; ┴ ┴└─┘─┴┘┴└─┘   └─┘└─┘ ┴
-(defpoll default-sink :interval "1s" "pulsemixer --list-sink | grep \"Default\" | gawk '{print $6}' FPAT='[0-9]+'")
+(deflisten sink_volume 'tail -F /tmp/.sink_volume')
 (defwidget audio-out []
-  (box
-  (label :text "墳 ")
-  (label :text default-sink)
+  (eventbox
+    :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
+    :onscroll "scripts/pulse_info change_volume sink {}"
+    (label :text "墳 ${sink_volume}")
   )
 )
 ; =============================================================================
@@ -135,11 +133,7 @@
 ;  │ │ │├─┘───│  ├┤ │││ │ ├┤ ├┬┘
 ;  ┴ └─┘┴     └─┘└─┘┘└┘ ┴ └─┘┴└─
 (defwidget top-center []
-  (box
-    :class "top-center"
-    :halign "start"
-    :spacing 36
-    :space-evenly false
+  (mybox :box-class "top-center"
     date
     time
     weather
