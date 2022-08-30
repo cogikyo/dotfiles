@@ -1,4 +1,4 @@
-; ██╗    ██╗██╗███╗   ██╗██████╗  █████ ╗ ██╗    ██╗███████╗
+
 ; ██║    ██║██║████╗  ██║██╔══██╗██╔═══██╗██║    ██║██╔════╝
 ; ██║ █╗ ██║██║██╔██╗ ██║██║  ██║██║   ██║██║ █╗ ██║███████╗
 ; ██║███╗██║██║██║╚██╗██║██║  ██║██║   ██║██║███╗██║╚════██║
@@ -62,8 +62,7 @@
   (mybox :box-class "top-left"
     (transform
       :translate-y "-3px"
-      (box :class "music-cover" :style "background-image: url('${cover}');")
-    )
+      (box :class "music-cover" :style "background-image: url('${artUrl}');"))
     (music)
     (mybox :box-class "audio"
       (audio-in) (audio-out)
@@ -74,20 +73,26 @@
 ; ┌┬┐┬ ┬┌─┐┬┌─┐
 ; ││││ │└─┐││
 ; ┴ ┴└─┘└─┘┴└─┘
-(defpoll status :interval "0.15s"  "scripts/music_info status")
-(defpoll progress :interval "1s"  "scripts/music_info duration")
-(defpoll cover :interval "1s"  "scripts/music_info cover")
+(deflisten status :initial "ﭦ" `playerctl --follow status`)
+(defpoll artUrl
+  :initial "/home/cullyn/.config/eww/assets/ytm.png"
+  :interval "1s"
+  "scripts/music_info cover"
+)
+(defpoll progress :initial 1 :interval "0.5s" "scripts/music_info duration")
 (defpoll song :interval "1s"  "scripts/music_info song")
 (defpoll artist :interval "1s"  "scripts/music_info artist")
 (defwidget music-progress-indicator []
   (mybox :box-class "music-progress"
-      (circular-progress
+    (circular-progress
       :class "music-progress"
       :value progress
       :start-at 75
       :thickness 2
       :clockwise true
-      (button :class "icon-progress" "${status}")
+      (button :class "icon-progress"
+        "${matches(status, "Playing") ? "" : "奈"}"
+      )
     )
   )
 )
