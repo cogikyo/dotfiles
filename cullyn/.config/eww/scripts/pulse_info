@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+get_id () {
+    id=$(pulsemixer --list-"$1" \
+        | grep "Default" \
+        | gawk "{print \$1}" FPAT="[0-9]+")
+    echo "$id"
+}
+
+get_volume () {
+    id=$(get_id "$1")
+    volume=$(pulsemixer --get-volume --id "$1-$id" \
+        | gawk "{print \$1}" FPAT="[0-9]+")
+    echo "$volume"
+}
+
+change_volume () {
+    direction="+"
+    if [[ "$2" == "down" ]]; then
+        direction="-"
+    fi
+    id="$(get_id "$1")"
+    pulsemixer --id "$1-$id" --change-volume "$direction"1
+
+    get_volume "$1" > "/tmp/.$1_volume"
+}
+
+"$@"

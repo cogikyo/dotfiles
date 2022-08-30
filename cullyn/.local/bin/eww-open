@@ -3,9 +3,9 @@
 killall eww -9
 eww daemon
 eww open-many top-bar bot-bar
-eww inspector
-sleep 0.75
-hyprctl dispatch movefocus l
+# eww inspector
+# sleep 0.75
+# hyprctl dispatch movefocus l
 
 notify-send "eww restarted"
 

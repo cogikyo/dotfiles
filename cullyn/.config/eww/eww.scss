@@ -80,19 +80,15 @@ $shadow: hsla(235, 19, 13, 0.69);
   }
 }
 
-.top-left {
+.top-left-box {
   margin-bottom: 6px;
 }
 
 @mixin box-decor() {
   background: $bg;
   margin: 10px 0 10px -13px;
-  border-radius: 420px 13px 300px 13px;
+  border-radius: 420px 17px 420px 17px;
   box-shadow: 2px 2px 3px 2px $shadow;
-}
-.audio-box {
-  padding: 0 1em 0 0.5em;
-  @include box-decor();
 }
 
 .music {
@@ -115,6 +111,11 @@ $shadow: hsla(235, 19, 13, 0.69);
   &-status {
     font-size: 30px;
   }
+}
+
+.audio-box {
+  padding: 0 1em 0 0.5em;
+  @include box-decor();
 }
 
 @mixin active_ws {
