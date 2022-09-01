@@ -1,9 +1,3 @@
-
-; ██║    ██║██║████╗  ██║██╔══██╗██╔═══██╗██║    ██║██╔════╝
-; ██║ █╗ ██║██║██╔██╗ ██║██║  ██║██║   ██║██║ █╗ ██║███████╗
-; ██║███╗██║██║██║╚██╗██║██║  ██║██║   ██║██║███╗██║╚════██║
-; ╚███╔███╔╝██║██║ ╚████║██████╔╝╚██████╔╝╚███╔███╔╝███████║
-;  ╚══╝╚══╝ ╚═╝╚═╝  ╚═══╝╚═════╝  ╚═════╝  ╚══╝╚══╝ ╚══════╝+ other defaults...
 ; =============================================================================
 (defwindow top-bar
   :monitor 0
@@ -90,7 +84,8 @@
       :start-at 75
       :thickness 2
       :clockwise true
-      (button :class "icon-progress"
+      (box :class "icon-progress"
+        :onclick "playerctl --player=youtube-music-desktop-app play-pause"
         "${matches(status, "Playing") ? "" : "奈"}"
       )
     )
@@ -99,7 +94,7 @@
 (defpoll volume :interval "1s"  "scripts/music_info volume")
 (defwidget music []
   (mybox :box-class "music"
-    (music-progress-indicator)
+    (button (music-progress-indicator))
     song
     (label :markup artist)
     (label :markup volume )
@@ -109,7 +104,9 @@
 ; ┌─┐┬ ┬┌┬┐┬┌─┐   ┬┌┐┌
 ; ├─┤│ │ ││││ │───││││
 ; ┴ ┴└─┘─┴┘┴└─┘   ┴┘└┘
-(deflisten source_volume 'tail -F /tmp/.source_volume')
+(deflisten source_volume :initial 'tail /tmp/.source_volume'
+  'tail -F /tmp/.source_volume'
+)
 (defwidget audio-in []
   (eventbox
     :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
@@ -121,7 +118,9 @@
 ; ┌─┐┬ ┬┌┬┐┬┌─┐   ┌─┐┬ ┬┌┬┐
 ; ├─┤│ │ ││││ │───│ ││ │ │
 ; ┴ ┴└─┘─┴┘┴└─┘   └─┘└─┘ ┴
-(deflisten sink_volume 'tail -F /tmp/.sink_volume')
+(deflisten sink_volume :initial 'tail /tmp/.sink_volume'
+  'tail -F /tmp/.sink_volume'
+)
 (defwidget audio-out []
   (eventbox
     :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 tempfile="/tmp/.active_workspace"
-echo "5" > "$tempfile"
+echo "3" > "$tempfile"
 
 handle() {
     event=$1

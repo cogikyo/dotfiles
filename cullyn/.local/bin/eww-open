@@ -8,5 +8,3 @@ eww open-many top-bar bot-bar
 # hyprctl dispatch movefocus l
 
 notify-send "eww restarted"
-
-exit
