@@ -31,9 +31,13 @@ duration() {
 
 cover() {
     artUrl=$(playerctl --player=youtube-music-desktop-app metadata --format '{{mpris:artUrl}}')
-    tempfile="/tmp/.album_art.png"
-    wget --output-document="$tempfile" "$artUrl"
-    echo "$tempfile"
+    if [[ -z $artUrl ]]; then
+        echo "/home/cullyn/.config/eww/assets/ytm.png"
+    else
+        tempfile="/tmp/.album_art.png"
+        wget --output-document="$tempfile" "$artUrl"
+        echo "$tempfile"
+    fi
 }
 
 volume() {

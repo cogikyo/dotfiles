@@ -4,22 +4,21 @@
 $sans-serif: Albert Sans, sans-serif;
 $monospace: Hack Nerd Font, monospace;
 $font-size: 20px;
-$border-radius: 16px;
 
 $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 
 // custom super set of tokyo nihgt
 // (https://github.com/enkia/tokyo-night-vscode-theme)
-
-/* prettier-ignore */
 $white: #c0caf5;
 $black: #1a1b26;
 $fg: #a9b1d6;
 $fg-alt: #9aa5ce;
 $grey: #565f89;
 $grey-alt: #414868;
+$grey_alt2: #3b4261;
+$grey_alt3: #2a2f46;
 $bg: #24283b;
-$bg-alt: #222d56;
+$bg-alt: #1f2335;
 $red: #f7768e;
 $red-alt: #e0617a;
 $orange: #ff9e64;
@@ -38,6 +37,7 @@ $blue: #7aa2f7;
 $blue-alt: #5784d5;
 $blue-g: #7e88bf;
 $blue-g-alt: #3f4e74;
+$dark-blue: #222d56;
 $magenta: #bb9af7;
 $magenta-alt: #997ad4;
 $pink: #f08ccd;
@@ -96,9 +96,8 @@ $shadow: hsla(235, 19, 13, 0.69);
     color: $red-alt;
   }
   &-box {
-    background: $bg;
     color: $red;
-    padding: 2px 1em;
+    padding: 0 1em;
     @include box-decor();
   }
   &-cover {
@@ -128,7 +127,7 @@ $shadow: hsla(235, 19, 13, 0.69);
     background: linear-gradient(
       to bottom,
       $trans-bg 55%,
-      $bg-alt 95%,
+      $dark-blue 95%,
       $blue 100%
     );
     border-radius: 60%;
