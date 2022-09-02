@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 killall eww -9
+pkill playerctl
 eww daemon
 eww open-many top-bar bot-bar
 # eww inspector
