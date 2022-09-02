@@ -1,14 +1,20 @@
 // ┬  ┬┌─┐┬─┐┬┌─┐┌┐ ┬  ┌─┐┌─┐
 // └┐┌┘├─┤├┬┘│├─┤├┴┐│  ├┤ └─┐
 //  └┘ ┴ ┴┴└─┴┴ ┴└─┘┴─┘└─┘└─┘
+// == fonts ===================================================================
+// {{{
 $sans-serif: Albert Sans, sans-serif;
 $monospace: Hack Nerd Font, monospace;
 $font-size: 20px;
+// }}}
+// =================================================================== fonts ==
 
-$ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
+// == colors ==================================================================
+// {{{
 
-// custom super set of tokyo nihgt
-// (https://github.com/enkia/tokyo-night-vscode-theme)
+// super set of tokyonight
+// nvim source: (https://github.com/folke/tokyonight.nvim/blob/main/lua/tokyonight/colors.lua)
+// vscode source: (https://github.com/enkia/tokyo-night-vscode-theme)
 $white: #c0caf5;
 $black: #1a1b26;
 $fg: #a9b1d6;
@@ -19,6 +25,8 @@ $grey_alt2: #3b4261;
 $grey_alt3: #2a2f46;
 $bg: #24283b;
 $bg-alt: #1f2335;
+$trans-bg: hsla(230, 24, 19, 0.05);
+$shadow: hsla(235, 19, 13, 0.69);
 $red: #f7768e;
 $red-alt: #e0617a;
 $orange: #ff9e64;
@@ -43,12 +51,14 @@ $magenta-alt: #997ad4;
 $pink: #f08ccd;
 $pink-alt: #d876b6;
 
-$trans-bg: hsla(230, 24, 19, 0.05);
-$shadow: hsla(235, 19, 13, 0.69);
+// }}}
+// ================================================================== colors ==
 
-// ┌─┐┌┐┌┬┌┬┐┌─┐┌┬┐┬┌─┐┌┐┌┌─┐
-// ├─┤│││││││├─┤ │ ││ ││││└─┐
-// ┴ ┴┘└┘┴┴ ┴┴ ┴ ┴ ┴└─┘┘└┘└─┘
+// == animation ===============================================================
+// {{{
+
+$ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
+
 @keyframes fade {
   0% {
     opacity: 0;
@@ -58,9 +68,50 @@ $shadow: hsla(235, 19, 13, 0.69);
   }
 }
 
-// ┌┐ ┌─┐┌─┐┌─┐
-// ├┴┐├─┤└─┐├┤
-// └─┘┴ ┴└─┘└─┘
+// }}}
+// =============================================================== animation ==
+
+// == mixins ===================================================================
+// box-decor active_ws {{{
+
+@mixin top-left-box-decor($color) {
+  background: $bg;
+  color: $color;
+  margin: 12px 0 12px -12px;
+  border-radius: 420px 17px 420px 17px;
+  box-shadow: -4px 3px 2px 2px $shadow;
+  padding: 0 1em;
+}
+
+@mixin top-center-box-decor() {
+  background: $bg;
+  color: $blue;
+  margin: 12px 0 12px 0;
+  border-radius: 16px 16px 256px 256px;
+  box-shadow: 0 1px 3px 0 $blue-alt;
+  padding: 0 1.5rem;
+}
+
+@mixin top-right-box-decor($color) {
+  background: $bg;
+  color: $color;
+  margin: 12px 0 12px -12px;
+  border-radius: 17px 420px 17px 420px;
+  box-shadow: 4px 3px 2px 2px $shadow;
+  padding: 0 1em;
+}
+
+@mixin active_ws {
+  font-size: 40px;
+  margin-top: -8px;
+}
+
+// }}}
+// =================================================================== mixins ==
+
+// == root ====================================================================
+// {{{
+
 * {
   all: unset;
 }
@@ -72,28 +123,22 @@ $shadow: hsla(235, 19, 13, 0.69);
   font-size: $font-size;
 }
 
-@mixin box-decor() {
-  background: $bg;
-  margin: 10px 0 10px -13px;
-  border-radius: 420px 17px 420px 17px;
-  box-shadow: 2px 2px 3px 2px $shadow;
-}
+// }}}
+// ==================================================================== root ==
 
-// ┌┬┐┌─┐┌─┐   ┬  ┌─┐┌─┐┌┬┐
-//  │ │ │├─┘───│  ├┤ ├┤  │
-//  ┴ └─┘┴     ┴─┘└─┘└   ┴
+// ┌┬┐┌─┐┌─┐
+//  │ │ │├─┘
+//  ┴ └─┘┴
+// == top-left ===================================================================
+// music audio {{{
+
 .top-left-box {
   margin-bottom: 6px;
 }
 
-// ┌┬┐┬ ┬┌─┐┬┌─┐
-// ││││ │└─┐││
-// ┴ ┴└─┘└─┘┴└─┘
 .music {
   &-box {
-    color: $red;
-    padding: 0 1em;
-    @include box-decor();
+    @include top-left-box-decor($red);
   }
   &-icon {
     &-progress {
@@ -111,8 +156,9 @@ $shadow: hsla(235, 19, 13, 0.69);
     background-size: cover;
     background-position: center;
     min-width: 59px;
-    border-radius: 0px 27px 69px 17px;
-    box-shadow: 2px 0px 5px -1px $red-alt;
+    padding-right: 6px;
+    border-radius: 0px 17px 69px 17px;
+    box-shadow: 2px 1px 5px -1px $red-alt;
   }
   &-status-button {
     color: $blue;
@@ -121,13 +167,78 @@ $shadow: hsla(235, 19, 13, 0.69);
 
 .audio-box {
   padding: 0 1em 0 0.5em;
-  @include box-decor();
+  @include top-left-box-decor($red-alt);
 }
 
-@mixin active_ws {
-  font-size: 40px;
-  margin-top: -8px;
+// }}}
+// =================================================================== top-left ==
+
+// == top-center ===================================================================
+// {{{
+
+.weather {
+  &-box {
+    @include top-left-box-decor($red);
+  }
 }
+
+.time {
+  &-box {
+    font-size: 2em;
+    font-family: sans-serif;
+    @include top-center-box-decor();
+    margin: 0px 0 12px 0;
+  }
+}
+
+.weekday {
+  &-box {
+    @include top-right-box-decor($blue);
+  }
+  &-day {
+    font-family: sans-serif;
+  }
+}
+
+// }}}
+// =================================================================== top-center ==
+
+// == top-right ===================================================================
+// {{{
+
+.cpu,
+.temp,
+.memory,
+.gpu {
+  &-box {
+    @include top-right-box-decor($blue);
+  }
+}
+
+.user {
+  background-size: cover;
+  background-position: center;
+  min-width: 59px;
+  border-radius: 17px 0px 17px 69px;
+  padding-left: 6px;
+  box-shadow: -2px 1px 5px -1px $blue-alt;
+  margin-left: -10px;
+}
+
+// }}}
+// =================================================================== top-right ==
+
+// ┌┐ ┌─┐┌┬┐
+// ├┴┐│ │ │
+// └─┘└─┘ ┴
+// == bot-left ===================================================================
+// {{{
+
+// }}}
+// =================================================================== bot-left ==
+
+// == bot-center ===================================================================
+// {{{
 
 .workspace {
   &-box {
@@ -190,3 +301,12 @@ $shadow: hsla(235, 19, 13, 0.69);
   color: $orange;
   @include active_ws();
 }
+
+// }}}
+// =================================================================== top-center ==
+
+// == bot-right ===================================================================
+// {{{
+
+// }}}
+// =================================================================== bot-right ==

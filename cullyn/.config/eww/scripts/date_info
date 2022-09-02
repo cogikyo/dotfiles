@@ -2,7 +2,7 @@
 
 day () {
     while true; do
-        date '+%A, %B %d, %Y' > "/tmp/.day"
+        date '+%A, %B %d' > "/tmp/.day"
         until_tomorrow=$(( $(date +%s -d "tomorrow 00:00") - $( date +%s ) ))
         sleep "$until_tomorrow"
     done

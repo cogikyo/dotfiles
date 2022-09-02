@@ -155,6 +155,7 @@ map("n", "<leader>nd", ":lua require('harpoon.ui').nav_file(5)<CR>zt")
 
 vim.cmd([[
 nnoremap <leader>ir vip:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
+nnoremap <leader>=r vip:<BS><BS><BS><BS><BS>'<,'>s/xxxxxx//g<Left><Left>
 vnoremap <leader>r :<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
 nnoremap <leader>R :%s//g<Left><Left>
 nnoremap <silent> <leader>N :call setreg("/", ['空'])<CR>
@@ -163,6 +164,11 @@ nnoremap <silent> <leader>N :call setreg("/", ['空'])<CR>
 -- 🙏 folds
 map("n", "<leader>mv", ":mkview<CR>")
 map("n", "<leader>lv", ":loadview<CR>")
+map(
+	"n",
+	"<leader>==",
+	"}o==<Esc>a  <Esc>6ix<Esc><Esc>a  <Esc>67i=<Esc><Esc>o<Esc>3i{<Esc><Esc>o<Esc>3i}<Esc>o<Esc><Esc>67i=<Esc><Esc>a  <Esc><Esc>6ix<Esc><Esc>a  <Esc><Esc>2i=<Esc><Esc>o<Esc>4k<Esc>gcc"
+)
 
 -- 🔤 spelling
 map("i", "<C-l>", "<c-g>u<Esc>[s1z=`]a<c-g>u", rec)

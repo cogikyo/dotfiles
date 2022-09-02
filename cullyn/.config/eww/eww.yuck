@@ -1,5 +1,9 @@
-; =============================================================================
-; =============================================================================
+; ┌┬┐┌─┐┬┌┐┌
+; │││├─┤││││
+; ┴ ┴┴ ┴┴┘└┘
+; -- windows ==================================================================
+; top-bar bot-bar {{{
+
 (defwindow top-bar
   :monitor 0
   :geometry (geometry
@@ -28,7 +32,12 @@
   )
 )
 
-; redefine defualts for box widget
+; }}}
+; ================================================================== windows ==
+
+; == widgets ==================================================================
+; mybox {{{
+
 (defwidget mybox [box-class ?spacing]
   (box
     :class "${box-class}-box"
@@ -38,42 +47,35 @@
     (children)
   )
 )
-; =============================================================================
-; =============================================================================
 
+; }}}
+; ================================================================== widgets ==
 
+; ┌┬┐┌─┐┌─┐
+;  │ │ │├─┘
+;  ┴ └─┘┴
+; == top-left =================================================================
+; music audio {{{
 
-; ████████╗ ██████╗ ██████╗
-; ╚══██╔══╝██╔═══██╗██╔══██╗
-;    ██║   ██║   ██║██████╔╝
-;    ██║   ██║   ██║██╔═══╝
-;    ██║   ╚██████╔╝██║
-;    ╚═╝    ╚═════╝ ╚═╝
-; =============================================================================
-; ┌┬┐┌─┐┌─┐   ┬  ┌─┐┌─┐┌┬┐
-;  │ │ │├─┘───│  ├┤ ├┤  │
-;  ┴ └─┘┴     ┴─┘└─┘└   ┴
 (defwidget top-left []
   (mybox :box-class "top-left"
-    (transform
-      :translate-y "-3px"
-      (box :class "music-cover" :style "background-image: url('${artUrl}');"))
-    (music)
-    (mybox :box-class "audio"
-      (audio-in) (audio-out)
+    (transform :translate-y "-3px"
+      (box :class "music-cover" :style "background-image: url('${artUrl}');")
     )
+    (music)
+    (mybox :box-class "audio" (audio-in) (audio-out))
   )
 )
 
-; ┌┬┐┬ ┬┌─┐┬┌─┐
-; ││││ │└─┐││
-; ┴ ┴└─┘└─┘┴└─┘
-(deflisten status :initial "ﭦ" `playerctl --follow status`)
+; == music ===================================================================
+; artUrl status progress song artist volume {{{
+
 (defpoll artUrl
   :initial "/home/cullyn/.config/eww/assets/ytm.png"
   :interval "1s"
   "scripts/music_info cover"
 )
+(deflisten status :initial "ﭦ" `playerctl --follow status`)
 (defpoll progress :initial 1 :interval "0.5s" "scripts/music_info duration")
 (defpoll song :interval "1s"  "scripts/music_info song")
 (defpoll artist :interval "1s"  "scripts/music_info artist")
@@ -103,13 +105,12 @@
     )
   )
 )
+; }}}
+; =================================================================== music ==
 
-; ┌─┐┬ ┬┌┬┐┬┌─┐   ┬┌┐┌
-; ├─┤│ │ ││││ │───││││
-; ┴ ┴└─┘─┴┘┴└─┘   ┴┘└┘
-(deflisten source_volume :initial '100'
-  'tail -F /tmp/.source_volume'
-)
+; == audio ===================================================================
+; audio-in (source) audio-out (sink) {{{
+(deflisten source_volume :initial '100' 'tail -F /tmp/.source_volume')
 (defwidget audio-in []
   (eventbox :class "audio-in-eventbox"
     :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
@@ -118,12 +119,7 @@
   )
 )
 
-; ┌─┐┬ ┬┌┬┐┬┌─┐   ┌─┐┬ ┬┌┬┐
-; ├─┤│ │ ││││ │───│ ││ │ │
-; ┴ ┴└─┘─┴┘┴└─┘   └─┘└─┘ ┴
-(deflisten sink_volume :initial '100'
-  'tail -F /tmp/.sink_volume'
-)
+(deflisten sink_volume :initial '50' 'tail -F /tmp/.sink_volume')
 (defwidget audio-out []
   (eventbox :class ""
     :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
@@ -131,123 +127,139 @@
     (label :text "墳 ${sink_volume}")
   )
 )
-; =============================================================================
+; }}}
+; =================================================================== audio-io ==
 
+; }}}
+; ================================================================= top-left ==
 
+; == top-center ===============================================================
+; weather time date {{{
 
-; =============================================================================
-; ┌┬┐┌─┐┌─┐   ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
-;  │ │ │├─┘───│  ├┤ │││ │ ├┤ ├┬┘
-;  ┴ └─┘┴     └─┘└─┘┘└┘ ┴ └─┘┴└─
 (defwidget top-center []
   (mybox :box-class "top-center"
-    week
-    day
-    (mybox :box-class "time" :spacing 0
-      (eventbox (label :text hour))
-      ":"
-      (label :text minute)
-    )
-    (eventbox :class "weather-box" weather)
+    (weather) (time) (weekday)
   )
 )
 
-(deflisten day :inital 'tail /tmp/.day' 'tail -F /tmp/.day')
-(deflisten week :inital 'tail /tmp/.week' 'tail -F /tmp/.week')
+(defpoll weather :interval "1m"  "scripts/weather.py")
+(defwidget weather []
+  (mybox :box-class "weather"
+    (eventbox :class "weather-event" weather)
+  )
+)
 
 (defpoll hour :interval "1s" "date '+%H'")
 (defpoll minute :interval "1s" "date '+%M'")
-(defpoll weather :interval "1m"  "scripts/weather.py")
-; =============================================================================
+(defwidget time []
+  (mybox :box-class "time" :spacing 0
+    (eventbox :class "time-hour" hour)
+    ":"
+    (eventbox :class "time-minute" minute)
+  )
+)
 
+(deflisten week :inital 'tail /tmp/.week' 'tail -F /tmp/.week')
+(deflisten day :inital 'tail /tmp/.day' 'tail -F /tmp/.day')
+(defwidget weekday []
+  (mybox :box-class "weekday"
+    (eventbox :class "weekday-day" day)
+    (eventbox :class "weekday-week" week)
+  )
+)
 
+; }}}
+; =============================================================== top-center ==
 
-; =============================================================================
-; ┌┬┐┌─┐┌─┐   ┬─┐┬┌─┐┬ ┬┌┬┐
-;  │ │ │├─┘───├┬┘││ ┬├─┤ │
-;  ┴ └─┘┴     ┴└─┴└─┘┴ ┴ ┴
+; == top-right ================================================================
+; cp temp memeory gpu {{{
+
+(defvar userUrl '/home/cullyn/.config/eww/assets/nosvagor.png')
 (defwidget top-right []
   (box
-    :class "top-right"
+    :class "top-right-box"
     :halign "end"
     :spacing 16
     :space-evenly false
     (cpu)
+    (temp)
     (memory)
     (gpu)
-    (temp)
+    (transform :translate-y "-3px"
+      (box :class "user" :style "background-image: url('${userUrl}');")
+    )
   )
 )
 
-; ┌─┐┌─┐┬ ┬
-; │  ├─┘│ │
-; └─┘┴  └─┘
-(defwidget cpu [] "cpu")
+; == cpu ======================================================================
+; {{{
+(defwidget cpu []
+  (mybox :box-class "cpu"
+  "cpu"
+  )
+)
+; }}}
+; ====================================================================== cpu ==
 
-; ┌┬┐┌─┐┌┬┐┌─┐┬─┐┬ ┬
-; │││├┤ ││││ │├┬┘└┬┘
-; ┴ ┴└─┘┴ ┴└─┘┴└─ ┴
-(defwidget memory [] "memory")
+; == temp =====================================================================
+; {{{
+(defwidget temp []
+  (mybox :box-class "temp"
+  "temp"
+  )
+)
+; }}}
+; ===================================================================== temp ==
 
-; ┌─┐┌─┐┬ ┬
-; │ ┬├─┘│ │
-; └─┘┴  └─┘
-(defwidget gpu [] "gpu")
+; == memory ===================================================================
+; {{{
+(defwidget memory []
+  (mybox :box-class "memory"
+  "memory"
+  )
+)
+; }}}
+; =================================================================== memory ==
 
-; ┌┬┐┌─┐┌┬┐┌─┐
-;  │ ├┤ │││├─┘
-;  ┴ └─┘┴ ┴┴
-(defwidget temp [] "temp")
-; =============================================================================
+; == gpu ======================================================================
+; {{{
+(defwidget gpu []
+  (mybox :box-class "gpu"
+  "gpu"
+  )
+)
+; }}}
+; ====================================================================== gpu ==
 
+; }}}
+; ================================================================ top-right ==
 
+; ┌┐ ┌─┐┌┬┐
+; ├┴┐│ │ │
+; └─┘└─┘ ┴
+; == bot-left =================================================================
+; pacman {{{
 
-
-; ██████╗  ██████╗ ████████╗
-; ██╔══██╗██╔═══██╗╚══██╔══╝
-; ██████╔╝██║   ██║   ██║
-; ██╔══██╗██║   ██║   ██║
-; ██████╔╝╚██████╔╝   ██║
-; ╚═════╝  ╚═════╝    ╚═╝
-; =============================================================================
-; ┌┐ ┌─┐┌┬┐  ┬  ┌─┐┌─┐┌┬┐
-; ├┴┐│ │ │───│  ├┤ ├┤  │
-; └─┘└─┘ ┴   ┴─┘└─┘└   ┴
 (defwidget bot-left []
-  (box
-    :class "bot-left"
-    :halign "start"
-    :spacing 36
-    :space-evenly false
+  (mybox :box-class "bot-left"
     (pacman)
   )
 )
 
-; ┌─┐┌─┐┌─┐┌┬┐┌─┐┌┐┌
-; ├─┘├─┤│  │││├─┤│││
-; ┴  ┴ ┴└─┘┴ ┴┴ ┴┘└┘
 (defwidget pacman [] "pacman")
-; =============================================================================
 
+; }}}
+; ================================================================= bot-left ==
 
+; == bot-center ===============================================================
+; workspaces {{{
 
-; =============================================================================
-; ┌┐ ┌─┐┌┬┐  ┌─┐┌─┐┌┐┌┌┬┐┌─┐┬─┐
-; ├┴┐│ │ │───│  ├┤ │││ │ ├┤ ├┬┘
-; └─┘└─┘ ┴   └─┘└─┘┘└┘ ┴ └─┘┴└─
 (defwidget bot-center []
-  (box
-    :class "bot-center"
-    :halign "center"
-    :spacing 16
-    :space-evenly false
+  (mybox :box-class "bot-center"
     (workspaces)
   )
 )
 
-; ┬ ┬┌─┐┬─┐┬┌─┌─┐┌─┐┌─┐┌─┐┌─┐┌─┐
-; ││││ │├┬┘├┴┐└─┐├─┘├─┤│  ├┤ └─┐
-; └┴┘└─┘┴└─┴ ┴└─┘┴  ┴ ┴└─┘└─┘└─┘
 (deflisten active_workspace 'tail -F /tmp/.active_workspace')
 (defwidget workspaces []
   (mybox :box-class "workspace" :spacing 12
@@ -283,7 +295,12 @@
     )
   )
 )
-; =============================================================================
+
+; }}}
+; =============================================================== bot-center ==
+
+; == bot-right ================================================================
+; netowork {{{
 
 (defwidget bot-right []
   (box
@@ -296,3 +313,6 @@
 )
 
 (defwidget network [] "network")
+
+; }}}
+; ================================================================ bot-right ==

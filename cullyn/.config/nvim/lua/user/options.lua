@@ -28,8 +28,8 @@ local options = {
 	display = { "lastline", "msgsep" },
 	wrap = false,
 	linebreak = true,
-	scrolloff = 16,
-	sidescrolloff = 6,
+	scrolloff = 22,
+	sidescrolloff = 42,
 	spell = true,
 	spelllang = { "en_us" },
 	-- ========================================================================
@@ -45,6 +45,7 @@ local options = {
 	termguicolors = true,
 	signcolumn = "yes",
 	colorcolumn = { "80", "87", "100" },
+	foldmethod = "marker",
 	-- ========================================================================
 
 	-- ⌨  UX ==================================================================
