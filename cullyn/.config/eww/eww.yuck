@@ -1,4 +1,5 @@
 ; =============================================================================
+; =============================================================================
 (defwindow top-bar
   :monitor 0
   :geometry (geometry
@@ -38,7 +39,7 @@
   )
 )
 ; =============================================================================
-
+; =============================================================================
 
 
 
@@ -84,7 +85,7 @@
       :start-at 75
       :thickness 2
       :clockwise true
-      (box :class "icon-progress"
+      (box :class "music-icon-progress"
         :onclick "playerctl --player=youtube-music-desktop-app play-pause"
         "${matches(status, "Playing") ? "" : "奈"}"
       )
@@ -94,21 +95,23 @@
 (defpoll volume :interval "1s"  "scripts/music_info volume")
 (defwidget music []
   (mybox :box-class "music"
-    (button (music-progress-indicator))
-    song
-    (label :markup artist)
-    (label :markup volume )
+    (music-progress-indicator)
+    (mybox :box-class "music-info"
+      (label :class "music-song" :markup song)
+      (label :class "music-artist" :markup artist)
+      (label :class "music-volume" :markup volume )
+    )
   )
 )
 
 ; ┌─┐┬ ┬┌┬┐┬┌─┐   ┬┌┐┌
 ; ├─┤│ │ ││││ │───││││
 ; ┴ ┴└─┘─┴┘┴└─┘   ┴┘└┘
-(deflisten source_volume :initial 'tail /tmp/.source_volume'
+(deflisten source_volume :initial '100'
   'tail -F /tmp/.source_volume'
 )
 (defwidget audio-in []
-  (eventbox
+  (eventbox :class "audio-in-eventbox"
     :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
     :onscroll "scripts/pulse_info change_volume source {}"
     (label :text " ${source_volume}")
@@ -118,11 +121,11 @@
 ; ┌─┐┬ ┬┌┬┐┬┌─┐   ┌─┐┬ ┬┌┬┐
 ; ├─┤│ │ ││││ │───│ ││ │ │
 ; ┴ ┴└─┘─┴┘┴└─┘   └─┘└─┘ ┴
-(deflisten sink_volume :initial 'tail /tmp/.sink_volume'
+(deflisten sink_volume :initial '100'
   'tail -F /tmp/.sink_volume'
 )
 (defwidget audio-out []
-  (eventbox
+  (eventbox :class ""
     :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
     :onscroll "scripts/pulse_info change_volume sink {}"
     (label :text "墳 ${sink_volume}")
@@ -138,25 +141,22 @@
 ;  ┴ └─┘┴     └─┘└─┘┘└┘ ┴ └─┘┴└─
 (defwidget top-center []
   (mybox :box-class "top-center"
-    date
-    time
-    weather
+    week
+    day
+    (mybox :box-class "time" :spacing 0
+      (eventbox (label :text hour))
+      ":"
+      (label :text minute)
+    )
+    (eventbox :class "weather-box" weather)
   )
 )
 
-; ┌┬┐┌─┐┌┬┐┌─┐
-;  ││├─┤ │ ├┤
-; ─┴┘┴ ┴ ┴ └─┘
-(defpoll date :interval "1s" "date '+ %A, %B %d, %Y'")
+(deflisten day :inital 'tail /tmp/.day' 'tail -F /tmp/.day')
+(deflisten week :inital 'tail /tmp/.week' 'tail -F /tmp/.week')
 
-; ┌┬┐┬┌┬┐┌─┐
-;  │ ││││├┤
-;  ┴ ┴┴ ┴└─┘
-(defpoll time :interval "1s" "date '+ %H:%M'")
-
-; ┬ ┬┌─┐┌─┐┌┬┐┬ ┬┌─┐┬─┐
-; │││├┤ ├─┤ │ ├─┤├┤ ├┬┘
-; └┴┘└─┘┴ ┴ ┴ ┴ ┴└─┘┴└─
+(defpoll hour :interval "1s" "date '+%H'")
+(defpoll minute :interval "1s" "date '+%M'")
 (defpoll weather :interval "1m"  "scripts/weather.py")
 ; =============================================================================
 
