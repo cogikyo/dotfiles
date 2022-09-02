@@ -72,18 +72,6 @@ $shadow: hsla(235, 19, 13, 0.69);
   font-size: $font-size;
 }
 
-.icon {
-  &-progress {
-    font-size: 1.5em;
-    margin: 6px 12px 4px 5px;
-    color: $red;
-  }
-}
-
-.top-left-box {
-  margin-bottom: 6px;
-}
-
 @mixin box-decor() {
   background: $bg;
   margin: 10px 0 10px -13px;
@@ -91,14 +79,33 @@ $shadow: hsla(235, 19, 13, 0.69);
   box-shadow: 2px 2px 3px 2px $shadow;
 }
 
+// ┌┬┐┌─┐┌─┐   ┬  ┌─┐┌─┐┌┬┐
+//  │ │ │├─┘───│  ├┤ ├┤  │
+//  ┴ └─┘┴     ┴─┘└─┘└   ┴
+.top-left-box {
+  margin-bottom: 6px;
+}
+
+// ┌┬┐┬ ┬┌─┐┬┌─┐
+// ││││ │└─┐││
+// ┴ ┴└─┘└─┘┴└─┘
 .music {
-  &-progress {
-    color: $red-alt;
-  }
   &-box {
     color: $red;
     padding: 0 1em;
     @include box-decor();
+  }
+  &-icon {
+    &-progress {
+      font-size: 1.5em;
+      margin: 6px 12px 4px 5px;
+      &-box {
+        padding: 2px 0;
+      }
+    }
+  }
+  &-info-box {
+    margin-top: 2px;
   }
   &-cover {
     background-size: cover;
@@ -107,8 +114,8 @@ $shadow: hsla(235, 19, 13, 0.69);
     border-radius: 0px 27px 69px 17px;
     box-shadow: 2px 0px 5px -1px $red-alt;
   }
-  &-status {
-    font-size: 30px;
+  &-status-button {
+    color: $blue;
   }
 }
 

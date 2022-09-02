@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+day () {
+    while true; do
+        date '+%A, %B %d, %Y' > "/tmp/.day"
+        until_tomorrow=$(( $(date +%s -d "tomorrow 00:00") - $( date +%s ) ))
+        sleep "$until_tomorrow"
+    done
+}
+
+week () {
+    while true; do
+        echo $(( ($(date -d "1996-02-26 PST" +%s) - $(date +%s))/(60*60*24)/-7 \
+        )) > "/tmp/.week"
+        until_monday=$(( $(date +%s -d "monday 00:00") - $( date +%s ) ))
+        sleep "$until_monday"
+    done
+}
+
+day & week

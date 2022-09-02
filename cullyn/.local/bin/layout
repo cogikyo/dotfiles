@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+left_window='1023 1024'
+center_window='1708 997'
+right_window='1001 1787'
+
 discord () {
     hyprctl dispatch workspace 1
     tmux select-window -t :1
@@ -48,7 +52,7 @@ code () {
     hyprctl dispatch movefocus r
     hyprctl dispatch movefocus l
     hyprctl dispatch movefocus r
-    alacritty --hold -e cava & sleep 0.5
+    alacritty --hold --title="cava" -e cava & sleep 0.5
     hyprctl dispatch movefocus u
     hyprctl dispatch resizeactive 'exact 1631 1863'
     hyprctl dispatch movefocus l
@@ -61,15 +65,15 @@ dotfiles () {
     alacritty --hold --working-directory=dotfiles -e tmux attach -t  & sleep 0.5
     firefox-developer-edition --new-window https://github.com/nosvagor & sleep 1.5
     hyprctl dispatch movefocus l
-    hyprctl dispatch resizeactive 'exact 1023 1811'
+    hyprctl dispatch resizeactive "exact $left_window"
     hyprctl dispatch movefocus r
     firefox-developer-edition --new-window https://github.com/nosvagor/dotfiles & sleep 1
-    hyprctl dispatch movefocus r
     hyprctl dispatch movefocus l
+    hyprctl dispatch resizeactive "exact $center_window"
     hyprctl dispatch movefocus r
-    alacritty --hold -e cava & sleep 0.5
+    alacritty --hold --title="cava" -e cava & sleep 0.5
     hyprctl dispatch movefocus u
-    hyprctl dispatch resizeactive 'exact 1631 1863'
+    hyprctl dispatch resizeactive "exact $right_window"
     hyprctl dispatch movefocus l
     hyprctl dispatch movefocus l
 }
@@ -77,6 +81,7 @@ dotfiles () {
 # internet randomly goes out for a few seconds and fucks up opening windows
 go=false
 conneciton () {
+    notify-send "opening $1 layout"
     if wget -q --spider http://google.com; then
         go=true
     else
@@ -87,7 +92,7 @@ conneciton () {
 
 hyprctl keyword input:follow_mouse 0
 while [ "$go" = false ]; do
-    conneciton
+    conneciton "$1"
     sleep 1
 done
 "$1"

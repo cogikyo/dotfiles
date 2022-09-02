@@ -26,7 +26,7 @@ change_volume () {
 }
 
 clean_tmp_files () {
-    get_volume sink > "/tmp/.sink_volume"
+    echo "50" > "/tmp/.sink_volume"
     get_volume source > "/tmp/.source_volume"
 }
 
