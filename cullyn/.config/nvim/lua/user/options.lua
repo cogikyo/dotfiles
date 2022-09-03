@@ -29,7 +29,7 @@ local options = {
 	wrap = false,
 	linebreak = true,
 	scrolloff = 22,
-	sidescrolloff = 42,
+	sidescrolloff = 6,
 	spell = true,
 	spelllang = { "en_us" },
 	-- ========================================================================

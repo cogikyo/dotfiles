@@ -79,22 +79,15 @@ dotfiles () {
 }
 
 # internet randomly goes out for a few seconds and fucks up opening windows
-go=false
-conneciton () {
-    notify-send "opening $1 layout"
-    if wget -q --spider http://google.com; then
-        go=true
-    else
-        go=false
-    fi
-
-}
+nc -z 8.8.8.8 53  >/dev/null 2>&1
+online=$?
 
 hyprctl keyword input:follow_mouse 0
-while [ "$go" = false ]; do
+while ! [ "$online" -eq 0 ]; do
     conneciton "$1"
-    sleep 1
+    sleep 0.5
 done
+notify-send "opening $1 layout"
 "$1"
 hyprctl keyword input:follow_mouse 1
 

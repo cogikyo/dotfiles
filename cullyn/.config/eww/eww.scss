@@ -74,31 +74,54 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 // == mixins ===================================================================
 // box-decor active_ws {{{
 
+@mixin top-left-corner {
+  background-size: cover;
+  background-position: center;
+  min-width: 59px;
+  border-radius: 0px 17px 69px 27px;
+  box-shadow: 3px -1px 3px 0px $red-alt;
+  margin-bottom: 6px;
+  margin-right: -4px;
+}
+
 @mixin top-left-box-decor($color) {
   background: $bg;
   color: $color;
-  margin: 12px 0 12px -12px;
+  margin: 12px -6px;
   border-radius: 420px 17px 420px 17px;
   box-shadow: -4px 3px 2px 2px $shadow;
+  border-top: 1px double $red-alt;
+  border-right: 1px double $red-alt;
   padding: 0 1em;
 }
 
 @mixin top-center-box-decor() {
   background: $bg;
   color: $blue;
-  margin: 12px 0 12px 0;
-  border-radius: 16px 16px 256px 256px;
+  border-radius: 64px 64px 256px 256px;
   box-shadow: 0 1px 3px 0 $blue-alt;
-  padding: 0 1.5rem;
+  padding: 0 2rem;
 }
 
 @mixin top-right-box-decor($color) {
   background: $bg;
   color: $color;
-  margin: 12px 0 12px -12px;
+  margin: 12px -6px;
   border-radius: 17px 420px 17px 420px;
   box-shadow: 4px 3px 2px 2px $shadow;
+  border-top: 1px double $blue-alt;
+  border-left: 1px double $blue-alt;
   padding: 0 1em;
+}
+
+@mixin top-right-corner {
+  background-size: cover;
+  background-position: center;
+  min-width: 59px;
+  border-radius: 17px 0px 27px 69px;
+  box-shadow: -3px -1px 3px 0px $blue-alt;
+  padding-left: 8px;
+  margin-bottom: 6px;
 }
 
 @mixin active_ws {
@@ -132,33 +155,23 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 // == top-left ===================================================================
 // music audio {{{
 
-.top-left-box {
-  margin-bottom: 6px;
-}
-
 .music {
   &-box {
     @include top-left-box-decor($red);
   }
+  &-progress {
+    color: $red-alt;
+  }
   &-icon {
-    &-progress {
-      font-size: 1.5em;
-      margin: 6px 12px 4px 5px;
-      &-box {
-        padding: 2px 0;
-      }
-    }
+    font-size: 1.5em;
+    margin: 6px 12px 4px 5px;
+    color: $red;
   }
   &-info-box {
     margin-top: 2px;
   }
   &-cover {
-    background-size: cover;
-    background-position: center;
-    min-width: 59px;
-    padding-right: 6px;
-    border-radius: 0px 17px 69px 17px;
-    box-shadow: 2px 1px 5px -1px $red-alt;
+    @include top-left-corner();
   }
   &-status-button {
     color: $blue;
@@ -178,7 +191,8 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 
 .weather {
   &-box {
-    @include top-left-box-decor($red);
+    color: $blue-alt;
+    background: $bg;
   }
 }
 
@@ -187,16 +201,17 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
     font-size: 2em;
     font-family: sans-serif;
     @include top-center-box-decor();
-    margin: 0px 0 12px 0;
+    margin-bottom: 2px;
   }
 }
 
 .weekday {
   &-box {
-    @include top-right-box-decor($blue);
+    background: $bg;
+    color: $blue-alt;
   }
   &-day {
-    font-family: sans-serif;
+    color: $blue-alt;
   }
 }
 
@@ -216,13 +231,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 }
 
 .user {
-  background-size: cover;
-  background-position: center;
-  min-width: 59px;
-  border-radius: 17px 0px 17px 69px;
-  padding-left: 6px;
-  box-shadow: -2px 1px 5px -1px $blue-alt;
-  margin-left: -10px;
+  @include top-right-corner();
 }
 
 // }}}

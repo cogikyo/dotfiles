@@ -59,9 +59,7 @@
 
 (defwidget top-left []
   (mybox :box-class "top-left"
-    (transform :translate-y "-3px"
-      (box :class "music-cover" :style "background-image: url('${artUrl}');")
-    )
+    (box :class "music-cover" :style "background-image: url('${artUrl}');")
     (music)
     (mybox :box-class "audio" (audio-in) (audio-out))
   )
@@ -87,7 +85,7 @@
       :start-at 75
       :thickness 2
       :clockwise true
-      (box :class "music-icon-progress"
+      (box :class "music-icon"
         :onclick "playerctl --player=youtube-music-desktop-app play-pause"
         "${matches(status, "Playing") ? "" : "奈"}"
       )
@@ -137,22 +135,24 @@
 ; weather time date {{{
 
 (defwidget top-center []
-  (mybox :box-class "top-center"
+  (box :class "top-center-box" :spacing 0
     (weather) (time) (weekday)
   )
 )
 
-(defpoll weather :interval "1m"  "scripts/weather.py")
+(defpoll wttr_emoji :interval "10m" "curl wttr.in/Portland?format=%c")
+(defpoll wttr_condition :interval "10m" "curl wttr.in/Portland?format=%C")
 (defwidget weather []
-  (mybox :box-class "weather"
-    (eventbox :class "weather-event" weather)
+  (box :class "weather-box" :halign "end"
+    ; wttr_emoji
+    wttr_condition
   )
 )
 
 (defpoll hour :interval "1s" "date '+%H'")
 (defpoll minute :interval "1s" "date '+%M'")
 (defwidget time []
-  (mybox :box-class "time" :spacing 0
+  (box :class "time-box" :spacing 0 :halign "center" :space-evenly false
     (eventbox :class "time-hour" hour)
     ":"
     (eventbox :class "time-minute" minute)
@@ -185,9 +185,7 @@
     (temp)
     (memory)
     (gpu)
-    (transform :translate-y "-3px"
-      (box :class "user" :style "background-image: url('${userUrl}');")
-    )
+    (box :class "user" :style "background-image: url('${userUrl}');")
   )
 )
 

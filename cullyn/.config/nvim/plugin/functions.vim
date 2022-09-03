@@ -43,7 +43,7 @@ augroup END
 
 augroup TEMP
     autocmd!
-    autocmd BufWritePost eww.yuck,eww.scss execute 'silent !' 'alacritty -e ~/.local/bin/eww-open & disown && exit'
+    autocmd BufWritePost eww.yuck,eww.scss execute 'silent !' 'alacritty --title="smallfloat" -e ~/.local/bin/eww-open & disown && exit'
 augroup END
 
 augroup TYPESCRIPT
