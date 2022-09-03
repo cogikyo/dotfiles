@@ -30,13 +30,16 @@ duration() {
 }
 
 cover() {
-    artUrl=$(playerctl --player=youtube-music-desktop-app metadata --format '{{mpris:artUrl}}')
-    if [[ -z $artUrl ]]; then
-        echo "/home/cullyn/.config/eww/assets/ytm.png"
-    else
+    nc -z -w 1 8.8.8.8 53  >/dev/null 2>&1
+    online=$?
+    if [[ "$online" -eq 0 ]]; then
+        artUrl=$(playerctl --player=youtube-music-desktop-app metadata --format '{{mpris:artUrl}}')
         tempfile="/tmp/.album_art.png"
         wget --output-document="$tempfile" "$artUrl"
         echo "$tempfile"
+    else
+        echo "/home/cullyn/.config/eww/assets/ytm.png"
+        notify-send -t 1000 "internet down..."
     fi
 }
 
