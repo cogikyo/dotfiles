@@ -63,6 +63,7 @@ alias not='cd ~/notes'
 alias x='exit'
 alias n='nvim'
 alias e='eww inspector & disown && exit'
+alias cava='alacritty --hold --title="cava" -e cava & disown && exit'
 alias man='man -r=""'
 touchsh () {
     file="$1"

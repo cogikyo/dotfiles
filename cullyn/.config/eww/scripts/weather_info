@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+lat="45.491848"
+lon="-122.688451"
+api=$(cat /home/cullyn/.openweather_api_key)
+units="metric"
+weahterUrl="https://api.openweathermap.org/data/3.0/onecall?lat=$lat&lon=$lon&units=$units&appid=$api"
+
+while true; do
+    curl "$weahterUrl" | jq > "/tmp/.weather_info.json"
+    echo "$weahterUrl"
+    sleep 300
+done

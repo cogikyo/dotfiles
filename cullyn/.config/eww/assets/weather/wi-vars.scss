@@ -1,0 +1,253 @@
+// ┌┐ ┌─┐┌─┐┬ ┬┌─┐┌─┐┬─┐┌┬┐
+// ├┴┐├┤ ├─┤│ │├┤ │ │├┬┘ │
+// └─┘└─┘┴ ┴└─┘└  └─┘┴└─ ┴
+$wind-beaufort-0: '\f0b7';
+$wind-beaufort-1: '\f0b8';
+$wind-beaufort-2: '\f0b9';
+$wind-beaufort-3: '\f0ba';
+$wind-beaufort-4: '\f0bb';
+$wind-beaufort-5: '\f0bc';
+$wind-beaufort-6: '\f0bd';
+$wind-beaufort-7: '\f0be';
+$wind-beaufort-8: '\f0bf';
+$wind-beaufort-9: '\f0c0';
+$wind-beaufort-10: '\f0c1';
+$wind-beaufort-11: '\f0c2';
+$wind-beaufort-12: '\f0c3';
+
+// ┌┬┐┌─┐┬ ┬
+//  ││├─┤└┬┘
+// ─┴┘┴ ┴ ┴
+$day-sunny: '\f00d';
+$day-cloudy: '\f002';
+$day-cloudy-gusts: '\f000';
+$day-cloudy-windy: '\f001';
+$day-fog: '\f003';
+$day-hail: '\f004';
+$day-haze: '\f0b6';
+$day-lightning: '\f005';
+$day-rain: '\f008';
+$day-rain-mix: '\f006';
+$day-rain-wind: '\f007';
+$day-showers: '\f009';
+$day-sleet: '\f0b2';
+$day-sleet-storm: '\f068';
+$day-snow: '\f00a';
+$day-snow-thunderstorm: '\f06b';
+$day-snow-wind: '\f065';
+$day-sprinkle: '\f00b';
+$day-storm-showers: '\f00e';
+$day-sunny-overcast: '\f00c';
+$day-thunderstorm: '\f010';
+$day-windy: '\f085';
+$solar-eclipse: '\f06e';
+$hot: '\f072';
+$day-cloudy-high: '\f07d';
+$day-light-wind: '\f0c4';
+
+// ┌┬┐┬┬─┐┌─┐┌─┐┌┬┐┬┌─┐┌┐┌
+//  │││├┬┘├┤ │   │ ││ ││││
+// ─┴┘┴┴└─└─┘└─┘ ┴ ┴└─┘┘└┘
+$direction-up: '\f058';
+$direction-up-right: '\f057';
+$direction-right: '\f04d';
+$direction-down-right: '\f088';
+$direction-down: '\f044';
+$direction-down-left: '\f043';
+$direction-left: '\f048';
+$direction-up-left: '\f087';
+
+// ┌┬┐┬┌─┐┌─┐
+// ││││└─┐│
+// ┴ ┴┴└─┘└─┘
+$alien: '\f075';
+$celsius: '\f03c';
+$fahrenheit: '\f045';
+$degrees: '\f042';
+$thermometer: '\f055';
+$thermometer-exterior: '\f053';
+$thermometer-internal: '\f054';
+$cloud-down: '\f03d';
+$cloud-up: '\f040';
+$cloud-refresh: '\f03e';
+$horizon: '\f047';
+$horizon-alt: '\f046';
+$sunrise: '\f051';
+$sunset: '\f052';
+$moonrise: '\f0c9';
+$moonset: '\f0ca';
+$refresh: '\f04c';
+$refresh-alt: '\f04b';
+$umbrella: '\f084';
+$barometer: '\f079';
+$humidity: '\f07a';
+$na: '\f07b';
+$train: '\f0cb';
+
+// ┌┬┐┌─┐┌─┐┌┐┌
+// ││││ ││ ││││
+// ┴ ┴└─┘└─┘┘└┘
+$moon-new: '\f095';
+$moon-waxing-crescent-1: '\f096';
+$moon-waxing-crescent-2: '\f097';
+$moon-waxing-crescent-3: '\f098';
+$moon-waxing-crescent-4: '\f099';
+$moon-waxing-crescent-5: '\f09a';
+$moon-waxing-crescent-6: '\f09b';
+$moon-first-quarter: '\f09c';
+$moon-waxing-gibbous-1: '\f09d';
+$moon-waxing-gibbous-2: '\f09e';
+$moon-waxing-gibbous-3: '\f09f';
+$moon-waxing-gibbous-4: '\f0a0';
+$moon-waxing-gibbous-5: '\f0a1';
+$moon-waxing-gibbous-6: '\f0a2';
+$moon-full: '\f0a3';
+$moon-waning-gibbous-1: '\f0a4';
+$moon-waning-gibbous-2: '\f0a5';
+$moon-waning-gibbous-3: '\f0a6';
+$moon-waning-gibbous-4: '\f0a7';
+$moon-waning-gibbous-5: '\f0a8';
+$moon-waning-gibbous-6: '\f0a9';
+$moon-third-quarter: '\f0aa';
+$moon-waning-crescent-1: '\f0ab';
+$moon-waning-crescent-2: '\f0ac';
+$moon-waning-crescent-3: '\f0ad';
+$moon-waning-crescent-4: '\f0ae';
+$moon-waning-crescent-5: '\f0af';
+$moon-waning-crescent-6: '\f0b0';
+$moon-alt-new: '\f0eb';
+$moon-alt-waxing-crescent-1: '\f0d0';
+$moon-alt-waxing-crescent-2: '\f0d1';
+$moon-alt-waxing-crescent-3: '\f0d2';
+$moon-alt-waxing-crescent-4: '\f0d3';
+$moon-alt-waxing-crescent-5: '\f0d4';
+$moon-alt-waxing-crescent-6: '\f0d5';
+$moon-alt-first-quarter: '\f0d6';
+$moon-alt-waxing-gibbous-1: '\f0d7';
+$moon-alt-waxing-gibbous-2: '\f0d8';
+$moon-alt-waxing-gibbous-3: '\f0d9';
+$moon-alt-waxing-gibbous-4: '\f0da';
+$moon-alt-waxing-gibbous-5: '\f0db';
+$moon-alt-waxing-gibbous-6: '\f0dc';
+$moon-alt-full: '\f0dd';
+$moon-alt-waning-gibbous-1: '\f0de';
+$moon-alt-waning-gibbous-2: '\f0df';
+$moon-alt-waning-gibbous-3: '\f0e0';
+$moon-alt-waning-gibbous-4: '\f0e1';
+$moon-alt-waning-gibbous-5: '\f0e2';
+$moon-alt-waning-gibbous-6: '\f0e3';
+$moon-alt-third-quarter: '\f0e4';
+$moon-alt-waning-crescent-1: '\f0e5';
+$moon-alt-waning-crescent-2: '\f0e6';
+$moon-alt-waning-crescent-3: '\f0e7';
+$moon-alt-waning-crescent-4: '\f0e8';
+$moon-alt-waning-crescent-5: '\f0e9';
+$moon-alt-waning-crescent-6: '\f0ea';
+
+// ┌┐┌┌─┐┬ ┬┌┬┐┬─┐┌─┐┬
+// │││├┤ │ │ │ ├┬┘├─┤│
+// ┘└┘└─┘└─┘ ┴ ┴└─┴ ┴┴─┘
+$cloud: '\f041';
+$cloudy: '\f013';
+$cloudy-gusts: '\f011';
+$cloudy-windy: '\f012';
+$fog: '\f014';
+$hail: '\f015';
+$rain: '\f019';
+$rain-mix: '\f017';
+$rain-wind: '\f018';
+$showers: '\f01a';
+$sleet: '\f0b5';
+$snow: '\f01b';
+$sprinkle: '\f01c';
+$storm-showers: '\f01d';
+$thunderstorm: '\f01e';
+$snow-wind: '\f064';
+$snow: '\f01b';
+$smog: '\f074';
+$smoke: '\f062';
+$lightning: '\f016';
+$raindrops: '\f04e';
+$raindrop: '\f078';
+$dust: '\f063';
+$snowflake-cold: '\f076';
+$windy: '\f021';
+$strong-wind: '\f050';
+$sandstorm: '\f082';
+$earthquake: '\f0c6';
+$fire: '\f0c7';
+$flood: '\f07c';
+$meteor: '\f071';
+$tsunami: '\f0c5';
+$volcano: '\f0c8';
+$hurricane: '\f073';
+$tornado: '\f056';
+$small-craft-advisory: '\f0cc';
+$gale-warning: '\f0cd';
+$storm-warning: '\f0ce';
+$hurricane-warning: '\f0cf';
+$wind: '\f0b1';
+
+// ┌┐┌┬┌─┐┬ ┬┌┬┐
+// │││││ ┬├─┤ │
+// ┘└┘┴└─┘┴ ┴ ┴
+$night-clear: '\f02e';
+$night-alt-cloudy: '\f086';
+$night-alt-cloudy-gusts: '\f022';
+$night-alt-cloudy-windy: '\f023';
+$night-alt-hail: '\f024';
+$night-alt-lightning: '\f025';
+$night-alt-rain: '\f028';
+$night-alt-rain-mix: '\f026';
+$night-alt-rain-wind: '\f027';
+$night-alt-showers: '\f029';
+$night-alt-sleet: '\f0b4';
+$night-alt-sleet-storm: '\f06a';
+$night-alt-snow: '\f02a';
+$night-alt-snow-thunderstorm: '\f06d';
+$night-alt-snow-wind: '\f067';
+$night-alt-sprinkle: '\f02b';
+$night-alt-storm-showers: '\f02c';
+$night-alt-thunderstorm: '\f02d';
+$night-cloudy: '\f031';
+$night-cloudy-gusts: '\f02f';
+$night-cloudy-windy: '\f030';
+$night-fog: '\f04a';
+$night-hail: '\f032';
+$night-lightning: '\f033';
+$night-partly-cloudy: '\f083';
+$night-rain: '\f036';
+$night-rain-mix: '\f034';
+$night-rain-wind: '\f035';
+$night-showers: '\f037';
+$night-sleet: '\f0b3';
+$night-sleet-storm: '\f069';
+$night-snow: '\f038';
+$night-snow-thunderstorm: '\f06c';
+$night-snow-wind: '\f066';
+$night-sprinkle: '\f039';
+$night-storm-showers: '\f03a';
+$night-thunderstorm: '\f03b';
+$lunar-eclipse: '\f070';
+$stars: '\f077';
+$storm-showers: '\f01d';
+$thunderstorm: '\f01e';
+$night-alt-cloudy-high: '\f07e';
+$night-cloudy-high: '\f080';
+$night-alt-partly-cloudy: '\f081';
+
+// ┌┬┐┬┌┬┐┌─┐
+//  │ ││││├┤
+//  ┴ ┴┴ ┴└─┘
+$time-1: '\f08a';
+$time-2: '\f08b';
+$time-3: '\f08c';
+$time-4: '\f08d';
+$time-5: '\f08e';
+$time-6: '\f08f';
+$time-7: '\f090';
+$time-8: '\f091';
+$time-9: '\f092';
+$time-10: '\f093';
+$time-11: '\f094';
+$time-12: '\f089';

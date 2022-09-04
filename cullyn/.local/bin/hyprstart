@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 alacritty -e ~/.local/bin/tmux-session restore
+~/.config/eww/scripts/pulse_info set_volume
 
 hyprctl keyword input:follow_mouse 0
 # ~/.local/bin/layout code
