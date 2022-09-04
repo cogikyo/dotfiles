@@ -9,7 +9,7 @@ song() {
     if [[ "$song" == "$album" ]]; then
         echo " <i>$album</i>"
     else
-        echo " $album  <i>$song</i>"
+        echo " <i>$song</i>  $album"
     fi
 }
 

@@ -86,8 +86,10 @@
       :thickness 2
       :clockwise true
       (box :class "music-progress-icon"
-        :onclick "playerctl --player=youtube-music-desktop-app play-pause"
-        "${matches(status, "Playing") ? "" : "奈"}"
+        (eventbox
+          :onclick "playerctl --player=youtube-music-desktop-app play-pause"
+          "${matches(status, "Playing") ? "" : "奈"}"
+        )
       )
     )
   )
@@ -132,29 +134,26 @@
 ; ================================================================= top-left ==
 
 ; == top-center ===============================================================
-; weather time date {{{
+; weather time date {{-{
 
 (defwidget top-center []
   (box :class "top-center-box" :spacing 0
     (weather) (time) (weekday)
+    )
   )
-)
 
 (defpoll wttr_emoji :interval "10m" "curl wttr.in/Portland?format=%c")
 (defpoll wttr_condition :interval "10m" "curl wttr.in/Portland?format=%C")
-(defvar lat 45.491848)
-(defvar lon -122.688451)
-(defvar API_key 'cat /home/cullyn/.openweather_api_key')
-(defpoll weatherJSON :interval "5m"
-  'curl https://api.openweathermap.org/data/3.0/onecall?lat={lat}&lon={lon}&appid={API_key}'
-)
+
+(defpoll weatherJSON :interval "5m" "cat /tmp/.weather_info.json")
 (defwidget weather []
-  (box :class "weather-box" :halign "end" :space-evenly false
+  (box :class "weather-box" :halign "end" :space-evenly false :spacing 8
     wttr_emoji
     wttr_condition
-    API_key
+    {round(weatherJSON.current.temp, 0)}
+    (label :class "weather-icon" :text "01b")
+    )
   )
-)
 
 (defpoll hour :interval "1s" "date '+%H'")
 (defpoll minute :interval "1s" "date '+%M'")
@@ -163,8 +162,8 @@
     (eventbox :class "time-hour" hour)
     (label :text ":" :class "time-delimiter")
     (eventbox :class "time-minute" minute)
+    )
   )
-)
 
 (deflisten week :inital 'tail /tmp/.week' 'tail -F /tmp/.week')
 (deflisten day :inital 'tail /tmp/.day' 'tail -F /tmp/.day')
@@ -172,10 +171,10 @@
   (mybox :box-class "weekday"
     (eventbox :class "weekday-day" day)
     (eventbox :class "weekday-week" week)
+    )
   )
-)
 
-; }}}
+;}}}
 ; =============================================================== top-center ==
 
 ; == top-right ================================================================
