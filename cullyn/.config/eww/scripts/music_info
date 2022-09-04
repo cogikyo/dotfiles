@@ -2,14 +2,14 @@
 
 song() {
     song=$(playerctl --player=youtube-music-desktop-app metadata --format \
-        '{{title}}' | sed -e 's/([^()]*)//g' -e 's/ $//g')
+        '{{markup_escape(title)}}' | sed -e 's/([^()]*)//g' -e 's/ $//g')
     album=$(playerctl --player=youtube-music-desktop-app metadata --format \
-        '{{album}}' | sed -e 's/([^()]*)//g' -e 's/ - EP//g' -e 's/ $//g')
+        '{{markup_escape(album)}}' | sed -e 's/([^()]*)//g' -e 's/ - EP//g' -e 's/ $//g')
 
     if [[ "$song" == "$album" ]]; then
-        echo " $album"
+        echo " <i>$album</i>"
     else
-        echo " $album  $song"
+        echo " $album  <i>$song</i>"
     fi
 }
 

@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-~/.config/eww/scripts/pulse_info clean_tmp_files
 alacritty -e ~/.local/bin/tmux-session restore
 
 hyprctl keyword input:follow_mouse 0

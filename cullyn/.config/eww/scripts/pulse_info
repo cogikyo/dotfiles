@@ -20,14 +20,9 @@ change_volume () {
         direction="-"
     fi
     id="$(get_id "$1")"
-    pulsemixer --id "$1-$id" --change-volume "$direction"1
+    pulsemixer --id "$1-$id" --change-volume "$direction$3"
 
-    get_volume "$1" >> "/tmp/.$1_volume"
+    get_volume """$1" >> "/tmp/.""$1"_volume
 }
 
-clean_tmp_files () {
-    echo "50" > "/tmp/.sink_volume"
-    echo "100" > "/tmp/.source_volume"
-}
-
-"$@"
+"""$@"

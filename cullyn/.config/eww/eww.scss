@@ -90,17 +90,20 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
   margin: 12px -6px;
   border-radius: 420px 17px 420px 17px;
   box-shadow: -4px 3px 2px 2px $shadow;
-  border-top: 1px double $red-alt;
-  border-right: 1px double $red-alt;
+  border-top: 1px double $color;
+  border-right: 2px solid $color;
   padding: 0 1em;
 }
 
-@mixin top-center-box-decor() {
+@mixin top-center-box-decor($color) {
   background: $bg;
-  color: $blue;
-  border-radius: 64px 64px 256px 256px;
-  box-shadow: 0 1px 3px 0 $blue-alt;
-  padding: 0 2rem;
+  color: $color;
+  border-radius: 16px 16px 64px 64px;
+  box-shadow: 0 1px 3px 0 $shadow;
+  border-bottom: 2px solid $color;
+  border-right: 1px solid $color;
+  border-left: 1px solid $color;
+  padding: 0 1.6rem;
 }
 
 @mixin top-right-box-decor($color) {
@@ -109,8 +112,8 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
   margin: 12px -6px;
   border-radius: 17px 420px 17px 420px;
   box-shadow: 4px 3px 2px 2px $shadow;
-  border-top: 1px double $blue-alt;
-  border-left: 1px double $blue-alt;
+  border-top: 1px double $color;
+  border-left: 2px solid $color;
   padding: 0 1em;
 }
 
@@ -161,20 +164,20 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
   }
   &-progress {
     color: $red-alt;
-  }
-  &-icon {
-    font-size: 1.5em;
-    margin: 6px 12px 4px 5px;
-    color: $red;
+    &-box {
+      margin: 3px 0 3px 3px;
+    }
+    &-icon {
+      font-size: 1.2em;
+      margin: 5px;
+      color: $red;
+    }
   }
   &-info-box {
     margin-top: 2px;
   }
   &-cover {
     @include top-left-corner();
-  }
-  &-status-button {
-    color: $blue;
   }
 }
 
@@ -191,27 +194,29 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 
 .weather {
   &-box {
-    color: $blue-alt;
-    background: $bg;
+    @include top-left-box-decor($orange-alt);
+    font-family: sans-serif;
+    margin-right: -42px;
   }
 }
 
 .time {
   &-box {
-    font-size: 2em;
+    font-size: 2.2em;
     font-family: sans-serif;
-    @include top-center-box-decor();
+    @include top-center-box-decor($orange-alt);
     margin-bottom: 2px;
+  }
+  &-delimiter {
+    font-size: 0.75em;
   }
 }
 
 .weekday {
   &-box {
-    background: $bg;
-    color: $blue-alt;
-  }
-  &-day {
-    color: $blue-alt;
+    @include top-right-box-decor($orange-alt);
+    margin-left: -42px;
+    font-family: sans-serif;
   }
 }
 
