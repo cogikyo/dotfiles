@@ -85,7 +85,7 @@
       :start-at 75
       :thickness 2
       :clockwise true
-      (box :class "music-icon"
+      (box :class "music-progress-icon"
         :onclick "playerctl --player=youtube-music-desktop-app play-pause"
         "${matches(status, "Playing") ? "" : "奈"}"
       )
@@ -112,16 +112,16 @@
 (defwidget audio-in []
   (eventbox :class "audio-in-eventbox"
     :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
-    :onscroll "scripts/pulse_info change_volume source {}"
+    :onscroll "scripts/pulse_info change_volume source {} 10"
     (label :text " ${source_volume}")
   )
 )
 
 (deflisten sink_volume :initial '50' 'tail -F /tmp/.sink_volume')
 (defwidget audio-out []
-  (eventbox :class ""
+  (eventbox :class "audio-out-eventbox"
     :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
-    :onscroll "scripts/pulse_info change_volume sink {}"
+    :onscroll "scripts/pulse_info change_volume sink {} 10"
     (label :text "墳 ${sink_volume}")
   )
 )
@@ -142,10 +142,17 @@
 
 (defpoll wttr_emoji :interval "10m" "curl wttr.in/Portland?format=%c")
 (defpoll wttr_condition :interval "10m" "curl wttr.in/Portland?format=%C")
+(defvar lat 45.491848)
+(defvar lon -122.688451)
+(defvar API_key 'cat /home/cullyn/.openweather_api_key')
+(defpoll weatherJSON :interval "5m"
+  'curl https://api.openweathermap.org/data/3.0/onecall?lat={lat}&lon={lon}&appid={API_key}'
+)
 (defwidget weather []
-  (box :class "weather-box" :halign "end"
-    ; wttr_emoji
+  (box :class "weather-box" :halign "end" :space-evenly false
+    wttr_emoji
     wttr_condition
+    API_key
   )
 )
 
@@ -154,7 +161,7 @@
 (defwidget time []
   (box :class "time-box" :spacing 0 :halign "center" :space-evenly false
     (eventbox :class "time-hour" hour)
-    ":"
+    (label :text ":" :class "time-delimiter")
     (eventbox :class "time-minute" minute)
   )
 )
