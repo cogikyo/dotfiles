@@ -151,7 +151,7 @@
     wttr_emoji
     wttr_condition
     {round(weatherJSON.current.temp, 0)}
-    (label :class "weather-icon" :text "01b")
+    (label :class "weather-icon" :text "f01b")
     )
   )
 
@@ -165,8 +165,8 @@
     )
   )
 
-(deflisten week :inital 'tail /tmp/.week' 'tail -F /tmp/.week')
-(deflisten day :inital 'tail /tmp/.day' 'tail -F /tmp/.day')
+(deflisten week 'tail -F /tmp/.week')
+(deflisten day 'tail -F /tmp/.day')
 (defwidget weekday []
   (mybox :box-class "weekday"
     (eventbox :class "weekday-day" day)
