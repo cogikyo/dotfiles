@@ -6,10 +6,6 @@
 
 $sans-serif: Albert Sans, sans-serif;
 $monospace: Hack Nerd Font, monospace;
-// @font-face {
-//   font-family: Weather Icons;
-//   src: url(.ttf);
-// }
 $font-size: 20px;
 
 // }}}
@@ -148,8 +144,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
   all: unset;
 }
 
-.top-bar,
-.bot-bar {
+window {
   color: $fg;
   font-family: $monospace;
   font-size: $font-size;
@@ -201,7 +196,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 .weather {
   &-box {
     @include top-left-box-decor($orange-alt);
-    font-family: sans-serif;
+    font-family: $sans-serif;
     margin-right: -42px;
   }
 }
@@ -209,7 +204,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 .time {
   &-box {
     font-size: 2.2em;
-    font-family: sans-serif;
+    font-family: $sans-serif;
     @include top-center-box-decor($orange-alt);
     margin-bottom: 2px;
   }
@@ -222,7 +217,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
   &-box {
     @include top-right-box-decor($orange-alt);
     margin-left: -42px;
-    font-family: sans-serif;
+    font-family: $sans-serif;
   }
 }
 
