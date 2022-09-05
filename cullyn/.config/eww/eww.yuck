@@ -14,7 +14,7 @@
   :exclusive false
   :focusable false
   (centerbox :class "top-bar-box"
-    (top-left) (top-center) (top-right)
+    (top-left) (time) (top-right)
   )
 )
 
@@ -62,6 +62,7 @@
     (box :class "music-cover" :style "background-image: url('${artUrl}');")
     (music)
     (mybox :box-class "audio" (audio-in) (audio-out))
+    (weather)
   )
 )
 
@@ -130,30 +131,36 @@
 ; }}}
 ; =================================================================== audio-io ==
 
+; == weather ==================================================================
+; {{{
+
+(defpoll w-icon :interval "5m" 'jq -r ".current.weather[].icon" /tmp/.weather_info.json')
+(defpoll w-temp :interval "5m" 'jq -r ".current.feels_like" /tmp/.weather_info.json')
+(defpoll w-main :interval "5m" 'jq -r ".current.weather[].main" /tmp/.weather_info.json')
+(defpoll w-cond :interval "5m" 'jq -r ".current.weather[].description" /tmp/.weather_info.json')
+(defwidget weather []
+  (box :class "weather-box" :halign "end" :space-evenly false :spacing 8
+    (box
+      :class "weather-icons"
+      :style "background-image: url('assets/owm-icons/${w-icon}.png');"
+    )
+    (label :markup "${round(w-temp,0)}<sup>°</sup>" )
+    (label :markup {matches(w-main, "Clear") ?
+      "<b>${w-main}</b>" :
+      "<b>${w-main}</b> <small>(<i>${w-cond}</i>)</small>"}
+    )
+    (label :limit-width 50 :text "-----------------------------------------------------------------------------------------------")
+  )
+)
+
+; }}}
+; ================================================================== weather ==
+
 ; }}}
 ; ================================================================= top-left ==
 
 ; == top-center ===============================================================
-; weather time date {{-{
-
-(defwidget top-center []
-  (box :class "top-center-box" :spacing 0
-    (weather) (time) (weekday)
-    )
-  )
-
-(defpoll wttr_emoji :interval "10m" "curl wttr.in/Portland?format=%c")
-(defpoll wttr_condition :interval "10m" "curl wttr.in/Portland?format=%C")
-
-(defpoll weatherJSON :interval "5m" "cat /tmp/.weather_info.json")
-(defwidget weather []
-  (box :class "weather-box" :halign "end" :space-evenly false :spacing 8
-    wttr_emoji
-    wttr_condition
-    {round(weatherJSON.current.temp, 0)}
-    (label :class "weather-icon" :text "f01b")
-    )
-  )
+; time {{{
 
 (defpoll hour :interval "1s" "date '+%H'")
 (defpoll minute :interval "1s" "date '+%M'")
@@ -162,15 +169,6 @@
     (eventbox :class "time-hour" hour)
     (label :text ":" :class "time-delimiter")
     (eventbox :class "time-minute" minute)
-    )
-  )
-
-(deflisten week 'tail -F /tmp/.week')
-(deflisten day 'tail -F /tmp/.day')
-(defwidget weekday []
-  (mybox :box-class "weekday"
-    (eventbox :class "weekday-day" day)
-    (eventbox :class "weekday-week" week)
     )
   )
 
@@ -187,6 +185,7 @@
     :halign "end"
     :spacing 16
     :space-evenly false
+    (weekday)
     (cpu)
     (temp)
     (memory)
@@ -195,8 +194,24 @@
   )
 )
 
+; == weekday ===================================================================
+; {{{
+
+(deflisten week 'tail -F /tmp/.week')
+(deflisten day 'tail -F /tmp/.day')
+(defwidget weekday []
+  (mybox :box-class "weekday"
+    (eventbox :class "weekday-day" day)
+    (eventbox :class "weekday-week" week)
+    )
+  )
+
+; }}}
+; =================================================================== weekday ==
+
 ; == cpu ======================================================================
 ; {{{
+
 (defwidget cpu []
   (mybox :box-class "cpu"
   "cpu"
@@ -207,6 +222,7 @@
 
 ; == temp =====================================================================
 ; {{{
+
 (defwidget temp []
   (mybox :box-class "temp"
   "temp"
@@ -217,6 +233,7 @@
 
 ; == memory ===================================================================
 ; {{{
+
 (defwidget memory []
   (mybox :box-class "memory"
   "memory"
@@ -227,6 +244,7 @@
 
 ; == gpu ======================================================================
 ; {{{
+
 (defwidget gpu []
   (mybox :box-class "gpu"
   "gpu"

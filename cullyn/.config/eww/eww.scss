@@ -146,7 +146,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 
 window {
   color: $fg;
-  font-family: $monospace;
+  font-family: $monospace $sans-serif;
   font-size: $font-size;
 }
 
@@ -197,7 +197,12 @@ window {
   &-box {
     @include top-left-box-decor($orange-alt);
     font-family: $sans-serif;
-    margin-right: -42px;
+  }
+  &-icons {
+    background-size: cover;
+    background-position: center;
+    min-width: 2.5em;
+    margin: 0px -6px;
   }
 }
 
@@ -216,7 +221,6 @@ window {
 .weekday {
   &-box {
     @include top-right-box-decor($orange-alt);
-    margin-left: -42px;
     font-family: $sans-serif;
   }
 }
