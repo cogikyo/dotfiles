@@ -17,4 +17,27 @@ week () {
     done
 }
 
-day & week
+clockface () {
+    hour=$(date "+%I")
+    case "$hour" in
+        01) echo "";;
+        02) echo "";;
+        03) echo "";;
+        04) echo "";;
+        05) echo "";;
+        06) echo "";;
+        07) echo "";;
+        08) echo "";;
+        09) echo "";;
+        10) echo "";;
+        11) echo "";;
+        12) echo "";;
+    esac
+
+}
+
+continuous () {
+    day & week
+}
+
+"$1"

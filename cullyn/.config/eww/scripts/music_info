@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+status=$(playerctl status)
+active=false
+if [[ "$status" == "Playing" ]] || [[ "$status" == "Paused" ]]; then
+    active=true
+fi
+
 song() {
     song=$(playerctl --player=youtube-music-desktop-app metadata --format \
         '{{markup_escape(title)}}' | sed -e 's/([^()]*)//g' -e 's/ $//g')
@@ -21,25 +27,29 @@ artist() {
 }
 
 duration() {
-    length=$(playerctl --player=youtube-music-desktop-app metadata --format \
-        '{{mpris:length}}' | bc )
-    position=$(playerctl --player=youtube-music-desktop-app metadata --format \
-        '{{position}}' | bc)
-    progress=$(echo "scale=2; (($position / $length) * 100) + 1" | bc)
-    echo "$progress"
+    if "$active"; then
+        length=$(playerctl --player=youtube-music-desktop-app metadata --format \
+            '{{mpris:length}}' | bc )
+        position=$(playerctl --player=youtube-music-desktop-app metadata --format \
+            '{{position}}' | bc)
+        progress=$(echo "scale=2; (($position / $length) * 100) + 1" | bc)
+        echo "$progress"
+    else
+        echo "1"
+    fi
 }
 
 cover() {
     nc -z -w 1 8.8.8.8 53  >/dev/null 2>&1
     online=$?
-    if [[ "$online" -eq 0 ]]; then
+
+    if [[ "$online" -eq 0 ]] && "$active"; then
         artUrl=$(playerctl --player=youtube-music-desktop-app metadata --format '{{mpris:artUrl}}')
         tempfile="/tmp/.album_art.png"
         wget --output-document="$tempfile" "$artUrl"
         echo "$tempfile"
     else
         echo "/home/cullyn/.config/eww/assets/ytm.png"
-        notify-send -t 1000 "internet down..."
     fi
 }
 

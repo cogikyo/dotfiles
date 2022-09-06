@@ -14,7 +14,7 @@
   :exclusive false
   :focusable false
   (centerbox :class "top-bar-box"
-    (top-left) (time) (top-right)
+    (top-left) (top-center) (top-right)
   )
 )
 
@@ -47,7 +47,6 @@
     (children)
   )
 )
-
 ; }}}
 ; ================================================================== widgets ==
 
@@ -62,7 +61,6 @@
     (box :class "music-cover" :style "background-image: url('${artUrl}');")
     (music)
     (mybox :box-class "audio" (audio-in) (audio-out))
-    (weather)
   )
 )
 
@@ -131,6 +129,22 @@
 ; }}}
 ; =================================================================== audio-io ==
 
+; }}}
+; ================================================================= top-left ==
+
+; == top-center ===============================================================
+; weather time weekday {{{
+
+(defwidget top-center []
+  (overlay :width 1000
+    (time)
+    (box :space-evenly false :spacing {900}
+      (weather)
+      (weekday)
+    )
+  )
+)
+
 ; == weather ==================================================================
 ; {{{
 
@@ -139,39 +153,73 @@
 (defpoll w-main :interval "5m" 'jq -r ".current.weather[].main" /tmp/.weather_info.json')
 (defpoll w-cond :interval "5m" 'jq -r ".current.weather[].description" /tmp/.weather_info.json')
 (defwidget weather []
-  (box :class "weather-box" :halign "end" :space-evenly false :spacing 8
+  (box :class "weather-box" :halign "center" :space-evenly false :spacing 8
     (box
       :class "weather-icons"
       :style "background-image: url('assets/owm-icons/${w-icon}.png');"
     )
     (label :markup "${round(w-temp,0)}<sup>°</sup>" )
-    (label :markup {matches(w-main, "Clear") ?
-      "<b>${w-main}</b>" :
-      "<b>${w-main}</b> <small>(<i>${w-cond}</i>)</small>"}
-    )
-    (label :limit-width 50 :text "-----------------------------------------------------------------------------------------------")
+    ; (label :markup "${strlength("${w-cond}${w-main}")}")
+    ; (label :markup {matches(w-main, "Clear") ?
+    ;   "<b>${w-main}</b>" :
+    ;   "<b>${w-main}</b> <small>(<i>${w-cond}</i>)</small>"}
+    ; )
   )
 )
 
 ; }}}
 ; ================================================================== weather ==
 
-; }}}
-; ================================================================= top-left ==
+; == time =====================================================================
+; {{{
 
-; == top-center ===============================================================
-; time {{{
-
+(defpoll clockface :interval "1s" 'scripts/date_info clockface')
 (defpoll hour :interval "1s" "date '+%H'")
 (defpoll minute :interval "1s" "date '+%M'")
+(defvar timer-visible false)
 (defwidget time []
   (box :class "time-box" :spacing 0 :halign "center" :space-evenly false
     (eventbox :class "time-hour" hour)
-    (label :text ":" :class "time-delimiter")
+    ; (label :class "time-delimiter" :text ":")
+    (label :class "time-clockface" :text clockface)
     (eventbox :class "time-minute" minute)
+    (eventbox :class "time-timer"
+      :onhover "eww update timer-visible=true"
+      :onhoverlost "eww update timer-visible=false"
+      (box :space-evenly false :spacing 8
+        (label :class "time-timer-label" :text "祥")
+        (revealer
+          :class "time-timer-info"
+          :reveal timer-visible
+          :transition "slideleft"
+          "timer duration"
+        )
+      )
     )
   )
+)
+; }}}
+; ===================================================================== time ==
 
+; == weekday ==================================================================
+; {{{
+
+(deflisten week 'tail -F /tmp/.week')
+(deflisten day 'tail -F /tmp/.day')
+(defwidget weekday []
+  (box :class "weekday-box" :spacing 16 :halign "center" :space-evenly false
+    (mybox :box-class "weekday-day" :spacing 8
+      (label :text "")
+      day
+    )
+    (mybox :box-class "weekday-week" :spacin 8
+      (label :text "")
+      week
+    )
+  )
+)
+; }}}
+; ================================================================== weekday ==
 ;}}}
 ; =============================================================== top-center ==
 
@@ -185,7 +233,6 @@
     :halign "end"
     :spacing 16
     :space-evenly false
-    (weekday)
     (cpu)
     (temp)
     (memory)
@@ -193,21 +240,6 @@
     (box :class "user" :style "background-image: url('${userUrl}');")
   )
 )
-
-; == weekday ===================================================================
-; {{{
-
-(deflisten week 'tail -F /tmp/.week')
-(deflisten day 'tail -F /tmp/.day')
-(defwidget weekday []
-  (mybox :box-class "weekday"
-    (eventbox :class "weekday-day" day)
-    (eventbox :class "weekday-week" week)
-    )
-  )
-
-; }}}
-; =================================================================== weekday ==
 
 ; == cpu ======================================================================
 ; {{{
