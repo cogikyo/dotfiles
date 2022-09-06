@@ -197,6 +197,7 @@ window {
   &-box {
     @include top-left-box-decor($orange-alt);
     font-family: $sans-serif;
+    margin-right: -100px;
   }
   &-icons {
     background-size: cover;
@@ -213,8 +214,18 @@ window {
     @include top-center-box-decor($orange-alt);
     margin-bottom: 2px;
   }
-  &-delimiter {
-    font-size: 0.75em;
+  &-clockface {
+    font-size: 0.5em;
+  }
+  &-timer {
+    &-label {
+      font-size: 0.35em;
+      margin-left: 0.2em;
+      margin-top: -18px;
+    }
+    &-info {
+      font-size: $font-size;
+    }
   }
 }
 
