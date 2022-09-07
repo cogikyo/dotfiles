@@ -8,9 +8,9 @@ fi
 
 song() {
     song=$(playerctl --player=youtube-music-desktop-app metadata --format \
-        '{{markup_escape(title)}}' | sed -e 's/([^()]*)//g' -e 's/ $//g')
+        '{{markup_escape(title)}}' | sed -e 's/([^()]*)//g' -e 's/ $//g' -e 's/:.*//g')
     album=$(playerctl --player=youtube-music-desktop-app metadata --format \
-        '{{markup_escape(album)}}' | sed -e 's/([^()]*)//g' -e 's/ - EP//g' -e 's/ $//g')
+        '{{markup_escape(album)}}' | sed -e 's/([^()]*)//g' -e 's/ - EP//g' -e 's/ $//g' -e 's/:.*//g')
 
     if [[ "$song" == "$album" ]]; then
         echo " <i>$album</i>"

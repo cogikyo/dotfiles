@@ -101,11 +101,17 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
   background: $bg;
   color: $color;
   border-radius: 16px 16px 64px 64px;
-  box-shadow: 0 1px 3px 0 $shadow;
+  box-shadow: 0 1px 4px 2px $shadow;
   border-bottom: 2px solid $color;
   border-right: 1px solid $color;
   border-left: 1px solid $color;
-  padding: 0 1.6rem;
+  padding: 0 1rem;
+}
+
+@mixin top-center-adjust {
+  font-family: $sans-serif;
+  margin-bottom: 36px;
+  transition: all 0.5s $ease-out-snap;
 }
 
 @mixin top-right-box-decor($color) {
@@ -127,6 +133,14 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
   box-shadow: -3px -1px 3px 0px $blue-alt;
   padding-left: 8px;
   margin-bottom: 6px;
+}
+
+@mixin clock-hover($color) {
+  transition: all 1s $ease-out-snap;
+  &-active {
+    transition: all 0.5s $ease-out-snap;
+    color: $color;
+  }
 }
 
 @mixin active_ws {
@@ -201,8 +215,7 @@ window {
 .weather {
   &-box {
     @include top-left-box-decor($orange-alt);
-    font-family: $sans-serif;
-    margin-right: -100px;
+    @include top-center-adjust();
   }
   &-icons {
     background-size: cover;
@@ -217,16 +230,20 @@ window {
     font-size: 2.5em;
     font-family: $sans-serif;
     @include top-center-box-decor($orange);
-    margin-top: -6px;
+    margin-top: -4px;
+    margin-bottom: 20px;
+  }
+  &-hour {
+    @include clock-hover($blue);
+  }
+  &-minute {
+    @include clock-hover($red);
   }
   &-clockface {
     &-box {
       font-size: 0.42em;
       color: $orange-alt;
-      margin: 0 3px;
-    }
-    &-hour {
-      margin-top: 10px;
+      margin: 9px 3px 0px 3px;
     }
   }
   &-timer {
@@ -251,7 +268,10 @@ window {
 .weekday {
   &-box {
     @include top-right-box-decor($orange-alt);
-    font-family: $sans-serif;
+    @include top-center-adjust();
+  }
+  &-day-box {
+    margin-left: 6px; // for nerd font icon 
   }
 }
 
