@@ -133,67 +133,101 @@
 ; ================================================================= top-left ==
 
 ; == top-center ===============================================================
-; weather time weekday {{{
+; weather time weekday {{-{
 
+
+(defvar startBoxLeft 450)
 (defwidget top-center []
-  (overlay :width 1000
+  (overlay :width 1600
     (time)
-    (box :space-evenly false :spacing {900}
-      (weather)
-      (weekday)
+    (transform :translate-x {
+                  matches(w-main, "Clear") ?
+                  (startBoxLeft - strlength("${w-main}")) :
+                  (startBoxLeft - 10 * strlength("${w-main}${w-cond}"))
+                }
+      (box :space-evenly false :spacing {
+                  matches(w-main, "Clear") ?
+                  (473 + strlength("${w-main}")) :
+                  (470 + 3 * strlength("${w-main}${w-cond}"))
+                }
+        (weather)
+        (weekday)
+      )
     )
   )
 )
-
 ; == weather ==================================================================
 ; {{{
-
 (defpoll w-icon :interval "5m" 'jq -r ".current.weather[].icon" /tmp/.weather_info.json')
 (defpoll w-temp :interval "5m" 'jq -r ".current.feels_like" /tmp/.weather_info.json')
 (defpoll w-main :interval "5m" 'jq -r ".current.weather[].main" /tmp/.weather_info.json')
 (defpoll w-cond :interval "5m" 'jq -r ".current.weather[].description" /tmp/.weather_info.json')
 (defwidget weather []
-  (box :class "weather-box" :halign "center" :space-evenly false :spacing 8
+  (box :class "weather-box" :halign "end" :space-evenly false :spacing 8
     (box
       :class "weather-icons"
       :style "background-image: url('assets/owm-icons/${w-icon}.png');"
     )
     (label :markup "${round(w-temp,0)}<sup>°</sup>" )
-    ; (label :markup "${strlength("${w-cond}${w-main}")}")
-    ; (label :markup {matches(w-main, "Clear") ?
-    ;   "<b>${w-main}</b>" :
-    ;   "<b>${w-main}</b> <small>(<i>${w-cond}</i>)</small>"}
-    ; )
+    (label :markup {matches(w-main, "Clear") ?
+      "<b>${w-main}</b>" :
+      "<b>${w-main}</b> (<i>${w-cond}</i>)"}
+    )
   )
 )
-
 ; }}}
 ; ================================================================== weather ==
 
 ; == time =====================================================================
 ; {{{
 
-(defpoll clockface :interval "1s" 'scripts/date_info clockface')
+(defpoll clockface-hour :interval "1s" 'scripts/date_info clockface-hour')
+(defpoll clockface-minute :interval "1s" 'scripts/date_info clockface-minute')
 (defpoll hour :interval "1s" "date '+%H'")
 (defpoll minute :interval "1s" "date '+%M'")
-(defvar timer-visible false)
+(defvar timer-visible true)
 (defwidget time []
   (box :class "time-box" :spacing 0 :halign "center" :space-evenly false
+    (timer-left)
     (eventbox :class "time-hour" hour)
-    ; (label :class "time-delimiter" :text ":")
-    (label :class "time-clockface" :text clockface)
+    (box :class "time-clockface-box" :orientation "v" :spacing -4 :space-evenly false
+      (label :class "time-clockface-hour" :text clockface-hour)
+      (label :class "time-clockface-minute" :text clockface-minute)
+    )
     (eventbox :class "time-minute" minute)
-    (eventbox :class "time-timer"
-      :onhover "eww update timer-visible=true"
-      :onhoverlost "eww update timer-visible=false"
-      (box :space-evenly false :spacing 8
-        (label :class "time-timer-label" :text "祥")
-        (revealer
-          :class "time-timer-info"
-          :reveal timer-visible
-          :transition "slideleft"
-          "timer duration"
-        )
+    (timer-right)
+  )
+)
+
+(deflisten timer :initial "00:00" 'tail -F /tmp/.timer')
+(defwidget timer-left []
+  (eventbox :class "time-timer"
+    :onhover "eww update timer-visible=true"
+    :onhoverlost "eww update timer-visible=false"
+    (box :space-evenly false :spacing 8
+      (revealer
+        :class "time-timer-info"
+        :reveal timer-visible
+        :transition "slideright"
+        (eventbox (label :text timer))
+      )
+      (label :class "time-timer-label-left" :text "羽")
+    )
+  )
+)
+
+(deflisten alarm :initial "00:00" 'tail -F /tmp/.alarm')
+(defwidget timer-right []
+  (eventbox :class "time-timer"
+    :onhover "eww update timer-visible=true"
+    :onhoverlost "eww update timer-visible=false"
+    (box :space-evenly false :spacing 8
+      (label :class "time-timer-label-right" :text "")
+      (revealer
+        :class "time-timer-info"
+        :reveal timer-visible
+        :transition "slideleft"
+        (eventbox(label :text alarm))
       )
     )
   )
@@ -207,13 +241,13 @@
 (deflisten week 'tail -F /tmp/.week')
 (deflisten day 'tail -F /tmp/.day')
 (defwidget weekday []
-  (box :class "weekday-box" :spacing 16 :halign "center" :space-evenly false
-    (mybox :box-class "weekday-day" :spacing 8
+  (mybox :box-class "weekday"
+    (mybox :box-class "weekday-day" :spacing 4
       (label :text "")
       day
     )
-    (mybox :box-class "weekday-week" :spacin 8
-      (label :text "")
+    (mybox :box-class "weekday-week" :spacing 4
+      (label :text "冀")
       week
     )
   )
