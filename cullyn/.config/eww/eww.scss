@@ -193,6 +193,11 @@ window {
 // == top-center ===================================================================
 // {{-{
 
+.debug {
+  border: 2px solid $red;
+  background: $trans-bg;
+}
+
 .weather {
   &-box {
     @include top-left-box-decor($orange-alt);
@@ -209,19 +214,33 @@ window {
 
 .time {
   &-box {
-    font-size: 2.2em;
+    font-size: 2.5em;
     font-family: $sans-serif;
-    @include top-center-box-decor($orange-alt);
-    margin-bottom: 2px;
+    @include top-center-box-decor($orange);
+    margin-top: -6px;
   }
   &-clockface {
-    font-size: 0.5em;
+    &-box {
+      font-size: 0.42em;
+      color: $orange-alt;
+      margin: 0 3px;
+    }
+    &-hour {
+      margin-top: 10px;
+    }
   }
   &-timer {
     &-label {
-      font-size: 0.35em;
-      margin-left: 0.2em;
-      margin-top: -18px;
+      &-left {
+        font-size: 0.35em;
+        margin-top: -16px;
+        margin-right: 4px;
+      }
+      &-right {
+        font-size: 0.35em;
+        margin-top: -16px;
+        margin-left: 2px;
+      }
     }
     &-info {
       font-size: $font-size;

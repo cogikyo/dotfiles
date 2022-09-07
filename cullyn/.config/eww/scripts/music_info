@@ -21,7 +21,7 @@ song() {
 
 artist() {
     artist=$(playerctl --player=youtube-music-desktop-app metadata --format \
-        '{{artist}}')
+        '{{markup_escape(artist)}}')
 
     echo " <b>$artist</b>"
 }

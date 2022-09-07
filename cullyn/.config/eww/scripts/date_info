@@ -2,7 +2,7 @@
 
 day () {
     while true; do
-        date '+%A, %B %d' > "/tmp/.day"
+        date '+%A, %b %d' > "/tmp/.day"
         until_tomorrow=$(( $(date +%s -d "tomorrow 00:00") - $( date +%s ) ))
         sleep "$until_tomorrow"
     done
@@ -17,8 +17,9 @@ week () {
     done
 }
 
-clockface () {
+clockface-hour () {
     hour=$(date "+%I")
+
     case "$hour" in
         01) echo "";;
         02) echo "";;
@@ -33,6 +34,28 @@ clockface () {
         11) echo "";;
         12) echo "";;
     esac
+}
+
+clockface-minute () {
+    minute=$(date "+%M / 5" | bc)
+    minute=${minute%.*}
+
+    case "$minute" in
+        1) echo "";;
+        2) echo "";;
+        3) echo "";;
+        4) echo "";;
+        5) echo "";;
+        6) echo "";;
+        7) echo "";;
+        8) echo "";;
+        9) echo "";;
+        10) echo "";;
+        11) echo "";;
+        12) echo "";;
+        *) echo "";;
+    esac
+
 
 }
 
@@ -40,4 +63,4 @@ continuous () {
     day & week
 }
 
-"$1"
+"$@"
