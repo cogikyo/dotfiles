@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
 get_json () {
-    lat="45.491848"
-    lon="-122.688451"
+    lat="45.487096"
+    lon="-122.744157"
     api=$(cat /home/cullyn/.openweather_api_key)
     units="metric"
     weahterUrl="https://api.openweathermap.org/data/3.0/onecall?lat=$lat&lon=$lon&units=$units&appid=$api"

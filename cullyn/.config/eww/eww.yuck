@@ -14,9 +14,22 @@
   :exclusive false
   :focusable false
   (centerbox :class "top-bar-box"
-    (top-left) (top-center) (top-right)
+    (top-left) (top-center-fake) (top-right)
   )
 )
+
+(defwindow top-center
+  :monitor 0
+  :geometry (geometry
+    :width "42%"
+    :anchor "top center"
+  )
+  :stacking "fg"
+  :exclusive false
+  :focusable false
+  (top-center-real)
+)
+
 
 (defwindow bot-bar
   :monitor 0
@@ -35,7 +48,7 @@
 ; }}}
 ; ================================================================== windows ==
 
-; == widgets ==================================================================
+; == general widgets ==========================================================
 ; mybox {{{
 
 (defwidget mybox [box-class ?spacing]
@@ -48,7 +61,7 @@
   )
 )
 ; }}}
-; ================================================================== widgets ==
+; ========================================================== general widgets ==
 
 ; ┌┬┐┌─┐┌─┐
 ;  │ │ │├─┘
@@ -61,8 +74,8 @@
     (box :class "music-cover" :style "background-image: url('${artUrl}');")
     (music)
     (mybox :box-class "audio" (audio-in) (audio-out))
+    )
   )
-)
 
 ; == music ===================================================================
 ; artUrl status progress song artist volume {{{
@@ -88,22 +101,22 @@
         (eventbox
           :onclick "playerctl --player=youtube-music-desktop-app play-pause"
           "${matches(status, "Playing") ? "" : "奈"}"
+          )
         )
       )
     )
   )
-)
 (defpoll volume :interval "1s"  "scripts/music_info volume")
 (defwidget music []
   (mybox :box-class "music"
     (music-progress-indicator)
     (mybox :box-class "music-info"
-      (label :class "music-song" :markup song)
+      (label :class "music-song"   :markup song)
       (label :class "music-artist" :markup artist)
       (label :class "music-volume" :markup volume )
+      )
     )
   )
-)
 ; }}}
 ; =================================================================== music ==
 
@@ -112,20 +125,20 @@
 (deflisten source_volume :initial '100' 'tail -F /tmp/.source_volume')
 (defwidget audio-in []
   (eventbox :class "audio-in-eventbox"
-    :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
-    :onscroll "scripts/pulse_info change_volume source {} 10"
+            :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
+            :onscroll "scripts/pulse_info change_volume source {} 10"
     (label :text " ${source_volume}")
+    )
   )
-)
 
 (deflisten sink_volume :initial '50' 'tail -F /tmp/.sink_volume')
 (defwidget audio-out []
   (eventbox :class "audio-out-eventbox"
-    :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
-    :onscroll "scripts/pulse_info change_volume sink {} 10"
+            :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
+            :onscroll "scripts/pulse_info change_volume sink {} 10"
     (label :text "墳 ${sink_volume}")
+    )
   )
-)
 ; }}}
 ; =================================================================== audio-io ==
 
@@ -135,28 +148,16 @@
 ; == top-center ===============================================================
 ; weather time weekday {{-{
 
+(defwidget top-center-fake [] "")
 
-(defvar startBoxLeft 450)
-(defwidget top-center []
-  (overlay :width 1600
-    (time)
-    (transform :translate-x {
-                  matches(w-main, "Clear") ?
-                  (startBoxLeft - strlength("${w-main}")) :
-                  (startBoxLeft - 10 * strlength("${w-main}${w-cond}"))
-                }
-      (box :space-evenly false :spacing {
-                  matches(w-main, "Clear") ?
-                  (473 + strlength("${w-main}")) :
-                  (470 + 3 * strlength("${w-main}${w-cond}"))
-                }
-        (weather)
-        (weekday)
-      )
-    )
+(defwidget top-center-real []
+  (box :class "top-bar-box"
+    (weather) (time) (weekday)
   )
 )
+
 ; == weather ==================================================================
+
 ; {{{
 (defpoll w-icon :interval "5m" 'jq -r ".current.weather[].icon" /tmp/.weather_info.json')
 (defpoll w-temp :interval "5m" 'jq -r ".current.feels_like" /tmp/.weather_info.json')
@@ -164,6 +165,7 @@
 (defpoll w-cond :interval "5m" 'jq -r ".current.weather[].description" /tmp/.weather_info.json')
 (defwidget weather []
   (box :class "weather-box" :halign "end" :space-evenly false :spacing 8
+       :style "margin-right: ${timer-visible ? '-90px' : '-140px;'}"
     (box
       :class "weather-icons"
       :style "background-image: url('assets/owm-icons/${w-icon}.png');"
@@ -171,7 +173,7 @@
     (label :markup "${round(w-temp,0)}<sup>°</sup>" )
     (label :markup {matches(w-main, "Clear") ?
       "<b>${w-main}</b>" :
-      "<b>${w-main}</b> (<i>${w-cond}</i>)"}
+      "<b>${w-main}</b> (<i><small>${w-cond}</small></i>)"}
     )
   )
 )
@@ -181,24 +183,42 @@
 ; == time =====================================================================
 ; {{{
 
+(defvar hour-active false)
+(defvar minute-active false)
+(defwidget time-active [content var bool]
+    (eventbox
+      :class {bool ?
+        "time-${content}-active" : "time-${content}"
+      }
+      :onhover "eww update ${content}-active=true"
+      :onhoverlost "eww update ${content}-active=false"
+      var
+    )
+)
+
 (defpoll clockface-hour :interval "1s" 'scripts/date_info clockface-hour')
 (defpoll clockface-minute :interval "1s" 'scripts/date_info clockface-minute')
+(defwidget clockface-delimiter []
+  (box :class "time-clockface-box" :orientation "v" :spacing -4 :space-evenly false
+    (time-active :content "hour" :var clockface-hour :bool hour-active)
+    (time-active :content "minute" :var clockface-minute :bool minute-active)
+  )
+)
+
 (defpoll hour :interval "1s" "date '+%H'")
 (defpoll minute :interval "1s" "date '+%M'")
-(defvar timer-visible true)
 (defwidget time []
-  (box :class "time-box" :spacing 0 :halign "center" :space-evenly false
+  (box :class "time-box" :halign "center" :space-evenly false :spacing 0
     (timer-left)
-    (eventbox :class "time-hour" hour)
-    (box :class "time-clockface-box" :orientation "v" :spacing -4 :space-evenly false
-      (label :class "time-clockface-hour" :text clockface-hour)
-      (label :class "time-clockface-minute" :text clockface-minute)
-    )
-    (eventbox :class "time-minute" minute)
+    (time-active :content "hour" :var hour :bool hour-active)
+    (clockface-delimiter)
+    (time-active :content "minute" :var minute :bool minute-active)
     (timer-right)
   )
 )
 
+
+(defvar timer-visible false)
 (deflisten timer :initial "00:00" 'tail -F /tmp/.timer')
 (defwidget timer-left []
   (eventbox :class "time-timer"
@@ -209,7 +229,9 @@
         :class "time-timer-info"
         :reveal timer-visible
         :transition "slideright"
-        (eventbox (label :text timer))
+        (eventbox
+          (label :text timer)
+        )
       )
       (label :class "time-timer-label-left" :text "羽")
     )
@@ -241,8 +263,10 @@
 (deflisten week 'tail -F /tmp/.week')
 (deflisten day 'tail -F /tmp/.day')
 (defwidget weekday []
-  (mybox :box-class "weekday"
-    (mybox :box-class "weekday-day" :spacing 4
+  (box :class "weekday-box"
+       :halign "start" :space-evenly false :spacing 16
+       :style "margin-left: ${timer-visible ? '-90px' : '-140px;'}"
+    (mybox :box-class "weekday-day" :spacing 6
       (label :text "")
       day
     )

@@ -3,7 +3,7 @@
 killall eww -9
 pkill playerctl
 eww daemon
-eww open-many top-bar bot-bar
+eww open-many top-bar top-center bot-bar
 # eww inspector
 # sleep 0.75
 # hyprctl dispatch movefocus l
