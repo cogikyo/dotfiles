@@ -91,7 +91,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
   color: $color;
   margin: 12px -6px;
   border-radius: 420px 17px 420px 17px;
-  box-shadow: -4px 3px 2px 2px $shadow;
+  box-shadow: -2px 3px 2px 2px $shadow;
   border-top: 1px double $color;
   border-right: 2px solid $color;
   padding: 0 1em;
@@ -109,9 +109,9 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 }
 
 @mixin top-center-adjust {
-  font-family: $sans-serif;
   margin-bottom: 36px;
   transition: all 0.5s $ease-out-snap;
+  font-family: $sans-serif;
 }
 
 @mixin top-right-box-decor($color) {
@@ -119,7 +119,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
   color: $color;
   margin: 12px -6px;
   border-radius: 17px 420px 17px 420px;
-  box-shadow: 4px 3px 2px 2px $shadow;
+  box-shadow: 2px 3px 2px 2px $shadow;
   border-top: 1px double $color;
   border-left: 2px solid $color;
   padding: 0 1em;
@@ -162,6 +162,11 @@ window {
   color: $fg;
   font-family: $monospace $sans-serif;
   font-size: $font-size;
+}
+
+.debug {
+  border: 2px solid $red;
+  background: $trans-bg;
 }
 
 // }}}
@@ -207,11 +212,6 @@ window {
 // == top-center ===================================================================
 // {{-{
 
-.debug {
-  border: 2px solid $red;
-  background: $trans-bg;
-}
-
 .weather {
   &-box {
     @include top-left-box-decor($orange-alt);
@@ -230,14 +230,14 @@ window {
     font-size: 2.5em;
     font-family: $sans-serif;
     @include top-center-box-decor($orange);
-    margin-top: -4px;
-    margin-bottom: 20px;
+    margin-top: -6px;
+    margin-bottom: 27px;
   }
   &-hour {
-    @include clock-hover($blue);
+    @include clock-hover($red-alt);
   }
   &-minute {
-    @include clock-hover($red);
+    @include clock-hover($blue-alt);
   }
   &-clockface {
     &-box {

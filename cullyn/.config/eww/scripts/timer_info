@@ -1,1 +1,16 @@
 #!/usr/bin/env bash
+
+alarm () {
+    echo "alarm"
+}
+
+timer () {
+    echo "timer"
+}
+
+create_temp_files () {
+    echo "00:00" > "/tmp/.alarm"
+    echo "00:00" > "/tmp/.timer"
+}
+
+"$1"

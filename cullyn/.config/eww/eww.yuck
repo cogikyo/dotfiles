@@ -21,7 +21,7 @@
 (defwindow top-center
   :monitor 0
   :geometry (geometry
-    :width "42%"
+    :width "40%"
     :anchor "top center"
   )
   :stacking "fg"
@@ -157,26 +157,32 @@
 )
 
 ; == weather ==================================================================
-
 ; {{{
-(defpoll w-icon :interval "5m" 'jq -r ".current.weather[].icon" /tmp/.weather_info.json')
-(defpoll w-temp :interval "5m" 'jq -r ".current.feels_like" /tmp/.weather_info.json')
-(defpoll w-main :interval "5m" 'jq -r ".current.weather[].main" /tmp/.weather_info.json')
-(defpoll w-cond :interval "5m" 'jq -r ".current.weather[].description" /tmp/.weather_info.json')
+
+(defpoll w-id :interval "1m" 'jq -r ".current.weather[].id" /tmp/.weather_info.json')
+(defpoll w-icon :interval "1m" 'jq -r ".current.weather[].icon" /tmp/.weather_info.json')
+(defpoll w-temp :interval "1m" 'jq -r ".current.feels_like" /tmp/.weather_info.json')
+(defpoll w-main :interval "1m" 'jq -r ".current.weather[].main" /tmp/.weather_info.json')
+(defpoll w-cond :interval "1m" 'jq -r ".current.weather[].description" /tmp/.weather_info.json')
+(defpoll w-uvi :interval "1m" 'scripts/weather_info uvi')
+(defpoll w-rain :interval "1m" 'jq -r ".daily[0].pop" /tmp/.weather_info.json')
+(defpoll w-wind :interval "1m" 'scripts/weather_info wind')
+(defpoll w-beaufort-icon :interval "1m" 'scripts/weather_info beaufort icon')
 (defwidget weather []
   (box :class "weather-box" :halign "end" :space-evenly false :spacing 8
-       :style "margin-right: ${timer-visible ? '-90px' : '-140px;'}"
+       :style "margin-right: ${timer-visible ? '-80px;' : '-133px;'}"
     (box
       :class "weather-icons"
       :style "background-image: url('assets/owm-icons/${w-icon}.png');"
     )
-    (label :markup "${round(w-temp,0)}<sup>°</sup>" )
-    (label :markup {matches(w-main, "Clear") ?
-      "<b>${w-main}</b>" :
-      "<b>${w-main}</b> (<i><small>${w-cond}</small></i>)"}
+    (label :markup "${round(w-temp,0)}<sup>°</sup>")
+    (label :markup {matches(w-id, "(800)|(7[0-9][0-9])") ?
+      "<b>${w-main}</b> 履 ${w-uvi}   ${w-rain}<sub>%</sub> ${w-beaufort-icon} ${w-wind}<sub>m/s</sub>" :
+      "<b>${w-main}</b> <small>(<i>${w-cond}</i>)</small>  履 ${w-uvi}   ${w-rain}<sub>%</sub> ${w-beaufort-icon} ${w-wind}<sub>m/s</sub>"}
     )
   )
 )
+
 ; }}}
 ; ================================================================== weather ==
 
@@ -263,9 +269,9 @@
 (deflisten week 'tail -F /tmp/.week')
 (deflisten day 'tail -F /tmp/.day')
 (defwidget weekday []
-  (box :class "weekday-box"
+    (box :class "weekday-box"
        :halign "start" :space-evenly false :spacing 16
-       :style "margin-left: ${timer-visible ? '-90px' : '-140px;'}"
+       :style "margin-left: ${timer-visible ? '-80px;' : '-133px;'}"
     (mybox :box-class "weekday-day" :spacing 6
       (label :text "")
       day
@@ -278,6 +284,7 @@
 )
 ; }}}
 ; ================================================================== weekday ==
+
 ;}}}
 ; =============================================================== top-center ==
 
