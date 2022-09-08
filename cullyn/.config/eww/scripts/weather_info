@@ -9,13 +9,90 @@ get_json () {
 
     while true; do
         curl "$weahterUrl" | jq > "/tmp/.weather_info.json"
-        sleep 300
+        sleep 60
     done
 }
 
 get_time () {
     time=$(jq -r ".current.$1" '/tmp/.weather_info.json')
     date -d @"$time" +%H:%M
+}
+
+wind () {
+    wind_speed=$(jq -r ".current.wind_speed" '/tmp/.weather_info.json')
+    echo "$wind_speed" | awk '{print int($1+0.5)}'
+}
+
+
+uvi () {
+    uvi=$(jq -r ".current.uvi" '/tmp/.weather_info.json')
+    echo "$uvi" | awk '{print int($1+0.5)}'
+}
+
+beaufort () {
+    wind_speed=$(jq -r ".current.wind_speed" '/tmp/.weather_info.json')
+    knots=$(echo "$wind_speed * 1.943844" | bc)
+    knots=${knots%.*}
+
+    if [[ knots -lt 1 ]]; then
+        beaufort_force=0
+        wmo="calm"
+    elif [[ knots -lt 4 ]]; then
+        beaufort_force=1
+        wmo="light air"
+    elif [[ knots -lt 7 ]]; then
+        beaufort_force=2
+        wmo="light breeze"
+    elif [[ knots -lt 11 ]]; then
+        beaufort_force=3
+        wmo="gentle breeze"
+    elif [[ knots -lt 17 ]]; then
+        beaufort_force=4
+        wmo="moderate breeze"
+    elif [[ knots -lt 22 ]]; then
+        beaufort_force=5
+        wmo="fresh breeze"
+    elif [[ knots -lt 28 ]]; then
+        beaufort_force=6
+        wmo="strong breeze"
+    elif [[ knots -lt 34 ]]; then
+        beaufort_force=7
+        wmo="near gale"
+    elif [[ knots -lt 41 ]]; then
+        beaufort_force=8
+        wmo="gale"
+    elif [[ knots -lt 48 ]]; then
+        beaufort_force=9
+        wmo="strong gale"
+    elif [[ knots -lt 56 ]]; then
+        beaufort_force=10
+        wmo="storm"
+    elif [[ knots -lt 64 ]]; then
+        beaufort_force=11
+        wmo="violent storm"
+    else
+        beaufort_force=12
+        wmo="hurricane"
+    fi
+
+    if [[ "$1" == "icon" ]]; then
+        case "$beaufort_force" in
+            1) echo "" ;;
+            2) echo "" ;;
+            3) echo "" ;;
+            4) echo "" ;;
+            5) echo "" ;;
+            6) echo "" ;;
+            7) echo "" ;;
+            8) echo "" ;;
+            9) echo "" ;;
+            10) echo "" ;;
+            11) echo "" ;;
+            12) echo "" ;;
+        esac
+    else
+        echo "$wmo"
+    fi
 }
 
 "$@"

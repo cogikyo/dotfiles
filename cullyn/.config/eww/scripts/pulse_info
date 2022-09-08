@@ -25,7 +25,7 @@ change_volume () {
     get_volume "$1" >> "/tmp/.$1_volume"
 }
 
-set_volume () {
+mk_temp () {
     echo "100" > "/tmp/.source_volume"
     echo "50" > "/tmp/.sink_volume"
 }
