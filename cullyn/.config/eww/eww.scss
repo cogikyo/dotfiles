@@ -248,6 +248,26 @@ window {
   }
   &-timer {
     &-label {
+      &-right {
+        margin-right: 5px;
+      }
+      &-left {
+        padding-left: 10px;
+      }
+    }
+    &-eventbox {
+      &-left {
+        &:hover {
+          color: $red;
+        }
+      }
+      &-right {
+        &:hover {
+          color: $blue;
+        }
+      }
+    }
+    &-icon {
       &-left {
         font-size: 0.35em;
         margin-top: -16px;

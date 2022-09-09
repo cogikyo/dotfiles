@@ -188,7 +188,7 @@
 ; ================================================================== weather ==
 
 ; == time =====================================================================
-; {{{
+; {{-{
 
 (defvar hour-active false)
 (defvar minute-active false)
@@ -226,27 +226,30 @@
 
 
 (defvar timer-visible false)
-(deflisten timer :initial "00:00" 'tail -F /tmp/.timer')
+(deflisten timer 'tail -F /tmp/.timer')
 (defwidget timer-right []
   (eventbox :class "time-timer"
     :onhover "eww update timer-visible=true"
     :onhoverlost "eww update timer-visible=false"
     (box :space-evenly false :spacing 8
-      (label :class "time-timer-label-right" :text "羽")
+      (label :class "time-timer-icon-right" :text "羽")
       (revealer
         :class "time-timer-info"
         :reveal timer-visible
         :transition "slideleft"
         (eventbox
-          :onscroll "scripts/timer_info timer {}"
-          (label :text timer)
+          :class "time-timer-eventbox-right"
+          :onscroll "scripts/timer_info timer {} 1"
+          :onrightclick "scripts/timer_info reset timer"
+          :onclick "scripts/timer_info timer_status start"
+          (label :class "time-timer-label-right" :text timer)
         )
       )
     )
   )
 )
 
-(deflisten alarm :initial "00:00" 'tail -F /tmp/.alarm')
+(deflisten alarm 'tail -F /tmp/.alarm')
 (defwidget timer-left []
   (eventbox :class "time-timer"
     :onhover "eww update timer-visible=true"
@@ -257,12 +260,13 @@
         :reveal timer-visible
         :transition "slideright"
         (eventbox
-          :onscroll "scripts/timer_info alarm {}"
+          :class "time-timer-eventbox-left"
+          :onscroll "scripts/timer_info alarm {} 1"
           :onrightclick "scripts/timer_info reset alarm"
-          (label :text alarm)
+          (label :class "time-timer-label-left" :text alarm)
         )
       )
-      (label :class "time-timer-label-left" :text "")
+      (label :class "time-timer-icon-left" :text "")
     )
   )
 )
