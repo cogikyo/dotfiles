@@ -1,35 +1,54 @@
 #!/usr/bin/env bash
 
-alarm () {
-    IFS=":" read -ra alarm <<<"$(tail -n 1 "/tmp/.alarm")"
-    min=${alarm[0]}
-    sec=${alarm[1]}
-
-
-    echo "$min--$sec"
-    if [[ "$1" == "up" ]]; then
-        ((sec+=5))
-    else
-        ((sec-=5))
-    fi
-
-    if [[ $sec -ge 60 ]]; then
-        ((sec-=60))
-        ((min+=1))
-    fi
-
-    if [[ $sec -lt 0 ]] && [[ $min -gt 0 ]]; then
-        ((min-=1))
-        ((sec+=60))
-    fi
-
-
-    printf "%02d:%02d\n" "$min" "$sec" >> "/tmp/.alarm"
-}
-
 timer () {
-    echo "00:00" > "/tmp/.timer"
+    IFS=":" read -ra timer <<<"$(tail -n 1 "/tmp/.timer")"
+    hr=${timer[0]#0}
+    min=${timer[1]#0}
+
+    if [[ "$1" == "up" ]]; then
+        ((min+=$2))
+        if [[ $min -ge 60 ]]; then
+            ((hr+=1))
+            ((min-=60))
+        fi
+    elif [[ $hr -gt 0 ]] || [[ $min -gt 0 ]]; then
+            ((min-=$2))
+    fi
+
+    if [[ $min -lt 0 ]] && [[ $hr -gt 0 ]]; then
+        ((hr-=1))
+        ((min+=60))
+    fi
+
+    printf "%02d:%02d\n" "$hr" "$min" >> "/tmp/.timer"
 }
+
+timer_status () {
+    countdown=false
+    if [[ $1 == "start" ]]; then
+       countdown=true
+       notify-send "timer started!"
+    fi
+
+    while "$countdown"; do
+        IFS=":" read -ra timer <<<"$(tail -n 1 "/tmp/.timer")"
+        hr=${timer[0]#0}
+        min=${timer[1]#0}
+
+        if [[ $hr -eq 0 ]] && [[ $min -eq 0 ]]; then
+            countdown=false
+            notify-send "timer done!"
+            break
+        fi
+
+        until_next_min=$(( 60 - $(date +%-S) ))
+        notify-send "$until_next_min"
+        sleep "$until_next_min"
+        timer "down" 1
+
+    done
+}
+
 
 reset () {
     case "$1" in
