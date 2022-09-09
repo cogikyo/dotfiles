@@ -159,15 +159,16 @@
 ; == weather ==================================================================
 ; {{{
 
-(defpoll w-id :interval "1m" 'jq -r ".current.weather[].id" /tmp/.weather_info.json')
-(defpoll w-icon :interval "1m" 'jq -r ".current.weather[].icon" /tmp/.weather_info.json')
-(defpoll w-temp :interval "1m" 'jq -r ".current.feels_like" /tmp/.weather_info.json')
-(defpoll w-main :interval "1m" 'jq -r ".current.weather[].main" /tmp/.weather_info.json')
-(defpoll w-cond :interval "1m" 'jq -r ".current.weather[].description" /tmp/.weather_info.json')
-(defpoll w-uvi :interval "1m" 'scripts/weather_info uvi')
-(defpoll w-rain :interval "1m" 'jq -r ".daily[0].pop" /tmp/.weather_info.json')
-(defpoll w-wind :interval "1m" 'scripts/weather_info wind')
-(defpoll w-beaufort-icon :interval "1m" 'scripts/weather_info beaufort icon')
+; TODO: turn into temp files for listening
+(defpoll w-id   :initial "800" :interval "1m" 'jq -r ".current.weather[].id" /tmp/.weather_info.json')
+(defpoll w-icon :interval "5s" 'jq -r ".current.weather[].icon" /tmp/.weather_info.json')
+(defpoll w-temp :interval "5s" 'jq -r ".current.feels_like" /tmp/.weather_info.json')
+(defpoll w-main :interval "5s" 'jq -r ".current.weather[].main" /tmp/.weather_info.json')
+(defpoll w-cond :interval "5s" 'jq -r ".current.weather[].description" /tmp/.weather_info.json')
+(defpoll w-uvi  :interval "5s" 'scripts/weather_info uvi')
+(defpoll w-rain :interval "5s" 'jq -r ".daily[0].pop" /tmp/.weather_info.json')
+(defpoll w-wind :interval "5s" 'scripts/weather_info wind')
+(defpoll w-bf-i :interval "5s" 'scripts/weather_info beaufort icon')
 (defwidget weather []
   (box :class "weather-box" :halign "end" :space-evenly false :spacing 8
        :style "margin-right: ${timer-visible ? '-80px;' : '-133px;'}"
@@ -177,8 +178,8 @@
     )
     (label :markup "${round(w-temp,0)}<sup>°</sup>")
     (label :markup {matches(w-id, "(800)|(7[0-9][0-9])") ?
-      "<b>${w-main}</b> 履 ${w-uvi}   ${w-rain}<sub>%</sub> ${w-beaufort-icon} ${w-wind}<sub>m/s</sub>" :
-      "<b>${w-main}</b> <small>(<i>${w-cond}</i>)</small>  履 ${w-uvi}   ${w-rain}<sub>%</sub> ${w-beaufort-icon} ${w-wind}<sub>m/s</sub>"}
+      "<b>${w-main}</b>  履 ${w-uvi}   ${w-rain}<sub>%</sub> ${w-bf-i} ${w-wind}<sub>m/s</sub>" :
+      "<b>${w-main}</b> <small>(<i>${w-cond}</i>)</small>  履 ${w-uvi}   ${w-rain}<sub>%</sub> ${w-bf-i} ${w-wind}<sub>m/s</sub>"}
     )
   )
 )
@@ -226,6 +227,26 @@
 
 (defvar timer-visible false)
 (deflisten timer :initial "00:00" 'tail -F /tmp/.timer')
+(defwidget timer-right []
+  (eventbox :class "time-timer"
+    :onhover "eww update timer-visible=true"
+    :onhoverlost "eww update timer-visible=false"
+    (box :space-evenly false :spacing 8
+      (label :class "time-timer-label-right" :text "羽")
+      (revealer
+        :class "time-timer-info"
+        :reveal timer-visible
+        :transition "slideleft"
+        (eventbox
+          :onscroll "scripts/timer_info timer {}"
+          (label :text timer)
+        )
+      )
+    )
+  )
+)
+
+(deflisten alarm :initial "00:00" 'tail -F /tmp/.alarm')
 (defwidget timer-left []
   (eventbox :class "time-timer"
     :onhover "eww update timer-visible=true"
@@ -236,27 +257,12 @@
         :reveal timer-visible
         :transition "slideright"
         (eventbox
-          (label :text timer)
+          :onscroll "scripts/timer_info alarm {}"
+          :onrightclick "scripts/timer_info reset alarm"
+          (label :text alarm)
         )
       )
-      (label :class "time-timer-label-left" :text "羽")
-    )
-  )
-)
-
-(deflisten alarm :initial "00:00" 'tail -F /tmp/.alarm')
-(defwidget timer-right []
-  (eventbox :class "time-timer"
-    :onhover "eww update timer-visible=true"
-    :onhoverlost "eww update timer-visible=false"
-    (box :space-evenly false :spacing 8
-      (label :class "time-timer-label-right" :text "")
-      (revealer
-        :class "time-timer-info"
-        :reveal timer-visible
-        :transition "slideleft"
-        (eventbox(label :text alarm))
-      )
+      (label :class "time-timer-label-left" :text "")
     )
   )
 )

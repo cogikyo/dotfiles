@@ -1,16 +1,49 @@
 #!/usr/bin/env bash
 
 alarm () {
-    echo "alarm"
+    IFS=":" read -ra alarm <<<"$(tail -n 1 "/tmp/.alarm")"
+    min=${alarm[0]}
+    sec=${alarm[1]}
+
+
+    echo "$min--$sec"
+    if [[ "$1" == "up" ]]; then
+        ((sec+=5))
+    else
+        ((sec-=5))
+    fi
+
+    if [[ $sec -ge 60 ]]; then
+        ((sec-=60))
+        ((min+=1))
+    fi
+
+    if [[ $sec -lt 0 ]] && [[ $min -gt 0 ]]; then
+        ((min-=1))
+        ((sec+=60))
+    fi
+
+
+    printf "%02d:%02d\n" "$min" "$sec" >> "/tmp/.alarm"
 }
 
 timer () {
-    echo "timer"
+    echo "00:00" > "/tmp/.timer"
 }
 
-create_temp_files () {
+reset () {
+    case "$1" in
+        alarm) echo "00:00" > "/tmp/.alarm"
+        ;;
+        timer) echo "00:00" > "/tmp/.timer"
+        ;;
+    esac
+
+}
+
+mk_temp () {
     echo "00:00" > "/tmp/.alarm"
     echo "00:00" > "/tmp/.timer"
 }
 
-"$1"
+"$@"

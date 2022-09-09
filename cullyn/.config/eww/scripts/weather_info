@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
 get_json () {
-    lat="45.487096"
-    lon="-122.744157"
-    api=$(cat /home/cullyn/.openweather_api_key)
+    read -ra location <<<"$(<"$HOME/.local/.location")"
+    lat="${location[0]}"
+    lon="${location[1]}"
+    api=$(<"$HOME/.local/.openweather_api_key")
     units="metric"
     weahterUrl="https://api.openweathermap.org/data/3.0/onecall?lat=$lat&lon=$lon&units=$units&appid=$api"
 
@@ -32,7 +33,7 @@ uvi () {
 beaufort () {
     wind_speed=$(jq -r ".current.wind_speed" '/tmp/.weather_info.json')
     knots=$(echo "$wind_speed * 1.943844" | bc)
-    knots=${knots%.*}
+    knots=$(echo "$knots" | awk '{print int($1+0.5)}')
 
     if [[ knots -lt 1 ]]; then
         beaufort_force=0
