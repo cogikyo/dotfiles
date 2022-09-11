@@ -7,9 +7,11 @@ get_json () {
     api=$(<"$HOME/.local/.openweather_api_key")
     units="metric"
     weahterUrl="https://api.openweathermap.org/data/3.0/onecall?lat=$lat&lon=$lon&units=$units&appid=$api"
+    airUrl="http://api.openweathermap.org/data/2.5/air_pollution/forecast?lat=$lat&lon=$lon&appid=$api"
 
     while true; do
         curl "$weahterUrl" | jq > "/tmp/.weather_info.json"
+        curl "$airUrl" | jq > "/tmp/.air_pollution.json"
         sleep 60
     done
 }

@@ -50,6 +50,7 @@ $blue-g-alt: #3f4e74;
 $dark-blue: #222d56;
 $magenta: #bb9af7;
 $magenta-alt: #997ad4;
+$sakura: #ffb7c5;
 $pink: #f08ccd;
 $pink-alt: #d876b6;
 
@@ -143,6 +144,16 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
   }
 }
 
+@mixin clock-label-right() {
+  padding-right: 4px;
+  font-size: 0.61em;
+}
+
+@mixin clock-label-left() {
+  padding-left: 4px;
+  font-size: 0.61em;
+}
+
 @mixin active_ws {
   font-size: 40px;
   margin-top: -8px;
@@ -221,15 +232,18 @@ window {
     background-size: cover;
     background-position: center;
     min-width: 2.5em;
-    margin: 0px -6px;
+    margin: 0px -8px;
+  }
+  &-label {
+    margin-top: 2px;
   }
 }
 
 .time {
   &-box {
     font-size: 2.5em;
-    font-family: $sans-serif;
     @include top-center-box-decor($orange);
+    font-family: $sans-serif;
     margin-top: -6px;
     margin-bottom: 27px;
   }
@@ -238,6 +252,11 @@ window {
   }
   &-minute {
     @include clock-hover($blue-alt);
+  }
+  &-second {
+    font-size: 10px;
+    font-family: $monospace;
+    margin-left: 3px;
   }
   &-clockface {
     &-box {
@@ -249,38 +268,63 @@ window {
   &-timer {
     &-label {
       &-right {
-        margin-right: 5px;
-      }
-      &-left {
-        padding-left: 10px;
-      }
-    }
-    &-eventbox {
-      &-left {
-        &:hover {
-          color: $red;
+        @include clock-label-right();
+        @include clock-hover($blue-alt);
+        &-active {
+          @include clock-label-right();
+        }
+        &-box {
+          margin-right: -2px;
+          @include clock-hover($blue-alt);
         }
       }
-      &-right {
-        &:hover {
-          color: $blue;
+      &-left {
+        @include clock-label-left();
+        @include clock-hover($red-alt);
+        &-active {
+          @include clock-label-left();
+        }
+        &-box {
+          @include clock-hover($red-alt);
+        }
+      }
+      &-eventbox {
+        &-left {
+          @include clock-hover($red-alt);
+          &:hover {
+            color: $red-alt;
+          }
+        }
+        &-right {
+          @include clock-hover($blue-alt);
+          &:hover {
+            color: $blue-alt;
+          }
         }
       }
     }
     &-icon {
       &-left {
-        font-size: 0.35em;
-        margin-top: -16px;
-        margin-right: 3px;
+        font-size: 0.42em;
+        margin-right: 2px;
+        margin-top: -2px;
+        margin-left: -3px;
       }
       &-right {
         font-size: 0.35em;
-        margin-top: -16px;
+        margin-top: 12px;
         margin-left: 3px;
       }
     }
-    &-info {
-      font-size: $font-size;
+    &-left {
+      &:hover {
+        color: $red;
+      }
+    }
+    &-right {
+      &:hover {
+        color: $blue;
+      }
     }
   }
 }
