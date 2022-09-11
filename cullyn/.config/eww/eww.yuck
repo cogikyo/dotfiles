@@ -122,11 +122,12 @@
 
 ; == audio ===================================================================
 ; audio-in (source) audio-out (sink) {{{
+
 (deflisten source_volume :initial '100' 'tail -F /tmp/.source_volume')
 (defwidget audio-in []
   (eventbox :class "audio-in-eventbox"
             :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
-            :onscroll "scripts/pulse_info change_volume source {} 10"
+            :onscroll "scripts/pulse_info change_volume source {} 1"
     (label :text " ${source_volume}")
     )
   )
@@ -135,10 +136,11 @@
 (defwidget audio-out []
   (eventbox :class "audio-out-eventbox"
             :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
-            :onscroll "scripts/pulse_info change_volume sink {} 10"
+            :onscroll "scripts/pulse_info change_volume sink {} 1"
     (label :text "墳 ${sink_volume}")
-    )
   )
+)
+
 ; }}}
 ; =================================================================== audio-io ==
 
@@ -160,25 +162,26 @@
 ; {{{
 
 ; TODO: turn into temp files for listening
-(defpoll w-id   :initial "800" :interval "1m" 'jq -r ".current.weather[].id" /tmp/.weather_info.json')
-(defpoll w-icon :interval "5s" 'jq -r ".current.weather[].icon" /tmp/.weather_info.json')
+(defpoll w-id   :initial "800" :interval "1m" 'jq -r ".current.weather[0].id" /tmp/.weather_info.json')
+(defpoll w-icon :interval "5s" 'jq -r ".current.weather[0].icon" /tmp/.weather_info.json')
 (defpoll w-temp :interval "5s" 'jq -r ".current.feels_like" /tmp/.weather_info.json')
-(defpoll w-main :interval "5s" 'jq -r ".current.weather[].main" /tmp/.weather_info.json')
-(defpoll w-cond :interval "5s" 'jq -r ".current.weather[].description" /tmp/.weather_info.json')
+(defpoll w-main :interval "5s" 'jq -r ".current.weather[0].main" /tmp/.weather_info.json')
+(defpoll w-cond :interval "5s" 'jq -r ".current.weather[0].description" /tmp/.weather_info.json')
+(defpoll w-aqi :interval "5s" 'jq -r ".list[0].main.aqi" /tmp/.air_pollution.json')
 (defpoll w-uvi  :interval "5s" 'scripts/weather_info uvi')
 (defpoll w-rain :interval "5s" 'jq -r ".daily[0].pop" /tmp/.weather_info.json')
 (defpoll w-wind :interval "5s" 'scripts/weather_info wind')
 (defpoll w-bf-i :interval "5s" 'scripts/weather_info beaufort icon')
 (defwidget weather []
   (box :class "weather-box" :halign "end" :space-evenly false :spacing 8
-       :style "margin-right: ${timer-visible ? '-80px;' : '-133px;'}"
+       :style "margin-right: ${timer-visible ? '-75px;' : '-133px;'}"
     (box
       :class "weather-icons"
       :style "background-image: url('assets/owm-icons/${w-icon}.png');"
     )
-    (label :markup "${round(w-temp,0)}<sup>°</sup>")
-    (label :markup {matches(w-id, "(800)|(7[0-9][0-9])") ?
-      "<b>${w-main}</b>  履 ${w-uvi}   ${w-rain}<sub>%</sub> ${w-bf-i} ${w-wind}<sub>m/s</sub>" :
+    (label :markup "<b>${round(w-temp,0)}<sup></sup></b>")
+    (label :class "weather-label" :markup {matches(w-id, "(800)|(7[0-9][0-9])") ?
+      "<b>${w-main}</b>  ${w-aqi}  履 ${w-uvi}   ${w-rain}<sub>%</sub> ${w-bf-i} ${w-wind}<sub>m/s</sub>" :
       "<b>${w-main}</b> <small>(<i>${w-cond}</i>)</small>  履 ${w-uvi}   ${w-rain}<sub>%</sub> ${w-bf-i} ${w-wind}<sub>m/s</sub>"}
     )
   )
@@ -226,50 +229,54 @@
 
 
 (defvar timer-visible false)
-(deflisten timer 'tail -F /tmp/.timer')
-(defwidget timer-right []
-  (eventbox :class "time-timer"
-    :onhover "eww update timer-visible=true"
-    :onhoverlost "eww update timer-visible=false"
-    (box :space-evenly false :spacing 8
-      (label :class "time-timer-icon-right" :text "羽")
-      (revealer
-        :class "time-timer-info"
-        :reveal timer-visible
-        :transition "slideleft"
-        (eventbox
-          :class "time-timer-eventbox-right"
-          :onscroll "scripts/timer_info timer {} 1"
-          :onrightclick "scripts/timer_info reset timer"
-          :onclick "scripts/timer_info timer_status start"
-          (label :class "time-timer-label-right" :text timer)
-        )
-      )
+(defwidget reveal-timer [direction app app-var ?inc-val bool]
+  (revealer
+    :class "time-timer-label-${direction}"
+    :reveal timer-visible
+    :transition "${direction == "left" ? "slideright" : "slideleft" }"
+    (eventbox
+      :class "time-timer-label-eventbox-${direction}"
+      :onscroll "scripts/timer_info ${app} {} ${strlength("${inc-val}") > 0 ? '${inc-val}' : '1'}"
+      :onrightclick "scripts/timer_info reset ${app}"
+      :onclick "scripts/timer_info ${app}_status start & disown"
+      (label :class {bool ? "time-timer-label-${direction}-active" : "time-timer-label-${direction}" }
+             :text app-var)
     )
   )
 )
 
 (deflisten alarm 'tail -F /tmp/.alarm')
 (defwidget timer-left []
-  (eventbox :class "time-timer"
+  (eventbox :class "time-timer-left"
     :onhover "eww update timer-visible=true"
     :onhoverlost "eww update timer-visible=false"
     (box :space-evenly false :spacing 8
-      (revealer
-        :class "time-timer-info"
-        :reveal timer-visible
-        :transition "slideright"
-        (eventbox
-          :class "time-timer-eventbox-left"
-          :onscroll "scripts/timer_info alarm {} 1"
-          :onrightclick "scripts/timer_info reset alarm"
-          (label :class "time-timer-label-left" :text alarm)
-        )
-      )
+      (reveal-timer :direction "left" :app "alarm" :app-var alarm :inc-val 15 :bool hour-active)
       (label :class "time-timer-icon-left" :text "")
     )
   )
 )
+
+(deflisten timer 'tail -F /tmp/.timer')
+(defpoll second :interval "1s" 'date +%S')
+(defwidget timer-right []
+  (eventbox :class "time-timer-right"
+    :onhover "eww update timer-visible=true"
+    :onhoverlost "eww update timer-visible=false"
+    (box :space-evenly false :spacing 8
+      (box :class {minute-active ?
+            "time-timer-label-right-box-active" :
+            "time-timer-label-right-box"
+            }
+           :orientation "v" :spacing 0 :space-evenly false
+        (label :class "time-timer-icon-right" :text "羽")
+        (label :class "time-second" :text second)
+      )
+      (reveal-timer :direction "right" :app "timer" :app-var timer :bool minute-active)
+    )
+  )
+)
+
 ; }}}
 ; ===================================================================== time ==
 
@@ -281,7 +288,7 @@
 (defwidget weekday []
     (box :class "weekday-box"
        :halign "start" :space-evenly false :spacing 16
-       :style "margin-left: ${timer-visible ? '-80px;' : '-133px;'}"
+       :style "margin-left: ${timer-visible ? '-75px;' : '-133px;'}"
     (mybox :box-class "weekday-day" :spacing 6
       (label :text "")
       day
