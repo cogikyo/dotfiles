@@ -1,101 +1,163 @@
 #!/usr/bin/env bash
 
+dir=/tmp/eww/weather
+weather_json="$dir/weather.json"
+air_json="$dir/air.json"
+wait=5
+
 get_json () {
     read -ra location <<<"$(<"$HOME/.local/.location")"
     lat="${location[0]}"
     lon="${location[1]}"
-    api=$(<"$HOME/.local/.openweather_api_key")
+    api=$(<"$HOME/.local/.openweather_key")
     units="metric"
     weahterUrl="https://api.openweathermap.org/data/3.0/onecall?lat=$lat&lon=$lon&units=$units&appid=$api"
     airUrl="http://api.openweathermap.org/data/2.5/air_pollution/forecast?lat=$lat&lon=$lon&appid=$api"
 
     while true; do
-        curl "$weahterUrl" | jq > "/tmp/.weather_info.json"
-        curl "$airUrl" | jq > "/tmp/.air_pollution.json"
-        sleep 60
+        online=1
+        connection () {
+            nc -z 8.8.8.8 53  >/dev/null 2>&1
+            online=$?
+        }
+
+        while [[ "$online" -eq 1 ]]; do
+            connection
+            sleep 0.5
+        done
+
+        curl "$weahterUrl" | jq > "$weather_json"
+        curl "$airUrl" | jq > "$air_json"
+        sleep "$wait"
     done
 }
 
-get_time () {
-    time=$(jq -r ".current.$1" '/tmp/.weather_info.json')
-    date -d @"$time" +%H:%M
+id () {
+    id=$(jq -r ".current.weather[0].id" "$weather_json")
+    echo "$id" >> "$dir/id"
+}
+
+icon () {
+    icon=$(jq -r ".current.weather[0].icon" "$weather_json")
+    echo "$icon" >> "$dir/icon"
+}
+
+temp () {
+    temp=$(jq -r ".current.feels_like" "$weather_json")
+    echo "$temp" | awk '{print int($1+0.5)}' >> "$dir/temp"
+}
+
+main () {
+    main=$(jq -r ".current.weather[0].main" "$weather_json")
+    if [[ -z "$main" ]]; then
+        echo "false"
+    else
+        echo "$main" >> "$dir/main"
+        echo "true"
+    fi
+}
+
+cond () {
+    cond=$(jq -r ".current.weather[0].description" "$weather_json")
+    echo "$cond" >> "$dir/cond"
+}
+
+aqi () {
+    aqi=$(jq -r ".list[0].main.aqi" "$air_json")
+    echo "$aqi" >> "$dir/aqi"
+}
+
+uvi () {
+    uvi=$(jq -r ".current.uvi" "$weather_json")
+    echo "$uvi" | awk '{print int($1+0.5)}' >> "$dir/uvi"
+}
+
+rain () {
+    rain_chance=$(jq -r ".daily[0].pop" "$weather_json")
+    echo "$rain_chance * 100" | awk '{print int($1+0.5)}' >> "$dir/rain"
 }
 
 wind () {
-    wind_speed=$(jq -r ".current.wind_speed" '/tmp/.weather_info.json')
-    echo "$wind_speed" | awk '{print int($1+0.5)}'
-}
-
-
-uvi () {
-    uvi=$(jq -r ".current.uvi" '/tmp/.weather_info.json')
-    echo "$uvi" | awk '{print int($1+0.5)}'
+    wind_speed=$(jq -r ".current.wind_speed" "$weather_json")
+    echo "$wind_speed" | awk '{print int($1+0.5)}' >> "$dir/wind"
 }
 
 beaufort () {
-    wind_speed=$(jq -r ".current.wind_speed" '/tmp/.weather_info.json')
+    wind_speed=$(jq -r ".current.wind_speed" "$weather_json")
     knots=$(echo "$wind_speed * 1.943844" | bc)
     knots=$(echo "$knots" | awk '{print int($1+0.5)}')
 
     if [[ knots -lt 1 ]]; then
         beaufort_force=0
-        wmo="calm"
+        desc="calm"
     elif [[ knots -lt 4 ]]; then
         beaufort_force=1
-        wmo="light air"
+        desc="light air"
     elif [[ knots -lt 7 ]]; then
         beaufort_force=2
-        wmo="light breeze"
+        desc="light breeze"
     elif [[ knots -lt 11 ]]; then
         beaufort_force=3
-        wmo="gentle breeze"
+        desc="gentle breeze"
     elif [[ knots -lt 17 ]]; then
         beaufort_force=4
-        wmo="moderate breeze"
+        desc="moderate breeze"
     elif [[ knots -lt 22 ]]; then
         beaufort_force=5
-        wmo="fresh breeze"
+        desc="fresh breeze"
     elif [[ knots -lt 28 ]]; then
         beaufort_force=6
-        wmo="strong breeze"
+        desc="strong breeze"
     elif [[ knots -lt 34 ]]; then
         beaufort_force=7
-        wmo="near gale"
+        desc="near gale"
     elif [[ knots -lt 41 ]]; then
         beaufort_force=8
-        wmo="gale"
+        desc="gale"
     elif [[ knots -lt 48 ]]; then
         beaufort_force=9
-        wmo="strong gale"
+        desc="strong gale"
     elif [[ knots -lt 56 ]]; then
         beaufort_force=10
-        wmo="storm"
+        desc="storm"
     elif [[ knots -lt 64 ]]; then
         beaufort_force=11
-        wmo="violent storm"
+        desc="violent storm"
     else
         beaufort_force=12
-        wmo="hurricane"
+        desc="hurricane"
     fi
 
-    if [[ "$1" == "icon" ]]; then
-        case "$beaufort_force" in
-            1) echo "" ;;
-            2) echo "" ;;
-            3) echo "" ;;
-            4) echo "" ;;
-            5) echo "" ;;
-            6) echo "" ;;
-            7) echo "" ;;
-            8) echo "" ;;
-            9) echo "" ;;
-            10) echo "" ;;
-            11) echo "" ;;
-            12) echo "" ;;
-        esac
-    else
-        echo "$wmo"
-    fi
+    case "$beaufort_force" in
+        0) icon="" ;;
+        1) icon="" ;;
+        2) icon="" ;;
+        3) icon="" ;;
+        4) icon="" ;;
+        5) icon="" ;;
+        6) icon="" ;;
+        7) icon="" ;;
+        8) icon="" ;;
+        9) icon="" ;;
+        10) icon="" ;;
+        11) icon="" ;;
+        12) icon="" ;;
+    esac
+
+    echo "$icon" >> "$dir/bf-icon"
+    echo "$desc" >> "$dir/bf-desc"
+}
+
+continuous () {
+    while true; do
+        valid_json=$(main)
+        while [[ "$valid_json" == "false" ]] ; do
+            sleep 0.25
+            valid_json=$(main)
+        done
+        id; icon; temp; main; cond; aqi; uvi; wind; rain; beaufort
+        sleep "$wait"
+    done
 }
 
 "$@"

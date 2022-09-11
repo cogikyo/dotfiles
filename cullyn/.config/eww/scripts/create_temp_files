@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+
+dir=/tmp/eww
+rm -rf "$dir"
+mkdir "$dir"
+mkdir "$dir/weather"
+
+file_names="day week sink source workspace"
+read -ra names_arr <<< "$file_names"
+
+for name in "${names_arr[@]}"; do
+    touch "$dir/$name"
+done
+
+weather_file_names="id icon temp main cond aqi uvi rain wind bf_icon bf_desc"
+read -ra weather_names_arr <<< "$weather_file_names"
+
+for name in "${weather_names_arr[@]}"; do
+    touch "$dir/weather/$name"
+done
+
+echo "00:00" > "$dir/alarm"
+echo "00:00" > "$dir/timer"
+
+exit 0

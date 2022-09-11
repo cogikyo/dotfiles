@@ -123,7 +123,7 @@
 ; == audio ===================================================================
 ; audio-in (source) audio-out (sink) {{{
 
-(deflisten source_volume :initial '100' 'tail -F /tmp/.source_volume')
+(deflisten source_volume :initial '100' 'tail -F /tmp/eww/source')
 (defwidget audio-in []
   (eventbox :class "audio-in-eventbox"
             :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
@@ -132,7 +132,7 @@
     )
   )
 
-(deflisten sink_volume :initial '50' 'tail -F /tmp/.sink_volume')
+(deflisten sink_volume :intial '50' 'tail -F /tmp/eww/sink')
 (defwidget audio-out []
   (eventbox :class "audio-out-eventbox"
             :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
@@ -162,16 +162,17 @@
 ; {{{
 
 ; TODO: turn into temp files for listening
-(defpoll w-id   :initial "800" :interval "1m" 'jq -r ".current.weather[0].id" /tmp/.weather_info.json')
-(defpoll w-icon :interval "5s" 'jq -r ".current.weather[0].icon" /tmp/.weather_info.json')
-(defpoll w-temp :interval "5s" 'jq -r ".current.feels_like" /tmp/.weather_info.json')
-(defpoll w-main :interval "5s" 'jq -r ".current.weather[0].main" /tmp/.weather_info.json')
-(defpoll w-cond :interval "5s" 'jq -r ".current.weather[0].description" /tmp/.weather_info.json')
-(defpoll w-aqi :interval "5s" 'jq -r ".list[0].main.aqi" /tmp/.air_pollution.json')
-(defpoll w-uvi  :interval "5s" 'scripts/weather_info uvi')
-(defpoll w-rain :interval "5s" 'jq -r ".daily[0].pop" /tmp/.weather_info.json')
-(defpoll w-wind :interval "5s" 'scripts/weather_info wind')
-(defpoll w-bf-i :interval "5s" 'scripts/weather_info beaufort icon')
+(deflisten w-id :initial "800" 'tail -F "/tmp/eww/weather/id"')
+(deflisten w-icon :initial " " 'tail -F "/tmp/eww/weather/icon"')
+(deflisten w-temp :initial " " 'tail -F "/tmp/eww/weather/temp"')
+(deflisten w-main :initial " " 'tail -F "/tmp/eww/weather/main"')
+(deflisten w-cond :initial " " 'tail -F "/tmp/eww/weather/cond"')
+(deflisten w-aqi  :initial " " 'tail -F "/tmp/eww/weather/aqi"')
+(deflisten w-uvi  :initial " " 'tail -F "/tmp/eww/weather/uvi"')
+(deflisten w-rain :initial " " 'tail -F "/tmp/eww/weather/rain"')
+(deflisten w-wind :initial " " 'tail -F "/tmp/eww/weather/wind"')
+(deflisten w-bf-i :initial " " 'tail -F "/tmp/eww/weather/bf-icon"')
+(deflisten w-bf-d :initial " " 'tail -F "/tmp/eww/weather/bf-desc"')
 (defwidget weather []
   (box :class "weather-box" :halign "end" :space-evenly false :spacing 8
        :style "margin-right: ${timer-visible ? '-75px;' : '-133px;'}"
@@ -179,10 +180,14 @@
       :class "weather-icons"
       :style "background-image: url('assets/owm-icons/${w-icon}.png');"
     )
-    (label :markup "<b>${round(w-temp,0)}<sup></sup></b>")
-    (label :class "weather-label" :markup {matches(w-id, "(800)|(7[0-9][0-9])") ?
-      "<b>${w-main}</b>  ${w-aqi}  履 ${w-uvi}   ${w-rain}<sub>%</sub> ${w-bf-i} ${w-wind}<sub>m/s</sub>" :
-      "<b>${w-main}</b> <small>(<i>${w-cond}</i>)</small>  履 ${w-uvi}   ${w-rain}<sub>%</sub> ${w-bf-i} ${w-wind}<sub>m/s</sub>"}
+    (label :markup "<b>${w-temp}<sup></sup></b>")
+    (label :class "weather-label"
+           :markup {matches(w-id, "(800)|(7[0-9][0-9])") ?
+                      "<b>${w-main}</b>  ${w-aqi}" :
+                      "<b>${w-main}</b> <small>(<i>${w-cond}</i>)</small>" }
+    )
+    (label :class "weather-label"
+           :markup "履 ${w-uvi}   ${w-rain}<sub>%</sub> ${w-bf-i} ${w-wind}<sub>m/s</sub>"
     )
   )
 )
@@ -245,19 +250,25 @@
   )
 )
 
-(deflisten alarm 'tail -F /tmp/.alarm')
+(deflisten alarm :intial '00:00' 'tail -F /tmp/eww/alarm')
 (defwidget timer-left []
   (eventbox :class "time-timer-left"
     :onhover "eww update timer-visible=true"
     :onhoverlost "eww update timer-visible=false"
     (box :space-evenly false :spacing 8
       (reveal-timer :direction "left" :app "alarm" :app-var alarm :inc-val 15 :bool hour-active)
-      (label :class "time-timer-icon-left" :text "")
+      (box :class {hour-active ?
+            "time-timer-label-left-box-active" :
+            "time-timer-label-left-box"
+            }
+           :orientation "v" :valign "center" :spacing 0 :space-evenly false
+        (label :class "time-timer-icon-left" :text "")
+      )
     )
   )
 )
 
-(deflisten timer 'tail -F /tmp/.timer')
+(deflisten timer :intial '00:00' 'tail -F /tmp/eww/timer')
 (defpoll second :interval "1s" 'date +%S')
 (defwidget timer-right []
   (eventbox :class "time-timer-right"
@@ -268,7 +279,7 @@
             "time-timer-label-right-box-active" :
             "time-timer-label-right-box"
             }
-           :orientation "v" :spacing 0 :space-evenly false
+           :orientation "v" :valign "center" :spacing 0 :space-evenly false
         (label :class "time-timer-icon-right" :text "羽")
         (label :class "time-second" :text second)
       )
@@ -283,8 +294,8 @@
 ; == weekday ==================================================================
 ; {{{
 
-(deflisten week 'tail -F /tmp/.week')
-(deflisten day 'tail -F /tmp/.day')
+(deflisten week 'tail -F /tmp/eww/week')
+(deflisten day 'tail -F /tmp/eww/day')
 (defwidget weekday []
     (box :class "weekday-box"
        :halign "start" :space-evenly false :spacing 16
@@ -396,37 +407,37 @@
   )
 )
 
-(deflisten active_workspace 'tail -F /tmp/.active_workspace')
+(deflisten workspace 'tail -F /tmp/eww/workspace')
 (defwidget workspaces []
   (mybox :box-class "workspace" :spacing 12
     (eventbox
       :onclick "hyprctl dispatch workspace 1"
       (label :text ""
-        :class {matches(active_workspace,1) ? 'workspace-1 active' : 'workspace-1'}
+        :class {matches(workspace,1) ? 'workspace-1 active' : 'workspace-1'}
       )
     )
     (eventbox
       :onclick "hyprctl dispatch workspace 2"
       (label :text ""
-        :class {matches(active_workspace,2) ? 'workspace-2 active' : 'workspace-2'}
+        :class {matches(workspace,2) ? 'workspace-2 active' : 'workspace-2'}
       )
     )
     (eventbox
       :onclick "hyprctl dispatch workspace 3"
       (label :text "ﮂ"
-        :class {matches(active_workspace,3) ? 'workspace-3 active' : 'workspace-3'}
+        :class {matches(workspace,3) ? 'workspace-3 active' : 'workspace-3'}
       )
     )
     (eventbox
       :onclick "hyprctl dispatch workspace 4"
       (label :text ""
-        :class {matches(active_workspace,4) ? 'workspace-4 active' : 'workspace-4'}
+        :class {matches(workspace,4) ? 'workspace-4 active' : 'workspace-4'}
       )
     )
     (eventbox
       :onclick "hyprctl dispatch workspace 5"
       (label :text "輸"
-        :class {matches(active_workspace,5) ? 'workspace-5 active' : 'workspace-5'}
+        :class {matches(workspace,5) ? 'workspace-5 active' : 'workspace-5'}
       )
     )
   )

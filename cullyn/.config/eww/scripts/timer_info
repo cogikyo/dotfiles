@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 timer () {
-    IFS=":" read -ra timer <<<"$(tail -n 1 "/tmp/.timer")"
+    IFS=":" read -ra timer <<<"$(tail -n 1 "/tmp/eww/timer")"
     hr=${timer[0]#0}
     min=${timer[1]#0}
 
@@ -24,7 +24,7 @@ timer () {
         min=0
     fi
 
-    printf "%02d:%02d\n" "$hr" "$min" >> "/tmp/.timer"
+    printf "%02d:%02d\n" "$hr" "$min" >> "/tmp/eww/timer"
 }
 
 timer_status () {
@@ -35,7 +35,7 @@ timer_status () {
     fi
 
     while "$countdown"; do
-        IFS=":" read -ra timer <<<"$(tail -n 1 "/tmp/.timer")"
+        IFS=":" read -ra timer <<<"$(tail -n 1 "/tmp/eww/timer")"
         hr=${timer[0]#0}
         min=${timer[1]#0}
 
@@ -63,7 +63,7 @@ timer_status () {
 }
 
 alarm () {
-    IFS=":" read -ra alarm <<<"$(tail -n 1 "/tmp/.alarm")"
+    IFS=":" read -ra alarm <<<"$(tail -n 1 "/tmp/eww/alarm")"
     hr=${alarm[0]#0}
     min=${alarm[1]#0}
 
@@ -90,7 +90,7 @@ alarm () {
         min=0
     fi
 
-    printf "%02d:%02d\n" "$hr" "$min" >> "/tmp/.alarm"
+    printf "%02d:%02d\n" "$hr" "$min" >> "/tmp/eww/alarm"
 }
 
 
@@ -102,7 +102,7 @@ alarm_status () {
     fi
 
     while "$countdown"; do
-        IFS=":" read -ra timer <<<"$(tail -n 1 "/tmp/.timer")"
+        IFS=":" read -ra timer <<<"$(tail -n 1 "/tmp/eww/alarm")"
         hr=${timer[0]#0}
         min=${timer[1]#0}
 
@@ -134,21 +134,16 @@ reset () {
     case "$1" in
         alarm)
             ps -ef | rg alarm_status | grep -v grep | awk '{print $2}' | xargs kill
-            echo "00:00" > "/tmp/.alarm"
+            echo "00:00" > "/tmp/eww/alarm"
             notify-send "alarm reset"
         ;;
         timer)
             ps -ef | rg timer_status | grep -v grep | awk '{print $2}' | xargs kill
-            echo "00:00" > "/tmp/.timer"
+            echo "00:00" > "/tmp/eww/timer"
             notify-send "timer reset"
         ;;
     esac
 
-}
-
-mk_temp () {
-    echo "00:00" > "/tmp/.alarm"
-    echo "00:00" > "/tmp/.timer"
 }
 
 "$@"
