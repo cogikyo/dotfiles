@@ -2,7 +2,7 @@
 
 day () {
     while true; do
-        date '+%A, %B %d' > "/tmp/.day"
+        date '+%A, %B %d' > "/tmp/eww/day"
         until_tomorrow=$(( $(date +%s -d "tomorrow 00:00") - $( date +%s ) ))
         sleep "$until_tomorrow"
     done
@@ -11,7 +11,7 @@ day () {
 week () {
     while true; do
         echo $(( ($(date -d "1996-02-26 PST" +%s) - $(date +%s))/(60*60*24)/-7 \
-        )) > "/tmp/.week"
+        )) > "/tmp/eww/week"
         until_monday=$(( $(date +%s -d "next monday 00:00") - $( date +%s ) ))
         sleep "$until_monday"
     done
@@ -55,8 +55,6 @@ clockface-minute () {
         12) echo "";;
         *) echo "";;
     esac
-
-
 }
 
 continuous () {

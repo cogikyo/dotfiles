@@ -145,13 +145,21 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 }
 
 @mixin clock-label-right() {
-  padding-right: 4px;
+  padding-right: 0px;
   font-size: 0.61em;
+  &-active {
+    padding-right: 4px;
+    font-size: 0.61em;
+  }
 }
 
 @mixin clock-label-left() {
-  padding-left: 4px;
+  padding-left: 0px;
   font-size: 0.61em;
+  &-active {
+    padding-left: 4px;
+    font-size: 0.61em;
+  }
 }
 
 @mixin active_ws {
@@ -256,7 +264,7 @@ window {
   &-second {
     font-size: 10px;
     font-family: $monospace;
-    margin-left: 3px;
+    margin-left: 2px;
   }
   &-clockface {
     &-box {
@@ -270,33 +278,24 @@ window {
       &-right {
         @include clock-label-right();
         @include clock-hover($blue-alt);
-        &-active {
-          @include clock-label-right();
-        }
         &-box {
-          margin-right: -2px;
           @include clock-hover($blue-alt);
         }
       }
       &-left {
         @include clock-label-left();
         @include clock-hover($red-alt);
-        &-active {
-          @include clock-label-left();
-        }
         &-box {
           @include clock-hover($red-alt);
         }
       }
       &-eventbox {
         &-left {
-          @include clock-hover($red-alt);
           &:hover {
             color: $red-alt;
           }
         }
         &-right {
-          @include clock-hover($blue-alt);
           &:hover {
             color: $blue-alt;
           }
@@ -306,13 +305,11 @@ window {
     &-icon {
       &-left {
         font-size: 0.42em;
-        margin-right: 2px;
-        margin-top: -2px;
+        margin-right: 3px;
         margin-left: -3px;
       }
       &-right {
         font-size: 0.35em;
-        margin-top: 12px;
         margin-left: 3px;
       }
     }

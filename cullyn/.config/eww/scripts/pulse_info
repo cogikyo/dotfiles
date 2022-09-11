@@ -22,12 +22,7 @@ change_volume () {
     id="$(get_id "$1")"
     pulsemixer --id "$1-$id" --change-volume "$direction$3"
 
-    get_volume "$1" >> "/tmp/.$1_volume"
-}
-
-mk_temp () {
-    echo "100" > "/tmp/.source_volume"
-    echo "50" > "/tmp/.sink_volume"
+    get_volume "$1" >> "/tmp/eww/$1"
 }
 
 "$@"

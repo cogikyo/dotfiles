@@ -1,13 +1,10 @@
 #!/usr/bin/env bash
 
-tempfile="/tmp/.active_workspace"
-echo "3" > "$tempfile"
-
 handle() {
     event=$1
     arg=$2
     if [[ "$event" == "workspace" ]]; then
-        echo "$arg" >> "$tempfile" # needed for 'tail -f'
+        echo "$arg" >> "/tmp/eww/workspace" 
     fi
 }
 

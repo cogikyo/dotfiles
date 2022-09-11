@@ -78,15 +78,19 @@ dotfiles () {
     hyprctl dispatch movefocus l
 }
 
-# internet randomly goes out for a few seconds and fucks up opening windows
-nc -z 8.8.8.8 53  >/dev/null 2>&1
-online=$?
+online=1
+connection () {
+    nc -z 8.8.8.8 53  >/dev/null 2>&1
+    online=$?
+    echo "connect: $online"
+}
 
-hyprctl keyword input:follow_mouse 0
-while ! [ "$online" -eq 0 ]; do
-    conneciton "$1"
+while [[ "$online" -eq 1 ]]; do
+    connection
     sleep 0.5
 done
+
+hyprctl keyword input:follow_mouse 0
 notify-send "opening $1 layout"
 "$1"
 hyprctl keyword input:follow_mouse 1
