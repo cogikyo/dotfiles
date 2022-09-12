@@ -1,5 +1,17 @@
 #!/usr/bin/env bash
 
+display_active () {
+    eww update timer-visible="true"
+    case "$1" in
+        "hour") eww update hour-active="true" ;;
+        "minute") eww update minute-active="true" ;;
+    esac
+    sleep 3
+    eww update timer-visible="false"
+    eww update minute-active="false"
+    eww update hour-active="false"
+}
+
 timer () {
     IFS=":" read -ra timer <<<"$(tail -n 1 "/tmp/eww/timer")"
     hr=${timer[0]#0}
@@ -28,12 +40,9 @@ timer () {
 }
 
 timer_status () {
-    countdown=false
-    if [[ $1 == "start" ]]; then
-       countdown=true
-       notify-send "timer started!"
-    fi
+    notify-send "timer started!"
 
+    countdown=true
     while "$countdown"; do
         IFS=":" read -ra timer <<<"$(tail -n 1 "/tmp/eww/timer")"
         hr=${timer[0]#0}
@@ -42,18 +51,12 @@ timer_status () {
         if [[ $hr -eq 0 ]] && [[ $min -eq 0 ]]; then
             countdown=false
             notify-send "timer done!"
-            eww update timer-visible="true"
-            sleep 5
-            eww update timer-visible="false"
+            display_active "minute"
             break
         fi
 
         if [[ $((min % 15)) -eq 0 ]] || [[ $min -le 5 ]]; then
-            eww update timer-visible="true"
-            eww update minute-active="true"
-            sleep 2
-            eww update timer-visible="false"
-            eww update minute-active="false"
+            display_active "minute"
         fi
 
         until_next_min=$(( 60 - $(date +%-S) ))
@@ -66,6 +69,13 @@ alarm () {
     IFS=":" read -ra alarm <<<"$(tail -n 1 "/tmp/eww/alarm")"
     hr=${alarm[0]#0}
     min=${alarm[1]#0}
+
+    if [[ "$1" == "start" ]]; then
+        hr_now=$(date '+%H')
+        min_now=$(date '+%M')
+        ((hr-=hr_now))
+        ((min-=min_now))
+    fi
 
     if [[ "$1" == "up" ]]; then
         ((min+=$2))
@@ -83,10 +93,11 @@ alarm () {
     fi
 
     if [[ $hr -ge 24 ]]; then
-        hr=0
+        ((hr-=24))
     fi
 
     if [[ $min -lt 0 ]]; then
+        ((hr+=min))
         min=0
     fi
 
@@ -95,12 +106,11 @@ alarm () {
 
 
 alarm_status () {
-    countdown=false
-    if [[ $1 == "start" ]]; then
-       countdown=true
-       notify-send "timer started!"
-    fi
+    notify-send "alarm started!"
 
+    alarm "start"
+
+    countdown=true
     while "$countdown"; do
         IFS=":" read -ra timer <<<"$(tail -n 1 "/tmp/eww/alarm")"
         hr=${timer[0]#0}
@@ -108,24 +118,18 @@ alarm_status () {
 
         if [[ $hr -eq 0 ]] && [[ $min -eq 0 ]]; then
             countdown=false
-            notify-send "timer done!"
-            eww update timer-visible="true"
-            sleep 5
-            eww update timer-visible="false"
+            notify-send "alarm done!"
+            display_active "hour"
             break
         fi
 
         if [[ $((min % 15)) -eq 0 ]] || [[ $min -le 5 ]]; then
-            eww update timer-visible="true"
-            eww update minute-active="true"
-            sleep 2
-            eww update timer-visible="false"
-            eww update minute-active="false"
+            display_active "hour"
         fi
 
         until_next_min=$(( 60 - $(date +%-S) ))
         sleep "$until_next_min"
-        timer "down" 1
+        alarm "down" 1
     done
 }
 
@@ -134,7 +138,7 @@ reset () {
     case "$1" in
         alarm)
             ps -ef | rg alarm_status | grep -v grep | awk '{print $2}' | xargs kill
-            echo "00:00" > "/tmp/eww/alarm"
+            date '+%H:30' -d '+ 3hour' > "/tmp/eww/alarm"
             notify-send "alarm reset"
         ;;
         timer)
