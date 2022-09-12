@@ -3,13 +3,13 @@
 dir=/tmp/eww/weather
 weather_json="$dir/weather.json"
 air_json="$dir/air.json"
-wait=5
+wait=60
 
 get_json () {
     read -ra location <<<"$(<"$HOME/.local/.location")"
     lat="${location[0]}"
     lon="${location[1]}"
-    api=$(<"$HOME/.local/.openweather_key")
+    api=$(<"$HOME/.local/.owm_api_key")
     units="metric"
     weahterUrl="https://api.openweathermap.org/data/3.0/onecall?lat=$lat&lon=$lon&units=$units&appid=$api"
     airUrl="http://api.openweathermap.org/data/2.5/air_pollution/forecast?lat=$lat&lon=$lon&appid=$api"

@@ -21,7 +21,7 @@
 (defwindow top-center
   :monitor 0
   :geometry (geometry
-    :width "40%"
+    :width "30%"
     :anchor "top center"
   )
   :stacking "fg"
@@ -34,7 +34,7 @@
 (defwindow bot-bar
   :monitor 0
   :geometry (geometry
-    :width "100%"
+    :width "35%"
     :anchor "bottom center"
   )
   :stacking "fg"
@@ -175,7 +175,7 @@
 (deflisten w-bf-d :initial " " 'tail -F "/tmp/eww/weather/bf-desc"')
 (defwidget weather []
   (box :class "weather-box" :halign "end" :space-evenly false :spacing 8
-       :style "margin-right: ${timer-visible ? '-75px;' : '-133px;'}"
+       :style "margin-right: ${timer-visible ? '-25px;' : '-70px;'}"
     (box
       :class "weather-icons"
       :style "background-image: url('assets/owm-icons/${w-icon}.png');"
@@ -183,11 +183,11 @@
     (label :markup "<b>${w-temp}<sup></sup></b>")
     (label :class "weather-label"
            :markup {matches(w-id, "(800)|(7[0-9][0-9])") ?
-                      "<b>${w-main}</b>  ${w-aqi}" :
-                      "<b>${w-main}</b> <small>(<i>${w-cond}</i>)</small>" }
+                      "<b>${w-main}</b>  ${w-aqi} " :
+                      "<b>${w-main}</b> <small>(<i>${w-cond}</i>)</small>"}
     )
     (label :class "weather-label"
-           :markup "履 ${w-uvi}   ${w-rain}<sub>%</sub> ${w-bf-i} ${w-wind}<sub>m/s</sub>"
+           :markup "履 ${w-uvi}   ${w-rain}<sub>%  </sub>${w-bf-i} ${w-wind}<sub>m/s</sub>"
     )
   )
 )
@@ -232,31 +232,32 @@
   )
 )
 
-
+(defvar fine-adjust false)
 (defvar timer-visible false)
-(defwidget reveal-timer [direction app app-var ?inc-val bool]
+(defwidget reveal-timer [direction app text bool]
   (revealer
     :class "time-timer-label-${direction}"
     :reveal timer-visible
     :transition "${direction == "left" ? "slideright" : "slideleft" }"
     (eventbox
       :class "time-timer-label-eventbox-${direction}"
-      :onscroll "scripts/timer_info ${app} {} ${strlength("${inc-val}") > 0 ? '${inc-val}' : '1'}"
+      :onscroll "scripts/timer_info ${app} {} ${fine-adjust ? 1 : 15}"
       :onrightclick "scripts/timer_info reset ${app}"
-      :onclick "scripts/timer_info ${app}_status start & disown"
+      :onclick "scripts/timer_info ${app}_status & disown"
+      :onmiddleclick "eww update fine-adjust=${fine-adjust ? "false" : "true"}"
       (label :class {bool ? "time-timer-label-${direction}-active" : "time-timer-label-${direction}" }
-             :text app-var)
+             :text text)
     )
   )
 )
 
-(deflisten alarm :intial '00:00' 'tail -F /tmp/eww/alarm')
+(deflisten alarm 'tail -F /tmp/eww/alarm')
 (defwidget timer-left []
   (eventbox :class "time-timer-left"
     :onhover "eww update timer-visible=true"
     :onhoverlost "eww update timer-visible=false"
     (box :space-evenly false :spacing 8
-      (reveal-timer :direction "left" :app "alarm" :app-var alarm :inc-val 15 :bool hour-active)
+      (reveal-timer :direction "left" :app "alarm" :text alarm :bool hour-active)
       (box :class {hour-active ?
             "time-timer-label-left-box-active" :
             "time-timer-label-left-box"
@@ -268,7 +269,7 @@
   )
 )
 
-(deflisten timer :intial '00:00' 'tail -F /tmp/eww/timer')
+(deflisten timer 'tail -F /tmp/eww/timer')
 (defpoll second :interval "1s" 'date +%S')
 (defwidget timer-right []
   (eventbox :class "time-timer-right"
@@ -283,7 +284,7 @@
         (label :class "time-timer-icon-right" :text "羽")
         (label :class "time-second" :text second)
       )
-      (reveal-timer :direction "right" :app "timer" :app-var timer :bool minute-active)
+      (reveal-timer :direction "right" :app "timer" :text timer :bool minute-active)
     )
   )
 )
@@ -299,7 +300,7 @@
 (defwidget weekday []
     (box :class "weekday-box"
        :halign "start" :space-evenly false :spacing 16
-       :style "margin-left: ${timer-visible ? '-75px;' : '-133px;'}"
+       :style "margin-left: ${timer-visible ? '-25px;' : '-70px;'}"
     (mybox :box-class "weekday-day" :spacing 6
       (label :text "")
       day
