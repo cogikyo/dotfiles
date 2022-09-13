@@ -58,7 +58,11 @@ main () {
 }
 
 cond () {
-    cond=$(jq -r ".current.weather[0].description" "$weather_json")
+    cond=$(jq -r ".current.weather[0].description" "$weather_json" \
+        | sed -e "s/ clouds//g" \
+              -e "s/ with thunderstorm//g" \
+              -e "s/ thunderstorm//g" \
+    )
     echo "$cond" >> "$dir/cond"
 }
 
