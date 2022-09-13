@@ -21,7 +21,7 @@
 (defwindow top-center
   :monitor 0
   :geometry (geometry
-    :width "30%"
+    :width "35%"
     :anchor "top center"
   )
   :stacking "fg"
@@ -34,7 +34,7 @@
 (defwindow bot-bar
   :monitor 0
   :geometry (geometry
-    :width "35%"
+    :width "100%"
     :anchor "bottom center"
   )
   :stacking "fg"
@@ -198,96 +198,103 @@
 ; == time =====================================================================
 ; {{-{
 
+(defpoll hour :interval "1s" "date '+%H'")
+(defpoll minute :interval "1s" "date '+%M'")
+(defpoll second :interval "1s" 'date +%S')
+(defwidget time []
+  (eventbox
+    :onhover "eww update timer-visible=true"
+    :onhoverlost "eww update timer-visible=false"
+    (box :class "time-box" :halign "center" :space-evenly false :spacing 0
+      (alarm)
+      (clock :content "hour" :text hour :bool hour-active)
+      (clock-delimiter)
+      (clock :content "minute" :text minute :bool minute-active)
+      (timer)
+    )
+  )
+)
+
+; == clock ===================================================================
+; {{{
+
 (defvar hour-active false)
 (defvar minute-active false)
-(defwidget time-active [content var bool]
-    (eventbox
-      :class {bool ?
-        "time-${content}-active" : "time-${content}"
-      }
-      :onhover "eww update ${content}-active=true"
-      :onhoverlost "eww update ${content}-active=false"
-      var
-    )
+(defwidget clock [content bool text]
+  (eventbox :class "time-${content}${bool ? "-active" : ""}"
+    :onhover "eww update ${content}-active=true"
+    :onhoverlost "eww update ${content}-active=false"
+    (label :class "time-${content}-label" :text text)
+  )
 )
 
 (defpoll clockface-hour :interval "1s" 'scripts/date_info clockface-hour')
 (defpoll clockface-minute :interval "1s" 'scripts/date_info clockface-minute')
-(defwidget clockface-delimiter []
-  (box :class "time-clockface-box" :orientation "v" :spacing -4 :space-evenly false
-    (time-active :content "hour" :var clockface-hour :bool hour-active)
-    (time-active :content "minute" :var clockface-minute :bool minute-active)
+(defwidget clock-delimiter []
+  (box :class "time-clockface-box"
+    :orientation "v" :spacing -4 :space-evenly false
+    (clock :content "hour" :text clockface-hour :bool hour-active)
+    (clock :content "minute" :text clockface-minute :bool minute-active)
   )
 )
 
-(defpoll hour :interval "1s" "date '+%H'")
-(defpoll minute :interval "1s" "date '+%M'")
-(defwidget time []
-  (box :class "time-box" :halign "center" :space-evenly false :spacing 0
-    (timer-left)
-    (time-active :content "hour" :var hour :bool hour-active)
-    (clockface-delimiter)
-    (time-active :content "minute" :var minute :bool minute-active)
-    (timer-right)
-  )
-)
+; }}}
+; =================================================================== clock ==
+
+; == revealer ===================================================================
+; time-revealer -> alarm timer {{{
 
 (defvar fine-adjust false)
 (defvar timer-visible false)
-(defwidget reveal-timer [direction app text bool]
-  (revealer
-    :class "time-timer-label-${direction}"
+(defwidget time-revealer [app direction text bool]
+  (revealer :class "time-${app}-revealer"
     :reveal timer-visible
     :transition "${direction == "left" ? "slideright" : "slideleft" }"
-    (eventbox
-      :class "time-timer-label-eventbox-${direction}"
-      :onscroll "scripts/timer_info ${app} {} ${fine-adjust ? 1 : 15}"
-      :onrightclick "scripts/timer_info reset ${app}"
+    (eventbox :class "time-${app}-eventbox"
       :onclick "scripts/timer_info ${app}_status & disown"
+      :onscroll "scripts/timer_info ${app} {} ${fine-adjust ? 1 : 15}"
       :onmiddleclick "eww update fine-adjust=${fine-adjust ? "false" : "true"}"
-      (label :class {bool ? "time-timer-label-${direction}-active" : "time-timer-label-${direction}" }
-             :text text)
+      :onrightclick "scripts/timer_info reset ${app}"
+      (label :class "time-${app}-text ${bool ? "-active" : "" }" :text text)
     )
   )
 )
 
+; (defwidget time-revealer-indicator [app bool icon content text]
+;   (eventbox :class "time-${app}-indicator${bool ? "-active" : ""}"
+;     :onhover "eww update ${content}-active=true"
+;     :onhoverlost "eww update ${content}-active=false"
+;     (box :orientation "v" :valign "center" :spacing 0 :space-evenly false
+;       (label :class "time-${app}-indicator-icon" :text icon)
+;       (label :class "time-${app}-indicator-text" :text text)
+;     )
+;   )
+; )
+;
 (deflisten alarm 'tail -F /tmp/eww/alarm')
-(defwidget timer-left []
-  (eventbox :class "time-timer-left"
-    :onhover "eww update timer-visible=true"
-    :onhoverlost "eww update timer-visible=false"
-    (box :space-evenly false :spacing 8
-      (reveal-timer :direction "left" :app "alarm" :text alarm :bool hour-active)
-      (box :class {hour-active ?
-            "time-timer-label-left-box-active" :
-            "time-timer-label-left-box"
-            }
-           :orientation "v" :valign "center" :spacing 0 :space-evenly false
-        (label :class "time-timer-icon-left" :text "")
-      )
-    )
+(defwidget alarm []
+  (mybox :box-class "time-alarm" :spacing 6
+    (time-revealer :app "alarm"
+      :direction "left" :text alarm :bool hour-active)
+    ; (time-revealer-indicator :app "alarm"
+    ;   :icon "" :bool hour-active :content "hour"
+    ;   :text "${fine-adjust ? "1" : "15"}"
+    ; )
   )
 )
 
 (deflisten timer 'tail -F /tmp/eww/timer')
-(defpoll second :interval "1s" 'date +%S')
-(defwidget timer-right []
-  (eventbox :class "time-timer-right"
-    :onhover "eww update timer-visible=true"
-    :onhoverlost "eww update timer-visible=false"
-    (box :space-evenly false :spacing 8
-      (box :class {minute-active ?
-            "time-timer-label-right-box-active" :
-            "time-timer-label-right-box"
-            }
-           :orientation "v" :valign "center" :spacing 0 :space-evenly false
-        (label :class "time-timer-icon-right" :text "羽")
-        (label :class "time-second" :text second)
-      )
-      (reveal-timer :direction "right" :app "timer" :text timer :bool minute-active)
-    )
+(defwidget timer []
+  (mybox :box-class "time-timer" :spacing 6
+    ; (time-revealer-indicator :app "timer"
+    ;   :icon "羽" :text second :bool minute-active :content "minute"
+    ; )
+    (time-revealer :app "timer"
+      :direction "right" :text timer :bool minute-active)
   )
 )
+; }}}
+; =================================================================== revealer ==
 
 ; }}}
 ; ===================================================================== time ==
