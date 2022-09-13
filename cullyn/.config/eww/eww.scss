@@ -144,24 +144,6 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
   }
 }
 
-@mixin clock-label-right() {
-  padding-right: 0px;
-  font-size: 0.61em;
-  &-active {
-    padding-right: 4px;
-    font-size: 0.61em;
-  }
-}
-
-@mixin clock-label-left() {
-  padding-left: 0px;
-  font-size: 0.61em;
-  &-active {
-    padding-left: 4px;
-    font-size: 0.61em;
-  }
-}
-
 @mixin active_ws {
   font-size: 40px;
   margin-top: -8px;
@@ -248,6 +230,7 @@ window {
 }
 
 .time {
+  // parent for time related content
   &-box {
     font-size: 2.5em;
     @include top-center-box-decor($orange);
@@ -255,75 +238,78 @@ window {
     margin-top: -6px;
     margin-bottom: 27px;
   }
+
+  // box for clockface delimiter
+  &-clockface-box {
+    font-size: 0.42em;
+    color: $orange-alt;
+    margin: 9px 3px 0px 3px;
+  }
+
+  // Adjustmetns to hour:minute
   &-hour {
     @include clock-hover($red-alt);
   }
   &-minute {
     @include clock-hover($blue-alt);
   }
-  &-second {
-    font-size: 10px;
-    font-family: $monospace;
-    margin-left: 2px;
+
+  &-revealer {
+    font-size: 0.4em;
   }
-  &-clockface {
-    &-box {
-      font-size: 0.42em;
-      color: $orange-alt;
-      margin: 9px 3px 0px 3px;
-    }
-  }
-  &-timer {
-    &-label {
-      &-right {
-        @include clock-label-right();
-        @include clock-hover($blue-alt);
-        &-box {
-          @include clock-hover($blue-alt);
-        }
-      }
-      &-left {
-        @include clock-label-left();
-        @include clock-hover($red-alt);
-        &-box {
-          @include clock-hover($red-alt);
-        }
-      }
-      &-eventbox {
-        &-left {
-          &:hover {
-            color: $red-alt;
-          }
-        }
-        &-right {
-          &:hover {
-            color: $blue-alt;
-          }
-        }
-      }
-    }
-    &-icon {
-      &-left {
-        font-size: 0.42em;
-        margin-right: 3px;
-        margin-left: -3px;
-      }
-      &-right {
-        font-size: 0.35em;
-        margin-left: 3px;
-      }
-    }
-    &-left {
-      &:hover {
-        color: $red;
-      }
-    }
-    &-right {
-      &:hover {
-        color: $blue;
-      }
-    }
-  }
+
+  // &-second {
+  //   font-size: 10px;
+  //   font-family: $monospace;
+  //   margin-left: 2px;
+  // }
+  // &-timer {
+  //   &-revealer {
+  //     font-size: 0.4em;
+  //   }
+  //   &-label {
+  //     &-right,
+  //     &-right-box {
+  //       @include clock-hover($blue-alt);
+  //     }
+  //     &-left,
+  //     &-left-box {
+  //       @include clock-hover($red-alt);
+  //     }
+  //     &-eventbox {
+  //       &-left {
+  //         &:hover {
+  //           color: $red-alt;
+  //         }
+  //       }
+  //       &-right {
+  //         &:hover {
+  //           color: $blue-alt;
+  //         }
+  //       }
+  //     }
+  //   }
+  //   &-left {
+  //     &:hover {
+  //       color: $red;
+  //     }
+  //   }
+  //   &-right {
+  //     &:hover {
+  //       color: $blue;
+  //     }
+  //   }
+  //   &-icon {
+  //     &-left {
+  //       font-size: 0.42em;
+  //       margin: -2px 4px 0 -4px;
+  //     }
+  //     &-right {
+  //       font-size: 0.35em;
+  //       margin-left: 3px;
+  //     }
+  //   }
+  // }
 }
 
 .weekday {
