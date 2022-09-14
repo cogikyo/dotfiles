@@ -1,96 +1,69 @@
-; ┌┬┐┌─┐┬┌┐┌
-; │││├─┤││││
-; ┴ ┴┴ ┴┴┘└┘
-; -- windows ==================================================================
-; top-bar bot-bar {{{
+; ================================= windows ===================================
+; {{{
 
-(defwindow top-bar
-  :monitor 0
-  :geometry (geometry
-    :width "100%"
-    :anchor "top center"
-  )
-  :stacking "fg"
-  :exclusive false
-  :focusable false
-  (centerbox :class "top-bar-box"
-    (top-left) (top-center-fake) (top-right)
-  )
-)
+(defvar spacing 16)
 
-(defwindow top-center
-  :monitor 0
-  :geometry (geometry
-    :width "35%"
-    :anchor "top center"
-  )
-  :stacking "fg"
-  :exclusive false
-  :focusable false
-  (top-center-real)
-)
-
-
-(defwindow bot-bar
-  :monitor 0
-  :geometry (geometry
-    :width "100%"
-    :anchor "bottom center"
-  )
-  :stacking "fg"
-  :exclusive false
-  :focusable false
-  (centerbox :class "bot-bar-box"
-    (bot-left) (bot-center) (bot-right)
-  )
-)
-
-; }}}
-; ================================================================== windows ==
-
-; == general widgets ==========================================================
-; mybox {{{
-
-(defwidget mybox [box-class ?spacing]
-  (box
-    :class "${box-class}-box"
-    :spacing {strlength("${spacing}") > 0 ? '${spacing}' : '16'}
-    :orientation "h"
-    :space-evenly false
-    (children)
-  )
-)
-; }}}
-; ========================================================== general widgets ==
-
-; ┌┬┐┌─┐┌─┐
-;  │ │ │├─┘
-;  ┴ └─┘┴
-; == top-left =================================================================
-; music audio {{{
-
-(defwidget top-left []
-  (mybox :box-class "top-left"
-    (box :class "music-cover" :style "background-image: url('${artUrl}');")
-    (music)
-    (mybox :box-class "audio" (audio-in) (audio-out))
+(defwindow sound
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :width "33%" :anchor "top left")
+  (box :class "sound" :halign "start" :space-evenly false :spacing spacing
+    (cover)
+    (music-info)
+    (box :class "audio" :space-evenly false :spacing spacing
+      (audio :content "source" :var source :icon "")
+      (audio :content "sink" :var sink :icon "墳")
     )
   )
-
-; == music ===================================================================
-; artUrl status progress song artist volume {{{
-
-(defpoll artUrl
-  :initial "/home/cullyn/.config/eww/assets/ytm.png"
-  :interval "1s"
-  "scripts/music_info cover"
 )
-(deflisten status :initial "ﭦ" `playerctl --follow status`)
-(defpoll progress :initial 1 :interval "0.5s" "scripts/music_info duration")
-(defpoll song :interval "1s"  "scripts/music_info song")
-(defpoll artist :interval "1s"  "scripts/music_info artist")
-(defwidget music-progress-indicator []
-  (mybox :box-class "music-progress"
+
+(defwindow today
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :width "33%" :anchor "top center")
+  (box :class "today" :space-evenly false :spacing spacing
+    (weather) (time) (date)
+  )
+)
+
+(defwindow computer
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :width "33%" :anchor "top right")
+  (computer)
+)
+
+(defwindow actions
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :width "33%" :anchor "bottom right")
+  (actions)
+)
+
+(defwindow workspaces
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :width "33%" :anchor "bottom center")
+  (workspaces)
+)
+
+(defwindow network
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :width "33%" :anchor "bottom right")
+  (network)
+)
+
+; }}}
+; =============================================================================
+
+; == sound ====================================================================
+; {{{
+
+(defpoll art-url :interval "1s" "scripts/music_info cover")
+(defwidget cover []
+  (box :class "music-cover" :style "background-image: url('${art-url}');")
+  ; TODO: EVENTS
+)
+
+(defvar player "youtube-music-desktop-app")
+(deflisten status 'playerctl --follow status')
+(defwidget music-progress []
+  (box :class "music-progress-box" :space-evenly false :spacing spacing
     (circular-progress
       :class "music-progress"
       :value progress
@@ -98,105 +71,77 @@
       :thickness 2
       :clockwise true
       (box :class "music-progress-icon"
-        (eventbox
-          :onclick "playerctl --player=youtube-music-desktop-app play-pause"
+        (eventbox :onclick "playerctl --player=${player} play-pause"
           "${matches(status, "Playing") ? "" : "奈"}"
-          )
         )
       )
     )
   )
-(defpoll volume :interval "1s"  "scripts/music_info volume")
-(defwidget music []
-  (mybox :box-class "music"
-    (music-progress-indicator)
-    (mybox :box-class "music-info"
-      (label :class "music-song"   :markup song)
-      (label :class "music-artist" :markup artist)
-      (label :class "music-volume" :markup volume )
-      )
-    )
+)
+
+(defpoll progress :interval "0.5s" "scripts/music_info duration")
+(defpoll song     :interval "1s"   "scripts/music_info song")
+(defpoll artist   :interval "1s"   "scripts/music_info artist")
+(defpoll volume   :interval "1s"   "scripts/music_info volume")
+(defwidget music-info []
+  (box :class "music-info" :space-evenly false :spacing spacing
+    (music-progress)
+  ; TODO: EVENTS
+    (label :class "music-song"   :markup song)
+    (label :class "music-artist" :markup artist)
+    (label :class "music-volume" :markup volume )
   )
-; }}}
-; =================================================================== music ==
+)
 
-; == audio ===================================================================
-; audio-in (source) audio-out (sink) {{{
-
-(deflisten source_volume :initial '100' 'tail -F /tmp/eww/source')
-(defwidget audio-in []
-  (eventbox :class "audio-in-eventbox"
-            :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
-            :onscroll "scripts/pulse_info change_volume source {} 1"
-    (label :text " ${source_volume}")
-    )
-  )
-
-(deflisten sink_volume :intial '50' 'tail -F /tmp/eww/sink')
-(defwidget audio-out []
-  (eventbox :class "audio-out-eventbox"
-            :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
-            :onscroll "scripts/pulse_info change_volume sink {} 1"
-    (label :text "墳 ${sink_volume}")
+(deflisten source :initial '100' 'tail -F /tmp/eww/source')
+(deflisten sink :intial '50' 'tail -F /tmp/eww/sink')
+(defwidget audio [content icon var]
+  (eventbox
+    :class "audio-${content}"
+    :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
+    :onscroll "scripts/pulse_info change_volume ${content} {} 1"
+    (label :class "audio-${content}-label" :text "${icon} ${var}")
   )
 )
 
 ; }}}
-; =================================================================== audio-io ==
+; =============================================================================
 
-; }}}
-; ================================================================= top-left ==
-
-; == top-center ===============================================================
-; weather time weekday {{-{
-
-(defwidget top-center-fake [] "")
-
-(defwidget top-center-real []
-  (box :class "top-bar-box"
-    (weather) (time) (weekday)
-  )
-)
-
-; == weather ==================================================================
+; == today ==================================================================
 ; {{{
 
-; TODO: turn into temp files for listening
 (deflisten w-id :initial "800" 'tail -F "/tmp/eww/weather/id"')
-(deflisten w-icon :initial " " 'tail -F "/tmp/eww/weather/icon"')
-(deflisten w-temp :initial " " 'tail -F "/tmp/eww/weather/temp"')
-(deflisten w-main :initial " " 'tail -F "/tmp/eww/weather/main"')
-(deflisten w-cond :initial " " 'tail -F "/tmp/eww/weather/cond"')
-(deflisten w-aqi  :initial " " 'tail -F "/tmp/eww/weather/aqi"')
-(deflisten w-uvi  :initial " " 'tail -F "/tmp/eww/weather/uvi"')
-(deflisten w-rain :initial " " 'tail -F "/tmp/eww/weather/rain"')
-(deflisten w-wind :initial " " 'tail -F "/tmp/eww/weather/wind"')
-(deflisten w-bf-i :initial " " 'tail -F "/tmp/eww/weather/bf-icon"')
-(deflisten w-bf-d :initial " " 'tail -F "/tmp/eww/weather/bf-desc"')
+(deflisten w-icon 'tail -F "/tmp/eww/weather/icon"')
+(deflisten w-temp 'tail -F "/tmp/eww/weather/temp"')
+(deflisten w-main 'tail -F "/tmp/eww/weather/main"')
+(deflisten w-cond 'tail -F "/tmp/eww/weather/cond"')
+(deflisten w-aqi  'tail -F "/tmp/eww/weather/aqi"')
+(deflisten w-uvi  'tail -F "/tmp/eww/weather/uvi"')
+(deflisten w-rain 'tail -F "/tmp/eww/weather/rain"')
+(deflisten w-wind 'tail -F "/tmp/eww/weather/wind"')
+(deflisten w-bf-i 'tail -F "/tmp/eww/weather/bf-icon"')
+(deflisten w-bf-d 'tail -F "/tmp/eww/weather/bf-desc"')
 (defwidget weather []
-  (box :class "weather-box" :halign "end" :space-evenly false :spacing 8
-       :style "margin-right: ${timer-visible ? '-25px;' : '-70px;'}"
-    (box
+  (box
+    :class "weather" :halign "end" :space-evenly false :spacing 8
+    :style "margin-right: ${timer-visible ? '-25px;' : '-70px;'}"
+    (box ;TODO: IMAGE INSTEAD?
       :class "weather-icons"
       :style "background-image: url('assets/owm-icons/${w-icon}.png');"
     )
     (label :markup "<b>${w-temp}<sup></sup></b>")
-    (label :class "weather-label"
-           :markup {matches(w-id, "(800)|(7[0-9][0-9])") ?
-                      "<b>${w-main}</b>  ${w-aqi} " :
-                      "<b>${w-main}</b> <small>(<i>${w-cond}</i>)</small>"}
+    (label
+      :class "weather-label"
+      :markup {matches(w-id, "(800)|(7[0-9][0-9])") ?
+        "<b>${w-main}</b>  ${w-aqi} " :
+        "<b>${w-main}</b> <small>(<i>${w-cond}</i>)</small>"}
     )
-    (label :class "weather-label"
-           :markup "履 ${w-uvi}   ${w-rain}<sub>%  </sub>${w-bf-i} ${w-wind}<sub>m/s</sub>"
+    (label ; TODO: REVEAL
+      :class "weather-label"
+      :markup "履 ${w-uvi}   ${w-rain}<sub>%  </sub>${w-bf-i} ${w-wind}<sub>m/s</sub>"
     )
   )
 )
-
-; }}}
-; ================================================================== weather ==
-
-; == time =====================================================================
-; {{-{
 
 (defpoll hour :interval "1s" "date '+%H'")
 (defpoll minute :interval "1s" "date '+%M'")
@@ -205,7 +150,7 @@
   (eventbox
     :onhover "eww update timer-visible=true"
     :onhoverlost "eww update timer-visible=false"
-    (box :class "time-box" :halign "center" :space-evenly false :spacing 0
+    (box :class "time" :halign "center" :space-evenly false :spacing 0
       (alarm)
       (clock :content "hour" :text hour :bool hour-active)
       (clock-delimiter)
@@ -215,13 +160,11 @@
   )
 )
 
-; == clock ===================================================================
-; {{{
-
 (defvar hour-active false)
 (defvar minute-active false)
 (defwidget clock [content bool text]
-  (eventbox :class "time-${content}${bool ? "-active" : ""}"
+  (eventbox
+    :class "time-${content}${bool ? "-active" : ""}"
     :onhover "eww update ${content}-active=true"
     :onhoverlost "eww update ${content}-active=false"
     (label :class "time-${content}-label" :text text)
@@ -231,26 +174,25 @@
 (defpoll clockface-hour :interval "1s" 'scripts/date_info clockface-hour')
 (defpoll clockface-minute :interval "1s" 'scripts/date_info clockface-minute')
 (defwidget clock-delimiter []
-  (box :class "time-clockface-box"
+  (box
+    :class "time-clockface-box"
     :orientation "v" :spacing -4 :space-evenly false
     (clock :content "hour" :text clockface-hour :bool hour-active)
     (clock :content "minute" :text clockface-minute :bool minute-active)
   )
 )
 
-; }}}
-; =================================================================== clock ==
 
-; == revealer ===================================================================
-; time-revealer -> alarm timer {{{
 
 (defvar fine-adjust false)
 (defvar timer-visible false)
 (defwidget time-revealer [app direction text bool]
-  (revealer :class "time-${app}-revealer"
+  (revealer
+    :class "time-${app}-revealer"
     :reveal timer-visible
     :transition "${direction == "left" ? "slideright" : "slideleft" }"
-    (eventbox :class "time-${app}-eventbox"
+    (eventbox
+      :class "time-${app}-eventbox"
       :onclick "scripts/timer_info ${app}_status & disown"
       :onscroll "scripts/timer_info ${app} {} ${fine-adjust ? 1 : 15}"
       :onmiddleclick "eww update fine-adjust=${fine-adjust ? "false" : "true"}"
@@ -273,9 +215,9 @@
 ;
 (deflisten alarm 'tail -F /tmp/eww/alarm')
 (defwidget alarm []
-  (mybox :box-class "time-alarm" :spacing 6
+  (box :box-class "time-alarm" :spacing 6 :space-evenly false
     (time-revealer :app "alarm"
-      :direction "left" :text alarm :bool hour-active)
+                   :direction "left" :text alarm :bool hour-active)
     ; (time-revealer-indicator :app "alarm"
     ;   :icon "" :bool hour-active :content "hour"
     ;   :text "${fine-adjust ? "1" : "15"}"
@@ -285,55 +227,41 @@
 
 (deflisten timer 'tail -F /tmp/eww/timer')
 (defwidget timer []
-  (mybox :box-class "time-timer" :spacing 6
+  (box :box-class "time-timer" :spacing 6 :space-evenly false
     ; (time-revealer-indicator :app "timer"
     ;   :icon "羽" :text second :bool minute-active :content "minute"
     ; )
     (time-revealer :app "timer"
-      :direction "right" :text timer :bool minute-active)
+                   :direction "right" :text timer :bool minute-active)
   )
 )
-; }}}
-; =================================================================== revealer ==
-
-; }}}
-; ===================================================================== time ==
-
-; == weekday ==================================================================
-; {{{
 
 (deflisten week 'tail -F /tmp/eww/week')
 (deflisten day 'tail -F /tmp/eww/day')
-(defwidget weekday []
-    (box :class "weekday-box"
+(defwidget date []
+  (box :class "weekday-box"
        :halign "start" :space-evenly false :spacing 16
        :style "margin-left: ${timer-visible ? '-25px;' : '-70px;'}"
-    (mybox :box-class "weekday-day" :spacing 6
+    (box :class "weekday-day" :spacing 6 :space-evenly false
       (label :text "")
       day
-    )
-    (mybox :box-class "weekday-week" :spacing 4
+      )
+    (box :class "weekday-week" :spacing 6 :space-evenly false
       (label :text "冀")
       week
     )
   )
 )
-; }}}
-; ================================================================== weekday ==
 
 ;}}}
-; =============================================================== top-center ==
+; =============================================================================
 
-; == top-right ================================================================
-; cp temp memeory gpu {{{
+; == computer =================================================================
+; {{{
 
 (defvar userUrl '/home/cullyn/.config/eww/assets/nosvagor.png')
-(defwidget top-right []
-  (box
-    :class "top-right-box"
-    :halign "end"
-    :spacing 16
-    :space-evenly false
+(defwidget computer []
+  (box :class "computer" :halign "end" :spacing 16 :space-evenly false
     (cpu)
     (temp)
     (memory)
@@ -342,61 +270,39 @@
   )
 )
 
-; == cpu ======================================================================
-; {{{
-
 (defwidget cpu []
-  (mybox :box-class "cpu"
+  (box :class "cpu"
   "cpu"
   )
 )
-; }}}
-; ====================================================================== cpu ==
 
-; == temp =====================================================================
-; {{{
 
 (defwidget temp []
-  (mybox :box-class "temp"
+  (box :class "temp"
   "temp"
   )
 )
-; }}}
-; ===================================================================== temp ==
-
-; == memory ===================================================================
-; {{{
 
 (defwidget memory []
-  (mybox :box-class "memory"
+  (box :class "memory"
   "memory"
   )
 )
-; }}}
-; =================================================================== memory ==
-
-; == gpu ======================================================================
-; {{{
 
 (defwidget gpu []
-  (mybox :box-class "gpu"
+  (box :class "gpu"
   "gpu"
   )
 )
-; }}}
-; ====================================================================== gpu ==
 
 ; }}}
-; ================================================================ top-right ==
+; =============================================================================
 
-; ┌┐ ┌─┐┌┬┐
-; ├┴┐│ │ │
-; └─┘└─┘ ┴
-; == bot-left =================================================================
+; == action ===================================================================
 ; pacman {{{
 
-(defwidget bot-left []
-  (mybox :box-class "bot-left"
+(defwidget actions []
+    (box :class "actions" :space-evenly false :spacing spacing
     (pacman)
   )
 )
@@ -404,20 +310,20 @@
 (defwidget pacman [] "pacman")
 
 ; }}}
-; ================================================================= bot-left ==
+; =============================================================================
 
-; == bot-center ===============================================================
-; workspaces {{{
+; == workspaces ===============================================================
+; {{{
 
-(defwidget bot-center []
-  (mybox :box-class "bot-center"
+(defwidget worksapces []
+    (box :class "workspaces" :space-evenly false :spacing spacing
     (workspaces)
   )
 )
 
 (deflisten workspace 'tail -F /tmp/eww/workspace')
 (defwidget workspaces []
-  (mybox :box-class "workspace" :spacing 12
+  (box :class "workspace" :space-evenly false :spacing 12
     (eventbox
       :onclick "hyprctl dispatch workspace 1"
       (label :text ""
@@ -452,17 +358,13 @@
 )
 
 ; }}}
-; =============================================================== bot-center ==
+; =============================================================================
 
-; == bot-right ================================================================
+; == network ================================================================
 ; netowork {{{
 
-(defwidget bot-right []
-  (box
-    :class "bot-right"
-    :halign "end"
-    :spacing 16
-    :space-evenly false
+(defwidget network []
+  (box :class "bot-right" :halign "end" :spacing 16 :space-evenly false
     (network)
   )
 )
@@ -470,4 +372,4 @@
 (defwidget network [] "network")
 
 ; }}}
-; ================================================================ bot-right ==
+; =============================================================================
