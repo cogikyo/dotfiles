@@ -33,7 +33,9 @@ duration() {
         position=$(playerctl --player=youtube-music-desktop-app metadata --format \
             '{{position}}' | bc)
         progress=$(echo "scale=2; (($position / $length) * 100) + 1" | bc)
-        echo "$progress"
+        if [[ $progress -gt 0 ]]; then
+            echo "$progress"
+        fi
     else
         echo "1"
     fi

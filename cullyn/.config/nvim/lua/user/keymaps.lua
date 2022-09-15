@@ -38,13 +38,9 @@ map("v", "<leader>p", "y`]p`]ml`[O<Esc>'lo<Esc>")
 map("v", "<leader>P", "yP`]o<Esc>j")
 
 -- 🦬 buffers
-map("n", "<leader>b", ":bp<CR>zt")
-map("n", "<leader>B", ":bn<CR>zt")
+map("n", "<leader>b", ":bn<CR>zt")
+map("n", "<leader>B", ":bp<CR>zt")
 map("n", "<leader><C-b>", ":bd!<CR>zt")
-
--- 🤯 comment headers
-map("n", "HS", '<leader>o<leader>O:.! figlet -fshadow <CR> gcip6j2"_dd', rec)
-map("n", "HC", '<leader>o<leader>O:.! figlet -fcalvin <CR> gcip3j"_dd', rec)
 
 -- 🌌 gimme space please
 map("n", "<leader>o", ':<C-u>call append(line("."),   repeat([""], v:count1))<CR>')
@@ -153,22 +149,21 @@ map("n", "<leader>ns", ":lua require('harpoon.ui').nav_file(3)<CR>zt")
 map("n", "<leader>na", ":lua require('harpoon.ui').nav_file(4)<CR>zt")
 map("n", "<leader>nd", ":lua require('harpoon.ui').nav_file(5)<CR>zt")
 
-vim.cmd([[
-nnoremap <leader>ir vip:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
-nnoremap <leader>=r vip:<BS><BS><BS><BS><BS>'<,'>s/xxxxxx//g<Left><Left>
-vnoremap <leader>r :<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>
-nnoremap <leader>R :%s//g<Left><Left>
-nnoremap <silent> <leader>N :call setreg("/", ['空'])<CR>
-]])
+-- 🔍 search / replace
+map("n", "<leader>ir", "vip:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>", rec)
+map("n", "<leader>r", ":<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>", rec)
+map("n", "<leader>R", ":%s//g<Left><Left>", rec)
+map("n", "<leader>N", ':call setreg("/", [\'空\']")<CR>', rec)
+
+-- 🤯 comment headers
+map("n", "HS", '<leader>o<leader>O:.! figlet -fshadow <CR> gcip6j2"_dd', rec)
+map("n", "HC", ":.! figlet -fcalvin <CR> gc2j2j", rec)
 
 -- 🙏 folds
 map("n", "<leader>mv", ":mkview<CR>")
 map("n", "<leader>lv", ":loadview<CR>")
-map(
-	"n",
-	"<leader>==",
-	"}o==<Esc>a  <Esc>6ix<Esc><Esc>a  <Esc>67i=<Esc><Esc>o<Esc>3i{<Esc><Esc>o<Esc>3i}<Esc>o<Esc><Esc>67i=<Esc><Esc>a  <Esc><Esc>6ix<Esc><Esc>a  <Esc><Esc>2i=<Esc><Esc>o<Esc>4k<Esc>gcc"
-)
+map("n", "<leader>==", "}o<Esc>35i=<Esc>a<Space>title<Space>=<Esc>33i=<Esc>o<Esc>76i=<Esc>o<Esc>2kgcipftciw", rec)
+map("n", "<leader>zf", "<leader>o<CR><Esc>kzf1jzoo<CR><Esc>")
 
 -- 🔤 spelling
 map("i", "<C-l>", "<c-g>u<Esc>[s1z=`]a<c-g>u", rec)
