@@ -5,34 +5,31 @@
 
 (defwindow sound
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :width "33%" :anchor "top left")
+  :geometry (geometry :width "30%" :anchor "top left")
   (box :class "sound" :halign "start" :space-evenly false :spacing spacing
-    (cover)
-    (music-info)
-    (box :class "audio" :space-evenly false :spacing spacing
-      (audio :content "source" :var source :icon "")
-      (audio :content "sink" :var sink :icon "墳")
-    )
+    (music) (audio)
   )
 )
 
 (defwindow today
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :width "33%" :anchor "top center")
-  (box :class "today" :space-evenly false :spacing spacing
+  :geometry (geometry :width "39%" :anchor "top center")
+  (centerbox :class "today"
     (weather) (time) (date)
   )
 )
 
 (defwindow computer
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :width "33%" :anchor "top right")
-  (computer)
+  :geometry (geometry :width "30%" :anchor "top right")
+  (box :class "sound" :halign "end" :space-evenly false :spacing spacing
+    (cpu) (gpu) (temp) (memory) (user)
+  )
 )
 
 (defwindow actions
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :width "33%" :anchor "bottom right")
+  :geometry (geometry :width "33%" :anchor "bottom left")
   (actions)
 )
 
@@ -47,30 +44,42 @@
   :geometry (geometry :width "33%" :anchor "bottom right")
   (network)
 )
-
 ; }}}
 ; =============================================================================
 
-; == sound ====================================================================
+; ================================= sound =====================================
+; ┌┬┐┬ ┬┌─┐┬┌─┐
+; ││││ │└─┐││
+; ┴ ┴└─┘└─┘┴└─┘
 ; {{{
-
-(defpoll art-url :interval "1s" "scripts/music_info cover")
-(defwidget cover []
-  (box :class "music-cover" :style "background-image: url('${art-url}');")
-  ; TODO: EVENTS
-)
 
 (defvar player "youtube-music-desktop-app")
 (deflisten status 'playerctl --follow status')
+(defpoll progress :initial 1 :interval "0.5s" "scripts/music_info duration")
+(defpoll song     :interval "1s"   "scripts/music_info song")
+(defpoll artist   :interval "1s"   "scripts/music_info artist")
+(defpoll volume   :interval "1s"   "scripts/music_info volume")
+
+(defwidget music []
+  (box :class "music" :space-evenly false :spacing spacing
+    (music-cover) (music-info)
+  )
+)
+
+(defpoll art-url :interval "1s" "scripts/music_info cover")
+(defwidget music-cover []
+  (box :class "music-cover" :style "background-image: url('${art-url}');")
+)
+
 (defwidget music-progress []
-  (box :class "music-progress-box" :space-evenly false :spacing spacing
+  (box :class "music-progress" :space-evenly false :spacing spacing
     (circular-progress
-      :class "music-progress"
+      :class "music-progress-circle"
       :value progress
       :start-at 75
       :thickness 2
       :clockwise true
-      (box :class "music-progress-icon"
+      (box :class "music-progress-circle-icon"
         (eventbox :onclick "playerctl --player=${player} play-pause"
           "${matches(status, "Playing") ? "" : "奈"}"
         )
@@ -79,23 +88,31 @@
   )
 )
 
-(defpoll progress :interval "0.5s" "scripts/music_info duration")
-(defpoll song     :interval "1s"   "scripts/music_info song")
-(defpoll artist   :interval "1s"   "scripts/music_info artist")
-(defpoll volume   :interval "1s"   "scripts/music_info volume")
 (defwidget music-info []
   (box :class "music-info" :space-evenly false :spacing spacing
     (music-progress)
-  ; TODO: EVENTS
     (label :class "music-song"   :markup song)
     (label :class "music-artist" :markup artist)
     (label :class "music-volume" :markup volume )
   )
 )
+; }}}
+; ┌─┐┬ ┬┌┬┐┬┌─┐
+; ├─┤│ │ ││││ │
+; ┴ ┴└─┘─┴┘┴└─┘
+; {{{
 
 (deflisten source :initial '100' 'tail -F /tmp/eww/source')
 (deflisten sink :intial '50' 'tail -F /tmp/eww/sink')
-(defwidget audio [content icon var]
+
+(defwidget audio []
+  (box :class "audio" :space-evenly false :spacing spacing
+    (audio-control :content "source" :var source :icon "")
+    (audio-control :content "sink" :var sink :icon "墳")
+  )
+)
+
+(defwidget audio-control [content icon var]
   (eventbox
     :class "audio-${content}"
     :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
@@ -103,11 +120,13 @@
     (label :class "audio-${content}-label" :text "${icon} ${var}")
   )
 )
-
 ; }}}
 ; =============================================================================
 
-; == today ==================================================================
+; ================================= today =====================================
+; ┬ ┬┌─┐┌─┐┌┬┐┬ ┬┌─┐┬─┐
+; │││├┤ ├─┤ │ ├─┤├┤ ├┬┘
+; └┴┘└─┘┴ ┴ ┴ ┴ ┴└─┘┴└─
 ; {{{
 
 (deflisten w-id :initial "800" 'tail -F "/tmp/eww/weather/id"')
@@ -121,11 +140,11 @@
 (deflisten w-wind 'tail -F "/tmp/eww/weather/wind"')
 (deflisten w-bf-i 'tail -F "/tmp/eww/weather/bf-icon"')
 (deflisten w-bf-d 'tail -F "/tmp/eww/weather/bf-desc"')
+
 (defwidget weather []
   (box
     :class "weather" :halign "end" :space-evenly false :spacing 8
-    :style "margin-right: ${timer-visible ? '-25px;' : '-70px;'}"
-    (box ;TODO: IMAGE INSTEAD?
+    (box
       :class "weather-icons"
       :style "background-image: url('assets/owm-icons/${w-icon}.png');"
     )
@@ -142,10 +161,16 @@
     )
   )
 )
+; }}}
+; ┌┬┐┬┌┬┐┌─┐
+;  │ ││││├┤
+;  ┴ ┴┴ ┴└─┘
+; {{{
 
 (defpoll hour :interval "1s" "date '+%H'")
 (defpoll minute :interval "1s" "date '+%M'")
 (defpoll second :interval "1s" 'date +%S')
+
 (defwidget time []
   (eventbox
     :onhover "eww update timer-visible=true"
@@ -182,8 +207,6 @@
   )
 )
 
-
-
 (defvar fine-adjust false)
 (defvar timer-visible false)
 (defwidget time-revealer [app direction text bool]
@@ -215,7 +238,7 @@
 ;
 (deflisten alarm 'tail -F /tmp/eww/alarm')
 (defwidget alarm []
-  (box :box-class "time-alarm" :spacing 6 :space-evenly false
+  (box :class "time-alarm" :spacing spacing :space-evenly false
     (time-revealer :app "alarm"
                    :direction "left" :text alarm :bool hour-active)
     ; (time-revealer-indicator :app "alarm"
@@ -227,7 +250,7 @@
 
 (deflisten timer 'tail -F /tmp/eww/timer')
 (defwidget timer []
-  (box :box-class "time-timer" :spacing 6 :space-evenly false
+  (box :class "time-timer" :spacing spacing :space-evenly false
     ; (time-revealer-indicator :app "timer"
     ;   :icon "羽" :text second :bool minute-active :content "minute"
     ; )
@@ -235,13 +258,17 @@
                    :direction "right" :text timer :bool minute-active)
   )
 )
+; }}}
+; ┌┬┐┌─┐┌┬┐┌─┐
+;  ││├─┤ │ ├┤
+; ─┴┘┴ ┴ ┴ └─┘
+; {{{
 
 (deflisten week 'tail -F /tmp/eww/week')
 (deflisten day 'tail -F /tmp/eww/day')
 (defwidget date []
-  (box :class "weekday-box"
-       :halign "start" :space-evenly false :spacing 16
-       :style "margin-left: ${timer-visible ? '-25px;' : '-70px;'}"
+  (box :class "date"
+       :halign "start" :space-evenly false :spacing spacing
     (box :class "weekday-day" :spacing 6 :space-evenly false
       (label :text "")
       day
@@ -252,53 +279,67 @@
     )
   )
 )
-
-;}}}
+; }}}
 ; =============================================================================
 
-; == computer =================================================================
+; ================================= computer ==================================
+; ┌─┐┌─┐┬ ┬
+; │  ├─┘│ │
+; └─┘┴  └─┘
 ; {{{
-
-(defvar userUrl '/home/cullyn/.config/eww/assets/nosvagor.png')
-(defwidget computer []
-  (box :class "computer" :halign "end" :spacing 16 :space-evenly false
-    (cpu)
-    (temp)
-    (memory)
-    (gpu)
-    (box :class "user" :style "background-image: url('${userUrl}');")
-  )
-)
 
 (defwidget cpu []
   (box :class "cpu"
   "cpu"
   )
 )
-
-
-(defwidget temp []
-  (box :class "temp"
-  "temp"
-  )
-)
-
-(defwidget memory []
-  (box :class "memory"
-  "memory"
-  )
-)
+; }}}
+; ┌─┐┌─┐┬ ┬
+; │ ┬├─┘│ │
+; └─┘┴  └─┘
+; {{{
 
 (defwidget gpu []
   (box :class "gpu"
   "gpu"
   )
 )
+; }}}
+; ┌┬┐┌─┐┌┬┐┌─┐
+;  │ ├┤ │││├─┘
+;  ┴ └─┘┴ ┴┴
+; {{{
 
+(defwidget temp []
+  (box :class "temp"
+  "temp"
+  )
+)
+; }}}
+; ┌┬┐┌─┐┌┬┐┌─┐┬─┐┬ ┬
+; │││├┤ ││││ │├┬┘└┬┘
+; ┴ ┴└─┘┴ ┴└─┘┴└─ ┴
+; {{{
+
+(defwidget memory []
+  (box :class "memory"
+  "memory"
+  )
+)
+; }}}
+; ┬ ┬┌─┐┌─┐┬─┐
+; │ │└─┐├┤ ├┬┘
+; └─┘└─┘└─┘┴└─
+; {{{
+
+(defvar userUrl '/home/cullyn/.config/eww/assets/nosvagor.png')
+(defwidget user []
+  (box :class "user" :style "background-image: url('${userUrl}');")
+)
 ; }}}
 ; =============================================================================
 
-; == action ===================================================================
+; ================================= actions ===================================
 ; pacman {{{
 
 (defwidget actions []
@@ -312,18 +353,12 @@
 ; }}}
 ; =============================================================================
 
-; == workspaces ===============================================================
+; ================================= workspaces ================================
 ; {{{
-
-(defwidget worksapces []
-    (box :class "workspaces" :space-evenly false :spacing spacing
-    (workspaces)
-  )
-)
 
 (deflisten workspace 'tail -F /tmp/eww/workspace')
 (defwidget workspaces []
-  (box :class "workspace" :space-evenly false :spacing 12
+  (box :class "workspaces" :halign "center" :space-evenly false :spacing spacing
     (eventbox
       :onclick "hyprctl dispatch workspace 1"
       (label :text ""
@@ -360,16 +395,13 @@
 ; }}}
 ; =============================================================================
 
-; == network ================================================================
-; netowork {{{
+; ================================= network ===================================
+; {{{
 
 (defwidget network []
-  (box :class "bot-right" :halign "end" :spacing 16 :space-evenly false
-    (network)
+  (box :class "network" :halign "end" :spacing 16 :space-evenly false
+    "network"
   )
 )
-
-(defwidget network [] "network")
-
-; }}}
+;}}}
 ; =============================================================================
