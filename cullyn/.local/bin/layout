@@ -67,7 +67,7 @@ dotfiles () {
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive "exact $left_window"
     hyprctl dispatch movefocus r
-    firefox-developer-edition --new-window https://github.com/nosvagor/dotfiles & sleep 1
+    firefox-developer-edition --new-window https://calendar.google.com/calendar/u/0/r & sleep 1
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive "exact $center_window"
     hyprctl dispatch movefocus r

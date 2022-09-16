@@ -150,7 +150,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
   border-top: 1px double $color;
   padding: 0 1em;
   margin-top: 10px;
-  margin-bottom: 18px;
+  margin-bottom: 20px;
 
   @if $position == 'top-left' {
     border-right: 2px solid $color;
@@ -167,27 +167,30 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
   }
 
   @if $position == 'top-center' {
-    border-radius: 16px 16px 64px 64px;
+    border-radius: 16px 16px 69px 69px;
     border-right: 1px solid $color;
     border-bottom: 2px solid $color;
     border-left: 1px solid $color;
-    box-shadow: 0 1px 4px 2px $shadow;
+    margin: -8px 18px 12px 18px;
+    transition: padding 0.5s ease-out;
   }
 }
 
-@mixin clock-hover($color) {
-  font-size: 2.5em;
-  transition: all 1s $ease-out-snap;
+@mixin clock-hover($color, $font-size: 1em, $font-family: $sans-serif) {
+  font-size: $font-size;
+  font-family: $font-family;
+  transition: color 1.5s $ease-out-snap;
   &-active {
-    font-size: 2.5em;
-    transition: all 0.5s $ease-out-snap;
+    font-size: $font-size;
+    font-family: $font-family;
+    transition: color 0.5s $ease-out-snap;
     color: $color;
   }
 }
 
 // }}}
 // ============================================================================
-
+//
 // ================================ sound =====================================
 // ┌┬┐┬ ┬┌─┐┬┌─┐
 // ││││ │└─┐││
@@ -226,7 +229,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 }
 // }}}
 // ============================================================================
-
+//
 // ================================ today =====================================
 // ┬ ┬┌─┐┌─┐┌┬┐┬ ┬┌─┐┬─┐
 // │││├┤ ├─┤ │ ├─┤├┤ ├┬┘
@@ -234,7 +237,6 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 // {{{
 
 .weather {
-  margin-right: 16px;
   @include box-decor($orange, 'top-left');
   &-icons {
     background-size: cover;
@@ -250,22 +252,41 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 
 .time {
   @include box-decor($orange, 'top-center');
-  margin-top: -6px;
-  margin-bottom: 10px;
-
-  // box for clockface delimiter
-  &-clockface-box {
-    font-size: 0.42em;
+  &-clockface {
+    font-size: 0.45em;
+    font-family: $monospace;
     color: $orange-d;
-    margin: 9px 3px 0px 3px;
+    margin-top: 7px;
   }
-
-  // Adjustmetns to hour:minute
   &-hour {
-    @include clock-hover($red-d);
+    @include clock-hover($red-d, 2.5em);
   }
   &-minute {
+    @include clock-hover($blue-d, 2.5em);
+  }
+  &-alarm {
+    @include clock-hover($red-d);
+    &-eventbox:hover {
+      color: $red-l;
+    }
+    &-indicator {
+      @include clock-hover($red-d, 0.6em, $monospace);
+      &-icon {
+        font-size: 1.5em;
+      }
+    }
+  }
+  &-timer {
     @include clock-hover($blue-d);
+    &-eventbox:hover {
+      color: $blue-l;
+    }
+    &-indicator {
+      @include clock-hover($blue-d, 0.6em, $monospace);
+      &-icon {
+        font-size: 1.5em;
+      }
+    }
   }
 }
 // }}}
@@ -275,12 +296,11 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 // {{{
 
 .date {
-  margin-left: 16px;
   @include box-decor($orange, 'top-right');
 }
 // }}}
 // ============================================================================
-
+//
 // ================================= computer =================================
 // ┌─┐┌─┐┬ ┬
 // │  ├─┘│ │
@@ -328,7 +348,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 }
 // }}}
 // ============================================================================
-
+//
 // ================================= actions ==================================
 // ┌─┐┌─┐┌┬┐┬┌─┐┌┐┌┌─┐
 // ├─┤│   │ ││ ││││└─┐
@@ -340,7 +360,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 }
 // }}}
 // ============================================================================
-
+//
 // ================================= workspaces ===============================
 // ┬ ┬┌─┐┬─┐┬┌─┌─┐┌─┐┌─┐┌─┐┌─┐┌─┐
 // ││││ │├┬┘├┴┐└─┐├─┘├─┤│  ├┤ └─┐
@@ -352,7 +372,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 }
 // }}}
 // ============================================================================
-
+//
 // ================================= network ==================================
 // ┌┐┌┌─┐┌┬┐┬ ┬┌─┐┬─┐┬┌─
 // │││├┤  │ ││││ │├┬┘├┴┐
