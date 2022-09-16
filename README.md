@@ -1,10 +1,10 @@
 <h1 align="center">⚙️ dotfiles ⚙️</h1>
 
 <p align="center">
-    <img src="https://img.shields.io/badge/OS-Arch Linux-ae477a?style=plastic&labelColor=24283b"/>&nbsp;&nbsp;
-    <img src="https://img.shields.io/badge/DS-Wayland-5454B9?style=plastic&labelColor=24283b"/>&nbsp;&nbsp;
+    <img src="https://img.shields.io/badge/OS-Arch Linux-5454B9?style=plastic&labelColor=24283b"/>&nbsp;&nbsp;
+    <img src="https://img.shields.io/badge/DS-Wayland-883330?style=plastic&labelColor=24283b"/>&nbsp;&nbsp;
     <img src="https://img.shields.io/badge/WM-Hyprland-7c4592?style=plastic&labelColor=24283b"/>&nbsp;&nbsp;
-    <img src="https://img.shields.io/badge/CS-Tokyo Night-883330?style=plastic&labelColor=24283b"/>
+    <img src="https://img.shields.io/badge/CS-Tokyo Night-ae477a?style=plastic&labelColor=24283b"/>
     <br>
     <kbd>
         <img
