@@ -11,6 +11,7 @@ local function map(mode, lhs, rhs, opts)
 end
 
 local rec = { noremap = false, silent = true }
+local nrec = { noremap = false, silent = false }
 
 -- ☄  leader
 map("", "<Space>", "<Nop>")
@@ -150,10 +151,9 @@ map("n", "<leader>na", ":lua require('harpoon.ui').nav_file(4)<CR>zt")
 map("n", "<leader>nd", ":lua require('harpoon.ui').nav_file(5)<CR>zt")
 
 -- 🔍 search / replace
-map("n", "<leader>ir", "vip:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>", rec)
-map("n", "<leader>r", ":<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>", rec)
-map("n", "<leader>R", ":%s//g<Left><Left>", rec)
-map("n", "<leader>N", ':call setreg("/", [\'空\']")<CR>', rec)
+map("n", "<leader>ir", "vip:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>", nrec)
+map("v", "<leader>r", ":<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>", nrec)
+map("n", "<leader>R", ":%s///g<Left><Left><Left>", nrec)
 
 -- 🤯 comment headers
 map("n", "HS", '<leader>o<leader>O:.! figlet -fshadow <CR> gcip6j2"_dd', rec)

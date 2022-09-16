@@ -67,6 +67,11 @@ alias ew='eww-open'
 alias el='eww logs'
 alias cava='alacritty --hold --title="cava" -e cava & disown && exit'
 alias man='man -r=""'
+pacclean () {
+    while ! [ "$(pacman -Qdtq)" = "" ]; do
+	sudo pacman -Rn $(pacman -Qdtq)
+    done
+}
 touchsh () {
     file="$1"
     if [[ -z "$1" ]]; then
