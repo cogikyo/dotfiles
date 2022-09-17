@@ -23,7 +23,7 @@
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :width "30%" :anchor "top right")
   (box :class "sound" :halign "end" :space-evenly false :spacing spacing
-    (cpu) (gpu) (temp) (memory) (user)
+    (cpu) (gpu) (temp) (memory) (disk) (user)
   )
 )
 
@@ -185,22 +185,22 @@
     (box :class "time" :halign "center" :space-evenly false :spacing 3
       :style "padding: 0 ${timer-visible ? "0.9em" : "1.3em"}"
       (alarm)
-      (clock :childclass "hour" :text hour :bool hour-active)
+      (clock :child "hour" :text hour :bool hour-active)
       (clockface)
-      (clock :childclass "minute" :text minute :bool minute-active)
+      (clock :child "minute" :text minute :bool minute-active)
       (timer)
     )
   )
 )
 
-(defwidget clock [childclass bool text]
+(defwidget clock [child bool text]
   (eventbox
-    :class "time-${childclass}${bool ? "-active" : ""}"
-    :onhover "eww update ${childclass}-active=true"
-    :onhoverlost "eww update ${childclass}-active=false"
+    :class "time-${child}${bool ? "-active" : ""}"
+    :onhover "eww update ${child}-active=true"
+    :onhoverlost "eww update ${child}-active=false"
     :onclick "firefox-developer-edition https://calendar.google.com/calendar/u/0/r"
     :onrightclick "firefox-developer-edition https://calendar.google.com/calendar/u/0/r/eventedit?state=%5B%5D"
-    (label :class "time-${childclass}-text" :text text)
+    (label :class "time-${child}-text" :text text)
   )
 )
 
@@ -210,22 +210,23 @@
     :orientation "v"
     :spacing -5
     :space-evenly false
-    (clock :childclass "hour" :text clockface-hour :bool hour-active)
-    (clock :childclass "minute" :text clockface-minute :bool minute-active)
+    (clock :child "hour" :text clockface-hour :bool hour-active)
+    (clock :child "minute" :text clockface-minute :bool minute-active)
   )
 )
 
-(defwidget time-revealer [app direction text bool]
+(defwidget time-revealer [app direction child text bool]
   (revealer
     :reveal timer-visible
     :transition "${direction == "left" ? "slideright" : "slideleft" }"
     (eventbox
-      :class "time-${app}-eventbox"
+      :class "time-${app}${bool ? "-active" : "" }"
+      :onhover "eww update ${child}-active=true"
+      :onhoverlost "eww update ${child}-active=false"
       :onclick "scripts/timer_info ${app}_status & disown"
       :onscroll "scripts/timer_info ${app} {} ${fine-adjust ? 1 : 15}"
-      :onmiddleclick "eww update fine-adjust=${fine-adjust ? "false" : "true"}"
       :onrightclick "scripts/timer_info reset ${app}"
-      (label :class "time-${app}${bool ? "-active" : "" }" :text text)
+      text
     )
   )
 )
@@ -255,6 +256,7 @@
     (time-revealer
       :app "alarm"
       :direction "left"
+      :child "hour"
       :text alarm
       :bool hour-active
     )
@@ -262,7 +264,7 @@
       :app "alarm"
       :child "hour"
       :icon ""
-      :text {fine-adjust ? "駱" : "15"}
+      :text {fine-adjust ? "駱" : " 神"}
       :bool hour-active
     )
   )
@@ -281,6 +283,7 @@
     (time-revealer
       :app "timer"
       :direction "right"
+      :child "minute"
       :text timer
       :bool minute-active
     )
@@ -317,8 +320,8 @@
 ; {{{
 
 (defwidget cpu []
-  (box :class "cpu"
-  "cpu"
+  (box :class "cpu" :space-evenly false :spacing spacing
+  " ${EWW_CPU.avg}"
   )
 )
 ; }}}
@@ -329,7 +332,7 @@
 
 (defwidget gpu []
   (box :class "gpu"
-  "gpu"
+  "⌬"
   )
 )
 ; }}}
@@ -338,9 +341,11 @@
 ;  ┴ └─┘┴ ┴┴
 ; {{{
 
+
+
 (defwidget temp []
   (box :class "temp"
-  "temp"
+  "   ${EWW_TEMPS.TCTL}"
   )
 )
 ; }}}
@@ -351,7 +356,20 @@
 
 (defwidget memory []
   (box :class "memory"
-  "memory"
+  "ﮕ ${EWW_RAM.used_mem}"
+  )
+)
+; }}}
+
+; ┌┬┐┬┌─┐┬┌─
+;  │││└─┐├┴┐
+; ─┴┘┴└─┘┴ ┴
+; {{{
+
+(defwidget disk []
+
+  (box :class "disk"
+    " ${round(EWW_DISK["/"].used_perc,0)}%"
   )
 )
 ; }}}
@@ -428,7 +446,8 @@
 
 (defwidget network []
   (box :class "network" :halign "end" :spacing 16 :space-evenly false
-    "network"
+    (label :text "ﯲ ${EWW_NET.enp10s0.NET_DOWN}")
+    (label :text "ﯴ ${EWW_NET.enp10s0.NET_UP}")
   )
 )
 ;}}}

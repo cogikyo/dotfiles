@@ -176,7 +176,12 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
   }
 }
 
-@mixin clock-hover($color, $font-size: 1em, $font-family: $sans-serif) {
+@mixin clock-hover(
+  $color,
+  $color2,
+  $font-size: 1em,
+  $font-family: $sans-serif
+) {
   font-size: $font-size;
   font-family: $font-family;
   transition: color 1.5s $ease-out-snap;
@@ -185,6 +190,9 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
     font-family: $font-family;
     transition: color 0.5s $ease-out-snap;
     color: $color;
+    &:hover {
+      color: $color2;
+    }
   }
 }
 
@@ -207,7 +215,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
     &-circle {
       background: $black;
       &-icon {
-        font-size: 1.2em;
+        font-size: 25px;
         margin: 5px;
         color: $red;
       }
@@ -259,36 +267,39 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
     margin-top: 7px;
   }
   &-hour {
-    @include clock-hover($red-d, 2.5em);
+    @include clock-hover($red-d, $red-l, 2.5em);
   }
   &-minute {
-    @include clock-hover($blue-d, 2.5em);
+    @include clock-hover($blue-d, $blue-l, 2.5em);
   }
   &-alarm {
-    @include clock-hover($red-d);
-    &-eventbox:hover {
-      color: $red-l;
-    }
+    @include clock-hover($red-d, $red-l);
     &-indicator {
-      @include clock-hover($red-d, 0.6em, $monospace);
+      @include clock-hover($red-d, $red-l, 0.6em, $monospace);
       &-icon {
         font-size: 1.5em;
+      }
+      &-text {
+        margin-right: -1px;
       }
     }
   }
   &-timer {
-    @include clock-hover($blue-d);
-    &-eventbox:hover {
-      color: $blue-l;
-    }
+    @include clock-hover($blue-d, $blue-l);
     &-indicator {
-      @include clock-hover($blue-d, 0.6em, $monospace);
+      @include clock-hover($blue-d, $blue-l, 0.6em, $monospace);
       &-icon {
         font-size: 1.5em;
+        margin-top: 2px;
+      }
+      &-text {
+        margin-top: 1px;
+        font-size: 0.9em;
       }
     }
   }
 }
+
 // }}}
 // ┌┬┐┌─┐┌┬┐┌─┐
 //  ││├─┤ │ ├┤
@@ -335,6 +346,15 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 // {{{
 
 .memory {
+  @include box-decor($blue, 'top-right');
+}
+// }}}
+// ┌┬┐┬┌─┐┬┌─
+//  │││└─┐├┴┐
+// ─┴┘┴└─┘┴ ┴
+// {{{
+
+.disk {
   @include box-decor($blue, 'top-right');
 }
 // }}}
