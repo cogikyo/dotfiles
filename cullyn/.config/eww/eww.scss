@@ -8,8 +8,7 @@ $monospace: Hack Nerd Font, monospace;
 $font-size: 20px;
 
 // custom super set of popular tokyonight colorscheme
-// nvim: https://github.com/folke/tokyonight.nvim/blob/main/lua/tokyonight/colors.lua
-// vscode: https://github.com/enkia/tokyo-night-vscode-theme
+// nvim: https://github.com/folke/tokyonight.nvim/blob/main/lua/tokyonight/colors.lua // vscode: https://github.com/enkia/tokyo-night-vscode-theme
 
 $white: #c0caf5;
 $black: #1a1b26;
@@ -149,8 +148,8 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
   color: $color;
   border-top: 1px double $color;
   padding: 0 1em;
-  margin-top: 10px;
-  margin-bottom: 20px;
+  margin-top: 0.5em;
+  margin-bottom: 1em;
 
   @if $position == 'top-left' {
     border-right: 2px solid $color;
@@ -167,7 +166,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
   }
 
   @if $position == 'top-center' {
-    border-radius: 16px 16px 69px 69px;
+    border-radius: 27px 27px 69px 69px;
     border-right: 1px solid $color;
     border-bottom: 2px solid $color;
     border-left: 1px solid $color;
@@ -176,22 +175,17 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
   }
 }
 
-@mixin clock-hover(
-  $color,
-  $color2,
-  $font-size: 1em,
-  $font-family: $sans-serif
-) {
-  font-size: $font-size;
-  font-family: $font-family;
-  transition: color 1.5s $ease-out-snap;
+@mixin clock-hover($color, $colorHover) {
+  &-inactive {
+    transition: color 1.5s $ease-out-snap;
+    color: $orange;
+  }
   &-active {
-    font-size: $font-size;
-    font-family: $font-family;
     transition: color 0.5s $ease-out-snap;
     color: $color;
     &:hover {
-      color: $color2;
+      color: $colorHover;
+      transition: color 0.5s $ease-out-snap;
     }
   }
 }
@@ -260,42 +254,40 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 
 .time {
   @include box-decor($orange, 'top-center');
+  &-text {
+    font-size: 2.5em;
+  }
   &-clockface {
-    font-size: 0.45em;
+    font-size: 0.42em;
     font-family: $monospace;
     color: $orange-d;
-    margin-top: 7px;
+    margin-top: 8px;
   }
   &-hour {
-    @include clock-hover($red-d, $red-l, 2.5em);
+    @include clock-hover($red-d, $red-l);
   }
+
   &-minute {
-    @include clock-hover($blue-d, $blue-l, 2.5em);
+    @include clock-hover($blue-d, $blue-l);
   }
   &-alarm {
-    @include clock-hover($red-d, $red-l);
-    &-indicator {
-      @include clock-hover($red-d, $red-l, 0.6em, $monospace);
-      &-icon {
-        font-size: 1.5em;
-      }
-      &-text {
-        margin-right: -1px;
-      }
+    margin-right: -6px;
+    &-icon {
+      margin-top: 2px;
+    }
+    &-subtext {
+      font-size: 0.8em;
     }
   }
   &-timer {
-    @include clock-hover($blue-d, $blue-l);
-    &-indicator {
-      @include clock-hover($blue-d, $blue-l, 0.6em, $monospace);
-      &-icon {
-        font-size: 1.5em;
-        margin-top: 2px;
-      }
-      &-text {
-        margin-top: 1px;
-        font-size: 0.9em;
-      }
+    margin-left: -6px;
+    &-icon {
+      margin-top: 2px;
+    }
+    &-subtext {
+      font-family: $monospace;
+      margin-top: 1px;
+      font-size: 0.69em;
     }
   }
 }
@@ -320,6 +312,50 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 
 .cpu {
   @include box-decor($blue, 'top-right');
+  > * {
+    font-family: $monospace;
+    transition: color 1.25s $ease-out-snap;
+  }
+  &-icon {
+    font-size: 1.2em;
+    margin-right: 6px;
+  }
+  &-1 {
+    color: $blue-gd;
+  }
+  &-2 {
+    color: $blue-g;
+  }
+  &-3 {
+    color: $blue-gl;
+  }
+  &-4 {
+    color: $blue-d;
+  }
+  &-5 {
+    color: $blue;
+  }
+  &-6 {
+    color: $azure;
+  }
+  &-7 {
+    color: $azure-l;
+  }
+  &-8 {
+    color: $yellow-l;
+  }
+  &-9 {
+    color: $orange-l;
+  }
+  &-10 {
+    color: $red-l;
+  }
+  &-11 {
+    color: $red;
+  }
+  &-12 {
+    color: $red-d;
+  }
 }
 // }}}
 // ┌─┐┌─┐┬ ┬
