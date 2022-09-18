@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-
-cpu () {
-    mpstat -P 0 --dec=0 | sed 1,3d
-}
-
-"$@"
