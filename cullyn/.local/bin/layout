@@ -63,11 +63,11 @@ dotfiles () {
     hyprctl dispatch workspace 4
     tmux select-window -t :1
     alacritty --hold --working-directory=dotfiles -e tmux attach -t  & sleep 0.5
-    firefox-developer-edition --new-window https://calendar.google.com/calendar/u/0/r & sleep 1
+    firefox-developer-edition --new-window https://calendar.google.com/calendar/u/0/r & sleep 1.5
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive "exact $left_window"
     hyprctl dispatch movefocus r
-    firefox-developer-edition --new-window https://github.com/nosvagor & sleep 1.5
+    firefox-developer-edition --new-window https://github.com/nosvagor & sleep 1
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive "exact $center_window"
     hyprctl dispatch movefocus r
