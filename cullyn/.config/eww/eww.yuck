@@ -158,6 +158,7 @@
 (deflisten w-temp 'tail -F "/tmp/eww/weather/temp"')
 (deflisten w-main 'tail -F "/tmp/eww/weather/main"')
 (deflisten w-cond 'tail -F "/tmp/eww/weather/cond"')
+; TODO: dynamic AQI
 (deflisten w-aqi  'tail -F "/tmp/eww/weather/aqi"')
 (deflisten w-uvi  'tail -F "/tmp/eww/weather/uvi"')
 (deflisten w-rain 'tail -F "/tmp/eww/weather/rain"')
@@ -180,7 +181,7 @@
       (label
         :class "weather-label"
         :markup {matches(w-id, "(800)|(7[0-9][0-9])") ?
-          "<b>${w-main}</b>  ${w-aqi} " :
+          "<b>${w-main}</b>  ${w-aqi}" :
           "<b>${w-main}</b> <small>(<i>${w-cond}</i>)</small>"}
       )
       (slide-n-fade :bool weather-info :direction "right"
@@ -190,8 +191,7 @@
         )
       )
     )
-  )
-)
+  ))
 ; }}}
 ; ┌┬┐┬┌┬┐┌─┐
 ;  │ ││││├┤
@@ -405,9 +405,15 @@
 ; └─┘┴  └─┘
 ; {{{
 
+(defpoll gpu :interval "0.5s" 'scripts/computer_info gpu')
+; (defpoll gpu-temp :interval "0.5s" 'scripts/computer_info gpu temp')
+; (defpoll gpu-freq :interval "0.5s" 'scripts/computer_info gpu freq')
 (defwidget gpu []
-  (box :class "gpu"
-  "⌬"
+  (box :class "gpu" :space-evenly false :spacing 2
+    (label :class "gpu-icon" :text "⌬" )
+    (label :class "gpu-util" :markup "${gpu.mclk}<small>%</small>")
+    ; (label :class "gpu-freq" :markup "${gpu-freq}")
+    ; (label :class "gpu-temp" :markup "${gpu-temp}")
   )
 )
 ; }}}
