@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+gpu () {
+    # make this file readable (chod 755) ↴
+    gpu_info=$(head -n 11 /sys/kernel/debug/dri/0/amdgpu_pm_info)
+    read -ra gpu<<<"$(echo "$gpu_info" | grep -o "[0-9]\+" | tr '\n' ' ')"
+
+    echo "{\
+        \"Mclk\":\"${gpu[0]}\"\
+        \"Sclk\":\"${gpu[2]}\"\
+        \"mclk\":\"${gpu[0]}\"\
+        \"mclk\":\"${gpu[0]}\"\
+    }"
+    # memclock range: 100 500 625 875
+    # power range : POW / 190 W
+    #
+}
+
+"$@"
