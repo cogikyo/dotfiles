@@ -78,7 +78,7 @@ uvi () {
 
 rain () {
     rain_chance=$(jq -r ".daily[0].pop" "$weather_json")
-    echo "$rain_chance * 100" | awk '{print int($1+0.5)}' >> "$dir/rain"
+    echo "$rain_chance" | awk '{print int($1*100)}' >> "$dir/rain"
 }
 
 wind () {

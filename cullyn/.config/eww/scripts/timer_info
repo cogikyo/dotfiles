@@ -138,7 +138,7 @@ reset () {
     case "$1" in
         alarm)
             ps -ef | rg alarm_status | grep -v grep | awk '{print $2}' | xargs kill
-            date '+%H:30' -d '+ 3hour' > "/tmp/eww/alarm"
+            date '+%H:00' -d '+ 3hour' > "/tmp/eww/alarm"
             notify-send "alarm reset"
         ;;
         timer)

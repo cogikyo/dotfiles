@@ -99,9 +99,12 @@
       :start-at 75
       :thickness 2
       :clockwise true
-      (box :class "music-progress-circle-icon"
-        (eventbox :onclick "playerctl --player=${player} play-pause"
-          "${matches(status, "Playing") ? "" : "奈"}"
+      (box
+        :class "music-progress-circle-icon"
+        (eventbox
+          :class "music-${matches(status, "Playing") ? "playing" : "paused" }"
+          :onclick "playerctl --player=${player} play-pause"
+          (label :text "${matches(status, "Playing") ? "" : "奈"}")
         )
       )
     )
@@ -149,6 +152,7 @@
 ; └┴┘└─┘┴ ┴ ┴ ┴ ┴└─┘┴└─
 ; {{{
 
+; TODO CHANGE ALL THIS INTO SINGLE LISTENING JSON
 (deflisten w-id :initial "800" 'tail -F "/tmp/eww/weather/id"')
 (deflisten w-icon 'tail -F "/tmp/eww/weather/icon"')
 (deflisten w-temp 'tail -F "/tmp/eww/weather/temp"')
@@ -182,7 +186,7 @@
       (slide-n-fade :bool weather-info :direction "right"
         (label
           :class "weather-label"
-          :markup "履 ${w-uvi}   ${w-rain}<sub>%  </sub>${w-bf-i} ${w-wind}<sub>m/s</sub>"
+          :markup "${w-uvi > 0 ? " 履 ${w-uvi}  " : "<small> </small>"} ${w-rain}<small>%</small> ${w-bf-i} ${w-wind}<sub>m/s</sub>"
         )
       )
     )
@@ -197,8 +201,8 @@
 (defpoll time :interval "1s"
   `date +'{"hour":"%H", "minute":"%M", "second":"%S"}'`
 )
-(defpoll clockface-hour :interval "1m" "scripts/date_info clockface-hour")
-(defpoll clockface-minute :interval "1m" "scripts/date_info clockface-minute")
+(deflisten clockface-hour "scripts/date_info clockface-hour")
+(deflisten clockface-minute "scripts/date_info clockface-minute")
 (defvar hour-active false)
 (defvar minute-active false)
 (defvar fine-adjust false)
@@ -303,21 +307,36 @@
 ; ─┴┘┴ ┴ ┴ └─┘
 ; {{{
 
-(deflisten week 'tail -F /tmp/eww/week')
-(deflisten day 'tail -F /tmp/eww/day')
+(deflisten week 'scripts/date_info week')
+(deflisten dayjson 'scripts/date_info day')
+(defvar date-extra false)
+
 (defwidget date []
-  (box :class "date"
-       :halign "start" :space-evenly false :spacing spacing
-    (box :class "weekday-day" :spacing 6 :space-evenly false
-      (label :text "")
-      day
+  (eventbox
+    :onhover "eww update date-extra=true"
+    :onhoverlost "eww update date-extra=false"
+    (box
+      :class "date"
+      :halign "start"
+      :space-evenly false
+      :spacing 10
+      (slide-n-fade
+        :bool date-extra
+        :direction "left"
+        (label :class "date-week" :text "冀 ${week}")
       )
-    (box :class "weekday-week" :spacing 6 :space-evenly false
-      (label :text "冀")
-      week
+      (box
+        :class "date-general"
+        :space-evenly false
+        :spacing 6
+        (label :class "date-weekday" :text " ${dayjson.weekday},")
+        (label :class "date-month" :text "${dayjson.month}")
+        (label :class "date-month" :text "${dayjson.day}")
+      )
     )
   )
 )
+
 ; }}}
 ; =============================================================================
 

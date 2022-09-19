@@ -2,7 +2,8 @@
 
 day () {
     while true; do
-        date '+%A, %B %d' > "/tmp/eww/day"
+        day_json=$(date +'{"weekday":"%A", "month":"%B", "day":"%d"}')
+        echo "$day_json"
         until_tomorrow=$(( $(date +%s -d "tomorrow 00:00") - $( date +%s ) ))
         sleep "$until_tomorrow"
     done
@@ -10,56 +11,62 @@ day () {
 
 week () {
     while true; do
-        echo $(( ($(date -d "1996-02-26 PST" +%s) - $(date +%s))/(60*60*24)/-7 \
-        )) > "/tmp/eww/week"
+        greg_brith="1996-02-26 PST"
+        weeks_alive=$(( ($(date -d "$greg_brith" +%s) - $(date +%s))/86400/-7 ))
+        echo "$weeks_alive"
         until_monday=$(( $(date +%s -d "next monday 00:00") - $( date +%s ) ))
         sleep "$until_monday"
     done
 }
 
 clockface-hour () {
-    hour=$(date "+%I")
+    while true; do
+        hour=$(date "+%I")
 
-    case "$hour" in
-        01) echo "";;
-        02) echo "";;
-        03) echo "";;
-        04) echo "";;
-        05) echo "";;
-        06) echo "";;
-        07) echo "";;
-        08) echo "";;
-        09) echo "";;
-        10) echo "";;
-        11) echo "";;
-        12) echo "";;
-         *) echo "";;
-    esac
+        case "$hour" in
+            01) echo "";;
+            02) echo "";;
+            03) echo "";;
+            04) echo "";;
+            05) echo "";;
+            06) echo "";;
+            07) echo "";;
+            08) echo "";;
+            09) echo "";;
+            10) echo "";;
+            11) echo "";;
+            12) echo "";;
+            *) echo "";;
+        esac
+        next_hour=$(date -d "+ 1hour" "+%H:00")
+        until_next_hour=$(( $(date -d "$next_hour" +%s) - $(date +%s) ))
+        sleep "$until_next_hour"
+    done;
 }
 
 clockface-minute () {
-    minute=$(date "+%M / 5" | bc)
-    minute=${minute%.*}
+    while true; do
+        minute=$(date "+%M / 5" | bc)
+        minute=${minute%.*}
 
-    case "$minute" in
-         1) echo "";;
-         2) echo "";;
-         3) echo "";;
-         4) echo "";;
-         5) echo "";;
-         6) echo "";;
-         7) echo "";;
-         8) echo "";;
-         9) echo "";;
-        10) echo "";;
-        11) echo "";;
-        12) echo "";;
-         *) echo "";;
-    esac
-}
-
-continuous () {
-    day & week
+        case "$minute" in
+            1) echo "";;
+            2) echo "";;
+            3) echo "";;
+            4) echo "";;
+            5) echo "";;
+            6) echo "";;
+            7) echo "";;
+            8) echo "";;
+            9) echo "";;
+            10) echo "";;
+            11) echo "";;
+            12) echo "";;
+            *) echo "";;
+        esac
+        until_next_min=$(( 60 - $(date +%-S) ))
+        sleep "$until_next_min"
+    done
 }
 
 "$@"
