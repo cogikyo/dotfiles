@@ -199,6 +199,13 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 // ┴ ┴└─┘└─┘┴└─┘
 // {{{
 
+.music-playing {
+  color: $red;
+}
+.music-paused {
+  color: $red-g;
+}
+
 .music {
   font-family: $sans-serif;
   &-cover {
@@ -211,7 +218,6 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
       &-icon {
         font-size: 25px;
         margin: 5px;
-        color: $red;
       }
     }
   }
@@ -300,6 +306,10 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 
 .date {
   @include box-decor($orange, 'top-right');
+  padding-right: 1.1em;
+  &-week {
+    margin-left: 3px;
+  }
 }
 // }}}
 // ============================================================================
