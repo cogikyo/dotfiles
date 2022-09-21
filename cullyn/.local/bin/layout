@@ -67,7 +67,7 @@ dotfiles () {
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive "exact $left_window"
     hyprctl dispatch movefocus r
-    firefox-developer-edition --new-window https://github.com/nosvagor & sleep 1
+    alacritty --hold -e tmux attach -t ﳣ & sleep 0.5
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive "exact $center_window"
     hyprctl dispatch movefocus r

@@ -23,7 +23,7 @@
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :width "30%" :anchor "top right")
   (box :class "sound" :halign "end" :space-evenly false :spacing spacing
-    (cpu) (gpu) (temp) (memory) (disk) (user)
+    (cpu) (gpu) (disk) (user)
   )
 )
 
@@ -187,7 +187,7 @@
       (slide-n-fade :bool weather-info :direction "right"
         (label
           :class "weather-label"
-          :markup "${w-uvi > 0 ? " 履 ${w-uvi}  " : "<small> </small>"} ${w-rain}<small>%</small> ${w-bf-i} ${w-wind}<sub>m/s</sub>"
+          :markup "${w-uvi > 0 ? " 履 ${round(w-uvi,1)}  " : "<small> </small>"} ${w-rain}<small>%</small> ${w-bf-i} ${w-wind}<sub>m/s</sub>"
         )
       )
     )
@@ -358,23 +358,21 @@
       load < 75    ? "▆" :
       load < 88.5  ? "▇" : "█"
     }
-    :class {
-      load < 5   ? "cpu-1" :
-      load < 10  ? "cpu-2" :
-      load < 20  ? "cpu-3" :
-      load < 30  ? "cpu-4" :
-      load < 40  ? "cpu-5" :
-      load < 50  ? "cpu-6" :
-      load < 60  ? "cpu-7" :
-      load < 70  ? "cpu-8" :
-      load < 80  ? "cpu-9" :
-      load < 90  ? "cpu-10" :
-      load < 95  ? "cpu-11" : "cpu-12"
-    }
+    :class "ramp-${
+      load < 5   ? "1" :
+      load < 10  ? "2" :
+      load < 20  ? "3" :
+      load < 30  ? "4" :
+      load < 40  ? "5" :
+      load < 50  ? "6" :
+      load < 60  ? "7" :
+      load < 70  ? "8" :
+      load < 80  ? "9" :
+      load < 90  ? "10" :
+      load < 95  ? "11" : "12"
+    }"
   )
 )
-
-
 
 (defwidget core [num]
   (label :text "${EWW_CPU.cores[num].usage}")
@@ -385,17 +383,18 @@
     (label
       :text ""
       :class "cpu-icon ${
-        EWW_CPU.avg < 30  ? "cpu-5" :
-        EWW_CPU.avg < 40  ? "cpu-6" :
-        EWW_CPU.avg < 50  ? "cpu-7" :
-        EWW_CPU.avg < 60  ? "cpu-8" :
-        EWW_CPU.avg < 70  ? "cpu-9" :
-        EWW_CPU.avg < 80  ? "cpu-10" :
-        EWW_CPU.avg < 90  ? "cpu-11" : "cpu-12" }"
+        EWW_CPU.avg < 25  ? "ramp-5" :
+        EWW_CPU.avg < 40  ? "ramp-6" :
+        EWW_CPU.avg < 55  ? "ramp-7" :
+        EWW_CPU.avg < 70  ? "ramp-8" :
+        EWW_CPU.avg < 85  ? "ramp-9" :
+        EWW_CPU.avg < 90  ? "ramp-10" :
+        EWW_CPU.avg < 95  ? "ramp-11" : "ramp-12" }"
     )
     (for num in cores
       (num-to-block :load {EWW_CPU.cores[num].usage})
     )
+    (label :class "mem-icon" :text "ﮕ" )
   )
 )
 
@@ -405,42 +404,35 @@
 ; └─┘┴  └─┘
 ; {{{
 
-(defpoll gpu :interval "0.5s" 'scripts/computer_info gpu')
-; (defpoll gpu-temp :interval "0.5s" 'scripts/computer_info gpu temp')
-; (defpoll gpu-freq :interval "0.5s" 'scripts/computer_info gpu freq')
+(defpoll gpu :interval "0.5s" 'scripts/computer_info')
 (defwidget gpu []
   (box :class "gpu" :space-evenly false :spacing 2
-    (label :class "gpu-icon" :text "⌬" )
-    (label :class "gpu-util" :markup "${gpu.mclk}<small>%</small>")
-    ; (label :class "gpu-freq" :markup "${gpu-freq}")
-    ; (label :class "gpu-temp" :markup "${gpu-temp}")
+    (label :class "gpu-icon" :text "⌬ " )
+    (num-to-block :load {gpu.gpu_busy})
+
+    (gpu-label-ramp :text "龍" :child "mclock-icon" :val {gpu.mclk_level})
+    (gpu-label-ramp :text {gpu.mclk} :child "mclock-text" :val {gpu.mclk_level})
+
+    (label :class "gpu-voltage" :text "")
+
+    (label :class "gpu-memory-icon" :text "ﮕ" )
+    (num-to-block :load {gpu.mem_busy})
+    (label :class "gpu-vram" :text {gpu.vram} )
   )
 )
-; }}}
-; ┌┬┐┌─┐┌┬┐┌─┐
-;  │ ├┤ │││├─┘
-;  ┴ └─┘┴ ┴┴
-; {{{
 
-
-
-(defwidget temp []
-  (box :class "temp"
-  "   ${EWW_TEMPS.TCTL}"
+(defwidget gpu-label-ramp [text child val]
+  (label
+    :text text
+    :class "gpu-${child} ${
+      val == 1 ? "ramp-6" :
+      val == 2 ? "ramp-9" :
+      val == 3 ? "ramp-11" : "ramp-5"
+    }"
   )
 )
-; }}}
-; ┌┬┐┌─┐┌┬┐┌─┐┬─┐┬ ┬
-; │││├┤ ││││ │├┬┘└┬┘
-; ┴ ┴└─┘┴ ┴└─┘┴└─ ┴
-; {{{
 
-(defwidget memory []
-  (box :class "memory"
-  ; "ﮕ ${EWW_RAM.used_mem}"
-  "ﮕ"
-  )
-)
+
 ; }}}
 ; ┌┬┐┬┌─┐┬┌─
 ;  │││└─┐├┴┐

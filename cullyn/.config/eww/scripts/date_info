@@ -69,4 +69,6 @@ clockface-minute () {
     done
 }
 
+# TODO: seems to bo repeating these calls..... tons of bash sleeps originating
+# from here. maybe due to restarting eww?
 "$@"
