@@ -62,6 +62,7 @@ code () {
 dotfiles () {
     hyprctl dispatch workspace 4
     tmux select-window -t :1
+    tmux select-window -t :1
     alacritty --hold --working-directory=dotfiles -e tmux attach -t  & sleep 0.5
     firefox-developer-edition --new-window https://calendar.google.com/calendar/u/0/r & sleep 1.5
     hyprctl dispatch movefocus l

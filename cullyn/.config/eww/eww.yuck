@@ -23,7 +23,7 @@
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :width "30%" :anchor "top right")
   (box :class "sound" :halign "end" :space-evenly false :spacing spacing
-    (cpu) (gpu) (disk) (user)
+    (cpu) (memory) (gpu) (disk) (user)
   )
 )
 
@@ -187,7 +187,7 @@
       (slide-n-fade :bool weather-info :direction "right"
         (label
           :class "weather-label"
-          :markup "${w-uvi > 0 ? " 履 ${round(w-uvi,1)}  " : "<small> </small>"} ${w-rain}<small>%</small> ${w-bf-i} ${w-wind}<sub>m/s</sub>"
+          :markup "${w-uvi > 0 ? " 履 ${w-uvi}  " : "<small> </small>"} ${w-rain}<small>%</small> ${w-bf-i} ${w-wind}<sub>m/s</sub>"
         )
       )
     )
@@ -394,10 +394,35 @@
     (for num in cores
       (num-to-block :load {EWW_CPU.cores[num].usage})
     )
-    (label :class "mem-icon" :text "ﮕ" )
   )
 )
 
+; }}}
+; ┌┬┐┌─┐┌┬┐┌─┐┬─┐┬ ┬
+; │││├┤ ││││ │├┬┘└┬┘
+; ┴ ┴└─┘┴ ┴└─┘┴└─ ┴
+; {{{
+
+(defvar range16 "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
+(defwidget memory []
+  (box :class "memory" :space-evenly false :spacing 2
+    (label :class "memory-icon" :text "ﮕ" )
+    (box :class "gpu-vram" :space-evenly false :spacing -2
+      (for n in range16
+        (label
+          :text ""
+          :class "ramp-${
+            gpu.vram == 100 ? "12" : "${
+              gpu.vram < n * 95 / 15 ? "2" : "${
+                round(n / 2.1, 0) + 4
+              }"
+            }"
+          }"
+        )
+      )
+    )
+  )
+)
 ; }}}
 ; ┌─┐┌─┐┬ ┬
 ; │ ┬├─┘│ │
@@ -405,19 +430,39 @@
 ; {{{
 
 (defpoll gpu :interval "0.5s" 'scripts/computer_info')
+(defvar range8 "[0,1,2,3,4,5,6,7]")
 (defwidget gpu []
   (box :class "gpu" :space-evenly false :spacing 2
     (label :class "gpu-icon" :text "⌬ " )
     (num-to-block :load {gpu.gpu_busy})
+    (num-to-block :load {gpu.mem_busy})
 
     (gpu-label-ramp :text "龍" :child "mclock-icon" :val {gpu.mclk_level})
-    (gpu-label-ramp :text {gpu.mclk} :child "mclock-text" :val {gpu.mclk_level})
+    ; (gpu-label-ramp :text {gpu.mclk} :child "mclock-text" :val {gpu.mclk_level})
 
     (label :class "gpu-voltage" :text "")
+    (vram)
 
-    (label :class "gpu-memory-icon" :text "ﮕ" )
-    (num-to-block :load {gpu.mem_busy})
-    (label :class "gpu-vram" :text {gpu.vram} )
+  )
+)
+
+(defwidget vram-bars []
+  (box :class "gpu-vram" :space-evenly false :spacing -2
+    (for n in range8
+      (label
+        :text ""
+        :class "ramp-${
+          gpu.vram == 100 ? "12" : "${gpu.vram < n * 95 / 7 ? "2" : n + 4}"
+        }"
+      )
+    )
+  )
+)
+
+(defwidget vram []
+  (box :class "gpu-vram" :space-evenly false :spacing 2
+    (label :class "gpu-vram-icon" :markup "ﮕ")
+    (vram-bars)
   )
 )
 
