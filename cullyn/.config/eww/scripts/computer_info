@@ -17,7 +17,8 @@ echo "{\
     \"gpu_busy\":\"$gpu_busy\", \
     \"mclk\":\"$mclk\", \
     \"mclk_level\":\"$mclk_level\", \
-    \"vram\":\"$vram\"\
+    \"vram\":\"$vram\", \
+    \"used\":\"$used\" \
 }"
 
 exit 0

@@ -17,7 +17,7 @@ $bg: #24283b;
 $fg-d: #9aa5ce;
 $bg-l: #1f2335;
 
-$grey-0: #565f89;
+$grey: #565f89;
 $grey-1: #414868;
 $grey-2: #3b4261;
 $grey-3: #2a2f46;
@@ -86,6 +86,8 @@ $navy: #222d56;
 
 $pseudo-trans: hsla(230, 24, 19, 0.1);
 $shadow: hsla(235, 19, 13, 0.69);
+
+$ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 // }}}
 // ┬─┐┌─┐┌─┐┌┬┐
 // ├┬┘│ ││ │ │
@@ -111,47 +113,59 @@ window {
 .ramp {
   &-1 {
     color: $blue-gd;
+    transition: color 1.25s $ease-out-snap;
   }
   &-2 {
     color: $blue-g;
+    transition: color 1.25s $ease-out-snap;
   }
   &-3 {
-    color: $blue-gl;
+    color: $blue-d;
+    transition: color 1.25s $ease-out-snap;
   }
   &-4 {
-    color: $blue-d;
+    color: $blue;
+    transition: color 1.25s $ease-out-snap;
   }
   &-5 {
-    color: $blue;
+    color: $azure;
+    transition: color 1.25s $ease-out-snap;
   }
   &-6 {
-    color: $azure;
+    color: $cyan-l;
+    transition: color 1.25s $ease-out-snap;
   }
   &-7 {
-    color: $azure-l;
+    color: $green-l;
+    transition: color 1.25s $ease-out-snap;
   }
   &-8 {
     color: $yellow-l;
+    transition: color 1.25s $ease-out-snap;
   }
   &-9 {
-    color: $orange-l;
+    color: $orange;
+    transition: color 1.25s $ease-out-snap;
   }
   &-10 {
     color: $red-l;
+    transition: color 1.25s $ease-out-snap;
   }
   &-11 {
     color: $red;
+    transition: color 1.25s $ease-out-snap;
   }
   &-12 {
     color: $red-d;
+    transition: color 1.25s $ease-out-snap;
   }
 }
+
 // }}}
 // ┌─┐┌┐┌┬┌┬┐┌─┐┌┬┐┬┌─┐┌┐┌┌─┐
 // ├─┤│││││││├─┤ │ ││ ││││└─┐
 // ┴ ┴┘└┘┴┴ ┴┴ ┴ ┴ ┴└─┘┘└┘└─┘
 // {{{
-$ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 
 @keyframes fade {
   0% {
@@ -369,6 +383,16 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
   }
 }
 // }}}
+// ┌┬┐┌─┐┌┬┐┌─┐┬─┐┬ ┬
+// │││├┤ ││││ │├┬┘└┬┘
+// ┴ ┴└─┘┴ ┴└─┘┴└─ ┴
+// {{{
+
+.memory {
+  @include box-decor($blue, 'top-right');
+  font-family: $monospace;
+}
+// }}}
 // ┌─┐┌─┐┬ ┬
 // │ ┬├─┘│ │
 // └─┘┴  └─┘
@@ -377,9 +401,6 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 .gpu {
   @include box-decor($blue, 'top-right');
   font-family: $monospace;
-  > * {
-    transition: color 1.25s $ease-out-snap;
-  }
   &-icon {
     font-size: 1.1em;
     margin-left: 6px;
