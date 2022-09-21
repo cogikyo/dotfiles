@@ -107,6 +107,45 @@ window {
   border: 1px solid $pink;
   background: $shadow;
 }
+
+.ramp {
+  &-1 {
+    color: $blue-gd;
+  }
+  &-2 {
+    color: $blue-g;
+  }
+  &-3 {
+    color: $blue-gl;
+  }
+  &-4 {
+    color: $blue-d;
+  }
+  &-5 {
+    color: $blue;
+  }
+  &-6 {
+    color: $azure;
+  }
+  &-7 {
+    color: $azure-l;
+  }
+  &-8 {
+    color: $yellow-l;
+  }
+  &-9 {
+    color: $orange-l;
+  }
+  &-10 {
+    color: $red-l;
+  }
+  &-11 {
+    color: $red;
+  }
+  &-12 {
+    color: $red-d;
+  }
+}
 // }}}
 // ┌─┐┌┐┌┬┌┬┐┌─┐┌┬┐┬┌─┐┌┐┌┌─┐
 // ├─┤│││││││├─┤ │ ││ ││││└─┐
@@ -192,7 +231,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 
 // }}}
 // ============================================================================
-//
+
 // ================================ sound =====================================
 // ┌┬┐┬ ┬┌─┐┬┌─┐
 // ││││ │└─┐││
@@ -320,49 +359,13 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 
 .cpu {
   @include box-decor($blue, 'top-right');
+  font-family: $monospace;
   > * {
-    font-family: $monospace;
     transition: color 1.25s $ease-out-snap;
   }
   &-icon {
     font-size: 1.2em;
     margin-right: 6px;
-  }
-  &-1 {
-    color: $blue-gd;
-  }
-  &-2 {
-    color: $blue-g;
-  }
-  &-3 {
-    color: $blue-gl;
-  }
-  &-4 {
-    color: $blue-d;
-  }
-  &-5 {
-    color: $blue;
-  }
-  &-6 {
-    color: $azure;
-  }
-  &-7 {
-    color: $azure-l;
-  }
-  &-8 {
-    color: $yellow-l;
-  }
-  &-9 {
-    color: $orange-l;
-  }
-  &-10 {
-    color: $red-l;
-  }
-  &-11 {
-    color: $red;
-  }
-  &-12 {
-    color: $red-d;
   }
 }
 // }}}
@@ -373,30 +376,24 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 
 .gpu {
   @include box-decor($blue, 'top-right');
+  font-family: $monospace;
+  > * {
+    transition: color 1.25s $ease-out-snap;
+  }
   &-icon {
-    font-family: $monospace;
+    font-size: 1.1em;
+    margin-left: 6px;
   }
-  &-util {
-    color: $blue-l;
+  &-mclock {
+    &-icon {
+      margin-left: 8px;
+    }
+    &-text {
+      font-family: $sans-serif;
+      margin: 4px 8px 0 3px;
+      font-size: 0.8em;
+    }
   }
-}
-// }}}
-// ┌┬┐┌─┐┌┬┐┌─┐
-//  │ ├┤ │││├─┘
-//  ┴ └─┘┴ ┴┴
-// {{{
-
-.temp {
-  @include box-decor($blue, 'top-right');
-}
-// }}}
-// ┌┬┐┌─┐┌┬┐┌─┐┬─┐┬ ┬
-// │││├┤ ││││ │├┬┘└┬┘
-// ┴ ┴└─┘┴ ┴└─┘┴└─ ┴
-// {{{
-
-.memory {
-  @include box-decor($blue, 'top-right');
 }
 // }}}
 // ┌┬┐┬┌─┐┬┌─
