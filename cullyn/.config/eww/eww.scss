@@ -86,7 +86,6 @@ $navy: #222d56;
 
 $pseudo-trans: hsla(230, 24, 19, 0.1);
 $shadow: hsla(235, 19, 13, 0.69);
-
 $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 // }}}
 // ┬─┐┌─┐┌─┐┌┬┐
@@ -113,51 +112,39 @@ window {
 .ramp {
   &-1 {
     color: $blue-gd;
-    transition: color 1.25s $ease-out-snap;
   }
   &-2 {
     color: $blue-g;
-    transition: color 1.25s $ease-out-snap;
   }
   &-3 {
     color: $blue-d;
-    transition: color 1.25s $ease-out-snap;
   }
   &-4 {
     color: $blue;
-    transition: color 1.25s $ease-out-snap;
   }
   &-5 {
     color: $azure;
-    transition: color 1.25s $ease-out-snap;
   }
   &-6 {
     color: $cyan-l;
-    transition: color 1.25s $ease-out-snap;
   }
   &-7 {
     color: $green-l;
-    transition: color 1.25s $ease-out-snap;
   }
   &-8 {
     color: $yellow-l;
-    transition: color 1.25s $ease-out-snap;
   }
   &-9 {
     color: $orange;
-    transition: color 1.25s $ease-out-snap;
   }
   &-10 {
     color: $red-l;
-    transition: color 1.25s $ease-out-snap;
   }
   &-11 {
     color: $red;
-    transition: color 1.25s $ease-out-snap;
   }
   &-12 {
     color: $red-d;
-    transition: color 1.25s $ease-out-snap;
   }
 }
 
@@ -166,7 +153,6 @@ window {
 // ├─┤│││││││├─┤ │ ││ ││││└─┐
 // ┴ ┴┘└┘┴┴ ┴┴ ┴ ┴ ┴└─┘┘└┘└─┘
 // {{{
-
 @keyframes fade {
   0% {
     opacity: 0;
@@ -200,22 +186,26 @@ window {
   background: $bg;
   color: $color;
   border-top: 1px double $color;
-  padding: 0 1em;
-  margin-top: 0.5em;
-  margin-bottom: 1em;
+  padding: 3px 0.9em 0 1.1em;
+  margin-top: 12px;
+  margin-bottom: 20px;
 
   @if $position == 'top-left' {
     border-right: 2px solid $color;
-    border-radius: 420px 17px 420px 17px;
-    box-shadow: -2px 3px 2px 2px $shadow;
+    border-radius: 420px 17px 420px 69px;
+    box-shadow: -3px 3px 2px 2px $shadow;
     margin-left: -6px;
   }
 
   @if $position == 'top-right' {
     border-left: 2px solid $color;
-    border-radius: 17px 420px 17px 420px;
-    box-shadow: 2px 3px 2px 2px $shadow;
+    border-radius: 17px 420px 69px 420px;
+    box-shadow: 3px 3px 2px 2px $shadow;
     margin-right: -6px;
+    font-family: $monospace;
+    > * {
+      transition: color 1.25s $ease-out-snap;
+    }
   }
 
   @if $position == 'top-center' {
@@ -223,8 +213,8 @@ window {
     border-right: 1px solid $color;
     border-bottom: 2px solid $color;
     border-left: 1px solid $color;
-    margin: -8px 18px 12px 18px;
-    transition: padding 0.5s ease-out;
+    margin: -7px 18px 10px 18px;
+    padding: 0 0.9em;
   }
 }
 
@@ -357,11 +347,9 @@ window {
 
 .date {
   @include box-decor($orange, 'top-right');
-  padding-right: 1.1em;
-  &-week {
-    margin-left: 3px;
-  }
+  font-family: $sans-serif;
 }
+
 // }}}
 // ============================================================================
 
@@ -373,13 +361,13 @@ window {
 
 .cpu {
   @include box-decor($blue, 'top-right');
-  font-family: $monospace;
-  > * {
-    transition: color 1.25s $ease-out-snap;
-  }
   &-icon {
-    font-size: 1.2em;
-    margin-right: 6px;
+    font-size: 1.1em;
+    margin-top: -1px;
+    margin-right: 7px;
+  }
+  &-block {
+    font-size: 0.9em;
   }
 }
 // }}}
@@ -390,8 +378,14 @@ window {
 
 .memory {
   @include box-decor($blue, 'top-right');
-  font-family: $monospace;
+  &-icon {
+    font-size: 1.1em;
+  }
+  &-bars {
+    margin-top: 2px;
+  }
 }
+
 // }}}
 // ┌─┐┌─┐┬ ┬
 // │ ┬├─┘│ │
@@ -400,30 +394,24 @@ window {
 
 .gpu {
   @include box-decor($blue, 'top-right');
-  font-family: $monospace;
   &-icon {
     font-size: 1.1em;
-    margin-left: 6px;
+    margin-top: 1px;
   }
   &-mclock {
     &-icon {
-      margin-left: 8px;
-    }
-    &-text {
-      font-family: $sans-serif;
-      margin: 4px 8px 0 3px;
-      font-size: 0.8em;
+      font-size: 1.15em;
+      margin-right: 1px;
     }
   }
-}
-// }}}
-// ┌┬┐┬┌─┐┬┌─
-//  │││└─┐├┴┐
-// ─┴┘┴└─┘┴ ┴
-// {{{
-
-.disk {
-  @include box-decor($blue, 'top-right');
+  &-vram {
+    &-icon {
+      font-size: 1.15em;
+    }
+    &-bars {
+      margin-top: 2px;
+    }
+  }
 }
 // }}}
 // ┬ ┬┌─┐┌─┐┬─┐
