@@ -87,6 +87,7 @@ $navy: #222d56;
 $pseudo-trans: hsla(230, 24, 19, 0.1);
 $shadow: hsla(235, 19, 13, 0.69);
 $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
+
 // }}}
 // ┬─┐┌─┐┌─┐┌┬┐
 // ├┬┘│ ││ │ │
@@ -145,6 +146,10 @@ window {
   }
   &-12 {
     color: $red-d;
+  }
+  &-crit {
+    color: $pink;
+    font-weight: bold;
   }
 }
 

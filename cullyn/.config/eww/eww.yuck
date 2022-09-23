@@ -49,6 +49,55 @@
 ; }}}
 ; =============================================================================
 
+; ================================== widgets ==================================
+; {{{
+
+(defwidget num-to-block [load]
+  (label
+    :text {
+      load < 12.5  ? "▁" :
+      load < 25    ? "▂" :
+      load < 37.5  ? "▃" :
+      load < 50    ? "▄" :
+      load < 62.5  ? "▅" :
+      load < 75    ? "▆" :
+      load < 88.5  ? "▇" : "█"
+    }
+    :class "cpu-block ramp-${
+      load < 5   ? "1" :
+      load < 10  ? "2" :
+      load < 20  ? "3" :
+      load < 30  ? "4" :
+      load < 40  ? "5" :
+      load < 50  ? "6" :
+      load < 60  ? "7" :
+      load < 70  ? "8" :
+      load < 80  ? "9" :
+      load < 90  ? "10" :
+      load < 95  ? "11" : "12"
+    }"
+  )
+)
+
+(defwidget label-ramp [icon ?child percent]
+  (label
+    :markup icon
+    :class "${child} ramp-${
+      percent < 25  ? "4"  :
+      percent < 35  ? "5"  :
+      percent < 50  ? "6"  :
+      percent < 65  ? "7"  :
+      percent < 80  ? "8"  :
+      percent < 85  ? "9"  :
+      percent < 90  ? "10" :
+      percent < 95  ? "11" : "12"
+    }"
+  )
+)
+
+; }}}
+; =============================================================================
+
 ; =============================================================================
 ; {{{
 
@@ -178,18 +227,21 @@
       (label :markup "<b>${w-temp}<sup></sup></b>")
       (label
         :class "weather-label"
-        :markup {matches(w-id, "(800)|(7[0-9][0-9])") ?
-          "<b>${w-main}</b>  ${w-aqi}" :
-          "<b>${w-main}</b> <small>(<i>${w-cond}</i>)</small>"}
+      ;   :markup {matches(w-id, "(800)|(7[0-9][0-9])") ?
+      ;     "<b>${w-main}</b>  ${w-aqi}" :
+      ;     "<b>${w-main}</b> <small>(<i>${w-cond}</i>)</small>"}
+      ; )
+        :markup "<b>${w-main}</b>  ${w-aqi}"
       )
       (slide-n-fade :bool weather-info :direction "right"
         (label
-          :class "weather-label"
-          :markup "${w-uvi > 0 ? " 履 ${w-uvi}  " : "<small> </small>"} ${w-rain}<small>%</small> ${w-bf-i} ${w-wind}<sub>m/s</sub>"
+          :class "weather-label-open"
+          :markup "${w-uvi > 0 ? "履 ${w-uvi}  " : "<small> </small>"} ${w-rain}<small>%</small> ${w-bf-i} ${w-wind}<sub>m/s</sub>"
         )
       )
     )
-  ))
+  )
+)
 ; }}}
 ; ┌┬┐┬┌┬┐┌─┐
 ;  │ ││││├┤
@@ -344,56 +396,59 @@
 ; └─┘┴  └─┘
 ; {{{
 
+(defwidget temp-ramp [child current percent max]
+  (box
+    :space-evenly false
+    :spacing 6
+    :class "${child} ramp-${
+      percent < 50  ? "3"  :
+      percent < 55  ? "4"  :
+      percent < 65  ? "5"  :
+      percent < 70  ? "8"  :
+      percent < 75  ? "9"  :
+      percent < 90  ? "10" :
+      percent < 95  ? "11" : "12"
+    } ${current >= max ? "ramp-crit" : ""}"
+    (label
+      :class "${child}-icon"
+      :text "${
+        percent < 50 ? "" :
+        percent < 75 ? "" :
+        percent < 85 ? "" :
+        percent < 90 ? "" : ""
+      }"
+    )
+    (label
+      :class "${child}-current"
+      :markup "${current}<sup></sup>")
+  )
+)
+
+(defvar foo 42)
 (defvar cores "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
 (defwidget cpu []
   (box :class "cpu" :space-evenly false :spacing 2
+    (temp-ramp
+      :child "cpu-temp"
+      ; :current {round( sensors.nvme-pci-0100.Composite.temp1_input ,0)}
+      :current {round(
+        ; sensors.nvme-pci-0100.Composite.temp1_input /
+        foo /
+        (sensors.nvme-pci-0100.Composite.temp1_min -
+         sensors.nvme-pci-0100.Composite.temp1_max * - 1) * 100
+      ,0)}
+      :percent {round(
+        ; sensors.nvme-pci-0100.Composite.temp1_input /
+        foo /
+        (sensors.nvme-pci-0100.Composite.temp1_min -
+         sensors.nvme-pci-0100.Composite.temp1_max * - 1) * 100
+      ,0)}
+      :max {sensors.nvme-pci-0100.Composite.temp1_max}
+    )
     (label-ramp :icon "" :child "cpu-icon" :percent {EWW_CPU.avg})
     (for num in cores
       (num-to-block :load {EWW_CPU.cores[num].usage})
     )
-  )
-)
-
-(defwidget num-to-block [load]
-  (label
-    :text {
-      load < 12.5  ? "▁" :
-      load < 25    ? "▂" :
-      load < 37.5  ? "▃" :
-      load < 50    ? "▄" :
-      load < 62.5  ? "▅" :
-      load < 75    ? "▆" :
-      load < 88.5  ? "▇" : "█"
-    }
-    :class "cpu-block ramp-${
-      load < 5   ? "1" :
-      load < 10  ? "2" :
-      load < 20  ? "3" :
-      load < 30  ? "4" :
-      load < 40  ? "5" :
-      load < 50  ? "6" :
-      load < 60  ? "7" :
-      load < 70  ? "8" :
-      load < 80  ? "9" :
-      load < 90  ? "10" :
-      load < 95  ? "11" : "12"
-    }"
-  )
-)
-
-(defwidget label-ramp [icon ?child percent]
-  (label
-    :text icon
-    :class "${child} ramp-${
-      percent < 25  ? "4"  :
-      percent < 35  ? "5"  :
-      percent < 50  ? "6"  :
-      percent < 65  ? "7"  :
-      percent < 80  ? "8"  :
-      percent < 85  ? "9"  :
-      percent < 90  ? "10" :
-      percent < 95  ? "11" : "12"
-    }"
   )
 )
 
@@ -430,13 +485,39 @@
 ; └─┘┴  └─┘
 ; {{{
 
+(defpoll sensors :interval "0.5s" `sensors -j`)
 (defpoll gpu :interval "0.5s" 'scripts/computer_info')
 (defvar range8 "[0,1,2,3,4,5,6,7]")
 (defwidget gpu []
   (box :class "gpu" :space-evenly false :spacing 8
     (label-ramp :icon "⌬" :child "gpu-icon" :percent {gpu.gpu_busy})
     (mclock)
+    (voltage)
+    (fan)
     (vram)
+  )
+)
+
+(defpoll voltage :interval "0.5s" `sensors -j | jq '."amdgpu-pci-0d00".PPT'`)
+(defwidget voltage []
+  (label-ramp
+    :icon ""
+    :child "gpu-voltage"
+    :percent {round(
+        sensors.amdgpu-pci-0d00.PPT.power1_average /
+        sensors.amdgpu-pci-0d00.PPT.power1_cap * 100
+    ,0)}
+  )
+)
+
+(defwidget fan []
+  (label-ramp
+    :icon ""
+    :child "gpu-fan"
+    :percent {round(
+        sensors.amdgpu-pci-0d00.fan1.fan1_input /
+        sensors.amdgpu-pci-0d00.fan1.fan1_max * 100
+    ,0)}
   )
 )
 
@@ -444,7 +525,7 @@
   (label
     :text "龍"
     :class "gpu-mclock-icon ramp-${
-      gpu.mclk_level == 1 ? "6" :
+      gpu.mclk_level == 1 ? "5" :
       gpu.mclk_level == 2 ? "9" :
       gpu.mclk_level == 3 ? "11" : "4"
     }"
