@@ -2,8 +2,8 @@
 
 day () {
     while true; do
-        day_json=$(date +'{"weekday":"%A", "month":"%B", "day":"%d"}')
-        echo "$day_json"
+        date_abd=$(date +'{"weekday":"%A", "month":"%B", "day":"%d"}')
+        echo "$date_abd" >> "/tmp/eww/date_abd"
         until_tomorrow=$(( $(date +%s -d "tomorrow 00:00") - $( date +%s ) ))
         sleep "$until_tomorrow"
     done
@@ -13,7 +13,7 @@ week () {
     while true; do
         greg_brith="1996-02-26 PST"
         weeks_alive=$(( ($(date -d "$greg_brith" +%s) - $(date +%s))/86400/-7 ))
-        echo "$weeks_alive"
+        echo "$weeks_alive" >> "/tmp/eww/weeks_alive"
         until_monday=$(( $(date +%s -d "next monday 00:00") - $( date +%s ) ))
         sleep "$until_monday"
     done
@@ -24,20 +24,21 @@ clockface-hour () {
         hour=$(date "+%I")
 
         case "$hour" in
-            01) echo "";;
-            02) echo "";;
-            03) echo "";;
-            04) echo "";;
-            05) echo "";;
-            06) echo "";;
-            07) echo "";;
-            08) echo "";;
-            09) echo "";;
-            10) echo "";;
-            11) echo "";;
-            12) echo "";;
-            *) echo "";;
+            01) res="";;
+            02) res="";;
+            03) res="";;
+            04) res="";;
+            05) res="";;
+            06) res="";;
+            07) res="";;
+            08) res="";;
+            09) res="";;
+            10) res="";;
+            11) res="";;
+            12) res="";;
+            *) res="";;
         esac
+        echo "$res" >> "/tmp/eww/clockface-hour"
         next_hour=$(date -d "+ 1hour" "+%H:00")
         until_next_hour=$(( $(date -d "$next_hour" +%s) - $(date +%s) ))
         sleep "$until_next_hour"
@@ -50,25 +51,24 @@ clockface-minute () {
         minute=${minute%.*}
 
         case "$minute" in
-            1) echo "";;
-            2) echo "";;
-            3) echo "";;
-            4) echo "";;
-            5) echo "";;
-            6) echo "";;
-            7) echo "";;
-            8) echo "";;
-            9) echo "";;
-            10) echo "";;
-            11) echo "";;
-            12) echo "";;
-            *) echo "";;
+            1) res="";;
+            2) res="";;
+            3) res="";;
+            4) res="";;
+            5) res="";;
+            6) res="";;
+            7) res="";;
+            8) res="";;
+            9) res="";;
+            10) res="";;
+            11) res="";;
+            12) res="";;
+            *) res="";;
         esac
+        echo "$res" >> "/tmp/eww/clockface-minute"
         until_next_min=$(( 60 - $(date +%-S) ))
         sleep "$until_next_min"
     done
 }
 
-# TODO: seems to bo repeating these calls..... tons of bash sleeps originating
-# from here. maybe due to restarting eww?
-"$@"
+day & week & clockface-hour & clockface-minute

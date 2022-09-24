@@ -1,65 +1,61 @@
 #!/usr/bin/env bash
 
-status=$(playerctl status)
-active=false
-if [[ "$status" == "Playing" ]] || [[ "$status" == "Paused" ]]; then
-    active=true
-fi
+player="--player=youtube-music-desktop-app"
 
-song() {
-    song=$(playerctl --player=youtube-music-desktop-app metadata --format \
-        '{{markup_escape(title)}}' | sed -e 's/([^()]*)//g' -e 's/ $//g' -e 's/:.*//g' -e 's/,.*//g')
-    album=$(playerctl --player=youtube-music-desktop-app metadata --format \
-        '{{markup_escape(album)}}' | sed -e 's/([^()]*)//g' -e 's/ -.*//g' -e 's/ $//g' -e 's/:.*//g')
+# song() {
+#     song=$(playerctl --player=youtube-music-desktop-app metadata --format \
+#         '{{markup_escape(title)}}' | sed -e 's/([^()]*)//g' -e 's/ $//g' -e 's/:.*//g' -e 's/,.*//g')
+#     album=$(playerctl --player=youtube-music-desktop-app metadata --format \
+#         '{{markup_escape(album)}}' | sed -e 's/([^()]*)//g' -e 's/ -.*//g' -e 's/ $//g' -e 's/:.*//g')
+#
+#     if [[ "$song" == "$album" ]]; then
+#         echo " <i>$album</i>"
+#     else
+#         echo " <i>$song</i>  $album"
+#     fi
+# }
+#
+# artist() {
+#     artist=$(playerctl --player=youtube-music-desktop-app metadata --format \
+#         '{{markup_escape(artist)}}')
+#
+#     echo " <b>$artist</b>"
+# }
+#
+progress() {
+    length=$(playerctl "$player" metadata -f '{{ mpris:length }}' | bc)
+    position=$(playerctl "$player"  metadata -f '{{ position }}' | bc)
+    progress=$(echo "scale=3; $position / $length * 100 + 0.1" | bc)
+    echo "$progress"
+}
+#
+# cover() {
+#     if [[ "$online" -eq 0 ]] && "$active"; then
+#         artUrl=$(playerctl --player=youtube-music-desktop-app metadata --format '{{mpris:artUrl}}')
+#         tempfile="/tmp/eww/.album_art.png"
+#         wget --output-document="$tempfile" "$artUrl"
+#         echo "$tempfile"
+#     else
+#         echo "/home/cullyn/.config/eww/assets/ytm.png"
+#     fi
+# }
+#
+# volume() {
+#     volume=$(playerctl volume)
+#     volume=$(echo "$volume * 10 / 1" | bc)
+#     echo "墳 $volume"
+# }
+#
 
-    if [[ "$song" == "$album" ]]; then
-        echo " <i>$album</i>"
-    else
-        echo " <i>$song</i>  $album"
-    fi
+get_json () {
+    playerctl -F "$player" metadata -f "{\
+        \"status\":\"{{ status }}\",\
+        \"volume\":\"{{ volume }}\",\
+        \"album\":\"{{ album }}\",\
+        \"artUrl\":\"{{ mpris:artUrl }}\",\
+        \"artist\":\"{{ artist }}\",\
+        \"title\":\"{{ title }}\"\
+    }"
 }
 
-artist() {
-    artist=$(playerctl --player=youtube-music-desktop-app metadata --format \
-        '{{markup_escape(artist)}}')
-
-    echo " <b>$artist</b>"
-}
-
-duration() {
-    if "$active"; then
-        length=$(playerctl --player=youtube-music-desktop-app metadata --format \
-            '{{mpris:length}}' | bc )
-        position=$(playerctl --player=youtube-music-desktop-app metadata --format \
-            '{{position}}' | bc)
-        progress=$(echo "scale=2; (($position / $length) * 100) + 1" | bc)
-    fi
-
-    if [[ -z "$progress" ]]; then
-        echo "1"
-    else
-        echo "$progress"
-    fi
-}
-
-cover() {
-    nc -z -w 1 8.8.8.8 53  >/dev/null 2>&1
-    online=$?
-
-    if [[ "$online" -eq 0 ]] && "$active"; then
-        artUrl=$(playerctl --player=youtube-music-desktop-app metadata --format '{{mpris:artUrl}}')
-        tempfile="/tmp/.album_art.png"
-        wget --output-document="$tempfile" "$artUrl"
-        echo "$tempfile"
-    else
-        echo "/home/cullyn/.config/eww/assets/ytm.png"
-    fi
-}
-
-volume() {
-    volume=$(playerctl volume)
-    level=$(echo "$volume * 10 / 1" | bc)
-    echo "墳 $level"
-}
-
-"$1"
+"$@"
