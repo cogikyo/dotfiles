@@ -4,7 +4,7 @@ handle() {
     event=$1
     arg=$2
     if [[ "$event" == "workspace" ]]; then
-        echo "$arg" >> "/tmp/eww/workspace" 
+        echo "$arg" >> "/tmp/eww/workspace"
     fi
 }
 

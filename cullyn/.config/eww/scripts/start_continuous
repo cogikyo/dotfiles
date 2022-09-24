@@ -2,11 +2,11 @@
 
 dir="$HOME/.config/eww/scripts"
 
-"$dir/create_temp_files"
-
+eval "$dir/create_temp_files" & disown
 eval "$dir/workspaces" & disown
 eval "$dir/weather_info get_json" & disown
 eval "$dir/weather_info continuous" & disown
 eval "$dir/pulse_info get_volume sink" & disown
+eval "$dir/date_info" & disown
 
 exit 0

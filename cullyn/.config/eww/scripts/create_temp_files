@@ -5,22 +5,23 @@ rm -rf "$dir"
 mkdir "$dir"
 mkdir "$dir/weather"
 
-file_names="day-ab day-d week sink source workspace"
+file_names="workspaces sink source clockface-minute clockface-hour date_abd weeks_alive"
 read -ra names_arr <<< "$file_names"
 
 for name in "${names_arr[@]}"; do
     touch "$dir/$name"
 done
 
-weather_file_names="id icon temp main cond aqi uvi rain wind bf_icon bf_desc"
+weather_file_names="id icon temp main cond aqi uvi rain wind"
 read -ra weather_names_arr <<< "$weather_file_names"
 
 for name in "${weather_names_arr[@]}"; do
     touch "$dir/weather/$name"
 done
 
-echo "13:30" > "$dir/alarm"
-echo "03:30" > "$dir/timer"
+echo "13:00" > "$dir/alarm"
+echo "01:30" > "$dir/timer"
 echo "50" > "$dir/sink"
+echo "100" > "$dir/source"
 
 exit 0

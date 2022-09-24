@@ -264,7 +264,6 @@ window {
 }
 
 .music {
-  font-family: $sans-serif;
   &-cover {
     @include corner-image($red);
   }

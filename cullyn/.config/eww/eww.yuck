@@ -115,7 +115,7 @@
   )
 )
 
-(defwidget temp-ramp [child current percent max bool ?direction]
+(defwidget temp-ramp [child current percent max bool ?direction ?extra]
   (box
     :space-evenly false
     :spacing 6
@@ -141,7 +141,7 @@
     (slide-n-fade :bool bool :direction {strlenth(direction) > 0 ? "${direction}" : "right"}
       (label
         :class "${child}-current"
-        :markup "${current}<sup></sup>"
+        :markup "${current}<sup></sup>${extra}"
       )
     )
   )
@@ -157,11 +157,8 @@
 ; {{{
 
 (defvar player "youtube-music-desktop-app")
-(deflisten status 'playerctl --follow status')
-(defpoll progress :initial 1 :interval "0.5s" "scripts/music_info duration")
-(defpoll song     :interval "1s"   "scripts/music_info song")
-(defpoll artist   :interval "1s"   "scripts/music_info artist")
-(defpoll volume   :interval "1s"   "scripts/music_info volume")
+(deflisten pctl 'scripts/music_info get_json')
+(defpoll progress :interval "1s" "scripts/music_info progress")
 
 (defwidget music []
   (box :class "music" :space-evenly false :spacing spacing
@@ -169,9 +166,8 @@
   )
 )
 
-(defpoll art-url :interval "1s" "scripts/music_info cover")
 (defwidget music-cover []
-  (box :class "music-cover" :style "background-image: url('${art-url}');")
+  (box :class "music-cover" :style "background-image: url('${pctl.art_path}');")
 )
 
 (defwidget music-progress []
@@ -185,9 +181,9 @@
       (box
         :class "music-progress-circle-icon"
         (eventbox
-          :class "music-${matches(status, "Playing") ? "playing" : "paused" }"
+          :class "music-${matches("${pctl.status}", "Playing") ? "playing" : "paused" }"
           :onclick "playerctl --player=${player} play-pause"
-          (label :text "${matches(status, "Playing") ? "" : "奈"}")
+          (label :text "${matches("${pctl.status}", "Playing") ? "" : "奈"}")
         )
       )
     )
@@ -197,9 +193,10 @@
 (defwidget music-info []
   (box :class "music-info" :space-evenly false :spacing spacing
     (music-progress)
-    (label :class "music-song"   :markup song)
-    (label :class "music-artist" :markup artist)
-    (label :class "music-volume" :markup volume )
+    (label :class "music-title"  :markup {pctl.title})
+    (label :class "music-album"  :markup {pctl.album})
+    (label :class "music-artist" :markup {pctl.artist})
+    (label :class "music-volume" :markup {round(pctl.volume * 100,0)})
   )
 )
 ; }}}
@@ -287,8 +284,8 @@
 (defpoll time :interval "1s"
   `date +'{"hour":"%H", "minute":"%M", "second":"%S"}'`
 )
-(deflisten clockface-hour "scripts/date_info clockface-hour")
-(deflisten clockface-minute "scripts/date_info clockface-minute")
+(deflisten clockface-hour 'tail -F /tmp/eww/clockface-hour')
+(deflisten clockface-minute 'tail -F /tmp/eww/clockface-minute')
 (defvar hour-active false)
 (defvar minute-active false)
 (defvar fine-adjust false)
@@ -393,8 +390,8 @@
 ; ─┴┘┴ ┴ ┴ └─┘
 ; {{{
 
-(deflisten week 'scripts/date_info week')
-(deflisten dayjson 'scripts/date_info day')
+(deflisten weeks_alive 'tail -F /tmp/eww/weeks_alive')
+(deflisten date_abd 'tail -F /tmp/eww/date_abd')
 (defvar date-extra false)
 
 (defwidget date []
@@ -409,7 +406,7 @@
       (slide-n-fade
         :bool date-extra
         :direction "left"
-        (label :class "date-week" :text "冀 ${week}")
+        (label :class "date-week" :text "冀 ${weeks_alive}")
       )
       (box
         :class "date-general"
@@ -418,10 +415,10 @@
         (label
           :class "date-weekday"
           :style "margin-left: ${date-extra ? "0" : "-6"}px;"
-          :text " ${dayjson.weekday},"
+          :text " ${date_abd.weekday},"
         )
-        (label :class "date-month" :text "${dayjson.month}")
-        (label :class "date-month" :text "${dayjson.day}")
+        (label :class "date-month" :text "${date_abd.month}")
+        (label :class "date-month" :text "${date_abd.day}")
       )
     )
   )
@@ -527,6 +524,7 @@
     :onhoverlost "eww update gpu-info=false"
     :onclick "alacritty --title='terminalfloat' -e nvtop & disown"
     (box :class "gpu" :space-evenly false :spacing 8
+      (gpu-temp)
       (label-ramp
         :icon "⌬"
         :child "gpu-busy"
@@ -556,6 +554,20 @@
       )
       (vram)
     )
+  )
+)
+
+(defwidget gpu-temp []
+  (temp-ramp
+    :child "gpu-temp"
+    :current {round(sensors.amdgpu-pci-0d00.junction.temp2_input,0)}
+    :percent {round(
+      sensors.amdgpu-pci-0d00.junction.temp2_input /
+      sensors.amdgpu-pci-0d00.junction.temp2_crit  * 100
+    ,0)}
+    :max {sensors.amdgpu-pci-0d00.junction.temp2_crit}
+    :bool gpu-info
+    :extra "|${round(sensors.amdgpu-pci-0d00.mem.temp3_input,0)}<sup></sup>"
   )
 )
 
