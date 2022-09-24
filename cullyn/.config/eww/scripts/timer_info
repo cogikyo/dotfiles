@@ -143,7 +143,7 @@ reset () {
         ;;
         timer)
             ps -ef | rg timer_status | grep -v grep | awk '{print $2}' | xargs kill
-            echo "00:00" > "/tmp/eww/timer"
+            echo "01:30" > "/tmp/eww/timer"
             notify-send "timer reset"
         ;;
     esac
