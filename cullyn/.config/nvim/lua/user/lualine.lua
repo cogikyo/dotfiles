@@ -105,15 +105,15 @@ local filename = {
 	},
 	color = function()
 		local mode_color = {
-			n = utils.brighten(colors.blue, 0.25),
-			i = utils.brighten(colors.green, 0.3),
-			v = utils.brighten(colors.magenta, 0.33),
-			[""] = utils.brighten(colors.magenta, 0.33),
-			V = utils.brighten(colors.magenta, 0.33),
-			c = utils.brighten(colors.orange, 0.3),
-			R = utils.brighten(colors.red, 0.2),
-			s = utils.brighten(colors.teal, 0.3),
-			S = utils.brighten(colors.teal, 0.3),
+			n = utils.lighten(colors.blue, 0.25),
+			i = utils.lighten(colors.green, 0.3),
+			v = utils.lighten(colors.magenta, 0.33),
+			[""] = utils.lighten(colors.magenta, 0.33),
+			V = utils.lighten(colors.magenta, 0.33),
+			c = utils.lighten(colors.orange, 0.3),
+			R = utils.lighten(colors.red, 0.2),
+			s = utils.lighten(colors.teal, 0.3),
+			S = utils.lighten(colors.teal, 0.3),
 		}
 		return { fg = mode_color[vim.fn.mode()] }
 	end,
