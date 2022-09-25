@@ -1,34 +1,34 @@
-vim.g.nvim_tree_icons = {
-	default = "",
-	symlink = "",
-	git = {
-		unstaged = "🞊",
-		staged = "",
-		unmerged = "",
-		renamed = "",
-		deleted = "",
-		untracked = "⧂",
-		ignored = "",
-	},
-	folder = {
-		arrow_open = "",
-		arrow_closed = "",
-		default = "",
-		open = "",
-		empty = "",
-		empty_open = "",
-		symlink = "",
-		symlink_open = "",
-	},
-}
-vim.g.nvim_tree_highlight_opened_files = 2
-vim.g.nvim_tree_special_files = {
-	["Cargo.toml"] = true,
-	Makefile = true,
-	["README.md"] = true,
-	["readme.md"] = true,
-}
-
+-- vim.g.nvim_tree_icons = {
+-- 	default = "",
+-- 	symlink = "",
+-- 	git = {
+-- 		unstaged = "🞊",
+-- 		staged = "",
+-- 		unmerged = "",
+-- 		renamed = "",
+-- 		deleted = "",
+-- 		untracked = "⧂",
+-- 		ignored = "",
+-- 	},
+-- 	folder = {
+-- 		arrow_open = "",
+-- 		arrow_closed = "",
+-- 		default = "",
+-- 		open = "",
+-- 		empty = "",
+-- 		empty_open = "",
+-- 		symlink = "",
+-- 		symlink_open = "",
+-- 	},
+-- }
+-- vim.g.nvim_tree_highlight_opened_files = 2
+-- vim.g.nvim_tree_special_files = {
+-- 	["Cargo.toml"] = true,
+-- 	Makefile = true,
+-- 	["README.md"] = true,
+-- 	["readme.md"] = true,
+-- }
+--
 local status_ok, nvim_tree = pcall(require, "nvim-tree")
 if not status_ok then
 	return

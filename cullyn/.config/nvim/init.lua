@@ -15,7 +15,7 @@ local config_files = {
 	"autopairs",
 	"comment",
 	"gitsigns",
-	-- "nvim-tree",
+	"nvim-tree",
 	"toggleterm",
 	"lualine",
 	"alpha",

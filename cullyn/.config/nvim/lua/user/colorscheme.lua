@@ -9,10 +9,10 @@ if not status_ok then
 end
 
 vim.cmd([[
-highlight ColorColumn guibg=#22263a
-highlight CursorLine guibg=#22263a
-highlight helpExample guifg=#7aa2f7
-hi link   helpCommand Constant
-highlight MsgArea guifg=#565f89
-highlight Folded guibg=#24283b guifg=#565f89
+    highlight ColorColumn guibg=#22263a
+    highlight CursorLine guibg=#22263a
+    highlight helpExample guifg=#7aa2f7
+    hi link   helpCommand Constant
+    highlight MsgArea guifg=#565f89
+    highlight Folded guibg=#24283b guifg=#565f89
 ]])
