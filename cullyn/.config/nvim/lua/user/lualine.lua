@@ -50,7 +50,7 @@ local branch = {
 local modes = {
 	["NORMAL"] = "ﯢ",
 	["INSERT"] = "",
-	["VISUAL"] = "﯎",
+	["VISUAL"] = "﯎",
 	["SELECT"] = "",
 	["V-LINE"] = "",
 	["V-BLOCK"] = "",
@@ -105,15 +105,15 @@ local filename = {
 	},
 	color = function()
 		local mode_color = {
-			n = utils.lighten(colors.blue, 0.25),
-			i = utils.lighten(colors.green, 0.3),
-			v = utils.lighten(colors.magenta, 0.33),
-			[""] = utils.lighten(colors.magenta, 0.33),
-			V = utils.lighten(colors.magenta, 0.33),
-			c = utils.lighten(colors.orange, 0.3),
-			R = utils.lighten(colors.red, 0.2),
-			s = utils.lighten(colors.teal, 0.3),
-			S = utils.lighten(colors.teal, 0.3),
+			n = utils.lighten(colors.blue, 0.75),
+			i = utils.lighten(colors.green, 0.75),
+			v = utils.lighten(colors.magenta, 0.75),
+			V = utils.lighten(colors.magenta, 0.75),
+			c = utils.lighten(colors.orange, 0.75),
+			R = utils.lighten(colors.red, 0.75),
+			s = utils.lighten(colors.teal, 0.75),
+			S = utils.lighten(colors.teal, 0.75),
+			[""] = utils.lighten(colors.magenta, 0.75),
 		}
 		return { fg = mode_color[vim.fn.mode()] }
 	end,
