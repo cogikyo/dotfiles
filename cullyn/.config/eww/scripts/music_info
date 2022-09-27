@@ -26,33 +26,20 @@ progress() {
     length=$(playerctl "$player" metadata -f '{{ mpris:length }}' | bc)
     position=$(playerctl "$player"  metadata -f '{{ position }}' | bc)
     progress=$(echo "scale=3; $position / $length * 100 + 0.1" | bc)
+    if [[ "$position" -lt 100  ]]; then
+        artUrl=$(playerctl "$player" metadata --format '{{ mpris:artUrl }}')
+        tempfile="/tmp/eww/album_art.png"
+        wget --output-document="$tempfile" "$artUrl"
+        eww update artUrl="$tempfile"
+    fi
     echo "$progress"
 }
-#
-# cover() {
-#     if [[ "$online" -eq 0 ]] && "$active"; then
-#         artUrl=$(playerctl --player=youtube-music-desktop-app metadata --format '{{mpris:artUrl}}')
-#         tempfile="/tmp/eww/.album_art.png"
-#         wget --output-document="$tempfile" "$artUrl"
-#         echo "$tempfile"
-#     else
-#         echo "/home/cullyn/.config/eww/assets/ytm.png"
-#     fi
-# }
-#
-# volume() {
-#     volume=$(playerctl volume)
-#     volume=$(echo "$volume * 10 / 1" | bc)
-#     echo "墳 $volume"
-# }
-#
 
 get_json () {
     playerctl -F "$player" metadata -f "{\
         \"status\":\"{{ status }}\",\
         \"volume\":\"{{ volume }}\",\
         \"album\":\"{{ album }}\",\
-        \"artUrl\":\"{{ mpris:artUrl }}\",\
         \"artist\":\"{{ artist }}\",\
         \"title\":\"{{ title }}\"\
     }"
