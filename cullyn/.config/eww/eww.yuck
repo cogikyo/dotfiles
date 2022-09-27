@@ -110,6 +110,7 @@
       (label
         :class "${child}-text"
         :markup {strlength(val) > 0 ? val : "${round(percent,0)}<small>%</small>"}
+
       )
     )
   )
@@ -158,6 +159,7 @@
 
 (defvar player "youtube-music-desktop-app")
 (deflisten pctl 'scripts/music_info get_json')
+(defvar artUrl "/tmp/eww/album_art.png")
 (defpoll progress :interval "1s" "scripts/music_info progress")
 
 (defwidget music []
@@ -167,7 +169,13 @@
 )
 
 (defwidget music-cover []
-  (box :class "music-cover" :style "background-image: url('${pctl.art_path}');")
+  (box
+    :class "music-cover"
+    :style "background-image: url('${ matches("${pctl.status}", "Playing") ?
+      artUrl :
+      "/home/cullyn/.config/eww/assets/ytm.svg" }');"
+    )
+
 )
 
 (defwidget music-progress []
@@ -257,19 +265,15 @@
         :class "weather-icons"
         :style "background-image: url('assets/owm-icons/${w-icon}.png');"
       )
-      (label :markup "<b>${w-temp}<sup></sup></b>")
+      (label :markup "<b>${w-temp}<tt><sup></sup></tt></b>")
       (label
         :class "weather-label"
-      ;   :markup {matches(w-id, "(800)|(7[0-9][0-9])") ?
-      ;     "<b>${w-main}</b>  ${w-aqi}" :
-      ;     "<b>${w-main}</b> <small>(<i>${w-cond}</i>)</small>"}
-      ; )
-        :markup "<b>${w-main}</b>  ${w-aqi}"
+        :markup "<b>${w-main}</b>"
       )
       (slide-n-fade :bool weather-info :direction "right"
         (label
           :class "weather-label-open"
-          :markup "${w-uvi > 0 ? "履 ${w-uvi}  " : "<small> </small>"} ${w-rain}<small>%</small> ${w-bf-i} ${w-wind}<sub>m/s</sub>"
+          :markup " ${w-aqi} ${w-uvi > 0 ? "履 ${w-uvi}<small> </small>" : "<small> </small>"} ${w-rain}<small>%</small> ${w-bf-i} ${w-wind}<sub>m/s</sub>"
         )
       )
     )
@@ -302,7 +306,7 @@
       :class "time"
       :halign "center"
       :space-evenly false
-      :spacing 3
+      :spacing 2
       (alarm)
       (clock :child "hour" :text {time.hour} :bool hour-active)
       (clockface)
@@ -327,7 +331,7 @@
   (box
     :class "time-clockface"
     :orientation "v"
-    :spacing -4
+    :spacing 0
     :space-evenly false
     (clock :child "hour" :text clockface-hour :bool hour-active)
     (clock :child "minute" :text clockface-minute :bool minute-active)
@@ -351,7 +355,7 @@
           :orientation "v"
           :valign "center"
           :space-evenly false
-          :spacing -1
+          :spacing 1
           (label :class "time-${app}-icon" :text icon)
           (label :class "time-${app}-subtext" :text subtext)
         )
@@ -482,7 +486,7 @@
     :onhover "eww update memory-info=true"
     :onhoverlost "eww update memory-info=false"
     :onclick "alacritty --title='terminalfloat' -e btop & disown"
-    (box :class "memory" :space-evenly false :spacing 5
+    (box :class "memory" :space-evenly false :spacing 2
       (label-ramp
         :icon "ﮕ"
         :child "memory-busy"

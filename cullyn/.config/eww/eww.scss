@@ -5,6 +5,7 @@
 // {{{
 $sans-serif: Albert Sans, sans-serif;
 $monospace: Hack Nerd Font, monospace;
+$default-font: $sans-serif $monospace;
 $font-size: 20px;
 
 // custom super set of popular tokyonight colorscheme
@@ -100,7 +101,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 
 window {
   color: $fg;
-  font-family: $sans-serif;
+  font-family: $default-font;
   font-size: $font-size;
   // background-color: $shadow;
 }
@@ -171,6 +172,7 @@ window {
 // ├─┤│││││││├─┤ │ ││ ││││└─┐
 // ┴ ┴┘└┘┴┴ ┴┴ ┴ ┴ ┴└─┘┘└┘└─┘
 // {{{
+
 @keyframes fade {
   0% {
     opacity: 0;
@@ -179,6 +181,7 @@ window {
     opacity: 1;
   }
 }
+
 // }}}
 // ┌┬┐┬─┐ ┬┬┌┐┌┌─┐
 // ││││┌┴┬┘││││└─┐
@@ -273,7 +276,7 @@ window {
       background: $black;
       &-icon {
         font-size: 25px;
-        margin: 5px;
+        margin: 3px;
       }
     }
   }
@@ -290,7 +293,9 @@ window {
 
 .audio {
   @include box-decor($red, 'top-left');
+  font-family: $monospace;
 }
+
 // }}}
 // ============================================================================
 
@@ -305,9 +310,10 @@ window {
   &-icons {
     background-size: cover;
     background-position: center;
-    min-width: 2em;
+    min-width: 1.5em;
   }
 }
+
 // }}}
 // ┌┬┐┬┌┬┐┌─┐
 //  │ ││││├┤
@@ -320,10 +326,8 @@ window {
     font-size: 2.5em;
   }
   &-clockface {
-    font-size: 0.42em;
-    font-family: $monospace;
-    color: $fg;
-    margin-top: 8px;
+    font-size: 0.4em;
+    margin-top: 11px;
   }
   &-hour {
     @include clock-hover($red-d, $red-l);
@@ -335,6 +339,7 @@ window {
     margin-right: -6px;
     &-icon {
       margin-top: 2px;
+      margin-bottom: 2px;
     }
     &-subtext {
       font-size: 0.8em;
@@ -343,7 +348,7 @@ window {
   &-timer {
     margin-left: -6px;
     &-icon {
-      margin-top: 2px;
+      margin-top: 3px;
     }
     &-subtext {
       font-family: $monospace;
@@ -360,7 +365,7 @@ window {
 
 .date {
   @include box-decor($orange, 'top-right');
-  font-family: $sans-serif;
+  font-family: $default-font;
 }
 
 // }}}
@@ -393,6 +398,9 @@ window {
   &-bars {
     margin-top: 2px;
     margin-right: -8px;
+  }
+  &-busy-icon {
+    margin-right: 3px;
   }
 }
 
