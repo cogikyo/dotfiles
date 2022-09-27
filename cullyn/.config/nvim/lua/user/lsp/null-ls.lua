@@ -1,6 +1,6 @@
 local null_ls_status_ok, null_ls = pcall(require, "null-ls")
 if not null_ls_status_ok then
-	return
+    return
 end
 
 local code_actions = null_ls.builtins.code_actions
@@ -9,33 +9,31 @@ local formatting = null_ls.builtins.formatting
 local hover = null_ls.builtins.hover
 
 null_ls.setup({
-	debug = false,
-	sources = {
-		formatting.prettier.with({
-			extra_args = {
-				"--single-quote",
-				"--jsx-single-quote",
-				"--print-width 80",
-			},
-		}),
-		formatting.black.with({
-			extra_args = { "--fast" },
-		}),
-		formatting.stylua,
-		formatting.shellharden,
+    debug = false,
+    sources = {
+        formatting.prettier.with({
+            extra_args = {
+                "--single-quote",
+                "--jsx-single-quote",
+                "--print-width 80",
+            },
+        }),
+        formatting.black.with({
+            extra_args = { "--fast" },
+        }),
+        formatting.shellharden,
 
-		diagnostics.flake8,
-		diagnostics.shellcheck,
-		diagnostics.eslint,
-        diagnostics.stylelint,
-		diagnostics.jsonlint,
-		diagnostics.luacheck.with({
-			extra_args = { "--globals" },
-		}),
+        diagnostics.flake8,
+        diagnostics.shellcheck,
+        diagnostics.eslint,
+        diagnostics.jsonlint,
+        diagnostics.luacheck.with({
+            extra_args = { "--globals" },
+        }),
 
-		code_actions.shellcheck,
-		code_actions.eslint,
+        code_actions.shellcheck,
+        code_actions.eslint,
 
-		hover.dictionary,
-	},
+        hover.dictionary,
+    },
 })

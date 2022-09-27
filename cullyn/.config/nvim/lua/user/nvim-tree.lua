@@ -60,7 +60,7 @@ nvim_tree.setup({
     select_prompts = false,
     view = {
         adaptive_size = true,
-        width = 69,
+        width = 60,
         centralize_selection = false,
         hide_root_folder = false,
         side = "left",
@@ -71,7 +71,7 @@ nvim_tree.setup({
         mappings = {
             custom_only = true,
             list = {
-                { key = { "o" }, action = "edit" },
+                { key = { "<CR>", "o" }, action = "edit" },
                 { key = "]]", action = "cd" },
                 { key = "<C-v>", action = "vsplit" },
                 { key = "<C-h>", action = "split" },
@@ -80,7 +80,6 @@ nvim_tree.setup({
                 { key = "<Down>", action = "next_sibling" },
                 { key = "P", action = "parent_node" },
                 { key = "h", action = "close_node" },
-                { key = "<CR>", action = "preview" },
                 { key = "K", action = "first_sibling" },
                 { key = "J", action = "last_sibling" },
                 { key = "I", action = "toggle_git_ignored" },
@@ -115,14 +114,22 @@ nvim_tree.setup({
                 relative = "editor",
                 border = "rounded",
                 height = 33,
-                row = 5,
-                col = 6,
+                row = 6,
+                col = 8,
             },
         },
     },
     renderer = {
+        add_trailing = false,
+        group_empty = true,
+        full_name = false,
+        highlight_git = true,
+        highlight_opened_files = "none",
+        root_folder_modifier = ":~",
+        indent_width = 2,
         indent_markers = {
             enable = true,
+            inline_arrows = true,
             icons = {
                 corner = "└╾ ",
                 edge = "│ ",
@@ -130,42 +137,52 @@ nvim_tree.setup({
                 none = "",
             },
         },
-        icons = {},
-        -- vim.g.nvim_tree_icons = {
-        -- 	default = "",
-        -- 	symlink = "",
-        -- 	git = {
-        -- 		unstaged = "🞊",
-        -- 		staged = "",
-        -- 		unmerged = "",
-        -- 		renamed = "",
-        -- 		deleted = "",
-        -- 		untracked = "⧂",
-        -- 		ignored = "",
-        -- 	},
-        -- 	folder = {
-        -- 		arrow_open = "",
-        -- 		arrow_closed = "",
-        -- 		default = "",
-        -- 		open = "",
-        -- 		empty = "",
-        -- 		empty_open = "",
-        -- 		symlink = "",
-        -- 		symlink_open = "",
-        -- 	},
-        -- }
-        -- vim.g.nvim_tree_highlight_opened_files = 2
-        -- vim.g.nvim_tree_special_files = {
-        -- 	["Cargo.toml"] = true,
-        -- 	Makefile = true,
-        -- 	["README.md"] = true,
-        -- 	["readme.md"] = true,
-        -- }
-        --
+        icons = {
+            webdev_colors = true,
+            git_placement = "before",
+            padding = " ",
+            symlink_arrow = " ➛ ",
+            show = {
+                file = true,
+                folder = true,
+                folder_arrow = true,
+                git = true,
+            },
+            glyphs = {
+                default = "",
+                symlink = "",
+                git = {
+                    unstaged = "🞊",
+                    staged = "",
+                    unmerged = "",
+                    renamed = "",
+                    deleted = "",
+                    untracked = "⧂",
+                    ignored = "",
+                },
+                folder = {
+                    arrow_open = "",
+                    arrow_closed = "",
+                    default = "",
+                    open = "",
+                    empty = "",
+                    empty_open = "",
+                    symlink = "",
+                    symlink_open = "",
+                },
+            }
+        },
+        special_files = {
+            ["Cargo.toml"] = true,
+            Makefile = true,
+            ["README.md"] = true,
+            ["readme.md"] = true,
+        },
+        symlink_destination = true,
     },
     filters = {
         dotfiles = false,
-        custom = {},
+        custom = { "^\\.git" },
         exclude = {},
     },
     trash = {
@@ -176,10 +193,11 @@ nvim_tree.setup({
         change_dir = {
             enable = true,
             global = false,
+            restrict_above_cwd = false,
         },
         open_file = {
             quit_on_open = true,
-            resize_window = false,
+            resize_window = true,
             window_picker = {
                 enable = true,
                 chars = "asetniol",
