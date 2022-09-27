@@ -6,6 +6,7 @@
 -- ╚═╝     ╚══════╝ ╚═════╝  ╚═════╝ ╚═╝╚═╝  ╚═══╝╚══════╝
 
 -- Plugins & Packer Setup
+-- {{{
 local fn = vim.fn
 
 -- Automatically install packer
@@ -47,6 +48,7 @@ packer.init({
 		end,
 	},
 })
+-- }}}
 
 return packer.startup(function(use)
 	-- 🔧 Utility -------------------------------------------------------------
@@ -99,7 +101,6 @@ return packer.startup(function(use)
 	-- 🔭 Telescope -----------------------------------------------------------
 	use("nvim-telescope/telescope.nvim")
 	use({ "nvim-telescope/telescope-fzf-native.nvim", run = "make" })
-	use("nvim-telescope/telescope-media-files.nvim")
 	---------------------------------------------------------------------------
 
 	-- 👀 UI ------------------------------------------------------------------
