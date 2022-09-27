@@ -2,8 +2,8 @@
 
 path="/sys/class/drm/card0/device"
 
-gpu_busy=$(cat "$path/gpu_busy_percent")
-mem_busy=$(cat "$path/mem_busy_percent")
+gpu_busy=$(<"$path/gpu_busy_percent")
+mem_busy=$(<"$path/mem_busy_percent")
 
 mclk=$(rg "\*" "$path/pp_dpm_mclk" | rg -o "[0-9]{3}")
 mclk_level=$(rg "\*" "$path/pp_dpm_mclk" | rg -o "^[0-9]{1}")
