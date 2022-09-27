@@ -11,6 +11,17 @@ telescope.setup({
 		prompt_prefix = "   ",
 		selection_caret = "  ",
 		path_display = { "smart" },
+        file_ignore_patterns = { "^.git/", "^cullyn/.local/share/" },
+        vimgrep_argumetns = {
+            "rg",
+          "--color=never",
+          "--no-heading",
+          "--with-filename",
+                    "--line-number",
+          "--column",
+          "--smart-case"
+        },
+
 
 		mappings = {
 			i = {
@@ -29,9 +40,10 @@ telescope.setup({
 				["<C-u>"] = actions.preview_scrolling_up,
 				["<C-d>"] = actions.preview_scrolling_down,
 
-				["<CR>"] = actions.select_tab,
+				["<CR>"] = actions.select_default,
 				["<C-h>"] = actions.select_horizontal,
 				["<C-v>"] = actions.select_vertical,
+				["<gt>"] = actions.select_tab,
 
 				["<Tab>"] = actions.toggle_selection + actions.move_selection_worse,
 				["<S-Tab>"] = actions.toggle_selection + actions.move_selection_better,
@@ -91,11 +103,7 @@ telescope.setup({
 			override_file_sorter = true, -- override the file sorter
 			case_mode = "smart_case", -- or "ignore_case" or "respect_case"
 		},
-		media_files = {
-			filetypes = { "png", "webp", "jpg", "jpeg", "mp4" },
-			find_cmd = "rg",
-		},
 	},
 })
 
-telescope.load_extension("fzf", "media_files")
+telescope.load_extension("fzf")

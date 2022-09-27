@@ -27,25 +27,15 @@ null_ls.setup({
 		diagnostics.flake8,
 		diagnostics.shellcheck,
 		diagnostics.eslint,
+        diagnostics.stylelint,
 		diagnostics.jsonlint,
 		diagnostics.luacheck.with({
 			extra_args = { "--globals" },
 		}),
 
 		code_actions.shellcheck,
-		-- code_actions.refactoring,
 		code_actions.eslint,
 
 		hover.dictionary,
 	},
-	on_attach = function(client)
-		if client.server_capabilities.document_formatting then
-			vim.cmd([[
-                augroup LspFormatting
-                autocmd! * <buffer>
-                autocmd BufWritePre <buffer> lua vim.lsp.buf.formatting_sync()
-                augroup END
-            ]])
-		end
-	end,
 })

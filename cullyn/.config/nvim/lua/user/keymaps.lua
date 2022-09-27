@@ -6,8 +6,8 @@
 -- ╚═╝  ╚═╝╚══════╝   ╚═╝   ╚═╝     ╚═╝╚═╝  ╚═╝╚═╝     ╚══════╝
 
 local function map(mode, lhs, rhs, opts)
-	opts = vim.tbl_extend("force", { noremap = true, silent = true }, opts or {})
-	vim.api.nvim_set_keymap(mode, lhs, rhs, opts)
+    opts = vim.tbl_extend("force", { noremap = true, silent = true }, opts or {})
+    vim.api.nvim_set_keymap(mode, lhs, rhs, opts)
 end
 
 local rec = { noremap = false, silent = true }
@@ -15,11 +15,12 @@ local nrec = { noremap = false, silent = false }
 
 -- ☄  leader
 map("", "<Space>", "<Nop>")
+map("n", "<leader>s", "<Nop>")  -- TODO: add <Nop> for all secondary leader keys
 vim.g.mapleader = " "
 
 -- ⚕  save
 map("i", "<C-s>", "<Esc>:w<CR>")
-map("n", "<C-s>", ":w<CR>")
+map("n", "<C-s>", ":lua vim.lsp.buf.format()<CR> :w<CR>")
 map("n", "<leader><C-s>", ":noa w<CR>")
 map("v", "<C-s>", "<Esc>:w<CR>")
 
@@ -92,6 +93,7 @@ map("n", "<leader>==", "ml=ip`lzt")
 map("n", "<leader>=y", "mlgg=G`lzt")
 
 -- 🔭 telescope
+map("n", "<leader>t", "<Nop>")
 map("n", "<leader>t<leader>", "<cmd>lua require('telescope.builtin').find_files({hidden = true})<CR>")
 map("n", "<leader>T", "<cmd>lua require('telescope.builtin').live_grep()<CR>")
 map("n", "<leader>th", "<cmd>lua require('telescope.builtin').help_tags()<CR>")
@@ -112,7 +114,6 @@ map("n", "<leader>gd", "<cmd>lua require('telescope.builtin').lsp_definitions()<
 map("n", "<leader>D", "<cmd>lua require('telescope.builtin').lsp_type_definitions()<CR>")
 
 map("n", "<leader>ts", "<cmd>lua require('telescope.builtin').treesitter()<CR>")
-map("n", "<leader>ti", "<cmd>lua require('telescope').extensions.media_files.media_files()<CR>")
 
 -- ℹ️  null_ls
 map("n", "<leader>ca", ": lua vim.lsp.buf.code_action()<CR>")
