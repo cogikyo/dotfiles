@@ -15,13 +15,13 @@ local nrec = { noremap = false, silent = false }
 
 -- ☄  leader
 map("", "<Space>", "<Nop>")
-map("n", "<leader>s", "<Nop>")  -- TODO: add <Nop> for all secondary leader keys
+map("n", "<leader>s", "<Nop>") -- TODO: add <Nop> for all secondary leader keys
 vim.g.mapleader = " "
 
 -- ⚕  save
 map("i", "<C-s>", "<Esc>:w<CR>")
 map("n", "<C-s>", ":lua vim.lsp.buf.format()<CR> :w<CR>")
-map("n", "<leader><C-s>", ":noa w<CR>")
+map("n", "<leader>s<leader>", ":noa w<CR>")
 map("v", "<C-s>", "<Esc>:w<CR>")
 
 -- ✍️  quit
@@ -139,7 +139,6 @@ map("n", "<leader>rs", ":w | source %<CR>")
 -- ⛵ reflow
 map("n", "<leader>rx", "vipgqzt{j^")
 map("n", "<leader>rf", "mzJ`zVgwzHzt_")
-map("n", "<leader>rp", "<cmd>call Black()<cr>")
 
 -- 🔱 harpoon
 map("n", "<leader>n", "<Nop>")
