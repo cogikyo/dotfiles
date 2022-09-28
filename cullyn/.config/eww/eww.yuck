@@ -1,8 +1,6 @@
 ; ================================= windows ===================================
 ; {{{
 
-(defvar spacing 16)
-
 (defwindow sound
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :width "30%" :anchor "top left")
@@ -45,12 +43,13 @@
   (network)
 )
 
-
 ; }}}
 ; =============================================================================
 
-; ================================== widgets ==================================
+; ================================= widgets ===================================
 ; {{{
+
+(defvar spacing 16)
 
 (defwidget slide-n-fade [direction bool]
   (revealer
@@ -331,6 +330,7 @@
   (box
     :class "time-clockface"
     :orientation "v"
+    :valign "center"
     :spacing 0
     :space-evenly false
     (clock :child "hour" :text clockface-hour :bool hour-active)
@@ -571,7 +571,7 @@
     ,0)}
     :max {sensors.amdgpu-pci-0d00.junction.temp2_crit}
     :bool gpu-info
-    :extra "|${round(sensors.amdgpu-pci-0d00.mem.temp3_input,0)}<sup></sup>"
+    ; :extra "|${round(sensors.amdgpu-pci-0d00.edge.temp1_input,0)}<sup></sup>|${round(sensors.amdgpu-pci-0d00.mem.temp3_input,0)}<sup></sup>"
   )
 )
 
