@@ -26,7 +26,7 @@ progress() {
     length=$(playerctl "$player" metadata -f '{{ mpris:length }}' | bc)
     position=$(playerctl "$player"  metadata -f '{{ position }}' | bc)
     progress=$(echo "scale=3; $position / $length * 100 + 0.1" | bc)
-    if [[ "$position" -lt 100  ]]; then
+    if [[ $(( position / 1000000 )) -lt 3  ]]; then
         artUrl=$(playerctl "$player" metadata --format '{{ mpris:artUrl }}')
         tempfile="/tmp/eww/album_art.png"
         wget --output-document="$tempfile" "$artUrl"
