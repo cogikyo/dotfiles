@@ -11,9 +11,11 @@
 
 (defwindow today
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :width "39%" :anchor "top center")
-  (centerbox :class "today"
-    (weather) (time) (date)
+  :geometry (geometry :width "40%" :anchor "top center")
+  (transform :translate-x "-20px"
+    (centerbox :class "today"
+      (weather) (time) (date)
+    )
   )
 )
 
@@ -157,7 +159,7 @@
 ; {{{
 
 (defvar player "youtube-music-desktop-app")
-(deflisten pctl 'scripts/music_info get_json')
+(deflisten pctl 'tail -F /tmp/eww/music.json 2> /dev/null')
 (defvar artUrl "/tmp/eww/album_art.png")
 (defpoll progress :interval "1s" "scripts/music_info progress")
 
@@ -200,10 +202,10 @@
 (defwidget music-info []
   (box :class "music-info" :space-evenly false :spacing spacing
     (music-progress)
-    (label :class "music-title"  :markup {pctl.title})
-    (label :class "music-album"  :markup {pctl.album})
-    (label :class "music-artist" :markup {pctl.artist})
-    (label :class "music-volume" :markup {round(pctl.volume * 100,0)})
+    (label :class "music-title"  :markup "<tt></tt>  ${pctl.title}")
+    (label :class "music-album"  :markup "<tt></tt>  ${pctl.album}")
+    (label :class "music-artist" :markup "<tt></tt>  ${pctl.artist}")
+    (label :class "music-volume" :markup "<tt>墳</tt> ${round(pctl.volume * 100,0)}")
   )
 )
 ; }}}
@@ -267,12 +269,12 @@
       (label :markup "<b>${w-temp}<tt><sup></sup></tt></b>")
       (label
         :class "weather-label"
-        :markup "<b>${w-main}</b>"
+        :markup "<b>${w-main}</b>  <tt></tt>  ${w-rain}<small>%</small>"
       )
       (slide-n-fade :bool weather-info :direction "right"
         (label
           :class "weather-label-open"
-          :markup " ${w-aqi} ${w-uvi > 0 ? "履 ${w-uvi}<small> </small>" : "<small> </small>"} ${w-rain}<small>%</small> ${w-bf-i} ${w-wind}<sub>m/s</sub>"
+          :markup "<tt></tt>  ${w-aqi} ${w-uvi > 0 ? "<tt>履</tt>  ${w-uvi}<small> </small>" : "<small> </small>"}<tt>${w-bf-i}</tt>  ${w-wind}<sub>m/s</sub>"
         )
       )
     )

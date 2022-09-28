@@ -2,36 +2,32 @@
 
 player="--player=youtube-music-desktop-app"
 
-# song() {
-#     song=$(playerctl --player=youtube-music-desktop-app metadata --format \
-#         '{{markup_escape(title)}}' | sed -e 's/([^()]*)//g' -e 's/ $//g' -e 's/:.*//g' -e 's/,.*//g')
-#     album=$(playerctl --player=youtube-music-desktop-app metadata --format \
-#         '{{markup_escape(album)}}' | sed -e 's/([^()]*)//g' -e 's/ -.*//g' -e 's/ $//g' -e 's/:.*//g')
-#
-#     if [[ "$song" == "$album" ]]; then
-#         echo " <i>$album</i>"
-#     else
-#         echo " <i>$song</i>  $album"
-#     fi
-# }
-#
-# artist() {
-#     artist=$(playerctl --player=youtube-music-desktop-app metadata --format \
-#         '{{markup_escape(artist)}}')
-#
-#     echo " <b>$artist</b>"
-# }
-#
+song() {
+    echo "$1" | sed -e 's/([^()]*)//g' \
+                    -e 's/ $//g' \
+                    -e 's/:.*//g' \
+                    -e 's/,.*//g'
+}
+
+album () {
+    echo "$1" | sed -e 's/([^()]*)//g' \
+                    -e 's/ -.*//g' \
+                    -e 's/ $//g' \
+                    -e 's/:.*//g'
+}
+
 progress() {
     length=$(playerctl "$player" metadata -f '{{ mpris:length }}' | bc)
     position=$(playerctl "$player"  metadata -f '{{ position }}' | bc)
     progress=$(echo "scale=3; $position / $length * 100 + 0.1" | bc)
+
     if [[ $(( position / 1000000 )) -lt 3  ]]; then
         artUrl=$(playerctl "$player" metadata --format '{{ mpris:artUrl }}')
         tempfile="/tmp/eww/album_art.png"
         wget --output-document="$tempfile" "$artUrl"
         eww update artUrl="$tempfile"
     fi
+
     echo "$progress"
 }
 
@@ -39,10 +35,10 @@ get_json () {
     playerctl -F "$player" metadata -f "{\
         \"status\":\"{{ status }}\",\
         \"volume\":\"{{ volume }}\",\
-        \"album\":\"{{ album }}\",\
-        \"artist\":\"{{ artist }}\",\
-        \"title\":\"{{ title }}\"\
-    }"
+        \"album\":\"{{ markup_escape(album) }}\",\
+        \"artist\":\"{{ markup_escape(artist) }}\",\
+        \"title\":\"{{ markup_escape(title) }}\"\
+    }" > '/tmp/eww/music.json'
 }
 
 "$@"
