@@ -1,270 +1,11 @@
-// ================================= base =====================================
-// ┬  ┬┌─┐┬─┐┌─┐
-// └┐┌┘├─┤├┬┘└─┐
-//  └┘ ┴ ┴┴└─└─┘
+// ================================ imports ===================================
 // {{{
-$sans-serif: Albert Sans, sans-serif;
-$monospace: Hack Nerd Font, monospace;
-$default-font: $sans-serif $monospace;
-$font-size: 20px;
-
-// custom super set of popular tokyonight colorscheme
-// nvim: https://github.com/folke/tokyonight.nvim/blob/main/lua/tokyonight/colors.lua // vscode: https://github.com/enkia/tokyo-night-vscode-theme
-
-$white: #c0caf5;
-$black: #1a1b26;
-$fg: #a9b1d6;
-$bg: #24283b;
-$fg-d: #9aa5ce;
-$bg-l: #1f2335;
-
-$grey: #565f89;
-$grey-1: #414868;
-$grey-2: #3b4261;
-$grey-3: #2a2f46;
-
-$red: #f7768e;
-$red-d: #e0617a;
-$red-l: #ff8ba2;
-$orange: #ff9e64;
-$orange-d: #e4874e;
-$orange-l: #ffb67a;
-$yellow: #e0af68;
-$yellow-d: #c79852;
-$yellow-l: #fac77e;
-$green: #9ece6a;
-$green-d: #85b553;
-$green-l: #b7e882;
-$cyan: #73daca;
-$cyan-d: #58c0b0;
-$cyan-l: #8ef5e4;
-$azure: #86caf6;
-$azure-d: #6cb1dc;
-$azure-l: #a0e4ff;
-$blue: #7aa2f7;
-$blue-d: #5784d5;
-$blue-l: #91b7ff;
-$purple: #bb9af7;
-$purple-d: #997ad4;
-$purple-l: #d2b0ff;
-$pink: #f896d6;
-$pink-d: #df7fbe;
-$pink-l: #ffaeee;
-
-$red-g: #753c45;
-$red-gd: #4d2a30;
-$red-gl: #d0a4a9;
-$orange-g: #784d33;
-$orange-gd: #503424;
-$orange-gl: #d0ac98;
-$yellow-g: #6a5435;
-$yellow-gd: #473925;
-$yellow-gl: #bba891;
-$green-g: #4d6236;
-$green-gd: #354126;
-$green-gl: #9fad8d;
-$cyan-g: #3c6760;
-$cyan-gd: #2a4540;
-$cyan-gl: #9ab8b2;
-$azure-g: #446073;
-$azure-gd: #2f404c;
-$azure-gl: #afc2d1;
-$blue-g: #3f4e74;
-$blue-gd: #2c354c;
-$blue-gl: #9fadd8;
-$purple-g: #5a4b74;
-$purple-gd: #3c334c;
-$purple-gl: #c6bad9;
-$pink-g: #744a65;
-$pink-gd: #4d3243;
-$pink-gl: #d9b8cc;
-
-$sakura: #ffb7c5;
-$celeste: #b4f9f8;
-$turqoise: #2ac3de;
-$beige: #cfc9c2;
-$navy: #222d56;
-
-$pseudo-trans: hsla(230, 24, 19, 0.1);
-$shadow: hsla(235, 19, 13, 0.69);
-$ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
-
-// }}}
-// ┬─┐┌─┐┌─┐┌┬┐
-// ├┬┘│ ││ │ │
-// ┴└─└─┘└─┘ ┴
-// {{{
-
-* {
-  all: unset;
-}
-
-window {
-  color: $fg;
-  font-family: $default-font;
-  font-size: $font-size;
-  // background-color: $shadow;
-}
-
-.debug {
-  border: 1px solid $pink;
-  background: $shadow;
-}
-
-.ramp {
-  &-1 {
-    color: $blue-gd;
-    transition: color 1.25s $ease-out-snap;
-  }
-  &-2 {
-    color: $blue-g;
-    transition: color 1.25s $ease-out-snap;
-  }
-  &-3 {
-    color: $blue-d;
-    transition: color 1.25s $ease-out-snap;
-  }
-  &-4 {
-    color: $blue;
-    transition: color 1.25s $ease-out-snap;
-  }
-  &-5 {
-    color: $azure;
-    transition: color 1.25s $ease-out-snap;
-  }
-  &-6 {
-    color: $cyan-l;
-    transition: color 1.25s $ease-out-snap;
-  }
-  &-7 {
-    color: $green-l;
-    transition: color 1.25s $ease-out-snap;
-  }
-  &-8 {
-    color: $yellow-l;
-    transition: color 1.25s $ease-out-snap;
-  }
-  &-9 {
-    color: $orange;
-    transition: color 1.25s $ease-out-snap;
-  }
-  &-10 {
-    color: $red-l;
-    transition: color 1.25s $ease-out-snap;
-  }
-  &-11 {
-    color: $red;
-    transition: color 1.25s $ease-out-snap;
-  }
-  &-12 {
-    color: $red-d;
-    transition: color 1.25s $ease-out-snap;
-  }
-  &-crit {
-    color: $pink;
-    font-weight: bold;
-    transition: color 1.25s $ease-out-snap;
-  }
-}
-
-// }}}
-// ┌─┐┌┐┌┬┌┬┐┌─┐┌┬┐┬┌─┐┌┐┌┌─┐
-// ├─┤│││││││├─┤ │ ││ ││││└─┐
-// ┴ ┴┘└┘┴┴ ┴┴ ┴ ┴ ┴└─┘┘└┘└─┘
-// {{{
-
-@keyframes fade {
-  0% {
-    opacity: 0;
-  }
-  100% {
-    opacity: 1;
-  }
-}
-
-// }}}
-// ┌┬┐┬─┐ ┬┬┌┐┌┌─┐
-// ││││┌┴┬┘││││└─┐
-// ┴ ┴┴┴ └─┴┘└┘└─┘
-// {{{
-@mixin corner-image($color, $direction: 'left') {
-  background-size: cover;
-  background-position: center;
-  min-width: 64px;
-  min-height: 56px;
-  margin-bottom: 10px;
-  @if $direction == 'left' {
-    border-radius: 0px 17px 69px 27px;
-    box-shadow: 1px -1px 1px 1px $color;
-  } @else {
-    min-width: 69px;
-    border-radius: 17px 0px 27px 69px;
-    box-shadow: -1px -1px 1px 1px $color;
-  }
-}
-
-@mixin box-decor($color, $position) {
-  background: $bg;
-  color: $color;
-  border-top: 1px double $color;
-  padding: 3px 0.9em 0 1.1em;
-  margin-top: 12px;
-  margin-bottom: 20px;
-
-  @if $position == 'top-left' {
-    border-right: 2px solid $color;
-    border-radius: 420px 17px 420px 69px;
-    box-shadow: -3px 3px 2px 2px $shadow;
-  }
-
-  @if $position == 'top-right' {
-    border-left: 2px solid $color;
-    border-radius: 17px 420px 69px 420px;
-    box-shadow: 3px 3px 2px 2px $shadow;
-    font-family: $monospace;
-    margin-right: 6px; // eventbox clipping issue
-  }
-
-  @if $position == 'top-center' {
-    border-radius: 27px 27px 69px 69px;
-    border-right: 1px solid $color;
-    border-bottom: 2px solid $color;
-    border-left: 1px solid $color;
-    margin: -7px 18px 10px 18px;
-    padding: 0 0.9em;
-  }
-}
-
-@mixin clock-hover($color, $colorHover) {
-  &-inactive {
-    transition: color 1.5s $ease-out-snap;
-    color: $orange;
-  }
-  &-active {
-    transition: color 0.5s $ease-out-snap;
-    color: $color;
-    &:hover {
-      color: $colorHover;
-      transition: color 0.5s $ease-out-snap;
-    }
-  }
-}
-
+@import 'scss/colors';
+@import 'scss/animations';
+@import 'scss/core';
+@import 'scss/mixins';
 // }}}
 // ============================================================================
-
-// ================================ sound =====================================
-// ┌┬┐┬ ┬┌─┐┬┌─┐
-// ││││ │└─┐││
-// ┴ ┴└─┘└─┘┴└─┘
-// {{{
-
-.music-playing {
-  color: $red;
-}
-.music-paused {
-  color: $red-g;
-}
 
 .music {
   &-cover {
@@ -280,30 +21,22 @@ window {
       }
     }
   }
+  &-playing {
+    color: $red;
+  }
+  &-paused {
+    color: $red-g;
+  }
   &-info {
     color: $red;
     @include box-decor($red, 'top-left');
   }
 }
-// }}}
-// ┌─┐┬ ┬┌┬┐┬┌─┐
-// ├─┤│ │ ││││ │
-// ┴ ┴└─┘─┴┘┴└─┘
-// {{{
 
 .audio {
   @include box-decor($red, 'top-left');
   font-family: $monospace;
 }
-
-// }}}
-// ============================================================================
-
-// ================================ today =====================================
-// ┬ ┬┌─┐┌─┐┌┬┐┬ ┬┌─┐┬─┐
-// │││├┤ ├─┤ │ ├─┤├┤ ├┬┘
-// └┴┘└─┘┴ ┴ ┴ ┴ ┴└─┘┴└─
-// {{{
 
 .weather {
   @include box-decor($orange, 'top-left');
@@ -314,12 +47,6 @@ window {
   }
 }
 
-// }}}
-// ┌┬┐┬┌┬┐┌─┐
-//  │ ││││├┤
-//  ┴ ┴┴ ┴└─┘
-// {{{
-
 .time {
   @include box-decor($orange, 'top-center');
   &-text {
@@ -327,7 +54,10 @@ window {
   }
   &-clockface {
     font-size: 0.4em;
-    margin-top: 11px;
+    margin-top: 6px;
+    &-hour {
+      font-family: $monospace;
+    }
   }
   &-hour {
     @include clock-hover($red-d, $red-l);
@@ -357,25 +87,11 @@ window {
     }
   }
 }
-// }}}
-// ┌┬┐┌─┐┌┬┐┌─┐
-//  ││├─┤ │ ├┤
-// ─┴┘┴ ┴ ┴ └─┘
-// {{{
 
 .date {
   @include box-decor($orange, 'top-right');
   font-family: $default-font;
 }
-
-// }}}
-// ============================================================================
-
-// ================================= computer =================================
-// ┌─┐┌─┐┬ ┬
-// │  ├─┘│ │
-// └─┘┴  └─┘
-// {{{
 
 .cpu {
   @include box-decor($blue, 'top-right');
@@ -387,11 +103,6 @@ window {
     margin-right: -6px;
   }
 }
-// }}}
-// ┌┬┐┌─┐┌┬┐┌─┐┬─┐┬ ┬
-// │││├┤ ││││ │├┬┘└┬┘
-// ┴ ┴└─┘┴ ┴└─┘┴└─ ┴
-// {{{
 
 .memory {
   @include box-decor($blue, 'top-right');
@@ -404,27 +115,22 @@ window {
   }
 }
 
-// }}}
-// ┌─┐┌─┐┬ ┬
-// │ ┬├─┘│ │
-// └─┘┴  └─┘
-// {{{
-
 .gpu {
   @include box-decor($blue, 'top-right');
-  &-icon {
-    font-size: 1.1em;
-    margin-top: 1px;
-  }
   &-mclock {
     &-icon {
       font-size: 1.15em;
-      margin-right: 1px;
+      margin-right: 7px;
+      margin-top: -1px;
     }
+  }
+  &-fan-icon {
+    margin-right: 5px;
   }
   &-vram {
     &-icon {
       font-size: 1.15em;
+      margin-right: 4px;
     }
     &-bars {
       margin-top: 2px;
@@ -432,51 +138,20 @@ window {
     }
   }
 }
-// }}}
-// ┬ ┬┌─┐┌─┐┬─┐
-// │ │└─┐├┤ ├┬┘
-// └─┘└─┘└─┘┴└─
-// {{{
 
 .user {
   @include corner-image($blue, 'right');
   margin-left: -10px;
 }
-// }}}
-// ============================================================================
-
-// ================================= actions ==================================
-// ┌─┐┌─┐┌┬┐┬┌─┐┌┐┌┌─┐
-// ├─┤│   │ ││ ││││└─┐
-// ┴ ┴└─┘ ┴ ┴└─┘┘└┘└─┘
-// {{{
 
 .actions {
   color: $blue;
 }
-// }}}
-// ============================================================================
-
-// ================================= workspaces ===============================
-// ┬ ┬┌─┐┬─┐┬┌─┌─┐┌─┐┌─┐┌─┐┌─┐┌─┐
-// ││││ │├┬┘├┴┐└─┐├─┘├─┤│  ├┤ └─┐
-// └┴┘└─┘┴└─┴ ┴└─┘┴  ┴ ┴└─┘└─┘└─┘
-// {{{
 
 .workspaces {
   color: $fg;
 }
-// }}}
-// ============================================================================
-
-// ================================= network ==================================
-// ┌┐┌┌─┐┌┬┐┬ ┬┌─┐┬─┐┬┌─
-// │││├┤  │ ││││ │├┬┘├┴┐
-// ┘└┘└─┘ ┴ └┴┘└─┘┴└─┴ ┴
-// {{{
 
 .network {
   color: $green;
 }
-// }}}
-// ============================================================================
