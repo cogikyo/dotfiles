@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 killall eww -9
-pkill playerctl
 eww daemon
 eww open-many sound today computer actions workspaces network
 # eww inspector
