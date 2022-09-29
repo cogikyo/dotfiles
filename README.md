@@ -299,6 +299,16 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
       pdfjs.sidebarViewOnLoad = 0
 
+- Enable ability to use custom css (TODO: create script to symlink css files)
+
+      toolkit.legacyUserProfileCustomizations.stylesheets = true
+
+  - Enable remote debugging and live editing of css (Ctrl + Alt + Shift + I):
+
+        F12 -> settings -> Adavnce Settings ->
+        -> Enable remote debugging
+        -> Enable browser chrome and add-on debuggins toolboxes
+
 &nbsp;
 
 🦊.2 Firefox basic options options:
