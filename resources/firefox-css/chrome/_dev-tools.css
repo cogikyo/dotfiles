@@ -1,0 +1,50 @@
+/*
+ * Variables for devtools are available at: https://developer.mozilla.org/en-US/docs/Tools/DevToolsColors
+ */
+
+:root.theme-dark {
+    /*
+     * Chrome colors
+     */
+    --theme-tab-toolbar-background: var(--bg) !important;
+    --theme-toolbar-background: var(--bg) !important;
+    --theme-toolbar-hover: var(--black) !important;
+    --theme-selection-background: var(--black-br) !important;
+    --theme-selection-color: var(--white-br) !important;
+    --theme-splitter-color: var(--black) !important;
+    --theme-comment: var(--grey) !important;
+
+    /*
+     * Content Colors
+     */
+    --theme-body-background: var(--bg) !important;
+    --theme-sidebar-background: var(--black) !important;
+    --theme-contrast-background: var(--black) !important;
+    --theme-accordion-header-background: var(--bg) !important;
+    --theme-accordion-header-hover: var(--black) !important;
+    --rule-healder-background-color: var(--bg) !important;
+    --devtools-splitter-color: var(--orannge) !important;
+
+    /*
+     * Text Colors
+     */
+    --theme-body-color: var(--fg) !important;
+    --theme-body-color-alt: var(--cyan) !important;
+    --theme-content-color1: var(--white-br) !important;
+    --theme-content-color2: var(--black-br) !important;
+    --theme-content-color3: var(--grey) !important;
+
+
+    /*
+     * Highlight Colors
+     */
+    --theme-highlight-blue: var(--blue) !important;
+    --theme-highlight-purple: var(--purple) !important;
+    --theme-highlight-pink: var(--pink) !important;
+    --theme-highlight-red: var(--red) !important;
+    --theme-highlight-orange: var(--orange) !important;
+    --theme-highlight-lightorange: var(--orange-br) !important;
+    --theme-highlight-green: var(--green) !important;
+    --theme-highlight-bluegrey: var(--blue-grey) !important;
+    --theme-highlight-yellow: var(--yellow) !important;
+}

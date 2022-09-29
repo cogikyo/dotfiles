@@ -1,0 +1,31 @@
+[lwt-sidebar] {
+  background-color: var(--bg) !important;
+}
+
+#bookmarksPanel treechildren::-moz-tree-indentation { 
+  width: 0px !important 
+}
+
+.sidebar-placesTreechildren{
+  margin-top: 6px !important;
+}
+
+.hidevscroll-scrollbar {
+  visibility: collapse !important;
+}
+
+#sidebar-splitter {
+  border: none !important;
+  width: 3px !important;
+  background: var(--black) !important;
+}
+
+#sidebar-splitter:hover {
+  background: var(--orange-br) !important;
+}
+
+#sidebar-header, #sidebar-search-container, 
+#sidebar-box #sidebar-header #sidebar-close {
+  visibility: collapse !important;
+}
+
