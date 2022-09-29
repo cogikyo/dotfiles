@@ -308,6 +308,7 @@
       :halign "center"
       :space-evenly false
       :spacing 2
+      :style "padding: 0 ${timer-visible ? "0.9" : "1.2" }em;"
       (alarm)
       (clock :child "hour" :text {time.hour} :bool hour-active)
       (clockface)
