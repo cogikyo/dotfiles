@@ -7,19 +7,19 @@ window:
 
 font:
   normal:
-    family: Hack Nerd Font
-    style: Regular
+    family: Caskaydia Cove Nerd Font
+    style: SemiLight
 
   italic:
-    family: Hack Nerd Font
+    family: Caskaydia Cove Nerd Font
     style: Italic
 
   bold:
-    family: Hack Nerd Font
+    family: Caskaydia Cove Nerd Font
     style: Bold
 
   bold_itaic:
-    family: Hack Nerd Font
+    family: Caskaydia Cove Nerd Font
     style: Bold Italic
 
   size: 14
