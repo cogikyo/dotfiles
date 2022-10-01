@@ -25,16 +25,14 @@ gitsigns.setup({
         follow_files = true,
     },
     attach_to_untracked = true,
-    current_line_blame = false, -- Toggle with `:Gitsigns toggle_current_line_blame`
+    current_line_blame = true, -- Toggle with `:Gitsigns toggle_current_line_blame`
     current_line_blame_opts = {
-        virt_text = true,
+        virt_text = false,
         virt_text_pos = "eol", -- 'eol' | 'overlay' | 'right_align'
         delay = 1000,
         ignore_whitespace = false,
     },
-    current_line_blame_formatter_opts = {
-        relative_time = false,
-    },
+    current_line_blame_formatter = '<author>, <author_time:%Y-%m-%d> - <summary>',
     sign_priority = 6,
     update_debounce = 100,
     status_formatter = nil, -- Use default
@@ -73,8 +71,6 @@ gitsigns.setup({
         map("n", "<leader>hp", "<cmd>Gitsigns preview_hunk<CR>")
         map("n", "<leader>hb", '<cmd>lua require"gitsigns".blame_line{full=true}<CR>')
         map("n", "<leader>lt", "<cmd>Gitsigns toggle_current_line_blame<CR>")
-        map("n", "<leader>hd", "<cmd>Gitsigns diffthis<CR>")
-        map("n", "<leader>hD", '<cmd>lua require"gitsigns".diffthis("~")<CR>')
         map("n", "<leader>dt", "<cmd>Gitsigns toggle_deleted<CR>")
 
         -- Text object
