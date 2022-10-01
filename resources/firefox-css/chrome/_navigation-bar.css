@@ -28,10 +28,6 @@
     background: none !important;
 }
 
-#back-button, #forward-button {
-    visibility: collapse !important;
-}
-
 #PanelUI-button {
     margin-inline-start: 0 !important;
     padding-inline-start: 0 !important;
