@@ -1,5 +1,5 @@
 #tabs-newtab-button .toolbarbutton-icon {
-     visibility: collapse !important;
+    visibility: collapse !important;
 }
 
 toolbarbutton#scrollbutton-up, toolbarbutton#scrollbutton-down,
@@ -24,7 +24,7 @@ toolbarbutton#new-tab-button, toolbarbutton#alltabs-button {
 }
 
 .tabbrowser-tab[label="New Tab"] .tab-icon-image {
-   display: none !important; 
+   display: none !important;
 }
 
 .tabbrowser-tab .tab-stack {
@@ -51,33 +51,32 @@ toolbarbutton#new-tab-button, toolbarbutton#alltabs-button {
 }
 
 .tabbrowser-tab[selected] .tab-stack {
-    border: 1px outset var(--orange-br) !important;
+    border: 1px solid transparent !important;
     color: var(--orange) !important;
+    margin: 0 0 0 4px !important;
 }
 
 .tabbrowser-tab[selected] .tab-background {
     background: var(--bg) !important;
-    border-radius: 4px !important;  
 }
 
 #tabbrowser-tabs {
   --uc-tab-curve-size:10px;
   --uc-tabs-scrollbutton-border: 0px;
   --proton-tab-block-margin:0px;
-  --tab-min-height: 24px; 
+  --tab-min-height: 20px;
 }
-
 
 .tab-icon-sound-label {
     visibility: collapse !important;
 }
 
 #tabbrowser-tabs, #tabbrowser-tabs > .tabbrowser-arrowscrollbox, #tabbrowser-arrowscrollbox{
-    min-height: 0 !important; 
+    min-height: 0 !important;
 }
 
 .accessibility-indicator,
-.private-browsing-indicator{ 
+.private-browsing-indicator{
   height: unset !important;
 }
 
@@ -86,4 +85,9 @@ toolbarbutton#new-tab-button, toolbarbutton#alltabs-button {
   visibility: collapse !important;
 }
 
-#tabbrowser-tabs .tabbrowser-tab{ height: 38px !important; }
+.tabbrowser-tab {
+    height: 36px !important;
+}
+
+
+

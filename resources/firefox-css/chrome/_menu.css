@@ -144,10 +144,6 @@ panelview {
    display: none !important;
 }
 
-#toolbar-menubar {
-    visibility: collapse !important;
-}
-
 #contentAreaContextMenu{ 
     margin: 5px 0px 0px 5px !imporltant;
 }
