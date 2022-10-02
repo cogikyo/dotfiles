@@ -33,7 +33,7 @@ progress() {
 
 get_json () {
     status=$(playerctl status)
-    while [[ $status == "Playing" ]]; do
+    while ! [[ $status == "Playing" ]]; do
         notify-send "waiting for player to start..."
         sleep 1
         status=$(playerctl status)

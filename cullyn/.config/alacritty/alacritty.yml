@@ -7,19 +7,19 @@ window:
 
 font:
   normal:
-    family: Hack Nerd Font
+    family: LigaHack Nerd Font
     style: Regular
 
   italic:
-    family: Hack Nerd Font
+    family: LigaHack Nerd Font
     style: Italic
 
   bold:
-    family: Hack Nerd Font
+    family: LigaHack Nerd Font
     style: Bold
 
   bold_itaic:
-    family: Hack Nerd Font
+    family: LigaHack Nerd Font
     style: Bold Italic
 
   size: 14

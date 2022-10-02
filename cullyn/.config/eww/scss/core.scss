@@ -1,5 +1,5 @@
 $sans-serif: Albert Sans;
-$monospace: Liga Hack;
+$monospace: LigaHack Nerd Font;
 $font-size: 20px;
 
 * {
@@ -8,8 +8,8 @@ $font-size: 20px;
 
 window {
   color: $fg;
-  font-family: $sans-serif;
-  font-size: $font-size;
+  font-family: $sans-serif, $monospace;
+  font-size: 20px;
 }
 
 .debug {
