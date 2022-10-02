@@ -192,7 +192,7 @@
         (eventbox
           :class "music-${matches("${pctl.status}", "Playing") ? "playing" : "paused" }"
           :onclick "playerctl --player=${player} play-pause"
-          (label :text "${matches("${pctl.status}", "Playing") ? "" : "奈"}")
+          (label :text "${matches("${pctl.status}", "Playing") ? " " : "奈 "}")
         )
       )
     )
@@ -334,10 +334,10 @@
     :class "time-clockface"
     :orientation "v"
     :valign "center"
-    :spacing 0
+    :spacing -2
     :space-evenly false
-    (clock :child "hour" :text clockface-hour :bool hour-active)
-    (clock :child "minute" :text clockface-minute :bool minute-active)
+    (clock :child "hour" :text "${clockface-hour} " :bool hour-active)
+    (clock :child "minute" :text "${clockface-minute} " :bool minute-active)
   )
 )
 

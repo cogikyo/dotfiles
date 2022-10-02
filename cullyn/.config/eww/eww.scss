@@ -11,11 +11,13 @@
   }
   &-progress {
     color: $red-d;
+    padding: 2px 0 4px 0;
+    margin-left: -2px;
     &-circle {
       background: $black;
       &-icon {
         font-size: 25px;
-        margin: 3px;
+        margin: 4px -5px 4px 4px;
       }
     }
   }
@@ -53,9 +55,7 @@
   &-clockface {
     font-size: 0.4em;
     margin-top: 6px;
-    &-hour {
-      font-family: $monospace;
-    }
+    margin-right: -8px;
   }
   &-hour {
     @include clock-hover($red-d, $red-l);
@@ -64,7 +64,6 @@
     @include clock-hover($blue-d, $blue-l);
   }
   &-alarm {
-    margin-right: -6px;
     &-icon {
       margin-top: 2px;
       margin-bottom: 2px;
@@ -74,7 +73,6 @@
     }
   }
   &-timer {
-    margin-left: -6px;
     &-icon {
       margin-top: 3px;
     }
