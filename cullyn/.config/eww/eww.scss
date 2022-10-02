@@ -88,7 +88,7 @@
 
 .date {
   @include box-decor($orange, 'top-right');
-  font-family: $default-font;
+  font-family: $sans-serif;
 }
 
 .cpu {
