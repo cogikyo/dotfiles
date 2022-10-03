@@ -51,6 +51,9 @@ map("n", "<leader>O", ':<C-u>call append(line(".")-1,   repeat([""], v:count1))<
 -- 💎 don't let go
 map("n", "<leader>d", '"_d')
 map("v", "<leader>d", '"_d')
+map("n", "<leader>c", '"_c')
+map("v", "<leader>c", '"_c')
+map("n", "<leader>C", '"_C')
 map("v", "<", "<gv")
 map("v", ">", ">gv")
 map("v", "<Up>", ":m '<-2<CR>gv-gv")

@@ -8,13 +8,13 @@ discord () {
     hyprctl dispatch workspace 1
     tmux select-window -t :1
     tmux select-window -t :1
-    alacritty --hold --working-directory=notes -e tmux attach -t  & sleep 0.5
+    kitty --hold --working-directory=notes -e tmux attach -t  & sleep 0.5
     exec discord & sleep 6
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive 'exact 1023 1811'
     hyprctl dispatch movefocus r
     firefox-developer-edition --new-window https://www.twitch.tv/directory/following & sleep 1
-    alacritty --hold -e tmux attach -t  & sleep 0.5
+    kitty --hold -e tmux attach -t  & sleep 0.5
     hyprctl dispatch movefocus u
     hyprctl dispatch resizeactive 'exact 1355 1058'
     hyprctl dispatch movefocus l
@@ -26,13 +26,13 @@ zoom () {
     hyprctl dispatch workspace 2
     tmux select-window -t :1
     tmux select-window -t :1
-    alacritty --hold --working-directory=notes -e tmux attach -t  & sleep 0.5
+    kitty --hold --working-directory=notes -e tmux attach -t  & sleep 0.5
     firefox-developer-edition --new-window https://www.youtube.com/feed/subscriptions & sleep 1
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive 'exact 1023 1811'
     hyprctl dispatch movefocus r
     exec zoom & sleep 6
-    alacritty --hold -e tmux attach -t  & sleep 0.5
+    kitty --hold -e tmux attach -t  & sleep 0.5
     hyprctl dispatch movefocus u
     hyprctl dispatch resizeactive 'exact 1355 1058'
     hyprctl dispatch movefocus l
@@ -43,16 +43,16 @@ zoom () {
 code () {
     hyprctl dispatch workspace 3
     tmux select-window -t ﮂ:1
-    alacritty --hold --working-directory=notes -e tmux attach -t ﮂ & sleep 0.5
+    kitty --hold --working-directory=notes -e tmux attach -t ﮂ & sleep 0.5
     firefox-developer-edition --new-window https://calendar.google.com/calendar/u/0/r & sleep 1.5
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive 'exact 1023 1811'
     hyprctl dispatch movefocus r
-    alacritty --hold -e tmux attach -t ﳣ & sleep 0.5
+    kitty --hold -e tmux attach -t ﳣ & sleep 0.5
     hyprctl dispatch movefocus r
     hyprctl dispatch movefocus l
     hyprctl dispatch movefocus r
-    alacritty --hold --title="cava" -e cava & sleep 0.5
+    kitty --hold --title="cava" -e cava & sleep 0.5
     hyprctl dispatch movefocus u
     hyprctl dispatch resizeactive 'exact 1631 1863'
     hyprctl dispatch movefocus l
@@ -63,16 +63,16 @@ dotfiles () {
     hyprctl dispatch workspace 4
     tmux select-window -t :1
     tmux select-window -t ﳣ:1
-    alacritty --hold --working-directory=dotfiles -e tmux attach -t  & sleep 0.5
+    kitty --hold --working-directory=dotfiles -e tmux attach -t  & sleep 0.5
     firefox-developer-edition --new-window https://calendar.google.com/calendar/u/0/r & sleep 1.5
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive "exact $left_window"
     hyprctl dispatch movefocus r
-    alacritty --hold -e tmux attach -t ﳣ & sleep 0.5
+    kitty --hold -e tmux attach -t ﳣ & sleep 0.5
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive "exact $center_window"
     hyprctl dispatch movefocus r
-    alacritty --hold --title="cava" -e cava & sleep 0.5
+    kitty --hold --title="cava" -e cava & sleep 0.5
     hyprctl dispatch movefocus u
     hyprctl dispatch resizeactive "exact $right_window"
     hyprctl dispatch movefocus l

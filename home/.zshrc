@@ -5,6 +5,8 @@ export PATH="$PATH:$HOME/.local/bin"
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 
+export PAGER=nvimpager
+
 # evals (shell "apps")
 eval "$(starship init zsh)"
 eval "$(jump shell)"
@@ -134,7 +136,7 @@ source ~/.local/zsh/zsh-autocomplete/zsh-autocomplete.plugin.zsh
   zstyle ':autocomplete:*' fzf-completion yes
   zstyle ':autocomplete:*' add-space
   zstyle ':autocomplete:*' min-input 1
-source ~/.local/zsh/zsh-colored-man-pages/colored-man-pages.plugin.zsh
+# source ~/.local/zsh/zsh-colored-man-pages/colored-man-pages.plugin.zsh
 
 # ┌─┐┬─┐ ┬  ┬┌─┌─┐┬ ┬┌─┐
 # ├┤ │┌┴┬┘  ├┴┐├┤ └┬┘└─┐
@@ -149,4 +151,5 @@ bindkey '^[[1;5D'  backward-word  # C-right
 bindkey '^[[1;5A'  history-incremental-search-backward # C-up
 bindkey '^[[1;5B'  history-incremental-search-forward  # C-down
 
-$HOME/.local/bin/dna
+# TODO: FIX
+# $HOME/.local/bin/dna
