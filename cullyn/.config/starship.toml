@@ -1,11 +1,12 @@
-format = """[╭╼╾ $username ╼╾ $time$python$golang ╼╾ ](bold blue) $cmd_duration
+format = """
+[╭╼╾ $username ╼╾ $time$python$golang ╼╾ ](bold blue) $cmd_duration
 [╞╾פּ ](bold blue)$directory$git_branch$git_commit$git_state$git_status$hg_branch
 [╰╼╾](bold blue) $status$character"""
 
 [directory]
 truncation_length = 6
 truncation_symbol = " "
-style = "cyan"
+style = "blue"
 read_only = " "
 home_symbol = " ~"
 disabled = false
