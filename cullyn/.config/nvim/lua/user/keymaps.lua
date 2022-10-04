@@ -22,15 +22,18 @@ map("n", "<leader>q", ":q!<CR>")
 map("n", "<leader>x", ":q<CR>")
 map("n", "<C-c>", "<Esc>")
 
+-- 🤙 common backwards compatibility shortcuts / one handed
+map("n", "<C-z>", "u")
+map("n", "<C-PageUp>", "25kzt^")
+map("n", "<C-PageDown>", "25jzt^")
+map("n", "<C-g>", '"*p')
+map("i", "<C-v>", '<Esc>"+p')
+
 -- 🤖 copy copy
 map("v", "<leader>y", 'ml"+y`l')
 map("n", "<leader>y", '"+y')
 map("n", "<leader>Y", '"+y$')
 map("n", "<leader>gy", 'mlgg"+yG`lzt')
-
-map("n", "<C-v>", '"+p')
-map("i", "<C-v>", '<Esc>"+p')
-
 map("n", "<leader>p", "`]p`]")
 map("v", "<leader>p", "y`]p`]ml`[O<Esc>'lo<Esc>")
 map("v", "<leader>P", "yP`]o<Esc>j")
@@ -50,6 +53,8 @@ map("v", "<leader>d", '"_d')
 map("n", "<leader>c", '"_c')
 map("v", "<leader>c", '"_c')
 map("n", "<leader>C", '"_C')
+map("n", "<leader>x", '"_x')
+map("n", "<leader>X", '"_X')
 map("v", "<", "<gv")
 map("v", ">", ">gv")
 map("v", "<Up>", ":m '<-2<CR>gv-gv")
