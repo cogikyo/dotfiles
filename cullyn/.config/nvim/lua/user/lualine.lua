@@ -8,7 +8,6 @@ local utils = require("tokyonight.util")
 local fg_gutter_alt = "#2a2f46"
 
 local tokyonight = {
-
     normal = {
         a = { bg = colors.blue, fg = colors.black },
         b = { bg = fg_gutter_alt, fg = colors.blue },
@@ -49,6 +48,7 @@ local branch = {
 -- see lualine.nvim/lua/lualine/utils/mode.lua for mode names
 local modes = {
     ["NORMAL"] = "",
+    ["O-PENDING"] = "",
     ["INSERT"] = "",
     ["VISUAL"] = "",
     ["SELECT"] = "",
