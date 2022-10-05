@@ -44,7 +44,6 @@ local options = {
     wildmenu = true,
     wildmode = { "longest:full", "full" },
     mouse = "a",
-    updatetime = 1420,
     splitbelow = true,
     splitright = true,
     showmode = false,
@@ -54,6 +53,7 @@ local options = {
 
     -- 🥷 Miscellaneous =======================================================
     backup = false,
+    updatetime = 1420,
     swapfile = false,
     undofile = true,
     wildignore = ".bak,~,.o,.h,.info,.swp,.obj,.pyc",
