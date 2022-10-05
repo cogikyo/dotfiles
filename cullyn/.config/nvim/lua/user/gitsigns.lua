@@ -71,7 +71,7 @@ gitsigns.setup({
         map("n", "<leader>hp", "<cmd>Gitsigns preview_hunk<CR>")
         map("n", "<leader>hb", '<cmd>lua require"gitsigns".blame_line{full=true}<CR>')
         map("n", "<leader>lb", "<cmd>Gitsigns toggle_current_line_blame<CR>")
-        map("n", "<leader>dt", "<cmd>Gitsigns toggle_deleted<CR>")
+        map("n", "<leader>hd", "<cmd>Gitsigns toggle_deleted<CR>")
 
         -- Text object
         map("o", "ih", ":<C-U>Gitsigns select_hunk<CR>")
