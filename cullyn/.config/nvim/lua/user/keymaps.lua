@@ -22,7 +22,7 @@ map("i", "<C-s>", "<Esc>:w<CR>")
 map("n", "<C-s>", ":lua vim.lsp.buf.format()<CR>:w<CR>")
 map("n", "<leader>s<leader>", ":noa w<CR>")
 map("v", "<C-s>", "<Esc>:w<CR>")
-map("n", "<leader>sr", ":w | source %<CR>")
+map("n", "<leader>rs", ":w | source %<CR>")
 -- }}}
 
 -- 🖐️ Quit {{{
