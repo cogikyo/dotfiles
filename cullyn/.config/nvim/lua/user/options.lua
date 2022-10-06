@@ -36,7 +36,7 @@ local options = {
     cursorline = true,
     termguicolors = true,
     signcolumn = "yes",
-    colorcolumn = { "80", "87", "100" },
+    colorcolumn = "80",
     foldmethod = "marker",
     -- ========================================================================
 
