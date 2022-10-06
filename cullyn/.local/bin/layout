@@ -60,19 +60,20 @@ code () {
 }
 
 dotfiles () {
+    term () {
+        kitty --working-directory="$HOME/dotfiles/" --title=\""$1"\" -e "$1" & sleep 0.5
+    }
     hyprctl dispatch workspace 4
-    tmux select-window -t :1
-    tmux select-window -t ﳣ:1
-    kitty --hold --working-directory=dotfiles -e tmux attach -t  & sleep 0.5
+    term nvim
     firefox-developer-edition --new-window https://calendar.google.com/calendar/u/0/r & sleep 1.5
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive "exact $left_window"
     hyprctl dispatch movefocus r
-    kitty --hold -e tmux attach -t ﳣ & sleep 0.5
+    term pipes-rs
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive "exact $center_window"
     hyprctl dispatch movefocus r
-    kitty --hold --title="cava" -e cava & sleep 0.5
+    term cava
     hyprctl dispatch movefocus u
     hyprctl dispatch resizeactive "exact $right_window"
     hyprctl dispatch movefocus l
