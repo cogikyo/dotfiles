@@ -68,7 +68,7 @@ alias n='nvim'
 alias e='eww inspector & disown && exit'
 alias ew='eww-open'
 alias el='eww logs'
-alias cava='alacritty --hold --title="cava" -e cava & disown && exit'
+alias cava='kitty --hold --title="cava" -e cava & disown && exit'
 alias man='man -r=""'
 pacclean () {
     while ! [ "$(pacman -Qdtq)" = "" ]; do
