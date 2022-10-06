@@ -163,7 +163,7 @@ sub add_environment {
 			type		=> "waterline",
 			shape		=> $water_line_segment[$i],
 			position	=> [ 0, $i+5, $depth{'water_line'  . $i} ],
-			default_color	=> 'cyan',
+			default_color	=> 'blue',
 			depth		=> 22,
 			physical	=> 1,
 		);
@@ -173,35 +173,35 @@ sub add_environment {
 sub add_castle {
 	my ($anim) = @_;
 	my $castle_image = q{
-               T~~
-               |
+               T~~~
+               |~~
               /^\
-             /   \
- _   _   _  /     \  _   _   _
+ T~  T~~ T~  /   \   T~  T~~ T~
+ |   |   |  /     \  |   |   |
 [ ]_[ ]_[ ]/ _   _ \[ ]_[ ]_[ ]
-|_=__-_ =_|_[ ]_[ ]_|_=-___-__|
- | _- =  | =_ = _    |= _=   |
- |= -[]  |- = _ =    |_-=_[] |
- | =_    |= - ___    | =_ =  |
- |=  []- |-  /| |\   |=_ =[] |
- |- =_   | =| | | |  |- = -  |
+|__=___=__/_[ ]_[ ]_\__=___=_|
+ | _- =  | =_ = _=  -|= _=  -|
+ |= -[]- |- = _ = _ =| -=_[] |
+ | =_    |= - ___  - | =_ =  |
+ |=  []- |-  / _ \  =|_ = [] |
+ |- =_   |= | | | |  | = -  =|
  |_______|__|_|_|_|__|_______|
 };
 
 	my $castle_mask = q{
-                RR
-
-              yyy
-             y   y
-            y     y
-           y       y
-
-
-
-              yyy
-             yy yy
-            y y y y
-            yyyyyyy
+               WYYY
+               WYY
+              BBB
+ WY  WYY WY  B   B   WY  WYY WY
+ W   W   W  B     B  W   W   W
+   W   W   B B   B B   W   W
+ BBWBBBWBBBB   B   BBBBWBBBWBW
+ W                           W
+ W   BB                   BB W
+ W            BBB            W
+ W   BB      B B B        BB W
+ W          B B B B          W
+ W          BBBBBBB          W
 };
 
 	$anim->new_entity(
@@ -209,7 +209,7 @@ sub add_castle {
 		shape		=> $castle_image,
 		color		=> $castle_mask,
 		position	=> [ $anim->width()-32, $anim->height()-13, $depth{'castle'} ],
-		default_color	=> 'WHITE',
+		default_color	=> 'white',
 	);
 }
 
