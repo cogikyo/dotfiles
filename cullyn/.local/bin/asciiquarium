@@ -179,9 +179,9 @@ sub add_castle {
  T~  T~~ T~  /   \   T~  T~~ T~
  |   |   |  /     \  |   |   |
 [ ]_[ ]_[ ]/ _   _ \[ ]_[ ]_[ ]
-|__=___=__/_[ ]_[ ]_\__=___=_|
+|__=___=__/_[ ]_[ ]_\__=___=__|
  | _- =  | =_ = _=  -|= _=  -|
- |= -[]- |- = _ = _ =| -=_[] |
+ |= -[]- |- = _ = _  | -=_[] |
  | =_    |= - ___  - | =_ =  |
  |=  []- |-  / _ \  =|_ = [] |
  |- =_   |= | | | |  | = -  =|
@@ -194,14 +194,14 @@ sub add_castle {
               BBB
  WY  WYY WY  B   B   WY  WYY WY
  W   W   W  B     B  W   W   W
-   W   W   B B   B B   W   W
- BBWBBBWBBBB   B   BBBBWBBBWBW
- W                           W
- W   BB                   BB W
- W            BBB            W
- W   BB      B B B        BB W
- W          B B B B          W
- W          BBBBBBB          W
+   W   W   B       B   W   W
+ BBWBBBWBBBB   B   BBBBWBBBWBBW
+ W       W           W       W
+ W   BB  W           W    BB W
+ W       W    BBB    W       W
+ W   BB  W   B B B   W    BB W
+ W       W  B B B B  W       W
+ W       W  BBBBBBB  W       W
 };
 
 	$anim->new_entity(
