@@ -27,7 +27,6 @@ map("n", "<leader>rs", ":w | source %<CR>")
 
 -- 🖐️ Quit {{{
 map("n", "<leader>q", ":q!<CR>")
-map("n", "<leader>x", ":q<CR>")
 map("n", "<C-c>", "<Esc>")
 -- }}}
 

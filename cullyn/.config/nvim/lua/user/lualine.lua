@@ -198,7 +198,7 @@ lualine.setup({
         lualine_c = { diff, diagnostics },
         lualine_x = { lsp, search },
         lualine_y = { filetype },
-        lualine_z = {},
+        lualine_z = {}, -- TODO: ADD ACTIVE FORMATTED, or other NULL-LS  shit
     },
     inactive_sections = {
         lualine_a = { "" },
