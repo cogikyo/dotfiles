@@ -23,6 +23,30 @@
 
 &nbsp;
 
+<p align="center"> ⚠️  ---- REFACTOR WIP ---- ⚠️ </p>
+
+- [x] Finish configuration around wayland protocol
+- [x] Fix fonts, for all edge cases (no longer hack nerd font)
+- [x] Ditch TMUX in favor for kitty terminal emulator
+- [ ] Finish configuration of eww widgets, replacing need for status bars
+  - [x] Top bar (harder)
+  - [ ] Bot bar
+  - [ ] Clean up, documument config file.
+- [ ] Refactor neovim config, pending 0.8 upgrade.
+- [ ] Update README
+    - [ ] Trim excess packages
+    - [ ] Create an automated install-script that works on machines running Arch Linux.
+    - [ ] Create video guide for those who might want to learn how to do something similar.
+    - [ ] Create exposition of screenshots to post on /r/unixporn and Gallery section.
+
+&nbsp;
+
+Verson 2 goals:
+- Create unified custom theme that can modifiy all programs with adjustable themes.
+- Rewrite as much as I can in rust, rewriting popular programs for practice.
+
+&nbsp;
+
 ## Overview 👾
 
 - **Operating System**: [Arch Linux](https://wiki.archlinux.org/title/Arch_Linux)
