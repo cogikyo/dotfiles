@@ -115,6 +115,7 @@ kurmit () {
 alias amend='(){git add . && git commit --amend --no-edit;}'
 alias gpf='git push --force'
 alias gp='git pull'
+alias gP='git push'
 alias gsync='git fetch -p && git branch -vv | awk "/: gone]/{print \$1}" | xargs git branch -D'
 
 # tmux
