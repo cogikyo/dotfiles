@@ -1,6 +1,6 @@
 # pyright: reportMissingImports=false
 from os import getlogin, uname
-from pathlib import Path, PurePath
+from pathlib import Path
 from kitty.boss import get_boss
 from kitty.fast_data_types import Screen, add_timer, get_options
 from kitty.utils import color_as_int
@@ -29,6 +29,7 @@ SEPARATOR_SYMBOL_RIGHT, SOFT_SEPARATOR_SYMBOL_RIGHT = ("", "")
 ICON, ICON_HOST, ICON_USER, ICON_DIR = ("  ", " 歷 ", " ", "  ")
 RIGHT_MARGIN = -6
 REFRESH_TIME = 1
+right_status_length = -1
 
 
 def _draw_icon(screen: Screen, index: int) -> int:
@@ -44,32 +45,38 @@ def _draw_icon(screen: Screen, index: int) -> int:
     return screen.cursor.x
 
 
+def get_cwd():
+    cwd = ""
+    tab_manager = get_boss().active_tab_manager
+    if tab_manager is not None:
+        window = tab_manager.active_window
+        if window is not None:
+            cwd = window.cwd_of_child
+
+    cwd_parts = list(Path(cwd).parts)
+    if len(cwd_parts) > 1:
+        if cwd_parts[1] == "home":
+            cwd_parts[0] = "  "
+            cwd_parts[1:3] = []
+        else:
+            cwd_parts[0] = "  "
+    else:
+        cwd_parts[0] = "  "
+
+    if len(cwd_parts) < 4:
+        cwd = cwd_parts[0] + "/".join(cwd_parts[1:])
+    else:
+        cwd = "/".join(cwd_parts[0:1]) + ".../" + "/".join(cwd_parts[-3:])
+
+    return cwd
+
+
 def _draw_cwd(screen: Screen, index: int) -> int:
     if index != 1:
         return 0
     fg, bg = screen.cursor.fg, screen.cursor.bg
     screen.cursor.fg, screen.cursor.bg = BG, ACTIVE_BG
-    tm = get_boss().active_tab_manager
-    cwd = ""
-    if tm is not None:
-        w = tm.active_window
-        if w is not None:
-            cwd = w.cwd_of_child or ""
-            cwd_parts = list(Path(cwd).parts)
-            if len(cwd_parts) > 1:
-                if cwd_parts[1] == "home":
-                    cwd_parts[0] = "  "
-                    cwd_parts[1:3] = []
-                else:
-                    cwd_parts[0] = "  "
-            else:
-                cwd_parts[0] = "  "
-
-            if len(cwd_parts) < 4:
-                cwd = cwd_parts[0] + "/".join(cwd_parts[1:])
-            else:
-                cwd = "  .../" + "/".join(cwd_parts[-3:])
-            # cwd = cwd.name if cwd.name != getlogin() else "~"
+    cwd = get_cwd()
     screen.draw(cwd)
     screen.cursor.fg, screen.cursor.bg = ACTIVE_BG, BAR_BG
     screen.draw(SEPARATOR_SYMBOL)
@@ -82,10 +89,7 @@ def _draw_left_status(
     draw_data: DrawData,
     screen: Screen,
     tab: TabBarData,
-    before: int,
-    max_title_length: int,
     index: int,
-    is_last: bool,
     extra_data: ExtraData,
 ) -> int:
     if screen.cursor.x >= screen.columns - right_status_length:
@@ -145,24 +149,18 @@ def _redraw_tab_bar(_):
         tab_manager.mark_tab_bar_dirty()
 
 
-timer_id = None
-right_status_length = -1
-
-
 def draw_tab(
     draw_data: DrawData,
     screen: Screen,
     tab: TabBarData,
-    before: int,
-    max_title_length: int,
+    before: int,  # Not accessed, but things break without it?
+    max_title_length: int,  # Not accessed, but things break without it?
     index: int,
     is_last: bool,
     extra_data: ExtraData,
 ) -> int:
-    global timer_id
     global right_status_length
-    if timer_id is None:
-        timer_id = add_timer(_redraw_tab_bar, REFRESH_TIME, True)
+    add_timer(_redraw_tab_bar, REFRESH_TIME, True)
     app = ICON_USER + getlogin() + " " + SEPARATOR_SYMBOL_RIGHT
     host = uname()[1] + ICON_HOST
     cells = []
@@ -179,10 +177,7 @@ def draw_tab(
         draw_data,
         screen,
         tab,
-        before,
-        max_title_length,
         index,
-        is_last,
         extra_data,
     )
 
