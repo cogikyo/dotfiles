@@ -89,7 +89,7 @@ local diff = {
 local filetype = {
     "filetype",
     colored = false,
-    icon_only = true,
+    icon_only = false,
     padding = { left = 0, right = 1 },
 }
 
@@ -157,17 +157,6 @@ local tsplayground = {
     filetypes = { "tsplayground" },
 }
 
-local spectre = {
-    sections = {
-        lualine_a = { mode },
-        lualine_y = { filetype },
-    },
-    inactive_sections = {
-        lualine_z = { filetype },
-    },
-    filetypes = { "spectre" },
-}
-
 local search = {
     function()
         local last_search = vim.fn.getreg("/")
@@ -176,12 +165,17 @@ local search = {
         end
         local searchcount = vim.fn.searchcount({ maxcount = 9999 })
         if searchcount.total == 0 then
-            vim.cmd([[ :call setreg("/", ['空'])<CR> ]])
+            vim.cmd([[ :call setreg("/", [''])<CR> ]])
         end
         return " " .. last_search .. "(" .. searchcount.current .. "/" .. searchcount.total .. ")"
     end,
-    color = { fg = utils.darken(colors.orange, 0.25) },
+    color = { fg = utils.darken(colors.orange, 0.69) },
 }
+
+local function icon()
+    return [[ ]]
+end
+
 lualine.setup({
     options = {
         icons_enabled = true,
@@ -198,7 +192,7 @@ lualine.setup({
         lualine_c = { diff, diagnostics },
         lualine_x = { lsp, search },
         lualine_y = { filetype },
-        lualine_z = {}, -- TODO: ADD ACTIVE FORMATTED, or other NULL-LS  shit
+        lualine_z = { icon }, -- TODO: ADD ACTIVE FORMATTED, or other NULL-LS  shit
     },
     inactive_sections = {
         lualine_a = { "" },
@@ -214,6 +208,5 @@ lualine.setup({
         "quickfix",
         "toggleterm",
         tsplayground,
-        spectre,
     },
 })
