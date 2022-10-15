@@ -142,7 +142,6 @@ return packer.startup(function(use)
         end,
         ft = { "markdown" },
     })
-    use("nvim-pack/nvim-spectre")
     use("ThePrimeagen/harpoon")
     use("tpope/vim-repeat")
     use("tpope/vim-surround")
