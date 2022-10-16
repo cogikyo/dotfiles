@@ -25,7 +25,8 @@ BG = as_rgb(color_as_int(opts.color4))
 BAR_BG = as_rgb(color_as_int(opts.tab_bar_background))
 ACTIVE_BG = as_rgb(color_as_int(opts.active_tab_background))
 SEPARATOR_SYMBOL, SOFT_SEPARATOR_SYMBOL = ("", "")
-SEPARATOR_SYMBOL_RIGHT, SOFT_SEPARATOR_SYMBOL_RIGHT = ("", "")
+SEPARATOR_SYMBOL_RIGHT = ""
+TRUNCATION_SYMBOL = "/⟜⊸/"
 ICON, ICON_HOST, ICON_USER, ICON_DIR = ("  ", " 歷 ", " ", "  ")
 RIGHT_MARGIN = -6
 REFRESH_TIME = 1
@@ -63,10 +64,15 @@ def get_cwd():
     else:
         cwd_parts[0] = "  "
 
-    if len(cwd_parts) < 4:
+    if len(cwd_parts) < 5:
         cwd = cwd_parts[0] + "/".join(cwd_parts[1:])
     else:
-        cwd = "/".join(cwd_parts[0:1]) + ".../" + "/".join(cwd_parts[-3:])
+        cwd = (
+            cwd_parts[0]
+            + "/".join(cwd_parts[1:2])
+            + TRUNCATION_SYMBOL
+            + "/".join(cwd_parts[-2:])
+        )
 
     return cwd
 
@@ -81,7 +87,7 @@ def _draw_cwd(screen: Screen, index: int) -> int:
     screen.cursor.fg, screen.cursor.bg = ACTIVE_BG, BAR_BG
     screen.draw(SEPARATOR_SYMBOL)
     screen.cursor.fg, screen.cursor.bg = fg, bg
-    screen.cursor.x = len(cwd) + 5
+    screen.cursor.x = len(cwd) + 7
     return screen.cursor.x
 
 
@@ -94,8 +100,11 @@ def _draw_left_status(
 ) -> int:
     if screen.cursor.x >= screen.columns - right_status_length:
         return screen.cursor.x
-    tab_bg = screen.cursor.bg
-    tab_fg = screen.cursor.fg
+    tab_bg, tab_fg = screen.cursor.bg, screen.cursor.fg
+    if index == 1:
+        screen.cursor.fg, screen.cursor.bg = tab_bg, BAR_BG
+        screen.draw(SEPARATOR_SYMBOL_RIGHT)
+        screen.cursor.bg = tab_bg
     default_bg = as_rgb(int(draw_data.default_bg))
     if extra_data.next_tab:
         next_tab_bg = as_rgb(draw_data.tab_bg(extra_data.next_tab))
@@ -180,7 +189,6 @@ def draw_tab(
         index,
         extra_data,
     )
-
     _draw_right_status(
         screen,
         is_last,
