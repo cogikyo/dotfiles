@@ -90,12 +90,6 @@ return packer.startup(function(use)
     use("JoosepAlviste/nvim-ts-context-commentstring")
     use("mfussenegger/nvim-ts-hint-textobject")
     use("andymass/vim-matchup")
-    use({
-        "lewis6991/spellsitter.nvim",
-        config = function()
-            require("spellsitter").setup()
-        end,
-    })
     ---------------------------------------------------------------------------
 
     -- 🔭 Telescope -----------------------------------------------------------
@@ -124,6 +118,19 @@ return packer.startup(function(use)
         tag = "release",
     })
     use("nvim-lualine/lualine.nvim")
+    -- use({
+    --     "folke/noice.nvim",
+    --     event = "VimEnter",
+    --     config = function()
+    --         require("noice").setup()
+    --     end,
+    --     requires = {
+    --         -- if you lazy-load any plugin below, make sure to add proper `module="..."` entries
+    --         "MunifTanjim/nui.nvim",
+    --         "rcarriga/nvim-notify",
+    --     }
+    -- })
+
     ---------------------------------------------------------------------------
 
     -- ✋ UX ------------------------------------------------------------------
