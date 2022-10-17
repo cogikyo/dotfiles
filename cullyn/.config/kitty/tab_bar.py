@@ -22,6 +22,7 @@ opts = get_options()  # --------------------------------------------⮯
 # --------------------------------------------------------------/
 FG = as_rgb(color_as_int(opts.background))
 BG = as_rgb(color_as_int(opts.color4))
+ACCENT = as_rgb(color_as_int(opts.selection_background))
 BAR_BG = as_rgb(color_as_int(opts.tab_bar_background))
 ACTIVE_BG = as_rgb(color_as_int(opts.active_tab_background))
 SEPARATOR_SYMBOL, SOFT_SEPARATOR_SYMBOL = ("", "")
@@ -86,8 +87,9 @@ def _draw_cwd(screen: Screen, index: int) -> int:
     screen.draw(cwd)
     screen.cursor.fg, screen.cursor.bg = ACTIVE_BG, BAR_BG
     screen.draw(SEPARATOR_SYMBOL)
+    screen.draw(" |-> ")
     screen.cursor.fg, screen.cursor.bg = fg, bg
-    screen.cursor.x = len(cwd) + 7
+    screen.cursor.x = len(cwd) + 10
     return screen.cursor.x
 
 

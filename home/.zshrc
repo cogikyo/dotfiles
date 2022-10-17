@@ -1,16 +1,14 @@
-# paths
+# exports
 export GOPATH="$HOME/.go"
 export PATH="$PATH:$HOME/.go/bin"
 export PATH="$PATH:$HOME/.local/bin"
 export PATH="$HOME/.local/bin:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
-
 export PAGER=nvimpager
 
 # evals (shell "apps")
 eval "$(starship init zsh)"
 eval "$(jump shell)"
-eval "$(thefuck --alias)"
 
 # history
 HISTFILE=~/.histfile
@@ -134,11 +132,13 @@ alias taa='tmux select-window -t :1; tmux attach -t '
 # ╩  ┴─┘└─┘└─┘┴┘└┘└─┘
 source ~/.local/zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
 source ~/.local/zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
+  ZSH_AUTOSUGGEST_STRATEGY=(history completion match_prev_cmd)
 source ~/.local/zsh/zsh-autocomplete/zsh-autocomplete.plugin.zsh
   zstyle ':autocomplete:*' fzf-completion yes
-  zstyle ':autocomplete:*' add-space
-  zstyle ':autocomplete:*' min-input 1
-# source ~/.local/zsh/zsh-colored-man-pages/colored-man-pages.plugin.zsh
+  zstyle ':autocomplete:*' min-delay 0.69
+  zstyle ':autocomplete:*' list-lines 32
+  zstyle ':autocomplete:history-search:*' list-lines 32
+  zstyle ':autocomplete:history-incremental-search-*:*' list-lines 32
 
 # ┌─┐┬─┐ ┬  ┬┌─┌─┐┬ ┬┌─┐
 # ├┤ │┌┴┬┘  ├┴┐├┤ └┬┘└─┐

@@ -8,7 +8,6 @@ configs.setup({
     -- Auto install
     ensure_installed = "all",
     sync_install = false,
-    ignore_install = { "help" }, -- Name of parser, not filetype.
 
     -- ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐
     -- ││││ │ │││ ││  ├┤ └─┐
@@ -64,11 +63,6 @@ configs.setup({
         disable = {},
         -- [options] -- TODO: learn to use this module beyond basics
     },
-})
-
-require("nvim-treesitter.highlight").set_custom_captures({
-    -- Highlight the @foo.bar capture group with the "Identifier" highlight group.
-    -- ["foo.bar"] = "Identifier",
 })
 
 local tsht_ok, tsht = pcall(require, "tsht")
