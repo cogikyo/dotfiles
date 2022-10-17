@@ -99,8 +99,8 @@ local filename = {
     path = 0,
     icon = "",
     symbols = {
-        modified = " 🞊",
-        readonly = " ",
+        modified = "🞊",
+        readonly = "",
         unnamed = "--名前?--",
     },
     color = function()
