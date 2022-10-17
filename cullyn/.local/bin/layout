@@ -2,7 +2,7 @@
 
 left_window='1023 1024'
 center_window='1708 997'
-right_window='1001 1787'
+right_window='1009 1701'
 
 discord () {
     hyprctl dispatch workspace 1
@@ -12,8 +12,7 @@ discord () {
     exec discord & sleep 6
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive 'exact 1023 1811'
-    hyprctl dispatch movefocus r
-    firefox-developer-edition --new-window https://www.twitch.tv/directory/following & sleep 1
+    hyprctl dispatch movefocus r firefox-developer-edition --new-window https://www.twitch.tv/directory/following & sleep 1
     kitty --hold -e tmux attach -t  & sleep 0.5
     hyprctl dispatch movefocus u
     hyprctl dispatch resizeactive 'exact 1355 1058'
@@ -60,20 +59,17 @@ code () {
 }
 
 dotfiles () {
-    term () {
-        kitty --working-directory="$HOME/dotfiles/" --title=\""$1"\" -e "$1" & sleep 0.5
-    }
     hyprctl dispatch workspace 4
-    term nvim
+    kitty --hold --working-directory="$HOME/dotfiles/" -e nvim & sleep 0.5
     firefox-developer-edition --new-window https://calendar.google.com/calendar/u/0/r & sleep 1.5
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive "exact $left_window"
     hyprctl dispatch movefocus r
-    term pipes-rs
+    kitty --hold --title="pipes-rs" -e pipes-rs & sleep 0.5
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive "exact $center_window"
     hyprctl dispatch movefocus r
-    term cava
+    kitty --hold -o font_size=2.0 --title="cava" -e cava & sleep 0.5
     hyprctl dispatch movefocus u
     hyprctl dispatch resizeactive "exact $right_window"
     hyprctl dispatch movefocus l
