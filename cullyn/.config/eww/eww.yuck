@@ -1,5 +1,5 @@
-; ================================= windows ===================================
-; {{{
+; ================================= core ======================================
+; 🪟 windows {{{
 
 (defwindow sound
   :monitor 0 :stacking "fg" :exclusive false :focusable false
@@ -46,12 +46,7 @@
   )
 
 ; }}}
-; =============================================================================
-
-; ================================= widgets ===================================
-; widgets {{{
-
-(defvar spacing 16)
+; ♻️  widgets {{{
 
 (defwidget slide-n-fade [direction bool]
   (revealer
@@ -65,97 +60,22 @@
   )
 )
 
-(defwidget num-to-block [load]
-  (label
-    :text {
-      load < 12.5  ? "▁" :
-      load < 25    ? "▂" :
-      load < 37.5  ? "▃" :
-      load < 50    ? "▄" :
-      load < 62.5  ? "▅" :
-      load < 75    ? "▆" :
-      load < 88.5  ? "▇" : "█"
-    }
-    :class "ramp-${
-      load < 5   ? "1" :
-      load < 10  ? "2" :
-      load < 20  ? "3" :
-      load < 30  ? "4" :
-      load < 40  ? "5" :
-      load < 50  ? "6" :
-      load < 60  ? "7" :
-      load < 70  ? "8" :
-      load < 80  ? "9" :
-      load < 90  ? "10" :
-      load < 95  ? "11" : "12"
-    }"
-  )
-)
+; }}}
+; 🚧 constants {{{
 
-(defwidget label-ramp [child icon ?val percent bool ?direction]
-  (box
-    :space-evenly false
-    :spacing 5
-    :class "${child} ramp-${
-      percent < 25  ? "4"  :
-      percent < 35  ? "5"  :
-      percent < 50  ? "6"  :
-      percent < 65  ? "7"  :
-      percent < 80  ? "8"  :
-      percent < 85  ? "9"  :
-      percent < 90  ? "10" :
-      percent < 95  ? "11" : "12"
-    }"
-    (label :markup icon :class "${child}-icon")
-    (slide-n-fade :bool bool :direction "right"
-      (label
-        :class "${child}-text"
-        :markup {strlength(val) > 0 ? val : "${round(percent,0)}<small>%</small>"}
+(defvar spacing 16)
 
-      )
-    )
-  )
-)
+; }}}
+; =============================================================================
 
-(defwidget temp-ramp [child current percent max bool ?direction ?extra]
-  (box
-    :space-evenly false
-    :spacing 6
-    :class "${child} ramp-${
-      percent < 50  ? "3"  :
-      percent < 56  ? "4"  :
-      percent < 62  ? "5"  :
-      percent < 68  ? "6"  :
-      percent < 74  ? "8"  :
-      percent < 80  ? "9" :
-      percent < 86  ? "10" :
-      percent < 94  ? "11" : "12"
-    } ${current >= max ? "ramp-crit" : ""}"
-    (label
-      :class "${child}-icon"
-      :text "${
-        percent < 50 ? "" :
-        percent < 56 ? "" :
-        percent < 80 ? "" :
-        percent < 90 ? "" : ""
-      }"
-    )
-    (slide-n-fade :bool bool :direction {strlenth(direction) > 0 ? "${direction}" : "right"}
-      (label
-        :class "${child}-current"
-        :markup "${current}<sup></sup>${extra}"
-      )
-    )
-  )
-)
+; ================================= widgets ===================================
+; widgets {{{
+
 
 ; }}}
 ; =============================================================================
 
 ; ================================= sound =====================================
-; ┌┬┐┬ ┬┌─┐┬┌─┐
-; ││││ │└─┐││
-; ┴ ┴└─┘└─┘┴└─┘
 ; {{{
 
 (defvar player "youtube-music-desktop-app")
@@ -209,9 +129,6 @@
   )
 )
 ; }}}
-; ┌─┐┬ ┬┌┬┐┬┌─┐
-; ├─┤│ │ ││││ │
-; ┴ ┴└─┘─┴┘┴└─┘
 ; {{{
 
 (deflisten source :initial '100' 'tail -F /tmp/eww/source')
@@ -236,9 +153,6 @@
 ; =============================================================================
 
 ; ================================= today =====================================
-; ┬ ┬┌─┐┌─┐┌┬┐┬ ┬┌─┐┬─┐
-; │││├┤ ├─┤ │ ├─┤├┤ ├┬┘
-; └┴┘└─┘┴ ┴ ┴ ┴ ┴└─┘┴└─
 ; {{{
 
 ; TODO CHANGE ALL THIS INTO SINGLE LISTENING JSON
@@ -281,9 +195,6 @@
   )
 )
 ; }}}
-; ┌┬┐┬┌┬┐┌─┐
-;  │ ││││├┤
-;  ┴ ┴┴ ┴└─┘
 ; {{{
 
 (defpoll time :interval "1s"
@@ -392,9 +303,6 @@
   )
 )
 ; }}}
-; ┌┬┐┌─┐┌┬┐┌─┐
-;  ││├─┤ │ ├┤
-; ─┴┘┴ ┴ ┴ └─┘
 ; {{{
 
 (deflisten weeks_alive 'tail -F /tmp/eww/weeks_alive')
@@ -435,13 +343,94 @@
 ; =============================================================================
 
 ; ================================= computer ==================================
-; ┌─┐┌─┐┬ ┬
-; │  ├─┘│ │
-; └─┘┴  └─┘
-; {{{
+; ♻️  computer-widgets {{{
+(defwidget num-to-block [load]
+  (label
+    :text {
+      load < 12.5  ? "▁" :
+      load < 25    ? "▂" :
+      load < 37.5  ? "▃" :
+      load < 50    ? "▄" :
+      load < 62.5  ? "▅" :
+      load < 75    ? "▆" :
+      load < 88.5  ? "▇" : "█"
+    }
+    :class "ramp-${
+      load < 5   ? "1" :
+      load < 10  ? "2" :
+      load < 20  ? "3" :
+      load < 30  ? "4" :
+      load < 40  ? "5" :
+      load < 50  ? "6" :
+      load < 60  ? "7" :
+      load < 70  ? "8" :
+      load < 80  ? "9" :
+      load < 90  ? "10" :
+      load < 95  ? "11" : "12"
+    }"
+  )
+)
 
-(defvar cores "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
+(defwidget label-ramp [child icon ?val percent bool ?direction]
+  (box
+    :space-evenly false
+    :spacing 5
+    :class "${child} ramp-${
+      percent < 25  ? "4"  :
+      percent < 35  ? "5"  :
+      percent < 50  ? "6"  :
+      percent < 65  ? "7"  :
+      percent < 80  ? "8"  :
+      percent < 85  ? "9"  :
+      percent < 90  ? "10" :
+      percent < 95  ? "11" : "12"
+    }"
+    (label :markup icon :class "${child}-icon")
+    (slide-n-fade :bool bool :direction "right"
+      (label
+        :class "${child}-text"
+        :markup {strlength(val) > 0 ? val : "${round(percent,0)}<small>%</small>"}
+      )
+    )
+  )
+)
+
+(defwidget temp-ramp [child current percent max bool ?direction ?extra]
+  (box
+    :space-evenly false
+    :spacing 6
+    :class "${child} ramp-${
+      percent < 50  ? "3"  :
+      percent < 56  ? "4"  :
+      percent < 62  ? "5"  :
+      percent < 68  ? "6"  :
+      percent < 74  ? "8"  :
+      percent < 80  ? "9" :
+      percent < 86  ? "10" :
+      percent < 94  ? "11" : "12"
+    } ${current >= max ? "ramp-crit" : ""}"
+    (label
+      :class "${child}-icon"
+      :text "${
+        percent < 50 ? "" :
+        percent < 56 ? "" :
+        percent < 80 ? "" :
+        percent < 90 ? "" : ""
+      }"
+    )
+    (slide-n-fade :bool bool :direction {strlenth(direction) > 0 ? "${direction}" : "right"}
+      (label
+        :class "${child}-current"
+        :markup "${current}<sup></sup>${extra}"
+      )
+    )
+  )
+)
+; }}}
+
+; 💻 cpu {{{
 (defvar cpu-info false)
+(defvar cores "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
 
 (defwidget cpu []
   (eventbox
@@ -476,10 +465,7 @@
 )
 
 ; }}}
-; ┌┬┐┌─┐┌┬┐┌─┐┬─┐┬ ┬
-; │││├┤ ││││ │├┬┘└┬┘
-; ┴ ┴└─┘┴ ┴└─┘┴└─ ┴
-; {{{
+; 🧠 memory {{{
 
 (defvar range16 "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
 (defvar memory-info false)
@@ -515,10 +501,7 @@
 )
 
 ; }}}
-; ┌─┐┌─┐┬ ┬
-; │ ┬├─┘│ │
-; └─┘┴  └─┘
-; {{{
+; 🖥️ gpu {{{
 
 (defpoll sensors :interval "0.5s" `sensors -j`)
 (defpoll gpu :interval "0.5s" 'scripts/computer_info')
@@ -623,10 +606,7 @@
 )
 
 ; }}}
-; ┬ ┬┌─┐┌─┐┬─┐
-; │ │└─┐├┤ ├┬┘
-; └─┘└─┘└─┘┴└─
-; {{{
+;   user {{{
 
 (defvar userUrl '/home/cullyn/.config/eww/assets/nosvagor.png')
 (defwidget user []
@@ -657,8 +637,9 @@
 (defwidget workspace [icon num]
   (eventbox
     :onclick "hyprctl dispatch workspace ${num}"
+    :class "workspaces-workspace-${num}${matches(active-ws,num) ? ' ws-active' : ''}"
     (box
-      :class "workspaces-workspace${matches(active-ws,num) ? ' active' : ''}"
+      :class "workspaces-workspace-${num}${matches(active-ws,num) ? ' ws-active' : ''}"
       :style "background-image: url('assets/ws-icons/${icon}.svg');"
     )
   )
@@ -671,6 +652,7 @@
     (workspace :icon "dna"      :num "3")
     (workspace :icon "dotfiles" :num "4")
     (workspace :icon "music"    :num "5")
+    (label :text "${active-ws}")
   )
 )
 

@@ -5,14 +5,14 @@ rm -rf "$dir"
 mkdir "$dir"
 mkdir "$dir/weather"
 
-file_names="workspaces sink source clockface-minute clockface-hour date_abd weeks_alive"
+file_names="workspace sink source clockface-minute clockface-hour date_abd weeks_alive"
 read -ra names_arr <<< "$file_names"
 
 for name in "${names_arr[@]}"; do
     touch "$dir/$name"
 done
 
-weather_file_names="id icon temp main cond aqi uvi rain wind"
+weather_file_names="id icon temp main cond aqi uvi rain wind weather.json"
 read -ra weather_names_arr <<< "$weather_file_names"
 
 for name in "${weather_names_arr[@]}"; do

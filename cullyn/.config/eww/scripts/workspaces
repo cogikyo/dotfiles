@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
 
 handle() {
-    event=$1
-    arg=$2
-    if [[ "$event" == "workspace" ]]; then
-        echo "$arg" >> "/tmp/eww/workspace"
+    if [[ "$1" == "workspace" ]]; then
+        # appending (>>) only works, truncating (>) seems to miss events sometimes
+        echo "$2" >> "/tmp/eww/workspace"
     fi
 }
 
