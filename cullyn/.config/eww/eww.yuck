@@ -6,8 +6,8 @@
   :geometry (geometry :width "30%" :anchor "top left")
   (box :class "sound" :halign "start" :space-evenly false :spacing spacing
     (music) (audio)
+    )
   )
-)
 
 (defwindow today
   :monitor 0 :stacking "fg" :exclusive false :focusable false
@@ -15,41 +15,41 @@
   (transform :translate-x "-20px"
     (centerbox :class "today"
       (weather) (time) (date)
+      )
     )
   )
-)
 
 (defwindow computer
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :width "30%" :anchor "top right")
   (box :class "computer" :halign "end" :space-evenly false :spacing spacing
     (cpu) (memory) (gpu) (user)
+    )
   )
-)
 
 (defwindow actions
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :width "33%" :anchor "bottom left")
   (actions)
-)
+  )
 
 (defwindow workspaces
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :width "33%" :anchor "bottom center")
   (workspaces)
-)
+  )
 
 (defwindow network
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :width "33%" :anchor "bottom right")
   (network)
-)
+  )
 
 ; }}}
 ; =============================================================================
 
 ; ================================= widgets ===================================
-; {{{
+; widgets {{{
 
 (defvar spacing 16)
 
@@ -652,39 +652,25 @@
 ; ================================= workspaces ================================
 ; {{{
 
-(deflisten workspace 'tail -F /tmp/eww/workspace')
+(deflisten active-ws 'tail -F /tmp/eww/workspace')
+
+(defwidget workspace [icon num]
+  (eventbox
+    :onclick "hyprctl dispatch workspace ${num}"
+    (box
+      :class "workspaces-workspace${matches(active-ws,num) ? ' active' : ''}"
+      :style "background-image: url('assets/ws-icons/${icon}.svg');"
+    )
+  )
+)
+
 (defwidget workspaces []
   (box :class "workspaces" :halign "center" :space-evenly false :spacing spacing
-    (eventbox
-      :onclick "hyprctl dispatch workspace 1"
-      (label :text ""
-        :class {matches(workspace,1) ? 'workspace-1 active' : 'workspace-1'}
-      )
-    )
-    (eventbox
-      :onclick "hyprctl dispatch workspace 2"
-      (label :text ""
-        :class {matches(workspace,2) ? 'workspace-2 active' : 'workspace-2'}
-      )
-    )
-    (eventbox
-      :onclick "hyprctl dispatch workspace 3"
-      (label :text "ﮂ"
-        :class {matches(workspace,3) ? 'workspace-3 active' : 'workspace-3'}
-      )
-    )
-    (eventbox
-      :onclick "hyprctl dispatch workspace 4"
-      (label :text ""
-        :class {matches(workspace,4) ? 'workspace-4 active' : 'workspace-4'}
-      )
-    )
-    (eventbox
-      :onclick "hyprctl dispatch workspace 5"
-      (label :text "輸"
-        :class {matches(workspace,5) ? 'workspace-5 active' : 'workspace-5'}
-      )
-    )
+    (workspace :icon "network"  :num "1")
+    (workspace :icon "learn"    :num "2")
+    (workspace :icon "dna"      :num "3")
+    (workspace :icon "dotfiles" :num "4")
+    (workspace :icon "music"    :num "5")
   )
 )
 
