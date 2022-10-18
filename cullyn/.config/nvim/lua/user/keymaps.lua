@@ -174,7 +174,7 @@ map("n", "<leader>nd", ":lua require('harpoon.ui').nav_file(5)<CR>zt")
 -- 🔍 Replace {{{
 map("n", "<leader>ir", "vip:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>", ff)
 map("v", "r", ":<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>", ff)
-map("n", "<leeder>R", ":%s///g<Left><Left><Left>", ff)
+map("n", "<leader>r<leader>", ":%s///g<Left><Left><Left>", ff)
 -- }}}
 
 -- 🤯 Comment headers {{{
