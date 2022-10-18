@@ -152,6 +152,7 @@ window {
 // }}}
 // ============================================================================
 
+// 🎵 music {{{
 .music {
   &-cover {
     @include corner-image($red);
@@ -179,12 +180,15 @@ window {
     @include box-decor($red, 'top-left');
   }
 }
-
+// }}}
+// 🎤 audio {{{
 .audio {
   @include box-decor($red, 'top-left');
   font-family: $monospace;
 }
+// }}}
 
+// 🌧️ weather {{{
 .weather {
   @include box-decor($orange, 'top-left');
   &-icons {
@@ -193,7 +197,8 @@ window {
     min-width: 1.5em;
   }
 }
-
+// }}}
+// 🕐 time {{{
 .time {
   @include box-decor($orange, 'top-center');
   &-text {
@@ -230,12 +235,15 @@ window {
     }
   }
 }
-
+// }}}
+// 📆 date {{{
 .date {
   @include box-decor($orange, 'top-right');
   font-family: $sans-serif;
 }
+// }}}
 
+// 💻 cpu {{{
 .cpu {
   @include box-decor($blue, 'top-right');
   &-busy-icon {
@@ -246,7 +254,8 @@ window {
     margin-right: -6px;
   }
 }
-
+// }}}
+// 🧠 memory {{{
 .memory {
   @include box-decor($blue, 'top-right');
   &-bars {
@@ -257,7 +266,8 @@ window {
     margin-right: 4px;
   }
 }
-
+// }}}
+// 🖥️ gpu {{{
 .gpu {
   @include box-decor($blue, 'top-right');
   &-mclock {
@@ -281,25 +291,55 @@ window {
     }
   }
 }
-
+// }}}
+//   user {{{
 .user {
   @include corner-image($blue, 'right');
   margin-left: -10px;
 }
+// }}}
 
+// 👷 actions {{{
 .actions {
   color: $blue;
+}
+// }}}
+
+//   workspaces {{{
+
+.ws-active {
+  background-color: $red;
 }
 
 .workspaces {
   &-workspace {
-    background-size: cover;
-    background-position: center;
-    min-width: 40px;
-    min-height: 40px;
+    &-1,
+    &-2,
+    &-3,
+    &-4,
+    &-5 {
+      background-size: cover;
+      background-position: center;
+      min-width: 40px;
+      min-height: 40px;
+      margin-bottom: 6px;
+      &:hover {
+        transition: opacity 0.5s $ease-out-snap;
+        opacity: 0;
+      }
+    }
+    &-2 {
+      margin-left: 3px;
+    }
+    &-5 {
+      margin-left: 4px;
+    }
   }
 }
+// }}}
 
+// 🖧  network {{{
 .network {
   color: $green;
 }
+// }}}
