@@ -1,8 +1,155 @@
-// ================================ imports ===================================
+// ============================================================================
+// 🎥 animations {{{
+
+$ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
+
+// }}}
+// 🌎 core {{{
+
+$sans-serif: Albert Sans;
+$monospace: LigaHack Nerd Font;
+$monospace-alt: Fira Code, Symbols Nerd Font;
+$font-size: 20px;
+
+* {
+  all: unset;
+}
+
 @import 'scss/colors';
-@import 'scss/animations';
-@import 'scss/core';
-@import 'scss/mixins';
+
+window {
+  color: $fg;
+  font-family: $sans-serif, $monospace;
+  font-size: 20px;
+}
+
+.debug {
+  border: 1px solid $pink;
+}
+
+.ramp {
+  &-1 {
+    color: $blue-gd;
+    transition: color 1.25s $ease-out-snap;
+  }
+  &-2 {
+    color: $blue-g;
+    transition: color 1.25s $ease-out-snap;
+  }
+  &-3 {
+    color: $blue-d;
+    transition: color 1.25s $ease-out-snap;
+  }
+  &-4 {
+    color: $blue;
+    transition: color 1.25s $ease-out-snap;
+  }
+  &-5 {
+    color: $azure;
+    transition: color 1.25s $ease-out-snap;
+  }
+  &-6 {
+    color: $cyan-l;
+    transition: color 1.25s $ease-out-snap;
+  }
+  &-7 {
+    color: $green-l;
+    transition: color 1.25s $ease-out-snap;
+  }
+  &-8 {
+    color: $yellow-l;
+    transition: color 1.25s $ease-out-snap;
+  }
+  &-9 {
+    color: $orange;
+    transition: color 1.25s $ease-out-snap;
+  }
+  &-10 {
+    color: $red-l;
+    transition: color 1.25s $ease-out-snap;
+  }
+  &-11 {
+    color: $red;
+    transition: color 1.25s $ease-out-snap;
+  }
+  &-12 {
+    color: $red-d;
+    transition: color 1.25s $ease-out-snap;
+  }
+  &-crit {
+    color: $pink;
+    font-weight: bold;
+    transition: color 1.25s $ease-out-snap;
+  }
+}
+
+// }}}
+// 🥣 mixins {{{
+
+@mixin corner-image($color, $direction: 'left') {
+  background-size: cover;
+  background-position: center;
+  min-width: 64px;
+  min-height: 56px;
+  margin-bottom: 10px;
+  @if $direction == 'left' {
+    border-radius: 0px 17px 69px 27px;
+    box-shadow: 1px -1px 1px 1px $color;
+  } @else {
+    min-width: 69px;
+    border-radius: 17px 0px 27px 69px;
+    box-shadow: -1px -1px 1px 1px $color;
+  }
+}
+
+@mixin box-decor($color, $position) {
+  background: $bg;
+  color: $color;
+  border-top: 1px double $color;
+  padding: 3px 0.9em 0 1.1em;
+  margin-top: 12px;
+  margin-bottom: 20px;
+
+  @if $position == 'top-left' {
+    border-right: 2px solid $color;
+    border-radius: 420px 17px 420px 69px;
+    box-shadow: -3px 3px 2px 2px rgba($black, 0.69);
+  }
+
+  @if $position == 'top-right' {
+    border-left: 2px solid $color;
+    border-radius: 17px 420px 69px 420px;
+    box-shadow: 3px 3px 2px 2px rgba($black, 0.69);
+    font-family: $monospace;
+    margin-right: 6px;
+  }
+
+  @if $position == 'top-center' {
+    border-radius: 27px 27px 69px 69px;
+    border-right: 1px solid $color;
+    border-bottom: 2px solid $color;
+    border-left: 1px solid $color;
+    margin: -7px 18px 10px 18px;
+    // box-shadow: 0px 2px 2px 2px rgba($black, 0.69);
+  }
+}
+
+@mixin clock-hover($color, $colorHover) {
+  &-inactive {
+    transition: color 1.5s $ease-out-snap;
+    color: $orange;
+  }
+  &-active {
+    transition: color 0.5s $ease-out-snap;
+    color: $color;
+    &:hover {
+      color: $colorHover;
+      transition: color 0.5s $ease-out-snap;
+    }
+  }
+}
+
+// }}}
 // ============================================================================
 
 .music {
@@ -145,7 +292,12 @@
 }
 
 .workspaces {
-  color: $fg;
+  &-workspace {
+    background-size: cover;
+    background-position: center;
+    min-width: 40px;
+    min-height: 40px;
+  }
 }
 
 .network {
