@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 
-left_window='1023 1024'
-center_window='1708 997'
-right_window='1009 1701'
+left_window='1023 1501'
+center_window='1715 1501'
+right_window='994 1764'
 
 discord () {
     hyprctl dispatch workspace 1
@@ -66,13 +66,11 @@ dotfiles () {
     hyprctl dispatch resizeactive "exact $left_window"
     hyprctl dispatch movefocus r
     kitty --hold --title="pipes-rs" -e pipes-rs & sleep 0.5
-    hyprctl dispatch movefocus l
-    hyprctl dispatch resizeactive "exact $center_window"
-    hyprctl dispatch movefocus r
     kitty --hold -o font_size=2.0 --title="cava" -e cava & sleep 0.5
     hyprctl dispatch movefocus u
     hyprctl dispatch resizeactive "exact $right_window"
     hyprctl dispatch movefocus l
+    hyprctl dispatch resizeactive "exact $center_window"
     hyprctl dispatch movefocus l
 }
 
