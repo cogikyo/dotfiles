@@ -16,7 +16,7 @@
 
 (defwindow today
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :width "30%" :anchor "top left" :x "1316px")
+  :geometry (geometry :width "36%" :anchor "top left" :x "1215px")
   (centerbox :class "today"
     (weather) (time) (date)
     )
@@ -62,13 +62,6 @@
     )
   )
 )
-
-; }}}
-; =============================================================================
-
-; ================================= widgets ===================================
-; widgets {{{
-
 
 ; }}}
 ; =============================================================================
@@ -243,7 +236,7 @@
     :class "time-clockface"
     :orientation "v"
     :valign "center"
-    :spacing -2
+    :spacing -4
     :space-evenly false
     (clock :child "hour" :text "${clockface-hour} " :bool hour-active)
     (clock :child "minute" :text "${clockface-minute} " :bool minute-active)
@@ -618,11 +611,14 @@
 
 (defwidget actions []
     (box :class "actions" :space-evenly false :spacing spacing
-    (pacman)
+    (apps) (pacman) (screen) (colorpicker)
   )
 )
 
+(defwidget apps [] "apps")
 (defwidget pacman [] "pacman")
+(defwidget screen [] "screen")
+(defwidget colorpicker [] "colorpicker")
 
 ; }}}
 ; =============================================================================
@@ -662,9 +658,10 @@
 ; {{{
 
 (defwidget network []
-  (box :class "network" :halign "end" :spacing 16 :space-evenly false
+  (box :class "network" :halign "end" :space-evenly false :spacing spacing
     (label :text "ﯲ ${EWW_NET.enp10s0.NET_DOWN}")
     (label :text "ﯴ ${EWW_NET.enp10s0.NET_UP}")
+    (label :text "notifications  ")
   )
 )
 ;}}}
