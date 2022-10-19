@@ -3,6 +3,7 @@ export GOPATH="$HOME/.go"
 export PATH="$PATH:$HOME/.go/bin"
 export PATH="$PATH:$HOME/.local/bin"
 export PATH="$HOME/.local/bin:$PATH"
+export PATH="$HOME/.config/nnn/plugins:$PATH"
 export PATH="$HOME/.cargo/bin:$PATH"
 export PAGER=nvimpager
 
@@ -31,7 +32,7 @@ f ()
 
   NNN_TMPFILE="${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.lastd"
 
-  nnn -e "$@"
+  nnn -c "$@"
 
   if [ -f "$NNN_TMPFILE" ]; then
     . "$NNN_TMPFILE"
@@ -46,7 +47,7 @@ HARDLINK="00" SYMLINK="06"
 MISSING="00"  ORPHAN="09"
 FIFO="00" SOCK="00" OTHER="01"
 export NNN_FCOLORS="$BLK$CHR$DIR$EXE$REG$HARDLINK$SYMLINK$MISSING$ORPHAN$FIFO$SOCK$OTHER"
-export NNN_PLUG='t:autojump;f:bulknew;z:preview-tui'
+export NNN_PLUG='j:autojump;f:bulknew;l:preview-tui;'
 export NNN_FIFO='/tmp/nnn.fifo'
 export NNN_OPENER=nuke
 export EDITOR=nvim
