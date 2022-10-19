@@ -1,4 +1,9 @@
 ; ================================= core ======================================
+; 🚧 constants {{{
+
+(defvar spacing 16)
+
+; }}}
 ; 🪟 windows {{{
 
 (defwindow sound
@@ -11,11 +16,9 @@
 
 (defwindow today
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :width "40%" :anchor "top center")
-  (transform :translate-x "-20px"
-    (centerbox :class "today"
-      (weather) (time) (date)
-      )
+  :geometry (geometry :width "30%" :anchor "top left" :x "1316px")
+  (centerbox :class "today"
+    (weather) (time) (date)
     )
   )
 
@@ -35,7 +38,7 @@
 
 (defwindow workspaces
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :width "33%" :anchor "bottom center")
+  :geometry (geometry :width "8%" :anchor "bottom center")
   (workspaces)
   )
 
@@ -59,11 +62,6 @@
     )
   )
 )
-
-; }}}
-; 🚧 constants {{{
-
-(defvar spacing 16)
 
 ; }}}
 ; =============================================================================
@@ -153,7 +151,7 @@
 ; =============================================================================
 
 ; ================================= today =====================================
-; {{{
+; 🌧️ weather {{{
 
 ; TODO CHANGE ALL THIS INTO SINGLE LISTENING JSON
 (deflisten w-id :initial "800" 'tail -F "/tmp/eww/weather/id"')
@@ -195,7 +193,7 @@
   )
 )
 ; }}}
-; {{{
+; 🕐 time {{{
 
 (defpoll time :interval "1s"
   `date +'{"hour":"%H", "minute":"%M", "second":"%S"}'`
@@ -303,7 +301,7 @@
   )
 )
 ; }}}
-; {{{
+; 📅 date {{{
 
 (deflisten weeks_alive 'tail -F /tmp/eww/weeks_alive')
 (deflisten date_abd 'tail -F /tmp/eww/date_abd')
@@ -321,7 +319,7 @@
       (slide-n-fade
         :bool date-extra
         :direction "left"
-        (label :class "date-week" :text "冀 ${weeks_alive}")
+        (label :class "date-week" :text "冀  ${weeks_alive}")
       )
       (box
         :class "date-general"
@@ -330,7 +328,7 @@
         (label
           :class "date-weekday"
           :style "margin-left: ${date-extra ? "0" : "-6"}px;"
-          :text " ${date_abd.weekday},"
+          :text "  ${date_abd.weekday},"
         )
         (label :class "date-month" :text "${date_abd.month}")
         (label :class "date-month" :text "${date_abd.day}")
@@ -633,26 +631,27 @@
 ; {{{
 
 (deflisten active-ws 'tail -F /tmp/eww/workspace')
+(defvar ws-hovered false)
 
 (defwidget workspace [icon num]
   (eventbox
     :onclick "hyprctl dispatch workspace ${num}"
-    :class "workspaces-workspace-${num}${matches(active-ws,num) ? ' ws-active' : ''}"
+    :onhover "eww update ws-hovered=true"
+    :onhoverlost "eww update ws-hovered=false"
     (box
-      :class "workspaces-workspace-${num}${matches(active-ws,num) ? ' ws-active' : ''}"
-      :style "background-image: url('assets/ws-icons/${icon}.svg');"
+      :style "background-image: url('assets/ws-icons/${icon}${matches(active-ws,num) ? '-active' : ''}.svg');"
+      :class "workspace ws-${num}"
     )
   )
 )
 
 (defwidget workspaces []
-  (box :class "workspaces" :halign "center" :space-evenly false :spacing spacing
+  (box :class "workspaces-box" :halign "center" :space-evenly false :spacing spacing
     (workspace :icon "network"  :num "1")
     (workspace :icon "learn"    :num "2")
     (workspace :icon "dna"      :num "3")
     (workspace :icon "dotfiles" :num "4")
     (workspace :icon "music"    :num "5")
-    (label :text "${active-ws}")
   )
 )
 

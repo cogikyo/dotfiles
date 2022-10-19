@@ -9,7 +9,6 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 $sans-serif: Albert Sans;
 $monospace: LigaHack Nerd Font;
 $monospace-alt: Fira Code, Symbols Nerd Font;
-$font-size: 20px;
 
 * {
   all: unset;
@@ -106,7 +105,7 @@ window {
   background: $bg;
   color: $color;
   border-top: 1px double $color;
-  padding: 3px 0.9em 0 1.1em;
+  padding: 3px 1.1em 0 1.1em;
   margin-top: 12px;
   margin-bottom: 20px;
 
@@ -130,8 +129,22 @@ window {
     border-bottom: 2px solid $color;
     border-left: 1px solid $color;
     margin: -7px 18px 10px 18px;
-    // box-shadow: 0px 2px 2px 2px rgba($black, 0.69);
+    box-shadow: 0px 2px 2px 2px rgba($black, 0.69);
   }
+
+  @if $position == 'bot-center' {
+    background: $bg-d;
+    border-radius: 69px 69px 27px 27px;
+    border-right: 1px solid $color;
+    border-top: 2px solid $color;
+    border-left: 1px solid $color;
+    padding: 7px 1.3em 0 1.3em;
+    margin: 10px 18px -7px 18px;
+    box-shadow: 0px -2px 2px 2px rgba($navy, 0.89);
+  }
+}
+
+@mixin box-decor-bot($color, $position) {
 }
 
 @mixin clock-hover($color, $colorHover) {
@@ -206,8 +219,7 @@ window {
   }
   &-clockface {
     font-size: 0.4em;
-    margin-top: 6px;
-    margin-right: -8px;
+    margin: 5px -5px 0 3px;
   }
   &-hour {
     @include clock-hover($red-d, $red-l);
@@ -307,34 +319,61 @@ window {
 
 //   workspaces {{{
 
-.ws-active {
-  background-color: $red;
+// .ws-active {
+//   background-size: cover;
+//   background-position: center;
+//   min-width: 40px;
+//   min-height: 40px;
+//   &-1 {
+//     &:hover {
+//       background-image: url('assets/ws-icons/network-active.svg');
+//     }
+//   }
+//   &-2 {
+//     &:hover {
+//       background-image: url('assets/ws-icons/learn-active.svg');
+//     }
+//   }
+//   &-3 {
+//     &:hover {
+//       background-image: url('assets/ws-icons/dna-active.svg');
+//     }
+//   }
+//   &-4 {
+//     &:hover {
+//       background-image: url('assets/ws-icons/dotfiles-active.svg');
+//     }
+//   }
+//   &-5 {
+//     &:hover {
+//       background-image: url('assets/ws-icons/music-active.svg');
+//     }
+//   }
+// }
+//
+// .ws-inactive {
+//   opacity: 0;
+// }
+
+.workspace {
+  background-size: cover;
+  background-position: center;
+  min-width: 34px;
+  min-height: 34px;
+  margin-bottom: 11px;
 }
 
-.workspaces {
-  &-workspace {
-    &-1,
-    &-2,
-    &-3,
-    &-4,
-    &-5 {
-      background-size: cover;
-      background-position: center;
-      min-width: 40px;
-      min-height: 40px;
-      margin-bottom: 6px;
-      &:hover {
-        transition: opacity 0.5s $ease-out-snap;
-        opacity: 0;
-      }
-    }
-    &-2 {
-      margin-left: 3px;
-    }
-    &-5 {
-      margin-left: 4px;
-    }
+.ws {
+  &-2 {
+    margin-left: 4px;
   }
+  &-5 {
+    margin-left: 4px;
+  }
+}
+
+.workspaces-box {
+  @include box-decor($orange, 'bot-center');
 }
 // }}}
 
