@@ -215,11 +215,13 @@ window {
 .time {
   @include box-decor($orange, 'top-center');
   &-text {
-    font-size: 2.5em;
+    font-family: Fira Code;
+    font-weight: 400;
+    font-size: 2.3em;
   }
   &-clockface {
-    font-size: 0.4em;
-    margin: 5px -5px 0 3px;
+    font-size: 9px;
+    margin: 2px -5px 0 3px;
   }
   &-hour {
     @include clock-hover($red-d, $red-l);
@@ -230,10 +232,11 @@ window {
   &-alarm {
     &-icon {
       margin-top: 2px;
-      margin-bottom: 2px;
+      margin-bottom: -1px;
     }
     &-subtext {
       font-size: 0.8em;
+      margin-right: 2px;
     }
   }
   &-timer {
