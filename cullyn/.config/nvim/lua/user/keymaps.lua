@@ -49,7 +49,7 @@ map("v", "<leader>P", "yP`]o<Esc>j")
 -- 🦬 Buffers {{{
 map("n", "<leader>b", ":bn<CR>zt")
 map("n", "<leader>B", ":bp<CR>zt")
-map("n", "<leader><C-b>", ":bd!<CR>zt")
+map("n", "<leader><C-w>", ":bd!<CR>zt")
 -- }}}
 
 -- 🌌 Gimme space please {{{
