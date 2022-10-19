@@ -16,7 +16,7 @@
 
 (defwindow today
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :width "36%" :anchor "top left" :x "1215px")
+  :geometry (geometry :width "36%" :anchor "top left" :x "1230px")
   (centerbox :class "today"
     (weather) (time) (date)
     )
