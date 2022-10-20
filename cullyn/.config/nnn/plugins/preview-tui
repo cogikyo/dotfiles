@@ -111,17 +111,17 @@ start_preview() {
 
     if [ -e "${TMUX%%,*}" ] && tmux -V | grep -q '[ -][3456789]\.'; then
         TERMINAL=tmux
-    elif [ -n "$KITTY_LISTEN_ON" ]; then
+    elif [ "$KITTY_LISTEN_ON" != "" ]; then
         TERMINAL=kitty
-    elif [ -z "$TERMINAL" ] && [ "$TERM_PROGRAM" = "iTerm.app" ]; then
+    elif [ "$TERMINAL" = "" ] && [ "$TERM_PROGRAM" = "iTerm.app" ]; then
         TERMINAL=iterm
-    elif [ -n "$WT_SESSION" ]; then
+    elif [ "$WT_SESSION" != "" ]; then
         TERMINAL=winterm
     else
         TERMINAL="${TERMINAL:-xterm}"
     fi
 
-    if [ -z "$SPLIT" ] && [ $(($(tput lines) * 2)) -gt "$(tput cols)" ]; then
+    if [ "$SPLIT" = "" ] && [ $(($(tput lines) * 2)) -gt "$(tput cols)" ]; then
         SPLIT='h'
     elif [ "$SPLIT" != 'h' ]; then
         SPLIT='v'
@@ -171,7 +171,7 @@ EOF
             ;;
         winterm)
             if [ "$SPLIT" = "h" ]; then split="H"; else split="V"; fi
-            cmd.exe /c wt -w 0 sp -$split -s$((SPLIT_SIZE / 100)) bash -c "cd $PWD \; \
+            cmd.exe /c wt -w 0 sp -"$split" -s$((SPLIT_SIZE / 100)) bash -c "cd $PWD \; \
                 PATH='$PATH' NNN_FIFO=$NNN_FIFO PREVIEW_MODE=1 CURSEL=$CURSEL TMPDIR=$TMPDIR \
                 FIFOPID=$FIFOPID BAT_STYLE=$BAT_STYLE BAT_THEME=$BAT_THEME PREVIEWPID=$PREVIEWPID \
                 PAGER='$PAGER' ICONLOOKUP=$ICONLOOKUP NNN_PREVIEWWIDTH=$NNN_PREVIEWWIDTH \
@@ -179,11 +179,11 @@ EOF
                 NNN_PREVIEWDIR=$NNN_PREVIEWDIR NNN_PREVIEWHEIGHT=$NNN_PREVIEWHEIGHT \
                 FIFO_UEBERZUG=$FIFO_UEBERZUG QLPATH=$2 $0 $1" \; -w 0 mf previous
             ;;
-        *)  if [ -n "$2" ]; then
+        *)  if [ "$2" != "" ]; then
                 QUICKLOOK=1 QLPATH="$2" PREVIEW_MODE=1 "$0" "$1" &
             else
                 PREVIEWPID="$PREVIEWPID" CURSEL="$CURSEL" PREVIEW_MODE=1 \
-                     FIFOPID="$FIFOPID" FIFO_UEBERZUG="$FIFO_UEBERZUG" $TERMINAL -e "$0" "$1" &
+                     FIFOPID="$FIFOPID" FIFO_UEBERZUG="$FIFO_UEBERZUG" "$TERMINAL" -e "$0" "$1" &
             fi ;;
     esac
 }
@@ -198,7 +198,7 @@ toggle_preview() {
         [ -p "$NNN_PPIPE" ] && printf "0" > "$NNN_PPIPE"
         pidkill "$PREVIEWPID"
         pkill -f "tail --follow $FIFO_UEBERZUG"
-        if [ -n "$QLPATH" ] && stat "$1"; then
+        if [ "$QLPATH" != "" ] && stat "$1"; then
             f="$(wslpath -w "$1")" && "$QLPATH" "$f" &
         fi
     else
@@ -215,7 +215,7 @@ fifo_pager() {
     tmpfifopath="$TMPDIR/nnn-preview-tui-fifo.$$"
     mkfifo "$tmpfifopath" || return
 
-    $PAGER < "$tmpfifopath" &
+    "$PAGER" < "$tmpfifopath" &
     printf "%s" "$!" > "$PREVIEWPID"
 
     (
@@ -225,7 +225,7 @@ fifo_pager() {
                 bat --terminal-width="$cols" --decorations=always --color=always \
                     --paging=never --style="$BAT_STYLE" --theme="$BAT_THEME" "$@" &
             else
-                $PAGER "$@" &
+                "$PAGER" "$@" &
             fi
         else
             "$cmd" "$@" &
@@ -318,7 +318,7 @@ preview_file() {
     fi
 
     # Use QuickLook if it's available.
-    if [ -n "$QUICKLOOK" ]; then
+    if [ "$QUICKLOOK" != "" ]; then
         stat "$1" && f="$(wslpath -w "$1")" && "$QLPATH" "$f" &
         return
     fi
@@ -327,7 +327,7 @@ preview_file() {
     encoding="$(file -bL --mime-encoding -- "$1")"
     mimetype="$(file -bL --mime-type -- "$1")"
     ext="${1##*.}"
-    [ -n "$ext" ] && ext="$(printf "%s" "${ext}" | tr '[:upper:]' '[:lower:]')"
+    [ "$ext" != "" ] && ext="$(printf "%s" "$ext" | tr '[:upper:]' '[:lower:]')"
     lines=$(tput lines)
     cols=$(tput cols)
 
@@ -338,6 +338,8 @@ preview_file() {
             [ "$SPLIT" = v ] && BSTR="\n"
             # shellcheck disable=SC2012
             ls -F --group-directories-first | head -n "$((lines - 3))" | "$(dirname "$0")"/.iconlookup -l "$cols" -B "$BSTR" -b " "
+        elif exists gtree; then
+            fifo_pager gtree
         elif exists tree; then
             fifo_pager tree --filelimit "$(find . -maxdepth 1 | wc -l)" -L 3 -C -F --dirsfirst --noreport
         elif exists exa; then
@@ -353,9 +355,9 @@ preview_file() {
 }
 
 generate_preview() {
-  if [ -n "$QLPATH" ] && stat "$3"; then
+  if [ "$QLPATH" != "" ] && stat "$3"; then
         f="$(wslpath -w "$3")" && "$QLPATH" "$f" &
-  elif [ ! -f "$NNN_PREVIEWDIR/$3.jpg" ] || [ -n "$(find -L "$3" -newer "$NNN_PREVIEWDIR/$3.jpg")" ]; then
+  elif [ ! -f "$NNN_PREVIEWDIR/$3.jpg" ] || [ "$(find -L "$3" -newer "$NNN_PREVIEWDIR/$3.jpg")" != "" ]; then
         mkdir -p "$NNN_PREVIEWDIR/${3%/*}"
         case $4 in
             audio) ffmpeg -i "$3" -filter_complex "scale=iw*min(1\,min($NNN_PREVIEWWIDTH/iw\,ih)):-1" "$NNN_PREVIEWDIR/$3.jpg" -y ;;
@@ -369,9 +371,9 @@ generate_preview() {
                         MAGICK_TMPDIR="/tmp" convert -coalesce -resize "$NNN_PREVIEWWIDTH"x"$NNN_PREVIEWHEIGHT"\> "$3" "$frameprefix.jpg"
                     fi
                     frames=$(($(find "$NNN_PREVIEWDIR/$3" | wc -l) - 2))
-                    [ $frames -lt 0 ] && return
+                    [ "$frames" -lt 0 ] && return
                     while true; do
-                        for i in $(seq 0 $frames); do
+                        for i in "$(seq 0 "$frames")"; do
                             image_preview "$1" "$2" "$frameprefix-$i.jpg"
                             sleep 0.1
                         done
@@ -442,7 +444,7 @@ winch_handler() {
 
 preview_fifo() {
     while read -r selection; do
-        if [ -n "$selection" ]; then
+        if [ "$selection" != "" ]; then
             pidkill "$PREVIEWPID"
             [ -p "$FIFO_UEBERZUG" ] && ueberzug_remove
             [ "$selection" = "close" ] && break
@@ -472,7 +474,7 @@ else
     if [ ! -r "$NNN_FIFO" ]; then
         clear
         prompt "No FIFO available! (\$NNN_FIFO='$NNN_FIFO')\nPlease read Usage in preview-tui."
-    elif [ "$KITTY_WINDOW_ID" ] && [ -z "$TMUX" ] && [ -z "$KITTY_LISTEN_ON" ]; then
+    elif [ "$KITTY_WINDOW_ID" ] && [ "$TMUX" = "" ] && [ "$KITTY_LISTEN_ON" = "" ]; then
         clear
         prompt "\$KITTY_LISTEN_ON not set!\nPlease read Usage in preview-tui."
     else
