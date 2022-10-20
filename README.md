@@ -34,14 +34,15 @@
   - [ ] Clean up, documument config file.
 - [ ] Refactor neovim config, pending 0.8 upgrade.
 - [ ] Update README
-    - [ ] Trim excess packages
-    - [ ] Create an automated install-script that works on machines running Arch Linux.
-    - [ ] Create video guide for those who might want to learn how to do something similar.
-    - [ ] Create exposition of screenshots to post on /r/unixporn and Gallery section.
+  - [ ] Trim excess packages
+  - [ ] Create an automated install-script that works on machines running Arch Linux.
+  - [ ] Create video guide for those who might want to learn how to do something similar.
+  - [ ] Create exposition of screenshots to post on /r/unixporn and Gallery section.
 
 &nbsp;
 
 Verson 2 goals:
+
 - Create unified custom theme that can modifiy all programs with adjustable themes.
 - Rewrite as much as I can in rust, rewriting popular programs for practice.
 
@@ -296,6 +297,12 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
     ln -sfn ~/.icons/default/index.theme /usr/share/icons/default/index.theme
     ln -sfn $HOME/.local/share/themes/Tokyonight /usr/share/themes
+
+&nbsp;
+
+2.12 Nice tree replacement (found when configuring nnn)
+
+    go install github.com/kitagry/gtree@latest
 
 ---
 
