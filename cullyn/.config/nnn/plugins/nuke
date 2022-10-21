@@ -127,7 +127,7 @@ handle_audio() {
 }
 
 handle_video() {
-    mpv "${FNAME}"
+    mpv --loop "${FNAME}"
     exit 0
 }
 
