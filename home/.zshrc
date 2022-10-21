@@ -23,7 +23,7 @@ setopt HIST_IGNORE_DUPS
 # │││││││││
 # ┘└┘┘└┘┘└┘
 
-f ()
+e ()
 {
   if [ -n $NNNLVL ] && [ "${NNNLVL:-0}" -ge 1 ]; then
     echo "nnn is already running"
@@ -73,8 +73,9 @@ alias d='cd ~/downloads'
 alias not='cd ~/notes'
 alias x='exit'
 alias n='nvim'
-alias e='eww inspector & disown && exit'
+bk () { mpvpaper -o "--loop --brightness=$2 --contrast=$3 --saturation=$4 --gamma=$5 --hue=$6" 'HDMI-A-1' ~/dotfiles/resources/videos/"$1".mp4 }
 alias ew='eww-open'
+alias ews='eww inspector & disown && exit'
 alias el='eww logs'
 alias cava='kitty --hold --title="cava" -e cava & disown && exit'
 alias man='man -r=""'
