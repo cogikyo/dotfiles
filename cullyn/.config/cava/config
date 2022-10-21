@@ -125,7 +125,7 @@ sleep_timer = 10
 # enable alacritty synchronized updates. 1 = on, 0 = off
 # removes flickering in alacritty terminal emeulator.
 # defaults to off since the behaviour in other terminal emulators is unknown
-alacritty_sync = 1
+; alacritty_sync = 1
 
 [color]
 
