@@ -1,21 +1,24 @@
 #!/usr/bin/env bash
 
-left_window='1023 1501'
-center_window='1715 1501'
-right_window='994 1764'
+side_window='1023 1204'
+center_window='1668 1727'
 
 dotfiles () {
     hyprctl dispatch workspace 4
     kitty --hold --working-directory="$HOME/dotfiles/" -e nvim & sleep 0.5
     firefox-developer-edition --new-window https://calendar.google.com/calendar/u/0/r & sleep 1.5
+    kitty --hold --working-directory="$HOME/dotfiles/" -e nvim & sleep 0.5
     hyprctl dispatch movefocus l
-    hyprctl dispatch resizeactive "exact $left_window"
+    hyprctl dispatch resizeactive "exact $side_window"
+    hyprctl dispatch movefocus r
+    hyprctl dispatch resizeactive "exact $center_window"
     hyprctl dispatch movefocus r
     kitty --hold --title="pipes-rs" -e pipes-rs & sleep 0.5
-    kitty --hold -o font_size=2.0 --title="cava" -e cava & sleep 0.5
     hyprctl dispatch movefocus u
-    hyprctl dispatch resizeactive "exact $right_window"
+    hyprctl dispatch resizeactive "exact $side_window"
     hyprctl dispatch movefocus l
+    kitty --hold -o font_size=6.0 --title="cava" -e cava & sleep 0.5
+    hyprctl dispatch movefocus u
     hyprctl dispatch resizeactive "exact $center_window"
     hyprctl dispatch movefocus l
 }
