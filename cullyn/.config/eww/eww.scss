@@ -86,23 +86,21 @@ window {
 // 🥣 mixins {{{
 
 @mixin corner-image($color, $direction: 'left') {
-  background-size: cover;
+  background-size: contain;
   background-position: center;
-  min-width: 64px;
-  min-height: 56px;
-  margin-bottom: 10px;
   @if $direction == 'left' {
-    border-radius: 0px 17px 69px 27px;
+    min-width: 64px;
+    border-radius: 0px 27px 69px 17px;
     box-shadow: 1px -1px 1px 1px $color;
   } @else {
-    min-width: 69px;
-    border-radius: 17px 0px 27px 69px;
+    min-width: 70px;
+    border-radius: 27px 0px 17px 69px;
     box-shadow: -1px -1px 1px 1px $color;
   }
 }
 
 @mixin box-decor($color, $position) {
-  background: $bg;
+  background: $bg-d;
   color: $color;
   border-top: 1px double $color;
   padding: 3px 1.1em 0 1.1em;
@@ -112,14 +110,13 @@ window {
   @if $position == 'top-left' {
     border-right: 2px solid $color;
     border-radius: 420px 17px 420px 69px;
-    box-shadow: -3px 3px 2px 2px rgba($black, 0.69);
+    box-shadow: -2px 2px 3px 1px rgba($color, 0.16);
   }
 
   @if $position == 'top-right' {
     border-left: 2px solid $color;
     border-radius: 17px 420px 69px 420px;
-    box-shadow: 3px 3px 2px 2px rgba($black, 0.69);
-    font-family: $monospace;
+    box-shadow: 2px 2px 3px 1px rgba($color, 0.16);
     margin-right: 6px;
   }
 
@@ -128,19 +125,18 @@ window {
     border-right: 1px solid $color;
     border-bottom: 2px solid $color;
     border-left: 1px solid $color;
-    margin: -7px 18px 10px 18px;
-    box-shadow: 0px 2px 2px 2px rgba($black, 0.69);
+    margin: -7px 18px 20px 18px;
+    box-shadow: 0px 2px 8px 2px rgba($color, 0.16);
   }
 
   @if $position == 'bot-center' {
-    background: $bg-d;
     border-radius: 69px 69px 27px 27px;
     border-right: 1px solid $color;
     border-top: 2px solid $color;
     border-left: 1px solid $color;
     padding: 7px 1.3em 0 1.3em;
     margin: 10px 18px -7px 18px;
-    box-shadow: 0px -2px 2px 2px rgba($navy, 0.89);
+    box-shadow: 0px -2px 8px 2px rgba($color, 0.16);
   }
 }
 
@@ -168,12 +164,13 @@ window {
 // 🎵 music {{{
 .music {
   &-cover {
-    @include corner-image($red);
+    @include corner-image($blue);
   }
   &-progress {
-    color: $red-d;
-    padding: 2px 0 4px 0;
+    color: $blue-d;
+    // padding: 2px 0 4px 0;
     margin-left: -2px;
+    margin-bottom: 1px;
     &-circle {
       background: $black;
       &-icon {
@@ -183,20 +180,20 @@ window {
     }
   }
   &-playing {
-    color: $red;
+    color: $blue;
   }
   &-paused {
-    color: $red-g;
+    color: $blue-g;
   }
   &-info {
-    color: $red;
-    @include box-decor($red, 'top-left');
+    color: $blue;
+    @include box-decor($blue, 'top-left');
   }
 }
 // }}}
 // 🎤 audio {{{
 .audio {
-  @include box-decor($red, 'top-left');
+  @include box-decor($blue, 'top-left');
   font-family: $monospace;
 }
 // }}}
@@ -204,6 +201,7 @@ window {
 // 🌧️ weather {{{
 .weather {
   @include box-decor($orange, 'top-left');
+  margin-bottom: 30px;
   &-icons {
     background-size: cover;
     background-position: center;
@@ -254,7 +252,7 @@ window {
 // 📆 date {{{
 .date {
   @include box-decor($orange, 'top-right');
-  font-family: $sans-serif;
+  margin-bottom: 30px;
 }
 // }}}
 
