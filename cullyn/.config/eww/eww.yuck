@@ -9,44 +9,44 @@
 (defwindow sound
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :width "30%" :anchor "top left")
-  (box :class "sound" :halign "start" :space-evenly false :spacing spacing
+  (box :class "sound" :halign "start" :space-evenly false :spacing 0
     (music) (audio)
-    )
   )
+)
 
 (defwindow today
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :width "36%" :anchor "top left" :x "1226px")
   (centerbox :class "today"
     (weather) (time) (date)
-    )
   )
+)
 
 (defwindow computer
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :width "30%" :anchor "top right")
-  (box :class "computer" :halign "end" :space-evenly false :spacing spacing
+  (box :class "computer" :halign "end" :space-evenly false :spacing 0
     (cpu) (memory) (gpu) (user)
-    )
   )
+)
 
 (defwindow actions
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :width "33%" :anchor "bottom left")
   (actions)
-  )
+)
 
 (defwindow workspaces
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :width "8%" :anchor "bottom center")
   (workspaces)
-  )
+)
 
 (defwindow network
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :width "33%" :anchor "bottom right")
   (network)
-  )
+)
 
 ; }}}
 ; ♻️  widgets {{{
@@ -75,7 +75,7 @@
 (defpoll progress :interval "1s" "scripts/music_info progress")
 
 (defwidget music []
-  (box :class "music" :space-evenly false :spacing spacing
+  (box :class "music" :space-evenly false :spacing 0
     (music-cover) (music-info)
   )
 )
@@ -87,7 +87,6 @@
       artUrl :
       "/home/cullyn/.config/eww/assets/ytm.svg" }');"
     )
-
 )
 
 (defwidget music-progress []
@@ -166,20 +165,16 @@
     :onhover "eww update weather-info=true"
     :onhoverlost "eww update weather-info=false"
     (box
-      :class "weather" :halign "end" :space-evenly false :spacing 8
-      (box
-        :class "weather-icons"
-        :style "background-image: url('assets/owm-icons/${w-icon}.png');"
-      )
-      (label :markup "<b>${w-temp}<tt><sup></sup></tt></b>")
+      :class "weather" :halign "end" :space-evenly false :spacing 0
+      (label :markup "<b>${w-temp}<tt><sup></sup> </tt></b>")
       (label
         :class "weather-label"
-        :markup "<b>${w-main}</b>  <tt></tt>  ${w-rain}<small>%</small>"
+        :markup "<b>${w-main}</b>  <tt></tt>  ${w-rain}<small>% </small>"
       )
       (slide-n-fade :bool weather-info :direction "right"
         (label
           :class "weather-label-open"
-          :markup "<tt></tt>  ${w-aqi} ${w-uvi > 0 ? "<tt>履</tt>  ${w-uvi}<small> </small>" : "<small> </small>"}<tt>${w-bf-i}</tt>  ${w-wind}<sub>m/s</sub>"
+          :markup "<tt> </tt>  ${w-aqi} ${w-uvi > 0 ? "<tt> 履</tt>  ${w-uvi}" : ""}<small>  </small> <tt>${w-bf-i}</tt>  ${w-wind}<sub>m/s</sub>"
         )
       )
     )
@@ -209,7 +204,7 @@
       :class "time"
       :halign "center"
       :space-evenly false
-      :spacing 2
+      :spacing 3
       :style "padding: 0 ${timer-visible ? "0.9" : "1.2" }em;"
       (alarm)
       (clock :child "hour" :text {time.hour} :bool hour-active)
@@ -312,7 +307,7 @@
       (slide-n-fade
         :bool date-extra
         :direction "left"
-        (label :class "date-week" :text "冀  ${weeks_alive}")
+        (label :class "date-week" :text "冀  ${weeks_alive} ")
       )
       (box
         :class "date-general"
@@ -557,18 +552,18 @@
     (label
       :text "龍"
       :class "gpu-mclock-icon ramp-${
-        gpu.mclk_level == 1 ? "5" :
-        gpu.mclk_level == 2 ? "9" :
-        gpu.mclk_level == 3 ? "12" : "4"
+        gpu.mclk_level == 1 ? "4" :
+        gpu.mclk_level == 2 ? "5" :
+        gpu.mclk_level == 3 ? "8" : "3"
       }"
     )
     (slide-n-fade :bool gpu-info :direction "right"
       (label
         :markup "${gpu.mclk}<b><sub>MHz</sub></b>"
         :class "gpu-mclock-text ramp-${
-          gpu.mclk_level == 1 ? "5" :
-          gpu.mclk_level == 2 ? "9" :
-          gpu.mclk_level == 3 ? "12" : "4"
+          gpu.mclk_level == 1 ? "4" :
+          gpu.mclk_level == 2 ? "5" :
+          gpu.mclk_level == 3 ? "8" : "3"
         }"
       )
     )
