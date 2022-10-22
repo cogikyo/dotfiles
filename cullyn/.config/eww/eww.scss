@@ -83,64 +83,94 @@ window {
 }
 
 // }}}
-// 🥣 mixins {{{
 
-@mixin corner-image($color, $direction: 'left') {
-  background-size: contain;
-  background-position: center;
-  @if $direction == 'left' {
-    min-width: 64px;
+// 🥣 mixins {{{
+@mixin corner-image($direction) {
+  background-size: cover;
+  margin-top: -1px;
+  border-top: 1px solid $blue-d;
+  border-bottom: 1px solid $blue-d;
+
+  @if $direction == 'top-left' {
+    background-position: calc(50% - 6px) 50%;
+    min-width: 72px;
     border-radius: 0px 27px 69px 17px;
-    box-shadow: 1px -1px 1px 1px $color;
-  } @else {
-    min-width: 70px;
+    border-right: 2px solid $blue;
+    box-shadow: 1px 3px 8px 2px rgba($blue, 0.16);
+    margin-right: 12px;
+  }
+
+  @if $direction == 'top-right' {
+    background-position: calc(50% + 6px) 50%;
+    min-width: 80px;
     border-radius: 27px 0px 17px 69px;
-    box-shadow: -1px -1px 1px 1px $color;
+    border-left: 2px solid $blue;
+    box-shadow: -1px 3px 8px 2px rgba($blue, 0.16);
+    margin-left: 12px;
   }
 }
 
-@mixin box-decor($color, $position) {
-  background: $bg-d;
-  color: $color;
-  border-top: 1px double $color;
-  padding: 3px 1.1em 0 1.1em;
-  margin-top: 12px;
-  margin-bottom: 20px;
+@mixin box-decor($position) {
+  background: rgba($bg, 0.69);
+  color: $blue;
+  border-top: 1px double $blue;
+  padding: 4px 1.1em;
+  margin: 16px 8px 30px 8px;
 
   @if $position == 'top-left' {
-    border-right: 2px solid $color;
+    border-right: 2px solid $blue;
     border-radius: 420px 17px 420px 69px;
-    box-shadow: -2px 2px 3px 1px rgba($color, 0.16);
+
+    box-shadow: -3px 2px 3px 1px rgba($blue-d, 0.16);
   }
 
   @if $position == 'top-right' {
-    border-left: 2px solid $color;
+    border-left: 2px solid $blue;
     border-radius: 17px 420px 69px 420px;
-    box-shadow: 2px 2px 3px 1px rgba($color, 0.16);
-    margin-right: 6px;
+
+    box-shadow: 3px 2px 3px 1px rgba($blue-d, 0.22);
+  }
+
+  @if $position == 'top-center-left' {
+    border-right: 2px solid $orange;
+    border-top: 1px double $orange;
+    color: $orange;
+    border-radius: 420px 17px 420px 69px;
+
+    box-shadow: -3px 2px 3px 1px rgba($orange-d, 0.16);
+  }
+
+  @if $position == 'top-center-right' {
+    border-left: 2px solid $orange;
+    border-top: 1px double $orange;
+    color: $orange;
+    border-radius: 17px 420px 69px 420px;
+
+    box-shadow: 3px 2px 3px 1px rgba($orange-d, 0.16);
   }
 
   @if $position == 'top-center' {
     border-radius: 27px 27px 69px 69px;
-    border-right: 1px solid $color;
-    border-bottom: 2px solid $color;
-    border-left: 1px solid $color;
-    margin: -7px 18px 20px 18px;
-    box-shadow: 0px 2px 8px 2px rgba($color, 0.16);
+    border-right: 1px solid $orange;
+    border-bottom: 2px solid $orange;
+    border-left: 1px solid $orange;
+
+    box-shadow: 0px 2px 8px 2px rgba($orange, 0.16);
+
+    padding: 0px 1.3em 11px 1.3em;
+    margin: -7px 16px 30px 16px;
   }
 
   @if $position == 'bot-center' {
     border-radius: 69px 69px 27px 27px;
-    border-right: 1px solid $color;
-    border-top: 2px solid $color;
-    border-left: 1px solid $color;
-    padding: 7px 1.3em 0 1.3em;
-    margin: 10px 18px -7px 18px;
-    box-shadow: 0px -2px 8px 2px rgba($color, 0.16);
-  }
-}
+    border-right: 1px solid $orange;
+    border-top: 2px solid $orange;
+    border-left: 1px solid $orange;
+    box-shadow: 0px -2px 8px 2px rgba($orange, 0.16);
 
-@mixin box-decor-bot($color, $position) {
+    padding: 11px 1.3em 0 1.3em;
+    margin: 30px 18px -6px 18px;
+  }
 }
 
 @mixin clock-hover($color, $colorHover) {
@@ -161,16 +191,18 @@ window {
 // }}}
 // ============================================================================
 
+.sound,
+.computer {
+  margin-bottom: 16px; // leave room for box-shadow
+}
+
 // 🎵 music {{{
 .music {
   &-cover {
-    @include corner-image($blue);
+    @include corner-image('top-left');
   }
   &-progress {
     color: $blue-d;
-    // padding: 2px 0 4px 0;
-    margin-left: -2px;
-    margin-bottom: 1px;
     &-circle {
       background: $black;
       &-icon {
@@ -187,31 +219,26 @@ window {
   }
   &-info {
     color: $blue;
-    @include box-decor($blue, 'top-left');
+    @include box-decor('top-left');
   }
 }
 // }}}
 // 🎤 audio {{{
 .audio {
-  @include box-decor($blue, 'top-left');
+  @include box-decor('top-left');
   font-family: $monospace;
 }
 // }}}
 
 // 🌧️ weather {{{
 .weather {
-  @include box-decor($orange, 'top-left');
-  margin-bottom: 30px;
-  &-icons {
-    background-size: cover;
-    background-position: center;
-    min-width: 1.5em;
-  }
+  @include box-decor('top-center-left');
 }
 // }}}
+
 // 🕐 time {{{
 .time {
-  @include box-decor($orange, 'top-center');
+  @include box-decor('top-center');
   &-text {
     font-family: Fira Code;
     font-weight: 500;
@@ -238,8 +265,11 @@ window {
     }
   }
   &-timer {
+    margin-left: -5px;
+    margin-right: 2px;
     &-icon {
       margin-top: 3px;
+      margin-left: 1px;
     }
     &-subtext {
       font-family: $monospace;
@@ -251,14 +281,16 @@ window {
 // }}}
 // 📆 date {{{
 .date {
-  @include box-decor($orange, 'top-right');
-  margin-bottom: 30px;
+  @include box-decor('top-center-right');
+  &-week {
+    margin-left: 6px;
+  }
 }
 // }}}
 
 // 💻 cpu {{{
 .cpu {
-  @include box-decor($blue, 'top-right');
+  @include box-decor('top-right');
   &-busy-icon {
     font-size: 1.15em;
   }
@@ -270,7 +302,7 @@ window {
 // }}}
 // 🧠 memory {{{
 .memory {
-  @include box-decor($blue, 'top-right');
+  @include box-decor('top-right');
   &-bars {
     margin-top: 2px;
     margin-right: -8px;
@@ -282,7 +314,7 @@ window {
 // }}}
 // 🖥️ gpu {{{
 .gpu {
-  @include box-decor($blue, 'top-right');
+  @include box-decor('top-right');
   &-mclock {
     &-icon {
       font-size: 1.15em;
@@ -307,8 +339,7 @@ window {
 // }}}
 //   user {{{
 .user {
-  @include corner-image($blue, 'right');
-  margin-left: -10px;
+  @include corner-image('top-right');
 }
 // }}}
 
@@ -374,7 +405,7 @@ window {
 }
 
 .workspaces-box {
-  @include box-decor($orange, 'bot-center');
+  @include box-decor('bot-center');
 }
 // }}}
 
