@@ -2,18 +2,26 @@
 
 player="--player=youtube-music-desktop-app"
 
-song() {
-    echo "$1" | sed -e 's/([^()]*)//g' \
-                    -e 's/ $//g' \
-                    -e 's/:.*//g' \
-                    -e 's/,.*//g'
-}
+# song() {
+#     echo "$1" | sed -e 's/([^()]*)//g' \
+#                     -e 's/ $//g' \
+#                     -e 's/:.*//g' \
+#                     -e 's/,.*//g'
+# }
+#
+# album () {
+#     echo "$1" | sed -e 's/([^()]*)//g' \
+#                     -e 's/ -.*//g' \
+#                     -e 's/ $//g' \
+#                     -e 's/:.*//g'
+# }
 
-album () {
-    echo "$1" | sed -e 's/([^()]*)//g' \
-                    -e 's/ -.*//g' \
-                    -e 's/ $//g' \
-                    -e 's/:.*//g'
+volume () {
+    direction="+"
+    if [[ "$1" == "down" ]]; then
+        direction="-"
+    fi
+    playerctl $player volume "$2"$direction
 }
 
 progress() {
@@ -34,6 +42,7 @@ progress() {
 get_json () {
     status=$(playerctl status)
     while ! [[ $status == "Playing" ]]; do
+        notify-send "waiting for player to start..."
         sleep 1
         status=$(playerctl status)
     done
