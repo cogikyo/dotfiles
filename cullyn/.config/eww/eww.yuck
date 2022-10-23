@@ -76,12 +76,19 @@
 
 (defvar player "youtube-music-desktop-app")
 (defvar artUrl "/tmp/eww/album_art.png")
+(defvar volume-visible false)
 (defpoll progress :interval "1s" "scripts/music_info progress")
 (deflisten pctl 'tail -F /tmp/eww/music.json 2> /dev/null')
 
 (defwidget music []
-  (box :class "music" :space-evenly false :spacing 0
-    (music-cover) (music-info)
+  (eventbox
+    :onclick "hyprctl dispatch workspace 5"
+    :onrightclick "hyprctl dispatch workspace previous"
+    :onhover "eww update volume-visible=true"
+    :onhoverlost "eww update volume-visible=false"
+    (box :class "music" :space-evenly false :spacing 0
+      (music-cover) (music-info)
+    )
   )
 )
 
@@ -92,6 +99,26 @@
       artUrl :
       "/home/cullyn/.config/eww/assets/ytm.svg" }');"
     )
+)
+
+(defwidget music-info []
+  (box :class "music-info" :space-evenly false :spacing spacing
+    (music-progress)
+    (literal
+      :content "${"${pctl.title}" == "${pctl.album}" ? "(title-same)" : "(title-diff)"}"
+      :style "margin-top: 2px;"
+    )
+    (label
+      :class "music-artist"
+      :markup "<tt></tt>  <b>${pctl.artist}</b>"
+      :style "margin-right: ${volume-visible ? "-6" : "-16" }px;
+              transition: margin 0.5s ease-${volume-visible ? "out" : "in" };
+             "
+    )
+    (slide-n-fade :direction "left" :bool volume-visible
+      (music-volume :value {round(pctl.volume * 100,0)})
+    )
+  )
 )
 
 (defwidget music-progress []
@@ -115,19 +142,6 @@
   )
 )
 
-(defwidget music-info []
-  (box :class "music-info" :space-evenly false :spacing spacing
-    (music-progress)
-    (literal
-      :content "${"${pctl.title}" == "${pctl.album}" ? "(title-same)" : "(title-diff)"}"
-      :style "margin-top: 2px;"
-    )
-    (label :class "music-artist" :markup "<tt></tt>  <b>${pctl.artist}</b>")
-    (music-volume :value {round(pctl.volume * 100,0)})
-  )
-)
-
-(defvar volume-visible false)
 (defwidget music-volume [value]
   (eventbox
       :onclick "playerctl --player=${player} volume 1"
@@ -135,7 +149,19 @@
       :onrightclick "playerctl --player=${player} volume 0"
       :onscroll "scripts/music_info volume {} 0.1"
       :cursor "pointer"
-    (box :class "music-volume" :space-evenly false :spacing 0
+    (box :class "music-volume ramp-${
+              value < 1   ? "2" :
+              value < 20  ? "3" :
+              value < 30  ? "4" :
+              value < 40  ? "5" :
+              value < 50  ? "6" :
+              value < 60  ? "7" :
+              value < 70  ? "8" :
+              value < 80  ? "9" :
+              value < 90  ? "10" :
+              value < 99  ? "11" : "12"
+          }"
+         :space-evenly false :spacing 0
       (circular-progress
         :class "music-volume-circle"
         :value value
@@ -230,7 +256,7 @@
   )
 )
 ; }}}
-; 🕐 time:: {{{
+; 🕐 time: {{{
 
 (defpoll time :interval "1s"
   `date +'{"hour":"%H", "minute":"%M", "second":"%S"}'`
@@ -340,7 +366,7 @@
   )
 )
 ; }}}
-; 📅 date:: {{{
+; 📅 date: {{{
 
 (deflisten weeks_alive 'tail -F /tmp/eww/weeks_alive')
 (deflisten date_abd 'tail -F /tmp/eww/date_abd')

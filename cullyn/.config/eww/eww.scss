@@ -136,6 +136,7 @@ window {
     border-radius: 17px 420px 69px 420px;
 
     box-shadow: 3px 2px 3px 1px rgba($blue-d, 0.21);
+    font-family: $monospace;
   }
 
   @if $position == 'top-center-left' {
@@ -214,11 +215,9 @@ window {
     }
   }
   &-volume {
-    color: $blue-d;
+    transition: color 0.5s $ease-out-snap;
     &-circle {
-      background: $blue-gd;
       &-icon {
-        color: $blue;
         font-size: 1em;
         margin: 6px -3px 6px 6px;
       }
@@ -305,10 +304,11 @@ window {
   @include box-decor('top-right');
   &-busy-icon {
     font-size: 1.15em;
+    margin-right: 3px;
   }
   &-bars {
     font-size: 0.9em;
-    margin-right: -6px;
+    margin: 2px -8px 0 -3px;
   }
 }
 // }}}
@@ -330,12 +330,12 @@ window {
   &-mclock {
     &-icon {
       font-size: 1.15em;
-      margin-right: 7px;
-      margin-top: -1px;
+      margin: -1px 8px 0 3px;
     }
   }
   &-fan-icon {
-    margin-right: 5px;
+    margin-right: 6px;
+    margin-left: 2px;
   }
   &-vram {
     &-icon {
@@ -343,8 +343,7 @@ window {
       margin-right: 4px;
     }
     &-bars {
-      margin-top: 2px;
-      margin-right: -8px;
+      margin: 2px -8px 0 -3px;
     }
   }
 }
