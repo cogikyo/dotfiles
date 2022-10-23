@@ -76,6 +76,7 @@
 
 (defvar player "youtube-music-desktop-app")
 (defvar artUrl "/tmp/eww/album_art.png")
+(defvar art-inactive-url "/home/cullyn/.config/eww/assets/ytm.svg" )
 (defvar volume-visible false)
 (defpoll progress :interval "1s" "scripts/music_info progress")
 (deflisten pctl 'tail -F /tmp/eww/music.json 2> /dev/null')
@@ -95,23 +96,41 @@
 (defwidget music-cover []
   (box
     :class "music-cover"
-    :style "background-image: url('${ matches("${pctl.status}", "Playing") ?
-      artUrl :
-      "/home/cullyn/.config/eww/assets/ytm.svg" }');"
+    :style "background-image: url('${matches("${pctl.status}", "Playing") ?
+      artUrl : art-inactive-url}');"
     )
+)
+
+(defwidget title-diff []
+  (box :space-evenly false :spacing spacing
+    (label :class "music-album"  :markup "<tt></tt>  ${pctl.album}")
+    (label :class "music-title"  :markup "<tt></tt>  <i>${pctl.title}</i>")
+  )
+)
+
+(defwidget title-same []
+  (box :space-evenly false :spacing spacing
+    (label
+      :class "music-title"
+      :markup "<tt>硫</tt>  <i>${pctl.album}</i>"
+      :style "margin-left: -4px;"
+    )
+  )
 )
 
 (defwidget music-info []
   (box :class "music-info" :space-evenly false :spacing spacing
     (music-progress)
-    (literal
-      :content "${"${pctl.title}" == "${pctl.album}" ? "(title-same)" : "(title-diff)"}"
-      :style "margin-top: 2px;"
-    )
     (label
       :class "music-artist"
       :markup "<tt></tt>  <b>${pctl.artist}</b>"
-      :style "margin-right: ${volume-visible ? "-6" : "-16" }px;
+      :style "margin-right: -2px;"
+    )
+    (literal
+      :content "${"${pctl.title}" == "${pctl.album}" ? "(title-same)" : "(title-diff)"}"
+      :style "
+              margin-top: 2px;
+              margin-right: ${volume-visible ? "-6" : "-16" }px;
               transition: margin 0.5s ease-${volume-visible ? "out" : "in" };
              "
     )
@@ -178,19 +197,6 @@
         )
       )
     )
-  )
-)
-
-(defwidget title-diff []
-  (box :space-evenly false :spacing spacing
-    (label :class "music-title"  :markup "<tt></tt>  <i>${pctl.title}</i>")
-    (label :class "music-album"  :markup "<tt></tt>  ${pctl.album}")
-  )
-)
-
-(defwidget title-same []
-  (box :space-evenly false :spacing spacing
-    (label :class "music-album"  :markup "<tt></tt>  <i>${pctl.album}</i>")
   )
 )
 
