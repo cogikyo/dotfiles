@@ -1,10 +1,16 @@
-; ================================= core ======================================
-; 🚧 constants {{{
+; ██╗      ██████╗  ██████╗ ██╗ ██████╗
+; ██║     ██╔═══██╗██╔════╝ ██║██╔════╝
+; ██║     ██║   ██║██║  ███╗██║██║
+; ██║     ██║   ██║██║   ██║██║██║
+; ███████╗╚██████╔╝╚██████╔╝██║╚██████╗
+; ╚══════╝ ╚═════╝  ╚═════╝ ╚═╝ ╚═════╝
+; =============================================================================
+; 🚧 constants: {{{
 
 (defvar spacing 16)
 
 ; }}}
-; 🪟 windows {{{
+; 🪟 windows: {{{
 
 (defwindow sound
   :monitor 0 :stacking "fg" :exclusive false :focusable false
@@ -49,7 +55,7 @@
 )
 
 ; }}}
-; ♻️  widgets {{{
+; ♻️  widgets: {{{
 
 (defwidget slide-n-fade [direction bool]
   (revealer
@@ -66,8 +72,7 @@
 ; }}}
 ; =============================================================================
 
-; ================================= sound =====================================
-; 🎵 music {{{
+; 🎵 music: {{{
 
 (defvar player "youtube-music-desktop-app")
 (defvar artUrl "/tmp/eww/album_art.png")
@@ -164,7 +169,7 @@
 )
 
 ; }}}
-; 🎤 audio {{{
+; 🎤 audio: {{{
 
 (deflisten source :initial '--' 'tail -F /tmp/eww/source')
 (deflisten sink :intial '--' 'tail -F /tmp/eww/sink')
@@ -186,10 +191,8 @@
   )
 )
 ; }}}
-; =============================================================================
 
-; ================================= today =====================================
-; 🌧️ weather {{{
+; 🌧️ weather: {{{
 
 ; TODO CHANGE ALL THIS INTO SINGLE LISTENING JSON
 (deflisten w-id :initial "800" 'tail -F "/tmp/eww/weather/id"')
@@ -227,7 +230,7 @@
   )
 )
 ; }}}
-; 🕐 time: {{{
+; 🕐 time:: {{{
 
 (defpoll time :interval "1s"
   `date +'{"hour":"%H", "minute":"%M", "second":"%S"}'`
@@ -337,7 +340,7 @@
   )
 )
 ; }}}
-; 📅 date: {{{
+; 📅 date:: {{{
 
 (deflisten weeks_alive 'tail -F /tmp/eww/weeks_alive')
 (deflisten date_abd 'tail -F /tmp/eww/date_abd')
@@ -374,10 +377,8 @@
 )
 
 ; }}}
-; =============================================================================
 
-; ================================= computer ==================================
-; ♻️  computer-widgets {{{
+; ♻️  computer-widgets: {{{
 (defwidget num-to-block [load]
   (label
     :text {
@@ -461,8 +462,7 @@
   )
 )
 ; }}}
-
-; 💻 cpu {{{
+; 💻 cpu: {{{
 (defvar cpu-info false)
 (defvar cores "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
 
@@ -500,7 +500,7 @@
 )
 
 ; }}}
-; 🧠 memory {{{
+; 🧠 memory: {{{
 
 (defvar range16 "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
 (defvar memory-info false)
@@ -537,7 +537,7 @@
 )
 
 ; }}}
-; 🖥️ gpu {{{
+; 🖥️ gpu: {{{
 
 (defpoll sensors :interval "0.5s" `sensors -j`)
 (defpoll gpu :interval "0.5s" 'scripts/computer_info')
@@ -643,17 +643,15 @@
 )
 
 ; }}}
-;   user {{{
+; 🤓 user: {{{
 
 (defvar userUrl '/home/cullyn/.config/eww/assets/nosvagor.png')
 (defwidget user []
   (box :class "user" :style "background-image: url('${userUrl}');")
 )
 ; }}}
-; =============================================================================
 
-; ================================= actions ===================================
-; pacman {{{
+; 👷 actions: {{{
 
 (defwidget actions []
     (box :class "actions" :space-evenly false :spacing spacing
@@ -667,10 +665,7 @@
 (defwidget colorpicker [] "colorpicker")
 
 ; }}}
-; =============================================================================
-
-; ================================= workspaces ================================
-; {{{
+; 👾 workspaces: {{{
 
 (deflisten active-ws 'tail -F /tmp/eww/workspace')
 (defvar ws-hovered false)
@@ -699,10 +694,7 @@
 )
 
 ; }}}
-; =============================================================================
-
-; ================================= network ===================================
-; {{{
+; 🕸️ network: {{{
 
 (defwidget network []
   (box :class "network" :halign "end" :space-evenly false :spacing spacing
@@ -712,4 +704,3 @@
   )
 )
 ;}}}
-; =============================================================================
