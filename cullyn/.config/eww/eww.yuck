@@ -67,12 +67,12 @@
 ; =============================================================================
 
 ; ================================= sound =====================================
-; {{{
+; 🎵 music {{{
 
 (defvar player "youtube-music-desktop-app")
-(deflisten pctl 'tail -F /tmp/eww/music.json 2> /dev/null')
 (defvar artUrl "/tmp/eww/album_art.png")
 (defpoll progress :interval "1s" "scripts/music_info progress")
+(deflisten pctl 'tail -F /tmp/eww/music.json 2> /dev/null')
 
 (defwidget music []
   (box :class "music" :space-evenly false :spacing 0
@@ -102,6 +102,7 @@
         (eventbox
           :class "music-${matches("${pctl.status}", "Playing") ? "playing" : "paused" }"
           :onclick "playerctl --player=${player} play-pause"
+          :cursor "pointer"
           (label :text "${matches("${pctl.status}", "Playing") ? " " : "奈 "}")
         )
       )
@@ -112,17 +113,61 @@
 (defwidget music-info []
   (box :class "music-info" :space-evenly false :spacing spacing
     (music-progress)
-    (label :class "music-title"  :markup "<tt></tt>  ${pctl.title}")
-    (label :class "music-album"  :markup "<tt></tt>  ${pctl.album}")
-    (label :class "music-artist" :markup "<tt></tt>  ${pctl.artist}")
-    (label :class "music-volume" :markup "<tt>墳</tt> ${round(pctl.volume * 100,0)}")
+    (literal
+      :content "${"${pctl.title}" == "${pctl.album}" ? "(title-same)" : "(title-diff)"}"
+      :style "margin-top: 2px;"
+    )
+    (label :class "music-artist" :markup "<tt></tt>  <b>${pctl.artist}</b>")
+    (music-volume :value {round(pctl.volume * 100,0)})
   )
 )
-; }}}
-; {{{
 
-(deflisten source :initial '100' 'tail -F /tmp/eww/source')
-(deflisten sink :intial '50' 'tail -F /tmp/eww/sink')
+(defvar volume-visible false)
+(defwidget music-volume [value]
+  (eventbox
+      :onclick "playerctl --player=${player} volume 1"
+      :onmiddleclick "playerctl --player=${player} volume 0.01"
+      :onrightclick "playerctl --player=${player} volume 0"
+      :onscroll "scripts/music_info volume {} 0.1"
+      :cursor "pointer"
+    (box :class "music-volume" :space-evenly false :spacing 0
+      (circular-progress
+        :class "music-volume-circle"
+        :value value
+        :start-at 75
+        :thickness 2
+        :clockwise false
+        (label
+          :class "music-volume-circle-icon"
+          :text {
+            value == 0  ? "婢 " :
+            value < 35  ? "奄 " :
+            value < 65  ? "奔 " : "墳 "
+          }
+        )
+      )
+    )
+  )
+)
+
+(defwidget title-diff []
+  (box :space-evenly false :spacing spacing
+    (label :class "music-title"  :markup "<tt></tt>  <i>${pctl.title}</i>")
+    (label :class "music-album"  :markup "<tt></tt>  ${pctl.album}")
+  )
+)
+
+(defwidget title-same []
+  (box :space-evenly false :spacing spacing
+    (label :class "music-album"  :markup "<tt></tt>  <i>${pctl.album}</i>")
+  )
+)
+
+; }}}
+; 🎤 audio {{{
+
+(deflisten source :initial '--' 'tail -F /tmp/eww/source')
+(deflisten sink :intial '--' 'tail -F /tmp/eww/sink')
 
 (defwidget audio []
   (box :class "audio" :space-evenly false :spacing spacing
@@ -134,8 +179,9 @@
 (defwidget audio-control [content icon var]
   (eventbox
     :class "audio-${content}"
-    :onclick "alacritty --title='terminalfloat' -e pulsemixer & disown"
+    :onclick "kitty --title='terminalfloat' -e pulsemixer & disown"
     :onscroll "scripts/pulse_info change_volume ${content} {} 1"
+    :cursor "pointer"
     (label :class "audio-${content}-label" :text "${icon} ${var}")
   )
 )
@@ -181,7 +227,7 @@
   )
 )
 ; }}}
-; 🕐 time {{{
+; 🕐 time: {{{
 
 (defpoll time :interval "1s"
   `date +'{"hour":"%H", "minute":"%M", "second":"%S"}'`
@@ -222,6 +268,7 @@
     :onhoverlost "eww update ${child}-active=false"
     :onclick "firefox-developer-edition https://calendar.google.com/calendar/u/0/r"
     :onrightclick "firefox-developer-edition https://calendar.google.com/calendar/u/0/r/eventedit?state=%5B%5D"
+    :cursor "pointer"
     (label :class "time-text" :text text)
   )
 )
@@ -249,6 +296,7 @@
       :onclick "scripts/timer_info ${app}_status & disown"
       :onscroll "scripts/timer_info ${app} {} ${fine-adjust ? 1 : 15}"
       :onrightclick "scripts/timer_info reset ${app}"
+      :cursor "pointer"
       (box :class "time-${app}" :space-evenly false :spacing 6
         {direction == "left" ? text : ""}
         (box
@@ -289,7 +337,7 @@
   )
 )
 ; }}}
-; 📅 date {{{
+; 📅 date: {{{
 
 (deflisten weeks_alive 'tail -F /tmp/eww/weeks_alive')
 (deflisten date_abd 'tail -F /tmp/eww/date_abd')
@@ -422,7 +470,8 @@
   (eventbox
     :onhover "eww update cpu-info=true"
     :onhoverlost "eww update cpu-info=false"
-    :onclick "alacritty --title='terminalfloat' -e btop & disown"
+    :onclick "kitty --title='terminalfloat' -e btop & disown"
+    :cursor "pointer"
     (box :class "cpu" :space-evenly false :spacing 8
       (temp-ramp
         :child "cpu-temp"
@@ -460,7 +509,8 @@
   (eventbox
     :onhover "eww update memory-info=true"
     :onhoverlost "eww update memory-info=false"
-    :onclick "alacritty --title='terminalfloat' -e btop & disown"
+    :onclick "kitty --title='terminalfloat' -e btop & disown"
+    :cursor "pointer"
     (box :class "memory" :space-evenly false :spacing 2
       (label-ramp
         :icon "ﮕ"
@@ -498,7 +548,8 @@
  (eventbox
     :onhover "eww update gpu-info=true"
     :onhoverlost "eww update gpu-info=false"
-    :onclick "alacritty --title='terminalfloat' -e nvtop & disown"
+    :onclick "kitty --title='terminalfloat' -e nvtop & disown"
+    :cursor "pointer"
     (box :class "gpu" :space-evenly false :spacing 8
       (gpu-temp)
       (label-ramp
@@ -629,6 +680,7 @@
     :onclick "hyprctl dispatch workspace ${num}"
     :onhover "eww update ws-hovered=true"
     :onhoverlost "eww update ws-hovered=false"
+    :cursor "pointer"
     (box
       :style "background-image: url('assets/ws-icons/${icon}${matches(active-ws,num) ? '-active' : ''}.svg');"
       :class "workspace ws-${num}"

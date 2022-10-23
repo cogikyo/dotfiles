@@ -21,7 +21,5 @@ done
 
 echo "13:00" > "$dir/alarm"
 echo "01:30" > "$dir/timer"
-echo "50" > "$dir/sink"
-echo "100" > "$dir/source"
 
 exit 0

@@ -83,7 +83,6 @@ window {
 }
 
 // }}}
-
 // 🥣 mixins {{{
 @mixin corner-image($direction) {
   background-size: cover;
@@ -191,10 +190,12 @@ window {
 // }}}
 // ============================================================================
 
+// 🪟 windows {{{
 .sound,
 .computer {
   margin-bottom: 16px; // leave room for box-shadow
 }
+// }}}
 
 // 🎵 music {{{
 .music {
@@ -204,10 +205,21 @@ window {
   &-progress {
     color: $blue-d;
     &-circle {
-      background: $black;
+      background: $blue-gd;
       &-icon {
         font-size: 25px;
         margin: 4px -5px 4px 4px;
+      }
+    }
+  }
+  &-volume {
+    color: $blue-d;
+    &-circle {
+      background: $blue-gd;
+      &-icon {
+        color: $blue;
+        font-size: 1em;
+        margin: 6px -3px 6px 6px;
       }
     }
   }
@@ -235,7 +247,6 @@ window {
   @include box-decor('top-center-left');
 }
 // }}}
-
 // 🕐 time {{{
 .time {
   @include box-decor('top-center');
@@ -348,7 +359,6 @@ window {
   color: $blue;
 }
 // }}}
-
 //   workspaces {{{
 
 // .ws-active {
@@ -408,7 +418,6 @@ window {
   @include box-decor('bot-center');
 }
 // }}}
-
 // 🖧  network {{{
 .network {
   color: $green;
