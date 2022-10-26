@@ -131,14 +131,12 @@ window {
   @if $position == 'top-left' {
     border-right: 2px solid $blue;
     border-radius: 420px 17px 420px 69px;
-
     box-shadow: -3px 2px 3px 1px rgba($blue-d, 0.16);
   }
 
   @if $position == 'top-right' {
     border-left: 2px solid $blue;
     border-radius: 17px 420px 69px 420px;
-
     box-shadow: 3px 2px 3px 1px rgba($blue-d, 0.21);
     font-family: $monospace;
   }
@@ -148,7 +146,6 @@ window {
     border-top: 1px double $orange;
     color: $orange;
     border-radius: 420px 17px 420px 69px;
-
     box-shadow: -3px 2px 3px 1px rgba($orange-d, 0.16);
   }
 
@@ -157,7 +154,6 @@ window {
     border-top: 1px double $orange;
     color: $orange;
     border-radius: 17px 420px 69px 420px;
-
     box-shadow: 3px 2px 3px 1px rgba($orange-d, 0.16);
   }
 
@@ -166,9 +162,7 @@ window {
     border-right: 1px solid $orange;
     border-bottom: 2px solid $orange;
     border-left: 1px solid $orange;
-
     box-shadow: 0px 2px 8px 2px rgba($orange, 0.16);
-
     padding: 0px 1.3em 11px 1.3em;
     margin: -7px 16px 30px 16px;
   }
@@ -179,7 +173,6 @@ window {
     border-top: 2px solid $orange;
     border-left: 1px solid $orange;
     box-shadow: 0px -2px 8px 2px rgba($orange, 0.16);
-
     padding: 11px 1.3em 0 1.3em;
     margin: 30px 18px -6px 18px;
   }
@@ -214,7 +207,7 @@ window {
       background: $blue-gd;
       &-icon {
         font-size: 25px;
-        margin: 4px -5px 4px 4px;
+        margin: 4px -4px 4px 5px;
       }
     }
   }
@@ -223,6 +216,9 @@ window {
     &-icon {
       font-size: 1em;
       margin: 6px -3px 6px 6px;
+    }
+    &-text {
+      margin: 1px 12px 0 8px;
     }
   }
   &-playing {
@@ -233,6 +229,7 @@ window {
   }
   &-info {
     @include box-decor('top-left');
+    padding: 4px 0.2em 4px 1.3em;
   }
   &-artist {
     color: $blue-d;
@@ -255,8 +252,15 @@ window {
 .audio {
   @include box-decor('top-left');
   font-family: $monospace;
+  padding: 4px 1em 4px 1.2em;
   &-volume {
     transition: color 0.5s $ease-out-snap;
+  }
+  &-source,
+  &-sink {
+    &-circle {
+      color: $blue-g;
+    }
   }
   &-source {
     &-icon {
@@ -267,6 +271,10 @@ window {
     &-icon {
       font-size: 0.9em;
       margin: 8px -2px 7px 10px;
+      &-inactiveFix {
+        font-size: 0.9em;
+        margin: 8px 0px 7px 8px;
+      }
     }
   }
 }
