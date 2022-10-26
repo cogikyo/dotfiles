@@ -78,7 +78,7 @@
 (defvar artUrl "/tmp/eww/album_art.png")
 (defvar art-inactive-url "/home/cullyn/.config/eww/assets/ytm.svg" )
 (defvar volume-visible false)
-(defpoll progress :interval "1s" "scripts/music_info progress")
+(defpoll progress :initial 1 :interval "1s" "scripts/music_info progress")
 (deflisten pctl 'tail -F /tmp/eww/music.json 2> /dev/null')
 
 (defwidget music []
@@ -103,15 +103,21 @@
 
 (defwidget title-diff []
   (box :space-evenly false :spacing spacing
-    (label :class "music-album"  :markup "<tt></tt>  ${pctl.album}")
-    (label :class "music-title"  :markup "<tt></tt>  <i>${pctl.title}</i>")
+    (label
+      :class "music-${matches("${pctl.status}", "Playing") ? "album" : "inactive" }"
+      :markup "<tt></tt>  ${pctl.album}"
+    )
+    (label
+      :class "music-${matches("${pctl.status}", "Playing") ? "title" : "inactive" }"
+      :markup "<tt></tt>  <i>${pctl.title}</i>"
+    )
   )
 )
 
 (defwidget title-same []
   (box :space-evenly false :spacing spacing
     (label
-      :class "music-title"
+      :class "music-${matches("${pctl.status}", "Playing") ? "title" : "inactive" }"
       :markup "<tt>硫</tt>  <i>${pctl.album}</i>"
       :style "margin-left: -4px;"
     )
@@ -119,17 +125,20 @@
 )
 
 (defwidget music-info []
-  (box :class "music-info" :space-evenly false :spacing spacing
+  (box
+    :class "music-info"
+    :space-evenly false
+    :spacing spacing
     (music-progress)
     (label
-      :class "music-artist"
+      :class "music-${matches("${pctl.status}", "Playing") ? "artist" : "inactive" }"
       :markup "<tt></tt>  <b>${pctl.artist}</b>"
       :style "margin-right: -2px;"
     )
     (literal
       :content "${"${pctl.title}" == "${pctl.album}" ? "(title-same)" : "(title-diff)"}"
       :style "
-              margin-top: 2px;
+              margin-top: 3px;
               margin-right: ${volume-visible ? "-6" : "-16" }px;
               transition: margin 0.5s ease-${volume-visible ? "out" : "in" };
              "
@@ -182,13 +191,12 @@
           }"
          :space-evenly false :spacing 0
       (circular-progress
-        :class "music-volume-circle"
         :value value
         :start-at 75
         :thickness 2
         :clockwise false
         (label
-          :class "music-volume-circle-icon"
+          :class "music-volume-icon"
           :text {
             value == 0  ? "婢 " :
             value < 35  ? "奄 " :
@@ -203,25 +211,85 @@
 ; }}}
 ; 🎤 audio: {{{
 
-(deflisten source :initial '--' 'tail -F /tmp/eww/source')
-(deflisten sink :intial '--' 'tail -F /tmp/eww/sink')
+(deflisten source 'tail -F /tmp/eww/source')
+(deflisten source-name :initial "Scarlett" 'tail -F /tmp/eww/source-name')
+(deflisten sink 'tail -F /tmp/eww/sink')
+(deflisten sink-name :intiial "WH-1000XM4" 'tail -F /tmp/eww/sink-name')
+(defvar audio-info false)
 
 (defwidget audio []
-  (box :class "audio" :space-evenly false :spacing spacing
-    (audio-control :content "source" :var source :icon "")
-    (audio-control :content "sink" :var sink :icon "墳")
+  (eventbox
+    :onhover "eww update audio-info=true"
+    :onhoverlost "eww update audio-info=false"
+    (box :class "audio" :space-evenly false :spacing 8
+      (audio-control
+        :content "source"
+        :value source
+        :name "${source-name} "
+        :icon-off " "
+        :icon-on " "
+      )
+      (audio-control
+        :content "sink"
+        :value sink
+        :name sink-name
+        :icon-off "遼 "
+        :icon-on "蓼 "
+      )
+    )
   )
 )
 
-(defwidget audio-control [content icon var]
+(defwidget audio-control [content value name icon-off icon-on]
   (eventbox
     :class "audio-${content}"
-    :onclick "kitty --title='terminalfloat' -e pulsemixer & disown"
-    :onscroll "scripts/pulse_info change_volume ${content} {} 1"
+    :onclick "scripts/pulse_info set_default ${content} & disown"
+    :onmiddleclick "kitty --title='terminalfloat' -e pulsemixer & disown"
+    :onrightclick "scripts/pulse_info mute ${content} & disown"
+    :onscroll "scripts/pulse_info change_volume ${content} {} & disown"
     :cursor "pointer"
-    (label :class "audio-${content}-label" :text "${icon} ${var}")
+    (box :space-evenly false :spacing 8
+      (audio-volume :content content :value value :icon-on icon-on :icon-off icon-off)
+      (slide-n-fade :bool audio-info :direction "left"
+        (label :class "audio-${content}-name" :text name)
+      )
+    )
   )
 )
+
+(defwidget audio-volume [content value icon-off icon-on]
+  (box :space-evenly false :spacing 0
+        :class "audio-volume ramp-${
+            value < 1   ? "2" :
+            value <= 30  ? "3" :
+            value <= 50  ? "4" :
+            value <= 60  ? "4-alt" :
+            value <= 70  ? "8" :
+            value <= 80  ? "9" :
+            value <= 90  ? "10" : "11"
+        }"
+    (circular-progress
+      :class "audio-volume ramp-${
+          value < 1   ? "2" :
+          value <= 30  ? "3" :
+          value <= 50  ? "4" :
+          value <= 60  ? "4-alt" :
+          value <= 70  ? "8" :
+          value <= 80  ? "9" :
+          value <= 90  ? "10" : "11"
+      }"
+      :value value
+      :start-at 75
+      :thickness 2
+      :clockwise false
+      (label
+        :class "audio-${content}-icon"
+        :text { value == 0  ? "${icon-off}" : "${icon-on}" }
+      )
+    )
+  )
+)
+
 ; }}}
 
 ; 🌧️ weather: {{{

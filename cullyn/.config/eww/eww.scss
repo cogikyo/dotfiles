@@ -39,6 +39,10 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
     color: $blue;
     transition: color 1.25s $ease-out-snap;
   }
+  &-4-alt {
+    color: $blue-l;
+    transition: color 1.25s $ease-out-snap;
+  }
   &-5 {
     color: $azure;
     transition: color 1.25s $ease-out-snap;
@@ -216,11 +220,9 @@ window {
   }
   &-volume {
     transition: color 0.5s $ease-out-snap;
-    &-circle {
-      &-icon {
-        font-size: 1em;
-        margin: 6px -3px 6px 6px;
-      }
+    &-icon {
+      font-size: 1em;
+      margin: 6px -3px 6px 6px;
     }
   }
   &-playing {
@@ -230,7 +232,6 @@ window {
     color: $blue-g;
   }
   &-info {
-    color: $blue;
     @include box-decor('top-left');
   }
   &-artist {
@@ -245,12 +246,29 @@ window {
   &-title {
     color: $blue-l;
   }
+  &-inactive {
+    color: $blue-g;
+  }
 }
 // }}}
 // 🎤 audio: {{{
 .audio {
   @include box-decor('top-left');
   font-family: $monospace;
+  &-volume {
+    transition: color 0.5s $ease-out-snap;
+  }
+  &-source {
+    &-icon {
+      margin: 5px -4px 5px 8px;
+    }
+  }
+  &-sink {
+    &-icon {
+      font-size: 0.9em;
+      margin: 8px -2px 7px 10px;
+    }
+  }
 }
 // }}}
 
