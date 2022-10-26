@@ -1,24 +1,18 @@
 #!/usr/bin/env bash
 
-set_default () {
-    sink_val=69
-    source_val=100
-    source_id="$(get_id "source")"
-    sink_id="$(get_id "sink")"
-
-    pulsemixer --id "sink-$sink_id" --set-volume "$sink_val"
-    pulsemixer --id "source-$source_id" --set-volume "$source_val"
-
-    echo "$sink_val" >> "/tmp/eww/sink"
-    echo "$source_val" >> "/tmp/eww/source"
-
-}
-
 get_id () {
     id=$(pulsemixer --list-"$1" \
         | grep "Default" \
         | gawk "{print \$1}" FPAT="[0-9]+")
     echo "$id"
+}
+
+get_name () {
+    device_name=$(pulsemixer --list-"$1"  \
+        | grep "Default" \
+        | grep -oP "Name:\s+\K.[A-Za-z0-9-]+"
+    )
+    echo "$device_name" >> "/tmp/eww/$1-name"
 }
 
 get_volume () {
@@ -28,14 +22,52 @@ get_volume () {
     echo "$volume"
 }
 
+set_default () {
+    sink_val=60
+    source_val=100
+    source_id="$(get_id "source")"
+    sink_id="$(get_id "sink")"
+
+    if [[ "$1" == "sink" ]] || [[ "$1" == "both" ]]; then
+        pulsemixer --id "sink-$sink_id" --set-volume "$sink_val"
+        echo "$sink_val" >> "/tmp/eww/sink"
+        get_name "sink"
+    fi
+
+    if [[ "$1" == "source" ]] || [[ "$1" == "both" ]]; then
+        pulsemixer --id "source-$source_id" --set-volume "$source_val"
+        echo "$source_val" >> "/tmp/eww/source"
+        get_name "source"
+    fi
+    exit 0
+}
+
+mute () {
+    id=$(get_id "$1")
+    pulsemixer --id "$1-$id" --set-volume 0
+    echo "0" >> "/tmp/eww/$1"
+}
+
 change_volume () {
+    incremment="10"
+    current_volume=$(get_volume "$1")
+
     direction="+"
     if [[ "$2" == "down" ]]; then
         direction="-"
     fi
+
     id="$(get_id "$1")"
-    pulsemixer --id "$1-$id" --change-volume "$direction$3"
-    get_volume "$1" >> "/tmp/eww/$1"
+
+    if [[ current_volume -ge 100 ]] && [[ $direction == "+" ]]; then
+        pulsemixer --id "$1-$id" --set-volume "100"
+    else
+        pulsemixer --id "$1-$id" --change-volume "$direction$incremment"
+    fi
+
+    current_volume=$(get_volume "$1")
+
+    echo "$current_volume" >> "/tmp/eww/$1"
 }
 
 "$@"
