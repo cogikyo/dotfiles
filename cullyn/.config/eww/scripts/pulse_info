@@ -23,7 +23,7 @@ get_volume () {
 }
 
 set_default () {
-    sink_val=50
+    sink_val=60
     source_val=80
     source_id="$(get_id "source")"
     sink_id="$(get_id "sink")"

@@ -2,20 +2,6 @@
 
 player="--player=youtube-music-desktop-app"
 
-# song() {
-#     echo "$1" | sed -e 's/([^()]*)//g' \
-#                     -e 's/ $//g' \
-#                     -e 's/:.*//g' \
-#                     -e 's/,.*//g'
-# }
-#
-# album () {
-#     echo "$1" | sed -e 's/([^()]*)//g' \
-#                     -e 's/ -.*//g' \
-#                     -e 's/ $//g' \
-#                     -e 's/:.*//g'
-# }
-
 volume () {
     direction="+"
     if [[ "$1" == "down" ]]; then
@@ -24,33 +10,54 @@ volume () {
     playerctl "$player" volume "$2""$direction"
 }
 
-progress() {
-    length=$(playerctl "$player" metadata -f '{{ mpris:length }}' | bc)
-    position=$(playerctl "$player"  metadata -f '{{ position }}' | bc)
-    progress=$(echo "scale=3; $position / $length * 100 + 0.1" | bc)
-
-    if [[ $(( position / 1000000 )) -lt 3  ]]; then
-        artUrl=$(playerctl "$player" metadata --format '{{ mpris:artUrl }}')
-        tempfile="/tmp/eww/album_art.png"
-        wget --output-document="$tempfile" "$artUrl"
-        eww update artUrl="$tempfile"
+next_or_prev () {
+    direction="next"
+    if [[ "$1" == "down" ]]; then
+        direction="previous"
     fi
+    playerctl "$player" "$direction"
+}
 
-    echo "$progress"
+progress() {
+    status=$(playerctl status)
+    if [[ $status == "Playing" ]] || [[ $status == "Paused" ]]; then
+
+        length=$(playerctl "$player" metadata -f '{{ mpris:length }}' | bc)
+        position=$(playerctl "$player"  metadata -f '{{ position }}' | bc)
+        progress=$(echo "scale=3; $position / $length * 100 + 0.1" | bc)
+
+        if [[ $(( position / 1000000 )) -lt 3  ]]; then
+            artUrl=$(playerctl "$player" metadata --format '{{ mpris:artUrl }}')
+            tempfile="/tmp/eww/album_art.png"
+            wget --output-document="$tempfile" "$artUrl"
+            eww update artUrl="$tempfile"
+        fi
+
+        echo "$progress"
+    else
+        echo "0"
+    fi
 }
 
 get_json () {
     status=$(playerctl status)
     while ! [[ $status == "Playing" ]]; do
         sleep 1
+        echo "{\
+            \"status\":\"Paused\",\
+            \"volume\":\"0\",\
+            \"artist\":\"YouTube Music\",\
+            \"album\":\"Waiting for player to start...\",\
+            \"title\":\"Waiting for player to start...\"\
+        }" > '/tmp/eww/music.json'
         status=$(playerctl status)
     done
 
     playerctl -F "$player" metadata -f "{\
         \"status\":\"{{ status }}\",\
         \"volume\":\"{{ volume }}\",\
-        \"album\":\"{{ markup_escape(album) }}\",\
         \"artist\":\"{{ markup_escape(artist) }}\",\
+        \"album\":\"{{ markup_escape(album) }}\",\
         \"title\":\"{{ markup_escape(title) }}\"\
     }" > '/tmp/eww/music.json'
 }

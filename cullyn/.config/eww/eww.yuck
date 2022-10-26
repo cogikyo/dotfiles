@@ -1,4 +1,5 @@
-; ██╗      ██████╗  ██████╗ ██╗ ██████╗ ; ██║     ██╔═══██╗██╔════╝ ██║██╔════╝
+; ██╗      ██████╗  ██████╗ ██╗ ██████╗
+; ██║     ██╔═══██╗██╔════╝ ██║██╔════╝
 ; ██║     ██║   ██║██║  ███╗██║██║
 ; ██║     ██║   ██║██║   ██║██║██║
 ; ███████╗╚██████╔╝╚██████╔╝██║╚██████╗
@@ -82,8 +83,6 @@
 
 (defwidget music []
   (eventbox
-    :onclick "hyprctl dispatch workspace 5"
-    :onrightclick "hyprctl dispatch workspace previous"
     :onhover "eww update volume-visible=true"
     :onhoverlost "eww update volume-visible=false"
     (box :class "music" :space-evenly false :spacing 0
@@ -97,7 +96,7 @@
     :class "music-cover"
     :style "background-image: url('${matches("${pctl.status}", "Playing") ?
       artUrl : art-inactive-url}');"
-    )
+  )
 )
 
 (defwidget title-diff []
@@ -134,7 +133,7 @@
     )
     (literal
       :content "${"${pctl.title}" == "${pctl.album}" ? "(title-same)" : "(title-diff)"}"
-      :style "margin-top: 3px; "
+      :style "margin-top: 3px; margin-right: -3px;"
     )
     (slide-n-fade :direction "left" :bool volume-visible
       (music-volume :value {round(pctl.volume * 100,0)})
@@ -144,17 +143,18 @@
 
 (defwidget music-progress []
   (box :class "music-progress" :space-evenly false :spacing spacing
+       :style "margin-right: -2px;"
     (circular-progress
       :class "music-progress-circle"
       :value progress
       :start-at 75
       :thickness 2
       :clockwise true
-      (box
-        :class "music-progress-circle-icon"
+      (box :class "music-progress-circle-icon"
         (eventbox
           :class "music-${matches("${pctl.status}", "Playing") ? "playing" : "paused" }"
           :onclick "playerctl --player=${player} play-pause"
+          :onscroll "scripts/music_info next_or_prev {}"
           :cursor "pointer"
           (label :text "${matches("${pctl.status}", "Playing") ? " " : "奈 "}")
         )
@@ -242,7 +242,7 @@
     :onrightclick "scripts/pulse_info mute ${content} & disown"
     :onscroll "scripts/pulse_info change_volume ${content} {} & disown"
     :cursor "pointer"
-    (box :space-evenly false :spacing 8
+    (box :space-evenly false :spacing 9
       :class "audio-volume ramp-${
           value < 1   ? "2" :
           value <= 30  ? "3" :
@@ -274,7 +274,7 @@
 
 ; 🌧️ weather: {{{
 
-; TODO CHANGE ALL THIS INTO SINGLE LISTENING JSON
+; TODO: CHANGE ALL THIS INTO SINGLE LISTENING JSON
 (deflisten w-id :initial "800" 'tail -F "/tmp/eww/weather/id"')
 (deflisten w-icon 'tail -F "/tmp/eww/weather/icon"')
 (deflisten w-temp 'tail -F "/tmp/eww/weather/temp"')
@@ -295,15 +295,16 @@
     :onhoverlost "eww update weather-info=false"
     (box
       :class "weather" :halign "end" :space-evenly false :spacing 0
+      (label :markup "<b> </b>")
       (label :markup "<b>${w-temp}<tt><sup></sup> </tt></b>")
       (label
         :class "weather-label"
-        :markup "<b>${w-main}</b>  <tt></tt>  ${w-rain}<small>% </small>"
+        :markup "<b>${w-main}</b>  <tt></tt>  ${w-rain}<small>% </small> <tt>${w-bf-i}</tt>  ${w-wind}<sub>m/s</sub>"
       )
       (slide-n-fade :bool weather-info :direction "right"
         (label
           :class "weather-label-open"
-          :markup "<tt> </tt>  ${w-aqi} ${w-uvi > 0 ? "<tt> 履</tt>  ${w-uvi}" : ""}<small>  </small> <tt>${w-bf-i}</tt>  ${w-wind}<sub>m/s</sub>"
+          :markup "<tt> </tt>  ${w-aqi}<tt> 履</tt>  ${w-uvi}"
         )
       )
     )
@@ -753,6 +754,8 @@
 (defwidget workspace [icon num]
   (eventbox
     :onclick "hyprctl dispatch workspace ${num}"
+    :onrightclick "hyprctl dispatch workspace previous"
+    :onscroll "scripts/workspaces next_or_prev {}"
     :onhover "eww update ws-hovered=true"
     :onhoverlost "eww update ws-hovered=false"
     :cursor "pointer"
