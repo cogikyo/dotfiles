@@ -259,7 +259,7 @@
         :thickness 2
         :clockwise false
         (label
-          :class "audio-${content}-icon${value == 0 && content == "sink" ? "-inactiveFix" : ""}"
+          :class "audio-${content}-icon${value == 0 ? "-inactiveFix" : ""}"
           :text { value == 0  ? "${icon-off}" : "${icon-on}" }
         )
       )
