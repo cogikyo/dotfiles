@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-dir=/tmp/eww/weather
-weather_json="$dir/weather.json"
-air_json="$dir/air.json"
-wait=60
+dir=/tmp/eww
+WEATHER_JSON="$dir/weather.json"
+AIR_JSON="$dir/air.json"
+WAIT=60
 
 get_json () {
     read -ra location <<<"$(<"$HOME/.local/.location")"
@@ -11,8 +11,7 @@ get_json () {
     lon="${location[1]}"
     api=$(<"$HOME/.local/.owm_api_key")
     units="metric"
-    weahterUrl="https://api.openweathermap.org/data/3.0/onecall?lat=$lat&lon=$lon&units=$units&appid=$api"
-    airUrl="http://api.openweathermap.org/data/2.5/air_pollution/forecast?lat=$lat&lon=$lon&appid=$api"
+    weahterUrl="https://api.openweathermap.org/data/3.0/onecall?lat=$lat&lon=$lon&units=$units&exclude=hourly,daily,minutely&appid=$api"
 
     while true; do
         online=1
@@ -26,68 +25,18 @@ get_json () {
             sleep 0.5
         done
 
-        curl "$weahterUrl" | jq > "$weather_json"
-        curl "$airUrl" | jq > "$air_json"
-        sleep "$wait"
+        start=$(date "+%s")
+        end=$(( start + 10000))
+        airUrl="http://api.openweathermap.org/data/2.5/air_pollution/history?lat=$lat&lon=$lon&start=$start&end=$end&appid=$api"
+
+        curl "$weahterUrl" | jq > "$WEATHER_JSON"
+        curl "$airUrl" | jq > "$AIR_JSON"
+        sleep "$WAIT"
     done
 }
 
-id () {
-    id=$(jq -r ".current.weather[0].id" "$weather_json")
-    echo "$id" >> "$dir/id"
-}
-
-icon () {
-    icon=$(jq -r ".current.weather[0].icon" "$weather_json")
-    echo "$icon" >> "$dir/icon"
-}
-
-temp () {
-    temp=$(jq -r ".current.feels_like" "$weather_json")
-    echo "$temp" | awk '{print int($1+0.5)}' >> "$dir/temp"
-}
-
-main () {
-    main=$(jq -r ".current.weather[0].main" "$weather_json")
-    if [[ -z "$main" ]]; then
-        echo "false"
-    else
-        echo "$main" >> "$dir/main"
-        echo "true"
-    fi
-}
-
-cond () {
-    cond=$(jq -r ".current.weather[0].description" "$weather_json" \
-        | sed -e "s/ clouds//g" \
-              -e "s/ with thunderstorm//g" \
-              -e "s/ thunderstorm//g" \
-    )
-    echo "$cond" >> "$dir/cond"
-}
-
-aqi () {
-    aqi=$(jq -r ".list[0].main.aqi" "$air_json")
-    echo "$aqi" >> "$dir/aqi"
-}
-
-uvi () {
-    uvi=$(jq -r ".current.uvi" "$weather_json")
-    echo "$uvi" | awk '{print int($1+0.5)}' >> "$dir/uvi"
-}
-
-rain () {
-    rain_chance=$(jq -r ".daily[0].pop" "$weather_json")
-    echo "$rain_chance" | awk '{print int($1*100)}' >> "$dir/rain"
-}
-
-wind () {
-    wind_speed=$(jq -r ".current.wind_speed" "$weather_json")
-    echo "$wind_speed" | awk '{print int($1+0.5)}' >> "$dir/wind"
-}
-
 beaufort () {
-    wind_speed=$(jq -r ".current.wind_speed" "$weather_json")
+    wind_speed=$(jq -r ".current.wind_speed" "$WEATHER_JSON")
     knots=$(echo "$wind_speed * 1.943844" | bc)
     knots=$(echo "$knots" | awk '{print int($1+0.5)}')
 
@@ -152,16 +101,33 @@ beaufort () {
     echo "$desc" >> "$dir/bf-desc"
 }
 
-continuous () {
-    while true; do
-        valid_json=$(main)
-        while [[ "$valid_json" == "false" ]] ; do
-            sleep 0.25
-            valid_json=$(main)
-        done
-        id; icon; temp; main; cond; aqi; uvi; wind; rain; beaufort
-        sleep "$wait"
-    done
+valid_json () {
+    main=$(jq -r ".current.weather[0].main" "$WEATHER_JSON")
+    # check for empty (-z) string (indicating downloading/error or some kind)
+    if [[ -z "$main" ]]; then
+        return 1 # false
+    else
+        return 0 # true
+    fi
 }
 
-"$@"
+continuous () {
+    while true; do
+        valid_json=1
+        while ! [[ $valid_json ]] ; do
+            sleep 0.25
+            valid_json=$(valid_json)
+        done
+        beaufort
+        sleep "$WAIT"
+    done
+}
+        # echo "{\
+        #     \"status\":\"Paused\",\
+        #     \"volume\":\"0\",\
+        #     \"artist\":\"YouTube Music\",\
+        #     \"album\":\"Waiting for player to start...\",\
+        #     \"title\":\"Waiting for player to start...\"\
+        # }" > '/tmp/eww/w.json'
+
+"$1"

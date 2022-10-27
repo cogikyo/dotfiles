@@ -275,18 +275,8 @@
 ; 🌧️ weather: {{{
 
 ; TODO: CHANGE ALL THIS INTO SINGLE LISTENING JSON
-(deflisten w-id :initial "800" 'tail -F "/tmp/eww/weather/id"')
-(deflisten w-icon 'tail -F "/tmp/eww/weather/icon"')
-(deflisten w-temp 'tail -F "/tmp/eww/weather/temp"')
-(deflisten w-main 'tail -F "/tmp/eww/weather/main"')
-(deflisten w-cond 'tail -F "/tmp/eww/weather/cond"')
-; TODO: dynamic AQI
-(deflisten w-aqi  'tail -F "/tmp/eww/weather/aqi"')
-(deflisten w-uvi  'tail -F "/tmp/eww/weather/uvi"')
-(deflisten w-rain 'tail -F "/tmp/eww/weather/rain"')
-(deflisten w-wind 'tail -F "/tmp/eww/weather/wind"')
-(deflisten w-bf-i 'tail -F "/tmp/eww/weather/bf-icon"')
-(deflisten w-bf-d 'tail -F "/tmp/eww/weather/bf-desc"')
+(deflisten w-bf-i 'tail -F "/tmp/eww/bf-icon"')
+(deflisten w-bf-d 'tail -F "/tmp/eww/bf-desc"')
 (defvar weather-info false)
 
 (defwidget weather []
@@ -296,17 +286,17 @@
     (box
       :class "weather" :halign "end" :space-evenly false :spacing 0
       (label :markup "<b> </b>")
-      (label :markup "<b>${w-temp}<tt><sup></sup> </tt></b>")
-      (label
-        :class "weather-label"
-        :markup "<b>${w-main}</b>  <tt></tt>  ${w-rain}<small>% </small> <tt>${w-bf-i}</tt>  ${w-wind}<sub>m/s</sub>"
-      )
-      (slide-n-fade :bool weather-info :direction "right"
-        (label
-          :class "weather-label-open"
-          :markup "<tt> </tt>  ${w-aqi}<tt> 履</tt>  ${w-uvi}"
-        )
-      )
+      ; (label :markup "<b>${w-temp}<tt><sup></sup> </tt></b>")
+      ; (label
+      ;   :class "weather-label"
+      ;   :markup "<b>${w-main}</b>  <tt></tt>  ${w-rain}<small>% </small> <tt>${w-bf-i}</tt>  ${w-wind}<sub>m/s</sub>"
+      ; )
+      ; (slide-n-fade :bool weather-info :direction "right"
+      ;   (label
+      ;     :class "weather-label-open"
+      ;     :markup "<tt> </tt>  ${w-aqi}<tt> 履</tt>  ${w-uvi}"
+      ;   )
+      ; )
     )
   )
 )
