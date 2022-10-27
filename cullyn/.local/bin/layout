@@ -5,7 +5,7 @@ center_window='1668 1727'
 
 dotfiles () {
     hyprctl dispatch workspace 4
-    kitty --hold --working-directory="$HOME/dotfiles/" & sleep 0.5
+    kitty --working-directory="$HOME/dotfiles/" & sleep 0.5
     firefox-developer-edition --new-window https://calendar.google.com/calendar/u/0/r & sleep 1.5
     kitty --hold --working-directory="$HOME/dotfiles/" -e nvim & sleep 0.5
     hyprctl dispatch movefocus l
