@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
 
-dir=/tmp/eww
-WEATHER_JSON="$dir/weather.json"
-AIR_JSON="$dir/air.json"
+DIR=/tmp/eww
+WEATHER_JSON="$DIR/open-weather.json"
+AIR_JSON="$DIR/air.json"
 WAIT=60
+valid_json="false"
+
+online=1
+connection () {
+    nc -z 8.8.8.8 53  >/dev/null 2>&1
+    online=$?
+}
 
 get_json () {
     read -ra location <<<"$(<"$HOME/.local/.location")"
@@ -13,121 +20,117 @@ get_json () {
     units="metric"
     weahterUrl="https://api.openweathermap.org/data/3.0/onecall?lat=$lat&lon=$lon&units=$units&exclude=hourly,daily,minutely&appid=$api"
 
-    while true; do
-        online=1
-        connection () {
-            nc -z 8.8.8.8 53  >/dev/null 2>&1
-            online=$?
-        }
-
-        while [[ "$online" -eq 1 ]]; do
-            connection
-            sleep 0.5
-        done
-
-        start=$(date "+%s")
-        end=$(( start + 10000))
-        airUrl="http://api.openweathermap.org/data/2.5/air_pollution/history?lat=$lat&lon=$lon&start=$start&end=$end&appid=$api"
-
-        curl "$weahterUrl" | jq > "$WEATHER_JSON"
-        curl "$airUrl" | jq > "$AIR_JSON"
-        sleep "$WAIT"
+    while [[ "$online" -eq 1 ]]; do
+        valid_json="false"
+        connection
+        sleep 0.5
     done
+
+    start=$(date "+%s")
+    end=$(( start + 5000 ))
+    airUrl="http://api.openweathermap.org/data/2.5/air_pollution/history?lat=$lat&lon=$lon&start=$start&end=$end&appid=$api"
+
+    curl "$weahterUrl" | jq > "$WEATHER_JSON"
+    curl "$airUrl" | jq > "$AIR_JSON"
+    valid_json="true"
 }
 
-beaufort () {
+while true; do
+    while [[ "$valid_json" == "false" ]] ; do
+        get_json
+    done
+
+    id_main=$(jq -r ".current.weather[0].id" "$WEATHER_JSON")
+    id_sec=$(jq -r ".current.weather[1].id" "$WEATHER_JSON")
+    sunrise=$(jq -r ".current.sunrise" "$WEATHER_JSON")
+    sunrise=$(date -d @"$sunrise" +"%H:%M")
+    sunset=$(jq -r ".current.sunset" "$WEATHER_JSON")
+    sunset=$(date -d @"$sunset" +"%H:%M")
+    temp=$(jq -r ".current.temp" "$WEATHER_JSON")
+    feels_like=$(jq -r ".current.feels_like" "$WEATHER_JSON")
+    uvi=$(jq -r ".current.uvi" "$WEATHER_JSON")
+    clouds=$(jq -r ".current.clouds" "$WEATHER_JSON")
+
     wind_speed=$(jq -r ".current.wind_speed" "$WEATHER_JSON")
+    wind_deg=$(jq -r ".current.wind_deg" "$WEATHER_JSON")
     knots=$(echo "$wind_speed * 1.943844" | bc)
     knots=$(echo "$knots" | awk '{print int($1+0.5)}')
 
     if [[ knots -lt 1 ]]; then
-        beaufort_force=0
-        desc="calm"
+        bf_icon=" "
+        bf_desc="calm"
     elif [[ knots -lt 4 ]]; then
-        beaufort_force=1
-        desc="light air"
+        bf_icon=" "
+        bf_desc="light air"
     elif [[ knots -lt 7 ]]; then
-        beaufort_force=2
-        desc="light breeze"
+        bf_icon=" "
+        bf_desc="light breeze"
     elif [[ knots -lt 11 ]]; then
-        beaufort_force=3
-        desc="gentle breeze"
+        bf_icon=" "
+        bf_desc="gentle breeze"
     elif [[ knots -lt 17 ]]; then
-        beaufort_force=4
-        desc="moderate breeze"
+        bf_icon=" "
+        bf_desc="moderate breeze"
     elif [[ knots -lt 22 ]]; then
-        beaufort_force=5
-        desc="fresh breeze"
+        bf_icon=" "
+        bf_desc="fresh breeze"
     elif [[ knots -lt 28 ]]; then
-        beaufort_force=6
-        desc="strong breeze"
+        bf_icon=" "
+        bf_desc="strong breeze"
     elif [[ knots -lt 34 ]]; then
-        beaufort_force=7
-        desc="near gale"
+        bf_icon=" "
+        bf_desc="near gale"
     elif [[ knots -lt 41 ]]; then
-        beaufort_force=8
-        desc="gale"
+        bf_icon=" "
+        bf_desc="gale"
     elif [[ knots -lt 48 ]]; then
-        beaufort_force=9
-        desc="strong gale"
+        bf_icon=" "
+        bf_desc="strong gale"
     elif [[ knots -lt 56 ]]; then
-        beaufort_force=10
-        desc="storm"
+        bf_icon=" "
+        bf_desc="storm"
     elif [[ knots -lt 64 ]]; then
-        beaufort_force=11
-        desc="violent storm"
+        bf_icon=" "
+        bf_desc="violent storm"
     else
-        beaufort_force=12
-        desc="hurricane"
+        bf_icon=" "
+        bf_desc="hurricane"
     fi
 
-    case "$beaufort_force" in
-        0) icon="" ;;
-        1) icon="" ;;
-        2) icon="" ;;
-        3) icon="" ;;
-        4) icon="" ;;
-        5) icon="" ;;
-        6) icon="" ;;
-        7) icon="" ;;
-        8) icon="" ;;
-        9) icon="" ;;
-        10) icon="" ;;
-        11) icon="" ;;
-        12) icon="" ;;
-    esac
-
-    echo "$icon" >> "$dir/bf-icon"
-    echo "$desc" >> "$dir/bf-desc"
-}
-
-valid_json () {
-    main=$(jq -r ".current.weather[0].main" "$WEATHER_JSON")
-    # check for empty (-z) string (indicating downloading/error or some kind)
-    if [[ -z "$main" ]]; then
-        return 1 # false
+    if [[ $wind_deg -lt 45 ]]; then
+        wind_icon=" " # north
+    elif [[ $wind_deg -lt 90 ]]; then
+        wind_icon=" " # north-east
+    elif [[ $wind_deg -lt 135 ]]; then
+        wind_icon=" " # east
+    elif [[ $wind_deg -lt 225 ]]; then
+        wind_icon=" " # south-east
+    elif [[ $wind_deg -lt 180 ]]; then
+        wind_icon=" " # south
+    elif [[ $wind_deg -lt 225 ]]; then
+        wind_icon=" " # south-west
+    elif [[ $wind_deg -lt 270 ]]; then
+        wind_icon=" " # west
+    elif [[ $wind_deg -lt 315 ]]; then
+        wind_icon=" " # north-west
     else
-        return 0 # true
+        wind_icon=" " # north
     fi
-}
 
-continuous () {
-    while true; do
-        valid_json=1
-        while ! [[ $valid_json ]] ; do
-            sleep 0.25
-            valid_json=$(valid_json)
-        done
-        beaufort
-        sleep "$WAIT"
-    done
-}
-        # echo "{\
-        #     \"status\":\"Paused\",\
-        #     \"volume\":\"0\",\
-        #     \"artist\":\"YouTube Music\",\
-        #     \"album\":\"Waiting for player to start...\",\
-        #     \"title\":\"Waiting for player to start...\"\
-        # }" > '/tmp/eww/w.json'
+    echo "{\
+        \"id_main\":\"$id_main\",\
+        \"id_sec\":\"$id_sec\",\
+        \"bf_icon\":\"$bf_icon\",\
+        \"bf_desc\":\"$bf_desc\",\
+        \"wind_icon\":\"$wind_icon\",\
+        \"wind_deg\":\"$wind_deg\",\
+        \"sunrise\":\"$sunrise\",\
+        \"sunset\":\"$sunset\",\
+        \"temp\":\"$temp\",\
+        \"feels_like\":\"$feels_like\",\
+        \"uvi\":\"$uvi\",\
+        \"clouds\":\"$clouds\"\
+    }" > '/tmp/eww/weather.json'
 
-"$1"
+    sleep "$WAIT"
+done

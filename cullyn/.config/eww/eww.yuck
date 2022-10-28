@@ -274,9 +274,7 @@
 
 ; 🌧️ weather: {{{
 
-; TODO: CHANGE ALL THIS INTO SINGLE LISTENING JSON
-(deflisten w-bf-i 'tail -F "/tmp/eww/bf-icon"')
-(deflisten w-bf-d 'tail -F "/tmp/eww/bf-desc"')
+(deflisten weather 'tail -F /tmp/eww/weather.json 2> /dev/null')
 (defvar weather-info false)
 
 (defwidget weather []
@@ -285,7 +283,7 @@
     :onhoverlost "eww update weather-info=false"
     (box
       :class "weather" :halign "end" :space-evenly false :spacing 0
-      (label :markup "<b> </b>")
+      (label :markup "<b>${weather.id_main}</b>")
       ; (label :markup "<b>${w-temp}<tt><sup></sup> </tt></b>")
       ; (label
       ;   :class "weather-label"
