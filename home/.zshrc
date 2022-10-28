@@ -77,7 +77,9 @@ bk () { mpvpaper -o "--loop --brightness=$2 --contrast=$3 --saturation=$4 --gamm
 alias ew='eww-open'
 alias ews='eww inspector & disown && exit'
 alias el='eww logs'
-alias cava='kitty --hold --title="cava" -e cava & disown && exit'
+choas () {
+    kitty --hold --title="$1" -e $1 & disown
+}
 alias man='man -r=""'
 pacclean () {
     while ! [ "$(pacman -Qdtq)" = "" ]; do
