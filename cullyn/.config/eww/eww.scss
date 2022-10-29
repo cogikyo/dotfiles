@@ -55,6 +55,10 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
     color: $green-l;
     transition: color 1.25s $ease-out-snap;
   }
+  &-7-alt {
+    color: $green-d;
+    transition: color 1.25s $ease-out-snap;
+  }
   &-8 {
     color: $yellow-l;
     transition: color 1.25s $ease-out-snap;
@@ -142,55 +146,45 @@ window {
   }
 
   @if $position == 'top-center-left' {
-    border-right: 2px solid $orange;
-    border-top: 1px double $orange;
-    color: $orange;
+    border-right: 2px solid $blue;
+    border-top: 1px double $blue;
+    color: $blue;
     border-radius: 420px 17px 420px 69px;
-    box-shadow: -3px 2px 3px 1px rgba($orange-d, 0.16);
+    box-shadow: -3px 2px 3px 1px rgba($blue-d, 0.16);
   }
 
   @if $position == 'top-center-right' {
-    border-left: 2px solid $orange;
-    border-top: 1px double $orange;
-    color: $orange;
+    border-left: 2px solid $blue;
+    border-top: 1px double $blue;
+    color: $blue;
     border-radius: 17px 420px 69px 420px;
-    box-shadow: 3px 2px 3px 1px rgba($orange-d, 0.16);
+    box-shadow: 3px 2px 3px 1px rgba($blue-d, 0.16);
   }
 
   @if $position == 'top-center' {
     border-radius: 27px 27px 69px 69px;
-    border-right: 1px solid $orange;
-    border-bottom: 2px solid $orange;
-    border-left: 1px solid $orange;
-    box-shadow: 0px 2px 8px 2px rgba($orange, 0.16);
+    border-right: 1px solid $blue;
+    border-bottom: 2px solid $blue;
+    border-left: 1px solid $blue;
+    box-shadow: 0px 2px 8px 2px rgba($blue, 0.16);
     padding: 0px 1.3em 11px 1.3em;
     margin: -7px 16px 30px 16px;
   }
 
   @if $position == 'bot-center' {
     border-radius: 69px 69px 27px 27px;
-    border-right: 1px solid $orange;
-    border-top: 2px solid $orange;
-    border-left: 1px solid $orange;
-    box-shadow: 0px -2px 8px 2px rgba($orange, 0.16);
+    border-right: 1px solid $blue;
+    border-top: 2px solid $blue;
+    border-left: 1px solid $blue;
+    box-shadow: 0px -2px 8px 2px rgba($blue, 0.16);
     padding: 11px 1.3em 0 1.3em;
     margin: 30px 18px -6px 18px;
   }
 }
 
-@mixin clock-hover($color, $colorHover) {
-  &-inactive {
-    transition: color 1.5s $ease-out-snap;
-    color: $orange;
-  }
-  &-active {
-    transition: color 0.5s $ease-out-snap;
-    color: $color;
-    &:hover {
-      color: $colorHover;
-      transition: color 0.5s $ease-out-snap;
-    }
-  }
+@mixin cycle($color) {
+  color: $color;
+  transition: color 4s ease-out;
 }
 
 // }}}
@@ -286,6 +280,48 @@ window {
 // 🌧️ weather: {{{
 .weather {
   @include box-decor('top-center-left');
+  &-base {
+    @include cycle($blue-d);
+    &-alt {
+      @include cycle($blue);
+    }
+  }
+  &-air {
+    @include cycle($blue-l);
+  }
+  &-rain {
+    @include cycle($cyan);
+  }
+  &-day {
+    @include cycle($orange);
+  }
+  &-night {
+    @include cycle($white);
+  }
+  &-sunset {
+    @include cycle($sakura);
+  }
+  &-index {
+    &-base {
+      @include cycle($blue-d);
+    }
+    &-low {
+      @include cycle($green-d);
+    }
+    &-moderate {
+      @include cycle($yellow);
+    }
+    &-high {
+      @include cycle($orange-l);
+    }
+    &-very-high {
+      @include cycle($red);
+    }
+    &-crit {
+      @include cycle($pink);
+      font-weight: bold;
+    }
+  }
 }
 // }}}
 // 🕐 time: {{{
@@ -300,11 +336,20 @@ window {
     font-size: 9px;
     margin: 2px -5px 0 3px;
   }
-  &-hour {
-    @include clock-hover($red-d, $red-l);
-  }
+  &-hour,
   &-minute {
-    @include clock-hover($blue-d, $blue-l);
+    &-inactive {
+      transition: color 0.5s $ease-out-snap;
+      color: $blue-l;
+    }
+    &-active {
+      transition: color 0.5s $ease-out-snap;
+      color: $orange;
+      &:hover {
+        color: $orange-l;
+        transition: color 0.5s $ease-out-snap;
+      }
+    }
   }
   &-alarm {
     &-icon {
