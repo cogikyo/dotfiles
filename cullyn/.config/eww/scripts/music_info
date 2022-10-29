@@ -10,12 +10,12 @@ volume () {
     playerctl "$player" volume "$2""$direction"
 }
 
-next_or_prev () {
-    direction="next"
+seek () {
+    direction="+"
     if [[ "$1" == "down" ]]; then
-        direction="previous"
+        direction="-"
     fi
-    playerctl "$player" "$direction"
+    playerctl "$player" position 10"$direction"
 }
 
 progress() {

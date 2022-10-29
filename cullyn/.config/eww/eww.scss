@@ -229,7 +229,7 @@ window {
   }
   &-info {
     @include box-decor('top-left');
-    padding: 4px 0.2em 4px 1.3em;
+    padding: 4px 0.2em 4px 0em;
   }
   &-artist {
     color: $blue-d;
