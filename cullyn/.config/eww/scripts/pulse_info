@@ -12,7 +12,7 @@ get_name () {
         | grep "Default" \
         | grep -oP "Name:\s+\K.[A-Za-z0-9-]+"
     )
-    echo "$device_name" >> "/tmp/eww/$1-name"
+    echo "$device_name"
 }
 
 get_volume () {
@@ -31,13 +31,11 @@ set_default () {
     if [[ "$1" == "sink" ]] || [[ "$1" == "both" ]]; then
         pulsemixer --id "sink-$sink_id" --set-volume "$sink_val"
         echo "$sink_val" >> "/tmp/eww/sink"
-        get_name "sink"
     fi
 
     if [[ "$1" == "source" ]] || [[ "$1" == "both" ]]; then
         pulsemixer --id "source-$source_id" --set-volume "$source_val"
         echo "$source_val" >> "/tmp/eww/source"
-        get_name "source"
     fi
     exit 0
 }

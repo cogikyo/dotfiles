@@ -207,8 +207,9 @@
 ; 🎤 audio: {{{
 
 (deflisten source 'tail -F /tmp/eww/source')
-(deflisten source-name :initial "Scarlett" 'tail -F /tmp/eww/source-name') (deflisten sink 'tail -F /tmp/eww/sink')
-(deflisten sink-name :intiial "WH-1000XM4" 'tail -F /tmp/eww/sink-name')
+(deflisten sink 'tail -F /tmp/eww/sink')
+(defpoll source-name :interval "1s" 'scripts/pulse_info get_name source')
+(defpoll sink-name :interval "1s" 'scripts/pulse_info get_name sink')
 (defvar audio-info false)
 
 (defwidget audio []
@@ -230,6 +231,7 @@
         :icon-off "遼 "
         :icon-on "蓼 "
       )
+      (bluetooth-status :value sink)
     )
   )
 )
@@ -267,6 +269,25 @@
         (label :class "audio-${content}-name" :text name)
       )
     )
+  )
+)
+
+(defwidget bluetooth-status [value]
+  (label
+    :class "ramp-${matches(sink-name, "WH-1000XM4") ?
+            "${
+              value < 1   ? "2" :
+              value <= 30  ? "3" :
+              value <= 50  ? "4" :
+              value <= 60  ? "4-alt" :
+              value <= 70  ? "8" :
+              value <= 80  ? "9" :
+              value <= 90  ? "10" : "11"
+            }" :
+            "crit"
+    }"
+    :text "${matches(sink-name, "WH-1000XM4") ? " " : " "}"
+    :style "margin-left: -4px;"
   )
 )
 
@@ -637,7 +658,7 @@
         ,0)}
         :val "${round(sensors.amdgpu-pci-0d00.PPT.power1_average,0)}<sub><b>W</b></sub>"
         :bool gpu-info
-      )
+     )
       (label-ramp
         :icon ""
         :child "gpu-fan"
