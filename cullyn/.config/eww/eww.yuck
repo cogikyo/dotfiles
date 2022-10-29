@@ -320,10 +320,18 @@
 (defwidget weather []
   (eventbox
     :onhover "eww update weather-info=true"
+    :onclick "firefox-developer-edition https://www.windy.com/?hrrrConus,45.445,-122.764,9"
+    :cursor "pointehttps://www.windy.com/?hrrrConus,45.445,-122.764,9r"
     :onhoverlost "eww update weather-info=false"
     (box
-      :class "weather" :halign "end" :space-evenly false :spacing 0
-      (label :markup "<b>${weather.id_main}</b>")
+      :class "weather" :halign "end" :space-evenly false :spacing 8
+      (label :markup "<b>${weather.icon}</b>")
+      (label :markup "<b>${round("${weather.temp}",0)}<sup> </sup></b>")
+      (label :markup "<b>${weather.desc}</b>")
+      (label :markup "${weather.bf_icon} ${round("${weather.wind_speed}",0)}m/s")
+      (label :markup "${weather.wind_icon}${weather.wind_dir} (<i>${weather.wind_deg}</i>)")
+      (label :markup "(<i>${weather.bf_desc}</i>)")
+      (label :markup "${weather.sunset}")
       ; (label :markup "<b>${w-temp}<tt><sup></sup> </tt></b>")
       ; (label
       ;   :class "weather-label"

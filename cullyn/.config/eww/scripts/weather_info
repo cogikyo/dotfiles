@@ -6,6 +6,13 @@ AIR_JSON="$DIR/air.json"
 WAIT=60
 valid_json="false"
 
+read -ra location <<<"$(<"$HOME/.local/.location")"
+LAT="${location[0]}"
+LON="${location[1]}"
+API=$(<"$HOME/.local/.owm_api_key")
+UNITS="metric"
+WEATHER_URL="https://api.openweathermap.org/data/3.0/onecall?lat=$LAT&lon=$LON&units=$UNITS&exclude=hourly,daily,minutely&appid=$API"
+
 online=1
 connection () {
     nc -z 8.8.8.8 53  >/dev/null 2>&1
@@ -13,13 +20,6 @@ connection () {
 }
 
 get_json () {
-    read -ra location <<<"$(<"$HOME/.local/.location")"
-    lat="${location[0]}"
-    lon="${location[1]}"
-    api=$(<"$HOME/.local/.owm_api_key")
-    units="metric"
-    weahterUrl="https://api.openweathermap.org/data/3.0/onecall?lat=$lat&lon=$lon&units=$units&exclude=hourly,daily,minutely&appid=$api"
-
     while [[ "$online" -eq 1 ]]; do
         valid_json="false"
         connection
@@ -28,10 +28,10 @@ get_json () {
 
     start=$(date "+%s")
     end=$(( start + 5000 ))
-    airUrl="http://api.openweathermap.org/data/2.5/air_pollution/history?lat=$lat&lon=$lon&start=$start&end=$end&appid=$api"
+    air_url="http://api.openweathermap.org/data/2.5/air_pollution/history?lat=$LAT&lon=$LON&start=$start&end=$end&appid=$API"
 
-    curl "$weahterUrl" | jq > "$WEATHER_JSON"
-    curl "$airUrl" | jq > "$AIR_JSON"
+    curl "$WEATHER_URL" | jq > "$WEATHER_JSON"
+    curl "$air_url" | jq > "$AIR_JSON"
     valid_json="true"
 }
 
@@ -40,11 +40,17 @@ while true; do
         get_json
     done
 
-    id_main=$(jq -r ".current.weather[0].id" "$WEATHER_JSON")
-    id_sec=$(jq -r ".current.weather[1].id" "$WEATHER_JSON")
+    id=$(jq -r ".current.weather[0].id" "$WEATHER_JSON")
+    desc=$(jq -r ".current.weather[0].main" "$WEATHER_JSON")
     sunrise=$(jq -r ".current.sunrise" "$WEATHER_JSON")
     sunrise=$(date -d @"$sunrise" +"%H:%M")
     sunset=$(jq -r ".current.sunset" "$WEATHER_JSON")
+    now=$(date "+%s")
+    if [[ "$now" -gt "$sunset" ]]; then
+        night="true"
+    else
+        night="false"
+    fi
     sunset=$(date -d @"$sunset" +"%H:%M")
     temp=$(jq -r ".current.temp" "$WEATHER_JSON")
     feels_like=$(jq -r ".current.feels_like" "$WEATHER_JSON")
@@ -55,6 +61,56 @@ while true; do
     wind_deg=$(jq -r ".current.wind_deg" "$WEATHER_JSON")
     knots=$(echo "$wind_speed * 1.943844" | bc)
     knots=$(echo "$knots" | awk '{print int($1+0.5)}')
+
+    if [[ "$night" == "false" ]]; then
+        if [[ "$id" -lt 300 ]]; then
+            icon=" "
+        elif [[ "$id" -lt 500 ]]; then
+            icon=" "
+        elif [[ "$id" -eq 504 ]]; then
+            icon=" "
+        elif [[ "$id" -lt 600 ]]; then
+            icon=" "
+        elif [[ "$id" -lt 700 ]]; then
+            icon=" "
+        elif [[ "$id" -eq 711 ]]; then
+            icon=" "
+        elif [[ "$id" -eq 781 ]]; then
+            icon=" "
+        elif [[ "$id" -eq 800 ]]; then
+            icon=" "
+        elif [[ "$id" -eq 800 ]]; then
+            icon=" "
+        elif [[ "$id" -lt 803 ]]; then
+            icon=" "
+        else
+            icon=" "
+        fi
+    else
+        if [[ "$id" -lt 300 ]]; then
+            icon=" "
+        elif [[ "$id" -lt 500 ]]; then
+            icon=" "
+        elif [[ "$id" -eq 504 ]]; then
+            icon=" "
+        elif [[ "$id" -lt 600 ]]; then
+            icon=" "
+        elif [[ "$id" -lt 700 ]]; then
+            icon=" "
+        elif [[ "$id" -eq 711 ]]; then
+            icon=" "
+        elif [[ "$id" -eq 781 ]]; then
+            icon=" "
+        elif [[ "$id" -lt 800 ]]; then
+            icon=" "
+        elif [[ "$id" -eq 800 ]]; then
+            icon=" "
+        elif [[ "$id" -lt 803 ]]; then
+            icon=" "
+        else
+            icon=" "
+        fi
+    fi
 
     if [[ knots -lt 1 ]]; then
         bf_icon=" "
@@ -98,34 +154,47 @@ while true; do
     fi
 
     if [[ $wind_deg -lt 45 ]]; then
-        wind_icon=" " # north
+        wind_icon=" "
+        wind_dir="N"
     elif [[ $wind_deg -lt 90 ]]; then
-        wind_icon=" " # north-east
+        wind_icon=" "
+        wind_dir="NE"
     elif [[ $wind_deg -lt 135 ]]; then
-        wind_icon=" " # east
+        wind_icon=" "
+        wind_dir="E"
     elif [[ $wind_deg -lt 225 ]]; then
-        wind_icon=" " # south-east
+        wind_icon=" "
+        wind_dir="SE"
     elif [[ $wind_deg -lt 180 ]]; then
-        wind_icon=" " # south
+        wind_icon=" "
+        wind_dir="S"
     elif [[ $wind_deg -lt 225 ]]; then
-        wind_icon=" " # south-west
+        wind_icon=" "
+        wind_dir="SW"
     elif [[ $wind_deg -lt 270 ]]; then
-        wind_icon=" " # west
+        wind_icon=" "
+        wind_dir="W"
     elif [[ $wind_deg -lt 315 ]]; then
-        wind_icon=" " # north-west
+        wind_icon=" "
+        wind_dir="NW"
     else
-        wind_icon=" " # north
+        wind_icon=" "
+        wind_dir="N"
     fi
 
     echo "{\
-        \"id_main\":\"$id_main\",\
-        \"id_sec\":\"$id_sec\",\
+        \"id\":\"$id\",\
+        \"icon\":\"$icon\",\
+        \"desc\":\"$desc\",\
         \"bf_icon\":\"$bf_icon\",\
         \"bf_desc\":\"$bf_desc\",\
         \"wind_icon\":\"$wind_icon\",\
+        \"wind_speed\":\"$wind_speed\",\
         \"wind_deg\":\"$wind_deg\",\
+        \"wind_dir\":\"$wind_dir\",\
         \"sunrise\":\"$sunrise\",\
         \"sunset\":\"$sunset\",\
+        \"night\":\"$night\",\
         \"temp\":\"$temp\",\
         \"feels_like\":\"$feels_like\",\
         \"uvi\":\"$uvi\",\
