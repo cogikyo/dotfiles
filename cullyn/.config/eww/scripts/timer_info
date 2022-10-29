@@ -6,7 +6,7 @@ display_active () {
         "hour") eww update hour-active="true" ;;
         "minute") eww update minute-active="true" ;;
     esac
-    sleep 3
+    sleep 5
     eww update timer-visible="false"
     eww update minute-active="false"
     eww update hour-active="false"

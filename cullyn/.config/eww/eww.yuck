@@ -5,9 +5,12 @@
 ; ███████╗╚██████╔╝╚██████╔╝██║╚██████╗
 ; ╚══════╝ ╚═════╝  ╚═════╝ ╚═╝ ╚═════╝
 ; =============================================================================
-; 🚧 constants: {{{
+; 🚧 vars: {{{
 
 (defvar spacing 16)
+(deflisten cycle-6 'while true; do echo 0; sleep 6; echo 1; sleep 6; done')
+(deflisten cycle-5 'while true; do echo 0; sleep 5; echo 1; sleep 5; done')
+(deflisten cycle-4 'while true; do echo 0; sleep 4; echo 1; sleep 4; done')
 
 ; }}}
 ; 🪟 windows: {{{
@@ -22,7 +25,7 @@
 
 (defwindow today
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :width "36%" :anchor "top left" :x "1226px")
+  :geometry (geometry :width "50%" :anchor "top left" :x "958px")
   (centerbox :class "today"
     (weather) (time) (date)
   )
@@ -320,29 +323,86 @@
 (defwidget weather []
   (eventbox
     :onhover "eww update weather-info=true"
-    :onclick "firefox-developer-edition https://www.windy.com/?hrrrConus,45.445,-122.764,9"
-    :cursor "pointehttps://www.windy.com/?hrrrConus,45.445,-122.764,9r"
     :onhoverlost "eww update weather-info=false"
-    (box
-      :class "weather" :halign "end" :space-evenly false :spacing 8
-      (label :markup "<b>${weather.icon}</b>")
-      (label :markup "<b>${round("${weather.temp}",0)}<sup> </sup></b>")
-      (label :markup "<b>${weather.desc}</b>")
-      (label :markup "${weather.bf_icon} ${round("${weather.wind_speed}",0)}m/s")
-      (label :markup "${weather.wind_icon}${weather.wind_dir} (<i>${weather.wind_deg}</i>)")
-      (label :markup "(<i>${weather.bf_desc}</i>)")
-      (label :markup "${weather.sunset}")
-      ; (label :markup "<b>${w-temp}<tt><sup></sup> </tt></b>")
-      ; (label
-      ;   :class "weather-label"
-      ;   :markup "<b>${w-main}</b>  <tt></tt>  ${w-rain}<small>% </small> <tt>${w-bf-i}</tt>  ${w-wind}<sub>m/s</sub>"
-      ; )
-      ; (slide-n-fade :bool weather-info :direction "right"
-      ;   (label
-      ;     :class "weather-label-open"
-      ;     :markup "<tt> </tt>  ${w-aqi}<tt> 履</tt>  ${w-uvi}"
-      ;   )
-      ; )
+    :onclick "firefox-developer-edition https://www.windy.com/?hrrrConus,45.445,-122.764,9"
+    :cursor "pointer"
+    (box :class "weather" :halign "end" :space-evenly false :spacing 8
+      (label
+        :class "weather-${cycle-6 == 0 ?
+               "${matches("${weather.night}", "true") ? "night" : "day"}"
+               : "base-alt"
+        }"
+        :markup "<b>${weather.icon}   ${weather.temp}<sup> </sup></b>"
+        :style "margin-right: -8px;"
+      )
+      (slide-n-fade :bool weather-info :direction "right"
+        (label
+          :class "weather-${cycle-6 == 0 ?
+                "${matches("${weather.night}", "true") ? "night" : "day"}"
+                : "base"
+          }"
+          :markup " ${weather.feels_like}<sup> </sup>"
+          :style "font-size: 0.8em; margin-right: -6px;"
+        )
+      )
+      (label
+        :class "weather-${cycle-4 == 1 ? "air" : "base-alt" }"
+        :markup "<b>${weather.desc}</b>"
+        :style "margin-top: 1px; margin-left: ${weather-info ? "0" : "-6"}px;"
+      )
+      (slide-n-fade :bool weather-info :direction "right"
+        (box :space-evenly false :spacing 8
+          (label
+            :class "weather-${cycle-6 == 0 ? "rain" : "base" }"
+            :markup "殺  ${weather.rain_1h}|${weather.rain_2h}<small>%</small>"
+            :style "margin-top: 1px;"
+          )
+          (label
+            :class "weather-${cycle-4 == 1 ? "air" : "base-alt" }"
+            :markup "   ${weather.clouds}<small>%</small>"
+            :style "margin-top: 1px;"
+          )
+        )
+      )
+      (label
+        :class "weather-${cycle-4 == 1 ? "air" : "base-alt" }"
+        :markup "${weather.bf_icon} ${weather.wind_speed}m<sup>-1</sup>"
+        :style "margin-left: ${weather-info ? "0" : "-8"}px;"
+      )
+      (slide-n-fade :bool weather-info :direction "right"
+        (label
+          :class "weather-${cycle-4 == 1 ? "air" : "base-alt" }"
+          :markup "<small>(<i>${weather.bf_desc}</i>)</small>"
+          :style "margin-top: 2px; margin-left: ${weather-info ? "0" : "-6"}px;"
+        )
+      )
+      (label
+        :class "weather-index-${cycle-5 == 1 ? "${
+          weather.uvi < 1  ? "none" :
+          weather.uvi < 2  ? "low"  :
+          weather.uvi < 5  ? "moderate" :
+          weather.uvi < 7  ? "high" :
+          weather.uvi < 10 ? "very-high" : "crit"
+        }" : "base"}"
+        :markup "<tt>履 ${weather.uvi}</tt>"
+        :style "margin-top: 1px; margin-left: ${weather-info ? "0" : "-8"}px;"
+      )
+      (label
+        :class "weather-index-${cycle-6 == 1 ? "${
+          weather.uvi == 1  ? "low"  :
+          weather.uvi == 2  ? "moderate" :
+          weather.uvi == 3  ? "high" :
+          weather.uvi == 4  ? "very-high" : "crit"
+        }" : "base"}"
+        :markup "<tt> ${weather.aqi}</tt>"
+        :style "margin-top: 1px;"
+      )
+      (slide-n-fade :bool weather-info :direction "right"
+        (label
+          :class "weather-${cycle-5 == 0 ? "sunset" : "base"}"
+          :markup "   ${weather.sunset}"
+        )
+      )
     )
   )
 )
