@@ -102,14 +102,16 @@
 )
 
 (defwidget title-diff []
-  (box :space-evenly false :spacing spacing
+  (box :space-evenly false :spacing 10
     (label
       :class "music-${matches("${pctl.status}", "Playing") ? "album" : "inactive" }"
-      :markup "<tt></tt>  ${pctl.album}"
+      :text "  ${captures("${pctl.album}","([^()]*)")[0][0]}"
+      :limit-width 25
     )
     (label
       :class "music-${matches("${pctl.status}", "Playing") ? "title" : "inactive" }"
-      :markup "<tt></tt>  <i>${pctl.title}</i>"
+      :text "  ${captures("${pctl.title}","([^()]*)")[0][0]}"
+      :limit-width 25
     )
   )
 )
