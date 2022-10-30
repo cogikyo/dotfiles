@@ -217,9 +217,11 @@ window {
   }
   &-playing {
     color: $blue;
+    transition: color 1.25s $ease-out-snap;
   }
   &-paused {
     color: $blue-g;
+    transition: color 1.25s $ease-out-snap;
   }
   &-info {
     @include box-decor('top-left');
@@ -286,13 +288,16 @@ window {
       @include cycle($blue);
     }
   }
+  &-moon {
+    color: $white;
+  }
   &-air {
     @include cycle($blue-l);
   }
   &-rain {
-    @include cycle($cyan);
+    @include cycle($royal);
   }
-  &-day {
+  &-sun {
     @include cycle($orange);
   }
   &-night {
@@ -301,9 +306,27 @@ window {
   &-sunset {
     @include cycle($sakura);
   }
+  &-morn {
+    @include cycle($blue-d);
+  }
+  &-day {
+    @include cycle($blue-l);
+  }
+  &-max {
+    @include cycle($red-l);
+  }
+  &-eve {
+    @include cycle($pink);
+  }
+  &-night {
+    @include cycle($purple-d);
+  }
   &-index {
     &-base {
-      @include cycle($blue-d);
+      @include cycle($blue);
+    }
+    &-none {
+      @include cycle($blue-g);
     }
     &-low {
       @include cycle($green-d);
@@ -319,7 +342,6 @@ window {
     }
     &-crit {
       @include cycle($pink);
-      font-weight: bold;
     }
   }
 }
