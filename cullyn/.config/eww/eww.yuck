@@ -10,7 +10,6 @@
 (defvar spacing 16)
 (deflisten cycle-6 'while true; do echo 0; sleep 6; echo 1; sleep 6; done')
 (deflisten cycle-5 'while true; do echo 0; sleep 5; echo 1; sleep 5; done')
-(deflisten cycle-4 'while true; do echo 0; sleep 4; echo 1; sleep 4; done')
 
 ; }}}
 ; 🪟 windows: {{{
@@ -25,7 +24,7 @@
 
 (defwindow today
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :width "50%" :anchor "top left" :x "958px")
+  :geometry (geometry :width "45%" :anchor "top left" :x "1050px")
   (centerbox :class "today"
     (weather) (time) (date)
   )
@@ -320,6 +319,14 @@
 (deflisten weather 'tail -F /tmp/eww/weather.json 2> /dev/null')
 (defvar weather-info false)
 
+(defwidget daily-temp [temp margin color]
+  (label
+    :class "weather-${color}"
+    :text temp
+    :style "font-size: 0.7em; margin-top: ${margin}px"
+  )
+)
+
 (defwidget weather []
   (eventbox
     :onhover "eww update weather-info=true"
@@ -329,52 +336,56 @@
     (box :class "weather" :halign "end" :space-evenly false :spacing 8
       (label
         :class "weather-${cycle-6 == 0 ?
-               "${matches("${weather.night}", "true") ? "night" : "day"}"
+               "${matches("${weather.night}", "true") ? "night" : "sun"}"
                : "base-alt"
         }"
         :markup "<b>${weather.icon}   ${weather.temp}<sup> </sup></b>"
         :style "margin-right: -8px;"
       )
       (slide-n-fade :bool weather-info :direction "right"
-        (label
-          :class "weather-${cycle-6 == 0 ?
-                "${matches("${weather.night}", "true") ? "night" : "day"}"
-                : "base"
-          }"
-          :markup " ${weather.feels_like}<sup> </sup>"
-          :style "font-size: 0.8em; margin-right: -6px;"
+        (box :space-evenly false :spacing 3
+          (label
+            :class "weather-${cycle-6 == 0 ?
+                  "${matches("${weather.night}", "true") ? "night" : "sun"}"
+                  : "base-alt"
+            }"
+            :markup " ${weather.feels_like}<sup> </sup>"
+            :style "font-size: 0.8em;"
+          )
+          (daily-temp :temp {weather.temp_morn} :margin 4 :color "morn")
+          (daily-temp :temp {weather.temp_day} :margin -2 :color "day")
+          (daily-temp :temp {weather.temp_max} :margin -6 :color "max")
+          (daily-temp :temp {weather.temp_eve} :margin 4 :color "eve")
+          (daily-temp :temp {weather.temp_night} :margin 12 :color "night")
         )
       )
       (label
-        :class "weather-${cycle-4 == 1 ? "air" : "base-alt" }"
+        :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
         :markup "<b>${weather.desc}</b>"
-        :style "margin-top: 1px; margin-left: ${weather-info ? "0" : "-6"}px;"
+        :style "margin-top: 1px; margin-left: ${weather-info ? "0" : "-8"}px;"
       )
       (slide-n-fade :bool weather-info :direction "right"
-        (box :space-evenly false :spacing 8
           (label
-            :class "weather-${cycle-6 == 0 ? "rain" : "base" }"
-            :markup "殺  ${weather.rain_1h}|${weather.rain_2h}<small>%</small>"
-            :style "margin-top: 1px;"
-          )
-          (label
-            :class "weather-${cycle-4 == 1 ? "air" : "base-alt" }"
+            :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
             :markup "   ${weather.clouds}<small>%</small>"
             :style "margin-top: 1px;"
           )
-        )
       )
       (label
-        :class "weather-${cycle-4 == 1 ? "air" : "base-alt" }"
-        :markup "${weather.bf_icon} ${weather.wind_speed}m<sup>-1</sup>"
-        :style "margin-left: ${weather-info ? "0" : "-8"}px;"
+        :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
+        :markup "${weather.bf_icon}"
+        :style "margin: 3px ${weather-info ? "-6" : "-2"}px 0 ${weather-info ? "0" : "-8"}px;"
       )
       (slide-n-fade :bool weather-info :direction "right"
         (label
-          :class "weather-${cycle-4 == 1 ? "air" : "base-alt" }"
-          :markup "<small>(<i>${weather.bf_desc}</i>)</small>"
-          :style "margin-top: 2px; margin-left: ${weather-info ? "0" : "-6"}px;"
+          :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
+          :markup "<i>${weather.wind_speed}m<sup>-1</sup></i>"
         )
+      )
+      (label
+        :class "weather-${cycle-5 == 1 ? "rain" : "base-alt" }"
+        :markup "<tt>殺 ${weather-info ? "${weather.rain_day}" : "${weather.rain_1h}"}<small>%</small></tt>"
+        :style "margin-top: 1px; margin-left: ${weather-info ? "0" : "-8"}px;"
       )
       (label
         :class "weather-index-${cycle-5 == 1 ? "${
@@ -385,23 +396,28 @@
           weather.uvi < 10 ? "very-high" : "crit"
         }" : "base"}"
         :markup "<tt>履 ${weather.uvi}</tt>"
-        :style "margin-top: 1px; margin-left: ${weather-info ? "0" : "-8"}px;"
+        :style "margin-top: 1px;"
       )
       (label
-        :class "weather-index-${cycle-6 == 1 ? "${
-          weather.uvi == 1  ? "low"  :
-          weather.uvi == 2  ? "moderate" :
-          weather.uvi == 3  ? "high" :
-          weather.uvi == 4  ? "very-high" : "crit"
+        :class "weather-index-${cycle-5 == 1 ? "${
+          weather.aqi == 1  ? "low"  :
+          weather.aqi == 2  ? "moderate" :
+          weather.aqi == 3  ? "high" :
+          weather.aqi == 4  ? "very-high" : "crit"
         }" : "base"}"
-        :markup "<tt> ${weather.aqi}</tt>"
-        :style "margin-top: 1px;"
+        :markup "<tt> ${weather.aqi}</tt>"
+        :style "margin-top: 1px; margin-right: ${weather-info ? "0" : "-8" }px;"
       )
       (slide-n-fade :bool weather-info :direction "right"
         (label
-          :class "weather-${cycle-5 == 0 ? "sunset" : "base"}"
+          :class "weather-${cycle-6 == 0 ? "sunset" : "base"}"
           :markup "   ${weather.sunset}"
         )
+      )
+      (label
+        :class "weather-moon"
+        :markup "<tt>${weather.moon}</tt>"
+        :style "margin-top: -12px; margin-right: -20px;"
       )
     )
   )
