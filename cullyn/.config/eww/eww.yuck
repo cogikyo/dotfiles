@@ -351,8 +351,8 @@
                   "${matches("${weather.night}", "true") ? "night" : "sun"}"
                   : "base-alt"
             }"
-            :markup " ${weather.feels_like}<sup> </sup>"
-            :style "font-size: 0.8em;"
+            :markup "<small></small> ${weather.feels_like}<sup> </sup>"
+            :style "font-size: 0.8em; margin-right: -4px;"
           )
           (daily-temp :temp {weather.temp_morn} :margin 4 :color "morn")
           (daily-temp :temp {weather.temp_day} :margin -2 :color "day")
@@ -364,13 +364,13 @@
       (label
         :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
         :markup "<b>${weather.desc}</b>"
-        :style "margin-top: 1px; margin-left: ${weather-info ? "0" : "-8"}px;"
+        :style "margin-top: 2px; margin-left: ${weather-info ? "0" : "-8"}px;"
       )
       (slide-n-fade :bool weather-info :direction "right"
           (label
             :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
             :markup "   ${weather.clouds}<small>%</small>"
-            :style "margin-top: 1px;"
+            :style "margin-top: 2px;"
           )
       )
       (label
@@ -387,7 +387,7 @@
       (label
         :class "weather-${cycle-5 == 1 ? "rain" : "base-alt" }"
         :markup "<tt>殺 ${weather-info ? "${weather.rain_day}" : "${weather.rain_1h}"}<small>%</small></tt>"
-        :style "margin-top: 1px; margin-left: ${weather-info ? "0" : "-8"}px;"
+        :style "margin-top: 2px; margin-left: ${weather-info ? "0" : "-8"}px;"
       )
       (label
         :class "weather-index-${cycle-5 == 1 ? "${
@@ -398,7 +398,7 @@
           weather.uvi < 10 ? "very-high" : "crit"
         }" : "base"}"
         :markup "<tt>履 ${weather.uvi}</tt>"
-        :style "margin-top: 1px;"
+        :style "margin-top: 2px;"
       )
       (label
         :class "weather-index-${cycle-5 == 1 ? "${
@@ -408,18 +408,19 @@
           weather.aqi == 4  ? "very-high" : "crit"
         }" : "base"}"
         :markup "<tt> ${weather.aqi}</tt>"
-        :style "margin-top: 1px; margin-right: ${weather-info ? "0" : "-8" }px;"
+        :style "margin-top: 2px; margin-right: ${weather-info ? "0" : "-8" }px;"
       )
       (slide-n-fade :bool weather-info :direction "right"
         (label
           :class "weather-${cycle-6 == 0 ? "sunset" : "base"}"
           :markup "   ${weather.sunset}"
+          :style "margin-top: 4px;"
         )
       )
       (label
         :class "weather-moon"
         :markup "<tt>${weather.moon}</tt>"
-        :style "margin-top: -12px; margin-right: -20px;"
+        :style "margin-top: -10px; margin-right: -24px;"
       )
     )
   )
