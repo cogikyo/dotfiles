@@ -859,23 +859,11 @@
 )
 ; }}}
 
-; 👷 actions: {{{
-
-(defwidget actions []
-    (box :class "actions" :space-evenly false :spacing spacing
-    (apps) (pacman) (screen) (colorpicker)
-  )
-)
-
-(defwidget apps [] "apps")
-(defwidget pacman [] "pacman")
-(defwidget screen [] "screen")
-(defwidget colorpicker [] "colorpicker")
-
-; }}}
 ; 👾 workspaces: {{{
 
 (deflisten active-ws 'tail -F /tmp/eww/workspace')
+; (defpoll occupied :interval "1s" "scripts/workspaces occupied")
+(deflisten occupied 'tail -F /tmp/eww/occupied')
 (defvar ws-hovered false)
 
 (defwidget workspace [icon num]
@@ -887,7 +875,9 @@
     :onhoverlost "eww update ws-hovered=false"
     :cursor "pointer"
     (box
-      :style "background-image: url('assets/ws-icons/${icon}${matches(active-ws,num) ? '-active' : ''}.svg');"
+      :style "background-image: url('assets/ws-icons/${icon}${matches(active-ws,num) ?
+      '-active' : "${matches(occupied, "${num}") ? "" : "-empty"}"
+      }.svg');"
       :class "workspace ws-${num}"
     )
   )
@@ -902,6 +892,20 @@
     (workspace :icon "music"    :num "5")
   )
 )
+
+; }}}
+; 👷 actions: {{{
+
+(defwidget actions []
+    (box :class "actions" :space-evenly false :spacing spacing
+    (apps) (pacman) (screen) (colorpicker)
+  )
+)
+
+(defwidget apps [] "apps")
+(defwidget pacman [] "pacman")
+(defwidget screen [] "screen")
+(defwidget colorpicker [] "colorpicker")
 
 ; }}}
 ; 🕸️ network: {{{
