@@ -416,7 +416,7 @@ window {
   }
   &-Tuesday,
   &-Thursday {
-    @include cycle($green-d);
+    @include cycle($green-l);
   }
   &-Wednesday {
     @include cycle($orange-l);
