@@ -2,8 +2,7 @@
 
 day () {
     while true; do
-        date_abd=$(date +'{"weekday":"%A", "month":"%B", "day":"%d"}')
-        echo "$date_abd" >> "/tmp/eww/date_abd"
+        date +'{"weekday":"%A", "month":"%B", "day":"%d"}' >> "/tmp/eww/date"
         until_tomorrow=$(( $(date +%s -d "tomorrow 00:00") - $( date +%s ) ))
         sleep "$until_tomorrow"
     done

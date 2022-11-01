@@ -297,9 +297,6 @@ window {
   &-rain {
     @include cycle($royal);
   }
-  &-sun {
-    @include cycle($orange);
-  }
   &-night {
     @include cycle($white);
   }
@@ -310,7 +307,7 @@ window {
     @include cycle($blue-d);
   }
   &-day {
-    @include cycle($blue-l);
+    @include cycle($orange-l);
   }
   &-max {
     @include cycle($red-l);
@@ -401,8 +398,32 @@ window {
 // 📆 date: {{{
 .date {
   @include box-decor('top-center-right');
-  &-week {
-    margin-left: 6px;
+  &-base {
+    @include cycle($blue);
+    &-alt {
+      @include cycle($blue-l);
+    }
+  }
+  &-alive {
+    @include cycle($blue-g);
+  }
+  &-day {
+    font-weight: bold;
+    font-size: 1.1em;
+  }
+  &-Monday {
+    @include cycle($red);
+  }
+  &-Tuesday,
+  &-Thursday {
+    @include cycle($green-d);
+  }
+  &-Wednesday {
+    @include cycle($orange-l);
+  }
+  &-Friday,
+  &-Sunday {
+    @include cycle($royal);
   }
 }
 // }}}

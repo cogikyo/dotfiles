@@ -102,16 +102,17 @@
 )
 
 (defwidget title-diff []
-  (box :space-evenly false :spacing 10
+  (box :space-evenly false :spacing 8
     (label
       :class "music-${matches("${pctl.status}", "Playing") ? "album" : "inactive" }"
       :text "  ${captures("${pctl.album}","([^()]*)")[0][0]}"
-      :limit-width 25
+      :limit-width 20
+      :style "margin-left: -4px;"
     )
     (label
       :class "music-${matches("${pctl.status}", "Playing") ? "title" : "inactive" }"
       :text "  ${captures("${pctl.title}","([^()]*)")[0][0]}"
-      :limit-width 25
+      :limit-width 20
     )
   )
 )
@@ -152,11 +153,11 @@
     (label
       :class "music-${matches("${pctl.status}", "Playing") ? "artist" : "inactive" }"
       :markup "<tt></tt>  <b>${pctl.artist}</b>"
-      :style "margin: -1px -2px 0 ${volume-visible ? "-6" : "-10"}px;"
+      :style "margin: 2px -2px 0 ${volume-visible ? "-6" : "-12"}px;"
     )
     (literal
       :content "${"${pctl.title}" == "${pctl.album}" ? "(title-same)" : "(title-diff)"}"
-      :style "margin-top: 3px; margin-right: -3px;"
+      :style "margin-top: 4px; margin-right: ${volume-visible ? "-6" : "-2"}px;"
     )
     (slide-n-fade :direction "left" :bool volume-visible
       (music-volume :value {round(pctl.volume * 100,0)})
@@ -341,14 +342,14 @@
                "${matches("${weather.night}", "true") ? "night" : "sun"}"
                : "base-alt"
         }"
-        :markup "<b>${weather.icon}   ${weather.temp}<sup> </sup></b>"
+        :markup "<b>${weather.icon}  ${weather.temp}<sup> </sup></b>"
         :style "margin-right: -8px;"
       )
       (slide-n-fade :bool weather-info :direction "right"
         (box :space-evenly false :spacing 3
           (label
             :class "weather-${cycle-6 == 0 ?
-                  "${matches("${weather.night}", "true") ? "night" : "sun"}"
+                  "${matches("${weather.night}", "true") ? "night" : "day"}"
                   : "base-alt"
             }"
             :markup "<small></small> ${weather.feels_like}<sup> </sup>"
@@ -387,40 +388,37 @@
       (label
         :class "weather-${cycle-5 == 1 ? "rain" : "base-alt" }"
         :markup "<tt>殺 ${weather-info ? "${weather.rain_day}" : "${weather.rain_1h}"}<small>%</small></tt>"
-        :style "margin-top: 2px; margin-left: ${weather-info ? "0" : "-8"}px;"
-      )
-      (label
-        :class "weather-index-${cycle-5 == 1 ? "${
-          weather.uvi < 1  ? "none" :
-          weather.uvi < 2  ? "low"  :
-          weather.uvi < 5  ? "moderate" :
-          weather.uvi < 7  ? "high" :
-          weather.uvi < 10 ? "very-high" : "crit"
-        }" : "base"}"
-        :markup "<tt>履 ${weather.uvi}</tt>"
-        :style "margin-top: 2px;"
-      )
-      (label
-        :class "weather-index-${cycle-5 == 1 ? "${
-          weather.aqi == 1  ? "low"  :
-          weather.aqi == 2  ? "moderate" :
-          weather.aqi == 3  ? "high" :
-          weather.aqi == 4  ? "very-high" : "crit"
-        }" : "base"}"
-        :markup "<tt> ${weather.aqi}</tt>"
-        :style "margin-top: 2px; margin-right: ${weather-info ? "0" : "-8" }px;"
+        :style "margin: 2px ${weather-info ? "0" : "-8"}px; margin-bottom: 0;"
       )
       (slide-n-fade :bool weather-info :direction "right"
-        (label
-          :class "weather-${cycle-6 == 0 ? "sunset" : "base"}"
-          :markup "   ${weather.sunset}"
-          :style "margin-top: 4px;"
+        (box :space-evenly false :spacing 8
+          (label
+            :class "weather-index-${cycle-5 == 1 ? "${
+              weather.uvi < 1  ? "none" :
+              weather.uvi < 2  ? "low"  :
+              weather.uvi < 5  ? "moderate" :
+              weather.uvi < 7  ? "high" :
+              weather.uvi < 10 ? "very-high" : "crit"
+            }" : "base"}"
+            :markup "<tt>履 ${weather.uvi}</tt>"
+            :style "margin-top: 2px; margin-left: 2px;"
+          )
+          (label
+            :class "weather-index-${cycle-5 == 1 ? "${
+              weather.aqi == 1  ? "low"  :
+              weather.aqi == 2  ? "moderate" :
+              weather.aqi == 3  ? "high" :
+              weather.aqi == 4  ? "very-high" : "crit"
+            }" : "base"}"
+            :markup "<tt> ${weather.aqi}</tt>"
+            :style "margin-top: 2px;"
+          )
         )
       )
       (label
         :class "weather-moon"
         :markup "<tt>${weather.moon}</tt>"
-        :style "margin-top: -10px; margin-right: -24px;"
+        :style "margin: -10px -20px 0 2px;"
       )
     )
   )
@@ -539,34 +537,48 @@
 ; 📅 date: {{{
 
 (deflisten weeks_alive 'tail -F /tmp/eww/weeks_alive')
-(deflisten date_abd 'tail -F /tmp/eww/date_abd')
-(defvar date-extra false)
+(deflisten date 'tail -F /tmp/eww/date')
+(defvar date-info false)
 
 (defwidget date []
   (eventbox
-    :onhover "eww update date-extra=true"
-    :onhoverlost "eww update date-extra=false"
+  :onhover "eww update date-info=true"
+  :onhoverlost "eww update date-info=false"
     (box
-      :class "date"
-      :halign "start"
-      :space-evenly false
-      :spacing 10
-      (slide-n-fade
-        :bool date-extra
-        :direction "left"
-        (label :class "date-week" :text "冀  ${weeks_alive} ")
+    :class "date"
+    :halign "start"
+    :space-evenly false
+    :spacing 4
+    (slide-n-fade
+      :bool date-info
+      :direction "left"
+      (label
+        :class "date-${cycle-6 == 0 ? "alive" : "base-alt"}"
+        :markup "冀  ${weeks_alive}"
+        :style "margin-top: 2px;"
       )
-      (box
-        :class "date-general"
-        :space-evenly false
-        :spacing 6
+    )
+      (label
+        :class "date-${cycle-5 == 0 ? "${date.weekday}" : "base"}"
+        :text "  ${date.weekday}"
+        :style "margin-left: ${date-info ? "4" : "-2"}px; margin-right: -4px;"
+      )
+      (label
+        :class "date-${cycle-6 == 1 ? "base-alt" : "base"}"
+        :text ", ${date.month}"
+        :style "margin-top: 3px;"
+      )
+      (label
+        :class "date-day date-${cycle-6 == 1 ? "base-alt" : "base"}"
+        :text "${date.day}"
+        :style "margin-top: 4px;"
+      )
+      (slide-n-fade :bool date-info :direction "right"
         (label
-          :class "date-weekday"
-          :style "margin-left: ${date-extra ? "0" : "-6"}px;"
-          :text "  ${date_abd.weekday},"
+          :class "weather-${cycle-6 == 0 ? "sunset" : "base"}"
+          :markup "   ${weather.sunset}"
+          :style "margin-top: 4px; margin-left: 4px;"
         )
-        (label :class "date-month" :text "${date_abd.month}")
-        (label :class "date-month" :text "${date_abd.day}")
       )
     )
   )
