@@ -98,6 +98,7 @@
     :class "music-cover"
     :style "background-image: url('${matches("${pctl.status}", "Playing") ?
       artUrl : art-inactive-url}');"
+    :tooltip "test"
   )
 )
 
@@ -153,7 +154,7 @@
     (label
       :class "music-${matches("${pctl.status}", "Playing") ? "artist" : "inactive" }"
       :markup "<tt></tt>  <b>${pctl.artist}</b>"
-      :style "margin: 2px -2px 0 ${volume-visible ? "-6" : "-12"}px;"
+      :style "margin: 1px -2px 0 ${volume-visible ? "-6" : "-12"}px;"
     )
     (literal
       :content "${"${pctl.title}" == "${pctl.album}" ? "(title-same)" : "(title-diff)"}"
@@ -342,7 +343,7 @@
                "${matches("${weather.night}", "true") ? "night" : "sun"}"
                : "base-alt"
         }"
-        :markup "<b>${weather.icon}  ${weather.temp}<sup> </sup></b>"
+        :markup "<b><tt>${weather.icon}</tt>  ${weather.temp}<sup> </sup></b>"
         :style "margin-right: -8px;"
       )
       (slide-n-fade :bool weather-info :direction "right"
@@ -587,6 +588,8 @@
 ; }}}
 
 ; ♻️  computer-widgets: {{{
+; Update `define_builtin_vars! { Duration::new(0, 500000000)` in inbuilt.rs
+; Default is (2, 0), but I like updates of 0.5 seconds for cpu polling.
 (defwidget num-to-block [load]
   (label
     :text {
