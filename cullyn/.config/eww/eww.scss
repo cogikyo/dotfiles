@@ -86,6 +86,13 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
   }
 }
 
+tooltip {
+  color: $blue;
+  background-color: rgba($bg, 0.69);
+  border: 1px solid $blue-g;
+  border-radius: 0 18px 18px 22px;
+}
+
 // }}}
 // 🪟 windows: {{{
 window {
