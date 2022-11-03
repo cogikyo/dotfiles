@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+while true; do
+    count=$(paru -Qu | wc -l)
+    echo "{\
+        \"count\":\"$count\",\
+        \"title\":\"Waiting for player to start...\"\
+    }" > '/tmp/eww/pacman.json'
+    sleep 10
+done

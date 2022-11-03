@@ -2,7 +2,7 @@
 
 killall eww -9
 eww daemon
-eww open-many sound today computer actions workspaces network
+eww open-many sound today computer workspaces misc
 # eww inspector
 # sleep 0.75
 # hyprctl dispatch movefocus l

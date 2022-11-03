@@ -38,22 +38,18 @@
   )
 )
 
-(defwindow actions
-  :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :width "33%" :anchor "bottom left")
-  (actions)
-)
-
 (defwindow workspaces
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :width "8%" :anchor "bottom center")
   (workspaces)
 )
 
-(defwindow network
+(defwindow misc
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :width "33%" :anchor "bottom right")
-  (network)
+  :geometry (geometry :anchor "bottom right")
+  (box :class "misc-box" :space-evenly false :spacing 16
+    (apps) (pacman) (network) (dunst)
+  )
 )
 
 ; }}}
@@ -98,7 +94,6 @@
     :class "music-cover"
     :style "background-image: url('${matches("${pctl.status}", "Playing") ?
       artUrl : art-inactive-url}');"
-    :tooltip "test"
   )
 )
 
@@ -865,7 +860,6 @@
 ; 👾 workspaces: {{{
 
 (deflisten active-ws 'tail -F /tmp/eww/workspace')
-; (defpoll occupied :interval "1s" "scripts/workspaces occupied")
 (deflisten occupied 'tail -F /tmp/eww/occupied')
 (defvar ws-hovered false)
 
@@ -897,27 +891,38 @@
 )
 
 ; }}}
-; 👷 actions: {{{
+; 💽 misc: {{{
 
-(defwidget actions []
-    (box :class "actions" :space-evenly false :spacing spacing
-    (apps) (pacman) (screen) (colorpicker)
+(defwidget apps []
+  (eventbox
+    :cursor "pointer"
+    (label
+      :class "apps"
+      :text ""
+      :style "font-size: 1.3em;"
+    )
   )
 )
 
-(defwidget apps [] "apps")
-(defwidget pacman [] "pacman")
-(defwidget screen [] "screen")
-(defwidget colorpicker [] "colorpicker")
+(deflisten pacman_info 'tail -F /tmp/eww/pacman.json 2> /dev/null')
 
-; }}}
-; 🕸️ network: {{{
+(defwidget pacman []
+  (eventbox
+    :cursor "pointer" (label
+      :class "pacman"
+      :markup "<tt> </tt><sup>${pacman_info.count}</sup>"
+    )
+  )
+)
 
 (defwidget network []
   (box :class "network" :halign "end" :space-evenly false :spacing spacing
     (label :text "ﯲ ${EWW_NET.enp10s0.NET_DOWN}")
     (label :text "ﯴ ${EWW_NET.enp10s0.NET_UP}")
-    (label :text "notifications  ")
   )
+)
+
+(defwidget dunst []
+  (label :text "notifications  ")
 )
 ;}}}
