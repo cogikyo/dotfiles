@@ -101,14 +101,16 @@
   (box :space-evenly false :spacing 8
     (label
       :class "music-${matches("${pctl.status}", "Playing") ? "album" : "inactive" }"
-      :text "  ${captures("${pctl.album}","([^()]*)")[0][0]}"
+      :text "  ${pctl.album}"
+      :tooltip "   ${pctl.album}"
       :limit-width 20
       :style "margin-left: -4px;"
     )
     (label
       :class "music-${matches("${pctl.status}", "Playing") ? "title" : "inactive" }"
-      :text "  ${captures("${pctl.title}","([^()]*)")[0][0]}"
+      :text "  ${pctl.title}"
       :limit-width 20
+      :tooltip "   ${pctl.title}"
     )
   )
 )
@@ -118,6 +120,7 @@
     :class "music-${matches("${pctl.status}", "Playing") ? "title" : "inactive" }"
     :markup "<tt>硫</tt>  <i>${pctl.album}</i>"
     :style "margin-left: -4px;"
+    :tooltip "硫  ${pctl.album}"
   )
 )
 
@@ -150,6 +153,7 @@
       :class "music-${matches("${pctl.status}", "Playing") ? "artist" : "inactive" }"
       :markup "<tt></tt>  <b>${pctl.artist}</b>"
       :style "margin: 1px -2px 0 ${volume-visible ? "-6" : "-12"}px;"
+      :tooltip "   ${pctl.artist}"
     )
     (literal
       :content "${"${pctl.title}" == "${pctl.album}" ? "(title-same)" : "(title-diff)"}"
