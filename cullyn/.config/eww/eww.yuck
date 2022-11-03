@@ -339,10 +339,10 @@
     (box :class "weather" :halign "end" :space-evenly false :spacing 8
       (label
         :class "weather-${cycle-6 == 0 ?
-               "${matches("${weather.night}", "true") ? "night" : "sun"}"
+               "${matches("${weather.night}", "true") ? "night" : "day"}"
                : "base-alt"
         }"
-        :markup "<b><tt>${weather.icon}</tt>  ${weather.temp}<sup> </sup></b>"
+        :markup "<b><tt>${weather.icon}</tt> ${weather.temp}<sup> </sup></b>"
         :style "margin-right: -8px;"
       )
       (slide-n-fade :bool weather-info :direction "right"
