@@ -7,7 +7,6 @@
 ; =============================================================================
 ; 🚧 vars: {{{
 
-(defvar spacing 16)
 (deflisten cycle-6 'while true; do echo 0; sleep 6; echo 1; sleep 6; done')
 (deflisten cycle-5 'while true; do echo 0; sleep 5; echo 1; sleep 5; done')
 
@@ -103,13 +102,13 @@
       :class "music-${matches("${pctl.status}", "Playing") ? "album" : "inactive" }"
       :text "  ${pctl.album}"
       :tooltip "   ${pctl.album}"
-      :limit-width 25
+      :limit-width 30
       :style "margin-left: -4px;"
     )
     (label
       :class "music-${matches("${pctl.status}", "Playing") ? "title" : "inactive" }"
       :text "  ${pctl.title}"
-      :limit-width 25
+      :limit-width 30
       :tooltip "   ${pctl.title}"
     )
   )
@@ -120,7 +119,7 @@
     :class "music-${matches("${pctl.status}", "Playing") ? "title" : "inactive" }"
     :markup "<tt>硫</tt>  <i>${pctl.album}</i>"
     :style "margin-left: -4px;"
-    :tooltip "硫  ${pctl.album}"
+    :tooltip "硫 ${pctl.album}"
   )
 )
 
@@ -129,11 +128,11 @@
     :class "music-info"
     :style "
             padding-left: ${volume-visible ? "1" : "0.7"}em;
-            padding-right: ${volume-visible ? "1" : "0.7"}em;
+            padding-right: ${volume-visible ? "1" : "0.1"}em;
             transition: padding 0.3s ease;
            "
     :space-evenly false
-    :spacing spacing
+    :spacing 16
     (slide-n-fade :direction "left" :bool volume-visible
       (eventbox
         :cursor "pointer"
@@ -160,14 +159,14 @@
       :content "${"${pctl.title}" == "${pctl.album}" ? "(title-same)" : "(title-diff)"}"
       :style "margin-top: 4px; margin-right: ${volume-visible ? "-6" : "-2"}px;"
     )
-    (slide-n-fade :direction "left" :bool volume-visible
+    (slide-n-fade :direction "right" :bool volume-visible
       (music-volume :value {round(pctl.volume * 100,0)})
     )
   )
 )
 
 (defwidget music-progress []
-  (box :class "music-progress" :space-evenly false :spacing spacing
+  (box :class "music-progress" :space-evenly false :spacing 16
        :style "margin: 0 -8px;"
    (circular-progress
       :class "music-progress-circle"
@@ -268,6 +267,7 @@
     :onrightclick "scripts/pulse_info mute ${content} & disown"
     :onscroll "scripts/pulse_info change_volume ${content} {} & disown"
     :cursor "pointer"
+    :tooltip " ${value}% "
     (box :space-evenly false :spacing 9
       :class "audio-volume ramp-${
           value < 1   ? "2" :
@@ -885,7 +885,7 @@
 )
 
 (defwidget workspaces []
-  (box :class "workspaces-box" :halign "center" :space-evenly false :spacing spacing
+  (box :class "workspaces-box" :halign "center" :space-evenly false :spacing 16
     (workspace :icon "network"  :num "1")
     (workspace :icon "learn"    :num "2")
     (workspace :icon "dna"      :num "3")
@@ -920,7 +920,7 @@
 )
 
 (defwidget network []
-  (box :class "network" :halign "end" :space-evenly false :spacing spacing
+  (box :class "network" :halign "end" :space-evenly false :spacing 16
     (label :text "ﯲ ${EWW_NET.enp10s0.NET_DOWN}")
     (label :text "ﯴ ${EWW_NET.enp10s0.NET_UP}")
   )
