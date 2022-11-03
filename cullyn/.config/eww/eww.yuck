@@ -45,9 +45,9 @@
 
 (defwindow misc
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :anchor "bottom right")
+  :geometry (geometry :width "10%" :anchor "bottom right")
   (box :class "misc-box" :space-evenly false :spacing 16
-    (apps) (pacman) (network) (dunst)
+    (apps) (pacman) (network) (dunst) (power)
   )
 )
 
@@ -909,7 +909,6 @@
 )
 
 (deflisten pacman_info 'tail -F /tmp/eww/pacman.json 2> /dev/null')
-
 (defwidget pacman []
   (eventbox
     :cursor "pointer" (label
@@ -919,14 +918,50 @@
   )
 )
 
+(deflisten network_info 'tail -F /tmp/eww/network_info.json 2> /dev/null')
 (defwidget network []
-  (box :class "network" :halign "end" :space-evenly false :spacing 16
-    (label :text "ﯲ ${EWW_NET.enp10s0.NET_DOWN}")
-    (label :text "ﯴ ${EWW_NET.enp10s0.NET_UP}")
+  (box :class "network-box" :halign "end" :space-evenly false :spacing 16
+    (transmit :icon "ﯲ" :value {EWW_NET.enp10s0.NET_DOWN})
+    (label :text "ﯴ")
+    (label :text "${network_info.tx.bytespersecond}")
+  )
+)
+
+(defwidget num-to-block-network [load]
+  (label
+    :text {
+      load < 1  ? "▁" :
+      load < 10  ? "▂" :
+      load < 100  ? "▃" :
+      load < 1000  ? "▄" :
+      load < 10000  ? "▅" :
+      load < 100000  ? "▆" :
+      load < 1000000  ? "▇" : "█"
+    }
+    :class "ramp-${
+      load < 1  ? "1" :
+      load < 10  ? "2" :
+      load < 100  ? "4" :
+      load < 1000  ? "5" :
+      load < 10000  ? "7" :
+      load < 100000  ? "9" :
+      load < 1000000  ? "11" : "crit"
+    }"
+  )
+)
+
+(defwidget transmit [?class icon value]
+  (box :class class :space-evenly false :spacing 10
+    (label :text icon)
+    (num-to-block-network :load value)
   )
 )
 
 (defwidget dunst []
   (label :text "notifications  ")
+)
+
+(defwidget power []
+  (label :text " ")
 )
 ;}}}
