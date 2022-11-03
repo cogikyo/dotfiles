@@ -103,13 +103,13 @@
       :class "music-${matches("${pctl.status}", "Playing") ? "album" : "inactive" }"
       :text "  ${pctl.album}"
       :tooltip "   ${pctl.album}"
-      :limit-width 20
+      :limit-width 25
       :style "margin-left: -4px;"
     )
     (label
       :class "music-${matches("${pctl.status}", "Playing") ? "title" : "inactive" }"
       :text "  ${pctl.title}"
-      :limit-width 20
+      :limit-width 25
       :tooltip "   ${pctl.title}"
     )
   )
@@ -129,6 +129,7 @@
     :class "music-info"
     :style "
             padding-left: ${volume-visible ? "1" : "0.7"}em;
+            padding-right: ${volume-visible ? "1" : "0.7"}em;
             transition: padding 0.3s ease;
            "
     :space-evenly false
@@ -206,7 +207,6 @@
               value < 90  ? "10" :
               value < 99  ? "11" : "12"
           }"
-         :space-evenly false :spacing 0
       (circular-progress
         :class "music-progress-circle"
         :value value
@@ -214,6 +214,7 @@
         :thickness 2
         :clockwise false
         (label
+          :tooltip "輸 Youtube Music"
           :class "music-volume-icon"
           :text {
             value == 0  ? "婢 " :
@@ -222,7 +223,6 @@
           }
         )
       )
-      (label :text "YouTube Music 輸 " :class "music-volume-text")
     )
   )
 )
