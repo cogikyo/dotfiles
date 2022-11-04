@@ -44,6 +44,7 @@ map("n", "<leader>gy", 'mlgg"+yG`lzt')
 map("n", "<leader>p", "`]p`]")
 map("v", "<leader>p", "y`]p`]ml`[O<Esc>'lo<Esc>")
 map("v", "<leader>P", "yP`]o<Esc>j")
+map("n", "<leader>wd", "dt<space>")
 -- }}}
 
 -- 🦬 Buffers {{{
