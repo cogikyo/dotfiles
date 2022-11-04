@@ -189,10 +189,10 @@ window {
   }
 
   @if $position == 'bot-right' {
-    border-radius: 69px 69px 27px 27px;
-    border-right: 2px solid $blue;
-    border-left: 1px solid $blue;
-    box-shadow: 0px -2px 8px 2px rgba($blue, 0.16);
+    border-radius: 69px 0px 27px 27px;
+    box-shadow: 0px -2px 6px 2px rgba($blue, 0.16);
+    margin: 30px 0 0 30px;
+    padding-top: 4px;
   }
 }
 
@@ -497,7 +497,6 @@ window {
 }
 // }}}
 
-// }}}
 // 👾 workspaces: {{{
 
 .workspace {
@@ -522,14 +521,13 @@ window {
 }
 // }}}
 // 💽 misc: {{{
-.misc {
+.misc-box {
   @include box-decor('bot-right');
-  &-box {
-    padding: 4px 1.1em;
-  }
 }
 
-.network-box {
-  font-family: $monospace;
+.network {
+  &-box {
+    font-family: $monospace;
+  }
 }
 // }}}
