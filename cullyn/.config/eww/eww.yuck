@@ -1,5 +1,3 @@
-; ██╗      ██████╗  ██████╗ ██╗ ██████╗
-; ██║     ██╔═══██╗██╔════╝ ██║██╔════╝
 ; ██║     ██║   ██║██║  ███╗██║██║
 ; ██║     ██║   ██║██║   ██║██║██║
 ; ███████╗╚██████╔╝╚██████╔╝██║╚██████╗
@@ -46,9 +44,7 @@
 (defwindow misc
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :anchor "bottom right" )
-  (box :class "misc-box" :space-evenly false :spacing 16
-    (apps) (pacman) (network) (dunst) (power)
-  )
+  (misc)
 )
 
 ; }}}
@@ -56,12 +52,42 @@
 
 (defwidget slide-n-fade [direction bool]
   (revealer
-    :transition "${direction == "left" ? "slideleft" : "slideright" }"
+    :transition "slide${direction}"
     :reveal bool
     (revealer
       :transition "crossfade"
       :reveal bool
       (children)
+    )
+  )
+)
+
+(defwidget IVU [
+  ?box-style ?box-class
+  icon  ?icon-class  ?icon-style  ?icon-tooltip
+  value ?value-class ?value-style ?value-tooltip
+  ?unit ?unit-class  ?unit-style  ?unit-tooltip
+]
+  (box
+    :class "${strlength(value) > 0 ? box-class : "ramp-2"}"
+    :style box-style :space-evenly false :spacing 0
+    (label
+      :markup "<tt>${icon}</tt>"
+      :class icon-class
+      :style icon-style
+      :tooltip icon-tooltip
+    )
+    (label
+      :text "${strlength(value) > 0 ? value : "勒"}"
+      :class value-class
+      :style "${strlength(value) > 0 ? "${value-style}" : "margin-right: 5px;"}"
+      :tooltip value-tooltip
+    )
+    (label
+      :text unit
+      :class "unit ${unit-class}"
+      :style unit-style
+      :tooltip unit-tooltip
     )
   )
 )
@@ -663,7 +689,7 @@
         percent < 90 ? "" : ""
       }"
     )
-    (slide-n-fade :bool bool :direction {strlenth(direction) > 0 ? "${direction}" : "right"}
+    (slide-n-fade :bool bool :direction {strlength(direction) > 0 ? "${direction}" : "right"}
       (label
         :class "${child}-current"
         :markup "${current}<sup></sup>${extra}"
@@ -897,52 +923,69 @@
 ; }}}
 ; 💽 misc: {{{
 
+(defwidget misc []
+  (box :class "misc-box" :space-evenly false :spacing 10
+    (apps) (pacman) (dunst) (network)
+    (label
+      :class "misc-power"
+      :text " "
+
+    )
+  )
+)
+
 (defwidget apps []
   (eventbox
     :cursor "pointer"
     (label
-      :class "apps"
       :text " "
     )
   )
 )
 
-(deflisten pacman_info 'tail -F /tmp/eww/pacman.json 2> /dev/null')
+(defpoll upgrades :initial 0 :interval "10s" 'paru -Qu | wc -l')
 (defwidget pacman []
   (eventbox
-    :cursor "pointer" (label
-      :class "pacman"
-      :markup "<tt> </tt><sup>${pacman_info.count}</sup>"
+    :cursor "pointer"
+    :onclick 'kitty --title="terminalfloat" -e "paru" & disown'
+    (label
+      :class "ramp-${
+             upgrades <= 1 ? "3" :
+             upgrades <= 3 ? "4" :
+             upgrades < 5 ? "4-alt" :
+             upgrades < 10 ? "6" :
+             upgrades < 20 ? "8" :
+             upgrades < 30 ? "9" :
+             upgrades < 40 ? "11" : "crit"
+      }"
+      :markup "<tt> </tt><sup>${upgrades <= 1 ? " ": upgrades}</sup>"
+    )
+  )
+)
+(defpoll ping :interval "20s" `scripts/mtr -r -c 5 -j 8.8.8.8 | jq --jsonargs ".report.hubs[11].Avg" | awk '{print int($1+0.5)}'`)
+(defwidget network []
+  (box :class "misc-network" :space-evenly false :spacing 10
+    (transmit :icon " " :value {EWW_NET.enp10s0.NET_DOWN})
+    (transmit :icon " " :value {EWW_NET.enp10s0.NET_UP})
+    (IVU
+      :box-class "ramp-${
+        ping < 10  ? "3" :
+        ping < 30  ? "7-alt" :
+        ping < 70  ? "8" :
+        ping < 120 ? "9" :
+        ping < 200 ? "11" : "crit"
+      }"
+      :icon " "
+      :icon-style "margin-right: -2px; margin-left: 4px;"
+      :value ping
+      :unit "ms"
     )
   )
 )
 
-(defpoll ping :interval "3s" 'scripts/mtr -r -n -c 1 -j 8.8.8.8')
-(defwidget network []
-  (box :class "network-box" :space-evenly false :spacing 16
-    (transmit :icon " " :value {EWW_NET.enp10s0.NET_DOWN})
-    (transmit :icon " " :value {EWW_NET.enp10s0.NET_UP})
-    (label :markup "<tt> </tt>${round("${ping.report.hubs[11].Avg}", 0)}<small>ms</small>")
-  )
-)
-
-(defwidget num-to-block-network [load]
-  (label
-    :text {
-      load < 1  ? "▁" :
-      load < 10  ? "▂" :
-      load < 100  ? "▃" :
-      load < 1000  ? "▄" :
-      load < 10000  ? "▅" :
-      load < 100000  ? "▆" :
-      load < 1000000  ? "▇" : "█"
-    }
-    :style "margin-top: 4px;"
-  )
-)
-
-(defwidget transmit [?class icon value]
-  (box  :space-evenly false :spacing 6
+(defwidget transmit [icon value]
+  (box
+    :space-evenly false :spacing 3
     :class "ramp-${
       value < 1  ? "2" :
       value < 10  ? "3" :
@@ -952,8 +995,18 @@
       value < 100000  ? "9" :
       value < 1000000  ? "11" : "crit"
     }"
-    (label :text icon :style "margin-top: 4px;")
-    (num-to-block-network :load value)
+    (label :text icon :style "margin-top: 3px;")
+    (label :text {
+        value < 1  ? "▁" :
+        value < 10  ? "▂" :
+        value < 100  ? "▃" :
+        value < 1000  ? "▄" :
+        value < 10000  ? "▅" :
+        value < 100000  ? "▆" :
+        value < 1000000  ? "▇" : "█"
+      }
+      :style "margin-top: 3px;"
+    )
   )
 )
 
@@ -961,7 +1014,4 @@
   (label :text " ")
 )
 
-(defwidget power []
-  (label :text " ")
-)
 ;}}}
