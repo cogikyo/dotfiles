@@ -25,64 +25,64 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.618);
 .ramp {
   &-1 {
     color: $blue-gd;
-    transition: color 1.25s $ease-out-snap;
+    transition: color 0.5s ease-out;
   }
   &-2 {
     color: $blue-g;
-    transition: color 1.25s $ease-out-snap;
+    transition: color 0.5s ease-out;
   }
   &-3 {
     color: $blue-d;
-    transition: color 1.25s $ease-out-snap;
+    transition: color 0.5s ease-out;
   }
   &-4 {
     color: $blue;
-    transition: color 1.25s $ease-out-snap;
+    transition: color 0.5s ease-out;
   }
   &-4-alt {
     color: $blue-l;
-    transition: color 1.25s $ease-out-snap;
+    transition: color 0.5s ease-out;
   }
   &-5 {
     color: $azure;
-    transition: color 1.25s $ease-out-snap;
+    transition: color 0.5s ease-out;
   }
   &-6 {
     color: $cyan-l;
-    transition: color 1.25s $ease-out-snap;
+    transition: color 0.5s ease-out;
   }
   &-7 {
     color: $green-l;
-    transition: color 1.25s $ease-out-snap;
+    transition: color 0.5s ease-out;
   }
   &-7-alt {
     color: $green-d;
-    transition: color 1.25s $ease-out-snap;
+    transition: color 0.5s ease-out;
   }
   &-8 {
     color: $yellow-l;
-    transition: color 1.25s $ease-out-snap;
+    transition: color 0.5s ease-out;
   }
   &-9 {
     color: $orange;
-    transition: color 1.25s $ease-out-snap;
+    transition: color 0.5s ease-out;
   }
   &-10 {
     color: $red-l;
-    transition: color 1.25s $ease-out-snap;
+    transition: color 0.5s ease-out;
   }
   &-11 {
     color: $red;
-    transition: color 1.25s $ease-out-snap;
+    transition: color 0.5s ease-out;
   }
   &-12 {
     color: $red-d;
-    transition: color 1.25s $ease-out-snap;
+    transition: color 0.5s ease-out;
   }
   &-crit {
     color: $pink;
     font-weight: bold;
-    transition: color 1.25s $ease-out-snap;
+    transition: color 0.5s ease-out;
   }
 }
 
@@ -91,6 +91,12 @@ tooltip {
   background-color: rgba($bg, 0.69);
   border: 1px solid $blue-g;
   border-radius: 0 18px 18px 22px;
+}
+
+.unit {
+  font-size: 0.69em;
+  margin-top: 5px;
+  margin-left: 2px;
 }
 
 // }}}
@@ -186,13 +192,6 @@ window {
     box-shadow: 0px -2px 8px 2px rgba($blue, 0.16);
     padding: 11px 1.3em 0 1.3em;
     margin: 30px 18px -6px 18px;
-  }
-
-  @if $position == 'bot-right' {
-    border-radius: 69px 0px 27px 27px;
-    box-shadow: 0px -2px 6px 2px rgba($blue, 0.16);
-    margin: 30px 0 0 30px;
-    padding-top: 4px;
   }
 }
 
@@ -521,13 +520,27 @@ window {
 }
 // }}}
 // 💽 misc: {{{
-.misc-box {
-  @include box-decor('bot-right');
-}
-
-.network {
+.misc {
   &-box {
+    color: $blue;
     font-family: $monospace;
   }
+  &-network {
+    background: rgba($bg, 0.69);
+    border: 1px solid $blue;
+    box-shadow: 0px -2px 6px 2px rgba($blue, 0.16);
+    padding: 0 8px;
+  }
+  &-power {
+    font-size: 1.5em;
+    background: rgba($bg, 0.69);
+    border-left: 1px solid $blue;
+    border-top: 1px solid $blue;
+    border-radius: 69px 59px 0px 37px;
+    padding: 3px 2px 2px 10px;
+    margin-right: -8px;
+    margin-bottom: -2px;
+  }
 }
+
 // }}}
