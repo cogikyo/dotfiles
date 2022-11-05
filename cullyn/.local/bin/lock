@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+
+kill_background () {
+    ps -ef | rg "$1" | rg -v rg | awk '{print $2}' | xargs kill
+}
+
+
+hyprctl dispatch workspace 6
+killall eww -9
+mpvpaper -o "--loop --brightness=6 --contrast=9 --saturation=-16 --hue=-24" "HDMI-A-1" ~/dotfiles/resources/videos/ocean.mp4 & disown
+kill_background "dna"
+swaylock -C "$HOME/.config/swaylock/config.conf"
+eval "$HOME/.local/bin/eww-open"
+mpvpaper -o "--loop --brightness=6 --contrast=9 --saturation=-16 --hue=-24" "HDMI-A-1" ~/dotfiles/resources/videos/dna.mp4 &>/dev/null & disown
+sleep 0.5
+kill_background "ocean"
+notify-send "welcome back $USER"
+hyprctl dispatch workspace 4
+
+exit 0
