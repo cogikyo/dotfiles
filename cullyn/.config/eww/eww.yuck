@@ -923,14 +923,18 @@
 ; }}}
 ; 💽 misc: {{{
 
+
 (defwidget misc []
   (box :class "misc-box" :space-evenly false :spacing 10
-    (apps) (pacman) (dunst) (network)
-    (label
-      :class "misc-power"
-      :text " "
+    (apps) (pacman) (dunst) (network) (power)
+  )
+)
 
-    )
+(defvar power-options false)
+(defwidget power []
+  (label
+    :class "misc-power"
+    :text " "
   )
 )
 

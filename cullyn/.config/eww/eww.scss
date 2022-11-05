@@ -431,7 +431,8 @@ window {
   &-Thursday {
     @include cycle($green-l);
   }
-  &-Wednesday {
+  &-Wednesday,
+  &-Saturday {
     @include cycle($orange-l);
   }
   &-Friday,
@@ -519,7 +520,7 @@ window {
   @include box-decor('bot-center');
 }
 // }}}
-// 💽 misc: {{{
+// 💽 misc: {{
 .misc {
   &-box {
     color: $blue;

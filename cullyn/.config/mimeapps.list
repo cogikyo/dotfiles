@@ -9,6 +9,8 @@ application/x-extension-shtml=firefoxdeveloperedition.desktop
 application/xhtml+xml=firefoxdeveloperedition.desktop
 application/x-extension-xhtml=firefoxdeveloperedition.desktop
 application/x-extension-xht=firefoxdeveloperedition.desktop
+image/png=feh.desktop
+video/mp4=mpv.desktop
 
 [Added Associations]
 x-scheme-handler/http=firefox-developer-edition.desktop;firefoxdeveloperedition.desktop;
