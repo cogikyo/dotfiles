@@ -22,11 +22,11 @@ progress() {
     status=$(playerctl status)
     if [[ $status == "Playing" ]] || [[ $status == "Paused" ]]; then
 
-        length=$(playerctl "$player" metadata -f '{{ mpris:length }}' | bc)
-        position=$(playerctl "$player"  metadata -f '{{ position }}' | bc)
+        length=$(playerctl "$player" metadata --format '{{ mpris:length }}' | bc)
+        position=$(playerctl "$player"  metadata --format '{{ position }}' | bc)
         progress=$(echo "scale=3; $position / $length * 100 + 0.1" | bc)
 
-        if [[ $(( position / 1000000 )) -lt 3  ]]; then
+        if [[ $(( position / 1000000 )) -lt 5  ]]; then
             artUrl=$(playerctl "$player" metadata --format '{{ mpris:artUrl }}')
             tempfile="/tmp/eww/album_art.png"
             wget --output-document="$tempfile" "$artUrl"
