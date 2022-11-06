@@ -73,7 +73,7 @@ alias d='cd ~/downloads'
 alias not='cd ~/notes'
 alias x='exit'
 alias n='nvim'
-bk () { mpvpaper -o "--loop --brightness=$2 --contrast=$3 --saturation=$4 --gamma=$5 --hue=$6" 'HDMI-A-1' ~/dotfiles/resources/videos/"$1".mp4 }
+bk () { mpvpaper -o "--loop --brightness=$2 --contrast=$3 --saturation=$4 --hue=$5 --gamma=$6" 'HDMI-A-1' ~/dotfiles/resources/videos/"$1" }
 alias ew='eww-open'
 alias ews='eww inspector & disown && exit'
 alias el='eww logs'

@@ -221,11 +221,7 @@ window {
   &-volume {
     transition: color 0.5s $ease-out-snap;
     &-icon {
-      font-size: 1em;
       margin: 6px -3px 6px 6px;
-    }
-    &-text {
-      margin: 1px 12px 0 8px;
     }
   }
   &-playing {
@@ -238,7 +234,6 @@ window {
   }
   &-info {
     @include box-decor('top-left');
-    padding: 4px 0.2em 4px 0em;
   }
   &-artist {
     color: $blue-d;
@@ -526,12 +521,12 @@ window {
     color: $blue;
     font-family: $monospace;
   }
-  &-network {
-    background: rgba($bg, 0.69);
-    border: 1px solid $blue;
-    box-shadow: 0px -2px 6px 2px rgba($blue, 0.16);
-    padding: 0 8px;
-  }
+  // &-network {
+  // background: rgba($bg, 0.69);
+  // border: 1px solid $blue;
+  // box-shadow: 0px -2px 6px 2px rgba($blue, 0.16);
+  // padding: 0 8px;
+  // }
   &-power {
     font-size: 1.5em;
     background: rgba($bg, 0.69);
