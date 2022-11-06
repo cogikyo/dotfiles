@@ -183,7 +183,7 @@
     )
     (literal
       :content "${"${pctl.title}" == "${pctl.album}" ? "(title-same)" : "(title-diff)"}"
-      :style "margin-top: 4px; margin-right: ${volume-visible ? "-6" : "-2"}px;"
+      :style "margin-top: 4px; margin-right: ${volume-visible ? "-6" : "2"}px;"
     )
     (slide-n-fade :direction "right" :bool volume-visible
       (music-volume :value {round(pctl.volume * 100,0)})

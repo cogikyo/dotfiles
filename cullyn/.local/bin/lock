@@ -4,17 +4,18 @@ kill_background () {
     ps -ef | rg "$1" | rg -v rg | awk '{print $2}' | xargs kill
 }
 
+current_ws=$(tail -n 1 "/tmp/eww/workspace")
 
 hyprctl dispatch workspace 6
 killall eww -9
-mpvpaper -o "--loop --brightness=6 --contrast=9 --saturation=-16 --hue=-24" "HDMI-A-1" ~/dotfiles/resources/videos/ocean.mp4 & disown
+mpvpaper -o "--loop --brightness=3  --contrast=6  --saturation=-50  --hue=-8 --gamma=-20" "HDMI-A-1" ~/dotfiles/resources/videos/blackhole.webm & disown
+sleep 0.25
 kill_background "dna"
 swaylock -C "$HOME/.config/swaylock/config.conf"
 eval "$HOME/.local/bin/eww-open"
 mpvpaper -o "--loop --brightness=6 --contrast=9 --saturation=-16 --hue=-24" "HDMI-A-1" ~/dotfiles/resources/videos/dna.mp4 &>/dev/null & disown
-sleep 0.5
-kill_background "ocean"
-notify-send "welcome back $USER"
-hyprctl dispatch workspace 4
+sleep 0.25
+kill_background "blackhole"
+hyprctl dispatch workspace "$current_ws"
 
 exit 0
