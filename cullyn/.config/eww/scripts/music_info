@@ -39,10 +39,9 @@ progress() {
     fi
 }
 
-get_json () {
+check_status () {
     status=$(playerctl status)
     while ! [[ $status == "Playing" ]]; do
-        sleep 1
         echo "{\
             \"status\":\"Paused\",\
             \"volume\":\"0\",\
@@ -50,16 +49,24 @@ get_json () {
             \"album\":\"Waiting for player to start...\",\
             \"title\":\"Waiting for player to start...\"\
         }" > '/tmp/eww/music.json'
+        sleep 1
         status=$(playerctl status)
     done
+}
 
-    playerctl -F "$player" metadata -f "{\
-        \"status\":\"{{ status }}\",\
-        \"volume\":\"{{ volume }}\",\
-        \"artist\":\"{{ artist }}\",\
-        \"album\":\"{{ album }}\",\
-        \"title\":\"{{ title }}\"\
-    }" > '/tmp/eww/music.json'
+get_json () {
+    while true; do
+        check_status
+        playerctl -F "$player" metadata -f "{\
+            \"status\":\"{{ status }}\",\
+            \"volume\":\"{{ volume }}\",\
+            \"artist\":\"{{ artist }}\",\
+            \"album\":\"{{ album }}\",\
+            \"title\":\"{{ title }}\"\
+        }" > '/tmp/eww/music.json'
+        sleep 1
+        notify-send "playerctl died, restarting"
+    done
 }
 
 "$@"
