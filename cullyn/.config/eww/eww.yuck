@@ -41,10 +41,10 @@
   (workspaces)
 )
 
-(defwindow misc
+(defwindow systemctl
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :anchor "bottom right" )
-  (misc)
+  (systemctl)
 )
 
 ; }}}
@@ -930,14 +930,6 @@
   )
 )
 
-(defvar power-options false)
-(defwidget power []
-  (label
-    :class "misc-power"
-    :text " "
-  )
-)
-
 (defwidget apps []
   (eventbox
     :cursor "pointer"
@@ -1019,3 +1011,32 @@
 )
 
 ;}}}
+; 🎛️ systemctl: {{{
+
+(defvar power-url "/home/cullyn/.config/eww/assets/powerhouse.svg" )
+(defvar systemctl-extra false)
+(defwidget systemctl []
+  (eventbox
+    :cursor "pointer"
+    :onhover "eww update systemctl-extra=true"
+    :onhoverlost "eww update systemctl-extra=false"
+    ; :onrightclick "~/.local/bin/lock & disown"
+    ; :onmiddleclick "~/.local/bin/lock suspend & disown"
+    (box :space-evenly false :spacing 0
+      :class "systemctl-box ${systemctl-extra ? "systemctl-box-extra" : "" }"
+      :style "background-image: url('${power-url}');"
+      (slide-n-fade :direction "left" :bool systemctl-extra
+        (eventbox
+          :cursor "pointer"
+          (box :space-evenly false :spacing 0
+            (label :text "ﰇ")
+            (label :text "ﰇ")
+            (label :text "ﰇ")
+          )
+        )
+      )
+    )
+  )
+)
+
+; }}}
