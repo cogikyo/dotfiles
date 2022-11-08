@@ -274,26 +274,7 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
 &nbsp;
 
-2.10 Update some environment variables (might be a better way to do this, working as of now)
-
-    ────┬──────────────────────────────────────────────────────────────────────
-        │ File: /etc/environment
-    ────┼──────────────────────────────────────────────────────────────────────
-    1   │ #
-    2   │ # This file is parsed by pam_env module
-    3   │ #
-    4   │ # Syntax: simple "KEY=VAL" pairs on separate lines
-    5   │
-    6   │ # X11 vars (for QT applications)
-    7   │ XCURSOR_SIZE=14
-    8   │
-    9   │ # misc (for tmux colors)
-    10  │ TERM=xterm-256color
-    ────┴──────────────────────────────────────────────────────────────────────
-
-&nbsp;
-
-2.11 Symlink some important GTK settings
+2.10 Symlink some important GTK settings
 
     ln -sfn ~/.icons/default/index.theme /usr/share/icons/default/index.theme
     ln -sfn $HOME/.local/share/themes/Tokyonight /usr/share/themes
