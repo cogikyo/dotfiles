@@ -26,9 +26,7 @@ get_json () {
         sleep 0.5
     done
 
-    start=$(date "+%s")
-    end=$(( start + 5000 ))
-    air_url="http://api.openweathermap.org/data/2.5/air_pollution/history?lat=$LAT&lon=$LON&start=$start&end=$end&appid=$API"
+    air_url="http://api.openweathermap.org/data/2.5/air_pollution?lat=$LAT&lon=$LON&appid=$API"
 
     curl "$WEATHER_URL" | jq > "$WEATHER_JSON"
     curl "$air_url" | jq > "$AIR_JSON"
