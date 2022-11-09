@@ -10,7 +10,7 @@
 $sans-serif: Albert Sans;
 $monospace: LigaHack Nerd Font;
 $monospace-alt: Fira Code, Symbols Nerd Font;
-$ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.418);
+$ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.118);
 
 * {
   all: unset;
@@ -114,12 +114,11 @@ window {
 // }}}
 // ♻️  mixins: {{{
 @mixin corner-image($direction) {
-  background-size: cover;
+  background-repeat: no-repeat;
 
   @if $direction == 'top-left' {
-    background-position: calc(50% - 2px) 50%;
-
-    min-width: 72px;
+    background-size: 120%;
+    min-width: 76px;
     border-radius: 0px 27px 69px 17px;
     border-right: 2px solid $blue;
     border-top: 1px solid $blue-d;
@@ -131,9 +130,9 @@ window {
   }
 
   @if $direction == 'top-right' {
-    background-position: calc(50% + 6px) 50%;
-
+    background-size: 110%;
     min-width: 80px;
+
     border-radius: 27px 0px 17px 69px;
     border-left: 2px solid $blue;
     border-top: 1px solid $blue;
@@ -142,20 +141,6 @@ window {
 
     margin-top: -1px;
     margin-left: 12px;
-  }
-
-  @if $direction == 'bot-right' {
-    background-position: calc(50% + 2px) 4px;
-    min-height: 72px;
-    min-width: 72px;
-
-    border-radius: 69px 27px 0px 27px;
-    border-left: 2px solid $blue;
-    border-top: 1px solid $blue;
-    border-bottom: 1px solid $blue-d;
-    box-shadow: -3px -3px 8px 2px rgba($blue, 0.16);
-
-    margin: 20px -4px -1px 20px;
   }
 }
 
@@ -319,6 +304,9 @@ window {
   }
   &-moon {
     color: $white;
+    &-full {
+      color: $celeste;
+    }
   }
   &-air {
     @include cycle($blue-l);
@@ -553,29 +541,44 @@ window {
 // }}}
 // 🎛️ systemctl: {{{
 
-.systemctl-box {
-  @include corner-image('bot-right');
-  transition: all 0.5s $ease-out-snap;
-  &-extra {
-    background-position: calc(50% + 4px) 6px;
-    min-height: 80px;
-    min-width: 80px;
-    margin: 50px -4px -1px 50px;
+.systemctl {
+  &-box {
+    background-repeat: no-repeat;
+    background-size: 100%;
+    background-position: 2px -2px;
+    min-height: 72px;
+    min-width: 72px;
+    border-radius: 69px 27px 0px 17px;
+    border-left: 2px solid $blue;
+    border-top: 1px solid $blue;
+    border-bottom: 1px solid $blue-d;
+    box-shadow: -3px -3px 8px 2px rgba($blue, 0.16);
+    margin: 20px -8px -3px 20px;
+    transition: all 0.5s ease-out;
+    &-hovered {
+      background-color: rgba($navy, 0.69);
+      background-position: calc(50% + 16px) 30px;
+      background-size: 69%;
+      background-repeat: no-repeat;
+      min-height: 90px;
+      min-width: 95px;
+      box-shadow: -3px -3px 6px 2px rgba($blue, 0.25);
+    }
+  }
+  &-restart {
+    color: $green-d;
+    font-size: 1.2em;
+    margin: 40px 0 0 9px;
+  }
+  &-suspend {
+    color: $purple-d;
+    font-size: 1.2em;
+    margin: -25px 0px 0 -6px;
+  }
+  &-poweroff {
+    color: $red-d;
+    font-size: 1.2em;
+    margin: -50px 0px 0 -5px;
   }
 }
-
-// .systemctl-box {
-//   transition: all 0.42s $ease-out-snap;
-//   font-family: $monospace;
-//   font-size: 2em;
-//   background: rgba($bg, 0.69);
-//   border-left: 1px solid $blue;
-//   border-top: 1px solid $blue;
-//   border-radius: 69px 17px 0px 27px;
-//   // margin-bottom: -2px;
-//   &-extra {
-//     padding: 33px 2px 2px 40px;
-//     border-radius: 69px 59px 0px 69px;
-//   }
-// }
 // }}}
