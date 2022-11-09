@@ -2,7 +2,7 @@
 
 killall eww -9
 eww daemon
-eww open-many sound today computer workspaces systemctl
+eww open-many sound today computer screenctl workspaces misc systemctl
 # eww inspector
 # sleep 0.75
 # hyprctl dispatch movefocus l

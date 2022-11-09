@@ -13,16 +13,16 @@ kill_background "dna"
 
 if [[ "$1" == "suspend" ]]; then
     systemctl suspend
-    sleep 10
+    sleep 8
     systemctl suspend
 fi
 
 gdbus call -e -d de.mherzberg -o /de/mherzberg/wlrbrightness -m de.mherzberg.wlrbrightness.set 0.2
 swaylock -C "$HOME/.config/swaylock/config.conf"
-eval "$HOME/.local/bin/eww-open"
 gdbus call -e -d de.mherzberg -o /de/mherzberg/wlrbrightness -m de.mherzberg.wlrbrightness.set 1
 mpvpaper -o "--loop --brightness=6 --contrast=9 --saturation=-16 --hue=-24" "HDMI-A-1" ~/dotfiles/resources/videos/dna.mp4 &>/dev/null & disown
-sleep 0.75
+eval "$HOME/.local/bin/eww-open"
+sleep 0.5
 kill_background "blackhole"
 hyprctl dispatch workspace "$current_ws"
 notify-send "$current_ws"
