@@ -35,10 +35,22 @@
   )
 )
 
+(defwindow screenctl
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "top right" :y "100px")
+  (screenctl)
+)
+
 (defwindow workspaces
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :width "8%" :anchor "bottom center")
   (workspaces)
+)
+
+(defwindow misc
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "bottom right" :x "100px" )
+  (misc)
 )
 
 (defwindow systemctl
@@ -101,7 +113,7 @@
 (defvar artUrl "/tmp/eww/album_art.png")
 (defvar art-inactive-url "/home/cullyn/.config/eww/assets/ytm.svg" )
 (defvar volume-visible false)
-(defpoll progress :initial 1 :interval "1s" "scripts/music_info progress")
+(defpoll progress :interval "1s" "scripts/music_info progress")
 (deflisten pctl 'tail -F /tmp/eww/music.json 2> /dev/null')
 
 (defwidget music []
@@ -886,6 +898,21 @@
   (box :class "user" :style "background-image: url('${userUrl}');")
 )
 ; }}}
+; 🔆 screenctl: {{{
+
+(defvar screenctl-hovered false)
+(defwidget screenctl []
+  (eventbox
+    :onhover "eww update screenctl-hovered=true"
+    :onhoverlost "eww update screenctl-hovered=false"
+    (box :space-evenly false :spacing 0
+      :class "screenctl-box ${screenctl-hovered ? "screenctl-box-hovered" : "" }"
+      :style "background-image: url('assets/screenctl/br${screenctl-hovered ? "" : ""}.svg');"
+    )
+  )
+)
+
+; }}}
 
 ; 👾 workspaces: {{{
 
@@ -896,27 +923,34 @@
 (defwidget workspace [icon num]
   (eventbox
     :onclick "hyprctl dispatch workspace ${num}"
-    :onrightclick "hyprctl dispatch workspace previous"
-    :onscroll "scripts/workspaces next_or_prev {}"
-    :onhover "eww update ws-hovered=true"
-    :onhoverlost "eww update ws-hovered=false"
     :cursor "pointer"
     (box
-      :style "background-image: url('assets/ws-icons/${icon}${matches(active-ws,num) ?
-      '-active' : "${matches(occupied, "${num}") ? "" : "-empty"}"
-      }.svg');"
+      :style "
+              background-image: url('assets/ws-icons/${icon}${
+                matches(active-ws,num) ? "-active" :
+                "${matches(occupied, "${num}") ? "" : "-empty"}"
+                }.svg');
+              "
       :class "workspace ws-${num}"
     )
   )
 )
 
 (defwidget workspaces []
-  (box :class "workspaces-box" :halign "center" :space-evenly false :spacing 16
-    (workspace :icon "network"  :num "1")
-    (workspace :icon "learn"    :num "2")
-    (workspace :icon "dna"      :num "3")
-    (workspace :icon "dotfiles" :num "4")
-    (workspace :icon "music"    :num "5")
+  (eventbox
+    :onhover "eww update ws-hovered=true"
+    :onhoverlost "eww update ws-hovered=false"
+    :onrightclick "hyprctl dispatch workspace previous"
+    :onscroll "scripts/workspaces next_or_prev {}"
+    (box
+      :class "workspaces-box ${ws-hovered ? "workspaces-box-hovered" : ""}"
+      :halign "center" :space-evenly false :spacing 10
+      (workspace :icon "network"  :num "1")
+      (workspace :icon "learn"    :num "2")
+      (workspace :icon "dna"      :num "3")
+      (workspace :icon "dotfiles" :num "4")
+      (workspace :icon "music"    :num "5")
+    )
   )
 )
 
@@ -926,7 +960,7 @@
 
 (defwidget misc []
   (box :class "misc-box" :space-evenly false :spacing 10
-    (apps) (pacman) (dunst) (network) (power)
+    (apps) (pacman) (dunst) (network)
   )
 )
 
@@ -1023,6 +1057,7 @@
       :space-evenly false :spacing 0
       :class "systemctl-box ${systemctl-extra ? "systemctl-box-hovered" : "" }"
       :style "background-image: url('assets/powerhouse${systemctl-extra ? "-active" : ""}.svg');"
+      :tooltip "mitochondria, the powerhouse of the cell"
       (revealer
         :transition "crossfade"
         :reveal systemctl-extra
@@ -1036,10 +1071,10 @@
   )
 )
 
-(defvar restart-hover false)
 (defwidget systemctl-option [option icon command]
   (eventbox
     :cursor "pointer"
+    :tooltip "${option}"
     :onclick command
     (label :class "systemctl-${option}"  :text icon)
   )

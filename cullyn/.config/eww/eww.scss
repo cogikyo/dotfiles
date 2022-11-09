@@ -131,6 +131,7 @@ window {
 
   @if $direction == 'top-right' {
     background-size: 110%;
+    background-position: 0 -4px;
     min-width: 80px;
 
     border-radius: 27px 0px 17px 69px;
@@ -185,7 +186,7 @@ window {
     border-right: 1px solid $blue;
     border-bottom: 2px solid $blue;
     border-left: 1px solid $blue;
-    box-shadow: 0px 2px 8px 2px rgba($blue, 0.16);
+    box-shadow: 0px 2px 8px 2px rgba($blue, 0.18);
     padding: 0px 1.3em 11px 1.3em;
     margin: -7px 16px 30px 16px;
   }
@@ -195,7 +196,7 @@ window {
     border-right: 1px solid $blue;
     border-top: 2px solid $blue;
     border-left: 1px solid $blue;
-    box-shadow: 0px -2px 8px 2px rgba($blue, 0.16);
+    box-shadow: 0px -2px 8px 2px rgba($blue, 0.18);
     padding: 11px 1.3em 0 1.3em;
     margin: 30px 18px -6px 18px;
   }
@@ -500,12 +501,39 @@ window {
   @include corner-image('top-right');
 }
 // }}}
+// 🔆 screenctl: {{{
+.screenctl {
+  &-box {
+    background-repeat: no-repeat;
+    background-size: 120%;
+    background-position: calc(50% + 2px) 50%;
+    min-width: 48px;
+    min-height: 60px;
+    box-shadow: -3px -3px 8px 2px rgba($blue, 0.16);
+    margin: 20px 0 20px 20px;
+    border-radius: 27px 0px 17px 27px;
+    border-left: 2px solid $blue;
+    border-top: 1px solid $blue;
+    border-bottom: 1px solid $blue-d;
+    transition: all 0.5s ease-out;
+    &-hovered {
+      background-color: rgba($navy, 0.25);
+      background-size: 220%;
+      background-position: calc(50% -8px) calc(50% + 0px);
+      border-radius: 27px 0px 17px 27px;
+    }
+  }
+}
+
+// }}}
 
 // 👾 workspaces: {{{
 
 .workspace {
-  background-size: cover;
+  transition: all 0.42s $ease-out-snap;
+  background-repeat: no-repeat;
   background-position: center;
+  background-size: 100%;
   min-width: 34px;
   min-height: 34px;
   margin-bottom: 11px;
@@ -522,6 +550,11 @@ window {
 
 .workspaces-box {
   @include box-decor('bot-center');
+  transition: all 0.5s ease-out;
+  &-hovered {
+    box-shadow: -1px 3px 8px 2px rgba($blue, 0.42);
+    background-color: rgba($navy, 0.36);
+  }
 }
 // }}}
 // 💽 misc: {{{
@@ -544,8 +577,8 @@ window {
 .systemctl {
   &-box {
     background-repeat: no-repeat;
-    background-size: 100%;
-    background-position: 2px -2px;
+    background-size: 85%;
+    background-position: 10px 5px;
     min-height: 72px;
     min-width: 72px;
     border-radius: 69px 27px 0px 17px;
@@ -556,8 +589,8 @@ window {
     margin: 20px -8px -3px 20px;
     transition: all 0.5s ease-out;
     &-hovered {
-      background-color: rgba($navy, 0.69);
-      background-position: calc(50% + 16px) 30px;
+      background-color: rgba($navy, 0.53);
+      background-position: calc(50% + 14px) 28px;
       background-size: 69%;
       background-repeat: no-repeat;
       min-height: 90px;

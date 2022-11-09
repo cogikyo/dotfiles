@@ -3,6 +3,26 @@
 side_window='1023 1204'
 center_window='1668 1727'
 
+create () {
+    hyprctl dispatch workspace 2
+    kitty --working-directory="$HOME/media" & sleep 0.5
+    inkscape & sleep 5
+    firefox-developer-edition --new-window https://calendar.google.com/calendar/u/0/r & sleep 1.5
+    hyprctl dispatch movefocus l
+    hyprctl dispatch resizeactive "exact $side_window"
+    hyprctl dispatch movefocus r
+    hyprctl dispatch resizeactive "exact $center_window"
+    hyprctl dispatch movefocus r
+    kitty --hold --title="pipes-rs" -e pipes-rs & sleep 0.5
+    hyprctl dispatch movefocus u
+    hyprctl dispatch resizeactive "exact $side_window"
+    hyprctl dispatch movefocus l
+    kitty --hold -o font_size=6.0 --title="cava" -e cava & sleep 0.5
+    hyprctl dispatch movefocus u
+    hyprctl dispatch resizeactive "exact $center_window"
+    hyprctl dispatch movefocus l
+}
+
 dotfiles () {
     hyprctl dispatch workspace 4
     kitty --working-directory="$HOME/dotfiles/" & sleep 0.5
