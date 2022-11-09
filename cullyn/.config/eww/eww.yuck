@@ -35,16 +35,16 @@
   )
 )
 
-(defwindow screenctl
-  :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :anchor "top right" :y "100px")
-  (screenctl)
-)
-
 (defwindow workspaces
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :width "8%" :anchor "bottom center")
   (workspaces)
+)
+
+(defwindow screenctl
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "bottom right" :y "80px")
+  (screenctl)
 )
 
 (defwindow misc

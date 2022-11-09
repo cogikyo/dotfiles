@@ -518,8 +518,8 @@ window {
     transition: all 0.5s ease-out;
     &-hovered {
       background-color: rgba($navy, 0.25);
-      background-size: 220%;
-      background-position: calc(50% -8px) calc(50% + 0px);
+      background-size: 210%;
+      background-position: calc(50% - 4px) calc(50% - 2px);
       border-radius: 27px 0px 17px 27px;
     }
   }
