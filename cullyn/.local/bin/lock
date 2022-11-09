@@ -4,40 +4,25 @@ kill_background () {
     ps -ef | rg "$1" | rg -v rg | awk '{print $2}' | xargs kill
 }
 
-suspend () {
-    systemctl suspend
-    sleep 3
-    hyprctl dispatch workspace 6
-    systemctl suspend
-}
-
-monitor_off () {
-    sleep 3
-    if [[ -n "$1" ]]; then
-        "$1"
-    else
-        # hyprctl dispatch dpms off
-        # hyprctl dispatch workspace 6
-        exit 0
-    fi
-}
-
-
 current_ws=$(tail -n 1 "/tmp/eww/workspace")
-sleep 0.5
-
 hyprctl dispatch workspace 6
 killall eww -9
 mpvpaper -o "--loop --brightness=3  --contrast=6  --saturation=-50  --hue=-8 --gamma=-20" "HDMI-A-1" ~/dotfiles/resources/videos/blackhole.webm & disown
-sleep 0.5
+sleep 0.75
 kill_background "dna"
-monitor_off "$1" & disown
 
+if [[ "$1" == "suspend" ]]; then
+    systemctl suspend
+    sleep 10
+    systemctl suspend
+fi
+
+gdbus call -e -d de.mherzberg -o /de/mherzberg/wlrbrightness -m de.mherzberg.wlrbrightness.set 0.2
 swaylock -C "$HOME/.config/swaylock/config.conf"
-
 eval "$HOME/.local/bin/eww-open"
+gdbus call -e -d de.mherzberg -o /de/mherzberg/wlrbrightness -m de.mherzberg.wlrbrightness.set 1
 mpvpaper -o "--loop --brightness=6 --contrast=9 --saturation=-16 --hue=-24" "HDMI-A-1" ~/dotfiles/resources/videos/dna.mp4 &>/dev/null & disown
-sleep 0.5
+sleep 0.75
 kill_background "blackhole"
 hyprctl dispatch workspace "$current_ws"
 notify-send "$current_ws"

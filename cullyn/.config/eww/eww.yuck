@@ -442,7 +442,7 @@
         )
       )
       (label
-        :class "weather-moon"
+        :class "weather-moon${weather.moon == " " ? "-full" : ""}"
         :markup "<tt>${weather.moon}</tt>"
         :style "margin: -10px -20px 0 2px;"
       )
@@ -1013,29 +1013,35 @@
 ;}}}
 ; 🎛️ systemctl: {{{
 
-(defvar power-url "/home/cullyn/.config/eww/assets/powerhouse.svg" )
 (defvar systemctl-extra false)
 (defwidget systemctl []
   (eventbox
-    :cursor "pointer"
     :onhover "eww update systemctl-extra=true"
     :onhoverlost "eww update systemctl-extra=false"
-    ; :onrightclick "~/.local/bin/lock & disown"
-    ; :onmiddleclick "~/.local/bin/lock suspend & disown"
-    (box :space-evenly false :spacing 0
-      :class "systemctl-box ${systemctl-extra ? "systemctl-box-extra" : "" }"
-      :style "background-image: url('${power-url}');"
-      (slide-n-fade :direction "left" :bool systemctl-extra
-        (eventbox
-          :cursor "pointer"
-          (box :space-evenly false :spacing 0
-            (label :text "ﰇ")
-            (label :text "ﰇ")
-            (label :text "ﰇ")
-          )
+    :onrightclick "~/.local/bin/lock suspend & disown"
+    (box
+      :space-evenly false :spacing 0
+      :class "systemctl-box ${systemctl-extra ? "systemctl-box-hovered" : "" }"
+      :style "background-image: url('assets/powerhouse${systemctl-extra ? "-active" : ""}.svg');"
+      (revealer
+        :transition "crossfade"
+        :reveal systemctl-extra
+        (box :space-evenly false :spacing 0
+          (systemctl-option :option "restart"  :icon " " :command "systemctl reboot")
+          (systemctl-option :option "suspend"  :icon "⏾ " :command "~/.local/bin/lock suspend & disown")
+          (systemctl-option :option "poweroff" :icon " " :command "systemctl poweroff")
         )
       )
     )
+  )
+)
+
+(defvar restart-hover false)
+(defwidget systemctl-option [option icon command]
+  (eventbox
+    :cursor "pointer"
+    :onclick command
+    (label :class "systemctl-${option}"  :text icon)
   )
 )
 
