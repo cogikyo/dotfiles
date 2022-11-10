@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+
+inprog=$(ps -ef | rg adjust | rg -v rg | wc -l)
+if [[ "$inprog" -gt 2 ]]; then
+    exit 1
+fi
+
+reset () {
+    pkill wlr-brightness
+    sleep 0.1
+    wlr-brightness & disown
+    echo "10" > "/tmp/eww/brightness"
+    gdbus call -e -d de.mherzberg -o /de/mherzberg/wlrbrightness -m de.mherzberg.wlrbrightness.set 1
+}
+
+night () {
+    echo "4" > "/tmp/eww/brightness"
+    gdbus call -e -d de.mherzberg -o /de/mherzberg/wlrbrightness -m de.mherzberg.wlrbrightness.set 0.4
+}
+
+adjust () {
+    br="$2"
+    notify-send "$br"
+
+    if [[ "$br" -ge 2 ]] && [[ "$br" -le 10 ]]; then
+        if [[ "$1" == "down" ]]; then
+            if [[ "$br" -gt 2 ]]; then
+                gdbus call -e -d de.mherzberg -o /de/mherzberg/wlrbrightness -m de.mherzberg.wlrbrightness.decrease 0.1
+                br=$((br - 1))
+            fi
+        else
+            if [[ "$br" -lt 10 ]]; then
+                gdbus call -e -d de.mherzberg -o /de/mherzberg/wlrbrightness -m de.mherzberg.wlrbrightness.increase 0.1
+                br=$((br + 1))
+            fi
+        fi
+        echo "$br" >> "/tmp/eww/brightness"
+    else
+        exit 0
+    fi
+}
+
+"$@"

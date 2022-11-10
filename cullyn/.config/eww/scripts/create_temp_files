@@ -13,5 +13,6 @@ done
 
 echo "13:00" > "$dir/alarm"
 echo "01:30" > "$dir/timer"
+echo "10" > "$dir/brightness"
 
 exit 0
