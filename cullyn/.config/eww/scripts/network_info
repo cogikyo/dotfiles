@@ -1,5 +1,0 @@
-#!/usr/bin/env bash
-
-while  true; do
-    vnstat -tr 2 --json > "/tmp/eww/network_info.json"
-done

@@ -898,21 +898,6 @@
   (box :class "user" :style "background-image: url('${userUrl}');")
 )
 ; }}}
-; 🔆 screenctl: {{{
-
-(defvar screenctl-hovered false)
-(defwidget screenctl []
-  (eventbox
-    :onhover "eww update screenctl-hovered=true"
-    :onhoverlost "eww update screenctl-hovered=false"
-    (box :space-evenly false :spacing 0
-      :class "screenctl-box ${screenctl-hovered ? "screenctl-box-hovered" : "" }"
-      :style "background-image: url('assets/screenctl/br${screenctl-hovered ? "" : ""}.svg');"
-    )
-  )
-)
-
-; }}}
 
 ; 👾 workspaces: {{{
 
@@ -1045,6 +1030,25 @@
 )
 
 ;}}}
+; 🔆 screenctl: {{{
+
+(defvar screenctl-hovered false)
+(deflisten brightness 'tail -F /tmp/eww/brightness 2> /dev/null')
+(defwidget screenctl []
+  (eventbox
+    :onhover "eww update screenctl-hovered=true"
+    :onhoverlost "eww update screenctl-hovered=false"
+    :onclick "scripts/brightness night"
+    :onscroll "scripts/brightness adjust {} ${brightness} & disown"
+    :onrightclick "scripts/brightness reset & disown"
+    (box :space-evenly false :spacing 0
+      :class "screenctl-box ${screenctl-hovered ? "screenctl-box-hovered" : "" }"
+      :style "background-image: url('assets/screenctl/br${screenctl-hovered ? "" : ""}.svg');"
+    )
+  )
+)
+
+; }}}
 ; 🎛️ systemctl: {{{
 
 (defvar systemctl-extra false)
@@ -1063,7 +1067,7 @@
         :reveal systemctl-extra
         (box :space-evenly false :spacing 0
           (systemctl-option :option "restart"  :icon " " :command "systemctl reboot")
-          (systemctl-option :option "suspend"  :icon "⏾ " :command "~/.local/bin/lock suspend & disown")
+          (systemctl-option :option "lock"     :icon " " :command "~/.local/bin/lock disown")
           (systemctl-option :option "poweroff" :icon " " :command "systemctl poweroff")
         )
       )
