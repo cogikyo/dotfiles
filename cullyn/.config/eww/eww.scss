@@ -501,14 +501,14 @@ window {
   @include corner-image('top-right');
 }
 // }}}
-// 🔆 screenctl: {{{
+// 🔆 screenctl:
 .screenctl {
   &-box {
     background-repeat: no-repeat;
-    background-size: 120%;
-    background-position: calc(50% + 2px) 50%;
+    background-size: 140%;
+    background-position: calc(50% + 4px) calc(50% - 2px);
     min-width: 48px;
-    min-height: 60px;
+    min-height: 69px;
     box-shadow: -3px -3px 8px 2px rgba($blue, 0.16);
     margin: 20px 0 20px 20px;
     border-radius: 27px 0px 17px 27px;
@@ -517,15 +517,15 @@ window {
     border-bottom: 1px solid $blue-d;
     transition: all 0.5s ease-out;
     &-hovered {
-      background-color: rgba($navy, 0.25);
-      background-size: 210%;
-      background-position: calc(50% - 4px) calc(50% - 2px);
+      min-width: 330px;
+      min-height: 340px;
+      background-color: rgba($navy, 0.5);
+      background-size: 120%;
+      background-position: 50% calc(50% - 4px);
       border-radius: 27px 0px 17px 27px;
     }
   }
 }
-
-// }}}
 
 // 👾 workspaces: {{{
 

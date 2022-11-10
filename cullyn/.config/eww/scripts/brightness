@@ -20,8 +20,6 @@ night () {
 
 adjust () {
     br="$2"
-    notify-send "$br"
-
     if [[ "$br" -ge 2 ]] && [[ "$br" -le 10 ]]; then
         if [[ "$1" == "down" ]]; then
             if [[ "$br" -gt 2 ]]; then
