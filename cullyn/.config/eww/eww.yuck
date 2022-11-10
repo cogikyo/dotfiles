@@ -43,7 +43,7 @@
 
 (defwindow screenctl
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :anchor "bottom right" :y "80px")
+  :geometry (geometry :anchor "top right" :y "100px")
   (screenctl)
 )
 
@@ -1038,12 +1038,12 @@
   (eventbox
     :onhover "eww update screenctl-hovered=true"
     :onhoverlost "eww update screenctl-hovered=false"
-    :onclick "scripts/brightness night"
+    :onclick "scripts/brightness night & disown"
     :onscroll "scripts/brightness adjust {} ${brightness} & disown"
     :onrightclick "scripts/brightness reset & disown"
     (box :space-evenly false :spacing 0
       :class "screenctl-box ${screenctl-hovered ? "screenctl-box-hovered" : "" }"
-      :style "background-image: url('assets/screenctl/br${screenctl-hovered ? "" : ""}.svg');"
+      :style "background-image: url('assets/screenctl/br-${screenctl-hovered ? "10" : "10"}.svg');"
     )
   )
 )
