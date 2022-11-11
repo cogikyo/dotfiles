@@ -505,21 +505,25 @@ window {
 .screenctl {
   &-box {
     background-repeat: no-repeat;
-    background-position: center;
     background-size: 150%;
+    background-position: calc(50% + 6px) 50%;
     min-width: 48px;
     min-height: 64px;
     box-shadow: -3px 0px 8px 1px rgba($blue, 0.16);
-    margin: 20px 0 20px 20px;
+    margin: 30px 0 30px 30px;
     border-radius: 60% 0 5% 60%;
     border-left: 2px solid $blue;
     border-top: 1px solid $blue;
-    border-bottom: 1px solid $blue-d;
+    border-bottom: 1px solid $blue;
     transition: all 0.25s $ease-out-snap;
     &-hovered {
       min-width: 250px;
       min-height: 250px;
+      border-left: 4px solid $blue;
+      border-top: 2px solid $blue;
+      border-bottom: 2px solid $blue;
       background-color: rgba($bg, 0.8);
+      background-position: 50% 50%;
       box-shadow: -3px 0px 8px 1px rgba($blue, 0.25);
       background-size: 120%;
       border-radius: 42% 0 38% 48%;
