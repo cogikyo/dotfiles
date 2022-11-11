@@ -155,6 +155,7 @@ return packer.startup(function(use)
     use("mbbill/undotree")
     use("ggandor/lightspeed.nvim")
     use("elkowar/yuck.vim")
+    -- use("amadeus/vim-convert-color-to")
     ---------------------------------------------------------------------------
 
     -- Automatically set up configuration after cloning packer.nvim

@@ -509,20 +509,21 @@ window {
     background-position: calc(50% + 4px) calc(50% - 2px);
     min-width: 48px;
     min-height: 69px;
-    box-shadow: -3px -3px 8px 2px rgba($blue, 0.16);
+    box-shadow: -3px 0px 8px 1px rgba($blue, 0.16);
     margin: 20px 0 20px 20px;
     border-radius: 27px 0px 17px 27px;
     border-left: 2px solid $blue;
     border-top: 1px solid $blue;
     border-bottom: 1px solid $blue-d;
-    transition: all 0.5s ease-out;
+    transition: all 0.25s $ease-out-snap;
     &-hovered {
-      min-width: 330px;
-      min-height: 340px;
-      background-color: rgba($navy, 0.5);
+      min-width: 250px;
+      min-height: 250px;
+      background-color: rgba($bg, 0.8);
+      box-shadow: -3px 0px 8px 1px rgba($blue, 0.25);
       background-size: 120%;
       background-position: 50% calc(50% - 4px);
-      border-radius: 27px 0px 17px 27px;
+      border-radius: 20% 0px 10% 20%;
     }
   }
 }
