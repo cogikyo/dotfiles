@@ -505,13 +505,13 @@ window {
 .screenctl {
   &-box {
     background-repeat: no-repeat;
-    background-size: 140%;
-    background-position: calc(50% + 4px) calc(50% - 2px);
+    background-position: center;
+    background-size: 150%;
     min-width: 48px;
-    min-height: 69px;
+    min-height: 64px;
     box-shadow: -3px 0px 8px 1px rgba($blue, 0.16);
     margin: 20px 0 20px 20px;
-    border-radius: 27px 0px 17px 27px;
+    border-radius: 60% 0 5% 60%;
     border-left: 2px solid $blue;
     border-top: 1px solid $blue;
     border-bottom: 1px solid $blue-d;
@@ -522,8 +522,7 @@ window {
       background-color: rgba($bg, 0.8);
       box-shadow: -3px 0px 8px 1px rgba($blue, 0.25);
       background-size: 120%;
-      background-position: 50% calc(50% - 4px);
-      border-radius: 20% 0px 10% 20%;
+      border-radius: 42% 0 38% 48%;
     }
   }
 }

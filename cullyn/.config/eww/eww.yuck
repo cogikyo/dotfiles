@@ -1043,7 +1043,7 @@
     :onrightclick "scripts/brightness reset & disown"
     (box :space-evenly false :spacing 0
       :class "screenctl-box ${screenctl-hovered ? "screenctl-box-hovered" : "" }"
-      :style "background-image: url('assets/screenctl/br-${screenctl-hovered ? "10" : "10"}.svg');"
+      :style "background-image: url('assets/screenctl/brctl${screenctl-hovered ? "" : ""}.svg');"
     )
   )
 )
