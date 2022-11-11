@@ -43,11 +43,11 @@
        inkscape:collect="always"
        id="linearGradient3151">
       <stop
-         style="stop-color:#5885d5;stop-opacity:0.2;"
+         style="stop-color:#5885d5;stop-opacity:1;"
          offset="0"
          id="stop3147" />
       <stop
-         style="stop-color:#7aa2f7;stop-opacity:0.2;"
+         style="stop-color:#7aa2f7;stop-opacity:1;"
          offset="0.59122026"
          id="stop3157" />
       <stop
@@ -63,7 +63,7 @@
        inkscape:collect="always"
        id="10-l">
       <stop
-         style="stop-color:#e0617a;stop-opacity:0.2;"
+         style="stop-color:#e0617a;stop-opacity:1;"
          offset="0"
          id="stop2115" />
       <stop

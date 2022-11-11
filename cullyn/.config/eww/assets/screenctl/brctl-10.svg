@@ -71,18 +71,6 @@
          offset="1"
          id="stop2117" />
     </linearGradient>
-    <linearGradient
-       inkscape:collect="always"
-       id="10-j">
-      <stop
-         style="stop-color:#a0e4ff;stop-opacity:1;"
-         offset="0"
-         id="stop1214" />
-      <stop
-         style="stop-color:#c2efff;stop-opacity:1;"
-         offset="1"
-         id="stop2113" />
-    </linearGradient>
     <inkscape:path-effect
        effect="fillet_chamfer"
        id="path-effect3060"
