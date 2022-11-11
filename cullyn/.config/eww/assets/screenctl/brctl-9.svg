@@ -43,65 +43,33 @@
        inkscape:collect="always"
        id="linearGradient10869">
       <stop
-         style="stop-color:#5784d5;stop-opacity:0.89999998;"
+         style="stop-color:#5784d5;stop-opacity:1"
          offset="0"
          id="stop10861" />
       <stop
-         style="stop-color:#7aa2f7;stop-opacity:0.89999998;"
+         style="stop-color:#7aa2f7;stop-opacity:1"
          offset="0.59122026"
          id="stop10863" />
       <stop
-         style="stop-color:#a0e4ff;stop-opacity:0.89999998;"
+         style="stop-color:#a0e4ff;stop-opacity:0.9"
          offset="0.9180153"
          id="stop10865" />
       <stop
-         style="stop-color:#bdeaff;stop-opacity:0.89999998;"
+         style="stop-color:#bdeaff;stop-opacity:0.9"
          offset="1"
          id="stop10867" />
     </linearGradient>
     <linearGradient
        inkscape:collect="always"
-       id="linearGradient3151">
-      <stop
-         style="stop-color:#5784d5;stop-opacity:1;"
-         offset="0"
-         id="stop3147" />
-      <stop
-         style="stop-color:#7aa2f7;stop-opacity:1;"
-         offset="0.59122026"
-         id="stop3157" />
-      <stop
-         style="stop-color:#a0e4ff;stop-opacity:1;"
-         offset="0.9180153"
-         id="stop3155" />
-      <stop
-         style="stop-color:#bdeaff;stop-opacity:1;"
-         offset="1"
-         id="stop3149" />
-    </linearGradient>
-    <linearGradient
-       inkscape:collect="always"
        id="10-l">
       <stop
-         style="stop-color:#e0617a;stop-opacity:0.89999998;"
+         style="stop-color:#e0617a;stop-opacity:1"
          offset="0"
          id="stop2115" />
       <stop
-         style="stop-color:#fadeb8;stop-opacity:0.89999998;"
+         style="stop-color:#fadeb8;stop-opacity:0.9"
          offset="1"
          id="stop2117" />
-    </linearGradient>
-    <linearGradient
-       inkscape:collect="always"
-       id="10-j">
-      <stop
-         style="stop-color:#a0e4ff;stop-opacity:1;"
-         offset="0"
-         id="stop1214" />
-      <stop
-         style="stop-color:#c2efff;stop-opacity:1;"
-         offset="1"
-         id="stop2113" />
     </linearGradient>
     <inkscape:path-effect
        effect="fillet_chamfer"

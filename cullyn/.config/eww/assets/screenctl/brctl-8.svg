@@ -43,19 +43,19 @@
        inkscape:collect="always"
        id="linearGradient3151">
       <stop
-         style="stop-color:#5784d5;stop-opacity:0.80000001;"
+         style="stop-color:#5784d5;stop-opacity:1"
          offset="0"
          id="stop3147" />
       <stop
-         style="stop-color:#7aa2f7;stop-opacity:0.80000001;"
+         style="stop-color:#7aa2f7;stop-opacity:1"
          offset="0.59122026"
          id="stop3157" />
       <stop
-         style="stop-color:#a0e4ff;stop-opacity:0.80000001;"
+         style="stop-color:#a0e4ff;stop-opacity:0.8"
          offset="0.9180153"
          id="stop3155" />
       <stop
-         style="stop-color:#bdeaff;stop-opacity:0.80000001;"
+         style="stop-color:#bdeaff;stop-opacity:0.8"
          offset="1"
          id="stop3149" />
     </linearGradient>
@@ -63,25 +63,13 @@
        inkscape:collect="always"
        id="10-l">
       <stop
-         style="stop-color:#e0617a;stop-opacity:0.80000001;"
+         style="stop-color:#e0617a;stop-opacity:1"
          offset="0"
          id="stop2115" />
       <stop
-         style="stop-color:#fadeb8;stop-opacity:0.80000001;"
+         style="stop-color:#fadeb8;stop-opacity:0.8"
          offset="1"
          id="stop2117" />
-    </linearGradient>
-    <linearGradient
-       inkscape:collect="always"
-       id="10-j">
-      <stop
-         style="stop-color:#a0e4ff;stop-opacity:1;"
-         offset="0"
-         id="stop1214" />
-      <stop
-         style="stop-color:#c2efff;stop-opacity:1;"
-         offset="1"
-         id="stop2113" />
     </linearGradient>
     <inkscape:path-effect
        effect="fillet_chamfer"
