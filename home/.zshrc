@@ -78,7 +78,7 @@ alias ew='eww-open'
 alias ews='eww inspector & disown && exit'
 alias el='eww logs'
 choas () {
-    kitty --hold --title="$1" -e $1 & disown
+    kitty --title="$1" -c ".config/kitty/kitty.conf" -c ".config/kitty/nobg.conf" -e $1 & disown
 }
 alias man='man -r=""'
 pacclean () {
