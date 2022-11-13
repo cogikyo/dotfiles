@@ -33,7 +33,6 @@ local options = {
     showtabline = 0,
     number = true,
     relativenumber = true,
-    cursorline = true,
     termguicolors = true,
     signcolumn = "yes",
     colorcolumn = "80",
