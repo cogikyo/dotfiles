@@ -29,9 +29,17 @@
 
 (defwindow computer
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :width "30%" :anchor "top right")
+  :geometry (geometry :anchor "top right" :x "100px")
   (box :class "computer" :halign "end" :space-evenly false :spacing 0
-    (cpu) (memory) (gpu) (user)
+    (cpu) (memory) (gpu)
+  )
+)
+
+(defwindow user
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "top right")
+  (box :halign "end" :space-evenly false :spacing 0
+    (user)
   )
 )
 
@@ -894,8 +902,16 @@
 ; 🤓 user: {{{
 
 (defvar userUrl '/home/cullyn/.config/eww/assets/nosvagor.png')
+(defvar user-hover false)
 (defwidget user []
-  (box :class "user" :style "background-image: url('${userUrl}');")
+ (eventbox
+    :onhover "eww update user-hover=true"
+    :onhoverlost "eww update user-hover=false"
+    (box :space-evenly false :spacing 0
+      :class "user-box ${user-hover ? "user-box-hover" : ""}"
+      :style "background-image: url('${userUrl}');"
+    )
+  )
 )
 ; }}}
 
@@ -1032,17 +1048,17 @@
 ;}}}
 ; 🔆 screenctl: {{{
 
-(defvar screenctl-hovered false)
+(defvar screenctl-hover false)
 (deflisten brightness 'tail -F /tmp/eww/brightness 2> /dev/null')
 (defwidget screenctl []
   (eventbox
-    :onhover "eww update screenctl-hovered=true"
-    :onhoverlost "eww update screenctl-hovered=false"
+    :onhover "eww update screenctl-hover=true"
+    :onhoverlost "eww update screenctl-hover=false"
     :onclick "scripts/brightness night & disown"
     :onscroll "scripts/brightness adjust {} ${brightness} & disown"
     :onrightclick "scripts/brightness reset & disown"
     (box :space-evenly false :spacing 0
-      :class "screenctl-box ${screenctl-hovered ? "screenctl-box-hovered" : "" }"
+      :class "screenctl-box ${screenctl-hover ? "screenctl-box-hover" : "" }"
       :style "background-image: url('assets/screenctl/brctl-${brightness}.svg');"
     )
   )
