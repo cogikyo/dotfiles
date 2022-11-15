@@ -492,8 +492,7 @@ window {
     border-bottom: 1px solid $blue;
     box-shadow: -1px 3px 8px 2px rgba($blue, 0.16);
 
-    margin-top: -1px;
-    margin-left: 12px;
+    margin: -1px 0px 20px 12px;
     &-hover {
       min-height: 200px;
       min-width: 200px;
@@ -501,37 +500,6 @@ window {
   }
 }
 // }}}
-// 🔆 screenctl:
-.screenctl {
-  &-box {
-    background-repeat: no-repeat;
-    margin: 30px 0 30px 30px;
-    transition: all 0.25s $ease-out-snap;
-
-    min-width: 48px;
-    min-height: 64px;
-    background-size: 150%;
-    background-position: calc(50% + 6px) 50%;
-    background-color: rgba($bg, 0.2);
-    box-shadow: -3px 0px 8px 1px rgba($blue, 0.16);
-    border-radius: 60% 0 5% 60%;
-    border-top: 1px solid $blue;
-    border-left: 2px solid $blue;
-    border-bottom: 1px solid $blue;
-    &-hover {
-      min-width: 250px;
-      min-height: 250px;
-      background-position: 50% 50%;
-      background-color: rgba($bg, 0.8);
-      box-shadow: -3px 0px 8px 1px rgba($blue, 0.25);
-      border-radius: 42% 0 38% 48%;
-      border-top: 2px solid $orange;
-      border-left: 4px solid $orange;
-      border-bottom: 2px solid $orange;
-      background-size: 120%;
-    }
-  }
-}
 
 // 👾 workspaces: {{{
 
@@ -578,13 +546,75 @@ window {
 }
 
 // }}}
-// 🎛️ systemctl: {{{
+.signal {
+  &-box {
+    background-repeat: no-repeat;
+    margin: 30px 0 30px 30px;
+    transition: all 0.25s $ease-out-snap;
 
+    min-width: 48px;
+    min-height: 64px;
+    background-size: 150%;
+    background-position: calc(50% + 6px) 50%;
+    background-color: rgba($bg, 0.2);
+    box-shadow: -3px 0px 8px 1px rgba($blue, 0.16);
+    border-radius: 60% 0 5% 60%;
+    border-top: 1px solid $blue;
+    border-left: 2px solid $blue;
+    border-bottom: 1px solid $blue;
+    &-hover {
+      min-width: 250px;
+      min-height: 250px;
+      background-position: 50% 50%;
+      background-color: rgba($bg, 0.8);
+      box-shadow: -3px 0px 8px 1px rgba($blue, 0.25);
+      border-radius: 42% 0 38% 48%;
+      border-top: 2px solid $orange;
+      border-left: 4px solid $orange;
+      border-bottom: 2px solid $orange;
+      background-size: 120%;
+    }
+  }
+}
+
+// 🔆 screenctl: {{{
+.screenctl {
+  &-box {
+    background-repeat: no-repeat;
+    margin: 30px 0 30px 30px;
+    transition: all 0.25s $ease-out-snap;
+
+    min-width: 48px;
+    min-height: 64px;
+    background-size: 150%;
+    background-position: calc(50% + 6px) 50%;
+    background-color: rgba($bg, 0.2);
+    box-shadow: -3px 0px 8px 1px rgba($blue, 0.16);
+    border-radius: 60% 0 5% 60%;
+    border-top: 1px solid $blue;
+    border-left: 2px solid $blue;
+    border-bottom: 1px solid $blue;
+    &-hover {
+      min-width: 250px;
+      min-height: 250px;
+      background-position: 50% 50%;
+      background-color: rgba($bg, 0.8);
+      box-shadow: -3px 0px 8px 1px rgba($blue, 0.25);
+      border-radius: 42% 0 38% 48%;
+      border-top: 2px solid $orange;
+      border-left: 4px solid $orange;
+      border-bottom: 2px solid $orange;
+      background-size: 120%;
+    }
+  }
+}
+// }}}
+// 🎛️ systemctl: {{{
 .systemctl {
   &-box {
     background-repeat: no-repeat;
-    background-size: 85%;
-    background-position: 10px 5px;
+    background-size: 95%;
+    background-position: calc(50% + 2px) calc(50% + 2px);
     min-height: 72px;
     min-width: 72px;
     border-radius: 69px 27px 0px 17px;
@@ -596,7 +626,7 @@ window {
     transition: all 0.5s ease-out;
     &-hovered {
       background-color: rgba($navy, 0.53);
-      background-position: calc(50% + 14px) 28px;
+      background-position: calc(50% + 14px) calc(50% + 16px);
       background-size: 69%;
       background-repeat: no-repeat;
       min-height: 90px;
