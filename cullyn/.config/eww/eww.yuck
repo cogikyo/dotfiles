@@ -9,65 +9,6 @@
 (deflisten cycle-5 'while true; do echo 0; sleep 5; echo 1; sleep 5; done')
 
 ; }}}
-; 🪟 windows: {{{
-
-(defwindow sound
-  :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :width "30%" :anchor "top left")
-  (box :class "sound" :halign "start" :space-evenly false :spacing 0
-    (music) (audio)
-  )
-)
-
-(defwindow today
-  :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :width "45%" :anchor "top left" :x "1050px")
-  (centerbox :class "today"
-    (weather) (time) (date)
-  )
-)
-
-(defwindow computer
-  :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :anchor "top right" :x "100px")
-  (box :class "computer" :halign "end" :space-evenly false :spacing 0
-    (cpu) (memory) (gpu)
-  )
-)
-
-(defwindow user
-  :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :anchor "top right")
-  (box :halign "end" :space-evenly false :spacing 0
-    (user)
-  )
-)
-
-(defwindow workspaces
-  :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :width "8%" :anchor "bottom center")
-  (workspaces)
-)
-
-(defwindow screenctl
-  :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :anchor "top right" :y "100px")
-  (screenctl)
-)
-
-(defwindow misc
-  :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :anchor "bottom right" :x "100px" )
-  (misc)
-)
-
-(defwindow systemctl
-  :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :anchor "bottom right" )
-  (systemctl)
-)
-
-; }}}
 ; ♻️  widgets: {{{
 
 (defwidget slide-n-fade [direction bool]
@@ -115,6 +56,14 @@
 ; }}}
 ; =============================================================================
 
+; 🔊 sound: {{{
+(defwindow sound
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :width "30%" :anchor "top left")
+  (box :class "sound" :halign "start" :space-evenly false :spacing 0
+    (music) (audio)
+  )
+)
 ; 🎵 music: {{{
 
 (defvar player "youtube-music-desktop-app")
@@ -362,6 +311,15 @@
 )
 
 ; }}}
+; }}}
+; 🎂 today {{{
+(defwindow today
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :width "45%" :anchor "top left" :x "1050px")
+  (centerbox :class "today"
+    (weather) (time) (date)
+  )
+)
 
 ; 🌧️ weather: {{{
 
@@ -582,6 +540,7 @@
 ; }}}
 ; 📅 date: {{{
 
+
 (deflisten weeks_alive 'tail -F /tmp/eww/weeks_alive')
 (deflisten date 'tail -F /tmp/eww/date')
 (defvar date-info false)
@@ -632,6 +591,15 @@
 
 ; }}}
 
+; }}}
+; 🖥️ computer: {{{
+(defwindow computer
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "top right" :x "100px")
+  (box :class "computer" :halign "end" :space-evenly false :spacing 0
+    (cpu) (memory) (gpu)
+  )
+)
 ; ♻️  computer-widgets: {{{
 ; Update `define_builtin_vars! { Duration::new(0, 500000000)` in inbuilt.rs
 ; Default is (2, 0), but I like updates of 0.5 seconds for cpu polling.
@@ -899,7 +867,17 @@
 )
 
 ; }}}
+
+; }}}
 ; 🤓 user: {{{
+
+(defwindow user
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "top right")
+  (box :halign "end" :space-evenly false :spacing 0
+    (user)
+  )
+)
 
 (defvar userUrl '/home/cullyn/.config/eww/assets/nosvagor.png')
 (defvar user-hover false)
@@ -916,6 +894,12 @@
 ; }}}
 
 ; 👾 workspaces: {{{
+
+(defwindow workspaces
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :width "8%" :anchor "bottom center")
+  (workspaces)
+)
 
 (deflisten active-ws 'tail -F /tmp/eww/workspace')
 (deflisten occupied 'tail -F /tmp/eww/occupied')
@@ -956,21 +940,18 @@
 )
 
 ; }}}
+
 ; 💽 misc: {{{
 
+(defwindow misc
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "bottom right" :x "100px" )
+  (misc)
+)
 
 (defwidget misc []
   (box :class "misc-box" :space-evenly false :spacing 10
-    (apps) (pacman) (dunst) (network)
-  )
-)
-
-(defwidget apps []
-  (eventbox
-    :cursor "pointer"
-    (label
-      :text " "
-    )
+    (pacman) (dunst) (network)
   )
 )
 
@@ -1048,6 +1029,12 @@
 ;}}}
 ; 🔆 screenctl: {{{
 
+(defwindow screenctl
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "top right" :y "1450px")
+  (screenctl)
+)
+
 (defvar screenctl-hover false)
 (deflisten brightness 'tail -F /tmp/eww/brightness 2> /dev/null')
 (defwidget screenctl []
@@ -1065,7 +1052,34 @@
 )
 
 ; }}}
+
+(defwindow signal
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "top right" :y "1575px" )
+  (signal)
+)
+
+(defvar signal-hover false)
+(defwidget signal []
+  (eventbox
+    :onhover "eww update signal-hover=true"
+    :onhoverlost "eww update signal-hover=false"
+    (box
+      :space-evenly false :spacing 0
+      :class "signal-box ${signal-hover ? "signal-box-hover" : "" }"
+      :style "background-image: url('assets/connection/signal.svg');"
+      :tooltip "mitochondria, the powerhouse of the cell"
+    )
+  )
+)
+
 ; 🎛️ systemctl: {{{
+
+(defwindow systemctl
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "bottom right" )
+  (systemctl)
+)
 
 (defvar systemctl-extra false)
 (defwidget systemctl []
