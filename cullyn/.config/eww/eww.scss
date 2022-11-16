@@ -532,82 +532,53 @@ window {
 }
 // }}}
 // 💽 misc: {{{
-.misc {
-  &-box {
-    color: $blue;
-    font-family: $monospace;
-  }
-  // &-network {
-  // background: rgba($bg, 0.69);
-  // border: 1px solid $blue;
-  // box-shadow: 0px -2px 6px 2px rgba($blue, 0.16);
-  // padding: 0 8px;
-  // }
-}
 
-// }}}
-.signal {
-  &-box {
-    background-repeat: no-repeat;
-    margin: 30px 0 30px 30px;
-    transition: all 0.25s $ease-out-snap;
+.tabbox {
+  background-repeat: no-repeat;
+  margin: 30px 0 30px 30px;
+  transition: all 0.25s $ease-out-snap;
 
-    min-width: 48px;
-    min-height: 64px;
-    background-size: 150%;
-    background-position: calc(50% + 6px) 50%;
-    background-color: rgba($bg, 0.2);
-    box-shadow: -3px 0px 8px 1px rgba($blue, 0.16);
-    border-radius: 60% 0 5% 60%;
-    border-top: 1px solid $blue;
-    border-left: 2px solid $blue;
-    border-bottom: 1px solid $blue;
-    &-hover {
-      min-width: 250px;
-      min-height: 250px;
-      background-position: 50% 50%;
-      background-color: rgba($bg, 0.8);
-      box-shadow: -3px 0px 8px 1px rgba($blue, 0.25);
-      border-radius: 42% 0 38% 48%;
-      border-top: 2px solid $orange;
-      border-left: 4px solid $orange;
-      border-bottom: 2px solid $orange;
-      background-size: 120%;
-    }
+  min-width: 48px;
+  min-height: 64px;
+  background-size: 150%;
+  background-position: calc(50% + 6px) 50%;
+  background-color: rgba($bg, 0.2);
+  box-shadow: -3px 0px 8px 1px rgba($blue, 0.16);
+  border-radius: 60% 0 5% 60%;
+  border-top: 1px solid $blue;
+  border-left: 2px solid $blue;
+  border-bottom: 1px solid $blue;
+  &-hover {
+    min-width: 250px;
+    min-height: 250px;
+    background-position: 50% 50%;
+    background-color: rgba($bg, 0.8);
+    box-shadow: -3px 0px 8px 1px rgba($blue, 0.25);
+    border-radius: 42% 0 38% 48%;
+    border-top: 2px solid $orange;
+    border-left: 4px solid $orange;
+    border-bottom: 2px solid $orange;
+    background-size: 120%;
   }
 }
 
-// 🔆 screenctl: {{{
-.screenctl {
-  &-box {
-    background-repeat: no-repeat;
-    margin: 30px 0 30px 30px;
-    transition: all 0.25s $ease-out-snap;
-
-    min-width: 48px;
-    min-height: 64px;
-    background-size: 150%;
-    background-position: calc(50% + 6px) 50%;
-    background-color: rgba($bg, 0.2);
-    box-shadow: -3px 0px 8px 1px rgba($blue, 0.16);
-    border-radius: 60% 0 5% 60%;
-    border-top: 1px solid $blue;
-    border-left: 2px solid $blue;
-    border-bottom: 1px solid $blue;
-    &-hover {
-      min-width: 250px;
-      min-height: 250px;
-      background-position: 50% 50%;
-      background-color: rgba($bg, 0.8);
-      box-shadow: -3px 0px 8px 1px rgba($blue, 0.25);
-      border-radius: 42% 0 38% 48%;
-      border-top: 2px solid $orange;
-      border-left: 4px solid $orange;
-      border-bottom: 2px solid $orange;
-      background-size: 120%;
-    }
+.net {
+  font-size: 10px;
+  &-hover {
+    font-size: 36px;
+  }
+  &-up {
+    margin-bottom: 30px;
+  }
+  &-down {
+    margin-top: 0px;
+  }
+  &-ping {
+    margin-top: 38px;
+    margin-right: -2px;
   }
 }
+
 // }}}
 // 🎛️ systemctl: {{{
 .systemctl {
