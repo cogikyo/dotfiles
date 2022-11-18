@@ -2,7 +2,7 @@
 
 killall eww -9
 eww daemon
-eww open-many album-art music today computer user screenctl workspaces misc systemctl signal
+eww open-many album-art music today computer user screenctl workspaces notifications systemctl signal
 # eww inspector
 # sleep 0.75
 # hyprctl dispatch movefocus l
