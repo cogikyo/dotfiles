@@ -87,10 +87,10 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.118);
 }
 
 tooltip {
-  color: $blue;
-  background-color: rgba($bg, 0.69);
-  border: 1px solid $blue-g;
-  border-radius: 0 18px 18px 22px;
+  color: $orange;
+  background-color: rgba($bg, 0.9);
+  border: 1px solid $orange-g;
+  border-radius: 4px 24px 8px 20px;
 }
 
 .unit {
@@ -183,17 +183,22 @@ window {
 .music {
   &-cover {
     background-repeat: no-repeat;
-    background-size: 120%;
+    background-size: 115%;
+    background-position: 50% 50%;
     min-width: 80px;
     min-height: 80px;
-    border-radius: 0px 27px 69px 17px;
+    border-radius: 0px 27px 69px 27px;
     border-right: 2px solid $blue;
-    border-top: 1px solid $blue-d;
+    border-top: 1px solid $blue;
     border-bottom: 1px solid $blue;
     box-shadow: 1px 3px 8px 2px rgba($blue, 0.16);
+    transition: all 0.25s $ease-out-snap;
+    margin: -1px 20px 20px 0;
 
-    margin-top: -1px;
-    margin-right: 12px;
+    &-hover {
+      min-height: 200px;
+      min-width: 200px;
+    }
   }
   &-progress {
     color: $blue-d;
@@ -486,13 +491,13 @@ window {
     min-height: 80px;
     transition: all 0.25s $ease-out-snap;
 
-    border-radius: 27px 0px 17px 69px;
+    border-radius: 27px 0px 27px 69px;
     border-left: 2px solid $blue;
     border-top: 1px solid $blue;
     border-bottom: 1px solid $blue;
     box-shadow: -1px 3px 8px 2px rgba($blue, 0.16);
 
-    margin: -1px 0px 20px 12px;
+    margin: -1px 0px 20px 20px;
     &-hover {
       min-height: 200px;
       min-width: 200px;
@@ -538,44 +543,58 @@ window {
   margin: 30px 0 30px 30px;
   transition: all 0.25s $ease-out-snap;
 
-  min-width: 48px;
+  min-width: 64px;
   min-height: 64px;
-  background-size: 150%;
-  background-position: calc(50% + 6px) 50%;
+  background-size: 120%;
+  background-position: center;
   background-color: rgba($bg, 0.2);
-  box-shadow: -3px 0px 8px 1px rgba($blue, 0.16);
-  border-radius: 60% 0 5% 60%;
+  box-shadow: -2px 0px 8px 1px rgba($blue, 0.16);
+  border-radius: 50% 27% 48% 87%;
   border-top: 1px solid $blue;
   border-left: 2px solid $blue;
   border-bottom: 1px solid $blue;
   &-hover {
-    min-width: 250px;
-    min-height: 250px;
-    background-position: 50% 50%;
-    background-color: rgba($bg, 0.8);
-    box-shadow: -3px 0px 8px 1px rgba($blue, 0.25);
-    border-radius: 42% 0 38% 48%;
-    border-top: 2px solid $orange;
-    border-left: 4px solid $orange;
-    border-bottom: 2px solid $orange;
-    background-size: 120%;
+    min-width: 128px;
+    min-height: 128px;
+    background-color: rgba($bg, 0.69);
+    box-shadow: -2px 0px 8px 1px rgba($blue, 0.36);
+    border-radius: 42% 27% 48% 48%;
+    border-top: 1px solid $orange;
+    border-left: 2px solid $orange;
+    border-bottom: 1px solid $orange;
+    margin-right: -5px;
   }
 }
 
 .net {
-  font-size: 10px;
-  &-hover {
-    font-size: 36px;
-  }
+  transition: margin 0.25s $ease-out-snap;
+  font-size: 9px;
+
   &-up {
-    margin-bottom: 30px;
+    margin-bottom: 35px;
+    margin-left: -3px;
+    &-hover {
+      margin-bottom: 38px;
+      margin-left: 28px;
+    }
   }
   &-down {
-    margin-top: 0px;
+    margin-bottom: 9px;
+    margin-left: 7px;
+    &-hover {
+      margin-top: 20px;
+      margin-left: 16px;
+    }
   }
   &-ping {
-    margin-top: 38px;
-    margin-right: -2px;
+    font-size: 11px;
+    margin-top: 32px;
+    margin-left: -2px;
+    &-hover {
+      font-size: 11px;
+      margin-top: 14px;
+      margin-left: 5px;
+    }
   }
 }
 
@@ -588,10 +607,10 @@ window {
     background-position: calc(50% + 2px) calc(50% + 2px);
     min-height: 72px;
     min-width: 72px;
-    border-radius: 69px 27px 0px 17px;
-    border-left: 2px solid $blue;
+    border-radius: 69px 27px 0px 27px;
     border-top: 1px solid $blue;
-    border-bottom: 1px solid $blue-d;
+    border-left: 2px solid $blue;
+    border-bottom: 1px solid $blue;
     box-shadow: -3px -3px 8px 2px rgba($blue, 0.16);
     margin: 20px -8px -3px 20px;
     transition: all 0.5s ease-out;
@@ -599,6 +618,9 @@ window {
       background-color: rgba($navy, 0.53);
       background-position: calc(50% + 14px) calc(50% + 16px);
       background-size: 69%;
+      border-top: 2px solid $orange;
+      border-left: 3px solid $orange;
+      border-bottom: 1px solid $orange;
       background-repeat: no-repeat;
       min-height: 90px;
       min-width: 95px;
