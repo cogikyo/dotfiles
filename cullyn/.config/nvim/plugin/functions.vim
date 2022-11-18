@@ -44,6 +44,7 @@ augroup END
 augroup TEMP
     autocmd!
     autocmd BufWritePost eww.yuck,eww.scss execute 'silent !' 'alacritty --title="smallfloat" -e ~/.local/bin/eww-open & disown && exit'
+    autocmd BufWritePost dunstrc execute 'silent !' 'killall dunst;notify-send -u low dunst reloaded & disown'
 augroup END
 
 augroup TYPESCRIPT

@@ -6,15 +6,17 @@ if [[ "$inprog" -gt 2 ]]; then
 fi
 
 reset () {
+    echo "10" > "/tmp/eww/brightness"
     pkill wlr-brightness
     sleep 0.1
     wlr-brightness & disown
-    echo "10" > "/tmp/eww/brightness"
+    notify-send -h int:value:100 "normal brightness (100%)" -u low -t 1000 -i display-brightness-full
     gdbus call -e -d de.mherzberg -o /de/mherzberg/wlrbrightness -m de.mherzberg.wlrbrightness.set 1
 }
 
 night () {
     echo "4" > "/tmp/eww/brightness"
+    notify-send -h int:value:"$br"0 "low brightness (40%)" -u low -t 1000 -i display-brightness-low
     gdbus call -e -d de.mherzberg -o /de/mherzberg/wlrbrightness -m de.mherzberg.wlrbrightness.set 0.4
 }
 
@@ -33,6 +35,7 @@ adjust () {
             fi
         fi
         echo "$br" >> "/tmp/eww/brightness"
+        notify-send -h int:value:"$br"0 "brightness ""${br}0%" -u low -t 1000 -i display-brightness-medium
     else
         exit 0
     fi

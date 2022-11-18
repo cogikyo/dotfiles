@@ -557,7 +557,7 @@ window {
     min-width: 128px;
     min-height: 128px;
     background-color: rgba($bg, 0.69);
-    box-shadow: -2px 0px 8px 1px rgba($blue, 0.36);
+    box-shadow: -2px 0px 6px 0px rgba($red, 0.32);
     border-radius: 42% 27% 48% 48%;
     border-top: 1px solid $orange;
     border-left: 2px solid $orange;
@@ -568,7 +568,7 @@ window {
 
 .net {
   transition: margin 0.25s $ease-out-snap;
-  font-size: 9px;
+  font-size: 8px;
 
   &-up {
     margin-bottom: 35px;
@@ -587,13 +587,13 @@ window {
     }
   }
   &-ping {
-    font-size: 11px;
+    font-size: 9px;
     margin-top: 32px;
-    margin-left: -2px;
+    margin-left: -1px;
     &-hover {
-      font-size: 11px;
-      margin-top: 14px;
-      margin-left: 5px;
+      font-size: 9px;
+      margin-top: 4px;
+      margin-left: 6px;
     }
   }
 }
@@ -613,7 +613,7 @@ window {
     border-bottom: 1px solid $blue;
     box-shadow: -3px -3px 8px 2px rgba($blue, 0.16);
     margin: 20px -8px -3px 20px;
-    transition: all 0.5s ease-out;
+    transition: all 0.25s $ease-out-snap;
     &-hovered {
       background-color: rgba($navy, 0.53);
       background-position: calc(50% + 14px) calc(50% + 16px);

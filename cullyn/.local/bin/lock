@@ -10,6 +10,7 @@ hyprctl dispatch workspace 6
 killall eww -9
 mpvpaper -o "--loop --brightness=3  --contrast=6  --saturation=-50  --hue=-8 --gamma=-20" "HDMI-A-1" ~/dotfiles/resources/videos/blackhole.webm & disown
 sleep 0.5
+kill_background "dna"
 
 gdbus call -e -d de.mherzberg -o /de/mherzberg/wlrbrightness -m de.mherzberg.wlrbrightness.set 0.2
 swaylock -C "$HOME/.config/swaylock/config.conf"

@@ -114,9 +114,9 @@
     )
     (label
       :class "music-${matches("${pctl.status}", "Playing") ? "title" : "inactive" }"
-      :text "  ${pctl.title}"
+      :text "  ${pctl.title}"
       :limit-width 30
-      :tooltip "   ${pctl.title}"
+      :tooltip "   ${pctl.title}"
     )
   )
 )
@@ -955,16 +955,10 @@
 
 ; 💽 misc: {{{
 
-(defwindow misc
+(defwindow notifications
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :anchor "bottom right" :x "100px" )
-  (misc)
-)
-
-(defwidget misc []
-  (box :class "misc-box" :space-evenly false :spacing 10
-    (pacman) (dunst)
-  )
+  :geometry (geometry :anchor "bottom right" :x "100px" :y "8px" )
+  (dunst)
 )
 
 (defpoll upgrades :initial 0 :interval "10s" 'paru -Qu | wc -l')
@@ -1000,7 +994,7 @@
 )
 
 (defvar screenctl-hover false)
-(deflisten brightness 'tail -F /tmp/eww/brightness 2> /dev/null')
+(deflisten brightness :initial 10 'tail -F /tmp/eww/brightness 2> /dev/null')
 (defwidget screenctl []
   (eventbox
     :onhover "eww update screenctl-hover=true"
@@ -1010,7 +1004,7 @@
     :onrightclick "scripts/brightness reset & disown"
     (box :space-evenly false :spacing 0
       :class "tabbox ${screenctl-hover ? "tabbox-hover" : "" }"
-      :style "background-image: url('assets/screenctl/brctl-${brightness}.svg');"
+      :style "background-image: url('assets/screenctl/brctl-${brightness > 0 ? "${brightness}" : "10"}.svg');"
     )
   )
 )

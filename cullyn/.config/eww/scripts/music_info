@@ -58,9 +58,9 @@ get_json () {
         playerctl -F "$player" metadata -f "{\
             \"status\":\"{{ status }}\",\
             \"volume\":\"{{ volume }}\",\
-            \"artist\":\"{{ markup_escape(artist) }}\",\
-            \"album\":\"{{ markup_escape(album) }}\",\
-            \"title\":\"{{ markup_escape(title) }}\"\
+            \"artist\":\"{{ artist }}\",\
+            \"album\":\"{{ album }}\",\
+            \"title\":\"{{ title }}\"\
         }" > '/tmp/eww/music.json'
         sleep 1
         notify-send "playerctl died, restarting"
