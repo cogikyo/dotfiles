@@ -955,14 +955,28 @@
 
 ; 💽 misc: {{{
 
-(defwindow notifications
+(defvar dunst-hover false)
+(defvar dunst-active true)
+
+(defwindow dunst
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :anchor "bottom right" :x "100px" :y "8px" )
-  (dunst)
+  :geometry (geometry :anchor "top right" :y "1710px" )
+  (eventbox
+    :onhover "eww update dunst-hover=true"
+    :onhoverlost "eww update dunst-hover=false"
+    :onclick "eww update dunst-active=true"
+    :onrightclick "eww update dunst-active=false"
+    (box :space-evenly false :spacing 0
+      :class "tabbox ${dunst-hover ? "tabbox-hover" : "" }"
+      :style "background-image: url('assets/dunst/${dunst-active ? "active" : "inactive"}${dunst-hover ? "-hover" : ""}.svg');"
+    )
+  )
 )
 
-(defpoll upgrades :initial 0 :interval "10s" 'paru -Qu | wc -l')
-(defwidget pacman []
+(defpoll upgrades :initial 0 :interval "10s" 'paru -Sy | paru -Qu | wc -l')
+(defwindow pacman
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "bottom right" :x "4px" :y "70px" )
   (eventbox
     :cursor "pointer"
     :onclick 'kitty --title="terminalfloat" -e "paru" & disown'
@@ -980,16 +994,13 @@
     )
   )
 )
-(defwidget dunst []
-  (label :text " ")
-)
 
 ;}}}
 ; 🔆 screenctl: {{{
 
 (defwindow screenctl
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :anchor "top right" :y "1450px")
+  :geometry (geometry :anchor "top right" :y "1430px")
   (screenctl)
 )
 
@@ -1016,14 +1027,14 @@
 
 (defwindow signal
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :anchor "top right" :y "1600px" )
+  :geometry (geometry :anchor "top right" :y "1570px" )
   (eventbox
     :onhover "eww update signal-hover=true"
     :onhoverlost "eww update signal-hover=false"
     (box
       :space-evenly false :spacing 0
       :class "tabbox ${signal-hover ? "tabbox-hover" : "" }"
-      :style "background-image: url('assets/connection/signal${
+      :style "background-image: url('assets/signal/signal${
                 signal-hover ? "-hover${cycle-5 == 1 ? "-alt" : ""}" : "-alt"
       }.svg');"
       (box :space-evenly false :spacing 0 :valign "center" :halign "center"

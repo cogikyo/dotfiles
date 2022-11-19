@@ -28,14 +28,14 @@
      shape-rendering="auto"
      borderlayer="true"
      inkscape:zoom="1.3"
-     inkscape:cx="176.92308"
-     inkscape:cy="262.3077"
+     inkscape:cx="134.61538"
+     inkscape:cy="263.46154"
      inkscape:window-width="1667"
-     inkscape:window-height="848"
+     inkscape:window-height="885"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="g444"
+     inkscape:current-layer="g10857"
      showguides="true" />
   <defs
      id="defs2">
@@ -131,6 +131,17 @@
        cy="369.40088"
        fx="321.36899"
        fy="369.40088"
+       r="147.56943" />
+    <radialGradient
+       inkscape:collect="always"
+       xlink:href="#10-l"
+       id="radialGradient5666"
+       gradientUnits="userSpaceOnUse"
+       gradientTransform="matrix(0.0460959,-0.21516432,0.22237267,0.04764018,295.01673,373.58332)"
+       cx="381.66028"
+       cy="453.84262"
+       fx="381.66028"
+       fy="453.84262"
        r="147.56943" />
   </defs>
   <g
@@ -278,14 +289,14 @@
                        id="path6518" />
                     <text
                        xml:space="preserve"
-                       style="font-style:italic;font-weight:bold;font-size:36.9048px;font-family:'Albert Sans';-inkscape-font-specification:'Albert Sans Bold Italic';fill:url(#radialGradient10859);fill-opacity:1;stroke-width:0.460156;paint-order:stroke fill markers"
+                       style="font-style:italic;font-weight:bold;font-size:36.9048px;font-family:'Albert Sans';-inkscape-font-specification:'Albert Sans Bold Italic';fill:url(#radialGradient5666);fill-opacity:1;stroke-width:0.460156;paint-order:stroke fill markers"
                        x="398.09421"
                        y="318.48715"
                        id="text1352"
                        transform="rotate(3.904246)"><tspan
                          sodipodi:role="line"
                          id="tspan1350"
-                         style="fill:url(#radialGradient10859);fill-opacity:1;stroke-width:0.460156"
+                         style="fill:url(#radialGradient5666);fill-opacity:1;stroke-width:0.460156"
                          x="398.09421"
                          y="318.48715">9</tspan></text>
                   </g>

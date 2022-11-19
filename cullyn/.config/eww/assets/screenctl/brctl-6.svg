@@ -28,10 +28,10 @@
      shape-rendering="auto"
      borderlayer="true"
      inkscape:zoom="1.3"
-     inkscape:cx="233.07693"
-     inkscape:cy="313.84616"
+     inkscape:cx="190.76923"
+     inkscape:cy="130.38462"
      inkscape:window-width="1667"
-     inkscape:window-height="848"
+     inkscape:window-height="885"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
@@ -123,14 +123,14 @@
        gradientUnits="userSpaceOnUse" />
     <radialGradient
        inkscape:collect="always"
-       xlink:href="#linearGradient3151"
+       xlink:href="#10-l"
        id="radialGradient8171"
        gradientUnits="userSpaceOnUse"
-       gradientTransform="matrix(0,-1.2538018,1.0401761,0,-20.167891,786.54423)"
-       cx="321.36899"
-       cy="369.40088"
-       fx="321.36899"
-       fy="369.40088"
+       gradientTransform="matrix(0.01057237,-0.2105307,0.19207392,0.00964552,331.99715,388.98279)"
+       cx="364.83295"
+       cy="394.70718"
+       fx="364.83295"
+       fy="394.70718"
        r="147.56943" />
   </defs>
   <g
