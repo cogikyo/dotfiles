@@ -57,6 +57,12 @@
 ; =============================================================================
 
 ; 🔊 sound: {{{
+(defwindow album-art
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "top left")
+  (music-cover)
+)
+
 (defwindow music
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :anchor "top left" :x "100px")
@@ -65,11 +71,6 @@
   )
 )
 
-(defwindow album-art
-  :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :anchor "top left")
-  (music-cover)
-)
 
 ; 🎵 music: {{{
 
@@ -898,7 +899,7 @@
     :onhover "eww update user-hover=true"
     :onhoverlost "eww update user-hover=false"
     (box :space-evenly false :spacing 0
-      :class "user-box ${user-hover ? "user-box-hover" : ""}"
+      :class "userbox ${user-hover ? "userbox-hover" : ""}"
       :style "background-image: url('${userUrl}');"
     )
   )
@@ -1082,48 +1083,6 @@
 )
 
 ; }}}
-; 🎛️ systemctl: {{{
-
-(defwindow systemctl
-  :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :anchor "bottom right" )
-  (systemctl)
-)
-
-(defvar systemctl-hover false)
-(defwidget systemctl []
-  (eventbox
-    :onhover "eww update systemctl-hover=true"
-    :onhoverlost "eww update systemctl-hover=false"
-    :onrightclick "~/.local/bin/lock suspend & disown"
-    (box
-      :space-evenly false :spacing 0
-      :class "systemctl-box ${systemctl-hover ? "systemctl-box-hovered" : "" }"
-      :style "background-image: url('assets/powerhouse${systemctl-hover ? "-active" : ""}.svg');"
-      :tooltip "   mitochondria, the powerhouse of the cell"
-      (revealer
-        :transition "crossfade"
-        :reveal systemctl-hover
-        (box :space-evenly false :spacing 0
-          (systemctl-option :option "restart"  :icon " " :command "systemctl reboot")
-          (systemctl-option :option "lock"     :icon " " :command "~/.local/bin/lock disown")
-          (systemctl-option :option "poweroff" :icon " " :command "systemctl poweroff")
-        )
-      )
-    )
-  )
-)
-
-(defwidget systemctl-option [option icon command]
-  (eventbox
-    :cursor "pointer"
-    :tooltip " ${icon}  ${option}  "
-    :onclick command
-    (label :class "systemctl-${option}"  :text icon)
-  )
-)
-
-; }}}
 ; 🔔 dunst: {{{
 
 (defvar dunst-hover false)
@@ -1161,10 +1120,53 @@
 
 ;}}}
 
+; 🎛️ systemctl: {{{
+
+(defwindow systemctl
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "bottom right" )
+  (systemctl)
+)
+
+(defvar systemctl-hover false)
+(defwidget systemctl []
+  (eventbox
+    :onhover "eww update systemctl-hover=true"
+    :onhoverlost "eww update systemctl-hover=false"
+    :onrightclick "~/.local/bin/lock suspend & disown"
+    (box
+      :space-evenly false :spacing 0
+      :class "systemctl-box ${systemctl-hover ? "systemctl-box-hover" : "" }"
+      :style "background-image: url('assets/systemctl/mitochondria${systemctl-hover ? "-active" : ""}.svg');"
+      :tooltip "   mitochondria, the powerhouse of the cell"
+      (revealer
+        :transition "crossfade"
+        :reveal systemctl-hover
+        (box :space-evenly false :spacing 0
+          (systemctl-option :option "restart"  :icon " " :command "systemctl reboot")
+          (systemctl-option :option "lock"     :icon " " :command "~/.local/bin/lock disown")
+          (systemctl-option :option "poweroff" :icon " " :command "systemctl poweroff")
+        )
+      )
+    )
+  )
+)
+
+(defwidget systemctl-option [option icon command]
+  (eventbox
+    :cursor "pointer"
+    :tooltip " ${icon}  ${option}  "
+    :onclick command
+    (label :class "systemctl-${option}"  :text icon)
+  )
+)
+
+; }}}
+; 📦 pacman: {{{
 (defpoll upgrades :initial 0 :interval "1m" 'paru -Sy | paru -Qu | wc -l')
 (defwindow pacman
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :anchor "bottom right" :x "76px" :y "4px" )
+  :geometry (geometry :anchor "bottom right" :x "90px" :y "5px" )
   (eventbox
     :cursor "pointer"
     :onclick 'kitty --title="terminalfloat" -e "paru" & disown'
@@ -1179,12 +1181,12 @@
              upgrades < 40 ? "11" : "crit"
       }"
       :markup "<tt> </tt><sub>${upgrades <= 1 ? " ": upgrades}</sub>"
-      :tooltip "${upgrades <= 1 ? " ": "${upgrades} available updgrades" }"
+      :tooltip "${upgrades <= 1 ? "   synced  ": "${upgrades} available updgrades" }"
       :style "
               transition: margin 0.2s ease-out;
-              margin-right: ${systemctl-hover ? "20" : "0"}px;
+              margin-right: ${systemctl-hover ? "10" : "0"}px;
              "
     )
   )
 )
-
+; }}}

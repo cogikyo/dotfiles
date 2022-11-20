@@ -22,6 +22,10 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.118);
   border: 1px solid $pink;
 }
 
+.trc {
+  transition: color 0.5s ease-out;
+}
+
 .ramp {
   &-1 {
     color: $blue-gd;
@@ -90,7 +94,7 @@ tooltip {
   color: $orange;
   background-color: rgba($bg, 0.9);
   border: 1px solid $orange-g;
-  border-radius: 4px 24px 8px 20px;
+  border-radius: 8px 24px 8px 20px;
 }
 
 .unit {
@@ -182,22 +186,26 @@ window {
 // 🎵 music: {{{
 .music {
   &-cover {
+    transition: all 0.25s $ease-out-snap;
     background-repeat: no-repeat;
-    background-size: 115%;
-    background-position: 50% 50%;
+    background-size: 100%;
+
     min-width: 80px;
     min-height: 80px;
+
+    border-style: solid;
+    border-color: $blue;
+    border-width: 0px 3px 3px 0px;
     border-radius: 0px 27px 69px 27px;
-    border-right: 2px solid $blue;
-    border-top: 1px solid $blue;
-    border-bottom: 1px solid $blue;
-    box-shadow: 1px 3px 8px 2px rgba($blue, 0.16);
-    transition: all 0.25s $ease-out-snap;
-    margin: -1px 20px 20px 0;
+    margin: 0px 20px 20px 0px;
+    box-shadow: 1px 3px 7px 1px rgba($purple, 0.23);
 
     &-hover {
-      min-height: 200px;
-      min-width: 200px;
+      min-height: 160px;
+      min-width: 160px;
+      border-color: $orange;
+      border-radius: 0px 54px 138px 54px;
+      box-shadow: 1px 3px 6px 1px rgba($red, 0.42);
     }
   }
   &-progress {
@@ -482,28 +490,30 @@ window {
 }
 // }}}
 // 🤓 user: {{{
-.user {
-  &-box {
-    background-repeat: no-repeat;
-    background-size: 110%;
-    background-position: 0 -4px;
-    min-width: 80px;
-    min-height: 80px;
-    transition: all 0.25s $ease-out-snap;
+.userbox {
+  transition: all 0.25s $ease-out-snap;
+  background-repeat: no-repeat;
+  background-size: 110%;
+  background-position: 0 -4px;
+  min-width: 80px;
+  min-height: 80px;
 
-    border-radius: 27px 0px 27px 69px;
-    border-left: 2px solid $blue;
-    border-top: 1px solid $blue;
-    border-bottom: 1px solid $blue;
-    box-shadow: -1px 3px 8px 2px rgba($blue, 0.16);
+  border-style: solid;
+  border-color: $blue;
+  border-width: 0px 0px 3px 3px;
+  border-radius: 27px 0 27px 69px;
+  margin: 0 0 20px 20px;
+  box-shadow: -1px 3px 7px 1px rgba($purple, 0.23);
 
-    margin: -1px 0px 20px 20px;
-    &-hover {
-      min-height: 200px;
-      min-width: 200px;
-    }
+  &-hover {
+    min-height: 160px;
+    min-width: 160px;
+    border-radius: 54px 0 54px 138px;
+    border-color: $orange;
+    box-shadow: -1px 3px 6px 1px rgba($red, 0.42);
   }
 }
+
 // }}}
 
 // 👾 workspaces: {{{
@@ -568,37 +578,39 @@ window {
 
 // }}}
 
+// 💽 misc: {{{
 .pacman {
   transition: margin 0.25s $ease-out-snap;
 }
 
 .tabbox {
+  background-size: 120%;
   background-repeat: no-repeat;
-  margin: 30px 0 30px 30px;
+  background-position: center;
+  background-color: rgba($bg, 0.23);
+
   transition: all 0.25s $ease-out-snap;
 
   min-width: 64px;
   min-height: 64px;
-  background-size: 120%;
-  background-position: center;
-  background-color: rgba($bg, 0.2);
-  box-shadow: -2px 0px 8px 1px rgba($blue, 0.16);
+
+  border-style: solid;
+  border-color: $blue;
+  border-width: 1px 0px 1px 2px;
   border-radius: 50% 27% 48% 87%;
-  border-top: 1px solid $blue;
-  border-left: 2px solid $blue;
-  border-bottom: 1px solid $blue;
+  box-shadow: -2px 0px 7px 1px rgba($purple, 0.23);
+  margin: 30px 0 30px 30px;
+
   &-hover {
+    background-color: rgba($navy, 0.42);
     min-width: 128px;
     min-height: 128px;
-    background-color: rgba($bg, 0.69);
-    box-shadow: -2px 0px 6px 0px rgba($red, 0.32);
     border-radius: 42% 27% 48% 48%;
-    border-top: 1px solid $orange;
-    border-left: 2px solid $orange;
-    border-bottom: 1px solid $orange;
-    margin-right: -5px;
+    border-color: $orange;
+    box-shadow: -2px 0px 6px 1px rgba($red, 0.42);
   }
 }
+// }}}
 
 // 📶 signal: {{{
 .net {
@@ -637,45 +649,43 @@ window {
 // 🎛️ systemctl: {{{
 .systemctl {
   &-box {
+    transition: all 0.25s ease-out;
     background-repeat: no-repeat;
-    background-size: 95%;
-    background-position: calc(50% + 2px) calc(50% + 2px);
-    min-height: 72px;
-    min-width: 72px;
+    background-size: 100%;
+
+    min-width: 80px;
+    min-height: 80px;
+
+    border-style: solid;
+    border-color: $blue;
+    border-width: 3px 0px 0px 3px;
     border-radius: 69px 27px 0px 27px;
-    border-top: 1px solid $blue;
-    border-left: 2px solid $blue;
-    border-bottom: 1px solid $blue;
-    box-shadow: -3px -3px 8px 2px rgba($blue, 0.16);
-    margin: 20px -8px -3px 20px;
-    transition: all 0.25s $ease-out-snap;
-    &-hovered {
-      background-color: rgba($navy, 0.53);
-      background-position: calc(50% + 14px) calc(50% + 16px);
-      background-size: 69%;
-      border-top: 2px solid $orange;
-      border-left: 3px solid $orange;
-      border-bottom: 1px solid $orange;
-      background-repeat: no-repeat;
-      min-height: 90px;
+    margin: 20px 0px 0px 20px;
+    box-shadow: -1px -3px 7px 1px rgba($purple, 0.23);
+
+    &-hover {
+      background-color: rgba($navy, 0.42);
+      min-height: 95px;
       min-width: 95px;
-      box-shadow: -3px -3px 6px 2px rgba($blue, 0.25);
+      border-radius: 120px 37px 0px 37px;
+      border-color: $orange;
+      box-shadow: -1px -3px 6px 1px rgba($red, 0.42);
     }
   }
   &-restart {
     color: $green-d;
     font-size: 1.2em;
-    margin: 40px 0 0 9px;
+    margin: 48px 0 0 12px;
   }
   &-lock {
     color: $blue-d;
     font-size: 1.2em;
-    margin: -20px 0px 0 -10px;
+    margin: -24px 0px 0 -10px;
   }
   &-poweroff {
     color: $red-d;
     font-size: 1.2em;
-    margin: -50px 0px 0 -5px;
+    margin: -50px 0px 0 0px;
   }
 }
 // }}}
