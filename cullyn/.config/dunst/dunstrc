@@ -3,7 +3,7 @@
     enable_posix_regex = true
     origin = top-left
     width = 512
-    offset = 3016x1865
+    offset = 3016x1870
     notification_limit = 1
     progress_bar = true
     progress_bar_height = 10

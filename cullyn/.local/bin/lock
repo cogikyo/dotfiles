@@ -8,6 +8,7 @@ current_ws=$(tail -n 1 "/tmp/eww/workspace")
 
 hyprctl dispatch workspace 6
 killall eww -9
+playerctl pause
 mpvpaper -o "--loop --brightness=3  --contrast=6  --saturation=-50  --hue=-8 --gamma=-20" "HDMI-A-1" ~/dotfiles/resources/videos/blackhole.webm & disown
 sleep 0.5
 kill_background "dna"

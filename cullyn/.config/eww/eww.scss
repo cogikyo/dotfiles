@@ -536,7 +536,41 @@ window {
   }
 }
 // }}}
-// 💽 misc: {{{
+// 🔔 dunst: {{{
+
+.dunst-count {
+  color: $blue-d;
+  transition: all 0.25s $ease-out-snap;
+  font-family: $monospace;
+  font-size: 14px;
+  margin-left: 38px;
+  margin-top: 6px;
+  border: 1px solid $blue-g;
+  padding: 0px 5px;
+  border-radius: 24px;
+  &-alert {
+    border: 0px;
+    padding: 0;
+    color: $pink-d;
+    font-size: 18px;
+    margin-left: 42px;
+    margin-top: 6px;
+  }
+  &-0 {
+    border: 0px;
+    padding: 0;
+    color: $blue-g;
+    font-size: 18px;
+    margin-left: 44px;
+    margin-top: 7px;
+  }
+}
+
+// }}}
+
+.pacman {
+  transition: margin 0.25s $ease-out-snap;
+}
 
 .tabbox {
   background-repeat: no-repeat;
@@ -566,30 +600,31 @@ window {
   }
 }
 
+// 📶 signal: {{{
 .net {
   transition: margin 0.25s $ease-out-snap;
   font-size: 8px;
 
   &-up {
-    margin-bottom: 35px;
-    margin-left: -3px;
+    margin-bottom: 32px;
+    margin-left: -8px;
     &-hover {
-      margin-bottom: 38px;
-      margin-left: 28px;
+      margin-bottom: 36px;
+      margin-left: 30px;
     }
   }
   &-down {
-    margin-bottom: 9px;
-    margin-left: 7px;
+    margin-bottom: 4px;
+    margin-left: 6px;
     &-hover {
-      margin-top: 20px;
+      margin-top: 24px;
       margin-left: 16px;
     }
   }
   &-ping {
     font-size: 9px;
     margin-top: 32px;
-    margin-left: -1px;
+    margin-left: 5px;
     &-hover {
       font-size: 9px;
       margin-top: 4px;

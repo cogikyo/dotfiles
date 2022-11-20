@@ -953,49 +953,6 @@
 
 ; }}}
 
-; 💽 misc: {{{
-
-(defvar dunst-hover false)
-(defvar dunst-active true)
-
-(defwindow dunst
-  :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :anchor "top right" :y "1710px" )
-  (eventbox
-    :onhover "eww update dunst-hover=true"
-    :onhoverlost "eww update dunst-hover=false"
-    :onclick "eww update dunst-active=true"
-    :onrightclick "eww update dunst-active=false"
-    (box :space-evenly false :spacing 0
-      :class "tabbox ${dunst-hover ? "tabbox-hover" : "" }"
-      :style "background-image: url('assets/dunst/${dunst-active ? "active" : "inactive"}${dunst-hover ? "-hover" : ""}.svg');"
-    )
-  )
-)
-
-(defpoll upgrades :initial 0 :interval "10s" 'paru -Sy | paru -Qu | wc -l')
-(defwindow pacman
-  :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :anchor "bottom right" :x "4px" :y "70px" )
-  (eventbox
-    :cursor "pointer"
-    :onclick 'kitty --title="terminalfloat" -e "paru" & disown'
-    (label
-      :class "ramp-${
-             upgrades <= 1 ? "3" :
-             upgrades <= 3 ? "4" :
-             upgrades < 5 ? "4-alt" :
-             upgrades < 10 ? "6" :
-             upgrades < 20 ? "8" :
-             upgrades < 30 ? "9" :
-             upgrades < 40 ? "11" : "crit"
-      }"
-      :markup "<tt> </tt><sup>${upgrades <= 1 ? " ": upgrades}</sup>"
-    )
-  )
-)
-
-;}}}
 ; 🔆 screenctl: {{{
 
 (defwindow screenctl
@@ -1015,7 +972,7 @@
     :onrightclick "scripts/brightness reset & disown"
     (box :space-evenly false :spacing 0
       :class "tabbox ${screenctl-hover ? "tabbox-hover" : "" }"
-      :style "background-image: url('assets/screenctl/brctl-${brightness > 0 ? "${brightness}" : "10"}.svg');"
+      :style "background-image: url('assets/screenctl/brctl${screenctl-hover ? "-${brightness > 0 ? "${brightness}" : "10"}" : ""}.svg');"
     )
   )
 )
@@ -1024,7 +981,6 @@
 ; 📶 network: {{{
 
 (defvar signal-hover false)
-
 (defwindow signal
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :anchor "top right" :y "1570px" )
@@ -1035,8 +991,8 @@
       :space-evenly false :spacing 0
       :class "tabbox ${signal-hover ? "tabbox-hover" : "" }"
       :style "background-image: url('assets/signal/signal${
-                signal-hover ? "-hover${cycle-5 == 1 ? "-alt" : ""}" : "-alt"
-      }.svg');"
+                signal-hover ? "-hover" : ""
+              }.svg');"
       (box :space-evenly false :spacing 0 :valign "center" :halign "center"
         (net-down
           :icon " "
@@ -1134,20 +1090,20 @@
   (systemctl)
 )
 
-(defvar systemctl-extra false)
+(defvar systemctl-hover false)
 (defwidget systemctl []
   (eventbox
-    :onhover "eww update systemctl-extra=true"
-    :onhoverlost "eww update systemctl-extra=false"
+    :onhover "eww update systemctl-hover=true"
+    :onhoverlost "eww update systemctl-hover=false"
     :onrightclick "~/.local/bin/lock suspend & disown"
     (box
       :space-evenly false :spacing 0
-      :class "systemctl-box ${systemctl-extra ? "systemctl-box-hovered" : "" }"
-      :style "background-image: url('assets/powerhouse${systemctl-extra ? "-active" : ""}.svg');"
+      :class "systemctl-box ${systemctl-hover ? "systemctl-box-hovered" : "" }"
+      :style "background-image: url('assets/powerhouse${systemctl-hover ? "-active" : ""}.svg');"
       :tooltip "   mitochondria, the powerhouse of the cell"
       (revealer
         :transition "crossfade"
-        :reveal systemctl-extra
+        :reveal systemctl-hover
         (box :space-evenly false :spacing 0
           (systemctl-option :option "restart"  :icon " " :command "systemctl reboot")
           (systemctl-option :option "lock"     :icon " " :command "~/.local/bin/lock disown")
@@ -1168,3 +1124,67 @@
 )
 
 ; }}}
+; 🔔 dunst: {{{
+
+(defvar dunst-hover false)
+(defvar dunst-active true)
+
+(defpoll dunst-count :interval "1s" 'dunstctl count waiting')
+(defwindow dunst
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "top right" :y "1710px" )
+  (eventbox
+    :onhover "eww update dunst-hover=true"
+    :onhoverlost "eww update dunst-hover=false"
+    :onclick "eww update dunst-active=true"
+    :onrightclick "eww update dunst-active=false"
+    (box :space-evenly false :spacing 0
+      :class "tabbox ${dunst-hover ? "tabbox-hover" : "" }"
+      :style "background-image: url('assets/dunst/${dunst-active ? "active" : "inactive"}${dunst-hover ? "-hover" : ""}.svg');"
+      (box
+        :valign "start"
+        :class "${dunst-hover ? "" :
+                  "dunst-count${dunst-count > 9 ? "-alert" :
+                    "${dunst-count == 0 ? "-0" : ""
+                    }"
+                  }"
+                }"
+        "${dunst-hover ? "" :
+          "${dunst-count > 0 ? "${dunst-count < 10 ? "${dunst-count}" :
+            " "}" : " "
+          }"
+        }"
+      )
+    )
+  )
+)
+
+;}}}
+
+(defpoll upgrades :initial 0 :interval "1m" 'paru -Sy | paru -Qu | wc -l')
+(defwindow pacman
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "bottom right" :x "76px" :y "4px" )
+  (eventbox
+    :cursor "pointer"
+    :onclick 'kitty --title="terminalfloat" -e "paru" & disown'
+    (label
+      :class "pacamn ramp-${
+             upgrades <= 1 ? "3" :
+             upgrades <= 3 ? "4" :
+             upgrades < 5 ? "4-alt" :
+             upgrades < 10 ? "6" :
+             upgrades < 20 ? "8" :
+             upgrades < 30 ? "9" :
+             upgrades < 40 ? "11" : "crit"
+      }"
+      :markup "<tt> </tt><sub>${upgrades <= 1 ? " ": upgrades}</sub>"
+      :tooltip "${upgrades <= 1 ? " ": "${upgrades} available updgrades" }"
+      :style "
+              transition: margin 0.2s ease-out;
+              margin-right: ${systemctl-hover ? "20" : "0"}px;
+             "
+    )
+  )
+)
+
