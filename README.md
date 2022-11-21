@@ -32,13 +32,17 @@
   - [x] Top bar
   - [x] Bot bar
   - [x] Discover the wonder of creating my own SVGs
-    - [x] Start... using custom svgs everywhere
+    - [x] Start using custom svgs everywhere...
     - [ ] Resist urge to put custom svgs everywhere
     - [x] Probably make overly complex svgs
       - [x] Stop caaring and be happy because it looks great
     - [ ] Quit svg addiction
   - [ ] Clean up
   - [ ] Documument config file.
+- [ ] Break up with Google entirely
+  - [ ] Replace garbage YTM with spotify
+    - [x] Cry because Google's network effect grip is strangling me.
+      - [x] Reflect on why it's taking me so long to come to this obvious relization.
 - [ ] Refactor neovim config, pending 0.8 upgrade.
 - [ ] Update README
   - [ ] Trim excess packages
