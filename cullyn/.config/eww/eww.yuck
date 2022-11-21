@@ -1134,8 +1134,7 @@
     :onhover "eww update systemctl-hover=true"
     :onhoverlost "eww update systemctl-hover=false"
     :onrightclick "~/.local/bin/lock suspend & disown"
-    (box
-      :space-evenly false :spacing 0
+    (box :space-evenly false :spacing 0
       :class "systemctl-box ${systemctl-hover ? "systemctl-box-hover" : "" }"
       :style "background-image: url('assets/systemctl/mitochondria${systemctl-hover ? "-active" : ""}.svg');"
       :tooltip "   mitochondria, the powerhouse of the cell"
@@ -1163,10 +1162,10 @@
 
 ; }}}
 ; 📦 pacman: {{{
-(defpoll upgrades :initial 0 :interval "1m" 'paru -Sy | paru -Qu | wc -l')
+(defpoll upgrades :initial 0 :interval "1m" 'paru -Qu | wc -l')
 (defwindow pacman
   :monitor 0 :stacking "fg" :exclusive false :focusable false
-  :geometry (geometry :anchor "bottom right" :x "90px" :y "5px" )
+  :geometry (geometry :anchor "bottom right" :x "93px" :y "5px" )
   (eventbox
     :cursor "pointer"
     :onclick 'kitty --title="terminalfloat" -e "paru" & disown'
@@ -1180,7 +1179,7 @@
              upgrades < 30 ? "9" :
              upgrades < 40 ? "11" : "crit"
       }"
-      :markup "<tt> </tt><sub>${upgrades <= 1 ? " ": upgrades}</sub>"
+      :markup "<small>${upgrades <= 1 ? " ": "${upgrades} "}</small><tt> </tt>"
       :tooltip "${upgrades <= 1 ? "   synced  ": "${upgrades} available updgrades" }"
       :style "
               transition: margin 0.2s ease-out;
