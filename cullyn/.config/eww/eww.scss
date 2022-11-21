@@ -10,7 +10,7 @@
 $sans-serif: Albert Sans;
 $monospace: LigaHack Nerd Font;
 $monospace-alt: Fira Code, Symbols Nerd Font;
-$ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.118);
+$ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.367);
 
 * {
   all: unset;
@@ -22,8 +22,16 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.118);
   border: 1px solid $pink;
 }
 
-.trc {
-  transition: color 0.5s ease-out;
+.trC {
+  transition: color 0.5s $ease-out-snap;
+}
+
+.trM {
+  transition: margin 0.25s $ease-out-snap;
+}
+
+.trA {
+  transition: all 0.25s $ease-out-snap;
 }
 
 .ramp {
@@ -103,6 +111,34 @@ tooltip {
   margin-left: 2px;
 }
 
+.tabbox {
+  background-size: 120%;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-color: rgba($bg, 0.23);
+
+  transition: all 0.25s $ease-out-snap;
+
+  min-width: 64px;
+  min-height: 64px;
+
+  border-style: solid;
+  border-color: $blue;
+  border-width: 1px 0px 1px 2px;
+  border-radius: 50% 27% 48% 87%;
+  box-shadow: -2px 0px 7px 1px rgba($purple, 0.23);
+  margin: 30px 0 30px 30px;
+
+  &-hover {
+    background-color: rgba($navy, 0.42);
+    min-width: 128px;
+    min-height: 128px;
+    border-radius: 42% 27% 48% 48%;
+    border-color: $orange;
+    box-shadow: -2px 0px 6px 1px rgba($red, 0.42);
+  }
+}
+
 // }}}
 // 🪟 windows: {{{
 window {
@@ -159,19 +195,9 @@ window {
     border-right: 1px solid $blue;
     border-bottom: 2px solid $blue;
     border-left: 1px solid $blue;
-    box-shadow: 0px 2px 8px 2px rgba($blue, 0.18);
+    box-shadow: 0px 2px 7px 1px rgba($purple, 0.23);
     padding: 0px 1.3em 11px 1.3em;
     margin: -7px 16px 30px 16px;
-  }
-
-  @if $position == 'bot-center' {
-    border-radius: 69px 69px 27px 27px;
-    border-right: 1px solid $blue;
-    border-top: 2px solid $blue;
-    border-left: 1px solid $blue;
-    box-shadow: 0px -2px 8px 2px rgba($blue, 0.18);
-    padding: 11px 1.3em 0 1.3em;
-    margin: 30px 18px -6px 18px;
   }
 }
 
@@ -195,7 +221,7 @@ window {
 
     border-style: solid;
     border-color: $blue;
-    border-width: 0px 3px 3px 0px;
+    border-width: 0px 2px 2px 0px;
     border-radius: 0px 27px 69px 27px;
     margin: 0px 20px 20px 0px;
     box-shadow: 1px 3px 7px 1px rgba($purple, 0.23);
@@ -423,24 +449,26 @@ window {
     font-size: 1.1em;
   }
   &-Monday {
-    @include cycle($red);
+    @include cycle($pink);
   }
   &-Tuesday,
   &-Thursday {
     @include cycle($green-l);
   }
-  &-Wednesday,
-  &-Saturday {
+  &-Wednesday {
     @include cycle($orange-l);
   }
-  &-Friday,
-  &-Sunday {
+  &-Friday {
     @include cycle($royal);
+  }
+  &-Satuday,
+  &-Sunday {
+    @include cycle($pink);
   }
 }
 // }}}
 
-// 💻 cpu: {{{
+// 🖥️ computer: {{{
 .cpu {
   @include box-decor('top-right');
   &-busy-icon {
@@ -452,8 +480,7 @@ window {
     margin: 2px -8px 0 -3px;
   }
 }
-// }}}
-// 🧠 memory: {{{
+
 .memory {
   @include box-decor('top-right');
   &-bars {
@@ -464,8 +491,7 @@ window {
     margin-right: 4px;
   }
 }
-// }}}
-// 🖥️ gpu: {{{
+
 .gpu {
   @include box-decor('top-right');
   &-mclock {
@@ -491,7 +517,6 @@ window {
 // }}}
 // 🤓 user: {{{
 .userbox {
-  transition: all 0.25s $ease-out-snap;
   background-repeat: no-repeat;
   background-size: 110%;
   background-position: 0 -4px;
@@ -500,7 +525,7 @@ window {
 
   border-style: solid;
   border-color: $blue;
-  border-width: 0px 0px 3px 3px;
+  border-width: 0px 0px 2px 2px;
   border-radius: 27px 0 27px 69px;
   margin: 0 0 20px 20px;
   box-shadow: -1px 3px 7px 1px rgba($purple, 0.23);
@@ -519,7 +544,7 @@ window {
 // 👾 workspaces: {{{
 
 .workspace {
-  transition: all 0.42s $ease-out-snap;
+  transition: all 0.25s $ease-out-snap;
   background-repeat: no-repeat;
   background-position: center;
   background-size: 100%;
@@ -538,14 +563,23 @@ window {
 }
 
 .workspaces-box {
-  @include box-decor('bot-center');
-  transition: all 0.5s ease-out;
+  background: rgba($bg, 0.23);
+  border-color: $blue;
+  border-style: solid;
+  border-width: 2px 1px 0 1px;
+  border-radius: 69px 69px 17px 21px;
+  box-shadow: 0px -2px 7px 1px rgba($purple, 0.23);
+  padding: 11px 27px 0 27px;
+  margin: 30px 18px -6px 18px;
+  transition: all 0.25s $ease-out-snap;
   &-hovered {
-    box-shadow: -1px 3px 8px 2px rgba($blue, 0.42);
-    background-color: rgba($navy, 0.36);
+    background-color: rgba($navy, 0.31);
+    border-color: $orange;
+    box-shadow: 0px 0px 6px 1px rgba($red, 0.42);
   }
 }
 // }}}
+
 // 🔔 dunst: {{{
 
 .dunst-count {
@@ -577,41 +611,6 @@ window {
 }
 
 // }}}
-
-// 💽 misc: {{{
-.pacman {
-  transition: margin 0.25s $ease-out-snap;
-}
-
-.tabbox {
-  background-size: 120%;
-  background-repeat: no-repeat;
-  background-position: center;
-  background-color: rgba($bg, 0.23);
-
-  transition: all 0.25s $ease-out-snap;
-
-  min-width: 64px;
-  min-height: 64px;
-
-  border-style: solid;
-  border-color: $blue;
-  border-width: 1px 0px 1px 2px;
-  border-radius: 50% 27% 48% 87%;
-  box-shadow: -2px 0px 7px 1px rgba($purple, 0.23);
-  margin: 30px 0 30px 30px;
-
-  &-hover {
-    background-color: rgba($navy, 0.42);
-    min-width: 128px;
-    min-height: 128px;
-    border-radius: 42% 27% 48% 48%;
-    border-color: $orange;
-    box-shadow: -2px 0px 6px 1px rgba($red, 0.42);
-  }
-}
-// }}}
-
 // 📶 signal: {{{
 .net {
   transition: margin 0.25s $ease-out-snap;
@@ -646,6 +645,16 @@ window {
 }
 
 // }}}
+
+// 📦 pacman: {{{
+.pacman {
+  transition: all 0.25s $ease-out-snap;
+  &-hover {
+    color: $orange;
+    text-shadow: 0px 0px 2px rgba($red, 0.42);
+  }
+}
+// }}}
 // 🎛️ systemctl: {{{
 .systemctl {
   &-box {
@@ -658,7 +667,7 @@ window {
 
     border-style: solid;
     border-color: $blue;
-    border-width: 3px 0px 0px 3px;
+    border-width: 2px 0px 0px 2px;
     border-radius: 69px 27px 0px 27px;
     margin: 20px 0px 0px 20px;
     box-shadow: -1px -3px 7px 1px rgba($purple, 0.23);
