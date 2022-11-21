@@ -1,3 +1,5 @@
+; ██╗      ██████╗  ██████╗ ██╗ ██████╗
+; ██║     ██╔═══██╗██╔════╝ ██║██╔════╝
 ; ██║     ██║   ██║██║  ███╗██║██║
 ; ██║     ██║   ██║██║   ██║██║██║
 ; ███████╗╚██████╔╝╚██████╔╝██║╚██████╗
@@ -7,6 +9,8 @@
 
 (deflisten cycle-6 'while true; do echo 0; sleep 6; echo 1; sleep 6; done')
 (deflisten cycle-5 'while true; do echo 0; sleep 5; echo 1; sleep 5; done')
+(defvar browser "firefox-developer-edition")
+(defvar terminal "kitty")
 
 ; }}}
 ; ♻️  widgets: {{{
@@ -85,7 +89,8 @@
   (eventbox
     :onhover "eww update volume-visible=true"
     :onhoverlost "eww update volume-visible=false"
-    (box :class "music" :space-evenly false :spacing 0
+    (box :space-evenly false :spacing 0
+         :class "trM" :style "margin-left: ${music-hover ? 80 : 0}px;"
       (music-info)
     )
   )
@@ -609,11 +614,12 @@
 (defwindow computer
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :anchor "top right" :x "100px")
-  (box :class "computer" :halign "end" :space-evenly false :spacing 0
+  (box :class "trM" :halign "end" :space-evenly false :spacing 0
+    :style "margin-right: ${user-hover ? 80 : 0}px;"
     (cpu) (memory) (gpu)
   )
 )
-; ♻️  computer-widgets: {{{
+
 ; Update `define_builtin_vars! { Duration::new(0, 500000000)` in inbuilt.rs
 ; Default is (2, 0), but I like updates of 0.5 seconds for cpu polling.
 (defwidget num-to-block [load]
@@ -698,8 +704,7 @@
     )
   )
 )
-; }}}
-; 💻 cpu: {{{
+
 (defvar cpu-info false)
 (defvar cores "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
 
@@ -736,8 +741,6 @@
   )
 )
 
-; }}}
-; 🧠 memory: {{{
 
 (defvar range16 "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
 (defvar memory-info false)
@@ -773,8 +776,6 @@
   )
 )
 
-; }}}
-; 🖥️ gpu: {{{
 
 (defpoll sensors :interval "0.5s" `sensors -j`)
 (defpoll gpu :interval "0.5s" 'scripts/computer_info')
@@ -881,7 +882,6 @@
 
 ; }}}
 
-; }}}
 ; 🤓 user: {{{
 
 (defwindow user
@@ -898,8 +898,11 @@
  (eventbox
     :onhover "eww update user-hover=true"
     :onhoverlost "eww update user-hover=false"
+    :onclick "${browser} https://twitter.com/home & disown"
+    :onmiddleclick "${browser} https://www.youtube.com/feed/subscriptions & disown"
+    :onrightclick "${browser} https://github.com/nosvagor & disown"
     (box :space-evenly false :spacing 0
-      :class "userbox ${user-hover ? "userbox-hover" : ""}"
+      :class "trA userbox ${user-hover ? "userbox-hover" : ""}"
       :style "background-image: url('${userUrl}');"
     )
   )
@@ -1137,7 +1140,7 @@
     (box :space-evenly false :spacing 0
       :class "systemctl-box ${systemctl-hover ? "systemctl-box-hover" : "" }"
       :style "background-image: url('assets/systemctl/mitochondria${systemctl-hover ? "-active" : ""}.svg');"
-      :tooltip "   mitochondria, the powerhouse of the cell"
+      :tooltip "   mitochondria, the powerhouse of the cell "
       (revealer
         :transition "crossfade"
         :reveal systemctl-hover
@@ -1163,14 +1166,17 @@
 ; }}}
 ; 📦 pacman: {{{
 (defpoll upgrades :initial 0 :interval "1m" 'paru -Qu | wc -l')
+(defvar pacman-hover false)
 (defwindow pacman
   :monitor 0 :stacking "fg" :exclusive false :focusable false
   :geometry (geometry :anchor "bottom right" :x "93px" :y "5px" )
   (eventbox
     :cursor "pointer"
+    :onhover "eww update pacman-hover=true"
+    :onhoverlost "eww update pacman-hover=false"
     :onclick 'kitty --title="terminalfloat" -e "paru" & disown'
     (label
-      :class "pacamn ramp-${
+      :class "ramp-${
              upgrades <= 1 ? "3" :
              upgrades <= 3 ? "4" :
              upgrades < 5 ? "4-alt" :
@@ -1178,13 +1184,10 @@
              upgrades < 20 ? "8" :
              upgrades < 30 ? "9" :
              upgrades < 40 ? "11" : "crit"
-      }"
+      } pacman${pacman-hover ? "-hover" : ""}"
       :markup "<small>${upgrades <= 1 ? " ": "${upgrades} "}</small><tt> </tt>"
-      :tooltip "${upgrades <= 1 ? "   synced  ": "${upgrades} available updgrades" }"
-      :style "
-              transition: margin 0.2s ease-out;
-              margin-right: ${systemctl-hover ? "10" : "0"}px;
-             "
+      :tooltip "${upgrades <= 1 ? "   synced  ": " ${upgrades} available updgrades " }"
+      :style "margin-right: ${systemctl-hover ? "10" : "0"}px;"
     )
   )
 )
