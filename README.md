@@ -29,9 +29,16 @@
 - [x] Fix fonts, for all edge cases (no longer hack nerd font)
 - [x] Ditch TMUX in favor for kitty terminal emulator
 - [ ] Finish configuration of eww widgets, replacing need for status bars
-  - [x] Top bar (harder)
-  - [ ] Bot bar
-  - [ ] Clean up, documument config file.
+  - [x] Top bar
+  - [x] Bot bar
+  - [x] Discover the wonder of creating my own SVGs
+    - [x] Start... using custom svgs everywhere
+    - [ ] Resist urge to put custom svgs everywhere
+    - [x] Probably make overly complex svgs
+      - [x] Stop caaring and be happy because it looks great
+    - [ ] Quit svg addiction
+  - [ ] Clean up
+  - [ ] Documument config file.
 - [ ] Refactor neovim config, pending 0.8 upgrade.
 - [ ] Update README
   - [ ] Trim excess packages
