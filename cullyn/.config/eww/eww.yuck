@@ -356,7 +356,7 @@
   (eventbox
     :onhover "eww update weather-info=true"
     :onhoverlost "eww update weather-info=false"
-    :onclick "firefox-developer-edition https://www.windy.com/?hrrrConus,45.445,-122.764,9"
+    :onclick "firefox-developer-edition https://www.windy.com/?hrrrConus,45.445,-122.764,9 & disown"
     :cursor "pointer"
     (box :class "weather" :halign "end" :space-evenly false :spacing 8
       (label
@@ -485,8 +485,8 @@
     :class "time-${child} time-${child}-${bool ? "active" : "inactive"}"
     :onhover "eww update ${child}-active=true"
     :onhoverlost "eww update ${child}-active=false"
-    :onclick "firefox-developer-edition https://calendar.google.com/calendar/u/0/r"
-    :onrightclick "firefox-developer-edition https://calendar.google.com/calendar/u/0/r/eventedit?state=%5B%5D"
+    :onclick "${browser} https://calendar.google.com/calendar/u/0/r & disown"
+    :onrightclick "${browser} https://calendar.google.com/calendar/u/0/r/eventedit?state=%5B%5D & disown"
     :cursor "pointer"
     (label :class "time-text" :text text)
   )
@@ -921,10 +921,11 @@
 (deflisten occupied 'tail -F /tmp/eww/occupied')
 (defvar ws-hovered false)
 
-(defwidget workspace [icon num]
+(defwidget workspace [icon num desc]
   (eventbox
     :onclick "hyprctl dispatch workspace ${num}"
     :cursor "pointer"
+    :tooltip " ${desc} "
     (box
       :style "
               background-image: url('assets/ws-icons/${icon}${
@@ -946,11 +947,11 @@
     (box
       :class "workspaces-box ${ws-hovered ? "workspaces-box-hovered" : ""}"
       :halign "center" :space-evenly false :spacing 10
-      (workspace :icon "network"  :num "1")
-      (workspace :icon "learn"    :num "2")
-      (workspace :icon "dna"      :num "3")
-      (workspace :icon "dotfiles" :num "4")
-      (workspace :icon "music"    :num "5")
+      (workspace :icon "network"  :num "1" :desc "  chat 'n networking  " )
+      (workspace :icon "learn"    :num "2" :desc "   reading 'n browsing  " )
+      (workspace :icon "dna"      :num "3" :desc "  primary work station  " )
+      (workspace :icon "dotfiles" :num "4" :desc "  settings 'n seconday work  " )
+      (workspace :icon "music"    :num "5" :desc "  music 'n entertainment  " )
     )
   )
 )
@@ -1098,8 +1099,10 @@
   (eventbox
     :onhover "eww update dunst-hover=true"
     :onhoverlost "eww update dunst-hover=false"
-    :onclick "eww update dunst-active=true"
-    :onrightclick "eww update dunst-active=false"
+    :onclick "eww update dunst-active=true & dunstctl set-paused false & disown"
+    :onmiddleclick "dunstctl close-all"
+    :onrightclick "eww update dunst-active=false & dunstctl set-paused true & disown"
+    :tooltip " ${dunst-active ? "right click to silence  " : "${dunst-count} waiting notifications"} "
     (box :space-evenly false :spacing 0
       :class "tabbox ${dunst-hover ? "tabbox-hover" : "" }"
       :style "background-image: url('assets/dunst/${dunst-active ? "active" : "inactive"}${dunst-hover ? "-hover" : ""}.svg');"
@@ -1137,6 +1140,7 @@
     :onhover "eww update systemctl-hover=true"
     :onhoverlost "eww update systemctl-hover=false"
     :onrightclick "~/.local/bin/lock suspend & disown"
+    :onmiddleclick "systemctl poweroff"
     (box :space-evenly false :spacing 0
       :class "systemctl-box ${systemctl-hover ? "systemctl-box-hover" : "" }"
       :style "background-image: url('assets/systemctl/mitochondria${systemctl-hover ? "-active" : ""}.svg');"
@@ -1186,7 +1190,7 @@
              upgrades < 40 ? "11" : "crit"
       } pacman${pacman-hover ? "-hover" : ""}"
       :markup "<small>${upgrades <= 1 ? " ": "${upgrades} "}</small><tt> </tt>"
-      :tooltip "${upgrades <= 1 ? "   synced  ": " ${upgrades} available updgrades " }"
+      :tooltip "${upgrades <= 1 ? "   synced  ": "   ${upgrades} available upgrades " }"
       :style "margin-right: ${systemctl-hover ? "10" : "0"}px;"
     )
   )

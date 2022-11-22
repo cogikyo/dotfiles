@@ -10,7 +10,7 @@
 $sans-serif: Albert Sans;
 $monospace: LigaHack Nerd Font;
 $monospace-alt: Fira Code, Symbols Nerd Font;
-$ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.367);
+$ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 
 * {
   all: unset;
@@ -100,7 +100,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.367);
 
 tooltip {
   color: $orange;
-  background-color: rgba($bg, 0.9);
+  background-color: rgba($bg, 0.95);
   border: 1px solid $orange-g;
   border-radius: 8px 24px 8px 20px;
 }
@@ -449,7 +449,7 @@ window {
     font-size: 1.1em;
   }
   &-Monday {
-    @include cycle($pink);
+    @include cycle($purple);
   }
   &-Tuesday,
   &-Thursday {
