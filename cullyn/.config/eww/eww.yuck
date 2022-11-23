@@ -183,7 +183,7 @@
        :style "margin: 0 -8px;"
    (circular-progress
       :class "music-progress-circle"
-      :value progress
+      :value {progress >= 0 && progress <= 100 ? progress : 0}
       :start-at 75
       :thickness 2
       :clockwise true
@@ -293,7 +293,7 @@
       }"
       (circular-progress
         :class "music-progress-circle"
-        :value value
+        :value {value <= 100 ? value : 100}
         :start-at 75
         :thickness 2
         :clockwise false
@@ -977,7 +977,7 @@
     :onscroll "scripts/brightness adjust {} ${brightness} & disown"
     :onrightclick "scripts/brightness reset & disown"
     (box :space-evenly false :spacing 0
-      :class "tabbox ${screenctl-hover ? "tabbox-hover" : "" }"
+      :class "svgbox ${screenctl-hover ? "svgbox-hover" : "" } trA"
       :style "background-image: url('assets/screenctl/brctl${screenctl-hover ? "-${brightness > 0 ? "${brightness}" : "10"}" : ""}.svg');"
     )
   )
@@ -995,7 +995,7 @@
     :onhoverlost "eww update signal-hover=false"
     (box
       :space-evenly false :spacing 0
-      :class "tabbox ${signal-hover ? "tabbox-hover" : "" }"
+      :class "svgbox ${signal-hover ? "svgbox-hover" : "" } trA"
       :style "background-image: url('assets/signal/signal${
                 signal-hover ? "-hover" : ""
               }.svg');"
@@ -1105,7 +1105,7 @@
     :onrightclick "eww update dunst-active=false & dunstctl set-paused true & disown"
     :tooltip " ${dunst-active ? "right click to silence  " : "${dunst-count} waiting notifications"} "
     (box :space-evenly false :spacing 0
-      :class "tabbox ${dunst-hover ? "tabbox-hover" : "" }"
+      :class "svgbox ${dunst-hover ? "svgbox-hover" : "" } trA"
       :style "background-image: url('assets/dunst/${dunst-active ? "active" : "inactive"}${dunst-hover ? "-hover" : ""}.svg');"
       (box
         :valign "start"

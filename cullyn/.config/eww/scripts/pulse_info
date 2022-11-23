@@ -1,5 +1,10 @@
 #!/usr/bin/env bash
 
+inprog=$(ps -ef | rg change_volume | rg -v rg | wc -l)
+if [[ "$inprog" -gt 2 ]]; then
+    exit 1
+fi
+
 get_id () {
     id=$(pulsemixer --list-"$1" \
         | grep "Default" \
