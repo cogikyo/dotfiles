@@ -1,11 +1,6 @@
 <h1 align="center">⚙️ dotfiles ⚙️</h1>
 
 <p align="center">
-    <img src="https://img.shields.io/badge/OS-Arch Linux-5454B9?style=plastic&labelColor=24283b"/>&nbsp;&nbsp;
-    <img src="https://img.shields.io/badge/DS-Wayland-883330?style=plastic&labelColor=24283b"/>&nbsp;&nbsp;
-    <img src="https://img.shields.io/badge/WM-Hyprland-7c4592?style=plastic&labelColor=24283b"/>&nbsp;&nbsp;
-    <img src="https://img.shields.io/badge/CS-Tokyo Night-ae477a?style=plastic&labelColor=24283b"/>
-    <br>
     <kbd>
         <img
             alt="dotfiles neonlights banner"
@@ -295,6 +290,13 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 2.12 Nice tree replacement (found when configuring nnn)
 
     go install github.com/kitagry/gtree@latest
+
+&nbsp;
+
+2.13 SDDM setup (No theme setup, I prefer autologin). See [SDDM](https://wiki.archlinux.org/title/SDDM) for more instructions, if you wish to customize theme.
+
+    sudo cp your-user-icon.png "/usr/share/sddm/faces/$USER.face.icon"
+    cp ~/dotfiles/resources/sddm.conf.d/*.conf /etc/sddm.conf.d/
 
 ---
 
