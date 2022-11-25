@@ -59,7 +59,6 @@ while [[ "$online" -eq 1 ]]; do
 done
 
 hyprctl keyword input:follow_mouse 0
-notify-send "opening $1 layout"
 "$1"
 hyprctl keyword input:follow_mouse 1
 

@@ -14,6 +14,7 @@ local ff = { noremap = false, silent = false }
 map("", "<Space>", "<Nop>")
 map("n", "<leader>s", "<Nop>")
 map("n", "<leader>r", "<Nop>")
+map("n", "<leader>u", "<Nop>")
 vim.g.mapleader = " "
 -- }}}
 
@@ -194,4 +195,13 @@ map("i", "<C-l>", "<c-g>u<Esc>[s1z=`]a<c-g>u", ft)
 
 -- 🥂 Miscellaneous {{{
 map("n", "gx", [[:silent execute '!xdg-open ' . shellescape(expand('<cfile>'), v:true)<CR>]], ft)
+-- }}}
+
+-- ⭐ Common Unicode: {{{
+map("n", "<leader>uad", "a⮯")
+map("n", "<leader>uau", "a⮭")
+map("n", "<leader>uin", "a∞")
+map("n", "<leader>ucd", "a ")
+map("n", "<leader>uar", "a⇒")
+map("n", "<leader>ual", "a⇐")
 -- }}}

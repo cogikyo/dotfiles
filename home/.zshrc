@@ -72,20 +72,27 @@ alias dot='cd ~/dotfiles'
 alias d='cd ~/downloads'
 alias not='cd ~/notes'
 alias x='exit'
+alias g='lazygit'
 alias n='nvim'
-bk () { mpvpaper -o "--loop --brightness=$2 --contrast=$3 --saturation=$4 --hue=$5 --gamma=$6" 'HDMI-A-1' ~/dotfiles/resources/videos/"$1" }
 alias ew='eww-open'
 alias ews='eww inspector & disown && exit'
 alias el='eww logs'
+alias man='man -r=""'
+
 choas () {
     kitty --title="$1" -c ".config/kitty/kitty.conf" -c ".config/kitty/nobg.conf" -e $1 & disown
 }
-alias man='man -r=""'
+
+invis () {
+    kitty --title="invis" & disown;
+}
+
 pacclean () {
     while ! [ "$(pacman -Qdtq)" = "" ]; do
 	sudo pacman -Rn $(pacman -Qdtq)
     done
 }
+
 touchsh () {
     file="$1"
     if [[ -z "$1" ]]; then
@@ -96,38 +103,12 @@ touchsh () {
     echo "#!/usr/bin/env bash" >> $file
 }
 
-# git
-alias g='lazygit'
-alias gts='git status'
-kurmit () {
-    commit_msg="$*"
-    echo "git status:\n"
-    git status
-    echo
-    while true; do
-    yn=""
-    vared -p "Are you sure you want to kurmit all files? [y/n]: " yn
-    case $yn in
-        [Yy]* )
-            if [[ -z $commit_msg ]]; then
-                vared -p "Commit message: " commit_msg
-            fi
-            git add .
-            git commit --message="$commit_msg"
-            git push
-            return;;
-        [Nn]* )
-            echo "\nAll right, then. Keep your secrets."
-            return;;
-        * ) echo "Please answer (y)es or (n)o.";;
-    esac
-    done
+bk () {
+    mpvpaper -o \
+    "--loop --brightness=$2 --contrast=$3 --saturation=$4 --hue=$5 --gamma=$6" \
+    'HDMI-A-1' \
+    ~/dotfiles/resources/videos/"$1"
 }
-alias amend='(){git add . && git commit --amend --no-edit;}'
-alias gpf='git push --force'
-alias gp='git pull'
-alias gP='git push'
-# alias gsync='git fetch -p && git branch -vv | awk "/: gone]/{print \$1}" | xargs git branch -D'
 
 # ╔═╗┬  ┬ ┬┌─┐┬┌┐┌┌─┐
 # ╠═╝│  │ ││ ┬││││└─┐
