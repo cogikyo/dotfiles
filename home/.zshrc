@@ -24,15 +24,14 @@ setopt HIST_IGNORE_DUPS
 # ┘└┘┘└┘┘└┘
 
 e ()
-{
-  if [ -n $NNNLVL ] && [ "${NNNLVL:-0}" -ge 1 ]; then
+{ if [ -n $NNNLVL ] && [ "${NNNLVL:-0}" -ge 1 ]; then
     echo "nnn is already running"
     return
   fi
 
-  NNN_TMPFILE="${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.lastd"
+  NNN_TMPFILE="/tmp/nnn/.lastd"
 
-  nnn -c "$@"
+  nnn -cr "$@"
 
   if [ -f "$NNN_TMPFILE" ]; then
     . "$NNN_TMPFILE"
@@ -60,6 +59,9 @@ dots="$HOME/dotfiles"
 export NNN_BMS="d:$HOME/downloads/;.:$dots/;b:$dots/$USER/.local/bin;c:$dots/$USER/.config/;e:$dots/$USER/.config/nvim/;s:$HOME/media/screenshots/;r:$HOME/media/recordings/"
 export EDITOR=nvim
 
+stty start undef
+stty stop undef
+stty lnext undef
 
 # ╔═╗┬  ┬┌─┐┌─┐┌─┐┌─┐
 # ╠═╣│  │├─┤└─┐├┤ └─┐
@@ -70,6 +72,7 @@ alias ls='lsd'
 alias tree='gtree'
 alias dot='cd ~/dotfiles'
 alias d='cd ~/downloads'
+alias c='cd ~/.config/eww/' # current frequent dir
 alias not='cd ~/notes'
 alias x='exit'
 alias g='lazygit'

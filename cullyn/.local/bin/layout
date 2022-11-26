@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
-side_window='1001 1204'
-# large_side_window='2684 1204'
+side_window='1001 1202'
 center_window='1668 1800'
 
 create () {
@@ -26,7 +25,7 @@ create () {
 dotfiles () {
     pkill guvcview
     hyprctl dispatch workspace 4
-    kitty --working-directory="$HOME/dotfiles/" & sleep 0.5
+    kitty --working-directory="$HOME/dotfiles" & sleep 0.5
     firefox-developer-edition --new-window https://calendar.google.com/calendar/u/0/r & sleep 1.5
     kitty --hold -o font_size=10.0 --title="cava" -c ".config/kitty/kitty.conf" -c ".config/kitty/nobg.conf" -e cava & sleep 0.5
     hyprctl dispatch movefocus l
@@ -39,11 +38,8 @@ dotfiles () {
     kitty --title="invis" & sleep 0.5
     hyprctl dispatch movefocus u
     hyprctl dispatch resizeactive "exact $side_window"
-    hyprctl dispatch movefocus l
-    hyprctl dispatch movefocus l
-    hyprctl dispatch movefocus l
-    hyprctl dispatch movefocus l
-    guvcview & disown
+    guvcview & sleep 0.5
+    hyprctl dispatch movefocus r
 }
 
 online=1

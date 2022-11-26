@@ -2,7 +2,7 @@
 from os import getlogin, uname
 from pathlib import Path
 from kitty.boss import get_boss
-from kitty.fast_data_types import Screen, add_timer, get_options
+from kitty.fast_data_types import Screen, get_options
 from kitty.utils import color_as_int
 from kitty.tab_bar import (
     DrawData,
@@ -154,10 +154,10 @@ def _draw_right_status(screen: Screen, is_last: bool, cells: list) -> int:
     return screen.cursor.x
 
 
-def _redraw_tab_bar(_):
-    tab_manager = get_boss().active_tab_manager
-    if tab_manager is not None:
-        tab_manager.mark_tab_bar_dirty()
+# def _redraw_tab_bar(_):
+#     tab_manager = get_boss().active_tab_manager
+#     if tab_manager is not None:
+#         tab_manager.mark_tab_bar_dirty()
 
 
 def draw_tab(
@@ -171,7 +171,6 @@ def draw_tab(
     extra_data: ExtraData,
 ) -> int:
     global right_status_length
-    add_timer(_redraw_tab_bar, REFRESH_TIME, True)
     app = ICON_USER + getlogin() + " " + SEPARATOR_SYMBOL_RIGHT
     host = uname()[1] + ICON_HOST
     cells = []
