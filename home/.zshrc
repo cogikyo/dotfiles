@@ -31,7 +31,7 @@ e ()
 
   NNN_TMPFILE="/tmp/nnn/.lastd"
 
-  nnn -cr "$@"
+  nnn -c "$@"
 
   if [ -f "$NNN_TMPFILE" ]; then
     . "$NNN_TMPFILE"
@@ -69,9 +69,10 @@ stty lnext undef
 
 alias niol='clear && source ~/.zshrc'
 alias ls='lsd'
-alias tree='gtree'
+alias tree='gtree -d'
 alias dot='cd ~/dotfiles'
 alias d='cd ~/downloads'
+alias v='cd ~/vagari'
 alias c='cd ~/.config/eww/' # current frequent dir
 alias not='cd ~/notes'
 alias x='exit'
