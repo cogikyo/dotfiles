@@ -202,6 +202,6 @@ map("n", "<leader>uad", "a⮯")
 map("n", "<leader>uau", "a⮭")
 map("n", "<leader>uin", "a∞")
 map("n", "<leader>ucd", "a ")
-map("n", "<leader>uar", "a⇒")
-map("n", "<leader>ual", "a⇐")
+map("n", "<leader>uar", "a🢣")
+map("n", "<leader>ual", "a🢢")
 -- }}}
