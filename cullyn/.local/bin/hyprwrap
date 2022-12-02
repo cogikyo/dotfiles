@@ -15,3 +15,7 @@ export _JAVA_AWT_WM_NONEREPARENTING=1
 export CLUTTER_BACKEND="wayland"
 export GDK_BACKEND=wayland
 export XCURSOR_SIZE=24
+
+stty start undef
+stty stop undef
+stty lnext undef

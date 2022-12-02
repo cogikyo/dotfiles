@@ -59,10 +59,6 @@ dots="$HOME/dotfiles"
 export NNN_BMS="d:$HOME/downloads/;.:$dots/;b:$dots/$USER/.local/bin;c:$dots/$USER/.config/;e:$dots/$USER/.config/nvim/;s:$HOME/media/screenshots/;r:$HOME/media/recordings/"
 export EDITOR=nvim
 
-stty start undef
-stty stop undef
-stty lnext undef
-
 # ╔═╗┬  ┬┌─┐┌─┐┌─┐┌─┐
 # ╠═╣│  │├─┤└─┐├┤ └─┐
 # ╩ ╩┴─┘┴┴ ┴└─┘└─┘└─┘
@@ -88,7 +84,7 @@ choas () {
 }
 
 invis () {
-    kitty --title="invis" & disown;
+    kitty --title="invis" & disown; exit
 }
 
 pacclean () {

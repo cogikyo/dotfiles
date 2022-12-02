@@ -153,8 +153,9 @@ map("n", "<leader>mt", ":MarkdownPreviewToggle<CR>,")
 map("n", "<leader>hl", ":TSHighlightCapturesUnderCursor<CR>")
 map("n", "<leader>ls", ":LspInstallInfo<CR>")
 map("n", "<leader>et", ":NvimTreeToggle<CR> :NvimTreeRefresh<CR>")
-map("n", "<leader>tt", ":Switch<CR>") -- bool toggle false<->true
+map("n", "<leader>tb", ":Switch<CR>") -- bool toggle false<->true
 map("n", "<leader>it", ":NullLsInfo<CR>")
+map("n", "<leader>tt", ":NullLsInfo<CR>")
 -- }}}
 
 -- ⛵ Reflow TODO: FIXME {{{
@@ -177,6 +178,8 @@ map("n", "<leader>nd", ":lua require('harpoon.ui').nav_file(5)<CR>zt")
 map("n", "<leader>ir", "vip:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>", ff)
 map("v", "r", ":<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>", ff)
 map("n", "<leader>r<leader>", ":%s///g<Left><Left><Left>", ff)
+map("n", "<leader>rch", "viw:'<,'>ConvertColorTo hex<CR>")
+map("n", "<leader>rcl", "viw:'<,'>ConvertColorTo hsl<CR>")
 -- }}}
 
 -- 🤯 Comment headers {{{
@@ -204,4 +207,5 @@ map("n", "<leader>uin", "a∞")
 map("n", "<leader>ucd", "a ")
 map("n", "<leader>uar", "a🢣")
 map("n", "<leader>ual", "a🢢")
+map("n", "<leader>udeg", "a°")
 -- }}}
