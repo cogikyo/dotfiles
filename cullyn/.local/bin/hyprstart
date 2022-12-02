@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 hyprctl keyword input:follow_mouse 0
-~/.local/bin/layout -a discord -d media -n 1
-~/.local/bin/layout -a gimp -d vagari/share/images/ -n 2
-~/.local/bin/layout -a firefox -d vagari -n 3
-~/.local/bin/layout -a firefox -d eww -n 4
+~/.local/bin/layout -n 1 -a discord -w https://twitch.tv/following
+~/.local/bin/layout -n 2 -a inkscape
+~/.local/bin/layout -n 3 -w https://github.com/nosvagor/vagari -d vagari
+~/.local/bin/layout -n 4 -w https://github.com/nosvagor/dotfiles -d eww
 hyprctl keyword input:follow_mouse 1
 
 ytmdesktop & disown

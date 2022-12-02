@@ -1,32 +1,34 @@
 #!/usr/bin/env bash
 
-d_flag=''
-a_flag=''
-n_flag=''
+SIDE_WINDOW='1001 1202'
+CENTER_WINDOW='1668 1800'
+d_flag=""
+a_flag=""
+n_flag=""
+w_flag=""
 
-print_usage() {
-    echo "Please provide an (-a)pp, a (-d)irectory, and a workspace (-n)umber. "
-}
+inprog=$(ps -ef | rg layout | rg -v rg | wc -l)
+if [[ "$inprog" -gt 2 ]]; then
+    notify-send -u critical -t 2000 "ERROR: layout already in progress."
+    exit 1
+fi
 
-while getopts 'a:d:n:h' flag; do
+while getopts 'a:A:d:n:w:' flag; do
   case "$flag" in
     a) a_flag="$OPTARG" ;;
     d) d_flag="$OPTARG" ;;
     n) n_flag="$OPTARG" ;;
-    *) print_usage; exit 1 ;;
+    w) w_flag="$OPTARG" ;;
+    *) exit 1 ;;
   esac
 done
 
 if [[ "$#" == 0 ]]; then
-    print_usage
     exit 1
 fi
 
-side_window='1001 1202'
-center_window='1668 1800'
-
 browser () {
-    firefox-developer-edition --new-window "https://calendar.google.com/calendar/u/0/r" & sleep 1.5
+    firefox-developer-edition --new-window "$w_flag" & sleep 1.5
 }
 
 terminal () {
@@ -41,21 +43,35 @@ terminal () {
     kitty --working-directory="$HOME/$dir" & sleep 0.5
 }
 
-app () {
-    case "$a_flag" in
-        "gimp") gimp & sleep 5 ;;
-        "inkscape") inkscape & sleep 5 ;;
-        "web") browser ;;
-        "discord") discord & sleep 5; hyprctl dispatch movefocus r;;
-        *) firefox-developer-edition --new-window & sleep 1.5 ;;
-    esac
+cava () {
+    kitty --hold -o font_size=10.0 --title="cava" -c ".config/kitty/kitty.conf" -c ".config/kitty/nobg.conf" -e cava & sleep 0.5
+    hyprctl dispatch movefocus l
+    hyprctl dispatch resizeactive "exact $SIDE_WINDOW"
+    hyprctl dispatch movefocus r
+}
+
+code () {
+    kitty --working-directory="$HOME/dotfiles/" & sleep 0.5
+    hyprctl dispatch movefocus l
+    hyprctl dispatch resizeactive "exact $CENTER_WINDOW"
+    hyprctl dispatch movefocus r
+    kitty --title="invis" & sleep 0.5
+    hyprctl dispatch movefocus u
+    hyprctl dispatch resizeactive "exact $SIDE_WINDOW"
+    guvcview & sleep 0.5
+    hyprctl dispatch movefocus r
+}
+
+padding () {
+    kitty --title="invis" & sleep 0.5
+    hyprctl dispatch movefocus l
+    hyprctl dispatch resizeactive "exact $CENTER_WINDOW"
 }
 
 online=1
 connection () {
     nc -z 8.8.8.8 53  >/dev/null 2>&1
     online=$?
-    echo "connect: $online"
 }
 
 while [[ "$online" -eq 1 ]]; do
@@ -64,26 +80,34 @@ while [[ "$online" -eq 1 ]]; do
 done
 
 hyprctl keyword input:follow_mouse 0
-
 pkill guvcview
 hyprctl dispatch workspace "$n_flag"
-terminal "$d_flag"
-app
-kitty --hold -o font_size=10.0 --title="cava" -c ".config/kitty/kitty.conf" -c ".config/kitty/nobg.conf" -e cava & sleep 0.5
-hyprctl dispatch movefocus l
-hyprctl dispatch resizeactive "exact $side_window"
-hyprctl dispatch movefocus r
-kitty --working-directory="$HOME/dotfiles/" & sleep 0.5
-hyprctl dispatch movefocus l
-hyprctl dispatch resizeactive "exact $center_window"
-hyprctl dispatch movefocus r
-kitty --title="invis" & sleep 0.5
-hyprctl dispatch movefocus u
-hyprctl dispatch resizeactive "exact $side_window"
-guvcview & sleep 0.5
-hyprctl dispatch movefocus r
+
+case "$n_flag" in
+    1) echo 1
+    "$a_flag" & sleep 5;
+    browser
+    cava
+    padding
+    ;;
+    2) echo 2
+    browser
+    kitty & sleep 0.5;
+    cava
+    padding
+    ;;
+    3|4)
+    terminal "$d_flag"
+    browser
+    cava
+    code
+    ;;
+    *) exit 1 ;;
+esac
+
+
 
 hyprctl keyword input:follow_mouse 1
-notify-send -t 2000 "layout $1 opened"
+notify-send -t 2000 "layout for workspace $n_flag opened"
 
 exit 0
