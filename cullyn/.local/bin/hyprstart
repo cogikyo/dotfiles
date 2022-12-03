@@ -3,13 +3,13 @@
 hyprctl keyword input:follow_mouse 0
 ~/.local/bin/layout -n 1 -a discord -w https://twitch.tv/following
 ~/.local/bin/layout -n 2 -a inkscape
-~/.local/bin/layout -n 3 -w https://github.com/nosvagor/vagari -d vagari
-~/.local/bin/layout -n 4 -w https://github.com/nosvagor/dotfiles -d eww
+~/.local/bin/layout -n 3 -s vagari -w https://github.com/nosvagor/vagari
+~/.local/bin/layout -n 4 -s dotfiles -w https://github.com/nosvagor/dotfiles
 hyprctl keyword input:follow_mouse 1
 
 ytmdesktop & disown
 
-sleep 6.9
+sleep 4.20
 
 kill_background () {
     ps -ef | rg "$1" | rg -v rg | awk '{print $2}' | xargs kill

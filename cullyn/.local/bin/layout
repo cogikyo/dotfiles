@@ -2,9 +2,10 @@
 
 SIDE_WINDOW='1001 1202'
 CENTER_WINDOW='1668 1800'
-d_flag=""
 a_flag=""
+d_flag=""
 n_flag=""
+s_flag=""
 w_flag=""
 
 inprog=$(ps -ef | rg layout | rg -v rg | wc -l)
@@ -13,10 +14,11 @@ if [[ "$inprog" -gt 2 ]]; then
     exit 1
 fi
 
-while getopts 'a:A:d:n:w:' flag; do
+while getopts 'a:A:d:n:w:s:' flag; do
   case "$flag" in
     a) a_flag="$OPTARG" ;;
     d) d_flag="$OPTARG" ;;
+    s) s_flag="$OPTARG" ;;
     n) n_flag="$OPTARG" ;;
     w) w_flag="$OPTARG" ;;
     *) exit 1 ;;
@@ -32,15 +34,16 @@ browser () {
 }
 
 terminal () {
-    dir=''
-    case "$d_flag" in
-        "eww") dir=".config/eww/";;
-        "nvim") dir=".config/nvim/";;
-        "vagari") dir="vagari/";;
-        "media") dir="media/" ;;
-        *) dir="dotfiles/" ;;
-    esac
-    kitty --working-directory="$HOME/$dir" & sleep 0.5
+    if [[ -n "$1" ]]; then
+        kitty --session ~/.config/kitty/sessions/"$1".conf & sleep 1
+    else
+        if [[ -z "$d_flag" ]]; then
+            dir="dotfiles/"
+        else
+            dir="$d_flag"
+        fi
+        kitty --working-directory="$HOME/$dir" & sleep 0.5
+    fi
 }
 
 cava () {
@@ -51,13 +54,15 @@ cava () {
 }
 
 code () {
-    kitty --working-directory="$HOME/dotfiles/" & sleep 0.5
+    terminal "dotfiles"
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive "exact $CENTER_WINDOW"
     hyprctl dispatch movefocus r
     kitty --title="invis" & sleep 0.5
     hyprctl dispatch movefocus u
     hyprctl dispatch resizeactive "exact $SIDE_WINDOW"
+    hyprctl dispatch fullscreen 1
+    hyprctl dispatch fullscreen 1
     guvcview & sleep 0.5
     hyprctl dispatch movefocus r
 }
@@ -66,6 +71,30 @@ padding () {
     kitty --title="invis" & sleep 0.5
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive "exact $CENTER_WINDOW"
+    kitty --title="invis" & sleep 0.5
+    hyprctl dispatch movefocus u
+    hyprctl dispatch movefocus l
+    hyprctl dispatch resizeactive "exact $CENTER_WINDOW"
+    hyprctl dispatch movefocus r
+    kitty --title="invis" & sleep 0.5
+    hyprctl dispatch moveactive l
+    kitty --title="invis" & sleep 0.5
+    hyprctl dispatch movewindow l
+    hyprctl dispatch movefocus r
+    hyprctl dispatch movefocus r
+    hyprctl dispatch resizeactive "exact 4000 1800"
+    hyprctl dispatch movefocus l
+    hyprctl dispatch resizeactive "exact 2000 4000"
+    hyprctl dispatch movefocus u
+    hyprctl dispatch movefocus r
+    hyprctl dispatch resizeactive "exact 10 10"
+    hyprctl dispatch movefocus d
+    hyprctl dispatch resizeactive "exact 1900 500"
+    hyprctl dispatch movefocus d
+    hyprctl dispatch movefocus d
+    hyprctl dispatch resizeactive "0 35"
+    hyprctl dispatch movefocus u
+    hyprctl dispatch movefocus u
 }
 
 online=1
@@ -92,12 +121,17 @@ case "$n_flag" in
     ;;
     2) echo 2
     browser
-    kitty & sleep 0.5;
+    "$a_flag" & sleep 5;
     cava
     padding
+    hyprctl dispatch movefocus l
+    hyprctl dispatch movefocus l
+    hyprctl dispatch resizeactive "exact $SIDE_WINDOW"
+    hyprctl dispatch movefocus r
+    hyprctl dispatch movefocus r
     ;;
     3|4)
-    terminal "$d_flag"
+    terminal "$s_flag"
     browser
     cava
     code
