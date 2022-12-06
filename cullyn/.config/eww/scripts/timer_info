@@ -6,6 +6,7 @@ display_active () {
         "hour") eww update hour-active="true" ;;
         "minute") eww update minute-active="true" ;;
     esac
+    dunstify -a "attention" -t 1000 "🐦attention"
     sleep 5
     eww update timer-visible="false"
     eww update minute-active="false"
@@ -40,7 +41,7 @@ timer () {
 }
 
 timer_status () {
-    notify-send "timer started!"
+    dunstify -t 1000 "timer started!"
 
     countdown=true
     while "$countdown"; do
@@ -50,7 +51,7 @@ timer_status () {
 
         if [[ $hr -eq 0 ]] && [[ $min -eq 0 ]]; then
             countdown=false
-            notify-send "timer done!"
+            dunstify -a "timer" "timer done!"
             display_active "minute"
             break
         fi
@@ -106,7 +107,7 @@ alarm () {
 
 
 alarm_status () {
-    notify-send "alarm started!"
+    dunstify -t 1000 "alarm started!"
 
     alarm "start"
 
@@ -118,7 +119,7 @@ alarm_status () {
 
         if [[ $hr -eq 0 ]] && [[ $min -eq 0 ]]; then
             countdown=false
-            notify-send "alarm done!"
+            dunstify -a "timer" "alarm done!"
             display_active "hour"
             break
         fi
@@ -147,12 +148,12 @@ reset () {
                 offset="+ 3hour"
             fi
             date '+%H:00' -d "$offset" > "/tmp/eww/alarm"
-            notify-send "alarm reset"
+            dunstify -t 1000 "alarm reset"
         ;;
         timer)
             ps -ef | rg timer_status | rg -v rg | awk '{print $2}' | xargs kill
             echo "01:30" > "/tmp/eww/timer"
-            notify-send "timer reset"
+            dunstify -t 1000 "timer reset"
         ;;
     esac
 

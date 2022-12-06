@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+# dunsitfy arguments ⮯
+# app="$1"
+# sumamry="$2"
+# body="$3"
+# icon_path="$4"
+# urgency="$5"
+
+if [[ "$1" == "timer" ]]; then
+   sound="jackpot"
+fi
+
+case "$1" in
+    timer) sound="jackpot" ;;
+    attention) sound="discovery" ;;
+    *) sound="moondrop" ;;
+esac
+
+if [[ "$1" != "youtube-music-desktop-app" ]]; then
+    paplay "$HOME/dotfiles/resources/sounds/$sound.ogg"
+fi
+
+exit 0
