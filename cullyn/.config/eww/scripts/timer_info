@@ -6,7 +6,7 @@ display_active () {
         "hour") eww update hour-active="true" ;;
         "minute") eww update minute-active="true" ;;
     esac
-    dunstify -a "attention" -t 1000 "🐦attention"
+    dunstify -a "attention" -t 2000 "🐦attention"
     sleep 5
     eww update timer-visible="false"
     eww update minute-active="false"
@@ -56,7 +56,7 @@ timer_status () {
             break
         fi
 
-        if [[ $((min % 15)) -eq 0 ]] || [[ $min -le 5 ]]; then
+        if [[ $((min % 15)) -eq 0 ]]; then
             display_active "minute"
         fi
 
@@ -124,7 +124,7 @@ alarm_status () {
             break
         fi
 
-        if [[ $((min % 15)) -eq 0 ]] || [[ $min -le 5 ]]; then
+        if [[ $((min % 15)) -eq 0 ]]; then
             display_active "hour"
         fi
 
