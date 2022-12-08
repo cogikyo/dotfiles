@@ -1,9 +1,23 @@
 #!/usr/bin/env bash
 
+online=1
+connection () {
+    nc -z 8.8.8.8 53  >/dev/null 2>&1
+    online=$?
+}
+
+while [[ "$online" -eq 1 ]]; do
+    connection
+    sleep 0.5
+done
+
 hyprctl keyword input:follow_mouse 0
 ~/.local/bin/layout -n 1 -a discord -w https://twitch.tv/following
+sleep 3
 ~/.local/bin/layout -n 2 -a inkscape
+sleep 3
 ~/.local/bin/layout -n 3 -s vagari -w https://github.com/nosvagor/vagari
+sleep 3
 ~/.local/bin/layout -n 4 -s dotfiles -w https://github.com/nosvagor/dotfiles
 hyprctl keyword input:follow_mouse 1
 

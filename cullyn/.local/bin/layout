@@ -1,5 +1,11 @@
 #!/usr/bin/env bash
 
+inprog=$(ps -ef | rg layout | rg -v rg | wc -l)
+if [[ "$inprog" -gt 2 ]]; then
+    notify-send -u critical -t 2000 "ERROR: layout already in progress."
+    exit 0
+fi
+
 SIDE_WINDOW='1001 1202'
 CENTER_WINDOW='1668 1800'
 a_flag=""
@@ -8,13 +14,7 @@ n_flag=""
 s_flag=""
 w_flag=""
 
-inprog=$(ps -ef | rg layout | rg -v rg | wc -l)
-if [[ "$inprog" -gt 2 ]]; then
-    notify-send -u critical -t 2000 "ERROR: layout already in progress."
-    exit 1
-fi
-
-while getopts 'a:A:d:n:w:s:' flag; do
+while getopts 'a:d:n:w:s:' flag; do
   case "$flag" in
     a) a_flag="$OPTARG" ;;
     d) d_flag="$OPTARG" ;;
@@ -26,6 +26,12 @@ while getopts 'a:A:d:n:w:s:' flag; do
 done
 
 if [[ "$#" == 0 ]]; then
+    exit 1
+fi
+
+windows=$(hyprctl workspaces |  grep -A 1 "ID $n_flag" | grep -oP '\windows:\s+\K[0-9]+')
+if [[ "$windows" -gt 1 ]]; then
+    notify-send -u critical -t 2000 "ERROR: layout already open."
     exit 1
 fi
 
@@ -97,17 +103,6 @@ padding () {
     hyprctl dispatch movefocus u
 }
 
-online=1
-connection () {
-    nc -z 8.8.8.8 53  >/dev/null 2>&1
-    online=$?
-}
-
-while [[ "$online" -eq 1 ]]; do
-    connection
-    sleep 0.5
-done
-
 hyprctl keyword input:follow_mouse 0
 pkill guvcview
 hyprctl dispatch workspace "$n_flag"
@@ -139,9 +134,7 @@ case "$n_flag" in
     *) exit 1 ;;
 esac
 
-
-
 hyprctl keyword input:follow_mouse 1
-notify-send -t 2000 "layout for workspace $n_flag opened"
+notify-send -t 1000 "layout for workspace $n_flag opened"
 
 exit 0
