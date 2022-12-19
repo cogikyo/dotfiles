@@ -159,8 +159,7 @@ map("n", "<leader>tt", ":NullLsInfo<CR>")
 -- }}}
 
 -- ⛵ Reflow TODO: FIXME {{{
-map("n", "<leader>rx", "vipgqzt{j^")
-map("n", "<leader>rf", "mzJ`zVgwzHzt_")
+map("n", "<leader>rf", "gwip")
 -- }}}
 
 -- 🔱 Harpoon {{{
