@@ -16,9 +16,9 @@ hyprctl keyword input:follow_mouse 0
 # sleep 3
 # ~/.local/bin/layout -n 2 -a inkscape
 # sleep 3
-~/.local/bin/layout -n 3 -s vagari -w https://github.com/nosvagor/vagari
+# ~/.local/bin/layout -n 3 -s vagari.nvim -w https://github.com/nosvagor/vagari.nvim
 # sleep 3
-# ~/.local/bin/layout -n 4 -s dotfiles -w https://github.com/nosvagor/dotfiles
+~/.local/bin/layout -n 4 -s dotfiles -w https://github.com/nosvagor/dotfiles
 hyprctl keyword input:follow_mouse 1
 
 ytmdesktop & disown
