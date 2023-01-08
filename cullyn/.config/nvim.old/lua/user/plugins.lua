@@ -99,6 +99,7 @@ return packer.startup(function(use)
 
     -- 👀 UI ------------------------------------------------------------------
     use("folke/tokyonight.nvim")
+    use { "catppuccin/nvim", as = "catppuccin" }
     use({
         "kyazdani42/nvim-web-devicons",
         config = function()
