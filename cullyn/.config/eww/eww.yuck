@@ -15,6 +15,8 @@
 ; }}}
 ; ♻️  widgets: {{{
 
+; Combination of slide and fade revealer ⮯
+; See: https://elkowar.github.io/eww/widgets.html#revealer
 (defwidget slide-n-fade [direction bool]
   (revealer
     :transition "slide${direction}"
@@ -27,6 +29,8 @@
   )
 )
 
+; (I)con (V)alue (U)nit: Combination of multiple label widgets ⮯
+; See: https://elkowar.github.io/eww/widgets.html#label
 (defwidget IVU [
   ?box-style ?box-class
   icon  ?icon-class  ?icon-style  ?icon-tooltip
@@ -35,24 +39,26 @@
 ]
   (box
     :class "${strlength(value) > 0 ? box-class : "ramp-2"}"
-    :style box-style :space-evenly false :spacing 0
+    :style box-style
+    :space-evenly false
+    :spacing 0
     (label
-      :markup "<tt>${icon}</tt>"
-      :class icon-class
+      :text "${icon}"
+      :class "icon ${icon-class}"
       :style icon-style
-      :tooltip icon-tooltip
+      :tooltip " ${icon-tooltip} "
     )
     (label
       :text "${strlength(value) > 0 ? value : "勒"}"
-      :class value-class
+      :class "value ${value-class}"
       :style "${strlength(value) > 0 ? "${value-style}" : "margin-right: 5px;"}"
-      :tooltip value-tooltip
+      :tooltip " ${value-tooltip} "
     )
     (label
       :text unit
       :class "unit ${unit-class}"
       :style unit-style
-      :tooltip unit-tooltip
+      :tooltip " ${unit-tooltip} "
     )
   )
 )
@@ -633,7 +639,7 @@
       load < 75    ? "▆" :
       load < 88.5  ? "▇" : "█"
     }
-    :class "ramp-${
+    :class "trA ramp-${
       load < 5   ? "1" :
       load < 10  ? "2" :
       load < 20  ? "3" :

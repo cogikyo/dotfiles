@@ -24,6 +24,7 @@ tooltip {
   border: 1px solid $orange-g;
   border-radius: 10px 24px 12px 20px;
 }
+
 window {
   color: $blue;
   font-family: $sans-serif, $monospace;
@@ -43,7 +44,7 @@ window {
 }
 
 .trA {
-  transition: all 0.25s ease-out;
+  transition: all 0.25s $ease-out-snap;
 }
 
 .ramp {
@@ -120,8 +121,14 @@ window {
     radius: 50% 27% 48% 87%;
   }
 
+  margin: {
+    top: 30px;
+    right: 0;
+    bottom: 30px;
+    left: 30px;
+  }
+
   box-shadow: -2px 0px 7px 1px rgba($purple, 0.23);
-  margin: 30px 0 30px 30px;
 
   &-hover {
     background-color: rgba($navy, 0.42);
@@ -316,7 +323,7 @@ window {
   &-moon {
     color: $white;
     &-full {
-      color: $celeste;
+      color: #ffffff;
     }
   }
   &-air {
