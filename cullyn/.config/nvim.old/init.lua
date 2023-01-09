@@ -24,3 +24,4 @@ local config_files = {
 for _, file in ipairs(config_files) do
     require("user." .. file)
 end
+
