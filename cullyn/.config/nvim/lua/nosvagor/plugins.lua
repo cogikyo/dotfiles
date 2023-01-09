@@ -33,7 +33,6 @@ vim.api.nvim_create_autocmd('BufWritePost', {
   pattern = vim.fn.expand '$MYVIMRC',
 })
 
-
 -- Use a protected call so we don"t error out on first use
 local status_ok, packer = pcall(require, "packer")
 if not status_ok then
@@ -49,7 +48,6 @@ packer.init({
     },
 })
 
-
 -- }}}
 -- ============================================================================
 
@@ -62,15 +60,31 @@ return packer.startup(function(use)
     -- }}}
 
     -- 📚 LSP ⮯ {{{
+    use "neovim/nvim-lspconfig"
     use {
-        "neovim/nvim-lspconfig",
-        requires = {
-            'williamboman/mason.nvim',
-            'williamboman/mason-lspconfig.nvim',
-            'j-hui/fidget.nvim',
-            'folke/neodev.nvim',
-        },
+        'williamboman/mason.nvim',
+        config = function()
+            require("mason").setup({
+                ui = {
+                    icons = {
+                        package_installed = "✓",
+                        package_pending = "➜",
+                        package_uninstalled = "✗"
+                    }
+                }
+            })
+        end,
     }
+    use {
+        'williamboman/mason-lspconfig.nvim',
+        config = function()
+            require("mason-nvim-dap").setup({
+                automatic_setup = true,
+            })
+        end,
+    }
+    use 'j-hui/fidget.nvim'
+    use 'folke/neodev.nvim'
     use 'mfussenegger/nvim-dap'
     use 'jayp0521/mason-nvim-dap.nvim'
     use 'mfussenegger/nvim-lint'
@@ -95,10 +109,7 @@ return packer.startup(function(use)
     -- 🌲 Treesitter ⮯ {{{
     use { "nvim-treesitter/nvim-treesitter", run = ":TSUpdate" }
     use "nvim-treesitter/playground"
-    use { -- Additional text objects via treesitter
-        'nvim-treesitter/nvim-treesitter-textobjects',
-        after = 'nvim-treesitter',
-    }
+    use 'nvim-treesitter/nvim-treesitter-textobjects'
     use "JoosepAlviste/nvim-ts-context-commentstring"
     use "mfussenegger/nvim-ts-hint-textobject"
     use "andymass/vim-matchup"
@@ -126,14 +137,13 @@ return packer.startup(function(use)
         tag = "release",
     }
     use "nvim-lualine/lualine.nvim"
-
     -- }}}
 
     -- ✋ UX ⮯ {{{
     use 'tpope/vim-sleuth' -- Detect tabstop and shiftwidth automatically
     use "numToStr/Comment.nvim"
     use "ThePrimeagen/harpoon"
-    use 'nvim-telescope/telescope.nvim' 
+    use 'nvim-telescope/telescope.nvim'
     use "natecraddock/telescope-zf-native.nvim"
     use "mattn/emmet-vim"
     use "windwp/nvim-autopairs"
@@ -145,6 +155,20 @@ return packer.startup(function(use)
         "iamcco/markdown-preview.nvim",
         run = function() vim.fn["mkdp#util#install"]() end,
     }
+    use {
+        'cappyzawa/trim.nvim',
+        config = function()
+            require('trim').setup({
+                disable = {},
+                patterns = {
+                    -- replace multiple blank lines with a single line ⮯
+                    [[%s/\(\n\n\n\)\n\+/\1/]],
+                },
+            })
+        end,
+    }
+
+
     use "tpope/vim-repeat"
     use "tpope/vim-surround"
     use "mbbill/undotree"

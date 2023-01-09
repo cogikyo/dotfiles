@@ -1,5 +1,5 @@
 -- ============================================================================
--- 📎 Setup {{{
+-- 🧰 Setup {{{
 local function map(mode, lhs, rhs, opts)
     opts = vim.tbl_extend("force", { noremap = true, silent = true }, opts or {})
     vim.api.nvim_set_keymap(mode, lhs, rhs, opts)
@@ -49,8 +49,8 @@ map("n", "<leader>wd", "dt<space>")
 -- }}}
 
 -- 🦬 Buffers {{{
-map("n", "<leader>b", ":bn<CR>zt")
-map("n", "<leader>B", ":bp<CR>zt")
+map("n", "<leader>bn", ":bn<CR>zt")
+map("n", "<leader>bp", ":bp<CR>zt")
 map("n", "<leader><C-w>", ":bd!<CR>zt")
 -- }}}
 
@@ -138,28 +138,14 @@ map("n", "<leader>D", "<cmd>lua require('telescope.builtin').lsp_type_definition
 map("n", "<leader>ts", "<cmd>lua require('telescope.builtin').treesitter()<CR>")
 -- }}}
 
--- ℹ️  Null_ls {{{
-map("n", "<leader>ca", ": lua vim.lsp.buf.code_action()<CR>")
-map("n", "<leader>hi", ": lua vim.lsp.buf.hover()<CR>")
--- }}}
-
 -- 🤲 Toggle {{{
 map("n", "<leader>ut", ":UndotreeToggle<CR>")
-map("n", "<leader>HT", ":TSPlaygroundToggle<CR>")
+map("n", "<leader>pt", ":TSPlaygroundToggle<CR>")
 map("n", "<leader>ct", ":ColorizerToggle<CR>")
-map("n", "<leader>rt", ":call ToggleWrap()<CR>")
-map("n", "<leader>st", ":call ToggleSpellCheck()<CR>")
+map("n", "<leader>st", ":set spell!<CR>")
 map("n", "<leader>mt", ":MarkdownPreviewToggle<CR>,")
-map("n", "<leader>hl", ":TSHighlightCapturesUnderCursor<CR>")
-map("n", "<leader>ls", ":LspInstallInfo<CR>")
 map("n", "<leader>et", ":NvimTreeToggle<CR> :NvimTreeRefresh<CR>")
-map("n", "<leader>tb", ":Switch<CR>") -- bool toggle false<->true
-map("n", "<leader>it", ":NullLsInfo<CR>")
-map("n", "<leader>tt", ":NullLsInfo<CR>")
--- }}}
-
--- ⛵ Reflow TODO: FIXME {{{
-map("n", "<leader>rf", "gwip")
+map("n", "<leader>bt", ":Switch<CR>") -- toggle b false<->true
 -- }}}
 
 -- 🔱 Harpoon {{{
