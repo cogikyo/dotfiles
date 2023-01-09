@@ -25,6 +25,7 @@ local options = {
     sidescrolloff = 6,
     spell = false,
     spelllang = { "en_us" },
+    formatoptions = "carqnpj",
     -- ========================================================================
 
     -- 👀 UI ==================================================================
@@ -52,18 +53,18 @@ local options = {
 
     -- 🥷 Miscellaneous =======================================================
     backup = false,
-    updatetime = 1420,
+    updatetime = 420,
     swapfile = false,
     undofile = true,
     wildignore = ".bak,~,.o,.h,.info,.swp,.obj,.pyc",
     -- ========================================================================
 }
 
---
 vim.cmd([[
-    set undodir=~/.local/share/nvim/undodir
-]]) -- undotree needs this  (locally stored)
+	set undodir=~/.local/share/nvim/undodir
+]]) -- undotree needs this ⮭ (locally stored)
 
+-- actually setkthe options!
 for k, v in pairs(options) do
     vim.opt[k] = v
 end

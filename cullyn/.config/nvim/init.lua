@@ -5,18 +5,16 @@ if not status_ok then
 end -- ⮬ should only fail if packer is not yet installed
 
 
-
 -- organized config files ⮯
 local config_files = {
     -- ============================================================================
-    "settings", -- adjust built in options/settings
-    "keymaps", -- custom remaps, does not include plugins specific keymaps
-    "autocmds", -- listeners, or other custom automatic functions
-    "plugins", -- includes some basic plugin settings
+    "settings", -- adjust built-in options/settings
+    "keymaps", -- custom remaps, some minor plugin-specific keymaps
+    "autocmds", -- listeners, usually for filetypes or on pre/post save
+    "plugins", -- all plugins, and includes some basic plugin settings
     -- ============================================================================
-    -- plugins with required setups (or major changes) are given their own file ⮯
+    -- plugins with major changes or extensive configs are given their own file ⮯
     "cmp",
-    "mason",
     "colorscheme",
     "telescope",
     "treesitter",
@@ -30,7 +28,7 @@ local config_files = {
     "alpha",
 }
 
--- files are located under lua/{user} (e.g., nosvagor)
+-- files are located under lua/{user} (e.g., nosvagor).
 for _, file in ipairs(config_files) do
     require("nosvagor." .. file)
 end
