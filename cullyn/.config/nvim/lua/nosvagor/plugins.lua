@@ -28,9 +28,9 @@ vim.cmd([[
 -- Automatically source and re-compile packer whenever you save this init.lua
 local packer_group = vim.api.nvim_create_augroup('Packer', { clear = true })
 vim.api.nvim_create_autocmd('BufWritePost', {
-  command = 'source <afile> | silent! LspStop | silent! LspStart | PackerCompile',
-  group = packer_group,
-  pattern = vim.fn.expand '$MYVIMRC',
+    command = 'source <afile> | silent! LspStop | silent! LspStart | PackerCompile',
+    group = packer_group,
+    pattern = vim.fn.expand '$MYVIMRC',
 })
 
 -- Use a protected call so we don"t error out on first use
@@ -167,8 +167,6 @@ return packer.startup(function(use)
             })
         end,
     }
-
-
     use "tpope/vim-repeat"
     use "tpope/vim-surround"
     use "mbbill/undotree"
