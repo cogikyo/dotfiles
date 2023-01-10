@@ -12,8 +12,7 @@ local function scoped_autocmd(event, group, pattern, command)
 	})
 end
 
--- formatoptions keeps getting overwritten by other plugins (I think); there is
--- probably a better fix than this.
+-- 'formatoptions' keeps getting overwritten by other plugins (I think)
 global_autocmd("InsertEnter", "silent! set formatoptions=carqnpj")
 
 -- Why is highlighting text yanking not an default feature?

@@ -4,14 +4,10 @@ if not status_ok then
 end
 
 configs.setup({
-
     -- Auto install
     ensure_installed = "all",
-    sync_install = false,
-
-    -- ┌┬┐┌─┐┌┬┐┬ ┬┬  ┌─┐┌─┐
-    -- ││││ │ │││ ││  ├┤ └─┐
-    -- ┴ ┴└─┘─┴┘└─┘┴─┘└─┘└─┘
+    sync_install = true,
+    auto_install = true,
 
     -- Consistent syntax highlighting.
     highlight = {
@@ -28,6 +24,53 @@ configs.setup({
             node_incremental = "gn", -- visual: increment to the upper named parent.
             scope_incremental = "gy", -- visual: increment to the upper scope
             node_decremental = "gp", -- visual: decrement to the previous named node.
+        },
+    },
+
+    textobjects = {
+        select = {
+            enable = true,
+            lookahead = true, -- Automatically jump forward to textobj, similar to targets.vim
+            keymaps = {
+                -- You can use the capture groups defined in textobjects.scm
+                ['aa'] = '@parameter.outer',
+                ['ia'] = '@parameter.inner',
+                ['af'] = '@function.outer',
+                ['if'] = '@function.inner',
+                ['ac'] = '@class.outer',
+                ['ic'] = '@class.inner',
+            },
+        },
+    },
+
+    move = {
+        enable = true,
+        set_jumps = true, -- whether to set jumps in the jumplist
+        goto_next_start = {
+            [']m'] = '@function.outer',
+            [']]'] = '@class.outer',
+        },
+        goto_next_end = {
+            [']M'] = '@function.outer',
+            [']['] = '@class.outer',
+        },
+        goto_previous_start = {
+            ['[m'] = '@function.outer',
+            ['[['] = '@class.outer',
+        },
+        goto_previous_end = {
+            ['[M'] = '@function.outer',
+            ['[]'] = '@class.outer',
+        },
+    },
+
+    swap = {
+        enable = true,
+        swap_next = {
+            ['<leader>a'] = '@parameter.inner',
+        },
+        swap_previous = {
+            ['<leader>A'] = '@parameter.inner',
         },
     },
 
@@ -52,7 +95,8 @@ configs.setup({
     },
 
     indent = {
-        enable = true
+        enable = true,
+        disable = { 'python'},
     },
 
     context_commentstring = {
@@ -61,23 +105,4 @@ configs.setup({
     },
 
     autopairs = { enable = true },
-
-    matchup = {
-        enable = true,
-        disable = {},
-        -- [options] -- TODO: learn to use this module beyond basics
-    },
 })
-
-local tsht_ok, tsht = pcall(require, "tsht")
-if not tsht_ok then
-    return
-end
-
-vim.cmd([[
-omap     <silent> <leader><C-v> :<C-U>lua require('tsht').nodes()<CR>
-vnoremap <silent> <leader><C-v> :lua require('tsht').nodes()<CR>
-nnoremap <silent> <leader><C-v> v :lua require('tsht').nodes()<CR>
-]])
-
-tsht.config.hint_keys = { "a", "s", "e", "t", "n", "i", "o", "l" }

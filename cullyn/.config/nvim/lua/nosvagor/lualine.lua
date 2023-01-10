@@ -68,6 +68,7 @@ local mode = {
     end,
 }
 
+
 local diagnostics = {
     "diagnostics",
     sources = { "nvim_diagnostic" },

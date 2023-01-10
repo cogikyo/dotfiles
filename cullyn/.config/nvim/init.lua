@@ -14,11 +14,11 @@ local config_files = {
     "plugins", -- all plugins, and includes some basic plugin settings
     -- ============================================================================
     -- plugins with major changes or extensive configs are given their own file ⮯
-    "cmp",
-    "colorscheme",
-    "telescope",
     "treesitter",
-    "refactoring",
+    "lsp",
+    "cmp",
+    "telescope",
+    "colorscheme",
     "autopairs",
     "comment",
     "gitsigns",

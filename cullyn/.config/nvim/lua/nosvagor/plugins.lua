@@ -57,6 +57,12 @@ return packer.startup(function(use)
     use "lewis6991/impatient.nvim"
     use "nvim-lua/popup.nvim"
     use "nvim-lua/plenary.nvim"
+    use {
+        'folke/neodev.nvim',
+        config = function()
+            require('neodev').setup({})
+        end
+    }
     -- }}}
 
     -- 📚 LSP ⮯ {{{
@@ -84,7 +90,6 @@ return packer.startup(function(use)
         end,
     }
     use 'j-hui/fidget.nvim'
-    use 'folke/neodev.nvim'
     use 'mfussenegger/nvim-dap'
     use 'jayp0521/mason-nvim-dap.nvim'
     use 'mfussenegger/nvim-lint'
@@ -107,13 +112,19 @@ return packer.startup(function(use)
     -- }}}
 
     -- 🌲 Treesitter ⮯ {{{
-    use { "nvim-treesitter/nvim-treesitter", run = ":TSUpdate" }
+    use {
+        "nvim-treesitter/nvim-treesitter",
+        run = function()
+            pcall(require('nvim-treesitter.install').update { with_sync = true })
+        end
+    }
+    use {
+        'nvim-treesitter/nvim-treesitter-textobjects',
+        after = 'nvim-treesitter'
+    }
     use "nvim-treesitter/playground"
-    use 'nvim-treesitter/nvim-treesitter-textobjects'
     use "JoosepAlviste/nvim-ts-context-commentstring"
     use "mfussenegger/nvim-ts-hint-textobject"
-    use "andymass/vim-matchup"
-    use "ThePrimeagen/refactoring.nvim"
     -- }}}
 
     -- 👀 UI ⮯ {{{
@@ -140,7 +151,7 @@ return packer.startup(function(use)
     -- }}}
 
     -- ✋ UX ⮯ {{{
-    use 'tpope/vim-sleuth' -- Detect tabstop and shiftwidth automatically
+    use 'tpope/vim-sleuth' -- detect tabstop and shiftwidth automatically
     use "numToStr/Comment.nvim"
     use "ThePrimeagen/harpoon"
     use 'nvim-telescope/telescope.nvim'
