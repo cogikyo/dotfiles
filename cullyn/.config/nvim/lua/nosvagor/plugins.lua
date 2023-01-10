@@ -183,8 +183,6 @@ return packer.startup(function(use)
     use "mbbill/undotree"
     use "ggandor/lightspeed.nvim"
     use "elkowar/yuck.vim"
-    use "amadeus/vim-convert-color-to"
-    use "dhruvasagar/vim-table-mode"
     -- }}}
 
     -- Automatically set up configuration after cloning packer.nvim
