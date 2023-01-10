@@ -168,11 +168,10 @@ map("n", "<leader>nd", ":lua require('harpoon.ui').nav_file(5)<CR>zvzt")
 -- }}}
 
 -- 🔍 Replace {{{
-map("n", "<leader>ir", "vip:<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>", ff)
-map("v", "r", ":<BS><BS><BS><BS><BS>'<,'>s///g<Left><Left><Left>", ff)
+map("v", "r", ":s///g<Left><Left><Left>", ff)
 map("n", "<leader>r<leader>", ":%s///g<Left><Left><Left>", ff)
-map("n", "<leader>rch", "viw:'<,'>ConvertColorTo hex<CR>")
-map("n", "<leader>rcl", "viw:'<,'>ConvertColorTo hsl<CR>")
+map("n", "<leader>rw", ":%s/<C-r><C-w>//g<Left><Left>", ff)
+map("n", "<leader>rp", '"ryiwvip:s/<C-r>r//g<Left><Left>', ff)
 -- }}}
 
 -- 🤯 Comment headers {{{
