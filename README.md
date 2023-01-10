@@ -1,4 +1,22 @@
+<!-- ============================================================================ -->
+<!-- ⚙️ heading {{{ -->
 <h1 align="center">⚙️ dotfiles ⚙️</h1>
+
+<p align="center">
+    <a href="https://github.com/nosvagor/vagari/stargazers">
+        <img
+            src="https://img.shields.io/github/stars/nosvagor/vagari?color=ecc45d&logo=apachespark&labelColor=24283b&logoColor=ecc45d&style=for-the-badge"
+            title="what is love, baby don't hurt me"
+        >
+    </a>
+    &nbsp;
+    <!-- <a href="https://cullyn.eth/"> -->
+    <!--     <img -->
+    <!--         src="https://img.shields.io/github/sponsors/nosvagor?color=dc60bf&logo=githubsponsors&labelColor=24283b&logoColor=dc60bf&style=for-the-badge" -->
+    <!--         title="github sponsors not set up, pref ETH to cullyn.eth for now" -->
+    <!--     > -->
+    <!-- </a> -->
+</p>
 
 <p align="center">
     <kbd>
@@ -7,52 +25,54 @@
             src="https://github.com/nosvagor/dotfiles/blob/main/resources/share/dotfiles-banner.gif?raw=true"/>
     </kbd>
 </p>
+
 <p align="center">
-    <img src="https://img.shields.io/github/stars/nosvagor/dotfiles?color=e0af68&logo=github&labelColor=24283b&logoColor=e0af68&style=for-the-badge">&nbsp;&nbsp;
-    <img src="https://visitor-badge-reloaded.herokuapp.com/badge?color=b4f9f8&logoColor=b4f9f8&page_id=nosvagor/dotfiles&logo=linux&style=for-the-badge&lcolor=24283b"/>&nbsp;&nbsp;
-    <img src="https://img.shields.io/github/forks/nosvagor/dotfiles?color=7aa2f7&logo=git&labelColor=24283b&logoColor=7aa2f7&style=for-the-badge">&nbsp;&nbsp;
-    <img src="https://img.shields.io/github/license/nosvagor/dotfiles?color=bb9af7&logo=gnu&labelColor=24283b&logoColor=bb9af7&style=for-the-badge">
+  <a href="https://github.com/nosvagor/dotfiles/issues">
+      <img
+          src="https://img.shields.io/github/issues/nosvagor/dotfiles?color=ed5f6f&logo=fireship&labelColor=24283b&logoColor=ed5f6f&style=for-the-badge"
+          title="this is not fine!!"
+      >
+  </a>
+  &nbsp;
+  <a href="https://github.com/nosvagor/dotfiles/discussions">
+      <img
+          title="alright then, keep your secrets"
+          src="https://img.shields.io/github/discussions/nosvagor/dotfiles?color=ec9055&logo=github&labelColor=24283b&logoColor=ec9055&style=for-the-badge"
+      >
+  </a>
+  &nbsp;
+  <a href="https://github.com/nosvagor/dotfiles/contributors">
+      <img
+          src="https://img.shields.io/github/contributors/nosvagor/dotfiles?color=86b96f&logo=gitea&labelColor=24283b&logoColor=86b96f&style=for-the-badge"
+          title="gotta do the cooking by the book"
+      >
+  </a>
+  &nbsp;
+  <br>
+  <a href="https://www.reddit.com/r/unixporn/">
+      <img
+          src="https://vbr.wocr.tk/badge?color=59b5e5&logoColor=59b5e5&page_id=nosvagor/dotfiles&logo=linux&style=for-the-badge&lcolor=24283b"
+          alt="visitor count 💀"
+          title="hello there (I use arch, neovim, and rust, btw)"
+      >
+  </a>
+  &nbsp;
+  <a href="https://github.com/nosvagor/dotfiles/network/members">
+      <img
+          src="https://img.shields.io/github/forks/nosvagor/dotfiles?color=6c88f4&logo=git&labelColor=24283b&logoColor=6c88f4&style=for-the-badge"
+          title="Somewhere, something incredible is waiting to be known. &mdash; Carl Sagan"
+      >
+  </a>
+  &nbsp;
+  <a href="https://youtu.be/gxAaO2rsdIs">
+      <img
+          src="https://img.shields.io/github/license/nosvagor/dotfiles?color=9d71f0&logo=gnu&labelColor=24283b&logoColor=9d71f0&style=for-the-badge"
+          title="R_0 > 1 ? share it : change it"
+      >
+  </a>
 </p>
-
----
-
-&nbsp;
-
-<p align="center"> ⚠️  ---- REFACTOR WIP ---- ⚠️ </p>
-
-- [x] Finish configuration around wayland protocol
-- [x] Fix fonts, for all edge cases (no longer hack nerd font)
-- [x] Ditch TMUX in favor for kitty terminal emulator
-- [ ] Finish configuration of eww widgets, replacing need for status bars
-  - [x] Top bar
-  - [x] Bot bar
-  - [x] Discover the wonder of creating my own SVGs
-    - [x] Start using custom svgs everywhere...
-    - [ ] Resist urge to put custom svgs everywhere
-    - [x] Probably make overly complex svgs
-      - [x] Stop caaring and be happy because it looks great
-    - [ ] Quit svg addiction
-  - [ ] Clean up
-  - [ ] Documument config file.
-- [ ] Break up with Google entirely
-  - [ ] Replace garbage YTM with spotify
-    - [x] Cry because Google's network effect grip is strangling me.
-      - [x] Reflect on why it's taking me so long to come to this obvious relization.
-- [ ] Refactor neovim config, pending 0.8 upgrade.
-- [ ] Update README
-  - [ ] Trim excess packages
-  - [ ] Create an automated install-script that works on machines running Arch Linux.
-  - [ ] Create video guide for those who might want to learn how to do something similar.
-  - [ ] Create exposition of screenshots to post on /r/unixporn and Gallery section.
-
-&nbsp;
-
-Verson 2 goals:
-
-- Create unified custom theme that can modifiy all programs with adjustable themes.
-- Rewrite as much as I can in rust, rewriting popular programs for practice.
-
-&nbsp;
+<!-- }}} -->
+<!-- ============================================================================ -->
 
 ## Overview 👾
 
