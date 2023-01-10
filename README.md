@@ -2,7 +2,7 @@
 <!-- ⚙️ heading {{{ -->
 <h1 align="center">⚙️ dotfiles ⚙️</h1>
 
-<p align="center">
+<p align="right">
     <a href="https://github.com/nosvagor/vagari/stargazers">
         <img
             src="https://img.shields.io/github/stars/nosvagor/vagari?color=ecc45d&logo=apachespark&labelColor=24283b&logoColor=ecc45d&style=for-the-badge"
@@ -74,47 +74,48 @@
 <!-- }}} -->
 <!-- ============================================================================ -->
 
-## Overview 👾
+## 👾 Overview
+- **Operating System**: [Arch
+  Linux](https://wiki.archlinux.org/title/Arch_Linux)
+- **Display Server**: [Wayland](https://wiki.archlinux.org/title/Wayland)
+- **Compositor**: [Hyprland](https://hyprland.org/)
+- **Terminal**: [kitty](https://sw.kovidgoyal.net/kitty/)
+- **Shell**: [zsh](https://wiki.archlinux.org/title/zsh)
+- **Widgets**: [eww](https://github.com/elkowar/eww)
+- **Color Scheme**: [vagari](https://github.com/nosvagor/vagari)
+- **Editor**: [neovim](https://neovim.io/)
 
-- **Operating System**: [Arch Linux](https://wiki.archlinux.org/title/Arch_Linux)
-- **Display Server**: [Wayland](https://wiki.archlinux.org/title/Wayland), with display manager: [SDDM](https://wiki.archlinux.org/title/SDDM)
-- **Window manager/compositor**: [Hyprland](https://github.com/hyprwm/Hyprland)
-- **Color Scheme**: various ports of [Tokyo Night (storm)](https://github.com/enkia/tokyo-night-vscode-theme)
-- **Terminal**: [alacritty](https://github.com/alacritty/alacritty), with terminal multiplexer: [tmux](https://en.wikipedia.org/wiki/Tmux)
-- **Shell**: [zsh](https://wiki.archlinux.org/title/zsh),
-  - Plugins: [syntax highlighting](https://github.com/zsh-users/zsh-syntax-highlighting), [auto suggestions](https://github.com/zsh-users/zsh-autosuggestions), [auto complete](https://github.com/marlonrichert/zsh-autocomplete), [colored man pages](https://github.com/ael-code/zsh-colored-man-pages)
-  - Prompt: custom [starship](https://starship.rs/) + [custom DNA greeter](cullyn/.local/bin/dna)
-  - Quick navigation: [jump](https://github.com/gsamokovarov/jump)
-- **Editor**: [neovim-nightly](https://github.com/neovim/neovim),
-  - Theme: [Tokyo Night (storm)](https://github.com/folke/tokyonight.nvim)
-  - [config files](cullyn/.config/nvim/) _(work in progress)_ 🔨
-- **Browser**: [firefox-developer-eddition](https://www.mozilla.org/en-US/firefox/developer/), with keyboard focused usage via:
-  - [vimium](https://github.com/philc/vimium)
-  - and a custom, minimal css theme: [tokyo night]() _(work in progress)_ 🔨
-- **File manager**: [nnn](https://github.com/jarun/nnn)
-  - [config files](cullyn/.config/nnn/) _(work in progress)_ 🔨
-- **Music**: [YouTube Music](https://aur.archlinux.org/packages/ytmdesktop-git)
-  - I might try to write a CLI app for YouTube Music (the electron web emulator is pretty bad).
-  - However, [playerctl](https://github.com/altdesktop/playerctl) solves most usage issues, for now.
-- **Status bar (widgets)**: [eww](https://github.com/elkowar/eww)
-- **Launcher**: [rofi](https://github.com/davatorium/rofi)
-- **PDF viewer**: [zathura](https://pwmt.org/projects/zathura/)
-- **Notifications**: [dunst](https://github.com/dunst-project/dunst)
-- **Music visualizer**: [cava](https://github.com/karlstav/cava)
-- **Fonts**: [google fonts](https://aur.archlinux.org/packages/ttf-google-fonts-git/) / [nerd fonts](https://github.com/ryanoasis/nerd-fonts)
-  - [Albert Sans (serif)](https://fonts.google.com/specimen/Albert+Sans?query=Albert)
-  - [Roboto Slab (serif)](https://fonts.google.com/specimen/Roboto+Slab?query=Roboto+S)
-  - [Hack Nerd Font (monospace)](https://github.com/ryanoasis/nerd-fonts)
-  - Noto Color Emoji and Noto Emoji
-- **GTK**: [Tokyo Night GTK (storm)](https://github.com/Fausto-Korpsvart/Tokyo-Night-GTK-Theme)
-  - TODO: maybe customize it further, see [.local/share/themes](https://github.com/nosvagor/dotfiles/tree/main/cullyn/.local/share/themes) 🔨
-- **Cursor**: [Nordzy Cursors](https://github.com/alvatip/Nordzy-cursors)
-- **Icons**: [Nordzy Icon Theme](https://github.com/alvatip/Nordzy-icon)
+> ⚠️ Refactor Work in Progress, full oviewview will be updated once completed
+
+<!--   - Plugins: [syntax highlighting](https://github.com/zsh-users/zsh-syntax-highlighting), [auto suggestions](https://github.com/zsh-users/zsh-autosuggestions), [auto complete](https://github.com/marlonrichert/zsh-autocomplete), [colored man pages](https://github.com/ael-code/zsh-colored-man-pages) -->
+<!--   - Prompt: custom [starship](https://starship.rs/) + [custom DNA greeter](cullyn/.local/bin/dna) -->
+<!--   - Quick navigation: [jump](https://github.com/gsamokovarov/jump) -->
+<!--   - Theme: [Tokyo Night (storm)](https://github.com/folke/tokyonight.nvim) -->
+<!--   - [config files](cullyn/.config/nvim/) _(work in progress)_ 🔨 -->
+<!--   - [vimium](https://github.com/philc/vimium) -->
+<!--   - and a custom, minimal css theme: [tokyo night]() _(work in progress)_ 🔨 -->
+<!--   - [config files](cullyn/.config/nnn/) _(work in progress)_ 🔨 -->
+<!-- - **Music**: [YouTube Music](https://aur.archlinux.org/packages/ytmdesktop-git) -->
+<!--   - I might try to write a CLI app for YouTube Music (the electron web emulator is pretty bad). -->
+<!--   - However, [playerctl](https://github.com/altdesktop/playerctl) solves most usage issues, for now. -->
+<!-- - **Launcher**: [rofi](https://github.com/davatorium/rofi) -->
+<!-- - **PDF viewer**: [zathura](https://pwmt.org/projects/zathura/) -->
+<!-- - **Notifications**: [dunst](https://github.com/dunst-project/dunst) -->
+<!-- - **Music visualizer**: [cava](https://github.com/karlstav/cava) -->
+<!-- - **Fonts**: [google fonts](https://aur.archlinux.org/packages/ttf-google-fonts-git/) / [nerd fonts](https://github.com/ryanoasis/nerd-fonts) -->
+<!--   - [Albert Sans (serif)](https://fonts.google.com/specimen/Albert+Sans?query=Albert) -->
+<!--   - [Roboto Slab (serif)](https://fonts.google.com/specimen/Roboto+Slab?query=Roboto+S) -->
+<!--   - [Hack Nerd Font (monospace)](https://github.com/ryanoasis/nerd-fonts) -->
+<!--   - Noto Color Emoji and Noto Emoji -->
+<!-- - **GTK**: [Tokyo Night GTK (storm)](https://github.com/Fausto-Korpsvart/Tokyo-Night-GTK-Theme) -->
+<!--   - TODO: maybe customize it further, see [.local/share/themes](https://github.com/nosvagor/dotfiles/tree/main/cullyn/.local/share/themes) 🔨 -->
+<!-- - **Cursor**: [Nordzy Cursors](https://github.com/alvatip/Nordzy-cursors) -->
+<!-- - **Icons**: [Nordzy Icon Theme](https://github.com/alvatip/Nordzy-icon) -->
 
 </details>
 &nbsp;
 <details>
-<summary><b> My Hardware 🖥️ </b></summary>
+<summary><b> 🧰 My Hardware</b></summary>
 
 - **Mouse**: MX Master 3S
 - **CPU**: AMD Ryzen 7 3700X (16) @ 3.600GHz
@@ -126,7 +127,7 @@
 
 &nbsp;
 
-## Installation 🛠️
+## 🛠️ Installation
 
 <details>
 <summary><b>1. Installing Linux 🐧 </b></summary>
@@ -365,15 +366,3 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 ---
 
 </details>
-
-&nbsp;
-
-## Gallery 🎨
-
-&nbsp;
-
-## Support 🤝
-
-- Personal: [cullyn.eth](https://cullyn.eth/)
-  - ETH `0xe377b77E7177c236EDE5abD317960Fc023efD841`
-- Open source: [gitcoin.co](https://gitcoin.co/)
