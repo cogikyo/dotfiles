@@ -25,7 +25,7 @@ local options = {
     sidescrolloff = 6,
     spell = false,
     spelllang = { "en_us" },
-    formatoptions = "carqnpj",
+    formatoptions = "crqnpj",
     breakindent = true,
     -- ========================================================================
 

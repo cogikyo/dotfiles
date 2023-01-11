@@ -13,7 +13,7 @@ local function scoped_autocmd(event, group, pattern, command)
 end
 
 -- 'formatoptions' keeps getting overwritten by other plugins (I think)
-global_autocmd("InsertEnter", "silent! set formatoptions=carqnpj")
+global_autocmd("InsertEnter", "silent! set formatoptions=crqnpj")
 
 -- Why is highlighting text yanking not an default feature?
 global_autocmd("TextYankPost", "silent! lua vim.highlight.on_yank({ timeout = 69})")
