@@ -78,14 +78,16 @@
 - **Operating System**: [Arch
   Linux](https://wiki.archlinux.org/title/Arch_Linux)
 - **Display Server**: [Wayland](https://wiki.archlinux.org/title/Wayland)
-- **Compositor**: [Hyprland](https://hyprland.org/)
-- **Terminal**: [kitty](https://sw.kovidgoyal.net/kitty/)
-- **Shell**: [zsh](https://wiki.archlinux.org/title/zsh)
-- **Widgets**: [eww](https://github.com/elkowar/eww)
-- **Color Scheme**: [vagari](https://github.com/nosvagor/vagari)
-- **Editor**: [neovim](https://neovim.io/)
+- **Color Scheme**: [vagari](https://github.com/nosvagor/vagari) (also a design philosophy)
+- **Compositor**: [Hyprland](https://hyprland.org/) (pseudo window manager)
+- **Widgets**: [eww](https://github.com/elkowar/eww) (status bar and other user interface controls)
+- **Core Applications**:
+    - **Terminal**: [kitty](https://sw.kovidgoyal.net/kitty/)
+    - **Editor**: [neovim](https://neovim.io/)
+    - **Shell**: [Nushell](https://www.nushell.sh/)
+    - **Browser**: [Firefox](https://www.mozilla.org/en-US/firefox/developer/) (with custom UI/UX)
 
-> ⚠️ Refactor Work in Progress, full oviewview will be updated once completed
+> ⚠️ Refactor Work in Progress, full overview will be updated once completed
 
 <!--   - Plugins: [syntax highlighting](https://github.com/zsh-users/zsh-syntax-highlighting), [auto suggestions](https://github.com/zsh-users/zsh-autosuggestions), [auto complete](https://github.com/marlonrichert/zsh-autocomplete), [colored man pages](https://github.com/ael-code/zsh-colored-man-pages) -->
 <!--   - Prompt: custom [starship](https://starship.rs/) + [custom DNA greeter](cullyn/.local/bin/dna) -->
@@ -161,7 +163,7 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
 - nice to install some base packages needed for now:
 
-      base base-devel linux-headers git stow coreutils bat btop go rustup python
+      base base-devel linux-headers git openssh stow lua go rustup bat btop sd fd procs ripgrep fzf nushell python firefox-developer-edition
 
 ---
 
