@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+
+mkdir -vp ~/.local/share/fonts
+
+cp ~/dotfiles/fonts/*.zip ~/.local/share/fonts/
+
+cd ~/.local/share/fonts/
+
+unzip Albert_Sans.zip
+rm *.txt
+unzip Architects_Daughter.zip
+rm *.txt
+unzip Lora.zip
+rm *.txt
+unzip Archivo.zip
+rm *.txt
+rm *.zip
+
+exit 0

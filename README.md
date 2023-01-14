@@ -22,7 +22,7 @@
     <kbd>
         <img
             alt="dotfiles neonlights banner"
-            src="https://github.com/nosvagor/dotfiles/blob/main/resources/share/dotfiles-banner.gif?raw=true"/>
+            src="https://github.com/nosvagor/dotfiles/blob/main/share/dotfiles-banner.gif?raw=true"/>
     </kbd>
 </p>
 
@@ -74,20 +74,51 @@
 <!-- }}} -->
 <!-- ============================================================================ -->
 
+<h2 align="center"> ⚠️ Refactor In Progress ⚠️</h2>
+
 ## 👾 Overview
-- **Operating System**: [Arch
-  Linux](https://wiki.archlinux.org/title/Arch_Linux)
+
+##### 🐧 **[I use arch, btw](https://wiki.archlinux.org/title/Arch_Linux)**
+> General principles for selection of software follows Arch Linux's princples, i.e.,
+>
+> **Simplicity** &mdash; **Modernity**  &mdash; **Pragmatism** &mdash; **User Centrality** &mdash; **Versatility**
+>
+> 📈 increased value for **Innovative** and **Open** communities.
+>
+> 📉 decreased value for _the status quo_ and _zero-sum mentality_.
+>
+> _"...we do these things **not** because they are easy, but **because they are hard**_,"<br>
+> &emsp;&emsp;_"because that goal will serve to **organize** and **measure** the best of our energies and skills_,"<br>
+> &emsp;&emsp;&emsp;&emsp;"_because that challenge is one that we are **willing to accept**, one we are **unwilling to postpone**_..."
+
+##### 👨‍💻 Techincals
+
 - **Display Server**: [Wayland](https://wiki.archlinux.org/title/Wayland)
-- **Color Scheme**: [vagari](https://github.com/nosvagor/vagari) (also a design philosophy)
-- **Compositor**: [Hyprland](https://hyprland.org/) (pseudo window manager)
-- **Widgets**: [eww](https://github.com/elkowar/eww) (status bar and other user interface controls)
+    - **Compositor**: [Hyprland](https://hyprland.org/)
+    - **Widgets**: [eww](https://github.com/elkowar/eww)
+
+##### 🎥 Apperance
+
+- **Color Scheme / Design Framework**: [vagari](https://github.com/nosvagor/vagari)
+
+- **Fonts**:
+    - Sans Serif: [Albert Sans](https://fonts.google.com/specimen/Albert+Sans?query=Albert+Sans)
+    - Monospace: [Fira Code](https://github.com/tonsky/FiraCode)
+    - Other: [Lora (serif)](https://fonts.google.com/specimen/Lora),
+             [Archivo (display)](https://fonts.google.com/specimen/Archivo),
+             [Architects Daughter (handwritten)](https://fonts.google.com/specimen/Architects+Daughter)
+
 - **Core Applications**:
     - **Terminal**: [kitty](https://sw.kovidgoyal.net/kitty/)
-    - **Editor**: [neovim](https://neovim.io/)
     - **Shell**: [Nushell](https://www.nushell.sh/)
-    - **Browser**: [Firefox](https://www.mozilla.org/en-US/firefox/developer/) (with custom UI/UX)
+    - **Editor**: [neovim](https://neovim.io/)
+    - **Browser**: [Firefox](https://www.mozilla.org/en-US/firefox/developer/)
 
-> ⚠️ Refactor Work in Progress, full overview will be updated once completed
+- **Common Applications**:
+    - tbd...
+    - tbd...
+    - tbd...
+
 
 <!--   - Plugins: [syntax highlighting](https://github.com/zsh-users/zsh-syntax-highlighting), [auto suggestions](https://github.com/zsh-users/zsh-autosuggestions), [auto complete](https://github.com/marlonrichert/zsh-autocomplete), [colored man pages](https://github.com/ael-code/zsh-colored-man-pages) -->
 <!--   - Prompt: custom [starship](https://starship.rs/) + [custom DNA greeter](cullyn/.local/bin/dna) -->
@@ -157,13 +188,13 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
 **1.3 Use guided arch installation:**
 
-- boot to usb and run command:
+- boot to usb and run command (installing is easy to follow):
 
       archinstall
 
-- nice to install some base packages needed for now:
+- best to install a few essential packages during this step:
 
-      base base-devel linux-headers git rustup neovim
+      base base-devel linux-headers git rustup
 
 ---
 
@@ -187,7 +218,7 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 2.2 Install packages:
 
     cd $HOME && git clone https://github.com/nosvagor/dotfiles.git
-    paru -S - < $HOME/dotfiles/resources/packages.txt
+    paru -S - < $HOME/dotfiles/packages.txt
 
 &nbsp;
 
@@ -195,26 +226,10 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
 - Change default shell to zsh:
 
-      chsh -s $(which zsh)
+      chsh -s $(/usr/bin/nu)
 
-- Install shell related packages:
 
-      go install github.com/gsamokovarov/jump@latest
-      curl -sS https://starship.rs/install.sh | sh
-      $HOME/dotfiles/cullyn/.local/bin/zsh-install
-
-- Link config files using [GNU stow](https://brandon.invergo.net/news/2012-05-26-using-gnu-stow-to-manage-your-dotfiles.html):
-
-      cd $HOME/dotfiles
-      mv cullyn $USER
-      stow $USER
-      stow home
-
-**⚠️ Note:** _you probably don't want my zsh config, or many of my personal configs, and should update them now._
-
-&nbsp;
-
-2.5 Configure SSH for GitHub _(here for personal reference)_:
+2.4 Configure SSH for GitHub _(here for personal reference)_:
 
     ssh-keygen -t ed25519 -C "your_email@example.com"
     eval "$(ssh-agent -s)"
@@ -225,7 +240,7 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
 &nbsp;
 
-2.6 Update [bluetooth](https://wiki.archlinux.org/title/bluetooth):
+2.5 Update [bluetooth](https://wiki.archlinux.org/title/bluetooth):
 
     systemctl enable bluetooth.service
     systemctl start bluetooth.service #(if before reboot)
@@ -246,7 +261,7 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
       [Policy]
       AutoEnable=true
 
-- disable shitty built in bluetooth:
+- disable shitty built in bluetooth, e.g., (0b05:18ea is the important part):
 
       lsusb | grep "Bluetooth"
 
@@ -257,35 +272,21 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
       ---
       SUBSYSTEM=="usb", ATTRS{idVendor}=="0b05", ATTRS{idProduct}=="18ea", ATTR{authorized}="0"
 
-- verify by checking available agents (should just be one, preferably):
+- verify by checking available agents (after restaring service):
 
       bluetoothctl list
 
       # yields
       Controller 3C:7C:3F:A2:38:10 costello [default]
 
-&nbsp;
-
-2.7 Create default directories (personal preference, see [user-dirs.dir](https://github.com/nosvagor/dotfiles/blob/main/cullyn/.config/user-dirs.dirs)):
-
-    #simple script to edit if you want something different
-    dir-setup
-
-    # yields
-    ├── documents
-    │   ├── papers
-    │   ├── share
-    │   ├── templates
-    │   └── textbooks
-    ├── downloads
-    ├── media
-    │   ├── gifs
-    │   ├── images
-    │   ├── music
-    │   ├── recordings
-    │   └── videos
+      # insteasd of
+      Controller 3C:7C:3F:A2:38:10 costello #1 [default]
+      Controller D8:C0:A6:88:B1:24 costello
 
 &nbsp;
+
+2.7 Create default directories [user-dirs.dir](https://github.com/nosvagor/dotfiles/blob/main/cullyn/.config/user-dirs.dirs))
+
 
 2.8 Edit boot config (skip boot menu):
 
@@ -294,32 +295,6 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
     ──────┼────────────────────────────────────────────────────────────────────
       1   │ timeout 0
     ──────┴────────────────────────────────────────────────────────────────────
-
-&nbsp;
-
-2.9 Add extra figlet fonts (I sometimes use for visual headers in files):
-
-    cp -va  "$HOME/dotfiles/resources/ascii-fonts/." "/usr/share/figlet/fonts/"
-
-&nbsp;
-
-2.10 Symlink some important GTK settings
-
-    ln -sfn ~/.icons/default/index.theme /usr/share/icons/default/index.theme
-    ln -sfn $HOME/.local/share/themes/Tokyonight /usr/share/themes
-
-&nbsp;
-
-2.12 Nice tree replacement (found when configuring nnn)
-
-    go install github.com/kitagry/gtree@latest
-
-&nbsp;
-
-2.13 SDDM setup (No theme setup, I prefer autologin). See [SDDM](https://wiki.archlinux.org/title/SDDM) for more instructions, if you wish to customize theme.
-
-    sudo cp your-user-icon.png "/usr/share/sddm/faces/$USER.face.icon"
-    cp ~/dotfiles/resources/sddm.conf.d/*.conf /etc/sddm.conf.d/
 
 ---
 
@@ -347,21 +322,9 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
       pdfjs.sidebarViewOnLoad = 0
 
-- Enable ability to use custom css (TODO: create script to symlink css files)
+- Disable exentesion button
 
-      toolkit.legacyUserProfileCustomizations.stylesheets = true
-
-  - Enable remote debugging and live editing of css (Ctrl + Alt + Shift + I):
-
-        F12 -> settings -> Adavnce Settings ->
-        -> Enable remote debugging
-        -> Enable browser chrome and add-on debuggins toolboxes
-
-&nbsp;
-
-🦊.2 Firefox basic options options:
-
-- Disable hardware acceleration (firefox keeps seizing)
+      extensions.unifiedExtensions.enabled = false
 
 ---
 
