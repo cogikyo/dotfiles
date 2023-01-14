@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+
+mkdir -v "$HOME/downloads"
+mkdir -v "$HOME/documents"
+mkdir -v "$HOME/documents/templates"
+mkdir -v "$HOME/documents/textbooks"
+
+mkdir -v "$HOME/media"
+mkdir -v "$HOME/media/images"
+mkdir -v "$HOME/media/screenshots"
+mkdir -v "$HOME/media/music"
+mkdir -v "$HOME/media/videos"
+mkdir -v "$HOME/media/recordings"
+mkdir -v "$HOME/media/gifs"

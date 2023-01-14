@@ -163,7 +163,7 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
 - nice to install some base packages needed for now:
 
-      base base-devel linux-headers git openssh stow lua go rustup bat btop sd fd procs ripgrep fzf nushell python firefox-developer-edition
+      base base-devel linux-headers git rustup neovim
 
 ---
 
