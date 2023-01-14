@@ -48,7 +48,7 @@
       >
   </a>
   &nbsp;
-  <br>
+  &nbsp;
   <a href="https://www.reddit.com/r/unixporn/">
       <img
           src="https://vbr.wocr.tk/badge?color=59b5e5&logoColor=59b5e5&page_id=nosvagor/dotfiles&logo=linux&style=for-the-badge&lcolor=24283b"
@@ -78,7 +78,7 @@
 
 ## 👾 Overview
 
-##### 🐧 **[I use arch, btw](https://wiki.archlinux.org/title/Arch_Linux)**
+### 🐧 **[I use arch, btw](https://wiki.archlinux.org/title/Arch_Linux)**
 > General principles for selection of software follows Arch Linux's princples, i.e.,
 >
 > **Simplicity** &mdash; **Modernity**  &mdash; **Pragmatism** &mdash; **User Centrality** &mdash; **Versatility**
@@ -91,59 +91,56 @@
 > &emsp;&emsp;_"because that goal will serve to **organize** and **measure** the best of our energies and skills_,"<br>
 > &emsp;&emsp;&emsp;&emsp;"_because that challenge is one that we are **willing to accept**, one we are **unwilling to postpone**_..."
 
-##### 👨‍💻 Techincals
+### 👨‍💻 Techincals
 
 - **Display Server**: [Wayland](https://wiki.archlinux.org/title/Wayland)
-    - **Compositor**: [Hyprland](https://hyprland.org/)
-    - **Widgets**: [eww](https://github.com/elkowar/eww)
+    - Display Manager: [SDDM](https://wiki.archlinux.org/title/SDDM)
+    - Compositor: [Hyprland](https://hyprland.org/)
+    - Widgets: [eww](https://github.com/elkowar/eww)
+>
+- **Core Applications**:
+    - Terminal: [kitty](https://sw.kovidgoyal.net/kitty/)
+    - Shell: [Nushell](https://www.nushell.sh/)
+    - Editor: [neovim](https://neovim.io/)
+    - Browser: [Firefox](https://www.mozilla.org/en-US/firefox/developer/)
 
-##### 🎥 Apperance
+### 🎥 Apperance
 
-- **Color Scheme / Design Framework**: [vagari](https://github.com/nosvagor/vagari)
-
-- **Fonts**:
+- **Design Framework**:
+    - color scheme: [vagari](https://github.com/nosvagor/vagari#palette)
+        - nvim:
+        - firefox:
+        - notifications:
+        - GTK:
+        - QT:
+        - [... more vagari ports](https://github.com/nosvagor/vagari#ports)
+    - cursors:
+    - icons:
+>
+- **Fonts:**
     - Sans Serif: [Albert Sans](https://fonts.google.com/specimen/Albert+Sans?query=Albert+Sans)
     - Monospace: [Fira Code](https://github.com/tonsky/FiraCode)
+    - Emoji: [Noto Color Emoji](https://fonts.google.com/noto/specimen/Noto+Color+Emoji)
     - Other: [Lora (serif)](https://fonts.google.com/specimen/Lora),
-             [Archivo (display)](https://fonts.google.com/specimen/Archivo),
-             [Architects Daughter (handwritten)](https://fonts.google.com/specimen/Architects+Daughter)
-
-- **Core Applications**:
-    - **Terminal**: [kitty](https://sw.kovidgoyal.net/kitty/)
-    - **Shell**: [Nushell](https://www.nushell.sh/)
-    - **Editor**: [neovim](https://neovim.io/)
-    - **Browser**: [Firefox](https://www.mozilla.org/en-US/firefox/developer/)
-
-- **Common Applications**:
-    - tbd...
-    - tbd...
-    - tbd...
-
-
-<!--   - Plugins: [syntax highlighting](https://github.com/zsh-users/zsh-syntax-highlighting), [auto suggestions](https://github.com/zsh-users/zsh-autosuggestions), [auto complete](https://github.com/marlonrichert/zsh-autocomplete), [colored man pages](https://github.com/ael-code/zsh-colored-man-pages) -->
-<!--   - Prompt: custom [starship](https://starship.rs/) + [custom DNA greeter](cullyn/.local/bin/dna) -->
-<!--   - Quick navigation: [jump](https://github.com/gsamokovarov/jump) -->
-<!--   - Theme: [Tokyo Night (storm)](https://github.com/folke/tokyonight.nvim) -->
-<!--   - [config files](cullyn/.config/nvim/) _(work in progress)_ 🔨 -->
-<!--   - [vimium](https://github.com/philc/vimium) -->
-<!--   - and a custom, minimal css theme: [tokyo night]() _(work in progress)_ 🔨 -->
-<!--   - [config files](cullyn/.config/nnn/) _(work in progress)_ 🔨 -->
-<!-- - **Music**: [YouTube Music](https://aur.archlinux.org/packages/ytmdesktop-git) -->
-<!--   - I might try to write a CLI app for YouTube Music (the electron web emulator is pretty bad). -->
-<!--   - However, [playerctl](https://github.com/altdesktop/playerctl) solves most usage issues, for now. -->
-<!-- - **Launcher**: [rofi](https://github.com/davatorium/rofi) -->
-<!-- - **PDF viewer**: [zathura](https://pwmt.org/projects/zathura/) -->
-<!-- - **Notifications**: [dunst](https://github.com/dunst-project/dunst) -->
-<!-- - **Music visualizer**: [cava](https://github.com/karlstav/cava) -->
-<!-- - **Fonts**: [google fonts](https://aur.archlinux.org/packages/ttf-google-fonts-git/) / [nerd fonts](https://github.com/ryanoasis/nerd-fonts) -->
-<!--   - [Albert Sans (serif)](https://fonts.google.com/specimen/Albert+Sans?query=Albert) -->
-<!--   - [Roboto Slab (serif)](https://fonts.google.com/specimen/Roboto+Slab?query=Roboto+S) -->
-<!--   - [Hack Nerd Font (monospace)](https://github.com/ryanoasis/nerd-fonts) -->
-<!--   - Noto Color Emoji and Noto Emoji -->
-<!-- - **GTK**: [Tokyo Night GTK (storm)](https://github.com/Fausto-Korpsvart/Tokyo-Night-GTK-Theme) -->
-<!--   - TODO: maybe customize it further, see [.local/share/themes](https://github.com/nosvagor/dotfiles/tree/main/cullyn/.local/share/themes) 🔨 -->
-<!-- - **Cursor**: [Nordzy Cursors](https://github.com/alvatip/Nordzy-cursors) -->
-<!-- - **Icons**: [Nordzy Icon Theme](https://github.com/alvatip/Nordzy-icon) -->
+        [Archivo (display)](https://fonts.google.com/specimen/Archivo),
+        [Architects Daughter (handwritten)](https://fonts.google.com/specimen/Architects+Daughter)
+>
+- **Noteable CLI/TUI Tools**:
+    - btop
+    - bat
+    - cava
+    - xplr
+    - zoxide
+>
+- **Common GUI Applications**:
+    - music
+    - photo editing
+    - wofi
+    - obsidian
+    - zathura
+    - inkscape
+    - gimp
+    - blender
 
 </details>
 &nbsp;
@@ -162,50 +159,46 @@
 
 ## 🛠️ Installation
 
-<details>
-<summary><b>1. Installing Linux 🐧 </b></summary>
+> Do your best to look at these first:
+>
+> **[Official ArchWiki Installation Guide](https://wiki.archlinux.org/title/installation_guide)** (Pre Install)
+>
+> **[Please do read the FAQ](https://wiki.archlinux.org/title/Frequently_asked_questions)** (Pre/Post Install)
+>
+> **[ArchWiki General Recommendations](https://wiki.archlinux.org/title/General_recommendations)** (Post Install)
 
-##### [Official ArchWiki Installation Guide](https://wiki.archlinux.org/title/installation_guide)
+<details open>
+<summary><h3>Literal Installation</h3></summary>
 
-##### [Please do read the FAQ](https://wiki.archlinux.org/title/Frequently_asked_questions)
 
-**⚠️ Note:** _the following is essentially what I did if you want to start from scratch and
-follow along. Installation does not have to be exactly like I describe; these
-instructions are mostly just here for personal reference to debug what I might be
-doing wrong, or did wrong. Some minor steps or, reason behind my choices, are not explicitly stated._
+**1. Acquire an installation image**: https://archlinux.org/download/
 
-**1.1 Acquire an installation image**: https://archlinux.org/download/
+**2. Prepare an installation medium:**
 
-**1.2 Prepare an installation medium:**
-
-- find USB device partition (**sda** or **sdb**, probably):
+- Find USB device partition (**sda** or **sdb**, probably):
 
       lsblk -f
 
-- write to usb using **dd** (sd"x", do not use partition number):
+- Write to USB using **dd** (sd"x", do not use partition number):
 
       dd bs=4M if=path/to/archlinux-version-x86_64.iso of=/dev/sdx conv=fsync oflag=direct status=progress
 
-**1.3 Use guided arch installation:**
+**3. Use guided arch installation**
 
-- boot to usb and run command (installing is easy to follow):
+- Boot to USB and run command (installing is easy to follow):
 
       archinstall
 
-- best to install a few essential packages during this step:
+- Best to install a few essential packages during this step:
 
       base base-devel linux-headers git rustup
 
----
-
----
-
 </details>
-&nbsp;
-<details>
-<summary><b>2. Post-Installation 🧰 </b></summary>
 
-##### [ArchWiki General Recommendations](https://wiki.archlinux.org/title/General_recommendations)
+<details open>
+<summary><h3>Post-Installation </h3></summary>
+
+> Most of this is optional and primarily here for personal reference.
 
 2.1 Install AUR helper ([paru](https://github.com/Morganamilo/paru))
 
@@ -222,12 +215,12 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
 &nbsp;
 
-2.3 Configure shell and link config files:
+2.3 Run install script (primarily symlinks config files):
 
-- Change default shell to zsh:
+    cd ~/dotfiles
+    ./install
 
-      chsh -s $(/usr/bin/nu)
-
+&nbsp;
 
 2.4 Configure SSH for GitHub _(here for personal reference)_:
 
@@ -272,7 +265,7 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
       ---
       SUBSYSTEM=="usb", ATTRS{idVendor}=="0b05", ATTRS{idProduct}=="18ea", ATTR{authorized}="0"
 
-- verify by checking available agents (after restaring service):
+- verify by checking available agents (after restarting service):
 
       bluetoothctl list
 
@@ -285,10 +278,7 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
 &nbsp;
 
-2.7 Create default directories [user-dirs.dir](https://github.com/nosvagor/dotfiles/blob/main/cullyn/.config/user-dirs.dirs))
-
-
-2.8 Edit boot config (skip boot menu):
+2.6 Edit boot config (skip boot menu):
 
     ──────┬────────────────────────────────────────────────────────────────────
           │ File: /boot/loader/loader.conf
@@ -296,23 +286,11 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
       1   │ timeout 0
     ──────┴────────────────────────────────────────────────────────────────────
 
----
-
----
-
-</details>
-&nbsp;
-<details>
-
-<summary><b>3. Customization 🖌️</b></summary>
-
-#### [Firefox](https://www.mozilla.org/en-US/firefox/developer/) 🦊
-
-🦊.1 update various `about:config` options:
+2.7 update various firefox `about:config` options:
 
 - Update scaling factor if in HiDPI environment:
 
-      layout.css.devPixelsPerPx = 1.3
+      layout.css.devPixelsPerPx = 1.25
 
 - Stop asking to restore session (I often just kill the window and don't want the prompt later)
 
@@ -322,12 +300,6 @@ doing wrong, or did wrong. Some minor steps or, reason behind my choices, are no
 
       pdfjs.sidebarViewOnLoad = 0
 
-- Disable exentesion button
+- Disable extension button
 
       extensions.unifiedExtensions.enabled = false
-
----
-
----
-
-</details>
