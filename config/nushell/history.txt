@@ -1,0 +1,1 @@
+trash config/nushell/history.txt
