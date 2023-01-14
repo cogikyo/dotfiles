@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+
+file="$1"
+
+if [[ -z "$1" ]]; then
+    vared -p "script name: " file
+fi
+touch $file
+chmod +x $file
+echo "#!/usr/bin/env bash" >> $file

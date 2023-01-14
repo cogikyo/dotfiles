@@ -649,4 +649,5 @@ alias n = nvim
 alias p = paru
 alias g = lazygit
 
+source ~/.config/nushell/aliases.nu
 source ~/.config/nushell/zoxide.nu
