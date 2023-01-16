@@ -53,8 +53,13 @@ packer.init({
 
 return packer.startup(function(use)
     -- 🔧 Utility ⮯ {{{
+    use {
+        'lewis6991/impatient.nvim',
+        config = function()
+            require('impatient')
+        end
+    }
     use "wbthomason/packer.nvim"
-    use "lewis6991/impatient.nvim"
     use "nvim-lua/popup.nvim"
     use "nvim-lua/plenary.nvim"
     use {

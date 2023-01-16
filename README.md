@@ -48,6 +48,7 @@
       >
   </a>
   &nbsp;
+  <br>
   &nbsp;
   <a href="https://www.reddit.com/r/unixporn/">
       <img
@@ -78,96 +79,119 @@
 
 ## 👾 Overview
 
-### 🐧 **[I use arch, btw](https://wiki.archlinux.org/title/Arch_Linux)**
-> General principles for selection of software follows Arch Linux's princples, i.e.,
+### **[I use arch, btw ⮯](https://wiki.archlinux.org/title/Arch_Linux)**
+
+<img
+    src="https://github.com/nosvagor/dotfiles/blob/main/share/social-preview.jpg?raw=true"
+    title="we do these things not because they are easy, but because they are hard"
+    width=42%
+    align=right
+/>
+> 🌟 Additional guiding principles for software selection:
 >
-> **Simplicity** &mdash; **Modernity**  &mdash; **Pragmatism** &mdash; **User Centrality** &mdash; **Versatility**
+> - 🧪 **Innovative** (whats better _way_ of doing things?)
+> - 📖 **Open** (growth orientied; _infinite_ games)
+> - 🌍 **Collaborative** (what can _we_ do better?)
 >
-> 📈 increased value for **Innovative** and **Open** communities.
+> ❌ I try to avoid communities and software that:
 >
-> 📉 decreased value for _the status quo_ and _zero-sum mentality_.
+> - 🚩 follow _the status quo_ (even if it is _easier_)
+> - 🥧 have _zero-sum mentality_ (_winning_ is **not** the goal)
 >
-> _"...we do these things **not** because they are easy, but **because they are hard**_,"<br>
+&nbsp;
+In short (JFK defintely would've used arch, btw):
+> _"...we {do these} things **not** because they are easy, but **because they are hard**_,"<br>
+>
 > &emsp;&emsp;_"because that goal will serve to **organize** and **measure** the best of our energies and skills_,"<br>
-> &emsp;&emsp;&emsp;&emsp;"_because that challenge is one that we are **willing to accept**, one we are **unwilling to postpone**_..."
-
-### 👨‍💻 Techincals
-
-- **Display Server**: [Wayland](https://wiki.archlinux.org/title/Wayland)
-    - Display Manager: [SDDM](https://wiki.archlinux.org/title/SDDM)
-    - Compositor: [Hyprland](https://hyprland.org/)
-    - Widgets: [eww](https://github.com/elkowar/eww)
 >
-- **Core Applications**:
-    - Terminal: [kitty](https://sw.kovidgoyal.net/kitty/)
-    - Shell: [Nushell](https://www.nushell.sh/)
-    - Editor: [neovim](https://neovim.io/)
-    - Browser: [Firefox](https://www.mozilla.org/en-US/firefox/developer/)
+> &emsp;&emsp;&emsp;&emsp;_"because that challenge is one that we are **willing to accept**, one we are **unwilling to postpone**_..."
 
-### 🎥 Apperance
+### 👨‍💻 Core
 
-- **Design Framework**:
-    - color scheme: [vagari](https://github.com/nosvagor/vagari#palette)
-        - nvim:
-        - firefox:
-        - notifications:
-        - GTK:
-        - QT:
-        - [... more vagari ports](https://github.com/nosvagor/vagari#ports)
-    - cursors:
-    - icons:
->
-- **Fonts:**
-    - Sans Serif: [Albert Sans](https://fonts.google.com/specimen/Albert+Sans?query=Albert+Sans)
-    - Monospace: [Fira Code](https://github.com/tonsky/FiraCode)
-    - Emoji: [Noto Color Emoji](https://fonts.google.com/noto/specimen/Noto+Color+Emoji)
-    - Other: [Lora (serif)](https://fonts.google.com/specimen/Lora),
-        [Archivo (display)](https://fonts.google.com/specimen/Archivo),
-        [Architects Daughter (handwritten)](https://fonts.google.com/specimen/Architects+Daughter)
->
-- **Noteable CLI/TUI Tools**:
-    - btop
-    - bat
-    - cava
-    - xplr
-    - zoxide
->
-- **Common GUI Applications**:
-    - music
-    - photo editing
-    - wofi
-    - obsidian
-    - zathura
-    - inkscape
-    - gimp
-    - blender
+<details open>
+<summary>🖥️ <b>Display</b></summary>
 
-</details>
-&nbsp;
-<details>
-<summary><b> 🧰 My Hardware</b></summary>
-
-- **Mouse**: MX Master 3S
-- **CPU**: AMD Ryzen 7 3700X (16) @ 3.600GHz
-- **GPU**: AMD ATI Radeon RX 5600 OEM/5600 XT / 5700/5700 XT
-- **Monitor**: SAMSUNG UR59 Series 32-Inch 4K UHD (3840x2160)
-- **Keybaord:** Corne (Helidox) 42 key, Kailh gChoc Light Blue (20g),
+- Display Server: [Wayland](https://wiki.archlinux.org/title/Wayland)
+- Compositor: [Hyprland](https://hyprland.org/)
+- Widgets: [eww](https://github.com/elkowar/eww)
 
 </details>
 
-&nbsp;
+<details open>
+<summary>🎯 <b>Core Applications</b></summary>
+
+- Terminal: [kitty](https://sw.kovidgoyal.net/kitty/)
+- Shell: [Nushell](https://www.nushell.sh/)
+- Editor: [neovim](https://neovim.io/)
+- Browser: [Firefox](https://www.mozilla.org/en-US/firefox/developer/)
+
+</details>
+
+### 🎥 Appearance
+
+<details open>
+<summary>🎨 <b>Design Framework</b></summary>
+
+- Color Scheme: [vagari](https://github.com/nosvagor/vagari#palette)
+- GTK:
+- QT:
+- Cursors:
+- Icons:
+
+</details>
+
+<details open>
+<summary>💬 <b>Fonts</b></summary>
+
+- Sans Serif: [Albert Sans](https://fonts.google.com/specimen/Albert+Sans?query=Albert+Sans)
+- Monospace: [Fira Code](https://github.com/tonsky/FiraCode)
+- Emoji: [Noto Color Emoji](https://fonts.google.com/noto/specimen/Noto+Color+Emoji)
+- Other: [Lora (serif)](https://fonts.google.com/specimen/Lora),
+    [Archivo (display)](https://fonts.google.com/specimen/Archivo),
+    [Architects Daughter (handwritten)](https://fonts.google.com/specimen/Architects+Daughter)
+
+</details>
+
+### 🍎 Applications
+<details open>
+<summary>⌨️  <b>Noteable CLI/TUI</b></summary>
+
+- spotify-tui (music)
+- btop (cpu usage)
+- cava (music visualizor)
+- xplr (file explorer)
+
+</details>
+
+
+<details open>
+<summary>🖱️<b>Noteable GUI</b></summary>
+
+- wofi (application launcher)
+- obsidian (notes)
+- zathura (pdf viewer)
+- inkscape (graphics editor)
+- gimp (photo editor)
+- photo editing (photo processor)
+- blender (...everything 3D)
+
+</details>
+
 
 ## 🛠️ Installation
 
-> Do your best to look at these first:
->
-> **[Official ArchWiki Installation Guide](https://wiki.archlinux.org/title/installation_guide)** (Pre Install)
->
-> **[Please do read the FAQ](https://wiki.archlinux.org/title/Frequently_asked_questions)** (Pre/Post Install)
->
-> **[ArchWiki General Recommendations](https://wiki.archlinux.org/title/General_recommendations)** (Post Install)
+<details closed>
+<summary><b> 🧰 My Hardware</b></summary>
 
-<details open>
+- Mouse: MX Master 3S
+- CPU: AMD Ryzen 7 3700X (16) @ 3.600GHz
+- GPU: AMD ATI Radeon RX 5600 OEM/5600 XT / 5700/5700 XT
+- Monitor: SAMSUNG UR59 Series 32-Inch 4K UHD (3840x2160)
+- Keybaord: Corne (Helidox) 42 key, Kailh gChoc Light Blue (20g),
+
+</details>
+
+<details closed>
 <summary><h3>Literal Installation</h3></summary>
 
 
@@ -185,7 +209,7 @@
 
 **3. Use guided arch installation**
 
-- Boot to USB and run command (installing is easy to follow):
+- Boot to USB and run command (does a great job for me and is easy to follow):
 
       archinstall
 
@@ -195,10 +219,12 @@
 
 </details>
 
-<details open>
+<details closed>
 <summary><h3>Post-Installation </h3></summary>
 
-> Most of this is optional and primarily here for personal reference.
+> **[General Recommendations](https://wiki.archlinux.org/title/General_recommendations)**
+>
+> _Note_: most of this is optional and primarily here for personal reference.
 
 2.1 Install AUR helper ([paru](https://github.com/Morganamilo/paru))
 
@@ -222,14 +248,23 @@
 
 &nbsp;
 
+2.4 Enable SDDM
+
+    sytemctl enable sddm
+    # change environment variables here ⮯
+    ln -sfn ~/dotfiles/misc/sddm.conf.d/hyprwrap /usr/bin/
+    mkdir -v /etc/sddm.conf.d
+    # change your desired username --------⮯ (if you want autologin)
+    ln -sfn ~/dotfiles/misc/sddm.conf.d/autologin.conf /etc/sddm.conf.d/autologin.conf
+
+&nbsp;
+
 2.4 Configure SSH for GitHub _(here for personal reference)_:
 
     ssh-keygen -t ed25519 -C "your_email@example.com"
     eval "$(ssh-agent -s)"
     ssh-add ~/.ssh/id_ed25519
     bat ~/.ssh/id_ed25519.pub
-    # Add ssh key to github, then update remote origin:
-    git remote set-url origin git@github.com:USERNAME/REPOSITORY.git
 
 &nbsp;
 
@@ -254,7 +289,7 @@
       [Policy]
       AutoEnable=true
 
-- disable shitty built in bluetooth, e.g., (0b05:18ea is the important part):
+- disable shitty built in bluetooth, e.g., (**0b05**:**18ea** is the important part):
 
       lsusb | grep "Bluetooth"
 
@@ -262,8 +297,11 @@
       Bus 001 Device 004: ID 0b05:18ea ASUSTek Computer, Inc. Bluetooth Radio
 
       touch /etc/udev/rules.d/81-bluetooth-hci.rules
-      ---
-      SUBSYSTEM=="usb", ATTRS{idVendor}=="0b05", ATTRS{idProduct}=="18ea", ATTR{authorized}="0"
+      ────┬───────────────────────────────────────────────────────────────────────────────────────────
+          │ File: /etc/udev/rules.d/81-bluetooth-hci.rules
+      ────┼───────────────────────────────────────────────────────────────────────────────────────────
+      1   │ SUBSYSTEM=="usb", ATTRS{idVendor}=="0b05", ATTRS{idProduct}=="18ea", ATTR{authorized}="0"
+      ────┴───────────────────────────────────────────────────────────────────────────────────────────
 
 - verify by checking available agents (after restarting service):
 
@@ -285,6 +323,8 @@
     ──────┼────────────────────────────────────────────────────────────────────
       1   │ timeout 0
     ──────┴────────────────────────────────────────────────────────────────────
+
+&nbsp;
 
 2.7 update various firefox `about:config` options:
 
