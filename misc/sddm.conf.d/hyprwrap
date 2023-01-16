@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+
+cd ~
+
+# Log WLR errors and logs to the hyprland log. Recommended
+export HYPRLAND_LOG_WLR=1
+
+# Set a cursor size
+export XCURSOR_SIZE=24
+
+# Path
+export PATH="$PATH:$HOME/.local/bin"
+
+
+# Don't forget to link this file to /usr/bin/
+# > ln
+# Then edit /usr/share/wayland-sessions/Hyprland
+# >
+# [Desktop Entry]
+# Name=Hyprland (wrapped)
+# Comment=An intelligent dynamic tiling Wayland compositor
+# Exec=hyprwrap
+# Type=Application
+# >
+
+exec Hyprland
