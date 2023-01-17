@@ -21,6 +21,8 @@ ln -sfn ~/dotfiles/misc/sddm.conf.d/hyprland.desktop /usr/share/wayland-sessions
 mkdir -vp $HOME/.config/
 ln -sfn $HOME/dotfiles/config/* $HOME/.config/
 
+ln -sf $HOME/dotfiles/misc/.zshrc $HOME
+
 mkdir -vp ~/.local/share/fonts
 cp ~/dotfiles/fonts/*.zip ~/.local/share/fonts/
 cd ~/.local/share/fonts/
