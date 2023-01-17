@@ -8,8 +8,4 @@ export HYPRLAND_LOG_WLR=1
 # Set a cursor size
 export XCURSOR_SIZE=24
 
-# Path
-export PATH="$PATH:$HOME/.local/bin"
-
-
 exec Hyprland
