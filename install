@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+
+cd $HOME
+
+git clone https://github.com/nosvagor/dotfiles.git
+git clone https://aur.archlinux.org/paru.git
+cd paru
+makepkg -si
+cd $HOME
+
+paru -S - < $HOME/dotfiles/misc/packages.lst
+
+sytemctl enable sddm
+ln -sfn ~/dotfiles/misc/sddm.conf.d/hyprwrap /usr/bin/
+mkdir -v /etc/sddm.conf.d
+ln -sfn ~/dotfiles/misc/sddm.conf.d/autologin.conf /etc/sddm.conf.d/autologin.conf
+
+mkdir -vp downloads documents documents/templates books papers share media media/music media/images media/videos media/gifs
+
+mkdir -vp $HOME/.local/bin
+ln -sfn $HOME/dotfiles/bin $HOME/.local/bin
+
+mkdir -vp $HOME/.config/
+ln -sfn $HOME/dotfiles/config/* $HOME/.config/
+
+mkdir -vp ~/.local/share/fonts
+cp ~/dotfiles/fonts/*.zip ~/.local/share/fonts/
+cd ~/.local/share/fonts/
+unzip Albert_Sans.zip
+rm *.txt
+unzip Architects_Daughter.zip
+rm *.txt
+unzip Lora.zip
+rm *.txt
+unzip Archivo.zip
+rm *.txt
+rm *.zip
+
+exit 0

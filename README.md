@@ -95,7 +95,7 @@
 >
 > ❌ I try to avoid communities and software that:
 >
-> - 🚩 follow _the status quo_ (even if it is _easier_)
+> - 🚩 follow _the status quo_ (even if it is _easier_ at first)
 > - 🥧 have _zero-sum mentality_ (_winning_ is **not** the goal)
 >
 &nbsp;
