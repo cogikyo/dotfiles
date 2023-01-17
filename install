@@ -12,7 +12,11 @@ paru -S - < $HOME/dotfiles/misc/packages.lst
 
 mkdir -vp downloads documents documents/templates books papers share media media/music media/images media/videos media/gifs
 
-ln -sfn $HOME/dotfiles/bin $HOME/.local/
+ln -sfn $HOME/dotfiles/bin/* /usr/bin
+
+mkdir -vp /etc/sddm.conf.d
+ln -sfn ~/dotfiles/misc/sddm.conf.d/autologin.conf /etc/sddm.conf.d
+ln -sfn ~/dotfiles/misc/sddm.conf.d/hyprland.desktop /usr/share/wayland-sessions
 
 mkdir -vp $HOME/.config/
 ln -sfn $HOME/dotfiles/config/* $HOME/.config/
