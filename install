@@ -10,15 +10,9 @@ cd $HOME
 
 paru -S - < $HOME/dotfiles/misc/packages.lst
 
-sytemctl enable sddm
-ln -sfn ~/dotfiles/misc/sddm.conf.d/hyprwrap /usr/bin/
-mkdir -v /etc/sddm.conf.d
-ln -sfn ~/dotfiles/misc/sddm.conf.d/autologin.conf /etc/sddm.conf.d/autologin.conf
-
 mkdir -vp downloads documents documents/templates books papers share media media/music media/images media/videos media/gifs
 
-mkdir -vp $HOME/.local/bin
-ln -sfn $HOME/dotfiles/bin $HOME/.local/bin
+ln -sfn $HOME/dotfiles/bin $HOME/.local/
 
 mkdir -vp $HOME/.config/
 ln -sfn $HOME/dotfiles/config/* $HOME/.config/
