@@ -2,10 +2,8 @@
 
 cd ~
 
-# Log WLR errors and logs to the hyprland log. Recommended
 export HYPRLAND_LOG_WLR=1
-
-# Set a cursor size
 export XCURSOR_SIZE=24
+export PAGER=nvimpager
 
 exec Hyprland
