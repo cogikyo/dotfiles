@@ -34,10 +34,10 @@ zcomet load zsh-users/zsh-autosuggestions
 zcomet load marlonrichert/zsh-autocomplete
 
 # fix keys
-bindkey '^[[1~'    beginning-of-line
-bindkey '^[[H'     beginning-of-line
-bindkey '^[[4~'    end-of-line
-bindkey '^[[F'     end-of-line
+bindkey -v
+export KEYTIMEOUT=1
+bindkey '^[[H'     vi-beginning-of-line
+bindkey '^[[F'     vi-end-of-line
 bindkey '^[[3~'    delete-char
 bindkey '^[[1;5C'  forward-word   # C-left
 bindkey '^[[1;5D'  backward-word  # C-right
