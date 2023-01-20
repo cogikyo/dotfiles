@@ -1,12 +1,27 @@
--- Colorscheme options simple manual edits
+-- 🎨 Colorscheme & Color Overrides: ⮯ {{{
 vim.cmd [[
   colorscheme catppuccin-macchiato
   highlight ColorColumn guibg=#222536
   highlight MsgArea guifg=#565f89
   highlight Folded guibg=#24283b guifg=#565f89
 ]]
+-- }}} ⮭
 
--- Set lualine as statusline See `:help lualine.txt`
+require("nvim-web-devicons").setup({
+  default = true,
+})
+
+require("nvim-tree").setup()
+
+require('trim').setup({
+  disable = {},
+  patterns = {
+    -- replace multiple blank lines with a single line ⮯
+    [[%s/\(\n\n\n\)\n\+/\1/]],
+  },
+})
+
+-- LuaLine
 require('lualine').setup {
   options = {
     icons_enabled = true,

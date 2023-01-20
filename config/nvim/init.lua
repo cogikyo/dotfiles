@@ -8,50 +8,74 @@ if vim.fn.empty(vim.fn.glob(install_path)) > 0 then
   vim.cmd [[packadd packer.nvim]]
 end
 
+-- Minor adjustments to packer config
+require('packer').init({
+  display = {
+    open_fn = function()
+      return require("packer.util").float({ border = "rounded" })
+    end,
+    keybindings = { -- Keybindings for the display window
+      quit = '<Esc>',
+      toggle_update = 'u', -- only in preview
+      continue = 'c', -- only in preview
+      toggle_info = 'i',
+      diff = 'd',
+      prompt_revert = 'r',
+    }
+  },
+
+})
+
 require('packer').startup(function(use)
 -- }}}
 -- ============================================================================
 
-  -- 📚 LSP: {{{
+  -- 📚 LSP: ⮯ {{{
   use {
     'neovim/nvim-lspconfig',
     requires = {
-      -- Automatically install LSPs to stdpath for neovim
       'williamboman/mason.nvim',
       'williamboman/mason-lspconfig.nvim',
-
-      -- Useful status updates for LSP
       'j-hui/fidget.nvim',
-
       'folke/neodev.nvim',
-      -- Additional lua configuration, makes nvim stuff amazing
     },
   }
   -- }}}
 
-  -- 🪄 Completion: {{{
+  -- 🪄 Completion: ⮯ {{{
   use {
     'hrsh7th/nvim-cmp',
     requires = {
       'hrsh7th/cmp-nvim-lsp',
+      'hrsh7th/cmp-nvim-lua',
+      'hrsh7th/nvim-cmp',
+      'hrsh7th/cmp-buffer',
+      'hrsh7th/cmp-path',
+      'hrsh7th/cmp-cmdline',
+      'hrsh7th/cmp-calc',
+      'hrsh7th/cmp-emoji',
+      'max397574/cmp-greek',
       'L3MON4D3/LuaSnip',
-      'saadparwaiz1/cmp_luasnip'
+      'saadparwaiz1/cmp_luasnip',
+      'rafamadriz/friendly-snippets',
     },
   }
   -- }}}
 
-  -- 🌲 Treesitter: {{{
+  -- 🌲 Treesitter: ⮯ {{{
   use {
     'nvim-treesitter/nvim-treesitter',
     run = function()
       pcall(require('nvim-treesitter.install').update { with_sync = true })
     end,
   }
-
   use { -- Additional text objects via treesitter
     'nvim-treesitter/nvim-treesitter-textobjects',
     after = 'nvim-treesitter',
   }
+  use "nvim-treesitter/playground"
+  use "JoosepAlviste/nvim-ts-context-commentstring"
+  use "mfussenegger/nvim-ts-hint-textobject"
   -- }}}
 
   -- 🔱 Git: ⮯ {{{
@@ -66,39 +90,31 @@ require('packer').startup(function(use)
   -- }}} ⮭
 
   -- 👀 UI: ⮯ {{{
-  use 'nvim-lualine/lualine.nvim' -- Fancier statusline
   use { "catppuccin/nvim", as = "catppuccin" }
+  use 'nvim-lualine/lualine.nvim'
+  use "kyazdani42/nvim-web-devicons"
+  use "goolord/alpha-nvim"
+  use "kyazdani42/nvim-tree.lua"
+  use 'mbbill/undotree'
+  use "ThePrimeagen/harpoon"
   -- }}} ⮭
 
   -- ✋ UX: ⮯ {{{
+  use "ggandor/lightspeed.nvim"
   use "lewis6991/impatient.nvim"
+  use 'numToStr/Comment.nvim'
+  use "tpope/vim-surround"
+  use "tpope/vim-repeat"
+  use "mattn/emmet-vim"
+  use "windwp/nvim-autopairs"
+  use "AndrewRadev/switch.vim"
+  use 'tpope/vim-sleuth'
+  use 'cappyzawa/trim.nvim'
   use {
     "iamcco/markdown-preview.nvim",
     run = function() vim.fn["mkdp#util#install"]() end,
   }
-  use 'numToStr/Comment.nvim' -- "gc" to comment visual regions/lines
-  use "tpope/vim-surround"
-  use "tpope/vim-repeat"
-  use "windwp/nvim-autopairs"
-  use "AndrewRadev/switch.vim"
-  use 'tpope/vim-sleuth' -- Detect tabstop and shiftwidth automatically
-  use 'mbbill/undotree'
-  use "ggandor/lightspeed.nvim"
-  use "mattn/emmet-vim"
-  use "ThePrimeagen/harpoon"
-  use {
-    'cappyzawa/trim.nvim',
-    config = function()
-      require('trim').setup({
-        disable = {},
-        patterns = {
-          -- replace multiple blank lines with a single line ⮯
-          [[%s/\(\n\n\n\)\n\+/\1/]],
-        },
-      })
-    end
-  }
-  -- }}} ⮭
+-- }}} ⮭
 
 -- ============================================================================
   -- 🧮 ZHU LI, DO THE THING! 🢢 {{{
@@ -121,34 +137,29 @@ end
 -- Automatically source and re-compile packer whenever you save this init.lua
 local packer_group = vim.api.nvim_create_augroup('Packer', { clear = true })
 vim.api.nvim_create_autocmd('BufWritePost', {
-  command = 'source <afile> | silent! LspStop | silent! LspStart | PackerCompile',
+  command = 'source <afile> | silent! LspStop | silent! LspStart | PackerSync | PackerCompile ',
   group = packer_group,
   pattern = vim.fn.expand '$MYVIMRC',
 })
+
+vim.api.nvim_create_autocmd('BufWritePost', {
+  command = 'source <afile> | PackerSync',
+  group = packer_group,
+  pattern = vim.fn.expand '$MYVIMRC',
+})
+
 -- }}} ⮭
 -- ============================================================================
 
-
 local config_files = {
-  -- ============================================================================
-  "settings",
-  "keymaps",
-  "autocmds",
-  "simple-setup",
-  -- "treesitter",
-  -- "lsp",
-  -- "cmp",
-  -- "telescope",
-  -- "colorscheme",
-  -- "autopairs",
-  -- "comment",
-  -- "gitsigns",
-  -- "nvim-tree",
-  -- "toggleterm",
-  -- "lualine",
-  -- "alpha",
+  "impatient", -- speeds up loading lua modules -> blazingly fast startup time.
+  "setups", -- configuration and initialization of plugins
+  "settings", -- edit default options/settings for neovim
+  "keymaps", -- custom keymaps (some keymaps are defined in setups) ⮭
+  "autocmds", -- custom automatic functions
 }
 
+-- 🧮 ZHU LI, DO THE THING!
 for _, file in ipairs(config_files) do
   require(file)
 end

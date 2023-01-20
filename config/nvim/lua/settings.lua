@@ -1,53 +1,52 @@
+-- see :help 'option' for more details ⮯
 local options = {
-	-- 🔍 Search ==============================================================
-    hlsearch = false,
-    incsearch = true,
-    ignorecase = true,
-    smartcase = true,
+    -- 🔍 Search ==============================================================
+    hlsearch = false, -- turn off persistent highlights when searching
+    incsearch = true, -- (default on) but can be annoying.
+    ignorecase = true, -- ignore case when searching
+    smartcase = true, -- ignore, ignorecase if a captial letter is used
     -- ========================================================================
 
     -- 📃 Text ================================================================
-    display = { "lastline", "msgsep" },
-    wrap = false,
-    breakindent = true,
-    linebreak = true,
-    scrolloff = 22,
-    sidescrolloff = 6,
-    spell = false,
-    spelllang = { "en_us" },
-    formatoptions = "tcqnpj1",
-	-- ========================================================================
+    wrap = false, -- disable text wrapping by default
+    breakindent = true, -- continue to indent text (if wrapped line)
+    linebreak = true, -- smarter (more control) over line breaking; see 'breakat'
+    scrolloff = 22, -- minimum lines above/below cursor
+    sidescrolloff = 6, -- minimum lines left/right of cursor
+    spell = false, -- turn spell check off by default
+    spelllang = { "en_us", "en_gb" }, -- easily add/remove dictionaries
+    formatoptions = "tcqnpj1", -- see :help fo-table
+    -- ========================================================================
 
     -- 👀 UI ==================================================================
-    shortmess = "filnxtToOFcsS",
-    laststatus = 2,
-    showtabline = 0,
-    number = true,
-    relativenumber = true,
-    termguicolors = true,
-    signcolumn = "yes",
-    colorcolumn = "80",
-    foldmethod = "marker",
-    updatetime = 420,
+    shortmess = "filnxtToOFcsS", -- control some status line message settings
+    showtabline = 0, -- I don't use tabs; hide tabs
+    number = true, -- show line numbers
+    relativenumber = true, -- makes using {number}{motion} easier
+    termguicolors = true, -- more colors, good; needs terminal support.
+    signcolumn = "yes", -- allays display sign-column
+    colorcolumn = "80", -- reminder for the ideal line-length maximum
+    foldmethod = "marker", -- atomically fold on {{{ }}}
+    updatetime = 420, -- timer until events execute when cursors stops (ms)
     -- ========================================================================
 
     -- ⌨️  UX ==================================================================
-    tabstop = 4,
-    wildmenu = true,
-    wildmode = { "longest:full", "full" },
-    mouse = "a",
-    splitbelow = true,
-    splitright = true,
-    showmode = false,
-    completeopt = { "menuone", "noselect", "noinsert" },
-    iskeyword = "@,48-57,_,-,.,192-255",
-    swapfile = false,
-    undofile = true,
-    wildignore = ".bak,~,.o,.h,.info,.swp,.obj,.pyc",
+    tabstop = 4, -- preferred tabstop length; see 'tpope/vim-sleuth' plugin
+    wildmenu = true, -- command-line completion
+    wildmode = { "list:lastused", "full" }, -- completion method
+    mouse = "a", -- mouse can be useful, sometimes... it doesn't hurt.
+    splitbelow = true, -- split below by default
+    splitright = true, -- split right by default
+    showmode = false, -- redundant if using lualine
+    completeopt = { "menuone", "noselect", "noinsert" }, -- insert complete options
+    iskeyword = "@,48-57,_,-,192-255", -- define what a ends a "word"
+    swapfile = false, -- swapfiles are useless to me
+    undofile = true, -- persistent undo, very useful with 'mbbill/undotree' plugin
+    wildignore = ".back,~,.o,.h,.info,.swp,.obj,.pyc", -- don't check these files for "*" pattern matching
     -- ========================================================================
 }
 
--- Zhu Li, do the thing!
+-- 🧮 ZHU LI, DO THE THING!
 for k, v in pairs(options) do
-    vim.opt[k] = v
+	vim.opt[k] = v
 end

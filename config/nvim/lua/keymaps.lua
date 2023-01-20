@@ -23,7 +23,6 @@ map("n", "<leader>r", "<Nop>")
 map("n", "<leader>s", "<Nop>")
 map("n", "<leader>t", "<Nop>")
 map("n", "<leader>u", "<Nop>")
-map("n", "<leader>q", "<Nop>")
 -- }}} ⮭
 
 -- 💾 Save: {{{ ⮯
@@ -31,12 +30,12 @@ map("n", "<C-s>", ":w<CR> :echo <CR>")
 map("i", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("v", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("n", "<leader>s<leader>", ":noa w<CR><CR")
-map("n", "<leader>rs", ":w | source %<CR>")
+map("n", "<leader>so", ":w | source %<CR>")
 -- }}} ⮭
 
 -- 🔔 Quit: {{{ ⮯
+map("n", "<leader>q", ":q!<CR>")
 map("n", "qq", ":q<CR>")
-map("n", "<leader>q<leader>", ":q!<CR>")
 map("n", "q:", "<Nop>")
 map("n", "<C-c>", "<Esc>")
 -- }}} ⮭
@@ -45,8 +44,8 @@ map("n", "<C-c>", "<Esc>")
 map("n", "Q", "q") -- make starting recording more intentional
 map("n", "<C-z>", "u") -- undo
 map("n", "<C-y>", "<C-r>") -- redo
-map("n", "<C-g>", '"*p') -- system clipboard (visual selection) paste
-map("i", "<C-v>", '<Esc>"+p==') -- system clipboard (default) paste
+map("n", "<C-g>", '"*p=ip') -- system clipboard (visual selection) paste
+map("i", "<C-v>", '<Esc>"+p=ip') -- system clipboard (default) paste
 -- }}} ⮭
 
 -- 🤖 Copy copy: {{{ ⮯
@@ -155,7 +154,7 @@ map("n", "<leader>ct", ":ColorizerToggle<CR>")
 map("n", "<leader>st", ":set spell!<CR>")
 map("n", "<leader>wt", ":set wrap!<CR> :echo 'wrap toggled'<CR>")
 map("n", "<leader>mt", ":MarkdownPreviewToggle<CR>,")
-map("n", "<leader>et", ":NvimTreeToggle<CR> :NvimTreeRefresh<CR>")
+map("n", "<leader>et", ":NvimTreeFindFileToggle<CR> :NvimTreeRefresh<CR>")
 map("n", "<leader>bt", ":Switch<CR>") -- toggle b false<->true
 -- }}} ⮭
 
@@ -175,12 +174,14 @@ map("v", "r", ":s///g<Left><Left><Left>", recursive_explicit)
 map("n", "<leader>r<leader>", ":%s///g<Left><Left><Left>", recursive_explicit)
 map("n", "<leader>rw", ":%s/<C-r><C-w>//g<Left><Left>", recursive_explicit)
 map("n", "<leader>rp", '"ryiwvip:s/<C-r>r//g<Left><Left>', recursive_explicit)
+map("n", "<leader>rs", '1z=')
 -- }}} ⮭
 
 -- 🙏 Folds: {{{ ⮯
 map("n", "zh", "ggO<Esc>76i=<Esc>o<Esc>76i=<Esc>gck", recursive_explicit)
 map("n", "zfs", "i: : ⮯ <Esc>3a{<ESC>==^3lgcca", recursive_explicit)
-map("n", "zfe", "3i}<Esc>a ⮭<Esc>gcc<leader>o==", recursive_explicit)
+map("n", "zfe", "<leader>oj3i}<Esc>a ⮭<Esc>gcc<leader>o==", recursive_explicit)
+map("n", "<leader>zl", "O🧮 ZHU LI, DO THE THING!<Esc>gcc^", recursive_silent)
 -- }}} ⮭
 
 -- ⭐ Common Unicode:: {{{ ⮯
