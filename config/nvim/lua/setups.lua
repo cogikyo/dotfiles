@@ -7,12 +7,11 @@ vim.cmd [[
 ]]
 -- }}} ⮭
 
-require("nvim-web-devicons").setup({
-  default = true,
-})
-
-require("nvim-tree").setup()
-
+-- 🛠️ Simple Setups: ⮯ {{{
+require('fidget').setup()
+require('Comment').setup()
+require("lsp-file-operations").setup()
+require("nvim-web-devicons").setup({ default = true, })
 require('trim').setup({
   disable = {},
   patterns = {
@@ -20,8 +19,320 @@ require('trim').setup({
     [[%s/\(\n\n\n\)\n\+/\1/]],
   },
 })
+-- }}} ⮭
 
--- LuaLine
+-- 🗂️ nvim-tree ⮯ {{{
+require("nvim-tree").setup({
+  disable_netrw = true,
+  hijack_netrw = true,
+  open_on_setup = false,
+  ignore_buffer_on_setup = false,
+  ignore_ft_on_setup = {},
+  ignore_buf_on_tab_change = {},
+  auto_reload_on_write = true,
+  create_in_closed_folder = false,
+  open_on_tab = false,
+  sort_by = "name",
+  hijack_unnamed_buffer_when_opening = false,
+  hijack_cursor = true,
+  root_dirs = {},
+  prefer_startup_root = false,
+  sync_root_with_cwd = false,
+  respect_buf_cwd = false,
+  hijack_directories = {
+    enable = true,
+    auto_open = true,
+  },
+  update_focused_file = {
+    enable = true,
+    update_cwd = false,
+    ignore_list = {},
+  },
+  system_open = {
+    cmd = nil,
+    args = {},
+  },
+  diagnostics = {
+    enable = true,
+    debounce_delay = 50,
+    show_on_dirs = false,
+    icons = {
+      hint = "",
+      info = "",
+      warning = "",
+      error = "",
+    },
+  },
+  git = {
+    enable = true,
+    ignore = true,
+    show_on_dirs = true,
+    timeout = 420,
+  },
+  filesystem_watchers = {
+    enable = true,
+    debounce_delay = 50,
+  },
+  on_attach = "disable",
+  remove_keymaps = true,
+  select_prompts = false,
+  view = {
+    adaptive_size = true,
+    centralize_selection = false,
+    hide_root_folder = false,
+    side = "left",
+    preserve_window_proportions = false,
+    number = true,
+    relativenumber = true,
+    signcolumn = "yes",
+    mappings = {
+      custom_only = true,
+      list = {
+        { key = { "<CR>", "o" }, action = "edit" },
+        { key = "]]", action = "cd" },
+        { key = "<C-v>", action = "vsplit" },
+        { key = "<C-h>", action = "split" },
+        { key = "<C-t>", action = "tabnew" },
+        { key = "<Up>", action = "prev_sibling" },
+        { key = "<Down>", action = "next_sibling" },
+        { key = "P", action = "parent_node" },
+        { key = "h", action = "close_node" },
+        { key = "K", action = "first_sibling" },
+        { key = "J", action = "last_sibling" },
+        { key = "I", action = "toggle_git_ignored" },
+        { key = ".", action = "toggle_dotfiles" },
+        { key = "<C-r>", action = "refresh" },
+        { key = "t", action = "create" },
+        { key = "d", action = "trash" },
+        { key = "D", action = "remove" },
+        { key = "r", action = "rename" },
+        { key = "R", action = "full_rename" },
+        { key = "x", action = "cut" },
+        { key = "y", action = "copy" },
+        { key = "p", action = "paste" },
+        { key = "Y", action = "copy_path" },
+        { key = "gy", action = "copy_absolute_path" },
+        { key = "[c", action = "prev_git_item" },
+        { key = "]c", action = "next_git_item" },
+        { key = "-", action = "dir_up" },
+        { key = "O", action = "system_open" },
+        { key = "q", action = "close" },
+        { key = "?", action = "toggle_help" },
+        { key = "W", action = "collapse_all" },
+        { key = "S", action = "search_node" },
+        { key = "!", action = "run_file_command" },
+        { key = "<C-k>", action = "toggle_file_info" },
+        { key = "U", action = "toggle_custom" },
+      },
+    },
+    float = {
+      enable = true,
+      open_win_config = {
+        relative = "editor",
+        border = "rounded",
+        row = 3,
+        col = 69,
+      },
+    },
+  },
+  renderer = {
+    add_trailing = false,
+    group_empty = true,
+    full_name = false,
+    highlight_git = true,
+    highlight_opened_files = "none",
+    root_folder_modifier = ":~",
+    indent_width = 2,
+    indent_markers = {
+      enable = true,
+      inline_arrows = true,
+      icons = {
+        corner = "└╾ ",
+        edge = "│ ",
+        item = "├",
+        none = "",
+      },
+    },
+    icons = {
+      webdev_colors = true,
+      git_placement = "before",
+      padding = " ",
+      symlink_arrow = " ➛ ",
+      show = {
+        file = true,
+        folder = true,
+        folder_arrow = true,
+        git = true,
+      },
+      glyphs = {
+        default = "",
+        symlink = "",
+        git = {
+          unstaged = "🞊",
+          staged = "",
+          unmerged = "",
+          renamed = "",
+          deleted = "",
+          untracked = "⧂",
+          ignored = "",
+        },
+        folder = {
+          arrow_open = "",
+          arrow_closed = "",
+          default = "",
+          open = "",
+          empty = "",
+          empty_open = "",
+          symlink = "",
+          symlink_open = "",
+        },
+      }
+    },
+    special_files = {
+      ["Cargo.toml"] = true,
+      Makefile = true,
+      ["README.md"] = true,
+      ["readme.md"] = true,
+    },
+    symlink_destination = true,
+  },
+  filters = {
+    dotfiles = false,
+    custom = { "^\\.git" },
+    exclude = {},
+  },
+  trash = {
+    cmd = "trash-put",
+    require_confirm = true,
+  },
+  actions = {
+    change_dir = {
+      enable = true,
+      global = false,
+      restrict_above_cwd = false,
+    },
+    open_file = {
+      quit_on_open = true,
+      resize_window = true,
+      window_picker = {
+        enable = true,
+        chars = "asetniol",
+        exclude = {
+          filetype = { "notify", "packer", "qf", "diff", "fugitive", "fugitiveblame" },
+          buftype = { "nofile", "terminal", "help" },
+        },
+      },
+    },
+  },
+  log = {
+    enable = false,
+    truncate = false,
+    types = {
+      all = false,
+      config = false,
+      copy_paste = false,
+      git = false,
+      profile = false,
+    },
+  },
+})
+-- }}} ⮭
+
+-- 🧿 gitsigns: ⮯ {{{
+require('gitsigns').setup {
+  signs = {
+    add = {
+      hl = "GitSignsAdd",
+      text = "┣",
+      numhl = "GitSignsAddNr",
+      linehl = "GitSignsAddLn"
+    },
+    change = {
+      hl = "GitSignsChange",
+      text = "┃",
+      numhl = "GitSignsChangeNr",
+      linehl = "GitSignsChangeLn"
+    },
+    delete = {
+      hl = "GitSignsDelete",
+      text = "┫",
+      numhl = "GitSignsDeleteNr",
+      linehl = "GitSignsDeleteLn"
+    },
+    topdelete = {
+      hl = "GitSignsDelete",
+      text = "🠳",
+      numhl = "GitSignsDeleteNr",
+      linehl = "GitSignsDeleteLn"
+    },
+    changedelete = {
+      hl = "GitSignsChange",
+      text = "┃",
+      numhl = "GitSignsChangeNr",
+      linehl = "GitSignsChangeLn",
+    },
+  },
+  signcolumn = true, -- Toggle with `:Gitsigns toggle_signs`
+  numhl = true, -- Toggle with `:Gitsigns toggle_numhl`
+  linehl = false, -- Toggle with `:Gitsigns toggle_linehl`
+  word_diff = false, -- Toggle with `:Gitsigns toggle_word_diff`
+  current_line_blame = false, -- Toggle with `:Gitsigns toggle_current_line_blame`
+  watch_gitdir = {
+    interval = 1000,
+    follow_files = true,
+  },
+  attach_to_untracked = true,
+  current_line_blame_opts = {
+    virt_text = true,
+    virt_text_pos = "eol", -- 'eol' | 'overlay' | 'right_align'
+    delay = 1000,
+    ignore_whitespace = false,
+  },
+  current_line_blame_formatter = '<author>, <author_time:%Y-%m-%d> - <summary>',
+  sign_priority = 6,
+  update_debounce = 100,
+  status_formatter = nil, -- Use default
+  max_file_length = 40000,
+  preview_config = {
+    -- Options passed to nvim_open_win
+    border = "rounded",
+    style = "minimal",
+    relative = "cursor",
+    row = 0,
+    col = 1,
+  },
+  yadm = {
+    enable = false,
+  },
+  -- Keymaps
+  on_attach = function(bufnr)
+    local function map(mode, lhs, rhs, opts)
+      opts = vim.tbl_extend("force", { noremap = true, silent = true }, opts or {})
+      vim.api.nvim_buf_set_keymap(bufnr, mode, lhs, rhs, opts)
+    end
+    -- Navigation
+    map("n", "]]", "&diff ? ']c' : '<cmd>Gitsigns next_hunk<CR>'", { expr = true })
+    map("n", "[[", "&diff ? '[c' : '<cmd>Gitsigns prev_hunk<CR>'", { expr = true })
+    -- Actions
+    map("n", "<leader>hs", ":Gitsigns stage_hunk<CR>")
+    map("v", "<leader>hs", ":Gitsigns stage_hunk<CR>")
+    map("n", "<leader>hr", ":Gitsigns reset_hunk<CR>")
+    map("v", "<leader>hr", ":Gitsigns reset_hunk<CR>")
+    map("n", "<leader>hS", "<cmd>Gitsigns stage_buffer<CR>")
+    map("n", "<leader>hu", "<cmd>Gitsigns undo_stage_hunk<CR>")
+    map("n", "<leader>hR", "<cmd>Gitsigns reset_buffer<CR>")
+    map("n", "<leader>hp", "<cmd>Gitsigns preview_hunk<CR>")
+    map("n", "<leader>hb", '<cmd>lua require"gitsigns".blame_line{full=true}<CR>')
+    map("n", "<leader>lb", "<cmd>Gitsigns toggle_current_line_blame<CR>")
+    map("n", "<leader>hd", "<cmd>Gitsigns toggle_deleted<CR>")
+    -- Text object
+    map("o", "ih", ":<C-U>Gitsigns select_hunk<CR>")
+    map("x", "ih", ":<C-U>Gitsigns select_hunk<CR>")
+  end,
+}
+-- }}} ⮭
+
+-- 🧭 LuaLine: ⮯ {{{
 require('lualine').setup {
   options = {
     icons_enabled = true,
@@ -30,54 +341,77 @@ require('lualine').setup {
     section_separators = '',
   },
 }
+-- }}} ⮭
 
--- Enable Comment.nvim
-require('Comment').setup()
+-- 🔭 telescope: ⮯ {{{
 
--- Gitsigns
--- See `:help gitsigns.txt`
-require('gitsigns').setup {
-  signs = {
-    add = { text = '+' },
-    change = { text = '~' },
-    delete = { text = '_' },
-    topdelete = { text = '‾' },
-    changedelete = { text = '~' },
-  },
-}
+local actions = require("telescope.actions")
 
--- [[ Configure Telescope ]]
--- See `:help telescope` and `:help telescope.setup()`
-require('telescope').setup {
+require('telescope').setup({
   defaults = {
+    prompt_prefix = "   ",
+    selection_caret = "  ",
+    path_display = { "smart" },
     mappings = {
       i = {
-        ['<C-u>'] = false,
-        ['<C-d>'] = false,
+        ["<C-Down>"] = actions.cycle_history_next,
+        ["<C-Up>"] = actions.cycle_history_prev,
+        ["<Esc>"] = actions.close,
+        ["<C-c>"] = actions.close,
+        ["<Down>"] = actions.move_selection_next,
+        ["<Up>"] = actions.move_selection_previous,
+        ["<PageUp>"] = actions.results_scrolling_up,
+        ["<PageDown>"] = actions.results_scrolling_down,
+        ["<C-u>"] = actions.preview_scrolling_up,
+        ["<C-d>"] = actions.preview_scrolling_down,
+        ["<CR>"] = actions.select_default,
+        ["<C-h>"] = actions.select_horizontal,
+        ["<C-v>"] = actions.select_vertical,
+        ["<gt>"] = actions.select_tab,
+        ["<Tab>"] = actions.toggle_selection + actions.move_selection_worse,
+        ["<S-Tab>"] = actions.toggle_selection + actions.move_selection_better,
+        ["<C-f>"] = actions.send_to_qflist + actions.open_qflist,
+        ["<C-q>"] = actions.send_selected_to_qflist + actions.open_qflist,
+        ["<C-l>"] = actions.complete_tag,
+        ["<C-Space>"] = actions.which_key,
       },
     },
   },
-}
+  extensions = {
+    ["zf-native"] = {
+      file = {
+        enable = true,
+        highlight_results = true,
+        match_filename = true,
+      },
+      generic = {
+        enable = true,
+        highlight_results = true,
+        match_filename = false,
+      },
+    },
+  },
+})
 
--- Enable telescope fzf native, if installed
-pcall(require('telescope').load_extension, 'fzf')
+require("telescope").load_extension("zf-native")
 
--- See `:help telescope.builtin`
-vim.keymap.set('n', '<leader>?', require('telescope.builtin').oldfiles, { desc = '[?] Find recently opened files' })
-vim.keymap.set('n', '<leader><space>', require('telescope.builtin').buffers, { desc = '[ ] Find existing buffers' })
-vim.keymap.set('n', '<leader>/', function()
-  -- You can pass additional configuration to telescope to change theme, layout, etc.
-  require('telescope.builtin').current_buffer_fuzzy_find(require('telescope.themes').get_dropdown {
-    winblend = 10,
-    previewer = false,
-  })
-end, { desc = '[/] Fuzzily search in current buffer]' })
-
-vim.keymap.set('n', '<leader>sf', require('telescope.builtin').find_files, { desc = '[S]earch [F]iles' })
-vim.keymap.set('n', '<leader>sh', require('telescope.builtin').help_tags, { desc = '[S]earch [H]elp' })
-vim.keymap.set('n', '<leader>sw', require('telescope.builtin').grep_string, { desc = '[S]earch current [W]ord' })
-vim.keymap.set('n', '<leader>sg', require('telescope.builtin').live_grep, { desc = '[S]earch by [G]rep' })
-vim.keymap.set('n', '<leader>sd', require('telescope.builtin').diagnostics, { desc = '[S]earch [D]iagnostics' })
+local map = vim.keymap.set
+map('n', '<leader>t<leader>', require('telescope.builtin').find_files)
+map('n', '<leader>tt', require('telescope.builtin').live_grep)
+map('n', '<leader>tT', require('telescope.builtin').grep_string)
+map('n', '<leader>tg', require('telescope.builtin').git_files)
+map('n', '<leader>tr', require('telescope.builtin').oldfiles)
+map('n', '<leader>tb', require('telescope.builtin').buffers)
+map('n', '<leader>th', require('telescope.builtin').help_tags)
+map('n', '<leader>ts', require('telescope.builtin').grep_string)
+map('n', '<leader>td', require('telescope.builtin').diagnostics)
+map('n', '<leader>tp', require('telescope.builtin').builtin)
+map('n', '<leader>tc', require('telescope.builtin').commands)
+map('n', '<leader>tl', require('telescope.builtin').loclist)
+map('n', '<leader>tq', require('telescope.builtin').quickfix)
+map('n', '<leader>tm', require('telescope.builtin').man_pages)
+map('n', '<leader>ts', require('telescope.builtin').treesitter)
+-- }}} ⮭
 
 -- [[ Configure Treesitter ]]
 -- See `:help nvim-treesitter`
@@ -141,12 +475,6 @@ require('nvim-treesitter.configs').setup {
     },
   },
 }
-
--- Diagnostic keymaps
-vim.keymap.set('n', '[d', vim.diagnostic.goto_prev)
-vim.keymap.set('n', ']d', vim.diagnostic.goto_next)
-vim.keymap.set('n', '<leader>e', vim.diagnostic.open_float)
-vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist)
 
 -- LSP settings.
 --  This function gets run when an LSP connects to a particular buffer.
@@ -240,10 +568,8 @@ mason_lspconfig.setup_handlers {
   end,
 }
 
--- Turn on lsp status information
-require('fidget').setup()
 
--- nvim-cmp setup
+-- 🪄 nvim-cmp setup: ⮯ {{{
 local cmp = require 'cmp'
 local luasnip = require 'luasnip'
 
@@ -285,3 +611,47 @@ cmp.setup {
     { name = 'luasnip' },
   },
 }
+-- }}} ⮭
+
+-- 🍐 nvim-autopairs: ⮯ {{{
+local npairs = require("nvim-autopairs")
+local ts_conds = require('nvim-autopairs.ts-conds')
+local Rule = require('nvim-autopairs.rule')
+local cmp_autopairs = require("nvim-autopairs.completion.cmp")
+
+npairs.setup({
+  enable_check_bracket_line = false,
+  fast_wrap = {
+    map = "<C-e>",
+    chars = { "{", "[", "(", '"', "'", "`", "<" },
+    pattern = string.gsub([[ [%'%"%)%>%]%)%}%,] ]], "%s+", ""),
+    offset = -1,
+    end_key = "$",
+    keys = "asetniol",
+    check_comma = true,
+    highlight = "Search",
+    highlight_grey = "Comment",
+  },
+  check_ts = true,
+  ts_config = {
+    lua = {'string'},-- it will not add a pair on that treesitter node
+    javascript = {'template_string'},
+    java = false,-- don't check treesitter on java
+  }
+})
+
+-- press % => %% only while inside a comment or string
+npairs.add_rules({
+  Rule("%", "%", "lua")
+    :with_pair(ts_conds.is_ts_node({'string','comment'})),
+  Rule("$", "$", "lua")
+    :with_pair(ts_conds.is_not_ts_node({'function'}))
+})
+
+cmp.event:on(
+	"confirm_done",
+	cmp_autopairs.on_confirm_done({
+		map_char = { tex = "" },
+	})
+)
+-- }}} ⮭

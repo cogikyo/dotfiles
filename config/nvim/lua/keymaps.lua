@@ -34,7 +34,7 @@ map("n", "<leader>so", ":w | source %<CR>")
 -- }}} ⮭
 
 -- 🔔 Quit: {{{ ⮯
-map("n", "<leader>q", ":q!<CR>")
+map("n", "<leader>q", ":q!<CR>", recursive_explicit)
 map("n", "qq", ":q<CR>")
 map("n", "q:", "<Nop>")
 map("n", "<C-c>", "<Esc>")
@@ -122,29 +122,6 @@ map("n", "<C-Right>", ":vertical resize +2<CR>")
 -- 👉 Indent: {{{ ⮯
 map("n", "<leader>==", "ml=ip`lzvzt")
 map("n", "<leader>g=", "mlgg=G`lzvzt")
--- }}} ⮭
-
--- 🔭 Telescope: {{{ ⮯
-map("n", "<leader>t<leader>", "<cmd>lua require('telescope.builtin').find_files({hidden = true})<CR>")
-map("n", "<leader>T", "<cmd>lua require('telescope.builtin').live_grep()<CR>")
-map("n", "<leader>th", "<cmd>lua require('telescope.builtin').help_tags()<CR>")
-map("n", "<leader>te", "<cmd>lua require('telescope.builtin').git_files()<CR>")
-map("n", "<leader>tm", "<cmd>lua require('telescope.builtin').man_pages()<CR>")
-map("n", "<leader>tq", "<cmd>lua require('telescope.builtin').quickfix()<CR>")
-map("n", "<leader>tl", "<cmd>lua require('telescope.builtin').loclist()<CR>")
-map("n", "<leader>tc", "<cmd>lua require('telescope.builtin').commands()<CR>")
-map("n", "<leader>tr", "<cmd>lua require('telescope.builtin').oldfiles()<CR>")
-map("n", "<leader>tp", "<cmd>lua require('telescope.builtin').builtin()<CR>")
-map("n", "<leader>tb", "<cmd>lua require('telescope.builtin').buffers()<CR>")
-
-map("n", "<leader>gr", "<cmd>lua require('telescope.builtin').lsp_references()<CR>")
-map("n", "<leader>gs", "<cmd>lua require('telescope.builtin').lsp_document_symbols()<CR>")
-map("n", "<leader>gS", "<cmd>lua require('telescope.builtin').lsp_dynamic_workspace_symbols()<CR>")
-map("n", "<leader>gi", "<cmd>lua require('telescope.builtin').lsp_implementations()<CR>")
-map("n", "<leader>gd", "<cmd>lua require('telescope.builtin').lsp_definitions()<CR>")
-map("n", "<leader>D", "<cmd>lua require('telescope.builtin').lsp_type_definitions()<CR>")
-
-map("n", "<leader>ts", "<cmd>lua require('telescope.builtin').treesitter()<CR>")
 -- }}} ⮭
 
 -- 🤲 Toggle: {{{ ⮯

@@ -85,18 +85,30 @@ require('packer').startup(function(use)
   -- }}} ⮭
 
   -- 🔭 Fuzzy Finder: ⮯ {{{
-  use { 'nvim-telescope/telescope.nvim', branch = '0.1.x', requires = { 'nvim-lua/plenary.nvim' } }
-  use { 'nvim-telescope/telescope-fzf-native.nvim', run = 'make', cond = vim.fn.executable 'make' == 1 }
+  use {
+    'nvim-telescope/telescope.nvim',
+    branch = '0.1.x',
+    requires = {
+      'nvim-lua/plenary.nvim',
+      'natecraddock/telescope-zf-native.nvim'
+    }
+  }
   -- }}} ⮭
 
   -- 👀 UI: ⮯ {{{
   use { "catppuccin/nvim", as = "catppuccin" }
   use 'nvim-lualine/lualine.nvim'
-  use "kyazdani42/nvim-web-devicons"
   use "goolord/alpha-nvim"
-  use "kyazdani42/nvim-tree.lua"
   use 'mbbill/undotree'
   use "ThePrimeagen/harpoon"
+  use {
+    "kyazdani42/nvim-tree.lua",
+    requires = {
+      'antosha417/nvim-lsp-file-operations',
+      "nvim-lua/plenary.nvim",
+      "kyazdani42/nvim-web-devicons"
+    }
+  }
   -- }}} ⮭
 
   -- ✋ UX: ⮯ {{{
@@ -153,9 +165,9 @@ vim.api.nvim_create_autocmd('BufWritePost', {
 
 local config_files = {
   "impatient", -- speeds up loading lua modules -> blazingly fast startup time.
-  "setups", -- configuration and initialization of plugins
   "settings", -- edit default options/settings for neovim
-  "keymaps", -- custom keymaps (some keymaps are defined in setups) ⮭
+  "keymaps", -- custom keymaps (some keymaps are defined in setups)
+  "setups", -- configuration and initialization of plugins
   "autocmds", -- custom automatic functions
 }
 
