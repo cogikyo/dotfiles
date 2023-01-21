@@ -62,7 +62,7 @@ require('packer').startup(function(use)
   }
   -- }}}
 
-  -- 🌲 Treesitter: ⮯ {{{
+  -- 🎄 Treesitter: ⮯ {{{
   use {
     'nvim-treesitter/nvim-treesitter',
     run = function()
@@ -75,7 +75,6 @@ require('packer').startup(function(use)
   }
   use "nvim-treesitter/playground"
   use "JoosepAlviste/nvim-ts-context-commentstring"
-  use "mfussenegger/nvim-ts-hint-textobject"
   -- }}}
 
   -- 🔱 Git: ⮯ {{{
@@ -164,7 +163,9 @@ vim.api.nvim_create_autocmd('BufWritePost', {
 -- ============================================================================
 
 local config_files = {
+  -- load impatient first (per wiki instructions)  ⮯
   "impatient", -- speeds up loading lua modules -> blazingly fast startup time.
+  -- --------------------------------------------- ⮭
   "settings", -- edit default options/settings for neovim
   "keymaps", -- custom keymaps (some keymaps are defined in setups)
   "setups", -- configuration and initialization of plugins
