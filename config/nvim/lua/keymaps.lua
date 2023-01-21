@@ -139,11 +139,11 @@ map("n", "<leader>bt", ":Switch<CR>") -- toggle b false<->true
 map("n", "<leader>n", "<Nop>")
 map("n", "<leader>nn", ":lua require('harpoon.mark').add_file()<CR>")
 map("n", "<leader>ng", ":lua require('harpoon.ui').toggle_quick_menu()<CR>")
-map("n", "<leader>nt", ":lua require('harpoon.ui').nav_file(1)<CR>zvzt")
-map("n", "<leader>ne", ":lua require('harpoon.ui').nav_file(2)<CR>zvzt")
-map("n", "<leader>ns", ":lua require('harpoon.ui').nav_file(3)<CR>zvzt")
-map("n", "<leader>na", ":lua require('harpoon.ui').nav_file(4)<CR>zvzt")
-map("n", "<leader>nd", ":lua require('harpoon.ui').nav_file(5)<CR>zvzt")
+map("n", "<leader>nt", ":lua require('harpoon.ui').nav_file(1)<CR>zt")
+map("n", "<leader>ne", ":lua require('harpoon.ui').nav_file(2)<CR>zt")
+map("n", "<leader>ns", ":lua require('harpoon.ui').nav_file(3)<CR>zt")
+map("n", "<leader>na", ":lua require('harpoon.ui').nav_file(4)<CR>zt")
+map("n", "<leader>nd", ":lua require('harpoon.ui').nav_file(5)<CR>zt")
 -- }}} ⮭
 
 -- 🔍 Replace: {{{ ⮯
@@ -156,17 +156,17 @@ map("n", "<leader>rs", '1z=')
 
 -- 🙏 Folds: {{{ ⮯
 map("n", "zh", "ggO<Esc>76i=<Esc>o<Esc>76i=<Esc>gck", recursive_explicit)
-map("n", "zfs", "i: : ⮯ <Esc>3a{<ESC>==^3lgcca", recursive_explicit)
-map("n", "zfe", "<leader>oj3i}<Esc>a ⮭<Esc>gcc<leader>o==", recursive_explicit)
+map("n", "zfs", 'i: : ⮯ <Esc>3a{<ESC>l3"_dl^3lgcc==a', recursive_explicit)
+map("n", "zfe", '<leader>oj3i}<Esc>a ⮭<Esc>gcc<leader>o==', recursive_explicit)
 map("n", "<leader>zl", "O🧮 ZHU LI, DO THE THING!<Esc>gcc^", recursive_silent)
 -- }}} ⮭
 
 -- ⭐ Common Unicode:: {{{ ⮯
 map("n", "<leader>uad", "a ⮯<Esc>")
 map("n", "<leader>uau", "a ⮭<Esc>")
-map("n", "<leader>uin", "a ∞<Esc>")
-map("n", "<leader>ucd", "a  <Esc>")
 map("n", "<leader>uar", "a 🢣 <Esc>")
 map("n", "<leader>ual", "a 🢢 <Esc>")
+map("n", "<leader>uinf", "a ∞<Esc>")
+map("n", "<leader>udna", "a  <Esc>")
 map("n", "<leader>udeg", "a °<Esc>")
 -- }}} ⮭

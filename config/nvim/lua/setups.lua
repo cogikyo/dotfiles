@@ -1,13 +1,7 @@
--- 🎨 Colorscheme & Color Overrides: ⮯ {{{
-vim.cmd [[
-  colorscheme catppuccin-macchiato
-  highlight ColorColumn guibg=#222536
-  highlight MsgArea guifg=#565f89
-  highlight Folded guibg=#24283b guifg=#565f89
-]]
--- }}} ⮭
-
+-- ============================================================================
 -- 🛠️ Simple Setups: ⮯ {{{
+require('mason').setup()
+require('neodev').setup()
 require('fidget').setup()
 require('Comment').setup()
 require("lsp-file-operations").setup()
@@ -20,8 +14,18 @@ require('trim').setup({
   },
 })
 -- }}} ⮭
+-- ============================================================================
 
--- 🗂️ nvim-tree ⮯ {{{
+-- 🎨 Colorscheme: ⮯ {{{
+vim.cmd [[
+  colorscheme catppuccin-macchiato
+  highlight ColorColumn guibg=#222536
+  highlight MsgArea guifg=#565f89
+  highlight Folded guibg=#24283b guifg=#565f89
+]]
+-- }}} ⮭
+
+-- 🗂️ Nvim-Tree ⮯ {{{
 require("nvim-tree").setup({
   disable_netrw = true,
   hijack_netrw = true,
@@ -238,7 +242,7 @@ require("nvim-tree").setup({
 })
 -- }}} ⮭
 
--- 🧿 gitsigns: ⮯ {{{
+-- 🧿 GitSigns: ⮯ {{{
 require('gitsigns').setup {
   signs = {
     add = {
@@ -310,6 +314,7 @@ require('gitsigns').setup {
       opts = vim.tbl_extend("force", { noremap = true, silent = true }, opts or {})
       vim.api.nvim_buf_set_keymap(bufnr, mode, lhs, rhs, opts)
     end
+
     -- Navigation
     map("n", "]]", "&diff ? ']c' : '<cmd>Gitsigns next_hunk<CR>'", { expr = true })
     map("n", "[[", "&diff ? '[c' : '<cmd>Gitsigns prev_hunk<CR>'", { expr = true })
@@ -343,7 +348,7 @@ require('lualine').setup {
 }
 -- }}} ⮭
 
--- 🔭 telescope: ⮯ {{{
+-- 🔭 Telescope: ⮯ {{{
 
 local actions = require("telescope.actions")
 
@@ -400,176 +405,78 @@ map('n', '<leader>t<leader>', require('telescope.builtin').find_files)
 map('n', '<leader>tt', require('telescope.builtin').live_grep)
 map('n', '<leader>tT', require('telescope.builtin').grep_string)
 map('n', '<leader>tg', require('telescope.builtin').git_files)
-map('n', '<leader>tr', require('telescope.builtin').oldfiles)
+map('n', '<leader>to', require('telescope.builtin').oldfiles)
 map('n', '<leader>tb', require('telescope.builtin').buffers)
 map('n', '<leader>th', require('telescope.builtin').help_tags)
-map('n', '<leader>ts', require('telescope.builtin').grep_string)
 map('n', '<leader>td', require('telescope.builtin').diagnostics)
 map('n', '<leader>tp', require('telescope.builtin').builtin)
 map('n', '<leader>tc', require('telescope.builtin').commands)
 map('n', '<leader>tl', require('telescope.builtin').loclist)
 map('n', '<leader>tq', require('telescope.builtin').quickfix)
 map('n', '<leader>tm', require('telescope.builtin').man_pages)
-map('n', '<leader>ts', require('telescope.builtin').treesitter)
+map('n', '<leader>tst', require('telescope.builtin').treesitter)
 -- }}} ⮭
 
--- [[ Configure Treesitter ]]
--- See `:help nvim-treesitter`
+-- 🎄 Treesitter: ⮯ {{{
 require('nvim-treesitter.configs').setup {
-  -- Add languages to be installed here that you want installed for treesitter
-  ensure_installed = { 'c', 'cpp', 'go', 'lua', 'python', 'rust', 'typescript', 'help', 'vim' },
-
-  highlight = { enable = true },
-  indent = { enable = true, disable = { 'python' } },
+  ensure_installed = {
+    "lua", "help", "vim", "c", "cpp", "go", "scss", "yaml", "css", "html",
+    "python", "javascript", "json", "typescript", "rust", "bash", "markdown",
+    "latex", "regex", "solidity",
+  },
+  sync_install = true,
+  auto_install = true,
+  highlight = {
+    enable = true,
+    disable = function(lang, buf)
+      local max_filesize = 100 * 1024 -- 100 KB
+      local ok, stats = pcall(vim.loop.fs_stat, vim.api.nvim_buf_get_name(buf))
+      if ok and stats and stats.size > max_filesize then
+        return true
+      end
+    end,
+    additional_vim_regex_highlighting = false,
+  },
+  indent = {
+    enable = true,
+    disable = { 'python' }
+  },
   incremental_selection = {
     enable = true,
     keymaps = {
-      init_selection = '<c-space>',
-      node_incremental = '<c-space>',
-      scope_incremental = '<c-s>',
-      node_decremental = '<c-backspace>',
+      init_selection = "gn", -- normal: start incremental selection.
+      node_incremental = "gn", -- visual: increment to the upper named parent.
+      scope_incremental = "gy", -- visual: increment to the upper scope
+      node_decremental = "gp", -- visual: decrement to the previous named node.
     },
   },
-  textobjects = {
-    select = {
-      enable = true,
-      lookahead = true, -- Automatically jump forward to textobj, similar to targets.vim
-      keymaps = {
-        -- You can use the capture groups defined in textobjects.scm
-        ['aa'] = '@parameter.outer',
-        ['ia'] = '@parameter.inner',
-        ['af'] = '@function.outer',
-        ['if'] = '@function.inner',
-        ['ac'] = '@class.outer',
-        ['ic'] = '@class.inner',
-      },
-    },
-    move = {
-      enable = true,
-      set_jumps = true, -- whether to set jumps in the jumplist
-      goto_next_start = {
-        [']m'] = '@function.outer',
-        [']]'] = '@class.outer',
-      },
-      goto_next_end = {
-        [']M'] = '@function.outer',
-        [']['] = '@class.outer',
-      },
-      goto_previous_start = {
-        ['[m'] = '@function.outer',
-        ['[['] = '@class.outer',
-      },
-      goto_previous_end = {
-        ['[M'] = '@function.outer',
-        ['[]'] = '@class.outer',
-      },
-    },
-    swap = {
-      enable = true,
-      swap_next = {
-        ['<leader>a'] = '@parameter.inner',
-      },
-      swap_previous = {
-        ['<leader>A'] = '@parameter.inner',
-      },
+  context_commentstring = {
+    enable = true,
+    enable_autocmd = false, -- integration with Comment.nvim
+  },
+  playground = {
+    enable = true,
+    disable = {},
+    updatetime = 25, -- Debounced time for highlighting nodes in the playground from source code
+    persist_queries = false, -- Whether the query persists across vim sessions
+    keybindings = {
+      toggle_query_editor = "o",
+      toggle_hl_groups = "i",
+      toggle_injected_languages = "t",
+      toggle_anonymous_nodes = "a",
+      toggle_language_display = "I",
+      focus_language = "f",
+      unfocus_language = "F",
+      update = "R",
+      goto_node = "<CR>",
+      show_help = "?",
     },
   },
+  autopairs = { enable = true },
 }
+-- }}} ⮭
 
--- LSP settings.
---  This function gets run when an LSP connects to a particular buffer.
-local on_attach = function(_, bufnr)
-  -- NOTE: Remember that lua is a real programming language, and as such it is possible
-  -- to define small helper and utility functions so you don't have to repeat yourself
-  -- many times.
-  --
-  -- In this case, we create a function that lets us more easily define mappings specific
-  -- for LSP related items. It sets the mode, buffer and description for us each time.
-  local nmap = function(keys, func, desc)
-    if desc then
-      desc = 'LSP: ' .. desc
-    end
-
-    vim.keymap.set('n', keys, func, { buffer = bufnr, desc = desc })
-  end
-
-  nmap('<leader>rn', vim.lsp.buf.rename, '[R]e[n]ame')
-  nmap('<leader>ca', vim.lsp.buf.code_action, '[C]ode [A]ction')
-
-  nmap('gd', vim.lsp.buf.definition, '[G]oto [D]efinition')
-  nmap('gr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
-  nmap('gI', vim.lsp.buf.implementation, '[G]oto [I]mplementation')
-  nmap('<leader>D', vim.lsp.buf.type_definition, 'Type [D]efinition')
-  nmap('<leader>ds', require('telescope.builtin').lsp_document_symbols, '[D]ocument [S]ymbols')
-  nmap('<leader>ws', require('telescope.builtin').lsp_dynamic_workspace_symbols, '[W]orkspace [S]ymbols')
-
-  -- See `:help K` for why this keymap
-  nmap('K', vim.lsp.buf.hover, 'Hover Documentation')
-  nmap('<C-k>', vim.lsp.buf.signature_help, 'Signature Documentation')
-
-  -- Lesser used LSP functionality
-  nmap('gD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
-  nmap('<leader>wa', vim.lsp.buf.add_workspace_folder, '[W]orkspace [A]dd Folder')
-  nmap('<leader>wr', vim.lsp.buf.remove_workspace_folder, '[W]orkspace [R]emove Folder')
-  nmap('<leader>wl', function()
-    print(vim.inspect(vim.lsp.buf.list_workspace_folders()))
-  end, '[W]orkspace [L]ist Folders')
-
-  -- Create a command `:Format` local to the LSP buffer
-  vim.api.nvim_buf_create_user_command(bufnr, 'Format', function(_)
-    vim.lsp.buf.format()
-  end, { desc = 'Format current buffer with LSP' })
-end
-
--- Enable the following language servers
---  Feel free to add/remove any LSPs that you want here. They will automatically be installed.
---
---  Add any additional override configuration in the following tables. They will be passed to
---  the `settings` field of the server config. You must look up that documentation yourself.
-local servers = {
-  -- clangd = {},
-  -- gopls = {},
-  -- pyright = {},
-  -- rust_analyzer = {},
-  -- tsserver = {},
-
-  sumneko_lua = {
-    Lua = {
-      workspace = { checkThirdParty = false },
-      telemetry = { enable = false },
-    },
-  },
-}
-
--- Setup neovim lua configuration
-require('neodev').setup()
---
--- nvim-cmp supports additional completion capabilities, so broadcast that to servers
-local capabilities = vim.lsp.protocol.make_client_capabilities()
-capabilities = require('cmp_nvim_lsp').default_capabilities(capabilities)
-
--- Setup mason so it can manage external tooling
-require('mason').setup()
-
--- Ensure the servers above are installed
-local mason_lspconfig = require 'mason-lspconfig'
-
-mason_lspconfig.setup {
-  ensure_installed = vim.tbl_keys(servers),
-}
-
-mason_lspconfig.setup_handlers {
-  function(server_name)
-    require('lspconfig')[server_name].setup {
-      capabilities = capabilities,
-      on_attach = on_attach,
-      settings = servers[server_name],
-    }
-  end,
-}
-
-
--- 🪄 nvim-cmp setup: ⮯ {{{
+-- 🪄 Nvim-Cmp: ⮯ {{{
 local cmp = require 'cmp'
 local luasnip = require 'luasnip'
 
@@ -613,7 +520,60 @@ cmp.setup {
 }
 -- }}} ⮭
 
--- 🍐 nvim-autopairs: ⮯ {{{
+-- 📚 LSP Settings: ⮯ {{{
+local on_attach = function(_, bufnr)
+
+  local nmap = function(keys, func)
+    vim.keymap.set('n', keys, func, { buffer = bufnr })
+  end
+  nmap('<leader>tsr', require('telescope.builtin').lsp_references)
+  nmap('<leader>tss', require('telescope.builtin').lsp_document_symbols)
+  nmap('<leader>tsw', require('telescope.builtin').lsp_dynamic_workspace_symbols)
+  nmap('<leader>rn', vim.lsp.buf.rename)
+  nmap('<leader>ca', vim.lsp.buf.code_action)
+  nmap('gd', vim.lsp.buf.definition)
+  nmap('gI', vim.lsp.buf.implementation)
+  nmap('<leader>D', vim.lsp.buf.type_definition)
+  nmap('K', vim.lsp.buf.hover)
+  nmap('<C-k>', vim.lsp.buf.signature_help)
+end
+
+local servers = {
+  -- clangd = {},
+  -- gopls = {},
+  -- pyright = {},
+  -- rust_analyzer = {},
+  -- tsserver = {},
+
+  sumneko_lua = {
+    Lua = {
+      workspace = { checkThirdParty = false },
+      telemetry = { enable = false },
+    },
+  },
+}
+
+-- Ensure the servers above are installed
+local mason_lspconfig = require 'mason-lspconfig'
+local capabilities = vim.lsp.protocol.make_client_capabilities()
+capabilities = require('cmp_nvim_lsp').default_capabilities(capabilities)
+
+mason_lspconfig.setup {
+  ensure_installed = vim.tbl_keys(servers),
+}
+
+mason_lspconfig.setup_handlers {
+  function(server_name)
+    require('lspconfig')[server_name].setup {
+      capabilities = capabilities,
+      on_attach = on_attach,
+      settings = servers[server_name],
+    }
+  end,
+}
+-- }}} ⮭
+
+-- 🍐 Nvim-Autopairs: ⮯ {{{
 local npairs = require("nvim-autopairs")
 local ts_conds = require('nvim-autopairs.ts-conds')
 local Rule = require('nvim-autopairs.rule')
@@ -634,24 +594,24 @@ npairs.setup({
   },
   check_ts = true,
   ts_config = {
-    lua = {'string'},-- it will not add a pair on that treesitter node
-    javascript = {'template_string'},
-    java = false,-- don't check treesitter on java
+    lua = { 'string' }, -- it will not add a pair on that treesitter node
+    javascript = { 'template_string' },
+    java = false, -- don't check treesitter on java
   }
 })
 
 -- press % => %% only while inside a comment or string
 npairs.add_rules({
   Rule("%", "%", "lua")
-    :with_pair(ts_conds.is_ts_node({'string','comment'})),
+      :with_pair(ts_conds.is_ts_node({ 'string', 'comment' })),
   Rule("$", "$", "lua")
-    :with_pair(ts_conds.is_not_ts_node({'function'}))
+      :with_pair(ts_conds.is_not_ts_node({ 'function' }))
 })
 
 cmp.event:on(
-	"confirm_done",
-	cmp_autopairs.on_confirm_done({
-		map_char = { tex = "" },
-	})
+  "confirm_done",
+  cmp_autopairs.on_confirm_done({
+    map_char = { tex = "" },
+  })
 )
 -- }}} ⮭
