@@ -44,8 +44,7 @@ map("n", "<C-c>", "<Esc>")
 map("n", "Q", "q") -- make starting recording more intentional
 map("n", "<C-z>", "u") -- undo
 map("n", "<C-y>", "<C-r>") -- redo
-map("n", "<C-g>", '"*p=ip') -- system clipboard (visual selection) paste
-map("i", "<C-v>", '<Esc>"+p=ip') -- system clipboard (default) paste
+map("i", "<C-v>", '<Esc>"+p') -- system clipboard (default) paste
 -- }}} ⮭
 
 -- 🤖 Copy copy: {{{ ⮯
@@ -117,6 +116,7 @@ map("n", "<C-Up>", ":resize +2<CR>")
 map("n", "<C-Down>", ":resize -2<CR>")
 map("n", "<C-Left>", ":vertical resize -2<CR>")
 map("n", "<C-Right>", ":vertical resize +2<CR>")
+map("n", "gx", [[:silent execute '!xdg-open ' . shellescape(expand('<cfile>'), v:true)<CR>]], recursive_silent)
 -- }}} ⮭
 
 -- 👉 Indent: {{{ ⮯
@@ -127,7 +127,7 @@ map("n", "<leader>g=", "mlgg=G`lzvzt")
 -- 🤲 Toggle: {{{ ⮯
 map("n", "<leader>ut", ":UndotreeToggle<CR>")
 map("n", "<leader>pt", ":TSPlaygroundToggle<CR>")
-map("n", "<leader>ct", ":ColorizerToggle<CR>")
+map("n", "<leader>ct", ":HighlightColorsToggle<CR>")
 map("n", "<leader>st", ":set spell!<CR>")
 map("n", "<leader>wt", ":set wrap!<CR> :echo 'wrap toggled'<CR>")
 map("n", "<leader>mt", ":MarkdownPreviewToggle<CR>,")

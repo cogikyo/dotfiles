@@ -7,6 +7,14 @@ local options = {
     smartcase = true, -- ignore, ignorecase if a captial letter is used
     -- ========================================================================
 
+    -- 👉 Indentation =========================================================
+    tabstop = 4, -- preferred tabstop length.
+    shiftwidth = 4, -- set to same as tabstop ⮭
+    expandtab = true, -- as per option 2 in :help 'tabstop'
+    shiftround = true, -- ensures indent is a multipe of shiftwidth
+    smartindent = true, -- an extension of 'autoindent'
+    -- ========================================================================
+
     -- 📃 Text ================================================================
     wrap = false, -- disable text wrapping by default
     breakindent = true, -- continue to indent text (if wrapped line)
@@ -31,7 +39,6 @@ local options = {
     -- ========================================================================
 
     -- ⌨️  UX ==================================================================
-    tabstop = 4, -- preferred tabstop length; see 'tpope/vim-sleuth' plugin
     wildmenu = true, -- command-line completion
     wildmode = { "list:lastused", "full" }, -- completion method
     mouse = "a", -- mouse can be useful, sometimes... it doesn't hurt.
