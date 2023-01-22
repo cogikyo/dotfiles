@@ -13,6 +13,11 @@ require('trim').setup({
     [[%s/\(\n\n\n\)\n\+/\1/]],
   },
 })
+require("nvim-highlight-colors").setup {
+	render = 'background',
+	enable_named_colors = false,
+	enable_tailwind = false
+}
 -- }}} ⮭
 -- ============================================================================
 

@@ -97,6 +97,7 @@ require('packer').startup(function(use)
   -- 👀 UI: ⮯ {{{
   use { "catppuccin/nvim", as = "catppuccin" }
   use 'nvim-lualine/lualine.nvim'
+  use 'brenoprata10/nvim-highlight-colors'
   use "goolord/alpha-nvim"
   use 'mbbill/undotree'
   use "ThePrimeagen/harpoon"
