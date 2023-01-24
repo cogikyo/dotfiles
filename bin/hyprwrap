@@ -5,5 +5,6 @@ cd ~
 export HYPRLAND_LOG_WLR=1
 export XCURSOR_SIZE=24
 export PAGER=nvimpager
+export PATH="$HOME/.cargo/bin:$PATH"
 
 exec Hyprland

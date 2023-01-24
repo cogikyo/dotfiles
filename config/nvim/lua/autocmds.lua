@@ -2,7 +2,7 @@ local function global_autocmd(event, command)
 	vim.api.nvim_create_autocmd(event, {
 		group = vim.api.nvim_create_augroup(event, { clear = true }),
 		command = command,
-		pattern = '*'
+		pattern = "*",
 	})
 end
 
@@ -10,7 +10,7 @@ local function scoped_autocmd(event, group, pattern, command)
 	vim.api.nvim_create_autocmd(event, {
 		group = vim.api.nvim_create_augroup(group, { clear = true }),
 		command = command,
-		pattern = pattern
+		pattern = pattern,
 	})
 end
 
