@@ -5,9 +5,12 @@ local function map(mode, lhs, rhs, opts)
 	vim.api.nvim_set_keymap(mode, lhs, rhs, opts)
 end
 
+-- default is non-recursive and silent ⮭
 local recursive_silent = { noremap = false, silent = true }
 local recursive_explicit = { noremap = false, silent = false }
 local silent_expression = { expr = true, silent = true }
+-- https://stackoverflow.com/questions/3776117
+
 -- }}} ⮭
 -- ============================================================================
 
@@ -156,9 +159,10 @@ map("n", "<leader>rs", '1z=')
 
 -- 🙏 Folds: {{{ ⮯
 map("n", "zh", "ggO<Esc>76i=<Esc>o<Esc>76i=<Esc>gck", recursive_explicit)
-map("n", "zfs", 'i: : ⮯ <Esc>3a{<ESC>l3"_dl^3lgcc==a', recursive_explicit)
+map("n", "zfs", 'i : ⮯ <Esc>3a{<ESC>l3"_dl^3lgcc==a', recursive_explicit)
 map("n", "zfe", '<leader>oj3i}<Esc>a ⮭<Esc>gcc<leader>o==', recursive_explicit)
 map("n", "<leader>zl", "O🧮 ZHU LI, DO THE THING!<Esc>gcc^", recursive_silent)
+map("n", "zfb", '<leader>zfs<Esc><leader>zfe', recursive_silent)
 -- }}} ⮭
 
 -- ⭐ Common Unicode:: {{{ ⮯

@@ -18,6 +18,7 @@ require("nvim-highlight-colors").setup {
 	enable_named_colors = false,
 	enable_tailwind = false
 }
+require('refactoring').setup()
 -- }}} ⮭
 -- ============================================================================
 
@@ -433,7 +434,7 @@ require('nvim-treesitter.configs').setup {
   auto_install = true,
   highlight = {
     enable = true,
-    disable = function(lang, buf)
+    disable = function(buf)
       local max_filesize = 100 * 1024 -- 100 KB
       local ok, stats = pcall(vim.loop.fs_stat, vim.api.nvim_buf_get_name(buf))
       if ok and stats and stats.size > max_filesize then
@@ -576,6 +577,71 @@ mason_lspconfig.setup_handlers {
     }
   end,
 }
+-- }}} ⮭
+
+-- ⛑️  Null-ls ⮯ {{{
+local null_ls = require("null-ls")
+
+-- see https://github.com/jose-elias-alvarez/null-ls.nvim/blob/main/doc/BUILTINS.md
+local code_actions = null_ls.builtins.code_actions
+local completion = null_ls.builtins.completion
+local diagnostics = null_ls.builtins.diagnostics
+local formatting = null_ls.builtins.formatting
+local hover = null_ls.builtins.hover
+
+null_ls.setup({
+  sources = {
+    -- 🎬 code actions ⮯ {{{
+    code_actions.gitrebase,
+    code_actions.gitsigns,
+    code_actions.ltrs,
+    code_actions.proselint,
+    code_actions.refactoring,
+    code_actions.shellcheck,
+    code_actions.xo,
+    -- }}}
+    -- 🏁 completion : ⮯ {{{
+    completion.luasnip,
+    completion.spell,
+    completion.tags,
+    -- }}} ⮭
+    -- 🩺 diagnostics: ⮯ {{{
+    diagnostics.codespell,
+    diagnostics.eslint_d,
+    diagnostics.ltrs,
+    diagnostics.luacheck,
+    diagnostics.markdownlint,
+    diagnostics.mypy,
+    diagnostics.proselint,
+    diagnostics.ruff,
+    diagnostics.selene,
+    diagnostics.shellcheck,
+    diagnostics.spectral,
+    diagnostics.stylelint,
+    diagnostics.tidy,
+    diagnostics.todo_comments,
+    diagnostics.xo,
+    -- }}} ⮭
+    -- 🗃️ formatting: ⮯ {{{
+    formatting.beautysh,
+    formatting.black,
+    formatting.codespell,
+    formatting.dprint,
+    formatting.jq,
+    formatting.mdformat,
+    formatting.prettierd,
+    formatting.rustfmt,
+    formatting.shellharden,
+    formatting.stylua,
+    formatting.taplo,
+    formatting.tidy,
+    -- }}} ⮭
+    -- 🏄 hover: ⮯ {{{
+    hover.dictionary,
+    hover.printenv,
+    -- }}} ⮭
+  },
+})
 -- }}} ⮭
 
 -- 🍐 Nvim-Autopairs: ⮯ {{{

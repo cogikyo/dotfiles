@@ -36,6 +36,9 @@ require('packer').startup(function(use)
     requires = {
       'williamboman/mason.nvim',
       'williamboman/mason-lspconfig.nvim',
+      'mfussenegger/nvim-dap',
+      'ThePrimeagen/refactoring.nvim',
+      'jose-elias-alvarez/null-ls.nvim',
       'j-hui/fidget.nvim',
       'folke/neodev.nvim',
     },
