@@ -56,13 +56,13 @@ map("n", "<leader>y", '"+y') -- copy (can be used with motions)
 map("n", "<leader>Y", '"+y$') -- copy entire line
 map("n", "<leader>gy", 'mlgg"+yG`lzvzt') -- copy entire file
 map("n", "<leader>wd", "dt<space>") -- cut until next space
-map("x", "<leader>p", '\"_dP') -- replace visual with out replacing register
+map("x", "<leader>p", '"_dP') -- replace visual with out replacing register
 -- }}} ⮭
 
 -- 🌌 Gimme space please: {{{ ⮯
 map("n", "<leader>o", ':<C-u>call append(line("."),   repeat([""], v:count1))<CR>')
 map("n", "<leader>O", ':<C-u>call append(line(".")-1,   repeat([""], v:count1))<CR>')
-map("n", "<leader>a", '<leader>o<leader>O', recursive_silent)
+map("n", "<leader>a", "<leader>o<leader>O", recursive_silent)
 -- }}} ⮭
 
 -- 💎 Don't let go: {{{ ⮯
@@ -77,8 +77,8 @@ map("v", "<", "<gv")
 map("v", ">", ">gv")
 map("v", "<Up>", ":m '<-2<CR>gv-gv")
 map("v", "<Down>", ":m '>+1<CR>gv-gv")
-map("n", 'k', "v:count == 0 ? 'gk' : 'k'", silent_expression)
-map("n", 'j', "v:count == 0 ? 'gj' : 'j'", silent_expression)
+map("n", "k", "v:count == 0 ? 'gk' : 'k'", silent_expression)
+map("n", "j", "v:count == 0 ? 'gj' : 'j'", silent_expression)
 -- }}} ⮭
 
 -- 🎯 Keep cursor 'centered': {{{ ⮯
@@ -109,7 +109,7 @@ map("i", ":", ":<C-g>u")
 
 -- 🪟 Window movement: {{{ ⮯
 map("n", "<leader>bn", ":bn<CR>zvzt")
-map("n", "<leader>bb",  ":bp<CR>zvzt")
+map("n", "<leader>bb", ":bp<CR>zvzt")
 map("n", "<leader><C-w>", ":bd!<CR>zvzt")
 map("n", "<Down>", "<C-w>j")
 map("n", "<Up>", "<C-w>k")
@@ -134,6 +134,8 @@ map("n", "<leader>ct", ":HighlightColorsToggle<CR>")
 map("n", "<leader>st", ":set spell!<CR>")
 map("n", "<leader>wt", ":set wrap!<CR> :echo 'wrap toggled'<CR>")
 map("n", "<leader>mt", ":MarkdownPreviewToggle<CR>,")
+map("n", "<leader>mm", ":Mason<CR>,")
+map("n", "<leader>mn", ":NullLsInfo<CR>,")
 map("n", "<leader>et", ":NvimTreeFindFileToggle<CR> :NvimTreeRefresh<CR>")
 map("n", "<leader>bt", ":Switch<CR>") -- toggle b false<->true
 -- }}} ⮭
@@ -154,15 +156,15 @@ map("v", "r", ":s///g<Left><Left><Left>", recursive_explicit)
 map("n", "<leader>r<leader>", ":%s///g<Left><Left><Left>", recursive_explicit)
 map("n", "<leader>rw", ":%s/<C-r><C-w>//g<Left><Left>", recursive_explicit)
 map("n", "<leader>rp", '"ryiwvip:s/<C-r>r//g<Left><Left>', recursive_explicit)
-map("n", "<leader>rs", '1z=')
+map("n", "<leader>rs", "1z=")
 -- }}} ⮭
 
 -- 🙏 Folds: {{{ ⮯
 map("n", "zh", "ggO<Esc>76i=<Esc>o<Esc>76i=<Esc>gck", recursive_explicit)
 map("n", "zfs", 'i : ⮯ <Esc>3a{<ESC>l3"_dl^3lgcc==a', recursive_explicit)
-map("n", "zfe", '<leader>oj3i}<Esc>a ⮭<Esc>gcc<leader>o==', recursive_explicit)
+map("n", "zfe", "<leader>oj3i}<Esc>a ⮭<Esc>gcc<leader>o==", recursive_explicit)
 map("n", "<leader>zl", "O🧮 ZHU LI, DO THE THING!<Esc>gcc^", recursive_silent)
-map("n", "zfb", '<leader>zfs<Esc><leader>zfe', recursive_silent)
+map("n", "zfb", "<leader>zfs<Esc><leader>zfe", recursive_silent)
 -- }}} ⮭
 
 -- ⭐ Common Unicode:: {{{ ⮯
