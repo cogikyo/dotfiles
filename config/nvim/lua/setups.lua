@@ -1,7 +1,6 @@
 -- ============================================================================
 -- 🛠️ Simple Setups: ⮯ {{{
 require("neodev").setup()
-require("fidget").setup()
 require("Comment").setup()
 require("lsp-file-operations").setup()
 require("nvim-web-devicons").setup({ default = true })
@@ -33,64 +32,12 @@ vim.cmd([[
 -- 🗂️ Nvim-Tree ⮯ {{{
 require("nvim-tree").setup({
 	disable_netrw = true,
-	hijack_netrw = true,
-	open_on_setup = false,
-	ignore_buffer_on_setup = false,
-	ignore_ft_on_setup = {},
-	ignore_buf_on_tab_change = {},
-	auto_reload_on_write = true,
-	create_in_closed_folder = false,
-	open_on_tab = false,
-	sort_by = "name",
-	hijack_unnamed_buffer_when_opening = false,
 	hijack_cursor = true,
-	root_dirs = {},
-	prefer_startup_root = false,
-	sync_root_with_cwd = false,
-	respect_buf_cwd = false,
-	hijack_directories = {
-		enable = true,
-		auto_open = true,
-	},
-	update_focused_file = {
-		enable = true,
-		update_cwd = false,
-		ignore_list = {},
-	},
-	system_open = {
-		cmd = nil,
-		args = {},
-	},
-	diagnostics = {
-		enable = true,
-		debounce_delay = 50,
-		show_on_dirs = false,
-		icons = {
-			hint = "",
-			info = "",
-			warning = "",
-			error = "",
-		},
-	},
-	git = {
-		enable = true,
-		ignore = true,
-		show_on_dirs = true,
-		timeout = 420,
-	},
-	filesystem_watchers = {
-		enable = true,
-		debounce_delay = 50,
-	},
-	on_attach = "disable",
+	update_focused_file = { enable = true },
+	diagnostics = { enable = true },
+	modified = { enable = true },
 	remove_keymaps = true,
-	select_prompts = false,
 	view = {
-		adaptive_size = true,
-		centralize_selection = false,
-		hide_root_folder = false,
-		side = "left",
-		preserve_window_proportions = false,
 		number = true,
 		relativenumber = true,
 		signcolumn = "yes",
@@ -116,7 +63,7 @@ require("nvim-tree").setup({
 				{ key = "D", action = "remove" },
 				{ key = "r", action = "rename" },
 				{ key = "R", action = "full_rename" },
-				{ key = "x", action = "cut" },
+				{ key = "c", action = "cut" },
 				{ key = "y", action = "copy" },
 				{ key = "p", action = "paste" },
 				{ key = "Y", action = "copy_path" },
@@ -136,43 +83,39 @@ require("nvim-tree").setup({
 		},
 		float = {
 			enable = true,
-			open_win_config = {
-				relative = "editor",
-				border = "rounded",
-				row = 3,
-				col = 69,
-			},
+			open_win_config = function()
+				local screen_w = vim.opt.columns:get()
+				local screen_h = vim.opt.lines:get() - vim.opt.cmdheight:get()
+				local window_w = screen_w * 0.8
+				local window_h = screen_h * 0.5
+				local window_w_int = math.floor(window_w)
+				local window_h_int = math.floor(window_h)
+				local center_x = (screen_w - window_w) / 2
+				local center_y = ((vim.opt.lines:get() - window_h) / 2) - vim.opt.cmdheight:get()
+				return {
+					border = "rounded",
+					relative = "editor",
+					row = center_y,
+					col = center_x,
+					width = window_w_int,
+					height = window_h_int,
+				}
+			end,
 		},
 	},
 	renderer = {
-		add_trailing = false,
-		group_empty = true,
-		full_name = false,
 		highlight_git = true,
-		highlight_opened_files = "none",
-		root_folder_modifier = ":~",
-		indent_width = 2,
 		indent_markers = {
 			enable = true,
 			inline_arrows = true,
 			icons = {
-				corner = "└╾ ",
+				corner = "└╾",
 				edge = "│ ",
 				item = "├",
-				none = "",
+				none = " ",
 			},
 		},
 		icons = {
-			webdev_colors = true,
-			git_placement = "before",
-			padding = " ",
-			symlink_arrow = " ➛ ",
-			show = {
-				file = true,
-				folder = true,
-				folder_arrow = true,
-				git = true,
-			},
 			glyphs = {
 				default = "",
 				symlink = "",
@@ -185,63 +128,19 @@ require("nvim-tree").setup({
 					untracked = "⧂",
 					ignored = "",
 				},
-				folder = {
-					arrow_open = "",
-					arrow_closed = "",
-					default = "",
-					open = "",
-					empty = "",
-					empty_open = "",
-					symlink = "",
-					symlink_open = "",
-				},
 			},
 		},
-		special_files = {
-			["Cargo.toml"] = true,
-			Makefile = true,
-			["README.md"] = true,
-			["readme.md"] = true,
-		},
-		symlink_destination = true,
-	},
-	filters = {
-		dotfiles = false,
-		custom = { "^\\.git" },
-		exclude = {},
 	},
 	trash = {
 		cmd = "trash-put",
 		require_confirm = true,
 	},
 	actions = {
-		change_dir = {
-			enable = true,
-			global = false,
-			restrict_above_cwd = false,
-		},
 		open_file = {
 			quit_on_open = true,
-			resize_window = true,
 			window_picker = {
-				enable = true,
 				chars = "asetniol",
-				exclude = {
-					filetype = { "notify", "packer", "qf", "diff", "fugitive", "fugitiveblame" },
-					buftype = { "nofile", "terminal", "help" },
-				},
 			},
-		},
-	},
-	log = {
-		enable = false,
-		truncate = false,
-		types = {
-			all = false,
-			config = false,
-			copy_paste = false,
-			git = false,
-			profile = false,
 		},
 	},
 })
@@ -401,6 +300,7 @@ local mode = {
 
 local diagnostics = {
 	"diagnostics",
+
 	sources = { "nvim_diagnostic" },
 	sections = { "error", "warn", "hint", "info" },
 	symbols = { error = " ", warn = " ", hint = " ", info = " " },
@@ -413,7 +313,11 @@ local diagnostics = {
 local diff = {
 	"diff",
 	colored = true,
-	symbols = { added = " ", modified = " ", removed = " " }, -- changes diff symbols
+	symbols = {
+		added = " ",
+		modified = " ",
+		removed = " ",
+	},
 	cond = hide_in_width,
 }
 
@@ -451,24 +355,30 @@ local filename = {
 }
 
 local lsp = {
-	function()
-		local msg = "No Active Lsp"
-		local buf_ft = vim.api.nvim_buf_get_option(0, "filetype")
-		local clients = vim.lsp.get_active_clients()
-		if next(clients) == nil then
-			return msg
-		end
-		for _, client in ipairs(clients) do
-			local filetypes = client.config.filetypes
-			if filetypes and vim.fn.index(filetypes, buf_ft) ~= -1 then
-				return client.name
-			end
-		end
-		return msg
-	end,
-	icon = "",
-	color = { gui = "italic" },
-	cond = hide_in_width,
+	"lsp_progress",
+	display_components = {
+		"lsp_client_name",
+		"spinner",
+	},
+	timer = {
+		progress_enddelay = 100,
+		spinner = 100,
+		lsp_client_name_enddelay = 1000,
+	},
+	message = {
+		commenced = "󱞇 ",
+		completed = "󱞈 ",
+	},
+	separators = {
+		component = " ",
+		progress = "",
+		message = { pre = "", post = " " },
+		percentage = { pre = "", post = "%% " },
+		title = { pre = "", post = "" },
+		lsp_client_name = { pre = " ", post = "" },
+		spinner = { pre = "", post = "" },
+	},
+	spinner_symbols = { " ", " ", " ", " ", " ", " " },
 }
 
 local buffers = {
