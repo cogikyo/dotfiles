@@ -29,7 +29,7 @@ map("n", "<leader>u", "<Nop>")
 -- }}} ⮭
 
 -- 💾 Save: {{{ ⮯
-map("n", "<C-s>", ":w<CR> :echo <CR>")
+map("n", "<C-s>", ":w<CR>:echo <CR>")
 map("i", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("v", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("n", "<leader>s<leader>", ":noa w<CR><CR")
@@ -94,7 +94,7 @@ map("n", "<C-f>", "<C-f>zt")
 map("n", "<C-b>", "<C-b>zt")
 map("n", "<C-d>", "<C-d>zt")
 map("n", "<C-u>", "<C-u>zt")
-map("n", "zm", "zmzvzt")
+map("n", "zm", "zmzt")
 map("n", "za", "zazt")
 -- }}} ⮭
 
@@ -136,7 +136,7 @@ map("n", "<leader>wt", ":set wrap!<CR> :echo 'wrap toggled'<CR>")
 map("n", "<leader>mt", ":MarkdownPreviewToggle<CR>,")
 map("n", "<leader>mm", ":Mason<CR>,")
 map("n", "<leader>mn", ":NullLsInfo<CR>,")
-map("n", "<leader>et", ":NvimTreeFindFileToggle<CR> :NvimTreeRefresh<CR>")
+map("n", "<leader>et", ":NvimTreeToggle<CR> :NvimTreeRefresh<CR>")
 map("n", "<leader>bt", ":Switch<CR>") -- toggle b false<->true
 -- }}} ⮭
 
