@@ -37,7 +37,6 @@ require("packer").startup(function(use)
 			"williamboman/mason-lspconfig.nvim",
 			"mfussenegger/nvim-dap",
 			"jose-elias-alvarez/null-ls.nvim",
-			"j-hui/fidget.nvim",
 			"folke/neodev.nvim",
 		},
 	})
@@ -97,7 +96,13 @@ require("packer").startup(function(use)
 
 	-- 👀 UI: ⮯ {{{
 	use({ "catppuccin/nvim", as = "catppuccin" })
-	use("nvim-lualine/lualine.nvim")
+	use({
+		"nvim-lualine/lualine.nvim",
+		requires = {
+			"arkav/lualine-lsp-progress",
+		},
+	})
+	use("folke/tokyonight.nvim")
 	use("brenoprata10/nvim-highlight-colors")
 	use("goolord/alpha-nvim")
 	use("mbbill/undotree")
