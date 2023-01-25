@@ -33,7 +33,7 @@ map("n", "<C-s>", ":w<CR>:echo <CR>")
 map("i", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("v", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("n", "<leader>s<leader>", ":noa w<CR><CR")
-map("n", "<leader>sf", ":lua vim.lsp.buf.format()<CR>")
+map("n", "<leader>ff", ":w <CR>:lua vim.lsp.buf.format()<CR>")
 map("n", "<leader>so", ":w | source %<CR>")
 -- }}} ⮭
 
