@@ -21,13 +21,47 @@ require("nvim-highlight-colors").setup({
 
 -- 🎨 Colorscheme: ⮯ {{{
 
+require("catppuccin").setup({
+	color_overrides = {
+		macchiato = {
+			rosewater = "#F4DBD6",
+			flamingo = "#F0C6C6",
+			pink = "#F5BDE6",
+			mauve = "#C6A0F6",
+			red = "#ED8796",
+			maroon = "#EE99A0",
+			peach = "#F5A97F",
+			yellow = "#EED49F",
+			green = "#A6DA95",
+			teal = "#8BD5CA",
+			sky = "#91D7E3",
+			sapphire = "#7DC4E4",
+			blue = "#8AADF4",
+			lavender = "#B7BDF8",
+			text = "#CAD3F5",
+			subtext1 = "#B8C0E0",
+			subtext0 = "#A5ADCB",
+			overlay2 = "#939AB7",
+			overlay1 = "#8087A2",
+			overlay0 = "#6E738D",
+			surface2 = "#5B6078",
+			surface1 = "#494D64",
+			surface0 = "#363A4F",
+
+			base = "#24273A",
+			mantle = "#1E2030",
+			crust = "#181926",
+		},
+	},
+})
+
 vim.cmd([[
   colorscheme catppuccin-macchiato
   highlight ColorColumn guibg=#222536
-  highlight MsgArea guifg=#565f89
-  highlight Folded guibg=#24283b guifg=#565f89
+  highlight MsgArea guifg=#4c527b
+  highlight Folded guibg=#24283b guifg=#596091
 ]])
--- }}} ⮭
+-- }}} #⮭
 
 -- 🗂️ Nvim-Tree ⮯ {{{
 require("nvim-tree").setup({
@@ -508,12 +542,14 @@ require("telescope").load_extension("zf-native")
 local map = vim.keymap.set
 map("n", "<leader>t<leader>", require("telescope.builtin").find_files)
 map("n", "<leader>tt", require("telescope.builtin").live_grep)
-map("n", "<leader>tT", require("telescope.builtin").grep_string)
+map("n", "<leader>TT", require("telescope.builtin").grep_string)
 map("n", "<leader>tg", require("telescope.builtin").git_files)
 map("n", "<leader>to", require("telescope.builtin").oldfiles)
 map("n", "<leader>tb", require("telescope.builtin").buffers)
 map("n", "<leader>th", require("telescope.builtin").help_tags)
 map("n", "<leader>td", require("telescope.builtin").diagnostics)
+map("n", "[d", vim.diagnostic.goto_prev)
+map("n", "]d", vim.diagnostic.goto_next)
 map("n", "<leader>tp", require("telescope.builtin").builtin)
 map("n", "<leader>tc", require("telescope.builtin").commands)
 map("n", "<leader>tl", require("telescope.builtin").loclist)
