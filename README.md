@@ -1,4 +1,4 @@
-<!-- ============================================================================ -->
+<!-- ========================================================================== -->
 <!-- ⚙️ heading {{{ -->
 <h1 align="center">⚙️ dotfiles ⚙️</h1>
 
@@ -73,7 +73,7 @@
   </a>
 </p>
 <!-- }}} -->
-<!-- ============================================================================ -->
+<!-- ========================================================================== -->
 
 <h2 align="center"> ⚠️ Refactor In Progress ⚠️</h2>
 
@@ -89,7 +89,7 @@
 />
 > 🌟 Additional guiding principles for software selection:
 >
-> - 🧪 **Innovative** (whats better _way_ of doing things?)
+> - 🧪 **Innovative** (what's better _way_ of doing things?)
 > - 📖 **Open** (growth oriented; _infinite_ games)
 > - 🌍 **Collaborative** (what can _we_ do better?)
 >
@@ -156,7 +156,7 @@ In short (JFK definitely would've used arch, btw):
 
 ### 🍎 Applications
 <details open>
-<summary>⌨️  <b>Noteable CLI/TUI</b></summary>
+<summary>⌨️  <b>Notable CLI/TUI</b></summary>
 
 - spotify-tui (music)
 - btop (cpu usage)
@@ -167,7 +167,7 @@ In short (JFK definitely would've used arch, btw):
 
 
 <details open>
-<summary>🖱️<b>Noteable GUI</b></summary>
+<summary>🖱️<b>Notable GUI</b></summary>
 
 - wofi (application launcher)
 - obsidian (notes)
@@ -175,10 +175,9 @@ In short (JFK definitely would've used arch, btw):
 - inkscape (graphics editor)
 - gimp (photo editor)
 - photo editing (photo processor)
-- blender (...everything 3D)
+- blender (… everything 3D)
 
 </details>
-
 
 ## 🛠️ Installation
 
