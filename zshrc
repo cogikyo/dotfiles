@@ -1,6 +1,5 @@
 eval "$(starship init zsh)"
 eval "$(zoxide init zsh)"
-eval "$(thefuck --alias f)"
 
 # history
 HISTFILE=~/.histfile
@@ -11,7 +10,7 @@ setopt HIST_IGNORE_ALL_DUPS
 setopt HIST_IGNORE_DUPS
 
 # nnn cd on quit
-e ()
+g ()
 {
     if [[ "${NNNLVL:-0}" -ge 1 ]]; then
         echo "nnn is already running"
@@ -30,11 +29,10 @@ e ()
 alias niol='clear && source ~/.zshrc'
 alias ls='lsd'
 alias n='nvim'
-alias g='xplr'
 alias d='cd ~/dotfiles'
 alias v='cd ~/vagari'
 alias c='cd ~/dotfiles/config'
-alias nv='cd ~/dotfiles/config/nvim'
+alias e='cd ~/dotfiles/config/nvim'
 alias x='exit'
 alias p='paru'
 alias man='man --pager=nvimpager'

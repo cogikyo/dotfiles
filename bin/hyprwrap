@@ -4,7 +4,6 @@ cd ~ || exit
 
 export HYPRLAND_LOG_WLR=1
 export XCURSOR_SIZE=24
-export PAGER=nvimpager
 export PATH="$HOME/.cargo/bin:$PATH"
 export GOPATH="$HOME/.go"
 export PATH="$PATH:$HOME/.go/bin"
@@ -22,10 +21,24 @@ DIR="04"
 SYMLINK="06"
 ORPHAN="09"
 export NNN_FCOLORS="$BLK$CHR$DIR$EXE$REG$HARDLINK$SYMLINK$MISSING$ORPHAN$FIFO$SOCK$OTHER"
-export NNN_PLUG='z:autojump;f:bulknew;d:preview-tui;o:fzopen;p:fzplug;O:xdgdefault'
+export NNN_PLUG="a:autojump;N:bulknew;d:preview-tui;O:xdgdefault;E:suedit"
+dw="D:$HOME/downloads/"
+d="d:$HOME/dotfiles/"
+db="b:$HOME/dotfiles/bin/"
+v="v:$HOME/vagari/"
+c="c:$HOME/.config/"
+e="e:$HOME/dotfiles/config/nvim/"
+s="s:$HOME/media/screenshots/"
+r="r:$HOME/media/recordings/"
+u="u:/usr/"
+t="t:/etc/"
+export NNN_BMS="$dw;$v;$d;$db;$c;$e;$s;$r;$u;$t"
 export NNN_FIFO='/tmp/nnn.fifo'
 export NNN_OPENER=nuke
+export NNN_TRASH=2
+export NNN_OPTS=c
 export EDITOR=nvim
+export PAGER=nvimpager
 touch "/tmp/nnn.lastd"
 export NNN_TMPFILE="/tmp/nnn.lastd"
 stty start undef
