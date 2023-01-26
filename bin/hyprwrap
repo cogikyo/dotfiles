@@ -8,7 +8,6 @@ export PAGER=nvimpager
 export PATH="$HOME/.cargo/bin:$PATH"
 export GOPATH="$HOME/.go"
 export PATH="$PATH:$HOME/.go/bin"
-export NNN_COLORS='4321'
 
 # --------------------------------------------------------------\
 # black   red     green    blue     magenta  cyan     white   | color
@@ -23,11 +22,15 @@ DIR="04"
 SYMLINK="06"
 ORPHAN="09"
 export NNN_FCOLORS="$BLK$CHR$DIR$EXE$REG$HARDLINK$SYMLINK$MISSING$ORPHAN$FIFO$SOCK$OTHER"
-export NNN_PLUG='a:autojump;f:bulknew;d:preview-tui;o:fzopen;p:fzplug;O:xdgdefault'
+export NNN_PLUG='z:autojump;f:bulknew;d:preview-tui;o:fzopen;p:fzplug;O:xdgdefault'
 export NNN_FIFO='/tmp/nnn.fifo'
 export NNN_OPENER=nuke
-dots="$HOME/dotfiles"
-export NNN_BMS="d:$HOME/downloads/;.:$dots/;b:$dots/$USER/.local/bin;c:$dots/$USER/.config/;e:$dots/$USER/.config/nvim/;s:$HOME/media/screenshots/;r:$HOME/media/recordings/"
 export EDITOR=nvim
+touch "/tmp/nnn.lastd"
+export NNN_TMPFILE="/tmp/nnn.lastd"
+stty start undef
+stty stop undef
+stty lwrap undef
+stty lnext undef
 
 exec Hyprland

@@ -155,12 +155,11 @@
 
 </details>
 
-### 🍎 Applications
+### 🍎 Additional Applications
 
 <details open>
 <summary>⌨️  <b>Notable CLI/TUI</b></summary>
 
-- spotify-tui (music)
 - btop (cpu usage)
 - cava (music visualizor)
 - xplr (file explorer)
@@ -170,13 +169,12 @@
 <details open>
 <summary>🖱️<b>Notable GUI</b></summary>
 
-- wofi (application launcher)
-- obsidian (notes)
-- zathura (pdf viewer)
-- inkscape (graphics editor)
-- gimp (photo editor)
-- photo editing (photo processor)
-- blender (… everything 3D)
+- Document Viewer: [zathura](https://wiki.archlinux.org/title/zathura)
+- Image Processing: [darktable](https://www.darktable.org/)
+- Image Editing: [gimp](https://www.gimp.org/)
+- Vector Graphics: [inkscape](https://inkscape.org/)
+- Motion Graphics: [blender](https://www.blender.org/)
+- Music: [spotify](www.spotify.com) with [playerctl](https://github.com/altdesktop/playerctl)
 
 </details>
 
