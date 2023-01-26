@@ -1,39 +1,42 @@
 #!/usr/bin/env bash
 
-cd $HOME
-
-git clone https://github.com/nosvagor/dotfiles.git
+# Install paru (essential for AUR packages): ⮯
+mkdir -vp "$HOME/.cache/"
+cd "$HOME/.cache/" || exit 20
 git clone https://aur.archlinux.org/paru.git
-cd paru
+cd paru || exit 20
 makepkg -si
-cd $HOME
 
-paru -S - < $HOME/dotfiles/misc/packages.lst
+# Install most dependencies: ⮯
+cd "$HOME" || exit 20
+git clone https://github.com/nosvagor/dotfiles.git
+paru -S - < "$HOME/dotfiles/misc/packages.lst"
 
+# my preferred directory structure, see ~/.config/user-dirs.dirs ⮯
 mkdir -vp downloads documents documents/templates books papers share media media/music media/images media/videos media/gifs
 
-ln -sfn $HOME/dotfiles/bin/* /usr/bin
-
+# set up sddm: ⮯
 mkdir -vp /etc/sddm.conf.d
-ln -sfn ~/dotfiles/misc/sddm.conf.d/autologin.conf /etc/sddm.conf.d
-ln -sfn ~/dotfiles/misc/sddm.conf.d/hyprland.desktop /usr/share/wayland-sessions
+ln -sfn "$HOME/dotfiles/misc/sddm.conf.d/autologin.conf" /etc/sddm.conf.d
+ln -sfn "$HOME/dotfiles/misc/sddm.conf.d/hyprland.desktop" /usr/share/wayland-sessions
+sytemctl enable sddm
 
-mkdir -vp $HOME/.config/
-ln -sfn $HOME/dotfiles/config/* $HOME/.config/
+# symbolically link most config files: ⮯
+mkdir -vp "$HOME/.config/"
+ln -sfn "$HOME/dotfiles/config/*" "$HOME/.config/"
+ln -sfn "$HOME/dotfiles/bin/*" /usr/bin
+ln -sf "$HOME/dotfiles/zshrc" "$HOME/"
+mv "$HOME/zshrc" "$HOME/.zshrc"
 
-ln -sf $HOME/dotfiles/misc/.zshrc $HOME
-
-mkdir -vp ~/.local/share/fonts
-cp ~/dotfiles/fonts/*.zip ~/.local/share/fonts/
-cd ~/.local/share/fonts/
+# ensure custom fonts are installed: ⮯
+mkdir -vp "$HOME"/.local/share/fonts
+cp "$HOME/dotfiles/fonts/*.zip" "$HOME/.local/share/fonts/"
+cd "$HOME"/.local/share/fonts/  || exit 20
 unzip Albert_Sans.zip
-rm *.txt
 unzip Architects_Daughter.zip
-rm *.txt
 unzip Lora.zip
-rm *.txt
 unzip Archivo.zip
-rm *.txt
-rm *.zip
+rm ./*.txt
+rm ./*.zip
 
 exit 0

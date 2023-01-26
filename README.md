@@ -87,6 +87,7 @@
     width=42%
     align=right
 />
+
 > 🌟 Additional guiding principles for software selection:
 >
 > - 🧪 **Innovative** (what's better _way_ of doing things?)
@@ -98,8 +99,8 @@
 > - 🚩 follow _the status quo_ (even if it is _easier_ at first)
 > - 🥧 have _zero-sum mentality_ (_winning_ is **not** the goal)
 >
-&nbsp;
-In short (JFK definitely would've used arch, btw):
+> &nbsp;
+> In short (JFK definitely would've used arch, btw):
 > _"...we {do these} things **not** because they are easy, but **because they are hard**_,"<br>
 >
 > &emsp;&emsp;_"because that goal will serve to **organize** and **measure** the best of our energies and skills_,"<br>
@@ -124,8 +125,8 @@ In short (JFK definitely would've used arch, btw):
 - Terminal: [kitty](https://sw.kovidgoyal.net/kitty/)
 - Browser: [Firefox](https://www.mozilla.org/en-US/firefox/developer/)
 - Shell: [zsh](https://wiki.archlinux.org/title/zsh) with:
-    - Essential plugins: [syntax-highlighting](https://github.com/zsh-users/zsh-syntax-highlighting), [auto-suggestions](https://github.com/zsh-users/zsh-autosuggestions), [auto-completions](https://github.com/marlonrichert/zsh-autocomplete)
-    - Enhanced functionality: [zoxide (smart cd)](https://github.com/ajeetdsouza/zoxide) & [starship (prompt)](https://starship.rs/)
+  - Essential plugins: [syntax-highlighting](https://github.com/zsh-users/zsh-syntax-highlighting), [auto-suggestions](https://github.com/zsh-users/zsh-autosuggestions), [auto-completions](https://github.com/marlonrichert/zsh-autocomplete)
+  - Enhanced functionality: [zoxide (smart cd)](https://github.com/ajeetdsouza/zoxide) & [starship (prompt)](https://starship.rs/)
 
 </details>
 
@@ -149,12 +150,13 @@ In short (JFK definitely would've used arch, btw):
 - Monospace: [Fira Code](https://github.com/tonsky/FiraCode)
 - Emoji: [Noto Color Emoji](https://fonts.google.com/noto/specimen/Noto+Color+Emoji)
 - Other: [Lora (serif)](https://fonts.google.com/specimen/Lora),
-    [Archivo (display)](https://fonts.google.com/specimen/Archivo),
-    [Architects Daughter (handwritten)](https://fonts.google.com/specimen/Architects+Daughter)
+  [Archivo (display)](https://fonts.google.com/specimen/Archivo),
+  [Architects Daughter (handwritten)](https://fonts.google.com/specimen/Architects+Daughter)
 
 </details>
 
 ### 🍎 Applications
+
 <details open>
 <summary>⌨️  <b>Notable CLI/TUI</b></summary>
 
@@ -164,7 +166,6 @@ In short (JFK definitely would've used arch, btw):
 - xplr (file explorer)
 
 </details>
-
 
 <details open>
 <summary>🖱️<b>Notable GUI</b></summary>
@@ -194,7 +195,6 @@ In short (JFK definitely would've used arch, btw):
 
 <details closed>
 <summary><h3>Literal Installation</h3></summary>
-
 
 **1. Acquire an installation image**: https://archlinux.org/download/
 
@@ -227,40 +227,14 @@ In short (JFK definitely would've used arch, btw):
 >
 > _Note_: most of this is optional and primarily here for personal reference.
 
-2.1 Install AUR helper ([paru](https://github.com/Morganamilo/paru))
+2.1 Run install script: ⮯
 
-    git clone https://aur.archlinux.org/paru.git
-    cd paru
-    makepkg -si
+    cd "$HOME/dotfiles/" && ./install
 
 &nbsp;
 
-2.2 Install packages:
 
-    cd $HOME && git clone https://github.com/nosvagor/dotfiles.git
-    paru -S - < $HOME/dotfiles/packages.txt
-
-&nbsp;
-
-2.3 Run install script (primarily symlinks config files):
-
-    cd ~/dotfiles
-    ./install
-
-&nbsp;
-
-2.4 Enable SDDM
-
-    sytemctl enable sddm
-    # change environment variables here ⮯
-    ln -sfn ~/dotfiles/misc/sddm.conf.d/hyprwrap /usr/bin/
-    mkdir -v /etc/sddm.conf.d
-    # change your desired username --------⮯ (if you want autologin)
-    ln -sfn ~/dotfiles/misc/sddm.conf.d/autologin.conf /etc/sddm.conf.d/autologin.conf
-
-&nbsp;
-
-2.4 Configure SSH for GitHub _(here for personal reference)_:
+2.2 Configure SSH for GitHub _(here for personal reference)_:
 
     ssh-keygen -t ed25519 -C "your_email@example.com"
     eval "$(ssh-agent -s)"
@@ -269,7 +243,7 @@ In short (JFK definitely would've used arch, btw):
 
 &nbsp;
 
-2.5 Update [bluetooth](https://wiki.archlinux.org/title/bluetooth):
+2.3 Update [bluetooth](https://wiki.archlinux.org/title/bluetooth):
 
     systemctl enable bluetooth.service
     systemctl start bluetooth.service #(if before reboot)
@@ -308,10 +282,10 @@ In short (JFK definitely would've used arch, btw):
 
       bluetoothctl list
 
-      # yields
+      # should yield:
       Controller 3C:7C:3F:A2:38:10 costello [default]
 
-      # insteasd of
+      # insteasd of:
       Controller 3C:7C:3F:A2:38:10 costello #1 [default]
       Controller D8:C0:A6:88:B1:24 costello
 
