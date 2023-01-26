@@ -1,10 +1,33 @@
 #!/usr/bin/env bash
 
-cd ~
+cd ~ || exit
 
 export HYPRLAND_LOG_WLR=1
 export XCURSOR_SIZE=24
 export PAGER=nvimpager
 export PATH="$HOME/.cargo/bin:$PATH"
+export GOPATH="$HOME/.go"
+export PATH="$PATH:$HOME/.go/bin"
+export NNN_COLORS='4321'
+
+# --------------------------------------------------------------\
+# black   red     green    blue     magenta  cyan     white   | color
+# color0  color1  color2   color4   color5   color6   color7  | normal
+# color8  color9  color10  color12  color13  color14  color15 | bright
+# --------------------------------------------------------------/
+export NNN_COLORS='4321'
+BLK="00" CHR="00" REG="00" HARDLINK="00" FIFO="00" SOCK="00" MISSING="00"
+OTHER="01"
+EXE="02"
+DIR="04"
+SYMLINK="06"
+ORPHAN="09"
+export NNN_FCOLORS="$BLK$CHR$DIR$EXE$REG$HARDLINK$SYMLINK$MISSING$ORPHAN$FIFO$SOCK$OTHER"
+export NNN_PLUG='a:autojump;f:bulknew;d:preview-tui;o:fzopen;p:fzplug;O:xdgdefault'
+export NNN_FIFO='/tmp/nnn.fifo'
+export NNN_OPENER=nuke
+dots="$HOME/dotfiles"
+export NNN_BMS="d:$HOME/downloads/;.:$dots/;b:$dots/$USER/.local/bin;c:$dots/$USER/.config/;e:$dots/$USER/.config/nvim/;s:$HOME/media/screenshots/;r:$HOME/media/recordings/"
+export EDITOR=nvim
 
 exec Hyprland
