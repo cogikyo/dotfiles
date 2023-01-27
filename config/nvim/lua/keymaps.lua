@@ -111,7 +111,7 @@ map("i", ":", ":<C-g>u")
 -- 🪟 Window movement: {{{ ⮯
 map("n", "<leader>bn", ":bn<CR>zvzt")
 map("n", "<leader>bb", ":bp<CR>zvzt")
-map("n", "<leader><C-w>", ":bd!<CR>zvzt")
+map("n", "<leader>b<C-w>", ":bd!<CR>zvzt")
 map("n", "<Down>", "<C-w>j")
 map("n", "<Up>", "<C-w>k")
 map("n", "<Left>", "<C-w>h")

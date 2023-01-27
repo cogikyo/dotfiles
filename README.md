@@ -125,8 +125,6 @@
 - Terminal: [kitty](https://sw.kovidgoyal.net/kitty/)
 - Browser: [Firefox](https://www.mozilla.org/en-US/firefox/developer/)
 - Shell: [zsh](https://wiki.archlinux.org/title/zsh) with:
-  - Essential plugins: [syntax-highlighting](https://github.com/zsh-users/zsh-syntax-highlighting), [auto-suggestions](https://github.com/zsh-users/zsh-autosuggestions), [auto-completions](https://github.com/marlonrichert/zsh-autocomplete)
-  - Enhanced functionality: [zoxide (smart cd)](https://github.com/ajeetdsouza/zoxide) & [starship (prompt)](https://starship.rs/)
 
 </details>
 
