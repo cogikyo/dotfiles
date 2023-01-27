@@ -1,108 +1,134 @@
 # ============================================================================
 # 🧰 palette / basic config settings: ⮯ {{{
 add_newline = true
+scan_timeout = 10
+continuation_prompt = """[    ⋯  ](blue)"""
 # }}} ⮭
 # ============================================================================
 
-
 format = """
-[╭╼╾ $username ╼╾ $time$python$golang ╼╾ ](bold blue) $cmd_duration
-[╞╾פּ ](bold blue)$directory$git_branch$git_commit$git_state$git_status$hg_branch
-[╰╼╾](bold blue) $status$character
+[╭╼╾ $sudo$username ╼╾ ${custom.date}$python$rust$lua ╼╾ $hostname](blue)
+[╞╾⌬ ](blue)$directory$git_branch$git_commit$git_state$git_status
+[╰╼╾ $character](blue)
 """
 
-
-continuation_prompt = " "
-
-right_format = """$time"""
+right_format = """[$status $cmd_duration╼╾  $time ╼╾╯](blue)"""
 
 
 [character]
-success_symbol = "[ ](blue)"
-error_symbol = "[](bold red)"
+success_symbol = "[](blue)"
+error_symbol = "[](blue)"
+vimcmd_symbol = "[](blue)"
+vimcmd_replace_symbol = "[](red)"
+vimcmd_replace_one_symbol = "[](red)"
+vimcmd_visual_symbol = "[](purple)"
 
 [directory]
+style = "cyan bold"
 truncation_length = 6
 truncation_symbol = " "
+truncate_to_repo = true
 read_only = " "
 home_symbol = " ~"
-disabled = false
 
 [username]
-style_user = "bold blue"
-style_root = "red"
+style_user = "blue"
+style_root = "bold red"
+format = " [$user]($style)"
 show_always = true
-format = "[$user]($style)"
-disabled = false
 
 [hostname]
 ssh_only = false
-format = "[$hostname]($style)"
+format = "[$hostname  ]($style)"
 trim_at = "."
 style = "blue"
-disabled = true
 
 [cmd_duration]
 min_time = 420
 show_milliseconds = false
-format = "[$duration](cyan)"
+format = "[$duration ](dimmed green)"
 disabled = false
 
 [git_branch]
 truncation_length = 12
-style = "bold cyan"
-symbol = " "
+style = "#ff9e64"
+symbol = ""
 truncation_symbol = "..."
-disabled = false
+format = "[$symbol $branch(:$remote_branch)]($style) "
 
 [git_commit]
-commit_hash_length = 4
-tag_symbol = "🔖 "
+commit_hash_length = 7
+tag_symbol = " "
 tag_disabled = false
 only_detached = true
-disabled = false
+format = "[$tag $hash](style) "
 
 [git_status]
-format = '([ $conflicted$staged$untracked$ahead_behind$renamed$deleted$stashed$modified]($style))'
-conflicted = "[ ](bold #e46c9c)"
-stashed = "[ ${count} ](bold birght-black)"
-modified = "[🞊 ${count} ](bold cyan)"
-staged = '[ ${count} ](bold yellow)'
-untracked = '[⧂ ${count} ](bold #d3bf6f)'
-renamed = "[ ${count} ](bold purple)"
-deleted = "[ ${count} ](bold red)"
-ahead = "[⯭ ${count} ](bold green)"
-diverged = '[ [${ahead_count} ](bold green) [${behind_count} ](bold red)](bold purple)'
-behind = '[⯯ ${count} ](bold red)'
-style = "bold blue"
-disabled = false
+style = "blue"
+format = '[ $conflicted$staged$untracked$ahead_behind$renamed$deleted$stashed$modified]($style)'
+conflicted = "[ ](#e46c9c)"
+stashed = "[ ${count} ](black)"
+modified = "[🞊 ${count}](cyan)"
+staged = '[ ${count} ](#ff9e64)'
+untracked = '[⧂ ${count} ](#d3bf6f)'
+renamed = "[ ${count} ](purple)"
+deleted = "[ ${count} ](red)"
+ahead = "[⯭${count} ](green)"
+diverged = '[ [${ahead_count} ](green) [${behind_count} ](red)](purple)'
+behind = '[⯯${count} ](red)'
 
 [memory_usage]
-format = "[${ram}]($style)"
+format = "[$symbol$ram_pct]($style)"
 threshold = -1
-symbol = ""
-style = "dimmed blue"
-disabled = true
+symbol = " "
+style = "blue"
+disabled = false
 
 [time]
-disabled = false
 format = '[$time]($style)'
 time_format = "%R"
 style = "blue"
+disabled = false
 
 [status]
-format = '[$symbol $status]($style) '
-style = "bold red"
-symbol = ""
-success_symbol = ""
+style = "blue"
+success_symbol = "[](green)"
+not_executable_symbol = "[🕱](black $common_meaning)"
+not_found_symbol = "[ $common_meaning](red)"
+sigint_symbol = "[ ABORT](blue)"
+signal_symbol = "[ $int](yellow)"
+symbol = "[ $int $common_meaning](red)"
+recognize_signal_code = true
+pipestatus_format = """[⟪ $pipestatus ⟫]($style)"""
+pipestatus_separator = "[ ⇰ ]($style)"
+map_symbol = true
+pipestatus = true
+format = '[$symbol]($style)'
+disabled = false
+
+[sudo]
+format = "[ ](bold #ff9e64)"
 disabled = false
 
 [python]
-format = '[${symbol}${pyenv_prefix}(${version})( \($virtualenv\))]($style)'
-symbol = " ╼╾  "
-style = "blue"
+format = '[[ ╼╾](blue) $symbol ${pyenv_prefix}(${version})( \($virtualenv\))]($style)'
+symbol = ""
+style = "green"
 
-[golang]
-format = "[$symbol($version)]($style)"
-symbol = " ╼╾ ﳑ "
+[rust]
+format = "[ ╼╾](blue) [$symbol ($version )]($style)"
+symbol = ""
+style = "#ff9e64"
+
+[lua]
+symbol = ""
+style = "white"
+format = "[[ ╼╾](blue) $symbol ($version)]($style)"
+
+[custom.date]
 style = "blue"
+description = "simple date module, separate from time"
+command = "date '+%a, %b %d'"
+symbol = " "
+format = "[$symbol($output)]($style)"
+when = true
