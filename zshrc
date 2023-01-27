@@ -44,6 +44,7 @@ fi
 
 source ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh
 
+zcomet load kutsan/zsh-system-clipboard
 zcomet load zsh-users/zsh-syntax-highlighting
 zcomet load zsh-users/zsh-autosuggestions
 zcomet load marlonrichert/zsh-autocomplete
