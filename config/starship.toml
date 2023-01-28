@@ -53,17 +53,17 @@ format = "[$symbol$branch(:$remote_branch)]($style) "
 
 [git_status]
 style = "blue"
-format = '[⼮$conflicted$staged$untracked$ahead_behind$renamed$deleted$stashed$modified]($style)'
+format = '[⼮$modified$conflicted$staged$untracked$ahead_behind$renamed$stashed$deleted]($style)'
 conflicted = "[ ](#e46c9c)"
 stashed = "[ ${count} ](black)"
 modified = "[🞊 ${count}](blue)"
 staged = '[ ${count} ](#ff9e64)'
 untracked = '[⧂ ${count} ](yellow)'
 renamed = "[ ${count} ](purple)"
-deleted = "[ ${count} ](red)"
 ahead = "[⯭${count} ](green)"
 diverged = '[ [${ahead_count} ](green) [${behind_count} ](red)](purple)'
 behind = '[⯯${count} ](red)'
+deleted = "[  ${count}](red)"
 
 [memory_usage]
 format = "[$symbol$ram_pct]($style)"

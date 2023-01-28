@@ -98,14 +98,18 @@
 >
 > - 🚩 follow _the status quo_ (even if it is _easier_ at first)
 > - 🥧 have _zero-sum mentality_ (_winning_ is **not** the goal)
->
-> &nbsp;
+
+---
+
 > In short (JFK definitely would've used arch, btw):
+>
 > _"...we {do these} things **not** because they are easy, but **because they are hard**_,"<br>
 >
 > &emsp;&emsp;_"because that goal will serve to **organize** and **measure** the best of our energies and skills_,"<br>
 >
 > &emsp;&emsp;&emsp;&emsp;_"because that challenge is one that we are **willing to accept**, one we are **unwilling to postpone**_..."
+
+---
 
 ### 👨‍💻 Core
 
@@ -153,16 +157,13 @@
 
 </details>
 
-### 🍎 Additional Applications
-
-<details open>
-<summary>🖱️<b>Notable GUI</b></summary>
+### 🍎 Notable Applications
 
 - Resource Monitor: [btop](https://github.com/aristocratos/btop)
 - File Manager: [nnn](https://github.com/jarun/nnn)
+- Image Editing: [gimp](https://www.gimp.org/)
 - Document Viewer: [zathura](https://wiki.archlinux.org/title/zathura)
 - Image Processing: [darktable](https://www.darktable.org/)
-- Image Editing: [gimp](https://www.gimp.org/)
 - Vector Graphics: [inkscape](https://inkscape.org/)
 - Motion Graphics: [blender](https://www.blender.org/)
 - Music: [spotify](www.spotify.com) with [playerctl](https://github.com/altdesktop/playerctl)
@@ -173,7 +174,7 @@
 ## 🛠️ Installation
 
 <details closed>
-<summary><b> 🧰 My Hardware</b></summary>
+<summary><h5> 🧰 My Hardware</h5></summary>
 
 - Mouse: MX Master 3S
 - CPU: AMD Ryzen 7 3700X (16) @ 3.600GHz
@@ -184,7 +185,7 @@
 </details>
 
 <details closed>
-<summary><h3>Literal Installation</h3></summary>
+<summary><h3> 🔩 Literal Installation</h3></summary>
 
 **1. Acquire an installation image**: https://archlinux.org/download/
 
@@ -211,7 +212,7 @@
 </details>
 
 <details closed>
-<summary><h3>Post-Installation </h3></summary>
+<summary><h3> ⚙️  Post-Installation </h3></summary>
 
 > **[General Recommendations](https://wiki.archlinux.org/title/General_recommendations)**
 >
