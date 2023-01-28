@@ -7,39 +7,34 @@ continuation_prompt = """[    ⋯  ](blue)"""
 # ============================================================================
 
 format = """
-[╭╼╾ $sudo$username ╼╾ ${custom.date}$python$rust$lua ╼╾ $hostname](blue)
+[╭╼╾ $sudo$username ╼╾ ${custom.date1} ${custom.date2}$python$rust$lua ╼╾ $hostname](blue)
 [╞╾⌬ ](blue)$directory$git_branch$git_commit$git_state$git_status
 [╰╼╾ $character](blue)
 """
 
-right_format = """[$status $cmd_duration╼╾  $time ╼╾╯](blue)"""
+right_format = """[$status $cmd_duration╼╾ $time ╼╾╯](blue)"""
 
 
 [character]
 success_symbol = "[](blue)"
-error_symbol = "[](blue)"
+error_symbol = "[](blue)"
 vimcmd_symbol = "[](blue)"
-vimcmd_replace_symbol = "[](red)"
-vimcmd_replace_one_symbol = "[](red)"
-vimcmd_visual_symbol = "[](purple)"
 
 [directory]
-style = "cyan bold"
-truncation_length = 6
-truncation_symbol = " "
-truncate_to_repo = true
+style = "cyan"
+truncation_symbol = "⽙"
 read_only = " "
-home_symbol = " ~"
+home_symbol = "⾕"
 
 [username]
 style_user = "blue"
 style_root = "bold red"
-format = " [$user]($style)"
+format = "⼈[$user]($style)"
 show_always = true
 
 [hostname]
 ssh_only = false
-format = "[$hostname  ]($style)"
+format = "[$hostname ⾥]($style)"
 trim_at = "."
 style = "blue"
 
@@ -52,25 +47,18 @@ disabled = false
 [git_branch]
 truncation_length = 12
 style = "#ff9e64"
-symbol = ""
+symbol = "⽀"
 truncation_symbol = "..."
-format = "[$symbol $branch(:$remote_branch)]($style) "
-
-[git_commit]
-commit_hash_length = 7
-tag_symbol = " "
-tag_disabled = false
-only_detached = true
-format = "[$tag $hash](style) "
+format = "[$symbol$branch(:$remote_branch)]($style) "
 
 [git_status]
 style = "blue"
-format = '[ $conflicted$staged$untracked$ahead_behind$renamed$deleted$stashed$modified]($style)'
+format = '[⼮$conflicted$staged$untracked$ahead_behind$renamed$deleted$stashed$modified]($style)'
 conflicted = "[ ](#e46c9c)"
 stashed = "[ ${count} ](black)"
-modified = "[🞊 ${count}](cyan)"
+modified = "[🞊 ${count}](blue)"
 staged = '[ ${count} ](#ff9e64)'
-untracked = '[⧂ ${count} ](#d3bf6f)'
+untracked = '[⧂ ${count} ](yellow)'
 renamed = "[ ${count} ](purple)"
 deleted = "[ ${count} ](red)"
 ahead = "[⯭${count} ](green)"
@@ -86,13 +74,13 @@ disabled = false
 
 [time]
 format = '[$time]($style)'
-time_format = "%R"
+time_format = "時%R"
 style = "blue"
 disabled = false
 
 [status]
-style = "blue"
-success_symbol = "[](green)"
+style = "dimmed blue"
+success_symbol = "[](dimmed green)"
 not_executable_symbol = "[🕱](black $common_meaning)"
 not_found_symbol = "[ $common_meaning](red)"
 sigint_symbol = "[ ABORT](blue)"
@@ -125,10 +113,18 @@ symbol = ""
 style = "white"
 format = "[[ ╼╾](blue) $symbol ($version)]($style)"
 
-[custom.date]
+[custom.date1]
 style = "blue"
-description = "simple date module, separate from time"
-command = "date '+%a, %b %d'"
-symbol = " "
+description = "simple date module, day only"
+command = "date '+%a'"
+symbol = "⽇"
+format = "[$symbol($output)]($style)"
+when = true
+
+[custom.date2]
+style = "blue"
+description = "simple date module, weekday only"
+command = "date '+%d'"
+symbol = "⽉"
 format = "[$symbol($output)]($style)"
 when = true
