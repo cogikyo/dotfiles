@@ -3,9 +3,9 @@
 <h1 align="center">⚙️ dotfiles ⚙️</h1>
 
 <p align="right">
-    <a href="https://github.com/nosvagor/vagari/stargazers">
+    <a href="https://github.com/nosvagor/dotfiles/stargazers">
         <img
-            src="https://img.shields.io/github/stars/nosvagor/vagari?color=ecc45d&logo=apachespark&labelColor=24283b&logoColor=ecc45d&style=for-the-badge"
+            src="https://img.shields.io/github/stars/nosvagor/dotfiles?color=ecc45d&logo=apachespark&labelColor=24283b&logoColor=ecc45d&style=for-the-badge"
             title="what is love, baby don't hurt me"
         >
     </a>
@@ -122,9 +122,9 @@
 <summary>🎯 <b>Core Applications</b></summary>
 
 - Editor: [neovim](https://neovim.io/)
-- Terminal: [kitty](https://sw.kovidgoyal.net/kitty/)
 - Browser: [Firefox](https://www.mozilla.org/en-US/firefox/developer/)
-- Shell: [zsh](https://wiki.archlinux.org/title/zsh) with:
+- Terminal: [kitty](https://sw.kovidgoyal.net/kitty/)
+- Shell: [zsh](https://wiki.archlinux.org/title/zsh)
 
 </details>
 
@@ -156,23 +156,17 @@
 ### 🍎 Additional Applications
 
 <details open>
-<summary>⌨️  <b>Notable CLI/TUI</b></summary>
-
-- btop (cpu usage)
-- cava (music visualizor)
-- xplr (file explorer)
-
-</details>
-
-<details open>
 <summary>🖱️<b>Notable GUI</b></summary>
 
+- Resource Monitor: [btop](https://github.com/aristocratos/btop)
+- File Manager: [nnn](https://github.com/jarun/nnn)
 - Document Viewer: [zathura](https://wiki.archlinux.org/title/zathura)
 - Image Processing: [darktable](https://www.darktable.org/)
 - Image Editing: [gimp](https://www.gimp.org/)
 - Vector Graphics: [inkscape](https://inkscape.org/)
 - Motion Graphics: [blender](https://www.blender.org/)
 - Music: [spotify](www.spotify.com) with [playerctl](https://github.com/altdesktop/playerctl)
+- Music Visualizer: [glava](https://github.com/jarcode-foss/glava)
 
 </details>
 
@@ -225,7 +219,9 @@
 
 2.1 Run install script: ⮯
 
-    cd "$HOME/dotfiles/" && ./install
+    git clone https://github.com/nosvagor/dotfiles.git
+    cd dotfiles
+    ./install
 
 &nbsp;
 

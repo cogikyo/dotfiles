@@ -27,7 +27,7 @@ g ()
 
 # aliases
 alias niol='clear && source ~/.zshrc'
-alias ls='lsd'
+alias ls='echo; lsd'
 alias n='nvim'
 alias d='cd ~/dotfiles'
 alias v='cd ~/vagari'
@@ -43,6 +43,7 @@ if [[ ! -f ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh ]]; then
 fi
 
 source ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh
+
 
 zcomet load kutsan/zsh-system-clipboard
 zcomet load zsh-users/zsh-syntax-highlighting
