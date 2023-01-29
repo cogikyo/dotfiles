@@ -21,7 +21,7 @@ error_symbol = "[](blue)"
 vimcmd_symbol = "[](blue)"
 
 [directory]
-style = "cyan"
+style = "bold blue"
 truncation_symbol = "⽙"
 read_only = " "
 home_symbol = "⾕"
@@ -29,19 +29,19 @@ home_symbol = "⾕"
 [username]
 style_user = "blue"
 style_root = "bold red"
-format = "⼈[$user]($style)"
+format = "[⼈$user]($style)"
 show_always = true
 
 [hostname]
+style = "blue"
 ssh_only = false
 format = "[$hostname ⾥]($style)"
 trim_at = "."
-style = "blue"
 
 [cmd_duration]
 min_time = 420
 show_milliseconds = false
-format = "[$duration](dimmed green)"
+format = "[$duration](green)"
 disabled = false
 
 [git_branch]
@@ -52,35 +52,28 @@ truncation_symbol = "..."
 format = "[$symbol$branch(:$remote_branch)]($style) "
 
 [git_status]
-style = "blue"
-format = '[⼮$modified$conflicted$staged$untracked$ahead_behind$renamed$stashed$deleted]($style)'
+style = "#ff9e64"
+format = '[⼮$modified$conflicted$staged$untracked$ahead_behind$renamed$stashed$deleted ⽐]($style)'
 conflicted = "[ ](#e46c9c)"
 stashed = "[ ${count} ](black)"
 modified = "[🞊 ${count}](blue)"
 staged = '[ ${count} ](#ff9e64)'
-untracked = '[⧂ ${count} ](yellow)'
+untracked = '[ ⧂ ${count}](yellow)'
 renamed = "[ ${count} ](purple)"
 ahead = "[⯭${count} ](green)"
 diverged = '[ [${ahead_count} ](green) [${behind_count} ](red)](purple)'
 behind = '[⯯${count} ](red)'
 deleted = "[  ${count}](red)"
 
-[memory_usage]
-format = "[$symbol$ram_pct]($style)"
-threshold = -1
-symbol = " "
-style = "blue"
-disabled = false
-
 [time]
 format = '[$time]($style)'
 time_format = "時%R"
-style = "blue"
+style = "purple"
 disabled = false
 
 [status]
-style = "dimmed blue"
-success_symbol = "[](dimmed green)"
+style = "blue"
+success_symbol = "[](green)"
 not_executable_symbol = "[🕱](black $common_meaning)"
 not_found_symbol = "[ $common_meaning](red)"
 sigint_symbol = "[ ABORT](blue)"
@@ -95,7 +88,7 @@ format = '[$symbol]($style)'
 disabled = false
 
 [sudo]
-format = "[ ](bold #ff9e64)"
+format = "[󰌆 ](bold #ff9e64)"
 disabled = false
 
 [python]
@@ -114,7 +107,7 @@ style = "white"
 format = "[[ ╼╾](blue) $symbol ($version)]($style)"
 
 [custom.date1]
-style = "blue"
+style = "purple"
 description = "simple date module, day only"
 command = "date '+%a'"
 symbol = "⽇"
@@ -122,7 +115,7 @@ format = "[$symbol($output)]($style)"
 when = true
 
 [custom.date2]
-style = "blue"
+style = "purple"
 description = "simple date module, weekday only"
 command = "date '+%d'"
 symbol = "⽉"

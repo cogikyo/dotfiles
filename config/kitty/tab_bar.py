@@ -29,8 +29,8 @@ SEPARATOR_SYMBOL_RIGHT = ""
 TRUNCATION_SYMBOL = " ⽙"
 ICON, ICON_HOST, ICON_USER, = (
     "   ",
-    " 歷 ",
-    " ",
+    " ⾥ ",
+    "⼈",
 )
 RIGHT_MARGIN = -6
 REFRESH_TIME = 1
