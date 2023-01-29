@@ -26,7 +26,7 @@ BAR_BG = as_rgb(color_as_int(opts.tab_bar_background))
 ACTIVE_BG = as_rgb(color_as_int(opts.active_tab_background))
 SEPARATOR_SYMBOL, SOFT_SEPARATOR_SYMBOL = ("", "")
 SEPARATOR_SYMBOL_RIGHT = ""
-TRUNCATION_SYMBOL = "/⟜⊸/"
+TRUNCATION_SYMBOL = " ⽙"
 ICON, ICON_HOST, ICON_USER, = (
     "   ",
     " 歷 ",
@@ -61,22 +61,17 @@ def get_cwd():
     cwd_parts = list(Path(cwd).parts)
     if len(cwd_parts) > 1:
         if cwd_parts[1] == "home":
-            cwd_parts[0] = "  "
+            cwd_parts[0] = " ⾕"
             cwd_parts[1:3] = []
         else:
-            cwd_parts[0] = "  "
+            cwd_parts[0] = "  "  # root descended
     else:
-        cwd_parts[0] = "  "
+        cwd_parts[0] = "  "  # root base
 
-    if len(cwd_parts) < 5:
+    if len("/".join(cwd_parts)) < 15:
         cwd = cwd_parts[0] + "/".join(cwd_parts[1:])
     else:
-        cwd = (
-            cwd_parts[0]
-            + "/".join(cwd_parts[1:2])
-            + TRUNCATION_SYMBOL
-            + "/".join(cwd_parts[-2:])
-        )
+        cwd = TRUNCATION_SYMBOL + "/".join(cwd_parts[-2:])
 
     return cwd
 
@@ -90,9 +85,9 @@ def _draw_cwd(screen: Screen, index: int) -> int:
     screen.draw(cwd)
     screen.cursor.fg, screen.cursor.bg = ACTIVE_BG, BAR_BG
     screen.draw(SEPARATOR_SYMBOL)
-    screen.draw(" |-> ")
+    screen.draw("⽡")
     screen.cursor.fg, screen.cursor.bg = fg, bg
-    screen.cursor.x = len(cwd) + 11
+    screen.cursor.x = len(cwd) + 9
     return screen.cursor.x
 
 
@@ -145,7 +140,7 @@ def _draw_left_status(
 def _draw_right_status(screen: Screen, is_last: bool, cells: list) -> int:
     if not is_last:
         screen.cursor.bg = FG
-        return 0
+        return screen.cursor.x
     draw_attributed_string(Formatter.reset, screen)
     screen.cursor.x = screen.columns - right_status_length
     screen.cursor.fg = 0

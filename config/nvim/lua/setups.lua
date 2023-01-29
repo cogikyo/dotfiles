@@ -370,7 +370,7 @@ local filename = {
 	symbols = {
 		modified = "🞊",
 		readonly = "",
-		unnamed = "--名前?--",
+		unnamed = "名前?",
 	},
 	color = function()
 		local mode_color = {
@@ -639,9 +639,6 @@ local check_backspace = function()
 	local col = vim.fn.col(".") - 1
 	return col == 0 or vim.fn.getline("."):sub(col, col):match("%s")
 end
-
-local keymap = require("cmp.utils.keymap")
-local feedkeys = require("cmp.utils.feedkeys")
 
 local kind_icons = {
 	Text = "",
