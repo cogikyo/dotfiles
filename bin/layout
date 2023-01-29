@@ -52,8 +52,9 @@ terminal () {
     fi
 }
 
-cava () {
-    kitty --hold -o font_size=10.0 --title="cava" -c ".config/kitty/kitty.conf" -c ".config/kitty/nobg.conf" -e cava & sleep 0.5
+visualizer () {
+    # kitty --hold -c ".config/kitty/kitty.conf" -c ".config/kitty/nobg.conf" -e visualizer & sleep 0.5
+    glava & sleep 1
     hyprctl dispatch movefocus l
     hyprctl dispatch resizeactive "exact $SIDE_WINDOW"
     hyprctl dispatch movefocus r
@@ -111,13 +112,13 @@ case "$n_flag" in
     1) echo 1
     "$a_flag" & sleep 5;
     browser
-    cava
+    visualizer
     padding
     ;;
     2) echo 2
     browser
     "$a_flag" & sleep 5;
-    cava
+    visualizer
     padding
     hyprctl dispatch movefocus l
     hyprctl dispatch movefocus l
@@ -128,7 +129,7 @@ case "$n_flag" in
     3|4)
     terminal "$s_flag"
     browser
-    cava
+    visualizer
     code
     ;;
     *) exit 1 ;;
