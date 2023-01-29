@@ -12,7 +12,7 @@ format = """
 [╰╼╾ $character](blue)
 """
 
-right_format = """[$status $cmd_duration╼╾ $time ╼╾╯](blue)"""
+right_format = """[$status $cmd_duration ╼╾ $time ╼╾╯](blue)"""
 
 
 [character]
@@ -41,7 +41,7 @@ style = "blue"
 [cmd_duration]
 min_time = 420
 show_milliseconds = false
-format = "[$duration ](dimmed green)"
+format = "[$duration](dimmed green)"
 disabled = false
 
 [git_branch]
