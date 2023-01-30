@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+dir=/tmp/eww
+rm -rf "$dir"
+mkdir "$dir"
+
+file_names="workspace sink source clockface-minute clockface-hour date_abd weeks_alive"
+read -ra names_arr <<< "$file_names"
+
+for name in "${names_arr[@]}"; do
+    touch "$dir/$name"
+done
+
+echo "13:00" > "$dir/alarm"
+echo "01:30" > "$dir/timer"
+echo "10" > "$dir/brightness"
+
+exit 0

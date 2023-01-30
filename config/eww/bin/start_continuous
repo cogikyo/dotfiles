@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+dir="$HOME/.config/eww/scripts"
+
+eval "$dir/create_temp_files" & disown
+sleep 0.1
+eval "$dir/music_info get_json" & disown
+eval "$dir/weather_info" & disown
+eval "$dir/date_info" & disown
+
+exit 0
