@@ -49,11 +49,11 @@ truncation_length = 12
 style = "#ff9e64"
 symbol = "⽀"
 truncation_symbol = "..."
-format = "[$symbol$branch(:$remote_branch)]($style) "
+format = "[$symbol$branch(:$remote_branch)]($style)"
 
 [git_status]
 style = "#ff9e64"
-format = '[⼮$modified$conflicted$staged$untracked$ahead_behind$renamed$stashed$deleted ⽐]($style)'
+format = '[ $modified$conflicted$staged$untracked$ahead_behind$renamed$stashed$deleted]($style)'
 conflicted = "[ ](#e46c9c)"
 stashed = "[ ${count} ](black)"
 modified = "[🞊 ${count}](blue)"

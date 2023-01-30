@@ -2,7 +2,7 @@
 
 # dunsitfy arguments ⮯
 # app="$1"
-# sumamry="$2"
+# summary="$2"
 # body="$3"
 # icon_path="$4"
 # urgency="$5"

@@ -39,11 +39,6 @@ export NNN_TRASH=2
 export NNN_OPTS=c
 export EDITOR=nvim
 export PAGER=nvimpager
-touch "/tmp/nnn.lastd"
-export NNN_TMPFILE="/tmp/nnn.lastd"
-stty start undef
-stty stop undef
-stty lwrap undef
-stty lnext undef
+export NNN_TMPFILE="${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.lastd"
 
 exec Hyprland
