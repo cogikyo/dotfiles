@@ -1,0 +1,261 @@
+#!/usr/bin/env bash
+
+DIR=/tmp/eww
+WEATHER_JSON="$DIR/open-weather.json"
+AIR_JSON="$DIR/air.json"
+WAIT=60
+valid_json="false"
+
+read -ra location <<<"$(<"$HOME/.local/.location")"
+LAT="${location[0]}"
+LON="${location[1]}"
+API=$(<"$HOME/.local/.owm_api_key")
+UNITS="metric"
+WEATHER_URL="https://api.openweathermap.org/data/3.0/onecall?lat=$LAT&lon=$LON&units=$UNITS&exclude=minutely&appid=$API"
+
+online=1
+connection () {
+    nc -z 8.8.8.8 53  >/dev/null 2>&1
+    online=$?
+}
+
+get_json () {
+    while [[ "$online" -eq 1 ]]; do
+        valid_json="false"
+        connection
+        sleep 0.5
+    done
+
+    air_url="http://api.openweathermap.org/data/2.5/air_pollution?lat=$LAT&lon=$LON&appid=$API"
+
+    curl "$WEATHER_URL" | jq > "$WEATHER_JSON"
+    curl "$air_url" | jq > "$AIR_JSON"
+    valid_json="true"
+}
+
+while true; do
+    while [[ "$valid_json" == "false" ]] ; do
+        get_json
+    done
+
+    id=$(jq -r ".current.weather[0].id" "$WEATHER_JSON")
+    desc=$(jq -r ".current.weather[0].main" "$WEATHER_JSON")
+    sunset=$(jq -r ".current.sunset" "$WEATHER_JSON")
+    now=$(date "+%s")
+    if [[ "$now" -gt "$sunset" ]]; then
+        night="true"
+    else
+        night="false"
+    fi
+    sunset=$(date -d @"$sunset" +"%H:%M")
+    moon_phase=$(jq -r ".daily[0].moon_phase" "$WEATHER_JSON" | awk '{print $1*100}')
+    temp=$(jq -r ".current.temp" "$WEATHER_JSON" | awk '{print int($1+0.5)}')
+    temp_morn=$(jq -r ".daily[0].temp.morn" "$WEATHER_JSON" | awk '{print int($1+0.5)}')
+    temp_day=$(jq -r ".daily[0].temp.day" "$WEATHER_JSON" | awk '{print int($1+0.5)}')
+    temp_max=$(jq -r ".daily[0].temp.max" "$WEATHER_JSON" | awk '{print int($1+0.5)}')
+    temp_eve=$(jq -r ".daily[0].temp.eve" "$WEATHER_JSON" | awk '{print int($1+0.5)}')
+    temp_night=$(jq -r ".daily[0].temp.night" "$WEATHER_JSON" | awk '{print int($1+0.5)}')
+    feels_like=$(jq -r ".current.feels_like" "$WEATHER_JSON" | awk '{print int($1+0.5)}')
+    uvi=$(jq -r ".current.uvi" "$WEATHER_JSON" | awk '{print int($1+0.5)}')
+    aqi=$(jq -r ".list[0].main.aqi" "$AIR_JSON")
+    clouds=$(jq -r ".current.clouds" "$WEATHER_JSON")
+    rain_1h=$(jq -r ".hourly[0].pop" "$WEATHER_JSON" | awk '{print $1*100}')
+    rain_day=$(jq -r ".daily[0].pop" "$WEATHER_JSON" | awk '{print $1*100}')
+
+    wind_speed=$(jq -r ".current.wind_speed" "$WEATHER_JSON")
+    knots=$(echo "$wind_speed * 1.943844" | bc | awk '{print int($1+0.5)}')
+    wind_speed=$(echo "$wind_speed" | awk '{print int($1+0.5)}')
+
+    if [[ "$night" == "false" ]]; then
+        if [[ "$id" -lt 300 ]]; then
+            icon=" "
+        elif [[ "$id" -lt 500 ]]; then
+            icon=" "
+        elif [[ "$id" -eq 504 ]]; then
+            icon=" "
+        elif [[ "$id" -lt 600 ]]; then
+            icon=" "
+        elif [[ "$id" -lt 700 ]]; then
+            icon=" "
+        elif [[ "$id" -eq 711 ]]; then
+            icon=" "
+        elif [[ "$id" -eq 781 ]]; then
+            icon=" "
+        elif [[ "$id" -eq 800 ]]; then
+            icon=" "
+        elif [[ "$id" -eq 800 ]]; then
+            icon=" "
+        elif [[ "$id" -lt 803 ]]; then
+            icon=" "
+        else
+            icon=" "
+        fi
+    else
+        if [[ "$id" -lt 300 ]]; then
+            icon=" "
+        elif [[ "$id" -lt 500 ]]; then
+            icon=" "
+        elif [[ "$id" -eq 504 ]]; then
+            icon=" "
+        elif [[ "$id" -lt 600 ]]; then
+            icon=" "
+        elif [[ "$id" -lt 700 ]]; then
+            icon=" "
+        elif [[ "$id" -eq 711 ]]; then
+            icon=" "
+        elif [[ "$id" -eq 781 ]]; then
+            icon=" "
+        elif [[ "$id" -lt 800 ]]; then
+            icon=" "
+        elif [[ "$id" -eq 800 ]]; then
+            icon=" "
+        elif [[ "$id" -lt 803 ]]; then
+            icon=" "
+        else
+            icon=" "
+        fi
+    fi
+
+    if [[ "$moon_phase" -eq 0 ]]; then
+        moon=" " # NEW -----------------⮯
+    elif [[ "$moon_phase" -le 4 ]]; then
+        moon=" " # waxing_cres_1
+    elif [[ "$moon_phase" -le 8 ]]; then
+        moon=" " # waxing_cres_2
+    elif [[ "$moon_phase" -le 12 ]]; then
+        moon=" " # waxing_cres_3
+    elif [[ "$moon_phase" -le 16 ]]; then
+        moon=" " # waxing_cres_4
+    elif [[ "$moon_phase" -le 20 ]]; then
+        moon=" " #  waxing_cres_5
+    elif [[ "$moon_phase" -le 24 ]]; then
+        moon=" " # waxing_cres_6
+    elif [[ "$moon_phase" -eq 25 ]]; then
+        moon=" " # FIRST ---------------⮯
+    elif [[ "$moon_phase" -le 29 ]]; then
+        moon=" " # waxing_gib_1
+    elif [[ "$moon_phase" -le 33 ]]; then
+        moon=" " # waxing_gib_2
+    elif [[ "$moon_phase" -le 37 ]]; then
+        moon=" " # waxing_gib_3
+    elif [[ "$moon_phase" -le 41 ]]; then
+        moon=" " # waxing_gib_4
+    elif [[ "$moon_phase" -le 45 ]]; then
+        moon=" " # waxing_gib_5
+    elif [[ "$moon_phase" -le 49 ]]; then
+        moon=" " # waxing_gib_6
+    elif [[ "$moon_phase" -eq 50 ]]; then
+        moon=" " # FULL ----------------⮯
+    elif [[ "$moon_phase" -le 54 ]]; then
+        moon=" " # waning_gib_1
+    elif [[ "$moon_phase" -le 58 ]]; then
+        moon=" " # waning_gib_2
+    elif [[ "$moon_phase" -le 62 ]]; then
+        moon=" " # waning_gib_3
+    elif [[ "$moon_phase" -le 66 ]]; then
+        moon=" " # waning_gib_4
+    elif [[ "$moon_phase" -le 70 ]]; then
+        moon=" " # waning_gib_5
+    elif [[ "$moon_phase" -le 74 ]]; then
+        moon=" " # waning_gib_6
+    elif [[ "$moon_phase" -eq 75 ]]; then
+        moon=" " # THIRD ---------------⮯
+    elif [[ "$moon_phase" -le 79 ]]; then
+        moon=" " # waning_cres_1
+    elif [[ "$moon_phase" -le 83 ]]; then
+        moon=" " # waning_cres_2
+    elif [[ "$moon_phase" -le 87 ]]; then
+        moon=" " # waning_cres_3
+    elif [[ "$moon_phase" -le 91 ]]; then
+        moon=" " # waning_cres_4
+    elif [[ "$moon_phase" -le 95 ]]; then
+        moon=" " # waning_cres_5
+    elif [[ "$moon_phase" -le 99 ]]; then
+        moon=" " # waxing_cres_6
+    else
+        moon=" " # NEW
+    fi
+
+
+    if [[ knots -lt 1 ]]; then
+        bf_icon=" "
+    elif [[ knots -lt 4 ]]; then
+        bf_icon=" "
+    elif [[ knots -lt 7 ]]; then
+        bf_icon=" "
+    elif [[ knots -lt 11 ]]; then
+        bf_icon=" "
+    elif [[ knots -lt 17 ]]; then
+        bf_icon=" "
+    elif [[ knots -lt 22 ]]; then
+        bf_icon=" "
+    elif [[ knots -lt 28 ]]; then
+        bf_icon=" "
+    elif [[ knots -lt 34 ]]; then
+        bf_icon=" "
+    elif [[ knots -lt 41 ]]; then
+        bf_icon=" "
+    elif [[ knots -lt 48 ]]; then
+        bf_icon=" "
+    elif [[ knots -lt 56 ]]; then
+        bf_icon=" "
+    elif [[ knots -lt 64 ]]; then
+        bf_icon=" "
+    else
+        bf_icon=" "
+    fi
+
+    # if [[ $wind_deg -lt 45 ]]; then
+    #     wind_icon=" "
+    #     wind_dir="N"
+    # elif [[ $wind_deg -lt 90 ]]; then
+    #     wind_icon=" "
+    #     wind_dir="NE"
+    # elif [[ $wind_deg -lt 135 ]]; then
+    #     wind_icon=" "
+    #     wind_dir="E"
+    # elif [[ $wind_deg -lt 225 ]]; then
+    #     wind_icon=" "
+    #     wind_dir="SE"
+    # elif [[ $wind_deg -lt 180 ]]; then
+    #     wind_icon=" "
+    #     wind_dir="S"
+    # elif [[ $wind_deg -lt 225 ]]; then
+    #     wind_icon=" "
+    #     wind_dir="SW"
+    # elif [[ $wind_deg -lt 270 ]]; then
+    #     wind_icon=" "
+    #     wind_dir="W"
+    # elif [[ $wind_deg -lt 315 ]]; then
+    #     wind_icon=" "
+    #     wind_dir="NW"
+    # else
+    #     wind_icon=" "
+    #     wind_dir="N"
+    # fi
+
+    echo "{\
+        \"id\":\"$id\",\
+        \"icon\":\"$icon\",\
+        \"desc\":\"$desc\",\
+        \"bf_icon\":\"$bf_icon\",\
+        \"wind_speed\":\"$wind_speed\",\
+        \"sunset\":\"$sunset\",\
+        \"moon\":\"$moon\",\
+        \"night\":\"$night\",\
+        \"temp\":\"$temp\",\
+        \"temp_morn\":\"$temp_morn\",\
+        \"temp_day\":\"$temp_day\",\
+        \"temp_max\":\"$temp_max\",\
+        \"temp_eve\":\"$temp_eve\",\
+        \"temp_night\":\"$temp_night\",\
+        \"feels_like\":\"$feels_like\",\
+        \"uvi\":\"$uvi\",\
+        \"aqi\":\"$aqi\",\
+        \"rain_1h\":\"$rain_1h\",\
+        \"rain_day\":\"$rain_day\",\
+        \"clouds\":\"$clouds\"\
+    }" > '/tmp/eww/weather.json'
+
+    sleep "$WAIT"
+done
