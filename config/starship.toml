@@ -8,11 +8,11 @@ continuation_prompt = """[    ⋯  ](blue)"""
 
 format = """
 [╭╼╾ $sudo$username ╼╾ ${custom.date1} ${custom.date2}$python$rust$lua ╼╾ $hostname](blue)
-[╞╾⌬ ](blue)$directory$git_branch$git_commit$git_state$git_status
+[╞╾](blue)$directory$git_branch$git_commit$git_state$git_status
 [╰╼╾ $character](blue)
 """
 
-right_format = """[$status$cmd_duration ╼╾ $time ╼╾╯](blue)"""
+right_format = """[$status $cmd_duration╼╾ $time ╼╾╯](blue)"""
 
 
 [character]
@@ -41,7 +41,7 @@ trim_at = "."
 [cmd_duration]
 min_time = 420
 show_milliseconds = false
-format = "[$duration](green)"
+format = "[$duration ](green)"
 disabled = false
 
 [git_branch]
