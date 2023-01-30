@@ -29,15 +29,17 @@ case "$background_choice" in
         exit 0
     ;;
     "code")
-        dna
+        dna & disown
         sleep 2
         ps -ef | rg "mpvpaper" | rg -v rg | awk '{print $2}' | head -n -1 | xargs kill
     ;;
     "music")
-        record
+        record & disown
+        ps -ef | rg "blackhole" | rg -v rg | awk '{print $2}' | xargs kill
     ;;
     "lock")
-        blackhole
+        blackhole & disown
+        ps -ef | rg "record" | rg -v rg | awk '{print $2}' | xargs kill
     ;;
     *)
         echo "invalid choice; choices: code | music | lock"

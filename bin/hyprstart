@@ -1,31 +1,18 @@
 #!/usr/bin/env bash
 
-change-bg "code" & sleep 3
+change-bg "code"
 
 hyprctl keyword input:follow_mouse 0
-# ~/.local/bin/layout -n 1 -a discord -w https://twitch.tv/following
-# sleep 3
-# ~/.local/bin/layout -n 2 -a inkscape
-# sleep 3
-# ~/.local/bin/layout -n 3 -s vagari.nvim -w https://github.com/nosvagor/vagari.nvim
-# sleep 3
-# ~/.local/bin/layout -n 4 -s nvim -w https://github.com/nosvagor/dotfiles
+# layout -n 1 -a discord -w https://twitch.tv/following
+# layout -n 2 -a inkscape
+# layout -n 3 -s vagari.nvim -w https://github.com/nosvagor/vagari.nvim
+# layout -n 4 -s nvim -w https://github.com/nosvagor/dotfiles
 hyprctl keyword input:follow_mouse 1
 
-
 hyprctl dispatch workspace 5
-change-bg "music" & disown
 spotify & disown
+sleep 0.5
 
-notify-send "$USER@$HOST" "こんにちは"
-
-# mpvpaper -o "--loop --brightness=3  --contrast=6  --saturation=-50  --hue=-8 --gamma=-20" "HDMI-A-1" ~/dotfiles/resources/videos/blackhole.webm & disown
-# sleep 0.5
-# kill_background "dna"
-# swaylock -C "$HOME/.config/swaylock/config.conf"
-# sleep 0.5
-# kill_background "blackhole"
-# eval "$HOME/.local/bin/eww-open"
-# hyprctl dispatch workspace 5
+lock
 
 exit 0
