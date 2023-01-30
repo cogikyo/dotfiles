@@ -12,7 +12,7 @@
    as a 2D sampler.
 
    See documentation for more details. */
-#request mod radial
+#request mod bars
 
 /* Window hints */
 #request setfloating  true
@@ -47,7 +47,7 @@
 #request settitle "GLava"
 
 /* Window geometry (x, y, width, height) */
-#request setgeometry 0 0 1000 1000
+#request setgeometry -10 2068 3860 92
 
 /* Window background color (RGB format).
    Does not work with `setopacity "xroot"` */
@@ -95,7 +95,7 @@
    the GLava window. Useful when you want to interact with other
    desktop windows (icons, menus, desktop shells). Enabled by
    default when GLava itself is a desktop window. */
-#request setclickthrough false
+#request setclickthrough true
 
 /* Audio source
 
@@ -206,7 +206,7 @@
    embedding in the desktop.
 
    This routinely sends X11 events and should be avoided. */
-#request setforcegeometry false
+#request setforcegeometry true
 
 /*                    ** DEPRECATED **
    Force window to be raised (focused in some WMs), useful for
