@@ -10,7 +10,7 @@ makepkg -si
 # Install most dependencies: ⮯
 cd "$HOME" || exit 20
 git clone https://github.com/nosvagor/dotfiles.git
-paru -S - < "$HOME"/dotfiles/misc/packages.lst
+paru -S - < "$HOME"/dotfiles/setup/packages.lst
 
 # my preferred directory structure, see ~/.config/user-dirs.dirs ⮯
 mkdir -vp downloads documents/templates books papers share
@@ -18,20 +18,20 @@ mkdir -vp media/music media/images media/videos media/gifs media/screenshots med
 
 # set up sddm: ⮯
 mkdir -vp /etc/sddm.conf.d
-ln -sfn "$HOME"/dotfiles/misc/sddm.conf.d/autologin.conf /etc/sddm.conf.d
-ln -sfn "$HOME"/dotfiles/misc/sddm.conf.d/hyprland.desktop /usr/share/wayland-sessions
+ln -sfn "$HOME"/dotfiles/setup/sddm.conf.d/autologin.conf /etc/sddm.conf.d
+ln -sfn "$HOME"/dotfiles/setup/sddm.conf.d/hyprland.desktop /usr/share/wayland-sessions
 sytemctl enable sddm
 
 # symbolically link most config files: ⮯
 mkdir -vp "$HOME"/.config/
 ln -sfn "$HOME"/dotfiles/config/* "$HOME"/.config/
 ln -sf "$HOME"/dotfiles/bin/* /usr/bin
-ln -sf "$HOME"/dotfiles/zshrc "$HOME"/
+ln -sf "$HOME"/dotfiles/setup/zshrc "$HOME"/
 mv "$HOME"/zshrc "$HOME/.zshrc"
 
 # ensure custom fonts are installed: ⮯
 mkdir -vp "$HOME"/.local/share/fonts
-cp "$HOME"/dotfiles/fonts/*.zip "$HOME"/.local/share/fonts/
+cp "$HOME"/dotfiles/share/fonts/*.zip "$HOME"/.local/share/fonts/
 cd "$HOME"/.local/share/fonts/  || exit 20
 unzip Albert_Sans.zip
 unzip Architects_Daughter.zip

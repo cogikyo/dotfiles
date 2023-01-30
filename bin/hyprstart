@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+change-bg "code" & sleep 3
 
 hyprctl keyword input:follow_mouse 0
 # ~/.local/bin/layout -n 1 -a discord -w https://twitch.tv/following

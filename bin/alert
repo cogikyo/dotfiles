@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+SOUND_PATH="$HOME/dotfiles/share/sounds"
 # dunsitfy arguments ⮯
 # app="$1"
 # summary="$2"
@@ -14,11 +15,13 @@ fi
 case "$1" in
     timer) sound="jackpot" ;;
     attention) sound="discovery" ;;
+    chat) sound="reward" ;;
+    work) sound="fruit" ;;
     *) sound="moondrop" ;;
 esac
 
 if [[ "$1" != "youtube-music-desktop-app" ]]; then
-    paplay "$HOME/dotfiles/sounds/$sound.ogg"
+    paplay "$SOUND_PATH/$sound.ogg" & disown
 fi
 
 exit 0
