@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
 DISPLAY="HDMI-A-1"
+VID_PATH="$HOME/dotfiles/share/videos"
 
 background_choice=""
 if [[ $# -eq 0 ]]; then
@@ -10,15 +11,15 @@ else
 fi
 
 dna () {
-    mpvpaper -o "--loop --brightness=6 --contrast=9 --saturation=-16 --hue=-24" $DISPLAY "$HOME/dotfiles/videos/dna.mp4" & disown
+    mpvpaper -o "--loop --brightness=6 --contrast=9 --saturation=-16 --hue=-24" $DISPLAY "$VID_PATH/dna.mp4" & disown
 }
 
 record () {
-    mpvpaper -o "--loop --brightness=-3 --contrast=10 --saturation=-42 --hue=69" $DISPLAY "$HOME/dotfiles/videos/record.mp4" & disown
+    mpvpaper -o "--loop --brightness=-3 --contrast=10 --saturation=-42 --hue=69" $DISPLAY "$VID_PATH/record.mp4" & disown
 }
 
 blackhole () {
-    mpvpaper -o "--loop --brightness=3  --contrast=6  --saturation=-50  --hue=-8 --gamma=-20" $DISPLAY "$HOME/dotfiles/videos/blackhole.webm" & disown
+    mpvpaper -o "--loop --brightness=3  --contrast=6  --saturation=-50  --hue=-8 --gamma=-20" $DISPLAY "$VID_PATH/blackhole.webm" & disown
 }
 
 

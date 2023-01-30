@@ -12,7 +12,7 @@ format = """
 [╰╼╾ $character](blue)
 """
 
-right_format = """[$status $cmd_duration ╼╾ $time ╼╾╯](blue)"""
+right_format = """[$status$cmd_duration ╼╾ $time ╼╾╯](blue)"""
 
 
 [character]
@@ -53,12 +53,12 @@ format = "[$symbol$branch(:$remote_branch)]($style)"
 
 [git_status]
 style = "#ff9e64"
-format = '[ $modified$conflicted$staged$untracked$ahead_behind$renamed$stashed$deleted]($style)'
+format = '[ $ahead_behind$conflicted$renamed$staged$modified$untracked$stashed$deleted]($style)'
 conflicted = "[ ](#e46c9c)"
 stashed = "[ ${count} ](black)"
-modified = "[🞊 ${count}](blue)"
+modified = "[🞊 ${count} ](cyan)"
 staged = '[ ${count} ](#ff9e64)'
-untracked = '[ ⧂ ${count}](yellow)'
+untracked = '[ ${count} ](yellow)'
 renamed = "[ ${count} ](purple)"
 ahead = "[⯭${count} ](green)"
 diverged = '[ [${ahead_count} ](green) [${behind_count} ](red)](purple)'
@@ -74,14 +74,14 @@ disabled = false
 [status]
 style = "blue"
 success_symbol = "[](green)"
-not_executable_symbol = "[🕱](black $common_meaning)"
+not_executable_symbol = "[🕱 $common_meaning](black)"
 not_found_symbol = "[ $common_meaning](red)"
 sigint_symbol = "[ ABORT](blue)"
-signal_symbol = "[ $int](yellow)"
+signal_symbol = "[🗲 $int](yellow)"
 symbol = "[ $int $common_meaning](red)"
 recognize_signal_code = true
-pipestatus_format = """[⟪ $pipestatus ⟫]($style)"""
-pipestatus_separator = "[ ⇰ ]($style)"
+pipestatus_format = """[⽣ $pipestatus ⽍]($style)"""
+pipestatus_separator = "[ » ]($style)"
 map_symbol = true
 pipestatus = true
 format = '[$symbol]($style)'
