@@ -22,3 +22,5 @@ global_autocmd("TextYankPost", "silent! lua vim.highlight.on_yank({ timeout = 69
 
 -- Remove color column when entering help docs
 scoped_autocmd("FileType", "HelpDocs", "help", "silent! setlocal cc=")
+
+scoped_autocmd("BufWritePost", "EwwRestart", "eww.yuck,eww.scss", ":!unix_command eww-open & disown && exit<CR>")
