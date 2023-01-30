@@ -133,6 +133,7 @@ require("packer").startup(function(use)
 			vim.fn["mkdp#util#install"]()
 		end,
 	})
+	use("elkowar/yuck.vim")
 	-- }}} ⮭
 
 	-- ============================================================================
