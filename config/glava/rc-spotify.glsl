@@ -67,7 +67,7 @@
    will do nothing, but you can use "!+" and "!-" to stack on top
    or below other windows.
 */
-#request setxwintype "normal"
+#request setxwintype "!"
 
 /* (X11 only) EWMH Window state atoms (multiple can be specified).
    Possible values are:

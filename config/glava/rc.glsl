@@ -67,7 +67,7 @@
    will do nothing, but you can use "!+" and "!-" to stack on top
    or below other windows.
 */
-#request setxwintype "normal"
+#request setxwintype "!"
 
 /* (X11 only) EWMH Window state atoms (multiple can be specified).
    Possible values are:
@@ -95,7 +95,7 @@
    the GLava window. Useful when you want to interact with other
    desktop windows (icons, menus, desktop shells). Enabled by
    default when GLava itself is a desktop window. */
-#request setclickthrough false
+#request setclickthrough true
 
 /* Audio source
 
