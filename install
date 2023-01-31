@@ -29,15 +29,17 @@ sytemctl enable sddm
 mkdir -vp "$HOME"/.config/
 ln -sfn "$DOTS"/config/* "$HOME"/.config/
 ln -sfn "$DOTS"/bin/* /usr/bin
+ln -sfn ~/dotfiles/etc/udev/* /etc/udev/rules.d/
 
 # because zsh insists on having the config file hidden (even with ZDOTDIR): ⮯
 ln -sfn "$DOTS"/config/zsh/zshrc "$HOME"/.zshrc
 
+# bluetooth setup: ⮯
+ln -sfn ~/dotfiles/etc/bluetooth/main.conf /etc/bluetooth/main.conf
+systemctl enable bluetooth.service
+
 # ensure preferred fonts are installed: ⮯
 tar -xzvf "$DOTS/fonts.tar.gz" fonts
 mv fonts "$HOME/.local/share"
-
-# udev rules for via-bin keyboard
-ln -sfn ~/dotfiles/etc/92-viia.rules /etc/udev/rules.d/92-viia.rules
 
 exit 0
