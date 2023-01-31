@@ -1,43 +1,43 @@
 #!/usr/bin/env bash
 
-# Install paru (essential for AUR packages): ⮯
+DOTS="$HOME/dotfiles"
+
+# Install paru (essential for AUR packages and my preferred pac manager): ⮯
 mkdir -vp "$HOME"/.cache/
 cd "$HOME"/.cache/ || exit 20
 git clone https://aur.archlinux.org/paru.git
 cd paru || exit 20
 makepkg -si
 
-# Install most dependencies: ⮯
+# Install most dependencies (that are available from official/AUR packages): ⮯
 cd "$HOME" || exit 20
 git clone https://github.com/nosvagor/dotfiles.git
-paru -S - < "$HOME"/dotfiles/setup/packages.lst
+paru -S - < "$DOTS/etc/packages.lst"
 
-# my preferred directory structure, see ~/.config/user-dirs.dirs ⮯
-mkdir -vp downloads documents/templates books papers share
+# My preferred directory structure, see ~/.config/user-dirs.dirs ⮯
+mkdir -vp downloads
 mkdir -vp media/music media/images media/videos media/gifs media/screenshots media/recordings
+mkdir -vp docs/templates docs/books docs/papers docs/share
 
-# set up sddm: ⮯
+# set up sddm (merely autologin to compositor, no major configs): ⮯
 mkdir -vp /etc/sddm.conf.d
-ln -sfn "$HOME"/dotfiles/setup/sddm.conf.d/autologin.conf /etc/sddm.conf.d
-ln -sfn "$HOME"/dotfiles/setup/sddm.conf.d/hyprland.desktop /usr/share/wayland-sessions
+ln -sfn "$DOTS"/etc/sddm.conf.d/autologin.conf /etc/sddm.conf.d
+ln -sfn "$DOTS"/etc/sddm.conf.d/hyprland.desktop /usr/share/wayland-sessions
 sytemctl enable sddm
 
-# symbolically link most config files: ⮯
+# symbolically link config files: ⮯
 mkdir -vp "$HOME"/.config/
-ln -sfn "$HOME"/dotfiles/config/* "$HOME"/.config/
-ln -sf "$HOME"/dotfiles/bin/* /usr/bin
-ln -sf "$HOME"/dotfiles/setup/zshrc "$HOME"/
-mv "$HOME"/zshrc "$HOME/.zshrc"
+ln -sfn "$DOTS"/config/* "$HOME"/.config/
+ln -sfn "$DOTS"/bin/* /usr/bin
 
-# ensure custom fonts are installed: ⮯
-mkdir -vp "$HOME"/.local/share/fonts
-cp "$HOME"/dotfiles/share/fonts/*.zip "$HOME"/.local/share/fonts/
-cd "$HOME"/.local/share/fonts/  || exit 20
-unzip Albert_Sans.zip
-unzip Architects_Daughter.zip
-unzip Lora.zip
-unzip Archivo.zip
-rm ./*.txt
-rm ./*.zip
+# because zsh insists on having the config file hidden (even with ZDOTDIR): ⮯
+ln -sfn "$DOTS"/config/zsh/zshrc "$HOME"/.zshrc
+
+# ensure preferred fonts are installed: ⮯
+tar -xzvf "$DOTS/fonts.tar.gz" fonts
+mv fonts "$HOME/.local/share"
+
+# udev rules for via-bin keyboard
+ln -sfn ~/dotfiles/etc/92-viia.rules /etc/udev/rules.d/92-viia.rules
 
 exit 0

@@ -63,7 +63,7 @@ renamed = "[ ${count} ](purple)"
 ahead = "[⯭${count} ](green)"
 diverged = '[ [${ahead_count} ](green) [${behind_count} ](red)](purple)'
 behind = '[⯯${count} ](red)'
-deleted = "[  ${count}](red)"
+deleted = "[ ${count} ](red)"
 
 [time]
 format = '[$time]($style)'

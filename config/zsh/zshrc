@@ -1,0 +1,62 @@
+eval "$(starship init zsh)"
+eval "$(zoxide init zsh)"
+
+# history
+HISTFILE=~/.histfile
+HISTSIZE=1000
+SAVEHIST=800
+setopt INC_APPEND_HISTORY
+setopt HIST_IGNORE_ALL_DUPS
+setopt HIST_IGNORE_DUPS
+
+# nnn cd on quit
+g ()
+{
+    if [[ "${NNNLVL:-0}" -ge 1 ]]; then
+        echo "nnn is already running"
+        return
+    fi
+
+    nnn "$@"
+
+    if [ -f "$NNN_TMPFILE" ]; then
+            . "$NNN_TMPFILE"
+            rm -f "$NNN_TMPFILE" > /dev/null
+    fi
+}
+
+# aliases
+alias niol='clear && source ~/.zshrc'
+alias ls='echo; lsd'
+alias n='nvim'
+alias c='calc'
+alias d='cd ~/dotfiles'
+alias v='cd ~/vagari'
+alias e='cd ~/dotfiles/config/nvim'
+alias x='exit'
+alias p='paru'
+alias man='man --pager=nvimpager'
+
+# plugins
+if [[ ! -f ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh ]]; then
+  command git clone https://github.com/agkozak/zcomet.git ${ZDOTDIR:-${HOME}}/.zcomet/bin
+fi
+
+source ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh
+
+zcomet load zsh-users/zsh-syntax-highlighting
+zcomet load zsh-users/zsh-autosuggestions
+zcomet load marlonrichert/zsh-autocomplete
+
+source $HOME/.config/zsh/vagari_zsh-syntax-highlighting.zsh
+
+# fix keys
+bindkey -v
+export KEYTIMEOUT=01
+bindkey '^[[H'     vi-beginning-of-line
+bindkey '^[[F'     vi-end-of-line
+bindkey '^[[3~'    delete-char
+bindkey '^[[1;5C'  forward-word   # C-left
+bindkey '^[[1;5D'  backward-word  # C-right
+bindkey '^[[1;5A'  history-incremental-search-backward # C-up
+bindkey '^[[1;5B'  history-incremental-search-forward  # C-down
