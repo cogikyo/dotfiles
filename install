@@ -42,4 +42,6 @@ systemctl enable bluetooth.service
 tar -xzvf "$DOTS/fonts.tar.gz" fonts
 mv fonts "$HOME/.local/share"
 
+notify-send "complete, reboot?"
+
 exit 0

@@ -11,7 +11,7 @@ hyprctl keyword input:follow_mouse 1
 
 hyprctl dispatch workspace 5
 spotify & disown
-sleep 0.5
+sleep 4
 
 lock
 
