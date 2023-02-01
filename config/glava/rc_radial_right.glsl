@@ -12,7 +12,7 @@
    as a 2D sampler.
 
    See documentation for more details. */
-#request mod bars
+#request mod radial
 
 /* Window hints */
 #request setfloating  true
@@ -47,7 +47,7 @@
 #request settitle "GLava"
 
 /* Window geometry (x, y, width, height) */
-#request setgeometry -10 2068 3860 92
+#request setgeometry 3000 1000 1000 1000
 
 /* Window background color (RGB format).
    Does not work with `setopacity "xroot"` */
@@ -206,7 +206,7 @@
    embedding in the desktop.
 
    This routinely sends X11 events and should be avoided. */
-#request setforcegeometry true
+#request setforcegeometry false
 
 /*                    ** DEPRECATED **
    Force window to be raised (focused in some WMs), useful for
