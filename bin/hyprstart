@@ -4,13 +4,15 @@ change-bg "code"
 
 hyprctl keyword input:follow_mouse 0
 # layout -n 1 -a discord -w https://twitch.tv/following
-# layout -n 2 -a inkscape
-# layout -n 3 -s vagari.nvim -w https://github.com/nosvagor/vagari.nvim
-# layout -n 4 -s nvim -w https://github.com/nosvagor/dotfiles
+layout -n 2 -a inkscape
+layout -n 3 -s vagari.nvim -w https://github.com/nosvagor/vagari.nvim
+layout -n 4 -s dotfiles -w https://github.com/nosvagor/dotfiles
 hyprctl keyword input:follow_mouse 1
 
 hyprctl dispatch workspace 5
 spotify & disown
+glava -e "rc_radial_right.glsl" & disown
+glava -e "rc_bars_bot.glsl" & disown
 sleep 4
 
 lock

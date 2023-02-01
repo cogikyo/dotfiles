@@ -20,7 +20,7 @@ case "$1" in
     *) sound="moondrop" ;;
 esac
 
-if [[ "$1" != "youtube-music-desktop-app" ]]; then
+if [[ "$1" != "spotify" ]]; then
     paplay "$SOUND_PATH/$sound.ogg" & disown
 fi
 
