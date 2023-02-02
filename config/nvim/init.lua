@@ -136,7 +136,7 @@ require("packer").startup(function(use)
 	use("elkowar/yuck.vim")
 	-- }}} ⮭
 
-	-- ============================================================================
+-- ============================================================================
 	-- 🧮 ZHU LI, DO THE THING! 🢢 {{{
 	use("wbthomason/packer.nvim")
 
@@ -172,9 +172,8 @@ vim.api.nvim_create_autocmd("BufWritePost", {
 -- ============================================================================
 
 local config_files = {
-	-- load impatient first (per wiki instructions)  ⮯
+	-- load impatient first (per wiki instructions) ⮯
 	"impatient", -- speeds up loading lua modules -> blazingly fast startup time.
-	-- --------------------------------------------- ⮭
 	"settings", -- edit default options/settings for neovim
 	"keymaps", -- custom keymaps (some keymaps are defined in setups)
 	"setups", -- configuration and initialization of plugins
