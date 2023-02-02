@@ -919,7 +919,8 @@
     <group
        id="boot"
        theme="colorful"
-       canvas="dark">
+       canvas="dark"
+       enabled="0">
       <group
          id="shown"
          ver1.2.2="1" />
@@ -936,8 +937,8 @@
      id="desktop"
      style="fill:#000000">
     <group
-       width="1667"
-       height="989"
+       width="1441"
+       height="1955"
        x="0"
        y="0"
        maximized="1"
