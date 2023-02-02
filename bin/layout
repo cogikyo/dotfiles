@@ -32,7 +32,7 @@ if [[ "$windows" -gt 2 ]]; then
 fi
 
 browser () {
-    firefox-developer-edition --new-window "$w_flag" & sleep 1.5
+    firefox-developer-edition --new-window "$w_flag" & sleep 3
 }
 
 terminal () {
