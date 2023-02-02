@@ -34,14 +34,13 @@ ln -sfn "$DOTS"/bin/* /usr/bin
 ln -sfn "$DOTS"/config/zsh/zshrc "$HOME"/.zshrc
 
 # cp some root config files (bluetooth, udev): ⮯
-cp ~/dotfiles/etc/bluetooth/main.conf /etc/bluetooth/main.conf
-cp ~/dotfiles/etc/udev/* /etc/udev/rules.d/
+cp "$DOTS"/etc/bluetooth/main.conf /etc/bluetooth/main.conf
+cp "$DOTS"/etc/udev/* /etc/udev/rules.d/
+cp "$DOTS"/etc/loader.conf /boot/loader/loader.conf
 systemctl enable bluetooth.service
 
 # ensure preferred fonts are installed: ⮯
 tar -xzvf "$DOTS/fonts.tar.gz" fonts
 mv fonts "$HOME/.local/share"
-
-notify-send "complete, reboot?"
 
 exit 0
