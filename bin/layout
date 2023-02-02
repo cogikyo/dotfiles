@@ -67,7 +67,6 @@ case "$n_flag" in
     3|4)
         terminal "$s_flag"
         browser
-        terminal
         resize; ;;
     *) exit 1 ;;
 esac
