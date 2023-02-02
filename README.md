@@ -173,18 +173,18 @@
 
 ## 🛠️ Installation
 
-<details closed>
+<details open>
 <summary><h5> 🧰 My Hardware</h5></summary>
 
-- Mouse: MX Master 3S
-- CPU: AMD Ryzen 7 3700X (16) @ 3.600GHz
-- GPU: AMD ATI Radeon RX 5600 OEM/5600 XT / 5700/5700 XT
-- Monitor: SAMSUNG UR59 Series 32-Inch 4K UHD (3840x2160)
-- Keyboard: Corne (Helidox) 42 key, Kailh gChoc Light Blue (20g),
+- Mouse: [MX Master 3S](https://www.logitech.com/en-us/products/mice/mx-master-3s.910-006556.html)
+- CPU: [AMD Ryzen 7 3700X (16) @ 3.600GHz](https://www.amd.com/en/products/cpu/amd-ryzen-7-3700x)
+    - GPU: AMD ATI Radeon RX 5600 OEM/5600 XT / 5700/5700 XT
+- Monitor: [SAMSUNG UR59 Series 32-Inch 4K UHD (3840x2160)](https://a.co/d/bZtUse0)
+- Keyboard: [Corne (Helidox) 42 key](https://keebmaker.com/products/corne-low-profile), Kailh gChoc Light Blue (20g),
 
 </details>
 
-<details closed>
+<details open>
 <summary><h3> 🔩 Literal Installation</h3></summary>
 
 **1. Acquire an installation image**: https://archlinux.org/download/
@@ -195,7 +195,7 @@
 
       lsblk -f
 
-- Write to USB using **dd** (sd"x", do not use partition number):
+- Write to USB using **[dd](https://wiki.archlinux.org/title/Dd)** (sd"x", do not use partition number):
 
       dd bs=4M if=path/to/archlinux-version-x86_64.iso of=/dev/sdx conv=fsync oflag=direct status=progress
 
@@ -211,7 +211,7 @@
 
 </details>
 
-<details closed>
+<details open>
 <summary><h3> ⚙️  Post-Installation </h3></summary>
 
 > **[General Recommendations](https://wiki.archlinux.org/title/General_recommendations)**
@@ -222,7 +222,7 @@
 
     git clone https://github.com/nosvagor/dotfiles.git
     cd dotfiles
-    ./install
+    sudo ./install
 
 &nbsp;
 
@@ -236,65 +236,7 @@
 
 &nbsp;
 
-2.3 Update [bluetooth](https://wiki.archlinux.org/title/bluetooth):
-
-    systemctl enable bluetooth.service
-    systemctl start bluetooth.service #(if before reboot)
-
-- pair device
-
-      bluetoothctl
-      power on
-      scan on
-      pair DEVICE
-      trust DEVICE
-      connect DEVICE
-
-- auto power-on:
-
-      /etc/bluetooth/main.conf
-      ---
-      [Policy]
-      AutoEnable=true
-
-- disable shitty built in bluetooth, e.g., (**0b05**:**18ea** is the important part):
-
-      lsusb | grep "Bluetooth"
-
-      # yields
-      Bus 001 Device 004: ID 0b05:18ea ASUSTek Computer, Inc. Bluetooth Radio
-
-      touch /etc/udev/rules.d/81-bluetooth-hci.rules
-      ────┬───────────────────────────────────────────────────────────────────────────────────────────
-          │ File: /etc/udev/rules.d/81-bluetooth-hci.rules
-      ────┼───────────────────────────────────────────────────────────────────────────────────────────
-      1   │ SUBSYSTEM=="usb", ATTRS{idVendor}=="0b05", ATTRS{idProduct}=="18ea", ATTR{authorized}="0"
-      ────┴───────────────────────────────────────────────────────────────────────────────────────────
-
-- verify by checking available agents (after restarting service):
-
-      bluetoothctl list
-
-      # should yield:
-      Controller 3C:7C:3F:A2:38:10 costello [default]
-
-      # insteasd of:
-      Controller 3C:7C:3F:A2:38:10 costello #1 [default]
-      Controller D8:C0:A6:88:B1:24 costello
-
-&nbsp;
-
-2.6 Edit boot config (skip boot menu):
-
-    ──────┬────────────────────────────────────────────────────────────────────
-          │ File: /boot/loader/loader.conf
-    ──────┼────────────────────────────────────────────────────────────────────
-      1   │ timeout 0
-    ──────┴────────────────────────────────────────────────────────────────────
-
-&nbsp;
-
-2.7 update various firefox `about:config` options:
+2.3 update various firefox `about:config` options:
 
 - Update scaling factor if in HiDPI environment:
 
