@@ -111,7 +111,7 @@
 
 ---
 
-### 👨‍💻 Core
+### 👨‍💻 Essentials
 
 <details open>
 <summary>🖥️ <b>Display</b></summary>
@@ -159,10 +159,8 @@
 
 ### 🍎 Notable Applications
 
-- Resource Monitor: [btop](https://github.com/aristocratos/btop)
-- File Manager: [nnn](https://github.com/jarun/nnn)
+- File Explorer: [xplr](https://github.com/sayanarijit/xplr)
 - Image Editing: [gimp](https://www.gimp.org/)
-- Document Viewer: [zathura](https://wiki.archlinux.org/title/zathura)
 - Image Processing: [darktable](https://www.darktable.org/)
 - Vector Graphics: [inkscape](https://inkscape.org/)
 - Motion Graphics: [blender](https://www.blender.org/)
@@ -173,7 +171,7 @@
 
 ## 🛠️ Installation
 
-<details open>
+<details closed>
 <summary><h5> 🧰 My Hardware</h5></summary>
 
 - Mouse: [MX Master 3S](https://www.logitech.com/en-us/products/mice/mx-master-3s.910-006556.html)
@@ -214,23 +212,24 @@
 <details open>
 <summary><h3> ⚙️  Post-Installation </h3></summary>
 
-> **[General Recommendations](https://wiki.archlinux.org/title/General_recommendations)**
+> **❕[General Recommendations](https://wiki.archlinux.org/title/General_recommendations)**  worth the read, seriously
 
-2.1 Run install script: ⮯
+**1. Clone dotifles:**
 
     git clone https://github.com/nosvagor/dotfiles.git
 
 &nbsp;
 
+**2. Install latest stable of version of rust using [rustup](https://github.com/rust-lang/rustup):**
 
-2.2 Configure SSH for GitHub _(here for personal reference)_:
+    rustup default stable
 
-    ssh-keygen -t ed25519 -C "your_email@example.com"
-    eval "$(ssh-agent -s)"
-    ssh-add ~/.ssh/id_ed25519
-    bat ~/.ssh/id_ed25519.pub
+2.3 Install [paru](https://github.com/Morganamilo/paru) ⮯
 
-&nbsp;
+    mkdir "$HOME"/.cache/ && cd "$HOME"/.cache/
+    git clone https://aur.archlinux.org/paru.git && cd paru
+    makepkg -si
+
 
 2.3 update various firefox `about:config` options:
 
@@ -246,6 +245,15 @@
 
       pdfjs.sidebarViewOnLoad = 0
 
-- Disable extension button
+- Disable pointless extension button
 
       extensions.unifiedExtensions.enabled = false
+
+2 Configure SSH for GitHub _(here for personal reference)_:
+
+    ssh-keygen -t ed25519 -C "your_email@example.com"
+    eval "$(ssh-agent -s)"
+    ssh-add ~/.ssh/id_ed25519
+    bat ~/.ssh/id_ed25519.pub
+
+&nbsp;
