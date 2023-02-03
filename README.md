@@ -215,14 +215,10 @@
 <summary><h3> ⚙️  Post-Installation </h3></summary>
 
 > **[General Recommendations](https://wiki.archlinux.org/title/General_recommendations)**
->
-> _Note_: most of this is optional and primarily here for personal reference.
 
 2.1 Run install script: ⮯
 
     git clone https://github.com/nosvagor/dotfiles.git
-    cd dotfiles
-    sudo ./install
 
 &nbsp;
 
