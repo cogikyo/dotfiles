@@ -79,7 +79,7 @@
 
 ## 👾 Overview
 
-### **[I use arch, btw ⮯](https://wiki.archlinux.org/title/Arch_Linux)**
+### **[I use arch, btw](https://wiki.archlinux.org/title/Arch_Linux)**
 
 <img
     src="https://github.com/nosvagor/dotfiles/blob/main/share/social-preview.jpg?raw=true"
@@ -182,10 +182,12 @@
 
 </details>
 
-<details open>
+<details closed>
 <summary><h3> 🔩 Literal Installation</h3></summary>
 
-**1. Acquire an installation image**: https://archlinux.org/download/
+**1. Get the installation image:**
+
+- **[archlinux-version-x86_64.iso](https://archlinux.org/download/)** &mdash; https://archlinux.org/download/
 
 **2. Prepare an installation medium:**
 
@@ -196,6 +198,8 @@
 - Write to USB using **[dd](https://wiki.archlinux.org/title/Dd)** (sd"x", do not use partition number):
 
       dd bs=4M if=path/to/archlinux-version-x86_64.iso of=/dev/sdx conv=fsync oflag=direct status=progress
+
+<br>
 
 **3. Use guided arch installation**
 
@@ -212,32 +216,80 @@
 <details open>
 <summary><h3> ⚙️  Post-Installation </h3></summary>
 
-> **❕[General Recommendations](https://wiki.archlinux.org/title/General_recommendations)**  worth the read, seriously
+> **[General Recommendations](https://wiki.archlinux.org/title/General_recommendations)**   worth the read, seriously
 
-**1. Clone dotifles:**
-
-    git clone https://github.com/nosvagor/dotfiles.git
-
-&nbsp;
-
-**2. Install latest stable of version of rust using [rustup](https://github.com/rust-lang/rustup):**
+**1. Install latest stable of version of rust using [rustup](https://github.com/rust-lang/rustup):**
 
     rustup default stable
 
-2.3 Install [paru](https://github.com/Morganamilo/paru) ⮯
+<br>
+
+**2. Install [paru](https://github.com/Morganamilo/paru):**
 
     mkdir "$HOME"/.cache/ && cd "$HOME"/.cache/
     git clone https://aur.archlinux.org/paru.git && cd paru
     makepkg -si
 
+<br>
 
-2.3 update various firefox `about:config` options:
+**3. Clone dotfiles and install packages:**
 
-- Update scaling factor if in HiDPI environment:
+    cd "$HOME"
+    git clone https://github.com/nosvagor/dotfiles
+    paru -S - < "$HOME"/dotfiles/etc/packages.lst
+
+<br>
+
+**4. My preferred directory structure:**
+
+    cd "$HOME"
+    mkdir -vp media/music media/images media/videos media/gifs media/screenshots media/recordings
+    mkdir -vp downloads docs/templates docs/books docs/papers docs/share
+
+<br>
+
+**5. Set up [sddm](https://wiki.archlinux.org/title/SDDM):**
+
+    mkdir -vp /etc/sddm.conf.d
+    cp "$HOME/dotfiles/etc/sddm.conf.d/autologin.conf /etc/sddm.conf.d/autologin.conf
+    cp "$HOME/dotfiles/etc/sddm.conf.d/hyprland.desktop /usr/share/wayland-sessions/hyprland.desktop
+    systemctl enable sddm
+
+<br>
+
+**6. Symbolically link most config files:**
+
+    mkdir -vp "$HOME"/.config/
+    ln -sfn "$HOME"/dotfiles/config/* "$HOME"/.config/
+    ln -sfn "$HOME/dotfiles/config/zsh/zshrc "$HOME"/.zshrc
+    sudo ln -sfn "$HOME/dotfiles/bin/* /usr/bin
+
+<br>
+
+**7. Copy root config files:**
+
+    cp "$HOME"/dotfiles/etc/bluetooth/main.conf /etc/bluetooth/main.conf
+    cp "$HOME"/dotfiles/etc/udev/* /etc/udev/rules.d/
+    cp "$HOME"/dotfiles/etc/loader.conf /boot/loader/loader.conf
+    systemctl enable bluetooth.service
+
+<br>
+
+**8. Ensure some preferred fonts are installed:**
+
+    mkdir -vp "$HOME/.local/share"
+    tar -xzvf "$HOME"/dotfiles/etc/fonts.tar.gz fonts
+    mv fonts "$HOME/.local/share/"
+
+<br>
+
+**9. Update various Firefox `about:config` options:**
+
+- Increase scaling factor due to 4k screen (HiDPI environment):
 
       layout.css.devPixelsPerPx = 1.25
 
-- Stop asking to restore session (I often just kill the window and don't want the prompt later)
+- Stop asking to restore session (killing the windows counts as a crash, I guesss)
 
       browser.sessionstore.resume_from_crash = false
 
@@ -249,11 +301,11 @@
 
       extensions.unifiedExtensions.enabled = false
 
-2 Configure SSH for GitHub _(here for personal reference)_:
+<br>
+
+**10. Configure SSH key:**
 
     ssh-keygen -t ed25519 -C "your_email@example.com"
     eval "$(ssh-agent -s)"
     ssh-add ~/.ssh/id_ed25519
     bat ~/.ssh/id_ed25519.pub
-
-&nbsp;
