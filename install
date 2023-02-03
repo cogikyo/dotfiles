@@ -24,7 +24,7 @@ mkdir -vp docs/templates docs/books docs/papers docs/share
 mkdir -vp /etc/sddm.conf.d
 cp "$DOTS"/etc/sddm.conf.d/autologin.conf /etc/sddm.conf.d/autologin.conf 
 cp "$DOTS"/etc/sddm.conf.d/hyprland.desktop /usr/share/wayland-sessions/hyprland.desktop
-sytemctl enable sddm
+systemctl enable sddm
 
 # symbolically link config files: ⮯
 mkdir -vp "$HOME"/.config/
@@ -41,7 +41,7 @@ cp "$DOTS"/etc/loader.conf /boot/loader/loader.conf
 systemctl enable bluetooth.service
 
 # ensure preferred fonts are installed: ⮯
-tar -xzvf "$DOTS/fonts.tar.gz" "$HOME/fonts"
+tar -xzvf "$DOTS/etc/fonts.tar.gz" "$HOME/fonts"
 mv "$HOME/fonts/" "$HOME/.local/share/"
 
 exit 0
