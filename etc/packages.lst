@@ -3,12 +3,14 @@ amd-ucode
 base
 base-devel
 bat
+blender
 bluez
 bluez-utils
 brave-bin
 btop
 calc
 codespell
+darktable
 dunst-git
 efibootmgr
 eww-wayland
@@ -18,6 +20,7 @@ firefox-developer-edition
 fontpreview
 fzf
 git
+gimp
 glava
 go
 grim
@@ -41,9 +44,8 @@ man-db
 mediainfo
 mplayer
 mpv
-mpvpaper-git r71.786f3ff-1
+mpvpaper-git
 neovim
-nnn-nerd
 noto-fonts-cjk
 noto-fonts-emoji
 noto-fonts-extra
@@ -59,6 +61,7 @@ pipewire-pulse
 playerctl
 polkit-kde-agent
 pulsemixer
+python
 python-pip
 python-pynvim
 qbittorrent
