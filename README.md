@@ -225,61 +225,68 @@
 <br>
 
 **2. Install [paru](https://github.com/Morganamilo/paru):**
-
-    mkdir "$HOME"/.cache/ && cd "$HOME"/.cache/
-    git clone https://aur.archlinux.org/paru.git && cd paru
-    makepkg -si
+```shell
+mkdir "$HOME/.cache/" && cd "$HOME/.cache/"
+git clone https://aur.archlinux.org/paru.git && cd paru
+makepkg -si
+```
 
 <br>
 
 **3. Clone dotfiles and install packages:**
-
-    cd "$HOME"
-    git clone https://github.com/nosvagor/dotfiles
-    paru -S - < "$HOME"/dotfiles/etc/packages.lst
+```shell
+cd "$HOME"
+git clone https://github.com/nosvagor/dotfiles
+paru -S - < "$HOME/dotfiles/etc/packages.lst"
+```
 
 <br>
 
 **4. My preferred directory structure:**
-
-    cd "$HOME"
-    mkdir -vp media/music media/images media/videos media/gifs media/screenshots media/recordings
-    mkdir -vp downloads docs/templates docs/books docs/papers docs/share
+```shell
+cd "$HOME"
+mkdir -vp media/music media/images media/videos media/gifs media/screenshots media/recordings
+mkdir -vp downloads docs/templates docs/books docs/papers docs/share
+```
 
 <br>
 
 **5. Set up [sddm](https://wiki.archlinux.org/title/SDDM):**
-
-    mkdir -vp /etc/sddm.conf.d
-    cp "$HOME/dotfiles/etc/sddm.conf.d/autologin.conf /etc/sddm.conf.d/autologin.conf
-    cp "$HOME/dotfiles/etc/sddm.conf.d/hyprland.desktop /usr/share/wayland-sessions/hyprland.desktop
-    systemctl enable sddm
+```shell
+mkdir -vp /etc/sddm.conf.d
+cp "$HOME/dotfiles/etc/sddm.conf.d/autologin.conf" /etc/sddm.conf.d/autologin.conf
+cp "$HOME/dotfiles/etc/sddm.conf.d/hyprland.desktop" /usr/share/wayland-sessions/hyprland.desktop
+systemctl enable sddm
+```
 
 <br>
 
 **6. Symbolically link most config files:**
-
-    mkdir -vp "$HOME"/.config/
-    ln -sfn "$HOME"/dotfiles/config/* "$HOME"/.config/
-    ln -sfn "$HOME/dotfiles/config/zsh/zshrc "$HOME"/.zshrc
-    sudo ln -sfn "$HOME/dotfiles/bin/* /usr/bin
+```shell
+mkdir -vp "$HOME/.config/"
+ln -sfn "$HOME/dotfiles/config/*" "$HOME/.config/"
+ln -sfn "$HOME/dotfiles/config/zsh/zshrc" "$HOME/.zshrc"
+sudo ln -sfn "$HOME/dotfiles/bin/*" /usr/bin
+```
 
 <br>
 
 **7. Copy root config files:**
-
-    cp "$HOME"/dotfiles/etc/bluetooth/main.conf /etc/bluetooth/main.conf
-    cp "$HOME"/dotfiles/etc/udev/* /etc/udev/rules.d/
-    cp "$HOME"/dotfiles/etc/loader.conf /boot/loader/loader.conf
-    systemctl enable bluetooth.service
+```shell
+cp "$HOME/dotfiles/etc/bluetooth/main.conf" /etc/bluetooth/main.conf
+cp "$HOME/dotfiles/etc/udev/*" /etc/udev/rules.d/
+cp "$HOME/dotfiles/etc/loader.conf" /boot/loader/loader.conf
+systemctl enable bluetooth.service
+```
 
 <br>
 
 **8. Ensure some preferred fonts are installed:**
-
-    mkdir -vp "$HOME/.local/share"
-    tar -xzvf "$HOME"/dotfiles/etc/fonts.tar.gz fonts
-    mv fonts "$HOME/.local/share/"
+```shell
+mkdir -vp "$HOME/.local/share"
+tar -xzvf "$HOME/dotfiles/etc/fonts.tar.gz" fonts
+mv fonts "$HOME/.local/share/"
+```
 
 <br>
 
@@ -304,8 +311,9 @@
 <br>
 
 **10. Configure SSH key:**
-
-    ssh-keygen -t ed25519 -C "your_email@example.com"
-    eval "$(ssh-agent -s)"
-    ssh-add ~/.ssh/id_ed25519
-    bat ~/.ssh/id_ed25519.pub
+```shell
+ssh-keygen -t ed25519 -C "your_email@example.com"
+eval "$(ssh-agent -s)"
+ssh-add ~/.ssh/id_ed25519
+bat ~/.ssh/id_ed25519.pub
+```
