@@ -226,8 +226,10 @@
 
 **2. Install [paru](https://github.com/Morganamilo/paru):**
 ```shell
-mkdir "$HOME"/.cache/ && cd "$HOME"/.cache/
-git clone https://aur.archlinux.org/paru.git && cd paru
+cd ~
+mkdir .cache && cd .cache
+git clone https://aur.archlinux.org/paru.git
+cd paru
 makepkg -si
 ```
 
@@ -235,73 +237,70 @@ makepkg -si
 
 **3. Clone dotfiles and install packages:**
 ```shell
-cd "$HOME"
+cd ~
 git clone https://github.com/nosvagor/dotfiles
-paru -S - < "$HOME"/dotfiles/etc/packages.lst
+paru -S - < ~/dotfiles/etc/packages.lst
 ```
 
-$4. Change default shell:**
+<br>
+
+**4. Change default shell:**
 ```shell
 chsh -s /usr/bin/zsh
 ```
 
 <br>
 
-**5. My preferred directory structure:**
+**5. Set up [sddm](https://wiki.archlinux.org/title/SDDM):**
 ```shell
-cd "$HOME"
-mkdir -vp media/music media/images media/videos media/gifs media/screenshots media/recordings
-mkdir -vp downloads docs/templates docs/books docs/papers docs/share
-```
-
-<br>
-
-**6. Set up [sddm](https://wiki.archlinux.org/title/SDDM):**
-```shell
-mkdir -vp /etc/sddm.conf.d
-cp "$HOME"/dotfiles/etc/sddm.conf.d/autologin.conf /etc/sddm.conf.d/autologin.conf
-cp "$HOME"/dotfiles/etc/sddm.conf.d/hyprland.desktop /usr/share/wayland-sessions/hyprland.desktop
+cd ~/dotfiles/etc/sddm.conf.d
+mkdir /etc/sddm.conf.d
+sudo cp autologin.conf /etc/sddm.conf.d/
+sudo cp hyprland.desktop /usr/share/wayland-sessions/hyprland.desktop
 systemctl enable sddm
 ```
 
 <br>
 
-**7. Symbolically link most config files:**
+**6. Symbolically link most config files:**
 ```shell
-mkdir -vp "$HOME"/.config/
-ln -sfn "$HOME"/dotfiles/config/* "$HOME"/.config/
-ln -sfn "$HOME"/dotfiles/config/zsh/zshrc "$HOME"/.zshrc
-sudo ln -sfn "$HOME"/dotfiles/bin/* /usr/bin
+cd ~
+mkdir .config
+ln -sfn ~/dotfiles/config/* ~/.config/
+ln -sfn ~/dotfiles/config/zsh/zshrc .zshrr
+sudo ln -sfn "$HOME"/dotfiles/bin/* /usr/bin/
 ```
 
 <br>
 
-**8. Copy root config files:**
+**7. Copy root config files:**
 ```shell
-cp "$HOME"/dotfiles/etc/bluetooth/main.conf /etc/bluetooth/main.conf
-cp "$HOME"/dotfiles/etc/udev/* /etc/udev/rules.d/
-cp "$HOME"/dotfiles/etc/loader.conf /boot/loader/loader.conf
-systemctl enable bluetooth.service
+cd ~/dotfiles/etc
+sudo cp bluetooth/main.conf /etc/bluetooth/main.conf
+sudo cp udev/* /etc/udev/rules.d/
+sudo cp loader.conf /boot/loader/loader.conf
+systemctl enable bluetooth
 ```
 
 <br>
 
-**9. Ensure some preferred fonts are installed:**
+**8. Ensure some preferred fonts are installed:**
 ```shell
-mkdir -vp "$HOME"/.local/share
-tar -xzvf "$HOME"/dotfiles/etc/fonts.tar.gz fonts
-mv fonts "$HOME"/.local/share/
+cd ~
+mkdir -vp ~/.local/share
+tar -xzvf ~/dotfiles/etc/fonts.tar.gz fonts
+mv fonts ~/.local/share/
 ```
 
 <br>
 
-**10. Update various Firefox `about:config` options:**
+**9. Update various Firefox `about:config` options:**
 
 - Increase scaling factor due to 4k screen (HiDPI environment):
 
       layout.css.devPixelsPerPx = 1.25
 
-- Stop asking to restore session (killing the windows counts as a crash, I guesss)
+- Stop asking to restore session (killing the windows counts as a crash, I guess)
 
       browser.sessionstore.resume_from_crash = false
 
@@ -309,13 +308,14 @@ mv fonts "$HOME"/.local/share/
 
       pdfjs.sidebarViewOnLoad = 0
 
-- Disable pointless extension button
+- Disable some bloat:
 
       extensions.unifiedExtensions.enabled = false
+      extensions.pocket.enabled = false
 
 <br>
 
-**11. Configure SSH key:**
+**10. Configure SSH key:**
 ```shell
 ssh-keygen -t ed25519 -C "your_email@example.com"
 eval "$(ssh-agent -s)"
@@ -323,6 +323,19 @@ ssh-add ~/.ssh/id_ed25519
 bat ~/.ssh/id_ed25519.pub
 ```
 
-- E.g., useful for ssh protected clone, simply change origin url:
+- e.g., using SSH key to manage dotfiles:
 
       git remote set-url origin git@github.com:nosvagor/dotfiles.git
+
+<br>
+
+**My preferred directory structure:** (definitely optional)
+```shell
+cd ~
+mkdir -vp media/music media/images media/videos media/gifs media/screenshots media/recordings
+mkdir -vp downloads docs/templates docs/books docs/papers docs/share
+git clone git@github.com:nosvagor/vagari.git
+git clone git@github.com:nosvagor/notes.git
+```
+
+<br>
