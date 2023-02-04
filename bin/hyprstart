@@ -8,17 +8,16 @@ hyprctl keyword input:follow_mouse 0
 # layout -n 2 -a inkscape
 # sleep 1
 layout -n 3 -s vagari -w https://github.com/nosvagor/vagari
-sleep 1
+sleep 2
 layout -n 4 -s dotfiles -w https://github.com/nosvagor/dotfiles
-sleep 1
+sleep 2
 hyprctl keyword input:follow_mouse 1
 
 hyprctl dispatch workspace 5
 spotify & disown
 glava -e "rc_bars_bot.glsl" & disown
-sleep 1
 glava -e "rc_radial_record.glsl" & disown
-sleep 4
+sleep 3
 
 lock
 
