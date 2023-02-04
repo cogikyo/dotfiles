@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+
+ln -sfnv "$HOME"/dotfiles/config/* "$HOME"/.config/
