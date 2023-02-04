@@ -7,39 +7,6 @@ export XCURSOR_SIZE=24
 export PATH="$HOME/.cargo/bin:$PATH"
 export GOPATH="$HOME/.go"
 export PATH="$PATH:$HOME/.go/bin"
-
-# --------------------------------------------------------------\
-# black   red     green    blue     magenta  cyan     white   | color
-# color0  color1  color2   color4   color5   color6   color7  | normal
-# color8  color9  color10  color12  color13  color14  color15 | bright
-# --------------------------------------------------------------/
-export NNN_COLORS='4321'
-BLK="00" CHR="00" REG="00" HARDLINK="00" FIFO="00" SOCK="00" MISSING="00"
-OTHER="01"
-EXE="02"
-DIR="04"
-SYMLINK="06"
-ORPHAN="09"
-export NNN_FCOLORS="$BLK$CHR$DIR$EXE$REG$HARDLINK$SYMLINK$MISSING$ORPHAN$FIFO$SOCK$OTHER"
-export NNN_PLUG="N:bulknew;d:preview-tui;O:xdgdefault;E:suedit"
-dw="D:$HOME/downloads/"
-d="d:$HOME/dotfiles/"
-db="b:$HOME/dotfiles/bin/"
-v="v:$HOME/vagari/"
-c="c:$HOME/.config/"
-e="e:$HOME/dotfiles/config/nvim/"
-s="s:$HOME/media/screenshots/"
-r="r:$HOME/media/recordings/"
-u="U:/usr/"
-t="E:/etc/"
-tr="T:$HOME/.local/share/Trash/"
-export NNN_BMS="$dw;$v;$d;$db;$c;$e;$s;$r;$u;$t;$tr"
-export NNN_FIFO='/tmp/nnn.fifo'
-export NNN_OPENER=nuke
-export NNN_TRASH=2
-export NNN_OPTS=c
-export EDITOR=nvim
 export PAGER=nvimpager
-export NNN_TMPFILE="${XDG_CONFIG_HOME:-$HOME/.config}/nnn/.lastd"
 
 exec Hyprland
