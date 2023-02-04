@@ -226,7 +226,7 @@
 
 **2. Install [paru](https://github.com/Morganamilo/paru):**
 ```shell
-mkdir "$HOME/.cache/" && cd "$HOME/.cache/"
+mkdir "$HOME"/.cache/ && cd "$HOME"/.cache/
 git clone https://aur.archlinux.org/paru.git && cd paru
 makepkg -si
 ```
@@ -237,12 +237,17 @@ makepkg -si
 ```shell
 cd "$HOME"
 git clone https://github.com/nosvagor/dotfiles
-paru -S - < "$HOME/dotfiles/etc/packages.lst"
+paru -S - < "$HOME"/dotfiles/etc/packages.lst
+```
+
+$4. Change default shell:**
+```shell
+chsh -s /usr/bin/zsh
 ```
 
 <br>
 
-**4. My preferred directory structure:**
+**5. My preferred directory structure:**
 ```shell
 cd "$HOME"
 mkdir -vp media/music media/images media/videos media/gifs media/screenshots media/recordings
@@ -251,46 +256,46 @@ mkdir -vp downloads docs/templates docs/books docs/papers docs/share
 
 <br>
 
-**5. Set up [sddm](https://wiki.archlinux.org/title/SDDM):**
+**6. Set up [sddm](https://wiki.archlinux.org/title/SDDM):**
 ```shell
 mkdir -vp /etc/sddm.conf.d
-cp "$HOME/dotfiles/etc/sddm.conf.d/autologin.conf" /etc/sddm.conf.d/autologin.conf
-cp "$HOME/dotfiles/etc/sddm.conf.d/hyprland.desktop" /usr/share/wayland-sessions/hyprland.desktop
+cp "$HOME"/dotfiles/etc/sddm.conf.d/autologin.conf /etc/sddm.conf.d/autologin.conf
+cp "$HOME"/dotfiles/etc/sddm.conf.d/hyprland.desktop /usr/share/wayland-sessions/hyprland.desktop
 systemctl enable sddm
 ```
 
 <br>
 
-**6. Symbolically link most config files:**
+**7. Symbolically link most config files:**
 ```shell
-mkdir -vp "$HOME/.config/"
-ln -sfn "$HOME/dotfiles/config/*" "$HOME/.config/"
-ln -sfn "$HOME/dotfiles/config/zsh/zshrc" "$HOME/.zshrc"
-sudo ln -sfn "$HOME/dotfiles/bin/*" /usr/bin
+mkdir -vp "$HOME"/.config/
+ln -sfn "$HOME"/dotfiles/config/* "$HOME"/.config/
+ln -sfn "$HOME"/dotfiles/config/zsh/zshrc" "$HOME"/.zshrc
+sudo ln -sfn "$HOME"/dotfiles/bin/* /usr/bin
 ```
 
 <br>
 
-**7. Copy root config files:**
+**8. Copy root config files:**
 ```shell
-cp "$HOME/dotfiles/etc/bluetooth/main.conf" /etc/bluetooth/main.conf
-cp "$HOME/dotfiles/etc/udev/*" /etc/udev/rules.d/
-cp "$HOME/dotfiles/etc/loader.conf" /boot/loader/loader.conf
+cp "$HOME"/dotfiles/etc/bluetooth/main.conf /etc/bluetooth/main.conf
+cp "$HOME"/dotfiles/etc/udev/* /etc/udev/rules.d/
+cp "$HOME"/dotfiles/etc/loader.conf /boot/loader/loader.conf
 systemctl enable bluetooth.service
 ```
 
 <br>
 
-**8. Ensure some preferred fonts are installed:**
+**9. Ensure some preferred fonts are installed:**
 ```shell
-mkdir -vp "$HOME/.local/share"
-tar -xzvf "$HOME/dotfiles/etc/fonts.tar.gz" fonts
-mv fonts "$HOME/.local/share/"
+mkdir -vp "$HOME"/.local/share
+tar -xzvf "$HOME"/dotfiles/etc/fonts.tar.gz fonts
+mv fonts "$HOME"/.local/share/
 ```
 
 <br>
 
-**9. Update various Firefox `about:config` options:**
+**10. Update various Firefox `about:config` options:**
 
 - Increase scaling factor due to 4k screen (HiDPI environment):
 
@@ -310,7 +315,7 @@ mv fonts "$HOME/.local/share/"
 
 <br>
 
-**10. Configure SSH key:**
+**11. Configure SSH key:**
 ```shell
 ssh-keygen -t ed25519 -C "your_email@example.com"
 eval "$(ssh-agent -s)"

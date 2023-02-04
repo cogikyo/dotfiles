@@ -10,8 +10,7 @@ setopt HIST_IGNORE_ALL_DUPS
 setopt HIST_IGNORE_DUPS
 
 # nnn cd on quit
-g ()
-{
+g () {
     if [[ "${NNNLVL:-0}" -ge 1 ]]; then
         echo "nnn is already running"
         return
@@ -36,6 +35,10 @@ alias e='cd ~/dotfiles/config/nvim'
 alias x='exit'
 alias p='paru'
 alias man='man --pager=nvimpager'
+
+relink () {
+    ln -sfn "$HOME"/dotfiles/config/* "$HOME"/.config/
+}
 
 # plugins
 if [[ ! -f ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh ]]; then
