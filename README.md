@@ -270,7 +270,7 @@ systemctl enable sddm
 ```shell
 mkdir -vp "$HOME"/.config/
 ln -sfn "$HOME"/dotfiles/config/* "$HOME"/.config/
-ln -sfn "$HOME"/dotfiles/config/zsh/zshrc" "$HOME"/.zshrc
+ln -sfn "$HOME"/dotfiles/config/zsh/zshrc "$HOME"/.zshrc
 sudo ln -sfn "$HOME"/dotfiles/bin/* /usr/bin
 ```
 
