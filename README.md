@@ -317,3 +317,7 @@ eval "$(ssh-agent -s)"
 ssh-add ~/.ssh/id_ed25519
 bat ~/.ssh/id_ed25519.pub
 ```
+
+- E.g., useful for ssh protected clone, simply change origin url:
+
+      git remote set-url origin git@github.com:nosvagor/dotfiles.git
