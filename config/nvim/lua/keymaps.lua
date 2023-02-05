@@ -1,8 +1,8 @@
 -- ============================================================================
 -- 🧰 Setup (definition for short-hand remap function): ⮯ {{{
 local function map(mode, lhs, rhs, opts)
-	opts = vim.tbl_extend("force", { noremap = true, silent = true }, opts or {})
-	vim.api.nvim_set_keymap(mode, lhs, rhs, opts)
+    opts = vim.tbl_extend("force", { noremap = true, silent = true }, opts or {})
+    vim.api.nvim_set_keymap(mode, lhs, rhs, opts)
 end
 
 -- default is non-recursive and silent ⮭
@@ -33,7 +33,6 @@ map("n", "<C-s>", ":w<CR>:echo <CR>")
 map("i", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("v", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("n", "<leader>s<leader>", ":noa w<CR><CR")
-map("n", "<leader>ff", ":w <CR>:lua vim.lsp.buf.format()<CR>")
 map("n", "<leader>so", ":w | source %<CR>")
 -- }}} ⮭
 
@@ -116,6 +115,7 @@ map("n", "<Down>", "<C-w>j")
 map("n", "<Up>", "<C-w>k")
 map("n", "<Left>", "<C-w>h")
 map("n", "<Right>", "<C-w>l")
+map("n", "<leader><C-t>", "<C-w>T")
 map("n", "<C-Up>", ":resize +2<CR>")
 map("n", "<C-Down>", ":resize -2<CR>")
 map("n", "<C-Left>", ":vertical resize -2<CR>")
@@ -136,7 +136,6 @@ map("n", "<leader>st", ":set spell!<CR>")
 map("n", "<leader>wt", ":set wrap!<CR> :echo 'wrap toggled'<CR>")
 map("n", "<leader>mt", ":MarkdownPreviewToggle<CR>,")
 map("n", "<leader>mm", ":Mason<CR>,")
-map("n", "<leader>mn", ":NullLsInfo<CR>,")
 map("n", "<leader>et", ":NvimTreeToggle<CR> :NvimTreeRefresh<CR>")
 map("n", "<leader>bt", ":Switch<CR>") -- toggle b false<->true
 -- }}} ⮭
