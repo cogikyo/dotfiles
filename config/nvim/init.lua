@@ -1,10 +1,18 @@
 -- ============================================================================
--- 📦 PACKER, PREP THE THING!: ⮯{{{
-local install_path = vim.fn.stdpath("data") .. "/site/pack/packer/start/packer.nvim"
+-- 📦 PACKER, PREP THE THING! 🢢 {{{
+local install_path = vim.fn.stdpath("data")
+	.. "/site/pack/packer/start/packer.nvim"
 local is_bootstrap = false
 if vim.fn.empty(vim.fn.glob(install_path)) > 0 then
 	is_bootstrap = true
-	vim.fn.system({ "git", "clone", "--depth", "1", "https://github.com/wbthomason/packer.nvim", install_path })
+	vim.fn.system({
+		"git",
+		"clone",
+		"--depth",
+		"1",
+		"https://github.com/wbthomason/packer.nvim",
+		install_path,
+	})
 	vim.cmd([[packadd packer.nvim]])
 end
 
@@ -12,7 +20,9 @@ end
 require("packer").init({
 	display = {
 		open_fn = function()
-			return require("packer.util").float({ border = "rounded" })
+			return require("packer.util").float({
+				border = "rounded",
+			})
 		end,
 		keybindings = { -- Keybindings for the display window
 			quit = "<Esc>",
@@ -26,8 +36,8 @@ require("packer").init({
 })
 
 require("packer").startup(function(use)
-	-- }}}
-	-- ============================================================================
+-- }}}
+-- ============================================================================
 
 	-- 📚 LSP: ⮯ {{{
 	use({
@@ -36,7 +46,7 @@ require("packer").startup(function(use)
 			"williamboman/mason.nvim",
 			"williamboman/mason-lspconfig.nvim",
 			"mfussenegger/nvim-dap",
-			"folke/neodev.nvim",
+			"jose-elias-alvarez/null-ls.nvim",
 		},
 	})
 	-- }}}
@@ -45,9 +55,9 @@ require("packer").startup(function(use)
 	use({
 		"hrsh7th/nvim-cmp",
 		requires = {
+			"hrsh7th/nvim-cmp",
 			"hrsh7th/cmp-nvim-lsp",
 			"hrsh7th/cmp-nvim-lua",
-			"hrsh7th/nvim-cmp",
 			"hrsh7th/cmp-buffer",
 			"hrsh7th/cmp-path",
 			"hrsh7th/cmp-emoji",
@@ -63,7 +73,9 @@ require("packer").startup(function(use)
 	use({
 		"nvim-treesitter/nvim-treesitter",
 		run = function()
-			pcall(require("nvim-treesitter.install").update({ with_sync = true }))
+			pcall(require("nvim-treesitter.install").update({
+				with_sync = true,
+			}))
 		end,
 	})
 	use({ -- Additional text objects via treesitter
@@ -92,7 +104,10 @@ require("packer").startup(function(use)
 	-- }}} ⮭
 
 	-- 👀 UI: ⮯ {{{
-	use({ "catppuccin/nvim", as = "catppuccin" })
+	use({
+		"catppuccin/nvim",
+		as = "catppuccin",
+	})
 	use({
 		"nvim-lualine/lualine.nvim",
 		requires = {
@@ -152,7 +167,9 @@ if is_bootstrap then
 end
 
 -- Automatically source and re-compile packer whenever you save this init.lua
-local packer_group = vim.api.nvim_create_augroup("Packer", { clear = true })
+local packer_group = vim.api.nvim_create_augroup("Packer", {
+	clear = true,
+})
 vim.api.nvim_create_autocmd("BufWritePost", {
 	command = "source <afile> | silent! LspStop | silent! LspStart | PackerSync | PackerCompile ",
 	group = packer_group,
@@ -169,8 +186,9 @@ vim.api.nvim_create_autocmd("BufWritePost", {
 -- ============================================================================
 
 local config_files = {
-	-- load impatient first (per wiki instructions) ⮯
-	"impatient", -- speeds up loading lua modules -> blazingly fast startup time.
+	-- ------------------------------------------------------------------------
+	"impatient", -- caches lua modules -> blazingly fast startup time
+	-- ------------------------------------------------------------------------
 	"settings", -- edit default options/settings for neovim
 	"keymaps", -- custom keymaps (some keymaps are defined in setups)
 	"setups", -- configuration and initialization of plugins

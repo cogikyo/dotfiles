@@ -33,6 +33,7 @@ map("n", "<C-s>", ":w<CR>:echo <CR>")
 map("i", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("v", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("n", "<leader>s<leader>", ":noa w<CR><CR")
+map("n", "<leader><C-s>", ":lua vim.lsp.buf.format()<CR><C-s>")
 map("n", "<leader>so", ":w | source %<CR>")
 -- }}} ⮭
 
@@ -136,6 +137,7 @@ map("n", "<leader>st", ":set spell!<CR>")
 map("n", "<leader>wt", ":set wrap!<CR> :echo 'wrap toggled'<CR>")
 map("n", "<leader>mt", ":MarkdownPreviewToggle<CR>,")
 map("n", "<leader>mm", ":Mason<CR>,")
+map("n", "<leader>mn", ":NullLsInfo<CR>,")
 map("n", "<leader>et", ":NvimTreeToggle<CR> :NvimTreeRefresh<CR>")
 map("n", "<leader>bt", ":Switch<CR>") -- toggle b false<->true
 -- }}} ⮭
