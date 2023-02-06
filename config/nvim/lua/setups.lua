@@ -565,16 +565,14 @@ require("nvim-treesitter.configs").setup({
 		"help",
 		"vim",
 		"scss",
-		"yaml",
 		"css",
 		"html",
-		"python",
 		"json",
+		"python",
 		"rust",
 		"bash",
 		"markdown",
 		"regex",
-		"solidity",
 	},
 	sync_install = true,
 	auto_install = true,
@@ -600,6 +598,41 @@ require("nvim-treesitter.configs").setup({
 			node_incremental = "gn", -- visual: increment to the upper named parent.
 			scope_incremental = "gy", -- visual: increment to the upper scope
 			node_decremental = "gp", -- visual: decrement to the previous named node.
+		},
+	},
+	textobjects = {
+		select = {
+			enable = true,
+			lookahead = true, -- Automatically jump forward to textobj, similar to targets.vim
+			keymaps = {
+				-- You can use the capture groups defined in textobjects.scm
+				["aa"] = "@parameter.outer",
+				["ia"] = "@parameter.inner",
+				["af"] = "@function.outer",
+				["if"] = "@function.inner",
+				["ac"] = "@class.outer",
+				["ic"] = "@class.inner",
+			},
+		},
+	},
+	move = {
+		enable = true,
+		set_jumps = true, -- whether to set jumps in the jumplist
+		goto_next_start = {
+			["]m"] = "@function.outer",
+			["]]"] = "@class.outer",
+		},
+		goto_next_end = {
+			["]M"] = "@function.outer",
+			["]["] = "@class.outer",
+		},
+		goto_previous_start = {
+			["[m"] = "@function.outer",
+			["[["] = "@class.outer",
+		},
+		goto_previous_end = {
+			["[M"] = "@function.outer",
+			["[]"] = "@class.outer",
 		},
 	},
 	context_commentstring = {
@@ -735,6 +768,7 @@ cmp.setup({
 -- }}} ⮭
 
 -- 📚 LSP (and more) ⮯ {{{
+
 -- critical on_attach function, applied by mason ⮯
 local on_attach = function(client, bufnr)
 	local nmap = function(keys, func)
@@ -788,9 +822,7 @@ null_ls.setup({
 		formatting.jq, -- json
 		formatting.prettier, -- webdev 'n stuff daemon for prettier;
 		formatting.rustfmt, -- rust
-		formatting.stylua.with({
-            extra_args = { "--globals", "--column-width 80" },
-        }), -- lua
+		formatting.stylua, -- lua
 		-- 🏄 hover: ⮯
 		hover.dictionary,
 		hover.printenv,
@@ -798,7 +830,7 @@ null_ls.setup({
 })
 -- }}} ⮭
 
--- ♦️ Vim Diagnostic Settings: ⮯ {{{
+-- ♦️  Vim Diagnostic Settings: ⮯ {{{
 local signs = {
 	{ name = "DiagnosticSignError", text = "" },
 	{ name = "DiagnosticSignWarn", text = "" },
