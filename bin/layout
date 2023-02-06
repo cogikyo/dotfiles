@@ -61,6 +61,10 @@ visualizer () {
 # ============================================================================
 hyprctl keyword input:follow_mouse 0
 
+if [[ "$windows" -lt 2 ]]; then
+    visualizer
+fi
+
 hyprctl dispatch workspace "$n_flag"
 case "$n_flag" in
     1|2) "$a_flag" & sleep 5 ;;
@@ -74,9 +78,6 @@ esac
 
 hyprctl keyword input:follow_mouse 1
 
-if [[ "$windows" -lt 2 ]]; then
-    visualizer
-fi
 # ============================================================================
 
 exit 0
