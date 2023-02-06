@@ -52,7 +52,9 @@ require("xpm").setup({
 		-- }}} ⮭
 
 		-- 📎 Integrations: ⮯ {{{
-        'sayanarijit/zoxide.xplr',
+		"sayanarijit/fzf.xplr",
+		"sayanarijit/zoxide.xplr",
+		"Junker/nuke.xplr",
 		-- }}} ⮭
 
 		-- 👀 Theme ⮯ {{{
@@ -75,11 +77,49 @@ require("xpm").setup({
 -- ============================================================================
 -- ⚙️  Nonstandard Configuration: 🢢 {{{
 
-require("zoxide").setup{
-  bin = "zoxide",
-  mode = "default",
-  key = "z",
+require("zoxide").setup({
+	bin = "zoxide",
+	mode = "default",
+	key = "z",
+})
+
+require("fzf").setup({
+	mode = "default",
+	key = "t",
+	bin = "fzf",
+	args = "--preview 'pistol {}'",
+	recursive = true, -- If true, search all files under $PWD
+	enter_dir = true, -- Enter if the result is directory
+})
+
+require("nuke").setup({
+	pager = "$PAGER", -- default: less -R
+	open = {
+		run_executables = false,
+		custom = {
+			{ extension = "jpg", command = "sxiv {}" },
+			{ mime = "video/mp4", command = "mpv {}" },
+			{ mime_regex = "^video/.*", command = "mpv {}" },
+			{ mime_regex = ".*", command = "xdg-open {}" },
+		},
+	},
+	view = {
+		show_line_numbers = true, -- default: false
+	},
+	smart_view = {
+		custom = {
+			{ extension = "so", command = "ldd -r {} | less" },
+		},
+	},
+})
+
+local key = xplr.config.modes.builtin.default.key_bindings.on_key
+
+key.v = {
+	help = "nuke",
+	messages = { "PopMode", { SwitchModeCustom = "nuke" } },
 }
+key["enter"] = xplr.config.modes.custom.nuke.key_bindings.on_key.o
 
 -- }}}
 -- ============================================================================
