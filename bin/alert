@@ -9,7 +9,7 @@ SOUND_PATH="$HOME/dotfiles/share/sounds"
 # urgency="$5"
 
 if [[ "$1" == "timer" ]]; then
-   sound="jackpot"
+    sound="jackpot"
 fi
 
 case "$1" in

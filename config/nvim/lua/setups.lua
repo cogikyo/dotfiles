@@ -751,8 +751,8 @@ cmp.setup({
 		{ name = "path" },
 		{ name = "nvim_lua" },
 		{ name = "buffer" },
-		{ name = "nerdfont" },
 		{ name = "emoji" },
+		{ name = "nerdfont" },
 	},
 	confirm_opts = {
 		behavior = cmp.ConfirmBehavior.Replace,
@@ -816,9 +816,11 @@ null_ls.setup({
 		-- 🩺 diagnostics: ⮯
 		diagnostics.codespell, -- identify some common code related misspellings
 		diagnostics.shellcheck, -- shell linter
+		diagnostics.zsh, -- zsh -n (somewhat useful)
 		diagnostics.stylelint, -- css 'n related linting
 		-- 🗃️ formatting: ⮯
 		formatting.shellharden, -- bash; goes well with shellcheck linting
+		formatting.beautysh, -- zsh 'n more (+ alt bash)
 		formatting.jq, -- json
 		formatting.prettier, -- webdev 'n stuff daemon for prettier;
 		formatting.rustfmt, -- rust
