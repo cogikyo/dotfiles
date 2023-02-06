@@ -98,28 +98,32 @@ require("nuke").setup({
 		run_executables = false,
 		custom = {
 			{ extension = "jpg", command = "sxiv {}" },
+			{ extension = "png", command = "sxiv {}" },
+			{ extension = "gif", command = "gifview -a {}" },
+			{ extension = "md", command = "nvim {}" },
+			{ extension = "json", command = "nvim {}" },
+			{ extension = "svg", command = "nvim {}" },
+			{ extension = "", command = "nvim {}" },
+			{ extension = "gz", command = "tar tf {} | $PAGER" },
 			{ mime = "video/mp4", command = "mpv {}" },
 			{ mime_regex = "^video/.*", command = "mpv {}" },
 			{ mime_regex = ".*", command = "xdg-open {}" },
 		},
 	},
 	view = {
-		show_line_numbers = true, -- default: false
-	},
-	smart_view = {
-		custom = {
-			{ extension = "so", command = "ldd -r {} | less" },
-		},
+		show_line_numbers = false, -- default: false
 	},
 })
 
-local key = xplr.config.modes.builtin.default.key_bindings.on_key
+local nukekey = xplr.config.modes.builtin.default.key_bindings.on_key
 
-key.v = {
+nukekey.v = {
 	help = "nuke",
 	messages = { "PopMode", { SwitchModeCustom = "nuke" } },
 }
-key["enter"] = xplr.config.modes.custom.nuke.key_bindings.on_key.o
+nukekey["enter"] = xplr.config.modes.custom.nuke.key_bindings.on_key.o
+nukekey["right"] = xplr.config.modes.custom.nuke.key_bindings.on_key.o
+nukekey["o"] = xplr.config.modes.custom.nuke.key_bindings.on_key.v
 
 -- }}}
 -- ============================================================================
