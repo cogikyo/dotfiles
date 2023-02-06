@@ -14,6 +14,7 @@ alias niol='clear && source ~/.zshrc'
 alias ls='echo; lsd'
 alias n='nvim'
 alias c='calc'
+alias g='xplr'
 alias d='cd ~/dotfiles'
 alias v='cd ~/vagari'
 alias e='cd ~/dotfiles/config/nvim'
@@ -23,7 +24,7 @@ alias man='man --pager=$PAGER'
 
 # plugins
 if [[ ! -f ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh ]]; then
-  command git clone https://github.com/agkozak/zcomet.git ${ZDOTDIR:-${HOME}}/.zcomet/bin
+    command git clone https://github.com/agkozak/zcomet.git ${ZDOTDIR:-${HOME}}/.zcomet/bin
 fi
 
 source ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh

@@ -9,4 +9,11 @@ export GOPATH="$HOME/.go"
 export PATH="$PATH:$HOME/.go/bin"
 export PAGER=nvimpager
 
+# export PISTOL_CHROMA_STYLE=catppuccin-macchiato
+
+export FZF_DEFAULT_OPTS="\
+--color=bg+:#363a4f,bg:#24273a,spinner:#f4dbd6,hl:#F5A97F \
+--color=fg:#cad3f5,header:#F5A97F,info:#8AADF4,pointer:#f4dbd6 \
+--color=marker:#f4dbd6,fg+:#cad3f5,prompt:#8AADF4,hl+:#F5A97F"
+
 exec Hyprland
