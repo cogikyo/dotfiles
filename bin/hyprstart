@@ -2,14 +2,14 @@
 
 change-bg "code"
 
-hyprctl keyword input:follow_mouse 0
+# first open of galva keeps failing? let these be the martyrs
+glava -e "rc_bars_bot.glsl" & disown
+glava -e "rc_radial_right.glsl" & disown
+
 # layout -n 1 -a discord -w https://twitch.tv/following
-# sleep 1
 # layout -n 2 -a inkscape
-# sleep 1
 # layout -n 3 -s vagari -w https://github.com/nosvagor/vagari
 layout -n 4 -s dotfiles -w https://github.com/nosvagor/dotfiles
-hyprctl keyword input:follow_mouse 1
 
 hyprctl dispatch workspace 5
 glava -e "rc_bars_bot.glsl" & disown
