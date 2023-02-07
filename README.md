@@ -279,6 +279,7 @@ cd ~/dotfiles/etc
 sudo cp bluetooth/main.conf /etc/bluetooth/main.conf
 sudo cp udev/* /etc/udev/rules.d/
 sudo cp loader.conf /boot/loader/loader.conf
+sudo cp giview.desktop /usr/share/applications/gifview.desktop
 systemctl enable bluetooth
 ```
 
