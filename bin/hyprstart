@@ -6,7 +6,7 @@ change-bg "code"
 glava -e "rc_bars_bot.glsl" & disown
 glava -e "rc_radial_right.glsl" & disown
 
-# layout -n 1 -a discord -w https://twitch.tv/following
+layout -n 1 -w https://twitch.tv/following
 # layout -n 2 -a inkscape
 # layout -n 3 -s vagari -w https://github.com/nosvagor/vagari
 layout -n 4 -s dotfiles -w https://github.com/nosvagor/dotfiles

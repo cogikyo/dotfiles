@@ -32,7 +32,7 @@ if [[ "$windows" -gt 2 ]]; then
 fi
 
 browser () {
-    firefox-developer-edition --new-window "$w_flag" & sleep 3
+    firefox-developer-edition --new-window "$w_flag" & sleep 1.5
 }
 
 terminal () {
@@ -63,7 +63,14 @@ hyprctl keyword input:follow_mouse 0
 
 hyprctl dispatch workspace "$n_flag"
 case "$n_flag" in
-    1|2) "$a_flag" & sleep 5 ;;
+    1)
+        terminal "$s_flag"
+        browser & sleep 3
+        webcord & sleep 2;
+        hyprctl dispatch movefocus u
+        resize
+    ;;
+    2) "$a_flag" & sleep 5 ;;
     3|4)
         terminal "$s_flag"
         browser
