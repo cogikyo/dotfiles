@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-cd ~ || exit
+cd ~ || exit 20
 
 export HYPRLAND_LOG_WLR=1
 export XCURSOR_SIZE=24
@@ -8,6 +8,7 @@ export PATH="$HOME/.cargo/bin:$PATH"
 export GOPATH="$HOME/.go"
 export PATH="$PATH:$HOME/.go/bin"
 export PAGER=nvimpager
+export EDITOR="nvim"
 
 # export PISTOL_CHROMA_STYLE=catppuccin-macchiato
 

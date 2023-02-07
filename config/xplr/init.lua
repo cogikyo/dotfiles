@@ -3,12 +3,11 @@ version = "0.20.2"
 local xplr = xplr -- The globally exposed configuration to be overridden.
 ---@diagnostic enable
 
--- only non-default settings inclucded
 local general = {
 	disable_debug_error_mode = false,
 	enable_mouse = true,
 	show_hidden = false,
-	enable_recover_mode = true,
+	enable_recover_mode = false,
 	prompt = {
 		format = "  ",
 	},
@@ -48,7 +47,6 @@ require("xpm").setup({
 		"dtomvan/xpm.xplr",
 		-- ====================================================================
 		-- 🛰️ Exentions: ⮯ {{{
-		"sayanarijit/command-mode.xplr",
 		-- }}} ⮭
 
 		-- 📎 Integrations: ⮯ {{{
@@ -97,16 +95,6 @@ require("nuke").setup({
 	open = {
 		run_executables = false,
 		custom = {
-			{ extension = "jpg", command = "sxiv {}" },
-			{ extension = "png", command = "sxiv {}" },
-			{ extension = "gif", command = "gifview -a {}" },
-			{ extension = "md", command = "nvim {}" },
-			{ extension = "json", command = "nvim {}" },
-			{ extension = "svg", command = "nvim {}" },
-			{ extension = "", command = "nvim {}" },
-			{ extension = "gz", command = "tar tf {} | $PAGER" },
-			{ mime = "video/mp4", command = "mpv {}" },
-			{ mime_regex = "^video/.*", command = "mpv {}" },
 			{ mime_regex = ".*", command = "xdg-open {}" },
 		},
 	},
@@ -121,7 +109,6 @@ nukekey.v = {
 	help = "nuke",
 	messages = { "PopMode", { SwitchModeCustom = "nuke" } },
 }
-nukekey["enter"] = xplr.config.modes.custom.nuke.key_bindings.on_key.o
 nukekey["right"] = xplr.config.modes.custom.nuke.key_bindings.on_key.o
 nukekey["o"] = xplr.config.modes.custom.nuke.key_bindings.on_key.v
 
