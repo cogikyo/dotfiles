@@ -20,6 +20,9 @@ alias v='cd ~/vagari'
 alias e='cd ~/dotfiles/config/nvim'
 alias x='exit'
 alias p='paru'
+alias oc='ouch compress'
+alias od='ouch decompress'
+alias ol='ouch list --tree'
 alias man='man --pager=$PAGER'
 
 # plugins
@@ -31,13 +34,13 @@ source ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh
 
 zcomet load zsh-users/zsh-syntax-highlighting
 zcomet load zsh-users/zsh-autosuggestions
-    ZSH_AUTOSUGGEST_STRATEGY=(history completion match_prev_cmd)
+ZSH_AUTOSUGGEST_STRATEGY=(history completion match_prev_cmd)
 zcomet load marlonrichert/zsh-autocomplete
-    zstyle ':autocomplete:*' fzf-completion yes
-    zstyle ':autocomplete:*' min-delay 0.42
-    zstyle ':autocomplete:*' list-lines 21
-    zstyle ':autocomplete:history-search:*' list-lines 21
-    zstyle ':autocomplete:history-incremental-search-*:*' list-lines 21
+zstyle ':autocomplete:*' fzf-completion yes
+zstyle ':autocomplete:*' min-delay 0.42
+zstyle ':autocomplete:*' list-lines 21
+zstyle ':autocomplete:history-search:*' list-lines 21
+zstyle ':autocomplete:history-incremental-search-*:*' list-lines 21
 
 source $HOME/.config/zsh/vagari_zsh-syntax-highlighting.zsh
 
