@@ -4,6 +4,7 @@ cd ~ || exit 20
 
 export HYPRLAND_LOG_WLR=1
 export XCURSOR_SIZE=24
+export XCURSOR_THEME=Nordzy-cursors-white
 export PATH="$HOME/.cargo/bin:$PATH"
 export GOPATH="$HOME/.go"
 export PATH="$PATH:$HOME/.go/bin"

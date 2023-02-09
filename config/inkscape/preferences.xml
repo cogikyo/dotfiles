@@ -302,7 +302,7 @@
        id="lpetool"
        mode="drag"
        style="fill:#ff0000;fill-opacity:1;fill-rule:nonzero;stroke:none;"
-       unit="px"
+       unit="mm"
        show_bbox="1" />
     <eventcontext
        id="text"
@@ -938,10 +938,10 @@
      style="fill:#000000">
     <group
        width="1870"
-       height="634"
+       height="471"
        x="0"
        y="0"
-       maximized="0"
+       maximized="1"
        fullscreen="0"
        id="geometry" />
     <group
@@ -1060,8 +1060,8 @@
   <group
      id="theme"
      defaultPreferDarkTheme="0"
-     defaultIconTheme="Adwaita"
-     defaultGtkTheme="Adwaita"
+     defaultIconTheme="Nordzy"
+     defaultGtkTheme="Catppuccin-Macchiato-Standard-Peach-Dark"
      narrowSpinButton="1"
      preferDarkTheme="1"
      darkTheme="1"
