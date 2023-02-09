@@ -9,6 +9,7 @@ export GOPATH="$HOME/.go"
 export PATH="$PATH:$HOME/.go/bin"
 export PAGER=nvimpager
 export EDITOR="nvim"
+export DOTS="$HOME/dotfiles"
 
 # export PISTOL_CHROMA_STYLE=catppuccin-macchiato
 

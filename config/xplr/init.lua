@@ -5,7 +5,6 @@ local xplr = xplr -- The globally exposed configuration to be overridden.
 
 -- 🌐 General: ⮯ {{{
 
-local orange = {}
 -- https://xplr.dev/en/style (shorthand ⮯)
 local function style(fg, add_mods)
 	return {
@@ -41,12 +40,12 @@ local general = {
 		header = {
 			cols = {
 				{ format = "  " },
-				{ format = "╭──⨒ path" },
-				{ format = "⼈⾕⾥" },
+				{ format = "╭─⨒ path" },
+				{ format = "⼈⾕⾥" },
 				{ format = "猪size ─╮" },
 				{ format = " modified" },
 			},
-			style = { fg = "Blue" },
+			style = style("Blue", { "Bold" }),
 			height = 1,
 		},
 		row = {
@@ -241,14 +240,6 @@ require("xpm").setup({
 		"Junker/nuke.xplr",
 		"dtomvan/ouch.xplr",
 		"prncss-xyz/icons.xplr",
-		{
-			"dtomvan/extra-icons.xplr",
-			after = function()
-				xplr.config.general.table.row.cols[2] = {
-					format = "custom.icons_dtomvan_col_1",
-				}
-			end,
-		},
 	},
 	auto_install = true,
 	auto_cleanup = true,
