@@ -90,7 +90,7 @@
 
 > 🌟 Additional guiding principles for software selection:
 >
-> - 🧪 **Innovative** (what's better _way_ of doing things?)
+> - 🧪 **Innovative** (what's a better _way_ of doing things?)
 > - 📖 **Open** (growth oriented; _infinite_ games)
 > - 🌍 **Collaborative** (what can _we_ do better?)
 >
@@ -140,8 +140,8 @@
 - Color Scheme: [vagari](https://github.com/nosvagor/vagari#palette)
 - GTK:
 - QT:
-- Cursors:
-- Icons:
+- Cursors: [Nordzy-orange](https://github.com/alvatip/Nordzy-cursors) (temporary)
+- Icons: [Nordzy](https://github.com/alvatip/Nordzy-icon) (temporary)
 
 </details>
 
@@ -182,12 +182,12 @@
 
 </details>
 
-<details closed>
-<summary><h3> 🔩 Literal Installation</h3></summary>
+<details open>
+<summary><h4> 🔩 Literal Installation</h4></summary>
 
 **1. Get the installation image:**
 
-- **[archlinux-version-x86_64.iso](https://archlinux.org/download/)** &mdash; https://archlinux.org/download/
+- **[archlinux-version-x86_64.iso](https://archlinux.org/download/)** (https://archlinux.org/download/)
 
 **2. Prepare an installation medium:**
 
@@ -268,18 +268,20 @@ cd ~
 mkdir .config
 ln -sfn ~/dotfiles/config/* ~/.config/
 ln -sfn ~/dotfiles/config/zsh/zshrc .zshrr
-sudo ln -sfn "$HOME"/dotfiles/bin/* /usr/bin/
 ```
 
 <br>
 
-**7. Copy root config files:**
+**7. Setup some root configurations:**
 ```shell
 cd ~/dotfiles/etc
+sudo ln -sfn "$HOME"/dotfiles/bin/* /usr/bin/
 sudo cp bluetooth/main.conf /etc/bluetooth/main.conf
 sudo cp udev/* /etc/udev/rules.d/
 sudo cp loader.conf /boot/loader/loader.conf
 sudo cp giview.desktop /usr/share/applications/gifview.desktop
+sudo cp cursor/index.theme /usr/share/icons/default/index.theme
+sudo cp security/faillock.conf /etc/security/faillock.conf
 systemctl enable bluetooth
 ```
 

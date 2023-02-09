@@ -27,7 +27,7 @@ fi
 
 windows=$(hyprctl workspaces | grep -A 1 "ID $n_flag" | grep -oP '\windows:\s+\K[0-9]+')
 if [[ "$windows" -gt 2 ]]; then
-    notify-send -u critical -t 2000 "ERROR: layout already open."
+    dunstify -u critical -t 2000 "ERROR" "a layout is already open"
     exit 1
 fi
 
