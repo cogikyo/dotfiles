@@ -138,7 +138,7 @@
 <summary>🎨 <b>Design Framework</b></summary>
 
 - Color Scheme: [vagari](https://github.com/nosvagor/vagari#palette)
-- GTK:
+- GTK: [CatppuccinMacchiato (Peach)](https://github.com/catppuccin/gtk) (temporary)
 - QT:
 - Cursors: [Nordzy-orange](https://github.com/alvatip/Nordzy-cursors) (temporary)
 - Icons: [Nordzy](https://github.com/alvatip/Nordzy-icon) (temporary)
@@ -182,7 +182,7 @@
 
 </details>
 
-<details open>
+<details closed>
 <summary><h4> 🔩 Literal Installation</h4></summary>
 
 **1. Get the installation image:**
@@ -280,7 +280,6 @@ sudo cp bluetooth/main.conf /etc/bluetooth/main.conf
 sudo cp udev/* /etc/udev/rules.d/
 sudo cp loader.conf /boot/loader/loader.conf
 sudo cp giview.desktop /usr/share/applications/gifview.desktop
-sudo cp cursor/index.theme /usr/share/icons/default/index.theme
 sudo cp security/faillock.conf /etc/security/faillock.conf
 systemctl enable bluetooth
 ```
