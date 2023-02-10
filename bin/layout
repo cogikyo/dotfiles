@@ -52,11 +52,6 @@ resize () {
     done # have resize master several times (bug?) ⮭
 }
 
-visualizer () {
-    exec glava -e "rc_radial_right.glsl" & disown
-    exec glava -e "rc_bars_bot.glsl" & disown
-}
-
 
 # ============================================================================
 hyprctl keyword input:follow_mouse 0
@@ -78,10 +73,6 @@ case "$n_flag" in
     ;;
     *) exit 1 ;;
 esac
-
-if [[ "$windows" -lt 2 ]]; then
-    visualizer & sleep 2
-fi
 
 hyprctl keyword input:follow_mouse 1
 # ============================================================================

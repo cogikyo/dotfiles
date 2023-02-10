@@ -13,7 +13,7 @@
 /* outline width (in pixels, set to 0 to disable outline drawing) */
 #define BAR_OUTLINE_WIDTH 0
 /* Amplify magnitude of the results each bar displays */
-#define AMPLIFY 500
+#define AMPLIFY 442
 /* Bar color */
 #define COLOR (#6b88f4 * ((d / 180) + 0.69))
 /* Angle (in radians) for how much to rotate the visualizer */

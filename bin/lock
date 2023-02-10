@@ -2,12 +2,15 @@
 
 hyprctl dispatch workspace 6
 killall eww -9
+killall glava
 playerctl pause
 change-bg "lock" 2>&1 /dev/null
 sleep 0.5
 
 swaylock -C "$HOME/.config/swaylock/config.conf"
 
+glava -e "bars_rc.glsl" & disown
+glava -e "radial_rc.glsl" & disown
 playerctl play
 change-bg "music"
 hyprctl dispatch workspace 5

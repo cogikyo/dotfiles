@@ -2,18 +2,14 @@
 
 change-bg "code"
 
-# first open of galva keeps failing? let these be the martyrs
-glava -e "rc_bars_bot.glsl" & disown
-glava -e "rc_radial_right.glsl" & disown
-
 layout -n 1 -w https://twitch.tv/following
 # layout -n 2 -a inkscape
 # layout -n 3 -s vagari -w https://github.com/nosvagor/vagari
 layout -n 4 -s dotfiles -w https://github.com/nosvagor/dotfiles
 
 hyprctl dispatch workspace 5
-glava -e "rc_bars_bot.glsl" & disown
-glava -e "rc_radial_mid.glsl" & disown
+glava -e "bars_rc.glsl" & disown
+glava -e "radial_rc.glsl" & disown
 spotify & disown
 sleep 2
 
