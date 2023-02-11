@@ -1,5 +1,6 @@
 adobe-source-code-pro-fonts
 amd-ucode
+ardour
 base
 base-devel
 bat
@@ -10,6 +11,7 @@ bluez-utils
 brave-bin
 btop
 calc
+catppuccin-gtk-theme-macchiato
 codespell
 darktable
 dunst-git
@@ -21,7 +23,6 @@ ffmpegthumbnailer
 firefox-developer-edition
 fontpreview
 fzf
-git
 gifsicle
 gimp
 git
@@ -29,6 +30,8 @@ glava
 go
 grim
 gst-plugin-pipewire
+gtk3-demos
+guvcview
 hyprland-bin
 hyprpicker-git
 imagemagick
@@ -45,6 +48,7 @@ lsd
 lua-format
 luacheck
 luarocks
+lxappearance
 man-db
 mediainfo
 mplayer
@@ -72,7 +76,6 @@ playerctl
 polkit-kde-agent
 prettier
 pulsemixer
-python
 python-pip
 python-pynvim
 qbittorrent
