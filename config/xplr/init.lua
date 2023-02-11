@@ -1,27 +1,37 @@
+-- ============================================================================
+-- 🧰 Setup: 🢢 {{{
 ---@diagnostic disable
 version = "0.20.2"
 local xplr = xplr -- The globally exposed configuration to be overridden.
 ---@diagnostic enable
-
--- 🌐 General: ⮯ {{{
-
 -- https://xplr.dev/en/style (shorthand ⮯)
-local function style(fg, add_mods)
+local function style(color, add_mods)
 	return {
-		fg = fg or nil,
+		fg = color or nil,
 		add_modifiers = add_mods or nil,
 	}
 end
 
 -- more shorthand for common {format, style} pattern
-local function format(fmt, color)
+local function format(fmt, color, mods)
 	return {
-		format = fmt or nil,
-		style = { fg = color } or {},
+		format = fmt,
+		style = {
+			fg = color,
+			add_modifiers = mods or {},
+		},
 	}
 end
 
--- https://github.com/sayanarijit/xplr/blob/main/src/init.lua
+local azure = { Rgb = { 158, 219, 255 } }
+local orange = { Rgb = { 245, 169, 127 } }
+local purple = { Rgb = { 194, 170, 252 } }
+
+-- }}} ⮭
+-- ============================================================================
+
+-- 🌐 General🢢: ⮯ {{{
+
 local general = {
 	disable_debug_error_mode = true,
 	enable_mouse = true,
@@ -40,12 +50,12 @@ local general = {
 		header = {
 			cols = {
 				{ format = "  " },
-				{ format = "╭─⨒ path" },
+				{ format = "╭─⼮path" },
 				{ format = "⼈⾕⾥" },
 				{ format = "猪size ─╮" },
 				{ format = " modified" },
 			},
-			style = style("Blue", { "Bold" }),
+			style = style("Green"),
 			height = 1,
 		},
 		row = {
@@ -80,37 +90,30 @@ local general = {
 		style = {},
 	},
 	focus_ui = {
-		prefix = "⌬ ╼( ",
-		suffix = " )╾",
-		style = {
-			fg = { Rgb = { 245, 169, 127 } },
-		},
+		prefix = "⌬ ",
+		suffix = "",
+		style = style(orange, { "Bold" }),
 	},
 	selection_ui = {
-		prefix = "⟪ ",
-		suffix = " ⟫",
-		style = style("Cyan", { "Bold" }),
+		prefix = "⟪------",
+		suffix = " ------ ⼶",
+		style = style("Cyan", { "Dim" }),
 	},
 	focus_selection_ui = {
-		prefix = " ╼[",
-		suffix = "]╾",
-		style = {
-			fg = {
-				Rgb = { 245, 169, 127 },
-			},
-			add_modifiers = { "Bold" },
-		},
+		prefix = "⌬ ⟪------",
+		suffix = " ------ ⼶",
+		style = style(orange, { "Bold" }),
 	},
 	sort_and_filter_ui = {
-		separator = format("  ", "DarkGray"),
+		separator = format(" ⇨ ", "DarkGray"),
 		sort_direction_identifiers = {
-			forward = format("⮯", "Blue"),
-			reverse = format("⮭", "Red"),
+			forward = format("⮯", "Magenta"),
+			reverse = format("⮭", "Cyan"),
 		},
 		sorter_identifiers = {
 			ByExtension = { format = "ext", style = {} },
 			ByICanonicalAbsolutePath = { format = "[ci]abs", style = {} },
-			ByIRelativePath = { format = "[i]rel", style = {} },
+			ByIRelativePath = format("⻚", "Magenta"),
 			ByISymlinkAbsolutePath = { format = "[si]abs", style = {} },
 			ByIsBroken = { format = "⨯", style = {} },
 			ByIsDir = { format = "dir", style = {} },
@@ -125,7 +128,7 @@ local general = {
 
 			ByCanonicalAbsolutePath = { format = "[c]abs", style = {} },
 			ByCanonicalExtension = { format = "[c]ext", style = {} },
-			ByCanonicalIsDir = { format = "[c]dir", style = {} },
+			ByCanonicalIsDir = format("⽊", "Cyan"),
 			ByCanonicalIsFile = { format = "[c]file", style = {} },
 			ByCanonicalIsReadonly = { format = "[c]ro", style = {} },
 			ByCanonicalMimeEssence = { format = "[c]mime", style = {} },
@@ -148,7 +151,7 @@ local general = {
 			RelativePathDoesEndWith = { format = "rel=$", style = {} },
 			RelativePathDoesNotContain = { format = "rel!~", style = {} },
 			RelativePathDoesNotEndWith = { format = "rel!$", style = {} },
-			RelativePathDoesNotStartWith = { format = "rel!^", style = {} },
+			RelativePathDoesNotStartWith = format("  ", "Yellow"),
 			RelativePathDoesStartWith = { format = "rel=^", style = {} },
 			RelativePathIs = { format = "rel==", style = {} },
 			RelativePathIsNot = { format = "rel!=", style = {} },
@@ -189,20 +192,151 @@ local general = {
 			IAbsolutePathDoesNotMatchRegex = { format = "[i]abs!/", style = {} },
 		},
 		search_identifier = {
-			format = "  ",
-			style = { fg = { Rgb = { 245, 169, 127 } } },
+			format = " ",
+			style = style(orange),
 		},
 	},
-	-- panel_ui = {
-	-- 	default = {
-	-- 		title = format(nil),
-	-- 	},
-	-- },
+	panel_ui = {
+		default = {
+			title = {
+				format = nil,
+				style = { fg = "Blue", add_modifiers = { "Bold" } },
+			},
+			style = {},
+			borders = {
+				"Top",
+				"Right",
+				"Bottom",
+				"Left",
+			},
+			border_type = "Rounded",
+			border_style = { fg = "DarkGray" },
+		},
+		table = {
+			title = format(),
+			style = {},
+			borders = nil,
+			border_type = nil,
+			border_style = {},
+		},
+		help_menu = {
+			title = format(),
+			style = {},
+			borders = nil,
+			border_type = nil,
+			border_style = {},
+		},
+		input_and_logs = {
+			title = format(),
+			style = {},
+			borders = nil,
+			border_type = nil,
+			border_style = {},
+		},
+		selection = {
+			title = format(),
+			style = {},
+			borders = nil,
+			border_type = nil,
+			border_style = {},
+		},
+		sort_and_filter = {
+			title = format(" Filter   Sort"),
+			style = {},
+			borders = nil,
+			border_type = nil,
+			border_style = {},
+		},
+	},
+	initial_sorting = {
+		{ sorter = "ByCanonicalIsDir", reverse = true },
+		{ sorter = "ByIRelativePath", reverse = false },
+	},
+	initial_mode = "default",
+	initial_layout = "default",
+	start_fifo = nil,
+	global_key_bindings = {
+		on_key = {
+			["esc"] = {
+				messages = {
+					"PopMode",
+				},
+			},
+			["ctrl-c"] = {
+				messages = {
+					"Terminate",
+				},
+			},
+		},
+	},
 }
 
 -- 🧮 ZHU LI, DO THE THING!
 for key, val in pairs(general) do
 	xplr.config.general[key] = val
+end
+-- }}} ⮭
+
+-- ✳️  Nodes Types: ⮯ {{{
+
+local function meta(icon, color, mods)
+	return {
+		style = {
+			fg = color,
+			add_modifiers = mods or nil,
+		},
+		meta = { icon = icon },
+	}
+end
+
+local node_types = {
+	directory = meta(" ", "Blue"),
+	file = meta(" ", "Reset"),
+	symlink = meta(" ", azure),
+	mime_essence = {
+		audio = {
+			["*"] = meta(" ", "Magenta"),
+		},
+		video = {
+			["*"] = meta(" ", purple),
+		},
+		image = {
+			["*"] = meta(" ", "Magenta", { "Dim" }),
+		},
+		application = {
+			["*"] = meta(" ", "Green"),
+		},
+		text = {
+			["*"] = meta(" ", "Reset"),
+		},
+	},
+	extension = {
+		md = meta(" ", "Yellow"),
+	},
+	special = {
+		downloads = meta(" "),
+		dotfiles = meta("🍙"),
+		docs = meta(" "),
+		books = meta(" "),
+		papers = meta("📜"),
+		templates = meta(" "),
+		notes = meta("📚"),
+		media = meta(" "),
+		vagari = meta("🧬"),
+		share = meta("⾦"),
+		etc = meta("⽳"),
+		bin = meta("⼡"),
+		usr = meta("⼈"),
+		home = meta("⾕", orange),
+		cullyn = meta("⾕"),
+		config = meta(" "),
+		LICENSE = meta(" ", "DarkGray"),
+	},
+}
+
+-- 🧮 ZHU LI, DO THE THING!
+for key, val in pairs(node_types) do
+	xplr.config.node_types[key] = val
 end
 -- }}} ⮭
 
@@ -239,14 +373,13 @@ require("xpm").setup({
 		"sayanarijit/trash-cli.xplr",
 		"Junker/nuke.xplr",
 		"dtomvan/ouch.xplr",
-		"prncss-xyz/icons.xplr",
 	},
 	auto_install = true,
 	auto_cleanup = true,
 })
 -- }}} ⮭
 
--- ⚙️  Nonstandard Configurations: ⮯ {{{
+-- ⚙️  Nonstandard Plugin Configurations: ⮯ {{{
 
 require("ouch").setup({
 	mode = "default",
