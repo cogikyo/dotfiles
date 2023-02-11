@@ -137,9 +137,9 @@
 <details open>
 <summary>🎨 <b>Design Framework</b></summary>
 
-- Color Scheme: [vagari](https://github.com/nosvagor/vagari#palette)
-- GTK: [CatppuccinMacchiato (Peach)](https://github.com/catppuccin/gtk) (temporary)
-- QT:
+- Color Scheme: [catppuccin macchiato](https://github.com/catppuccin/catppuccin) (temporary)
+    - work in progress: [vagari](https://github.com/nosvagor/vagari#palette)
+- GTK: [catppuccin macchiato (peach)](https://github.com/catppuccin/gtk) (temporary)
 - Cursors: [Nordzy-orange](https://github.com/alvatip/Nordzy-cursors) (temporary)
 - Icons: [Nordzy](https://github.com/alvatip/Nordzy-icon) (temporary)
 
@@ -162,6 +162,8 @@
 - File Explorer: [xplr](https://github.com/sayanarijit/xplr)
 - Image Editing: [gimp](https://www.gimp.org/)
 - Image Processing: [darktable](https://www.darktable.org/)
+- Screen Recording: [OBS](https://obsproject.com/)
+- Audio Editing: [ardour](https://ardour.org/)
 - Vector Graphics: [inkscape](https://inkscape.org/)
 - Motion Graphics: [blender](https://www.blender.org/)
 - Music: [spotify](www.spotify.com) with [playerctl](https://github.com/altdesktop/playerctl)
