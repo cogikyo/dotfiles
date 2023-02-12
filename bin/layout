@@ -26,7 +26,7 @@ if [[ "$#" == 0 ]]; then
 fi
 
 windows=$(hyprctl workspaces | grep -A 1 "ID $n_flag" | grep -oP '\windows:\s+\K[0-9]+')
-if [[ "$windows" -gt 2 ]]; then
+if [[ "$windows" -gt 0 ]]; then
     dunstify -u critical -t 2000 "ERROR" "a layout is already open"
     exit 1
 fi

@@ -937,11 +937,11 @@
      id="desktop"
      style="fill:#000000">
     <group
-       width="1870"
-       height="471"
+       width="2915"
+       height="1955"
        x="0"
        y="0"
-       maximized="1"
+       maximized="0"
        fullscreen="0"
        id="geometry" />
     <group
