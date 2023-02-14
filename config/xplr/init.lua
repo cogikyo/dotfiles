@@ -4,6 +4,7 @@
 version = "0.20.2"
 local xplr = xplr -- The globally exposed configuration to be overridden.
 ---@diagnostic enable
+
 -- https://xplr.dev/en/style (shorthand ⮯)
 local function style(color, add_mods)
 	return {
@@ -23,6 +24,23 @@ local function format(fmt, color, mods)
 	}
 end
 
+local function panel_format(fmt, color, mods)
+	return {
+		title = {
+			format = fmt,
+			style = {
+				fg = color,
+				add_modifiers = mods or {},
+			},
+		},
+		border_style = {
+			fg = color,
+			add_modifiers = mods or {},
+		},
+        style = { fg = color }
+	}
+end
+
 local azure = { Rgb = { 158, 219, 255 } }
 local orange = { Rgb = { 245, 169, 127 } }
 local purple = { Rgb = { 194, 170, 252 } }
@@ -30,10 +48,10 @@ local purple = { Rgb = { 194, 170, 252 } }
 -- }}} ⮭
 -- ============================================================================
 
--- 🌐 General🢢: ⮯ {{{
+-- 🌐 General: ⮯ {{{
 
 local general = {
-	disable_debug_error_mode = true,
+	disable_debug_error_mode = false,
 	enable_mouse = true,
 	show_hidden = false,
 	read_only = false,
@@ -41,11 +59,13 @@ local general = {
 	hide_remaps_in_help_menu = false,
 	enforce_bounded_index_navigation = false,
 	prompt = format("  ", "Blue"),
+
 	logs = {
 		success = format("SUCCESS", "Green"),
 		warning = format("WARNING", "Yellow"),
 		error = format("ERROR", "Red"),
 	},
+
 	table = {
 		header = {
 			cols = {
@@ -77,33 +97,38 @@ local general = {
 		},
 		col_spacing = 1,
 		col_widths = {
-			{ Percentage = 5 },
-			{ Percentage = 55 },
-			{ Percentage = 5 },
-			{ Percentage = 15 },
-			{ Percentage = 20 },
+			{ Percentage = 4 },
+			{ Percentage = 57 },
+			{ Percentage = 4 },
+			{ Percentage = 11 },
+			{ Percentage = 21 },
 		},
 	},
+
 	default_ui = {
 		prefix = " ",
 		suffix = "",
 		style = {},
 	},
+
 	focus_ui = {
 		prefix = "⌬ ",
 		suffix = "",
 		style = style(orange, { "Bold" }),
 	},
+
 	selection_ui = {
-		prefix = "⟪------",
-		suffix = " ------ ⼶",
+		prefix = "⟪─── ",
+		suffix = " ─╼╾ ⼶",
 		style = style("Cyan", { "Dim" }),
 	},
+
 	focus_selection_ui = {
-		prefix = "⌬ ⟪------",
-		suffix = " ------ ⼶",
+		prefix = "⌬ ⟪─── ",
+		suffix = " ─╼╾ ⼶",
 		style = style(orange, { "Bold" }),
 	},
+
 	sort_and_filter_ui = {
 		separator = format(" ⇨ ", "DarkGray"),
 		sort_direction_identifiers = {
@@ -125,7 +150,6 @@ local general = {
 			BySize = { format = "size", style = {} },
 			ByCreated = { format = "created", style = {} },
 			ByLastModified = { format = "modified", style = {} },
-
 			ByCanonicalAbsolutePath = { format = "[c]abs", style = {} },
 			ByCanonicalExtension = { format = "[c]ext", style = {} },
 			ByCanonicalIsDir = format("⽊", "Cyan"),
@@ -135,7 +159,6 @@ local general = {
 			ByCanonicalSize = { format = "[c]size", style = {} },
 			ByCanonicalCreated = { format = "[c]created", style = {} },
 			ByCanonicalLastModified = { format = "[c]modified", style = {} },
-
 			BySymlinkAbsolutePath = { format = "[s]abs", style = {} },
 			BySymlinkExtension = { format = "[s]ext", style = {} },
 			BySymlinkIsDir = { format = "[s]dir", style = {} },
@@ -151,13 +174,12 @@ local general = {
 			RelativePathDoesEndWith = { format = "rel=$", style = {} },
 			RelativePathDoesNotContain = { format = "rel!~", style = {} },
 			RelativePathDoesNotEndWith = { format = "rel!$", style = {} },
-			RelativePathDoesNotStartWith = format("  ", "Yellow"),
+			RelativePathDoesNotStartWith = format("  ", "White"),
 			RelativePathDoesStartWith = { format = "rel=^", style = {} },
 			RelativePathIs = { format = "rel==", style = {} },
 			RelativePathIsNot = { format = "rel!=", style = {} },
 			RelativePathDoesMatchRegex = { format = "rel=/", style = {} },
 			RelativePathDoesNotMatchRegex = { format = "rel!/", style = {} },
-
 			IRelativePathDoesContain = { format = "[i]rel=~", style = {} },
 			IRelativePathDoesEndWith = { format = "[i]rel=$", style = {} },
 			IRelativePathDoesNotContain = { format = "[i]rel!~", style = {} },
@@ -168,7 +190,6 @@ local general = {
 			IRelativePathIsNot = { format = "[i]rel!=", style = {} },
 			IRelativePathDoesMatchRegex = { format = "[i]rel=/", style = {} },
 			IRelativePathDoesNotMatchRegex = { format = "[i]rel!/", style = {} },
-
 			AbsolutePathDoesContain = { format = "abs=~", style = {} },
 			AbsolutePathDoesEndWith = { format = "abs=$", style = {} },
 			AbsolutePathDoesNotContain = { format = "abs!~", style = {} },
@@ -179,7 +200,6 @@ local general = {
 			AbsolutePathIsNot = { format = "abs!=", style = {} },
 			AbsolutePathDoesMatchRegex = { format = "abs=/", style = {} },
 			AbsolutePathDoesNotMatchRegex = { format = "abs!/", style = {} },
-
 			IAbsolutePathDoesContain = { format = "[i]abs=~", style = {} },
 			IAbsolutePathDoesEndWith = { format = "[i]abs=$", style = {} },
 			IAbsolutePathDoesNotContain = { format = "[i]abs!~", style = {} },
@@ -193,14 +213,14 @@ local general = {
 		},
 		search_identifier = {
 			format = " ",
-			style = style(orange),
+			style = style(orange, { "Bold" }),
 		},
 	},
 	panel_ui = {
 		default = {
 			title = {
 				format = nil,
-				style = { fg = "Blue", add_modifiers = { "Bold" } },
+				style = style("Blue", { "Bold" }),
 			},
 			style = {},
 			borders = {
@@ -212,49 +232,38 @@ local general = {
 			border_type = "Rounded",
 			border_style = { fg = "DarkGray" },
 		},
-		table = {
-			title = format(),
-			style = {},
-			borders = nil,
-			border_type = nil,
-			border_style = {},
-		},
-		help_menu = {
-			title = format(),
-			style = {},
-			borders = nil,
-			border_type = nil,
-			border_style = {},
-		},
-		input_and_logs = {
-			title = format(),
-			style = {},
-			borders = nil,
-			border_type = nil,
-			border_style = {},
-		},
-		selection = {
-			title = format(),
-			style = {},
-			borders = nil,
-			border_type = nil,
-			border_style = {},
-		},
-		sort_and_filter = {
-			title = format(" Filter   Sort"),
-			style = {},
-			borders = nil,
-			border_type = nil,
-			border_style = {},
-		},
+		table = panel_format(nil, "Blue", { "Bold" }),
+		help_menu = panel_format(
+			"─╼╾ 何 Help ╼╾",
+			"Magenta",
+			{ "Bold" }
+		),
+		input_and_logs = panel_format(
+			"─╼╾  Input ╼╾  Logs ╼╾",
+			"Blue",
+			{ "Dim" }
+		),
+		selection = panel_format(
+			"─╼╾ ⼶ Selection ╼╾",
+			"Cyan",
+			{ "Dim" }
+		),
+		sort_and_filter = panel_format(
+			"─╼╾  Filter ╼╾ Sort  ╼╾",
+			"Blue",
+			{ "Dim" }
+		),
 	},
+
 	initial_sorting = {
 		{ sorter = "ByCanonicalIsDir", reverse = true },
 		{ sorter = "ByIRelativePath", reverse = false },
 	},
+
 	initial_mode = "default",
 	initial_layout = "default",
 	start_fifo = nil,
+
 	global_key_bindings = {
 		on_key = {
 			["esc"] = {
@@ -304,6 +313,9 @@ local node_types = {
 			["*"] = meta(" ", "Magenta", { "Dim" }),
 		},
 		application = {
+			["x-pie-executable"] = meta(" ", "Green"),
+			["x-shellscript"] = meta(" ", "Green"),
+			["x-executable"] = meta(" ", "Green"),
 			["*"] = meta(" ", "Green"),
 		},
 		text = {
@@ -312,6 +324,21 @@ local node_types = {
 	},
 	extension = {
 		md = meta(" ", "Yellow"),
+		toml = meta(" "),
+		conf = meta(" "),
+		json = meta(" "),
+		list = meta(" "),
+		lst = meta(" "),
+		dirs = meta(" "),
+		gz = meta(" ", "White"),
+		zip = meta(" ", "White"),
+		desktop = meta(" "),
+		rules = meta(" ", "Red", { "Dim" }),
+		lua = meta(" ", orange, { "Dim" }),
+		rs = meta(" ", orange, { "Dim" }),
+		py = meta(" ", orange, { "Dim" }),
+		scss = meta(" ", orange, { "Dim" }),
+		css = meta(" ", orange, { "Dim" }),
 	},
 	special = {
 		downloads = meta(" "),
@@ -330,7 +357,7 @@ local node_types = {
 		home = meta("⾕", orange),
 		cullyn = meta("⾕"),
 		config = meta(" "),
-		LICENSE = meta(" ", "DarkGray"),
+		LICENSE = meta(" ", "DarkGray"),
 	},
 }
 
@@ -338,6 +365,140 @@ local node_types = {
 for key, val in pairs(node_types) do
 	xplr.config.node_types[key] = val
 end
+-- }}} ⮭
+
+-- 🪟 Layout: ⮯ {{{
+-- Type: [Layout](https://xplr.dev/en/layout)
+xplr.config.layouts.builtin.default = {
+	Horizontal = {
+		config = {
+			margin = 1,
+			horizontal_margin = 2,
+			constraints = { { Percentage = 100 } },
+		},
+		splits = {
+			{
+				Vertical = {
+					config = {
+						constraints = {
+							{ Length = 3 },
+							{ Min = 1 },
+							{ Length = 15 },
+							{ Length = 3 },
+						},
+					},
+					splits = {
+						"SortAndFilter",
+						"Table",
+						"Selection",
+						"InputAndLogs",
+					},
+				},
+			},
+		},
+	},
+}
+
+-- The layout without help menu
+--
+-- Type: [Layout](https://xplr.dev/en/layout)
+xplr.config.layouts.builtin.no_help = {
+	Horizontal = {
+		config = {
+			constraints = {
+				{ Percentage = 70 },
+				{ Percentage = 30 },
+			},
+		},
+		splits = {
+			{
+				Vertical = {
+					config = {
+						constraints = {
+							{ Length = 3 },
+							{ Min = 1 },
+							{ Length = 3 },
+						},
+					},
+					splits = {
+						"SortAndFilter",
+						"Table",
+						"InputAndLogs",
+					},
+				},
+			},
+			"Selection",
+		},
+	},
+}
+
+-- The layout without selection panel
+--
+-- Type: [Layout](https://xplr.dev/en/layout)
+xplr.config.layouts.builtin.no_selection = {
+	Horizontal = {
+		config = {
+			constraints = {
+				{ Percentage = 70 },
+				{ Percentage = 30 },
+			},
+		},
+		splits = {
+			{
+				Vertical = {
+					config = {
+						constraints = {
+							{ Length = 3 },
+							{ Min = 1 },
+							{ Length = 3 },
+						},
+					},
+					splits = {
+						"SortAndFilter",
+						"Table",
+						"InputAndLogs",
+					},
+				},
+			},
+			"HelpMenu",
+		},
+	},
+}
+
+-- The layout without help menu and selection panel
+--
+-- Type: [Layout](https://xplr.dev/en/layout)
+xplr.config.layouts.builtin.no_help_no_selection = {
+	Vertical = {
+		config = {
+			constraints = {
+				{ Length = 3 },
+				{ Min = 1 },
+				{ Length = 3 },
+			},
+		},
+		splits = {
+			"SortAndFilter",
+			"Table",
+			"InputAndLogs",
+		},
+	},
+}
+
+-- This is where you can define custom layouts
+--
+-- Type: mapping of the following key-value pairs:
+--
+-- * key: string
+-- * value: [Layout](https://xplr.dev/en/layout)
+--
+-- Example:
+--
+-- ```lua
+-- xplr.config.layouts.custom.example = "Nothing" -- Show a blank screen
+-- xplr.config.general.initial_layout = "example" -- Load the example layout
+-- ```
+xplr.config.layouts.custom = {}
 -- }}} ⮭
 
 -- ============================================================================
