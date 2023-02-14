@@ -174,7 +174,6 @@ map("n", "<leader>uad", "a ⮯<Esc>")
 map("n", "<leader>uau", "a ⮭<Esc>")
 map("n", "<leader>uar", "a 🢣 <Esc>")
 map("n", "<leader>ual", "a 🢢 <Esc>")
-map("n", "<leader>uinf", "a ∞<Esc>")
-map("n", "<leader>udna", "a  <Esc>")
 map("n", "<leader>udeg", "a °<Esc>")
+map("n", "<leader>unode", "a╼╾<Esc>")
 -- }}} ⮭
