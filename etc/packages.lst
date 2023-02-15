@@ -98,6 +98,7 @@ unzip
 usbutils
 v4l2loopback-dkms
 via-bin
+vidir
 vlc
 webcord
 wget

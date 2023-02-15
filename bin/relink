@@ -1,3 +1,7 @@
 #!/usr/bin/env bash
 
-ln -sfnv "$HOME"/dotfiles/config/* "$HOME"/.config/
+if [[ "$1" == "bin" ]]; then
+    ln -sf "$HOME"/dotfiles/bin/* /usr/bin/
+else
+    ln -sfnv "$HOME"/dotfiles/config/* "$HOME"/.config/
+fi
