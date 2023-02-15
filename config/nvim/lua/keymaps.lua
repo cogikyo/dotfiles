@@ -38,6 +38,7 @@ map("n", "<leader>so", ":w | source %<CR>")
 -- }}} ⮭
 
 -- 🔔 Quit: {{{ ⮯
+map("n", "Q", ":q!<CR>", recursive_explicit)
 map("n", "<leader>q", ":q!<CR>", recursive_explicit)
 map("n", "qq", ":q<CR>")
 map("n", "q:", "<Nop>")
@@ -45,7 +46,6 @@ map("n", "<C-c>", "<Esc>")
 -- }}} ⮭
 
 -- 🍸 Vestigial: {{{ ⮯
-map("n", "Q", "q") -- make starting recording more intentional
 map("n", "<C-z>", "u") -- undo
 map("n", "<C-y>", "<C-r>") -- redo
 map("i", "<C-v>", '<Esc>"+p') -- system clipboard (default) paste

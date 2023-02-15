@@ -37,7 +37,7 @@ local function panel_format(fmt, color, mods)
 			fg = color,
 			add_modifiers = mods or {},
 		},
-        style = { fg = color }
+		style = { fg = color },
 	}
 end
 
@@ -58,7 +58,7 @@ local general = {
 	enable_recover_mode = false,
 	hide_remaps_in_help_menu = false,
 	enforce_bounded_index_navigation = false,
-	prompt = format("  ", "Blue"),
+	prompt = format("  ", orange),
 
 	logs = {
 		success = format("SUCCESS", "Green"),
@@ -70,10 +70,12 @@ local general = {
 		header = {
 			cols = {
 				{ format = "  " },
-				{ format = "╭─⼮path" },
+				{
+					format = "╭╼╾⼮path ──────────────────────────────────────╮",
+				},
 				{ format = "⼈⾕⾥" },
 				{ format = "猪size ─╮" },
-				{ format = " modified" },
+				{ format = "🞊 modified ────╮" },
 			},
 			style = style("Green"),
 			height = 1,
@@ -232,14 +234,18 @@ local general = {
 			border_type = "Rounded",
 			border_style = { fg = "DarkGray" },
 		},
-		table = panel_format(nil, "Blue", { "Bold" }),
+		table = panel_format(
+			"──────────────────────────╼╾ ⽊ Directory ╼╾",
+			"Blue",
+			{ "Bold" }
+		),
 		help_menu = panel_format(
 			"─╼╾ 何 Help ╼╾",
 			"Magenta",
-			{ "Bold" }
+			{ "Dim" }
 		),
 		input_and_logs = panel_format(
-			"─╼╾  Input ╼╾  Logs ╼╾",
+			"──────────────────────────────────────────────────────────────╼╾  Input ╼╾  Logs ╼╾",
 			"Blue",
 			{ "Dim" }
 		),
@@ -249,7 +255,7 @@ local general = {
 			{ "Dim" }
 		),
 		sort_and_filter = panel_format(
-			"─╼╾  Filter ╼╾ Sort  ╼╾",
+			"──────────────────────────────────────────────────────────────╼╾  Filter ╼╾ Sort  ╼╾",
 			"Blue",
 			{ "Dim" }
 		),
@@ -284,6 +290,7 @@ local general = {
 for key, val in pairs(general) do
 	xplr.config.general[key] = val
 end
+
 -- }}} ⮭
 
 -- ✳️  Nodes Types: ⮯ {{{
@@ -313,9 +320,6 @@ local node_types = {
 			["*"] = meta(" ", "Magenta", { "Dim" }),
 		},
 		application = {
-			["x-pie-executable"] = meta(" ", "Green"),
-			["x-shellscript"] = meta(" ", "Green"),
-			["x-executable"] = meta(" ", "Green"),
 			["*"] = meta(" ", "Green"),
 		},
 		text = {
@@ -323,7 +327,7 @@ local node_types = {
 		},
 	},
 	extension = {
-		md = meta(" ", "Yellow"),
+		md = meta(" ", "Yellow", { "Dim" }),
 		toml = meta(" "),
 		conf = meta(" "),
 		json = meta(" "),
@@ -345,12 +349,14 @@ local node_types = {
 		dotfiles = meta("🍙"),
 		docs = meta(" "),
 		books = meta(" "),
-		papers = meta("📜"),
+		papers = meta("⼠"),
 		templates = meta(" "),
 		notes = meta("📚"),
 		media = meta(" "),
 		vagari = meta("🧬"),
 		share = meta("⾦"),
+		music = meta(" "),
+		images = meta(" ", "Magenta", { "Dim" }),
 		etc = meta("⽳"),
 		bin = meta("⼡"),
 		usr = meta("⼈"),
@@ -399,49 +405,12 @@ xplr.config.layouts.builtin.default = {
 	},
 }
 
--- The layout without help menu
---
--- Type: [Layout](https://xplr.dev/en/layout)
-xplr.config.layouts.builtin.no_help = {
-	Horizontal = {
-		config = {
-			constraints = {
-				{ Percentage = 70 },
-				{ Percentage = 30 },
-			},
-		},
-		splits = {
-			{
-				Vertical = {
-					config = {
-						constraints = {
-							{ Length = 3 },
-							{ Min = 1 },
-							{ Length = 3 },
-						},
-					},
-					splits = {
-						"SortAndFilter",
-						"Table",
-						"InputAndLogs",
-					},
-				},
-			},
-			"Selection",
-		},
-	},
-}
-
--- The layout without selection panel
---
--- Type: [Layout](https://xplr.dev/en/layout)
 xplr.config.layouts.builtin.no_selection = {
 	Horizontal = {
 		config = {
-			constraints = {
-				{ Percentage = 70 },
-				{ Percentage = 30 },
-			},
+			margin = 1,
+			horizontal_margin = 2,
+			constraints = { { Percentage = 100 } },
 		},
 		splits = {
 			{
@@ -450,55 +419,151 @@ xplr.config.layouts.builtin.no_selection = {
 						constraints = {
 							{ Length = 3 },
 							{ Min = 1 },
+							{ Length = 42 },
 							{ Length = 3 },
 						},
 					},
 					splits = {
 						"SortAndFilter",
 						"Table",
+						"HelpMenu",
 						"InputAndLogs",
 					},
 				},
 			},
-			"HelpMenu",
 		},
 	},
 }
 
--- The layout without help menu and selection panel
---
--- Type: [Layout](https://xplr.dev/en/layout)
-xplr.config.layouts.builtin.no_help_no_selection = {
-	Vertical = {
-		config = {
-			constraints = {
-				{ Length = 3 },
-				{ Min = 1 },
-				{ Length = 3 },
+-- }}} ⮭
+
+-- 🎛️ Modes: ⮯ {{{
+
+local modes = xplr.config.modes.builtin
+local on_key = modes.default.key_bindings.on_key
+
+modes.create_directory.prompt = "  (create dir)  "
+modes.create_file.prompt = "  (create file)  "
+modes.number.prompt = "  "
+modes.rename.prompt = "  (rename)  "
+
+modes.switch_layout = {
+	name = "switch layout",
+	layout = "HelpMenu",
+	key_bindings = {
+		on_key = {
+			["s"] = {
+				help = "selection",
+				messages = {
+					{ SwitchLayoutBuiltin = "default" },
+					"PopMode",
+				},
+			},
+			["h"] = {
+				help = "help",
+				messages = {
+					{ SwitchLayoutBuiltin = "no_selection" },
+					"PopMode",
+				},
 			},
 		},
-		splits = {
-			"SortAndFilter",
-			"Table",
-			"InputAndLogs",
+	},
+}
+
+on_key["m"] = {
+	help = "bookmark",
+	messages = {
+		{
+			BashExecSilently0 = [===[
+        PTH="${XPLR_FOCUS_PATH:?}"
+        PTH_ESC=$(printf %q "$PTH")
+        if echo "${PTH:?}" >> "${XPLR_SESSION_PATH:?}/bookmarks"; then
+          "$XPLR" -m 'LogSuccess: %q' "$PTH_ESC added to bookmarks"
+        else
+          "$XPLR" -m 'LogError: %q' "Failed to bookmark $PTH_ESC"
+        fi
+      ]===],
 		},
 	},
 }
 
--- This is where you can define custom layouts
---
--- Type: mapping of the following key-value pairs:
---
--- * key: string
--- * value: [Layout](https://xplr.dev/en/layout)
---
--- Example:
---
--- ```lua
--- xplr.config.layouts.custom.example = "Nothing" -- Show a blank screen
--- xplr.config.general.initial_layout = "example" -- Load the example layout
--- ```
-xplr.config.layouts.custom = {}
+on_key["`"] = {
+	help = "go to bookmark",
+	messages = {
+		{
+			BashExec0 = [===[
+        PTH=$(cat "${XPLR_SESSION_PATH:?}/bookmarks" | fzf --no-sort)
+        PTH_ESC=$(printf %q "$PTH")
+        if [ "$PTH" ]; then
+          "$XPLR" -m 'FocusPath: %q' "$PTH"
+        fi
+      ]===],
+		},
+	},
+}
+
+on_key["R"] = {
+	help = "batch rename",
+	messages = { { BashExec = [===[ renamer ]===] } },
+}
+
+-- }}}
+
+-- 🦄 Functions: ⮯ {{{
+
+-- (https://xplr.dev/en/lua-function-calls)
+
+-- Renders the second column in the table
+xplr.fn.builtin.fmt_general_table_row_cols_1 = function(m)
+	local is_binary = m.permissions.user_execute
+		or m.permissions.group_execute
+		or m.permissions.other_execute
+
+	if m.is_broken then
+		-- Broken symlink icon is hardcoded. Not implemented in xplr yet.
+		m.meta.icon = ""
+	end
+
+	if not m.is_broken and is_binary and m.canonical.is_file then
+		m.meta.icon = " "
+	end
+
+	local r = m.tree .. m.prefix
+
+	local function path_escape(path)
+		return string.gsub(string.gsub(path, "\\", "\\\\"), "\n", "\\n")
+	end
+
+	if m.meta.icon == nil then
+		r = r .. ""
+	else
+		r = r .. m.meta.icon .. " "
+	end
+
+	r = r .. path_escape(m.relative_path)
+
+	if m.is_dir then
+		r = r .. "/"
+	end
+
+	r = r .. m.suffix .. " "
+
+	if m.is_symlink then
+		r = r .. "-> "
+
+		if m.is_broken then
+			r = r .. "×"
+		else
+			r = r .. path_escape(m.symlink.absolute_path)
+
+			if m.symlink.is_dir then
+				r = r .. "/"
+			end
+		end
+	end
+
+	return r
+end
 -- }}} ⮭
 
 -- ============================================================================
@@ -560,16 +625,16 @@ require("nuke").setup({
 	open = {
 		run_executables = false,
 		custom = {
+			{ extension = "gz", command = "tar tf {} | nvimpager" },
 			{ mime_regex = ".*", command = "xdg-open {}" },
 		},
 	},
 })
 
-local key = xplr.config.modes.builtin.default.key_bindings.on_key
-local nukey = xplr.config.modes.custom.nuke.key_bindings.on_key
+local nuke_on_key = xplr.config.modes.custom.nuke.key_bindings.on_key
 
-key.v = nukey.v
-key["right"] = nukey.o
+on_key["v"] = nuke_on_key.v
+on_key["right"] = nuke_on_key.o
 
 -- }}}
 -- ============================================================================

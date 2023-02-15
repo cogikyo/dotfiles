@@ -1,12 +1,5 @@
--- see :help 'option' for more details ⮯
+-- see :help '{option}' for more details ⮯
 local options = {
-	-- 🔍 Search ==============================================================
-	hlsearch = false, -- turn off persistent highlights when searching
-	incsearch = true, -- (default on) but can be annoying.
-	ignorecase = true, -- ignore case when searching
-	smartcase = true, -- ignore, ignorecase if a capital letter is used
-	-- ========================================================================
-
 	-- 👉 Indentation =========================================================
 	tabstop = 4, -- preferred tabstop length.
 	shiftwidth = 4, -- set to same as tabstop ⮭
@@ -27,6 +20,7 @@ local options = {
 	-- ========================================================================
 
 	-- 👀 UI ==================================================================
+	hlsearch = false, -- turn off persistent highlights when searching
 	shortmess = "filnxtToOFcsS", -- control some status line message settings
 	showtabline = 0, -- I don't use tabs; hide tabs
 	number = true, -- show line numbers
@@ -45,7 +39,7 @@ local options = {
 	splitbelow = true, -- split below by default
 	splitright = true, -- split right by default
 	showmode = false, -- redundant if using lualine
-	completeopt = { "menu", "menuone", "noselect", }, -- insert complete options
+	completeopt = { "menu", "menuone", "noselect" }, -- insert complete options
 	iskeyword = "@,48-57,_,-,192-255", -- define what a ends a "word"
 	swapfile = false, -- swapfiles are useless to me
 	undofile = true, -- persistent undo, very useful with 'mbbill/undotree' plugin
