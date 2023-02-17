@@ -25,11 +25,15 @@ if [[ "$#" == 0 ]]; then
     exit 1
 fi
 
+hyprctl dispatch workspace 6
+
 windows=$(hyprctl workspaces | grep -A 1 "ID $n_flag" | grep -oP '\windows:\s+\K[0-9]+')
 if [[ "$windows" -gt 0 ]]; then
     dunstify -u critical -t 2000 "ERROR" "a layout is already open"
+    hyprctl dispatch workspace previous
     exit 1
 fi
+
 
 browser () {
     firefox-developer-edition --new-window "$w_flag" & sleep 1.5
@@ -57,23 +61,26 @@ resize () {
 hyprctl keyword input:follow_mouse 0
 
 hyprctl dispatch workspace "$n_flag"
+terminal "$s_flag"
+
 case "$n_flag" in
     1)
-        terminal "$s_flag"
-        browser & sleep 3
-        webcord & sleep 2;
-        hyprctl dispatch movefocus u
-        resize
-    ;;
-    2) "$a_flag" & sleep 5 ;;
-    3|4)
-        terminal "$s_flag"
         browser
-        resize
+        webcord & sleep 2
+        hyprctl dispatch movefocus u
+    ;;
+    2)
+        "$a_flag" & sleep 3
+        browser
+        hyprctl dispatch movefocus u
+    ;;
+    3|4)
+        browser
     ;;
     *) exit 1 ;;
 esac
 
+resize
 hyprctl keyword input:follow_mouse 1
 # ============================================================================
 
