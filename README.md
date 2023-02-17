@@ -220,7 +220,7 @@
 
 > **[General Recommendations](https://wiki.archlinux.org/title/General_recommendations)**   worth the read, seriously
 
-**1. Install latest stable of version of rust using [rustup](https://github.com/rust-lang/rustup):**
+**1. Install the latest stable of version of rust using [rustup](https://github.com/rust-lang/rustup):**
 
     rustup default stable
 

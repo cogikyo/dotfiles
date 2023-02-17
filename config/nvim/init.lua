@@ -1,7 +1,6 @@
 -- ============================================================================
 -- 📦 PACKER, PREP THE THING! 🢢 {{{
-local install_path = vim.fn.stdpath("data")
-	.. "/site/pack/packer/start/packer.nvim"
+local install_path = vim.fn.stdpath("data") .. "/site/pack/packer/start/packer.nvim"
 local is_bootstrap = false
 if vim.fn.empty(vim.fn.glob(install_path)) > 0 then
 	is_bootstrap = true
@@ -36,8 +35,8 @@ require("packer").init({
 })
 
 require("packer").startup(function(use)
--- }}}
--- ============================================================================
+	-- }}}
+	-- ============================================================================
 
 	-- 📚 LSP: ⮯ {{{
 	use({
@@ -130,7 +129,6 @@ require("packer").startup(function(use)
 	-- }}} ⮭
 
 	-- ✋ UX: ⮯ {{{
-	use("ggandor/lightspeed.nvim")
 	use("lewis6991/impatient.nvim")
 	use("numToStr/Comment.nvim")
 	use("tpope/vim-surround")
@@ -148,7 +146,7 @@ require("packer").startup(function(use)
 	use("elkowar/yuck.vim")
 	-- }}} ⮭
 
--- ============================================================================
+	-- ============================================================================
 	-- 🧮 ZHU LI, DO THE THING! 🢢 {{{
 	use("wbthomason/packer.nvim")
 

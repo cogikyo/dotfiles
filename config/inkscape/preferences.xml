@@ -536,14 +536,16 @@
     <group
        id="toolbox" />
     <group
-       id="fillstroke" />
+       id="fillstroke"
+       page="1" />
     <group
        id="filtereffects" />
     <group
        id="textandfont" />
     <group
        id="transformation"
-       applyseparately="0" />
+       applyseparately="0"
+       rotateCounterClockwise="1" />
     <group
        id="align" />
     <group
@@ -562,7 +564,8 @@
        state="1" />
     <group
        id="preferences"
-       state="1" />
+       state="1"
+       page="27" />
     <group
        id="gradienteditor" />
     <group
@@ -609,7 +612,8 @@
        id="clonetiler"
        dotrace="0" />
     <group
-       id="gridtiler" />
+       id="gridtiler"
+       SpacingType="20" />
     <group
        id="extension-error"
        show-on-startup="0" />
@@ -641,6 +645,8 @@
        id="colorpickerwindow" />
     <group
        id="undo-history" />
+    <group
+       id="objects" />
   </group>
   <group
      id="printing">
@@ -709,7 +715,7 @@
        uri="" />
     <group
        id="savewindowgeometry"
-       value="1" />
+       value="2" />
     <group
        id="defaultoffsetwidth"
        value="2px" />
@@ -724,7 +730,7 @@
        value="1.414213562" />
     <group
        id="zoomcorrection"
-       value="1.0"
+       value="1"
        unit="mm" />
     <group
        id="keyscroll"
@@ -779,7 +785,7 @@
        value="1" />
     <group
        id="defaultwindowsize"
-       value="2" />
+       value="1" />
     <group
        id="arenatilescachesize"
        value="8192" />
@@ -918,7 +924,7 @@
        unitType="2" />
     <group
        id="boot"
-       theme="colorful"
+       theme="custom"
        canvas="dark"
        enabled="0">
       <group
@@ -927,6 +933,12 @@
     </group>
     <group
        id="rendering" />
+    <group
+       id="commandpalette">
+      <group
+         id="showfullactionname"
+         value="1" />
+    </group>
   </group>
   <group
      id="extensions"
@@ -937,11 +949,11 @@
      id="desktop"
      style="fill:#000000">
     <group
-       width="2915"
+       width="1870"
        height="1955"
        x="0"
        y="0"
-       maximized="0"
+       maximized="1"
        fullscreen="0"
        id="geometry" />
     <group
@@ -963,7 +975,7 @@
      id="toolbox"
      icononly="1"
      secondary="1"
-     simplesnap="1"
+     simplesnap="0"
      small="1">
     <group
        id="tools"
@@ -1063,17 +1075,17 @@
      defaultIconTheme="Nordzy"
      defaultGtkTheme="Catppuccin-Macchiato-Standard-Peach-Dark"
      narrowSpinButton="1"
-     preferDarkTheme="1"
+     preferDarkTheme="0"
      darkTheme="1"
      symbolicIcons="1"
      symbolicDefaultBaseColors="0"
      symbolicDefaultHighColors="0"
-     gtkTheme="Adwaita"
-     iconTheme="multicolor">
+     iconTheme="multicolor"
+     fontscale="101">
     <group
        id="multicolor"
        symbolicBaseColor="3958107135"
-       symbolicSuccessColor="10029823"
+       symbolicSuccessColor="180295167"
        symbolicWarningColor="4279865599"
        symbolicErrorColor="10086143" />
   </group>

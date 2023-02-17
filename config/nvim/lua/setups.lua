@@ -825,6 +825,7 @@ null_ls.setup({
 		formatting.prettier, -- webdev 'n stuff daemon for prettier;
 		formatting.rustfmt, -- rust
 		formatting.stylua, -- lua
+		formatting.taplo, -- toml
 		-- 🏄 hover: ⮯
 		hover.dictionary,
 		hover.printenv,
@@ -881,7 +882,8 @@ local servers = {
 	prosemd_lsp = {},
 	cssls = {},
 	rust_analyzer = {},
-	sumneko_lua = {
+    taplo = {},
+	lua_ls = {
 		Lua = {
 			workspace = { checkThirdParty = false },
 			telemetry = { enable = false },

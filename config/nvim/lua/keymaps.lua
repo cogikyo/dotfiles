@@ -29,7 +29,7 @@ map("n", "<leader>u", "<Nop>")
 -- }}} ⮭
 
 -- 💾 Save: {{{ ⮯
-map("n", "<C-s>", ":w<CR>:echo <CR>")
+map("n", "<C-s>", ":w<CR>:echo <CR>zo")
 map("i", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("v", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("n", "<leader>s<leader>", ":noa w<CR><CR")
@@ -53,6 +53,7 @@ map("i", "<C-v>", '<Esc>"+p') -- system clipboard (default) paste
 
 -- 🤖 Copy copy: {{{ ⮯
 map("v", "<leader>y", 'ml"+y`l') -- copy visual selection
+map("v", "<C-c>", 'ml"+y`l') -- copy visual selection
 map("n", "<leader>y", '"+y') -- copy (can be used with motions)
 map("n", "<leader>Y", '"+y$') -- copy entire line
 map("n", "<leader>gy", 'mlgg"+yG`lzvzt') -- copy entire file
@@ -163,10 +164,10 @@ map("n", "<leader>rs", "1z=")
 
 -- 🙏 Folds: {{{ ⮯
 map("n", "zh", "ggO<Esc>76i=<Esc>o<Esc>76i=<Esc>gck", recursive_explicit)
-map("n", "zfs", 'i : ⮯ <Esc>3a{<ESC>l3"_dl^3lgcc==a', recursive_explicit)
+map("n", "zfs", 'i : : ⮯ <Esc>3a{<ESC>l3"_dl^3lgcc==a', recursive_explicit)
 map("n", "zfe", "<leader>oj3i}<Esc>a ⮭<Esc>gcc<leader>o==", recursive_explicit)
 map("n", "<leader>zl", "O🧮 ZHU LI, DO THE THING!<Esc>gcc^", recursive_silent)
-map("n", "zfb", "<leader>zfs<Esc><leader>zfe", recursive_silent)
+map("n", "zfb", "<leader>zfs<Esc><leader>zfek^wa", recursive_silent)
 -- }}} ⮭
 
 -- ⭐ Common Unicode:: {{{ ⮯
