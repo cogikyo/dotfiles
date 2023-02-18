@@ -30,6 +30,7 @@ local options = {
 	colorcolumn = "80", -- reminder for the ideal line-length maximum
 	foldmethod = "marker", -- atomically fold on {{{ }}}
 	updatetime = 420, -- timer until events execute when cursors stops (ms)
+	fillchars = "fold:⋅,",
 	-- ========================================================================
 
 	-- ⌨️  UX ==================================================================
@@ -47,7 +48,6 @@ local options = {
 	-- ========================================================================
 }
 
--- 🧮 ZHU LI, DO THE THING!
 for k, v in pairs(options) do
 	vim.opt[k] = v
 end

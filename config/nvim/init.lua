@@ -35,8 +35,8 @@ require("packer").init({
 })
 
 require("packer").startup(function(use)
-	-- }}}
-	-- ============================================================================
+-- }}}
+-- ============================================================================
 
 	-- 📚 LSP: ⮯ {{{
 	use({
@@ -114,6 +114,7 @@ require("packer").startup(function(use)
 		},
 	})
 	use("folke/tokyonight.nvim")
+	use("anuvyklack/pretty-fold.nvim")
 	use("brenoprata10/nvim-highlight-colors")
 	use("goolord/alpha-nvim")
 	use("mbbill/undotree")
@@ -146,8 +147,7 @@ require("packer").startup(function(use)
 	use("elkowar/yuck.vim")
 	-- }}} ⮭
 
-	-- ============================================================================
-	-- 🧮 ZHU LI, DO THE THING! 🢢 {{{
+-- ============================================================================
 	use("wbthomason/packer.nvim")
 
 	if is_bootstrap then
@@ -193,7 +193,6 @@ local config_files = {
 	"autocmds", -- custom automatic functions
 }
 
--- 🧮 ZHU LI, DO THE THING!
 for _, file in ipairs(config_files) do
 	require(file)
 end

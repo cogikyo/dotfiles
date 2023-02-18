@@ -74,9 +74,9 @@
 </p>
 <!-- }}} -->
 <!-- ========================================================================== -->
-
 <h2 align="center"> ⚠️ Refactor In Progress ⚠️</h2>
 
+<!-- 👾 Overview {{{ -->
 ## 👾 Overview
 
 ### **[I use arch, btw](https://wiki.archlinux.org/title/Arch_Linux)**
@@ -171,6 +171,9 @@
 
 </details>
 
+<!-- }}} -->
+
+<!-- 🛠️ Installation {{{ -->
 ## 🛠️ Installation
 
 <details closed>
@@ -341,5 +344,4 @@ mkdir -vp downloads docs/templates docs/books docs/papers docs/share
 git clone git@github.com:nosvagor/vagari.git
 git clone git@github.com:nosvagor/notes.git
 ```
-
-<br>
+<!-- }}} -->

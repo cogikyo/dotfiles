@@ -1,5 +1,5 @@
 -- ============================================================================
--- 🛠️ Simple Setups: ⮯ {{{
+-- 🛠️ Simple Setups {{{
 require("Comment").setup()
 require("lsp-file-operations").setup()
 require("nvim-web-devicons").setup()
@@ -15,10 +15,29 @@ require("nvim-highlight-colors").setup({
 	enable_named_colors = false,
 	enable_tailwind = false,
 })
+
+require("pretty-fold").setup({
+	sections = {
+		left = {
+			"╘╾",
+			"content",
+			"⮯ ",
+		},
+		right = {
+			" ",
+			"number_of_folded_lines",
+			": ",
+			"percentage",
+			" ╼╕ ",
+		},
+	},
+	fill_char = "⋅",
+	process_comment_signs = "delete",
+})
 -- }}} ⮭
 -- ============================================================================
 
--- 🎨 Colorscheme: ⮯ {{{
+-- 🎨 Colorscheme  {{{
 
 require("catppuccin").setup({
 	color_overrides = {
@@ -60,9 +79,9 @@ vim.cmd([[
   highlight MsgArea guifg=#4c527b
   highlight Folded guibg=#24283b guifg=#596091
 ]])
--- }}} #⮭
+-- }}} ⮭
 
--- 🗂️ Nvim-Tree ⮯ {{{
+-- 🗂️ Nvim-Tree {{{
 
 -- https://github.com/nvim-tree/nvim-tree.lua
 require("nvim-tree").setup({
@@ -177,7 +196,7 @@ require("nvim-tree").setup({
 })
 -- }}} ⮭
 
--- 🧿 GitSigns: ⮯ {{{
+-- 🧿 GitSigns {{{
 require("gitsigns").setup({
 	signs = {
 		add = {
@@ -262,7 +281,7 @@ require("gitsigns").setup({
 })
 -- }}} ⮭
 
--- 🧭 LuaLine: ⮯ {{{
+-- 🧭 LuaLine {{{
 
 local colors = require("tokyonight.colors").setup({})
 local utils = require("tokyonight.util")
@@ -484,7 +503,7 @@ require("lualine").setup({
 })
 -- }}} ⮭
 
--- 🔭 Telescope: ⮯ {{{
+-- 🔭 Telescope {{{
 
 local actions = require("telescope.actions")
 
@@ -558,7 +577,7 @@ tmap("<leader>tst", builtin.treesitter)
 
 -- }}} ⮭
 
--- 🎄 Treesitter: ⮯ {{{
+-- 🎄 Treesitter {{{
 require("nvim-treesitter.configs").setup({
 	ensure_installed = {
 		"lua",
@@ -661,7 +680,7 @@ require("nvim-treesitter.configs").setup({
 })
 -- }}} ⮭
 
--- 🪄 Nvim-Cmp: ⮯ {{{
+-- 🪄 Nvim-Cmp {{{
 local cmp = require("cmp")
 local luasnip = require("luasnip")
 
@@ -767,7 +786,7 @@ cmp.setup({
 })
 -- }}} ⮭
 
--- 📚 LSP (and more) ⮯ {{{
+-- 📚 LSP (and more) {{{
 
 -- critical on_attach function, applied by mason ⮯
 local on_attach = function(client, bufnr)
@@ -803,7 +822,7 @@ local on_attach = function(client, bufnr)
 	end
 end
 
--- ⛑️  Null-ls (Linting, formatting): ⮯ {{{
+-- ⛑️  Null-ls (Linting, formatting) {{{
 local null_ls = require("null-ls")
 
 -- see https://github.com/jose-elias-alvarez/null-ls.nvim/blob/main/doc/BUILTINS.md
@@ -833,7 +852,7 @@ null_ls.setup({
 })
 -- }}} ⮭
 
--- ♦️  Vim Diagnostic Settings: ⮯ {{{
+-- ♦️  Vim Diagnostic Settings {{{
 local signs = {
 	{ name = "DiagnosticSignError", text = "" },
 	{ name = "DiagnosticSignWarn", text = "" },
@@ -875,7 +894,7 @@ vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.s
 })
 -- }}} ⮭
 
--- 🎾 Automatic Server Setup: ⮯ {{{
+-- 🎾 Automatic Server Setup {{{
 local servers = {
 	bashls = {},
 	marksman = {},
@@ -894,7 +913,7 @@ local servers = {
 }
 -- }}} ⮭
 
--- 🧱 MASON, DO THE THING! ⮯ {{{
+-- 🧱 MASON, DO THE THING! ⮯  {{{
 require("mason").setup({ ui = { border = "rounded" } })
 
 local mason_lspconfig = require("mason-lspconfig")
@@ -919,7 +938,7 @@ mason_lspconfig.setup_handlers({
 
 -- }}} ⮭
 
--- 🍐 Nvim-Autopairs: ⮯ {{{
+-- 🍐 Nvim-Autopairs {{{
 local npairs = require("nvim-autopairs")
 local ts_conds = require("nvim-autopairs.ts-conds")
 local Rule = require("nvim-autopairs.rule")
@@ -960,7 +979,7 @@ cmp.event:on(
 )
 -- }}} ⮭
 
--- 👋 Alpha: ⮯ {{{
+-- 👋 Alpha {{{
 local alpha = require("alpha")
 local dashboard = require("alpha.themes.dashboard")
 local plenary_path = require("plenary.path")

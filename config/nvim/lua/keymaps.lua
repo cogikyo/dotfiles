@@ -11,10 +11,10 @@ local recursive_explicit = { noremap = false, silent = false }
 local silent_expression = { expr = true, silent = true }
 -- https://stackoverflow.com/questions/3776117
 
--- }}} ⮭
+-- }}}
 -- ============================================================================
 
--- 🌠 Leader: {{{ ⮯
+-- 🌠 Leader {{{
 vim.g.mapleader = " "
 map("", "<Space>", "<Nop>")
 map("n", "<leader>b", "<Nop>")
@@ -26,32 +26,32 @@ map("n", "<leader>r", "<Nop>")
 map("n", "<leader>s", "<Nop>")
 map("n", "<leader>t", "<Nop>")
 map("n", "<leader>u", "<Nop>")
--- }}} ⮭
+-- }}}
 
--- 💾 Save: {{{ ⮯
+-- 💾 Save {{{
 map("n", "<C-s>", ":w<CR>:echo <CR>zo")
 map("i", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("v", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("n", "<leader>s<leader>", ":noa w<CR><CR")
 map("n", "<leader><C-s>", ":lua vim.lsp.buf.format()<CR><C-s>")
 map("n", "<leader>so", ":w | source %<CR>")
--- }}} ⮭
+-- }}}
 
--- 🔔 Quit: {{{ ⮯
+-- 🔔 Quit {{{
 map("n", "Q", ":q!<CR>", recursive_explicit)
 map("n", "<leader>q", ":q!<CR>", recursive_explicit)
 map("n", "qq", ":q<CR>")
 map("n", "q:", "<Nop>")
 map("n", "<C-c>", "<Esc>")
--- }}} ⮭
+-- }}}
 
--- 🍸 Vestigial: {{{ ⮯
+-- 🍸 Vestigial {{{
 map("n", "<C-z>", "u") -- undo
 map("n", "<C-y>", "<C-r>") -- redo
 map("i", "<C-v>", '<Esc>"+p') -- system clipboard (default) paste
--- }}} ⮭
+-- }}}
 
--- 🤖 Copy copy: {{{ ⮯
+-- 🤖 Copy copy {{{
 map("v", "<leader>y", 'ml"+y`l') -- copy visual selection
 map("v", "<C-c>", 'ml"+y`l') -- copy visual selection
 map("n", "<leader>y", '"+y') -- copy (can be used with motions)
@@ -59,15 +59,15 @@ map("n", "<leader>Y", '"+y$') -- copy entire line
 map("n", "<leader>gy", 'mlgg"+yG`lzvzt') -- copy entire file
 map("n", "<leader>wd", "dt<space>") -- cut until next space
 map("x", "<leader>p", '"_dP') -- replace visual with out replacing register
--- }}} ⮭
+-- }}}
 
--- 🌌 Gimme space please: {{{ ⮯
+-- 🌌 Gimme space please {{{
 map("n", "<leader>o", ':<C-u>call append(line("."),   repeat([""], v:count1))<CR>')
 map("n", "<leader>O", ':<C-u>call append(line(".")-1,   repeat([""], v:count1))<CR>')
 map("n", "<leader>a", "<leader>o<leader>O", recursive_silent)
--- }}} ⮭
+-- }}}
 
--- 💎 Don't let go: {{{ ⮯
+-- 💎 Don't let go {{{
 map("n", "<leader>d", '"_d')
 map("v", "<leader>d", '"_d')
 map("n", "<leader>c", '"_c')
@@ -81,9 +81,9 @@ map("v", "<Up>", ":m '<-2<CR>gv-gv")
 map("v", "<Down>", ":m '>+1<CR>gv-gv")
 map("n", "k", "v:count == 0 ? 'gk' : 'k'", silent_expression)
 map("n", "j", "v:count == 0 ? 'gj' : 'j'", silent_expression)
--- }}} ⮭
+-- }}}
 
--- 🎯 Keep cursor 'centered': {{{ ⮯
+-- 🎯 Keep cursor 'centered' {{{
 map("n", "G", "Gzvzt")
 map("n", "n", "nzvzt")
 map("n", "N", "Nzvzt")
@@ -98,18 +98,18 @@ map("n", "<C-d>", "<C-d>zt")
 map("n", "<C-u>", "<C-u>zt")
 map("n", "zm", "zmzt")
 map("n", "za", "zazt")
--- }}} ⮭
+-- }}}
 
--- 👈 Undo break points: {{{ ⮯
+-- 👈 Undo break points {{{
 map("i", ",", ",<C-g>u")
 map("i", ".", ".<C-g>u")
 map("i", "!", "!<C-g>u")
 map("i", "?", "?<C-g>u")
 map("i", ";", ";<C-g>u")
 map("i", ":", ":<C-g>u")
--- }}} ⮭
+-- }}}
 
--- 🪟 Window movement: {{{ ⮯
+-- 🪟 Window movement {{{
 map("n", "<leader>bn", ":bp<CR>zvzt")
 map("n", "<leader>bb", ":bn<CR>zvzt")
 map("n", "<leader>b<C-w>", ":bd!<CR>zvzt")
@@ -123,14 +123,14 @@ map("n", "<C-Down>", ":resize -2<CR>")
 map("n", "<C-Left>", ":vertical resize -2<CR>")
 map("n", "<C-Right>", ":vertical resize +2<CR>")
 map("n", "gx", [[:silent execute '!xdg-open ' . shellescape(expand('<cfile>'), v:true)<CR>]], recursive_silent)
--- }}} ⮭
+-- }}}
 
--- 👉 Indent: {{{ ⮯
+-- 👉 Indent {{{
 map("n", "<leader>==", "ml=ip`lzvzt")
 map("n", "<leader>g=", "mlgg=G`lzvzt")
--- }}} ⮭
+-- }}}
 
--- 🤲 Toggle: {{{ ⮯
+-- 🤲 Toggle {{{
 map("n", "<leader>ut", ":UndotreeToggle<CR>")
 map("n", "<leader>pt", ":TSPlaygroundToggle<CR>")
 map("n", "<leader>ct", ":HighlightColorsToggle<CR>")
@@ -141,9 +141,9 @@ map("n", "<leader>mm", ":Mason<CR>,")
 map("n", "<leader>mn", ":NullLsInfo<CR>,")
 map("n", "<leader>et", ":NvimTreeToggle<CR> :NvimTreeRefresh<CR>")
 map("n", "<leader>bt", ":Switch<CR>") -- toggle b false<->true
--- }}} ⮭
+-- }}}
 
--- 🔱 Harpoon: {{{ ⮯
+-- 🔱 Harpoon {{{
 map("n", "<leader>n", "<Nop>")
 map("n", "<leader>nn", ":lua require('harpoon.mark').add_file()<CR>")
 map("n", "<leader>ng", ":lua require('harpoon.ui').toggle_quick_menu()<CR>")
@@ -152,29 +152,28 @@ map("n", "<leader>ne", ":lua require('harpoon.ui').nav_file(2)<CR>zt")
 map("n", "<leader>ns", ":lua require('harpoon.ui').nav_file(3)<CR>zt")
 map("n", "<leader>na", ":lua require('harpoon.ui').nav_file(4)<CR>zt")
 map("n", "<leader>nd", ":lua require('harpoon.ui').nav_file(5)<CR>zt")
--- }}} ⮭
+-- }}}
 
--- 🔍 Replace: {{{ ⮯
+-- 🔍 Replace {{{
 map("v", "r", ":s///g<Left><Left><Left>", recursive_explicit)
 map("n", "<leader>r<leader>", ":%s///g<Left><Left><Left>", recursive_explicit)
 map("n", "<leader>rw", ":%s/<C-r><C-w>//g<Left><Left>", recursive_explicit)
 map("n", "<leader>rp", '"ryiwvip:s/<C-r>r//g<Left><Left>', recursive_explicit)
 map("n", "<leader>rs", "1z=")
--- }}} ⮭
+-- }}}
 
--- 🙏 Folds: {{{ ⮯
+-- 🙏 Folds {{{
 map("n", "zh", "ggO<Esc>76i=<Esc>o<Esc>76i=<Esc>gck", recursive_explicit)
-map("n", "zfs", 'i : : ⮯ <Esc>3a{<ESC>l3"_dl^3lgcc==a', recursive_explicit)
-map("n", "zfe", "<leader>oj3i}<Esc>a ⮭<Esc>gcc<leader>o==", recursive_explicit)
-map("n", "<leader>zl", "O🧮 ZHU LI, DO THE THING!<Esc>gcc^", recursive_silent)
-map("n", "zfb", "<leader>zfs<Esc><leader>zfek^wa", recursive_silent)
--- }}} ⮭
+map("n", "zfs", 'i : <Esc>3a{<ESC>l3"_dl^3lgcc==a', recursive_explicit)
+map("n", "zfe", "<leader>oj3i}<Esc>gcc<leader>o==", recursive_explicit)
+map("n", "zfb", "o<Cr><Esc><leader>zfs<Esc><leader>zfeO<Cr><Esc>2k^wa", recursive_silent)
+--  }}}
 
--- ⭐ Common Unicode:: {{{ ⮯
+-- ⭐ Common Unicode: {{{
 map("n", "<leader>uad", "a ⮯<Esc>")
 map("n", "<leader>uau", "a ⮭<Esc>")
 map("n", "<leader>uar", "a 🢣 <Esc>")
 map("n", "<leader>ual", "a 🢢 <Esc>")
 map("n", "<leader>udeg", "a °<Esc>")
 map("n", "<leader>unode", "a╼╾<Esc>")
--- }}} ⮭
+-- }}}
