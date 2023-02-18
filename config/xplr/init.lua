@@ -286,7 +286,6 @@ local general = {
 	},
 }
 
--- 🧮 ZHU LI, DO THE THING!
 for key, val in pairs(general) do
 	xplr.config.general[key] = val
 end
@@ -371,7 +370,6 @@ local node_types = {
 	},
 }
 
--- 🧮 ZHU LI, DO THE THING!
 for key, val in pairs(node_types) do
 	xplr.config.node_types[key] = val
 end
