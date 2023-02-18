@@ -882,7 +882,7 @@ local servers = {
 	prosemd_lsp = {},
 	cssls = {},
 	rust_analyzer = {},
-    taplo = {},
+	taplo = {},
 	lua_ls = {
 		Lua = {
 			workspace = { checkThirdParty = false },
