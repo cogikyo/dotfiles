@@ -138,6 +138,7 @@ require("packer").startup(function(use)
 	use("windwp/nvim-autopairs")
 	use("AndrewRadev/switch.vim")
 	use("cappyzawa/trim.nvim")
+    use("ziontee113/color-picker.nvim")
 	use({
 		"iamcco/markdown-preview.nvim",
 		run = function()

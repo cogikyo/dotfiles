@@ -1,4 +1,4 @@
--- ============================================================================
+-- =============================================================================
 -- 🛠️ Simple Setups {{{
 require("Comment").setup()
 require("lsp-file-operations").setup()
@@ -28,14 +28,15 @@ require("pretty-fold").setup({
 			"number_of_folded_lines",
 			": ",
 			"percentage",
-			" ╼╕ ",
+			" ╼╕     ",
 		},
 	},
 	fill_char = "⋅",
 	process_comment_signs = "delete",
 })
+require("color-picker").setup()
 -- }}} ⮭
--- ============================================================================
+-- =============================================================================
 
 -- 🎨 Colorscheme  {{{
 
@@ -56,7 +57,7 @@ require("catppuccin").setup({
 			sapphire = "#7DC4E4",
 			blue = "#8AADF4",
 			lavender = "#B7BDF8",
-			text = "#CAD3F5",
+			text = "#aeb9f8",
 			subtext1 = "#B8C0E0",
 			subtext0 = "#A5ADCB",
 			overlay2 = "#939AB7",
@@ -66,7 +67,7 @@ require("catppuccin").setup({
 			surface1 = "#494D64",
 			surface0 = "#363A4F",
 
-			base = "#24273A",
+			base = "#222536",
 			mantle = "#1E2030",
 			crust = "#181926",
 		},
@@ -75,9 +76,9 @@ require("catppuccin").setup({
 
 vim.cmd([[
   colorscheme catppuccin-macchiato
-  highlight ColorColumn guibg=#222536
+  highlight ColorColumn guibg=#1F2335
   highlight MsgArea guifg=#4c527b
-  highlight Folded guibg=#24283b guifg=#596091
+  highlight Folded guibg=#222536 guifg=#596091
 ]])
 -- }}} ⮭
 
