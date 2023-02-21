@@ -283,7 +283,7 @@ sudo ln -sfn "$HOME"/dotfiles/bin/* /usr/bin/
 sudo cp bluetooth/main.conf /etc/bluetooth/main.conf
 sudo cp udev/* /etc/udev/rules.d/
 sudo cp loader.conf /boot/loader/loader.conf
-sudo cp giview.desktop /usr/share/applications/gifview.desktop
+sudo cp gifview.desktop /usr/share/applications/gifview.desktop
 sudo cp security/faillock.conf /etc/security/faillock.conf
 systemctl enable bluetooth
 ```
@@ -316,7 +316,6 @@ mv fonts ~/.local/share/
 
 - Disable some bloat:
 
-      extensions.unifiedExtensions.enabled = false
       extensions.pocket.enabled = false
 
 <br>
@@ -335,7 +334,7 @@ bat ~/.ssh/id_ed25519.pub
 
 <br>
 
-**My preferred directory structure:** (definitely optional)
+> **My preferred directory structure:** _(definitely optional)_
 ```shell
 cd ~
 mkdir -vp media/music media/images media/videos media/gifs media/screenshots media/recordings
