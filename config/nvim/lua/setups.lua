@@ -28,7 +28,7 @@ require("pretty-fold").setup({
 			"number_of_folded_lines",
 			": ",
 			"percentage",
-			" ╼╕     ",
+			" ╼╕",
 		},
 	},
 	fill_char = "⋅",
@@ -76,9 +76,9 @@ require("catppuccin").setup({
 
 vim.cmd([[
   colorscheme catppuccin-macchiato
-  highlight ColorColumn guibg=#1F2335
+  highlight ColorColumn guibg=#1e2133
   highlight MsgArea guifg=#4c527b
-  highlight Folded guibg=#222536 guifg=#596091
+  highlight Folded guibg=#1e2133 guifg=#596091
 ]])
 -- }}} ⮭
 

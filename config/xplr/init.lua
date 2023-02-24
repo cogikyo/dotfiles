@@ -235,7 +235,8 @@ local general = {
 			border_style = { fg = "DarkGray" },
 		},
 		table = panel_format(
-			"──────────────────────────╼╾ ⽊ Directory ╼╾",
+			-- "──────────────────────────╼╾ ⽊ Directory ╼╾",
+			nil,
 			"Blue",
 			{ "Bold" }
 		),

@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-cd ~ || exit 20
-
 export HYPRLAND_LOG_WLR=1
 export XCURSOR_SIZE=24
 export XCURSOR_THEME=Nordzy-cursors-white
