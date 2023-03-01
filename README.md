@@ -80,10 +80,12 @@
 
 ### **[I use arch, btw](https://wiki.archlinux.org/title/Arch_Linux)**
 
+---
+
 <img
     src="https://github.com/nosvagor/dotfiles/blob/main/share/social-preview.jpg?raw=true"
     title="we do these things not because they are easy, but because they are hard"
-    width=42%
+    width=43%
     align=right
 />
 
