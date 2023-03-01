@@ -1,5 +1,5 @@
 -- ============================================================================
--- 📦 PACKER, PREP THE THING! 🢢 {{{
+-- 📦 🢢 🢢 🢢  PACKER, PREP THE THING! 🢢 🢢 🢢 {{{
 local install_path = vim.fn.stdpath("data") .. "/site/pack/packer/start/packer.nvim"
 local is_bootstrap = false
 if vim.fn.empty(vim.fn.glob(install_path)) > 0 then
@@ -35,10 +35,10 @@ require("packer").init({
 })
 
 require("packer").startup(function(use)
--- }}}
+	-- }}}
 -- ============================================================================
 
-	-- 📚 LSP: ⮯ {{{
+	-- 📚 LSP {{{
 	use({
 		"neovim/nvim-lspconfig",
 		requires = {
@@ -50,7 +50,7 @@ require("packer").startup(function(use)
 	})
 	-- }}}
 
-	-- 🪄 Completion: ⮯ {{{
+	-- 🪄 Completion {{{
 	use({
 		"hrsh7th/nvim-cmp",
 		requires = {
@@ -68,7 +68,7 @@ require("packer").startup(function(use)
 	})
 	-- }}}
 
-	-- 🎄 Treesitter: ⮯ {{{
+	-- 🎄 Treesitter {{{
 	use({
 		"nvim-treesitter/nvim-treesitter",
 		run = function()
@@ -85,13 +85,13 @@ require("packer").startup(function(use)
 	use("JoosepAlviste/nvim-ts-context-commentstring")
 	-- }}}
 
-	-- 🔱 Git: ⮯ {{{
+	-- 🔱 Git {{{
 	use("tpope/vim-fugitive")
 	use("tpope/vim-rhubarb")
 	use("lewis6991/gitsigns.nvim")
-	-- }}} ⮭
+	-- }}}
 
-	-- 🔭 Fuzzy Finder: ⮯ {{{
+	-- 🔭 Fuzzy Finder {{{
 	use({
 		"nvim-telescope/telescope.nvim",
 		branch = "0.1.x",
@@ -100,9 +100,9 @@ require("packer").startup(function(use)
 			"natecraddock/telescope-zf-native.nvim",
 		},
 	})
-	-- }}} ⮭
+	-- }}}
 
-	-- 👀 UI: ⮯ {{{
+	-- 👀 UI {{{
 	use({
 		"catppuccin/nvim",
 		as = "catppuccin",
@@ -127,9 +127,9 @@ require("packer").startup(function(use)
 			"kyazdani42/nvim-web-devicons",
 		},
 	})
-	-- }}} ⮭
+	-- }}}
 
-	-- ✋ UX: ⮯ {{{
+	-- ✋ UX {{{
 	use("lewis6991/impatient.nvim")
 	use("numToStr/Comment.nvim")
 	use("tpope/vim-surround")
@@ -138,7 +138,7 @@ require("packer").startup(function(use)
 	use("windwp/nvim-autopairs")
 	use("AndrewRadev/switch.vim")
 	use("cappyzawa/trim.nvim")
-    use("ziontee113/color-picker.nvim")
+	use("ziontee113/color-picker.nvim")
 	use({
 		"iamcco/markdown-preview.nvim",
 		run = function()
@@ -146,9 +146,10 @@ require("packer").startup(function(use)
 		end,
 	})
 	use("elkowar/yuck.vim")
-	-- }}} ⮭
+	-- }}}
 
 -- ============================================================================
+-- 📦 🢣 🢣 🢣 PACKER, DO THE THING! 🢣 🢣 🢣  {{{
 	use("wbthomason/packer.nvim")
 
 	if is_bootstrap then
@@ -181,7 +182,7 @@ vim.api.nvim_create_autocmd("BufWritePost", {
 	pattern = vim.fn.expand("$MYVIMRC"),
 })
 
--- }}} ⮭
+-- }}}
 -- ============================================================================
 
 local config_files = {
