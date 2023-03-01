@@ -134,6 +134,8 @@ map("n", "<leader>g=", "mlgg=G`lzvzt")
 -- 🤲 Toggle {{{
 map("n", "<leader>ut", ":UndotreeToggle<CR>")
 map("n", "<leader>pt", ":TSPlaygroundToggle<CR>")
+map("n", "<leader>pc", ":TSHighlightCapturesUnderCursor<CR>")
+map("n", "<leader>pn", ":TSNodeUnderCursor<CR>")
 map("n", "<leader>ct", ":HighlightColorsToggle<CR>")
 map("n", "<leader>st", ":set spell!<CR>")
 map("n", "<leader>wt", ":set wrap!<CR> :echo 'wrap toggled'<CR>")
