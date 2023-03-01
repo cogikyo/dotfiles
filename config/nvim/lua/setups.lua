@@ -1,6 +1,7 @@
 -- =============================================================================
 -- 🛠️ Simple Setups {{{
 require("Comment").setup()
+require("trouble").setup()
 require("lsp-file-operations").setup()
 require("nvim-web-devicons").setup()
 require("trim").setup({
@@ -34,7 +35,6 @@ require("pretty-fold").setup({
 	fill_char = "⋅",
 	process_comment_signs = "delete",
 })
-require("color-picker").setup()
 -- }}} ⮭
 -- =============================================================================
 
@@ -581,18 +581,20 @@ tmap("<leader>tst", builtin.treesitter)
 -- 🎄 Treesitter {{{
 require("nvim-treesitter.configs").setup({
 	ensure_installed = {
-		"lua",
-		"help",
-		"vim",
-		"scss",
+		"bash",
 		"css",
+		"help",
 		"html",
 		"json",
-		"python",
-		"rust",
-		"bash",
+		"lua",
 		"markdown",
 		"regex",
+		"rust",
+		"scss",
+		"vim",
+        "python",
+        "toml",
+        "yaml",
 	},
 	sync_install = true,
 	auto_install = true,
