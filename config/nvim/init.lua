@@ -35,7 +35,7 @@ require("packer").init({
 })
 
 require("packer").startup(function(use)
-	-- }}}
+-- }}}
 -- ============================================================================
 
 	-- 📚 LSP {{{
@@ -86,9 +86,6 @@ require("packer").startup(function(use)
 	-- }}}
 
 	-- 🔱 Git {{{
-	use("tpope/vim-fugitive")
-	use("tpope/vim-rhubarb")
-	use("lewis6991/gitsigns.nvim")
 	-- }}}
 
 	-- 🔭 Fuzzy Finder {{{
@@ -113,6 +110,7 @@ require("packer").startup(function(use)
 			"arkav/lualine-lsp-progress",
 		},
 	})
+	use("lewis6991/gitsigns.nvim")
 	use("folke/tokyonight.nvim")
 	use("anuvyklack/pretty-fold.nvim")
 	use("brenoprata10/nvim-highlight-colors")
@@ -134,11 +132,12 @@ require("packer").startup(function(use)
 	use("numToStr/Comment.nvim")
 	use("tpope/vim-surround")
 	use("tpope/vim-repeat")
+	use("tpope/vim-fugitive")
+	use("folke/trouble.nvim")
 	use("mattn/emmet-vim")
 	use("windwp/nvim-autopairs")
 	use("AndrewRadev/switch.vim")
 	use("cappyzawa/trim.nvim")
-	use("ziontee113/color-picker.nvim")
 	use({
 		"iamcco/markdown-preview.nvim",
 		run = function()

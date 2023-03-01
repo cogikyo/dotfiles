@@ -142,7 +142,7 @@ map("n", "<leader>mm", ":Mason<CR>,")
 map("n", "<leader>mn", ":NullLsInfo<CR>,")
 map("n", "<leader>et", ":NvimTreeToggle<CR> :NvimTreeRefresh<CR>")
 map("n", "<leader>bt", ":Switch<CR>") -- toggle b false<->true
-map("n", "<leader>cp", ":PickColor<CR>")
+map("n", "<leader>tt", ":TroubleToggle<CR>") -- toggle b false<->true
 
 -- }}}
 
