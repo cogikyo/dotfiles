@@ -180,11 +180,15 @@
 <details closed>
 <summary><h5> 🧰 My Hardware</h5></summary>
 
+- Keyboard: [Corne (Helidox) 42 key](https://keebmaker.com/products/corne-low-profile), with Kailh gChoc Light Blue (20g),
+- Monitor: [SAMSUNG UR59 Series 32-Inch 4K UHD (3840x2160)](https://a.co/d/bZtUse0)
 - Mouse: [MX Master 3S](https://www.logitech.com/en-us/products/mice/mx-master-3s.910-006556.html)
 - CPU: [AMD Ryzen 7 3700X (16) @ 3.600GHz](https://www.amd.com/en/products/cpu/amd-ryzen-7-3700x)
-    - GPU: AMD ATI Radeon RX 5600 OEM/5600 XT / 5700/5700 XT
-- Monitor: [SAMSUNG UR59 Series 32-Inch 4K UHD (3840x2160)](https://a.co/d/bZtUse0)
-- Keyboard: [Corne (Helidox) 42 key](https://keebmaker.com/products/corne-low-profile), Kailh gChoc Light Blue (20g),
+    - GPU: [AMD ATI Radeon RX 5600 OEM/5600 XT / 5700/5700 XT](https://www.amd.com/en/products/graphics/amd-radeon-rx-5600-xt)
+- Microphone: [Shure SM57](https://www.amazon.com/gp/product/B0000AQRST)
+    - Audio Interface: [Scaarlett Solo 3rd Gen](https://www.amazon.com/gp/product/B07QR6Z1JB)
+- Camera: [Canon EOS M50 Mark II](https://www.amazon.com/gp/product/B08KSLW8N3)
+    - Lens: [Sigma 16mm f/1.4](https://www.amazon.com/gp/product/B084KYHYKN)
 
 </details>
 
