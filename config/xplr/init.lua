@@ -45,10 +45,10 @@ local azure = { Rgb = { 158, 219, 255 } }
 local orange = { Rgb = { 245, 169, 127 } }
 local purple = { Rgb = { 194, 170, 252 } }
 
--- }}} ⮭
+-- }}}
 -- ============================================================================
 
--- 🌐 General: ⮯ {{{
+-- 🌐 General {{{
 
 local general = {
 	disable_debug_error_mode = false,
@@ -291,9 +291,9 @@ for key, val in pairs(general) do
 	xplr.config.general[key] = val
 end
 
--- }}} ⮭
+-- }}}
 
--- ✳️  Nodes Types: ⮯ {{{
+-- ✳️  Nodes Types {{{
 
 local function meta(icon, color, mods)
 	return {
@@ -338,7 +338,7 @@ local node_types = {
 		zip = meta(" ", "White"),
 		desktop = meta(" "),
 		rules = meta(" ", "Red", { "Dim" }),
-		lua = meta(" ", orange, { "Dim" }),
+		lua = meta(" "),
 		rs = meta(" ", orange, { "Dim" }),
 		py = meta(" ", orange, { "Dim" }),
 		scss = meta(" ", orange, { "Dim" }),
@@ -374,9 +374,9 @@ local node_types = {
 for key, val in pairs(node_types) do
 	xplr.config.node_types[key] = val
 end
--- }}} ⮭
+-- }}}
 
--- 🪟 Layout: ⮯ {{{
+-- 🪟 Layout {{{
 -- Type: [Layout](https://xplr.dev/en/layout)
 xplr.config.layouts.builtin.default = {
 	Horizontal = {
@@ -438,9 +438,9 @@ xplr.config.layouts.builtin.no_selection = {
 	},
 }
 
--- }}} ⮭
+-- }}}
 
--- 🎛️ Modes: ⮯ {{{
+-- 🎛️ Modes {{{
 
 local modes = xplr.config.modes.builtin
 local on_key = modes.default.key_bindings.on_key
@@ -512,7 +512,7 @@ on_key["R"] = {
 
 -- }}}
 
--- 🦄 Functions: ⮯ {{{
+-- 🦄 Functions {{{
 
 -- (https://xplr.dev/en/lua-function-calls)
 
@@ -567,7 +567,7 @@ xplr.fn.builtin.fmt_general_table_row_cols_1 = function(m)
 
 	return r
 end
--- }}} ⮭
+-- }}}
 
 -- ============================================================================
 -- 📦 XPM, PREP THE THING! 🢢 {{{
@@ -592,7 +592,7 @@ os.execute(
 )
 -- }}}
 
--- 🔌 Selected Plugins: ⮯ {{{
+-- 🔌 Selected Plugins {{{
 require("xpm").setup({
 	plugins = { -- https://xplr.dev/en/awesome-plugins
 		"dtomvan/xpm.xplr",
@@ -606,9 +606,9 @@ require("xpm").setup({
 	auto_install = true,
 	auto_cleanup = true,
 })
--- }}} ⮭
+-- }}}
 
--- ⚙️  Nonstandard Plugin Configurations: ⮯ {{{
+-- ⚙️  Nonstandard Plugin Configurations {{{
 
 require("ouch").setup({
 	mode = "default",
