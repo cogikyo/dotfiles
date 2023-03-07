@@ -277,7 +277,7 @@ systemctl enable sddm
 cd ~
 mkdir .config
 ln -sfn ~/dotfiles/config/* ~/.config/
-ln -sfn ~/dotfiles/config/zsh/zshrc .zshrr
+ln -sfn ~/dotfiles/config/zsh/zshrc .zshrc
 ```
 
 <br>

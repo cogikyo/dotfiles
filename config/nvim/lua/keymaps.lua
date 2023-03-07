@@ -175,6 +175,14 @@ map("n", "zfe", "<leader>oj3i}<Esc>gcc<leader>o==", recursive_explicit)
 map("n", "zfb", "o<Cr><Esc><leader>zfs<Esc><leader>zfeO<Cr><Esc>2k^wa", recursive_silent)
 --  }}}
 
+-- 📃 Common HTML {{{
+map("n", "<leader>@b", "ysiw<b>", recursive_explicit)
+map("n", "<leader>@i", "ysiw<i>", recursive_explicit)
+map("n", "<leader>@p", "ysip<p>", recursive_explicit)
+map("n", "<leader>@d", "a&mdash;<Esc>", recursive_explicit)
+map("n", "<leader>@s", "a&emsp;<Esc>", recursive_explicit)
+-- }}}
+
 -- ⭐ Common Unicode: {{{
 map("n", "<leader>uad", "a ⮯<Esc>")
 map("n", "<leader>uau", "a ⮭<Esc>")
