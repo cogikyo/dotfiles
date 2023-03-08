@@ -35,12 +35,719 @@ require("pretty-fold").setup({
 	fill_char = "⋅",
 	process_comment_signs = "delete",
 })
-vim.cmd([[ colorscheme vagari ]])
--- }}} ⮭
+-- }}}
 -- =============================================================================
 
 -- 🎨 Colorscheme  {{{
--- }}} ⮭
+-- vim.cmd([[ colorscheme vagari ]])
+
+-- (TEMP) palette {{{
+local p = {
+	bg = "#222536", -- CR: 1.00
+	fg = "#aeb9f8", -- CR: 8.00
+
+	drk_0 = "#1e2133", -- CR: 1.05
+	drk_1 = "#181b2c", -- CR: 1.12
+	drk_2 = "#131626", -- CR: 1.18
+	drk_3 = "#0d0f1b", -- CR: 1.26
+	brt_0 = "#b6c0f7", -- CR: 8.56
+	brt_1 = "#bec6f8", -- CR: 9.11
+	brt_2 = "#cad1fb", -- CR: 10.12
+	brt_3 = "#d1d8ff", -- CR: 11.21
+
+	blk_0 = "#1d1d21", -- CR: 1.11
+	blk_1 = "#16161a", -- CR: 1.19
+	blk_2 = "#101014", -- CR: 1.25
+	blk_3 = "#0b0b0f", -- CR: 1.30
+	wht_0 = "#c9c9e2", -- CR: 9.33
+	wht_1 = "#d3d3ed", -- CR: 10.41
+	wht_2 = "#ddddf6", -- CR: 11.36
+	wht_3 = "#e9e9fb", -- CR: 12.63
+
+	blu_0 = "#4a6be3", -- CR: 3.24
+	blu_1 = "#6380ec", -- CR: 4.20
+	blu_2 = "#7492ef", -- CR: 5.12
+	blu_3 = "#8aa4f3", -- CR: 6.26
+	blu_4 = "#9db2f4", -- CR: 7.29
+	orn_0 = "#e56b2c", -- CR: 4.66
+	orn_1 = "#ea834b", -- CR: 5.66
+	orn_2 = "#eb905d", -- CR: 6.26
+	orn_3 = "#f2a170", -- CR: 7.29
+	orn_4 = "#f8b486", -- CR: 8.56
+
+	grn_0 = "#5b9542", -- CR: 4.20
+	grn_1 = "#73ad5a", -- CR: 5.66
+	grn_2 = "#85ba6d", -- CR: 6.67
+	grn_3 = "#95cb79", -- CR: 8.00
+	grn_4 = "#9fd883", -- CR: 9.11
+	prp_0 = "#7f61cd", -- CR: 3.24
+	prp_1 = "#9376d8", -- CR: 4.20
+	prp_2 = "#a188df", -- CR: 5.12
+	prp_3 = "#b29ae8", -- CR: 6.26
+	prp_4 = "#bdaaeb", -- CR: 7.29
+
+	emr_0 = "#2d9a43", -- CR: 4.20
+	emr_1 = "#48a95b", -- CR: 5.12
+	emr_2 = "#5aba6d", -- CR: 6.26
+	emr_3 = "#5fc976", -- CR: 7.29
+	emr_4 = "#76d78b", -- CR: 8.56
+	rby_0 = "#f34658", -- CR: 4.20
+	rby_1 = "#f36978", -- CR: 5.12
+	rby_2 = "#f07a88", -- CR: 5.66
+	rby_3 = "#f08898", -- CR: 6.26
+	rby_4 = "#f29ca9", -- CR: 7.29
+
+	sun_0 = "#f3a338", -- CR: 7.29
+	sun_1 = "#f5b855", -- CR: 8.56
+	sun_2 = "#f5c069", -- CR: 9.11
+	sun_3 = "#f4ce88", -- CR: 10.12
+	sun_4 = "#f5d599", -- CR: 10.72
+	sky_0 = "#369fd7", -- CR: 5.12
+	sky_1 = "#54b0e2", -- CR: 6.26
+	sky_2 = "#6bbdec", -- CR: 7.29
+	sky_3 = "#7cc5ef", -- CR: 8.00
+	sky_4 = "#90d1f5", -- CR: 9.11
+
+	cyn_0 = "#2bb198", -- CR: 5.66
+	cyn_1 = "#30c9b0", -- CR: 7.29
+	cyn_2 = "#38d2ba", -- CR: 8.00
+	cyn_3 = "#50dec8", -- CR: 9.11
+	cyn_4 = "#75e6d5", -- CR: 10.12
+	pnk_0 = "#d15da6", -- CR: 4.20
+	pnk_1 = "#e36cb8", -- CR: 5.12
+	pnk_2 = "#ea76c0", -- CR: 5.66
+	pnk_3 = "#e887c3", -- CR: 6.26
+	pnk_4 = "#ed9acd", -- CR: 7.29
+
+	his_0 = "#824141", -- CR: 2.00
+	his_1 = "#b15e5b", -- CR: 3.33
+	his_2 = "#c67a79", -- CR: 4.66
+	his_3 = "#d09490", -- CR: 6.00
+	glu_0 = "#3b557c", -- CR: 2.00
+	glu_1 = "#5b77a4", -- CR: 3.33
+	glu_2 = "#7690b9", -- CR: 4.66
+	glu_3 = "#90a4c7", -- CR: 6.00
+	asn_0 = "#6f447a", -- CR: 2.00
+	asn_1 = "#9961a7", -- CR: 3.33
+	asn_2 = "#af7dba", -- CR: 4.66
+	asn_3 = "#c193cd", -- CR: 6.00
+	pro_0 = "#505831", -- CR: 2.00
+	pro_1 = "#717b45", -- CR: 3.33
+	pro_2 = "#8a945b", -- CR: 4.66
+	pro_3 = "#9ea876", -- CR: 6.00
+	tyr_0 = "#375c47", -- CR: 2.00
+	tyr_1 = "#4b8163", -- CR: 3.33
+	tyr_2 = "#5a9c78", -- CR: 4.66
+	tyr_3 = "#72b08e", -- CR: 6.00
+
+	gry_0 = "#373945", -- CR: 1.32
+	gry_1 = "#3f414f", -- CR: 1.50
+	gry_2 = "#4f5163", -- CR: 1.94
+	gry_3 = "#5f6278", -- CR: 2.52
+	gry_4 = "#6d7089", -- CR: 3.12
+	gry_5 = "#7f8199", -- CR: 3.97
+	slt_0 = "#343852", -- CR: 1.32
+	slt_1 = "#3c4162", -- CR: 1.53
+	slt_2 = "#484e75", -- CR: 1.89
+	slt_3 = "#585f8d", -- CR: 2.47
+	slt_4 = "#686ea1", -- CR: 3.12
+	slt_5 = "#7b7fb0", -- CR: 3.97
+	glc_0 = "#252841", -- CR: 1.05
+	glc_1 = "#282b48", -- CR: 1.10
+	glc_2 = "#30345a", -- CR: 1.27
+	glc_3 = "#3f4578", -- CR: 1.68
+	glc_4 = "#4e5492", -- CR: 2.16
+	glc_5 = "#5a61aa", -- CR: 2.68
+	rst_0 = "#493531", -- CR: 1.32
+	rst_1 = "#563e39", -- CR: 1.54
+	rst_2 = "#694b44", -- CR: 1.94
+	rst_3 = "#805a52", -- CR: 2.52
+	rst_4 = "#92675d", -- CR: 3.11
+	rst_5 = "#a3786d", -- CR: 3.97
+	plm_0 = "#453445", -- CR: 1.32
+	plm_1 = "#523c52", -- CR: 1.53
+	plm_2 = "#634a64", -- CR: 1.96
+	plm_3 = "#765a77", -- CR: 2.52
+	plm_4 = "#876888", -- CR: 3.15
+	plm_5 = "#977998", -- CR: 3.97
+	olv_0 = "#383a39", -- CR: 1.32
+	olv_1 = "#414342", -- CR: 1.51
+	olv_2 = "#505251", -- CR: 1.92
+	olv_3 = "#5f6361", -- CR: 2.48
+	olv_4 = "#6e7270", -- CR: 3.10
+	olv_5 = "#818382", -- CR: 3.97
+}
+-- }}}
+
+-- (TEMP) thalamus {{{
+local t = {
+	-- alternative background:
+	substrate = p.drk_0, -- drk_0: (lower bg) -> enzeyme
+	enzyme = p.glc_4, -- glc_4: (lower fg) <- substrate
+
+	-- alt background (higher):
+	catalyst = p.glc_0, -- glc_0: (active bg) -> reagent or product
+	reagent = p.blu_3, -- slt_2: (passive fg) <- catalyst
+	product = p.orn_4, -- orn_4: (active fg) <- catalyst
+
+	-- functional ui:
+	inner = {},
+	outer = {},
+	border = {},
+	broken = {},
+	locked = {},
+	hidden = {},
+
+	-- signlaing:
+	error = p.rby_1,
+	success = p.emr_2,
+	warning = p.sun_2,
+	hint = p.sky_2,
+	important = p.cyn_3,
+	critical = p.pnk_2,
+
+	-- headings
+	h1 = {},
+	h2 = {},
+	h3 = {},
+	h4 = {},
+	h5 = {},
+	h6 = {},
+
+	-- deviations:
+	min = {},
+	minor = {},
+	normal = {},
+	major = {},
+	max = {},
+
+	-- state
+	new = {},
+	modified = {},
+	delete = {},
+	add = {},
+
+	-- relations
+	positive = {},
+	negative = {},
+	neutral = {},
+	match = {},
+	selected = {},
+	occupied = {},
+	empty = {},
+	inactive = {},
+
+	-- links:
+	active = {},
+	visited = {},
+	internal = {},
+	exterenal = {},
+
+	-- time dependent:
+	loading = {},
+	paused = {},
+	start = {},
+	stop = {},
+}
+-- }}}
+
+-- (TEMP) setup {{{
+local hl = {
+	syntax = {},
+	builtin = {},
+	treesitter = {},
+	lsp = {},
+	filetypes = {},
+	plugins = {},
+}
+local function vim_highlights(hl_groups)
+	for group_name, group_settings in pairs(hl_groups) do
+		vim.api.nvim_command(
+			string.format(
+				"highlight %s guifg=%s guibg=%s guisp=%s gui=%s",
+				group_name,
+				group_settings.fg or "none",
+				group_settings.bg or "none",
+				group_settings.sp or "none",
+				group_settings.fmt or "none"
+			)
+		)
+	end
+end
+
+-- vimhighlights(hl.treesitter)
+
+-- for _, group in pairs(hl.filetypes) do
+-- 	vim_highlights(group)
+-- end
+--
+-- for _, group in pairs(hl.plugins) do
+-- 	vim_highlights(group)
+-- end
+
+-- }}}
+
+-- (TEMP) builtin {{{
+hl.builtin = {
+	-- text:
+	Normal = { fg = p.fg, bg = p.bg },
+	Conceal = { fg = t.reagent }, -- open to change (OTC)
+
+	-- recurring ui:
+	Folded = { fg = t.enzyme, bg = t.substrate },
+	FoldColumn = { fg = t.enzyme, bg = t.substrate },
+	SignColumn = { fg = p.enzyme },
+	LineNrAbove = { fg = p.rst_0 },
+	LineNr = { fg = t.product },
+	LineNrBelow = { fg = p.glc_3 },
+	ColorColumn = { fg = t.enzyme, bg = t.substrate },
+	CursorLine = { bg = t.substrate },
+
+	-- temporary ui:
+	Pmenu = { fg = t.reagent, bg = t.catalyst },
+	PmenuSel = { fg = t.product, bg = p.glc_2, fmt = "bold" },
+	PmenuSbar = { bg = t.reagent },
+	PmenuThumb = { bg = t.enzyme },
+
+	-- state change:
+	DiffAdd = { fg = p.tyr_2 },
+	DiffChange = { fg = p.asn_2 },
+	DiffDelete = { fg = p.his_2 },
+	DiffText = { fg = p.glu_2 },
+
+	-- visual selection:
+	Visual = { bg = t.catalyst, fmt = "bold" }, -- standard
+	VisualNOS = { fg = p.blu_0, bg = p.drk_0 }, -- rarely used
+
+	-- linting:
+	SpellBad = { sp = p.rby_1, fmt = "undercurl" }, -- error
+	SpellCap = { sp = p.sky_1, fmt = "undercurl" }, -- OTC
+	SpellLocal = { sp = p.cyn_1, fmt = "undercurl" }, -- OTC
+	SpellRare = { sp = p.pnk_1, fmt = "undercurl" }, -- OTC
+
+	CurSearch = { fg = p.orn_4, bg = p.drk_0 },
+	Cursor = { fg = p.bg, bg = p.brt_1 },
+	lCursor = { fg = p.bg, bg = p.brt_1 },
+	CursorIM = { fg = p.bg, bg = p.brt_1 },
+	CursorColumn = { fg = p.drk_0 },
+	Directory = { fg = p.sky_2 },
+	EndOfBuffer = { fg = p.bg },
+	TermCursor = { fg = p.bg, bg = p.brt_1 },
+	TermCursorNC = { fg = p.bg, bg = p.brt_1 },
+	ErrorMsg = { fg = p.rby_1 },
+	WinSeparator = { fg = p.blu_3 },
+	IncSearch = { fg = p.orn_4, bg = p.slt_0 },
+	Substitute = { fg = p.orn_4, bg = p.slt_0 },
+	CursorLineNr = { fg = p.asn_0 },
+	CursorLineSign = { fg = p.asn_0 },
+	CursorLineFold = { fg = p.asn_0 },
+	MatchParen = { fg = p.orn_4 },
+	ModeMsg = { fg = p.slt_5 },
+	MsgArea = { fg = p.slt_5 },
+	MsgSeparator = { fg = p.blu_2 },
+	MoreMsg = { fg = p.blu_3 },
+	NonText = { fg = p.drk_0 },
+	NormalFloat = { fg = p.brt_1 },
+	NormalNC = { fg = p.fg },
+	Question = { fg = p.blu_4 },
+	QuickFixLine = { fg = p.brt_3 },
+	Search = { fg = p.orn_4 },
+	SpecialKey = { fg = p.olv_2 },
+	StatusLine = { fg = p.drk_0 },
+	StatusLineNC = { fg = p.drk_0 },
+	TabLine = { fg = p.drk_0 },
+	TabLineFill = { fg = p.dark_1 },
+	TabLineSel = { fg = p.orn_4 },
+	Title = { fg = p.sky_4 },
+	WarningMsg = { fg = p.sun_4 },
+	Whitespace = { fg = p.slt_2 },
+	WildMenu = { fg = p.blu_2 },
+	WinBar = { fg = p.drk_0 },
+	WinBarNC = { fg = p.drk_0 },
+}
+
+-- }}}
+
+-- (TEMP) syntax {{{
+hl.syntax = {
+	Comment = { fg = p.slt_2 },
+	Constant = { fg = p.orn_1 },
+	String = { fg = p.grn_4 },
+	Character = { fg = p.grn_2 },
+	Number = { fg = p.pnk_3 },
+	Boolean = { fg = p.cyn_3 },
+	Float = { fg = p.pnk_4 },
+	Identifier = { fg = p.blu_3 },
+	Function = { fg = p.orn_3 },
+	Statement = { fg = p.prp_4 },
+	Conditional = { fg = p.prp_2 },
+	Repeat = { fg = p.prp_3 },
+	Label = { fg = p.blu_4 },
+	Operator = { fg = p.cyn_4 },
+	Keyword = { fg = p.prp_4 },
+	Exception = { fg = p.prp_2 },
+	PreProc = { fg = p.blu_4 },
+	Include = { fg = p.blu_3 },
+	Define = { fg = p.blu_2 },
+	Macro = { fg = p.blu_2 },
+	PreCondit = { fg = p.blu_1 },
+	Type = { fg = p.sun_4 },
+	StorageClass = { fg = p.sun_3 },
+	Structure = { fg = p.sun_2 },
+	Typedef = { fg = p.sun_3 },
+	Special = { fg = p.sky_4 },
+	SpecialChar = { fg = p.sky_2 },
+	Title = { fg = p.sky_4 },
+	Tag = { fg = p.sky_3 },
+	Delimiter = { fg = p.sky_2 },
+	SpecialComment = { fg = p.sky_0 },
+	Debug = { fg = p.sky_1 },
+	Underlined = { fg = p.tyr_3 },
+	Ignore = { fg = p.gry_2 },
+	Error = { fg = p.rby_3 },
+	Todo = { fg = p.orn_4 },
+}
+
+-- }}}
+
+-- (TEMP) lsp {{{
+
+hl.lsp = {
+	Default = {},
+	Array = {},
+	Boolean = {},
+	Class = {},
+	Color = {},
+	Constant = {},
+	Constructor = {},
+	Enum = {},
+	EnumMember = {},
+	Event = {},
+	Field = {},
+	File = {},
+	Folder = {},
+	Function = {},
+	Interface = {},
+	Key = {},
+	Keyword = {},
+	Method = {},
+	Module = {},
+	Namespace = {},
+	Null = {},
+	Number = {},
+	Object = {},
+	Operator = {},
+	Package = {},
+	Property = {},
+	Reference = {},
+	Snippet = {},
+	String = {},
+	Struct = {},
+	Text = {},
+	TypeParameter = {},
+	Unit = {},
+	Value = {},
+	Variable = {},
+}
+
+-- }}}
+
+-- (TEMP) treesitter {{{
+hl.treesitter = {
+	["@annotation"] = {},
+	["@attribute"] = {},
+	["@boolean"] = {},
+	["@character"] = {},
+	["@comment"] = {},
+	["@conditional"] = {},
+	["@constant"] = {},
+	["@constant.builtin"] = {},
+	["@constant.macro"] = {},
+	["@constructor"] = {},
+	["@error"] = {},
+	["@exception"] = {},
+	["@field"] = {},
+	["@float"] = {},
+	["@function"] = {},
+	["@function.builtin"] = {},
+	["@function.macro"] = {},
+	["@include"] = {},
+	["@keyword"] = {},
+	["@keyword.function"] = {},
+	["@keyword.operator"] = {},
+	["@label"] = {},
+	["@method"] = {},
+	["@namespace"] = {},
+	["@none"] = {},
+	["@number"] = {},
+	["@operator"] = {},
+	["@parameter"] = {},
+	["@parameter.reference"] = {},
+	["@property"] = {},
+	["@punctuation.delimiter"] = {},
+	["@punctuation.bracket"] = {},
+	["@punctuation.special"] = {},
+	["@repeat"] = {},
+	["@string"] = {},
+	["@string.regex"] = {},
+	["@string.escape"] = {},
+	["@symbol"] = {},
+	["@tag"] = {},
+	["@tag.attribute"] = {},
+	["@tag.delimiter"] = {},
+	["@text"] = {},
+	["@text.strong"] = {},
+	["@text.emphasis"] = {},
+	["@text.underline"] = {},
+	["@text.strike"] = {},
+	["@text.title"] = {},
+	["@text.literal"] = {},
+	["@text.uri"] = {},
+	["@text.todo"] = {},
+	["@text.math"] = {},
+	["@text.reference"] = {},
+	["@text.environment"] = {},
+	["@text.environment.name"] = {},
+	["@text.diff.add"] = {},
+	["@text.diff.delete"] = {},
+	["@note"] = {},
+	["@warning"] = {},
+	["@danger"] = {},
+	["@type"] = {},
+	["@type.builtin"] = {},
+	["@variable"] = {},
+	["@variable.builtin"] = {},
+}
+
+-- }}}
+
+-- (TEMP) filetypes {{{
+hl.filetypes.markdown = {
+	markdownBlockquote = {},
+	markdownBold = {},
+	markdownBoldDelimiter = {},
+	markdownCode = {},
+	markdownCodeBlock = {},
+	markdownCodeDelimiter = {},
+	markdownH1 = {},
+	markdownH2 = {},
+	markdownH3 = {},
+	markdownH4 = {},
+	markdownH5 = {},
+	markdownH6 = {},
+	markdownHeadingDelimiter = {},
+	markdownHeadingRule = {},
+	markdownId = {},
+	markdownIdDeclaration = {},
+	markdownItalic = {},
+	markdownItalicDelimiter = {},
+	markdownLinkDelimiter = {},
+	markdownLinkText = {},
+	markdownLinkTextDelimiter = {},
+	markdownListMarker = {},
+	markdownOrderedListMarker = {},
+	markdownRule = {},
+	markdownUrl = {},
+	markdownUrlDelimiter = {},
+	markdownUrlTitleDelimiter = {},
+}
+
+-- }}}
+
+-- (TEMP) plugins {{{
+
+hl.plugins.lsp = {
+	LspCxxHlGroupEnumConstant = {},
+	LspCxxHlGroupMemberVariable = {},
+	LspCxxHlGroupNamespace = {},
+	LspCxxHlSkippedRegion = {},
+	LspCxxHlSkippedRegionBeginEnd = {},
+
+	DiagnosticError = {},
+	DiagnosticHint = {},
+	DiagnosticInfo = {},
+	DiagnosticWarn = {},
+
+	DiagnosticVirtualTextError = {},
+	DiagnosticVirtualTextWarn = {},
+	DiagnosticVirtualTextInfo = {},
+	DiagnosticVirtualTextHint = {},
+
+	DiagnosticUnderlineError = {},
+	DiagnosticUnderlineHint = {},
+	DiagnosticUnderlineInfo = {},
+	DiagnosticUnderlineWarn = {},
+
+	LspReferenceText = {},
+	LspReferenceWrite = {},
+	LspReferenceRead = {},
+
+	LspCodeLens = {},
+	LspCodeLensSeparator = {},
+}
+
+hl.plugins.cmp = {
+	CmpItemAbbr = {},
+	CmpItemAbbrDeprecated = {},
+	CmpItemAbbrMatch = {},
+	CmpItemAbbrMatchFuzzy = {},
+	CmpItemMenu = {},
+	CmpItemKind = {},
+}
+
+hl.plugins.whichkey = {
+	WhichKey = {},
+	WhichKeyDesc = {},
+	WhichKeyGroup = {},
+	WhichKeySeperator = {},
+}
+
+-- comment
+hl.plugins.diffview = {
+	DiffviewFilePanelTitle = {},
+	DiffviewFilePanelCounter = {},
+	DiffviewFilePanelFileName = {},
+	DiffviewNormal = {},
+	DiffviewCursorLine = {},
+	DiffviewVertSplit = {},
+	DiffviewSignColumn = {},
+	DiffviewStatusLine = {},
+	DiffviewStatusLineNC = {},
+	DiffviewEndOfBuffer = {},
+	DiffviewFilePanelRootPath = {},
+	DiffviewFilePanelPath = {},
+	DiffviewFilePanelInsertions = {},
+	DiffviewFilePanelDeletions = {},
+	DiffviewStatusAdded = {},
+	DiffviewStatusUntracked = {},
+	DiffviewStatusModified = {},
+	DiffviewStatusRenamed = {},
+	DiffviewStatusCopied = {},
+	DiffviewStatusTypeChange = {},
+	DiffviewStatusUnmerged = {},
+	DiffviewStatusUnknown = {},
+	DiffviewStatusDeleted = {},
+	DiffviewStatusBroken = {},
+}
+
+hl.plugins.gitsigns = {
+	GitSignsAdd = {},
+	GitSignsAddLn = {},
+	GitSignsAddNr = {},
+	GitSignsChange = {},
+	GitSignsChangeLn = {},
+	GitSignsChangeNr = {},
+	GitSignsDelete = {},
+	GitSignsDeleteLn = {},
+	GitSignsDeleteNr = {},
+}
+
+hl.plugins.neo_tree = {
+	NeoTreeNormal = {},
+	NeoTreeNormalNC = {},
+	NeoTreeVertSplit = {},
+	NeoTreeWinSeparator = {},
+	NeoTreeEndOfBuffer = {},
+	NeoTreeRootName = {},
+	NeoTreeGitAdded = {},
+	NeoTreeGitDeleted = {},
+	NeoTreeGitModified = {},
+	NeoTreeGitConflict = {},
+	NeoTreeGitUntracked = {},
+	NeoTreeIndentMarker = {},
+	NeoTreeSymbolicLinkTarget = {},
+}
+
+hl.plugins.neotest = {
+	NeotestAdapterName = {},
+	NeotestDir = {},
+	NeotestExpandMarker = {},
+	NeotestFailed = {},
+	NeotestFile = {},
+	NeotestFocused = {},
+	NeotestIndent = {},
+	NeotestMarked = {},
+	NeotestNamespace = {},
+	NeotestPassed = {},
+	NeotestRunning = {},
+	NeotestWinSelect = {},
+	NeotestSkipped = {},
+	NeotestTarget = {},
+	NeotestTest = {},
+	NeotestUnknown = {},
+}
+
+hl.plugins.nvim_tree = {
+	NvimTreeNormal = {},
+	NvimTreeVertSplit = {},
+	NvimTreeEndOfBuffer = {},
+	NvimTreeRootFolder = {},
+	NvimTreeGitDirty = {},
+	NvimTreeGitNew = {},
+	NvimTreeGitDeleted = {},
+	NvimTreeSpecialFile = {},
+	NvimTreeIndentMarker = {},
+	NvimTreeImageFile = {},
+	NvimTreeSymlink = {},
+	NvimTreeFolderName = {},
+}
+
+hl.plugins.telescope = {
+	TelescopeBorder = {},
+	TelescopePromptBorder = {},
+	TelescopeResultsBorder = {},
+	TelescopePreviewBorder = {},
+	TelescopeMatching = {},
+	TelescopePromptPrefix = {},
+	TelescopeSelection = {},
+	TelescopeSelectionCaret = {},
+}
+
+hl.plugins.dashboard = {
+	DashboardShortCut = {},
+	DashboardHeader = {},
+	DashboardCenter = {},
+	DashboardFooter = {},
+}
+
+hl.plugins.outline = {
+	FocusedSymbol = {},
+	AerialLine = {},
+}
+
+hl.plugins.navic = {
+	NavicText = {},
+	NavicSeparator = {},
+}
+
+hl.plugins.ts_rainbow = {
+	rainbowcol1 = {},
+	rainbowcol2 = {},
+	rainbowcol3 = {},
+	rainbowcol4 = {},
+	rainbowcol5 = {},
+	rainbowcol6 = {},
+	rainbowcol7 = {},
+}
+
+hl.plugins.indent_blankline = {
+	IndentBlanklineIndent1 = {},
+	IndentBlanklineIndent2 = {},
+	IndentBlanklineIndent3 = {},
+	IndentBlanklineIndent4 = {},
+	IndentBlanklineIndent5 = {},
+	IndentBlanklineIndent6 = {},
+	IndentBlanklineChar = {},
+	IndentBlanklineContext = {},
+	IndentBlanklineContextChar = {},
+	IndentBlanklineContextStart = {},
+	IndentBlanklineContextSpaceChar = {},
+}
+-- }}}
+
+vim_highlights(hl.builtin)
+vim_highlights(hl.syntax)
+-- }}}
 
 -- 🗂️ Nvim-Tree {{{
 
@@ -155,7 +862,7 @@ require("nvim-tree").setup({
 		},
 	},
 })
--- }}} ⮭
+-- }}}
 
 -- 🧿 GitSigns {{{
 require("gitsigns").setup({
@@ -167,10 +874,10 @@ require("gitsigns").setup({
 			linehl = "GitSignsAddLn",
 		},
 		change = {
-			hl = "Character",
+			hl = "DiffChange",
 			text = "🞊",
-			numhl = "Character",
-			linehl = "Character",
+			numhl = "DiffChange",
+			linehl = "DiffChange",
 		},
 		untracked = {
 			hl = "GitSignsChange",
@@ -198,7 +905,7 @@ require("gitsigns").setup({
 		},
 	},
 	signcolumn = true, -- Toggle with `:Gitsigns toggle_signs`
-	numhl = true, -- Toggle with `:Gitsigns toggle_numhl`
+	numhl = false, -- Toggle with `:Gitsigns toggle_numhl`
 	linehl = false, -- Toggle with `:Gitsigns toggle_linehl`
 	word_diff = false, -- Toggle with `:Gitsigns toggle_word_diff`
 	current_line_blame = false, -- Toggle with `:Gitsigns toggle_current_line_blame`
@@ -240,7 +947,7 @@ require("gitsigns").setup({
 		map("x", "ih", ":<C-U>Gitsigns select_hunk<CR>")
 	end,
 })
--- }}} ⮭
+-- }}}
 
 -- 🧭 LuaLine {{{
 
@@ -462,7 +1169,7 @@ require("lualine").setup({
 		tsplayground,
 	},
 })
--- }}} ⮭
+-- }}}
 
 -- 🔭 Telescope {{{
 
@@ -536,7 +1243,7 @@ tmap("<leader>tq", builtin.quickfix)
 tmap("<leader>tm", builtin.man_pages)
 tmap("<leader>tst", builtin.treesitter)
 
--- }}} ⮭
+-- }}}
 
 -- 🎄 Treesitter {{{
 require("nvim-treesitter.configs").setup({
@@ -641,7 +1348,7 @@ require("nvim-treesitter.configs").setup({
 	},
 	autopairs = { enable = true },
 })
--- }}} ⮭
+-- }}}
 
 -- 🪄 Nvim-Cmp {{{
 local cmp = require("cmp")
@@ -747,7 +1454,7 @@ cmp.setup({
 		ghost_text = true,
 	},
 })
--- }}} ⮭
+-- }}}
 
 -- 📚 LSP (and more) {{{
 
@@ -813,7 +1520,7 @@ null_ls.setup({
 		hover.printenv,
 	},
 })
--- }}} ⮭
+-- }}}
 
 -- ♦️  Vim Diagnostic Settings {{{
 local signs = {
@@ -855,7 +1562,7 @@ vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
 vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, {
 	border = "rounded",
 })
--- }}} ⮭
+-- }}}
 
 -- 🎾 Automatic Server Setup {{{
 local servers = {
@@ -874,7 +1581,7 @@ local servers = {
 		},
 	},
 }
--- }}} ⮭
+-- }}}
 
 -- 🧱 MASON, DO THE THING! ⮯  {{{
 require("mason").setup({ ui = { border = "rounded" } })
@@ -897,9 +1604,9 @@ mason_lspconfig.setup_handlers({
 		})
 	end,
 })
--- }}} ⮭
+-- }}}
 
--- }}} ⮭
+-- }}}
 
 -- 🍐 Nvim-Autopairs {{{
 local npairs = require("nvim-autopairs")
@@ -940,7 +1647,7 @@ cmp.event:on(
 		map_char = { tex = "" },
 	})
 )
--- }}} ⮭
+-- }}}
 
 -- 👋 Alpha {{{
 local alpha = require("alpha")
@@ -1134,4 +1841,4 @@ local opts = {
 }
 
 alpha.setup(opts)
--- }}} ⮭
+-- }}}
