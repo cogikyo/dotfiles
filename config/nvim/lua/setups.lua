@@ -181,12 +181,13 @@ local p = {
 
 -- (TEMP) thalamus {{{
 local t = {
-	-- alternative background:
-	substrate = p.drk_0, -- drk_0: (lower bg) -> enzeyme
-	enzyme = p.glc_4, -- glc_4: (lower fg) <- substrate
+	-- passive background:
+	substrate = p.drk_0, -- drk_0: (darker bg) -> enzeyme or solution
+	solution = p.slt_2, -- slt_2: (passive fg) <- substrate
+	enzyme = p.glc_4, -- glc_4: (active fg) <- substrate
 
-	-- alt background (higher):
-	catalyst = p.glc_0, -- glc_0: (active bg) -> reagent or product
+	-- active background:
+	catalyst = p.glc_0, -- glc_0: (lighter bg) -> reagent or product
 	reagent = p.blu_3, -- slt_2: (passive fg) <- catalyst
 	product = p.orn_4, -- orn_4: (active fg) <- catalyst
 
@@ -199,12 +200,12 @@ local t = {
 	hidden = {},
 
 	-- signlaing:
-	error = p.rby_1,
-	success = p.emr_2,
-	warning = p.sun_2,
-	hint = p.sky_2,
+	error = p.rby_3,
+	success = p.emr_3,
+	warning = p.sun_3,
+	hint = p.sky_3,
 	important = p.cyn_3,
-	critical = p.pnk_2,
+	critical = p.pnk_3,
 
 	-- headings
 	h1 = {},
@@ -222,10 +223,10 @@ local t = {
 	max = {},
 
 	-- state
-	new = {},
-	modified = {},
-	delete = {},
-	add = {},
+	new = p.pro_1,
+	modified = p.glu_1,
+	delete = p.his_1,
+	add = p.tyr_1,
 
 	-- relations
 	positive = {},
@@ -297,10 +298,10 @@ hl.builtin = {
 	Folded = { fg = t.enzyme, bg = t.substrate },
 	FoldColumn = { fg = t.enzyme, bg = t.substrate },
 	SignColumn = { fg = p.enzyme },
-	LineNrAbove = { fg = p.rst_0 },
+	LineNrAbove = { fg = t.solution },
 	LineNr = { fg = t.product },
-	LineNrBelow = { fg = p.glc_3 },
-	ColorColumn = { fg = t.enzyme, bg = t.substrate },
+	LineNrBelow = { fg = t.solution },
+	ColorColumn = { bg = t.substrate },
 	CursorLine = { bg = t.substrate },
 
 	-- temporary ui:
@@ -310,13 +311,13 @@ hl.builtin = {
 	PmenuThumb = { bg = t.enzyme },
 
 	-- state change:
-	DiffAdd = { fg = p.tyr_2 },
-	DiffChange = { fg = p.asn_2 },
-	DiffDelete = { fg = p.his_2 },
-	DiffText = { fg = p.glu_2 },
+	DiffAdd = { fg = t.add },
+	DiffChange = { fg = t.modified },
+	DiffDelete = { fg = t.delete },
+	DiffText = { fg = t.modified },
 
 	-- visual selection:
-	Visual = { bg = t.catalyst, fmt = "bold" }, -- standard
+	Visual = { bg = p.glc_2, fmt = "bold" }, -- standard
 	VisualNOS = { fg = p.blu_0, bg = p.drk_0 }, -- rarely used
 
 	-- linting:
@@ -370,7 +371,7 @@ hl.builtin = {
 
 -- (TEMP) syntax {{{
 hl.syntax = {
-	Comment = { fg = p.slt_2 },
+	Comment = { fg = t.solution },
 	Constant = { fg = p.orn_1 },
 	String = { fg = p.grn_4 },
 	Character = { fg = p.grn_2 },
@@ -905,7 +906,7 @@ require("gitsigns").setup({
 		},
 	},
 	signcolumn = true, -- Toggle with `:Gitsigns toggle_signs`
-	numhl = false, -- Toggle with `:Gitsigns toggle_numhl`
+	numhl = true, -- Toggle with `:Gitsigns toggle_numhl`
 	linehl = false, -- Toggle with `:Gitsigns toggle_linehl`
 	word_diff = false, -- Toggle with `:Gitsigns toggle_word_diff`
 	current_line_blame = false, -- Toggle with `:Gitsigns toggle_current_line_blame`
