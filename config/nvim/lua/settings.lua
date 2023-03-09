@@ -20,9 +20,7 @@ local options = {
 	-- ========================================================================
 
 	-- 👀 UI ==================================================================
-	hlsearch = false, -- turn off persistent highlights when searching
 	shortmess = "filnxtToOFcsS", -- control some status line message settings
-	showtabline = 0, -- I don't use tabs; hide tabs
 	number = true, -- show line numbers
 	relativenumber = true, -- makes using {number}{motion} easier
 	termguicolors = true, -- more colors, good; needs terminal support.
@@ -34,8 +32,6 @@ local options = {
 	-- ========================================================================
 
 	-- ⌨️  UX ==================================================================
-	wildmenu = true, -- command-line completion
-	wildmode = { "list:lastused", "full" }, -- completion method
 	mouse = "a", -- mouse can be useful, sometimes... it doesn't hurt.
 	splitbelow = true, -- split below by default
 	splitright = true, -- split right by default

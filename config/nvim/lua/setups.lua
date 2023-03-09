@@ -179,79 +179,6 @@ local p = {
 }
 -- }}}
 
--- (TEMP) thalamus {{{
-local t = {
-	-- passive background:
-	substrate = p.drk_0, -- drk_0: (darker bg) -> enzeyme or solution
-	solution = p.slt_2, -- slt_2: (passive fg) <- substrate
-	enzyme = p.glc_4, -- glc_4: (active fg) <- substrate
-
-	-- active background:
-	catalyst = p.glc_0, -- glc_0: (lighter bg) -> reagent or product
-	reagent = p.blu_3, -- slt_2: (passive fg) <- catalyst
-	product = p.orn_4, -- orn_4: (active fg) <- catalyst
-
-	-- functional ui:
-	inner = {},
-	outer = {},
-	border = {},
-	broken = {},
-	locked = {},
-	hidden = {},
-
-	-- signlaing:
-	error = p.rby_3,
-	success = p.emr_3,
-	warning = p.sun_3,
-	hint = p.sky_3,
-	important = p.cyn_3,
-	critical = p.pnk_3,
-
-	-- headings
-	h1 = {},
-	h2 = {},
-	h3 = {},
-	h4 = {},
-	h5 = {},
-	h6 = {},
-
-	-- deviations:
-	min = {},
-	minor = {},
-	normal = {},
-	major = {},
-	max = {},
-
-	-- state
-	new = p.pro_1,
-	modified = p.glu_1,
-	delete = p.his_1,
-	add = p.tyr_1,
-
-	-- relations
-	positive = {},
-	negative = {},
-	neutral = {},
-	match = {},
-	selected = {},
-	occupied = {},
-	empty = {},
-	inactive = {},
-
-	-- links:
-	active = {},
-	visited = {},
-	internal = {},
-	exterenal = {},
-
-	-- time dependent:
-	loading = {},
-	paused = {},
-	start = {},
-	stop = {},
-}
--- }}}
-
 -- (TEMP) setup {{{
 local hl = {
 	syntax = {},
@@ -288,95 +215,180 @@ end
 
 -- }}}
 
+-- (TEMP) thalamus {{{
+local t = {
+	-- passive background:
+	bg_passive = p.drk_0, -- drk_0
+	fg_passive = p.slt_2, -- slt_2
+	fg_passive_br = p.glc_4, -- glc_4
+
+	-- active background:
+	bg_active = p.glc_0, -- glc_0
+	bg_active_br = p.glc_2, --glc_2
+	fg_active = p.orn_4, -- orn_4
+	fg_active_passive = p.blu_2, -- blu_2
+
+	-- search:
+	srch_active = p.orn_3, -- orn_3
+	srch_passive = p.blu_1, -- blu_0
+
+	-- state
+	new = p.pro_1,
+	modified = p.glu_1,
+	delete = p.his_1,
+	add = p.tyr_1,
+
+	-- signaling:
+	error = p.rby_3,
+	success = p.emr_3,
+	warning = p.sun_3,
+	hint = p.sky_3,
+	important = p.cyn_3,
+	critical = p.pnk_3,
+
+	-- functional ui:
+	inner = {},
+	outer = {},
+	border = {},
+	broken = {},
+	locked = {},
+	hidden = {},
+
+	-- headings
+	h1 = p.sky_2,
+	h2 = {},
+	h3 = {},
+	h4 = {},
+	h5 = {},
+	h6 = {},
+
+	-- deviations:
+	min = {},
+	minor = {},
+	normal = {},
+	major = {},
+	max = {},
+
+	-- relations
+	positive = {},
+	negative = {},
+	neutral = {},
+	match = {},
+	selected = {},
+	occupied = {},
+	empty = {},
+	inactive = {},
+
+	-- links:
+	active = {},
+	visited = {},
+	internal = {},
+	exterenal = {},
+
+	-- time dependent:
+	loading = {},
+	paused = {},
+	start = {},
+	stop = {},
+}
+-- }}}
+
 -- (TEMP) builtin {{{
 hl.builtin = {
-	-- text:
+	-- base:
 	Normal = { fg = p.fg, bg = p.bg },
-	Conceal = { fg = t.reagent }, -- open to change (OTC)
+	Cursor = { fg = p.bg, bg = p.fg },
+	lCursor = { fg = p.bg, bg = p.fg },
+	CursorIM = { fg = p.bg, bg = p.fg },
+	TermCursor = { fg = p.bg, bg = p.fg },
+	TermCursorNC = { fg = p.bg, bg = p.fg },
+	MatchParen = { fg = t.fg_active },
+	EndOfBuffer = { fg = p.bg },
+	Whitespace = { fg = t.fg_passive },
 
 	-- recurring ui:
-	Folded = { fg = t.enzyme, bg = t.substrate },
-	FoldColumn = { fg = t.enzyme, bg = t.substrate },
-	SignColumn = { fg = p.enzyme },
-	LineNrAbove = { fg = t.solution },
-	LineNr = { fg = t.product },
-	LineNrBelow = { fg = t.solution },
-	ColorColumn = { bg = t.substrate },
-	CursorLine = { bg = t.substrate },
+	Folded = { fg = t.fg_passive_br, bg = t.bg_passive },
+	FoldColumn = { fg = t.fg_passive_br, bg = t.bg_passive },
+	CursorLineFold = { fg = t.fg_active_passive, bg = t.bg_passive },
+	SignColumn = { fg = t.fg_active_passive },
+	CursorLineSign = { bg = t.bg_passive },
+	LineNrAbove = { fg = t.fg_passive },
+	LineNr = { fg = t.fg_active_passive },
+	CursorLineNr = { fg = t.fg_active_passive, bg = t.bg_passive },
+	LineNrBelow = { fg = t.fg_passive },
+	ColorColumn = { bg = t.bg_passive },
+	CursorColumn = { bg = t.bg_passive },
+	CursorLine = { bg = t.bg_passive },
 
 	-- temporary ui:
-	Pmenu = { fg = t.reagent, bg = t.catalyst },
-	PmenuSel = { fg = t.product, bg = p.glc_2, fmt = "bold" },
-	PmenuSbar = { bg = t.reagent },
-	PmenuThumb = { bg = t.enzyme },
+	Pmenu = { fg = t.fg_active_passive, bg = t.bg_active },
+	PmenuSel = { fg = t.fg_active, bg = t.bg_active_br, fmt = "bold" },
+	PmenuSbar = { bg = t.fg_active_passive },
+	PmenuThumb = { bg = t.fg_passive_br },
+	WildMenu = { fg = t.fg_active, bg = t.bg_active },
 
 	-- state change:
 	DiffAdd = { fg = t.add },
+	DiffNew = { fg = t.new },
 	DiffChange = { fg = t.modified },
-	DiffDelete = { fg = t.delete },
 	DiffText = { fg = t.modified },
+	DiffDelete = { fg = t.delete },
 
-	-- visual selection:
-	Visual = { bg = p.glc_2, fmt = "bold" }, -- standard
-	VisualNOS = { fg = p.blu_0, bg = p.drk_0 }, -- rarely used
+	-- visual:
+	Visual = { bg = t.bg_active_br, fmt = "bold" },
+	VisualNOS = { fg = p.blu_0, bg = p.drk_1 },
+	Search = { fg = t.srch_passive },
+	CurSearch = { fg = t.srch_active, fmt = "bold" },
+	IncSearch = { fg = t.srch_active, fmt = "bold" },
+	Substitute = { fg = t.srch_active, fmt = "bold" },
 
 	-- linting:
-	SpellBad = { sp = p.rby_1, fmt = "undercurl" }, -- error
-	SpellCap = { sp = p.sky_1, fmt = "undercurl" }, -- OTC
-	SpellLocal = { sp = p.cyn_1, fmt = "undercurl" }, -- OTC
-	SpellRare = { sp = p.pnk_1, fmt = "undercurl" }, -- OTC
+	SpellBad = { sp = p.rby_1, fmt = "undercurl" },
+	SpellCap = { sp = p.sky_1, fmt = "undercurl" },
+	SpellLocal = { sp = p.cyn_1, fmt = "undercurl" },
+	SpellRare = { sp = p.pnk_1, fmt = "undercurl" },
 
-	CurSearch = { fg = p.orn_4, bg = p.drk_0 },
-	Cursor = { fg = p.bg, bg = p.brt_1 },
-	lCursor = { fg = p.bg, bg = p.brt_1 },
-	CursorIM = { fg = p.bg, bg = p.brt_1 },
-	CursorColumn = { fg = p.drk_0 },
-	Directory = { fg = p.sky_2 },
-	EndOfBuffer = { fg = p.bg },
-	TermCursor = { fg = p.bg, bg = p.brt_1 },
-	TermCursorNC = { fg = p.bg, bg = p.brt_1 },
-	ErrorMsg = { fg = p.rby_1 },
-	WinSeparator = { fg = p.blu_3 },
-	IncSearch = { fg = p.orn_4, bg = p.slt_0 },
-	Substitute = { fg = p.orn_4, bg = p.slt_0 },
-	CursorLineNr = { fg = p.asn_0 },
-	CursorLineSign = { fg = p.asn_0 },
-	CursorLineFold = { fg = p.asn_0 },
-	MatchParen = { fg = p.orn_4 },
-	ModeMsg = { fg = p.slt_5 },
-	MsgArea = { fg = p.slt_5 },
-	MsgSeparator = { fg = p.blu_2 },
-	MoreMsg = { fg = p.blu_3 },
-	NonText = { fg = p.drk_0 },
-	NormalFloat = { fg = p.brt_1 },
-	NormalNC = { fg = p.fg },
-	Question = { fg = p.blu_4 },
-	QuickFixLine = { fg = p.brt_3 },
-	Search = { fg = p.orn_4 },
-	SpecialKey = { fg = p.olv_2 },
-	StatusLine = { fg = p.drk_0 },
-	StatusLineNC = { fg = p.drk_0 },
-	TabLine = { fg = p.drk_0 },
-	TabLineFill = { fg = p.dark_1 },
-	TabLineSel = { fg = p.orn_4 },
-	Title = { fg = p.sky_4 },
-	WarningMsg = { fg = p.sun_4 },
-	Whitespace = { fg = p.slt_2 },
-	WildMenu = { fg = p.blu_2 },
-	WinBar = { fg = p.drk_0 },
-	WinBarNC = { fg = p.drk_0 },
+	-- messaging:
+	ErrorMsg = { fg = t.error },
+	WarningMsg = { fg = t.warning },
+	ModeMsg = { fg = t.fg_active_passive, bg = t.bg_active },
+	MsgArea = { fg = t.fg_passive_br },
+	MoreMsg = { fg = p.fg_ },
+	MsgSeparator = { fg = t.fg_active_passive },
+	Question = { fg = t.fg_active_passive },
+
+	-- windows 'n such:
+	WinSeparator = { fg = t.fg_active_passive },
+	NormalFloat = { fg = p.brt_0, bg = p.bg },
+	NormalNC = { fg = p.slt_4, bg = t.bg_passive },
+	QuickFixLine = { fg = t.fg_active_passive, bg = p.glc_0 },
+	StatusLine = { fg = t.fg_passive_br, bg = t.bg_passive },
+	StatusLineNC = { fg = t.fg_passive_br, bg = t.bg_passive },
+	TabLine = { fg = t.fg_passive_br, bg = t.bg_passive },
+	TabLineFill = { bg = t.bg_passive },
+	TabLineSel = { fg = t.fg_active_passive, bg = t.bg_active },
+	WinBar = { fg = t.fg_active_passive, bg = t.bg_passive },
+	WinBarNC = { fg = t.fg_passive, bg = p.drk1 },
+
+	-- uncertain assignments:
+	Directory = { fg = t.h1, fmt = "bold" },
+	Title = { fg = t.h1, fmt = "bold" },
+	Conceal = { fg = t.fg_active_passive },
+	NonText = { fg = t.fg_passive_br },
+	SpecialKey = { fg = p.gry_2 },
 }
 
 -- }}}
 
 -- (TEMP) syntax {{{
 hl.syntax = {
-	Comment = { fg = t.solution },
+	Comment = { fg = t.fg_passive },
 	Constant = { fg = p.orn_1 },
-	String = { fg = p.grn_4 },
+	String = { fg = p.grn_3 },
 	Character = { fg = p.grn_2 },
 	Number = { fg = p.pnk_3 },
 	Boolean = { fg = p.cyn_3 },
+	BooleanFalse = { fg = p.pnk_3 },
 	Float = { fg = p.pnk_4 },
 	Identifier = { fg = p.blu_3 },
 	Function = { fg = p.orn_3 },
@@ -384,7 +396,7 @@ hl.syntax = {
 	Conditional = { fg = p.prp_2 },
 	Repeat = { fg = p.prp_3 },
 	Label = { fg = p.blu_4 },
-	Operator = { fg = p.cyn_4 },
+	Operator = { fg = p.prp_2 },
 	Keyword = { fg = p.prp_4 },
 	Exception = { fg = p.prp_2 },
 	PreProc = { fg = p.blu_4 },
@@ -400,13 +412,13 @@ hl.syntax = {
 	SpecialChar = { fg = p.sky_2 },
 	Title = { fg = p.sky_4 },
 	Tag = { fg = p.sky_3 },
-	Delimiter = { fg = p.sky_2 },
+	Delimiter = { fg = p.glu_2 },
 	SpecialComment = { fg = p.sky_0 },
 	Debug = { fg = p.sky_1 },
 	Underlined = { fg = p.tyr_3 },
-	Ignore = { fg = p.gry_2 },
-	Error = { fg = p.rby_3 },
-	Todo = { fg = p.orn_4 },
+	Ignore = { fg = t.fg_passive },
+	Error = { fg = t.error },
+	Todo = { fg = t.hint },
 }
 
 -- }}}
@@ -457,7 +469,6 @@ hl.lsp = {
 hl.treesitter = {
 	["@annotation"] = {},
 	["@attribute"] = {},
-	["@boolean"] = {},
 	["@character"] = {},
 	["@comment"] = {},
 	["@conditional"] = {},
@@ -754,7 +765,7 @@ vim_highlights(hl.syntax)
 
 -- https://github.com/nvim-tree/nvim-tree.lua
 require("nvim-tree").setup({
-	disable_netrw = true,
+	disable_netrw = false,
 	hijack_cursor = true,
 	update_focused_file = { enable = true },
 	diagnostics = { enable = true },
@@ -881,10 +892,10 @@ require("gitsigns").setup({
 			linehl = "DiffChange",
 		},
 		untracked = {
-			hl = "GitSignsChange",
+			hl = "DiffNew",
 			text = "",
-			numhl = "GitSignsChangeNr",
-			linehl = "GitSignsChangeLn",
+			numhl = "DiffNew",
+			linehl = "DIffNew",
 		},
 		delete = {
 			hl = "GitSignsDelete",
@@ -906,7 +917,7 @@ require("gitsigns").setup({
 		},
 	},
 	signcolumn = true, -- Toggle with `:Gitsigns toggle_signs`
-	numhl = true, -- Toggle with `:Gitsigns toggle_numhl`
+	numhl = false, -- Toggle with `:Gitsigns toggle_numhl`
 	linehl = false, -- Toggle with `:Gitsigns toggle_linehl`
 	word_diff = false, -- Toggle with `:Gitsigns toggle_word_diff`
 	current_line_blame = false, -- Toggle with `:Gitsigns toggle_current_line_blame`
@@ -960,7 +971,7 @@ local tokyonight = {
 	normal = {
 		a = { bg = colors.blue, fg = colors.black },
 		b = { bg = fg_gutter_alt, fg = colors.blue },
-		c = { bg = colors.bg_statusline, fg = colors.blue7 },
+		c = { bg = "#1e2133", fg = colors.blue7 },
 	},
 	insert = {
 		a = { bg = colors.green, fg = colors.black },
@@ -981,7 +992,7 @@ local tokyonight = {
 	inactive = {
 		a = { bg = colors.bg_statusline, fg = colors.blue },
 		b = { bg = colors.bg_statusline, fg = fg_gutter_alt, gui = "bold" },
-		c = { bg = colors.bg_statusline, fg = fg_gutter_alt },
+		c = { bg = "#1e2133", fg = fg_gutter_alt },
 	},
 }
 
@@ -1155,12 +1166,12 @@ require("lualine").setup({
 		lualine_z = { icon },
 	},
 	inactive_sections = {
-		lualine_a = { "" },
-		lualine_b = { buffers },
-		lualine_c = { "" },
+		lualine_a = {},
+		lualine_b = {},
+		lualine_c = {},
 		lualine_x = {},
-		lualine_y = { "" },
-		lualine_z = { "filetype" },
+		lualine_y = {},
+		lualine_z = {},
 	},
 	tabline = {},
 	extensions = {
