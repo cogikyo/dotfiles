@@ -218,19 +218,19 @@ end
 -- (TEMP) thalamus {{{
 local t = {
 	-- passive background:
-	bg_passive = p.drk_0, -- drk_0
-	fg_passive = p.slt_2, -- slt_2
-	fg_passive_br = p.glc_4, -- glc_4
+	bg_passive = p.drk_0,
+	fg_passive = p.slt_2,
+	fg_passive_br = p.glc_4,
 
 	-- active background:
-	bg_active = p.glc_0, -- glc_0
-	bg_active_br = p.glc_2, --glc_2
-	fg_active = p.orn_4, -- orn_4
-	fg_active_passive = p.blu_2, -- blu_2
+	bg_active = p.glc_0,
+	bg_active_br = p.glc_2,
+	fg_active = p.orn_4,
+	fg_active_passive = p.blu_2,
 
 	-- search:
-	srch_active = p.orn_3, -- orn_3
-	srch_passive = p.blu_1, -- blu_0
+	search_active = p.orn_1,
+	search_passive = p.blu_0,
 
 	-- state
 	new = p.pro_1,
@@ -239,20 +239,17 @@ local t = {
 	add = p.tyr_1,
 
 	-- signaling:
+	inactive = p.gry_2,
 	error = p.rby_3,
+	bad = p.rby_1,
 	success = p.emr_3,
 	warning = p.sun_3,
 	hint = p.sky_3,
+	tip = p.sky_1,
 	important = p.cyn_3,
+	custom = p.cyn_1,
 	critical = p.pnk_3,
-
-	-- functional ui:
-	inner = {},
-	outer = {},
-	border = {},
-	broken = {},
-	locked = {},
-	hidden = {},
+	rare = p.pnk_1,
 
 	-- headings
 	h1 = p.sky_2,
@@ -274,10 +271,6 @@ local t = {
 	negative = {},
 	neutral = {},
 	match = {},
-	selected = {},
-	occupied = {},
-	empty = {},
-	inactive = {},
 
 	-- links:
 	active = {},
@@ -313,7 +306,7 @@ hl.builtin = {
 	SignColumn = { fg = t.fg_active_passive },
 	CursorLineSign = { bg = t.bg_passive },
 	LineNrAbove = { fg = t.fg_passive },
-	LineNr = { fg = t.fg_active_passive },
+	LineNr = { fg = t.fg_active_passive, fmt = "bold" },
 	CursorLineNr = { fg = t.fg_active_passive, bg = t.bg_passive },
 	LineNrBelow = { fg = t.fg_passive },
 	ColorColumn = { bg = t.bg_passive },
@@ -337,74 +330,73 @@ hl.builtin = {
 	-- visual:
 	Visual = { bg = t.bg_active_br, fmt = "bold" },
 	VisualNOS = { fg = p.blu_0, bg = p.drk_1 },
-	Search = { fg = t.srch_passive },
-	CurSearch = { fg = t.srch_active, fmt = "bold" },
-	IncSearch = { fg = t.srch_active, fmt = "bold" },
-	Substitute = { fg = t.srch_active, fmt = "bold" },
+	Search = { fg = t.search_passive },
+	CurSearch = { fg = t.search_active, fmt = "bold" },
+	IncSearch = { fg = t.search_active, fmt = "bold" },
+	Substitute = { fg = t.search_active, fmt = "bold" },
 
 	-- linting:
-	SpellBad = { sp = p.rby_1, fmt = "undercurl" },
-	SpellCap = { sp = p.sky_1, fmt = "undercurl" },
-	SpellLocal = { sp = p.cyn_1, fmt = "undercurl" },
-	SpellRare = { sp = p.pnk_1, fmt = "undercurl" },
+	SpellBad = { sp = t.bad, fmt = "undercurl" },
+	SpellCap = { sp = t.tip, fmt = "undercurl" },
+	SpellLocal = { sp = t.custom, fmt = "undercurl" },
+	SpellRare = { sp = t.rare, fmt = "undercurl" },
 
 	-- messaging:
 	ErrorMsg = { fg = t.error },
 	WarningMsg = { fg = t.warning },
 	ModeMsg = { fg = t.fg_active_passive, bg = t.bg_active },
 	MsgArea = { fg = t.fg_passive_br },
-	MoreMsg = { fg = p.fg_ },
+	MoreMsg = { fg = p.fg_active_passive },
 	MsgSeparator = { fg = t.fg_active_passive },
 	Question = { fg = t.fg_active_passive },
 
 	-- windows 'n such:
 	WinSeparator = { fg = t.fg_active_passive },
-	NormalFloat = { fg = p.brt_0, bg = p.bg },
-	NormalNC = { fg = p.slt_4, bg = t.bg_passive },
-	QuickFixLine = { fg = t.fg_active_passive, bg = p.glc_0 },
+	NormalFloat = { fg = t.fg_active_passive, bg = t.bg_active },
+	NormalNC = { fg = t.fg_passive_br, bg = t.bg_passive },
+	QuickFixLine = { fg = t.fg_active_passive, bg = t.bg_active },
 	StatusLine = { fg = t.fg_passive_br, bg = t.bg_passive },
 	StatusLineNC = { fg = t.fg_passive_br, bg = t.bg_passive },
 	TabLine = { fg = t.fg_passive_br, bg = t.bg_passive },
 	TabLineFill = { bg = t.bg_passive },
 	TabLineSel = { fg = t.fg_active_passive, bg = t.bg_active },
 	WinBar = { fg = t.fg_active_passive, bg = t.bg_passive },
-	WinBarNC = { fg = t.fg_passive, bg = p.drk1 },
+	WinBarNC = { fg = t.fg_passive_br, bg = t.bg_passive },
 
 	-- uncertain assignments:
-	Directory = { fg = t.h1, fmt = "bold" },
-	Title = { fg = t.h1, fmt = "bold" },
+	Directory = { fg = t.h1 },
+	Title = { fg = t.h1 },
 	Conceal = { fg = t.fg_active_passive },
-	NonText = { fg = t.fg_passive_br },
-	SpecialKey = { fg = p.gry_2 },
+	NonText = { fg = t.inactive },
+	SpecialKey = { fg = t.inactive },
 }
 
 -- }}}
 
--- (TEMP) syntax {{{
+-- (TEMP) syntax {{
 hl.syntax = {
 	Comment = { fg = t.fg_passive },
-	Constant = { fg = p.orn_1 },
+	Constant = { fg = p.sun_3 },
 	String = { fg = p.grn_3 },
-	Character = { fg = p.grn_2 },
-	Number = { fg = p.pnk_3 },
-	Boolean = { fg = p.cyn_3 },
-	BooleanFalse = { fg = p.pnk_3 },
+	Character = { fg = p.tyr_2 },
+	Number = { fg = p.pnk_2 },
+	Boolean = { fg = p.cyn_2 },
 	Float = { fg = p.pnk_4 },
 	Identifier = { fg = p.blu_3 },
-	Function = { fg = p.orn_3 },
-	Statement = { fg = p.prp_4 },
-	Conditional = { fg = p.prp_2 },
-	Repeat = { fg = p.prp_3 },
-	Label = { fg = p.blu_4 },
-	Operator = { fg = p.prp_2 },
-	Keyword = { fg = p.prp_4 },
-	Exception = { fg = p.prp_2 },
-	PreProc = { fg = p.blu_4 },
-	Include = { fg = p.blu_3 },
-	Define = { fg = p.blu_2 },
-	Macro = { fg = p.blu_2 },
-	PreCondit = { fg = p.blu_1 },
-	Type = { fg = p.sun_4 },
+	Function = { fg = p.orn_4 },
+	Statement = { fg = p.prp_1, fmt = "italic" },
+	Conditional = { fg = p.prp_1 },
+	Repeat = { fg = p.prp_1, fmt = "italic" },
+	Label = { fg = p.prp_4, fmt = "italic" },
+	Operator = { fg = p.prp_3 },
+	Keyword = { fg = p.prp_2, fmt = "italic" },
+	Exception = { fg = p.prp_4, fmt = "italic" },
+	PreProc = { fg = p.glc_5 },
+	Include = { fg = p.glc_5 },
+	Define = { fg = p.glc_5 },
+	Macro = { fg = p.glc_5 },
+	PreCondit = { fg = p.glc_5 },
+	Type = { fg = p.blu_1, fmt = "italic" },
 	StorageClass = { fg = p.sun_3 },
 	Structure = { fg = p.sun_2 },
 	Typedef = { fg = p.sun_3 },
@@ -761,7 +753,7 @@ vim_highlights(hl.builtin)
 vim_highlights(hl.syntax)
 -- }}}
 
--- 🗂️ Nvim-Tree {{{
+-- 🗂️ Nvim-Tree {{
 
 -- https://github.com/nvim-tree/nvim-tree.lua
 require("nvim-tree").setup({
@@ -992,7 +984,7 @@ local tokyonight = {
 	inactive = {
 		a = { bg = colors.bg_statusline, fg = colors.blue },
 		b = { bg = colors.bg_statusline, fg = fg_gutter_alt, gui = "bold" },
-		c = { bg = "#1e2133", fg = fg_gutter_alt },
+		c = { bg = "#22536", fg = fg_gutter_alt },
 	},
 }
 
