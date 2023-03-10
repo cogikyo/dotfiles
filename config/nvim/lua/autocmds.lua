@@ -20,8 +20,8 @@ global_autocmd("InsertEnter", "silent! set formatoptions=tcqnpj1")
 -- Why is highlighting text yanking not an default feature?
 global_autocmd("TextYankPost", "silent! lua vim.highlight.on_yank({ timeout = 69})")
 
--- Remove color column when entering help docs
-scoped_autocmd("FileType", "HelpDocs", "help", "silent! setlocal cc=")
+-- Remove color column
+scoped_autocmd("FileType", "NoColorColumn", { "help", "Trouble" }, "silent! setlocal cc=")
 
 scoped_autocmd("BufWritePost", "EwwRestart", "eww.yuck,eww.scss", ":! eww-open & disown && exit<CR>")
 
