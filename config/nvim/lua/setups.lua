@@ -38,7 +38,7 @@ require("pretty-fold").setup({
 -- }}}
 -- =============================================================================
 
--- 🎨 Colorscheme  {{{
+-- 🎨 Colorscheme  {{
 -- vim.cmd([[ colorscheme vagari ]])
 
 -- (TEMP) palette {{{
@@ -184,7 +184,8 @@ local hl = {
 	syntax = {},
 	builtin = {},
 	treesitter = {},
-	lsp = {},
+	treesitter_queries = {},
+	lsp_kind_icons = {},
 	filetypes = {},
 	plugins = {},
 }
@@ -203,16 +204,6 @@ local function vim_highlights(hl_groups)
 	end
 end
 
--- vimhighlights(hl.treesitter)
-
--- for _, group in pairs(hl.filetypes) do
--- 	vim_highlights(group)
--- end
---
--- for _, group in pairs(hl.plugins) do
--- 	vim_highlights(group)
--- end
-
 -- }}}
 
 -- (TEMP) thalamus {{{
@@ -226,17 +217,17 @@ local t = {
 	bg_active = p.glc_0,
 	bg_active_br = p.glc_2,
 	fg_active = p.orn_4,
-	fg_active_passive = p.blu_2,
+	fg_idle = p.blu_2,
 
 	-- search:
 	search_active = p.orn_1,
-	search_passive = p.blu_0,
+	search_idle = p.blu_0,
 
 	-- state
+	add = p.tyr_1,
 	new = p.pro_1,
 	modified = p.glu_1,
 	delete = p.his_1,
-	add = p.tyr_1,
 
 	-- signaling:
 	inactive = p.gry_2,
@@ -258,82 +249,126 @@ local t = {
 	h4 = {},
 	h5 = {},
 	h6 = {},
-
-	-- deviations:
-	min = {},
-	minor = {},
-	normal = {},
-	major = {},
-	max = {},
-
-	-- relations
-	positive = {},
-	negative = {},
-	neutral = {},
-	match = {},
-
-	-- links:
-	active = {},
-	visited = {},
-	internal = {},
-	exterenal = {},
-
-	-- time dependent:
-	loading = {},
-	paused = {},
-	start = {},
-	stop = {},
 }
+-- }}}
+
+-- (TEMP) cortex {{{
+local c = {
+	normal = { fg = p.fg, bg = p.bg },
+	reverse = { fg = p.bg, bg = p.fg },
+	invis = { fg = p.bg, bg = p.bg },
+	inactive = { fg = t.inactive },
+	heading = { fg = t.h1 },
+
+	comment = { fg = t.fg_passive },
+	passive = { fg = t.fg_passive_br, bg = t.bg_passive },
+	passive_fg = { fg = t.fg_passive_br },
+	passive_bg = { bg = t.bg_passive },
+
+	active = { fg = t.fg_active },
+	active_select = { fg = t.fg_active, bg = t.bg_active_br, fmt = "bold" },
+	select = { bg = t.bg_active_br, fmt = "bold" },
+
+	idle = { fg = t.fg_idle },
+	idle_reverse = { bg = t.fg_idle },
+	idle_bg = { bg = t.bg_active_br },
+	idle_passive = { fg = t.fg_idle, bg = t.bg_passive },
+	idle_active = { fg = t.fg_idle, bg = t.bg_active },
+	idle_bold = { fg = t.fg_idle, fmt = "bold" },
+
+	search_active = { fg = t.search_active, fmt = "bold" },
+	search_idle = { fg = t.search_idle },
+
+	add = { fg = t.add },
+	new = { fg = t.new },
+	modified = { fg = t.modified },
+	delete = { fg = t.delete },
+
+	error = { fg = t.error },
+	warning = { fg = t.warning },
+	tip = { fg = t.tip },
+	todo = { fg = t.hint },
+
+	const = { fg = p.sun_3 },
+	var = { fg = p.blu_3 },
+	str = { fg = p.grn_3 },
+	char = { fg = p.tyr_2 },
+	num = { fg = p.pnk_2 },
+	bool = { fg = p.cyn_2 },
+	float = { fg = p.pnk_4 },
+	func = { fg = p.orn_4 },
+	operator = { fg = p.prp_4 },
+	macro = { fg = p.orn_3, fmt = "italic" },
+	delim = { fg = p.glu_2 },
+
+	ctrl = {
+		external = { fg = p.asn_2, fmt = "italic" },
+		logic = { fg = p.prp_1, fmt = "italic" },
+		general = { fg = p.prp_2, fmt = "italic" },
+		operator = { fg = p.prp_4, fmt = "italic" },
+	},
+
+	type = { fg = p.blu_1, fmt = "italic" },
+	typedef = { fg = p.blu_2, fmt = "bold" },
+	store = { fg = p.blu_2, fmt = "italic" },
+	struct = { fg = p.blu_0, fmt = "italic" },
+
+	specialchar = { fg = p.sky_0 },
+	special = { fg = p.sky_2 },
+
+	link = { fg = p.tyr_3 },
+}
+
 -- }}}
 
 -- (TEMP) builtin {{{
 hl.builtin = {
 	-- base:
-	Normal = { fg = p.fg, bg = p.bg },
-	Cursor = { fg = p.bg, bg = p.fg },
-	lCursor = { fg = p.bg, bg = p.fg },
-	CursorIM = { fg = p.bg, bg = p.fg },
-	TermCursor = { fg = p.bg, bg = p.fg },
-	TermCursorNC = { fg = p.bg, bg = p.fg },
-	MatchParen = { fg = t.fg_active },
-	EndOfBuffer = { fg = p.bg },
-	Whitespace = { fg = t.fg_passive },
+	Normal = c.normal,
+	Cursor = c.reverse,
+	lCursor = c.reverse,
+	CursorIM = c.reverse,
+	TermCursor = c.reverse,
+	TermCursorNC = c.reverse,
+	MatchParen = c.active,
+	EndOfBuffer = c.invis,
+	Whitespace = c.comment,
 
 	-- recurring ui:
-	Folded = { fg = t.fg_passive_br, bg = t.bg_passive },
-	FoldColumn = { fg = t.fg_passive_br, bg = t.bg_passive },
-	CursorLineFold = { fg = t.fg_active_passive, bg = t.bg_passive },
-	SignColumn = { fg = t.fg_active_passive },
-	CursorLineSign = { bg = t.bg_passive },
-	LineNrAbove = { fg = t.fg_passive },
-	LineNr = { fg = t.fg_active_passive, fmt = "bold" },
-	CursorLineNr = { fg = t.fg_active_passive, bg = t.bg_passive },
-	LineNrBelow = { fg = t.fg_passive },
-	ColorColumn = { bg = t.bg_passive },
-	CursorColumn = { bg = t.bg_passive },
-	CursorLine = { bg = t.bg_passive },
+	Folded = c.passive,
+	FoldColumn = c.passive,
+	CursorLineFold = c.idle_passive,
+	SignColumn = c.comment,
+	CursorLineSign = c.passive,
+	LineNrAbove = c.comment,
+	LineNr = c.idle_bold,
+	CursorLineNr = c.idle_passive,
+	LineNrBelow = c.comment,
+	ColorColumn = c.passive_bg,
+	CursorColumn = c.passive_bg,
+	CursorLine = c.passive_bg,
 
 	-- temporary ui:
-	Pmenu = { fg = t.fg_active_passive, bg = t.bg_active },
-	PmenuSel = { fg = t.fg_active, bg = t.bg_active_br, fmt = "bold" },
-	PmenuSbar = { bg = t.fg_active_passive },
-	PmenuThumb = { bg = t.fg_passive_br },
-	WildMenu = { fg = t.fg_active, bg = t.bg_active },
+	Pmenu = c.idle_active,
+	PmenuSel = c.active_select,
+	PmenuSbar = c.idle_bg,
+	PmenuThumb = c.idle_reverse,
+	WildMenu = c.active_select,
 
 	-- state change:
-	DiffAdd = { fg = t.add },
-	DiffNew = { fg = t.new },
-	DiffChange = { fg = t.modified },
-	DiffText = { fg = t.modified },
-	DiffDelete = { fg = t.delete },
+	DiffAdd = c.add,
+	DiffNew = c.new,
+	DiffChange = c.modified,
+	DiffText = c.modified,
+	DiffDelete = c.delete,
 
 	-- visual:
-	Visual = { bg = t.bg_active_br, fmt = "bold" },
+	Visual = c.select,
 	VisualNOS = { fg = p.blu_0, bg = p.drk_1 },
-	Search = { fg = t.search_passive },
-	CurSearch = { fg = t.search_active, fmt = "bold" },
-	IncSearch = { fg = t.search_active, fmt = "bold" },
-	Substitute = { fg = t.search_active, fmt = "bold" },
+	Search = c.search_idle,
+	CurSearch = c.search_active,
+	IncSearch = c.search_active,
+	Substitute = c.search_active,
 
 	-- linting:
 	SpellBad = { sp = t.bad, fmt = "undercurl" },
@@ -342,82 +377,82 @@ hl.builtin = {
 	SpellRare = { sp = t.rare, fmt = "undercurl" },
 
 	-- messaging:
-	ErrorMsg = { fg = t.error },
-	WarningMsg = { fg = t.warning },
-	ModeMsg = { fg = t.fg_active_passive, bg = t.bg_active },
-	MsgArea = { fg = t.fg_passive_br },
-	MoreMsg = { fg = p.fg_active_passive },
-	MsgSeparator = { fg = t.fg_active_passive },
-	Question = { fg = t.fg_active_passive },
+	ErrorMsg = c.error,
+	WarningMsg = c.warning,
+	ModeMsg = c.idle_active,
+	MsgArea = c.comment,
+	MoreMsg = c.idle,
+	MsgSeparator = c.idle,
+	Question = c.idle,
 
 	-- windows 'n such:
-	WinSeparator = { fg = t.fg_active_passive },
-	NormalFloat = { fg = t.fg_active_passive, bg = t.bg_active },
-	NormalNC = { fg = t.fg_passive_br, bg = t.bg_passive },
-	QuickFixLine = { fg = t.fg_active_passive, bg = t.bg_active },
-	StatusLine = { fg = t.fg_passive_br, bg = t.bg_passive },
-	StatusLineNC = { fg = t.fg_passive_br, bg = t.bg_passive },
-	TabLine = { fg = t.fg_passive_br, bg = t.bg_passive },
-	TabLineFill = { bg = t.bg_passive },
-	TabLineSel = { fg = t.fg_active_passive, bg = t.bg_active },
-	WinBar = { fg = t.fg_active_passive, bg = t.bg_passive },
-	WinBarNC = { fg = t.fg_passive_br, bg = t.bg_passive },
+	WinSeparator = c.idle_active,
+	NormalFloat = c.idle_active,
+	NormalNC = c.passive,
+	QuickFixLine = c.idle_active,
+	StatusLine = c.passive,
+	StatusLineNC = c.passive,
+	TabLine = c.passive,
+	TabLineFill = c.passive_bg,
+	TabLineSel = c.idle_active,
+	WinBar = c.idle_passive,
+	WinBarNC = c.passive,
 
 	-- uncertain assignments:
-	Directory = { fg = t.h1 },
-	Title = { fg = t.h1 },
-	Conceal = { fg = t.fg_active_passive },
-	NonText = { fg = t.inactive },
-	SpecialKey = { fg = t.inactive },
+	Directory = c.heading,
+	Title = c.heading,
+	Conceal = c.idle,
+	NonText = c.inative,
+	SpecialKey = c.inative,
 }
 
 -- }}}
 
--- (TEMP) syntax {{
+-- (TEMP) syntax {{{
 hl.syntax = {
-	Comment = { fg = t.fg_passive },
-	Constant = { fg = p.sun_3 },
-	String = { fg = p.grn_3 },
-	Character = { fg = p.tyr_2 },
-	Number = { fg = p.pnk_2 },
-	Boolean = { fg = p.cyn_2 },
-	Float = { fg = p.pnk_4 },
-	Identifier = { fg = p.blu_3 },
-	Function = { fg = p.orn_4 },
-	Statement = { fg = p.prp_1, fmt = "italic" },
-	Conditional = { fg = p.prp_1 },
-	Repeat = { fg = p.prp_1, fmt = "italic" },
-	Label = { fg = p.prp_4, fmt = "italic" },
-	Operator = { fg = p.prp_3 },
-	Keyword = { fg = p.prp_2, fmt = "italic" },
-	Exception = { fg = p.prp_4, fmt = "italic" },
-	PreProc = { fg = p.glc_5 },
-	Include = { fg = p.glc_5 },
-	Define = { fg = p.glc_5 },
-	Macro = { fg = p.glc_5 },
-	PreCondit = { fg = p.glc_5 },
-	Type = { fg = p.blu_1, fmt = "italic" },
-	StorageClass = { fg = p.sun_3 },
-	Structure = { fg = p.sun_2 },
-	Typedef = { fg = p.sun_3 },
-	Special = { fg = p.sky_4 },
-	SpecialChar = { fg = p.sky_2 },
-	Title = { fg = p.sky_4 },
-	Tag = { fg = p.sky_3 },
-	Delimiter = { fg = p.glu_2 },
-	SpecialComment = { fg = p.sky_0 },
-	Debug = { fg = p.sky_1 },
-	Underlined = { fg = p.tyr_3 },
-	Ignore = { fg = t.fg_passive },
-	Error = { fg = t.error },
-	Todo = { fg = t.hint },
+	Comment = c.comment,
+	Constant = c.const,
+	String = c.str,
+	Character = c.char,
+	Number = c.num,
+	Boolean = c.bool,
+	Float = c.float,
+	Identifier = c.var,
+	Function = c.func,
+	Statement = c.ctrl.general,
+	Conditional = c.ctrl.logic,
+	Repeat = c.ctrl.logic,
+	Label = c.ctrl.operator,
+	Operator = c.operator,
+	Keyword = c.ctrl.general,
+	Exception = c.ctrl.operator,
+	PreProc = c.external,
+	Include = c.external,
+	Define = c.external,
+	PreCondit = c.external,
+	Macro = c.macro,
+	Type = c.type,
+	StorageClass = c.store,
+	Structure = c.struct,
+	Typedef = c.typedef,
+	Special = c.special,
+	SpecialChar = c.specialchar,
+	Title = c.heading,
+	Tag = c.tip,
+	Delimiter = c.delim,
+	SpecialComment = c.todo,
+	Debug = c.tip,
+	Underlined = c.link,
+	Ignore = c.passive_fg,
+	Error = c.error,
+	Todo = c.todo,
 }
 
 -- }}}
 
--- (TEMP) lsp {{{
+-- (TEMP) lsp_kind_icons {{{
 
-hl.lsp = {
+hl.lsp_kind_icons = {
 	Default = {},
 	Array = {},
 	Boolean = {},
@@ -458,70 +493,123 @@ hl.lsp = {
 -- }}}
 
 -- (TEMP) treesitter {{{
-hl.treesitter = {
-	["@annotation"] = {},
-	["@attribute"] = {},
-	["@character"] = {},
-	["@comment"] = {},
-	["@conditional"] = {},
-	["@constant"] = {},
-	["@constant.builtin"] = {},
-	["@constant.macro"] = {},
-	["@constructor"] = {},
-	["@error"] = {},
-	["@exception"] = {},
-	["@field"] = {},
-	["@float"] = {},
-	["@function"] = {},
-	["@function.builtin"] = {},
-	["@function.macro"] = {},
-	["@include"] = {},
-	["@keyword"] = {},
-	["@keyword.function"] = {},
-	["@keyword.operator"] = {},
-	["@label"] = {},
-	["@method"] = {},
-	["@namespace"] = {},
-	["@none"] = {},
-	["@number"] = {},
-	["@operator"] = {},
-	["@parameter"] = {},
-	["@parameter.reference"] = {},
-	["@property"] = {},
-	["@punctuation.delimiter"] = {},
-	["@punctuation.bracket"] = {},
-	["@punctuation.special"] = {},
-	["@repeat"] = {},
-	["@string"] = {},
-	["@string.regex"] = {},
-	["@string.escape"] = {},
-	["@symbol"] = {},
-	["@tag"] = {},
-	["@tag.attribute"] = {},
-	["@tag.delimiter"] = {},
-	["@text"] = {},
-	["@text.strong"] = {},
-	["@text.emphasis"] = {},
-	["@text.underline"] = {},
-	["@text.strike"] = {},
-	["@text.title"] = {},
-	["@text.literal"] = {},
-	["@text.uri"] = {},
-	["@text.todo"] = {},
-	["@text.math"] = {},
-	["@text.reference"] = {},
-	["@text.environment"] = {},
-	["@text.environment.name"] = {},
-	["@text.diff.add"] = {},
-	["@text.diff.delete"] = {},
-	["@note"] = {},
-	["@warning"] = {},
-	["@danger"] = {},
-	["@type"] = {},
-	["@type.builtin"] = {},
-	["@variable"] = {},
-	["@variable.builtin"] = {},
+hl.treesitter = { -- https://github.com/nvim-treesitter/nvim-treesitter/blob/master/CONTRIBUTING.md
+
+	-- Misc
+	["@comment"] = {}, -- line and block comments
+	["@comment.documentation"] = {}, -- comments documenting code
+	["@error"] = {}, -- syntax/parser errors
+	["@none"] = {}, -- completely disable the highlight
+	["@preproc"] = {}, -- various preprocessor directives & shebangs
+	["@define"] = {}, -- preprocessor definition directives
+	["@operator"] = {}, -- symbolic operators (e.g. `+` / `*`)
+
+	-- Punctuation
+	["@punctuation.delimiter"] = {}, --` / `.` / `,`)
+	["@punctuation.bracket"] = {}, -- brackets (e.g. `()` / `{}` / `[]`)
+	["@punctuation.special"] = {}, -- special symbols (e.g. `{}` in string interpolation)
+
+	-- Literals
+	["@string"] = {}, -- string literals
+	["@string.documentation"] = {}, -- string documenting code (e.g. Python docstrings)
+	["@string.regex"] = {}, -- regular expressions
+	["@string.escape"] = {}, -- escape sequences
+	["@string.special"] = {}, -- other special strings (e.g. dates)
+	["@character"] = {}, -- character literals
+	["@character.special"] = {}, -- special characters (e.g. wildcards)
+	["@boolean"] = {}, -- boolean literals
+	["@number"] = {}, -- numeric literals
+	["@float"] = {}, -- floating-point number literals
+
+	-- Functions
+	["@function"] = {}, -- function definitions
+	["@function.builtin"] = {}, -- built-in functions
+	["@function.call"] = {}, -- function calls
+	["@function.macro"] = {}, -- preprocessor macros
+	["@method"] = {}, -- method definitions
+	["@method.call"] = {}, -- method calls
+	["@constructor"] = {}, -- constructor calls and definitions
+	["@parameter"] = {}, -- parameters of a function
+
+	-- Keywords
+	["@keyword"] = {}, -- various keywords
+	["@keyword.coroutine"] = {}, -- keywords related to coroutines (e.g. `go` in Go, `async/await` in Python)
+	["@keyword.function"] = {}, -- keywords that define a function (e.g. `func` in Go, `def` in Python)
+	["@keyword.operator"] = {}, -- operators that are English words (e.g. `and` / `or`)
+	["@keyword.return"] = {}, -- keywords like `return` and `yield`
+	["@conditional"] = {}, -- keywords related to conditionals (e.g. `if` / `else`)
+	["@conditional.ternary"] = {}, -- ternary operator (e.g. `?` / `:`)
+	["@repeat"] = {}, -- keywords related to loops (e.g. `for` / `while`)
+	["@debug"] = {}, -- keywords related to debugging
+	["@label"] = {}, -- GOTO and other labels (e.g. `label:` in C)
+	["@include"] = {}, -- keywords for including modules (e.g. `import` / `from` in Python)
+	["@exception"] = {}, -- keywords related to exceptions (e.g. `throw` / `catch`)
+
+	-- Types
+	["@type"] = {}, -- type or class definitions and annotations
+	["@type.builtin"] = {}, -- built-in types
+	["@type.definition"] = {}, -- type definitions (e.g. `typedef` in C)
+	["@type.qualifier"] = {}, -- type qualifiers (e.g. `const`)
+	["@storageclass"] = {}, -- modifiers that affect storage in memory or life-time
+	["@attribute"] = {}, -- attribute annotations (e.g. Python decorators)
+	["@field"] = {}, -- object and struct fields
+	["@property"] = {}, -- similar to `@field`
+
+	-- Identifiers
+	["@variable"] = {}, -- various variable names
+	["@variable.builtin"] = {}, -- built-in variable names (e.g. `this`)
+	["@constant"] = {}, -- constant identifiers
+	["@constant.builtin"] = {}, -- built-in constant values
+	["@constant.macro"] = {}, -- constants defined by the preprocessor
+	["@namespace"] = {}, -- modules or namespaces
+	["@symbol"] = {}, -- symbols or atoms
+
+	-- Text
+	["@text"] = {}, -- non-structured text
+	["@text.strong"] = {}, -- bold text
+	["@text.emphasis"] = {}, -- text with emphasis
+	["@text.underline"] = {}, -- underlined text
+	["@text.strike"] = {}, -- strikethrough text
+	["@text.title"] = {}, -- text that is part of a title
+	["@text.literal"] = {}, -- literal or verbatim text (e.g., inline code)
+	["@text.quote"] = {}, -- text quotations
+	["@text.uri"] = {}, -- URIs (e.g. hyperlinks)
+	["@text.math"] = {}, -- math environments (e.g. `$ ... $` in LaTeX)
+	["@text.environment"] = {}, -- text environments of markup languages
+	["@text.environment.name"] = {}, -- text indicating the type of an environment
+	["@text.reference"] = {}, -- text references, footnotes, citations, etc.
+	["@text.todo"] = {}, -- todo notes
+	["@text.note"] = {}, -- info notes
+	["@text.warning"] = {}, -- warning notes
+	["@text.danger"] = {}, -- danger/error notes
+	["@text.diff.add"] = {}, -- added text (for diff files)
+	["@text.diff.delete"] = {}, -- deleted text (for diff files)
+
+	-- Tags
+	["@tag"] = {}, -- XML tag names
+	["@tag.attribute"] = {}, -- XML tag attributes
+	["@tag.delimiter"] = {}, -- XML tag delimiters
+
+	-- Indents
+	["@indent"] = {}, -- indent children when matching this node
+	["@indent_end"] = {}, -- marks the end of indented block
+	["@aligned_indent"] = {}, -- behaves like python aligned/hanging indent
+	["@dedent"] = {}, -- dedent children when matching this node
+	["@branch"] = {}, -- dedent itself when matching this node
+	["@ignore"] = {}, -- do not indent in this node
+	["@auto"] = {}, -- behaves like 'autoindent' buffer option
+	["@zero_indent"] = {}, -- sets this node at position 0 (no indent)
+
+	-- Spell
+	["@spell"] = {}, -- for defining regions to be spellchecked
+	["@nospell"] = {}, -- for defining regions that should NOT be spellchecked
 }
+
+-- }}}
+
+-- treesitter language specifics (highlights.scm) {{{
+-- https://github.com/nvim-treesitter/nvim-treesitter/tree/master/queries
+hl.treesitter_queries = {}
 
 -- }}}
 
@@ -751,9 +839,20 @@ hl.plugins.indent_blankline = {
 
 vim_highlights(hl.builtin)
 vim_highlights(hl.syntax)
+
+-- vim.highlights(hl.treesitter)
+
+-- for _, group in pairs(hl.filetypes) do
+-- 	vim_highlights(group)
+-- end
+--
+-- for _, group in pairs(hl.plugins) do
+-- 	vim_highlights(group)
+-- end
+
 -- }}}
 
--- 🗂️ Nvim-Tree {{
+-- 🗂️ Nvim-Tree {{{
 
 -- https://github.com/nvim-tree/nvim-tree.lua
 require("nvim-tree").setup({
