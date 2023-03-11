@@ -20,6 +20,7 @@ local options = {
 	-- ========================================================================
 
 	-- 👀 UI ==================================================================
+	-- hlsearch = false, -- turn off persistent highlights when searching
 	shortmess = "filnxtToOFcsS", -- control some status line message settings
 	number = true, -- show line numbers
 	relativenumber = true, -- makes using {number}{motion} easier
