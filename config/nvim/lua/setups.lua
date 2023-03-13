@@ -1,4 +1,3 @@
--- =============================================================================
 -- 🛠️ Simple Setups {{{
 require("Comment").setup()
 require("trouble").setup()
@@ -256,8 +255,14 @@ local t = {
 local c = {
 	text = {
 		norm = { fg = p.fg, bg = p.bg },
-		reverse = { fg = p.bg, bg = p.fg },
+		bold = { fmt = "bold" },
+		italic = { fg = p.blu_4, fmt = "italic" },
+		underline = { fg = p.brt_0, sp = p.brt_2, fmt = "underline" },
+		strike = { fg = p.slt_4, fmt = "strikethrough" },
+		title = { fg = t.h1, fmt = "bold" },
+		reverse = { fg = p.bg, bg = p.brt_1 },
 	},
+
 	invis = { fg = p.bg, bg = p.bg },
 	inactive = { fg = t.inactive },
 	disown = { fg = p.blu_0, bg = p.drk_1 },
@@ -288,19 +293,11 @@ local c = {
 	delete = { fg = t.delete },
 
 	error = { fg = t.error },
+	success = { fg = t.success },
 	warning = { fg = t.warning },
 	tip = { fg = t.tip },
 	todo = { fg = t.hint },
-	const = {
-		norm = { fg = p.sun_3 },
-		builtin = { fg = p.sun_1 },
-		external = { fg = p.pro_3, fmt = "italic" },
-	},
-	var = {
-		builtin = { fg = p.blue_2 },
-		norm = { fg = p.blu_3 },
-		param = { fg = p.blu_4 },
-	},
+
 	str = {
 		special = { fg = p.grn_4 },
 		norm = { fg = p.grn_3 },
@@ -308,19 +305,36 @@ local c = {
 		regex = { fg = p.grn_1 },
 		char = { fg = p.tyr_2 },
 	},
-	num = { fg = p.pnk_2 },
-	bool = { fg = p.cyn_2 },
-	float = { fg = p.pnk_4 },
+
 	func = {
 		def = { fg = p.orn_4, fmt = "bold" },
 		norm = { fg = p.orn_4 },
 		builtin = { fg = p.orn_2 },
 		macro = { fg = p.orn_3, fmt = "italic" },
 	},
+
+	num = { fg = p.pnk_2 },
+	bool = { fg = p.cyn_2 },
+	float = { fg = p.pnk_4 },
 	operator = { fg = p.prp_4 },
+
 	delim = {
 		norm = { fg = p.glu_2 },
 		bracket = { fg = p.glu_3 },
+	},
+
+	const = {
+		norm = { fg = p.sun_3 },
+		builtin = { fg = p.sun_2, fmt = "italic" },
+		external = { fg = p.asn_3, fmt = "italic" },
+	},
+
+	var = {
+		tag = { fg = p.blu_1 },
+		builtin = { fg = p.blu_2 },
+		norm = { fg = p.blu_3 },
+		attr = { fg = p.blu_3, fmt = "italic" },
+		param = { fg = p.blu_4 },
 	},
 
 	keyword = {
@@ -329,7 +343,6 @@ local c = {
 		link = { fg = p.tyr_2, fmt = "italic" },
 		logic = { fg = p.prp_1, fmt = "italic" },
 		norm = { fg = p.prp_2, fmt = "italic" },
-		label = { fg = p.prp_4, fmt = "italic" },
 		def = { fg = p.prp_2, fmt = "bold,italic" },
 		flow = { fg = p.prp_1, fmt = "bold,italic" },
 	},
@@ -414,7 +427,7 @@ hl.builtin = {
 	ErrorMsg = c.error,
 	WarningMsg = c.warning,
 	ModeMsg = c.idle_active,
-	MsgArea = c.comment,
+	MsgArea = c.passive_fg,
 	MoreMsg = c.idle,
 	MsgSeparator = c.idle,
 	Question = c.idle,
@@ -476,10 +489,19 @@ hl.syntax = {
 	Delimiter = c.delim.norm,
 	SpecialComment = c.todo,
 	Debug = c.tip,
-	Underlined = c.link,
 	Ignore = c.passive_fg,
 	Error = c.error,
 	Todo = c.todo,
+
+	Bold = c.text.bold,
+	Italic = c.text.italic,
+	Underlined = c.text.underline,
+
+	healthError = { fg = t.error, fmt = "reverse" },
+	healthSuccess = { fg = t.success, fmt = "reverse" },
+	healthWarning = { c.warning, fmt = "italic" },
+
+	markdownHeadingRule = c.comment,
 }
 
 -- }}}
@@ -533,7 +555,7 @@ hl.treesitter = { -- https://github.com/nvim-treesitter/nvim-treesitter/blob/mas
 	["@comment"] = c.comment, -- line and block comments
 	["@comment.documentation"] = c.passive_bg, -- comments documenting code
 	["@error"] = c.error, -- syntax/parser errors
-	["@none"] = c.text, -- completely disable the highlight
+	["@none"] = c.text.norm, -- completely disable the highlight
 	["@preproc"] = c.keyword.external, -- various preprocessor directives & shebangs
 	["@define"] = c.keyword.external, -- preprocessor definition directives
 	["@operator"] = c.operator, -- symbolic operators (e.g. `+` / `*`)
@@ -566,10 +588,10 @@ hl.treesitter = { -- https://github.com/nvim-treesitter/nvim-treesitter/blob/mas
 	["@parameter"] = c.var.param, -- parameters of a function
 
 	-- Keywords
-	["@keyword"] = c.keyword.def, -- various keywords
+	["@keyword"] = c.keyword.norm, -- various keywords
 	["@keyword.coroutine"] = c.keyword.def, -- keywords related to coroutines (e.g. `go` in Go, `async/await` in Python)
 	["@keyword.function"] = c.keyword.def, -- keywords that define a function (e.g. `func` in Go, `def` in Python)
-	["@keyword.operator"] = c.keyword.label, -- operators that are English words (e.g. `and` / `or`)
+	["@keyword.operator"] = c.keyword.logic, -- operators that are English words (e.g. `and` / `or`)
 	["@keyword.return"] = c.keyword.flow, -- keywords like `return` and `yield`
 	["@conditional"] = c.keyword.logic, -- keywords related to conditionals (e.g. `if` / `else`)
 	["@conditional.ternary"] = c.keyword.flow, -- ternary operator (e.g. `?` / `:`)
@@ -599,85 +621,45 @@ hl.treesitter = { -- https://github.com/nvim-treesitter/nvim-treesitter/blob/mas
 	["@symbol"] = c.var.builtin, -- symbols or atoms
 
 	-- Text
-	["@text"] = c.text, -- non-structured text
-	["@text.strong"] = c.x, -- bold text
-	["@text.emphasis"] = c.x, -- text with emphasis
-	["@text.underline"] = c.x, -- underlined text
-	["@text.strike"] = c.x, -- strikethrough text
-	["@text.title"] = c.x, -- text that is part of a title
-	["@text.literal"] = c.x, -- literal or verbatim text (e.g., inline code)
-	["@text.quote"] = c.x, -- text quotations
-	["@text.uri"] = c.x, -- URIs (e.g. hyperlinks)
-	["@text.math"] = c.x, -- math environments (e.g. `$ ... $` in LaTeX)
-	["@text.environment"] = c.x, -- text environments of markup languages
-	["@text.environment.name"] = c.x, -- text indicating the type of an environment
-	["@text.reference"] = c.x, -- text references, footnotes, citations, etc.
-	["@text.todo"] = c.x, -- todo notes
-	["@text.note"] = c.x, -- info notes
-	["@text.warning"] = c.x, -- warning notes
-	["@text.danger"] = c.x, -- danger/error notes
-	["@text.diff.add"] = c.x, -- added text (for diff files)
-	["@text.diff.delete"] = c.x, -- deleted text (for diff files)
-	--
-	-- -- Tags
-	-- ["@tag"] = c.x, -- XML tag names
-	-- ["@tag.attribute"] = c.x, -- XML tag attributes
-	-- ["@tag.delimiter"] = c.x, -- XML tag delimiters
-	--
-	-- -- Indents
-	-- ["@indent"] = c.x, -- indent children when matching this node
-	-- ["@indent_end"] = c.x, -- marks the end of indented block
-	-- ["@aligned_indent"] = c.x, -- behaves like python aligned/hanging indent
-	-- ["@dedent"] = c.x, -- dedent children when matching this node
-	-- ["@branch"] = c.x, -- dedent itself when matching this node
-	-- ["@ignore"] = c.x, -- do not indent in this node
-	-- ["@auto"] = c.x, -- behaves like 'autoindent' buffer option
-	-- ["@zero_indent"] = c.x, -- sets this node at position 0 (no indent)
-	--
-	-- -- Spell
-	-- ["@spell"] = c.x, -- for defining regions to be spellchecked
-	-- ["@nospell"] = c.x, -- for defining regions that should NOT be spellchecked
-}
+	["@text"] = c.text.norm, -- non-structured text
+	["@text.strong"] = c.text.bold, -- bold text
+	["@text.emphasis"] = c.text.italic, -- text with emphasis
+	["@text.underline"] = c.text.underline, -- underlined text
+	["@text.strike"] = c.text.strike, -- strikethrough text
+	["@text.title"] = c.text.title, -- text that is part of a title
+	["@text.literal"] = c.str.norm, -- literal or verbatim text (e.g., inline code)
+	["@text.quote"] = { fg = p.slt_5 }, -- text quotations
+	["@text.uri"] = c.link, -- URIs (e.g. hyperlinks)
+	["@text.math"] = c.tip, -- math environments (e.g. `$ ... $` in LaTeX)
+	["@text.environment"] = c.type.norm, -- text environments of markup languages
+	["@text.environment.name"] = c.type.def, -- text indicating the type of an environment
+	["@text.reference"] = c.comment, -- text references, footnotes, citations, etc.
+	["@text.todo"] = c.todo, -- todo notes
+	["@text.note"] = c.tip, -- info notes
+	["@text.warning"] = c.warning, -- warning notes
+	["@text.danger"] = c.error, -- danger/error notes
+	["@text.diff.add"] = c.add, -- added text (for diff files)
+	["@text.diff.delete"] = c.delete, -- deleted text (for diff files)
 
+	-- Tags
+	["@tag"] = c.var.tag, -- XML tag names
+	["@tag.attribute"] = c.var.attr, -- XML tag attributes
+	["@tag.delimiter"] = c.delim.norm, -- XML tag delimiters
+}
 -- }}}
 
--- treesitter language specifics (highlights.scm) {{{
--- https://github.com/nvim-treesitter/nvim-treesitter/tree/master/queries
-hl.treesitter_queries = {}
+-- (TEMP) treesitter queries {{{
+hl.treesitter_queries = { -- https://github.com/nvim-treesitter/nvim-treesitter/tree/master/queries
 
--- }}}
+	--help
+	["@label.help"] = c.var.tag,
+	["@text.reference"] = c.link,
+	["@text.literal"] = c.passive_fg,
 
--- (TEMP) filetypes {{{
-hl.filetypes.markdown = {
-	markdownBlockquote = {},
-	markdownBold = {},
-	markdownBoldDelimiter = {},
-	markdownCode = {},
-	markdownCodeBlock = {},
-	markdownCodeDelimiter = {},
-	markdownH1 = {},
-	markdownH2 = {},
-	markdownH3 = {},
-	markdownH4 = {},
-	markdownH5 = {},
-	markdownH6 = {},
-	markdownHeadingDelimiter = {},
-	markdownHeadingRule = {},
-	markdownId = {},
-	markdownIdDeclaration = {},
-	markdownItalic = {},
-	markdownItalicDelimiter = {},
-	markdownLinkDelimiter = {},
-	markdownLinkText = {},
-	markdownLinkTextDelimiter = {},
-	markdownListMarker = {},
-	markdownOrderedListMarker = {},
-	markdownRule = {},
-	markdownUrl = {},
-	markdownUrlDelimiter = {},
-	markdownUrlTitleDelimiter = {},
+	-- toml
+	["@type.toml"] = c.var.tag,
+	["@property.toml"] = c.var.param,
 }
-
 -- }}}
 
 -- (TEMP) plugins {{{
@@ -873,13 +855,9 @@ hl.plugins.indent_blankline = {
 
 vim_highlights(hl.builtin)
 vim_highlights(hl.syntax)
-
 vim_highlights(hl.treesitter)
+vim_highlights(hl.treesitter_queries)
 
--- for _, group in pairs(hl.filetypes) do
--- 	vim_highlights(group)
--- end
---
 -- for _, group in pairs(hl.plugins) do
 -- 	vim_highlights(group)
 -- end
@@ -1710,6 +1688,7 @@ local servers = {
 	cssls = {},
 	rust_analyzer = {},
 	taplo = {},
+	html = {},
 	lua_ls = {
 		Lua = {
 			workspace = { checkThirdParty = false },
