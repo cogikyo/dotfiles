@@ -29,7 +29,7 @@ map("n", "<leader>u", "<Nop>")
 -- }}}
 
 -- 💾 Save {{{
-map("n", "<C-s>", ":w<CR>:echo <CR>zo")
+map("n", "<C-s>", ":w<CR>:echo <CR>")
 map("i", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("v", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("n", "<leader>s<leader>", ":noa w<CR><CR")
