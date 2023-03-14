@@ -3,7 +3,7 @@
 change-bg "code"
 
 layout -n 1 -w https://twitch.tv/following
-layout -n 2 -s vagari -a inkscape -w https://contrast-ratio.com/
+layout -n 2 -s vagari -a inkscape
 layout -n 3 -s vagari -w https://github.com/nosvagor/vagari
 layout -n 4 -s dotfiles -w https://github.com/nosvagor/dotfiles
 

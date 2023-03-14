@@ -71,8 +71,6 @@ case "$n_flag" in
     ;;
     2)
         "$a_flag" & sleep 3
-        browser
-        hyprctl dispatch movefocus u
     ;;
     3|4)
         browser
