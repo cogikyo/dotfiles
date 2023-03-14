@@ -1,3 +1,4 @@
+-- =============================================================================
 -- 🛠️ Simple Setups {{{
 require("Comment").setup()
 require("trouble").setup()
@@ -208,8 +209,9 @@ end
 -- (TEMP) thalamus (link relay station) {{{
 local t = {
 
-	text = {
+	txt = {
 		norm = { fg = p.fg, bg = p.bg },
+		minor = { fg = p.slt_5 },
 		bold = { fmt = "bold" },
 		italic = { fg = p.blu_4, fmt = "italic" },
 		underline = { fg = p.brt_0, sp = p.brt_2, fmt = "underline" },
@@ -234,8 +236,10 @@ local t = {
 		bg = { bg = p.glc_2 },
 		passive = { fg = p.blu_2, bg = p.drk_0 },
 		passive_br = { fg = p.blu_2, bg = p.glc_0 },
+		invis_br = { fg = p.glc_0, bg = p.glc_0 },
 		bold = { fg = p.blu_2, fmt = "bold" },
 		search = { fg = p.blu_0 },
+		ref = { fg = p.blu_0, fmt = "bold" },
 	},
 
 	active = {
@@ -253,23 +257,35 @@ local t = {
 	},
 
 	msg = {
-		success = { fg = p.emr_3 },
-		error = { fg = p.rby_3 },
-		warning = { fg = p.sun_3 },
-		tip = { fg = p.sky_1 },
-		hint = { fg = p.sky_3 },
-		info = { fg = p.sky_4 },
-		errorInv = { fg = p.rby_2, fmt = "reverse" },
-		successInv = { fg = p.emr_2, fmt = "reverse" },
-		warningAlt = { fg = p.sun_2, fmt = "italic" },
-	},
-
-	underline = {
-		bad = { sp = p.rby_1, fmt = "undercurl" },
-		nag = { sp = p.sky_1, fmt = "undercurl" },
-		warn = { fg = p.sun_1, fmt = "undercurl" },
-		custom = { sp = p.cyn_1, fmt = "undercurl" },
-		rare = { sp = p.pnk_1, fmt = "undercurl" },
+		success = {
+			norm = { fg = p.emr_3 },
+			inverse = { fg = p.emr_2, fmt = "reverse" },
+		},
+		error = {
+			norm = { fg = p.rby_3 },
+			inverse = { fg = p.rby_2, fmt = "reverse" },
+			under = { sp = p.rby_1, fmt = "undercurl" },
+			virtual = { fg = p.rby_4 },
+		},
+		warn = {
+			norm = { fg = p.sun_3 },
+			alt = { fg = p.sun_2, fmt = "italic" },
+			under = { sp = p.sun_1, fmt = "undercurl" },
+			virtual = { fg = p.sun_4 },
+		},
+		hint = {
+			norm = { fg = p.sky_3 },
+			under = { sp = p.sky_1, fmt = "undercurl" },
+			special = { fg = p.sky_1 },
+			virtual = { fg = p.sky_4 },
+		},
+		info = {
+			norm = { fg = p.cyn_3 },
+			under = { sp = p.cyn_1, fmt = "undercurl" },
+			custom = { sp = p.cyn_1, fmt = "undercurl" },
+			rare = { sp = p.pnk_1, fmt = "undercurl" },
+			virtual = { fg = p.cyn_4 },
+		},
 	},
 
 	str = {
@@ -312,6 +328,7 @@ local t = {
 		link = { fg = p.tyr_2, fmt = "italic" },
 		logic = { fg = p.prp_1, fmt = "italic" },
 		norm = { fg = p.prp_2, fmt = "italic" },
+		label = { fg = p.prp_3 },
 		def = { fg = p.prp_2, fmt = "bold,italic" },
 		flow = { fg = p.prp_1, fmt = "bold,italic" },
 	},
@@ -340,12 +357,12 @@ local t = {
 -- (TEMP) builtin {{{
 hl.builtin = {
 	-- base:
-	Normal = t.text.norm,
-	Cursor = t.text.reverse,
-	lCursor = t.text.reverse,
-	CursorIM = t.text.reverse,
-	TermCursor = t.text.reverse,
-	TermCursorNC = t.text.reverse,
+	Normal = t.txt.norm,
+	Cursor = t.txt.reverse,
+	lCursor = t.txt.reverse,
+	CursorIM = t.txt.reverse,
+	TermCursor = t.txt.reverse,
+	TermCursorNC = t.txt.reverse,
 	MatchParen = t.active.norm,
 	EndOfBuffer = t.passive.invis,
 	Whitespace = t.passive.comment,
@@ -387,14 +404,14 @@ hl.builtin = {
 	Substitute = t.active.search,
 
 	-- linting:
-	SpellBad = t.underline.bad,
-	SpellCap = t.underline.nag,
-	SpellLocal = t.underline.custom,
-	SpellRare = t.underline.rare,
+	SpellBad = t.msg.error.under,
+	SpellCap = t.msg.hint.under,
+	SpellLocal = t.msg.info.custom,
+	SpellRare = t.msg.info.rare,
 
 	-- messaging:
-	ErrorMsg = t.msg.error,
-	WarningMsg = t.msg.warning,
+	ErrorMsg = t.msg.error.norm,
+	WarningMsg = t.msg.warn.norm,
 	ModeMsg = t.idle.passive_br,
 	MsgArea = t.passive.fg,
 	MoreMsg = t.idle.norm,
@@ -418,8 +435,8 @@ hl.builtin = {
 	Directory = t.h1,
 	Title = t.h1,
 	Conceal = t.idle.norm,
-	NonText = t.text.inative,
-	SpecialKey = t.text.inative,
+	NonText = t.passive.fg,
+	SpecialKey = t.txt.inactive,
 }
 
 -- }}}
@@ -454,23 +471,195 @@ hl.syntax = {
 	Special = t.special,
 	SpecialChar = t.specialchar,
 	Title = t.h1,
-	Tag = t.tip,
+	Tag = t.var.tag,
 	Delimiter = t.delim.norm,
-	SpecialComment = t.hint,
-	Debug = t.tip,
+	SpecialComment = t.msg.hint.special,
+	Debug = t.msg.hint.special,
 	Ignore = t.passive.fg,
-	Error = t.error,
-	Todo = t.hint,
+	Error = t.msg.error.norm,
+	Todo = t.msg.hint.special,
 
-	Bold = t.text.bold,
-	Italic = t.text.italic,
-	Underlined = t.text.underline,
+	Bold = t.txt.bold,
+	Italic = t.txt.italic,
+	Underlined = t.txt.underline,
 
-	healthError = t.msg.errorInv,
-	healthSuccess = t.msg.successInv,
-	healthWarning = t.msg.warningAlt,
+	healthError = t.msg.error.inverse,
+	healthSuccess = t.msg.success.inverse,
+	healthWarning = t.msg.warn.alt,
 
 	markdownHeadingRule = t.passive.comment,
+}
+
+-- }}}
+
+-- (TEMP) treesitter {{{
+hl.treesitter = { -- https://github.com/nvim-treesitter/nvim-treesitter/blob/master/CONTRIBUTING.md
+
+	-- Misc
+	["@comment"] = t.passive.comment, -- line and block comments
+	["@comment.documentation"] = t.passive.bg, -- comments documenting code
+	["@error"] = t.msg.error.norm, -- syntax/parser errors
+	["@none"] = t.txt.norm, -- completely disable the highlight
+	["@preproc"] = t.keyword.external, -- various preprocessor directives & shebangs
+	["@define"] = t.keyword.external, -- preprocessor definition directives
+	["@operator"] = t.operator, -- symbolic operators (e.g. `+` / `*`)
+
+	-- Punctuation
+	["@punctuation.delimiter"] = t.delim.norm, --` / `.` / `,`)
+	["@punctuation.bracket"] = t.delim.bracket, -- brackets (e.g. `()` / `{}` / `[]`)
+	["@punctuation.special"] = t.special, -- special symbols (e.g. `{}` in string interpolation)
+
+	-- Literals
+	["@string"] = t.str.norm, -- string literals
+	["@string.documentation"] = t.str.doc, -- string documenting code (e.g. Python docstrings)
+	["@string.regex"] = t.str.regex, -- regular expressions
+	["@string.escape"] = t.str.char, -- escape sequences
+	["@string.special"] = t.str.special, -- other special strings (e.g. dates)
+	["@character"] = t.str.char, -- character literals
+	["@character.special"] = t.str.special, -- special characters (e.g. wildcards)
+	["@boolean"] = t.bool, -- boolean literals
+	["@number"] = t.num, -- numeric literals
+	["@float"] = t.float, -- floating-point number literals
+
+	-- Functions
+	["@function"] = t.func.norm, -- function definitions
+	["@function.builtin"] = t.func.builtin, -- built-in functions
+	["@function.call"] = t.func.norm, -- function calls
+	["@function.macro"] = t.func.macro, -- preprocessor macros
+	["@method"] = t.func.norm, -- method definitions
+	["@method.call"] = t.func.norm, -- method calls
+	["@constructor"] = t.typedef, -- constructor calls and definitions
+	["@parameter"] = t.var.param, -- parameters of a function
+
+	-- Keywords
+	["@keyword"] = t.keyword.norm, -- various keywords
+	["@keyword.coroutine"] = t.keyword.def, -- keywords related to coroutines (e.g. `go` in Go, `async/await` in Python)
+	["@keyword.function"] = t.keyword.def, -- keywords that define a function (e.g. `func` in Go, `def` in Python)
+	["@keyword.operator"] = t.keyword.logic, -- operators that are English words (e.g. `and` / `or`)
+	["@keyword.return"] = t.keyword.flow, -- keywords like `return` and `yield`
+	["@conditional"] = t.keyword.logic, -- keywords related to conditionals (e.g. `if` / `else`)
+	["@conditional.ternary"] = t.keyword.flow, -- ternary operator (e.g. `?` / `:`)
+	["@repeat"] = t.keyword.logic, -- keywords related to loops (e.g. `for` / `while`)
+	["@debug"] = t.msg.hint.special, -- keywords related to debugging
+	["@label"] = t.keyword.label, -- GOTO and other labels (e.g. `label:` in C)
+	["@include"] = t.keyword.link, -- keywords for including modules (e.g. `import` / `from` in Python)
+	["@exception"] = t.keyword.label, -- keywords related to exceptions (e.g. `throw` / `catch`)
+
+	-- Types
+	["@type"] = t.type.norm, -- type or class definitions and annotations
+	["@type.builtin"] = t.type.builtin, -- built-in types
+	["@type.definition"] = t.type.def, -- type definitions (e.g. `typedef` in C)
+	["@type.qualifier"] = t.type.struct, -- type qualifiers (e.g. `const`)
+	["@storageclass"] = t.type.store, -- modifiers that affect storage in memory or life-time
+	["@attribute"] = t.keyword.external, -- attribute annotations (e.g. Python decorators)
+	["@field"] = t.var.norm, -- object and struct fields
+	["@property"] = t.var.norm, -- similar to `@field`
+
+	-- Identifiers
+	["@variable"] = t.var.norm, -- various variable names
+	["@variable.builtin"] = t.var.builtin, -- built-in variable names (e.g. `this`)
+	["@constant"] = t.const.norm, -- constant identifiers
+	["@constant.builtin"] = t.const.builtin, -- built-in constant values
+	["@constant.macro"] = t.const.external, -- constants defined by the preprocessor
+	["@namespace"] = t.var.builtin, -- modules or namespaces
+	["@symbol"] = t.var.builtin, -- symbols or atoms
+
+	-- Text
+	["@text"] = t.txt.norm, -- non-structured text
+	["@text.strong"] = t.txt.bold, -- bold text
+	["@text.emphasis"] = t.txt.italic, -- text with emphasis
+	["@text.underline"] = t.txt.underline, -- underlined text
+	["@text.strike"] = t.txt.strike, -- strikethrough text
+	["@text.title"] = t.txt.title, -- text that is part of a title
+	["@text.literal"] = t.str.norm, -- literal or verbatim text (e.g., inline code)
+	["@text.quote"] = t.txt.minor, -- text quotations
+	["@text.uri"] = t.link, -- URIs (e.g. hyperlinks)
+	["@text.math"] = t.msg.hint.special, -- math environments (e.g. `$ ... $` in LaTeX)
+	["@text.environment"] = t.type.norm, -- text environments of markup languages
+	["@text.environment.name"] = t.type.def, -- text indicating the type of an environment
+	["@text.reference"] = t.passive.comment, -- text references, footnotes, citations, etc.
+	["@text.todo"] = t.msg.hint.special, -- todo notes
+	["@text.note"] = t.msg.info.norm, -- info notes
+	["@text.warning"] = t.warning, -- warning notes
+	["@text.danger"] = t.msg.error.norm, -- danger/error notes
+	["@text.diff.add"] = t.state.add, -- added text (for diff files)
+	["@text.diff.delete"] = t.state.delete, -- deleted text (for diff files)
+
+	-- Tags
+	["@tag"] = t.var.tag, -- XML tag names
+	["@tag.attribute"] = t.var.attr, -- XML tag attributes
+	["@tag.delimiter"] = t.delim.norm, -- XML tag delimiters
+}
+-- }}}
+
+-- (TEMP) treesitter queries {{{
+hl.treesitter_queries = { -- https://github.com/nvim-treesitter/nvim-treesitter/tree/master/queries
+
+	--help
+	["@label.help"] = t.var.tag,
+	["@text.reference"] = t.link,
+	["@text.literal"] = t.passive.fg,
+
+	-- toml
+	["@type.toml"] = t.var.tag,
+	["@property.toml"] = t.var.param,
+}
+-- }}}
+
+-- (TEMP) plugins {{{
+
+hl.plugins.lsp = {
+	DiagnosticError = t.msg.error.norm,
+	DiagnosticHint = t.msg.hint.norm,
+	DiagnosticInfo = t.msg.info.norm,
+	DiagnosticWarn = t.msg.warn.norm,
+
+	DiagnosticVirtualTextError = t.msg.error.virtual,
+	DiagnosticVirtualTextWarn = t.msg.warn.virtual,
+	DiagnosticVirtualTextInfo = t.msg.info.virtual,
+	DiagnosticVirtualTextHint = t.msg.hint.virtual,
+
+	DiagnosticUnderlineError = t.msg.error.under,
+	DiagnosticUnderlineHint = t.msg.hint.under,
+	DiagnosticUnderlineInfo = t.msg.info.under,
+	DiagnosticUnderlineWarn = t.msg.warn.under,
+
+	LspReferenceText = t.txt.bold,
+	LspReferenceWrite = t.active.search,
+	LspReferenceRead = t.idle.ref,
+}
+
+hl.plugins.gitsigns = {
+	GitSignsAdd = t.state.add,
+	GitSignsAddLn = t.state.add,
+	GitSignsAddNr = t.state.add,
+	GitSignsChange = t.state.modified,
+	GitSignsChangeLn = t.state.modified,
+	GitSignsChangeNr = t.state.modified,
+	GitSignsDelete = t.state.delete,
+	GitSignsDeleteLn = t.state.delete,
+	GitSignsDeleteNr = t.state.delete,
+}
+
+hl.plugins.nvim_tree = {
+	NvimTreeNormal = t.idle.passive_br,
+	NvimTreeEndOfBuffer = t.idle.invis_br,
+	NvimTreeRootFolder = t.txt.title,
+	NvimTreeGitDirty = t.state.modified,
+	NvimTreeGitNew = t.state.new,
+	NvimTreeGitDeleted = t.state.new,
+	NvimTreeSpecialFile = t.special,
+	NvimTreeFolderName = t.var.tag,
+}
+
+hl.plugins.telescope = {
+	TelescopeNormal = t.idle.passive_br,
+	TelescopeBorder = t.idle.passive_br,
+	TelescopeTitle = t.idle.bold,
+	TelescopeMatching = t.active.search,
+	TelescopePromptPrefix = t.active.norm,
+	TelescopeSelection = t.active.select,
+	TelescopeSelectionCaret = t.active.select,
 }
 
 -- }}}
@@ -517,313 +706,14 @@ hl.lsp_kind_icons = {
 
 -- }}}
 
--- (TEMP) treesitter {{{
-hl.treesitter = { -- https://github.com/nvim-treesitter/nvim-treesitter/blob/master/CONTRIBUTING.md
-
-	-- Misc
-	["@comment"] = t.passive.comment, -- line and block comments
-	["@comment.documentation"] = t.passive.bg, -- comments documenting code
-	["@error"] = t.error, -- syntax/parser errors
-	["@none"] = t.text.norm, -- completely disable the highlight
-	["@preproc"] = t.keyword.external, -- various preprocessor directives & shebangs
-	["@define"] = t.keyword.external, -- preprocessor definition directives
-	["@operator"] = t.operator, -- symbolic operators (e.g. `+` / `*`)
-
-	-- Punctuation
-	["@punctuation.delimiter"] = t.delim.norm, --` / `.` / `,`)
-	["@punctuation.bracket"] = t.delim.bracket, -- brackets (e.g. `()` / `{}` / `[]`)
-	["@punctuation.special"] = t.special, -- special symbols (e.g. `{}` in string interpolation)
-
-	-- Literals
-	["@string"] = t.str.norm, -- string literals
-	["@string.documentation"] = t.str.doc, -- string documenting code (e.g. Python docstrings)
-	["@string.regex"] = t.str.regex, -- regular expressions
-	["@string.escape"] = t.str.char, -- escape sequences
-	["@string.special"] = t.str.special, -- other special strings (e.g. dates)
-	["@character"] = t.str.char, -- character literals
-	["@character.special"] = t.str.special, -- special characters (e.g. wildcards)
-	["@boolean"] = t.bool, -- boolean literals
-	["@number"] = t.num, -- numeric literals
-	["@float"] = t.float, -- floating-point number literals
-
-	-- Functions
-	["@function"] = t.func.norm, -- function definitions
-	["@function.builtin"] = t.func.builtin, -- built-in functions
-	["@function.call"] = t.func.norm, -- function calls
-	["@function.macro"] = t.func.macro, -- preprocessor macros
-	["@method"] = t.func.norm, -- method definitions
-	["@method.call"] = t.func.norm, -- method calls
-	["@constructor"] = t.typedef, -- constructor calls and definitions
-	["@parameter"] = t.var.param, -- parameters of a function
-
-	-- Keywords
-	["@keyword"] = t.keyword.norm, -- various keywords
-	["@keyword.coroutine"] = t.keyword.def, -- keywords related to coroutines (e.g. `go` in Go, `async/await` in Python)
-	["@keyword.function"] = t.keyword.def, -- keywords that define a function (e.g. `func` in Go, `def` in Python)
-	["@keyword.operator"] = t.keyword.logic, -- operators that are English words (e.g. `and` / `or`)
-	["@keyword.return"] = t.keyword.flow, -- keywords like `return` and `yield`
-	["@conditional"] = t.keyword.logic, -- keywords related to conditionals (e.g. `if` / `else`)
-	["@conditional.ternary"] = t.keyword.flow, -- ternary operator (e.g. `?` / `:`)
-	["@repeat"] = t.keyword.logic, -- keywords related to loops (e.g. `for` / `while`)
-	["@debug"] = t.tip, -- keywords related to debugging
-	["@label"] = t.keyword.label, -- GOTO and other labels (e.g. `label:` in C)
-	["@include"] = t.keyword.link, -- keywords for including modules (e.g. `import` / `from` in Python)
-	["@exception"] = t.keyword.label, -- keywords related to exceptions (e.g. `throw` / `catch`)
-
-	-- Types
-	["@type"] = t.type.norm, -- type or class definitions and annotations
-	["@type.builtin"] = t.type.builtin, -- built-in types
-	["@type.definition"] = t.type.def, -- type definitions (e.g. `typedef` in C)
-	["@type.qualifier"] = t.type.struct, -- type qualifiers (e.g. `const`)
-	["@storageclass"] = t.type.store, -- modifiers that affect storage in memory or life-time
-	["@attribute"] = t.keyword.external, -- attribute annotations (e.g. Python decorators)
-	["@field"] = t.var.norm, -- object and struct fields
-	["@property"] = t.var.norm, -- similar to `@field`
-
-	-- Identifiers
-	["@variable"] = t.var.norm, -- various variable names
-	["@variable.builtin"] = t.var.builtin, -- built-in variable names (e.g. `this`)
-	["@constant"] = t.const.norm, -- constant identifiers
-	["@constant.builtin"] = t.const.builtin, -- built-in constant values
-	["@constant.macro"] = t.const.external, -- constants defined by the preprocessor
-	["@namespace"] = t.var.builtin, -- modules or namespaces
-	["@symbol"] = t.var.builtin, -- symbols or atoms
-
-	-- Text
-	["@text"] = t.text.norm, -- non-structured text
-	["@text.strong"] = t.text.bold, -- bold text
-	["@text.emphasis"] = t.text.italic, -- text with emphasis
-	["@text.underline"] = t.text.underline, -- underlined text
-	["@text.strike"] = t.text.strike, -- strikethrough text
-	["@text.title"] = t.text.title, -- text that is part of a title
-	["@text.literal"] = t.str.norm, -- literal or verbatim text (e.g., inline code)
-	["@text.quote"] = { fg = p.slt_5 }, -- text quotations
-	["@text.uri"] = t.link, -- URIs (e.g. hyperlinks)
-	["@text.math"] = t.tip, -- math environments (e.g. `$ ... $` in LaTeX)
-	["@text.environment"] = t.type.norm, -- text environments of markup languages
-	["@text.environment.name"] = t.type.def, -- text indicating the type of an environment
-	["@text.reference"] = t.passive.comment, -- text references, footnotes, citations, etc.
-	["@text.todo"] = t.hint, -- todo notes
-	["@text.note"] = t.tip, -- info notes
-	["@text.warning"] = t.warning, -- warning notes
-	["@text.danger"] = t.error, -- danger/error notes
-	["@text.diff.add"] = t.add, -- added text (for diff files)
-	["@text.diff.delete"] = t.delete, -- deleted text (for diff files)
-
-	-- Tags
-	["@tag"] = t.var.tag, -- XML tag names
-	["@tag.attribute"] = t.var.attr, -- XML tag attributes
-	["@tag.delimiter"] = t.delim.norm, -- XML tag delimiters
-}
--- }}}
-
--- (TEMP) treesitter queries {{{
-hl.treesitter_queries = { -- https://github.com/nvim-treesitter/nvim-treesitter/tree/master/queries
-
-	--help
-	["@label.help"] = t.var.tag,
-	["@text.reference"] = t.link,
-	["@text.literal"] = t.passive.fg,
-
-	-- toml
-	["@type.toml"] = t.var.tag,
-	["@property.toml"] = t.var.param,
-}
--- }}}
-
--- (TEMP) plugins {{{
-
-hl.plugins.lsp = {
-	DiagnosticError = t.error,
-	DiagnosticHint = t.hint,
-	DiagnosticInfo = t.info,
-	DiagnosticWarn = t.warning,
-
-	DiagnosticVirtualTextError = {},
-	DiagnosticVirtualTextWarn = {},
-	DiagnosticVirtualTextInfo = {},
-	DiagnosticVirtualTextHint = {},
-
-	DiagnosticUnderlineError = t.bad,
-	DiagnosticUnderlineHint = t.nag,
-	DiagnosticUnderlineInfo = t.nag,
-	DiagnosticUnderlineWarn = t.warn,
-
-	LspReferenceText = {},
-	LspReferenceWrite = {},
-	LspReferenceRead = {},
-
-	LspCodeLens = {},
-	LspCodeLensSeparator = {},
-}
-
-hl.plugins.cmp = {
-	CmpItemAbbr = {},
-	CmpItemAbbrDeprecated = {},
-	CmpItemAbbrMatch = {},
-	CmpItemAbbrMatchFuzzy = {},
-	CmpItemMenu = {},
-	CmpItemKind = {},
-}
-
-hl.plugins.whichkey = {
-	WhichKey = {},
-	WhichKeyDesc = {},
-	WhichKeyGroup = {},
-	WhichKeySeperator = {},
-}
-
--- comment
-hl.plugins.diffview = {
-	DiffviewFilePanelTitle = {},
-	DiffviewFilePanelCounter = {},
-	DiffviewFilePanelFileName = {},
-	DiffviewNormal = {},
-	DiffviewCursorLine = {},
-	DiffviewVertSplit = {},
-	DiffviewSignColumn = {},
-	DiffviewStatusLine = {},
-	DiffviewStatusLineNC = {},
-	DiffviewEndOfBuffer = {},
-	DiffviewFilePanelRootPath = {},
-	DiffviewFilePanelPath = {},
-	DiffviewFilePanelInsertions = {},
-	DiffviewFilePanelDeletions = {},
-	DiffviewStatusAdded = {},
-	DiffviewStatusUntracked = {},
-	DiffviewStatusModified = {},
-	DiffviewStatusRenamed = {},
-	DiffviewStatusCopied = {},
-	DiffviewStatusTypeChange = {},
-	DiffviewStatusUnmerged = {},
-	DiffviewStatusUnknown = {},
-	DiffviewStatusDeleted = {},
-	DiffviewStatusBroken = {},
-}
-
-hl.plugins.gitsigns = {
-	GitSignsAdd = t.add,
-	GitSignsAddLn = t.add,
-	GitSignsAddNr = t.add,
-	GitSignsChange = t.modified,
-	GitSignsChangeLn = t.modified,
-	GitSignsChangeNr = t.modified,
-	GitSignsDelete = t.delete,
-	GitSignsDeleteLn = t.delete,
-	GitSignsDeleteNr = t.delete,
-}
-
-hl.plugins.neo_tree = {
-	NeoTreeNormal = {},
-	NeoTreeNormalNC = {},
-	NeoTreeVertSplit = {},
-	NeoTreeWinSeparator = {},
-	NeoTreeEndOfBuffer = {},
-	NeoTreeRootName = {},
-	NeoTreeGitAdded = {},
-	NeoTreeGitDeleted = {},
-	NeoTreeGitModified = {},
-	NeoTreeGitConflict = {},
-	NeoTreeGitUntracked = {},
-	NeoTreeIndentMarker = {},
-	NeoTreeSymbolicLinkTarget = {},
-}
-
-hl.plugins.neotest = {
-	NeotestAdapterName = {},
-	NeotestDir = {},
-	NeotestExpandMarker = {},
-	NeotestFailed = {},
-	NeotestFile = {},
-	NeotestFocused = {},
-	NeotestIndent = {},
-	NeotestMarked = {},
-	NeotestNamespace = {},
-	NeotestPassed = {},
-	NeotestRunning = {},
-	NeotestWinSelect = {},
-	NeotestSkipped = {},
-	NeotestTarget = {},
-	NeotestTest = {},
-	NeotestUnknown = {},
-}
-
-hl.plugins.nvim_tree = {
-	NvimTreeNormal = {},
-	NvimTreeVertSplit = {},
-	NvimTreeEndOfBuffer = {},
-	NvimTreeRootFolder = {},
-	NvimTreeGitDirty = {},
-	NvimTreeGitNew = {},
-	NvimTreeGitDeleted = {},
-	NvimTreeSpecialFile = {},
-	NvimTreeIndentMarker = {},
-	NvimTreeImageFile = {},
-	NvimTreeSymlink = {},
-	NvimTreeFolderName = {},
-}
-
-hl.plugins.telescope = {
-	TelescopeBorder = {},
-	TelescopePromptBorder = {},
-	TelescopeResultsBorder = {},
-	TelescopePreviewBorder = {},
-	TelescopeMatching = {},
-	TelescopePromptPrefix = {},
-	TelescopeSelection = {},
-	TelescopeSelectionCaret = {},
-}
-
-hl.plugins.dashboard = {
-	DashboardShortCut = {},
-	DashboardHeader = {},
-	DashboardCenter = {},
-	DashboardFooter = {},
-}
-
-hl.plugins.outline = {
-	FocusedSymbol = {},
-	AerialLine = {},
-}
-
-hl.plugins.navic = {
-	NavicText = {},
-	NavicSeparator = {},
-}
-
-hl.plugins.ts_rainbow = {
-	rainbowcol1 = {},
-	rainbowcol2 = {},
-	rainbowcol3 = {},
-	rainbowcol4 = {},
-	rainbowcol5 = {},
-	rainbowcol6 = {},
-	rainbowcol7 = {},
-}
-
-hl.plugins.indent_blankline = {
-	IndentBlanklineIndent1 = {},
-	IndentBlanklineIndent2 = {},
-	IndentBlanklineIndent3 = {},
-	IndentBlanklineIndent4 = {},
-	IndentBlanklineIndent5 = {},
-	IndentBlanklineIndent6 = {},
-	IndentBlanklineChar = {},
-	IndentBlanklineContext = {},
-	IndentBlanklineContextChar = {},
-	IndentBlanklineContextStart = {},
-	IndentBlanklineContextSpaceChar = {},
-}
--- }}}
-
 vim_highlights(hl.builtin)
 vim_highlights(hl.syntax)
 vim_highlights(hl.treesitter)
 vim_highlights(hl.treesitter_queries)
 
--- for _, group in pairs(hl.plugins) do
--- 	vim_highlights(group)
--- end
+for _, group in pairs(hl.plugins) do
+	vim_highlights(group)
+end
 
 -- }}}
 
@@ -839,6 +729,7 @@ require("nvim-tree").setup({
 	remove_keymaps = true,
 	view = {
 		number = true,
+		cursorline = false,
 		relativenumber = true,
 		signcolumn = "yes",
 		mappings = {
@@ -882,8 +773,8 @@ require("nvim-tree").setup({
 			open_win_config = function()
 				local screen_w = vim.opt.columns:get()
 				local screen_h = vim.opt.lines:get() - vim.opt.cmdheight:get()
-				local window_w = screen_w * 0.8
-				local window_h = screen_h * 0.5
+				local window_w = screen_w * 0.66
+				local window_h = screen_h * 0.33
 				local window_w_int = math.floor(window_w)
 				local window_h_int = math.floor(window_h)
 				local center_x = (screen_w - window_w) / 2
@@ -1313,6 +1204,7 @@ tmap("<leader>tg", builtin.git_files)
 tmap("<leader>to", builtin.oldfiles)
 tmap("<leader>tb", builtin.buffers)
 tmap("<leader>th", builtin.help_tags)
+tmap("<leader>tH", builtin.highlights)
 tmap("<leader>td", builtin.diagnostics)
 tmap("<leader>tp", builtin.builtin)
 tmap("<leader>tc", builtin.commands)
@@ -1537,10 +1429,23 @@ cmp.setup({
 
 -- 📚 LSP (and more) {{{
 
--- critical on_attach function, applied by mason ⮯
+-- critical on_attach function ⮯
 local on_attach = function(client, bufnr)
 	local nmap = function(keys, func)
 		vim.keymap.set("n", keys, func, { buffer = bufnr })
+	end
+
+	if client.supports_method("textDocument/documentHighlight") then
+		vim.api.nvim_exec(
+			[[
+            augroup ReferenceHighlight
+                autocmd! * <buffer>
+                autocmd CursorHold <buffer> lua vim.lsp.buf.document_highlight()
+                autocmd CursorMoved <buffer> lua vim.lsp.buf.clear_references()
+            augroup END
+        ]],
+			false
+		)
 	end
 
 	nmap("<leader>tsr", require("telescope.builtin").lsp_references)
@@ -1647,6 +1552,7 @@ vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.s
 local servers = {
 	bashls = {},
 	marksman = {},
+	pyright = {},
 	prosemd_lsp = {},
 	cssls = {},
 	rust_analyzer = {},
