@@ -207,6 +207,7 @@ end
 
 -- (TEMP) thalamus (link relay station) {{{
 local t = {
+
 	text = {
 		norm = { fg = p.fg, bg = p.bg },
 		bold = { fmt = "bold" },
@@ -215,50 +216,61 @@ local t = {
 		strike = { fg = p.slt_4, fmt = "strikethrough" },
 		title = { fg = p.sky_2, fmt = "bold" },
 		reverse = { fg = p.bg, bg = p.brt_1 },
+		inactive = { fg = p.gry_1 },
 	},
 
-	comment = { fg = p.slt_2 },
-	invis = { fg = p.bg, bg = p.bg },
-	inactive = { fg = p.gry_2 },
-	disown = { fg = p.blu_0, bg = p.drk_1 },
+	passive = {
+		comment = { fg = p.slt_2 },
+		invis = { fg = p.bg, bg = p.bg },
+		disown = { fg = p.blu_0, bg = p.drk_1 },
+		norm = { fg = p.glc_4, bg = p.drk_0 },
+		fg = { fg = p.glc_4 },
+		bg = { bg = p.drk_0 },
+	},
 
-	h1 = { fg = p.sky_2 },
+	idle = {
+		norm = { fg = p.blu_2 },
+		solid = { bg = p.blu_2 },
+		bg = { bg = p.glc_2 },
+		passive = { fg = p.blu_2, bg = p.drk_0 },
+		passive_br = { fg = p.blu_2, bg = p.glc_0 },
+		bold = { fg = p.blu_2, fmt = "bold" },
+		search = { fg = p.blu_0 },
+	},
 
-	passive = { fg = p.glc_4, bg = p.drk_0 },
-	passive_fg = { fg = p.glc_4 },
-	passive_bg = { bg = p.drk_0 },
+	active = {
+		norm = { fg = p.orn_4 },
+		select = { fg = p.orn_4, bg = p.glc_2, fmt = "bold" },
+		visual = { bg = p.glc_2, fmt = "bold" },
+		search = { fg = p.orn_1, fmt = "bold" },
+	},
 
-	active = { fg = p.orn_4 },
-	active_select = { fg = p.orn_4, bg = p.glc_2, fmt = "bold" },
-	select = { bg = p.glc_2, fmt = "bold" },
+	state = {
+		add = { fg = p.tyr_1 },
+		new = { fg = p.pro_1 },
+		modified = { fg = p.glu_1 },
+		delete = { fg = p.his_1 },
+	},
 
-	idle = { fg = p.blu_2 },
-	idle_reverse = { bg = p.blu_2 },
-	idle_bg = { bg = p.glc_2 },
-	idle_passive = { fg = p.blu_2, bg = p.drk_0 },
-	idle_active = { fg = p.blu_2, bg = p.glc_0 },
-	idle_bold = { fg = p.blu_2, fmt = "bold" },
+	msg = {
+		success = { fg = p.emr_3 },
+		error = { fg = p.rby_3 },
+		warning = { fg = p.sun_3 },
+		tip = { fg = p.sky_1 },
+		hint = { fg = p.sky_3 },
+		info = { fg = p.sky_4 },
+		errorInv = { fg = p.rby_2, fmt = "reverse" },
+		successInv = { fg = p.emr_2, fmt = "reverse" },
+		warningAlt = { fg = p.sun_2, fmt = "italic" },
+	},
 
-	search_active = { fg = p.orn_1, fmt = "bold" },
-	search_idle = { fg = p.blu_0 },
-
-	add = { fg = p.tyr_1 },
-	new = { fg = p.pro_1 },
-	modified = { fg = p.glu_1 },
-	delete = { fg = p.his_1 },
-
-	success = { fg = p.emr_3 },
-	error = { fg = p.rby_3 },
-	warning = { fg = p.sun_3 },
-	tip = { fg = p.sky_1 },
-	hinp = { fg = p.sky_3 },
-	info = { fg = p.sky_4 },
-
-	bad = { sp = p.rby_1, fmt = "undercurl" },
-	nag = { sp = p.sky_1, fmt = "undercurl" },
-	warn = { fg = p.sun_1, fmt = "undercurl" },
-	custom = { sp = p.cyn_1, fmt = "undercurl" },
-	rare = { sp = p.pnk_1, fmt = "undercurl" },
+	underline = {
+		bad = { sp = p.rby_1, fmt = "undercurl" },
+		nag = { sp = p.sky_1, fmt = "undercurl" },
+		warn = { fg = p.sun_1, fmt = "undercurl" },
+		custom = { sp = p.cyn_1, fmt = "undercurl" },
+		rare = { sp = p.pnk_1, fmt = "undercurl" },
+	},
 
 	str = {
 		special = { fg = p.grn_4 },
@@ -274,11 +286,6 @@ local t = {
 		builtin = { fg = p.orn_2 },
 		macro = { fg = p.orn_3, fmt = "italic" },
 	},
-
-	num = { fg = p.pnk_2 },
-	bool = { fg = p.cyn_2 },
-	float = { fg = p.pnk_4 },
-	operator = { fg = p.prp_4 },
 
 	delim = {
 		norm = { fg = p.glu_2 },
@@ -317,9 +324,15 @@ local t = {
 		def = { fg = p.blu_2, fmt = "bold" },
 	},
 
+	num = { fg = p.pnk_2 },
+	bool = { fg = p.cyn_2 },
+	float = { fg = p.pnk_4 },
+	operator = { fg = p.prp_4 },
+
+	link = { fg = p.tyr_3 },
 	specialchar = { fg = p.sky_0 },
 	special = { fg = p.sky_2 },
-	link = { fg = p.tyr_3 },
+	h1 = { fg = p.sky_2 },
 }
 
 -- }}}
@@ -333,87 +346,87 @@ hl.builtin = {
 	CursorIM = t.text.reverse,
 	TermCursor = t.text.reverse,
 	TermCursorNC = t.text.reverse,
-	MatchParen = t.active,
-	EndOfBuffer = t.invis,
-	Whitespace = t.comment,
+	MatchParen = t.active.norm,
+	EndOfBuffer = t.passive.invis,
+	Whitespace = t.passive.comment,
 
 	-- recurring ui:
-	Folded = t.passive,
-	FoldColumn = t.passive,
-	CursorLineFold = t.idle_passive,
-	SignColumn = t.comment,
-	CursorLineSign = t.passive,
-	LineNrAbove = t.comment,
-	LineNr = t.idle_bold,
-	CursorLineNr = t.idle_passive,
-	LineNrBelow = t.comment,
-	ColorColumn = t.passive_bg,
-	CursorColumn = t.passive_bg,
-	CursorLine = t.passive_bg,
+	Folded = t.passive.norm,
+	FoldColumn = t.passive.norm,
+	CursorLineFold = t.idle.passive,
+	SignColumn = t.passive.comment,
+	CursorLineSign = t.passive.norm,
+	LineNrAbove = t.passive.comment,
+	LineNr = t.idle.bold,
+	CursorLineNr = t.idle.passive,
+	LineNrBelow = t.passive.comment,
+	ColorColumn = t.passive.bg,
+	CursorColumn = t.passive.bg,
+	CursorLine = t.passive.bg,
 
 	-- temporary ui:
-	Pmenu = t.idle_active,
-	PmenuSel = t.active_select,
-	PmenuSbar = t.idle_bg,
-	PmenuThumb = t.idle_reverse,
-	WildMenu = t.active_select,
+	Pmenu = t.idle.passive_br,
+	PmenuSel = t.active.select,
+	PmenuSbar = t.idle.bg,
+	PmenuThumb = t.idle.solid,
+	WildMenu = t.active.select,
 
 	-- state change:
-	DiffAdd = t.add,
-	DiffNew = t.new,
-	DiffChange = t.modified,
-	DiffText = t.modified,
-	DiffDelete = t.delete,
+	DiffAdd = t.state.add,
+	DiffNew = t.state.new,
+	DiffChange = t.state.modified,
+	DiffText = t.state.modified,
+	DiffDelete = t.state.delete,
 
 	-- visual:
-	Visual = t.select,
-	VisualNOS = t.disown,
-	Search = t.search_idle,
-	CurSearch = t.search_active,
-	IncSearch = t.search_active,
-	Substitute = t.search_active,
+	Visual = t.active.visual,
+	VisualNOS = t.passive.disown,
+	Search = t.idle.search,
+	CurSearch = t.active.search,
+	IncSearch = t.active.search,
+	Substitute = t.active.search,
 
 	-- linting:
-	SpellBad = t.bad,
-	SpellCap = t.nag,
-	SpellLocal = t.custom,
-	SpellRare = t.rare,
+	SpellBad = t.underline.bad,
+	SpellCap = t.underline.nag,
+	SpellLocal = t.underline.custom,
+	SpellRare = t.underline.rare,
 
 	-- messaging:
-	ErrorMsg = t.error,
-	WarningMsg = t.warning,
-	ModeMsg = t.idle_active,
-	MsgArea = t.passive_fg,
-	MoreMsg = t.idle,
-	MsgSeparator = t.idle,
-	Question = t.idle,
+	ErrorMsg = t.msg.error,
+	WarningMsg = t.msg.warning,
+	ModeMsg = t.idle.passive_br,
+	MsgArea = t.passive.fg,
+	MoreMsg = t.idle.norm,
+	MsgSeparator = t.idle.norm,
+	Question = t.idle.norm,
 
 	-- windows 'n such:
-	WinSeparator = t.idle_active,
-	NormalFloat = t.idle_active,
-	NormalNC = t.passive,
-	QuickFixLine = t.idle_active,
-	StatusLine = t.passive,
-	StatusLineNC = t.passive,
-	TabLine = t.passive,
-	TabLineFill = t.passive_bg,
-	TabLineSel = t.idle_active,
-	WinBar = t.idle_passive,
-	WinBarNC = t.passive,
+	WinSeparator = t.idle.passive_br,
+	NormalFloat = t.idle.passive_br,
+	NormalNC = t.passive.norm,
+	QuickFixLine = t.idle.passive_br,
+	StatusLine = t.passive.norm,
+	StatusLineNC = t.passive.norm,
+	TabLine = t.passive.norm,
+	TabLineFill = t.passive.bg,
+	TabLineSel = t.idle.passive_br,
+	WinBar = t.idle.passive,
+	WinBarNC = t.passive.norm,
 
 	-- uncertain assignments:
 	Directory = t.h1,
 	Title = t.h1,
-	Conceal = t.idle,
-	NonText = t.inative,
-	SpecialKey = t.inative,
+	Conceal = t.idle.norm,
+	NonText = t.text.inative,
+	SpecialKey = t.text.inative,
 }
 
 -- }}}
 
 -- (TEMP) syntax {{{
 hl.syntax = {
-	Comment = t.comment,
+	Comment = t.passive.comment,
 	Constant = t.const.norm,
 	String = t.str.norm,
 	Character = t.str.char,
@@ -445,7 +458,7 @@ hl.syntax = {
 	Delimiter = t.delim.norm,
 	SpecialComment = t.hint,
 	Debug = t.tip,
-	Ignore = t.passive_fg,
+	Ignore = t.passive.fg,
 	Error = t.error,
 	Todo = t.hint,
 
@@ -453,11 +466,11 @@ hl.syntax = {
 	Italic = t.text.italic,
 	Underlined = t.text.underline,
 
-	healthError = { fg = t.rby_2, fmt = "reverse" },
-	healthSuccess = { fg = p.emr_2, fmt = "reverse" },
-	healthWarning = { fg = p.sun_2, fmt = "italic" },
+	healthError = t.msg.errorInv,
+	healthSuccess = t.msg.successInv,
+	healthWarning = t.msg.warningAlt,
 
-	markdownHeadingRule = t.comment,
+	markdownHeadingRule = t.passive.comment,
 }
 
 -- }}}
@@ -508,8 +521,8 @@ hl.lsp_kind_icons = {
 hl.treesitter = { -- https://github.com/nvim-treesitter/nvim-treesitter/blob/master/CONTRIBUTING.md
 
 	-- Misc
-	["@comment"] = t.comment, -- line and block comments
-	["@comment.documentation"] = t.passive_bg, -- comments documenting code
+	["@comment"] = t.passive.comment, -- line and block comments
+	["@comment.documentation"] = t.passive.bg, -- comments documenting code
 	["@error"] = t.error, -- syntax/parser errors
 	["@none"] = t.text.norm, -- completely disable the highlight
 	["@preproc"] = t.keyword.external, -- various preprocessor directives & shebangs
@@ -589,7 +602,7 @@ hl.treesitter = { -- https://github.com/nvim-treesitter/nvim-treesitter/blob/mas
 	["@text.math"] = t.tip, -- math environments (e.g. `$ ... $` in LaTeX)
 	["@text.environment"] = t.type.norm, -- text environments of markup languages
 	["@text.environment.name"] = t.type.def, -- text indicating the type of an environment
-	["@text.reference"] = t.comment, -- text references, footnotes, citations, etc.
+	["@text.reference"] = t.passive.comment, -- text references, footnotes, citations, etc.
 	["@text.todo"] = t.hint, -- todo notes
 	["@text.note"] = t.tip, -- info notes
 	["@text.warning"] = t.warning, -- warning notes
@@ -610,7 +623,7 @@ hl.treesitter_queries = { -- https://github.com/nvim-treesitter/nvim-treesitter/
 	--help
 	["@label.help"] = t.var.tag,
 	["@text.reference"] = t.link,
-	["@text.literal"] = t.passive_fg,
+	["@text.literal"] = t.passive.fg,
 
 	-- toml
 	["@type.toml"] = t.var.tag,
