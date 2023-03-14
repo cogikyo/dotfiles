@@ -52,7 +52,7 @@
   &nbsp;
   <a href="https://www.reddit.com/r/unixporn/">
       <img
-          src="https://vbr.wocr.tk/badge?color=59b5e5&logoColor=59b5e5&page_id=nosvagor/dotfiles&logo=linux&style=for-the-badge&lcolor=24283b"
+          src="https://vbr.wocr.tk/badge?color=59b5e5&logoColor=59b5e5&page_id=dotfiles&logo=linux&style=for-the-badge&lcolor=24283b"
           alt="visitor count 💀"
           title="hello there (I use arch, neovim, and rust, btw)"
       >
