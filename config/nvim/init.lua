@@ -85,41 +85,20 @@ require("packer").startup(function(use)
 	use("JoosepAlviste/nvim-ts-context-commentstring")
 	-- }}}
 
-	-- 🔱 Git {{{
-	-- }}}
-
-	-- 🔭 Fuzzy Finder {{{
-	use({
-		"nvim-telescope/telescope.nvim",
-		branch = "0.1.x",
-		requires = {
-			"nvim-lua/plenary.nvim",
-			"natecraddock/telescope-zf-native.nvim",
-		},
-	})
-	-- }}}
-
 	-- 👀 UI {{{
-	use({
-		"catppuccin/nvim",
-		as = "catppuccin",
-	})
+	use("nosvagor/vagari.nvim")
+	use("lewis6991/gitsigns.nvim")
+	use("anuvyklack/pretty-fold.nvim")
+	use("brenoprata10/nvim-highlight-colors")
+	use("goolord/alpha-nvim")
+	use("mbbill/undotree")
+	use("ThePrimeagen/harpoon")
 	use({
 		"nvim-lualine/lualine.nvim",
 		requires = {
 			"arkav/lualine-lsp-progress",
 		},
 	})
-	use("lewis6991/gitsigns.nvim")
-	use("folke/tokyonight.nvim")
-	use("ellisonleao/gruvbox.nvim")
-	use("navarasu/onedark.nvim")
-	use("nosvagor/vagari.nvim")
-	use("anuvyklack/pretty-fold.nvim")
-	use("brenoprata10/nvim-highlight-colors")
-	use("goolord/alpha-nvim")
-	use("mbbill/undotree")
-	use("ThePrimeagen/harpoon")
 	use({
 		"kyazdani42/nvim-tree.lua",
 		requires = {
@@ -141,13 +120,21 @@ require("packer").startup(function(use)
 	use("windwp/nvim-autopairs")
 	use("AndrewRadev/switch.vim")
 	use("cappyzawa/trim.nvim")
+	use("elkowar/yuck.vim")
 	use({
 		"iamcco/markdown-preview.nvim",
 		run = function()
 			vim.fn["mkdp#util#install"]()
 		end,
 	})
-	use("elkowar/yuck.vim")
+	use({
+		"nvim-telescope/telescope.nvim",
+		branch = "0.1.x",
+		requires = {
+			"nvim-lua/plenary.nvim",
+			"natecraddock/telescope-zf-native.nvim",
+		},
+	})
 	-- }}}
 
 -- ============================================================================
