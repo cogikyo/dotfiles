@@ -244,38 +244,7 @@ require("gitsigns").setup({
 
 -- 🧭 LuaLine {{{
 
-local colors = require("tokyonight.colors").setup({})
-local utils = require("tokyonight.util")
-local fg_gutter_alt = "#2a2f46"
-
-local tokyonight = {
-	normal = {
-		a = { bg = colors.blue, fg = colors.black },
-		b = { bg = fg_gutter_alt, fg = colors.blue },
-		c = { bg = "#1e2133", fg = colors.blue7 },
-	},
-	insert = {
-		a = { bg = colors.green, fg = colors.black },
-		b = { bg = fg_gutter_alt, fg = colors.green },
-	},
-	command = {
-		a = { bg = colors.yellow, fg = colors.black },
-		b = { bg = fg_gutter_alt, fg = colors.yellow },
-	},
-	visual = {
-		a = { bg = colors.magenta, fg = colors.black },
-		b = { bg = fg_gutter_alt, fg = colors.magenta },
-	},
-	replace = {
-		a = { bg = colors.red, fg = colors.black },
-		b = { bg = fg_gutter_alt, fg = colors.red },
-	},
-	inactive = {
-		a = { bg = colors.bg_statusline, fg = colors.blue },
-		b = { bg = colors.bg_statusline, fg = fg_gutter_alt, gui = "bold" },
-		c = { bg = "#22536", fg = fg_gutter_alt },
-	},
-}
+local p = require("vagari.palette")
 
 local hide_in_width = function()
 	return vim.fn.winwidth(0) > 80
@@ -326,7 +295,7 @@ local diff = {
 	colored = true,
 	symbols = {
 		added = " ",
-		modified = " ",
+		modified = "🞊 ",
 		removed = " ",
 	},
 	cond = hide_in_width,
@@ -351,21 +320,21 @@ local filename = {
 	},
 	color = function()
 		local mode_color = {
-			n = utils.lighten(colors.blue, 0.75),
-			i = utils.lighten(colors.green, 0.75),
-			v = utils.lighten(colors.magenta, 0.75),
-			V = utils.lighten(colors.magenta, 0.75),
-			c = utils.lighten(colors.orange, 0.75),
-			R = utils.lighten(colors.red, 0.75),
-			s = utils.lighten(colors.teal, 0.75),
-			S = utils.lighten(colors.teal, 0.75),
-			[""] = utils.lighten(colors.magenta, 0.75),
+			n = p.blu_4,
+			i = p.grn_4,
+			v = p.prp_4,
+			V = p.prp_4,
+			c = p.orn_4,
+			R = p.emr_4,
+			s = p.cyn_4,
+			S = p.cyn_4,
+			[""] = p.prp_4,
 		}
 		return { fg = mode_color[vim.fn.mode()] }
 	end,
 }
 
-local lsp = {
+local lsp_progress = {
 	"lsp_progress",
 	display_components = {
 		"lsp_client_name",
@@ -374,7 +343,7 @@ local lsp = {
 	timer = {
 		progress_enddelay = 100,
 		spinner = 100,
-		lsp_client_name_enddelay = 1000,
+		lsp_client_name_enddelay = 3000,
 	},
 	message = {
 		commenced = "󱞇 ",
@@ -392,23 +361,6 @@ local lsp = {
 	spinner_symbols = { " ", " ", " ", " ", " ", " " },
 }
 
-local buffers = {
-	"buffers",
-	max_length = vim.o.columns * 10 / 11,
-	cond = hide_in_width,
-}
-
-local tsplayground = {
-	sections = {
-		lualine_b = { filename },
-		lualine_z = { filetype },
-	},
-	inactive_sections = {
-		lualine_z = { filetype },
-	},
-	filetypes = { "tsplayground" },
-}
-
 local search = {
 	function()
 		local last_search = vim.fn.getreg("/")
@@ -421,7 +373,7 @@ local search = {
 		end
 		return " " .. last_search .. "(" .. searchcount.current .. "/" .. searchcount.total .. ")"
 	end,
-	color = { fg = utils.darken(colors.orange, 0.69) },
+	color = { fg = p.orn_2 },
 }
 
 local function icon()
@@ -430,37 +382,20 @@ end
 
 require("lualine").setup({
 	options = {
-		icons_enabled = true,
-		theme = tokyonight,
+		theme = "vagari",
 		section_separators = { left = "", right = "" },
 		component_separators = { left = "⊸", right = "⟜" },
-		disabled_filetypes = {},
-		always_divide_middle = true,
-		globalstatus = false,
 	},
 	sections = {
 		lualine_a = { mode },
 		lualine_b = { branch, filename },
 		lualine_c = { diff, lsp_diagnostics },
-		lualine_x = { lsp, search },
+		lualine_x = { lsp_progress, search },
 		lualine_y = { filetype },
 		lualine_z = { icon },
 	},
-	inactive_sections = {
-		lualine_a = {},
-		lualine_b = {},
-		lualine_c = {},
-		lualine_x = {},
-		lualine_y = {},
-		lualine_z = {},
-	},
+	inactive_sections = {},
 	tabline = {},
-	extensions = {
-		"nvim-tree",
-		"quickfix",
-		"toggleterm",
-		tsplayground,
-	},
 })
 -- }}}
 
@@ -981,7 +916,7 @@ local header = {
 		[[    `-..,..-'       `-..,..-'       `-..,..-'      ]],
 	},
 	opts = {
-		hl = "Function",
+		hl = "@function.macro",
 		shrink_margin = false,
 		position = "center",
 	},
