@@ -36,7 +36,7 @@ require("pretty-fold").setup({
 	process_comment_signs = "delete",
 })
 
-vim.cmd([[ colorscheme vagari ]])
+vim.cmd("colorscheme vagari")
 
 -- }}}
 -- =============================================================================
@@ -477,6 +477,7 @@ tmap("<leader>tst", builtin.treesitter)
 -- 🎄 Treesitter {{{
 require("nvim-treesitter.configs").setup({
 	ensure_installed = {
+        "query",
 		"bash",
 		"css",
 		"help",
