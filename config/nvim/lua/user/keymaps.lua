@@ -1,8 +1,8 @@
 -- ============================================================================
 -- 🧰 Setup (definition for short-hand remap function): ⮯ {{{
 local function map(mode, lhs, rhs, opts)
-	opts = vim.tbl_extend("force", { noremap = true, silent = true }, opts or {})
-	vim.api.nvim_set_keymap(mode, lhs, rhs, opts)
+    opts = vim.tbl_extend("force", { noremap = true, silent = true }, opts or {})
+    vim.api.nvim_set_keymap(mode, lhs, rhs, opts)
 end
 
 -- default is non-recursive and silent ⮭
@@ -46,21 +46,21 @@ map("n", "<C-c>", "<Esc>")
 -- }}}
 
 -- 🍸 Vestigial {{{
-map("n", "<C-z>", "u") -- undo
-map("n", "<C-y>", "<C-r>") -- redo
+map("n", "<C-z>", "u")        -- undo
+map("n", "<C-y>", "<C-r>")    -- redo
 map("i", "<C-v>", '<Esc>"+p') -- system clipboard (default) paste
 map("n", "<leader>rfl", "<S-v>gw")
 map("n", "<leader>rfp", "vipgw")
 -- }}}
 
 -- 🤖 Copy copy {{{
-map("v", "<leader>y", 'ml"+y`l') -- copy visual selection
-map("v", "<C-c>", 'ml"+y`l') -- copy visual selection
-map("n", "<leader>y", '"+y') -- copy (can be used with motions)
-map("n", "<leader>Y", '"+y$') -- copy entire line
+map("v", "<leader>y", 'ml"+y`l')         -- copy visual selection
+map("v", "<C-c>", 'ml"+y`l')             -- copy visual selection
+map("n", "<leader>y", '"+y')             -- copy (can be used with motions)
+map("n", "<leader>Y", '"+y$')            -- copy entire line
 map("n", "<leader>gy", 'mlgg"+yG`lzvzt') -- copy entire file
-map("n", "<leader>wd", "dt<space>") -- cut until next space
-map("x", "<leader>p", '"_dP') -- replace visual with out replacing register
+map("n", "<leader>wd", "dt<space>")      -- cut until next space
+map("x", "<leader>p", '"_dP')            -- replace visual with out replacing register
 -- }}}
 
 -- 🌌 Gimme space please {{{
@@ -136,6 +136,7 @@ map("n", "<leader>g=", "mlgg=G`lzvzt")
 
 -- 🤲 Toggle {{{
 map("n", "<leader>ut", ":UndotreeToggle<CR>")
+map("n", "<leader>up", ":Lazy update<CR>")
 map("n", "<leader>pt", ":TSPlaygroundToggle<CR>")
 map("n", "<leader>pc", ":TSHighlightCapturesUnderCursor<CR>")
 map("n", "<leader>pn", ":TSNodeUnderCursor<CR>")
@@ -147,7 +148,7 @@ map("n", "<leader>mt", ":MarkdownPreviewToggle<CR>,")
 map("n", "<leader>mm", ":Mason<CR>,")
 map("n", "<leader>mn", ":NullLsInfo<CR>,")
 map("n", "<leader>et", ":NvimTreeToggle<CR> :NvimTreeRefresh<CR>")
-map("n", "<leader>bt", ":Switch<CR>") -- toggle b false<->true
+map("n", "<leader>bt", ":Switch<CR>")        -- toggle b false<->true
 map("n", "<leader>tt", ":TroubleToggle<CR>") -- toggle b false<->true
 
 -- }}}

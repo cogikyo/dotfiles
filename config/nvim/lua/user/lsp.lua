@@ -1,0 +1,164 @@
+local on_attach = function(client, bufnr)
+	local nmap = function(keys, func)
+		vim.keymap.set("n", keys, func, { buffer = bufnr })
+	end
+
+	if client.supports_method("textDocument/documentHighlight") then
+		vim.api.nvim_exec(
+			[[
+            augroup ReferenceHighlight
+                autocmd! * <buffer>
+                autocmd CursorHold <buffer> lua vim.lsp.buf.document_highlight()
+                autocmd CursorMoved <buffer> lua vim.lsp.buf.clear_references()
+            augroup END
+        ]],
+			false
+		)
+	end
+
+	nmap("<leader>tsr", require("telescope.builtin").lsp_references)
+	nmap("<leader>tss", require("telescope.builtin").lsp_document_symbols)
+	nmap("<leader>tsw", require("telescope.builtin").lsp_dynamic_workspace_symbols)
+	nmap("<leader>rn", vim.lsp.buf.rename)
+	nmap("<leader>ca", vim.lsp.buf.code_action)
+	nmap("<leader>gr", vim.lsp.buf.references)
+	nmap("gd", vim.lsp.buf.type_definition)
+	nmap("<leader>gd", vim.lsp.buf.definition)
+	nmap("gi", vim.lsp.buf.implementation)
+	nmap("K", vim.lsp.buf.hover)
+	nmap("<C-k>", vim.lsp.buf.signature_help)
+	nmap("<leader>?", vim.diagnostic.open_float)
+	nmap("[d", vim.diagnostic.goto_prev)
+	nmap("]d", vim.diagnostic.goto_next)
+
+	if client.supports_method("textDocument/formatting") then
+		local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
+		vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
+		vim.api.nvim_create_autocmd("BufWritePre", {
+			group = augroup,
+			buffer = bufnr,
+			callback = function()
+				vim.lsp.buf.format()
+			end,
+		})
+	end
+end
+
+-- ⛑️  Null-ls (Linting, formatting) {{{
+local null_ls = require("null-ls")
+
+-- see https://github.com/jose-elias-alvarez/null-ls.nvim/blob/main/doc/BUILTINS.md
+local diagnostics = null_ls.builtins.diagnostics
+local formatting = null_ls.builtins.formatting
+local hover = null_ls.builtins.hover
+
+null_ls.setup({
+	border = "rounded",
+	sources = {
+		-- 🩺 diagnostics: ⮯
+		diagnostics.codespell, -- identify some common code related misspellings
+		diagnostics.shellcheck, -- shell linter
+		diagnostics.zsh, -- zsh -n (somewhat useful)
+		diagnostics.stylelint, -- css 'n related linting
+		-- 🗃️ formatting: ⮯
+		formatting.shellharden, -- bash; goes well with shellcheck linting
+		formatting.beautysh, -- zsh 'n more (+ alt bash)
+		formatting.jq, -- json
+		formatting.prettier, -- webdev 'n stuff daemon for prettier;
+		formatting.rustfmt, -- rust
+		formatting.stylua, -- lua
+		formatting.taplo, -- toml
+		-- 🏄 hover: ⮯
+		hover.dictionary,
+		hover.printenv,
+	},
+})
+-- }}}
+
+-- ♦️  Vim Diagnostic Settings {{{
+local signs = {
+	{ name = "DiagnosticSignError", text = "" },
+	{ name = "DiagnosticSignWarn", text = "" },
+	{ name = "DiagnosticSignHint", text = "" },
+	{ name = "DiagnosticSignInfo", text = "" },
+}
+
+for _, sign in ipairs(signs) do
+	vim.fn.sign_define(sign.name, {
+		texthl = sign.name,
+		text = sign.text,
+		numhl = sign.name,
+	})
+end
+
+local diagnostic_config = {
+	underline = false,
+	virtual_text = true,
+	signs = true,
+	update_in_insert = false,
+	float = {
+		focusable = false,
+		style = "minimal",
+		border = "rounded",
+		source = "always",
+		header = "",
+		prefix = "",
+	},
+}
+
+vim.diagnostic.config(diagnostic_config)
+
+vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
+	border = "rounded",
+})
+
+vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, {
+	border = "rounded",
+})
+-- }}}
+
+-- 🎾 Automatic Server Setup {{{
+local servers = {
+	bashls = {},
+	marksman = {},
+	pyright = {},
+	prosemd_lsp = {},
+	cssls = {},
+	rust_analyzer = {},
+	taplo = {},
+	html = {},
+	lua_ls = {
+		Lua = {
+			workspace = { checkThirdParty = false },
+			telemetry = { enable = false },
+			diagnostics = { globals = { "vim" } },
+			format = { enable = false },
+		},
+	},
+}
+-- }}}
+
+-- 🧱 MASON, DO THE THING! {{{
+require("mason").setup({
+	ui = { border = "rounded" },
+})
+
+local mason_lspconfig = require("mason-lspconfig")
+local capabilities = vim.lsp.protocol.make_client_capabilities()
+
+capabilities = require("cmp_nvim_lsp").default_capabilities(capabilities)
+
+mason_lspconfig.setup({
+	ensure_installed = vim.tbl_keys(servers),
+})
+
+mason_lspconfig.setup_handlers({
+	function(server_name)
+		require("lspconfig")[server_name].setup({
+			capabilities = capabilities,
+			on_attach = on_attach,
+			settings = servers[server_name],
+		})
+	end,
+})
+-- }}}
