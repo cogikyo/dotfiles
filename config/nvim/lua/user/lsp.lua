@@ -1,3 +1,40 @@
+-- ============================================================================
+-- 🧰 Setup {{{
+local null_ls_ok, null_ls = pcall(require, "null-ls")
+if not null_ls_ok then
+	vim.api.nvim_echo({
+        {
+            "Error: null-ls plugin not found, but is needed to manage additional diag sources/formatting... skipping lsp setup()",
+            "Error"
+        }
+    }, true, {})
+	return
+end
+
+local cmp_capabilities_ok, cmp = pcall(require, "cmp_nvim_lsp")
+if not cmp_capabilities_ok then
+	vim.api.nvim_echo({
+        {
+            "Error: nvim-cmp uses lsp completions, but cmp-nvim-lsp is not found... skipping lsp setup()",
+            "Error"
+        }
+    }, true, {})
+	return
+end
+
+local mason_ok, mason = pcall(require, "mason")
+if not mason_ok then
+	vim.api.nvim_echo({
+        {
+            "Error: lsp uses mason to configure various settings, but mason is not found... skipping lsp setup()",
+            "Error"
+        }
+    }, true, {})
+	return
+end
+-- }}}
+-- ============================================================================
+
 local on_attach = function(client, bufnr)
 	local nmap = function(keys, func)
 		vim.keymap.set("n", keys, func, { buffer = bufnr })
@@ -16,9 +53,6 @@ local on_attach = function(client, bufnr)
 		)
 	end
 
-	nmap("<leader>tsr", require("telescope.builtin").lsp_references)
-	nmap("<leader>tss", require("telescope.builtin").lsp_document_symbols)
-	nmap("<leader>tsw", require("telescope.builtin").lsp_dynamic_workspace_symbols)
 	nmap("<leader>rn", vim.lsp.buf.rename)
 	nmap("<leader>ca", vim.lsp.buf.code_action)
 	nmap("<leader>gr", vim.lsp.buf.references)
@@ -44,8 +78,7 @@ local on_attach = function(client, bufnr)
 	end
 end
 
--- ⛑️  Null-ls (Linting, formatting) {{{
-local null_ls = require("null-ls")
+-- ⛑️  Null-ls (Linting, formatting):
 
 -- see https://github.com/jose-elias-alvarez/null-ls.nvim/blob/main/doc/BUILTINS.md
 local diagnostics = null_ls.builtins.diagnostics
@@ -73,9 +106,8 @@ null_ls.setup({
 		hover.printenv,
 	},
 })
--- }}}
 
--- ♦️  Vim Diagnostic Settings {{{
+-- ♦️  Vim Diagnostic Settings:
 local signs = {
 	{ name = "DiagnosticSignError", text = "" },
 	{ name = "DiagnosticSignWarn", text = "" },
@@ -115,9 +147,8 @@ vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
 vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, {
 	border = "rounded",
 })
--- }}}
 
--- 🎾 Automatic Server Setup {{{
+-- 🎾 Automatic Server Setup:
 local servers = {
 	bashls = {},
 	marksman = {},
@@ -136,17 +167,17 @@ local servers = {
 		},
 	},
 }
--- }}}
 
+-- ============================================================================
 -- 🧱 MASON, DO THE THING! {{{
-require("mason").setup({
+mason.setup({
 	ui = { border = "rounded" },
 })
 
 local mason_lspconfig = require("mason-lspconfig")
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 
-capabilities = require("cmp_nvim_lsp").default_capabilities(capabilities)
+capabilities = cmp.default_capabilities(capabilities)
 
 mason_lspconfig.setup({
 	ensure_installed = vim.tbl_keys(servers),
@@ -162,3 +193,4 @@ mason_lspconfig.setup_handlers({
 	end,
 })
 -- }}}
+-- ============================================================================

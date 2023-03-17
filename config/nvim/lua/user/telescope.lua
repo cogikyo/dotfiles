@@ -1,6 +1,20 @@
+local ok, telescope = pcall(require, "telescope")
+
+if not ok then
+	vim.api.nvim_echo({
+        {
+            "Error: telescope plugin not found... skipping relevant setup()",
+            "Error"
+        }
+    }, true, {})
+	return
+end
+
+telescope.load_extension("zf-native")
+
 local actions = require("telescope.actions")
 
-require("telescope").setup({
+telescope.setup({
 	defaults = {
 		layout_strategy = "vertical",
 		layout_config = {
@@ -53,16 +67,14 @@ require("telescope").setup({
 	},
 })
 
-require("telescope").load_extension("zf-native")
-
 local builtin = require("telescope.builtin")
 local tmap = function(key, cmd)
 	vim.keymap.set("n", key, cmd, {})
 end
 
 tmap("<leader>t<leader>", builtin.find_files)
-tmap("<leader>g<leader>", builtin.live_grep)
-tmap("<leader>s<leader>", builtin.grep_string)
+tmap("<leader>s<leader>", builtin.live_grep)
+tmap("<leader>g<leader>", builtin.grep_string)
 tmap("<leader>tg", builtin.git_files)
 tmap("<leader>to", builtin.oldfiles)
 tmap("<leader>tb", builtin.buffers)
@@ -75,3 +87,8 @@ tmap("<leader>tl", builtin.loclist)
 tmap("<leader>tq", builtin.quickfix)
 tmap("<leader>tm", builtin.man_pages)
 tmap("<leader>tst", builtin.treesitter)
+
+-- only works if lsp sevrer is attached:
+tmap("<leader>tsr", builtin.lsp_references)
+tmap("<leader>tss", builtin.lsp_document_symbols)
+tmap("<leader>tsw", builtin.lsp_dynamic_workspace_symbols)
