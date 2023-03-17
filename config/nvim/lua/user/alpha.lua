@@ -1,6 +1,19 @@
-local alpha = require("alpha")
-local dashboard = require("alpha.themes.dashboard")
+-- ============================================================================
+-- 🧰 Setup {{{
+local ok, alpha = pcall(require, "alpha")
+if not ok then
+	vim.api.nvim_echo({
+		{
+			"Error: alpha plugin not found... skipping relevant setup()",
+			"Error",
+		},
+	}, true, {})
+	return
+end
+-- }}}
+-- ============================================================================
 
+local dashboard = require("alpha.themes.dashboard")
 local header = {
 	type = "text",
 	val = {
@@ -45,7 +58,7 @@ local buttons = {
 	},
 }
 
-local opts = {
+alpha.setup({
 	layout = {
 		{ type = "padding", val = 2 },
 		header,
@@ -55,6 +68,4 @@ local opts = {
 	opts = {
 		margin = 5,
 	},
-}
-
-alpha.setup(opts)
+})

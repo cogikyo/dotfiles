@@ -1,4 +1,28 @@
-local p = require("vagari.palette")
+-- ============================================================================
+-- 🧰 setup {{{
+local lualine_ok, lualine = pcall(require, "lualine")
+if not lualine_ok then
+	vim.api.nvim_echo({
+        {
+            "Error: lualine plugin not found... skipping relevant setup()",
+            "Error"
+        }
+    }, true, {})
+	return
+end
+
+local additional_colors_ok, p = pcall(require, "vagari.palette")
+if not additional_colors_ok then
+	vim.api.nvim_echo({
+        {
+            "Error: lualine config has impored vagari.nvim that are not found, skipping setup",
+            "Error"
+        }
+    }, true, {})
+	return
+end
+-- }}}
+-- ============================================================================
 
 local hide_in_width = function()
 	return vim.fn.winwidth(0) > 80
@@ -134,7 +158,13 @@ local function icon()
 	return [[ ]]
 end
 
-require("lualine").setup({
+local lazy = {
+	require("lazy.status").updates,
+	cond = require("lazy.status").has_updates,
+	color = { fg = p.glc_4 },
+}
+
+lualine.setup({
 	options = {
 		theme = "vagari",
 		section_separators = { left = "", right = "" },
@@ -144,7 +174,7 @@ require("lualine").setup({
 		lualine_a = { mode },
 		lualine_b = { branch, filename },
 		lualine_c = { diff, lsp_diagnostics },
-		lualine_x = { lsp_progress, search },
+		lualine_x = { lazy, lsp_progress, search },
 		lualine_y = { filetype },
 		lualine_z = { icon },
 	},

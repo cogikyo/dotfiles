@@ -1,5 +1,28 @@
-local cmp = require("cmp")
-local luasnip = require("luasnip")
+-- ============================================================================
+-- 🧰 setup {{{
+local cmp_ok, cmp = pcall(require, "cmp")
+if not cmp_ok then
+	vim.api.nvim_echo({
+		{
+			"Error: cmp plugin not found... skipping relevant setup()",
+			"Error",
+		},
+	}, true, {})
+	return
+end
+
+local luasnip_ok, luasnip = pcall(require, "luasnip")
+if not luasnip_ok then
+	vim.api.nvim_echo({
+		{
+			"Error: cmp uses luasnip, but luasnip is not found, skipping setup",
+			"Error",
+		},
+	}, true, {})
+	return
+end
+-- }}}
+-- ============================================================================
 
 require("luasnip/loaders/from_vscode").lazy_load()
 local kind_icons = {

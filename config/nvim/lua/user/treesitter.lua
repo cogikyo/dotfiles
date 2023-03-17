@@ -1,4 +1,19 @@
-require("nvim-treesitter.configs").setup({
+-- ============================================================================
+-- 🧰 Setup {{{
+local ok, treesitter = pcall(require, "nvim-treesitter.configs")
+if not ok then
+	vim.api.nvim_echo({
+		{
+			"Error: nvim-treesitter plugin not found... skipping relevant setup()",
+			"Error",
+		},
+	}, true, {})
+	return
+end
+-- }}}
+-- ============================================================================
+
+treesitter.setup({
 	ensure_installed = "all",
 	sync_install = true,
 	auto_install = true,

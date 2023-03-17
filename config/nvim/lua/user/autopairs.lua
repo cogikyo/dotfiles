@@ -1,4 +1,17 @@
-local npairs = require("nvim-autopairs")
+-- ============================================================================
+-- 🧰 Setup {{{
+local ok, npairs = pcall(require, "nvim-autopairs")
+if not ok then
+	vim.api.nvim_echo({
+		{
+			"Error: nvim-autopairs plugin not found... skipping relevant setup()",
+			"Error",
+		},
+	}, true, {})
+	return
+end
+-- }}}
+-- ============================================================================
 
 npairs.setup({
 	enable_check_bracket_line = false,
