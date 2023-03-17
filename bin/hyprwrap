@@ -27,5 +27,7 @@ export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
 export QT_QPA_PLATFORMTHEME=qt5c
 
 export GDK_BACKEND="wayland,x11"
+export CLUTTER_BACKEND=wayland
+export SDL_VIDEODRIVER=wayland
 
 exec Hyprland
