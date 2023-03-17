@@ -17,4 +17,15 @@ export FZF_DEFAULT_OPTS="\
 --color=fg:#cad3f5,header:#F5A97F,info:#8AADF4,pointer:#f4dbd6 \
 --color=marker:#f4dbd6,fg+:#cad3f5,prompt:#8AADF4,hl+:#F5A97F"
 
+export XDG_CURRENT_DESKTOP=Hyprland
+export XDG_SESSION_TYPE=wayland
+export XDG_SESSION_DESKTOP=Hyprland
+
+export QT_AUTO_SCREEN_SCALE_FACTOR=1
+export QT_QPA_PLATFORM=wayland;xcb
+export QT_WAYLAND_DISABLE_WINDOWDECORATION=1
+export QT_QPA_PLATFORMTHEME=qt5c
+
+export GDK_BACKEND="wayland,x11"
+
 exec Hyprland
