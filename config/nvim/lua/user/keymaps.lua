@@ -150,10 +150,6 @@ map("n", "<leader>mn", ":NullLsInfo<CR>,")
 map("n", "<leader>et", ":NvimTreeToggle<CR> :NvimTreeRefresh<CR>")
 map("n", "<leader>bt", ":Switch<CR>") -- toggle b false<->true
 map("n", "<leader>tt", ":TroubleToggle<CR>") -- toggle b false<->true
-
-vim.api.nvim_create_user_command("PeekOpen", require("peek").open, {})
-vim.api.nvim_create_user_command("PeekClose", require("peek").close, {})
-
 -- }}}
 
 -- 🔱 Harpoon {{{

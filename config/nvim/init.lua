@@ -95,62 +95,72 @@ require("lazy").setup({
 
 	{ --🧿 GitSigns {{{
 		"lewis6991/gitsigns.nvim",
-        opts = {
+		opts = {
 
-            signs = {
-                add = { text = "" },
-                change = { text = "🞊" },
-                untracked = { text = "" },
-                delete = { text = "" },
-                topdelete = { text = "🕱" },
-                changedelete = { text = "" },
-            },
+			signs = {
+				add = { text = "" },
+				change = { text = "🞊" },
+				untracked = { text = "" },
+				delete = { text = "" },
+				topdelete = { text = "🕱" },
+				changedelete = { text = "" },
+			},
 
-            signcolumn = true, -- Toggle with `:Gitsigns toggle_signs`
-            numhl = false, -- Toggle with `:Gitsigns toggle_numhl`
-            linehl = false, -- Toggle with `:Gitsigns toggle_linehl`
-            word_diff = false, -- Toggle with `:Gitsigns toggle_word_diff`
-            current_line_blame = false, -- Toggle with `:Gitsigns toggle_current_line_blame`
+			signcolumn = true, -- Toggle with `:Gitsigns toggle_signs`
+			numhl = false, -- Toggle with `:Gitsigns toggle_numhl`
+			linehl = false, -- Toggle with `:Gitsigns toggle_linehl`
+			word_diff = false, -- Toggle with `:Gitsigns toggle_word_diff`
+			current_line_blame = false, -- Toggle with `:Gitsigns toggle_current_line_blame`
 
-            -- Keymaps
-            on_attach = function(bufnr)
-                local gs = package.loaded.gitsigns
+			-- Keymaps
+			on_attach = function(bufnr)
+				local gs = package.loaded.gitsigns
 
-                local function map(mode, l, r, opts)
-                    opts = opts or {}
-                    opts.buffer = bufnr
-                    vim.keymap.set(mode, l, r, opts)
-                end
+				local function map(mode, l, r, opts)
+					opts = opts or {}
+					opts.buffer = bufnr
+					vim.keymap.set(mode, l, r, opts)
+				end
 
-                -- Navigation
-                map('n', ']c', function()
-                    if vim.wo.diff then return ']c' end
-                    vim.schedule(function() gs.next_hunk() end)
-                    return '<Ignore>'
-                end, {expr=true})
+				-- Navigation
+				map("n", "]c", function()
+					if vim.wo.diff then
+						return "]c"
+					end
+					vim.schedule(function()
+						gs.next_hunk()
+					end)
+					return "<Ignore>"
+				end, { expr = true })
 
-                map('n', '[c', function()
-                    if vim.wo.diff then return '[c' end
-                    vim.schedule(function() gs.prev_hunk() end)
-                    return '<Ignore>'
-                end, {expr=true})
+				map("n", "[c", function()
+					if vim.wo.diff then
+						return "[c"
+					end
+					vim.schedule(function()
+						gs.prev_hunk()
+					end)
+					return "<Ignore>"
+				end, { expr = true })
 
-                -- Actions
-                map({'n', 'v'}, '<leader>hs', ':Gitsigns stage_hunk<CR>')
-                map({'n', 'v'}, '<leader>hr', ':Gitsigns reset_hunk<CR>')
-                map('n', '<leader>hS', gs.stage_buffer)
-                map('n', '<leader>hu', gs.undo_stage_hunk)
-                map('n', '<leader>hR', gs.reset_buffer)
-                map('n', '<leader>hp', gs.preview_hunk)
-                map('n', '<leader>hb', function() gs.blame_line{full=true} end)
-                map('n', '<leader>hB', gs.toggle_current_line_blame)
-                map('n', '<leader>hd', gs.diffthis)
-                map('n', '<leader>hD', gs.toggle_deleted)
+				-- Actions
+				map({ "n", "v" }, "<leader>hs", ":Gitsigns stage_hunk<CR>")
+				map({ "n", "v" }, "<leader>hr", ":Gitsigns reset_hunk<CR>")
+				map("n", "<leader>hS", gs.stage_buffer)
+				map("n", "<leader>hu", gs.undo_stage_hunk)
+				map("n", "<leader>hR", gs.reset_buffer)
+				map("n", "<leader>hp", gs.preview_hunk)
+				map("n", "<leader>hb", function()
+					gs.blame_line({ full = true })
+				end)
+				map("n", "<leader>hB", gs.toggle_current_line_blame)
+				map("n", "<leader>hd", gs.toggle_deleted)
+				map("n", "<leader>hD", gs.diffthis)
 
-                -- Text object
-                map({'o', 'x'}, 'ih', ':<C-U>Gitsigns select_hunk<CR>')
-            end
-        },
+				-- Text object
+				map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>")
+			end,
+		},
 	}, -- }}}
 
 	{ --🗂️ Nvim-Tree {{{
@@ -284,13 +294,13 @@ require("lazy").setup({
 		},
 	},
 	{
-        "nvim-lualine/lualine.nvim",
-        dependencies = { "arkav/lualine-lsp-progress" }
-    },
+		"nvim-lualine/lualine.nvim",
+		dependencies = { "arkav/lualine-lsp-progress" },
+	},
 	{
-        "goolord/alpha-nvim",
-        dependencies = { "kyazdani42/nvim-web-devicons" }
-    },
+		"goolord/alpha-nvim",
+		dependencies = { "kyazdani42/nvim-web-devicons" },
+	},
 
 	-- }}}
 
@@ -306,12 +316,10 @@ require("lazy").setup({
 	},
 
 	{
-		"toppair/peek.nvim",
-		build = "deno task --quiet build:fast",
-		opts = {
-			close_on_bdelete = false,
-			app = "browser",
-		},
+		"iamcco/markdown-preview.nvim",
+		build = function()
+			vim.fn["mkdp#util#install"]()
+		end,
 	},
 
 	{ "numToStr/Comment.nvim", opts = {} },
@@ -333,7 +341,10 @@ require("lazy").setup({
 	-- }}}
 }, { -- opts:
 	ui = { border = "rounded" },
-	checker = { enabled = true },
+	checker = {
+		enabled = true,
+		notify = true,
+	},
 })
 
 -- ============================================================================
