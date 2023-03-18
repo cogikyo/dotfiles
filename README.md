@@ -138,8 +138,7 @@
 <details open>
 <summary>🎨 <b>Design Framework</b></summary>
 
-- Color Scheme: [catppuccin macchiato](https://github.com/catppuccin/catppuccin) (temporary)
-    - work in progress: [vagari](https://github.com/nosvagor/vagari#palette)
+- Color Scheme: [vagari](https://github.com/nosvagor/vagari#palette) (work in progress)
 - GTK: [catppuccin macchiato (peach)](https://github.com/catppuccin/gtk) (temporary)
 - Cursors: [Nordzy-orange](https://github.com/alvatip/Nordzy-cursors) (temporary)
 - Icons: [Nordzy](https://github.com/alvatip/Nordzy-icon) (temporary)
