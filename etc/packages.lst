@@ -55,9 +55,9 @@ mediainfo
 mplayer
 mpv
 mpvpaper-git
+neofetch
 neovim
 nordzy-cursors
-nordzy-icon-theme-git
 noto-fonts-cjk
 noto-fonts-emoji
 noto-fonts-extra
@@ -72,7 +72,6 @@ pipewire
 pipewire-alsa
 pipewire-jack
 pipewire-pulse
-pistol-git
 playerctl
 polkit-kde-agent
 prettier

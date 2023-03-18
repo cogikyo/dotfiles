@@ -237,7 +237,7 @@
 <br>
 
 **2. Install [paru](https://github.com/Morganamilo/paru):**
-```shell
+```sh
 cd ~
 mkdir .cache && cd .cache
 git clone https://aur.archlinux.org/paru.git
@@ -248,23 +248,27 @@ makepkg -si
 <br>
 
 **3. Clone dotfiles and install packages:**
-```shell
+```sh
 cd ~
 git clone https://github.com/nosvagor/dotfiles
 paru -S - < ~/dotfiles/etc/packages.lst
+# no good repo for icons, do manually ⮯
+git clone https://github.com/alvatip/Nordzy-icon
+cd Nordzy-icon/
+./install.sh
 ```
 
 <br>
 
-**4. Change default shell:**
-```shell
+**4. Change default sh:**
+```sh
 chsh -s /usr/bin/zsh
 ```
 
 <br>
 
 **5. Set up [sddm](https://wiki.archlinux.org/title/SDDM):**
-```shell
+```sh
 cd ~/dotfiles/etc/sddm.conf.d
 mkdir /etc/sddm.conf.d
 sudo cp autologin.conf /etc/sddm.conf.d/
@@ -275,7 +279,7 @@ systemctl enable sddm
 <br>
 
 **6. Symbolically link most config files:**
-```shell
+```sh
 cd ~
 mkdir .config
 ln -sfn ~/dotfiles/config/* ~/.config/
@@ -285,7 +289,7 @@ ln -sfn ~/dotfiles/config/zsh/zshrc .zshrc
 <br>
 
 **7. Setup some root configurations:**
-```shell
+```sh
 cd ~/dotfiles/etc
 sudo ln -sfn "$HOME"/dotfiles/bin/* /usr/bin/
 sudo cp bluetooth/main.conf /etc/bluetooth/main.conf
@@ -299,7 +303,7 @@ systemctl enable bluetooth
 <br>
 
 **8. Ensure some preferred fonts are installed:**
-```shell
+```sh
 cd ~
 mkdir -vp ~/.local/share
 tar -xzvf ~/dotfiles/etc/fonts.tar.gz fonts
@@ -329,7 +333,7 @@ mv fonts ~/.local/share/
 <br>
 
 **10. Configure SSH key:**
-```shell
+```sh
 ssh-keygen -t ed25519 -C "your_email@example.com"
 eval "$(ssh-agent -s)"
 ssh-add ~/.ssh/id_ed25519
@@ -343,7 +347,7 @@ bat ~/.ssh/id_ed25519.pub
 <br>
 
 > **My preferred directory structure:** _(definitely optional)_
-```shell
+```sh
 cd ~
 mkdir -vp media/music media/images media/videos media/gifs media/screenshots media/recordings
 mkdir -vp downloads docs/templates docs/books docs/papers docs/share
