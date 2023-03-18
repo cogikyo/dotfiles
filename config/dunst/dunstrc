@@ -56,21 +56,19 @@
     mouse_right_click = "close_all"
 
 [urgency_low]
-    background = "#24283b42"
-    foreground = "#5784d5E6"
-    frame_color = "#5784d599"
-    highlight = "#5784d5E6"
+    background = "#25284100"
+    foreground = "#5a61aa"
+    frame_color = "#282b48"
     timeout = 4
 
 [urgency_normal]
-    background = "#222d5642"
-    foreground = "#7aa2f7"
-    frame_color = "#5784d5"
-    highlight = "#7aa2f7"
+    background = "#252841"
+    foreground = "#8aa4f3"
+    frame_color = "#6380ec"
     timeout = 6
 
 [urgency_critical]
-    background = "#4d2a303B"
+    background = "#82414120"
     foreground = "#f7768e"
-    frame_color = "#e0617a"
+    frame_color = "#f34658"
     timeout = 0
