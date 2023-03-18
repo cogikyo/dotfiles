@@ -56,19 +56,20 @@
     mouse_right_click = "close_all"
 
 [urgency_low]
-    background = "#25284100"
-    foreground = "#5a61aa"
-    frame_color = "#282b48"
+    background = "#25284180"
+    foreground = "#7492ef"
+    frame_color = "#4a6be380"
     timeout = 4
 
 [urgency_normal]
-    background = "#252841"
-    foreground = "#8aa4f3"
-    frame_color = "#6380ec"
+    background = "#49353130"
+    foreground = "#f2a170"
+    frame_color = "#ea834b"
     timeout = 6
 
 [urgency_critical]
     background = "#82414120"
     foreground = "#f7768e"
     frame_color = "#f34658"
+    script = "/usr/bin/alert critical"
     timeout = 0

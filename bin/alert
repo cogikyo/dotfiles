@@ -6,11 +6,7 @@ app="$1"
 # summary="$2"
 # body="$3"
 # icon_path="$4"
-# urgency="$5"
-
-if [[ "$app" == "timer" ]]; then
-    sound="jackpot"
-fi
+urgency="$5"
 
 case "$app" in
     timer) sound="jackpot" ;;
@@ -19,6 +15,11 @@ case "$app" in
     work) sound="fruit" ;;
     *) sound="moondrop" ;;
 esac
+
+# dusnt urgency check
+if [[ "$urgency" == "CRITICAL" ]]; then
+    sound="gems"
+fi
 
 if [[ "$app" != "Spotify" ]]; then
     paplay "$SOUND_PATH/$sound.ogg" & disown
