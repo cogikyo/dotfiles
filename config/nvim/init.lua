@@ -343,7 +343,7 @@ require("lazy").setup({
 	ui = { border = "rounded" },
 	checker = {
 		enabled = true,
-		notify = true,
+		notify = false,
 	},
 })
 
