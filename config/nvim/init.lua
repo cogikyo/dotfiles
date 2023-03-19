@@ -21,7 +21,7 @@ vim.opt.rtp:prepend(lazypath)
 -- ============================================================================
 
 require("lazy").setup({
-
+	--	-----------------------------------------------------------------------
 	{ --📚 LSP {{{
 		"neovim/nvim-lspconfig",
 		dependencies = {
@@ -46,6 +46,12 @@ require("lazy").setup({
 			"L3MON4D3/LuaSnip",
 			"saadparwaiz1/cmp_luasnip",
 			"rafamadriz/friendly-snippets",
+			{
+				"zbirenbaum/copilot.lua",
+				cmd = "Copilot",
+				event = "InsertEnter",
+				dependencies = { "zbirenbaum/copilot-cmp" },
+			},
 		},
 	}, -- }}}
 
@@ -304,8 +310,7 @@ require("lazy").setup({
 
 	-- }}}
 
-	-- 🪩 Misc / simple setup {{{
-
+	-- 🪩    simple setup {{{
 	{
 		"brenoprata10/nvim-highlight-colors",
 		opts = {
@@ -339,6 +344,7 @@ require("lazy").setup({
 	"elkowar/yuck.vim",
 
 	-- }}}
+	--	-----------------------------------------------------------------------
 }, { -- opts:
 	ui = { border = "rounded" },
 	checker = {
