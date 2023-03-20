@@ -21,7 +21,8 @@ if [[ "$urgency" == "CRITICAL" ]]; then
     sound="gems"
 fi
 
-if [[ "$app" != "Spotify" ]]; then
+
+if [[ "$app" != "Spotify" && "$app" != "discord" ]]; then
     paplay "$SOUND_PATH/$sound.ogg" & disown
 fi
 

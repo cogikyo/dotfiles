@@ -3,33 +3,33 @@
 local null_ls_ok, null_ls = pcall(require, "null-ls")
 if not null_ls_ok then
 	vim.api.nvim_echo({
-        {
-            "Error: null-ls plugin not found, but is needed to manage additional diag sources/formatting... skipping lsp setup()",
-            "Error"
-        }
-    }, true, {})
+		{
+			"Error: null-ls plugin not found, but is needed to manage additional diag sources/formatting... skipping lsp setup()",
+			"Error",
+		},
+	}, true, {})
 	return
 end
 
 local cmp_capabilities_ok, cmp = pcall(require, "cmp_nvim_lsp")
 if not cmp_capabilities_ok then
 	vim.api.nvim_echo({
-        {
-            "Error: nvim-cmp uses lsp completions, but cmp-nvim-lsp is not found... skipping lsp setup()",
-            "Error"
-        }
-    }, true, {})
+		{
+			"Error: nvim-cmp uses lsp completions, but cmp-nvim-lsp is not found... skipping lsp setup()",
+			"Error",
+		},
+	}, true, {})
 	return
 end
 
 local mason_ok, mason = pcall(require, "mason")
 if not mason_ok then
 	vim.api.nvim_echo({
-        {
-            "Error: lsp uses mason to configure various settings, but mason is not found... skipping lsp setup()",
-            "Error"
-        }
-    }, true, {})
+		{
+			"Error: lsp uses mason to configure various settings, but mason is not found... skipping lsp setup()",
+			"Error",
+		},
+	}, true, {})
 	return
 end
 -- }}}
