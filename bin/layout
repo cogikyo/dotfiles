@@ -65,9 +65,8 @@ terminal "$s_flag"
 
 case "$n_flag" in
     1)
+        discord & sleep 2
         browser
-        webcord & sleep 2
-        hyprctl dispatch movefocus u
     ;;
     2)
         "$a_flag" & sleep 3

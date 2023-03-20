@@ -15,6 +15,6 @@ playerctl play
 change-bg "music"
 hyprctl dispatch workspace 5
 
-notify-send "$USER@$HOSTNAME" "こんにちは"
+dunstify -a "attention" -u low "$USER@$HOSTNAME" "こんにちは"
 
 exit 0
