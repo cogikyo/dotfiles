@@ -65,7 +65,7 @@
     background = "#49353130"
     foreground = "#f2a170"
     frame_color = "#ea834b"
-    timeout = 6
+    timeout = 0
 
 [urgency_critical]
     background = "#82414120"
