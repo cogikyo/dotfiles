@@ -6,7 +6,7 @@ display_active () {
         "hour") eww update hour-active="true" ;;
         "minute") eww update minute-active="true" ;;
     esac
-    dunstify -a "attention" -t 2000 "🐦attention"
+    dunstify -a "attention" -t 3000 "🐦attention" -u low
     sleep 5
     eww update timer-visible="false"
     eww update minute-active="false"
@@ -138,7 +138,7 @@ alarm_status () {
 reset () {
     case "$1" in
         alarm)
-            ps -ef | rg alarm_status | rg -v rg | awk '{print $2}' | xargs kill
+            ps -ef | rg alarm_status | rg -v rg | awk '{print $2}' | xargs notify-send
             next_hour=$(date -d "+ 1hour" "+%H:00")
             until_next_hour=$(( $(date -d "$next_hour" +%s) - $(date +%s) ))
             (( until_next_hour/=60 ))
@@ -153,7 +153,7 @@ reset () {
         timer)
             ps -ef | rg timer_status | rg -v rg | awk '{print $2}' | xargs kill
             echo "01:30" > "/tmp/eww/timer"
-            dunstify -t 1000 "timer reset"
+            dunstify -t 5000 "timer reset" -u low
         ;;
     esac
 

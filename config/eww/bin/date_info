@@ -1,21 +1,13 @@
 #!/usr/bin/env bash
 
 day () {
-    while true; do
-        date +'{"weekday":"%A", "month":"%B", "day":"%d"}' >> "/tmp/eww/date"
-        until_tomorrow=$(( $(date +%s -d "tomorrow 00:00") - $( date +%s ) ))
-        sleep "$until_tomorrow"
-    done
+    date +'{"weekday":"%A", "month":"%B", "day":"%d"}' >> "/tmp/eww/date"
 }
 
 week () {
-    while true; do
-        greg_brith="1996-02-26 PST"
-        weeks_alive=$(( ($(date -d "$greg_brith" +%s) - $(date +%s))/86400/-7 ))
-        echo "$weeks_alive" >> "/tmp/eww/weeks_alive"
-        until_monday=$(( $(date +%s -d "next monday 00:00") - $( date +%s ) ))
-        sleep "$until_monday"
-    done
+    greg_brith="1996-02-26 PST"
+    weeks_alive=$(( ($(date -d "$greg_brith" +%s) - $(date +%s))/86400/-7 ))
+    echo "$weeks_alive" >> "/tmp/eww/weeks_alive"
 }
 
 clockface-hour () {

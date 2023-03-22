@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-dir="$HOME/.config/eww/scripts"
+dir="$HOME/.config/eww/bin"
 
 eval "$dir/create_temp_files" & disown
 sleep 0.1
