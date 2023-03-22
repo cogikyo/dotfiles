@@ -290,28 +290,7 @@ require("lazy").setup({
 		},
 	}, -- }}}
 
-	-- 🧩 -> /lua/user/{plugin}.lua {{{
-
-	{
-		"nvim-telescope/telescope.nvim",
-		dependencies = {
-			"nvim-lua/plenary.nvim",
-			"natecraddock/telescope-zf-native.nvim",
-		},
-	},
-	{
-		"nvim-lualine/lualine.nvim",
-		dependencies = { "arkav/lualine-lsp-progress" },
-	},
-	{
-		"goolord/alpha-nvim",
-		dependencies = { "kyazdani42/nvim-web-devicons" },
-	},
-
-	-- }}}
-
-	-- 🪩    simple setup {{{
-	{
+	{ --🪩 simple setup {{{
 		"brenoprata10/nvim-highlight-colors",
 		opts = {
 			render = "background",
@@ -327,9 +306,9 @@ require("lazy").setup({
 		end,
 		config = function()
 			vim.g.mkdp_filetypes = { "markdown", "html" }
-            vim.g.mkdp_auto_start = 1
-            vim.g.mkdp_auto_close = 0
-            vim.g.mkdp_refresh_slow = 1
+			vim.g.mkdp_auto_start = 1
+			vim.g.mkdp_auto_close = 0
+			vim.g.mkdp_refresh_slow = 1
 		end,
 	},
 
@@ -349,7 +328,21 @@ require("lazy").setup({
 	"AndrewRadev/switch.vim",
 	"elkowar/yuck.vim",
 
-	-- }}}
+	{
+		"nvim-telescope/telescope.nvim",
+		dependencies = {
+			"nvim-lua/plenary.nvim",
+			"natecraddock/telescope-zf-native.nvim",
+		},
+	},
+	{
+		"nvim-lualine/lualine.nvim",
+		dependencies = { "arkav/lualine-lsp-progress" },
+	},
+	{
+		"goolord/alpha-nvim",
+		dependencies = { "kyazdani42/nvim-web-devicons" },
+	}, -- }}}
 	--	-----------------------------------------------------------------------
 }, { -- opts:
 	ui = { border = "rounded" },
