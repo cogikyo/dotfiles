@@ -61,17 +61,17 @@ resize () {
 hyprctl keyword input:follow_mouse 0
 
 hyprctl dispatch workspace "$n_flag"
-terminal "$s_flag"
 
 case "$n_flag" in
     1)
-        discord & sleep 2
+        discord & sleep 6
         browser
     ;;
     2)
         "$a_flag" & sleep 3
     ;;
     3|4)
+        terminal "$s_flag"
         browser
     ;;
     *) exit 1 ;;
