@@ -8,22 +8,26 @@ app="$1"
 # icon_path="$4"
 urgency="$5"
 
+case "$urgency" in
+    LOW) sound="none" ;;
+    NORMAL) sound="moondrop" ;;
+    CRITICAL) sound="gems" ;;
+esac
+
 case "$app" in
     timer) sound="jackpot" ;;
     attention) sound="discovery" ;;
     chat) sound="reward" ;;
     work) sound="fruit" ;;
+    Spotify) sound="none" ;;
+    discord) sound="none" ;;
     *) sound="moondrop" ;;
 esac
 
-# dusnt urgency check
-if [[ "$urgency" == "CRITICAL" ]]; then
-    sound="gems"
+if [ "$sound" == "none" ]; then
+    exit 0
 fi
 
-
-if [[ "$app" != "Spotify" && "$app" != "discord" ]]; then
-    paplay "$SOUND_PATH/$sound.ogg" & disown
-fi
+paplay "$SOUND_PATH/$sound.ogg" & disown
 
 exit 0

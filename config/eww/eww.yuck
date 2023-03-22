@@ -1,0 +1,179 @@
+;; ============================================================================
+;; 🧰 setup {{{
+
+(defvar browser "firefox-developer-edition")
+(defvar terminal "kitty")
+
+;; }}}
+
+; ♻️  widgets: {{{
+
+; Combination of slide and fade revealer ⮯
+; See: https://elkowar.github.io/eww/widgets.html#revealer
+(defwidget slide-n-fade [direction bool]
+  (revealer
+    :transition "slide${direction}"
+    :reveal bool
+    (revealer
+      :transition "crossfade"
+      :reveal bool
+      (children)
+    )
+  )
+)
+
+;; ; See: https://elkowar.github.io/eww/widgets.html#label
+;; (defwidget IVU [
+;;   ?box-style ?box-class
+;;   icon  ?icon-class  ?icon-style  ?icon-tooltip
+;;   value ?value-class ?value-style ?value-tooltip
+;;   ?unit ?unit-class  ?unit-style  ?unit-tooltip
+;; ]
+;;   (box
+;;     :class "${strlength(value) > 0 ? box-class : "ramp-2"}"
+;;     :style box-style
+;;     :space-evenly false
+;;     :spacing 0
+;;     (label
+;;       :text "${icon}"
+;;       :class "icon ${icon-class}"
+;;       :style icon-style
+;;       :tooltip " ${icon-tooltip} "
+;;     )
+;;     (label
+;;       :text "${strlength(value) > 0 ? value : "勒"}"
+;;       :class "value ${value-class}"
+;;       :style "${strlength(value) > 0 ? "${value-style}" : "margin-right: 5px;"}"
+;;       :tooltip " ${value-tooltip} "
+;;     )
+;;     (label
+;;       :text unit
+;;       :class "unit ${unit-class}"
+;;       :style unit-style
+;;       :tooltip " ${unit-tooltip} "
+;;     )
+;;   )
+;; )
+
+; }}}
+; =============================================================================
+
+(defwindow today
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :width "45%" :anchor "top left" :x "1050px")
+    (time)
+)
+
+; 🕐 time: {{{
+
+(defpoll time
+  :interval "1s"
+  :initial '{"hour":"04", "minute":"20", "second":"00"}'
+  `date +'{"hour":"%H", "minute":"%M", "second":"%S"}'`
+)
+
+(deflisten clockface-hour 'tail -F /tmp/eww/clockface-hour')
+(deflisten clockface-minute 'tail -F /tmp/eww/clockface-minute')
+(defvar hour-active false)
+(defvar minute-active false)
+(defvar fine-adjust false)
+(defvar timer-visible false)
+(deflisten alarm-current 'tail -F /tmp/eww/alarm 2> /dev/null')
+(deflisten timer-current 'tail -F /tmp/eww/timer 2> /dev/null')
+
+(defwidget time []
+  (eventbox
+    :onhover "eww update timer-visible=true"
+    :onhoverlost "eww update timer-visible=false"
+    :onmiddleclick "eww update fine-adjust=${fine-adjust ? "false" : "true"}"
+    (box
+      :class "time"
+      :halign "center"
+      :space-evenly false
+      :spacing 3
+      :style "padding: 0 ${timer-visible ? "0.9" : "1.2" }em;"
+      (alarm)
+      (clock :child "hour" :text {time.hour} :bool hour-active)
+      (clockface)
+      (clock :child "minute" :text {time.minute} :bool minute-active)
+      (timer)
+    )
+  )
+)
+
+(defwidget clock [child bool text]
+  (eventbox
+    :class "time-${child} time-${child}-${bool ? "active" : "inactive"}"
+    :onhover "eww update ${child}-active=true"
+    :onhoverlost "eww update ${child}-active=false"
+    :onclick "${browser} https://calendar.google.com/calendar/u/0/r & disown"
+    :onrightclick "${browser} https://calendar.google.com/calendar/u/0/r/eventedit?state=%5B%5D & disown"
+    :cursor "pointer"
+    (label :class "time-text" :text text)
+  )
+)
+
+(defwidget clockface []
+  (box
+    :class "time-clockface"
+    :orientation "v"
+    :valign "center"
+    :spacing -4
+    :space-evenly false
+    (clock :child "hour" :text "${clockface-hour} " :bool hour-active)
+    (clock :child "minute" :text "${clockface-minute} " :bool minute-active)
+  )
+)
+
+(defwidget time-revealer [app direction child bool icon text subtext]
+  (slide-n-fade
+    :bool timer-visible
+    :direction {direction == "left" ? "right" : "left"}
+    (eventbox
+      :class "time-${app} time-${child}-${bool ? "active" : "inactive" }"
+      :onhover "eww update ${child}-active=true"
+      :onhoverlost "eww update ${child}-active=false"
+      :onclick "bin/timer_info ${app}_status & disown"
+      :onscroll "bin/timer_info ${app} {} ${fine-adjust ? 1 : 15}"
+      :onrightclick "bin/timer_info reset ${app}"
+      :cursor "pointer"
+      (box :class "time-${app}" :space-evenly false :spacing 6
+        {direction == "left" ? text : ""}
+        (box
+          :orientation "v"
+          :valign "center"
+          :space-evenly false
+          :spacing 1
+          (label :class "time-${app}-icon" :text icon)
+          (label :class "time-${app}-subtext" :text subtext)
+        )
+        {direction == "right" ? text : "" }
+      )
+    )
+  )
+)
+
+(defwidget alarm []
+  (time-revealer
+    :app "alarm"
+    :direction "left"
+    :child "hour"
+    :bool hour-active
+    :text alarm-current
+    :icon ""
+    :subtext {fine-adjust ? "駱" : ""}
+  )
+)
+
+(defwidget timer []
+  (time-revealer
+    :app "timer"
+    :direction "right"
+    :child "minute"
+    :bool minute-active
+    :text timer-current
+    :icon "羽"
+    :subtext {time.second}
+  )
+)
+; }}}

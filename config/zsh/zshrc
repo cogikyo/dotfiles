@@ -28,6 +28,10 @@ alias od='ouch decompress'
 alias ol='ouch list --tree'
 alias man='man --pager=$PAGER'
 
+alias ew='eww-open'
+alias ews='eww inspector & disown && exit'
+alias el='eww logs'
+
 # plugins
 if [[ ! -f ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh ]]; then
     command git clone https://github.com/agkozak/zcomet.git ${ZDOTDIR:-${HOME}}/.zcomet/bin

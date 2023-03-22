@@ -3,14 +3,4 @@
 killall eww -9
 eww daemon
 eww open-many \
-    album-art \
-    music \
-    today \
-    computer \
-    user \
-    screenctl \
-    workspaces \
-    dunst \
-    systemctl \
-    signal \
-    pacman
+    today

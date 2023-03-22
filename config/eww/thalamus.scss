@@ -1,8 +1,3 @@
-// ============================================================================
-// 🧰 setup {{{
-
-// 🎨 palette {{{
-
 $bg: #222536;
 $drk-0: #1e2133;
 $drk-1: #181b2c;
@@ -128,24 +123,6 @@ $gry-3: #5f6278;
 $gry-4: #6d7089;
 $gry-5: #7f8199;
 
-// }}}
-
-// 🔗 thalamus {{{
-
-$ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
-
-.tr-c {
-  transition: color 0.5s $ease-out-snap;
-}
-
-.tr-m {
-  transition: margin 0.25s $ease-out-snap;
-}
-
-.tr-a {
-  transition: all 0.25s $ease-out-snap;
-}
-
 .idle {
   &-norm {
     color: $blu-2;
@@ -212,98 +189,3 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   }
 
 };
-
-// }}}
-
-* {
-  all: unset;
-}
-
-window {
-  color: $blu-2;
-  font-family: sans-serif, monospace;
-  font-size: 20px;
-}
-
-tooltip {
-  color: $orn-3;
-  font-size: 20px;
-  background-color: rgba($bg, 0.95);
-  border: 1px solid $orn-0;
-  border-radius: 10px 24px 12px 20px;
-}
-
-
-// }}}
-// ============================================================================
-
-// time {{{
-.time {
-  background: $bg;
-  border-radius: 27px 27px 69px 69px;
-  border-right: 1px solid $blu-2;
-  border-bottom: 2px solid $blu-2;
-  border-left: 1px solid $blu-2;
-  box-shadow: 0 2px 7px 1px rgba($prp-0, 0.23);
-  padding: 0 1.3em 11px;
-  margin: -7px 16px 30px;
-
-  &-text {
-    font-family: Architects Daughter, monospace;
-    font-weight: 600;
-    font-size: 3em;
-  }
-
-  &-clockface {
-    font-size: 9px;
-    margin: 2px -5px 0 3px;
-  }
-
-  &-hour,
-  &-minute {
-    &-inactive {
-      transition: color 0.5s $ease-out-snap;
-      color: $blu-2;
-    }
-
-    &-active {
-      transition: color 0.5s $ease-out-snap;
-      color: $orn-2;
-
-      &:hover {
-        color: $orn-4;
-        transition: color 0.5s $ease-out-snap;
-      }
-    }
-  }
-
-  &-alarm {
-    &-icon {
-      margin-top: 2px;
-      margin-bottom: -1px;
-    }
-
-    &-subtext {
-      font-size: 0.8em;
-      margin-right: 2px;
-    }
-  }
-
-  &-timer {
-    margin-left: -5px;
-    margin-right: 2px;
-
-    &-icon {
-      margin-top: 3px;
-      margin-left: 1px;
-    }
-
-    &-subtext {
-      font-family: monospace;
-      margin-top: 1px;
-      font-size: 0.69em;
-    }
-  }
-}
-
-// }}}

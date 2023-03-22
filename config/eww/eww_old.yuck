@@ -1,0 +1,1205 @@
+; ██╗      ██████╗  ██████╗ ██╗ ██████╗
+; ██║     ██╔═══██╗██╔════╝ ██║██╔════╝
+; ██║     ██║   ██║██║  ███╗██║██║
+; ██║     ██║   ██║██║   ██║██║██║
+; ███████╗╚██████╔╝╚██████╔╝██║╚██████╗
+; ╚══════╝ ╚═════╝  ╚═════╝ ╚═╝ ╚═════╝
+; =============================================================================
+; 🚧 vars: {{{
+
+(deflisten cycle-6 'while true; do echo 0; sleep 6; echo 1; sleep 6; done')
+(deflisten cycle-5 'while true; do echo 0; sleep 5; echo 1; sleep 5; done')
+(defvar browser "firefox-developer-edition")
+(defvar terminal "kitty")
+
+; }}}
+; ♻️  widgets: {{{
+
+; Combination of slide and fade revealer ⮯
+; See: https://elkowar.github.io/eww/widgets.html#revealer
+(defwidget slide-n-fade [direction bool]
+  (revealer
+    :transition "slide${direction}"
+    :reveal bool
+    (revealer
+      :transition "crossfade"
+      :reveal bool
+      (children)
+    )
+  )
+)
+
+; (I)con (V)alue (U)nit: Combination of multiple label widgets ⮯
+; See: https://elkowar.github.io/eww/widgets.html#label
+(defwidget IVU [
+  ?box-style ?box-class
+  icon  ?icon-class  ?icon-style  ?icon-tooltip
+  value ?value-class ?value-style ?value-tooltip
+  ?unit ?unit-class  ?unit-style  ?unit-tooltip
+]
+  (box
+    :class "${strlength(value) > 0 ? box-class : "ramp-2"}"
+    :style box-style
+    :space-evenly false
+    :spacing 0
+    (label
+      :text "${icon}"
+      :class "icon ${icon-class}"
+      :style icon-style
+      :tooltip " ${icon-tooltip} "
+    )
+    (label
+      :text "${strlength(value) > 0 ? value : "勒"}"
+      :class "value ${value-class}"
+      :style "${strlength(value) > 0 ? "${value-style}" : "margin-right: 5px;"}"
+      :tooltip " ${value-tooltip} "
+    )
+    (label
+      :text unit
+      :class "unit ${unit-class}"
+      :style unit-style
+      :tooltip " ${unit-tooltip} "
+    )
+  )
+)
+
+; }}}
+; =============================================================================
+
+; 🔊 sound: {{{
+(defwindow album-art
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "top left")
+  (music-cover)
+)
+
+(defwindow music
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "top left" :x "100px")
+  (box :halign "start" :space-evenly false :spacing 0
+    (music) (audio)
+  )
+)
+
+
+; 🎵 music: {{{
+
+(defvar player "youtube-music-desktop-app")
+(defvar artUrl "/tmp/eww/album_art.png")
+(defvar art-inactive-url "/home/cullyn/.config/eww/assets/ytm.svg" )
+(defvar volume-visible false)
+(defpoll progress :interval "1s" "scripts/music_info progress")
+(deflisten pctl 'tail -F /tmp/eww/music.json 2> /dev/null')
+
+(defwidget music []
+  (eventbox
+    :onhover "eww update volume-visible=true"
+    :onhoverlost "eww update volume-visible=false"
+    (box :space-evenly false :spacing 0
+         :class "trM" :style "margin-left: ${music-hover ? 80 : 0}px;"
+      (music-info)
+    )
+  )
+)
+
+(defvar music-hover false)
+(defwidget music-cover []
+  (eventbox
+    :onhover "eww update music-hover=true"
+    :onhoverlost "eww update music-hover=false"
+    (box
+      :class "music-cover ${music-hover ? "music-cover-hover" : ""}"
+      :style "background-image: url('${matches("${pctl.status}", "Playing") ?
+        artUrl : art-inactive-url}');"
+    )
+  )
+)
+
+(defwidget title-diff []
+  (box :space-evenly false :spacing 8
+    (label
+      :class "music-${matches("${pctl.status}", "Playing") ? "album" : "inactive" }"
+      :text "  ${pctl.album}"
+      :tooltip "   ${pctl.album}"
+      :limit-width 20
+      :style "margin-left: -4px;"
+    )
+    (label
+      :class "music-${matches("${pctl.status}", "Playing") ? "title" : "inactive" }"
+      :text "  ${pctl.title}"
+      :limit-width 20
+      :tooltip "   ${pctl.title}"
+    )
+  )
+)
+
+(defwidget title-same []
+  (label
+    :class "music-${matches("${pctl.status}", "Playing") ? "title" : "inactive" }"
+    :markup "<tt>硫</tt>  <i>${pctl.album}</i>"
+    :style "margin-left: -4px;"
+    :tooltip "硫 ${pctl.album}"
+  )
+)
+
+(defwidget music-info []
+  (box
+    :class "music-info"
+    :style "
+            padding-left: ${volume-visible ? "1" : "0.7"}em;
+            padding-right: ${volume-visible ? "1" : "0.1"}em;
+            transition: padding 0.3s ease;
+           "
+    :space-evenly false
+    :spacing 16
+    (slide-n-fade :direction "left" :bool volume-visible
+      (eventbox
+        :cursor "pointer"
+        :onclick "playerctl --player=${player} previous"
+        (label :text "玲"
+        )
+      )
+    )
+    (music-progress)
+    (slide-n-fade :direction "right" :bool volume-visible
+      (eventbox
+        :cursor "pointer"
+        :onclick "playerctl --player=${player} next"
+        (label :text "怜")
+      )
+    )
+    (label
+      :class "music-${matches("${pctl.status}", "Playing") ? "artist" : "inactive" }"
+      :markup "<tt></tt>  <b>${pctl.artist}</b>"
+      :style "margin: 1px -2px 0 ${volume-visible ? "-6" : "-12"}px;"
+      :tooltip "   ${pctl.artist}"
+    )
+    (literal
+      :content "${"${pctl.title}" == "${pctl.album}" ? "(title-same)" : "(title-diff)"}"
+      :style "margin-top: 4px; margin-right: ${volume-visible ? "-6" : "2"}px;"
+    )
+    (slide-n-fade :direction "right" :bool volume-visible
+      (music-volume :value {round(pctl.volume * 100,0)})
+    )
+  )
+)
+
+(defwidget music-progress []
+  (box :class "music-progress" :space-evenly false :spacing 16
+       :style "margin: 0 -8px;"
+   (circular-progress
+      :class "music-progress-circle"
+      :value {progress >= 0 && progress <= 100 ? progress : 0}
+      :start-at 75
+      :thickness 2
+      :clockwise true
+      (box :class "music-progress-circle-icon"
+        (eventbox
+          :class "music-${matches("${pctl.status}", "Playing") ? "playing" : "paused" }"
+          :onclick "playerctl --player=${player} play-pause"
+          :onscroll "scripts/music_info seek {}"
+          :cursor "pointer"
+          (label :text "${matches("${pctl.status}", "Playing") ? " " : "奈 "}")
+        )
+      )
+    )
+  )
+)
+
+(defwidget music-volume [value]
+  (eventbox
+      :onclick "playerctl --player=${player} volume 1"
+      :onmiddleclick "playerctl --player=${player} volume 0.01"
+      :onrightclick "playerctl --player=${player} volume 0"
+      :onscroll "scripts/music_info volume {} 0.1"
+      :cursor "pointer"
+    (box :class "music-volume ramp-${
+              value < 1   ? "2" :
+              value < 20  ? "3" :
+              value < 30  ? "4" :
+              value < 40  ? "5" :
+              value < 50  ? "6" :
+              value < 60  ? "7" :
+              value < 70  ? "8" :
+              value < 80  ? "9" :
+              value < 90  ? "10" :
+              value < 99  ? "11" : "12"
+          }"
+      (circular-progress
+        :class "music-progress-circle"
+        :value value
+        :start-at 75
+        :thickness 2
+        :clockwise false
+        (label
+          :tooltip "輸 Youtube Music"
+          :class "music-volume-icon"
+          :text {
+            value == 0  ? "婢 " :
+            value < 35  ? "奄 " :
+            value < 65  ? "奔 " : "墳 "
+          }
+        )
+      )
+    )
+  )
+)
+
+; }}}
+; 🎤 audio: {{{
+
+(deflisten source 'tail -F /tmp/eww/source')
+(deflisten sink 'tail -F /tmp/eww/sink')
+(defpoll source-name :interval "1s" 'scripts/pulse_info get_name source')
+(defpoll sink-name :interval "1s" 'scripts/pulse_info get_name sink')
+(defvar audio-info false)
+
+(defwidget audio []
+  (eventbox
+    :onhover "eww update audio-info=true"
+    :onhoverlost "eww update audio-info=false"
+    (box :class "audio" :space-evenly false :spacing 10
+      (audio-control
+        :content "source"
+        :value source
+        :name "${source-name}"
+        :icon-off " "
+        :icon-on " "
+      )
+      (audio-control
+        :content "sink"
+        :value sink
+        :name "${sink-name}"
+        :icon-off "遼 "
+        :icon-on "蓼 "
+      )
+      (bluetooth-status :value sink)
+    )
+  )
+)
+
+(defwidget audio-control [content value name icon-off icon-on]
+  (eventbox
+    :class "audio-${content}"
+    :onclick "scripts/pulse_info set_default ${content} & disown"
+    :onmiddleclick "kitty --title='terminalfloat' -e pulsemixer & disown"
+    :onrightclick "scripts/pulse_info mute ${content} & disown"
+    :onscroll "scripts/pulse_info change_volume ${content} {} & disown"
+    :cursor "pointer"
+    :tooltip " ${value}% "
+    (box :space-evenly false :spacing 9
+      :class "audio-volume ramp-${
+          value < 1   ? "2" :
+          value <= 30  ? "3" :
+          value <= 50  ? "4" :
+          value <= 60  ? "4-alt" :
+          value <= 70  ? "8" :
+          value <= 80  ? "9" :
+          value <= 90  ? "10" : "11"
+      }"
+      (circular-progress
+        :class "music-progress-circle"
+        :value {value <= 100 ? value : 100}
+        :start-at 75
+        :thickness 2
+        :clockwise false
+        (label
+          :class "audio-${content}-icon${value == 0 ? "-inactiveFix" : ""}"
+          :text { value == 0  ? "${icon-off}" : "${icon-on}" }
+        )
+      )
+      (slide-n-fade :bool audio-info :direction "right"
+        (label :class "audio-${content}-name" :text name)
+      )
+    )
+  )
+)
+
+(defwidget bluetooth-status [value]
+  (label
+    :class "ramp-${matches(sink-name, "WH-1000XM4") ?
+            "${
+              value < 1   ? "2" :
+              value <= 30  ? "3" :
+              value <= 50  ? "4" :
+              value <= 60  ? "4-alt" :
+              value <= 70  ? "8" :
+              value <= 80  ? "9" :
+              value <= 90  ? "10" : "11"
+            }" :
+            "2"
+    }"
+    :text "${matches(sink-name, "WH-1000XM4") ? " " : " "}"
+    :style "margin-left: -4px;"
+  )
+)
+
+; }}}
+; }}}
+; 🎂 today {{{
+(defwindow today
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :width "45%" :anchor "top left" :x "1050px")
+  (centerbox :class "today"
+    (weather) (time) (date)
+  )
+)
+
+; 🌧️ weather: {{{
+
+(deflisten weather 'tail -F /tmp/eww/weather.json 2> /dev/null')
+(defvar weather-info false)
+
+(defwidget daily-temp [temp margin color]
+  (label
+    :class "weather-${color}"
+    :text temp
+    :style "font-size: 0.7em; margin-top: ${margin}px"
+  )
+)
+
+(defwidget weather []
+  (eventbox
+    :onhover "eww update weather-info=true"
+    :onhoverlost "eww update weather-info=false"
+    :onclick "firefox-developer-edition https://www.windy.com/?hrrrConus,45.445,-122.764,9 & disown"
+    :cursor "pointer"
+    (box :class "weather" :halign "end" :space-evenly false :spacing 8
+      (label
+        :class "weather-${cycle-6 == 0 ?
+               "${matches("${weather.night}", "true") ? "night" : "day"}"
+               : "base-alt"
+        }"
+        :markup "<b><tt>${weather.icon}</tt> ${weather.temp}<sup> </sup></b>"
+        :style "margin-right: -8px;"
+      )
+      (slide-n-fade :bool weather-info :direction "right"
+        (box :space-evenly false :spacing 3
+          (label
+            :class "weather-${cycle-6 == 0 ?
+                  "${matches("${weather.night}", "true") ? "night" : "day"}"
+                  : "base-alt"
+            }"
+            :markup "<small></small> ${weather.feels_like}<sup> </sup>"
+            :style "font-size: 0.8em; margin-right: -4px;"
+          )
+          (daily-temp :temp {weather.temp_morn} :margin 4 :color "morn")
+          (daily-temp :temp {weather.temp_day} :margin -2 :color "day")
+          (daily-temp :temp {weather.temp_max} :margin -6 :color "max")
+          (daily-temp :temp {weather.temp_eve} :margin 4 :color "eve")
+          (daily-temp :temp {weather.temp_night} :margin 12 :color "night")
+        )
+      )
+      (label
+        :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
+        :markup "<b>${weather.desc}</b>"
+        :style "margin-top: 2px; margin-left: ${weather-info ? "0" : "-8"}px;"
+      )
+      (slide-n-fade :bool weather-info :direction "right"
+          (label
+            :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
+            :markup "   ${weather.clouds}<small>%</small>"
+            :style "margin-top: 2px;"
+          )
+      )
+      (label
+        :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
+        :markup "${weather.bf_icon}"
+        :style "margin: 3px ${weather-info ? "-6" : "-2"}px 0 ${weather-info ? "0" : "-8"}px;"
+      )
+      (slide-n-fade :bool weather-info :direction "right"
+        (label
+          :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
+          :markup "<i>${weather.wind_speed}m<sup>-1</sup></i>"
+        )
+      )
+      (label
+        :class "weather-${cycle-5 == 1 ? "rain" : "base-alt" }"
+        :markup "<tt>殺 ${weather-info ? "${weather.rain_day}" : "${weather.rain_1h}"}<small>%</small></tt>"
+        :style "margin: 2px ${weather-info ? "0" : "-8"}px; margin-bottom: 0;"
+      )
+      (slide-n-fade :bool weather-info :direction "right"
+        (box :space-evenly false :spacing 8
+          (label
+            :class "weather-index-${cycle-5 == 1 ? "${
+              weather.uvi < 1  ? "none" :
+              weather.uvi < 2  ? "low"  :
+              weather.uvi < 5  ? "moderate" :
+              weather.uvi < 7  ? "high" :
+              weather.uvi < 10 ? "very-high" : "crit"
+            }" : "base"}"
+            :markup "<tt>履 ${weather.uvi}</tt>"
+            :style "margin-top: 2px; margin-left: 2px;"
+          )
+          (label
+            :class "weather-index-${cycle-5 == 1 ? "${
+              weather.aqi == 1  ? "low"  :
+              weather.aqi == 2  ? "moderate" :
+              weather.aqi == 3  ? "high" :
+              weather.aqi == 4  ? "very-high" : "crit"
+            }" : "base"}"
+            :markup "<tt> ${weather.aqi}</tt>"
+            :style "margin-top: 2px;"
+          )
+        )
+      )
+      (label
+        :class "weather-moon${weather.moon == " " ? "-full" : ""}"
+        :markup "<tt>${weather.moon}</tt>"
+        :style "margin: -10px -20px 0 2px;"
+      )
+    )
+  )
+)
+; }}}
+; 🕐 time: {{{
+
+(defpoll time :interval "1s"
+  `date +'{"hour":"%H", "minute":"%M", "second":"%S"}'`
+)
+(deflisten clockface-hour 'tail -F /tmp/eww/clockface-hour')
+(deflisten clockface-minute 'tail -F /tmp/eww/clockface-minute')
+(defvar hour-active false)
+(defvar minute-active false)
+(defvar fine-adjust false)
+(defvar timer-visible false)
+(deflisten alarm-current 'tail -F /tmp/eww/alarm')
+(deflisten timer-current 'tail -F /tmp/eww/timer')
+
+(defwidget time []
+  (eventbox
+    :onhover "eww update timer-visible=true"
+    :onhoverlost "eww update timer-visible=false"
+    :onmiddleclick "eww update fine-adjust=${fine-adjust ? "false" : "true"}"
+    (box
+      :class "time"
+      :halign "center"
+      :space-evenly false
+      :spacing 3
+      :style "padding: 0 ${timer-visible ? "0.9" : "1.2" }em;"
+      (alarm)
+      (clock :child "hour" :text {time.hour} :bool hour-active)
+      (clockface)
+      (clock :child "minute" :text {time.minute} :bool minute-active)
+      (timer)
+    )
+  )
+)
+
+(defwidget clock [child bool text]
+  (eventbox
+    :class "time-${child} time-${child}-${bool ? "active" : "inactive"}"
+    :onhover "eww update ${child}-active=true"
+    :onhoverlost "eww update ${child}-active=false"
+    :onclick "${browser} https://calendar.google.com/calendar/u/0/r & disown"
+    :onrightclick "${browser} https://calendar.google.com/calendar/u/0/r/eventedit?state=%5B%5D & disown"
+    :cursor "pointer"
+    (label :class "time-text" :text text)
+  )
+)
+
+(defwidget clockface []
+  (box
+    :class "time-clockface"
+    :orientation "v"
+    :valign "center"
+    :spacing -4
+    :space-evenly false
+    (clock :child "hour" :text "${clockface-hour} " :bool hour-active)
+    (clock :child "minute" :text "${clockface-minute} " :bool minute-active)
+  )
+)
+
+(defwidget time-revealer [app direction child bool icon text subtext]
+  (slide-n-fade
+    :bool timer-visible
+    :direction {direction == "left" ? "right" : "left"}
+    (eventbox
+      :class "time-${app} time-${child}-${bool ? "active" : "inactive" }"
+      :onhover "eww update ${child}-active=true"
+      :onhoverlost "eww update ${child}-active=false"
+      :onclick "scripts/timer_info ${app}_status & disown"
+      :onscroll "scripts/timer_info ${app} {} ${fine-adjust ? 1 : 15}"
+      :onrightclick "scripts/timer_info reset ${app}"
+      :cursor "pointer"
+      (box :class "time-${app}" :space-evenly false :spacing 6
+        {direction == "left" ? text : ""}
+        (box
+          :orientation "v"
+          :valign "center"
+          :space-evenly false
+          :spacing 1
+          (label :class "time-${app}-icon" :text icon)
+          (label :class "time-${app}-subtext" :text subtext)
+        )
+        {direction == "right" ? text : "" }
+      )
+    )
+  )
+)
+
+(defwidget alarm []
+  (time-revealer
+    :app "alarm"
+    :direction "left"
+    :child "hour"
+    :bool hour-active
+    :text alarm-current
+    :icon ""
+    :subtext {fine-adjust ? "駱" : ""}
+  )
+)
+
+(defwidget timer []
+  (time-revealer
+    :app "timer"
+    :direction "right"
+    :child "minute"
+    :bool minute-active
+    :text timer-current
+    :icon "羽"
+    :subtext {time.second}
+  )
+)
+; }}}
+; 📅 date: {{{
+
+
+(deflisten weeks_alive 'tail -F /tmp/eww/weeks_alive')
+(deflisten date 'tail -F /tmp/eww/date')
+(defvar date-info false)
+
+(defwidget date []
+  (eventbox
+  :onhover "eww update date-info=true"
+  :onhoverlost "eww update date-info=false"
+    (box
+    :class "date"
+    :halign "start"
+    :space-evenly false
+    :spacing 4
+    (slide-n-fade
+      :bool date-info
+      :direction "left"
+      (label
+        :class "date-${cycle-6 == 0 ? "alive" : "base-alt"}"
+        :markup "冀  ${weeks_alive}"
+        :style "margin-top: 2px;"
+      )
+    )
+      (label
+        :class "date-${cycle-5 == 0 ? "${date.weekday}" : "base"}"
+        :text "  ${date.weekday}"
+        :style "margin-left: ${date-info ? "4" : "-2"}px; margin-right: -4px;"
+      )
+      (label
+        :class "date-${cycle-6 == 1 ? "base-alt" : "base"}"
+        :text ", ${date.month}"
+        :style "margin-top: 3px;"
+      )
+      (label
+        :class "date-day date-${cycle-6 == 1 ? "base-alt" : "base"}"
+        :text "${date.day}"
+        :style "margin-top: 4px;"
+      )
+      (slide-n-fade :bool date-info :direction "right"
+        (label
+          :class "weather-${cycle-6 == 0 ? "sunset" : "base"}"
+          :markup "   ${weather.sunset}"
+          :style "margin-top: 4px; margin-left: 4px;"
+        )
+      )
+    )
+  )
+)
+
+; }}}
+
+; }}}
+; 🖥️ computer: {{{
+(defwindow computer
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "top right" :x "100px")
+  (box :class "trM" :halign "end" :space-evenly false :spacing 0
+    :style "margin-right: ${user-hover ? 80 : 0}px;"
+    (cpu) (memory) (gpu)
+  )
+)
+
+; Update `define_builtin_vars! { Duration::new(0, 500000000)` in inbuilt.rs
+; Default is (2, 0), but I like updates of 0.5 seconds for cpu polling.
+(defwidget num-to-block [load]
+  (label
+    :text {
+      load < 12.5  ? "▁" :
+      load < 25    ? "▂" :
+      load < 37.5  ? "▃" :
+      load < 50    ? "▄" :
+      load < 62.5  ? "▅" :
+      load < 75    ? "▆" :
+      load < 88.5  ? "▇" : "█"
+    }
+    :class "trA ramp-${
+      load < 5   ? "1" :
+      load < 10  ? "2" :
+      load < 20  ? "3" :
+      load < 30  ? "4" :
+      load < 40  ? "5" :
+      load < 50  ? "6" :
+      load < 60  ? "7" :
+      load < 70  ? "8" :
+      load < 80  ? "9" :
+      load < 90  ? "10" :
+      load < 95  ? "11" : "12"
+    }"
+  )
+)
+
+(defwidget label-ramp [child icon ?val percent bool ?direction]
+  (box
+    :space-evenly false
+    :spacing 5
+    :class "${child} ramp-${
+      percent < 25  ? "4"  :
+      percent < 35  ? "5"  :
+      percent < 50  ? "6"  :
+      percent < 65  ? "7"  :
+      percent < 80  ? "8"  :
+      percent < 85  ? "9"  :
+      percent < 90  ? "10" :
+      percent < 95  ? "11" : "12"
+    }"
+    (label :markup icon :class "${child}-icon")
+    (slide-n-fade :bool bool :direction "right"
+      (label
+        :class "${child}-text"
+        :markup {strlength(val) > 0 ? val : "${round(percent,0)}<small>%</small>"}
+      )
+    )
+  )
+)
+
+(defwidget temp-ramp [child current percent max bool ?direction ?extra]
+  (box
+    :space-evenly false
+    :spacing 6
+    :class "${child} ramp-${
+      percent < 50  ? "3"  :
+      percent < 56  ? "4"  :
+      percent < 62  ? "5"  :
+      percent < 68  ? "6"  :
+      percent < 74  ? "8"  :
+      percent < 80  ? "9" :
+      percent < 86  ? "10" :
+      percent < 94  ? "11" : "12"
+    } ${current >= max ? "ramp-crit" : ""}"
+    (label
+      :class "${child}-icon"
+      :text "${
+        percent < 50 ? "" :
+        percent < 56 ? "" :
+        percent < 80 ? "" :
+        percent < 90 ? "" : ""
+      }"
+    )
+    (slide-n-fade :bool bool :direction {strlength(direction) > 0 ? "${direction}" : "right"}
+      (label
+        :class "${child}-current"
+        :markup "${current}<sup></sup>${extra}"
+      )
+    )
+  )
+)
+
+(defvar cpu-info false)
+(defvar cores "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
+
+(defwidget cpu []
+  (eventbox
+    :onhover "eww update cpu-info=true"
+    :onhoverlost "eww update cpu-info=false"
+    :onclick "kitty --title='terminalfloat' -e btop & disown"
+    :cursor "pointer"
+    (box :class "cpu" :space-evenly false :spacing 8
+      (temp-ramp
+        :child "cpu-temp"
+        :current {round(sensors.nvme-pci-0100.Composite.temp1_input,0)}
+        :percent {round(
+          sensors.nvme-pci-0100.Composite.temp1_input /
+          (sensors.nvme-pci-0100.Composite.temp1_min -
+          sensors.nvme-pci-0100.Composite.temp1_max * - 1) * 100
+        ,0)}
+        :max {sensors.nvme-pci-0100.Composite.temp1_max}
+        :bool cpu-info
+      )
+      (label-ramp
+        :icon ""
+        :child "cpu-busy"
+        :percent {EWW_CPU.avg}
+        :bool cpu-info
+      )
+      (box :class "cpu-bars" :space-evenly false :spacing 2
+        (for num in cores
+          (num-to-block :load {EWW_CPU.cores[num].usage})
+        )
+      )
+    )
+  )
+)
+
+
+(defvar range16 "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
+(defvar memory-info false)
+
+(defwidget memory []
+  (eventbox
+    :onhover "eww update memory-info=true"
+    :onhoverlost "eww update memory-info=false"
+    :onclick "kitty --title='terminalfloat' -e btop & disown"
+    :cursor "pointer"
+    (box :class "memory" :space-evenly false :spacing 2
+      (label-ramp
+        :icon "ﮕ"
+        :child "memory-busy"
+        :percent {EWW_RAM.used_mem_perc}
+        :bool memory-info
+      )
+      (box :class "memory-bars" :space-evenly false :spacing -2
+        (for n in range16
+          (label
+            :text ""
+            :class "ramp-${
+              EWW_RAM.used_mem_perc == 100 ? "12" : "${
+                EWW_RAM.used_mem_perc < n * 95 / 15 ? "2" : "${
+                  round(n / 2.1, 0) + 4
+                }"
+              }"
+            }"
+          )
+        )
+      )
+    )
+  )
+)
+
+
+(defpoll sensors :interval "0.5s" `sensors -j`)
+(defpoll gpu :interval "0.5s" 'scripts/computer_info')
+(defvar range8 "[0,1,2,3,4,5,6,7]")
+(defvar gpu-info false)
+
+(defwidget gpu []
+ (eventbox
+    :onhover "eww update gpu-info=true"
+    :onhoverlost "eww update gpu-info=false"
+    :onclick "kitty --title='terminalfloat' -e nvtop & disown"
+    :cursor "pointer"
+    (box :class "gpu" :space-evenly false :spacing 8
+      (gpu-temp)
+      (label-ramp
+        :icon "⌬"
+        :child "gpu-busy"
+        :percent {gpu.gpu_busy}
+        :bool gpu-info
+      )
+      (mclock)
+      (label-ramp
+        :icon ""
+        :child "gpu-voltage"
+        :percent {round(
+            sensors.amdgpu-pci-0d00.PPT.power1_average /
+            sensors.amdgpu-pci-0d00.PPT.power1_cap * 100
+        ,0)}
+        :val "${round(sensors.amdgpu-pci-0d00.PPT.power1_average,0)}<sub><b>W</b></sub>"
+        :bool gpu-info
+     )
+      (label-ramp
+        :icon ""
+        :child "gpu-fan"
+        :percent {round(
+            sensors.amdgpu-pci-0d00.fan1.fan1_input /
+            sensors.amdgpu-pci-0d00.fan1.fan1_max * 100
+        ,0)}
+        :val "${round(sensors.amdgpu-pci-0d00.fan1.fan1_input,0)}<sub><b>RPM</b></sub>"
+        :bool gpu-info
+      )
+      (vram)
+    )
+  )
+)
+
+(defwidget gpu-temp []
+  (temp-ramp
+    :child "gpu-temp"
+    :current {round(sensors.amdgpu-pci-0d00.junction.temp2_input,0)}
+    :percent {round(
+      sensors.amdgpu-pci-0d00.junction.temp2_input /
+      sensors.amdgpu-pci-0d00.junction.temp2_crit  * 100
+    ,0)}
+    :max {sensors.amdgpu-pci-0d00.junction.temp2_crit}
+    :bool gpu-info
+    ; :extra "|${round(sensors.amdgpu-pci-0d00.edge.temp1_input,0)}<sup></sup>|${round(sensors.amdgpu-pci-0d00.mem.temp3_input,0)}<sup></sup>"
+  )
+)
+
+(defwidget mclock []
+  (box :class "gpu-mclock" :space-evenly false :spacing 3
+    (label
+      :text "龍"
+      :class "gpu-mclock-icon ramp-${
+        gpu.mclk_level == 1 ? "4" :
+        gpu.mclk_level == 2 ? "5" :
+        gpu.mclk_level == 3 ? "8" : "3"
+      }"
+    )
+    (slide-n-fade :bool gpu-info :direction "right"
+      (label
+        :markup "${gpu.mclk}<b><sub>MHz</sub></b>"
+        :class "gpu-mclock-text ramp-${
+          gpu.mclk_level == 1 ? "4" :
+          gpu.mclk_level == 2 ? "5" :
+          gpu.mclk_level == 3 ? "8" : "3"
+        }"
+      )
+    )
+  )
+)
+
+(defwidget vram []
+  (box :class "gpu-vram" :space-evenly false :spacing 5
+    (label-ramp
+      :child "gpu-vram"
+      :icon "ﮕ"
+      :percent {gpu.mem_busy}
+      :bool gpu-info
+    )
+    (box :class "gpu-vram-bars" :space-evenly false :spacing -2
+      (for n in range8
+        (label
+          :text ""
+          :class " ramp-${
+            gpu.vram == 100 ? "12" : "${gpu.vram < n * 95 / 7 ? "2" : n + 4}"
+          }"
+        )
+      )
+    )
+  )
+)
+
+; }}}
+
+; 🤓 user: {{{
+
+(defwindow user
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "top right")
+  (box :halign "end" :space-evenly false :spacing 0
+    (user)
+  )
+)
+
+(defvar userUrl '/home/cullyn/.config/eww/assets/nosvagor.png')
+(defvar user-hover false)
+(defwidget user []
+ (eventbox
+    :onhover "eww update user-hover=true"
+    :onhoverlost "eww update user-hover=false"
+    :onclick "${browser} https://twitter.com/home & disown"
+    :onmiddleclick "${browser} https://www.youtube.com/feed/subscriptions & disown"
+    :onrightclick "${browser} https://github.com/nosvagor & disown"
+    (box :space-evenly false :spacing 0
+      :class "trA userbox ${user-hover ? "userbox-hover" : ""}"
+      :style "background-image: url('${userUrl}');"
+    )
+  )
+)
+; }}}
+
+; 👾 workspaces: {{{
+
+(defwindow workspaces
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :width "8%" :anchor "bottom center")
+  (workspaces)
+)
+
+(deflisten active-ws 'tail -F /tmp/eww/workspace')
+(deflisten occupied 'tail -F /tmp/eww/occupied')
+(defvar ws-hovered false)
+
+(defwidget workspace [icon num desc ?app]
+  (eventbox
+    :onclick "hyprctl dispatch workspace ${num}"
+    :cursor "pointer"
+    :onmiddleclick "hyprctl dispatch workspace ${num} && ${app} & disown"
+    :tooltip " ${desc} "
+    (box
+      :style "
+              background-image: url('assets/ws-icons/${icon}${
+                matches(active-ws,num) ? "-active" :
+                "${matches(occupied, "${num}") ? "" : "-empty"}"
+                }.svg');
+              "
+      :class "workspace ws-${num}"
+    )
+  )
+)
+
+(defwidget workspaces []
+  (eventbox
+    :onhover "eww update ws-hovered=true"
+    :onhoverlost "eww update ws-hovered=false"
+    :onrightclick "hyprctl dispatch workspace previous"
+    :onscroll "scripts/workspaces next_or_prev {}"
+    (box
+      :class "workspaces-box ${ws-hovered ? "workspaces-box-hovered" : ""}"
+      :halign "center" :space-evenly false :spacing 10
+      (workspace :icon "network"  :num "1" :desc "  chat 'n networking  "   :app "discord")
+      (workspace :icon "learn"    :num "2" :desc "   reading 'n browsing  " :app "${browser}" )
+      (workspace :icon "dna"      :num "3" :desc "  primary work station  " )
+      (workspace :icon "dotfiles" :num "4" :desc "  settings 'n seconday work  " )
+      (workspace :icon "music"    :num "5" :desc "  music 'n entertainment  " :app "ytmdesktop" )
+    )
+  )
+)
+
+; }}}
+
+; 🔆 screenctl: {{{
+
+(defwindow screenctl
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "top right" :y "1430px")
+  (screenctl)
+)
+
+(defvar screenctl-hover false)
+(deflisten brightness :initial 10 'tail -F /tmp/eww/brightness 2> /dev/null')
+(defwidget screenctl []
+  (eventbox
+    :onhover "eww update screenctl-hover=true"
+    :onhoverlost "eww update screenctl-hover=false"
+    :onclick "scripts/brightness night & disown"
+    :onscroll "scripts/brightness adjust {} ${brightness} & disown"
+    :onrightclick "scripts/brightness reset & disown"
+    (box :space-evenly false :spacing 0
+      :class "svgbox ${screenctl-hover ? "svgbox-hover" : "" } trA"
+      :style "background-image: url('assets/screenctl/brctl${screenctl-hover ? "-${brightness > 0 ? "${brightness}" : "10"}" : ""}.svg');"
+    )
+  )
+)
+
+; }}}
+; 📶 network: {{{
+
+(defvar signal-hover false)
+(defwindow signal
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "top right" :y "1570px" )
+  (eventbox
+    :onhover "eww update signal-hover=true"
+    :onhoverlost "eww update signal-hover=false"
+    (box
+      :space-evenly false :spacing 0
+      :class "svgbox ${signal-hover ? "svgbox-hover" : "" } trA"
+      :style "background-image: url('assets/signal/signal${
+                signal-hover ? "-hover" : ""
+              }.svg');"
+      (box :space-evenly false :spacing 0 :valign "center" :halign "center"
+        (net-down
+          :icon " "
+          :value {round(EWW_NET.enp10s0.NET_DOWN / 100000, 2)}
+          :bool signal-hover
+        )
+        (net-up
+          :icon " "
+          :value {round(EWW_NET.enp10s0.NET_UP / 100000, 2)}
+          :bool signal-hover
+        )
+        (ping)
+      )
+    )
+  )
+)
+
+(defwidget net-down [icon value bool]
+  (box :space-evenly false :spacing 0 :tooltip "  ${value} Mbps"
+    :class "net net-down${bool ? "-hover" : "" } ramp-${
+      value < 1   ? "2"  :
+      value < 10  ? "3"  :
+      value < 20  ? "4"  :
+      value < 30  ? "6"  :
+      value < 50  ? "7"  :
+      value < 80  ? "9"  :
+      value < 130 ? "11" : "crit"
+    }"
+    (label :text icon)
+    (label :text {
+        value < 1   ? "▁" :
+        value < 10  ? "▂" :
+        value < 20  ? "▃" :
+        value < 30  ? "▄" :
+        value < 50  ? "▅" :
+        value < 80  ? "▆" :
+        value < 130 ? "▇" : "█"
+      }
+    )
+  )
+)
+
+(defwidget net-up [icon value bool]
+  (box :space-evenly false :spacing 0 :tooltip "  ${value} Mbps"
+    :class "net net-up${bool ? "-hover" : "" } ramp-${
+      value < 0.01 ? "2"  :
+      value < 0.1  ? "3"  :
+      value < 1    ? "4"  :
+      value < 2    ? "6"  :
+      value < 4    ? "7"  :
+      value < 8    ? "9"  :
+      value < 16   ? "11" : "crit"
+    }"
+    (label :text icon)
+    (label :text {
+        value < 0.01 ? "▁" :
+        value < 0.1  ? "▂" :
+        value < 1    ? "▃" :
+        value < 2    ? "▄" :
+        value < 4    ? "▅" :
+        value < 8    ? "▆" :
+        value < 16   ? "▇" : "█"
+      }
+    )
+  )
+)
+
+(defpoll ping :interval "20s" `scripts/mtr -r -c 5 -j 8.8.8.8 | jq --jsonargs ".report.hubs[11].Avg" | awk '{print int($1+0.5)}'`)
+(defwidget ping []
+  (box
+    :class "net net-ping${signal-hover ? "-hover" : "" }"
+    :space-evenly false :spacing 0 :valign "center"
+    :tooltip "Ping: ${strlength(ping) > 0 ? "${ping} ms" : "determining..."}"
+    (IVU
+      :box-class "ramp-${
+        ping < 10  ? "3" :
+        ping < 30  ? "7-alt" :
+        ping < 70  ? "8" :
+        ping < 120 ? "9" :
+        ping < 200 ? "11" : "crit"
+      }"
+      :icon " "
+      :icon-style "margin-right: -2px; margin-left: 4px;"
+      :value ping
+    )
+  )
+)
+
+; }}}
+; 🔔 dunst: {{{
+
+(defvar dunst-hover false)
+(defvar dunst-active true)
+
+(defpoll dunst-count :interval "1s" 'dunstctl count waiting')
+(defwindow dunst
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "top right" :y "1710px" )
+  (eventbox
+    :onhover "eww update dunst-hover=true"
+    :onhoverlost "eww update dunst-hover=false"
+    :onclick "eww update dunst-active=true & dunstctl set-paused false & disown"
+    :onmiddleclick "dunstctl close-all"
+    :onrightclick "eww update dunst-active=false & dunstctl set-paused true & disown"
+    :tooltip " ${dunst-active ? "right click to silence  " : "${dunst-count} waiting notifications"} "
+    (box :space-evenly false :spacing 0
+      :class "svgbox ${dunst-hover ? "svgbox-hover" : "" } trA"
+      :style "background-image: url('assets/dunst/${dunst-active ? "active" : "inactive"}${dunst-hover ? "-hover" : ""}.svg');"
+      (box
+        :valign "start"
+        :class "${dunst-hover ? "" :
+                  "dunst-count${dunst-count > 9 ? "-alert" :
+                    "${dunst-count == 0 ? "-0" : ""
+                    }"
+                  }"
+                }"
+        "${dunst-hover ? "" :
+          "${dunst-count > 0 ? "${dunst-count < 10 ? "${dunst-count}" :
+            " "}" : " "
+          }"
+        }"
+      )
+    )
+  )
+)
+
+;}}}
+
+; 🎛️ systemctl: {{{
+
+(defwindow systemctl
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "bottom right" )
+  (systemctl)
+)
+
+(defvar systemctl-hover false)
+(defwidget systemctl []
+  (eventbox
+    :onhover "eww update systemctl-hover=true"
+    :onhoverlost "eww update systemctl-hover=false"
+    :onrightclick "~/.local/bin/lock suspend & disown"
+    :onmiddleclick "systemctl poweroff"
+    (box :space-evenly false :spacing 0
+      :class "systemctl-box ${systemctl-hover ? "systemctl-box-hover" : "" }"
+      :style "background-image: url('assets/systemctl/mitochondria${systemctl-hover ? "-active" : ""}.svg');"
+      :tooltip "   mitochondria, the powerhouse of the cell "
+      (revealer
+        :transition "crossfade"
+        :reveal systemctl-hover
+        (box :space-evenly false :spacing 0
+          (systemctl-option :option "restart"  :icon " " :command "systemctl reboot")
+          (systemctl-option :option "lock"     :icon " " :command "~/.local/bin/lock disown")
+          (systemctl-option :option "poweroff" :icon " " :command "systemctl poweroff")
+        )
+      )
+    )
+  )
+)
+
+(defwidget systemctl-option [option icon command]
+  (eventbox
+    :cursor "pointer"
+    :tooltip " ${icon}  ${option}  "
+    :onclick command
+    (label :class "systemctl-${option}"  :text icon)
+  )
+)
+
+; }}}
+; 📦 pacman: {{{
+(defpoll upgrades :initial 0 :interval "1m" 'paru -Qu | wc -l')
+(defvar pacman-hover false)
+(defwindow pacman
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "bottom right" :x "93px" :y "5px" )
+  (eventbox
+    :cursor "pointer"
+    :onhover "eww update pacman-hover=true"
+    :onhoverlost "eww update pacman-hover=false"
+    :onclick 'kitty --title="terminalfloat" -e "paru" & disown'
+    (label
+      :class "ramp-${
+             upgrades <= 1 ? "3" :
+             upgrades <= 3 ? "4" :
+             upgrades < 5 ? "4-alt" :
+             upgrades < 10 ? "6" :
+             upgrades < 20 ? "8" :
+             upgrades < 30 ? "9" :
+             upgrades < 40 ? "11" : "crit"
+      } pacman${pacman-hover ? "-hover" : ""}"
+      :markup "<small>${upgrades <= 1 ? " ": "${upgrades} "}</small><tt> </tt>"
+      :tooltip "${upgrades <= 1 ? "   synced  ": "   ${upgrades} available upgrades " }"
+      :style "margin-right: ${systemctl-hover ? "10" : "0"}px;"
+    )
+  )
+)
+; }}}

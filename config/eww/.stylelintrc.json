@@ -1,0 +1,14 @@
+{
+    "extends": ["stylelint-config-standard-scss"],
+    "rules": {
+        "selector-type-no-unknown": [
+            true,
+            {
+                "ignoreTypes": [
+                    "window",
+                    "tooltip"
+                ]
+            }
+        ]
+    }
+}
