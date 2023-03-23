@@ -130,91 +130,6 @@ $gry-5: #7f8199;
 
 // }}}
 
-// 🔗 thalamus {{{
-
-$ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
-
-.tr-c {
-  transition: color 0.5s $ease-out-snap;
-}
-
-.tr-m {
-  transition: margin 0.25s $ease-out-snap;
-}
-
-.tr-a {
-  transition: all 0.25s $ease-out-snap;
-}
-
-.idle {
-  &-norm {
-    color: $blu-2;
-  }
-
-  &-solid {
-    background-color: $blu-2;
-  }
-
-  &-bg {
-    background-color: $glc-2;
-  }
-
-  &-passive {
-    color: $blu-2;
-    background-color: $drk-0;
-
-    &-br {
-      color: $blu-2;
-      background-color: $drk-0;
-    }
-  }
-
-  &-bold {
-    color: $blu-2;
-    font-weight: bold;
-  }
-
-  &-search {
-    color: $blu-0;
-  }
-
-  &-rer {
-    color: $blu-0;
-    font-weight: bold;
-  }
-
-};
-
-.active {
-  &-norm {
-    color: $orn-4;
-  }
-
-  &-input {
-    color: $orn-4;
-    background-color: $glc-0;
-  }
-
-  &-select {
-    color: $orn-4;
-    background-color: $glc-2;
-    font-weight: bold;
-  }
-
-  &-visual {
-    background-color: $glc-2;
-    font-weight: bold;
-  }
-
-  &-search {
-    color: $orn-1;
-    font-weight: bold;
-  }
-
-};
-
-// }}}
-
 * {
   all: unset;
 }
@@ -233,30 +148,123 @@ tooltip {
   border-radius: 10px 24px 12px 20px;
 }
 
+$ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
+
+@mixin cycle($color, $duration: 4s) {
+  color: $color;
+  transition: color $duration ease-in-out;
+}
 
 // }}}
 // ============================================================================
 
-// time {{{
+// 🌧️ weather: {{{
+.weather {
+  background: $bg;
+  padding: 4px 1.1em;
+  margin: 16px 8px 50px;
+  border-right: 3px solid $blu-1;
+  border-top: 1px double $blu-1;
+  border-radius: 420px 17px 420px 69px;
+  box-shadow: -3px 2px 3px 1px rgba($blu-0, 0.42);
+
+  &-base {
+    @include cycle($blu-0);
+
+    &-alt {
+      @include cycle($blu-4);
+    }
+  }
+
+  &-moon {
+    color: $wht-0;
+
+    &-full {
+      color: $wht-3;
+    }
+  }
+
+  &-air {
+    @include cycle($sky-4);
+  }
+
+  &-rain {
+    @include cycle($blu-0);
+  }
+
+  &-morn {
+    @include cycle($blu-0);
+  }
+
+  &-day {
+    @include cycle($sun-2);
+  }
+
+  &-max {
+    @include cycle($rby-3);
+  }
+
+  &-eve {
+    @include cycle($prp-1);
+  }
+
+  &-night {
+    @include cycle($glc-5);
+  }
+
+  &-index {
+    &-base {
+      @include cycle($blu-2);
+    }
+
+    &-none {
+      @include cycle($slt-4);
+    }
+
+    &-low {
+      @include cycle($grn-3);
+    }
+
+    &-moderate {
+      @include cycle($sun-1);
+    }
+
+    &-high {
+      @include cycle($sun-4);
+    }
+
+    &-very-high {
+      @include cycle($rby-2);
+    }
+
+    &-crit {
+      @include cycle($pnk-2);
+    }
+  }
+}
+
+// }}}
+// 🕐 time {{{
 .time {
   background: $bg;
   border-radius: 27px 27px 69px 69px;
-  border-right: 1px solid $blu-2;
-  border-bottom: 2px solid $blu-2;
-  border-left: 1px solid $blu-2;
-  box-shadow: 0 2px 7px 1px rgba($prp-0, 0.23);
-  padding: 0 1.3em 11px;
-  margin: -7px 16px 30px;
+  border-width: 0 1px 3px;
+  border-style: solid;
+  border-color: $blu-1;
+  box-shadow: 0 2px 7px 1px rgba($blu-0, 0.42);
+  margin: -7px 16px 36px;
 
   &-text {
-    font-family: Architects Daughter, monospace;
-    font-weight: 600;
-    font-size: 3em;
+    font-family: Archivo, monospace;
+    color: $blu-2;
+    font-weight: 500;
+    font-size: 2.8em;
+    margin-top: 4px;
   }
 
   &-clockface {
-    font-size: 9px;
-    margin: 2px -5px 0 3px;
+    font-size: 8px;
+    margin: 4px -3px 0 3px;
   }
 
   &-hour,
@@ -268,7 +276,7 @@ tooltip {
 
     &-active {
       transition: color 0.5s $ease-out-snap;
-      color: $orn-2;
+      color: $orn-1;
 
       &:hover {
         color: $orn-4;
@@ -277,32 +285,92 @@ tooltip {
     }
   }
 
+
   &-alarm {
+    margin-top: 8px;
+    margin-right: -4px;
+    margin-left: 4px;
+
     &-icon {
-      margin-top: 2px;
       margin-bottom: -1px;
     }
 
     &-subtext {
-      font-size: 0.8em;
+      font-size: 0.75em;
+      margin-top: 2px;
       margin-right: 2px;
     }
   }
 
   &-timer {
-    margin-left: -5px;
+    margin-top: 8px;
+    margin-left: -2px;
     margin-right: 2px;
 
     &-icon {
-      margin-top: 3px;
       margin-left: 1px;
     }
 
     &-subtext {
       font-family: monospace;
       margin-top: 1px;
-      font-size: 0.69em;
+      font-size: 0.75em;
     }
+  }
+}
+
+// }}}
+// 📆 date: {{{
+.date {
+  background: $bg;
+  padding: 4px 1.1em;
+  margin: 16px 8px 50px;
+  border-left: 3px solid $blu-1;
+  border-top: 1px double $blu-1;
+  border-radius: 17px 420px 69px;
+  box-shadow: 3px 2px 3px 1px rgba($blu-0, 0.42);
+
+  &-base {
+    @include cycle($blu-2);
+
+    &-alt {
+      @include cycle($blu-4);
+    }
+  }
+
+  &-alive {
+    @include cycle($pnk-4);
+  }
+
+  &-dead {
+    @include cycle($glc-2);
+  }
+
+  &-day {
+    font-weight: bold;
+    font-size: 1.1em;
+  }
+
+  &-Monday {
+    @include cycle($pnk-4);
+  }
+
+  &-Tuesday,
+  &-Thursday {
+    @include cycle($emr-4);
+  }
+
+  &-Wednesday {
+    @include cycle($orn-4);
+  }
+
+  &-Friday {
+    @include cycle($rby-4);
+  }
+
+  &-Satuday,
+  &-Sunday {
+    @include cycle($prp-4);
   }
 }
 
