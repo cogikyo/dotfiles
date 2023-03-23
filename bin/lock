@@ -16,5 +16,6 @@ change-bg "music"
 hyprctl dispatch workspace 5
 
 dunstify -a "attention" -u low "$USER@$HOSTNAME" "こんにちは"
+eww-open
 
 exit 0

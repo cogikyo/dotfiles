@@ -138,12 +138,12 @@ alarm_status () {
 reset () {
     case "$1" in
         alarm)
-            ps -ef | rg alarm_status | rg -v rg | awk '{print $2}' | xargs notify-send
+            ps -ef | rg alarm_status | rg -v rg | awk '{print $2}' | xargs kill
             next_hour=$(date -d "+ 1hour" "+%H:00")
             until_next_hour=$(( $(date -d "$next_hour" +%s) - $(date +%s) ))
             (( until_next_hour/=60 ))
             if [[ $until_next_hour -lt 30 ]]; then
-                offset="+ 4hour"
+                offset="+ 1hour"
             else
                 offset="+ 3hour"
             fi

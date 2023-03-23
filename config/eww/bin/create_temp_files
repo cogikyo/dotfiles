@@ -11,7 +11,7 @@ for name in "${names_arr[@]}"; do
     touch "$dir/$name"
 done
 
-echo "13:00" > "$dir/alarm"
+echo "14:00" > "$dir/alarm"
 echo "01:30" > "$dir/timer"
 echo "10" > "$dir/brightness"
 
