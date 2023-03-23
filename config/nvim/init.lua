@@ -324,6 +324,7 @@ require("lazy").setup({
 	"tpope/vim-repeat",
 	"tpope/vim-fugitive",
 	"tpope/vim-rhubarb",
+	"tpope/vim-sleuth",
 
 	"AndrewRadev/switch.vim",
 	"elkowar/yuck.vim",

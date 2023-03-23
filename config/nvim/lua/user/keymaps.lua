@@ -49,6 +49,7 @@ map("n", "<C-c>", "<Esc>")
 map("n", "<C-z>", "u") -- undo
 map("n", "<C-y>", "<C-r>") -- redo
 map("i", "<C-v>", '<Esc>"+p') -- system clipboard (default) paste
+map("i", "<C-t>", '<Esc>"*p') -- system clipboard (selection) paste
 map("n", "<leader>rfl", "<S-v>gw")
 map("n", "<leader>rfp", "vipgw")
 -- }}}
