@@ -67,7 +67,7 @@
 ; =============================================================================
 
 (defwindow today
-  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :monitor 0 :stacking "bg" :exclusive false :focusable false
   :geometry (geometry :width "45%" :anchor "top left" :x "1050px")
   (centerbox :class "today"
     (weather) (time) (date)
@@ -236,13 +236,13 @@
 
 (defwidget clock [child bool text]
   (eventbox
-    :class "time-${child} time-${child}-${bool ? "active" : "inactive"}"
+    :class "time-${child}"
     :onhover "eww update ${child}-active=true"
     :onhoverlost "eww update ${child}-active=false"
     :onclick "${browser} https://calendar.google.com/calendar/u/0/r & disown"
     :onrightclick "${browser} https://calendar.google.com/calendar/u/0/r/eventedit?state=%5B%5D & disown"
     :cursor "pointer"
-    (label :class "time-text" :text text)
+    (label :class "time-${child}-${bool ? "active" : "text"} time-text" :text text)
   )
 )
 
@@ -369,7 +369,7 @@
 ; }}}
 
 (defwindow computer
-  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :monitor 0 :stacking "bg" :exclusive false :focusable false
   :geometry (geometry :anchor "top right" :x "100px")
   (box :class "tr-m" :halign "end" :space-evenly false :spacing 0
     :style "margin-right: ${user-hover ? 110 : 10}px;"
