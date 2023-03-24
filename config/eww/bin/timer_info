@@ -41,7 +41,7 @@ timer () {
 }
 
 timer_status () {
-    dunstify -t 1000 "timer started!"
+    dunstify -a "attention" -t 3000 "⏲️ timer started" -u low
 
     countdown=true
     while "$countdown"; do
@@ -107,7 +107,7 @@ alarm () {
 
 
 alarm_status () {
-    dunstify -t 1000 "alarm started!"
+    dunstify -a "attention" -t 3000 "⏰alarm started" -u low
 
     alarm "start"
 
@@ -148,7 +148,7 @@ reset () {
                 offset="+ 3hour"
             fi
             date '+%H:00' -d "$offset" > "/tmp/eww/alarm"
-            dunstify -t 1000 "alarm reset"
+            dunstify -t 5000 "alarm reset" -u low
         ;;
         timer)
             ps -ef | rg timer_status | rg -v rg | awk '{print $2}' | xargs kill

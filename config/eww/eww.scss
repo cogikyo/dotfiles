@@ -339,16 +339,20 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   }
 
   &-alive {
-    @include cycle($pnk-4);
+    @include cycle($pnk-3);
   }
 
   &-dead {
-    @include cycle($glc-2);
+    @include cycle($glc-5);
   }
 
   &-day {
     font-weight: bold;
     font-size: 1.1em;
+  }
+
+  &-weeks {
+    font-family: Archivo, monospace;
   }
 
   &-Monday {

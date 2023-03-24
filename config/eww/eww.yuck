@@ -131,18 +131,19 @@
       (label
         :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
         :markup "${weather.bf_icon}"
-        :style "margin: 4px ${weather-info ? "-4" : "-2"}px 0 ${weather-info ? "0" : "-6"}px;"
+        :style "margin: 6px ${weather-info ? "-4" : "-2"}px 0 ${weather-info ? "0" : "-6"}px;"
       )
       (slide-n-fade :bool weather-info :direction "right"
         (label
           :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
           :markup "<i><small>${weather.wind_speed}m<sup>-1</sup></small></i>"
+          :style "margin-top: 2px;"
         )
       )
       (label
         :class "weather-${cycle-5 == 0 ? "rain" : "base-alt" }"
         :markup "<tt><small><sub> </sub>${weather-info ? "${weather.rain_day}" : "${weather.rain_1h}"}<small>%</small></small></tt>"
-        :style "margin-top: 4px; margin-left: ${weather-info ? "3px" : "-6px"};"
+        :style "margin-top: 6px; margin-left: ${weather-info ? "3px" : "-6px"};"
       )
       (slide-n-fade :bool weather-info :direction "right"
         (box :space-evenly false :spacing 8
@@ -313,31 +314,31 @@
         :bool date-info
         :direction "left"
         (label
-          :class "date-${cycle-6 == 0 ? "dead" : "alive"}"
+          :class "date-weeks date-${cycle-6 == 0 ? "dead" : "alive"}"
           :markup "冀 ${weeks_alive}"
-          :style "margin-top: 2px; margin-right: 6px; margin-left: 8px;"
+          :style "margin-top: 3px; margin-right: 10px; margin-left: 6px;"
         )
       )
       (label
         :class "date-${cycle-6 == 0 ? "${date.weekday}" : "base"}"
         :text " ${date.weekday}"
-        :style "margin-left: 6px; margin-right: -4px;"
+        :style "margin-right: -4px; margin-left: 1px;"
       )
       (label
-        :class "date-${cycle-6 == 1 ? "base" : "base-alt"}"
+        :class "date-month date-${cycle-6 == 1 ? "base" : "base-alt"}"
         :text ", ${date.month}"
-        :style "margin-top: 3px;"
+        :style "margin-top: 1px;"
       )
       (label
         :class "date-day date-${cycle-6 == 1 ? "base" : "base-alt"}"
         :text "${date.day}"
-        :style "margin-top: 4px;"
+        :style "margin-top: 1px; margin-left: 2px;"
       )
       (slide-n-fade :bool date-info :direction "right"
         (label
           :class "date-${cycle-6 == 0 ? "dead" : "alive"}"
           :markup " ${weather.sunset}"
-          :style "margin-top: 4px; margin-left: 8px;"
+          :style "margin-top: 2px; margin-left: 6px;"
         )
       )
     )
