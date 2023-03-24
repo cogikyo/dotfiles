@@ -315,6 +315,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   border-color: $blu-1;
   box-shadow: 0 2px 7px 1px rgba($blu-0, 0.42);
   margin: -7px 16px 36px;
+  transition: all 0.5s $ease-out-snap;
 
   &-text {
     font-family: Archivo, monospace;
@@ -322,6 +323,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
     font-weight: 500;
     font-size: 2.8em;
     margin-top: 4px;
+    transition: all 0.5s $ease-out-snap;
   }
 
   &-clockface {
@@ -333,20 +335,21 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   &-minute {
     &-inactive {
       transition: color 0.5s $ease-out-snap;
-      color: $blu-2;
+      color: $blu-1;
     }
 
     &-active {
       transition: color 0.5s $ease-out-snap;
-      color: $orn-1;
+      color: $orn-2;
 
       &:hover {
         color: $orn-4;
-        transition: color 0.5s $ease-out-snap;
+        font-size: 1.1em;
+        font-weight: bold;
+        transition: all 0.25s $ease-out-snap;
       }
     }
   }
-
 
   &-alarm {
     margin-top: 8px;
