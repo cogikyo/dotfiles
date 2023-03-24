@@ -29,7 +29,7 @@ local options = {
 	colorcolumn = "80", -- reminder for the ideal line-length maximum
 	foldmethod = "marker", -- atomically fold on {{{ }}}
 	updatetime = 420, -- timer until events execute when cursors stops (ms)
-    timeoutlen = 420, -- timeout for mapped sequence to complete
+	timeoutlen = 420, -- timeout for mapped sequence to complete
 	fillchars = "fold:⋅,",
 	-- ========================================================================
 
