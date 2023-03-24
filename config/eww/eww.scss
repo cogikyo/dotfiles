@@ -62,10 +62,10 @@ $tyr-0: #375c47;
 $tyr-1: #4b8163;
 $tyr-2: #5a9c78;
 $tyr-3: #72b08e;
-$cy2-0: #2bb198;
-$cy2-1: #30c9b0;
-$cy2-2: #38d2ba;
-$cy2-3: #50dec8;
+$cyn-0: #2bb198;
+$cyn-1: #30c9b0;
+$cyn-2: #38d2ba;
+$cyn-3: #50dec8;
 $cy2-4: #75e6d5;
 $sky-0: #369fd7;
 $sky-1: #54b0e2;
@@ -155,6 +155,68 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   transition: color $duration ease-in-out;
 }
 
+.tr-c {
+  transition: color 0.5s $ease-out-snap;
+}
+
+.tr-m {
+  transition: margin 0.25s $ease-out-snap;
+}
+
+.tr-a {
+  transition: all 0.25s $ease-out-snap;
+}
+
+.ramp {
+  &-1 {
+    color: $glc-3;
+  }
+
+  &-2 {
+    color: $blu-0;
+  }
+
+  &-3 {
+    color: $blu-1;
+  }
+
+  &-4 {
+    color: $blu-2;
+  }
+
+  &-5 {
+    color: $sky-2;
+  }
+
+  &-6 {
+    color: $sky-4;
+  }
+
+  &-7 {
+    color: $grn-3;
+  }
+
+  &-8 {
+    color: $sun-3;
+  }
+
+  &-9 {
+    color: $orn-3;
+  }
+
+  &-10 {
+    color: $rby-3;
+  }
+
+  &-11 {
+    color: $rby-1;
+  }
+
+  &-12 {
+    color: $pnk-1;
+  }
+}
+
 // }}}
 // ============================================================================
 
@@ -164,7 +226,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   padding: 4px 1.1em;
   margin: 16px 8px 50px;
   border-right: 3px solid $blu-1;
-  border-top: 1px double $blu-1;
+  border-top: 1px solid $blu-1;
   border-radius: 420px 17px 420px 69px;
   box-shadow: -3px 2px 3px 1px rgba($blu-0, 0.42);
 
@@ -326,7 +388,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   padding: 4px 1.1em;
   margin: 16px 8px 50px;
   border-left: 3px solid $blu-1;
-  border-top: 1px double $blu-1;
+  border-top: 1px solid $blu-1;
   border-radius: 17px 420px 69px;
   box-shadow: 3px 2px 3px 1px rgba($blu-0, 0.42);
 
@@ -375,6 +437,44 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   &-Satuday,
   &-Sunday {
     @include cycle($prp-4);
+  }
+}
+
+// }}}
+
+// 🖥️ computer: {{{
+.computer-box-decor {
+  background: $bg;
+  border-top: 1px solid $blu-2;
+  border-left: 3px solid $blu-1;
+  padding: 6px 1.3em 4px;
+  margin: 16px 8px;
+  border-radius: 17px 420px 69px;
+  box-shadow: 3px 2px 3px 1px rgba($blu-0, 0.42);
+  font-family: monospace;
+}
+
+// }}}
+// 🤓 user: {{{
+.userbox {
+  background-repeat: no-repeat;
+  background-size: 100%;
+  background-position: 7px 2px;
+  min-width: 90px;
+  min-height: 90px;
+  border-style: solid;
+  border-color: $blu-1;
+  border-width: 0 0 3px 2px;
+  border-radius: 27px 0 27px 69px;
+  margin: 0 0 50px 50px;
+  box-shadow: -1px 3px 7px 1px rgba($blu-0, 0.42);
+
+  &-hover {
+    min-height: 180px;
+    min-width: 180px;
+    border-radius: 54px 0 54px 138px;
+    border-color: $orn-3;
+    box-shadow: -1px 3px 6px 1px rgba($rby-1, 0.42);
   }
 }
 
