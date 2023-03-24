@@ -3,4 +3,5 @@
 killall eww -9
 eww daemon
 eww open-many \
-    today
+    today \
+    computer user \

@@ -1,8 +1,14 @@
 ;; ============================================================================
 ;; 🧰 setup {{{
 
-(deflisten cycle-6 'while true; do echo 0; sleep 6; echo 1; sleep 6; done')
-(deflisten cycle-5 'while true; do echo 0; sleep 5; echo 1; sleep 5; done')
+(deflisten cycle-6
+  :initial 0
+  'while true; do echo 0; sleep 6; echo 1; sleep 6; done'
+)
+(deflisten cycle-5
+  :initial 0
+  'while true; do echo 0; sleep 5; echo 1; sleep 5; done'
+)
 (defvar browser "firefox-developer-edition")
 (defvar terminal "kitty")
 
@@ -24,38 +30,38 @@
   )
 )
 
-;; ; See: https://elkowar.github.io/eww/widgets.html#label
-;; (defwidget IVU [
-;;   ?box-style ?box-class
-;;   icon  ?icon-class  ?icon-style  ?icon-tooltip
-;;   value ?value-class ?value-style ?value-tooltip
-;;   ?unit ?unit-class  ?unit-style  ?unit-tooltip
-;; ]
-;;   (box
-;;     :class "${strlength(value) > 0 ? box-class : "ramp-2"}"
-;;     :style box-style
-;;     :space-evenly false
-;;     :spacing 0
-;;     (label
-;;       :text "${icon}"
-;;       :class "icon ${icon-class}"
-;;       :style icon-style
-;;       :tooltip " ${icon-tooltip} "
-;;     )
-;;     (label
-;;       :text "${strlength(value) > 0 ? value : "勒"}"
-;;       :class "value ${value-class}"
-;;       :style "${strlength(value) > 0 ? "${value-style}" : "margin-right: 5px;"}"
-;;       :tooltip " ${value-tooltip} "
-;;     )
-;;     (label
-;;       :text unit
-;;       :class "unit ${unit-class}"
-;;       :style unit-style
-;;       :tooltip " ${unit-tooltip} "
-;;     )
-;;   )
-;; )
+; See: https://elkowar.github.io/eww/widgets.html#label
+(defwidget IVU [
+  ?box-style ?box-class
+  icon  ?icon-class  ?icon-style  ?icon-tooltip
+  value ?value-class ?value-style ?value-tooltip
+  ?unit ?unit-class  ?unit-style  ?unit-tooltip
+]
+  (box
+    :class "${strlength(value) > 0 ? box-class : "ramp-2"}"
+    :style box-style
+    :space-evenly false
+    :spacing 0
+    (label
+      :text "${icon}"
+      :class "icon ${icon-class}"
+      :style icon-style
+      :tooltip " ${icon-tooltip} "
+    )
+    (label
+      :text "${strlength(value) > 0 ? value : "↻"}"
+      :class "value ${value-class}"
+      :style "${strlength(value) > 0 ? "${value-style}" : "margin-right: 5px;"}"
+      :tooltip " ${value-tooltip} "
+    )
+    (label
+      :text unit
+      :class "unit ${unit-class}"
+      :style unit-style
+      :tooltip " ${unit-tooltip} "
+    )
+  )
+)
 
 ; }}}
 ; =============================================================================
@@ -187,14 +193,26 @@
   `date +'{"hour":"%H", "minute":"%M", "second":"%S"}'`
 )
 
-(deflisten clockface-hour 'tail -F /tmp/eww/clockface-hour')
-(deflisten clockface-minute 'tail -F /tmp/eww/clockface-minute')
+(deflisten clockface-hour
+  :initial ""
+  'tail -F /tmp/eww/clockface-hour 2> /dev/null'
+)
+(deflisten clockface-minute
+  :initial ""
+  'tail -F /tmp/eww/clockface-minute 2> /dev/null'
+)
 (defvar hour-active false)
 (defvar minute-active false)
 (defvar fine-adjust false)
 (defvar timer-visible false)
-(deflisten alarm-current 'tail -F /tmp/eww/alarm 2> /dev/null')
-(deflisten timer-current 'tail -F /tmp/eww/timer 2> /dev/null')
+(deflisten alarm-current
+  :initial "14:00"
+  'tail -F /tmp/eww/alarm 2> /dev/null'
+)
+(deflisten timer-current
+  :initial "01:30"
+  'tail -F /tmp/eww/timer 2> /dev/null'
+)
 
 (defwidget time []
   (eventbox
@@ -294,10 +312,13 @@
 ; }}}
 ; 📅 date: {{{
 
-(deflisten weeks_alive 'tail -F /tmp/eww/weeks_alive')
+(deflisten weeks_alive
+  :initial "4732"
+  'tail -F /tmp/eww/weeks_alive 2> /dev/null'
+)
 (deflisten date
-  :initial `{"weekday":"Thursday", "month":"March", "day":"23"}`
-  'tail -F /tmp/eww/date'
+  :initial `{"weekday":"?", "month":"?", "day":"?"}`
+  'tail -F /tmp/eww/date 2> /dev/null'
 )
 (defvar date-info false)
 
@@ -345,4 +366,313 @@
   )
 )
 
+; }}}
+
+(defwindow computer
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "top right" :x "100px")
+  (box :class "tr-m" :halign "end" :space-evenly false :spacing 0
+    :style "margin-right: ${user-hover ? 110 : 10}px;"
+    (cpu) (memory) (gpu)
+  )
+)
+
+; 💻 computer: {{{
+
+; Update `define_builtin_vars! { Duration::new(0, 500000000)` in inbuilt.rs
+; Default is (2, 0), but I like updates of 0.5 seconds for cpu polling.
+(defwidget num-to-block [load]
+  (label
+    :text {
+      load < 12.5  ? "▁" :
+      load < 25    ? "▂" :
+      load < 37.5  ? "▃" :
+      load < 50    ? "▄" :
+      load < 62.5  ? "▅" :
+      load < 75    ? "▆" :
+      load < 88.5  ? "▇" : "█"
+    }
+    :class "tr-c ramp-${
+      load < 5   ? "1" :
+      load < 10  ? "2" :
+      load < 20  ? "3" :
+      load < 30  ? "4" :
+      load < 40  ? "5" :
+      load < 50  ? "6" :
+      load < 60  ? "7" :
+      load < 70  ? "8" :
+      load < 80  ? "9" :
+      load < 90  ? "10" :
+      load < 95  ? "11" : "12"
+    }"
+  )
+)
+
+(defwidget label-ramp [child icon ?val percent bool ?direction]
+  (box
+    :space-evenly false
+    :spacing 5
+    :class "tr-c ${child} ramp-${
+      percent < 25  ? "3"  :
+      percent < 35  ? "4"  :
+      percent < 50  ? "5"  :
+      percent < 65  ? "6"  :
+      percent < 80  ? "7"  :
+      percent < 85  ? "8"  :
+      percent < 90  ? "9" :
+      percent < 95  ? "10" : "11"
+    }"
+    (label :markup icon :class "${child}-icon")
+    (slide-n-fade :bool bool :direction "right"
+      (label
+        :class "${child}-text"
+        :markup {strlength(val) > 0 ? val :
+          "${"${round(percent,0)}" < 10 ? "0${round(percent,0)}" : round(percent,0) }<small>%</small>"
+        }
+      )
+    )
+  )
+)
+
+(defwidget temp-ramp [child current percent max bool ?direction ?extra]
+  (box
+    :space-evenly false
+    :spacing 6
+    :class "tr-c ${child} ramp-${
+      percent < 50  ? "3"  :
+      percent < 56  ? "4"  :
+      percent < 62  ? "5"  :
+      percent < 68  ? "6"  :
+      percent < 74  ? "7"  :
+      percent < 80  ? "8" :
+      percent < 86  ? "9" :
+      percent < 94  ? "10" : "11"
+    } ${current >= max ? "ramp-12" : ""}"
+    (label
+      :class "tr-a ${child}-icon"
+      :text "${
+        percent < 50 ? "" :
+        percent < 56 ? "" :
+        percent < 80 ? "" :
+        percent < 90 ? "" : ""
+      }"
+    )
+    (slide-n-fade :bool bool :direction {strlength(direction) > 0 ? "${direction}" : "right"}
+      (label
+        :class "${child}-current"
+        :markup "${current}<sup></sup>${extra}"
+      )
+    )
+  )
+)
+
+(defvar cpu-info false)
+(defvar cores "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
+
+(defwidget cpu []
+  (eventbox
+    :onhover "eww update cpu-info=true"
+    :onhoverlost "eww update cpu-info=false"
+    :onclick "kitty --title='terminalfloat' -e btop & disown"
+    :cursor "pointer"
+    (box :class "cpu computer-box-decor" :space-evenly false :spacing "${cpu-info ? "12" : "8" }"
+      (temp-ramp
+        :child "cpu-temp"
+        :current {round(sensors.nvme-pci-0100.Composite.temp1_input,0)}
+        :percent {round(
+          sensors.nvme-pci-0100.Composite.temp1_input /
+          (sensors.nvme-pci-0100.Composite.temp1_min -
+          sensors.nvme-pci-0100.Composite.temp1_max * - 1) * 100
+        ,0)}
+        :max {sensors.nvme-pci-0100.Composite.temp1_max}
+        :bool cpu-info
+      )
+      (label-ramp
+        :icon ""
+        :child "cpu-busy"
+        :percent {EWW_CPU.avg}
+        :bool cpu-info
+      )
+      (box :class "cpu-bars" :space-evenly false :spacing 2
+        (for num in cores
+          (num-to-block :load {EWW_CPU.cores[num].usage})
+        )
+      )
+    )
+  )
+)
+
+
+(defvar range16 "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
+(defvar memory-info false)
+
+(defwidget memory []
+  (eventbox
+    :onhover "eww update memory-info=true"
+    :onhoverlost "eww update memory-info=false"
+    :onclick "kitty --title='terminalfloat' -e btop & disown"
+    :cursor "pointer"
+    (box :class "memory computer-box-decor" :space-evenly false :spacing 8
+      (label-ramp
+        :icon "ﮕ"
+        :child "memory-busy"
+        :percent {EWW_RAM.used_mem_perc}
+        :bool memory-info
+      )
+      (box :class "memory-bars" :space-evenly false :spacing 3
+        (for n in range16
+          (label
+            :text ""
+            :class "ramp-${
+              EWW_RAM.used_mem_perc == 100 ? "12" : "${
+                EWW_RAM.used_mem_perc < n * 95 / 15 ? "1" : "${
+                  round(n / 2.1, 0) + 4
+                }"
+              }"
+            }"
+          )
+        )
+      )
+    )
+  )
+)
+
+
+(defpoll sensors
+  :interval "0.5s"
+  :initial `{ "nvme-pci-0100":{ "Adapter": "PCI adapter", "Composite":{ "temp1_input": 42.850, "temp1_max": 79.850, "temp1_min": -5.150, "temp1_crit": 84.850, "temp1_alarm": 0.000 } }, "amdgpu-pci-0d00":{ "Adapter": "PCI adapter", "vddgfx":{ "in0_input": 0.750 }, "fan1":{ "fan1_input": 0.000, "fan1_min": 0.000, "fan1_max": 3630.000 }, "edge":{ "temp1_input": 57.000, "temp1_crit": 100.000, "temp1_crit_hyst": -273.150, "temp1_emergency": 105.000 }, "junction":{ "temp2_input": 57.000, "temp2_crit": 110.000, "temp2_crit_hyst": -273.150, "temp2_emergency": 115.000 }, "mem":{ "temp3_input": 60.000, "temp3_crit": 105.000, "temp3_crit_hyst": -273.150, "temp3_emergency": 110.000 }, "PPT":{ "power1_average": 21.000, "power1_cap": 190.000 } }, "k10temp-pci-00c3":{ "Adapter": "PCI adapter", "Tctl":{ "temp1_input": 64.000 }, "Tccd1":{ "temp3_input": 65.500 } } }`
+  `sensors -j`
+)
+(defpoll gpu
+  :interval "0.5s"
+  :initial `{ "mem_busy":"0", "gpu_busy":"0", "mclk":"0", "mclk_level": "0", "vram":"0", "used":"0" }`
+  'bin/computer_info'
+)
+(defvar range8 "[0,1,2,3,4,5,6,7]")
+(defvar gpu-info false)
+
+(defwidget gpu []
+ (eventbox
+    :onhover "eww update gpu-info=true"
+    :onhoverlost "eww update gpu-info=false"
+    :onclick "kitty --title='terminalfloat' -e nvtop & disown"
+    :cursor "pointer"
+    (box :class "gpu computer-box-decor" :space-evenly false :spacing "${gpu-info ? "16" : "8" }"
+      (gpu-temp)
+      (label-ramp
+        :icon ""
+        :child "gpu-busy"
+        :percent {gpu.gpu_busy}
+        :bool gpu-info
+      )
+      (mclock)
+      (label-ramp
+        :icon ""
+        :child "gpu-voltage"
+        :percent {round(
+            sensors.amdgpu-pci-0d00.PPT.power1_average /
+            sensors.amdgpu-pci-0d00.PPT.power1_cap * 100
+        ,0)}
+        :val "${round(sensors.amdgpu-pci-0d00.PPT.power1_average,0)}<sub><b>W</b></sub>"
+        :bool gpu-info
+     )
+      (label-ramp
+        :icon ""
+        :child "gpu-fan"
+        :percent {round(
+            sensors.amdgpu-pci-0d00.fan1.fan1_input /
+            sensors.amdgpu-pci-0d00.fan1.fan1_max * 100
+        ,0)}
+        :val "${round(sensors.amdgpu-pci-0d00.fan1.fan1_input,0)}<sub><b>RPM</b></sub>"
+        :bool gpu-info
+      )
+      (vram)
+    )
+  )
+)
+
+(defwidget gpu-temp []
+  (temp-ramp
+    :child "gpu-temp"
+    :current {round(sensors.amdgpu-pci-0d00.junction.temp2_input,0)}
+    :percent {round(
+      sensors.amdgpu-pci-0d00.junction.temp2_input /
+      sensors.amdgpu-pci-0d00.junction.temp2_crit  * 100
+    ,0)}
+    :max {sensors.amdgpu-pci-0d00.junction.temp2_crit}
+    :bool gpu-info
+    :extra "|${round(sensors.amdgpu-pci-0d00.edge.temp1_input,0)}<sup></sup>|${round(sensors.amdgpu-pci-0d00.mem.temp3_input,0)}<sup></sup>"
+  )
+)
+
+(defwidget mclock []
+  (box :class "gpu-mclock" :space-evenly false :spacing 3
+    (label
+      :text "󰓅 "
+      :class "tr-c ramp-${
+        gpu.mclk_level == 1 ? "4" :
+        gpu.mclk_level == 2 ? "7" :
+        gpu.mclk_level == 3 ? "8" : "3"
+      }"
+    )
+    (slide-n-fade :bool gpu-info :direction "right"
+      (label
+        :markup "${gpu.mclk}<b><sub>MHz</sub></b>"
+        :class "tr-a ramp-${
+          gpu.mclk_level == 1 ? "4" :
+          gpu.mclk_level == 2 ? "7" :
+          gpu.mclk_level == 3 ? "8" : "3"
+        }"
+      )
+    )
+  )
+)
+
+(defwidget vram []
+  (box :class "gpu-vram" :space-evenly false :spacing 5
+    (label-ramp
+      :child "gpu-vram"
+      :icon "ﮕ"
+      :percent {gpu.mem_busy}
+      :bool gpu-info
+    )
+    (box :class "tr-a" :space-evenly false :spacing 3
+      (for n in range8
+        (label
+          :text ""
+          :class " ramp-${
+            gpu.vram == 100 ? "12" : "${gpu.vram < n * 95 / 7 ? "1" : n + 4}"
+          }"
+        )
+      )
+    )
+  )
+)
+
+; }}}
+; 🤓 user: {{{
+
+(defwindow user
+  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :geometry (geometry :anchor "top right")
+  (box :halign "end" :space-evenly false :spacing 0
+    (user)
+  )
+)
+
+(defvar userUrl `/home/cullyn/dotfiles/config/eww/art/nosvagor.png`)
+(defvar user-hover false)
+(defwidget user []
+ (eventbox
+    :onhover "eww update user-hover=true"
+    :onhoverlost "eww update user-hover=false"
+    :onclick "${browser} https://twitter.com/home & disown"
+    :onmiddleclick "${browser} https://www.youtube.com/feed/subscriptions & disown"
+    :onrightclick "${browser} https://github.com/nosvagor & disown"
+    (box :space-evenly false :spacing 0
+      :class "tr-a userbox ${user-hover ? "userbox-hover" : ""}"
+      :style "background-image: url('${userUrl}');"
+    )
+  )
+)
 ; }}}
