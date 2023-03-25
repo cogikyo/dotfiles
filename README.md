@@ -25,53 +25,7 @@
             src="https://github.com/nosvagor/dotfiles/blob/main/share/dotfiles-banner.gif?raw=true"/>
     </kbd>
 </p>
-
 <p align="center">
-  <a href="https://github.com/nosvagor/dotfiles/issues">
-      <img
-          src="https://img.shields.io/github/issues/nosvagor/dotfiles?color=ed5f6f&logo=fireship&labelColor=24283b&logoColor=ed5f6f&style=for-the-badge"
-          title="this is not fine!!"
-      >
-  </a>
-  &nbsp;
-  <a href="https://github.com/nosvagor/dotfiles/discussions">
-      <img
-          title="alright then, keep your secrets"
-          src="https://img.shields.io/github/discussions/nosvagor/dotfiles?color=ec9055&logo=github&labelColor=24283b&logoColor=ec9055&style=for-the-badge"
-      >
-  </a>
-  &nbsp;
-  <a href="https://github.com/nosvagor/dotfiles/contributors">
-      <img
-          src="https://img.shields.io/github/contributors/nosvagor/dotfiles?color=86b96f&logo=gitea&labelColor=24283b&logoColor=86b96f&style=for-the-badge"
-          title="gotta do the cooking by the book"
-      >
-  </a>
-  &nbsp;
-  <br>
-  &nbsp;
-  <a href="https://www.reddit.com/r/unixporn/">
-      <img
-          src="https://vbr.wocr.tk/badge?color=59b5e5&logoColor=59b5e5&page_id=dotfiles&logo=linux&style=for-the-badge&lcolor=24283b"
-          alt="visitor count 💀"
-          title="hello there (I use arch, neovim, and rust, btw)"
-      >
-  </a>
-  &nbsp;
-  <a href="https://github.com/nosvagor/dotfiles/network/members">
-      <img
-          src="https://img.shields.io/github/forks/nosvagor/dotfiles?color=6c88f4&logo=git&labelColor=24283b&logoColor=6c88f4&style=for-the-badge"
-          title="Somewhere, something incredible is waiting to be known. &mdash; Carl Sagan"
-      >
-  </a>
-  &nbsp;
-  <a href="https://youtu.be/gxAaO2rsdIs">
-      <img
-          src="https://img.shields.io/github/license/nosvagor/dotfiles?color=9d71f0&logo=gnu&labelColor=24283b&logoColor=9d71f0&style=for-the-badge"
-          title="R_0 > 1 ? share it : change it"
-      >
-  </a>
-</p>
 <!-- }}} -->
 <!-- ========================================================================== -->
 
