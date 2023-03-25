@@ -6,3 +6,5 @@
 	editor = nvim
 [gpg]
 	format = ssh
+[commit]
+	gpgsign = true
