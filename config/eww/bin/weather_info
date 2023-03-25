@@ -12,6 +12,8 @@ LON="${location[1]}"
 API=$(<"$HOME/.local/.owm_api_key")
 UNITS="metric"
 WEATHER_URL="https://api.openweathermap.org/data/3.0/onecall?lat=$LAT&lon=$LON&units=$UNITS&exclude=minutely&appid=$API"
+AIR_URL="http://api.openweathermap.org/data/2.5/air_pollution?lat=$LAT&lon=$LON&appid=$API"
+
 
 online=1
 connection () {
@@ -20,22 +22,30 @@ connection () {
 }
 
 get_json () {
+    echo "" > "$WEATHER_JSON"
+
     while [[ "$online" -eq 1 ]]; do
         valid_json="false"
         connection
         sleep 0.5
     done
 
-    air_url="http://api.openweathermap.org/data/2.5/air_pollution?lat=$LAT&lon=$LON&appid=$API"
 
     curl "$WEATHER_URL" | jq > "$WEATHER_JSON"
-    curl "$air_url" | jq > "$AIR_JSON"
-    valid_json="true"
+    curl "$AIR_URL" | jq > "$AIR_JSON"
+
+    # test to see if the json is valid
+    if [[ "$(jq -r ".current.weather[0].id" "$WEATHER_JSON")" == "null" ]]; then
+        valid_json="false"
+    else
+        valid_json="true"
+    fi
 }
 
 while true; do
     while [[ "$valid_json" == "false" ]] ; do
         get_json
+        sleep 1
     done
 
     id=$(jq -r ".current.weather[0].id" "$WEATHER_JSON")

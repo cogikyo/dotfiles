@@ -437,9 +437,9 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
     @include cycle($rby-4);
   }
 
-  &-Satuday,
+  &-Saturday,
   &-Sunday {
-    @include cycle($prp-4);
+    @include cycle($prp-3);
   }
 }
 

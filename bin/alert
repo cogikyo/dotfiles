@@ -21,7 +21,6 @@ case "$app" in
     work) sound="fruit" ;;
     Spotify) sound="none" ;;
     discord) sound="none" ;;
-    *) sound="moondrop" ;;
 esac
 
 if [ "$sound" == "none" ]; then
