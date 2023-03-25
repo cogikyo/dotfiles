@@ -340,8 +340,14 @@ bat ~/.ssh/id_ed25519.pub
 ```
 
 - e.g., using SSH key to manage dotfiles:
+```sh
+# example moving to ssh origin:
+git remote set-url origin git@github.com:nosvagor/dotfiles.git
 
-      git remote set-url origin git@github.com:nosvagor/dotfiles.git
+# tell git about your ssh to sign commits:
+git config --global gpg.format ssh
+git config --global user.signingkey ~/.ssh/id_ed25519.pub
+```
 
 <br>
 

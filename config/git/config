@@ -1,5 +1,8 @@
 [user]
 	name = nosvagor
 	email = nosvagor@gmail.com
+	signingkey = /home/cullyn/.ssh/id_ed25519.pub
 [core]
 	editor = nvim
+[gpg]
+	format = ssh
