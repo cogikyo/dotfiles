@@ -67,7 +67,7 @@
 ; =============================================================================
 
 (defwindow today
-  :monitor 0 :stacking "bg" :exclusive false :focusable false
+  :monitor 0 :stacking "overlay" :exclusive false :focusable false
   :geometry (geometry :width "45%" :anchor "top left" :x "1050px")
   (centerbox :class "today"
     (weather) (time) (date)
@@ -369,7 +369,7 @@
 ; }}}
 
 (defwindow computer
-  :monitor 0 :stacking "bg" :exclusive false :focusable false
+  :monitor 0 :stacking "overlay" :exclusive false :focusable false
   :geometry (geometry :anchor "top right" :x "100px")
   (box :class "tr-m" :halign "end" :space-evenly false :spacing 0
     :style "margin-right: ${user-hover ? 110 : 10}px;"
@@ -611,16 +611,16 @@
       :text "󰓅 "
       :class "tr-c ramp-${
         gpu.mclk_level == 1 ? "4" :
-        gpu.mclk_level == 2 ? "7" :
+        gpu.mclk_level == 2 ? "5" :
         gpu.mclk_level == 3 ? "8" : "3"
       }"
     )
     (slide-n-fade :bool gpu-info :direction "right"
       (label
         :markup "${gpu.mclk}<b><sub>MHz</sub></b>"
-        :class "tr-a ramp-${
-          gpu.mclk_level == 1 ? "4" :
-          gpu.mclk_level == 2 ? "7" :
+        :class "tr-c ramp-${
+          gpu.mclk_level == 1 ? "3" :
+          gpu.mclk_level == 2 ? "5" :
           gpu.mclk_level == 3 ? "8" : "3"
         }"
       )
@@ -653,7 +653,7 @@
 ; 🤓 user: {{{
 
 (defwindow user
-  :monitor 0 :stacking "fg" :exclusive false :focusable false
+  :monitor 0 :stacking "overlay" :exclusive false :focusable false
   :geometry (geometry :anchor "top right")
   (box :halign "end" :space-evenly false :spacing 0
     (user)
