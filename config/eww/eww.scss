@@ -141,10 +141,10 @@ window {
 }
 
 tooltip {
-  color: $orn-3;
-  font-size: 20px;
-  background-color: rgba($bg, 0.95);
-  border: 1px solid $orn-0;
+  color: $blu-1;
+  font-family: "Architects Daughter", cursive;
+  background-color: $bg;
+  border: 1px solid $blu-0;
   border-radius: 10px 24px 12px 20px;
 }
 
@@ -219,6 +219,165 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 
 // }}}
 // ============================================================================
+
+// ❄️  yuki {{{
+.yuki {
+  transition: all 0.25s $ease-out-snap;
+  background-repeat: no-repeat;
+  background-size: 100%;
+  min-width: 90px;
+  min-height: 90px;
+  border-style: solid;
+  border-color: $blu-2;
+  border-width: 0 2px 2px 0;
+  border-radius: 0 27px 69px;
+  margin: 0 20px 20px 0;
+  box-shadow: 1px 3px 7px 1px rgba($blu-0, 0.42);
+
+  &-hover {
+    min-height: 160px;
+    min-width: 160px;
+    border-color: $orn-3;
+    border-radius: 0 54px 138px;
+    box-shadow: 1px 3px 6px 1px rgba($rby-1, 0.42);
+  }
+}
+
+// }}}
+
+// 🎤 audio: {{{
+.audio {
+  background: $bg;
+  color: $blu-2;
+  border-top: 1px double $blu-2;
+  margin: 16px 8px 30px;
+  border-right: 2px solid $blu-2;
+  border-radius: 420px 17px 420px 69px;
+  box-shadow: -3px 2px 3px 1px rgba($blu-0, 0.42);
+  font-family: monospace;
+  padding: 4px 0.9em 4px 1.3em;
+
+  &-volume {
+    transition: color 0.5s $ease-out-snap;
+  }
+
+  &-source,
+  &-sink {
+    &-circle {
+      color: $glc-5;
+    }
+  }
+
+  &-source {
+    &-icon {
+      margin: 5px -4px 5px 8px;
+
+      &-inactiveFix {
+        margin: 5px -3px 5px 7px;
+      }
+    }
+  }
+
+  &-sink {
+    &-icon {
+      font-size: 0.9em;
+      margin: 8px -2px 7px 10px;
+
+      &-inactiveFix {
+        font-size: 0.9em;
+        margin: 8px 0 7px 8px;
+      }
+    }
+  }
+}
+
+// }}}
+// 🎵 music: {{{
+.music {
+  &-cover {
+    transition: all 0.5s $ease-out-snap;
+    background-repeat: no-repeat;
+    background-size: 120%;
+    background-position: center;
+    min-width: 198px;
+    min-height: 198px;
+    border: 2px solid $blu-2;
+    border-radius: 50%;
+    margin: 30px;
+    box-shadow: 0 0 6px 1px rgba($blu-0, 0.69);
+
+    &-hover {
+      background-size: 130%;
+      border-color: $orn-3;
+      box-shadow: 0 0 12px 2px rgba($rby-1, 0.69);
+      transition: all 0.5s $ease-out-snap;
+    }
+  }
+
+  &-progress {
+    color: $blu-0;
+
+    &-circle {
+      background: $glc-3;
+
+      &-icon {
+        font-size: 25px;
+        margin: 4px -4px 4px 5px;
+      }
+    }
+  }
+
+  &-volume {
+    transition: color 0.5s $ease-out-snap;
+
+    &-icon {
+      margin: 6px -3px 6px 6px;
+    }
+  }
+
+  &-playing {
+    color: $blu-2;
+    transition: color 1.25s $ease-out-snap;
+  }
+
+  &-paused {
+    color: $glc-5;
+    transition: color 1.25s $ease-out-snap;
+  }
+
+  &-info {
+    background: $bg;
+    color: $blu-2;
+    border-top: 1px double $blu-2;
+    padding: 4px 1.1em;
+    margin: 16px 8px 30px 110px;
+    border-right: 2px solid $blu-2;
+    border-radius: 420px 17px 420px 69px;
+    box-shadow: -3px 2px 3px 1px rgba($blu-0, 0.42);
+  }
+
+  &-artist {
+    color: $blu-0;
+  }
+
+  &-album {
+    color: $blu-2;
+
+    &-single {
+      color: $blu-4;
+    }
+  }
+
+  &-title {
+    color: $blu-4;
+  }
+
+  &-inactive {
+    color: $glc-5;
+  }
+}
+
+// }}}
 
 // 🌧️ weather: {{{
 .weather {
@@ -459,6 +618,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 
 // }}}
 // 🤓 user: {{{
+
 .userbox {
   background-repeat: no-repeat;
   background-size: 100%;

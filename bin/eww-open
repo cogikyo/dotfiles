@@ -5,3 +5,4 @@ eww daemon
 eww open-many \
     today \
     computer user \
+    assistant music album-art

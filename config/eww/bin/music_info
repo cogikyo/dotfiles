@@ -43,7 +43,7 @@ check_status () {
         echo "{\
             \"status\":\"Paused\",\
             \"volume\":\"0\",\
-            \"artist\":\"YouTube Music\",\
+            \"artist\":\"Spotify\",\
             \"album\":\"Waiting for player to start...\",\
             \"title\":\"Waiting for player to start...\"\
         }" > '/tmp/eww/music.json'
