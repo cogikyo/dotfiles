@@ -316,6 +316,7 @@ require("lazy").setup({
 	{ "folke/trouble.nvim", ops = {} },
 	{ "cappyzawa/trim.nvim", opts = {} },
 
+	"ggandor/lightspeed.nvim",
 	"mbbill/undotree",
 	"ThePrimeagen/harpoon",
 	"mattn/emmet-vim",
