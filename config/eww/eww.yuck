@@ -32,10 +32,11 @@
 ; }}}
 ; =============================================================================
 
+
 (defwindow today
   :monitor 0 :stacking "overlay" :exclusive false :focusable false
-  :geometry (geometry :width "45%" :anchor "top left" :x "1050px")
-  (centerbox :class "today"
+  :geometry (geometry :width "40%" :anchor "top left" :x "1060px")
+  (centerbox
     (weather) (time) (date)
   )
 )
@@ -61,13 +62,13 @@
     :onhoverlost "eww update weather-info=false"
     :onclick "firefox-developer-edition https://www.windy.com/?hrrrConus,45.445,-122.764,9 & disown"
     :cursor "pointer"
-    (box :class "weather" :halign "end" :space-evenly false :spacing 8
+    (box :class "weather ${weather-info ? "weather-hover" : "" }" :halign "end" :space-evenly false :spacing 8
       (label
         :class "weather-${cycle-6 == 0 ?
                "${matches("${weather.night}", "true") ? "night" : "day"}"
                : "base-alt"
         }"
-        :markup "<b><tt>${weather.icon}</tt> ${weather.temp}<sup> </sup></b>"
+        :markup "<b><tt>${weather.icon}</tt>${weather.temp}<sup> </sup></b>"
         :style "margin-right: -6px;"
       )
       (slide-n-fade :bool weather-info :direction "right"
@@ -152,6 +153,11 @@
 ; }}}
 ; 🕐 time: {{{
 
+(defvar hour-active false)
+(defvar minute-active false)
+(defvar fine-adjust false)
+(defvar timer-visible false)
+
 (defpoll time
   :interval "1s"
   :initial '{"hour":"04", "minute":"20", "second":"00"}'
@@ -166,10 +172,6 @@
   :initial ""
   'tail -F /tmp/eww/clockface-minute 2> /dev/null'
 )
-(defvar hour-active false)
-(defvar minute-active false)
-(defvar fine-adjust false)
-(defvar timer-visible false)
 (deflisten alarm-current
   :initial "14:00"
   'tail -F /tmp/eww/alarm 2> /dev/null'
@@ -185,7 +187,7 @@
     :onhoverlost "eww update timer-visible=false"
     :onmiddleclick "eww update fine-adjust=${fine-adjust ? "false" : "true"}"
     (box
-      :class "time"
+      :class "time ${timer-visible ? "time-hover" : ""}"
       :halign "center"
       :space-evenly false
       :spacing 3
@@ -204,8 +206,7 @@
     :class "time-${child}"
     :onhover "eww update ${child}-active=true"
     :onhoverlost "eww update ${child}-active=false"
-    :onclick "${browser} https://calendar.google.com/calendar/u/0/r & disown"
-    :onrightclick "${browser} https://calendar.google.com/calendar/u/0/r/eventedit?state=%5B%5D & disown"
+    :onclick "${browser} https://calendar.google.com/calendar/u/0/r/eventedit?state=%5B%5D & disown"
     :cursor "pointer"
     (label :class "time-${child}-${bool ? "active" : "text"} time-text" :text text)
   )
@@ -285,19 +286,21 @@
   :initial `{"weekday":"?", "month":"?", "day":"?"}`
   'tail -F /tmp/eww/date 2> /dev/null'
 )
-(defvar date-info false)
+(defvar date-hover false)
 
 (defwidget date []
   (eventbox
-  :onhover "eww update date-info=true"
-  :onhoverlost "eww update date-info=false"
+  :onhover "eww update date-hover=true"
+  :onhoverlost "eww update date-hover=false"
+  :onclick "${browser} https://calendar.google.com/calendar/u/0/r & disown"
+  :onrightclick "${browser} https://mail.google.com/mail/u/0/#inbox & disown"
     (box
-    :class "date"
+    :class "date ${date-hover ? "date-hover" : ""}"
     :halign "start"
     :space-evenly false
     :spacing 4
       (slide-n-fade
-        :bool date-info
+        :bool date-hover
         :direction "left"
         (label
           :class "date-weeks date-${cycle-6 == 0 ? "dead" : "alive"}"
@@ -320,7 +323,7 @@
         :text "${date.day}"
         :style "margin-top: 1px; margin-left: 2px;"
       )
-      (slide-n-fade :bool date-info :direction "right"
+      (slide-n-fade :bool date-hover :direction "right"
         (label
           :class "date-${cycle-6 == 0 ? "dead" : "alive"}"
           :markup " ${weather.sunset}"
@@ -332,6 +335,7 @@
 )
 
 ; }}}
+
 
 (defwindow computer
   :monitor 0 :stacking "overlay" :exclusive false :focusable false
@@ -374,11 +378,11 @@
   )
 )
 
-(defwidget label-ramp [child icon ?val percent bool ?direction]
+(defwidget label-ramp [icon ?val percent bool ?direction]
   (box
     :space-evenly false
     :spacing 5
-    :class "tr-c ${child} ramp-${
+    :class "tr-c ramp-${
       percent < 25  ? "3"  :
       percent < 35  ? "4"  :
       percent < 50  ? "5"  :
@@ -388,10 +392,9 @@
       percent < 90  ? "9" :
       percent < 95  ? "10" : "11"
     }"
-    (label :markup icon :class "${child}-icon")
+    (label :markup icon)
     (slide-n-fade :bool bool :direction "right"
       (label
-        :class "${child}-text"
         :markup {strlength(val) > 0 ? val :
           "${"${round(percent,0)}" < 10 ? "0${round(percent,0)}" : round(percent,0) }<small>%</small>"
         }
@@ -400,11 +403,11 @@
   )
 )
 
-(defwidget temp-ramp [child current percent max bool ?direction ?extra]
+(defwidget temp-ramp [current percent max bool ?direction ?extra]
   (box
     :space-evenly false
     :spacing 6
-    :class "tr-c ${child} ramp-${
+    :class "tr-c ramp-${
       percent < 50  ? "3"  :
       percent < 56  ? "4"  :
       percent < 62  ? "5"  :
@@ -415,7 +418,7 @@
       percent < 94  ? "10" : "11"
     } ${current >= max ? "ramp-12" : ""}"
     (label
-      :class "tr-a ${child}-icon"
+      :class "tr-a"
       :text "${
         percent < 50 ? "" :
         percent < 56 ? "" :
@@ -425,25 +428,25 @@
     )
     (slide-n-fade :bool bool :direction {strlength(direction) > 0 ? "${direction}" : "right"}
       (label
-        :class "${child}-current"
         :markup "${current}<sup></sup>${extra}"
       )
     )
   )
 )
 
-(defvar cpu-info false)
+(defvar cpu-hover false)
 (defvar cores "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
 
 (defwidget cpu []
   (eventbox
-    :onhover "eww update cpu-info=true"
-    :onhoverlost "eww update cpu-info=false"
+    :onhover "eww update cpu-hover=true"
+    :onhoverlost "eww update cpu-hover=false"
     :onclick "kitty --title='terminalfloat' -e btop & disown"
     :cursor "pointer"
-    (box :class "cpu computer-box-decor" :space-evenly false :spacing "${cpu-info ? "12" : "8" }"
+    (box
+      :class "computerbox ${cpu-hover ? "computerbox-hover" : "" }"
+      :space-evenly false :spacing "${cpu-hover ? "12" : "8" }"
       (temp-ramp
-        :child "cpu-temp"
         :current {round(sensors.nvme-pci-0100.Composite.temp1_input,0)}
         :percent {round(
           sensors.nvme-pci-0100.Composite.temp1_input /
@@ -451,15 +454,14 @@
           sensors.nvme-pci-0100.Composite.temp1_max * - 1) * 100
         ,0)}
         :max {sensors.nvme-pci-0100.Composite.temp1_max}
-        :bool cpu-info
+        :bool cpu-hover
       )
       (label-ramp
         :icon ""
-        :child "cpu-busy"
         :percent {EWW_CPU.avg}
-        :bool cpu-info
+        :bool cpu-hover
       )
-      (box :class "cpu-bars" :space-evenly false :spacing 2
+      (box :space-evenly false :spacing 2
         (for num in cores
           (num-to-block :load {EWW_CPU.cores[num].usage})
         )
@@ -470,22 +472,23 @@
 
 
 (defvar range16 "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
-(defvar memory-info false)
+(defvar memory-hover false)
 
 (defwidget memory []
   (eventbox
-    :onhover "eww update memory-info=true"
-    :onhoverlost "eww update memory-info=false"
+    :onhover "eww update memory-hover=true"
+    :onhoverlost "eww update memory-hover=false"
     :onclick "kitty --title='terminalfloat' -e btop & disown"
     :cursor "pointer"
-    (box :class "memory computer-box-decor" :space-evenly false :spacing 8
+    (box
+      :class "computerbox ${memory-hover ? "computerbox-hover" : "" }"
+      :space-evenly false :spacing 8
       (label-ramp
         :icon "ﮕ"
-        :child "memory-busy"
         :percent {EWW_RAM.used_mem_perc}
-        :bool memory-info
+        :bool memory-hover
       )
-      (box :class "memory-bars" :space-evenly false :spacing 3
+      (box :space-evenly false :spacing 3
         (for n in range16
           (label
             :text ""
@@ -515,42 +518,41 @@
   'bin/computer_info'
 )
 (defvar range8 "[0,1,2,3,4,5,6,7]")
-(defvar gpu-info false)
+(defvar gpu-hover false)
 
 (defwidget gpu []
  (eventbox
-    :onhover "eww update gpu-info=true"
-    :onhoverlost "eww update gpu-info=false"
+    :onhover "eww update gpu-hover=true"
+    :onhoverlost "eww update gpu-hover=false"
     :onclick "kitty --title='terminalfloat' -e nvtop & disown"
     :cursor "pointer"
-    (box :class "gpu computer-box-decor" :space-evenly false :spacing "${gpu-info ? "16" : "8" }"
+    (box
+      :class "computerbox ${gpu-hover ? "computerbox-hover" : "" }"
+      :space-evenly false :spacing "${gpu-hover ? "16" : "8" }"
       (gpu-temp)
       (label-ramp
         :icon ""
-        :child "gpu-busy"
         :percent {gpu.gpu_busy}
-        :bool gpu-info
+        :bool gpu-hover
       )
       (mclock)
       (label-ramp
         :icon ""
-        :child "gpu-voltage"
         :percent {round(
             sensors.amdgpu-pci-0d00.PPT.power1_average /
             sensors.amdgpu-pci-0d00.PPT.power1_cap * 100
         ,0)}
         :val "${round(sensors.amdgpu-pci-0d00.PPT.power1_average,0)}<sub><b>W</b></sub>"
-        :bool gpu-info
+        :bool gpu-hover
      )
       (label-ramp
         :icon ""
-        :child "gpu-fan"
         :percent {round(
             sensors.amdgpu-pci-0d00.fan1.fan1_input /
             sensors.amdgpu-pci-0d00.fan1.fan1_max * 100
         ,0)}
         :val "${round(sensors.amdgpu-pci-0d00.fan1.fan1_input,0)}<sub><b>RPM</b></sub>"
-        :bool gpu-info
+        :bool gpu-hover
       )
       (vram)
     )
@@ -559,14 +561,13 @@
 
 (defwidget gpu-temp []
   (temp-ramp
-    :child "gpu-temp"
     :current {round(sensors.amdgpu-pci-0d00.junction.temp2_input,0)}
     :percent {round(
       sensors.amdgpu-pci-0d00.junction.temp2_input /
       sensors.amdgpu-pci-0d00.junction.temp2_crit  * 100
     ,0)}
     :max {sensors.amdgpu-pci-0d00.junction.temp2_crit}
-    :bool gpu-info
+    :bool gpu-hover
     :extra "|${round(sensors.amdgpu-pci-0d00.edge.temp1_input,0)}<sup></sup>|${round(sensors.amdgpu-pci-0d00.mem.temp3_input,0)}<sup></sup>"
   )
 )
@@ -581,7 +582,7 @@
         gpu.mclk_level == 3 ? "8" : "3"
       }"
     )
-    (slide-n-fade :bool gpu-info :direction "right"
+    (slide-n-fade :bool gpu-hover :direction "right"
       (label
         :markup "${gpu.mclk}<b><sub>MHz</sub></b>"
         :class "tr-c ramp-${
@@ -597,10 +598,9 @@
 (defwidget vram []
   (box :class "gpu-vram" :space-evenly false :spacing 5
     (label-ramp
-      :child "gpu-vram"
       :icon "ﮕ"
       :percent {gpu.mem_busy}
-      :bool gpu-info
+      :bool gpu-hover
     )
     (box :class "tr-a" :space-evenly false :spacing 3
       (for n in range8
@@ -617,6 +617,7 @@
 
 ; }}}
 
+
 (defwindow user
   :monitor 0 :stacking "overlay" :exclusive false :focusable false
   :geometry (geometry :anchor "top right" :y "-3px" )
@@ -628,7 +629,7 @@
 
 
 
-(defvar userUrl `/home/cullyn/.config/eww/art/nosvagor.png`)
+(defvar user-art-path `/home/cullyn/.config/eww/art/nosvagor.png`)
 (defvar user-hover false)
 (defwidget user []
  (eventbox
@@ -639,18 +640,18 @@
     :onrightclick "${browser} https://github.com/nosvagor & disown"
     (box :space-evenly false :spacing 0
       :class "userbox ${user-hover ? "userbox-hover" : ""}"
-      :style "background-image: url('${userUrl}');"
+      :style "background-image: url('${user-art-path}');"
     )
   )
 )
 ; }}}
+
 
 (defwindow assistant
   :monitor 0 :stacking "overlay" :exclusive false :focusable false
   :geometry (geometry :anchor "top left" :y "-3px" )
   (assistant)
 )
-
 ; ❄️  assistant: {{{
 (defvar assistant "/home/cullyn/.config/eww/art/yuki.png" )
 (defvar assistant-hover false)
@@ -658,6 +659,7 @@
   (eventbox
     :onhover "eww update assistant-hover=true"
     :onhoverlost "eww update assistant-hover=false"
+    :onclick "${browser} https://chat.openai.com/chat?model=gpt-4 & disown"
     (box
       :class "assistantbox ${assistant-hover ? "assistantbox-hover" : ""}"
       :style "background-image: url('${assistant}')"
@@ -670,15 +672,35 @@
 (defwindow albumArt
   :monitor 0 :stacking "overlay" :exclusive false :focusable false
   :geometry (geometry :anchor "bottom right" :x "209px" :y "454px")
+  (albumArt)
+)
+;; 💿 albumArt {{{
+(defvar music-hover false)
+
+(defwidget albumArt []
   (eventbox
     :onhover "eww update music-hover=true"
     :onhoverlost "eww update music-hover=false"
+    :onclick "hyprctl dispatch workspace previous & change-bg & disown"
+    :onscroll "bin/music_info seek {}"
+    :onmiddleclick "${browser} www.google.com/search?q='${pctl.artist}' & disown"
+    :onrightclick "hyprctl dispatch workspace 5 & change-bg 'music' & disown"
     (box
       :class "album-art ${music-hover ? "album-art-hover" : ""}"
-      :style "background-image: url('${matches("${pctl.status}", "Playing") ? artUrl : playerctl}');"
+      :style "background-image: url('${matches("${pctl.status}", "Playing") ? album-art-path : playerctl}');"
+      (circular-progress
+        :class "tr-a album-art-progress ${music-hover ? "album-art-path-progress-hover" : ""}"
+        :value {progress >= 0 && progress <= 100 ? progress : 0}
+        :start-at 75
+        :thickness "${music-hover ? 6 : 4}"
+        :clockwise true
+      )
     )
   )
 )
+
+;; }}}
+
 
 (defwindow music
   :monitor 0 :stacking "overlay" :exclusive false :focusable false
@@ -690,18 +712,15 @@
     (music) (audio)
   )
 )
-
 ; 🎵 music: {{{
 
-(defvar music-hover false)
 (defpoll progress
   :initial "0"
   :interval "1s"
   "bin/music_info progress"
 )
 (defvar player "spotify")
-(defvar artUrl "/tmp/eww/album_art.png")
-(defvar volume-visible false)
+(defvar album-art-path "/tmp/eww/album_art.png")
 (deflisten pctl
   :initial '{ "status":"Paused", "volume":"1.0", "artist":"", "album":"", "title":""}'
   'tail -F /tmp/eww/music.json 2> /dev/null'
@@ -711,61 +730,75 @@
 
 (defwidget music []
   (eventbox
-    :onhover "eww update volume-visible=true"
-    :onhoverlost "eww update volume-visible=false"
+    :onhover "eww update music-hover=true"
+    :onhoverlost "eww update music-hover=false"
     (box
-      :class "music-info"
+      :class "music-info ${music-hover ? "music-info-hover" : ""}"
       :style "
-              padding-left: ${volume-visible ? "1" : "0.7"}em;
-              padding-right: ${volume-visible ? "1" : "0.1"}em;
+              padding-left: ${music-hover ? "1" : "0.8"}em;
+              padding-right: ${music-hover ? "1" : "0.6"}em;
               transition: padding 0.25s ease-out;
             "
       :space-evenly false
       :spacing 16
-      (slide-n-fade :direction "left" :bool volume-visible
+      (slide-n-fade :direction "left" :bool music-hover
         (eventbox
+          :class "tr-a music-progress-circle-icon-${matches("${pctl.status}", "Playing") ? "playing" : "paused" }"
           :cursor "pointer"
           :onclick "playerctl --player=${player} previous"
-          (label :text "󰒮" :class "music-prev")
+          (label :text "󰒮")
         )
       )
       (music-progress)
-      (slide-n-fade :direction "right" :bool volume-visible
+      (slide-n-fade :direction "right" :bool music-hover
         (eventbox
+          :class "tr-a music-progress-circle-icon-${matches("${pctl.status}", "Playing") ? "playing" : "paused" }"
           :cursor "pointer"
           :onclick "playerctl --player=${player} next"
-          :tooltip "next song"
-          (label :text "󰒭")
+          (label :text "󰒭" )
         )
       )
       (label
         :class "tr-c music-${matches("${pctl.status}", "Playing") ? "artist" : "inactive" }"
-        :markup " <b>${pctl.artist}</b>"
-        :tooltip " ${pctl.artist}"
-        :style "margin-left: ${volume-visible ? "-6" : "-12"}px;"
+        :text " ${pctl.artist}"
+        :tooltip "  ${pctl.artist} "
+        :style "margin-left: ${music-hover ? "-2" : "-12"}px;"
       )
       (label
         :class "tr-c music-${matches("${pctl.status}", "Playing") ? "album" : "inactive" }"
         :text " ${pctl.album}"
-        :tooltip " ${pctl.album}"
-        :limit-width 20
-        :style "${"${pctl.title}" != "${pctl.album}" ? "" : "margin-top: -100px; margin-left: -1000px;"}"
+        :tooltip "  ${pctl.album} "
+        :limit-width 19
+        :style "${
+          "${pctl.title}" != "${pctl.album}" ?
+          "margin-left: -6px;" : "margin-top: -100px; margin-left: -1000px;"
+        }"
       )
       (label
         :class "tr-c music-${matches("${pctl.status}", "Playing") ? "title" : "inactive" }"
         :text " ${pctl.title}"
-        :limit-width 20
-        :tooltip " ${pctl.title}"
-        :style "${"${pctl.title}" != "${pctl.album}" ? "" : "margin-top: -100px; margin-left: -1000px;"}"
+        :limit-width 19
+        :tooltip "  ${pctl.title} "
+        :style "${
+          "${pctl.title}" != "${pctl.album}" ?
+          "margin-left: -6px; margin-right: -20px;" : "margin-top: -100px; margin-left: -1000px;"
+        }"
       )
       (label
         :class "tr-c music-${matches("${pctl.status}", "Playing") ? "single" : "inactive" }"
-        :markup "󰓏 <b><i>${pctl.album}</i></b>"
-        :tooltip "󰓏 ${pctl.album}"
-        :style "${"${pctl.title}" == "${pctl.album}" ? "margin-left: -36px;" : "margin-top: -100px; margin-left: -1000px;"}"
+        :text "󰓏 ${pctl.album}"
+        :tooltip " 󰓏 ${pctl.album} "
+        :style "${
+          "${pctl.title}" == "${pctl.album}" ?
+          "margin-left: -38px; margin-right: -6px;" : "margin-top: -100px; margin-left: -1000px;"
+        }"
       )
-      (slide-n-fade :direction "right" :bool volume-visible
-        (music-volume :value {round(pctl.volume * 100,0)})
+      (slide-n-fade
+        :direction "left"
+        :bool music-hover
+        (music-volume
+          :value {round(pctl.volume * 100,0)}
+        )
       )
     )
   )
@@ -773,21 +806,21 @@
 
 
 (defwidget music-progress []
-  (box :class "music-progress" :space-evenly false :spacing 16
-       :style "margin: 0 -8px;"
+  (box :class "music-progress" :space-evenly false :spacing 0
+       :style "margin: 0 -9px;"
    (circular-progress
-      :class "music-progress-circle"
+      :class "music-progress-circle${matches("${pctl.status}", "Playing") ? "" : "-paused" }"
       :value {progress >= 0 && progress <= 100 ? progress : 0}
       :start-at 75
       :thickness 2
       :clockwise true
       (box :class "music-progress-circle-icon"
         (eventbox
-          :class "music-${matches("${pctl.status}", "Playing") ? "playing" : "paused" }"
+          :class "tr-a music-progress-circle-icon-${matches("${pctl.status}", "Playing") ? "playing" : "paused" }"
           :onclick "playerctl --player=${player} play-pause"
           :onscroll "bin/music_info seek {}"
           :cursor "pointer"
-          (label :text "${matches("${pctl.status}", "Playing") ? " " : "奈 "}")
+          (label :text "${matches("${pctl.status}", "Playing") ? "" : "󰐍"}")
         )
       )
     )
@@ -801,32 +834,38 @@
       :onrightclick "playerctl --player=${player} volume 0"
       :onscroll "bin/music_info volume {} 0.1"
       :cursor "pointer"
-    (box :class "music-volume ramp-${
-              value < 1   ? "2" :
-              value < 20  ? "3" :
-              value < 30  ? "4" :
-              value < 40  ? "5" :
-              value < 50  ? "6" :
-              value < 60  ? "7" :
-              value < 70  ? "8" :
-              value < 80  ? "9" :
-              value < 90  ? "10" :
-              value < 99  ? "11" : "12"
+    (box :style "margin-right: 4px;" :class "tr-c ramp-${
+              value < 1   ? "1" :
+              value < 30  ? "2" :
+              value < 40  ? "3" :
+              value < 50  ? "4" :
+              value < 60  ? "5" :
+              value < 70  ? "6" :
+              value < 80  ? "7" :
+              value < 90  ? "8" :
+              value < 99  ? "9" : "10"
           }"
       (circular-progress
-        :class "music-progress-circle"
+        :class "tr-c music-progress-circle"
         :value value
         :start-at 75
         :thickness 2
         :clockwise false
         (label
-          :tooltip " Spotify"
-          :class "music-volume-icon"
+          :tooltip "  ${value}% "
           :text {
-            value == 0  ? "婢 " :
-            value < 35  ? "奄 " :
-            value < 65  ? "奔 " : "墳 "
+            value == 0  ? "󰖁" :
+            value < 35  ? "󰕿" :
+            value < 65  ? "󰖀" : "󰕾"
           }
+          :style
+          "
+            font-size: ${value > 0 && value < 65 ? "22" : "20"}px;
+            margin: ${
+              value > 0 && value < 35 ? "8px 11px 7px 9px" :
+                           value < 65 ? "6px 9px 4px 7px" : "6px 6px 5px 7px"
+            };
+          "
         )
       )
     )
@@ -834,7 +873,6 @@
 )
 
 ; }}}
-
 ; 🎤 audio: {{{
 
 (deflisten source
@@ -847,26 +885,28 @@
 )
 (defvar source-name "Scarlett")
 (defvar sink-name "WH-1000XM4")
-(defvar audio-info false)
+(defvar audio-hover false)
 
 (defwidget audio []
   (eventbox
-    :onhover "eww update audio-info=true"
-    :onhoverlost "eww update audio-info=false"
-    (box :class "audio" :space-evenly false :spacing 10
+    :onhover "eww update audio-hover=true"
+    :onhoverlost "eww update audio-hover=false"
+    (box
+      :class "audio ${audio-hover ? 'audio-hover' : ''}"
+      :space-evenly false :spacing 10
       (audio-control
         :content "source"
         :value source
         :name "${source-name}"
-        :icon-off " "
-        :icon-on " "
+        :icon-off ""
+        :icon-on ""
       )
       (audio-control
         :content "sink"
         :value sink
         :name "${sink-name}"
-        :icon-off "遼 "
-        :icon-on "蓼 "
+        :icon-on "󰓃"
+        :icon-off "󰓄"
       )
       (bluetooth-status :value sink)
     )
@@ -881,16 +921,19 @@
     :onrightclick "bin/pulse_info mute ${content} & disown"
     :onscroll "bin/pulse_info change_volume ${content} {} & disown"
     :cursor "pointer"
-    :tooltip " ${value}% "
+    :tooltip " ${content}: ${value}% "
     (box :space-evenly false :spacing 9
-      :class "audio-volume ramp-${
-          value < 1   ? "2" :
-          value <= 30  ? "3" :
-          value <= 50  ? "4" :
-          value <= 60  ? "5" :
-          value <= 70  ? "8" :
-          value <= 80  ? "9" :
-          value <= 90  ? "10" : "11"
+      :class "tr-c audio-volume ramp-${
+          value < 1   ? "1" :
+          value <= 10  ? "2" :
+          value <= 20  ? "4" :
+          value <= 30  ? "4" :
+          value <= 40  ? "5" :
+          value <= 50  ? "6" :
+          value <= 60  ? "8" :
+          value <= 70  ? "9" :
+          value <= 80  ? "10" :
+          value <= 90  ? "11" : "12"
       }"
       (circular-progress
         :class "music-progress-circle"
@@ -903,8 +946,8 @@
           :text { value == 0  ? "${icon-off}" : "${icon-on}" }
         )
       )
-      (slide-n-fade :bool audio-info :direction "right"
-        (label :class "audio-${content}-name" :text name)
+      (slide-n-fade :bool audio-hover :direction "right"
+        (label :class "audio-${content}-text" :text name)
       )
     )
   )
@@ -912,19 +955,8 @@
 
 (defwidget bluetooth-status [value]
   (label
-    :class "ramp-${matches(sink-name, "WH-1000XM4") ?
-            "${
-              value < 1   ? "2" :
-              value <= 30  ? "3" :
-              value <= 50  ? "4" :
-              value <= 60  ? "5" :
-              value <= 70  ? "8" :
-              value <= 80  ? "9" :
-              value <= 90  ? "10" : "11"
-            }" : "2"
-    }"
     :text "${matches(sink-name, "WH-1000XM4") ? " " : " "}"
-    :style "margin-left: -4px;"
+    :style "margin-left: -2px; margin-top: 2px;"
   )
 )
 

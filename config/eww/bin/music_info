@@ -29,7 +29,7 @@ progress() {
         artUrl=$(playerctl "$player" metadata --format '{{ mpris:artUrl }}')
         tempfile="/tmp/eww/album_art.png"
         wget --output-document="$tempfile" "$artUrl"
-        eww update artUrl="$tempfile"
+        eww update album-art-path="$tempfile"
 
         echo "$progress"
     else

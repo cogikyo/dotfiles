@@ -143,6 +143,7 @@ window {
 tooltip {
   color: $blu-1;
   font-family: "Architects Daughter", cursive;
+  font-size: 0.9em;
   background-color: $bg;
   border: 1px solid $blu-0;
   border-radius: 10px 24px 12px 20px;
@@ -220,7 +221,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   transition: color $duration ease-in-out;
 }
 
-@mixin imagebox($position: 'left') {
+@mixin imagebox($position: "left") {
   transition: all 0.25s $ease-out-snap;
 
   $x: 1px;
@@ -242,7 +243,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   box-shadow: $x 3px 7px 1px rgba($blu-0, 0.42);
   margin: 0 $margin $margin 0;
 
-  @if $position == 'right' {
+  @if $position == "right" {
     $x: -1px;
 
     border-width: 0 0 3px 2px;
@@ -255,7 +256,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
     min-height: 180px;
     min-width: 180px;
     border-color: $orn-3;
-    box-shadow: $x 3px 6px 1px rgba($rby-1, 0.42);
+    box-shadow: $x 3px 6px 1px rgba($rby-1, 0.69);
   }
 }
 
@@ -282,85 +283,102 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 
 // 🎵 music: {{{
 .album-art {
+  transition: all 0.35s $ease-out-snap;
+  background-repeat: no-repeat;
+  background-size: 102%;
+  background-position: center;
+  min-width: 198px;
+  min-height: 198px;
+  border: 2px solid $blu-1;
+  border-radius: 50%;
+  margin: 30px;
+  opacity: 0.8;
+  box-shadow: 0 0 6px 1px rgba($blu-0, 0.69);
+
+  &-hover {
     transition: all 0.35s $ease-out-snap;
-    background-repeat: no-repeat;
-    background-size: 102%;
-    background-position: center;
-    min-width: 199px;
-    min-height: 199px;
-    border: 2px solid $blu-2;
-    border-radius: 50%;
-    margin: 30px;
-    opacity: 0.80;
-    box-shadow: 0 0 6px 1px rgba($blu-0, 0.69);
+    background-size: 112%;
+    border-color: $orn-3;
+    opacity: 0.95;
+    box-shadow: 0 0 12px 2px rgba($rby-1, 0.87);
+  }
+
+  &-progress {
+    color: rgba($blu-2, 0.87);
+    background: rgba($bg, 0.25);
 
     &-hover {
-      transition: all 0.35s $ease-out-snap;
-      background-size: 80%;
-      border-color: $orn-3;
-      opacity: 0.95;
-      box-shadow: 0 0 12px 2px rgba($rby-1, 0.69);
+      color: rgba($orn-3, 0.87);
     }
+  }
 }
 
 .music {
   &-progress {
-    color: $blu-0;
+    color: $blu-1;
 
     &-circle {
-      background: $glc-3;
+      background: $glc-2;
+
+      &-paused {
+        color: $glc-2;
+        background: $glc-1;
+      }
 
       &-icon {
-        font-size: 25px;
-        margin: 4px -4px 4px 5px;
+        font-size: 24px;
+        margin: 4px 5px;
+
+        &-playing {
+          color: $blu-1;
+
+          &:hover {
+            color: $orn-3;
+          }
+        }
+
+        &-paused {
+          color: $blu-2;
+
+          &:hover {
+            color: $orn-3;
+          }
+        }
       }
     }
   }
 
-  &-volume {
-    transition: color 0.5s $ease-out-snap;
-
-    &-icon {
-      margin: 6px -3px 6px 6px;
-    }
-  }
-
-
-  &-playing {
-    color: $blu-2;
-    transition: color 1.25s $ease-out-snap;
-  }
-
-  &-paused {
-    color: $glc-5;
-    transition: color 1.25s $ease-out-snap;
+  &-player-icon {
+    margin: 5px 1px 5px 7px;
   }
 
   &-info {
     background: $bg;
     color: $blu-2;
-    border-top: 1px double $blu-2;
+    border-top: 1px solid $blu-1;
     padding: 4px 1.1em;
     margin: 16px 8px 30px 110px;
-    border-right: 2px solid $blu-2;
+    border-right: 3px solid $blu-2;
     border-radius: 420px 17px 420px 69px;
     box-shadow: -3px 2px 3px 1px rgba($blu-0, 0.42);
+
+    &-hover {
+      border-color: $orn-3;
+      box-shadow: -3px 2px 3px 1px rgba($rby-1, 0.42);
+    }
   }
 
   &-artist {
-    color: $blu-0;
+    color: $blu-1;
+    font-weight: 600;
   }
 
   &-album {
     color: $blu-2;
-
-    &-single {
-      color: $blu-4;
-    }
   }
 
   &-title {
-    color: $blu-4;
+    color: $blu-3;
   }
 
   &-inactive {
@@ -368,7 +386,8 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   }
 
   &-single {
-    color: $blu-3;
+    color: $blu-4;
+    font-weight: 600;
   }
 }
 
@@ -377,43 +396,38 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 .audio {
   background: $bg;
   color: $blu-2;
-  border-top: 1px double $blu-2;
+  border-top: 1px solid $blu-2;
   margin: 16px 8px 30px;
-  border-right: 2px solid $blu-2;
+  border-right: 3px solid $blu-2;
   border-radius: 420px 17px 420px 69px;
   box-shadow: -3px 2px 3px 1px rgba($blu-0, 0.42);
-  font-family: monospace;
   padding: 4px 0.9em 4px 1.3em;
 
-  &-volume {
-    transition: color 0.5s $ease-out-snap;
-  }
-
-  &-source,
-  &-sink {
-    &-circle {
-      color: $glc-5;
-    }
+  &-hover {
+    border-color: $orn-3;
+    box-shadow: -3px 2px 3px 1px rgba($rby-1, 0.42);
   }
 
   &-source {
     &-icon {
-      margin: 5px -4px 5px 8px;
+      font-size: 20px;
+      margin: 8px 8px 7px 9px;
 
       &-inactiveFix {
-        margin: 5px -3px 5px 7px;
+        font-size: 19px;
+        margin: 8px 7px 7px 8px;
       }
     }
   }
 
   &-sink {
     &-icon {
-      font-size: 0.9em;
-      margin: 8px -2px 7px 10px;
+      font-size: 17px;
+      margin: 9px 9px 8px 10px;
 
       &-inactiveFix {
-        font-size: 0.9em;
-        margin: 8px 0 7px 8px;
+        font-size: 16px;
+        margin: 8px 8px 7px;
       }
     }
   }
@@ -429,7 +443,12 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   border-right: 3px solid $blu-1;
   border-top: 1px solid $blu-1;
   border-radius: 420px 17px 420px 69px;
-  box-shadow: -3px 2px 3px 1px rgba($blu-0, 0.42);
+  box-shadow: -3px 2px 3px 1px rgba($blu-0, 0.32);
+
+  &-hover {
+    border-color: $orn-3;
+    box-shadow: -3px 2px 3px 1px rgba($rby-1, 0.32);
+  }
 
   &-base {
     @include cycle($blu-0);
@@ -518,6 +537,12 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   margin: -7px 16px 36px;
   transition: all 0.5s $ease-out-snap;
 
+  &-hover {
+    transition: all 0.5s $ease-out-snap;
+    border-color: $orn-3;
+    box-shadow: 0 2px 7px 1px rgba($rby-1, 0.42);
+  }
+
   &-text {
     font-family: Archivo, monospace;
     color: $blu-2;
@@ -541,10 +566,10 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 
     &-active {
       transition: color 0.5s $ease-out-snap;
-      color: $orn-2;
+      color: $orn-3;
 
       &:hover {
-        color: $orn-4;
+        color: $rby-3;
         font-size: 1.1em;
         font-weight: bold;
         transition: all 0.25s $ease-out-snap;
@@ -573,10 +598,6 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
     margin-left: -2px;
     margin-right: 2px;
 
-    &-icon {
-      margin-left: 1px;
-    }
-
     &-subtext {
       font-family: monospace;
       margin-top: 1px;
@@ -595,6 +616,11 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   border-top: 1px solid $blu-1;
   border-radius: 17px 420px 69px;
   box-shadow: 3px 2px 3px 1px rgba($blu-0, 0.42);
+
+  &-hover {
+    border-color: $orn-3;
+    box-shadow: 3px 2px 3px 1px rgba($rby-1, 0.42);
+  }
 
   &-base {
     @include cycle($blu-2);
@@ -647,7 +673,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 // }}}
 
 // 🖥️ computer: {{{
-.computer-box-decor {
+.computerbox {
   background: $bg;
   border-top: 1px solid $blu-2;
   border-left: 3px solid $blu-1;
@@ -656,6 +682,11 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   border-radius: 17px 420px 69px;
   box-shadow: 3px 2px 3px 1px rgba($blu-0, 0.42);
   font-family: monospace;
+
+  &-hover {
+    border-color: $orn-3;
+    box-shadow: 3px 2px 3px 1px rgba($rby-1, 0.42);
+  }
 }
 
 // }}}
