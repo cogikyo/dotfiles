@@ -28,7 +28,7 @@ get_volume () {
 }
 
 set_default () {
-    sink_val=60
+    sink_val=69
     source_val=100
     source_id="$(get_id "source")"
     sink_id="$(get_id "sink")"
@@ -40,7 +40,7 @@ set_default () {
 
     if [[ "$1" == "source" ]] || [[ "$1" == "both" ]]; then
         pulsemixer --id "source-$source_id" --set-volume "$source_val"
-        echo "$source_val" >> "/tmp/eww/source"
+        echo "$source_val - 20" | bc >> "/tmp/eww/source"
     fi
     exit 0
 }
@@ -53,6 +53,7 @@ mute () {
 
 change_volume () {
     incremment="10"
+    sink_offset="20"
     current_volume=$(get_volume "$1")
 
     direction="+"
@@ -62,13 +63,32 @@ change_volume () {
 
     id="$(get_id "$1")"
 
-    if [[ current_volume -ge 100 ]] && [[ $direction == "+" ]]; then
-        pulsemixer --id "$1-$id" --set-volume "100"
+    max="100"
+
+    if [[ "$1" == "source" ]]; then
+        max="120"
+    fi
+
+    if [[ "$1" == "source" && current_volume -le $sink_offset ]]; then
+        pulsemixer --id "$1-$id" --set-volume "20"
+        current_volume=$sink_offset
+    fi
+
+    if [[ current_volume -ge $max ]] && [[ $direction == "+" ]]; then
+        pulsemixer --id "$1-$id" --set-volume "$max"
     else
         pulsemixer --id "$1-$id" --change-volume "$direction$incremment"
     fi
 
     current_volume=$(get_volume "$1")
+
+    if [[ "$1" == "source" && current_volume -le $sink_offset ]]; then
+        pulsemixer --id "$1-$id" --set-volume "0"
+    fi
+
+    if [[ "$1" == "source" ]]; then
+        ((current_volume-=20))
+    fi
 
     echo "$current_volume" >> "/tmp/eww/$1"
 }
