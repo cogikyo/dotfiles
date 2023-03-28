@@ -688,6 +688,7 @@
     (box
       :class "album-art ${music-hover ? "album-art-hover" : ""}"
       :style "background-image: url('${matches("${pctl.status}", "Playing") ? album-art-path : playerctl}');"
+      :tooltip "  ${pctl.artist}  󰎆 ${pctl.title} "
       (circular-progress
         :class "tr-a album-art-progress ${music-hover ? "album-art-progress-hover" : ""}"
         :value {progress >= 0 && progress <= 100 ? progress : 0}
@@ -957,6 +958,7 @@
   (label
     :text "${matches(sink-name, "WH-1000XM4") ? " " : " "}"
     :style "margin-left: -2px; margin-top: 2px;"
+    :tooltip " Bluetooth ${matches(sink-name, "WH-1000XM4") ? "Connected" : "Disconnected"}  "
   )
 )
 
