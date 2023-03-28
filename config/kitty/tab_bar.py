@@ -19,10 +19,14 @@ opts = get_options()  # --------------------------------------------⮯
 # color0 |  color1  color2   color4   color5   color6   color7  | normal
 # color8 |  color9  color10  color12  color13  color14  color15 | bright
 # --------------------------------------------------------------/
+if opts.tab_bar_background is None:
+    tab_background = 0
+else:
+    tab_background = opts.tab_bar_background
 FG = as_rgb(color_as_int(opts.background))
 BG = as_rgb(color_as_int(opts.color4))
 ACCENT = as_rgb(color_as_int(opts.selection_background))
-BAR_BG = as_rgb(color_as_int(opts.tab_bar_background))
+BAR_BG = as_rgb(color_as_int(tab_background))
 ACTIVE_BG = as_rgb(color_as_int(opts.active_tab_background))
 SEPARATOR_SYMBOL, SOFT_SEPARATOR_SYMBOL = ("", "")
 SEPARATOR_SYMBOL_RIGHT = ""
