@@ -89,12 +89,13 @@
 // #request addxwinstate "skip_taskbar"
 // #request addxwinstate "skip_pager"
 // #request addxwinstate "above"
-// #request addxwinstate "pinned"
+#request addxwinstate "below"
 
 /* (X11 only) Use the XShape extension to support clicking through
    the GLava window. Useful when you want to interact with other
    desktop windows (icons, menus, desktop shells). Enabled by
    default when GLava itself is a desktop window. */
+
 #request setclickthrough true
 
 /* Audio source
