@@ -689,7 +689,7 @@
       :class "album-art ${music-hover ? "album-art-hover" : ""}"
       :style "background-image: url('${matches("${pctl.status}", "Playing") ? album-art-path : playerctl}');"
       (circular-progress
-        :class "tr-a album-art-progress ${music-hover ? "album-art-path-progress-hover" : ""}"
+        :class "tr-a album-art-progress ${music-hover ? "album-art-progress-hover" : ""}"
         :value {progress >= 0 && progress <= 100 ? progress : 0}
         :start-at 75
         :thickness "${music-hover ? 6 : 4}"
@@ -876,7 +876,7 @@
 ; 🎤 audio: {{{
 
 (deflisten source
-  :initial "100"
+  :initial "80"
   'tail -F /tmp/eww/source'
 )
 (deflisten sink
