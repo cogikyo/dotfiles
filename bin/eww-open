@@ -5,4 +5,5 @@ eww daemon
 eww open-many \
     today \
     computer user \
+    workspaces \
     music albumArt assistant
