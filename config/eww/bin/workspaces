@@ -6,13 +6,6 @@ handle() {
     fi
 }
 
-next_or_prev () {
-    direction="+1"
-    if [[ "$1" == "down" ]]; then
-        direction="-1"
-    fi
-    hyprctl dispatch workspace "e$direction"
-}
 
 occupied () {
     mapfile -t occupied_ws < <( hyprctl workspaces | rg -oP "(?<=ID\s)\d" )

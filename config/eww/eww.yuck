@@ -671,7 +671,7 @@
 
 (defwindow albumArt
   :monitor 0 :stacking "overlay" :exclusive false :focusable false
-  :geometry (geometry :anchor "bottom right" :x "209px" :y "454px")
+  :geometry (geometry :anchor "bottom right" :x "208px" :y "383")
   (albumArt)
 )
 ;; 💿 albumArt {{{
@@ -878,14 +878,22 @@
 
 (deflisten source
   :initial "80"
-  'tail -F /tmp/eww/source'
+  'tail -F /tmp/eww/source 2> /dev/null'
 )
 (deflisten sink
-  :initial "70"
-  'tail -F /tmp/eww/sink'
+  :initial "69"
+  'tail -F /tmp/eww/sink 2> /dev/null'
 )
-(defvar source-name "Scarlett")
-(defvar sink-name "WH-1000XM4")
+(defpoll source-name
+  :initial "Scarlett"
+  :interval "5s"
+  'bin/pulse_info get_name source'
+)
+(defpoll sink-name
+  :initial "WH-1000XM4"
+  :interval "5s"
+  'bin/pulse_info get_name sink'
+)
 (defvar audio-hover false)
 
 (defwidget audio []
@@ -956,6 +964,7 @@
 
 (defwidget bluetooth-status [value]
   (label
+    :class "tr-c ${matches(sink-name, "WH-1000XM4") ? "" : "music-inactive"}"
     :text "${matches(sink-name, "WH-1000XM4") ? " " : " "}"
     :style "margin-left: -2px; margin-top: 2px;"
     :tooltip " Bluetooth ${matches(sink-name, "WH-1000XM4") ? "Connected" : "Disconnected"}  "
@@ -963,3 +972,68 @@
 )
 
 ; }}}
+
+
+(defwindow workspaces
+  :monitor 0 :stacking "overlay" :exclusive false :focusable false
+  :geometry (geometry :anchor "center right" :x "620px" :y "0px")
+  (workspaces)
+)
+;; 👾 workspaces: {{{
+
+(defvar ws-hover false)
+(defvar ws-hover-1 false)
+(defvar ws-hover-2 false)
+(defvar ws-hover-3 false)
+(defvar ws-hover-4 false)
+(defvar ws-hover-5 false)
+(deflisten active-ws
+  :initial "5"
+  'tail -F /tmp/eww/workspace 2> /dev/null'
+)
+(deflisten occupied
+  :initial "5"
+  'tail -F /tmp/eww/occupied 2> /dev/null'
+)
+
+(defwidget workspace [icon num desc ?app]
+  (eventbox
+    :onclick "${num == "5" ? "change-bg 'music';" : "change-bg;"} hyprctl dispatch workspace ${num} & disown"
+    :cursor "pointer"
+    :onmiddleclick "hyprctl dispatch workspace ${num} && ${app} & disown"
+    :tooltip "  ${desc}  "
+    (box
+      :style "
+              background-image: url('art/ws-icons/${icon}${
+                matches(active-ws,num) ? "-active" :
+                "${matches(occupied, "${num}") ? "" : "-empty"}"
+                }.svg');
+              "
+      :class "workspace ws-${num}"
+    )
+  )
+)
+
+(defwidget workspaces []
+  (eventbox
+    :onhover "eww update ws-hover=true"
+    :onhoverlost "eww update ws-hover=false"
+    :onrightclick "hyprctl dispatch workspace previous"
+    (box
+      :class "tr-a workspacesbox ${ws-hover ? "workspacesbox-hover" : ""}"
+      :halign "center" :space-evenly false :spacing 10 :orientation "${active-ws == "5" ? "horizontal" : "vertical"}"
+      :style "${active-ws == "5" ?
+        "
+        margin-right: 40px;
+        margin-top: 260px;
+        padding: 11px 15px 0px 15px;
+        " : "" }"
+      (workspace :icon "network"  :num "1" :desc " chat 'n networking")
+      (workspace :icon "learn"    :num "2" :desc " documents 'n such" )
+      (workspace :icon "dna"      :num "3" :desc " primary desktop" )
+      (workspace :icon "dotfiles" :num "4" :desc " settings 'n secondary work" )
+      (workspace :icon "music"    :num "5" :desc " music" )
+    )
+  )
+)
+;; }}}
