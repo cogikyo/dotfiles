@@ -225,7 +225,11 @@ chsh -s /usr/bin/zsh
 cd ~/dotfiles/etc/sddm.conf.d
 mkdir /etc/sddm.conf.d
 sudo cp autologin.conf /etc/sddm.conf.d/
+# note: updates to hyprland sometimes overwrite the desktop entry ⮯
 sudo cp hyprland.desktop /usr/share/wayland-sessions/hyprland.desktop
+# simply copy over the desktop entry as as needed
+# check using: bat /usr/share/wayland-sessions/hyprland.desktop
+# should be: 4 | Exec=hyprwrap (not Hyprland)
 systemctl enable sddm
 ```
 
