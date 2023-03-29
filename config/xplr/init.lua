@@ -1,7 +1,7 @@
 -- ============================================================================
 -- 🧰 Setup: 🢢 {{{
 ---@diagnostic disable
-version = "0.20.2"
+version = "0.21.1"
 local xplr = xplr -- The globally exposed configuration to be overridden.
 ---@diagnostic enable
 
@@ -105,6 +105,18 @@ local general = {
 			{ Percentage = 11 },
 			{ Percentage = 21 },
 		},
+	},
+
+	selection = {
+		item = {
+			format = "builtin.fmt_general_selection_item",
+			style = style("Cyan", { "Dim" }),
+		},
+	},
+
+	search = {
+		algorithm = "Fuzzy",
+		unordered = false,
 	},
 
 	default_ui = {
@@ -213,9 +225,15 @@ local general = {
 			IAbsolutePathDoesMatchRegex = { format = "[i]abs=/", style = {} },
 			IAbsolutePathDoesNotMatchRegex = { format = "[i]abs!/", style = {} },
 		},
-		search_identifier = {
-			format = " ",
-			style = style(orange, { "Bold" }),
+		search_identifiers = {
+			Fuzzy = {
+				format = " ",
+				style = style(orange, { "Bold" }),
+			},
+			Regex = {
+				format = " ",
+				style = style(orange, { "Bold" }),
+			},
 		},
 	},
 	panel_ui = {
