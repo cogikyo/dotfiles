@@ -207,7 +207,7 @@
    embedding in the desktop.
 
    This routinely sends X11 events and should be avoided. */
-#request setforcegeometry false
+#request setforcegeometry true
 
 /*                    ** DEPRECATED **
    Force window to be raised (focused in some WMs), useful for
