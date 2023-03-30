@@ -1051,7 +1051,7 @@
       :orientation "${active-ws == "5" ? "horizontal" : "vertical"}"
       :style "${active-ws == "5" ?
         "
-        margin-right: 40px;
+        margin-right: 38px;
         margin-top: 260px;
         padding: 11px 15px 0px 15px;
         " : "" }"
