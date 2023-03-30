@@ -141,11 +141,11 @@ window {
 }
 
 tooltip {
-  color: $blu-1;
+  background-color: rgba($bg, 0.9);
+  color: $orn-2;
   font-family: "Architects Daughter", cursive;
-  font-size: 0.9em;
-  background-color: $bg;
-  border: 1px solid $blu-0;
+  font-size: 1.25em;
+  border: 1px solid $orn-3;
   border-radius: 10px 24px 12px 20px;
 }
 
@@ -438,7 +438,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 // 🌧️ weather: {{{
 .weather {
   background: $bg;
-  padding: 4px 1.1em;
+  padding: 4px 12px 4px 1.1em;
   margin: 16px 8px 50px;
   border-right: 3px solid $blu-1;
   border-top: 1px solid $blu-1;
@@ -459,10 +459,10 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   }
 
   &-moon {
-    color: $wht-0;
+    color: $glu-3;
 
     &-full {
-      color: $wht-3;
+      color: $brt-3;
     }
   }
 
@@ -474,7 +474,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
     @include cycle($blu-0);
   }
 
-  &-morn {
+  &-morning {
     @include cycle($blu-0);
   }
 
@@ -486,7 +486,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
     @include cycle($rby-3);
   }
 
-  &-eve {
+  &-evening {
     @include cycle($prp-1);
   }
 
@@ -499,11 +499,8 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
       @include cycle($blu-2);
     }
 
-    &-none {
-      @include cycle($slt-4);
-    }
-
-    &-low {
+    &-low,
+    &-good {
       @include cycle($grn-3);
     }
 
@@ -511,15 +508,16 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
       @include cycle($sun-1);
     }
 
-    &-high {
+    &-high,
+    &-poor {
       @include cycle($sun-4);
     }
 
-    &-very-high {
+    &-intense {
       @include cycle($rby-2);
     }
 
-    &-crit {
+    &-extreme {
       @include cycle($pnk-2);
     }
   }
@@ -578,12 +576,12 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   }
 
   &-alarm {
-    margin-top: 8px;
+    margin-top: 7px;
     margin-right: -4px;
     margin-left: 4px;
 
     &-icon {
-      margin-bottom: -1px;
+      margin-bottom: 1px;
     }
 
     &-subtext {
