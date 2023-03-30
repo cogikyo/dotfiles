@@ -205,10 +205,17 @@ makepkg -si
 cd ~
 git clone https://github.com/nosvagor/dotfiles
 paru -S - < ~/dotfiles/etc/packages.lst
-# no good repo for icons, do manually ⮯
+
+# no good repos nordzy icons/cursors, do manually ⮯
 git clone https://github.com/alvatip/Nordzy-icon
-cd Nordzy-icon/
-./install.sh
+cd ~/.cache
+cd Nordzy-icon
+sudo ./install.sh
+# note: sudo ./install.sh installs globally.
+cd ~/.cache
+git clone https://github.com/alvatip/Nordzy-cursors
+cd Nordzy-cursors
+sudo ./install.sh
 ```
 
 <br>
