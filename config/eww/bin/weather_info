@@ -42,6 +42,7 @@ get_json () {
     fi
 }
 
+# https://openweathermap.org/api/one-call-3#hist_parameter
 while true; do
     while [[ "$valid_json" == "false" ]] ; do
         get_json
@@ -76,6 +77,7 @@ while true; do
     knots=$(echo "$wind_speed * 1.943844" | bc | awk '{print int($1+0.5)}')
     wind_speed=$(echo "$wind_speed" | awk '{print int($1+0.5)}')
 
+    # https://openweathermap.org/weather-conditions#How-to-get-icon-URL
     if [[ "$night" == "false" ]]; then
         if [[ "$id" -lt 300 ]]; then
             icon=" "
@@ -91,7 +93,7 @@ while true; do
             icon=" "
         elif [[ "$id" -eq 781 ]]; then
             icon=" "
-        elif [[ "$id" -eq 800 ]]; then
+        elif [[ "$id" -lt 800 ]]; then
             icon=" "
         elif [[ "$id" -eq 800 ]]; then
             icon=" "
@@ -128,91 +130,133 @@ while true; do
 
     if [[ "$moon_phase" -eq 0 ]]; then
         moon=" " # NEW -----------------⮯
+        moon_desc="New Moon (0%)"
     elif [[ "$moon_phase" -le 4 ]]; then
         moon=" " # waxing_cres_1
+        moon_desc="Waxing Crescent (0-4%)"
     elif [[ "$moon_phase" -le 8 ]]; then
         moon=" " # waxing_cres_2
+        moon_desc="Waxing Crescent (4-8%)"
     elif [[ "$moon_phase" -le 12 ]]; then
         moon=" " # waxing_cres_3
+        moon_desc="Waxing Crescent (8-12%)"
     elif [[ "$moon_phase" -le 16 ]]; then
         moon=" " # waxing_cres_4
+        moon_desc="Waxing Crescent (12-16%)"
     elif [[ "$moon_phase" -le 20 ]]; then
         moon=" " #  waxing_cres_5
+        moon_desc="Waxing Crescent (16-20%)"
     elif [[ "$moon_phase" -le 24 ]]; then
         moon=" " # waxing_cres_6
+        moon_desc="Waxing Crescent (20-24%)"
     elif [[ "$moon_phase" -eq 25 ]]; then
         moon=" " # FIRST ---------------⮯
+        moon_desc="First Quarter (25%)"
     elif [[ "$moon_phase" -le 29 ]]; then
         moon=" " # waxing_gib_1
+        moon_desc="Waxing Gibbous (25-29%)"
     elif [[ "$moon_phase" -le 33 ]]; then
         moon=" " # waxing_gib_2
+        moon_desc="Waxing Gibbous (29-33%)"
     elif [[ "$moon_phase" -le 37 ]]; then
         moon=" " # waxing_gib_3
+        moon_desc="Waxing Gibbous (33-37%)"
     elif [[ "$moon_phase" -le 41 ]]; then
         moon=" " # waxing_gib_4
+        moon_desc="Waxing Gibbous (37-41%)"
     elif [[ "$moon_phase" -le 45 ]]; then
         moon=" " # waxing_gib_5
+        moon_desc="Waxing Gibbous (41-45%)"
     elif [[ "$moon_phase" -le 49 ]]; then
         moon=" " # waxing_gib_6
+        moon_desc="Waxing Gibbous (45-49%)"
     elif [[ "$moon_phase" -eq 50 ]]; then
         moon=" " # FULL ----------------⮯
+        moon_desc="Full Moon (50%)"
     elif [[ "$moon_phase" -le 54 ]]; then
         moon=" " # waning_gib_1
+        moon_desc="Waning Gibbous (50-54%)"
     elif [[ "$moon_phase" -le 58 ]]; then
         moon=" " # waning_gib_2
+        moon_desc="Waning Gibbous (54-58%)"
     elif [[ "$moon_phase" -le 62 ]]; then
         moon=" " # waning_gib_3
+        moon_desc="Waning Gibbous (58-62%)"
     elif [[ "$moon_phase" -le 66 ]]; then
         moon=" " # waning_gib_4
+        moon_desc="Waning Gibbous (62-66%)"
     elif [[ "$moon_phase" -le 70 ]]; then
         moon=" " # waning_gib_5
+        moon_desc="Waning Gibbous (66-70%)"
     elif [[ "$moon_phase" -le 74 ]]; then
         moon=" " # waning_gib_6
+        moon_desc="Waning Gibbous (70-74%)"
     elif [[ "$moon_phase" -eq 75 ]]; then
         moon=" " # THIRD ---------------⮯
+        moon_desc="Third Quarter (75%)"
     elif [[ "$moon_phase" -le 79 ]]; then
         moon=" " # waning_cres_1
+        moon_desc="Waning Crescent (75-79%)"
     elif [[ "$moon_phase" -le 83 ]]; then
         moon=" " # waning_cres_2
+        moon_desc="Waning Crescent (79-83%)"
     elif [[ "$moon_phase" -le 87 ]]; then
         moon=" " # waning_cres_3
+        moon_desc="Waning Crescent (83-87%)"
     elif [[ "$moon_phase" -le 91 ]]; then
         moon=" " # waning_cres_4
+        moon_desc="Waning Crescent (87-91%)"
     elif [[ "$moon_phase" -le 95 ]]; then
         moon=" " # waning_cres_5
+        moon_desc="Waning Crescent (91-95%)"
     elif [[ "$moon_phase" -le 99 ]]; then
         moon=" " # waxing_cres_6
+        moon_desc="Waning Crescent (95-99%)"
     else
         moon=" " # NEW
+        moon_desc="New Moon (100%)"
     fi
 
 
     if [[ knots -lt 1 ]]; then
         bf_icon=" "
+        bf_desc="calm"
     elif [[ knots -lt 4 ]]; then
         bf_icon=" "
+        bf_desc="light air"
     elif [[ knots -lt 7 ]]; then
         bf_icon=" "
+        bf_desc="light breeze"
     elif [[ knots -lt 11 ]]; then
         bf_icon=" "
+        bf_desc="gentle breeze"
     elif [[ knots -lt 17 ]]; then
         bf_icon=" "
+        bf_desc="moderate breeze"
     elif [[ knots -lt 22 ]]; then
         bf_icon=" "
+        bf_desc="fresh breeze"
     elif [[ knots -lt 28 ]]; then
         bf_icon=" "
+        bf_desc="strong breeze"
     elif [[ knots -lt 34 ]]; then
         bf_icon=" "
+        bf_desc="near gale"
     elif [[ knots -lt 41 ]]; then
         bf_icon=" "
+        bf_desc="gale"
     elif [[ knots -lt 48 ]]; then
         bf_icon=" "
+        bf_desc="strong gale"
     elif [[ knots -lt 56 ]]; then
         bf_icon=" "
+        bf_desc="storm"
     elif [[ knots -lt 64 ]]; then
         bf_icon=" "
+        bf_desc="violent storm"
     else
         bf_icon=" "
+        bf_desc="hurricane"
     fi
 
     # if [[ $wind_deg -lt 45 ]]; then
@@ -244,14 +288,40 @@ while true; do
     #     wind_dir="N"
     # fi
 
+
+
+    if [[ $uvi ]]; then
+        if [[ $uvi -le 2 ]]; then
+            uvi_desc="low"
+        elif [[ $uvi -le 5 ]]; then
+            uvi_desc="moderate"
+        elif [[ $uvi -le 7 ]]; then
+            uvi_desc="high"
+        elif [[ $uvi -le 10 ]]; then
+            uvi_desc="intense"
+        else
+            uvi_desc="extreme"
+        fi
+    fi
+
+    case $aqi in
+        1) aqi_desc="good" ;;
+        2) aqi_desc="moderate" ;;
+        3) aqi_desc="poor" ;;
+        4) aqi_desc="intense" ;;
+        5) aqi_desc="extreme" ;;
+    esac
+
     echo "{\
         \"id\":\"$id\",\
         \"icon\":\"$icon\",\
         \"desc\":\"$desc\",\
         \"bf_icon\":\"$bf_icon\",\
+        \"bf_desc\":\"$bf_desc\",\
         \"wind_speed\":\"$wind_speed\",\
         \"sunset\":\"$sunset\",\
         \"moon\":\"$moon\",\
+        \"moon_desc\":\"$moon_desc\",\
         \"night\":\"$night\",\
         \"temp\":\"$temp\",\
         \"temp_morn\":\"$temp_morn\",\
@@ -261,7 +331,9 @@ while true; do
         \"temp_night\":\"$temp_night\",\
         \"feels_like\":\"$feels_like\",\
         \"uvi\":\"$uvi\",\
+        \"uvi_desc\":\"$uvi_desc\",\
         \"aqi\":\"$aqi\",\
+        \"aqi_desc\":\"$aqi_desc\",\
         \"rain_1h\":\"$rain_1h\",\
         \"rain_day\":\"$rain_day\",\
         \"clouds\":\"$clouds\"\
