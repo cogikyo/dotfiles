@@ -6,4 +6,5 @@ eww open-many \
     today \
     computer user \
     workspaces \
-    music albumArt assistant
+    music albumArt assistant \
+    pacman screenctl dunst systemctl network
