@@ -4,7 +4,7 @@ display_active () {
     eww update timer-visible="true"
     case "$1" in
         "hour") eww update hour-active="true" ;;
-        "minute") eww update minute-active="true" ;;
+        "minute") eww update timer-active="true" ;;
     esac
     dunstify -a "attention" -t 3000 "🐦attention" -u low
     sleep 5
@@ -37,11 +37,13 @@ timer () {
         min=0
     fi
 
+    eww update timer-active="true"
     printf "%02d:%02d\n" "$hr" "$min" >> "/tmp/eww/timer"
 }
 
 timer_status () {
     dunstify -a "attention" -t 3000 "⏲️ timer started" -u low
+    eww update timer-active="true"
 
     countdown=true
     while "$countdown"; do
@@ -71,56 +73,117 @@ alarm () {
     hr=${alarm[0]#0}
     min=${alarm[1]#0}
 
+    hr_now=$(date '+%H')
+    min_now=$(date '+%M')
+
     if [[ "$1" == "start" ]]; then
-        hr_now=$(date '+%H')
-        min_now=$(date '+%M')
+
+        if [[ $hr -le $hr_now && $min -le $min_now ]]; then
+            reset "alarm" & disown
+            exit
+        fi
+
+        printf "%02d:%02d\n" "$hr" "$min" >> "/tmp/eww/alarm-end"
         ((hr-=hr_now))
         ((min-=min_now))
-    fi
 
-    if [[ "$1" == "up" ]]; then
-        ((min+=$2))
-        if [[ $min -ge 60 ]]; then
-            ((hr+=1))
-            ((min-=60))
+        if [[ $hr -lt 0 ]]; then
+            reset "alarm" & disown
+            exit
         fi
-    elif [[ $hr -gt 0 ]] || [[ $min -gt 0 ]]; then
-            ((min-=$2))
     fi
 
-    if [[ $min -lt 0 ]] && [[ $hr -gt 0 ]]; then
-        ((hr-=1))
-        ((min+=60))
-    fi
+    IFS=":" read -ra alarm_end <<<"$(tail -n 1 "/tmp/eww/alarm-end")"
+    hr_end=${alarm_end[0]#0}
+    min_end=${alarm_end[1]#0}
 
-    if [[ $hr -ge 24 ]]; then
-        ((hr-=24))
-    fi
+    case "$2" in
+        1) i=1 ;;
+        15) i=15 ;;
+        *) i=0 ;;
+    esac
 
-    if [[ $min -lt 0 ]]; then
-        ((hr+=min))
-        min=0
-    fi
+    case $1 in
+        "up")
+            ((min+=i))
+            ((min_end+=i))
 
+            if [[ $min -ge 60 ]]; then
+                ((hr+=1))
+                ((min-=60))
+            fi
+
+            if [[ $min_end -ge 60 ]]; then
+                ((hr_end+=1))
+                ((min_end-=60))
+            fi
+        ;;
+        "down")
+            ((min-=i))
+            ((min_end-=i))
+
+            if [[ $min -lt 0 ]] && [[ $hr -gt 0 ]]; then
+                ((hr-=1))
+                ((min+=60))
+            fi
+
+            if [[ $min_end -lt 0 ]] && [[ $hr_end -gt 0 ]]; then
+                ((hr_end-=1))
+                ((min_end+=60))
+            fi
+
+            if [[ $min -lt 0 ]]; then
+                ((hr+=min))
+                min=0
+            fi
+
+            if [[ $min_end -lt 0 ]]; then
+                ((hr_end+=min_end))
+                min_end=0
+            fi
+
+            if [[ $hr_end -le $hr_now && $min_end -le $min_now ]]; then
+                reset "alarm" & disown
+                exit 1
+            fi
+        ;;
+        *)
+            ((min-=i))
+
+            if [[ $min -lt 0 ]] && [[ $hr -gt 0 ]]; then
+                ((hr-=1))
+                ((min+=60))
+            fi
+
+            if [[ $min -lt 0 ]]; then
+                ((hr+=min))
+                min=0
+            fi
+        ;;
+    esac
+
+    printf "%02d:%02d\n" "$hr_end" "$min_end" >> "/tmp/eww/alarm-end"
     printf "%02d:%02d\n" "$hr" "$min" >> "/tmp/eww/alarm"
 }
 
 
 alarm_status () {
     dunstify -a "attention" -t 3000 "⏰alarm started" -u low
-
+    eww update alarm-active="true"
     alarm "start"
 
     countdown=true
     while "$countdown"; do
-        IFS=":" read -ra timer <<<"$(tail -n 1 "/tmp/eww/alarm")"
-        hr=${timer[0]#0}
-        min=${timer[1]#0}
+        IFS=":" read -ra alarm <<<"$(tail -n 1 "/tmp/eww/alarm")"
+        hr=${alarm[0]#0}
+        min=${alarm[1]#0}
 
-        if [[ $hr -eq 0 ]] && [[ $min -eq 0 ]]; then
+        if [[ $hr -le 0 ]] && [[ $min -le 0 ]]; then
             countdown=false
             dunstify -a "timer" "alarm done!"
             display_active "hour"
+            eww update alarm-active="false"
+            reset "alarm" & disown
             break
         fi
 
@@ -130,7 +193,7 @@ alarm_status () {
 
         until_next_min=$(( 60 - $(date +%-S) ))
         sleep "$until_next_min"
-        alarm "down" 1
+        alarm "*" 1
     done
 }
 
@@ -143,17 +206,20 @@ reset () {
             until_next_hour=$(( $(date -d "$next_hour" +%s) - $(date +%s) ))
             (( until_next_hour/=60 ))
             if [[ $until_next_hour -lt 30 ]]; then
-                offset="+ 1hour"
-            else
                 offset="+ 3hour"
+            else
+                offset="+ 6hour"
             fi
             date '+%H:00' -d "$offset" > "/tmp/eww/alarm"
-            dunstify -t 5000 "alarm reset" -u low
+            date '+%H:00' -d "$offset" > "/tmp/eww/alarm_end"
+            eww update alarm-active="false"
+            dunstify -t 1000 "alarm reset" -u low
         ;;
         timer)
             ps -ef | rg timer_status | rg -v rg | awk '{print $2}' | xargs kill
             echo "01:30" > "/tmp/eww/timer"
-            dunstify -t 5000 "timer reset" -u low
+            eww update timer-active="false"
+            dunstify -t 1000 "timer reset" -u low
         ;;
     esac
 

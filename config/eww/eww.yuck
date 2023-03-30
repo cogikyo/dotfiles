@@ -53,6 +53,7 @@
     :class "weather-${cycle-5 == 1 ? "${color}" : "base-alt" }"
     :markup "${temp}"
     :style "font-size: 0.7em; margin-top: ${margin}px;"
+    :tooltip " ${color} ${temp}  "
   )
 )
 
@@ -62,7 +63,9 @@
     :onhoverlost "eww update weather-info=false"
     :onclick "firefox-developer-edition https://www.windy.com/?hrrrConus,45.445,-122.764,9 & disown"
     :cursor "pointer"
-    (box :class "weather ${weather-info ? "weather-hover" : "" }" :halign "end" :space-evenly false :spacing 8
+    (box
+      :class "weather ${weather-info ? "weather-hover" : "" }"
+      :halign "end" :space-evenly false :spacing 8
       (label
         :class "weather-${cycle-6 == 0 ?
                "${matches("${weather.night}", "true") ? "night" : "day"}"
@@ -70,6 +73,7 @@
         }"
         :markup "<b><tt>${weather.icon}</tt>${weather.temp}<sup> </sup></b>"
         :style "margin-right: -6px;"
+        :tooltip "  ${weather.icon}reported: ${weather.temp}   󰈷 feels: ${weather.feels_like}  "
       )
       (slide-n-fade :bool weather-info :direction "right"
         (box :space-evenly false :spacing 3
@@ -80,11 +84,12 @@
             }"
             :markup " <small>${weather.feels_like}<sup> </sup></small>"
             :style "font-size: 0.8em; margin-right: 6px;"
+            :tooltip "  󰈷 Feels like: ${weather.feels_like}  "
           )
-          (daily-temp :temp {weather.temp_morn} :margin 12 :color "morn")
+          (daily-temp :temp {weather.temp_morn} :margin 12 :color "morning")
           (daily-temp :temp {weather.temp_day} :margin -2 :color "day")
           (daily-temp :temp {weather.temp_max} :margin -10 :color "max")
-          (daily-temp :temp {weather.temp_eve} :margin 4 :color "eve")
+          (daily-temp :temp {weather.temp_eve} :margin 4 :color "evening")
           (daily-temp :temp {weather.temp_night} :margin 12 :color "night")
         )
       )
@@ -92,60 +97,61 @@
         :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
         :markup "<b>${weather.desc}</b>"
         :style "margin-top: 2px; margin-left: ${weather-info ? "2" : "-4"}px;"
+        :tooltip "  ${weather.icon}${weather.desc} with ${weather.clouds}% cloud coverage and a ${weather.bf_desc}  "
       )
       (slide-n-fade :bool weather-info :direction "right"
           (label
             :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
             :markup " <small>${weather.clouds}<small>%</small></small>"
             :style "margin-top: 2px; margin-left: 2px;"
+            :tooltip "   ${weather.clouds}% cloud coverage "
           )
       )
       (label
         :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
         :markup "${weather.bf_icon}"
         :style "margin: 6px ${weather-info ? "-4" : "-2"}px 0 ${weather-info ? "0" : "-6"}px;"
+        :tooltip "   ${weather.bf_icon}${weather.bf_desc} (${weather.wind_speed}m/s)  "
       )
       (slide-n-fade :bool weather-info :direction "right"
         (label
           :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
           :markup "<i><small>${weather.wind_speed}m<sup>-1</sup></small></i>"
           :style "margin-top: 2px;"
+          :tooltip "   ${weather.bf_icon}${weather.bf_desc} (${weather.wind_speed}m/s)  "
         )
       )
       (label
         :class "weather-${cycle-5 == 0 ? "rain" : "base-alt" }"
         :markup "<tt><small><sub> </sub>${weather-info ? "${weather.rain_day}" : "${weather.rain_1h}"}<small>%</small></small></tt>"
         :style "margin-top: 6px; margin-left: ${weather-info ? "3px" : "-6px"};"
+        :tooltip "   ${weather.rain_day}% chance of rain today, ${weather.rain_1h}% in the next hour  "
       )
       (slide-n-fade :bool weather-info :direction "right"
         (box :space-evenly false :spacing 8
           (label
-            :class "weather-index-${cycle-5 == 1 ? "${
-              weather.uvi < 1  ? "none" :
-              weather.uvi < 2  ? "low"  :
-              weather.uvi < 5  ? "moderate" :
-              weather.uvi < 7  ? "high" :
-              weather.uvi < 10 ? "very-high" : "crit"
-            }" : "base"}"
+            :class "weather-index-${cycle-5 == 1 ? "${weather.uvi_desc}" : "base"}"
             :markup "<tt>󰓠<small> </small>${weather.uvi}</tt>"
             :style "margin-top: 2px; margin-left: 4px;"
+            :tooltip "  󰓠 ultraviolet index: ${weather.uvi}, ${weather.uvi_desc} "
           )
           (label
-            :class "weather-index-${cycle-5 == 1 ? "${
-              weather.aqi == 1  ? "low"  :
-              weather.aqi == 2  ? "moderate" :
-              weather.aqi == 3  ? "high" :
-              weather.aqi == 4  ? "very-high" : "crit"
-            }" : "base"}"
+            :class "weather-index-${cycle-5 == 1 ? "${weather.uvi_desc}" : "base"}"
             :markup "<tt><small> </small>${weather.aqi}</tt>"
-            :style "margin-top: 2px; margin-right: 12px;"
+            :style "margin-top: 2px; margin-left: 2px;"
+            :tooltip "   air quality index: ${weather.aqi}, ${weather.aqi_desc} "
           )
         )
       )
       (label
         :class "weather-moon${weather.moon == " " ? "-full" : ""}"
-        :markup "<tt>${weather.moon}</tt>"
-        :style "margin: -10px -6px 0 -16px;"
+        :text "${weather.moon}"
+        :style "
+          margin-top: -8px;
+          margin-left: ${weather-info ? "-2" : "-12" }px;
+          transition: margin 0.25s ease-out;
+          "
+        :tooltip "  ${weather.moon} ${weather.moon_desc}  "
       )
     )
   )
@@ -157,6 +163,8 @@
 (defvar minute-active false)
 (defvar fine-adjust false)
 (defvar timer-visible false)
+(defvar timer-active false)
+(defvar alarm-active false)
 
 (defpoll time
   :interval "1s"
@@ -175,6 +183,10 @@
 (deflisten alarm-current
   :initial "14:00"
   'tail -F /tmp/eww/alarm 2> /dev/null'
+)
+(deflisten alarm-end
+  :initial "14:00"
+  'tail -F /tmp/eww/alarm-end 2> /dev/null'
 )
 (deflisten timer-current
   :initial "01:30"
@@ -208,6 +220,10 @@
     :onhoverlost "eww update ${child}-active=false"
     :onclick "${browser} https://calendar.google.com/calendar/u/0/r/eventedit?state=%5B%5D & disown"
     :cursor "pointer"
+    :tooltip " ${child == "hour" ?
+      "  ${alarm-active ?  "set for ${alarm-end}" : "no active alarm"}" :
+      " 󰔟 ${timer-active ?  "${timer-current} remaining" : "no active timer"}"
+    } "
     (label :class "time-${child}-${bool ? "active" : "text"} time-text" :text text)
   )
 )
@@ -235,8 +251,10 @@
       :onclick "bin/timer_info ${app}_status & disown"
       :onscroll "bin/timer_info ${app} {} ${fine-adjust ? 1 : 15}"
       :onrightclick "bin/timer_info reset ${app}"
+      :onmiddleclick "bin/timer_info ${app} ${fine-adjust ? 1 : 15}"
       :cursor "pointer"
-      (box :class "time-${app}" :space-evenly false :spacing 6
+      (box
+        :class "time-${app}" :space-evenly false :spacing 6
         {direction == "left" ? text : ""}
         (box
           :orientation "v"
@@ -271,7 +289,7 @@
     :child "minute"
     :bool minute-active
     :text timer-current
-    :icon "羽"
+    :icon "󰔟"
     :subtext {time.second}
   )
 )
@@ -293,7 +311,6 @@
   :onhover "eww update date-hover=true"
   :onhoverlost "eww update date-hover=false"
   :onclick "${browser} https://calendar.google.com/calendar/u/0/r & disown"
-  :onrightclick "${browser} https://mail.google.com/mail/u/0/#inbox & disown"
     (box
     :class "date ${date-hover ? "date-hover" : ""}"
     :halign "start"
@@ -304,30 +321,35 @@
         :direction "left"
         (label
           :class "date-weeks date-${cycle-6 == 0 ? "dead" : "alive"}"
-          :markup "冀 ${weeks_alive}"
+          :markup "󰕶  ${weeks_alive}"
           :style "margin-top: 3px; margin-right: 10px; margin-left: 6px;"
+          :tooltip "  󰕶 weeks survived: ${weeks_alive}  "
         )
       )
       (label
         :class "date-${cycle-6 == 0 ? "${date.weekday}" : "base"}"
         :text " ${date.weekday}"
         :style "margin-right: -4px; margin-left: 1px;"
+        :tooltip "   ${date.weekday}, ${date.month} ${date.day} "
       )
       (label
         :class "date-month date-${cycle-6 == 1 ? "base" : "base-alt"}"
         :text ", ${date.month}"
         :style "margin-top: 1px;"
+        :tooltip "   ${date.weekday}, ${date.month} ${date.day} "
       )
       (label
         :class "date-day date-${cycle-6 == 1 ? "base" : "base-alt"}"
         :text "${date.day}"
         :style "margin-top: 1px; margin-left: 2px;"
+        :tooltip "   ${date.weekday}, ${date.month} ${date.day} "
       )
       (slide-n-fade :bool date-hover :direction "right"
         (label
           :class "date-${cycle-6 == 0 ? "dead" : "alive"}"
           :markup " ${weather.sunset}"
           :style "margin-top: 2px; margin-left: 6px;"
+          :tooltip "   sunset: ${weather.sunset}  "
         )
       )
     )
@@ -660,6 +682,8 @@
     :onhover "eww update assistant-hover=true"
     :onhoverlost "eww update assistant-hover=false"
     :onclick "${browser} https://chat.openai.com/chat?model=gpt-4 & disown"
+    :onrightclick "${browser} https://mail.google.com/mail/u/0/#inbox & disown"
+    :onmiddleclick "${browser} https://mail.google.com/mail/u/1/#inbox & disown"
     (box
       :class "assistantbox ${assistant-hover ? "assistantbox-hover" : ""}"
       :style "background-image: url('${assistant}')"
@@ -688,7 +712,7 @@
     (box
       :class "album-art ${music-hover ? "album-art-hover" : ""}"
       :style "background-image: url('${matches("${pctl.status}", "Playing") ? album-art-path : playerctl}');"
-      :tooltip "  ${pctl.artist}  󰎆 ${pctl.title} "
+      :tooltip "   ${pctl.artist}  󰎆 ${pctl.title} "
       (circular-progress
         :class "tr-a album-art-progress ${music-hover ? "album-art-progress-hover" : ""}"
         :value {progress >= 0 && progress <= 100 ? progress : 0}
@@ -930,7 +954,7 @@
     :onrightclick "bin/pulse_info mute ${content} & disown"
     :onscroll "bin/pulse_info change_volume ${content} {} & disown"
     :cursor "pointer"
-    :tooltip " ${content}: ${value}% "
+    :tooltip "  ${icon-on} ${content}: ${value}% "
     (box :space-evenly false :spacing 9
       :class "tr-c audio-volume ramp-${
           value < 1   ? "1" :
@@ -982,11 +1006,11 @@
 ;; 👾 workspaces: {{{
 
 (defvar ws-hover false)
-(defvar ws-hover-1 false)
-(defvar ws-hover-2 false)
-(defvar ws-hover-3 false)
-(defvar ws-hover-4 false)
-(defvar ws-hover-5 false)
+(defvar ws-h1 false)
+(defvar ws-h2 false)
+(defvar ws-h3 false)
+(defvar ws-h4 false)
+(defvar ws-h5 false)
 (deflisten active-ws
   :initial "5"
   'tail -F /tmp/eww/workspace 2> /dev/null'
@@ -996,19 +1020,20 @@
   'tail -F /tmp/eww/occupied 2> /dev/null'
 )
 
-(defwidget workspace [icon num desc ?app]
+(defwidget workspace [icon num desc hover ?app]
   (eventbox
+    :onhover "eww update ws-h${num}=true"
+    :onhoverlost "eww update ws-h${num}=false"
     :onclick "${num == "5" ? "change-bg 'music';" : "change-bg;"} hyprctl dispatch workspace ${num} & disown"
     :cursor "pointer"
     :onmiddleclick "hyprctl dispatch workspace ${num} && ${app} & disown"
     :tooltip "  ${desc}  "
     (box
-      :style "
-              background-image: url('art/ws-icons/${icon}${
+      :style "background-image: url('art/ws-icons/${icon}${
+                hover ? "-hover" :
                 matches(active-ws,num) ? "-active" :
                 "${matches(occupied, "${num}") ? "" : "-empty"}"
-                }.svg');
-              "
+              }.svg');"
       :class "workspace ws-${num}"
     )
   )
@@ -1021,18 +1046,19 @@
     :onrightclick "hyprctl dispatch workspace previous"
     (box
       :class "tr-a workspacesbox ${ws-hover ? "workspacesbox-hover" : ""}"
-      :halign "center" :space-evenly false :spacing 10 :orientation "${active-ws == "5" ? "horizontal" : "vertical"}"
+      :halign "center" :space-evenly false :spacing 10
+      :orientation "${active-ws == "5" ? "horizontal" : "vertical"}"
       :style "${active-ws == "5" ?
         "
         margin-right: 40px;
         margin-top: 260px;
         padding: 11px 15px 0px 15px;
         " : "" }"
-      (workspace :icon "network"  :num "1" :desc " chat 'n networking")
-      (workspace :icon "learn"    :num "2" :desc " documents 'n such" )
-      (workspace :icon "dna"      :num "3" :desc " primary desktop" )
-      (workspace :icon "dotfiles" :num "4" :desc " settings 'n secondary work" )
-      (workspace :icon "music"    :num "5" :desc " music" )
+      (workspace :icon "network"  :num "1" :hover ws-h1 :desc " chat 'n networking")
+      (workspace :icon "learn"    :num "2" :hover ws-h2 :desc " documents 'n such" )
+      (workspace :icon "dna"      :num "3" :hover ws-h3 :desc " primary desktop" )
+      (workspace :icon "dotfiles" :num "4" :hover ws-h4 :desc " settings 'n secondary work" )
+      (workspace :icon "music"    :num "5" :hover ws-h5 :desc " music" )
     )
   )
 )
