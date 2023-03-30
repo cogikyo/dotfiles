@@ -8,15 +8,14 @@ fi
 reset () {
     echo "10" > "/tmp/eww/brightness"
     pkill wlr-brightness
-    sleep 0.1
     wlr-brightness & disown
     notify-send -h int:value:100 "normal brightness (100%)" -u low -t 1000 -i display-brightness-full
     gdbus call -e -d de.mherzberg -o /de/mherzberg/wlrbrightness -m de.mherzberg.wlrbrightness.set 1
 }
 
 night () {
-    echo "4" > "/tmp/eww/brightness"
-    notify-send -h int:value:"$br"0 "low brightness (40%)" -u low -t 1000 -i display-brightness-low
+    echo "4" >> "/tmp/eww/brightness"
+    dunstify -h int:value:40 "low brightness (40%)" -u low -t 1000 -i display-brightness-low -a "wlr-brightness"
     gdbus call -e -d de.mherzberg -o /de/mherzberg/wlrbrightness -m de.mherzberg.wlrbrightness.set 0.4
 }
 
@@ -27,6 +26,9 @@ adjust () {
             if [[ "$br" -gt 2 ]]; then
                 gdbus call -e -d de.mherzberg -o /de/mherzberg/wlrbrightness -m de.mherzberg.wlrbrightness.decrease 0.1
                 br=$((br - 1))
+            else
+                reset
+                br=10
             fi
         else
             if [[ "$br" -lt 10 ]]; then
@@ -35,7 +37,7 @@ adjust () {
             fi
         fi
         echo "$br" >> "/tmp/eww/brightness"
-        notify-send -h int:value:"$br"0 "brightness ""${br}0%" -u low -t 1000 -i display-brightness-medium
+        dunstify -h int:value:"$br"0 "brightness ""${br}0%" -u low -t 500 -i display-brightness-medium -a "wlr-brightness"
     else
         exit 0
     fi

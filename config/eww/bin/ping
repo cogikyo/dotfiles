@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+
+res="$(ping -c 3 "google.com" | rg -oP 'rtt min/avg/max/mdev = \K[\d.]+(?=/)' | awk '{print int($1+0.5)}')"
+
+echo "$res"
