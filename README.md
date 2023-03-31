@@ -94,7 +94,7 @@
 
 - Color Scheme: [vagari](https://github.com/nosvagor/vagari#palette) (work in progress)
 - GTK: [catppuccin macchiato (peach)](https://github.com/catppuccin/gtk) (temporary)
-- Cursors: [Nordzy-orange](https://github.com/alvatip/Nordzy-cursors) (temporary)
+- Cursors: [Nordzy-white](https://github.com/alvatip/Nordzy-cursors) (temporary)
 - Icons: [Nordzy](https://github.com/alvatip/Nordzy-icon) (temporary)
 
 </details>
@@ -219,6 +219,7 @@ makepkg -si
 cd ~
 git clone https://github.com/nosvagor/dotfiles
 paru -S - < ~/dotfiles/etc/packages.lst
+
 # no good repos nordzy icons/cursors, do manually ⮯
 git clone https://github.com/alvatip/Nordzy-icon
 cd ~/.cache
@@ -229,6 +230,17 @@ cd ~/.cache
 git clone https://github.com/alvatip/Nordzy-cursors
 cd Nordzy-cursors
 sudo ./install.sh
+
+# manual eww installation
+git clone https://github.com/elkowar/eww
+cd eww
+# Update `define_builtin_vars! { Duration::new(0, 500000000)` in inbuilt.rs
+# Default is (2, 0), but I like updates of 0.5 seconds for cpu polling.
+# ... there is probably a better way to do this.
+cargo build --release --no-default-features --features=wayland
+cd target/release
+chmod +x ./eww
+cp eww /usr/bin/
 ```
 
 <br>
