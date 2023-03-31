@@ -4,6 +4,7 @@ ardour
 base
 base-devel
 bat
+bc
 beautysh
 blender
 bluez
@@ -18,7 +19,6 @@ discord
 dunst-git
 efibootmgr
 electron
-eww-wayland
 fd
 ffmpegthumbnailer
 firefox-developer-edition
@@ -29,6 +29,7 @@ gimp
 git
 glava
 go
+gputest
 grim
 gst-plugin-pipewire
 gtk3-demos
@@ -57,15 +58,16 @@ mpv
 mpvpaper-git
 neofetch
 neovim
-nordzy-cursors
 noto-fonts-cjk
 noto-fonts-emoji
 noto-fonts-extra
 npm
 nvimpager
+nvtop
 obs-studio
 openssh
 ouch
+pacman-contrib
 paru
 pipes-rs-git
 pipewire
@@ -86,9 +88,9 @@ sddm-git
 shellcheck-bin
 shellharden
 slurp
+socat
 spotify
 starship
-stylelint
 stylua
 swaylock
 taplo-cli
@@ -107,12 +109,14 @@ webcord
 wget
 wireplumber
 wl-clipboard
+wlr-brightness-git
 wofi
 wofi-emoji-git
 xdg-desktop-portal-hyprland-git
 xplr
 zathura
 zathura-pdf-mupdf
+zoom
 zoxide
 zram-generator
 zsh
