@@ -663,7 +663,6 @@
     (box :space-evenly false :spacing 0
       :class "userbox ${user-hover ? "userbox-hover" : ""}"
       :style "background-image: url('${user-art-path}');"
-      :tooltip "          "
     )
   )
 )
@@ -688,7 +687,6 @@
     (box
       :class "assistantbox ${assistant-hover ? "assistantbox-hover" : ""}"
       :style "background-image: url('${assistant}')"
-      :tooltip "      "
     )
   )
 )
@@ -1313,7 +1311,7 @@
 
 (defwindow pacman
   :monitor 0 :stacking "overlay" :exclusive false :focusable false
-  :geometry (geometry :anchor "bottom right" :x "-22px" :y "172px" )
+  :geometry (geometry :anchor "bottom right" :x "-22px" :y "170px" )
   (pacman)
 )
 ; 📦 pacman: {{{
@@ -1339,7 +1337,7 @@
       } pacman${pacman-hover ? "-hover" : ""}"
       :markup "<small>${upgrades <= 1 ? " ": "${upgrades} "}</small>"
       :tooltip "  ${upgrades <= 1 ? "  synced  ": "   ${upgrades} available upgrades  " }"
-      :style "margin: 30px; margin-bottom: ${dunst-hover ? "86px" : "30px"};"
+      :style "margin: 30px; margin-bottom: ${dunst-hover ? "92px" : "30px"};"
     )
   )
 )
