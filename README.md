@@ -129,6 +129,20 @@
 
 <!-- }}} -->
 
+<br>
+
+## 🪟 Gallery
+
+> **Note**: Gallery WIP: working on video showcase.
+
+<p align="center">
+    <kbd>
+        <img
+            src="https://github.com/nosvagor/dotfiles/blob/main/share/example-1.png?raw=true"/>
+    </kbd>
+</p>
+<br>
+
 <!-- 🛠️ Installation {{{ -->
 ## 🛠️ Installation
 
@@ -205,7 +219,6 @@ makepkg -si
 cd ~
 git clone https://github.com/nosvagor/dotfiles
 paru -S - < ~/dotfiles/etc/packages.lst
-
 # no good repos nordzy icons/cursors, do manually ⮯
 git clone https://github.com/alvatip/Nordzy-icon
 cd ~/.cache
