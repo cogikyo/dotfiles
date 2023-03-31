@@ -146,6 +146,12 @@
         <img
             src="https://github.com/nosvagor/dotfiles/blob/main/share/example-2.png?raw=true"/>
     </kbd>
+    <br>
+    <br>
+    <kbd>
+        <img
+            src="https://github.com/nosvagor/dotfiles/blob/main/share/example-3.png?raw=true"/>
+    </kbd>
 </p>
 <br>
 
