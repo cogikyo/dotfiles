@@ -74,6 +74,7 @@
 - Display Server: [Wayland](https://wiki.archlinux.org/title/Wayland)
 - Compositor: [Hyprland](https://hyprland.org/)
 - Widgets: [eww](https://github.com/elkowar/eww)
+- Wallpaper: [mpvpaper](https://github.com/GhostNaN/mpvpaper) (vidoes found [here](https://github.com/nosvagor/dotfiles/tree/main/share/videos))
 
 </details>
 
