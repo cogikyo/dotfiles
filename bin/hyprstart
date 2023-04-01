@@ -2,10 +2,10 @@
 
 change-bg "code"
 
-layout -n 1 -w https://twitch.tv/following
+layout -n 1 -w https://chat.openai.com/chat?model=gpt-4
 # layout -n 2 -s vagari -a inkscape
 # layout -n 3 -s vagari -w https://github.com/nosvagor/vagari
-layout -n 4 -s eww -w https://github.com/nosvagor/dotfiles
+layout -n 4 -s dotfiles -w https://github.com/nosvagor/dotfiles
 
 hyprctl dispatch workspace 5
 glava -e "bars_rc.glsl" & disown
