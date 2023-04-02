@@ -33,6 +33,7 @@ go
 gputest
 grim
 gst-plugin-pipewire
+gtk-layer-shell
 gtk3-demos
 guvcview
 hyprland-bin
