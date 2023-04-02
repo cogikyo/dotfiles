@@ -11,6 +11,7 @@ bluez
 bluez-utils
 brave-bin
 btop
+btrfs-progs
 calc
 catppuccin-gtk-theme-macchiato
 codespell
@@ -106,7 +107,7 @@ v4l2loopback-dkms
 via-bin
 vidir
 vlc
-webcord
+webcord-bin
 wget
 wireplumber
 wl-clipboard
