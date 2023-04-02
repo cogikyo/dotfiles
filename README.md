@@ -199,6 +199,12 @@
 
       archinstall
 
+- Some relevant options that might not be clear:
+
+      audio client: pipewire
+      best effort partition: btrfs
+      desktop client: minimal (arch does not support hyprland at this time)
+
 - Best to install a few essential packages during this step:
 
       base base-devel linux-headers git rustup
@@ -209,10 +215,24 @@
 <summary><h3> ⚙️  Post-Installation </h3></summary>
 
 > **[General Recommendations](https://wiki.archlinux.org/title/General_recommendations)**   worth the read, seriously
+>
+> **Note**: the following is not meant to be a generalized installation guide;
+> it's essentially a collection of commands to take a minimal arch install to
+> my current configuration.
+>
+> Many of steps are extremely tailored to my needs, or my best attempt to solve
+> certain problems. Notably, many of my configs are based around my custom keyboard
+> layout, so don't expect shortcuts to be intuitive if you are trying to copy them.
+>
+> Eventually I'd like to create a generalized script to streamline
+> installation for different hardware, but that's not a problem needing to be
+> solved at this time.
+
+<br>
 
 **1. Install the latest stable of version of rust using [rustup](https://github.com/rust-lang/rustup):**
 
-    rustup default stable
+    rustup default nightly
 
 <br>
 
@@ -255,6 +275,12 @@ cargo build --release --no-default-features --features=wayland
 cd target/release
 chmod +x ./eww
 cp eww /usr/bin/
+
+# note: a location and openweathermap key is needed for weather widget.
+# https://home.openweathermap.org/api_keys
+echo "{api key here}" > ~/.local/.owm_api_key
+echo "{lat} {long}" > ~/.local/.location
+
 ```
 
 <br>
@@ -340,6 +366,9 @@ mv fonts ~/.local/share/
 ssh-keygen -t ed25519 -C "your_email@example.com"
 eval "$(ssh-agent -s)"
 ssh-add ~/.ssh/id_ed25519
+
+# https://github.com/settings/keys
+# view your key, which github needs for auth/singing
 bat ~/.ssh/id_ed25519.pub
 ```
 
@@ -347,10 +376,6 @@ bat ~/.ssh/id_ed25519.pub
 ```sh
 # example moving to ssh origin:
 git remote set-url origin git@github.com:nosvagor/dotfiles.git
-
-# tell git about your ssh to sign commits:
-git config --global gpg.format ssh
-git config --global user.signingkey ~/.ssh/id_ed25519.pub
 ```
 
 <br>
