@@ -231,18 +231,17 @@ makepkg -si
 ```sh
 cd ~
 git clone https://github.com/nosvagor/dotfiles
-paru -S - < ~/dotfiles/etc/packages.lst
+paru -S --needed - < ~/dotfiles/etc/packages.lst
 
 # no good repos nordzy icons/cursors, do manually ⮯
 git clone https://github.com/alvatip/Nordzy-icon
 cd ~/.cache
 cd Nordzy-icon
-sudo ./install.sh
-# note: sudo ./install.sh installs globally.
+./install.sh
 cd ~/.cache
 git clone https://github.com/alvatip/Nordzy-cursors
 cd Nordzy-cursors
-sudo ./install.sh
+./install.sh
 
 # manual eww installation
 git clone https://github.com/elkowar/eww
