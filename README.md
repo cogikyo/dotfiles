@@ -232,6 +232,7 @@ makepkg -si
 cd ~
 git clone https://github.com/nosvagor/dotfiles
 paru -S --needed - < ~/dotfiles/etc/packages.lst
+# might want to review/edit this list ⮭ before installing.
 
 # no good repos nordzy icons/cursors, do manually ⮯
 git clone https://github.com/alvatip/Nordzy-icon
@@ -246,7 +247,15 @@ cd Nordzy-cursors
 # manual eww installation
 git clone https://github.com/elkowar/eww
 cd eww
+<<<<<<< HEAD
 # In: crates/eww/src/config/inbuilt.rs
+=======
+<<<<<<< HEAD
+# In: crates/eww/src/config/inbuilt.rs
+=======
+# Edit: crates/eww/src/config/inbuilt.rs
+>>>>>>> c241ed6 (minor updates to install instructions)
+>>>>>>> 1bf2507 (more minor updates to install instructions)
 # Update: `define_builtin_vars! { Duration::new(0, 500000000)`
 # Default is (2, 0), but I like updates of 0.5 seconds for cpu polling.
 # ... there is probably a better way to do this.
