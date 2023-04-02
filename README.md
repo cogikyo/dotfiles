@@ -212,7 +212,7 @@
 
 **1. Install the latest stable of version of rust using [rustup](https://github.com/rust-lang/rustup):**
 
-    rustup default nightly
+    rustup default stable
 
 <br>
 
@@ -247,15 +247,7 @@ cd Nordzy-cursors
 # manual eww installation
 git clone https://github.com/elkowar/eww
 cd eww
-<<<<<<< HEAD
-# In: crates/eww/src/config/inbuilt.rs
-=======
-<<<<<<< HEAD
-# In: crates/eww/src/config/inbuilt.rs
-=======
 # Edit: crates/eww/src/config/inbuilt.rs
->>>>>>> c241ed6 (minor updates to install instructions)
->>>>>>> 1bf2507 (more minor updates to install instructions)
 # Update: `define_builtin_vars! { Duration::new(0, 500000000)`
 # Default is (2, 0), but I like updates of 0.5 seconds for cpu polling.
 # ... there is probably a better way to do this.
