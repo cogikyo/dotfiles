@@ -212,7 +212,7 @@
 
 **1. Install the latest stable of version of rust using [rustup](https://github.com/rust-lang/rustup):**
 
-    rustup default stable
+    rustup default nightly
 
 <br>
 
@@ -246,7 +246,8 @@ cd Nordzy-cursors
 # manual eww installation
 git clone https://github.com/elkowar/eww
 cd eww
-# Update `define_builtin_vars! { Duration::new(0, 500000000)` in inbuilt.rs
+# In: crates/eww/src/config/inbuilt.rs
+# Update: `define_builtin_vars! { Duration::new(0, 500000000)`
 # Default is (2, 0), but I like updates of 0.5 seconds for cpu polling.
 # ... there is probably a better way to do this.
 cargo build --release --no-default-features --features=wayland
