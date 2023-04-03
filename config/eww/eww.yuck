@@ -1019,13 +1019,13 @@
   'tail -F /tmp/eww/occupied 2> /dev/null'
 )
 
-(defwidget workspace [icon num desc hover ?app]
+(defwidget workspace [icon num desc hover]
   (eventbox
     :onhover "eww update ws-h${num}=true"
     :onhoverlost "eww update ws-h${num}=false"
     :onclick "${num == "5" ? "change-bg 'music';" : "change-bg;"} hyprctl dispatch workspace ${num} & disown"
     :cursor "pointer"
-    :onmiddleclick "hyprctl dispatch workspace ${num} && ${app} & disown"
+    :onmiddleclick "hyprctl dispatch workspace ${num} & disown"
     :tooltip "  ${desc}  "
     (box
       :style "background-image: url('art/ws-icons/${icon}${
@@ -1048,11 +1048,12 @@
       :halign "center" :space-evenly false :spacing 10
       :orientation "${active-ws == "5" ? "horizontal" : "vertical"}"
       :style "${active-ws == "5" ?
-        "
-        margin-right: 38px;
-        margin-top: 260px;
-        padding: 11px 15px 0px 15px;
-        " : "" }"
+          "
+          margin-right: 38px;
+          margin-top: 260px;
+          padding: 11px 15px 0px 15px;
+          "
+        : "" }"
       (workspace :icon "network"  :num "1" :hover ws-h1 :desc " chat 'n networking")
       (workspace :icon "learn"    :num "2" :hover ws-h2 :desc " documents 'n such" )
       (workspace :icon "dna"      :num "3" :hover ws-h3 :desc " primary desktop" )
