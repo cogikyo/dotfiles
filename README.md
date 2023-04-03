@@ -120,9 +120,8 @@
 - Image Editing: [gimp](https://www.gimp.org/)
 - Image Processing: [darktable](https://www.darktable.org/)
 - Screen Recording: [OBS](https://obsproject.com/)
-- Audio Editing: [ardour](https://ardour.org/)
 - Vector Graphics: [inkscape](https://inkscape.org/)
-- Motion Graphics: [blender](https://www.blender.org/)
+- Video Editing: [DaVinci Resolve](https://www.blackmagicdesign.com/products/davinciresolve)
 - Music: [spotify](www.spotify.com) with [playerctl](https://github.com/altdesktop/playerctl)
 - Music Visualizer: [glava](https://github.com/jarcode-foss/glava)
 
