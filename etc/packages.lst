@@ -6,7 +6,6 @@ base-devel
 bat
 bc
 beautysh
-blender
 bluez
 bluez-utils
 brave-bin
@@ -16,6 +15,7 @@ calc
 catppuccin-gtk-theme-macchiato
 codespell
 darktable
+davinci-resolve
 discord
 dunst-git
 efibootmgr
@@ -97,6 +97,7 @@ starship
 stylua
 swaylock
 taplo-cli
+tbb2020
 tldr
 trash-cli
 ttf-fira-code
