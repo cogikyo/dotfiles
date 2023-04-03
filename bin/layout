@@ -6,17 +6,17 @@ if [[ "$inprog" -gt 2 ]]; then
     exit 0
 fi
 
-a_flag="" # [a]plication
+# a_flag="" # [a]plication
 n_flag="" # [w]orkspace
-s_flag="" # [s]ession (kitty)
-w_flag="" # [w]ebsite
+# s_flag="" # [s]ession (kitty)
+# w_flag="" # [w]ebsite
 
 while getopts 'a:d:n:w:s:' flag; do
   case "$flag" in
-    a) a_flag="$OPTARG" ;;
-    s) s_flag="$OPTARG" ;;
+    # a) a_flag="$OPTARG" ;;
+    # s) s_flag="$OPTARG" ;;
     n) n_flag="$OPTARG" ;;
-    w) w_flag="$OPTARG" ;;
+    # w) w_flag="$OPTARG" ;;
     *) exit 1 ;;
   esac
 done
@@ -36,7 +36,7 @@ fi
 
 
 browser () {
-    firefox-developer-edition --new-window "$w_flag" & sleep 1.5
+    firefox-developer-edition --new-window "$1" & sleep 1.5
 }
 
 terminal () {
@@ -64,15 +64,19 @@ hyprctl dispatch workspace "$n_flag"
 
 case "$n_flag" in
     1)
-        discord & sleep 6
+        discord & sleep 3
+        browser "https://chat.openai.com/chat?model=gpt-4"
+    ;;
+    # 2)
+    #
+    # ;;
+    3)
+        terminal "home"
         browser
     ;;
-    2)
-        "$a_flag" & sleep 3
-    ;;
-    3|4)
-        terminal "$s_flag"
-        browser
+    4)
+        terminal "dotfiles"
+        browser "https://github.com/nosvagor/dotfiles"
     ;;
     *) exit 1 ;;
 esac
