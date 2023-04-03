@@ -81,6 +81,7 @@ end
 -- ⛑️  Null-ls (Linting, formatting):
 
 -- see https://github.com/jose-elias-alvarez/null-ls.nvim/blob/main/doc/BUILTINS.md
+local code_actions = null_ls.builtins.code_actions
 local diagnostics = null_ls.builtins.diagnostics
 local formatting = null_ls.builtins.formatting
 local hover = null_ls.builtins.hover
@@ -88,11 +89,15 @@ local hover = null_ls.builtins.hover
 null_ls.setup({
 	border = "rounded",
 	sources = {
+		-- 🧹 code actions: ⮯
+		code_actions.eslint_d,
+		code_actions.gitsigns,
 		-- 🩺 diagnostics: ⮯
 		diagnostics.codespell, -- identify some common code related misspellings
 		diagnostics.shellcheck, -- shell linter
 		diagnostics.zsh, -- zsh -n (somewhat useful)
 		diagnostics.stylelint, -- css 'n related linting
+		diagnostics.eslint_d, -- js 'n related linting
 		-- 🗃️ formatting: ⮯
 		formatting.shellharden, -- bash; goes well with shellcheck linting
 		formatting.beautysh, -- zsh 'n more (+ alt bash)
@@ -149,6 +154,7 @@ vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.s
 })
 
 -- 🎾 Automatic Server Setup:
+-- https://github.com/williamboman/mason-lspconfig.nvim#default-configuration
 local servers = {
 	bashls = {},
 	marksman = {},
@@ -158,6 +164,7 @@ local servers = {
 	rust_analyzer = {},
 	taplo = {},
 	html = {},
+	tsserver = {},
 	lua_ls = {
 		Lua = {
 			workspace = { checkThirdParty = false },
