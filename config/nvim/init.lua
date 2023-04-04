@@ -321,6 +321,11 @@ require("lazy").setup({
 	"ThePrimeagen/harpoon",
 	"mattn/emmet-vim",
 
+	{
+		"barrett-ruth/live-server.nvim",
+		config = true,
+	},
+
 	"tpope/vim-surround",
 	"tpope/vim-repeat",
 	"tpope/vim-fugitive",

@@ -96,8 +96,8 @@ null_ls.setup({
 		diagnostics.codespell, -- identify some common code related misspellings
 		diagnostics.shellcheck, -- shell linter
 		diagnostics.zsh, -- zsh -n (somewhat useful)
-		diagnostics.stylelint, -- css 'n related linting
-		diagnostics.eslint_d, -- js 'n related linting
+		-- diagnostics.stylelint, -- css 'n related linting
+		-- diagnostics.eslint_d, -- js 'n related linting
 		-- 🗃️ formatting: ⮯
 		formatting.shellharden, -- bash; goes well with shellcheck linting
 		formatting.beautysh, -- zsh 'n more (+ alt bash)
