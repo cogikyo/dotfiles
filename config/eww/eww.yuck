@@ -686,7 +686,11 @@
     :onmiddleclick "${browser} https://mail.google.com/mail/u/1/#inbox & disown"
     (box
       :class "assistantbox ${assistant-hover ? "assistantbox-hover" : ""}"
-      :style "background-image: url('${assistant}')"
+      :style
+        "
+        background-image: url('${assistant-hover ? assistant : album-art-path }');
+        ${assistant-hover ? "": "background-size: 110%;" }
+        "
     )
   )
 )
@@ -694,7 +698,7 @@
 
 
 (defwindow albumArt
-  :monitor 0 :stacking "bottom" :exclusive false :focusable true
+  :monitor 0 :stacking "overlay" :exclusive false :focusable false
   :geometry (geometry :anchor "bottom right" :x "208px" :y "383")
   (albumArt)
 )
