@@ -71,8 +71,8 @@ case "$n_flag" in
     #
     # ;;
     3)
-        terminal "home"
-        browser
+        terminal "firefox"
+        browser "https://github.com/nosvagor/vagari.firefox"
     ;;
     4)
         terminal "dotfiles"
