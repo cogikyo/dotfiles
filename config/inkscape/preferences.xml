@@ -949,11 +949,11 @@
      id="desktop"
      style="fill:#000000">
     <group
-       width="1870"
-       height="961"
+       width="2915"
+       height="1955"
        x="0"
        y="0"
-       maximized="1"
+       maximized="0"
        fullscreen="0"
        id="geometry" />
     <group
@@ -1072,7 +1072,7 @@
   <group
      id="theme"
      defaultPreferDarkTheme="0"
-     defaultIconTheme="Nordzy"
+     defaultIconTheme="Nordzy-dark"
      defaultGtkTheme="Catppuccin-Macchiato-Standard-Peach-Dark"
      narrowSpinButton="1"
      preferDarkTheme="0"
