@@ -686,11 +686,7 @@
     :onmiddleclick "${browser} https://mail.google.com/mail/u/1/#inbox & disown"
     (box
       :class "assistantbox ${assistant-hover ? "assistantbox-hover" : ""}"
-      :style
-        "
-        background-image: url('${assistant-hover ? assistant : album-art-path }');
-        ${assistant-hover ? "": "background-size: 110%;" }
-        "
+      :style "background-image: url('${assistant}')"
     )
   )
 )
