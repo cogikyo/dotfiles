@@ -11,6 +11,7 @@ bluez-utils
 brave-bin
 btop
 btrfs-progs
+caddy
 calc
 catppuccin-gtk-theme-macchiato
 codespell
@@ -20,6 +21,7 @@ discord
 dunst-git
 efibootmgr
 electron
+eslint_d
 fd
 ffmpegthumbnailer
 firefox-developer-edition
@@ -61,6 +63,7 @@ mpvpaper-git
 ncdu
 neofetch
 neovim
+nodejs-live-server
 noto-fonts-cjk
 noto-fonts-emoji
 noto-fonts-extra
@@ -93,7 +96,9 @@ shellharden
 slurp
 socat
 spotify
+spotifywm-git
 starship
+stylelint
 stylua
 swaylock
 taplo-cli
@@ -118,6 +123,7 @@ wofi
 wofi-emoji-git
 xdg-desktop-portal-hyprland-git
 xplr
+yarn
 zathura
 zathura-pdf-mupdf
 zoom
