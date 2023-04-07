@@ -1,9 +1,6 @@
 #!/usr/bin/env bash
 
-cd ~ || exit
-caddy file-server --listen :42069 --browse & disown
-sleep 1
-
+sleep 0.5
 change-bg "code"
 
 layout -n 1
