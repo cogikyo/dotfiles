@@ -409,8 +409,8 @@ xplr.config.layouts.builtin.default = {
 					config = {
 						constraints = {
 							{ Length = 3 },
-							{ Min = 1 },
-							{ Length = 15 },
+							{ Min = 10 },
+							{ Max = 10 },
 							{ Length = 3 },
 						},
 					},
@@ -439,15 +439,13 @@ xplr.config.layouts.builtin.no_selection = {
 					config = {
 						constraints = {
 							{ Length = 3 },
-							{ Min = 1 },
-							{ Length = 42 },
+							{ Min = 5 },
 							{ Length = 3 },
 						},
 					},
 					splits = {
 						"SortAndFilter",
 						"Table",
-						"HelpMenu",
 						"InputAndLogs",
 					},
 				},
@@ -480,8 +478,8 @@ modes.switch_layout = {
 					"PopMode",
 				},
 			},
-			["h"] = {
-				help = "help",
+			["n"] = {
+				help = "no selection",
 				messages = {
 					{ SwitchLayoutBuiltin = "no_selection" },
 					"PopMode",
