@@ -75,7 +75,7 @@ def get_cwd():
     if len("/".join(cwd_parts)) < 15:
         cwd = cwd_parts[0] + "/".join(cwd_parts[1:])
     else:
-        cwd = TRUNCATION_SYMBOL + "/".join(cwd_parts[-2:])
+        cwd = TRUNCATION_SYMBOL + cwd_parts[-1]
 
     return cwd
 
