@@ -325,7 +325,9 @@ sudo cp udev/* /etc/udev/rules.d/
 sudo cp loader.conf /boot/loader/loader.conf
 sudo cp gifview.desktop /usr/share/applications/gifview.desktop
 sudo cp security/faillock.conf /etc/security/faillock.conf
-systemctl enable bluetooth
+sudo cp caddy.service /etc/systemd/system/
+sudo systemctl enable bluetooth
+sudo systemctl enable caddy.service
 ```
 
 <br>

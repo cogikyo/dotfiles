@@ -38,7 +38,7 @@ gst-plugin-pipewire
 gtk-layer-shell
 gtk3-demos
 guvcview
-hyprland-bin
+hyprland
 hyprpicker-git
 imagemagick
 imv
@@ -111,10 +111,10 @@ ttf-nerd-fonts-symbols-2048-em
 unzip
 usbutils
 v4l2loopback-dkms
-via-bin
 vidir
 vlc
 webcord-bin
+wev
 wget
 wireplumber
 wl-clipboard

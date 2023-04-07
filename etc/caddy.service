@@ -1,0 +1,11 @@
+[Unit]
+Description=Caddy File Server
+After=network.target
+
+[Service]
+User=cullyn
+ExecStart=/usr/bin/caddy file-server --listen :42069 --browser
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
