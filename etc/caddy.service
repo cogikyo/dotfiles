@@ -4,7 +4,7 @@ After=network.target
 
 [Service]
 User=cullyn
-ExecStart=/usr/bin/caddy file-server --listen :42069 --browser
+ExecStart=/usr/bin/caddy file-server --listen :42069 --browse
 Restart=always
 
 [Install]
