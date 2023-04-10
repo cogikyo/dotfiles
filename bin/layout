@@ -64,15 +64,15 @@ hyprctl dispatch workspace "$n_flag"
 
 case "$n_flag" in
     1)
-        discord & sleep 3
+        webcord & sleep 3
         browser "https://chat.openai.com/chat?model=gpt-4"
     ;;
     # 2)
     #
     # ;;
     3)
-        terminal "firefox"
-        browser ""
+        terminal "pipes"
+        browser "https://chat.openai.com/chat?model=gpt-4"
     ;;
     4)
         terminal "dotfiles"
