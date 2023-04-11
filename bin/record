@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+
+a_flag="combined_audio.monitor" # audio sources
+s_flag=""
+
+while getopts 'a:s:' flag; do
+    case "$flag" in
+        a) a_flag="$OPTARG" ;;
+        s) s_flag="$OPTARG" ;;
+        *) exit 1 ;;
+    esac
+done
+
+if [[ "$s_flag" == "slurp" ]]; then
+    s_flag="-g $(slurp)"
+else
+    s_flag=""
+fi
+
+
+# sources
+input_source="alsa_output.usb-Focusrite_Scarlett_Solo_USB_Y70ZEU921E21FF-00.analog-stereo.5"
+output_source="bluez_output.14_3F_A6_10_A1_B5.1.monitor"
+
+if [[ $a_flag == "combined_audio.monitor" ]]; then
+    # create a null sink (virtual audio device)
+    combined=$(pactl load-module module-null-sink sink_name=combined_audio)
+
+    # scarlette needs to be remapped to mono audio
+    remapped=$(pactl load-module module-remap-source master="$input_source" source_name=remapped_source channels=1 channel_map=mono)
+
+    # create two audio loopbacks, one for each audio source
+    input=$(pactl load-module module-loopback source=remapped_source sink=combined_audio)
+    output=$(pactl load-module module-loopback source="$output_source" sink=combined_audio)
+fi
+
+case "$a_flag" in
+    source) wf_audio="--audio=$input_source" ;;
+    sink) wf_audio="--audio=$output_source" ;;
+    none) wf_audio="" ;;
+    *) wf_audio="--audio=$a_flag" ;;
+esac
+
+wf_output="-f $HOME/media/recordings/$(date +%F__%T__slurp).mp4"
+wf_codec="-c h264_vaapi -d /dev/dri/renderD128"
+
+dunstify "wf-recorder started" -a "wf-recorder" -u low
+
+wf-recorder $wf_codec $s_flag $wf_output $wf_audio
+
+cleanup() {
+    if [[ $a_flag == "combined_audio.monitor" ]]; then
+        pactl unload-module "$combined"
+        pactl unload-module "$input"
+        pactl unload-module "$output"
+        pactl unload-module "$remapped"
+    fi
+
+    dunstify "wf-recorder ended" -a "wf-recorder" -u low
+}
+
+# wait for the recording to finish (press Ctrl+C to stop the recording)
+echo "Press Ctrl+C to stop the recording and clean up PulseAudio modules..."
+
+# catch Ctrl+C and call the cleanup function
+trap cleanup EXIT
