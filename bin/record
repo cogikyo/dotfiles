@@ -1,28 +1,29 @@
 #!/usr/bin/env bash
 
-a_flag="combined_audio.monitor" # audio sources
-s_flag=""
+C="--codec=h264_vaapi"
+D="--device=/dev/dri/renderD128"
 
-while getopts 'a:s:' flag; do
+dir="$HOME/media/recordings"
+a_flag="combined_audio.monitor" # audio sources
+a_label="fullaudio"
+s_flag=""
+s_label="fullscreen"
+
+while getopts 'a:s:d:' flag; do
     case "$flag" in
         a) a_flag="$OPTARG" ;;
         s) s_flag="$OPTARG" ;;
+        d) dir="$OPTARG" ;;
         *) exit 1 ;;
     esac
 done
 
-if [[ "$s_flag" == "slurp" ]]; then
-    s_flag="-g $(slurp)"
-else
-    s_flag=""
-fi
-
-
-# sources
-input_source="alsa_output.usb-Focusrite_Scarlett_Solo_USB_Y70ZEU921E21FF-00.analog-stereo.5"
-output_source="bluez_output.14_3F_A6_10_A1_B5.1.monitor"
-
 if [[ $a_flag == "combined_audio.monitor" ]]; then
+
+    # sources
+    input_source="alsa_output.usb-Focusrite_Scarlett_Solo_USB_Y70ZEU921E21FF-00.analog-stereo"
+    output_source="bluez_output.14_3F_A6_10_A1_B5.1.monitor"
+
     # create a null sink (virtual audio device)
     combined=$(pactl load-module module-null-sink sink_name=combined_audio)
 
@@ -35,18 +36,25 @@ if [[ $a_flag == "combined_audio.monitor" ]]; then
 fi
 
 case "$a_flag" in
-    source) wf_audio="--audio=$input_source" ;;
-    sink) wf_audio="--audio=$output_source" ;;
-    none) wf_audio="" ;;
-    *) wf_audio="--audio=$a_flag" ;;
+    source) a="--audio=$input_source"; a_label="source" ;;
+    sink) a="--audio=$output_source"; a_label="sink" ;;
+    none) a=""; a_label="muted" ;;
+    *) a="--audio=$a_flag" ;;
 esac
 
-wf_output="-f $HOME/media/recordings/$(date +%F__%T__slurp).mp4"
-wf_codec="-c h264_vaapi -d /dev/dri/renderD128"
 
-dunstify "wf-recorder started" -a "wf-recorder" -u low
 
-wf-recorder $wf_codec $s_flag $wf_output $wf_audio
+if [[ "$s_flag" == "slurp" ]]; then
+    slurp="$(slurp)"
+    g="-g $slurp"
+    s_label=$(echo "$slurp" | awk -F ' ' '{print $2}')
+else
+    g=""
+fi
+
+label="($s_label-$a_label)"
+
+f="-f$dir/$(date "+%T %m-%d $label").mp4"
 
 cleanup() {
     if [[ $a_flag == "combined_audio.monitor" ]]; then
@@ -56,8 +64,11 @@ cleanup() {
         pactl unload-module "$remapped"
     fi
 
-    dunstify "wf-recorder ended" -a "wf-recorder" -u low
+    dunstify "🎬 screen recording ended" -a "wf-end" -u low
 }
+
+dunstify "📽️ recording $label" -a "wf-start" -u low
+wf-recorder "$C" "$D" "$a" "$f" "$g"
 
 # wait for the recording to finish (press Ctrl+C to stop the recording)
 echo "Press Ctrl+C to stop the recording and clean up PulseAudio modules..."
