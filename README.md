@@ -83,6 +83,7 @@
 
 - Editor: [neovim](https://neovim.io/)
 - Browser: [Firefox](https://www.mozilla.org/en-US/firefox/developer/)
+    - with custom [firefox css](https://github.com/nosvagor/vagari.firefox).
 - Terminal: [kitty](https://sw.kovidgoyal.net/kitty/)
 - Shell: [zsh](https://wiki.archlinux.org/title/zsh)
 
