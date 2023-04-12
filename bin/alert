@@ -19,6 +19,8 @@ case "$app" in
     attention) sound="discovery" ;;
     chat) sound="reward" ;;
     work) sound="fruit" ;;
+    wf-start) sound="discovery" ;;
+    wf-end) sound="reward" ;;
     Spotify) sound="none" ;;
     discord) sound="none" ;;
 esac
