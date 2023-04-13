@@ -6,6 +6,7 @@ base-devel
 bat
 bc
 beautysh
+blender
 bluez
 bluez-utils
 brave-bin
@@ -69,7 +70,6 @@ noto-fonts-extra
 npm
 nvimpager
 nvtop
-obs-studio
 olive-git
 onetbb
 openssh
@@ -113,6 +113,7 @@ ttf-nerd-fonts-symbols-2048-em
 unzip
 usbutils
 v4l2loopback-dkms
+vial-appimage
 vidir
 vlc
 webcord-bin
@@ -123,7 +124,7 @@ wireplumber
 wl-clipboard
 wlr-brightness-git
 wofi
-wofi-emoji-git
+wofi-emoji
 xdg-desktop-portal-hyprland-git
 xplr
 yarn
