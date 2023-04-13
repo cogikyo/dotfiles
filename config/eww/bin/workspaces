@@ -9,7 +9,7 @@ handle() {
 
 occupied () {
     mapfile -t occupied_ws < <( hyprctl workspaces | rg -oP "(?<=ID\s)\d" )
-    echo "${occupied_ws[@]}" > "/tmp/eww/occupied"
+    echo "${occupied_ws[@]}" >> "/tmp/eww/occupied"
 }
 
 
