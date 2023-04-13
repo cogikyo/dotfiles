@@ -361,6 +361,9 @@ mv fonts ~/.local/share/
 
       extensions.pocket.enabled = false
 
+- Review basic settings (fonts 'n such)
+- Install [vagari.firefox](https://github.com/nosvagor/vagari.firefox) userChrome css
+
 <br>
 
 **10. Configure SSH key:**
