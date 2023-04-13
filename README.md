@@ -119,10 +119,11 @@
 
 - File Explorer: [xplr](https://github.com/sayanarijit/xplr)
 - Image Editing: [gimp](https://www.gimp.org/)
+- Imagine Generation: [midjourney](https://www.midjourney.com/)
 - Image Processing: [darktable](https://www.darktable.org/)
-- Screen Recording: [OBS](https://obsproject.com/)
+- Screen Recording: [wf-recorder](https://github.com/ammen99/wf-recorder)
 - Vector Graphics: [inkscape](https://inkscape.org/)
-- Video Editing: [DaVinci Resolve](https://www.blackmagicdesign.com/products/davinciresolve)
+- Video Editing: [blender](https://www.blender.org/features/video-editing/)
 - Music: [spotify](www.spotify.com) with [playerctl](https://github.com/altdesktop/playerctl)
 - Music Visualizer: [glava](https://github.com/jarcode-foss/glava)
 

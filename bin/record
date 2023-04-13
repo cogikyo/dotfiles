@@ -18,6 +18,40 @@ while getopts 'a:s:d:' flag; do
     esac
 done
 
+if [[ "$s_flag" == "slurp" ]]; then
+    slurp="$(slurp)"
+    g="-g $slurp"
+    s_label=$(echo "$slurp" | awk -F ' ' '{print $2}')
+else
+    g=""
+fi
+
+if [[ "$s_label" == "" ]]; then
+    dunstify "no region selected, aborting" -a "wf-end" -u critical -t 1000
+    exit 1
+fi
+
+label="($s_label-$a_label)"
+
+if [[ "$label" == "(fullscreen-fullaudio)" ]]; then
+    label="(all)"
+fi
+
+output="$dir/$(date "+%m-%d-%y %H:%M $label").mp4"
+
+if [[ -s "$output" ]]; then
+    rm "$output"
+fi
+
+f="-f$output"
+
+case "$a_flag" in
+    source) a="--audio=$input_source"; a_label="source" ;;
+    sink) a="--audio=$output_source"; a_label="sink" ;;
+    none) a=""; a_label="muted" ;;
+    *) a="--audio=$a_flag" ;;
+esac
+
 if [[ $a_flag == "combined_audio.monitor" ]]; then
 
     # sources
@@ -28,50 +62,32 @@ if [[ $a_flag == "combined_audio.monitor" ]]; then
     combined=$(pactl load-module module-null-sink sink_name=combined_audio)
 
     # scarlette needs to be remapped to mono audio
-    remapped=$(pactl load-module module-remap-source master="$input_source" source_name=remapped_source channels=1 channel_map=mono)
+    remapped_input=$(pactl load-module module-remap-source master="$input_source" source_name=remapped_input channels=1 channel_map=mono)
 
     # create two audio loopbacks, one for each audio source
-    input=$(pactl load-module module-loopback source=remapped_source sink=combined_audio)
+    input=$(pactl load-module module-loopback source=remapped_input sink=combined_audio)
     output=$(pactl load-module module-loopback source="$output_source" sink=combined_audio)
+
+    # lower sink volume (volume control on sink does not affect it in the combined input)
+    output_loopback_id=$(pactl list short sink-inputs  | rg "PipeWire" | tail -n 1 | awk '{print $1}')
+    pactl set-sink-input-volume "$output_loopback_id" 69%
 fi
-
-case "$a_flag" in
-    source) a="--audio=$input_source"; a_label="source" ;;
-    sink) a="--audio=$output_source"; a_label="sink" ;;
-    none) a=""; a_label="muted" ;;
-    *) a="--audio=$a_flag" ;;
-esac
-
-
-
-if [[ "$s_flag" == "slurp" ]]; then
-    slurp="$(slurp)"
-    g="-g $slurp"
-    s_label=$(echo "$slurp" | awk -F ' ' '{print $2}')
-else
-    g=""
-fi
-
-label="($s_label-$a_label)"
-
-f="-f$dir/$(date "+%T %m-%d $label").mp4"
 
 cleanup() {
     if [[ $a_flag == "combined_audio.monitor" ]]; then
         pactl unload-module "$combined"
         pactl unload-module "$input"
         pactl unload-module "$output"
-        pactl unload-module "$remapped"
+        pactl unload-module "$remapped_input"
     fi
 
-    dunstify "🎬 screen recording ended" -a "wf-end" -u low
+    dunstify "🎬 screen recording ended" -a "wf-end" -u low -t 1000
 }
 
-dunstify "📽️ recording $label" -a "wf-start" -u low
-wf-recorder "$C" "$D" "$a" "$f" "$g"
+# =============================================================================
 
-# wait for the recording to finish (press Ctrl+C to stop the recording)
-echo "Press Ctrl+C to stop the recording and clean up PulseAudio modules..."
+dunstify "📽️ recording $label" -a "wf-start" -u low -t 1000
+wf-recorder "$C" "$D" "$a" "$f" "$g"
 
 # catch Ctrl+C and call the cleanup function
 trap cleanup EXIT
