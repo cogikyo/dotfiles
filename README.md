@@ -65,8 +65,20 @@
 > &emsp;&emsp;&emsp;&emsp;_"because that challenge is one that we are **willing to accept**, one we are **unwilling to postpone**_..."
 
 ---
+<br>
 
-### 👨‍💻 Essentials
+## 🎥 Video Showcase
+
+https://user-images.githubusercontent.com/59071534/232156316-a30c7624-3876-43e5-8b02-6801327b0744.mp4
+
+<br>
+
+https://user-images.githubusercontent.com/59071534/232156421-099bea2d-b3a9-4de2-9f1f-c29985230c66.mp4
+
+<br>
+<br>
+
+## 👨‍💻 Software
 
 <details open>
 <summary>🖥️ <b>Display</b></summary>
@@ -136,8 +148,6 @@
 
 ## 🪟 Gallery
 
-> **Note**: Gallery WIP: working on video showcase.
-
 <p align="center">
     <kbd>
         <img
@@ -161,10 +171,14 @@
 <!-- 🛠️ Installation {{{ -->
 ## 🛠️ Installation
 
-<details closed>
+<details open>
 <summary><h5> 🧰 My Hardware</h5></summary>
 
-- Keyboard: [Corne (Helidox) 42 key](https://keebmaker.com/products/corne-low-profile), with Kailh gChoc Light Blue (20g),
+- Keyboard: [Corne (Helidox) 42 key](https://keebmaker.com/products/corne-low-profile), with Kailh gChoc Light Blue (20g), and **custom layout**:
+![image](https://user-images.githubusercontent.com/59071534/232157490-bc96cdec-fa8c-4245-a9fe-76fd57a381af.png)
+![image](https://user-images.githubusercontent.com/59071534/232157618-c49b549f-6acf-4343-96d0-9f9932196b36.png)
+![image](https://user-images.githubusercontent.com/59071534/232157647-baabd17f-9cf7-43b1-9577-37eb7daa326d.png)
+![image](https://user-images.githubusercontent.com/59071534/232157666-a6fa76f4-43a2-414b-879d-26a200101e18.png)
 - Monitor: [SAMSUNG UR59 Series 32-Inch 4K UHD (3840x2160)](https://a.co/d/bZtUse0)
 - Mouse: [MX Master 3S](https://www.logitech.com/en-us/products/mice/mx-master-3s.910-006556.html)
 - CPU: [AMD Ryzen 7 3700X (16) @ 3.600GHz](https://www.amd.com/en/products/cpu/amd-ryzen-7-3700x)
