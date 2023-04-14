@@ -25,7 +25,7 @@ blackhole () {
 
 case "$background_choice" in
     "default" )
-        ps -ef | rg "record.mp4|blackhole.mp4" | rg -v rg | awk '{print $2}' | xargs kill
+        ps -ef | rg "record.mp4|blackhole.webm" | rg -v rg | awk '{print $2}' | xargs kill
         exit 0
     ;;
     "code")
@@ -35,7 +35,7 @@ case "$background_choice" in
     ;;
     "music")
         record & disown
-        ps -ef | rg "blackhole.mp4" | rg -v rg | awk '{print $2}' | xargs kill
+        ps -ef | rg "blackhole.webm" | rg -v rg | awk '{print $2}' | xargs kill
     ;;
     "lock")
         blackhole & disown
