@@ -31,6 +31,13 @@ if [[ "$s_label" == "" ]]; then
     exit 1
 fi
 
+case "$a_flag" in
+    source) a="--audio=$input_source"; a_label="source" ;;
+    sink) a="--audio=$output_source"; a_label="sink" ;;
+    none) a=""; a_label="muted" ;;
+    *) a="--audio=$a_flag" ;;
+esac
+
 label="($s_label-$a_label)"
 
 if [[ "$label" == "(fullscreen-fullaudio)" ]]; then
@@ -44,13 +51,6 @@ if [[ -s "$output" ]]; then
 fi
 
 f="-f$output"
-
-case "$a_flag" in
-    source) a="--audio=$input_source"; a_label="source" ;;
-    sink) a="--audio=$output_source"; a_label="sink" ;;
-    none) a=""; a_label="muted" ;;
-    *) a="--audio=$a_flag" ;;
-esac
 
 if [[ $a_flag == "combined_audio.monitor" ]]; then
 
@@ -70,7 +70,7 @@ if [[ $a_flag == "combined_audio.monitor" ]]; then
 
     # lower sink volume (volume control on sink does not affect it in the combined input)
     output_loopback_id=$(pactl list short sink-inputs  | rg "PipeWire" | tail -n 1 | awk '{print $1}')
-    pactl set-sink-input-volume "$output_loopback_id" 69%
+    pactl set-sink-input-volume "$output_loopback_id" 75%
 fi
 
 cleanup() {
@@ -86,7 +86,8 @@ cleanup() {
 
 # =============================================================================
 
-dunstify "📽️ recording $label" -a "wf-start" -u low -t 1000
+dunstify "📽️ recording $label" -a "wf-start" -u low -t 2000 && sleep 2.1
+
 wf-recorder "$C" "$D" "$a" "$f" "$g"
 
 # catch Ctrl+C and call the cleanup function
