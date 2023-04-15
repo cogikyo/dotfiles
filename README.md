@@ -65,18 +65,6 @@
 > &emsp;&emsp;&emsp;&emsp;_"because that challenge is one that we are **willing to accept**, one we are **unwilling to postpone**_..."
 
 ---
-<br>
-
-## 🎥 Video Showcase
-
-https://user-images.githubusercontent.com/59071534/232156316-a30c7624-3876-43e5-8b02-6801327b0744.mp4
-
-<br>
-
-https://user-images.githubusercontent.com/59071534/232156421-099bea2d-b3a9-4de2-9f1f-c29985230c66.mp4
-
-<br>
-<br>
 
 ## 👨‍💻 Software
 
@@ -166,6 +154,9 @@ https://user-images.githubusercontent.com/59071534/232156421-099bea2d-b3a9-4de2-
             src="https://github.com/nosvagor/dotfiles/blob/main/share/example-3.png?raw=true"/>
     </kbd>
 </p>
+
+https://user-images.githubusercontent.com/59071534/232156421-099bea2d-b3a9-4de2-9f1f-c29985230c66.mp4
+
 <br>
 
 <!-- 🛠️ Installation {{{ -->
