@@ -36,7 +36,11 @@ fi
 
 
 browser () {
-    firefox-developer-edition --new-window "$1" & sleep 1.5
+    if [[ "$2" == "tab" ]]; then
+        firefox-developer-edition "$1" & sleep 1.5
+    else
+        firefox-developer-edition --new-window "$1" & sleep 1.5
+    fi
 }
 
 terminal () {
@@ -70,8 +74,9 @@ case "$n_flag" in
     #
     # ;;
     3)
-        terminal "home"
+        terminal "cogikyo"
         browser "https://chat.openai.com/chat?model=gpt-4"
+        browser "https://github.com/nosvagor/cogikyo" tab
     ;;
     4)
         terminal "dotfiles"

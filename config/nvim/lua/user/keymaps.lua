@@ -52,6 +52,7 @@ map("i", "<C-v>", '<Esc>"+p') -- system clipboard (default) paste
 map("i", "<C-t>", '<Esc>"*p') -- system clipboard (selection) paste
 map("n", "<leader>rfl", "<S-v>gw")
 map("n", "<leader>rfp", "vipgw")
+map("n", "<leader>rff", "gngw", recursive_silent)
 -- }}}
 
 -- 🤖 Copy copy {{{
