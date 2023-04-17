@@ -319,6 +319,14 @@ require("lazy").setup({
 	"ggandor/lightspeed.nvim",
 	"mbbill/undotree",
 	"ThePrimeagen/harpoon",
+	{
+		"ThePrimeagen/refactoring.nvim",
+		dependencies = {
+			{ "nvim-lua/plenary.nvim" },
+			{ "nvim-treesitter/nvim-treesitter" },
+		},
+		opts = {},
+	},
 	"mattn/emmet-vim",
 
 	{
@@ -330,7 +338,6 @@ require("lazy").setup({
 	"tpope/vim-repeat",
 	"tpope/vim-fugitive",
 	"tpope/vim-rhubarb",
-	"tpope/vim-sleuth",
 
 	"AndrewRadev/switch.vim",
 	"elkowar/yuck.vim",

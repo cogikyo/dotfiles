@@ -92,12 +92,14 @@ null_ls.setup({
 		-- 🧹 code actions: ⮯
 		code_actions.eslint_d,
 		code_actions.gitsigns,
+		code_actions.refactoring,
 		-- 🩺 diagnostics: ⮯
 		diagnostics.codespell, -- identify some common code related misspellings
 		diagnostics.shellcheck, -- shell linter
 		diagnostics.zsh, -- zsh -n (somewhat useful)
 		-- diagnostics.stylelint, -- css 'n related linting
 		-- diagnostics.eslint_d, -- js 'n related linting
+
 		-- 🗃️ formatting: ⮯
 		formatting.shellharden, -- bash; goes well with shellcheck linting
 		formatting.beautysh, -- zsh 'n more (+ alt bash)
@@ -106,6 +108,7 @@ null_ls.setup({
 		formatting.rustfmt, -- rust
 		formatting.stylua, -- lua
 		formatting.taplo, -- toml
+		formatting.black, -- python
 		-- 🏄 hover: ⮯
 		hover.dictionary,
 		hover.printenv,
@@ -158,7 +161,7 @@ vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.s
 local servers = {
 	bashls = {},
 	marksman = {},
-	pyright = {},
+	-- pyright = {},
 	prosemd_lsp = {},
 	cssls = {},
 	rust_analyzer = {},
