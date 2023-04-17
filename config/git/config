@@ -8,3 +8,5 @@
 	format = ssh
 [commit]
 	gpgsign = true
+[pull]
+	rebase = true
