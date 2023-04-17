@@ -7,6 +7,7 @@ export XCURSOR_THEME=Nordzy-cursors-white
 export PATH="$HOME/.cargo/bin:$PATH"
 export GOPATH="$HOME/.go"
 export PATH="$PATH:$HOME/.go/bin"
+export PATH="$HOME/.local/bin:$PATH"
 export PAGER=nvimpager
 export EDITOR="nvim"
 export DOTS="$HOME/dotfiles"
