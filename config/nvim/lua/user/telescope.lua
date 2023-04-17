@@ -2,11 +2,11 @@ local ok, telescope = pcall(require, "telescope")
 
 if not ok then
 	vim.api.nvim_echo({
-        {
-            "Error: telescope plugin not found... skipping relevant setup()",
-            "Error"
-        }
-    }, true, {})
+		{
+			"Error: telescope plugin not found... skipping relevant setup()",
+			"Error",
+		},
+	}, true, {})
 	return
 end
 
@@ -66,6 +66,14 @@ telescope.setup({
 		},
 	},
 })
+
+telescope.load_extension("refactoring")
+vim.api.nvim_set_keymap(
+	"v",
+	"<leader>tr",
+	"<Esc><cmd>lua require('telescope').extensions.refactoring.refactors()<CR>",
+	{ noremap = true }
+)
 
 local builtin = require("telescope.builtin")
 local tmap = function(key, cmd)
