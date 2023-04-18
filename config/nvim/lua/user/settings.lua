@@ -16,6 +16,7 @@ local options = {
 	sidescrolloff = 6, -- minimum lines left/right of cursor
 	spell = false, -- turn spell check off by default
 	spelllang = { "en_us", "en_gb" }, -- easily add/remove dictionaries
+	textwidth = 80,
 	formatoptions = "tcqnpj1", -- see :help fo-table
 	-- ========================================================================
 
