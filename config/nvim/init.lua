@@ -169,127 +169,6 @@ require("lazy").setup({
 		},
 	}, -- }}}
 
-	{ --🗂️ Nvim-Tree {{{
-
-		"kyazdani42/nvim-tree.lua",
-		dependencies = {
-			{ "antosha417/nvim-lsp-file-operations", opts = {} },
-			{ "kyazdani42/nvim-web-devicons", opts = {} },
-			"nvim-lua/plenary.nvim",
-		},
-		opts = {
-			disable_netrw = false,
-			hijack_cursor = true,
-			update_focused_file = { enable = true },
-			diagnostics = { enable = true },
-			modified = { enable = true },
-			remove_keymaps = true,
-			view = {
-				number = true,
-				cursorline = false,
-				relativenumber = true,
-				signcolumn = "yes",
-				mappings = {
-					custom_only = true,
-					list = {
-						{ key = { "<CR>", "o", "<Right>" }, action = "edit" },
-						{ key = "zz", action = "cd" },
-						{ key = "<Up>", action = "prev_sibling" },
-						{ key = "<Down>", action = "next_sibling" },
-						{ key = "<Left>", action = "parent_node" },
-						{ key = "<C-v>", action = "vsplit" },
-						{ key = "<C-h>", action = "split" },
-						{ key = "<C-t>", action = "tabnew" },
-						{ key = "zc", action = "close_node" },
-						{ key = "I", action = "toggle_git_ignored" },
-						{ key = ".", action = "toggle_dotfiles" },
-						{ key = "n", action = "create" },
-						{ key = "x", action = "trash" },
-						{ key = "X", action = "remove" },
-						{ key = "r", action = "rename" },
-						{ key = "<C-r>", action = "full_rename" },
-						{ key = "R", action = "refresh" },
-						{ key = "d", action = "cut" },
-						{ key = "yy", action = "copy" },
-						{ key = "p", action = "paste" },
-						{ key = "yp", action = "copy_path" },
-						{ key = "yP", action = "copy_absolute_path" },
-						{ key = "[", action = "prev_git_item" },
-						{ key = "]", action = "next_git_item" },
-						{ key = "O", action = "system_open" },
-						{ key = { "q", "<Esc>" }, action = "close" },
-						{ key = "?", action = "toggle_help" },
-						{ key = "zm", action = "collapse_all" },
-						{ key = "zr", action = "expand_all" },
-						{ key = "S", action = "search_node" },
-						{ key = "<C-k>", action = "toggle_file_info" },
-					},
-				},
-				float = {
-					enable = true,
-					open_win_config = function()
-						local screen_w = vim.opt.columns:get()
-						local screen_h = vim.opt.lines:get() - vim.opt.cmdheight:get()
-						local window_w = screen_w * 0.66
-						local window_h = screen_h * 0.33
-						local window_w_int = math.floor(window_w)
-						local window_h_int = math.floor(window_h)
-						local center_x = (screen_w - window_w) / 2
-						local center_y = ((vim.opt.lines:get() - window_h) / 2) - vim.opt.cmdheight:get()
-						return {
-							border = "rounded",
-							relative = "editor",
-							row = center_y,
-							col = center_x,
-							width = window_w_int,
-							height = window_h_int,
-						}
-					end,
-				},
-			},
-			renderer = {
-				highlight_git = true,
-				indent_markers = {
-					enable = true,
-					inline_arrows = true,
-					icons = {
-						corner = "└╾",
-						edge = "│ ",
-						item = "├",
-						none = " ",
-					},
-				},
-				icons = {
-					glyphs = {
-						default = "",
-						symlink = "",
-						git = {
-							unstaged = "🞊",
-							staged = "",
-							unmerged = "",
-							renamed = "",
-							deleted = "",
-							untracked = "",
-							ignored = "",
-						},
-					},
-				},
-			},
-			trash = {
-				cmd = "trash-put",
-				require_confirm = true,
-			},
-			actions = {
-				open_file = {
-					quit_on_open = true,
-					window_picker = {
-						chars = "asetniol",
-					},
-				},
-			},
-		},
-	}, -- }}}
-
 	{ --🪩 simple setup {{{
 		"brenoprata10/nvim-highlight-colors",
 		opts = {
@@ -350,6 +229,14 @@ require("lazy").setup({
 		},
 	},
 	{
+		"kyazdani42/nvim-tree.lua",
+		dependencies = {
+			{ "antosha417/nvim-lsp-file-operations", opts = {} },
+			{ "kyazdani42/nvim-web-devicons", opts = {} },
+			{ "nvim-lua/plenary.nvim" },
+		},
+	},
+	{
 		"nvim-lualine/lualine.nvim",
 		dependencies = { "arkav/lualine-lsp-progress" },
 	},
@@ -379,6 +266,7 @@ local user_config = {
 	"alpha", -- welcome screen
 	"cmp", -- completion, snippets, and related
 	"lualine", -- status line
+	"nvimtree", -- file explorer
 	"telescope", -- fuzzy finder
 	"treesitter", -- treesitter and related
 	"autopairs", -- autopair configs and custom functions
