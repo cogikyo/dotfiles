@@ -1,40 +1,39 @@
-set default-fg                   "#CAD3F5"
-set default-bg 			         "#24273A"
+set default-fg                   "#aeb9f8"
+set default-bg 			         "#222536"
 
-set completion-bg		         "#363A4F"
-set completion-fg		         "#CAD3F5"
-set completion-highlight-bg	     "#575268"
-set completion-highlight-fg	     "#CAD3F5"
-set completion-group-bg		     "#363A4F"
-set completion-group-fg		     "#8AADF4"
+set completion-bg		         "#1e2133"
+set completion-fg		         "#aeb9f8"
+set completion-highlight-bg	     "#30345a"
+set completion-highlight-fg	     "#aeb9f8"
+set completion-group-bg		     "#1e2133"
+set completion-group-fg		     "#7492ef"
 
-set statusbar-fg		         "#CAD3F5"
-set statusbar-bg		         "#363A4F"
+set statusbar-fg		         "#aeb9f8"
+set statusbar-bg		         "#1e2133"
 
-set notification-bg		         "#363A4F"
-set notification-fg		         "#CAD3F5"
-set notification-error-bg	     "#363A4F"
-set notification-error-fg	     "#ED8796"
-set notification-warning-bg	     "#363A4F"
-set notification-warning-fg	     "#FAE3B0"
+set notification-bg		         "#1e2133"
+set notification-fg		         "#aeb9f8"
+set notification-error-bg	     "#1e2133"
+set notification-error-fg	     "#f08898"
+set notification-warning-bg	     "#1e2133"
+set notification-warning-fg	     "#f4ce88"
 
-set inputbar-fg			         "#CAD3F5"
-set inputbar-bg 		         "#363A4F"
+set inputbar-fg			         "#5a61aa"
+set inputbar-bg 		         "#1e2133"
 
-set recolor-lightcolor		     "#24273A"
-set recolor-darkcolor		     "#CAD3F5"
+set recolor-lightcolor		     "#222536"
+set recolor-darkcolor		     "#aeb9f8"
 
-set index-fg			         "#CAD3F5"
-set index-bg			         "#24273A"
-set index-active-fg		         "#CAD3F5"
-set index-active-bg		         "#363A4F"
+set index-fg			         "#aeb9f8"
+set index-bg			         "#222536"
+set index-active-fg		         "#aeb9f8"
+set index-active-bg		         "#1e2133"
 
-set render-loading-bg		     "#24273A"
-set render-loading-fg		     "#CAD3F5"
+set render-loading-bg		     "#222536"
+set render-loading-fg		     "#aeb9f8"
 
-set highlight-color		         "#575268"
-set highlight-fg                 "#F5BDE6"
-set highlight-active-color	     "#F5BDE6"
+set highlight-color		         "#30345a"
+set highlight-active-color	     "#f2a170"
 
 map t navigate next
 map e navigate previous
@@ -46,5 +45,5 @@ set link-hadjust                 false
 set search-hadjust               false
 set scroll-page-aware            true
 set scroll-step                  200
-set adjust-open                  "width"
-set zoom-step                    5
+set zoom-step                    6
+set recolor                      true
