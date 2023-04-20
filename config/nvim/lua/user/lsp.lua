@@ -162,7 +162,6 @@ local servers = {
 	bashls = {},
 	marksman = {},
 	pyright = {},
-	prosemd_lsp = {},
 	cssls = {},
 	rust_analyzer = {},
 	taplo = {},
