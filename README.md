@@ -327,7 +327,7 @@ ln -sfn ~/dotfiles/config/zsh/zshrc .zshrc
 **7. Setup some root configurations:**
 ```sh
 cd ~/dotfiles/etc
-sudo ln -sfn "$HOME"/dotfiles/bin/* /usr/bin/
+sudo ln -sfn ~/dotfiles/bin/* /usr/bin/
 sudo cp bluetooth/main.conf /etc/bluetooth/main.conf
 sudo cp udev/* /etc/udev/rules.d/
 sudo cp loader.conf /boot/loader/loader.conf
