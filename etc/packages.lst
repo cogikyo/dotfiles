@@ -56,6 +56,7 @@ luacheck
 luarocks
 lxappearance
 man-db
+manim
 mediainfo
 mplayer
 mpv
@@ -105,6 +106,18 @@ stylelint
 stylua
 swaylock
 taplo-cli
+texlive-bibtexextra
+texlive-core
+texlive-fontsextra
+texlive-formatsextra
+texlive-games
+texlive-humanities
+texlive-latexextra
+texlive-music
+texlive-pictures
+texlive-pstricks
+texlive-publishers
+texlive-science
 tldr
 trash-cli
 ttf-fira-code
@@ -128,6 +141,7 @@ wofi-emoji
 xdg-desktop-portal-hyprland-git
 xplr
 yarn
+yay
 zathura
 zathura-pdf-mupdf
 zoom
