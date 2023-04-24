@@ -53,7 +53,7 @@ mute () {
 
 change_volume () {
     incremment="10"
-    sink_offset="20"
+    sink_offset="30"
     current_volume=$(get_volume "$1")
 
     direction="+"
@@ -66,7 +66,7 @@ change_volume () {
     max="100"
 
     if [[ "$1" == "source" ]]; then
-        max="120"
+        max="130"
     fi
 
     if [[ "$1" == "source" && current_volume -le $sink_offset ]]; then
@@ -87,7 +87,7 @@ change_volume () {
     fi
 
     if [[ "$1" == "source" ]]; then
-        ((current_volume-=20))
+        ((current_volume-=sink_offset))
     fi
 
     echo "$current_volume" >> "/tmp/eww/$1"
