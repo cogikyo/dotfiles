@@ -70,13 +70,16 @@ case "$n_flag" in
     1)
         webcord & sleep 1
     ;;
-    # 2)
-    #
-    # ;;
+    2)
+        terminal "voice"
+        browser "https://www.udemy.com/home/my-courses/learning"
+    ;;
     3)
-        terminal "cogikyo"
-        browser "https://chat.openai.com/chat?model=gpt-4"
-        browser "https://github.com/nosvagor/cogikyo" tab
+        terminal "rust"
+        browser "https://github.com/nosvagor/rust"
+        browser "https://rust-book.cs.brown.edu/ch02-00-guessing-game-tutorial.html" tab
+        browser "https://doc.rust-lang.org/rust-by-example/index.html" tab
+
     ;;
     4)
         terminal "dotfiles"

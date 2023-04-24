@@ -124,6 +124,9 @@
 - Vector Graphics: [inkscape](https://inkscape.org/)
 - Screen Recording: [wf-recorder](https://github.com/ammen99/wf-recorder)
 - Audio Editing: [audacity](https://www.audacityteam.org/)
+    - Edit: `/usr/share/applications/audacity.desktop` (currently broken under
+      wayland)
+    - Change `Exec` line to: `Exec=env GDK_BACKEND=x11 audacity %F`
 - Video Editing: [blender](https://www.blender.org/features/video-editing/)
 - Music: [spotify](www.spotify.com) with [playerctl](https://github.com/altdesktop/playerctl)
 - Music Visualizer: [glava](https://github.com/jarcode-foss/glava)
