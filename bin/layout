@@ -69,6 +69,9 @@ hyprctl dispatch workspace "$n_flag"
 case "$n_flag" in
     1)
         webcord & sleep 1
+        browser "https://twitter.com/nosvagor"
+        browser "https://www.midjourney.com/app/" tab
+        browser "https://chat.openai.com/?model=gpt-4" tab
     ;;
     2)
         terminal "voice"
@@ -77,7 +80,7 @@ case "$n_flag" in
     3)
         terminal "rust"
         browser "https://github.com/nosvagor/rust"
-        browser "https://doc.rust-lang.org/book/ch05-00-structs.html" tab
+        browser "https://doc.rust-lang.org/book/ch08-00-common-collections.html" tab
         # browser "https://rust-book.cs.brown.edu/ch02-00-guessing-game-tutorial.html" tab
         # browser "https://doc.rust-lang.org/rust-by-example/index.html" tab
 
