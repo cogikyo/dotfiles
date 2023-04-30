@@ -80,7 +80,7 @@ case "$n_flag" in
     3)
         terminal "rust"
         browser "https://github.com/nosvagor/rust"
-        browser "https://doc.rust-lang.org/book/ch15-00-smart-pointers.html" tab
+        browser "https://doc.rust-lang.org/book/ch19-00-advanced-features.html" tab
         # browser "https://rust-book.cs.brown.edu/ch02-00-guessing-game-tutorial.html" tab
         # browser "https://doc.rust-lang.org/rust-by-example/index.html" tab
 
