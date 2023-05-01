@@ -53,6 +53,10 @@ local on_attach = function(client, bufnr)
 		)
 	end
 
+	if client.name == "rust_analyzer" then
+		client.server_capabilities.semanticTokensProvider = nil
+	end
+
 	nmap("<leader>rn", vim.lsp.buf.rename)
 	nmap("<leader>ca", vim.lsp.buf.code_action)
 	nmap("<leader>gr", vim.lsp.buf.references)
