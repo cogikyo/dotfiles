@@ -75,7 +75,8 @@ require("lazy").setup({
 		config = function()
 			vim.cmd.colorscheme("vagari")
 		end,
-	}, -- }}}
+	},
+	-- }}}
 
 	{ --📰 Pretty-fold {{{
 		"anuvyklack/pretty-fold.nvim",
@@ -169,7 +170,7 @@ require("lazy").setup({
 		},
 	}, -- }}}
 
-	{ --🪩 simple setup {{{
+	{ --🪩 Simple setup {{{
 		"brenoprata10/nvim-highlight-colors",
 		opts = {
 			render = "background",
