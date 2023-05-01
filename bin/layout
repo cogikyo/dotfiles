@@ -12,13 +12,13 @@ n_flag="" # [w]orkspace
 # w_flag="" # [w]ebsite
 
 while getopts 'a:d:n:w:s:' flag; do
-  case "$flag" in
-    # a) a_flag="$OPTARG" ;;
-    # s) s_flag="$OPTARG" ;;
-    n) n_flag="$OPTARG" ;;
-    # w) w_flag="$OPTARG" ;;
-    *) exit 1 ;;
-  esac
+    case "$flag" in
+            # a) a_flag="$OPTARG" ;;
+            # s) s_flag="$OPTARG" ;;
+        n) n_flag="$OPTARG" ;;
+            # w) w_flag="$OPTARG" ;;
+        *) exit 1 ;;
+    esac
 done
 
 if [[ "$#" == 0 ]]; then
@@ -72,23 +72,22 @@ case "$n_flag" in
         browser "https://twitter.com/nosvagor"
         browser "https://www.midjourney.com/app/" tab
         browser "https://chat.openai.com/?model=gpt-4" tab
-    ;;
+        ;;
     2)
         terminal "voice"
         browser "https://www.udemy.com/home/my-courses/learning"
-    ;;
+        ;;
     3)
         terminal "rust"
         browser "https://github.com/nosvagor/rust"
-        browser "https://doc.rust-lang.org/book/ch19-00-advanced-features.html" tab
-        # browser "https://rust-book.cs.brown.edu/ch02-00-guessing-game-tutorial.html" tab
-        # browser "https://doc.rust-lang.org/rust-by-example/index.html" tab
+        browser "https://rust-book.cs.brown.edu/ch02-00-guessing-game-tutorial.html" tab
+        browser "https://doc.rust-lang.org/rust-by-example/index.html" tab
 
-    ;;
+        ;;
     4)
         terminal "dotfiles"
         browser "https://github.com/nosvagor/dotfiles"
-    ;;
+        ;;
     *) exit 1 ;;
 esac
 
