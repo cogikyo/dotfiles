@@ -26,7 +26,7 @@ local copilot_ok, copilot = pcall(require, "copilot")
 if not copilot_ok then
 	vim.api.nvim_echo({
 		{
-			"Error: cmp is intergrated with copilot, but copilot is not found, skipping relevant setup",
+			"Error: cmp is integrated with copilot, but copilot is not found, skipping relevant setup",
 			"Error",
 		},
 	}, true, {})
@@ -34,7 +34,7 @@ if not copilot_ok then
 end
 
 local copilot_cmp_ok, copilot_cmp = pcall(require, "copilot_cmp")
-if not copilot_ok then
+if not copilot_cmp_ok then
 	vim.api.nvim_echo({
 		{
 			"Error: copilt needs copilt_cmp to work well, but copilot_cmp is not found, skipping relevant setup",
@@ -50,31 +50,31 @@ end
 require("luasnip/loaders/from_vscode").lazy_load()
 
 local kind_icons = {
-	Text = "",
+	Text = "⼠",
 	Method = "⟜",
-	Function = "",
+	Function = "➠",
 	Constructor = "",
-	Field = "",
-	Variable = "",
-	Class = "",
+	Field = "",
+	Variable = "λ",
+	Class = "",
 	Interface = "",
 	Module = "",
 	Property = "",
 	Unit = "",
-	Value = "",
+	Value = "󱁦",
 	Enum = "",
-	Keyword = "",
+	Keyword = "",
 	Snippet = "",
-	Color = "",
-	File = "",
+	Color = "",
+	File = "",
 	Reference = "",
-	Folder = "",
+	Folder = "",
 	EnumMember = "",
-	Constant = "",
-	Struct = "",
+	Constant = "ℎ",
+	Struct = "",
 	Event = "",
-	Operator = "",
-	TypeParameter = "",
+	Operator = "",
+	TypeParameter = "",
 	Copilot = "",
 }
 
@@ -125,12 +125,12 @@ cmp.setup({
 			vim_item.menu = ({
 				copilot = " copilot",
 				nvim_lua = " nvim_lua",
-				nvim_lsp = " lsp",
-				luasnip = "luasnip",
-				buffer = "﬘ buffer",
+				nvim_lsp = " lsp",
+				luasnip = " luasnip",
+				buffer = "⼞buffer",
 				path = "⨒ path",
 				emoji = "ﲃ emoji",
-				nerdfont = " nerdfont",
+				nerdfont = "󰊪 nerdfont",
 			})[entry.source.name]
 			return vim_item
 		end,

@@ -3,22 +3,22 @@
 local lualine_ok, lualine = pcall(require, "lualine")
 if not lualine_ok then
 	vim.api.nvim_echo({
-        {
-            "Error: lualine plugin not found... skipping relevant setup()",
-            "Error"
-        }
-    }, true, {})
+		{
+			"Error: lualine plugin not found... skipping relevant setup()",
+			"Error",
+		},
+	}, true, {})
 	return
 end
 
 local additional_colors_ok, p = pcall(require, "vagari.palette")
 if not additional_colors_ok then
 	vim.api.nvim_echo({
-        {
-            "Error: lualine config has impored vagari.nvim that are not found, skipping setup",
-            "Error"
-        }
-    }, true, {})
+		{
+			"Error: lualine config has impored vagari.nvim that are not found, skipping setup",
+			"Error",
+		},
+	}, true, {})
 	return
 end
 -- }}}
@@ -90,7 +90,7 @@ local filename = {
 	"filename",
 	file_status = true,
 	path = 0,
-	icon = "",
+	icon = "⽂",
 	symbols = {
 		modified = "🞊",
 		readonly = "",
@@ -134,9 +134,9 @@ local lsp_progress = {
 		percentage = { pre = "", post = "%% " },
 		title = { pre = "", post = "" },
 		lsp_client_name = { pre = " ", post = "" },
-		spinner = { pre = "", post = "" },
+		spinner = { pre = "", post = " " },
 	},
-	spinner_symbols = { " ", " ", " ", " ", " ", " " },
+	spinner_symbols = { "󰇊", "󰇋", "󰇌", "󰇍", "󰇎", "󰇏" },
 }
 
 local search = {
@@ -149,7 +149,7 @@ local search = {
 		if searchcount.total == 0 then
 			vim.cmd([[ :call setreg("/", [''])<CR> ]])
 		end
-		return " " .. last_search .. "(" .. searchcount.current .. "/" .. searchcount.total .. ")"
+		return " " .. last_search .. "(" .. searchcount.current .. "/" .. searchcount.total .. ")"
 	end,
 	color = { fg = p.orn_2 },
 }
