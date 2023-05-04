@@ -278,8 +278,6 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
     color: $blu-2;
     width: 1px 0 1px 2px;
     radius: 50% 0% 48% 87%;
-
-
   }
 
   @if $direction == "up" {
@@ -457,12 +455,12 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 
   &-source {
     &-icon {
-      font-size: 20px;
-      margin: 8px 8px 7px 9px;
+      font-size: 17px;
+      margin: 9px 9px 8px 10px;
 
       &-inactiveFix {
-        font-size: 19px;
-        margin: 8px 7px 7px 8px;
+        font-size: 15px;
+        margin: 8px 8px 7px 9px;
       }
     }
   }
@@ -615,8 +613,6 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 
       &:hover {
         color: $rby-3;
-        font-size: 1.1em;
-        font-weight: bold;
         transition: all 0.25s $ease-out-snap;
       }
     }
@@ -629,6 +625,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 
     &-icon {
       margin-bottom: 1px;
+      font-size: 0.85em;
     }
 
     &-subtext {
@@ -857,11 +854,11 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 
 .net {
   transition: margin 0.25s $ease-out-snap;
-  font-size: 8px;
+  font-size: 11px;
 
   &-up {
     margin-bottom: 18px;
-    margin-left: 6px;
+    margin-left: 1px;
 
     &-hover {
       margin-bottom: 36px;
@@ -870,8 +867,8 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   }
 
   &-down {
-    margin-bottom: 4px;
-    margin-left: 4px;
+    margin-bottom: 0px;
+    margin-left: 8px;
 
     &-hover {
       margin-top: 24px;
@@ -880,7 +877,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   }
 
   &-ping {
-    font-size: 10px;
+    font-size: 11px;
     margin-top: 30px;
     margin-left: -3px;
 

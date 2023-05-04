@@ -50,11 +50,11 @@ local buttons = {
 			},
 		},
 		{ type = "padding", val = 2 },
-		dashboard.button("r", "  Recent Files", ":Telescope oldfiles <CR>"),
-		dashboard.button("t", "  Find file", ":Telescope find_files <CR>"),
-		dashboard.button("s", "  Live grep", ":Telescope live_grep <CR>"),
+		dashboard.button("o", "  Recent Files", ":Telescope oldfiles <CR>"),
+		dashboard.button("t", "󰈞  Find file", ":Telescope find_files <CR>"),
+		dashboard.button("s", "󰭎  Live grep", ":Telescope live_grep <CR>"),
 		{ type = "padding", val = 2 },
-		dashboard.button("q", "  Quit", ":qa<CR>"),
+		dashboard.button("q", "󰗼  Quit", ":qa<CR>"),
 	},
 }
 
