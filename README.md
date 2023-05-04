@@ -106,7 +106,7 @@
 
 - Sans Serif: [Albert Sans](https://fonts.google.com/specimen/Albert+Sans?query=Albert+Sans)
 - Monospace: [Fira Code](https://github.com/tonsky/FiraCode)
-    - Italic: [Hack](https://sourcefoundry.org/hack/)
+    - Italic: [JetBrains Mono](https://www.jetbrains.com/lp/mono/)
     - Symbols: [Nerd Font Symbols](https://github.com/ryanoasis/nerd-fonts)
 - Emoji: [Noto Color Emoji](https://fonts.google.com/noto/specimen/Noto+Color+Emoji)
 - Other: [Lora (serif)](https://fonts.google.com/specimen/Lora),
