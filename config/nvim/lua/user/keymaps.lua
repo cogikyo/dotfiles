@@ -189,12 +189,3 @@ map("n", "<leader>@p", "ysip<p>", recursive_explicit)
 map("n", "<leader>@d", "a&mdash;<Esc>", recursive_explicit)
 map("n", "<leader>@s", "a&emsp;<Esc>", recursive_explicit)
 -- }}}
-
--- ⭐ Common Unicode: {{{
-map("n", "<leader>uad", "a ⮯<Esc>")
-map("n", "<leader>uau", "a ⮭<Esc>")
-map("n", "<leader>uar", "a 🢣 <Esc>")
-map("n", "<leader>ual", "a 🢢 <Esc>")
-map("n", "<leader>udeg", "a °<Esc>")
-map("n", "<leader>unode", "a╼╾<Esc>")
--- }}}

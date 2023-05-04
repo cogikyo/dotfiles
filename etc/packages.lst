@@ -72,11 +72,11 @@ npm
 nvimpager
 nvtop
 obs-studio
-olive-git
 onetbb
 openssh
 ouch
 pacman-contrib
+pandoc-bin
 paru
 pipes-rs-git
 pipewire
@@ -123,7 +123,7 @@ tldr
 trash-cli
 ttf-fira-code
 ttf-hack
-ttf-nerd-fonts-symbols-2048-em
+ttf-nerd-fonts-symbols
 unzip
 usbutils
 v4l2loopback-dkms
