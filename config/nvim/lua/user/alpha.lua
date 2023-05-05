@@ -32,7 +32,7 @@ local header = {
 		[[    `-..,..-'       `-..,..-'       `-..,..-'      ]],
 	},
 	opts = {
-		hl = "@function.macro",
+		hl = "@function.builtin",
 		shrink_margin = false,
 		position = "center",
 	},
