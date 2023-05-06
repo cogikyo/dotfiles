@@ -325,7 +325,7 @@ end
 
 local node_types = {
 	directory = meta(" ", "Blue"),
-	file = meta(" ", "Reset"),
+	file = meta(" ", "White"),
 	symlink = meta(" ", azure),
 	mime_essence = {
 		audio = {
@@ -341,7 +341,7 @@ local node_types = {
 			["*"] = meta("󰶭 ", "Green"),
 		},
 		text = {
-			["*"] = meta(" ", "Reset"),
+			["*"] = meta(" ", "White"),
 		},
 	},
 	extension = {
@@ -357,11 +357,11 @@ local node_types = {
 		desktop = meta("󱕷 "),
 		rules = meta(" ", "Red", { "Dim" }),
 		lua = meta(" "),
-		rs = meta(" ", orange, { "Dim" }),
-		py = meta(" ", orange, { "Dim" }),
-		scss = meta("󰟬 ", orange, { "Dim" }),
-		css = meta(" ", orange, { "Dim" }),
-		html = meta(" ", orange, { "Dim" }),
+		rs = meta("󱘗 "),
+		py = meta(" "),
+		scss = meta("󰟬 "),
+		css = meta(" "),
+		html = meta(" "),
 	},
 	special = {
 		downloads = meta(" "),
