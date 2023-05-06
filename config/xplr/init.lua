@@ -1,5 +1,5 @@
 -- ============================================================================
--- 🧰 Setup: 🢢 {{{
+-- 🧰 Setup: {{{
 ---@diagnostic disable
 version = "0.21.1"
 local xplr = xplr -- The globally exposed configuration to be overridden.
@@ -74,7 +74,7 @@ local general = {
 					format = "╭╼╾⼮path ──────────────────────────────────────╮",
 				},
 				{ format = "⼈⾕⾥" },
-				{ format = "猪size ─╮" },
+				{ format = "󰖡 size ─╮" },
 				{ format = "🞊 modified ────╮" },
 			},
 			style = style("Green"),
@@ -188,7 +188,7 @@ local general = {
 			RelativePathDoesEndWith = { format = "rel=$", style = {} },
 			RelativePathDoesNotContain = { format = "rel!~", style = {} },
 			RelativePathDoesNotEndWith = { format = "rel!$", style = {} },
-			RelativePathDoesNotStartWith = format("  ", "White"),
+			RelativePathDoesNotStartWith = format(" 󰊠 ", "White"),
 			RelativePathDoesStartWith = { format = "rel=^", style = {} },
 			RelativePathIs = { format = "rel==", style = {} },
 			RelativePathIsNot = { format = "rel!=", style = {} },
@@ -325,7 +325,7 @@ end
 
 local node_types = {
 	directory = meta(" ", "Blue"),
-	file = meta(" ", "Reset"),
+	file = meta(" ", "Reset"),
 	symlink = meta(" ", azure),
 	mime_essence = {
 		audio = {
@@ -338,14 +338,14 @@ local node_types = {
 			["*"] = meta(" ", "Magenta", { "Dim" }),
 		},
 		application = {
-			["*"] = meta(" ", "Green"),
+			["*"] = meta("󰶭 ", "Green"),
 		},
 		text = {
-			["*"] = meta(" ", "Reset"),
+			["*"] = meta(" ", "Reset"),
 		},
 	},
 	extension = {
-		md = meta(" ", "Yellow", { "Dim" }),
+		md = meta(" ", azure, { "Dim" }),
 		toml = meta(" "),
 		conf = meta(" "),
 		json = meta(" "),
@@ -354,29 +354,30 @@ local node_types = {
 		dirs = meta(" "),
 		gz = meta(" ", "White"),
 		zip = meta(" ", "White"),
-		desktop = meta(" "),
+		desktop = meta("󱕷 "),
 		rules = meta(" ", "Red", { "Dim" }),
 		lua = meta(" "),
 		rs = meta(" ", orange, { "Dim" }),
 		py = meta(" ", orange, { "Dim" }),
-		scss = meta(" ", orange, { "Dim" }),
-		css = meta(" ", orange, { "Dim" }),
+		scss = meta("󰟬 ", orange, { "Dim" }),
+		css = meta(" ", orange, { "Dim" }),
+		html = meta(" ", orange, { "Dim" }),
 	},
 	special = {
 		downloads = meta(" "),
 		dotfiles = meta("🍙"),
 		docs = meta(" "),
-		books = meta(" "),
+		books = meta(" "),
 		papers = meta("⼠"),
 		templates = meta(" "),
 		notes = meta("📚"),
-		media = meta(" "),
+		media = meta("󰈯 "),
 		vagari = meta("🧬"),
 		share = meta("⾦"),
-		music = meta(" "),
-		gifs = meta(" "),
+		music = meta(" "),
+		gifs = meta("󰤺 "),
 		screenshots = meta(" "),
-		images = meta(" "),
+		images = meta("󰋯 "),
 		videos = meta("📽 "),
 		recordings = meta("⏺ "),
 		etc = meta("⽳"),
@@ -461,10 +462,10 @@ xplr.config.layouts.builtin.no_selection = {
 local modes = xplr.config.modes.builtin
 local on_key = modes.default.key_bindings.on_key
 
-modes.create_directory.prompt = "  (create dir)  "
-modes.create_file.prompt = "  (create file)  "
+modes.create_directory.prompt = "  (create dir)  "
+modes.create_file.prompt = "  (create file)  "
 modes.number.prompt = "  "
-modes.rename.prompt = "  (rename)  "
+modes.rename.prompt = "  (rename)  "
 
 modes.switch_layout = {
 	name = "switch layout",
@@ -526,63 +527,6 @@ on_key["R"] = {
 	messages = { { BashExec = [===[ renamer ]===] } },
 }
 
--- }}}
-
--- 🦄 Functions {{{
-
--- (https://xplr.dev/en/lua-function-calls)
-
--- Renders the second column in the table
-xplr.fn.builtin.fmt_general_table_row_cols_1 = function(m)
-	local is_binary = m.permissions.user_execute
-		or m.permissions.group_execute
-		or m.permissions.other_execute
-
-	if m.is_broken then
-		-- Broken symlink icon is hardcoded. Not implemented in xplr yet.
-		m.meta.icon = ""
-	end
-
-	if not m.is_broken and is_binary and m.canonical.is_file then
-		m.meta.icon = " "
-	end
-
-	local r = m.tree .. m.prefix
-
-	local function path_escape(path)
-		return string.gsub(string.gsub(path, "\\", "\\\\"), "\n", "\\n")
-	end
-
-	if m.meta.icon == nil then
-		r = r .. ""
-	else
-		r = r .. m.meta.icon .. " "
-	end
-
-	r = r .. path_escape(m.relative_path)
-
-	if m.is_dir then
-		r = r .. "/"
-	end
-
-	r = r .. m.suffix .. " "
-
-	if m.is_symlink then
-		r = r .. "-> "
-
-		if m.is_broken then
-			r = r .. "×"
-		else
-			r = r .. path_escape(m.symlink.absolute_path)
-
-			if m.symlink.is_dir then
-				r = r .. "/"
-			end
-		end
-	end
-
-	return r
-end
 -- }}}
 
 -- ============================================================================
