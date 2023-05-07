@@ -99,8 +99,8 @@ local general = {
 		},
 		col_spacing = 1,
 		col_widths = {
-			{ Percentage = 5 },
-			{ Percentage = 56 },
+			{ Percentage = 4 },
+			{ Percentage = 57 },
 			{ Percentage = 4 },
 			{ Percentage = 11 },
 			{ Percentage = 21 },
