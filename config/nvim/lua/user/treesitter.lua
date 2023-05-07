@@ -14,7 +14,30 @@ end
 -- ============================================================================
 
 treesitter.setup({
-	ensure_installed = "all",
+	ensure_installeid = {
+		"c",
+		"lua",
+		"python",
+        "md",
+		"bash",
+		"vim",
+		"yaml",
+		"help",
+		"query",
+		"comment",
+		"vimdoc",
+		"query",
+		"typescript",
+		"javascript",
+		"json",
+		"html",
+		"css",
+		"scss",
+		"rust",
+		"toml",
+		"go",
+        "java",
+	},
 	sync_install = true,
 	auto_install = true,
 	highlight = {
