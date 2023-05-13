@@ -74,8 +74,8 @@ case "$n_flag" in
         browser "https://chat.openai.com/?model=gpt-4" tab
         ;;
     2)
-        terminal "voice"
-        browser "https://www.udemy.com/home/my-courses/learning"
+        # terminal "voice"
+        # browser "https://www.udemy.com/home/my-courses/learning"
         ;;
     3)
         terminal "rust"
