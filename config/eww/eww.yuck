@@ -233,7 +233,7 @@
     :class "time-clockface"
     :orientation "v"
     :valign "center"
-    :spacing -4
+    :spacing -3
     :space-evenly false
     (clock :child "hour" :text "${clockface-hour} " :bool hour-active)
     (clock :child "minute" :text "${clockface-minute} " :bool minute-active)
