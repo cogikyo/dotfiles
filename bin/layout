@@ -79,9 +79,8 @@ case "$n_flag" in
         ;;
     3)
         terminal "rust"
-        browser "https://github.com/nosvagor/rust"
-        browser "https://rust-book.cs.brown.edu/ch02-00-guessing-game-tutorial.html" tab
-        browser "https://doc.rust-lang.org/rust-by-example/index.html" tab
+        browser "https://rust-book.cs.brown.edu/ch03-02-data-types.html"
+        browser "https://www.codewars.com/users/cullyn" tab
 
         ;;
     4)
