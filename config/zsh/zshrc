@@ -30,6 +30,7 @@ alias ol='ouch list --tree'
 alias man='man --pager=$PAGER'
 alias zoomfix='XDG_CURRENT_DESKTOP=gnome GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb zoom & disown'
 alias af='GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb audacity & disown'
+alias tree='erd -I --suppress-size --threads 16 --inverted'
 
 alias ew='eww-open'
 alias ews='eww inspector & disown && exit'
