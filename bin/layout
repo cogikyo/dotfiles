@@ -74,14 +74,15 @@ case "$n_flag" in
         browser "https://chat.openai.com/?model=gpt-4" tab
         ;;
     2)
-        # terminal "voice"
-        # browser "https://www.udemy.com/home/my-courses/learning"
+        terminal "voice"
+        browser "https://www.udemy.com/home/my-courses/learning"
         ;;
     3)
         terminal "rust"
         browser "https://rust-book.cs.brown.edu/ch03-02-data-types.html"
+        browser "https://chat.openai.com/?model=gpt-4" tab
         browser "https://www.codewars.com/users/cullyn" tab
-
+        terminal "rust-run"
         ;;
     4)
         terminal "dotfiles"
@@ -91,6 +92,13 @@ case "$n_flag" in
 esac
 
 resize
+if [[ "$n_flag" == 3 ]]; then
+    hyprctl dispatch movefocus r
+    hyprctl dispatch movefocus u
+    hyprctl dispatch resizeactive exact 1870 1186
+    hyprctl dispatch movefocus d
+    hyprctl dispatch movefocus l
+fi
 hyprctl keyword input:follow_mouse 1
 # ============================================================================
 

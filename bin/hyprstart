@@ -5,8 +5,8 @@ change-bg "code"
 
 sleep 3
 
-layout -n 1
-layout -n 2
+# layout -n 1
+# layout -n 2
 layout -n 3
 layout -n 4
 
