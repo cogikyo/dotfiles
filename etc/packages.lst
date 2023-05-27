@@ -20,6 +20,7 @@ discord
 dunst-git
 efibootmgr
 electron
+erdtree
 eslint_d
 fd
 ffmpegthumbnailer
@@ -58,6 +59,7 @@ lxappearance
 man-db
 manim
 mediainfo
+microsoft-edge-dev-bin
 mplayer
 mpv
 mpvpaper-git
@@ -90,7 +92,6 @@ pulsemixer
 python-pip
 python-pynvim
 qbittorrent
-qt5ct
 ripgrep
 rocm-opencl-runtime
 rustup
@@ -100,6 +101,7 @@ shellcheck-bin
 shellharden
 slurp
 socat
+solaar
 spotify
 spotifywm-git
 starship
@@ -123,7 +125,9 @@ tldr
 trash-cli
 ttf-fira-code
 ttf-hack
+ttf-jetbrains-mono
 ttf-nerd-fonts-symbols
+ttf-nerd-fonts-symbols-common
 unzip
 usbutils
 v4l2loopback-dkms
@@ -142,7 +146,6 @@ wofi-emoji
 xdg-desktop-portal-hyprland-git
 xplr
 yarn
-yay
 zathura
 zathura-pdf-mupdf
 zoom
