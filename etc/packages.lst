@@ -109,6 +109,7 @@ stylelint
 stylua
 swaylock
 taplo-cli
+teams
 texlive-bibtexextra
 texlive-core
 texlive-fontsextra
@@ -146,6 +147,7 @@ wofi-emoji
 xdg-desktop-portal-hyprland-git
 xplr
 yarn
+yay-bin
 zathura
 zathura-pdf-mupdf
 zoom

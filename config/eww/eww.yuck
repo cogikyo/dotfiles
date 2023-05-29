@@ -249,9 +249,9 @@
       :onhover "eww update ${child}-active=true"
       :onhoverlost "eww update ${child}-active=false"
       :onclick "bin/timer_info ${app}_status & disown"
-      :onscroll "bin/timer_info ${app} {} ${fine-adjust ? 1 : 15}"
+      :onscroll "bin/timer_info ${app} {} ${fine-adjust ? 15 : 1}"
       :onrightclick "bin/timer_info reset ${app}"
-      :onmiddleclick "bin/timer_info ${app} ${fine-adjust ? 1 : 15}"
+      :onmiddleclick "bin/timer_info ${app} ${fine-adjust ? 15 : 1}"
       :cursor "pointer"
       (box
         :class "time-${app}" :space-evenly false :spacing 6
@@ -366,7 +366,7 @@
     :halign "end" :space-evenly false :spacing 0
     :class "tr-m"
     :style "margin-right: ${user-hover ? 100 : 5 }px;"
-    (cpu) (memory) (gpu)
+    (cpu) (memory)
   )
 )
 ; 💻 computer: {{{
@@ -909,21 +909,21 @@
 ; }}}
 ; 🎤 audio: {{{
 
-(deflisten source
-  :initial "80"
-  'tail -F /tmp/eww/source 2> /dev/null'
-)
+;; (deflisten source
+;;   :initial "80"
+;;   'tail -F /tmp/eww/source 2> /dev/null'
+;; )
 (deflisten sink
   :initial "69"
   'tail -F /tmp/eww/sink 2> /dev/null'
 )
-(defpoll source-name
-  :initial "Scarlett"
-  :interval "5s"
-  'bin/pulse_info get_name source'
-)
+;; (defpoll source-name
+;;   :initial "Scarlett"
+;;   :interval "5s"
+;;   'bin/pulse_info get_name source'
+;; )
 (defpoll sink-name
-  :initial "WH-1000XM4"
+  :initial "pixel buds"
   :interval "5s"
   'bin/pulse_info get_name sink'
 )
@@ -936,13 +936,13 @@
     (box
       :class "audio ${audio-hover ? 'audio-hover' : ''}"
       :space-evenly false :spacing 10
-      (audio-control
-        :content "source"
-        :value source
-        :name "${source-name}"
-        :icon-off ""
-        :icon-on ""
-      )
+      ;; (audio-control
+      ;;   :content "source"
+      ;;   :value source
+      ;;   :name "${source-name}"
+      ;;   :icon-off ""
+      ;;   :icon-on ""
+      ;; )
       (audio-control
         :content "sink"
         :value sink
@@ -997,10 +997,10 @@
 
 (defwidget bluetooth-status [value]
   (label
-    :class "tr-c ${matches(sink-name, "WH-1000XM4") ? "" : "music-inactive"}"
-    :text "${matches(sink-name, "WH-1000XM4") ? "󰂯 " : "󰂲 "}"
-    :style "margin-left: -2px; margin-top: 2px;"
-    :tooltip " Bluetooth ${matches(sink-name, "WH-1000XM4") ? "Connected" : "Disconnected"}  "
+    :class "tr-c ${matches(sink-name, "pixel buds") ? "" : "music-inactive"}"
+    :text "${matches(sink-name, "pixel buds") ? "󰂯 " : "󰂲 "}"
+    :style "margin-left: -2px; margin-top: 2px; margin-right: 2px"
+    :tooltip " Bluetooth ${matches(sink-name, "pixel buds") ? "Connected" : "Disconnected"}  "
   )
 )
 
@@ -1129,12 +1129,12 @@
       (box :space-evenly false :spacing 0 :valign "center" :halign "center"
         (net-down
           :icon " "
-          :value {round(EWW_NET.enp10s0.NET_DOWN / 100000, 2)}
+          :value {round(EWW_NET.enp2s0.NET_DOWN / 100000, 2)}
           :bool network-hover
         )
         (net-up
           :icon " "
-          :value {round(EWW_NET.enp10s0.NET_UP / 100000, 2)}
+          :value {round(EWW_NET.enp2s0.NET_UP / 100000, 2)}
           :bool network-hover
         )
         (ping)

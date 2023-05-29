@@ -3,11 +3,12 @@
 sleep 0.5
 change-bg "code"
 
-sleep 3
+solaar & sleep 3
+pkill solaar
 
 # layout -n 1
 # layout -n 2
-layout -n 3
+# layout -n 3
 layout -n 4
 
 hyprctl dispatch workspace 5
