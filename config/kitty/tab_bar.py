@@ -36,7 +36,7 @@ ICON, ICON_HOST, ICON_USER, = (
     " ⾥ ",
     "⼈",
 )
-RIGHT_MARGIN = -6
+RIGHT_MARGIN = -8
 REFRESH_TIME = 1
 right_status_length = -1
 
