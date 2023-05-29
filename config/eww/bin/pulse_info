@@ -17,6 +17,10 @@ get_name () {
         | grep "Default" \
         | grep -oP "Name:\s+\K.[A-Za-z0-9-]+"
     )
+
+    if [[ $device_name == "cullyn" ]]; then
+        device_name="pixel buds"
+    fi
     echo "$device_name"
 }
 

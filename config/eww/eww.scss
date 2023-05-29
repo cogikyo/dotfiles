@@ -232,7 +232,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   background-size: 105%;
   background-position: center;
   min-width: 90px;
-  min-height: 90px;
+  min-height: 94px;
   opacity: 0.95;
 
   // border
@@ -312,7 +312,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 .assistantbox {
   @include imagebox(left);
 
-  background-position: -6px 3px;
+  background-position: -4px -4px;
 }
 
 // }}}
@@ -321,7 +321,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 .userbox {
   @include imagebox(right);
 
-  background-position: 7px 2px;
+  background-position: 0px 0px;
 }
 
 // }}}
@@ -877,7 +877,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   }
 
   &-ping {
-    font-size: 11px;
+    font-size: 10px;
     margin-top: 30px;
     margin-left: -3px;
 
