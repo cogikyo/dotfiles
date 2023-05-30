@@ -3,9 +3,6 @@
 sleep 0.5
 change-bg "code"
 
-solaar & sleep 3
-pkill solaar
-
 # layout -n 1
 # layout -n 2
 # layout -n 3

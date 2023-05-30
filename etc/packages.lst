@@ -51,6 +51,7 @@ libva-mesa-driver
 linux
 linux-firmware
 linux-headers
+logiops
 lsd
 lua-format
 luacheck
@@ -101,7 +102,6 @@ shellcheck-bin
 shellharden
 slurp
 socat
-solaar
 spotify
 spotifywm-git
 starship
