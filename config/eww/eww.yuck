@@ -249,9 +249,9 @@
       :onhover "eww update ${child}-active=true"
       :onhoverlost "eww update ${child}-active=false"
       :onclick "bin/timer_info ${app}_status & disown"
-      :onscroll "bin/timer_info ${app} {} ${fine-adjust ? 15 : 1}"
+      :onscroll "bin/timer_info ${app} {} ${fine-adjust ? 1 : 15}"
       :onrightclick "bin/timer_info reset ${app}"
-      :onmiddleclick "bin/timer_info ${app} ${fine-adjust ? 15 : 1}"
+      :onmiddleclick "bin/timer_info ${app} ${fine-adjust ? 1 : 15}"
       :cursor "pointer"
       (box
         :class "time-${app}" :space-evenly false :spacing 6
@@ -278,7 +278,7 @@
     :bool hour-active
     :text alarm-current
     :icon ""
-    :subtext {fine-adjust ? "󱤺" : "󰪽"}
+    :subtext {fine-adjust ? "󰪽" : "󱤺"}
   )
 )
 
