@@ -1,6 +1,10 @@
 eval "$(starship init zsh)"
 eval "$(zoxide init zsh)"
 
+function command_not_found_handler {
+    return 127
+}
+
 # history
 HISTFILE=~/.histfile
 HISTSIZE=1000
@@ -8,6 +12,7 @@ SAVEHIST=800
 setopt INC_APPEND_HISTORY
 setopt HIST_IGNORE_ALL_DUPS
 setopt HIST_IGNORE_DUPS
+setopt AUTO_CD
 
 # aliases
 alias niol='clear && source ~/.zshrc'
@@ -40,18 +45,18 @@ alias el='eww logs'
 if [[ ! -f ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh ]]; then
     command git clone https://github.com/agkozak/zcomet.git ${ZDOTDIR:-${HOME}}/.zcomet/bin
 fi
-
 source ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh
 
-zcomet load zsh-users/zsh-syntax-highlighting
+zcomet load zsh-users/zsh-completions
 zcomet load zsh-users/zsh-autosuggestions
-ZSH_AUTOSUGGEST_STRATEGY=(history completion match_prev_cmd)
 zcomet load marlonrichert/zsh-autocomplete
-zstyle ':autocomplete:*' fzf-completion yes
-zstyle ':autocomplete:*' min-delay 0.42
-zstyle ':autocomplete:*' list-lines 21
-zstyle ':autocomplete:history-search:*' list-lines 21
-zstyle ':autocomplete:history-incremental-search-*:*' list-lines 21
+zcomet load zsh-users/zsh-syntax-highlighting
+
+autoload -U compinit; compinit
+
+ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
+
+source $HOME/.config/zsh/vagari-highlights.zsh
 
 # fix keys
 bindkey -v
