@@ -17,6 +17,7 @@ hyprctl dispatch workspace 5
 
 ps -ef | rg weather_info | rg -v rg | awk '{print $2}' | xargs kill
 eval "$HOME/dotfiles/config/eww/bin/weather_info" & disown
+eval "$HOME/dotfiles/config/eww/bin/date_info" & disown
 
 dunstify -a "attention" -u low "$USER@$HOSTNAME" "こんにちは"
 eww-open
