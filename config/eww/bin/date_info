@@ -62,4 +62,6 @@ clockface-minute () {
     done
 }
 
-day & week & clockface-hour & clockface-minute
+day
+week
+clockface-hour & clockface-minute

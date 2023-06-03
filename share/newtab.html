@@ -3,42 +3,43 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>☄️ 行こう</title>
-  <style>
-    html,
-    body {
-      height: 100%;
-      margin: 0;
-      overflow: hidden;
-      position: relative;
-      background-color: #222536;
-    }
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="favicon.ico" />
+    <title>行こう</title>
+    <style>
+        html,
+        body {
+            height: 100%;
+            margin: 0;
+            overflow: hidden;
+            position: relative;
+            background-color: #222536;
+        }
 
-    #video-background {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      top: 0;
-      left: 0;
-      animation: fadeIn 1s ease-in-out;
-    }
+        #video-background {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            top: 0;
+            left: 0;
+            animation: fadeIn 1s ease-in-out;
+        }
 
-    @keyframes fadeIn {
-      0% {
-        opacity: 0;
-      }
+        @keyframes fadeIn {
+            0% {
+                opacity: 0;
+            }
 
-      100% {
-        opacity: 1;
-      }
-    }
-  </style>
+            100% {
+                opacity: 1;
+            }
+        }
+    </style>
 </head>
 
 <body>
-  <video src="videos/dna-vf-blu.webm" id="video-background" autoplay muted loop></video>
+    <video src="videos/dna-vf-blu.webm" id="video-background" autoplay muted loop></video>
 </body>
 
 </html>

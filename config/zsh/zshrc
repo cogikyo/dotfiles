@@ -53,8 +53,6 @@ zstyle ':autocomplete:*' list-lines 21
 zstyle ':autocomplete:history-search:*' list-lines 21
 zstyle ':autocomplete:history-incremental-search-*:*' list-lines 21
 
-source $HOME/.config/zsh/vagari_zsh-syntax-highlighting.zsh
-
 # fix keys
 bindkey -v
 export KEYTIMEOUT=01
