@@ -30,6 +30,7 @@
 <!-- ========================================================================== -->
 
 <!-- 👾 Overview {{{ -->
+
 ## 👾 Overview
 
 ### **[I use arch, btw](https://wiki.archlinux.org/title/Arch_Linux)**
@@ -83,7 +84,7 @@
 
 - Editor: [neovim](https://neovim.io/)
 - Browser: [Firefox](https://www.mozilla.org/en-US/firefox/developer/)
-    - with custom [firefox css](https://github.com/nosvagor/vagari.firefox).
+  - with custom [firefox css](https://github.com/nosvagor/vagari.firefox).
 - Terminal: [kitty](https://sw.kovidgoyal.net/kitty/)
 - Shell: [zsh](https://wiki.archlinux.org/title/zsh)
 
@@ -106,8 +107,8 @@
 
 - Sans Serif: [Albert Sans](https://fonts.google.com/specimen/Albert+Sans?query=Albert+Sans)
 - Monospace: [Fira Code](https://github.com/tonsky/FiraCode)
-    - Italic: [JetBrains Mono](https://www.jetbrains.com/lp/mono/)
-    - Symbols: [Nerd Font Symbols](https://github.com/ryanoasis/nerd-fonts)
+  - Italic: [JetBrains Mono](https://www.jetbrains.com/lp/mono/)
+  - Symbols: [Nerd Font Symbols](https://github.com/ryanoasis/nerd-fonts)
 - Emoji: [Noto Color Emoji](https://fonts.google.com/noto/specimen/Noto+Color+Emoji)
 - Other: [Lora (serif)](https://fonts.google.com/specimen/Lora),
   [Archivo (display)](https://fonts.google.com/specimen/Archivo),
@@ -124,9 +125,9 @@
 - Vector Graphics: [inkscape](https://inkscape.org/)
 - Screen Recording: [wf-recorder](https://github.com/ammen99/wf-recorder)
 - Audio Editing: [audacity](https://www.audacityteam.org/)
-    - Edit: `/usr/share/applications/audacity.desktop` (currently broken under
-      wayland)
-    - Change `Exec` line to: `Exec=env GDK_BACKEND=x11 audacity %F`
+  - Edit: `/usr/share/applications/audacity.desktop` (currently broken under
+    wayland)
+  - Change `Exec` line to: `Exec=env GDK_BACKEND=x11 audacity %F`
 - Video Editing: [blender](https://www.blender.org/features/video-editing/)
 - Music: [spotify](www.spotify.com) with [playerctl](https://github.com/altdesktop/playerctl)
 - Music Visualizer: [glava](https://github.com/jarcode-foss/glava)
@@ -163,25 +164,25 @@ https://user-images.githubusercontent.com/59071534/232156421-099bea2d-b3a9-4de2-
 <br>
 
 <!-- 🛠️ Installation {{{ -->
+
 ## 🛠️ Installation
 
 <details open>
 <summary><h5> 🧰 My Hardware</h5></summary>
 
 - Keyboard: [Corne (Helidox) 42 key](https://keebmaker.com/products/corne-low-profile), with Kailh gChoc Light Blue (20g), and **custom layout**:
-![image](https://user-images.githubusercontent.com/59071534/232157490-bc96cdec-fa8c-4245-a9fe-76fd57a381af.png)
-![image](https://user-images.githubusercontent.com/59071534/232157618-c49b549f-6acf-4343-96d0-9f9932196b36.png)
-![image](https://user-images.githubusercontent.com/59071534/232157647-baabd17f-9cf7-43b1-9577-37eb7daa326d.png)
-![image](https://user-images.githubusercontent.com/59071534/232157666-a6fa76f4-43a2-414b-879d-26a200101e18.png)
-    - ZMK firmware (for bluetooth version of keyboard): [nosvagor/zmk-config](https://github.com/nosvagor/zmk-config)
+  ![image](https://user-images.githubusercontent.com/59071534/232157490-bc96cdec-fa8c-4245-a9fe-76fd57a381af.png)
+  ![image](https://user-images.githubusercontent.com/59071534/232157618-c49b549f-6acf-4343-96d0-9f9932196b36.png)
+  ![image](https://user-images.githubusercontent.com/59071534/232157647-baabd17f-9cf7-43b1-9577-37eb7daa326d.png)
+  ![image](https://user-images.githubusercontent.com/59071534/232157666-a6fa76f4-43a2-414b-879d-26a200101e18.png) - ZMK firmware (for bluetooth version of keyboard): [nosvagor/zmk-config](https://github.com/nosvagor/zmk-config)
 - Monitor: [SAMSUNG UR59 Series 32-Inch 4K UHD (3840x2160)](https://a.co/d/bZtUse0)
 - Mouse: [MX Master 3S](https://www.logitech.com/en-us/products/mice/mx-master-3s.910-006556.html)
 - CPU: [AMD Ryzen 7 3700X (16) @ 3.600GHz](https://www.amd.com/en/products/cpu/amd-ryzen-7-3700x)
-    - GPU: [AMD ATI Radeon RX 5600 OEM/5600 XT / 5700/5700 XT](https://www.amd.com/en/products/graphics/amd-radeon-rx-5600-xt)
+  - GPU: [AMD ATI Radeon RX 5600 OEM/5600 XT / 5700/5700 XT](https://www.amd.com/en/products/graphics/amd-radeon-rx-5600-xt)
 - Microphone: [Shure SM57](https://www.amazon.com/gp/product/B0000AQRST)
-    - Audio Interface: [Scaarlett Solo 3rd Gen](https://www.amazon.com/gp/product/B07QR6Z1JB)
+  - Audio Interface: [Scaarlett Solo 3rd Gen](https://www.amazon.com/gp/product/B07QR6Z1JB)
 - Camera: [Canon EOS M50 Mark II](https://www.amazon.com/gp/product/B08KSLW8N3)
-    - Lens: [Sigma 16mm f/1.4](https://www.amazon.com/gp/product/B084KYHYKN)
+  - Lens: [Sigma 16mm f/1.4](https://www.amazon.com/gp/product/B084KYHYKN)
 
 </details>
 
@@ -225,7 +226,7 @@ https://user-images.githubusercontent.com/59071534/232156421-099bea2d-b3a9-4de2-
 <details open>
 <summary><h3> ⚙️  Post-Installation </h3></summary>
 
-> **[General Recommendations](https://wiki.archlinux.org/title/General_recommendations)**   worth the read, seriously
+> **[General Recommendations](https://wiki.archlinux.org/title/General_recommendations)**  worth the read, seriously
 >
 > **Note**: the following is not meant to be a generalized installation guide;
 > it's essentially a collection of commands to take a minimal arch install to
@@ -248,6 +249,7 @@ https://user-images.githubusercontent.com/59071534/232156421-099bea2d-b3a9-4de2-
 <br>
 
 **2. Install [paru](https://github.com/Morganamilo/paru):**
+
 ```sh
 cd ~
 mkdir .cache && cd .cache
@@ -259,6 +261,7 @@ makepkg -si
 <br>
 
 **3. Clone dotfiles and install packages:**
+
 ```sh
 cd ~
 git clone https://github.com/nosvagor/dotfiles
@@ -275,18 +278,6 @@ git clone https://github.com/alvatip/Nordzy-cursors
 cd Nordzy-cursors
 ./install.sh
 
-# manual eww installation
-git clone https://github.com/elkowar/eww
-cd eww
-# Edit: crates/eww/src/config/inbuilt.rs
-# Update: `define_builtin_vars! { Duration::new(0, 500000000)`
-# Default is (2, 0), but I like updates of 0.5 seconds for cpu polling.
-# ... there is probably a better way to do this.
-cargo build --release --no-default-features --features=wayland
-cd target/release
-chmod +x ./eww
-cp eww /usr/bin/
-
 # note: a location and openweathermap key is needed for weather widget.
 # https://home.openweathermap.org/api_keys
 echo "{api key here}" > ~/.local/.owm_api_key
@@ -297,6 +288,7 @@ echo "{lat} {long}" > ~/.local/.location
 <br>
 
 **4. Change default sh:**
+
 ```sh
 chsh -s /usr/bin/zsh
 ```
@@ -304,6 +296,7 @@ chsh -s /usr/bin/zsh
 <br>
 
 **5. Set up [sddm](https://wiki.archlinux.org/title/SDDM):**
+
 ```sh
 cd ~/dotfiles/etc/sddm.conf.d
 mkdir /etc/sddm.conf.d
@@ -319,6 +312,7 @@ systemctl enable sddm
 <br>
 
 **6. Symbolically link most config files:**
+
 ```sh
 mkdir ~/.config # might already be made
 ln -sfn ~/dotfiles/config/* ~/.config/
@@ -328,6 +322,7 @@ ln -sfn ~/dotfiles/config/zsh/zshrc .zshrc
 <br>
 
 **7. Setup some root configurations:**
+
 ```sh
 cd ~/dotfiles/etc
 sudo ln -sfn ~/dotfiles/bin/* /usr/bin/
@@ -346,6 +341,7 @@ sudo systemctl enable caddy.service
 <br>
 
 **8. Ensure some preferred fonts are installed:**
+
 ```sh
 mkdir -vp ~/.local/share
 tar -xzvf ~/dotfiles/etc/fonts.tar.gz fonts
@@ -378,6 +374,7 @@ mv fonts ~/.local/share/
 <br>
 
 **10. Configure SSH key:**
+
 ```sh
 ssh-keygen -t ed25519 -C "your_email@example.com"
 eval "$(ssh-agent -s)"
@@ -389,6 +386,7 @@ bat ~/.ssh/id_ed25519.pub
 ```
 
 - e.g., using SSH key to manage dotfiles:
+
 ```sh
 # example moving to ssh origin:
 git remote set-url origin git@github.com:nosvagor/dotfiles.git
@@ -397,6 +395,7 @@ git remote set-url origin git@github.com:nosvagor/dotfiles.git
 <br>
 
 > **My preferred directory structure:** _(definitely optional)_
+
 ```sh
 cd ~
 mkdir -vp media/music media/images media/videos media/gifs media/screenshots media/recordings
@@ -404,4 +403,5 @@ mkdir -vp downloads docs/templates docs/books docs/papers docs/share
 git clone git@github.com:nosvagor/vagari.git
 git clone git@github.com:nosvagor/notes.git
 ```
+
 <!-- }}} -->
