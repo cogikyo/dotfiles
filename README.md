@@ -341,7 +341,6 @@ sudo cp caddy.service /etc/systemd/system/
 sudo cp logid.cfg /etc/logid.cfg
 sudo systemctl enable bluetooth
 sudo systemctl enable caddy.service
-sudo systemctl enable logid
 ```
 
 <br>
