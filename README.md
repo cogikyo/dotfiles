@@ -320,8 +320,7 @@ systemctl enable sddm
 
 **6. Symbolically link most config files:**
 ```sh
-cd ~
-mkdir .config
+mkdir ~/.config # might already be made
 ln -sfn ~/dotfiles/config/* ~/.config/
 ln -sfn ~/dotfiles/config/zsh/zshrc .zshrc
 ```
@@ -333,20 +332,22 @@ ln -sfn ~/dotfiles/config/zsh/zshrc .zshrc
 cd ~/dotfiles/etc
 sudo ln -sfn ~/dotfiles/bin/* /usr/bin/
 sudo cp bluetooth/main.conf /etc/bluetooth/main.conf
-sudo cp udev/* /etc/udev/rules.d/
+sudo cp udev/* /etc/udev/rules.d/ # probably don't want the bluetooth rules
 sudo cp loader.conf /boot/loader/loader.conf
 sudo cp gifview.desktop /usr/share/applications/gifview.desktop
 sudo cp security/faillock.conf /etc/security/faillock.conf
 sudo cp caddy.service /etc/systemd/system/
+sudo cp caddy.service /etc/systemd/system/
+sudo cp logid.cfg /etc/logid.cfg
 sudo systemctl enable bluetooth
 sudo systemctl enable caddy.service
+sudo systemctl enable logid
 ```
 
 <br>
 
 **8. Ensure some preferred fonts are installed:**
 ```sh
-cd ~
 mkdir -vp ~/.local/share
 tar -xzvf ~/dotfiles/etc/fonts.tar.gz fonts
 mv fonts ~/.local/share/
