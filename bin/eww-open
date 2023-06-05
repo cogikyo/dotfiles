@@ -5,6 +5,6 @@ eww daemon
 eww open-many \
     today \
     computer user \
-    workspaces \
-    music albumArt assistant \
-    pacman screenctl dunst systemctl network
+    music assistant
+    # workspaces \
+    # pacman screenctl dunst systemctl network

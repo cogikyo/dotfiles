@@ -68,10 +68,9 @@ hyprctl dispatch workspace "$n_flag"
 
 case "$n_flag" in
     1)
-        webcord & sleep 1
-        browser "https://twitter.com/nosvagor"
-        browser "https://www.midjourney.com/app/" tab
-        browser "https://chat.openai.com/?model=gpt-4" tab
+        browser "https://outlook.office365.com/mail/"
+        browser "https://keep.google.com/u/0/"
+        browser "https://teams.microsoft.com/_" tab
         ;;
     2)
         terminal "voice"

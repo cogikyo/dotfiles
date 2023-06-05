@@ -137,14 +137,13 @@ $gry-5: #7f8199;
 window {
   color: $blu-2;
   font-family: sans-serif, monospace;
-  font-size: 20px;
+  font-size: 14px;
 }
 
 tooltip {
   background-color: rgba($bg, 0.9);
   color: $orn-2;
   font-family: "Architects Daughter", cursive;
-  font-size: 1.25em;
   border: 1px solid $orn-3;
   border-radius: 10px 24px 12px 20px;
 }
@@ -225,14 +224,14 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   transition: all 0.25s $ease-out-snap;
 
   $x: 1px;
-  $margin: 30px;
+  $margin: 20px;
 
   // image properties
   background-repeat: no-repeat;
   background-size: 105%;
   background-position: center;
-  min-width: 90px;
-  min-height: 94px;
+  min-width: 50px;
+  min-height: 54px;
   opacity: 0.95;
 
   // border
@@ -253,8 +252,8 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 
   &-hover {
     opacity: 0.99;
-    min-height: 180px;
-    min-width: 180px;
+    min-height: 90px;
+    min-width: 94px;
     border-color: $orn-3;
     box-shadow: $x 3px 6px 1px rgba($rby-1, 0.69);
   }
@@ -312,7 +311,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 .assistantbox {
   @include imagebox(left);
 
-  background-position: -4px -4px;
+  background-position: 0px 0px;
 }
 
 // }}}
@@ -371,11 +370,11 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
       }
 
       &-icon {
-        font-size: 24px;
-        margin: 4px 5px;
+        font-size: 20px;
+        margin: 4px 4px 2px 5px;
 
         &-playing {
-          color: $blu-1;
+          color: $blu-2;
 
           &:hover {
             color: $orn-3;
@@ -394,6 +393,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   }
 
   &-player-icon {
+    font-size: 12px;
     margin: 5px 1px 5px 7px;
   }
 
@@ -402,7 +402,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
     color: $blu-2;
     border-top: 1px solid $blu-1;
     padding: 4px 1.1em;
-    margin: 16px 8px 30px 110px;
+    margin: 8px 8px 10px 60px;
     border-right: 3px solid $blu-2;
     border-radius: 420px 17px 420px 69px;
     box-shadow: -3px 2px 3px 1px rgba($blu-0, 0.42);
@@ -442,7 +442,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   background: $bg;
   color: $blu-2;
   border-top: 1px solid $blu-2;
-  margin: 16px 8px 30px;
+  margin: 8px 8px 10px;
   border-right: 3px solid $blu-2;
   border-radius: 420px 17px 420px 69px;
   box-shadow: -3px 2px 3px 1px rgba($blu-0, 0.42);
@@ -467,12 +467,12 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 
   &-sink {
     &-icon {
-      font-size: 17px;
-      margin: 9px 9px 8px 10px;
+      font-size: 12px;
+      margin: 8px 8px 7px 8px;
 
       &-inactiveFix {
-        font-size: 16px;
-        margin: 8px 8px 7px;
+        font-size: 12px;
+        margin: 7px 7px 6px;
       }
     }
   }
@@ -484,7 +484,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 .weather {
   background: $bg;
   padding: 4px 12px 4px 1.1em;
-  margin: 16px 8px 50px;
+  margin: 8px 8px 20px;
   border-right: 3px solid $blu-1;
   border-top: 1px solid $blu-1;
   border-radius: 420px 17px 420px 69px;
@@ -576,8 +576,8 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   border-width: 0 1px 3px;
   border-style: solid;
   border-color: $blu-1;
-  box-shadow: 0 2px 7px 1px rgba($blu-0, 0.42);
-  margin: -7px 16px 36px;
+  box-shadow: 0 2px 6px 1px rgba($blu-0, 0.42);
+  margin: -7px 16px 20px;
   transition: all 0.5s $ease-out-snap;
 
   &-hover {
@@ -596,8 +596,8 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   }
 
   &-clockface {
-    font-size: 8px;
-    margin: 4px 2px 0 0;
+    font-size: 6px;
+    margin-top: 4px;
   }
 
   &-hour,
@@ -653,7 +653,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 .date {
   background: $bg;
   padding: 4px 1.1em;
-  margin: 16px 8px 50px;
+  margin: 8px 8px 20px;
   border-left: 3px solid $blu-1;
   border-top: 1px solid $blu-1;
   border-radius: 17px 420px 69px;
@@ -720,7 +720,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   border-top: 1px solid $blu-2;
   border-left: 3px solid $blu-1;
   padding: 6px 1.3em 4px;
-  margin: 16px 8px;
+  margin: 8px 8px;
   border-radius: 17px 420px 69px;
   box-shadow: 3px 2px 3px 1px rgba($blu-0, 0.42);
   font-family: monospace;
