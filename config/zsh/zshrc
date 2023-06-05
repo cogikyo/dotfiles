@@ -1,6 +1,10 @@
 eval "$(starship init zsh)"
 eval "$(zoxide init zsh)"
 
+function command_not_found_handler {
+    return 127
+}
+
 # history
 HISTFILE=~/.histfile
 HISTSIZE=1000
@@ -8,6 +12,7 @@ SAVEHIST=800
 setopt INC_APPEND_HISTORY
 setopt HIST_IGNORE_ALL_DUPS
 setopt HIST_IGNORE_DUPS
+setopt AUTO_CD
 
 # aliases
 alias niol='clear && source ~/.zshrc'
@@ -34,8 +39,17 @@ alias od='ouch decompress'
 alias ol='ouch list --tree'
 alias man='man --pager=$PAGER'
 alias zoomfix='XDG_CURRENT_DESKTOP=gnome GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb zoom & disown'
+alias mfix='hyprctl dispatch workspace 7; kitty -e sudo logid & disown'
 alias af='GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb audacity & disown'
-alias tree='erd -I --suppress-size --threads 16 --inverted'
+function tree () {
+    echo
+    if [[ -z $1 ]]; then
+        L=2
+    else
+        L=$1
+    fi
+    erd -L "$L" -I --suppress-size --threads 16 --layout inverted
+}
 
 alias ew='eww-open'
 alias ews='eww inspector & disown && exit'
@@ -45,18 +59,18 @@ alias el='eww logs'
 if [[ ! -f ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh ]]; then
     command git clone https://github.com/agkozak/zcomet.git ${ZDOTDIR:-${HOME}}/.zcomet/bin
 fi
-
 source ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh
 
-zcomet load zsh-users/zsh-syntax-highlighting
+zcomet load zsh-users/zsh-completions
 zcomet load zsh-users/zsh-autosuggestions
-ZSH_AUTOSUGGEST_STRATEGY=(history completion match_prev_cmd)
 zcomet load marlonrichert/zsh-autocomplete
-zstyle ':autocomplete:*' fzf-completion yes
-zstyle ':autocomplete:*' min-delay 0.42
-zstyle ':autocomplete:*' list-lines 21
-zstyle ':autocomplete:history-search:*' list-lines 21
-zstyle ':autocomplete:history-incremental-search-*:*' list-lines 21
+zcomet load zsh-users/zsh-syntax-highlighting
+
+autoload -U compinit; compinit
+
+ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
+
+source $HOME/.config/zsh/vagari-highlights.zsh
 
 # fix keys
 bindkey -v
