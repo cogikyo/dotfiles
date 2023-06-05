@@ -19,7 +19,12 @@ alias g='cd "$(xplr --print-pwd-as-result)"'
 alias N='cd ~/notes'
 alias d='cd ~/dotfiles'
 alias D='cd ~/downloads'
+alias S='cd ~/downloads/surveys/'
+alias U='cd ~/downloads/uploads/'
 alias v='cd ~/vagari'
+function uz() {
+    unzip *.zip -d $1 && rm *.zip
+}
 alias e='cd ~/dotfiles/config/nvim'
 alias x='exit'
 alias p='paru'
