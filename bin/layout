@@ -51,14 +51,14 @@ terminal () {
     fi
 }
 
-resize () {
-    hyprctl dispatch resizeactive exact 1870 1186
-    hyprctl dispatch movefocus l
-    hyprctl disptch resizeactive exact 1866 1955
-    for ((i = 0; i < 5; i++)); do
-        hyprctl dispatch resizeactive exact 1012 1955
-    done # have resize master several times (bug?) ⮭
-}
+# resize () {
+#     hyprctl dispatch resizeactive exact 1870 1186
+#     hyprctl dispatch movefocus l
+#     hyprctl disptch resizeactive exact 1866 1955
+#     for ((i = 0; i < 5; i++)); do
+#         hyprctl dispatch resizeactive exact 1012 1955
+#     done # have resize master several times (bug?) ⮭
+# }
 
 
 # ============================================================================
@@ -69,19 +69,15 @@ hyprctl dispatch workspace "$n_flag"
 case "$n_flag" in
     1)
         browser "https://outlook.office365.com/mail/"
-        browser "https://keep.google.com/u/0/"
-        browser "https://teams.microsoft.com/_" tab
+        browser "https://teams.microsoft.com/_"
         ;;
     2)
-        terminal "voice"
-        browser "https://www.udemy.com/home/my-courses/learning"
+        browser "https://docs.google.com/spreadsheets/d/1hRZLt60KB39iURcQoYHQIRRVOs1stlF4b5dcK5u1ZmA/edit#gid=0"
         ;;
     3)
-        terminal "rust"
-        browser "https://rust-book.cs.brown.edu/ch03-02-data-types.html"
-        browser "https://chat.openai.com/?model=gpt-4" tab
-        browser "https://www.codewars.com/users/cullyn" tab
-        terminal "rust-run"
+        browser "https://portal.cultureindex.com/clients/MtUIs650BA/surveys"
+        browser "https://keep.google.com/u/0/#home" tab
+        browser "https://app.jazz.co/app/v2/candidate"
         ;;
     4)
         terminal "dotfiles"
@@ -90,14 +86,14 @@ case "$n_flag" in
     *) exit 1 ;;
 esac
 
-resize
-if [[ "$n_flag" == 3 ]]; then
-    hyprctl dispatch movefocus r
-    hyprctl dispatch movefocus u
-    hyprctl dispatch resizeactive exact 1870 1186
-    hyprctl dispatch movefocus d
-    hyprctl dispatch movefocus l
-fi
+# resize
+# if [[ "$n_flag" == 3 ]]; then
+#     hyprctl dispatch movefocus r
+#     hyprctl dispatch movefocus u
+#     hyprctl dispatch resizeactive exact 1870 1186
+#     hyprctl dispatch movefocus d
+#     hyprctl dispatch movefocus l
+# fi
 hyprctl keyword input:follow_mouse 1
 # ============================================================================
 
