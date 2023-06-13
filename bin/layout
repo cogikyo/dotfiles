@@ -69,7 +69,7 @@ hyprctl dispatch workspace "$n_flag"
 case "$n_flag" in
     1)
         browser "https://outlook.office365.com/mail/"
-        browser "https://teams.microsoft.com/_"
+        browser "https://teams.microsoft.com/_" tab
         ;;
     2)
         browser "https://docs.google.com/spreadsheets/d/1hRZLt60KB39iURcQoYHQIRRVOs1stlF4b5dcK5u1ZmA/edit#gid=0"
