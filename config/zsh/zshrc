@@ -25,11 +25,7 @@ alias N='cd ~/notes'
 alias d='cd ~/dotfiles'
 alias D='cd ~/downloads'
 alias S='cd ~/downloads/surveys/'
-alias U='cd ~/downloads/uploads/'
 alias v='cd ~/vagari'
-function uz() {
-    unzip *.zip -d ~/downloads/uploads/$1 && rm *.zip && tree
-}
 alias e='cd ~/dotfiles/config/nvim'
 alias x='exit'
 alias p='paru'
