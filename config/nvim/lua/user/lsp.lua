@@ -107,6 +107,7 @@ null_ls.setup({
 		-- 🗃️ formatting: ⮯
 		formatting.shellharden, -- bash; goes well with shellcheck linting
 		formatting.beautysh, -- zsh 'n more (+ alt bash)
+		formatting.black,
 		formatting.jq, -- json
 		formatting.prettier, -- webdev 'n stuff daemon for prettier;
 		formatting.rustfmt, -- rust

@@ -997,10 +997,10 @@
 
 (defwidget bluetooth-status [value]
   (label
-    :class "tr-c ${matches(sink-name, "pixel buds") ? "" : "music-inactive"}"
-    :text "${matches(sink-name, "pixel buds") ? "󰂯 " : "󰂲 "}"
-    :style "margin-left: ${audio-hover ? "-6" : "-10"}px; margin-top: 2px; margin-right: 2px"
-    :tooltip " Bluetooth ${matches(sink-name, "pixel buds") ? "Connected" : "Disconnected"}  "
+    :class "tr-c ${matches(sink-name, "WH-1000XM4") ? "" : "music-inactive"}"
+    :text "${matches(sink-name, "WH-1000XM4") ? "󰂯 " : "󰂲 "}"
+    :style "margin-left: ${audio-hover ? "-4" : "-10"}px; margin-top: -1px; margin-right: 2px"
+    :tooltip " Bluetooth ${matches(sink-name, "WH-1000XM4") ? "Connected" : "Disconnected"}  "
   )
 )
 
