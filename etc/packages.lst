@@ -27,6 +27,7 @@ ffmpegthumbnailer
 firefox-developer-edition
 fontpreview
 fzf
+geckodriver
 gifsicle
 gimp
 git
@@ -67,6 +68,7 @@ mpvpaper-git
 ncdu
 neofetch
 neovim
+networkmanager
 nodejs-live-server
 noto-fonts-cjk
 noto-fonts-emoji
@@ -110,18 +112,18 @@ stylua
 swaylock
 taplo-cli
 teams
+texlive-basic
 texlive-bibtexextra
-texlive-core
 texlive-fontsextra
 texlive-formatsextra
 texlive-games
 texlive-humanities
 texlive-latexextra
+texlive-mathscience
 texlive-music
 texlive-pictures
 texlive-pstricks
 texlive-publishers
-texlive-science
 thunar
 tldr
 trash-cli
@@ -130,6 +132,7 @@ ttf-hack
 ttf-jetbrains-mono
 ttf-nerd-fonts-symbols
 ttf-nerd-fonts-symbols-common
+unrtf
 unzip
 usbutils
 v4l2loopback-dkms

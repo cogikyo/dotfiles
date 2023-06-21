@@ -21,6 +21,7 @@ get_name () {
     if [[ $device_name == "cullyn" ]]; then
         device_name="pixel buds"
     fi
+
     echo "$device_name"
 }
 
