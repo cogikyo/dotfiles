@@ -822,6 +822,7 @@
         :class "tr-c music-${matches("${pctl.status}", "Playing") ? "single" : "inactive" }"
         :text "󰓏 ${pctl.album}"
         :tooltip " 󰓏 ${pctl.album} "
+        :limit-width 9
         :style "${
           "${pctl.title}" == "${pctl.album}" ?
           "margin-left: -38px; margin-right: -6px;" : "margin-top: -100px; margin-left: -1000px;"
