@@ -854,7 +854,6 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 
 .net {
   transition: margin 0.25s $ease-out-snap;
-  font-size: 11px;
 
   &-up {
     margin-bottom: 18px;

@@ -7,5 +7,5 @@ eww open-many \
     computer user \
     workspaces \
     music albumArt \
-    pacman screenctl dunst systemctl network \
+    pacman screenctl dunst systemctl \
     assistant
