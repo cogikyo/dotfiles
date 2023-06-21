@@ -70,6 +70,7 @@ case "$n_flag" in
     1)
         browser "https://outlook.office365.com/mail/"
         browser "https://teams.microsoft.com/_" tab
+        browser "https://docs.google.com/spreadsheets/d/14cbHgPx3ucmrDlKG3UgSb5vDyyOMoEIQbHjbhjNoGuA/edit#gid=0" tab
         ;;
     2)
         browser "https://docs.google.com/spreadsheets/d/1hRZLt60KB39iURcQoYHQIRRVOs1stlF4b5dcK5u1ZmA/edit#gid=0"

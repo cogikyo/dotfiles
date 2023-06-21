@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-DISPLAY="DP-1"
+DISPLAY="HDMI-A"
 VID_PATH="$HOME/dotfiles/share/videos"
 
 background_choice=""

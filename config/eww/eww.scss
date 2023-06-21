@@ -311,7 +311,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 .assistantbox {
   @include imagebox(left);
 
-  background-position: 0px 0px;
+  background-position: 0px 2px;
 }
 
 // }}}
