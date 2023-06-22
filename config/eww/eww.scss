@@ -856,6 +856,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   transition: margin 0.25s $ease-out-snap;
 
   &-up {
+    font-size: 11px;
     margin-bottom: 18px;
     margin-left: 1px;
 
