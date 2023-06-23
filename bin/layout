@@ -76,9 +76,8 @@ case "$n_flag" in
         browser "https://docs.google.com/spreadsheets/d/1hRZLt60KB39iURcQoYHQIRRVOs1stlF4b5dcK5u1ZmA/edit#gid=0"
         ;;
     3)
+        terminal "dabella"
         browser "https://portal.cultureindex.com/clients/MtUIs650BA/surveys"
-        browser "https://keep.google.com/u/0/#home" tab
-        browser "https://app.jazz.co/app/v2/candidate"
         ;;
     4)
         terminal "dotfiles"
