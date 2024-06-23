@@ -1006,11 +1006,11 @@
 
 ; }}}
 
-(defwindow workspaces
-  :monitor 0 :stacking "bottom" :exclusive false :focusable false
-  :geometry (geometry :anchor "center right" :x "620px" :y "0px")
-  (workspaces)
-)
+;; (defwindow workspaces
+;;   :monitor 0 :stacking "bottom" :exclusive false :focusable false
+;;   :geometry (geometry :anchor "center right" :x "620px" :y "0px")
+;;   (workspaces)
+;; )
 ;; 👾 workspaces: {{{
 
 (defvar ws-hover false)
