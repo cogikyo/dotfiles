@@ -11,7 +11,7 @@ layout -n 4
 hyprctl dispatch workspace 5
 glava -e "bars_rc.glsl" & disown
 glava -e "radial_rc.glsl" & disown
-spotify & disown
+spotify-launcher & disown
 sleep 2
 hyprctl dispatch moveactive exact 2361 147
 hyprctl dispatch resizeactive exact 1301 1000
