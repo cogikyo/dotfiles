@@ -60,7 +60,6 @@ nvim_tree.setup({
 	update_focused_file = { enable = true },
 	diagnostics = { enable = true },
 	modified = { enable = true },
-	remove_keymaps = true,
 	view = {
 		number = true,
 		cursorline = false,

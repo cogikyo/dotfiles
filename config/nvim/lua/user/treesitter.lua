@@ -14,15 +14,13 @@ end
 -- ============================================================================
 
 treesitter.setup({
-	ensure_installeid = {
+	ensure_installed = {
 		"c",
 		"lua",
 		"python",
-        "md",
 		"bash",
 		"vim",
 		"yaml",
-		"help",
 		"query",
 		"comment",
 		"vimdoc",
@@ -36,10 +34,11 @@ treesitter.setup({
 		"rust",
 		"toml",
 		"go",
-        "java",
+		"java",
 	},
 	sync_install = true,
 	auto_install = true,
+    ignore_install = {},
 	highlight = {
 		enable = true,
 		additional_vim_regex_highlighting = false,
@@ -92,10 +91,6 @@ treesitter.setup({
 			["[]"] = "@class.outer",
 		},
 	},
-	context_commentstring = {
-		enable = true,
-		enable_autocmd = false, -- integration with Comment.nvim
-	},
 	playground = {
 		enable = true,
 		disable = {},
@@ -116,4 +111,5 @@ treesitter.setup({
 	},
 	autopairs = { enable = true },
 	autotag = { enable = true },
+    modules = {},
 })
