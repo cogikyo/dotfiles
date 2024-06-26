@@ -51,14 +51,14 @@ terminal () {
     fi
 }
 
-# resize () {
-#     hyprctl dispatch resizeactive exact 1870 1186
-#     hyprctl dispatch movefocus l
-#     hyprctl disptch resizeactive exact 1866 1955
-#     for ((i = 0; i < 5; i++)); do
-#         hyprctl dispatch resizeactive exact 1012 1955
-#     done # have resize master several times (bug?) ⮭
-# }
+resize () {
+    hyprctl dispatch resizeactive exact 1870 1186
+    hyprctl dispatch movefocus l
+    hyprctl disptch resizeactive exact 1866 1955
+    for ((i = 0; i < 5; i++)); do
+        hyprctl dispatch resizeactive exact 1012 1955
+    done # have resize master several times (bug?) ⮭
+}
 
 
 # ============================================================================
@@ -70,15 +70,14 @@ case "$n_flag" in
     1)
         browser "https://outlook.office365.com/mail/"
         browser "https://keep.google.com/u/0/" tab
-        browser "https://teams.microsoft.com/_" tab
-        browser "https://docs.google.com/spreadsheets/d/14cbHgPx3ucmrDlKG3UgSb5vDyyOMoEIQbHjbhjNoGuA/edit#gid=0"
         ;;
     2)
-        browser "https://docs.google.com/spreadsheets/d/1hRZLt60KB39iURcQoYHQIRRVOs1stlF4b5dcK5u1ZmA/edit#gid=0"
+        terminal "nectar"
+        browser "https://hr.dabella.us"
         ;;
     3)
-        terminal "dabella"
-        browser "https://portal.cultureindex.com/clients/MtUIs650BA/surveys"
+        terminal "wangare"
+        browser "localhost:8080"
         ;;
     4)
         terminal "dotfiles"
@@ -87,14 +86,14 @@ case "$n_flag" in
     *) exit 1 ;;
 esac
 
-# resize
-# if [[ "$n_flag" == 3 ]]; then
-#     hyprctl dispatch movefocus r
-#     hyprctl dispatch movefocus u
-#     hyprctl dispatch resizeactive exact 1870 1186
-#     hyprctl dispatch movefocus d
-#     hyprctl dispatch movefocus l
-# fi
+resize
+if [[ "$n_flag" == 3 ]]; then
+    hyprctl dispatch movefocus r
+    hyprctl dispatch movefocus u
+    hyprctl dispatch resizeactive exact 1870 1186
+    hyprctl dispatch movefocus d
+    hyprctl dispatch movefocus l
+fi
 hyprctl keyword input:follow_mouse 1
 # ============================================================================
 
