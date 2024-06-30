@@ -27,7 +27,7 @@ fi
 
 hyprctl dispatch workspace 6
 
-windows=$(hyprctl workspaces | grep -A 1 "ID $n_flag" | grep -oP '\windows:\s+\K[0-9]+')
+windows=$(hyprctl workspaces | grep -A 5 "ID $n_flag" | grep -oP '\windows:\s+\K[0-9]+')
 if [[ "$windows" -gt 0 ]]; then
     dunstify -u critical -t 2000 "ERROR" "a layout is already open"
     hyprctl dispatch workspace previous
@@ -77,7 +77,7 @@ case "$n_flag" in
         ;;
     3)
         terminal "wangare"
-        browser "localhost:8080"
+        browser "https://claude.ai/new"
         ;;
     4)
         terminal "dotfiles"
@@ -87,13 +87,13 @@ case "$n_flag" in
 esac
 
 resize
-if [[ "$n_flag" == 3 ]]; then
-    hyprctl dispatch movefocus r
-    hyprctl dispatch movefocus u
-    hyprctl dispatch resizeactive exact 1870 1186
-    hyprctl dispatch movefocus d
-    hyprctl dispatch movefocus l
-fi
+# if [[ "$n_flag" == 3 ]]; then
+#     hyprctl dispatch movefocus r
+#     hyprctl dispatch movefocus u
+#     hyprctl dispatch resizeactive exact 1870 1186
+#     hyprctl dispatch movefocus d
+#     hyprctl dispatch movefocus l
+# fi
 hyprctl keyword input:follow_mouse 1
 # ============================================================================
 

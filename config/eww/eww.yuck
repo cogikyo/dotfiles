@@ -800,9 +800,11 @@
       )
       (label
         :class "tr-c music-${matches("${pctl.status}", "Playing") ? "album" : "inactive" }"
-        :text "󰀥 ${pctl.album}"
+        :text "󰀥 ${(
+          strlength("${pctl.album}") > 15 ?
+          substring("${pctl.album}", 0, 15) + "..." : "${pctl.album}"
+        )}"
         :tooltip " 󰀥 ${pctl.album} "
-        :limit-width 19
         :style "${
           "${pctl.title}" != "${pctl.album}" ?
           "margin-left: -6px;" : "margin-top: -100px; margin-left: -1000px;"
@@ -811,7 +813,10 @@
       (label
         :class "tr-c music-${matches("${pctl.status}", "Playing") ? "title" : "inactive" }"
         :text " 󰎆 ${pctl.title}"
-        :limit-width 19
+        :text " 󰎆 ${(
+          strlength("${pctl.title}") > 15 ?
+          substring("${pctl.title}", 0, 15) + "..." : "${pctl.title}"
+        )}"
         :tooltip " 󰎆 ${pctl.title} "
         :style "${
           "${pctl.title}" != "${pctl.album}" ?
