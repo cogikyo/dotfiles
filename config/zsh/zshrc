@@ -5,6 +5,8 @@ function command_not_found_handler {
     return 127
 }
 
+export TERM=xterm-256color
+
 # history
 HISTFILE=~/.histfile
 HISTSIZE=1000

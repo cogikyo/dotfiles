@@ -6,7 +6,7 @@ change-bg "code"
 # layout -n 1
 # layout -n 2
 layout -n 3
-# layout -n 4
+layout -n 4
 
 hyprctl dispatch workspace 5
 glava -e "bars_rc.glsl" & disown
