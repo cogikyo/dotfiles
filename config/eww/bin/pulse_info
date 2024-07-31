@@ -7,15 +7,15 @@ fi
 
 get_id () {
     id=$(pulsemixer --list-"$1" \
-        | grep "Default" \
+            | grep "Default" \
         | gawk "{print \$1}" FPAT="[0-9]+")
     echo "$id"
 }
 
 get_name () {
     device_name=$(pulsemixer --list-"$1"  \
-        | grep "Default" \
-        | grep -oP "Name:\s+\K.[A-Za-z0-9-]+"
+            | grep "Default" \
+            | grep -oP "Name:\s+\K.[A-Za-z0-9-]+"
     )
 
     if [[ $device_name == "cullyn" ]]; then

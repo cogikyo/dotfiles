@@ -14,7 +14,7 @@ local silent_expression = { expr = true, silent = true }
 -- }}}
 -- ============================================================================
 
--- 🌠 Leader {{{
+-- Leader {{{
 vim.g.mapleader = " "
 map("", "<Space>", "<Nop>")
 map("n", "<leader>b", "<Nop>")

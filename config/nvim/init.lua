@@ -79,25 +79,25 @@ require("lazy").setup({
 	-- }}}
 
 	{ --📰 Pretty-fold {{{
-		"anuvyklack/pretty-fold.nvim",
-		opts = {
-			sections = {
-				left = {
-					"╘╾",
-					"content",
-					"⮯ ",
-				},
-				right = {
-					" ",
-					"number_of_folded_lines",
-					": ",
-					"percentage",
-					" ╼╕",
-				},
-			},
-			fill_char = "⋅",
-			process_comment_signs = "delete",
-		},
+		-- "anuvyklack/pretty-fold.nvim",
+		-- opts = {
+		-- 	sections = {
+		-- 		left = {
+		-- 			"╘╾",
+		-- 			"content",
+		-- 			"⮯ ",
+		-- 		},
+		-- 		right = {
+		-- 			" ",
+		-- 			"number_of_folded_lines",
+		-- 			": ",
+		-- 			"percentage",
+		-- 			" ╼╕",
+		-- 		},
+		-- 	},
+		-- 	fill_char = "⋅",
+		-- 	process_comment_signs = "delete",
+		-- },
 	}, -- }}}
 
 	{ --🧿 GitSigns {{{
@@ -256,7 +256,6 @@ require("lazy").setup({
 
 -- ============================================================================
 local user_config = {
-
 	-- custom ⮯ ---------------------------------------------------------------
 	"settings", -- edit default options/settings for neovim
 	"keymaps", -- most custom keymaps (some are defined in plugin opts above)

@@ -1,4 +1,5 @@
 -- see :help '{option}' for more details ⮯
+
 local options = {
 	-- 👉 Indentation =========================================================
 	tabstop = 4, -- preferred tabstop length.
