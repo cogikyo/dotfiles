@@ -181,7 +181,6 @@ copilot.setup({
 		},
 	},
 	filetypes = {
-		yaml = false,
 		markdown = false,
 		help = false,
 		gitcommit = false,
@@ -202,5 +201,13 @@ copilot_cmp.setup({
 		label = cmp_format.format_label_text,
 		insert_text = cmp_format.remove_existing,
 		preview = cmp_format.deindent,
+	},
+})
+
+cmp.setup.filetype({ "sql" }, {
+	sources = {
+		{ name = "vim-dadbod-completion" },
+		{ name = "copilot" },
+		{ name = "buffer" },
 	},
 })
