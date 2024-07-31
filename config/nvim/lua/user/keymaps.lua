@@ -173,6 +173,11 @@ map("n", "<leader>rp", '"ryiwvip:s/<C-r>r//g<Left><Left>', recursive_explicit)
 map("n", "<leader>rs", "1z=")
 -- }}}
 
+-- 💾 Database {{{
+map("n", "<leader>db", ":DBUIToggle<CR>")
+map("n", "<leader>df", ":DBUIFindBuffer<CR>")
+-- }}}
+
 -- 🙏 Folds {{{
 map("n", "zh", "ggO<Esc>76i=<Esc>o<Esc>76i=<Esc>gck", recursive_explicit)
 map("n", "zfs", 'i : <Esc>3a{<ESC>l3"_dl^3lgcc==a', recursive_explicit)
