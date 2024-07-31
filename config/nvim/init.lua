@@ -110,7 +110,7 @@ require("lazy").setup({
 				untracked = { text = "" },
 				delete = { text = "" },
 				topdelete = { text = "🕱" },
-				changedelete = { text = "" },
+				changedelete = { text = "❍" },
 			},
 
 			signcolumn = true, -- Toggle with `:Gitsigns toggle_signs`
@@ -191,11 +191,27 @@ require("lazy").setup({
 			vim.g.mkdp_refresh_slow = 1
 		end,
 	},
+	{
+		"kristijanhusak/vim-dadbod-ui",
+		dependencies = {
+			{ "tpope/vim-dadbod", lazy = true },
+			{ "kristijanhusak/vim-dadbod-completion", ft = { "postgres" }, lazy = true }, -- Optional
+		},
+		cmd = {
+			"DBUI",
+			"DBUIToggle",
+			"DBUIAddConnection",
+			"DBUIFindBuffer",
+		},
+		init = function()
+			-- Your DBUI configuration
+			vim.g.db_ui_use_nerd_fonts = 1
+		end,
+	},
 
 	{ "numToStr/Comment.nvim", opts = {} },
 	{ "folke/trouble.nvim", ops = {} },
 	{ "cappyzawa/trim.nvim", opts = {} },
-
 	"ggandor/lightspeed.nvim",
 	"mbbill/undotree",
 	"ThePrimeagen/harpoon",
