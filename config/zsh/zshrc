@@ -68,8 +68,6 @@ autoload -U compinit; compinit
 
 ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
 
-source $HOME/.config/zsh/vagari-highlights.zsh
-
 # fix keys
 bindkey -v
 export KEYTIMEOUT=01
@@ -80,3 +78,5 @@ bindkey '^[[1;5C'  forward-word   # C-left
 bindkey '^[[1;5D'  backward-word  # C-right
 bindkey '^[[1;5A'  history-incremental-search-backward # C-up
 bindkey '^[[1;5B'  history-incremental-search-forward  # C-down
+
+source $HOME/.config/zsh/vagari-highlights.zsh
