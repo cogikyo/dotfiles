@@ -97,9 +97,14 @@ null_ls.setup({
 		code_actions.eslint_d,
 		code_actions.gitsigns,
 		code_actions.refactoring,
+		code_actions.gomodifytags,
+        code_actions.impl,
+
 		-- 🩺 diagnostics: ⮯
 		diagnostics.codespell, -- identify some common code related misspellings
 		diagnostics.shellcheck, -- shell linter
+        diagnostics.staticcheck, -- go linter
+        diagnostics.gospel, -- go spell check
 		diagnostics.zsh, -- zsh -n (somewhat useful)
 		-- diagnostics.stylelint, -- css 'n related linting
 		-- diagnostics.eslint_d, -- js 'n related linting
@@ -114,6 +119,10 @@ null_ls.setup({
 		formatting.stylua, -- lua
 		formatting.taplo, -- toml
 		formatting.black, -- python
+        formatting.gofmt, -- go
+        formatting.goimports, -- go
+        formatting.golines, -- go
+
 		-- 🏄 hover: ⮯
 		hover.dictionary,
 		hover.printenv,
@@ -165,6 +174,7 @@ vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.s
 -- https://github.com/williamboman/mason-lspconfig.nvim#default-configuration
 local servers = {
 	bashls = {},
+    gopls = {},
 	marksman = {},
 	pyright = {},
 	cssls = {},
