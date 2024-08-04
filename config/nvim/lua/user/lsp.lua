@@ -60,12 +60,12 @@ local on_attach = function(client, bufnr)
 	nmap("<leader>rn", vim.lsp.buf.rename)
 	nmap("<leader>ca", vim.lsp.buf.code_action)
 	nmap("<leader>gr", vim.lsp.buf.references)
-	nmap("gd", vim.lsp.buf.type_definition)
-	nmap("<leader>gd", vim.lsp.buf.definition)
+	nmap("<leader>gd", vim.lsp.buf.type_definition)
+	nmap("gd", vim.lsp.buf.definition)
 	nmap("gi", vim.lsp.buf.implementation)
 	nmap("K", vim.lsp.buf.hover)
 	nmap("<C-k>", vim.lsp.buf.signature_help)
-	nmap("<leader>?", vim.diagnostic.open_float)
+	nmap("<leader>k", vim.diagnostic.open_float)
 	nmap("[d", vim.diagnostic.goto_prev)
 	nmap("]d", vim.diagnostic.goto_next)
 
@@ -98,10 +98,12 @@ null_ls.setup({
 		code_actions.gitsigns,
 		code_actions.refactoring,
 		code_actions.gomodifytags,
-		code_actions.impl, -- 🩺 diagnostics: ⮯
+		code_actions.impl,
+
+		-- 🩺 diagnostics: ⮯
 		diagnostics.codespell, -- identify some common code related misspellings
-		diagnostics.shellcheck, -- shell linter
-		diagnostics.staticcheck, -- go linter
+		diagnostics.stylelint, -- css 'n related linting
+		-- diagnostics.shellcheck, -- shell linter
 		diagnostics.gospel, -- go spell check
 		diagnostics.sqlfluff.with({
 			extra_args = { "--dialect", "postgres" }, -- change to your dialect
@@ -109,15 +111,16 @@ null_ls.setup({
 		diagnostics.zsh, -- zsh -n (somewhat useful)
 		-- diagnostics.stylelint, -- css 'n related linting
 		-- diagnostics.eslint_d, -- js 'n related linting
+
 		-- 🗃️ formatting: ⮯
 		formatting.shellharden, -- bash; goes well with shellcheck linting
 		formatting.beautysh, -- zsh 'n more (+ alt bash)
-		formatting.black,
+		formatting.black, -- python
+		formatting.stylelint, -- scss
 		formatting.sqlfluff.with({
 			extra_args = { "--dialect", "postgres" }, -- change to your dialect
 		}), -- sql
 		formatting.jq, -- json
-		formatting.prettier, -- webdev 'n stuff daemon for prettier;
 		formatting.rustfmt, -- rust
 		formatting.stylua, -- lua
 		formatting.taplo, -- toml
@@ -125,6 +128,7 @@ null_ls.setup({
 		formatting.gofmt, -- go
 		formatting.goimports, -- go
 		formatting.golines, -- go
+
 		-- 🏄 hover: ⮯
 		hover.dictionary,
 		hover.printenv,
@@ -164,9 +168,13 @@ local diagnostic_config = {
 
 vim.diagnostic.config(diagnostic_config)
 
-vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { border = "rounded" })
+vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
+	border = "rounded",
+})
 
-vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, { border = "rounded" })
+vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, {
+	border = "rounded",
+})
 
 -- 🎾 Automatic Server Setup:
 -- https://github.com/williamboman/mason-lspconfig.nvim#default-configuration
@@ -176,11 +184,8 @@ local servers = {
 	templ = {},
 	marksman = {},
 	pyright = {},
-	cssls = {},
-	rust_analyzer = {},
 	taplo = {},
 	html = {},
-	tsserver = {},
 	lua_ls = {
 		Lua = {
 			workspace = { checkThirdParty = false },
@@ -193,14 +198,18 @@ local servers = {
 
 -- ============================================================================
 -- 🧱 MASON, DO THE THING! {{{
-mason.setup({ ui = { border = "rounded" } })
+mason.setup({
+	ui = { border = "rounded" },
+})
 
 local mason_lspconfig = require("mason-lspconfig")
 local capabilities = vim.lsp.protocol.make_client_capabilities()
 
 capabilities = cmp.default_capabilities(capabilities)
 
-mason_lspconfig.setup({ ensure_installed = vim.tbl_keys(servers) })
+mason_lspconfig.setup({
+	ensure_installed = vim.tbl_keys(servers),
+})
 
 mason_lspconfig.setup_handlers({
 	function(server_name)
