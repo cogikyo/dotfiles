@@ -36,7 +36,7 @@ alias od='ouch decompress'
 alias ol='ouch list --tree'
 alias man='man --pager=$PAGER'
 alias zoomfix='XDG_CURRENT_DESKTOP=gnome GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb zoom & disown'
-alias mfix='hyprctl dispatch workspace 7; kitty -e sudo logid & disown'
+alias mfix='hyprctl dispatch workspace 7; kitty -e sudo logid -c ~/dotfiles/etc/logid.cfg & disown'
 alias af='GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb audacity & disown'
 alias tt='cd ~/dabella && ls *.zip'
 function tree () {
