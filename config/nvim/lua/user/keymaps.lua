@@ -34,6 +34,7 @@ map("i", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("v", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("n", "<leader>s<leader>", ":noa w<CR><CR")
 map("n", "<leader><C-s>", ":lua vim.lsp.buf.format()<CR><C-s>")
+map("v", "<leader><C-s>", ":<C-u>lua vim.lsp.buf.format({ range = { start = vim.api.nvim_buf_get_mark(0, '<'), ['end'] = vim.api.nvim_buf_get_mark(0, '>') } })<CR>")
 map("n", "<leader>so", ":w | source %<CR>")
 -- }}}
 
@@ -142,7 +143,7 @@ map("n", "<leader>up", ":Lazy update<CR>")
 map("n", "<leader>pt", ":TSPlaygroundToggle<CR>")
 map("n", "<leader>pc", ":TSHighlightCapturesUnderCursor<CR>")
 map("n", "<leader>pn", ":TSNodeUnderCursor<CR>")
-map("n", "<leader>ct", ":HighlightColorsToggle<CR>")
+map("n", "<leader>ct", ":HighlightColors Toggle<CR>")
 map("n", "<leader>st", ":set spell!<CR>")
 map("n", "<leader>sc", ":let @/ = ''<CR>")
 map("n", "<leader>wt", ":set wrap!<CR> :echo 'wrap toggled'<CR>")
@@ -151,7 +152,6 @@ map("n", "<leader>mm", ":Mason<CR>,")
 map("n", "<leader>mn", ":NullLsInfo<CR>,")
 map("n", "<leader>et", ":NvimTreeToggle<CR> :NvimTreeRefresh<CR>")
 map("n", "<leader>bt", ":Switch<CR>") -- toggle b false<->true
-map("n", "<leader>tt", ":TroubleToggle<CR>") -- toggle b false<->true
 -- }}}
 
 -- 🔱 Harpoon {{{

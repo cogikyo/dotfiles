@@ -14,6 +14,9 @@ telescope.load_extension("zf-native")
 
 local actions = require("telescope.actions")
 
+-- local open_with_trouble = require("troubile.sources.telescope").open
+-- local add_to_trouble = require("trouble.sources.telescope").add
+
 telescope.setup({
 	defaults = {
 		layout_strategy = "vertical",
@@ -47,6 +50,7 @@ telescope.setup({
 				["<C-f>"] = actions.send_to_qflist + actions.open_qflist,
 				["<C-q>"] = actions.send_selected_to_qflist + actions.open_qflist,
 				["<C-l>"] = actions.complete_tag,
+                -- ["<c-t>"] = open_with_trouble,
 				["<C-Space>"] = actions.which_key,
 			},
 		},

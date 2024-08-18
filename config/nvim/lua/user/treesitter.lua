@@ -31,6 +31,7 @@ treesitter.setup({
 		"html",
 		"css",
 		"scss",
+		"templ",
 		"rust",
 		"toml",
 		"go",

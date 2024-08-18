@@ -170,6 +170,46 @@ require("lazy").setup({
 		},
 	}, -- }}}
 
+	{ -- 🚦Trouble {{{
+		"folke/trouble.nvim",
+		opts = {}, -- for default options, refer to the configuration section for custom setup.
+		cmd = "Trouble",
+		keys = {
+			{
+				"<leader>txt",
+				"<cmd>Trouble diagnostics toggle<cr>",
+				desc = "Diagnostics (Trouble)",
+			},
+			{
+				"<leader>txb",
+				"<cmd>Trouble diagnostics toggle filter.buf=0<cr>",
+				desc = "Buffer Diagnostics (Trouble)",
+			},
+			{
+				"<leader>txs",
+				"<cmd>Trouble symbols toggle focus=false<cr>",
+				desc = "Symbols (Trouble)",
+			},
+			{
+				"<leader>txp",
+				"<cmd>Trouble lsp toggle focus=false win.position=right<cr>",
+				desc = "LSP Definitions / references / ... (Trouble)",
+			},
+			{
+				"<leader>tsl",
+				"<cmd>Trouble loclist toggle<cr>",
+				desc = "Location List (Trouble)",
+			},
+			{
+				"<leader>tsq",
+				"<cmd>Trouble qflist toggle<cr>",
+				desc = "Quickfix List (Trouble)",
+			},
+		},
+	},
+
+	-- }}}
+
 	{ --🪩 Simple setup {{{
 		"brenoprata10/nvim-highlight-colors",
 		opts = {
@@ -210,7 +250,6 @@ require("lazy").setup({
 	},
 
 	{ "numToStr/Comment.nvim", opts = {} },
-	{ "folke/trouble.nvim", ops = {} },
 	{ "cappyzawa/trim.nvim", opts = {} },
 	"ggandor/lightspeed.nvim",
 	"mbbill/undotree",

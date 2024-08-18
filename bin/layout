@@ -77,7 +77,11 @@ case "$n_flag" in
         ;;
     3)
         terminal "wangare"
-        browser "https://claude.ai/new"
+        browser "localhost:3000"
+        browser "https://github.com/nosvagor/wangare" "tab"
+        browser "https://coolify.wangare.com/project/p88ww84/production" "tab"
+        browser "https://wangare.com/home" "tab"
+        browser "https://claude.ai/project/f4695c70-3710-4539-b30d-23f91f927cc7" "tab"
         resize
         ;;
     4)
