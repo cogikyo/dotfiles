@@ -40,19 +40,6 @@ local on_attach = function(client, bufnr)
 		vim.keymap.set("n", keys, func, { buffer = bufnr })
 	end
 
-	if client.supports_method("textDocument/documentHighlight") then
-		vim.api.nvim_exec(
-			[[
-            augroup ReferenceHighlight
-                autocmd! * <buffer>
-                autocmd CursorHold <buffer> lua vim.lsp.buf.document_highlight()
-                autocmd CursorMoved <buffer> lua vim.lsp.buf.clear_references()
-            augroup END
-        ]],
-			false
-		)
-	end
-
 	if client.name == "rust_analyzer" then
 		client.server_capabilities.semanticTokensProvider = nil
 	end
@@ -69,17 +56,17 @@ local on_attach = function(client, bufnr)
 	nmap("[d", vim.diagnostic.goto_prev)
 	nmap("]d", vim.diagnostic.goto_next)
 
-	if client.supports_method("textDocument/formatting") then
-		local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
-		vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
-		vim.api.nvim_create_autocmd("BufWritePre", {
-			group = augroup,
-			buffer = bufnr,
-			callback = function()
-				vim.lsp.buf.format()
-			end,
-		})
-	end
+	-- if client.supports_method("textDocument/formatting") then
+	-- 	local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
+	-- 	vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
+	-- 	vim.api.nvim_create_autocmd("BufWritePre", {
+	-- 		group = augroup,
+	-- 		buffer = bufnr,
+	-- 		callback = function()
+	-- 			vim.lsp.buf.format()
+	-- 		end,
+	-- 	})
+	-- end
 end
 
 -- ⛑️  Null-ls (Linting, formatting):
@@ -116,7 +103,7 @@ null_ls.setup({
 		formatting.shellharden, -- bash; goes well with shellcheck linting
 		formatting.beautysh, -- zsh 'n more (+ alt bash)
 		formatting.black, -- python
-		formatting.stylelint, -- scss
+		formatting.stylelint, -- css
 		formatting.sqlfluff.with({
 			extra_args = { "--dialect", "postgres" }, -- change to your dialect
 		}), -- sql
@@ -181,6 +168,9 @@ vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.s
 local servers = {
 	bashls = {},
 	gopls = {},
+	cssls = {},
+	stylelint_lsp = {},
+	css_variables = {},
 	templ = {},
 	marksman = {},
 	pyright = {},
