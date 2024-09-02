@@ -183,8 +183,6 @@ map("n", "zh", "ggO<Esc>76i=<Esc>o<Esc>76i=<Esc>gck", recursive_explicit)
 map("n", "zfs", 'i : <Esc>3a{<ESC>l3"_dl^3lgcc==a', recursive_explicit)
 map("n", "zfe", "<leader>oj3i}<Esc>gcc<leader>o==", recursive_explicit)
 map("n", "zfb", "o<Cr><Esc><leader>zfs<Esc><leader>zfeO<Cr><Esc>2k^wa", recursive_silent)
-map("n", "<leader>j", "zj")
-map("n", "<leader>k", "zk")
 --  }}}
 
 -- 📃 Common HTML {{{
