@@ -91,11 +91,11 @@ cmp.setup({
 		["<C-e>"] = cmp.mapping.abort(),
 		["<Right>"] = cmp.mapping.confirm({
 			behavior = cmp.ConfirmBehavior.Replace,
-			select = false,
+			select = true,
 		}),
 		["<CR>"] = cmp.mapping.confirm({
 			behavior = cmp.ConfirmBehavior.Replace,
-			select = true,
+			select = false,
 		}),
 		["<Tab>"] = cmp.mapping(function(fallback)
 			if cmp.visible() then
