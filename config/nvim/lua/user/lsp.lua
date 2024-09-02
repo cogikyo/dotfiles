@@ -48,6 +48,7 @@ local on_attach = function(client, bufnr)
 	nmap("<leader>ca", vim.lsp.buf.code_action)
 	nmap("<leader>gr", vim.lsp.buf.references)
 	nmap("<leader>gd", vim.lsp.buf.type_definition)
+	nmap("<leader>gg", ":LspRestart<CR>")
 	nmap("gd", vim.lsp.buf.definition)
 	nmap("gi", vim.lsp.buf.implementation)
 	nmap("K", vim.lsp.buf.hover)
@@ -56,17 +57,17 @@ local on_attach = function(client, bufnr)
 	nmap("[d", vim.diagnostic.goto_prev)
 	nmap("]d", vim.diagnostic.goto_next)
 
-	-- if client.supports_method("textDocument/formatting") then
-	-- 	local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
-	-- 	vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
-	-- 	vim.api.nvim_create_autocmd("BufWritePre", {
-	-- 		group = augroup,
-	-- 		buffer = bufnr,
-	-- 		callback = function()
-	-- 			vim.lsp.buf.format()
-	-- 		end,
-	-- 	})
-	-- end
+	if client.supports_method("textDocument/formatting") then
+		local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
+		vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
+		vim.api.nvim_create_autocmd("BufWritePre", {
+			group = augroup,
+			buffer = bufnr,
+			callback = function()
+				vim.lsp.buf.format()
+			end,
+		})
+	end
 end
 
 -- ⛑️  Null-ls (Linting, formatting):
@@ -112,6 +113,7 @@ null_ls.setup({
 		formatting.stylua, -- lua
 		formatting.taplo, -- toml
 		formatting.black, -- python
+		formatting.prettier, -- js, ts, css, html
 		formatting.gofmt, -- go
 		formatting.goimports, -- go
 		formatting.golines, -- go
@@ -175,7 +177,6 @@ local servers = {
 	marksman = {},
 	pyright = {},
 	taplo = {},
-	html = {},
 	lua_ls = {
 		Lua = {
 			workspace = { checkThirdParty = false },
