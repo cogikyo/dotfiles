@@ -225,7 +225,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   transition: all 0.25s $ease-out-snap;
 
   $x: 1px;
-  $margin: 30px;
+  $margin: 20px;
 
   // image properties
   background-repeat: no-repeat;
@@ -243,7 +243,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   box-shadow: $x 3px 7px 1px rgba($blu-0, 0.42);
   margin: 0 $margin $margin 0;
 
-  @if $position == "right" {
+  @if $position =="right" {
     $x: -1px;
 
     border-width: 0 0 3px 2px;
@@ -280,7 +280,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
     radius: 50% 0% 48% 87%;
   }
 
-  @if $direction == "up" {
+  @if $direction =="up" {
     border-radius: 50% 28% 0% 87%;
   }
 
@@ -289,6 +289,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 
   &-hover {
     background-color: rgba($bg, 0.88);
+
     min: {
       width: 128px;
       height: 128px;
@@ -296,7 +297,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 
     border-radius: 42% 0% 42% 48%;
 
-    @if $direction == "up" {
+    @if $direction =="up" {
       border-radius: 42% 32% 0% 48%;
     }
 

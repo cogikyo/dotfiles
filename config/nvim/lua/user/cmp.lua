@@ -22,27 +22,27 @@ if not luasnip_ok then
 	return
 end
 
-local copilot_ok, copilot = pcall(require, "copilot")
-if not copilot_ok then
-	vim.api.nvim_echo({
-		{
-			"Error: cmp is integrated with copilot, but copilot is not found, skipping relevant setup",
-			"Error",
-		},
-	}, true, {})
-	return
-end
-
-local copilot_cmp_ok, copilot_cmp = pcall(require, "copilot_cmp")
-if not copilot_cmp_ok then
-	vim.api.nvim_echo({
-		{
-			"Error: copilt needs copilt_cmp to work well, but copilot_cmp is not found, skipping relevant setup",
-			"Error",
-		},
-	}, true, {})
-	return
-end
+-- local copilot_ok, copilot = pcall(require, "copilot")
+-- if not copilot_ok then
+-- 	vim.api.nvim_echo({
+-- 		{
+-- 			"Error: cmp is integrated with copilot, but copilot is not found, skipping relevant setup",
+-- 			"Error",
+-- 		},
+-- 	}, true, {})
+-- 	return
+-- end
+--
+-- local copilot_cmp_ok, copilot_cmp = pcall(require, "copilot_cmp")
+-- if not copilot_cmp_ok then
+-- 	vim.api.nvim_echo({
+-- 		{
+-- 			"Error: copilt needs copilt_cmp to work well, but copilot_cmp is not found, skipping relevant setup",
+-- 			"Error",
+-- 		},
+-- 	}, true, {})
+-- 	return
+-- end
 
 -- }}}
 -- ============================================================================
@@ -123,7 +123,7 @@ cmp.setup({
 		format = function(entry, vim_item)
 			vim_item.kind = string.format("%s ", kind_icons[vim_item.kind])
 			vim_item.menu = ({
-				copilot = " copilot",
+				-- copilot = " copilot",
 				nvim_lua = " nvim_lua",
 				nvim_lsp = " lsp",
 				luasnip = " luasnip",
@@ -137,7 +137,7 @@ cmp.setup({
 	},
 	sources = {
 		{ name = "nvim_lsp", group_index = 2 },
-		{ name = "copilot", group_index = 2 },
+		-- { name = "copilot", group_index = 2 },
 		{ name = "luasnip", group_index = 2 },
 		{ name = "path", group_index = 2 },
 		{ name = "nvim_lua", group_index = 2 },
@@ -148,7 +148,7 @@ cmp.setup({
 	sorting = {
 		priority_weight = 2,
 		comparators = {
-			require("copilot_cmp.comparators").prioritize,
+			-- require("copilot_cmp.comparators").prioritize,
 
 			-- Below is the default comparator list and order for nvim-cmp
 			cmp.config.compare.offset,
@@ -165,49 +165,49 @@ cmp.setup({
 	},
 })
 
-copilot.setup({
-	panel = { enabled = false },
-	suggestion = {
-		enabled = true,
-		auto_trigger = true,
-		debounce = 75,
-		keymap = {
-			accept = "<C-l>",
-			accept_word = false,
-			accept_line = false,
-			next = "<C-y>",
-			prev = "<C-g>",
-			dismiss = "<C-e>",
-		},
-	},
-	filetypes = {
-		markdown = false,
-		help = false,
-		gitcommit = false,
-		gitrebase = false,
-		hgcommit = false,
-		svn = false,
-		cvs = false,
-		["."] = false,
-	},
-	copilot_node_command = "node", -- Node.js version must be > 16.x
-	server_opts_overrides = {},
-})
+-- copilot.setup({
+-- 	panel = { enabled = false },
+-- 	suggestion = {
+-- 		enabled = true,
+-- 		auto_trigger = true,
+-- 		debounce = 75,
+-- 		keymap = {
+-- 			accept = "<C-l>",
+-- 			accept_word = false,
+-- 			accept_line = false,
+-- 			next = "<C-y>",
+-- 			prev = "<C-g>",
+-- 			dismiss = "<C-e>",
+-- 		},
+-- 	},
+-- 	filetypes = {
+-- 		markdown = false,
+-- 		help = false,
+-- 		gitcommit = false,
+-- 		gitrebase = false,
+-- 		hgcommit = false,
+-- 		svn = false,
+-- 		cvs = false,
+-- 		["."] = false,
+-- 	},
+-- 	copilot_node_command = "node", -- Node.js version must be > 16.x
+-- 	server_opts_overrides = {},
+-- })
 
-local cmp_format = require("copilot_cmp.format")
-copilot_cmp.setup({
-	suggestion = { enabled = true },
-	formatters = {
-		label = cmp_format.format_label_text,
-		insert_text = cmp_format.remove_existing,
-		preview = cmp_format.deindent,
-	},
-})
+-- local cmp_format = require("copilot_cmp.format")
+-- copilot_cmp.setup({
+-- 	suggestion = { enabled = true },
+-- 	formatters = {
+-- 		label = cmp_format.format_label_text,
+-- 		insert_text = cmp_format.remove_existing,
+-- 		preview = cmp_format.deindent,
+-- 	},
+-- })
 
 cmp.setup.filetype({ "sql" }, {
 	sources = {
 		{ name = "vim-dadbod-completion" },
-		{ name = "copilot" },
+		-- { name = "copilot" },
 		{ name = "buffer" },
 	},
 })

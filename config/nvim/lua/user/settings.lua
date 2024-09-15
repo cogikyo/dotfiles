@@ -32,7 +32,7 @@ local options = {
 	foldmethod = "marker", -- atomically fold on {{{ }}}
 	updatetime = 420, -- timer until events execute when cursors stops (ms)
 	timeoutlen = 690, -- timeout for mapped sequence to complete
-	fillchars = "fold:⋅,",
+	fillchars = "vert: ,horiz: ,fold:⋅,eob: ,msgsep:‾",
 	-- ========================================================================
 
 	-- ⌨️  UX ==================================================================

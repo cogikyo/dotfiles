@@ -89,12 +89,15 @@ local filetype = {
 local filename = {
 	"filename",
 	file_status = true,
-	path = 0,
-	icon = "⽂",
+	newfile_status = true,
+	path = 1,
+	shorting_target = 80,
+	icon = nil,
 	symbols = {
 		modified = "🞊",
-		readonly = "",
-		unnamed = "名前?",
+		readonly = "󰍁",
+		unnamed = "…",
+		newfile = "",
 	},
 	color = function()
 		local mode_color = {
@@ -106,7 +109,7 @@ local filename = {
 			R = p.emr_4,
 			s = p.cyn_4,
 			S = p.cyn_4,
-			[""] = p.prp_4,
+			[""] = p.prp_4,
 		}
 		return { fg = mode_color[vim.fn.mode()] }
 	end,
@@ -164,6 +167,32 @@ local lazy = {
 	color = { fg = p.glc_4 },
 }
 
+local minimal = {
+	sections = {
+		lualine_a = { mode },
+		lualine_b = {},
+		lualine_c = {},
+		lualine_x = { search },
+		lualine_y = { filetype },
+		lualine_z = { icon() },
+	},
+	inactive_sections = {
+		lualine_a = {},
+		lualine_b = {},
+		lualine_c = {},
+		lualine_x = {},
+		lualine_y = { filetype },
+		luailne_z = {},
+	},
+	filetypes = {
+		"Avante",
+		"AvanteInput",
+		"tsplayground",
+		"undotree",
+		"diff",
+	},
+}
+
 lualine.setup({
 	options = {
 		theme = "vagari",
@@ -178,6 +207,14 @@ lualine.setup({
 		lualine_y = { filetype },
 		lualine_z = { icon },
 	},
-	inactive_sections = {},
+	inactive_sections = {
+		lualine_a = {},
+		lualine_b = {},
+		lualine_c = {},
+		lualine_x = {},
+		lualine_y = { filetype },
+		luailne_z = {},
+	},
 	tabline = {},
+	extensions = { minimal },
 })
