@@ -34,7 +34,11 @@ map("i", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("v", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("n", "<leader>s<leader>", ":noa w<CR><CR")
 map("n", "<leader><C-s>", ":lua vim.lsp.buf.format()<CR><C-s>")
-map("v", "<leader><C-s>", ":<C-u>lua vim.lsp.buf.format({ range = { start = vim.api.nvim_buf_get_mark(0, '<'), ['end'] = vim.api.nvim_buf_get_mark(0, '>') } })<CR>")
+map(
+	"v",
+	"<leader><C-s>",
+	":<C-u>lua vim.lsp.buf.format({ range = { start = vim.api.nvim_buf_get_mark(0, '<'), ['end'] = vim.api.nvim_buf_get_mark(0, '>') } })<CR>"
+)
 map("n", "<leader>so", ":w | source %<CR>")
 -- }}}
 
@@ -163,6 +167,7 @@ map("n", "<leader>ne", ":lua require('harpoon.ui').nav_file(2)<CR>zt")
 map("n", "<leader>ns", ":lua require('harpoon.ui').nav_file(3)<CR>zt")
 map("n", "<leader>na", ":lua require('harpoon.ui').nav_file(4)<CR>zt")
 map("n", "<leader>nd", ":lua require('harpoon.ui').nav_file(5)<CR>zt")
+map("n", "<leader>n<leader>", "yy2pct/styles<esc>t.lC.css<esc>^jct/static/js<esc>t.lC.js<esc>2k")
 -- }}}
 
 -- 🔍 Replace {{{

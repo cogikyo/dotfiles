@@ -42,16 +42,9 @@ require("lazy").setup({
 			"hrsh7th/cmp-buffer",
 			"hrsh7th/cmp-path",
 			"hrsh7th/cmp-emoji",
-			-- "chrisgrieser/cmp-nerdfont",
 			"L3MON4D3/LuaSnip",
 			"saadparwaiz1/cmp_luasnip",
 			"rafamadriz/friendly-snippets",
-			{
-				"zbirenbaum/copilot.lua",
-				cmd = "Copilot",
-				event = "InsertEnter",
-				dependencies = { "zbirenbaum/copilot-cmp" },
-			},
 		},
 	}, -- }}}
 
@@ -210,6 +203,92 @@ require("lazy").setup({
 
 	-- }}}
 
+	{ -- 🍓 Avante {{{
+		"yetone/avante.nvim",
+		event = "VeryLazy",
+		lazy = false,
+		version = false,
+		opts = {
+			hints = { enabled = false },
+			windows = {
+				position = "right", -- the position of the sidebar
+				wrap = false, -- similar to vim.o.wrap
+				width = 50, -- default % based on available width
+				input = {
+					prefix = "󰭻 ",
+				},
+			},
+			mappings = {
+				ask = "<leader>at",
+				edit = "<leader>ae",
+				refresh = "<leader>ar",
+				diff = {
+					ours = "co",
+					theirs = "ct",
+					all_theirs = "ca",
+					both = "cb",
+					cursor = "cc",
+					next = "]x",
+					prev = "[x",
+				},
+				suggestion = {
+					accept = "<C-l>",
+					next = "<C-.>",
+					prev = "<C-,>",
+					dismiss = "<esc>",
+				},
+				jump = {
+					next = "]]",
+					prev = "[[",
+				},
+				submit = {
+					normal = "<CR>",
+					insert = "<C-s>",
+				},
+			},
+		},
+		build = "make",
+		dependencies = {
+			"stevearc/dressing.nvim",
+			"nvim-lua/plenary.nvim",
+			"MunifTanjim/nui.nvim",
+			"nvim-tree/nvim-web-devicons", -- or echasnovski/mini.icons
+			"zbirenbaum/copilot.lua", -- for providers='copilot'
+			{
+				"HakonHarnes/img-clip.nvim",
+				event = "VeryLazy",
+				opts = {
+					default = {
+						embed_image_as_base64 = false,
+						prompt_for_file_name = false,
+						drag_and_drop = {
+							insert_mode = true,
+						},
+					},
+				},
+				keys = {
+					{
+						"<leader>ip",
+						function()
+							return vim.bo.filetype == "AvanteInput" and require("avante.clipboard").paste_image()
+								or require("img-clip").paste_image()
+						end,
+						desc = "clip: paste image",
+					},
+				},
+			},
+			{
+				-- Make sure to set this up properly if you have lazy=true
+				"MeanderingProgrammer/render-markdown.nvim",
+				opts = {
+					file_types = { "markdown", "Avante" },
+				},
+				ft = { "markdown", "Avante" },
+			},
+		},
+	},
+	-- }}}
+
 	{ --🪩 Simple setup {{{
 		"brenoprata10/nvim-highlight-colors",
 		opts = {
@@ -276,6 +355,8 @@ require("lazy").setup({
 
 	"AndrewRadev/switch.vim",
 	"elkowar/yuck.vim",
+	"gen740/SmoothCursor.nvim",
+	"yetone/avante.nvim",
 
 	{
 		"nvim-telescope/telescope.nvim",
@@ -300,6 +381,7 @@ require("lazy").setup({
 		"goolord/alpha-nvim",
 		dependencies = { "kyazdani42/nvim-web-devicons" },
 	}, -- }}}
+
 	--	-----------------------------------------------------------------------
 }, { -- opts:
 	ui = { border = "rounded" },
@@ -326,10 +408,18 @@ local user_config = {
 	"treesitter", -- treesitter and related
 	"autopairs", -- autopair configs and custom functions
 	"lsp", -- lsp and related config
+	"cursor", -- smooth cursor
 	-- ------------------------------------------------------------------------
 }
 
 for _, file in ipairs(user_config) do
 	require("user." .. file)
+end
+
+local avante_lib_ok, avante_lib_result = pcall(require, "avante_lib")
+if avante_lib_ok then
+	pcall(avante_lib_result.load)
+else
+	vim.api.nvim_echo({ { "Error: avante failed to load", "ErrorMsg" } }, true, {})
 end
 -- ============================================================================
