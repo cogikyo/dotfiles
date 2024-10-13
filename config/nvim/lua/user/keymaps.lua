@@ -167,7 +167,7 @@ map("n", "<leader>ne", ":lua require('harpoon.ui').nav_file(2)<CR>zt")
 map("n", "<leader>ns", ":lua require('harpoon.ui').nav_file(3)<CR>zt")
 map("n", "<leader>na", ":lua require('harpoon.ui').nav_file(4)<CR>zt")
 map("n", "<leader>nd", ":lua require('harpoon.ui').nav_file(5)<CR>zt")
-map("n", "<leader>n<leader>", "yy2pct/styles<esc>t.lC.css<esc>^jct/static/js<esc>t.lC.js<esc>2k")
+map("n", "<leader>n<leader>", "yy2pct/styles<esc>t.lC.css<esc>k")
 -- }}}
 
 -- 🔍 Replace {{{
