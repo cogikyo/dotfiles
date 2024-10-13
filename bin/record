@@ -70,7 +70,7 @@ if [[ $a_flag == "combined_audio.monitor" ]]; then
 
     # lower sink volume (volume control on sink does not affect it in the combined input)
     output_loopback_id=$(pactl list short sink-inputs  | rg "PipeWire" | tail -n 1 | awk '{print $1}')
-    pactl set-sink-input-volume "$output_loopback_id" 75%
+    pactl set-sink-input-volume "$output_loopback_id" 150%
 fi
 
 cleanup() {
