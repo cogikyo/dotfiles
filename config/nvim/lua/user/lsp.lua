@@ -93,9 +93,9 @@ null_ls.setup({
 		diagnostics.stylelint, -- css 'n related linting
 		-- diagnostics.shellcheck, -- shell linter
 		diagnostics.gospel, -- go spell check
-		diagnostics.sqlfluff.with({
-			extra_args = { "--dialect", "postgres" }, -- change to your dialect
-		}), -- sql linter
+		-- diagnostics.sqlfluff.with({
+		-- 	extra_args = { "--dialect", "postgres" }, -- change to your dialect
+		-- }), -- sql linter
 		diagnostics.zsh, -- zsh -n (somewhat useful)
 		-- diagnostics.stylelint, -- css 'n related linting
 		-- diagnostics.eslint_d, -- js 'n related linting
@@ -105,9 +105,9 @@ null_ls.setup({
 		formatting.beautysh, -- zsh 'n more (+ alt bash)
 		formatting.black, -- python
 		formatting.stylelint, -- css
-		formatting.sqlfluff.with({
-			extra_args = { "--dialect", "postgres" }, -- change to your dialect
-		}), -- sql
+		-- formatting.sqlfluff.with({
+		-- 	extra_args = { "--dialect", "postgres" }, -- change to your dialect
+		-- }), -- sql
 		formatting.jq, -- json
 		formatting.rustfmt, -- rust
 		formatting.stylua, -- lua
@@ -116,7 +116,7 @@ null_ls.setup({
 		formatting.prettier, -- js, ts, css, html
 		formatting.gofmt, -- go
 		formatting.goimports, -- go
-		formatting.golines, -- go
+		-- formatting.golines, -- go
 
 		-- 🏄 hover: ⮯
 		hover.dictionary,

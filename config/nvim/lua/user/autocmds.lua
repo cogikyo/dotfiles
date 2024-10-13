@@ -21,7 +21,7 @@ global_autocmd("InsertEnter", "silent! set formatoptions=tcqnpj1")
 global_autocmd("TextYankPost", "silent! lua vim.highlight.on_yank({ timeout = 69})")
 
 -- Remove color column
-scoped_autocmd("FileType", "NoColorColumn", { "help", "Trouble", "Avante", "AvanteInput" }, "silent! setlocal cc=")
+scoped_autocmd("FileType", "NoColorColumn", { "help", "trouble", "Avante", "AvanteInput" }, "silent! setlocal cc=")
 
 scoped_autocmd("BufWritePost", "EwwRestart", "eww.yuck,eww.scss", ":! eww-open & disown && exit<CR>")
 

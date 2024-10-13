@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <inkscape
-   version="1"
-   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd">
+   version="1">
   <group
      id="window">
     <group
@@ -94,9 +93,10 @@
   </group>
   <group
      id="template">
-    <sodipodi:namedview
+    <group
        id="base"
        pagecolor="#505050"
+       deskcolor="#d1d1d1"
        pageopacity="0"
        pagecheckerboard="0"
        bordercolor="#eeeeee"
@@ -117,7 +117,9 @@
       <eventcontext
          id="rect"
          style="fill:blue;"
-         usecurrent="1" />
+         usecurrent="1"
+         width="2000"
+         height="1000" />
       <eventcontext
          id="3dbox"
          style="stroke:none;stroke-linejoin:round;"
@@ -302,7 +304,7 @@
        id="lpetool"
        mode="drag"
        style="fill:#ff0000;fill-opacity:1;fill-rule:nonzero;stroke:none;"
-       unit="mm"
+       unit="px"
        show_bbox="1" />
     <eventcontext
        id="text"
@@ -386,7 +388,8 @@
     <eventcontext
        id="connector"
        style="fill:none;fill-rule:evenodd;stroke:black;stroke-opacity:1;stroke-linejoin:miter;stroke-width:1px;stroke-linecap:butt;"
-       selcue="1" />
+       selcue="1"
+       curvature="0" />
     <eventcontext
        id="paintbucket"
        style="fill:#a0a0a0;stroke:none;"
@@ -515,7 +518,31 @@
   <group
      id="colorselector"
      page="0"
-     switcher="1" />
+     switcher="1">
+    <group
+       id="RGB"
+       visible="1" />
+    <group
+       id="HSL"
+       visible="1" />
+    <group
+       id="CMYK"
+       visible="1" />
+    <group
+       id="HSV"
+       visible="1" />
+    <group
+       id="HSLuv"
+       visible="1" />
+    <group
+       id="OKLAB"
+       visible="1" />
+    <group
+       id="CMS"
+       visible="1" />
+    <group
+       id="OKHSL" />
+  </group>
   <group
      id="embedded">
     <group
@@ -529,7 +556,17 @@
        tile_aspect="0"
        tile_border="1"
        rows="1"
-       tile_stretch="1" />
+       tile_stretch="1">
+      <group
+         id="pinned"
+         none="1"
+         rgb000000="1"
+         black="1"
+         rgb808080="1"
+         gray-50="1"
+         rgbffffff="1"
+         white="1" />
+    </group>
   </group>
   <group
      id="dialogs">
@@ -576,16 +613,23 @@
        append_extension="1"
        path="">
       <group
-         id="exportarea" />
+         id="exportarea"
+         value="page" />
       <group
          id="defaultxdpi" />
+      <group
+         id="batchexportarea"
+         value="layer" />
+      <group
+         id="defaultdpi"
+         value="3000" />
     </group>
     <group
        id="save_as"
        default="org.inkscape.output.svg.inkscape"
        append_extension="1"
        enable_preview="1"
-       path=""
+       path="/home/cullyn/nosvagor.com/static/svgs"
        use_current_dir="1" />
     <group
        id="save_copy"
@@ -596,7 +640,7 @@
     <group
        id="open"
        enable_preview="1"
-       path="" />
+       path="/home/cullyn/nosvagor.com/static/svgs/" />
     <group
        id="import"
        enable_preview="1"
@@ -622,7 +666,8 @@
     <group
        id="messages" />
     <group
-       id="swatches" />
+       id="swatches"
+       palette="Auto" />
     <group
        id="iconpreview" />
     <group
@@ -646,7 +691,8 @@
     <group
        id="undo-history" />
     <group
-       id="objects" />
+       id="objects"
+       expand_to_layer="1" />
   </group>
   <group
      id="printing">
@@ -711,8 +757,8 @@
        gamutcolor="#808080"
        gamutwarn="0"
        bpc="0"
-       preserveblack="0"
-       uri="" />
+       uri=""
+       preserveblack="0" />
     <group
        id="savewindowgeometry"
        value="2" />
@@ -898,13 +944,13 @@
        no_emphasize_when_zoomedout="0">
       <group
          id="xy"
-         units="px"
          origin_x="0.0"
          origin_y="0.0"
          spacing_x="1.0"
          spacing_y="1.0"
          empspacing="5"
-         dotted="0" />
+         dotted="0"
+         units="px" />
       <group
          id="axonom"
          units="mm"
@@ -939,6 +985,10 @@
          id="showfullactionname"
          value="1" />
     </group>
+    <group
+       id="threading" />
+    <group
+       id="ruler" />
   </group>
   <group
      id="extensions"
@@ -947,9 +997,9 @@
      org.inkscape.output.png.inkscape.png_antialias="2" />
   <group
      id="desktop"
-     style="fill:#000000">
+     style="fill:#6c88f4;-inkscape-font-specification:'Albert Sans';font-family:'Albert Sans';font-size:192px;stroke:#222536;stroke-width:4;stroke-linecap:round;stroke-linejoin:round">
     <group
-       width="2915"
+       width="3014"
        height="1955"
        x="0"
        y="0"
@@ -1073,7 +1123,7 @@
      id="theme"
      defaultPreferDarkTheme="0"
      defaultIconTheme="Nordzy-dark"
-     defaultGtkTheme="Catppuccin-Macchiato-Standard-Peach-Dark"
+     defaultGtkTheme="catppuccin-macchiato-peach-standard+default"
      narrowSpinButton="1"
      preferDarkTheme="0"
      darkTheme="1"
@@ -1081,7 +1131,8 @@
      symbolicDefaultBaseColors="0"
      symbolicDefaultHighColors="0"
      iconTheme="multicolor"
-     fontscale="101">
+     fontscale="101"
+     syntax-color-theme="inkscape-dark">
     <group
        id="multicolor"
        symbolicBaseColor="3958107135"
@@ -1089,4 +1140,7 @@
        symbolicWarningColor="4279865599"
        symbolicErrorColor="10086143" />
   </group>
+  <group
+     id="gradient-edit"
+     stoplist="1" />
 </inkscape>

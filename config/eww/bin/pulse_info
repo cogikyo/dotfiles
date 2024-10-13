@@ -34,7 +34,7 @@ get_volume () {
 
 set_default () {
     sink_val=69
-    source_val=100
+    source_val=150
     source_id="$(get_id "source")"
     sink_id="$(get_id "sink")"
 
@@ -58,7 +58,7 @@ mute () {
 
 change_volume () {
     incremment="10"
-    sink_offset="30"
+    sink_offset="50"
     current_volume=$(get_volume "$1")
 
     direction="+"
@@ -71,7 +71,7 @@ change_volume () {
     max="100"
 
     if [[ "$1" == "source" ]]; then
-        max="130"
+        max="150"
     fi
 
     if [[ "$1" == "source" && current_volume -le $sink_offset ]]; then
