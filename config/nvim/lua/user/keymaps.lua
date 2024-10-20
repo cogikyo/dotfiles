@@ -32,7 +32,7 @@ map("n", "<leader>u", "<Nop>")
 map("n", "<C-s>", ":w<CR>:echo <CR>")
 map("i", "<C-s>", "<Esc>:w<CR>:echo <CR>")
 map("v", "<C-s>", "<Esc>:w<CR>:echo <CR>")
-map("n", "<leader>s<leader>", ":noa w<CR><CR")
+map("n", "<leader>ss", ":noa w<CR><CR")
 map("n", "<leader><C-s>", ":lua vim.lsp.buf.format()<CR><C-s>")
 map(
 	"v",
@@ -134,6 +134,25 @@ map("n", "<C-Down>", ":resize -2<CR>")
 map("n", "<C-Left>", ":vertical resize -2<CR>")
 map("n", "<C-Right>", ":vertical resize +2<CR>")
 map("n", "gx", [[:silent execute '!xdg-open ' . shellescape(expand('<cfile>'), v:true)<CR>]], recursive_silent)
+map(
+    "n",
+    "<leader>gk",
+    "<cmd>lua vim.lsp.buf.hover()<CR>"
+        .. "<cmd>lua vim.lsp.buf.hover()<CR>"
+        .. "<cmd>lua vim.defer_fn(function() "
+        .. "vim.cmd('normal! G$h') "
+        .. "local url = vim.fn.expand('<cfile>') "
+        .. "vim.fn.system('xdg-open ' .. vim.fn.shellescape(url)) "
+        .. "vim.defer_fn(function() "
+        .. "    for _, win in ipairs(vim.api.nvim_list_wins()) do "
+        .. "        if vim.api.nvim_win_get_config(win).relative ~= '' then "
+        .. "            vim.api.nvim_win_close(win, true) "
+        .. "        end "
+        .. "    end "
+        .. "end, 20) "  -- Wait 500ms before closing the hover window
+        .. "end, 10)<CR>",
+    recursive_silent
+)
 -- }}}
 
 -- 👉 Indent {{{
