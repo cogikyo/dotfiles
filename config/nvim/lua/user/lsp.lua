@@ -116,7 +116,7 @@ null_ls.setup({
 		formatting.prettier, -- js, ts, css, html
 		formatting.gofmt, -- go
 		formatting.goimports, -- go
-		-- formatting.golines, -- go
+		formatting.golines, -- go
 
 		-- 🏄 hover: ⮯
 		hover.dictionary,

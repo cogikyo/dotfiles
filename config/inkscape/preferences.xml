@@ -176,13 +176,15 @@
          style="stroke-width:1px;"
          usecurrent="1"
          average_all_sketches="1"
-         pressure="0" />
+         pressure="0"
+         freehand-mode="0" />
       <eventcontext
          id="pen"
          mode="drag"
          selcue="1"
          style="stroke-width:1px;"
-         usecurrent="1" />
+         usecurrent="1"
+         freehand-mode="0" />
     </group>
     <eventcontext
        id="calligraphic"
@@ -313,8 +315,12 @@
        font_sample="AaBbCcIiPpQq12369$€¢?.;/()"
        show_sample_in_list="1"
        use_svg2="1"
-       style="fill:black;fill-opacity:1;line-height:1.25;stroke:none;font-family:sans-serif;font-style:normal;font-weight:normal;font-size:40px;"
-       selcue="1" />
+       style="line-height:1.25;font-family:sans-serif;font-size:16px;text-orientation:auto"
+       selcue="1"
+       align_mode="0"
+       writing_mode="0"
+       orientation_mode="0"
+       direction_mode="0" />
     <eventcontext
        id="nodes"
        selcue="1"
@@ -330,10 +336,10 @@
        live_outline="1"
        live_objects="1"
        show_helperpath="0"
-       x="0"
-       y="0"
        edit_clipping_paths="0"
-       edit_masks="0" />
+       edit_masks="0"
+       x="0"
+       y="0" />
     <eventcontext
        id="marker"
        selcue="1"
@@ -352,7 +358,8 @@
        doh="1"
        dos="1"
        dol="1"
-       doo="1" />
+       doo="1"
+       mode="0" />
     <eventcontext
        id="spray"
        selcue="1"
@@ -367,7 +374,9 @@
        mean="0" />
     <eventcontext
        id="gradient"
-       selcue="1" />
+       selcue="1"
+       newgradient="1"
+       newfillorstroke="1" />
     <eventcontext
        id="mesh"
        selcue="1" />
@@ -384,7 +393,9 @@
     <eventcontext
        id="select"
        selcue="1"
-       gradientdrag="0" />
+       gradientdrag="0"
+       changelayer="1"
+       changepage="1" />
     <eventcontext
        id="connector"
        style="fill:none;fill-rule:evenodd;stroke:black;stroke-opacity:1;stroke-linejoin:miter;stroke-width:1px;stroke-linecap:butt;"
@@ -584,7 +595,8 @@
        applyseparately="0"
        rotateCounterClockwise="1" />
     <group
-       id="align" />
+       id="align"
+       objects-align-to="page" />
     <group
        id="xml"
        h="500"
@@ -629,8 +641,9 @@
        default="org.inkscape.output.svg.inkscape"
        append_extension="1"
        enable_preview="1"
-       path="/home/cullyn/nosvagor.com/static/svgs"
-       use_current_dir="1" />
+       path="/home/cullyn/acr"
+       use_current_dir="1"
+       enable_svgexport="0" />
     <group
        id="save_copy"
        default=""
@@ -640,7 +653,7 @@
     <group
        id="open"
        enable_preview="1"
-       path="/home/cullyn/nosvagor.com/static/svgs/" />
+       path="/home/cullyn/acr/static/svgs/" />
     <group
        id="import"
        enable_preview="1"
@@ -648,7 +661,8 @@
        ask="1"
        ask_svg="1"
        link="link"
-       scale="optimizeSpeed" />
+       scale="auto"
+       import_mode_svg="include" />
     <group
        id="debug"
        redirect="0" />
@@ -693,6 +707,12 @@
     <group
        id="objects"
        expand_to_layer="1" />
+    <group
+       id="object-properties">
+      <group
+         id="path-panel"
+         precision="2" />
+    </group>
   </group>
   <group
      id="printing">
@@ -704,7 +724,8 @@
   </group>
   <group
      id="options"
-     rotationlock="1">
+     rotationlock="1"
+     onungroup="0">
     <group
        id="renderingcache"
        size="512" />
@@ -737,7 +758,7 @@
        value="12" />
     <group
        id="cursortolerance"
-       value="8.0" />
+       value="8" />
     <group
        id="dragtolerance"
        value="4.0" />
@@ -878,7 +899,8 @@
     <group
        id="maskobject"
        topmost="1"
-       remove="1" />
+       remove="1"
+       grouping="0" />
     <group
        id="blurquality"
        value="0" />
@@ -960,14 +982,25 @@
          angle_x="30.0"
          angle_z="30.0"
          empspacing="5" />
+      <group
+         id="modular"
+         units="mm"
+         origin_x="0.0"
+         origin_y="0.0"
+         spacing_x="40.0"
+         spacing_y="40.0"
+         gapx="10"
+         gapy="10"
+         marginx="0"
+         marginy="0" />
     </group>
     <group
        id="workarounds"
-       colorsontop="0"
-       partialdynamic="0" />
+       partialdynamic="0"
+       colorsontop="0" />
     <group
        id="font"
-       unitType="2" />
+       unitType="1" />
     <group
        id="boot"
        theme="custom"
@@ -989,15 +1022,22 @@
        id="threading" />
     <group
        id="ruler" />
+    <group
+       id="snapping"
+       snap-global-toggle="0" />
   </group>
   <group
      id="extensions"
      org.inkscape.output.png.inkscape.png_bitdepth="99"
      org.inkscape.output.png.inkscape.png_compression="6"
-     org.inkscape.output.png.inkscape.png_antialias="2" />
+     org.inkscape.output.png.inkscape.png_antialias="2"
+     org.inkscape.template.paper.max="297.0"
+     org.inkscape.template.paper.min="210.0"
+     org.inkscape.template.paper.orientation="port"
+     org.inkscape.template.paper.unit="mm" />
   <group
      id="desktop"
-     style="fill:#6c88f4;-inkscape-font-specification:'Albert Sans';font-family:'Albert Sans';font-size:192px;stroke:#222536;stroke-width:4;stroke-linecap:round;stroke-linejoin:round">
+     style="fill:#44403c;-inkscape-font-specification:Lora;font-family:Lora;font-size:20px;stroke-width:2.81574803;line-height:normal;text-decoration-color:#000000;stop-color:#000000;text-orientation:auto">
     <group
        width="3014"
        height="1955"
