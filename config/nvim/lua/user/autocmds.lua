@@ -14,7 +14,6 @@ local function scoped_autocmd(event, group, pattern, command)
 	})
 end
 
-
 -- 'formatoptions' keeps getting overwritten by other plugins (I think)
 global_autocmd("InsertEnter", "silent! set formatoptions=tcqnpj1")
 

@@ -68,11 +68,7 @@ hyprctl dispatch workspace "$n_flag"
 
 case "$n_flag" in
     1)
-        # browser "https://teams.microsoft.com/v2/?clientexperience=t2"
-        # browser "https://outlook.office365.com/mail/"
-        # browser "https://outlook.office365.com/calendar/view/workweek" "tab"
         browser "https://app.hey.com/calendar/days/now"
-        browser "https://3.basecamp.com/5856222/projects"
         ;;
     2)
         terminal "nectar"
@@ -80,13 +76,12 @@ case "$n_flag" in
         resize
         ;;
     3)
-        terminal "cullyn.dev"
-        browser "localhost:3001"
-        browser "https://github.com/nosvagor/cullyn.dev" "tab"
-        browser "https://wangare.com/project/q8oosw8/production" "tab"
-        browser "https://cullyn.dev" "tab"
-        browser "https://claude.ai/project/ba46e5b6-47d6-4d16-9fa7-39180a59f6e5" "tab"
-        resize
+        cursor & sleep 1.5
+        terminal "acr"
+        browser "localhost:3002"
+        browser "https://github.com/nosvagor/acr" "tab"
+        browser "https://wangare.com/project/csksoc4w0s8c4k8ok8g0cos8/production" "tab"
+        browser "https://acr.nosvagor.com" "tab"
         ;;
     4)
         terminal "dotfiles"
