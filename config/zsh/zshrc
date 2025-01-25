@@ -39,9 +39,8 @@ alias oc='ouch compress'
 alias od='ouch decompress'
 alias ol='ouch list --tree'
 alias man='man --pager=$PAGER'
-alias zoomfix='XDG_CURRENT_DESKTOP=gnome GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb zoom & disown'
+alias zoomfix='env XDG_CURRENT_DESKTOP=GNOME GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb XDG_SESSION_TYPE=x11 zoom & disown'
 alias af='GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb audacity & disown'
-alias tt='cd ~/dabella && ls *.zip'
 function tree () {
     echo
     if [[ -z $1 ]]; then

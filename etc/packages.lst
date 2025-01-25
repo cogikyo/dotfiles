@@ -1,4 +1,5 @@
 adobe-source-code-pro-fonts
+alsa-utils
 amd-ucode
 audacity
 base
@@ -53,13 +54,14 @@ kitty
 lazygit
 libcanberra
 libpulse
-libva-mesa-driver
+libreoffice-still
 lightningcss-cli-bin
 linux
 linux-firmware
 linux-headers
 logiops
 lsd
+lsof
 lua-format
 lua51
 luacheck
@@ -92,6 +94,7 @@ pacman-contrib
 pandoc-bin
 paru
 paru-debug
+pavucontrol
 pipes-rs-git
 pipewire
 pipewire-alsa

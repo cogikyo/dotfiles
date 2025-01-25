@@ -365,7 +365,6 @@
   (box
     :halign "end" :space-evenly false :spacing 0
     :class "tr-m"
-    :style "margin-right: ${user-hover ? 100 : 5 }px;"
     (cpu) (memory) (gpu)
   )
 )
@@ -665,11 +664,11 @@
  (eventbox
     :onhover "eww update user-hover=true"
     :onhoverlost "eww update user-hover=false"
-    :onclick "${browser} https://twitter.com/home & disown"
+    :onclick "${browser} https://twitter.com/nosvagor & disown"
     :onmiddleclick "${browser} https://www.youtube.com/feed/subscriptions & disown"
     :onrightclick "${browser} https://github.com/nosvagor & disown"
     (box :space-evenly false :spacing 0
-      :class "userbox ${user-hover ? "userbox-hover" : ""}"
+      :class "userbox"
       :style "background-image: url('${user-art-path}');"
     )
   )
@@ -693,7 +692,7 @@
     :onrightclick "${browser} https://mail.google.com/mail/u/0/#inbox & disown"
     :onmiddleclick "${browser} https://mail.google.com/mail/u/1/#inbox & disown"
     (box
-      :class "assistantbox ${assistant-hover ? "assistantbox-hover" : ""}"
+      :class "assistantbox"
       :style "margin-top: -1px; margin-left: -6px; background-image: url('${matches("${pctl.status}", "Playing") ? album-art-path : assistant}');"
     )
   )
@@ -742,7 +741,6 @@
   (box
     :halign "start" :space-evenly false :spacing 0
     :class "tr-m"
-    :style "margin-left: ${assistant-hover ? 100 : 5 }px;"
     (music) (audio)
   )
 )
@@ -1129,7 +1127,6 @@
       :class "tr-a networkbox ${network-hover ? "networkbox-hover" : "" }"
       :style "
           background-image: url('art/signal/signal${ network-hover ? "-hover" : "" }.svg');
-          margin-top: ${user-hover ? "120" : "30"}px;
         "
       (box :space-evenly false :spacing 0 :valign "center" :halign "center"
         (net-down

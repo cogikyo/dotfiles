@@ -1,4 +1,4 @@
-#Guvcview 2.0.8 config file
+#Guvcview 2.2.1 config file
 
 #video input width
 width=1920
@@ -14,6 +14,10 @@ audio=none
 gui=none
 #render api
 render=sdl
+#render window width
+render_width=800
+#render window height
+render_height=600
 #video codec [raw mjpg mpeg flv1 wmv1 mpg2 mp43 dx50 h264 vp80 theo]
 video_codec=dx50
 #audio codec [pcm mp2 mp3 aac ac3 vorb]
@@ -42,8 +46,11 @@ fps_denom=30
 audio_device=0
 #video fx mask 
 video_fx=0x1
+#fx binary filter treshold (0x0 to 0xff): default=0x7f (50%)
+fx_bin_treshold=0x7f
 #audio fx mask 
 audio_fx=0x0
 #OSD mask 
 osd_mask=0x0
 crosshair_color=0xff00
+crosshair_size=24
