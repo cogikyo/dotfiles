@@ -13,11 +13,11 @@ n_flag="" # [w]orkspace
 
 while getopts 'a:d:n:w:s:' flag; do
     case "$flag" in
-            # a) a_flag="$OPTARG" ;;
-            # s) s_flag="$OPTARG" ;;
-        n) n_flag="$OPTARG" ;;
-            # w) w_flag="$OPTARG" ;;
-        *) exit 1 ;;
+    # a) a_flag="$OPTARG" ;;
+    # s) s_flag="$OPTARG" ;;
+    n) n_flag="$OPTARG" ;;
+        # w) w_flag="$OPTARG" ;;
+    *) exit 1 ;;
     esac
 done
 
@@ -34,24 +34,27 @@ if [[ -n "$windows" && "$windows" -ne 0 ]]; then
     exit 1
 fi
 
-
-browser () {
+browser() {
     if [[ "$2" == "tab" ]]; then
-        firefox-developer-edition "$1" & sleep 1.5
+        firefox-developer-edition "$1" &
+        sleep 1.5
     else
-        firefox-developer-edition --new-window "$1" & sleep 1.5
+        firefox-developer-edition --new-window "$1" &
+        sleep 1.5
     fi
 }
 
-terminal () {
+terminal() {
     if [[ -n "$1" ]]; then
-        kitty --session ~/.config/kitty/sessions/"$1".conf & sleep 1
+        kitty --session ~/.config/kitty/sessions/"$1".conf &
+        sleep 1
     else
-        kitty --session ~/.config/kitty/sessions/pipes.conf & sleep 1
+        kitty --session ~/.config/kitty/sessions/pipes.conf &
+        sleep 1
     fi
 }
 
-resize () {
+resize() {
     hyprctl dispatch resizeactive exact 1870 1186
     hyprctl dispatch movefocus l
     hyprctl disptch resizeactive exact 1866 1955
@@ -60,6 +63,42 @@ resize () {
     done # have resize master several times (bug?) ⮭
 }
 
+dispatch() {
+    local medium_size="660 563"
+    local medium_pos="3153 209"
+    # Use the same values as defined in your hyprland.conf float commands
+    hyprctl dispatch setfloating
+    hyprctl dispatch moveactive exact "$medium_pos"
+    hyprctl dispatch resizeactive exact "$medium_size"
+}
+
+acr() {
+    cursor & sleep 0.5
+    terminal "acr"
+    dispatch
+    browser "localhost:3002"
+    browser "https://github.com/nosvagor/acr" "tab"
+    browser "https://wangare.com/project/csksoc4w0s8c4k8ok8g0cos8/production" "tab"
+    browser "https://acr.nosvagor.com" "tab"
+}
+
+nosvagor() {
+    cursor & sleep 0.5
+    terminal "nosvagor.com"
+    dispatch
+    browser "localhost:3000"
+    browser "https://wangare.com/project/vssk4cg8kwwgk8cgc08w44ow/production" "tab"
+    browser "https://nosvagor.com" "tab"
+    hyprctl dispatch movewindow l
+}
+
+yos () {
+    cursor & sleep 2
+    terminal "yos"
+    dispatch
+    browser "localhost"
+    browser "https://chatgpt.com/" "tab"
+}
 
 # ============================================================================
 # hyprctl keyword input:follow_mouse 0
@@ -67,28 +106,29 @@ resize () {
 hyprctl dispatch workspace "$n_flag"
 
 case "$n_flag" in
-    1)
-        browser "https://app.hey.com/calendar/days/now"
-        ;;
-    2)
-        terminal "nectar"
-        browser "https://hr.dabella.us"
-        resize
-        ;;
-    3)
-        cursor & sleep 1.5
-        terminal "acr"
-        browser "localhost:3002"
-        browser "https://github.com/nosvagor/acr" "tab"
-        browser "https://wangare.com/project/csksoc4w0s8c4k8ok8g0cos8/production" "tab"
-        browser "https://acr.nosvagor.com" "tab"
-        ;;
-    4)
-        terminal "dotfiles"
-        browser "https://github.com/nosvagor/dotfiles"
-        resize
-        ;;
-    *) exit 1 ;;
+1)
+    slack
+    browser "https://app.hey.com/calendar/days/now"
+    browser "https://mail.google.com/mail/u/1/?ogbl#inbox" "tab"
+    browser "https://calendar.google.com/calendar/u/1/r?pli=1" "tab"
+    ;;
+2)
+    ;;
+3.x)
+    acr
+    ;;
+3.y)
+    nosvagor
+    ;;
+3)
+    yos
+    ;;
+4)
+    terminal "dotfiles"
+    browser "https://github.com/nosvagor/dotfiles"
+    resize
+    ;;
+*) exit 1 ;;
 esac
 
 # if [[ "$n_flag" == 3 ]]; then
