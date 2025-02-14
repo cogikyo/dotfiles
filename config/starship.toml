@@ -8,7 +8,7 @@ palette = 'vagari'                           # palette definition must be last
 # ============================================================================
 
 format = """
-[╭╼╾ $sudo$username ╼╾ ${custom.date1} ${custom.date2}$python$rust$lua ╼╾ $hostname](blu_2)
+[╭╼╾ $sudo$username ╼╾ ${custom.date1} ${custom.date2}$python$rust$lua ╼╾ $hostname](blu_2) ${custom.vpn}
 [╞╾](blu_2)$directory$git_branch$git_commit$git_state$git_status
 [╰╼╾ $character](blu_2)
 """
@@ -122,6 +122,13 @@ command = "date '+%d'"
 symbol = "⽉"
 format = "[$symbol($output)]($style)"
 when = true
+
+[custom.vpn]
+when = "nmcli -t -f TYPE connection show --active | grep -q '^vpn'"
+command = "echo '󰖂 '"
+style = "cy2_3"
+format = "[$output]($style) "
+
 
 [palettes.vagari]
 
