@@ -11,4 +11,6 @@
 [pull]
 	rebase = true
 [init]
-	defaultBranch = main
+    defaultBranch = master
+[url "git@git.linecode.net:"]
+	insteadOf = https://git.linecode.net/

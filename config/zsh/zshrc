@@ -34,6 +34,7 @@ alias v='cd ~/vagari'
 alias e='cd ~/dotfiles/config/nvim'
 alias x='exit'
 alias p='paru'
+alias lg='lazygit'
 alias uvpn='nmcli connection up "TrendCapitalVPN"'
 alias dvpn='nmcli connection down "TrendCapitalVPN"'
 alias update='paru -Syu && paru -Qqe > ~/dotfiles/etc/packages.lst'
@@ -43,7 +44,7 @@ alias ol='ouch list --tree'
 alias man='man --pager=$PAGER'
 alias zoomfix='env XDG_CURRENT_DESKTOP=GNOME GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb XDG_SESSION_TYPE=x11 zoom & disown'
 alias af='GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb audacity & disown'
-function tree () {
+function etree () {
     echo
     if [[ -z $1 ]]; then
         L=2
