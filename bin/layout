@@ -92,9 +92,9 @@ nosvagor() {
     hyprctl dispatch movewindow l
 }
 
-yos () {
+leadPier () {
     cursor & sleep 2
-    terminal "yos"
+    terminal "LeadPier"
     dispatch
     browser "localhost"
     browser "https://chatgpt.com/" "tab"
@@ -107,7 +107,7 @@ hyprctl dispatch workspace "$n_flag"
 
 case "$n_flag" in
 1)
-    slack
+    slack & sleep 0.5
     browser "https://app.hey.com/calendar/days/now"
     browser "https://mail.google.com/mail/u/1/?ogbl#inbox" "tab"
     browser "https://calendar.google.com/calendar/u/1/r?pli=1" "tab"
@@ -121,7 +121,7 @@ case "$n_flag" in
     nosvagor
     ;;
 3)
-    yos
+    leadPier
     ;;
 4)
     terminal "dotfiles"
