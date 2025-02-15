@@ -1,6 +1,7 @@
 adobe-source-code-pro-fonts
 alsa-utils
 amd-ucode
+aquamarine
 audacity
 base
 base-devel
@@ -15,6 +16,7 @@ btop
 btrfs-progs
 caddy
 calc
+calibre
 catppuccin-gtk-theme-macchiato
 chromium
 codespell
@@ -45,8 +47,16 @@ gtk-layer-shell
 gtk3-demos
 guvcview
 hunspell
+hyprcursor
+hyprgraphics
 hyprland
-hyprpicker-git
+hyprland-protocols
+hyprland-qt-support
+hyprland-qtutils
+hyprlang
+hyprpicker
+hyprutils
+hyprwayland-scanner
 imagemagick
 imv
 inkscape
@@ -78,6 +88,7 @@ ncdu
 neofetch
 neovim
 networkmanager
+networkmanager-l2tp
 nodejs-live-server
 nordic-bluish-accent-standard-buttons-theme
 noto-fonts-cjk
@@ -93,7 +104,6 @@ ouch
 pacman-contrib
 pandoc-bin
 paru
-paru-debug
 pavucontrol
 pipes-rs-git
 pipewire
@@ -113,9 +123,10 @@ rocm-opencl-runtime
 rustup
 rustywind-bin
 sd
-sddm-git
+sddm
 shellcheck-bin
 shellharden
+slack-desktop-wayland
 slurp
 socat
 spotify-launcher
@@ -123,6 +134,7 @@ spotifywm-git
 sqlc
 sqlfluff
 starship
+strongswan
 stylelint-config-recommended
 stylua
 swaylock
@@ -153,6 +165,7 @@ ttf-hack
 ttf-jetbrains-mono
 ttf-nerd-fonts-symbols
 ttf-nerd-fonts-symbols-common
+ttfautohint-cli
 unrtf
 unzip
 usbutils
@@ -160,6 +173,7 @@ v4l2loopback-dkms
 vial-appimage
 vidir
 vlc
+watchman-bin
 webcord-bin
 wev
 wf-recorder
@@ -169,7 +183,8 @@ wl-clipboard
 wofi
 wofi-emoji
 xdg-desktop-portal-gtk
-xdg-desktop-portal-hyprland-git
+xdg-desktop-portal-hyprland
+xdg-desktop-portal-wlr
 xplr
 yarn
 yay-bin
