@@ -1,7 +1,7 @@
 -- ============================================================================
 -- 🧰 Setup: {{{
 ---@diagnostic disable
-version = "0.21.1"
+version = "1.0.0"
 local xplr = xplr -- The globally exposed configuration to be overridden.
 ---@diagnostic enable
 
