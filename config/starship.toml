@@ -8,12 +8,10 @@ palette = 'vagari'                           # palette definition must be last
 # ============================================================================
 
 format = """
-[╭╼╾ $sudo$username ╼╾ ${custom.date1} ${custom.date2}$python$rust$lua ╼╾ $hostname](blu_2) ${custom.vpn}
+[╭╼╾ $sudo$username ╼╾ $hostname ${custom.vpn}╼╾ ${custom.date1} ${custom.date2} $time$python$rust$lua](blu_2) $status $cmd_duration
 [╞╾](blu_2)$directory$git_branch$git_commit$git_state$git_status
 [╰╼╾ $character](blu_2)
 """
-
-right_format = """[$status $cmd_duration╼╾ $time ╼╾╯](blu_2)"""
 
 
 [character]
@@ -68,8 +66,8 @@ deleted = "[ ${count} ](rby_3)"
 
 [time]
 format = '[$time]($style)'
-time_format = "時%R"
-style = "pnk_4"
+time_format = "%R"
+style = "prp_2"
 disabled = false
 
 [status]
@@ -85,7 +83,7 @@ pipestatus_format = """[⽣ $pipestatus ⽍]($style)"""
 pipestatus_separator = "[ » ]($style)"
 map_symbol = true
 pipestatus = true
-format = '[$symbol]($style)'
+format = '[╼╾ $symbol]($style)'
 disabled = false
 
 [sudo]
@@ -120,14 +118,14 @@ style = "prp_1"
 description = "simple date module, weekday only"
 command = "date '+%d'"
 symbol = "⽉"
-format = "[$symbol($output)]($style)"
+format = "[($output)]($style)"
 when = true
 
 [custom.vpn]
 when = "nmcli -t -f TYPE connection show --active | grep -q '^vpn'"
-command = "echo '󰖂 '"
+command = "echo ' 󰖂 '"
 style = "cy2_3"
-format = "[$output]($style) "
+format = "[$output]($style)  "
 
 
 [palettes.vagari]
