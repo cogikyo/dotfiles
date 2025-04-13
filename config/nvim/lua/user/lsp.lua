@@ -1,16 +1,5 @@
 -- ============================================================================
 -- 🧰 Setup {{{
-local null_ls_ok, null_ls = pcall(require, "null-ls")
-if not null_ls_ok then
-	vim.api.nvim_echo({
-		{
-			"Error: null-ls plugin not found, but is needed to manage additional diag sources/formatting... skipping lsp setup()",
-			"Error",
-		},
-	}, true, {})
-	return
-end
-
 local cmp_capabilities_ok, cmp = pcall(require, "cmp_nvim_lsp")
 if not cmp_capabilities_ok then
 	vim.api.nvim_echo({
@@ -35,6 +24,45 @@ end
 -- }}}
 -- ============================================================================
 
+-- Formatting with conform.nvim
+require("conform").setup({
+	formatters_by_ft = {
+		bash = { "shellharden" },
+		sh = { "shellharden" },
+		zsh = { "beautysh" },
+		python = { "black" },
+		css = { "stylelint", "prettier" },
+		scss = { "stylelint", "prettier" },
+		json = { "jq" },
+		rust = { "rustfmt" },
+		lua = { "stylua" },
+		toml = { "taplo" },
+		javascript = { "prettier" },
+		typescript = { "prettier" },
+		html = { "prettier" },
+		go = { "gofmt", "goimports", "golines" },
+	},
+	format_on_save = {
+		timeout_ms = 500,
+		lsp_fallback = true, -- Use LSP formatting if no formatter is available
+	},
+})
+
+-- Linting with nvim-lint
+require("lint").linters_by_ft = {
+	css = { "stylelint" },
+	scss = { "stylelint" },
+	go = { "gospel" },
+	zsh = { "zsh" },
+}
+
+-- Run linting on write or read
+vim.api.nvim_create_autocmd({ "BufWritePost", "BufReadPost" }, {
+	callback = function()
+		require("lint").try_lint()
+	end,
+})
+
 local on_attach = function(client, bufnr)
 	local nmap = function(keys, func)
 		vim.keymap.set("n", keys, func, { buffer = bufnr })
@@ -56,73 +84,7 @@ local on_attach = function(client, bufnr)
 	nmap("<leader>k", vim.diagnostic.open_float)
 	nmap("[d", vim.diagnostic.goto_prev)
 	nmap("]d", vim.diagnostic.goto_next)
-
-	if client.supports_method("textDocument/formatting") then
-		local augroup = vim.api.nvim_create_augroup("LspFormatting", {})
-		vim.api.nvim_clear_autocmds({ group = augroup, buffer = bufnr })
-		vim.api.nvim_create_autocmd("BufWritePre", {
-			group = augroup,
-			buffer = bufnr,
-			callback = function()
-				vim.lsp.buf.format()
-			end,
-		})
-	end
 end
-
--- ⛑️  Null-ls (Linting, formatting):
-
--- see https://github.com/jose-elias-alvarez/null-ls.nvim/blob/main/doc/BUILTINS.md
-local code_actions = null_ls.builtins.code_actions
-local diagnostics = null_ls.builtins.diagnostics
-local formatting = null_ls.builtins.formatting
-local hover = null_ls.builtins.hover
-
-null_ls.setup({
-	border = "rounded",
-	sources = {
-		-- 🧹 code actions: ⮯
-		code_actions.eslint_d,
-		code_actions.gitsigns,
-		code_actions.refactoring,
-		code_actions.gomodifytags,
-		code_actions.impl,
-
-		-- 🩺 diagnostics: ⮯
-		diagnostics.codespell, -- identify some common code related misspellings
-		diagnostics.stylelint, -- css 'n related linting
-		-- diagnostics.shellcheck, -- shell linter
-		diagnostics.gospel, -- go spell check
-		-- diagnostics.sqlfluff.with({
-		-- 	extra_args = { "--dialect", "postgres" }, -- change to your dialect
-		-- }), -- sql linter
-		diagnostics.zsh, -- zsh -n (somewhat useful)
-		-- diagnostics.stylelint, -- css 'n related linting
-		-- diagnostics.eslint_d, -- js 'n related linting
-
-		-- 🗃️ formatting: ⮯
-		formatting.shellharden, -- bash; goes well with shellcheck linting
-		formatting.beautysh, -- zsh 'n more (+ alt bash)
-		formatting.black, -- python
-		formatting.stylelint, -- css
-		-- formatting.sqlfluff.with({
-		-- 	extra_args = { "--dialect", "postgres" }, -- change to your dialect
-		-- }), -- sql
-		formatting.jq, -- json
-		formatting.rustfmt, -- rust
-		formatting.stylua, -- lua
-		formatting.taplo, -- toml
-		formatting.black, -- python
-		formatting.prettier, -- js, ts, css, html
-		formatting.gofmt, -- go
-		formatting.goimports, -- go
-		formatting.golines, -- go
-
-		-- 🏄 hover: ⮯
-		hover.dictionary,
-		hover.printenv,
-	},
-})
 
 -- ♦️  Vim Diagnostic Settings:
 local signs = {

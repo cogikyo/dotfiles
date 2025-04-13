@@ -5,7 +5,7 @@ change-bg "code"
 
 layout -n 1
 # layout -n 2
-layout -n 3
+# layout -n 3
 layout -n 4
 
 hyprctl dispatch workspace 5
@@ -20,7 +20,6 @@ hyprctl dispatch resizeactive exact 1301 1000
 glava -e "bars_rc.glsl" & disown
 glava -e "radial_rc.glsl" & disown
 change-bg "music"
-hyprctl dispatch workspace "$ws"
 
 ps -ef | rg weather_info | rg -v rg | awk '{print $2}' | xargs kill
 eval "$HOME/dotfiles/config/eww/bin/weather_info" & disown
