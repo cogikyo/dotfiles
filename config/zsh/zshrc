@@ -27,6 +27,9 @@ alias n='nvim'
 alias c='calc'
 alias zz='cd ~'
 alias m="make"
+alias j="just"
+alias jt="just test"
+alias jr="just run"
 alias g='cd "$(xplr --print-pwd-as-result)"'
 alias d='cd ~/dotfiles'
 alias D='cd ~/downloads'
@@ -51,7 +54,7 @@ function etree () {
     else
         L=$1
     fi
-    erd -L "$L" -I --suppress-size --threads 16 --layout inverted
+    erd -L "$L" --suppress-size --threads 16 --layout inverted
 }
 
 alias ew='eww-open'

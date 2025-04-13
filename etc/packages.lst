@@ -19,10 +19,13 @@ calc
 calibre
 catppuccin-gtk-theme-macchiato
 chromium
+clickhouse-client-bin
 codespell
 cursor-bin
 dart-sass
 discord
+docker
+docker-compose
 dunst-git
 efibootmgr
 electron
@@ -33,12 +36,15 @@ ffmpegthumbnailer
 firefox
 firefox-developer-edition
 fontpreview
+fswatch
+fuse-overlayfs
 fzf
 geckodriver
 gifsicle
 gimp
 git
 glava
+gnu-netcat
 go
 gputest
 grim
@@ -60,6 +66,8 @@ hyprwayland-scanner
 imagemagick
 imv
 inkscape
+inotify-tools
+just
 kitty
 lazygit
 libcanberra
@@ -78,6 +86,7 @@ luacheck
 luarocks
 lxappearance
 man-db
+md5
 mediainfo
 microsoft-edge-dev-bin
 microsoft-edge-stable-bin
@@ -105,7 +114,7 @@ pacman-contrib
 pandoc-bin
 paru
 pavucontrol
-pipes-rs-git
+pipes-rs-bin
 pipewire
 pipewire-alsa
 pipewire-jack
@@ -118,10 +127,11 @@ pulsemixer
 python-pip
 python-pynvim
 qbittorrent
+rabbitmq
+redis
 ripgrep
 rocm-opencl-runtime
 rustup
-rustywind-bin
 sd
 sddm
 shellcheck-bin
@@ -159,6 +169,7 @@ texlive-publishers
 thunar
 tldr
 trash-cli
+tree
 tree-sitter-cli
 ttf-fira-code
 ttf-hack

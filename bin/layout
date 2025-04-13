@@ -6,14 +6,14 @@ if [[ "$inprog" -gt 2 ]]; then
     exit 0
 fi
 
-# a_flag="" # [a]plication
+a_flag="" # [a]plication
 n_flag="" # [w]orkspace
 # s_flag="" # [s]ession (kitty)
 # w_flag="" # [w]ebsite
 
 while getopts 'a:d:n:w:s:' flag; do
     case "$flag" in
-    # a) a_flag="$OPTARG" ;;
+    a) a_flag="$OPTARG" ;;
     # s) s_flag="$OPTARG" ;;
     n) n_flag="$OPTARG" ;;
         # w) w_flag="$OPTARG" ;;
@@ -76,17 +76,19 @@ acr() {
     cursor & sleep 0.5
     terminal "acr"
     dispatch
-    browser "localhost:3002"
+    browser "grok.com"
+    browser "localhost:3002" "tab"
     browser "https://github.com/nosvagor/acr" "tab"
     browser "https://wangare.com/project/csksoc4w0s8c4k8ok8g0cos8/production" "tab"
-    browser "https://acr.nosvagor.com" "tab"
+    browser "https://databasetagger.acrecruitergroup.com" "tab"
 }
 
 nosvagor() {
     cursor & sleep 0.5
     terminal "nosvagor.com"
     dispatch
-    browser "localhost:3000"
+    browser "grok.com"
+    browser "localhost:3000" "tab"
     browser "https://wangare.com/project/vssk4cg8kwwgk8cgc08w44ow/production" "tab"
     browser "https://nosvagor.com" "tab"
     hyprctl dispatch movewindow l
@@ -96,8 +98,9 @@ leadPier () {
     cursor & sleep 2
     terminal "LeadPier"
     dispatch
-    browser "localhost"
-    browser "https://chatgpt.com/" "tab"
+    browser "grok.com"
+    browser "http://localhost:4000" "tab"
+    browser "https://grok.com/" "tab"
 }
 
 # ============================================================================
@@ -109,19 +112,15 @@ case "$n_flag" in
 1)
     slack & sleep 0.5
     browser "https://app.hey.com/calendar/days/now"
-    browser "https://mail.google.com/mail/u/1/?ogbl#inbox" "tab"
-    browser "https://calendar.google.com/calendar/u/1/r?pli=1" "tab"
     ;;
 2)
     ;;
-3.x)
-    acr
-    ;;
-3.y)
-    nosvagor
-    ;;
 3)
-    leadPier
+    case "$a_flag" in
+        "a") acr ;;
+        "n") nosvagor ;;
+        "l") leadPier ;;
+    esac
     ;;
 4)
     terminal "dotfiles"
@@ -131,7 +130,7 @@ case "$n_flag" in
 *) exit 1 ;;
 esac
 
-# if [[ "$n_flag" == 3 ]]; then
+# if [[ ""$n_flag == 3 ]]; then
 #     hyprctl dispatch movefocus r
 #     hyprctl dispatch movefocus u
 #     hyprctl dispatch resizeactive exact 1870 1186
