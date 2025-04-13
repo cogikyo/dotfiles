@@ -22,6 +22,7 @@ export FZF_DEFAULT_OPTS="\
 export XDG_CURRENT_DESKTOP=Hyprland
 export XDG_SESSION_TYPE=wayland
 export XDG_SESSION_DESKTOP=Hyprland
+export XDG_DATA_DIRS="/usr/share:/usr/local/share"
 
 export QT_AUTO_SCREEN_SCALE_FACTOR=1
 export QT_QPA_PLATFORM="wayland;xcb"

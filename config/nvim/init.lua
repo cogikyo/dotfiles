@@ -25,10 +25,11 @@ require("lazy").setup({
 	{ --📚 LSP {{{
 		"neovim/nvim-lspconfig",
 		dependencies = {
+            { "stevearc/conform.nvim", event = { "BufWritePre" }, config = true },
+            { "mfussenegger/nvim-lint", event = { "BufWritePost", "BufReadPost" } },
 			"williamboman/mason.nvim",
 			"williamboman/mason-lspconfig.nvim",
 			"mfussenegger/nvim-dap",
-			"jose-elias-alvarez/null-ls.nvim",
 			{ "folke/neodev.nvim", opts = {} },
 		},
 	}, -- }}}
@@ -414,12 +415,5 @@ local user_config = {
 
 for _, file in ipairs(user_config) do
 	require("user." .. file)
-end
-
-local avante_lib_ok, avante_lib_result = pcall(require, "avante_lib")
-if avante_lib_ok then
-	pcall(avante_lib_result.load)
-else
-	vim.api.nvim_echo({ { "Error: avante failed to load", "ErrorMsg" } }, true, {})
 end
 -- ============================================================================
