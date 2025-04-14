@@ -1,7 +1,7 @@
 -- ============================================================================
 -- 🧰 Setup: {{{
 ---@diagnostic disable
-version = "0.21.1"
+version = "1.0.0"
 local xplr = xplr -- The globally exposed configuration to be overridden.
 ---@diagnostic enable
 
@@ -75,7 +75,7 @@ local general = {
 				},
 				{ format = "⼈⾕⾥" },
 				{ format = "󰖡 size ─╮" },
-				{ format = "🞊 modified ────╮" },
+				{ format = " modified ────╮" },
 			},
 			style = style("Green"),
 			height = 1,
@@ -146,8 +146,8 @@ local general = {
 	sort_and_filter_ui = {
 		separator = format(" ⇨ ", "DarkGray"),
 		sort_direction_identifiers = {
-			forward = format("⮯", "Magenta"),
-			reverse = format("⮭", "Cyan"),
+			forward = format("", "Magenta"),
+			reverse = format("", "Cyan"),
 		},
 		sorter_identifiers = {
 			ByExtension = { format = "ext", style = {} },
@@ -359,6 +359,7 @@ local node_types = {
 		lua = meta(" "),
 		rs = meta("󱘗 "),
 		py = meta(" "),
+        go = meta(" "),
 		scss = meta("󰟬 "),
 		css = meta(" "),
 		html = meta(" "),
@@ -566,6 +567,14 @@ require("xpm").setup({
 	auto_install = true,
 	auto_cleanup = true,
 })
+
+xplr.config.modes.builtin.default.key_bindings.on_key.x = {
+  help = "xpm",
+  messages = {
+    "PopMode",
+    { SwitchModeCustom = "xpm" },
+  },
+}
 -- }}}
 
 -- ⚙️  Nonstandard Plugin Configurations {{{
@@ -575,7 +584,11 @@ require("ouch").setup({
 	key = "o",
 })
 
-require("zoxide").setup({ key = "z" })
+require("zoxide").setup({
+    key = "z",
+    mode = "default",
+    bin = "zoxide"
+})
 
 require("fzf").setup({
 	key = "t",

@@ -104,7 +104,7 @@ nvim_tree.setup({
 				default = "",
 				symlink = "",
 				git = {
-					unstaged = "🞊",
+					unstaged = "",
 					staged = "",
 					unmerged = "",
 					renamed = "",

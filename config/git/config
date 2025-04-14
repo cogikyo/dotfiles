@@ -1,7 +1,8 @@
 [user]
-	name = nosvagor
-	email = nosvagor@gmail.com
-	signingkey = /home/cullyn/.ssh/id_ed25519.pub
+    name = cullyn
+    email = cullyn@trendcapital.com
+    signingkey = /Users/cullyn/.ssh/id_ed25519.pub
+
 [core]
 	editor = nvim
 [gpg]
@@ -11,4 +12,6 @@
 [pull]
 	rebase = true
 [init]
-	defaultBranch = main
+	defaultBranch = master
+[url "git@git.linecode.net:"]
+	insteadOf = https://git.linecode.net/
