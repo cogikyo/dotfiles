@@ -1,15 +1,15 @@
 -- ============================================================================
 -- 🧰 Setup {{{
-local null_ls_ok, null_ls = pcall(require, "null-ls")
-if not null_ls_ok then
-	vim.api.nvim_echo({
-		{
-			"Error: null-ls plugin not found, but is needed to manage additional diag sources/formatting... skipping lsp setup()",
-			"Error",
-		},
-	}, true, {})
-	return
-end
+-- local null_ls_ok, null_ls = pcall(require, "null-ls")
+-- if not null_ls_ok then
+-- 	vim.api.nvim_echo({
+-- 		{
+-- 			"Error: null-ls plugin not found, but is needed to manage additional diag sources/formatting... skipping lsp setup()",
+-- 			"Error",
+-- 		},
+-- 	}, true, {})
+-- 	return
+-- end
 
 local cmp_capabilities_ok, cmp = pcall(require, "cmp_nvim_lsp")
 if not cmp_capabilities_ok then
@@ -73,56 +73,56 @@ end
 -- ⛑️  Null-ls (Linting, formatting):
 
 -- see https://github.com/jose-elias-alvarez/null-ls.nvim/blob/main/doc/BUILTINS.md
-local code_actions = null_ls.builtins.code_actions
-local diagnostics = null_ls.builtins.diagnostics
-local formatting = null_ls.builtins.formatting
-local hover = null_ls.builtins.hover
-
-null_ls.setup({
-	border = "rounded",
-	sources = {
-		-- 🧹 code actions: ⮯
-		code_actions.eslint_d,
-		code_actions.gitsigns,
-		code_actions.refactoring,
-		code_actions.gomodifytags,
-		code_actions.impl,
-
-		-- 🩺 diagnostics: ⮯
-		diagnostics.codespell, -- identify some common code related misspellings
-		diagnostics.stylelint, -- css 'n related linting
-		-- diagnostics.shellcheck, -- shell linter
-		diagnostics.gospel, -- go spell check
-		-- diagnostics.sqlfluff.with({
-		-- 	extra_args = { "--dialect", "postgres" }, -- change to your dialect
-		-- }), -- sql linter
-		diagnostics.zsh, -- zsh -n (somewhat useful)
-		-- diagnostics.stylelint, -- css 'n related linting
-		-- diagnostics.eslint_d, -- js 'n related linting
-
-		-- 🗃️ formatting: ⮯
-		formatting.shellharden, -- bash; goes well with shellcheck linting
-		formatting.beautysh, -- zsh 'n more (+ alt bash)
-		formatting.black, -- python
-		formatting.stylelint, -- css
-		-- formatting.sqlfluff.with({
-		-- 	extra_args = { "--dialect", "postgres" }, -- change to your dialect
-		-- }), -- sql
-		formatting.jq, -- json
-		formatting.rustfmt, -- rust
-		formatting.stylua, -- lua
-		formatting.taplo, -- toml
-		formatting.black, -- python
-		formatting.prettier, -- js, ts, css, html
-		formatting.gofmt, -- go
-		formatting.goimports, -- go
-		formatting.golines, -- go
-
-		-- 🏄 hover: ⮯
-		hover.dictionary,
-		hover.printenv,
-	},
-})
+-- local code_actions = null_ls.builtins.code_actions
+-- local diagnostics = null_ls.builtins.diagnostics
+-- local formatting = null_ls.builtins.formatting
+-- local hover = null_ls.builtins.hover
+--
+-- null_ls.setup({
+-- 	border = "rounded",
+-- 	sources = {
+-- 		-- 🧹 code actions: ⮯
+-- 		-- code_actions.eslint_d,
+-- 		code_actions.gitsigns,
+-- 		code_actions.refactoring,
+-- 		code_actions.gomodifytags,
+-- 		-- code_actions.impl,
+--
+-- 		-- 🩺 diagnostics: ⮯
+-- 		-- diagnostics.codespell, -- identify some common code related misspellings
+-- 		-- diagnostics.stylelint, -- css 'n related linting
+-- 		-- diagnostics.shellcheck, -- shell linter
+-- 		-- diagnostics.gospel, -- go spell check
+-- 		-- diagnostics.sqlfluff.with({
+-- 		-- 	extra_args = { "--dialect", "postgres" }, -- change to your dialect
+-- 		-- }), -- sql linter
+-- 		diagnostics.zsh, -- zsh -n (somewhat useful)
+-- 		-- diagnostics.stylelint, -- css 'n related linting
+-- 		-- diagnostics.eslint_d, -- js 'n related linting
+--
+-- 		-- 🗃️ formatting: ⮯
+-- 		-- formatting.shellharden, -- bash; goes well with shellcheck linting
+-- 		-- formatting.beautysh, -- zsh 'n more (+ alt bash)
+-- 		-- formatting.black, -- python
+-- 		-- formatting.stylelint, -- css
+-- 		-- formatting.sqlfluff.with({
+-- 		-- 	extra_args = { "--dialect", "postgres" }, -- change to your dialect
+-- 		-- }), -- sql
+-- 		formatting.jq, -- json
+-- 		formatting.rustfmt, -- rust
+-- 		formatting.stylua, -- lua
+-- 		formatting.taplo, -- toml
+-- 		formatting.black, -- python
+-- 		formatting.prettier, -- js, ts, css, html
+-- 		formatting.gofmt, -- go
+-- 		formatting.goimports, -- go
+-- 		-- formatting.golines, -- go
+--
+-- 		-- 🏄 hover: ⮯
+-- 		hover.dictionary,
+-- 		hover.printenv,
+-- 	},
+-- })
 
 -- ♦️  Vim Diagnostic Settings:
 local signs = {
@@ -157,25 +157,18 @@ local diagnostic_config = {
 
 vim.diagnostic.config(diagnostic_config)
 
-vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, {
-	border = "rounded",
-})
-
-vim.lsp.handlers["textDocument/signatureHelp"] = vim.lsp.with(vim.lsp.handlers.signature_help, {
-	border = "rounded",
-})
 
 -- 🎾 Automatic Server Setup:
 -- https://github.com/williamboman/mason-lspconfig.nvim#default-configuration
 local servers = {
-	bashls = {},
+	-- bashls = {},
 	gopls = {},
-	cssls = {},
-	stylelint_lsp = {},
-	css_variables = {},
+	-- cssls = {},
+	-- stylelint_lsp = {},
+	-- css_variables = {},
 	templ = {},
 	marksman = {},
-	pyright = {},
+	-- pyright = {},
 	taplo = {},
 	lua_ls = {
 		Lua = {

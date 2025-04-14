@@ -28,8 +28,7 @@ require("lazy").setup({
 			"williamboman/mason.nvim",
 			"williamboman/mason-lspconfig.nvim",
 			"mfussenegger/nvim-dap",
-			"jose-elias-alvarez/null-ls.nvim",
-			{ "folke/neodev.nvim", opts = {} },
+			"folke/neodev.nvim"
 		},
 	}, -- }}}
 
@@ -99,10 +98,10 @@ require("lazy").setup({
 
 			signs = {
 				add = { text = "" },
-				change = { text = "🞊" },
+				change = { text = "" },
 				untracked = { text = "" },
 				delete = { text = "" },
-				topdelete = { text = "🕱" },
+				topdelete = { text = "☠" },
 				changedelete = { text = "❍" },
 			},
 

@@ -57,13 +57,13 @@ style = "orn_3"
 format = '[ $ahead_behind$conflicted$renamed$staged$modified$untracked$stashed$deleted]($style)'
 conflicted = "[ ](pnk_3)"
 stashed = "[󰸧 ${count} ](slt_2)"
-modified = "[🞊 ${count} ](sky_2)"
+modified = "[ ${count} ](sky_2)"
 staged = '[ ${count} ](orn_3)'
 untracked = '[ ${count} ](sun_3)'
 renamed = "[ ${count} ](prp_3)"
-ahead = "[⯭${count} ](grn_3)"
+ahead = "[⬆ ${count} ](grn_3)"
 diverged = '[󱡷 [${ahead_count} ](grn_3) [${behind_count} ](rby_3)](prp_3)'
-behind = '[⯯${count} ](rby_3)'
+behind = '[⬇ ${count} ](rby_3)'
 deleted = "[ ${count} ](rby_3)"
 
 [time]
@@ -78,7 +78,7 @@ success_symbol = "[](grn_3)"
 not_executable_symbol = "[🕱 $common_meaning](slt_2)"
 not_found_symbol = "[ $common_meaning](rby_3)"
 sigint_symbol = "[ ABORT](blu_2)"
-signal_symbol = "[🗲 $int](sun_3)"
+signal_symbol = "[# $int](sun_3)"
 symbol = "[ $int $common_meaning](rby_3)"
 recognize_signal_code = true
 pipestatus_format = """[⽣ $pipestatus ⽍]($style)"""

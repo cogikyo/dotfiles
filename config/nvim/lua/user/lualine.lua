@@ -73,7 +73,7 @@ local diff = {
 	colored = true,
 	symbols = {
 		added = " ",
-		modified = "🞊 ",
+		modified = " ",
 		removed = " ",
 	},
 	cond = hide_in_width,
