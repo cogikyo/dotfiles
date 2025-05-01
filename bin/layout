@@ -100,7 +100,6 @@ leadPier () {
     dispatch
     browser "grok.com"
     browser "http://localhost:4000" "tab"
-    browser "https://grok.com/" "tab"
 }
 
 # ============================================================================
