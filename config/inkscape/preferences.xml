@@ -118,8 +118,8 @@
          id="rect"
          style="fill:blue;"
          usecurrent="1"
-         width="2000"
-         height="1000" />
+         width="1.14551162719727"
+         height="1.61403465270996" />
       <eventcontext
          id="3dbox"
          style="stroke:none;stroke-linejoin:round;"
@@ -154,7 +154,9 @@
          style="fill:red;"
          end="0"
          start="0"
-         usecurrent="1" />
+         usecurrent="1"
+         rx="10.75"
+         ry="10.7423992156982" />
       <eventcontext
          id="star"
          magnitude="5"
@@ -395,7 +397,8 @@
        selcue="1"
        gradientdrag="0"
        changelayer="1"
-       changepage="1" />
+       changepage="1"
+       lock_aspect_ratio="0" />
     <eventcontext
        id="connector"
        style="fill:none;fill-rule:evenodd;stroke:black;stroke-opacity:1;stroke-linejoin:miter;stroke-width:1px;stroke-linecap:butt;"
@@ -408,6 +411,8 @@
     <group
        id="geometric"
        mode="drag" />
+    <group
+       id="picker" />
   </group>
   <group
      id="palette">
@@ -634,26 +639,27 @@
          value="layer" />
       <group
          id="defaultdpi"
-         value="3000" />
+         value="96" />
     </group>
     <group
        id="save_as"
        default="org.inkscape.output.svg.inkscape"
        append_extension="1"
        enable_preview="1"
-       path="/home/cullyn/acr"
+       path="/home/cullyn/hgmx-builder/views/icons"
        use_current_dir="1"
        enable_svgexport="0" />
     <group
        id="save_copy"
-       default=""
+       default="org.inkscape.output.svg.inkscape"
        append_extension="1"
        enable_preview="1"
-       path="" />
+       path="/home/cullyn/hgmx-builder/views/static"
+       enable_svgexport="0" />
     <group
        id="open"
        enable_preview="1"
-       path="/home/cullyn/acr/static/svgs/" />
+       path="/home/cullyn/docs/" />
     <group
        id="import"
        enable_preview="1"
@@ -706,13 +712,18 @@
        id="undo-history" />
     <group
        id="objects"
-       expand_to_layer="1" />
+       expand_to_layer="1"
+       layers_only="0" />
     <group
        id="object-properties">
       <group
          id="path-panel"
          precision="2" />
     </group>
+    <group
+       id="object-properties-widget"
+       expand-props="1"
+       expand-interactive="1" />
   </group>
   <group
      id="printing">
@@ -1024,7 +1035,37 @@
        id="ruler" />
     <group
        id="snapping"
-       snap-global-toggle="0" />
+       snap-global-toggle="1"
+       snap-bbox-edge-midpoint="1"
+       snap-bbox-center="1"
+       snap-path-intersection="1"
+       snap-line-midpoint="1"
+       snap-line-perpendicular="1"
+       snap-line-tangential="1"
+       snap-object-midpoint="1"
+       snap-rotation-center="1"
+       snap-alignment-self="1"
+       snap-bbox="1"
+       snap-bbox-edge="1"
+       snap-bbox-corner="1"
+       simple-snap-bbox="0"
+       snap-node-category="1"
+       snap-path="1"
+       snap-node-cusp="1"
+       snap-node-smooth="1"
+       simple-snap-nodes="0"
+       snap-alignment="1"
+       snap-distribution="1"
+       simple-snap-alignment="1"
+       snap-others="1"
+       snap-text-baseline="1"
+       snap-path-mask="1"
+       snap-path-clip="1"
+       snap-page-border="1"
+       snap-page-margin="1"
+       snap-grid="1"
+       snap-grid-line="1"
+       snap-guide="1" />
   </group>
   <group
      id="extensions"
@@ -1034,13 +1075,20 @@
      org.inkscape.template.paper.max="297.0"
      org.inkscape.template.paper.min="210.0"
      org.inkscape.template.paper.orientation="port"
-     org.inkscape.template.paper.unit="mm" />
+     org.inkscape.template.paper.unit="mm"
+     org.inkscape.effect.filter.ColorDropShadow.type="outer"
+     org.inkscape.effect.filter.ColorDropShadow.__live_effect__="0"
+     org.inkscape.effect.filter.ColorDropShadow.tab="optionstab"
+     org.inkscape.effect.filter.ColorDropShadow.color="128"
+     org.inkscape.effect.filter.ColorDropShadow.xoffset="-0.1"
+     org.inkscape.effect.filter.ColorDropShadow.yoffset="2.77555756156289e-17"
+     org.inkscape.effect.filter.ColorDropShadow.blur="0.1" />
   <group
      id="desktop"
-     style="fill:#44403c;-inkscape-font-specification:Lora;font-family:Lora;font-size:20px;stroke-width:2.81574803;line-height:normal;text-decoration-color:#000000;stop-color:#000000;text-orientation:auto">
+     style="fill:#b6bbd8;-inkscape-font-specification:'Chillax Variable Medium';font-family:'Chillax Variable';font-size:4px;line-height:0;text-decoration-color:#000000;stop-color:#000000;text-orientation:auto;font-weight:500;letter-spacing:-0.1px;stroke-width:0.2;stroke-linecap:round;stroke-miterlimit:3.9;stroke-linejoin:round">
     <group
-       width="3014"
-       height="1955"
+       width="2179"
+       height="1080"
        x="0"
        y="0"
        maximized="1"
