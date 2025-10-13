@@ -107,7 +107,7 @@ hgmx() {
     terminal "hgmx"
     dispatch
     browser "grok.com"
-    browser "http://localhost:3008" "tab"
+    browser "http://localhost:8003" "tab"
 }
 
 # ============================================================================
