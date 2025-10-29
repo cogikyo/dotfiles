@@ -166,6 +166,7 @@ local servers = {
 	-- cssls = {},
 	-- stylelint_lsp = {},
 	-- css_variables = {},
+    -- prettier = {}
 	templ = {},
 	marksman = {},
 	-- pyright = {},

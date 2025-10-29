@@ -116,7 +116,7 @@ nvim_tree.setup({
 		},
 	},
 	trash = {
-		cmd = "trash-put",
+		cmd = "trash",
 		require_confirm = true,
 	},
 	actions = {
