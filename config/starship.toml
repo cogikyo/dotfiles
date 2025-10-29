@@ -8,12 +8,12 @@ palette = 'vagari'                           # palette definition must be last
 # ============================================================================
 
 format = """
-[╭╼╾ $sudo$username ╼╾ ${custom.date1} ${custom.date2}$python$rust$lua ╼╾ $hostname](blu_2)
+[╭╼╾ $sudo$username ╼╾ $hostname](blu_2)
 [╞╾](blu_2)$directory$git_branch$git_commit$git_state$git_status
 [╰╼╾ $character](blu_2)
 """
 
-right_format = """[$status $cmd_duration╼╾ $time ╼╾╯](blu_2)"""
+# right_format = """[$status $cmd_duration╼╾ $time ╼╾╯](blu_2)"""
 
 
 [character]
@@ -46,7 +46,7 @@ format = "[$duration ](grn_3)"
 disabled = false
 
 [git_branch]
-truncation_length = 12
+truncation_length = 42
 style = "orn_2"
 symbol = "⽀"
 truncation_symbol = "..."
@@ -54,15 +54,15 @@ format = "[$symbol$branch(:$remote_branch)]($style)"
 
 [git_status]
 style = "orn_3"
-format = '[ $ahead_behind$conflicted$renamed$staged$modified$untracked$stashed$deleted]($style)'
+format = '[ $ahead_behind$conflicted$staged$modified$deleted$renamed$untracked$stashed]($style)'
 conflicted = "[ ](pnk_3)"
 stashed = "[󰸧 ${count} ](slt_2)"
-modified = "[ ${count} ](sky_2)"
+modified = "[ ${count} ](sky_2)"
 staged = '[ ${count} ](orn_3)'
 untracked = '[ ${count} ](sun_3)'
-renamed = "[ ${count} ](prp_3)"
+renamed = "[ ${count} ](prp_3)"
 ahead = "[⬆ ${count} ](grn_3)"
-diverged = '[󱡷 [${ahead_count} ](grn_3) [${behind_count} ](rby_3)](prp_3)'
+diverged = '[${behind_count}[${ahead_count} ](grn_3)](rby_3)'
 behind = '[⬇ ${count} ](rby_3)'
 deleted = "[ ${count} ](rby_3)"
 
