@@ -43,6 +43,27 @@ alias lg='lazygit'
 alias ld='lazydocker'
 alias uvpn='nmcli connection up "TrendCapitalVPN"'
 alias dvpn='nmcli connection down "TrendCapitalVPN"'
+ivpn() {
+    local file="$1"
+    [[ -f "$file" ]] || { echo "No such file: $1"; return 1; }
+
+    # Force .conf extension if missing
+    [[ "$file" != *.conf ]] && file="$file.conf"
+    [[ -f "$file" ]] || { echo "Still no file: $file"; return 1; }
+
+    local name=$(grep -m1 '^id=' "$file" | cut -d= -f2- | xargs)
+    [[ -z "$name" ]] && name=$(basename "$file" .conf)
+
+    echo "Importing → $name"
+    sudo nmcli connection import type l2tp file "$file" || return 1
+
+    echo "\nAvailable VPN connectios:"
+    nmcli connection show | grep -E "(vpn|l2tp)" | grep -v "^--"
+
+    echo "\nAuthenticate with:"
+    echo "\nnmcli connection up \"$name\" --ask"
+}
+
 alias update='paru -Syu && paru -Qqe > ~/dotfiles/etc/packages.lst'
 alias oc='ouch compress'
 alias od='ouch decompress'
