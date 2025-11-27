@@ -41,6 +41,9 @@ case "$background_choice" in
         blackhole & disown
         ps -ef | rg "record.mp4" | rg -v rg | awk '{print $2}' | xargs kill
     ;;
+    "kill")
+        ps -ef | rg "record.mp4" | rg -v rg | awk '{print $2}' | xargs kill
+    ;;
     *)
         echo "invalid choice; choices: code | music | lock"
         exit 1

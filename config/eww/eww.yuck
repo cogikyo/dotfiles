@@ -35,7 +35,7 @@
 
 (defwindow today
   :monitor 0 :stacking "overlay" :exclusive false :focusable false
-  :geometry (geometry :width "40%" :anchor "top left" :x "1060px")
+  :geometry (geometry :width "42%" :anchor "top left" :x "1080px")
   (centerbox
     (weather) (time) (date)
   )
@@ -365,7 +365,7 @@
   (box
     :halign "end" :space-evenly false :spacing 0
     :class "tr-m"
-    (cpu) (memory) (gpu)
+    (cpu) (memory)
   )
 )
 ; 💻 computer: {{{
@@ -676,24 +676,23 @@
 ; }}}
 
 
-(defwindow assistant
+(defwindow player
   :monitor 0 :stacking "overlay" :exclusive false :focusable false
   :geometry (geometry :anchor "top left" :y "-3px" )
-  (assistant)
+  (player)
 )
-; ❄️  assistant: {{{
-(defvar assistant "/home/cullyn/.config/eww/art/yuki.png" )
-(defvar assistant-hover false)
-(defwidget assistant []
+; ❄️  player {{{
+(defvar player "/home/cullyn/.config/eww/art/player.png" )
+(defvar player-hover false)
+(defwidget player []
   (eventbox
-    :onhover "eww update assistant-hover=true"
-    :onhoverlost "eww update assistant-hover=false"
-    :onclick "${browser} https://chat.openai.com/chat?model=gpt-4 & disown"
-    :onrightclick "${browser} https://mail.google.com/mail/u/0/#inbox & disown"
-    :onmiddleclick "${browser} https://mail.google.com/mail/u/1/#inbox & disown"
+    :onhover "eww update player-hover=true"
+    :onhoverlost "eww update player-hover=false"
+    :onmiddleclick "${browser} www.google.com/search?q='${pctl.artist}' & disown"
+    :onrightclick "hyprctl dispatch workspace 5 & change-bg 'music' & disown"
     (box
-      :class "assistantbox"
-      :style "margin-top: -1px; margin-left: -6px; background-image: url('${matches("${pctl.status}", "Playing") ? album-art-path : assistant}');"
+      :class "playerbox"
+      :style "margin-left: -5px; background-image: url('${matches("${pctl.status}", "Playing") ? album-art-path : playerctl-img}');"
     )
   )
 )
@@ -713,13 +712,13 @@
     :onhover "eww update music-hover=true"
     :onhoverlost "eww update music-hover=false"
     :onclick "playerctl "
-    :onclick "playerctl --player=${player} play-pause"
+    :onclick "playerctl --player=${player-client} play-pause"
     :onscroll "bin/music_info seek {}"
     :onmiddleclick "${browser} www.google.com/search?q='${pctl.artist}' & disown"
     :onrightclick "hyprctl dispatch workspace 5 & change-bg 'music' & disown"
     (box
       :class "album-art ${music-hover ? "album-art-hover" : ""}"
-      :style "background-image: url('${matches("${pctl.status}", "Playing") ? album-art-path : playerctl}');"
+      :style "background-image: url('${matches("${pctl.status}", "Playing") ? album-art-path : playerctl-img}');"
       :tooltip "  » 󰠃 ${pctl.artist}  󰎆 ${pctl.title} "
       (circular-progress
         :class "tr-a album-art-progress ${music-hover ? "album-art-progress-hover" : ""}"
@@ -737,7 +736,7 @@
 
 (defwindow music
   :monitor 0 :stacking "overlay" :exclusive false :focusable false
-  :geometry (geometry :anchor "top left" :x "0px")
+  :geometry (geometry :anchor "top left" :x "15px")
   (box
     :halign "start" :space-evenly false :spacing 0
     :class "tr-m"
@@ -751,13 +750,13 @@
   :interval "1s"
   "bin/music_info progress"
 )
-(defvar player "spotify")
+(defvar player-client "spotify")
 (defvar album-art-path "/tmp/eww/album_art.png")
 (deflisten pctl
   :initial '{ "status":"Paused", "volume":"1.0", "artist":"", "album":"", "title":""}'
   'tail -F /tmp/eww/music.json 2> /dev/null'
 )
-(defvar playerctl `/home/cullyn/.config/eww/art/player.png`)
+(defvar playerctl-img `/home/cullyn/.config/eww/art/player.png`)
 
 
 (defwidget music []
@@ -777,7 +776,7 @@
         (eventbox
           :class "tr-a music-progress-circle-icon-${matches("${pctl.status}", "Playing") ? "playing" : "paused" }"
           :cursor "pointer"
-          :onclick "playerctl --player=${player} previous"
+          :onclick "playerctl --player=${player-client} previous"
           (label :text "󰒮")
         )
       )
@@ -786,7 +785,7 @@
         (eventbox
           :class "tr-a music-progress-circle-icon-${matches("${pctl.status}", "Playing") ? "playing" : "paused" }"
           :cursor "pointer"
-          :onclick "playerctl --player=${player} next"
+          :onclick "playerctl --player=${player-client} next"
           (label :text "󰒭" )
         )
       )
@@ -854,7 +853,7 @@
       (box :class "music-progress-circle-icon"
         (eventbox
           :class "tr-a music-progress-circle-icon-${matches("${pctl.status}", "Playing") ? "playing" : "paused" }"
-          :onclick "playerctl --player=${player} play-pause"
+          :onclick "playerctl --player=${player-client} play-pause"
           :onscroll "bin/music_info seek {}"
           :cursor "pointer"
           (label :text "${matches("${pctl.status}", "Playing") ? "󰏦" : "󰐍"}")
@@ -866,9 +865,9 @@
 
 (defwidget music-volume [value]
   (eventbox
-      :onclick "playerctl --player=${player} volume 1"
-      :onmiddleclick "playerctl --player=${player} volume 0.01"
-      :onrightclick "playerctl --player=${player} volume 0"
+      :onclick "playerctl --player=${player-client} volume 1"
+      :onmiddleclick "playerctl --player=${player-client} volume 0.01"
+      :onrightclick "playerctl --player=${player-client} volume 0"
       :onscroll "bin/music_info volume {} 0.1"
       :cursor "pointer"
     (box :style "margin-right: 4px;" :class "tr-c ramp-${
@@ -1011,7 +1010,7 @@
 
 (defwindow workspaces
   :monitor 0 :stacking "bottom" :exclusive false :focusable false
-  :geometry (geometry :anchor "center right" :x "620px" :y "0px")
+  :geometry (geometry :anchor "top right" :x "0px" :y "0px")
   (workspaces)
 )
 ;; 👾 workspaces: {{{
@@ -1058,14 +1057,7 @@
     (box
       :class "tr-a workspacesbox ${ws-hover ? "workspacesbox-hover" : ""}"
       :halign "center" :space-evenly false :spacing 10
-      :orientation "${active-ws == "5" ? "horizontal" : "vertical"}"
-      :style "${active-ws == "5" ?
-          "
-          margin-right: 38px;
-          margin-top: 260px;
-          padding: 11px 15px 0px 15px;
-          "
-        : "" }"
+      :orientation "vertical"
       (workspace :icon "network"  :num "1" :hover ws-h1 :desc " chat 'n networking")
       (workspace :icon "learn"    :num "2" :hover ws-h2 :desc " documents 'n such" )
       (workspace :icon "dna"      :num "3" :hover ws-h3 :desc " primary desktop" )
