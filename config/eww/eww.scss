@@ -231,19 +231,19 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   background-repeat: no-repeat;
   background-size: 105%;
   background-position: center;
-  min-width: 90px;
-  min-height: 90px;
+  min-width: 94px;
+  min-height: 95px;
   opacity: 0.95;
 
   // border
   border-style: solid;
   border-color: $blu-1;
   border-width: 0 2px 3px 0;
-  border-radius: 0 32% 87%;
+  border-radius: 0 5% 100%;
   box-shadow: $x 3px 7px 1px rgba($blu-0, 0.42);
   margin: 0 $margin $margin 0;
 
-  @if $position =="right" {
+  @if $position == "right" {
     $x: -1px;
 
     border-width: 0 0 3px 2px;
@@ -280,7 +280,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
     radius: 50% 0% 48% 87%;
   }
 
-  @if $direction =="up" {
+  @if $direction == "up" {
     border-radius: 50% 28% 0% 87%;
   }
 
@@ -297,7 +297,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 
     border-radius: 42% 0% 42% 48%;
 
-    @if $direction =="up" {
+    @if $direction == "up" {
       border-radius: 42% 32% 0% 48%;
     }
 
@@ -310,7 +310,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 // ============================================================================
 
 // 🤖 assistant {{{
-.assistantbox {
+.playerbox {
   @include imagebox(left);
 
   background-position: 0px 0px;
