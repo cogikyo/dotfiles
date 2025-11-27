@@ -4,8 +4,8 @@ killall eww -9
 eww daemon
 eww open-many \
     today \
-    computer user \
+    computer \
     workspaces \
-    music albumArt \
-    pacman screenctl dunst systemctl \
-    assistant
+    music  \
+    player
+    # pacman screenctl dunst systemctl \
