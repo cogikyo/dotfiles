@@ -9,7 +9,7 @@ export TERM=xterm-256color
 export GOPRIVATE=git.linecode.net/yos/*
 
 if [ -f "$HOME/.anthropic_api_key" ]; then
-  export ANTHROPIC_API_KEY=$(cat "$HOME/.anthropic_api_key")
+    export ANTHROPIC_API_KEY=$(cat "$HOME/.anthropic_api_key")
 fi
 
 # history
@@ -39,6 +39,7 @@ alias v='cd ~/vagari'
 alias e='cd ~/dotfiles/config/nvim'
 alias x='exit'
 alias p='paru'
+alias k='kaizen'
 alias lg='lazygit'
 alias ld='lazydocker'
 alias uvpn='nmcli connection up "TrendCapitalVPN"'
