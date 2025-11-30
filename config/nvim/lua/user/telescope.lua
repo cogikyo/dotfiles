@@ -72,35 +72,3 @@ telescope.setup({
 })
 
 telescope.load_extension("refactoring")
-vim.api.nvim_set_keymap(
-	"v",
-	"<leader>tr",
-	"<Esc><cmd>lua require('telescope').extensions.refactoring.refactors()<CR>",
-	{ noremap = true }
-)
-
-local builtin = require("telescope.builtin")
-local tmap = function(key, cmd)
-	vim.keymap.set("n", key, cmd, {})
-end
-
-tmap("<leader>t<leader>", builtin.find_files)
-tmap("<leader>s<leader>", builtin.live_grep)
-tmap("<leader>g<leader>", builtin.grep_string)
-tmap("<leader>tg", builtin.git_files)
-tmap("<leader>tr", builtin.oldfiles)
-tmap("<leader>tb", builtin.buffers)
-tmap("<leader>th", builtin.help_tags)
-tmap("<leader>tH", builtin.highlights)
-tmap("<leader>td", builtin.diagnostics)
-tmap("<leader>tp", builtin.builtin)
-tmap("<leader>tc", builtin.commands)
-tmap("<leader>tl", builtin.loclist)
-tmap("<leader>tq", builtin.quickfix)
-tmap("<leader>tm", builtin.man_pages)
-tmap("<leader>tst", builtin.treesitter)
-
--- only works if lsp sevrer is attached:
-tmap("<leader>tsr", builtin.lsp_references)
-tmap("<leader>tss", builtin.lsp_document_symbols)
-tmap("<leader>tsw", builtin.lsp_dynamic_workspace_symbols)
