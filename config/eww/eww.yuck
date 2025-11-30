@@ -963,6 +963,7 @@
     :onclick "bin/pulse_info set_default ${content} & disown"
     :onmiddleclick "kitty --title='terminalfloat' -e pulsemixer & disown"
     :onrightclick "bin/pulse_info mute ${content} & disown"
+    :onmiddleclick "bluetoothctl connect 14:3F:A6:10:A1:B5 & disown"
     :onscroll "bin/pulse_info change_volume ${content} {} & disown"
     :cursor "pointer"
     :tooltip "  ${icon-on} ${content}: ${value}% "
