@@ -32,6 +32,10 @@ require("lazy").setup({
 			"WhoIsSethDaniel/mason-tool-installer.nvim",
 			{ "j-hui/fidget.nvim", opts = {} },
 			"mfussenegger/nvim-dap",
+			"rcarriga/nvim-dap-ui",
+			"nvim-neotest/nvim-nio",
+			"jay-babu/mason-nvim-dap.nvim",
+			"leoluz/nvim-dap-go",
 			"saghen/blink.cmp",
 		},
 	}, -- }}}
@@ -231,7 +235,34 @@ require("lazy").setup({
 	{
 		"goolord/alpha-nvim",
 		dependencies = { "kyazdani42/nvim-web-devicons" },
-	}, 
+	},
+
+	{
+		"folke/which-key.nvim",
+		event = "VimEnter",
+		opts = {
+			delay = 150,
+			icons = { mappings = true },
+			spec = {
+				{ "<leader>b", group = "Buffer/Breakpoint" },
+				{ "<leader>c", group = "Code/Change" },
+				{ "<leader>d", group = "Delete/Database" },
+				{ "<leader>e", group = "Explorer" },
+				{ "<leader>f", group = "Find/Trouble" },
+				{ "<leader>g", group = "Git/Goto" },
+				{ "<leader>h", group = "Git Hunk", mode = { "n", "v" } },
+				{ "<leader>m", group = "Markdown/Mason" },
+				{ "<leader>n", group = "Harpoon" },
+				{ "<leader>p", group = "Treesitter" },
+				{ "<leader>r", group = "Replace/Rename" },
+				{ "<leader>s", group = "Search/Save" },
+				{ "<leader>t", group = "Telescope/Toggle" },
+				{ "<leader>u", group = "Undo/Update" },
+				{ "gr", group = "LSP" },
+				{ "z", group = "Folds" },
+			},
+		},
+	},
 
 	--	-----------------------------------------------------------------------
 }, { -- opts:
@@ -259,6 +290,7 @@ local user_config = {
 	"treesitter", -- treesitter and related
 	"autopairs", -- autopair configs and custom functions
 	"lsp", -- lsp and related config
+	"debug", -- dap for go
 	"cursor", -- smooth cursor
 	-- ------------------------------------------------------------------------
 }
