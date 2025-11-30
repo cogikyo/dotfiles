@@ -25,8 +25,6 @@ scoped_autocmd("FileType", "NoColorColumn", { "help", "trouble", "Avante", "Avan
 
 scoped_autocmd("BufWritePost", "EwwRestart", "eww.yuck,eww.scss", ":! eww-open & disown && exit<CR>")
 
-scoped_autocmd("FileType", "Rust", "rust", "silent! set textwidth=80")
-
 scoped_autocmd(
 	"BufWritePost",
 	"DunstRestart",
