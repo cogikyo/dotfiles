@@ -15,7 +15,6 @@ local silent_expression = { expr = true, silent = true }
 -- ============================================================================
 
 -- Leader {{{
-vim.g.mapleader = " "
 map("", "<Space>", "<Nop>")
 map("n", "<leader>b", "<Nop>")
 map("n", "<leader>c", "<Nop>")

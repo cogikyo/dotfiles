@@ -1,45 +1,42 @@
--- ============================================================================
--- 🧰 Setup {{{
 local ok, treesitter = pcall(require, "nvim-treesitter.configs")
 if not ok then
-	vim.api.nvim_echo({
-		{
-			"Error: nvim-treesitter plugin not found... skipping relevant setup()",
-			"Error",
-		},
-	}, true, {})
 	return
 end
--- }}}
--- ============================================================================
 
 treesitter.setup({
 	ensure_installed = {
-		"c",
-		"lua",
-		"python",
 		"bash",
-		"vim",
-		"yaml",
-		"query",
-		"comment",
-		"vimdoc",
-		"query",
-		"typescript",
-		"javascript",
-		"json",
-		"html",
+		"c",
 		"css",
-		"scss",
-		"templ",
-		"rust",
-		"toml",
+		"diff",
+		"dockerfile",
+		"gitignore",
 		"go",
-		"java",
+		"gomod",
+		"gosum",
+		"html",
+		"javascript",
+		"jsdoc",
+		"json",
+		"jsonc",
+		"lua",
+		"luadoc",
+		"markdown",
+		"markdown_inline",
+		"python",
+		"query",
+		"regex",
+		"sql",
+		"templ",
+		"toml",
+		"tsx",
+		"typescript",
+		"vim",
+		"vimdoc",
+		"xml",
+		"yaml",
 	},
-	sync_install = true,
 	auto_install = true,
-	ignore_install = {},
 	highlight = {
 		enable = true,
 		additional_vim_regex_highlighting = false,
@@ -51,72 +48,91 @@ treesitter.setup({
 	incremental_selection = {
 		enable = true,
 		keymaps = {
-			init_selection = "gn", -- normal: start incremental selection.
-			node_incremental = "gn", -- visual: increment to the upper named parent.
-			scope_incremental = "gy", -- visual: increment to the upper scope
-			node_decremental = "gp", -- visual: decrement to the previous named node.
+			init_selection = "gn",
+			node_incremental = "gn",
+			scope_incremental = "gy",
+			node_decremental = "gp",
 		},
 	},
 	textobjects = {
 		select = {
 			enable = true,
-			lookahead = true, -- Automatically jump forward to textobj, similar to targets.vim
+			lookahead = true,
 			keymaps = {
-				-- You can use the capture groups defined in textobjects.scm
-				["aa"] = "@parameter.outer",
-				["ia"] = "@parameter.inner",
-				["af"] = "@function.outer",
-				["if"] = "@function.inner",
-				["ac"] = "@class.outer",
-				["ic"] = "@class.inner",
-				["at"] = "@tag.outer",
-				["it"] = "@tag.inner",
-				["ab"] = "@block.outer",
-				["ib"] = "@block.inner",
-				["al"] = "@loop.outer",
-				["il"] = "@loop.inner",
+				["aa"] = { query = "@parameter.outer", desc = "around argument" },
+				["ia"] = { query = "@parameter.inner", desc = "inside argument" },
+				["af"] = { query = "@function.outer", desc = "around function" },
+				["if"] = { query = "@function.inner", desc = "inside function" },
+				["ac"] = { query = "@class.outer", desc = "around class" },
+				["ic"] = { query = "@class.inner", desc = "inside class" },
+				["at"] = { query = "@tag.outer", desc = "around tag" },
+				["it"] = { query = "@tag.inner", desc = "inside tag" },
+				["ab"] = { query = "@block.outer", desc = "around block" },
+				["ib"] = { query = "@block.inner", desc = "inside block" },
+				["al"] = { query = "@loop.outer", desc = "around loop" },
+				["il"] = { query = "@loop.inner", desc = "inside loop" },
+				["a/"] = { query = "@comment.outer", desc = "around comment" },
+				["i/"] = { query = "@comment.inner", desc = "inside comment" },
+				["ai"] = { query = "@conditional.outer", desc = "around conditional" },
+				["ii"] = { query = "@conditional.inner", desc = "inside conditional" },
+			},
+		},
+		swap = {
+			enable = true,
+			swap_next = {
+				["<leader>sa"] = { query = "@parameter.inner", desc = "Swap with next argument" },
+				["<leader>sf"] = { query = "@function.outer", desc = "Swap with next function" },
+			},
+			swap_previous = {
+				["<leader>sA"] = { query = "@parameter.inner", desc = "Swap with previous argument" },
+				["<leader>sF"] = { query = "@function.outer", desc = "Swap with previous function" },
+			},
+		},
+		move = {
+			enable = true,
+			set_jumps = true,
+			goto_next_start = {
+				["]f"] = { query = "@function.outer", desc = "Next function start" },
+				["]c"] = { query = "@class.outer", desc = "Next class start" },
+				["]a"] = { query = "@parameter.inner", desc = "Next argument" },
+				["]l"] = { query = "@loop.outer", desc = "Next loop" },
+				["]i"] = { query = "@conditional.outer", desc = "Next conditional" },
+			},
+			goto_next_end = {
+				["]F"] = { query = "@function.outer", desc = "Next function end" },
+				["]C"] = { query = "@class.outer", desc = "Next class end" },
+			},
+			goto_previous_start = {
+				["[f"] = { query = "@function.outer", desc = "Previous function start" },
+				["[c"] = { query = "@class.outer", desc = "Previous class start" },
+				["[a"] = { query = "@parameter.inner", desc = "Previous argument" },
+				["[l"] = { query = "@loop.outer", desc = "Previous loop" },
+				["[i"] = { query = "@conditional.outer", desc = "Previous conditional" },
+			},
+			goto_previous_end = {
+				["[F"] = { query = "@function.outer", desc = "Previous function end" },
+				["[C"] = { query = "@class.outer", desc = "Previous class end" },
 			},
 		},
 	},
-	move = {
-		enable = true,
-		set_jumps = true, -- whether to set jumps in the jumplist
-		goto_next_start = {
-			["]m"] = "@function.outer",
-			["]]"] = "@class.outer",
-		},
-		goto_next_end = {
-			["]M"] = "@function.outer",
-			["]["] = "@class.outer",
-		},
-		goto_previous_start = {
-			["[m"] = "@function.outer",
-			["[["] = "@class.outer",
-		},
-		goto_previous_end = {
-			["[M"] = "@function.outer",
-			["[]"] = "@class.outer",
-		},
-	},
-	playground = {
-		enable = true,
-		disable = {},
-		updatetime = 25, -- Debounced time for highlighting nodes in the playground from source code
-		persist_queries = false, -- Whether the query persists across vim sessions
-		keybindings = {
-			toggle_query_editor = "o",
-			toggle_hl_groups = "i",
-			toggle_injected_languages = "t",
-			toggle_anonymous_nodes = "a",
-			toggle_language_display = "I",
-			focus_language = "f",
-			unfocus_language = "F",
-			update = "R",
-			goto_node = "<CR>",
-			show_help = "?",
-		},
-	},
-	autopairs = { enable = true },
-	autotag = { enable = true },
-	modules = {},
 })
+
+require("nvim-ts-autotag").setup({
+	opts = {
+		enable_close = true,
+		enable_rename = true,
+		enable_close_on_slash = true,
+	},
+})
+
+require("treesitter-context").setup({
+	enable = true,
+	max_lines = 3,
+	multiline_threshold = 1,
+	trim_scope = "outer",
+	mode = "cursor",
+})
+
+vim.keymap.set("n", "[x", function()
+	require("treesitter-context").go_to_context(vim.v.count1)
+end, { desc = "Jump to context" })
