@@ -16,7 +16,6 @@ local silent_expression = { expr = true, silent = true }
 
 -- Leader {{{
 map("", "<Space>", "<Nop>")
-map("n", "<leader>b", "<Nop>")
 map("n", "<leader>c", "<Nop>")
 map("n", "<leader>e", "<Nop>")
 map("n", "<leader>m", "<Nop>")
@@ -215,3 +214,78 @@ map("n", "<leader>@p", "ysip<p>", recursive_explicit)
 map("n", "<leader>@d", "a&mdash;<Esc>", recursive_explicit)
 map("n", "<leader>@s", "a&emsp;<Esc>", recursive_explicit)
 -- }}}
+
+-- 🔭 Telescope {{{
+local ok_telescope, telescope = pcall(require, "telescope.builtin")
+if ok_telescope then
+	local tmap = function(key, cmd, desc)
+		vim.keymap.set("n", key, cmd, { desc = desc })
+	end
+	tmap("<leader>t<leader>", telescope.find_files, "Find files")
+	tmap("<leader>s<leader>", telescope.live_grep, "Live grep")
+	tmap("<leader>g<leader>", telescope.grep_string, "Grep string")
+	tmap("<leader>tg", telescope.git_files, "Git files")
+	tmap("<leader>tr", telescope.oldfiles, "Recent files")
+	tmap("<leader>tb", telescope.buffers, "Buffers")
+	tmap("<leader>th", telescope.help_tags, "Help tags")
+	tmap("<leader>tH", telescope.highlights, "Highlights")
+	tmap("<leader>td", telescope.diagnostics, "Diagnostics")
+	tmap("<leader>tp", telescope.builtin, "Pickers")
+	tmap("<leader>tc", telescope.commands, "Commands")
+	tmap("<leader>tl", telescope.loclist, "Location list")
+	tmap("<leader>tq", telescope.quickfix, "Quickfix")
+	tmap("<leader>tm", telescope.man_pages, "Man pages")
+	tmap("<leader>tst", telescope.treesitter, "Treesitter")
+	tmap("<leader>tsr", telescope.lsp_references, "LSP references")
+	tmap("<leader>tss", telescope.lsp_document_symbols, "Document symbols")
+	tmap("<leader>tsw", telescope.lsp_dynamic_workspace_symbols, "Workspace symbols")
+	vim.keymap.set(
+		"v",
+		"<leader>tr",
+		"<Esc><cmd>lua require('telescope').extensions.refactoring.refactors()<CR>",
+		{ noremap = true, desc = "Refactor" }
+	)
+end
+-- }}}
+
+-- 🐛 Debug {{{
+local ok_dap, dap = pcall(require, "dap")
+local ok_dapui, dapui = pcall(require, "dapui")
+if ok_dap and ok_dapui then
+	vim.keymap.set("n", "<F5>", dap.continue, { desc = "Debug: Start/Continue" })
+	vim.keymap.set("n", "<F1>", dap.step_into, { desc = "Debug: Step Into" })
+	vim.keymap.set("n", "<F2>", dap.step_over, { desc = "Debug: Step Over" })
+	vim.keymap.set("n", "<F3>", dap.step_out, { desc = "Debug: Step Out" })
+	vim.keymap.set("n", "<leader>b", dap.toggle_breakpoint, { desc = "Debug: Toggle Breakpoint" })
+	vim.keymap.set("n", "<leader>B", function()
+		dap.set_breakpoint(vim.fn.input("Breakpoint condition: "))
+	end, { desc = "Debug: Set Breakpoint" })
+	vim.keymap.set("n", "<F7>", dapui.toggle, { desc = "Debug: Toggle UI" })
+end
+-- }}}
+
+-- ============================================================================
+-- 📎 Buffer-local keymaps (on_attach callbacks)
+-- These keymaps are defined in their plugin files because they:
+--   1. Need buffer-local scope (opts.buffer = bufnr)
+--   2. Require plugin APIs only available in the callback
+-- ============================================================================
+
+-- 🔀 Git Hunks → lua/user/gitsigns.lua
+--    ]c / [c     Navigate hunks
+--    <leader>h   Stage, reset, preview, blame, diff
+
+-- 📚 LSP → lua/user/lsp.lua
+--    gr*         LSP actions (rename, references, etc.)
+--    gd / gi     Go to definition/implementation
+--    K / <C-k>   Hover / signature help
+--    <leader>k   Diagnostic float
+--    [d / ]d     Navigate diagnostics
+
+-- 🌲 File Tree → lua/user/nvimtree.lua
+--    Arrows      Navigate tree
+--    n / d / r   Create, trash, rename
+--    <C-v/h/t>   Open splits/tab
+
+-- 🚦 Trouble → init.lua (lazy keys)
+--    <leader>f*  Diagnostics, symbols, quickfix
