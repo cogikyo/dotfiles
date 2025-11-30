@@ -5,7 +5,7 @@ vim.g.mapleader = " "
 vim.g.maplocalleader = " "
 
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
-if not vim.loop.fs_stat(lazypath) then
+if not vim.uv.fs_stat(lazypath) then
 	vim.fn.system({
 		"git",
 		"clone",
@@ -25,42 +25,68 @@ require("lazy").setup({
 	{ --📚 LSP {{{
 		"neovim/nvim-lspconfig",
 		dependencies = {
-            { "stevearc/conform.nvim", event = { "BufWritePre" }, config = true },
-            { "mfussenegger/nvim-lint", event = { "BufWritePost", "BufReadPost" } },
-			"williamboman/mason.nvim",
-			"williamboman/mason-lspconfig.nvim",
+			{ "stevearc/conform.nvim", event = { "BufWritePre" }, config = true },
+			{ "mfussenegger/nvim-lint", event = { "BufWritePost", "BufReadPost" } },
+			{ "mason-org/mason.nvim", opts = {} },
+			"mason-org/mason-lspconfig.nvim",
+			"WhoIsSethDaniel/mason-tool-installer.nvim",
+			{ "j-hui/fidget.nvim", opts = {} },
 			"mfussenegger/nvim-dap",
-			{ "folke/neodev.nvim", opts = {} },
+			"saghen/blink.cmp",
 		},
 	}, -- }}}
 
 	{ --🪄 Completion {{{
-		"hrsh7th/nvim-cmp",
+		"saghen/blink.cmp",
+		event = "VimEnter",
+		version = "1.*",
 		dependencies = {
-			"hrsh7th/nvim-cmp",
-			"hrsh7th/cmp-nvim-lsp",
-			"hrsh7th/cmp-nvim-lua",
-			"hrsh7th/cmp-buffer",
-			"hrsh7th/cmp-path",
-			"hrsh7th/cmp-emoji",
-			"L3MON4D3/LuaSnip",
-			"saadparwaiz1/cmp_luasnip",
-			"rafamadriz/friendly-snippets",
+			{
+				"L3MON4D3/LuaSnip",
+				version = "2.*",
+				build = (function()
+					if vim.fn.has("win32") == 1 or vim.fn.executable("make") == 0 then
+						return
+					end
+					return "make install_jsregexp"
+				end)(),
+			},
+			{
+				"folke/lazydev.nvim",
+				ft = "lua",
+				opts = {
+					library = {
+						{ path = "${3rd}/luv/library", words = { "vim%.uv" } },
+					},
+				},
+			},
+		},
+		opts = {
+			keymap = { preset = "default" },
+			appearance = { nerd_font_variant = "mono" },
+			completion = { documentation = { auto_show = true, auto_show_delay_ms = 200 } },
+			sources = {
+				default = { "lsp", "path", "snippets", "lazydev" },
+				providers = {
+					lazydev = { module = "lazydev.integrations.blink", score_offset = 100 },
+				},
+			},
+			snippets = { preset = "luasnip" },
+			fuzzy = { implementation = "prefer_rust_with_warning" },
+			signature = { enabled = true },
 		},
 	}, -- }}}
 
 	{ --🎄 Treesitter {{{
 		"nvim-treesitter/nvim-treesitter",
+		build = ":TSUpdate",
 		dependencies = {
-			"nvim-treesitter/nvim-treesitter-textobjects", -- use treesitter text objects to do cools things
-			"nvim-treesitter/playground", -- view treesitter info directly in nvim
-			"JoosepAlviste/nvim-ts-context-commentstring", -- dynamic 'commentstring' based on cursor location rather than file:
-			"windwp/nvim-ts-autotag", -- auto close tags
-			"windwp/nvim-autopairs", -- treesitter aware pairing and more
+			"nvim-treesitter/nvim-treesitter-textobjects",
+			"nvim-treesitter/nvim-treesitter-context",
+			"JoosepAlviste/nvim-ts-context-commentstring",
+			"windwp/nvim-ts-autotag",
+			"windwp/nvim-autopairs",
 		},
-		config = function()
-			pcall(require("nvim-treesitter.install").update({ with_sync = true }))
-		end,
 	}, -- }}}
 
 	{ --🎨 Colorscheme {{{
@@ -72,97 +98,6 @@ require("lazy").setup({
 	},
 	-- }}}
 
-	{ --📰 Pretty-fold {{{
-		-- "anuvyklack/pretty-fold.nvim",
-		-- opts = {
-		-- 	sections = {
-		-- 		left = {
-		-- 			"╘╾",
-		-- 			"content",
-		-- 			"⮯ ",
-		-- 		},
-		-- 		right = {
-		-- 			" ",
-		-- 			"number_of_folded_lines",
-		-- 			": ",
-		-- 			"percentage",
-		-- 			" ╼╕",
-		-- 		},
-		-- 	},
-		-- 	fill_char = "⋅",
-		-- 	process_comment_signs = "delete",
-		-- },
-	}, -- }}}
-
-	{ --🧿 GitSigns {{{
-		"lewis6991/gitsigns.nvim",
-		opts = {
-
-			signs = {
-				add = { text = "" },
-				change = { text = "🞊" },
-				untracked = { text = "" },
-				delete = { text = "" },
-				topdelete = { text = "🕱" },
-				changedelete = { text = "❍" },
-			},
-
-			signcolumn = true, -- Toggle with `:Gitsigns toggle_signs`
-			numhl = false, -- Toggle with `:Gitsigns toggle_numhl`
-			linehl = false, -- Toggle with `:Gitsigns toggle_linehl`
-			word_diff = false, -- Toggle with `:Gitsigns toggle_word_diff`
-			current_line_blame = false, -- Toggle with `:Gitsigns toggle_current_line_blame`
-
-			-- Keymaps
-			on_attach = function(bufnr)
-				local gs = package.loaded.gitsigns
-
-				local function map(mode, l, r, opts)
-					opts = opts or {}
-					opts.buffer = bufnr
-					vim.keymap.set(mode, l, r, opts)
-				end
-
-				-- Navigation
-				map("n", "]c", function()
-					if vim.wo.diff then
-						return "]c"
-					end
-					vim.schedule(function()
-						gs.next_hunk()
-					end)
-					return "<Ignore>"
-				end, { expr = true })
-
-				map("n", "[c", function()
-					if vim.wo.diff then
-						return "[c"
-					end
-					vim.schedule(function()
-						gs.prev_hunk()
-					end)
-					return "<Ignore>"
-				end, { expr = true })
-
-				-- Actions
-				map({ "n", "v" }, "<leader>hs", ":Gitsigns stage_hunk<CR>")
-				map({ "n", "v" }, "<leader>hr", ":Gitsigns reset_hunk<CR>")
-				map("n", "<leader>hS", gs.stage_buffer)
-				map("n", "<leader>hu", gs.undo_stage_hunk)
-				map("n", "<leader>hR", gs.reset_buffer)
-				map("n", "<leader>hp", gs.preview_hunk)
-				map("n", "<leader>hb", function()
-					gs.blame_line({ full = true })
-				end)
-				map("n", "<leader>hB", gs.toggle_current_line_blame)
-				map("n", "<leader>hd", gs.toggle_deleted)
-				map("n", "<leader>hD", gs.diffthis)
-
-				-- Text object
-				map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>")
-			end,
-		},
-	}, -- }}}
 
 	{ -- 🚦Trouble {{{
 		"folke/trouble.nvim",
@@ -204,98 +139,13 @@ require("lazy").setup({
 
 	-- }}}
 
-	{ -- 🍓 Avante {{{
-		"yetone/avante.nvim",
-		event = "VeryLazy",
-		lazy = false,
-		version = false,
-		opts = {
-			hints = { enabled = false },
-			windows = {
-				position = "right", -- the position of the sidebar
-				wrap = false, -- similar to vim.o.wrap
-				width = 50, -- default % based on available width
-				input = {
-					prefix = "󰭻 ",
-				},
-			},
-			mappings = {
-				ask = "<leader>at",
-				edit = "<leader>ae",
-				refresh = "<leader>ar",
-				diff = {
-					ours = "co",
-					theirs = "ct",
-					all_theirs = "ca",
-					both = "cb",
-					cursor = "cc",
-					next = "]x",
-					prev = "[x",
-				},
-				suggestion = {
-					accept = "<C-l>",
-					next = "<C-.>",
-					prev = "<C-,>",
-					dismiss = "<esc>",
-				},
-				jump = {
-					next = "]]",
-					prev = "[[",
-				},
-				submit = {
-					normal = "<CR>",
-					insert = "<C-s>",
-				},
-			},
-		},
-		build = "make",
-		dependencies = {
-			"stevearc/dressing.nvim",
-			"nvim-lua/plenary.nvim",
-			"MunifTanjim/nui.nvim",
-			"nvim-tree/nvim-web-devicons", -- or echasnovski/mini.icons
-			"zbirenbaum/copilot.lua", -- for providers='copilot'
-			{
-				"HakonHarnes/img-clip.nvim",
-				event = "VeryLazy",
-				opts = {
-					default = {
-						embed_image_as_base64 = false,
-						prompt_for_file_name = false,
-						drag_and_drop = {
-							insert_mode = true,
-						},
-					},
-				},
-				keys = {
-					{
-						"<leader>ip",
-						function()
-							return vim.bo.filetype == "AvanteInput" and require("avante.clipboard").paste_image()
-								or require("img-clip").paste_image()
-						end,
-						desc = "clip: paste image",
-					},
-				},
-			},
-			{
-				-- Make sure to set this up properly if you have lazy=true
-				"MeanderingProgrammer/render-markdown.nvim",
-				opts = {
-					file_types = { "markdown", "Avante" },
-				},
-				ft = { "markdown", "Avante" },
-			},
-		},
-	},
-	-- }}}
 
-	{ --🪩 Simple setup {{{
+	{ 
 		"brenoprata10/nvim-highlight-colors",
 		opts = {
 			render = "background",
 			enable_named_colors = false,
-			enable_tailwind = false,
+			enable_tailwind = true,
 		},
 	},
 
@@ -349,6 +199,7 @@ require("lazy").setup({
 		config = true,
 	},
 
+	"lewis6991/gitsigns.nvim",
 	"tpope/vim-surround",
 	"tpope/vim-repeat",
 	"tpope/vim-fugitive",
@@ -357,7 +208,6 @@ require("lazy").setup({
 	"AndrewRadev/switch.vim",
 	"elkowar/yuck.vim",
 	"gen740/SmoothCursor.nvim",
-	"yetone/avante.nvim",
 
 	{
 		"nvim-telescope/telescope.nvim",
@@ -381,7 +231,7 @@ require("lazy").setup({
 	{
 		"goolord/alpha-nvim",
 		dependencies = { "kyazdani42/nvim-web-devicons" },
-	}, -- }}}
+	}, 
 
 	--	-----------------------------------------------------------------------
 }, { -- opts:
@@ -402,7 +252,7 @@ local user_config = {
 
 	-- plugins ⮯ --------------------------------------------------------------
 	"alpha", -- welcome screen
-	"cmp", -- completion, snippets, and related
+	"gitsigns", -- git signs and hunk actions
 	"lualine", -- status line
 	"nvimtree", -- file explorer
 	"telescope", -- fuzzy finder
