@@ -3,16 +3,16 @@
 <h1 align="center">⚙️ dotfiles ⚙️</h1>
 
 <p align="right">
-    <a href="https://github.com/nosvagor/dotfiles/stargazers">
+    <a href="https://github.com/cogikyo/dotfiles/stargazers">
         <img
-            src="https://img.shields.io/github/stars/nosvagor/dotfiles?color=ecc45d&logo=apachespark&labelColor=24283b&logoColor=ecc45d&style=for-the-badge"
+            src="https://img.shields.io/github/stars/cogikyo/dotfiles?color=ecc45d&logo=apachespark&labelColor=24283b&logoColor=ecc45d&style=for-the-badge"
             title="what is love, baby don't hurt me"
         >
     </a>
     &nbsp;
     <!-- <a href="https://cullyn.eth/"> -->
     <!--     <img -->
-    <!--         src="https://img.shields.io/github/sponsors/nosvagor?color=dc60bf&logo=githubsponsors&labelColor=24283b&logoColor=dc60bf&style=for-the-badge" -->
+    <!--         src="https://img.shields.io/github/sponsors/cogikyo?color=dc60bf&logo=githubsponsors&labelColor=24283b&logoColor=dc60bf&style=for-the-badge" -->
     <!--         title="github sponsors not set up, pref ETH to cullyn.eth for now" -->
     <!--     > -->
     <!-- </a> -->
@@ -22,7 +22,7 @@
     <kbd>
         <img
             alt="dotfiles neonlights banner"
-            src="https://github.com/nosvagor/dotfiles/blob/main/share/dotfiles-banner.gif?raw=true"/>
+            src="https://github.com/cogikyo/dotfiles/blob/master/share/dotfiles-banner.gif?raw=true"/>
     </kbd>
 </p>
 <p align="center">
@@ -38,7 +38,7 @@
 ---
 
 <img
-    src="https://github.com/nosvagor/dotfiles/blob/main/share/social-preview.jpg?raw=true"
+    src="https://github.com/cogikyo/dotfiles/blob/master/share/social-preview.jpg?raw=true"
     title="we do these things not because they are easy, but because they are hard"
     width=43%
     align=right
@@ -75,7 +75,7 @@
 - Display Server: [Wayland](https://wiki.archlinux.org/title/Wayland)
 - Compositor: [Hyprland](https://hyprland.org/)
 - Widgets: [eww](https://github.com/elkowar/eww)
-- Wallpaper: [mpvpaper](https://github.com/GhostNaN/mpvpaper) (vidoes found [here](https://github.com/nosvagor/dotfiles/tree/main/share/videos))
+- Wallpaper: [mpvpaper](https://github.com/GhostNaN/mpvpaper) (vidoes found [here](https://github.com/cogikyo/dotfiles/tree/master/share/videos))
 
 </details>
 
@@ -84,7 +84,7 @@
 
 - Editor: [neovim](https://neovim.io/)
 - Browser: [Firefox](https://www.mozilla.org/en-US/firefox/developer/)
-  - with custom [firefox css](https://github.com/nosvagor/vagari.firefox).
+  - with custom [firefox css](https://github.com/cogikyo/vagari.firefox).
 - Terminal: [kitty](https://sw.kovidgoyal.net/kitty/)
 - Shell: [zsh](https://wiki.archlinux.org/title/zsh)
 
@@ -95,7 +95,7 @@
 <details open>
 <summary>🎨 <b>Design Framework</b></summary>
 
-- Color Scheme: [vagari](https://github.com/nosvagor/vagari#palette) (work in progress)
+- Color Scheme: [vagari](https://github.com/cogikyo/vagari#palette) (work in progress)
 - GTK: [catppuccin macchiato (peach)](https://github.com/catppuccin/gtk) (temporary)
 - Cursors: [Nordzy-white](https://github.com/alvatip/Nordzy-cursors) (temporary)
 - Icons: [Nordzy](https://github.com/alvatip/Nordzy-icon) (temporary)
@@ -143,19 +143,19 @@
 <p align="center">
     <kbd>
         <img
-            src="https://github.com/nosvagor/dotfiles/blob/main/share/example-1.png?raw=true"/>
+            src="https://github.com/cogikyo/dotfiles/blob/master/share/example-1.png?raw=true"/>
     </kbd>
     <br>
     <br>
     <kbd>
         <img
-            src="https://github.com/nosvagor/dotfiles/blob/main/share/example-2.png?raw=true"/>
+            src="https://github.com/cogikyo/dotfiles/blob/master/share/example-2.png?raw=true"/>
     </kbd>
     <br>
     <br>
     <kbd>
         <img
-            src="https://github.com/nosvagor/dotfiles/blob/main/share/example-3.png?raw=true"/>
+            src="https://github.com/cogikyo/dotfiles/blob/master/share/example-3.png?raw=true"/>
     </kbd>
 </p>
 
@@ -174,7 +174,7 @@ https://user-images.githubusercontent.com/59071534/232156421-099bea2d-b3a9-4de2-
   ![image](https://user-images.githubusercontent.com/59071534/232157490-bc96cdec-fa8c-4245-a9fe-76fd57a381af.png)
   ![image](https://user-images.githubusercontent.com/59071534/232157618-c49b549f-6acf-4343-96d0-9f9932196b36.png)
   ![image](https://user-images.githubusercontent.com/59071534/232157647-baabd17f-9cf7-43b1-9577-37eb7daa326d.png)
-  ![image](https://user-images.githubusercontent.com/59071534/232157666-a6fa76f4-43a2-414b-879d-26a200101e18.png) - ZMK firmware (for bluetooth version of keyboard): [nosvagor/zmk-config](https://github.com/nosvagor/zmk-config)
+  ![image](https://user-images.githubusercontent.com/59071534/232157666-a6fa76f4-43a2-414b-879d-26a200101e18.png) - ZMK firmware (for bluetooth version of keyboard): [cogikyo/zmk-config](https://github.com/cogikyo/zmk-config)
 - Monitor: [SAMSUNG UR59 Series 32-Inch 4K UHD (3840x2160)](https://a.co/d/bZtUse0)
 - Mouse: [MX Master 3S](https://www.logitech.com/en-us/products/mice/mx-master-3s.910-006556.html)
 - CPU: [AMD Ryzen 7 3700X (16) @ 3.600GHz](https://www.amd.com/en/products/cpu/amd-ryzen-7-3700x)
@@ -264,7 +264,7 @@ makepkg -si
 
 ```sh
 cd ~
-git clone https://github.com/nosvagor/dotfiles
+git clone https://github.com/cogikyo/dotfiles
 paru -S --needed - < ~/dotfiles/etc/packages.lst
 # might want to review/edit this list ⮭ before installing.
 
@@ -369,7 +369,7 @@ mv fonts ~/.local/share/
       extensions.pocket.enabled = false
 
 - Review basic settings (fonts 'n such)
-- Install [vagari.firefox](https://github.com/nosvagor/vagari.firefox) userChrome css
+- Install [vagari.firefox](https://github.com/cogikyo/vagari.firefox) userChrome css
 
 <br>
 
@@ -389,7 +389,7 @@ bat ~/.ssh/id_ed25519.pub
 
 ```sh
 # example moving to ssh origin:
-git remote set-url origin git@github.com:nosvagor/dotfiles.git
+git remote set-url origin git@github.com:cogikyo/dotfiles.git
 ```
 
 <br>
@@ -400,8 +400,8 @@ git remote set-url origin git@github.com:nosvagor/dotfiles.git
 cd ~
 mkdir -vp media/music media/images media/videos media/gifs media/screenshots media/recordings
 mkdir -vp downloads docs/templates docs/books docs/papers docs/share
-git clone git@github.com:nosvagor/vagari.git
-git clone git@github.com:nosvagor/notes.git
+git clone git@github.com:cogikyo/vagari.git
+git clone git@github.com:cogikyo/notes.git
 ```
 
 <!-- }}} -->
