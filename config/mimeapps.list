@@ -1,14 +1,14 @@
 [Default Applications]
-x-scheme-handler/http=firefoxdeveloperedition.desktop
-x-scheme-handler/https=firefoxdeveloperedition.desktop
-x-scheme-handler/chrome=firefoxdeveloperedition.desktop
+x-scheme-handler/http=firefox-developer-edition.desktop
+x-scheme-handler/https=firefox-developer-edition.desktop
+x-scheme-handler/chrome=firefox-developer-edition.desktop
 x-scheme-handler/ftp=firefoxdeveloperedition.desktop;
-application/x-extension-htm=firefoxdeveloperedition.desktop
-application/x-extension-html=firefoxdeveloperedition.desktop
-application/x-extension-shtml=firefoxdeveloperedition.desktop
-application/xhtml+xml=firefoxdeveloperedition.desktop
-application/x-extension-xhtml=firefoxdeveloperedition.desktop
-application/x-extension-xht=firefoxdeveloperedition.desktop
+application/x-extension-htm=firefox-developer-edition.desktop
+application/x-extension-html=firefox-developer-edition.desktop
+application/x-extension-shtml=firefox-developer-edition.desktop
+application/xhtml+xml=firefox-developer-edition.desktop
+application/x-extension-xhtml=firefox-developer-edition.desktop
+application/x-extension-xht=firefox-developer-edition.desktop
 application/pdf=org.pwmt.zathura.desktop;
 application/json=nvim.desktop
 video/x-matroska=mpv.desktop;
@@ -19,5 +19,17 @@ image/svg+xml=imv.desktop;
 image/svg=imv.desktop;
 image/jpeg=imv.desktop;
 text/plain=nvim.desktop
-text/html=nvim.desktop;
+text/html=firefox-developer-edition.desktop
 text/xml=nvim.desktop;
+
+[Added Associations]
+x-scheme-handler/http=firefox-developer-edition.desktop;
+x-scheme-handler/https=firefox-developer-edition.desktop;
+x-scheme-handler/chrome=firefox-developer-edition.desktop;
+text/html=firefox-developer-edition.desktop;
+application/x-extension-htm=firefox-developer-edition.desktop;
+application/x-extension-html=firefox-developer-edition.desktop;
+application/x-extension-shtml=firefox-developer-edition.desktop;
+application/xhtml+xml=firefox-developer-edition.desktop;
+application/x-extension-xhtml=firefox-developer-edition.desktop;
+application/x-extension-xht=firefox-developer-edition.desktop;
