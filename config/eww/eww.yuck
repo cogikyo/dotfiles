@@ -35,7 +35,7 @@
 
 (defwindow today
   :monitor 0 :stacking "overlay" :exclusive false :focusable false
-  :geometry (geometry :width "42%" :anchor "top left" :x "1080px")
+  :geometry (geometry :width "42%" :anchor "top left" :x "1100px")
   (centerbox
     (weather) (time) (date)
   )
@@ -234,6 +234,7 @@
     :orientation "v"
     :valign "center"
     :spacing -3
+    :style "margin-left: 3px; margin-right: -4px;"
     :space-evenly false
     (clock :child "hour" :text "${clockface-hour} " :bool hour-active)
     (clock :child "minute" :text "${clockface-minute} " :bool minute-active)
