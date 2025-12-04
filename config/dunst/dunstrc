@@ -1,9 +1,9 @@
 [global]
     follow = "keyboard"
     enable_posix_regex = true
-    origin = "bottom-right"
+    origin = "top-right"
     width = 600
-    offset = "90x118"
+    offset = "(712, 16)"
     notification_limit = 1
     progress_bar = true
     progress_bar_height = 10
@@ -11,9 +11,9 @@
     progress_bar_min_width = 600
     progress_bar_max_width = 600
     indicate_hidden = false
-    padding = 16
-    horizontal_padding = 16
-    text_icon_padding = 16
+    padding = 3
+    horizontal_padding = 8
+    text_icon_padding = 8
     frame_width = 2
     gap_size = 0
     separator_color = "frame"
@@ -22,7 +22,7 @@
     font = "Albert Sans 16"
     line_height = 2
     markup = "full"
-    format = "<b>⽱ %s</b> <span size='50%' rise='6pt'> ⾛ <span rise='5pt'><tt>%a</tt></span></span>\n%b"
+    format = "<b>⽱ %s</b>: %b \t<span size='50%' rise='5pt'> ⾛ <span rise='4pt'><tt>%a</tt></span></span>"
     fullscreen = "pushback"
     alignment = "left"
     vertical_alignment = "center"
@@ -47,7 +47,7 @@
     script = "/usr/bin/alert"
     title = "Dunst"
     class = "Dunst"
-    corner_radius = 16
+    corner_radius = 8
     ignore_dbusclose = false
     force_xwayland = false
     force_xinerama = false
@@ -65,7 +65,7 @@
     background = "#49353130"
     foreground = "#f2a170"
     frame_color = "#ea834b"
-    timeout = 8
+    timeout = 4
 
 [urgency_critical]
     background = "#82414120"
