@@ -659,15 +659,15 @@
 
 
 
-(defvar user-art-path `/home/cullyn/.config/eww/art/nosvagor.png`)
+(defvar user-art-path `/home/cullyn/.config/eww/art/cogikyo.png`)
 (defvar user-hover false)
 (defwidget user []
  (eventbox
     :onhover "eww update user-hover=true"
     :onhoverlost "eww update user-hover=false"
-    :onclick "${browser} https://twitter.com/nosvagor & disown"
+    :onclick "${browser} https://twitter.com/cogikyo & disown"
     :onmiddleclick "${browser} https://www.youtube.com/feed/subscriptions & disown"
-    :onrightclick "${browser} https://github.com/nosvagor & disown"
+    :onrightclick "${browser} https://github.com/cogikyo & disown"
     (box :space-evenly false :spacing 0
       :class "userbox"
       :style "background-image: url('${user-art-path}');"

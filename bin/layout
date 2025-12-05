@@ -78,12 +78,12 @@ acr() {
     dispatch
     browser "grok.com"
     browser "localhost:3002" "tab"
-    browser "https://github.com/nosvagor/acr" "tab"
+    browser "https://github.com/cogikyo/acr" "tab"
     browser "https://wangare.com/project/csksoc4w0s8c4k8ok8g0cos8/production" "tab"
     browser "https://databasetagger.acrecruitergroup.com" "tab"
 }
 
-nosvagor() {
+cogikyo() {
     cursor & sleep 0.5
     terminal "nosvagor.com"
     dispatch
@@ -125,14 +125,14 @@ case "$n_flag" in
 3)
     case "$a_flag" in
         "a") acr ;;
-        "n") nosvagor ;;
+        "n") cogikyo ;;
         "l") leadPier ;;
         "h") hgmx ;p
     ;; esac
     ;;
 4)
     terminal "dotfiles"
-    browser "https://github.com/nosvagor/dotfiles"
+    browser "https://github.com/cogikyo/dotfiles"
     resize
     ;;
 *) exit 1 ;;
