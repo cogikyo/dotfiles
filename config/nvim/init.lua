@@ -4,10 +4,7 @@ vim.g.maplocalleader = "\\"
 _G.preq = function(module)
 	local ok, mod = pcall(require, module)
 	if not ok then
-		vim.notify(
-			string.format("could not load module %s: %s", module, mod),
-			vim.log.levels.ERROR
-		)
+		vim.notify(string.format("could not load module %s: %s", module, mod), vim.log.levels.ERROR)
 		return nil
 	end
 	return mod
@@ -45,7 +42,6 @@ require("lazy").setup({
 				vim.cmd.colorscheme("vagari")
 			end,
 		},
-
 
 		{ import = "plugins.dev" },
 		-- kristijanhusak/vim-dadbod-ui: database explorer and query UI
@@ -86,7 +82,6 @@ require("lazy").setup({
 		-- nvim-tree/nvim-tree.lua: file explorer
 		"ggandor/lightspeed.nvim", -- fast motion/word jumps
 		"mbbill/undotree", -- visual undo tree panel
-
 	},
 	ui = { border = "rounded" },
 })
@@ -94,4 +89,3 @@ require("lazy").setup({
 require("config.settings")
 require("config.keymaps")
 require("config.autocmds")
-
