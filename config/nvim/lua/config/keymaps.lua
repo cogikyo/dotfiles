@@ -138,8 +138,8 @@ map("i", ";", ";<C-g>u")
 map("i", ":", ":<C-g>u")
 
 --- 🪟 Window movement ---
-map("n", "<leader>bi", ":bp<CR>zvzt", desc("Previous buffer"))
-map("n", "<leader>bo", ":bn<CR>zvzt", desc("Next buffer"))
+map("n", "<leader><C-o>", ":bp<CR>zvzt", desc("Previous buffer"))
+map("n", "<leader><C-i>", ":bn<CR>zvzt", desc("Next buffer"))
 map("n", "<leader>b<C-w>", ":bd!<CR>zvzt", desc("Delete buffer"))
 map("n", "<leader>pt", ":InspectTree<CR>", desc("Tree sitter inspect"))
 map("n", "<leader>pc", ":Inspect<CR>", desc("TS inspect"))
@@ -189,7 +189,7 @@ map("n", "<leader>ut", ":UndotreeToggle<CR>", desc("Undo tree"))
 map("n", "<leader>up", ":Lazy update<CR>", desc("Update plugins"))
 map("n", "<leader>ct", ":HighlightColors Toggle<CR>", desc("Toggle colors"))
 map("n", "<leader>st", ":set spell!<CR>", desc("Toggle spell"))
-map("n", "<leader>/", ":let @/ = ''<CR>", desc("Clear search"))
+map("n", "<leader>sc", ":let @/ = ''<CR>", desc("Clear search"))
 map("n", "<leader>wt", ":set wrap!<CR> :echo 'wrap toggled'<CR>", desc("Toggle wrap"))
 map("n", "<leader>mt", ":MarkdownPreviewToggle<CR>,", desc("Markdown preview"))
 map("n", "<leader>et", ":NvimTreeToggle<CR> :NvimTreeRefresh<CR>", desc("Toggle file tree"))
@@ -351,3 +351,4 @@ M.ts_actions = function(event)
 end
 
 return M
+
