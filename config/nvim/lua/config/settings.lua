@@ -29,7 +29,7 @@ local options = {
 	fillchars = "vert: ,horiz: ,fold:⋅,eob: ,msgsep:‾",
 
 	mouse = "a", -- enable mouse support
-	splitbelow = true, -- split below by default
+	splitbelow = false, -- do split below by default
 	splitright = true, -- split right by default
 	completeopt = { "menu", "menuone", "noselect" }, -- insert complete options
 	iskeyword = "@,48-57,_,-,192-255,#", -- define what a ends a "word"
