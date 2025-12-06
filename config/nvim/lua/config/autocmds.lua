@@ -11,9 +11,13 @@ local function au(event, opts)
 end
 
 -- ftplugins override formatoptions, vim.schedule defers until after they run
--- c: auto-wrap comments | q: format with gq | n: numbered lists
--- j: remove comment leader on join | r: insert comment leader on Enter
--- l: don't break long lines | 1: don't break after one-letter word
+-- c: auto-wrap comments
+-- q: format with gq
+-- n: numbered lists
+-- j: remove comment leader on join
+-- r: insert comment leader on Enter
+-- l: don't break long lines
+-- 1: don't break after one-letter word
 au("FileType", {
 	group = "FormatOptions",
 	callback = function()
@@ -143,11 +147,11 @@ au("BufReadPost", {
 au("BufWritePost", {
 	group = "EwwRestart",
 	pattern = { "eww.yuck", "eww.scss" },
-	command = ":! eww-open & disown && exit",
+	command = ":silent !eww-open",
 })
 
 au("BufWritePost", {
 	group = "DunstRestart",
 	pattern = "dunstrc",
-	command = ":! pkill dunst; dunst & notify-send -u low 'dunst restarted'",
+	command = ":silent !pkill dunst; dunst & dunstify -u low 'dunst restarted' 'config change detected'",
 })

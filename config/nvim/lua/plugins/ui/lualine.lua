@@ -62,7 +62,7 @@ return {
 			colored = true,
 			symbols = {
 				added = " ",
-				modified = "🞊 ",
+				modified = " ",
 				removed = " ",
 			},
 			cond = hide_in_width,
@@ -83,10 +83,10 @@ return {
 			shorting_target = 80,
 			icon = nil,
 			symbols = {
-				modified = "🞊",
-				readonly = "󰍁",
+				modified = "㋲",
+				readonly = "󰍁 ",
 				unnamed = "…",
-				newfile = "",
+				newfile = " ",
 			},
 			color = function()
 				local mode_color = {
