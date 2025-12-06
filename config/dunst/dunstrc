@@ -3,7 +3,7 @@
     enable_posix_regex = true
     origin = "top-right"
     width = 600
-    offset = "(712, 16)"
+    offset = "(712, 18)"
     notification_limit = 1
     progress_bar = true
     progress_bar_height = 10
@@ -11,7 +11,7 @@
     progress_bar_min_width = 600
     progress_bar_max_width = 600
     indicate_hidden = false
-    padding = 3
+    padding = 4
     horizontal_padding = 8
     text_icon_padding = 8
     frame_width = 2
@@ -22,7 +22,7 @@
     font = "Albert Sans 16"
     line_height = 2
     markup = "full"
-    format = "<b>⽱ %s</b>: %b \t<span size='50%' rise='5pt'> ⾛ <span rise='4pt'><tt>%a</tt></span></span>"
+    format = "<span size='50%' rise='4pt'> ⾛ <span rise='3pt'><tt>%a</tt></span></span> <b>%s</b>: %b"
     fullscreen = "pushback"
     alignment = "left"
     vertical_alignment = "center"
@@ -65,11 +65,11 @@
     background = "#49353130"
     foreground = "#f2a170"
     frame_color = "#ea834b"
-    timeout = 4
+    timeout = 6
 
 [urgency_critical]
     background = "#82414120"
     foreground = "#f7768e"
     frame_color = "#f34658"
     script = "/usr/bin/alert critical"
-    timeout = 0
+    timeout = 8
