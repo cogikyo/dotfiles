@@ -106,6 +106,8 @@ local servers = {
 	pyright = {},
 	taplo = {},
 	lua_ls = {
+		filetypes = { "lua" },
+		root_markers = { ".luarc.json", ".luarc.jsonc", ".stylua.toml", "stylua.toml", ".git" },
 		settings = {
 			Lua = {
 				workspace = { checkThirdParty = false },
@@ -118,7 +120,36 @@ local servers = {
 	},
 }
 
+local mason_servers = {
+	"bash-language-server",
+	"gopls",
+	"typescript-language-server",
+	"eslint-lsp",
+	"tailwindcss-language-server",
+	"css-lsp",
+	"html-lsp",
+	"json-lsp",
+	"dockerfile-language-server",
+	"docker-compose-language-service",
+	"emmet-ls",
+	"templ",
+	"marksman",
+	"pyright",
+	"taplo",
+	"lua-language-server",
+}
+
 return {
+	{
+		"williamboman/mason.nvim",
+		cmd = "Mason",
+		build = ":MasonUpdate",
+		opts = {},
+	},
+	{
+		"williamboman/mason-lspconfig.nvim",
+		opts = { ensure_installed = mason_servers },
+	},
 	{
 		"saghen/blink.cmp",
 		version = "1.*",
@@ -157,7 +188,11 @@ return {
 	{
 		"neovim/nvim-lspconfig",
 		event = { "BufReadPre", "BufNewFile" },
-		dependencies = { "saghen/blink.cmp" },
+		dependencies = {
+			"saghen/blink.cmp",
+			"williamboman/mason.nvim",
+			"williamboman/mason-lspconfig.nvim",
+		},
 		config = function()
 			local capabilities = require("blink.cmp").get_lsp_capabilities()
 
