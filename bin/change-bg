@@ -38,8 +38,7 @@ case "$background_choice" in
         ps -ef | rg "blackhole.webm" | rg -v rg | awk '{print $2}' | xargs kill
     ;;
     "lock")
-        blackhole & disown
-        ps -ef | rg "record.mp4" | rg -v rg | awk '{print $2}' | xargs kill
+        ps -ef | rg "mpvpaper" | rg -v rg | awk '{print $2}' | xargs kill
     ;;
     "kill")
         ps -ef | rg "record.mp4" | rg -v rg | awk '{print $2}' | xargs kill
