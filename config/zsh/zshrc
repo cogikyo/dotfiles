@@ -1,3 +1,5 @@
+[ -f "$HOME/.config/shell/env.sh" ] && source "$HOME/.config/shell/env.sh"
+
 eval "$(starship init zsh)"
 eval "$(zoxide init zsh)"
 
@@ -5,12 +7,6 @@ function command_not_found_handler {
     return 127
 }
 
-export TERM=xterm-256color
-export GOPRIVATE=git.linecode.net/yos/*
-
-if [ -f "$HOME/.anthropic_api_key" ]; then
-    export ANTHROPIC_API_KEY=$(cat "$HOME/.anthropic_api_key")
-fi
 
 # history
 HISTFILE=~/.histfile
