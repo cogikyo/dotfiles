@@ -1,9 +1,9 @@
 [global]
     follow = "keyboard"
     enable_posix_regex = true
-    origin = "top-right"
-    width = 600
-    offset = "(712, 18)"
+    origin = "top-left"
+    width = "(300, 910)"
+    offset = "(580, 18)"
     notification_limit = 1
     progress_bar = true
     progress_bar_height = 10
@@ -28,7 +28,7 @@
     vertical_alignment = "center"
     show_age_threshold = 60
     word_wrap = false
-    ellipsize = "middle"
+    ellipsize = "end"
     ignore_newline = "no"
     stack_duplicates = true
     hide_duplicate_count = false

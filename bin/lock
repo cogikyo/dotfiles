@@ -1,28 +1,37 @@
 #!/usr/bin/env bash
 
+GRACE=6
+
 ws=$(tail -n 1 /tmp/eww/workspace)
 hyprctl dispatch workspace 6 & disown
 
 killall eww -9 & disown
 killall glava & disown
 
+dunstctl close-all
+dunstctl set-paused true
+
 playerctl pause
-hyprlock
-# playerctl play
+start=$SECONDS
+hyprlock --grace $GRACE
+elapsed=$((SECONDS - start))
 
-hyprctl dispatch workspace "$ws"
-
+hyprctl dispatch workspace "$ws" & disown
 glava -e "bars_rc.glsl" & disown
 glava -e "bars_r_rc.glsl" & disown
 glava -e "radial_rc.glsl" & disown
-hyprctl dispatch workspace "$ws"
 
-ps -ef | rg weather_info | rg -v rg | awk '{print $2}' | xargs kill
+ps -ef | rg weather_info | rg -v rg | awk '{print $2}' | xargs kill 
 eval "$HOME/dotfiles/config/eww/bin/weather_info" & disown
 eval "$HOME/dotfiles/config/eww/bin/date_info" & disown
 
 eww-open & disown
-sleep 1.5
-dunstify -a "attention" -u low "$USER@$HOSTNAME" "こんにちは"
+if ((elapsed > GRACE)); then
+    dunstify -a "attention" -u low "$USER@$HOSTNAME" "こんにちは"
+else
+   playerctl play
+fi
+sleep 1
+dunstctl set-paused false
 
 exit 0

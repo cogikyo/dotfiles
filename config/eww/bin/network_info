@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+
+get_ramp() {
+    local kb=$1
+    if   (( kb < 5 ));     then echo 1
+    elif (( kb < 20 ));    then echo 2
+    elif (( kb < 50 ));    then echo 3
+    elif (( kb < 300 ));   then echo 4
+    elif (( kb < 500 ));   then echo 5
+    elif (( kb < 1000 ));  then echo 6
+    elif (( kb < 2500 ));  then echo 7
+    elif (( kb < 5000 ));  then echo 8
+    elif (( kb < 10000 )); then echo 9
+    elif (( kb < 25000 )); then echo 10
+    elif (( kb < 50000 )); then echo 11
+    else echo 12
+    fi
+}
+
+fmt_speed() {
+    local kb=$1
+    if (( kb < 1000 )); then
+        printf "%03d<sub>K</sub>" "$kb"
+    elif (( kb < 10240 )); then
+        awk "BEGIN {printf \"%04.1f<sub>M</sub>\", $kb/1024}"
+    else
+        awk "BEGIN {printf \"%03.0f<sub>M</sub>\", $kb/1024}"
+    fi
+}
+
+prev_rx=0
+prev_tx=0
+
+while true; do
+    active=$(nmcli -t -f TYPE,NAME,DEVICE connection show --active 2>/dev/null)
+    info=$(echo "$active" | grep -E "ethernet|wireless" | head -1)
+    vpn=$(echo "$active" | grep -q '^vpn' && echo "true" || echo "false")
+
+    if [[ -n "$info" ]]; then
+        type=$(echo "$info" | cut -d: -f1)
+        conn=$(echo "$info" | cut -d: -f2)
+        iface=$(echo "$info" | cut -d: -f3)
+
+        if [[ "$type" == "802-11-wireless" ]]; then
+            icon="󰖩"
+            name="$conn"
+        else
+            icon=""
+            name="$iface"
+        fi
+
+        rx=$(cat "/sys/class/net/$iface/statistics/rx_bytes" 2>/dev/null || echo 0)
+        tx=$(cat "/sys/class/net/$iface/statistics/tx_bytes" 2>/dev/null || echo 0)
+
+        if (( prev_rx > 0 )); then
+            down_kb=$(( (rx - prev_rx) / 1024 ))
+            up_kb=$(( (tx - prev_tx) / 1024 ))
+        else
+            down_kb=0
+            up_kb=0
+        fi
+
+        prev_rx=$rx
+        prev_tx=$tx
+    else
+        type="none"
+        icon="󰖪"
+        name="disconnected"
+        iface="lo"
+        down_kb=0
+        up_kb=0
+    fi
+
+    cat <<EOF
+{"type":"$type","icon":"$icon","name":"$name","iface":"$iface","vpn":$vpn,"down":$down_kb,"up":$up_kb,"down_ramp":$(get_ramp $down_kb),"up_ramp":$(get_ramp $up_kb),"down_fmt":"$(fmt_speed $down_kb)","up_fmt":"$(fmt_speed $up_kb)"}
+EOF
+
+    sleep 1
+done

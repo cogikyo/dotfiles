@@ -362,14 +362,58 @@
 
 (defwindow computer
   :monitor 0 :stacking "overlay" :exclusive false :focusable false
-  :geometry (geometry :anchor "top right" :x "100px")
+  :geometry (geometry :anchor "top right" :x "80px")
   (box
     :halign "end" :space-evenly false :spacing 0
     :class "tr-m"
-    (cpu) (memory)
+    (network) (cpu) (memory)
   )
 )
 ; 💻 computer: {{{
+; 🌐 network: {{{
+
+(deflisten net-info
+  :initial `{"type":"none","icon":"󰖪","name":"disconnected","iface":"lo","vpn":false,"down":0,"up":0,"down_ramp":1,"up_ramp":1,"down_fmt":"0<sub>K</sub>","up_fmt":"0<sub>K</sub>"}`
+  `bin/network_info`
+)
+(defvar network-hover false)
+(defvar vpn-name "TrendCapitalVPN")
+
+(defwidget network []
+  (eventbox
+    :onhover "eww update network-hover=true"
+    :onhoverlost "eww update network-hover=false"
+    :onclick "kitty --title='terminalfloat' -e nmtui & disown"
+    :onmiddleclick "nmcli connection ${net-info.vpn ? 'down' : 'up'} '${vpn-name}'"
+    :cursor "pointer"
+    (box
+      :class "computerbox ${network-hover ? "computerbox-hover" : "" }"
+      :space-evenly false :spacing "${network-hover ? "6" : "2" }"
+      (label
+        :class "tr-c ramp-7"
+        :visible {net-info.vpn}
+        :text "󰖂  "
+      )
+      (label
+        :class "tr-c ramp-${net-info.type == "802-11-wireless" ? "5" : net-info.type == "802-3-ethernet" ? "9" : "1"}"
+        :text "${net-info.icon}${network-hover ? " ": "  "}"
+      )
+      (slide-n-fade :bool network-hover :direction "right"
+        (label :class "tr-c ramp-${net-info.type == "802-11-wireless" ? "5" : net-info.type == "802-3-ethernet" ? "9" : "1"}" :markup "${net-info.name} ")
+      )
+      (label :class "tr-c ramp-${net-info.down_ramp}" :text "󰁆${network-hover ? "": " "}")
+      (slide-n-fade :bool network-hover :direction "right"
+        (label :class "tr-c ramp-${net-info.down_ramp}" :markup "<small>${net-info.down_fmt}</small>")
+      )
+      (label :class "tr-c ramp-${net-info.up_ramp}" :text "󰁞")
+      (slide-n-fade :bool network-hover :direction "right"
+        (label :class "tr-c ramp-${net-info.up_ramp}" :markup "<small>${net-info.up_fmt}</small>")
+      )
+    )
+  )
+)
+
+; }}}
 
 ; Update `define_builtin_vars! { Duration::new(0, 500000000)` in inbuilt.rs
 ; Default is (2, 0), but I like updates of 0.5 seconds for cpu polling.
@@ -1101,96 +1145,6 @@
   )
 )
 
-; }}}
-
-(defwindow network
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
-  :geometry (geometry :anchor "top right" :y "80px" )
-  (network)
-)
-; 📶 network: {{{
-
-(defvar network-hover false)
-
-(defwidget network []
-  (eventbox
-    :onhover "eww update network-hover=true"
-    :onhoverlost "eww update network-hover=false"
-    (box
-      :space-evenly false :spacing 0
-      :class "tr-a networkbox ${network-hover ? "networkbox-hover" : "" }"
-      :style "
-          background-image: url('art/signal/signal${ network-hover ? "-hover" : "" }.svg');
-        "
-      (box :space-evenly false :spacing 0 :valign "center" :halign "center"
-        (net-down
-          :icon " "
-          :value {round(EWW_NET.en2ps0.NET_DOWN / 100000, 2)}
-          :bool network-hover
-        )
-        (net-up
-          :icon " "
-          :value {round(EWW_NET.en2ps0.NET_UP / 100000, 2)}
-          :bool network-hover
-        )
-        (ping)
-      )
-    )
-  )
-)
-
-(defwidget net-down [icon value bool]
-  (box :space-evenly false :spacing 0 :tooltip "   ${value} Mbps "
-    :class "net net-down${bool ? "-hover" : "" } ramp-${
-      value < 1   ? "2"  :
-      value < 10  ? "3"  :
-      value < 20  ? "4"  :
-      value < 30  ? "6"  :
-      value < 50  ? "7"  :
-      value < 80  ? "9"  :
-      value < 130 ? "11" : "12"
-    }"
-    (label :text icon)
-  )
-)
-
-(defwidget net-up [icon value bool]
-  (box :space-evenly false :spacing 0 :tooltip "   ${value} Mbps "
-    :class "net net-up${bool ? "-hover" : "" } ramp-${
-      value < 0.01 ? "2"  :
-      value < 0.1  ? "3"  :
-      value < 1    ? "4"  :
-      value < 2    ? "6"  :
-      value < 4    ? "7"  :
-      value < 8    ? "9"  :
-      value < 16   ? "11" : "12"
-    }"
-    (label :text icon)
-  )
-)
-
-(defpoll ping
-  :initial "0"
-  :interval "3s"
-  `bin/ping`
-)
-(defwidget ping []
-  (box
-    :class "net net-ping${network-hover ? "-hover" : "" }"
-    :space-evenly false :spacing 0 :valign "center"
-    :tooltip "   ${ping != 0 ? "${ping} ms" : "determining..."} "
-    (label
-      :class "tr-a ramp-${
-        ping < 10  ? "3" :
-        ping < 30  ? "5" :
-        ping < 70  ? "8" :
-        ping < 120 ? "9" :
-        ping < 200 ? "11" : "12"
-      }"
-      :text " ${ping}"
-    )
-  )
-)
 ; }}}
 
 
