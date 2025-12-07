@@ -103,6 +103,10 @@ local function setup()
 			},
 		},
 	})
+
+	require("treesitter-context").setup()
+	vim.api.nvim_set_hl(0, "TreesitterContext", { link = "Folded" })
+	vim.api.nvim_set_hl(0, "TreesitterContextLineNumber", { link = "Folded" })
 end
 
 return {
