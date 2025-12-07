@@ -85,7 +85,7 @@ return {
 			symbols = {
 				modified = "㋲",
 				readonly = "󰍁 ",
-				unnamed = "…",
+				unnamed = "",
 				newfile = " ",
 			},
 			color = function()
@@ -174,9 +174,6 @@ return {
 				luailne_z = {},
 			},
 			filetypes = {
-				"Avante",
-				"AvanteInput",
-				"tsplayground",
 				"undotree",
 				"diff",
 			},
