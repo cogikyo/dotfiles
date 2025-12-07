@@ -577,21 +577,21 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   border-width: 0 1px 3px;
   border-style: solid;
   border-color: $blu-1;
-  box-shadow: 0 2px 7px 1px rgba($blu-0, 0.42);
-  margin: -7px 16px 36px;
+  box-shadow: 0 2px 3px 1px rgba($blu-0, 0.42);
+  margin: -7px 10px 44px;
   transition: all 0.5s $ease-out-snap;
 
   &-hover {
     transition: all 0.5s $ease-out-snap;
     border-color: $orn-3;
-    box-shadow: 0 2px 7px 1px rgba($rby-1, 0.42);
+    box-shadow: 0 2px 3px 1px rgba($rby-1, 0.42);
   }
 
   &-text {
     font-family: Archivo, monospace;
     color: $blu-2;
     font-weight: 500;
-    font-size: 2.8em;
+    font-size: 2.5em;
     margin-top: 4px;
     transition: all 0.5s $ease-out-snap;
   }
@@ -750,11 +750,11 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   background: $bg;
   border-color: $blu-1;
   border-style: solid;
-  border-width: 2px;
+  border-width: 0 0 2px 2px;
   border-radius: 100px;
   box-shadow: 0 0 5px 1px rgba($blu-1, 0.32);
-  padding: 15px 10px 5px;
-  margin: 20px;
+  padding: 20px 12px 10px;
+  margin: -10px -2px 20px 20px;
 
   &-hover {
     border-color: $orn-3;
@@ -847,48 +847,6 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 }
 
 // }}}
-// 📶 network: {{{
-
-.networkbox {
-  @include svgbox("down");
-}
-
-.net {
-  transition: margin 0.25s $ease-out-snap;
-
-  &-up {
-    font-size: 11px;
-    margin-bottom: 18px;
-    margin-left: 1px;
-
-    &-hover {
-      margin-bottom: 36px;
-      margin-left: 36px;
-    }
-  }
-
-  &-down {
-    margin-bottom: 0px;
-    margin-left: 8px;
-
-    &-hover {
-      margin-top: 24px;
-      margin-left: 16px;
-    }
-  }
-
-  &-ping {
-    font-size: 11px;
-    margin-top: 30px;
-    margin-left: -3px;
-
-    &-hover {
-      font-size: 11px;
-      margin-top: 3px;
-      margin-left: 2px;
-    }
-  }
-}
 
 // }}}
 // 📦 pacman: {{{
