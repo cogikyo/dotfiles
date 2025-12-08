@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-
-file="$1"
-
-touch "$file"
-chmod +x "$file"
-echo "#!/usr/bin/env $2" >> "$file"
