@@ -13,7 +13,7 @@ dunstctl set-paused true
 
 playerctl pause
 start=$SECONDS
-hyprlock --grace $GRACE
+hyprlock --grace "$GRACE"
 elapsed=$((SECONDS - start))
 
 hyprctl dispatch workspace "$ws" & disown
@@ -24,6 +24,8 @@ glava -e "radial_rc.glsl" & disown
 ps -ef | rg weather_info | rg -v rg | awk '{print $2}' | xargs kill 
 eval "$HOME/dotfiles/config/eww/bin/weather_info" & disown
 eval "$HOME/dotfiles/config/eww/bin/date_info" & disown
+
+bluetoothctl connect 14:3F:A6:10:A1:B5 & disown
 
 eww-open & disown
 if ((elapsed > GRACE)); then
