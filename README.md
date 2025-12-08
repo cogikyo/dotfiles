@@ -1,4 +1,4 @@
-<!-- ========================================================================== -->
+<!-- ======================================================================--->
 <!-- ☄️  heading {{{ -->
 <h1 align="center">⚙️ dotfiles ⚙️</h1>
 
@@ -9,13 +9,6 @@
             title="what is love, baby don't hurt me"
         >
     </a>
-    &nbsp;
-    <!-- <a href="https://cullyn.eth/"> -->
-    <!--     <img -->
-    <!--         src="https://img.shields.io/github/sponsors/cogikyo?color=dc60bf&logo=githubsponsors&labelColor=24283b&logoColor=dc60bf&style=for-the-badge" -->
-    <!--         title="github sponsors not set up, pref ETH to cullyn.eth for now" -->
-    <!--     > -->
-    <!-- </a> -->
 </p>
 
 <p align="center">
@@ -27,7 +20,7 @@
 </p>
 <p align="center">
 <!-- }}} -->
-<!-- ========================================================================== -->
+<!-- ======================================================================--->
 
 <!-- 👾 Overview {{{ -->
 
@@ -106,8 +99,7 @@
 <summary>💬 <b>Fonts</b></summary>
 
 - Sans Serif: [Albert Sans](https://fonts.google.com/specimen/Albert+Sans?query=Albert+Sans)
-- Monospace: [Fira Code](https://github.com/tonsky/FiraCode)
-  - Italic: [JetBrains Mono](https://www.jetbrains.com/lp/mono/)
+- Monospace: [Iosevka Vagari](https://typeof.net/Iosevka/) (custom build, see `etc/iosevka/`)
   - Symbols: [Nerd Font Symbols](https://github.com/ryanoasis/nerd-fonts)
 - Emoji: [Noto Color Emoji](https://fonts.google.com/noto/specimen/Noto+Color+Emoji)
 - Other: [Lora (serif)](https://fonts.google.com/specimen/Lora),
@@ -135,33 +127,6 @@
 </details>
 
 <!-- }}} -->
-
-<br>
-
-## 🪟 Gallery
-
-<p align="center">
-    <kbd>
-        <img
-            src="https://github.com/cogikyo/dotfiles/blob/master/share/example-1.png?raw=true"/>
-    </kbd>
-    <br>
-    <br>
-    <kbd>
-        <img
-            src="https://github.com/cogikyo/dotfiles/blob/master/share/example-2.png?raw=true"/>
-    </kbd>
-    <br>
-    <br>
-    <kbd>
-        <img
-            src="https://github.com/cogikyo/dotfiles/blob/master/share/example-3.png?raw=true"/>
-    </kbd>
-</p>
-
-https://user-images.githubusercontent.com/59071534/232156421-099bea2d-b3a9-4de2-9f1f-c29985230c66.mp4
-
-<br>
 
 <!-- 🛠️ Installation {{{ -->
 
@@ -301,11 +266,6 @@ chsh -s /usr/bin/zsh
 cd ~/dotfiles/etc/sddm.conf.d
 mkdir /etc/sddm.conf.d
 sudo cp autologin.conf /etc/sddm.conf.d/
-# note: updates to hyprland sometimes overwrite the desktop entry ⮯
-sudo cp hyprland.desktop /usr/share/wayland-sessions/hyprland.desktop
-# simply copy over the desktop entry as as needed
-# check using: bat /usr/share/wayland-sessions/hyprland.desktop
-# should be: 4 | Exec=hyprwrap (not Hyprland)
 systemctl enable sddm
 ```
 
@@ -332,25 +292,95 @@ sudo cp loader.conf /boot/loader/loader.conf
 sudo cp gifview.desktop /usr/share/applications/gifview.desktop
 sudo cp security/faillock.conf /etc/security/faillock.conf
 sudo cp caddy.service /etc/systemd/system/
-sudo cp caddy.service /etc/systemd/system/
 sudo cp logid.cfg /etc/logid.cfg
 sudo systemctl enable bluetooth
 sudo systemctl enable caddy.service
+
+# DNS: systemd-resolved with Cloudflare (DNS-over-TLS)
+sudo ln -sf ~/dotfiles/etc/systemd/resolved.conf /etc/systemd/
+sudo systemctl enable --now systemd-resolved
+sudo mkdir -p /etc/NetworkManager/conf.d
+echo -e "[main]\ndns=systemd-resolved" | sudo tee /etc/NetworkManager/conf.d/dns.conf
+sudo ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+sudo systemctl restart NetworkManager
 ```
 
 <br>
 
-**8. Ensure some preferred fonts are installed:**
+**8. Configure swap and memory management:**
 
 ```sh
+# Create btrfs swap subvolume with 16GB swapfile
+sudo btrfs subvolume create /swap
+sudo truncate -s 0 /swap/swapfile
+sudo chattr +C /swap/swapfile        # disable COW (required for btrfs swap)
+sudo fallocate -l 16G /swap/swapfile
+sudo chmod 600 /swap/swapfile
+sudo mkswap /swap/swapfile
+sudo swapon /swap/swapfile
+
+# Add to /etc/fstab (low priority so zram is used first)
+echo '/swap/swapfile none swap defaults,pri=10 0 0' | sudo tee -a /etc/fstab
+
+# Earlyoom: prevent the brutal kernel OOM killer from randomly killing processes when memory is exhausted.
+sudo systemctl enable --now earlyoom
+```
+
+<br>
+
+**9. Configure hibernation (suspend-then-hibernate):**
+
+```sh
+# Get swapfile resume offset (needed for btrfs swapfile hibernation)
+RESUME_OFFSET=$(sudo btrfs inspect-internal map-swapfile -r /swap/swapfile)
+RESUME_UUID=$(findmnt -no UUID -T /swap/swapfile)
+
+echo "Add to bootloader options: resume=UUID=$RESUME_UUID resume_offset=$RESUME_OFFSET"
+
+# Edit bootloader entry to add resume parameters
+sudo nvim /boot/loader/entries/*_linux.conf
+# Add to 'options' line: resume=UUID=<UUID> resume_offset=<OFFSET>
+
+# Add resume hook to mkinitcpio (after filesystems, before fsck)
+sudo nvim /etc/mkinitcpio.conf
+# HOOKS=(... filesystems resume fsck)
+sudo mkinitcpio -P
+
+# Configure suspend-then-hibernate delay
+sudo mkdir -p /etc/systemd/sleep.conf.d
+sudo cp ~/dotfiles/etc/systemd/sleep.conf.d/hibernate.conf /etc/systemd/sleep.conf.d/
+```
+
+<br>
+
+**10. Install fonts:**
+
+```sh
+# Extract bundled fonts (Albert Sans, Lora, Archivo, etc.)
 mkdir -vp ~/.local/share
 tar -xzvf ~/dotfiles/etc/fonts.tar.gz fonts
 mv fonts ~/.local/share/
+
+# Build custom Iosevka Vagari (monospace)
+cd /tmp
+git clone --depth 1 https://github.com/be5invis/Iosevka.git
+cd Iosevka
+cp ~/dotfiles/etc/iosevka/private-build-plans.toml .
+npm install
+npm run build -- ttf-unhinted::Vagari --jCmd=12
+cp -r dist/Vagari/TTF/* ~/.local/share/fonts/
+fc-cache -fv
 ```
+
+> **TODO:** Switch to curated fonts from [Fontshare](https://www.fontshare.com/):
+>
+> - Satoshi (geometric sans for UI)
+> - General Sans or Cabinet Grotesk (display)
+> - Update `fonts.tar.gz` with new selections
 
 <br>
 
-**9. Update various Firefox `about:config` options:**
+**11. Update various Firefox `about:config` options:**
 
 - Increase scaling factor due to 4k screen (HiDPI environment):
 
@@ -373,7 +403,7 @@ mv fonts ~/.local/share/
 
 <br>
 
-**10. Configure SSH key:**
+**12. Configure SSH key:**
 
 ```sh
 ssh-keygen -t ed25519 -C "your_email@example.com"

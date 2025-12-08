@@ -120,25 +120,6 @@ local servers = {
 	},
 }
 
-local mason_servers = {
-	"bash-language-server",
-	"gopls",
-	"typescript-language-server",
-	"eslint-lsp",
-	"tailwindcss-language-server",
-	"css-lsp",
-	"html-lsp",
-	"json-lsp",
-	"dockerfile-language-server",
-	"docker-compose-language-service",
-	"emmet-ls",
-	"templ",
-	"marksman",
-	"pyright",
-	"taplo",
-	"lua-language-server",
-}
-
 return {
 	{
 		"williamboman/mason.nvim",
@@ -148,7 +129,7 @@ return {
 	},
 	{
 		"williamboman/mason-lspconfig.nvim",
-		opts = { ensure_installed = mason_servers },
+		opts = { ensure_installed = vim.tbl_keys(servers) },
 	},
 	{
 		"saghen/blink.cmp",
