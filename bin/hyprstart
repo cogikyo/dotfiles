@@ -21,6 +21,7 @@ hyprctl dispatch resizeactive exact 1310 2053
 ps -ef | rg weather_info | rg -v rg | awk '{print $2}' | xargs kill
 eval "$HOME/dotfiles/config/eww/bin/weather_info" & disown
 eval "$HOME/dotfiles/config/eww/bin/date_info" & disown
+bluetoothctl connect 14:3F:A6:10:A1:B5 & disown
 
 dunstify -a "attention" -u low "$USER@$HOSTNAME" "こんにちは"
 eww-open
