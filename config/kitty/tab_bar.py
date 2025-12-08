@@ -13,12 +13,12 @@ from kitty.tab_bar import (
     draw_title,
 )
 
-opts = get_options()  # --------------------------------------------⮯
-# --------------------------------------------------------------\
-# black  |  red     green    blue     magenta  cyan     white   | color
-# color0 |  color1  color2   color4   color5   color6   color7  | normal
-# color8 |  color9  color10  color12  color13  color14  color15 | bright
-# --------------------------------------------------------------/
+opts = get_options()
+# /---------------------------------------------------------------\
+#  | black   red     green    blue     magenta  cyan     white   | color
+#  | color0  color1  color2   color4   color5   color6   color7  | normal
+#  | color8  color9  color10  color12  color13  color14  color15 | bright
+# /--------------------------------------------------------------/
 if opts.tab_bar_background is None:
     tab_background = 0
 else:
@@ -31,9 +31,13 @@ ACTIVE_BG = as_rgb(color_as_int(opts.active_tab_background))
 SEPARATOR_SYMBOL, SOFT_SEPARATOR_SYMBOL = ("", "")
 SEPARATOR_SYMBOL_RIGHT = ""
 TRUNCATION_SYMBOL = " ⽙"
-ICON, ICON_HOST, ICON_USER, = (
-    "   ",
-    " ⾥ ",
+(
+    ICON,
+    ICON_HOST,
+    ICON_USER,
+) = (
+    "  ",
+    " ⾥",
     "⼈",
 )
 RIGHT_MARGIN = -8
