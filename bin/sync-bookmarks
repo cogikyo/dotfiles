@@ -1,0 +1,41 @@
+#!/bin/bash
+
+FIREFOX_PROFILE="$HOME/.mozilla/firefox/sdfm8kqz.dev-edition-default"
+OUTPUT="$HOME/dotfiles/share/newtab/bookmarks.json"
+
+if [[ ! -f "$FIREFOX_PROFILE/places.sqlite" ]]; then
+    echo "Firefox profile not found"
+    exit 1
+fi
+
+cp "$FIREFOX_PROFILE/places.sqlite" /tmp/places_copy.sqlite
+cp "$FIREFOX_PROFILE/places.sqlite-wal" /tmp/places_copy.sqlite-wal 2>/dev/null
+cp "$FIREFOX_PROFILE/places.sqlite-shm" /tmp/places_copy.sqlite-shm 2>/dev/null
+
+sqlite3 -json /tmp/places_copy.sqlite "
+SELECT 
+    COALESCE(f.title, 'unsorted') as folder,
+    b.title as title,
+    p.url as url,
+    k.keyword as keyword,
+    (
+        SELECT GROUP_CONCAT(t.title)
+        FROM moz_bookmarks tag_link
+        JOIN moz_bookmarks t ON tag_link.parent = t.id
+        WHERE tag_link.fk = p.id
+        AND t.parent = (SELECT id FROM moz_bookmarks WHERE title = 'tags' AND parent = 1)
+    ) as tags
+FROM moz_bookmarks b
+JOIN moz_places p ON b.fk = p.id
+LEFT JOIN moz_bookmarks f ON b.parent = f.id
+LEFT JOIN moz_keywords k ON p.id = k.place_id
+WHERE p.url NOT LIKE 'place:%' 
+    AND b.title IS NOT NULL 
+    AND b.title != ''
+    AND f.title != 'tags'
+ORDER BY f.title, b.position;
+" > "$OUTPUT"
+
+rm -f /tmp/places_copy.sqlite /tmp/places_copy.sqlite-wal /tmp/places_copy.sqlite-shm
+
+echo "Synced bookmarks to $OUTPUT"
