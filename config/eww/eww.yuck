@@ -34,7 +34,7 @@
 
 
 (defwindow today
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :width "45%" :anchor "top center")
   (centerbox
     (box :halign "end" (weather))
@@ -363,7 +363,7 @@
 
 
 (defwindow computer
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :anchor "top right" :x "80px")
   (box
     :halign "end" :space-evenly false :spacing 0
@@ -695,7 +695,7 @@
 
 
 (defwindow user
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :anchor "top right" :y "-3px" )
   (box :halign "end" :space-evenly false :spacing 0
     (user)
@@ -724,7 +724,7 @@
 
 
 (defwindow player
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :anchor "top left" :y "-3px" )
   (player)
 )
@@ -747,7 +747,7 @@
 
 
 (defwindow albumArt
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :anchor "bottom right" :x "208px" :y "383")
   (albumArt)
 )
@@ -782,7 +782,7 @@
 
 
 (defwindow music
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :anchor "top left" :x "15px")
   (box
     :halign "start" :space-evenly false :spacing 0
@@ -1117,7 +1117,7 @@
 ;; }}}
 
 (defwindow screenctl
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :anchor "top right" :y "1260px")
   (screenctl)
 )
@@ -1151,7 +1151,7 @@
 
 
 (defwindow dunst
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :anchor "bottom right" :y "95px" )
   (dunst)
 )
@@ -1199,7 +1199,7 @@
 
 
 (defwindow systemctl
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :anchor "bottom right" :y "1255px" )
   (systemctl)
 )
@@ -1252,7 +1252,7 @@
 
 
 (defwindow pacman
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :anchor "bottom right" :x "-22px" :y "170px" )
   (pacman)
 )
