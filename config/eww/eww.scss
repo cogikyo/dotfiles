@@ -485,7 +485,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 .weather {
   background: $bg;
   padding: 4px 12px 4px 1.1em;
-  margin: 16px 8px 50px;
+  margin: 16px 8px;
   border-right: 3px solid $blu-1;
   border-top: 1px solid $blu-1;
   border-radius: 420px 17px 420px 69px;
@@ -578,7 +578,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
   border-style: solid;
   border-color: $blu-1;
   box-shadow: 0 2px 3px 1px rgba($blu-0, 0.42);
-  margin: -7px 10px 44px;
+  margin: -7px 10px 8px;
   transition: all 0.5s $ease-out-snap;
 
   &-hover {
@@ -654,7 +654,7 @@ $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
 .date {
   background: $bg;
   padding: 4px 1.1em;
-  margin: 16px 8px 50px;
+  margin: 16px 8px;
   border-left: 3px solid $blu-1;
   border-top: 1px solid $blu-1;
   border-radius: 17px 420px 69px;
