@@ -2,8 +2,8 @@
     follow = "keyboard"
     enable_posix_regex = true
     origin = "top-left"
-    width = "(300, 690)"
-    offset = "(2325, 18)"
+    width = "(300, 640)"
+    offset = "(2370, 18)"
     notification_limit = 1
     progress_bar = true
     progress_bar_height = 10
