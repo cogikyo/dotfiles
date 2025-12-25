@@ -12,6 +12,7 @@ hyprctl dispatch workspace 5
 glava -e "bars_rc.glsl" & disown
 glava -e "bars_r_rc.glsl" & disown
 glava -e "radial_rc.glsl" & disown
+
 spotify-launcher & disown
 sleep 2
 hyprctl dispatch setfloating
