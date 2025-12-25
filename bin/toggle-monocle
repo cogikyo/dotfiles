@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# Toggle monocle mode: float window to modal-like state or return to tiled
+
+set -euo pipefail
+
+CACHE_DIR="/tmp/hypr-monocle"
+MONOCLE_SIZE="2900 1606"
+
+mkdir -p "$CACHE_DIR"
+
+get_tiled_windows() {
+    local ws="$1"
+    hyprctl clients -j | jq -r --arg ws "$ws" \
+        '[.[] | select(.workspace.id == ($ws | tonumber) and .floating == false)]'
+}
+
+get_slave_index() {
+    local ws="$1" addr="$2"
+    get_tiled_windows "$ws" | jq -r --arg addr "$addr" \
+        'sort_by(.at[0]) | .[1:] | sort_by(.at[1]) | to_entries[] | select(.value.address == $addr) | .key'
+}
+
+
+window_info=$(hyprctl activewindow -j)
+floating=$(jq -r '.floating' <<< "$window_info")
+addr=$(jq -r '.address' <<< "$window_info")
+workspace_id=$(jq -r '.workspace.id' <<< "$window_info")
+
+# Skip master window (leftmost tiled window)
+if [[ "$floating" == "false" ]]; then
+    master_addr=$(get_tiled_windows "$workspace_id" | jq -r 'sort_by(.at[0]) | .[0].address')
+    [[ "$addr" == "$master_addr" ]] && exit 0
+fi
+
+cache_file="$CACHE_DIR/$addr"
+
+if [[ "$floating" == "true" ]]; then
+    # Untoggle: return to tiled
+    hyprctl --batch "dispatch setprop address:$addr dimaround 0; dispatch togglefloating"
+
+    if [[ -f "$cache_file" ]]; then
+        saved_index=$(<"$cache_file")
+        slave_count=$(get_tiled_windows "$workspace_id" | jq 'length - 1')
+        swaps=$((slave_count - 1 - saved_index))
+
+        for ((i = 0; i < swaps; i++)); do
+            hyprctl dispatch layoutmsg swapprev
+        done
+        rm -f "$cache_file"
+    fi
+else
+    get_slave_index "$workspace_id" "$addr" > "$cache_file"
+
+    hyprctl --batch "\
+        dispatch togglefloating; \
+        dispatch resizeactive exact $MONOCLE_SIZE; \
+        dispatch centerwindow; \
+        dispatch setprop address:$addr dimaround 1"
+fi

@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Toggle swap with master, remembering displaced master for restoration
+#
+# Flow:
+#   Slave pressed  → save OLD MASTER addr, move slave to master
+#   Master pressed → focus saved addr (old master, now slave), move it to master
+#                    save ourselves (now slave) for next toggle
+
+set -euo pipefail
+
+CACHE_DIR="/tmp/hypr-swap-master"
+mkdir -p "$CACHE_DIR"
+
+get_tiled_windows() {
+    hyprctl clients -j | jq -r --argjson ws "$1" \
+        '[.[] | select(.workspace.id == $ws and .floating == false)]'
+}
+
+get_master_addr() {
+    get_tiled_windows "$1" | jq -r 'sort_by(.at[0])[0].address'
+}
+
+# Get active window info
+read -r addr workspace_id < <(
+    hyprctl activewindow -j | jq -r '[.address, .workspace.id] | @tsv'
+)
+
+master_addr=$(get_master_addr "$workspace_id")
+cache_file="$CACHE_DIR/$workspace_id"
+
+if [[ "$addr" == "$master_addr" ]]; then
+    # ON MASTER: restore the displaced master (now a slave)
+    [[ ! -f "$cache_file" ]] && exit 0
+    
+    displaced=$(<"$cache_file")
+    
+    # Sanity check: displaced should not be current master
+    [[ "$displaced" == "$master_addr" ]] && { rm -f "$cache_file"; exit 0; }
+    
+    # Save ourselves (we'll become a slave after this)
+    echo "$addr" > "$cache_file"
+    
+    # Focus displaced master (now slave) and move it back to master
+    hyprctl dispatch focuswindow "address:$displaced"
+    hyprctl dispatch movewindow l
+    
+    # Focus back to ourselves (now in slave area)
+    hyprctl dispatch focuswindow "address:$addr"
+else
+    # ON SLAVE: save the current master (will be displaced), then take master
+    echo "$master_addr" > "$cache_file"
+    hyprctl dispatch movewindow l
+fi
+
