@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Toggle pseudo-master: float a slave to cover other slaves at full height
+
+set -euo pipefail
+
+CACHE_DIR="/tmp/hypr-pseudo-master"
+mkdir -p "$CACHE_DIR"
+
+# Monitor geometry (3840x2160 with reserved: 80 top, 16 bottom, 105 left, 85 right)
+readonly RESERVED_TOP=80 RESERVED_BOTTOM=16 RESERVED_RIGHT=85
+readonly MONITOR_W=3840 MONITOR_H=2160
+readonly USABLE_H=$((MONITOR_H - RESERVED_TOP - RESERVED_BOTTOM))
+
+get_tiled_windows() {
+    hyprctl clients -j | jq -r --argjson ws "$1" \
+        '[.[] | select(.workspace.id == $ws and .floating == false)]'
+}
+
+get_slave_index() {
+    get_tiled_windows "$1" | jq -r --arg addr "$2" \
+        'sort_by(.at[0]) | .[1:] | sort_by(.at[1]) | to_entries[] | select(.value.address == $addr) | .key'
+}
+
+get_slave_area() {
+    get_tiled_windows "$1" | jq -r --argjson right "$RESERVED_RIGHT" --argjson mw "$MONITOR_W" '
+        sort_by(.at[0]) | .[0].at[0] as $master_x |
+        [.[] | select(.at[0] > $master_x)] |
+        if length == 0 then empty else .[0].at[0] as $x | "\($x) \($mw - $x - $right)" end
+    '
+}
+
+# Get active window info in single jq call
+read -r floating addr workspace_id < <(
+    hyprctl activewindow -j | jq -r '[.floating, .address, .workspace.id] | @tsv'
+)
+
+cache_file="$CACHE_DIR/$addr"
+
+# Skip master window (leftmost tiled window)
+if [[ "$floating" == "false" ]]; then
+    master_addr=$(get_tiled_windows "$workspace_id" | jq -r 'sort_by(.at[0])[0].address')
+    [[ "$addr" == "$master_addr" ]] && exit 0
+fi
+
+if [[ "$floating" == "true" ]]; then
+    hyprctl dispatch togglefloating
+
+    if [[ -f "$cache_file" ]]; then
+        saved_index=$(<"$cache_file")
+        # Fresh client data after toggle
+        slave_count=$(get_tiled_windows "$workspace_id" | jq 'length - 1')
+        swaps=$((slave_count - 1 - saved_index))
+
+        for ((i = 0; i < swaps; i++)); do
+            hyprctl dispatch layoutmsg swapprev
+        done
+        rm -f "$cache_file"
+    fi
+else
+    slave_area=$(get_slave_area "$workspace_id")
+    [[ -z "$slave_area" ]] && exit 0
+
+    get_slave_index "$workspace_id" "$addr" > "$cache_file"
+    read -r slave_x slave_w <<< "$slave_area"
+
+    hyprctl --batch "
+        dispatch togglefloating;
+        dispatch moveactive exact $slave_x $RESERVED_TOP;
+        dispatch resizeactive exact $slave_w $USABLE_H"
+fi
