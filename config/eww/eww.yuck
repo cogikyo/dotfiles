@@ -397,11 +397,11 @@
         :text "󰖂  "
       )
       (label
-        :class "tr-c ramp-${net-info.type == "802-11-wireless" ? "5" : net-info.type == "802-3-ethernet" ? "9" : "1"}"
+        :class "tr-c ramp-${net-info.type == "802-11-wireless" ? "9" : net-info.type == "802-3-ethernet" ? "4" : "1"}"
         :text "${net-info.icon}${network-hover ? " ": "  "}"
       )
       (slide-n-fade :bool network-hover :direction "right"
-        (label :class "tr-c ramp-${net-info.type == "802-11-wireless" ? "5" : net-info.type == "802-3-ethernet" ? "9" : "1"}" :markup "${net-info.name} ")
+        (label :class "tr-c ramp-${net-info.type == "802-11-wireless" ? "9" : net-info.type == "802-3-ethernet" ? "4" : "1"}" :markup "${net-info.name} ")
       )
       (label :class "tr-c ramp-${net-info.down_ramp}" :text "󰁆${network-hover ? "": " "}")
       (slide-n-fade :bool network-hover :direction "right"
