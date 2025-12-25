@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 
-inprog=$(ps -ef | rg layout | rg -v rg | wc -l)
-if [[ "$inprog" -gt 2 ]]; then
-    notify-send -u critical -t 2000 "ERROR: layout already in progress."
-    exit 0
-fi
+# === INITIALIZATION ===========================================================
+
+error() {
+    dunstify -a "layout" -u critical -t 2000 "ERROR $n_flag" "$1"
+    exit 1
+}
+
 
 a_flag="" # [a]plication
 n_flag="" # [w]orkspace
@@ -22,17 +24,72 @@ while getopts 'a:d:n:w:s:' flag; do
 done
 
 if [[ "$#" == 0 ]]; then
-    exit 1
+    error "no workspace specified"
 fi
 
-hyprctl dispatch workspace 6
-
-windows=$(hyprctl workspaces | grep -A 2 "ID $n_flag" | grep -oP '\windows:\s+\K[0-9]+')
-if [[ -n "$windows" && "$windows" -ne 0 ]]; then
-    dunstify -u critical -t 2000 "ERROR" "a layout is already open"
-    hyprctl dispatch workspace previous
-    exit 1
+inprog=$(ps -ef | rg layout | rg -v rg | wc -l)
+if [[ "$inprog" -gt 2 ]]; then
+    error "already in progress"
 fi
+
+# === FUNCTIONS ================================================================
+
+check_windows() {
+    windows=$(hyprctl clients -j | jq "[.[] | select(.workspace.id == $n_flag and .pinned == false)] | length")
+    if [[ "$windows" -gt 0 ]]; then
+        hyprctl dispatch workspace "$n_flag"
+        error "already has windows open"
+    fi
+}
+
+# shellcheck disable=SC2155
+arrange_layout() {
+    sleep 2 # wait for the workspace to be created
+
+    # Ensures: master → cursor, slave 1 → firefox, slave 2 → terminal
+    local ws_id="$n_flag"
+    local max_attempts=10
+    local attempt=0
+
+    # Wait for 3 windows to appear
+    while [[ $attempt -lt $max_attempts ]]; do
+        local count
+        count=$(hyprctl clients -j | jq "[.[] | select(.workspace.id == $ws_id and .floating == false)] | length")
+        [[ $count -ge 3 ]] && break
+        sleep 0.5
+        ((attempt++))
+    done
+
+    local clients=$(hyprctl clients -j | jq "[.[] | select(.workspace.id == $ws_id and .floating == false)]")
+    
+    local cursor_addr=$(echo "$clients" | jq -r '.[] | select(.class == "cursor") | .address' | head -1)
+    local firefox_addr=$(echo "$clients" | jq -r '.[] | select(.class | test("firefox"; "i")) | .address' | head -1)
+    local kitty_addr=$(echo "$clients" | jq -r '.[] | select(.class == "kitty") | .address' | head -1)
+
+    [[ -z "$cursor_addr" || -z "$firefox_addr" || -z "$kitty_addr" ]] && return 1
+
+    # Swap cursor to master position
+    hyprctl dispatch focuswindow "address:$cursor_addr"
+    hyprctl dispatch layoutmsg swapwithmaster master
+    sleep 0.1
+
+    # Get updated positions
+    clients=$(hyprctl clients -j | jq "[.[] | select(.workspace.id == $ws_id and .floating == false)]")
+
+    # Check if firefox is above kitty (slave 1 should be firefox)
+    local firefox_y=$(echo "$clients" | jq -r ".[] | select(.address == \"$firefox_addr\") | .at[1]")
+    local kitty_y=$(echo "$clients" | jq -r ".[] | select(.address == \"$kitty_addr\") | .at[1]")
+
+    # If kitty is above firefox, swap them
+    if [[ $kitty_y -lt $firefox_y ]]; then
+        hyprctl dispatch focuswindow "address:$kitty_addr"
+        hyprctl dispatch layoutmsg swapnext
+    fi
+
+    # Focus back to master (cursor)
+    hyprctl dispatch focuswindow "address:$cursor_addr"
+}
+# ============================================================================
 
 browser() {
     if [[ "$2" == "tab" ]]; then
@@ -45,107 +102,92 @@ browser() {
 }
 
 terminal() {
-    if [[ -n "$1" ]]; then
-        kitty --session ~/.config/kitty/sessions/"$1".conf &
-        sleep 1
-    else
-        kitty --session ~/.config/kitty/sessions/pipes.conf &
-        sleep 1
+    local path="$HOME/$1"
+    if [[ ! -d "$path" ]]; then
+        error "path does not exist: $path"
     fi
-}
-
-resize() {
-    hyprctl dispatch resizeactive exact 1870 1186
-    hyprctl dispatch movefocus l
-    hyprctl disptch resizeactive exact 1866 1955
-    for ((i = 0; i < 5; i++)); do
-        hyprctl dispatch resizeactive exact 1012 1955
-    done # have resize master several times (bug?) ⮭
-}
-
-dispatch() {
-    local medium_size="660 563"
-    local medium_pos="3153 209"
-    # Use the same values as defined in your hyprland.conf float commands
-    hyprctl dispatch setfloating
-    hyprctl dispatch moveactive exact "$medium_pos"
-    hyprctl dispatch resizeactive exact "$medium_size"
-}
-
-acr() {
-    cursor & sleep 0.5
-    terminal "acr"
-    dispatch
-    browser "grok.com"
-    browser "localhost:3002" "tab"
-    browser "https://github.com/cogikyo/acr" "tab"
-    browser "https://wangare.com/project/csksoc4w0s8c4k8ok8g0cos8/production" "tab"
-    browser "https://databasetagger.acrecruitergroup.com" "tab"
+    case "$1" in
+        dotfiles)
+            kitty --session ~/.config/kitty/sessions/dotfiles.conf 
+            ;;
+        default)
+            PROJECT_PATH="$path" kitty --session ~/.config/kitty/sessions/default.conf 
+            ;;
+    esac;
+    sleep 0.25
 }
 
 cogikyo() {
-    cursor & sleep 0.5
-    terminal "nosvagor.com"
-    dispatch
-    browser "grok.com"
-    browser "localhost:3000" "tab"
-    browser "https://wangare.com/project/vssk4cg8kwwgk8cgc08w44ow/production" "tab"
-    browser "https://nosvagor.com" "tab"
-    hyprctl dispatch movewindow l
+    cursor "$HOME/nosvagor.com"
+    browser "localhost:3000"
+}
+
+acr() {
+    cursor "$HOME/acr"
+    browser "localhost:3002"
+    terminal "acr"
 }
 
 leadPier () {
-    cursor & sleep 2
+    cursor "$HOME/LeadPier"
+    browser "http://localhost:4000" 
     terminal "LeadPier"
-    dispatch
-    browser "grok.com"
-    browser "http://localhost:4000" "tab"
 }
 
 hgmx() {
-    cursor & sleep 2
-    terminal "hgmx"
-    dispatch
-    browser "grok.com"
-    browser "http://localhost:8003" "tab"
+    # cursor "$HOME/hgmx-builder"
+    terminal "hgmx-builder"
+    # sleep 1
+    # browser "http://localhost:8003"
 }
 
-# ============================================================================
-# hyprctl keyword input:follow_mouse 0
-
-hyprctl dispatch workspace "$n_flag"
-
-case "$n_flag" in
-1)
-    slack & sleep 0.5
-    browser "https://app.hey.com/calendar/days/now"
-    ;;
-2)
-    ;;
-3)
-    case "$a_flag" in
-        "a") acr ;;
-        "n") cogikyo ;;
-        "l") leadPier ;;
-        "h") hgmx ;p
-    ;; esac
-    ;;
-4)
-    terminal "dotfiles"
+dotfiles() {
+    cursor "$HOME/dotfiles"
     browser "https://github.com/cogikyo/dotfiles"
-    resize
-    ;;
-*) exit 1 ;;
-esac
+    terminal "dotfiles"
+}
 
-# if [[ ""$n_flag == 3 ]]; then
-#     hyprctl dispatch movefocus r
-#     hyprctl dispatch movefocus u
-#     hyprctl dispatch resizeactive exact 1870 1186
-#     hyprctl dispatch movefocus d
-#     hyprctl dispatch movefocus l
-# fi
-# hyprctl keyword input:follow_mouse 1
-# ============================================================================
+# === MAIN =====================================================================
 
+main() {
+    hyprctl keyword input:follow_mouse 0
+
+    check_windows
+    hyprctl dispatch workspace "$n_flag"
+
+    case "$n_flag" in
+    1)
+        dunstify -a "layout" -u low "S" "opening networking"
+        slack & sleep 0.5
+        ;;
+    2)
+        dunstify -a "layout" -u low "E" "opening adjacent tools"
+        tableplus & sleep 0.5
+        ;;
+    3)
+        dunstify -a "layout" -u low "T" "opening main workspace"
+        case "$a_flag" in
+            "a") acr ;;
+            "n") cogikyo ;;
+            "l") leadPier ;;
+            "h") hgmx ;;
+        esac
+        ;;
+    4) 
+        dunstify -a "layout" -u low "D" "opening settings"
+        dotfiles
+        ;;
+    *) error "invalid workspace" ;;
+    esac
+
+    if [[ "$n_flag" -eq 3 || "$n_flag" -eq 4 ]]; then
+        split -d
+        arrange_layout
+        resize-slave
+    fi
+
+    hyprctl keyword input:follow_mouse 1
+}
+
+main
 exit 0

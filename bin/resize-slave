@@ -15,7 +15,7 @@ bottom_size=$(echo "$slaves" | jq -r '.[1].size | "\(.[0]),\(.[1])"')
 original_addr=$(hyprctl activewindow -j | jq -r '.address')
 
 # If already focused on bottom and bottom is already resized, focus master
-if [[ "$original_addr" == "$bottom" && "$bottom_size" == "1540,540" ]]; then
+if [[ "$original_addr" == "$bottom" && "$bottom_size" == "1540,572" ]]; then
     master=$(echo "$tiled" | jq --argjson mx "$master_x" -r '.[] | select(.at[0] == $mx) | .address')
     hyprctl dispatch focuswindow "address:$master"
     exit 0
@@ -23,4 +23,4 @@ fi
 
 # Reset mfact, resize top slave, focus bottom
 hyprctl dispatch layoutmsg mfact exact 0.5749
-hyprctl --batch "dispatch focuswindow address:$top; dispatch resizeactive exact 1540 1500; dispatch focuswindow address:$bottom"
+hyprctl --batch "dispatch focuswindow address:$top; dispatch resizeactive exact 1540 1468; dispatch focuswindow address:$bottom"
