@@ -304,7 +304,7 @@
   'tail -F /tmp/eww/weeks_alive 2> /dev/null'
 )
 (deflisten date
-  :initial `{"weekday":"?", "month":"?", "day":"?"}`
+  :initial `{"weekday":"?", "weekday_short":"?", "month":"?", "month_short":"?", "day":"?"}`
   'tail -F /tmp/eww/date 2> /dev/null'
 )
 (defvar date-hover false)
@@ -331,13 +331,13 @@
       )
       (label
         :class "date-${cycle-6 == 0 ? "${date.weekday}" : "base"}"
-        :text " 󰃭 ${date.weekday}"
+        :text " 󰃭 ${date-hover ? date.weekday : date.weekday_short}"
         :style "margin-right: -4px; margin-left: -2px;"
         :tooltip "  󰃭 ${date.weekday}, ${date.month} ${date.day} "
       )
       (label
         :class "date-month date-${cycle-6 == 1 ? "base" : "base-alt"}"
-        :text ", ${date.month}"
+        :text ", ${date-hover ? date.month : date.month_short}"
         :style "margin-top: 1px;"
         :tooltip "  󰃭 ${date.weekday}, ${date.month} ${date.day} "
       )

@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Cycle mfact through 3 sizes: default → mobile → wide → default
+
+state_file="/tmp/mfact-state"
+current=$(cat "$state_file" 2>/dev/null || echo "default")
+
+case "$current" in
+    default)
+        hyprctl dispatch layoutmsg mfact exact 0.794
+        echo "mobile" > "$state_file"
+        ;;
+    mobile)
+        hyprctl dispatch layoutmsg mfact exact 0.3665
+        echo "wide" > "$state_file"
+        ;;
+    *)
+        hyprctl dispatch layoutmsg mfact exact 0.5749
+        echo "default" > "$state_file"
+        ;;
+esac
