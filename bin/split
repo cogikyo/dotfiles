@@ -1,20 +1,39 @@
 #!/usr/bin/env bash
-# Cycle mfact through 3 sizes: default → mobile → wide → default
 
 state_file="/tmp/mfact-state"
+
+set_layout() {
+    case "$1" in
+        default)
+            hyprctl dispatch layoutmsg mfact exact 0.5749
+            echo "default" > "$state_file"
+            ;;
+        mobile)
+            hyprctl dispatch layoutmsg mfact exact 0.794
+            echo "mobile" > "$state_file"
+            ;;
+        wide)
+            hyprctl dispatch layoutmsg mfact exact 0.3665
+            echo "wide" > "$state_file"
+            ;;
+    esac
+}
+
+# Parse flags
+while getopts 'dmw' flag; do
+    case "$flag" in
+        d) set_layout "default"; exit 0 ;;
+        m) set_layout "mobile"; exit 0 ;;
+        w) set_layout "wide"; exit 0 ;;
+        *) exit 1 ;;
+    esac
+done
+
+# Default: toggle through states
 current=$(cat "$state_file" 2>/dev/null || echo "default")
 
 case "$current" in
-    default)
-        hyprctl dispatch layoutmsg mfact exact 0.794
-        echo "mobile" > "$state_file"
-        ;;
-    mobile)
-        hyprctl dispatch layoutmsg mfact exact 0.3665
-        echo "wide" > "$state_file"
-        ;;
-    *)
-        hyprctl dispatch layoutmsg mfact exact 0.5749
-        echo "default" > "$state_file"
-        ;;
+    default) set_layout "mobile" ;;
+    mobile) set_layout "wide" ;;
+    *) set_layout "default" ;;
 esac

@@ -8,7 +8,7 @@ palette = 'vagari'                           # palette definition must be last
 # ============================================================================
 
 format = """
-[╭╼╾ $sudo$username ╼╾ $hostname ${custom.vpn}╼╾ ${custom.date1} ${custom.date2} $time$python$rust$lua](blu_2) $status $cmd_duration
+[╭╼╾ $sudo$username ╼╾ $hostname ${custom.vpn}╼╾ ${custom.date1} ${custom.date2} $time$python$rust$lua$golang$package$shell](blu_2) $status $cmd_duration
 [╞╾](blu_2)$directory$git_branch$git_commit$git_state$git_status
 [╰╼╾ $character](blu_2)
 """
@@ -104,6 +104,16 @@ style = "orn_3"
 symbol = ""
 style = "fg"
 format = "[[ ╼╾](blu_2) $symbol ($version)]($style)"
+
+[golang]
+format = "[[ ╼╾](blu_2) $symbol ($version)]($style)"
+symbol = ""
+style = "cy2_3"
+
+[package]
+format = "[[ ╼╾](blu_2) $symbol]($style)"
+symbol = ""
+style = "orn_2"
 
 [custom.date1]
 style = "prp_2"
