@@ -1,0 +1,143 @@
+{
+  "window.commandCenter": 1,
+  "workbench.colorTheme": "Tokyo Night Storm",
+  "editor.mouseWheelZoom": true,
+  "git.autofetch": true,
+  "editor.formatOnSave": true,
+  "editor.quickSuggestions": {
+    "strings": "on"
+  },
+  "editor.tokenColorCustomizations": {
+    "textMateRules": [
+      {
+        "scope": "comment",
+        "settings": {
+          "fontStyle": ""
+        }
+      }
+    ]
+  },
+  "[jsonc]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "tailwindcss-intellisense.trace.server": "messages",
+  "tailwindCSS.includeLanguages": {
+    "templ": "html",
+    "css": "css",
+    "go": "html"
+  },
+  "emmet.includeLanguages": {
+    "templ": "html"
+  },
+  "tailwindCSS.emmetCompletions": true,
+  "tailwindCSS.experimental.classRegex": [
+    "class:?\\s*\"([^\"]*)\"",
+    "class:?\\s*'([^']*)'",
+    "class:?\\s*`([^`]*)`",
+    "(?:add|remove|toggle)\\s+\\.([\\w\\-:/]+)",
+    "(?:add|remove|toggle)\\s+((?:\\.[\\w\\-:/]+\\s*)+)",
+    "func.*?\\bclasses\\b\\s*\\(\\s*\\)\\s*string\\s*\\{[\\s\\S]*?return\\s*\"([^\"]*)\"",
+    "Style\\(\"([^\"]*)\"\\)",
+    "Build\\(\"([^\"]*)\"\\)",
+    "Build\\([^)]*?\"([^\"]*)\"[^)]*?\\)",
+    "Style\\('([^']*)'\\)",
+    "Style\\(`([^`]*)`\\)"
+  ],
+  "tailwindCSS.classAttributes": ["class", "className", "ngClass", "class:list", ":class"],
+  "files.associations": {
+    "*.css": "tailwindcss",
+    "templ": "html"
+  },
+  "templ.log": "/tmp/templ.log",
+  "templ.goplsLog": "/tmp/gopls.log",
+  "makefile.configureOnOpen": false,
+  "git.confirmSync": false,
+  "git.enableSmartCommit": true,
+  "html.autoClosingTags": false,
+  "workbench.editor.limit.enabled": true,
+  "workbench.editor.limit.excludeDirty": true,
+  "workbench.editor.limit.value": 8,
+  "cursor.cmdk.useThemedDiffBackground": true,
+  "go-lines.lineLength": 135,
+  "editor.rulers": [80, 100, 130],
+  "editor.minimap.maxColumn": 100,
+  "explorer.autoRevealExclude": {
+    "**/templ": true
+  },
+  "vim.smartRelativeLine": true,
+  "extensions.ignoreRecommendations": true,
+  "[json]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "vim.easymotion": true,
+  "vim.highlightedyank.duration": 69,
+  "vim.highlightedyank.color": "rgba(240, 180, 170, 0.5)",
+  "vim.highlightedyank.enable": true,
+  "cursor.composer.shouldAllowCustomModes": true,
+  "cursor.composer.shouldChimeAfterChatFinishes": true,
+  "vim.foldfix": true,
+  "go.toolsManagement.autoUpdate": true,
+  "go.editorContextMenuCommands": {
+    "fillStruct": true,
+    "removeTags": true
+  },
+  "go.inlayHints.constantValues": true,
+  "go.useLanguageServer": true,
+  "templ.goplsRPCTrace": true,
+  "templ.pprof": false,
+  "[templ]": {
+    "editor.defaultFormatter": "a-h.templ"
+  },
+  "files.exclude": {
+    "**/.git": true,
+    "**/node_modules": true,
+    "**/*.log": true,
+    "**/dist": true,
+    "**/*_templ.go": true
+  },
+  "cursor.diffs.useCharacterLevelDiffs": true,
+  "git.timeline.showAuthor": false,
+  "gitlens.codeLens.authors.enabled": false,
+  "gitlens.codeLens.recentChange.enabled": false,
+  "[javascript]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
+  },
+  "prettier.printWidth": 120,
+  "headwind.classRegex": {
+    "jade": [
+      {
+        "regex": "\\.([\\._a-zA-Z0-9\\-]+)",
+        "separator": "\\.",
+        "replacement": "."
+      },
+      "\\bclass\\s*=\\s*[\\\"\\']([\\._a-zA-Z0-9\\s\\-\\:\\/]+)[\\\"\\']"
+    ],
+    "html": "\\bclass\\s*=\\s*[\\\"\\']([\\._a-zA-Z0-9\\s\\-\\:\\/]+)[\\\"\\']",
+    "css": "\\B@apply\\s+([\\._a-zA-Z0-9\\s\\-\\:\\/]+);",
+    "javascript": [
+      "(?:\\b(?:class(?:Name)?|tw)\\s*=\\s*(?:(?:{([\\w\\d\\s!?_\\-:/${}()[\\]\"'`,]+)})|([\"'`][\\w\\d\\s_\\-:/]+[\"'`])))",
+      "(?:[\"'`]([\\.\\w\\d\\s_\\-:/${}()[\\]]+)[\"'`])"
+    ],
+    "javascriptreact": [
+      "(?:\\b(?:class(?:Name)?|tw)\\s*=\\s*(?:(?:{([\\w\\d\\s!?_\\-:/${}()[\\]\"'`,]+)})|([\"'`][\\w\\d\\s_\\-:/]+[\"'`])))",
+      "(?:[\"'`]([\\.\\w\\d\\s_\\-:/${}()[\\]]+)[\"'`])"
+    ],
+    "typescript": [
+      "(?:\\b(?:class(?:Name)?|tw)\\s*=\\s*(?:(?:{([\\w\\d\\s!?_\\-:/${}()[\\]\"'`,]+)})|([\"'`][\\w\\d\\s_\\-:/]+[\"'`])))",
+      "(?:[\"'`]([\\.\\w\\d\\s_\\-:/${}()[\\]]+)[\"'`])"
+    ],
+    "typescriptreact": [
+      "(?:\\b(?:class(?:Name)?|tw)\\s*=\\s*(?:(?:{([\\w\\d\\s!?_\\-:/${}()[\\]\"'`,]+)})|([\"'`][\\w\\d\\s_\\-:/]+[\"'`])))",
+      "(?:[\"'`]([\\.\\w\\d\\s_\\-:/${}()[\\]]+)[\"'`])"
+    ]
+  },
+  "cursor.cpp.disabledLanguages": ["plaintext"],
+  "window.zoomLevel": 2.25,
+  "editor.fontFamily": "'Vagari', 'Symbols Nerd Font', monospace",
+  "terminal.integrated.fontLigatures.enabled": true,
+  "terminal.integrated.fontSize": 12,
+  "editor.fontSize": 12,
+  "cursor.composer.usageSummaryDisplay": "always",
+  "workbench.startupEditor": "none",
+  "window.restoreWindows": "none"
+}

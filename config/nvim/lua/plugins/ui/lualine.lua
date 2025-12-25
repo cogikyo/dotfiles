@@ -147,7 +147,7 @@ return {
 		}
 
 		local function icon()
-			return [[ ]]
+			return [[ ]]
 		end
 
 		local lazy = {
