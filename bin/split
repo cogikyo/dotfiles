@@ -4,36 +4,48 @@ state_file="/tmp/mfact-state"
 
 set_layout() {
     case "$1" in
+        xs)
+            hyprctl dispatch layoutmsg mfact exact 0.3665
+            echo "xs" > "$state_file"
+            ;;
+        sm)
+            hyprctl dispatch layoutmsg mfact exact 0.47075
+            echo "sm" > "$state_file"
+            ;;
         default)
             hyprctl dispatch layoutmsg mfact exact 0.5749
             echo "default" > "$state_file"
             ;;
-        mobile)
+        lg)
             hyprctl dispatch layoutmsg mfact exact 0.794
-            echo "mobile" > "$state_file"
-            ;;
-        wide)
-            hyprctl dispatch layoutmsg mfact exact 0.3665
-            echo "wide" > "$state_file"
+            echo "lg" > "$state_file"
             ;;
     esac
 }
 
-# Parse flags
-while getopts 'dmw' flag; do
+current=$(cat "$state_file" 2>/dev/null || echo "default")
+
+while getopts 'xsdl' flag; do
     case "$flag" in
-        d) set_layout "default"; exit 0 ;;
-        m) set_layout "mobile"; exit 0 ;;
-        w) set_layout "wide"; exit 0 ;;
+        x) set_layout "xs"; exit 0 ;;
+        s) set_layout "sm"; exit 0 ;;
+        d)
+            if [[ "$current" == "default" ]]; then
+                set_layout "sm"
+            else
+                set_layout "default"
+            fi
+            exit 0
+            ;;
+        l) set_layout "lg"; exit 0 ;;
         *) exit 1 ;;
     esac
 done
 
 # Default: toggle through states
-current=$(cat "$state_file" 2>/dev/null || echo "default")
-
 case "$current" in
-    default) set_layout "mobile" ;;
-    mobile) set_layout "wide" ;;
-    *) set_layout "default" ;;
+    xs) set_layout "sm" ;;
+    sm) set_layout "default" ;;
+    default) set_layout "lg" ;;
+    *) set_layout "xs" ;;
 esac
