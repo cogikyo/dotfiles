@@ -13,7 +13,7 @@ readonly USABLE_H=$((MONITOR_H - RESERVED_TOP - RESERVED_BOTTOM))
 
 get_tiled_windows() {
     hyprctl clients -j | jq -r --argjson ws "$1" \
-        '[.[] | select(.workspace.id == $ws and .floating == false)]'
+        '[.[] | select(.workspace.id == $ws and .floating == false and .class != "GLava")]'
 }
 
 get_slave_index() {
