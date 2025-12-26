@@ -2,35 +2,46 @@
 
 # === INITIALIZATION ===========================================================
 
-error() {
-    dunstify -a "layout" -u critical -t 2000 "ERROR $n_flag" "$1"
-    exit 1
-}
-
+# Workspaces: name|sub|cmd
+declare -A WS=(
+    [1]="[S] Network|chat, email, calendar|slack"
+    [2]="[E] Assist|adjacent tools|tableplus"
+    [3]="[T] Master|primary desktop|"
+    [4]="[D] Config|settings, dotfiles|"
+)
 
 a_flag="" # [a]plication
 n_flag="" # [w]orkspace
-# s_flag="" # [s]ession (kitty)
-# w_flag="" # [w]ebsite
 
 while getopts 'a:d:n:w:s:' flag; do
     case "$flag" in
     a) a_flag="$OPTARG" ;;
-    # s) s_flag="$OPTARG" ;;
     n) n_flag="$OPTARG" ;;
-        # w) w_flag="$OPTARG" ;;
     *) exit 1 ;;
     esac
 done
 
-if [[ "$#" == 0 ]]; then
-    error "no workspace specified"
-fi
+[[ "$#" == 0 || -z "$n_flag" ]] && exit 1
+
+# Switch workspace IMMEDIATELY before anything else
+hyprctl dispatch workspace "$n_flag"
+
+ws_name="${WS[$n_flag]%%|*}"
+
+error() {
+    dunstify -a "layout" -u critical -t 2000 "ERROR $ws_name" "$1"
+    exit 1
+}
 
 inprog=$(ps -ef | rg layout | rg -v rg | wc -l)
 if [[ "$inprog" -gt 2 ]]; then
     error "already in progress"
 fi
+
+# Auto-kill after 10 seconds to prevent hidden hangs
+( sleep 5; dunstify -a "layout" -u critical -t 2000 "TIMEOUT" "layout script killed after 10s"; kill $$ 2>/dev/null ) &
+WATCHDOG_PID=$!
+trap 'kill $WATCHDOG_PID 2>/dev/null' EXIT
 
 # === FUNCTIONS ================================================================
 
@@ -44,7 +55,7 @@ check_windows() {
 
 # shellcheck disable=SC2155
 arrange_layout() {
-    sleep 2 # wait for the workspace to be created
+    sleep 1.5 # wait for the workspace applicationst to be created
 
     # Ensures: master → cursor, slave 1 → firefox, slave 2 → terminal
     local ws_id="$n_flag"
@@ -54,15 +65,18 @@ arrange_layout() {
     # Wait for 3 windows to appear
     while [[ $attempt -lt $max_attempts ]]; do
         local count
-        count=$(hyprctl clients -j | jq "[.[] | select(.workspace.id == $ws_id and .floating == false)] | length")
+        count=$(hyprctl clients -j | jq --argjson ws "$ws_id" \
+            '[.[] | select(.workspace.id == $ws and .floating == false and .class != "GLava")] | length')
         [[ $count -ge 3 ]] && break
         sleep 0.5
         ((attempt++))
     done
 
-    local clients=$(hyprctl clients -j | jq "[.[] | select(.workspace.id == $ws_id and .floating == false)]")
+    local clients
+    clients=$(hyprctl clients -j | jq --argjson ws "$ws_id" \
+        '[.[] | select(.workspace.id == $ws and .floating == false and .class != "GLava")]')
     
-    local cursor_addr=$(echo "$clients" | jq -r '.[] | select(.class == "cursor") | .address' | head -1)
+    local cursor_addr=$(echo "$clients" | jq -r '.[] | select(.class | test("cursor"; "i")) | .address' | head -1)
     local firefox_addr=$(echo "$clients" | jq -r '.[] | select(.class | test("firefox"; "i")) | .address' | head -1)
     local kitty_addr=$(echo "$clients" | jq -r '.[] | select(.class == "kitty") | .address' | head -1)
 
@@ -70,11 +84,12 @@ arrange_layout() {
 
     # Swap cursor to master position
     hyprctl dispatch focuswindow "address:$cursor_addr"
-    hyprctl dispatch layoutmsg swapwithmaster master
+    hyprctl dispatch layoutmsg swapwithmaster
     sleep 0.1
 
     # Get updated positions
-    clients=$(hyprctl clients -j | jq "[.[] | select(.workspace.id == $ws_id and .floating == false)]")
+    clients=$(hyprctl clients -j | jq --argjson ws "$ws_id" \
+        '[.[] | select(.workspace.id == $ws and .floating == false and .class != "GLava")]')
 
     # Check if firefox is above kitty (slave 1 should be firefox)
     local firefox_y=$(echo "$clients" | jq -r ".[] | select(.address == \"$firefox_addr\") | .at[1]")
@@ -92,13 +107,18 @@ arrange_layout() {
 # ============================================================================
 
 browser() {
-    if [[ "$2" == "tab" ]]; then
-        firefox-developer-edition "$1" &
-        sleep 1.5
-    else
-        firefox-developer-edition --new-window "$1" &
-        sleep 1.5
-    fi
+    local urls=("$@")
+    [[ ${#urls[@]} -eq 0 ]] && return
+
+    # First URL opens new window - use hyprctl dispatch exec to spawn on current workspace
+    hyprctl dispatch exec "firefox-developer-edition --new-window '${urls[0]}'"
+    sleep 0.5
+
+    # Remaining URLs open as tabs
+    for url in "${urls[@]:1}"; do
+        hyprctl dispatch exec "firefox-developer-edition '$url'"
+        sleep 0.3
+    done
 }
 
 terminal() {
@@ -106,78 +126,68 @@ terminal() {
     if [[ ! -d "$path" ]]; then
         error "path does not exist: $path"
     fi
-    case "$1" in
-        dotfiles)
-            kitty --session ~/.config/kitty/sessions/dotfiles.conf 
-            ;;
-        default)
-            PROJECT_PATH="$path" kitty --session ~/.config/kitty/sessions/default.conf 
-            ;;
-    esac;
+    # Use hyprctl dispatch exec to spawn on current workspace
+    if [[ "$1" == "dotfiles" ]]; then
+        hyprctl dispatch exec "kitty --session ~/.config/kitty/sessions/dotfiles.conf"
+    else
+        hyprctl dispatch exec "env PROJECT_PATH=$path kitty --session ~/.config/kitty/sessions/default.conf"
+    fi
     sleep 0.25
 }
 
-cogikyo() {
-    cursor "$HOME/nosvagor.com"
-    browser "localhost:3000"
-}
-
-acr() {
-    cursor "$HOME/acr"
-    browser "localhost:3002"
-    terminal "acr"
-}
-
-leadPier () {
-    cursor "$HOME/LeadPier"
-    browser "http://localhost:4000" 
-    terminal "LeadPier"
-}
-
-hgmx() {
-    # cursor "$HOME/hgmx-builder"
-    terminal "hgmx-builder"
-    # sleep 1
-    # browser "http://localhost:8003"
-}
-
 dotfiles() {
-    cursor "$HOME/dotfiles"
+    hyprctl dispatch exec "cursor $HOME/dotfiles"
     browser "https://github.com/cogikyo/dotfiles"
     terminal "dotfiles"
 }
 
+# === CONFIG ===================================================================
+
+# Apps: path|url1|url2|...
+declare -A APP=(
+    [a]="acr|localhost:3002"
+    [n]="nosvagor.com|localhost:3000"
+    [l]="LeadPier|http://localhost:4000"
+    [h]="hgmx-builder|https://github.com/cogikyo/hgmx-builder|http://localhost:8003"
+)
+
 # === MAIN =====================================================================
 
 main() {
-    hyprctl keyword input:follow_mouse 0
+    local ws_entry="${WS[$n_flag]}"
+    [[ -z "$ws_entry" ]] && error "invalid workspace"
 
+    IFS='|' read -r layout_name layout_sub ws_cmd <<< "$ws_entry"
+
+    local app_path sub_msg
+    if [[ -n "$a_flag" ]]; then
+        local app_entry="${APP[$a_flag]}"
+        [[ -z "$app_entry" ]] && error "invalid application: $a_flag"
+        app_path="${app_entry%%|*}"
+        sub_msg="opening $app_path"
+    else
+        sub_msg="opening $layout_sub"
+    fi
+
+    hyprctl keyword input:follow_mouse 0
     check_windows
-    hyprctl dispatch workspace "$n_flag"
+
+    dunstify -a "layout" -u low "$layout_name" "$sub_msg"
 
     case "$n_flag" in
-    1)
-        dunstify -a "layout" -u low "S" "opening networking"
-        slack & sleep 0.5
-        ;;
-    2)
-        dunstify -a "layout" -u low "E" "opening adjacent tools"
-        tableplus & sleep 0.5
+    1 | 2)
+        hyprctl dispatch exec "$ws_cmd"
+        sleep 0.5
         ;;
     3)
-        dunstify -a "layout" -u low "T" "opening main workspace"
-        case "$a_flag" in
-            "a") acr ;;
-            "n") cogikyo ;;
-            "l") leadPier ;;
-            "h") hgmx ;;
-        esac
+        hyprctl dispatch exec "cursor $HOME/$app_path"
+        IFS='|' read -ra parts <<< "${APP[$a_flag]}"
+        browser "${parts[@]:1}"
+        terminal "$app_path"
         ;;
-    4) 
-        dunstify -a "layout" -u low "D" "opening settings"
+    4)
         dotfiles
         ;;
-    *) error "invalid workspace" ;;
     esac
 
     if [[ "$n_flag" -eq 3 || "$n_flag" -eq 4 ]]; then
@@ -187,6 +197,7 @@ main() {
     fi
 
     hyprctl keyword input:follow_mouse 1
+    dunstify -a "layout" -u low "$layout_name" "$sub_msg completed"
 }
 
 main
