@@ -29,6 +29,8 @@ const topRightBar = document.querySelector(".toolbar.top-right");
 const bottomBar = document.querySelector(".toolbar.bottom");
 const input = document.querySelector("input");
 const suggestionsList = document.querySelector(".suggestions");
+const loadingEl = document.querySelector(".loading");
+const loadingText = document.querySelector(".loading-text");
 
 // ═══════════════════════════════════════════════════════════════════════════
 // API
@@ -308,7 +310,10 @@ function render(results, query) {
   suggestionsList.classList.add("active");
 
   suggestionsList.querySelectorAll(".suggestion").forEach((el) => {
-    el.addEventListener("click", () => go(+el.dataset.idx, results, query));
+    el.addEventListener("mousedown", (e) => {
+      e.preventDefault();
+      go(+el.dataset.idx, results, query);
+    });
   });
 }
 
@@ -323,17 +328,48 @@ function toggleFolder(folder) {
   update();
 }
 
+function truncateUrl(url, max = 50) {
+  if (url.length <= max) return url;
+  return url.slice(0, max - 3) + "...";
+}
+
+function showLoading(label, url, folder) {
+  input.style.display = "none";
+  suggestionsList.style.display = "none";
+  loadingEl.classList.remove("hidden");
+  if (folder) {
+    loadingEl.dataset.folder = folder;
+    delete loadingEl.dataset.type;
+  } else {
+    loadingEl.dataset.type = label;
+    delete loadingEl.dataset.folder;
+  }
+  loadingText.innerHTML = `<span class="folder">${label}</span>${truncateUrl(url)}`;
+}
+
 function go(idx, results, query) {
+  let url, label, folder;
   if (idx < results.length) {
     const r = results[idx];
     if (r.type === "suggested") {
-      location.href = `https://google.com/search?q=${encodeURIComponent(r.title)}`;
+      url = `https://google.com/search?q=${encodeURIComponent(r.title)}`;
+      label = "suggested";
+    } else if (r.type === "history") {
+      url = r.url;
+      label = "history";
     } else {
-      location.href = r.url;
+      url = r.url;
+      label = r.folder || "bookmark";
+      folder = r.folder;
     }
   } else {
-    location.href = `https://google.com/search?q=${encodeURIComponent(query)}`;
+    url = `https://google.com/search?q=${encodeURIComponent(query)}`;
+    label = "google";
   }
+  showLoading(label, url, folder);
+  requestAnimationFrame(() => {
+    location.href = url;
+  });
 }
 
 function reset() {
@@ -357,7 +393,6 @@ function reset() {
 async function update() {
   clearTimeout(autoGoTimer);
   clearTimeout(suggestTimer);
-  selected = -1;
 
   const q = input.value.trim();
   const bookmarkResults = searchBookmarks(q);
@@ -366,13 +401,19 @@ async function update() {
   if (hasExactMatch) {
     selected = 0;
     render(bookmarkResults, q);
+    const b = bookmarkResults[0];
     autoGoTimer = setTimeout(() => {
-      location.href = bookmarkResults[0].url;
+      showLoading(b.folder || "bookmark", b.url, b.folder);
+      requestAnimationFrame(() => {
+        location.href = b.url;
+      });
     }, AUTO_GO_MS);
     return;
   }
 
-  render(blendResults(bookmarkResults, historyResults, suggestions, q), q);
+  const results = blendResults(bookmarkResults, historyResults, suggestions, q);
+  selected = results.length > 0 || q ? 0 : -1;
+  render(results, q);
 
   suggestTimer = setTimeout(async () => {
     const [newHistory, newSuggestions] = await Promise.all([fetchHistory(q), fetchSuggestions(q)]);
@@ -380,12 +421,15 @@ async function update() {
     historyResults = newHistory;
     suggestions = newSuggestions;
 
-    const currentBookmarks = searchBookmarks(input.value.trim());
+    const currentQ = input.value.trim();
+    const currentBookmarks = searchBookmarks(currentQ);
     if (currentBookmarks.length === 1 && currentBookmarks[0].exact) {
       return;
     }
 
-    render(blendResults(currentBookmarks, historyResults, suggestions, input.value.trim()), input.value.trim());
+    const results = blendResults(currentBookmarks, historyResults, suggestions, currentQ);
+    selected = results.length > 0 || currentQ ? 0 : -1;
+    render(results, currentQ);
   }, DEBOUNCE_MS);
 }
 
@@ -396,13 +440,11 @@ async function update() {
 input.addEventListener("input", update);
 
 input.addEventListener("blur", () => {
-  setTimeout(() => {
-    if (activeFolder && document.activeElement !== input) {
-      activeFolder = null;
-      updateToolbarState();
-      update();
-    }
-  }, 150);
+  if (activeFolder) {
+    activeFolder = null;
+    updateToolbarState();
+    update();
+  }
 });
 
 input.addEventListener("keydown", (e) => {
@@ -437,13 +479,21 @@ input.addEventListener("keydown", (e) => {
     case "Enter":
       e.preventDefault();
       if (bookmarkResults.length === 1 && bookmarkResults[0].exact) {
-        location.href = bookmarkResults[0].url;
+        const b = bookmarkResults[0];
+        showLoading(b.folder || "bookmark", b.url, b.folder);
+        requestAnimationFrame(() => {
+          location.href = b.url;
+        });
       } else if (selected >= 0) {
         go(selected, results, q);
       } else if (results.length > 0) {
         go(0, results, q);
       } else if (q) {
-        location.href = `https://google.com/search?q=${encodeURIComponent(q)}`;
+        const url = `https://google.com/search?q=${encodeURIComponent(q)}`;
+        showLoading("google", url);
+        requestAnimationFrame(() => {
+          location.href = url;
+        });
       }
       break;
 
@@ -457,11 +507,27 @@ input.addEventListener("keydown", (e) => {
 // Init
 // ═══════════════════════════════════════════════════════════════════════════
 
+function resetLoading() {
+  loadingEl.classList.add("hidden");
+  delete loadingEl.dataset.type;
+  delete loadingEl.dataset.folder;
+  input.style.display = "";
+  suggestionsList.style.display = "";
+}
+
 async function init() {
+  resetLoading();
   input.value = "";
   bookmarks = await fetchBookmarks();
   folders = [...new Set(bookmarks.map((b) => b.folder))].sort();
   renderToolbar();
 }
+
+window.addEventListener("pageshow", (e) => {
+  if (e.persisted) {
+    resetLoading();
+    reset();
+  }
+});
 
 init();

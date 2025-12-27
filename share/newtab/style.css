@@ -427,7 +427,7 @@ input.keyword-match {
   gap: 1rem;
   padding: var(--suggestion-padding);
   cursor: pointer;
-  transition: all 0.1s;
+  transition: all var(--transition-fast);
   border-left: 2px solid transparent;
 }
 
@@ -447,10 +447,12 @@ input.keyword-match {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  transition: color var(--transition-fast), font-weight var(--transition-fast);
 }
 
 .suggestion .title .match {
-  color: var(--orn-2);
+  color: var(--blu-1);
+  font-weight: 500;
 }
 
 .suggestion .meta {
@@ -497,6 +499,7 @@ input.keyword-match {
 .suggestion.keyword-exact.selected {
   background: color-mix(in srgb, var(--accent-0) 18%, transparent);
   border-left-color: var(--accent-0);
+  font-weight: 500;
 }
 
 .suggestion.keyword-exact .title {
@@ -526,37 +529,8 @@ input.keyword-match {
 }
 
 .suggestion.type-bookmark .title .match {
-  color: var(--orn-2);
-}
-
-/* ═══════════════════════════════════════════════════════════════════════════
-   Suggestion Types: History
-   ═══════════════════════════════════════════════════════════════════════════ */
-
-.suggestion.type-history {
-  border-left-color: var(--slt-3);
-}
-
-.suggestion.type-history .title {
-  font-style: italic;
-  color: var(--slt-3);
-}
-
-.suggestion.type-history .title::before {
-  content: " ";
-  opacity: 0.75;
-  font-size: 0.8rem;
-}
-
-.suggestion.type-history .folder {
-  color: var(--drk-3);
-  background: color-mix(in srgb, var(--slt-3) 40%, transparent);
-}
-
-.suggestion.type-history:hover,
-.suggestion.type-history.selected {
-  background: color-mix(in srgb, var(--slt-1) 30%, transparent);
-  border-left-color: var(--slt-3);
+  color: var(--blu-1);
+  font-weight: 500;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -585,13 +559,50 @@ input.keyword-match {
 
 .suggestion.type-suggested:hover,
 .suggestion.type-suggested.selected {
-  background: color-mix(in srgb, var(--glc-3) 20%, transparent);
+  background: color-mix(in srgb, var(--glc-3) 30%, transparent);
   border-left-color: var(--slt-1);
 }
 
 .suggestion.type-suggested:hover .title,
 .suggestion.type-suggested.selected .title {
-  color: var(--brt-1);
+  color: var(--wht-3);
+  font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Suggestion Types: History
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.suggestion.type-history {
+  border-left-color: var(--slt-3);
+}
+
+.suggestion.type-history .title {
+  font-style: italic;
+  color: var(--slt-3);
+}
+
+.suggestion.type-history .title::before {
+  content: " ";
+  opacity: 0.75;
+  font-size: 0.8rem;
+}
+
+.suggestion.type-history .folder {
+  color: var(--brt-0);
+  background: color-mix(in srgb, var(--drk-2) 70%, transparent);
+}
+
+.suggestion.type-history:hover,
+.suggestion.type-history.selected {
+  background: color-mix(in srgb, var(--drk-2) 70%, transparent);
+  border-left-color: var(--slt-3);
+}
+
+.suggestion.type-history:hover .title,
+.suggestion.type-history.selected .title {
+  color: var(--brt-0);
+  font-weight: 500;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -618,42 +629,30 @@ input.keyword-match {
   display: none;
 }
 
+.suggestion.fallback:hover,
+.suggestion.fallback.selected {
+  background: color-mix(in srgb, var(--rby-0) 15%, transparent);
+  border-left-color: var(--rby-1);
+}
+
+.suggestion.fallback:hover .title,
+.suggestion.fallback.selected .title {
+  color: var(--rby-2);
+  font-weight: 500;
+}
+
 /* ═══════════════════════════════════════════════════════════════════════════
    Suggestion Folder Colors (Bookmark Titles)
    ═══════════════════════════════════════════════════════════════════════════ */
 
-.suggestion[class*="type-bookmark"][data-folder="learn"] .title {
-  color: color-mix(in srgb, var(--grn-3) 60%, var(--brt-3));
+.suggestion[class*="type-bookmark"][data-folder] .title {
+  color: color-mix(in srgb, var(--accent-3) 60%, var(--brt-3));
 }
-.suggestion[class*="type-bookmark"][data-folder="dev"] .title {
-  color: color-mix(in srgb, var(--cyn-3) 60%, var(--brt-3));
-}
-.suggestion[class*="type-bookmark"][data-folder="config"] .title {
-  color: color-mix(in srgb, var(--prp-3) 60%, var(--brt-3));
-}
-.suggestion[class*="type-bookmark"][data-folder="life"] .title {
-  color: color-mix(in srgb, var(--pnk-3) 60%, var(--brt-3));
-}
-.suggestion[class*="type-bookmark"][data-folder="bills"] .title {
-  color: color-mix(in srgb, var(--sun-3) 60%, var(--brt-3));
-}
-.suggestion[class*="type-bookmark"][data-folder="wangare"] .title {
-  color: color-mix(in srgb, var(--sky-3) 60%, var(--brt-3));
-}
-.suggestion[class*="type-bookmark"][data-folder="localhost"] .title {
-  color: color-mix(in srgb, var(--orn-3) 60%, var(--brt-3));
-}
-.suggestion[class*="type-bookmark"][data-folder="trend"] .title {
-  color: color-mix(in srgb, var(--emr-3) 60%, var(--brt-3));
-}
-.suggestion[class*="type-bookmark"][data-folder="git"] .title {
-  color: color-mix(in srgb, var(--blu-3) 60%, var(--brt-3));
-}
-.suggestion[class*="type-bookmark"][data-folder="google"] .title {
-  color: color-mix(in srgb, var(--rby-2) 60%, var(--brt-3));
-}
-.suggestion[class*="type-bookmark"][data-folder="x"] .title {
-  color: color-mix(in srgb, var(--wht-3) 60%, var(--brt-3));
+
+.suggestion[class*="type-bookmark"][data-folder]:hover .title,
+.suggestion[class*="type-bookmark"][data-folder].selected .title {
+  color: var(--accent-3);
+  font-weight: 500;
 }
 
 /* ═══════════════════════════════════════════════════════════════════════════
@@ -697,4 +696,99 @@ input.keyword-match {
     opacity: 1;
     transform: translateX(0);
   }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes dash {
+  0% {
+    stroke-dasharray: 1, 62;
+    stroke-dashoffset: 0;
+  }
+  50% {
+    stroke-dasharray: 45, 62;
+    stroke-dashoffset: -17;
+  }
+  100% {
+    stroke-dasharray: 45, 62;
+    stroke-dashoffset: -62;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Loading State
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.loading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: var(--input-padding);
+  background: color-mix(in srgb, var(--drk-1) 75%, transparent);
+  border: 1px solid var(--accent-1);
+  border-radius: var(--input-radius);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--accent-0) 20%, transparent);
+}
+
+.loading.hidden {
+  display: none;
+}
+
+.loading .spinner {
+  width: 1.2rem;
+  height: 1.2rem;
+  flex-shrink: 0;
+  animation: spin 1s linear infinite;
+}
+
+.loading .spinner circle {
+  stroke: var(--accent-2);
+  stroke-linecap: round;
+  animation: dash 1.5s ease-in-out infinite;
+}
+
+.loading-text {
+  font-size: 0.88rem;
+  color: var(--accent-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.loading-text .folder {
+  font-size: 0.68rem;
+  color: var(--accent-2);
+  padding: 0.1rem 0.35rem;
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--accent-0) 10%, var(--glc-0));
+  margin-right: 0.5rem;
+}
+
+.loading[data-type="bookmark"] {
+  --accent-0: var(--blu-0);
+  --accent-1: var(--blu-1);
+  --accent-2: var(--blu-2);
+}
+
+.loading[data-type="history"] {
+  --accent-0: var(--drk-2);
+  --accent-1: var(--slt-3);
+  --accent-2: var(--brt-0);
+}
+
+.loading[data-type="history"] .folder {
+  background: color-mix(in srgb, var(--drk-2) 70%, transparent);
+}
+
+.loading[data-type="suggested"],
+.loading[data-type="google"] {
+  --accent-0: var(--rby-0);
+  --accent-1: var(--rby-1);
+  --accent-2: var(--rby-2);
 }
