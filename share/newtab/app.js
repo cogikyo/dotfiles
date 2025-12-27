@@ -412,7 +412,8 @@ async function update() {
   }
 
   const results = blendResults(bookmarkResults, historyResults, suggestions, q);
-  selected = results.length > 0 || q ? 0 : -1;
+  const noBookmarks = bookmarkResults.length === 0;
+  selected = q ? (noBookmarks ? results.length : 0) : results.length > 0 ? 0 : -1;
   render(results, q);
 
   suggestTimer = setTimeout(async () => {
@@ -428,7 +429,8 @@ async function update() {
     }
 
     const results = blendResults(currentBookmarks, historyResults, suggestions, currentQ);
-    selected = results.length > 0 || currentQ ? 0 : -1;
+    const noBookmarks = currentBookmarks.length === 0;
+    selected = currentQ ? (noBookmarks ? results.length : 0) : results.length > 0 ? 0 : -1;
     render(results, currentQ);
   }, DEBOUNCE_MS);
 }
