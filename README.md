@@ -378,7 +378,35 @@ fc-cache -fv
 
 <br>
 
-**11. Update various Firefox `about:config` options:**
+**11. Configure newtab server:**
+
+The custom newtab page (`share/newtab/`) requires updating the Firefox profile path:
+
+```sh
+# Find your Firefox profile directory
+ls ~/.mozilla/firefox/ | grep -E '\.default|\.dev-edition'
+
+# Update the profile path in main.go (replace YOUR_PROFILE with your actual profile name), e.g.:
+sed -i "s/sdfm8kqz.dev-edition-default/YOUR_PROFILE/" ~/dotfiles/share/newtab/main.go
+```
+
+Then set Firefox to use the custom newtab:
+
+1. Open `about:config`
+2. Set `browser.newtabpage.enabled` = `false`
+3. Install an extension like [New Tab Override](https://addons.mozilla.org/en-US/firefox/addon/new-tab-override/)
+4. Set custom URL to `http://localhost:42069`
+
+Start the server (or add to startup):
+
+```sh
+cd ~/dotfiles/share/newtab && go run . &
+# Or use the bin script: newtab-server
+```
+
+<br>
+
+**12. Update Firefox `about:config` options:**
 
 - Increase scaling factor due to 4k screen (HiDPI environment):
 
@@ -401,7 +429,7 @@ fc-cache -fv
 
 <br>
 
-**12. Configure SSH key:**
+**13. Configure SSH key:**
 
 ```sh
 ssh-keygen -t ed25519 -C "your_email@example.com"
