@@ -447,7 +447,9 @@ input.keyword-match {
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  transition: color var(--transition-fast), font-weight var(--transition-fast);
+  transition:
+    color var(--transition-fast),
+    font-weight var(--transition-fast);
 }
 
 .suggestion .title .match {
