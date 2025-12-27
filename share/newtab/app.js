@@ -1,3 +1,16 @@
+// ═══════════════════════════════════════════════════════════════════════════
+// Constants
+// ═══════════════════════════════════════════════════════════════════════════
+
+const TOP_LEFT_FOLDERS = ["localhost", "trend", "git"];
+const TOP_RIGHT_FOLDERS = ["google", "x"];
+const DEBOUNCE_MS = 10;
+const AUTO_GO_MS = 200;
+
+// ═══════════════════════════════════════════════════════════════════════════
+// State
+// ═══════════════════════════════════════════════════════════════════════════
+
 let bookmarks = [];
 let folders = [];
 let activeFolder = null;
@@ -7,9 +20,9 @@ let suggestTimer = null;
 let historyResults = [];
 let suggestions = [];
 
-const TOP_LEFT_FOLDERS = ["localhost", "trend", "git"];
-const TOP_RIGHT_FOLDERS = ["google", "x"];
-const DEBOUNCE_MS = 10;
+// ═══════════════════════════════════════════════════════════════════════════
+// DOM
+// ═══════════════════════════════════════════════════════════════════════════
 
 const topLeftBar = document.querySelector(".toolbar.top-left");
 const topRightBar = document.querySelector(".toolbar.top-right");
@@ -17,50 +30,53 @@ const bottomBar = document.querySelector(".toolbar.bottom");
 const input = document.querySelector("input");
 const suggestionsList = document.querySelector(".suggestions");
 
-input.value = "";
+// ═══════════════════════════════════════════════════════════════════════════
+// API
+// ═══════════════════════════════════════════════════════════════════════════
 
-// Fetch bookmarks from API on load
-fetch("/api/bookmarks")
-  .then((r) => r.json())
-  .then((data) => {
-    bookmarks = data || [];
-    folders = [...new Set(data.map((b) => b.folder))].sort();
-    renderToolbar();
-  })
-  .catch(() => console.warn("Failed to fetch bookmarks"));
-
-function renderToolbar() {
-  const topLeft = TOP_LEFT_FOLDERS.filter((f) => folders.includes(f));
-  const topRight = TOP_RIGHT_FOLDERS.filter((f) => folders.includes(f));
-  const bottom = folders.filter((f) => !TOP_LEFT_FOLDERS.includes(f) && !TOP_RIGHT_FOLDERS.includes(f));
-
-  topLeftBar.innerHTML = topLeft.map((f, i) => `<button data-folder="${f}" style="--i:${i}">${f}</button>`).join("");
-  topRightBar.innerHTML = topRight.map((f, i) => `<button data-folder="${f}" style="--i:${i}">${f}</button>`).join("");
-  bottomBar.innerHTML = bottom.map((f, i) => `<button data-folder="${f}" style="--i:${i}">${f}</button>`).join("");
-
-  document.querySelectorAll(".toolbar button").forEach((btn) => {
-    btn.addEventListener("click", () => toggleFolder(btn.dataset.folder));
-  });
-}
-
-function toggleFolder(folder) {
-  activeFolder = activeFolder === folder ? null : folder;
-  updateToolbarState();
-  input.focus();
-  update();
-}
-
-function updateToolbarState() {
-  document.querySelectorAll(".toolbar button").forEach((btn) => {
-    btn.classList.toggle("active", btn.dataset.folder === activeFolder);
-  });
-
-  if (activeFolder) {
-    document.body.dataset.folder = activeFolder;
-  } else {
-    delete document.body.dataset.folder;
+async function fetchBookmarks() {
+  try {
+    const res = await fetch("/api/bookmarks");
+    return (await res.json()) || [];
+  } catch {
+    console.warn("Failed to fetch bookmarks");
+    return [];
   }
 }
+
+async function fetchHistory(query) {
+  try {
+    const url = query ? `/api/history?q=${encodeURIComponent(query)}` : "/api/history";
+    const res = await fetch(url);
+    const data = await res.json();
+    return (data || []).map((h) => ({
+      title: h.title,
+      url: h.url,
+      visitCount: h.visit_count,
+      type: "history",
+    }));
+  } catch {
+    return [];
+  }
+}
+
+async function fetchSuggestions(query) {
+  if (!query) return [];
+  try {
+    const res = await fetch(`/api/suggest?q=${encodeURIComponent(query)}`);
+    const data = await res.json();
+    return (data || []).map((s) => ({
+      title: s,
+      type: "suggested",
+    }));
+  } catch {
+    return [];
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Utils
+// ═══════════════════════════════════════════════════════════════════════════
 
 function clean(title) {
   return title.replace(/\s*[\(\[@][\w@]+[\)\]@]?\s*$/, "").trim();
@@ -94,6 +110,21 @@ function fuzzy(text, query) {
 
   return { score, pos };
 }
+
+function highlight(text, pos) {
+  if (!pos?.length) return text;
+  let out = "",
+    last = 0;
+  for (const p of pos) {
+    out += text.slice(last, p) + `<span class="match">${text[p]}</span>`;
+    last = p + 1;
+  }
+  return out + text.slice(last);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Search
+// ═══════════════════════════════════════════════════════════════════════════
 
 function searchBookmarks(query) {
   const pool = activeFolder ? bookmarks.filter((b) => b.folder === activeFolder) : bookmarks;
@@ -141,53 +172,6 @@ function searchBookmarks(query) {
   return results.slice(0, 8);
 }
 
-async function fetchHistory(query) {
-  try {
-    const url = query ? `/api/history?q=${encodeURIComponent(query)}` : "/api/history";
-    const res = await fetch(url);
-    const data = await res.json();
-    return (data || []).map((h) => ({
-      title: h.title,
-      url: h.url,
-      visitCount: h.visit_count,
-      type: "history",
-    }));
-  } catch {
-    return [];
-  }
-}
-
-async function fetchSuggestions(query) {
-  if (!query) return [];
-  try {
-    const res = await fetch(`/api/suggest?q=${encodeURIComponent(query)}`);
-    const data = await res.json();
-    return (data || []).map((s) => ({
-      title: s,
-      type: "suggested",
-    }));
-  } catch {
-    return [];
-  }
-}
-
-function highlight(text, pos) {
-  if (!pos?.length) return text;
-  let out = "",
-    last = 0;
-  for (const p of pos) {
-    out += text.slice(last, p) + `<span class="match">${text[p]}</span>`;
-    last = p + 1;
-  }
-  return out + text.slice(last);
-}
-
-function updateSelection() {
-  suggestionsList.querySelectorAll(".suggestion").forEach((el) => {
-    el.classList.toggle("selected", +el.dataset.idx === selected);
-  });
-}
-
 function blendResults(bookmarkResults, historyResults, suggestionResults, query) {
   const results = [];
   const seenUrls = new Set();
@@ -218,6 +202,42 @@ function blendResults(bookmarkResults, historyResults, suggestionResults, query)
   }
 
   return results.slice(0, 12);
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Render
+// ═══════════════════════════════════════════════════════════════════════════
+
+function renderToolbar() {
+  const topLeft = TOP_LEFT_FOLDERS.filter((f) => folders.includes(f));
+  const topRight = TOP_RIGHT_FOLDERS.filter((f) => folders.includes(f));
+  const bottom = folders.filter((f) => !TOP_LEFT_FOLDERS.includes(f) && !TOP_RIGHT_FOLDERS.includes(f));
+
+  topLeftBar.innerHTML = topLeft.map((f, i) => `<button data-folder="${f}" style="--i:${i}">${f}</button>`).join("");
+  topRightBar.innerHTML = topRight.map((f, i) => `<button data-folder="${f}" style="--i:${i}">${f}</button>`).join("");
+  bottomBar.innerHTML = bottom.map((f, i) => `<button data-folder="${f}" style="--i:${i}">${f}</button>`).join("");
+
+  document.querySelectorAll(".toolbar button").forEach((btn) => {
+    btn.addEventListener("click", () => toggleFolder(btn.dataset.folder));
+  });
+}
+
+function updateToolbarState() {
+  document.querySelectorAll(".toolbar button").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.folder === activeFolder);
+  });
+
+  if (activeFolder) {
+    document.body.dataset.folder = activeFolder;
+  } else {
+    delete document.body.dataset.folder;
+  }
+}
+
+function updateSelection() {
+  suggestionsList.querySelectorAll(".suggestion").forEach((el) => {
+    el.classList.toggle("selected", +el.dataset.idx === selected);
+  });
 }
 
 function render(results, query) {
@@ -292,6 +312,17 @@ function render(results, query) {
   });
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Navigation
+// ═══════════════════════════════════════════════════════════════════════════
+
+function toggleFolder(folder) {
+  activeFolder = activeFolder === folder ? null : folder;
+  updateToolbarState();
+  input.focus();
+  update();
+}
+
 function go(idx, results, query) {
   if (idx < results.length) {
     const r = results[idx];
@@ -304,6 +335,24 @@ function go(idx, results, query) {
     location.href = `https://google.com/search?q=${encodeURIComponent(query)}`;
   }
 }
+
+function reset() {
+  clearTimeout(autoGoTimer);
+  clearTimeout(suggestTimer);
+  input.value = "";
+  activeFolder = null;
+  historyResults = [];
+  suggestions = [];
+  updateToolbarState();
+  suggestionsList.classList.remove("active");
+  input.classList.remove("keyword-match");
+  delete input.dataset.folder;
+  selected = -1;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Update Loop
+// ═══════════════════════════════════════════════════════════════════════════
 
 async function update() {
   clearTimeout(autoGoTimer);
@@ -319,7 +368,7 @@ async function update() {
     render(bookmarkResults, q);
     autoGoTimer = setTimeout(() => {
       location.href = bookmarkResults[0].url;
-    }, 200);
+    }, AUTO_GO_MS);
     return;
   }
 
@@ -340,7 +389,21 @@ async function update() {
   }, DEBOUNCE_MS);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Events
+// ═══════════════════════════════════════════════════════════════════════════
+
 input.addEventListener("input", update);
+
+input.addEventListener("blur", () => {
+  setTimeout(() => {
+    if (activeFolder && document.activeElement !== input) {
+      activeFolder = null;
+      updateToolbarState();
+      update();
+    }
+  }, 150);
+});
 
 input.addEventListener("keydown", (e) => {
   const q = input.value.trim();
@@ -348,44 +411,57 @@ input.addEventListener("keydown", (e) => {
   const results = blendResults(bookmarkResults, historyResults, suggestions, q);
   const total = results.length + (q ? 1 : 0);
 
-  if (e.key === "ArrowDown") {
-    e.preventDefault();
-    selected = (selected + 1) % total;
-    updateSelection();
-  } else if (e.key === "ArrowUp") {
-    e.preventDefault();
-    selected = selected <= 0 ? total - 1 : selected - 1;
-    updateSelection();
-  } else if (e.key === "Tab") {
-    e.preventDefault();
-    const dir = e.shiftKey ? -1 : 1;
-    const idx = folders.indexOf(activeFolder);
-    const next = (idx + dir + folders.length + 1) % (folders.length + 1);
-    activeFolder = next < folders.length ? folders[next] : null;
-    updateToolbarState();
-    update();
-  } else if (e.key === "Enter") {
-    e.preventDefault();
-    if (bookmarkResults.length === 1 && bookmarkResults[0].exact) {
-      location.href = bookmarkResults[0].url;
-    } else if (selected >= 0) {
-      go(selected, results, q);
-    } else if (results.length > 0) {
-      go(0, results, q);
-    } else if (q) {
-      location.href = `https://google.com/search?q=${encodeURIComponent(q)}`;
-    }
-  } else if (e.key === "Escape") {
-    clearTimeout(autoGoTimer);
-    clearTimeout(suggestTimer);
-    input.value = "";
-    activeFolder = null;
-    historyResults = [];
-    suggestions = [];
-    updateToolbarState();
-    suggestionsList.classList.remove("active");
-    input.classList.remove("keyword-match");
-    delete input.dataset.folder;
-    selected = -1;
+  switch (e.key) {
+    case "ArrowDown":
+      e.preventDefault();
+      selected = (selected + 1) % total;
+      updateSelection();
+      break;
+
+    case "ArrowUp":
+      e.preventDefault();
+      selected = selected <= 0 ? total - 1 : selected - 1;
+      updateSelection();
+      break;
+
+    case "Tab":
+      e.preventDefault();
+      const dir = e.shiftKey ? -1 : 1;
+      const idx = folders.indexOf(activeFolder);
+      const next = (idx + dir + folders.length + 1) % (folders.length + 1);
+      activeFolder = next < folders.length ? folders[next] : null;
+      updateToolbarState();
+      update();
+      break;
+
+    case "Enter":
+      e.preventDefault();
+      if (bookmarkResults.length === 1 && bookmarkResults[0].exact) {
+        location.href = bookmarkResults[0].url;
+      } else if (selected >= 0) {
+        go(selected, results, q);
+      } else if (results.length > 0) {
+        go(0, results, q);
+      } else if (q) {
+        location.href = `https://google.com/search?q=${encodeURIComponent(q)}`;
+      }
+      break;
+
+    case "Escape":
+      reset();
+      break;
   }
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Init
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function init() {
+  input.value = "";
+  bookmarks = await fetchBookmarks();
+  folders = [...new Set(bookmarks.map((b) => b.folder))].sort();
+  renderToolbar();
+}
+
+init();

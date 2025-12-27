@@ -14,18 +14,25 @@ import (
 	_ "modernc.org/sqlite"
 )
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Constants
+// ═══════════════════════════════════════════════════════════════════════════
+
 const (
 	port          = ":42069"
 	firefoxDB     = ".mozilla/firefox/sdfm8kqz.dev-edition-default/places.sqlite"
 	staticDir     = "dotfiles/share/newtab"
 	googleSuggest = "https://suggestqueries.google.com/complete/search?client=firefox&q="
+	historyLimit  = 15
 )
 
-var homeDir string
+const (
+	urlFilter   = "p.url NOT LIKE 'about:%' AND p.url NOT LIKE 'moz-%'"
+	titleFilter = "p.title IS NOT NULL AND p.title != ''"
+	visitFilter = "p.visit_count > 0"
+)
 
-func init() {
-	homeDir, _ = os.UserHomeDir()
-}
+var homeDir = os.Getenv("HOME")
 
 func dbPath() string {
 	return "file:" + filepath.Join(homeDir, firefoxDB) + "?mode=ro&immutable=1"
@@ -35,7 +42,10 @@ func staticPath() string {
 	return filepath.Join(homeDir, staticDir)
 }
 
-// Bookmark represents a Firefox bookmark
+// ═══════════════════════════════════════════════════════════════════════════
+// Types
+// ═══════════════════════════════════════════════════════════════════════════
+
 type Bookmark struct {
 	Folder  string  `json:"folder"`
 	Title   string  `json:"title"`
@@ -44,7 +54,6 @@ type Bookmark struct {
 	Tags    *string `json:"tags"`
 }
 
-// HistoryEntry represents a Firefox history entry
 type HistoryEntry struct {
 	Title      string `json:"title"`
 	URL        string `json:"url"`
@@ -52,23 +61,27 @@ type HistoryEntry struct {
 	LastVisit  int64  `json:"last_visit"`
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// Main
+// ═══════════════════════════════════════════════════════════════════════════
+
 func main() {
 	mux := http.NewServeMux()
 
-	// API endpoints
-	mux.HandleFunc("/api/bookmarks", corsMiddleware(handleBookmarks))
-	mux.HandleFunc("/api/history", corsMiddleware(handleHistory))
-	mux.HandleFunc("/api/suggest", corsMiddleware(handleSuggest))
-
-	// Static files
-	fs := http.FileServer(http.Dir(staticPath()))
-	mux.Handle("/", fs)
+	mux.HandleFunc("/api/bookmarks", withCORS(handleBookmarks))
+	mux.HandleFunc("/api/history", withCORS(handleHistory))
+	mux.HandleFunc("/api/suggest", withCORS(handleSuggest))
+	mux.Handle("/", http.FileServer(http.Dir(staticPath())))
 
 	log.Printf("newtab-server listening on http://localhost%s", port)
 	log.Fatal(http.ListenAndServe(port, mux))
 }
 
-func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
+// ═══════════════════════════════════════════════════════════════════════════
+// Middleware
+// ═══════════════════════════════════════════════════════════════════════════
+
+func withCORS(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Content-Type", "application/json")
@@ -76,10 +89,22 @@ func corsMiddleware(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+func writeJSON(w http.ResponseWriter, v any) {
+	json.NewEncoder(w).Encode(v)
+}
+
+func writeError(w http.ResponseWriter, err error) {
+	http.Error(w, err.Error(), http.StatusInternalServerError)
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Handlers
+// ═══════════════════════════════════════════════════════════════════════════
+
 func handleBookmarks(w http.ResponseWriter, r *http.Request) {
 	db, err := sql.Open("sqlite", dbPath())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeError(w, err)
 		return
 	}
 	defer db.Close()
@@ -108,7 +133,7 @@ func handleBookmarks(w http.ResponseWriter, r *http.Request) {
 		ORDER BY f.title, b.position
 	`)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeError(w, err)
 		return
 	}
 	defer rows.Close()
@@ -122,24 +147,21 @@ func handleBookmarks(w http.ResponseWriter, r *http.Request) {
 		bookmarks = append(bookmarks, b)
 	}
 
-	json.NewEncoder(w).Encode(bookmarks)
+	writeJSON(w, bookmarks)
 }
 
 func handleHistory(w http.ResponseWriter, r *http.Request) {
-	query := r.URL.Query().Get("q")
-	limit := 15
-
 	db, err := sql.Open("sqlite", dbPath())
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeError(w, err)
 		return
 	}
 	defer db.Close()
 
+	query := r.URL.Query().Get("q")
 	var rows *sql.Rows
 
 	if query == "" {
-		// Return recent history
 		rows, err = db.Query(`
 			SELECT 
 				COALESCE(p.title, '') as title,
@@ -147,16 +169,13 @@ func handleHistory(w http.ResponseWriter, r *http.Request) {
 				p.visit_count,
 				p.last_visit_date / 1000000 as last_visit
 			FROM moz_places p
-			WHERE p.visit_count > 0
-				AND p.title IS NOT NULL
-				AND p.title != ''
-				AND p.url NOT LIKE 'about:%'
-				AND p.url NOT LIKE 'moz-%'
+			WHERE `+visitFilter+`
+				AND `+titleFilter+`
+				AND `+urlFilter+`
 			ORDER BY p.last_visit_date DESC
 			LIMIT ?
-		`, limit)
+		`, historyLimit)
 	} else {
-		// Search history by title/URL
 		searchTerm := "%" + strings.ToLower(query) + "%"
 		rows, err = db.Query(`
 			SELECT 
@@ -165,20 +184,18 @@ func handleHistory(w http.ResponseWriter, r *http.Request) {
 				p.visit_count,
 				p.last_visit_date / 1000000 as last_visit
 			FROM moz_places p
-			WHERE p.visit_count > 0
-				AND p.title IS NOT NULL
-				AND p.title != ''
-				AND p.url NOT LIKE 'about:%'
-				AND p.url NOT LIKE 'moz-%'
+			WHERE `+visitFilter+`
+				AND `+titleFilter+`
+				AND `+urlFilter+`
 				AND (LOWER(p.title) LIKE ? OR LOWER(p.url) LIKE ?)
 			ORDER BY 
 				p.visit_count * 0.3 + (p.last_visit_date / 1000000000000.0) DESC
 			LIMIT ?
-		`, searchTerm, searchTerm, limit)
+		`, searchTerm, searchTerm, historyLimit)
 	}
 
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		writeError(w, err)
 		return
 	}
 	defer rows.Close()
@@ -192,39 +209,38 @@ func handleHistory(w http.ResponseWriter, r *http.Request) {
 		history = append(history, h)
 	}
 
-	json.NewEncoder(w).Encode(history)
+	writeJSON(w, history)
 }
 
 func handleSuggest(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	if query == "" {
-		json.NewEncoder(w).Encode([]string{})
+		writeJSON(w, []string{})
 		return
 	}
 
 	resp, err := http.Get(googleSuggest + url.QueryEscape(query))
 	if err != nil {
-		json.NewEncoder(w).Encode([]string{})
+		writeJSON(w, []string{})
 		return
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		json.NewEncoder(w).Encode([]string{})
+		writeJSON(w, []string{})
 		return
 	}
 
-	// Google returns: ["query", ["suggestion1", "suggestion2", ...]]
-	var result []interface{}
+	var result []any
 	if err := json.Unmarshal(body, &result); err != nil || len(result) < 2 {
-		json.NewEncoder(w).Encode([]string{})
+		writeJSON(w, []string{})
 		return
 	}
 
-	suggestions, ok := result[1].([]interface{})
+	suggestions, ok := result[1].([]any)
 	if !ok {
-		json.NewEncoder(w).Encode([]string{})
+		writeJSON(w, []string{})
 		return
 	}
 
@@ -235,5 +251,5 @@ func handleSuggest(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	json.NewEncoder(w).Encode(out)
+	writeJSON(w, out)
 }
