@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Exit pseudo-lock submap if active (clean transition to real lock)
+hyprctl dispatch submap reset
+
 GRACE=6
 
 ws=$(tail -n 1 /tmp/eww/workspace)
