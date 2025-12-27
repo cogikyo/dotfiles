@@ -1,7 +1,15 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   Fonts
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 @font-face {
   font-family: "Symbols Nerd Font";
   src: local("Symbols Nerd Font");
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Variables
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 :root {
   --bg: #222536;
@@ -84,7 +92,26 @@
   --accent-1: var(--blu-1);
   --accent-2: var(--blu-2);
   --accent-3: var(--blu-3);
+
+  --toolbar-gap: 0.5rem;
+  --toolbar-inset: 1.2rem;
+  --container-top: 15%;
+  --container-width: 520px;
+
+  --input-padding: 0.9rem 1.2rem;
+  --input-radius: 6px;
+  --btn-radius: 3px;
+  --suggestion-padding: 0.55rem 1rem;
+
+  --transition-fast: 0.12s;
+  --transition-med: 0.15s;
+  --animation-duration: 0.4s;
+  --animation-stagger: 0.05s;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Folder Accent Overrides
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 [data-folder="git"] {
   --accent-0: var(--blu-0);
@@ -153,6 +180,10 @@
   --accent-3: var(--sky-3);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Reset & Base
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 * {
   box-sizing: border-box;
   margin: 0;
@@ -168,6 +199,10 @@ body {
   color: var(--fg);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Video Background
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 video {
   position: fixed;
   inset: 0;
@@ -178,33 +213,41 @@ video {
   animation: fadeIn 0.6s ease-out forwards;
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Container
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 .container {
   position: fixed;
-  top: 15%;
+  top: var(--container-top);
   left: 50%;
   transform: translateX(-50%);
   z-index: 10;
   width: 100%;
-  max-width: 520px;
+  max-width: var(--container-width);
   padding: 0 1.5rem;
   opacity: 0;
-  animation: slideDown 0.4s ease-out 0.15s forwards;
+  animation: slideDown var(--animation-duration) ease-out 0.15s forwards;
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Toolbar
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 .toolbar {
   position: fixed;
   z-index: 10;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--toolbar-gap);
 }
 
 .toolbar.top-left {
-  top: 1.2rem;
-  left: 1.2rem;
+  top: var(--toolbar-inset);
+  left: var(--toolbar-inset);
   display: grid;
   grid-template-columns: repeat(2, auto);
-  gap: 0.5rem;
+  gap: var(--toolbar-gap);
   justify-items: start;
 }
 
@@ -222,18 +265,18 @@ video {
 }
 
 .toolbar.top-right {
-  top: 1.2rem;
-  right: 1.2rem;
+  top: var(--toolbar-inset);
+  right: var(--toolbar-inset);
   align-items: flex-end;
 }
 
 .toolbar.bottom {
-  bottom: 1.2rem;
-  right: 1.2rem;
+  bottom: var(--toolbar-inset);
+  right: var(--toolbar-inset);
   display: grid;
   grid-template-columns: repeat(3, 5rem);
   grid-template-rows: repeat(3, auto);
-  gap: 0.5rem;
+  gap: var(--toolbar-gap);
   align-items: end;
   justify-items: end;
 }
@@ -241,7 +284,6 @@ video {
 .toolbar.bottom button {
   width: 100%;
 }
-
 .toolbar.bottom button:nth-child(1) {
   grid-column: 1;
   grid-row: 3;
@@ -268,32 +310,28 @@ video {
 }
 
 .toolbar button {
-  --delay: 0.05s;
-  opacity: 0;
-  animation-delay: calc(var(--i) * var(--delay));
-}
-
-.toolbar.top-left button {
-  animation: slideFromLeft 0.4s ease-out forwards;
-}
-
-.toolbar.top-right button,
-.toolbar.bottom button {
-  animation: slideFromRight 0.4s ease-out forwards;
-}
-
-.toolbar button {
+  --delay: var(--animation-stagger);
   font: inherit;
   font-size: 0.7rem;
   padding: 0.25rem 0.5rem;
   background: transparent;
   border: 1px solid color-mix(in srgb, var(--blu-3) 50%, transparent);
-  border-radius: 3px;
+  border-radius: var(--btn-radius);
   color: var(--blu-3);
   cursor: pointer;
-  transition: all 0.12s;
+  transition: all var(--transition-fast);
   letter-spacing: 0.02em;
   text-align: left;
+  opacity: 0;
+  animation-delay: calc(var(--i) * var(--delay));
+}
+
+.toolbar.top-left button {
+  animation: slideFromLeft var(--animation-duration) ease-out forwards;
+}
+.toolbar.top-right button,
+.toolbar.bottom button {
+  animation: slideFromRight var(--animation-duration) ease-out forwards;
 }
 
 .toolbar button .hotkey {
@@ -319,17 +357,21 @@ video {
   box-shadow: 0 0 10px color-mix(in srgb, var(--accent-0) 25%, transparent);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Input
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 input {
   width: 100%;
-  padding: 0.9rem 1.2rem;
+  padding: var(--input-padding);
   font: inherit;
   font-size: 1rem;
   background: color-mix(in srgb, var(--drk-1) 20%, transparent);
   border: 1px solid var(--slt-0);
-  border-radius: 6px;
+  border-radius: var(--input-radius);
   color: var(--fg);
   outline: none;
-  transition: all 0.15s;
+  transition: all var(--transition-med);
   backdrop-filter: blur(16px);
 }
 
@@ -349,11 +391,15 @@ input.keyword-match {
   color: var(--accent-2);
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   Suggestions Container
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 .suggestions {
-  margin-top: 0.5rem;
+  margin-top: var(--toolbar-gap);
   background: color-mix(in srgb, var(--drk-1) 75%, transparent);
   border: 1px solid var(--slt-0);
-  border-radius: 6px;
+  border-radius: var(--input-radius);
   overflow: hidden;
   display: none;
   backdrop-filter: blur(16px);
@@ -364,12 +410,22 @@ input.keyword-match {
   display: block;
 }
 
+.suggestion-divider {
+  height: 1px;
+  background: var(--slt-1);
+  margin: 0.25rem 1rem;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Suggestion Items
+   ═══════════════════════════════════════════════════════════════════════════ */
+
 .suggestion {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.55rem 1rem;
+  padding: var(--suggestion-padding);
   cursor: pointer;
   transition: all 0.1s;
   border-left: 2px solid transparent;
@@ -385,17 +441,6 @@ input.keyword-match {
   border-left-color: var(--accent-1);
 }
 
-.suggestion.keyword-exact {
-  background: color-mix(in srgb, var(--accent-0) 12%, transparent);
-  border-left-color: var(--accent-1);
-}
-
-.suggestion.keyword-exact:hover,
-.suggestion.keyword-exact.selected {
-  background: color-mix(in srgb, var(--accent-0) 18%, transparent);
-  border-left-color: var(--accent-0);
-}
-
 .suggestion .title {
   color: var(--brt-0);
   font-size: 0.88rem;
@@ -406,9 +451,6 @@ input.keyword-match {
 
 .suggestion .title .match {
   color: var(--orn-2);
-}
-.suggestion.keyword-exact .title {
-  color: var(--accent-3);
 }
 
 .suggestion .meta {
@@ -436,11 +478,125 @@ input.keyword-match {
   margin-right: 0.5rem;
 }
 
+.suggestion .type-indicator {
+  opacity: 0.6;
+  background: transparent;
+  padding: 0;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Suggestion Types: Keyword Exact
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.suggestion.keyword-exact {
+  background: color-mix(in srgb, var(--accent-0) 12%, transparent);
+  border-left-color: var(--accent-1);
+}
+
+.suggestion.keyword-exact:hover,
+.suggestion.keyword-exact.selected {
+  background: color-mix(in srgb, var(--accent-0) 18%, transparent);
+  border-left-color: var(--accent-0);
+}
+
+.suggestion.keyword-exact .title {
+  color: var(--accent-3);
+}
+
 .suggestion.keyword-exact .keyword {
   color: var(--accent-2);
   background: color-mix(in srgb, var(--accent-1) 20%, transparent);
   box-shadow: 0 0 8px color-mix(in srgb, var(--accent-0) 30%, transparent);
 }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Suggestion Types: Bookmark
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.suggestion.type-bookmark .title::before {
+  content: " ";
+  opacity: 0.75;
+  font-size: 1rem;
+}
+
+.suggestion.type-bookmark-keyword .title::before {
+  content: " ";
+  opacity: 0.75;
+  font-size: 1rem;
+}
+
+.suggestion.type-bookmark .title .match {
+  color: var(--orn-2);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Suggestion Types: History
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.suggestion.type-history {
+  border-left-color: var(--slt-3);
+}
+
+.suggestion.type-history .title {
+  font-style: italic;
+  color: var(--slt-3);
+}
+
+.suggestion.type-history .title::before {
+  content: " ";
+  opacity: 0.75;
+  font-size: 0.8rem;
+}
+
+.suggestion.type-history .folder {
+  color: var(--drk-3);
+  background: color-mix(in srgb, var(--slt-3) 40%, transparent);
+}
+
+.suggestion.type-history:hover,
+.suggestion.type-history.selected {
+  background: color-mix(in srgb, var(--slt-1) 30%, transparent);
+  border-left-color: var(--slt-3);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Suggestion Types: Suggested (Google)
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+.suggestion.type-suggested {
+  border-left-color: var(--glc-3);
+}
+
+.suggestion.type-suggested .title {
+  color: var(--fg);
+  font-style: italic;
+}
+
+.suggestion.type-suggested .title::before {
+  content: " ";
+  opacity: 0.75;
+  font-size: 1rem;
+}
+
+.suggestion.type-suggested .folder {
+  color: var(--brt-0);
+  background: color-mix(in srgb, var(--glc-3) 40%, transparent);
+}
+
+.suggestion.type-suggested:hover,
+.suggestion.type-suggested.selected {
+  background: color-mix(in srgb, var(--glc-3) 20%, transparent);
+  border-left-color: var(--slt-1);
+}
+
+.suggestion.type-suggested:hover .title,
+.suggestion.type-suggested.selected .title {
+  color: var(--brt-1);
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Suggestion Types: Fallback (Google Search)
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 .suggestion.fallback {
   justify-content: flex-end;
@@ -452,56 +608,19 @@ input.keyword-match {
   font-style: italic;
 }
 
-.suggestion.fallback .folder {
-  display: none;
-}
-
-.suggestion.type-suggested .folder {
-  color: var(--brt-0);
-  background: color-mix(in srgb, var(--glc-3) 40%, transparent);
-}
-
-.suggestion.type-history .folder {
-  color: var(--drk-3);
-  background: color-mix(in srgb, var(--slt-3) 40%, transparent);
-}
-
-/* Result type indicators */
-.suggestion.type-history .title::before {
-  content: " ";
-  opacity: 0.75;
-  font-size: 0.8rem;
-}
-
-.suggestion.type-suggested .title::before {
-  content: " ";
-  opacity: 0.75;
-  font-size: 1rem;
-}
-
-.suggestion.type-bookmark-keyword .title::before {
-  content: " ";
-  opacity: 0.75;
-  font-size: 1rem;
-}
-
-.suggestion.type-bookmark .title::before {
-  content: " ";
-  opacity: 0.75;
-  font-size: 1rem;
-}
-
-.suggestion .type-indicator {
-  opacity: 0.6;
-  background: transparent;
-  padding: 0;
-}
-
 .suggestion.fallback .title::before {
   content: " ";
   opacity: 0.75;
   font-size: 1rem;
 }
+
+.suggestion.fallback .folder {
+  display: none;
+}
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   Suggestion Folder Colors (Bookmark Titles)
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 .suggestion[class*="type-bookmark"][data-folder="learn"] .title {
   color: color-mix(in srgb, var(--grn-3) 60%, var(--brt-3));
@@ -537,50 +656,9 @@ input.keyword-match {
   color: color-mix(in srgb, var(--wht-3) 60%, var(--brt-3));
 }
 
-.suggestion.type-bookmark .title .match {
-  color: var(--orn-2);
-}
-
-.suggestion.type-history {
-  border-left-color: var(--slt-3);
-}
-
-.suggestion.type-history .title {
-  font-style: italic;
-  color: var(--slt-3);
-}
-
-.suggestion.type-history:hover,
-.suggestion.type-history.selected {
-  background: color-mix(in srgb, var(--slt-1) 30%, transparent);
-  border-left-color: var(--slt-3);
-}
-
-.suggestion.type-suggested {
-  border-left-color: var(--glc-3);
-}
-
-.suggestion.type-suggested .title {
-  color: var(--fg);
-  font-style: italic;
-}
-
-.suggestion.type-suggested:hover,
-.suggestion.type-suggested.selected {
-  background: color-mix(in srgb, var(--glc-3) 20%, transparent);
-  border-left-color: var(--slt-1);
-}
-
-.suggestion.type-suggested:hover .title,
-.suggestion.type-suggested.selected .title {
-  color: var(--brt-1);
-}
-
-.suggestion-divider {
-  height: 1px;
-  background: var(--slt-1);
-  margin: 0.25rem 1rem;
-}
+/* ═══════════════════════════════════════════════════════════════════════════
+   Keyframes
+   ═══════════════════════════════════════════════════════════════════════════ */
 
 @keyframes fadeIn {
   to {
@@ -596,17 +674,6 @@ input.keyword-match {
   to {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
-  }
-}
-
-@keyframes fadeSlideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-4px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
   }
 }
 

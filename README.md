@@ -291,10 +291,8 @@ sudo cp udev/* /etc/udev/rules.d/ # probably don't want the bluetooth rules
 sudo cp loader.conf /boot/loader/loader.conf
 sudo cp gifview.desktop /usr/share/applications/gifview.desktop
 sudo cp security/faillock.conf /etc/security/faillock.conf
-sudo cp caddy.service /etc/systemd/system/
 sudo cp logid.cfg /etc/logid.cfg
 sudo systemctl enable bluetooth
-sudo systemctl enable caddy.service
 
 # DNS: systemd-resolved with Cloudflare (DNS-over-TLS)
 sudo ln -sf ~/dotfiles/etc/systemd/resolved.conf /etc/systemd/
