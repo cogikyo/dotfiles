@@ -1,7 +1,18 @@
 #!/usr/bin/env bash
 
-sleep 1
 change-bg "code"
+
+# Wait for internet connection before opening layouts
+max_attempts=10
+attempt=0
+while ! ping -c 1 -W 1 1.1.1.1 &>/dev/null; do
+    ((attempt++))
+    if ((attempt >= max_attempts)); then
+        dunstify -a "attention" -u critical "Network" "Failed to connect after ${max_attempts}s"
+        break
+    fi
+    sleep 1
+done
 
 # layout -n 1
 # layout -n 2
