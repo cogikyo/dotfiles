@@ -1,3 +1,8 @@
+@font-face {
+  font-family: "Symbols Nerd Font";
+  src: local("Symbols Nerd Font");
+}
+
 :root {
   --bg: #222536;
   --drk-0: #1e2133;
@@ -159,7 +164,7 @@ body {
   height: 100%;
   overflow: hidden;
   background: var(--bg);
-  font-family: monospace;
+  font-family: monospace, "Symbols Nerd Font";
   color: var(--fg);
 }
 
@@ -422,9 +427,10 @@ input.keyword-match {
 }
 
 .suggestion .keyword {
-  font-size: 0.68rem;
-  color: var(--blu-2);
-  background: color-mix(in srgb, var(--blu-1) 12%, transparent);
+  font-size: 1rem;
+  font-weight: bold;
+  color: var(--accent-2);
+  background: color-mix(in srgb, var(--accent-1) 12%, transparent);
   padding: 0.1rem 0.4rem;
   border-radius: 2px;
   margin-right: 0.5rem;
@@ -436,13 +442,144 @@ input.keyword-match {
   box-shadow: 0 0 8px color-mix(in srgb, var(--accent-0) 30%, transparent);
 }
 
+.suggestion.fallback {
+  justify-content: flex-end;
+  margin-right: -0.75rem;
+}
+
 .suggestion.fallback .title {
-  color: var(--glc-3);
+  color: var(--rby-1);
   font-style: italic;
 }
 
 .suggestion.fallback .folder {
   display: none;
+}
+
+.suggestion.type-suggested .folder {
+  color: var(--brt-0);
+  background: color-mix(in srgb, var(--glc-3) 40%, transparent);
+}
+
+.suggestion.type-history .folder {
+  color: var(--drk-3);
+  background: color-mix(in srgb, var(--slt-3) 40%, transparent);
+}
+
+/* Result type indicators */
+.suggestion.type-history .title::before {
+  content: " ";
+  opacity: 0.75;
+  font-size: 0.8rem;
+}
+
+.suggestion.type-suggested .title::before {
+  content: " ";
+  opacity: 0.75;
+  font-size: 1rem;
+}
+
+.suggestion.type-bookmark-keyword .title::before {
+  content: " ";
+  opacity: 0.75;
+  font-size: 1rem;
+}
+
+.suggestion.type-bookmark .title::before {
+  content: " ";
+  opacity: 0.75;
+  font-size: 1rem;
+}
+
+.suggestion .type-indicator {
+  opacity: 0.6;
+  background: transparent;
+  padding: 0;
+}
+
+.suggestion.fallback .title::before {
+  content: " ";
+  opacity: 0.75;
+  font-size: 1rem;
+}
+
+.suggestion[class*="type-bookmark"][data-folder="learn"] .title {
+  color: color-mix(in srgb, var(--grn-3) 60%, var(--brt-3));
+}
+.suggestion[class*="type-bookmark"][data-folder="dev"] .title {
+  color: color-mix(in srgb, var(--cyn-3) 60%, var(--brt-3));
+}
+.suggestion[class*="type-bookmark"][data-folder="config"] .title {
+  color: color-mix(in srgb, var(--prp-3) 60%, var(--brt-3));
+}
+.suggestion[class*="type-bookmark"][data-folder="life"] .title {
+  color: color-mix(in srgb, var(--pnk-3) 60%, var(--brt-3));
+}
+.suggestion[class*="type-bookmark"][data-folder="bills"] .title {
+  color: color-mix(in srgb, var(--sun-3) 60%, var(--brt-3));
+}
+.suggestion[class*="type-bookmark"][data-folder="wangare"] .title {
+  color: color-mix(in srgb, var(--sky-3) 60%, var(--brt-3));
+}
+.suggestion[class*="type-bookmark"][data-folder="localhost"] .title {
+  color: color-mix(in srgb, var(--orn-3) 60%, var(--brt-3));
+}
+.suggestion[class*="type-bookmark"][data-folder="trend"] .title {
+  color: color-mix(in srgb, var(--emr-3) 60%, var(--brt-3));
+}
+.suggestion[class*="type-bookmark"][data-folder="git"] .title {
+  color: color-mix(in srgb, var(--blu-3) 60%, var(--brt-3));
+}
+.suggestion[class*="type-bookmark"][data-folder="google"] .title {
+  color: color-mix(in srgb, var(--rby-2) 60%, var(--brt-3));
+}
+.suggestion[class*="type-bookmark"][data-folder="x"] .title {
+  color: color-mix(in srgb, var(--wht-3) 60%, var(--brt-3));
+}
+
+.suggestion.type-bookmark .title .match {
+  color: var(--orn-2);
+}
+
+.suggestion.type-history {
+  border-left-color: var(--slt-3);
+}
+
+.suggestion.type-history .title {
+  font-style: italic;
+  color: var(--slt-3);
+}
+
+.suggestion.type-history:hover,
+.suggestion.type-history.selected {
+  background: color-mix(in srgb, var(--slt-1) 30%, transparent);
+  border-left-color: var(--slt-3);
+}
+
+.suggestion.type-suggested {
+  border-left-color: var(--glc-3);
+}
+
+.suggestion.type-suggested .title {
+  color: var(--fg);
+  font-style: italic;
+}
+
+.suggestion.type-suggested:hover,
+.suggestion.type-suggested.selected {
+  background: color-mix(in srgb, var(--glc-3) 20%, transparent);
+  border-left-color: var(--slt-1);
+}
+
+.suggestion.type-suggested:hover .title,
+.suggestion.type-suggested.selected .title {
+  color: var(--brt-1);
+}
+
+.suggestion-divider {
+  height: 1px;
+  background: var(--slt-1);
+  margin: 0.25rem 1rem;
 }
 
 @keyframes fadeIn {

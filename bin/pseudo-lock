@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+
+if [[ "$1" == "-u" ]]; then
+    # Unlock: exit submap, restore workspace, restart eww & glava
+    hyprctl dispatch submap reset
+    if [[ -f /tmp/pseudo-lock-ws ]]; then
+        ws=$(cat /tmp/pseudo-lock-ws)
+        hyprctl dispatch workspace "$ws"
+    fi
+    eww-open &
+    glava -e "bars_rc.glsl" & disown
+    glava -e "bars_r_rc.glsl" & disown
+    glava -e "radial_rc.glsl" & disown
+else
+    # Lock: save workspace, move to WS 6, kill eww & glava, enter submap
+    ws=$(tail -n 1 /tmp/eww/workspace)
+    echo "$ws" > /tmp/pseudo-lock-ws
+    hyprctl dispatch workspace 6
+    killall eww -9 2>/dev/null
+    killall glava 2>/dev/null
+    hyprctl dispatch submap pseudolock
+fi
