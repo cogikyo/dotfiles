@@ -53,7 +53,15 @@ if [[ "$floating" == "true" ]]; then
     exit 0
 fi
 
-master_addr=$(get_tiled_windows "$workspace_id" | jq -r 'sort_by(.at[0])[0].address')
+tiled_windows=$(get_tiled_windows "$workspace_id")
+window_count=$(echo "$tiled_windows" | jq 'length')
+
+if [[ "$window_count" -eq 2 ]]; then
+    hyprctl dispatch workspace 6
+    exit 0
+fi
+
+master_addr=$(echo "$tiled_windows" | jq -r 'sort_by(.at[0])[0].address')
 if [[ "$addr" == "$master_addr" ]]; then
     hyprctl dispatch movefocus r
     read -r addr workspace_id < <(hyprctl activewindow -j | jq -r '[.address, .workspace.id] | @tsv')

@@ -5,6 +5,11 @@ fallback="$2"
 
 [[ -z "$class" ]] && exit 1
 
+current=$(hyprctl activewindow -j | jq -r '.address')
+if [[ -f "/tmp/hypr-pseudo-master/$current" ]]; then
+    pseudo-master
+fi
+
 ws=$(hyprctl activeworkspace -j | jq '.id')
 addr=$(hyprctl clients -j | jq -r \
     --argjson ws "$ws" \
