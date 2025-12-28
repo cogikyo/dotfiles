@@ -59,9 +59,9 @@ modified = "[㋲${count} ](sky_2)"
 staged = '[ ${count} ](orn_3)'
 untracked = '[ ${count} ](sun_3)'
 renamed = "[ ${count} ](prp_3)"
-ahead = "[⯭${count} ](grn_3)"
+ahead = "[🢙${count} ](grn_3)"
 diverged = '[󱡷 [${ahead_count} ](grn_3) [${behind_count} ](rby_3)](prp_3)'
-behind = '[⯯${count} ](rby_3)'
+behind = '[🢛${count} ](rby_3)'
 deleted = "[ ${count} ](rby_3)"
 
 [time]
