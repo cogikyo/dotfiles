@@ -73,7 +73,6 @@ require("lazy").setup({
 		-- neovim/nvim-lspconfig: language server setup
 		-- saghen/blink.cmp: completion capabilities
 		"ThePrimeagen/refactoring.nvim", -- refactoring helpers via treesitter
-
 		"elkowar/yuck.vim", -- yuck/eww syntax highlighting
 
 		{ import = "plugins.ui" },
