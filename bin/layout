@@ -126,12 +126,7 @@ terminal() {
     if [[ ! -d "$path" ]]; then
         error "path does not exist: $path"
     fi
-    # Use hyprctl dispatch exec to spawn on current workspace
-    if [[ "$1" == "dotfiles" ]]; then
-        hyprctl dispatch exec "kitty --session ~/.config/kitty/sessions/dotfiles.conf"
-    else
-        hyprctl dispatch exec "env PROJECT_PATH=$path kitty --session ~/.config/kitty/sessions/default.conf"
-    fi
+    hyprctl dispatch exec "env PROJECT_PATH=$path kitty --session ~/.config/kitty/sessions/default.conf"
     sleep 0.25
 }
 
