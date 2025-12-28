@@ -34,6 +34,7 @@ while getopts 'xsdlr' flag; do
                 set_layout "sm"
             else
                 set_layout "default"
+                resize-slave -r
             fi
             exit 0
             ;;
