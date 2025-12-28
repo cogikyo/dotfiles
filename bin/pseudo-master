@@ -36,26 +36,40 @@ read -r floating addr workspace_id < <(
 
 cache_file="$CACHE_DIR/$addr"
 
-# Skip master window (leftmost tiled window)
-if [[ "$floating" == "false" ]]; then
-    master_addr=$(get_tiled_windows "$workspace_id" | jq -r 'sort_by(.at[0])[0].address')
-    [[ "$addr" == "$master_addr" ]] && exit 0
-fi
-
 if [[ "$floating" == "true" ]]; then
-    hyprctl dispatch togglefloating
-
     if [[ -f "$cache_file" ]]; then
+        hyprctl dispatch togglefloating
         saved_index=$(<"$cache_file")
-        # Fresh client data after toggle
         slave_count=$(get_tiled_windows "$workspace_id" | jq 'length - 1')
         swaps=$((slave_count - 1 - saved_index))
-
         for ((i = 0; i < swaps; i++)); do
             hyprctl dispatch layoutmsg swapprev
         done
         rm -f "$cache_file"
+        resize-slave -r
+    else
+        exec toggle-monocle
     fi
+    exit 0
+fi
+
+master_addr=$(get_tiled_windows "$workspace_id" | jq -r 'sort_by(.at[0])[0].address')
+if [[ "$addr" == "$master_addr" ]]; then
+    hyprctl dispatch movefocus r
+    read -r addr workspace_id < <(hyprctl activewindow -j | jq -r '[.address, .workspace.id] | @tsv')
+    cache_file="$CACHE_DIR/$addr"
+fi
+
+if [[ -f "$cache_file" ]]; then
+    hyprctl dispatch togglefloating
+    saved_index=$(<"$cache_file")
+    slave_count=$(get_tiled_windows "$workspace_id" | jq 'length - 1')
+    swaps=$((slave_count - 1 - saved_index))
+    for ((i = 0; i < swaps; i++)); do
+        hyprctl dispatch layoutmsg swapprev
+    done
+    rm -f "$cache_file"
+    resize-slave -r
 else
     slave_area=$(get_slave_area "$workspace_id")
     [[ -z "$slave_area" ]] && exit 0
