@@ -24,17 +24,17 @@ from kitty.utils import color_as_int
 # │ Configuration                                                                │
 # ╰──────────────────────────────────────────────────────────────────────────────╯
 
-ICON_MAIN = " 󰣇 "  # arch logo
+ICON_MAIN = "  "  # arch logo
 
-SEP_LEFT = ""  # left-pointing powerline arrow 
-SEP_RIGHT = ""  # right-pointing powerline arrow 
+SEP_LEFT = ""  # left-pointing powerline arrow
+SEP_RIGHT = ""  # right-pointing powerline arrow
 SEP_SOFT = ""  # soft separator between same-bg tabs
 
 TRUNCATE = " ⽙"  # shown when cwd is truncated
 ICON_HOME = " ⾕"  # home indicator
 CWD_SPACER = "  "  # decorative spacer after cwd
 
-ICON_ROOT_DESCENDED = "  "  # root indicator when path has multiple parts 
+ICON_ROOT_DESCENDED = "  "  # root indicator when path has multiple parts
 ICON_ROOT_BASE = "  "  # root indicator when at root
 
 ICON_USER = "⼈"  # user indicator
@@ -82,7 +82,7 @@ def get_cwd(tab: TabBarData = None) -> str:
     """Get formatted current working directory from tab's active window."""
     boss = get_boss()
     cwd = None
-    
+
     # If tab is provided, try to get its active window
     if tab is not None:
         try:
@@ -92,25 +92,25 @@ def get_cwd(tab: TabBarData = None) -> str:
                 for t in tab_manager.tabs:
                     if t.id == tab.tab_id:
                         window = t.active_window
-                        if window and hasattr(window, 'cwd_of_child'):
+                        if window and hasattr(window, "cwd_of_child"):
                             cwd = window.cwd_of_child
                             break
         except (AttributeError, KeyError, TypeError):
             pass
-    
+
     # Fallback to active window if we didn't get CWD from specific tab
     if not cwd:
         tab_manager = boss.active_tab_manager
         if not tab_manager:
             return ""
         window = tab_manager.active_window
-        if not window or not hasattr(window, 'cwd_of_child'):
+        if not window or not hasattr(window, "cwd_of_child"):
             return ""
         cwd = window.cwd_of_child
-    
+
     if not cwd:
         return ICON_ROOT_BASE
-    
+
     parts = list(Path(cwd).parts)
 
     if not parts:
