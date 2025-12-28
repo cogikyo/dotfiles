@@ -25,7 +25,7 @@ glava -e "bars_r_rc.glsl" & disown
 glava -e "radial_rc.glsl" & disown
 
 spotify-launcher & disown
-sleep 2
+sleep 3
 hyprctl dispatch setfloating
 hyprctl dispatch moveactive exact 2418 88
 hyprctl dispatch resizeactive exact 1310 2053
