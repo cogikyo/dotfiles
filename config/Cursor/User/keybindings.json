@@ -147,17 +147,8 @@
     "command": "composerMode.plan"
   },
   {
-    "key": "meta+i i",
-    "command": "claude-vscode.insertAtMention",
-    "when": "editorTextFocus"
-  },
-  {
     "key": "alt+k",
     "command": "-claude-vscode.insertAtMention",
     "when": "editorTextFocus"
-  },
-  {
-    "key": "meta+i c",
-    "command": "claude-vscode.editor.openLast"
   }
 ]

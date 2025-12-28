@@ -38,8 +38,7 @@ if [[ "$inprog" -gt 2 ]]; then
     error "already in progress"
 fi
 
-# Auto-kill after 10 seconds to prevent hidden hangs
-( sleep 5; dunstify -a "layout" -u critical -t 2000 "TIMEOUT" "layout script killed after 10s"; kill $$ 2>/dev/null ) &
+( sleep 5; dunstify -a "layout" -u critical -t 2000 "TIMEOUT" "layout script killed after 5s"; kill $$ 2>/dev/null ) &
 WATCHDOG_PID=$!
 trap 'kill $WATCHDOG_PID 2>/dev/null' EXIT
 
@@ -144,6 +143,7 @@ declare -A APP=(
     [n]="nosvagor.com|localhost:3000"
     [l]="LeadPier|http://localhost:4000"
     [h]="hgmx-builder|https://github.com/cogikyo/hgmx-builder|http://localhost:8003"
+    [z]="kaizen|https://github.com/cogikyo/kaizen"
 )
 
 # === MAIN =====================================================================
@@ -164,7 +164,7 @@ main() {
         sub_msg="opening $layout_sub"
     fi
 
-    hyprctl keyword input:follow_mouse 0
+    # hyprctl keyword input:follow_mouse 0
     check_windows
 
     dunstify -a "layout" -u low "$layout_name" "$sub_msg"
@@ -191,7 +191,7 @@ main() {
         resize-slave
     fi
 
-    hyprctl keyword input:follow_mouse 1
+    # hyprctl keyword input:follow_mouse 1
     dunstify -a "layout" -u low "$layout_name" "$sub_msg completed"
 }
 
