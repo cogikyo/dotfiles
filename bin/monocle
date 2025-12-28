@@ -4,7 +4,7 @@
 set -euo pipefail
 
 CACHE_DIR="/tmp/hypr-monocle"
-MONOCLE_SIZE="2900 1606"
+MONOCLE_SIZE="3200 1914"
 MONOCLE_WS_FILE="/tmp/eww/monocle"
 
 BORDER_DEFAULT="rgb(f2a170)"
@@ -120,6 +120,7 @@ else
         dispatch resizeactive exact $MONOCLE_SIZE; \
         dispatch centerwindow; \
         dispatch movetoworkspace 6; \
+        dispatch moveactive 0 25; \
         keyword general:col.active_border $BORDER_MONOCLE; \
         keyword decoration:shadow:color $SHADOW_MONOCLE"
     
