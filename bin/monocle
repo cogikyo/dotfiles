@@ -40,6 +40,41 @@ fi
 
 cache_file="$CACHE_DIR/$addr"
 
+restore_monocle() {
+    local monocle_addr="$1"
+    local monocle_cache="$CACHE_DIR/$monocle_addr"
+    [[ ! -f "$monocle_cache" ]] && return 1
+    
+    IFS=':' read -r position orig_ws <<< "$(<"$monocle_cache")"
+    
+    hyprctl --batch "\
+        dispatch focuswindow address:$monocle_addr; \
+        dispatch togglefloating; \
+        dispatch movetoworkspace $orig_ws; \
+        keyword general:col.active_border $BORDER_DEFAULT; \
+        keyword decoration:shadow:color $SHADOW_DEFAULT"
+
+    if [[ "$position" == "master" ]]; then
+        hyprctl dispatch movewindow u
+        hyprctl dispatch movewindow l
+    elif [[ "$position" == "0" ]]; then
+        hyprctl dispatch movewindow u
+    fi
+    rm -f "$monocle_cache"
+    echo "" >> "$MONOCLE_WS_FILE"
+    resize-slave -r
+}
+
+if [[ "$workspace_id" != "6" ]]; then
+    monocle_window=$(hyprctl clients -j | jq -r '[.[] | select(.workspace.id == 6 and .floating == true)][0].address // empty')
+    if [[ -n "$monocle_window" ]]; then
+        restore_monocle "$monocle_window"
+        hyprctl dispatch movefocus l
+        hyprctl dispatch movefocus r
+        exit 0
+    fi
+fi
+
 if [[ "$workspace_id" == "6" && "$floating" == "true" ]]; then
     if [[ -f "$cache_file" ]]; then
         IFS=':' read -r position orig_ws <<< "$(<"$cache_file")"
