@@ -1,3 +1,22 @@
 #!/usr/bin/env bash
 
-ln -sfnv "$HOME"/dotfiles/config/* "$HOME"/.config/
+# Symlink most config directories normally
+for item in "$HOME"/dotfiles/config/*; do
+    name=$(basename "$item")
+
+    # Skip directories that need special handling
+    if [[ "$name" == "claude" || "$name" == "Cursor" ]]; then
+        continue
+    fi
+
+    ln -sfnv "$item" "$HOME/.config/"
+done
+
+# Special handling for claude: symlink individual files only
+mkdir -p "$HOME/.config/claude"
+ln -sfnv "$HOME/dotfiles/config/claude/settings.json" "$HOME/.config/claude/settings.json"
+
+# Special handling for Cursor: symlink User directory files only
+mkdir -p "$HOME/.config/Cursor/User"
+ln -sfnv "$HOME/dotfiles/config/Cursor/User/keybindings.json" "$HOME/.config/Cursor/User/keybindings.json"
+ln -sfnv "$HOME/dotfiles/config/Cursor/User/settings.json" "$HOME/.config/Cursor/User/settings.json"
