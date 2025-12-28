@@ -25,7 +25,7 @@ set_layout() {
 
 current=$(cat "$state_file" 2>/dev/null || echo "default")
 
-while getopts 'xsdl' flag; do
+while getopts 'xsdlr' flag; do
     case "$flag" in
         x) set_layout "xs"; exit 0 ;;
         s) set_layout "sm"; exit 0 ;;
@@ -38,6 +38,12 @@ while getopts 'xsdl' flag; do
             exit 0
             ;;
         l) set_layout "lg"; exit 0 ;;
+        r)
+            set_layout "$current"
+            pos=$(hyprctl activewindow -j | jq -r '"\(.at[0] + .size[0]/2),\(.at[1] + .size[1]/2)"')
+            hyprctl dispatch movecursor "${pos%,*} ${pos#*,}"
+            exit 0
+            ;;
         *) exit 1 ;;
     esac
 done

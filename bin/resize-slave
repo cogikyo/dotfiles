@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # Resize bottom slave to ~20% height when exactly 3 tiled windows exist
 
+original_addr=$(hyprctl activewindow -j | jq -r '.address')
 ws_id=$(hyprctl activeworkspace -j | jq '.id')
 tiled=$(hyprctl clients -j | jq --argjson ws "$ws_id" '[.[] | select(.floating == false and .workspace.id == $ws)]')
 
@@ -9,18 +10,14 @@ tiled=$(hyprctl clients -j | jq --argjson ws "$ws_id" '[.[] | select(.floating =
 master_x=$(echo "$tiled" | jq '[.[].at[0]] | min')
 slaves=$(echo "$tiled" | jq --argjson mx "$master_x" '[.[] | select(.at[0] > $mx)] | sort_by(.at[1])')
 top=$(echo "$slaves" | jq -r '.[0].address')
-bottom=$(echo "$slaves" | jq -r '.[1].address')
-bottom_size=$(echo "$slaves" | jq -r '.[1].size | "\(.[0]),\(.[1])"')
 
-original_addr=$(hyprctl activewindow -j | jq -r '.address')
-
-# If already focused on bottom and bottom is already resized, focus master
-if [[ "$original_addr" == "$bottom" && "$bottom_size" == "1540,572" ]]; then
-    master=$(echo "$tiled" | jq --argjson mx "$master_x" -r '.[] | select(.at[0] == $mx) | .address')
-    hyprctl dispatch focuswindow "address:$master"
-    exit 0
-fi
-
-# Reset mfact, resize top slave, focus bottom
 hyprctl dispatch layoutmsg mfact exact 0.5749
-hyprctl --batch "dispatch focuswindow address:$top; dispatch resizeactive exact 1540 1468; dispatch focuswindow address:$bottom"
+hyprctl --batch "dispatch focuswindow address:$top; dispatch resizeactive exact 1540 1468; dispatch focuswindow address:$original_addr"
+
+while getopts 'r' flag; do
+    case "$flag" in
+        r) split -r; exit 0;;
+        *) exit 1 ;;
+    esac
+done
+

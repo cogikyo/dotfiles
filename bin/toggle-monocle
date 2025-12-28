@@ -26,34 +26,41 @@ floating=$(jq -r '.floating' <<< "$window_info")
 addr=$(jq -r '.address' <<< "$window_info")
 workspace_id=$(jq -r '.workspace.id' <<< "$window_info")
 
-# Skip master window (leftmost tiled window)
+is_master="false"
 if [[ "$floating" == "false" ]]; then
     master_addr=$(get_tiled_windows "$workspace_id" | jq -r 'sort_by(.at[0]) | .[0].address')
-    [[ "$addr" == "$master_addr" ]] && exit 0
+    [[ "$addr" == "$master_addr" ]] && is_master="true"
 fi
 
 cache_file="$CACHE_DIR/$addr"
 
 if [[ "$floating" == "true" ]]; then
-    # Untoggle: return to tiled
     hyprctl --batch "dispatch setprop address:$addr dimaround 0; dispatch togglefloating"
 
     if [[ -f "$cache_file" ]]; then
-        saved_index=$(<"$cache_file")
-        slave_count=$(get_tiled_windows "$workspace_id" | jq 'length - 1')
-        swaps=$((slave_count - 1 - saved_index))
-
-        for ((i = 0; i < swaps; i++)); do
-            hyprctl dispatch layoutmsg swapprev
-        done
+        saved=$(<"$cache_file")
+        if [[ "$saved" == "master" ]]; then
+            hyprctl dispatch movewindow u
+            hyprctl dispatch movewindow l
+        elif [[ "$saved" == "0" ]]; then
+            hyprctl dispatch movewindow u
+        fi
         rm -f "$cache_file"
+        resize-slave -r
     fi
 else
-    get_slave_index "$workspace_id" "$addr" > "$cache_file"
+    if [[ "$is_master" == "true" ]]; then
+        echo "master" > "$cache_file"
+    else
+        get_slave_index "$workspace_id" "$addr" > "$cache_file"
+    fi
 
     hyprctl --batch "\
         dispatch togglefloating; \
         dispatch resizeactive exact $MONOCLE_SIZE; \
         dispatch centerwindow; \
         dispatch setprop address:$addr dimaround 1"
+    
+    pos=$(hyprctl activewindow -j | jq -r '"\(.at[0] + .size[0]/2),\(.at[1] + .size[1]/2)"')
+    hyprctl dispatch movecursor "${pos%,*} ${pos#*,}"
 fi
