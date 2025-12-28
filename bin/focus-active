@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+class="$1"
+fallback="$2"
+
+[[ -z "$class" ]] && exit 1
+
+ws=$(hyprctl activeworkspace -j | jq '.id')
+addr=$(hyprctl clients -j | jq -r \
+    --argjson ws "$ws" \
+    --arg class "$class" \
+    '.[] | select(.workspace.id == $ws and .class == $class) | .address' | head -1)
+
+if [[ -n "$addr" ]]; then
+    hyprctl dispatch focuswindow "address:$addr"
+elif [[ -n "$fallback" ]]; then
+    $fallback
+fi
