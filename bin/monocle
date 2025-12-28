@@ -32,6 +32,17 @@ floating=$(jq -r '.floating' <<< "$window_info")
 addr=$(jq -r '.address' <<< "$window_info")
 workspace_id=$(jq -r '.workspace.id' <<< "$window_info")
 
+# Check if window is in pseudo-master mode and restore it first
+PSEUDO_MASTER_CACHE="/tmp/hypr-pseudo-master/$addr"
+if [[ "$floating" == "true" && -f "$PSEUDO_MASTER_CACHE" ]]; then
+    pseudo-master
+    # Re-fetch window info after pseudo-master restoration
+    window_info=$(hyprctl activewindow -j)
+    floating=$(jq -r '.floating' <<< "$window_info")
+    addr=$(jq -r '.address' <<< "$window_info")
+    workspace_id=$(jq -r '.workspace.id' <<< "$window_info")
+fi
+
 is_master="false"
 if [[ "$floating" == "false" ]]; then
     master_addr=$(get_tiled_windows "$workspace_id" | jq -r 'sort_by(.at[0]) | .[0].address')
