@@ -5,6 +5,12 @@ set -euo pipefail
 
 CACHE_DIR="/tmp/hypr-monocle"
 MONOCLE_SIZE="2900 1606"
+MONOCLE_WS_FILE="/tmp/eww/monocle"
+
+BORDER_DEFAULT="rgb(f2a170)"
+SHADOW_DEFAULT="rgba(e56b2c32)"
+BORDER_MONOCLE="rgb(5aba6d)"
+SHADOW_MONOCLE="rgba(2d9a4342)"
 
 mkdir -p "$CACHE_DIR"
 
@@ -34,32 +40,42 @@ fi
 
 cache_file="$CACHE_DIR/$addr"
 
-if [[ "$floating" == "true" ]]; then
-    hyprctl --batch "dispatch setprop address:$addr dimaround 0; dispatch togglefloating"
-
+if [[ "$workspace_id" == "6" && "$floating" == "true" ]]; then
     if [[ -f "$cache_file" ]]; then
-        saved=$(<"$cache_file")
-        if [[ "$saved" == "master" ]]; then
+        IFS=':' read -r position orig_ws <<< "$(<"$cache_file")"
+        
+        hyprctl --batch "\
+            dispatch togglefloating; \
+            dispatch movetoworkspace $orig_ws; \
+            keyword general:col.active_border $BORDER_DEFAULT; \
+            keyword decoration:shadow:color $SHADOW_DEFAULT"
+
+        if [[ "$position" == "master" ]]; then
             hyprctl dispatch movewindow u
             hyprctl dispatch movewindow l
-        elif [[ "$saved" == "0" ]]; then
+        elif [[ "$position" == "0" ]]; then
             hyprctl dispatch movewindow u
         fi
         rm -f "$cache_file"
+        echo "" >> "$MONOCLE_WS_FILE"
         resize-slave -r
     fi
 else
     if [[ "$is_master" == "true" ]]; then
-        echo "master" > "$cache_file"
+        echo "master:$workspace_id" > "$cache_file"
     else
-        get_slave_index "$workspace_id" "$addr" > "$cache_file"
+        echo "$(get_slave_index "$workspace_id" "$addr"):$workspace_id" > "$cache_file"
     fi
+
+    echo "$workspace_id" >> "$MONOCLE_WS_FILE"
 
     hyprctl --batch "\
         dispatch togglefloating; \
         dispatch resizeactive exact $MONOCLE_SIZE; \
         dispatch centerwindow; \
-        dispatch setprop address:$addr dimaround 1"
+        dispatch movetoworkspace 6; \
+        keyword general:col.active_border $BORDER_MONOCLE; \
+        keyword decoration:shadow:color $SHADOW_MONOCLE"
     
     pos=$(hyprctl activewindow -j | jq -r '"\(.at[0] + .size[0]/2),\(.at[1] + .size[1]/2)"')
     hyprctl dispatch movecursor "${pos%,*} ${pos#*,}"

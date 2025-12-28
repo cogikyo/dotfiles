@@ -1077,6 +1077,10 @@
   :initial "5"
   'tail -F /tmp/eww/occupied 2> /dev/null'
 )
+(deflisten monocle-origin
+  :initial ""
+  'tail -F /tmp/eww/monocle 2> /dev/null'
+)
 
 (defwidget workspace [icon num desc hover]
   (eventbox
@@ -1088,6 +1092,7 @@
     :tooltip "  ${desc}  "
     (box
       :style "background-image: url('art/ws-icons/${icon}${
+                monocle-origin == num ? "-monocle" :
                 hover ? "-hover" :
                 matches(active-ws,num) ? "-active" :
                 "${matches(occupied, "${num}") ? "" : "-empty"}"
@@ -1103,7 +1108,7 @@
     :onhoverlost "eww update ws-hover=false"
     :onrightclick "hyprctl dispatch workspace previous"
     (box
-      :class "tr-a workspacesbox ${ws-hover ? "workspacesbox-hover" : ""}"
+      :class "tr-a workspacesbox ${ws-hover ? "workspacesbox-hover" : ""} ${monocle-origin != "" ? "workspacesbox-monocle" : ""}"
       :halign "center" :space-evenly false :spacing 10
       :orientation "vertical"
       (workspace :icon "network"  :num "1" :hover ws-h1 :desc " chat 'n networking")
