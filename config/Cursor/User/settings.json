@@ -139,5 +139,7 @@
   "editor.fontSize": 12,
   "cursor.composer.usageSummaryDisplay": "always",
   "workbench.startupEditor": "none",
-  "window.restoreWindows": "none"
+  "window.restoreWindows": "none",
+  "claudeCode.preferredLocation": "panel",
+  "claudeCode.selectedModel": "default"
 }
