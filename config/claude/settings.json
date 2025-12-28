@@ -1,0 +1,17 @@
+{
+  "$schema": "https://raw.githubusercontent.com/anthropics/claude-code/main/schema/settings.schema.json",
+  "model": "sonnet",
+  "statusLineMode": "compact",
+  "promptSuggestions": true,
+  "theme": "light-ansi",
+  "editorMode": "vim",
+  "preferredNotifChannel": "kitty",
+  "autoUpdates": false,
+  "allowedTools": {
+    "Bash": {
+      "mkdir": "*"
+    }
+  },
+  "hooks": {},
+  "mcpServers": {}
+}
