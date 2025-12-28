@@ -2,6 +2,9 @@
 # Resize bottom slave to ~20% height when exactly 3 tiled windows exist
 
 original_addr=$(hyprctl activewindow -j | jq -r '.address')
+floating=$(hyprctl activewindow -j | jq -r '.floating')
+[[ "$floating" == "true" ]] && exit 0
+
 ws_id=$(hyprctl activeworkspace -j | jq '.id')
 tiled=$(hyprctl clients -j | jq --argjson ws "$ws_id" '[.[] | select(.floating == false and .workspace.id == $ws)]')
 

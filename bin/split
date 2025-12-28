@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+floating=$(hyprctl activewindow -j | jq -r '.floating')
+[[ "$floating" == "true" ]] && exit 0
+
 state_file="/tmp/mfact-state"
 
 set_layout() {
