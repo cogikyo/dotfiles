@@ -50,6 +50,7 @@ if [[ "$floating" == "true" ]]; then
     else
         exec toggle-monocle
     fi
+    hyprctl dispatch movefocus l
     exit 0
 fi
 
@@ -57,7 +58,14 @@ tiled_windows=$(get_tiled_windows "$workspace_id")
 window_count=$(echo "$tiled_windows" | jq 'length')
 
 if [[ "$window_count" -eq 2 ]]; then
-    hyprctl dispatch workspace 6
+    has_floating=$(hyprctl clients -j | jq --argjson ws "$workspace_id" \
+        '[.[] | select(.workspace.id == $ws and .floating == true and .class != "GLava")] | length > 0')
+    if [[ "$has_floating" == "true" ]]; then
+        hyprctl dispatch cyclenext prev
+        pseudo-master
+    else
+        hyprctl dispatch cyclenext prev
+    fi
     exit 0
 fi
 
