@@ -15,6 +15,7 @@ done
 # Special handling for claude: symlink individual files only
 mkdir -p "$HOME/.config/claude"
 ln -sfnv "$HOME/dotfiles/config/claude/settings.json" "$HOME/.config/claude/settings.json"
+ln -sfnv "$HOME/dotfiles/config/claude/skills" "$HOME/.config/claude/skills"
 
 # Special handling for Cursor: symlink User directory files only
 mkdir -p "$HOME/.config/Cursor/User"
