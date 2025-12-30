@@ -52,18 +52,20 @@ return {
 
 		nvim_tree.setup({
 			on_attach = on_attach,
-			disable_netrw = false,
+			disable_netrw = true,
+			cursorline = false,
 			hijack_cursor = true,
 			update_focused_file = { enable = true },
 			diagnostics = { enable = true },
 			modified = { enable = true },
 			view = {
+				signcoulmn = false,
 				number = true,
 				cursorline = false,
-				relativenumber = true,
+				relativenumber = false,
 				signcolumn = "yes",
 				float = {
-					enable = true,
+					enable = false,
 					open_win_config = function()
 						local screen_w = vim.opt.columns:get()
 						local screen_h = vim.opt.lines:get() - vim.opt.cmdheight:get()
@@ -96,9 +98,9 @@ return {
 						none = " ",
 					},
 				},
-			icons = {
-				git_placement = "signcolumn",
-				glyphs = {
+				icons = {
+					git_placement = "after",
+					glyphs = {
 						default = "",
 						symlink = "",
 						git = {
