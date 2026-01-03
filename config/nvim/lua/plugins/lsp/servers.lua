@@ -103,7 +103,24 @@ local servers = {
 	},
 	templ = {},
 	marksman = {},
-	pyright = {},
+	basedpyright = {
+		settings = {
+			basedpyright = {
+				typeCheckingMode = "standard",
+				analysis = {
+					autoSearchPaths = true,
+					useLibraryCodeForTypes = true,
+					diagnosticSeverityOverrides = {
+						reportUnknownMemberType = "none",
+						reportUnknownArgumentType = "none",
+						reportUnknownVariableType = "none",
+						reportMissingTypeStubs = "none",
+					},
+				},
+			},
+		},
+	},
+	ruff = {},
 	taplo = {},
 	lua_ls = {
 		filetypes = { "lua" },
@@ -136,7 +153,19 @@ return {
 		version = "1.*",
 		dependencies = { "rafamadriz/friendly-snippets" },
 		opts = {
-			keymap = { preset = "default" },
+			keymap = {
+				preset = "none",
+				["<Tab>"] = { "select_and_accept", "fallback" },
+				["<Up>"] = { "select_prev", "fallback" },
+				["<Down>"] = { "select_next", "fallback" },
+				["<C-p>"] = { "select_prev", "fallback" },
+				["<C-n>"] = { "select_next", "fallback" },
+				["<C-Space>"] = { "show", "fallback" },
+				["<C-e>"] = { "cancel", "fallback" },
+				["<Esc>"] = { "cancel", "fallback" },
+				["<C-b>"] = { "scroll_documentation_up", "fallback" },
+				["<C-f>"] = { "scroll_documentation_down", "fallback" },
+			},
 			appearance = { nerd_font_variant = "mono" },
 			completion = {
 				accept = { auto_brackets = { enabled = true } },
@@ -165,6 +194,23 @@ return {
 			},
 			fuzzy = { implementation = "prefer_rust_with_warning" },
 		},
+		config = function(_, opts)
+			require("blink.cmp").setup(opts)
+
+			-- Hide Copilot ghost text when popup opens
+			vim.api.nvim_create_autocmd("User", {
+				pattern = "BlinkCmpMenuOpen",
+				callback = function()
+					vim.b.copilot_suggestion_hidden = true
+				end,
+			})
+			vim.api.nvim_create_autocmd("User", {
+				pattern = "BlinkCmpMenuClose",
+				callback = function()
+					vim.b.copilot_suggestion_hidden = false
+				end,
+			})
+		end,
 	},
 	{
 		"neovim/nvim-lspconfig",
@@ -200,7 +246,11 @@ return {
 						[vim.diagnostic.severity.HINT] = "󰌶 ",
 					},
 				},
-				virtual_text = { source = true, spacing = 2 },
+				virtual_text = {
+					source = false,
+					spacing = 2,
+					severity = { min = vim.diagnostic.severity.WARN },
+				},
 			})
 
 			local hover_method = vim.lsp.protocol.Methods.textDocument_hover
