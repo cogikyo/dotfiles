@@ -52,10 +52,10 @@ format = "[$symbol$branch(:$remote_branch)]($style)"
 
 [git_status]
 style = "orn_3"
-format = '[ $ahead_behind$conflicted$renamed$staged$modified$untracked$stashed$deleted]($style)'
+format = '[ $ahead_behind$conflicted$untracked$modified$staged$renamed$deleted$stashed]($style)'
 conflicted = "[ ](pnk_3)"
 stashed = "[󰸧 ${count} ](slt_2)"
-modified = "[㋲${count} ](sky_2)"
+modified = "[${count} ](sky_2)"
 staged = '[ ${count} ](orn_3)'
 untracked = '[ ${count} ](sun_3)'
 renamed = "[ ${count} ](prp_3)"

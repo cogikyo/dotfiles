@@ -81,7 +81,6 @@ require("lazy").setup({
 		-- nvim-lualine/lualine.nvim: statusline with LSP progress
 		-- "ThePrimeagen/harpoon": quick file marks/teleport
 		-- nvim-tree/nvim-tree.lua: file explorer
-		{ "lukas-reineke/virt-column.nvim", opts = { char = "⏐", highlight = "VirtColumn" } },
 		"ggandor/lightspeed.nvim", -- fast motion/word jumps
 		"mbbill/undotree", -- visual undo tree panel
 	},

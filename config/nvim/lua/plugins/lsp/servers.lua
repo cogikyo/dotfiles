@@ -200,7 +200,11 @@ return {
 						[vim.diagnostic.severity.HINT] = "󰌶 ",
 					},
 				},
-				virtual_text = { source = true, spacing = 2 },
+				-- virtual_text = {
+				-- 	source = false,
+				-- 	spacing = 2,
+				-- 	severity = { min = vim.diagnostic.severity.WARN },
+				-- },
 			})
 
 			local hover_method = vim.lsp.protocol.Methods.textDocument_hover
