@@ -7,7 +7,7 @@ CACHE_DIR="/tmp/hypr-pseudo-master"
 mkdir -p "$CACHE_DIR"
 
 # Monitor geometry (3840x2160 with reserved: 80 top, 16 bottom, 105 left, 85 right)
-readonly RESERVED_TOP=80 RESERVED_BOTTOM=16 RESERVED_RIGHT=85
+readonly RESERVED_TOP=86 RESERVED_BOTTOM=32 RESERVED_RIGHT=85
 readonly MONITOR_W=3840 MONITOR_H=2160
 readonly USABLE_H=$((MONITOR_H - RESERVED_TOP - RESERVED_BOTTOM))
 

@@ -1,7 +1,6 @@
 return {
 	"nvim-lualine/lualine.nvim",
 	dependencies = {
-		"arkav/lualine-lsp-progress",
 		"nvim-tree/nvim-web-devicons",
 	},
 	config = function()
@@ -51,7 +50,7 @@ return {
 			sources = { "nvim_diagnostic" },
 			sections = { "error", "warn", "hint", "info" },
 			symbols = { error = " ", warn = " ", hint = " ", info = " " },
-			colored = false,
+			colored = true,
 			update_in_insert = false,
 			padding = { left = 1, right = 1 },
 			cond = hide_in_width,
@@ -83,9 +82,9 @@ return {
 			shorting_target = 80,
 			icon = nil,
 			symbols = {
-				modified = "㋲",
+				modified = " ",
 				readonly = "󰍁 ",
-				unnamed = "",
+				unnamed = "󱙝 ",
 				newfile = " ",
 			},
 			color = function()
@@ -104,31 +103,16 @@ return {
 			end,
 		}
 
-		local lsp_progress = {
-			"lsp_progress",
-			display_components = {
-				"lsp_client_name",
-				"spinner",
+		local lsp_status = {
+			"lsp_status",
+			icon = "",
+			symbols = {
+				spinner = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" },
+				done = "✓",
+				separator = " ",
 			},
-			timer = {
-				progress_enddelay = 100,
-				spinner = 100,
-				lsp_client_name_enddelay = 3000,
-			},
-			message = {
-				commenced = "󱞇 ",
-				completed = "󱞈 ",
-			},
-			separators = {
-				component = " ",
-				progress = "",
-				message = { pre = "", post = " " },
-				percentage = { pre = "", post = "%% " },
-				title = { pre = "", post = "" },
-				lsp_client_name = { pre = " ", post = "" },
-				spinner = { pre = "", post = " " },
-			},
-			spinner_symbols = { "󰇊", "󰇋", "󰇌", "󰇍", "󰇎", "󰇏" },
+			ignore_lsp = {},
+			show_name = true,
 		}
 
 		local search = {
@@ -174,6 +158,7 @@ return {
 				luailne_z = {},
 			},
 			filetypes = {
+				"NvimTree",
 				"undotree",
 				"diff",
 			},
@@ -188,8 +173,15 @@ return {
 			sections = {
 				lualine_a = { mode },
 				lualine_b = { branch, filename },
-				lualine_c = { diff, lsp_diagnostics },
-				lualine_x = { lazy, lsp_progress, search },
+				lualine_c = { diff },
+				lualine_x = {
+					lazy,
+					lsp_diagnostics,
+					lsp_status,
+					{ require("recorder").recordingStatus },
+					{ require("recorder").displaySlots },
+					search,
+				},
 				lualine_y = { filetype },
 				lualine_z = { icon },
 			},

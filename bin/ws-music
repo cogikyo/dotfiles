@@ -21,10 +21,10 @@ if [[ "$current_ws" == "$MUSIC_WS" ]]; then
     fi
     change-bg "kill"
 else
-    hyprctl keyword animation "workspaces, 1, 8, default, slidefade"
+    hyprctl keyword animation "workspaces, 1, 5, default, slidefade"
     hyprctl dispatch workspace "$MUSIC_WS" &
     change-bg "music"
-    sleep 0.8
+    sleep 0.5
     hyprctl keyword animation "workspaces, 1, 0.5, default, slide"
 fi
 
