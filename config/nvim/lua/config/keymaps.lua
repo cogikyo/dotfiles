@@ -1,12 +1,11 @@
---- 🔧 helpers ---
 local function map(mode, lhs, rhs, opts)
 	local keymap_opts = vim.tbl_extend("force", { silent = true }, opts or {})
 	keymap_opts.icon = nil
 	vim.keymap.set(mode, lhs, rhs, keymap_opts)
 end
 
-local function with_desc(desc, extra)
-	local o = { desc = desc }
+local function with_desc(description, extra)
+	local o = { desc = description }
 
 	if extra then
 		for k, v in pairs(extra) do
@@ -15,20 +14,21 @@ local function with_desc(desc, extra)
 	end
 	return o
 end
-local function desc(desc)
-	return with_desc(desc)
+local function desc(description)
+	return with_desc(description)
 end
-local function remap(desc)
-	return with_desc(desc, { remap = true })
+local function remap(description)
+	return with_desc(description, { remap = true })
 end
-local function remap_explicit(desc)
-	return with_desc(desc, { remap = true, silent = false })
+local function remap_explicit(description)
+	return with_desc(description, { remap = true, silent = false })
 end
-local function expr(desc)
-	return with_desc(desc, { expr = true })
+local function expr(description)
+	return with_desc(description, { expr = true })
 end
 
 local GROUPS = {
+	{ "<leader>a", group = "AI/Copilot" },
 	{ "<leader>b", group = "Buffer Controls" },
 	{ "<leader>c", group = "Code/Change" },
 	{ "<leader>d", group = "Delete/Database" },
@@ -47,18 +47,12 @@ local GROUPS = {
 	{ "z", group = "Folds" },
 }
 
---- 💾 Save ---
+-- save
 map("n", "<C-s>", ":w<CR>", desc("Save"))
 map("i", "<C-s>", "<Esc>:w<CR>", desc("Save"))
 map("v", "<C-s>", "<Esc>:w<CR>", desc("Save"))
 map("n", "<leader>ss", ":noa w<CR><CR", desc("Save (no autocmd)"))
 map("n", "<leader><C-s>", ":lua vim.lsp.buf.format()<CR><C-s>", desc("Format and save"))
-map(
-	"v",
-	"<leader><C-s>",
-	":<C-u>lua vim.lsp.buf.format({ range = { start = vim.api.nvim_buf_get_mark(0, '<'), ['end'] = vim.api.nvim_buf_get_mark(0, '>') } })<CR>",
-	desc("Format selection")
-)
 map("n", "<leader>so", ":w | source %<CR>", desc("Save and source"))
 
 --- 🔔 Quit ---
@@ -73,19 +67,25 @@ map("n", "<C-y>", "<C-r>", desc("Redo"))
 map("i", "<C-v>", '<Esc>"+p', desc("Paste (clipboard)"))
 map("i", "<C-t>", '<Esc>"*p', desc("Paste (selection)"))
 
---- 🤖 Copy copy ---
+--- 🤖 Copy copy ----------------------------------------------------------------------------------
 map("v", "<leader>y", 'ml"+y`l', desc("Yank to clipboard"))
 map("v", "<C-c>", 'ml"+y`l', desc("Yank to clipboard"))
 map("n", "<leader>y", '"+y', desc("Yank to clipboard"))
 map("n", "<leader>Y", '"+y$', desc("Yank line to clipboard"))
 map("n", "<leader>gy", 'mlgg"+yG`lzvzt', desc("Yank file to clipboard"))
+map("n", "<leader>yc", ':let @+=expand("%:p")<CR>', desc("Yank file path"))
+map("v", "<leader><C-c>", function()
+	vim.cmd('normal! "+y')
+	local selection = vim.fn.getreg("+")
+	local path = vim.fn.expand("%:p")
+	vim.fn.setreg("+", path .. "\n\n" .. selection .. "\n")
+end, desc("Yank file path + selection"))
 map("n", "<leader>wd", "dt<space>", desc("Delete word"))
 map("x", "<leader>p", '"_dP', desc("Paste (preserve register)"))
 
 --- 🌌 Gimme space please ---
 map("n", "<leader>o", ':<C-u>call append(line("."),   repeat([""], v:count1))<CR>', desc("Add line below"))
 map("n", "<leader>O", ':<C-u>call append(line(".")-1,   repeat([""], v:count1))<CR>', desc("Add line above"))
-map("n", "<leader>a", "<leader>o<leader>O", remap("Add lines around"))
 
 --- 💎 Don't let go ---
 map("n", "<leader>d", '"_d', desc("Delete (no register)"))
@@ -195,6 +195,11 @@ map("n", "<leader>mt", ":MarkdownPreviewToggle<CR>,", desc("Markdown preview"))
 map("n", "<leader>et", ":NvimTreeToggle<CR> :NvimTreeRefresh<CR>", desc("Toggle file tree"))
 map("n", "<leader>bt", ":Switch<CR>", desc("Toggle variant"))
 
+--- 🤖 Copilot ---
+map("n", "<leader>at", ":Copilot toggle<CR>", desc("Toggle Copilot"))
+map("n", "<leader>as", ":Copilot status<CR>", desc("Copilot status"))
+map("n", "<leader>ap", ":Copilot panel<CR>", desc("Copilot panel"))
+
 --- 🔍 Replace ---
 map("v", "r", ":s///g<Left><Left><Left>", remap_explicit("Replace in selection"))
 map("n", "<leader>r<leader>", ":%s///g<Left><Left><Left>", remap_explicit("Replace {custom pattern} in file"))
@@ -239,9 +244,9 @@ if telescope_ok then
 	tmap("<leader>tsp", telescope_builtin.spell_suggest, "Spelling suggestions")
 
 	-- LSP-only pickers (require attached server)
-	tmap("<leader>tsr", telescope_builtin.lsp_references, "LSP references", "󰌹", "purple")
-	tmap("<leader>tss", telescope_builtin.lsp_document_symbols, "LSP document symbols", "󰙅", "cyan")
-	tmap("<leader>tsw", telescope_builtin.lsp_dynamic_workspace_symbols, "LSP workspace symbols", "󰙅", "cyan")
+	tmap("<leader>tsr", telescope_builtin.lsp_references, "LSP references")
+	tmap("<leader>tss", telescope_builtin.lsp_document_symbols, "LSP document symbols")
+	tmap("<leader>tsw", telescope_builtin.lsp_dynamic_workspace_symbols, "LSP workspace symbols")
 end
 
 --- 🔱 Harpoon ---
@@ -276,7 +281,9 @@ M.on_attach = function(event)
 	bmap("<C-k>", vim.lsp.buf.signature_help, "Signature Help")
 	bmap("<leader>k", vim.diagnostic.open_float, "Diagnostic Float")
 
-	bmap("<leader>rn", vim.lsp.buf.rename, "Rename")
+	vim.keymap.set("n", "<f2>", function()
+		return ":IncRename " .. vim.fn.expand("<cword>")
+	end, { buffer = event.buf, desc = "LSP: Rename", expr = true })
 	bmap("<leader>ca", vim.lsp.buf.code_action, "Code Action")
 	bmap("<leader>cl", vim.lsp.codelens.run, "Code Lens")
 
@@ -301,29 +308,8 @@ M.on_attach = function(event)
 		return
 	end
 
-	if client:supports_method(vim.lsp.protocol.Methods.textDocument_documentHighlight, event.buf) then
-		local hl_group = vim.api.nvim_create_augroup("lsp-highlight", { clear = false })
-		vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
-			buffer = event.buf,
-			group = hl_group,
-			callback = vim.lsp.buf.document_highlight,
-		})
-		vim.api.nvim_create_autocmd({ "CursorMoved", "CursorMovedI" }, {
-			buffer = event.buf,
-			group = hl_group,
-			callback = vim.lsp.buf.clear_references,
-		})
-		vim.api.nvim_create_autocmd("LspDetach", {
-			group = vim.api.nvim_create_augroup("lsp-detach", { clear = true }),
-			callback = function(e)
-				vim.lsp.buf.clear_references()
-				vim.api.nvim_clear_autocmds({ group = "lsp-highlight", buffer = e.buf })
-			end,
-		})
-	end
-
 	if client:supports_method(vim.lsp.protocol.Methods.textDocument_codeLens, event.buf) then
-		vim.api.nvim_create_autocmd({ "BufEnter", "CursorHold", "InsertLeave" }, {
+		vim.api.nvim_create_autocmd({ "BufEnter", "InsertLeave" }, {
 			buffer = event.buf,
 			callback = vim.lsp.codelens.refresh,
 		})

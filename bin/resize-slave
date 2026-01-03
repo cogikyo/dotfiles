@@ -14,8 +14,8 @@ master_x=$(echo "$tiled" | jq '[.[].at[0]] | min')
 slaves=$(echo "$tiled" | jq --argjson mx "$master_x" '[.[] | select(.at[0] > $mx)] | sort_by(.at[1])')
 top=$(echo "$slaves" | jq -r '.[0].address')
 
-hyprctl dispatch layoutmsg mfact exact 0.5749
-hyprctl --batch "dispatch focuswindow address:$top; dispatch resizeactive exact 1540 1468; dispatch focuswindow address:$original_addr"
+hyprctl --batch "dispatch focuswindow address:$top; dispatch resizeactive exact 1824 1472; dispatch focuswindow address:$original_addr"
+hyprctl dispatch layoutmsg mfact exact 0.4942
 
 while getopts 'r' flag; do
     case "$flag" in
