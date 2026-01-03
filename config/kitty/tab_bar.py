@@ -1,3 +1,7 @@
+# pyright: reportMissingImports=false
+# pyright: reportCallIssue=false
+# pyright: reportGeneralTypeIssues=false
+# pyright: reportAttributeAccessIssue=false
 """
 Custom Kitty tab bar with:
   - Left: Icon → CWD → Tab titles
@@ -25,6 +29,7 @@ from kitty.utils import color_as_int
 # ╰──────────────────────────────────────────────────────────────────────────────╯
 
 ICON_MAIN = "  "  # arch logo
+ICON_CLAUDE = " 󰯉 "  # claude icon
 
 SEP_LEFT = ""  # left-pointing powerline arrow
 SEP_RIGHT = ""  # right-pointing powerline arrow
@@ -68,45 +73,23 @@ class Colors:
 
 
 colors = Colors()
-
-# Track right status length globally for positioning
 _right_status_length = 0
-
 
 # ╭──────────────────────────────────────────────────────────────────────────────╮
 # │ Utilities                                                                    │
 # ╰──────────────────────────────────────────────────────────────────────────────╯
 
 
-def get_cwd(tab: TabBarData = None) -> str:
-    """Get formatted current working directory from tab's active window."""
+def get_cwd() -> str:
+    """Get formatted current working directory from active window."""
     boss = get_boss()
-    cwd = None
-
-    # If tab is provided, try to get its active window
-    if tab is not None:
-        try:
-            tab_manager = boss.active_tab_manager
-            if tab_manager:
-                # Find the tab by iterating through tabs
-                for t in tab_manager.tabs:
-                    if t.id == tab.tab_id:
-                        window = t.active_window
-                        if window and hasattr(window, "cwd_of_child"):
-                            cwd = window.cwd_of_child
-                            break
-        except (AttributeError, KeyError, TypeError):
-            pass
-
-    # Fallback to active window if we didn't get CWD from specific tab
-    if not cwd:
-        tab_manager = boss.active_tab_manager
-        if not tab_manager:
-            return ""
-        window = tab_manager.active_window
-        if not window or not hasattr(window, "cwd_of_child"):
-            return ""
-        cwd = window.cwd_of_child
+    tab_manager = boss.active_tab_manager
+    if not tab_manager:
+        return ""
+    window = tab_manager.active_window
+    if not window or not hasattr(window, "cwd_of_child"):
+        return ""
+    cwd = window.cwd_of_child
 
     if not cwd:
         return ICON_ROOT_BASE
@@ -139,6 +122,35 @@ def get_cwd(tab: TabBarData = None) -> str:
 # ╰─────────────────────────────────────────────────────────────────────────────╯
 
 
+def get_window_title() -> str:
+    """Get the active window's title."""
+    boss = get_boss()
+    if not boss:
+        return ""
+    tm = boss.active_tab_manager
+    if not tm:
+        return ""
+    window = tm.active_window
+    if not window:
+        return ""
+    return window.title or ""
+
+
+def is_claude_running(window) -> bool:
+    """Check if claude CLI is running in the window."""
+    if not window or not hasattr(window, "child"):
+        return False
+    try:
+        procs = window.child.foreground_processes
+        for p in procs:
+            cmdline = p.get("cmdline") or []
+            if any("claude" in str(arg).lower() for arg in cmdline):
+                return True
+    except (AttributeError, KeyError, TypeError):
+        pass
+    return False
+
+
 def draw_icon(screen: Screen, index: int) -> int:
     """Draw the main icon (only on first tab)."""
     if index != 1:
@@ -146,9 +158,17 @@ def draw_icon(screen: Screen, index: int) -> int:
 
     fg_prev, bg_prev = screen.cursor.fg, screen.cursor.bg
 
+    # Choose icon based on running process
+    icon = ICON_MAIN
+    boss = get_boss()
+    if boss:
+        tm = boss.active_tab_manager
+        if tm and is_claude_running(tm.active_window):
+            icon = ICON_CLAUDE
+
     # Icon with accent background
     screen.cursor.fg, screen.cursor.bg = colors.fg, colors.bg
-    screen.draw(ICON_MAIN)
+    screen.draw(icon)
 
     # Separator
     screen.cursor.fg, screen.cursor.bg = colors.bg, bg_prev
@@ -159,13 +179,13 @@ def draw_icon(screen: Screen, index: int) -> int:
     return screen.cursor.x
 
 
-def draw_cwd(screen: Screen, index: int, tab: TabBarData = None) -> int:
-    """Draw the current working directory (only on first tab)."""
+def draw_cwd(screen: Screen, index: int) -> int:
+    """Draw the current working directory (only at index 1, shows active tab's cwd)."""
     if index != 1:
         return 0
 
     fg_prev, bg_prev = screen.cursor.fg, screen.cursor.bg
-    cwd = get_cwd(tab)
+    cwd = get_cwd()  # Get active tab's CWD
 
     # CWD text
     screen.cursor.fg, screen.cursor.bg = colors.bg, colors.active_bg
@@ -309,7 +329,7 @@ def draw_tab(
 
     # Draw components
     draw_icon(screen, index)
-    draw_cwd(screen, index, tab)
+    draw_cwd(screen, index)
     draw_tab_title(draw_data, screen, tab, index, extra_data)
     draw_right_status(screen, is_last, cells)
 

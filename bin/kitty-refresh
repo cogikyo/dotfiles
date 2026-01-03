@@ -43,17 +43,17 @@ open_tab() {
     local cmd="${CMDS[$name]}"
 
     if [[ "$name" == "build" ]]; then
-        just --list --justfile "$cwd/justfile" &>/dev/null || { $refresh && kitty @ close-tab --match "env:KITTY_TAB_ID=${tab_id}" 2>/dev/null || true; return 0; }
+        just --list --justfile "$cwd/justfile" &>/dev/null || { "$refresh" && kitty @ close-tab --match "env:KITTY_TAB_ID=${tab_id}" 2>/dev/null || true; return 0; }
     fi
 
     if [[ "$name" == "git" ]]; then
-        git -C "$cwd" rev-parse --git-dir &>/dev/null || { $refresh && kitty @ close-tab --match "env:KITTY_TAB_ID=${tab_id}" 2>/dev/null || true; return 0; }
+        git -C "$cwd" rev-parse --git-dir &>/dev/null || { "$refresh" && kitty @ close-tab --match "env:KITTY_TAB_ID=${tab_id}" 2>/dev/null || true; return 0; }
     fi
 
-    $refresh && kitty @ close-tab --match "env:KITTY_TAB_ID=${tab_id}" 2>/dev/null || true
+    "$refresh" && kitty @ close-tab --match "env:KITTY_TAB_ID=${tab_id}" 2>/dev/null || true
 
     if [[ -n "$cmd" ]]; then
-        kitty @ launch --type=tab --hold --copy-env --env KITTY_TAB_ID="$tab_id" --tab-title="$title" --cwd="$cwd" $cmd >/dev/null
+        kitty @ launch --type=tab --hold --copy-env --env KITTY_TAB_ID="$tab_id" --tab-title="$title" --cwd="$cwd" "$cmd" >/dev/null
     else
         kitty @ launch --type=tab --copy-env --env KITTY_TAB_ID="$tab_id" --tab-title="$title" --cwd="$cwd" >/dev/null
     fi

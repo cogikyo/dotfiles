@@ -6,5 +6,21 @@
   "preferredNotifChannel": "kitty",
   "autoUpdates": false,
   "hooks": {},
-  "mcpServers": {}
+  "mcpServers": {},
+  "permissions": {
+    "allow": [
+      "Read",
+      "Edit",
+      "Write",
+      "Bash",
+      "Glob",
+      "Grep",
+      "Task",
+      "WebFetch",
+      "WebSearch",
+      "Skill"
+    ]
+  },
+  "model": "opus",
+  "outputStyle": "default"
 }

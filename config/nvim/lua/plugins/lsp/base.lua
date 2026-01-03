@@ -8,7 +8,7 @@ return {
 				bash = { "shellharden" },
 				sh = { "shellharden" },
 				zsh = { "beautysh" },
-				python = { "black" },
+				python = { "ruff_format" },
 				css = { "prettierd" },
 				json = { "prettierd" },
 				jsonc = { "prettierd" },
