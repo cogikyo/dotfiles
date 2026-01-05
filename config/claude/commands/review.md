@@ -1,5 +1,4 @@
 ---
-name: review
 description: Find bugs, anti-patterns, and issues in code. Reports findings first, then offers to fix. Focuses on real problems, not style nitpicks. Use on changed files, a directory, or specific files.
 allowed-tools: Read, Grep, Glob, Edit, Task, AskUserQuestion, TodoWrite
 ---
@@ -147,8 +146,9 @@ After presenting all findings:
 
 ## Language-Specific Checks
 
-- [react.md](react.md) - React/TypeScript patterns
-- [go.md](go.md) - Go patterns
+Read these reference files for detailed patterns:
+- `.claude/commands/review/react.md` - React/TypeScript patterns
+- `.claude/commands/review/go.md` - Go patterns
 
 ## What NOT to Flag
 
