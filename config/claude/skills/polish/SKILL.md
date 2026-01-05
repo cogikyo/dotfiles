@@ -1,4 +1,5 @@
 ---
+name: polish
 description: Refactor and polish code for readability, idiomaticity, efficiency, and DRY principles.
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash, Task, AskUserQuestion, EnterPlanMode, TodoWrite
 ---

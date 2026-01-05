@@ -1,4 +1,5 @@
 ---
+name: review
 description: Find bugs, anti-patterns, and issues in code. Reports findings first, then offers to fix.
 allowed-tools: Read, Grep, Glob, Edit, Task, AskUserQuestion, TodoWrite
 ---
