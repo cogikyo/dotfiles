@@ -10,14 +10,14 @@ Uses `gofmt` with modernize flag. Format on save is enabled - don't fight the fo
 
 ### File Naming Prefixes
 
-| Prefix | Purpose | Example |
-| --- | --- | --- |
-| `init.*.go` | Service setup, migrations, seeding | `init.feedback.go` |
-| `s.*.go` | [S]ervice handlers (API endpoints) | `s.feedback.config.go` |
-| `c.*.go` | [C]ore logic (simple services) | `c.stats.fetch.go` |
-| `r.*.yaml` | Route registry (auto-generated) | `r.feedback.yaml` |
-| `db.*.go` | [D]ata[b]ase models (in models/) | `db.feedback.go` |
-| `io.*.go` | [I]nput/[o]utput DTOs (in models/) | `io.feedback.config.go` |
+| Prefix      | Purpose                            | Example                 |
+| ----------- | ---------------------------------- | ----------------------- |
+| `init.*.go` | Service setup, migrations, seeding | `init.feedback.go`      |
+| `s.*.go`    | [S]ervice handlers (API endpoints) | `s.feedback.config.go`  |
+| `c.*.go`    | [C]ore logic (simple services)     | `c.stats.fetch.go`      |
+| `r.*.yaml`  | Route registry (auto-generated)    | `r.feedback.yaml`       |
+| `db.*.go`   | [D]ata[b]ase models (in models/)   | `db.feedback.go`        |
+| `io.*.go`   | [I]nput/[o]utput DTOs (in models/) | `io.feedback.config.go` |
 
 > **Choose one:** Use `c.*.go` for simple services OR `internal/` for complex services needing sub-packages. Not both.
 
@@ -227,6 +227,18 @@ internal/
     payment.go      # Payment processing
     repository.go   # Data access for billing
 ```
+
+**Never create LOCAL generic catch-all packages:**
+
+- ❌ `utils/`, `helpers/`, `common/`, `shared/` (in service directories)
+- ✅ Generic names ARE fine globally (`core/`)
+
+**When you find utility-like code:**
+
+1. Check if `shared/` or `core/` or `utility` or other similar packages already have it
+2. Search for similar patterns elsewhere - enhance existing or hoist from another location
+3. If truly reusable, hoist to global core packages
+4. If local only, keep next to the code that uses it
 
 ## Performance
 

@@ -22,6 +22,16 @@ During development, verbose structure is fine. When polishing, compress to final
 - **Maximum ~6 files**: More suggests the directory is doing too much - split by concern
 - **Exceptions**: `components/` roots, `hooks/` collections, barrel directories
 
+**Never create LOCAL generic catch-all directories:**
+- ❌ `utils/`, `helpers/`, `interfaces/`, `common/` (in feature directories)
+- ✅ Generic names ARE fine globally (`@leadpier/shared/utils/`)
+
+**When you find utility-like code:**
+1. Check if `@leadpier/shared/utils/` already has it
+2. Search for similar patterns elsewhere - enhance existing or hoist from another location
+3. If truly reusable, hoist to global shared
+4. If local only, name by what it does (e.g., `document.utils.ts` in `documents/`)
+
 These are soft guidelines - use judgment based on cohesion and clarity.
 
 ### File Naming Patterns

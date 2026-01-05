@@ -11,6 +11,7 @@ For `/polish quick` - lightweight pass on small scopes:
 - [ ] **Interfaces**: consistent signatures between files
 - [ ] Present changes to user
 - [ ] Execute after approval
+- [ ] Run ESLint fix twice on modified TS files (`npx eslint --fix`)
 - [ ] Brief summary
 
 ---
@@ -57,6 +58,11 @@ For `/polish quick` - lightweight pass on small scopes:
 - [ ] Collected issues for review
 - [ ] Ignored transient LSP errors
 
+### Tooling (after edits)
+- [ ] TypeScript: Ran `npx eslint --fix` twice on modified files
+- [ ] TypeScript: Verified no remaining ESLint errors
+- [ ] Go: Ran `gofmt -w -s` on modified files
+
 ## Phase 4: Review
 
 - [ ] Spawned fresh review agent
@@ -86,6 +92,9 @@ For `/polish quick` - lightweight pass on small scopes:
 - [ ] No oversized directories (>6 files suggests split needed)
 - [ ] Directory names are one word or compound noun
 - [ ] Directory casing matches content (PascalCase if .tsx, camelCase if .ts only)
+- [ ] No LOCAL generic catch-all names (utils/, helpers/, interfaces/ in features)
+- [ ] Checked global shared for existing utilities before creating new ones
+- [ ] Searched for similar patterns elsewhere (enhance existing or hoist)
 
 ### Naming
 - [ ] Important functions have single-word names
@@ -107,6 +116,8 @@ For `/polish quick` - lightweight pass on small scopes:
 - [ ] No `any` types
 - [ ] Proper type narrowing
 - [ ] File naming follows pattern (PascalCase components, use*.ts hooks, *.types.ts, *.api.ts)
+- [ ] ESLint `--fix` run twice on all modified files
+- [ ] No remaining ESLint errors
 
 ### Go Specific
 - [ ] Follows gofmt/modernize

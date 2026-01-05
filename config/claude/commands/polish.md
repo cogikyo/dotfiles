@@ -1,5 +1,4 @@
 ---
-name: polish
 description: Refactor and polish code for readability, idiomaticity, efficiency, and DRY principles. Use when cleaning up a feature or module after initial development is complete. Reorganizes file structure, separates concerns, ensures naming consistency, and improves code locality.
 allowed-tools: Read, Grep, Glob, Edit, Write, Bash, Task, AskUserQuestion, EnterPlanMode, TodoWrite
 ---
@@ -166,8 +165,8 @@ For each parallelizable unit of work, spawn a `Task` agent with `subagent_type: 
 EXECUTION TASK: [specific task description]
 
 BEFORE STARTING - Read conventions:
-- .claude/skills/polish/go.md (if Go files)
-- .claude/skills/polish/typescript.md (if TS/React files)
+- .claude/commands/polish/go.md (if Go files)
+- .claude/commands/polish/typescript.md (if TS/React files)
 
 PLAN REFERENCE: [which part of the plan this executes]
 
@@ -221,8 +220,8 @@ Spawn a **fresh review agent** (`subagent_type: "general-purpose"`) with no prio
 REVIEW TASK: Polish refactor verification
 
 BEFORE STARTING - Read conventions:
-- .claude/skills/polish/go.md (if Go files)
-- .claude/skills/polish/typescript.md (if TS/React files)
+- .claude/commands/polish/go.md (if Go files)
+- .claude/commands/polish/typescript.md (if TS/React files)
 
 ORIGINAL SCOPE: [files/modules that were polished]
 
@@ -326,17 +325,70 @@ During development, verbose structure is acceptable. Polish compresses to final 
 - **One word names preferred**: `documents/`, `billing/` - compound words (sparingly) for specific nouns (`formFields/`)
 - **Exceptions**: `models/`, `components/` roots, `hooks/` collections, or other collections. Generally, rule for leaf node directories.
 
-These are soft guidelines - use judgment based on cohesion.
+**NEVER create LOCAL generic catch-all directories or files:**
+
+- ❌ `utils/`, `utils.ts`, `helpers/`, `helpers.ts` (in feature directories)
+- ❌ `interfaces/`, `interfaces.ts`, `types/` (except at package root)
+- ❌ `common/`, `shared/`, `misc/`, `general/` (locally)
+
+These names indicate unclear ownership and become dumping grounds at the local level.
+
+**When you find utility-like code during polish:**
+
+1. **Check global shared first** - find global shared utilities packages
+2. **Search for similar patterns** - Is this half-implemented elsewhere? Could enhance existing?
+3. **Consider hoisting** - If truly reusable, hoist to global shared rather than duplicating locally
+4. **If local only** - Name by what it does, keep next to the code that uses it
+
+These are rule of thumb guidelines - use judgment based on cohesion.
 
 ## Language-Specific Guidelines
 
-- [typescript.md](typescript.md) - TypeScript/React patterns
-- [go.md](go.md) - Go idioms and patterns
+Read these reference files for detailed patterns:
+- `.claude/commands/polish/typescript.md` - TypeScript/React patterns
+- `.claude/commands/polish/go.md` - Go idioms and patterns
+- `.claude/commands/polish/checklist.md` - Full verification checklist
 
 ## Tooling
 
-- **Go**: gofmt with modernize (format on save)
-- **TypeScript**: ESLint (format on save)
+### Go
+
+Run `gofmt` with modernize:
+
+```bash
+gofmt -w -s path/to/file.go
+```
+
+### TypeScript
+
+Run ESLint with auto-fix **twice**. The first pass may auto-fix issues that create new fixable issues (e.g., import sorting after removing unused imports).
+
+```bash
+# From leadpierui directory
+npx eslint --fix path/to/file.tsx
+npx eslint --fix path/to/file.tsx  # Second pass
+```
+
+For multiple files or directories:
+
+```bash
+npx eslint --fix "src/features/documents/**/*.{ts,tsx}"
+npx eslint --fix "src/features/documents/**/*.{ts,tsx}"
+```
+
+**What ESLint fixes:**
+- Import sorting and grouping (`perfectionist/sort-imports`)
+- Interface/object property sorting (`perfectionist/sort-interfaces`, `perfectionist/sort-objects`)
+- JSX prop sorting (`react/jsx-sort-props`)
+- Unused variable warnings (reports, doesn't auto-remove)
+- Object curly newline consistency
+
+**After ESLint, verify no errors remain:**
+```bash
+npx eslint path/to/file.tsx
+```
+
+If errors remain that can't be auto-fixed, address them manually before proceeding
 
 ## Output
 
@@ -367,7 +419,3 @@ After completing all phases, provide:
 5. **Follow-ups**
    - Suggestions for future improvements
    - Related areas that might benefit from polish
-
-## Checklist
-
-See [checklist.md](checklist.md) for full verification checklist.
