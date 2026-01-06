@@ -25,6 +25,19 @@ Read master plan to understand:
 - Batch order and dependencies
 - Current status of each batch
 
+### Step 1.5: Cache Lint Output (TypeScript)
+
+For TypeScript projects, run lint once and save output to temp file:
+
+```bash
+if [ -f "package.json" ]; then
+  yarn lint 2>&1 > /tmp/meta-lint-output.txt || true
+  echo "Lint output cached to /tmp/meta-lint-output.txt"
+fi
+```
+
+**IMPORTANT:** Tell sub-agents to READ `/tmp/meta-lint-output.txt` instead of re-running `yarn lint`.
+
 ### Step 2: Find Next Executable Batch
 
 A batch is executable when:
@@ -60,6 +73,9 @@ This plan contains:
 - Step-by-step instructions
 - Verification checklist
 
+LINT: If you need lint output, READ /tmp/meta-lint-output.txt using the Read tool.
+DO NOT run yarn lint - it's slow. Use the cached output instead.
+
 EXECUTE the plan:
 1. Follow each step in order
 2. Make the specified changes to files
@@ -70,6 +86,7 @@ CONSTRAINTS:
 - Stay within scope of the implementation plan
 - Do not modify files not listed in the plan
 - If blocked, report the blocker rather than improvising
+- Use cached lint output from /tmp/meta-lint-output.txt, not fresh lint runs
 
 WHEN DONE:
 Report which steps completed, any issues, and verification results.
