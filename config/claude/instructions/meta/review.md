@@ -23,6 +23,19 @@ ls ./meta/plan.md 2>/dev/null || ls ./.meta/plan.md 2>/dev/null
 
 If no plans found, inform user and suggest `/meta init`.
 
+### Step 1.5: Cache Lint Output (TypeScript)
+
+For TypeScript projects, run lint once and save output to temp file:
+
+```bash
+if [ -f "package.json" ]; then
+  yarn lint 2>&1 > /tmp/meta-lint-output.txt || true
+  echo "Lint output cached to /tmp/meta-lint-output.txt"
+fi
+```
+
+**IMPORTANT:** When checking lint/style compliance, READ `/tmp/meta-lint-output.txt` using the Read tool. DO NOT re-run `yarn lint` - it's slow.
+
 ### Step 2: Read Master Plan
 
 Read `{path}/plan.md` to understand:
