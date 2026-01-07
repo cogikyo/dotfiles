@@ -5,6 +5,7 @@
 
 [core]
 	editor = nvim
+	ignorecase = false
 [gpg]
 	format = ssh
 [commit]

@@ -17,6 +17,6 @@ Then read mode-specific instructions:
 
 ## Modes
 
-- `/meta init [path]` - Clarify scope, create master plan + implementation plans
+- `/meta init` - Clarify scope, create master plan + implementation plans
 - `/meta review` - Review and refine plans
 - `/meta build` - Execute plans via sub-agents
