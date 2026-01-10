@@ -1,7 +1,7 @@
 return {
 	"goolord/alpha-nvim",
 	dependencies = { "nvim-tree/nvim-web-devicons" },
-	opts = function()
+	config = function()
 		local dashboard = require("alpha.themes.dashboard")
 
 		local header = {
@@ -48,7 +48,7 @@ return {
 			},
 		}
 
-		return {
+		require("alpha").setup({
 			layout = {
 				{ type = "padding", val = 2 },
 				header,
@@ -58,6 +58,20 @@ return {
 			opts = {
 				margin = 5,
 			},
-		}
+		})
+
+		vim.api.nvim_create_autocmd("User", {
+			pattern = "AlphaReady",
+			callback = function(ev)
+				vim.keymap.set("n", "<CR>", function()
+					for _, file in ipairs(vim.v.oldfiles) do
+						if vim.fn.filereadable(file) == 1 then
+							vim.cmd("edit " .. vim.fn.fnameescape(file))
+							return
+						end
+					end
+				end, { buffer = ev.buf })
+			end,
+		})
 	end,
 }
