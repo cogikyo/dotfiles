@@ -5,7 +5,7 @@ return {
 		slots = { "a", "s", "e", "t" },
 		mapping = {
 			startStopRecording = "q",
-			playMacro = "Q",
+			playMacro = "@",
 			switchSlot = "<C-q>",
 			editMacro = "cq",
 			deleteAllMacros = "dq",
