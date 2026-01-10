@@ -62,14 +62,14 @@ return {
 			pickers = {
 				find_files = {
 					theme = "dropdown",
-					previewer = false,
+					previewer = true,
 				},
 				buffers = {
 					theme = "dropdown",
-					previewer = false,
+					previewer = true,
 				},
 				live_grep = {
-					theme = "ivy",
+					theme = "dropdown",
 				},
 				current_buffer_fuzzy_find = {
 					theme = "dropdown",

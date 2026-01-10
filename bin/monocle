@@ -14,6 +14,20 @@ SHADOW_MONOCLE="rgba(2d9a4342)"
 
 mkdir -p "$CACHE_DIR"
 
+cleanup_stale_monocle() {
+    hyprctl --batch "\
+        keyword general:col.active_border $BORDER_DEFAULT; \
+        keyword decoration:shadow:color $SHADOW_DEFAULT"
+    rm -f "$CACHE_DIR"/*
+    echo "" > "$MONOCLE_WS_FILE"
+}
+
+# Clean up stale state if monocle workspace is empty (exclude GLava)
+monocle_ws_windows=$(hyprctl clients -j | jq '[.[] | select(.workspace.id == 6 and .class != "GLava")] | length')
+if [[ "$monocle_ws_windows" -eq 0 && -n "$(ls -A "$CACHE_DIR" 2>/dev/null)" ]]; then
+    cleanup_stale_monocle
+fi
+
 get_tiled_windows() {
     local ws="$1"
     hyprctl clients -j | jq -r --arg ws "$ws" \
