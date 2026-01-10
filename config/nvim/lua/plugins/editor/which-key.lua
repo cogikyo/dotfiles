@@ -4,7 +4,7 @@ return {
 	opts = function()
 		local max_width = math.min(math.floor(vim.o.columns * 0.95), 200)
 		return {
-			delay = 350,
+			delay = 500,
 			icons = {
 				mappings = false,
 				keys = {},
