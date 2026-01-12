@@ -14,5 +14,9 @@
     ]
   },
   "model": "opus",
-  "outputStyle": "default"
+  "outputStyle": "default",
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  }
 }
