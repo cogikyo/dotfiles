@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Vagari palette colors (RGB)
+blu_1='\033[2;34m'                # dim terminal blue
 blu_2='\033[38;2;116;146;239m'   # #7492ef - separators
 blu_3='\033[1;38;2;138;164;243m' # #8aa4f3 - directory (bold)
 orn_2='\033[38;2;235;144;93m'    # #eb905d - git branch
@@ -26,6 +27,7 @@ icon_behind=$'\xe2\xac\x87'       # ⬇
 icon_deleted=$'\xef\x91\x98'      #
 icon_branch=$'\xe2\xbd\x80'       # ⽀
 icon_model=$'\xf3\xb0\xaf\x89'    # 󰯉
+icon_time=$'\xee\x8e\x85'         #
 
 # Read JSON input
 input=$(cat)
@@ -34,6 +36,18 @@ input=$(cat)
 current_dir=$(echo "$input" | jq -r '.workspace.current_dir')
 model_name=$(echo "$input" | jq -r '.model.display_name')
 context_data=$(echo "$input" | jq '.context_window')
+duration_ms=$(echo "$input" | jq -r '.cost.total_duration_ms // 0')
+
+# Format duration (minutes or hours only)
+format_duration() {
+    local ms=$1
+    local mins=$((ms / 1000 / 60))
+    if [ "$mins" -lt 60 ]; then
+        printf "%dm" "$mins"
+    else
+        printf "%dh" "$((mins / 60))"
+    fi
+}
 
 # Get directory (replace home with ⾕)
 dir="${current_dir/#$HOME/⾕}"
@@ -102,7 +116,7 @@ if [ "$usage" != "null" ]; then
         for ((i=0; i<filled; i++)); do bar+="▰"; done
         for ((i=0; i<empty; i++)); do bar+="▱"; done
 
-        context_bar="${bar_color}㊋ ${bar} ${pct}%${N}"
+        context_bar="${bar_color}㊋${bar} ${pct}%${N}"
     fi
 fi
 
@@ -120,6 +134,17 @@ fi
 
 printf "${blu_2} ╼╾ ${N}"
 printf "${blu_2}${icon_model} %s${N}" "$model_name"
+
+# Session duration (no divider, right after model)
+if [ "$duration_ms" != "null" ] && [ "$duration_ms" -gt 0 ] 2>/dev/null; then
+    hrs=$((duration_ms / 1000 / 60 / 60))
+    if [ "$hrs" -ge 24 ]; then
+        time_color="$rby_3"
+    else
+        time_color="$blu_1"
+    fi
+    printf " ${time_color}${icon_time} %s${N}" "$(format_duration "$duration_ms")"
+fi
 
 if [ -n "$context_bar" ]; then
     printf "${blu_2} ╼╾ ${N}%b" "$context_bar"
