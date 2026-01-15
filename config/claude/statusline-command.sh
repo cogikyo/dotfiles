@@ -29,6 +29,29 @@ icon_branch=$'\xe2\xbd\x80'       # ⽀
 icon_model=$'\xf3\xb0\xaf\x89'    # 󰯉
 icon_time=$'\xee\x8e\x85'         #
 
+# Progress circle icons (0% to 100% in ~10% increments)
+progress_icons=(
+    $'\xf3\xb0\xaa\x9e'   # 󰪞 ~0%
+    $'\xf3\xb0\xaa\x9f'   # 󰪟 ~10%
+    $'\xf3\xb0\xaa\xa0'   # 󰪠 ~20%
+    $'\xf3\xb0\xaa\xa1'   # 󰪡 ~30%
+    $'\xf3\xb0\xaa\xa2'   # 󰪢 ~40%
+    $'\xf3\xb0\xaa\xa3'   # 󰪣 ~50%
+    $'\xf3\xb0\xaa\xa4'   # 󰪤 ~60%
+    $'\xf3\xb0\xaa\xa5'   # 󰪥 ~70%
+    $'\xf3\xb0\xaa\xa6'   # 󰪦 ~80%
+    $'\xf3\xb0\xaa\xa7'   # 󰪧 ~90-100%
+)
+
+# Get progress icon based on percentage (0-100)
+get_progress_icon() {
+    local pct=$1
+    local idx=$((pct / 10))
+    [ "$idx" -gt 9 ] && idx=9
+    [ "$idx" -lt 0 ] && idx=0
+    echo "${progress_icons[$idx]}"
+}
+
 # Read JSON input
 input=$(cat)
 
@@ -47,6 +70,21 @@ format_duration() {
     else
         printf "%dh" "$((mins / 60))"
     fi
+}
+
+# Fetch usage limits from API
+get_usage_limits() {
+    local creds token response
+    creds=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null) || return 1
+    token=$(echo "$creds" | jq -r '.claudeAiOauth.accessToken // empty') || return 1
+    [ -z "$token" ] && return 1
+
+    response=$(curl -s --max-time 2 \
+        -H "Authorization: Bearer $token" \
+        -H "anthropic-beta: oauth-2025-04-20" \
+        "https://api.anthropic.com/api/oauth/usage" 2>/dev/null) || return 1
+
+    echo "$response"
 }
 
 # Get directory (replace home with ⾕)
@@ -120,6 +158,60 @@ if [ "$usage" != "null" ]; then
     fi
 fi
 
+# Usage limits (5-hour and 7-day)
+usage_info=""
+usage_response=$(get_usage_limits)
+if [ -n "$usage_response" ]; then
+    five_hr=$(echo "$usage_response" | jq -r '.five_hour.utilization // empty')
+    five_hr_reset=$(echo "$usage_response" | jq -r '.five_hour.resets_at // empty')
+    seven_day=$(echo "$usage_response" | jq -r '.seven_day.utilization // empty')
+    seven_day_reset=$(echo "$usage_response" | jq -r '.seven_day.resets_at // empty')
+
+    if [ -n "$five_hr" ]; then
+        # Color based on usage: blue <15%, green 15-30%, yellow 30-60%, red >60%
+        if [ "${five_hr%.*}" -lt 15 ] 2>/dev/null; then
+            hr_color="$blu_2"
+        elif [ "${five_hr%.*}" -lt 30 ] 2>/dev/null; then
+            hr_color="$grn_3"
+        elif [ "${five_hr%.*}" -lt 60 ] 2>/dev/null; then
+            hr_color="$sun_3"
+        else
+            hr_color="$rby_3"
+        fi
+        # Format reset time (just hour, e.g., "4am") - convert from UTC to local
+        hr_reset_fmt=""
+        if [ -n "$five_hr_reset" ]; then
+            # Convert +00:00 to +0000 format for macOS date
+            hr_reset_fmt=$(date -j -f "%Y-%m-%dT%H:%M:%S%z" "${five_hr_reset%%.*}+0000" "+%I%p" 2>/dev/null | sed 's/^0//' | tr '[:upper:]' '[:lower:]')
+            [ -n "$hr_reset_fmt" ] && hr_reset_fmt=" (${hr_reset_fmt})"
+        fi
+        hr_icon=$(get_progress_icon "${five_hr%.*}")
+        usage_info+="${hr_color}${hr_icon} ${five_hr%.*}%${hr_reset_fmt}${N}"
+    fi
+
+    if [ -n "$seven_day" ]; then
+        # Color based on usage: blue <15%, green 15-30%, yellow 30-60%, red >60%
+        if [ "${seven_day%.*}" -lt 15 ] 2>/dev/null; then
+            day_color="$blu_2"
+        elif [ "${seven_day%.*}" -lt 30 ] 2>/dev/null; then
+            day_color="$grn_3"
+        elif [ "${seven_day%.*}" -lt 60 ] 2>/dev/null; then
+            day_color="$sun_3"
+        else
+            day_color="$rby_3"
+        fi
+        # Format reset date (e.g., "1/16") - convert from UTC to local
+        day_reset_fmt=""
+        if [ -n "$seven_day_reset" ]; then
+            day_reset_fmt=$(date -j -f "%Y-%m-%dT%H:%M:%S%z" "${seven_day_reset%%.*}+0000" "+%-m/%-d" 2>/dev/null)
+            [ -n "$day_reset_fmt" ] && day_reset_fmt=" (${day_reset_fmt})"
+        fi
+        [ -n "$usage_info" ] && usage_info+="${blu_2} ╼╾ ${N}"
+        day_icon=$(get_progress_icon "${seven_day%.*}")
+        usage_info+="${day_color}${day_icon} ${seven_day%.*}%${day_reset_fmt}${N}"
+    fi
+fi
+
 # Build status line
 printf "${blu_2}╞╾${N}"
 printf "${blu_3}%s${N}" "$dir"
@@ -148,6 +240,10 @@ fi
 
 if [ -n "$context_bar" ]; then
     printf "${blu_2} ╼╾ ${N}%b" "$context_bar"
+fi
+
+if [ -n "$usage_info" ]; then
+    printf "${blu_2} ╼╾ ${N}%b" "$usage_info"
 fi
 
 # Two newlines for spacing
