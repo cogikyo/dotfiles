@@ -16,6 +16,7 @@ Edit and refine master plan files without implementing them.
 /master-plan                    # Auto-detect PLANS/ dir in cwd
 /master-plan path/to/PLANS      # Specific PLANS directory
 /master-plan path/to/MASTER.md  # Specific master plan file
+/master-plan questions          # Research & resolve open questions
 ```
 
 ## PLANS/ Structure
@@ -24,6 +25,7 @@ Edit and refine master plan files without implementing them.
 PLANS/
 ├── MASTER.md      # Read first - overview, links
 ├── LOG.md         # Read second - append-only history
+├── QUESTIONS.md   # Open questions needing answers
 ├── DISCOVERIES.md # Research, context, blockers
 └── {SCOPE}.md     # Detailed scope plans
 ```

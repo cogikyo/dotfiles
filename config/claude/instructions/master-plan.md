@@ -20,6 +20,7 @@ Plans live in a `PLANS/` directory with this structure:
 PLANS/
 ├── MASTER.md      # Tree overview, links to scopes (read first)
 ├── LOG.md         # Append-only work log (read second)
+├── QUESTIONS.md   # Open questions needing answers
 ├── DISCOVERIES.md # Important learnings, context, research
 └── {SCOPE}.md     # Individual scope plans (MODELS.md, HANDLERS.md, etc.)
 ```
@@ -30,6 +31,7 @@ PLANS/
 |------|---------|
 | **MASTER.md** | Entry point. Brief context, architecture, links to all scopes. Zero-to-hero in one read. |
 | **LOG.md** | Append-only history. Read before work, append after. Breaks loops, provides memory. |
+| **QUESTIONS.md** | Open questions needing resolution. Deferred questions land here. |
 | **DISCOVERIES.md** | Research findings, blockers, context relevant to overall implementation. |
 | **{SCOPE}.md** | Detailed plans for specific areas. MASTER links here. |
 
@@ -40,6 +42,58 @@ PLANS/
 - Multiple agents may work concurrently
 - Read before starting work
 - Append after completing work
+
+**Format:** `**action(context)**: message` — Commit-message style. Brief but not cryptic.
+
+```markdown
+- **add(MASTER)**: rate limiting phase, blocked pending Redis caching decision
+- **move(MASTER)**: SSE phase to Ready Now, docs obtained from infra team
+- **split(AUTH.md)**: separated permissions into own file for clearer ownership
+- **update(DISCOVERIES)**: documented Redis vs Memcached tradeoffs from research
+```
+
+### QUESTIONS.md Rules
+
+Open questions that block progress or need user/research input.
+
+**When asking user a question, always offer option to defer:**
+
+> "Should we use Redis or Memcached for caching?"
+> 1. Redis
+> 2. Memcached
+> 3. **Defer** — add to QUESTIONS.md for later
+
+Deferred questions get added to QUESTIONS.md with context about why it matters and what it blocks.
+
+**Format:**
+
+```markdown
+## Q: Redis vs Memcached for session caching?
+
+**Context**: Auth phase needs caching layer. Redis has persistence, Memcached is simpler.
+**Blocks**: Phase: Auth Infrastructure
+**Added**: 2024-01-15
+
+### Research Notes
+(filled in by `/master-plan questions`)
+```
+
+---
+
+## Subcommand: `/master-plan questions`
+
+Resolves open questions through research and user input.
+
+**Flow:**
+1. Read QUESTIONS.md
+2. For each question, spawn sub-agent to research (codebase, docs, web)
+3. Sub-agents return findings → added to question's Research Notes
+4. Main instance presents each question with research context
+5. User answers or defers again
+6. Resolved questions → update relevant plan files, remove from QUESTIONS.md
+7. Log all changes
+
+This often results in updates across multiple plan files at once as questions unlock blocked phases.
 
 ---
 
