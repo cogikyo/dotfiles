@@ -228,15 +228,15 @@ printf "${blu_2} ╼╾ ${N}"
 printf "${blu_2}${icon_model} %s${N}" "$model_name"
 
 # Session duration (no divider, right after model)
-if [ "$duration_ms" != "null" ] && [ "$duration_ms" -gt 0 ] 2>/dev/null; then
-    hrs=$((duration_ms / 1000 / 60 / 60))
-    if [ "$hrs" -ge 24 ]; then
-        time_color="$rby_3"
-    else
-        time_color="$blu_1"
-    fi
-    printf " ${time_color}${icon_time} %s${N}" "$(format_duration "$duration_ms")"
-fi
+# if [ "$duration_ms" != "null" ] && [ "$duration_ms" -gt 0 ] 2>/dev/null; then
+#     hrs=$((duration_ms / 1000 / 60 / 60))
+#     if [ "$hrs" -ge 24 ]; then
+#         time_color="$rby_3"
+#     else
+#         time_color="$blu_1"
+#     fi
+#     printf " ${time_color}${icon_time} %s${N}" "$(format_duration "$duration_ms")"
+# fi
 
 if [ -n "$context_bar" ]; then
     printf "${blu_2} ╼╾ ${N}%b" "$context_bar"
