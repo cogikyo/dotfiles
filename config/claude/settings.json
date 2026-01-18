@@ -1,12 +1,4 @@
 {
-  "statusLineMode": "compact",
-  "promptSuggestions": true,
-  "theme": "light-ansi",
-  "editorMode": "vim",
-  "preferredNotifChannel": "kitty",
-  "autoUpdates": false,
-  "hooks": {},
-  "mcpServers": {},
   "permissions": {
     "allow": [
       "Read",
@@ -22,5 +14,13 @@
     ]
   },
   "model": "opus",
-  "outputStyle": "default"
+  "outputStyle": "default",
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "bash ~/.claude/statusline-command.sh"
+  }
 }
