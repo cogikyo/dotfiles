@@ -1,250 +1,203 @@
 #!/bin/bash
 
-# Vagari palette colors (RGB)
-blu_1='\033[2;34m'                # dim terminal blue
-blu_2='\033[38;2;116;146;239m'   # #7492ef - separators
-blu_3='\033[1;38;2;138;164;243m' # #8aa4f3 - directory (bold)
-orn_2='\033[38;2;235;144;93m'    # #eb905d - git branch
-orn_3='\033[38;2;242;161;112m'   # #f2a170 - staged
-grn_3='\033[38;2;149;203;121m'   # #95cb79 - ahead, green
-rby_3='\033[38;2;240;136;152m'   # #f08898 - behind, deleted, red
-sky_2='\033[38;2;107;189;236m'   # #6bbdec - modified
-sun_3='\033[38;2;244;206;136m'   # #f4ce88 - untracked, yellow
-slt_2='\033[38;2;72;78;117m'     # #484e75 - stashed
-prp_3='\033[38;2;178;154;232m'   # #b29ae8 - renamed
-pnk_3='\033[38;2;232;135;195m'   # #e887c3 - conflicted
+# ─────────────────────────────────────────────────
+# Modifiers & Helpers
+# ─────────────────────────────────────────────────
+BOLD='\033[1m'
 N='\033[0m'
 
-# Nerd font icons (from starship config, using hex escapes for reliability)
-icon_conflicted=$'\xef\x91\xbf'   #
-icon_stashed=$'\xf3\xb0\xb8\xa7'  # 󰸧
-icon_modified=$'\xee\xab\x9e'     #
-icon_staged=$'\xef\x90\x97'       #
-icon_untracked=$'\xee\x8d\xb0'    #
-icon_renamed=$'\xef\x81\x84'      #
-icon_ahead=$'\xe2\xac\x86'        # ⬆
-icon_behind=$'\xe2\xac\x87'       # ⬇
-icon_deleted=$'\xef\x91\x98'      #
-icon_branch=$'\xe2\xbd\x80'       # ⽀
-icon_model=$'\xf3\xb0\xaf\x89'    # 󰯉
-icon_time=$'\xee\x8e\x85'         #
+cprint() { printf '%b%s%b' "$1" "$2" "$N"; }
 
-# Progress circle icons (0% to 100% in ~10% increments)
-progress_icons=(
-    $'\xf3\xb0\xaa\x9e'   # 󰪞 ~0%
-    $'\xf3\xb0\xaa\x9f'   # 󰪟 ~10%
-    $'\xf3\xb0\xaa\xa0'   # 󰪠 ~20%
-    $'\xf3\xb0\xaa\xa1'   # 󰪡 ~30%
-    $'\xf3\xb0\xaa\xa2'   # 󰪢 ~40%
-    $'\xf3\xb0\xaa\xa3'   # 󰪣 ~50%
-    $'\xf3\xb0\xaa\xa4'   # 󰪤 ~60%
-    $'\xf3\xb0\xaa\xa5'   # 󰪥 ~70%
-    $'\xf3\xb0\xaa\xa6'   # 󰪦 ~80%
-    $'\xf3\xb0\xaa\xa7'   # 󰪧 ~90-100%
-)
+# ─────────────────────────────────────────────────
+# Colors
+# ─────────────────────────────────────────────────
+# Blues
+RED='\033[31m'
+GREEN='\033[32m'
+YELLOW='\033[33m'
+BLUE='\033[34m'
+CYAN='\033[36m'
+MAGENTA='\033[35m'
+GRAY='\033[90m'
 
-# Get progress icon based on percentage (0-100)
+BR_RED='\033[91m'
+BR_GREEN='\033[92m'
+BR_YELLOW='\033[93m'
+BR_BLUE='\033[94m'
+PINK='\033[95m'
+
+
+SEP='╼╾'
+
+# Git
+GIT_BRANCH='⽀'
+GIT_AHEAD='⮭'
+GIT_BEHIND='⮯'
+GIT_STAGED=''
+GIT_MODIFIED=' '
+GIT_UNTRACKED=' '
+GIT_DELETED='󰚃 '
+GIT_STASHED='󰸧 '
+GIT_RENAMED='󰑕 '
+GIT_CONFLICT=' '
+
+# Progress bar
+BAR_FILLED='◉'
+BAR_EMPTY='○'
+BAR_CONTEXT='㊋'
+BAR_PROGRESS=("󰪞" "󰪟" "󰪠" "󰪡" "󰪢" "󰪣" "󰪤" "󰪥" "󰪦" "󰪧")
+
+# Session
+ICON_MODEL='󰯉 '
+
+# ─────────────────────────────────────────────────
+# Functions
+# ─────────────────────────────────────────────────
+
+# Get progress bar icon based on percentage (0-100)
 get_progress_icon() {
     local pct=$1
     local idx=$((pct / 10))
-    [ "$idx" -gt 9 ] && idx=9
-    [ "$idx" -lt 0 ] && idx=0
-    echo "${progress_icons[$idx]}"
+    (( idx = idx > 9 ? 9 : (idx < 0 ? 0 : idx) ))
+    echo "${BAR_PROGRESS[$idx]}"
 }
 
-# Read JSON input
-input=$(cat)
+pct_color() {
+    local pct=${1%.*}
+    if   (( pct < 10 )); then echo "$BLUE"
+    elif (( pct < 20 )); then echo "$BR_BLUE"
+    elif (( pct < 30 )); then echo "$GREEN"
+    elif (( pct < 40 )); then echo "$BR_GREEN"
+    elif (( pct < 50 )); then echo "$BR_YELLOW"
+    elif (( pct < 60 )); then echo "$YELLOW"
+    elif (( pct < 70 )); then echo "$RED"
+    elif (( pct < 90 )); then echo "$BR_RED"
+    else echo "$PINK"; fi
+}
 
-# Extract values
-current_dir=$(echo "$input" | jq -r '.workspace.current_dir')
-model_name=$(echo "$input" | jq -r '.model.display_name')
-context_data=$(echo "$input" | jq '.context_window')
-duration_ms=$(echo "$input" | jq -r '.cost.total_duration_ms // 0')
-
-# Format duration (minutes or hours only)
-format_duration() {
-    local ms=$1
-    local mins=$((ms / 1000 / 60))
-    if [ "$mins" -lt 60 ]; then
-        printf "%dm" "$mins"
+format_date() {
+    local iso=$1 fmt=$2
+    [[ -z "$iso" ]] && return 1
+    if [[ "$OSTYPE" == darwin* ]]; then
+        date -j -f "%Y-%m-%dT%H:%M:%S%z" "${iso%%.*}+0000" "+$fmt" 2>/dev/null
     else
-        printf "%dh" "$((mins / 60))"
+        date -d "$iso" "+$fmt" 2>/dev/null
     fi
+}
+
+# Git command wrapper with common flags
+gitc() { git -C "$current_dir" --no-optional-locks "$@" 2>/dev/null; }
+
+# Count lines from piped input
+count_lines() { wc -l | tr -d ' '; }
+
+# Append to git_status if count > 0
+git_stat() {
+    local color=$1 icon=$2 count=$3
+    (( count > 0 )) && git_status+="${color}${icon}${count} ${N}"
+}
+
+# Get credentials file path (Linux)
+get_creds_file() {
+    local xdg="${XDG_CONFIG_HOME:-$HOME/.config}/claude/.credentials.json"
+    [[ -f "$xdg" ]] && echo "$xdg" || echo "$HOME/.claude/.credentials.json"
 }
 
 # Fetch usage limits from API
 get_usage_limits() {
-    local creds token response
-    creds=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null) || return 1
-    token=$(echo "$creds" | jq -r '.claudeAiOauth.accessToken // empty') || return 1
-    [ -z "$token" ] && return 1
-
-    response=$(curl -s --max-time 2 \
+    local creds token
+    if [[ "$OSTYPE" == darwin* ]]; then
+        creds=$(security find-generic-password -s "Claude Code-credentials" -w 2>/dev/null) || return 1
+    else
+        creds=$(cat "$(get_creds_file)" 2>/dev/null) || return 1
+    fi
+    token=$(jq -r '.claudeAiOauth.accessToken // empty' <<< "$creds") || return 1
+    [[ -z "$token" ]] && return 1
+    curl -s --max-time 2 \
         -H "Authorization: Bearer $token" \
         -H "anthropic-beta: oauth-2025-04-20" \
-        "https://api.anthropic.com/api/oauth/usage" 2>/dev/null) || return 1
-
-    echo "$response"
+        "https://api.anthropic.com/api/oauth/usage" 2>/dev/null
 }
 
-# Get directory (replace home with ⾕)
-dir="${current_dir/#$HOME/⾕}"
+# Build progress bar string
+build_bar() {
+    local filled=$1 total=${2:-10} bar=""
+    for ((i=0; i<filled; i++)); do bar+="$BAR_FILLED"; done
+    for ((i=filled; i<total; i++)); do bar+="$BAR_EMPTY"; done
+    echo "$bar"
+}
+
+# ─────────────────────────────────────────────────
+# Main
+# ─────────────────────────────────────────────────
+input=$(cat)
+current_dir=$(jq -r '.workspace.current_dir' <<< "$input")
+context_data=$(jq '.context_window' <<< "$input")
 
 # Git info
-git_info=""
-git_status=""
-if git -C "$current_dir" rev-parse --git-dir > /dev/null 2>&1; then
-    branch=$(git -C "$current_dir" --no-optional-locks branch --show-current 2>/dev/null)
-    if [ -n "$branch" ]; then
-        git_info="${orn_2} ${icon_branch}${branch}${N}"
-    fi
+git_info="" git_status=""
+if git -C "$current_dir" rev-parse --git-dir &>/dev/null; then
+    branch=$(gitc branch --show-current)
+    [[ -n "$branch" ]] && git_info="${YELLOW} ${GIT_BRANCH}${branch}${N}"
 
-    # Git status indicators (starship style)
-    # Ahead/behind
-    ahead=$(git -C "$current_dir" --no-optional-locks rev-list --count @{upstream}..HEAD 2>/dev/null || echo 0)
-    behind=$(git -C "$current_dir" --no-optional-locks rev-list --count HEAD..@{upstream} 2>/dev/null || echo 0)
-    [ "$ahead" -gt 0 ] 2>/dev/null && git_status+="${grn_3}${icon_ahead}${ahead} ${N}"
-    [ "$behind" -gt 0 ] 2>/dev/null && git_status+="${rby_3}${icon_behind}${behind} ${N}"
-
-    # Staged
-    staged=$(git -C "$current_dir" --no-optional-locks diff --cached --numstat 2>/dev/null | wc -l | tr -d ' ')
-    [ "$staged" -gt 0 ] && git_status+="${orn_3}${icon_staged} ${staged} ${N}"
-
-    # Modified
-    modified=$(git -C "$current_dir" --no-optional-locks diff --numstat 2>/dev/null | wc -l | tr -d ' ')
-    [ "$modified" -gt 0 ] && git_status+="${sky_2}${icon_modified} ${modified} ${N}"
-
-    # Untracked
-    untracked=$(git -C "$current_dir" --no-optional-locks ls-files --others --exclude-standard 2>/dev/null | wc -l | tr -d ' ')
-    [ "$untracked" -gt 0 ] && git_status+="${sun_3}${icon_untracked} ${untracked} ${N}"
-
-    # Deleted
-    deleted=$(git -C "$current_dir" --no-optional-locks diff --diff-filter=D --numstat 2>/dev/null | wc -l | tr -d ' ')
-    [ "$deleted" -gt 0 ] && git_status+="${rby_3}${icon_deleted} ${deleted} ${N}"
-
-    # Stashed
-    stashed=$(git -C "$current_dir" --no-optional-locks stash list 2>/dev/null | wc -l | tr -d ' ')
-    [ "$stashed" -gt 0 ] && git_status+="${slt_2}${icon_stashed} ${stashed} ${N}"
+    # shellcheck disable=SC1083
+    ahead=$(gitc rev-list --count '@{upstream}..HEAD' || echo 0)
+    behind=$(gitc rev-list --count 'HEAD..@{upstream}' || echo 0)
+    git_stat "$GREEN"     "$GIT_AHEAD"   "$ahead"
+    git_stat "$BR_RED"       "$GIT_BEHIND"  "$behind"
+    git_stat "$YELLOW"    "$GIT_STAGED"  "$(gitc diff --cached --numstat | count_lines)"
+    git_stat "$CYAN"      "$GIT_MODIFIED" "$(gitc diff --numstat | count_lines)"
+    git_stat "$BR_YELLOW" "$GIT_UNTRACKED" "$(gitc ls-files --others --exclude-standard | count_lines)"
+    git_stat "$RED"    "$GIT_DELETED" "$(gitc diff --diff-filter=D --numstat | count_lines)"
+    git_stat "$GRAY"      "$GIT_STASHED" "$(gitc stash list | count_lines)"
+    git_stat "$MAGENTA"   "$GIT_RENAMED" "$(gitc diff --cached --diff-filter=R --numstat | count_lines)"
+    git_stat "$PINK"      "$GIT_CONFLICT" "$(gitc diff --name-only --diff-filter=U | count_lines)"
 fi
 
-# Build context progress bar
+# Context progress bar
 context_bar=""
-usage=$(echo "$context_data" | jq '.current_usage')
-if [ "$usage" != "null" ]; then
-    current=$(echo "$usage" | jq '.input_tokens + .cache_creation_input_tokens + .cache_read_input_tokens')
-    size=$(echo "$context_data" | jq '.context_window_size')
-    if [ "$current" != "null" ] && [ "$size" != "null" ] && [ "$size" -gt 0 ]; then
+usage=$(jq '.current_usage' <<< "$context_data")
+if [[ "$usage" != "null" ]]; then
+    current=$(jq '.input_tokens + .cache_creation_input_tokens + .cache_read_input_tokens' <<< "$usage")
+    size=$(jq '.context_window_size' <<< "$context_data")
+    if [[ "$current" != "null" && "$size" != "null" && "$size" -gt 0 ]]; then
         pct=$((current * 100 / size))
-
-        filled=$((pct / 10))
-        empty=$((10 - filled))
-
-        # Color: blue 0-15%, green 15-30%, yellow 30-60%, red 60%+
-        if [ "$pct" -lt 15 ]; then
-            bar_color="$blu_2"
-        elif [ "$pct" -lt 30 ]; then
-            bar_color="$grn_3"
-        elif [ "$pct" -lt 60 ]; then
-            bar_color="$sun_3"
-        else
-            bar_color="$rby_3"
-        fi
-
-        bar=""
-        for ((i=0; i<filled; i++)); do bar+="▰"; done
-        for ((i=0; i<empty; i++)); do bar+="▱"; done
-
-        context_bar="${bar_color}㊋${bar} ${pct}%${N}"
+        context_bar="$(pct_color "$pct")${BAR_CONTEXT}$(build_bar $((pct / 10))) ${pct}%${N}"
     fi
 fi
 
-# Usage limits (5-hour and 7-day)
+# Usage limits
 usage_info=""
-usage_response=$(get_usage_limits)
-if [ -n "$usage_response" ]; then
-    five_hr=$(echo "$usage_response" | jq -r '.five_hour.utilization // empty')
-    five_hr_reset=$(echo "$usage_response" | jq -r '.five_hour.resets_at // empty')
-    seven_day=$(echo "$usage_response" | jq -r '.seven_day.utilization // empty')
-    seven_day_reset=$(echo "$usage_response" | jq -r '.seven_day.resets_at // empty')
+if usage_response=$(get_usage_limits); then
+    five_hr=$(jq -r '.five_hour.utilization // empty' <<< "$usage_response")
+    five_hr_reset=$(jq -r '.five_hour.resets_at // empty' <<< "$usage_response")
+    seven_day=$(jq -r '.seven_day.utilization // empty' <<< "$usage_response")
+    seven_day_reset=$(jq -r '.seven_day.resets_at // empty' <<< "$usage_response")
 
-    if [ -n "$five_hr" ]; then
-        # Color based on usage: blue <15%, green 15-30%, yellow 30-60%, red >60%
-        if [ "${five_hr%.*}" -lt 15 ] 2>/dev/null; then
-            hr_color="$blu_2"
-        elif [ "${five_hr%.*}" -lt 30 ] 2>/dev/null; then
-            hr_color="$grn_3"
-        elif [ "${five_hr%.*}" -lt 60 ] 2>/dev/null; then
-            hr_color="$sun_3"
-        else
-            hr_color="$rby_3"
-        fi
-        # Format reset time (just hour, e.g., "4am") - convert from UTC to local
-        hr_reset_fmt=""
-        if [ -n "$five_hr_reset" ]; then
-            # Convert +00:00 to +0000 format for macOS date
-            hr_reset_fmt=$(date -j -f "%Y-%m-%dT%H:%M:%S%z" "${five_hr_reset%%.*}+0000" "+%I%p" 2>/dev/null | sed 's/^0//' | tr '[:upper:]' '[:lower:]')
-            [ -n "$hr_reset_fmt" ] && hr_reset_fmt=" (${hr_reset_fmt})"
-        fi
+    if [[ -n "$five_hr" ]]; then
+        hr_color=$(pct_color "$five_hr")
         hr_icon=$(get_progress_icon "${five_hr%.*}")
-        usage_info+="${hr_color}${hr_icon} ${five_hr%.*}%${hr_reset_fmt}${N}"
+        hr_reset=$(format_date "$five_hr_reset" "%-I%P")
+        [[ -n "$hr_reset" ]] && hr_reset=" (${hr_reset})"
+        usage_info+="${hr_color}${hr_icon} ${five_hr%.*}%${hr_reset}${N}"
     fi
 
-    if [ -n "$seven_day" ]; then
-        # Color based on usage: blue <15%, green 15-30%, yellow 30-60%, red >60%
-        if [ "${seven_day%.*}" -lt 15 ] 2>/dev/null; then
-            day_color="$blu_2"
-        elif [ "${seven_day%.*}" -lt 30 ] 2>/dev/null; then
-            day_color="$grn_3"
-        elif [ "${seven_day%.*}" -lt 60 ] 2>/dev/null; then
-            day_color="$sun_3"
-        else
-            day_color="$rby_3"
-        fi
-        # Format reset date (e.g., "1/16") - convert from UTC to local
-        day_reset_fmt=""
-        if [ -n "$seven_day_reset" ]; then
-            day_reset_fmt=$(date -j -f "%Y-%m-%dT%H:%M:%S%z" "${seven_day_reset%%.*}+0000" "+%-m/%-d" 2>/dev/null)
-            [ -n "$day_reset_fmt" ] && day_reset_fmt=" (${day_reset_fmt})"
-        fi
-        [ -n "$usage_info" ] && usage_info+="${blu_2} ╼╾ ${N}"
+    if [[ -n "$seven_day" ]]; then
+        [[ -n "$usage_info" ]] && usage_info+="${BLUE} ${SEP} ${N}"
+        day_color=$(pct_color "$seven_day")
         day_icon=$(get_progress_icon "${seven_day%.*}")
-        usage_info+="${day_color}${day_icon} ${seven_day%.*}%${day_reset_fmt}${N}"
+        day_reset=$(format_date "$seven_day_reset" "%-m/%-d")
+        [[ -n "$day_reset" ]] && day_reset=" (${day_reset})"
+        usage_info+="${day_color}${day_icon} ${seven_day%.*}%${day_reset}${N}"
     fi
 fi
 
-# Build status line
-printf "${blu_2}╞╾${N}"
-printf "${blu_3}%s${N}" "$dir"
-
-if [ -n "$git_info" ]; then
-    printf "%b" "$git_info"
-fi
-
-if [ -n "$git_status" ]; then
-    printf " %b" "$git_status"
-fi
-
-printf "${blu_2} ╼╾ ${N}"
-printf "${blu_2}${icon_model} %s${N}" "$model_name"
-
-# Session duration (no divider, right after model)
-# if [ "$duration_ms" != "null" ] && [ "$duration_ms" -gt 0 ] 2>/dev/null; then
-#     hrs=$((duration_ms / 1000 / 60 / 60))
-#     if [ "$hrs" -ge 24 ]; then
-#         time_color="$rby_3"
-#     else
-#         time_color="$blu_1"
-#     fi
-#     printf " ${time_color}${icon_time} %s${N}" "$(format_duration "$duration_ms")"
-# fi
-
-if [ -n "$context_bar" ]; then
-    printf "${blu_2} ╼╾ ${N}%b" "$context_bar"
-fi
-
-if [ -n "$usage_info" ]; then
-    printf "${blu_2} ╼╾ ${N}%b" "$usage_info"
-fi
-
-# Two newlines for spacing
-printf "\n\n"
+# ─────────────────────────────────────────────────
+# Output (buffered to prevent partial output leaking)
+# ─────────────────────────────────────────────────
+out="${BOLD}${BLUE}${ICON_MODEL}${current_dir/#$HOME\//}${N}"
+[[ -n "$git_info" ]]    && out+="$git_info"
+[[ -n "$git_status" ]]  && out+=" $git_status"
+[[ -n "$context_bar" ]] && out+="${BR_BLUE}${SEP} ${N}${context_bar}"
+[[ -n "$usage_info" ]]  && out+="${BR_BLUE} ${SEP} ${N}${usage_info}"
+printf '%b\033[K\033[0m' "$out"
