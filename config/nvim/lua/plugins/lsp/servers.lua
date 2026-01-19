@@ -131,7 +131,6 @@ local servers = {
 				telemetry = { enable = false },
 				diagnostics = { globals = { "vim" } },
 				format = { enable = false },
-				completion = { callSnippet = "Replace" },
 			},
 		},
 	},
@@ -146,82 +145,20 @@ return {
 	},
 	{
 		"williamboman/mason-lspconfig.nvim",
-		opts = { ensure_installed = vim.tbl_keys(servers) },
-	},
-	{
-		"saghen/blink.cmp",
-		version = "1.*",
-		dependencies = { "rafamadriz/friendly-snippets" },
 		opts = {
-			keymap = {
-				preset = "none",
-				["<Tab>"] = { "select_and_accept", "fallback" },
-				["<Up>"] = { "select_prev", "fallback" },
-				["<Down>"] = { "select_next", "fallback" },
-				["<C-p>"] = { "select_prev", "fallback" },
-				["<C-n>"] = { "select_next", "fallback" },
-				["<C-Space>"] = { "show", "fallback" },
-				["<C-e>"] = { "cancel", "fallback" },
-				["<Esc>"] = { "cancel", "fallback" },
-				["<C-b>"] = { "scroll_documentation_up", "fallback" },
-				["<C-f>"] = { "scroll_documentation_down", "fallback" },
-			},
-			appearance = { nerd_font_variant = "mono" },
-			completion = {
-				accept = { auto_brackets = { enabled = true } },
-				documentation = {
-					auto_show = true,
-					auto_show_delay_ms = 100,
-					window = { border = "rounded" },
-				},
-				menu = {
-					border = "rounded",
-					draw = {
-						columns = {
-							{ "kind_icon" },
-							{ "label", "label_description", gap = 1 },
-							{ "source_name" },
-						},
-					},
-				},
-			},
-			signature = {
-				enabled = true,
-				window = { border = "rounded" },
-			},
-			sources = {
-				default = { "lsp", "path", "snippets", "buffer" },
-			},
-			fuzzy = { implementation = "prefer_rust_with_warning" },
+			ensure_installed = vim.tbl_keys(servers),
+			handlers = {},
 		},
-		config = function(_, opts)
-			require("blink.cmp").setup(opts)
-
-			-- Hide Copilot ghost text when popup opens
-			vim.api.nvim_create_autocmd("User", {
-				pattern = "BlinkCmpMenuOpen",
-				callback = function()
-					vim.b.copilot_suggestion_hidden = true
-				end,
-			})
-			vim.api.nvim_create_autocmd("User", {
-				pattern = "BlinkCmpMenuClose",
-				callback = function()
-					vim.b.copilot_suggestion_hidden = false
-				end,
-			})
-		end,
 	},
 	{
 		"neovim/nvim-lspconfig",
 		event = { "BufReadPre", "BufNewFile" },
 		dependencies = {
-			"saghen/blink.cmp",
 			"williamboman/mason.nvim",
 			"williamboman/mason-lspconfig.nvim",
 		},
 		config = function()
-			local capabilities = require("blink.cmp").get_lsp_capabilities()
+			local capabilities = vim.lsp.protocol.make_client_capabilities()
 
 			vim.api.nvim_create_autocmd("LspAttach", {
 				group = vim.api.nvim_create_augroup("lsp-attach", { clear = true }),
@@ -249,7 +186,7 @@ return {
 				virtual_text = {
 					source = false,
 					spacing = 2,
-					severity = { min = vim.diagnostic.severity.WARN },
+					severity = { min = vim.diagnostic.severity.HINT },
 				},
 			})
 
@@ -278,6 +215,8 @@ return {
 				vim.lsp.config(name, config)
 				vim.lsp.enable(name)
 			end
+
+			vim.lsp.enable("stylua", false)
 		end,
 	},
 }

@@ -1,4 +1,8 @@
 {
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "permissions": {
     "allow": [
       "Read",
@@ -14,13 +18,11 @@
     ]
   },
   "model": "opus",
-  "outputStyle": "default",
-  "attribution": {
-    "commit": "",
-    "pr": ""
-  },
   "statusLine": {
     "type": "command",
     "command": "bash ~/.claude/statusline-command.sh"
-  }
+  },
+  "outputStyle": "explanatory",
+  "shiftTabHint": false,
+  "promptSuggestionEnabled": false
 }

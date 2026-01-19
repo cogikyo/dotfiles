@@ -96,17 +96,17 @@ return {
 					},
 				},
 				icons = {
-					git_placement = "after",
+					git_placement = "before",
 					glyphs = {
 						default = "",
 						symlink = "",
 						git = {
-							unstaged = "",
-							staged = "",
+							unstaged = "",
+							staged = "",
 							unmerged = "",
 							renamed = "",
 							deleted = "",
-							untracked = " ",
+							untracked = "",
 							ignored = "",
 						},
 					},
