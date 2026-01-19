@@ -85,6 +85,7 @@ require("lazy").setup({
 		"mbbill/undotree", -- visual undo tree panel
 	},
 	ui = { border = "rounded" },
+	change_detection = { notify = false, enabled = true },
 })
 
 require("config.settings")

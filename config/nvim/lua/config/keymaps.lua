@@ -1,5 +1,5 @@
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ Helpers: one liner keymaps                                                  │
+-- │ helpers: one liner keymaps                                                  │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 local function map(mode, lhs, rhs, opts)
 	local keymap_opts = vim.tbl_extend("force", { silent = true }, opts or {})
@@ -31,10 +31,9 @@ local function expr(description)
 end
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ Groups: secondary leader groups                                             │
+-- │ groups: secondary leader groups                                             │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 local GROUPS = {
-	{ "<leader>a", group = "AI/Copilot" },
 	{ "<leader>b", group = "Buffer Controls" },
 	{ "<leader>c", group = "Code/Change" },
 	{ "<leader>d", group = "Delete/Database" },
@@ -54,7 +53,7 @@ local GROUPS = {
 }
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ Save: write files, format, source                                           │
+-- │ save: write files, format, source                                           │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 map("n", "<C-s>", ":w<CR>", desc("Save"))
 map("i", "<C-s>", "<Esc>:w<CR>", desc("Save"))
@@ -64,7 +63,7 @@ map("n", "<leader><C-s>", ":lua vim.lsp.buf.format()<CR><C-s>", desc("Format and
 map("n", "<leader>so", ":w | source %<CR>", desc("Save and source"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ Quit: exit, force quit, escape                                              │
+-- │ quit: exit, force quit, escape                                              │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 map("n", "<leader>q", ":q!<CR>", remap_explicit("Force quit"))
 map("n", "qq", ":q<CR>", desc("Quit"))
@@ -73,15 +72,7 @@ map("n", "q", "<Nop>")
 map("n", "<C-c>", "<Esc>", desc("Escape"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ Vestigial: common editor shortcuts (undo, redo, paste)                      │
--- ╰─────────────────────────────────────────────────────────────────────────────╯
-map("n", "<C-z>", "u", desc("Undo"))
-map("n", "<C-y>", "<C-r>", desc("Redo"))
-map("i", "<C-v>", '<Esc>"+p', desc("Paste (clipboard)"))
-map("i", "<C-t>", '<Esc>"*p', desc("Paste (selection)"))
-
--- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ Copy: clipboard yank operations                                             │
+-- │ copy: clipboard yank operations                                             │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 map("v", "<leader>y", 'ml"+y`l', desc("Yank to clipboard"))
 map("v", "<C-c>", 'ml"+y`l', desc("Yank to clipboard"))
@@ -92,7 +83,7 @@ map("n", "<leader>wd", "dt<space>", desc("Delete word"))
 map("x", "<leader>p", '"_dP', desc("Paste (preserve register)"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ Context: yank with file path prepended                                      │
+-- │ context: yank with file path prepended                                      │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 local function yank_path(motion)
 	if motion then
@@ -114,13 +105,13 @@ map("n", "<A-g>", yank_paragrah("gv"), desc("Yank file path + selection (last vi
 map("n", "<A-p>", yank_paragrah("vap"), desc("Yank file path + paragraph"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ Space: add empty lines above/below                                          │
+-- │ space: add empty lines above/below                                          │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 map("n", "<leader>o", ':<C-u>call append(line("."),   repeat([""], v:count1))<CR>', desc("Add line below"))
 map("n", "<leader>O", ':<C-u>call append(line(".")-1,   repeat([""], v:count1))<CR>', desc("Add line above"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ Hold: no register, indent, move selection                                   │
+-- │ hold: no register, indent, move selection                                   │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 map("n", "<leader>d", '"_d', desc("Delete (no register)"))
 map("v", "<leader>d", '"_d', desc("Delete (no register)"))
@@ -137,7 +128,7 @@ map("n", "k", "v:count == 0 ? 'gk' : 'k'", expr("Up (display line)"))
 map("n", "j", "v:count == 0 ? 'gj' : 'j'", expr("Down (display line)"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ Center: keep cursor centered on screen                                      │
+-- │ center: keep cursor centered on screen                                      │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 local function search_move(reverse)
 	return function()
@@ -145,6 +136,9 @@ local function search_move(reverse)
 		local ok = pcall(vim.cmd.normal, { bang = true, args = { key } })
 		if ok then
 			vim.cmd.normal({ bang = true, args = { "zvzt" } })
+			if _G.reset_search_timer then
+				_G.reset_search_timer()
+			end
 		end
 	end
 end
@@ -164,7 +158,7 @@ map("n", "zm", "zmzt", desc("Fold more"))
 map("n", "za", "zazt", desc("Toggle fold"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ Undo: insert mode break points at punctuation                               │
+-- │ undo: insert mode break points at punctuation                               │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 map("i", ",", ",<C-g>u")
 map("i", ".", ".<C-g>u")
@@ -174,7 +168,7 @@ map("i", ";", ";<C-g>u")
 map("i", ":", ":<C-g>u")
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ Window: navigation, tabs, resize, buffers                                   │
+-- │ window: navigation, tabs, resize, buffers                                   │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 map("n", "<leader><C-o>", ":bp<CR>zvzt", desc("Previous buffer"))
 map("n", "<leader><C-i>", ":bn<CR>zvzt", desc("Next buffer"))
@@ -219,13 +213,13 @@ end
 map("n", "<leader>gk", open_doc_link, desc("Open LSP doc link"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ Indent: format paragraph, file                                              │
+-- │ indent: format paragraph, file                                              │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 map("n", "<leader>==", "ml=ip`lzvzt", desc("Indent paragraph"))
 map("n", "<leader>g=", "mlgg=G`lzvzt", desc("Indent file"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ Toggle: features, UI elements, settings                                     │
+-- │ toggle: features, UI elements, settings                                     │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 map("n", "<leader>ut", ":UndotreeToggle<CR>", desc("Undo tree"))
 map("n", "<leader>up", ":Lazy update<CR>", desc("Update plugins"))
@@ -238,14 +232,7 @@ map("n", "<leader>et", ":NvimTreeToggle<CR> :NvimTreeRefresh<CR>", desc("Toggle 
 map("n", "<leader>bt", ":Switch<CR>", desc("Toggle variant"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ Copilot: AI assistant controls                                              │
--- ╰─────────────────────────────────────────────────────────────────────────────╯
-map("n", "<leader>at", ":Copilot toggle<CR>", desc("Toggle Copilot"))
-map("n", "<leader>as", ":Copilot status<CR>", desc("Copilot status"))
-map("n", "<leader>ap", ":Copilot panel<CR>", desc("Copilot panel"))
-
--- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ Replace: search and substitute patterns                                     │
+-- │ replace: search and substitute patterns                                     │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 map("v", "r", ":s///g<Left><Left><Left>", remap_explicit("Replace in selection"))
 map("n", "<leader>r<leader>", ":%s///g<Left><Left><Left>", remap_explicit("Replace {custom pattern} in file"))
@@ -254,14 +241,14 @@ map("n", "<leader>rp", '"ryiwvip:s/<C-r>r//g<Left><Left>', remap_explicit("Repla
 map("n", "<leader>rs", "1z=", desc("Fix spelling"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ Database: DB UI controls                                                    │
+-- │ database: DB UI controls                                                    │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 map("n", "<leader>db", ":DBUIToggle<CR>", desc("Toggle DB UI"))
 map("n", "<leader>df", ":DBUIFindBuffer<CR>", desc("Find DB buffer"))
 
--- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ Telescope: fuzzy finder pickers                                             │
--- ╰─────────────────────────────────────────────────────────────────────────────╯
+-- ╭─────────────────────────────────────────────────────────────────────────────
+-- │ telescope: fuzzy finder pickers
+-- ╰─────────────────────────────────────────────────────────────────────────────
 local telescope_ok, telescope_builtin = pcall(require, "telescope.builtin")
 if telescope_ok then
 	local tmap = function(lhs, picker, d)
@@ -300,7 +287,7 @@ if telescope_ok then
 end
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ Harpoon: quick file navigation                                              │
+-- │ harpoon: quick file navigation                                              │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 map("n", "<leader>nn", ":lua require('harpoon.mark').add_file()<CR>", desc("Add file"))
 map("n", "<leader>ng", ":lua require('harpoon.ui').toggle_quick_menu()<CR>", desc("Quick menu"))
@@ -311,10 +298,65 @@ map("n", "<leader>na", ":lua require('harpoon.ui').nav_file(4)<CR>zt", desc("Fil
 map("n", "<leader>nd", ":lua require('harpoon.ui').nav_file(5)<CR>zt", desc("File 5"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ LSP: language server protocol mappings                                      │
+-- │ gitsigns: git hunk navigation and actions                                   │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 local M = { groups = GROUPS }
 
+local function nav_hunk(direction)
+	return function()
+		local gs = require("gitsigns")
+		if vim.wo.diff then
+			vim.cmd.normal({ direction == "next" and "]h" or "[h", bang = true })
+		else
+			gs.nav_hunk(direction)
+		end
+	end
+end
+local function stage_hunk_visual()
+	require("gitsigns").stage_hunk({ vim.fn.line("."), vim.fn.line("v") })
+end
+local function reset_hunk_visual()
+	require("gitsigns").reset_hunk({ vim.fn.line("."), vim.fn.line("v") })
+end
+local function blame_full()
+	require("gitsigns").blame_line({ full = true })
+end
+local function diff_head()
+	require("gitsigns").diffthis("~")
+end
+
+M.gitsigns_on_attach = function(bufnr)
+	local gs = require("gitsigns")
+
+	local function gsmap(mode, l, r, opts)
+		opts = opts or {}
+		opts.buffer = bufnr
+		vim.keymap.set(mode, l, r, opts)
+	end
+
+	gsmap("n", "]h", nav_hunk("next"), { desc = "Next hunk" })
+	gsmap("n", "[h", nav_hunk("prev"), { desc = "Previous hunk" })
+	gsmap("n", "<leader>hs", gs.stage_hunk, { desc = "Stage hunk" })
+	gsmap("n", "<leader>hr", gs.reset_hunk, { desc = "Reset hunk" })
+	gsmap("v", "<leader>hs", stage_hunk_visual, { desc = "Stage hunk" })
+	gsmap("v", "<leader>hr", reset_hunk_visual, { desc = "Reset hunk" })
+	gsmap("n", "<leader>hS", gs.stage_buffer, { desc = "Stage buffer" })
+	gsmap("n", "<leader>hu", gs.undo_stage_hunk, { desc = "Undo stage hunk" })
+	gsmap("n", "<leader>hR", gs.reset_buffer, { desc = "Reset buffer" })
+	gsmap("n", "<leader>hp", gs.preview_hunk, { desc = "Preview hunk" })
+	gsmap("n", "<leader>hb", blame_full, { desc = "Blame line" })
+	gsmap("n", "<leader>hB", gs.toggle_current_line_blame, { desc = "Toggle line blame" })
+	gsmap("n", "<leader>hw", gs.toggle_word_diff, { desc = "Toggle word diff" })
+	gsmap("n", "<leader>hl", gs.toggle_linehl, { desc = "Toggle line highlight" })
+	gsmap("n", "<leader>hd", gs.toggle_deleted, { desc = "Toggle deleted" })
+	gsmap("n", "<leader>hD", gs.diffthis, { desc = "Diff this" })
+	gsmap("n", "<leader>hH", diff_head, { desc = "Diff against HEAD~" })
+	gsmap({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>", { desc = "Select hunk" })
+end
+
+-- ╭─────────────────────────────────────────────────────────────────────────────╮
+-- │ lsp: language server protocol mappings                                      │
+-- ╰─────────────────────────────────────────────────────────────────────────────╯
 local function diag_jump(count)
 	return function()
 		vim.diagnostic.jump({ count = count })

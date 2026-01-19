@@ -155,3 +155,39 @@ au("BufWritePost", {
 	pattern = "dunstrc",
 	command = ":silent !pkill dunst; dunst & dunstify -u low 'dunst restarted' 'config change detected'",
 })
+
+-- auto-clear search highlight due to inactivity
+local search_timer = nil
+local search_timeout = 2000 -- ms
+
+local function clear_search_hl()
+	if vim.v.hlsearch == 1 then
+		vim.cmd("nohlsearch")
+	end
+end
+
+local function reset_search_timer()
+	if search_timer then
+		search_timer:stop()
+	end
+	search_timer = vim.defer_fn(clear_search_hl, search_timeout)
+end
+
+-- expose for keymaps to use
+_G.reset_search_timer = reset_search_timer
+
+au("CmdlineLeave", {
+	group = "AutoClearSearch",
+	pattern = { "/", "?" },
+	callback = reset_search_timer,
+})
+
+-- remove trailing whitespace on save
+au("BufWritePre", {
+	group = "TrimWhitespace",
+	callback = function()
+		local pos = vim.api.nvim_win_get_cursor(0)
+		vim.cmd([[%s/\s\+$//e]])
+		vim.api.nvim_win_set_cursor(0, pos)
+	end,
+})

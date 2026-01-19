@@ -4,7 +4,7 @@ return {
 	opts = {
 		slots = { "a", "s", "e", "t" },
 		mapping = {
-			startStopRecording = "q",
+			startStopRecording = "@",
 			playMacro = "@",
 			switchSlot = "<C-q>",
 			editMacro = "cq",

@@ -82,10 +82,10 @@ return {
 			shorting_target = 80,
 			icon = nil,
 			symbols = {
-				modified = " ",
-				readonly = "󰍁 ",
-				unnamed = "󱙝 ",
-				newfile = " ",
+				modified = "",
+				readonly = "󰍁",
+				unnamed = "󱙝",
+				newfile = "",
 			},
 			color = function()
 				local mode_color = {
@@ -108,10 +108,9 @@ return {
 			icon = "",
 			symbols = {
 				spinner = { "⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏" },
-				done = "✓",
+				done = "",
 				separator = " ",
 			},
-			ignore_lsp = {},
 			show_name = true,
 		}
 

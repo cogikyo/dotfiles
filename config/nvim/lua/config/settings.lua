@@ -20,6 +20,7 @@ local options = {
 	shortmess = "filnxtToOFcsIC", -- shorten/suppress various messages
 	number = true, -- show absolute line number
 	relativenumber = true, -- show relative line numbers (easier motions)
+	signcolumn = "yes", -- always show sign column (left of numbers)
 	termguicolors = true, -- 24-bit RGB color support
 	colorcolumn = "100", -- visual guides for line length
 	foldmethod = "expr",
