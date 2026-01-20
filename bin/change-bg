@@ -11,15 +11,15 @@ else
 fi
 
 dna () {
-    mpvpaper -o "--loop --brightness=6 --contrast=9 --saturation=-16 --hue=-24" $DISPLAY "$VID_PATH/dna.mp4" & disown
+    mpvpaper -o "--loop --brightness=6 --contrast=9 --saturation=-16 --hue=-24" "$DISPLAY" "$VID_PATH/dna.mp4" & disown
 }
 
 record () {
-    mpvpaper -o "--loop --brightness=-3 --contrast=10 --saturation=-42 --hue=69" $DISPLAY "$VID_PATH/record.mp4" & disown
+    mpvpaper -o "--loop --brightness=-3 --contrast=10 --saturation=-42 --hue=69" "$DISPLAY" "$VID_PATH/record.mp4" & disown
 }
 
 blackhole () {
-    mpvpaper -o "--loop --brightness=3  --contrast=6  --saturation=-50  --hue=-8 --gamma=-20" $DISPLAY "$VID_PATH/blackhole.webm" & disown
+    mpvpaper -o "--loop --brightness=3  --contrast=6  --saturation=-50  --hue=-8 --gamma=-20" "$DISPLAY" "$VID_PATH/blackhole.webm" & disown
 }
 
 
@@ -38,7 +38,9 @@ case "$background_choice" in
         ps -ef | rg "blackhole.webm" | rg -v rg | awk '{print $2}' | xargs kill
     ;;
     "lock")
-        blackhole & disown
+        ps -ef | rg "mpvpaper" | rg -v rg | awk '{print $2}' | xargs kill
+    ;;
+    "kill")
         ps -ef | rg "record.mp4" | rg -v rg | awk '{print $2}' | xargs kill
     ;;
     *)

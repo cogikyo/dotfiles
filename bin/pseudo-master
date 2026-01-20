@@ -1,0 +1,100 @@
+#!/usr/bin/env bash
+# Toggle pseudo-master: float a slave to cover other slaves at full height
+
+set -euo pipefail
+
+CACHE_DIR="/tmp/hypr-pseudo-master"
+mkdir -p "$CACHE_DIR"
+
+# Monitor geometry (3840x2160 with reserved: 80 top, 16 bottom, 105 left, 85 right)
+readonly RESERVED_TOP=86 RESERVED_BOTTOM=32 RESERVED_RIGHT=85
+readonly MONITOR_W=3840 MONITOR_H=2160
+readonly USABLE_H=$((MONITOR_H - RESERVED_TOP - RESERVED_BOTTOM))
+
+get_tiled_windows() {
+    hyprctl clients -j | jq -r --argjson ws "$1" \
+        '[.[] | select(.workspace.id == $ws and .floating == false and .class != "GLava")]'
+}
+
+get_slave_index() {
+    get_tiled_windows "$1" | jq -r --arg addr "$2" \
+        'sort_by(.at[0]) | .[1:] | sort_by(.at[1]) | to_entries[] | select(.value.address == $addr) | .key'
+}
+
+get_slave_area() {
+    get_tiled_windows "$1" | jq -r --argjson right "$RESERVED_RIGHT" --argjson mw "$MONITOR_W" '
+        sort_by(.at[0]) | .[0].at[0] as $master_x |
+        [.[] | select(.at[0] > $master_x)] |
+        if length == 0 then empty else .[0].at[0] as $x | "\($x) \($mw - $x - $right)" end
+    '
+}
+
+# Get active window info in single jq call
+read -r floating addr workspace_id < <(
+    hyprctl activewindow -j | jq -r '[.floating, .address, .workspace.id] | @tsv'
+)
+
+cache_file="$CACHE_DIR/$addr"
+
+if [[ "$floating" == "true" ]]; then
+    if [[ -f "$cache_file" ]]; then
+        hyprctl dispatch togglefloating
+        saved_index=$(<"$cache_file")
+        slave_count=$(get_tiled_windows "$workspace_id" | jq 'length - 1')
+        swaps=$((slave_count - 1 - saved_index))
+        for ((i = 0; i < swaps; i++)); do
+            hyprctl dispatch layoutmsg swapprev
+        done
+        rm -f "$cache_file"
+        resize-slave -r
+    else
+        exec toggle-monocle
+    fi
+    hyprctl dispatch movefocus l
+    exit 0
+fi
+
+tiled_windows=$(get_tiled_windows "$workspace_id")
+window_count=$(echo "$tiled_windows" | jq 'length')
+
+if [[ "$window_count" -eq 2 ]]; then
+    has_floating=$(hyprctl clients -j | jq --argjson ws "$workspace_id" \
+        '[.[] | select(.workspace.id == $ws and .floating == true and .class != "GLava")] | length > 0')
+    if [[ "$has_floating" == "true" ]]; then
+        hyprctl dispatch cyclenext prev
+        pseudo-master
+    else
+        hyprctl dispatch cyclenext prev
+    fi
+    exit 0
+fi
+
+master_addr=$(echo "$tiled_windows" | jq -r 'sort_by(.at[0])[0].address')
+if [[ "$addr" == "$master_addr" ]]; then
+    hyprctl dispatch movefocus r
+    read -r addr workspace_id < <(hyprctl activewindow -j | jq -r '[.address, .workspace.id] | @tsv')
+    cache_file="$CACHE_DIR/$addr"
+fi
+
+if [[ -f "$cache_file" ]]; then
+    hyprctl dispatch togglefloating
+    saved_index=$(<"$cache_file")
+    slave_count=$(get_tiled_windows "$workspace_id" | jq 'length - 1')
+    swaps=$((slave_count - 1 - saved_index))
+    for ((i = 0; i < swaps; i++)); do
+        hyprctl dispatch layoutmsg swapprev
+    done
+    rm -f "$cache_file"
+    resize-slave -r
+else
+    slave_area=$(get_slave_area "$workspace_id")
+    [[ -z "$slave_area" ]] && exit 0
+
+    get_slave_index "$workspace_id" "$addr" > "$cache_file"
+    read -r slave_x slave_w <<< "$slave_area"
+
+    hyprctl --batch "
+        dispatch togglefloating;
+        dispatch moveactive exact $slave_x $RESERVED_TOP;
+        dispatch resizeactive exact $slave_w $USABLE_H"
+fi

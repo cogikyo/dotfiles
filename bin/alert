@@ -23,7 +23,8 @@ case "$app" in
     wf-end) sound="reward" ;;
     Spotify) sound="none" ;;
     discord) sound="none" ;;
-esac
+    Slack) sound="knock"
+;; esac
 
 if [ "$sound" == "none" ]; then
     exit 0
