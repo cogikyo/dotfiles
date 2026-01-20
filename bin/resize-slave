@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# Resize bottom slave to ~20% height when exactly 3 tiled windows exist
+
+original_addr=$(hyprctl activewindow -j | jq -r '.address')
+floating=$(hyprctl activewindow -j | jq -r '.floating')
+[[ "$floating" == "true" ]] && exit 0
+
+ws_id=$(hyprctl activeworkspace -j | jq '.id')
+tiled=$(hyprctl clients -j | jq --argjson ws "$ws_id" '[.[] | select(.floating == false and .workspace.id == $ws)]')
+
+[[ $(echo "$tiled" | jq 'length') -ne 3 ]] && exit 0
+
+master_x=$(echo "$tiled" | jq '[.[].at[0]] | min')
+slaves=$(echo "$tiled" | jq --argjson mx "$master_x" '[.[] | select(.at[0] > $mx)] | sort_by(.at[1])')
+top=$(echo "$slaves" | jq -r '.[0].address')
+
+hyprctl --batch "dispatch focuswindow address:$top; dispatch resizeactive exact 1824 1472; dispatch focuswindow address:$original_addr"
+hyprctl dispatch layoutmsg mfact exact 0.4942
+
+while getopts 'r' flag; do
+    case "$flag" in
+        r) split -r; exit 0;;
+        *) exit 1 ;;
+    esac
+done
+

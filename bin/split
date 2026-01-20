@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+
+floating=$(hyprctl activewindow -j | jq -r '.floating')
+[[ "$floating" == "true" ]] && exit 0
+
+state_file="/tmp/mfact-state"
+
+set_layout() {
+    case "$1" in
+        xs)
+            hyprctl dispatch layoutmsg mfact exact 0.37
+            echo "xs" > "$state_file"
+            ;;
+        # sm)
+        #     hyprctl dispatch layoutmsg mfact exact 0.4942
+        #     echo "sm" > "$state_file"
+        #     ;;
+        default)
+            # hyprctl dispatch layoutmsg mfact exact 0.57
+            hyprctl dispatch layoutmsg mfact exact 0.4942
+            echo "default" > "$state_file"
+            ;;
+        lg)
+            hyprctl dispatch layoutmsg mfact exact 0.77
+            echo "lg" > "$state_file"
+            ;;
+    esac
+}
+
+current=$(cat "$state_file" 2>/dev/null || echo "default")
+
+while getopts 'xsdlr' flag; do
+    case "$flag" in
+        x) set_layout "xs"; exit 0 ;;
+        # s) set_layout "sm"; exit 0 ;;
+        d)
+            if [[ "$current" == "default" ]]; then
+                set_layout "xs"
+            else
+                set_layout "default"
+                resize-slave -r
+            fi
+            exit 0
+            ;;
+        l) set_layout "lg"; exit 0 ;;
+        r)
+            set_layout "$current"
+            pos=$(hyprctl activewindow -j | jq -r '"\(.at[0] + .size[0]/2),\(.at[1] + .size[1]/2)"')
+            hyprctl dispatch movecursor "${pos%,*} ${pos#*,}"
+            exit 0
+            ;;
+        *) exit 1 ;;
+    esac
+done
+
+# Default: toggle through states
+case "$current" in
+    xs) set_layout "default" ;;
+    # sm) set_layout "default" ;;
+    default) set_layout "lg" ;;
+    *) set_layout "xs" ;;
+esac

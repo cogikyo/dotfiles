@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+MONOCLE_WS_FILE="/tmp/eww/monocle"
+WORKSPACE_FILE="/tmp/eww/workspace"
+MUSIC_WS=5
+MONOCLE_WS=6
+
+current_ws=$(hyprctl activeworkspace -j | jq '.id')
+
+if [[ "$current_ws" == "$MUSIC_WS" ]]; then
+    monocle_origin=$(tail -n 1 "$MONOCLE_WS_FILE" 2>/dev/null || echo "")
+    
+    if [[ -n "$monocle_origin" ]]; then
+        hyprctl dispatch workspace "$MONOCLE_WS"
+    else
+        prev_ws=$(tail -n 2 "$WORKSPACE_FILE" 2>/dev/null | head -n 1 || echo "3")
+        [[ "$prev_ws" == "$MUSIC_WS" ]] && prev_ws=3
+        hyprctl dispatch workspace "$prev_ws"
+    fi
+    change-bg "kill"
+else
+    hyprctl keyword animation "workspaces, 1, 5, default, slidefade"
+    hyprctl dispatch workspace "$MUSIC_WS" &
+    change-bg "music"
+    sleep 0.5
+    hyprctl keyword animation "workspaces, 1, 0.5, default, slide"
+fi
+

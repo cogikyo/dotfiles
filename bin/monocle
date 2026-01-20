@@ -1,0 +1,143 @@
+#!/usr/bin/env bash
+# Toggle monocle mode: float window to modal-like state or return to tiled
+
+set -euo pipefail
+
+CACHE_DIR="/tmp/hypr-monocle"
+MONOCLE_SIZE="3200 1914"
+MONOCLE_WS_FILE="/tmp/eww/monocle"
+
+BORDER_DEFAULT="rgb(f2a170)"
+SHADOW_DEFAULT="rgba(e56b2c32)"
+BORDER_MONOCLE="rgb(5aba6d)"
+SHADOW_MONOCLE="rgba(2d9a4342)"
+
+mkdir -p "$CACHE_DIR"
+
+cleanup_stale_monocle() {
+    hyprctl --batch "\
+        keyword general:col.active_border $BORDER_DEFAULT; \
+        keyword decoration:shadow:color $SHADOW_DEFAULT"
+    rm -f "$CACHE_DIR"/*
+    echo "" > "$MONOCLE_WS_FILE"
+}
+
+# Clean up stale state if monocle workspace is empty (exclude GLava)
+monocle_ws_windows=$(hyprctl clients -j | jq '[.[] | select(.workspace.id == 6 and .class != "GLava")] | length')
+if [[ "$monocle_ws_windows" -eq 0 && -n "$(ls -A "$CACHE_DIR" 2>/dev/null)" ]]; then
+    cleanup_stale_monocle
+fi
+
+get_tiled_windows() {
+    local ws="$1"
+    hyprctl clients -j | jq -r --arg ws "$ws" \
+        '[.[] | select(.workspace.id == ($ws | tonumber) and .floating == false)]'
+}
+
+get_slave_index() {
+    local ws="$1" addr="$2"
+    get_tiled_windows "$ws" | jq -r --arg addr "$addr" \
+        'sort_by(.at[0]) | .[1:] | sort_by(.at[1]) | to_entries[] | select(.value.address == $addr) | .key'
+}
+
+
+window_info=$(hyprctl activewindow -j)
+floating=$(jq -r '.floating' <<< "$window_info")
+addr=$(jq -r '.address' <<< "$window_info")
+workspace_id=$(jq -r '.workspace.id' <<< "$window_info")
+
+# Check if window is in pseudo-master mode and restore it first
+PSEUDO_MASTER_CACHE="/tmp/hypr-pseudo-master/$addr"
+if [[ "$floating" == "true" && -f "$PSEUDO_MASTER_CACHE" ]]; then
+    pseudo-master
+    # Re-fetch window info after pseudo-master restoration
+    window_info=$(hyprctl activewindow -j)
+    floating=$(jq -r '.floating' <<< "$window_info")
+    addr=$(jq -r '.address' <<< "$window_info")
+    workspace_id=$(jq -r '.workspace.id' <<< "$window_info")
+fi
+
+is_master="false"
+if [[ "$floating" == "false" ]]; then
+    master_addr=$(get_tiled_windows "$workspace_id" | jq -r 'sort_by(.at[0]) | .[0].address')
+    [[ "$addr" == "$master_addr" ]] && is_master="true"
+fi
+
+cache_file="$CACHE_DIR/$addr"
+
+restore_monocle() {
+    local monocle_addr="$1"
+    local monocle_cache="$CACHE_DIR/$monocle_addr"
+    [[ ! -f "$monocle_cache" ]] && return 1
+    
+    IFS=':' read -r position orig_ws <<< "$(<"$monocle_cache")"
+    
+    hyprctl --batch "\
+        dispatch focuswindow address:$monocle_addr; \
+        dispatch togglefloating; \
+        dispatch movetoworkspace $orig_ws; \
+        keyword general:col.active_border $BORDER_DEFAULT; \
+        keyword decoration:shadow:color $SHADOW_DEFAULT"
+
+    if [[ "$position" == "master" ]]; then
+        hyprctl dispatch movewindow u
+        hyprctl dispatch movewindow l
+    elif [[ "$position" == "0" ]]; then
+        hyprctl dispatch movewindow u
+    fi
+    rm -f "$monocle_cache"
+    echo "" >> "$MONOCLE_WS_FILE"
+    resize-slave -r
+}
+
+if [[ "$workspace_id" != "6" ]]; then
+    monocle_window=$(hyprctl clients -j | jq -r '[.[] | select(.workspace.id == 6 and .floating == true)][0].address // empty')
+    if [[ -n "$monocle_window" ]]; then
+        restore_monocle "$monocle_window"
+        hyprctl dispatch movefocus l
+        hyprctl dispatch movefocus r
+        exit 0
+    fi
+fi
+
+if [[ "$workspace_id" == "6" && "$floating" == "true" ]]; then
+    if [[ -f "$cache_file" ]]; then
+        IFS=':' read -r position orig_ws <<< "$(<"$cache_file")"
+        
+        hyprctl --batch "\
+            dispatch togglefloating; \
+            dispatch movetoworkspace $orig_ws; \
+            keyword general:col.active_border $BORDER_DEFAULT; \
+            keyword decoration:shadow:color $SHADOW_DEFAULT"
+
+        if [[ "$position" == "master" ]]; then
+            hyprctl dispatch movewindow u
+            hyprctl dispatch movewindow l
+        elif [[ "$position" == "0" ]]; then
+            hyprctl dispatch movewindow u
+        fi
+        rm -f "$cache_file"
+        echo "" >> "$MONOCLE_WS_FILE"
+        resize-slave -r
+    fi
+else
+    if [[ "$is_master" == "true" ]]; then
+        echo "master:$workspace_id" > "$cache_file"
+    else
+        echo "$(get_slave_index "$workspace_id" "$addr"):$workspace_id" > "$cache_file"
+    fi
+
+    echo "$workspace_id" >> "$MONOCLE_WS_FILE"
+
+    hyprctl --batch "\
+        dispatch togglefloating; \
+        dispatch resizeactive exact $MONOCLE_SIZE; \
+        dispatch centerwindow; \
+        dispatch movetoworkspace 6; \
+        dispatch moveactive 0 25; \
+        keyword general:col.active_border $BORDER_MONOCLE; \
+        keyword decoration:shadow:color $SHADOW_MONOCLE"
+    
+    pos=$(hyprctl activewindow -j | jq -r '"\(.at[0] + .size[0]/2),\(.at[1] + .size[1]/2)"')
+    hyprctl dispatch movecursor "${pos%,*} ${pos#*,}"
+fi

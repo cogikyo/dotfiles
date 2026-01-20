@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+
+class=""
+title=""
+fallback=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --title|-t)
+            title="$2"
+            shift 2
+            ;;
+        *)
+            if [[ -z "$class" ]]; then
+                class="$1"
+            else
+                fallback="$1"
+            fi
+            shift
+            ;;
+    esac
+done
+
+[[ -z "$class" ]] && exit 1
+
+current=$(hyprctl activewindow -j | jq -r '.address')
+if [[ -f "/tmp/hypr-pseudo-master/$current" ]]; then
+    pseudo-master
+fi
+
+ws=$(hyprctl activeworkspace -j | jq '.id')
+
+if [[ -n "$title" ]]; then
+    addr=$(hyprctl clients -j | jq -r \
+        --argjson ws "$ws" \
+        --arg class "$class" \
+        --arg title "$title" \
+        '.[] | select(.workspace.id == $ws and .class == $class and .title == $title) | .address' | head -1)
+else
+    addr=$(hyprctl clients -j | jq -r \
+        --argjson ws "$ws" \
+        --arg class "$class" \
+        '.[] | select(.workspace.id == $ws and .class == $class) | .address' | head -1)
+fi
+
+if [[ -n "$addr" ]]; then
+    hyprctl dispatch focuswindow "address:$addr"
+elif [[ -n "$fallback" ]]; then
+    eval "$fallback"
+fi
