@@ -200,5 +200,5 @@ out="${BLUE}${ICON_MODEL}${BOLD}${BLUE}${current_dir/#$HOME\//}${N}"
 [[ -n "$git_status" ]]  && out+=" $git_status"
 [[ -n "$context_bar" ]] && out+="${BR_BLUE}${SEP} ${N}${context_bar}"
 [[ -n "$usage_info" ]]  && out+="${BR_BLUE} ${SEP} ${N}${usage_info}"
-# Clear entire line first, then output, then clear any remaining
-printf '\033[2K\r%b\033[K\033[0m' "$out"
+# Save cursor, clear line, output, restore cursor
+printf '\033[s\r\033[2K%b\033[0m\033[u' "$out"
