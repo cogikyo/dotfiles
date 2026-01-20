@@ -28,7 +28,7 @@ tab="${1:-}"
 
 kitty_state=$(kitty @ ls)
 window_id=$(echo "$kitty_state" | jq -r '.[0].id')
-cwd=$(echo "$kitty_state" | jq -r '.[0].tabs[] | select(.is_focused) | .windows[] | select(.is_focused) | .cwd')
+cwd="${PWD}"
 
 get_tab_index() {
     local name="$1"
