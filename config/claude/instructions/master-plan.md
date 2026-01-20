@@ -18,7 +18,7 @@ Plans live in a `PLANS/` directory with this structure:
 
 ```
 PLANS/
-├── MASTER.md      # Tree overview, links to scopes (read first)
+├── MASTER.md      # Full spec overview, links to scopes (read first)
 ├── LOG.md         # Append-only work log (read second)
 ├── QUESTIONS.md   # Open questions needing answers
 ├── DISCOVERIES.md # Important learnings, context, research
@@ -29,7 +29,7 @@ PLANS/
 
 | File | Purpose |
 |------|---------|
-| **MASTER.md** | Entry point. Brief context, architecture, links to all scopes. Zero-to-hero in one read. |
+| **MASTER.md** | Entry point. Full detailed spec. Architecture, links to all scopes. Zero-to-hero in one read. |
 | **LOG.md** | Append-only history. Read before work, append after. Breaks loops, provides memory. |
 | **QUESTIONS.md** | Open questions needing resolution. Deferred questions land here. |
 | **DISCOVERIES.md** | Research findings, blockers, context relevant to overall implementation. |
@@ -46,10 +46,10 @@ PLANS/
 **Format:** `**action(context)**: message` — Commit-message style. Brief but not cryptic.
 
 ```markdown
-- **add(MASTER)**: rate limiting phase, blocked pending Redis caching decision
-- **move(MASTER)**: SSE phase to Ready Now, docs obtained from infra team
+- **add(MASTER)**: rate limiting section
 - **split(AUTH.md)**: separated permissions into own file for clearer ownership
 - **update(DISCOVERIES)**: documented Redis vs Memcached tradeoffs from research
+- **refine(MODELS)**: added field descriptions for NotificationPreference
 ```
 
 ### QUESTIONS.md Rules
@@ -63,15 +63,14 @@ Open questions that block progress or need user/research input.
 > 2. Memcached
 > 3. **Defer** — add to QUESTIONS.md for later
 
-Deferred questions get added to QUESTIONS.md with context about why it matters and what it blocks.
+Deferred questions get added to QUESTIONS.md with context about why it matters.
 
 **Format:**
 
 ```markdown
 ## Q: Redis vs Memcached for session caching?
 
-**Context**: Auth phase needs caching layer. Redis has persistence, Memcached is simpler.
-**Blocks**: Phase: Auth Infrastructure
+**Context**: Auth system needs caching layer. Redis has persistence, Memcached is simpler.
 **Added**: 2024-01-15
 
 ### Research Notes
@@ -93,32 +92,32 @@ Resolves open questions through research and user input.
 6. Resolved questions → update relevant plan files, remove from QUESTIONS.md
 7. Log all changes
 
-This often results in updates across multiple plan files at once as questions unlock blocked phases.
-
 ---
 
-## Phase Organization
+## Plan Structure
 
-**NO NUMBERED PHASES.** Numbers imply order. Phases get reordered, unblocked, blocked.
+Plans are broken into **scopes** — logical chunks that one person can pick up and complete.
 
-Instead use: `**Phase: Context**` under sections: EXAMPLE:
+Each scope file should be:
+- **Self-contained**: All context needed to implement
+- **Clear on boundaries**: What's in scope, what's not
+- **Detailed enough**: No ambiguity about what to build
+
+MASTER.md links to all scopes and provides the full picture. Scope files provide implementation detail.
+
+**Example MASTER.md structure:**
 
 ```markdown
-## Phases
+## Scopes
 
-### Ready Now
-- [ ] **Phase: Core Infrastructure** - Models, enums, init
-- [ ] **Phase: Bell Icon API** - List, UnreadCount, MarkRead
-
-### Blocked by SSE
-- [ ] **Phase: Core Senders** - InApp, Email, Slack
-- [ ] **Phase: SSE Integration** - Obtain docs, implement push
-
-### Blocked by Design
-- [ ] **Phase: Subscriptions API** - Matching strategy TBD
+| Scope | Description |
+|-------|-------------|
+| [MODELS.md](./MODELS.md) | Database models and enums |
+| [HANDLERS.md](./HANDLERS.md) | API endpoint handlers |
+| [SERVICES.md](./SERVICES.md) | Business logic layer |
 ```
 
-When a blocker resolves, move the phase to "Ready Now". Or move to section if potentially blocked by something different.
+No ordering implied. A person picks a scope, does it, reports back.
 
 ---
 
@@ -149,7 +148,7 @@ When a blocker resolves, move the phase to "Ready Now". Or move to section if po
 6. Append to LOG.md what you did
 7. Done. No implementation.
 
-!IMPORTANT: if any edit is ever amde to any plan file, make sure log is upadted! this can often be missed.
+**IMPORTANT**: If any edit is made to any plan file, LOG.md must be updated.
 
 ---
 
@@ -176,9 +175,8 @@ If asked to "just implement this one thing":
 - Problem statement / overview
 - Architecture diagram (text)
 - Quick links table to all scope files
-- File structure (target state) -- IMPORTANT
-- Current blockers table
-- Phase sections (Ready Now, Blocked by X)
+- File structure (target state)
+- Technical decisions and rationale
 
 Top and bottom should have:
 
