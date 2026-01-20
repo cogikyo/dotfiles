@@ -1,8 +1,18 @@
+# pyright: reportMissingImports=false
+# pyright: reportCallIssue=false
+# pyright: reportGeneralTypeIssues=false
+# pyright: reportAttributeAccessIssue=false
+"""
+Custom Kitty tab bar with:
+  - Left: Icon → CWD → Tab titles
+  - Right: user@hostname status
+"""
+
 from os import getlogin, uname
 from pathlib import Path
+
 from kitty.boss import get_boss
 from kitty.fast_data_types import Screen, get_options
-from kitty.utils import color_as_int
 from kitty.tab_bar import (
     DrawData,
     ExtraData,
@@ -12,183 +22,315 @@ from kitty.tab_bar import (
     draw_attributed_string,
     draw_title,
 )
+from kitty.utils import color_as_int
 
-opts = get_options()  # --------------------------------------------⮯
-# --------------------------------------------------------------\
-# black  |  red     green    blue     magenta  cyan     white   | color
-# color0 |  color1  color2   color4   color5   color6   color7  | normal
-# color8 |  color9  color10  color12  color13  color14  color15 | bright
-# --------------------------------------------------------------/
-if opts.tab_bar_background is None:
-    tab_background = 0
-else:
-    tab_background = opts.tab_bar_background
-FG = as_rgb(color_as_int(opts.background))
-BG = as_rgb(color_as_int(opts.color4))
-ACCENT = as_rgb(color_as_int(opts.selection_background))
-BAR_BG = as_rgb(color_as_int(tab_background))
-ACTIVE_BG = as_rgb(color_as_int(opts.active_tab_background))
-SEPARATOR_SYMBOL, SOFT_SEPARATOR_SYMBOL = ("", "")
-SEPARATOR_SYMBOL_RIGHT = ""
-TRUNCATION_SYMBOL = " ⽙"
-ICON, ICON_HOST, ICON_USER, = (
-    "   ",
-    " ⾥ ",
-    "⼈",
-)
+# ╭──────────────────────────────────────────────────────────────────────────────╮
+# │ Configuration                                                                │
+# ╰──────────────────────────────────────────────────────────────────────────────╯
+
+ICON_MAIN = "  "  # arch logo
+ICON_CLAUDE = " 󰯉 "  # claude icon
+
+SEP_LEFT = ""  # left-pointing powerline arrow
+SEP_RIGHT = ""  # right-pointing powerline arrow
+SEP_SOFT = ""  # soft separator between same-bg tabs
+
+TRUNCATE = " ⽙"  # shown when cwd is truncated
+ICON_HOME = " ⾕"  # home indicator
+CWD_SPACER = "  "  # decorative spacer after cwd
+
+ICON_ROOT_DESCENDED = "  "  # root indicator when path has multiple parts
+ICON_ROOT_BASE = "  "  # root indicator when at root
+
+ICON_USER = "⼈"  # user indicator
+ICON_HOST = " ⾥"  # host indicator
+
+# Layout
 RIGHT_MARGIN = -8
-REFRESH_TIME = 1
-right_status_length = -1
+MAX_CWD_LENGTH = 60  # max total characters for cwd display
+MAX_CWD_DEPTH = 4  # max directory levels to show
+MAX_DIR_LENGTH = 10  # truncate individual dir names longer than this
 
 
-def _draw_icon(screen: Screen, index: int) -> int:
+# ╭──────────────────────────────────────────────────────────────────────────────╮
+# │ Colors                                                                       │
+# ╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+class Colors:
+    """Color palette derived from kitty options."""
+
+    def __init__(self):
+        opts = get_options()
+        self.fg = as_rgb(color_as_int(opts.background))
+        self.bg = as_rgb(color_as_int(opts.color4))
+        self.accent = as_rgb(color_as_int(opts.selection_background))
+        self.active_bg = as_rgb(color_as_int(opts.active_tab_background))
+
+        # Tab bar background (with fallback)
+        bar_bg = opts.tab_bar_background if opts.tab_bar_background else 0
+        self.bar_bg = as_rgb(color_as_int(bar_bg)) if bar_bg else 0
+
+
+colors = Colors()
+_right_status_length = 0
+
+# ╭──────────────────────────────────────────────────────────────────────────────╮
+# │ Utilities                                                                    │
+# ╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+def get_cwd() -> str:
+    """Get formatted current working directory from active window."""
+    boss = get_boss()
+    tab_manager = boss.active_tab_manager
+    if not tab_manager:
+        return ""
+    window = tab_manager.active_window
+    if not window or not hasattr(window, "cwd_of_child"):
+        return ""
+    cwd = window.cwd_of_child
+
+    if not cwd:
+        return ICON_ROOT_BASE
+
+    parts = list(Path(cwd).parts)
+
+    if not parts:
+        return ICON_ROOT_BASE
+
+    # Replace /home/user with home icon
+    if len(parts) > 1 and parts[1] == "home":
+        parts[0] = ICON_HOME
+        parts[1:3] = []
+    else:
+        # Use different root icon based on path depth
+        if len(parts) > 1:
+            parts[0] = ICON_ROOT_DESCENDED
+        else:
+            parts[0] = ICON_ROOT_BASE
+
+    # Format path, truncating if too long
+    full_path = parts[0] + "/".join(parts[1:])
+    if len(full_path) <= MAX_CWD_LENGTH:
+        return full_path
+    return TRUNCATE + parts[-1]
+
+
+# ╭─────────────────────────────────────────────────────────────────────────────╮
+# │ Drawing Components                                                          │
+# ╰─────────────────────────────────────────────────────────────────────────────╯
+
+
+def get_window_title() -> str:
+    """Get the active window's title."""
+    boss = get_boss()
+    if not boss:
+        return ""
+    tm = boss.active_tab_manager
+    if not tm:
+        return ""
+    window = tm.active_window
+    if not window:
+        return ""
+    return window.title or ""
+
+
+def is_claude_running(window) -> bool:
+    """Check if claude CLI is running in the window."""
+    if not window or not hasattr(window, "child"):
+        return False
+    try:
+        procs = window.child.foreground_processes
+        for p in procs:
+            cmdline = p.get("cmdline") or []
+            if any("claude" in str(arg).lower() for arg in cmdline):
+                return True
+    except (AttributeError, KeyError, TypeError):
+        pass
+    return False
+
+
+def draw_icon(screen: Screen, index: int) -> int:
+    """Draw the main icon (only on first tab)."""
     if index != 1:
         return 0
-    fg, bg = screen.cursor.fg, screen.cursor.bg
-    screen.cursor.fg, screen.cursor.bg = FG, BG
-    screen.draw(ICON)
-    screen.cursor.fg, screen.cursor.bg = BG, bg
-    screen.draw(SEPARATOR_SYMBOL)
-    screen.cursor.fg, screen.cursor.bg = fg, bg
-    screen.cursor.x = len(ICON + SEPARATOR_SYMBOL)
+
+    fg_prev, bg_prev = screen.cursor.fg, screen.cursor.bg
+
+    # Choose icon based on running process
+    icon = ICON_MAIN
+    boss = get_boss()
+    if boss:
+        tm = boss.active_tab_manager
+        if tm and is_claude_running(tm.active_window):
+            icon = ICON_CLAUDE
+
+    # Icon with accent background
+    screen.cursor.fg, screen.cursor.bg = colors.fg, colors.bg
+    screen.draw(icon)
+
+    # Separator
+    screen.cursor.fg, screen.cursor.bg = colors.bg, bg_prev
+    screen.draw(SEP_LEFT)
+
+    screen.cursor.fg, screen.cursor.bg = fg_prev, bg_prev
+    screen.cursor.x = len(ICON_MAIN + SEP_LEFT)
     return screen.cursor.x
 
 
-def get_cwd():
-    cwd = ""
-    tab_manager = get_boss().active_tab_manager
-    if tab_manager is not None:
-        window = tab_manager.active_window
-        if window is not None:
-            cwd = window.cwd_of_child
-
-    cwd_parts = list(Path(cwd).parts)
-    if len(cwd_parts) > 1:
-        if cwd_parts[1] == "home":
-            cwd_parts[0] = " ⾕"
-            cwd_parts[1:3] = []
-        else:
-            cwd_parts[0] = "  "  # root descended
-    else:
-        cwd_parts[0] = "  "  # root base
-
-    if len("/".join(cwd_parts)) < 15:
-        cwd = cwd_parts[0] + "/".join(cwd_parts[1:])
-    else:
-        cwd = TRUNCATION_SYMBOL + cwd_parts[-1]
-
-    return cwd
-
-
-def _draw_cwd(screen: Screen, index: int) -> int:
+def draw_cwd(screen: Screen, index: int) -> int:
+    """Draw the current working directory (only at index 1, shows active tab's cwd)."""
     if index != 1:
         return 0
-    fg, bg = screen.cursor.fg, screen.cursor.bg
-    screen.cursor.fg, screen.cursor.bg = BG, ACTIVE_BG
-    cwd = get_cwd()
+
+    fg_prev, bg_prev = screen.cursor.fg, screen.cursor.bg
+    cwd = get_cwd()  # Get active tab's CWD
+
+    # CWD text
+    screen.cursor.fg, screen.cursor.bg = colors.bg, colors.active_bg
     screen.draw(cwd)
-    screen.cursor.fg, screen.cursor.bg = ACTIVE_BG, BAR_BG
-    screen.draw(SEPARATOR_SYMBOL)
-    screen.draw("⽡")
-    screen.cursor.fg, screen.cursor.bg = fg, bg
+
+    # Separator + spacer
+    screen.cursor.fg, screen.cursor.bg = colors.active_bg, colors.bar_bg
+    screen.draw(SEP_LEFT)
+    screen.draw(CWD_SPACER)
+
+    screen.cursor.fg, screen.cursor.bg = fg_prev, bg_prev
     screen.cursor.x = len(cwd) + 9
     return screen.cursor.x
 
 
-def _draw_left_status(
+def draw_tab_title(
     draw_data: DrawData,
     screen: Screen,
     tab: TabBarData,
     index: int,
     extra_data: ExtraData,
 ) -> int:
-    if screen.cursor.x >= screen.columns - right_status_length:
+    """Draw the tab title with appropriate separators."""
+    global _right_status_length
+
+    if screen.cursor.x >= screen.columns - _right_status_length:
         return screen.cursor.x
+
     tab_bg, tab_fg = screen.cursor.bg, screen.cursor.fg
+
+    # Opening separator for first tab
     if index == 1:
-        screen.cursor.fg, screen.cursor.bg = tab_bg, BAR_BG
-        screen.draw(SEPARATOR_SYMBOL_RIGHT)
+        screen.cursor.fg, screen.cursor.bg = tab_bg, colors.bar_bg
+        screen.draw(SEP_RIGHT)
         screen.cursor.bg = tab_bg
+
     default_bg = as_rgb(int(draw_data.default_bg))
+
+    # Determine next tab background for separator style
     if extra_data.next_tab:
         next_tab_bg = as_rgb(draw_data.tab_bg(extra_data.next_tab))
-        needs_soft_separator = next_tab_bg == tab_bg
+        needs_soft_sep = next_tab_bg == tab_bg
     else:
         next_tab_bg = default_bg
-        needs_soft_separator = False
-    if screen.cursor.x <= len(ICON):
-        screen.cursor.x = len(ICON)
+        needs_soft_sep = False
+
+    # Ensure cursor is past icon
+    if screen.cursor.x <= len(ICON_MAIN):
+        screen.cursor.x = len(ICON_MAIN)
+
+    # Draw tab content
     screen.draw(" ")
     screen.cursor.bg = tab_bg
     draw_title(draw_data, screen, tab, index)
-    if not needs_soft_separator:
+
+    # Draw appropriate separator
+    if needs_soft_sep:
+        _draw_soft_separator(screen, draw_data, tab_bg, tab_fg, default_bg)
+    else:
         screen.draw(" ")
         screen.cursor.fg = tab_bg
         screen.cursor.bg = next_tab_bg
-        screen.draw(SEPARATOR_SYMBOL)
-    else:
-        prev_fg = screen.cursor.fg
-        if tab_bg == tab_fg:
+        screen.draw(SEP_LEFT)
+
+    return screen.cursor.x
+
+
+def _draw_soft_separator(
+    screen: Screen,
+    draw_data: DrawData,
+    tab_bg: int,
+    tab_fg: int,
+    default_bg: int,
+) -> None:
+    """Draw a soft separator between tabs with same background."""
+    prev_fg = screen.cursor.fg
+
+    if tab_bg == tab_fg:
+        screen.cursor.fg = default_bg
+    elif tab_bg != default_bg:
+        c1 = draw_data.inactive_bg.contrast(draw_data.default_bg)
+        c2 = draw_data.inactive_bg.contrast(draw_data.inactive_fg)
+        if c1 < c2:
             screen.cursor.fg = default_bg
-        elif tab_bg != default_bg:
-            c1 = draw_data.inactive_bg.contrast(draw_data.default_bg)
-            c2 = draw_data.inactive_bg.contrast(draw_data.inactive_fg)
-            if c1 < c2:
-                screen.cursor.fg = default_bg
-        screen.draw(" " + SOFT_SEPARATOR_SYMBOL)
-        screen.cursor.fg = prev_fg
-    end = screen.cursor.x
-    return end
+
+    screen.draw(" " + SEP_SOFT)
+    screen.cursor.fg = prev_fg
 
 
-def _draw_right_status(screen: Screen, is_last: bool, cells: list) -> int:
+def draw_right_status(screen: Screen, is_last: bool, cells: list) -> int:
+    """Draw the right-aligned status (user@host)."""
     if not is_last:
-        screen.cursor.bg = FG
+        screen.cursor.bg = colors.fg
         return screen.cursor.x
+
     draw_attributed_string(Formatter.reset, screen)
-    screen.cursor.x = screen.columns - right_status_length
+    screen.cursor.x = screen.columns - _right_status_length
     screen.cursor.fg = 0
     screen.cursor.bg = 0
-    for color_fg, color_bg, status in cells:
-        screen.cursor.fg = color_fg
-        screen.cursor.bg = color_bg
-        screen.draw(status)
+
+    for fg, bg, text in cells:
+        screen.cursor.fg = fg
+        screen.cursor.bg = bg
+        screen.draw(text)
+
     return screen.cursor.x
+
+
+# ╭──────────────────────────────────────────────────────────────────────────────╮
+# │ Main Entry Point                                                             │
+# ╰──────────────────────────────────────────────────────────────────────────────╯
 
 
 def draw_tab(
     draw_data: DrawData,
     screen: Screen,
     tab: TabBarData,
-    before: int,  # Not accessed, but things break without it?
-    max_title_length: int,  # Not accessed, but things break without it?
+    before: int,
+    max_title_length: int,
     index: int,
     is_last: bool,
     extra_data: ExtraData,
 ) -> int:
-    global right_status_length
-    app = ICON_USER + getlogin() + " " + SEPARATOR_SYMBOL_RIGHT
-    host = uname()[1] + ICON_HOST
-    cells = []
-    cells.append((ACTIVE_BG, BAR_BG, SEPARATOR_SYMBOL_RIGHT))
-    cells.append((BG, ACTIVE_BG, app))
-    cells.append((FG, BG, host))
-    right_status_length = RIGHT_MARGIN + 1
-    for cell in cells:
-        right_status_length += len(str(cell[1]))
+    """Main entry point for drawing each tab."""
+    global _right_status_length
 
-    _draw_icon(screen, index)
-    _draw_cwd(screen, index)
-    _draw_left_status(
-        draw_data,
-        screen,
-        tab,
-        index,
-        extra_data,
-    )
-    _draw_right_status(
-        screen,
-        is_last,
-        cells,
-    )
+    # Build right status cells: separator | user | hostname
+    user_text = ICON_USER + getlogin() + " " + SEP_RIGHT
+    host_text = uname()[1] + ICON_HOST
+
+    cells = [
+        (colors.active_bg, colors.bar_bg, SEP_RIGHT),
+        (colors.bg, colors.active_bg, user_text),
+        (colors.fg, colors.bg, host_text),
+    ]
+
+    # Calculate right status width
+    _right_status_length = RIGHT_MARGIN + 2
+    for cell in cells:
+        _right_status_length += len(str(cell[1]))
+
+    # Draw components
+    draw_icon(screen, index)
+    draw_cwd(screen, index)
+    draw_tab_title(draw_data, screen, tab, index, extra_data)
+    draw_right_status(screen, is_last, cells)
+
     return screen.cursor.x
