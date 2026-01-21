@@ -1,0 +1,61 @@
+#!/bin/bash
+# ralph - Runs Claude sequentially until all tasks complete
+#
+# Usage: ralph [max_passes]
+#   max_passes: Max iterations (default: 50)
+#
+# Searches for PLANS/ directory starting from current working directory.
+
+set -e
+
+MAX_PASSES="${1:-50}"
+PLANS_DIR="./PLANS"
+
+if [[ ! -d "$PLANS_DIR" ]]; then
+  echo "Error: PLANS directory not found in current directory"
+  exit 1
+fi
+
+if [[ ! -f "$PLANS_DIR/IMPLEMENTATION.yaml" ]]; then
+  echo "Error: IMPLEMENTATION.yaml not found. Run /master-plan finish first."
+  exit 1
+fi
+
+echo "ralph: $PLANS_DIR"
+echo "passes: $MAX_PASSES"
+echo ""
+
+for ((i=1; i<=MAX_PASSES; i++)); do
+  echo "=== Pass $i ==="
+
+  OUTPUT=$(claude -p --dangerously-skip-permissions "You are implementing a master plan.
+
+Read these files in order:
+1. $PLANS_DIR/MASTER.md - Full plan context and implementation instructions
+2. $PLANS_DIR/IMPLEMENTATION.yaml - Current state of all scopes
+3. $PLANS_DIR/LOG.md - Recent activity context
+
+Then complete ONE task following the instructions in MASTER.md.
+
+End your response with EXACTLY one of:
+- <TASK COMPLETE>
+- <ALL TASKS DONE TO BEST OF ABILITY>" 2>&1)
+
+  echo "$OUTPUT"
+  echo ""
+
+  if echo "$OUTPUT" | grep -qF "<ALL TASKS DONE TO BEST OF ABILITY>"; then
+    echo "=== Done ==="
+    exit 0
+  fi
+
+  if ! echo "$OUTPUT" | grep -qF "<TASK COMPLETE>"; then
+    echo "=== ERROR: No signal ==="
+    exit 1
+  fi
+
+  sleep 2
+done
+
+echo "=== Hit max ($MAX_PASSES) ==="
+exit 1
