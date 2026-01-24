@@ -195,9 +195,10 @@ fi
 # ─────────────────────────────────────────────────
 # Output (buffered to prevent partial output leaking)
 # ─────────────────────────────────────────────────
-out="${BOLD}${BLUE}${ICON_MODEL}${current_dir/#$HOME\//}${N}"
+out="${BLUE}${ICON_MODEL}${BOLD}${BLUE}${current_dir/#$HOME\//}${N}"
 [[ -n "$git_info" ]]    && out+="$git_info"
 [[ -n "$git_status" ]]  && out+=" $git_status"
 [[ -n "$context_bar" ]] && out+="${BR_BLUE}${SEP} ${N}${context_bar}"
 [[ -n "$usage_info" ]]  && out+="${BR_BLUE} ${SEP} ${N}${usage_info}"
-printf '%b\033[K\033[0m' "$out"
+# Output line (Claude Code handles positioning)
+printf '%b\033[0m' "$out"
