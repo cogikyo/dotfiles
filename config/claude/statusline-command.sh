@@ -30,7 +30,7 @@ PINK='\033[95m'
 SEP='╼╾'
 
 # Git
-GIT_BRANCH='⽀'
+GIT_BRANCH=' ⽀'
 GIT_AHEAD='⮭'
 GIT_BEHIND='⮯'
 GIT_STAGED=''
@@ -138,17 +138,17 @@ context_data=$(jq '.context_window' <<< "$input")
 git_info="" git_status=""
 if git -C "$current_dir" rev-parse --git-dir &>/dev/null; then
     branch=$(gitc branch --show-current)
-    [[ -n "$branch" ]] && git_info="${YELLOW} ${GIT_BRANCH}${branch}${N}"
+    [[ -n "$branch" ]] && git_info="${YELLOW}${GIT_BRANCH}${branch}${N}"
 
     # shellcheck disable=SC1083
     ahead=$(gitc rev-list --count '@{upstream}..HEAD' || echo 0)
     behind=$(gitc rev-list --count 'HEAD..@{upstream}' || echo 0)
     git_stat "$GREEN"     "$GIT_AHEAD"   "$ahead"
-    git_stat "$BR_RED"       "$GIT_BEHIND"  "$behind"
+    git_stat "$BR_RED"    "$GIT_BEHIND"  "$behind"
     git_stat "$YELLOW"    "$GIT_STAGED"  "$(gitc diff --cached --numstat | count_lines)"
     git_stat "$CYAN"      "$GIT_MODIFIED" "$(gitc diff --numstat | count_lines)"
     git_stat "$BR_YELLOW" "$GIT_UNTRACKED" "$(gitc ls-files --others --exclude-standard | count_lines)"
-    git_stat "$RED"    "$GIT_DELETED" "$(gitc diff --diff-filter=D --numstat | count_lines)"
+    git_stat "$RED"       "$GIT_DELETED" "$(gitc diff --diff-filter=D --numstat | count_lines)"
     git_stat "$GRAY"      "$GIT_STASHED" "$(gitc stash list | count_lines)"
     git_stat "$MAGENTA"   "$GIT_RENAMED" "$(gitc diff --cached --diff-filter=R --numstat | count_lines)"
     git_stat "$PINK"      "$GIT_CONFLICT" "$(gitc diff --name-only --diff-filter=U | count_lines)"
@@ -198,7 +198,7 @@ fi
 out="${BLUE}${ICON_MODEL}${BOLD}${BLUE}${current_dir/#$HOME\//}${N}"
 [[ -n "$git_info" ]]    && out+="$git_info"
 [[ -n "$git_status" ]]  && out+=" $git_status"
-[[ -n "$context_bar" ]] && out+="${BR_BLUE}${SEP} ${N}${context_bar}"
-[[ -n "$usage_info" ]]  && out+="${BR_BLUE} ${SEP} ${N}${usage_info}"
+[[ -n "$context_bar" ]] && out+="${BR_BLUE}${SEP} ${N}${context_bar} "
+[[ -n "$usage_info" ]]  && out+="${BR_BLUE}${SEP} ${N}${usage_info}"
 # Output line (Claude Code handles positioning)
 printf '%b\033[0m' "$out"
