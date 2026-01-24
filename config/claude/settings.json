@@ -18,13 +18,6 @@
     ]
   },
   "model": "opus",
-  "statusLine": {
-    "type": "command",
-    "command": "bash ~/.claude/statusline-command.sh"
-  },
-  "outputStyle": "explanatory",
-  "shiftTabHint": false,
-  "promptSuggestionEnabled": false,
   "hooks": {
     "Notification": [
       {
@@ -46,5 +39,15 @@
         ]
       }
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "/home/cullyn/dotfiles/config/claude/statusline-bin"
+  },
+  "outputStyle": "explanatory",
+  "promptSuggestionEnabled": false,
+  "shiftTabHint": false,
+  "enabledPlugins": {
+    "gopls-lsp@claude-plugins-official": true
   }
 }
