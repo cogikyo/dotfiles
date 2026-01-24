@@ -27,10 +27,10 @@ BR_BLUE='\033[94m'
 PINK='\033[95m'
 
 
-SEP='╼╾'
+SEP=' ╼╾ '
 
 # Git
-GIT_BRANCH=' ⽀'
+GIT_BRANCH=' '
 GIT_AHEAD='⮭'
 GIT_BEHIND='⮯'
 GIT_STAGED=''
@@ -91,10 +91,10 @@ gitc() { git -C "$current_dir" --no-optional-locks "$@" 2>/dev/null; }
 # Count lines from piped input
 count_lines() { wc -l | tr -d ' '; }
 
-# Append to git_status if count > 0
+# Append to git_status if count > 0 (space prefix, no trailing space)
 git_stat() {
     local color=$1 icon=$2 count=$3
-    (( count > 0 )) && git_status+="${color}${icon}${count} ${N}"
+    (( count > 0 )) && git_status+=" ${color}${icon}${count}${N}"
 }
 
 # Get credentials file path (Linux)
@@ -134,24 +134,54 @@ input=$(cat)
 current_dir=$(jq -r '.workspace.current_dir' <<< "$input")
 context_data=$(jq '.context_window' <<< "$input")
 
-# Git info
+# Git info (single porcelain v2 call for all stats)
 git_info="" git_status=""
 if git -C "$current_dir" rev-parse --git-dir &>/dev/null; then
-    branch=$(gitc branch --show-current)
-    [[ -n "$branch" ]] && git_info="${YELLOW}${GIT_BRANCH}${branch}${N}"
+    git_output=$(gitc status --porcelain=v2 --branch --show-stash 2>/dev/null)
 
-    # shellcheck disable=SC1083
-    ahead=$(gitc rev-list --count '@{upstream}..HEAD' || echo 0)
-    behind=$(gitc rev-list --count 'HEAD..@{upstream}' || echo 0)
-    git_stat "$GREEN"     "$GIT_AHEAD"   "$ahead"
-    git_stat "$BR_RED"    "$GIT_BEHIND"  "$behind"
-    git_stat "$YELLOW"    "$GIT_STAGED"  "$(gitc diff --cached --numstat | count_lines)"
-    git_stat "$CYAN"      "$GIT_MODIFIED" "$(gitc diff --numstat | count_lines)"
-    git_stat "$BR_YELLOW" "$GIT_UNTRACKED" "$(gitc ls-files --others --exclude-standard | count_lines)"
-    git_stat "$RED"       "$GIT_DELETED" "$(gitc diff --diff-filter=D --numstat | count_lines)"
-    git_stat "$GRAY"      "$GIT_STASHED" "$(gitc stash list | count_lines)"
-    git_stat "$MAGENTA"   "$GIT_RENAMED" "$(gitc diff --cached --diff-filter=R --numstat | count_lines)"
-    git_stat "$PINK"      "$GIT_CONFLICT" "$(gitc diff --name-only --diff-filter=U | count_lines)"
+    # Initialize counters
+    branch="" ahead=0 behind=0 staged=0 modified=0 untracked=0 deleted=0 stashed=0 renamed=0 conflicted=0
+
+    # Parse all data in single pass
+    while IFS= read -r line; do
+        case "$line" in
+            "# branch.head "*)  branch="${line#\# branch.head }" ;;
+            "# branch.ab "*)
+                tmp="${line#\# branch.ab +}"
+                ahead="${tmp%% *}"
+                behind="${tmp##*-}"
+                ;;
+            "# stash "*)        stashed="${line#\# stash }" ;;
+            "#"*)               continue ;;  # Skip other headers
+            "")                 continue ;;  # Skip empty lines
+            *)
+                type="${line:0:1}"
+                xy="${line:2:2}"
+                case "$type" in
+                    1)  # Tracked file changes
+                        [[ "${xy:0:1}" != " " && "${xy:0:1}" != "." ]] && ((staged++))
+                        [[ "${xy:1:1}" == "M" || "${xy:1:1}" == "T" ]] && ((modified++))
+                        [[ "${xy:1:1}" == "D" ]] && ((deleted++))
+                        ;;
+                    2)  ((renamed++)) ;;
+                    u)  ((conflicted++)) ;;
+                    \?) ((untracked++)) ;;
+                esac
+                ;;
+        esac
+    done <<< "$git_output"
+
+    # Build display
+    [[ -n "$branch" ]] && git_info="${YELLOW} ${GIT_BRANCH}${branch}${N}"
+    git_stat "$GREEN"     "$GIT_AHEAD"     "$ahead"
+    git_stat "$BR_RED"    "$GIT_BEHIND"    "$behind"
+    git_stat "$YELLOW"    "$GIT_STAGED"    "$staged"
+    git_stat "$CYAN"      "$GIT_MODIFIED"  "$modified"
+    git_stat "$BR_YELLOW" "$GIT_UNTRACKED" "$untracked"
+    git_stat "$RED"       "$GIT_DELETED"   "$deleted"
+    git_stat "$GRAY"      "$GIT_STASHED"   "$stashed"
+    git_stat "$MAGENTA"   "$GIT_RENAMED"   "$renamed"
+    git_stat "$PINK"      "$GIT_CONFLICT"  "$conflicted"
 fi
 
 # Context progress bar
@@ -183,7 +213,7 @@ if usage_response=$(get_usage_limits); then
     fi
 
     if [[ -n "$seven_day" ]]; then
-        [[ -n "$usage_info" ]] && usage_info+="${BLUE} ${SEP} ${N}"
+        [[ -n "$usage_info" ]] && usage_info+="${BLUE}${SEP}${N}"
         day_color=$(pct_color "$seven_day")
         day_icon=$(get_progress_icon "${seven_day%.*}")
         day_reset=$(format_date "$seven_day_reset" "%-m/%-d")
@@ -197,8 +227,8 @@ fi
 # ─────────────────────────────────────────────────
 out="${BLUE}${ICON_MODEL}${BOLD}${BLUE}${current_dir/#$HOME\//}${N}"
 [[ -n "$git_info" ]]    && out+="$git_info"
-[[ -n "$git_status" ]]  && out+=" $git_status"
-[[ -n "$context_bar" ]] && out+="${BR_BLUE}${SEP} ${N}${context_bar} "
-[[ -n "$usage_info" ]]  && out+="${BR_BLUE}${SEP} ${N}${usage_info}"
+[[ -n "$git_status" ]]  && out+="$git_status"
+[[ -n "$context_bar" ]] && out+="${BR_BLUE}${SEP}${N}${context_bar}"
+[[ -n "$usage_info" ]]  && out+="${BR_BLUE}${SEP}${N}${usage_info}"
 # Output line (Claude Code handles positioning)
 printf '%b\033[0m' "$out"
