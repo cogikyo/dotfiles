@@ -73,3 +73,31 @@
     frame_color = "#f34658"
     script = "/usr/bin/alert critical"
     timeout = 8
+
+# Claude Code notifications
+[claude]
+    appname = "claude"
+    urgency = low
+    background = "#2a2d4580"
+    foreground = "#8aa4f3"
+    frame_color = "#6380ec80"
+    timeout = 4
+
+[claude-input]
+    appname = "claude-input"
+    urgency = normal
+    background = "#49353130"
+    foreground = "#f2a170"
+    frame_color = "#ea834b"
+    timeout = 8
+
+# Suppress Kitty-sourced Claude notifications (our hooks handle these)
+[kitty-claude-summary]
+    appname = "kitty"
+    summary = ".*[Cc]laude.*"
+    skip_display = true
+
+[kitty-claude-body]
+    appname = "kitty"
+    body = ".*[Cc]laude.*"
+    skip_display = true
