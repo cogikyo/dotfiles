@@ -24,5 +24,27 @@
   },
   "outputStyle": "explanatory",
   "shiftTabHint": false,
-  "promptSuggestionEnabled": false
+  "promptSuggestionEnabled": false,
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/cullyn/dotfiles/bin/claude-notify permission"
+          }
+        ]
+      },
+      {
+        "matcher": "idle_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/cullyn/dotfiles/bin/claude-notify idle"
+          }
+        ]
+      }
+    ]
+  }
 }
