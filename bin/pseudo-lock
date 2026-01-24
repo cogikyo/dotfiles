@@ -11,10 +11,22 @@ if [[ "$1" == "-u" ]]; then
     glava -e "bars_rc.glsl" & disown
     glava -e "bars_r_rc.glsl" & disown
     glava -e "radial_rc.glsl" & disown
+    # Resume music if it was playing before lock
+    if [[ -f /tmp/pseudo-lock-music ]]; then
+        playerctl play
+        rm /tmp/pseudo-lock-music
+    fi
 else
     # Lock: save workspace, move to WS 6, kill eww & glava, enter submap
     ws=$(tail -n 1 /tmp/eww/workspace)
     echo "$ws" > /tmp/pseudo-lock-ws
+    # Save music state and pause if playing
+    if [[ "$(playerctl status 2>/dev/null)" == "Playing" ]]; then
+        touch /tmp/pseudo-lock-music
+        playerctl pause
+    else
+        rm -f /tmp/pseudo-lock-music
+    fi
     hyprctl dispatch workspace 6
     killall eww -9 2>/dev/null
     killall glava 2>/dev/null
