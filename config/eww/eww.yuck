@@ -725,7 +725,7 @@
 
 (defwindow player
   :monitor 0 :stacking "bottom" :exclusive false :focusable false
-  :geometry (geometry :anchor "top left" :y "-3px" )
+  :geometry (geometry :anchor "top left"  :y "-3px" )
   (player)
 )
 ; ❄️  player {{{
@@ -783,7 +783,7 @@
 
 (defwindow music
   :monitor 0 :stacking "bottom" :exclusive false :focusable false
-  :geometry (geometry :anchor "top left" :x "15px")
+  :geometry (geometry :anchor "top left" :x "20px")
   (box
     :halign "start" :space-evenly false :spacing 0
     :class "tr-m"
