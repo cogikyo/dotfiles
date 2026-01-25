@@ -13,11 +13,18 @@ if [[ -n "$WINDOW_ID" ]] && command -v kitty &>/dev/null; then
     TAB_TITLE=$(kitty @ ls 2>/dev/null | jq -r --arg wid "$WINDOW_ID" '
         .[] | .tabs[] | select(.windows[] | .id == ($wid | tonumber)) | .title
     ' 2>/dev/null)
+
+    # Extract just the nerd font icon from between decorators
+    # Handles both ⊰ ... ⊱ (claude mode) and ⟜ ... ⊸ (normal mode)
+    if [[ -n "$TAB_TITLE" ]]; then
+        TAB_ICON=$(echo "$TAB_TITLE" | sed -E 's/^[⊰⟜] (.*) [⊱⊸]$/\1/' | xargs)
+        [[ -n "$TAB_ICON" ]] && TAB_TITLE="$TAB_ICON"
+    fi
 fi
 
 # Build notification body with tab title
 if [[ -n "$TAB_TITLE" ]]; then
-    BODY="${MESSAGE:-Waiting for input} [$TAB_TITLE]"
+    BODY="${MESSAGE:-Waiting for input}: $TAB_TITLE "
 else
     BODY="${MESSAGE:-Waiting for input}"
 fi
