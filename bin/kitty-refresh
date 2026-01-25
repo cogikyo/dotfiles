@@ -15,22 +15,27 @@ done
 if [[ "$mode" == "claude" ]]; then
     declare -A TABS=(
         [xplr]="⟜ 󰭎  ⊸"
-        [claude]="⊰ 󰯉  ⊱"
-        [edit]="⊰   ⊱"
-        [task]="⊰ ㊋ ⊱"
+        [main]="⊰ 󰯉  ⊱"
+        [dev]="⊰   ⊱"
+        [idea]="⊰   ⊱"
         [git]="⊰   ⊱"
     )
     declare -A CMDS=(
         [xplr]='xplr'
-        [claude]='claude'
-        [edit]='nvim'
-        [task]=''
+        [main]='claude'
+        [dev]=''
+        [idea]='claude'
         [git]='lazygit'
     )
-    TAB_ORDER=(xplr claude edit task git)
+    declare -A CLAUDE_VARIANTS=(
+        [main]='main'
+        [dev]='dev'
+        [idea]='idea'
+    )
+    TAB_ORDER=(xplr main dev idea git)
     PREFIX="claude-"
-    FOCUS_TAB="claude"
-    USAGE="kitty-refresh [-r] --claude {claude|edit|task|git|all}"
+    FOCUS_TAB="main"
+    USAGE="kitty-refresh [-r] --claude {main|dev|idea|git|all}"
 else
     declare -A TABS=(
         [xplr]="⟜ 󰭎  ⊸"
@@ -71,6 +76,7 @@ open_tab() {
     local tab_id="${window_id}-${PREFIX}${name}"
     local title="${TABS[$name]}"
     local cmd="${CMDS[$name]}"
+    local variant="${CLAUDE_VARIANTS[$name]:-}"
 
     if [[ "$name" == "build" ]]; then
         just --list --justfile "$cwd/justfile" &>/dev/null || { "$refresh" && kitty @ close-tab --match "env:KITTY_TAB_ID=${tab_id}" 2>/dev/null || true; return 0; }
@@ -82,10 +88,13 @@ open_tab() {
 
     "$refresh" && kitty @ close-tab --match "env:KITTY_TAB_ID=${tab_id}" 2>/dev/null || true
 
+    local env_args=(--env KITTY_TAB_ID="$tab_id")
+    [[ -n "$variant" ]] && env_args+=(--env CLAUDE_VARIANT="$variant")
+
     if [[ -n "$cmd" ]]; then
-        kitty @ launch --type=tab --hold --copy-env --env KITTY_TAB_ID="$tab_id" --tab-title="$title" --cwd="$cwd" "$cmd" >/dev/null
+        kitty @ launch --type=tab --hold --copy-env "${env_args[@]}" --tab-title="$title" --cwd="$cwd" "$cmd" >/dev/null
     else
-        kitty @ launch --type=tab --copy-env --env KITTY_TAB_ID="$tab_id" --tab-title="$title" --cwd="$cwd" >/dev/null
+        kitty @ launch --type=tab --copy-env "${env_args[@]}" --tab-title="$title" --cwd="$cwd" >/dev/null
     fi
 }
 
