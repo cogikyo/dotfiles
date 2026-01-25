@@ -14,7 +14,7 @@ done
 
 if [[ "$mode" == "claude" ]]; then
     declare -A TABS=(
-        [xplr]="⟜ 󰭎  ⊸"
+        [xplr]="⊰ 󰭎  ⊱"
         [main]="⊰ 󰯉  ⊱"
         [dev]="⊰   ⊱"
         [idea]="⊰   ⊱"
@@ -55,6 +55,7 @@ else
     PREFIX=""
     FOCUS_TAB="nvim"
     USAGE="kitty-refresh [-r] {nvim|term|xplr|build|git|all}"
+    declare -A CLAUDE_VARIANTS=()
 fi
 
 tab="${1:-}"
