@@ -5,38 +5,57 @@ local servers = {
 	gopls = {
 		settings = {
 			gopls = {
+				-- Use gofumpt for stricter formatting (superset of gofmt)
 				gofumpt = true,
+
+				-- Clickable actions shown above functions/types in the editor
 				codelenses = {
-					gc_details = false,
-					generate = true,
-					regenerate_cgo = true,
-					run_govulncheck = true,
-					test = true,
-					tidy = true,
-					upgrade_dependency = true,
-					vendor = true,
+					gc_details = false, -- Show garbage collector optimization decisions (noisy)
+					generate = true, -- Run `go generate` for //go:generate directives
+					regenerate_cgo = true, -- Regenerate cgo definitions
+					run_govulncheck = true, -- Scan dependencies for known vulnerabilities
+					test = true, -- Run tests for this package
+					tidy = true, -- Run `go mod tidy` to clean up go.mod
+					upgrade_dependency = true, -- Upgrade a dependency to latest version
+					vendor = true, -- Run `go mod vendor` to vendor dependencies
 				},
+
+				-- Inlay hints: inline type/value annotations shown in the editor
 				hints = {
-					assignVariableTypes = true,
-					compositeLiteralFields = true,
-					compositeLiteralTypes = true,
-					constantValues = true,
-					functionTypeParameters = true,
-					parameterNames = true,
-					rangeVariableTypes = true,
+					assignVariableTypes = true, -- Show types for `x := foo()` → `x int := foo()`
+					compositeLiteralFields = true, -- Show field names in struct literals
+					compositeLiteralTypes = true, -- Show types in composite literals
+					constantValues = true, -- Show computed values of constants
+					functionTypeParameters = true, -- Show type params in generic function calls
+					parameterNames = true, -- Show parameter names at call sites
+					rangeVariableTypes = true, -- Show types for range loop variables
 				},
+
+				-- Static analyzers that run on your code
 				analyses = {
-					nilness = true,
-					unusedparams = true,
-					unusedwrite = true,
-					useany = true,
-					shadow = true,
+					nilness = true, -- Detect nil pointer dereferences
+					unusedparams = true, -- Warn about unused function parameters
+					unusedwrite = true, -- Detect writes to variables that are never read
+					useany = true, -- Suggest `any` instead of `interface{}`
+					shadow = false, -- Variable shadowing (disabled: too noisy for `err`)
 				},
+
+				-- Enable staticcheck: additional linters beyond go vet
 				staticcheck = true,
+
+				-- Directories to exclude from workspace scanning (prefix `-` to exclude)
 				directoryFilters = { "-.git", "-.vscode", "-.idea", "-.venv", "-node_modules" },
+
+				-- Enhanced syntax highlighting using LSP semantic tokens
 				semanticTokens = true,
+
+				-- Insert placeholders for function parameters in completions
 				usePlaceholders = true,
+
+				-- Auto-import: suggest completions from packages not yet imported
 				completeUnimported = true,
+
+				-- Postfix completions: `err.ifnotnil` → `if err != nil { }`
 				experimentalPostfixCompletions = true,
 			},
 		},
