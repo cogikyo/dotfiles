@@ -4,9 +4,10 @@
 TYPE="${1:-idle}"
 MESSAGE="${2:-}"
 
-# Get Kitty window/tab info if available
+# Get Kitty window/tab info and Claude variant if available
 TAB_TITLE=""
 WINDOW_ID="${KITTY_WINDOW_ID:-}"
+VARIANT="${CLAUDE_VARIANT:-}"
 
 if [[ -n "$WINDOW_ID" ]] && command -v kitty &>/dev/null; then
     # Get tab title for this window
@@ -20,6 +21,9 @@ if [[ -n "$WINDOW_ID" ]] && command -v kitty &>/dev/null; then
         TAB_ICON=$(echo "$TAB_TITLE" | sed -E 's/^[⊰⟜] (.*) [⊱⊸]$/\1/' | xargs)
         [[ -n "$TAB_ICON" ]] && TAB_TITLE="$TAB_ICON"
     fi
+
+    # Append variant name if this is a claude instance (e.g., "󰯉 main")
+    [[ -n "$VARIANT" && -n "$TAB_TITLE" ]] && TAB_TITLE="$TAB_TITLE $VARIANT"
 fi
 
 # Build notification body with tab title
