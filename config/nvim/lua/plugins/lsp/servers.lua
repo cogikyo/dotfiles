@@ -38,6 +38,7 @@ local servers = {
 					unusedwrite = true, -- Detect writes to variables that are never read
 					useany = true, -- Suggest `any` instead of `interface{}`
 					shadow = false, -- Variable shadowing (disabled: too noisy for `err`)
+					ST1003 = false, -- Naming conventions (disabled: allow SCREAMING_SNAKE_CASE)
 				},
 
 				-- Enable staticcheck: additional linters beyond go vet
