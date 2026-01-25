@@ -1,30 +1,60 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-declare -A TABS=(
-    [nvim]="⟜  ⊸"
-    [term]="⟜  ⊸"
-    [xplr]="⟜ 󰭎 ⊸"
-    [build]="⟜ 󰖷 ⊸"
-    [git]="⟜  ⊸"
-)
-
-declare -A CMDS=(
-    [nvim]='nvim'
-    [term]=''
-    [xplr]='xplr'
-    [build]='just watch'
-    [git]='lazygit'
-)
-
-TAB_ORDER=(nvim term xplr build git)
-
+mode="term"
 refresh=false
-[[ "${1:-}" == "-r" ]] && { refresh=true; shift; }
+
+while [[ "${1:-}" == -* ]]; do
+    case "$1" in
+        -r) refresh=true; shift ;;
+        --claude) mode="claude"; shift ;;
+        *) echo "Unknown option: $1"; exit 1 ;;
+    esac
+done
+
+if [[ "$mode" == "claude" ]]; then
+    declare -A TABS=(
+        [xplr]="⟜ 󰭎  ⊸"
+        [claude]="⊰ 󰯉  ⊱"
+        [edit]="⊰   ⊱"
+        [task]="⊰ ㊋ ⊱"
+        [git]="⊰   ⊱"
+    )
+    declare -A CMDS=(
+        [xplr]='xplr'
+        [claude]='claude'
+        [edit]='nvim'
+        [task]=''
+        [git]='lazygit'
+    )
+    TAB_ORDER=(xplr claude edit task git)
+    PREFIX="claude-"
+    FOCUS_TAB="claude"
+    USAGE="kitty-refresh [-r] --claude {claude|edit|task|git|all}"
+else
+    declare -A TABS=(
+        [xplr]="⟜ 󰭎  ⊸"
+        [nvim]="⟜   ⊸"
+        [term]="⟜   ⊸"
+        [build]="⟜   ⊸"
+        [git]="⟜   ⊸"
+    )
+    declare -A CMDS=(
+        [nvim]='nvim'
+        [term]=''
+        [xplr]='xplr'
+        [build]='just watch'
+        [git]='lazygit'
+    )
+    TAB_ORDER=(xplr nvim term build git)
+    PREFIX=""
+    FOCUS_TAB="nvim"
+    USAGE="kitty-refresh [-r] {nvim|term|xplr|build|git|all}"
+fi
 
 tab="${1:-}"
-[[ -z "$tab" ]] && { echo "Usage: kitty-refresh [-r] {nvim|term|xplr|build|git|all}"; exit 1; }
-[[ "$tab" != "all" && -z "${TABS[$tab]:-}" ]] && { echo "Usage: kitty-refresh [-r] {nvim|term|xplr|build|git|all}"; exit 1; }
+[[ -z "$tab" ]] && { echo "Usage: $USAGE"; exit 1; }
+[[ "$tab" != "all" && -z "${TABS[$tab]:-}" ]] && { echo "Usage: $USAGE"; exit 1; }
 
 kitty_state=$(kitty @ ls)
 window_id=$(echo "$kitty_state" | jq -r '.[0].id')
@@ -32,13 +62,13 @@ cwd=$(echo "$kitty_state" | jq -r '.[0].tabs[] | select(.is_focused) | .windows[
 
 get_tab_index() {
     local name="$1"
-    local tab_id="${window_id}-${name}"
+    local tab_id="${window_id}-${PREFIX}${name}"
     kitty @ ls | jq -r --arg id "$tab_id" '.[0].tabs | to_entries[] | select(.value.windows[0].env.KITTY_TAB_ID == $id) | .key'
 }
 
 open_tab() {
     local name="$1"
-    local tab_id="${window_id}-${name}"
+    local tab_id="${window_id}-${PREFIX}${name}"
     local title="${TABS[$name]}"
     local cmd="${CMDS[$name]}"
 
@@ -63,9 +93,9 @@ if [[ "$tab" == "all" ]]; then
     for name in "${TAB_ORDER[@]}"; do
         open_tab "$name"
     done
-    kitty @ focus-tab --match "env:KITTY_TAB_ID=${window_id}-term" 2>/dev/null || true
+    kitty @ focus-tab --match "env:KITTY_TAB_ID=${window_id}-${PREFIX}${FOCUS_TAB}" 2>/dev/null || true
 else
-    kitty @ focus-tab --match "env:KITTY_TAB_ID=${window_id}-${tab}" 2>/dev/null || true
+    kitty @ focus-tab --match "env:KITTY_TAB_ID=${window_id}-${PREFIX}${tab}" 2>/dev/null || true
     original_idx=$(get_tab_index "$tab")
     open_tab "$tab"
     new_idx=$(get_tab_index "$tab")
