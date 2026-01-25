@@ -468,7 +468,7 @@ func main() {
 	} else if dir == home {
 		displayDir = ""
 	}
-	out.WriteString(blue + iconModel + bold + blue + displayDir + reset)
+	out.WriteString(red + iconModel + bold + red + displayDir + reset)
 
 	// Git info
 	if gitStatus != nil && gitStatus.Branch != "" {
