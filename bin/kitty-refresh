@@ -98,10 +98,18 @@ open_tab() {
     fi
 }
 
+close_launcher_tab() {
+    # Close the initial launcher tab (has no KITTY_TAB_ID env var)
+    local launcher_tab_id
+    launcher_tab_id=$(kitty @ ls | jq -r '.[0].tabs[] | select(.windows[0].env.KITTY_TAB_ID == null or .windows[0].env.KITTY_TAB_ID == "") | .id' | head -1)
+    [[ -n "$launcher_tab_id" ]] && kitty @ close-tab --match "id:${launcher_tab_id}" 2>/dev/null || true
+}
+
 if [[ "$tab" == "all" ]]; then
     for name in "${TAB_ORDER[@]}"; do
         open_tab "$name"
     done
+    close_launcher_tab
     kitty @ focus-tab --match "env:KITTY_TAB_ID=${window_id}-${PREFIX}${FOCUS_TAB}" 2>/dev/null || true
 else
     kitty @ focus-tab --match "env:KITTY_TAB_ID=${window_id}-${PREFIX}${tab}" 2>/dev/null || true
