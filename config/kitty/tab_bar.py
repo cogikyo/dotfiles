@@ -63,7 +63,8 @@ class Colors:
     def __init__(self):
         opts = get_options()
         self.fg = as_rgb(color_as_int(opts.background))
-        self.bg = as_rgb(color_as_int(opts.color4))
+        self.bg = as_rgb(color_as_int(opts.color4))  # blue accent
+        self.red = as_rgb(color_as_int(opts.color1))  # red accent for claude
         self.accent = as_rgb(color_as_int(opts.selection_background))
         self.active_bg = as_rgb(color_as_int(opts.active_tab_background))
 
@@ -73,6 +74,16 @@ class Colors:
 
 
 colors = Colors()
+
+
+def get_accent() -> int:
+    """Get the accent color based on window type (red for Claude, blue otherwise)."""
+    boss = get_boss()
+    if boss and is_claude_window(boss.active_tab_manager):
+        return colors.red
+    return colors.bg
+
+
 _right_status_length = 0
 
 # ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -149,7 +160,9 @@ def is_claude_window(tab_manager) -> bool:
         for tab in tab_manager.tabs:
             for window in tab.windows:
                 # Try override_title first (set by --title flag), then title
-                title = getattr(window, "override_title", None) or getattr(window, "title", "")
+                title = getattr(window, "override_title", None) or getattr(
+                    window, "title", ""
+                )
                 if title and "claude" in title.lower():
                     return True
     except (AttributeError, TypeError):
@@ -172,12 +185,14 @@ def draw_icon(screen: Screen, index: int) -> int:
         if is_claude_window(tm):
             icon = ICON_CLAUDE
 
+    accent = get_accent()
+
     # Icon with accent background
-    screen.cursor.fg, screen.cursor.bg = colors.fg, colors.bg
+    screen.cursor.fg, screen.cursor.bg = colors.fg, accent
     screen.draw(icon)
 
     # Separator
-    screen.cursor.fg, screen.cursor.bg = colors.bg, bg_prev
+    screen.cursor.fg, screen.cursor.bg = accent, bg_prev
     screen.draw(SEP_LEFT)
 
     screen.cursor.fg, screen.cursor.bg = fg_prev, bg_prev
@@ -194,7 +209,7 @@ def draw_cwd(screen: Screen, index: int) -> int:
     cwd = get_cwd()  # Get active tab's CWD
 
     # CWD text
-    screen.cursor.fg, screen.cursor.bg = colors.bg, colors.active_bg
+    screen.cursor.fg, screen.cursor.bg = get_accent(), colors.active_bg
     screen.draw(cwd)
 
     # Separator + spacer
@@ -321,11 +336,12 @@ def draw_tab(
     # Build right status cells: separator | user | hostname
     user_text = ICON_USER + getlogin() + " " + SEP_RIGHT
     host_text = uname()[1] + ICON_HOST
+    accent = get_accent()
 
     cells = [
         (colors.active_bg, colors.bar_bg, SEP_RIGHT),
-        (colors.bg, colors.active_bg, user_text),
-        (colors.fg, colors.bg, host_text),
+        (accent, colors.active_bg, user_text),
+        (colors.fg, accent, host_text),
     ]
 
     # Calculate right status width
