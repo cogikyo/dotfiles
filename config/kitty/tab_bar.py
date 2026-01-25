@@ -37,7 +37,7 @@ SEP_SOFT = ""  # soft separator between same-bg tabs
 
 TRUNCATE = " ⽙"  # shown when cwd is truncated
 ICON_HOME = " ⾕"  # home indicator
-CWD_SPACER = "  "  # decorative spacer after cwd
+CWD_SPACER = " 󰓩 "  # decorative spacer after cwd
 
 ICON_ROOT_DESCENDED = "  "  # root indicator when path has multiple parts
 ICON_ROOT_BASE = "  "  # root indicator when at root
@@ -136,17 +136,23 @@ def get_window_title() -> str:
     return window.title or ""
 
 
-def is_claude_running(window) -> bool:
-    """Check if claude CLI is running in the window."""
-    if not window or not hasattr(window, "child"):
+def is_claude_window(tab_manager) -> bool:
+    """Check if any window in the tab manager was launched as a Claude window.
+
+    This checks the initial title set when the window was created
+    (e.g., via `kitty --title claude`), not the current active title.
+    """
+    if not tab_manager:
         return False
     try:
-        procs = window.child.foreground_processes
-        for p in procs:
-            cmdline = p.get("cmdline") or []
-            if any("claude" in str(arg).lower() for arg in cmdline):
-                return True
-    except (AttributeError, KeyError, TypeError):
+        # Check all tabs and their windows
+        for tab in tab_manager.tabs:
+            for window in tab.windows:
+                # Try override_title first (set by --title flag), then title
+                title = getattr(window, "override_title", None) or getattr(window, "title", "")
+                if title and "claude" in title.lower():
+                    return True
+    except (AttributeError, TypeError):
         pass
     return False
 
@@ -158,12 +164,12 @@ def draw_icon(screen: Screen, index: int) -> int:
 
     fg_prev, bg_prev = screen.cursor.fg, screen.cursor.bg
 
-    # Choose icon based on running process
+    # Choose icon based on initial window title (e.g., kitty launched with --title claude)
     icon = ICON_MAIN
     boss = get_boss()
     if boss:
         tm = boss.active_tab_manager
-        if tm and is_claude_running(tm.active_window):
+        if is_claude_window(tm):
             icon = ICON_CLAUDE
 
     # Icon with accent background
