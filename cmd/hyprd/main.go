@@ -6,6 +6,10 @@
 //	hyprd status       Check if daemon is running
 package main
 
+// ================================================================================
+// Entry point and CLI command dispatcher
+// ================================================================================
+
 import (
 	"fmt"
 	"os"

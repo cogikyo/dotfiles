@@ -1,5 +1,8 @@
-// Package daemon server.go handles client socket communication.
 package daemon
+
+// ================================================================================
+// Client-side socket communication for sending commands to daemon
+// ================================================================================
 
 import (
 	"bufio"
