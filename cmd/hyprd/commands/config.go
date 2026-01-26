@@ -1,6 +1,10 @@
 package commands
 
-// Monitor geometry constants (3840x2160 with Hyprland gaps)
+// ================================================================================
+// Monitor geometry, split ratios, and visual styling constants
+// ================================================================================
+
+// Monitor geometry constants (3840x2160 with Hyprland gaps) TODO:
 const (
 	MonitorWidth   = 3840
 	MonitorHeight  = 2160
@@ -10,7 +14,7 @@ const (
 	UsableHeight   = MonitorHeight - ReservedTop - ReservedBottom // 2042
 )
 
-// Monocle workspace and size
+// Monocle workspace and size TODO
 const (
 	MonocleWS     = 6
 	MonocleWidth  = 3190

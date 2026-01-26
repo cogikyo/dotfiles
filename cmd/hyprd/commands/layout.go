@@ -1,5 +1,9 @@
 package commands
 
+// ================================================================================
+// Session layout management for predefined workspaces
+// ================================================================================
+
 import (
 	"fmt"
 	"sort"
@@ -171,7 +175,10 @@ func (l *Layout) arrangeLayout(wsID int) {
 	// Ensure firefox is above kitty in slave stack
 	if firefox != nil && kitty != nil {
 		// Re-query positions
-		clients, _ = l.hypr.Clients()
+		clients, err = l.hypr.Clients()
+		if err != nil {
+			return
+		}
 		for i := range clients {
 			c := &clients[i]
 			if c.Address == firefox.Address {

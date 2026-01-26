@@ -1,5 +1,8 @@
-// Package commands implements hyprd window management commands.
 package commands
+
+// ================================================================================
+// Monocle mode for focused full-workspace floating
+// ================================================================================
 
 import (
 	"fmt"
