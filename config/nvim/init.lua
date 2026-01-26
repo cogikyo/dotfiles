@@ -44,6 +44,11 @@ require("lazy").setup({
 				vim.cmd.colorscheme("vagari")
 			end,
 		},
+		{
+			"folke/tokyonight.nvim",
+			lazy = true,
+			opts = { style = "storm" },
+		},
 
 		{ import = "plugins.dev" },
 		-- kristijanhusak/vim-dadbod-ui: database explorer and query UI

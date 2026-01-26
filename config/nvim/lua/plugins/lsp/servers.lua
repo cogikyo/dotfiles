@@ -48,7 +48,7 @@ local servers = {
 				directoryFilters = { "-.git", "-.vscode", "-.idea", "-.venv", "-node_modules" },
 
 				-- Enhanced syntax highlighting using LSP semantic tokens
-				semanticTokens = true,
+				semanticTokens = false,
 
 				-- Insert placeholders for function parameters in completions
 				usePlaceholders = true,
