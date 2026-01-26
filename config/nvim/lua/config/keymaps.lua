@@ -39,7 +39,7 @@ local GROUPS = {
 	{ "<leader>d", group = "Delete/Database" },
 	{ "<leader>e", group = "Explorer" },
 	{ "<leader>f", group = "Find/Trouble" },
-	{ "<leader>g", group = "Git/Goto" },
+	{ "<leader>g", group = "Misc" },
 	{ "<leader>h", group = "Git Hunk", mode = { "n", "v" } },
 	{ "<leader>m", group = "Markdown/Mason" },
 	{ "<leader>n", group = "Harpoon" },
@@ -99,10 +99,30 @@ local function yank_paragrah(motion)
 		yank_path(motion)
 	end
 end
+local function yank_diagnostics()
+	local path = vim.fn.expand("%:p")
+	local line = vim.fn.line(".")
+	local diagnostics = vim.diagnostic.get(0, { lnum = line - 1 }) -- 0-indexed
+
+	if #diagnostics == 0 then
+		vim.fn.setreg("+", path .. ":" .. line .. "\n  |- (no diagnostics)")
+		vim.notify("No diagnostics on this line", vim.log.levels.WARN)
+		return
+	end
+
+	local lines = { path .. ":" .. line }
+	for _, d in ipairs(diagnostics) do
+		table.insert(lines, "  |- " .. d.message:gsub("\n", " "))
+	end
+	vim.fn.setreg("+", table.concat(lines, "\n"))
+	vim.notify("Yanked " .. #diagnostics .. " diagnostic(s)", vim.log.levels.INFO)
+end
+
 map("n", "<A-f>", ':let @+=expand("%:p")<CR>', desc("Yank file path"))
 map("v", "<A-c>", yank_path, desc("Yank file path + selection"))
 map("n", "<A-g>", yank_paragrah("gv"), desc("Yank file path + selection (last visual)"))
 map("n", "<A-p>", yank_paragrah("vap"), desc("Yank file path + paragraph"))
+map("n", "<A-w>", yank_diagnostics, desc("Yank file path + diagnostics"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ space: add empty lines above/below                                          │
@@ -380,7 +400,7 @@ M.on_attach = function(event)
 	lspmap("gd", vim.lsp.buf.definition, "Definition")
 	lspmap("gD", vim.lsp.buf.declaration, "Declaration")
 	lspmap("gi", vim.lsp.buf.implementation, "Implementation")
-	lspmap("gr", ts.lsp_references, "References")
+	lspmap("<F12>", ts.lsp_references, "References")
 	lspmap("gt", ts.lsp_type_definitions, "Type Definition")
 	lspmap("gO", ts.lsp_document_symbols, "Document Symbols")
 	lspmap("gW", ts.lsp_dynamic_workspace_symbols, "Workspace Symbols")
