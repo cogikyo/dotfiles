@@ -38,6 +38,7 @@ notify_with_action() {
     local app="$1" urgency="$2" timeout="$3" title="$4" body="$5" wid="$6"
 
     action=$(dunstify -a "$app" -u "$urgency" -t "$timeout" \
+        -A "focus,Focus" \
         "$title" "$body")
 
     if [[ "$action" == "focus" && -n "$wid" ]]; then

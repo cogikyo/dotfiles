@@ -1,6 +1,10 @@
 // Package hypr provides Hyprland IPC socket communication.
 package hypr
 
+// ================================================================================
+// Hyprland IPC client for commands, queries, and event subscription
+// ================================================================================
+
 import (
 	"encoding/json"
 	"fmt"

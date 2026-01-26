@@ -1,4 +1,11 @@
+// Package commands implements window management commands for hyprd including monocle mode,
+// pseudo-master mode, split ratio cycling, master/slave swapping, workspace switching,
+// and session layout management.
 package commands
+
+// ================================================================================
+// Shared type definitions for daemon state management
+// ================================================================================
 
 // MonocleState tracks a window in monocle mode.
 type MonocleState struct {

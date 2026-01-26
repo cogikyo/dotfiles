@@ -1,5 +1,9 @@
 package daemon
 
+// ================================================================================
+// Subscription manager for streaming state changes to clients
+// ================================================================================
+
 import (
 	"encoding/json"
 	"fmt"
@@ -12,6 +16,7 @@ import (
 type Subscriber struct {
 	conn   net.Conn
 	topics map[string]bool
+	mu     sync.Mutex // protects conn writes
 }
 
 // SubscriptionManager handles client subscriptions.
@@ -79,7 +84,9 @@ func (m *SubscriptionManager) Notify(topic string, data any) {
 
 	for _, sub := range m.subscribers {
 		if sub.topics[topic] || sub.topics["*"] {
+			sub.mu.Lock()
 			sub.conn.Write(jsonData)
+			sub.mu.Unlock()
 		}
 	}
 }
@@ -93,7 +100,9 @@ func (m *SubscriptionManager) sendInitialState(sub *Subscriber) {
 		}
 		event := map[string]any{"event": "workspace", "data": data}
 		if jsonData, err := json.Marshal(event); err == nil {
+			sub.mu.Lock()
 			sub.conn.Write(append(jsonData, '\n'))
+			sub.mu.Unlock()
 		}
 	}
 
@@ -108,14 +117,18 @@ func (m *SubscriptionManager) sendInitialState(sub *Subscriber) {
 		}
 		event := map[string]any{"event": "monocle", "data": data}
 		if jsonData, err := json.Marshal(event); err == nil {
+			sub.mu.Lock()
 			sub.conn.Write(append(jsonData, '\n'))
+			sub.mu.Unlock()
 		}
 	}
 
 	if sub.topics["split"] || sub.topics["*"] {
 		event := map[string]any{"event": "split", "data": m.state.GetSplitRatio()}
 		if jsonData, err := json.Marshal(event); err == nil {
+			sub.mu.Lock()
 			sub.conn.Write(append(jsonData, '\n'))
+			sub.mu.Unlock()
 		}
 	}
 }
