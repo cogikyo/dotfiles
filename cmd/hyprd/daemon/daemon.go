@@ -1,5 +1,10 @@
-// Package daemon provides the hyprd daemon lifecycle management.
+// Package daemon implements the hyprd background service that manages Hyprland window state,
+// provides Unix socket IPC at /tmp/hyprd.sock, and streams events to subscribers like eww widgets.
 package daemon
+
+// ================================================================================
+// Core daemon lifecycle, socket server, and command routing
+// ================================================================================
 
 import (
 	"fmt"
@@ -52,7 +57,7 @@ func (d *Daemon) Run() error {
 	d.listener = listener
 
 	// Make socket world-accessible (for eww, scripts, etc.)
-	if err := os.Chmod(SocketPath, 0666); err != nil {
+	if err := os.Chmod(SocketPath, 0o666); err != nil {
 		listener.Close()
 		return fmt.Errorf("chmod socket: %w", err)
 	}
@@ -111,7 +116,7 @@ func (d *Daemon) acceptLoop() {
 func (d *Daemon) handleClient(conn net.Conn) {
 	buf := make([]byte, 4096)
 	n, err := conn.Read(buf)
-	if err != nil {
+	if err != nil || n == 0 {
 		conn.Close()
 		return
 	}
@@ -132,6 +137,7 @@ func (d *Daemon) handleClient(conn net.Conn) {
 
 	// Normal request-response
 	response := d.handleCommand(command)
+	// Ignore write errors - client may disconnect before receiving response
 	conn.Write([]byte(response))
 	conn.Close()
 }

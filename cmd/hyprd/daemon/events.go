@@ -1,7 +1,12 @@
 package daemon
 
+// ================================================================================
+// Hyprland event loop and state synchronization
+// ================================================================================
+
 import (
 	"bufio"
+	"encoding/json"
 	"fmt"
 	"net"
 	"os"
@@ -80,14 +85,11 @@ func (e *EventLoop) syncState() error {
 	}
 
 	// Parse workspace ID from JSON
-	// Format: {"id":3,"name":"3",...}
-	if idx := strings.Index(string(data), `"id":`); idx >= 0 {
-		rest := string(data)[idx+5:]
-		if end := strings.IndexAny(rest, ",}"); end > 0 {
-			if ws, err := strconv.Atoi(rest[:end]); err == nil {
-				e.state.SetWorkspace(ws)
-			}
-		}
+	var ws struct {
+		ID int `json:"id"`
+	}
+	if err := json.Unmarshal(data, &ws); err == nil {
+		e.state.SetWorkspace(ws.ID)
 	}
 
 	// Get occupied workspaces

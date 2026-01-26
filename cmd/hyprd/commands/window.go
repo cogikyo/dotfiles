@@ -1,5 +1,9 @@
 package commands
 
+// ================================================================================
+// Window query utilities for master/slave layout classification
+// ================================================================================
+
 import (
 	"fmt"
 	"slices"
