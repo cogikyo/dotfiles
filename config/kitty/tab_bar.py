@@ -28,7 +28,7 @@ from kitty.utils import color_as_int
 # │ Configuration                                                                │
 # ╰──────────────────────────────────────────────────────────────────────────────╯
 
-ICON_MAIN = "  "  # arch logo
+ICON_MAIN = "  "  # arch logo
 ICON_CLAUDE = " 󰯉 "  # claude icon
 
 SEP_LEFT = ""  # left-pointing powerline arrow
@@ -110,8 +110,8 @@ def get_cwd() -> str:
     if not parts:
         return ICON_ROOT_BASE
 
-    # Replace /home/user with home icon
-    if len(parts) > 1 and parts[1] == "home":
+    # Replace /home/user or /Users/user with home icon
+    if len(parts) > 1 and parts[1] in ("home", "Users"):
         parts[0] = ICON_HOME
         parts[1:3] = []
     else:
