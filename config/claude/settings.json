@@ -25,7 +25,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/cullyn/dotfiles/bin/claude-notify permission"
+            "command": "/Users/cullyn/dotfiles/bin/claude-notify permission"
           }
         ]
       },
@@ -34,7 +34,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/cullyn/dotfiles/bin/claude-notify idle"
+            "command": "/Users/cullyn/dotfiles/bin/claude-notify idle"
           }
         ]
       }
@@ -42,7 +42,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "/home/cullyn/dotfiles/config/claude/statusline-bin"
+    "command": "/Users/cullyn/dotfiles/config/claude/statusline-bin"
   },
   "outputStyle": "explanatory",
   "promptSuggestionEnabled": false,
