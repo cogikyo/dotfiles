@@ -1,0 +1,3 @@
+gui:
+  showCommandLog: false
+promptToReturnFromSubprocess: false
