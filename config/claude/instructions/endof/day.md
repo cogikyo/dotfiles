@@ -34,6 +34,7 @@ Analyze the day's git commits and add them to the current week's impact file.
 7. **Categorize and summarize** the work:
    - Group by project/service
    - Extract key changes from commit messages and diffs
+   - Use format: `- feat/fix/refactor(scope): description`
 
 8. **Update the weekly file** - Add the summary under the appropriate day header (## Mon, ## Tue, etc.)
 
@@ -45,20 +46,11 @@ Under the day header, add:
 ## [Day]
 
 **[Frontend/Backend] Project/Service Name**
-- Built out feature X with 3 modes - Presets, Custom, and Advanced
-- Added user profile endpoint to support the new settings page
-- Refactored auth middleware for cleaner token validation
+- change description
+- another change
 
-Misc:
-- Fixed typo in error message
-- Updated package versions
+**[Category] Another Area**
+- changes here
 ```
 
-## Writing Style
-
-- **Start with action verbs** - "Built out", "Added", "Refactored", "Made", "Implemented", "Fixed"
-- **Be specific about features** - mention modes, counts, names (e.g. "3 validation modes - strict, lenient, and custom")
-- **Include the why when relevant** - "to support system user entries", "for cleaner state management"
-- **Keep technical details brief but accurate** - enough context to understand the scope
-- **Group minor fixes under "Misc:"** - typos, version bumps, small cleanup
-- **Write accomplishments, not commits** - summarize related commits into meaningful work items rather than listing each commit message
+Keep entries concise but descriptive. Group related commits together.

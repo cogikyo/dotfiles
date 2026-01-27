@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Claude Code notification helper with Kitty tab info
+
+TYPE="${1:-idle}"
+MESSAGE="${2:-}"
+
+# Get Kitty window/tab info and Claude variant if available
+TAB_TITLE=""
+WINDOW_ID="${KITTY_WINDOW_ID:-}"
+VARIANT="${CLAUDE_VARIANT:-}"
+
+if [[ -n "$WINDOW_ID" ]] && command -v kitty &>/dev/null; then
+    # Get tab title for this window
+    TAB_TITLE=$(kitty @ ls 2>/dev/null | jq -r --arg wid "$WINDOW_ID" '
+        .[] | .tabs[] | select(.windows[] | .id == ($wid | tonumber)) | .title
+    ' 2>/dev/null)
+
+    # Extract just the nerd font icon from between decorators
+    # Handles both ⊰ ... ⊱ (claude mode) and ⟜ ... ⊸ (normal mode)
+    if [[ -n "$TAB_TITLE" ]]; then
+        TAB_ICON=$(echo "$TAB_TITLE" | sed -E 's/^[⊰⟜] (.*) [⊱⊸]$/\1/' | xargs)
+        [[ -n "$TAB_ICON" ]] && TAB_TITLE="$TAB_ICON"
+    fi
+
+    # Append variant name if this is a claude instance (e.g., "󰯉 main")
+    [[ -n "$VARIANT" && -n "$TAB_TITLE" ]] && TAB_TITLE="$TAB_TITLE $VARIANT"
+fi
+
+# Build notification body with tab title
+if [[ -n "$TAB_TITLE" ]]; then
+    BODY="${MESSAGE:-Waiting for input}: $TAB_TITLE "
+else
+    BODY="${MESSAGE:-Waiting for input}"
+fi
+
+# Run notification with click-to-focus action (in background to not block)
+notify_with_action() {
+    local app="$1" urgency="$2" timeout="$3" title="$4" body="$5" wid="$6"
+
+    action=$(dunstify -a "$app" -u "$urgency" -t "$timeout" \
+        -A "focus,Focus" \
+        "$title" "$body")
+
+    if [[ "$action" == "focus" && -n "$wid" ]]; then
+        kitty @ focus-window --match id:"$wid" 2>/dev/null
+    fi
+}
+
+case "$TYPE" in
+    idle)
+        notify_with_action "claude" "low" "6000" "Claude" "$BODY" "$WINDOW_ID" &
+        ;;
+    permission)
+        BODY="${MESSAGE:-Permission needed}${TAB_TITLE:+ [$TAB_TITLE]}"
+        notify_with_action "claude-input" "normal" "8000" "Claude" "$BODY" "$WINDOW_ID" &
+        ;;
+esac

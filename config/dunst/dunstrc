@@ -1,9 +1,9 @@
 [global]
     follow = "keyboard"
     enable_posix_regex = true
-    origin = "bottom-right"
-    width = 600
-    offset = "90x118"
+    origin = "top-left"
+    width = "(300, 715)"
+    offset = "(2265, 18)"
     notification_limit = 1
     progress_bar = true
     progress_bar_height = 10
@@ -11,9 +11,9 @@
     progress_bar_min_width = 600
     progress_bar_max_width = 600
     indicate_hidden = false
-    padding = 16
-    horizontal_padding = 16
-    text_icon_padding = 16
+    padding = 4
+    horizontal_padding = 8
+    text_icon_padding = 8
     frame_width = 2
     gap_size = 0
     separator_color = "frame"
@@ -22,21 +22,21 @@
     font = "Albert Sans 16"
     line_height = 2
     markup = "full"
-    format = "<b>⽱ %s</b> <span size='50%' rise='6pt'> ⾛ <span rise='5pt'><tt>%a</tt></span></span>\n%b"
+    format = "<span size='50%' rise='4pt'> ⾛ <span rise='3pt'><tt>%a</tt></span></span> <b>%s</b>: %b"
     fullscreen = "pushback"
     alignment = "left"
     vertical_alignment = "center"
     show_age_threshold = 60
     word_wrap = false
-    ellipsize = "middle"
+    ellipsize = "end"
     ignore_newline = "no"
     stack_duplicates = true
     hide_duplicate_count = false
     show_indicators = false
     enable_recursive_icon_lookup = true
     icon_position = "left"
-    min_icon_size = 64
-    max_icon_size = 64
+    min_icon_size = 16
+    max_icon_size = 16
     icon_theme = "Nordzy"
     icon_path = "/usr/share/icons/Nordzy/"
     sticky_history = "yes"
@@ -47,7 +47,7 @@
     script = "/usr/bin/alert"
     title = "Dunst"
     class = "Dunst"
-    corner_radius = 16
+    corner_radius = 8
     ignore_dbusclose = false
     force_xwayland = false
     force_xinerama = false
@@ -65,11 +65,39 @@
     background = "#49353130"
     foreground = "#f2a170"
     frame_color = "#ea834b"
-    timeout = 120
+    timeout = 6
 
 [urgency_critical]
     background = "#82414120"
     foreground = "#f7768e"
     frame_color = "#f34658"
     script = "/usr/bin/alert critical"
-    timeout = 0
+    timeout = 8
+
+# Claude Code notifications
+[claude]
+    appname = "claude"
+    urgency = low
+    background = "#2a2d4580"
+    foreground = "#8aa4f3"
+    frame_color = "#6380ec80"
+    timeout = 4
+
+[claude-input]
+    appname = "claude-input"
+    urgency = normal
+    background = "#49353130"
+    foreground = "#f2a170"
+    frame_color = "#ea834b"
+    timeout = 8
+
+# Suppress Kitty-sourced Claude notifications (our hooks handle these)
+[kitty-claude-summary]
+    appname = "kitty"
+    summary = ".*[Cc]laude.*"
+    skip_display = true
+
+[kitty-claude-body]
+    appname = "kitty"
+    body = ".*[Cc]laude.*"
+    skip_display = true

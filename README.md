@@ -1,33 +1,26 @@
-<!-- ========================================================================== -->
+<!-- ======================================================================--->
 <!-- ☄️  heading {{{ -->
 <h1 align="center">⚙️ dotfiles ⚙️</h1>
 
 <p align="right">
-    <a href="https://github.com/nosvagor/dotfiles/stargazers">
+    <a href="https://github.com/cogikyo/dotfiles/stargazers">
         <img
-            src="https://img.shields.io/github/stars/nosvagor/dotfiles?color=ecc45d&logo=apachespark&labelColor=24283b&logoColor=ecc45d&style=for-the-badge"
+            src="https://img.shields.io/github/stars/cogikyo/dotfiles?color=ecc45d&logo=apachespark&labelColor=24283b&logoColor=ecc45d&style=for-the-badge"
             title="what is love, baby don't hurt me"
         >
     </a>
-    &nbsp;
-    <!-- <a href="https://cullyn.eth/"> -->
-    <!--     <img -->
-    <!--         src="https://img.shields.io/github/sponsors/nosvagor?color=dc60bf&logo=githubsponsors&labelColor=24283b&logoColor=dc60bf&style=for-the-badge" -->
-    <!--         title="github sponsors not set up, pref ETH to cullyn.eth for now" -->
-    <!--     > -->
-    <!-- </a> -->
 </p>
 
 <p align="center">
     <kbd>
         <img
             alt="dotfiles neonlights banner"
-            src="https://github.com/nosvagor/dotfiles/blob/main/share/dotfiles-banner.gif?raw=true"/>
+            src="https://github.com/cogikyo/dotfiles/blob/master/share/dotfiles-banner.gif?raw=true"/>
     </kbd>
 </p>
 <p align="center">
 <!-- }}} -->
-<!-- ========================================================================== -->
+<!-- ======================================================================--->
 
 <!-- 👾 Overview {{{ -->
 
@@ -38,7 +31,7 @@
 ---
 
 <img
-    src="https://github.com/nosvagor/dotfiles/blob/main/share/social-preview.jpg?raw=true"
+    src="https://github.com/cogikyo/dotfiles/blob/master/share/social-preview.jpg?raw=true"
     title="we do these things not because they are easy, but because they are hard"
     width=43%
     align=right
@@ -75,7 +68,7 @@
 - Display Server: [Wayland](https://wiki.archlinux.org/title/Wayland)
 - Compositor: [Hyprland](https://hyprland.org/)
 - Widgets: [eww](https://github.com/elkowar/eww)
-- Wallpaper: [mpvpaper](https://github.com/GhostNaN/mpvpaper) (vidoes found [here](https://github.com/nosvagor/dotfiles/tree/main/share/videos))
+- Wallpaper: [mpvpaper](https://github.com/GhostNaN/mpvpaper) (vidoes found [here](https://github.com/cogikyo/dotfiles/tree/master/share/videos))
 
 </details>
 
@@ -84,7 +77,7 @@
 
 - Editor: [neovim](https://neovim.io/)
 - Browser: [Firefox](https://www.mozilla.org/en-US/firefox/developer/)
-  - with custom [firefox css](https://github.com/nosvagor/vagari.firefox).
+  - with custom [firefox css](https://github.com/cogikyo/vagari.firefox).
 - Terminal: [kitty](https://sw.kovidgoyal.net/kitty/)
 - Shell: [zsh](https://wiki.archlinux.org/title/zsh)
 
@@ -95,7 +88,7 @@
 <details open>
 <summary>🎨 <b>Design Framework</b></summary>
 
-- Color Scheme: [vagari](https://github.com/nosvagor/vagari#palette) (work in progress)
+- Color Scheme: [vagari](https://github.com/cogikyo/vagari#palette) (work in progress)
 - GTK: [catppuccin macchiato (peach)](https://github.com/catppuccin/gtk) (temporary)
 - Cursors: [Nordzy-white](https://github.com/alvatip/Nordzy-cursors) (temporary)
 - Icons: [Nordzy](https://github.com/alvatip/Nordzy-icon) (temporary)
@@ -106,8 +99,7 @@
 <summary>💬 <b>Fonts</b></summary>
 
 - Sans Serif: [Albert Sans](https://fonts.google.com/specimen/Albert+Sans?query=Albert+Sans)
-- Monospace: [Fira Code](https://github.com/tonsky/FiraCode)
-  - Italic: [JetBrains Mono](https://www.jetbrains.com/lp/mono/)
+- Monospace: [Iosevka Vagari](https://typeof.net/Iosevka/) (custom build, see `etc/iosevka/`)
   - Symbols: [Nerd Font Symbols](https://github.com/ryanoasis/nerd-fonts)
 - Emoji: [Noto Color Emoji](https://fonts.google.com/noto/specimen/Noto+Color+Emoji)
 - Other: [Lora (serif)](https://fonts.google.com/specimen/Lora),
@@ -136,33 +128,6 @@
 
 <!-- }}} -->
 
-<br>
-
-## 🪟 Gallery
-
-<p align="center">
-    <kbd>
-        <img
-            src="https://github.com/nosvagor/dotfiles/blob/main/share/example-1.png?raw=true"/>
-    </kbd>
-    <br>
-    <br>
-    <kbd>
-        <img
-            src="https://github.com/nosvagor/dotfiles/blob/main/share/example-2.png?raw=true"/>
-    </kbd>
-    <br>
-    <br>
-    <kbd>
-        <img
-            src="https://github.com/nosvagor/dotfiles/blob/main/share/example-3.png?raw=true"/>
-    </kbd>
-</p>
-
-https://user-images.githubusercontent.com/59071534/232156421-099bea2d-b3a9-4de2-9f1f-c29985230c66.mp4
-
-<br>
-
 <!-- 🛠️ Installation {{{ -->
 
 ## 🛠️ Installation
@@ -174,7 +139,7 @@ https://user-images.githubusercontent.com/59071534/232156421-099bea2d-b3a9-4de2-
   ![image](https://user-images.githubusercontent.com/59071534/232157490-bc96cdec-fa8c-4245-a9fe-76fd57a381af.png)
   ![image](https://user-images.githubusercontent.com/59071534/232157618-c49b549f-6acf-4343-96d0-9f9932196b36.png)
   ![image](https://user-images.githubusercontent.com/59071534/232157647-baabd17f-9cf7-43b1-9577-37eb7daa326d.png)
-  ![image](https://user-images.githubusercontent.com/59071534/232157666-a6fa76f4-43a2-414b-879d-26a200101e18.png) - ZMK firmware (for bluetooth version of keyboard): [nosvagor/zmk-config](https://github.com/nosvagor/zmk-config)
+  ![image](https://user-images.githubusercontent.com/59071534/232157666-a6fa76f4-43a2-414b-879d-26a200101e18.png) - ZMK firmware (for bluetooth version of keyboard): [cogikyo/zmk-config](https://github.com/cogikyo/zmk-config)
 - Monitor: [SAMSUNG UR59 Series 32-Inch 4K UHD (3840x2160)](https://a.co/d/bZtUse0)
 - Mouse: [MX Master 3S](https://www.logitech.com/en-us/products/mice/mx-master-3s.910-006556.html)
 - CPU: [AMD Ryzen 7 3700X (16) @ 3.600GHz](https://www.amd.com/en/products/cpu/amd-ryzen-7-3700x)
@@ -264,7 +229,7 @@ makepkg -si
 
 ```sh
 cd ~
-git clone https://github.com/nosvagor/dotfiles
+git clone https://github.com/cogikyo/dotfiles
 paru -S --needed - < ~/dotfiles/etc/packages.lst
 # might want to review/edit this list ⮭ before installing.
 
@@ -301,11 +266,6 @@ chsh -s /usr/bin/zsh
 cd ~/dotfiles/etc/sddm.conf.d
 mkdir /etc/sddm.conf.d
 sudo cp autologin.conf /etc/sddm.conf.d/
-# note: updates to hyprland sometimes overwrite the desktop entry ⮯
-sudo cp hyprland.desktop /usr/share/wayland-sessions/hyprland.desktop
-# simply copy over the desktop entry as as needed
-# check using: bat /usr/share/wayland-sessions/hyprland.desktop
-# should be: 4 | Exec=hyprwrap (not Hyprland)
 systemctl enable sddm
 ```
 
@@ -331,26 +291,122 @@ sudo cp udev/* /etc/udev/rules.d/ # probably don't want the bluetooth rules
 sudo cp loader.conf /boot/loader/loader.conf
 sudo cp gifview.desktop /usr/share/applications/gifview.desktop
 sudo cp security/faillock.conf /etc/security/faillock.conf
-sudo cp caddy.service /etc/systemd/system/
-sudo cp caddy.service /etc/systemd/system/
 sudo cp logid.cfg /etc/logid.cfg
 sudo systemctl enable bluetooth
-sudo systemctl enable caddy.service
+
+# DNS: systemd-resolved with Cloudflare (DNS-over-TLS)
+sudo ln -sf ~/dotfiles/etc/systemd/resolved.conf /etc/systemd/
+sudo systemctl enable --now systemd-resolved
+sudo mkdir -p /etc/NetworkManager/conf.d
+echo -e "[main]\ndns=systemd-resolved" | sudo tee /etc/NetworkManager/conf.d/dns.conf
+sudo ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+sudo systemctl restart NetworkManager
 ```
 
 <br>
 
-**8. Ensure some preferred fonts are installed:**
+**8. Configure swap and memory management:**
 
 ```sh
+# Create btrfs swap subvolume with 16GB swapfile
+sudo btrfs subvolume create /swap
+sudo truncate -s 0 /swap/swapfile
+sudo chattr +C /swap/swapfile        # disable COW (required for btrfs swap)
+sudo fallocate -l 16G /swap/swapfile
+sudo chmod 600 /swap/swapfile
+sudo mkswap /swap/swapfile
+sudo swapon /swap/swapfile
+
+# Add to /etc/fstab (low priority so zram is used first)
+echo '/swap/swapfile none swap defaults,pri=10 0 0' | sudo tee -a /etc/fstab
+
+# Earlyoom: prevent the brutal kernel OOM killer from randomly killing processes when memory is exhausted.
+sudo systemctl enable --now earlyoom
+```
+
+<br>
+
+**9. Configure hibernation (suspend-then-hibernate):**
+
+```sh
+# Get swapfile resume offset (needed for btrfs swapfile hibernation)
+RESUME_OFFSET=$(sudo btrfs inspect-internal map-swapfile -r /swap/swapfile)
+RESUME_UUID=$(findmnt -no UUID -T /swap/swapfile)
+
+echo "Add to bootloader options: resume=UUID=$RESUME_UUID resume_offset=$RESUME_OFFSET"
+
+# Edit bootloader entry to add resume parameters
+sudo nvim /boot/loader/entries/*_linux.conf
+# Add to 'options' line: resume=UUID=<UUID> resume_offset=<OFFSET>
+
+# Add resume hook to mkinitcpio (after filesystems, before fsck)
+sudo nvim /etc/mkinitcpio.conf
+# HOOKS=(... filesystems resume fsck)
+sudo mkinitcpio -P
+
+# Configure suspend-then-hibernate delay
+sudo mkdir -p /etc/systemd/sleep.conf.d
+sudo cp ~/dotfiles/etc/systemd/sleep.conf.d/hibernate.conf /etc/systemd/sleep.conf.d/
+```
+
+<br>
+
+**10. Install fonts:**
+
+```sh
+# Extract bundled fonts (Albert Sans, Lora, Archivo, etc.)
 mkdir -vp ~/.local/share
 tar -xzvf ~/dotfiles/etc/fonts.tar.gz fonts
 mv fonts ~/.local/share/
+
+# Build custom Iosevka Vagari (monospace)
+cd /tmp
+git clone --depth 1 https://github.com/be5invis/Iosevka.git
+cd Iosevka
+cp ~/dotfiles/etc/iosevka/private-build-plans.toml .
+npm install
+npm run build -- ttf-unhinted::Vagari --jCmd=12
+cp -r dist/Vagari/TTF/* ~/.local/share/fonts/
+fc-cache -fv
+```
+
+> **TODO:** Switch to curated fonts from [Fontshare](https://www.fontshare.com/):
+>
+> - Satoshi (geometric sans for UI)
+> - General Sans or Cabinet Grotesk (display)
+> - Update `fonts.tar.gz` with new selections
+
+<br>
+
+**11. Configure newtab server:**
+
+The custom newtab page (`share/newtab/`) requires updating the Firefox profile path:
+
+```sh
+# Find your Firefox profile directory
+ls ~/.mozilla/firefox/ | grep -E '\.default|\.dev-edition'
+
+# Update the profile path in main.go (replace YOUR_PROFILE with your actual profile name), e.g.:
+sed -i "s/sdfm8kqz.dev-edition-default/YOUR_PROFILE/" ~/dotfiles/share/newtab/main.go
+```
+
+Then set Firefox to use the custom newtab:
+
+1. Open `about:config`
+2. Set `browser.newtabpage.enabled` = `false`
+3. Install an extension like [New Tab Override](https://addons.mozilla.org/en-US/firefox/addon/new-tab-override/)
+4. Set custom URL to `http://localhost:42069`
+
+Start the server (or add to startup):
+
+```sh
+cd ~/dotfiles/share/newtab && go run . &
+# Or use the bin script: newtab-server
 ```
 
 <br>
 
-**9. Update various Firefox `about:config` options:**
+**12. Update Firefox `about:config` options:**
 
 - Increase scaling factor due to 4k screen (HiDPI environment):
 
@@ -369,11 +425,11 @@ mv fonts ~/.local/share/
       extensions.pocket.enabled = false
 
 - Review basic settings (fonts 'n such)
-- Install [vagari.firefox](https://github.com/nosvagor/vagari.firefox) userChrome css
+- Install [vagari.firefox](https://github.com/cogikyo/vagari.firefox) userChrome css
 
 <br>
 
-**10. Configure SSH key:**
+**13. Configure SSH key:**
 
 ```sh
 ssh-keygen -t ed25519 -C "your_email@example.com"
@@ -389,7 +445,7 @@ bat ~/.ssh/id_ed25519.pub
 
 ```sh
 # example moving to ssh origin:
-git remote set-url origin git@github.com:nosvagor/dotfiles.git
+git remote set-url origin git@github.com:cogikyo/dotfiles.git
 ```
 
 <br>
@@ -400,8 +456,8 @@ git remote set-url origin git@github.com:nosvagor/dotfiles.git
 cd ~
 mkdir -vp media/music media/images media/videos media/gifs media/screenshots media/recordings
 mkdir -vp downloads docs/templates docs/books docs/papers docs/share
-git clone git@github.com:nosvagor/vagari.git
-git clone git@github.com:nosvagor/notes.git
+git clone git@github.com:cogikyo/vagari.git
+git clone git@github.com:cogikyo/notes.git
 ```
 
 <!-- }}} -->

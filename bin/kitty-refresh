@@ -1,46 +1,83 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-declare -A TABS=(
-    [nvim]="⟜  ⊸"
-    [term]="⟜  ⊸"
-    [xplr]="⟜ 󰭎 ⊸"
-    [build]="⟜ 󰖷 ⊸"
-    [git]="⟜  ⊸"
-)
-
-declare -A CMDS=(
-    [nvim]='nvim'
-    [term]=''
-    [xplr]='xplr'
-    [build]='just watch'
-    [git]='lazygit'
-)
-
-TAB_ORDER=(nvim term xplr build git)
-
+mode="term"
 refresh=false
-[[ "${1:-}" == "-r" ]] && { refresh=true; shift; }
+
+while [[ "${1:-}" == -* ]]; do
+    case "$1" in
+        -r) refresh=true; shift ;;
+        --claude) mode="claude"; shift ;;
+        *) echo "Unknown option: $1"; exit 1 ;;
+    esac
+done
+
+if [[ "$mode" == "claude" ]]; then
+    declare -A TABS=(
+        [xplr]="⊰ 󰭎  ⊱"
+        [main]="⊰ 󰯉  ⊱"
+        [dev]="⊰   ⊱"
+        [idea]="⊰   ⊱"
+        [git]="⊰   ⊱"
+    )
+    declare -A CMDS=(
+        [xplr]='xplr'
+        [main]='claude'
+        [dev]=''
+        [idea]='claude'
+        [git]='lazygit'
+    )
+    declare -A CLAUDE_VARIANTS=(
+        [main]='main'
+        [dev]='dev'
+        [idea]='idea'
+    )
+    TAB_ORDER=(xplr main dev idea git)
+    PREFIX="claude-"
+    FOCUS_TAB="main"
+    USAGE="kitty-refresh [-r] --claude {main|dev|idea|git|all}"
+else
+    declare -A TABS=(
+        [xplr]="⟜ 󰭎  ⊸"
+        [nvim]="⟜   ⊸"
+        [term]="⟜   ⊸"
+        [build]="⟜   ⊸"
+        [git]="⟜   ⊸"
+    )
+    declare -A CMDS=(
+        [nvim]='nvim'
+        [term]=''
+        [xplr]='xplr'
+        [build]='just watch'
+        [git]='lazygit'
+    )
+    TAB_ORDER=(xplr nvim term build git)
+    PREFIX=""
+    FOCUS_TAB="nvim"
+    USAGE="kitty-refresh [-r] {nvim|term|xplr|build|git|all}"
+    declare -A CLAUDE_VARIANTS=()
+fi
 
 tab="${1:-}"
-[[ -z "$tab" ]] && { echo "Usage: kitty-refresh [-r] {nvim|term|xplr|build|git|all}"; exit 1; }
-[[ "$tab" != "all" && -z "${TABS[$tab]:-}" ]] && { echo "Usage: kitty-refresh [-r] {nvim|term|xplr|build|git|all}"; exit 1; }
+[[ -z "$tab" ]] && { echo "Usage: $USAGE"; exit 1; }
+[[ "$tab" != "all" && -z "${TABS[$tab]:-}" ]] && { echo "Usage: $USAGE"; exit 1; }
 
 kitty_state=$(kitty @ ls)
 window_id=$(echo "$kitty_state" | jq -r '.[0].id')
-cwd="${PWD}"
+cwd=$(echo "$kitty_state" | jq -r '.[0].tabs[] | select(.is_focused) | .windows[] | select(.is_focused) | .cwd')
 
 get_tab_index() {
     local name="$1"
-    local tab_id="${window_id}-${name}"
+    local tab_id="${window_id}-${PREFIX}${name}"
     kitty @ ls | jq -r --arg id "$tab_id" '.[0].tabs | to_entries[] | select(.value.windows[0].env.KITTY_TAB_ID == $id) | .key'
 }
 
 open_tab() {
     local name="$1"
-    local tab_id="${window_id}-${name}"
+    local tab_id="${window_id}-${PREFIX}${name}"
     local title="${TABS[$name]}"
     local cmd="${CMDS[$name]}"
+    local variant="${CLAUDE_VARIANTS[$name]:-}"
 
     if [[ "$name" == "build" ]]; then
         just --list --justfile "$cwd/justfile" &>/dev/null || { "$refresh" && kitty @ close-tab --match "env:KITTY_TAB_ID=${tab_id}" 2>/dev/null || true; return 0; }
@@ -52,20 +89,31 @@ open_tab() {
 
     "$refresh" && kitty @ close-tab --match "env:KITTY_TAB_ID=${tab_id}" 2>/dev/null || true
 
+    local env_args=(--env KITTY_TAB_ID="$tab_id")
+    [[ -n "$variant" ]] && env_args+=(--env CLAUDE_VARIANT="$variant")
+
     if [[ -n "$cmd" ]]; then
-        kitty @ launch --type=tab --hold --copy-env --env KITTY_TAB_ID="$tab_id" --tab-title="$title" --cwd="$cwd" "$cmd" >/dev/null
+        kitty @ launch --type=tab --hold --copy-env "${env_args[@]}" --tab-title="$title" --cwd="$cwd" "$cmd" >/dev/null
     else
-        kitty @ launch --type=tab --copy-env --env KITTY_TAB_ID="$tab_id" --tab-title="$title" --cwd="$cwd" >/dev/null
+        kitty @ launch --type=tab --copy-env "${env_args[@]}" --tab-title="$title" --cwd="$cwd" >/dev/null
     fi
+}
+
+close_launcher_tab() {
+    # Close the initial launcher tab (has no KITTY_TAB_ID env var)
+    local launcher_tab_id
+    launcher_tab_id=$(kitty @ ls | jq -r '.[0].tabs[] | select(.windows[0].env.KITTY_TAB_ID == null or .windows[0].env.KITTY_TAB_ID == "") | .id' | head -1)
+    [[ -n "$launcher_tab_id" ]] && kitty @ close-tab --match "id:${launcher_tab_id}" 2>/dev/null || true
 }
 
 if [[ "$tab" == "all" ]]; then
     for name in "${TAB_ORDER[@]}"; do
         open_tab "$name"
     done
-    kitty @ focus-tab --match "env:KITTY_TAB_ID=${window_id}-term" 2>/dev/null || true
+    close_launcher_tab
+    kitty @ focus-tab --match "env:KITTY_TAB_ID=${window_id}-${PREFIX}${FOCUS_TAB}" 2>/dev/null || true
 else
-    kitty @ focus-tab --match "env:KITTY_TAB_ID=${window_id}-${tab}" 2>/dev/null || true
+    kitty @ focus-tab --match "env:KITTY_TAB_ID=${window_id}-${PREFIX}${tab}" 2>/dev/null || true
     original_idx=$(get_tab_index "$tab")
     open_tab "$tab"
     new_idx=$(get_tab_index "$tab")

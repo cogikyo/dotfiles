@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 day () {
-    date +'{"weekday":"%A", "month":"%B", "day":"%d"}' >> "/tmp/eww/date"
+    date +'{"weekday":"%A", "weekday_short":"%a", "month":"%B", "month_short":"%b", "day":"%d"}' >> "/tmp/eww/date"
 }
 
 week () {

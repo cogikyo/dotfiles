@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 SOUND_PATH="$HOME/dotfiles/share/sounds"
-# dunsitfy arguments ⮯
+# dunstify arguments ⮯
 app="$1"
-# summary="$2"
-# body="$3"
+summary="$2"
+body="$3"
 # icon_path="$4"
 urgency="$5"
 
@@ -23,8 +23,16 @@ case "$app" in
     wf-end) sound="reward" ;;
     Spotify) sound="none" ;;
     discord) sound="none" ;;
-    Slack) sound="knock"
-;; esac
+    Slack) sound="knock" ;;
+    claude) sound="fruit" ;;
+    claude-input) sound="reward" ;;
+    kitty)
+        # Only suppress kitty notifications mentioning Claude
+        if [[ "${summary,,}${body,,}" == *claude* ]]; then
+            sound="none"
+        fi
+        ;;
+esac
 
 if [ "$sound" == "none" ]; then
     exit 0

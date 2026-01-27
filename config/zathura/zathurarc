@@ -46,4 +46,4 @@ set search-hadjust               false
 set scroll-page-aware            true
 set scroll-step                  200
 set zoom-step                    6
-set recolor                      true
+set recolor                      false
