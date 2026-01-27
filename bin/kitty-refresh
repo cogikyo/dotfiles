@@ -14,14 +14,14 @@ done
 
 if [[ "$mode" == "claude" ]]; then
     declare -A TABS=(
-        [xplr]="⊰ 󰭎  ⊱"
+        # [xplr]="⊰ 󰭎  ⊱"
         [main]="⊰ 󰯉  ⊱"
         [dev]="⊰   ⊱"
         [idea]="⊰   ⊱"
         [git]="⊰   ⊱"
     )
     declare -A CMDS=(
-        [xplr]='xplr'
+        # [xplr]='xplr'
         [main]='claude'
         [dev]=''
         [idea]='claude'
@@ -32,13 +32,13 @@ if [[ "$mode" == "claude" ]]; then
         [dev]='dev'
         [idea]='idea'
     )
-    TAB_ORDER=(xplr main dev idea git)
+    TAB_ORDER=(main dev idea git)
     PREFIX="claude-"
     FOCUS_TAB="main"
     USAGE="kitty-refresh [-r] --claude {main|dev|idea|git|all}"
 else
     declare -A TABS=(
-        [xplr]="⟜ 󰭎  ⊸"
+        # [xplr]="⟜ 󰭎  ⊸"
         [nvim]="⟜   ⊸"
         [term]="⟜   ⊸"
         [build]="⟜   ⊸"
@@ -47,11 +47,11 @@ else
     declare -A CMDS=(
         [nvim]='nvim'
         [term]=''
-        [xplr]='xplr'
+        # [xplr]='xplr'
         [build]='just watch'
         [git]='lazygit'
     )
-    TAB_ORDER=(xplr nvim term build git)
+    TAB_ORDER=(nvim term build git)
     PREFIX=""
     FOCUS_TAB="nvim"
     USAGE="kitty-refresh [-r] {nvim|term|xplr|build|git|all}"
@@ -65,6 +65,11 @@ tab="${1:-}"
 kitty_state=$(kitty @ ls)
 window_id=$(echo "$kitty_state" | jq -r '.[0].id')
 cwd=$(echo "$kitty_state" | jq -r '.[0].tabs[] | select(.is_focused) | .windows[] | select(.is_focused) | .cwd')
+
+# Fallback to PWD if cwd is empty or home
+if [[ -z "$cwd" || "$cwd" == "$HOME" ]]; then
+    cwd="${PWD:-$HOME}"
+fi
 
 get_tab_index() {
     local name="$1"
