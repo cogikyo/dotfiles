@@ -8,7 +8,7 @@ palette = 'vagari'                           # palette definition must be last
 # ============================================================================
 
 format = """
-[╭╼╾ $sudo$username ╼╾ $hostname ${custom.vpn}╼╾ $python$lua$golang$package$shell](blu_2) $status $cmd_duration
+[╭╼╾ $sudo$username ╼╾ $hostname$python$lua$golang$package$shell](blu_2) $status $cmd_duration
 [╞╾](blu_2)$directory$git_branch$git_commit$git_state$git_status
 [╰╼╾ $character](blu_2)
 """
