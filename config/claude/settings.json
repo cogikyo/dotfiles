@@ -1,4 +1,8 @@
 {
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
   "permissions": {
     "allow": [
       "Read",
@@ -14,13 +18,36 @@
     ]
   },
   "model": "opus",
-  "outputStyle": "default",
-  "attribution": {
-    "commit": "",
-    "pr": ""
+  "hooks": {
+    "Notification": [
+      {
+        "matcher": "permission_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/cullyn/dotfiles/bin/claude-notify permission"
+          }
+        ]
+      },
+      {
+        "matcher": "idle_prompt",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/cullyn/dotfiles/bin/claude-notify idle"
+          }
+        ]
+      }
+    ]
   },
   "statusLine": {
     "type": "command",
-    "command": "/Users/cullyn/dotfiles/config/claude/statusline-bin"
+    "command": "/home/cullyn/dotfiles/config/claude/statusline-bin"
+  },
+  "outputStyle": "explanatory",
+  "promptSuggestionEnabled": false,
+  "shiftTabHint": false,
+  "enabledPlugins": {
+    "gopls-lsp@claude-plugins-official": true
   }
 }

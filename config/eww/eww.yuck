@@ -34,10 +34,12 @@
 
 
 (defwindow today
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
-  :geometry (geometry :width "40%" :anchor "top left" :x "1060px")
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
+  :geometry (geometry :width "45%" :anchor "top center")
   (centerbox
-    (weather) (time) (date)
+    (box :halign "end" (weather))
+    (box :halign "center" (time))
+    (box :halign "start" (date))
   )
 )
 ; 🌧️ weather: {{{
@@ -234,6 +236,7 @@
     :orientation "v"
     :valign "center"
     :spacing -3
+    :style "margin-left: 3px; margin-right: -4px;"
     :space-evenly false
     (clock :child "hour" :text "${clockface-hour} " :bool hour-active)
     (clock :child "minute" :text "${clockface-minute} " :bool minute-active)
@@ -301,7 +304,7 @@
   'tail -F /tmp/eww/weeks_alive 2> /dev/null'
 )
 (deflisten date
-  :initial `{"weekday":"?", "month":"?", "day":"?"}`
+  :initial `{"weekday":"?", "weekday_short":"?", "month":"?", "month_short":"?", "day":"?"}`
   'tail -F /tmp/eww/date 2> /dev/null'
 )
 (defvar date-hover false)
@@ -328,13 +331,13 @@
       )
       (label
         :class "date-${cycle-6 == 0 ? "${date.weekday}" : "base"}"
-        :text " 󰃭 ${date.weekday}"
+        :text " 󰃭 ${date-hover ? date.weekday : date.weekday_short}"
         :style "margin-right: -4px; margin-left: -2px;"
         :tooltip "  󰃭 ${date.weekday}, ${date.month} ${date.day} "
       )
       (label
         :class "date-month date-${cycle-6 == 1 ? "base" : "base-alt"}"
-        :text ", ${date.month}"
+        :text ", ${date-hover ? date.month : date.month_short}"
         :style "margin-top: 1px;"
         :tooltip "  󰃭 ${date.weekday}, ${date.month} ${date.day} "
       )
@@ -360,15 +363,59 @@
 
 
 (defwindow computer
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
-  :geometry (geometry :anchor "top right" :x "100px")
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
+  :geometry (geometry :anchor "top right" :x "80px")
   (box
     :halign "end" :space-evenly false :spacing 0
     :class "tr-m"
-    (cpu) (memory) (gpu)
+    (network) (cpu) (memory)
   )
 )
 ; 💻 computer: {{{
+; 🌐 network: {{{
+
+(deflisten net-info
+  :initial `{"type":"none","icon":"󰖪","name":"disconnected","iface":"lo","vpn":false,"down":0,"up":0,"down_ramp":1,"up_ramp":1,"down_fmt":"0<sub>K</sub>","up_fmt":"0<sub>K</sub>"}`
+  `bin/network_info`
+)
+(defvar network-hover false)
+(defvar vpn-name "TrendCapitalVPN")
+
+(defwidget network []
+  (eventbox
+    :onhover "eww update network-hover=true"
+    :onhoverlost "eww update network-hover=false"
+    :onclick "kitty --title='terminalfloat' -e nmtui & disown"
+    :onmiddleclick "nmcli connection ${net-info.vpn ? 'down' : 'up'} '${vpn-name}'"
+    :cursor "pointer"
+    (box
+      :class "computerbox ${network-hover ? "computerbox-hover" : "" }"
+      :space-evenly false :spacing "${network-hover ? "6" : "2" }"
+      (label
+        :class "tr-c ramp-7"
+        :visible {net-info.vpn}
+        :text "󰖂  "
+      )
+      (label
+        :class "tr-c ramp-${net-info.type == "802-11-wireless" ? "9" : net-info.type == "802-3-ethernet" ? "4" : "1"}"
+        :text "${net-info.icon}${network-hover ? " ": "  "}"
+      )
+      (slide-n-fade :bool network-hover :direction "right"
+        (label :class "tr-c ramp-${net-info.type == "802-11-wireless" ? "9" : net-info.type == "802-3-ethernet" ? "4" : "1"}" :markup "${net-info.name} ")
+      )
+      (label :class "tr-c ramp-${net-info.down_ramp}" :text "󰁆${network-hover ? "": " "}")
+      (slide-n-fade :bool network-hover :direction "right"
+        (label :class "tr-c ramp-${net-info.down_ramp}" :markup "<small>${net-info.down_fmt}</small>")
+      )
+      (label :class "tr-c ramp-${net-info.up_ramp}" :text "󰁞")
+      (slide-n-fade :bool network-hover :direction "right"
+        (label :class "tr-c ramp-${net-info.up_ramp}" :markup "<small>${net-info.up_fmt}</small>")
+      )
+    )
+  )
+)
+
+; }}}
 
 ; Update `define_builtin_vars! { Duration::new(0, 500000000)` in inbuilt.rs
 ; Default is (2, 0), but I like updates of 0.5 seconds for cpu polling.
@@ -648,7 +695,7 @@
 
 
 (defwindow user
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :anchor "top right" :y "-3px" )
   (box :halign "end" :space-evenly false :spacing 0
     (user)
@@ -658,15 +705,15 @@
 
 
 
-(defvar user-art-path `/home/cullyn/.config/eww/art/nosvagor.png`)
+(defvar user-art-path `/home/cullyn/.config/eww/art/cogikyo.png`)
 (defvar user-hover false)
 (defwidget user []
  (eventbox
     :onhover "eww update user-hover=true"
     :onhoverlost "eww update user-hover=false"
-    :onclick "${browser} https://twitter.com/nosvagor & disown"
+    :onclick "${browser} https://twitter.com/cogikyo & disown"
     :onmiddleclick "${browser} https://www.youtube.com/feed/subscriptions & disown"
-    :onrightclick "${browser} https://github.com/nosvagor & disown"
+    :onrightclick "${browser} https://github.com/cogikyo & disown"
     (box :space-evenly false :spacing 0
       :class "userbox"
       :style "background-image: url('${user-art-path}');"
@@ -676,24 +723,23 @@
 ; }}}
 
 
-(defwindow assistant
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
-  :geometry (geometry :anchor "top left" :y "-3px" )
-  (assistant)
+(defwindow player
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
+  :geometry (geometry :anchor "top left"  :y "-3px" )
+  (player)
 )
-; ❄️  assistant: {{{
-(defvar assistant "/home/cullyn/.config/eww/art/yuki.png" )
-(defvar assistant-hover false)
-(defwidget assistant []
+; ❄️  player {{{
+(defvar player "/home/cullyn/.config/eww/art/player.png" )
+(defvar player-hover false)
+(defwidget player []
   (eventbox
-    :onhover "eww update assistant-hover=true"
-    :onhoverlost "eww update assistant-hover=false"
-    :onclick "${browser} https://chat.openai.com/chat?model=gpt-4 & disown"
-    :onrightclick "${browser} https://mail.google.com/mail/u/0/#inbox & disown"
-    :onmiddleclick "${browser} https://mail.google.com/mail/u/1/#inbox & disown"
+    :onhover "eww update player-hover=true"
+    :onhoverlost "eww update player-hover=false"
+    :onmiddleclick "${browser} www.google.com/search?q='${pctl.artist}' & disown"
+    :onrightclick "hyprctl dispatch workspace 5 & change-bg 'music' & disown"
     (box
-      :class "assistantbox"
-      :style "margin-top: -1px; margin-left: -6px; background-image: url('${matches("${pctl.status}", "Playing") ? album-art-path : assistant}');"
+      :class "playerbox"
+      :style "margin-left: -5px; background-image: url('${matches("${pctl.status}", "Playing") ? album-art-path : playerctl-img}');"
     )
   )
 )
@@ -701,7 +747,7 @@
 
 
 (defwindow albumArt
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :anchor "bottom right" :x "208px" :y "383")
   (albumArt)
 )
@@ -713,13 +759,13 @@
     :onhover "eww update music-hover=true"
     :onhoverlost "eww update music-hover=false"
     :onclick "playerctl "
-    :onclick "playerctl --player=${player} play-pause"
+    :onclick "playerctl --player=${player-client} play-pause"
     :onscroll "bin/music_info seek {}"
     :onmiddleclick "${browser} www.google.com/search?q='${pctl.artist}' & disown"
     :onrightclick "hyprctl dispatch workspace 5 & change-bg 'music' & disown"
     (box
       :class "album-art ${music-hover ? "album-art-hover" : ""}"
-      :style "background-image: url('${matches("${pctl.status}", "Playing") ? album-art-path : playerctl}');"
+      :style "background-image: url('${matches("${pctl.status}", "Playing") ? album-art-path : playerctl-img}');"
       :tooltip "  » 󰠃 ${pctl.artist}  󰎆 ${pctl.title} "
       (circular-progress
         :class "tr-a album-art-progress ${music-hover ? "album-art-progress-hover" : ""}"
@@ -736,8 +782,8 @@
 
 
 (defwindow music
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
-  :geometry (geometry :anchor "top left" :x "0px")
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
+  :geometry (geometry :anchor "top left" :x "20px")
   (box
     :halign "start" :space-evenly false :spacing 0
     :class "tr-m"
@@ -751,13 +797,13 @@
   :interval "1s"
   "bin/music_info progress"
 )
-(defvar player "spotify")
+(defvar player-client "spotify")
 (defvar album-art-path "/tmp/eww/album_art.png")
 (deflisten pctl
   :initial '{ "status":"Paused", "volume":"1.0", "artist":"", "album":"", "title":""}'
   'tail -F /tmp/eww/music.json 2> /dev/null'
 )
-(defvar playerctl `/home/cullyn/.config/eww/art/player.png`)
+(defvar playerctl-img `/home/cullyn/.config/eww/art/player.png`)
 
 
 (defwidget music []
@@ -777,7 +823,7 @@
         (eventbox
           :class "tr-a music-progress-circle-icon-${matches("${pctl.status}", "Playing") ? "playing" : "paused" }"
           :cursor "pointer"
-          :onclick "playerctl --player=${player} previous"
+          :onclick "playerctl --player=${player-client} previous"
           (label :text "󰒮")
         )
       )
@@ -786,7 +832,7 @@
         (eventbox
           :class "tr-a music-progress-circle-icon-${matches("${pctl.status}", "Playing") ? "playing" : "paused" }"
           :cursor "pointer"
-          :onclick "playerctl --player=${player} next"
+          :onclick "playerctl --player=${player-client} next"
           (label :text "󰒭" )
         )
       )
@@ -854,7 +900,7 @@
       (box :class "music-progress-circle-icon"
         (eventbox
           :class "tr-a music-progress-circle-icon-${matches("${pctl.status}", "Playing") ? "playing" : "paused" }"
-          :onclick "playerctl --player=${player} play-pause"
+          :onclick "playerctl --player=${player-client} play-pause"
           :onscroll "bin/music_info seek {}"
           :cursor "pointer"
           (label :text "${matches("${pctl.status}", "Playing") ? "󰏦" : "󰐍"}")
@@ -866,9 +912,9 @@
 
 (defwidget music-volume [value]
   (eventbox
-      :onclick "playerctl --player=${player} volume 1"
-      :onmiddleclick "playerctl --player=${player} volume 0.01"
-      :onrightclick "playerctl --player=${player} volume 0"
+      :onclick "playerctl --player=${player-client} volume 1"
+      :onmiddleclick "playerctl --player=${player-client} volume 0.01"
+      :onrightclick "playerctl --player=${player-client} volume 0"
       :onscroll "bin/music_info volume {} 0.1"
       :cursor "pointer"
     (box :style "margin-right: 4px;" :class "tr-c ramp-${
@@ -964,6 +1010,7 @@
     :onclick "bin/pulse_info set_default ${content} & disown"
     :onmiddleclick "kitty --title='terminalfloat' -e pulsemixer & disown"
     :onrightclick "bin/pulse_info mute ${content} & disown"
+    :onmiddleclick "bluetoothctl connect 14:3F:A6:10:A1:B5 & disown"
     :onscroll "bin/pulse_info change_volume ${content} {} & disown"
     :cursor "pointer"
     :tooltip "  ${icon-on} ${content}: ${value}% "
@@ -1000,8 +1047,8 @@
 
 (defwidget bluetooth-status [value]
   (label
-    :class "tr-c ${(matches(sink-name, "WH-1000XM4") || matches(sink-name, "pixel buds")) ? "" : "music-inactive"}"
-    :text "${(matches(sink-name, "WH-1000XM4") || matches(sink-name, "pixel buds")) ? "󰂯 " : "󰂲 "}"
+    :class "tr-c ${(matches(sink-name, "WH-1000XM4") || matches(sink-name, "OpenFit")) ? "" : "music-inactive"}"
+    :text "${(matches(sink-name, "WH-1000XM4") || matches(sink-name, "OpenFit")) ? "󰂯 " : "󰂲 "}"
     :style "margin-left: -2px; margin-top: 2px;"
     :tooltip " Bluetooth ${(matches(sink-name, "WH-1000XM4") || matches(sink-name, "pixel buds")) ? "Connected" : "Disconnected"}  "
   )
@@ -1011,7 +1058,7 @@
 
 (defwindow workspaces
   :monitor 0 :stacking "bottom" :exclusive false :focusable false
-  :geometry (geometry :anchor "center right" :x "620px" :y "0px")
+  :geometry (geometry :anchor "top right" :x "0px" :y "0px")
   (workspaces)
 )
 ;; 👾 workspaces: {{{
@@ -1030,6 +1077,10 @@
   :initial "5"
   'tail -F /tmp/eww/occupied 2> /dev/null'
 )
+(deflisten monocle-origin
+  :initial ""
+  'tail -F /tmp/eww/monocle 2> /dev/null'
+)
 
 (defwidget workspace [icon num desc hover]
   (eventbox
@@ -1041,6 +1092,7 @@
     :tooltip "  ${desc}  "
     (box
       :style "background-image: url('art/ws-icons/${icon}${
+                monocle-origin == num ? "-monocle" :
                 hover ? "-hover" :
                 matches(active-ws,num) ? "-active" :
                 "${matches(occupied, "${num}") ? "" : "-empty"}"
@@ -1056,16 +1108,9 @@
     :onhoverlost "eww update ws-hover=false"
     :onrightclick "hyprctl dispatch workspace previous"
     (box
-      :class "tr-a workspacesbox ${ws-hover ? "workspacesbox-hover" : ""}"
+      :class "tr-a workspacesbox ${ws-hover ? "workspacesbox-hover" : ""} ${monocle-origin != "" ? "workspacesbox-monocle" : ""}"
       :halign "center" :space-evenly false :spacing 10
-      :orientation "${active-ws == "5" ? "horizontal" : "vertical"}"
-      :style "${active-ws == "5" ?
-          "
-          margin-right: 38px;
-          margin-top: 260px;
-          padding: 11px 15px 0px 15px;
-          "
-        : "" }"
+      :orientation "vertical"
       (workspace :icon "network"  :num "1" :hover ws-h1 :desc " chat 'n networking")
       (workspace :icon "learn"    :num "2" :hover ws-h2 :desc " documents 'n such" )
       (workspace :icon "dna"      :num "3" :hover ws-h3 :desc " primary desktop" )
@@ -1077,7 +1122,7 @@
 ;; }}}
 
 (defwindow screenctl
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :anchor "top right" :y "1260px")
   (screenctl)
 )
@@ -1109,99 +1154,9 @@
 
 ; }}}
 
-(defwindow network
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
-  :geometry (geometry :anchor "top right" :y "80px" )
-  (network)
-)
-; 📶 network: {{{
-
-(defvar network-hover false)
-
-(defwidget network []
-  (eventbox
-    :onhover "eww update network-hover=true"
-    :onhoverlost "eww update network-hover=false"
-    (box
-      :space-evenly false :spacing 0
-      :class "tr-a networkbox ${network-hover ? "networkbox-hover" : "" }"
-      :style "
-          background-image: url('art/signal/signal${ network-hover ? "-hover" : "" }.svg');
-        "
-      (box :space-evenly false :spacing 0 :valign "center" :halign "center"
-        (net-down
-          :icon " "
-          :value {round(EWW_NET.en2ps0.NET_DOWN / 100000, 2)}
-          :bool network-hover
-        )
-        (net-up
-          :icon " "
-          :value {round(EWW_NET.en2ps0.NET_UP / 100000, 2)}
-          :bool network-hover
-        )
-        (ping)
-      )
-    )
-  )
-)
-
-(defwidget net-down [icon value bool]
-  (box :space-evenly false :spacing 0 :tooltip "   ${value} Mbps "
-    :class "net net-down${bool ? "-hover" : "" } ramp-${
-      value < 1   ? "2"  :
-      value < 10  ? "3"  :
-      value < 20  ? "4"  :
-      value < 30  ? "6"  :
-      value < 50  ? "7"  :
-      value < 80  ? "9"  :
-      value < 130 ? "11" : "12"
-    }"
-    (label :text icon)
-  )
-)
-
-(defwidget net-up [icon value bool]
-  (box :space-evenly false :spacing 0 :tooltip "   ${value} Mbps "
-    :class "net net-up${bool ? "-hover" : "" } ramp-${
-      value < 0.01 ? "2"  :
-      value < 0.1  ? "3"  :
-      value < 1    ? "4"  :
-      value < 2    ? "6"  :
-      value < 4    ? "7"  :
-      value < 8    ? "9"  :
-      value < 16   ? "11" : "12"
-    }"
-    (label :text icon)
-  )
-)
-
-(defpoll ping
-  :initial "0"
-  :interval "3s"
-  `bin/ping`
-)
-(defwidget ping []
-  (box
-    :class "net net-ping${network-hover ? "-hover" : "" }"
-    :space-evenly false :spacing 0 :valign "center"
-    :tooltip "   ${ping != 0 ? "${ping} ms" : "determining..."} "
-    (label
-      :class "tr-a ramp-${
-        ping < 10  ? "3" :
-        ping < 30  ? "5" :
-        ping < 70  ? "8" :
-        ping < 120 ? "9" :
-        ping < 200 ? "11" : "12"
-      }"
-      :text " ${ping}"
-    )
-  )
-)
-; }}}
-
 
 (defwindow dunst
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :anchor "bottom right" :y "95px" )
   (dunst)
 )
@@ -1249,7 +1204,7 @@
 
 
 (defwindow systemctl
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :anchor "bottom right" :y "1255px" )
   (systemctl)
 )
@@ -1302,7 +1257,7 @@
 
 
 (defwindow pacman
-  :monitor 0 :stacking "overlay" :exclusive false :focusable false
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :anchor "bottom right" :x "-22px" :y "170px" )
   (pacman)
 )

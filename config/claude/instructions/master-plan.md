@@ -18,7 +18,7 @@ Plans live in a `PLANS/` directory with this structure:
 
 ```
 PLANS/
-├── MASTER.md      # Full spec overview, links to scopes (read first)
+├── MASTER.md      # Tree overview, links to scopes (read first)
 ├── LOG.md         # Append-only work log (read second)
 ├── QUESTIONS.md   # Open questions needing answers
 ├── DISCOVERIES.md # Important learnings, context, research
@@ -29,7 +29,7 @@ PLANS/
 
 | File | Purpose |
 |------|---------|
-| **MASTER.md** | Entry point. Full detailed spec. Architecture, links to all scopes. Zero-to-hero in one read. |
+| **MASTER.md** | Entry point. Brief context, architecture, links to all scopes. Zero-to-hero in one read. |
 | **LOG.md** | Append-only history. Read before work, append after. Breaks loops, provides memory. |
 | **QUESTIONS.md** | Open questions needing resolution. Deferred questions land here. |
 | **DISCOVERIES.md** | Research findings, blockers, context relevant to overall implementation. |
@@ -46,10 +46,10 @@ PLANS/
 **Format:** `**action(context)**: message` — Commit-message style. Brief but not cryptic.
 
 ```markdown
-- **add(MASTER)**: rate limiting section
+- **add(MASTER)**: rate limiting phase, blocked pending Redis caching decision
+- **move(MASTER)**: SSE phase to Ready Now, docs obtained from infra team
 - **split(AUTH.md)**: separated permissions into own file for clearer ownership
 - **update(DISCOVERIES)**: documented Redis vs Memcached tradeoffs from research
-- **refine(MODELS)**: added field descriptions for NotificationPreference
 ```
 
 ### QUESTIONS.md Rules
@@ -63,14 +63,15 @@ Open questions that block progress or need user/research input.
 > 2. Memcached
 > 3. **Defer** — add to QUESTIONS.md for later
 
-Deferred questions get added to QUESTIONS.md with context about why it matters.
+Deferred questions get added to QUESTIONS.md with context about why it matters and what it blocks.
 
 **Format:**
 
 ```markdown
 ## Q: Redis vs Memcached for session caching?
 
-**Context**: Auth system needs caching layer. Redis has persistence, Memcached is simpler.
+**Context**: Auth phase needs caching layer. Redis has persistence, Memcached is simpler.
+**Blocks**: Phase: Auth Infrastructure
 **Added**: 2024-01-15
 
 ### Research Notes
@@ -92,203 +93,32 @@ Resolves open questions through research and user input.
 6. Resolved questions → update relevant plan files, remove from QUESTIONS.md
 7. Log all changes
 
----
-
-## Subcommand: `/master-plan finish`
-
-Transitions plan from planning to implementation mode.
-
-**Flow:**
-1. **Remove disclaimers** - Strip all "NEVER EXECUTE" / "THIS IS A PLAN" language from MASTER.md
-2. **Discover CLAUDE.md files** - Find all CLAUDE.md files in the project root and subdirectories. These contain project conventions that agents must follow.
-3. **Scour for issues** - Scan ALL plan files for:
-   - Unresolved questions (`?` in prose, items in QUESTIONS.md)
-   - Ambiguous markers (`TODO:`, `TBD`, `UNKNOWN`, `???`)
-   - Conflicting statements between scope files
-4. **Resolve or abort** - Present any issues to user. Must resolve before proceeding.
-5. **Truncate LOG.md** - Move existing content to `LOG_ARCHIVE.md`, start fresh with:
-   ```
-   - **finish**: transitioned to implementation mode
-   ```
-6. **Create IMPLEMENTATION.yaml** - State tracking for automation loop
-7. **Add CLAUDE.md references to MASTER.md** - Include links to all discovered CLAUDE.md files so agents load them
-8. **Prepend instructions to MASTER.md** - Implementation loop instructions block
+This often results in updates across multiple plan files at once as questions unlock blocked phases.
 
 ---
 
-### CLAUDE.md References Block
+## Phase Organization
 
-Added to MASTER.md during finish. Provides agents with project-specific conventions.
+**NO NUMBERED PHASES.** Numbers imply order. Phases get reordered, unblocked, blocked.
 
-**Discovery:** Run `find . -name "CLAUDE.md" -type f` from project root.
-
-**Template (adapt paths based on discovery):**
+Instead use: `**Phase: Context**` under sections: EXAMPLE:
 
 ```markdown
-### Project Instructions
+## Phases
 
-Before implementing, read these project-specific instruction files:
+### Ready Now
+- [ ] **Phase: Core Infrastructure** - Models, enums, init
+- [ ] **Phase: Bell Icon API** - List, UnreadCount, MarkRead
 
-| File | Purpose |
-|------|---------|
-| [CLAUDE.md](../CLAUDE.md) | Root project conventions, patterns, tech stack |
-| [subdir/CLAUDE.md](../subdir/CLAUDE.md) | Subdirectory-specific conventions |
+### Blocked by SSE
+- [ ] **Phase: Core Senders** - InApp, Email, Slack
+- [ ] **Phase: SSE Integration** - Obtain docs, implement push
 
-These files contain critical context that agents MUST follow during implementation.
+### Blocked by Design
+- [ ] **Phase: Subscriptions API** - Matching strategy TBD
 ```
 
-**Rules:**
-- Include ALL discovered CLAUDE.md files
-- Paths should be relative from PLANS/ directory
-- Add brief purpose description for each (infer from location or file content)
-
----
-
-### IMPLEMENTATION.yaml
-
-Created in PLANS/ directory. Tracks state for each scope file.
-
-```yaml
-# Auto-generated by /master-plan finish
-# Updated by implementation loop - do not edit manually
-
-scopes:
-  MODELS.md:
-    status: pending    # pending | in_progress | done | ISSUE
-    attempts: 0
-    issue: null
-
-  HANDLERS.md:
-    status: pending
-    attempts: 0
-    issue: null
-
-  # ... one entry per scope file
-```
-
----
-
-### Implementation Instructions Block
-
-Prepended to MASTER.md (replaces the disclaimer block):
-
-```markdown
----
-## IMPLEMENTATION MODE
-
-This plan is being implemented via automated loop.
-
-### Your Task
-
-You are tasked with finding and completing **1 TASK ONLY**.
-
-### Before Acting
-
-1. **Read MASTER.md** - This file contains the full plan context and these instructions
-2. **Read IMPLEMENTATION.yaml** - Check current state of all scopes
-3. **Read LOG.md** - Understand recent context and what's happened
-4. **Read CLAUDE.md files** - Load project-specific instructions from ALL CLAUDE.md files in the workspace (root and subdirectories). Check the "Project Instructions" section in this file for links. These contain critical project conventions.
-5. **Check git log** - Review recent commits to verify past agents followed instructions
-6. **Handle uncommitted files** - If any exist, commit them with appropriate message before proceeding
-7. **Select ONE pending scope** - Pick a scope with `status: pending`
-
-### Execution
-
-1. **Evaluate scope size** - If too large to complete in one pass:
-   - Break it into smaller scope files
-   - Add new entries to IMPLEMENTATION.yaml
-   - Log: `- **split(SCOPE)**: broke into X smaller scopes`
-   - Commit: `split(SCOPE): broke into X smaller scopes`
-   - Return `<TASK COMPLETE>`
-
-2. **Implement the scope** - Complete the work described in the scope file
-
-3. **Log your work** - Append to LOG.md (detailed notes):
-   ```
-   - **implement(SCOPE)**: what you did, files changed, decisions made
-   ```
-
-4. **Commit your work** - Create clean commit (brief message):
-   ```
-   implement(SCOPE): concise summary
-   ```
-   Do NOT push. Just commit to current branch.
-
-5. **Verify BEFORE marking done** - Re-read the scope file and verify ALL items are FULLY implemented:
-   - Check every bullet point, requirement, and acceptance criteria
-   - If ANY part is not implemented, set `status: in_progress` NOT `done`
-   - Only set `status: done` when 100% of the scope is complete
-
-6. **Update state** - Set status in IMPLEMENTATION.yaml based on verification above
-
-### Git Discipline
-
-- **Commit after each task** — One scope = one commit
-- **Clean commit messages** — `action(scope): brief summary` format
-- **LOG.md has details** — Commit messages stay short, LOG.md has full context
-- **Never push** — Commits stay local for human review
-- **Verify history** — Check recent commits show proper patterns from past agents
-- **Resolve orphaned work** — Uncommitted changes from crashed agents should be committed with `recover(SCOPE): description`
-
-### Error Handling
-
-If implementation fails:
-1. Log attempt: `- **attempt(SCOPE)**: what went wrong`
-2. Commit attempt: `attempt(SCOPE): what went wrong`
-3. Increment `attempts` in IMPLEMENTATION.yaml
-4. If `attempts > 3`:
-   - Set `status: ISSUE`
-   - Set `issue: "description of the problem"`
-5. Move on to other pending tasks
-
-### Completion Signals
-
-Return EXACTLY one of these at the end of your response:
-
-- `<TASK COMPLETE>` — You completed (or split) one scope, more work remains
-- `<ALL TASKS DONE TO BEST OF ABILITY>` — All scopes are `done` or `ISSUE`, nothing left to do
-
-### Rules
-
-- **ONE TASK ONLY** — Never attempt multiple scopes in one pass
-- **CHECK LOG FIRST** — Always read LOG.md before acting
-- **CHECK GIT LOG** — Verify past agents committed properly
-- **LOG EVERYTHING** — All actions must be traceable in LOG.md
-- **COMMIT EVERYTHING** — All actions must have a commit (clean history)
-- **SKIP ISSUE TASKS** — Don't retry scopes with 3+ failed attempts
-- **BE EXPLICIT** — End with a completion signal, always
-- **FULL STACK** — This is a full-stack project. You implement BOTH backend AND frontend. Never mark a scope "not in scope" because it involves frontend or a different layer.
-- **NO "NOT IN SCOPE" EXCUSES** — Every scope must be fully implemented. You cannot mark a task done by claiming parts are "not in scope", "frontend-only", "lives elsewhere", or "already handled by API". If the scope describes it, you implement it.
-- **VERIFY BEFORE DONE** — Re-read the scope file before marking done. If ANY item remains unimplemented, status is `in_progress`, not `done`.
----
-```
-
----
-
-## Plan Structure
-
-Plans are broken into **scopes** — logical chunks that one person can pick up and complete.
-
-Each scope file should be:
-- **Self-contained**: All context needed to implement
-- **Clear on boundaries**: What's in scope, what's not
-- **Detailed enough**: No ambiguity about what to build
-
-MASTER.md links to all scopes and provides the full picture. Scope files provide implementation detail.
-
-**Example MASTER.md structure:**
-
-```markdown
-## Scopes
-
-| Scope | Description |
-|-------|-------------|
-| [MODELS.md](./MODELS.md) | Database models and enums |
-| [HANDLERS.md](./HANDLERS.md) | API endpoint handlers |
-| [SERVICES.md](./SERVICES.md) | Business logic layer |
-```
-
-No ordering implied. A person picks a scope, does it, reports back.
+When a blocker resolves, move the phase to "Ready Now". Or move to section if potentially blocked by something different.
 
 ---
 
@@ -319,7 +149,7 @@ No ordering implied. A person picks a scope, does it, reports back.
 6. Append to LOG.md what you did
 7. Done. No implementation.
 
-**IMPORTANT**: If any edit is made to any plan file, LOG.md must be updated.
+!IMPORTANT: if any edit is ever amde to any plan file, make sure log is upadted! this can often be missed.
 
 ---
 
@@ -346,8 +176,9 @@ If asked to "just implement this one thing":
 - Problem statement / overview
 - Architecture diagram (text)
 - Quick links table to all scope files
-- File structure (target state)
-- Technical decisions and rationale
+- File structure (target state) -- IMPORTANT
+- Current blockers table
+- Phase sections (Ready Now, Blocked by X)
 
 Top and bottom should have:
 
@@ -355,18 +186,6 @@ Top and bottom should have:
 **IMPORTANT: NEVER EXECUTE THIS PLAN**
 **THIS PLAN IS MASTER PLAN FOR BLUEPRINT DESIGN SPEC**
 **THIS WARNING WILL BE REMOVED WHEN READY TO IMPLEMENT**
-```
-
----
-
-## Implementation Loop
-
-After running `/master-plan finish`, use ralph to implement:
-
-```bash
-cd /path/to/project  # must have PLANS/ directory
-ralph                # default 50 passes
-ralph 100            # custom max passes
 ```
 
 ---

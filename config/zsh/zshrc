@@ -1,3 +1,5 @@
+[ -f "$HOME/.config/shell/env.sh" ] && source "$HOME/.config/shell/env.sh"
+
 eval "$(starship init zsh)"
 eval "$(zoxide init zsh)"
 
@@ -5,11 +7,6 @@ function command_not_found_handler {
     return 127
 }
 
-export TERM=xterm-256color
-
-if [ -f "$HOME/.anthropic_api_key" ]; then
-  export ANTHROPIC_API_KEY=$(cat "$HOME/.anthropic_api_key")
-fi
 
 # history
 HISTFILE=~/.histfile
@@ -24,16 +21,47 @@ setopt AUTO_CD
 alias niol='clear && source ~/.zshrc'
 alias ls='echo; lsd'
 alias n='nvim'
-alias c='calc'
+alias c='claude'
 alias zz='cd ~'
 alias m="make"
+alias j="just"
+alias jt="just test"
+alias jr="just req"
+alias jw="just watch"
 alias g='cd "$(xplr --print-pwd-as-result)"'
+alias rh='git reset --soft HEAD^'
 alias d='cd ~/dotfiles'
 alias D='cd ~/downloads'
 alias v='cd ~/vagari'
 alias e='cd ~/dotfiles/config/nvim'
 alias x='exit'
 alias p='paru'
+alias k='kaizen'
+alias lg='lazygit'
+alias ld='lazydocker'
+alias uvpn='nmcli connection up "TrendCapitalVPN"'
+alias dvpn='nmcli connection down "TrendCapitalVPN"'
+ivpn() {
+    local file="$1"
+    [[ -f "$file" ]] || { echo "No such file: $1"; return 1; }
+
+    # Force .conf extension if missing
+    [[ "$file" != *.conf ]] && file="$file.conf"
+    [[ -f "$file" ]] || { echo "Still no file: $file"; return 1; }
+
+    local name=$(grep -m1 '^id=' "$file" | cut -d= -f2- | xargs)
+    [[ -z "$name" ]] && name=$(basename "$file" .conf)
+
+    echo "Importing → $name"
+    sudo nmcli connection import type l2tp file "$file" || return 1
+
+    echo "\nAvailable VPN connectios:"
+    nmcli connection show | grep -E "(vpn|l2tp)" | grep -v "^--"
+
+    echo "\nAuthenticate with:"
+    echo "\nnmcli connection up \"$name\" --ask"
+}
+
 alias update='paru -Syu && paru -Qqe > ~/dotfiles/etc/packages.lst'
 alias oc='ouch compress'
 alias od='ouch decompress'
@@ -41,14 +69,14 @@ alias ol='ouch list --tree'
 alias man='man --pager=$PAGER'
 alias zoomfix='env XDG_CURRENT_DESKTOP=GNOME GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb XDG_SESSION_TYPE=x11 zoom & disown'
 alias af='GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb audacity & disown'
-function tree () {
+function etree () {
     echo
     if [[ -z $1 ]]; then
         L=2
     else
         L=$1
     fi
-    erd -L "$L" -I --suppress-size --threads 16 --layout inverted
+    erd -L "$L" --suppress-size --threads 16 --layout inverted
 }
 
 alias ew='eww-open'

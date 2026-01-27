@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="style.css" />
+    <title>㋦</title>
+  </head>
+
+  <body>
+    <video src="dna.webm" autoplay muted loop></video>
+
+    <nav class="toolbar top-right"></nav>
+    <nav class="toolbar top-left"></nav>
+    <nav class="toolbar bottom"></nav>
+
+    <div class="container">
+      <input type="text" autofocus />
+      <div class="loading hidden">
+        <svg class="spinner" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" stroke-width="2" fill="none" />
+        </svg>
+        <span class="loading-text"></span>
+      </div>
+      <div class="suggestions"></div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>

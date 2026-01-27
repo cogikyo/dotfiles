@@ -1,0 +1,154 @@
+// Place your key bindings in this file to override the defaults
+[
+  {
+    "key": "meta+i",
+    "command": "composer.startComposerPrompt",
+    "when": "composerIsEnabled"
+  },
+  {
+    "key": "ctrl+i",
+    "command": "-composer.startComposerPrompt",
+    "when": "composerIsEnabled"
+  },
+  {
+    "key": "meta+i",
+    "command": "composer.startComposerControlPanel",
+    "when": "composerIsEnabled && isComposerControlPanelEnabled"
+  },
+  {
+    "key": "ctrl+shift+i",
+    "command": "-composer.startComposerControlPanel",
+    "when": "composerIsEnabled && isComposerControlPanelEnabled"
+  },
+  {
+    "key": "ctrl+shift+b",
+    "command": "extension.vim_ctrl+b",
+    "when": "editorTextFocus && vim.active && vim.use<C-b> && !inDebugRepl && vim.mode != 'Insert'"
+  },
+  {
+    "key": "ctrl+b",
+    "command": "-extension.vim_ctrl+b",
+    "when": "editorTextFocus && vim.active && vim.use<C-b> && !inDebugRepl && vim.mode != 'Insert'"
+  },
+  {
+    "key": "shift+meta+t",
+    "command": "workbench.action.quickOpen"
+  },
+  {
+    "key": "ctrl+p",
+    "command": "-workbench.action.quickOpen"
+  },
+  {
+    "key": "meta+i",
+    "command": "composer.startComposerPrompt"
+  },
+  {
+    "key": "ctrl+i",
+    "command": "-composer.startComposerPrompt"
+  },
+  {
+    "key": "ctrl+shift+i i",
+    "command": "composer.newAgentChat"
+  },
+  {
+    "key": "ctrl+shift+i",
+    "command": "-composer.newAgentChat"
+  },
+  {
+    "key": "meta+r c",
+    "command": "editor.foldLevel1",
+    "when": "editorTextFocus && foldingEnabled"
+  },
+  {
+    "key": "ctrl+m ctrl+1",
+    "command": "-editor.foldLevel1",
+    "when": "editorTextFocus && foldingEnabled"
+  },
+  {
+    "key": "ctrl+shift+meta+space t",
+    "command": "vscode-harpoon.addEditor1"
+  },
+  {
+    "key": "ctrl+shift+meta+space e",
+    "command": "vscode-harpoon.addEditor2"
+  },
+  {
+    "key": "ctrl+shift+meta+space s",
+    "command": "vscode-harpoon.addEditor3"
+  },
+  {
+    "key": "ctrl+shift+meta+space a",
+    "command": "vscode-harpoon.addEditor4"
+  },
+  {
+    "key": "ctrl+shift+meta+space g",
+    "command": "vscode-harpoon.addEditor5"
+  },
+  {
+    "key": "ctrl+shift+meta+space f",
+    "command": "vscode-harpoon.addEditor6"
+  },
+  {
+    "key": "ctrl+shift+meta+space d",
+    "command": "vscode-harpoon.addEditor7"
+  },
+  {
+    "key": "ctrl+shift+space y",
+    "command": "vscode-harpoon.editEditors"
+  },
+  {
+    "key": "ctrl+shift+space t",
+    "command": "vscode-harpoon.gotoEditor1"
+  },
+  {
+    "key": "ctrl+shift+space e",
+    "command": "vscode-harpoon.gotoEditor2"
+  },
+  {
+    "key": "ctrl+shift+space s",
+    "command": "vscode-harpoon.gotoEditor3"
+  },
+  {
+    "key": "ctrl+shift+space a",
+    "command": "vscode-harpoon.gotoEditor4"
+  },
+  {
+    "key": "ctrl+shift+space g",
+    "command": "vscode-harpoon.gotoEditor5"
+  },
+  {
+    "key": "ctrl+shift+space f",
+    "command": "vscode-harpoon.gotoEditor6"
+  },
+  {
+    "key": "ctrl+shift+space d",
+    "command": "vscode-harpoon.gotoEditor7"
+  },
+  {
+    "key": "shift+meta+f",
+    "command": "workbench.action.findInFiles"
+  },
+  {
+    "key": "shift+meta+p",
+    "command": "workbench.action.showCommands"
+  },
+  {
+    "key": "shift+meta+e",
+    "command": "workbench.view.explorer",
+    "when": "viewContainer.workbench.view.explorer.enabled"
+  },
+  {
+    "key": "ctrl+shift+e",
+    "command": "-workbench.view.explorer",
+    "when": "viewContainer.workbench.view.explorer.enabled"
+  },
+  {
+    "key": "shift+meta+i",
+    "command": "composerMode.plan"
+  },
+  {
+    "key": "alt+k",
+    "command": "-claude-vscode.insertAtMention",
+    "when": "editorTextFocus"
+  }
+]

@@ -4,7 +4,7 @@
 set -euo pipefail
 
 CACHE_DIR="/tmp/hypr-monocle"
-MONOCLE_SIZE="3200 1914"
+MONOCLE_SIZE="3190 1920"
 MONOCLE_WS_FILE="/tmp/eww/monocle"
 
 BORDER_DEFAULT="rgb(f2a170)"
@@ -69,9 +69,9 @@ restore_monocle() {
     local monocle_addr="$1"
     local monocle_cache="$CACHE_DIR/$monocle_addr"
     [[ ! -f "$monocle_cache" ]] && return 1
-    
+
     IFS=':' read -r position orig_ws <<< "$(<"$monocle_cache")"
-    
+
     hyprctl --batch "\
         dispatch focuswindow address:$monocle_addr; \
         dispatch togglefloating; \
@@ -103,7 +103,7 @@ fi
 if [[ "$workspace_id" == "6" && "$floating" == "true" ]]; then
     if [[ -f "$cache_file" ]]; then
         IFS=':' read -r position orig_ws <<< "$(<"$cache_file")"
-        
+
         hyprctl --batch "\
             dispatch togglefloating; \
             dispatch movetoworkspace $orig_ws; \
@@ -137,7 +137,7 @@ else
         dispatch moveactive 0 25; \
         keyword general:col.active_border $BORDER_MONOCLE; \
         keyword decoration:shadow:color $SHADOW_MONOCLE"
-    
+
     pos=$(hyprctl activewindow -j | jq -r '"\(.at[0] + .size[0]/2),\(.at[1] + .size[1]/2)"')
     hyprctl dispatch movecursor "${pos%,*} ${pos#*,}"
 fi
