@@ -47,9 +47,7 @@ ICON_HOST = " ⾥"  # host indicator
 
 # Layout
 RIGHT_MARGIN = -8
-MAX_CWD_LENGTH = 60  # max total characters for cwd display
-MAX_CWD_DEPTH = 4  # max directory levels to show
-MAX_DIR_LENGTH = 10  # truncate individual dir names longer than this
+MAX_CWD_DEPTH = 2  # max directory levels to show
 
 
 # ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -121,11 +119,13 @@ def get_cwd() -> str:
         else:
             parts[0] = ICON_ROOT_BASE
 
-    # Format path, truncating if too long
-    full_path = parts[0] + "/".join(parts[1:])
-    if len(full_path) <= MAX_CWD_LENGTH:
-        return full_path
-    return TRUNCATE + parts[-1]
+    # Limit to MAX_CWD_DEPTH directories (excluding the icon prefix)
+    dir_parts = parts[1:]  # directories without the icon
+    if len(dir_parts) > MAX_CWD_DEPTH:
+        # Show truncation symbol + last MAX_CWD_DEPTH directories
+        return TRUNCATE + "/".join(dir_parts[-MAX_CWD_DEPTH:])
+
+    return parts[0] + "/".join(dir_parts)
 
 
 # ╭─────────────────────────────────────────────────────────────────────────────╮
