@@ -5,8 +5,14 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 IOSEVKA_DIR="$HOME/downloads/Iosevka"
-FONT_DIR="$HOME/.local/share/fonts"
 FONT_NAME="Vagari"
+
+# Cross-platform font directory
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    FONT_DIR="$HOME/Library/Fonts"
+else
+    FONT_DIR="$HOME/.local/share/fonts"
+fi
 MAX_JOBS="${1:-8}"  # Limit parallel jobs (each uses ~1GB RAM), override with: ./build.sh N
 
 # Clone Iosevka if needed
@@ -43,13 +49,19 @@ echo "Installing new fonts..."
 mkdir -p "$FONT_DIR"
 cp "$IOSEVKA_DIR/dist/$FONT_NAME/TTF/"*.ttf "$FONT_DIR/"
 
-# Refresh font cache
-echo "Refreshing font cache..."
-fc-cache -fv
+# Refresh font cache (Linux only, macOS auto-detects)
+if [[ "$OSTYPE" != "darwin"* ]]; then
+    echo "Refreshing font cache..."
+    fc-cache -fv
+fi
 
 echo ""
 echo "Done! Installed fonts:"
-fc-list | grep -i vagari | head -5
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    ls "$FONT_DIR" | grep -i vagari | head -5
+else
+    fc-list | grep -i vagari | head -5
+fi
 
 echo ""
 echo "Restart Kitty (ctrl+shift+f5) and use these settings:"
