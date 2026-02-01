@@ -97,8 +97,8 @@ local function setup()
 			lsp_interop = {
 				enable = true,
 				peek_definition_code = {
-					["<leader>hf"] = "@function.outer",
-					["<leader>hc"] = "@class.outer",
+					["<leader>pf"] = "@function.outer",
+					["<leader>pc"] = "@class.outer",
 				},
 			},
 		},
