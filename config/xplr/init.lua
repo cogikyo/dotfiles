@@ -13,7 +13,6 @@ local function style(color, add_mods)
 	}
 end
 
--- more shorthand for common {format, style} pattern
 local function format(fmt, color, mods)
 	return {
 		format = fmt,
@@ -279,8 +278,8 @@ local general = {
 		{ sorter = "ByIRelativePath", reverse = false },
 	},
 
-	initial_mode = "default",
-	initial_layout = "default",
+	initial_mode = "preview_mode",
+	initial_layout = "preview",
 	start_fifo = nil,
 
 	global_key_bindings = {
@@ -523,7 +522,7 @@ on_key["R"] = {
 -- }}}
 
 -- ============================================================================
--- 📦 XPM, PREP THE THING! 🢢 {{{
+-- 📦 Plugins Setup:
 local home = os.getenv("HOME")
 
 -- Add plugins path for preview.xplr (manual installs)
@@ -632,7 +631,7 @@ xplr.config.layouts.custom.preview = {
 						"Table",
 						{
 							CustomContent = {
-								title = " Preview",
+								title = "  Preview",
 								body = {
 									DynamicParagraph = {
 										render = "custom.preview.render",
@@ -648,32 +647,107 @@ xplr.config.layouts.custom.preview = {
 	},
 }
 
--- Custom preview mode (inherits default mode, adds P to close)
+-- Layout with Selection panel instead of Preview (for when items are selected)
+xplr.config.layouts.custom.selection = {
+	Horizontal = {
+		config = {
+			margin = 1,
+			horizontal_margin = 2,
+			constraints = { { Percentage = 100 } },
+		},
+		splits = {
+			{
+				Vertical = {
+					config = {
+						constraints = {
+							{ Length = 3 },
+							{ Percentage = 50 },
+							{ Percentage = 50 },
+							{ Length = 3 },
+						},
+					},
+					splits = {
+						"SortAndFilter",
+						"Table",
+						"Selection",
+						"InputAndLogs",
+					},
+				},
+			},
+		},
+	},
+}
+
+-- Helper to copy all keybindings from default mode
+local function inherit_default_keys()
+	local keys = {}
+	for k, v in pairs(on_key) do
+		keys[k] = v
+	end
+	return keys
+end
+
+-- Custom preview mode (default startup mode - shows preview panel)
+local preview_keys = inherit_default_keys()
+preview_keys["P"] = {
+	help = "close preview",
+	messages = {
+		{ SwitchLayoutBuiltin = "default" },
+		{ SwitchModeBuiltin = "default" },
+	},
+}
+preview_keys["space"] = {
+	help = "toggle selection",
+	messages = {
+		"ToggleSelection",
+		{ SwitchLayoutCustom = "selection" },
+		{ SwitchModeCustom = "selection_mode" },
+	},
+}
+
 xplr.config.modes.custom.preview_mode = {
 	name = "preview",
 	key_bindings = {
-		on_key = {
-			["P"] = {
-				help = "close preview",
-				messages = {
-					{ SwitchLayoutBuiltin = "default" },
-					"PopMode",
-				},
-			},
-			-- Navigation (inherit from default mode behavior)
-			["up"] = modes.default.key_bindings.on_key["up"],
-			["down"] = modes.default.key_bindings.on_key["down"],
-			["k"] = modes.default.key_bindings.on_key["up"],
-			["j"] = modes.default.key_bindings.on_key["down"],
-			["enter"] = modes.default.key_bindings.on_key["enter"],
-			["right"] = on_key["right"],
-			["left"] = modes.default.key_bindings.on_key["left"],
-			["g"] = modes.default.key_bindings.on_key["g"],
-			["G"] = modes.default.key_bindings.on_key["G"],
-			["/"] = modes.default.key_bindings.on_key["/"],
-			["q"] = modes.default.key_bindings.on_key["q"],
-			["v"] = on_key["v"],
+		on_key = preview_keys,
+	},
+}
+
+-- Selection mode (shows selection panel instead of preview)
+local selection_keys = inherit_default_keys()
+selection_keys["P"] = {
+	help = "back to preview",
+	messages = {
+		{ SwitchLayoutCustom = "preview" },
+		{ SwitchModeCustom = "preview_mode" },
+	},
+}
+selection_keys["space"] = {
+	help = "toggle selection",
+	messages = {
+		"ToggleSelection",
+		-- Check if selection is empty via bash, switch back to preview
+		{
+			BashExecSilently0 = [===[
+				if [ -z "$XPLR_SELECTION" ]; then
+					"$XPLR" -m 'SwitchLayoutCustom: preview' -m 'SwitchModeCustom: preview_mode'
+				fi
+			]===],
 		},
+	},
+}
+selection_keys["u"] = {
+	help = "clear selection",
+	messages = {
+		"ClearSelection",
+		{ SwitchLayoutCustom = "preview" },
+		{ SwitchModeCustom = "preview_mode" },
+	},
+}
+
+xplr.config.modes.custom.selection_mode = {
+	name = "selection",
+	key_bindings = {
+		on_key = selection_keys,
 	},
 }
 
