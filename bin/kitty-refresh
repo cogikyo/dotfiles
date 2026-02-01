@@ -14,11 +14,20 @@ while [[ "${1:-}" == -* ]]; do
     esac
 done
 
+if [[ -n "$search_pattern" && "$mode" == "term" ]]; then
+    _kitty_state=$(kitty @ ls)
+    _window_id=$(echo "$_kitty_state" | jq -r '.[0].id')
+    if echo "$_kitty_state" | jq -e --arg prefix "${_window_id}-claude-" \
+        '.[0].tabs[].windows[0].env.KITTY_TAB_ID | select(. != null and startswith($prefix))' &>/dev/null; then
+        mode="claude"
+    fi
+fi
+
 if [[ "$mode" == "claude" ]]; then
     declare -A TABS=(
-        [xplr]="⊰ 󰭎  ⊱"
+        [xplr]="⊰   ⊱"
         [master]="⊰ 󰯉  ⊱"
-        [dev]="⊰  󰚗  ⊱"
+        [dev]="⊰   ⊱"
         [plan]="⊰   ⊱"
         [git]="⊰   ⊱"
     )
@@ -28,11 +37,6 @@ if [[ "$mode" == "claude" ]]; then
         [dev]='claude'
         [plan]='claude'
         [git]='claude'
-    )
-    declare -A CLAUDE_VARIANTS=(
-        [master]='master'
-        [dev]='dev'
-        [plan]='plan'
     )
     TAB_ORDER=(xplr master dev plan git)
     PREFIX="claude-"
@@ -57,17 +61,17 @@ else
     PREFIX=""
     FOCUS_TAB="nvim"
     USAGE="kitty-refresh [-r] {nvim|term|xplr|build|git|all}"
-    declare -A CLAUDE_VARIANTS=()
 fi
 
 kitty_state=$(kitty @ ls)
 
-# Handle -s search mode: parse "term|claude" format and find matching tab
+# Handle -s search mode: parse "term:claude" format and find matching tab
+# e.g., "build:plan" means: use "build" in term session OR "plan" in claude session
 if [[ -n "$search_pattern" ]]; then
-    # Parse term|claude format (e.g., "nvim|master" or just "xplr")
-    if [[ "$search_pattern" == *"|"* ]]; then
-        term_name="${search_pattern%%|*}"
-        claude_name="${search_pattern##*|}"
+    # Parse term:claude format (e.g., "nvim:master", "build:plan", or just "xplr")
+    if [[ "$search_pattern" == *":"* ]]; then
+        term_name="${search_pattern%%:*}"
+        claude_name="${search_pattern##*:}"
         [[ "$mode" == "claude" ]] && tab_name="$claude_name" || tab_name="$term_name"
     else
         tab_name="$search_pattern"
@@ -115,7 +119,6 @@ open_tab() {
     local tab_id="${window_id}-${PREFIX}${name}"
     local title="${TABS[$name]}"
     local cmd="${CMDS[$name]}"
-    local variant="${CLAUDE_VARIANTS[$name]:-}"
 
     if [[ "$name" == "build" ]]; then
         just --list --justfile "$cwd/justfile" &>/dev/null || { "$refresh" && kitty @ close-tab --match "env:KITTY_TAB_ID=${tab_id}" 2>/dev/null || true; return 0; }
@@ -128,7 +131,6 @@ open_tab() {
     "$refresh" && kitty @ close-tab --match "env:KITTY_TAB_ID=${tab_id}" 2>/dev/null || true
 
     local env_args=(--env KITTY_TAB_ID="$tab_id")
-    [[ -n "$variant" ]] && env_args+=(--env CLAUDE_VARIANT="$variant")
 
     if [[ -n "$cmd" ]]; then
         kitty @ launch --type=tab --hold --copy-env "${env_args[@]}" --tab-title="$title" --cwd="$cwd" "$cmd" >/dev/null
