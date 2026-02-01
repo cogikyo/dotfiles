@@ -2,7 +2,7 @@
 
 # Skills linking script
 # Usage:
-#   link.sh user              - Symlink all user skills to ~/.claude/skills/
+#   link.sh user              - Symlink all user skills to ~/.config/claude/skills/
 #   link.sh project <name>    - Symlink a project skill to ./.claude/skills/
 
 set -euo pipefail
@@ -12,7 +12,7 @@ USER_SKILLS_DIR="$SCRIPT_DIR/user"
 PROJECT_SKILLS_DIR="$SCRIPT_DIR/project"
 
 link_user_skills() {
-    local target_dir="${HOME}/.claude/skills"
+    local target_dir="${HOME}/.config/claude/skills"
     mkdir -p "$target_dir"
 
     if [[ ! -d "$USER_SKILLS_DIR" ]]; then
@@ -57,7 +57,7 @@ case "${1:-}" in
         ;;
     *)
         echo "Usage:"
-        echo "  link.sh user              - Link all user skills to ~/.claude/skills/"
+        echo "  link.sh user              - Link all user skills to ~/.config/claude/skills/"
         echo "  link.sh project <name>    - Link a project skill to ./.claude/skills/"
         exit 1
         ;;
