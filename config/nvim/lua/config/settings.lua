@@ -17,6 +17,7 @@ local options = {
 	smoothscroll = true, -- scroll by screen line, not text line
 
 	hlsearch = true, -- highlight all search matches
+	showmode = false,
 	shortmess = "filnxtToOFcsIC", -- shorten/suppress various messages
 	number = true, -- show absolute line number
 	relativenumber = true, -- show relative line numbers (easier motions)
@@ -26,7 +27,7 @@ local options = {
 	foldmethod = "expr",
 	foldexpr = "v:lua.vim.treesitter.foldexpr()",
 	foldlevel = 6,
-	updatetime = 250, -- timer until events execute when cursors stops (ms)
+	updatetime = 300, -- timer until events execute when cursors stops (ms)
 	timeoutlen = 500, -- timeout for mapped sequence to complete
 	fillchars = "vert: ,horiz: ,fold:⋅,eob: ,msgsep:‾",
 
@@ -36,6 +37,7 @@ local options = {
 	completeopt = { "menu", "menuone", "noselect" }, -- insert complete options
 	iskeyword = "@,48-57,_,-,192-255,#", -- define what a ends a "word"
 	swapfile = false, -- swapfiles are useless to me
+	autoread = true, -- auto-reload files changed externally
 	undofile = true, -- persistent undo, very useful with 'mbbill/undotree' plugin
 	wildignore = ".back,~,.o,.h,.info,.swp,.obj,.pyc", -- don't check these files for "*" pattern matching
 }
