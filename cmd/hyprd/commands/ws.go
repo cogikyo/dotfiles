@@ -6,9 +6,8 @@ package commands
 
 import (
 	"fmt"
-	"strconv"
-
 	"hyprd/hypr"
+	"strconv"
 )
 
 // WS handles the workspace switch command.
@@ -16,7 +15,7 @@ type WS struct {
 	hypr *hypr.Client
 }
 
-// NewWS creates a ws command handler.
+// NewWS creates a workspace command handler.
 func NewWS(h *hypr.Client) *WS {
 	return &WS{hypr: h}
 }
