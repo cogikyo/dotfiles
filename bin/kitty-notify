@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Kitty command completion notification
+# - Suppresses Claude commands (handled by dedicated hooks)
+# - Strips "Click to focus" from notification body
+
+CMD="$1"
+
+# Skip Claude commands - they have dedicated notification hooks
+[[ "$CMD" =~ ^claude ]] && exit 0
+
+# Send notification without "Click to focus" action text
+dunstify -a "kitty" -t "5000" " Finished" "$CMD"
