@@ -126,6 +126,7 @@ verb(scope/context): description
 | `ci`       | CI/CD                            |
 
 **NEVER use `update`** - it's too generic. Pick the specific verb:
+
 - Adding a word to spell dictionary? → `add`
 - Changing config values? → `edit`
 - Adding new config options? → `extend`
