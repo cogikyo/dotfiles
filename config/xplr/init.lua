@@ -69,13 +69,15 @@ local general = {
 	table = {
 		header = {
 			cols = {
-				{ format = "  " },
+				{ format = "   󱣱 " },
 				{
-					format = "╭╼╾⼮path ──────────────────────────────────────╮",
+					format = "╭╼╾⼮path ──────────────────────────────────────────────────────────────────────────────╮",
 				},
-				{ format = "⼈⾕⾥" },
+				{ format = "   " },
 				{ format = "󰖡 size ─╮" },
-				{ format = "🞊 modified ────╮" },
+				{
+					format = "  modified ────────────╮",
+				},
 			},
 			style = style("Green"),
 			height = 1,
@@ -368,19 +370,17 @@ local node_types = {
 		dotfiles = meta("🍙"),
 		docs = meta(" "),
 		books = meta(" "),
-		papers = meta("⼠"),
 		templates = meta(" "),
 		notes = meta("📚"),
 		media = meta("󰈯 "),
-		vagari = meta("🧬"),
 		share = meta("⾦"),
 		music = meta(" "),
 		gifs = meta("󰤺 "),
 		screenshots = meta(" "),
 		images = meta("󰋯 "),
-		videos = meta("📽 "),
-		recordings = meta("⏺ "),
-		etc = meta("⽳"),
+		videos = meta(" "),
+		recordings = meta("󰕧 "),
+		etc = meta(" "),
 		bin = meta("⼡"),
 		usr = meta("⼈"),
 		home = meta("⾕", orange),
@@ -532,6 +532,14 @@ on_key["R"] = {
 -- ============================================================================
 -- 📦 XPM, PREP THE THING! 🢢 {{{
 local home = os.getenv("HOME")
+
+-- Add plugins path for preview.xplr (manual installs)
+package.path = home
+	.. "/.config/xplr/plugins/?/init.lua;"
+	.. home
+	.. "/.config/xplr/plugins/?.lua;"
+	.. package.path
+
 local xpm_path = home .. "/.local/share/xplr/dtomvan/xpm.xplr"
 local xpm_url = "https://github.com/dtomvan/xpm.xplr"
 
@@ -598,6 +606,68 @@ local nuke_on_key = xplr.config.modes.custom.nuke.key_bindings.on_key
 
 on_key["v"] = nuke_on_key.v
 on_key["right"] = nuke_on_key.o
+
+-- 👁️ Preview Plugin
+require("preview").setup({
+	as_default = false,
+	keybind = "P",
+	left_pane_constraint = { Percentage = 55 },
+	right_pane_constraint = { Percentage = 45 },
+	style = false,
+	text = {
+		enable = true,
+		highlight = {
+			enable = true,
+			method = "truecolor",
+			style = nil,
+		},
+	},
+	image = {
+		enable = true,
+		method = "kitty",
+	},
+	directory = {
+		enable = true,
+	},
+})
+
+-- Custom preview mode (inherits default mode, adds P to close)
+xplr.config.modes.custom.preview_mode = {
+	name = "preview",
+	key_bindings = {
+		on_key = {
+			["P"] = {
+				help = "close preview",
+				messages = {
+					{ SwitchLayoutBuiltin = "default" },
+					"PopMode",
+				},
+			},
+			-- Navigation (inherit from default mode behavior)
+			["up"] = modes.default.key_bindings.on_key["up"],
+			["down"] = modes.default.key_bindings.on_key["down"],
+			["k"] = modes.default.key_bindings.on_key["up"],
+			["j"] = modes.default.key_bindings.on_key["down"],
+			["enter"] = modes.default.key_bindings.on_key["enter"],
+			["right"] = on_key["right"],
+			["left"] = modes.default.key_bindings.on_key["left"],
+			["g"] = modes.default.key_bindings.on_key["g"],
+			["G"] = modes.default.key_bindings.on_key["G"],
+			["/"] = modes.default.key_bindings.on_key["/"],
+			["q"] = modes.default.key_bindings.on_key["q"],
+			["v"] = on_key["v"],
+		},
+	},
+}
+
+-- Toggle preview with P from default mode
+on_key["P"] = {
+	help = "toggle preview",
+	messages = {
+		{ SwitchLayoutCustom = "preview" },
+		{ SwitchModeCustom = "preview_mode" },
+	},
+}
 
 -- }}}
 -- ============================================================================
