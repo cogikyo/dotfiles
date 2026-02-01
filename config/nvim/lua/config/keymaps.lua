@@ -245,7 +245,7 @@ map("n", "<leader>ct", ":HighlightColors Toggle<CR>",              desc("Toggle 
 map("n", "<leader>st", ":set spell!<CR>",                          desc("Toggle spell"))
 map("n", "<leader>sc", ":let @/ = ''<CR>",                         desc("Clear search"))
 map("n", "<leader>wt", ":set wrap!<CR> :echo 'wrap toggled'<CR>",  desc("Toggle wrap"))
-map("n", "<leader>mt", ":MarkdownPreviewToggle<CR>,",              desc("Markdown preview"))
+map("n", "<leader>mt", ":MarkdownPreviewToggle<CR>",               desc("Markdown preview"))
 map("n", "<leader>et", ":NvimTreeToggle<CR> :NvimTreeRefresh<CR>", desc("Toggle file tree"))
 map("n", "<leader>bt", ":Switch<CR>",                              desc("Toggle variant"))
 -- stylua: ignore end
