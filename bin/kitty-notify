@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# Kitty command completion notification
-# - Suppresses Claude commands (handled by dedicated hooks)
-# - Strips "Click to focus" from notification body
 
 CMD="$1"
 
