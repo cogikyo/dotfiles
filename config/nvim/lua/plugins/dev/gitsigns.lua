@@ -9,12 +9,19 @@ return {
 
 		gitsigns.setup({
 			signs = {
-				add = { text = "┣" },
+				add = { text = "┃" },
 				change = { text = "┃" },
-				untracked = { text = "┊" },
-				delete = { text = "│" },
-				topdelete = { text = "┼" },
+				untracked = { text = "┋" },
+				delete = { text = "▁" },
+				topdelete = { text = "▔" },
 				changedelete = { text = "╋" },
+			},
+			signs_staged = {
+				add = { text = "│" },
+				change = { text = "│" },
+				delete = { text = "▁" },
+				topdelete = { text = "▔" },
+				changedelete = { text = "┼" },
 			},
 
 			signcolumn = true,

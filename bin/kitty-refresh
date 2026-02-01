@@ -3,10 +3,12 @@ set -euo pipefail
 
 mode="term"
 refresh=false
+search_pattern=""
 
 while [[ "${1:-}" == -* ]]; do
     case "$1" in
         -r) refresh=true; shift ;;
+        -s) search_pattern="$2"; shift 2 ;;
         --claude) mode="claude"; shift ;;
         *) echo "Unknown option: $1"; exit 1 ;;
     esac
@@ -15,27 +17,27 @@ done
 if [[ "$mode" == "claude" ]]; then
     declare -A TABS=(
         [xplr]="⊰ 󰭎  ⊱"
-        [main]="⊰ 󰯉  ⊱"
-        [dev]="⊰   ⊱"
-        [idea]="⊰   ⊱"
-        [git]="⊰   ⊱"
+        [master]="⊰ 󰯉  ⊱"
+        [dev]="⊰  󰚗  ⊱"
+        [plan]="⊰   ⊱"
+        [git]="⊰   ⊱"
     )
     declare -A CMDS=(
-        [xplr]='xplr'
-        [main]='claude'
-        [dev]=''
-        [idea]='claude'
-        [git]='lazygit'
+        [xplr]='claude'
+        [master]='claude'
+        [dev]='claude'
+        [plan]='claude'
+        [git]='claude'
     )
     declare -A CLAUDE_VARIANTS=(
-        [main]='main'
+        [master]='master'
         [dev]='dev'
-        [idea]='idea'
+        [plan]='plan'
     )
-    TAB_ORDER=(xplr main dev idea git)
+    TAB_ORDER=(xplr master dev plan git)
     PREFIX="claude-"
-    FOCUS_TAB="main"
-    USAGE="kitty-refresh [-r] --claude {main|dev|idea|git|all}"
+    FOCUS_TAB="master"
+    USAGE="kitty-refresh [-r] --claude {master|dev|plan|git|all}"
 else
     declare -A TABS=(
         [xplr]="⟜ 󰭎  ⊸"
@@ -58,11 +60,42 @@ else
     declare -A CLAUDE_VARIANTS=()
 fi
 
+kitty_state=$(kitty @ ls)
+
+# Handle -s search mode: parse "term|claude" format and find matching tab
+if [[ -n "$search_pattern" ]]; then
+    # Parse term|claude format (e.g., "nvim|master" or just "xplr")
+    if [[ "$search_pattern" == *"|"* ]]; then
+        term_name="${search_pattern%%|*}"
+        claude_name="${search_pattern##*|}"
+        [[ "$mode" == "claude" ]] && tab_name="$claude_name" || tab_name="$term_name"
+    else
+        tab_name="$search_pattern"
+    fi
+
+    # Check if tab name is valid
+    if [[ -z "${TABS[$tab_name]:-}" ]]; then
+        echo "Unknown tab: $tab_name"
+        echo "Available: ${!TABS[*]}"
+        exit 1
+    fi
+
+    # Check if that tab actually exists in current session
+    expected_title="${TABS[$tab_name]}"
+    matched_title=$(echo "$kitty_state" | jq -r --arg title "$expected_title" \
+        '.[0].tabs[].title | select(. == $title)' | head -1)
+
+    if [[ -z "$matched_title" ]]; then
+        exit 0
+    fi
+
+    set -- "$tab_name"
+    refresh=true
+fi
+
 tab="${1:-}"
 [[ -z "$tab" ]] && { echo "Usage: $USAGE"; exit 1; }
 [[ "$tab" != "all" && -z "${TABS[$tab]:-}" ]] && { echo "Usage: $USAGE"; exit 1; }
-
-kitty_state=$(kitty @ ls)
 window_id=$(echo "$kitty_state" | jq -r '.[0].id')
 cwd=$(echo "$kitty_state" | jq -r '.[0].tabs[] | select(.is_focused) | .windows[] | select(.is_focused) | .cwd')
 
