@@ -655,8 +655,12 @@ xplr.config.layouts.custom.preview = {
 						"Table",
 						{
 							CustomContent = {
-								title = "Preview",
-								body = { DynamicParagraph = { render = "custom.preview.render" } },
+								title = " Preview",
+								body = {
+									DynamicParagraph = {
+										render = "custom.preview.render",
+									},
+								},
 							},
 						},
 						"InputAndLogs",
