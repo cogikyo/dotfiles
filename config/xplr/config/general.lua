@@ -64,8 +64,8 @@ local general = {
 
 	selection = {
 		item = {
-			format = "builtin.fmt_general_selection_item",
-			style = { fg = { Rgb = { 0, 255, 255 } }, add_modifiers = { "Bold" } },
+			format = "custom.fmt_selection_item",
+			style = {},
 		},
 	},
 
@@ -296,4 +296,10 @@ end
 xplr.fn.custom.fmt_col_4 = function(ctx)
 	local content = xplr.fn.builtin.fmt_general_table_row_cols_4(ctx)
 	return wrap_with_style(ctx, content)
+end
+
+xplr.fn.custom.fmt_selection_item = function(ctx)
+	local content = xplr.fn.builtin.fmt_general_selection_item(ctx)
+	local clean = strip_ansi(content)
+	return xplr.util.paint(clean, { fg = "Cyan", add_modifiers = { "Bold" } })
 end
