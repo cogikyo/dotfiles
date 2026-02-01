@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 
+# Preserve user's home before sudo changes it to /root
+USER_HOME="${USER_HOME:-$HOME}"
+
+# Re-exec with sudo if not root
+if [[ $EUID -ne 0 ]]; then
+    exec sudo USER_HOME="$HOME" "$0" "$@"
+fi
+
 # Symlink most config directories normally
-for item in "$HOME"/dotfiles/config/*; do
+echo "Linking most configs..."
+for item in "$USER_HOME"/dotfiles/config/*; do
     name=$(basename "$item")
 
     # Skip directories that need special handling
@@ -9,17 +18,23 @@ for item in "$HOME"/dotfiles/config/*; do
         continue
     fi
 
-    ln -sfnv "$item" "$HOME/.config/"
+    ln -sfnv "$item" "$USER_HOME/.config/"
 done
 
+echo "Linking partial directories..."
 # Special handling for claude: symlink to ~/.claude/
-mkdir -p "$HOME/.claude"
-ln -sfnv "$HOME/dotfiles/config/claude/settings.json" "$HOME/.claude/settings.json"
-ln -sfnv "$HOME/dotfiles/config/claude/skills" "$HOME/.claude/skills"
-ln -sfnv "$HOME/dotfiles/config/claude/instructions" "$HOME/.claude/instructions"
-ln -sfnv "$HOME/dotfiles/config/claude/statusline-command.sh" "$HOME/.claude/statusline-command.sh"
+mkdir -p "$USER_HOME/.claude"
+ln -sfnv "$USER_HOME/dotfiles/config/claude/settings.json" "$USER_HOME/.claude/settings.json"
+ln -sfnv "$USER_HOME/dotfiles/config/claude/skills" "$USER_HOME/.claude/skills"
+ln -sfnv "$USER_HOME/dotfiles/config/claude/instructions" "$USER_HOME/.claude/instructions"
 
 # Special handling for Cursor: symlink User directory files only
-mkdir -p "$HOME/.config/Cursor/User"
-ln -sfnv "$HOME/dotfiles/config/Cursor/User/keybindings.json" "$HOME/.config/Cursor/User/keybindings.json"
-ln -sfnv "$HOME/dotfiles/config/Cursor/User/settings.json" "$HOME/.config/Cursor/User/settings.json"
+mkdir -p "$USER_HOME/.config/Cursor/User"
+ln -sfnv "$USER_HOME/dotfiles/config/Cursor/User/keybindings.json" "$USER_HOME/.config/Cursor/User/keybindings.json"
+ln -sfnv "$USER_HOME/dotfiles/config/Cursor/User/settings.json" "$USER_HOME/.config/Cursor/User/settings.json"
+
+echo "Linking bin scripts to /usr/local/bin..."
+for script in "$USER_HOME"/dotfiles/bin/*; do
+    [[ -x "$script" ]] || continue  # skip non-executables
+    ln -sfv "$script" /usr/local/bin/
+done
