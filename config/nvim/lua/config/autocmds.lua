@@ -74,11 +74,20 @@ au({ "FocusGained", "BufEnter", "CursorHold", "TermClose", "TermLeave" }, {
 	end,
 })
 
--- force reload when file changes externally, even if buffer modified undo history is preserved
+-- reload external changes while preserving undo history (makes external edits undoable)
 au("FileChangedShell", {
 	group = "ForceReloadExternal",
-	callback = function()
-		vim.v.fcs_choice = "reload"
+	callback = function(args)
+		local bufnr = args.buf
+		local filename = vim.api.nvim_buf_get_name(bufnr)
+		local ok, new_lines = pcall(vim.fn.readfile, filename)
+		if not ok then
+			vim.v.fcs_choice = "reload"
+			return
+		end
+		vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, new_lines)
+		vim.bo[bufnr].modified = false
+		vim.v.fcs_choice = ""
 	end,
 })
 
