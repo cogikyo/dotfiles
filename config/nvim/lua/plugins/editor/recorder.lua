@@ -4,11 +4,11 @@ return {
 	opts = {
 		slots = { "a", "s", "e", "t" },
 		mapping = {
-			startStopRecording = "@",
+			startStopRecording = "M",
 			playMacro = "@",
-			switchSlot = "<C-q>",
-			editMacro = "cq",
-			deleteAllMacros = "dq",
+			switchSlot = "<C-m>",
+			editMacro = "cm",
+			deleteAllMacros = "dm",
 		},
 	},
 }

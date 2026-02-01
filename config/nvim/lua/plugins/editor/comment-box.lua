@@ -1,9 +1,9 @@
 return {
 	"LudoPinelli/comment-box.nvim",
 	keys = {
-		{ "<leader>cb", "<Cmd>CBccbox<CR>", mode = { "n", "v" }, desc = "Comment box" },
-		{ "<leader>cB", "<Cmd>CBcatalog<CR>", desc = "Comment box catalog" },
-		{ "<leader>c-", "<Cmd>CBline<CR>", desc = "Comment line" },
+		{ "gcb", "<Cmd>CBllbox<CR>", mode = { "n", "v" }, desc = "Comment box" },
+		{ "gcq", "<Cmd>CBllbox13<CR>", mode = { "n", "v" }, desc = "Comment quote" },
+		{ "gcl", "<Cmd>CBllline10<CR>", mode = { "n", "v" }, desc = "Comment line" },
 	},
 	opts = {
 		box_width = 80,
