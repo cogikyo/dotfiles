@@ -65,7 +65,7 @@ local general = {
 	selection = {
 		item = {
 			format = "builtin.fmt_general_selection_item",
-			style = style("Cyan", { "Bold" }),
+			style = { fg = { Rgb = { 0, 255, 255 } }, add_modifiers = { "Bold" } },
 		},
 	},
 
