@@ -6,3 +6,4 @@ linter
 dotfiles
 unstaged
 config
+stylua
