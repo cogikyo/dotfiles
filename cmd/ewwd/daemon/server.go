@@ -32,7 +32,7 @@ func SendCommand(command string) (string, error) {
 	return string(buf[:n]), nil
 }
 
-// StreamCommand sends a command and streams the response to stdout.
+// StreamCommand sends a command and streams the response to standard output.
 // Used for subscribe commands that keep the connection open.
 func StreamCommand(command string) (string, error) {
 	conn, err := net.Dial("unix", SocketPath)
@@ -45,7 +45,7 @@ func StreamCommand(command string) (string, error) {
 		return "", err
 	}
 
-	// Stream response lines to stdout
+	// Stream response lines to standard output
 	reader := bufio.NewReader(conn)
 	for {
 		line, err := reader.ReadString('\n')
