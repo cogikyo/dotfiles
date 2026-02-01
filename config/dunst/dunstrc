@@ -91,13 +91,7 @@
     frame_color = "#ea834b"
     timeout = 8
 
-# Suppress Kitty-sourced Claude notifications (our hooks handle these)
-[kitty-claude-summary]
+[kitty-claude]
     appname = "kitty"
-    summary = ".*[Cc]laude.*"
-    skip_display = true
-
-[kitty-claude-body]
-    appname = "kitty"
-    body = ".*[Cc]laude.*"
+    summary = ".*󰯉.*"
     skip_display = true
