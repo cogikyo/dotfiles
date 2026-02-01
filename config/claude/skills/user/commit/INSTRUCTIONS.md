@@ -125,6 +125,11 @@ verb(scope/context): description
 | `chore`    | Build, deps, config              |
 | `ci`       | CI/CD                            |
 
+**NEVER use `update`** - it's too generic. Pick the specific verb:
+- Adding a word to spell dictionary? → `add`
+- Changing config values? → `edit`
+- Adding new config options? → `extend`
+
 **Breaking change**: Add `!` → `edit(api)!: rename endpoints`
 
 ### 8. Commit
