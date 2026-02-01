@@ -9,6 +9,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -156,10 +157,25 @@ func getCredsPath() string {
 }
 
 func getAccessToken() string {
-	data, err := os.ReadFile(getCredsPath())
-	if err != nil {
-		return ""
+	var data []byte
+	var err error
+
+	// On macOS, use Keychain
+	if runtime.GOOS == "darwin" {
+		cmd := exec.Command("security", "find-generic-password", "-s", "Claude Code-credentials", "-w")
+		data, err = cmd.Output()
+		if err != nil {
+			return ""
+		}
+		data = []byte(strings.TrimSpace(string(data)))
+	} else {
+		// On Linux, read from file
+		data, err = os.ReadFile(getCredsPath())
+		if err != nil {
+			return ""
+		}
 	}
+
 	var creds Credentials
 	if err := json.Unmarshal(data, &creds); err != nil {
 		return ""
@@ -420,11 +436,39 @@ func formatResetDate(isoTime string) string {
 // ─────────────────────────────────────────────────
 // Output Formatting
 // ─────────────────────────────────────────────────
-func formatGitStat(color, icon string, count int) string {
-	if count <= 0 {
-		return ""
+func buildGitStats(gs *GitStatus) string {
+	var stats strings.Builder
+	if gs.Ahead > 0 {
+		fmt.Fprintf(&stats, " %s%s%d", green, gitAhead, gs.Ahead)
 	}
-	return fmt.Sprintf(" %s%s%d%s", color, icon, count, reset)
+	if gs.Behind > 0 {
+		fmt.Fprintf(&stats, " %s%s%d", brRed, gitBehind, gs.Behind)
+	}
+	if gs.Staged > 0 {
+		fmt.Fprintf(&stats, " %s%s%d", yellow, gitStaged, gs.Staged)
+	}
+	if gs.Modified > 0 {
+		fmt.Fprintf(&stats, " %s%s%d", cyan, gitModified, gs.Modified)
+	}
+	if gs.Untracked > 0 {
+		fmt.Fprintf(&stats, " %s%s%d", brYello, gitUntracked, gs.Untracked)
+	}
+	if gs.Deleted > 0 {
+		fmt.Fprintf(&stats, " %s%s%d", red, gitDeleted, gs.Deleted)
+	}
+	if gs.Stashed > 0 {
+		fmt.Fprintf(&stats, " %s%s%d", gray, gitStashed, gs.Stashed)
+	}
+	if gs.Renamed > 0 {
+		fmt.Fprintf(&stats, " %s%s%d", magenta, gitRenamed, gs.Renamed)
+	}
+	if gs.Conflicted > 0 {
+		fmt.Fprintf(&stats, " %s%s%d", pink, gitConflict, gs.Conflicted)
+	}
+	if stats.Len() > 0 {
+		stats.WriteString(reset)
+	}
+	return stats.String()
 }
 
 func main() {
@@ -472,16 +516,8 @@ func main() {
 
 	// Git info
 	if gitStatus != nil && gitStatus.Branch != "" {
-		out.WriteString(yellow + " " + gitBranch + gitStatus.Branch + reset)
-		out.WriteString(formatGitStat(green, gitAhead, gitStatus.Ahead))
-		out.WriteString(formatGitStat(brRed, gitBehind, gitStatus.Behind))
-		out.WriteString(formatGitStat(yellow, gitStaged, gitStatus.Staged))
-		out.WriteString(formatGitStat(cyan, gitModified, gitStatus.Modified))
-		out.WriteString(formatGitStat(brYello, gitUntracked, gitStatus.Untracked))
-		out.WriteString(formatGitStat(red, gitDeleted, gitStatus.Deleted))
-		out.WriteString(formatGitStat(gray, gitStashed, gitStatus.Stashed))
-		out.WriteString(formatGitStat(magenta, gitRenamed, gitStatus.Renamed))
-		out.WriteString(formatGitStat(pink, gitConflict, gitStatus.Conflicted))
+		out.WriteString(" " + yellow + gitBranch + gitStatus.Branch + reset)
+		out.WriteString(buildGitStats(gitStatus))
 	}
 
 	// Context window bar
@@ -492,22 +528,19 @@ func main() {
 		pct := total * 100 / size
 		color := pctColor(pct)
 		bar := buildBar(pct / 10)
-		out.WriteString(brBlue + sep + reset)
+		out.WriteString(gray + sep + reset)
 		fmt.Fprintf(&out, "%s%s%s %d%%%s", color, barContext, bar, pct, reset)
 	}
 
 	// Usage limits
 	if usageResp != nil {
-		hasOutput := false
-
 		if usageResp.FiveHour != nil {
 			pct := int(usageResp.FiveHour.Utilization)
 			color := pctColor(pct)
 			icon := progressIcon(pct)
 			resetTime := formatResetTime(usageResp.FiveHour.ResetsAt)
-			out.WriteString(brBlue + sep + reset)
+			out.WriteString(gray + sep + reset)
 			fmt.Fprintf(&out, "%s%s %d%%%s%s", color, icon, pct, resetTime, reset)
-			hasOutput = true
 		}
 
 		if usageResp.SevenDay != nil {
@@ -515,11 +548,7 @@ func main() {
 			color := pctColor(pct)
 			icon := progressIcon(pct)
 			resetDate := formatResetDate(usageResp.SevenDay.ResetsAt)
-			if hasOutput {
-				out.WriteString(blue + sep + reset)
-			} else {
-				out.WriteString(brBlue + sep + reset)
-			}
+			out.WriteString(gray + sep + reset)
 			fmt.Fprintf(&out, "%s%s %d%%%s%s", color, icon, pct, resetDate, reset)
 		}
 	}
