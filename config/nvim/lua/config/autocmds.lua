@@ -124,7 +124,7 @@ au("TermOpen", {
 	end,
 })
 
--- spell check in prose-oriented filetypes
+-- spell and wrap in prose-oriented filetypes
 au("FileType", {
 	group = "SpellCheck",
 	pattern = { "markdown", "text", "gitcommit", "NeogitCommitMessage" },

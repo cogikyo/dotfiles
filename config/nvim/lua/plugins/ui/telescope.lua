@@ -4,6 +4,32 @@ return {
 		"nvim-lua/plenary.nvim",
 		"natecraddock/telescope-zf-native.nvim",
 	},
+	-- stylua: ignore
+	keys = {
+		{ "<leader>t<leader>", "<cmd>Telescope find_files<cr>",     desc = "Find files" },
+		{ "<leader>e<leader>", "<cmd>Telescope oldfiles<cr>",       desc = "Recent files" },
+		{ "<leader>s<leader>", "<cmd>Telescope live_grep<cr>",      desc = "Live grep" },
+		{ "<leader>g<leader>", "<cmd>Telescope grep_string<cr>",    desc = "Grep string under cursor" },
+		{ "<leader>tg",        "<cmd>Telescope git_files<cr>",      desc = "Git files" },
+		{ "<leader>tb",        "<cmd>Telescope buffers<cr>",        desc = "Buffers" },
+		{ "<leader>th",        "<cmd>Telescope help_tags<cr>",      desc = "Help tags" },
+		{ "<leader>tH",        "<cmd>Telescope highlights<cr>",     desc = "Highlight groups" },
+		{ "<leader>td",        "<cmd>Telescope diagnostics<cr>",    desc = "Diagnostics" },
+		{ "<leader>tp",        "<cmd>Telescope builtin<cr>",        desc = "Telescope builtins" },
+		{ "<leader>tc",        "<cmd>Telescope commands<cr>",       desc = "Commands" },
+		{ "<leader>tl",        "<cmd>Telescope loclist<cr>",        desc = "Location list" },
+		{ "<leader>tq",        "<cmd>Telescope quickfix<cr>",       desc = "Quickfix list" },
+		{ "<leader>tm",        "<cmd>Telescope man_pages<cr>",      desc = "Man pages" },
+		{ "<leader>tt",        "<cmd>Telescope resume<cr>",         desc = "Resume last picker" },
+		{ "<leader>t;",        "<cmd>Telescope marks<cr>",          desc = "Marks" },
+		{ "<leader>tst",       "<cmd>Telescope treesitter<cr>",     desc = "Treesitter symbols" },
+		{ "<leader>tk",        "<cmd>Telescope keymaps<cr>",        desc = "Keymaps" },
+		{ "<leader>trg",       "<cmd>Telescope registers<cr>",      desc = "Registers" },
+		{ "<leader>tco",       "<cmd>Telescope colorscheme<cr>",    desc = "Colorschemes" },
+		{ "<leader>tj",        "<cmd>Telescope jumplist<cr>",       desc = "Jumplist" },
+		{ "<leader>tsh",       "<cmd>Telescope search_history<cr>", desc = "Search history" },
+		{ "<leader>tsp",       "<cmd>Telescope spell_suggest<cr>",  desc = "Spelling suggestions" },
+	},
 	config = function()
 		local ok, telescope = pcall(require, "telescope")
 		if not ok then
