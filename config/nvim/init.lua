@@ -51,7 +51,6 @@ require("lazy").setup({
 		},
 
 		{ import = "plugins.dev" },
-		-- kristijanhusak/vim-dadbod-ui: database explorer and query UI
 		-- lewis6991/gitsigns.nvim: inline git hunks and blame
 		-- iamcco/markdown-preview.nvim: live preview in browser
 		-- folke/trouble.nvim: diagnostics and lists viewer
