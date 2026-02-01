@@ -49,7 +49,7 @@ alias ld='lazydocker'
 alias uvpn='vpn up'
 alias dvpn='vpn down'
 
-alias update='paru -Syu && paru -Qqe > ~/dotfiles/etc/packages.lst'
+alias update='paru -Syu && paru -Rns $(paru -Qdtq) 2>/dev/null; paru -Qq | sort > ~/dotfiles/etc/packages.lst'
 alias oc='ouch compress'
 alias od='ouch decompress'
 alias ol='ouch list --tree'
