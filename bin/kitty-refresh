@@ -66,6 +66,11 @@ kitty_state=$(kitty @ ls)
 window_id=$(echo "$kitty_state" | jq -r '.[0].id')
 cwd=$(echo "$kitty_state" | jq -r '.[0].tabs[] | select(.is_focused) | .windows[] | select(.is_focused) | .cwd')
 
+# Fallback to PWD if cwd is empty or home
+if [[ -z "$cwd" || "$cwd" == "$HOME" ]]; then
+    cwd="${PWD:-$HOME}"
+fi
+
 get_tab_index() {
     local name="$1"
     local tab_id="${window_id}-${PREFIX}${name}"
