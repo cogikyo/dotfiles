@@ -20,6 +20,7 @@ catppuccin-gtk-theme-macchiato
 chromium
 clickhouse-client-bin
 codespell
+composer
 cosign
 cursor-bin
 darkhttpd
@@ -32,7 +33,6 @@ earlyoom
 efibootmgr
 electron
 erdtree
-eslint_d
 fd
 ffmpegthumbnailer
 firefox-developer-edition
@@ -71,7 +71,9 @@ imagemagick
 imv
 inkscape
 inotify-tools
+jdk-openjdk
 jq
+julia
 just
 kitty
 kvantum
@@ -120,15 +122,14 @@ papirus-folders-catppuccin-git
 papirus-icon-theme
 paru
 pavucontrol
+php
 pipewire
 pipewire-alsa
 pipewire-jack
 pipewire-pulse
 playerctl
 postgresql
-prettier
 pulsemixer
-pyright
 python-pip
 python-pynvim
 qbittorrent
@@ -136,6 +137,7 @@ rabbitmq
 redis
 reflector
 ripgrep
+ruby
 rustup
 sd
 sddm
@@ -151,12 +153,10 @@ sqlfluff
 starship
 strongswan
 stylelint-config-recommended
-stylua
 sxiv
 tableplus
 tailwindcss-bin
 tailwindcss-language-server
-taplo-cli
 thunar
 tldr
 trash-cli
