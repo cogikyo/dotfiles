@@ -1,0 +1,8 @@
+{
+  "diagnostics": {
+    "globals": ["xplr", "version"]
+  },
+  "workspace": {
+    "checkThirdParty": false
+  }
+}
