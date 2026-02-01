@@ -15,7 +15,6 @@ if [[ -n "$WINDOW_ID" ]] && command -v kitty &>/dev/null; then
     ' 2>/dev/null)
 
     # Extract just the nerd font icon from between decorators
-    # Handles both ⊰ ... ⊱ (claude mode) and ⟜ ... ⊸ (normal mode)
     if [[ -n "$TAB_TITLE" ]]; then
         TAB_ICON=$(echo "$TAB_TITLE" | sed -E 's/^[⊰⟜] (.*) [⊱⊸]$/\1/' | xargs)
         [[ -n "$TAB_ICON" ]] && TAB_TITLE="$TAB_ICON"
@@ -41,13 +40,11 @@ notify_with_action() {
 
 case "$TYPE" in
     idle)
-        # Orange (matches standard terminal accent)
-        BODY="${MESSAGE:-Waiting for input}${TAB_TITLE:+ [$TAB_TITLE]}"
+        BODY="${MESSAGE:-Waiting for input}${TAB_TITLE:+ ⊰ $TAB_TITLE ⊱ }"
         notify_with_action "claude" "low" "6000" "Claude" "$BODY" "$WINDOW_ID" "#f2a170" "#ea834b" &
         ;;
     permission)
-        # Red (Claude accent color)
-        BODY="${MESSAGE:-Permission needed}${TAB_TITLE:+ [$TAB_TITLE]}"
+        BODY="${MESSAGE:-Permission needed}${TAB_TITLE:+ ⊰ $TAB_TITLE ⊱}"
         notify_with_action "claude-input" "normal" "8000" "Claude" "$BODY" "$WINDOW_ID" "#f07a88" "#f36978" &
         ;;
 esac
