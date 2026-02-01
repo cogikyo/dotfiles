@@ -46,12 +46,12 @@ Group changes by logical scope. Look for:
 
 If parallel: proceed to step 4. If direct: skip to step 5.
 
-### 4. Parallel Commit (Sub-agents)
+### 4. Parallel Commit (sub-Agents)
 
 Launch Task agents with `subagent_type: "Bash"` for each group. Each agent:
 
 - Gets assigned specific files/directories
-- Follows steps 5-8 independently
+- Follows steps 5–8 independently
 - Commits only its assigned scope
 
 **Agent assignment rules:**
@@ -122,7 +122,7 @@ verb(scope/context): description
 | `style`    | Formatting, whitespace           |
 | `docs`     | Documentation                    |
 | `test`     | Tests                            |
-| `chore`    | Build, deps, config              |
+| `chore`    | Build, dependencies, config      |
 | `ci`       | CI/CD                            |
 
 **NEVER use `update`** - it's too generic. Pick the specific verb:
@@ -152,7 +152,7 @@ If more changes remain (and not using parallel approach), repeat steps 5-8 for n
 
 ## Examples
 
-### Mixed changes across features
+### Mixed Changes Across Features
 
 ```
 # Status shows:
@@ -173,7 +173,7 @@ git add zsh/.zshrc
 git commit -m "add(zsh): fzf key bindings"
 ```
 
-### Single file, multiple concerns
+### Single File, multiple Concerns
 
 ```
 # lsp.lua has both a bug fix AND a new feature
