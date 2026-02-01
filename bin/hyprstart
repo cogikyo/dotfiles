@@ -27,8 +27,8 @@ glava -e "radial_rc.glsl" & disown
 spotify-launcher & disown
 sleep 3
 hyprctl dispatch setfloating
-hyprctl dispatch moveactive exact 2418 88
-hyprctl dispatch resizeactive exact 1310 2053
+hyprctl dispatch moveactive exact 2018 88
+hyprctl dispatch resizeactive exact 1710 2053
 
 ps -ef | rg weather_info | rg -v rg | awk '{print $2}' | xargs kill
 eval "$HOME/dotfiles/config/eww/bin/weather_info" & disown
