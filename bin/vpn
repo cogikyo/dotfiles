@@ -1,0 +1,184 @@
+#!/usr/bin/env bash
+
+# VPN management script for NetworkManager L2TP connections
+
+VPN_NAME="${VPN_NAME:-TrendCapitalVPN}"
+NM_DIR="/etc/NetworkManager/system-connections"
+
+usage() {
+    cat <<EOF
+Usage: vpn [command] [options]
+
+Commands:
+    up, connect       Connect to VPN (default)
+    down, disconnect  Disconnect from VPN
+    status            Show VPN connection status
+    import <file>     Import L2TP config file
+    export [file]     Export current config to file
+    delete [name]     Delete a VPN connection
+    list              List all VPN connections
+
+Options:
+    -n, --name NAME   Specify VPN connection name
+    -h, --help        Show this help
+
+Environment:
+    VPN_NAME          Default VPN name (current: $VPN_NAME)
+EOF
+}
+
+msg()  { printf '%s\n' "$*"; }
+err()  { printf '%s\n' "$*" >&2; }
+die()  { err "$*"; exit 1; }
+
+vpn_up() {
+    msg "Connecting to $VPN_NAME..."
+    if ! nmcli connection up "$VPN_NAME" 2>&1; then
+        err "\nConnection failed. Check logs with:"
+        err "  journalctl -xe NM_CONNECTION=\$(nmcli -t -f UUID connection show \"$VPN_NAME\" | head -1)"
+        return 1
+    fi
+}
+
+vpn_down() {
+    msg "Disconnecting from $VPN_NAME..."
+    nmcli connection down "$VPN_NAME"
+}
+
+vpn_status() {
+    local active
+    active=$(nmcli -t -f TYPE,NAME connection show --active 2>/dev/null | grep "^vpn:")
+
+    if [[ -n "$active" ]]; then
+        msg "VPN connected: $(echo "$active" | cut -d: -f2)"
+    else
+        msg "VPN disconnected"
+    fi
+
+    echo
+    msg "Available VPN connections:"
+    nmcli connection show | grep -E "^\S+\s+\S+\s+vpn" || msg "  (none)"
+}
+
+vpn_import() {
+    local file="$1"
+    [[ -z "$file" ]] && die "Usage: vpn import <file.conf>"
+    [[ -f "$file" ]] || die "File not found: $file"
+
+    # Try adding .conf extension if missing
+    if [[ "$file" != *.conf ]] && [[ -f "$file.conf" ]]; then
+        file="$file.conf"
+    fi
+
+    # Extract name from config or use filename
+    local name
+    name=$(grep -m1 '^id=' "$file" 2>/dev/null | cut -d= -f2- | xargs)
+    [[ -z "$name" ]] && name=$(basename "$file" .conf)
+
+    msg "Importing: $name"
+    sudo nmcli connection import type l2tp file "$file" || return 1
+
+    echo
+    msg "Available VPN connections:"
+    nmcli connection show | grep -E "vpn|l2tp" | grep -v "^--"
+
+    echo
+    msg "Connect with:"
+    msg "  vpn -n \"$name\" up"
+    msg "  # or with password prompt:"
+    msg "  nmcli connection up \"$name\" --ask"
+}
+
+vpn_export() {
+    local outfile="${1:-$VPN_NAME.nmconnection}"
+    local nmfile="$NM_DIR/$VPN_NAME.nmconnection"
+
+    if ! sudo test -f "$nmfile"; then
+        die "Connection file not found: $nmfile"
+    fi
+
+    msg "Exporting $VPN_NAME to $outfile"
+    sudo cat "$nmfile" > "$outfile" || die "Export failed"
+    chmod 600 "$outfile"
+    msg "Done. Note: passwords may be stored in system keyring, not in this file."
+}
+
+vpn_delete() {
+    local name="${1:-$VPN_NAME}"
+
+    # Confirm deletion
+    read -rp "Delete VPN connection '$name'? [y/N] " confirm
+    [[ "$confirm" =~ ^[Yy]$ ]] || { msg "Cancelled"; return 0; }
+
+    msg "Deleting $name..."
+    nmcli connection delete "$name"
+}
+
+vpn_list() {
+    msg "VPN connections:"
+    nmcli connection show | grep -E "TYPE|vpn" | grep -v "^--"
+}
+
+# Parse arguments
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -n|--name)
+            VPN_NAME="$2"
+            shift 2
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        up|connect)
+            CMD="up"
+            shift
+            ;;
+        down|disconnect)
+            CMD="down"
+            shift
+            ;;
+        status)
+            CMD="status"
+            shift
+            ;;
+        import)
+            CMD="import"
+            IMPORT_FILE="$2"
+            shift 2
+            ;;
+        export)
+            CMD="export"
+            EXPORT_FILE="$2"
+            shift
+            [[ -n "$EXPORT_FILE" ]] && shift
+            ;;
+        delete|--delete)
+            CMD="delete"
+            DELETE_NAME="$2"
+            shift
+            [[ -n "$DELETE_NAME" && "$DELETE_NAME" != -* ]] && shift
+            ;;
+        list)
+            CMD="list"
+            shift
+            ;;
+        *)
+            die "Unknown option: $1 (see vpn --help)"
+            ;;
+    esac
+done
+
+# Default command
+CMD="${CMD:-up}"
+
+# Execute
+case "$CMD" in
+    up)      vpn_up ;;
+    down)    vpn_down ;;
+    status)  vpn_status ;;
+    import)  vpn_import "$IMPORT_FILE" ;;
+    export)  vpn_export "$EXPORT_FILE" ;;
+    delete)  vpn_delete "$DELETE_NAME" ;;
+    list)    vpn_list ;;
+esac
