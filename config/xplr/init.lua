@@ -260,21 +260,13 @@ local general = {
 			"Blue",
 			{ "Bold" }
 		),
-		help_menu = panel_format(
-			"─╼╾ 何 Help ╼╾",
-			"Magenta",
-			{ "Dim" }
-		),
+		help_menu = panel_format("─╼╾ 何 Help ╼╾", "Magenta", { "Dim" }),
 		input_and_logs = panel_format(
 			"──────────────────────────────────────────────────────────────╼╾  Input ╼╾  Logs ╼╾",
 			"Blue",
 			{ "Dim" }
 		),
-		selection = panel_format(
-			"─╼╾ ⼶ Selection ╼╾",
-			"Cyan",
-			{ "Dim" }
-		),
+		selection = panel_format("─╼╾ ⼶ Selection ╼╾", "Cyan", { "Dim" }),
 		sort_and_filter = panel_format(
 			"──────────────────────────────────────────────────────────────╼╾  Filter ╼╾ Sort  ╼╾",
 			"Blue",
@@ -370,17 +362,18 @@ local node_types = {
 		dotfiles = meta("🍙"),
 		docs = meta(" "),
 		books = meta(" "),
+		cmd = meta(" "),
 		templates = meta(" "),
 		notes = meta("📚"),
 		media = meta("󰈯 "),
-		share = meta("⾦"),
+		share = meta(" "),
 		music = meta(" "),
 		gifs = meta("󰤺 "),
 		screenshots = meta(" "),
 		images = meta("󰋯 "),
 		videos = meta(" "),
 		recordings = meta("󰕧 "),
-		etc = meta(" "),
+		etc = meta("󱁽 "),
 		bin = meta("⼡"),
 		usr = meta("⼈"),
 		home = meta("⾕", orange),
@@ -534,30 +527,14 @@ on_key["R"] = {
 local home = os.getenv("HOME")
 
 -- Add plugins path for preview.xplr (manual installs)
-package.path = home
-	.. "/.config/xplr/plugins/?/init.lua;"
-	.. home
-	.. "/.config/xplr/plugins/?.lua;"
-	.. package.path
+package.path = home .. "/.config/xplr/plugins/?/init.lua;" .. home .. "/.config/xplr/plugins/?.lua;" .. package.path
 
 local xpm_path = home .. "/.local/share/xplr/dtomvan/xpm.xplr"
 local xpm_url = "https://github.com/dtomvan/xpm.xplr"
 
-package.path = package.path
-	.. ";"
-	.. xpm_path
-	.. "/?.lua;"
-	.. xpm_path
-	.. "/?/init.lua"
+package.path = package.path .. ";" .. xpm_path .. "/?.lua;" .. xpm_path .. "/?/init.lua"
 
-os.execute(
-	string.format(
-		"[ -e '%s' ] || git clone '%s' '%s'",
-		xpm_path,
-		xpm_url,
-		xpm_path
-	)
-)
+os.execute(string.format("[ -e '%s' ] || git clone '%s' '%s'", xpm_path, xpm_url, xpm_path))
 -- }}}
 
 -- 🔌 Selected Plugins {{{
