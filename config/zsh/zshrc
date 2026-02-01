@@ -81,7 +81,6 @@ ZSH_AUTOSUGGEST_STRATEGY=(history completion)
 # plugins (order matters - syntax highlighting must be last)
 zcomet load zsh-users/zsh-completions
 zcomet load zsh-users/zsh-autosuggestions
-zcomet load zsh-users/zsh-history-substring-search
 zcomet load Aloxaf/fzf-tab
 zcomet load zsh-users/zsh-syntax-highlighting
 
@@ -97,7 +96,7 @@ bindkey '^[[1;5C'  forward-word   # C-left
 bindkey '^[[1;5D'  backward-word  # C-right
 bindkey '^[[1;5A'  history-incremental-search-backward # C-up
 bindkey '^[[1;5B'  history-incremental-search-forward  # C-down
-bindkey '^[[A'     history-substring-search-up         # Up
-bindkey '^[[B'     history-substring-search-down       # Down
+
+eval "$(atuin init zsh)"
 
 source $HOME/.config/zsh/vagari-highlights.zsh
