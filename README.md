@@ -230,7 +230,7 @@ makepkg -si
 ```sh
 cd ~
 git clone https://github.com/cogikyo/dotfiles
-paru -S --needed - < ~/dotfiles/etc/packages.lst
+paru -S --needed --noconfirm --skipreview - < ~/dotfiles/etc/packages.lst
 # might want to review/edit this list ⮭ before installing.
 
 # no good repos nordzy icons/cursors, do manually ⮯
