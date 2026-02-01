@@ -1,3 +1,6 @@
 # Compiled binaries
 bin/newtab-server
 config/claude/statusline-bin
+
+# External plugins (managed separately)
+config/xplr/plugins/preview/
