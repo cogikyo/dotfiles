@@ -22,16 +22,11 @@ for item in "$USER_HOME"/dotfiles/config/*; do
 done
 
 echo "Linking partial directories..."
+
 # Special handling for claude: symlink to ~/.claude/
 mkdir -p "$USER_HOME/.claude"
 ln -sfnv "$USER_HOME/dotfiles/config/claude/settings.json" "$USER_HOME/.claude/settings.json"
-ln -sfnv "$USER_HOME/dotfiles/config/claude/skills" "$USER_HOME/.claude/skills"
-ln -sfnv "$USER_HOME/dotfiles/config/claude/instructions" "$USER_HOME/.claude/instructions"
-
-# Special handling for Cursor: symlink User directory files only
-mkdir -p "$USER_HOME/.config/Cursor/User"
-ln -sfnv "$USER_HOME/dotfiles/config/Cursor/User/keybindings.json" "$USER_HOME/.config/Cursor/User/keybindings.json"
-ln -sfnv "$USER_HOME/dotfiles/config/Cursor/User/settings.json" "$USER_HOME/.config/Cursor/User/settings.json"
+"$USER_HOME/dotfiles/config/claude/skills/link.sh" user
 
 echo "Linking bin scripts to /usr/local/bin..."
 for script in "$USER_HOME"/dotfiles/bin/*; do
