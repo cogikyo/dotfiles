@@ -8,8 +8,10 @@ Skills extend Claude with specialized knowledge for using tools, workflows, and 
 
 **1. Ask scope:**
 
-- **user** → `~/.dotfiles/config/claude/skills/user/<name>/`
-- **project** → `~/.dotfiles/config/claude/skills/project/<name>/`
+- **user** → `~/dotfiles/config/claude/skills/user/<name>/`
+- **project** → `~/dotfiles/config/claude/skills/project/<name>/`
+
+Skills are automatically available once created—no linking needed.
 
 **2. Gather requirements:**
 
@@ -36,28 +38,39 @@ skill-name/
 └── assets/            # Templates, boilerplate (optional)
 ```
 
-**5. Link (once per new skill):**
-
-```bash
-~/.dotfiles/config/claude/skills/link.sh user  # or: link.sh project <name>
-```
-
-Symlinks point to directories—edits sync automatically.
-
 ---
 
 ### `/learn refine`
 
-**1. Identify skill** - ask or infer from context
+**1. Identify skill:**
 
-**2. Read current state** - SKILL.md + INSTRUCTIONS.md
+- User specifies skill name, OR
+- Use `AskUserQuestion` to ask which skill to refine
 
-**3. Gather feedback:**
+**2. Read current state:**
 
-- "What's not working?"
-- "What should change?"
+- Read SKILL.md + INSTRUCTIONS.md
+- Re-read this file's Principles section to verify conventions
 
-**4. Edit**
+**3. Understand the change:**
+
+Refinements vary in scope:
+
+- **Quick fix** (typos, small tweaks) → edit directly
+- **Workflow improvement** → ask what's not working, what outcome is wanted
+- **Tool/framework upgrade** → when a wrapped tool has breaking changes (major version), may require multiple refine passes
+
+For non-trivial changes, ask clarifying questions first.
+
+**4. Verify tool behavior:**
+
+Don't assume how tools work. If unsure about current APIs, flags, or behavior, use `WebSearch` to check official docs before editing.
+
+**5. Edit while ensuring:**
+
+- Architecture matches patterns in this file
+- Principles are followed (concise, tool-wrapping, proper triggers)
+- No unnecessary content added
 
 ---
 
