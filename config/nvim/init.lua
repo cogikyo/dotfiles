@@ -44,6 +44,11 @@ require("lazy").setup({
 				vim.cmd.colorscheme("vagari")
 			end,
 		},
+		{
+			"folke/tokyonight.nvim",
+			lazy = true,
+			opts = { style = "storm" },
+		},
 
 		{ import = "plugins.dev" },
 		-- kristijanhusak/vim-dadbod-ui: database explorer and query UI
@@ -71,7 +76,6 @@ require("lazy").setup({
 		-- mfussenegger/nvim-lint: linter orchestration
 		-- mfussenegger/nvim-dap: debugging wiring
 		-- neovim/nvim-lspconfig: language server setup
-		-- saghen/blink.cmp: completion capabilities
 		"ThePrimeagen/refactoring.nvim", -- refactoring helpers via treesitter
 		"elkowar/yuck.vim", -- yuck/eww syntax highlighting
 
