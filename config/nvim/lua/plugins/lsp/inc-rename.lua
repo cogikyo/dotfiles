@@ -1,6 +1,6 @@
 return {
 	"smjonas/inc-rename.nvim",
-	cmd = "IncRename",
+	event = "LspAttach",
 	dependencies = {
 		-- use dressing input to avoid race condition with sh.vim syntax
 		-- loading on Neovim 0.11.x (E184: ShFoldIfDoFor command not found)
