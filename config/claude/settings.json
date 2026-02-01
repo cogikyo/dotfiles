@@ -46,6 +46,7 @@
   },
   "outputStyle": "explanatory",
   "promptSuggestionEnabled": false,
+  "preferredNotifChannel": "none",
   "shiftTabHint": false,
   "enabledPlugins": {
     "gopls-lsp@claude-plugins-official": true
