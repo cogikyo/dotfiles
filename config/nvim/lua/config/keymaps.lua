@@ -38,7 +38,7 @@ local GROUPS = {
 	{ "<leader>c", group = "Code/Change" },
 	{ "<leader>d", group = "Delete/Database" },
 	{ "<leader>e", group = "Explorer" },
-	{ "<leader>f", group = "Find/Trouble" },
+	{ "<leader>f", group = "Diagnostics" },
 	{ "<leader>g", group = "Git/Goto" },
 	{ "<leader>h", group = "Git Hunk", mode = { "n", "v" } },
 	{ "<leader>m", group = "Markdown/Mason" },
@@ -47,9 +47,10 @@ local GROUPS = {
 	{ "<leader>r", group = "Replace/Rename" },
 	{ "<leader>s", group = "Search/Save" },
 	{ "<leader>t", group = "Telescope/Toggle" },
-	{ "<leader>u", group = "Undo/Update" },
-	{ "gr", group = "LSP" },
-	{ "z", group = "Folds" },
+	{ "<leader>u", group = "UndO" },
+
+	{ "g", group = "LSP" },
+	{ "q", group = "Quit" },
 }
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
@@ -58,18 +59,14 @@ local GROUPS = {
 map("n", "<C-s>", ":w<CR>", desc("Save"))
 map("i", "<C-s>", "<Esc>:w<CR>", desc("Save"))
 map("v", "<C-s>", "<Esc>:w<CR>", desc("Save"))
-map("n", "<leader>ss", ":noa w<CR><CR", desc("Save (no autocmd)"))
-map("n", "<leader><C-s>", ":lua vim.lsp.buf.format()<CR><C-s>", desc("Format and save"))
-map("n", "<leader>so", ":w | source %<CR>", desc("Save and source"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ quit: exit, force quit, escape                                              │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
-map("n", "<leader>q", ":q!<CR>", remap_explicit("Force quit"))
-map("n", "qq", ":q<CR>", desc("Quit"))
 map("n", "q:", "<Nop>")
-map("n", "q", "<Nop>")
+map("n", "qq", ":q<CR>", desc("Quit"))
 map("n", "<C-c>", "<Esc>", desc("Escape"))
+map("n", "<leader>q", ":q!<CR>", remap_explicit("Force quit"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ copy: clipboard yank operations                                             │
@@ -99,10 +96,30 @@ local function yank_paragrah(motion)
 		yank_path(motion)
 	end
 end
+local function yank_diagnostics()
+	local path = vim.fn.expand("%:p")
+	local line = vim.fn.line(".")
+	local diagnostics = vim.diagnostic.get(0, { lnum = line - 1 }) -- 0-indexed
+
+	if #diagnostics == 0 then
+		vim.fn.setreg("+", path .. ":" .. line .. "\n  |- (no diagnostics)")
+		vim.notify("No diagnostics on this line", vim.log.levels.WARN)
+		return
+	end
+
+	local lines = { path .. ":" .. line }
+	for _, d in ipairs(diagnostics) do
+		table.insert(lines, "  |- " .. d.message:gsub("\n", " "))
+	end
+	vim.fn.setreg("+", table.concat(lines, "\n"))
+	vim.notify("Yanked " .. #diagnostics .. " diagnostic(s)", vim.log.levels.INFO)
+end
+
 map("n", "<A-f>", ':let @+=expand("%:p")<CR>', desc("Yank file path"))
 map("v", "<A-c>", yank_path, desc("Yank file path + selection"))
 map("n", "<A-g>", yank_paragrah("gv"), desc("Yank file path + selection (last visual)"))
 map("n", "<A-p>", yank_paragrah("vap"), desc("Yank file path + paragraph"))
+map("n", "<A-w>", yank_diagnostics, desc("Yank file path + diagnostics"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ space: add empty lines above/below                                          │
@@ -113,22 +130,24 @@ map("n", "<leader>O", ':<C-u>call append(line(".")-1,   repeat([""], v:count1))<
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ hold: no register, indent, move selection                                   │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
-map("n", "<leader>d", '"_d', desc("Delete (no register)"))
-map("v", "<leader>d", '"_d', desc("Delete (no register)"))
-map("n", "<leader>c", '"_c', desc("Change (no register)"))
-map("v", "<leader>c", '"_c', desc("Change (no register)"))
-map("n", "<leader>C", '"_C', desc("Change to EOL (no register)"))
-map("n", "<leader>x", '"_x', desc("Delete char (no register)"))
-map("n", "<leader>X", '"_X', desc("Backspace (no register)"))
-map("v", "<", "<gv", desc("Indent left"))
-map("v", ">", ">gv", desc("Indent right"))
-map("v", "<Up>", ":m '<-2<CR>gv-gv", desc("Move selection up"))
-map("v", "<Down>", ":m '>+1<CR>gv-gv", desc("Move selection down"))
-map("n", "k", "v:count == 0 ? 'gk' : 'k'", expr("Up (display line)"))
-map("n", "j", "v:count == 0 ? 'gj' : 'j'", expr("Down (display line)"))
+-- stylua: ignore start
+map("n", "<leader>d", '"_d',                       desc("Delete (no register)"))
+map("v", "<leader>d", '"_d',                       desc("Delete (no register)"))
+map("n", "<leader>c", '"_c',                       desc("Change (no register)"))
+map("v", "<leader>c", '"_c',                       desc("Change (no register)"))
+map("n", "<leader>C", '"_C',                       desc("Change to EOL (no register)"))
+map("n", "<leader>x", '"_x',                       desc("Delete char (no register)"))
+map("n", "<leader>X", '"_X',                       desc("Backspace (no register)"))
+map("v", "<",         "<gv",                       desc("Indent left"))
+map("v", ">",         ">gv",                       desc("Indent right"))
+map("v", "<Up>",      ":m '<-2<CR>gv-gv",          desc("Move selection up"))
+map("v", "<Down>",    ":m '>+1<CR>gv-gv",          desc("Move selection down"))
+map("n", "k",         "v:count == 0 ? 'gk' : 'k'", expr("Up (display line)"))
+map("n", "j",         "v:count == 0 ? 'gj' : 'j'", expr("Down (display line)"))
+-- stylua: ignore end
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ center: keep cursor centered on screen                                      │
+-- │ search: clear highlights automatically                                      │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 local function search_move(reverse)
 	return function()
@@ -145,17 +164,37 @@ end
 map("n", "G", "Gzvzt", desc("Go to EOF"))
 map("n", "n", search_move(false), desc("Next search result"))
 map("n", "N", search_move(true), desc("Prev search result"))
+
+local function star_search(key)
+	return function()
+		local ok = pcall(vim.cmd.normal, { bang = true, args = { key } })
+		if ok then
+			vim.cmd.normal({ bang = true, args = { "zvzt" } })
+			if _G.reset_search_timer then
+				_G.reset_search_timer()
+			end
+		end
+	end
+end
+map("n", "*", star_search("*"), desc("Search word forward"))
+map("n", "#", star_search("#"), desc("Search word backward"))
+map("n", "g*", star_search("g*"), desc("Search word forward (partial)"))
+map("n", "g#", star_search("g#"), desc("Search word backward (partial)"))
+
+-- ╭─────────────────────────────────────────────────────────────────────────────╮
+-- │ center: keep cursor centered on screen                                      │
+-- ╰─────────────────────────────────────────────────────────────────────────────╯
+-- stylua: ignore start
+map("n", "J",     "mzJ`z",     desc("Join lines"))
+map("n", "<C-o>", "<C-o>zvzz", desc("Jump back"))
+map("n", "<C-i>", "<C-i>zvzz", desc("Jump forward"))
+map("n", "<C-f>", "<C-f>zz",   desc("Page down"))
+map("n", "<C-b>", "<C-b>zz",   desc("Page up"))
+map("n", "<C-d>", "<C-d>zz",   desc("Half page down"))
+map("n", "<C-u>", "<C-u>zz",   desc("Half page up"))
 map("n", "}", ':<C-u>execute "keepjumps norm! " . v:count1 . "}"<CR>zvzt', desc("Next paragraph"))
 map("n", "{", ':<C-u>execute "keepjumps norm! " . v:count1 . "{"<CR>zvzt', desc("Prev paragraph"))
-map("n", "J", "mzJ`z", desc("Join lines"))
-map("n", "<C-o>", "<C-o>zvzt", desc("Jump back"))
-map("n", "<C-i>", "<C-i>zvzt", desc("Jump forward"))
-map("n", "<C-f>", "<C-f>zt", desc("Page down"))
-map("n", "<C-b>", "<C-b>zt", desc("Page up"))
-map("n", "<C-d>", "<C-d>zt", desc("Half page down"))
-map("n", "<C-u>", "<C-u>zt", desc("Half page up"))
-map("n", "zm", "zmzt", desc("Fold more"))
-map("n", "za", "zazt", desc("Toggle fold"))
+-- stylua: ignore end
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ undo: insert mode break points at punctuation                               │
@@ -170,47 +209,25 @@ map("i", ":", ":<C-g>u")
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ window: navigation, tabs, resize, buffers                                   │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
-map("n", "<leader><C-o>", ":bp<CR>zvzt", desc("Previous buffer"))
-map("n", "<leader><C-i>", ":bn<CR>zvzt", desc("Next buffer"))
-map("n", "<leader>b<C-w>", ":bd!<CR>zvzt", desc("Delete buffer"))
-map("n", "<leader>pt", ":InspectTree<CR>", desc("Tree sitter inspect"))
-map("n", "<leader>pc", ":Inspect<CR>", desc("TS inspect"))
-map("n", "<leader>pn", ":Inspect<CR>", desc("TS node under cursor"))
-map("n", "<Down>", "<C-w>j", desc("Window down"))
-map("n", "<Up>", "<C-w>k", desc("Window up"))
-map("n", "<Left>", "<C-w>h", desc("Window left"))
-map("n", "<Right>", "<C-w>l", desc("Window right"))
-map("n", "<PageUp>", "gt", desc("Next tab"))
-map("n", "<PageDown>", "gT", desc("Prev tab"))
-map("n", "<leader><C-t>", "<C-w>T", desc("Move to new tab"))
-map("n", "<C-Up>", ":resize +2<CR>", desc("Increase height"))
-map("n", "<C-Down>", ":resize -2<CR>", desc("Decrease height"))
-map("n", "<C-Left>", ":vertical resize -2<CR>", desc("Decrease width"))
-map("n", "<C-Right>", ":vertical resize +2<CR>", desc("Increase width"))
+-- stylua: ignore start
+map("n", "<leader><C-o>",  ":bp<CR>zvzt",             desc("Previous buffer"))
+map("n", "<leader><C-i>",  ":bn<CR>zvzt",             desc("Next buffer"))
+map("n", "<leader>b<C-w>", ":bd!<CR>zvzt",            desc("Delete buffer"))
+map("n", "<leader>pt",     ":InspectTree<CR>",        desc("Tree sitter inspect"))
+map("n", "<leader>pc",     ":Inspect<CR>",            desc("TS inspect"))
+map("n", "<Down>",         "<C-w>j",                  desc("Window down"))
+map("n", "<Up>",           "<C-w>k",                  desc("Window up"))
+map("n", "<Left>",         "<C-w>h",                  desc("Window left"))
+map("n", "<Right>",        "<C-w>l",                  desc("Window right"))
+map("n", "<PageUp>",       "gt",                      desc("Next tab"))
+map("n", "<PageDown>",     "gT",                      desc("Prev tab"))
+map("n", "<leader><C-t>",  "<C-w>T",                  desc("Move to new tab"))
+map("n", "<C-Up>",         ":resize +2<CR>",          desc("Increase height"))
+map("n", "<C-Down>",       ":resize -2<CR>",          desc("Decrease height"))
+map("n", "<C-Left>",       ":vertical resize -2<CR>", desc("Decrease width"))
+map("n", "<C-Right>",      ":vertical resize +2<CR>", desc("Increase width"))
+-- stylua: ignore end
 map("n", "gx", [[:silent execute '!xdg-open ' . shellescape(expand('<cfile>'), v:true)<CR>]], remap("Open URL"))
-
-local function open_doc_link()
-	vim.lsp.buf.hover()
-	vim.defer_fn(function()
-		for _, win in ipairs(vim.api.nvim_list_wins()) do
-			if vim.api.nvim_win_get_config(win).relative ~= "" then
-				local buf = vim.api.nvim_win_get_buf(win)
-				local lines = vim.api.nvim_buf_get_lines(buf, 0, -1, false)
-				for i = #lines, 1, -1 do
-					local url = lines[i]:match("https?://[%w%.%-%_~:/?#%[%]@!$&'%(%)%*%+,;=%%]+")
-					if url then
-						url = url:gsub("[%)%]>]+$", "")
-						vim.fn.jobstart({ "xdg-open", url }, { detach = true })
-						vim.api.nvim_win_close(win, true)
-						return
-					end
-				end
-			end
-		end
-	end, 100)
-end
-
-map("n", "<leader>gk", open_doc_link, desc("Open LSP doc link"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ indent: format paragraph, file                                              │
@@ -221,15 +238,17 @@ map("n", "<leader>g=", "mlgg=G`lzvzt", desc("Indent file"))
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ toggle: features, UI elements, settings                                     │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
-map("n", "<leader>ut", ":UndotreeToggle<CR>", desc("Undo tree"))
-map("n", "<leader>up", ":Lazy update<CR>", desc("Update plugins"))
-map("n", "<leader>ct", ":HighlightColors Toggle<CR>", desc("Toggle colors"))
-map("n", "<leader>st", ":set spell!<CR>", desc("Toggle spell"))
-map("n", "<leader>sc", ":let @/ = ''<CR>", desc("Clear search"))
-map("n", "<leader>wt", ":set wrap!<CR> :echo 'wrap toggled'<CR>", desc("Toggle wrap"))
-map("n", "<leader>mt", ":MarkdownPreviewToggle<CR>,", desc("Markdown preview"))
+-- stylua: ignore start
+map("n", "<leader>mu", ":Lazy update<CR>",                         desc("Update plugins"))
+map("n", "<leader>ut", ":UndotreeToggle<CR>",                      desc("Undo tree"))
+map("n", "<leader>ct", ":HighlightColors Toggle<CR>",              desc("Toggle colors"))
+map("n", "<leader>st", ":set spell!<CR>",                          desc("Toggle spell"))
+map("n", "<leader>sc", ":let @/ = ''<CR>",                         desc("Clear search"))
+map("n", "<leader>wt", ":set wrap!<CR> :echo 'wrap toggled'<CR>",  desc("Toggle wrap"))
+map("n", "<leader>mt", ":MarkdownPreviewToggle<CR>,",              desc("Markdown preview"))
 map("n", "<leader>et", ":NvimTreeToggle<CR> :NvimTreeRefresh<CR>", desc("Toggle file tree"))
-map("n", "<leader>bt", ":Switch<CR>", desc("Toggle variant"))
+map("n", "<leader>bt", ":Switch<CR>",                              desc("Toggle variant"))
+-- stylua: ignore end
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ replace: search and substitute patterns                                     │
@@ -249,46 +268,45 @@ map("n", "<leader>df", ":DBUIFindBuffer<CR>", desc("Find DB buffer"))
 -- ╭─────────────────────────────────────────────────────────────────────────────
 -- │ telescope: fuzzy finder pickers
 -- ╰─────────────────────────────────────────────────────────────────────────────
-local telescope_ok, telescope_builtin = pcall(require, "telescope.builtin")
+local telescope_ok, t = pcall(require, "telescope.builtin")
 if telescope_ok then
 	local tmap = function(lhs, picker, d)
 		map("n", lhs, picker, desc(d))
 	end
 
-	tmap("<leader>t<leader>", telescope_builtin.find_files, "Find files")
-	tmap("<leader>e<leader>", telescope_builtin.oldfiles, "Recent files")
-	tmap("<leader>s<leader>", telescope_builtin.live_grep, "Live grep")
-	tmap("<leader>g<leader>", telescope_builtin.grep_string, "Grep string under cursor")
+  -- stylua: ignore start
+	tmap("<leader>t<leader>", t.find_files,  "Find files")
+	tmap("<leader>e<leader>", t.oldfiles,    "Recent files")
+	tmap("<leader>s<leader>", t.live_grep,   "Live grep")
+	tmap("<leader>g<leader>", t.grep_string, "Grep string under cursor")
 
-	tmap("<leader>tg", telescope_builtin.git_files, "Git files")
-	tmap("<leader>tb", telescope_builtin.buffers, "Buffers")
-	tmap("<leader>th", telescope_builtin.help_tags, "Help tags")
-	tmap("<leader>tH", telescope_builtin.highlights, "Highlight groups")
-	tmap("<leader>td", telescope_builtin.diagnostics, "Diagnostics")
-	tmap("<leader>tp", telescope_builtin.builtin, "Telescope builtins")
-	tmap("<leader>tc", telescope_builtin.commands, "Commands")
-	tmap("<leader>tl", telescope_builtin.loclist, "Location list")
-	tmap("<leader>tq", telescope_builtin.quickfix, "Quickfix list")
-	tmap("<leader>tm", telescope_builtin.man_pages, "Man pages")
-	tmap("<leader>tt", telescope_builtin.resume, "Resume last picker")
-	tmap("<leader>tf", telescope_builtin.current_buffer_fuzzy_find, "Find in this file")
-	tmap("<leader>t;", telescope_builtin.marks, "Marks")
-	tmap("<leader>tst", telescope_builtin.treesitter, "Treesitter symbols")
-	tmap("<leader>tk", telescope_builtin.keymaps, "Keymaps")
-	tmap("<leader>trg", telescope_builtin.registers, "Registers")
-	tmap("<leader>tco", telescope_builtin.colorscheme, "Colorschemes")
-	tmap("<leader>tj", telescope_builtin.jumplist, "Jumplist")
-	tmap("<leader>tsh", telescope_builtin.search_history, "Search history")
-	tmap("<leader>tsp", telescope_builtin.spell_suggest, "Spelling suggestions")
-
-	tmap("<leader>tsr", telescope_builtin.lsp_references, "LSP references")
-	tmap("<leader>tss", telescope_builtin.lsp_document_symbols, "LSP document symbols")
-	tmap("<leader>tsw", telescope_builtin.lsp_dynamic_workspace_symbols, "LSP workspace symbols")
+	tmap("<leader>tg",  t.git_files,      "Git files")
+	tmap("<leader>tb",  t.buffers,        "Buffers")
+	tmap("<leader>th",  t.help_tags,      "Help tags")
+	tmap("<leader>tH",  t.highlights,     "Highlight groups")
+	tmap("<leader>td",  t.diagnostics,    "Diagnostics")
+	tmap("<leader>tp",  t.builtin,        "Telescope builtins")
+	tmap("<leader>tc",  t.commands,       "Commands")
+	tmap("<leader>tl",  t.loclist,        "Location list")
+	tmap("<leader>tq",  t.quickfix,       "Quickfix list")
+	tmap("<leader>tm",  t.man_pages,      "Man pages")
+	-- tmap("<leader>tj",  t.media_files,    "Media Files")
+	tmap("<leader>tt",  t.resume,         "Resume last picker")
+	tmap("<leader>t;",  t.marks,          "Marks")
+	tmap("<leader>tst", t.treesitter,     "Treesitter symbols")
+	tmap("<leader>tk",  t.keymaps,        "Keymaps")
+	tmap("<leader>trg", t.registers,      "Registers")
+	tmap("<leader>tco", t.colorscheme,    "Colorschemes")
+	tmap("<leader>tj",  t.jumplist,       "Jumplist")
+	tmap("<leader>tsh", t.search_history, "Search history")
+	tmap("<leader>tsp", t.spell_suggest,  "Spelling suggestions")
+	-- stylua: ignore end
 end
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ harpoon: quick file navigation                                              │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
+
 map("n", "<leader>nn", ":lua require('harpoon.mark').add_file()<CR>", desc("Add file"))
 map("n", "<leader>ng", ":lua require('harpoon.ui').toggle_quick_menu()<CR>", desc("Quick menu"))
 map("n", "<leader>nt", ":lua require('harpoon.ui').nav_file(1)<CR>zt", desc("File 1"))
@@ -298,10 +316,57 @@ map("n", "<leader>na", ":lua require('harpoon.ui').nav_file(4)<CR>zt", desc("Fil
 map("n", "<leader>nd", ":lua require('harpoon.ui').nav_file(5)<CR>zt", desc("File 5"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ gitsigns: git hunk navigation and actions                                   │
+-- │ nvim-tree: file explorer (buffer-local)                                     │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 local M = { groups = GROUPS }
 
+M.nvimtree_on_attach = function(bufnr)
+	local api = require("nvim-tree.api")
+	local function map(lhs, rhs, d)
+		vim.keymap.set("n", lhs, rhs, { desc = "nvim-tree: " .. d, buffer = bufnr, silent = true, nowait = true })
+	end
+
+  -- stylua: ignore start
+	map("<CR>",    api.node.open.edit,               "Open")
+	map("o",       api.node.open.edit,               "Open")
+	map("<Right>", api.node.open.edit,               "Open")
+	map("zz",      api.tree.change_root_to_node,     "CD")
+	map("<Up>",    api.node.navigate.sibling.prev,   "Previous Sibling")
+	map("<Down>",  api.node.navigate.sibling.next,   "Next Sibling")
+	map("<Left>",  api.node.navigate.parent,         "Parent Directory")
+	map("<C-v>",   api.node.open.vertical,           "Open: Vertical Split")
+	map("<C-h>",   api.node.open.horizontal,         "Open: Horizontal Split")
+	map("<C-t>",   api.node.open.tab,                "Open: New Tab")
+	map("zc",      api.node.navigate.parent_close,   "Close Directory")
+	map("I",       api.tree.toggle_gitignore_filter, "Toggle Git Ignore")
+	map(".",       api.tree.toggle_hidden_filter,    "Toggle Dotfiles")
+	map("n",       api.fs.create,                    "Create")
+	map("d",       api.fs.trash,                     "Trash")
+	map("X",       api.fs.remove,                    "Delete")
+	map("r",       api.fs.rename,                    "Rename")
+	map("<C-r>",   api.fs.rename_sub,                "Rename: Omit Filename")
+	map("R",       api.tree.reload,                  "Refresh")
+	map("<C-x>",   api.fs.cut,                       "Cut")
+	map("yy",      api.fs.copy.node,                 "Copy")
+	map("p",       api.fs.paste,                     "Paste")
+	map("yp",      api.fs.copy.relative_path,        "Copy Relative Path")
+	map("yP",      api.fs.copy.absolute_path,        "Copy Absolute Path")
+	map("[",       api.node.navigate.git.prev,       "Prev Git")
+	map("]",       api.node.navigate.git.next,       "Next Git")
+	map("O",       api.node.run.system,              "Run System")
+	map("q",       api.tree.close,                   "Close")
+	map("<Esc>",   api.tree.close,                   "Close")
+	map("?",       api.tree.toggle_help,             "Help")
+	map("zm",      api.tree.collapse_all,            "Collapse")
+	map("zr",      api.tree.expand_all,              "Expand All")
+	map("S",       api.tree.search_node,             "Search")
+	map("<C-k>",   api.node.show_info_popup,         "Info")
+	-- stylua: ignore end
+end
+
+-- ╭─────────────────────────────────────────────────────────────────────────────╮
+-- │ gitsigns: git hunk navigation and actions (buffer-local)                    │
+-- ╰─────────────────────────────────────────────────────────────────────────────╯
 local function nav_hunk(direction)
 	return function()
 		local gs = require("gitsigns")
@@ -380,7 +445,7 @@ M.on_attach = function(event)
 	lspmap("gd", vim.lsp.buf.definition, "Definition")
 	lspmap("gD", vim.lsp.buf.declaration, "Declaration")
 	lspmap("gi", vim.lsp.buf.implementation, "Implementation")
-	lspmap("gr", ts.lsp_references, "References")
+	lspmap("<F12>", ts.lsp_references, "References")
 	lspmap("gt", ts.lsp_type_definitions, "Type Definition")
 	lspmap("gO", ts.lsp_document_symbols, "Document Symbols")
 	lspmap("gW", ts.lsp_dynamic_workspace_symbols, "Workspace Symbols")
@@ -430,5 +495,61 @@ M.ts_actions = function(event)
 	tsmap("<leader>am", action("source.addMissingImports.ts"), "Add Missing Imports")
 	tsmap("<leader>fa", action("source.fixAll.ts"), "Fix All")
 end
+
+-- ╭─────────────────────────────────────────────────────────────────────────────╮
+-- │ PLUGIN KEYS (lazy-loaded, defined in plugin specs)                          │
+-- ╰─────────────────────────────────────────────────────────────────────────────╯
+
+-- ── trouble.nvim ──────────────────────────────────────────────────────────────
+-- <leader>fd    Diagnostics (Trouble)
+-- <leader>ft    Buffer Diagnostics (Trouble)
+-- <leader>fs    Symbols (Trouble)
+-- <leader>fp    LSP Definitions / references / ... (Trouble)
+-- <leader>fl    Location List (Trouble)
+-- <leader>fq    Quickfix List (Trouble)
+
+-- ── nvim-dap ──────────────────────────────────────────────────────────────────
+-- <F5>          Debug: Start/Continue
+-- <F1>          Debug: Step Into
+-- <F2>          Debug: Step Over
+-- <F3>          Debug: Step Out
+-- <leader>b     Debug: Toggle Breakpoint
+-- <leader>B     Debug: Conditional Breakpoint
+-- <F7>          Debug: Toggle UI
+
+-- ── comment-box.nvim ──────────────────────────────────────────────────────────
+-- gcb           Comment box (n, v)
+-- gcq           Comment quote (n, v)
+-- gcl           Comment line (n, v)
+
+-- ── vim-easy-align ────────────────────────────────────────────────────────────
+-- ga            Easy Align (n, x)
+
+-- ── treesitter (incremental selection) ───────────────────────────────────────
+-- <C-n>         Init/Node incremental selection
+-- <C-p>         Node decremental
+-- <C-l>         Scope incremental
+
+-- ── treesitter textobjects (select) ───────────────────────────────────────────
+-- af/if         Function outer/inner          ac/ic         Class outer/inner
+-- aa/ia         Parameter outer/inner         aL/iL         Loop outer/inner
+-- ae/iE         Conditional outer/inner       aB/iB         Block outer/inner
+
+-- ── treesitter textobjects (move) ─────────────────────────────────────────────
+-- ]f  ]F        Next function start/end       [f  [F        Prev function start/end
+-- ]c  ]C        Next class start/end          [c  [C        Prev class start/end
+-- ]p  ]P        Next parameter start/end      [p  [P        Prev parameter start/end
+-- ]l  ]L        Next loop start/end           [l  [L        Prev loop start/end
+-- ]e  ]E        Next conditional start/end    [e  [E        Prev conditional start/end
+-- ]b  ]B        Next block start/end          [b  [B        Prev block start/end
+
+-- ── treesitter textobjects (swap) ─────────────────────────────────────────────
+-- <leader>ra    Swap parameter next           <leader>rA    Swap parameter prev
+-- <leader>rf    Swap function next            <leader>rF    Swap function prev
+-- <leader>rc    Swap class next               <leader>rC    Swap class prev
+
+-- ── treesitter lsp interop (peek) ─────────────────────────────────────────────
+-- <leader>hf    Peek function definition
+-- <leader>hc    Peek class definition
 
 return M
