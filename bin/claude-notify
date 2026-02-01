@@ -45,6 +45,6 @@ case "$TYPE" in
         ;;
     permission)
         BODY="${MESSAGE:-Permission needed}${TAB_TITLE:+ ⊰ $TAB_TITLE ⊱}"
-        notify_with_action "claude-input" "normal" "8000" "Claude" "$BODY" "$WINDOW_ID" "#f07a88" "#f36978" &
+        notify_with_action "claude-input" "normal" "8000" "Claude" "$BODY" "$WINDOW_ID" "#95cb79" "#5aba6d" &
         ;;
 esac
