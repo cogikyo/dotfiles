@@ -93,5 +93,5 @@
 
 [kitty-claude]
     appname = "kitty"
-    summary = ".*󰯉.*"
+    summary = ".*Claude.*"
     skip_display = true
