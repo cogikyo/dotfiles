@@ -3,7 +3,7 @@
 export PATH="$HOME/.cargo/bin:$HOME/.go/bin:$HOME/.local/bin:$PATH"
 export GOPATH="$HOME/.go"
 
-export TERM=xterm-256color
+# export TERM=xterm-256color  # Let terminal set its own (kitty needs xterm-kitty for undercurls)
 export PAGER=nvimpager
 export EDITOR=nvim
 export DOTS="$HOME/dotfiles"
