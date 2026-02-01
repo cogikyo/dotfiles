@@ -4,6 +4,16 @@ Skills extend Claude with specialized knowledge for using tools, workflows, and 
 
 ## Commands
 
+### `/learn audit`
+
+Run linter on all skills: `scripts/audit.sh`
+
+Or lint a specific skill by name: `scripts/audit.sh learn`
+
+Reports pass/fail for each skill in `user/` and `project/`.
+
+---
+
 ### `/learn new`
 
 **1. Ask scope:**
@@ -38,6 +48,18 @@ skill-name/
 └── assets/            # Templates, boilerplate (optional)
 ```
 
+**5. Run linter:**
+
+After creating, run: `scripts/audit.sh <skill-name>`
+
+This validates:
+
+- Correct path depth (user/\<name\> or project/\<name\>, not nested)
+- Required files exist (SKILL.md, INSTRUCTIONS.md)
+- SKILL.md stays lean (<30 lines, <200 words)
+- YAML frontmatter present
+- No forbidden files (README.md, etc.)
+
 ---
 
 ### `/learn refine`
@@ -71,6 +93,10 @@ Don't assume how tools work. If unsure about current APIs, flags, or behavior, u
 - Architecture matches patterns in this file
 - Principles are followed (concise, tool-wrapping, proper triggers)
 - No unnecessary content added
+
+**6. Run linter:**
+
+After refining, run: `scripts/audit.sh <skill-name>`
 
 ---
 
