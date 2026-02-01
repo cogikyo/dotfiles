@@ -119,5 +119,8 @@ return {
 			vim.lsp.config(name, config)
 			vim.lsp.enable(name)
 		end
+
+		-- Disable unwanted LSPs that auto-start from lspconfig defaults
+		vim.lsp.enable("harper_ls", false)
 	end,
 }
