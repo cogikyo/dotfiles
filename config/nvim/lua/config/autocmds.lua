@@ -27,7 +27,7 @@ au("FileType", {
 	end,
 })
 
--- two-space indent for markup/config languages
+-- two-space indent for heaivly indeneted languages
 au("FileType", {
 	group = "TwoSpaceIndent",
 	pattern = { "lua", "yaml", "json", "jsonc", "html", "css", "scss", "markdown", "typescript", "javascript" },
@@ -64,13 +64,21 @@ au("VimResized", {
 	end,
 })
 
--- check if file changed outside nvim and prompt to reload
-au({ "FocusGained", "TermClose", "TermLeave" }, {
+-- check if file changed outside nvim and auto-reload (requires autoread option)
+au({ "FocusGained", "BufEnter", "CursorHold", "TermClose", "TermLeave" }, {
 	group = "CheckExternalChanges",
 	callback = function()
 		if vim.o.buftype ~= "nofile" then
 			vim.cmd("checktime")
 		end
+	end,
+})
+
+-- force reload when file changes externally, even if buffer modified undo history is preserved
+au("FileChangedShell", {
+	group = "ForceReloadExternal",
+	callback = function()
+		vim.v.fcs_choice = "reload"
 	end,
 })
 
