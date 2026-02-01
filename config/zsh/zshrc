@@ -7,15 +7,22 @@ function command_not_found_handler {
     return 127
 }
 
-
 # history
 HISTFILE=~/.histfile
-HISTSIZE=1000
-SAVEHIST=800
+HISTSIZE=10000
+SAVEHIST=10000
 setopt INC_APPEND_HISTORY
 setopt HIST_IGNORE_ALL_DUPS
 setopt HIST_IGNORE_DUPS
+setopt HIST_FIND_NO_DUPS
+setopt SHARE_HISTORY
+setopt HIST_REDUCE_BLANKS
 setopt AUTO_CD
+
+chpwd() {
+    echo
+    lsd
+}
 
 # aliases
 alias niol='clear && source ~/.zshrc'
@@ -47,8 +54,6 @@ alias oc='ouch compress'
 alias od='ouch decompress'
 alias ol='ouch list --tree'
 alias man='man --pager=$PAGER'
-alias zoomfix='env XDG_CURRENT_DESKTOP=GNOME GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb XDG_SESSION_TYPE=x11 zoom & disown'
-alias af='GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb audacity & disown'
 function etree () {
     echo
     if [[ -z $1 ]]; then
@@ -69,14 +74,18 @@ if [[ ! -f ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh ]]; then
 fi
 source ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh
 
+# plugin settings (before loading)
+ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
+ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+
+# plugins (order matters - syntax highlighting must be last)
 zcomet load zsh-users/zsh-completions
 zcomet load zsh-users/zsh-autosuggestions
-zcomet load marlonrichert/zsh-autocomplete
+zcomet load zsh-users/zsh-history-substring-search
+zcomet load Aloxaf/fzf-tab
 zcomet load zsh-users/zsh-syntax-highlighting
 
 autoload -U compinit; compinit
-
-ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
 
 # fix keys
 bindkey -v
@@ -88,5 +97,7 @@ bindkey '^[[1;5C'  forward-word   # C-left
 bindkey '^[[1;5D'  backward-word  # C-right
 bindkey '^[[1;5A'  history-incremental-search-backward # C-up
 bindkey '^[[1;5B'  history-incremental-search-forward  # C-down
+bindkey '^[[A'     history-substring-search-up         # Up
+bindkey '^[[B'     history-substring-search-down       # Down
 
 source $HOME/.config/zsh/vagari-highlights.zsh
