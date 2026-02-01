@@ -54,6 +54,10 @@ return {
 				},
 				icons = {
 					git_placement = "before",
+					web_devicons = {
+						file = { color = false },
+						folder = { color = true },
+					},
 					glyphs = {
 						default = "",
 						symlink = "",
@@ -82,13 +86,5 @@ return {
 				},
 			},
 		})
-
-		vim.api.nvim_set_hl(0, "NvimTreeGitDirty", { fg = "#6bbdec" })
-		vim.api.nvim_set_hl(0, "NvimTreeGitStaged", { fg = "#f2a170" })
-		vim.api.nvim_set_hl(0, "NvimTreeGitNew", { fg = "#f4ce88" })
-		vim.api.nvim_set_hl(0, "NvimTreeGitDeleted", { fg = "#f08898" })
-		vim.api.nvim_set_hl(0, "NvimTreeGitRenamed", { fg = "#b29ae8" })
-		vim.api.nvim_set_hl(0, "NvimTreeGitMerge", { fg = "#e887c3" })
-		vim.api.nvim_set_hl(0, "NvimTreeGitIgnored", { fg = "#484e75" })
 	end,
 }
