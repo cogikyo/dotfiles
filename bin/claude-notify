@@ -7,7 +7,6 @@ MESSAGE="${2:-}"
 # Get Kitty window/tab info and Claude variant if available
 TAB_TITLE=""
 WINDOW_ID="${KITTY_WINDOW_ID:-}"
-VARIANT="${CLAUDE_VARIANT:-}"
 
 if [[ -n "$WINDOW_ID" ]] && command -v kitty &>/dev/null; then
     # Get tab title for this window
@@ -21,23 +20,17 @@ if [[ -n "$WINDOW_ID" ]] && command -v kitty &>/dev/null; then
         TAB_ICON=$(echo "$TAB_TITLE" | sed -E 's/^[⊰⟜] (.*) [⊱⊸]$/\1/' | xargs)
         [[ -n "$TAB_ICON" ]] && TAB_TITLE="$TAB_ICON"
     fi
-
-    # Append variant name if this is a claude instance (e.g., "󰯉 main")
-    [[ -n "$VARIANT" && -n "$TAB_TITLE" ]] && TAB_TITLE="$TAB_TITLE $VARIANT"
 fi
 
-# Build notification body with tab title
-if [[ -n "$TAB_TITLE" ]]; then
-    BODY="${MESSAGE:-Waiting for input}: $TAB_TITLE "
-else
-    BODY="${MESSAGE:-Waiting for input}"
-fi
+BODY="${MESSAGE:-Waiting for input}"
 
 # Run notification with click-to-focus action (in background to not block)
 notify_with_action() {
-    local app="$1" urgency="$2" timeout="$3" title="$4" body="$5" wid="$6"
+    local app="$1" urgency="$2" timeout="$3" title="$4" body="$5" wid="$6" fg="$7" fr="$8"
 
     action=$(dunstify -a "$app" -u "$urgency" -t "$timeout" \
+        -h "string:fgcolor:$fg" \
+        -h "string:frcolor:$fr" \
         -A "focus,Focus" \
         "$title" "$body")
 
@@ -48,10 +41,13 @@ notify_with_action() {
 
 case "$TYPE" in
     idle)
-        notify_with_action "claude" "low" "6000" "Claude" "$BODY" "$WINDOW_ID" &
+        # Orange (matches standard terminal accent)
+        BODY="${MESSAGE:-Waiting for input}${TAB_TITLE:+ [$TAB_TITLE]}"
+        notify_with_action "claude" "low" "6000" "Claude" "$BODY" "$WINDOW_ID" "#f2a170" "#ea834b" &
         ;;
     permission)
+        # Red (Claude accent color)
         BODY="${MESSAGE:-Permission needed}${TAB_TITLE:+ [$TAB_TITLE]}"
-        notify_with_action "claude-input" "normal" "8000" "Claude" "$BODY" "$WINDOW_ID" &
+        notify_with_action "claude-input" "normal" "8000" "Claude" "$BODY" "$WINDOW_ID" "#f07a88" "#f36978" &
         ;;
 esac
