@@ -561,6 +561,11 @@ require("ouch").setup({
 
 require("zoxide").setup({ key = "z" })
 
+local ok, trash = pcall(require, "trash-cli")
+if ok then
+	trash.setup()
+end
+
 require("fzf").setup({
 	key = "t",
 	recursive = true,
