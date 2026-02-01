@@ -12,10 +12,9 @@ package main
 
 import (
 	"fmt"
+	"hyprd/daemon"
 	"os"
 	"strings"
-
-	"hyprd/daemon"
 )
 
 func main() {
@@ -72,7 +71,7 @@ func runDaemon() {
 }
 
 func cmdStatus() {
-	// Check for --json flag
+	// Check for –json flag
 	jsonOutput := false
 	for _, arg := range os.Args[2:] {
 		if arg == "--json" || arg == "-j" {
