@@ -22,7 +22,7 @@ return {
 				desc = "Debug: Step Into",
 			},
 			{
-				"<F2>",
+				"<F10>",
 				function()
 					require("dap").step_over()
 				end,
