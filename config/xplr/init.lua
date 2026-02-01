@@ -617,19 +617,55 @@ require("preview").setup({
 	text = {
 		enable = true,
 		highlight = {
-			enable = true,
+			enable = false,
 			method = "truecolor",
 			style = nil,
 		},
 	},
 	image = {
-		enable = true,
+		enable = false, -- disabled: causes xplr panic
 		method = "kitty",
 	},
 	directory = {
 		enable = true,
 	},
 })
+
+-- Override plugin's layout (Table above, Preview below)
+xplr.config.layouts.custom.preview = {
+	Horizontal = {
+		config = {
+			margin = 1,
+			horizontal_margin = 2,
+			constraints = { { Percentage = 100 } },
+		},
+		splits = {
+			{
+				Vertical = {
+					config = {
+						constraints = {
+							{ Length = 3 },
+							{ Percentage = 50 },
+							{ Percentage = 50 },
+							{ Length = 3 },
+						},
+					},
+					splits = {
+						"SortAndFilter",
+						"Table",
+						{
+							CustomContent = {
+								title = "Preview",
+								body = { DynamicParagraph = { render = "custom.preview.render" } },
+							},
+						},
+						"InputAndLogs",
+					},
+				},
+			},
+		},
+	},
+}
 
 -- Custom preview mode (inherits default mode, adds P to close)
 xplr.config.modes.custom.preview_mode = {
