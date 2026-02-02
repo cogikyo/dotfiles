@@ -35,7 +35,7 @@
 package main
 
 import (
-	"dotfiles/cmd/internal/daemon"
+	"dotfiles/daemons/internal/daemon"
 	"fmt"
 	"os"
 	"strings"

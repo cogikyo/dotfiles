@@ -35,10 +35,10 @@
 package main
 
 import (
-	"dotfiles/cmd/hyprd/commands"
-	"dotfiles/cmd/hyprd/config"
-	"dotfiles/cmd/hyprd/hypr"
-	"dotfiles/cmd/internal/daemon"
+	"dotfiles/daemons/hyprd/commands"
+	"dotfiles/daemons/hyprd/config"
+	"dotfiles/daemons/hyprd/hypr"
+	"dotfiles/daemons/internal/daemon"
 	"encoding/json"
 	"fmt"
 	"os"

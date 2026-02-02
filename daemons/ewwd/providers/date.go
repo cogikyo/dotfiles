@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"dotfiles/cmd/ewwd/config"
+	"dotfiles/daemons/ewwd/config"
 )
 
 // DateState holds date and time information for the eww statusbar.

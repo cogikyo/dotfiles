@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"dotfiles/cmd/hyprd/hypr"
+	"dotfiles/daemons/hyprd/hypr"
 )
 
 // Monocle toggles fullscreen floating mode for focused work on a dedicated workspace.

@@ -49,7 +49,7 @@
 // and other daemon configuration values.
 package commands
 
-import "dotfiles/cmd/hyprd/config"
+import "dotfiles/daemons/hyprd/config"
 
 // MonocleState tracks a window in monocle mode.
 type MonocleState struct {

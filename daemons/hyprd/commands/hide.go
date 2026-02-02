@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"dotfiles/cmd/hyprd/hypr"
+	"dotfiles/daemons/hyprd/hypr"
 )
 
 // Hide manages window visibility by moving slave windows to and from special workspaces.

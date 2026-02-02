@@ -28,7 +28,7 @@ return {
 			map("I",       api.tree.toggle_gitignore_filter, "Toggle Git Ignore")
 			map(".",       api.tree.toggle_hidden_filter,    "Toggle Dotfiles")
 			map("n",       api.fs.create,                    "Create")
-			map("d",       api.fs.trash,                     "Trash")
+			map("d",       function() pcall(api.fs.trash) end, "Trash")
 			map("X",       api.fs.remove,                    "Delete")
 			map("r",       api.fs.rename,                    "Rename")
 			map("<C-r>",   api.fs.rename_sub,                "Rename: Omit Filename")
@@ -55,6 +55,9 @@ return {
 		nvim_tree.setup({
 			on_attach = on_attach,
 			disable_netrw = true,
+			filesystem_watchers = {
+				ignore_dirs = { ".git" },
+			},
 			hijack_cursor = true,
 			update_focused_file = { enable = true },
 			diagnostics = { enable = true },

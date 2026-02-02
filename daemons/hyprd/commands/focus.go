@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"dotfiles/cmd/hyprd/hypr"
+	"dotfiles/daemons/hyprd/hypr"
 )
 
 // Focus focuses windows by class or title, unhiding from special workspaces if needed.

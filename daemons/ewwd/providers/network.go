@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"dotfiles/cmd/ewwd/config"
+	"dotfiles/daemons/ewwd/config"
 )
 
 // NetworkState holds network speed and connection information.

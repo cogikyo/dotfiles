@@ -3,7 +3,7 @@ package commands
 import (
 	"fmt"
 
-	"dotfiles/cmd/hyprd/hypr"
+	"dotfiles/daemons/hyprd/hypr"
 )
 
 // Swap exchanges windows between master and slave positions with undo support.

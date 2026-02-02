@@ -1,4 +1,4 @@
-module dotfiles/cmd
+module dotfiles/daemons
 
 go 1.25
 
