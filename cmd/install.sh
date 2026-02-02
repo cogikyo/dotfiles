@@ -24,19 +24,21 @@ success() { printf "${GREEN}==>${NC} %s\n" "$*"; }
 warn() { printf "${YELLOW}==>${NC} %s\n" "$*"; }
 error() { printf "${RED}==>${NC} %s\n" "$*" >&2; }
 
-# Binary definitions: name|source_dir|description
+# Binary definitions: name|module_dir|build_path|description
+# module_dir: directory containing go.mod
+# build_path: path to build (relative to module_dir, or "." for same dir)
 declare -A BINARIES=(
-    ["hyprd"]="cmd/hyprd|Hyprland window management daemon"
-    ["ewwd"]="cmd/ewwd|System utilities daemon for eww"
-    ["statusline"]="config/claude/statusline|Claude Code statusline generator"
-    ["newtab"]="share/newtab|Firefox new tab HTTP server"
+    ["hyprd"]="cmd|./hyprd|Hyprland window management daemon"
+    ["ewwd"]="cmd|./ewwd|System utilities daemon for eww"
+    ["statusline"]="config/claude/statusline|.|Claude Code statusline generator"
+    ["newtab"]="share/newtab|.|Firefox new tab HTTP server"
 )
 
 list_binaries() {
     echo "Available binaries:"
     echo
     for name in "${!BINARIES[@]}"; do
-        IFS='|' read -r src_dir desc <<< "${BINARIES[$name]}"
+        IFS='|' read -r module_dir build_path desc <<< "${BINARIES[$name]}"
         printf "  %-12s %s\n" "$name" "$desc"
     done | sort
 }
@@ -50,11 +52,11 @@ build_binary() {
         return 1
     fi
 
-    IFS='|' read -r src_dir desc <<< "${BINARIES[$name]}"
-    local full_path="$DOTFILES/$src_dir"
+    IFS='|' read -r module_dir build_path desc <<< "${BINARIES[$name]}"
+    local full_path="$DOTFILES/$module_dir"
 
     if [[ ! -d "$full_path" ]]; then
-        error "Source directory not found: $full_path"
+        error "Module directory not found: $full_path"
         return 1
     fi
 
@@ -63,10 +65,10 @@ build_binary() {
         return 1
     fi
 
-    info "Building $name from $src_dir"
+    info "Building $name from $module_dir/$build_path"
     (
         cd "$full_path"
-        go build -o "$INSTALL_DIR/$name" .
+        go build -o "$INSTALL_DIR/$name" "$build_path"
     )
     success "Installed $name → $INSTALL_DIR/$name"
 }

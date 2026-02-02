@@ -1,8 +1,6 @@
-package daemon
+package main
 
-// ================================================================================
 // Hyprland event loop and state synchronization
-// ================================================================================
 
 import (
 	"bufio"
@@ -14,19 +12,20 @@ import (
 	"strconv"
 	"strings"
 
-	"hyprd/hypr"
+	"dotfiles/cmd/hyprd/hypr"
+	"dotfiles/cmd/internal/daemon"
 )
 
 // EventLoop connects to Hyprland's event socket and updates state.
 type EventLoop struct {
 	hypr  *hypr.Client
 	state *State
-	subs  *SubscriptionManager
-	done  chan struct{}
+	subs  *daemon.SubscriptionManager
+	done  <-chan struct{}
 }
 
 // NewEventLoop creates an event loop.
-func NewEventLoop(hypr *hypr.Client, state *State, subs *SubscriptionManager, done chan struct{}) *EventLoop {
+func NewEventLoop(hypr *hypr.Client, state *State, subs *daemon.SubscriptionManager, done <-chan struct{}) *EventLoop {
 	return &EventLoop{
 		hypr:  hypr,
 		state: state,

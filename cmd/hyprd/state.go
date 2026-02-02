@@ -1,14 +1,12 @@
-package daemon
+package main
 
-// ================================================================================
 // Thread-safe daemon state with RWMutex protection
-// ================================================================================
 
 import (
 	"encoding/json"
 	"sync"
 
-	"hyprd/commands"
+	"dotfiles/cmd/hyprd/commands"
 )
 
 // State holds all daemon state with thread-safe access.

@@ -7,7 +7,7 @@ package commands
 import (
 	"fmt"
 
-	"hyprd/hypr"
+	"dotfiles/cmd/hyprd/hypr"
 )
 
 // Split handles the split command execution.
