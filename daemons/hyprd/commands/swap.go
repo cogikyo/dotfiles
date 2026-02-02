@@ -8,17 +8,17 @@ import (
 
 // Swap exchanges windows between master and slave positions with undo support.
 type Swap struct {
-	hypr  *hypr.Client
-	state StateManager
+	hypr  *hypr.Client   // Hyprland IPC client
+	state StateManager   // Persistent state storage
 }
 
-// NewSwap returns a new Swap command handler.
+// NewSwap creates a Swap handler with the given Hyprland client and state manager.
 func NewSwap(h *hypr.Client, s StateManager) *Swap {
 	return &Swap{hypr: h, state: s}
 }
 
-// Execute swaps the active window with the master position, or restores the
-// previously displaced master if called from the master position.
+// Execute swaps the active window with the master, or restores the previously
+// displaced master if called from the master position. Ignored for floating windows.
 func (s *Swap) Execute() (string, error) {
 	win, err := s.hypr.ActiveWindow()
 	if err != nil {
@@ -38,52 +38,41 @@ func (s *Swap) Execute() (string, error) {
 	}
 
 	if win.Address == masterAddr {
-		// On master: restore the displaced master (now a slave)
 		return s.restoreDisplaced(win, wsID)
 	}
 
-	// On slave: save current master and take master position
 	return s.takeoverMaster(win, wsID, masterAddr)
 }
 
-// restoreDisplaced restores the previously displaced master.
+// restoreDisplaced moves the previously displaced master back to the master position.
 func (s *Swap) restoreDisplaced(currentMaster *hypr.Window, wsID int) (string, error) {
 	displaced := s.state.GetDisplacedMaster(wsID)
 	if displaced == "" {
 		return "no displaced master to restore", nil
 	}
 
-	// Sanity check
 	if displaced == currentMaster.Address {
 		s.state.SetDisplacedMaster(wsID, "")
 		return "displaced master is current master, cleared", nil
 	}
 
-	// Save ourselves (we'll become a slave after this)
 	s.state.SetDisplacedMaster(wsID, currentMaster.Address)
-
-	// Focus displaced master (now slave) and move it back to master
 	s.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", displaced))
 	s.hypr.Dispatch("movewindow l")
-
-	// Focus back to ourselves (now in slave area)
 	s.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", currentMaster.Address))
 
 	return fmt.Sprintf("restored: %s to master, displaced %s", displaced, currentMaster.Address), nil
 }
 
-// takeoverMaster moves a slave to master position.
+// takeoverMaster moves a slave window to the master position, displacing the current master.
 func (s *Swap) takeoverMaster(slave *hypr.Window, wsID int, masterAddr string) (string, error) {
-	// Save current master (will be displaced)
 	s.state.SetDisplacedMaster(wsID, masterAddr)
-
-	// Move slave to master position
 	s.hypr.Dispatch("movewindow l")
 
 	return fmt.Sprintf("takeover: %s to master, displaced %s", slave.Address, masterAddr), nil
 }
 
-// getMasterAddr returns the master window address for a workspace.
+// getMasterAddr finds the master window address for the given workspace.
 func (s *Swap) getMasterAddr(wsID int) (string, error) {
 	cfg := s.state.GetConfig()
 	master, err := GetMaster(s.hypr, wsID, cfg.Windows.IgnoredClasses)

@@ -14,15 +14,16 @@ import (
 	"dotfiles/daemons/internal/daemon"
 )
 
-// EventLoop listens to Hyprland's event socket and synchronizes daemon state.
+// EventLoop synchronizes daemon state by listening to Hyprland's event socket
+// and notifying subscribers of workspace changes.
 type EventLoop struct {
-	hypr  *hypr.Client
-	state *State
-	subs  *daemon.SubscriptionManager
-	done  <-chan struct{}
+	hypr  *hypr.Client                    // Hyprland IPC client
+	state *State                          // Shared daemon state
+	subs  *daemon.SubscriptionManager     // Pub/sub for workspace events
+	done  <-chan struct{}                 // Shutdown signal
 }
 
-// NewEventLoop creates an EventLoop with the given dependencies.
+// NewEventLoop creates an EventLoop.
 func NewEventLoop(hypr *hypr.Client, state *State, subs *daemon.SubscriptionManager, done <-chan struct{}) *EventLoop {
 	return &EventLoop{
 		hypr:  hypr,
@@ -32,7 +33,8 @@ func NewEventLoop(hypr *hypr.Client, state *State, subs *daemon.SubscriptionMana
 	}
 }
 
-// Run connects to Hyprland and processes events until the done channel closes.
+// Run connects to Hyprland's event socket, performs initial state sync,
+// then processes events until the done channel closes.
 func (e *EventLoop) Run() error {
 	socketPath := e.hypr.EventSocketPath()
 

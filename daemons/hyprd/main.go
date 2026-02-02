@@ -97,7 +97,6 @@ func runDaemon() {
 }
 
 func cmdStatus() {
-	// Check for –json flag
 	jsonOutput := false
 	for _, arg := range os.Args[2:] {
 		if arg == "--json" || arg == "-j" {
@@ -115,7 +114,6 @@ func cmdStatus() {
 	}
 
 	if jsonOutput {
-		// Get full state from daemon
 		resp, err := client.Send("state")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)

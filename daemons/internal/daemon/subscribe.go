@@ -7,26 +7,25 @@ import (
 	"sync"
 )
 
-// Subscriber represents a connected client receiving events on subscribed topics.
+// Subscriber represents a client connection receiving events for subscribed topics.
 type Subscriber struct {
-	conn   net.Conn
-	topics map[string]bool
-	mu     sync.Mutex
+	conn   net.Conn         // Client connection
+	topics map[string]bool  // Topics the client is subscribed to
+	mu     sync.Mutex       // Protects concurrent writes to conn
 }
 
-// SubscriptionManager tracks active subscribers and dispatches events to them.
+// SubscriptionManager coordinates event delivery to active subscribers.
 type SubscriptionManager struct {
-	mu          sync.RWMutex
-	subscribers []*Subscriber
+	mu          sync.RWMutex   // Protects subscribers slice
+	subscribers []*Subscriber  // Active client subscriptions
 }
 
-// NewSubscriptionManager returns a new SubscriptionManager ready to accept subscribers.
+// NewSubscriptionManager creates a SubscriptionManager.
 func NewSubscriptionManager() *SubscriptionManager {
 	return &SubscriptionManager{}
 }
 
-// Subscribe registers a connection to receive events for the given topics.
-// The onSubscribe callback is invoked to send initial state to the new subscriber.
+// Subscribe registers conn to receive events for topics, then calls onSubscribe to send initial state.
 func (m *SubscriptionManager) Subscribe(conn net.Conn, topics []string, onSubscribe func(sub *Subscriber)) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -60,8 +59,7 @@ func (m *SubscriptionManager) Unsubscribe(conn net.Conn) {
 	}
 }
 
-// Notify broadcasts an event to all subscribers interested in the given topic.
-// Events are encoded as JSON with "event" and "data" fields.
+// Notify broadcasts a JSON event to all subscribers interested in topic.
 func (m *SubscriptionManager) Notify(topic string, data any) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -101,8 +99,7 @@ func (sub *Subscriber) WantsTopic(topic string) bool {
 	return sub.topics[topic] || sub.topics["*"]
 }
 
-// ParseSubscribeCommand extracts topic names from a subscribe command string.
-// If no topics are specified, it returns ["*"] to subscribe to all events.
+// ParseSubscribeCommand extracts topics from cmd, defaulting to ["*"] if none specified.
 func ParseSubscribeCommand(cmd string) []string {
 	parts := strings.Fields(cmd)
 	if len(parts) < 2 {

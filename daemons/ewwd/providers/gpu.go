@@ -12,17 +12,17 @@ import (
 	"dotfiles/daemons/ewwd/config"
 )
 
-// GPUState holds AMD GPU metrics including utilization and memory usage.
+// GPUState contains AMD GPU metrics for consumption by UI widgets and monitoring tools.
 type GPUState struct {
-	GPUBusy   string `json:"gpu_busy"`
-	MemBusy   string `json:"mem_busy"`
-	MCLK      string `json:"mclk"`
-	MCLKLevel string `json:"mclk_level"`
-	VRAM      string `json:"vram"`
-	Used      string `json:"used"`
+	GPUBusy   string `json:"gpu_busy"`   // GPU utilization percentage
+	MemBusy   string `json:"mem_busy"`   // Memory controller utilization percentage
+	MCLK      string `json:"mclk"`       // Memory clock speed in MHz
+	MCLKLevel string `json:"mclk_level"` // Active memory clock level (0-N)
+	VRAM      string `json:"vram"`       // VRAM usage percentage
+	Used      string `json:"used"`       // VRAM used in bytes
 }
 
-// GPU provides AMD GPU metrics by reading from sysfs.
+// GPU monitors AMD GPU metrics by reading sysfs device attributes.
 type GPU struct {
 	state  StateSetter
 	config config.GPUConfig
@@ -30,7 +30,7 @@ type GPU struct {
 	active bool
 }
 
-// NewGPU creates a GPU provider.
+// NewGPU creates a GPU provider configured to read from the specified device path.
 func NewGPU(state StateSetter, cfg config.GPUConfig) Provider {
 	return &GPU{
 		state:  state,
@@ -39,12 +39,11 @@ func NewGPU(state StateSetter, cfg config.GPUConfig) Provider {
 	}
 }
 
-// Name returns the provider identifier.
 func (g *GPU) Name() string {
 	return "gpu"
 }
 
-// Start begins polling GPU metrics at configured intervals.
+// Start polls GPU metrics at configured intervals and notifies subscribers of state changes.
 func (g *GPU) Start(ctx context.Context, notify func(data any)) error {
 	g.active = true
 	ticker := time.NewTicker(g.config.PollInterval)
@@ -71,7 +70,6 @@ func (g *GPU) Start(ctx context.Context, notify func(data any)) error {
 	}
 }
 
-// Stop gracefully shuts down the GPU provider.
 func (g *GPU) Stop() error {
 	if g.active {
 		close(g.done)

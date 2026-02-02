@@ -8,20 +8,19 @@ import (
 
 // Split manages master/slave split ratios with cycling and direct ratio selection.
 type Split struct {
-	hypr  *hypr.Client
-	state StateManager
+	hypr  *hypr.Client   // Hyprland IPC client
+	state StateManager   // Persistent state storage
 }
 
-// NewSplit returns a new Split command handler.
+// NewSplit creates a Split handler with the given Hyprland client and state manager.
 func NewSplit(h *hypr.Client, s StateManager) *Split {
 	return &Split{hypr: h, state: s}
 }
 
-// Execute sets or cycles the split ratio. Supported flags are "xs", "default",
-// "lg", "toggle" (between default and xs), "reapply", or empty string to cycle
-// through xs, default, and lg in order.
+// Execute sets or cycles the split ratio. Supported flags: "xs", "default", "lg",
+// "toggle" (toggles default/xs), "reapply" (reapplies current and centers cursor),
+// or empty to cycle xs -> default -> lg. Ignored for floating windows.
 func (s *Split) Execute(flag string) (string, error) {
-	// Ignore if active window is floating
 	win, err := s.hypr.ActiveWindow()
 	if err != nil {
 		return "", err
@@ -40,13 +39,11 @@ func (s *Split) Execute(flag string) (string, error) {
 	case "default":
 		return s.setRatio("default")
 	case "toggle", "-d":
-		// Toggle between default and xs
 		if current == "default" {
 			return s.setRatio("xs")
 		}
 		return s.setRatio("default")
 	case "reapply", "-r":
-		// Reapply current ratio and center cursor
 		result, err := s.setRatio(current)
 		if err != nil {
 			return "", err
@@ -54,12 +51,11 @@ func (s *Split) Execute(flag string) (string, error) {
 		centerCursor(s.hypr)
 		return result, nil
 	default:
-		// Cycle: xs → default → lg → xs
 		return s.cycle(current)
 	}
 }
 
-// setRatio applies a split ratio.
+// setRatio applies the specified split ratio by dispatching the mfact layoutmsg to Hyprland.
 func (s *Split) setRatio(ratio string) (string, error) {
 	cfg := s.state.GetConfig()
 
@@ -82,7 +78,7 @@ func (s *Split) setRatio(ratio string) (string, error) {
 	return fmt.Sprintf("split: %s (%s)", ratio, mfact), nil
 }
 
-// cycle moves to the next split ratio.
+// cycle advances to the next split ratio in the sequence: xs -> default -> lg -> xs.
 func (s *Split) cycle(current string) (string, error) {
 	var next string
 	switch current {
