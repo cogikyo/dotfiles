@@ -1,5 +1,39 @@
-// Package daemon provides shared infrastructure for Unix socket daemons,
-// including client/server communication, subscription management, and signal handling.
+// Package daemon provides shared infrastructure for Unix socket daemons.
+//
+// The package implements a client/server architecture for inter-process
+// communication over Unix domain sockets. Daemons expose a socket that clients
+// can connect to for sending commands and receiving responses.
+//
+// # Server
+//
+// Server manages the Unix socket lifecycle, accepting connections and routing
+// commands to a user-provided handler. It handles graceful shutdown via signals
+// and cleans up the socket file on exit.
+//
+//	server := daemon.NewServer("/tmp/my.sock", handleCommand)
+//	server.Start()
+//	server.WaitForSignal()
+//	server.Shutdown()
+//
+// # Client
+//
+// Client provides methods for connecting to a running daemon. It supports
+// one-shot request/response communication as well as streaming subscriptions.
+//
+//	client := daemon.NewClient("/tmp/my.sock")
+//	response, err := client.Send("status")
+//
+// # Subscriptions
+//
+// The subscription mechanism allows clients to receive real-time updates from
+// the daemon. Clients subscribe to topics and receive JSON events when the
+// daemon calls Notify on the SubscriptionManager.
+//
+//	// Server side
+//	server.Subs.Notify("window", windowData)
+//
+//	// Client side
+//	client.Stream("subscribe window workspace")
 package daemon
 
 import (
@@ -11,14 +45,14 @@ import (
 	"syscall"
 )
 
-// CommandHandler processes a command and returns a response.
+// CommandHandler processes a command string and returns a response.
 type CommandHandler func(command string) string
 
-// SubscribeHandler is called when a client subscribes.
-// It should send initial state to the subscriber.
+// SubscribeHandler is called when a client subscribes to topics.
+// Implementations should send initial state to the subscriber.
 type SubscribeHandler func(sub *Subscriber, topics []string)
 
-// Server manages the Unix socket and client connections.
+// Server handles incoming daemon connections on a Unix socket.
 type Server struct {
 	SocketPath  string
 	Subs        *SubscriptionManager
@@ -28,7 +62,8 @@ type Server struct {
 	listener    net.Listener
 }
 
-// NewServer creates a new daemon server.
+// NewServer returns a new Server configured to listen on the given socket path.
+// The handler is invoked for each non-subscribe command received.
 func NewServer(socketPath string, handler CommandHandler) *Server {
 	return &Server{
 		SocketPath: socketPath,
@@ -39,8 +74,8 @@ func NewServer(socketPath string, handler CommandHandler) *Server {
 }
 
 // Start begins listening on the socket and accepting connections.
+// It removes any stale socket file and restricts access to the current user.
 func (s *Server) Start() error {
-	// Remove stale socket
 	os.Remove(s.SocketPath)
 
 	listener, err := net.Listen("unix", s.SocketPath)
@@ -49,8 +84,7 @@ func (s *Server) Start() error {
 	}
 	s.listener = listener
 
-	// Make socket world-accessible (for eww, scripts, etc.)
-	if err := os.Chmod(s.SocketPath, 0o666); err != nil {
+	if err := os.Chmod(s.SocketPath, 0o600); err != nil {
 		listener.Close()
 		return fmt.Errorf("chmod socket: %w", err)
 	}
@@ -59,7 +93,7 @@ func (s *Server) Start() error {
 	return nil
 }
 
-// Shutdown cleanly stops the server.
+// Shutdown stops the server, closes the listener, and removes the socket file.
 func (s *Server) Shutdown() {
 	close(s.done)
 	if s.listener != nil {
@@ -68,19 +102,18 @@ func (s *Server) Shutdown() {
 	os.Remove(s.SocketPath)
 }
 
-// Done returns the done channel for coordinating shutdown.
+// Done returns a channel that is closed when the server shuts down.
 func (s *Server) Done() <-chan struct{} {
 	return s.done
 }
 
-// WaitForSignal blocks until SIGINT or SIGTERM is received.
+// WaitForSignal blocks until SIGINT or SIGTERM is received and returns the signal.
 func (s *Server) WaitForSignal() os.Signal {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
 	return <-sigCh
 }
 
-// acceptLoop handles incoming client connections.
 func (s *Server) acceptLoop() {
 	for {
 		conn, err := s.listener.Accept()
@@ -97,7 +130,6 @@ func (s *Server) acceptLoop() {
 	}
 }
 
-// handleClient processes a single client connection.
 func (s *Server) handleClient(conn net.Conn) {
 	buf := make([]byte, 4096)
 	n, err := conn.Read(buf)
@@ -108,7 +140,6 @@ func (s *Server) handleClient(conn net.Conn) {
 
 	command := strings.TrimSpace(string(buf[:n]))
 
-	// Handle subscribe specially - keep connection open
 	if strings.HasPrefix(command, "subscribe") {
 		topics := ParseSubscribeCommand(command)
 		s.Subs.Subscribe(conn, topics, func(sub *Subscriber) {
@@ -116,7 +147,6 @@ func (s *Server) handleClient(conn net.Conn) {
 				s.OnSubscribe(sub, topics)
 			}
 		})
-		// Block until client disconnects
 		buf := make([]byte, 1)
 		conn.Read(buf)
 		s.Subs.Unsubscribe(conn)
@@ -124,7 +154,6 @@ func (s *Server) handleClient(conn net.Conn) {
 		return
 	}
 
-	// Normal request-response
 	response := s.Handler(command)
 	conn.Write([]byte(response))
 	conn.Close()

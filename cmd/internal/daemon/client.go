@@ -1,7 +1,5 @@
 package daemon
 
-// Client-side socket communication for sending commands to daemon
-
 import (
 	"bufio"
 	"io"
@@ -9,17 +7,17 @@ import (
 	"os"
 )
 
-// Client sends commands to a daemon socket.
+// Client connects to a running daemon instance via Unix socket.
 type Client struct {
 	SocketPath string
 }
 
-// NewClient creates a client for the given socket path.
+// NewClient returns a new Client configured to connect to the given socket path.
 func NewClient(socketPath string) *Client {
 	return &Client{SocketPath: socketPath}
 }
 
-// Send sends a command and returns the response.
+// Send transmits a command to the daemon and returns the response.
 func (c *Client) Send(command string) (string, error) {
 	conn, err := net.Dial("unix", c.SocketPath)
 	if err != nil {
@@ -40,8 +38,9 @@ func (c *Client) Send(command string) (string, error) {
 	return string(buf[:n]), nil
 }
 
-// Stream sends a command and streams the response to stdout.
-// Used for subscribe commands that keep the connection open.
+// Stream sends a command and continuously writes response lines to stdout.
+// It keeps the connection open until the server closes it, making it suitable
+// for subscribe commands that receive ongoing events.
 func (c *Client) Stream(command string) error {
 	conn, err := net.Dial("unix", c.SocketPath)
 	if err != nil {
@@ -66,7 +65,8 @@ func (c *Client) Stream(command string) error {
 	}
 }
 
-// IsRunning checks if a daemon is running on the socket.
+// IsRunning reports whether a daemon is listening on the socket.
+// It attempts a ping/pong exchange to verify the daemon is responsive.
 func (c *Client) IsRunning() bool {
 	conn, err := net.Dial("unix", c.SocketPath)
 	if err != nil {
