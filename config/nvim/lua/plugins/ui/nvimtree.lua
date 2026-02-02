@@ -86,7 +86,7 @@ return {
 				},
 			},
 			renderer = {
-				highlight_git = true,
+				highlight_git = "icon",
 				indent_markers = {
 					enable = true,
 					inline_arrows = true,
@@ -98,7 +98,7 @@ return {
 					},
 				},
 				icons = {
-					git_placement = "before",
+					git_placement = "after",
 					web_devicons = {
 						file = { color = false },
 						folder = { color = true },
