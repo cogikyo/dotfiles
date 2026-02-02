@@ -7,12 +7,12 @@ import (
 	"os"
 )
 
-// Client connects to a running daemon instance via Unix socket.
+// Client provides methods for sending commands to a daemon over Unix sockets.
 type Client struct {
-	SocketPath string
+	SocketPath string // Path to the Unix domain socket
 }
 
-// NewClient returns a new Client configured to connect to the given socket path.
+// NewClient creates a Client for the given socket path.
 func NewClient(socketPath string) *Client {
 	return &Client{SocketPath: socketPath}
 }
@@ -65,8 +65,7 @@ func (c *Client) Stream(command string) error {
 	}
 }
 
-// IsRunning reports whether a daemon is listening on the socket.
-// It attempts a ping/pong exchange to verify the daemon is responsive.
+// IsRunning checks if the daemon is running and responsive via ping/pong exchange.
 func (c *Client) IsRunning() bool {
 	conn, err := net.Dial("unix", c.SocketPath)
 	if err != nil {

@@ -48,22 +48,20 @@ import (
 // CommandHandler processes a command string and returns a response.
 type CommandHandler func(command string) string
 
-// SubscribeHandler is called when a client subscribes to topics.
-// Implementations should send initial state to the subscriber.
+// SubscribeHandler is invoked when a client subscribes; use it to send initial state.
 type SubscribeHandler func(sub *Subscriber, topics []string)
 
-// Server handles incoming daemon connections on a Unix socket.
+// Server manages a Unix socket daemon, routing commands to handlers and managing subscriptions.
 type Server struct {
-	SocketPath  string
-	Subs        *SubscriptionManager
-	Handler     CommandHandler
-	OnSubscribe SubscribeHandler
-	done        chan struct{}
-	listener    net.Listener
+	SocketPath  string                // Path to the Unix domain socket
+	Subs        *SubscriptionManager  // Manages client subscriptions to events
+	Handler     CommandHandler        // Processes non-subscribe commands
+	OnSubscribe SubscribeHandler      // Optional callback invoked on new subscriptions
+	done        chan struct{}         // Signals server shutdown
+	listener    net.Listener          // Unix socket listener
 }
 
-// NewServer returns a new Server configured to listen on the given socket path.
-// The handler is invoked for each non-subscribe command received.
+// NewServer creates a Server that listens on socketPath and routes commands to handler.
 func NewServer(socketPath string, handler CommandHandler) *Server {
 	return &Server{
 		SocketPath: socketPath,

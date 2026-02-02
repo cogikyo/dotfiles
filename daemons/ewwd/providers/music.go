@@ -24,29 +24,29 @@ const (
 	defaultSeekDelta   = 10   // 10 seconds
 )
 
-// MusicState holds music playback information for the eww statusbar.
+// MusicState represents current playback state for the eww statusbar.
 type MusicState struct {
-	Status  string `json:"status"`   // "Playing", "Paused", "Stopped"
-	Volume  string `json:"volume"`   // "0.0" - "1.0"
-	Artist  string `json:"artist"`   // Artist name
-	Album   string `json:"album"`    // Album name
-	Title   string `json:"title"`    // Track title
-	ArtPath string `json:"art_path"` // Path to album art image
+	Status  string `json:"status"`   // "Playing", "Paused", or "Stopped"
+	Volume  string `json:"volume"`   // Range: "0.0" to "1.0"
+	Artist  string `json:"artist"`   // Current track artist
+	Album   string `json:"album"`    // Current track album
+	Title   string `json:"title"`    // Current track title
+	ArtPath string `json:"art_path"` // Local filesystem path to cached album art
 }
 
-// Music provides Spotify playback monitoring and control via playerctl.
+// Music monitors Spotify playback via playerctl, caching album art and providing playback control actions.
 type Music struct {
-	state      StateSetter
-	notify     func(data any)
-	done       chan struct{}
-	active     bool
-	last       MusicState
-	lastArtURL string
-	mu         sync.Mutex
-	wg         sync.WaitGroup // Track background goroutines for clean shutdown
+	state      StateSetter      // State storage backend
+	notify     func(data any)   // Callback for state changes
+	done       chan struct{}    // Shutdown signal
+	active     bool             // Whether provider is running
+	last       MusicState       // Last known state for change detection
+	lastArtURL string           // URL of currently cached album art
+	mu         sync.Mutex       // Protects state and lastArtURL
+	wg         sync.WaitGroup   // Tracks background album art downloads
 }
 
-// NewMusic creates a Music provider.
+// NewMusic creates a Music provider for Spotify playback monitoring.
 func NewMusic(state StateSetter) Provider {
 	return &Music{
 		state: state,
@@ -54,12 +54,11 @@ func NewMusic(state StateSetter) Provider {
 	}
 }
 
-// Name returns the provider identifier.
 func (m *Music) Name() string {
 	return "music"
 }
 
-// Start begins monitoring music playback using playerctl follow mode.
+// Start monitors Spotify playback using playerctl follow mode for real-time updates, with a fallback polling mechanism.
 func (m *Music) Start(ctx context.Context, notify func(data any)) error {
 	m.active = true
 	m.notify = notify
@@ -91,7 +90,7 @@ func (m *Music) Start(ctx context.Context, notify func(data any)) error {
 	}
 }
 
-// Stop gracefully shuts down the music provider.
+// Stop shuts down the provider and waits for pending album art downloads to complete.
 func (m *Music) Stop() error {
 	if m.active {
 		close(m.done)
@@ -101,7 +100,7 @@ func (m *Music) Stop() error {
 	return nil
 }
 
-// followMode uses playerctl -F to get real-time updates.
+// followMode continuously streams metadata changes from playerctl, automatically restarting on failure.
 func (m *Music) followMode(ctx context.Context) {
 	for {
 		select {
@@ -160,7 +159,7 @@ func (m *Music) followMode(ctx context.Context) {
 	}
 }
 
-// parseFollowLine parses output from playerctl --follow.
+// parseFollowLine parses tab-separated playerctl output and triggers album art downloads when URLs change.
 func (m *Music) parseFollowLine(line string) {
 	parts := strings.Split(line, "\t")
 	if len(parts) < 6 {
@@ -202,7 +201,7 @@ func (m *Music) parseFollowLine(line string) {
 	}
 }
 
-// updateAndNotify polls current music state and notifies if changed.
+// updateAndNotify polls playerctl for current state and notifies only if state has changed.
 func (m *Music) updateAndNotify() {
 	state := m.getCurrentState()
 
@@ -224,7 +223,7 @@ func (m *Music) updateAndNotify() {
 	}
 }
 
-// getCurrentState reads current music state from playerctl.
+// getCurrentState queries playerctl for all metadata fields and returns a default "waiting" state if player is unavailable.
 func (m *Music) getCurrentState() MusicState {
 	status := m.playerctl("status")
 	if status == "" || status == "No players found" {
@@ -260,7 +259,7 @@ func (m *Music) getCurrentState() MusicState {
 	}
 }
 
-// playerctl runs a playerctl command and returns the output.
+// playerctl executes a playerctl command and returns trimmed stdout, or empty string on error.
 func (m *Music) playerctl(cmd string) string {
 	out, err := exec.Command("playerctl", "--player="+musicPlayer, cmd).Output()
 	if err != nil {
@@ -269,7 +268,7 @@ func (m *Music) playerctl(cmd string) string {
 	return strings.TrimSpace(string(out))
 }
 
-// playerctlMetadata gets a specific metadata field.
+// playerctlMetadata retrieves a specific metadata field from playerctl, returning empty string on error.
 func (m *Music) playerctlMetadata(field string) string {
 	out, err := exec.Command("playerctl", "--player="+musicPlayer, "metadata", field).Output()
 	if err != nil {
@@ -278,7 +277,7 @@ func (m *Music) playerctlMetadata(field string) string {
 	return strings.TrimSpace(string(out))
 }
 
-// downloadAlbumArt fetches album art and saves to file.
+// downloadAlbumArt fetches album art from URL and atomically writes it to the cache path.
 func (m *Music) downloadAlbumArt(url string) {
 	if url == "" {
 		return
@@ -311,7 +310,7 @@ func (m *Music) downloadAlbumArt(url string) {
 	os.Rename(tmpFile, albumArtPath)
 }
 
-// playerctlRun executes a playerctl command, logging errors.
+// playerctlRun executes a playerctl command, logging errors to stderr.
 func (m *Music) playerctlRun(args ...string) {
 	fullArgs := append([]string{"--player=" + musicPlayer}, args...)
 	if err := exec.Command("playerctl", fullArgs...).Run(); err != nil {
@@ -319,7 +318,7 @@ func (m *Music) playerctlRun(args ...string) {
 	}
 }
 
-// HandleAction processes music commands: play, pause, toggle, next, previous, volume, and seek.
+// HandleAction processes playback control commands (play, pause, toggle, next, previous, volume, seek).
 func (m *Music) HandleAction(args []string) (string, error) {
 	if len(args) == 0 {
 		return "", errors.New("action required: play, pause, toggle, volume, seek")

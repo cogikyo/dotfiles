@@ -11,20 +11,19 @@ import (
 	"strings"
 )
 
-// SocketPath is the Unix socket address where the daemon listens for connections.
 const SocketPath = "/tmp/ewwd.sock"
 
-// Daemon is the main ewwd daemon.
+// Daemon orchestrates providers and routes commands between clients and state updates.
 type Daemon struct {
-	state     *State
-	server    *daemon.Server
-	providers []providers.Provider
-	ctx       context.Context
-	cancel    context.CancelFunc
-	config    *config.Config
+	state     *State                  // Thread-safe data store
+	server    *daemon.Server          // Unix socket server
+	providers []providers.Provider    // Data sources
+	ctx       context.Context         // Cancellation context
+	cancel    context.CancelFunc      // Triggers provider shutdown
+	config    *config.Config          // YAML configuration
 }
 
-// New creates a new daemon instance.
+// New loads configuration and initializes the daemon with server and state.
 func New() (*Daemon, error) {
 	cfg := config.Load()
 
@@ -77,7 +76,7 @@ func (d *Daemon) Run() error {
 	return nil
 }
 
-// initProviders registers all data providers.
+// initProviders instantiates all providers with their configuration.
 func (d *Daemon) initProviders() {
 	cfg := d.config
 	d.providers = []providers.Provider{
@@ -92,7 +91,7 @@ func (d *Daemon) initProviders() {
 	}
 }
 
-// sendInitialState sends current state to a new subscriber.
+// sendInitialState sends existing state to new subscribers for their requested topics.
 func (d *Daemon) sendInitialState(sub *daemon.Subscriber, topics []string) {
 	allState := d.state.GetAll()
 
@@ -103,7 +102,7 @@ func (d *Daemon) sendInitialState(sub *daemon.Subscriber, topics []string) {
 	}
 }
 
-// handleCommand dispatches commands and returns responses.
+// handleCommand parses and routes client commands (status, query, action) to handlers.
 func (d *Daemon) handleCommand(command string) string {
 	parts := strings.SplitN(command, " ", 2)
 	cmd := parts[0]
@@ -147,7 +146,7 @@ func (d *Daemon) handleCommand(command string) string {
 	}
 }
 
-// query returns the current state for requested topics.
+// query returns JSON state for a topic or all state if topic is "all" or empty.
 func (d *Daemon) query(topic string) (string, error) {
 	if topic == "all" || topic == "" {
 		jsonData, err := d.state.JSON()
@@ -162,7 +161,7 @@ func (d *Daemon) query(topic string) (string, error) {
 	return string(jsonData), err
 }
 
-// handleAction routes action commands to the appropriate provider.
+// handleAction finds the provider by name and delegates action execution with args.
 func (d *Daemon) handleAction(providerName string, args []string) string {
 	for _, p := range d.providers {
 		if p.Name() == providerName {

@@ -51,49 +51,51 @@ package commands
 
 import "dotfiles/daemons/hyprd/config"
 
-// MonocleState tracks a window in monocle mode.
+// MonocleState tracks a fullscreen floating window, storing its origin workspace
+// and position so it can be restored when toggled off.
 type MonocleState struct {
 	Address  string `json:"address"`   // Window address (0x...)
-	OriginWS int    `json:"origin_ws"` // Original workspace
-	Position string `json:"position"`  // "master" | "0" | "1" | ...
+	OriginWS int    `json:"origin_ws"` // Workspace to restore to
+	Position string `json:"position"`  // Position to restore: "master" or slave index "0", "1", etc.
 }
 
-// HiddenState tracks a window hidden to special workspace.
+// HiddenState tracks a window moved to the special workspace for temporary hiding,
+// storing its origin so it can be restored to the same workspace and slave position.
 type HiddenState struct {
 	Address    string `json:"address"`     // Window address (0x...)
-	OriginWS   int    `json:"origin_ws"`   // Workspace it came from
-	SlaveIndex int    `json:"slave_index"` // Position in slave stack
+	OriginWS   int    `json:"origin_ws"`   // Workspace to restore to
+	SlaveIndex int    `json:"slave_index"` // Slave position to restore to
 }
 
-// MonitorGeometry holds computed monitor dimensions for window positioning.
+// MonitorGeometry holds computed screen dimensions for window positioning and monocle sizing.
+// Computed by ComputeGeometry from raw dimensions, reserved areas, and monocle ratios.
 type MonitorGeometry struct {
-	Width        int `json:"width"`         // Full monitor width
-	Height       int `json:"height"`        // Full monitor height
-	ReservedTop  int `json:"reserved_top"`  // Top gap (e.g., for bar)
-	ReservedBot  int `json:"reserved_bot"`  // Bottom gap
-	ReservedLeft int `json:"reserved_left"` // Left gap
-	UsableHeight int `json:"usable_height"` // Height minus reserved areas
-	MonocleW     int `json:"monocle_w"`     // Monocle window width
-	MonocleH     int `json:"monocle_h"`     // Monocle window height
+	Width        int `json:"width"`         // Full monitor width in pixels
+	Height       int `json:"height"`        // Full monitor height in pixels
+	ReservedTop  int `json:"reserved_top"`  // Top reserved area (e.g., status bar)
+	ReservedBot  int `json:"reserved_bot"`  // Bottom reserved area
+	ReservedLeft int `json:"reserved_left"` // Left reserved area
+	UsableHeight int `json:"usable_height"` // Height minus top and bottom reserved areas
+	MonocleW     int `json:"monocle_w"`     // Monocle window width (monitor width * ratio)
+	MonocleH     int `json:"monocle_h"`     // Monocle window height (usable height * ratio)
 }
 
-// StateManager defines the interface for commands to interact with daemon state.
-// It provides access to monocle state, hidden windows, split ratios, displaced
-// masters, monitor geometry, and configuration. The daemon.State type implements
-// this interface.
+// StateManager abstracts daemon state access for commands, providing monocle tracking,
+// hidden window management, split ratios, displaced master tracking, monitor geometry,
+// and configuration. Implemented by daemon.State.
 type StateManager interface {
 	GetMonocle() *MonocleState
 	SetMonocle(m *MonocleState)
 
-	GetHidden() map[string]*HiddenState
+	GetHidden() map[string]*HiddenState // Returns all hidden windows by address
 	AddHidden(h *HiddenState)
-	RemoveHidden(addr string) *HiddenState
+	RemoveHidden(addr string) *HiddenState // Returns the removed state
 	IsHidden(addr string) bool
 
-	GetSplitRatio() string
+	GetSplitRatio() string // Returns "xs", "default", or "lg"
 	SetSplitRatio(ratio string)
 
-	GetDisplacedMaster(ws int) string
+	GetDisplacedMaster(ws int) string    // Returns window address of displaced master on workspace
 	SetDisplacedMaster(ws int, addr string)
 
 	GetGeometry() *MonitorGeometry

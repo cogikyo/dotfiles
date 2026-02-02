@@ -7,20 +7,19 @@ import (
 	"dotfiles/daemons/hyprd/hypr"
 )
 
-// Monocle toggles fullscreen floating mode for focused work on a dedicated workspace.
+// Monocle toggles fullscreen floating mode, moving windows to a dedicated workspace for distraction-free focus.
 type Monocle struct {
-	hypr  *hypr.Client
-	state StateManager
+	hypr  *hypr.Client  // Hyprland IPC client
+	state StateManager  // tracks monocle state and config
 }
 
-// NewMonocle returns a new Monocle command handler.
+// NewMonocle creates a Monocle command handler.
 func NewMonocle(h *hypr.Client, s StateManager) *Monocle {
 	return &Monocle{hypr: h, state: s}
 }
 
-// Execute toggles monocle mode on the active window. Entering monocle mode
-// floats the window, resizes it, and moves it to a dedicated workspace.
-// Exiting restores the window to its original workspace and tiling position.
+// Execute toggles monocle mode, floating and resizing the active window on a dedicated workspace.
+// Calling again restores the window to its original workspace and tiling position.
 func (m *Monocle) Execute() (string, error) {
 	// Get active window
 	win, err := m.hypr.ActiveWindow()
@@ -58,7 +57,7 @@ func (m *Monocle) Execute() (string, error) {
 	return m.enter(win)
 }
 
-// enter puts a window into monocle mode.
+// enter saves window state, floats and resizes it, then moves to the monocle workspace.
 func (m *Monocle) enter(win *hypr.Window) (string, error) {
 	cfg := m.state.GetConfig()
 
@@ -106,7 +105,7 @@ func (m *Monocle) enter(win *hypr.Window) (string, error) {
 	return fmt.Sprintf("monocle: %s from ws%d (%s)", win.Address, win.Workspace.ID, position), nil
 }
 
-// restore returns a monocle window to its original position.
+// restore unfloats the window and returns it to its original workspace and tiling position.
 func (m *Monocle) restore(monocle *MonocleState) (string, error) {
 	cfg := m.state.GetConfig()
 
@@ -143,7 +142,7 @@ func (m *Monocle) restore(monocle *MonocleState) (string, error) {
 	return fmt.Sprintf("restored: %s to ws%d (%s)", monocle.Address, monocle.OriginWS, monocle.Position), nil
 }
 
-// getPosition determines if window is master or its slave index.
+// getPosition returns "master", slave index, or "floating" to enable accurate restoration.
 func (m *Monocle) getPosition(win *hypr.Window) (string, error) {
 	if win.Floating {
 		return "floating", nil
@@ -168,7 +167,7 @@ func (m *Monocle) getPosition(win *hypr.Window) (string, error) {
 	return "0", nil
 }
 
-// FormatAddress returns the address with a "0x" prefix if not already present.
+// FormatAddress ensures window addresses have the "0x" prefix for Hyprland commands.
 func FormatAddress(addr string) string {
 	if !strings.HasPrefix(addr, "0x") {
 		return "0x" + addr

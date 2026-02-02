@@ -45,18 +45,18 @@ import (
 	"strings"
 )
 
-// SocketPath is the Unix socket path for client connections.
 const SocketPath = "/tmp/hyprd.sock"
 
-// Daemon manages the hyprd event loop, state, and command routing.
+// Daemon coordinates Hyprland IPC, state management, and command execution.
+// It handles client requests over a Unix socket and publishes state changes to subscribers.
 type Daemon struct {
-	hypr   *hypr.Client
-	state  *State
-	server *daemon.Server
-	config *config.Config
+	hypr   *hypr.Client       // Hyprland IPC connection
+	state  *State             // Thread-safe workspace and window state
+	server *daemon.Server     // Unix socket command server
+	config *config.Config     // Monitor geometry and layout configuration
 }
 
-// New creates a new Daemon by connecting to Hyprland and initializing state.
+// New connects to Hyprland's IPC socket and initializes the daemon state.
 func New() (*Daemon, error) {
 	cfg := config.Load()
 
@@ -78,7 +78,7 @@ func New() (*Daemon, error) {
 	return d, nil
 }
 
-// Run starts the daemon and blocks until a shutdown signal is received.
+// Run starts the command server and event loop, blocking until SIGINT/SIGTERM.
 func (d *Daemon) Run() error {
 	clients, err := d.hypr.Clients()
 	if err != nil {
@@ -109,7 +109,7 @@ func (d *Daemon) Run() error {
 	return nil
 }
 
-// sendInitialState sends current state to a new subscriber.
+// sendInitialState bootstraps a subscriber with the current state for their topics.
 func (d *Daemon) sendInitialState(sub *daemon.Subscriber, topics []string) {
 	if sub.WantsTopic("workspace") {
 		data := map[string]any{
@@ -136,14 +136,13 @@ func (d *Daemon) sendInitialState(sub *daemon.Subscriber, topics []string) {
 	}
 }
 
-// initGeometry queries Hyprland for monitor dimensions and sets state geometry.
+// initGeometry queries monitor dimensions from Hyprland and computes monocle window size.
 func (d *Daemon) initGeometry() error {
 	monitor, err := d.hypr.FocusedMonitor()
 	if err != nil {
 		return err
 	}
 
-	// Use monitor dimensions if available, otherwise use config defaults
 	width := d.config.Monitor.Width
 	height := d.config.Monitor.Height
 	if monitor != nil {
@@ -168,6 +167,7 @@ func (d *Daemon) initGeometry() error {
 	return nil
 }
 
+// handleCommand parses and routes incoming client commands, returning results as strings.
 func (d *Daemon) handleCommand(command string) string {
 	parts := strings.SplitN(command, " ", 2)
 	cmd := parts[0]
@@ -263,7 +263,7 @@ func (d *Daemon) handleCommand(command string) string {
 	}
 }
 
-// query returns the current state for requested topics.
+// query returns JSON-encoded state for a specific topic or all state if topic is "all".
 func (d *Daemon) query(topic string) (string, error) {
 	switch topic {
 	case "workspace":

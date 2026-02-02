@@ -11,34 +11,33 @@ import (
 	"dotfiles/daemons/ewwd/config"
 )
 
-// NetworkState holds network speed and connection information.
+// NetworkState contains real-time network connection and throughput metrics for UI display.
 type NetworkState struct {
-	Type     string `json:"type"`
-	Icon     string `json:"icon"`
-	Name     string `json:"name"`
-	Iface    string `json:"iface"`
-	VPN      bool   `json:"vpn"`
-	Down     int    `json:"down"`
-	Up       int    `json:"up"`
-	DownRamp int    `json:"down_ramp"`
-	UpRamp   int    `json:"up_ramp"`
-	DownFmt  string `json:"down_fmt"`
-	UpFmt    string `json:"up_fmt"`
+	Type     string `json:"type"`      // Connection type (ethernet/wireless)
+	Icon     string `json:"icon"`      // Display icon for connection type
+	Name     string `json:"name"`      // Connection or interface name
+	Iface    string `json:"iface"`     // Network interface name
+	VPN      bool   `json:"vpn"`       // Active VPN connection detected
+	Down     int    `json:"down"`      // Download speed in KB/s
+	Up       int    `json:"up"`        // Upload speed in KB/s
+	DownRamp int    `json:"down_ramp"` // Download speed bucket (1-12) for visual indicators
+	UpRamp   int    `json:"up_ramp"`   // Upload speed bucket (1-12) for visual indicators
+	DownFmt  string `json:"down_fmt"`  // Formatted download speed with units
+	UpFmt    string `json:"up_fmt"`    // Formatted upload speed with units
 }
 
-// Network provides network speed monitoring via nmcli and sysfs.
+// Network monitors network connection state and throughput using nmcli and sysfs statistics.
 type Network struct {
 	state  StateSetter
 	config config.NetworkConfig
 	done   chan struct{}
 	active bool
 
-	// Previous byte counts for calculating speed
-	prevRx int64
-	prevTx int64
+	prevRx int64 // Previous receive bytes for speed calculation
+	prevTx int64 // Previous transmit bytes for speed calculation
 }
 
-// NewNetwork creates a Network provider.
+// NewNetwork creates a Network provider that tracks speed deltas between poll intervals.
 func NewNetwork(state StateSetter, cfg config.NetworkConfig) Provider {
 	return &Network{
 		state:  state,
@@ -47,12 +46,11 @@ func NewNetwork(state StateSetter, cfg config.NetworkConfig) Provider {
 	}
 }
 
-// Name returns the provider identifier.
 func (n *Network) Name() string {
 	return "network"
 }
 
-// Start begins polling network statistics at configured intervals.
+// Start polls network connection state and speed at configured intervals, notifying subscribers of changes.
 func (n *Network) Start(ctx context.Context, notify func(data any)) error {
 	n.active = true
 	ticker := time.NewTicker(n.config.PollInterval)
@@ -73,7 +71,6 @@ func (n *Network) Start(ctx context.Context, notify func(data any)) error {
 	}
 }
 
-// Stop gracefully shuts down the network provider.
 func (n *Network) Stop() error {
 	if n.active {
 		close(n.done)
@@ -183,7 +180,7 @@ func readInt64File(path string) int64 {
 	return v
 }
 
-// getRamp returns a value 1-12 based on KB/s speed.
+// getRamp maps network speed to a 1-12 scale for visual indicators like bar graphs.
 func getRamp(kb int) int {
 	switch {
 	case kb < 5:
@@ -213,7 +210,7 @@ func getRamp(kb int) int {
 	}
 }
 
-// fmtSpeed formats KB/s into display string.
+// fmtSpeed formats KB/s into display string with HTML subscript units (K/M).
 func fmtSpeed(kb int) string {
 	if kb < 1000 {
 		return fmt.Sprintf("%03d<sub>K</sub>", kb)
