@@ -1,19 +1,44 @@
-// ewwd — System utilities daemon for eww statusbar integration.
+// Package main implements ewwd, a system utilities daemon for eww statusbar integration.
 //
-// Usage:
+// ewwd provides real-time system data to eww widgets through a Unix socket interface.
+// It uses a provider-based architecture where each provider monitors a specific system
+// resource and publishes updates to subscribers.
 //
-//	ewwd              Start daemon (foreground)
-//	ewwd status       Check if daemon is running
+// # Architecture
+//
+// The daemon consists of three main components:
+//
+//   - Daemon: Manages the lifecycle, command routing, and provider coordination
+//   - State: Thread-safe storage for all provider data using a generic map
+//   - Providers: Independent goroutines that monitor system resources and publish updates
+//
+// # Providers
+//
+// Each provider implements the providers.Provider interface and runs in its own goroutine:
+//
+//   - gpu: AMD GPU statistics (utilization, VRAM, memory clock)
+//   - network: Network speed monitoring
+//   - date: Date/time with clockface icons
+//   - brightness: Screen brightness control
+//   - audio: PulseAudio volume control
+//   - music: Spotify playback status
+//   - timer: Timer and alarm countdown
+//   - weather: OpenWeatherMap data
+//
+// # Usage
+//
+//	ewwd                  Start daemon (foreground)
+//	ewwd status           Check if daemon is running
+//	ewwd query [topic]    Get current state
+//	ewwd subscribe [...]  Stream events to stdout
+//	ewwd action <p> ...   Execute provider action
 package main
 
-// Entry point and CLI command dispatcher
-
 import (
+	"dotfiles/cmd/internal/daemon"
 	"fmt"
 	"os"
 	"strings"
-
-	"dotfiles/cmd/internal/daemon"
 )
 
 var client = daemon.NewClient(SocketPath)

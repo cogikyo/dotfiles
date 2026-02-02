@@ -1,9 +1,5 @@
 package providers
 
-// ================================================================================
-// Network speed monitoring via nmcli and /sys/class/net/
-// ================================================================================
-
 import (
 	"context"
 	"fmt"
@@ -11,9 +7,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"dotfiles/cmd/ewwd/config"
 )
 
-// NetworkState holds network speed and connection info.
+// NetworkState holds network speed and connection information.
 type NetworkState struct {
 	Type     string `json:"type"`
 	Icon     string `json:"icon"`
@@ -28,9 +26,10 @@ type NetworkState struct {
 	UpFmt    string `json:"up_fmt"`
 }
 
-// Network provides network speed monitoring.
+// Network provides network speed monitoring via nmcli and sysfs.
 type Network struct {
 	state  StateSetter
+	config config.NetworkConfig
 	done   chan struct{}
 	active bool
 
@@ -40,20 +39,23 @@ type Network struct {
 }
 
 // NewNetwork creates a Network provider.
-func NewNetwork(state StateSetter) Provider {
+func NewNetwork(state StateSetter, cfg config.NetworkConfig) Provider {
 	return &Network{
-		state: state,
-		done:  make(chan struct{}),
+		state:  state,
+		config: cfg,
+		done:   make(chan struct{}),
 	}
 }
 
+// Name returns the provider identifier.
 func (n *Network) Name() string {
 	return "network"
 }
 
+// Start begins polling network statistics at configured intervals.
 func (n *Network) Start(ctx context.Context, notify func(data any)) error {
 	n.active = true
-	ticker := time.NewTicker(1 * time.Second)
+	ticker := time.NewTicker(n.config.PollInterval)
 	defer ticker.Stop()
 
 	for {
@@ -71,6 +73,7 @@ func (n *Network) Start(ctx context.Context, notify func(data any)) error {
 	}
 }
 
+// Stop gracefully shuts down the network provider.
 func (n *Network) Stop() error {
 	if n.active {
 		close(n.done)

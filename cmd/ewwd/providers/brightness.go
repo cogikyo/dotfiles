@@ -1,9 +1,5 @@
 package providers
 
-// ================================================================================
-// Screen brightness control via wlr-brightness
-// ================================================================================
-
 import (
 	"context"
 	"errors"
@@ -11,16 +7,19 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+
+	"dotfiles/cmd/ewwd/config"
 )
 
-// BrightnessState holds brightness level for eww.
+// BrightnessState holds the current screen brightness level.
 type BrightnessState struct {
 	Level int `json:"level"` // 2-10 (multiplied by 10 for percentage)
 }
 
-// Brightness provides screen brightness control.
+// Brightness provides screen brightness control via wlr-brightness.
 type Brightness struct {
 	state  StateSetter
+	config config.BrightnessConfig
 	notify func(data any)
 	done   chan struct{}
 	active bool
@@ -28,18 +27,21 @@ type Brightness struct {
 }
 
 // NewBrightness creates a Brightness provider.
-func NewBrightness(state StateSetter) Provider {
+func NewBrightness(state StateSetter, cfg config.BrightnessConfig) Provider {
 	return &Brightness{
-		state: state,
-		done:  make(chan struct{}),
-		level: 10, // Default to max
+		state:  state,
+		config: cfg,
+		done:   make(chan struct{}),
+		level:  cfg.Default,
 	}
 }
 
+// Name returns the provider identifier.
 func (b *Brightness) Name() string {
 	return "brightness"
 }
 
+// Start initializes the brightness provider and sends the initial state.
 func (b *Brightness) Start(ctx context.Context, notify func(data any)) error {
 	b.active = true
 	b.notify = notify
@@ -58,6 +60,7 @@ func (b *Brightness) Start(ctx context.Context, notify func(data any)) error {
 	}
 }
 
+// Stop gracefully shuts down the brightness provider.
 func (b *Brightness) Stop() error {
 	if b.active {
 		close(b.done)
@@ -66,8 +69,7 @@ func (b *Brightness) Stop() error {
 	return nil
 }
 
-// HandleAction processes brightness commands.
-// Actions: reset, night, adjust <up|down>
+// HandleAction processes brightness commands: reset, night, and adjust.
 func (b *Brightness) HandleAction(args []string) (string, error) {
 	if len(args) == 0 {
 		return "", errors.New("action required: reset, night, adjust")
@@ -75,21 +77,21 @@ func (b *Brightness) HandleAction(args []string) (string, error) {
 
 	switch args[0] {
 	case "reset":
-		b.level = 10
-		b.setBrightness(1.0)
+		b.level = b.config.Max
+		b.setBrightness(float64(b.config.Max) / 10.0)
 
 	case "night":
-		b.level = 4
-		b.setBrightness(0.4)
+		b.level = b.config.Night
+		b.setBrightness(float64(b.config.Night) / 10.0)
 
 	case "adjust":
 		if len(args) < 2 {
 			return "", errors.New("adjust requires direction: up or down")
 		}
 		direction := args[1]
-		if direction == "up" && b.level < 10 {
+		if direction == "up" && b.level < b.config.Max {
 			b.level++
-		} else if direction == "down" && b.level > 2 {
+		} else if direction == "down" && b.level > b.config.Min {
 			b.level--
 		}
 		b.setBrightness(float64(b.level) / 10.0)
