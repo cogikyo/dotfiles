@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# cmd/install.sh - Build and install all Go binaries from dotfiles
+# daemons/install.sh - Build and install all Go binaries from dotfiles
 #
 # Usage:
-#   ./cmd/install.sh           # Build all binaries
-#   ./cmd/install.sh hyprd     # Build specific binary
-#   ./cmd/install.sh ewwd      # Build specific binary
-#   ./cmd/install.sh --list    # List available binaries
+#   ./daemons/install.sh           # Build all binaries
+#   ./daemons/install.sh hyprd     # Build specific binary
+#   ./daemons/install.sh ewwd      # Build specific binary
+#   ./daemons/install.sh --list    # List available binaries
 
 set -euo pipefail
 
@@ -28,8 +28,8 @@ error() { printf "${RED}==>${NC} %s\n" "$*" >&2; }
 # module_dir: directory containing go.mod
 # build_path: path to build (relative to module_dir, or "." for same dir)
 declare -A BINARIES=(
-    ["hyprd"]="cmd|./hyprd|Hyprland window management daemon"
-    ["ewwd"]="cmd|./ewwd|System utilities daemon for eww"
+    ["hyprd"]="daemons|./hyprd|Hyprland window management daemon"
+    ["ewwd"]="daemons|./ewwd|System utilities daemon for eww"
     ["statusline"]="config/claude/statusline|.|Claude Code statusline generator"
     ["newtab"]="share/newtab|.|Firefox new tab HTTP server"
 )

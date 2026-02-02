@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"dotfiles/cmd/hyprd/hypr"
+	"dotfiles/daemons/hyprd/hypr"
 )
 
 // WS switches workspaces with automatic master window focusing.

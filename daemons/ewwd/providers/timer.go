@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"dotfiles/cmd/ewwd/config"
+	"dotfiles/daemons/ewwd/config"
 )
 
 // TimerState holds timer and alarm countdown state.

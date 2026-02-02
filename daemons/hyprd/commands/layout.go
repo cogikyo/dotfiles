@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"dotfiles/cmd/hyprd/hypr"
+	"dotfiles/daemons/hyprd/hypr"
 
 	"gopkg.in/yaml.v3"
 )
