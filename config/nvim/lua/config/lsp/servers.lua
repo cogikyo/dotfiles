@@ -1,5 +1,4 @@
--- Server definitions and tools for LSP/Mason
--- This is a data-only module, no plugin specs
+-- LSP server definitions (data-only module)
 
 local ts_inlay_hints = {
 	includeInlayParameterNameHints = "all",
@@ -12,9 +11,7 @@ local ts_inlay_hints = {
 	includeInlayEnumMemberValueHints = true,
 }
 
-local M = {}
-
-M.servers = {
+return {
 	bashls = {},
 	gopls = {
 		settings = {
@@ -132,18 +129,3 @@ M.servers = {
 		},
 	},
 }
-
-M.tools = {
-	-- Formatters
-	"shellharden",
-	"beautysh",
-	"prettierd",
-	"stylua",
-	"goimports",
-	"gofumpt",
-	-- Linters
-	"staticcheck",
-	"hadolint",
-}
-
-return M
