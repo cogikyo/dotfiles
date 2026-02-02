@@ -1,7 +1,5 @@
 package daemon
 
-// Subscription manager for streaming state changes to clients
-
 import (
 	"encoding/json"
 	"net"
@@ -9,26 +7,26 @@ import (
 	"sync"
 )
 
-// Subscriber represents a client subscribed to state changes.
+// Subscriber represents a connected client receiving events on subscribed topics.
 type Subscriber struct {
 	conn   net.Conn
 	topics map[string]bool
-	mu     sync.Mutex // protects conn writes
+	mu     sync.Mutex
 }
 
-// SubscriptionManager handles client subscriptions.
+// SubscriptionManager tracks active subscribers and dispatches events to them.
 type SubscriptionManager struct {
 	mu          sync.RWMutex
 	subscribers []*Subscriber
 }
 
-// NewSubscriptionManager creates a subscription manager.
+// NewSubscriptionManager returns a new SubscriptionManager ready to accept subscribers.
 func NewSubscriptionManager() *SubscriptionManager {
 	return &SubscriptionManager{}
 }
 
-// Subscribe adds a new subscriber for the given topics.
-// The onSubscribe callback is called to send initial state.
+// Subscribe registers a connection to receive events for the given topics.
+// The onSubscribe callback is invoked to send initial state to the new subscriber.
 func (m *SubscriptionManager) Subscribe(conn net.Conn, topics []string, onSubscribe func(sub *Subscriber)) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -49,7 +47,7 @@ func (m *SubscriptionManager) Subscribe(conn net.Conn, topics []string, onSubscr
 	}
 }
 
-// Unsubscribe removes a subscriber.
+// Unsubscribe removes the subscriber associated with the given connection.
 func (m *SubscriptionManager) Unsubscribe(conn net.Conn) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -62,7 +60,8 @@ func (m *SubscriptionManager) Unsubscribe(conn net.Conn) {
 	}
 }
 
-// Notify sends an event to all subscribers interested in the topic.
+// Notify broadcasts an event to all subscribers interested in the given topic.
+// Events are encoded as JSON with "event" and "data" fields.
 func (m *SubscriptionManager) Notify(topic string, data any) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -87,7 +86,7 @@ func (m *SubscriptionManager) Notify(topic string, data any) {
 	}
 }
 
-// SendEvent sends a single event to a subscriber.
+// SendEvent writes a JSON event to the subscriber's connection.
 func (sub *Subscriber) SendEvent(topic string, data any) {
 	event := map[string]any{"event": topic, "data": data}
 	if jsonData, err := json.Marshal(event); err == nil {
@@ -97,12 +96,13 @@ func (sub *Subscriber) SendEvent(topic string, data any) {
 	}
 }
 
-// WantsTopic returns true if subscriber is interested in the topic.
+// WantsTopic reports whether the subscriber is interested in the given topic.
 func (sub *Subscriber) WantsTopic(topic string) bool {
 	return sub.topics[topic] || sub.topics["*"]
 }
 
-// ParseSubscribeCommand parses "subscribe topic1 topic2 ..." into topics.
+// ParseSubscribeCommand extracts topic names from a subscribe command string.
+// If no topics are specified, it returns ["*"] to subscribe to all events.
 func ParseSubscribeCommand(cmd string) []string {
 	parts := strings.Fields(cmd)
 	if len(parts) < 2 {
