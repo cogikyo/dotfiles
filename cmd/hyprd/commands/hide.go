@@ -1,9 +1,5 @@
 package commands
 
-// ================================================================================
-// Hide/show mode for managing window visibility via special workspaces
-// ================================================================================
-
 import (
 	"fmt"
 	"strings"
@@ -11,21 +7,21 @@ import (
 	"dotfiles/cmd/hyprd/hypr"
 )
 
-// Hide handles the hide/show command execution.
+// Hide manages window visibility by moving slave windows to and from special workspaces.
 type Hide struct {
 	hypr  *hypr.Client
 	state StateManager
 }
 
-// NewHide creates a hide command handler.
+// NewHide returns a new Hide command handler.
 func NewHide(h *hypr.Client, s StateManager) *Hide {
 	return &Hide{hypr: h, state: s}
 }
 
-// Execute toggles hide/show on the active window.
-// - If window is on special:hiddenSlaves: bring it back to tiled
-// - If window is a tiled slave: hide it to special:hiddenSlaves
-// - If window is master: do nothing (only slaves can be hidden)
+// Execute toggles the visibility of the active window. Hidden windows are
+// moved to a special workspace; unhiding restores them to their original
+// workspace and position. Only slave windows can be hidden; master windows
+// and floating windows are ignored.
 func (h *Hide) Execute() (string, error) {
 	win, err := h.hypr.ActiveWindow()
 	if err != nil {
@@ -35,8 +31,10 @@ func (h *Hide) Execute() (string, error) {
 		return "no active window", nil
 	}
 
+	cfg := h.state.GetConfig()
+
 	// Case 1: Window is on special workspace (hidden) - unhide it
-	if isOnHiddenWorkspace(win) {
+	if h.isOnHiddenWorkspace(win, cfg.Windows.HiddenWorkspace) {
 		return h.unhide(win)
 	}
 
@@ -46,7 +44,7 @@ func (h *Hide) Execute() (string, error) {
 	}
 
 	// Get tiled windows on this workspace
-	tiled, err := GetTiledWindows(h.hypr, win.Workspace.ID)
+	tiled, err := GetTiledWindows(h.hypr, win.Workspace.ID, cfg.Windows.IgnoredClasses)
 	if err != nil {
 		return "", err
 	}
@@ -67,6 +65,9 @@ func (h *Hide) Execute() (string, error) {
 
 // hide moves a slave window to special:hiddenSlaves workspace.
 func (h *Hide) hide(win *hypr.Window, tiled []hypr.Window) (string, error) {
+	cfg := h.state.GetConfig()
+	hiddenWS := cfg.Windows.HiddenWorkspace
+
 	// Calculate slave index for later restoration
 	slaves := GetSlaves(tiled)
 	slaveIndex := SlaveIndex(slaves, win.Address)
@@ -83,11 +84,11 @@ func (h *Hide) hide(win *hypr.Window, tiled []hypr.Window) (string, error) {
 
 	// Move to special workspace (silent - doesn't switch view)
 	if err := h.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s",
-		HiddenWorkspace, win.Address)); err != nil {
+		hiddenWS, win.Address)); err != nil {
 		return "", fmt.Errorf("hide window: %w", err)
 	}
 
-	return fmt.Sprintf("hidden: %s (slave %d) to %s", win.Address, slaveIndex, HiddenWorkspace), nil
+	return fmt.Sprintf("hidden: %s (slave %d) to %s", win.Address, slaveIndex, hiddenWS), nil
 }
 
 // unhide brings a window back from special:hiddenSlaves to its origin workspace.
@@ -116,8 +117,10 @@ func (h *Hide) unhide(win *hypr.Window) (string, error) {
 
 // restoreSlavePosition attempts to move the window back to its original slave index.
 func (h *Hide) restoreSlavePosition(addr string, wsID int, targetIndex int) {
+	cfg := h.state.GetConfig()
+
 	// Re-query tiled windows after unhide
-	tiled, err := GetTiledWindows(h.hypr, wsID)
+	tiled, err := GetTiledWindows(h.hypr, wsID, cfg.Windows.IgnoredClasses)
 	if err != nil || len(tiled) < 2 {
 		return
 	}
@@ -134,12 +137,12 @@ func (h *Hide) restoreSlavePosition(addr string, wsID int, targetIndex int) {
 }
 
 // isOnHiddenWorkspace checks if a window is on the hidden special workspace.
-func isOnHiddenWorkspace(win *hypr.Window) bool {
-	return strings.HasPrefix(win.Workspace.Name, "special:hiddenSlaves")
+func (h *Hide) isOnHiddenWorkspace(win *hypr.Window, hiddenWS string) bool {
+	return strings.HasPrefix(win.Workspace.Name, hiddenWS)
 }
 
-// UnhideByAddress brings a specific hidden window back to tiled.
-// Used by focus command when focusing a hidden window.
+// UnhideByAddress restores a hidden window to the specified workspace.
+// If destWS is zero or negative, the window's original workspace is used.
 func (h *Hide) UnhideByAddress(addr string, destWS int) (string, error) {
 	hidden := h.state.RemoveHidden(addr)
 

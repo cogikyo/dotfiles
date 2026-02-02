@@ -1,27 +1,24 @@
 package commands
 
-// ================================================================================
-// Master/slave position swapping with undo support
-// ================================================================================
-
 import (
 	"fmt"
 
 	"dotfiles/cmd/hyprd/hypr"
 )
 
-// Swap handles the swap-master command execution.
+// Swap exchanges windows between master and slave positions with undo support.
 type Swap struct {
 	hypr  *hypr.Client
 	state StateManager
 }
 
-// NewSwap creates a swap command handler.
+// NewSwap returns a new Swap command handler.
 func NewSwap(h *hypr.Client, s StateManager) *Swap {
 	return &Swap{hypr: h, state: s}
 }
 
-// Execute toggles swap between master and slave positions.
+// Execute swaps the active window with the master position, or restores the
+// previously displaced master if called from the master position.
 func (s *Swap) Execute() (string, error) {
 	win, err := s.hypr.ActiveWindow()
 	if err != nil {
@@ -88,7 +85,8 @@ func (s *Swap) takeoverMaster(slave *hypr.Window, wsID int, masterAddr string) (
 
 // getMasterAddr returns the master window address for a workspace.
 func (s *Swap) getMasterAddr(wsID int) (string, error) {
-	master, err := GetMaster(s.hypr, wsID)
+	cfg := s.state.GetConfig()
+	master, err := GetMaster(s.hypr, wsID, cfg.Windows.IgnoredClasses)
 	if err != nil {
 		return "", err
 	}

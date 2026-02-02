@@ -1,9 +1,5 @@
 package commands
 
-// ================================================================================
-// Monocle mode for focused full-workspace floating
-// ================================================================================
-
 import (
 	"fmt"
 	"strings"
@@ -11,18 +7,20 @@ import (
 	"dotfiles/cmd/hyprd/hypr"
 )
 
-// Monocle handles the monocle command execution.
+// Monocle toggles fullscreen floating mode for focused work on a dedicated workspace.
 type Monocle struct {
 	hypr  *hypr.Client
 	state StateManager
 }
 
-// NewMonocle creates a monocle command handler.
+// NewMonocle returns a new Monocle command handler.
 func NewMonocle(h *hypr.Client, s StateManager) *Monocle {
 	return &Monocle{hypr: h, state: s}
 }
 
-// Execute toggles monocle mode on the active window.
+// Execute toggles monocle mode on the active window. Entering monocle mode
+// floats the window, resizes it, and moves it to a dedicated workspace.
+// Exiting restores the window to its original workspace and tiling position.
 func (m *Monocle) Execute() (string, error) {
 	// Get active window
 	win, err := m.hypr.ActiveWindow()
@@ -36,8 +34,10 @@ func (m *Monocle) Execute() (string, error) {
 	// Check current monocle state
 	monocle := m.state.GetMonocle()
 
+	cfg := m.state.GetConfig()
+
 	// Case 1: Window is on monocle workspace and floating - restore it
-	if win.Workspace.ID == MonocleWS && win.Floating {
+	if win.Workspace.ID == cfg.Monocle.Workspace && win.Floating {
 		if monocle != nil && monocle.Address == win.Address {
 			return m.restore(monocle)
 		}
@@ -60,6 +60,8 @@ func (m *Monocle) Execute() (string, error) {
 
 // enter puts a window into monocle mode.
 func (m *Monocle) enter(win *hypr.Window) (string, error) {
+	cfg := m.state.GetConfig()
+
 	// Determine position (master or slave index)
 	position, err := m.getPosition(win)
 	if err != nil {
@@ -73,6 +75,9 @@ func (m *Monocle) enter(win *hypr.Window) (string, error) {
 		Position: position,
 	})
 
+	// Get current monitor geometry
+	geo := m.state.GetGeometry()
+
 	// Execute Hyprland commands
 	// Use movetoworkspacesilent to move window without switching view,
 	// then workspace to switch view (keeps focus on monocle window)
@@ -85,10 +90,10 @@ func (m *Monocle) enter(win *hypr.Window) (string, error) {
 			"dispatch moveactive 0 25; "+
 			"keyword general:col.active_border %s; "+
 			"keyword decoration:shadow:color %s",
-		MonocleWidth, MonocleHeight,
-		MonocleWS,
-		MonocleWS,
-		BorderMonocle, ShadowMonocle,
+		geo.MonocleW, geo.MonocleH,
+		cfg.Monocle.Workspace,
+		cfg.Monocle.Workspace,
+		cfg.Style.Border.Monocle, cfg.Style.Shadow.Monocle,
 	)
 
 	if _, err := m.hypr.Request("[[BATCH]]" + batch); err != nil {
@@ -96,13 +101,15 @@ func (m *Monocle) enter(win *hypr.Window) (string, error) {
 	}
 
 	// Move cursor to window center
-	CenterCursor(m.hypr)
+	centerCursor(m.hypr)
 
 	return fmt.Sprintf("monocle: %s from ws%d (%s)", win.Address, win.Workspace.ID, position), nil
 }
 
 // restore returns a monocle window to its original position.
 func (m *Monocle) restore(monocle *MonocleState) (string, error) {
+	cfg := m.state.GetConfig()
+
 	// Reset colors, unfloat, move back to origin, and switch view
 	batch := fmt.Sprintf(
 		"dispatch focuswindow address:%s; "+
@@ -114,7 +121,7 @@ func (m *Monocle) restore(monocle *MonocleState) (string, error) {
 		monocle.Address,
 		monocle.OriginWS,
 		monocle.OriginWS,
-		BorderDefault, ShadowDefault,
+		cfg.Style.Border.Default, cfg.Style.Shadow.Default,
 	)
 
 	if _, err := m.hypr.Request("[[BATCH]]" + batch); err != nil {
@@ -142,7 +149,8 @@ func (m *Monocle) getPosition(win *hypr.Window) (string, error) {
 		return "floating", nil
 	}
 
-	tiled, err := GetTiledWindows(m.hypr, win.Workspace.ID)
+	cfg := m.state.GetConfig()
+	tiled, err := GetTiledWindows(m.hypr, win.Workspace.ID, cfg.Windows.IgnoredClasses)
 	if err != nil {
 		return "", err
 	}
@@ -160,7 +168,7 @@ func (m *Monocle) getPosition(win *hypr.Window) (string, error) {
 	return "0", nil
 }
 
-// FormatAddress ensures address has 0x prefix.
+// FormatAddress returns the address with a "0x" prefix if not already present.
 func FormatAddress(addr string) string {
 	if !strings.HasPrefix(addr, "0x") {
 		return "0x" + addr
