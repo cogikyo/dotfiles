@@ -10,8 +10,8 @@ import (
 	"strconv"
 	"strings"
 
-	"dotfiles/cmd/hyprd/hypr"
-	"dotfiles/cmd/internal/daemon"
+	"dotfiles/daemons/hyprd/hypr"
+	"dotfiles/daemons/internal/daemon"
 )
 
 // EventLoop listens to Hyprland's event socket and synchronizes daemon state.

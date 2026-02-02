@@ -3,7 +3,7 @@ package commands
 import (
 	"fmt"
 
-	"dotfiles/cmd/hyprd/hypr"
+	"dotfiles/daemons/hyprd/hypr"
 )
 
 // Split manages master/slave split ratios with cycling and direct ratio selection.
