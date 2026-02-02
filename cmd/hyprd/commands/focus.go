@@ -1,9 +1,5 @@
 package commands
 
-// ================================================================================
-// Focus window by class/title, unhiding from special workspace if needed
-// ================================================================================
-
 import (
 	"encoding/json"
 	"fmt"
@@ -12,20 +8,20 @@ import (
 	"dotfiles/cmd/hyprd/hypr"
 )
 
-// Focus handles the focus-active command.
+// Focus focuses windows by class or title, unhiding from special workspaces if needed.
 type Focus struct {
 	hypr  *hypr.Client
 	state StateManager
 }
 
-// NewFocus creates a focus command handler.
+// NewFocus returns a new Focus command handler.
 func NewFocus(h *hypr.Client, s StateManager) *Focus {
 	return &Focus{hypr: h, state: s}
 }
 
-// Execute focuses a window by class/title, unhiding from special workspace if needed.
-// Args: "class" or "class title"
-// Searches all workspaces including special:hiddenSlaves.
+// Execute focuses a window matching the given class and optional title.
+// It searches all workspaces including special:hiddenSlaves and will
+// automatically unhide windows from special workspaces before focusing.
 func (f *Focus) Execute(class, title string) (string, error) {
 	if class == "" {
 		return "", fmt.Errorf("class required")
