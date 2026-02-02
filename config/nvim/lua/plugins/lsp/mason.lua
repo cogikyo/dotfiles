@@ -1,5 +1,18 @@
 -- Mason ecosystem: package management for LSP servers, formatters, linters
-local server_config = require("config.servers")
+local servers = require("config.lsp.servers")
+
+local tools = {
+	-- Formatters
+	"shellharden",
+	"beautysh",
+	"prettierd",
+	"stylua",
+	"goimports",
+	"gofumpt",
+	-- Linters
+	"staticcheck",
+	"hadolint",
+}
 
 return {
 	{
@@ -11,14 +24,14 @@ return {
 	{
 		"williamboman/mason-lspconfig.nvim",
 		opts = {
-			ensure_installed = vim.tbl_keys(server_config.servers),
+			ensure_installed = vim.tbl_keys(servers),
 		},
 	},
 	{
 		"WhoIsSethDaniel/mason-tool-installer.nvim",
 		dependencies = { "williamboman/mason.nvim" },
 		opts = {
-			ensure_installed = server_config.tools,
+			ensure_installed = tools,
 			auto_update = true,
 			run_on_start = true,
 		},
