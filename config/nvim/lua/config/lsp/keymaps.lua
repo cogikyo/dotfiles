@@ -26,8 +26,12 @@ function M.setup()
 			map("gO", ts.lsp_document_symbols, "Document Symbols")
 			map("gW", ts.lsp_dynamic_workspace_symbols, "Workspace Symbols")
 
-			map("K", vim.lsp.buf.hover, "Hover")
-			map("<C-k>", vim.lsp.buf.signature_help, "Signature Help")
+			map("<C-k>", function()
+				vim.lsp.buf.hover({ border = "single" })
+			end, "Hover")
+			map("K", function()
+				vim.lsp.buf.signature_help({ border = "single" })
+			end, "Signature Help")
 			map("<leader>k", vim.diagnostic.open_float, "Diagnostic Float")
 
 			vim.keymap.set("n", "<F2>", function()
@@ -42,10 +46,10 @@ function M.setup()
 			map("[d", diag_jump(-1), "Previous Diagnostic")
 			map("]d", diag_jump(1), "Next Diagnostic")
 
+			map("<leader>Rs", "<cmd>LspRestart<CR>", "Restart LSP")
 			map("<leader>ht", function()
 				vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = event.buf }))
 			end, "Toggle Inlay Hints")
-			map("<leader>gg", "<cmd>LspRestart<CR>", "Restart LSP")
 
 			local client = vim.lsp.get_client_by_id(event.data.client_id)
 			if not client then
