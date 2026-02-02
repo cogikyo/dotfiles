@@ -1,6 +1,6 @@
+// Package daemon provides shared infrastructure for Unix socket daemons,
+// including client/server communication, subscription management, and signal handling.
 package daemon
-
-// Core server lifecycle, socket handling, and accept loop
 
 import (
 	"fmt"
@@ -20,12 +20,12 @@ type SubscribeHandler func(sub *Subscriber, topics []string)
 
 // Server manages the Unix socket and client connections.
 type Server struct {
-	SocketPath       string
-	Subs             *SubscriptionManager
-	Handler          CommandHandler
-	OnSubscribe      SubscribeHandler
-	done             chan struct{}
-	listener         net.Listener
+	SocketPath  string
+	Subs        *SubscriptionManager
+	Handler     CommandHandler
+	OnSubscribe SubscribeHandler
+	done        chan struct{}
+	listener    net.Listener
 }
 
 // NewServer creates a new daemon server.
