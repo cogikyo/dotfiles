@@ -13,29 +13,28 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// SessionConfig represents the root structure of the sessions.yaml configuration file.
+// SessionConfig is the root structure for sessions.yaml.
 type SessionConfig struct {
-	Sessions map[string]Session `yaml:"sessions"`
+	Sessions map[string]Session `yaml:"sessions"` // keyed by session name
 }
 
-// Session defines a workspace layout with windows, URLs, and project settings.
+// Session defines a workspace layout for automated window spawning and arrangement.
 type Session struct {
-	Name      string         `yaml:"name" json:"name"`
-	Workspace int            `yaml:"workspace" json:"workspace"`
-	Project   string         `yaml:"project" json:"project"`
-	URLs      []string       `yaml:"urls" json:"urls"`
-	Windows   []WindowConfig `yaml:"windows" json:"windows"`
+	Name      string         `yaml:"name" json:"name"`           // display name
+	Workspace int            `yaml:"workspace" json:"workspace"` // target workspace ID
+	Project   string         `yaml:"project" json:"project"`     // sets PROJECT_PATH for kitty sessions
+	URLs      []string       `yaml:"urls" json:"urls"`           // opened in firefox
+	Windows   []WindowConfig `yaml:"windows" json:"windows"`     // spawned and arranged by role
 }
 
-// WindowConfig specifies a window to spawn with its command, title, and layout role.
+// WindowConfig defines a window to spawn and its position in the master/slave layout.
 type WindowConfig struct {
-	Command string `yaml:"command"` // e.g., "kitty --title terminal"
-	Title   string `yaml:"title"`   // e.g., "terminal" (for detection)
-	Role    string `yaml:"role"`    // "master" | "slave"
+	Command string `yaml:"command"` // shell command to execute (empty means no spawn)
+	Title   string `yaml:"title"`   // used to identify window for arrangement
+	Role    string `yaml:"role"`    // "master" or "slave"
 }
 
-// DefaultSessions contains built-in session configurations used when no
-// user configuration file exists.
+// DefaultSessions provides fallback configurations when ~/.config/hyprd/sessions.yaml is missing or invalid.
 var DefaultSessions = map[string]Session{
 	"dotfiles": {
 		Name:      "dotfiles",
@@ -72,19 +71,18 @@ var DefaultSessions = map[string]Session{
 	},
 }
 
-// Layout opens predefined session layouts with automatic window spawning and arrangement.
+// Layout manages session-based workspace layouts with automatic window spawning and arrangement.
 type Layout struct {
-	hypr  *hypr.Client
-	state StateManager
+	hypr  *hypr.Client  // Hyprland IPC client
+	state StateManager  // shared daemon state
 }
 
-// NewLayout returns a new Layout command handler.
+// NewLayout creates a Layout command handler.
 func NewLayout(h *hypr.Client, s StateManager) *Layout {
 	return &Layout{hypr: h, state: s}
 }
 
-// Execute opens the named session or lists available sessions if arg is empty,
-// "--list", or "-l".
+// Execute opens the named session or lists available sessions (when arg is empty, "--list", or "-l").
 func (l *Layout) Execute(arg string) (string, error) {
 	sessions := LoadSessions()
 
@@ -100,8 +98,7 @@ func (l *Layout) Execute(arg string) (string, error) {
 	return l.openSession(session)
 }
 
-// LoadSessions reads session configurations from ~/.config/hyprd/sessions.yaml,
-// returning DefaultSessions if the file is missing or invalid.
+// LoadSessions reads ~/.config/hyprd/sessions.yaml, falling back to DefaultSessions on error.
 func LoadSessions() map[string]Session {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -127,7 +124,7 @@ func LoadSessions() map[string]Session {
 	return config.Sessions
 }
 
-// listSessions returns available session names.
+// listSessions formats session names with workspace IDs for display.
 func listSessions(sessions map[string]Session) string {
 	var names []string
 	for name, s := range sessions {
@@ -137,7 +134,7 @@ func listSessions(sessions map[string]Session) string {
 	return "sessions: " + strings.Join(names, ", ")
 }
 
-// openSession opens a session layout.
+// openSession spawns windows, opens URLs, and arranges the layout on the target workspace.
 func (l *Layout) openSession(s Session) (string, error) {
 	// Switch to workspace
 	l.hypr.Dispatch(fmt.Sprintf("workspace %d", s.Workspace))
@@ -193,7 +190,7 @@ func (l *Layout) openSession(s Session) (string, error) {
 	return fmt.Sprintf("opened session: %s on ws%d", s.Name, s.Workspace), nil
 }
 
-// arrangeLayout arranges windows: terminal → master, firefox/claude → slaves.
+// arrangeLayout moves terminal to master and orders firefox/claude in the slave stack.
 func (l *Layout) arrangeLayout(wsID int, session Session) {
 	clients, err := l.hypr.Clients()
 	if err != nil {

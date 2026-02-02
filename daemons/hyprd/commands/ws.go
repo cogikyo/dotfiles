@@ -7,32 +7,31 @@ import (
 	"dotfiles/daemons/hyprd/hypr"
 )
 
-// WS switches workspaces with automatic master window focusing.
+// WS implements workspace switching with automatic focus on the leftmost tiled window.
 type WS struct {
-	hypr  *hypr.Client
-	state StateManager
+	hypr  *hypr.Client   // Hyprland IPC client
+	state StateManager   // Access to daemon config
 }
 
-// NewWS returns a new WS command handler.
+// NewWS creates a workspace switcher command handler.
 func NewWS(h *hypr.Client, s StateManager) *WS {
 	return &WS{hypr: h, state: s}
 }
 
-// Execute switches to the workspace specified by wsArg and focuses the master window.
+// Execute switches to workspace wsArg and focuses its leftmost tiled window if one exists.
+// Returns a status message indicating the result.
 func (w *WS) Execute(wsArg string) (string, error) {
 	ws, err := strconv.Atoi(wsArg)
 	if err != nil {
 		return "", fmt.Errorf("invalid workspace: %s", wsArg)
 	}
 
-	// Switch workspace
 	if err := w.hypr.Dispatch(fmt.Sprintf("workspace %d", ws)); err != nil {
 		return "", err
 	}
 
 	cfg := w.state.GetConfig()
 
-	// Focus the master window
 	master, err := GetMaster(w.hypr, ws, cfg.Windows.IgnoredClasses)
 	if err != nil {
 		return fmt.Sprintf("ws %d (no focus)", ws), nil

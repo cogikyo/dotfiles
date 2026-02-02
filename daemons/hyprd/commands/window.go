@@ -8,7 +8,7 @@ import (
 	"dotfiles/daemons/hyprd/hypr"
 )
 
-// centerCursor moves cursor to active window center.
+// centerCursor moves the cursor to the center of the currently active window.
 func centerCursor(h *hypr.Client) {
 	win, err := h.ActiveWindow()
 	if err != nil || win == nil {
@@ -19,8 +19,8 @@ func centerCursor(h *hypr.Client) {
 	h.Dispatch(fmt.Sprintf("movecursor %d %d", x, y))
 }
 
-// GetTiledWindows returns non-floating windows on a workspace, sorted by X (master first).
-// Excludes windows with classes in ignoredClasses (e.g., GLava).
+// GetTiledWindows returns non-floating windows on wsID, sorted by X position (leftmost first).
+// Windows with classes in ignoredClasses are excluded from the results.
 func GetTiledWindows(h *hypr.Client, wsID int, ignoredClasses []string) ([]hypr.Window, error) {
 	clients, err := h.Clients()
 	if err != nil {
@@ -41,7 +41,7 @@ func GetTiledWindows(h *hypr.Client, wsID int, ignoredClasses []string) ([]hypr.
 	return tiled, nil
 }
 
-// GetMaster returns the master window (leftmost tiled) on a workspace.
+// GetMaster returns the leftmost tiled window on wsID, or nil if none exist.
 func GetMaster(h *hypr.Client, wsID int, ignoredClasses []string) (*hypr.Window, error) {
 	tiled, err := GetTiledWindows(h, wsID, ignoredClasses)
 	if err != nil {
@@ -53,7 +53,7 @@ func GetMaster(h *hypr.Client, wsID int, ignoredClasses []string) (*hypr.Window,
 	return &tiled[0], nil
 }
 
-// GetSlaves returns slave windows (non-master tiled), sorted by Y position.
+// GetSlaves returns all tiled windows right of the master, sorted by Y position.
 func GetSlaves(tiled []hypr.Window) []hypr.Window {
 	if len(tiled) < 2 {
 		return nil
@@ -74,7 +74,7 @@ func GetSlaves(tiled []hypr.Window) []hypr.Window {
 	return slaves
 }
 
-// IsMaster returns true if the window is in master position (leftmost).
+// IsMaster checks if the window with addr is the leftmost in tiled.
 func IsMaster(tiled []hypr.Window, addr string) bool {
 	return len(tiled) > 0 && tiled[0].Address == addr
 }

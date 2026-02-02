@@ -7,19 +7,19 @@ import (
 	"dotfiles/daemons/ewwd/config"
 )
 
-// DateState holds date and time information for the eww statusbar.
+// DateState provides formatted date/time fields and personal life counter for statusbar display.
 type DateState struct {
-	Weekday      string `json:"weekday"`
-	WeekdayShort string `json:"weekday_short"`
-	Month        string `json:"month"`
-	MonthShort   string `json:"month_short"`
-	Day          string `json:"day"`
-	ClockHour    string `json:"clock_hour"`
-	ClockMinute  string `json:"clock_minute"`
-	WeeksAlive   int    `json:"weeks_alive"`
+	Weekday      string `json:"weekday"`       // Full weekday name
+	WeekdayShort string `json:"weekday_short"` // 3-letter weekday abbreviation
+	Month        string `json:"month"`         // Full month name
+	MonthShort   string `json:"month_short"`   // 3-letter month abbreviation
+	Day          string `json:"day"`           // Day of month (zero-padded)
+	ClockHour    string `json:"clock_hour"`    // Clock icon for current hour
+	ClockMinute  string `json:"clock_minute"`  // Clock icon for 5-minute interval
+	WeeksAlive   int    `json:"weeks_alive"`   // Weeks since configured birth date
 }
 
-// Date provides date, time, and weeks-alive counter for the eww statusbar.
+// Date updates date/time state every minute, aligned to minute boundaries for efficiency.
 type Date struct {
 	state     StateSetter
 	done      chan struct{}
@@ -27,7 +27,7 @@ type Date struct {
 	birthDate time.Time // For weeks_alive calculation
 }
 
-// NewDate creates a Date provider.
+// NewDate creates a Date provider with birth date from config (fallback: 1996-02-26).
 func NewDate(state StateSetter, cfg config.DateConfig) Provider {
 	birthDate, err := time.Parse("2006-01-02", cfg.BirthDate)
 	if err != nil {
@@ -41,12 +41,11 @@ func NewDate(state StateSetter, cfg config.DateConfig) Provider {
 	}
 }
 
-// Name returns the provider identifier.
 func (d *Date) Name() string {
 	return "date"
 }
 
-// Start begins updating date/time state aligned to minute boundaries.
+// Start sends initial state then updates every minute, aligned to minute boundaries for efficiency.
 func (d *Date) Start(ctx context.Context, notify func(data any)) error {
 	d.active = true
 
@@ -77,7 +76,6 @@ func (d *Date) Start(ctx context.Context, notify func(data any)) error {
 	}
 }
 
-// Stop gracefully shuts down the date provider.
 func (d *Date) Stop() error {
 	if d.active {
 		close(d.done)
@@ -88,8 +86,6 @@ func (d *Date) Stop() error {
 
 func (d *Date) read() *DateState {
 	now := time.Now()
-
-	// Birth date for weeks_alive calculation (from struct, configured via env)
 	weeksAlive := int(now.Sub(d.birthDate).Hours() / 24 / 7)
 
 	return &DateState{
@@ -104,9 +100,8 @@ func (d *Date) read() *DateState {
 	}
 }
 
-// clockHourIcon returns the clockface icon for the hour (1-12).
+// clockHourIcon maps 24-hour time to 12-hour clockface icon.
 func clockHourIcon(hour int) string {
-	// Convert to 12-hour format
 	h := hour % 12
 	if h == 0 {
 		h = 12
@@ -122,9 +117,8 @@ func clockHourIcon(hour int) string {
 	return ""
 }
 
-// clockMinuteIcon returns the clockface icon for minute intervals (0-12).
+// clockMinuteIcon maps minutes to 5-minute interval clockface icon (0-55 minutes).
 func clockMinuteIcon(minute int) string {
-	// Divide minute by 5 to get 0-12 range
 	interval := minute / 5
 
 	icons := map[int]string{

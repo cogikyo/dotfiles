@@ -1,6 +1,7 @@
 package commands
 
-// ComputeGeometry calculates monitor geometry from dimensions, reserved areas, and monocle ratios.
+// ComputeGeometry calculates usable screen dimensions and monocle window sizes from monitor
+// dimensions, reserved areas (gaps/bars), and monocle size ratios.
 func ComputeGeometry(width, height, reservedTop, reservedBot, reservedLeft int, monocleWidthRatio, monocleHeightRatio float64) *MonitorGeometry {
 	usableH := height - reservedTop - reservedBot
 	return &MonitorGeometry{
