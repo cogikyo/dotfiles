@@ -6,16 +6,17 @@
 //	hyprd status       Check if daemon is running
 package main
 
-// ================================================================================
 // Entry point and CLI command dispatcher
-// ================================================================================
 
 import (
 	"fmt"
-	"hyprd/daemon"
 	"os"
 	"strings"
+
+	"dotfiles/cmd/internal/daemon"
 )
+
+var client = daemon.NewClient(SocketPath)
 
 func main() {
 	if len(os.Args) < 2 {
@@ -53,12 +54,12 @@ func main() {
 }
 
 func runDaemon() {
-	if daemon.IsRunning() {
+	if client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "hyprd: daemon already running")
 		os.Exit(1)
 	}
 
-	d, err := daemon.New()
+	d, err := New()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd: %v\n", err)
 		os.Exit(1)
@@ -79,7 +80,7 @@ func cmdStatus() {
 		}
 	}
 
-	if !daemon.IsRunning() {
+	if !client.IsRunning() {
 		if jsonOutput {
 			fmt.Println(`{"status":"not running"}`)
 		} else {
@@ -90,7 +91,7 @@ func cmdStatus() {
 
 	if jsonOutput {
 		// Get full state from daemon
-		resp, err := daemon.SendCommand("state")
+		resp, err := client.Send("state")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
@@ -102,12 +103,12 @@ func cmdStatus() {
 }
 
 func cmdMonocle() {
-	if !daemon.IsRunning() {
+	if !client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
 		os.Exit(1)
 	}
 
-	resp, err := daemon.SendCommand("monocle")
+	resp, err := client.Send("monocle")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -116,7 +117,7 @@ func cmdMonocle() {
 }
 
 func cmdSplit() {
-	if !daemon.IsRunning() {
+	if !client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
 		os.Exit(1)
 	}
@@ -126,7 +127,7 @@ func cmdSplit() {
 		cmd += " " + os.Args[2]
 	}
 
-	resp, err := daemon.SendCommand(cmd)
+	resp, err := client.Send(cmd)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -135,12 +136,12 @@ func cmdSplit() {
 }
 
 func cmdPseudo() {
-	if !daemon.IsRunning() {
+	if !client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
 		os.Exit(1)
 	}
 
-	resp, err := daemon.SendCommand("pseudo")
+	resp, err := client.Send("pseudo")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -149,12 +150,12 @@ func cmdPseudo() {
 }
 
 func cmdSwap() {
-	if !daemon.IsRunning() {
+	if !client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
 		os.Exit(1)
 	}
 
-	resp, err := daemon.SendCommand("swap")
+	resp, err := client.Send("swap")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -163,7 +164,7 @@ func cmdSwap() {
 }
 
 func cmdWS() {
-	if !daemon.IsRunning() {
+	if !client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
 		os.Exit(1)
 	}
@@ -173,7 +174,7 @@ func cmdWS() {
 		os.Exit(1)
 	}
 
-	resp, err := daemon.SendCommand("ws " + os.Args[2])
+	resp, err := client.Send("ws " + os.Args[2])
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -182,7 +183,7 @@ func cmdWS() {
 }
 
 func cmdFocus() {
-	if !daemon.IsRunning() {
+	if !client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
 		os.Exit(1)
 	}
@@ -193,7 +194,7 @@ func cmdFocus() {
 	}
 
 	cmd := "focus " + strings.Join(os.Args[2:], " ")
-	resp, err := daemon.SendCommand(cmd)
+	resp, err := client.Send(cmd)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -202,7 +203,7 @@ func cmdFocus() {
 }
 
 func cmdQuery() {
-	if !daemon.IsRunning() {
+	if !client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
 		os.Exit(1)
 	}
@@ -212,7 +213,7 @@ func cmdQuery() {
 		topic = os.Args[2]
 	}
 
-	resp, err := daemon.SendCommand("query " + topic)
+	resp, err := client.Send("query " + topic)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -221,7 +222,7 @@ func cmdQuery() {
 }
 
 func cmdSubscribe() {
-	if !daemon.IsRunning() {
+	if !client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
 		os.Exit(1)
 	}
@@ -231,16 +232,15 @@ func cmdSubscribe() {
 		cmd += " " + strings.Join(os.Args[2:], " ")
 	}
 
-	resp, err := daemon.StreamCommand(cmd)
+	err := client.Stream(cmd)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Print(resp)
 }
 
 func cmdLayout() {
-	if !daemon.IsRunning() {
+	if !client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
 		os.Exit(1)
 	}
@@ -250,7 +250,7 @@ func cmdLayout() {
 		arg = os.Args[2]
 	}
 
-	resp, err := daemon.SendCommand("layout " + arg)
+	resp, err := client.Send("layout " + arg)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)

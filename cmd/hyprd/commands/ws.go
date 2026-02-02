@@ -6,8 +6,9 @@ package commands
 
 import (
 	"fmt"
-	"hyprd/hypr"
 	"strconv"
+
+	"dotfiles/cmd/hyprd/hypr"
 )
 
 // WS handles the workspace switch command.
