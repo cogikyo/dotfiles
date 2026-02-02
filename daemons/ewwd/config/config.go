@@ -15,68 +15,68 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Config is the root configuration for ewwd.
+// Config defines all provider-specific settings for ewwd daemon services.
 type Config struct {
-	Weather    WeatherConfig    `yaml:"weather"`
-	Timer      TimerConfig      `yaml:"timer"`
-	Audio      AudioConfig      `yaml:"audio"`
-	Brightness BrightnessConfig `yaml:"brightness"`
-	Date       DateConfig       `yaml:"date"`
-	GPU        GPUConfig        `yaml:"gpu"`
-	Network    NetworkConfig    `yaml:"network"`
+	Weather    WeatherConfig    `yaml:"weather"`    // OpenWeatherMap API integration
+	Timer      TimerConfig      `yaml:"timer"`      // Timer and alarm defaults
+	Audio      AudioConfig      `yaml:"audio"`      // PulseAudio volume control
+	Brightness BrightnessConfig `yaml:"brightness"` // Screen brightness levels
+	Date       DateConfig       `yaml:"date"`       // Date calculations (e.g., age)
+	GPU        GPUConfig        `yaml:"gpu"`        // AMD GPU monitoring via sysfs
+	Network    NetworkConfig    `yaml:"network"`    // Network interface monitoring
 }
 
-// WeatherConfig holds OpenWeatherMap settings.
+// WeatherConfig configures OpenWeatherMap API integration for live weather updates.
 type WeatherConfig struct {
-	APIKeyFile   string        `yaml:"api_key_file"`
-	LocationFile string        `yaml:"location_file"`
-	PollInterval time.Duration `yaml:"poll_interval"`
+	APIKeyFile   string        `yaml:"api_key_file"`   // Path to file containing OWM API key
+	LocationFile string        `yaml:"location_file"`  // Path to file containing lat,lon coordinates
+	PollInterval time.Duration `yaml:"poll_interval"`  // How often to fetch weather data
 }
 
-// TimerConfig holds timer/alarm defaults.
+// TimerConfig defines default durations and constraints for timer and alarm operations.
 type TimerConfig struct {
-	DefaultMinutes    int `yaml:"default_minutes"`
-	DefaultAlarmHours int `yaml:"default_alarm_hours"`
-	MinAlarmHours     int `yaml:"min_alarm_hours"`
+	DefaultMinutes    int `yaml:"default_minutes"`      // Default timer duration in minutes
+	DefaultAlarmHours int `yaml:"default_alarm_hours"`  // Default alarm time (hours from midnight)
+	MinAlarmHours     int `yaml:"min_alarm_hours"`      // Minimum alarm time (hours from midnight)
 }
 
-// AudioConfig holds PulseAudio settings.
+// AudioConfig controls PulseAudio source/sink volumes with custom limits and aliases.
 type AudioConfig struct {
-	SourceOffset        int               `yaml:"source_offset"`
-	SourceMax           int               `yaml:"source_max"`
-	SinkMax             int               `yaml:"sink_max"`
-	VolumeStep          int               `yaml:"volume_step"`
-	PollInterval        time.Duration     `yaml:"poll_interval"`
-	DefaultSinkVolume   int               `yaml:"default_sink_volume"`
-	DefaultSourceVolume int               `yaml:"default_source_volume"`
-	NameMappings        map[string]string `yaml:"name_mappings"`
+	SourceOffset        int               `yaml:"source_offset"`         // Base offset added to source volume calculations
+	SourceMax           int               `yaml:"source_max"`            // Maximum microphone volume percentage
+	SinkMax             int               `yaml:"sink_max"`              // Maximum speaker volume percentage
+	VolumeStep          int               `yaml:"volume_step"`           // Increment for volume adjustments
+	PollInterval        time.Duration     `yaml:"poll_interval"`         // How often to poll PulseAudio state
+	DefaultSinkVolume   int               `yaml:"default_sink_volume"`   // Initial speaker volume on reset
+	DefaultSourceVolume int               `yaml:"default_source_volume"` // Initial microphone volume on reset
+	NameMappings        map[string]string `yaml:"name_mappings"`         // Friendly aliases for device names
 }
 
-// BrightnessConfig holds screen brightness settings.
+// BrightnessConfig defines preset brightness levels for common scenarios.
 type BrightnessConfig struct {
-	Min     int `yaml:"min"`
-	Max     int `yaml:"max"`
-	Night   int `yaml:"night"`
-	Default int `yaml:"default"`
+	Min     int `yaml:"min"`     // Minimum allowed brightness
+	Max     int `yaml:"max"`     // Maximum allowed brightness
+	Night   int `yaml:"night"`   // Night mode brightness
+	Default int `yaml:"default"` // Default startup brightness
 }
 
-// DateConfig holds date provider settings.
+// DateConfig provides reference dates for date-based calculations (e.g., age).
 type DateConfig struct {
-	BirthDate string `yaml:"birth_date"`
+	BirthDate string `yaml:"birth_date"` // ISO 8601 date (YYYY-MM-DD) for age calculation
 }
 
-// GPUConfig holds GPU monitoring settings.
+// GPUConfig enables AMD GPU monitoring via sysfs device nodes.
 type GPUConfig struct {
-	DevicePath   string        `yaml:"device_path"`
-	PollInterval time.Duration `yaml:"poll_interval"`
+	DevicePath   string        `yaml:"device_path"`   // Path to DRM device in sysfs (e.g., /sys/class/drm/card0/device)
+	PollInterval time.Duration `yaml:"poll_interval"` // How often to read GPU metrics
 }
 
-// NetworkConfig holds network monitoring settings.
+// NetworkConfig controls polling frequency for network interface statistics.
 type NetworkConfig struct {
-	PollInterval time.Duration `yaml:"poll_interval"`
+	PollInterval time.Duration `yaml:"poll_interval"` // How often to read network interface stats
 }
 
-// Default returns the default configuration.
+// Default returns a config with sensible defaults for all providers.
 func Default() *Config {
 	return &Config{
 		Weather: WeatherConfig{
@@ -118,8 +118,7 @@ func Default() *Config {
 	}
 }
 
-// Load loads configuration from ~/.config/ewwd/config.yaml.
-// Falls back to defaults if file doesn't exist or has errors.
+// Load reads config from ~/.config/ewwd/config.yaml, falling back to defaults on any error.
 func Load() *Config {
 	cfg := Default()
 
@@ -142,7 +141,7 @@ func Load() *Config {
 	return cfg
 }
 
-// ExpandPath expands ~ to home directory.
+// ExpandPath converts ~/ prefix to absolute home directory path, leaving other paths unchanged.
 func ExpandPath(path string) string {
 	if strings.HasPrefix(path, "~/") {
 		home, err := os.UserHomeDir()

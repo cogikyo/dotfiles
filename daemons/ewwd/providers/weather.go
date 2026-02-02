@@ -14,34 +14,34 @@ import (
 	"dotfiles/daemons/ewwd/config"
 )
 
-// WeatherState holds weather conditions and forecasts from OpenWeatherMap.
+// WeatherState contains comprehensive weather data from OpenWeatherMap for UI display.
 type WeatherState struct {
-	Icon      string `json:"icon"`
-	Desc      string `json:"desc"`
-	Temp      int    `json:"temp"`
-	FeelsLike int    `json:"feels_like"`
-	TempMorn  int    `json:"temp_morn"`
-	TempDay   int    `json:"temp_day"`
-	TempEve   int    `json:"temp_eve"`
-	TempNight int    `json:"temp_night"`
-	TempMax   int    `json:"temp_max"`
-	UVI       int    `json:"uvi"`
-	UVIDesc   string `json:"uvi_desc"`
-	AQI       int    `json:"aqi"`
-	AQIDesc   string `json:"aqi_desc"`
-	Rain1h    int    `json:"rain_1h"`
-	RainDay   int    `json:"rain_day"`
-	Clouds    int    `json:"clouds"`
-	WindSpeed int    `json:"wind_speed"`
-	BFIcon    string `json:"bf_icon"`
-	BFDesc    string `json:"bf_desc"`
-	Sunset    string `json:"sunset"`
-	Moon      string `json:"moon"`
-	MoonDesc  string `json:"moon_desc"`
-	Night     bool   `json:"night"`
+	Icon      string `json:"icon"`       // Weather condition icon
+	Desc      string `json:"desc"`       // Weather description
+	Temp      int    `json:"temp"`       // Current temperature in Celsius
+	FeelsLike int    `json:"feels_like"` // Feels-like temperature in Celsius
+	TempMorn  int    `json:"temp_morn"`  // Morning temperature forecast
+	TempDay   int    `json:"temp_day"`   // Daytime temperature forecast
+	TempEve   int    `json:"temp_eve"`   // Evening temperature forecast
+	TempNight int    `json:"temp_night"` // Nighttime temperature forecast
+	TempMax   int    `json:"temp_max"`   // Maximum temperature for the day
+	UVI       int    `json:"uvi"`        // UV index
+	UVIDesc   string `json:"uvi_desc"`   // UV index severity (low/moderate/high/extreme)
+	AQI       int    `json:"aqi"`        // Air Quality Index (1-5)
+	AQIDesc   string `json:"aqi_desc"`   // AQI description (good/moderate/poor/extreme)
+	Rain1h    int    `json:"rain_1h"`    // Rain probability next hour (percentage)
+	RainDay   int    `json:"rain_day"`   // Rain probability today (percentage)
+	Clouds    int    `json:"clouds"`     // Cloud coverage percentage
+	WindSpeed int    `json:"wind_speed"` // Wind speed in m/s
+	BFIcon    string `json:"bf_icon"`    // Beaufort scale icon
+	BFDesc    string `json:"bf_desc"`    // Beaufort scale description (calm/breeze/gale/etc)
+	Sunset    string `json:"sunset"`     // Sunset time formatted HH:MM
+	Moon      string `json:"moon"`       // Moon phase icon
+	MoonDesc  string `json:"moon_desc"`  // Moon phase description
+	Night     bool   `json:"night"`      // Current time is after sunset
 }
 
-// Weather provides weather data from the OpenWeatherMap API.
+// Weather fetches current conditions and forecasts from OpenWeatherMap API using configured location.
 type Weather struct {
 	state  StateSetter
 	config config.WeatherConfig
@@ -49,12 +49,12 @@ type Weather struct {
 	active bool
 	client *http.Client // Reused HTTP client for connection pooling
 
-	lat    string
-	lon    string
-	apiKey string
+	lat    string // Latitude loaded from config file
+	lon    string // Longitude loaded from config file
+	apiKey string // API key loaded from config file
 }
 
-// NewWeather creates a Weather provider.
+// NewWeather creates a Weather provider that loads credentials at start time from configured file paths.
 func NewWeather(state StateSetter, cfg config.WeatherConfig) Provider {
 	return &Weather{
 		state:  state,
@@ -63,12 +63,11 @@ func NewWeather(state StateSetter, cfg config.WeatherConfig) Provider {
 	}
 }
 
-// Name returns the provider identifier.
 func (w *Weather) Name() string {
 	return "weather"
 }
 
-// Start begins fetching weather data at configured intervals.
+// Start fetches weather data at configured intervals, continuing on errors to avoid daemon failure.
 func (w *Weather) Start(ctx context.Context, notify func(data any)) error {
 	w.active = true
 	w.client = &http.Client{Timeout: 10 * time.Second}
@@ -103,7 +102,6 @@ func (w *Weather) Start(ctx context.Context, notify func(data any)) error {
 	}
 }
 
-// Stop gracefully shuts down the weather provider.
 func (w *Weather) Stop() error {
 	if w.active {
 		close(w.done)
@@ -177,7 +175,6 @@ func (w *Weather) httpGet(url string) ([]byte, error) {
 	return io.ReadAll(resp.Body)
 }
 
-// OpenWeatherMap API response structures
 type owmResponse struct {
 	Current struct {
 		Temp      float64 `json:"temp"`
@@ -315,8 +312,8 @@ func roundToInt(f float64) int {
 	return int(math.Round(f))
 }
 
-// getWeatherIcon returns weather icon based on condition ID and day/night.
-// https://openweathermap.org/weather-conditions#How-to-get-icon-URL
+// getWeatherIcon maps OpenWeatherMap condition ID to Nerd Font icon, adjusted for day/night.
+// See https://openweathermap.org/weather-conditions#How-to-get-icon-URL
 func getWeatherIcon(id int, night bool) string {
 	if !night {
 		// Day icons
@@ -373,7 +370,7 @@ func getWeatherIcon(id int, night bool) string {
 	}
 }
 
-// getMoonPhase returns moon icon and description based on phase (0-100).
+// getMoonPhase maps moon phase percentage (0-100) to icon and human-readable description.
 func getMoonPhase(phase int) (icon, desc string) {
 	switch {
 	case phase == 0:
@@ -437,7 +434,7 @@ func getMoonPhase(phase int) (icon, desc string) {
 	}
 }
 
-// getBeaufortScale returns Beaufort scale icon and description based on wind speed in knots.
+// getBeaufortScale converts wind speed (knots) to Beaufort scale 0-12 with icon and description.
 func getBeaufortScale(knots int) (icon, desc string) {
 	switch {
 	case knots < 1:
@@ -469,7 +466,7 @@ func getBeaufortScale(knots int) (icon, desc string) {
 	}
 }
 
-// getUVIDesc returns UV index description.
+// getUVIDesc maps UV index to WHO standard severity categories.
 func getUVIDesc(uvi int) string {
 	switch {
 	case uvi <= 2:
@@ -485,7 +482,7 @@ func getUVIDesc(uvi int) string {
 	}
 }
 
-// getAQIDesc returns Air Quality Index description.
+// getAQIDesc maps OpenWeatherMap AQI scale (1-5) to quality descriptions.
 func getAQIDesc(aqi int) string {
 	switch aqi {
 	case 1:

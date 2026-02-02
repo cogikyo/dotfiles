@@ -20,21 +20,15 @@ package providers
 
 import "context"
 
-// Provider defines the base interface for all ewwd providers.
+// Provider monitors a subsystem and pushes state updates via notify callback.
 type Provider interface {
-	// Name returns the provider identifier used for query and subscribe topics.
-	Name() string
-	// Start begins the provider's background work. The notify callback should
-	// be called whenever the provider's state changes.
-	Start(ctx context.Context, notify func(data any)) error
-	// Stop gracefully shuts down the provider and releases resources.
-	Stop() error
+	Name() string                                              // Returns provider identifier for query/subscribe topics
+	Start(ctx context.Context, notify func(data any)) error   // Starts background monitoring; calls notify on state changes
+	Stop() error                                               // Gracefully stops the provider and releases resources
 }
 
-// ActionProvider extends Provider with command handling capability.
+// ActionProvider adds command handling for interactive control (e.g., volume adjust, brightness set).
 type ActionProvider interface {
 	Provider
-	// HandleAction processes commands such as "brightness adjust up 8".
-	// It returns a result string and any error encountered.
-	HandleAction(args []string) (string, error)
+	HandleAction(args []string) (string, error) // Processes command args, returns result or error
 }
