@@ -1,9 +1,5 @@
 package providers
 
-// ================================================================================
-// PulseAudio volume monitoring and control via pulsemixer
-// ================================================================================
-
 import (
 	"context"
 	"errors"
@@ -14,26 +10,16 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"dotfiles/cmd/ewwd/config"
 )
 
-// Package-level compiled regexes (avoid recompilation in hot loops)
 var (
 	audioIDRe   = regexp.MustCompile(`ID:\s*\w+-(\d+)`)
 	audioNameRe = regexp.MustCompile(`Name:\s*([A-Za-z0-9-]+)`)
 )
 
-const (
-	sourceOffset = 50
-	sourceMax    = 150
-	sinkMax      = 100
-	volumeStep   = 10
-	pollInterval = 2 * time.Second
-
-	defaultSinkVol   = 69
-	defaultSourceVol = 150 // actual value (displays as 100)
-)
-
-// AudioState holds audio levels for eww.
+// AudioState holds audio volume levels and device names for the eww statusbar.
 type AudioState struct {
 	Sink       int    `json:"sink"`        // 0-100
 	SinkName   string `json:"sink_name"`   // e.g., "pixel buds"
@@ -41,9 +27,10 @@ type AudioState struct {
 	SourceName string `json:"source_name"` // e.g., "pixel buds"
 }
 
-// Audio provides audio volume monitoring and control via pulsemixer.
+// Audio provides PulseAudio volume monitoring and control via pulsemixer.
 type Audio struct {
-	state StateSetter
+	state  StateSetter
+	config config.AudioConfig
 	notify func(data any)
 	done   chan struct{}
 	active bool
@@ -51,17 +38,20 @@ type Audio struct {
 }
 
 // NewAudio creates an Audio provider.
-func NewAudio(state StateSetter) Provider {
+func NewAudio(state StateSetter, cfg config.AudioConfig) Provider {
 	return &Audio{
-		state: state,
-		done:  make(chan struct{}),
+		state:  state,
+		config: cfg,
+		done:   make(chan struct{}),
 	}
 }
 
+// Name returns the provider identifier.
 func (a *Audio) Name() string {
 	return "audio"
 }
 
+// Start begins polling audio state and notifying on changes.
 func (a *Audio) Start(ctx context.Context, notify func(data any)) error {
 	a.active = true
 	a.notify = notify
@@ -69,7 +59,7 @@ func (a *Audio) Start(ctx context.Context, notify func(data any)) error {
 	// Send initial state
 	a.updateAndNotify()
 
-	ticker := time.NewTicker(pollInterval)
+	ticker := time.NewTicker(a.config.PollInterval)
 	defer ticker.Stop()
 
 	for {
@@ -84,6 +74,7 @@ func (a *Audio) Start(ctx context.Context, notify func(data any)) error {
 	}
 }
 
+// Stop gracefully shuts down the audio provider.
 func (a *Audio) Stop() error {
 	if a.active {
 		close(a.done)
@@ -171,9 +162,9 @@ func (a *Audio) getName(deviceType string) string {
 		if strings.Contains(line, "Default") {
 			if m := audioNameRe.FindStringSubmatch(line); len(m) > 1 {
 				name := m[1]
-				// Custom name mappings
-				if name == "cullyn" {
-					return "pixel buds"
+				// Custom name mappings from config
+				if mapped, ok := a.config.NameMappings[name]; ok {
+					return mapped
 				}
 				return name
 			}
@@ -197,14 +188,13 @@ func (a *Audio) setVolume(deviceType string, volume int) {
 
 // sourceDisplayValue converts actual source volume to display value (with offset).
 func (a *Audio) sourceDisplayValue(actual int) int {
-	if actual <= sourceOffset {
+	if actual <= a.config.SourceOffset {
 		return 0
 	}
-	return actual - sourceOffset
+	return actual - a.config.SourceOffset
 }
 
-// HandleAction processes audio commands.
-// Actions: mute <sink|source>, change_volume <sink|source> <up|down>, set_default <sink|source|both>
+// HandleAction processes audio commands: mute, change_volume, and set_default.
 func (a *Audio) HandleAction(args []string) (string, error) {
 	if len(args) == 0 {
 		return "", errors.New("action required: mute, change_volume, set_default")
@@ -248,27 +238,27 @@ func (a *Audio) mute(deviceType string) {
 // changeVolume adjusts volume by step, respecting source offset logic.
 func (a *Audio) changeVolume(deviceType, direction string) {
 	current := a.getVolume(deviceType)
-	maxVol := sinkMax
+	maxVol := a.config.SinkMax
 
 	if deviceType == "source" {
-		maxVol = sourceMax
+		maxVol = a.config.SourceMax
 
 		// If source is at or below offset, jump to offset before adjusting
-		if current <= sourceOffset && direction == "up" {
-			a.setVolume(deviceType, sourceOffset)
-			current = sourceOffset
+		if current <= a.config.SourceOffset && direction == "up" {
+			a.setVolume(deviceType, a.config.SourceOffset)
+			current = a.config.SourceOffset
 		}
 	}
 
-	delta := volumeStep
+	delta := a.config.VolumeStep
 	if direction == "down" {
-		delta = -volumeStep
+		delta = -a.config.VolumeStep
 	}
 
 	newVol := min(max(current+delta, 0), maxVol)
 
 	// For source, if going below offset, snap to 0
-	if deviceType == "source" && newVol < sourceOffset && direction == "down" {
+	if deviceType == "source" && newVol < a.config.SourceOffset && direction == "down" {
 		newVol = 0
 	}
 
@@ -278,9 +268,9 @@ func (a *Audio) changeVolume(deviceType, direction string) {
 // setDefault sets device(s) to preset values.
 func (a *Audio) setDefault(target string) {
 	if target == "sink" || target == "both" {
-		a.setVolume("sink", defaultSinkVol)
+		a.setVolume("sink", a.config.DefaultSinkVolume)
 	}
 	if target == "source" || target == "both" {
-		a.setVolume("source", defaultSourceVol)
+		a.setVolume("source", a.config.DefaultSourceVolume)
 	}
 }

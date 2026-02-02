@@ -1,19 +1,17 @@
-// ewwd — System utilities daemon for eww statusbar integration.
 package main
-
-// Core daemon lifecycle and command routing
 
 import (
 	"context"
+	"dotfiles/cmd/ewwd/config"
+	"dotfiles/cmd/ewwd/providers"
+	"dotfiles/cmd/internal/daemon"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
-
-	"dotfiles/cmd/ewwd/providers"
-	"dotfiles/cmd/internal/daemon"
 )
 
+// SocketPath is the Unix socket address where the daemon listens for connections.
 const SocketPath = "/tmp/ewwd.sock"
 
 // Daemon is the main ewwd daemon.
@@ -23,16 +21,20 @@ type Daemon struct {
 	providers []providers.Provider
 	ctx       context.Context
 	cancel    context.CancelFunc
+	config    *config.Config
 }
 
 // New creates a new daemon instance.
 func New() (*Daemon, error) {
+	cfg := config.Load()
+
 	ctx, cancel := context.WithCancel(context.Background())
 	state := NewState()
 	d := &Daemon{
 		state:  state,
 		ctx:    ctx,
 		cancel: cancel,
+		config: cfg,
 	}
 
 	d.server = daemon.NewServer(SocketPath, d.handleCommand)
@@ -77,15 +79,16 @@ func (d *Daemon) Run() error {
 
 // initProviders registers all data providers.
 func (d *Daemon) initProviders() {
+	cfg := d.config
 	d.providers = []providers.Provider{
-		providers.NewGPU(d.state),
-		providers.NewNetwork(d.state),
-		providers.NewDate(d.state),
-		providers.NewBrightness(d.state),
-		providers.NewAudio(d.state),
+		providers.NewGPU(d.state, cfg.GPU),
+		providers.NewNetwork(d.state, cfg.Network),
+		providers.NewDate(d.state, cfg.Date),
+		providers.NewBrightness(d.state, cfg.Brightness),
+		providers.NewAudio(d.state, cfg.Audio),
 		providers.NewMusic(d.state),
-		providers.NewTimer(d.state),
-		providers.NewWeather(d.state),
+		providers.NewTimer(d.state, cfg.Timer),
+		providers.NewWeather(d.state, cfg.Weather),
 	}
 }
 

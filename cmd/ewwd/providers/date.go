@@ -1,19 +1,13 @@
 package providers
 
-// ================================================================================
-// Date, time, and weeks-alive counter for statusbar
-// ================================================================================
-
 import (
 	"context"
-	"os"
 	"time"
+
+	"dotfiles/cmd/ewwd/config"
 )
 
-// defaultBirthDate is used if EWWD_BIRTH_DATE env var is not set.
-const defaultBirthDate = "1996-02-26"
-
-// DateState holds date/time information for eww.
+// DateState holds date and time information for the eww statusbar.
 type DateState struct {
 	Weekday      string `json:"weekday"`
 	WeekdayShort string `json:"weekday_short"`
@@ -25,7 +19,7 @@ type DateState struct {
 	WeeksAlive   int    `json:"weeks_alive"`
 }
 
-// Date provides date/time info for eww statusbar.
+// Date provides date, time, and weeks-alive counter for the eww statusbar.
 type Date struct {
 	state     StateSetter
 	done      chan struct{}
@@ -34,15 +28,10 @@ type Date struct {
 }
 
 // NewDate creates a Date provider.
-func NewDate(state StateSetter) Provider {
-	// Read birth date from environment, fall back to default
-	birthStr := os.Getenv("EWWD_BIRTH_DATE")
-	if birthStr == "" {
-		birthStr = defaultBirthDate
-	}
-	birthDate, err := time.Parse("2006-01-02", birthStr)
+func NewDate(state StateSetter, cfg config.DateConfig) Provider {
+	birthDate, err := time.Parse("2006-01-02", cfg.BirthDate)
 	if err != nil {
-		birthDate, _ = time.Parse("2006-01-02", defaultBirthDate)
+		birthDate, _ = time.Parse("2006-01-02", "1996-02-26") // Fallback
 	}
 
 	return &Date{
@@ -52,10 +41,12 @@ func NewDate(state StateSetter) Provider {
 	}
 }
 
+// Name returns the provider identifier.
 func (d *Date) Name() string {
 	return "date"
 }
 
+// Start begins updating date/time state aligned to minute boundaries.
 func (d *Date) Start(ctx context.Context, notify func(data any)) error {
 	d.active = true
 
@@ -86,6 +77,7 @@ func (d *Date) Start(ctx context.Context, notify func(data any)) error {
 	}
 }
 
+// Stop gracefully shuts down the date provider.
 func (d *Date) Stop() error {
 	if d.active {
 		close(d.done)
