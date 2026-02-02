@@ -1,7 +1,5 @@
 package main
 
-// Hyprland event loop and state synchronization
-
 import (
 	"bufio"
 	"encoding/json"
@@ -16,7 +14,7 @@ import (
 	"dotfiles/cmd/internal/daemon"
 )
 
-// EventLoop connects to Hyprland's event socket and updates state.
+// EventLoop listens to Hyprland's event socket and synchronizes daemon state.
 type EventLoop struct {
 	hypr  *hypr.Client
 	state *State
@@ -24,7 +22,7 @@ type EventLoop struct {
 	done  <-chan struct{}
 }
 
-// NewEventLoop creates an event loop.
+// NewEventLoop creates an EventLoop with the given dependencies.
 func NewEventLoop(hypr *hypr.Client, state *State, subs *daemon.SubscriptionManager, done <-chan struct{}) *EventLoop {
 	return &EventLoop{
 		hypr:  hypr,
@@ -34,7 +32,7 @@ func NewEventLoop(hypr *hypr.Client, state *State, subs *daemon.SubscriptionMana
 	}
 }
 
-// Run starts listening for Hyprland events. Blocks until done channel closes.
+// Run connects to Hyprland and processes events until the done channel closes.
 func (e *EventLoop) Run() error {
 	socketPath := e.hypr.EventSocketPath()
 
@@ -46,7 +44,6 @@ func (e *EventLoop) Run() error {
 
 	fmt.Printf("hyprd: subscribed to hyprland events\n")
 
-	// Initialize state from current Hyprland state
 	if err := e.syncState(); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd: initial sync failed: %v\n", err)
 	}
@@ -75,15 +72,12 @@ func (e *EventLoop) Run() error {
 	return nil
 }
 
-// syncState queries Hyprland for current state.
 func (e *EventLoop) syncState() error {
-	// Get current workspace
 	data, err := e.hypr.Request("j/activeworkspace")
 	if err != nil {
 		return err
 	}
 
-	// Parse workspace ID from JSON
 	var ws struct {
 		ID int `json:"id"`
 	}
@@ -91,7 +85,6 @@ func (e *EventLoop) syncState() error {
 		e.state.SetWorkspace(ws.ID)
 	}
 
-	// Get occupied workspaces
 	if err := e.updateOccupied(); err != nil {
 		return err
 	}
@@ -99,14 +92,12 @@ func (e *EventLoop) syncState() error {
 	return nil
 }
 
-// updateOccupied queries Hyprland for occupied workspaces.
 func (e *EventLoop) updateOccupied() error {
 	clients, err := e.hypr.Clients()
 	if err != nil {
 		return err
 	}
 
-	// Collect unique workspace IDs
 	wsSet := make(map[int]bool)
 	for _, c := range clients {
 		if c.Workspace.ID > 0 { // Skip special workspaces
@@ -114,7 +105,6 @@ func (e *EventLoop) updateOccupied() error {
 		}
 	}
 
-	// Convert to sorted slice
 	occupied := make([]int, 0, len(wsSet))
 	for ws := range wsSet {
 		occupied = append(occupied, ws)
@@ -125,9 +115,7 @@ func (e *EventLoop) updateOccupied() error {
 	return nil
 }
 
-// handleEvent processes a single Hyprland event.
 func (e *EventLoop) handleEvent(line string) {
-	// Events are formatted as: eventname>>data
 	parts := strings.SplitN(line, ">>", 2)
 	if len(parts) != 2 {
 		return
@@ -137,7 +125,6 @@ func (e *EventLoop) handleEvent(line string) {
 
 	switch event {
 	case "workspace", "workspacev2":
-		// workspace>>ID or workspacev2>>ID,name
 		wsStr := data
 		if idx := strings.Index(data, ","); idx > 0 {
 			wsStr = data[:idx]
@@ -148,7 +135,6 @@ func (e *EventLoop) handleEvent(line string) {
 		}
 
 	case "focusedmon":
-		// data: monitorname,workspaceID
 		if idx := strings.LastIndex(data, ","); idx >= 0 {
 			if ws, err := strconv.Atoi(data[idx+1:]); err == nil {
 				e.state.SetWorkspace(ws)
@@ -157,17 +143,14 @@ func (e *EventLoop) handleEvent(line string) {
 		}
 
 	case "createworkspace", "destroyworkspace":
-		// Workspace list changed, update occupied
 		e.updateOccupied()
 		e.notifyWorkspace()
 
 	case "openwindow":
-		// data: address,workspace,class,title
 		e.updateOccupied()
 		e.notifyWorkspace()
 
 	case "closewindow":
-		// data: window address
 		addr := data
 		if !strings.HasPrefix(addr, "0x") {
 			addr = "0x" + addr
@@ -177,13 +160,11 @@ func (e *EventLoop) handleEvent(line string) {
 		e.notifyWorkspace()
 
 	case "movewindow":
-		// data: address,workspace
 		e.updateOccupied()
 		e.notifyWorkspace()
 	}
 }
 
-// notifyWorkspace sends workspace state to subscribers.
 func (e *EventLoop) notifyWorkspace() {
 	if e.subs == nil {
 		return

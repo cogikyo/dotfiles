@@ -1,39 +1,75 @@
-// hyprd — Unified Hyprland daemon for window management and eww integration.
+// Package main implements hyprd, a daemon for managing Hyprland window layouts
+// and state synchronization with eww widgets.
+//
+// hyprd connects to Hyprland's IPC sockets to monitor workspace changes,
+// window events, and execute window management commands. It maintains
+// state for features like monocle mode, split ratios, and hidden windows.
+//
+// # Architecture
+//
+// The daemon consists of three main components:
+//
+//   - Daemon: Manages the command socket and routes client requests
+//   - EventLoop: Subscribes to Hyprland events and updates state
+//   - State: Thread-safe storage for workspace and window tracking
+//
+// # Commands
+//
+// Clients connect via Unix socket and send text commands:
+//
+//   - monocle: Toggle focused window to float on dedicated workspace
+//   - split: Cycle or set the master/slave split ratio
+//   - hide: Toggle visibility of slave windows
+//   - swap: Exchange master and slave window positions
+//   - ws: Switch workspace with automatic master focus
+//   - focus: Focus window by class, unhiding if necessary
+//   - layout: Apply predefined window arrangements
+//   - query: Retrieve current state as JSON
+//   - subscribe: Stream state change events
+//
+// # Integration
+//
+// hyprd provides real-time state updates to eww widgets through a
+// subscription mechanism. Widgets subscribe to topics (workspace, monocle,
+// split) and receive JSON events when state changes.
 package main
 
-// Core daemon lifecycle and command routing
-
 import (
+	"dotfiles/cmd/hyprd/commands"
+	"dotfiles/cmd/hyprd/config"
+	"dotfiles/cmd/hyprd/hypr"
+	"dotfiles/cmd/internal/daemon"
 	"encoding/json"
 	"fmt"
 	"os"
 	"strings"
-
-	"dotfiles/cmd/hyprd/commands"
-	"dotfiles/cmd/hyprd/hypr"
-	"dotfiles/cmd/internal/daemon"
 )
 
+// SocketPath is the Unix socket path for client connections.
 const SocketPath = "/tmp/hyprd.sock"
 
-// Daemon is the main hyprd daemon.
+// Daemon manages the hyprd event loop, state, and command routing.
 type Daemon struct {
 	hypr   *hypr.Client
 	state  *State
 	server *daemon.Server
+	config *config.Config
 }
 
-// New creates a new daemon instance.
+// New creates a new Daemon by connecting to Hyprland and initializing state.
 func New() (*Daemon, error) {
+	cfg := config.Load()
+
 	hyprClient, err := hypr.NewClient()
 	if err != nil {
 		return nil, fmt.Errorf("connect to hyprland: %w", err)
 	}
 
-	state := NewState()
+	state := NewState(cfg)
 	d := &Daemon{
-		hypr:  hyprClient,
-		state: state,
+		hypr:   hyprClient,
+		state:  state,
+		config: cfg,
 	}
 
 	d.server = daemon.NewServer(SocketPath, d.handleCommand)
@@ -42,21 +78,23 @@ func New() (*Daemon, error) {
 	return d, nil
 }
 
-// Run starts the daemon and blocks until shutdown.
+// Run starts the daemon and blocks until a shutdown signal is received.
 func (d *Daemon) Run() error {
-	// Verify Hyprland connection
 	clients, err := d.hypr.Clients()
 	if err != nil {
 		return fmt.Errorf("hyprland query failed: %w", err)
 	}
 	fmt.Printf("hyprd: connected to hyprland (%d clients)\n", len(clients))
 
+	if err := d.initGeometry(); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd: geometry query failed, using defaults: %v\n", err)
+	}
+
 	if err := d.server.Start(); err != nil {
 		return err
 	}
 	fmt.Printf("hyprd: listening on %s\n", SocketPath)
 
-	// Start event loop
 	events := NewEventLoop(d.hypr, d.state, d.server.Subs, d.server.Done())
 	go func() {
 		if err := events.Run(); err != nil {
@@ -64,7 +102,6 @@ func (d *Daemon) Run() error {
 		}
 	}()
 
-	// Wait for signal
 	sig := d.server.WaitForSignal()
 	fmt.Printf("\nhyprd: received %s, shutting down\n", sig)
 	d.server.Shutdown()
@@ -99,9 +136,39 @@ func (d *Daemon) sendInitialState(sub *daemon.Subscriber, topics []string) {
 	}
 }
 
-// handleCommand dispatches commands and returns responses.
+// initGeometry queries Hyprland for monitor dimensions and sets state geometry.
+func (d *Daemon) initGeometry() error {
+	monitor, err := d.hypr.FocusedMonitor()
+	if err != nil {
+		return err
+	}
+
+	// Use monitor dimensions if available, otherwise use config defaults
+	width := d.config.Monitor.Width
+	height := d.config.Monitor.Height
+	if monitor != nil {
+		width = monitor.Width
+		height = monitor.Height
+	}
+
+	geo := commands.ComputeGeometry(
+		width,
+		height,
+		d.config.Monitor.Reserved.Top,
+		d.config.Monitor.Reserved.Bottom,
+		d.config.Monitor.Reserved.Left,
+		d.config.Monocle.WidthRatio,
+		d.config.Monocle.HeightRatio,
+	)
+	d.state.SetGeometry(geo)
+	if monitor != nil {
+		fmt.Printf("hyprd: monitor %s (%dx%d), monocle %dx%d\n",
+			monitor.Name, width, height, geo.MonocleW, geo.MonocleH)
+	}
+	return nil
+}
+
 func (d *Daemon) handleCommand(command string) string {
-	// Parse command and arguments
 	parts := strings.SplitN(command, " ", 2)
 	cmd := parts[0]
 	arg := ""
@@ -152,14 +219,13 @@ func (d *Daemon) handleCommand(command string) string {
 		if arg == "" {
 			return "error: workspace number required"
 		}
-		ws := commands.NewWS(d.hypr)
+		ws := commands.NewWS(d.hypr, d.state)
 		result, err := ws.Execute(arg)
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
 	case "focus":
-		// Parse "class" or "class title"
 		parts := strings.SplitN(arg, " ", 2)
 		class := ""
 		title := ""
