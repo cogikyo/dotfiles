@@ -1,28 +1,25 @@
 package commands
 
-// ================================================================================
-// Master/slave split ratio cycling and management
-// ================================================================================
-
 import (
 	"fmt"
 
 	"dotfiles/cmd/hyprd/hypr"
 )
 
-// Split handles the split command execution.
+// Split manages master/slave split ratios with cycling and direct ratio selection.
 type Split struct {
 	hypr  *hypr.Client
 	state StateManager
 }
 
-// NewSplit creates a split command handler.
+// NewSplit returns a new Split command handler.
 func NewSplit(h *hypr.Client, s StateManager) *Split {
 	return &Split{hypr: h, state: s}
 }
 
-// Execute runs the split command with given flags.
-// Flags: "xs", "default", "lg", "toggle", "reapply", or "" (cycle)
+// Execute sets or cycles the split ratio. Supported flags are "xs", "default",
+// "lg", "toggle" (between default and xs), "reapply", or empty string to cycle
+// through xs, default, and lg in order.
 func (s *Split) Execute(flag string) (string, error) {
 	// Ignore if active window is floating
 	win, err := s.hypr.ActiveWindow()
@@ -54,7 +51,7 @@ func (s *Split) Execute(flag string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		CenterCursor(s.hypr)
+		centerCursor(s.hypr)
 		return result, nil
 	default:
 		// Cycle: xs → default → lg → xs
@@ -64,15 +61,17 @@ func (s *Split) Execute(flag string) (string, error) {
 
 // setRatio applies a split ratio.
 func (s *Split) setRatio(ratio string) (string, error) {
+	cfg := s.state.GetConfig()
+
 	var mfact string
 	switch ratio {
 	case "xs":
-		mfact = SplitXS
+		mfact = cfg.Split.XS
 	case "lg":
-		mfact = SplitLG
+		mfact = cfg.Split.LG
 	default:
 		ratio = "default"
-		mfact = SplitDefault
+		mfact = cfg.Split.Default
 	}
 
 	if err := s.hypr.Dispatch(fmt.Sprintf("layoutmsg mfact exact %s", mfact)); err != nil {

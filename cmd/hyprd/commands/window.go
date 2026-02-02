@@ -1,9 +1,5 @@
 package commands
 
-// ================================================================================
-// Window query utilities for master/slave layout classification
-// ================================================================================
-
 import (
 	"fmt"
 	"slices"
@@ -12,8 +8,8 @@ import (
 	"dotfiles/cmd/hyprd/hypr"
 )
 
-// CenterCursor moves cursor to active window center.
-func CenterCursor(h *hypr.Client) {
+// centerCursor moves cursor to active window center.
+func centerCursor(h *hypr.Client) {
 	win, err := h.ActiveWindow()
 	if err != nil || win == nil {
 		return
@@ -24,8 +20,8 @@ func CenterCursor(h *hypr.Client) {
 }
 
 // GetTiledWindows returns non-floating windows on a workspace, sorted by X (master first).
-// Excludes windows with classes in IgnoredClasses (e.g., GLava).
-func GetTiledWindows(h *hypr.Client, wsID int) ([]hypr.Window, error) {
+// Excludes windows with classes in ignoredClasses (e.g., GLava).
+func GetTiledWindows(h *hypr.Client, wsID int, ignoredClasses []string) ([]hypr.Window, error) {
 	clients, err := h.Clients()
 	if err != nil {
 		return nil, err
@@ -33,7 +29,7 @@ func GetTiledWindows(h *hypr.Client, wsID int) ([]hypr.Window, error) {
 
 	var tiled []hypr.Window
 	for _, c := range clients {
-		if c.Workspace.ID == wsID && !c.Floating && !isIgnoredClass(c.Class) {
+		if c.Workspace.ID == wsID && !c.Floating && !slices.Contains(ignoredClasses, c.Class) {
 			tiled = append(tiled, c)
 		}
 	}
@@ -46,8 +42,8 @@ func GetTiledWindows(h *hypr.Client, wsID int) ([]hypr.Window, error) {
 }
 
 // GetMaster returns the master window (leftmost tiled) on a workspace.
-func GetMaster(h *hypr.Client, wsID int) (*hypr.Window, error) {
-	tiled, err := GetTiledWindows(h, wsID)
+func GetMaster(h *hypr.Client, wsID int, ignoredClasses []string) (*hypr.Window, error) {
+	tiled, err := GetTiledWindows(h, wsID, ignoredClasses)
 	if err != nil {
 		return nil, err
 	}
@@ -91,9 +87,4 @@ func SlaveIndex(slaves []hypr.Window, addr string) int {
 		}
 	}
 	return -1
-}
-
-// isIgnoredClass returns true if the class should be excluded from window operations.
-func isIgnoredClass(class string) bool {
-	return slices.Contains(IgnoredClasses, class)
 }

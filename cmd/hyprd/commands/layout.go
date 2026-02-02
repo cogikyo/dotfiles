@@ -1,9 +1,5 @@
 package commands
 
-// ================================================================================
-// Session layout management with YAML configuration
-// ================================================================================
-
 import (
 	"fmt"
 	"os"
@@ -17,12 +13,12 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// SessionConfig is the root of sessions.yaml.
+// SessionConfig represents the root structure of the sessions.yaml configuration file.
 type SessionConfig struct {
 	Sessions map[string]Session `yaml:"sessions"`
 }
 
-// Session defines a workspace layout configuration.
+// Session defines a workspace layout with windows, URLs, and project settings.
 type Session struct {
 	Name      string         `yaml:"name" json:"name"`
 	Workspace int            `yaml:"workspace" json:"workspace"`
@@ -31,14 +27,15 @@ type Session struct {
 	Windows   []WindowConfig `yaml:"windows" json:"windows"`
 }
 
-// WindowConfig defines a window to spawn and its role.
+// WindowConfig specifies a window to spawn with its command, title, and layout role.
 type WindowConfig struct {
 	Command string `yaml:"command"` // e.g., "kitty --title terminal"
 	Title   string `yaml:"title"`   // e.g., "terminal" (for detection)
 	Role    string `yaml:"role"`    // "master" | "slave"
 }
 
-// DefaultSessions provides built-in session configurations.
+// DefaultSessions contains built-in session configurations used when no
+// user configuration file exists.
 var DefaultSessions = map[string]Session{
 	"dotfiles": {
 		Name:      "dotfiles",
@@ -75,19 +72,19 @@ var DefaultSessions = map[string]Session{
 	},
 }
 
-// Layout handles the layout command execution.
+// Layout opens predefined session layouts with automatic window spawning and arrangement.
 type Layout struct {
 	hypr  *hypr.Client
 	state StateManager
 }
 
-// NewLayout creates a layout command handler.
+// NewLayout returns a new Layout command handler.
 func NewLayout(h *hypr.Client, s StateManager) *Layout {
 	return &Layout{hypr: h, state: s}
 }
 
-// Execute runs the layout command.
-// Args: session name, or "--list" to list sessions
+// Execute opens the named session or lists available sessions if arg is empty,
+// "--list", or "-l".
 func (l *Layout) Execute(arg string) (string, error) {
 	sessions := LoadSessions()
 
@@ -103,7 +100,8 @@ func (l *Layout) Execute(arg string) (string, error) {
 	return l.openSession(session)
 }
 
-// LoadSessions loads session config from YAML file, falling back to defaults.
+// LoadSessions reads session configurations from ~/.config/hyprd/sessions.yaml,
+// returning DefaultSessions if the file is missing or invalid.
 func LoadSessions() map[string]Session {
 	homeDir, err := os.UserHomeDir()
 	if err != nil {
@@ -260,5 +258,6 @@ func (l *Layout) arrangeLayout(wsID int, session Session) {
 	}
 
 	// Apply default split
-	l.hypr.Dispatch(fmt.Sprintf("layoutmsg mfact exact %s", SplitDefault))
+	cfg := l.state.GetConfig()
+	l.hypr.Dispatch(fmt.Sprintf("layoutmsg mfact exact %s", cfg.Split.Default))
 }

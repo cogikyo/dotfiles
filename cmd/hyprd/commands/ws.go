@@ -1,9 +1,5 @@
 package commands
 
-// ================================================================================
-// Workspace switching with automatic master focus
-// ================================================================================
-
 import (
 	"fmt"
 	"strconv"
@@ -11,17 +7,18 @@ import (
 	"dotfiles/cmd/hyprd/hypr"
 )
 
-// WS handles the workspace switch command.
+// WS switches workspaces with automatic master window focusing.
 type WS struct {
-	hypr *hypr.Client
+	hypr  *hypr.Client
+	state StateManager
 }
 
-// NewWS creates a workspace command handler.
-func NewWS(h *hypr.Client) *WS {
-	return &WS{hypr: h}
+// NewWS returns a new WS command handler.
+func NewWS(h *hypr.Client, s StateManager) *WS {
+	return &WS{hypr: h, state: s}
 }
 
-// Execute switches to the specified workspace and focuses the master window.
+// Execute switches to the workspace specified by wsArg and focuses the master window.
 func (w *WS) Execute(wsArg string) (string, error) {
 	ws, err := strconv.Atoi(wsArg)
 	if err != nil {
@@ -33,8 +30,10 @@ func (w *WS) Execute(wsArg string) (string, error) {
 		return "", err
 	}
 
+	cfg := w.state.GetConfig()
+
 	// Focus the master window
-	master, err := GetMaster(w.hypr, ws)
+	master, err := GetMaster(w.hypr, ws, cfg.Windows.IgnoredClasses)
 	if err != nil {
 		return fmt.Sprintf("ws %d (no focus)", ws), nil
 	}
