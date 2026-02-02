@@ -1,19 +1,44 @@
-// hyprd — Unified Hyprland daemon for window management and eww integration.
+// Package main implements hyprd, a daemon for managing Hyprland window layouts
+// and state synchronization with eww widgets.
 //
-// Usage:
+// hyprd connects to Hyprland's IPC sockets to monitor workspace changes,
+// window events, and execute window management commands. It maintains
+// state for features like monocle mode, split ratios, and hidden windows.
 //
-//	hyprd              Start daemon (foreground)
-//	hyprd status       Check if daemon is running
+// # Architecture
+//
+// The daemon consists of three main components:
+//
+//   - Daemon: Manages the command socket and routes client requests
+//   - EventLoop: Subscribes to Hyprland events and updates state
+//   - State: Thread-safe storage for workspace and window tracking
+//
+// # Commands
+//
+// Clients connect via Unix socket and send text commands:
+//
+//   - monocle: Toggle focused window to float on dedicated workspace
+//   - split: Cycle or set the master/slave split ratio
+//   - hide: Toggle visibility of slave windows
+//   - swap: Exchange master and slave window positions
+//   - ws: Switch workspace with automatic master focus
+//   - focus: Focus window by class, unhiding if necessary
+//   - layout: Apply predefined window arrangements
+//   - query: Retrieve current state as JSON
+//   - subscribe: Stream state change events
+//
+// # Integration
+//
+// hyprd provides real-time state updates to eww widgets through a
+// subscription mechanism. Widgets subscribe to topics (workspace, monocle,
+// split) and receive JSON events when state changes.
 package main
 
-// Entry point and CLI command dispatcher
-
 import (
+	"dotfiles/cmd/internal/daemon"
 	"fmt"
 	"os"
 	"strings"
-
-	"dotfiles/cmd/internal/daemon"
 )
 
 var client = daemon.NewClient(SocketPath)
