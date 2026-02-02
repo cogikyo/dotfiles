@@ -1,5 +1,5 @@
 // Package commands implements window management commands for hyprd including monocle mode,
-// pseudo-master mode, split ratio cycling, master/slave swapping, workspace switching,
+// hide/show mode, split ratio cycling, master/slave swapping, workspace switching,
 // and session layout management.
 package commands
 
@@ -14,10 +14,11 @@ type MonocleState struct {
 	Position string `json:"position"`  // "master" | "0" | "1" | ...
 }
 
-// PseudoState tracks a window in pseudo-master mode.
-type PseudoState struct {
-	Address    string `json:"address"`
-	SlaveIndex int    `json:"slave_index"`
+// HiddenState tracks a window hidden to special workspace.
+type HiddenState struct {
+	Address    string `json:"address"`     // Window address (0x...)
+	OriginWS   int    `json:"origin_ws"`   // Workspace it came from
+	SlaveIndex int    `json:"slave_index"` // Position in slave stack
 }
 
 // StateManager interface for commands to interact with daemon state.
@@ -27,9 +28,11 @@ type StateManager interface {
 	GetMonocle() *MonocleState
 	SetMonocle(m *MonocleState)
 
-	// Pseudo-master state
-	GetPseudo() *PseudoState
-	SetPseudo(p *PseudoState)
+	// Hidden windows state
+	GetHidden() map[string]*HiddenState
+	AddHidden(h *HiddenState)
+	RemoveHidden(addr string) *HiddenState
+	IsHidden(addr string) bool
 
 	// Split ratio
 	GetSplitRatio() string
