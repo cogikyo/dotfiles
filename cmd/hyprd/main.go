@@ -31,8 +31,8 @@ func main() {
 		cmdMonocle()
 	case "split":
 		cmdSplit()
-	case "pseudo":
-		cmdPseudo()
+	case "hide":
+		cmdHide()
 	case "swap":
 		cmdSwap()
 	case "ws":
@@ -135,13 +135,13 @@ func cmdSplit() {
 	fmt.Println(resp)
 }
 
-func cmdPseudo() {
+func cmdHide() {
 	if !client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
 		os.Exit(1)
 	}
 
-	resp, err := client.Send("pseudo")
+	resp, err := client.Send("hide")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -268,18 +268,18 @@ Usage:
 
 Window commands:
   hyprd monocle          Toggle monocle mode (float to WS6)
-  hyprd pseudo           Toggle pseudo-master (float slave over stack)
+  hyprd hide             Toggle hide/show slave (special workspace)
   hyprd swap             Toggle swap between master and slave
   hyprd split            Cycle split ratio (xs → default → lg)
   hyprd split -x|-d|-l   Set specific split ratio
   hyprd ws <n>           Switch to workspace n, focus master
-  hyprd focus <class>    Focus window by class on current workspace
+  hyprd focus <class> [title]  Focus window, unhide if hidden
 
 Sessions:
   hyprd layout --list    List available sessions
-  hyprd layout <name>    Open session (acr, dotfiles, nosvagor)
+  hyprd layout <name>    Open session (loads from ~/.config/hyprd/sessions.yaml)
 
 Query/Subscribe (for eww):
-  hyprd query [topic]    Get state (workspace|monocle|split|all)
+  hyprd query [topic]    Get state (workspace|monocle|hidden|split|all)
   hyprd subscribe [...]  Stream events (workspace monocle split)`)
 }

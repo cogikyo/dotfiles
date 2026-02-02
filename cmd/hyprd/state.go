@@ -20,8 +20,8 @@ type State struct {
 	// Monocle mode: window floated to WS6 for focus
 	Monocle *commands.MonocleState `json:"monocle,omitempty"`
 
-	// Pseudo-master mode: slave floated over stack area
-	Pseudo *commands.PseudoState `json:"pseudo,omitempty"`
+	// Hidden windows: slaves sent to special:hiddenSlaves workspace
+	Hidden map[string]*commands.HiddenState `json:"hidden,omitempty"`
 
 	// Displaced masters: original master saved when slave swapped to master
 	DisplacedMasters map[int]string `json:"displaced_masters,omitempty"`
@@ -35,6 +35,7 @@ func NewState() *State {
 	return &State{
 		Workspace:          1,
 		OccupiedWorkspaces: []int{},
+		Hidden:             make(map[string]*commands.HiddenState),
 		DisplacedMasters:   make(map[int]string),
 		SplitRatio:         "default",
 	}
@@ -96,22 +97,40 @@ func (s *State) GetMonocle() *commands.MonocleState {
 	return &m
 }
 
-// SetPseudo sets or clears pseudo-master state.
-func (s *State) SetPseudo(p *commands.PseudoState) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.Pseudo = p
-}
-
-// GetPseudo returns current pseudo state.
-func (s *State) GetPseudo() *commands.PseudoState {
+// GetHidden returns a copy of all hidden window states.
+func (s *State) GetHidden() map[string]*commands.HiddenState {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if s.Pseudo == nil {
-		return nil
+	result := make(map[string]*commands.HiddenState)
+	for k, v := range s.Hidden {
+		copy := *v
+		result[k] = &copy
 	}
-	p := *s.Pseudo
-	return &p
+	return result
+}
+
+// AddHidden adds a window to the hidden state.
+func (s *State) AddHidden(h *commands.HiddenState) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Hidden[h.Address] = h
+}
+
+// RemoveHidden removes and returns hidden state for an address.
+func (s *State) RemoveHidden(addr string) *commands.HiddenState {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	h := s.Hidden[addr]
+	delete(s.Hidden, addr)
+	return h
+}
+
+// IsHidden checks if a window address is hidden.
+func (s *State) IsHidden(addr string) bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	_, ok := s.Hidden[addr]
+	return ok
 }
 
 // SetSplitRatio updates split ratio.
@@ -146,7 +165,7 @@ func (s *State) GetDisplacedMaster(ws int) string {
 	return s.DisplacedMasters[ws]
 }
 
-// ClearWindowState removes any monocle/pseudo state for a window address.
+// ClearWindowState removes any monocle/hidden state for a window address.
 // Called when a window closes.
 func (s *State) ClearWindowState(addr string) {
 	s.mu.Lock()
@@ -155,9 +174,7 @@ func (s *State) ClearWindowState(addr string) {
 	if s.Monocle != nil && s.Monocle.Address == addr {
 		s.Monocle = nil
 	}
-	if s.Pseudo != nil && s.Pseudo.Address == addr {
-		s.Pseudo = nil
-	}
+	delete(s.Hidden, addr)
 	// Clean displaced masters referencing this address
 	for ws, a := range s.DisplacedMasters {
 		if a == addr {
