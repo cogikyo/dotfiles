@@ -9,7 +9,7 @@ import (
 	"slices"
 	"sort"
 
-	"hyprd/hypr"
+	"dotfiles/cmd/hyprd/hypr"
 )
 
 // CenterCursor moves cursor to active window center.

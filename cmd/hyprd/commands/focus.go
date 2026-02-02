@@ -8,7 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"hyprd/hypr"
+	"dotfiles/cmd/hyprd/hypr"
 )
 
 // Focus handles the focus-active command.

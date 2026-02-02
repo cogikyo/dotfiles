@@ -7,7 +7,7 @@ package commands
 import (
 	"fmt"
 
-	"hyprd/hypr"
+	"dotfiles/cmd/hyprd/hypr"
 )
 
 // Pseudo handles the pseudo-master command execution.
