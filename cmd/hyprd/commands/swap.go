@@ -7,7 +7,7 @@ package commands
 import (
 	"fmt"
 
-	"hyprd/hypr"
+	"dotfiles/cmd/hyprd/hypr"
 )
 
 // Swap handles the swap-master command execution.

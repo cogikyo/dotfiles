@@ -1,8 +1,6 @@
 package daemon
 
-// ================================================================================
 // Subscription manager for streaming state changes to clients
-// ================================================================================
 
 import (
 	"encoding/json"
@@ -22,18 +20,16 @@ type Subscriber struct {
 type SubscriptionManager struct {
 	mu          sync.RWMutex
 	subscribers []*Subscriber
-	state       *State
 }
 
 // NewSubscriptionManager creates a subscription manager.
-func NewSubscriptionManager(state *State) *SubscriptionManager {
-	return &SubscriptionManager{
-		state: state,
-	}
+func NewSubscriptionManager() *SubscriptionManager {
+	return &SubscriptionManager{}
 }
 
 // Subscribe adds a new subscriber for the given topics.
-func (m *SubscriptionManager) Subscribe(conn net.Conn, topics []string) {
+// The onSubscribe callback is called to send initial state.
+func (m *SubscriptionManager) Subscribe(conn net.Conn, topics []string, onSubscribe func(sub *Subscriber)) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
@@ -48,8 +44,9 @@ func (m *SubscriptionManager) Subscribe(conn net.Conn, topics []string) {
 	}
 	m.subscribers = append(m.subscribers, sub)
 
-	// Send initial state for subscribed topics
-	m.sendInitialState(sub)
+	if onSubscribe != nil {
+		onSubscribe(sub)
+	}
 }
 
 // Unsubscribe removes a subscriber.
@@ -90,35 +87,19 @@ func (m *SubscriptionManager) Notify(topic string, data any) {
 	}
 }
 
-// sendInitialState sends current state for subscribed topics.
-func (m *SubscriptionManager) sendInitialState(sub *Subscriber) {
-	allState := m.state.GetAll()
-
-	for topic, data := range allState {
-		if data != nil && (sub.topics[topic] || sub.topics["*"]) {
-			event := map[string]any{"event": topic, "data": data}
-			if jsonData, err := json.Marshal(event); err == nil {
-				sub.mu.Lock()
-				sub.conn.Write(append(jsonData, '\n'))
-				sub.mu.Unlock()
-			}
-		}
+// SendEvent sends a single event to a subscriber.
+func (sub *Subscriber) SendEvent(topic string, data any) {
+	event := map[string]any{"event": topic, "data": data}
+	if jsonData, err := json.Marshal(event); err == nil {
+		sub.mu.Lock()
+		sub.conn.Write(append(jsonData, '\n'))
+		sub.mu.Unlock()
 	}
 }
 
-// Query returns the current state for requested topics.
-func Query(state *State, topic string) (string, error) {
-	if topic == "all" || topic == "" {
-		jsonData, err := state.JSON()
-		return string(jsonData), err
-	}
-
-	data := state.Get(topic)
-	if data == nil {
-		return "null", nil
-	}
-	jsonData, err := json.Marshal(data)
-	return string(jsonData), err
+// WantsTopic returns true if subscriber is interested in the topic.
+func (sub *Subscriber) WantsTopic(topic string) bool {
+	return sub.topics[topic] || sub.topics["*"]
 }
 
 // ParseSubscribeCommand parses "subscribe topic1 topic2 ..." into topics.

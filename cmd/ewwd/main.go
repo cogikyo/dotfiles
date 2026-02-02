@@ -6,16 +6,17 @@
 //	ewwd status       Check if daemon is running
 package main
 
-// ================================================================================
 // Entry point and CLI command dispatcher
-// ================================================================================
 
 import (
-	"ewwd/daemon"
 	"fmt"
 	"os"
 	"strings"
+
+	"dotfiles/cmd/internal/daemon"
 )
+
+var client = daemon.NewClient(SocketPath)
 
 func main() {
 	if len(os.Args) < 2 {
@@ -41,12 +42,12 @@ func main() {
 }
 
 func runDaemon() {
-	if daemon.IsRunning() {
+	if client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "ewwd: daemon already running")
 		os.Exit(1)
 	}
 
-	d, err := daemon.New()
+	d, err := New()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ewwd: %v\n", err)
 		os.Exit(1)
@@ -66,7 +67,7 @@ func cmdStatus() {
 		}
 	}
 
-	if !daemon.IsRunning() {
+	if !client.IsRunning() {
 		if jsonOutput {
 			fmt.Println(`{"status":"not running"}`)
 		} else {
@@ -76,7 +77,7 @@ func cmdStatus() {
 	}
 
 	if jsonOutput {
-		resp, err := daemon.SendCommand("state")
+		resp, err := client.Send("state")
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
@@ -88,7 +89,7 @@ func cmdStatus() {
 }
 
 func cmdQuery() {
-	if !daemon.IsRunning() {
+	if !client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "ewwd: daemon not running")
 		os.Exit(1)
 	}
@@ -98,7 +99,7 @@ func cmdQuery() {
 		topic = os.Args[2]
 	}
 
-	resp, err := daemon.SendCommand("query " + topic)
+	resp, err := client.Send("query " + topic)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -107,7 +108,7 @@ func cmdQuery() {
 }
 
 func cmdSubscribe() {
-	if !daemon.IsRunning() {
+	if !client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "ewwd: daemon not running")
 		os.Exit(1)
 	}
@@ -117,16 +118,15 @@ func cmdSubscribe() {
 		cmd += " " + strings.Join(os.Args[2:], " ")
 	}
 
-	resp, err := daemon.StreamCommand(cmd)
+	err := client.Stream(cmd)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Print(resp)
 }
 
 func cmdAction() {
-	if !daemon.IsRunning() {
+	if !client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "ewwd: daemon not running")
 		os.Exit(1)
 	}
@@ -137,7 +137,7 @@ func cmdAction() {
 	}
 
 	cmd := "action " + strings.Join(os.Args[2:], " ")
-	resp, err := daemon.SendCommand(cmd)
+	resp, err := client.Send(cmd)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)

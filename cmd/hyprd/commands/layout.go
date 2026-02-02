@@ -10,7 +10,7 @@ import (
 	"strings"
 	"time"
 
-	"hyprd/hypr"
+	"dotfiles/cmd/hyprd/hypr"
 )
 
 // Session defines a workspace layout configuration.

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	"hyprd/hypr"
+	"dotfiles/cmd/hyprd/hypr"
 )
 
 // Monocle handles the monocle command execution.

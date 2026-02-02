@@ -1,32 +1,26 @@
-// Package daemon implements the hyprd background service that manages Hyprland window state,
-// provides Unix socket IPC at /tmp/hyprd.sock, and streams events to subscribers like eww widgets.
-package daemon
+// hyprd — Unified Hyprland daemon for window management and eww integration.
+package main
 
-// ================================================================================
-// Core daemon lifecycle, socket server, and command routing
-// ================================================================================
+// Core daemon lifecycle and command routing
 
 import (
+	"encoding/json"
 	"fmt"
-	"net"
 	"os"
-	"os/signal"
 	"strings"
-	"syscall"
 
-	"hyprd/commands"
-	"hyprd/hypr"
+	"dotfiles/cmd/hyprd/commands"
+	"dotfiles/cmd/hyprd/hypr"
+	"dotfiles/cmd/internal/daemon"
 )
 
 const SocketPath = "/tmp/hyprd.sock"
 
 // Daemon is the main hyprd daemon.
 type Daemon struct {
-	hypr     *hypr.Client
-	state    *State
-	subs     *SubscriptionManager
-	listener net.Listener
-	done     chan struct{}
+	hypr   *hypr.Client
+	state  *State
+	server *daemon.Server
 }
 
 // New creates a new daemon instance.
@@ -37,48 +31,33 @@ func New() (*Daemon, error) {
 	}
 
 	state := NewState()
-	return &Daemon{
+	d := &Daemon{
 		hypr:  hyprClient,
 		state: state,
-		subs:  NewSubscriptionManager(state),
-		done:  make(chan struct{}),
-	}, nil
+	}
+
+	d.server = daemon.NewServer(SocketPath, d.handleCommand)
+	d.server.OnSubscribe = d.sendInitialState
+
+	return d, nil
 }
 
 // Run starts the daemon and blocks until shutdown.
 func (d *Daemon) Run() error {
-	// Remove stale socket
-	os.Remove(SocketPath)
-
-	listener, err := net.Listen("unix", SocketPath)
-	if err != nil {
-		return fmt.Errorf("listen on %s: %w", SocketPath, err)
-	}
-	d.listener = listener
-
-	// Make socket world-accessible (for eww, scripts, etc.)
-	if err := os.Chmod(SocketPath, 0o666); err != nil {
-		listener.Close()
-		return fmt.Errorf("chmod socket: %w", err)
-	}
-
 	// Verify Hyprland connection
 	clients, err := d.hypr.Clients()
 	if err != nil {
-		listener.Close()
 		return fmt.Errorf("hyprland query failed: %w", err)
 	}
 	fmt.Printf("hyprd: connected to hyprland (%d clients)\n", len(clients))
+
+	if err := d.server.Start(); err != nil {
+		return err
+	}
 	fmt.Printf("hyprd: listening on %s\n", SocketPath)
 
-	// Handle signals
-	sigCh := make(chan os.Signal, 1)
-	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
-
-	go d.acceptLoop()
-
 	// Start event loop
-	events := NewEventLoop(d.hypr, d.state, d.subs, d.done)
+	events := NewEventLoop(d.hypr, d.state, d.server.Subs, d.server.Done())
 	go func() {
 		if err := events.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "hyprd: event loop error: %v\n", err)
@@ -86,60 +65,38 @@ func (d *Daemon) Run() error {
 	}()
 
 	// Wait for signal
-	sig := <-sigCh
+	sig := d.server.WaitForSignal()
 	fmt.Printf("\nhyprd: received %s, shutting down\n", sig)
-	close(d.done)
-	d.listener.Close()
-	os.Remove(SocketPath)
+	d.server.Shutdown()
 
 	return nil
 }
 
-// acceptLoop handles incoming client connections.
-func (d *Daemon) acceptLoop() {
-	for {
-		conn, err := d.listener.Accept()
-		if err != nil {
-			select {
-			case <-d.done:
-				return
-			default:
-				fmt.Fprintf(os.Stderr, "accept error: %v\n", err)
-				continue
+// sendInitialState sends current state to a new subscriber.
+func (d *Daemon) sendInitialState(sub *daemon.Subscriber, topics []string) {
+	if sub.WantsTopic("workspace") {
+		data := map[string]any{
+			"current":  d.state.GetWorkspace(),
+			"occupied": d.state.GetOccupied(),
+		}
+		sub.SendEvent("workspace", data)
+	}
+
+	if sub.WantsTopic("monocle") {
+		monocle := d.state.GetMonocle()
+		var data any
+		if monocle != nil {
+			data = map[string]any{
+				"address":   monocle.Address,
+				"origin_ws": monocle.OriginWS,
 			}
 		}
-		go d.handleClient(conn)
-	}
-}
-
-// handleClient processes a single client connection.
-func (d *Daemon) handleClient(conn net.Conn) {
-	buf := make([]byte, 4096)
-	n, err := conn.Read(buf)
-	if err != nil || n == 0 {
-		conn.Close()
-		return
+		sub.SendEvent("monocle", data)
 	}
 
-	command := strings.TrimSpace(string(buf[:n]))
-
-	// Handle subscribe specially - keep connection open
-	if strings.HasPrefix(command, "subscribe") {
-		topics := ParseSubscribeCommand(command)
-		d.subs.Subscribe(conn, topics)
-		// Block until client disconnects (read will fail when connection closes)
-		buf := make([]byte, 1)
-		conn.Read(buf)
-		d.subs.Unsubscribe(conn)
-		conn.Close()
-		return
+	if sub.WantsTopic("split") {
+		sub.SendEvent("split", d.state.GetSplitRatio())
 	}
-
-	// Normal request-response
-	response := d.handleCommand(command)
-	// Ignore write errors - client may disconnect before receiving response
-	conn.Write([]byte(response))
-	conn.Close()
 }
 
 // handleCommand dispatches commands and returns responses.
@@ -223,7 +180,7 @@ func (d *Daemon) handleCommand(command string) string {
 		if topic == "" {
 			topic = "all"
 		}
-		result, err := Query(d.state, topic)
+		result, err := d.query(topic)
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
 		}
@@ -240,19 +197,41 @@ func (d *Daemon) handleCommand(command string) string {
 	}
 }
 
-// IsRunning checks if hyprd daemon is already running.
-func IsRunning() bool {
-	conn, err := net.Dial("unix", SocketPath)
-	if err != nil {
-		return false
-	}
-	defer conn.Close()
+// query returns the current state for requested topics.
+func (d *Daemon) query(topic string) (string, error) {
+	switch topic {
+	case "workspace":
+		data := map[string]any{
+			"current":  d.state.GetWorkspace(),
+			"occupied": d.state.GetOccupied(),
+		}
+		jsonData, err := json.Marshal(data)
+		return string(jsonData), err
 
-	conn.Write([]byte("ping"))
-	buf := make([]byte, 64)
-	n, err := conn.Read(buf)
-	if err != nil {
-		return false
+	case "monocle":
+		monocle := d.state.GetMonocle()
+		if monocle == nil {
+			return "null", nil
+		}
+		jsonData, err := json.Marshal(monocle)
+		return string(jsonData), err
+
+	case "pseudo":
+		pseudo := d.state.GetPseudo()
+		if pseudo == nil {
+			return "null", nil
+		}
+		jsonData, err := json.Marshal(pseudo)
+		return string(jsonData), err
+
+	case "split":
+		return fmt.Sprintf(`"%s"`, d.state.GetSplitRatio()), nil
+
+	case "all", "":
+		jsonData, err := d.state.JSON()
+		return string(jsonData), err
+
+	default:
+		return "", fmt.Errorf("unknown topic: %s", topic)
 	}
-	return string(buf[:n]) == "pong"
 }
