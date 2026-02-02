@@ -17,7 +17,6 @@ function M.setup()
 		virtual_text = { source = false, spacing = 2 },
 	})
 
-	vim.lsp.handlers["textDocument/hover"] = vim.lsp.with(vim.lsp.handlers.hover, { border = "rounded" })
 end
 
 return M
