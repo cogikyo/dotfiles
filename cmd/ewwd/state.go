@@ -1,7 +1,5 @@
 package main
 
-// Thread-safe generic state storage with RWMutex protection
-
 import (
 	"encoding/json"
 	"maps"
