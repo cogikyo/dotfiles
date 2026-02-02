@@ -69,8 +69,8 @@ function M.setup()
 				tsmap("<leader>fa", action("source.fixAll.ts"), "Fix All")
 			end
 
-			-- Auto-enable inlay hints for Go/TS
-			if client.name == "gopls" or client.name == "ts_ls" then
+			-- Auto-enable inlay hints for TS
+			if client.name == "ts_ls" then
 				vim.lsp.inlay_hint.enable(true, { bufnr = event.buf })
 			end
 
