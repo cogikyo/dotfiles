@@ -1,9 +1,5 @@
 package providers
 
-// ================================================================================
-// AMD GPU metrics from /sys/class/drm/
-// ================================================================================
-
 import (
 	"context"
 	"fmt"
@@ -12,11 +8,11 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"dotfiles/cmd/ewwd/config"
 )
 
-const GPUPath = "/sys/class/drm/card0/device"
-
-// GPUState holds AMD GPU metrics.
+// GPUState holds AMD GPU metrics including utilization and memory usage.
 type GPUState struct {
 	GPUBusy   string `json:"gpu_busy"`
 	MemBusy   string `json:"mem_busy"`
@@ -26,28 +22,32 @@ type GPUState struct {
 	Used      string `json:"used"`
 }
 
-// GPU provides AMD GPU metrics from /sys/class/drm/.
+// GPU provides AMD GPU metrics by reading from sysfs.
 type GPU struct {
 	state  StateSetter
+	config config.GPUConfig
 	done   chan struct{}
 	active bool
 }
 
 // NewGPU creates a GPU provider.
-func NewGPU(state StateSetter) Provider {
+func NewGPU(state StateSetter, cfg config.GPUConfig) Provider {
 	return &GPU{
-		state: state,
-		done:  make(chan struct{}),
+		state:  state,
+		config: cfg,
+		done:   make(chan struct{}),
 	}
 }
 
+// Name returns the provider identifier.
 func (g *GPU) Name() string {
 	return "gpu"
 }
 
+// Start begins polling GPU metrics at configured intervals.
 func (g *GPU) Start(ctx context.Context, notify func(data any)) error {
 	g.active = true
-	ticker := time.NewTicker(500 * time.Millisecond)
+	ticker := time.NewTicker(g.config.PollInterval)
 	defer ticker.Stop()
 
 	// Initial read
@@ -71,6 +71,7 @@ func (g *GPU) Start(ctx context.Context, notify func(data any)) error {
 	}
 }
 
+// Stop gracefully shuts down the GPU provider.
 func (g *GPU) Stop() error {
 	if g.active {
 		close(g.done)
@@ -80,16 +81,17 @@ func (g *GPU) Stop() error {
 }
 
 func (g *GPU) read() *GPUState {
-	gpuBusy := readFile(GPUPath + "/gpu_busy_percent")
-	memBusy := readFile(GPUPath + "/mem_busy_percent")
+	path := g.config.DevicePath
+	gpuBusy := readFile(path + "/gpu_busy_percent")
+	memBusy := readFile(path + "/mem_busy_percent")
 
 	// Parse mclk from pp_dpm_mclk (line with * is active)
-	mclkData := readFile(GPUPath + "/pp_dpm_mclk")
+	mclkData := readFile(path + "/pp_dpm_mclk")
 	mclk, mclkLevel := parseMCLK(mclkData)
 
 	// Calculate VRAM percentage
-	totalStr := readFile(GPUPath + "/mem_info_vram_total")
-	usedStr := readFile(GPUPath + "/mem_info_vram_used")
+	totalStr := readFile(path + "/mem_info_vram_total")
+	usedStr := readFile(path + "/mem_info_vram_used")
 	vram := calculateVRAMPercent(totalStr, usedStr)
 
 	return &GPUState{

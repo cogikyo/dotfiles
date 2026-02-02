@@ -1,9 +1,5 @@
 package providers
 
-// ================================================================================
-// OpenWeatherMap integration for conditions and forecasts
-// ================================================================================
-
 import (
 	"context"
 	"encoding/json"
@@ -12,12 +8,13 @@ import (
 	"math"
 	"net/http"
 	"os"
-	"path/filepath"
 	"strings"
 	"time"
+
+	"dotfiles/cmd/ewwd/config"
 )
 
-// WeatherState holds weather information from OpenWeatherMap.
+// WeatherState holds weather conditions and forecasts from OpenWeatherMap.
 type WeatherState struct {
 	Icon      string `json:"icon"`
 	Desc      string `json:"desc"`
@@ -44,9 +41,10 @@ type WeatherState struct {
 	Night     bool   `json:"night"`
 }
 
-// Weather provides weather data from OpenWeatherMap API.
+// Weather provides weather data from the OpenWeatherMap API.
 type Weather struct {
 	state  StateSetter
+	config config.WeatherConfig
 	done   chan struct{}
 	active bool
 	client *http.Client // Reused HTTP client for connection pooling
@@ -57,23 +55,26 @@ type Weather struct {
 }
 
 // NewWeather creates a Weather provider.
-func NewWeather(state StateSetter) Provider {
+func NewWeather(state StateSetter, cfg config.WeatherConfig) Provider {
 	return &Weather{
-		state: state,
-		done:  make(chan struct{}),
+		state:  state,
+		config: cfg,
+		done:   make(chan struct{}),
 	}
 }
 
+// Name returns the provider identifier.
 func (w *Weather) Name() string {
 	return "weather"
 }
 
+// Start begins fetching weather data at configured intervals.
 func (w *Weather) Start(ctx context.Context, notify func(data any)) error {
 	w.active = true
 	w.client = &http.Client{Timeout: 10 * time.Second}
 
-	// Load config
-	if err := w.loadConfig(); err != nil {
+	// Load location and API key from files
+	if err := w.loadCredentials(); err != nil {
 		fmt.Fprintf(os.Stderr, "ewwd: weather config error: %v\n", err)
 		return nil // Don't fail the daemon, just skip weather updates
 	}
@@ -84,8 +85,7 @@ func (w *Weather) Start(ctx context.Context, notify func(data any)) error {
 		notify(state)
 	}
 
-	// Poll every 60 seconds
-	ticker := time.NewTicker(60 * time.Second)
+	ticker := time.NewTicker(w.config.PollInterval)
 	defer ticker.Stop()
 
 	for {
@@ -103,6 +103,7 @@ func (w *Weather) Start(ctx context.Context, notify func(data any)) error {
 	}
 }
 
+// Stop gracefully shuts down the weather provider.
 func (w *Weather) Stop() error {
 	if w.active {
 		close(w.done)
@@ -111,14 +112,9 @@ func (w *Weather) Stop() error {
 	return nil
 }
 
-func (w *Weather) loadConfig() error {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return fmt.Errorf("get home dir: %w", err)
-	}
-
+func (w *Weather) loadCredentials() error {
 	// Read location: "LAT LON"
-	locPath := filepath.Join(home, ".local", ".location")
+	locPath := config.ExpandPath(w.config.LocationFile)
 	locData, err := os.ReadFile(locPath)
 	if err != nil {
 		return fmt.Errorf("read location: %w", err)
@@ -131,7 +127,7 @@ func (w *Weather) loadConfig() error {
 	w.lon = parts[1]
 
 	// Read API key
-	keyPath := filepath.Join(home, ".local", ".owm_api_key")
+	keyPath := config.ExpandPath(w.config.APIKeyFile)
 	keyData, err := os.ReadFile(keyPath)
 	if err != nil {
 		return fmt.Errorf("read api key: %w", err)

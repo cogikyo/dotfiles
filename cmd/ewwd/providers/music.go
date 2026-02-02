@@ -1,9 +1,5 @@
 package providers
 
-// ================================================================================
-// Spotify playback monitoring and control via playerctl
-// ================================================================================
-
 import (
 	"bufio"
 	"context"
@@ -28,7 +24,7 @@ const (
 	defaultSeekDelta   = 10   // 10 seconds
 )
 
-// MusicState holds music playback info for eww.
+// MusicState holds music playback information for the eww statusbar.
 type MusicState struct {
 	Status  string `json:"status"`   // "Playing", "Paused", "Stopped"
 	Volume  string `json:"volume"`   // "0.0" - "1.0"
@@ -38,7 +34,7 @@ type MusicState struct {
 	ArtPath string `json:"art_path"` // Path to album art image
 }
 
-// Music provides music playback monitoring and control via playerctl.
+// Music provides Spotify playback monitoring and control via playerctl.
 type Music struct {
 	state      StateSetter
 	notify     func(data any)
@@ -58,10 +54,12 @@ func NewMusic(state StateSetter) Provider {
 	}
 }
 
+// Name returns the provider identifier.
 func (m *Music) Name() string {
 	return "music"
 }
 
+// Start begins monitoring music playback using playerctl follow mode.
 func (m *Music) Start(ctx context.Context, notify func(data any)) error {
 	m.active = true
 	m.notify = notify
@@ -93,6 +91,7 @@ func (m *Music) Start(ctx context.Context, notify func(data any)) error {
 	}
 }
 
+// Stop gracefully shuts down the music provider.
 func (m *Music) Stop() error {
 	if m.active {
 		close(m.done)
@@ -320,8 +319,7 @@ func (m *Music) playerctlRun(args ...string) {
 	}
 }
 
-// HandleAction processes music commands.
-// Actions: play, pause, toggle, volume <up|down> [amount], seek <up|down>
+// HandleAction processes music commands: play, pause, toggle, next, previous, volume, and seek.
 func (m *Music) HandleAction(args []string) (string, error) {
 	if len(args) == 0 {
 		return "", errors.New("action required: play, pause, toggle, volume, seek")
