@@ -21,6 +21,9 @@ const (
 	MonocleHeight = 1920
 )
 
+// Hidden workspace for hide/show feature
+const HiddenWorkspace = "special:hiddenSlaves"
+
 // Split ratio values (master factor)
 const (
 	SplitXS      = "0.37"

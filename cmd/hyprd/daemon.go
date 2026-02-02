@@ -134,9 +134,9 @@ func (d *Daemon) handleCommand(command string) string {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
-	case "pseudo":
-		pseudo := commands.NewPseudo(d.hypr, d.state)
-		result, err := pseudo.Execute()
+	case "hide":
+		hide := commands.NewHide(d.hypr, d.state)
+		result, err := hide.Execute()
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
 		}
@@ -216,12 +216,12 @@ func (d *Daemon) query(topic string) (string, error) {
 		jsonData, err := json.Marshal(monocle)
 		return string(jsonData), err
 
-	case "pseudo":
-		pseudo := d.state.GetPseudo()
-		if pseudo == nil {
+	case "hidden":
+		hidden := d.state.GetHidden()
+		if len(hidden) == 0 {
 			return "null", nil
 		}
-		jsonData, err := json.Marshal(pseudo)
+		jsonData, err := json.Marshal(hidden)
 		return string(jsonData), err
 
 	case "split":
