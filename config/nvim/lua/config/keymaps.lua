@@ -260,10 +260,4 @@ map("n", "<leader>rp", '"ryiwvip:s/<C-r>r//g<Left><Left>', remap_explicit("Repla
 map("n", "<leader>rs", "1z=", desc("Fix spelling"))
 map("n", "<leader>Rs", ":LspRestart<CR>", desc("Restart LSP"))
 
--- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ database: DB UI controls                                                    │
--- ╰─────────────────────────────────────────────────────────────────────────────╯
-map("n", "<leader>db", ":DBUIToggle<CR>", desc("Toggle DB UI"))
-map("n", "<leader>df", ":DBUIFindBuffer<CR>", desc("Find DB buffer"))
-
 return { groups = GROUPS }
