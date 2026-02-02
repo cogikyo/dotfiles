@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strconv"
 
-	"dotfiles/cmd/ewwd/config"
+	"dotfiles/daemons/ewwd/config"
 )
 
 // BrightnessState holds the current screen brightness level.

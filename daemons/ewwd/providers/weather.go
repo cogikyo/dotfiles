@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"dotfiles/cmd/ewwd/config"
+	"dotfiles/daemons/ewwd/config"
 )
 
 // WeatherState holds weather conditions and forecasts from OpenWeatherMap.

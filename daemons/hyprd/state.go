@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"sync"
 
-	"dotfiles/cmd/hyprd/commands"
-	"dotfiles/cmd/hyprd/config"
+	"dotfiles/daemons/hyprd/commands"
+	"dotfiles/daemons/hyprd/config"
 )
 
 // State holds all daemon state with thread-safe access via RWMutex.

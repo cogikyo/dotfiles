@@ -2,9 +2,9 @@ package main
 
 import (
 	"context"
-	"dotfiles/cmd/ewwd/config"
-	"dotfiles/cmd/ewwd/providers"
-	"dotfiles/cmd/internal/daemon"
+	"dotfiles/daemons/ewwd/config"
+	"dotfiles/daemons/ewwd/providers"
+	"dotfiles/daemons/internal/daemon"
 	"encoding/json"
 	"fmt"
 	"os"
