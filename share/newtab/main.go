@@ -20,7 +20,7 @@ import (
 
 const (
 	port          = ":42069"
-	firefoxDB     = ".mozilla/firefox/sdfm8kqz.dev-edition-default/places.sqlite"
+	firefoxDB     = ".config/mozilla/firefox/ya02701v.dev-edition-default/places.sqlite"
 	staticDir     = "dotfiles/share/newtab"
 	googleSuggest = "https://suggestqueries.google.com/complete/search?client=firefox&q="
 	historyLimit  = 15
@@ -110,7 +110,7 @@ func handleBookmarks(w http.ResponseWriter, r *http.Request) {
 	defer db.Close()
 
 	rows, err := db.Query(`
-		SELECT 
+		SELECT
 			COALESCE(f.title, 'unsorted') as folder,
 			b.title as title,
 			p.url as url,
@@ -126,8 +126,8 @@ func handleBookmarks(w http.ResponseWriter, r *http.Request) {
 		JOIN moz_places p ON b.fk = p.id
 		LEFT JOIN moz_bookmarks f ON b.parent = f.id
 		LEFT JOIN moz_keywords k ON p.id = k.place_id
-		WHERE p.url NOT LIKE 'place:%' 
-			AND b.title IS NOT NULL 
+		WHERE p.url NOT LIKE 'place:%'
+			AND b.title IS NOT NULL
 			AND b.title != ''
 			AND (f.title IS NULL OR f.title != 'tags')
 		ORDER BY f.title, b.position
@@ -163,7 +163,7 @@ func handleHistory(w http.ResponseWriter, r *http.Request) {
 
 	if query == "" {
 		rows, err = db.Query(`
-			SELECT 
+			SELECT
 				COALESCE(p.title, '') as title,
 				p.url,
 				p.visit_count,
@@ -178,7 +178,7 @@ func handleHistory(w http.ResponseWriter, r *http.Request) {
 	} else {
 		searchTerm := "%" + strings.ToLower(query) + "%"
 		rows, err = db.Query(`
-			SELECT 
+			SELECT
 				COALESCE(p.title, '') as title,
 				p.url,
 				p.visit_count,
@@ -188,7 +188,7 @@ func handleHistory(w http.ResponseWriter, r *http.Request) {
 				AND `+titleFilter+`
 				AND `+urlFilter+`
 				AND (LOWER(p.title) LIKE ? OR LOWER(p.url) LIKE ?)
-			ORDER BY 
+			ORDER BY
 				p.visit_count * 0.3 + (p.last_visit_date / 1000000000000.0) DESC
 			LIMIT ?
 		`, searchTerm, searchTerm, historyLimit)
