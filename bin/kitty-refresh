@@ -27,7 +27,7 @@ if [[ "$mode" == "claude" ]]; then
     declare -A TABS=(
         [xplr]="⊰   ⊱"
         [master]="⊰ 󰯉  ⊱"
-        [dev]="⊰   ⊱"
+        [dev]="⊰   ⊱"
         [plan]="⊰   ⊱"
         [git]="⊰   ⊱"
     )
