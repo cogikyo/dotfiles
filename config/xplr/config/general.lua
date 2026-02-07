@@ -280,6 +280,18 @@ end
 
 xplr.fn.custom.fmt_col_1 = function(ctx)
 	local content = xplr.fn.builtin.fmt_general_table_row_cols_1(ctx)
+
+	local clean = strip_ansi(content)
+	local s, e = clean:find("-> ", 1, true)
+	if s then
+		local before = clean:sub(1, s - 1)
+		local after = clean:sub(e + 1)
+		local link_style = { fg = "Blue", add_modifiers = { "Italic", "Dim" } }
+		content = xplr.util.paint(before, link_style)
+			.. xplr.util.paint("-> ", link_style)
+			.. xplr.util.paint(after, link_style)
+	end
+
 	return wrap_with_style(ctx, content)
 end
 
