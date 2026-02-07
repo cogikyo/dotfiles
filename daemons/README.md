@@ -1,6 +1,6 @@
 # daemons
 
-Go daemons for Hyprland window management and eww statusbar integration.
+Go daemons and services for Hyprland, eww, and Firefox.
 
 ## Why
 
@@ -38,10 +38,11 @@ Go daemons for Hyprland window management and eww statusbar integration.
 
 - **[hyprd](hyprd/)** — Window management: monocle, split ratios, hide/show, swap, workspace nav, session layouts
 - **[ewwd](ewwd/)** — System utilities: GPU stats, audio, brightness, music, network, date, weather, timer
+- **[newtab](newtab/)** — Firefox new tab page: local HTTP server with bookmarks, history, and suggestions
 
 ## Shared infrastructure
 
-The `daemon/` package provides the Unix socket server/client and subscription system used by both daemons. It handles socket lifecycle, command routing, and event streaming.
+The `daemon/` package provides the Unix socket server/client and subscription system used by hyprd and ewwd. It handles socket lifecycle, command routing, and event streaming. (newtab uses its own HTTP server and separate go.mod.)
 
 ```
 daemon/
@@ -53,8 +54,9 @@ daemon/
 ## Installation
 
 ```bash
-cd ~/dotfiles/daemons
-./install.sh
+install-go.sh          # build all
+install-go.sh hyprd    # build one
+install-go.sh --list   # see available
 ```
 
 Binaries go to `~/.local/bin/`.
@@ -65,4 +67,5 @@ Binaries go to `~/.local/bin/`.
 # hyprland.conf
 exec-once = hyprd
 exec-once = ewwd
+exec-once = newtab
 ```
