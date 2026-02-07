@@ -38,7 +38,7 @@ import (
 	"dotfiles/daemons/hyprd/commands"
 	"dotfiles/daemons/hyprd/config"
 	"dotfiles/daemons/hyprd/hypr"
-	"dotfiles/daemons/internal/daemon"
+	"dotfiles/daemons/daemon"
 	"encoding/json"
 	"fmt"
 	"os"
