@@ -4,7 +4,7 @@ import (
 	"context"
 	"dotfiles/daemons/ewwd/config"
 	"dotfiles/daemons/ewwd/providers"
-	"dotfiles/daemons/internal/daemon"
+	"dotfiles/daemons/daemon"
 	"encoding/json"
 	"fmt"
 	"os"
