@@ -124,16 +124,6 @@ au("TermOpen", {
 	end,
 })
 
--- spell and wrap in prose-oriented filetypes
-au("FileType", {
-	group = "SpellCheck",
-	pattern = { "markdown", "text", "gitcommit", "NeogitCommitMessage" },
-	callback = function()
-		vim.opt_local.spell = true
-		vim.opt_local.wrap = true
-	end,
-})
-
 local large_file_threshold = 1024 * 1024 -- 1MB
 
 au("BufReadPre", {
