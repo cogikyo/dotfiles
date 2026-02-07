@@ -30,7 +30,7 @@ local node_types = {
 		},
 	},
 	extension = {
-		md = meta(" ", "White", { "Dim" }),
+		md = meta(" ", "Green"),
 		toml = meta(" "),
 		conf = meta(" "),
 		json = meta(" "),
