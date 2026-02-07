@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"dotfiles/daemons/hyprd/hypr"
-	"dotfiles/daemons/internal/daemon"
+	"dotfiles/daemons/daemon"
 )
 
 // EventLoop synchronizes daemon state by listening to Hyprland's event socket
