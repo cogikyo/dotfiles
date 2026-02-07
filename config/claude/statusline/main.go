@@ -1,3 +1,20 @@
+// Claude Code custom statusline renderer.
+//
+// This program reads a JSON payload from stdin (provided by Claude Code's
+// statusline hook) and produces an ANSI-colored, Nerd-Font-decorated status
+// string on stdout.
+//
+// The status line is composed of several segments:
+//
+//  1. Working directory – relative to $HOME, prefixed with a model icon.
+//  2. Git branch & stats – branch name plus ahead/behind, staged, modified,
+//     untracked, deleted, stashed, renamed, and conflicted counts.
+//  3. Context window usage – a 10-dot progress bar of context consumption.
+//  4. Usage utilization – 5-hour and 7-day gauges from the Anthropic
+//     OAuth usage API, with reset times in parentheses.
+//
+// Git status and API usage are fetched concurrently. API responses are
+// cached to disk with a 60-second TTL.
 package main
 
 import (
