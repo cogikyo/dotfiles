@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	"dotfiles/daemons/hyprd/commands"
-	"dotfiles/daemons/hyprd/config"
+	"dotfiles/daemons/config"
 )
 
 // State tracks workspace information and window management state for commands.
@@ -22,11 +22,11 @@ type State struct {
 	SplitRatio       string                           `json:"split_ratio"`                 // Master/slave split identifier
 	Geometry         *commands.MonitorGeometry        `json:"geometry,omitempty"`          // Cached monitor dimensions
 
-	config *config.Config // Daemon configuration
+	config *config.HyprConfig // Daemon configuration
 }
 
 // NewState creates a State with default values and the given configuration.
-func NewState(cfg *config.Config) *State {
+func NewState(cfg *config.HyprConfig) *State {
 	return &State{
 		Workspace:          1,
 		OccupiedWorkspaces: []int{},
@@ -186,6 +186,6 @@ func (s *State) GetGeometry() *commands.MonitorGeometry {
 	return &g
 }
 
-func (s *State) GetConfig() *config.Config {
+func (s *State) GetConfig() *config.HyprConfig {
 	return s.config
 }

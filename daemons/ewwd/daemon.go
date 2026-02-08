@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"dotfiles/daemons/ewwd/config"
+	"dotfiles/daemons/config"
 	"dotfiles/daemons/ewwd/providers"
 	"dotfiles/daemons/daemon"
 	"encoding/json"
@@ -78,7 +78,7 @@ func (d *Daemon) Run() error {
 
 // initProviders instantiates all providers with their configuration.
 func (d *Daemon) initProviders() {
-	cfg := d.config
+	cfg := d.config.Eww
 	d.providers = []providers.Provider{
 		providers.NewGPU(d.state, cfg.GPU),
 		providers.NewNetwork(d.state, cfg.Network),

@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"strconv"
 
-	"dotfiles/daemons/ewwd/config"
+	"dotfiles/daemons/config"
 )
 
 // BrightnessState represents the current screen brightness level for eww statusbar.

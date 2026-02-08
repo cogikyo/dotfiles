@@ -10,7 +10,7 @@ import (
 	"sync"
 	"time"
 
-	"dotfiles/daemons/ewwd/config"
+	"dotfiles/daemons/config"
 )
 
 // TimerState represents countdown timer and clock-based alarm state for statusbar display.

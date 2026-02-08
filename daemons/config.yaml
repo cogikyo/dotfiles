@@ -1,0 +1,95 @@
+eww:
+  weather:
+    api_key_file: "~/.local/.owm_api_key"
+    poll_interval: 60s
+  timer:
+    default_minutes: 90
+    default_alarm_hours: 6
+    min_alarm_hours: 3
+  audio:
+    source_offset: 50
+    source_max: 150
+    sink_max: 100
+    volume_step: 10
+    poll_interval: 2s
+    default_sink_volume: 69
+    default_source_volume: 150
+    name_mappings:
+      cullyn: "pixel buds"
+  brightness:
+    min: 2
+    max: 10
+    night: 4
+    default: 10
+  date:
+    birth_date: "1996-02-26"
+  gpu:
+    device_path: "/sys/class/drm/card0/device"
+    poll_interval: 500ms
+  network:
+    poll_interval: 1s
+
+hypr:
+  monitor:
+    width: 3840
+    height: 2160
+    reserved:
+      top: 86
+      bottom: 32
+      left: 0
+  monocle:
+    workspace: 6
+    width_ratio: 0.83
+    height_ratio: 0.94
+  split:
+    xs: "0.37"
+    default: "0.4942"
+    lg: "0.77"
+  style:
+    border:
+      default: "rgb(f2a170)"
+      monocle: "rgb(5aba6d)"
+    shadow:
+      default: "rgba(e56b2c32)"
+      monocle: "rgba(2d9a4342)"
+  windows:
+    ignored_classes:
+      - "GLava"
+    hidden_workspace: "special:hiddenSlaves"
+  sessions:
+    dotfiles:
+      name: dotfiles
+      workspace: 4
+      project: dotfiles
+      urls:
+        - "https://github.com/cogikyo/dotfiles"
+      windows:
+        - { command: "kitty --title terminal", title: terminal, role: master }
+        - { title: firefox, role: slave }
+        - { command: "kitty --title claude", title: claude, role: slave }
+    acr:
+      name: acr
+      workspace: 3
+      project: acr
+      urls:
+        - "localhost:3002"
+      windows:
+        - { command: "kitty --title terminal", title: terminal, role: master }
+        - { title: firefox, role: slave }
+        - { command: "kitty --title claude", title: claude, role: slave }
+    nosvagor:
+      name: nosvagor
+      workspace: 3
+      project: nosvagor.com
+      urls:
+        - "localhost:3000"
+      windows:
+        - { command: "kitty --title terminal", title: terminal, role: master }
+        - { title: firefox, role: slave }
+        - { command: "kitty --title claude", title: claude, role: slave }
+
+newtab:
+  port: ":42069"
+  firefox_db: ".mozilla/firefox/sdfm8kqz.dev-edition-default/places.sqlite"
+  static_dir: "dotfiles/daemons/newtab"
+  history_limit: 15
