@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"dotfiles/daemons/ewwd/config"
+	"dotfiles/daemons/config"
 )
 
 var (

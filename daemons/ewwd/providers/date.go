@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"dotfiles/daemons/ewwd/config"
+	"dotfiles/daemons/config"
 )
 
 // DateState provides formatted date/time fields and personal life counter for statusbar display.

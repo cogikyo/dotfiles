@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"dotfiles/daemons/ewwd/config"
+	"dotfiles/daemons/config"
 )
 
 // NetworkState contains real-time network connection and throughput metrics for UI display.

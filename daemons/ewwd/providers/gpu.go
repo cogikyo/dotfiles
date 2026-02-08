@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"dotfiles/daemons/ewwd/config"
+	"dotfiles/daemons/config"
 )
 
 // GPUState contains AMD GPU metrics for consumption by UI widgets and monitoring tools.

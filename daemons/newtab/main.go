@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	_ "modernc.org/sqlite"
+	"gopkg.in/yaml.v3"
 )
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -19,11 +20,8 @@ import (
 // ═══════════════════════════════════════════════════════════════════════════
 
 const (
-	port          = ":42069"
-	firefoxDB     = ".mozilla/firefox/sdfm8kqz.dev-edition-default/places.sqlite"
-	staticDir     = "dotfiles/daemons/newtab"
-	googleSuggest = "https://suggestqueries.google.com/complete/search?client=firefox&q="
-	historyLimit  = 15
+	daemonConfigPath = "dotfiles/daemons/config.yaml"
+	googleSuggest    = "https://suggestqueries.google.com/complete/search?client=firefox&q="
 )
 
 const (
@@ -34,12 +32,49 @@ const (
 
 var homeDir = os.Getenv("HOME")
 
-func dbPath() string {
-	return "file:" + filepath.Join(homeDir, firefoxDB) + "?mode=ro&immutable=1"
+// ═══════════════════════════════════════════════════════════════════════════
+// Config
+// ═══════════════════════════════════════════════════════════════════════════
+
+type newtabConfig struct {
+	Port         string `yaml:"port"`
+	FirefoxDB    string `yaml:"firefox_db"`
+	StaticDir    string `yaml:"static_dir"`
+	HistoryLimit int    `yaml:"history_limit"`
 }
 
-func staticPath() string {
-	return filepath.Join(homeDir, staticDir)
+type daemonConfig struct {
+	Newtab newtabConfig `yaml:"newtab"`
+}
+
+func loadConfig() newtabConfig {
+	cfg := newtabConfig{
+		Port:         ":42069",
+		FirefoxDB:    ".mozilla/firefox/sdfm8kqz.dev-edition-default/places.sqlite",
+		StaticDir:    "dotfiles/daemons/newtab",
+		HistoryLimit: 15,
+	}
+
+	data, err := os.ReadFile(filepath.Join(homeDir, daemonConfigPath))
+	if err != nil {
+		return cfg
+	}
+
+	var dc daemonConfig
+	dc.Newtab = cfg
+	if err := yaml.Unmarshal(data, &dc); err != nil {
+		return cfg
+	}
+
+	return dc.Newtab
+}
+
+func dbPath(cfg newtabConfig) string {
+	return "file:" + filepath.Join(homeDir, cfg.FirefoxDB) + "?mode=ro&immutable=1"
+}
+
+func staticPath(cfg newtabConfig) string {
+	return filepath.Join(homeDir, cfg.StaticDir)
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -66,15 +101,17 @@ type HistoryEntry struct {
 // ═══════════════════════════════════════════════════════════════════════════
 
 func main() {
+	cfg := loadConfig()
+
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/api/bookmarks", withCORS(handleBookmarks))
-	mux.HandleFunc("/api/history", withCORS(handleHistory))
+	mux.HandleFunc("/api/bookmarks", withCORS(handleBookmarks(cfg)))
+	mux.HandleFunc("/api/history", withCORS(handleHistory(cfg)))
 	mux.HandleFunc("/api/suggest", withCORS(handleSuggest))
-	mux.Handle("/", http.FileServer(http.Dir(staticPath())))
+	mux.Handle("/", http.FileServer(http.Dir(staticPath(cfg))))
 
-	log.Printf("newtab-server listening on http://localhost%s", port)
-	log.Fatal(http.ListenAndServe(port, mux))
+	log.Printf("newtab-server listening on http://localhost%s", cfg.Port)
+	log.Fatal(http.ListenAndServe(cfg.Port, mux))
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -101,16 +138,17 @@ func writeError(w http.ResponseWriter, err error) {
 // Handlers
 // ═══════════════════════════════════════════════════════════════════════════
 
-func handleBookmarks(w http.ResponseWriter, r *http.Request) {
-	db, err := sql.Open("sqlite", dbPath())
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	defer db.Close()
+func handleBookmarks(cfg newtabConfig) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		db, err := sql.Open("sqlite", dbPath(cfg))
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		defer db.Close()
 
-	rows, err := db.Query(`
-		SELECT 
+		rows, err := db.Query(`
+		SELECT
 			COALESCE(f.title, 'unsorted') as folder,
 			b.title as title,
 			p.url as url,
@@ -126,44 +164,46 @@ func handleBookmarks(w http.ResponseWriter, r *http.Request) {
 		JOIN moz_places p ON b.fk = p.id
 		LEFT JOIN moz_bookmarks f ON b.parent = f.id
 		LEFT JOIN moz_keywords k ON p.id = k.place_id
-		WHERE p.url NOT LIKE 'place:%' 
-			AND b.title IS NOT NULL 
+		WHERE p.url NOT LIKE 'place:%'
+			AND b.title IS NOT NULL
 			AND b.title != ''
 			AND (f.title IS NULL OR f.title != 'tags')
 		ORDER BY f.title, b.position
 	`)
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	defer rows.Close()
-
-	bookmarks := []Bookmark{}
-	for rows.Next() {
-		var b Bookmark
-		if err := rows.Scan(&b.Folder, &b.Title, &b.URL, &b.Keyword, &b.Tags); err != nil {
-			continue
+		if err != nil {
+			writeError(w, err)
+			return
 		}
-		bookmarks = append(bookmarks, b)
-	}
+		defer rows.Close()
 
-	writeJSON(w, bookmarks)
+		bookmarks := []Bookmark{}
+		for rows.Next() {
+			var b Bookmark
+			if err := rows.Scan(&b.Folder, &b.Title, &b.URL, &b.Keyword, &b.Tags); err != nil {
+				continue
+			}
+			bookmarks = append(bookmarks, b)
+		}
+
+		writeJSON(w, bookmarks)
+	}
 }
 
-func handleHistory(w http.ResponseWriter, r *http.Request) {
-	db, err := sql.Open("sqlite", dbPath())
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	defer db.Close()
+func handleHistory(cfg newtabConfig) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		db, err := sql.Open("sqlite", dbPath(cfg))
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		defer db.Close()
 
-	query := r.URL.Query().Get("q")
-	var rows *sql.Rows
+		query := r.URL.Query().Get("q")
+		var rows *sql.Rows
 
-	if query == "" {
-		rows, err = db.Query(`
-			SELECT 
+		if query == "" {
+			rows, err = db.Query(`
+			SELECT
 				COALESCE(p.title, '') as title,
 				p.url,
 				p.visit_count,
@@ -174,11 +214,11 @@ func handleHistory(w http.ResponseWriter, r *http.Request) {
 				AND `+urlFilter+`
 			ORDER BY p.last_visit_date DESC
 			LIMIT ?
-		`, historyLimit)
-	} else {
-		searchTerm := "%" + strings.ToLower(query) + "%"
-		rows, err = db.Query(`
-			SELECT 
+		`, cfg.HistoryLimit)
+		} else {
+			searchTerm := "%" + strings.ToLower(query) + "%"
+			rows, err = db.Query(`
+			SELECT
 				COALESCE(p.title, '') as title,
 				p.url,
 				p.visit_count,
@@ -188,28 +228,29 @@ func handleHistory(w http.ResponseWriter, r *http.Request) {
 				AND `+titleFilter+`
 				AND `+urlFilter+`
 				AND (LOWER(p.title) LIKE ? OR LOWER(p.url) LIKE ?)
-			ORDER BY 
+			ORDER BY
 				p.visit_count * 0.3 + (p.last_visit_date / 1000000000000.0) DESC
 			LIMIT ?
-		`, searchTerm, searchTerm, historyLimit)
-	}
-
-	if err != nil {
-		writeError(w, err)
-		return
-	}
-	defer rows.Close()
-
-	history := []HistoryEntry{}
-	for rows.Next() {
-		var h HistoryEntry
-		if err := rows.Scan(&h.Title, &h.URL, &h.VisitCount, &h.LastVisit); err != nil {
-			continue
+		`, searchTerm, searchTerm, cfg.HistoryLimit)
 		}
-		history = append(history, h)
-	}
 
-	writeJSON(w, history)
+		if err != nil {
+			writeError(w, err)
+			return
+		}
+		defer rows.Close()
+
+		history := []HistoryEntry{}
+		for rows.Next() {
+			var h HistoryEntry
+			if err := rows.Scan(&h.Title, &h.URL, &h.VisitCount, &h.LastVisit); err != nil {
+				continue
+			}
+			history = append(history, h)
+		}
+
+		writeJSON(w, history)
+	}
 }
 
 func handleSuggest(w http.ResponseWriter, r *http.Request) {
