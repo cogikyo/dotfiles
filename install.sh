@@ -11,6 +11,8 @@
 set -euo pipefail
 
 DOTFILES="${DOTFILES:-$HOME/dotfiles}"
+DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/cogikyo/dotfiles.git}"
+DOTFILES_REF="${DOTFILES_REF:-master}"
 
 # Colors
 R='\033[0;31m'
@@ -52,6 +54,7 @@ STEPS=(
 PASSED=()
 FAILED=()
 SKIPPED=()
+declare -A STEP_ACTIVE=()
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -69,6 +72,52 @@ confirm() {
 }
 
 has() { command -v "$1" &>/dev/null; }
+
+array_contains() {
+    local needle="$1"
+    shift
+    local item
+    for item in "$@"; do
+        [[ "$item" == "$needle" ]] && return 0
+    done
+    return 1
+}
+
+canonpath() {
+    if has realpath; then
+        realpath -m -- "$1"
+    elif has readlink; then
+        readlink -f -- "$1" 2>/dev/null || printf '%s\n' "$1"
+    else
+        printf '%s\n' "$1"
+    fi
+}
+
+ensure_dotfiles_checkout() {
+    local script_path script_real target_real
+    script_path="${BASH_SOURCE[0]:-$0}"
+    script_real=$(canonpath "$script_path")
+    target_real=$(canonpath "$DOTFILES/install.sh")
+
+    if [[ "$script_real" == "$target_real" ]]; then
+        return 0
+    fi
+
+    if [[ ! -d "$DOTFILES/.git" || ! -f "$DOTFILES/install.sh" ]]; then
+        has git || { error "git not found. Install git first."; exit 1; }
+
+        if [[ -e "$DOTFILES" && ! -d "$DOTFILES/.git" ]]; then
+            error "DOTFILES path exists but is not a git checkout: $DOTFILES"
+            exit 1
+        fi
+
+        info "Bootstrapping dotfiles into $DOTFILES..."
+        git clone --depth 1 --branch "$DOTFILES_REF" "$DOTFILES_REPO" "$DOTFILES"
+    fi
+
+    info "Re-running installer from $DOTFILES/install.sh..."
+    exec "$DOTFILES/install.sh" "$@"
+}
 
 ensure_rustup_stable() {
     if ! has rustup; then
@@ -253,7 +302,7 @@ step_secrets() {
     local manifest="$DOTFILES/secrets/manifest"
     if [[ ! -f "$manifest" ]] || ! grep -qv '^#\|^$' "$manifest"; then
         warn "No secrets configured yet"
-        info "Add secrets with: secrets add <name> <file> <target> [mode]"
+        info "Add entries in $DOTFILES/secrets/manifest, then run: secrets sync"
         return 0
     fi
 
@@ -422,42 +471,63 @@ step_swap() {
     header "Setting up swap"
     needs_sudo
 
-    local SWAP_SIZE="16G"
+    local SWAP_SIZE="${DOTFILES_SWAP_SIZE:-16G}"
     local SWAP_DIR="/swap"
     local SWAP_FILE="$SWAP_DIR/swapfile"
 
-    # Check if swap subvolume exists
+    if ! has btrfs; then
+        error "btrfs command not found. Install btrfs-progs first."
+        return 1
+    fi
+
+    # Ensure /swap is a dedicated btrfs subvolume
     if sudo btrfs subvolume show "$SWAP_DIR" &>/dev/null; then
         success "Swap subvolume already exists at $SWAP_DIR"
     else
+        if [[ -e "$SWAP_DIR" ]]; then
+            error "$SWAP_DIR exists but is not a btrfs subvolume. Refusing to modify it automatically."
+            return 1
+        fi
         info "Creating btrfs swap subvolume at $SWAP_DIR..."
         sudo btrfs subvolume create "$SWAP_DIR"
     fi
 
+    # Prevent compression for swap extents.
+    sudo btrfs property set "$SWAP_DIR" compression none &>/dev/null || true
+
     # Check if swapfile is active
-    if swapon --show=NAME --noheadings | grep -q "$SWAP_FILE"; then
+    if swapon --show=NAME --noheadings | sed 's/^[[:space:]]*//' | grep -Fxq "$SWAP_FILE"; then
         success "Swapfile already active: $SWAP_FILE"
     else
-        if [[ -f "$SWAP_FILE" ]]; then
-            warn "Swapfile exists but is not active, re-enabling..."
+        if [[ -e "$SWAP_FILE" ]]; then
+            warn "Existing inactive swapfile found, recreating: $SWAP_FILE"
+            sudo swapoff "$SWAP_FILE" 2>/dev/null || true
+            sudo rm -f "$SWAP_FILE"
+        fi
+
+        if sudo btrfs filesystem mkswapfile --help &>/dev/null; then
+            info "Creating ${SWAP_SIZE} swapfile with btrfs mkswapfile..."
+            sudo btrfs filesystem mkswapfile --size "$SWAP_SIZE" --uuid clear "$SWAP_FILE"
         else
-            info "Creating ${SWAP_SIZE} swapfile..."
+            info "Creating ${SWAP_SIZE} swapfile (manual btrfs-safe path)..."
             sudo truncate -s 0 "$SWAP_FILE"
             sudo chattr +C "$SWAP_FILE"
+            sudo btrfs property set "$SWAP_FILE" compression none &>/dev/null || true
             sudo fallocate -l "$SWAP_SIZE" "$SWAP_FILE"
             sudo chmod 600 "$SWAP_FILE"
             sudo mkswap "$SWAP_FILE"
         fi
+
         info "Activating swap..."
         sudo swapon "$SWAP_FILE"
     fi
 
     # Add to fstab if not present
-    if grep -q "$SWAP_FILE" /etc/fstab; then
+    if awk -v swap_path="$SWAP_FILE" '$0 !~ /^[[:space:]]*#/ && $1 == swap_path && $3 == "swap" {found=1} END {exit(found ? 0 : 1)}' /etc/fstab; then
         success "Swapfile already in /etc/fstab"
     else
         info "Adding swapfile to /etc/fstab..."
-        echo "$SWAP_FILE none swap defaults,pri=10 0 0" | sudo tee -a /etc/fstab
+        printf '%s none swap defaults,pri=10 0 0\n' "$SWAP_FILE" | sudo tee -a /etc/fstab > /dev/null
         success "Added to /etc/fstab"
     fi
 
@@ -822,27 +892,71 @@ step_dns() {
     header "Setting up DNS (systemd-resolved + Cloudflare DNS-over-TLS)"
     needs_sudo
 
-    # Verify resolved.conf is installed (owned by step_system)
-    if ! diff -q "$DOTFILES/etc/systemd/resolved.conf" /etc/systemd/resolved.conf &>/dev/null 2>&1; then
-        warn "resolved.conf is missing or outdated — run the 'system' step first"
+    local RESOLVED_SRC="$DOTFILES/etc/systemd/resolved.conf"
+    local RESOLVED_DST="/etc/systemd/resolved.conf"
+
+    # Require a synced resolved.conf from step_system.
+    if [[ ! -f "$RESOLVED_SRC" ]]; then
+        error "Source resolved.conf not found at $RESOLVED_SRC"
+        return 1
+    fi
+    if ! sudo test -f "$RESOLVED_DST"; then
+        error "$RESOLVED_DST not found."
+        error "Run the 'system' step first."
+        return 1
+    fi
+    if ! sudo cmp -s "$RESOLVED_SRC" "$RESOLVED_DST"; then
+        error "resolved.conf is missing or outdated."
+        error "Run './install.sh system' before running 'dns'."
+        return 1
     fi
 
-    # Enable systemd-resolved
-    if systemctl is-active systemd-resolved &>/dev/null; then
-        success "systemd-resolved already active"
+    # Enable/start systemd-resolved
+    if systemctl is-enabled systemd-resolved &>/dev/null; then
+        success "systemd-resolved already enabled"
     else
         info "Enabling systemd-resolved..."
-        sudo systemctl enable --now systemd-resolved
+        sudo systemctl enable systemd-resolved
     fi
+    sudo systemctl restart systemd-resolved
 
-    # Configure NetworkManager
-    local NM_CONF="/etc/NetworkManager/conf.d/dns.conf"
-    if [[ -f "$NM_CONF" ]] && grep -q "dns=systemd-resolved" "$NM_CONF"; then
-        success "NetworkManager already configured for systemd-resolved"
+    # Configure NetworkManager via dedicated drop-in.
+    local NM_DIR="/etc/NetworkManager/conf.d"
+    local NM_CONF="$NM_DIR/10-dotfiles-dns.conf"
+    local nm_tmp
+    nm_tmp=$(mktemp)
+    printf "[main]\ndns=systemd-resolved\n" > "$nm_tmp"
+    if sudo test -f "$NM_CONF" && sudo cmp -s "$nm_tmp" "$NM_CONF"; then
+        success "NetworkManager DNS drop-in already configured"
     else
         info "Configuring NetworkManager to use systemd-resolved..."
-        sudo mkdir -p /etc/NetworkManager/conf.d
-        printf "[main]\ndns=systemd-resolved\n" | sudo tee "$NM_CONF" > /dev/null
+        sudo mkdir -p "$NM_DIR"
+        sudo install -m 0644 "$nm_tmp" "$NM_CONF"
+    fi
+    rm -f "$nm_tmp"
+
+    local nm_conflicts
+    nm_conflicts=$(grep -Rns --include='*.conf' '^[[:space:]]*dns=' "$NM_DIR" 2>/dev/null | grep -Fv "$NM_CONF" | grep -Fv 'dns=systemd-resolved' || true)
+    if [[ -n "$nm_conflicts" ]]; then
+        warn "Other NetworkManager dns= entries were found and may override this setup:"
+        printf '%s\n' "$nm_conflicts"
+    fi
+
+    if [[ "${DOTFILES_DNS_FORCE_CLOUDFLARE:-0}" == "1" ]]; then
+        if ! has nmcli; then
+            warn "DOTFILES_DNS_FORCE_CLOUDFLARE=1 requested, but nmcli is not available"
+        else
+            info "Forcing active NetworkManager connections to Cloudflare DNS..."
+            local conn
+            while IFS= read -r conn; do
+                [[ -n "$conn" ]] || continue
+                sudo nmcli connection modify "$conn" \
+                    ipv4.ignore-auto-dns yes \
+                    ipv4.dns "1.1.1.1 1.0.0.1" \
+                    ipv6.ignore-auto-dns yes \
+                    ipv6.dns "2606:4700:4700::1111 2606:4700:4700::1001"
+            done < <(nmcli -t -f NAME connection show --active 2>/dev/null)
+        fi
     fi
 
     # Link resolv.conf
@@ -850,13 +964,33 @@ step_dns() {
     if [[ -L /etc/resolv.conf ]] && [[ "$(readlink /etc/resolv.conf)" == "$STUB" ]]; then
         success "resolv.conf already linked to stub"
     else
+        if [[ -e /etc/resolv.conf && ! -L /etc/resolv.conf ]]; then
+            info "Backing up existing /etc/resolv.conf to /etc/resolv.conf.pre-dotfiles.bak"
+            sudo cp /etc/resolv.conf /etc/resolv.conf.pre-dotfiles.bak
+        fi
         info "Linking resolv.conf to systemd-resolved stub..."
-        sudo ln -sf "$STUB" /etc/resolv.conf
+        sudo ln -sfn "$STUB" /etc/resolv.conf
     fi
 
     info "Restarting NetworkManager..."
     sudo systemctl restart NetworkManager
-    success "DNS configured with Cloudflare DNS-over-TLS"
+
+    if ! systemctl is-active systemd-resolved &>/dev/null; then
+        error "systemd-resolved is not active after configuration"
+        return 1
+    fi
+    if [[ "$(readlink /etc/resolv.conf 2>/dev/null || true)" != "$STUB" ]]; then
+        error "/etc/resolv.conf is not linked to $STUB"
+        return 1
+    fi
+
+    if has resolvectl; then
+        local runtime_dns
+        runtime_dns=$(resolvectl dns 2>/dev/null | awk 'NF > 2 {for (i = 3; i <= NF; i++) print $i}' | sort -u | tr '\n' ' ')
+        [[ -n "$runtime_dns" ]] && info "Runtime DNS servers: $runtime_dns"
+    fi
+
+    success "DNS configured with Cloudflare DNS-over-TLS + strict DNSSEC"
 }
 
 # ── Menu and dispatch ────────────────────────────────────────────────────────
@@ -896,28 +1030,52 @@ run_step() {
         return 1
     fi
 
-    # Check dependencies (only when tracking results, i.e. multi-step runs)
+    if array_contains "$name" "${PASSED[@]}" || array_contains "$name" "${FAILED[@]}" || array_contains "$name" "${SKIPPED[@]}"; then
+        return 0
+    fi
+
+    if [[ "${STEP_ACTIVE[$name]:-0}" -eq 1 ]]; then
+        error "Dependency cycle detected at step '$name'"
+        FAILED+=("$name")
+        return 1
+    fi
+    STEP_ACTIVE["$name"]=1
+
+    # Resolve dependencies eagerly so direct runs still enforce deps.
     local deps
     deps=$(get_step_deps "$name")
     if [[ -n "$deps" ]]; then
         IFS=',' read -ra dep_list <<< "$deps"
         for dep in "${dep_list[@]}"; do
-            for f in "${FAILED[@]}"; do
-                if [[ "$f" == "$dep" ]]; then
-                    warn "Skipping '$name' — dependency '$dep' failed"
-                    SKIPPED+=("$name")
-                    return 0
-                fi
-            done
+            dep="${dep#"${dep%%[![:space:]]*}"}"
+            dep="${dep%"${dep##*[![:space:]]}"}"
+            [[ -n "$dep" ]] || continue
+
+            if ! run_step "$dep"; then
+                warn "Skipping '$name' — dependency '$dep' failed"
+                SKIPPED+=("$name")
+                STEP_ACTIVE["$name"]=0
+                return 0
+            fi
+
+            if array_contains "$dep" "${FAILED[@]}" || array_contains "$dep" "${SKIPPED[@]}"; then
+                warn "Skipping '$name' — dependency '$dep' did not complete successfully"
+                SKIPPED+=("$name")
+                STEP_ACTIVE["$name"]=0
+                return 0
+            fi
         done
     fi
 
     # Run in subshell to isolate set -e failures
     if ( "$func" ); then
         PASSED+=("$name")
+        STEP_ACTIVE["$name"]=0
     else
         FAILED+=("$name")
+        STEP_ACTIVE["$name"]=0
         warn "Step '$name' failed (continuing)"
+        return 1
     fi
 }
 
@@ -999,6 +1157,8 @@ usage() {
 }
 
 main() {
+    ensure_dotfiles_checkout "$@"
+
     if [[ $# -eq 0 ]]; then
         if ! require_desktop_environment; then
             error "Aborting. Use DOTFILES_INSTALL_ALLOW_HEADLESS=1 to bypass this check."
