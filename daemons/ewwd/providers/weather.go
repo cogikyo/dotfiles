@@ -11,7 +11,7 @@ import (
 	"strings"
 	"time"
 
-	"dotfiles/daemons/ewwd/config"
+	"dotfiles/daemons/config"
 )
 
 // WeatherState contains comprehensive weather data from OpenWeatherMap for UI display.
@@ -110,20 +110,13 @@ func (w *Weather) Stop() error {
 	return nil
 }
 
-func (w *Weather) loadCredentials() error {
-	// Read location: "LAT LON"
-	locPath := config.ExpandPath(w.config.LocationFile)
-	locData, err := os.ReadFile(locPath)
-	if err != nil {
-		return fmt.Errorf("read location: %w", err)
-	}
-	parts := strings.Fields(string(locData))
-	if len(parts) < 2 {
-		return fmt.Errorf("invalid location format: expected 'LAT LON'")
-	}
-	w.lat = parts[0]
-	w.lon = parts[1]
+type geoResponse struct {
+	Status string  `json:"status"`
+	Lat    float64 `json:"lat"`
+	Lon    float64 `json:"lon"`
+}
 
+func (w *Weather) loadCredentials() error {
 	// Read API key
 	keyPath := config.ExpandPath(w.config.APIKeyFile)
 	keyData, err := os.ReadFile(keyPath)
@@ -132,6 +125,53 @@ func (w *Weather) loadCredentials() error {
 	}
 	w.apiKey = strings.TrimSpace(string(keyData))
 
+	// Auto-detect location via IP geolocation, fall back to file
+	if err := w.geolocate(); err != nil {
+		fmt.Fprintf(os.Stderr, "ewwd: geolocation failed (%v), trying fallback\n", err)
+
+		locPath := config.ExpandPath("~/.local/.location")
+		locData, err := os.ReadFile(locPath)
+		if err != nil {
+			return fmt.Errorf("geolocation failed and no fallback (~/.local/.location): %w", err)
+		}
+		parts := strings.Fields(string(locData))
+		if len(parts) < 2 {
+			return fmt.Errorf("invalid fallback location format: expected 'LAT LON'")
+		}
+		w.lat = parts[0]
+		w.lon = parts[1]
+		fmt.Fprintf(os.Stderr, "ewwd: using fallback location: %s, %s\n", w.lat, w.lon)
+	}
+
+	return nil
+}
+
+func (w *Weather) geolocate() error {
+	resp, err := w.client.Get("http://ip-api.com/json/")
+	if err != nil {
+		return fmt.Errorf("request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("http %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	var geo geoResponse
+	if err := json.Unmarshal(body, &geo); err != nil {
+		return fmt.Errorf("parse: %w", err)
+	}
+	if geo.Status != "success" {
+		return fmt.Errorf("api status: %s", geo.Status)
+	}
+
+	w.lat = fmt.Sprintf("%f", geo.Lat)
+	w.lon = fmt.Sprintf("%f", geo.Lon)
 	return nil
 }
 

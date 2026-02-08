@@ -49,7 +49,7 @@
 // and other daemon configuration values.
 package commands
 
-import "dotfiles/daemons/hyprd/config"
+import "dotfiles/daemons/config"
 
 // MonocleState tracks a fullscreen floating window, storing its origin workspace
 // and position so it can be restored when toggled off.
@@ -100,5 +100,5 @@ type StateManager interface {
 
 	GetGeometry() *MonitorGeometry
 
-	GetConfig() *config.Config
+	GetConfig() *config.HyprConfig
 }

@@ -36,14 +36,14 @@ type MusicState struct {
 
 // Music monitors Spotify playback via playerctl, caching album art and providing playback control actions.
 type Music struct {
-	state      StateSetter      // State storage backend
-	notify     func(data any)   // Callback for state changes
-	done       chan struct{}    // Shutdown signal
-	active     bool             // Whether provider is running
-	last       MusicState       // Last known state for change detection
-	lastArtURL string           // URL of currently cached album art
-	mu         sync.Mutex       // Protects state and lastArtURL
-	wg         sync.WaitGroup   // Tracks background album art downloads
+	state      StateSetter    // State storage backend
+	notify     func(data any) // Callback for state changes
+	done       chan struct{}  // Shutdown signal
+	active     bool           // Whether provider is running
+	last       MusicState     // Last known state for change detection
+	lastArtURL string         // URL of currently cached album art
+	mu         sync.Mutex     // Protects state and lastArtURL
+	wg         sync.WaitGroup // Tracks background album art downloads
 }
 
 // NewMusic creates a Music provider for Spotify playback monitoring.

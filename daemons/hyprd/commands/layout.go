@@ -3,78 +3,18 @@ package commands
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 	"time"
 
+	"dotfiles/daemons/config"
 	"dotfiles/daemons/hyprd/hypr"
-
-	"gopkg.in/yaml.v3"
 )
-
-// SessionConfig is the root structure for sessions.yaml.
-type SessionConfig struct {
-	Sessions map[string]Session `yaml:"sessions"` // keyed by session name
-}
-
-// Session defines a workspace layout for automated window spawning and arrangement.
-type Session struct {
-	Name      string         `yaml:"name" json:"name"`           // display name
-	Workspace int            `yaml:"workspace" json:"workspace"` // target workspace ID
-	Project   string         `yaml:"project" json:"project"`     // sets PROJECT_PATH for kitty sessions
-	URLs      []string       `yaml:"urls" json:"urls"`           // opened in firefox
-	Windows   []WindowConfig `yaml:"windows" json:"windows"`     // spawned and arranged by role
-}
-
-// WindowConfig defines a window to spawn and its position in the master/slave layout.
-type WindowConfig struct {
-	Command string `yaml:"command"` // shell command to execute (empty means no spawn)
-	Title   string `yaml:"title"`   // used to identify window for arrangement
-	Role    string `yaml:"role"`    // "master" or "slave"
-}
-
-// DefaultSessions provides fallback configurations when ~/.config/hyprd/sessions.yaml is missing or invalid.
-var DefaultSessions = map[string]Session{
-	"dotfiles": {
-		Name:      "dotfiles",
-		Workspace: 4,
-		Project:   "dotfiles",
-		URLs:      []string{"https://github.com/cogikyo/dotfiles"},
-		Windows: []WindowConfig{
-			{Command: "kitty --title terminal", Title: "terminal", Role: "master"},
-			{Title: "firefox", Role: "slave"},
-			{Command: "kitty --title claude", Title: "claude", Role: "slave"},
-		},
-	},
-	"acr": {
-		Name:      "acr",
-		Workspace: 3,
-		Project:   "acr",
-		URLs:      []string{"localhost:3002"},
-		Windows: []WindowConfig{
-			{Command: "kitty --title terminal", Title: "terminal", Role: "master"},
-			{Title: "firefox", Role: "slave"},
-			{Command: "kitty --title claude", Title: "claude", Role: "slave"},
-		},
-	},
-	"nosvagor": {
-		Name:      "nosvagor",
-		Workspace: 3,
-		Project:   "nosvagor.com",
-		URLs:      []string{"localhost:3000"},
-		Windows: []WindowConfig{
-			{Command: "kitty --title terminal", Title: "terminal", Role: "master"},
-			{Title: "firefox", Role: "slave"},
-			{Command: "kitty --title claude", Title: "claude", Role: "slave"},
-		},
-	},
-}
 
 // Layout manages session-based workspace layouts with automatic window spawning and arrangement.
 type Layout struct {
-	hypr  *hypr.Client  // Hyprland IPC client
-	state StateManager  // shared daemon state
+	hypr  *hypr.Client // Hyprland IPC client
+	state StateManager // shared daemon state
 }
 
 // NewLayout creates a Layout command handler.
@@ -84,7 +24,11 @@ func NewLayout(h *hypr.Client, s StateManager) *Layout {
 
 // Execute opens the named session or lists available sessions (when arg is empty, "--list", or "-l").
 func (l *Layout) Execute(arg string) (string, error) {
-	sessions := LoadSessions()
+	cfg := l.state.GetConfig()
+	sessions := cfg.Sessions
+	if len(sessions) == 0 {
+		sessions = config.Default().Hypr.Sessions
+	}
 
 	if arg == "" || arg == "--list" || arg == "-l" {
 		return listSessions(sessions), nil
@@ -98,34 +42,8 @@ func (l *Layout) Execute(arg string) (string, error) {
 	return l.openSession(session)
 }
 
-// LoadSessions reads ~/.config/hyprd/sessions.yaml, falling back to DefaultSessions on error.
-func LoadSessions() map[string]Session {
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return DefaultSessions
-	}
-
-	configPath := filepath.Join(homeDir, ".config", "hyprd", "sessions.yaml")
-	data, err := os.ReadFile(configPath)
-	if err != nil {
-		return DefaultSessions
-	}
-
-	var config SessionConfig
-	if err := yaml.Unmarshal(data, &config); err != nil {
-		fmt.Fprintf(os.Stderr, "hyprd: failed to parse sessions.yaml: %v\n", err)
-		return DefaultSessions
-	}
-
-	if len(config.Sessions) == 0 {
-		return DefaultSessions
-	}
-
-	return config.Sessions
-}
-
 // listSessions formats session names with workspace IDs for display.
-func listSessions(sessions map[string]Session) string {
+func listSessions(sessions map[string]config.Session) string {
 	var names []string
 	for name, s := range sessions {
 		names = append(names, fmt.Sprintf("%s (ws%d)", name, s.Workspace))
@@ -135,7 +53,7 @@ func listSessions(sessions map[string]Session) string {
 }
 
 // openSession spawns windows, opens URLs, and arranges the layout on the target workspace.
-func (l *Layout) openSession(s Session) (string, error) {
+func (l *Layout) openSession(s config.Session) (string, error) {
 	// Switch to workspace
 	l.hypr.Dispatch(fmt.Sprintf("workspace %d", s.Workspace))
 
@@ -185,13 +103,13 @@ func (l *Layout) openSession(s Session) (string, error) {
 
 	// Wait for windows to appear then arrange
 	time.Sleep(1500 * time.Millisecond)
-	l.arrangeLayout(s.Workspace, s)
+	l.arrangeLayout(s.Workspace)
 
 	return fmt.Sprintf("opened session: %s on ws%d", s.Name, s.Workspace), nil
 }
 
 // arrangeLayout moves terminal to master and orders firefox/claude in the slave stack.
-func (l *Layout) arrangeLayout(wsID int, session Session) {
+func (l *Layout) arrangeLayout(wsID int) {
 	clients, err := l.hypr.Clients()
 	if err != nil {
 		return

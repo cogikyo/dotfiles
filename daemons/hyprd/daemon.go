@@ -36,7 +36,7 @@ package main
 
 import (
 	"dotfiles/daemons/hyprd/commands"
-	"dotfiles/daemons/hyprd/config"
+	"dotfiles/daemons/config"
 	"dotfiles/daemons/hyprd/hypr"
 	"dotfiles/daemons/daemon"
 	"encoding/json"
@@ -53,7 +53,7 @@ type Daemon struct {
 	hypr   *hypr.Client       // Hyprland IPC connection
 	state  *State             // Thread-safe workspace and window state
 	server *daemon.Server     // Unix socket command server
-	config *config.Config     // Monitor geometry and layout configuration
+	config *config.HyprConfig // Monitor geometry and layout configuration
 }
 
 // New connects to Hyprland's IPC socket and initializes the daemon state.
@@ -65,11 +65,11 @@ func New() (*Daemon, error) {
 		return nil, fmt.Errorf("connect to hyprland: %w", err)
 	}
 
-	state := NewState(cfg)
+	state := NewState(&cfg.Hypr)
 	d := &Daemon{
 		hypr:   hyprClient,
 		state:  state,
-		config: cfg,
+		config: &cfg.Hypr,
 	}
 
 	d.server = daemon.NewServer(SocketPath, d.handleCommand)
