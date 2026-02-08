@@ -148,6 +148,7 @@ return {
 			opts = opts or {}
 			local active_bg = opts.active_bg or p.orn_4
 			local inactive_bg = opts.inactive_bg or p.rst_2
+			local inactive_fg = opts.inactive_fg or p.blk_1
 			local function get_label()
 				local text = type(label) == "function" and label() or label
 				return ext_icon .. " " .. text
@@ -167,7 +168,7 @@ return {
 					lualine_a = {
 						{
 							get_label,
-							color = { fg = p.blk_1, bg = inactive_bg, gui = "bold" },
+							color = { fg = inactive_fg, bg = inactive_bg, gui = "bold" },
 							separator = { right = "" },
 						},
 					},
@@ -261,14 +262,17 @@ return {
 						if node and node.absolute_path then
 							local home = vim.env.HOME
 							local path = node.absolute_path
-							if home and path:sub(1, #home) == home then
-								return "~" .. path:sub(#home + 1)
+							if home and path == home then
+								return vim.env.USER or vim.fn.fnamemodify(home, ":t")
+							end
+							if home and path:sub(1, #home + 1) == home .. "/" then
+								return path:sub(#home + 2)
 							end
 							return "../" .. vim.fn.fnamemodify(path, ":t")
 						end
 					end
 					return "Files"
-				end, "󰙅", { active_bg = p.blu_3, inactive_bg = p.glc_2 }),
+				end, "󰙅", { active_bg = p.blu_2, inactive_bg = p.glc_1, inactive_fg = p.blu_1 }),
 				make_extension("undotree", "Undotree", "󰕍"),
 				make_extension("diff", "Undodiff", "󰕛"),
 			},
