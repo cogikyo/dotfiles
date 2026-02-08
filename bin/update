@@ -123,10 +123,8 @@ do_install() {
   success "Package installation complete!"
   echo
   info "Remaining post-install steps:"
-  echo "  1. relink              # symlink configs"
-  echo "  2. install-go.sh       # build Go binaries (hyprd, ewwd, etc.)"
-  echo "  3. chsh -s /usr/bin/zsh"
-  echo "  4. See README.md for: fonts, sddm, swap, hibernation, firefox"
+  echo "  Run: ./install.sh         # interactive menu for remaining setup"
+  echo "  Or:  ./install.sh all     # run everything"
 }
 
 do_dry_run() {
