@@ -13,8 +13,9 @@ set -euo pipefail
 REPO_RAW="https://raw.githubusercontent.com/cogikyo/dotfiles/master"
 CONFIG="/tmp/arch_config.json"
 CREDS="/tmp/arch_creds.json"
+PASSFILE="/tmp/arch_password.$$"
 
-trap 'rm -f "$CONFIG" "$CREDS"' EXIT
+trap 'rm -f "$CONFIG" "$CREDS" "$PASSFILE"' EXIT
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -28,11 +29,16 @@ warn()  { printf '%b==>%b %s\n' "$YELLOW" "$NC" "$*"; }
 die()   { printf '%b==>%b %s\n' "$RED" "$NC" "$*" >&2; exit 1; }
 
 [[ $EUID -eq 0 ]] || die "Run as root from the live ISO"
+command -v python3 >/dev/null || die "python3 is required"
+command -v archinstall >/dev/null || die "archinstall is required"
+
+# Keep generated creds/config private in /tmp.
+umask 077
 
 # ── Download config ───────────────────────────────────────────────────────────
 
 info "Downloading configuration..."
-curl -sL "$REPO_RAW/etc/arch.json" -o "$CONFIG"
+curl -fsSL "$REPO_RAW/etc/arch.json" -o "$CONFIG"
 ok "Config downloaded"
 
 # ── Detect disk ───────────────────────────────────────────────────────────────
@@ -74,6 +80,7 @@ read -rsp "Confirm: " password_confirm
 echo
 
 [[ "$password" == "$password_confirm" ]] || die "Passwords do not match"
+[[ -n "$password" ]] || die "Password cannot be empty"
 
 # ── Disk size ────────────────────────────────────────────────────────────────
 
@@ -90,23 +97,15 @@ fi
 
 info "Preparing config for $disk..."
 
-export HOSTNAME_VAL="$hostname"
-export USERNAME_VAL="$username"
-export PASSWORD_VAL="$password"
-export DISK_VAL="$disk"
-export DISK_SIZE_VAL="$disk_size"
+printf '%s\n' "$password" > "$PASSFILE"
 
-python3 << 'PYEOF'
-import json, os
+python3 - "$CONFIG" "$CREDS" "$PASSFILE" "$hostname" "$username" "$disk" "$disk_size" << 'PYEOF'
+import json
+import sys
 
-hostname = os.environ["HOSTNAME_VAL"]
-username = os.environ["USERNAME_VAL"]
-password = os.environ["PASSWORD_VAL"]
-disk = os.environ["DISK_VAL"]
-disk_size = os.environ["DISK_SIZE_VAL"]
-
-config_path = "/tmp/arch_config.json"
-creds_path = "/tmp/arch_creds.json"
+config_path, creds_path, passfile_path, hostname, username, disk, disk_size = sys.argv[1:8]
+with open(passfile_path) as f:
+    password = f.read().rstrip("\n")
 
 with open(config_path) as f:
     config = json.load(f)
@@ -143,6 +142,9 @@ creds = {
 with open(creds_path, "w") as f:
     json.dump(creds, f, indent=4)
 PYEOF
+
+chmod 600 "$CREDS"
+unset password password_confirm
 
 ok "Config patched for $disk"
 ok "Credentials ready"
