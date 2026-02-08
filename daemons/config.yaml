@@ -77,10 +77,10 @@ hypr:
         - { command: "kitty --title terminal", title: terminal, role: master }
         - { title: firefox, role: slave }
         - { command: "kitty --title claude", title: claude, role: slave }
-    nosvagor:
-      name: nosvagor
+    cogikyo:
+      name: cogikyo
       workspace: 3
-      project: nosvagor.com
+      project: cogikyo.com
       urls:
         - "localhost:3000"
       windows:

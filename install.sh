@@ -541,7 +541,7 @@ step_firefox() {
 
     if [[ ! -d "$vagari_dir" ]]; then
         info "Cloning vagari.firefox..."
-        git clone https://github.com/nosvagor/vagari.firefox.git "$vagari_dir"
+        git clone https://github.com/cogikyo/vagari.firefox.git "$vagari_dir"
     else
         success "vagari.firefox already cloned at $vagari_dir"
     fi
