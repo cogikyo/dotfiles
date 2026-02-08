@@ -1,4 +1,3 @@
-user_pref("layout.css.devPixelsPerPx", "1.25");
 user_pref("browser.sessionstore.resume_from_crash", false);
 user_pref("pdfjs.sidebarViewOnLoad", 0);
 user_pref("extensions.pocket.enabled", false);
