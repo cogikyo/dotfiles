@@ -17,16 +17,24 @@ PASSFILE="/tmp/arch_password.$$"
 
 trap 'rm -f "$CONFIG" "$CREDS" "$PASSFILE"' EXIT
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[0;33m'
-NC='\033[0m'
+R='\033[0;31m'
+G='\033[0;32m'
+Y='\033[1;33m'
+B='\033[1;34m'
+M='\033[0;35m'
+F='\033[90m'
+N='\033[0m'
 
-info()  { printf '%b==>%b %s\n' "$BLUE" "$NC" "$*"; }
-ok()    { printf '%b==>%b %s\n' "$GREEN" "$NC" "$*"; }
-warn()  { printf '%b==>%b %s\n' "$YELLOW" "$NC" "$*"; }
-die()   { printf '%b==>%b %s\n' "$RED" "$NC" "$*" >&2; exit 1; }
+info()    { printf '%b(↓)%b %s\n' "$B" "$N" "$*"; }
+step()    { printf '%b(→)%b %s\n' "$B" "$N" "$*"; }
+success() { printf '%b(✓)%b %s\n' "$G" "$N" "$*"; }
+finish()  { printf '\n%b(✓✓) %s%b\n' "$G" "$*" "$N"; }
+warn()    { printf '\n%b(!) %s%b\n' "$Y" "$*" "$N"; }
+error()   { printf '%b(✗)%b %s\n' "$R" "$N" "$*" >&2; }
+die()     { printf '%b(✗)%b %s\n' "$R" "$N" "$*" >&2; exit 1; }
+ask()     { printf '%b(?)%b %s\n' "$Y" "$N" "$*"; }
+header()  { printf '\n%b━━━ %s ━━━%b\n\n' "$M" "$*" "$N"; }
+faint()   { printf '%b%s%b\n' "$F" "$*" "$N"; }
 
 [[ $EUID -eq 0 ]] || die "Run as root from the live ISO"
 command -v python3 >/dev/null || die "python3 is required"
@@ -39,7 +47,7 @@ umask 077
 
 info "Downloading configuration..."
 curl -fsSL "$REPO_RAW/etc/arch.json" -o "$CONFIG"
-ok "Config downloaded"
+success "Config downloaded"
 
 # ── Detect disk ───────────────────────────────────────────────────────────────
 
@@ -146,8 +154,8 @@ PYEOF
 chmod 600 "$CREDS"
 unset password password_confirm
 
-ok "Config patched for $disk"
-ok "Credentials ready"
+success "Config patched for $disk"
+success "Credentials ready"
 
 # ── Run archinstall ───────────────────────────────────────────────────────────
 
@@ -158,12 +166,11 @@ archinstall --config "$CONFIG" --creds "$CREDS" --silent
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 
-echo
-ok "Installation complete!"
+finish "Installation complete!"
 echo
 info "Next steps:"
-info "  1. Reboot into the new system"
-info "  2. Log in as $username"
-info "  3. Clone dotfiles:  git clone https://github.com/cogikyo/dotfiles ~/dotfiles"
-info "  4. Run post-install: cd ~/dotfiles && ./install.sh"
+step "1. Reboot into the new system"
+step "2. Log in as $username"
+step "3. Clone dotfiles:  git clone https://github.com/cogikyo/dotfiles ~/dotfiles"
+step "4. Run post-install: cd ~/dotfiles && ./install.sh"
 echo
