@@ -101,6 +101,7 @@ echo
 
 mapfile -t disks < <(lsblk -dpno NAME | grep -v loop)
 disk=""
+disk_bytes=""
 
 if [[ ${#disks[@]} -eq 0 ]]; then
     die "No target disks detected"
@@ -115,6 +116,8 @@ else
 fi
 
 [[ -n "${disk:-}" ]] || die "No disk selected (input closed before a selection was made)"
+disk_bytes=$(lsblk -bdno SIZE "$disk" | head -n1)
+[[ "$disk_bytes" =~ ^[0-9]+$ ]] || die "Failed to read disk size for $disk"
 
 warn "ALL DATA on $disk will be erased"
 read -rp "Continue? [y/N] " yn
@@ -166,11 +169,12 @@ info "Preparing config for $disk..."
 
 printf '%s\n' "$password" > "$PASSFILE"
 
-python3 - "$CONFIG" "$CREDS" "$PASSFILE" "$hostname" "$username" "$disk" "$disk_size" << 'PYEOF'
+python3 - "$CONFIG" "$CREDS" "$PASSFILE" "$hostname" "$username" "$disk" "$disk_size" "$disk_bytes" << 'PYEOF'
 import json
 import sys
 
-config_path, creds_path, passfile_path, hostname, username, disk, disk_size = sys.argv[1:8]
+config_path, creds_path, passfile_path, hostname, username, disk, disk_size, disk_bytes = sys.argv[1:9]
+disk_bytes = int(disk_bytes)
 with open(passfile_path) as f:
     password = f.read().rstrip("\n")
 
@@ -185,13 +189,16 @@ for mod in config["disk_config"]["device_modifications"]:
 device_mod = config["disk_config"]["device_modifications"][0]
 btrfs_part = device_mod["partitions"][1]
 
-# Full-disk installs: normalize legacy unit to lower-case percent.
+# Full-disk installs: calculate an explicit byte size to avoid unit compatibility issues.
 if disk_size.lower().startswith("y"):
-    size_arg = btrfs_part.get("size")
-    if isinstance(size_arg, dict):
-        size_arg["unit"] = "percent"
-        size_arg["value"] = 100
-        size_arg["sector_size"] = None
+    start_arg = btrfs_part.get("start", {})
+    start_bytes = int(start_arg.get("value", 0))
+    full_size_bytes = max(disk_bytes - start_bytes - (1024 * 1024), 1024 * 1024 * 1024)
+    btrfs_part["size"] = {
+        "sector_size": None,
+        "unit": "B",
+        "value": full_size_bytes,
+    }
 
 # Custom GiB size: patch the btrfs partition (second partition).
 else:

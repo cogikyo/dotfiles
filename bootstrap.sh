@@ -8,7 +8,9 @@
 
 set -euo pipefail
 
-REPO_RAW="${DOTFILES_RAW_BASE:-https://raw.githubusercontent.com/cogikyo/dotfiles/master}"
+BOOTSTRAP_VERSION="2026.02.08.1"
+REPO_RAW_ROOT="${DOTFILES_RAW_ROOT:-https://raw.githubusercontent.com/cogikyo/dotfiles}"
+DEFAULT_REF="${DOTFILES_REF:-master}"
 
 R='\033[0;31m'
 G='\033[0;32m'
@@ -36,6 +38,11 @@ Options:
              Download + verify only (do not execute)
   -o, --output PATH
              Save path for download-only mode (default: ./SCRIPT_NAME)
+  -r, --ref REF
+             Git ref to download from (branch, tag, or commit SHA). Default: master
+  --cache-bust TOKEN
+             Append ?v=TOKEN to download URLs to bypass caches
+  --version  Show bootstrap version and exit
   -h, --help Show this help
 
 Examples:
@@ -43,6 +50,7 @@ Examples:
   curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash -s -- auto
   curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash -s -- install -- all
   curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash -s -- auto --download-only -o /tmp/archinstall.sh
+  curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash -s -- arch --ref master --cache-bust "$(date +%s)"
 EOF
 }
 
@@ -61,17 +69,25 @@ verify_file_checksum() {
 }
 
 download_target_script() {
-    local target_script="$1" workdir="$2"
+    local repo_raw="$1" target_script="$2" workdir="$3" cache_bust="$4"
     local sums_file target_file
+    local sums_url target_url
 
     sums_file="$workdir/SHA256SUMS"
     target_file="$workdir/$target_script"
 
-    info "Downloading checksums..."
-    curl -fsSL "$REPO_RAW/SHA256SUMS" -o "$sums_file"
+    sums_url="$repo_raw/SHA256SUMS"
+    target_url="$repo_raw/$target_script"
+    if [[ -n "$cache_bust" ]]; then
+        sums_url="${sums_url}?v=${cache_bust}"
+        target_url="${target_url}?v=${cache_bust}"
+    fi
+
+    info "Downloading checksums from $repo_raw ..."
+    curl -fsSL -H "Cache-Control: no-cache" -H "Pragma: no-cache" "$sums_url" -o "$sums_file"
 
     info "Downloading $target_script..."
-    curl -fsSL "$REPO_RAW/$target_script" -o "$target_file"
+    curl -fsSL -H "Cache-Control: no-cache" -H "Pragma: no-cache" "$target_url" -o "$target_file"
 
     verify_file_checksum "$sums_file" "$target_file"
     ok "$target_script checksum verified"
@@ -104,7 +120,10 @@ main() {
     local mode="auto"
     local download_only="0"
     local output_path=""
+    local ref="$DEFAULT_REF"
+    local cache_bust=""
     local workdir target_script target_file
+    local repo_raw
     local -a script_args=()
 
     if [[ $# -gt 0 && "${1#-}" == "$1" ]]; then
@@ -121,6 +140,20 @@ main() {
                 shift
                 [[ $# -gt 0 ]] || die "Missing path for --output"
                 output_path="$1"
+                ;;
+            -r|--ref)
+                shift
+                [[ $# -gt 0 ]] || die "Missing value for --ref"
+                ref="$1"
+                ;;
+            --cache-bust)
+                shift
+                [[ $# -gt 0 ]] || die "Missing value for --cache-bust"
+                cache_bust="$1"
+                ;;
+            --version)
+                printf '%s\n' "$BOOTSTRAP_VERSION"
+                return 0
                 ;;
             -h|--help)
                 usage
@@ -173,11 +206,17 @@ main() {
         die "--output is only valid with --download-only/--save-only"
     fi
 
+    if [[ -n "${DOTFILES_RAW_BASE:-}" ]]; then
+        repo_raw="$DOTFILES_RAW_BASE"
+    else
+        repo_raw="$REPO_RAW_ROOT/$ref"
+    fi
+
     workdir=$(mktemp -d)
     trap 'rm -rf "${workdir:-}"' EXIT
     target_file="$workdir/$target_script"
 
-    download_target_script "$target_script" "$workdir"
+    download_target_script "$repo_raw" "$target_script" "$workdir" "$cache_bust"
 
     if [[ "$download_only" == "1" ]]; then
         output_path="${output_path:-./$target_script}"
