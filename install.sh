@@ -31,6 +31,7 @@ STEPS=(
     "packages|Install packages from saved lists|yes|"
     "link|Symlink configs and scripts|no|"
     "secrets|Decrypt age-encrypted secrets to target paths|no|"
+    "repos|Clone repositories and create directories|no|secrets"
     "system|Install system configs and enable services|yes|"
     "swap|Set up btrfs swap subvolume and swapfile|yes|"
     "hibernate|Configure suspend-then-hibernate|yes|swap"
@@ -63,6 +64,80 @@ confirm() {
 
 has() { command -v "$1" &>/dev/null; }
 
+ensure_rustup_stable() {
+    if ! has rustup; then
+        warn "rustup not found; skipping Rust toolchain initialization"
+        return 0
+    fi
+
+    local active=""
+    active=$(rustup show active-toolchain 2>/dev/null | awk 'NR==1 {print $1}')
+
+    if [[ "$active" == stable* ]]; then
+        success "Rust toolchain already set to stable ($active)"
+        return 0
+    fi
+
+    info "Initializing rustup stable toolchain..."
+    rustup toolchain install stable
+    rustup default stable
+    success "Rust toolchain set to stable"
+}
+
+has_user_bus() {
+    [[ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]] && return 0
+    [[ -n "${XDG_RUNTIME_DIR:-}" && -S "${XDG_RUNTIME_DIR}/bus" ]] && return 0
+    has busctl && busctl --user status &>/dev/null
+}
+
+in_chroot() {
+    if has systemd-detect-virt; then
+        systemd-detect-virt --quiet --chroot && return 0
+    fi
+
+    local root_id init_root_id
+    root_id=$(stat -Lc '%d:%i' / 2>/dev/null || true)
+    init_root_id=$(stat -Lc '%d:%i' /proc/1/root/. 2>/dev/null || true)
+    [[ -n "$root_id" && -n "$init_root_id" && "$root_id" != "$init_root_id" ]]
+}
+
+require_desktop_environment() {
+    if [[ "${DOTFILES_INSTALL_ALLOW_HEADLESS:-0}" == "1" ]]; then
+        warn "Headless override enabled (DOTFILES_INSTALL_ALLOW_HEADLESS=1)"
+        return 0
+    fi
+
+    if [[ $EUID -eq 0 ]]; then
+        error "Run install.sh as your regular user (not root)"
+        return 1
+    fi
+
+    if [[ -n "${SSH_CONNECTION:-}" || -n "${SSH_TTY:-}" ]]; then
+        error "Refusing to run from SSH session"
+        return 1
+    fi
+
+    if in_chroot; then
+        error "Refusing to run from chroot/containerized install environment"
+        return 1
+    fi
+
+    if [[ -z "${XDG_SESSION_TYPE:-}" ]]; then
+        error "No desktop session detected (XDG_SESSION_TYPE is unset)"
+        return 1
+    fi
+
+    if [[ "$XDG_SESSION_TYPE" != "wayland" && "$XDG_SESSION_TYPE" != "x11" ]]; then
+        error "Unsupported session type '$XDG_SESSION_TYPE' (expected wayland or x11)"
+        return 1
+    fi
+
+    if ! has_user_bus; then
+        error "No user DBus/systemd session bus detected"
+        return 1
+    fi
+}
+
 needs_sudo() {
     if [[ $EUID -ne 0 ]]; then
         if ! sudo -n true 2>/dev/null; then
@@ -84,6 +159,7 @@ step_packages() {
     fi
 
     "$DOTFILES/bin/update" --install
+    ensure_rustup_stable
 }
 
 # ── Step: link ───────────────────────────────────────────────────────────────
@@ -91,9 +167,35 @@ step_packages() {
 step_link() {
     header "Linking configs and scripts"
 
-    # Config directories → ~/.config/
-    info "Linking config directories to ~/.config/..."
+    link_tree_contents() {
+        local src="$1"
+        local dst="$2"
+        mkdir -p "$dst"
+
+        local item name target
+        shopt -s dotglob nullglob
+        for item in "$src"/*; do
+            name=$(basename "$item")
+            [[ "$name" == "." || "$name" == ".." ]] && continue
+            target="$dst/$name"
+
+            if [[ -d "$item" && ! -L "$item" ]]; then
+                if [[ -e "$target" && ! -d "$target" ]]; then
+                    rm -f "$target"
+                fi
+                mkdir -p "$target"
+                link_tree_contents "$item" "$target"
+            else
+                ln -sfnv "$item" "$target"
+            fi
+        done
+        shopt -u dotglob nullglob
+    }
+
+    # Config directories → ~/.config/<name> (content-level sync via symlinks)
+    info "Linking config content into ~/.config/..."
     mkdir -p "$HOME/.config"
+    mkdir -p "$HOME/.local/bin"
 
     for item in "$DOTFILES"/config/*; do
         local name
@@ -103,7 +205,11 @@ step_link() {
             claude|Cursor|firefox) continue ;;
         esac
 
-        ln -sfnv "$item" "$HOME/.config/"
+        if [[ -d "$item" && ! -L "$item" ]]; then
+            link_tree_contents "$item" "$HOME/.config/$name"
+        else
+            ln -sfnv "$item" "$HOME/.config/$name"
+        fi
     done
 
     # Claude: partial linking
@@ -119,7 +225,6 @@ step_link() {
 
     # Scripts → ~/.local/bin/
     info "Linking scripts to ~/.local/bin/..."
-    mkdir -p "$HOME/.local/bin"
 
     for script in "$DOTFILES"/bin/*; do
         [[ -x "$script" ]] || continue
@@ -147,6 +252,92 @@ step_secrets() {
     fi
 
     "$DOTFILES/bin/secrets" decrypt
+}
+
+# ── Step: repos ──────────────────────────────────────────────────────────────
+
+step_repos() {
+    header "Cloning repositories and creating directories"
+
+    local REPOS_FILE="$DOTFILES/etc/repos.toml"
+
+    if [[ ! -f "$REPOS_FILE" ]]; then
+        error "Repos manifest not found: $REPOS_FILE"
+        return 1
+    fi
+
+    # Create standard directories
+    local DIRS=(
+        "$HOME/downloads"
+        "$HOME/documents"
+        "$HOME/media/screenshots"
+        "$HOME/media/recordings"
+        "$HOME/media/images"
+        "$HOME/media/gifs"
+        "$HOME/agents"
+    )
+
+    for dir in "${DIRS[@]}"; do
+        if [[ ! -d "$dir" ]]; then
+            mkdir -p "$dir"
+            success "Created $dir"
+        fi
+    done
+
+    # Parse repos.toml and clone
+    local repo="" path="" cloned=0 skipped=0
+
+    while IFS= read -r line; do
+        line="${line%%#*}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        [[ -z "$line" ]] && continue
+
+        if [[ "$line" =~ ^\[.*\] ]]; then
+            # Process previous entry before starting new section
+            if [[ -n "$repo" && -n "$path" ]]; then
+                local expanded="${path/#\~/$HOME}"
+                if [[ -d "$expanded" ]]; then
+                    ((skipped++))
+                else
+                    mkdir -p "$(dirname "$expanded")"
+                    info "Cloning $repo → $path"
+                    git clone "git@github.com:$repo.git" "$expanded"
+                    ((cloned++))
+                fi
+            fi
+            repo="" path=""
+            continue
+        fi
+
+        local key="${line%%=*}"
+        local val="${line#*=}"
+        key="${key#"${key%%[![:space:]]*}"}"
+        key="${key%"${key##*[![:space:]]}"}"
+        val="${val#"${val%%[![:space:]]*}"}"
+        val="${val%"${val##*[![:space:]]}"}"
+        val="${val#\"}" val="${val%\"}"
+
+        case "$key" in
+            repo) repo="$val" ;;
+            path) path="$val" ;;
+        esac
+    done < "$REPOS_FILE"
+
+    # Process last entry
+    if [[ -n "$repo" && -n "$path" ]]; then
+        local expanded="${path/#\~/$HOME}"
+        if [[ -d "$expanded" ]]; then
+            ((skipped++))
+        else
+            mkdir -p "$(dirname "$expanded")"
+            info "Cloning $repo → $path"
+            git clone "git@github.com:$repo.git" "$expanded"
+            ((cloned++))
+        fi
+    fi
+
+    echo
+    success "Cloned $cloned repos ($skipped already exist)"
 }
 
 # ── Step: system ─────────────────────────────────────────────────────────────
@@ -409,11 +600,15 @@ install_daemon_services() {
     local service_dir="$HOME/.config/systemd/user"
     mkdir -p "$service_dir"
 
+    if ! has_user_bus; then
+        error "No user session bus available; cannot manage user services"
+        return 1
+    fi
+
     local daemons=()
     for name in "${!GO_BINARIES[@]}"; do
         IFS='|' read -r module_dir _ _ is_daemon <<< "${GO_BINARIES[$name]}"
         [[ "$is_daemon" == "yes" ]] || continue
-        daemons+=("$name")
 
         local src="$DOTFILES/$module_dir/$name/$name.service"
         # newtab has its own module dir
@@ -424,6 +619,7 @@ install_daemon_services() {
             continue
         fi
 
+        daemons+=("$name")
         cp "$src" "$service_dir/$name.service"
     done
 
@@ -798,15 +994,29 @@ usage() {
 
 main() {
     if [[ $# -eq 0 ]]; then
+        if ! require_desktop_environment; then
+            error "Aborting. Use DOTFILES_INSTALL_ALLOW_HEADLESS=1 to bypass this check."
+            exit 1
+        fi
         interactive_menu
         exit 0
     fi
 
     case "$1" in
-        all)        run_all ;;
         --list|-l)  list_steps ;;
         --help|-h)  usage ;;
+        all)
+            if ! require_desktop_environment; then
+                error "Aborting. Use DOTFILES_INSTALL_ALLOW_HEADLESS=1 to bypass this check."
+                exit 1
+            fi
+            run_all
+            ;;
         *)
+            if ! require_desktop_environment; then
+                error "Aborting. Use DOTFILES_INSTALL_ALLOW_HEADLESS=1 to bypass this check."
+                exit 1
+            fi
             for step in "$@"; do
                 run_step "$step"
             done
