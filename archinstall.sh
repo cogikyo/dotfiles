@@ -177,42 +177,6 @@ with open(passfile_path) as f:
 with open(config_path) as f:
     config = json.load(f)
 
-
-def load_size_model():
-    try:
-        from archinstall.lib.models.device import Size  # type: ignore
-
-        return Size
-    except Exception:
-        pass
-
-    try:
-        from archinstall.lib.models.device_model import Size  # type: ignore
-
-        return Size
-    except Exception:
-        return None
-
-
-def is_valid_size_arg(size_model, size_arg):
-    if size_model is None:
-        return True
-
-    try:
-        size_model.parse_arg(size_arg)
-        return True
-    except Exception:
-        return False
-
-
-def resolve_percent_unit(size_model):
-    probe = {"sector_size": None, "value": 100}
-    for candidate in ("Percent", "percent", "PERCENT", "Percentage", "percentage", "PERCENTAGE", "%"):
-        probe["unit"] = candidate
-        if is_valid_size_arg(size_model, probe):
-            return candidate
-    return None
-
 config["hostname"] = hostname
 
 for mod in config["disk_config"]["device_modifications"]:
@@ -220,20 +184,14 @@ for mod in config["disk_config"]["device_modifications"]:
 
 device_mod = config["disk_config"]["device_modifications"][0]
 btrfs_part = device_mod["partitions"][1]
-size_model = load_size_model()
 
-# Full-disk installs: normalize legacy "Percent" unit to current archinstall unit name.
+# Full-disk installs: normalize legacy unit to lower-case percent.
 if disk_size.lower().startswith("y"):
     size_arg = btrfs_part.get("size")
-    if isinstance(size_arg, dict) and not is_valid_size_arg(size_model, size_arg):
-        percent_unit = resolve_percent_unit(size_model)
-        if percent_unit is not None:
-            size_arg["unit"] = percent_unit
-            size_arg["value"] = 100
-            size_arg["sector_size"] = None
-        # Fallback for incompatible schema changes: omit explicit size for final partition.
-        if not is_valid_size_arg(size_model, size_arg):
-            btrfs_part.pop("size", None)
+    if isinstance(size_arg, dict):
+        size_arg["unit"] = "percent"
+        size_arg["value"] = 100
+        size_arg["sector_size"] = None
 
 # Custom GiB size: patch the btrfs partition (second partition).
 else:
