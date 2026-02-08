@@ -440,14 +440,22 @@ git remote set-url origin git@github.com:cogikyo/dotfiles.git
 
 <br>
 
-> **My preferred directory structure:** _(definitely optional)_
+> **Directory structure and repositories:**
+>
+> Directories and repos are created automatically by `./install.sh repos`.
+> The repo manifest lives in `etc/repos.toml`.
 
-```sh
-cd ~
-mkdir -vp media/music media/images media/videos media/gifs media/screenshots media/recordings
-mkdir -vp downloads docs/templates docs/books docs/papers docs/share
-git clone git@github.com:cogikyo/vagari.git
-git clone git@github.com:cogikyo/notes.git
+```
+~/
+├── dotfiles/           # this repo
+├── cogikyo/            # business (cogikyo.com, acr, wangare)
+├── vagari/             # theme ecosystem (vagari, vagari.nvim, vagari.firefox)
+├── projects/           # personal (cullyn.dev, hgmx-builder, kaizen)
+├── agents/             # agent-owned repos
+├── LeadPier/           # work
+├── downloads/
+├── documents/
+└── media/{screenshots,recordings,images,gifs}
 ```
 
 <!-- }}} -->

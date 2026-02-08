@@ -70,7 +70,7 @@ hypr:
     acr:
       name: acr
       workspace: 3
-      project: acr
+      project: cogikyo/acr
       urls:
         - "localhost:3002"
       windows:
@@ -80,7 +80,7 @@ hypr:
     cogikyo:
       name: cogikyo
       workspace: 3
-      project: cogikyo.com
+      project: cogikyo/cogikyo.com
       urls:
         - "localhost:3000"
       windows:
