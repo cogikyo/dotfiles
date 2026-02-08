@@ -2,7 +2,7 @@
 # archinstall - Automated Arch Linux installation from live ISO
 #
 # Usage (as root on live ISO):
-#   curl -fsSL https://cogikyo.com/archinstall.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash -s -- arch
 #
 # Pulls configuration from this repo, prompts for password, detects disk,
 # patches config, and runs archinstall.
@@ -11,6 +11,7 @@
 set -euo pipefail
 
 REPO_RAW="https://raw.githubusercontent.com/cogikyo/dotfiles/master"
+SHA256SUMS_URL="$REPO_RAW/SHA256SUMS"
 CONFIG="/tmp/arch_config.json"
 CREDS="/tmp/arch_creds.json"
 PASSFILE="/tmp/arch_password.$$"
@@ -41,11 +42,45 @@ faint()   { printf '%b%s%b\n' "$F" "$*" "$N"; }
 command -v python3 >/dev/null || die "python3 is required"
 command -v archinstall >/dev/null || die "archinstall is required"
 command -v sha256sum >/dev/null || die "sha256sum is required"
+command -v curl >/dev/null || die "curl is required"
 
 # Keep generated creds/config private in /tmp.
 umask 077
 
+verify_self_checksum() {
+    if [[ "${DOTFILES_SKIP_SELF_VERIFY:-0}" == "1" ]]; then
+        warn "Skipping script checksum verification (DOTFILES_SKIP_SELF_VERIFY=1)"
+        return 0
+    fi
+
+    local script_path script_name expected actual tmp_sums
+    script_path=$(readlink -f -- "${BASH_SOURCE[0]:-$0}" 2>/dev/null || printf '%s' "${BASH_SOURCE[0]:-$0}")
+    script_name=$(basename "$script_path")
+
+    if [[ "$script_name" != "archinstall.sh" ]]; then
+        warn "Skipping script checksum verification (unexpected script name: $script_name)"
+        warn "Save as archinstall.sh to enable automatic self-verification"
+        return 0
+    fi
+
+    tmp_sums=$(mktemp)
+    curl -fsSL "$SHA256SUMS_URL" -o "$tmp_sums" || die "Failed to download SHA256SUMS from $SHA256SUMS_URL"
+    expected=$(awk '$2=="archinstall.sh" {print $1}' "$tmp_sums")
+    rm -f "$tmp_sums"
+
+    [[ -n "$expected" ]] || die "archinstall.sh entry not found in SHA256SUMS"
+
+    actual=$(sha256sum "$script_path" | awk '{print $1}')
+    if [[ "$actual" != "$expected" ]]; then
+        die "archinstall.sh checksum mismatch: expected $expected, got $actual"
+    fi
+
+    success "Script checksum verified"
+}
+
 # ── Download config ───────────────────────────────────────────────────────────
+
+verify_self_checksum
 
 info "Downloading configuration..."
 curl -fsSL "$REPO_RAW/etc/arch.json" -o "$CONFIG"
@@ -178,5 +213,5 @@ echo
 info "Next steps:"
 step "1. Reboot into the new system"
 step "2. Log in as $username"
-step "3. Run post-install (recommended): curl -fsSL https://cogikyo.com/install.sh | bash -s -- all"
+step "3. Run post-install (recommended): curl -fsSL $REPO_RAW/bootstrap.sh | bash -s -- install all"
 echo
