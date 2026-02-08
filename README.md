@@ -75,6 +75,7 @@
 <details open>
 <summary>🎯 <b>Core Applications</b></summary>
 
+- File Explorer: [xplr](https://github.com/sayanarijit/xplr)
 - Editor: [neovim](https://neovim.io/)
 - Browser: [Firefox](https://www.mozilla.org/en-US/firefox/developer/)
   - with custom [firefox css](https://github.com/cogikyo/vagari.firefox).
@@ -90,8 +91,8 @@
 
 - Color Scheme: [vagari](https://github.com/cogikyo/vagari#palette) (work in progress)
 - GTK: [catppuccin macchiato (peach)](https://github.com/catppuccin/gtk) (temporary)
-- Cursors: [Nordzy-white](https://github.com/alvatip/Nordzy-cursors) (temporary)
-- Icons: [Nordzy](https://github.com/alvatip/Nordzy-icon) (temporary)
+- Cursors: [catppuccin-macchiato-dark](https://github.com/catppuccin/cursors)
+- Icons: [Papirus-Dark](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme)
 
 </details>
 
@@ -110,17 +111,9 @@
 
 ### 🍎 Notable Applications
 
-- File Explorer: [xplr](https://github.com/sayanarijit/xplr)
 - Image Editing: [gimp](https://www.gimp.org/)
-- Imagine Generation: [midjourney](https://www.midjourney.com/)
-- Image Processing: [darktable](https://www.darktable.org/)
 - Vector Graphics: [inkscape](https://inkscape.org/)
 - Screen Recording: [wf-recorder](https://github.com/ammen99/wf-recorder)
-- Audio Editing: [audacity](https://www.audacityteam.org/)
-  - Edit: `/usr/share/applications/audacity.desktop` (currently broken under
-    wayland)
-  - Change `Exec` line to: `Exec=env GDK_BACKEND=x11 audacity %F`
-- Video Editing: [blender](https://www.blender.org/features/video-editing/)
 - Music: [spotify](www.spotify.com) with [playerctl](https://github.com/altdesktop/playerctl)
 - Music Visualizer: [glava](https://github.com/jarcode-foss/glava)
 
@@ -128,9 +121,70 @@
 
 <!-- }}} -->
 
-<!-- 🛠️ Installation {{{ -->
-
 ## 🛠️ Installation
+
+### 🚀 Install V2 (Recommended)
+
+This is the intended end-to-end flow:
+
+1. From Arch ISO as `root`: run `archinstall.sh`
+2. Reboot and log in as your user
+3. Run `install.sh all` once and enter the secrets passphrase when prompted
+4. System is fully restored (SSH keys, API keys, configs, services)
+
+Safer invocation with checksum verification:
+
+```sh
+# live ISO / root
+cd /tmp
+curl -fsSLO https://cogikyo.com/archinstall.sh
+curl -fsSLO https://cogikyo.com/SHA256SUMS
+grep ' archinstall.sh$' SHA256SUMS | sha256sum -c -
+bash ./archinstall.sh
+```
+
+After reboot:
+
+```sh
+# first login as your regular user
+cd /tmp
+curl -fsSLO https://cogikyo.com/install.sh
+curl -fsSLO https://cogikyo.com/SHA256SUMS
+grep ' install.sh$' SHA256SUMS | sha256sum -c -
+bash ./install.sh all
+```
+
+`install.sh` bootstraps `~/dotfiles` automatically if missing, then re-runs from the checked-out repo.
+
+### 🔐 Secrets Workflow (Native age)
+
+`secrets/identity.age` is a passphrase-encrypted `age` identity file.
+`secrets/recipient.txt` is the matching public recipient key.
+`secrets/*.age` are encrypted payloads (SSH keys, API keys, etc).
+
+Initial setup or rotation on your trusted machine:
+
+```sh
+cd ~/dotfiles
+secrets init      # creates/rotates identity.age + recipient.txt (prompts via age)
+secrets sync      # encrypts plaintext targets from secrets/manifest into secrets/*.age
+git add secrets/manifest secrets/recipient.txt secrets/identity.age secrets/*.age
+git commit -m "chore(secrets): rotate age identity and re-sync encrypted payloads"
+```
+
+Adding or updating a secret later:
+
+1. Edit `secrets/manifest` with `name:target_path:mode`.
+2. Update/create the plaintext file at that `target_path`.
+3. Run `secrets sync`.
+4. Commit updated `secrets/*.age` files.
+
+How install uses this:
+
+1. `install.sh` runs the `secrets` step.
+2. That calls `bin/secrets decrypt`.
+3. You enter the identity passphrase once.
+4. Secrets are written atomically to target paths with the declared file modes.
 
 <details open>
 <summary><h5> 🧰 My Hardware</h5></summary>
