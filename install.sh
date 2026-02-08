@@ -6,6 +6,7 @@
 #   ./install.sh all         # Run all steps in order
 #   ./install.sh link go     # Run specific steps by name
 #   ./install.sh --list      # List available steps
+#   ./install.sh --sign      # Regenerate SHA256SUMS for publishable scripts
 #   ./install.sh --help      # Show usage
 
 set -euo pipefail
@@ -117,6 +118,28 @@ ensure_dotfiles_checkout() {
 
     info "Re-running installer from $DOTFILES/install.sh..."
     exec "$DOTFILES/install.sh" "$@"
+}
+
+sign_release_checksums() {
+    has sha256sum || { error "sha256sum not found"; return 1; }
+
+    local arch_script="$DOTFILES/archinstall.sh"
+    local install_script="$DOTFILES/install.sh"
+    local out_file="$DOTFILES/SHA256SUMS"
+    local tmp_file
+
+    [[ -f "$arch_script" ]] || { error "Missing file: $arch_script"; return 1; }
+    [[ -f "$install_script" ]] || { error "Missing file: $install_script"; return 1; }
+
+    tmp_file=$(mktemp)
+    (
+        cd "$DOTFILES"
+        sha256sum archinstall.sh install.sh > "$tmp_file"
+    )
+    mv -f "$tmp_file" "$out_file"
+
+    success "Updated checksums: $out_file"
+    cat "$out_file"
 }
 
 ensure_rustup_stable() {
@@ -1004,7 +1027,7 @@ list_steps() {
         local badges=""
         [[ "$needs_root" == "yes" ]] && badges+=" ${Y}(sudo)${N}"
         [[ -n "$deps" ]] && badges+=" ${B}(after: $deps)${N}"
-        printf '  %b%d%b. %-12s %s%b\n' "$BD" "$i" "$N" "$name" "$desc" "$badges"
+        printf '  %b%02d%b. %-12s %s%b\n' "$BD" "$i" "$N" "$name" "$desc" "$badges"
         ((i++))
     done
 }
@@ -1151,6 +1174,7 @@ usage() {
     echo
     echo "Options:"
     echo "  --list, -l    List available steps"
+    echo "  --sign        Regenerate SHA256SUMS for archinstall.sh and install.sh"
     echo "  --help, -h    Show this help"
     echo
     list_steps
@@ -1170,6 +1194,7 @@ main() {
 
     case "$1" in
         --list|-l)  list_steps ;;
+        --sign)     sign_release_checksums ;;
         --help|-h)  usage ;;
         all)
             if ! require_desktop_environment; then
