@@ -23,6 +23,7 @@ return {
 			map("o",       api.node.open.edit,               "Open")
 			map("<Right>", api.node.open.edit,               "Open")
 			map("zz",      api.tree.change_root_to_node,     "CD")
+			map("zu",      api.tree.change_root_to_parent,  "Up")
 			map("<Up>",    api.node.navigate.sibling.prev,   "Previous Sibling")
 			map("<Down>",  api.node.navigate.sibling.next,   "Next Sibling")
 			map("<Left>",  api.node.navigate.parent,         "Parent Directory")
@@ -48,7 +49,7 @@ return {
 			map("]",       api.node.navigate.git.next,       "Next Git")
 			map("O",       api.node.run.system,              "Run System")
 			map("q",       api.tree.close,                   "Close")
-			map("<Esc>",   api.tree.close,                   "Close")
+			map("<Esc>",   function() vim.cmd("wincmd p") end, "Back to editor")
 			map("?",       api.tree.toggle_help,             "Help")
 			map("zm",      api.tree.collapse_all,            "Collapse")
 			map("zr",      api.tree.expand_all,              "Expand All")
@@ -68,30 +69,14 @@ return {
 			diagnostics = { enable = true },
 			modified = { enable = true },
 			view = {
+				width = {
+					min = 25,
+					max = 45,
+				},
+				side = "left",
 				number = false,
 				relativenumber = false,
 				signcolumn = "no",
-				float = {
-					enable = true,
-					open_win_config = function()
-						local screen_w = vim.opt.columns:get()
-						local screen_h = vim.opt.lines:get() - vim.opt.cmdheight:get()
-						local window_w = screen_w * 0.66
-						local window_h = screen_h * 0.66
-						local window_w_int = math.floor(window_w)
-						local window_h_int = math.floor(window_h)
-						local center_x = (screen_w - window_w) / 2
-						local center_y = ((vim.opt.lines:get() - window_h) / 2) - vim.opt.cmdheight:get()
-						return {
-							border = "rounded",
-							relative = "editor",
-							row = center_y,
-							col = center_x,
-							width = window_w_int,
-							height = window_h_int,
-						}
-					end,
-				},
 			},
 			renderer = {
 				highlight_git = "icon",
@@ -132,7 +117,7 @@ return {
 			},
 			actions = {
 				open_file = {
-					quit_on_open = true,
+					quit_on_open = false,
 					window_picker = {
 						chars = "asetniol",
 					},
