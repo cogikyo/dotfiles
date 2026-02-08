@@ -1,6 +1,4 @@
-<!-- ======================================================================--->
-<!-- ☄️  heading {{{ -->
-<h1 align="center">⚙️ dotfiles ⚙️</h1>
+<h1 align="center">🍙 dotfiles 🍙</h1>
 
 <p align="right">
     <a href="https://github.com/cogikyo/dotfiles/stargazers">
@@ -19,40 +17,12 @@
     </kbd>
 </p>
 <p align="center">
-<!-- }}} -->
-<!-- ======================================================================--->
-
-<!-- 👾 Overview {{{ -->
-
-## 👾 Overview
-
-### **[I use arch, btw](https://wiki.archlinux.org/title/Arch_Linux)**
 
 ---
 
-<img
-    src="https://github.com/cogikyo/dotfiles/blob/master/share/social-preview.jpg?raw=true"
-    title="we do these things not because they are easy, but because they are hard"
-    width=43%
-    align=right
-/>
-
-> 🌟 Additional guiding principles for software selection:
+> **[I use arch, btw](https://wiki.archlinux.org/title/Arch_Linux)**
 >
-> - 🧪 **Innovative** (what's a better _way_ of doing things?)
-> - 📖 **Open** (growth oriented; _infinite_ games)
-> - 🌍 **Collaborative** (what can _we_ do better?)
->
-> ❌ I try to avoid communities and software that:
->
-> - 🚩 follow _the status quo_ (even if it is _easier_ at first)
-> - 🥧 have _zero-sum mentality_ (_winning_ is **not** the goal)
-
----
-
-> In short (JFK definitely would've used arch, btw):
->
-> _"...we {do these} things **not** because they are easy, but **because they are hard**_,"<br>
+> _"...we _{do these}_ things **not** because they are easy, but **because they are hard**_,"<br>
 >
 > &emsp;&emsp;_"because that goal will serve to **organize** and **measure** the best of our energies and skills_,"<br>
 >
@@ -68,29 +38,38 @@
 - Display Server: [Wayland](https://wiki.archlinux.org/title/Wayland)
 - Compositor: [Hyprland](https://hyprland.org/)
 - Widgets: [eww](https://github.com/elkowar/eww)
-- Wallpaper: [mpvpaper](https://github.com/GhostNaN/mpvpaper) (vidoes found [here](https://github.com/cogikyo/dotfiles/tree/master/share/videos))
+- Wallpaper: [mpvpaper](https://github.com/GhostNaN/mpvpaper)
 
 </details>
 
 <details open>
 <summary>🎯 <b>Core Applications</b></summary>
 
-- File Explorer: [xplr](https://github.com/sayanarijit/xplr)
 - Editor: [neovim](https://neovim.io/)
-- Browser: [Firefox](https://www.mozilla.org/en-US/firefox/developer/)
-  - with custom [firefox css](https://github.com/cogikyo/vagari.firefox).
+- Browser: [Firefox](https://www.mozilla.org/en-US/firefox/developer/) (with custom [firefox css](https://github.com/cogikyo/vagari.firefox))
+- File Explorer: [xplr](https://github.com/sayanarijit/xplr)
 - Terminal: [kitty](https://sw.kovidgoyal.net/kitty/)
 - Shell: [zsh](https://wiki.archlinux.org/title/zsh)
+
+</details>
+
+<details open>
+<summary>🍎 <b>Notable Applications</b></summary>
+
+- Image Editing: [gimp](https://www.gimp.org/)
+- Vector Graphics: [inkscape](https://inkscape.org/)
+- Music: [spotify](www.spotify.com) with [playerctl](https://github.com/altdesktop/playerctl)
+- Music Visualizer: [glava](https://github.com/jarcode-foss/glava)
 
 </details>
 
 ### 🎥 Appearance
 
 <details open>
-<summary>🎨 <b>Design Framework</b></summary>
+<summary>🎨 <b>Design</b></summary>
 
 - Color Scheme: [vagari](https://github.com/cogikyo/vagari#palette) (work in progress)
-- GTK: [catppuccin macchiato (peach)](https://github.com/catppuccin/gtk) (temporary)
+- GTK: [catppuccin macchiato (peach)](https://github.com/catppuccin/gtk)
 - Cursors: [catppuccin-macchiato-dark](https://github.com/catppuccin/cursors)
 - Icons: [Papirus-Dark](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme)
 
@@ -101,7 +80,7 @@
 
 - Sans Serif: [Albert Sans](https://fonts.google.com/specimen/Albert+Sans?query=Albert+Sans)
 - Monospace: [Iosevka Vagari](https://typeof.net/Iosevka/) (custom build, see `etc/iosevka/`)
-  - Symbols: [Nerd Font Symbols](https://github.com/ryanoasis/nerd-fonts)
+- Symbols: [Nerd Font Symbols](https://github.com/ryanoasis/nerd-fonts)
 - Emoji: [Noto Color Emoji](https://fonts.google.com/noto/specimen/Noto+Color+Emoji)
 - Other: [Lora (serif)](https://fonts.google.com/specimen/Lora),
   [Archivo (display)](https://fonts.google.com/specimen/Archivo),
@@ -109,91 +88,15 @@
 
 </details>
 
-### 🍎 Notable Applications
-
-- Image Editing: [gimp](https://www.gimp.org/)
-- Vector Graphics: [inkscape](https://inkscape.org/)
-- Screen Recording: [wf-recorder](https://github.com/ammen99/wf-recorder)
-- Music: [spotify](www.spotify.com) with [playerctl](https://github.com/altdesktop/playerctl)
-- Music Visualizer: [glava](https://github.com/jarcode-foss/glava)
-
-</details>
-
-<!-- }}} -->
-
-## 🛠️ Installation
-
-### 🚀 Install V2 (Recommended)
-
-This is the intended end-to-end flow:
-
-1. From Arch ISO as `root`: run `archinstall.sh`
-2. Reboot and log in as your user
-3. Run `install.sh all` once and enter the secrets passphrase when prompted
-4. System is fully restored (SSH keys, API keys, configs, services)
-
-Safer invocation with checksum verification:
-
-```sh
-# live ISO / root
-cd /tmp
-curl -fsSLO https://cogikyo.com/archinstall.sh
-curl -fsSLO https://cogikyo.com/SHA256SUMS
-grep ' archinstall.sh$' SHA256SUMS | sha256sum -c -
-bash ./archinstall.sh
-```
-
-After reboot:
-
-```sh
-# first login as your regular user
-cd /tmp
-curl -fsSLO https://cogikyo.com/install.sh
-curl -fsSLO https://cogikyo.com/SHA256SUMS
-grep ' install.sh$' SHA256SUMS | sha256sum -c -
-bash ./install.sh all
-```
-
-`install.sh` bootstraps `~/dotfiles` automatically if missing, then re-runs from the checked-out repo.
-
-### 🔐 Secrets Workflow (Native age)
-
-`secrets/identity.age` is a passphrase-encrypted `age` identity file.
-`secrets/recipient.txt` is the matching public recipient key.
-`secrets/*.age` are encrypted payloads (SSH keys, API keys, etc).
-
-Initial setup or rotation on your trusted machine:
-
-```sh
-cd ~/dotfiles
-secrets init      # creates/rotates identity.age + recipient.txt (prompts via age)
-secrets sync      # encrypts plaintext targets from secrets/manifest into secrets/*.age
-git add secrets/manifest secrets/recipient.txt secrets/identity.age secrets/*.age
-git commit -m "chore(secrets): rotate age identity and re-sync encrypted payloads"
-```
-
-Adding or updating a secret later:
-
-1. Edit `secrets/manifest` with `name:target_path:mode`.
-2. Update/create the plaintext file at that `target_path`.
-3. Run `secrets sync`.
-4. Commit updated `secrets/*.age` files.
-
-How install uses this:
-
-1. `install.sh` runs the `secrets` step.
-2. That calls `bin/secrets decrypt`.
-3. You enter the identity passphrase once.
-4. Secrets are written atomically to target paths with the declared file modes.
-
 <details open>
-<summary><h5> 🧰 My Hardware</h5></summary>
+<summary>🧰 <b>My Hardware</b></summary>
 
 - Keyboard: [Corne (Helidox) 42 key](https://keebmaker.com/products/corne-low-profile), with Kailh gChoc Light Blue (20g), and **custom layout**:
   ![image](https://user-images.githubusercontent.com/59071534/232157490-bc96cdec-fa8c-4245-a9fe-76fd57a381af.png)
   ![image](https://user-images.githubusercontent.com/59071534/232157618-c49b549f-6acf-4343-96d0-9f9932196b36.png)
   ![image](https://user-images.githubusercontent.com/59071534/232157647-baabd17f-9cf7-43b1-9577-37eb7daa326d.png)
-  ![image](https://user-images.githubusercontent.com/59071534/232157666-a6fa76f4-43a2-414b-879d-26a200101e18.png) - ZMK firmware (for bluetooth version of keyboard): [cogikyo/zmk-config](https://github.com/cogikyo/zmk-config)
+  ![image](https://user-images.githubusercontent.com/59071534/232157666-a6fa76f4-43a2-414b-879d-26a200101e18.png)
+- ZMK firmware (for bluetooth version of keyboard): [cogikyo/zmk-config](https://github.com/cogikyo/zmk-config)
 - Monitor: [SAMSUNG UR59 Series 32-Inch 4K UHD (3840x2160)](https://a.co/d/bZtUse0)
 - Mouse: [MX Master 3S](https://www.logitech.com/en-us/products/mice/mx-master-3s.910-006556.html)
 - CPU: [AMD Ryzen 7 3700X (16) @ 3.600GHz](https://www.amd.com/en/products/cpu/amd-ryzen-7-3700x)
@@ -205,311 +108,58 @@ How install uses this:
 
 </details>
 
-<details closed>
-<summary><h4> 🔩 Literal Installation</h4></summary>
+## 🛠️ Installation
 
-**1. Get the installation image:**
+### **1. Get the installation image:**
 
-- **[archlinux-version-x86_64.iso](https://archlinux.org/download/)** (https://archlinux.org/download/)
+- **[archlinux-version-x86_64.iso](https://archlinux.org/download/)**
 
-**2. Prepare an installation medium:**
+### **2. Load on USB**
 
-- Find USB device partition (**sda** or **sdb**, probably):
+<details>
+<summary>🐧 <b>Linux</b> (terminal)</summary>
 
-      lsblk -f
+Find your USB device (`sda`, `sdb`, etc.):
 
-- Write to USB using **[dd](https://wiki.archlinux.org/title/Dd)** (sd"x", do not use partition number):
+    lsblk -f
 
-      dd bs=4M if=path/to/archlinux-version-x86_64.iso of=/dev/sdx conv=fsync oflag=direct status=progress
+Write to USB using [dd](https://wiki.archlinux.org/title/Dd) — use the **disk** (e.g. `/dev/sdx`), not a partition:
 
-<br>
-
-**3. Use guided arch installation**
-
-- Boot to USB and run command (does a great job for me and is easy to follow):
-
-      archinstall
-
-- Some relevant options that might not be clear:
-
-      audio client: pipewire
-      best effort partition: btrfs
-      desktop client: minimal (arch does not support hyprland at this time)
-
-- Best to install a few essential packages during this step:
-
-      base base-devel linux-headers git rustup
+    dd bs=4M if=path/to/archlinux-version-x86_64.iso of=/dev/sdx conv=fsync oflag=direct status=progress
 
 </details>
 
-<details open>
-<summary><h3> ⚙️  Post-Installation </h3></summary>
+<details>
+<summary>🍎 <b>macOS</b> (terminal)</summary>
 
-> **[General Recommendations](https://wiki.archlinux.org/title/General_recommendations)**  worth the read, seriously
->
-> **Note**: the following is not meant to be a generalized installation guide;
-> it's essentially a collection of commands to take a minimal arch install to
-> my current configuration.
->
-> Many of steps are extremely tailored to my needs, or my best attempt to solve
-> certain problems. Notably, many of my configs are based around my custom keyboard
-> layout, so don't expect shortcuts to be intuitive if you are trying to copy them.
->
-> Eventually I'd like to create a generalized script to streamline
-> installation for different hardware, but that's not a problem needing to be
-> solved at this time.
+Find your USB device (`disk2`, `disk3`, etc.):
 
-<br>
+    diskutil list
 
-**1. Install the latest stable of version of rust using [rustup](https://github.com/rust-lang/rustup):**
+Unmount the disk, then write with [dd](https://wiki.archlinux.org/title/Dd):
 
-    rustup default nightly
+    diskutil unmountDisk /dev/diskX
+    sudo dd bs=4M if=path/to/archlinux-version-x86_64.iso of=/dev/rdiskX status=progress
 
-<br>
+> Use `/dev/rdiskX` (raw disk) for significantly faster writes.
 
-**2. Install [paru](https://github.com/Morganamilo/paru):**
+</details>
+
+<details>
+<summary>🪟 <b>Windows</b> (GUI)</summary>
+
+Use **[Rufus](https://rufus.ie/)** — select the ISO, pick your USB drive, and write in DD mode.
+
+</details>
+
+### 3. Arch Install
 
 ```sh
-cd ~
-mkdir .cache && cd .cache
-git clone https://aur.archlinux.org/paru.git
-cd paru
-makepkg -si
+curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash -s -- arch
 ```
 
-<br>
-
-**3. Clone dotfiles and install packages:**
+### 4. Post Install
 
 ```sh
-cd ~
-git clone https://github.com/cogikyo/dotfiles
-paru -S --needed --noconfirm --skipreview - < ~/dotfiles/etc/packages.lst
-# might want to review/edit this list ⮭ before installing.
-
-# decrypt secrets (API keys, SSH keys, etc.) — passphrase will be prompted
-secrets decrypt
-
-# location is auto-detected via IP geolocation
-# if behind a VPN, create ~/.local/.location with "LAT LON" as fallback
-
+curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash -s -- install all
 ```
-
-<br>
-
-**4. Change default sh:**
-
-```sh
-chsh -s /usr/bin/zsh
-```
-
-<br>
-
-**5. Set up [sddm](https://wiki.archlinux.org/title/SDDM):**
-
-```sh
-cd ~/dotfiles/etc/sddm.conf.d
-mkdir /etc/sddm.conf.d
-sudo cp autologin.conf /etc/sddm.conf.d/
-systemctl enable sddm
-```
-
-<br>
-
-**6. Symbolically link most config files:**
-
-```sh
-mkdir ~/.config # might already be made
-ln -sfn ~/dotfiles/config/* ~/.config/
-ln -sfn ~/dotfiles/config/zsh/zshrc .zshrc
-```
-
-<br>
-
-**7. Setup some root configurations:**
-
-```sh
-cd ~/dotfiles/etc
-sudo ln -sfn ~/dotfiles/bin/* /usr/bin/
-sudo cp bluetooth/main.conf /etc/bluetooth/main.conf
-sudo cp udev/* /etc/udev/rules.d/ # probably don't want the bluetooth rules
-sudo cp loader.conf /boot/loader/loader.conf
-sudo cp gifview.desktop /usr/share/applications/gifview.desktop
-sudo cp security/faillock.conf /etc/security/faillock.conf
-sudo cp logid.cfg /etc/logid.cfg
-sudo systemctl enable bluetooth
-
-# DNS: systemd-resolved with Cloudflare (DNS-over-TLS)
-sudo ln -sf ~/dotfiles/etc/systemd/resolved.conf /etc/systemd/
-sudo systemctl enable --now systemd-resolved
-sudo mkdir -p /etc/NetworkManager/conf.d
-echo -e "[main]\ndns=systemd-resolved" | sudo tee /etc/NetworkManager/conf.d/dns.conf
-sudo ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
-sudo systemctl restart NetworkManager
-```
-
-<br>
-
-**8. Configure swap and memory management:**
-
-```sh
-# Create btrfs swap subvolume with 16GB swapfile
-sudo btrfs subvolume create /swap
-sudo truncate -s 0 /swap/swapfile
-sudo chattr +C /swap/swapfile        # disable COW (required for btrfs swap)
-sudo fallocate -l 16G /swap/swapfile
-sudo chmod 600 /swap/swapfile
-sudo mkswap /swap/swapfile
-sudo swapon /swap/swapfile
-
-# Add to /etc/fstab (low priority so zram is used first)
-echo '/swap/swapfile none swap defaults,pri=10 0 0' | sudo tee -a /etc/fstab
-
-# Earlyoom: prevent the brutal kernel OOM killer from randomly killing processes when memory is exhausted.
-sudo systemctl enable --now earlyoom
-```
-
-<br>
-
-**9. Configure hibernation (suspend-then-hibernate):**
-
-```sh
-# Get swapfile resume offset (needed for btrfs swapfile hibernation)
-RESUME_OFFSET=$(sudo btrfs inspect-internal map-swapfile -r /swap/swapfile)
-RESUME_UUID=$(findmnt -no UUID -T /swap/swapfile)
-
-echo "Add to bootloader options: resume=UUID=$RESUME_UUID resume_offset=$RESUME_OFFSET"
-
-# Edit bootloader entry to add resume parameters
-sudo nvim /boot/loader/entries/*_linux.conf
-# Add to 'options' line: resume=UUID=<UUID> resume_offset=<OFFSET>
-
-# Add resume hook to mkinitcpio (after filesystems, before fsck)
-sudo nvim /etc/mkinitcpio.conf
-# HOOKS=(... filesystems resume fsck)
-sudo mkinitcpio -P
-
-# Configure suspend-then-hibernate delay
-sudo mkdir -p /etc/systemd/sleep.conf.d
-sudo cp ~/dotfiles/etc/systemd/sleep.conf.d/hibernate.conf /etc/systemd/sleep.conf.d/
-```
-
-<br>
-
-**10. Install fonts:**
-
-```sh
-# Extract bundled fonts (Albert Sans, Lora, Archivo, etc.)
-mkdir -vp ~/.local/share
-tar -xzvf ~/dotfiles/etc/fonts.tar.gz fonts
-mv fonts ~/.local/share/
-
-# Build custom Iosevka Vagari (monospace)
-cd /tmp
-git clone --depth 1 https://github.com/be5invis/Iosevka.git
-cd Iosevka
-cp ~/dotfiles/etc/iosevka/private-build-plans.toml .
-npm install
-npm run build -- ttf-unhinted::Vagari --jCmd=12
-cp -r dist/Vagari/TTF/* ~/.local/share/fonts/
-fc-cache -fv
-```
-
-> **TODO:** Switch to curated fonts from [Fontshare](https://www.fontshare.com/):
->
-> - Satoshi (geometric sans for UI)
-> - General Sans or Cabinet Grotesk (display)
-> - Update `fonts.tar.gz` with new selections
-
-<br>
-
-**11. Configure newtab server:**
-
-The custom newtab page (`daemons/newtab/`) requires updating the Firefox profile path:
-
-```sh
-# Find your Firefox profile directory
-ls ~/.mozilla/firefox/ | grep -E '\.default|\.dev-edition'
-
-# Update the profile path in main.go (replace YOUR_PROFILE with your actual profile name), e.g.:
-sed -i "s/sdfm8kqz.dev-edition-default/YOUR_PROFILE/" ~/dotfiles/daemons/newtab/main.go
-```
-
-Then set Firefox to use the custom newtab:
-
-1. Open `about:config`
-2. Set `browser.newtabpage.enabled` = `false`
-3. Install an extension like [New Tab Override](https://addons.mozilla.org/en-US/firefox/addon/new-tab-override/)
-4. Set custom URL to `http://localhost:42069`
-
-Build and install (or rebuild all Go binaries):
-
-```sh
-install-go.sh newtab
-```
-
-<br>
-
-**12. Update Firefox `about:config` options:**
-
-- Increase scaling factor due to 4k screen (HiDPI environment):
-
-      layout.css.devPixelsPerPx = 1.25
-
-- Stop asking to restore session (killing the windows counts as a crash, I guess)
-
-      browser.sessionstore.resume_from_crash = false
-
-- Hide PDF sidebar by default
-
-      pdfjs.sidebarViewOnLoad = 0
-
-- Disable some bloat:
-
-      extensions.pocket.enabled = false
-
-- Review basic settings (fonts 'n such)
-- Install [vagari.firefox](https://github.com/cogikyo/vagari.firefox) userChrome css
-
-<br>
-
-**13. Configure SSH key:**
-
-```sh
-ssh-keygen -t ed25519 -C "your_email@example.com"
-eval "$(ssh-agent -s)"
-ssh-add ~/.ssh/id_ed25519
-
-# https://github.com/settings/keys
-# view your key, which github needs for auth/singing
-bat ~/.ssh/id_ed25519.pub
-```
-
-- e.g., using SSH key to manage dotfiles:
-
-```sh
-# example moving to ssh origin:
-git remote set-url origin git@github.com:cogikyo/dotfiles.git
-```
-
-<br>
-
-> **Directory structure and repositories:**
->
-> Directories and repos are created automatically by `./install.sh repos`.
-> The repo manifest lives in `etc/repos.toml`.
-
-```
-~/
-├── dotfiles/           # this repo
-├── cogikyo/            # business (cogikyo.com, acr, wangare)
-├── vagari/             # theme ecosystem (vagari, vagari.nvim, vagari.firefox)
-├── projects/           # personal (cullyn.dev, hgmx-builder, kaizen)
-├── agents/             # agent-owned repos
-├── LeadPier/           # work
-├── downloads/
-├── documents/
-└── media/{screenshots,recordings,images,gifs}
-```
-
-<!-- }}} -->
