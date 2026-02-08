@@ -130,13 +130,24 @@ read -rp "Username [cullyn]: " username
 username="${username:-cullyn}"
 
 echo
-read -rsp "Password for $username (+ root): " password
-echo
-read -rsp "Confirm: " password_confirm
-echo
+while :; do
+    read -rsp "Password for $username (+ root): " password
+    echo
+    read -rsp "Confirm: " password_confirm
+    echo
 
-[[ "$password" == "$password_confirm" ]] || die "Passwords do not match"
-[[ -n "$password" ]] || die "Password cannot be empty"
+    if [[ -z "$password" ]]; then
+        warn "Password cannot be empty. Try again."
+        continue
+    fi
+
+    if [[ "$password" != "$password_confirm" ]]; then
+        warn "Passwords do not match. Try again."
+        continue
+    fi
+
+    break
+done
 
 # ── Disk size ────────────────────────────────────────────────────────────────
 
@@ -166,19 +177,70 @@ with open(passfile_path) as f:
 with open(config_path) as f:
     config = json.load(f)
 
+
+def load_size_model():
+    try:
+        from archinstall.lib.models.device import Size  # type: ignore
+
+        return Size
+    except Exception:
+        pass
+
+    try:
+        from archinstall.lib.models.device_model import Size  # type: ignore
+
+        return Size
+    except Exception:
+        return None
+
+
+def is_valid_size_arg(size_model, size_arg):
+    if size_model is None:
+        return True
+
+    try:
+        size_model.parse_arg(size_arg)
+        return True
+    except Exception:
+        return False
+
+
+def resolve_percent_unit(size_model):
+    probe = {"sector_size": None, "value": 100}
+    for candidate in ("Percent", "percent", "PERCENT", "Percentage", "percentage", "PERCENTAGE", "%"):
+        probe["unit"] = candidate
+        if is_valid_size_arg(size_model, probe):
+            return candidate
+    return None
+
 config["hostname"] = hostname
 
 for mod in config["disk_config"]["device_modifications"]:
     mod["device"] = disk
 
-# Custom GiB size: patch the btrfs partition (second partition)
-if not disk_size.lower().startswith("y"):
-    gib = float(disk_size)
-    btrfs_part = config["disk_config"]["device_modifications"][0]["partitions"][1]
+device_mod = config["disk_config"]["device_modifications"][0]
+btrfs_part = device_mod["partitions"][1]
+size_model = load_size_model()
+
+# Full-disk installs: normalize legacy "Percent" unit to current archinstall unit name.
+if disk_size.lower().startswith("y"):
+    size_arg = btrfs_part.get("size")
+    if isinstance(size_arg, dict) and not is_valid_size_arg(size_model, size_arg):
+        percent_unit = resolve_percent_unit(size_model)
+        if percent_unit is not None:
+            size_arg["unit"] = percent_unit
+            size_arg["value"] = 100
+            size_arg["sector_size"] = None
+        # Fallback for incompatible schema changes: omit explicit size for final partition.
+        if not is_valid_size_arg(size_model, size_arg):
+            btrfs_part.pop("size", None)
+
+# Custom GiB size: patch the btrfs partition (second partition).
+else:
     btrfs_part["size"] = {
         "sector_size": {"unit": "B", "value": 512},
         "unit": "GiB",
-        "value": gib,
+        "value": float(disk_size),
     }
 
 with open(config_path, "w") as f:
