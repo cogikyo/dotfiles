@@ -96,6 +96,6 @@ bindkey '^[[1;5D'  backward-word  # C-right
 bindkey '^[[1;5A'  history-incremental-search-backward # C-up
 bindkey '^[[1;5B'  history-incremental-search-forward  # C-down
 
-eval "$(atuin init zsh)"
+eval "$(atuin init zsh --disable-up-arrow)"
 
 source $HOME/.config/zsh/vagari-highlights.zsh
