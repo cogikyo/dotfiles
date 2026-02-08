@@ -13,18 +13,24 @@ set -euo pipefail
 DOTFILES="${DOTFILES:-$HOME/dotfiles}"
 
 # Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[0;33m'
-BOLD='\033[1m'
-NC='\033[0m'
+R='\033[0;31m'
+G='\033[0;32m'
+Y='\033[1;33m'
+B='\033[1;34m'
+M='\033[0;35m'
+F='\033[90m'
+BD='\033[1m'
+N='\033[0m'
 
-info()    { printf '%b==>%b %s\n' "$BLUE" "$NC" "$*"; }
-success() { printf '%b==>%b %s\n' "$GREEN" "$NC" "$*"; }
-warn()    { printf '%b==>%b %s\n' "$YELLOW" "$NC" "$*"; }
-error()   { printf '%b==>%b %s\n' "$RED" "$NC" "$*" >&2; }
-header()  { printf '\n%b━━━ %s ━━━%b\n\n' "${BOLD}${BLUE}" "$*" "$NC"; }
+info()    { printf '%b(↓)%b %s\n' "$B" "$N" "$*"; }
+step()    { printf '%b(→)%b %s\n' "$B" "$N" "$*"; }
+success() { printf '%b(✓)%b %s\n' "$G" "$N" "$*"; }
+finish()  { printf '\n%b(✓✓) %s%b\n' "$G" "$*" "$N"; }
+warn()    { printf '\n%b(!) %s%b\n' "$Y" "$*" "$N"; }
+error()   { printf '%b(✗)%b %s\n' "$R" "$N" "$*" >&2; }
+ask()     { printf '%b(?)%b %s\n' "$Y" "$N" "$*"; }
+header()  { printf '\n%b━━━ %s ━━━%b\n\n' "$M" "$*" "$N"; }
+faint()   { printf '%b%s%b\n' "$F" "$*" "$N"; }
 
 # Step definitions: name|description|requires_sudo|depends
 STEPS=(
@@ -862,9 +868,9 @@ list_steps() {
     for entry in "${STEPS[@]}"; do
         IFS='|' read -r name desc needs_root deps <<< "$entry"
         local badges=""
-        [[ "$needs_root" == "yes" ]] && badges+=" ${YELLOW}(sudo)${NC}"
-        [[ -n "$deps" ]] && badges+=" ${BLUE}(after: $deps)${NC}"
-        printf '  %b%d%b. %-12s %s%b\n' "$BOLD" "$i" "$NC" "$name" "$desc" "$badges"
+        [[ "$needs_root" == "yes" ]] && badges+=" ${Y}(sudo)${N}"
+        [[ -n "$deps" ]] && badges+=" ${B}(after: $deps)${N}"
+        printf '  %b%d%b. %-12s %s%b\n' "$BD" "$i" "$N" "$name" "$desc" "$badges"
         ((i++))
     done
 }
@@ -920,20 +926,20 @@ print_summary() {
 
     header "Summary"
     for name in "${PASSED[@]}"; do
-        printf '  %b✓%b %s\n' "$GREEN" "$NC" "$name"
+        printf '  %b✓%b %s\n' "$G" "$N" "$name"
     done
     for name in "${FAILED[@]}"; do
-        printf '  %b✗%b %s\n' "$RED" "$NC" "$name"
+        printf '  %b✗%b %s\n' "$R" "$N" "$name"
     done
     for name in "${SKIPPED[@]}"; do
-        printf '  %b-%b %s (skipped)\n' "$YELLOW" "$NC" "$name"
+        printf '  %b-%b %s (skipped)\n' "$Y" "$N" "$name"
     done
     echo
 
     if [[ ${#FAILED[@]} -gt 0 ]]; then
         warn "${#FAILED[@]} step(s) failed"
     else
-        success "All steps completed successfully"
+        finish "All steps completed successfully"
     fi
 }
 
@@ -947,12 +953,12 @@ run_all() {
 
 interactive_menu() {
     echo
-    printf '%bDotfiles Installer%b\n' "$BOLD" "$NC"
+    printf '%bDotfiles Installer%b\n' "$BD" "$N"
     echo
     list_steps
     echo
-    printf '  %ba%b. Run all steps\n' "$BOLD" "$NC"
-    printf '  %bq%b. Quit\n' "$BOLD" "$NC"
+    printf '  %ba%b. Run all steps\n' "$BD" "$N"
+    printf '  %bq%b. Quit\n' "$BD" "$N"
     echo
     read -rp "Select steps (space-separated numbers, 'a' for all, 'q' to quit): " selection
 
