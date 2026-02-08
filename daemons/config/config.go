@@ -310,10 +310,10 @@ func Default() *Config {
 						{Command: "kitty --title claude", Title: "claude", Role: "slave"},
 					},
 				},
-				"nosvagor": {
-					Name:      "nosvagor",
+				"cogikyo": {
+					Name:      "cogikyo",
 					Workspace: 3,
-					Project:   "nosvagor.com",
+					Project:   "cogikyo.com",
 					URLs:      []string{"localhost:3000"},
 					Windows: []WindowConfig{
 						{Command: "kitty --title terminal", Title: "terminal", Role: "master"},

@@ -2,7 +2,7 @@
 # archinstall - Automated Arch Linux installation from live ISO
 #
 # Usage (as root on live ISO):
-#   curl -sL raw.githubusercontent.com/nosvagor/dotfiles/master/archinstall.sh | bash
+#   curl -sL raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh | bash
 #
 # Pulls configuration from this repo, prompts for password, detects disk,
 # patches config, and runs archinstall.
@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-REPO_RAW="https://raw.githubusercontent.com/nosvagor/dotfiles/master"
+REPO_RAW="https://raw.githubusercontent.com/cogikyo/dotfiles/master"
 CONFIG="/tmp/arch_config.json"
 CREDS="/tmp/arch_creds.json"
 
@@ -162,6 +162,6 @@ echo
 info "Next steps:"
 info "  1. Reboot into the new system"
 info "  2. Log in as $username"
-info "  3. Clone dotfiles:  git clone https://github.com/nosvagor/dotfiles ~/dotfiles"
+info "  3. Clone dotfiles:  git clone https://github.com/cogikyo/dotfiles ~/dotfiles"
 info "  4. Run post-install: cd ~/dotfiles && ./install.sh"
 echo

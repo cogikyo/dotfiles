@@ -233,16 +233,6 @@ git clone https://github.com/cogikyo/dotfiles
 paru -S --needed --noconfirm --skipreview - < ~/dotfiles/etc/packages.lst
 # might want to review/edit this list ⮭ before installing.
 
-# no good repos nordzy icons/cursors, do manually ⮯
-git clone https://github.com/alvatip/Nordzy-icon
-cd ~/.cache
-cd Nordzy-icon
-./install.sh
-cd ~/.cache
-git clone https://github.com/alvatip/Nordzy-cursors
-cd Nordzy-cursors
-./install.sh
-
 # decrypt secrets (API keys, SSH keys, etc.) — passphrase will be prompted
 secrets decrypt
 
