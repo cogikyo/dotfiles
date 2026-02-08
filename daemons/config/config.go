@@ -302,7 +302,7 @@ func Default() *Config {
 				"acr": {
 					Name:      "acr",
 					Workspace: 3,
-					Project:   "acr",
+					Project:   "cogikyo/acr",
 					URLs:      []string{"localhost:3002"},
 					Windows: []WindowConfig{
 						{Command: "kitty --title terminal", Title: "terminal", Role: "master"},
@@ -313,7 +313,7 @@ func Default() *Config {
 				"cogikyo": {
 					Name:      "cogikyo",
 					Workspace: 3,
-					Project:   "cogikyo.com",
+					Project:   "cogikyo/cogikyo.com",
 					URLs:      []string{"localhost:3000"},
 					Windows: []WindowConfig{
 						{Command: "kitty --title terminal", Title: "terminal", Role: "master"},
