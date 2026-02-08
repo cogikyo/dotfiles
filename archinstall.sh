@@ -3,6 +3,7 @@
 #
 # Usage (as root on live ISO):
 #   curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash -s -- arch
+#   ./archinstall.sh
 #
 # Pulls configuration from this repo, prompts for password, detects disk,
 # patches config, and runs archinstall.
@@ -99,16 +100,21 @@ lsblk -dpno NAME,SIZE,MODEL | grep -v loop
 echo
 
 mapfile -t disks < <(lsblk -dpno NAME | grep -v loop)
+disk=""
 
-if [[ ${#disks[@]} -eq 1 ]]; then
+if [[ ${#disks[@]} -eq 0 ]]; then
+    die "No target disks detected"
+elif [[ ${#disks[@]} -eq 1 ]]; then
     disk="${disks[0]}"
     info "Auto-selected: $disk"
 else
     echo "Select target disk:"
     select disk in "${disks[@]}"; do
-        [[ -n "$disk" ]] && break
+        [[ -n "${disk:-}" ]] && break
     done
 fi
+
+[[ -n "${disk:-}" ]] || die "No disk selected (input closed before a selection was made)"
 
 warn "ALL DATA on $disk will be erased"
 read -rp "Continue? [y/N] " yn
@@ -213,5 +219,5 @@ echo
 info "Next steps:"
 step "1. Reboot into the new system"
 step "2. Log in as $username"
-step "3. Run post-install (recommended): curl -fsSL $REPO_RAW/bootstrap.sh | bash -s -- install all"
+step "3. Run post-install: curl -fsSL $REPO_RAW/bootstrap.sh | bash -s -- auto"
 echo
