@@ -1210,7 +1210,7 @@
   <group
      id="theme"
      defaultPreferDarkTheme="0"
-     defaultIconTheme="Nordzy-dark"
+     defaultIconTheme="Papirus-Dark"
      defaultGtkTheme="catppuccin-macchiato-peach-standard+default"
      narrowSpinButton="1"
      preferDarkTheme="0"

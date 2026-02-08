@@ -37,8 +37,8 @@
     icon_position = "left"
     min_icon_size = 16
     max_icon_size = 16
-    icon_theme = "Nordzy"
-    icon_path = "/usr/share/icons/Nordzy/"
+    icon_theme = "Papirus-Dark"
+    icon_path = "/usr/share/icons/Papirus-Dark/"
     sticky_history = "yes"
     history_length = 20
     dmenu = "/usr/bin/bmenu -p dunst:"
