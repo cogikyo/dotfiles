@@ -2,7 +2,7 @@
 # archinstall - Automated Arch Linux installation from live ISO
 #
 # Usage (as root on live ISO):
-#   curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash -s -- arch
+#   bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh) arch
 #   ./archinstall.sh
 #
 # Pulls configuration from this repo, prompts for password, detects disk,
@@ -246,5 +246,5 @@ echo
 info "Next steps:"
 step "1. Reboot into the new system"
 step "2. Log in as $username"
-step "3. Run post-install: curl -fsSL $REPO_RAW/bootstrap.sh | bash -s -- auto"
+step "3. Run post-install: bash <(curl -fsSL $REPO_RAW/bootstrap.sh) install -- all"
 echo

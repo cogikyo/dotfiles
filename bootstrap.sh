@@ -2,9 +2,9 @@
 # bootstrap - Single-command entrypoint for dotfiles installation scripts
 #
 # Usage:
-#   curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash -s -- arch
-#   curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash -s -- auto
-#   curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash -s -- auto --download-only
+#   bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh) arch
+#   bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh) install -- all
+#   bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh) auto --download-only
 
 set -euo pipefail
 
@@ -22,6 +22,7 @@ info()  { printf '%b(↓)%b %s\n' "$B" "$N" "$*"; }
 warn()  { printf '\n%b(!) %s%b\n' "$Y" "$*" "$N"; }
 ok()    { printf '%b(✓)%b %s\n' "$G" "$N" "$*"; }
 die()   { printf '%b(✗)%b %s\n' "$R" "$N" "$*" >&2; exit 1; }
+header(){ printf '%b== dotfiles bootstrap v%s ==%b\n' "$B" "$BOOTSTRAP_VERSION" "$N"; }
 
 usage() {
     cat <<'EOF'
@@ -46,11 +47,12 @@ Options:
   -h, --help Show this help
 
 Examples:
-  curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash
-  curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash -s -- auto
-  curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash -s -- install -- all
-  curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash -s -- auto --download-only -o /tmp/archinstall.sh
-  curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash -s -- arch --ref master --cache-bust "$(date +%s)"
+  bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh)
+  bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh) auto
+  bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh) arch
+  bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh) install -- all
+  bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh) auto --download-only -o /tmp/archinstall.sh
+  bash <(curl -fsSL "https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh?v=$(date +%s)") arch --ref master --cache-bust "$(date +%s)"
 EOF
 }
 
@@ -111,6 +113,8 @@ save_target_script() {
 }
 
 main() {
+    header
+
     require_bin bash
     require_bin curl
     require_bin sha256sum
@@ -224,7 +228,7 @@ main() {
         return 0
     fi
 
-    info "Running $target_script..."
+    info "Running $target_script (bootstrap v$BOOTSTRAP_VERSION)..."
     if [[ ! -t 0 && -r /dev/tty ]]; then
         exec bash "$target_file" "${script_args[@]}" < /dev/tty
     fi
