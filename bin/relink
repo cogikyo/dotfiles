@@ -1,35 +1,6 @@
 #!/usr/bin/env bash
+# bin/relink - Symlink configs and scripts
+# Delegates to the install script's link step.
 
-# Preserve user's home before sudo changes it to /root
-USER_HOME="${USER_HOME:-$HOME}"
-
-# Re-exec with sudo if not root
-if [[ $EUID -ne 0 ]]; then
-    exec sudo USER_HOME="$HOME" "$0" "$@"
-fi
-
-# Symlink most config directories normally
-echo "Linking most configs..."
-for item in "$USER_HOME"/dotfiles/config/*; do
-    name=$(basename "$item")
-
-    # Skip directories that need special handling
-    if [[ "$name" == "claude" || "$name" == "Cursor" ]]; then
-        continue
-    fi
-
-    ln -sfnv "$item" "$USER_HOME/.config/"
-done
-
-echo "Linking partial directories..."
-
-# Special handling for claude: symlink to ~/.config/claude/
-mkdir -p "$USER_HOME/.config/claude"
-ln -sfnv "$USER_HOME/dotfiles/config/claude/settings.json" "$USER_HOME/.config/claude/settings.json"
-"$USER_HOME/dotfiles/config/claude/skills/link.sh" user
-
-echo "Linking bin scripts to /usr/local/bin..."
-for script in "$USER_HOME"/dotfiles/bin/*; do
-    [[ -x "$script" ]] || continue  # skip non-executables
-    ln -sfv "$script" /usr/local/bin/
-done
+DOTFILES="${DOTFILES:-$HOME/dotfiles}"
+exec "$DOTFILES/install.sh" link
