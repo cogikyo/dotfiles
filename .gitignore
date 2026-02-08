@@ -1,4 +1,8 @@
-# Plaintext secrets
+# Compiled binaries
+config/claude/statusline-bin
+config/claude/statusline/statusline
+
+# Plaintext secrets (safety net)
 secrets/identity
 
 # External plugins (managed separately)
