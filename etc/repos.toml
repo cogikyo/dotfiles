@@ -1,0 +1,42 @@
+# Repos manifest — cloned by ./install.sh repos
+# Format: [name] with repo (GitHub org/name) and path (relative to ~/)
+
+[dotfiles]
+repo = "cogikyo/dotfiles"
+path = "~/dotfiles"
+
+[vagari]
+repo = "cogikyo/vagari"
+path = "~/vagari/vagari"
+
+[vagari.nvim]
+repo = "cogikyo/vagari.nvim"
+path = "~/vagari/vagari.nvim"
+
+[vagari.firefox]
+repo = "cogikyo/vagari.firefox"
+path = "~/vagari/vagari.firefox"
+
+[cogikyo.com]
+repo = "cogikyo/cogikyo.com"
+path = "~/cogikyo/cogikyo.com"
+
+[acr]
+repo = "cogikyo/acr"
+path = "~/cogikyo/acr"
+
+[wangare]
+repo = "cogikyo/wangare"
+path = "~/cogikyo/wangare"
+
+[cullyn.dev]
+repo = "cogikyo/cullyn.dev"
+path = "~/projects/cullyn.dev"
+
+[hgmx-builder]
+repo = "cogikyo/hgmx-builder"
+path = "~/projects/hgmx-builder"
+
+[kaizen]
+repo = "cogikyo/kaizen"
+path = "~/projects/kaizen"
