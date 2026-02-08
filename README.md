@@ -243,10 +243,11 @@ git clone https://github.com/alvatip/Nordzy-cursors
 cd Nordzy-cursors
 ./install.sh
 
-# note: a location and openweathermap key is needed for weather widget.
-# https://home.openweathermap.org/api_keys
-echo "{api key here}" > ~/.local/.owm_api_key
-echo "{lat} {long}" > ~/.local/.location
+# decrypt secrets (API keys, SSH keys, etc.) — passphrase will be prompted
+secrets decrypt
+
+# location is auto-detected via IP geolocation
+# if behind a VPN, create ~/.local/.location with "LAT LON" as fallback
 
 ```
 

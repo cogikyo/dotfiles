@@ -1,6 +1,5 @@
-# Compiled binaries
-bin/newtab-server
-config/claude/statusline-bin
+# Plaintext secrets
+secrets/identity
 
 # External plugins (managed separately)
 config/xplr/plugins/preview/
