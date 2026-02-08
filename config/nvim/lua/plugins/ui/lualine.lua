@@ -144,16 +144,21 @@ return {
 			return [[ ]]
 		end
 
-		local function make_extension(ft, label, ext_icon)
+		local function make_extension(ft, label, ext_icon, opts)
+			opts = opts or {}
+			local active_bg = opts.active_bg or p.orn_4
+			local inactive_bg = opts.inactive_bg or p.rst_2
+			local function get_label()
+				local text = type(label) == "function" and label() or label
+				return ext_icon .. " " .. text
+			end
 			return {
 				filetypes = { ft },
 				sections = {
 					lualine_a = {
 						{
-							function()
-								return ext_icon .. " " .. label
-							end,
-							color = { fg = p.blk_1, bg = p.orn_4, gui = "bold" },
+							get_label,
+							color = { fg = p.blk_1, bg = active_bg, gui = "bold" },
 							separator = { right = "" },
 						},
 					},
@@ -161,10 +166,8 @@ return {
 				inactive_sections = {
 					lualine_a = {
 						{
-							function()
-								return ext_icon .. " " .. label
-							end,
-							color = { fg = p.blk_1, bg = p.rst_2, gui = "bold" },
+							get_label,
+							color = { fg = p.blk_1, bg = inactive_bg, gui = "bold" },
 							separator = { right = "" },
 						},
 					},
@@ -251,6 +254,21 @@ return {
 			},
 			tabline = {},
 			extensions = {
+				make_extension("NvimTree", function()
+					local api_ok, api = pcall(require, "nvim-tree.api")
+					if api_ok then
+						local node = api.tree.get_nodes()
+						if node and node.absolute_path then
+							local home = vim.env.HOME
+							local path = node.absolute_path
+							if home and path:sub(1, #home) == home then
+								return "~" .. path:sub(#home + 1)
+							end
+							return "../" .. vim.fn.fnamemodify(path, ":t")
+						end
+					end
+					return "Files"
+				end, "󰙅", { active_bg = p.blu_3, inactive_bg = p.glc_2 }),
 				make_extension("undotree", "Undotree", "󰕍"),
 				make_extension("diff", "Undodiff", "󰕛"),
 			},
