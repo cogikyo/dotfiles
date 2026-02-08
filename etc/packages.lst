@@ -1,4 +1,5 @@
 adobe-source-code-pro-fonts
+age
 alsa-utils
 amd-ucode
 aquamarine
@@ -7,7 +8,6 @@ base
 base-devel
 bat
 bc
-bitwarden-cli
 bluez
 bluez-utils
 btop
@@ -92,6 +92,7 @@ noto-fonts-extra
 npm
 nvtop
 nwg-look
+oath-toolkit
 onetbb
 openssh
 ouch
