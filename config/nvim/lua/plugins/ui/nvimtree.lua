@@ -10,7 +10,12 @@ return {
 		local function on_attach(bufnr)
 			local api = require("nvim-tree.api")
 			local function map(lhs, rhs, d)
-				vim.keymap.set("n", lhs, rhs, { desc = "nvim-tree: " .. d, buffer = bufnr, silent = true, nowait = true })
+				vim.keymap.set(
+					"n",
+					lhs,
+					rhs,
+					{ desc = "nvim-tree: " .. d, buffer = bufnr, silent = true, nowait = true }
+				)
 			end
 
 			-- stylua: ignore start
