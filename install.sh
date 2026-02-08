@@ -26,20 +26,25 @@ warn()    { printf '%b==>%b %s\n' "$YELLOW" "$NC" "$*"; }
 error()   { printf '%b==>%b %s\n' "$RED" "$NC" "$*" >&2; }
 header()  { printf '\n%b━━━ %s ━━━%b\n\n' "${BOLD}${BLUE}" "$*" "$NC"; }
 
-# Step definitions: name|description|requires_sudo
+# Step definitions: name|description|requires_sudo|depends
 STEPS=(
-    "packages|Install packages from saved lists|yes"
-    "link|Symlink configs and scripts|no"
-    "secrets|Decrypt age-encrypted secrets to target paths|no"
-    "system|Install system configs and enable services|yes"
-    "swap|Set up btrfs swap subvolume and swapfile|yes"
-    "hibernate|Configure suspend-then-hibernate|yes"
-    "fonts|Extract fonts and optionally build Iosevka|no"
-    "go|Build Go binaries (hyprd, ewwd, statusline, newtab)|no"
-    "firefox|Configure Firefox profile, theme, and preferences|no"
-    "shell|Change default shell to zsh|yes"
-    "dns|Set up systemd-resolved with Cloudflare DNS-over-TLS|yes"
+    "packages|Install packages from saved lists|yes|"
+    "link|Symlink configs and scripts|no|"
+    "secrets|Decrypt age-encrypted secrets to target paths|no|"
+    "system|Install system configs and enable services|yes|"
+    "swap|Set up btrfs swap subvolume and swapfile|yes|"
+    "hibernate|Configure suspend-then-hibernate|yes|swap"
+    "fonts|Extract fonts and optionally build Iosevka|no|"
+    "go|Build Go binaries (hyprd, ewwd, statusline, newtab)|no|"
+    "firefox|Configure Firefox profile, theme, and preferences|no|"
+    "shell|Change default shell to zsh|yes|"
+    "dns|Set up systemd-resolved with Cloudflare DNS-over-TLS|yes|system"
 )
+
+# Track results across steps
+PASSED=()
+FAILED=()
+SKIPPED=()
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -102,9 +107,10 @@ step_link() {
     done
 
     # Claude: partial linking
-    info "Linking claude settings and skills..."
+    info "Linking claude settings, skills, and scripts..."
     mkdir -p "$HOME/.config/claude"
     ln -sfnv "$DOTFILES/config/claude/settings.json" "$HOME/.config/claude/settings.json"
+    ln -sfv "$DOTFILES/config/claude/claude-notify" "$HOME/.local/bin/claude-notify"
     "$DOTFILES/config/claude/skills/link.sh" user
 
     # .zshrc symlink
@@ -119,32 +125,6 @@ step_link() {
         [[ -x "$script" ]] || continue
         ln -sfv "$script" "$HOME/.local/bin/"
     done
-
-    # Clean up old /usr/local/bin symlinks (one-time migration)
-    local old_links=()
-    for script in "$DOTFILES"/bin/*; do
-        [[ -x "$script" ]] || continue
-        local name
-        name=$(basename "$script")
-        if [[ -L "/usr/local/bin/$name" ]]; then
-            local target
-            target=$(readlink "/usr/local/bin/$name")
-            if [[ "$target" == "$DOTFILES/bin/$name" || "$target" == "$DOTFILES/bin/"* ]]; then
-                old_links+=("$name")
-            fi
-        fi
-    done
-
-    if [[ ${#old_links[@]} -gt 0 ]]; then
-        warn "Found ${#old_links[@]} old symlinks in /usr/local/bin pointing to dotfiles/bin"
-        if confirm "Remove them? (scripts are now in ~/.local/bin)"; then
-            needs_sudo
-            for name in "${old_links[@]}"; do
-                sudo rm -v "/usr/local/bin/$name"
-            done
-            success "Cleaned up old /usr/local/bin symlinks"
-        fi
-    fi
 
     success "Linking complete"
 }
@@ -284,14 +264,6 @@ step_swap() {
         success "Added to /etc/fstab"
     fi
 
-    # Enable earlyoom
-    if systemctl is-enabled earlyoom &>/dev/null; then
-        success "earlyoom already enabled"
-    else
-        info "Enabling earlyoom..."
-        sudo systemctl enable --now earlyoom
-    fi
-
     success "Swap setup complete"
 }
 
@@ -401,26 +373,27 @@ step_fonts() {
     fi
 
     info "Refreshing font cache..."
-    fc-cache -fv
+    fc-cache -f
     success "Fonts installed"
 }
 
 # ── Step: go ─────────────────────────────────────────────────────────────────
 
-# Binary definitions: name → module_dir|build_path|description|is_daemon
+# Binary definitions: name → module_dir|build_path|description|is_daemon|output_dir
 declare -A GO_BINARIES=(
-    ["hyprd"]="daemons|./hyprd|Hyprland window management daemon|yes"
-    ["ewwd"]="daemons|./ewwd|System utilities daemon for eww|yes"
-    ["statusline"]="config/claude/statusline|.|Claude Code statusline generator|no"
-    ["newtab"]="daemons/newtab|.|Firefox new tab HTTP server|yes"
+    ["hyprd"]="daemons|./hyprd|Hyprland window management daemon|yes|"
+    ["ewwd"]="daemons|./ewwd|System utilities daemon for eww|yes|"
+    ["statusline"]="config/claude/statusline|.|Claude Code statusline generator|no|config/claude/statusline"
+    ["newtab"]="daemons/newtab|.|Firefox new tab HTTP server|yes|"
 )
 
 build_go_binary() {
     local name="$1"
-    local install_dir="$HOME/.local/bin"
 
-    IFS='|' read -r module_dir build_path desc is_daemon <<< "${GO_BINARIES[$name]}"
+    IFS='|' read -r module_dir build_path desc is_daemon output_dir <<< "${GO_BINARIES[$name]}"
     local full_path="$DOTFILES/$module_dir"
+    local install_dir="$HOME/.local/bin"
+    [[ -n "$output_dir" ]] && install_dir="$DOTFILES/$output_dir"
 
     if [[ ! -d "$full_path" ]] || [[ ! -f "$full_path/go.mod" ]]; then
         error "Module not found: $full_path"
@@ -523,9 +496,8 @@ detect_firefox_profile() {
         return 1
     fi
 
-    # Parse profiles.ini: scan for profile directories matching preferred names
+    # Parse profiles.ini for dev-edition-default profile
     local profile_path="" section_name="" section_path=""
-    local preferred_re="^(dev-edition-default|default-release|default)$"
 
     while IFS='=' read -r key value; do
         key="${key%%[[:space:]]*}"
@@ -535,16 +507,15 @@ detect_firefox_profile() {
             Name) section_name="$value" ;;
             Path) section_path="$value" ;;
         esac
-        if [[ -n "$section_name" && -n "$section_path" && "$section_name" =~ $preferred_re ]]; then
+        if [[ "$section_name" == "dev-edition-default" && -n "$section_path" ]]; then
             profile_path="$section_path"
             break
         fi
     done < "$ff_root/profiles.ini"
 
-    # If multiple profiles matched, prefer dev-edition-default
     if [[ -z "$profile_path" ]]; then
-        error "No suitable Firefox profile found in $ff_root/profiles.ini"
-        error "Expected one of: dev-edition-default, default-release, default"
+        error "Firefox Developer Edition profile not found in $ff_root/profiles.ini"
+        error "Install Firefox Developer Edition and launch it once to create a profile"
         return 1
     fi
 
@@ -649,12 +620,9 @@ step_dns() {
     header "Setting up DNS (systemd-resolved + Cloudflare DNS-over-TLS)"
     needs_sudo
 
-    # Install resolved.conf
-    if [[ -f /etc/systemd/resolved.conf ]] && diff -q "$DOTFILES/etc/systemd/resolved.conf" /etc/systemd/resolved.conf &>/dev/null; then
-        success "resolved.conf already up to date"
-    else
-        info "Installing resolved.conf..."
-        sudo cp "$DOTFILES/etc/systemd/resolved.conf" /etc/systemd/resolved.conf
+    # Verify resolved.conf is installed (owned by step_system)
+    if ! diff -q "$DOTFILES/etc/systemd/resolved.conf" /etc/systemd/resolved.conf &>/dev/null 2>&1; then
+        warn "resolved.conf is missing or outdated — run the 'system' step first"
     fi
 
     # Enable systemd-resolved
@@ -696,11 +664,23 @@ list_steps() {
     echo
     local i=1
     for entry in "${STEPS[@]}"; do
-        IFS='|' read -r name desc needs_root <<< "$entry"
-        local sudo_badge=""
-        [[ "$needs_root" == "yes" ]] && sudo_badge=" ${YELLOW}(sudo)${NC}"
-        printf '  %b%d%b. %-12s %s%b\n' "$BOLD" "$i" "$NC" "$name" "$desc" "$sudo_badge"
+        IFS='|' read -r name desc needs_root deps <<< "$entry"
+        local badges=""
+        [[ "$needs_root" == "yes" ]] && badges+=" ${YELLOW}(sudo)${NC}"
+        [[ -n "$deps" ]] && badges+=" ${BLUE}(after: $deps)${NC}"
+        printf '  %b%d%b. %-12s %s%b\n' "$BOLD" "$i" "$NC" "$name" "$desc" "$badges"
         ((i++))
+    done
+}
+
+get_step_deps() {
+    local target="$1"
+    for entry in "${STEPS[@]}"; do
+        IFS='|' read -r name _ _ deps <<< "$entry"
+        if [[ "$name" == "$target" ]]; then
+            echo "$deps"
+            return
+        fi
     done
 }
 
@@ -714,14 +694,59 @@ run_step() {
         return 1
     fi
 
-    "$func" || warn "Step '$name' failed (continuing)"
+    # Check dependencies (only when tracking results, i.e. multi-step runs)
+    local deps
+    deps=$(get_step_deps "$name")
+    if [[ -n "$deps" ]]; then
+        IFS=',' read -ra dep_list <<< "$deps"
+        for dep in "${dep_list[@]}"; do
+            for f in "${FAILED[@]}"; do
+                if [[ "$f" == "$dep" ]]; then
+                    warn "Skipping '$name' — dependency '$dep' failed"
+                    SKIPPED+=("$name")
+                    return 0
+                fi
+            done
+        done
+    fi
+
+    # Run in subshell to isolate set -e failures
+    if ( "$func" ); then
+        PASSED+=("$name")
+    else
+        FAILED+=("$name")
+        warn "Step '$name' failed (continuing)"
+    fi
+}
+
+print_summary() {
+    [[ ${#PASSED[@]} -eq 0 && ${#FAILED[@]} -eq 0 && ${#SKIPPED[@]} -eq 0 ]] && return
+
+    header "Summary"
+    for name in "${PASSED[@]}"; do
+        printf '  %b✓%b %s\n' "$GREEN" "$NC" "$name"
+    done
+    for name in "${FAILED[@]}"; do
+        printf '  %b✗%b %s\n' "$RED" "$NC" "$name"
+    done
+    for name in "${SKIPPED[@]}"; do
+        printf '  %b-%b %s (skipped)\n' "$YELLOW" "$NC" "$name"
+    done
+    echo
+
+    if [[ ${#FAILED[@]} -gt 0 ]]; then
+        warn "${#FAILED[@]} step(s) failed"
+    else
+        success "All steps completed successfully"
+    fi
 }
 
 run_all() {
     for entry in "${STEPS[@]}"; do
-        IFS='|' read -r name _ _ <<< "$entry"
+        IFS='|' read -r name _ _ _ <<< "$entry"
         run_step "$name"
     done
+    print_summary
 }
 
 interactive_menu() {
@@ -745,12 +770,13 @@ interactive_menu() {
     for sel in $selection; do
         if [[ "$sel" =~ ^[0-9]+$ ]] && (( sel >= 1 && sel <= ${#STEPS[@]} )); then
             local entry="${STEPS[$((sel-1))]}"
-            IFS='|' read -r name _ _ <<< "$entry"
+            IFS='|' read -r name _ _ _ <<< "$entry"
             run_step "$name"
         else
             error "Invalid selection: $sel"
         fi
     done
+    print_summary
 }
 
 usage() {
@@ -784,6 +810,7 @@ main() {
             for step in "$@"; do
                 run_step "$step"
             done
+            print_summary
             ;;
     esac
 }
