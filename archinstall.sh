@@ -2,11 +2,11 @@
 # archinstall - Automated Arch Linux installation from live ISO
 #
 # Usage (as root on live ISO):
-#   curl -sL raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh | bash
+#   curl -fsSL https://cogikyo.com/archinstall.sh | bash
 #
 # Pulls configuration from this repo, prompts for password, detects disk,
 # patches config, and runs archinstall.
-# After reboot, clone dotfiles and run ./install.sh for post-install setup.
+# After reboot, run the post-install script (it can bootstrap dotfiles automatically).
 
 set -euo pipefail
 
@@ -14,6 +14,7 @@ REPO_RAW="https://raw.githubusercontent.com/cogikyo/dotfiles/master"
 CONFIG="/tmp/arch_config.json"
 CREDS="/tmp/arch_creds.json"
 PASSFILE="/tmp/arch_password.$$"
+ARCH_JSON_SHA256="7c27924a0d22d7e5588e27ab7da32706022e24328c01e555579dcc36fd83ff20"
 
 trap 'rm -f "$CONFIG" "$CREDS" "$PASSFILE"' EXIT
 
@@ -39,6 +40,7 @@ faint()   { printf '%b%s%b\n' "$F" "$*" "$N"; }
 [[ $EUID -eq 0 ]] || die "Run as root from the live ISO"
 command -v python3 >/dev/null || die "python3 is required"
 command -v archinstall >/dev/null || die "archinstall is required"
+command -v sha256sum >/dev/null || die "sha256sum is required"
 
 # Keep generated creds/config private in /tmp.
 umask 077
@@ -47,7 +49,12 @@ umask 077
 
 info "Downloading configuration..."
 curl -fsSL "$REPO_RAW/etc/arch.json" -o "$CONFIG"
-success "Config downloaded"
+
+actual_sha256=$(sha256sum "$CONFIG" | awk '{print $1}')
+if [[ "$actual_sha256" != "$ARCH_JSON_SHA256" ]]; then
+    die "arch.json checksum mismatch: expected $ARCH_JSON_SHA256, got $actual_sha256"
+fi
+success "Config downloaded and verified"
 
 # ── Detect disk ───────────────────────────────────────────────────────────────
 
@@ -171,6 +178,5 @@ echo
 info "Next steps:"
 step "1. Reboot into the new system"
 step "2. Log in as $username"
-step "3. Clone dotfiles:  git clone https://github.com/cogikyo/dotfiles ~/dotfiles"
-step "4. Run post-install: cd ~/dotfiles && ./install.sh"
+step "3. Run post-install (recommended): curl -fsSL https://cogikyo.com/install.sh | bash -s -- all"
 echo
