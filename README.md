@@ -155,11 +155,11 @@ Use **[Rufus](https://rufus.ie/)** — select the ISO, pick your USB drive, and 
 ### 3. Arch Install
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash -s -- arch
+curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash
 ```
 
 ### 4. Post Install
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash -s -- install all
+curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh | bash
 ```
