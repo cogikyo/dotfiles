@@ -1205,7 +1205,7 @@ interactive_menu() {
         return
     fi
 
-    for sel in $selection; do
+    for sel in "${selection[@]}"; do
         if [[ "$sel" =~ ^[0-9]+$ ]] && (( sel >= 1 && sel <= ${#STEPS[@]} )); then
             local entry="${STEPS[$((sel-1))]}"
             IFS='|' read -r name _ _ _ <<< "$entry"
