@@ -175,16 +175,57 @@ ensure_dotfiles_checkout() {
 
 sign_release_checksums() {
     has sha256sum || { error "sha256sum not found"; return 1; }
+    has date || { error "date not found"; return 1; }
 
     local bootstrap_script="$DOTFILES/bootstrap.sh"
     local arch_script="$DOTFILES/archinstall.sh"
     local install_script="$DOTFILES/install.sh"
     local out_file="$DOTFILES/SHA256SUMS"
     local tmp_file
+    local -a release_files=("bootstrap.sh" "archinstall.sh" "install.sh")
+    local changed=0
 
     [[ -f "$bootstrap_script" ]] || { error "Missing file: $bootstrap_script"; return 1; }
     [[ -f "$arch_script" ]] || { error "Missing file: $arch_script"; return 1; }
     [[ -f "$install_script" ]] || { error "Missing file: $install_script"; return 1; }
+
+    if [[ -f "$out_file" ]]; then
+        local rel current_hash previous_hash
+        for rel in "${release_files[@]}"; do
+            current_hash=$(cd "$DOTFILES" && sha256sum "$rel" | awk '{print $1}')
+            previous_hash=$(awk -v f="$rel" '$2==f {print $1}' "$out_file")
+            if [[ -z "$previous_hash" || "$previous_hash" != "$current_hash" ]]; then
+                changed=1
+                break
+            fi
+        done
+    else
+        changed=1
+    fi
+
+    if [[ "$changed" -eq 1 ]]; then
+        local current_version version_prefix version_seq today new_version
+        current_version=$(awk -F'"' '/^BOOTSTRAP_VERSION="/ {print $2; exit}' "$bootstrap_script")
+        [[ -n "$current_version" ]] || { error "Could not read BOOTSTRAP_VERSION from $bootstrap_script"; return 1; }
+
+        today=$(date +%Y.%m.%d)
+        if [[ "$current_version" =~ ^([0-9]{4}\.[0-9]{2}\.[0-9]{2})\.([0-9]+)$ ]]; then
+            version_prefix="${BASH_REMATCH[1]}"
+            version_seq="${BASH_REMATCH[2]}"
+            if [[ "$version_prefix" == "$today" ]]; then
+                new_version="$today.$((version_seq + 1))"
+            else
+                new_version="$today.1"
+            fi
+        else
+            new_version="$today.1"
+        fi
+
+        sed -i -E "0,/^BOOTSTRAP_VERSION=\"[^\"]+\"/s//BOOTSTRAP_VERSION=\"$new_version\"/" "$bootstrap_script"
+        success "Bootstrap version bumped: $current_version → $new_version"
+    else
+        info "No release script changes detected; bootstrap version unchanged"
+    fi
 
     tmp_file=$(mktemp)
     (
