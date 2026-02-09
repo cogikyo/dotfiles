@@ -20,6 +20,15 @@ return {
 
 			-- stylua: ignore start
 			map("<CR>",    api.node.open.edit,               "Open")
+			map("<Right>", function()
+				local node = api.tree.get_node_under_cursor()
+				if node and node.type == "file" then
+					api.node.open.edit()
+					api.tree.close()
+				else
+					api.node.open.edit()
+				end
+			end, "Open and close tree")
 			map("zz",      api.tree.change_root_to_node,     "CD")
 			map("zu",      api.tree.change_root_to_parent,   "Up")
 			map("<Up>",    api.node.navigate.sibling.prev,   "Previous Sibling")
@@ -27,7 +36,6 @@ return {
 			map("<Left>",  api.node.navigate.parent,         "Parent Directory")
 			map("<C-v>",   api.node.open.vertical,           "Open: Vertical Split")
 			map("<C-h>",   api.node.open.horizontal,         "Open: Horizontal Split")
-			map("<C-t>",   api.node.open.tab,                "Open: New Tab")
 			map("zc",      api.node.navigate.parent_close,   "Close Directory")
 			map("I",       api.tree.toggle_gitignore_filter, "Toggle Git Ignore")
 			map(".",       api.tree.toggle_hidden_filter,    "Toggle Dotfiles")
@@ -77,6 +85,7 @@ return {
 				signcolumn = "no",
 			},
 			renderer = {
+				root_folder_label = false,
 				highlight_git = "icon",
 				indent_markers = {
 					enable = true,
