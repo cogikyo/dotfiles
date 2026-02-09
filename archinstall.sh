@@ -1,30 +1,29 @@
 #!/usr/bin/env bash
-# archinstall - Automated Arch Linux installation from live ISO
+# archinstall - Local partial-config launcher
 #
-# Usage (as root on live ISO):
-#   bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh) arch
-#   ./archinstall.sh            # partial config + interactive archinstall (default)
-#   ./archinstall.sh --auto     # same as default (explicit)
+# Usage:
+#   ./archinstall.sh
+#   ./archinstall.sh --auto
 #
-# Pulls partial configuration from this repo and runs non-silent archinstall.
-# Disk partitioning and user authentication are completed in the archinstall UI.
-# After reboot, run the post-install script (it can bootstrap dotfiles automatically).
+# This script only prepares a partial config from ./etc/arch.json and launches
+# non-silent archinstall. Disk partitioning and authentication are done in the UI.
 
 set -euo pipefail
 
-REPO_RAW="https://raw.githubusercontent.com/cogikyo/dotfiles/master"
-SHA256SUMS_URL="$REPO_RAW/SHA256SUMS"
+ARCHINSTALL_VERSION="2026.02.09.2"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SOURCE_CONFIG="$SCRIPT_DIR/etc/arch.json"
+TMP_SOURCE_CONFIG="/tmp/arch_source_config.json"
 CONFIG="/tmp/arch_config.json"
-ARCH_JSON_SHA256="db6644f33d47515285ec948528713345cf9eba73d24df633ec8146f9278f233d"
+DOTFILES_REF="${DOTFILES_REF:-master}"
+DOTFILES_RAW_BASE="${DOTFILES_RAW_BASE:-https://raw.githubusercontent.com/cogikyo/dotfiles/$DOTFILES_REF}"
 
-trap 'rm -f "$CONFIG"' EXIT
+trap 'rm -f "$CONFIG" "$TMP_SOURCE_CONFIG"' EXIT
 
 R='\033[0;31m'
 G='\033[0;32m'
 Y='\033[1;33m'
 B='\033[1;34m'
-M='\033[0;35m'
-F='\033[90m'
 N='\033[0m'
 
 info()    { printf '%b(↓)%b %s\n' "$B" "$N" "$*"; }
@@ -34,33 +33,24 @@ finish()  { printf '\n%b(✓✓) %s%b\n' "$G" "$*" "$N"; }
 warn()    { printf '\n%b(!) %s%b\n' "$Y" "$*" "$N"; }
 error()   { printf '%b(✗)%b %s\n' "$R" "$N" "$*" >&2; }
 die()     { printf '%b(✗)%b %s\n' "$R" "$N" "$*" >&2; exit 1; }
-ask()     { printf '%b(?)%b %s\n' "$Y" "$N" "$*"; }
-header()  { printf '\n%b━━━ %s ━━━%b\n\n' "$M" "$*" "$N"; }
-faint()   { printf '%b%s%b\n' "$F" "$*" "$N"; }
-
-[[ $EUID -eq 0 ]] || die "Run as root from the live ISO"
-command -v python3 >/dev/null || die "python3 is required"
-command -v archinstall >/dev/null || die "archinstall is required"
-command -v sha256sum >/dev/null || die "sha256sum is required"
-command -v curl >/dev/null || die "curl is required"
-
-# Keep generated creds/config private in /tmp.
-umask 077
-
-firmware_mode="bios"
-if [[ -d /sys/firmware/efi ]]; then
-    firmware_mode="uefi"
-fi
-info "Detected firmware mode: $firmware_mode"
+header()  { printf '%b== dotfiles archinstall v%s ==%b\n' "$B" "$ARCHINSTALL_VERSION" "$N"; }
 
 usage() {
     cat <<'EOF'
 Usage: archinstall.sh [--auto]
 
-Modes:
-  --auto     Run archinstall with partial repo config (default behavior)
+Notes:
+  --auto is accepted for compatibility, but default behavior is already auto.
 EOF
 }
+
+# Print version banner before any early validation errors.
+header
+
+[[ $EUID -eq 0 ]] || die "Run as root from the live ISO"
+command -v python3 >/dev/null || die "python3 is required"
+command -v archinstall >/dev/null || die "archinstall is required"
+command -v curl >/dev/null || die "curl is required"
 
 if [[ $# -gt 0 ]]; then
     case "$1" in
@@ -71,93 +61,30 @@ if [[ $# -gt 0 ]]; then
             usage
             exit 0
             ;;
-        --guided)
-            die "--guided has been removed. Use default/--auto."
-            ;;
         *)
-            die "Unknown argument: $1 (use --auto)"
+            die "Unknown argument: $1"
             ;;
     esac
 fi
 [[ $# -eq 0 ]] || die "Unexpected extra arguments: $*"
 
-refresh_archinstall_tooling() {
-    if [[ "${DOTFILES_SKIP_ARCHINSTALL_UPDATE:-0}" == "1" ]]; then
-        warn "Skipping archinstall/keyring refresh (DOTFILES_SKIP_ARCHINSTALL_UPDATE=1)"
-        return 0
-    fi
-
-    info "Refreshing archinstall + archlinux-keyring from repos..."
-    if pacman -Sy --noconfirm archlinux-keyring archinstall >/dev/null 2>&1; then
-        success "archinstall tooling refreshed"
-    else
-        warn "Failed to refresh archinstall tooling; continuing with ISO-provided versions"
-    fi
-}
-
-verify_self_checksum() {
-    if [[ "${DOTFILES_SKIP_SELF_VERIFY:-0}" == "1" ]]; then
-        warn "Skipping script checksum verification (DOTFILES_SKIP_SELF_VERIFY=1)"
-        return 0
-    fi
-
-    local script_path script_name expected actual tmp_sums
-    script_path=$(readlink -f -- "${BASH_SOURCE[0]:-$0}" 2>/dev/null || printf '%s' "${BASH_SOURCE[0]:-$0}")
-    script_name=$(basename "$script_path")
-
-    if [[ "$script_name" != "archinstall.sh" ]]; then
-        warn "Skipping script checksum verification (unexpected script name: $script_name)"
-        warn "Save as archinstall.sh to enable automatic self-verification"
-        return 0
-    fi
-
-    tmp_sums=$(mktemp)
-    curl -fsSL "$SHA256SUMS_URL" -o "$tmp_sums" || die "Failed to download SHA256SUMS from $SHA256SUMS_URL"
-    expected=$(awk '$2=="archinstall.sh" {print $1}' "$tmp_sums")
-    rm -f "$tmp_sums"
-
-    [[ -n "$expected" ]] || die "archinstall.sh entry not found in SHA256SUMS"
-
-    actual=$(sha256sum "$script_path" | awk '{print $1}')
-    if [[ "$actual" != "$expected" ]]; then
-        die "archinstall.sh checksum mismatch: expected $expected, got $actual"
-    fi
-
-    success "Script checksum verified"
-}
-
-# ── Download config ───────────────────────────────────────────────────────────
-
-verify_self_checksum
-
-refresh_archinstall_tooling
-
-run_archinstall() {
-    if ! archinstall "$@"; then
-        error "archinstall failed"
-        warn "Recent archinstall log output:"
-        if [[ -f /var/log/archinstall/install.log ]]; then
-            tail -n 120 /var/log/archinstall/install.log || true
-        else
-            warn "No /var/log/archinstall/install.log found"
-        fi
-        exit 1
-    fi
-}
-
-info "Downloading configuration..."
-curl -fsSL "$REPO_RAW/etc/arch.json" -o "$CONFIG"
-
-actual_sha256=$(sha256sum "$CONFIG" | awk '{print $1}')
-if [[ "$actual_sha256" != "$ARCH_JSON_SHA256" ]]; then
-    die "arch.json checksum mismatch: expected $ARCH_JSON_SHA256, got $actual_sha256"
+firmware_mode="bios"
+if [[ -d /sys/firmware/efi ]]; then
+    firmware_mode="uefi"
 fi
-success "Config downloaded and verified"
+info "Detected firmware mode: $firmware_mode"
 
-# ── Patch partial config ──────────────────────────────────────────────────────
+if [[ -f "$SOURCE_CONFIG" ]]; then
+    info "Loading local config: $SOURCE_CONFIG"
+    cp -f "$SOURCE_CONFIG" "$CONFIG"
+else
+    info "Local config not found at $SOURCE_CONFIG"
+    info "Downloading config: $DOTFILES_RAW_BASE/etc/arch.json"
+    curl -fsSL "$DOTFILES_RAW_BASE/etc/arch.json" -o "$TMP_SOURCE_CONFIG" || die "Failed to download etc/arch.json"
+    cp -f "$TMP_SOURCE_CONFIG" "$CONFIG"
+fi
 
 info "Preparing partial config..."
-
 python3 - "$CONFIG" "$firmware_mode" << 'PYEOF'
 import json
 import sys
@@ -167,43 +94,41 @@ config_path, firmware_mode = sys.argv[1:3]
 with open(config_path) as f:
     config = json.load(f)
 
-# Let archinstall collect these interactively in the UI.
+# Let archinstall handle these interactively.
 config.pop("disk_config", None)
 config.pop("auth_config", None)
 
-# Avoid a known archinstall hang/failure path around keymap application
-# ("Setting keyboard language to us") on some ISO versions.
+# Avoid pre-seeding keymap.
 locale_cfg = config.get("locale_config")
 if isinstance(locale_cfg, dict):
     locale_cfg.pop("kb_layout", None)
 
-# Systemd-boot is UEFI-only; use Grub in BIOS/legacy mode.
+# Systemd-boot is UEFI-only.
 bootloader_cfg = config.setdefault("bootloader_config", {})
-if firmware_mode == "bios":
-    bootloader_cfg["bootloader"] = "Grub"
-else:
-    bootloader_cfg["bootloader"] = "Systemd-boot"
+bootloader_cfg["bootloader"] = "Grub" if firmware_mode == "bios" else "Systemd-boot"
 
 with open(config_path, "w") as f:
     json.dump(config, f, indent=4)
 PYEOF
-
-success "Partial config ready"
-
-# ── Run archinstall ───────────────────────────────────────────────────────────
+success "Partial config ready: $CONFIG"
 
 info "Starting archinstall..."
-echo
-
-warn "Disk partitioning and user authentication will be set in archinstall UI"
-run_archinstall --config "$CONFIG"
-
-# ── Done ──────────────────────────────────────────────────────────────────────
+warn "Set disk partitioning and authentication in the archinstall UI"
+if ! archinstall --config "$CONFIG"; then
+    error "archinstall failed"
+    warn "Recent archinstall log output:"
+    if [[ -f /var/log/archinstall/install.log ]]; then
+        tail -n 120 /var/log/archinstall/install.log || true
+    else
+        warn "No /var/log/archinstall/install.log found"
+    fi
+    exit 1
+fi
 
 finish "Installation complete!"
 echo
 info "Next steps:"
 step "1. Reboot into the new system"
 step "2. Log in as your configured user"
-step "3. Run post-install: bash <(curl -fsSL $REPO_RAW/bootstrap.sh) install -- all"
+step "3. Clone dotfiles and run: ./install.sh all"
 echo

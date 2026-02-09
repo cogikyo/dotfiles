@@ -6,15 +6,14 @@
 #   ./install.sh all         # Run all steps in order
 #   ./install.sh link go     # Run specific steps by name
 #   ./install.sh --list      # List available steps
-#   ./install.sh --sign      # Regenerate SHA256SUMS for publishable scripts (bootstrap/archinstall/install)
 #   ./install.sh --help      # Show usage
 
 set -euo pipefail
 
+INSTALL_VERSION="2026.02.09.1"
 DOTFILES="${DOTFILES:-$HOME/dotfiles}"
 DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/cogikyo/dotfiles.git}"
 DOTFILES_REF="${DOTFILES_REF:-master}"
-DOTFILES_RAW_BASE="${DOTFILES_RAW_BASE:-https://raw.githubusercontent.com/cogikyo/dotfiles/$DOTFILES_REF}"
 
 # Colors
 R='\033[0;31m'
@@ -35,6 +34,7 @@ error()   { printf '%b(✗)%b %s\n' "$R" "$N" "$*" >&2; }
 ask()     { printf '%b(?)%b %s\n' "$Y" "$N" "$*"; }
 header()  { printf '\n%b━━━ %s ━━━%b\n\n' "$M" "$*" "$N"; }
 faint()   { printf '%b%s%b\n' "$F" "$*" "$N"; }
+script_header() { printf '%b== dotfiles install v%s ==%b\n' "$B" "$INSTALL_VERSION" "$N"; }
 
 # Step definitions: name|description|requires_sudo|depends
 STEPS=(
@@ -95,58 +95,6 @@ canonpath() {
     fi
 }
 
-verify_self_checksum() {
-    if [[ "${DOTFILES_SKIP_SELF_VERIFY:-0}" == "1" ]]; then
-        warn "Skipping script checksum verification (DOTFILES_SKIP_SELF_VERIFY=1)"
-        return 0
-    fi
-
-    if ! has curl || ! has sha256sum; then
-        warn "curl/sha256sum not found; skipping script checksum verification"
-        return 0
-    fi
-
-    local script_path script_real dotfiles_install script_name tmp_sums expected actual
-    script_path="${BASH_SOURCE[0]:-$0}"
-    script_real=$(canonpath "$script_path")
-    dotfiles_install=$(canonpath "$DOTFILES/install.sh")
-    script_name=$(basename "$script_real")
-
-    if [[ "$script_real" == "$dotfiles_install" ]]; then
-        info "Running installer from $DOTFILES; skipping self-checksum verification"
-        return 0
-    fi
-
-    if [[ "$script_name" != "install.sh" ]]; then
-        warn "Skipping script checksum verification (unexpected script name: $script_name)"
-        warn "Save as install.sh to enable automatic self-verification"
-        return 0
-    fi
-
-    tmp_sums=$(mktemp)
-    if ! curl -fsSL "$DOTFILES_RAW_BASE/SHA256SUMS" -o "$tmp_sums"; then
-        rm -f "$tmp_sums"
-        warn "Failed to download SHA256SUMS; skipping script checksum verification"
-        return 0
-    fi
-
-    expected=$(awk '$2=="install.sh" {print $1}' "$tmp_sums")
-    rm -f "$tmp_sums"
-
-    if [[ -z "$expected" ]]; then
-        warn "install.sh entry missing from SHA256SUMS; skipping script checksum verification"
-        return 0
-    fi
-
-    actual=$(sha256sum "$script_real" | awk '{print $1}')
-    if [[ "$actual" != "$expected" ]]; then
-        error "install.sh checksum mismatch: expected $expected, got $actual"
-        exit 1
-    fi
-
-    success "Script checksum verified"
-}
-
 ensure_dotfiles_checkout() {
     local script_path script_real target_real
     script_path="${BASH_SOURCE[0]:-$0}"
@@ -171,71 +119,6 @@ ensure_dotfiles_checkout() {
 
     info "Re-running installer from $DOTFILES/install.sh..."
     exec "$DOTFILES/install.sh" "$@"
-}
-
-sign_release_checksums() {
-    has sha256sum || { error "sha256sum not found"; return 1; }
-    has date || { error "date not found"; return 1; }
-
-    local bootstrap_script="$DOTFILES/bootstrap.sh"
-    local arch_script="$DOTFILES/archinstall.sh"
-    local install_script="$DOTFILES/install.sh"
-    local out_file="$DOTFILES/SHA256SUMS"
-    local tmp_file
-    local -a release_files=("bootstrap.sh" "archinstall.sh" "install.sh")
-    local changed=0
-
-    [[ -f "$bootstrap_script" ]] || { error "Missing file: $bootstrap_script"; return 1; }
-    [[ -f "$arch_script" ]] || { error "Missing file: $arch_script"; return 1; }
-    [[ -f "$install_script" ]] || { error "Missing file: $install_script"; return 1; }
-
-    if [[ -f "$out_file" ]]; then
-        local rel current_hash previous_hash
-        for rel in "${release_files[@]}"; do
-            current_hash=$(cd "$DOTFILES" && sha256sum "$rel" | awk '{print $1}')
-            previous_hash=$(awk -v f="$rel" '$2==f {print $1}' "$out_file")
-            if [[ -z "$previous_hash" || "$previous_hash" != "$current_hash" ]]; then
-                changed=1
-                break
-            fi
-        done
-    else
-        changed=1
-    fi
-
-    if [[ "$changed" -eq 1 ]]; then
-        local current_version version_prefix version_seq today new_version
-        current_version=$(awk -F'"' '/^BOOTSTRAP_VERSION="/ {print $2; exit}' "$bootstrap_script")
-        [[ -n "$current_version" ]] || { error "Could not read BOOTSTRAP_VERSION from $bootstrap_script"; return 1; }
-
-        today=$(date +%Y.%m.%d)
-        if [[ "$current_version" =~ ^([0-9]{4}\.[0-9]{2}\.[0-9]{2})\.([0-9]+)$ ]]; then
-            version_prefix="${BASH_REMATCH[1]}"
-            version_seq="${BASH_REMATCH[2]}"
-            if [[ "$version_prefix" == "$today" ]]; then
-                new_version="$today.$((version_seq + 1))"
-            else
-                new_version="$today.1"
-            fi
-        else
-            new_version="$today.1"
-        fi
-
-        sed -i -E "0,/^BOOTSTRAP_VERSION=\"[^\"]+\"/s//BOOTSTRAP_VERSION=\"$new_version\"/" "$bootstrap_script"
-        success "Bootstrap version bumped: $current_version → $new_version"
-    else
-        info "No release script changes detected; bootstrap version unchanged"
-    fi
-
-    tmp_file=$(mktemp)
-    (
-        cd "$DOTFILES"
-        sha256sum bootstrap.sh archinstall.sh install.sh > "$tmp_file"
-    )
-    mv -f "$tmp_file" "$out_file"
-
-    success "Updated checksums: $out_file"
-    cat "$out_file"
 }
 
 ensure_rustup_stable() {
@@ -1270,15 +1153,14 @@ usage() {
     echo
     echo "Options:"
     echo "  --list, -l    List available steps"
-    echo "  --sign        Regenerate SHA256SUMS for bootstrap.sh, archinstall.sh, and install.sh"
     echo "  --help, -h    Show this help"
     echo
     list_steps
 }
 
 main() {
-    verify_self_checksum
     ensure_dotfiles_checkout "$@"
+    script_header
 
     if [[ $# -eq 0 ]]; then
         if ! require_desktop_environment; then
@@ -1291,7 +1173,6 @@ main() {
 
     case "$1" in
         --list|-l)  list_steps ;;
-        --sign)     sign_release_checksums ;;
         --help|-h)  usage ;;
         all)
             if ! require_desktop_environment; then
