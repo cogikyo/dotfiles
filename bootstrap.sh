@@ -8,7 +8,7 @@
 
 set -euo pipefail
 
-BOOTSTRAP_VERSION="2026.02.08.1"
+BOOTSTRAP_VERSION="2026.02.08.14"
 REPO_RAW_ROOT="${DOTFILES_RAW_ROOT:-https://raw.githubusercontent.com/cogikyo/dotfiles}"
 DEFAULT_REF="${DOTFILES_REF:-master}"
 

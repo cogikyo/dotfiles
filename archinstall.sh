@@ -3,10 +3,11 @@
 #
 # Usage (as root on live ISO):
 #   bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh) arch
-#   ./archinstall.sh
+#   ./archinstall.sh            # partial config + interactive archinstall (default)
+#   ./archinstall.sh --auto     # same as default (explicit)
 #
-# Pulls configuration from this repo, prompts for password, detects disk,
-# patches config, and runs archinstall.
+# Pulls partial configuration from this repo and runs non-silent archinstall.
+# Disk partitioning and user authentication are completed in the archinstall UI.
 # After reboot, run the post-install script (it can bootstrap dotfiles automatically).
 
 set -euo pipefail
@@ -14,11 +15,9 @@ set -euo pipefail
 REPO_RAW="https://raw.githubusercontent.com/cogikyo/dotfiles/master"
 SHA256SUMS_URL="$REPO_RAW/SHA256SUMS"
 CONFIG="/tmp/arch_config.json"
-CREDS="/tmp/arch_creds.json"
-PASSFILE="/tmp/arch_password.$$"
-ARCH_JSON_SHA256="7c27924a0d22d7e5588e27ab7da32706022e24328c01e555579dcc36fd83ff20"
+ARCH_JSON_SHA256="db6644f33d47515285ec948528713345cf9eba73d24df633ec8146f9278f233d"
 
-trap 'rm -f "$CONFIG" "$CREDS" "$PASSFILE"' EXIT
+trap 'rm -f "$CONFIG"' EXIT
 
 R='\033[0;31m'
 G='\033[0;32m'
@@ -47,6 +46,54 @@ command -v curl >/dev/null || die "curl is required"
 
 # Keep generated creds/config private in /tmp.
 umask 077
+
+firmware_mode="bios"
+if [[ -d /sys/firmware/efi ]]; then
+    firmware_mode="uefi"
+fi
+info "Detected firmware mode: $firmware_mode"
+
+usage() {
+    cat <<'EOF'
+Usage: archinstall.sh [--auto]
+
+Modes:
+  --auto     Run archinstall with partial repo config (default behavior)
+EOF
+}
+
+if [[ $# -gt 0 ]]; then
+    case "$1" in
+        --auto)
+            shift
+            ;;
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --guided)
+            die "--guided has been removed. Use default/--auto."
+            ;;
+        *)
+            die "Unknown argument: $1 (use --auto)"
+            ;;
+    esac
+fi
+[[ $# -eq 0 ]] || die "Unexpected extra arguments: $*"
+
+refresh_archinstall_tooling() {
+    if [[ "${DOTFILES_SKIP_ARCHINSTALL_UPDATE:-0}" == "1" ]]; then
+        warn "Skipping archinstall/keyring refresh (DOTFILES_SKIP_ARCHINSTALL_UPDATE=1)"
+        return 0
+    fi
+
+    info "Refreshing archinstall + archlinux-keyring from repos..."
+    if pacman -Sy --noconfirm archlinux-keyring archinstall >/dev/null 2>&1; then
+        success "archinstall tooling refreshed"
+    else
+        warn "Failed to refresh archinstall tooling; continuing with ISO-provided versions"
+    fi
+}
 
 verify_self_checksum() {
     if [[ "${DOTFILES_SKIP_SELF_VERIFY:-0}" == "1" ]]; then
@@ -83,6 +130,21 @@ verify_self_checksum() {
 
 verify_self_checksum
 
+refresh_archinstall_tooling
+
+run_archinstall() {
+    if ! archinstall "$@"; then
+        error "archinstall failed"
+        warn "Recent archinstall log output:"
+        if [[ -f /var/log/archinstall/install.log ]]; then
+            tail -n 120 /var/log/archinstall/install.log || true
+        else
+            warn "No /var/log/archinstall/install.log found"
+        fi
+        exit 1
+    fi
+}
+
 info "Downloading configuration..."
 curl -fsSL "$REPO_RAW/etc/arch.json" -o "$CONFIG"
 
@@ -92,152 +154,49 @@ if [[ "$actual_sha256" != "$ARCH_JSON_SHA256" ]]; then
 fi
 success "Config downloaded and verified"
 
-# ── Detect disk ───────────────────────────────────────────────────────────────
+# ── Patch partial config ──────────────────────────────────────────────────────
 
-echo
-info "Available disks:"
-lsblk -dpno NAME,SIZE,MODEL | grep -v loop
-echo
+info "Preparing partial config..."
 
-mapfile -t disks < <(lsblk -dpno NAME | grep -v loop)
-disk=""
-disk_bytes=""
-
-if [[ ${#disks[@]} -eq 0 ]]; then
-    die "No target disks detected"
-elif [[ ${#disks[@]} -eq 1 ]]; then
-    disk="${disks[0]}"
-    info "Auto-selected: $disk"
-else
-    echo "Select target disk:"
-    select disk in "${disks[@]}"; do
-        [[ -n "${disk:-}" ]] && break
-    done
-fi
-
-[[ -n "${disk:-}" ]] || die "No disk selected (input closed before a selection was made)"
-disk_bytes=$(lsblk -bdno SIZE "$disk" | head -n1)
-[[ "$disk_bytes" =~ ^[0-9]+$ ]] || die "Failed to read disk size for $disk"
-
-warn "ALL DATA on $disk will be erased"
-read -rp "Continue? [y/N] " yn
-[[ "$yn" =~ ^[Yy] ]] || die "Aborted"
-
-# ── Prompt for hostname, username, and password ──────────────────────────────
-
-echo
-read -rp "Hostname: " hostname
-[[ -n "$hostname" ]] || die "Hostname cannot be empty"
-
-read -rp "Username [cullyn]: " username
-username="${username:-cullyn}"
-
-echo
-while :; do
-    read -rsp "Password for $username (+ root): " password
-    echo
-    read -rsp "Confirm: " password_confirm
-    echo
-
-    if [[ -z "$password" ]]; then
-        warn "Password cannot be empty. Try again."
-        continue
-    fi
-
-    if [[ "$password" != "$password_confirm" ]]; then
-        warn "Passwords do not match. Try again."
-        continue
-    fi
-
-    break
-done
-
-# ── Disk size ────────────────────────────────────────────────────────────────
-
-echo
-info "Btrfs partition sizing (boot partition uses 1 GiB)"
-read -rp "Use full remaining disk? [Y/n] or enter size in GiB: " disk_size
-disk_size="${disk_size:-y}"
-
-if [[ ! "$disk_size" =~ ^[Yy]([Ee][Ss])?$ ]] && [[ ! "$disk_size" =~ ^[0-9]+\.?[0-9]*$ ]]; then
-    die "Invalid disk size: '$disk_size' (enter 'y' or a number in GiB)"
-fi
-
-# ── Patch config and create credentials ───────────────────────────────────────
-
-info "Preparing config for $disk..."
-
-printf '%s\n' "$password" > "$PASSFILE"
-
-python3 - "$CONFIG" "$CREDS" "$PASSFILE" "$hostname" "$username" "$disk" "$disk_size" "$disk_bytes" << 'PYEOF'
+python3 - "$CONFIG" "$firmware_mode" << 'PYEOF'
 import json
 import sys
 
-config_path, creds_path, passfile_path, hostname, username, disk, disk_size, disk_bytes = sys.argv[1:9]
-disk_bytes = int(disk_bytes)
-with open(passfile_path) as f:
-    password = f.read().rstrip("\n")
+config_path, firmware_mode = sys.argv[1:3]
 
 with open(config_path) as f:
     config = json.load(f)
 
-config["hostname"] = hostname
+# Let archinstall collect these interactively in the UI.
+config.pop("disk_config", None)
+config.pop("auth_config", None)
 
-for mod in config["disk_config"]["device_modifications"]:
-    mod["device"] = disk
+# Avoid a known archinstall hang/failure path around keymap application
+# ("Setting keyboard language to us") on some ISO versions.
+locale_cfg = config.get("locale_config")
+if isinstance(locale_cfg, dict):
+    locale_cfg.pop("kb_layout", None)
 
-device_mod = config["disk_config"]["device_modifications"][0]
-btrfs_part = device_mod["partitions"][1]
-
-# Full-disk installs: calculate an explicit byte size to avoid unit compatibility issues.
-if disk_size.lower().startswith("y"):
-    start_arg = btrfs_part.get("start", {})
-    start_bytes = int(start_arg.get("value", 0))
-    full_size_bytes = max(disk_bytes - start_bytes - (1024 * 1024), 1024 * 1024 * 1024)
-    btrfs_part["size"] = {
-        "sector_size": None,
-        "unit": "B",
-        "value": full_size_bytes,
-    }
-
-# Custom GiB size: patch the btrfs partition (second partition).
+# Systemd-boot is UEFI-only; use Grub in BIOS/legacy mode.
+bootloader_cfg = config.setdefault("bootloader_config", {})
+if firmware_mode == "bios":
+    bootloader_cfg["bootloader"] = "Grub"
 else:
-    btrfs_part["size"] = {
-        "sector_size": {"unit": "B", "value": 512},
-        "unit": "GiB",
-        "value": float(disk_size),
-    }
+    bootloader_cfg["bootloader"] = "Systemd-boot"
 
 with open(config_path, "w") as f:
     json.dump(config, f, indent=4)
-
-creds = {
-    "!root-password": password,
-    "!users": [
-        {
-            "username": username,
-            "!password": password,
-            "sudo": True,
-        }
-    ],
-}
-
-with open(creds_path, "w") as f:
-    json.dump(creds, f, indent=4)
 PYEOF
 
-chmod 600 "$CREDS"
-unset password password_confirm
-
-success "Config patched for $disk"
-success "Credentials ready"
+success "Partial config ready"
 
 # ── Run archinstall ───────────────────────────────────────────────────────────
 
 info "Starting archinstall..."
 echo
 
-archinstall --config "$CONFIG" --creds "$CREDS" --silent
+warn "Disk partitioning and user authentication will be set in archinstall UI"
+run_archinstall --config "$CONFIG"
 
 # ── Done ──────────────────────────────────────────────────────────────────────
 
@@ -245,6 +204,6 @@ finish "Installation complete!"
 echo
 info "Next steps:"
 step "1. Reboot into the new system"
-step "2. Log in as $username"
+step "2. Log in as your configured user"
 step "3. Run post-install: bash <(curl -fsSL $REPO_RAW/bootstrap.sh) install -- all"
 echo
