@@ -265,8 +265,8 @@ return {
 							if home and path == home then
 								return vim.env.USER or vim.fn.fnamemodify(home, ":t")
 							end
-							if home and path:sub(1, #home + 1) == home .. "/" then
-								return path:sub(#home + 2)
+							if home and vim.fn.fnamemodify(path, ":h") == home then
+								return vim.fn.fnamemodify(path, ":t")
 							end
 							return "../" .. vim.fn.fnamemodify(path, ":t")
 						end
