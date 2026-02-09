@@ -155,11 +155,14 @@ Use **[Rufus](https://rufus.ie/)** — select the ISO, pick your USB drive, and 
 ### 3. Arch Install
 
 ```sh
-bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh)
 ```
+
+1. Set partition configuration via installer
+2. Set authentication and user via installer
 
 ### 4. Post Install
 
 ```sh
-bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/bootstrap.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/install.sh)
 ```
