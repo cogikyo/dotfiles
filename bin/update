@@ -26,6 +26,30 @@ success() { printf "${GREEN}==>${NC} %s\n" "$*"; }
 warn()    { printf "${YELLOW}==>${NC} %s\n" "$*"; }
 error()   { printf "${RED}==>${NC} %s\n" "$*" >&2; }
 
+has() { command -v "$1" &>/dev/null; }
+
+retry_cmd() {
+  local attempts="$1"
+  local delay="$2"
+  shift 2
+  local n=1
+  while true; do
+    if "$@"; then
+      return 0
+    fi
+    if (( n >= attempts )); then
+      return 1
+    fi
+    warn "Command failed (attempt $n/$attempts): $*"
+    sleep "$delay"
+    ((n++))
+  done
+}
+
+require_paru() {
+  has paru || { error "paru not found. Run install.sh packages first."; exit 1; }
+}
+
 # -git packages that have stable/binary alternatives
 # format: git-name|alternative|reason
 REPLACEMENTS=(
@@ -72,8 +96,10 @@ save_lists() {
 }
 
 do_update() {
+  require_paru
+
   info "Updating system..."
-  paru -Syu
+  retry_cmd 3 5 paru -Syu
 
   info "Removing orphaned packages..."
   local orphans
@@ -89,6 +115,13 @@ do_update() {
 }
 
 do_install() {
+  local noninteractive=0
+  if [[ "${DOTFILES_INSTALL_NONINTERACTIVE:-0}" == "1" || ! -t 0 ]]; then
+    noninteractive=1
+  fi
+
+  require_paru
+
   # Verify sudo works before starting
   if ! sudo -v; then
     error "sudo access required for package installation"
@@ -101,22 +134,38 @@ do_install() {
     exit 1
   fi
 
-  # Repo packages: fast, non-interactive
-  local pkg_count
-  pkg_count=$(wc -l < "$PKG_LIST")
-  info "Installing $pkg_count repo packages..."
-  paru -S --needed --noconfirm - < "$PKG_LIST"
-  success "Repo packages done"
+  # Repo packages
+  local repo_pkgs=()
+  mapfile -t repo_pkgs < <(sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$PKG_LIST")
+  local pkg_count=${#repo_pkgs[@]}
+  if (( pkg_count > 0 )); then
+    info "Installing $pkg_count repo packages..."
+    retry_cmd 3 5 paru -S --needed --noconfirm "${repo_pkgs[@]}"
+    success "Repo packages done"
+  else
+    success "No repo packages to install"
+  fi
 
-  # AUR packages: interactive (some need user input)
+  # AUR packages
   if [[ -f "$AUR_LIST" ]]; then
-    local aur_count
-    aur_count=$(wc -l < "$AUR_LIST")
-    info "Installing $aur_count AUR packages (interactive)..."
-    warn "AUR packages may prompt for input — this is intentional"
-    echo
-    paru -S --needed --skipreview - < "$AUR_LIST"
-    success "AUR packages done"
+    local aur_pkgs=()
+    mapfile -t aur_pkgs < <(sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$AUR_LIST")
+    local aur_count=${#aur_pkgs[@]}
+    if (( aur_count > 0 )); then
+      if [[ $noninteractive -eq 1 ]]; then
+        info "Installing $aur_count AUR packages (non-interactive)..."
+        retry_cmd 3 5 paru -S --needed --skipreview --noconfirm "${aur_pkgs[@]}"
+      else
+        info "Installing $aur_count AUR packages (interactive)..."
+        warn "AUR packages may prompt for input — this is intentional"
+        echo
+        retry_cmd 3 5 paru -S --needed --skipreview "${aur_pkgs[@]}"
+      fi
+      echo
+      success "AUR packages done"
+    else
+      success "No AUR packages to install"
+    fi
   fi
 
   echo
@@ -128,6 +177,8 @@ do_install() {
 }
 
 do_dry_run() {
+  require_paru
+
   info "[dry-run] Would update system with: paru -Syu"
   echo
 
@@ -147,6 +198,8 @@ do_dry_run() {
 }
 
 do_dry_install() {
+  require_paru
+
   if [[ ! -f "$PKG_LIST" ]]; then
     error "Package list not found: $PKG_LIST"
     exit 1
@@ -177,6 +230,8 @@ do_dry_install() {
 }
 
 check_sources() {
+  require_paru
+
   info "Checking for -git packages with better alternatives..."
   echo
 

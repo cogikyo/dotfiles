@@ -10,10 +10,13 @@
 
 set -euo pipefail
 
-INSTALL_VERSION="2026.02.09.1"
+INSTALL_VERSION="2026.02.12.1"
 DOTFILES="${DOTFILES:-$HOME/dotfiles}"
 DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/cogikyo/dotfiles.git}"
 DOTFILES_REF="${DOTFILES_REF:-master}"
+STEP_SKIPPED_RC=42
+DOTFILES_INSTALL_PREBOOT="${DOTFILES_INSTALL_PREBOOT:-0}"
+DOTFILES_INSTALL_BEST_EFFORT="${DOTFILES_INSTALL_BEST_EFFORT:-0}"
 
 # Colors
 R='\033[0;31m'
@@ -56,6 +59,7 @@ STEPS=(
 PASSED=()
 FAILED=()
 SKIPPED=()
+SOFT_FAILED=()
 declare -A STEP_ACTIVE=()
 
 # ── Helpers ──────────────────────────────────────────────────────────────────
@@ -63,6 +67,15 @@ declare -A STEP_ACTIVE=()
 confirm() {
     local prompt="$1" default="${2:-y}"
     local yn
+    if is_noninteractive; then
+        if [[ "$default" == "y" ]]; then
+            info "$prompt -> yes (non-interactive default)"
+            return 0
+        fi
+        info "$prompt -> no (non-interactive default)"
+        return 1
+    fi
+
     if [[ "$default" == "y" ]]; then
         read -rp "$prompt [Y/n] " yn
         yn="${yn:-y}"
@@ -74,6 +87,29 @@ confirm() {
 }
 
 has() { command -v "$1" &>/dev/null; }
+
+is_noninteractive() {
+    [[ "${DOTFILES_INSTALL_NONINTERACTIVE:-0}" == "1" || ! -t 0 ]]
+}
+
+is_headless_override() {
+    [[ "${DOTFILES_INSTALL_ALLOW_HEADLESS:-0}" == "1" ]]
+}
+
+is_preboot_mode() {
+    [[ "$DOTFILES_INSTALL_PREBOOT" == "1" ]]
+}
+
+is_best_effort_mode() {
+    [[ "$DOTFILES_INSTALL_BEST_EFFORT" == "1" ]]
+}
+
+is_critical_step() {
+    case "$1" in
+        packages|link|system) return 0 ;;
+        *) return 1 ;;
+    esac
+}
 
 array_contains() {
     local needle="$1"
@@ -87,7 +123,7 @@ array_contains() {
 
 canonpath() {
     if has realpath; then
-        realpath -m -- "$1"
+        realpath -m -- "$1" 2>/dev/null || realpath "$1" 2>/dev/null || printf '%s\n' "$1"
     elif has readlink; then
         readlink -f -- "$1" 2>/dev/null || printf '%s\n' "$1"
     else
@@ -159,7 +195,7 @@ in_chroot() {
 }
 
 require_desktop_environment() {
-    if [[ "${DOTFILES_INSTALL_ALLOW_HEADLESS:-0}" == "1" ]]; then
+    if is_headless_override; then
         warn "Headless override enabled (DOTFILES_INSTALL_ALLOW_HEADLESS=1)"
         return 0
     fi
@@ -196,12 +232,67 @@ require_desktop_environment() {
 }
 
 needs_sudo() {
-    if [[ $EUID -ne 0 ]]; then
-        if ! sudo -n true 2>/dev/null; then
-            info "Some steps require sudo access"
-            sudo -v
-        fi
+    if [[ $EUID -eq 0 ]]; then
+        return 0
     fi
+
+    if ! has sudo; then
+        error "sudo not found. Install sudo first."
+        return 1
+    fi
+
+    if ! sudo -n true 2>/dev/null; then
+        info "Some steps require sudo access"
+        sudo -v
+    fi
+}
+
+bootstrap_paru() {
+    if has paru; then
+        success "paru already installed"
+        return 0
+    fi
+
+    info "paru not found; bootstrapping..."
+
+    if ! has pacman; then
+        error "pacman not found; cannot bootstrap paru"
+        return 1
+    fi
+
+    if [[ $EUID -eq 0 ]]; then
+        pacman -S --needed --noconfirm paru || true
+    else
+        sudo pacman -S --needed --noconfirm paru || true
+    fi
+
+    if has paru; then
+        success "Installed paru from pacman repositories"
+        return 0
+    fi
+
+    warn "Failed to install paru via pacman; falling back to AUR build (paru-bin)"
+    has git || { error "git not found. Install git first."; return 1; }
+    has makepkg || { error "makepkg not found. Install base-devel first."; return 1; }
+
+    if [[ $EUID -eq 0 ]]; then
+        error "Cannot build AUR packages as root. Re-run as your regular user."
+        return 1
+    fi
+
+    local build_root="${XDG_CACHE_HOME:-$HOME/.cache}/paru-bootstrap"
+    rm -rf "$build_root"
+    mkdir -p "$(dirname "$build_root")"
+    git clone --depth 1 "https://aur.archlinux.org/paru-bin.git" "$build_root"
+    (cd "$build_root" && makepkg -si --noconfirm --needed)
+    rm -rf "$build_root"
+
+    if ! has paru; then
+        error "paru bootstrap failed"
+        return 1
+    fi
+
+    success "paru bootstrapped from AUR"
 }
 
 # ── Step: packages ───────────────────────────────────────────────────────────
@@ -209,11 +300,8 @@ needs_sudo() {
 step_packages() {
     header "Installing packages"
 
-    if ! has paru; then
-        error "paru not found. Install it first:"
-        echo "  cd ~/.cache && git clone https://aur.archlinux.org/paru.git && cd paru && makepkg -si"
-        return 1
-    fi
+    needs_sudo
+    bootstrap_paru
 
     "$DOTFILES/bin/update" --install
     ensure_rustup_stable
@@ -296,8 +384,13 @@ step_link() {
 step_secrets() {
     header "Decrypting secrets"
 
+    if [[ "${DOTFILES_SKIP_SECRETS:-0}" == "1" ]]; then
+        warn "Skipping secrets (DOTFILES_SKIP_SECRETS=1)"
+        return "$STEP_SKIPPED_RC"
+    fi
+
     if ! has age; then
-        error "age not found — install with: paru -S age"
+        error "age not found — install with: pacman -S age"
         return 1
     fi
 
@@ -306,6 +399,11 @@ step_secrets() {
         warn "No secrets configured yet"
         info "Add entries in $DOTFILES/secrets/manifest, then run: secrets sync"
         return 0
+    fi
+
+    if [[ ! -t 0 && ! -r /dev/tty ]]; then
+        warn "No interactive TTY available for age passphrase prompt; skipping secrets"
+        return "$STEP_SKIPPED_RC"
     fi
 
     "$DOTFILES/bin/secrets" decrypt
@@ -317,6 +415,11 @@ step_repos() {
     header "Cloning repositories and creating directories"
 
     local REPOS_FILE="$DOTFILES/etc/repos.toml"
+
+    if ! has git; then
+        error "git not found. Install it from packages first."
+        return 1
+    fi
 
     if [[ ! -f "$REPOS_FILE" ]]; then
         error "Repos manifest not found: $REPOS_FILE"
@@ -341,8 +444,19 @@ step_repos() {
         fi
     done
 
+    # Ensure github.com host key exists to avoid interactive SSH prompts.
+    if has ssh-keyscan; then
+        mkdir -p "$HOME/.ssh"
+        chmod 700 "$HOME/.ssh"
+        if ! ssh-keygen -F github.com -f "$HOME/.ssh/known_hosts" &>/dev/null; then
+            info "Adding github.com SSH host key..."
+            ssh-keyscan -H github.com >> "$HOME/.ssh/known_hosts" 2>/dev/null || true
+            chmod 600 "$HOME/.ssh/known_hosts"
+        fi
+    fi
+
     # Parse repos.toml and clone
-    local repo="" path="" cloned=0 skipped=0
+    local repo="" path="" cloned=0 skipped=0 failed=0
 
     while IFS= read -r line; do
         line="${line%%#*}"
@@ -358,8 +472,15 @@ step_repos() {
                 else
                     mkdir -p "$(dirname "$expanded")"
                     info "Cloning $repo → $path"
-                    git clone "git@github.com:$repo.git" "$expanded"
-                    ((cloned++))
+                    if git clone "git@github.com:$repo.git" "$expanded"; then
+                        ((cloned++))
+                    elif git clone "https://github.com/$repo.git" "$expanded"; then
+                        warn "SSH clone failed, used HTTPS fallback for $repo"
+                        ((cloned++))
+                    else
+                        error "Failed to clone $repo"
+                        ((failed++))
+                    fi
                 fi
             fi
             repo="" path=""
@@ -388,13 +509,24 @@ step_repos() {
         else
             mkdir -p "$(dirname "$expanded")"
             info "Cloning $repo → $path"
-            git clone "git@github.com:$repo.git" "$expanded"
-            ((cloned++))
+            if git clone "git@github.com:$repo.git" "$expanded"; then
+                ((cloned++))
+            elif git clone "https://github.com/$repo.git" "$expanded"; then
+                warn "SSH clone failed, used HTTPS fallback for $repo"
+                ((cloned++))
+            else
+                error "Failed to clone $repo"
+                ((failed++))
+            fi
         fi
     fi
 
     echo
     success "Cloned $cloned repos ($skipped already exist)"
+    if [[ $failed -gt 0 ]]; then
+        warn "$failed repo(s) failed to clone"
+        return 1
+    fi
 }
 
 # ── Step: system ─────────────────────────────────────────────────────────────
@@ -402,6 +534,12 @@ step_repos() {
 step_system() {
     header "Installing system configs"
     needs_sudo
+
+    local chroot_mode=0
+    if in_chroot; then
+        chroot_mode=1
+        warn "Chroot environment detected; runtime service actions will be limited"
+    fi
 
     # Source → destination mappings
     declare -A SYSTEM_FILES=(
@@ -456,15 +594,22 @@ step_system() {
             success "$svc already enabled"
         else
             info "Enabling $svc..."
-            sudo systemctl enable "$svc"
-            success "$svc enabled"
+            if sudo systemctl enable "$svc" &>/dev/null; then
+                success "$svc enabled"
+            else
+                warn "Could not enable $svc in current environment"
+            fi
         fi
     done
 
     # Reload udev rules
-    info "Reloading udev rules..."
-    sudo udevadm control --reload-rules
-    sudo udevadm trigger
+    if [[ $chroot_mode -eq 1 ]]; then
+        warn "Skipping udev reload in chroot"
+    else
+        info "Reloading udev rules..."
+        sudo udevadm control --reload-rules
+        sudo udevadm trigger
+    fi
 }
 
 # ── Step: swap ───────────────────────────────────────────────────────────────
@@ -476,10 +621,17 @@ step_swap() {
     local SWAP_SIZE="${DOTFILES_SWAP_SIZE:-16G}"
     local SWAP_DIR="/swap"
     local SWAP_FILE="$SWAP_DIR/swapfile"
+    local root_fs
 
     if ! has btrfs; then
-        error "btrfs command not found. Install btrfs-progs first."
-        return 1
+        warn "btrfs command not found. Skipping btrfs swap setup."
+        return "$STEP_SKIPPED_RC"
+    fi
+
+    root_fs=$(findmnt -no FSTYPE / 2>/dev/null || true)
+    if [[ "$root_fs" != "btrfs" ]]; then
+        warn "Root filesystem is '$root_fs' (not btrfs). Skipping btrfs swap setup."
+        return "$STEP_SKIPPED_RC"
     fi
 
     # Ensure /swap is a dedicated btrfs subvolume
@@ -558,26 +710,48 @@ step_hibernate() {
     info "Resume UUID:   $RESUME_UUID"
     info "Resume Offset: $RESUME_OFFSET"
 
-    # Update bootloader entry
+    # Update bootloader config (systemd-boot or GRUB).
     local LOADER_ENTRY
+    local GRUB_DEFAULT="/etc/default/grub"
     LOADER_ENTRY=$(find /boot/loader/entries/ -name '*_linux.conf' 2>/dev/null | head -1)
 
-    if [[ -z "$LOADER_ENTRY" ]]; then
-        error "No bootloader entry found in /boot/loader/entries/"
-        error "Manually add to your bootloader options: resume=UUID=$RESUME_UUID resume_offset=$RESUME_OFFSET"
-        return 1
-    fi
+    if [[ -n "$LOADER_ENTRY" ]]; then
+        if ! grep -q '^options' "$LOADER_ENTRY"; then
+            error "No 'options' line found in $LOADER_ENTRY"
+            return 1
+        fi
 
-    if grep -q "resume=UUID=" "$LOADER_ENTRY"; then
-        warn "Resume parameters already present in $LOADER_ENTRY"
-        info "Current options line:"
-        grep "^options" "$LOADER_ENTRY"
-        echo
-        warn "Verify these match: resume=UUID=$RESUME_UUID resume_offset=$RESUME_OFFSET"
+        info "Updating resume parameters in $LOADER_ENTRY..."
+        sudo sed -i -E \
+            -e 's/[[:space:]]resume=UUID=[^[:space:]]+//g' \
+            -e 's/[[:space:]]resume_offset=[^[:space:]]+//g' \
+            -e "s|^options.*|& resume=UUID=$RESUME_UUID resume_offset=$RESUME_OFFSET|" \
+            "$LOADER_ENTRY"
+        success "Updated systemd-boot entry"
+    elif [[ -f "$GRUB_DEFAULT" ]]; then
+        info "Updating resume parameters in $GRUB_DEFAULT..."
+        if grep -q '^GRUB_CMDLINE_LINUX_DEFAULT=' "$GRUB_DEFAULT"; then
+            sudo sed -i -E \
+                -e '/^GRUB_CMDLINE_LINUX_DEFAULT=/{s/[[:space:]]resume=UUID=[^[:space:]]+//g; s/[[:space:]]resume_offset=[^[:space:]]+//g; s/"$/ resume=UUID='"$RESUME_UUID"' resume_offset='"$RESUME_OFFSET"'"/}' \
+                "$GRUB_DEFAULT"
+        elif grep -q '^GRUB_CMDLINE_LINUX=' "$GRUB_DEFAULT"; then
+            sudo sed -i -E \
+                -e '/^GRUB_CMDLINE_LINUX=/{s/[[:space:]]resume=UUID=[^[:space:]]+//g; s/[[:space:]]resume_offset=[^[:space:]]+//g; s/"$/ resume=UUID='"$RESUME_UUID"' resume_offset='"$RESUME_OFFSET"'"/}' \
+                "$GRUB_DEFAULT"
+        else
+            printf 'GRUB_CMDLINE_LINUX_DEFAULT="resume=UUID=%s resume_offset=%s"\n' "$RESUME_UUID" "$RESUME_OFFSET" | sudo tee -a "$GRUB_DEFAULT" > /dev/null
+        fi
+
+        if has grub-mkconfig; then
+            info "Regenerating GRUB config..."
+            sudo grub-mkconfig -o /boot/grub/grub.cfg
+            success "Updated GRUB config"
+        else
+            warn "grub-mkconfig not found; regenerate GRUB config manually"
+        fi
     else
-        info "Adding resume parameters to $LOADER_ENTRY..."
-        sudo sed -i "s|^options.*|& resume=UUID=$RESUME_UUID resume_offset=$RESUME_OFFSET|" "$LOADER_ENTRY"
-        success "Updated bootloader entry"
+        warn "No supported bootloader config found; skipping bootloader resume parameters"
+        return "$STEP_SKIPPED_RC"
     fi
 
     # Add resume hook to mkinitcpio
@@ -679,8 +853,8 @@ install_daemon_services() {
     mkdir -p "$service_dir"
 
     if ! has_user_bus; then
-        error "No user session bus available; cannot manage user services"
-        return 1
+        warn "No user session bus available; skipping daemon service enable/start"
+        return "$STEP_SKIPPED_RC"
     fi
 
     local daemons=()
@@ -746,7 +920,12 @@ step_go() {
         return 1
     fi
 
-    install_daemon_services
+    local service_rc=0
+    install_daemon_services || service_rc=$?
+    if [[ $service_rc -eq "$STEP_SKIPPED_RC" ]]; then
+        return 0
+    fi
+    return "$service_rc"
 }
 
 # ── Step: firefox ───────────────────────────────────────────────────────────
@@ -808,7 +987,13 @@ detect_firefox_profile() {
 step_firefox() {
     header "Configuring Firefox"
 
-    detect_firefox_profile
+    if ! detect_firefox_profile; then
+        if in_chroot || is_headless_override || is_noninteractive; then
+            warn "Skipping Firefox setup until first user login/profile creation"
+            return "$STEP_SKIPPED_RC"
+        fi
+        return 1
+    fi
 
     # Install vagari.firefox userChrome CSS
     local vagari_dir="$HOME/vagari.firefox"
@@ -870,8 +1055,16 @@ step_firefox() {
 step_shell() {
     header "Setting default shell to zsh"
 
+    needs_sudo
+
+    local target_user="${SUDO_USER:-${USER:-$(id -un)}}"
     local current_shell
-    current_shell=$(getent passwd "$USER" | cut -d: -f7)
+    current_shell=$(getent passwd "$target_user" | cut -d: -f7)
+
+    if [[ -z "$current_shell" ]]; then
+        error "Could not detect current shell for user '$target_user'"
+        return 1
+    fi
 
     if [[ "$current_shell" == "/usr/bin/zsh" ]]; then
         success "Default shell is already zsh"
@@ -883,8 +1076,12 @@ step_shell() {
         return 1
     fi
 
-    info "Changing default shell from $current_shell to /usr/bin/zsh..."
-    chsh -s /usr/bin/zsh
+    info "Changing default shell for $target_user from $current_shell to /usr/bin/zsh..."
+    if [[ $EUID -eq 0 ]]; then
+        chsh -s /usr/bin/zsh "$target_user"
+    else
+        sudo chsh -s /usr/bin/zsh "$target_user"
+    fi
     success "Default shell changed to zsh (takes effect on next login)"
 }
 
@@ -893,6 +1090,12 @@ step_shell() {
 step_dns() {
     header "Setting up DNS (systemd-resolved + Cloudflare DNS-over-TLS)"
     needs_sudo
+
+    local chroot_mode=0
+    if in_chroot; then
+        chroot_mode=1
+        warn "Chroot environment detected; runtime restarts/checks will be skipped"
+    fi
 
     local RESOLVED_SRC="$DOTFILES/etc/systemd/resolved.conf"
     local RESOLVED_DST="/etc/systemd/resolved.conf"
@@ -920,7 +1123,11 @@ step_dns() {
         info "Enabling systemd-resolved..."
         sudo systemctl enable systemd-resolved
     fi
-    sudo systemctl restart systemd-resolved
+    if [[ $chroot_mode -eq 0 ]]; then
+        sudo systemctl restart systemd-resolved
+    else
+        warn "Skipping systemd-resolved restart in chroot"
+    fi
 
     # Configure NetworkManager via dedicated drop-in.
     local NM_DIR="/etc/NetworkManager/conf.d"
@@ -974,19 +1181,29 @@ step_dns() {
         sudo ln -sfn "$STUB" /etc/resolv.conf
     fi
 
-    info "Restarting NetworkManager..."
-    sudo systemctl restart NetworkManager
-
-    if ! systemctl is-active systemd-resolved &>/dev/null; then
-        error "systemd-resolved is not active after configuration"
-        return 1
-    fi
-    if [[ "$(readlink /etc/resolv.conf 2>/dev/null || true)" != "$STUB" ]]; then
-        error "/etc/resolv.conf is not linked to $STUB"
-        return 1
+    if [[ $chroot_mode -eq 0 ]]; then
+        info "Restarting NetworkManager..."
+        sudo systemctl restart NetworkManager
+    else
+        warn "Skipping NetworkManager restart in chroot"
     fi
 
-    if has resolvectl; then
+    if [[ $chroot_mode -eq 0 ]]; then
+        if ! systemctl is-active systemd-resolved &>/dev/null; then
+            error "systemd-resolved is not active after configuration"
+            return 1
+        fi
+        if [[ "$(readlink /etc/resolv.conf 2>/dev/null || true)" != "$STUB" ]]; then
+            error "/etc/resolv.conf is not linked to $STUB"
+            return 1
+        fi
+    else
+        if [[ "$(readlink /etc/resolv.conf 2>/dev/null || true)" != "$STUB" ]]; then
+            warn "/etc/resolv.conf is not linked to $STUB yet; verify after first boot"
+        fi
+    fi
+
+    if [[ $chroot_mode -eq 0 ]] && has resolvectl; then
         local runtime_dns
         runtime_dns=$(resolvectl dns 2>/dev/null | awk 'NF > 2 {for (i = 3; i <= NF; i++) print $i}' | sort -u | tr '\n' ' ')
         [[ -n "$runtime_dns" ]] && info "Runtime DNS servers: $runtime_dns"
@@ -1032,7 +1249,7 @@ run_step() {
         return 1
     fi
 
-    if array_contains "$name" "${PASSED[@]}" || array_contains "$name" "${FAILED[@]}" || array_contains "$name" "${SKIPPED[@]}"; then
+    if array_contains "$name" "${PASSED[@]}" || array_contains "$name" "${FAILED[@]}" || array_contains "$name" "${SKIPPED[@]}" || array_contains "$name" "${SOFT_FAILED[@]}"; then
         return 0
     fi
 
@@ -1060,7 +1277,7 @@ run_step() {
                 return 0
             fi
 
-            if array_contains "$dep" "${FAILED[@]}" || array_contains "$dep" "${SKIPPED[@]}"; then
+            if array_contains "$dep" "${FAILED[@]}" || array_contains "$dep" "${SKIPPED[@]}" || array_contains "$dep" "${SOFT_FAILED[@]}"; then
                 warn "Skipping '$name' — dependency '$dep' did not complete successfully"
                 SKIPPED+=("$name")
                 STEP_ACTIVE["$name"]=0
@@ -1070,10 +1287,22 @@ run_step() {
     fi
 
     # Run in subshell to isolate set -e failures
-    if ( "$func" ); then
+    local rc=0
+    ( "$func" ) || rc=$?
+
+    if [[ $rc -eq 0 ]]; then
         PASSED+=("$name")
         STEP_ACTIVE["$name"]=0
+    elif [[ $rc -eq "$STEP_SKIPPED_RC" ]]; then
+        SKIPPED+=("$name")
+        STEP_ACTIVE["$name"]=0
     else
+        if is_best_effort_mode && ! is_critical_step "$name"; then
+            SOFT_FAILED+=("$name")
+            STEP_ACTIVE["$name"]=0
+            warn "Step '$name' failed (best-effort soft failure)"
+            return 0
+        fi
         FAILED+=("$name")
         STEP_ACTIVE["$name"]=0
         warn "Step '$name' failed (continuing)"
@@ -1082,7 +1311,7 @@ run_step() {
 }
 
 print_summary() {
-    [[ ${#PASSED[@]} -eq 0 && ${#FAILED[@]} -eq 0 && ${#SKIPPED[@]} -eq 0 ]] && return
+    [[ ${#PASSED[@]} -eq 0 && ${#FAILED[@]} -eq 0 && ${#SKIPPED[@]} -eq 0 && ${#SOFT_FAILED[@]} -eq 0 ]] && return
 
     header "Summary"
     for name in "${PASSED[@]}"; do
@@ -1091,6 +1320,9 @@ print_summary() {
     for name in "${FAILED[@]}"; do
         printf '  %b✗%b %s\n' "$R" "$N" "$name"
     done
+    for name in "${SOFT_FAILED[@]}"; do
+        printf '  %b~%b %s (soft-failed)\n' "$Y" "$N" "$name"
+    done
     for name in "${SKIPPED[@]}"; do
         printf '  %b-%b %s (skipped)\n' "$Y" "$N" "$name"
     done
@@ -1098,15 +1330,29 @@ print_summary() {
 
     if [[ ${#FAILED[@]} -gt 0 ]]; then
         warn "${#FAILED[@]} step(s) failed"
+        return 1
     else
+        if [[ ${#SOFT_FAILED[@]} -gt 0 ]]; then
+            warn "${#SOFT_FAILED[@]} non-critical step(s) soft-failed in best-effort mode"
+        fi
         finish "All steps completed successfully"
+        return 0
     fi
 }
 
 run_all() {
     for entry in "${STEPS[@]}"; do
         IFS='|' read -r name _ _ _ <<< "$entry"
-        run_step "$name"
+        if is_preboot_mode; then
+            case "$name" in
+                repos|go|firefox)
+                    warn "Preboot mode: deferring '$name' until after first login"
+                    SKIPPED+=("$name")
+                    continue
+                    ;;
+            esac
+        fi
+        run_step "$name" || true
     done
     print_summary
 }
@@ -1129,11 +1375,14 @@ interactive_menu() {
         return
     fi
 
-    for sel in "${selection[@]}"; do
+    local selections=()
+    read -r -a selections <<< "$selection"
+
+    for sel in "${selections[@]}"; do
         if [[ "$sel" =~ ^[0-9]+$ ]] && (( sel >= 1 && sel <= ${#STEPS[@]} )); then
             local entry="${STEPS[$((sel-1))]}"
             IFS='|' read -r name _ _ _ <<< "$entry"
-            run_step "$name"
+            run_step "$name" || true
         else
             error "Invalid selection: $sel"
         fi
@@ -1154,6 +1403,10 @@ usage() {
     echo "Options:"
     echo "  --list, -l    List available steps"
     echo "  --help, -h    Show this help"
+    echo
+    echo "Env toggles:"
+    echo "  DOTFILES_INSTALL_PREBOOT=1       Defer desktop/user-session steps for first login"
+    echo "  DOTFILES_INSTALL_BEST_EFFORT=1   Continue past non-critical step failures"
     echo
     list_steps
 }
@@ -1187,7 +1440,7 @@ main() {
                 exit 1
             fi
             for step in "$@"; do
-                run_step "$step"
+                run_step "$step" || true
             done
             print_summary
             ;;
