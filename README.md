@@ -160,9 +160,31 @@ bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/arch
 
 1. Set partition configuration via installer
 2. Set authentication and user via installer
+3. After `archinstall` finishes, dotfiles post-install runs automatically in `arch-chroot` as that user
+4. Enter your `age` passphrase when prompted during secrets decrypt
+
+To disable auto post-install and do it manually after reboot:
+
+```sh
+DOTFILES_SKIP_POST_INSTALL=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh)
+```
+
+Useful toggles:
+
+```sh
+# Strict mode: fail immediately if any post-install step fails
+DOTFILES_INSTALL_BEST_EFFORT=0 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh)
+
+# Run only selected post-install steps in chroot (example)
+DOTFILES_POST_INSTALL_STEPS="packages link system shell dns" bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh)
+```
 
 ### 4. Post Install
 
+Most steps are now handled pre-reboot by `archinstall.sh`.
+
+Run deferred desktop-only steps after first login if needed:
+
 ```sh
-bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/install.sh)
+~/dotfiles/install.sh firefox
 ```
