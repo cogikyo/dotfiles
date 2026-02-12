@@ -53,7 +53,7 @@ Weekly files are named by the last workday of that week (usually Friday).
 
 ## Execution
 
-Based on the argument provided, read the corresponding file in `.claude/commands/endof/`:
+Based on the argument provided, read the corresponding file in `~/.claude/instructions/endof/`:
 - `day` or `d` → Read and execute `endof/day.md`
 - `week` or `w` → Read and execute `endof/week.md`
 - `quarter` or `q` → Read and execute `endof/quarter.md`

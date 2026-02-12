@@ -16,6 +16,9 @@ Analyze the day's git commits and add them to the current week's impact file.
    **Backend services (all git repos in):**
    - `~/LeadPier/services/*`
 
+   **Core libraries/services (all git repos in):**
+   - `~/LeadPier/core/*`
+
    Run for each repo:
    ```bash
    git log --author="cullyn" --since="YYYY-MM-DD 00:00" --until="YYYY-MM-DD 23:59" --pretty=format:"%h %s" --no-merges

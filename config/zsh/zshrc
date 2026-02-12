@@ -92,6 +92,56 @@ function etree () {
     erd -L "$L" --suppress-size --threads 16 --layout inverted
 }
 
+function mgif() {
+    local files=(~/Desktop/Screen\ Recording*.mov(Om))
+    if [[ ${#files} -eq 0 ]]; then
+        echo "No screen recording found on Desktop"
+        return 1
+    fi
+    local latest_recording="${files[-1]}"
+    if [[ ! -f "$latest_recording" ]]; then
+        echo "Error: File not found: $latest_recording"
+        return 1
+    fi
+    local output_name=$(basename "$latest_recording" .mov).gif
+    local output_path="$HOME/Documents/gifs/$output_name"
+    mkdir -p ~/Documents/gifs
+
+    if [[ "$1" == "hq" || "$1" == "high" ]]; then
+        local fps=20
+        local scale=1600:-1
+        local max_colors=256
+        local dither=sierra2_4a
+        echo "Converting (HIGH QUALITY) $latest_recording to $output_path..."
+        local vf_filter="fps=${fps},scale=${scale}:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=${max_colors}[p];[s1][p]paletteuse=dither=${dither}"
+    else
+        local fps=16
+        local scale=1000:-1
+        local max_colors=256
+        local dither=bayer
+        echo "Converting $latest_recording to $output_path..."
+        local vf_filter="fps=${fps},scale=${scale}:flags=lanczos,split[s0][s1];[s0]palettegen=max_colors=${max_colors}[p];[s1][p]paletteuse=dither=${dither}"
+    fi
+
+    local error_output
+    if error_output=$(ffmpeg -i "$latest_recording" -vf "$vf_filter" -y "$output_path" 2>&1); then
+        if [[ ! -f "$output_path" ]]; then
+            echo "Error: Conversion appeared to succeed but output file not found"
+            echo "$error_output" | tail -20
+            return 1
+        fi
+        local size=$(du -h "$output_path" | cut -f1)
+        local duration=$(ffprobe -v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 "$output_path" 2>/dev/null | awk '{printf "%.1f", $1}')
+        echo "Done! GIF saved to $output_path"
+        echo "Size: $size | Duration: ${duration}s"
+        open -a "Firefox Developer Edition" "$output_path"
+    else
+        echo "Error: Conversion failed"
+        echo "$error_output" | tail -20
+        return 1
+    fi
+}
+
 alias ew='eww-open'
 alias ews='eww inspector & disown && exit'
 alias el='eww logs'

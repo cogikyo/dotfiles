@@ -21,16 +21,12 @@ Summarize the current week's daily entries into a cohesive Review section.
 ```markdown
 ## Review
 
-**Major Focus Areas:**
-- [Project/Theme]: Brief summary of what was accomplished
-- [Another Area]: Summary
+**[Theme/Project Name]**
+- Key accomplishment or change
+- Another related item
 
-**Key Deliverables:**
-- Specific thing shipped/completed
-- Another deliverable
-
-**Notes:**
-- Any blockers, learnings, or context worth remembering
+**[Another Theme]**
+- Items grouped by theme
 ```
 
-Keep it concise but capture the essence of the week. This is for future reference and potential quarterly/yearly rollups.
+Group by project/theme with bolded headers. Keep it concise but capture the essence of the week. This is for future reference and potential quarterly/yearly rollups.

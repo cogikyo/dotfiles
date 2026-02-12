@@ -44,10 +44,10 @@
     "type": "command",
     "command": "/Users/cullyn/dotfiles/config/claude/statusline-bin"
   },
-  "outputStyle": "explanatory",
-  "promptSuggestionEnabled": false,
-  "shiftTabHint": false,
   "enabledPlugins": {
     "gopls-lsp@claude-plugins-official": true
-  }
+  },
+  "outputStyle": "explanatory",
+  "promptSuggestionEnabled": false,
+  "shiftTabHint": false
 }
