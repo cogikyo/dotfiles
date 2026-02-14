@@ -143,6 +143,7 @@ unrtf
 unzip
 usbutils
 v4l2loopback-dkms
+virtualbox
 wev
 wf-recorder
 wget
