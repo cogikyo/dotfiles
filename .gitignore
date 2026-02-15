@@ -3,7 +3,7 @@ config/claude/statusline-bin
 config/claude/statusline/statusline
 
 # Plaintext secrets (safety net)
-secrets/identity
+etc/secrets/identity
 
 # External plugins (managed separately)
 config/xplr/plugins/preview/
