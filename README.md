@@ -175,6 +175,9 @@ Useful toggles:
 # Strict mode: fail immediately if any post-install step fails
 STRICT=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh)
 
+# Slow down step transitions for readability
+PAUSE=3 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh)
+
 # Run only selected post-install steps in chroot (example)
 STEPS="packages link system shell dns" bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh)
 ```
