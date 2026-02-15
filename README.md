@@ -79,12 +79,13 @@
 <summary>💬 <b>Fonts</b></summary>
 
 - Sans Serif: [Albert Sans](https://fonts.google.com/specimen/Albert+Sans?query=Albert+Sans)
-- Monospace: [Iosevka Vagari](https://typeof.net/Iosevka/) (custom build, see `etc/iosevka/`)
-- Symbols: [Nerd Font Symbols](https://github.com/ryanoasis/nerd-fonts)
-- Emoji: [Noto Color Emoji](https://fonts.google.com/noto/specimen/Noto+Color+Emoji)
-- Other: [Lora (serif)](https://fonts.google.com/specimen/Lora),
-  [Archivo (display)](https://fonts.google.com/specimen/Archivo),
-  [Architects Daughter (handwritten)](https://fonts.google.com/specimen/Architects+Daughter)
+- Monospace: [Iosevka Vagari](https://typeof.net/Iosevka/)
+- Other:
+  - [Nerd Font Symbols](https://github.com/ryanoasis/nerd-fonts)
+  - [Noto Color Emoji](https://fonts.google.com/noto/specimen/Noto+Color+Emoji)
+  - [Lora (serif)](https://fonts.google.com/specimen/Lora),
+  - [Archivo (display)](https://fonts.google.com/specimen/Archivo),
+  - [Architects Daughter (handwritten)](https://fonts.google.com/specimen/Architects+Daughter)
 
 </details>
 
@@ -155,36 +156,33 @@ Use **[Rufus](https://rufus.ie/)** — select the ISO, pick your USB drive, and 
 ### 3. Arch Install
 
 ```sh
-bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh)
+ARCH=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/install.sh)
 ```
 
 1. Set partition configuration via installer
 2. Set authentication and user via installer
-3. After `archinstall` finishes, dotfiles post-install runs automatically in `arch-chroot` as that user
+3. After `archinstall` finishes, dotfiles post-install runs automatically
 4. Enter your `age` passphrase when prompted during secrets decrypt
 
 To disable auto post-install and do it manually after reboot:
 
 ```sh
-SKIP=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh)
+ARCH=1 SKIP=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/install.sh)
 ```
 
 Useful toggles:
 
 ```sh
 # Strict mode: fail immediately if any post-install step fails
-STRICT=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh)
+ARCH=1 STRICT=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/install.sh)
 
-# Slow down step transitions for readability
-PAUSE=3 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh)
-
-# Run only selected post-install steps in chroot (example)
-STEPS="packages link system shell dns" bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh)
+# Run only selected post-install steps in chroot
+ARCH=1 STEPS="packages link system shell dns" bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/install.sh)
 ```
 
 ### 4. Post Install
 
-Most steps are now handled pre-reboot by `archinstall.sh`.
+Most steps are now handled pre-reboot by `install.sh` in `ARCH=1` mode.
 
 Run deferred desktop-only steps after first login if needed:
 

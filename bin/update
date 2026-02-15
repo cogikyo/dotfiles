@@ -48,6 +48,11 @@ retry_cmd() {
 
 require_paru() {
   has paru || { error "paru not found. Run install.sh packages first."; exit 1; }
+  if ! paru --version &>/dev/null; then
+    error "paru is installed but not runnable (likely libalpm mismatch)"
+    error "Run: ./install.sh packages"
+    exit 1
+  fi
 }
 
 # -git packages that have stable/binary alternatives
