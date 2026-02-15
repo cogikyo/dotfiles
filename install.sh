@@ -394,10 +394,10 @@ step_secrets() {
         return 1
     fi
 
-    local manifest="$DOTFILES/secrets/manifest"
+    local manifest="$DOTFILES/etc/secrets/manifest"
     if [[ ! -f "$manifest" ]] || ! grep -qv '^#\|^$' "$manifest"; then
         warn "No secrets configured yet"
-        info "Add entries in $DOTFILES/secrets/manifest, then run: secrets sync"
+        info "Add entries in $DOTFILES/etc/secrets/manifest, then run: secrets sync"
         return 0
     fi
 
