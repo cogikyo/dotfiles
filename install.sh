@@ -14,7 +14,7 @@ set -euo pipefail
 #  Runtime Config
 # ========================
 
-INSTALL_VERSION="2026.02.15.3"
+INSTALL_VERSION="2026.02.15.4"
 DOTFILES="${DOTFILES:-$HOME/dotfiles}"
 DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/cogikyo/dotfiles.git}"
 DOTFILES_REF="${DOTFILES_REF:-master}"
@@ -53,17 +53,6 @@ if [[ ! -t 1 || -n "${NO_COLOR:-}" ]]; then
     RED='' GREEN='' YELLOW='' BLUE='' MAGENTA='' FAINT='' BOLD='' RESET=''
 fi
 
-# Backward-compatible color aliases used throughout this script.
-R="$RED"
-G="$GREEN"
-Y="$YELLOW"
-B="$BLUE"
-M="$MAGENTA"
-F="$FAINT"
-BD="$BOLD"
-N="$RESET"
-
-BANNER_WIDTH=62
 
 log_line() {
     local color="$1"
@@ -72,21 +61,17 @@ log_line() {
     printf '%b[%-5s]%b %s\n' "$color" "$level" "$RESET" "$*"
 }
 
-banner_line() {
-    local rule
-    rule=$(printf '%*s' "$BANNER_WIDTH" '' | tr ' ' '=')
-    printf '%b+%s+%b\n' "$MAGENTA" "$rule" "$RESET"
-}
-
-banner_text() {
-    local text="$1"
-    printf '%b| %-*s |%b\n' "$MAGENTA" "$BANNER_WIDTH" "$text" "$RESET"
-}
-
 banner_kv() {
-    local key="$1"
-    local value="$2"
-    banner_text "$key: $value"
+    printf '  %b%-18s%b %s\n' "$FAINT" "$1" "$RESET" "$2"
+}
+
+colored_block() {
+    local color="$1"
+    shift
+    local line
+    for line in "$@"; do
+        printf '%b%s%b\n' "$color" "$line" "$RESET"
+    done
 }
 
 script_header() { printf '%b== dotfiles install v%s ==%b\n' "$BLUE" "$INSTALL_VERSION" "$RESET"; }
@@ -98,18 +83,22 @@ warn()    { log_line "$YELLOW" "WARN" "$*"; }
 error()   { log_line "$RED" "ERROR" "$*" >&2; }
 ask()     { log_line "$MAGENTA" "ASK" "$*"; }
 faint()   { printf '%b%s%b\n' "$FAINT" "$*" "$RESET"; }
+bold()    { printf '%b%s%b\n' "$BOLD" "$*" "$RESET"; }
 finish()  { log_line "$GREEN" "DONE" "$*"; }
 header()  { printf '\n%b--- %s ---%b\n\n' "$MAGENTA" "$*" "$RESET"; }
 die()     { error "$*"; exit 1; }
 
 print_start_banner() {
-    local mode="$1"
-    local selection="$2"
-
-    script_header
-    banner_line
-    banner_text "DOTFILES INSTALL START"
-    banner_line
+    local mode="$1" selection="$2"
+    echo
+    colored_block "$MAGENTA" \
+        ' ___ _   _ ____ _____  _    _     _     ' \
+        '|_ _| \ | / ___|_   _|/ \  | |   | |    ' \
+        ' | ||  \| \___ \ | | / _ \ | |   | |    ' \
+        ' | || |\  |___) || |/ ___ \| |___| |___ ' \
+        '|___|_| \_|____/ |_/_/   \_\_____|_____|'
+    faint "  dotfiles v$INSTALL_VERSION"
+    echo
     banner_kv "mode" "$mode"
     banner_kv "selection" "$selection"
     banner_kv "dotfiles" "$DOTFILES"
@@ -118,14 +107,19 @@ print_start_banner() {
     banner_kv "preboot" "$DOTFILES_INSTALL_PREBOOT"
     banner_kv "noninteractive" "${DOTFILES_INSTALL_NONINTERACTIVE:-0}"
     banner_kv "chroot-forced" "${DOTFILES_INSTALL_CHROOT:-0}"
-    banner_line
+    echo
 }
 
 print_arch_start_banner() {
-    script_header
-    banner_line
-    banner_text "ARCH BOOTSTRAP START (ARCH=1)"
-    banner_line
+    echo
+    colored_block "$MAGENTA" \
+        '    _    ____   ____ _   _ ' \
+        '   / \  |  _ \ / ___| | | |' \
+        '  / _ \ | |_) | |   | |_| |' \
+        ' / ___ \|  _ <| |___|  _  |' \
+        '/_/   \_\_| \_\\____|_| |_|'
+    faint "  bootstrap v$INSTALL_VERSION"
+    echo
     banner_kv "target-root" "$DOTFILES_TARGET_ROOT"
     banner_kv "target-user" "${DOTFILES_TARGET_USER:-auto-detect}"
     banner_kv "profile-mode" "$ARCHINSTALL_PROFILE_MODE"
@@ -134,18 +128,30 @@ print_arch_start_banner() {
     banner_kv "strict" "$STRICT"
     banner_kv "pause" "$PAUSE"
     banner_kv "noninteractive" "$NONINTERACTIVE"
-    banner_line
+    echo
 }
 
 print_finish_banner() {
-    local mode="$1"
-    local status="$2"
-    local details="${3:-}"
-
-    banner_line
-    banner_text "$mode FINISH ($status)"
-    [[ -n "$details" ]] && banner_text "$details"
-    banner_line
+    local mode="$1" status="$2" details="${3:-}"
+    echo
+    if [[ "$status" == "FAILED" ]]; then
+        colored_block "$RED" \
+            ' _____ _    ___ _     _____ ____  ' \
+            '|  ___/ \  |_ _| |   | ____|  _ \ ' \
+            '| |_ / _ \  | || |   |  _| | | | |' \
+            '|  _/ ___ \ | || |___| |___| |_| |' \
+            '|_|/_/   \_\___|_____|_____|____/ '
+    else
+        colored_block "$GREEN" \
+            ' ____  _   _  ____ ____ _____ ____ ____  ' \
+            '/ ___|| | | |/ ___/ ___| ____/ ___/ ___| ' \
+            '\___ \| | | | |  | |   |  _| \___ \___ \ ' \
+            ' ___) | |_| | |__| |___| |___ ___) |__) |' \
+            '|____/ \___/ \____\____|_____|____/____/ '
+    fi
+    faint "  $mode"
+    [[ -n "$details" ]] && faint "  $details"
+    echo
 }
 
 # ========================
@@ -721,55 +727,88 @@ resolve_target_user() {
 }
 
 bootstrap_paru() {
-    if is_paru_usable; then
+    local target_user="" target_home="" cache_dir=""
+    local build_root makepkg_log
+    local q_build_root q_makepkg_log
+    local -a run_prefix=()
+
+    run_builder() {
+        if [[ ${#run_prefix[@]} -gt 0 ]]; then
+            "${run_prefix[@]}" "$@"
+        else
+            "$@"
+        fi
+    }
+
+    is_paru_usable_for_builder() {
+        if [[ ${#run_prefix[@]} -gt 0 ]]; then
+            "${run_prefix[@]}" paru --version &>/dev/null
+        else
+            is_paru_usable
+        fi
+    }
+
+    if [[ $EUID -eq 0 ]]; then
+        target_user=$(resolve_target_user 2>/dev/null || true)
+        if [[ -z "$target_user" || "$target_user" == "root" ]]; then
+            error "Cannot auto-bootstrap paru as root without a non-root target user."
+            error "Set DOTFILES_INSTALL_TARGET_USER=<user> and re-run."
+            return 1
+        fi
+
+        target_home=$(getent passwd "$target_user" | cut -d: -f6)
+        [[ -n "$target_home" ]] || target_home="/home/$target_user"
+
+        if has sudo; then
+            run_prefix=(sudo -H -u "$target_user" env HOME="$target_home" USER="$target_user")
+        elif has runuser; then
+            run_prefix=(runuser -u "$target_user" -- env HOME="$target_home" USER="$target_user")
+        else
+            error "Need sudo or runuser to drop privileges for AUR build as '$target_user'."
+            return 1
+        fi
+
+        cache_dir="$target_home/.cache"
+        info "Running paru bootstrap as user '$target_user'"
+    else
+        cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
+    fi
+
+    if is_paru_usable_for_builder; then
         success "paru already installed"
         return 0
     fi
 
     if has paru; then
-        warn "paru is installed but not runnable (likely libalpm mismatch)"
-        info "Attempting to reinstall paru from official repos first..."
-        if [[ $EUID -eq 0 ]]; then
-            pacman -S --needed --noconfirm paru || warn "pacman reinstall of paru failed; falling back to AUR bootstrap"
-        else
-            sudo pacman -S --needed --noconfirm paru || warn "pacman reinstall of paru failed; falling back to AUR bootstrap"
-        fi
-
-        if is_paru_usable; then
-            success "paru repaired via pacman"
-            return 0
-        fi
+        warn "Existing paru binary is present but failed health check; reinstalling via AUR bootstrap"
     fi
 
-    info "paru not found; using AUR prebuilt package (paru-bin)"
+    info "Bootstrapping paru from AUR prebuilt package (paru-bin)"
     info "This does not compile paru locally"
     has git || { error "git not found. Install git first."; return 1; }
     has makepkg || { error "makepkg not found. Install base-devel first."; return 1; }
 
-    if [[ $EUID -eq 0 ]]; then
-        error "Cannot build AUR packages as root. Re-run as your regular user."
-        return 1
-    fi
+    build_root="$cache_dir/paru-bootstrap"
+    makepkg_log="$cache_dir/paru-bootstrap.log"
+    printf -v q_build_root '%q' "$build_root"
+    printf -v q_makepkg_log '%q' "$makepkg_log"
 
-    local cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
-    local build_root="$cache_dir/paru-bootstrap"
-    local makepkg_log="$cache_dir/paru-bootstrap.log"
     rm -rf "$build_root"
-    mkdir -p "$cache_dir"
-    if ! git clone --depth 1 "https://aur.archlinux.org/paru-bin.git" "$build_root"; then
+    run_builder mkdir -p "$cache_dir"
+    if ! run_builder git clone --depth 1 "https://aur.archlinux.org/paru-bin.git" "$build_root"; then
         error "Failed to clone paru-bin AUR repo"
         return 1
     fi
-    if ! (cd "$build_root" && makepkg -si --noconfirm --needed 2>&1 | tee "$makepkg_log"); then
+    if ! run_builder bash -lc "cd $q_build_root && makepkg -si --noconfirm --needed 2>&1 | tee $q_makepkg_log"; then
         error "makepkg failed while bootstrapping paru-bin (log: $makepkg_log)"
         rm -rf "$build_root"
         if [[ "${DOTFILES_PARU_ALLOW_SOURCE_FALLBACK:-0}" == "1" ]]; then
             warn "DOTFILES_PARU_ALLOW_SOURCE_FALLBACK=1 set; retrying with source package (paru)"
-            if ! git clone --depth 1 "https://aur.archlinux.org/paru.git" "$build_root"; then
+            if ! run_builder git clone --depth 1 "https://aur.archlinux.org/paru.git" "$build_root"; then
                 error "Failed to clone paru AUR repo"
                 return 1
             fi
-            if ! (cd "$build_root" && makepkg -si --noconfirm --needed 2>&1 | tee "$makepkg_log"); then
+            if ! run_builder bash -lc "cd $q_build_root && makepkg -si --noconfirm --needed 2>&1 | tee $q_makepkg_log"; then
                 error "makepkg failed while bootstrapping paru from source (log: $makepkg_log)"
                 rm -rf "$build_root"
                 return 1
@@ -2013,9 +2052,9 @@ list_steps() {
     for entry in "${STEP_DEFS[@]}"; do
         IFS='|' read -r name desc needs_root deps <<< "$entry"
         local badges=""
-        [[ "$needs_root" == "yes" ]] && badges+=" ${Y}(sudo)${N}"
-        [[ -n "$deps" ]] && badges+=" ${B}(after: $deps)${N}"
-        printf '  %b%02d%b. %-12s %s%b\n' "$BD" "$i" "$N" "$name" "$desc" "$badges"
+        [[ "$needs_root" == "yes" ]] && badges+=" ${YELLOW}(sudo)${RESET}"
+        [[ -n "$deps" ]] && badges+=" ${BLUE}(after: $deps)${RESET}"
+        printf '  %b%02d%b. %-12s %s%b\n' "$BOLD" "$i" "$RESET" "$name" "$desc" "$badges"
         ((i++))
     done
 }
@@ -2047,7 +2086,8 @@ print_step_banner() {
     local desc="$2"
     local pause_seconds="${PAUSE:-0}"
 
-    printf '\n%b%s%b\n' "$BD" "===== STEP: $name =====" "$N"
+    echo
+    bold "===== STEP: $name ====="
     [[ -n "$desc" ]] && faint "$desc"
 
     if [[ "$pause_seconds" =~ ^[0-9]+$ ]] && (( pause_seconds > 0 )); then
@@ -2181,16 +2221,16 @@ print_summary() {
 
     header "Summary"
     for name in "${PASSED[@]}"; do
-        printf '  %b[OK ]%b %s\n' "$G" "$N" "$name"
+        log_line "$GREEN" "OK" "$name"
     done
     for name in "${FAILED[@]}"; do
-        printf '  %b[ERR]%b %s\n' "$R" "$N" "$name"
+        log_line "$RED" "FAIL" "$name"
     done
     for name in "${SOFT_FAILED[@]}"; do
-        printf '  %b[SOFT]%b %s (soft-failed)\n' "$Y" "$N" "$name"
+        log_line "$YELLOW" "SOFT" "$name (soft-failed)"
     done
     for name in "${SKIPPED[@]}"; do
-        printf '  %b[SKIP]%b %s (skipped)\n' "$Y" "$N" "$name"
+        log_line "$YELLOW" "SKIP" "$name (skipped)"
     done
     echo
 
@@ -2233,12 +2273,12 @@ run_all() {
 
 interactive_menu() {
     echo
-    printf '%bDotfiles Installer%b\n' "$BD" "$N"
+    bold "Dotfiles Installer"
     echo
     list_steps
     echo
-    printf '  %ba%b. Run all steps\n' "$BD" "$N"
-    printf '  %bq%b. Quit\n' "$BD" "$N"
+    bold "  a. Run all steps"
+    bold "  q. Quit"
     echo
     read -rp "Select steps (space-separated numbers, 'a' for all, 'q' to quit): " selection
 
