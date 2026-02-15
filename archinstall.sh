@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-ARCHINSTALL_VERSION="2026.02.15.1"
+ARCHINSTALL_VERSION="2026.02.15.2"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_CONFIG="$SCRIPT_DIR/etc/arch.json"
 TMP_SOURCE_CONFIG="/tmp/arch_source_config.json"
@@ -24,6 +24,7 @@ SKIP="${SKIP:-0}"
 STEPS="${STEPS:-all}"
 STRICT="${STRICT:-0}"
 NONINTERACTIVE="${NONINTERACTIVE:-0}"
+PAUSE="${PAUSE:-3}"
 
 trap 'rm -f "$CONFIG" "$TMP_SOURCE_CONFIG"' EXIT
 
@@ -51,6 +52,7 @@ Notes:
   Set SKIP=1 to skip chroot post-install automation.
   Set STEPS to run a subset (default: all).
   Set STRICT=1 for strict fail-fast post-install.
+  Set PAUSE=3 to pause N seconds before each install step.
   Set NONINTERACTIVE=1 for unattended post-install.
 EOF
 }
@@ -168,7 +170,8 @@ run_post_install() {
         "$DOTFILES_REPO" \
         "$STEPS" \
         "$STRICT" \
-        "$NONINTERACTIVE" << 'CHROOT_EOF'
+        "$NONINTERACTIVE" \
+        "$PAUSE" << 'CHROOT_EOF'
 set -euo pipefail
 
 target_user="$1"
@@ -178,6 +181,7 @@ dotfiles_repo="$4"
 post_install_steps="$5"
 install_strict="$6"
 install_noninteractive="$7"
+install_pause="$8"
 dotfiles_dir="$user_home/dotfiles"
 sudoers_file="/etc/sudoers.d/99-dotfiles-install"
 step_args=()
@@ -244,6 +248,7 @@ if [[ -r /dev/tty ]]; then
         DOTFILES_INSTALL_NONINTERACTIVE="$install_noninteractive" \
         DOTFILES_INSTALL_PREBOOT=1 \
         STRICT="$install_strict" \
+        PAUSE="$install_pause" \
         "$dotfiles_dir/install.sh" "${step_args[@]}" < /dev/tty
 else
     echo "No interactive TTY detected; running without secrets decrypt prompt" >&2
@@ -255,6 +260,7 @@ else
         DOTFILES_INSTALL_NONINTERACTIVE=1 \
         DOTFILES_INSTALL_PREBOOT=1 \
         STRICT="$install_strict" \
+        PAUSE="$install_pause" \
         DOTFILES_SKIP_SECRETS=1 \
         "$dotfiles_dir/install.sh" "${step_args[@]}"
 fi

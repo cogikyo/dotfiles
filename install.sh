@@ -18,6 +18,7 @@ STEP_SKIPPED_RC=42
 STEP_ABORT_RC=130
 DOTFILES_INSTALL_PREBOOT="${DOTFILES_INSTALL_PREBOOT:-0}"
 STRICT="${STRICT:-1}"
+PAUSE="${PAUSE:-3}"
 
 # Colors
 R='\033[0;31m'
@@ -89,12 +90,20 @@ confirm() {
 
 confirm_continue_after_failure() {
     local step_name="$1"
+    local step_log="${2:-}"
+    local step_rc="${3:-1}"
 
     if is_noninteractive; then
         return 0
     fi
 
-    if confirm "Step '$step_name' failed. Continue to next step?" "n"; then
+    warn "Step '$step_name' failed (exit code $step_rc)"
+    if [[ -n "$step_log" && -f "$step_log" ]]; then
+        warn "Recent output from '$step_name' (log: $step_log)"
+        tail -n 25 "$step_log" | sed 's/^/  | /'
+    fi
+
+    if confirm "Continue to next step?" "n"; then
         return 0
     fi
 
@@ -1292,6 +1301,31 @@ get_step_deps() {
     done
 }
 
+get_step_desc() {
+    local target="$1"
+    for entry in "${STEPS[@]}"; do
+        IFS='|' read -r name desc _ _ <<< "$entry"
+        if [[ "$name" == "$target" ]]; then
+            echo "$desc"
+            return
+        fi
+    done
+}
+
+print_step_banner() {
+    local name="$1"
+    local desc="$2"
+    local pause_seconds="${PAUSE:-0}"
+
+    printf '\n%b%s%b\n' "$BD" "===== STEP: $name =====" "$N"
+    [[ -n "$desc" ]] && faint "$desc"
+
+    if [[ "$pause_seconds" =~ ^[0-9]+$ ]] && (( pause_seconds > 0 )); then
+        info "Starting in ${pause_seconds}s..."
+        sleep "$pause_seconds"
+    fi
+}
+
 run_step() {
     local name="$1"
     local func="step_$name"
@@ -1345,9 +1379,21 @@ run_step() {
         done
     fi
 
+    print_step_banner "$name" "$(get_step_desc "$name")"
+
     # Run in subshell to isolate set -e failures
     local rc=0
-    ( "$func" ) || rc=$?
+    local cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
+    local step_log_dir="$cache_dir/dotfiles/install-logs"
+    local step_log=""
+    mkdir -p "$step_log_dir"
+    step_log="$step_log_dir/${name}.log"
+
+    if ( "$func" ) 2>&1 | tee "$step_log"; then
+        rc=0
+    else
+        rc=$?
+    fi
 
     if [[ $rc -eq 0 ]]; then
         PASSED+=("$name")
@@ -1360,13 +1406,13 @@ run_step() {
             SOFT_FAILED+=("$name")
             STEP_ACTIVE["$name"]=0
             warn "Step '$name' failed (best-effort soft failure)"
-            confirm_continue_after_failure "$name" || return $?
+            confirm_continue_after_failure "$name" "$step_log" "$rc" || return $?
             return 0
         fi
         FAILED+=("$name")
         STEP_ACTIVE["$name"]=0
         warn "Step '$name' failed (continuing)"
-        confirm_continue_after_failure "$name" || return $?
+        confirm_continue_after_failure "$name" "$step_log" "$rc" || return $?
         return 1
     fi
 }
@@ -1480,6 +1526,7 @@ usage() {
     echo "  DOTFILES_INSTALL_PREBOOT=1       Defer desktop/user-session steps for first login"
     echo "  STRICT=1                         Fail immediately when a step fails (default)"
     echo "  STRICT=0                         Continue past non-critical step failures"
+    echo "  PAUSE=3                          Pause N seconds before each step (default: 3)"
     echo
     list_steps
 }
@@ -1487,6 +1534,11 @@ usage() {
 main() {
     ensure_dotfiles_checkout "$@"
     script_header
+
+    if ! [[ "$PAUSE" =~ ^[0-9]+$ ]]; then
+        warn "Invalid PAUSE='$PAUSE' (expected integer seconds); defaulting to 0"
+        PAUSE=0
+    fi
 
     if [[ $# -eq 0 ]]; then
         if ! require_desktop_environment; then
