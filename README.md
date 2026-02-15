@@ -166,17 +166,17 @@ bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/arch
 To disable auto post-install and do it manually after reboot:
 
 ```sh
-DOTFILES_SKIP_POST_INSTALL=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh)
+SKIP=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh)
 ```
 
 Useful toggles:
 
 ```sh
 # Strict mode: fail immediately if any post-install step fails
-DOTFILES_INSTALL_BEST_EFFORT=0 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh)
+STRICT=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh)
 
 # Run only selected post-install steps in chroot (example)
-DOTFILES_POST_INSTALL_STEPS="packages link system shell dns" bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh)
+STEPS="packages link system shell dns" bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/archinstall.sh)
 ```
 
 ### 4. Post Install

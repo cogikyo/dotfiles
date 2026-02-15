@@ -10,7 +10,7 @@
 
 set -euo pipefail
 
-ARCHINSTALL_VERSION="2026.02.12.1"
+ARCHINSTALL_VERSION="2026.02.15.1"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SOURCE_CONFIG="$SCRIPT_DIR/etc/arch.json"
 TMP_SOURCE_CONFIG="/tmp/arch_source_config.json"
@@ -18,11 +18,12 @@ CONFIG="/tmp/arch_config.json"
 DOTFILES_REF="${DOTFILES_REF:-master}"
 DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/cogikyo/dotfiles.git}"
 DOTFILES_RAW_BASE="${DOTFILES_RAW_BASE:-https://raw.githubusercontent.com/cogikyo/dotfiles/$DOTFILES_REF}"
-DOTFILES_SKIP_POST_INSTALL="${DOTFILES_SKIP_POST_INSTALL:-0}"
 DOTFILES_TARGET_ROOT="${DOTFILES_TARGET_ROOT:-/mnt}"
 DOTFILES_TARGET_USER="${DOTFILES_TARGET_USER:-}"
-DOTFILES_POST_INSTALL_STEPS="${DOTFILES_POST_INSTALL_STEPS:-all}"
-DOTFILES_INSTALL_BEST_EFFORT="${DOTFILES_INSTALL_BEST_EFFORT:-1}"
+SKIP="${SKIP:-0}"
+STEPS="${STEPS:-all}"
+STRICT="${STRICT:-0}"
+NONINTERACTIVE="${NONINTERACTIVE:-0}"
 
 trap 'rm -f "$CONFIG" "$TMP_SOURCE_CONFIG"' EXIT
 
@@ -47,9 +48,10 @@ Usage: archinstall.sh [--auto]
 
 Notes:
   --auto is accepted for compatibility, but default behavior is already auto.
-  Set DOTFILES_SKIP_POST_INSTALL=1 to skip chroot post-install automation.
-  Set DOTFILES_POST_INSTALL_STEPS to run a subset (default: all).
-  Set DOTFILES_INSTALL_BEST_EFFORT=0 for strict fail-fast post-install.
+  Set SKIP=1 to skip chroot post-install automation.
+  Set STEPS to run a subset (default: all).
+  Set STRICT=1 for strict fail-fast post-install.
+  Set NONINTERACTIVE=1 for unattended post-install.
 EOF
 }
 
@@ -164,8 +166,9 @@ run_post_install() {
         "$user_home" \
         "$DOTFILES_REF" \
         "$DOTFILES_REPO" \
-        "$DOTFILES_POST_INSTALL_STEPS" \
-        "$DOTFILES_INSTALL_BEST_EFFORT" << 'CHROOT_EOF'
+        "$STEPS" \
+        "$STRICT" \
+        "$NONINTERACTIVE" << 'CHROOT_EOF'
 set -euo pipefail
 
 target_user="$1"
@@ -173,7 +176,8 @@ user_home="$2"
 dotfiles_ref="$3"
 dotfiles_repo="$4"
 post_install_steps="$5"
-install_best_effort="$6"
+install_strict="$6"
+install_noninteractive="$7"
 dotfiles_dir="$user_home/dotfiles"
 sudoers_file="/etc/sudoers.d/99-dotfiles-install"
 step_args=()
@@ -235,28 +239,30 @@ if [[ -r /dev/tty ]]; then
     sudo -H -u "$target_user" env \
         DOTFILES="$dotfiles_dir" \
         DOTFILES_REF="$dotfiles_ref" \
+        DOTFILES_INSTALL_TARGET_USER="$target_user" \
         DOTFILES_INSTALL_ALLOW_HEADLESS=1 \
-        DOTFILES_INSTALL_NONINTERACTIVE=1 \
+        DOTFILES_INSTALL_NONINTERACTIVE="$install_noninteractive" \
         DOTFILES_INSTALL_PREBOOT=1 \
-        DOTFILES_INSTALL_BEST_EFFORT="$install_best_effort" \
+        STRICT="$install_strict" \
         "$dotfiles_dir/install.sh" "${step_args[@]}" < /dev/tty
 else
     echo "No interactive TTY detected; running without secrets decrypt prompt" >&2
     sudo -H -u "$target_user" env \
         DOTFILES="$dotfiles_dir" \
         DOTFILES_REF="$dotfiles_ref" \
+        DOTFILES_INSTALL_TARGET_USER="$target_user" \
         DOTFILES_INSTALL_ALLOW_HEADLESS=1 \
         DOTFILES_INSTALL_NONINTERACTIVE=1 \
         DOTFILES_INSTALL_PREBOOT=1 \
-        DOTFILES_INSTALL_BEST_EFFORT="$install_best_effort" \
+        STRICT="$install_strict" \
         DOTFILES_SKIP_SECRETS=1 \
         "$dotfiles_dir/install.sh" "${step_args[@]}"
 fi
 CHROOT_EOF
 }
 
-if [[ "$DOTFILES_SKIP_POST_INSTALL" == "1" ]]; then
-    warn "Skipping post-install automation (DOTFILES_SKIP_POST_INSTALL=1)"
+if [[ "$SKIP" == "1" ]]; then
+    warn "Skipping post-install automation (SKIP=1)"
 else
     if ! run_post_install; then
         error "Post-install automation failed"
@@ -268,7 +274,7 @@ fi
 finish "Installation complete!"
 echo
 info "Next steps:"
-if [[ "$DOTFILES_SKIP_POST_INSTALL" == "1" ]]; then
+if [[ "$SKIP" == "1" ]]; then
     step "1. Reboot into the new system"
     step "2. Log in as your configured user"
     step "3. Clone dotfiles and run: ./install.sh all"

@@ -15,8 +15,9 @@ DOTFILES="${DOTFILES:-$HOME/dotfiles}"
 DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/cogikyo/dotfiles.git}"
 DOTFILES_REF="${DOTFILES_REF:-master}"
 STEP_SKIPPED_RC=42
+STEP_ABORT_RC=130
 DOTFILES_INSTALL_PREBOOT="${DOTFILES_INSTALL_PREBOOT:-0}"
-DOTFILES_INSTALL_BEST_EFFORT="${DOTFILES_INSTALL_BEST_EFFORT:-0}"
+STRICT="${STRICT:-1}"
 
 # Colors
 R='\033[0;31m'
@@ -86,6 +87,21 @@ confirm() {
     [[ "$yn" =~ ^[Yy] ]]
 }
 
+confirm_continue_after_failure() {
+    local step_name="$1"
+
+    if is_noninteractive; then
+        return 0
+    fi
+
+    if confirm "Step '$step_name' failed. Continue to next step?" "n"; then
+        return 0
+    fi
+
+    warn "Stopping at failed step '$step_name' by user request"
+    return "$STEP_ABORT_RC"
+}
+
 has() { command -v "$1" &>/dev/null; }
 
 is_noninteractive() {
@@ -101,7 +117,7 @@ is_preboot_mode() {
 }
 
 is_best_effort_mode() {
-    [[ "$DOTFILES_INSTALL_BEST_EFFORT" == "1" ]]
+    [[ "$STRICT" != "1" ]]
 }
 
 is_critical_step() {
@@ -247,31 +263,32 @@ needs_sudo() {
     fi
 }
 
+resolve_target_user() {
+    if [[ -n "${DOTFILES_INSTALL_TARGET_USER:-}" ]]; then
+        printf '%s\n' "$DOTFILES_INSTALL_TARGET_USER"
+        return 0
+    fi
+
+    if [[ $EUID -eq 0 ]]; then
+        if [[ -n "${SUDO_USER:-}" && "${SUDO_USER}" != "root" ]]; then
+            printf '%s\n' "$SUDO_USER"
+            return 0
+        fi
+        printf '%s\n' "${USER:-$(id -un)}"
+        return 0
+    fi
+
+    printf '%s\n' "${USER:-$(id -un)}"
+}
+
 bootstrap_paru() {
     if has paru; then
         success "paru already installed"
         return 0
     fi
 
-    info "paru not found; bootstrapping..."
-
-    if ! has pacman; then
-        error "pacman not found; cannot bootstrap paru"
-        return 1
-    fi
-
-    if [[ $EUID -eq 0 ]]; then
-        pacman -S --needed --noconfirm paru || true
-    else
-        sudo pacman -S --needed --noconfirm paru || true
-    fi
-
-    if has paru; then
-        success "Installed paru from pacman repositories"
-        return 0
-    fi
-
-    warn "Failed to install paru via pacman; falling back to AUR build (paru-bin)"
+    info "paru not found; using AUR prebuilt package (paru-bin)"
+    info "This does not compile paru locally"
     has git || { error "git not found. Install git first."; return 1; }
     has makepkg || { error "makepkg not found. Install base-devel first."; return 1; }
 
@@ -280,11 +297,33 @@ bootstrap_paru() {
         return 1
     fi
 
-    local build_root="${XDG_CACHE_HOME:-$HOME/.cache}/paru-bootstrap"
+    local cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
+    local build_root="$cache_dir/paru-bootstrap"
+    local makepkg_log="$cache_dir/paru-bootstrap.log"
     rm -rf "$build_root"
-    mkdir -p "$(dirname "$build_root")"
-    git clone --depth 1 "https://aur.archlinux.org/paru-bin.git" "$build_root"
-    (cd "$build_root" && makepkg -si --noconfirm --needed)
+    mkdir -p "$cache_dir"
+    if ! git clone --depth 1 "https://aur.archlinux.org/paru-bin.git" "$build_root"; then
+        error "Failed to clone paru-bin AUR repo"
+        return 1
+    fi
+    if ! (cd "$build_root" && makepkg -si --noconfirm --needed 2>&1 | tee "$makepkg_log"); then
+        error "makepkg failed while bootstrapping paru-bin (log: $makepkg_log)"
+        rm -rf "$build_root"
+        if [[ "${DOTFILES_PARU_ALLOW_SOURCE_FALLBACK:-0}" == "1" ]]; then
+            warn "DOTFILES_PARU_ALLOW_SOURCE_FALLBACK=1 set; retrying with source package (paru)"
+            if ! git clone --depth 1 "https://aur.archlinux.org/paru.git" "$build_root"; then
+                error "Failed to clone paru AUR repo"
+                return 1
+            fi
+            if ! (cd "$build_root" && makepkg -si --noconfirm --needed 2>&1 | tee "$makepkg_log"); then
+                error "makepkg failed while bootstrapping paru from source (log: $makepkg_log)"
+                rm -rf "$build_root"
+                return 1
+            fi
+        else
+            return 1
+        fi
+    fi
     rm -rf "$build_root"
 
     if ! has paru; then
@@ -813,6 +852,8 @@ step_fonts() {
             error "Iosevka build script not found at $DOTFILES/etc/iosevka/build.sh"
             return 1
         fi
+    else
+        info "Skipping Iosevka build"
     fi
 
     info "Refreshing font cache..."
@@ -1057,7 +1098,8 @@ step_shell() {
 
     needs_sudo
 
-    local target_user="${SUDO_USER:-${USER:-$(id -un)}}"
+    local target_user
+    target_user=$(resolve_target_user)
     local current_shell
     current_shell=$(getent passwd "$target_user" | cut -d: -f7)
 
@@ -1066,21 +1108,32 @@ step_shell() {
         return 1
     fi
 
-    if [[ "$current_shell" == "/usr/bin/zsh" ]]; then
+    if ! has zsh; then
+        warn "zsh not found; attempting to install it now..."
+        if [[ $EUID -eq 0 ]]; then
+            pacman -S --needed --noconfirm zsh
+        else
+            sudo pacman -S --needed --noconfirm zsh
+        fi
+    fi
+
+    local zsh_path
+    zsh_path=$(command -v zsh || true)
+    if [[ -z "$zsh_path" ]]; then
+        error "zsh is still unavailable after install attempt"
+        return 1
+    fi
+
+    if [[ "$current_shell" == "$zsh_path" ]]; then
         success "Default shell is already zsh"
         return 0
     fi
 
-    if ! has zsh; then
-        error "zsh not found. Install it from packages first."
-        return 1
-    fi
-
-    info "Changing default shell for $target_user from $current_shell to /usr/bin/zsh..."
+    info "Changing default shell for $target_user from $current_shell to $zsh_path..."
     if [[ $EUID -eq 0 ]]; then
-        chsh -s /usr/bin/zsh "$target_user"
+        chsh -s "$zsh_path" "$target_user"
     else
-        sudo chsh -s /usr/bin/zsh "$target_user"
+        sudo chsh -s "$zsh_path" "$target_user"
     fi
     success "Default shell changed to zsh (takes effect on next login)"
 }
@@ -1270,7 +1323,13 @@ run_step() {
             dep="${dep%"${dep##*[![:space:]]}"}"
             [[ -n "$dep" ]] || continue
 
-            if ! run_step "$dep"; then
+            local dep_rc=0
+            run_step "$dep" || dep_rc=$?
+            if [[ $dep_rc -eq "$STEP_ABORT_RC" ]]; then
+                STEP_ACTIVE["$name"]=0
+                return "$STEP_ABORT_RC"
+            fi
+            if [[ $dep_rc -ne 0 ]]; then
                 warn "Skipping '$name' — dependency '$dep' failed"
                 SKIPPED+=("$name")
                 STEP_ACTIVE["$name"]=0
@@ -1301,11 +1360,13 @@ run_step() {
             SOFT_FAILED+=("$name")
             STEP_ACTIVE["$name"]=0
             warn "Step '$name' failed (best-effort soft failure)"
+            confirm_continue_after_failure "$name" || return $?
             return 0
         fi
         FAILED+=("$name")
         STEP_ACTIVE["$name"]=0
         warn "Step '$name' failed (continuing)"
+        confirm_continue_after_failure "$name" || return $?
         return 1
     fi
 }
@@ -1341,6 +1402,7 @@ print_summary() {
 }
 
 run_all() {
+    local rc=0
     for entry in "${STEPS[@]}"; do
         IFS='|' read -r name _ _ _ <<< "$entry"
         if is_preboot_mode; then
@@ -1352,7 +1414,12 @@ run_all() {
                     ;;
             esac
         fi
-        run_step "$name" || true
+        rc=0
+        run_step "$name" || rc=$?
+        if [[ $rc -eq "$STEP_ABORT_RC" ]]; then
+            warn "Installation halted after failure by user request"
+            break
+        fi
     done
     print_summary
 }
@@ -1382,7 +1449,12 @@ interactive_menu() {
         if [[ "$sel" =~ ^[0-9]+$ ]] && (( sel >= 1 && sel <= ${#STEPS[@]} )); then
             local entry="${STEPS[$((sel-1))]}"
             IFS='|' read -r name _ _ _ <<< "$entry"
-            run_step "$name" || true
+            local rc=0
+            run_step "$name" || rc=$?
+            if [[ $rc -eq "$STEP_ABORT_RC" ]]; then
+                warn "Installation halted after failure by user request"
+                break
+            fi
         else
             error "Invalid selection: $sel"
         fi
@@ -1406,7 +1478,8 @@ usage() {
     echo
     echo "Env toggles:"
     echo "  DOTFILES_INSTALL_PREBOOT=1       Defer desktop/user-session steps for first login"
-    echo "  DOTFILES_INSTALL_BEST_EFFORT=1   Continue past non-critical step failures"
+    echo "  STRICT=1                         Fail immediately when a step fails (default)"
+    echo "  STRICT=0                         Continue past non-critical step failures"
     echo
     list_steps
 }
@@ -1440,7 +1513,12 @@ main() {
                 exit 1
             fi
             for step in "$@"; do
-                run_step "$step" || true
+                local rc=0
+                run_step "$step" || rc=$?
+                if [[ $rc -eq "$STEP_ABORT_RC" ]]; then
+                    warn "Installation halted after failure by user request"
+                    break
+                fi
             done
             print_summary
             ;;
