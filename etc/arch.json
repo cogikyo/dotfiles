@@ -165,21 +165,7 @@
         "age"
     ],
     "parallel_downloads": 0,
-    "profile_config": {
-        "gfx_driver": "All open-source",
-        "greeter": "sddm",
-        "profile": {
-            "custom_settings": {
-                "Hyprland": {
-                    "seat_access": "polkit"
-                }
-            },
-            "details": [
-                "Hyprland"
-            ],
-            "main": "Desktop"
-        }
-    },
+    "profile_config": null,
     "script": null,
     "services": [],
     "swap": {
