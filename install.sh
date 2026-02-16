@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-VERSION="0.2.2"
+VERSION="0.2.3"
 
 usage() {
     cat <<'EOF'
@@ -94,7 +94,6 @@ die()    { err "$*"; exit 1; }
 header() { printf '\n%b--- %s ---%b\n\n' "$MAGENTA" "$*" "$RESET"; }
 step()   { printf '%b  ==>%b %s\n' "$BLUE" "$RESET" "$*"; }
 dim()    { printf '%b%s%b\n' "$FAINT" "$*" "$RESET"; }
-bold()   { printf '%b%s%b\n' "$BOLD" "$*" "$RESET"; }
 
 # -- interaction ---------------------------------------------------------------
 
@@ -1352,7 +1351,6 @@ healthcheck_go() {
 #  STEP {FIREFOX}: Link Firefox theme/prefs and update newtab DB path  {{{
 
 FIREFOX_PROFILE_DIR=""
-FIREFOX_PROFILE_REL=""
 
 detect_firefox_profile() {
     local ff_root=""
@@ -1401,8 +1399,7 @@ detect_firefox_profile() {
     fi
 
     FIREFOX_PROFILE_DIR="$full_path"
-    FIREFOX_PROFILE_REL="${full_path#"$HOME"/}"
-    info "Detected Firefox profile: $FIREFOX_PROFILE_REL"
+    info "Detected Firefox profile: ${full_path#"$HOME"/}"
 }
 
 step_firefox() {
@@ -1449,7 +1446,7 @@ step_firefox() {
 
     # Update newtab config with profile path
     local config_yaml="$DOTFILES/daemons/config.yaml"
-    local new_db_path="$FIREFOX_PROFILE_REL/places.sqlite"
+    local new_db_path="${FIREFOX_PROFILE_DIR#"$HOME"/}/places.sqlite"
 
     if [[ ! -f "$config_yaml" ]]; then
         warn "daemons/config.yaml not found, skipping newtab config update"
@@ -1554,20 +1551,14 @@ step_dns() {
     local RESOLVED_SRC="$DOTFILES/etc/systemd/resolved.conf"
     local RESOLVED_DST="/etc/systemd/resolved.conf"
 
-    # Require a synced resolved.conf from step_system.
     if [[ ! -f "$RESOLVED_SRC" ]]; then
         err "Source resolved.conf not found at $RESOLVED_SRC"
         return 1
     fi
-    if ! sudo test -f "$RESOLVED_DST"; then
-        err "$RESOLVED_DST not found."
-        err "Run the 'system' step first."
-        return 1
-    fi
-    if ! sudo cmp -s "$RESOLVED_SRC" "$RESOLVED_DST"; then
-        err "resolved.conf is missing or outdated."
-        err "Run './install.sh system' before running 'dns'."
-        return 1
+    if ! sudo test -f "$RESOLVED_DST" || ! sudo cmp -s "$RESOLVED_SRC" "$RESOLVED_DST"; then
+        info "Installing resolved.conf..."
+        sudo mkdir -p "$(dirname "$RESOLVED_DST")"
+        sudo cp "$RESOLVED_SRC" "$RESOLVED_DST"
     fi
 
     # Enable/start systemd-resolved
@@ -1629,18 +1620,17 @@ step_dns() {
         warn "Skipping NetworkManager restart in chroot"
     fi
 
+    resolv_real=$(readlink -f /etc/resolv.conf 2>/dev/null || true)
     if [[ $chroot_mode -eq 0 ]]; then
         if ! systemctl is-active systemd-resolved &>/dev/null; then
             err "systemd-resolved is not active after configuration"
             return 1
         fi
-        resolv_real=$(readlink -f /etc/resolv.conf 2>/dev/null || true)
         if [[ -z "$stub_real" || -z "$resolv_real" || "$resolv_real" != "$stub_real" ]]; then
             err "/etc/resolv.conf is not linked to $STUB"
             return 1
         fi
     else
-        resolv_real=$(readlink -f /etc/resolv.conf 2>/dev/null || true)
         if [[ -z "$stub_real" || -z "$resolv_real" || "$resolv_real" != "$stub_real" ]]; then
             warn "/etc/resolv.conf is not linked to $STUB yet; verify after first boot"
         fi
