@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-VERSION="0.3.0"
+VERSION="0.4.0"
 
 usage() {
     cat <<'EOF'
@@ -341,26 +341,6 @@ run_arch_mode() {
 # =================================================================================================
 #  Step Prerequisites  {{{
 
-ensure_rustup_stable() {
-    if ! has rustup; then
-        warn "rustup not found; skipping Rust toolchain initialization"
-        return 0
-    fi
-
-    local active=""
-    active=$(rustup show active-toolchain 2>/dev/null | awk 'NR==1 {print $1}')
-
-    if [[ "$active" == stable* ]]; then
-        ok "Rust toolchain already set to stable ($active)"
-        return 0
-    fi
-
-    info "Initializing rustup stable toolchain..."
-    rustup toolchain install stable
-    rustup default stable
-    ok "Rust toolchain set to stable"
-}
-
 has_user_bus() {
     [[ -n "${DBUS_SESSION_BUS_ADDRESS:-}" ]] && return 0
     [[ -n "${XDG_RUNTIME_DIR:-}" && -S "${XDG_RUNTIME_DIR}/bus" ]] && return 0
@@ -371,9 +351,9 @@ in_chroot() {
     has systemd-detect-virt && systemd-detect-virt --quiet --chroot &>/dev/null
 }
 
-is_paru_usable() {
-    has paru || return 1
-    paru --version &>/dev/null
+is_yay_usable() {
+    has yay || return 1
+    yay --version &>/dev/null
 }
 
 needs_sudo() {
@@ -392,72 +372,63 @@ needs_sudo() {
     fi
 }
 
-bootstrap_paru() {
-    if is_paru_usable; then
-        ok "paru already installed"
+bootstrap_yay() {
+    if is_yay_usable; then
+        ok "yay already installed"
         return 0
     fi
 
-    info "Bootstrapping paru from source"
+    info "Bootstrapping yay from source"
     has git || { err "git not found. Install git first."; return 1; }
     has makepkg || { err "makepkg not found. Install base-devel first."; return 1; }
 
-    # paru requires Rust to build from source
-    if ! has cargo; then
-        info "Installing rustup (needed to build paru)..."
-        sudo pacman -S --needed --noconfirm rustup
-        rustup toolchain install stable
-        rustup default stable
-    fi
-
-    if ! has cargo; then
-        err "cargo not available after rustup install"
-        return 1
+    if ! has go; then
+        info "Installing go (needed to build yay)..."
+        sudo pacman -S --needed --noconfirm go
     fi
 
     local cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
-    local build_root="$cache_dir/paru-bootstrap"
+    local build_root="$cache_dir/yay-bootstrap"
 
     rm -rf "$build_root"
     mkdir -p "$cache_dir"
-    if ! git clone --depth 1 "https://aur.archlinux.org/paru.git" "$build_root"; then
-        err "Failed to clone paru AUR repo"
+    if ! git clone --depth 1 "https://aur.archlinux.org/yay.git" "$build_root"; then
+        err "Failed to clone yay AUR repo"
         return 1
     fi
     if ! (cd "$build_root" && makepkg -si --noconfirm); then
-        err "makepkg failed while bootstrapping paru"
+        err "makepkg failed while bootstrapping yay"
         rm -rf "$build_root"
         return 1
     fi
     rm -rf "$build_root"
 
-    if ! is_paru_usable; then
-        err "paru bootstrap failed"
+    if ! is_yay_usable; then
+        err "yay bootstrap failed"
         return 1
     fi
 
-    ok "paru bootstrapped from source"
+    ok "yay bootstrapped from source"
 }
 
 # }}}
 # =================================================================================================
 
 # =================================================================================================
-#  STEP {PACKAGES}: Install package sets and Rust stable toolchain  {{{
+#  STEP {PACKAGES}: Install packages and bootstrap AUR helper  {{{
 
 step_packages() {
     header "Installing packages"
 
     needs_sudo
-    bootstrap_paru
+    bootstrap_yay
 
     "$DOTFILES/bin/update" --install
-    ensure_rustup_stable
 }
 
 healthcheck_packages() {
-    if ! is_paru_usable; then
-        err "Healthcheck failed: paru is not runnable"
+    if ! is_yay_usable; then
+        err "Healthcheck failed: yay is not runnable"
         return 1
     fi
     return 0

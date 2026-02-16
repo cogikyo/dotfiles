@@ -46,13 +46,8 @@ retry_cmd() {
   done
 }
 
-require_paru() {
-  has paru || { error "paru not found. Run install.sh packages first."; exit 1; }
-  if ! paru --version &>/dev/null; then
-    error "paru is installed but not runnable (likely libalpm mismatch)"
-    error "Run: ./install.sh packages"
-    exit 1
-  fi
+require_yay() {
+  has yay || { error "yay not found. Run install.sh packages first."; exit 1; }
 }
 
 # -git packages that have stable/binary alternatives
@@ -71,8 +66,8 @@ save_lists() {
   old_aur=$(cat "$AUR_LIST" 2>/dev/null || true)
 
   # Save new lists (explicit only)
-  new_pkg=$(paru -Qenq | sort)
-  new_aur=$(paru -Qemq | sort)
+  new_pkg=$(yay -Qenq | sort)
+  new_aur=$(yay -Qemq | sort)
 
   echo "$new_pkg" > "$PKG_LIST"
   echo "$new_aur" > "$AUR_LIST"
@@ -101,17 +96,17 @@ save_lists() {
 }
 
 do_update() {
-  require_paru
+  require_yay
 
   info "Updating system..."
-  retry_cmd 3 5 paru -Syu
+  retry_cmd 3 5 yay -Syu
 
   info "Removing orphaned packages..."
   local orphans
   local orphan_list
-  mapfile -t orphan_list < <(paru -Qdtq 2>/dev/null || true)
+  mapfile -t orphan_list < <(yay -Qdtq 2>/dev/null || true)
   if [[ ${#orphan_list[@]} -gt 0 ]]; then
-    paru -Rns "${orphan_list[@]}"
+    yay -Rns "${orphan_list[@]}"
   else
     success "No orphans found"
   fi
@@ -125,7 +120,7 @@ do_install() {
     noninteractive=1
   fi
 
-  require_paru
+  require_yay
 
   # Verify sudo works before starting
   if ! sudo -v; then
@@ -145,7 +140,7 @@ do_install() {
   local pkg_count=${#repo_pkgs[@]}
   if (( pkg_count > 0 )); then
     info "Installing $pkg_count repo packages..."
-    retry_cmd 3 5 paru -S --needed --noconfirm "${repo_pkgs[@]}"
+    retry_cmd 3 5 yay -S --needed --noconfirm "${repo_pkgs[@]}"
     success "Repo packages done"
   else
     success "No repo packages to install"
@@ -159,12 +154,12 @@ do_install() {
     if (( aur_count > 0 )); then
       if [[ $noninteractive -eq 1 ]]; then
         info "Installing $aur_count AUR packages (non-interactive)..."
-        retry_cmd 3 5 paru -S --needed --skipreview --noconfirm "${aur_pkgs[@]}"
+        retry_cmd 3 5 yay -S --needed --noconfirm "${aur_pkgs[@]}"
       else
         info "Installing $aur_count AUR packages (interactive)..."
         warn "AUR packages may prompt for input — this is intentional"
         echo
-        retry_cmd 3 5 paru -S --needed --skipreview "${aur_pkgs[@]}"
+        retry_cmd 3 5 yay -S --needed "${aur_pkgs[@]}"
       fi
       echo
       success "AUR packages done"
@@ -182,13 +177,13 @@ do_install() {
 }
 
 do_dry_run() {
-  require_paru
+  require_yay
 
-  info "[dry-run] Would update system with: paru -Syu"
+  info "[dry-run] Would update system with: yay -Syu"
   echo
 
   local orphans
-  orphans=$(paru -Qdtq 2>/dev/null || true)
+  orphans=$(yay -Qdtq 2>/dev/null || true)
   if [[ -n "$orphans" ]]; then
     info "[dry-run] Would remove orphans:"
     while IFS= read -r p; do printf '  - %s\n' "$p"; done <<< "$orphans"
@@ -198,12 +193,12 @@ do_dry_run() {
   echo
 
   info "[dry-run] Would save package lists:"
-  echo "  Repo (explicit): $(paru -Qenq | wc -l) packages → etc/packages.lst"
-  echo "  AUR  (explicit): $(paru -Qemq | wc -l) packages → etc/packages-aur.lst"
+  echo "  Repo (explicit): $(yay -Qenq | wc -l) packages → etc/packages.lst"
+  echo "  AUR  (explicit): $(yay -Qemq | wc -l) packages → etc/packages-aur.lst"
 }
 
 do_dry_install() {
-  require_paru
+  require_yay
 
   if [[ ! -f "$PKG_LIST" ]]; then
     error "Package list not found: $PKG_LIST"
@@ -214,7 +209,7 @@ do_dry_install() {
   echo
 
   local missing
-  missing=$(comm -23 <(sort "$PKG_LIST") <(paru -Qenq | sort) || true)
+  missing=$(comm -23 <(sort "$PKG_LIST") <(yay -Qenq | sort) || true)
   if [[ -n "$missing" ]]; then
     info "Repo packages to install ($(wc -l <<< "$missing")):"
     while IFS= read -r p; do printf '  + %s\n' "$p"; done <<< "$missing"
@@ -224,7 +219,7 @@ do_dry_install() {
 
   echo
   if [[ -f "$AUR_LIST" ]]; then
-    missing=$(comm -23 <(sort "$AUR_LIST") <(paru -Qemq | sort) || true)
+    missing=$(comm -23 <(sort "$AUR_LIST") <(yay -Qemq | sort) || true)
     if [[ -n "$missing" ]]; then
       info "AUR packages to install ($(wc -l <<< "$missing")):"
       while IFS= read -r p; do printf '  + %s\n' "$p"; done <<< "$missing"
@@ -235,7 +230,7 @@ do_dry_install() {
 }
 
 check_sources() {
-  require_paru
+  require_yay
 
   info "Checking for -git packages with better alternatives..."
   echo
@@ -243,7 +238,7 @@ check_sources() {
   local found=0
   for entry in "${REPLACEMENTS[@]}"; do
     IFS='|' read -r git_pkg alt_pkg reason <<< "$entry"
-    if paru -Qq "$git_pkg" &>/dev/null; then
+    if yay -Qq "$git_pkg" &>/dev/null; then
       warn "$git_pkg → $alt_pkg ($reason)"
       found=1
     fi
@@ -256,7 +251,7 @@ check_sources() {
 
   echo
   info "To replace, run:"
-  echo "  paru -S <alternative>  # will prompt to remove the -git version"
+  echo "  yay -S <alternative>  # will prompt to remove the -git version"
 }
 
 usage() {
