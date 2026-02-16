@@ -5,8 +5,8 @@ ws="$1"
 hyprctl dispatch workspace "$ws"
 change-bg "kill"
 
-first=$(hyprctl clients -j | jq -r --argjson ws "$ws" \
-    '[.[] | select(.workspace.id == $ws and .class != "GLava")] | sort_by(.at[0])[0].address // empty')
+# first=$(hyprctl clients -j | jq -r --argjson ws "$ws" \
+#     '[.[] | select(.workspace.id == $ws and .class != "GLava")] | sort_by(.at[0])[0].address // empty')
 
-[[ -n "$first" ]] && hyprctl dispatch focuswindow "address:$first"
+# [[ -n "$first" ]] && hyprctl dispatch focuswindow "address:$first"
 
