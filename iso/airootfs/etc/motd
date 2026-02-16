@@ -1,0 +1,18 @@
+
+[1;34m ██████╗  ██████╗ ████████╗███████╗██╗██╗     ███████╗███████╗[0m
+[1;34m ██╔══██╗██╔═══██╗╚══██╔══╝██╔════╝██║██║     ██╔════╝██╔════╝[0m
+[1;34m ██║  ██║██║   ██║   ██║   █████╗  ██║██║     █████╗  ███████╗[0m
+[1;34m ██║  ██║██║   ██║   ██║   ██╔══╝  ██║██║     ██╔══╝  ╚════██║[0m
+[1;34m ██████╔╝╚██████╔╝   ██║   ██║     ██║███████╗███████╗███████║[0m
+[1;34m ╚═════╝  ╚═════╝    ╚═╝   ╚═╝     ╚═╝╚══════╝╚══════╝╚══════╝[0m
+
+  [1;33mCustom Arch ISO — offline install with pre-cached packages[0m
+
+  [1mInstall steps:[0m
+    1. Connect to Wi-Fi (optional):  [35miwctl[0m
+    2. Run the installer:            [35mARCH=1 ~/dotfiles/install.sh[0m
+    3. Reboot and run:               [35m~/dotfiles/install.sh all[0m
+
+  [90mLocal repo packages: pacman -Sl localrepo[0m
+  [90mDotfiles source:     ~/dotfiles/[0m
+
