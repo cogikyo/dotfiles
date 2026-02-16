@@ -165,9 +165,8 @@ ARCH=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/mast
 
 ### 4. Post Install
 
-After reboot, clone dotfiles and run the installer:
+Dotfiles are cloned automatically during arch install. After reboot:
 
 ```sh
-git clone https://github.com/cogikyo/dotfiles.git ~/dotfiles
 ~/dotfiles/install.sh all
 ```
