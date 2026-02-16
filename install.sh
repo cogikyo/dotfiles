@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-VERSION="0.4.0"
+VERSION="0.4.2"
 
 usage() {
     cat <<'EOF'
@@ -274,6 +274,10 @@ with open(config_path, "w", encoding="utf-8") as f:
 PYEOF
 }
 
+is_live_usb() {
+    [[ -d /var/cache/localrepo ]] && [[ -f /var/cache/localrepo/localrepo.db.tar.zst ]]
+}
+
 run_arch_mode() {
     local script_path script_dir source_config tmp_source_config config firmware_mode raw_base
     script_path="${BASH_SOURCE[0]:-$0}"
@@ -281,13 +285,22 @@ run_arch_mode() {
     source_config="$script_dir/etc/arch.json"
     tmp_source_config="/tmp/arch_source_config.json"
     config="/tmp/arch_config.json"
+    local live_usb=0
 
     banner_arch
 
     [[ $EUID -eq 0 ]] || die "Run ARCH=1 mode as root from the live ISO"
     command -v python3 >/dev/null || die "python3 is required"
     command -v archinstall >/dev/null || die "archinstall is required"
-    command -v curl >/dev/null || die "curl is required"
+
+    if is_live_usb; then
+        live_usb=1
+        ok "Custom live USB detected — using local package cache"
+    fi
+
+    if [[ $live_usb -eq 0 ]]; then
+        command -v curl >/dev/null || die "curl is required"
+    fi
 
     trap 'rm -f "$config" "$tmp_source_config"' EXIT
 
@@ -326,7 +339,6 @@ run_arch_mode() {
         exit 1
     fi
 
-    # Clone dotfiles into the new system for the target user
     local target_root="/mnt"
     local target_user
     target_user=$(
@@ -337,19 +349,52 @@ run_arch_mode() {
         ' "$target_root/etc/passwd"
     )
 
+    # Copy localrepo to the new system so post-install resolves packages locally
+    if [[ $live_usb -eq 1 ]]; then
+        info "Copying local package cache to new system..."
+        mkdir -p "$target_root/var/cache/localrepo"
+        cp -a /var/cache/localrepo/* "$target_root/var/cache/localrepo/"
+
+        # Add [localrepo] to the new system's pacman.conf (before [core])
+        if ! grep -q '^\[localrepo\]' "$target_root/etc/pacman.conf"; then
+            info "Adding [localrepo] to new system's pacman.conf..."
+            sed -i '/^\[core\]/i \[localrepo\]\nSigLevel = Optional TrustAll\nServer = file:///var/cache/localrepo\n' \
+                "$target_root/etc/pacman.conf"
+        fi
+        ok "Local package cache installed in new system"
+    fi
+
     if [[ -n "$target_user" ]]; then
         local user_home
         user_home=$(awk -F: -v user="$target_user" '$1 == user { print $6 }' "$target_root/etc/passwd")
         [[ -n "$user_home" ]] || user_home="/home/$target_user"
 
-        info "Cloning dotfiles into $user_home/dotfiles for user '$target_user'..."
-        arch-chroot "$target_root" /bin/bash -c "
-            pacman -S --needed --noconfirm git
-            sudo -u '$target_user' git clone --depth 1 --branch master \
-                https://github.com/cogikyo/dotfiles.git '$user_home/dotfiles'
-            chown -R '$target_user:$target_user' '$user_home/dotfiles'
-        "
-        ok "Dotfiles cloned into $user_home/dotfiles"
+        if [[ $live_usb -eq 1 && -d "$script_dir" ]]; then
+            # Copy dotfiles from live USB instead of cloning
+            info "Copying dotfiles from live USB into $user_home/dotfiles..."
+            arch-chroot "$target_root" /bin/bash -c "
+                pacman -S --needed --noconfirm git
+            "
+            cp -a "$script_dir" "$target_root$user_home/dotfiles"
+
+            # Re-initialize as a proper git repo so future git ops work
+            arch-chroot "$target_root" /bin/bash -c "
+                cd '$user_home/dotfiles'
+                git init
+                git remote add origin https://github.com/cogikyo/dotfiles.git
+                chown -R '$target_user:$target_user' '$user_home/dotfiles'
+            "
+            ok "Dotfiles copied from live USB into $user_home/dotfiles"
+        else
+            info "Cloning dotfiles into $user_home/dotfiles for user '$target_user'..."
+            arch-chroot "$target_root" /bin/bash -c "
+                pacman -S --needed --noconfirm git
+                sudo -u '$target_user' git clone --depth 1 --branch master \
+                    https://github.com/cogikyo/dotfiles.git '$user_home/dotfiles'
+                chown -R '$target_user:$target_user' '$user_home/dotfiles'
+            "
+            ok "Dotfiles cloned into $user_home/dotfiles"
+        fi
     else
         warn "Could not detect target user — clone dotfiles manually after reboot"
     fi
@@ -360,6 +405,9 @@ run_arch_mode() {
     step "1. Reboot into the new system"
     step "2. Log in as your configured user"
     step "3. Run: ~/dotfiles/install.sh all"
+    if [[ $live_usb -eq 1 ]]; then
+        dim "  (AUR packages will install from local cache — no rebuilds needed)"
+    fi
     echo
 }
 
@@ -452,6 +500,14 @@ step_packages() {
     bootstrap_yay
 
     "$DOTFILES/bin/update" --install
+
+    # Clean up localrepo if it was injected by the live USB installer
+    if [[ -d /var/cache/localrepo ]] && grep -q '^\[localrepo\]' /etc/pacman.conf; then
+        info "Cleaning up local package cache from live USB install..."
+        sudo sed -i '/^\[localrepo\]/,/^$/d' /etc/pacman.conf
+        sudo rm -rf /var/cache/localrepo
+        ok "Local package cache removed"
+    fi
 }
 
 healthcheck_packages() {
@@ -1643,7 +1699,7 @@ run_step() {
         return 0
     fi
 
-    # Check deps are in PASSED[]
+    # Verify dependencies via healthcheck (not session state)
     local deps
     deps=$(get_step_deps "$name")
     if [[ -n "$deps" ]]; then
@@ -1652,7 +1708,12 @@ run_step() {
             dep="${dep#"${dep%%[![:space:]]*}"}"
             dep="${dep%"${dep##*[![:space:]]}"}"
             [[ -n "$dep" ]] || continue
-            if ! array_contains "$dep" "${PASSED[@]}"; then
+            local dep_hc="healthcheck_${dep}"
+            local dep_rc=0
+            if declare -f "$dep_hc" &>/dev/null; then
+                "$dep_hc" 2>/dev/null || dep_rc=$?
+            fi
+            if [[ $dep_rc -ne 0 && $dep_rc -ne "$STEP_SKIPPED_RC" ]]; then
                 err "Step '$name' requires '$dep' — run '$dep' first"
                 FAILED+=("$name")
                 return 1
