@@ -112,18 +112,7 @@ return {
 				separator = " ",
 			},
 			show_name = true,
-			ignore_lsp = { "copilot" },
-		}
-
-		local copilot_status = {
-			function()
-				local clients = vim.lsp.get_clients({ bufnr = 0, name = "copilot" })
-				if #clients > 0 then
-					return "󰯉 "
-				end
-				return ""
-			end,
-		}
+			}
 
 		local search = {
 			function()
@@ -196,7 +185,7 @@ return {
 					lazy,
 					lsp_diagnostics,
 					lsp_status,
-					copilot_status,
+
 					{ require("recorder").recordingStatus },
 					{ require("recorder").displaySlots },
 					search,
