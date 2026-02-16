@@ -709,6 +709,16 @@ step_repos() {
         fi
     done
 
+    # Switch dotfiles remote from HTTPS to SSH (requires secrets step first)
+    local dotfiles_remote
+    dotfiles_remote=$(git -C "$DOTFILES" remote get-url origin 2>/dev/null || true)
+    if [[ "$dotfiles_remote" == https://* ]]; then
+        local ssh_url="${dotfiles_remote/https:\/\/github.com\//git@github.com:}"
+        info "Switching dotfiles remote to SSH..."
+        git -C "$DOTFILES" remote set-url origin "$ssh_url"
+        ok "Dotfiles remote: $ssh_url"
+    fi
+
     # Ensure github.com host key exists to avoid interactive SSH prompts.
     if has ssh-keyscan; then
         mkdir -p "$HOME/.ssh"

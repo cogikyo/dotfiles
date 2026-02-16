@@ -1,2 +1,2 @@
-# Print install instructions on login
-cat /etc/motd
+# Run automated script (from releng)
+~/.automated_script.sh

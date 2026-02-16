@@ -156,6 +156,10 @@ prepare_profile() {
         --exclude='./.git' \
         -cf - . | tar -xf - -C "$airootfs_dotfiles"
 
+    # Ensure scripts are executable in the squashfs
+    chmod +x "$airootfs_dotfiles/install.sh"
+    find "$airootfs_dotfiles/bin" -type f -exec chmod +x {} +
+
     ok "Dotfiles copied to live environment"
 }
 
