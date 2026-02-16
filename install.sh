@@ -739,9 +739,6 @@ step_repos() {
                     info "Cloning $repo -> $path"
                     if git clone "git@github.com:$repo.git" "$expanded"; then
                         ((cloned++))
-                    elif git clone "https://github.com/$repo.git" "$expanded"; then
-                        warn "SSH clone failed, used HTTPS fallback for $repo"
-                        ((cloned++))
                     else
                         err "Failed to clone $repo"
                         ((failed++))
@@ -775,9 +772,6 @@ step_repos() {
             mkdir -p "$(dirname "$expanded")"
             info "Cloning $repo -> $path"
             if git clone "git@github.com:$repo.git" "$expanded"; then
-                ((cloned++))
-            elif git clone "https://github.com/$repo.git" "$expanded"; then
-                warn "SSH clone failed, used HTTPS fallback for $repo"
                 ((cloned++))
             else
                 err "Failed to clone $repo"
