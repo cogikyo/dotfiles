@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-VERSION="0.2.3"
+VERSION="0.3.0"
 
 usage() {
     cat <<'EOF'
@@ -13,7 +13,7 @@ Post-installation script for dotfiles.
 
 Commands:
   all              Run all steps in order
-  {STEP}           Run specific steps by name
+  {STEP}           Run specific step by name
 
 Options:
   -l, --list       List available steps
@@ -22,9 +22,6 @@ Options:
 
 Environment:
   ARCH=1           Archinstall bootstrap (run as root from live ISO)
-  AUTO=1           Unattended mode (default: 0)
-  PAUSE=N          Seconds before each step (default: 3)
-  SKIP=1           Skip chroot post-install in ARCH mode
 EOF
     echo
     list_steps
@@ -41,9 +38,6 @@ DOTFILES="$HOME/dotfiles"
 
 # Behavior
 ARCH="${ARCH:-0}"
-AUTO="${AUTO:-0}"
-PAUSE="${PAUSE:-3}"
-SKIP="${SKIP:-0}"
 
 # }}}
 # =================================================================================================
@@ -99,11 +93,6 @@ dim()    { printf '%b%s%b\n' "$FAINT" "$*" "$RESET"; }
 
 confirm() {
     local prompt="$1" default="${2:-y}" yn
-    if is_auto; then
-        dim "$prompt -> $default (auto)"
-        [[ "$default" == "y" ]]
-        return
-    fi
     if [[ "$default" == "y" ]]; then
         printf '%b  ?  %b %s %b[Y/n]%b ' "$MAGENTA" "$RESET" "$prompt" "$FAINT" "$RESET"
     else
@@ -131,8 +120,6 @@ banner() {
     _banner_kv "mode" "$mode"
     _banner_kv "selection" "$selection"
     _banner_kv "dotfiles" "$DOTFILES"
-    _banner_kv "auto" "$AUTO"
-    _banner_kv "pause" "$PAUSE"
     echo
 }
 
@@ -146,10 +133,6 @@ banner_arch() {
         '██║  ██║██║  ██║╚██████╗██║  ██║'\
         '╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝'
     dim "  bootstrap v$VERSION"
-    echo
-    _banner_kv "skip" "$SKIP"
-    _banner_kv "auto" "$AUTO"
-    _banner_kv "pause" "$PAUSE"
     echo
 }
 
@@ -212,10 +195,6 @@ SKIPPED=()
 #  Core Helpers  {{{
 
 has() { command -v "$1" &>/dev/null; }
-
-is_auto() {
-    [[ "$AUTO" == "1" || ! -t 0 ]]
-}
 
 array_contains() {
     local needle="$1"
@@ -295,83 +274,6 @@ with open(config_path, "w", encoding="utf-8") as f:
 PYEOF
 }
 
-run_arch_post_install() {
-    local target_root="/mnt"
-    local target_user
-
-    command -v arch-chroot >/dev/null || die "arch-chroot is required for post-install"
-    [[ -d "$target_root/etc" ]] || die "Target root not found: $target_root"
-    [[ -f "$target_root/etc/passwd" ]] || die "Target root is missing /etc/passwd: $target_root"
-
-    target_user=$(
-        awk -F: '
-            $3 >= 1000 && $1 != "nobody" && $7 !~ /(nologin|false)$/ {
-                print $1
-                exit
-            }
-        ' "$target_root/etc/passwd"
-    )
-    [[ -n "$target_user" ]] || die "Could not detect target user in $target_root/etc/passwd"
-
-    local user_home
-    user_home=$(awk -F: -v user="$target_user" '$1 == user { print $6 }' "$target_root/etc/passwd")
-    [[ -n "$user_home" ]] || user_home="/home/$target_user"
-
-    info "Running post-install in chroot for user '$target_user'..."
-    arch-chroot "$target_root" /bin/bash -s -- \
-        "$target_user" \
-        "$user_home" \
-        "$AUTO" \
-        "$PAUSE" <<'CHROOT_EOF'
-set -euo pipefail
-
-target_user="$1"
-user_home="$2"
-install_auto="$3"
-install_pause="$4"
-dotfiles_dir="$user_home/dotfiles"
-sudoers_file="/etc/sudoers.d/99-dotfiles-install"
-
-if ! id "$target_user" &>/dev/null; then
-    echo "Target user does not exist in chroot: $target_user" >&2
-    exit 1
-fi
-
-pacman -Sy --noconfirm archlinux-keyring
-pacman -S --needed --noconfirm sudo git base-devel age
-
-install -d -m 0755 /etc/sudoers.d
-printf '%s ALL=(ALL) NOPASSWD:ALL\n' "$target_user" > "$sudoers_file"
-chmod 0440 "$sudoers_file"
-visudo -cf "$sudoers_file" >/dev/null
-trap 'rm -f "$sudoers_file"' EXIT
-
-if [[ ! -d "$user_home" ]]; then
-    echo "Home directory missing for user '$target_user': $user_home" >&2
-    exit 1
-fi
-
-if [[ -d "$dotfiles_dir/.git" ]]; then
-    sudo -H -u "$target_user" git -C "$dotfiles_dir" fetch --depth 1 origin master
-    sudo -H -u "$target_user" git -C "$dotfiles_dir" checkout -f FETCH_HEAD
-elif [[ -e "$dotfiles_dir" ]]; then
-    echo "dotfiles path exists but is not a git checkout: $dotfiles_dir" >&2
-    exit 1
-else
-    sudo -H -u "$target_user" git clone --depth 1 --branch master \
-        https://github.com/cogikyo/dotfiles.git "$dotfiles_dir"
-fi
-chown -R "$target_user:$target_user" "$dotfiles_dir"
-
-sudo -H -u "$target_user" env \
-    ARCH=0 \
-    AUTO="$install_auto" \
-    DOTFILES_INSTALL_CHROOT=1 \
-    PAUSE="$install_pause" \
-    "$dotfiles_dir/install.sh" all
-CHROOT_EOF
-}
-
 run_arch_mode() {
     local script_path script_dir source_config tmp_source_config config firmware_mode raw_base
     script_path="${BASH_SOURCE[0]:-$0}"
@@ -424,29 +326,12 @@ run_arch_mode() {
         exit 1
     fi
 
-    if [[ "$SKIP" == "1" ]]; then
-        warn "Skipping post-install automation (SKIP=1)"
-    else
-        if ! run_arch_post_install; then
-            err "Post-install automation failed"
-            warn "You can reboot and run ~/dotfiles/install.sh all manually"
-            banner_end "ARCH BOOTSTRAP" "FAILED" "chroot post-install failed"
-            exit 1
-        fi
-    fi
-
     ok "Installation complete"
-    banner_end "ARCH BOOTSTRAP" "SUCCESS" "reboot then run deferred desktop steps"
+    banner_end "ARCH BOOTSTRAP" "SUCCESS" "reboot and run ./install.sh all"
     info "Next steps:"
-    if [[ "$SKIP" == "1" ]]; then
-        step "1. Reboot into the new system"
-        step "2. Log in as your configured user"
-        step "3. Clone dotfiles and run: ./install.sh all"
-    else
-        step "1. Reboot into the new system"
-        step "2. Log in as your configured user"
-        step "3. Run deferred steps if needed (e.g. ./install.sh firefox after first Firefox launch)"
-    fi
+    step "1. Reboot into the new system"
+    step "2. Log in as your configured user"
+    step "3. Clone dotfiles and run: ./install.sh all"
     echo
 }
 
@@ -483,9 +368,7 @@ has_user_bus() {
 }
 
 in_chroot() {
-    [[ "${DOTFILES_INSTALL_CHROOT:-0}" == "1" ]] && return 0
-    has systemd-detect-virt && systemd-detect-virt --quiet --chroot &>/dev/null && return 0
-    return 1
+    has systemd-detect-virt && systemd-detect-virt --quiet --chroot &>/dev/null
 }
 
 is_paru_usable() {
@@ -515,21 +398,34 @@ bootstrap_paru() {
         return 0
     fi
 
-    info "Bootstrapping paru from AUR prebuilt package (paru-bin)"
+    info "Bootstrapping paru from source"
     has git || { err "git not found. Install git first."; return 1; }
     has makepkg || { err "makepkg not found. Install base-devel first."; return 1; }
+
+    # paru requires Rust to build from source
+    if ! has cargo; then
+        info "Installing rustup (needed to build paru)..."
+        sudo pacman -S --needed --noconfirm rustup
+        rustup toolchain install stable
+        rustup default stable
+    fi
+
+    if ! has cargo; then
+        err "cargo not available after rustup install"
+        return 1
+    fi
 
     local cache_dir="${XDG_CACHE_HOME:-$HOME/.cache}"
     local build_root="$cache_dir/paru-bootstrap"
 
     rm -rf "$build_root"
     mkdir -p "$cache_dir"
-    if ! git clone --depth 1 "https://aur.archlinux.org/paru-bin.git" "$build_root"; then
-        err "Failed to clone paru-bin AUR repo"
+    if ! git clone --depth 1 "https://aur.archlinux.org/paru.git" "$build_root"; then
+        err "Failed to clone paru AUR repo"
         return 1
     fi
-    if ! (cd "$build_root" && makepkg -si --noconfirm --needed); then
-        err "makepkg failed while bootstrapping paru-bin"
+    if ! (cd "$build_root" && makepkg -si --noconfirm); then
+        err "makepkg failed while bootstrapping paru"
         rm -rf "$build_root"
         return 1
     fi
@@ -540,7 +436,7 @@ bootstrap_paru() {
         return 1
     fi
 
-    ok "paru bootstrapped from AUR"
+    ok "paru bootstrapped from source"
 }
 
 # }}}
@@ -1770,14 +1666,9 @@ run_step() {
     desc=$(get_step_desc "$name")
     header "$name"
     [[ -n "$desc" ]] && dim "$desc"
-    if ! is_auto; then
-        if ! confirm "Run step '$name'?"; then
-            SKIPPED+=("$name")
-            return 0
-        fi
-    elif (( PAUSE > 0 )); then
-        dim "Starting in ${PAUSE}s..."
-        sleep "$PAUSE"
+    if ! confirm "Run step '$name'?"; then
+        SKIPPED+=("$name")
+        return 0
     fi
 
     # Run step function
@@ -1888,11 +1779,6 @@ main() {
 
     ensure_dotfiles_checkout "$@"
     validate_healthcheck_coverage
-
-    if ! [[ "$PAUSE" =~ ^[0-9]+$ ]]; then
-        warn "Invalid PAUSE='$PAUSE' (expected integer seconds); defaulting to 0"
-        PAUSE=0
-    fi
 
     if [[ $# -eq 0 ]]; then
         usage
