@@ -161,26 +161,13 @@ ARCH=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/mast
 
 1. Set partition configuration via installer
 2. Set authentication and user via installer
-3. After `archinstall` finishes, each post-install step prompts for confirmation
-4. Enter your `age` passphrase when prompted during secrets decrypt
-
-To skip the chroot post-install and do it manually after reboot:
-
-```sh
-ARCH=1 SKIP=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/install.sh)
-```
-
-For unattended mode (no confirmation prompts):
-
-```sh
-ARCH=1 AUTO=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/install.sh)
-```
+3. Reboot into the new system
 
 ### 4. Post Install
 
-Most steps run in chroot before first boot. After reboot, run any remaining steps:
+After reboot, clone dotfiles and run the installer:
 
 ```sh
-~/dotfiles/install.sh firefox   # needs a Firefox profile to exist first
-~/dotfiles/install.sh all       # or re-run everything
+git clone https://github.com/cogikyo/dotfiles.git ~/dotfiles
+~/dotfiles/install.sh all
 ```
