@@ -326,12 +326,40 @@ run_arch_mode() {
         exit 1
     fi
 
+    # Clone dotfiles into the new system for the target user
+    local target_root="/mnt"
+    local target_user
+    target_user=$(
+        awk -F: '
+            $3 >= 1000 && $1 != "nobody" && $7 !~ /(nologin|false)$/ {
+                print $1; exit
+            }
+        ' "$target_root/etc/passwd"
+    )
+
+    if [[ -n "$target_user" ]]; then
+        local user_home
+        user_home=$(awk -F: -v user="$target_user" '$1 == user { print $6 }' "$target_root/etc/passwd")
+        [[ -n "$user_home" ]] || user_home="/home/$target_user"
+
+        info "Cloning dotfiles into $user_home/dotfiles for user '$target_user'..."
+        arch-chroot "$target_root" /bin/bash -c "
+            pacman -S --needed --noconfirm git
+            sudo -u '$target_user' git clone --depth 1 --branch master \
+                https://github.com/cogikyo/dotfiles.git '$user_home/dotfiles'
+            chown -R '$target_user:$target_user' '$user_home/dotfiles'
+        "
+        ok "Dotfiles cloned into $user_home/dotfiles"
+    else
+        warn "Could not detect target user — clone dotfiles manually after reboot"
+    fi
+
     ok "Installation complete"
     banner_end "ARCH BOOTSTRAP" "SUCCESS" "reboot and run ./install.sh all"
     info "Next steps:"
     step "1. Reboot into the new system"
     step "2. Log in as your configured user"
-    step "3. Clone dotfiles and run: ./install.sh all"
+    step "3. Run: ~/dotfiles/install.sh all"
     echo
 }
 
