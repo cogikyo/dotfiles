@@ -14,7 +14,7 @@ VERSION="0.1.0"
 
 # -- paths --------------------------------------------------------------------
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 DOTFILES="$(cd "$SCRIPT_DIR/.." && pwd)"
 ISO_DIR="$DOTFILES/iso"
 WORK_DIR="$ISO_DIR/work"
@@ -147,16 +147,14 @@ prepare_profile() {
     fi
 
     info "Copying dotfiles repo into airootfs/root/dotfiles..."
-    git -C "$DOTFILES" archive --format=tar HEAD | tar -xf - -C "$(mktemp -d)" 2>/dev/null || true
-
-    # Use rsync to copy the repo, excluding build artifacts
-    rsync -a --delete \
-        --exclude='iso/work/' \
-        --exclude='iso/out/' \
-        --exclude='iso/airootfs/var/' \
-        --exclude='iso/airootfs/root/dotfiles/' \
-        --exclude='.git/' \
-        "$DOTFILES/" "$airootfs_dotfiles/"
+    mkdir -p "$airootfs_dotfiles"
+    tar -C "$DOTFILES" \
+        --exclude='./iso/work' \
+        --exclude='./iso/out' \
+        --exclude='./iso/airootfs/var' \
+        --exclude='./iso/airootfs/root/dotfiles' \
+        --exclude='./.git' \
+        -cf - . | tar -xf - -C "$airootfs_dotfiles"
 
     ok "Dotfiles copied to live environment"
 }
