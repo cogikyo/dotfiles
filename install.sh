@@ -1,20 +1,44 @@
 #!/usr/bin/env bash
-# install - Unified post-installation script for dotfiles
-#
-# Usage:
-#   ./install.sh             # Interactive menu to select steps
-#   ./install.sh all         # Run all steps in order
-#   ./install.sh link go     # Run specific steps by name
-#   ./install.sh --list      # List available steps
-#   ./install.sh --help      # Show usage
+# vim: set foldmethod=marker foldlevel=0:
 
 set -euo pipefail
 
-# ========================
-#  Runtime Config
-# ========================
+VERSION="0.1.0"
 
-INSTALL_VERSION="2026.02.15.4"
+usage() {
+    echo "Usage: ./install.sh [OPTIONS] [STEP...]"
+    echo
+    echo "Unified post-installation script for dotfiles."
+    echo
+    echo "Arch bootstrap mode:"
+    echo "  ARCH=1 ./install.sh"
+    echo
+    echo "Modes:"
+    echo "  (no args)     Interactive menu"
+    echo "  all           Run all steps in order"
+    echo "  STEP [STEP..] Run specific steps by name"
+    echo
+    echo "Options:"
+    echo "  --list, -l    List available steps"
+    echo "  --help, -h    Show this help"
+    echo
+    echo "Env toggles:"
+    echo "  DOTFILES_INSTALL_PREBOOT=1       Defer desktop/user-session steps for first login"
+    echo "  DOTFILES_INSTALL_CHROOT=1        Force chroot mode when auto-detection is blocked"
+    echo "  STRICT=1                         Fail immediately when a step fails (default)"
+    echo "  STRICT=0                         Continue past non-critical step failures"
+    echo "  PAUSE=3                          Pause N seconds before each step (default: 3)"
+    echo "  ARCH=1                           Run archinstall bootstrap mode"
+    echo "  SKIP=1                           Skip chroot post-install automation in ARCH mode"
+    echo "  STEPS=\"...\"                    Select post-install steps in ARCH mode"
+    echo "  AUTO=1                           Run unattended (skip prompts, use defaults)"
+    echo
+    list_steps
+}
+
+# =================================================================================================
+#  Runtime Config  {{{
+
 DOTFILES="${DOTFILES:-$HOME/dotfiles}"
 DOTFILES_REPO="${DOTFILES_REPO:-https://github.com/cogikyo/dotfiles.git}"
 DOTFILES_REF="${DOTFILES_REF:-master}"
@@ -32,13 +56,16 @@ DOTFILES_RAW_BASE="${DOTFILES_RAW_BASE:-https://raw.githubusercontent.com/cogiky
 DOTFILES_TARGET_ROOT="${DOTFILES_TARGET_ROOT:-/mnt}"
 DOTFILES_TARGET_USER="${DOTFILES_TARGET_USER:-}"
 ARCHINSTALL_PROFILE_MODE="${ARCHINSTALL_PROFILE_MODE:-minimal}"
-SKIP="${SKIP:-${ARCH_POST_SKIP:-0}}"
-STEPS="${STEPS:-${STPES:-${ARCH_STEPS:-${ARCH_POST_STEPS:-all}}}}"
-NONINTERACTIVE="${NONINTERACTIVE:-${ARCH_NONINTERACTIVE:-0}}"
+SKIP="${SKIP:-0}"
+STEPS="${STEPS:-all}"
+AUTO="${AUTO:-0}"
 
-# ========================
-#  Colors / Logging
-# ========================
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  Colors / Logging  {{{
+# =================================================================================================
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -52,7 +79,6 @@ RESET='\033[0m'
 if [[ ! -t 1 || -n "${NO_COLOR:-}" ]]; then
     RED='' GREEN='' YELLOW='' BLUE='' MAGENTA='' FAINT='' BOLD='' RESET=''
 fi
-
 
 log_line() {
     local color="$1"
@@ -74,7 +100,7 @@ colored_block() {
     done
 }
 
-script_header() { printf '%b== dotfiles install v%s ==%b\n' "$BLUE" "$INSTALL_VERSION" "$RESET"; }
+script_header() { printf '%b== dotfiles install v%s ==%b\n' "$BLUE" "$VERSION" "$RESET"; }
 
 info()    { log_line "$BLUE" "INFO" "$*"; }
 step()    { printf '%b  ==>%b %s\n' "$BLUE" "$RESET" "$*"; }
@@ -97,7 +123,7 @@ print_start_banner() {
         ' | ||  \| \___ \ | | / _ \ | |   | |    ' \
         ' | || |\  |___) || |/ ___ \| |___| |___ ' \
         '|___|_| \_|____/ |_/_/   \_\_____|_____|'
-    faint "  dotfiles v$INSTALL_VERSION"
+    faint "  dotfiles v$VERSION"
     echo
     banner_kv "mode" "$mode"
     banner_kv "selection" "$selection"
@@ -105,7 +131,7 @@ print_start_banner() {
     banner_kv "strict" "$STRICT"
     banner_kv "pause" "$PAUSE"
     banner_kv "preboot" "$DOTFILES_INSTALL_PREBOOT"
-    banner_kv "noninteractive" "${DOTFILES_INSTALL_NONINTERACTIVE:-0}"
+    banner_kv "auto" "$AUTO"
     banner_kv "chroot-forced" "${DOTFILES_INSTALL_CHROOT:-0}"
     echo
 }
@@ -118,7 +144,7 @@ print_arch_start_banner() {
         '  / _ \ | |_) | |   | |_| |' \
         ' / ___ \|  _ <| |___|  _  |' \
         '/_/   \_\_| \_\\____|_| |_|'
-    faint "  bootstrap v$INSTALL_VERSION"
+    faint "  bootstrap v$VERSION"
     echo
     banner_kv "target-root" "$DOTFILES_TARGET_ROOT"
     banner_kv "target-user" "${DOTFILES_TARGET_USER:-auto-detect}"
@@ -127,7 +153,7 @@ print_arch_start_banner() {
     banner_kv "skip-post-install" "$SKIP"
     banner_kv "strict" "$STRICT"
     banner_kv "pause" "$PAUSE"
-    banner_kv "noninteractive" "$NONINTERACTIVE"
+    banner_kv "auto" "$AUTO"
     echo
 }
 
@@ -154,9 +180,11 @@ print_finish_banner() {
     echo
 }
 
-# ========================
-#  Step Registry
-# ========================
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  Step Registry  {{{
 
 # name|description|requires_sudo|depends
 STEP_DEFS=(
@@ -181,14 +209,16 @@ SKIPPED=()
 SOFT_FAILED=()
 declare -A STEP_ACTIVE=()
 
-# ========================
-#  Core Helpers
-# ========================
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  Core Helpers  {{{
 
 confirm() {
     local prompt="$1" default="${2:-y}"
     local yn
-    if is_noninteractive; then
+    if is_auto; then
         if [[ "$default" == "y" ]]; then
             info "$prompt -> yes (non-interactive default)"
             return 0
@@ -214,7 +244,7 @@ confirm_continue_after_failure() {
     local step_log="${2:-}"
     local step_rc="${3:-1}"
 
-    if is_noninteractive; then
+    if is_auto; then
         return 0
     fi
 
@@ -234,8 +264,8 @@ confirm_continue_after_failure() {
 
 has() { command -v "$1" &>/dev/null; }
 
-is_noninteractive() {
-    [[ "${DOTFILES_INSTALL_NONINTERACTIVE:-0}" == "1" || ! -t 0 ]]
+is_auto() {
+    [[ "$AUTO" == "1" || ! -t 0 ]]
 }
 
 is_headless_override() {
@@ -303,23 +333,22 @@ ensure_dotfiles_checkout() {
     exec "$DOTFILES/install.sh" "$@"
 }
 
-# ========================
-#  Arch Bootstrap Mode
-# ========================
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  Arch Bootstrap Mode  {{{
 
 arch_mode_usage() {
     cat <<'EOF'
-Usage: ARCH=1 install.sh [--auto]
+Usage: ARCH=1 install.sh
 
 Notes:
-  --auto is accepted for compatibility, but default behavior is already auto.
   Set SKIP=1 to skip chroot post-install automation.
   Set STEPS to run a subset (default: all).
-    Back-compat aliases: STPES, ARCH_STEPS, ARCH_POST_STEPS.
   Set STRICT=1 for strict fail-fast post-install.
   Set PAUSE=3 to pause N seconds before each install step.
-  Set NONINTERACTIVE=1 for unattended post-install.
-    Back-compat alias: ARCH_NONINTERACTIVE.
+  Set AUTO=1 for unattended post-install.
   Set ARCHINSTALL_PROFILE_MODE=minimal|preset (default: minimal).
 EOF
 }
@@ -370,7 +399,7 @@ run_arch_post_install() {
     local target_user="$2"
     local post_install_steps="$3"
     local install_strict="$4"
-    local install_noninteractive="$5"
+    local install_auto="$5"
     local install_pause="$6"
 
     command -v arch-chroot >/dev/null || die "arch-chroot is required for post-install"
@@ -411,7 +440,7 @@ dotfiles_ref="$3"
 dotfiles_repo="$4"
 post_install_steps="$5"
 install_strict="$6"
-install_noninteractive="$7"
+install_auto="$7"
 install_pause="$8"
 dotfiles_dir="$user_home/dotfiles"
 sudoers_file="/etc/sudoers.d/99-dotfiles-install"
@@ -477,7 +506,7 @@ if [[ -r /dev/tty ]]; then
         DOTFILES_REF="$dotfiles_ref" \
         DOTFILES_INSTALL_TARGET_USER="$target_user" \
         DOTFILES_INSTALL_ALLOW_HEADLESS=1 \
-        DOTFILES_INSTALL_NONINTERACTIVE="$install_noninteractive" \
+        AUTO="$install_auto" \
         DOTFILES_INSTALL_PREBOOT=1 \
         DOTFILES_INSTALL_CHROOT=1 \
         STRICT="$install_strict" \
@@ -491,7 +520,7 @@ else
         DOTFILES_REF="$dotfiles_ref" \
         DOTFILES_INSTALL_TARGET_USER="$target_user" \
         DOTFILES_INSTALL_ALLOW_HEADLESS=1 \
-        DOTFILES_INSTALL_NONINTERACTIVE=1 \
+        AUTO=1 \
         DOTFILES_INSTALL_PREBOOT=1 \
         DOTFILES_INSTALL_CHROOT=1 \
         STRICT="$install_strict" \
@@ -512,9 +541,6 @@ run_arch_mode() {
 
     if [[ $# -gt 0 ]]; then
         case "$1" in
-            --auto)
-                shift
-                ;;
             -h|--help)
                 arch_mode_usage
                 exit 0
@@ -524,7 +550,6 @@ run_arch_mode() {
                 ;;
         esac
     fi
-    [[ $# -eq 0 ]] || die "Unexpected extra arguments in ARCH mode: $*"
 
     print_arch_start_banner
 
@@ -572,7 +597,7 @@ run_arch_mode() {
     if [[ "$SKIP" == "1" ]]; then
         warn "Skipping post-install automation (SKIP=1)"
     else
-        if ! run_arch_post_install "$DOTFILES_TARGET_ROOT" "$DOTFILES_TARGET_USER" "$STEPS" "$STRICT" "$NONINTERACTIVE" "$PAUSE"; then
+        if ! run_arch_post_install "$DOTFILES_TARGET_ROOT" "$DOTFILES_TARGET_USER" "$STEPS" "$STRICT" "$AUTO" "$PAUSE"; then
             error "Post-install automation failed"
             warn "You can reboot and run ~/dotfiles/install.sh all manually"
             print_finish_banner "ARCH BOOTSTRAP" "FAILED" "chroot post-install failed"
@@ -594,6 +619,12 @@ run_arch_mode() {
     fi
     echo
 }
+
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  Step Prerequisites  {{{
 
 ensure_rustup_stable() {
     if ! has rustup; then
@@ -827,9 +858,11 @@ bootstrap_paru() {
     success "paru bootstrapped from AUR"
 }
 
-# ========================
-#  STEP {PACKAGES}: Install pacman/AUR package sets and Rust stable toolchain
-# ========================
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  STEP {PACKAGES}: Install package sets and Rust stable toolchain  {{{
 
 step_packages() {
     header "Installing packages"
@@ -841,9 +874,19 @@ step_packages() {
     ensure_rustup_stable
 }
 
-# ========================
-#  STEP {LINK}: Symlink dotfiles config, scripts, and shell profile
-# ========================
+healthcheck_packages() {
+    if ! is_paru_usable; then
+        error "Healthcheck failed: paru is not runnable"
+        return 1
+    fi
+    return 0
+}
+
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  STEP {LINK}: Symlink dotfiles config, scripts, and shell profile  {{{
 
 step_link() {
     header "Linking configs and scripts"
@@ -915,9 +958,23 @@ step_link() {
     success "Linking complete"
 }
 
-# ========================
-#  STEP {SECRETS}: Decrypt age-managed secrets into local target paths
-# ========================
+healthcheck_link() {
+    local zsh_src zsh_dst
+    zsh_src=$(canonpath "$DOTFILES/config/zsh/zshrc")
+    zsh_dst=$(canonpath "$HOME/.zshrc")
+
+    [[ -L "$HOME/.zshrc" ]] || { error "Healthcheck failed: ~/.zshrc is not a symlink"; return 1; }
+    [[ "$zsh_src" == "$zsh_dst" ]] || { error "Healthcheck failed: ~/.zshrc does not point to $DOTFILES/config/zsh/zshrc"; return 1; }
+    [[ -d "$HOME/.config" ]] || { error "Healthcheck failed: ~/.config does not exist"; return 1; }
+    [[ -d "$HOME/.local/bin" ]] || { error "Healthcheck failed: ~/.local/bin does not exist"; return 1; }
+    return 0
+}
+
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  STEP {SECRETS}: Decrypt age-managed secrets into local target paths  {{{
 
 step_secrets() {
     header "Decrypting secrets"
@@ -947,9 +1004,46 @@ step_secrets() {
     "$DOTFILES/bin/secrets" decrypt
 }
 
-# ========================
-#  STEP {REPOS}: Create base directories and clone repos from manifest
-# ========================
+healthcheck_secrets() {
+    local manifest="$DOTFILES/etc/secrets/manifest"
+    local has_entries=0
+    local line name target mode expanded target_mode
+
+    [[ -f "$manifest" ]] || return "$STEP_SKIPPED_RC"
+
+    while IFS= read -r line; do
+        line="${line%%#*}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [[ -z "$line" ]] && continue
+        has_entries=1
+
+        IFS=':' read -r name target mode <<< "$line"
+        [[ -n "$target" ]] || continue
+
+        expanded="${target/#\~/$HOME}"
+        if [[ ! -e "$expanded" ]]; then
+            error "Healthcheck failed: missing secret target '$expanded' for '$name'"
+            return 1
+        fi
+
+        if [[ "$mode" =~ ^[0-7]{3,4}$ ]]; then
+            target_mode=$(stat -c '%a' "$expanded" 2>/dev/null || true)
+            if [[ -n "$target_mode" && "$target_mode" != "$mode" ]]; then
+                warn "Secret mode mismatch for $expanded (expected $mode, got $target_mode)"
+            fi
+        fi
+    done < "$manifest"
+
+    [[ $has_entries -eq 1 ]] || return "$STEP_SKIPPED_RC"
+    return 0
+}
+
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  STEP {REPOS}: Create base directories and clone repos from manifest  {{{
 
 step_repos() {
     header "Cloning repositories and creating directories"
@@ -1069,9 +1163,52 @@ step_repos() {
     fi
 }
 
-# ========================
-#  STEP {SYSTEM}: Install system-level config files and enable core services
-# ========================
+healthcheck_repos() {
+    local repos_file="$DOTFILES/etc/repos.toml"
+    local line key val path expanded
+    local expected=0
+    local missing=0
+
+    [[ -f "$repos_file" ]] || { error "Healthcheck failed: missing repos manifest"; return 1; }
+
+    while IFS= read -r line; do
+        line="${line%%#*}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        line="${line%"${line##*[![:space:]]}"}"
+        [[ -z "$line" ]] && continue
+
+        key="${line%%=*}"
+        val="${line#*=}"
+        key="${key#"${key%%[![:space:]]*}"}"
+        key="${key%"${key##*[![:space:]]}"}"
+        val="${val#"${val%%[![:space:]]*}"}"
+        val="${val%"${val##*[![:space:]]}"}"
+        val="${val#\"}" val="${val%\"}"
+
+        if [[ "$key" == "path" && -n "$val" ]]; then
+            ((++expected))
+            expanded="${val/#\~/$HOME}"
+            if [[ ! -d "$expanded" ]]; then
+                error "Healthcheck failed: repo path missing '$expanded'"
+                ((++missing))
+            fi
+        fi
+    done < "$repos_file"
+
+    if (( expected == 0 )); then
+        warn "No repo paths found in manifest during healthcheck"
+        return 0
+    fi
+
+    (( missing == 0 )) || return 1
+    return 0
+}
+
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  STEP {SYSTEM}: Install system-level config files and enable core services  {{{
 
 step_system() {
     header "Installing system configs"
@@ -1154,9 +1291,33 @@ step_system() {
     fi
 }
 
-# ========================
-#  STEP {SWAP}: Provision btrfs swap subvolume/file and fstab entry
-# ========================
+healthcheck_system() {
+    local checks=(
+        "/etc/bluetooth/main.conf"
+        "/etc/udev/rules.d/81-bluetooth-hci.rules"
+        "/etc/udev/rules.d/92-viia.rules"
+        "/etc/sddm.conf.d/autologin.conf"
+        "/etc/sddm.conf.d/hyprland.desktop"
+        "/etc/systemd/resolved.conf"
+        "/etc/systemd/sleep.conf.d/hibernate.conf"
+    )
+    local path
+
+    for path in "${checks[@]}"; do
+        if ! sudo test -f "$path"; then
+            error "Healthcheck failed: missing system file '$path'"
+            return 1
+        fi
+    done
+
+    return 0
+}
+
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  STEP {SWAP}: Provision btrfs swap subvolume/file and fstab entry  {{{
 
 step_swap() {
     header "Setting up swap"
@@ -1232,9 +1393,24 @@ step_swap() {
     success "Swap setup complete"
 }
 
-# ========================
-#  STEP {HIBERNATE}: Configure resume args, hooks, and initramfs for hibernate
-# ========================
+healthcheck_swap() {
+    local root_fs
+    root_fs=$(findmnt -no FSTYPE / 2>/dev/null || true)
+    [[ "$root_fs" == "btrfs" ]] || return "$STEP_SKIPPED_RC"
+
+    [[ -f /swap/swapfile ]] || { error "Healthcheck failed: /swap/swapfile missing"; return 1; }
+    if ! awk '$0 !~ /^[[:space:]]*#/ && $1 == "/swap/swapfile" && $3 == "swap" {found=1} END {exit(found ? 0 : 1)}' /etc/fstab; then
+        error "Healthcheck failed: /swap/swapfile is missing from /etc/fstab"
+        return 1
+    fi
+    return 0
+}
+
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  STEP {HIBERNATE}: Configure resume args, hooks, and initramfs for hibernate  {{{
 
 step_hibernate() {
     header "Configuring hibernation"
@@ -1336,9 +1512,23 @@ step_hibernate() {
     success "Hibernation configured"
 }
 
-# ========================
-#  STEP {FONTS}: Install bundled fonts and refresh font cache
-# ========================
+healthcheck_hibernate() {
+    if [[ ! -f /swap/swapfile ]]; then
+        error "Healthcheck failed: /swap/swapfile missing"
+        return 1
+    fi
+    if ! grep -q 'HOOKS=.*resume' /etc/mkinitcpio.conf; then
+        error "Healthcheck failed: mkinitcpio resume hook is missing"
+        return 1
+    fi
+    return 0
+}
+
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  STEP {FONTS}: Install bundled fonts and refresh font cache  {{{
 
 step_fonts() {
     header "Installing fonts"
@@ -1385,9 +1575,18 @@ step_fonts() {
     success "Fonts installed"
 }
 
-# ========================
-#  STEP {GO}: Build Go tools and install/enable user services
-# ========================
+healthcheck_fonts() {
+    local font_dir="$HOME/.local/share/fonts"
+    [[ -d "$font_dir" ]] || { error "Healthcheck failed: font directory missing"; return 1; }
+    [[ -n "$(ls -A "$font_dir" 2>/dev/null)" ]] || { error "Healthcheck failed: font directory is empty"; return 1; }
+    return 0
+}
+
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  STEP {GO}: Build Go tools and install/enable user services  {{{
 
 # Binary definitions: name -> module_dir|build_path|description|is_daemon|output_dir
 declare -A GO_BINARIES=(
@@ -1495,9 +1694,25 @@ step_go() {
     return "$service_rc"
 }
 
-# ========================
-#  STEP {FIREFOX}: Link Firefox theme/prefs and update newtab DB path
-# ========================
+healthcheck_go() {
+    local name module_dir build_path desc is_daemon output_dir install_dir
+    for name in "${!GO_BINARIES[@]}"; do
+        IFS='|' read -r module_dir build_path desc is_daemon output_dir <<< "${GO_BINARIES[$name]}"
+        install_dir="$HOME/.local/bin"
+        [[ -n "$output_dir" ]] && install_dir="$DOTFILES/$output_dir"
+        if [[ ! -x "$install_dir/$name" ]]; then
+            error "Healthcheck failed: missing Go binary '$install_dir/$name'"
+            return 1
+        fi
+    done
+    return 0
+}
+
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  STEP {FIREFOX}: Link Firefox theme/prefs and update newtab DB path  {{{
 
 FIREFOX_PROFILE_DIR=""
 FIREFOX_PROFILE_REL=""
@@ -1557,7 +1772,7 @@ step_firefox() {
     header "Configuring Firefox"
 
     if ! detect_firefox_profile; then
-        if in_chroot || is_headless_override || is_noninteractive; then
+        if in_chroot || is_headless_override || is_auto; then
             warn "Skipping Firefox setup until first user login/profile creation"
             return "$STEP_SKIPPED_RC"
         fi
@@ -1619,9 +1834,21 @@ step_firefox() {
     warn "Restart Firefox for changes to take effect"
 }
 
-# ========================
-#  STEP {SHELL}: Ensure zsh exists and set it as login shell
-# ========================
+healthcheck_firefox() {
+    if ! detect_firefox_profile; then
+        return "$STEP_SKIPPED_RC"
+    fi
+
+    [[ -f "$FIREFOX_PROFILE_DIR/user.js" ]] || { error "Healthcheck failed: Firefox user.js missing"; return 1; }
+    [[ -d "$FIREFOX_PROFILE_DIR/chrome" ]] || { error "Healthcheck failed: Firefox chrome/ directory missing"; return 1; }
+    return 0
+}
+
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  STEP {SHELL}: Ensure zsh exists and set it as login shell  {{{
 
 step_shell() {
     header "Setting default shell to zsh"
@@ -1668,9 +1895,25 @@ step_shell() {
     success "Default shell changed to zsh (takes effect on next login)"
 }
 
-# ========================
-#  STEP {DNS}: Configure systemd-resolved + NetworkManager DNS wiring
-# ========================
+healthcheck_shell() {
+    local target_user current_shell zsh_path
+    target_user=$(resolve_target_user)
+    zsh_path=$(command -v zsh || true)
+    [[ -n "$zsh_path" ]] || { error "Healthcheck failed: zsh is not installed"; return 1; }
+
+    current_shell=$(getent passwd "$target_user" | cut -d: -f7)
+    [[ "$current_shell" == "$zsh_path" ]] || {
+        error "Healthcheck failed: $target_user shell is '$current_shell' (expected '$zsh_path')"
+        return 1
+    }
+    return 0
+}
+
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  STEP {DNS}: Configure systemd-resolved + NetworkManager DNS wiring  {{{
 
 step_dns() {
     header "Setting up DNS (systemd-resolved + Cloudflare DNS-over-TLS)"
@@ -1803,198 +2046,6 @@ step_dns() {
     success "DNS configured with Cloudflare DNS-over-TLS + strict DNSSEC"
 }
 
-# ========================
-#  Step Healthchecks
-# ========================
-
-healthcheck_packages() {
-    if ! is_paru_usable; then
-        error "Healthcheck failed: paru is not runnable"
-        return 1
-    fi
-    return 0
-}
-
-healthcheck_link() {
-    local zsh_src zsh_dst
-    zsh_src=$(canonpath "$DOTFILES/config/zsh/zshrc")
-    zsh_dst=$(canonpath "$HOME/.zshrc")
-
-    [[ -L "$HOME/.zshrc" ]] || { error "Healthcheck failed: ~/.zshrc is not a symlink"; return 1; }
-    [[ "$zsh_src" == "$zsh_dst" ]] || { error "Healthcheck failed: ~/.zshrc does not point to $DOTFILES/config/zsh/zshrc"; return 1; }
-    [[ -d "$HOME/.config" ]] || { error "Healthcheck failed: ~/.config does not exist"; return 1; }
-    [[ -d "$HOME/.local/bin" ]] || { error "Healthcheck failed: ~/.local/bin does not exist"; return 1; }
-    return 0
-}
-
-healthcheck_secrets() {
-    local manifest="$DOTFILES/etc/secrets/manifest"
-    local has_entries=0
-    local line name target mode expanded target_mode
-
-    [[ -f "$manifest" ]] || return "$STEP_SKIPPED_RC"
-
-    while IFS= read -r line; do
-        line="${line%%#*}"
-        line="${line#"${line%%[![:space:]]*}"}"
-        line="${line%"${line##*[![:space:]]}"}"
-        [[ -z "$line" ]] && continue
-        has_entries=1
-
-        IFS=':' read -r name target mode <<< "$line"
-        [[ -n "$target" ]] || continue
-
-        expanded="${target/#\~/$HOME}"
-        if [[ ! -e "$expanded" ]]; then
-            error "Healthcheck failed: missing secret target '$expanded' for '$name'"
-            return 1
-        fi
-
-        if [[ "$mode" =~ ^[0-7]{3,4}$ ]]; then
-            target_mode=$(stat -c '%a' "$expanded" 2>/dev/null || true)
-            if [[ -n "$target_mode" && "$target_mode" != "$mode" ]]; then
-                warn "Secret mode mismatch for $expanded (expected $mode, got $target_mode)"
-            fi
-        fi
-    done < "$manifest"
-
-    [[ $has_entries -eq 1 ]] || return "$STEP_SKIPPED_RC"
-    return 0
-}
-
-healthcheck_repos() {
-    local repos_file="$DOTFILES/etc/repos.toml"
-    local line key val path expanded
-    local expected=0
-    local missing=0
-
-    [[ -f "$repos_file" ]] || { error "Healthcheck failed: missing repos manifest"; return 1; }
-
-    while IFS= read -r line; do
-        line="${line%%#*}"
-        line="${line#"${line%%[![:space:]]*}"}"
-        line="${line%"${line##*[![:space:]]}"}"
-        [[ -z "$line" ]] && continue
-
-        key="${line%%=*}"
-        val="${line#*=}"
-        key="${key#"${key%%[![:space:]]*}"}"
-        key="${key%"${key##*[![:space:]]}"}"
-        val="${val#"${val%%[![:space:]]*}"}"
-        val="${val%"${val##*[![:space:]]}"}"
-        val="${val#\"}" val="${val%\"}"
-
-        if [[ "$key" == "path" && -n "$val" ]]; then
-            ((++expected))
-            expanded="${val/#\~/$HOME}"
-            if [[ ! -d "$expanded" ]]; then
-                error "Healthcheck failed: repo path missing '$expanded'"
-                ((++missing))
-            fi
-        fi
-    done < "$repos_file"
-
-    if (( expected == 0 )); then
-        warn "No repo paths found in manifest during healthcheck"
-        return 0
-    fi
-
-    (( missing == 0 )) || return 1
-    return 0
-}
-
-healthcheck_system() {
-    local checks=(
-        "/etc/bluetooth/main.conf"
-        "/etc/udev/rules.d/81-bluetooth-hci.rules"
-        "/etc/udev/rules.d/92-viia.rules"
-        "/etc/sddm.conf.d/autologin.conf"
-        "/etc/sddm.conf.d/hyprland.desktop"
-        "/etc/systemd/resolved.conf"
-        "/etc/systemd/sleep.conf.d/hibernate.conf"
-    )
-    local path
-
-    for path in "${checks[@]}"; do
-        if ! sudo test -f "$path"; then
-            error "Healthcheck failed: missing system file '$path'"
-            return 1
-        fi
-    done
-
-    return 0
-}
-
-healthcheck_swap() {
-    local root_fs
-    root_fs=$(findmnt -no FSTYPE / 2>/dev/null || true)
-    [[ "$root_fs" == "btrfs" ]] || return "$STEP_SKIPPED_RC"
-
-    [[ -f /swap/swapfile ]] || { error "Healthcheck failed: /swap/swapfile missing"; return 1; }
-    if ! awk '$0 !~ /^[[:space:]]*#/ && $1 == "/swap/swapfile" && $3 == "swap" {found=1} END {exit(found ? 0 : 1)}' /etc/fstab; then
-        error "Healthcheck failed: /swap/swapfile is missing from /etc/fstab"
-        return 1
-    fi
-    return 0
-}
-
-healthcheck_hibernate() {
-    if [[ ! -f /swap/swapfile ]]; then
-        error "Healthcheck failed: /swap/swapfile missing"
-        return 1
-    fi
-    if ! grep -q 'HOOKS=.*resume' /etc/mkinitcpio.conf; then
-        error "Healthcheck failed: mkinitcpio resume hook is missing"
-        return 1
-    fi
-    return 0
-}
-
-healthcheck_fonts() {
-    local font_dir="$HOME/.local/share/fonts"
-    [[ -d "$font_dir" ]] || { error "Healthcheck failed: font directory missing"; return 1; }
-    [[ -n "$(ls -A "$font_dir" 2>/dev/null)" ]] || { error "Healthcheck failed: font directory is empty"; return 1; }
-    return 0
-}
-
-healthcheck_go() {
-    local name module_dir build_path desc is_daemon output_dir install_dir
-    for name in "${!GO_BINARIES[@]}"; do
-        IFS='|' read -r module_dir build_path desc is_daemon output_dir <<< "${GO_BINARIES[$name]}"
-        install_dir="$HOME/.local/bin"
-        [[ -n "$output_dir" ]] && install_dir="$DOTFILES/$output_dir"
-        if [[ ! -x "$install_dir/$name" ]]; then
-            error "Healthcheck failed: missing Go binary '$install_dir/$name'"
-            return 1
-        fi
-    done
-    return 0
-}
-
-healthcheck_firefox() {
-    if ! detect_firefox_profile; then
-        return "$STEP_SKIPPED_RC"
-    fi
-
-    [[ -f "$FIREFOX_PROFILE_DIR/user.js" ]] || { error "Healthcheck failed: Firefox user.js missing"; return 1; }
-    [[ -d "$FIREFOX_PROFILE_DIR/chrome" ]] || { error "Healthcheck failed: Firefox chrome/ directory missing"; return 1; }
-    return 0
-}
-
-healthcheck_shell() {
-    local target_user current_shell zsh_path
-    target_user=$(resolve_target_user)
-    zsh_path=$(command -v zsh || true)
-    [[ -n "$zsh_path" ]] || { error "Healthcheck failed: zsh is not installed"; return 1; }
-
-    current_shell=$(getent passwd "$target_user" | cut -d: -f7)
-    [[ "$current_shell" == "$zsh_path" ]] || {
-        error "Healthcheck failed: $target_user shell is '$current_shell' (expected '$zsh_path')"
-        return 1
-    }
-    return 0
-}
-
 healthcheck_dns() {
     local stub="/run/systemd/resolve/stub-resolv.conf"
     local stub_real resolv_real
@@ -2016,6 +2067,12 @@ healthcheck_dns() {
 
     return 0
 }
+
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  Step Dispatcher / CLI  {{{
 
 run_step_healthcheck() {
     local step_name="$1"
@@ -2040,10 +2097,6 @@ validate_healthcheck_coverage() {
         fi
     done
 }
-
-# ========================
-#  Step Dispatcher / CLI
-# ========================
 
 list_steps() {
     echo "Available steps:"
@@ -2309,37 +2362,6 @@ interactive_menu() {
     print_summary
 }
 
-usage() {
-    echo "Usage: ./install.sh [OPTIONS] [STEP...]"
-    echo
-    echo "Unified post-installation script for dotfiles."
-    echo
-    echo "Arch bootstrap mode:"
-    echo "  ARCH=1 ./install.sh [--auto]"
-    echo
-    echo "Modes:"
-    echo "  (no args)     Interactive menu"
-    echo "  all           Run all steps in order"
-    echo "  STEP [STEP..] Run specific steps by name"
-    echo
-    echo "Options:"
-    echo "  --list, -l    List available steps"
-    echo "  --help, -h    Show this help"
-    echo
-    echo "Env toggles:"
-    echo "  DOTFILES_INSTALL_PREBOOT=1       Defer desktop/user-session steps for first login"
-    echo "  DOTFILES_INSTALL_CHROOT=1        Force chroot mode when auto-detection is blocked"
-    echo "  STRICT=1                         Fail immediately when a step fails (default)"
-    echo "  STRICT=0                         Continue past non-critical step failures"
-    echo "  PAUSE=3                          Pause N seconds before each step (default: 3)"
-    echo "  ARCH=1                           Run archinstall bootstrap mode"
-    echo "  SKIP=1                           Skip chroot post-install automation in ARCH mode"
-    echo "  STEPS=\"...\"                     Select post-install steps in ARCH mode"
-    echo "  NONINTERACTIVE=1                 Run ARCH mode post-install unattended"
-    echo
-    list_steps
-}
-
 main() {
     if [[ "$ARCH" == "1" ]]; then
         run_arch_mode "$@"
@@ -2399,5 +2421,8 @@ main() {
             ;;
     esac
 }
+
+# }}}
+# =================================================================================================
 
 main "$@"
