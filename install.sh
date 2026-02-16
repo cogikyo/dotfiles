@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-VERSION="0.2.0"
+VERSION="0.2.2"
 
 usage() {
     cat <<'EOF'
@@ -22,7 +22,7 @@ Options:
 
 Environment:
   ARCH=1           Archinstall bootstrap (run as root from live ISO)
-  AUTO=1           Unattended mode (default: 1)
+  AUTO=1           Unattended mode (default: 0)
   PAUSE=N          Seconds before each step (default: 3)
   SKIP=1           Skip chroot post-install in ARCH mode
 EOF
@@ -41,7 +41,7 @@ DOTFILES="$HOME/dotfiles"
 
 # Behavior
 ARCH="${ARCH:-0}"
-AUTO="${AUTO:-1}"
+AUTO="${AUTO:-0}"
 PAUSE="${PAUSE:-3}"
 SKIP="${SKIP:-0}"
 
@@ -120,12 +120,13 @@ confirm() {
 banner() {
     local mode="$1" selection="$2"
     echo
-    _art "$MAGENTA" \
-        ' ___ _   _ ____ _____  _    _     _     ' \
-        '|_ _| \ | / ___|_   _|/ \  | |   | |    ' \
-        ' | ||  \| \___ \ | | / _ \ | |   | |    ' \
-        ' | || |\  |___) || |/ ___ \| |___| |___ ' \
-        '|___|_| \_|____/ |_/_/   \_\_____|_____|'
+    _art "$YELLOW" \
+        '██╗███╗   ██╗███████╗████████╗ █████╗ ██╗     ██╗     ' \
+        '██║████╗  ██║██╔════╝╚══██╔══╝██╔══██╗██║     ██║     ' \
+        '██║██╔██╗ ██║███████╗   ██║   ███████║██║     ██║     ' \
+        '██║██║╚██╗██║╚════██║   ██║   ██╔══██║██║     ██║     ' \
+        '██║██║ ╚████║███████║   ██║   ██║  ██║███████╗███████╗' \
+        '╚═╝╚═╝  ╚═══╝╚══════╝   ╚═╝   ╚═╝  ╚═╝╚══════╝╚══════╝'
     dim "  dotfiles v$VERSION"
     echo
     _banner_kv "mode" "$mode"
@@ -138,12 +139,13 @@ banner() {
 
 banner_arch() {
     echo
-    _art "$MAGENTA" \
-        '    _    ____   ____ _   _ ' \
-        '   / \  |  _ \ / ___| | | |' \
-        '  / _ \ | |_) | |   | |_| |' \
-        ' / ___ \|  _ <| |___|  _  |' \
-        '/_/   \_\_| \_\\____|_| |_|'
+    _art "$BLUE" \
+        ' █████╗ ██████╗  ██████╗██╗  ██╗'\
+        '██╔══██╗██╔══██╗██╔════╝██║  ██║'\
+        '███████║██████╔╝██║     ███████║'\
+        '██╔══██║██╔══██╗██║     ██╔══██║'\
+        '██║  ██║██║  ██║╚██████╗██║  ██║'\
+        '╚═╝  ╚═╝╚═╝  ╚═╝ ╚═════╝╚═╝  ╚═╝'
     dim "  bootstrap v$VERSION"
     echo
     _banner_kv "skip" "$SKIP"
@@ -157,18 +159,20 @@ banner_end() {
     echo
     if [[ "$status" == "FAILED" ]]; then
         _art "$RED" \
-            ' _____ _    ___ _     _____ ____  ' \
-            '|  ___/ \  |_ _| |   | ____|  _ \ ' \
-            '| |_ / _ \  | || |   |  _| | | | |' \
-            '|  _/ ___ \ | || |___| |___| |_| |' \
-            '|_|/_/   \_\___|_____|_____|____/ '
+            '███████╗ █████╗ ██╗██╗     ███████╗██████╗ ' \
+            '██╔════╝██╔══██╗██║██║     ██╔════╝██╔══██╗' \
+            '█████╗  ███████║██║██║     █████╗  ██║  ██║' \
+            '██╔══╝  ██╔══██║██║██║     ██╔══╝  ██║  ██║' \
+            '██║     ██║  ██║██║███████╗███████╗██████╔╝' \
+            '╚═╝     ╚═╝  ╚═╝╚═╝╚══════╝╚══════╝╚═════╝'
     else
         _art "$GREEN" \
-            ' ____  _   _  ____ ____ _____ ____ ____  ' \
-            '/ ___|| | | |/ ___/ ___| ____/ ___/ ___| ' \
-            '\___ \| | | | |  | |   |  _| \___ \___ \ ' \
-            ' ___) | |_| | |__| |___| |___ ___) |__) |' \
-            '|____/ \___/ \____\____|_____|____/____/ '
+            '███████╗██╗   ██╗ ██████╗███████╗███████╗███████╗' \
+            '██╔════╝██║   ██║██╔════╝██╔════╝██╔════╝██╔════╝' \
+            '███████╗██║   ██║██║     █████╗  ███████╗███████╗' \
+            '╚════██║██║   ██║██║     ██╔══╝  ╚════██║╚════██║' \
+            '███████║╚██████╔╝╚██████╗███████╗███████║███████║' \
+            '╚══════╝ ╚═════╝  ╚═════╝╚══════╝╚══════╝╚══════╝'
     fi
     dim "  $mode"
     [[ -n "$details" ]] && dim "  $details"
@@ -488,12 +492,6 @@ in_chroot() {
 is_paru_usable() {
     has paru || return 1
     paru --version &>/dev/null
-}
-
-require_desktop_environment() {
-    [[ $EUID -ne 0 ]] || { err "Run as your regular user, not root"; return 1; }
-    in_chroot && { err "Cannot run from chroot"; return 1; }
-    [[ "${XDG_SESSION_TYPE:-}" == "wayland" ]] || { err "No Wayland session detected"; return 1; }
 }
 
 needs_sudo() {
@@ -1777,12 +1775,17 @@ run_step() {
         done
     fi
 
-    # Step banner + pause
+    # Step banner + confirmation
     local desc
     desc=$(get_step_desc "$name")
     header "$name"
     [[ -n "$desc" ]] && dim "$desc"
-    if (( PAUSE > 0 )); then
+    if ! is_auto; then
+        if ! confirm "Run step '$name'?"; then
+            SKIPPED+=("$name")
+            return 0
+        fi
+    elif (( PAUSE > 0 )); then
         dim "Starting in ${PAUSE}s..."
         sleep "$PAUSE"
     fi
@@ -1921,12 +1924,10 @@ main() {
             ;;
         all)
             banner "post-install" "all"
-            require_desktop_environment || exit 1
             run_all
             ;;
         *)
             banner "post-install" "$*"
-            require_desktop_environment || exit 1
             for name in "$@"; do
                 run_step "$name" || break
             done
