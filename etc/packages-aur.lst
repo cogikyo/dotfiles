@@ -24,7 +24,6 @@ nvimpager
 openai-codex-bin
 pandoc-bin
 papirus-folders-catppuccin-git
-paru
 redis
 shellcheck-bin
 slack-desktop-wayland
@@ -36,4 +35,4 @@ vial-appimage
 vidir
 watchman-bin
 wayfreeze-git
-yay-bin
+yay
