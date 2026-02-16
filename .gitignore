@@ -7,3 +7,9 @@ etc/secrets/identity
 
 # External plugins (managed separately)
 config/xplr/plugins/preview/
+
+# ISO build artifacts
+iso/work/
+iso/out/
+iso/airootfs/var/
+iso/airootfs/root/dotfiles/

@@ -1,0 +1,459 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# =============================================================================
+#  Custom Arch ISO Builder
+#
+#  Builds a live ISO with all repo + AUR packages pre-cached in a [localrepo],
+#  so archinstall resolves from local disk instead of downloading.
+#
+#  Usage: sudo build-iso [--usb /dev/sdX] [--skip-aur] [--clean]
+# =============================================================================
+
+VERSION="0.1.0"
+
+# -- paths --------------------------------------------------------------------
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+DOTFILES="$(cd "$SCRIPT_DIR/.." && pwd)"
+ISO_DIR="$DOTFILES/iso"
+WORK_DIR="$ISO_DIR/work"
+OUT_DIR="$ISO_DIR/out"
+
+PACKAGES_LST="$DOTFILES/etc/packages.lst"
+PACKAGES_AUR_LST="$DOTFILES/etc/packages-aur.lst"
+
+LOCALREPO_DIR=""  # set in prepare_profile
+
+# -- options ------------------------------------------------------------------
+
+USB_DEVICE=""
+SKIP_AUR=0
+CLEAN=0
+
+# -- colors -------------------------------------------------------------------
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[1;34m'
+FAINT='\033[90m'
+BOLD='\033[1m'
+RESET='\033[0m'
+
+if [[ ! -t 1 || -n "${NO_COLOR:-}" ]]; then
+    RED='' GREEN='' YELLOW='' BLUE='' FAINT='' BOLD='' RESET=''
+fi
+
+_log() {
+    local color="$1" level="$2"; shift 2
+    printf '%b[%-5s]%b %s\n' "$color" "$level" "$RESET" "$*"
+}
+
+info()  { _log "$BLUE"   "INFO"  "$*"; }
+ok()    { _log "$GREEN"  "OK"    "$*"; }
+warn()  { _log "$YELLOW" "WARN"  "$*"; }
+err()   { _log "$RED"    "ERROR" "$*" >&2; }
+die()   { err "$*"; exit 1; }
+phase() { printf '\n%b=== Phase %s ===%b\n\n' "$BOLD" "$*" "$RESET"; }
+
+# -- usage --------------------------------------------------------------------
+
+usage() {
+    cat <<EOF
+Usage: sudo build-iso [OPTIONS]
+
+Build a custom Arch Linux ISO with pre-cached packages.
+
+Options:
+  --usb /dev/sdX   Write ISO to USB device after build
+  --skip-aur       Skip AUR package builds
+  --clean          Remove work/out dirs before building
+  -h, --help       Show this help
+
+Version: $VERSION
+EOF
+}
+
+# -- helpers ------------------------------------------------------------------
+
+read_package_list() {
+    local file="$1"
+    [[ -f "$file" ]] || return 0
+    grep -v '^#\|^$' "$file" | sed 's/#.*//' | awk '{print $1}' | sort -u
+}
+
+# =============================================================================
+#  Phase 0: Preflight
+# =============================================================================
+
+preflight() {
+    phase "0: Preflight"
+
+    [[ $EUID -eq 0 ]] || die "Must be run as root (use sudo)"
+
+    local missing=()
+    for cmd in mkarchiso pacman makepkg repo-add git; do
+        command -v "$cmd" &>/dev/null || missing+=("$cmd")
+    done
+
+    if [[ ${#missing[@]} -gt 0 ]]; then
+        die "Missing required commands: ${missing[*]}
+Install archiso: pacman -S archiso"
+    fi
+
+    [[ -d "$ISO_DIR" ]] || die "ISO profile not found: $ISO_DIR"
+    [[ -f "$PACKAGES_LST" ]] || die "Package list not found: $PACKAGES_LST"
+
+    local repo_count aur_count
+    repo_count=$(read_package_list "$PACKAGES_LST" | wc -l)
+    aur_count=0
+    [[ -f "$PACKAGES_AUR_LST" ]] && aur_count=$(read_package_list "$PACKAGES_AUR_LST" | wc -l)
+
+    info "Dotfiles:      $DOTFILES"
+    info "ISO profile:   $ISO_DIR"
+    info "Repo packages: $repo_count"
+    info "AUR packages:  $aur_count"
+
+    if [[ -n "$USB_DEVICE" ]]; then
+        [[ -b "$USB_DEVICE" ]] || die "USB device not found: $USB_DEVICE"
+        info "USB target:    $USB_DEVICE"
+    fi
+}
+
+# =============================================================================
+#  Phase 1: Prepare profile
+# =============================================================================
+
+prepare_profile() {
+    phase "1: Prepare profile"
+
+    if [[ $CLEAN -eq 1 ]]; then
+        info "Cleaning previous build artifacts..."
+        rm -rf "$WORK_DIR" "$OUT_DIR"
+    fi
+
+    mkdir -p "$WORK_DIR" "$OUT_DIR"
+
+    # localrepo lives inside the airootfs so it ends up in the squashfs
+    LOCALREPO_DIR="$ISO_DIR/airootfs/var/cache/localrepo"
+    mkdir -p "$LOCALREPO_DIR"
+
+    # Copy dotfiles repo into the live environment
+    local airootfs_dotfiles="$ISO_DIR/airootfs/root/dotfiles"
+    if [[ -d "$airootfs_dotfiles" ]]; then
+        info "Updating dotfiles in airootfs..."
+        rm -rf "$airootfs_dotfiles"
+    fi
+
+    info "Copying dotfiles repo into airootfs/root/dotfiles..."
+    git -C "$DOTFILES" archive --format=tar HEAD | tar -xf - -C "$(mktemp -d)" 2>/dev/null || true
+
+    # Use rsync to copy the repo, excluding build artifacts
+    rsync -a --delete \
+        --exclude='iso/work/' \
+        --exclude='iso/out/' \
+        --exclude='iso/airootfs/var/' \
+        --exclude='iso/airootfs/root/dotfiles/' \
+        --exclude='.git/' \
+        "$DOTFILES/" "$airootfs_dotfiles/"
+
+    ok "Dotfiles copied to live environment"
+}
+
+# =============================================================================
+#  Phase 2: Cache repo packages
+# =============================================================================
+
+cache_repo_packages() {
+    phase "2: Cache repo packages"
+
+    # Collect all repo packages: archinstall essentials + packages.lst
+    local -a pkgs=()
+
+    # Base packages that archinstall needs
+    local base_pkgs=(base linux linux-firmware base-devel git networkmanager)
+    for pkg in "${base_pkgs[@]}"; do
+        pkgs+=("$pkg")
+    done
+
+    # Read from packages.lst
+    while IFS= read -r pkg; do
+        pkgs+=("$pkg")
+    done < <(read_package_list "$PACKAGES_LST")
+
+    # Deduplicate
+    local -a unique_pkgs=()
+    local seen=""
+    for pkg in "${pkgs[@]}"; do
+        if [[ "$seen" != *"|$pkg|"* ]]; then
+            unique_pkgs+=("$pkg")
+            seen+="|$pkg|"
+        fi
+    done
+
+    info "Downloading ${#unique_pkgs[@]} packages (+ dependencies) to localrepo..."
+
+    # Download packages without installing — pacman -Syw downloads to cachedir
+    # Use --noconfirm and ignore groups that would prompt
+    pacman -Syw --noconfirm --needed \
+        --cachedir "$LOCALREPO_DIR" \
+        --dbpath /var/lib/pacman \
+        "${unique_pkgs[@]}" || {
+        warn "Some packages may not exist in repos (AUR packages are handled in phase 3)"
+        # Retry with only packages that exist in sync dbs
+        local -a valid_pkgs=()
+        for pkg in "${unique_pkgs[@]}"; do
+            if pacman -Si "$pkg" &>/dev/null; then
+                valid_pkgs+=("$pkg")
+            else
+                warn "Skipping non-repo package: $pkg"
+            fi
+        done
+        if [[ ${#valid_pkgs[@]} -gt 0 ]]; then
+            pacman -Syw --noconfirm --needed \
+                --cachedir "$LOCALREPO_DIR" \
+                --dbpath /var/lib/pacman \
+                "${valid_pkgs[@]}"
+        fi
+    }
+
+    local count
+    count=$(find "$LOCALREPO_DIR" -name '*.pkg.tar.*' ! -name '*.sig' | wc -l)
+    ok "Downloaded $count packages to localrepo"
+}
+
+# =============================================================================
+#  Phase 3: Build AUR packages
+# =============================================================================
+
+build_aur_packages() {
+    phase "3: Build AUR packages"
+
+    if [[ $SKIP_AUR -eq 1 ]]; then
+        warn "Skipping AUR builds (--skip-aur)"
+        return 0
+    fi
+
+    if [[ ! -f "$PACKAGES_AUR_LST" ]]; then
+        info "No AUR package list found, skipping"
+        return 0
+    fi
+
+    local -a aur_pkgs=()
+    while IFS= read -r pkg; do
+        aur_pkgs+=("$pkg")
+    done < <(read_package_list "$PACKAGES_AUR_LST")
+
+    if [[ ${#aur_pkgs[@]} -eq 0 ]]; then
+        info "No AUR packages to build"
+        return 0
+    fi
+
+    # Create a temporary build user since makepkg refuses to run as root
+    local build_user="_isobuild"
+    local build_home="/tmp/_isobuild"
+
+    if ! id "$build_user" &>/dev/null; then
+        useradd -m -d "$build_home" -s /bin/bash "$build_user"
+        # Allow passwordless sudo for package installation during makepkg -s
+        echo "$build_user ALL=(ALL) NOPASSWD: ALL" > "/etc/sudoers.d/$build_user"
+    fi
+    mkdir -p "$build_home"
+    chown -R "$build_user:$build_user" "$build_home"
+
+    local built=0 failed=0 skipped=0
+    info "Building ${#aur_pkgs[@]} AUR packages..."
+
+    for pkg in "${aur_pkgs[@]}"; do
+        # Skip if we already have this package cached
+        if find "$LOCALREPO_DIR" -name "${pkg}-*.pkg.tar.*" ! -name '*.sig' | grep -q .; then
+            ((++skipped))
+            continue
+        fi
+
+        local build_dir="$build_home/$pkg"
+        rm -rf "$build_dir"
+
+        info "Building AUR: $pkg"
+        if ! sudo -u "$build_user" git clone --depth 1 "https://aur.archlinux.org/$pkg.git" "$build_dir" 2>/dev/null; then
+            err "Failed to clone AUR package: $pkg"
+            ((++failed))
+            continue
+        fi
+
+        if sudo -u "$build_user" bash -c "cd '$build_dir' && makepkg -s --noconfirm --noprogressbar 2>&1"; then
+            # Copy built packages to localrepo
+            local found_pkg=0
+            while IFS= read -r -d '' pkg_file; do
+                cp "$pkg_file" "$LOCALREPO_DIR/"
+                ((++found_pkg))
+            done < <(find "$build_dir" -name '*.pkg.tar.*' ! -name '*.sig' -print0)
+
+            if [[ $found_pkg -gt 0 ]]; then
+                ((++built))
+                ok "Built: $pkg"
+            else
+                err "No package file produced for: $pkg"
+                ((++failed))
+            fi
+        else
+            err "Failed to build: $pkg"
+            ((++failed))
+        fi
+
+        rm -rf "$build_dir"
+    done
+
+    # Cleanup build user
+    userdel -r "$build_user" 2>/dev/null || true
+    rm -f "/etc/sudoers.d/$build_user"
+
+    ok "AUR builds complete: $built built, $skipped cached, $failed failed"
+    [[ $failed -eq 0 ]] || warn "Some AUR packages failed to build — install will fall back to network"
+}
+
+# =============================================================================
+#  Phase 4: Create repo database
+# =============================================================================
+
+create_repo_db() {
+    phase "4: Create repo database"
+
+    local pkg_count
+    pkg_count=$(find "$LOCALREPO_DIR" -name '*.pkg.tar.*' ! -name '*.sig' | wc -l)
+
+    if [[ $pkg_count -eq 0 ]]; then
+        die "No packages found in localrepo — nothing to index"
+    fi
+
+    info "Creating repo database for $pkg_count packages..."
+
+    # Remove old db files
+    rm -f "$LOCALREPO_DIR"/localrepo.db* "$LOCALREPO_DIR"/localrepo.files*
+
+    # Create the repo database
+    repo-add "$LOCALREPO_DIR/localrepo.db.tar.zst" "$LOCALREPO_DIR"/*.pkg.tar.*
+
+    ok "Repo database created"
+}
+
+# =============================================================================
+#  Phase 5: Build ISO
+# =============================================================================
+
+build_iso() {
+    phase "5: Build ISO"
+
+    info "Building ISO with mkarchiso..."
+    info "This may take a while..."
+
+    mkarchiso -v -w "$WORK_DIR" -o "$OUT_DIR" "$ISO_DIR"
+
+    local iso_file
+    iso_file=$(find "$OUT_DIR" -name '*.iso' -printf '%T@ %p\n' | sort -rn | head -1 | cut -d' ' -f2-)
+
+    if [[ -z "$iso_file" ]]; then
+        die "ISO build failed — no .iso file found in $OUT_DIR"
+    fi
+
+    local iso_size
+    iso_size=$(du -h "$iso_file" | cut -f1)
+    ok "ISO built: $iso_file ($iso_size)"
+}
+
+# =============================================================================
+#  Phase 6: Write to USB
+# =============================================================================
+
+write_to_usb() {
+    phase "6: Write to USB"
+
+    if [[ -z "$USB_DEVICE" ]]; then
+        info "No --usb specified, skipping USB write"
+        return 0
+    fi
+
+    local iso_file
+    iso_file=$(find "$OUT_DIR" -name '*.iso' -printf '%T@ %p\n' | sort -rn | head -1 | cut -d' ' -f2-)
+
+    [[ -n "$iso_file" ]] || die "No ISO file found to write"
+    [[ -b "$USB_DEVICE" ]] || die "USB device not found: $USB_DEVICE"
+
+    # Safety check — make sure it's not a mounted filesystem
+    if findmnt "$USB_DEVICE" &>/dev/null || findmnt "${USB_DEVICE}"?* &>/dev/null 2>&1; then
+        die "USB device $USB_DEVICE (or a partition) is mounted — unmount first"
+    fi
+
+    local iso_size dev_size
+    iso_size=$(stat -c %s "$iso_file")
+    dev_size=$(blockdev --getsize64 "$USB_DEVICE")
+
+    if [[ $iso_size -gt $dev_size ]]; then
+        die "ISO ($iso_size bytes) is larger than device ($dev_size bytes)"
+    fi
+
+    warn "This will ERASE ALL DATA on $USB_DEVICE"
+    printf '%b  ?  %b Continue? %b[y/N]%b ' '\033[0;35m' '\033[0m' '\033[90m' '\033[0m'
+    local yn
+    read -r yn
+    [[ "$yn" =~ ^[Yy] ]] || { info "Aborted"; return 0; }
+
+    info "Writing ISO to $USB_DEVICE..."
+    dd bs=4M if="$iso_file" of="$USB_DEVICE" status=progress oflag=sync
+
+    ok "ISO written to $USB_DEVICE"
+    info "You can now boot from this USB drive"
+}
+
+# =============================================================================
+#  Main
+# =============================================================================
+
+main() {
+    # Parse arguments
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --usb)
+                [[ -n "${2:-}" ]] || die "--usb requires a device argument"
+                USB_DEVICE="$2"
+                shift 2
+                ;;
+            --skip-aur)
+                SKIP_AUR=1
+                shift
+                ;;
+            --clean)
+                CLEAN=1
+                shift
+                ;;
+            -h|--help)
+                usage
+                exit 0
+                ;;
+            *)
+                die "Unknown option: $1"
+                ;;
+        esac
+    done
+
+    echo
+    printf '%b%s%b\n' "$BOLD" "build-iso v$VERSION" "$RESET"
+    printf '%b%s%b\n' "$FAINT" "Custom Arch ISO with pre-cached packages" "$RESET"
+    echo
+
+    preflight
+    prepare_profile
+    cache_repo_packages
+    build_aur_packages
+    create_repo_db
+    build_iso
+    write_to_usb
+
+    echo
+    ok "All done!"
+    info "Test with: qemu-system-x86_64 -cdrom $OUT_DIR/*.iso -m 4G -enable-kvm"
+    echo
+}
+
+main "$@"
