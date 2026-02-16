@@ -111,62 +111,63 @@
 
 ## 🛠️ Installation
 
-### **1. Get the installation image:**
+### **1. Get the installation image**
 
-- **[archlinux-version-x86_64.iso](https://archlinux.org/download/)**
+<details open>
+<summary>🚀 <b>Custom ISO</b> (recommended)</summary>
 
-### **2. Load on USB**
+Build a custom ISO with all repo and AUR packages pre-cached for a nearly offline install. Requires `archiso`:
+
+```sh
+sudo ~/.local/bin/build-iso --clean
+```
+
+Write to USB:
+
+```sh
+sudo build-iso --usb /dev/sdX
+```
+
+> Rebuild the ISO periodically to pick up package updates.
+
+</details>
 
 <details>
-<summary>🐧 <b>Linux</b> (terminal)</summary>
+<summary>📦 <b>Stock Arch ISO</b></summary>
 
-Find your USB device (`sda`, `sdb`, etc.):
-
-    lsblk -f
+Download the official image: **[archlinux-version-x86_64.iso](https://archlinux.org/download/)**
 
 Write to USB using [dd](https://wiki.archlinux.org/title/Dd) — use the **disk** (e.g. `/dev/sdx`), not a partition:
 
+    lsblk -f
     dd bs=4M if=path/to/archlinux-version-x86_64.iso of=/dev/sdx conv=fsync oflag=direct status=progress
 
 </details>
 
-<details>
-<summary>🍎 <b>macOS</b> (terminal)</summary>
+### **2. Boot USB and install**
 
-Find your USB device (`disk2`, `disk3`, etc.):
+**Custom ISO** — dotfiles and packages are already on disk:
 
-    diskutil list
+```sh
+ARCH=1 ~/dotfiles/install.sh
+```
 
-Unmount the disk, then write with [dd](https://wiki.archlinux.org/title/Dd):
-
-    diskutil unmountDisk /dev/diskX
-    sudo dd bs=4M if=path/to/archlinux-version-x86_64.iso of=/dev/rdiskX status=progress
-
-> Use `/dev/rdiskX` (raw disk) for significantly faster writes.
-
-</details>
-
-<details>
-<summary>🪟 <b>Windows</b> (GUI)</summary>
-
-Use **[Rufus](https://rufus.ie/)** — select the ISO, pick your USB drive, and write in DD mode.
-
-</details>
-
-### 3. Arch Install
+**Stock Arch ISO** — downloads dotfiles and packages from the network:
 
 ```sh
 ARCH=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/install.sh)
 ```
 
-1. Set partition configuration via installer
-2. Set authentication and user via installer
+1. Set partition configuration via the archinstall UI
+2. Set authentication and user via the archinstall UI
 3. Reboot into the new system
 
-### 4. Post Install
+### 3. Post Install
 
-Dotfiles are cloned automatically during arch install. After reboot:
+Dotfiles are copied (custom ISO) or cloned (stock ISO) automatically during arch install. After reboot:
 
 ```sh
 ~/dotfiles/install.sh all
 ```
+
+> With the custom ISO, packages resolve from the local cache — no downloads or AUR rebuilds needed. The local cache is cleaned up automatically after the packages step.
