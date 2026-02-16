@@ -161,31 +161,26 @@ ARCH=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/mast
 
 1. Set partition configuration via installer
 2. Set authentication and user via installer
-3. After `archinstall` finishes, dotfiles post-install runs automatically
+3. After `archinstall` finishes, each post-install step prompts for confirmation
 4. Enter your `age` passphrase when prompted during secrets decrypt
 
-To disable auto post-install and do it manually after reboot:
+To skip the chroot post-install and do it manually after reboot:
 
 ```sh
 ARCH=1 SKIP=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/install.sh)
 ```
 
-Useful toggles:
+For unattended mode (no confirmation prompts):
 
 ```sh
-# Strict mode: fail immediately if any post-install step fails
-ARCH=1 STRICT=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/install.sh)
-
-# Run only selected post-install steps in chroot
-ARCH=1 STEPS="packages link system shell dns" bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/install.sh)
+ARCH=1 AUTO=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/install.sh)
 ```
 
 ### 4. Post Install
 
-Most steps are now handled pre-reboot by `install.sh` in `ARCH=1` mode.
-
-Run deferred desktop-only steps after first login if needed:
+Most steps run in chroot before first boot. After reboot, run any remaining steps:
 
 ```sh
-~/dotfiles/install.sh firefox
+~/dotfiles/install.sh firefox   # needs a Firefox profile to exist first
+~/dotfiles/install.sh all       # or re-run everything
 ```
