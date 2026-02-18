@@ -25,11 +25,19 @@ fi
 
 if [[ "$mode" == "claude" ]]; then
     declare -A TABS=(
+<<<<<<< HEAD
         # [xplr]="⊰ 󰭎  ⊱"
         [main]="⊰ 󰯉  ⊱"
         [dev]="⊰   ⊱"
         [idea]="⊰   ⊱"
         [git]="⊰   ⊱"
+=======
+        [xplr]="⊰   ⊱"
+        [master]="⊰ 󰯉  ⊱"
+        [dev]="⊰   ⊱"
+        [plan]="⊰   ⊱"
+        [git]="⊰   ⊱"
+>>>>>>> 882fd6db (fixes)
     )
     declare -A CMDS=(
         # [xplr]='xplr'
@@ -49,7 +57,11 @@ if [[ "$mode" == "claude" ]]; then
     USAGE="kitty-refresh [-r] --claude {master|dev|plan|git|all}"
 else
     declare -A TABS=(
+<<<<<<< HEAD
         # [xplr]="⟜ 󰭎  ⊸"
+=======
+        [xplr]="⟜ 󰭎  ⊸"
+>>>>>>> 882fd6db (fixes)
         [nvim]="⟜   ⊸"
         [term]="⟜   ⊸"
         [build]="⟜   ⊸"
@@ -58,11 +70,11 @@ else
     declare -A CMDS=(
         [nvim]='nvim'
         [term]=''
-        # [xplr]='xplr'
+        [xplr]='xplr'
         [build]='just watch'
         [git]='lazygit'
     )
-    TAB_ORDER=(nvim term build git)
+    TAB_ORDER=(xplr nvim term build git)
     PREFIX=""
     FOCUS_TAB="nvim"
     USAGE="kitty-refresh [-r] {nvim|term|xplr|build|git|all}"
