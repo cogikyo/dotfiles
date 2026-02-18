@@ -49,5 +49,6 @@
   },
   "outputStyle": "explanatory",
   "promptSuggestionEnabled": false,
+  "skipDangerousModePermissionPrompt": true,
   "shiftTabHint": false
 }
