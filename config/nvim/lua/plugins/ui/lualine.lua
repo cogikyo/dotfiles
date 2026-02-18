@@ -112,7 +112,7 @@ return {
 				separator = " ",
 			},
 			show_name = true,
-			}
+		}
 
 		local search = {
 			function()
@@ -185,7 +185,6 @@ return {
 					lazy,
 					lsp_diagnostics,
 					lsp_status,
-
 					{ require("recorder").recordingStatus },
 					{ require("recorder").displaySlots },
 					search,
