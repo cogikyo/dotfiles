@@ -7,7 +7,13 @@ export GOPATH="$HOME/.go"
 export PAGER=nvimpager
 export EDITOR=nvim
 export DOTS="$HOME/dotfiles"
-export CLAUDE_CONFIG_DIR="$HOME/.config/claude"
+
+# Claude Code: ~/.claude/ on macOS (default), ~/.config/claude/ on Linux
+if [ "$(uname)" = "Darwin" ]; then
+    export CLAUDE_CONFIG_DIR="$HOME/.claude"
+else
+    export CLAUDE_CONFIG_DIR="$HOME/.config/claude"
+fi
 
 export FZF_DEFAULT_OPTS="\
 --color=bg+:#222536,bg:#222536,spinner:#b29ae8,hl:#f8b486 \
