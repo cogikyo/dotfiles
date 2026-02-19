@@ -28,24 +28,6 @@ error()   { printf "${RED}==>${NC} %s\n" "$*" >&2; }
 
 has() { command -v "$1" &>/dev/null; }
 
-retry_cmd() {
-  local attempts="$1"
-  local delay="$2"
-  shift 2
-  local n=1
-  while true; do
-    if "$@"; then
-      return 0
-    fi
-    if (( n >= attempts )); then
-      return 1
-    fi
-    warn "Command failed (attempt $n/$attempts): $*"
-    sleep "$delay"
-    ((n++))
-  done
-}
-
 require_yay() {
   has yay || { error "yay not found. Run install.sh packages first."; exit 1; }
 }
@@ -99,7 +81,7 @@ do_update() {
   require_yay
 
   info "Updating system..."
-  retry_cmd 3 5 yay -Syu
+  yay -Syu
 
   info "Removing orphaned packages..."
   local orphans
@@ -120,8 +102,6 @@ do_install() {
     noninteractive=1
   fi
 
-  require_yay
-
   # Verify sudo works before starting
   if ! sudo -v; then
     error "sudo access required for package installation"
@@ -134,16 +114,34 @@ do_install() {
     exit 1
   fi
 
+  # Sync package databases
+  info "Syncing package databases..."
+  sudo pacman -Sy --noconfirm
+
+  # Detect localrepo (ISO install path — all packages are pre-built)
+  local has_localrepo=0
+  if grep -q '^\[localrepo\]' /etc/pacman.conf 2>/dev/null; then
+    local cached
+    cached=$(pacman -Sl localrepo 2>/dev/null | wc -l)
+    success "Local package cache detected ($cached packages) — installing from cache"
+    has_localrepo=1
+  fi
+
   # Repo packages
   local repo_pkgs=()
   mapfile -t repo_pkgs < <(sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$PKG_LIST")
   local pkg_count=${#repo_pkgs[@]}
   if (( pkg_count > 0 )); then
     info "Installing $pkg_count repo packages..."
-    retry_cmd 3 5 yay -S --needed --noconfirm "${repo_pkgs[@]}"
+    sudo pacman -S --needed --noconfirm "${repo_pkgs[@]}"
     success "Repo packages done"
-  else
-    success "No repo packages to install"
+  fi
+
+  # Initialize rustup toolchain (needed before AUR packages that depend on Rust)
+  if has rustup && ! rustup show active-toolchain &>/dev/null; then
+    info "Initializing Rust toolchain via rustup..."
+    rustup default stable
+    success "Rust stable toolchain installed"
   fi
 
   # AUR packages
@@ -151,20 +149,42 @@ do_install() {
     local aur_pkgs=()
     mapfile -t aur_pkgs < <(sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$AUR_LIST")
     local aur_count=${#aur_pkgs[@]}
+
     if (( aur_count > 0 )); then
-      if [[ $noninteractive -eq 1 ]]; then
-        info "Installing $aur_count AUR packages (non-interactive)..."
-        retry_cmd 3 5 yay -S --needed --noconfirm "${aur_pkgs[@]}"
+      local install_cmd
+      if [[ $has_localrepo -eq 1 ]]; then
+        info "Installing $aur_count AUR packages from local cache..."
+        install_cmd=(sudo pacman -S --needed --noconfirm)
       else
-        info "Installing $aur_count AUR packages (interactive)..."
-        warn "AUR packages may prompt for input — this is intentional"
-        echo
-        retry_cmd 3 5 yay -S --needed "${aur_pkgs[@]}"
+        require_yay
+        local yay_flags=(--needed)
+        [[ $noninteractive -eq 1 ]] && yay_flags+=(--noconfirm)
+        info "Installing $aur_count AUR packages from AUR (one at a time)..."
+        install_cmd=(yay -S "${yay_flags[@]}")
       fi
+
+      local aur_failed=() aur_installed=0 aur_skipped=0
+      for pkg in "${aur_pkgs[@]}"; do
+        if pacman -Qq "$pkg" &>/dev/null; then
+          ((++aur_skipped))
+          continue
+        fi
+        info "[$((aur_installed + aur_skipped + ${#aur_failed[@]} + 1))/$aur_count] Installing $pkg..."
+        if "${install_cmd[@]}" "$pkg"; then
+          ((++aur_installed))
+        else
+          error "Failed to install AUR package: $pkg"
+          aur_failed+=("$pkg")
+        fi
+      done
       echo
-      success "AUR packages done"
-    else
-      success "No AUR packages to install"
+      success "AUR packages: $aur_installed installed, $aur_skipped already present"
+      if [[ ${#aur_failed[@]} -gt 0 ]]; then
+        warn "Failed AUR packages (${#aur_failed[@]}):"
+        for pkg in "${aur_failed[@]}"; do
+          printf '  - %s\n' "$pkg"
+        done
+      fi
     fi
   fi
 
