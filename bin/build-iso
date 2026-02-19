@@ -46,14 +46,14 @@ if [[ ! -t 1 || -n "${NO_COLOR:-}" ]]; then
 fi
 
 _log() {
-    local color="$1" level="$2"; shift 2
-    printf '%b[%-5s]%b %s\n' "$color" "$level" "$RESET" "$*"
+    local color="$1" prefix="$2"; shift 2
+    printf '%b%s%b %s\n' "$color" "$prefix" "$RESET" "$*"
 }
 
-info()  { _log "$BLUE"   "INFO"  "$*"; }
-ok()    { _log "$GREEN"  "OK"    "$*"; }
-warn()  { _log "$YELLOW" "WARN"  "$*"; }
-err()   { _log "$RED"    "ERROR" "$*" >&2; }
+info()  { _log "$BLUE"   "[INFO]"  "$*"; }
+ok()    { _log "$GREEN"  "[OK]"    "$*"; }
+warn()  { _log "$YELLOW" "[WARN]"  "$*"; }
+err()   { _log "$RED"    "[ERROR]"  "$*" >&2; }
 die()   { err "$*"; exit 1; }
 phase() { printf '\n%b=== Phase %s ===%b\n\n' "$BOLD" "$*" "$RESET"; }
 
@@ -265,6 +265,16 @@ build_aur_packages() {
     mkdir -p "$build_home"
     chown -R "$build_user:$build_user" "$build_home"
 
+    # Ensure common build deps that PKGBUILDs often omit
+    info "Installing common build dependencies..."
+    pacman -S --noconfirm --needed perl 2>/dev/null || true
+
+    # Ensure rustup has a default toolchain for the build user
+    if command -v rustup &>/dev/null; then
+        sudo -u "$build_user" env RUSTUP_HOME="$build_home/.rustup" CARGO_HOME="$build_home/.cargo" \
+            rustup default stable 2>/dev/null || true
+    fi
+
     local built=0 failed=0 skipped=0
     info "Building ${#aur_pkgs[@]} AUR packages..."
 
@@ -285,7 +295,8 @@ build_aur_packages() {
             continue
         fi
 
-        if sudo -u "$build_user" bash -c "cd '$build_dir' && makepkg -s --noconfirm --noprogressbar 2>&1"; then
+        if sudo -u "$build_user" env RUSTUP_HOME="$build_home/.rustup" CARGO_HOME="$build_home/.cargo" PATH="$build_home/.cargo/bin:/usr/bin/core_perl:$PATH" \
+            bash -c "cd '$build_dir' && makepkg -s --noconfirm --noprogressbar 2>&1"; then
             # Copy built packages to localrepo
             local found_pkg=0
             while IFS= read -r -d '' pkg_file; do
@@ -335,8 +346,9 @@ create_repo_db() {
     # Remove old db files
     rm -f "$LOCALREPO_DIR"/localrepo.db* "$LOCALREPO_DIR"/localrepo.files*
 
-    # Create the repo database
-    repo-add "$LOCALREPO_DIR/localrepo.db.tar.zst" "$LOCALREPO_DIR"/*.pkg.tar.{zst,xz}
+    # Create the repo database (use find to avoid glob failures when a format is absent)
+    find "$LOCALREPO_DIR" -name '*.pkg.tar.*' ! -name '*.sig' -exec \
+        repo-add "$LOCALREPO_DIR/localrepo.db.tar.zst" {} +
 
     ok "Repo database created"
 }
@@ -453,9 +465,18 @@ main() {
     build_iso
     write_to_usb
 
+    local iso_path
+    iso_path=$(find "$OUT_DIR" -name '*.iso' -printf '%T@ %p\n' | sort -rn | head -1 | cut -d' ' -f2-)
+
     echo
     ok "All done!"
-    info "Test with: qemu-system-x86_64 -cdrom $OUT_DIR/*.iso -m 4G -enable-kvm"
+    echo
+    info "Test in QEMU:"
+    printf '%b  %s%b\n' "$FAINT" "qemu-img create -f qcow2 /tmp/test-disk.qcow2 40G" "$RESET"
+    printf '%b  %s%b\n' "$FAINT" "qemu-system-x86_64 \\" "$RESET"
+    printf '%b  %s%b\n' "$FAINT" "  -cdrom $iso_path \\" "$RESET"
+    printf '%b  %s%b\n' "$FAINT" "  -m 8G -smp 4 -enable-kvm \\" "$RESET"
+    printf '%b  %s%b\n' "$FAINT" "  -drive file=/tmp/test-disk.qcow2,format=qcow2,if=virtio" "$RESET"
     echo
 }
 
