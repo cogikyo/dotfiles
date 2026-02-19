@@ -228,6 +228,10 @@ ensure_dotfiles_checkout() {
 
         info "Bootstrapping dotfiles into $DOTFILES..."
         git clone --depth 1 --branch master https://github.com/cogikyo/dotfiles.git "$DOTFILES"
+
+        # Ensure scripts are executable after fresh clone
+        chmod +x "$DOTFILES/install.sh"
+        find "$DOTFILES/bin" -type f -exec chmod +x {} +
     fi
 
     info "Re-running installer from $DOTFILES/install.sh..."
@@ -296,6 +300,13 @@ run_arch_mode() {
     if is_live_usb; then
         live_usb=1
         ok "Custom live USB detected — using local package cache"
+    fi
+
+    if [[ ! -f /etc/pacman.d/gnupg/trustdb.gpg ]]; then
+        info "Initializing pacman keyring..."
+        pacman-key --init
+        pacman-key --populate archlinux
+        ok "Pacman keyring initialized"
     fi
 
     if [[ $live_usb -eq 0 ]]; then
@@ -380,7 +391,11 @@ run_arch_mode() {
             # Re-initialize as a proper git repo so future git ops work
             arch-chroot "$target_root" /bin/bash -c "
                 cd '$user_home/dotfiles'
-                git init
+                chmod +x install.sh
+                find bin -type f -exec chmod +x {} +
+                git init -b master
+                git add -A
+                git -c user.name='install' -c user.email='install@local' commit -m 'ISO install snapshot'
                 git remote add origin https://github.com/cogikyo/dotfiles.git
                 chown -R '$target_user:$target_user' '$user_home/dotfiles'
             "
@@ -391,6 +406,8 @@ run_arch_mode() {
                 pacman -S --needed --noconfirm git
                 sudo -u '$target_user' git clone --depth 1 --branch master \
                     https://github.com/cogikyo/dotfiles.git '$user_home/dotfiles'
+                chmod +x '$user_home/dotfiles/install.sh'
+                find '$user_home/dotfiles/bin' -type f -exec chmod +x {} +
                 chown -R '$target_user:$target_user' '$user_home/dotfiles'
             "
             ok "Dotfiles cloned into $user_home/dotfiles"
@@ -497,7 +514,11 @@ step_packages() {
     header "Installing packages"
 
     needs_sudo
-    bootstrap_yay
+
+    # Only bootstrap yay if no localrepo (non-ISO install)
+    if ! grep -q '^\[localrepo\]' /etc/pacman.conf 2>/dev/null; then
+        bootstrap_yay
+    fi
 
     "$DOTFILES/bin/update" --install
 
@@ -586,8 +607,11 @@ step_link() {
     # Scripts -> ~/.local/bin/
     info "Linking scripts to ~/.local/bin/..."
 
+    # Ensure execute bits are set (may be lost after tarball extraction or ISO copy)
+    find "$DOTFILES/bin" -type f -exec chmod +x {} +
+
     for script in "$DOTFILES"/bin/*; do
-        [[ -x "$script" ]] || continue
+        [[ -f "$script" ]] || continue
         ln -sfv "$script" "$HOME/.local/bin/"
     done
 
@@ -1146,19 +1170,6 @@ step_fonts() {
         info "Extracting fonts from fonts.tar.gz..."
         tar -xzf "$TAR_FILE" -C "$HOME/.local/share/"
         ok "Fonts extracted to $FONT_DIR"
-    fi
-
-    # Optionally build Iosevka Vagari
-    echo
-    if confirm "Build Iosevka Vagari custom font? (requires npm, takes a while)" "n"; then
-        if [[ -x "$DOTFILES/etc/iosevka/build.sh" ]]; then
-            "$DOTFILES/etc/iosevka/build.sh"
-        else
-            err "Iosevka build script not found at $DOTFILES/etc/iosevka/build.sh"
-            return 1
-        fi
-    else
-        info "Skipping Iosevka build"
     fi
 
     info "Refreshing font cache..."

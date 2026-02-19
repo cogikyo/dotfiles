@@ -159,6 +159,7 @@ prepare_profile() {
     # Ensure scripts are executable in the squashfs
     chmod +x "$airootfs_dotfiles/install.sh"
     find "$airootfs_dotfiles/bin" -type f -exec chmod +x {} +
+    find "$airootfs_dotfiles" -name '*.sh' -exec chmod +x {} +
 
     ok "Dotfiles copied to live environment"
 }
@@ -335,7 +336,7 @@ create_repo_db() {
     rm -f "$LOCALREPO_DIR"/localrepo.db* "$LOCALREPO_DIR"/localrepo.files*
 
     # Create the repo database
-    repo-add "$LOCALREPO_DIR/localrepo.db.tar.zst" "$LOCALREPO_DIR"/*.pkg.tar.*
+    repo-add "$LOCALREPO_DIR/localrepo.db.tar.zst" "$LOCALREPO_DIR"/*.pkg.tar.{zst,xz}
 
     ok "Repo database created"
 }
