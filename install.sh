@@ -3,7 +3,7 @@
 
 set -euo pipefail
 
-VERSION="0.4.2"
+VERSION="0.5.0"
 
 usage() {
     cat <<'EOF'
@@ -36,7 +36,10 @@ readonly STEP_SKIPPED_RC=42
 # Core
 DOTFILES="$HOME/dotfiles"
 
-# Behavior
+# Behavior — auto-detect live ISO environment
+if [[ "${ARCH:-0}" != "1" ]] && [[ -d /run/archiso ]]; then
+    ARCH=1
+fi
 ARCH="${ARCH:-0}"
 
 # }}}

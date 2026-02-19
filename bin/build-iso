@@ -156,10 +156,8 @@ prepare_profile() {
         --exclude='./.git' \
         -cf - . | tar -xf - -C "$airootfs_dotfiles"
 
-    # Ensure scripts are executable in the squashfs
-    chmod +x "$airootfs_dotfiles/install.sh"
-    find "$airootfs_dotfiles/bin" -type f -exec chmod +x {} +
-    find "$airootfs_dotfiles" -name '*.sh' -exec chmod +x {} +
+    # NOTE: mkarchiso uses cp --no-preserve=mode, so chmod here has no effect.
+    # Execute bits are restored in .zlogin on first login instead.
 
     ok "Dotfiles copied to live environment"
 }
@@ -472,10 +470,9 @@ main() {
     ok "All done!"
     echo
     info "Test in QEMU:"
-    printf '%b  %s%b\n' "$FAINT" "qemu-img create -f qcow2 /tmp/test-disk.qcow2 40G" "$RESET"
-    printf '%b  %s%b\n' "$FAINT" "qemu-system-x86_64 \\" "$RESET"
-    printf '%b  %s%b\n' "$FAINT" "  -cdrom $iso_path \\" "$RESET"
-    printf '%b  %s%b\n' "$FAINT" "  -m 8G -smp 4 -enable-kvm \\" "$RESET"
+    printf '%b  %s%b\n' "$FAINT" "qemu-img create -f qcow2 /tmp/test-disk.qcow2 40G && \\" "$RESET"
+    printf '%b  %s%b\n' "$FAINT" "qemu-system-x86_64 -cdrom $iso_path \\" "$RESET"
+    printf '%b  %s%b\n' "$FAINT" "  -m 8G -smp 4 -enable-kvm -display gtk \\" "$RESET"
     printf '%b  %s%b\n' "$FAINT" "  -drive file=/tmp/test-disk.qcow2,format=qcow2,if=virtio" "$RESET"
     echo
 }

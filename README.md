@@ -149,13 +149,13 @@ Write to USB using [dd](https://wiki.archlinux.org/title/Dd) — use the **disk*
 **Custom ISO** — dotfiles and packages are already on disk:
 
 ```sh
-ARCH=1 ~/dotfiles/install.sh
+dotfiles
 ```
 
 **Stock Arch ISO** — downloads dotfiles and packages from the network:
 
 ```sh
-ARCH=1 bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/install.sh)
+bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/install.sh)
 ```
 
 1. Set partition configuration via the archinstall UI
