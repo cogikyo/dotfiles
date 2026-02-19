@@ -97,6 +97,8 @@ pulsemixer
 python-pip
 python-pynvim
 qbittorrent
+qemu-system-x86
+qemu-system-x86-firmware
 reflector
 ripgrep
 rsync
