@@ -522,6 +522,25 @@ step_packages() {
 
     "$DOTFILES/bin/update" --install
 
+    # Build eww from source with Wayland support (AUR package lacks the flag)
+    local eww_bin="$HOME/.local/bin/eww"
+    if [[ -x "$eww_bin" ]]; then
+        ok "eww already installed"
+    else
+        info "Building eww with Wayland support..."
+        has cargo || { err "cargo not found — install rustup and run: rustup default stable"; return 1; }
+        local eww_src="${XDG_CACHE_HOME:-$HOME/.cache}/eww"
+        if [[ -d "$eww_src/.git" ]]; then
+            git -C "$eww_src" pull --ff-only
+        else
+            rm -rf "$eww_src"
+            git clone https://github.com/elkowar/eww.git "$eww_src"
+        fi
+        (cd "$eww_src" && cargo build --release --no-default-features --features=wayland)
+        install -Dm755 "$eww_src/target/release/eww" "$eww_bin"
+        ok "eww installed to $eww_bin"
+    fi
+
     # Clean up localrepo if it was injected by the live USB installer
     if [[ -d /var/cache/localrepo ]] && grep -q '^\[localrepo\]' /etc/pacman.conf; then
         info "Cleaning up local package cache from live USB install..."
