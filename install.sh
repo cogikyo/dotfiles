@@ -62,8 +62,8 @@ fi
 # -- internal helpers ----------------------------------------------------------
 
 _log() {
-    local color="$1" level="$2"; shift 2
-    printf '%b[%-5s]%b %s\n' "$color" "$level" "$RESET" "$*"
+    local color="$1" prefix="$2"; shift 2
+    printf '%b%s%b %s\n' "$color" "$prefix" "$RESET" "$*"
 }
 
 _banner_kv() {
@@ -77,10 +77,10 @@ _art() {
 
 # -- status --------------------------------------------------------------------
 
-info()   { _log "$BLUE"   "INFO"  "$*"; }
-ok()     { _log "$GREEN"  "OK"    "$*"; }
-warn()   { _log "$YELLOW" "WARN"  "$*"; }
-err()    { _log "$RED"    "ERROR" "$*" >&2; }
+info()   { _log "$BLUE"   "[INFO]"  "$*"; }
+ok()     { _log "$GREEN"  "[OK]"    "$*"; }
+warn()   { _log "$YELLOW" "[WARN]"  "$*"; }
+err()    { _log "$RED"    "[ERROR]"  "$*" >&2; }
 die()    { err "$*"; exit 1; }
 
 # -- structure -----------------------------------------------------------------
@@ -1800,13 +1800,13 @@ print_summary() {
 
     header "Summary"
     for name in "${PASSED[@]}"; do
-        _log "$GREEN" "OK" "$name"
+        _log "$GREEN" "[OK]" "$name"
     done
     for name in "${FAILED[@]}"; do
-        _log "$RED" "FAIL" "$name"
+        _log "$RED" "[FAIL]" "$name"
     done
     for name in "${SKIPPED[@]}"; do
-        _log "$YELLOW" "SKIP" "$name"
+        _log "$YELLOW" "[SKIP]" "$name"
     done
     echo
 
@@ -1850,13 +1850,13 @@ run_healthchecks() {
         local rc=0
         "$fn" || rc=$?
         if [[ $rc -eq "$STEP_SKIPPED_RC" ]]; then
-            _log "$YELLOW" "SKIP" "$name"
+            _log "$YELLOW" "[SKIP]" "$name"
             ((++skipped))
         elif [[ $rc -eq 0 ]]; then
-            _log "$GREEN" "PASS" "$name"
+            _log "$GREEN" "[PASS]" "$name"
             ((++passed))
         else
-            _log "$RED" "FAIL" "$name"
+            _log "$RED" "[FAIL]" "$name"
             ((++failed))
         fi
     done
