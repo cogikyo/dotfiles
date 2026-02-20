@@ -1,16 +1,17 @@
 #!/usr/bin/env bash
-# Audit skill structure
+# Audit skill structure and symlinks
 # Usage: audit.sh [skill-name]  (no arg = audit all)
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 SKILLS_BASE="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 SKILL_NAME="${1:-}"
 ERRORS=()
 
 red() { printf '\033[31m%s\033[0m\n' "$1"; }
 green() { printf '\033[32m%s\033[0m\n' "$1"; }
+yellow() { printf '\033[33m%s\033[0m\n' "$1"; }
 
 find_skill() {
     local name="$1"
@@ -24,6 +25,33 @@ find_skill() {
     return 1
 }
 
+# User skills → ~/.config/claude/skills/<name> should be a symlink to dotfiles source
+check_link() {
+    local skill_name="$1"
+    local skill_path="$2"
+    local scope="$3"
+
+    if [[ "$scope" == "user" ]]; then
+        local target_dir="$HOME/.config/claude/skills"
+        local link="$target_dir/$skill_name"
+
+        if [[ -L "$link" ]]; then
+            local target
+            target=$(readlink "$link")
+            local norm_target="${target%/}"
+            local norm_skill="${skill_path%/}"
+            if [[ "$norm_target" != "$norm_skill" ]]; then
+                ERRORS+=("Symlink $link → $target (expected $skill_path)")
+            fi
+        elif [[ -d "$link" ]]; then
+            ERRORS+=("$link is a real directory, not a symlink — run link.sh user")
+        else
+            ERRORS+=("Not linked — run link.sh user")
+        fi
+    fi
+    # project skills are linked per-project via link.sh project <name>, skip here
+}
+
 lint_skill() {
     local skill_path="$1"
     ERRORS=()
@@ -32,7 +60,7 @@ lint_skill() {
     local depth
     depth=$(echo "$rel_path" | tr '/' '\n' | wc -l)
 
-    # Path structure
+    # Path structure: should be {user,project}/<name>
     if [[ $depth -gt 2 ]]; then
         ERRORS+=("Path too deep: $rel_path")
     fi
@@ -62,6 +90,12 @@ lint_skill() {
     for f in "${forbidden[@]}"; do
         [[ ! -f "$skill_path/$f" ]] || ERRORS+=("Forbidden file: $f")
     done
+
+    # Symlink check
+    local skill_name scope
+    skill_name=$(basename "$skill_path")
+    scope=$(echo "$rel_path" | cut -d'/' -f1)
+    check_link "$skill_name" "$skill_path" "$scope"
 
     # Report
     if [[ ${#ERRORS[@]} -eq 0 ]]; then
