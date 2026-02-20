@@ -121,7 +121,17 @@ EOF
 
 Body only when non-obvious. Skip for trivial changes.
 
-### 7. Interactive Staging (when needed)
+### 7. Pre-commit Hook Failures (ESLint)
+
+If a commit fails due to **ESLint errors** and the project has an `eslint.config.js`:
+
+1. Invoke the `eslint-fix` skill to fix errors on the staged files
+2. Re-stage the fixed files
+3. Retry the commit (new commit, NOT `--amend`)
+
+Only for ESLint failures — handle other pre-commit issues (Prettier, types) directly.
+
+### 8. Interactive Staging (when needed)
 
 For files with mixed concerns, use `git add -p` to split hunks:
 
