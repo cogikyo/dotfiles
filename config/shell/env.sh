@@ -6,6 +6,7 @@ export GOPATH="$HOME/.go"
 # export TERM=xterm-256color  # Let terminal set its own (kitty needs xterm-kitty for undercurls)
 export PAGER=nvimpager
 export EDITOR=nvim
+export VISUAL=nvim
 export DOTS="$HOME/dotfiles"
 
 # Claude Code: ~/.claude/ on macOS (default), ~/.config/claude/ on Linux
