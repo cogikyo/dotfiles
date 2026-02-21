@@ -25,43 +25,26 @@ fi
 
 if [[ "$mode" == "claude" ]]; then
     declare -A TABS=(
-<<<<<<< HEAD
-        # [xplr]="⊰ 󰭎  ⊱"
-        [main]="⊰ 󰯉  ⊱"
-        [dev]="⊰   ⊱"
-        [idea]="⊰   ⊱"
-        [git]="⊰   ⊱"
-=======
         [xplr]="⊰   ⊱"
         [master]="⊰ 󰯉  ⊱"
         [dev]="⊰   ⊱"
         [plan]="⊰   ⊱"
         [git]="⊰   ⊱"
->>>>>>> 882fd6db (fixes)
     )
     declare -A CMDS=(
-        # [xplr]='xplr'
-        [main]='claude'
-        [dev]=''
-        [idea]='claude'
-        [git]='lazygit'
+        [xplr]='claude'
+        [master]='claude'
+        [dev]='claude'
+        [plan]='claude'
+        [git]='claude'
     )
-    declare -A CLAUDE_VARIANTS=(
-        [main]='main'
-        [dev]='dev'
-        [idea]='idea'
-    )
-    TAB_ORDER=(main dev idea git)
+    TAB_ORDER=(xplr master dev plan git)
     PREFIX="claude-"
     FOCUS_TAB="master"
     USAGE="kitty-refresh [-r] --claude {master|dev|plan|git|all}"
 else
     declare -A TABS=(
-<<<<<<< HEAD
-        # [xplr]="⟜ 󰭎  ⊸"
-=======
         [xplr]="⟜ 󰭎  ⊸"
->>>>>>> 882fd6db (fixes)
         [nvim]="⟜   ⊸"
         [term]="⟜   ⊸"
         [build]="⟜   ⊸"
