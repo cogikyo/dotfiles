@@ -7,7 +7,7 @@ set -euo pipefail
 #  Builds a live ISO with all repo + AUR packages pre-cached in a [localrepo],
 #  so archinstall resolves from local disk instead of downloading.
 #
-#  Usage: sudo build-iso [--usb /dev/sdX] [--skip-aur] [--clean]
+#  Usage: sudo build-iso [--usb /dev/sdX] [--skip-aur] [--clean] [--release]
 # =============================================================================
 
 VERSION="0.1.0"
@@ -30,6 +30,7 @@ LOCALREPO_DIR=""  # set in prepare_profile
 USB_DEVICE=""
 SKIP_AUR=0
 CLEAN=0
+RELEASE=0
 
 # -- colors -------------------------------------------------------------------
 
@@ -69,6 +70,7 @@ Options:
   --usb /dev/sdX   Write ISO to USB device after build
   --skip-aur       Skip AUR package builds
   --clean          Remove work/out dirs before building
+  --release        Tag, push, and create a GitHub release with the ISO
   -h, --help       Show this help
 
 Version: $VERSION
@@ -420,6 +422,90 @@ write_to_usb() {
 }
 
 # =============================================================================
+#  Phase 7: GitHub Release
+# =============================================================================
+
+publish_release() {
+    phase "7: GitHub Release"
+
+    if [[ $RELEASE -eq 0 ]]; then
+        info "No --release specified, skipping"
+        return 0
+    fi
+
+    local iso_file
+    iso_file=$(find "$OUT_DIR" -name '*.iso' -printf '%T@ %p\n' | sort -rn | head -1 | cut -d' ' -f2-)
+    [[ -n "$iso_file" ]] || die "No ISO file found to release"
+
+    # Git/gh must run as the invoking user, not root
+    local run_user="${SUDO_USER:-$USER}"
+    local run_home
+    run_home=$(eval echo "~$run_user")
+
+    _as_user() {
+        sudo -u "$run_user" --preserve-env=HOME,XDG_CONFIG_HOME,GH_TOKEN \
+            env HOME="$run_home" "$@"
+    }
+
+    # Preflight checks
+    command -v gh &>/dev/null || die "gh CLI not installed (pacman -S github-cli)"
+    _as_user gh auth status &>/dev/null || die "gh not authenticated — run: gh auth login"
+
+    local branch
+    branch=$(_as_user git -C "$DOTFILES" branch --show-current)
+    [[ "$branch" == "master" ]] || die "Not on master branch (on: $branch)"
+
+    # Suggest a tag based on the ISO filename date
+    local iso_name
+    iso_name=$(basename "$iso_file")
+    local default_tag="iso-$(echo "$iso_name" | grep -oP '\d{4}\.\d{2}\.\d{2}')"
+    [[ -n "$default_tag" && "$default_tag" != "iso-" ]] || default_tag="iso-$(date +%Y.%m.%d)"
+
+    printf '\n%b  ?  %b Release tag %b[%s]%b: ' '\033[0;35m' '\033[0m' "$FAINT" "$default_tag" "$RESET"
+    local tag
+    read -r tag
+    tag="${tag:-$default_tag}"
+
+    # Validate tag doesn't already exist
+    if _as_user git -C "$DOTFILES" rev-parse "refs/tags/$tag" &>/dev/null; then
+        die "Tag '$tag' already exists"
+    fi
+
+    # Commit any staged/unstaged changes
+    if ! _as_user git -C "$DOTFILES" diff --quiet HEAD 2>/dev/null || \
+       [[ -n "$(_as_user git -C "$DOTFILES" ls-files --others --exclude-standard)" ]]; then
+        info "Committing pending changes..."
+        _as_user git -C "$DOTFILES" add -A
+        _as_user git -C "$DOTFILES" commit -m "chore: $tag"
+    fi
+
+    # Tag + push
+    info "Creating tag: $tag"
+    _as_user git -C "$DOTFILES" tag -a "$tag" -m "$tag"
+
+    info "Pushing master + tag to origin..."
+    _as_user git -C "$DOTFILES" push origin master
+    _as_user git -C "$DOTFILES" push origin "$tag"
+
+    # Create GitHub release with ISO attached
+    local iso_size
+    iso_size=$(du -h "$iso_file" | cut -f1)
+
+    info "Creating GitHub release (uploading $iso_size ISO — this may take a while)..."
+    _as_user gh release create "$tag" \
+        --repo "$(_as_user git -C "$DOTFILES" remote get-url origin)" \
+        --title "$tag" \
+        --notes "Custom Arch Linux ISO with pre-cached packages (repo + AUR).
+
+Built with \`build-iso v$VERSION\` — includes dotfiles, localrepo, and archinstall auto-configuration.
+
+**ISO:** \`$iso_name\` ($iso_size)" \
+        "$iso_file"
+
+    ok "Release published: $tag"
+}
+
+# =============================================================================
 #  Main
 # =============================================================================
 
@@ -438,6 +524,10 @@ main() {
                 ;;
             --clean)
                 CLEAN=1
+                shift
+                ;;
+            --release)
+                RELEASE=1
                 shift
                 ;;
             -h|--help)
@@ -462,6 +552,7 @@ main() {
     create_repo_db
     build_iso
     write_to_usb
+    publish_release
 
     local iso_path
     iso_path=$(find "$OUT_DIR" -name '*.iso' -printf '%T@ %p\n' | sort -rn | head -1 | cut -d' ' -f2-)
