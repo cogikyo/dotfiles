@@ -1,0 +1,8 @@
+gui:
+  showCommandLog: false
+promptToReturnFromSubprocess: false
+git:
+  overrideGpg: true
+os:
+  edit: "nvim {{filename}}"
+  editAtLine: "nvim +{{line}} {{filename}}"
