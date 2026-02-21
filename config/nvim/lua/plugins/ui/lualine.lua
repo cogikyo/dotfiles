@@ -112,7 +112,7 @@ return {
 				separator = " ",
 			},
 			show_name = true,
-		}
+			}
 
 		local search = {
 			function()
@@ -133,34 +133,42 @@ return {
 			return [[ ]]
 		end
 
+		local function make_extension(ft, label, ext_icon, opts)
+			opts = opts or {}
+			local active_bg = opts.active_bg or p.orn_4
+			local inactive_bg = opts.inactive_bg or p.rst_2
+			local inactive_fg = opts.inactive_fg or p.blk_1
+			local function get_label()
+				local text = type(label) == "function" and label() or label
+				return ext_icon .. " " .. text
+			end
+			return {
+				filetypes = { ft },
+				sections = {
+					lualine_a = {
+						{
+							get_label,
+							color = { fg = p.blk_1, bg = active_bg, gui = "bold" },
+							separator = { right = "" },
+						},
+					},
+				},
+				inactive_sections = {
+					lualine_a = {
+						{
+							get_label,
+							color = { fg = inactive_fg, bg = inactive_bg, gui = "bold" },
+							separator = { right = "" },
+						},
+					},
+				},
+			}
+		end
+
 		local lazy = {
 			require("lazy.status").updates,
 			cond = require("lazy.status").has_updates,
 			color = { fg = p.glc_4 },
-		}
-
-		local minimal = {
-			sections = {
-				lualine_a = { mode },
-				lualine_b = {},
-				lualine_c = {},
-				lualine_x = { search },
-				lualine_y = { filetype },
-				lualine_z = { icon() },
-			},
-			inactive_sections = {
-				lualine_a = {},
-				lualine_b = {},
-				lualine_c = {},
-				lualine_x = {},
-				lualine_y = { filetype },
-				luailne_z = {},
-			},
-			filetypes = {
-				"NvimTree",
-				"undotree",
-				"diff",
-			},
 		}
 
 		lualine.setup({
@@ -177,6 +185,7 @@ return {
 					lazy,
 					lsp_diagnostics,
 					lsp_status,
+
 					{ require("recorder").recordingStatus },
 					{ require("recorder").displaySlots },
 					search,
@@ -186,14 +195,76 @@ return {
 			},
 			inactive_sections = {
 				lualine_a = {},
-				lualine_b = {},
+				lualine_b = {
+					{
+						function()
+							local bufname = vim.fn.expand("%:t")
+							if bufname ~= "" then
+								local devicons_ok, devicons = pcall(require, "nvim-web-devicons")
+								local file_icon = ""
+								if devicons_ok then
+									file_icon = devicons.get_icon(bufname, vim.fn.expand("%:e"), { default = true })
+										or " "
+								end
+								return file_icon .. "  " .. vim.fn.expand("%:.")
+							end
+							local ft = vim.bo.filetype
+							if ft ~= "" then
+								return ft
+							end
+							return "󰊠 "
+						end,
+					},
+				},
 				lualine_c = {},
-				lualine_x = {},
-				lualine_y = { filetype },
-				luailne_z = {},
+				lualine_x = {
+					{
+						function()
+							return vim.fn.line("$") .. "L"
+						end,
+					},
+				},
+				lualine_y = {
+					{
+						"diff",
+						colored = true,
+						symbols = { added = " ", modified = " ", removed = " " },
+					},
+				},
+				lualine_z = {
+					{
+						function()
+							if vim.bo.modified then
+								return ""
+							end
+							return "󱣪 "
+						end,
+					},
+				},
 			},
 			tabline = {},
-			extensions = { minimal },
+			extensions = {
+				make_extension("NvimTree", function()
+					local api_ok, api = pcall(require, "nvim-tree.api")
+					if api_ok then
+						local node = api.tree.get_nodes()
+						if node and node.absolute_path then
+							local home = vim.env.HOME
+							local path = node.absolute_path
+							if home and path == home then
+								return vim.env.USER or vim.fn.fnamemodify(home, ":t")
+							end
+							if home and vim.fn.fnamemodify(path, ":h") == home then
+								return vim.fn.fnamemodify(path, ":t")
+							end
+							return "../" .. vim.fn.fnamemodify(path, ":t")
+						end
+					end
+					return "Files"
+				end, "󰙅", { active_bg = p.blu_2, inactive_bg = p.glc_1, inactive_fg = p.blu_1 }),
+				make_extension("undotree", "Undotree", "󰕍"),
+				make_extension("diff", "Undodiff", "󰕛"),
+			},
 		})
 	end,
 }

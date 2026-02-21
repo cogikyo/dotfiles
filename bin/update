@@ -1,0 +1,331 @@
+#!/usr/bin/env bash
+# bin/update - System update and package list management
+#
+# Usage:
+#   update              # Update system, remove orphans, save package lists
+#   update --install    # Install packages from saved lists (fresh system)
+#   update --dry-run    # Show what would change without doing it
+#   update --check      # Check for -git packages with better alternatives
+#   update --help       # Show this help
+
+set -euo pipefail
+
+DOTFILES="${DOTFILES:-$HOME/dotfiles}"
+PKG_LIST="$DOTFILES/etc/packages.lst"
+AUR_LIST="$DOTFILES/etc/packages-aur.lst"
+
+# Colors
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+YELLOW='\033[0;33m'
+NC='\033[0m'
+
+info()    { printf "${BLUE}==>${NC} %s\n" "$*"; }
+success() { printf "${GREEN}==>${NC} %s\n" "$*"; }
+warn()    { printf "${YELLOW}==>${NC} %s\n" "$*"; }
+error()   { printf "${RED}==>${NC} %s\n" "$*" >&2; }
+
+has() { command -v "$1" &>/dev/null; }
+
+require_yay() {
+  has yay || { error "yay not found. Run install.sh packages first."; exit 1; }
+}
+
+# -git packages that have stable/binary alternatives
+# format: git-name|alternative|reason
+REPLACEMENTS=(
+  "dunst-git|dunst|repo version is newer (extra repo)"
+  "logiops-git|logiops|stable AUR release, no build needed"
+  "mpvpaper-git|mpvpaper|stable AUR release, no build needed"
+)
+
+save_lists() {
+  local old_pkg old_aur new_pkg new_aur
+
+  # Capture old lists for diff
+  old_pkg=$(cat "$PKG_LIST" 2>/dev/null || true)
+  old_aur=$(cat "$AUR_LIST" 2>/dev/null || true)
+
+  # Save new lists (explicit only)
+  new_pkg=$(yay -Qenq | sort)
+  new_aur=$(yay -Qemq | sort)
+
+  echo "$new_pkg" > "$PKG_LIST"
+  echo "$new_aur" > "$AUR_LIST"
+
+  # Summary
+  local pkg_count aur_count
+  pkg_count=$(echo "$new_pkg" | wc -l)
+  aur_count=$(echo "$new_aur" | wc -l)
+  success "Saved $pkg_count repo packages → etc/packages.lst"
+  success "Saved $aur_count AUR packages  → etc/packages-aur.lst"
+
+  # Show changes
+  local added removed
+  if [[ -n "$old_pkg" ]]; then
+    added=$(comm -13 <(echo "$old_pkg") <(echo "$new_pkg") || true)
+    removed=$(comm -23 <(echo "$old_pkg") <(echo "$new_pkg") || true)
+    [[ -n "$added" ]] && info "New repo packages:" && while IFS= read -r p; do printf '  + %s\n' "$p"; done <<< "$added"
+    [[ -n "$removed" ]] && info "Removed repo packages:" && while IFS= read -r p; do printf '  - %s\n' "$p"; done <<< "$removed"
+  fi
+  if [[ -n "$old_aur" ]]; then
+    added=$(comm -13 <(echo "$old_aur") <(echo "$new_aur") || true)
+    removed=$(comm -23 <(echo "$old_aur") <(echo "$new_aur") || true)
+    [[ -n "$added" ]] && info "New AUR packages:" && while IFS= read -r p; do printf '  + %s\n' "$p"; done <<< "$added"
+    [[ -n "$removed" ]] && info "Removed AUR packages:" && while IFS= read -r p; do printf '  - %s\n' "$p"; done <<< "$removed"
+  fi
+}
+
+do_update() {
+  require_yay
+
+  info "Updating system..."
+  yay -Syu
+
+  info "Removing orphaned packages..."
+  local orphans
+  local orphan_list
+  mapfile -t orphan_list < <(yay -Qdtq 2>/dev/null || true)
+  if [[ ${#orphan_list[@]} -gt 0 ]]; then
+    yay -Rns "${orphan_list[@]}"
+  else
+    success "No orphans found"
+  fi
+
+  save_lists
+}
+
+do_install() {
+  local noninteractive=0
+  if [[ "${DOTFILES_INSTALL_NONINTERACTIVE:-0}" == "1" || ! -t 0 ]]; then
+    noninteractive=1
+  fi
+
+  # Verify sudo works before starting
+  if ! sudo -v; then
+    error "sudo access required for package installation"
+    exit 1
+  fi
+
+  if [[ ! -f "$PKG_LIST" ]]; then
+    error "Package list not found: $PKG_LIST"
+    error "Run 'update' first to generate package lists"
+    exit 1
+  fi
+
+  # Sync package databases
+  info "Syncing package databases..."
+  sudo pacman -Sy --noconfirm
+
+  # Detect localrepo (ISO install path — all packages are pre-built)
+  local has_localrepo=0
+  if grep -q '^\[localrepo\]' /etc/pacman.conf 2>/dev/null; then
+    local cached
+    cached=$(pacman -Sl localrepo 2>/dev/null | wc -l)
+    success "Local package cache detected ($cached packages) — installing from cache"
+    has_localrepo=1
+  fi
+
+  # Repo packages
+  local repo_pkgs=()
+  mapfile -t repo_pkgs < <(sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$PKG_LIST")
+  local pkg_count=${#repo_pkgs[@]}
+  if (( pkg_count > 0 )); then
+    info "Installing $pkg_count repo packages..."
+    sudo pacman -S --needed --noconfirm "${repo_pkgs[@]}"
+    success "Repo packages done"
+  fi
+
+  # Initialize rustup toolchain (needed before AUR packages that depend on Rust)
+  if has rustup && ! rustup show active-toolchain &>/dev/null; then
+    info "Initializing Rust toolchain via rustup..."
+    rustup default stable
+    success "Rust stable toolchain installed"
+  fi
+
+  # AUR packages
+  if [[ -f "$AUR_LIST" ]]; then
+    local aur_pkgs=()
+    mapfile -t aur_pkgs < <(sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$AUR_LIST")
+    local aur_count=${#aur_pkgs[@]}
+
+    if (( aur_count > 0 )); then
+      local install_cmd
+      if [[ $has_localrepo -eq 1 ]]; then
+        info "Installing $aur_count AUR packages from local cache..."
+        install_cmd=(sudo pacman -S --needed --noconfirm)
+      else
+        require_yay
+        local yay_flags=(--needed)
+        [[ $noninteractive -eq 1 ]] && yay_flags+=(--noconfirm)
+        info "Installing $aur_count AUR packages from AUR (one at a time)..."
+        install_cmd=(yay -S "${yay_flags[@]}")
+      fi
+
+      local aur_failed=() aur_installed=0 aur_skipped=0
+      for pkg in "${aur_pkgs[@]}"; do
+        if pacman -Qq "$pkg" &>/dev/null; then
+          ((++aur_skipped))
+          continue
+        fi
+        info "[$((aur_installed + aur_skipped + ${#aur_failed[@]} + 1))/$aur_count] Installing $pkg..."
+        if "${install_cmd[@]}" "$pkg"; then
+          ((++aur_installed))
+        else
+          error "Failed to install AUR package: $pkg"
+          aur_failed+=("$pkg")
+        fi
+      done
+      echo
+      success "AUR packages: $aur_installed installed, $aur_skipped already present"
+      if [[ ${#aur_failed[@]} -gt 0 ]]; then
+        warn "Failed AUR packages (${#aur_failed[@]}):"
+        for pkg in "${aur_failed[@]}"; do
+          printf '  - %s\n' "$pkg"
+        done
+      fi
+    fi
+  fi
+
+  echo
+  success "Package installation complete!"
+  echo
+  info "Remaining post-install steps:"
+  echo "  Run: ./install.sh         # interactive menu for remaining setup"
+  echo "  Or:  ./install.sh all     # run everything"
+}
+
+do_dry_run() {
+  require_yay
+
+  info "[dry-run] Would update system with: yay -Syu"
+  echo
+
+  local orphans
+  orphans=$(yay -Qdtq 2>/dev/null || true)
+  if [[ -n "$orphans" ]]; then
+    info "[dry-run] Would remove orphans:"
+    while IFS= read -r p; do printf '  - %s\n' "$p"; done <<< "$orphans"
+  else
+    info "[dry-run] No orphans to remove"
+  fi
+  echo
+
+  info "[dry-run] Would save package lists:"
+  echo "  Repo (explicit): $(yay -Qenq | wc -l) packages → etc/packages.lst"
+  echo "  AUR  (explicit): $(yay -Qemq | wc -l) packages → etc/packages-aur.lst"
+}
+
+do_dry_install() {
+  require_yay
+
+  if [[ ! -f "$PKG_LIST" ]]; then
+    error "Package list not found: $PKG_LIST"
+    exit 1
+  fi
+
+  info "[dry-run] Would install from saved lists:"
+  echo
+
+  local missing
+  missing=$(comm -23 <(sort "$PKG_LIST") <(yay -Qenq | sort) || true)
+  if [[ -n "$missing" ]]; then
+    info "Repo packages to install ($(wc -l <<< "$missing")):"
+    while IFS= read -r p; do printf '  + %s\n' "$p"; done <<< "$missing"
+  else
+    success "All repo packages already installed"
+  fi
+
+  echo
+  if [[ -f "$AUR_LIST" ]]; then
+    missing=$(comm -23 <(sort "$AUR_LIST") <(yay -Qemq | sort) || true)
+    if [[ -n "$missing" ]]; then
+      info "AUR packages to install ($(wc -l <<< "$missing")):"
+      while IFS= read -r p; do printf '  + %s\n' "$p"; done <<< "$missing"
+    else
+      success "All AUR packages already installed"
+    fi
+  fi
+}
+
+check_sources() {
+  require_yay
+
+  info "Checking for -git packages with better alternatives..."
+  echo
+
+  local found=0
+  for entry in "${REPLACEMENTS[@]}"; do
+    IFS='|' read -r git_pkg alt_pkg reason <<< "$entry"
+    if yay -Qq "$git_pkg" &>/dev/null; then
+      warn "$git_pkg → $alt_pkg ($reason)"
+      found=1
+    fi
+  done
+
+  if [[ $found -eq 0 ]]; then
+    success "No replaceable -git packages found"
+    return
+  fi
+
+  echo
+  info "To replace, run:"
+  echo "  yay -S <alternative>  # will prompt to remove the -git version"
+}
+
+usage() {
+  echo "Usage: update [OPTIONS]"
+  echo
+  echo "System update and package list management for Arch Linux."
+  echo
+  echo "Modes:"
+  echo "  (default)     Update system, remove orphans, save package lists"
+  echo "  --install     Install packages from saved lists (for fresh systems)"
+  echo "  --check       Check for -git packages with stable alternatives"
+  echo
+  echo "Options:"
+  echo "  --dry-run     Show what would change without doing it"
+  echo "  -h, --help    Show this help"
+  echo
+  echo "Package lists (explicit only — deps resolve automatically):"
+  echo "  etc/packages.lst      Repo packages"
+  echo "  etc/packages-aur.lst  AUR packages"
+}
+
+main() {
+  local mode="update"
+  local dry_run=false
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --install)  mode="install"; shift ;;
+      --check)    mode="check"; shift ;;
+      --dry-run)  dry_run=true; shift ;;
+      -h|--help)  usage; exit 0 ;;
+      *)          error "Unknown option: $1"; usage; exit 1 ;;
+    esac
+  done
+
+  case "$mode" in
+    update)
+      if "$dry_run"; then
+        do_dry_run
+      else
+        do_update
+      fi
+      ;;
+    install)
+      if "$dry_run"; then
+        do_dry_install
+      else
+        do_install
+      fi
+      ;;
+    check)
+      check_sources
+      ;;
+  esac
+}
+
+main "$@"

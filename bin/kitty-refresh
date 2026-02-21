@@ -3,14 +3,25 @@ set -euo pipefail
 
 mode="term"
 refresh=false
+search_pattern=""
 
 while [[ "${1:-}" == -* ]]; do
     case "$1" in
         -r) refresh=true; shift ;;
+        -s) search_pattern="$2"; shift 2 ;;
         --claude) mode="claude"; shift ;;
         *) echo "Unknown option: $1"; exit 1 ;;
     esac
 done
+
+if [[ -n "$search_pattern" && "$mode" == "term" ]]; then
+    _kitty_state=$(kitty @ ls)
+    _window_id=$(echo "$_kitty_state" | jq -r '.[0].id')
+    if echo "$_kitty_state" | jq -e --arg prefix "${_window_id}-claude-" \
+        '.[0].tabs[].windows[0].env.KITTY_TAB_ID | select(. != null and startswith($prefix))' &>/dev/null; then
+        mode="claude"
+    fi
+fi
 
 if [[ "$mode" == "claude" ]]; then
     declare -A TABS=(
@@ -34,8 +45,8 @@ if [[ "$mode" == "claude" ]]; then
     )
     TAB_ORDER=(main dev idea git)
     PREFIX="claude-"
-    FOCUS_TAB="main"
-    USAGE="kitty-refresh [-r] --claude {main|dev|idea|git|all}"
+    FOCUS_TAB="master"
+    USAGE="kitty-refresh [-r] --claude {master|dev|plan|git|all}"
 else
     declare -A TABS=(
         # [xplr]="⟜ 󰭎  ⊸"
@@ -55,14 +66,45 @@ else
     PREFIX=""
     FOCUS_TAB="nvim"
     USAGE="kitty-refresh [-r] {nvim|term|xplr|build|git|all}"
-    declare -A CLAUDE_VARIANTS=()
+fi
+
+kitty_state=$(kitty @ ls)
+
+# Handle -s search mode: parse "term:claude" format and find matching tab
+# e.g., "build:plan" means: use "build" in term session OR "plan" in claude session
+if [[ -n "$search_pattern" ]]; then
+    # Parse term:claude format (e.g., "nvim:master", "build:plan", or just "xplr")
+    if [[ "$search_pattern" == *":"* ]]; then
+        term_name="${search_pattern%%:*}"
+        claude_name="${search_pattern##*:}"
+        [[ "$mode" == "claude" ]] && tab_name="$claude_name" || tab_name="$term_name"
+    else
+        tab_name="$search_pattern"
+    fi
+
+    # Check if tab name is valid
+    if [[ -z "${TABS[$tab_name]:-}" ]]; then
+        echo "Unknown tab: $tab_name"
+        echo "Available: ${!TABS[*]}"
+        exit 1
+    fi
+
+    # Check if that tab actually exists in current session
+    expected_title="${TABS[$tab_name]}"
+    matched_title=$(echo "$kitty_state" | jq -r --arg title "$expected_title" \
+        '.[0].tabs[].title | select(. == $title)' | head -1)
+
+    if [[ -z "$matched_title" ]]; then
+        exit 0
+    fi
+
+    set -- "$tab_name"
+    refresh=true
 fi
 
 tab="${1:-}"
 [[ -z "$tab" ]] && { echo "Usage: $USAGE"; exit 1; }
 [[ "$tab" != "all" && -z "${TABS[$tab]:-}" ]] && { echo "Usage: $USAGE"; exit 1; }
-
-kitty_state=$(kitty @ ls)
 window_id=$(echo "$kitty_state" | jq -r '.[0].id')
 cwd=$(echo "$kitty_state" | jq -r '.[0].tabs[] | select(.is_focused) | .windows[] | select(.is_focused) | .cwd')
 
@@ -82,7 +124,6 @@ open_tab() {
     local tab_id="${window_id}-${PREFIX}${name}"
     local title="${TABS[$name]}"
     local cmd="${CMDS[$name]}"
-    local variant="${CLAUDE_VARIANTS[$name]:-}"
 
     if [[ "$name" == "build" ]]; then
         just --list --justfile "$cwd/justfile" &>/dev/null || { "$refresh" && kitty @ close-tab --match "env:KITTY_TAB_ID=${tab_id}" 2>/dev/null || true; return 0; }
@@ -95,7 +136,6 @@ open_tab() {
     "$refresh" && kitty @ close-tab --match "env:KITTY_TAB_ID=${tab_id}" 2>/dev/null || true
 
     local env_args=(--env KITTY_TAB_ID="$tab_id")
-    [[ -n "$variant" ]] && env_args+=(--env CLAUDE_VARIANT="$variant")
 
     if [[ -n "$cmd" ]]; then
         kitty @ launch --type=tab --hold --copy-env "${env_args[@]}" --tab-title="$title" --cwd="$cwd" "$cmd" >/dev/null

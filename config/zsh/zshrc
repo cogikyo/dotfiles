@@ -19,15 +19,22 @@ function command_not_found_handler {
     return 127
 }
 
-
 # history
 HISTFILE=~/.histfile
-HISTSIZE=1000
-SAVEHIST=800
+HISTSIZE=10000
+SAVEHIST=10000
 setopt INC_APPEND_HISTORY
 setopt HIST_IGNORE_ALL_DUPS
 setopt HIST_IGNORE_DUPS
+setopt HIST_FIND_NO_DUPS
+setopt SHARE_HISTORY
+setopt HIST_REDUCE_BLANKS
 setopt AUTO_CD
+
+chpwd() {
+    echo
+    lsd
+}
 
 # aliases
 alias niol='clear && source ~/.zshrc'
@@ -42,46 +49,23 @@ alias p='cd ~/LeadPier/services/partner'
 alias jt="just test"
 alias jr="just req"
 alias jw="just watch"
-alias g='cd "$(xplr --print-pwd-as-result)"'
+alias s='cd "$(xplr --print-pwd-as-result)"'
 alias rh='git reset --soft HEAD^'
 alias d='cd ~/dotfiles'
 alias D='cd ~/downloads'
-alias v='cd ~/vagari'
+alias v='cd ~/vagari/vagari'
 alias e='cd ~/dotfiles/config/nvim'
 alias x='exit'
 alias k='kaizen'
 alias lg='lazygit --use-config-file="$HOME/dotfiles/config/lazygit/config.yml"'
 alias ld='lazydocker'
-alias uvpn='nmcli connection up "TrendCapitalVPN"'
-alias dvpn='nmcli connection down "TrendCapitalVPN"'
-ivpn() {
-    local file="$1"
-    [[ -f "$file" ]] || { echo "No such file: $1"; return 1; }
+alias uvpn='vpn up'
+alias dvpn='vpn down'
 
-    # Force .conf extension if missing
-    [[ "$file" != *.conf ]] && file="$file.conf"
-    [[ -f "$file" ]] || { echo "Still no file: $file"; return 1; }
-
-    local name=$(grep -m1 '^id=' "$file" | cut -d= -f2- | xargs)
-    [[ -z "$name" ]] && name=$(basename "$file" .conf)
-
-    echo "Importing → $name"
-    sudo nmcli connection import type l2tp file "$file" || return 1
-
-    echo "\nAvailable VPN connectios:"
-    nmcli connection show | grep -E "(vpn|l2tp)" | grep -v "^--"
-
-    echo "\nAuthenticate with:"
-    echo "\nnmcli connection up \"$name\" --ask"
-}
-
-alias update='paru -Syu && paru -Qqe > ~/dotfiles/etc/packages.lst'
 alias oc='ouch compress'
 alias od='ouch decompress'
 alias ol='ouch list --tree'
 alias man='man --pager=$PAGER'
-alias zoomfix='env XDG_CURRENT_DESKTOP=GNOME GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb XDG_SESSION_TYPE=x11 zoom & disown'
-alias af='GDK_BACKEND=x11 QT_QPA_PLATFORM=xcb audacity & disown'
 function etree () {
     echo
     if [[ -z $1 ]]; then
@@ -152,14 +136,17 @@ if [[ ! -f ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh ]]; then
 fi
 source ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh
 
+# plugin settings (before loading)
+ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
+ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+
+# plugins (order matters - syntax highlighting must be last)
 zcomet load zsh-users/zsh-completions
 zcomet load zsh-users/zsh-autosuggestions
-zcomet load marlonrichert/zsh-autocomplete
+zcomet load Aloxaf/fzf-tab
 zcomet load zsh-users/zsh-syntax-highlighting
 
 autoload -U compinit; compinit
-
-ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
 
 # fix keys
 bindkey -v
@@ -171,5 +158,7 @@ bindkey '^[[1;5C'  forward-word   # C-left
 bindkey '^[[1;5D'  backward-word  # C-right
 bindkey '^[[1;5A'  history-incremental-search-backward # C-up
 bindkey '^[[1;5B'  history-incremental-search-forward  # C-down
+
+eval "$(atuin init zsh --disable-up-arrow)"
 
 source $HOME/.config/zsh/vagari-highlights.zsh

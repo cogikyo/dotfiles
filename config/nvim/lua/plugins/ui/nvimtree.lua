@@ -9,82 +9,84 @@ return {
 
 		local function on_attach(bufnr)
 			local api = require("nvim-tree.api")
-
-			local function opts(desc)
-				return { desc = "nvim-tree: " .. desc, buffer = bufnr, noremap = true, silent = true, nowait = true }
+			local function map(lhs, rhs, d)
+				vim.keymap.set(
+					"n",
+					lhs,
+					rhs,
+					{ desc = "nvim-tree: " .. d, buffer = bufnr, silent = true, nowait = true }
+				)
 			end
 
-			vim.keymap.set("n", "<CR>", api.node.open.edit, opts("Open"))
-			vim.keymap.set("n", "o", api.node.open.edit, opts("Open"))
-			vim.keymap.set("n", "<Right>", api.node.open.edit, opts("Open"))
-			vim.keymap.set("n", "zz", api.tree.change_root_to_node, opts("CD"))
-			vim.keymap.set("n", "<Up>", api.node.navigate.sibling.prev, opts("Previous Sibling"))
-			vim.keymap.set("n", "<Down>", api.node.navigate.sibling.next, opts("Next Sibling"))
-			vim.keymap.set("n", "<Left>", api.node.navigate.parent, opts("Parent Directory"))
-			vim.keymap.set("n", "<C-v>", api.node.open.vertical, opts("Open: Vertical Split"))
-			vim.keymap.set("n", "<C-h>", api.node.open.horizontal, opts("Open: Horizontal Split"))
-			vim.keymap.set("n", "<C-t>", api.node.open.tab, opts("Open: New Tab"))
-			vim.keymap.set("n", "zc", api.node.navigate.parent_close, opts("Close Directory"))
-			vim.keymap.set("n", "I", api.tree.toggle_gitignore_filter, opts("Toggle Git Ignore"))
-			vim.keymap.set("n", ".", api.tree.toggle_hidden_filter, opts("Toggle Dotfiles"))
-			vim.keymap.set("n", "n", api.fs.create, opts("Create"))
-			vim.keymap.set("n", "d", api.fs.trash, opts("Trash"))
-			vim.keymap.set("n", "X", api.fs.remove, opts("Delete"))
-			vim.keymap.set("n", "r", api.fs.rename, opts("Rename"))
-			vim.keymap.set("n", "<C-r>", api.fs.rename_sub, opts("Rename: Omit Filename"))
-			vim.keymap.set("n", "R", api.tree.reload, opts("Refresh"))
-			vim.keymap.set("n", "<C-x>", api.fs.cut, opts("Cut"))
-			vim.keymap.set("n", "yy", api.fs.copy.node, opts("Copy"))
-			vim.keymap.set("n", "p", api.fs.paste, opts("Paste"))
-			vim.keymap.set("n", "yp", api.fs.copy.relative_path, opts("Copy Relative Path"))
-			vim.keymap.set("n", "yP", api.fs.copy.absolute_path, opts("Copy Absolute Path"))
-			vim.keymap.set("n", "[", api.node.navigate.git.prev, opts("Prev Git"))
-			vim.keymap.set("n", "]", api.node.navigate.git.next, opts("Next Git"))
-			vim.keymap.set("n", "O", api.node.run.system, opts("Run System"))
-			vim.keymap.set("n", "q", api.tree.close, opts("Close"))
-			vim.keymap.set("n", "<Esc>", api.tree.close, opts("Close"))
-			vim.keymap.set("n", "?", api.tree.toggle_help, opts("Help"))
-			vim.keymap.set("n", "zm", api.tree.collapse_all, opts("Collapse"))
-			vim.keymap.set("n", "zr", api.tree.expand_all, opts("Expand All"))
-			vim.keymap.set("n", "S", api.tree.search_node, opts("Search"))
-			vim.keymap.set("n", "<C-k>", api.node.show_info_popup, opts("Info"))
+			-- stylua: ignore start
+			map("<CR>",    api.node.open.edit,               "Open")
+			map("<Right>", function()
+				local node = api.tree.get_node_under_cursor()
+				if node and node.type == "file" then
+					api.node.open.edit()
+					api.tree.close()
+				else
+					api.node.open.edit()
+				end
+			end, "Open and close tree")
+			map("zz",      api.tree.change_root_to_node,     "CD")
+			map("zu",      api.tree.change_root_to_parent,   "Up")
+			map("<Up>",    api.node.navigate.sibling.prev,   "Previous Sibling")
+			map("<Down>",  api.node.navigate.sibling.next,   "Next Sibling")
+			map("<Left>",  api.node.navigate.parent,         "Parent Directory")
+			map("<C-v>",   api.node.open.vertical,           "Open: Vertical Split")
+			map("<C-h>",   api.node.open.horizontal,         "Open: Horizontal Split")
+			map("zc",      api.node.navigate.parent_close,   "Close Directory")
+			map("I",       api.tree.toggle_gitignore_filter, "Toggle Git Ignore")
+			map(".",       api.tree.toggle_hidden_filter,    "Toggle Dotfiles")
+			map("n",       api.fs.create,                    "Create")
+			map("d",       function() pcall(api.fs.trash) end, "Trash")
+			map("X",       api.fs.remove,                    "Delete")
+			map("r",       api.fs.rename,                    "Rename")
+			map("<C-r>",   api.fs.rename_sub,                "Rename: Omit Filename")
+			map("R",       api.tree.reload,                  "Refresh")
+			map("<C-x>",   api.fs.cut,                       "Cut")
+			map("x",       api.fs.cut,                       "Cut")
+			map("yy",      api.fs.copy.node,                 "Copy")
+			map("p",       api.fs.paste,                     "Paste")
+			map("yp",      api.fs.copy.relative_path,        "Copy Relative Path")
+			map("yP",      api.fs.copy.absolute_path,        "Copy Absolute Path")
+			map("[",       api.node.navigate.git.prev,       "Prev Git")
+			map("]",       api.node.navigate.git.next,       "Next Git")
+			map("O",       api.node.run.system,              "Run System")
+			map("q",       api.tree.close,                   "Close")
+			map("<Esc>",   function() vim.cmd("wincmd p") end, "Back to editor")
+			map("?",       api.tree.toggle_help,             "Help")
+			map("zm",      api.tree.collapse_all,            "Collapse")
+			map("zr",      api.tree.expand_all,              "Expand All")
+			map("S",       api.tree.search_node,             "Search")
+			map("<C-k>",   api.node.show_info_popup,         "Info")
+			-- stylua: ignore end
 		end
 
 		nvim_tree.setup({
 			on_attach = on_attach,
 			disable_netrw = true,
+			filesystem_watchers = {
+				ignore_dirs = { ".git" },
+			},
 			hijack_cursor = true,
 			update_focused_file = { enable = true },
 			diagnostics = { enable = true },
 			modified = { enable = true },
 			view = {
+				width = {
+					min = 25,
+					max = 45,
+				},
+				side = "left",
 				number = false,
 				relativenumber = false,
 				signcolumn = "no",
-				float = {
-					enable = true,
-					open_win_config = function()
-						local screen_w = vim.opt.columns:get()
-						local screen_h = vim.opt.lines:get() - vim.opt.cmdheight:get()
-						local window_w = screen_w * 0.66
-						local window_h = screen_h * 0.66
-						local window_w_int = math.floor(window_w)
-						local window_h_int = math.floor(window_h)
-						local center_x = (screen_w - window_w) / 2
-						local center_y = ((vim.opt.lines:get() - window_h) / 2) - vim.opt.cmdheight:get()
-						return {
-							border = "rounded",
-							relative = "editor",
-							row = center_y,
-							col = center_x,
-							width = window_w_int,
-							height = window_h_int,
-						}
-					end,
-				},
 			},
 			renderer = {
-				highlight_git = true,
+				root_folder_label = false,
+				highlight_git = "icon",
 				indent_markers = {
 					enable = true,
 					inline_arrows = true,
@@ -96,7 +98,11 @@ return {
 					},
 				},
 				icons = {
-					git_placement = "before",
+					git_placement = "after",
+					web_devicons = {
+						file = { color = false },
+						folder = { color = true },
+					},
 					glyphs = {
 						default = "",
 						symlink = "",
@@ -105,7 +111,7 @@ return {
 							staged = "",
 							unmerged = "",
 							renamed = "",
-							deleted = "",
+							deleted = "󰮈",
 							untracked = "",
 							ignored = "",
 						},
@@ -118,7 +124,7 @@ return {
 			},
 			actions = {
 				open_file = {
-					quit_on_open = true,
+					quit_on_open = false,
 					window_picker = {
 						chars = "asetniol",
 					},
@@ -126,12 +132,27 @@ return {
 			},
 		})
 
-		vim.api.nvim_set_hl(0, "NvimTreeGitDirty", { fg = "#6bbdec" })
-		vim.api.nvim_set_hl(0, "NvimTreeGitStaged", { fg = "#f2a170" })
-		vim.api.nvim_set_hl(0, "NvimTreeGitNew", { fg = "#f4ce88" })
-		vim.api.nvim_set_hl(0, "NvimTreeGitDeleted", { fg = "#f08898" })
-		vim.api.nvim_set_hl(0, "NvimTreeGitRenamed", { fg = "#b29ae8" })
-		vim.api.nvim_set_hl(0, "NvimTreeGitMerge", { fg = "#e887c3" })
-		vim.api.nvim_set_hl(0, "NvimTreeGitIgnored", { fg = "#484e75" })
+		-- Auto-close nvim when NvimTree is the last window
+		vim.api.nvim_create_autocmd("QuitPre", {
+			callback = function()
+				local tree_wins = {}
+				local floating_wins = {}
+				local wins = vim.api.nvim_list_wins()
+				for _, w in ipairs(wins) do
+					local bufname = vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(w))
+					if bufname:match("NvimTree_") ~= nil then
+						table.insert(tree_wins, w)
+					end
+					if vim.api.nvim_win_get_config(w).relative ~= "" then
+						table.insert(floating_wins, w)
+					end
+				end
+				if #wins - #floating_wins - #tree_wins == 1 then
+					for _, w in ipairs(tree_wins) do
+						vim.api.nvim_win_close(w, true)
+					end
+				end
+			end,
+		})
 	end,
 }

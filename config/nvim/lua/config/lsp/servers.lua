@@ -1,0 +1,20 @@
+-- LSP server names (shared by lsp init and mason ensure_installed)
+return {
+	"bashls",
+	"gopls",
+	"ts_ls",
+	"eslint",
+	"tailwindcss",
+	"cssls",
+	"html",
+	"jsonls",
+	"dockerls",
+	"docker_compose_language_service",
+	"emmet_ls",
+	"templ",
+	"marksman",
+	"pyright",
+	"ruff",
+	"taplo",
+	"lua_ls",
+}

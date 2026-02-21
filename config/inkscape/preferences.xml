@@ -646,7 +646,7 @@
        default="org.inkscape.output.svg.inkscape"
        append_extension="1"
        enable_preview="1"
-       path="/home/cullyn/hgmx-builder/views/icons"
+       path="/home/cullyn/projects/hgmx-builder/views/icons"
        use_current_dir="1"
        enable_svgexport="0" />
     <group
@@ -654,7 +654,7 @@
        default="org.inkscape.output.svg.inkscape"
        append_extension="1"
        enable_preview="1"
-       path="/home/cullyn/hgmx-builder/views/static"
+       path="/home/cullyn/projects/hgmx-builder/views/static"
        enable_svgexport="0" />
     <group
        id="open"
@@ -1210,7 +1210,7 @@
   <group
      id="theme"
      defaultPreferDarkTheme="0"
-     defaultIconTheme="Nordzy-dark"
+     defaultIconTheme="Papirus-Dark"
      defaultGtkTheme="catppuccin-macchiato-peach-standard+default"
      narrowSpinButton="1"
      preferDarkTheme="0"

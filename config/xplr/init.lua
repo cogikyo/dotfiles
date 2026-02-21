@@ -1,8 +1,6 @@
--- ============================================================================
--- 🧰 Setup: {{{
 ---@diagnostic disable
 version = "1.0.0"
-local xplr = xplr -- The globally exposed configuration to be overridden.
+local xplr = xplr
 ---@diagnostic enable
 
 -- https://xplr.dev/en/style (shorthand ⮯)
@@ -533,8 +531,15 @@ on_key["R"] = {
 -- ============================================================================
 -- 📦 XPM, PREP THE THING! 🢢 {{{
 local home = os.getenv("HOME")
-local xpm_path = home .. "/.local/share/xplr/dtomvan/xpm.xplr"
-local xpm_url = "https://github.com/dtomvan/xpm.xplr"
+package.path = home
+	.. "/.config/xplr/?.lua;"
+	.. home
+	.. "/.config/xplr/?/init.lua;"
+	.. home
+	.. "/.config/xplr/plugins/?/init.lua;"
+	.. home
+	.. "/.config/xplr/plugins/?.lua;"
+	.. package.path
 
 package.path = package.path
 	.. ";"

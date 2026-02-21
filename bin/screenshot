@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# screenshot — region screenshot with screen freeze
+# Usage: screenshot [-f] [-s]
+#   (default)  region to clipboard
+#   -f         region to file (path copied to clipboard, for Claude)
+#   -s         region saved to ~/media/screenshots/
+
+notify() { dunstify "screenshot" "$1" -u low -a "grim"; }
+
+mode="clipboard"
+while getopts "fs" opt; do
+    case $opt in
+        f) mode="file" ;;
+        s) mode="save" ;;
+        *) exit 1 ;;
+    esac
+done
+
+GEOM_FILE=$(mktemp /tmp/scr-geom-XXXX)
+trap 'rm -f "$GEOM_FILE"' EXIT
+
+wayfreeze --after-freeze-cmd "slurp > '$GEOM_FILE'; kill \$PPID" || true
+
+GEOM=$(cat "$GEOM_FILE")
+[[ -z "$GEOM" ]] && exit 1
+
+case $mode in
+    clipboard)
+        grim -g "$GEOM" - | wl-copy
+        notify "saved to clipboard"
+        ;;
+    file)
+        FILE="/tmp/screenshot_$(date +%s).png"
+        grim -g "$GEOM" "$FILE"
+        echo -n "$FILE" | wl-copy
+        notify "$FILE"
+        ;;
+    save)
+        DEST="$HOME/media/screenshots/$(date +%F__%T__slurp).png"
+        grim -g "$GEOM" "$DEST"
+        notify "saved to folder"
+        ;;
+esac

@@ -27,7 +27,7 @@ au("FileType", {
 	end,
 })
 
--- two-space indent for markup/config languages
+-- two-space indent for heaivly indeneted languages
 au("FileType", {
 	group = "TwoSpaceIndent",
 	pattern = { "lua", "yaml", "json", "jsonc", "html", "css", "scss", "markdown", "typescript", "javascript" },
@@ -64,13 +64,30 @@ au("VimResized", {
 	end,
 })
 
--- check if file changed outside nvim and prompt to reload
-au({ "FocusGained", "TermClose", "TermLeave" }, {
+-- check if file changed outside nvim and auto-reload (requires autoread option)
+au({ "FocusGained", "BufEnter", "CursorHold", "TermClose", "TermLeave" }, {
 	group = "CheckExternalChanges",
 	callback = function()
 		if vim.o.buftype ~= "nofile" then
 			vim.cmd("checktime")
 		end
+	end,
+})
+
+-- reload external changes while preserving undo history (makes external edits undoable)
+au("FileChangedShell", {
+	group = "ForceReloadExternal",
+	callback = function(args)
+		local bufnr = args.buf
+		local filename = vim.api.nvim_buf_get_name(bufnr)
+		local ok, new_lines = pcall(vim.fn.readfile, filename)
+		if not ok then
+			vim.v.fcs_choice = "reload"
+			return
+		end
+		vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, new_lines)
+		vim.bo[bufnr].modified = false
+		vim.v.fcs_choice = ""
 	end,
 })
 
@@ -104,16 +121,6 @@ au("TermOpen", {
 		vim.opt_local.relativenumber = false
 		vim.opt_local.signcolumn = "no"
 		vim.cmd("startinsert")
-	end,
-})
-
--- spell check in prose-oriented filetypes
-au("FileType", {
-	group = "SpellCheck",
-	pattern = { "markdown", "text", "gitcommit", "NeogitCommitMessage" },
-	callback = function()
-		vim.opt_local.spell = true
-		vim.opt_local.wrap = true
 	end,
 })
 

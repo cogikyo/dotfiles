@@ -50,5 +50,6 @@
   "outputStyle": "explanatory",
   "promptSuggestionEnabled": false,
   "skipDangerousModePermissionPrompt": true,
+  "preferredNotifChannel": "none",
   "shiftTabHint": false
 }

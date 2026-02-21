@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# Claude Code notification helper with Kitty tab info
+
+TYPE="${1:-idle}"
+MESSAGE="${2:-}"
+
+# Get Kitty window/tab info and Claude variant if available
+TAB_TITLE=""
+WINDOW_ID="${KITTY_WINDOW_ID:-}"
+
+if [[ -n "$WINDOW_ID" ]] && command -v kitty &>/dev/null; then
+    # Get tab title for this window
+    TAB_TITLE=$(kitty @ ls 2>/dev/null | jq -r --arg wid "$WINDOW_ID" '
+        .[] | .tabs[] | select(.windows[] | .id == ($wid | tonumber)) | .title
+    ' 2>/dev/null)
+
+    # Extract just the nerd font icon from between decorators
+    if [[ -n "$TAB_TITLE" ]]; then
+        TAB_ICON=$(echo "$TAB_TITLE" | sed -E 's/^[⊰⟜] (.*) [⊱⊸]$/\1/' | xargs)
+        [[ -n "$TAB_ICON" ]] && TAB_TITLE="$TAB_ICON"
+    fi
+fi
+
+BODY="${MESSAGE:-Waiting for input}"
+
+# Run notification with click-to-focus action (in background to not block)
+notify_with_action() {
+    local app="$1" urgency="$2" timeout="$3" title="$4" body="$5" wid="$6" fg="$7" fr="$8"
+
+    action=$(dunstify -a "$app" -u "$urgency" -t "$timeout" \
+        -h "string:fgcolor:$fg" \
+        -h "string:frcolor:$fr" \
+        -A "focus,Focus" \
+        "$title" "$body")
+
+    if [[ "$action" == "focus" && -n "$wid" ]]; then
+        kitty @ focus-window --match id:"$wid" 2>/dev/null
+    fi
+}
+
+case "$TYPE" in
+    idle)
+        BODY="${MESSAGE:-Waiting for input}${TAB_TITLE:+ ⊰ $TAB_TITLE ⊱ }"
+        notify_with_action "claude" "low" "6000" "Claude" "$BODY" "$WINDOW_ID" "#f2a170" "#ea834b" &
+        ;;
+    permission)
+        BODY="${MESSAGE:-Permission needed}${TAB_TITLE:+ ⊰ $TAB_TITLE ⊱}"
+        notify_with_action "claude-input" "normal" "8000" "Claude" "$BODY" "$WINDOW_ID" "#95cb79" "#5aba6d" &
+        ;;
+esac

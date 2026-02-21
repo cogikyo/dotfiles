@@ -1,3 +1,15 @@
 # Compiled binaries
-bin/newtab-server
 config/claude/statusline-bin
+config/claude/statusline/statusline
+
+# Plaintext secrets (safety net)
+etc/secrets/identity
+
+# External plugins (managed separately)
+config/xplr/plugins/preview/
+
+# ISO build artifacts
+iso/work/
+iso/out/
+iso/airootfs/var/
+iso/airootfs/root/dotfiles/

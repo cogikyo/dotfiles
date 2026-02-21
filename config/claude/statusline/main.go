@@ -1,3 +1,11 @@
+// Claude Code custom statusline renderer.
+//
+// Reads JSON from stdin (via Claude Code's statusline hook) and prints an
+// ANSI-colored, Nerd Font status string to stdout. Segments are separated
+// by box-drawing delimiters (╼╾) and include: working directory, git branch
+// and file-status counts, context window usage bar, and rate-limit gauges
+// (5-hour / 7-day) from the Anthropic usage API. Git status and API calls
+// run concurrently; API responses are cached to disk with a 60s TTL.
 package main
 
 import (
