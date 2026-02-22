@@ -37,7 +37,7 @@ require("lazy").setup({
 	spec = {
 		{
 			"cogikyo/vagari.nvim",
-			dev = false,
+			dev = true,
 			priority = 1000,
 			lazy = false,
 			config = function()
