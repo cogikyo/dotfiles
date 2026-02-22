@@ -4,7 +4,6 @@ return {
 	lazy = false,
 	keys = {
 		{ "<leader>nm", "<cmd>Neominimap Toggle<cr>", desc = "Toggle minimap" },
-		{ "<leader>nf", "<cmd>Neominimap Focus<cr>", desc = "Focus minimap" },
 	},
 	init = function()
 		vim.g.neominimap = {
