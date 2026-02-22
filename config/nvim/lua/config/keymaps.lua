@@ -259,6 +259,32 @@ map("n", "<leader>et", function()
 		api.tree.open()
 	end
 end, desc("Toggle file tree"))
+map("n", "<leader>f<leader>", function()
+	local api = require("nvim-tree.api")
+	local view = require("nvim-tree.view")
+	if not view.is_visible() then
+		api.tree.open()
+	end
+	local cwd = require("nvim-tree.core").get_cwd()
+	require("telescope.builtin").find_files({
+		prompt_title = "Jump to directory",
+		cwd = cwd,
+		find_command = { "fd", "--type", "d", "--hidden", "--exclude", ".git" },
+		attach_mappings = function(_, _)
+			local actions = require("telescope.actions")
+			local action_state = require("telescope.actions.state")
+			actions.select_default:replace(function(prompt_bufnr)
+				local entry = action_state.get_selected_entry()
+				actions.close(prompt_bufnr)
+				if entry then
+					local path = cwd .. "/" .. entry[1]
+					api.tree.find_file({ buf = path, open = true, focus = true })
+				end
+			end)
+			return true
+		end,
+	})
+end, desc("Find directory in tree"))
 map("n", "<leader>bt", ":Switch<CR>",                              desc("Toggle variant"))
 -- stylua: ignore end
 
