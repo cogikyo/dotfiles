@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Print the most recent project root (git root):
+#   1. Last project tracked by chpwd hook (/tmp/last-project)
+#   2. Focused kitty tab's CWD → git root (via remote control socket)
+#   3. $HOME as last resort
+
+git_root() { git -C "$1" rev-parse --show-toplevel 2>/dev/null; }
+
+# Most recent cd into a git project (across all shells)
+if [[ -f /tmp/last-project ]]; then
+    proj=$(cat /tmp/last-project)
+    [[ -d "$proj" ]] && { echo "$proj"; exit 0; }
+fi
+
+# Fallback: active kitty window's focused tab
+pid=$(hyprctl activewindow -j 2>/dev/null | jq -r '.pid // empty')
+if [[ -n "$pid" && -S "/tmp/kitty-$pid" ]]; then
+    cwd=$(kitty @ --to "unix:/tmp/kitty-$pid" ls 2>/dev/null |
+        jq -r '.[0].tabs[] | select(.is_focused) | .windows[] | select(.is_focused) | .cwd')
+    root=$(git_root "$cwd")
+    [[ -n "$root" ]] && { echo "$root"; exit 0; }
+fi
+
+echo "$HOME"
