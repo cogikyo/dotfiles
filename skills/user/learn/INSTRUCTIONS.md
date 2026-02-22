@@ -1,6 +1,6 @@
 # Learn - Skill Creator
 
-Skills extend Claude with specialized knowledge for using tools, workflows, and domain expertise.
+Skills extend any AI agent with specialized knowledge for using tools, workflows, and domain expertise.
 
 ## Commands
 
@@ -120,7 +120,7 @@ Most skills should reference: CLI tools, libraries, APIs, or file format specs.
 
 ### Concise is Key
 
-Context is shared. Only add what Claude doesn't already know.
+Context is shared. Only add what the agent doesn't already know.
 
 - Prefer examples over explanations
 - Challenge each paragraph: "Does this justify its token cost?"
@@ -148,7 +148,7 @@ description: Work with PDFs using pdfplumber and pikepdf. Use for extracting tex
 - README.md, CHANGELOG.md, INSTALLATION.md
 - User-facing documentation
 - Setup/testing procedures
-- Anything not needed by Claude to do the job
+- Anything not needed by the agent to do the job
 
 ---
 
