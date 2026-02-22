@@ -125,22 +125,22 @@ case "$TYPE" in
         ;;
     complete)
         play jobs-done
-        notify low 20000 "$(summary last_assistant_message 'Jobs done')" "" \
+        notify low 0 "$(summary last_assistant_message 'Jobs done')" "" \
             "$ORN_BG" "$ORN_FG" "$ORN_FR" &
         ;;
     subagent)
         play jobs-done
         agent=$(jq -r '.agent_type // "Agent"' <<< "$HOOK_JSON" 2>/dev/null)
-        notify low 12000 "$agent: $(summary last_assistant_message Done 70)" "" \
-            "$ORN_BG" "$ORN_FG" "$ORN_FR" &
+        notify low 4000 "$agent: $(summary last_assistant_message Done 70)" "" \
+            "$BLU_BG" "$BLU_FG" "$BLU_FR" &
         ;;
     idle)
         play hey-listen 32768
-        notify low 8000 "$(summary message 'Waiting for input')" "" \
+        notify low 0 "$(summary message 'Waiting for input')" "" \
             "$PRP_BG" "$PRP_FG" "$PRP_FR" &
         ;;
     permission)
-        notify normal 20000 "$(summary message 'Permission needed')" "" \
+        notify normal 0 "$(summary message 'Permission needed')" "" \
             "$GRN_BG" "$GRN_FG" "$GRN_FR" &
         ;;
 esac
