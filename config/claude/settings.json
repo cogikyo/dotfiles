@@ -41,6 +41,17 @@
         ]
       }
     ],
+    "SubagentStop": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "/home/cullyn/dotfiles/config/claude/claude-notify subagent"
+          }
+        ]
+      }
+    ],
     "Notification": [
       {
         "matcher": "permission_prompt",
