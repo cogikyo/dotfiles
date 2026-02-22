@@ -22,7 +22,12 @@ setopt AUTO_CD
 chpwd() {
     echo
     lsd
+    local root
+    root=$(git rev-parse --show-toplevel 2>/dev/null) && echo "$root" > /tmp/last-project
 }
+
+alias install='~/dotfiles/install.sh'
+alias build='~/dotfiles/build.sh'
 
 # aliases
 alias niol='clear && source ~/.zshrc'
