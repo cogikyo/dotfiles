@@ -1,6 +1,10 @@
 #!/usr/bin/env bash
-# dunst notifications for Codex CLI (config.toml notify)
+# dunst notifications for Codex CLI
 # sources shared notification infra from claude-notify
+#
+# entry points:
+#   1. codex notify hook  →  codex-notify '{"type":"agent-turn-complete",...}'
+#   2. dunst script rule  →  codex-notify approval  (kitty OSC 99 intercept)
 #
 # codex spawns notify scripts with restricted env — re-export session vars
 # for D-Bus (dunstify) and PulseAudio (paplay)
@@ -8,8 +12,10 @@
 LOG="/tmp/codex-notify.log"
 exec >> "$LOG" 2>&1
 
-export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
-export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
+export DBUS_SESSION_BUS_ADDRESS
+XDG_RUNTIME_DIR="/run/user/$(id -u)"
+export XDG_RUNTIME_DIR
 
 echo "--- $(date) ---"
 echo "DBUS=$DBUS_SESSION_BUS_ADDRESS"
@@ -20,10 +26,22 @@ echo "which dunstify: $(which dunstify 2>&1)"
 # shellcheck source=../claude/claude-notify
 source "$(dirname "${BASH_SOURCE[0]}")/../claude/claude-notify"
 
-HOOK_JSON="$1"
-[[ -z "$HOOK_JSON" ]] && HOOK_JSON='{}'
-
-TYPE=$(jq -r '.type // empty' <<< "$HOOK_JSON" 2>/dev/null)
+# Dunst script mode: dunst passes (appname, summary, body, icon, urgency)
+# when intercepting kitty's OSC 99 "Approval requested" notification
+if [[ "${1:-}" == "kitty" && "${2:-}" == *Approval* ]]; then
+    HOOK_JSON='{}'
+    TYPE="approval-requested"
+    # Dunst has no kitty env — resolve codex window for tab_icon/ws_icon
+    WINDOW_ID=$(kitty @ ls 2>/dev/null \
+        | jq -r '[.[].tabs[].windows[]
+            | select(.foreground_processes[].cmdline[] | test("codex"))]
+            | .[0].id // empty' 2>/dev/null)
+    KITTY_PID=$(pgrep -ox kitty)
+else
+    HOOK_JSON="$1"
+    [[ -z "$HOOK_JSON" ]] && HOOK_JSON='{}'
+    TYPE=$(jq -r '.type // empty' <<< "$HOOK_JSON" 2>/dev/null)
+fi
 
 APP=$(tab_icon)
 APP="${APP:-codex}"
@@ -47,8 +65,10 @@ case "$TYPE" in
             "$PRP_BG" "$PRP_FG" "$PRP_FR" "" &
         ;;
     approval-requested)
+        # delay: dunstify blocks when called from within a dunst script handler
+        (sleep 0.3
         play hey-listen "$LOUD"
-        notify normal 0 "$(summary last-assistant-message 'Permission needed')" "" \
-            "$GRN_BG" "$GRN_FG" "$GRN_FR" "-monocle" &
+        notify normal 0 "Permission needed" "" \
+            "$GRN_BG" "$GRN_FG" "$GRN_FR" "-monocle") &disown
         ;;
 esac

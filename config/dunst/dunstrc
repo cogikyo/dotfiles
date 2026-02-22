@@ -83,3 +83,9 @@
     appname = "kitty"
     summary = ".*Codex.*"
     skip_display = true
+
+[kitty-approval]
+    appname = "kitty"
+    summary = ".*Approval requested.*"
+    format = ""
+    script = /home/cullyn/dotfiles/config/codex/codex-notify
