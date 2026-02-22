@@ -27,7 +27,7 @@ bigquery/
     └── product.md
 ```
 
-User asks about sales → Claude reads only `sales.md`.
+User asks about sales → agent reads only `sales.md`.
 
 ### Tool/Framework Variants
 

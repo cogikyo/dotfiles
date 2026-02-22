@@ -620,7 +620,7 @@ step_link() {
     mkdir -p "$HOME/.config/claude"
     ln -sfnv "$DOTFILES/config/claude/settings.json" "$HOME/.config/claude/settings.json"
     ln -sfv "$DOTFILES/config/claude/claude-notify" "$HOME/.local/bin/claude-notify"
-    "$DOTFILES/config/claude/skills/link.sh" user
+    "$DOTFILES/skills/link.sh" user
 
     # .zshrc symlink
     info "Linking .zshrc..."
