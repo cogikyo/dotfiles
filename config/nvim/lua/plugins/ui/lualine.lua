@@ -168,7 +168,7 @@ return {
 			return {
 				filetypes = { ft },
 				sections = make_sections({ fg = p.blk_1, bg = active_bg, gui = "bold" }),
-				inactive_sections = make_sections({ fg = inactive_fg, bg = inactive_bg, gui = "bold" }),
+				inactive_sections = make_sections({ fg = inactive_fg, bg = inactive_bg }),
 			}
 		end
 
