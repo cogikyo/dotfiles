@@ -32,10 +32,9 @@ ws=$(hyprctl activeworkspace -j | jq '.id')
 
 if [[ -n "$title" ]]; then
     addr=$(hyprctl clients -j | jq -r \
-        --argjson ws "$ws" \
         --arg class "$class" \
         --arg title "$title" \
-        '.[] | select(.workspace.id == $ws and .class == $class and .title == $title) | .address' | head -1)
+        '.[] | select(.class == $class and .initialTitle == $title) | .address' | head -1)
 else
     addr=$(hyprctl clients -j | jq -r \
         --argjson ws "$ws" \
@@ -46,5 +45,7 @@ fi
 if [[ -n "$addr" ]]; then
     hyprctl dispatch focuswindow "address:$addr"
 elif [[ -n "$fallback" ]]; then
+    export PROJECT_PATH
+    PROJECT_PATH="${PROJECT_PATH:-$(active-cwd)}"
     eval "$fallback"
 fi

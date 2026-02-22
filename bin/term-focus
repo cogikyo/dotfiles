@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Focus editor window's "term" tab if one exists on current workspace.
+# Otherwise, spawn a floating terminal.
+
+ws=$(hyprctl activeworkspace -j | jq '.id')
+
+read -r addr pid < <(hyprctl clients -j | jq -r --argjson ws "$ws" \
+    '[.[] | select(.workspace.id == $ws and .initialTitle == "editor")] | .[0] | "\(.address) \(.pid)"')
+
+if [[ -n "$addr" && "$addr" != "null" ]]; then
+    hyprctl dispatch focuswindow "address:$addr"
+
+    sock="/tmp/kitty-$pid"
+    if [[ -S "$sock" ]]; then
+        wid=$(kitty @ --to "unix:$sock" ls | jq -r '.[0].id')
+        kitty @ --to "unix:$sock" focus-tab \
+            --match "env:KITTY_TAB_ID=${wid}-term" 2>/dev/null || true
+    fi
+else
+    kitty --title "terminalfloat" --directory "$(active-cwd)" \
+        --session "~/.config/kitty/sessions/term.conf"
+fi

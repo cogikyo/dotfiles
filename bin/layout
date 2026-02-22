@@ -56,7 +56,7 @@ check_windows() {
 arrange_layout() {
     sleep 1.5 # wait for the workspace applicationst to be created
 
-    # Ensures: master → cursor, slave 1 → firefox, slave 2 → terminal
+    # Ensures: master → nvim (kitty), slave 1 → firefox, slave 2 → terminal (kitty)
     local ws_id="$n_flag"
     local max_attempts=10
     local attempt=0
@@ -74,15 +74,15 @@ arrange_layout() {
     local clients
     clients=$(hyprctl clients -j | jq --argjson ws "$ws_id" \
         '[.[] | select(.workspace.id == $ws and .floating == false and .class != "GLava")]')
-    
-    local cursor_addr=$(echo "$clients" | jq -r '.[] | select(.class | test("cursor"; "i")) | .address' | head -1)
+
+    local editor_addr=$(echo "$clients" | jq -r '.[] | select(.class == "kitty" and (.initialTitle == "editor")) | .address' | head -1)
     local firefox_addr=$(echo "$clients" | jq -r '.[] | select(.class | test("firefox"; "i")) | .address' | head -1)
-    local kitty_addr=$(echo "$clients" | jq -r '.[] | select(.class == "kitty") | .address' | head -1)
+    local kitty_addr=$(echo "$clients" | jq -r '.[] | select(.class == "kitty" and (.initialTitle == "terminal")) | .address' | head -1)
 
-    [[ -z "$cursor_addr" || -z "$firefox_addr" || -z "$kitty_addr" ]] && return 1
+    [[ -z "$editor_addr" || -z "$firefox_addr" || -z "$kitty_addr" ]] && return 1
 
-    # Swap cursor to master position
-    hyprctl dispatch focuswindow "address:$cursor_addr"
+    # Swap editor to master position
+    hyprctl dispatch focuswindow "address:$editor_addr"
     hyprctl dispatch layoutmsg swapwithmaster
     sleep 0.1
 
@@ -100,8 +100,8 @@ arrange_layout() {
         hyprctl dispatch layoutmsg swapnext
     fi
 
-    # Focus back to master (cursor)
-    hyprctl dispatch focuswindow "address:$cursor_addr"
+    # Focus back to master (editor)
+    hyprctl dispatch focuswindow "address:$editor_addr"
 }
 # ============================================================================
 
@@ -120,17 +120,26 @@ browser() {
     done
 }
 
+editor() {
+    local path="$HOME/$1"
+    if [[ ! -d "$path" ]]; then
+        error "path does not exist: $path"
+    fi
+    hyprctl dispatch exec "env PROJECT_PATH=$path kitty --title=editor --session ~/.config/kitty/sessions/editor.conf"
+    sleep 0.25
+}
+
 terminal() {
     local path="$HOME/$1"
     if [[ ! -d "$path" ]]; then
         error "path does not exist: $path"
     fi
-    hyprctl dispatch exec "env PROJECT_PATH=$path kitty --session ~/.config/kitty/sessions/default.conf"
+    hyprctl dispatch exec "kitty --title=terminal --directory $path --session ~/.config/kitty/sessions/term.conf"
     sleep 0.25
 }
 
 dotfiles() {
-    hyprctl dispatch exec "cursor $HOME/dotfiles"
+    editor "dotfiles"
     browser "https://github.com/cogikyo/dotfiles"
     terminal "dotfiles"
 }
@@ -175,7 +184,7 @@ main() {
         sleep 0.5
         ;;
     3)
-        hyprctl dispatch exec "cursor $HOME/$app_path"
+        editor "$app_path"
         IFS='|' read -ra parts <<< "${APP[$a_flag]}"
         browser "${parts[@]:1}"
         terminal "$app_path"

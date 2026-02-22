@@ -605,7 +605,7 @@ step_link() {
         name=$(basename "$item")
 
         case "$name" in
-            claude|Cursor|firefox) continue ;;
+            claude|firefox) continue ;;
         esac
 
         if [[ -d "$item" && ! -L "$item" ]]; then
