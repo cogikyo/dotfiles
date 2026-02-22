@@ -10,7 +10,9 @@ Run linter on all skills: `scripts/audit.sh`
 
 Or lint a specific skill by name: `scripts/audit.sh learn`
 
-Reports pass/fail for each skill in `user/` and `project/`.
+Reports pass/fail for each skill in `user/` and `project/`, plus:
+- Per-check status (`✔`, `✖`, faint `->` for skip)
+- Compact per-check metadata (counts/limits/context), including command lists for command-sync
 
 ---
 
@@ -18,10 +20,12 @@ Reports pass/fail for each skill in `user/` and `project/`.
 
 **1. Ask scope:**
 
-- **user** → `~/dotfiles/config/claude/skills/user/<name>/`
-- **project** → `~/dotfiles/config/claude/skills/project/<name>/`
+- **user** → `~/dotfiles/skills/user/<name>/`
+- **project** → `~/dotfiles/skills/project/<name>/`
 
-Skills are automatically available once created—no linking needed.
+After creating, link them:
+- user skills: `~/dotfiles/skills/link.sh user`
+- project skills (inside a project): `~/dotfiles/skills/link.sh project <name>`
 
 **2. Gather requirements:**
 
@@ -59,15 +63,17 @@ This validates:
 - SKILL.md stays lean (<30 lines, <200 words)
 - YAML frontmatter present
 - No forbidden files (README.md, etc.)
+- Slash-command list stays in sync across SKILL.md and INSTRUCTIONS.md (when both define command docs)
+- User skills are linked from a supported config skills directory
 
 ---
 
-### `/learn refine`
+### `/learn edit`
 
 **1. Identify skill:**
 
 - User specifies skill name, OR
-- Use `AskUserQuestion` to ask which skill to refine
+- Use `AskUserQuestion` to ask which skill to edit
 
 **2. Read current state:**
 
@@ -76,11 +82,11 @@ This validates:
 
 **3. Understand the change:**
 
-Refinements vary in scope:
+Edits vary in scope:
 
 - **Quick fix** (typos, small tweaks) → edit directly
 - **Workflow improvement** → ask what's not working, what outcome is wanted
-- **Tool/framework upgrade** → when a wrapped tool has breaking changes (major version), may require multiple refine passes
+- **Tool/framework upgrade** → when a wrapped tool has breaking changes (major version), may require multiple edit passes
 
 For non-trivial changes, ask clarifying questions first.
 
@@ -96,7 +102,7 @@ Don't assume how tools work. If unsure about current APIs, flags, or behavior, u
 
 **6. Run linter:**
 
-After refining, run: `scripts/audit.sh <skill-name>`
+After editing, run: `scripts/audit.sh <skill-name>`
 
 ---
 
