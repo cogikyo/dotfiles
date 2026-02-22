@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Codex notification helper for `notify` turn-complete events.
+
+set -u
+
+PAYLOAD="${1:-{}}"
+LOG_FILE="/tmp/codex-notify.log"
+SOUND_FILE="$HOME/dotfiles/share/sounds/jobs-done.ogg"
+
+if ! command -v dunstify >/dev/null 2>&1; then
+    exit 0
+fi
+
+json_get() {
+    local query="$1"
+    if ! command -v jq >/dev/null 2>&1; then
+        return 1
+    fi
+    jq -r "$query // empty" <<<"$PAYLOAD" 2>/dev/null
+}
+
+TYPE="$(json_get '.type')"
+
+# Current Codex CLI notify emits turn-complete events.
+if [[ "$TYPE" != "agent-turn-complete" ]]; then
+    exit 0
+fi
+
+SUMMARY="$(json_get '.summary')"
+MESSAGE="$(json_get '.message')"
+PROJECT="$(json_get '.cwd')"
+
+if [[ -z "$SUMMARY" ]]; then
+    SUMMARY="Jobs done"
+fi
+
+if [[ -z "$MESSAGE" ]]; then
+    MESSAGE="$SUMMARY"
+fi
+
+if [[ -n "$PROJECT" ]]; then
+    MESSAGE="$MESSAGE ⊰ ${PROJECT##*/} ⊱"
+fi
+
+WINDOW_ID="${KITTY_WINDOW_ID:-}"
+KITTY_PID="${KITTY_PID:-}"
+
+action=$(dunstify -a "codex" -u low -t 20000 \
+    -h "string:fgcolor:#f2a170" \
+    -h "string:frcolor:#ea834b" \
+    -A "focus,Focus" \
+    "Codex" "$MESSAGE")
+
+echo "[$(date +%T)] type='$TYPE' action='$action' wid='$WINDOW_ID' pid='$KITTY_PID'" >>"$LOG_FILE"
+
+if [[ -f "$SOUND_FILE" ]] && command -v paplay >/dev/null 2>&1; then
+    paplay "$SOUND_FILE" >/dev/null 2>&1 & disown
+fi
+
+if [[ "$action" == "focus" && -n "$WINDOW_ID" ]]; then
+    if [[ -n "$KITTY_PID" ]]; then
+        hyprctl dispatch focuswindow pid:"$KITTY_PID" >>"$LOG_FILE" 2>&1
+    fi
+    if command -v kitty >/dev/null 2>&1; then
+        kitty @ focus-window --match id:"$WINDOW_ID" >>"$LOG_FILE" 2>&1
+    fi
+fi

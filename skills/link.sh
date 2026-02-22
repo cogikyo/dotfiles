@@ -72,7 +72,7 @@ link_user_skills() {
     codex_home="${CODEX_HOME:-${HOME}/.codex}"
     target_dir="$codex_home/skills"
     claude_config_dir="${CLAUDE_CONFIG_DIR:-${HOME}/.config/claude}"
-    agents_config_dir="${AGENTS_CONFIG_DIR:-${HOME}/.config/agents}"
+    agents_config_dir="${AGENTS_CONFIG_DIR:-${HOME}/.codex}"
 
     mkdir -p "$target_dir"
 

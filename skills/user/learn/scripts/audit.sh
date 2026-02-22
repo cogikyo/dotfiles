@@ -63,7 +63,7 @@ find_skill() {
 # User skills should be linked in $CODEX_HOME/skills/<name>.
 # Config-dir compatibility paths are also accepted:
 #   ${CLAUDE_CONFIG_DIR:-~/.config/claude}/skills/<name>
-#   ${AGENTS_CONFIG_DIR:-~/.config/agents}/skills/<name>
+#   ${AGENTS_CONFIG_DIR:-~/.codex}/skills/<name>
 check_link() {
     local skill_name="$1"
     local skill_path="$2"
@@ -78,7 +78,7 @@ check_link() {
         norm_skill=$(readlink -f "$skill_path")
         local codex_home="${CODEX_HOME:-$HOME/.codex}"
         local claude_config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.config/claude}"
-        local agents_config_dir="${AGENTS_CONFIG_DIR:-$HOME/.config/agents}"
+        local agents_config_dir="${AGENTS_CONFIG_DIR:-$HOME/.codex}"
         local codex_link="$codex_home/skills/$skill_name"
         local candidates=(
             "$codex_link"

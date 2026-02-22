@@ -570,6 +570,70 @@ healthcheck_packages() {
 step_link() {
     header "Linking configs and scripts"
 
+    local linked_count=0
+    local unchanged_count=0
+    local skills_linked=0
+    local codex_home="$HOME/.codex"
+
+    link_or_skip() {
+        local src="$1"
+        local target="$2"
+        local src_real target_real
+
+        mkdir -p "$(dirname "$target")"
+        src_real=$(canonpath "$src")
+
+        if [[ -e "$target" || -L "$target" ]]; then
+            target_real=$(canonpath "$target")
+            if [[ "$src_real" == "$target_real" ]]; then
+                ((unchanged_count++))
+                return 0
+            fi
+        fi
+
+        ln -sfn "$src" "$target"
+        ((linked_count++))
+    }
+
+    verify_link_mapping() {
+        local src="$1"
+        local dst="$2"
+        local src_real dst_real src_file rel_file dst_file
+
+        if [[ -d "$src" && ! -L "$src" ]]; then
+            [[ -d "$dst" ]] || return 1
+            while IFS= read -r -d '' src_file; do
+                rel_file="${src_file#"$src"/}"
+                dst_file="$dst/$rel_file"
+                [[ -e "$dst_file" || -L "$dst_file" ]] || return 1
+                src_real=$(canonpath "$src_file")
+                dst_real=$(canonpath "$dst_file")
+                [[ "$src_real" == "$dst_real" ]] || return 1
+            done < <(find "$src" \( -type f -o -type l \) -print0)
+            return 0
+        fi
+
+        [[ -e "$dst" || -L "$dst" ]] || return 1
+        src_real=$(canonpath "$src")
+        dst_real=$(canonpath "$dst")
+        [[ "$src_real" == "$dst_real" ]]
+    }
+
+    ensure_user_skills_linked() {
+        local skills_output
+
+        if [[ "$skills_linked" -eq 1 ]]; then
+            return 0
+        fi
+
+        if ! skills_output=$(CODEX_HOME="$codex_home" AGENTS_CONFIG_DIR="$codex_home" "$DOTFILES/skills/link.sh" user 2>&1); then
+            err "Linking skills failed"
+            [[ -n "$skills_output" ]] && printf '%s\n' "$skills_output" >&2
+            return 1
+        fi
+        skills_linked=1
+    }
+
     link_tree_contents() {
         local src="$1"
         local dst="$2"
@@ -589,7 +653,7 @@ step_link() {
                 mkdir -p "$target"
                 link_tree_contents "$item" "$target"
             else
-                ln -sfnv "$item" "$target"
+                link_or_skip "$item" "$target"
             fi
         done
         shopt -u dotglob nullglob
@@ -605,26 +669,69 @@ step_link() {
         name=$(basename "$item")
 
         case "$name" in
-            claude|firefox) continue ;;
+            claude|codex|firefox) continue ;;
         esac
 
         if [[ -d "$item" && ! -L "$item" ]]; then
             link_tree_contents "$item" "$HOME/.config/$name"
         else
-            ln -sfnv "$item" "$HOME/.config/$name"
+            link_or_skip "$item" "$HOME/.config/$name"
+        fi
+
+        if verify_link_mapping "$item" "$HOME/.config/$name"; then
+            ok "$name linked"
+        else
+            err "Linking failed verification for ~/.config/$name"
+            return 1
         fi
     done
 
     # Claude: partial linking
     info "Linking claude settings, skills, and scripts..."
+    step "Linking skills (claude)"
+    ensure_user_skills_linked
+
+    step "Linking config (claude)"
     mkdir -p "$HOME/.config/claude"
-    ln -sfnv "$DOTFILES/config/claude/settings.json" "$HOME/.config/claude/settings.json"
-    ln -sfv "$DOTFILES/config/claude/claude-notify" "$HOME/.local/bin/claude-notify"
-    "$DOTFILES/skills/link.sh" user
+    link_or_skip "$DOTFILES/config/claude/settings.json" "$HOME/.config/claude/settings.json"
+    link_or_skip "$DOTFILES/config/claude/claude-notify" "$HOME/.local/bin/claude-notify"
+    verify_link_mapping "$DOTFILES/config/claude/settings.json" "$HOME/.config/claude/settings.json" || {
+        err "Linking failed verification for ~/.config/claude/settings.json"
+        return 1
+    }
+    verify_link_mapping "$DOTFILES/config/claude/claude-notify" "$HOME/.local/bin/claude-notify" || {
+        err "Linking failed verification for ~/.local/bin/claude-notify"
+        return 1
+    }
+    ok "claude linked"
+
+    # Codex: partial linking
+    info "Linking codex settings..."
+    step "Linking skills (codex)"
+    ensure_user_skills_linked
+
+    step "Linking config (codex)"
+    mkdir -p "$codex_home"
+    link_or_skip "$DOTFILES/config/codex/config.toml" "$codex_home/config.toml"
+    link_or_skip "$DOTFILES/config/codex/codex-notify" "$HOME/.local/bin/codex-notify"
+    verify_link_mapping "$DOTFILES/config/codex/config.toml" "$codex_home/config.toml" || {
+        err "Linking failed verification for $codex_home/config.toml"
+        return 1
+    }
+    verify_link_mapping "$DOTFILES/config/codex/codex-notify" "$HOME/.local/bin/codex-notify" || {
+        err "Linking failed verification for ~/.local/bin/codex-notify"
+        return 1
+    }
+    ok "codex linked"
 
     # .zshrc symlink
     info "Linking .zshrc..."
-    ln -sfnv "$DOTFILES/config/zsh/zshrc" "$HOME/.zshrc"
+    link_or_skip "$DOTFILES/config/zsh/zshrc" "$HOME/.zshrc"
+    verify_link_mapping "$DOTFILES/config/zsh/zshrc" "$HOME/.zshrc" || {
+        err "Linking failed verification for ~/.zshrc"
+        return 1
+    }
+    ok ".zshrc linked"
 
     # Scripts -> ~/.local/bin/
     info "Linking scripts to ~/.local/bin/..."
@@ -634,21 +741,92 @@ step_link() {
 
     for script in "$DOTFILES"/bin/*; do
         [[ -f "$script" ]] || continue
-        ln -sfv "$script" "$HOME/.local/bin/"
+        link_or_skip "$script" "$HOME/.local/bin/$(basename "$script")"
     done
 
-    ok "Linking complete"
+    ok "scripts linked"
+    ok "Linking complete (updated: $linked_count, unchanged: $unchanged_count)"
 }
 
 healthcheck_link() {
-    local zsh_src zsh_dst
-    zsh_src=$(canonpath "$DOTFILES/config/zsh/zshrc")
-    zsh_dst=$(canonpath "$HOME/.zshrc")
+    local item name src dst src_real dst_real src_file rel_file dst_file
+    local checked_entries=0
 
-    [[ -L "$HOME/.zshrc" ]] || { err "Healthcheck failed: ~/.zshrc is not a symlink"; return 1; }
-    [[ "$zsh_src" == "$zsh_dst" ]] || { err "Healthcheck failed: ~/.zshrc does not point to $DOTFILES/config/zsh/zshrc"; return 1; }
+    verify_link_mapping() {
+        local src="$1"
+        local dst="$2"
+        local src_real dst_real src_file rel_file dst_file
+
+        if [[ -d "$src" && ! -L "$src" ]]; then
+            [[ -d "$dst" ]] || return 1
+            while IFS= read -r -d '' src_file; do
+                rel_file="${src_file#"$src"/}"
+                dst_file="$dst/$rel_file"
+                [[ -e "$dst_file" || -L "$dst_file" ]] || return 1
+                src_real=$(canonpath "$src_file")
+                dst_real=$(canonpath "$dst_file")
+                [[ "$src_real" == "$dst_real" ]] || return 1
+            done < <(find "$src" \( -type f -o -type l \) -print0)
+            return 0
+        fi
+
+        [[ -e "$dst" || -L "$dst" ]] || return 1
+        src_real=$(canonpath "$src")
+        dst_real=$(canonpath "$dst")
+        [[ "$src_real" == "$dst_real" ]]
+    }
+
+    info "Healthcheck(link)"
+    step "Verify required directories"
     [[ -d "$HOME/.config" ]] || { err "Healthcheck failed: ~/.config does not exist"; return 1; }
     [[ -d "$HOME/.local/bin" ]] || { err "Healthcheck failed: ~/.local/bin does not exist"; return 1; }
+    ((checked_entries += 2))
+    ok "required directories"
+
+    step "Verify ~/.config mirrors dotfiles/config/* (excluding claude/codex/firefox)"
+    for item in "$DOTFILES"/config/*; do
+        name=$(basename "$item")
+        case "$name" in
+            claude|codex|firefox) continue ;;
+        esac
+        verify_link_mapping "$item" "$HOME/.config/$name" || {
+            err "Healthcheck failed: ~/.config/$name is not linked to $item"
+            return 1
+        }
+        ((checked_entries++))
+    done
+    ok "~/.config mirror links"
+
+    step "Verify partial links for claude/codex and shell"
+    verify_link_mapping "$DOTFILES/config/claude/settings.json" "$HOME/.config/claude/settings.json" || {
+        err "Healthcheck failed: ~/.config/claude/settings.json is not linked"
+        return 1
+    }
+    ((checked_entries++))
+    verify_link_mapping "$DOTFILES/config/claude/claude-notify" "$HOME/.local/bin/claude-notify" || {
+        err "Healthcheck failed: ~/.local/bin/claude-notify is not linked"
+        return 1
+    }
+    ((checked_entries++))
+    verify_link_mapping "$DOTFILES/config/codex/config.toml" "$HOME/.codex/config.toml" || {
+        err "Healthcheck failed: ~/.codex/config.toml is not linked"
+        return 1
+    }
+    ((checked_entries++))
+    verify_link_mapping "$DOTFILES/config/codex/codex-notify" "$HOME/.local/bin/codex-notify" || {
+        err "Healthcheck failed: ~/.local/bin/codex-notify is not linked"
+        return 1
+    }
+    ((checked_entries++))
+    verify_link_mapping "$DOTFILES/config/zsh/zshrc" "$HOME/.zshrc" || {
+        err "Healthcheck failed: ~/.zshrc is not linked"
+        return 1
+    }
+    ((checked_entries++))
+    ok "partial links"
+
+    ok "Healthcheck(link): $checked_entries checks passed"
+
     return 0
 }
 
