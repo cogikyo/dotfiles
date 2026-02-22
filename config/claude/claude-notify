@@ -1,80 +1,147 @@
 #!/usr/bin/env bash
-# Claude Code notification helper with Kitty tab info
+# dunst notifications for Claude Code hooks (settings.json)
+# reads hook JSON via stdin for context-aware summaries,
+# resolves workspace icons + kitty tab info per session
+
+# ╭──────────────────────────────────────────────────────────────────────────────╮
+# │ vars                                                                         │
+# ╰──────────────────────────────────────────────────────────────────────────────╯
 
 TYPE="${1:-idle}"
 MESSAGE="${2:-}"
 
-# Get Kitty window/tab info and Claude variant if available
-TAB_TITLE=""
+SOUND_DIR="$HOME/dotfiles/share/sounds"
+ICON_DIR="$HOME/dotfiles/config/eww/art/ws-icons"
 WINDOW_ID="${KITTY_WINDOW_ID:-}"
 KITTY_PID="${KITTY_PID:-}"
 
-if [[ -n "$WINDOW_ID" ]] && command -v kitty &>/dev/null; then
-    # Get tab title for this window
-    TAB_TITLE=$(kitty @ ls 2>/dev/null | jq -r --arg wid "$WINDOW_ID" '
-        .[] | .tabs[] | select(.windows[] | .id == ($wid | tonumber)) | .title
-    ' 2>/dev/null)
+# ╭──────────────────────────────────────────────────────────────────────────────╮
+# │ stdin context                                                                │
+# ╰──────────────────────────────────────────────────────────────────────────────╯
 
-    # Extract just the nerd font icon from between decorators
-    if [[ -n "$TAB_TITLE" ]]; then
-        TAB_ICON=$(echo "$TAB_TITLE" | sed -E 's/^[⊰⟜] (.*) [⊱⊸]$/\1/' | xargs)
-        [[ -n "$TAB_ICON" ]] && TAB_TITLE="$TAB_ICON"
+HOOK_JSON=""
+[[ ! -t 0 ]] && HOOK_JSON=$(cat)
+
+# Pull a field from hook JSON, strip markdown, truncate to $3 chars
+summary() {
+    local field="$1" fallback="$2" max="${3:-80}"
+    if [[ -n "$HOOK_JSON" ]]; then
+        local val
+        val=$(jq -r ".$field // empty" <<< "$HOOK_JSON" 2>/dev/null)
+        if [[ -n "$val" ]]; then
+            echo "$val" \
+                | sed -E 's/^#{1,6} //; s/\*\*//g; s/`//g; s/^\s+//' \
+                | grep -m1 '.' \
+                | cut -c1-"$max"
+            return
+        fi
     fi
-fi
+    echo "$fallback"
+}
 
-BODY="${MESSAGE:-Waiting for input}"
+# ╭──────────────────────────────────────────────────────────────────────────────╮
+# │ environment                                                                  │
+# ╰──────────────────────────────────────────────────────────────────────────────╯
 
-# Run notification with click-to-focus action (in background to not block)
-notify_with_action() {
-    local app="$1" urgency="$2" timeout="$3" title="$4" body="$5" wid="$6" fg="$7" fr="$8"
+# Kitty tab icon (nerd font glyph extracted from decorators)
+tab_suffix() {
+    [[ -n "$WINDOW_ID" ]] && command -v kitty &>/dev/null || return 0
+    local title icon
+    title=$(kitty @ ls 2>/dev/null \
+        | jq -r --arg w "$WINDOW_ID" \
+            '.[] | .tabs[] | select(.windows[] | .id == ($w | tonumber)) | .title' \
+            2>/dev/null) || return 0
+    icon=$(sed -E 's/^[⊰⟜] (.*) [⊱⊸]$/\1/' <<< "$title" | xargs)
+    [[ -n "$icon" ]] && echo " ⊰ $icon ⊱"
+}
 
-    action=$(dunstify -a "$app" -u "$urgency" -t "$timeout" \
-        -h "string:fgcolor:$fg" \
-        -h "string:frcolor:$fr" \
-        -A "focus,Focus" \
+# Workspace icon SVG (resolved from Claude's kitty window, not active ws)
+ws_icon() {
+    command -v hyprctl &>/dev/null || return 0
+    local ws
+    if [[ -n "$KITTY_PID" ]]; then
+        ws=$(hyprctl clients -j 2>/dev/null \
+            | jq -r --arg p "$KITTY_PID" \
+                '[.[] | select(.pid == ($p | tonumber))] | .[0].workspace.id // empty' \
+                2>/dev/null)
+    else
+        ws=$(hyprctl activeworkspace -j 2>/dev/null | jq -r '.id // empty' 2>/dev/null)
+    fi
+    local -A map=([1]=network [2]=learn [3]=dna [4]=dotfiles [5]=music)
+    local name="${map[$ws]:-}"
+    [[ -n "$name" ]] && echo "$ICON_DIR/${name}-active.svg"
+}
+
+# ╭──────────────────────────────────────────────────────────────────────────────╮
+# │ notification                                                                 │
+# ╰──────────────────────────────────────────────────────────────────────────────╯
+
+play() { paplay ${2:+--volume=$2} "$SOUND_DIR/$1.ogg" & disown; }
+
+notify() {
+    local urgency="$1" timeout="$2" title="$3" body="$4"
+    local bg="$5" fg="$6" fr="$7"
+
+    local icon icon_args=()
+    icon=$(ws_icon)
+    [[ -n "$icon" && -f "$icon" ]] && icon_args=(-I "$icon")
+
+    local action
+    action=$(dunstify -a "claude" -u "$urgency" -t "$timeout" \
+        -h "string:bgcolor:$bg" -h "string:fgcolor:$fg" -h "string:frcolor:$fr" \
+        "${icon_args[@]}" -A "focus,Focus" \
         "$title" "$body")
 
-    local log="/tmp/claude-notify.log"
-    echo "[$(date +%T)] action='$action' wid='$wid' KITTY_PID='$KITTY_PID'" >>"$log"
-
-    if [[ "$action" == "focus" && -n "$wid" ]]; then
-        if [[ -n "$KITTY_PID" ]]; then
-            hyprctl dispatch focuswindow pid:"$KITTY_PID" >>"$log" 2>&1
-        fi
-        kitty @ focus-window --match id:"$wid" >>"$log" 2>&1
+    if [[ "$action" == "focus" && -n "$WINDOW_ID" ]]; then
+        local log="/tmp/claude-notify.log"
+        [[ -n "$KITTY_PID" ]] && hyprctl dispatch focuswindow pid:"$KITTY_PID" >>"$log" 2>&1
+        kitty @ focus-window --match id:"$WINDOW_ID" >>"$log" 2>&1
     fi
 }
 
-SOUND_DIR="$HOME/dotfiles/share/sounds"
+# ╭──────────────────────────────────────────────────────────────────────────────╮
+# │ palette                                                                      │
+# ╰──────────────────────────────────────────────────────────────────────────────╯
 
-# Palette (fg=_3, frame=_1)
-BLU_FG="#8aa4f3" BLU_FR="#6380ec" # blu_3 / blu_1
-ORN_FG="#f2a170" ORN_FR="#ea834b" # orn_3 / orn_1
-PRP_FG="#b29ae8" PRP_FR="#9376d8" # prp_3 / prp_1
-GRN_FG="#95cb79" GRN_FR="#73ad5a" # grn_3 / grn_1
-# RBY_FG="#f08898" RBY_FR="#f36978" # rby_3 / rby_1
+BLU_BG="#25284180" BLU_FG="#8aa4f3" BLU_FR="#6380ec80"
+ORN_BG="#49353130" ORN_FG="#f2a170" ORN_FR="#ea834b"
+PRP_BG="#2a2d4580" PRP_FG="#b29ae8" PRP_FR="#9376d880"
+GRN_BG="#2a3d2580" GRN_FG="#95cb79" GRN_FR="#73ad5a80"
+
+# ╭──────────────────────────────────────────────────────────────────────────────╮
+# │ dispatch                                                                     │
+# ╰──────────────────────────────────────────────────────────────────────────────╯
+
+TAB=$(tab_suffix)
 
 case "$TYPE" in
     start)
-        START_SOUNDS=("zug-zug" "work-work" "okie-dokie" "something-need-doing")
-        PICK="${START_SOUNDS[$((RANDOM % ${#START_SOUNDS[@]}))]}"
-        paplay "$SOUND_DIR/$PICK.ogg" & disown
-        declare -A SOUND_MSGS=([zug-zug]="Be happy to" [work-work]="Work work" [okie-dokie]="Okie dokie" [something-need-doing]="Something need doing?")
-        BODY="${MESSAGE:-${SOUND_MSGS[$PICK]}}${TAB_TITLE:+ ⊰ $TAB_TITLE ⊱ }"
-        notify_with_action "claude" "low" "4000" "Claude" "$BODY" "$WINDOW_ID" "$BLU_FG" "$BLU_FR" &
-        ;;
-    idle)
-        paplay --volume=32768 "$SOUND_DIR/hey-listen.ogg" & disown
-        BODY="${MESSAGE:-Waiting for input}${TAB_TITLE:+ ⊰ $TAB_TITLE ⊱ }"
-        notify_with_action "claude" "low" "8000" "Claude" "$BODY" "$WINDOW_ID" "$PRP_FG" "$PRP_FR" &
+        sounds=(zug-zug work-work okie-dokie something-need-doing)
+        pick="${sounds[$((RANDOM % ${#sounds[@]}))]}"
+        play "$pick"
+        declare -A msgs=([zug-zug]="Be happy to" [work-work]="Work work"
+                         [okie-dokie]="Okie dokie" [something-need-doing]="Something need doing?")
+        notify low 4000 "${MESSAGE:-${msgs[$pick]}}$TAB" "" \
+            "$BLU_BG" "$BLU_FG" "$BLU_FR" &
         ;;
     complete)
-        paplay "$SOUND_DIR/jobs-done.ogg" & disown
-        BODY="${MESSAGE:-Jobs done}${TAB_TITLE:+ ⊰ $TAB_TITLE ⊱ }"
-        notify_with_action "claude" "low" "20000" "Claude" "$BODY" "$WINDOW_ID" "$ORN_FG" "$ORN_FR" &
+        play jobs-done
+        notify low 20000 "$(summary last_assistant_message 'Jobs done')$TAB" "" \
+            "$ORN_BG" "$ORN_FG" "$ORN_FR" &
+        ;;
+    subagent)
+        play jobs-done
+        agent=$(jq -r '.agent_type // "Agent"' <<< "$HOOK_JSON" 2>/dev/null)
+        notify low 12000 "$agent: $(summary last_assistant_message Done 70)$TAB" "" \
+            "$ORN_BG" "$ORN_FG" "$ORN_FR" &
+        ;;
+    idle)
+        play hey-listen 32768
+        notify low 8000 "$(summary message 'Waiting for input')$TAB" "" \
+            "$PRP_BG" "$PRP_FG" "$PRP_FR" &
         ;;
     permission)
-        BODY="${MESSAGE:-Permission needed}${TAB_TITLE:+ ⊰ $TAB_TITLE ⊱ }"
-        notify_with_action "claude-input" "normal" "20000" "Claude" "$BODY" "$WINDOW_ID" "$GRN_FG" "$GRN_FR" &
+        notify normal 20000 "$(summary message 'Permission needed')$TAB" "" \
+            "$GRN_BG" "$GRN_FG" "$GRN_FR" &
         ;;
 esac
