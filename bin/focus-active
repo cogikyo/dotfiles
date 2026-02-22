@@ -32,9 +32,10 @@ ws=$(hyprctl activeworkspace -j | jq '.id')
 
 if [[ -n "$title" ]]; then
     addr=$(hyprctl clients -j | jq -r \
+        --argjson ws "$ws" \
         --arg class "$class" \
         --arg title "$title" \
-        '.[] | select(.class == $class and .initialTitle == $title) | .address' | head -1)
+        '.[] | select(.workspace.id == $ws and .class == $class and .initialTitle == $title) | .address' | head -1)
 else
     addr=$(hyprctl clients -j | jq -r \
         --argjson ws "$ws" \
