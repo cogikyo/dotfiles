@@ -15,6 +15,7 @@ require("xpm").setup({
 		"sayanarijit/trash-cli.xplr",
 		"Junker/nuke.xplr",
 		"dtomvan/ouch.xplr",
+		"emsquid/preview.xplr",
 	},
 	auto_install = true,
 	auto_cleanup = true,
