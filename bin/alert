@@ -24,11 +24,10 @@ case "$app" in
     Spotify) sound="none" ;;
     discord) sound="none" ;;
     Slack) sound="knock" ;;
-    claude) sound="none" ;;
+    claude|codex|󰯉) sound="none" ;;
     claude-input) sound="none" ;;
     kitty)
-        # Only suppress kitty notifications mentioning Claude
-        if [[ "${summary,,}${body,,}" == *claude* ]]; then
+        if [[ "${summary,,}${body,,}" =~ (claude|codex|approval) ]]; then
             sound="none"
         fi
         ;;
