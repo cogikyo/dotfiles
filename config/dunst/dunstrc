@@ -78,3 +78,8 @@
     appname = "kitty"
     summary = ".*Claude.*"
     skip_display = true
+
+[kitty-codex]
+    appname = "kitty"
+    summary = ".*Codex.*"
+    skip_display = true

@@ -1,67 +1,148 @@
 #!/usr/bin/env bash
-# Codex notification helper for `notify` turn-complete events.
+# Enhanced Codex notification helper for Codex `notify` events.
 
 set -u
 
 PAYLOAD="${1:-{}}"
 LOG_FILE="/tmp/codex-notify.log"
-SOUND_FILE="$HOME/dotfiles/share/sounds/jobs-done.ogg"
+SOUND_DIR="$HOME/dotfiles/share/sounds"
+ICON_DIR="$HOME/dotfiles/config/eww/art/ws-icons"
+WINDOW_ID="${KITTY_WINDOW_ID:-}"
+KITTY_PID="${KITTY_PID:-}"
 
-if ! command -v dunstify >/dev/null 2>&1; then
+if ! command -v dunstify >/dev/null 2>&1 || ! command -v jq >/dev/null 2>&1; then
     exit 0
 fi
 
 json_get() {
     local query="$1"
-    if ! command -v jq >/dev/null 2>&1; then
-        return 1
-    fi
     jq -r "$query // empty" <<<"$PAYLOAD" 2>/dev/null
+}
+
+summary() {
+    local field="$1" fallback="$2" max="${3:-110}"
+    local val
+    val=$(json_get "$field")
+    if [[ -n "$val" ]]; then
+        echo "$val" \
+            | sed -E 's/^#{1,6} //; s/\*\*//g; s/`//g; s/^[[:space:]]+//' \
+            | grep -m1 '.' \
+            | cut -c1-"$max"
+        return
+    fi
+    echo "$fallback"
+}
+
+tab_icon() {
+    [[ -n "$WINDOW_ID" ]] && command -v kitty >/dev/null 2>&1 || return 0
+    local title icon
+    title=$(kitty @ ls 2>/dev/null \
+        | jq -r --arg w "$WINDOW_ID" \
+            '.[] | .tabs[] | select(.windows[] | .id == ($w | tonumber)) | .title' \
+            2>/dev/null) || return 0
+    icon=$(sed -E 's/^[⊰⟜] (.*) [⊱⊸]$/\1/' <<<"$title" | xargs)
+    [[ -n "$icon" ]] && echo "$icon"
+}
+
+ws_icon() {
+    command -v hyprctl >/dev/null 2>&1 || return 0
+    local ws
+    if [[ -n "$KITTY_PID" ]]; then
+        ws=$(hyprctl clients -j 2>/dev/null \
+            | jq -r --arg p "$KITTY_PID" \
+                '[.[] | select(.pid == ($p | tonumber))] | .[0].workspace.id // empty' \
+                2>/dev/null)
+    else
+        ws=$(hyprctl activeworkspace -j 2>/dev/null | jq -r '.id // empty' 2>/dev/null)
+    fi
+
+    local -A map=([1]=network [2]=learn [3]=dna [4]=dotfiles [5]=music)
+    local name=""
+    [[ -n "${ws:-}" ]] && name="${map[$ws]:-}"
+    [[ -n "$name" ]] && echo "$ICON_DIR/${name}-active.svg"
+}
+
+play() {
+    [[ -f "$SOUND_DIR/$1.ogg" ]] || return 0
+    command -v paplay >/dev/null 2>&1 || return 0
+    paplay "$SOUND_DIR/$1.ogg" >/dev/null 2>&1 & disown
+}
+
+notify() {
+    local urgency="$1" timeout="$2" title="$3" body="$4"
+    local bg="$5" fg="$6" fr="$7"
+
+    local icon icon_args=()
+    icon=$(ws_icon)
+    [[ -n "$icon" && -f "$icon" ]] && icon_args=(-I "$icon")
+
+    dunstify -a "$APP" -u "$urgency" -t "$timeout" \
+        -h "string:bgcolor:$bg" -h "string:fgcolor:$fg" -h "string:frcolor:$fr" \
+        "${icon_args[@]}" -A "focus,Focus" \
+        "$title" "$body" 2>>"$LOG_FILE"
 }
 
 TYPE="$(json_get '.type')"
 
-# Current Codex CLI notify emits turn-complete events.
-if [[ "$TYPE" != "agent-turn-complete" ]]; then
-    exit 0
-fi
+APP="$(tab_icon)"
+APP="${APP:-codex}"
 
-SUMMARY="$(json_get '.summary')"
-MESSAGE="$(json_get '.message')"
+BLU_BG="#25284180"
+BLU_FG="#8aa4f3"
+BLU_FR="#6380ec80"
+ORN_BG="#49353130"
+ORN_FG="#f2a170"
+ORN_FR="#ea834b"
+PRP_BG="#2a2d4580"
+PRP_FG="#b29ae8"
+PRP_FR="#9376d880"
+GRN_BG="#2a3d2580"
+GRN_FG="#95cb79"
+GRN_FR="#73ad5a80"
+
+event_kind() {
+    local t="${1,,}"
+    case "$t" in
+        *approval*|*permission*) echo "permission" ;;
+        *idle*|*waiting*|*input*) echo "idle" ;;
+        *start*|*begin*) echo "start" ;;
+        *complete*|*done*|*finish*) echo "complete" ;;
+        *) echo "unknown" ;;
+    esac
+}
+
+MESSAGE="$(summary '.message' "$(summary '.summary' 'Jobs done')" 160)"
 PROJECT="$(json_get '.cwd')"
+[[ -n "$PROJECT" ]] && MESSAGE="$MESSAGE ⊰ ${PROJECT##*/} ⊱"
 
-if [[ -z "$SUMMARY" ]]; then
-    SUMMARY="Jobs done"
-fi
+KIND="$(event_kind "$TYPE")"
+action=""
 
-if [[ -z "$MESSAGE" ]]; then
-    MESSAGE="$SUMMARY"
-fi
+case "$KIND" in
+    start)
+        sounds=(zug-zug work-work okie-dokie something-need-doing)
+        pick="${sounds[$((RANDOM % ${#sounds[@]}))]}"
+        play "$pick"
+        action="$(notify low 4000 "$MESSAGE" "" "$BLU_BG" "$BLU_FG" "$BLU_FR")"
+        ;;
+    permission)
+        play hey-listen
+        action="$(notify normal 0 "$MESSAGE" "" "$GRN_BG" "$GRN_FG" "$GRN_FR")"
+        ;;
+    idle)
+        play hey-listen
+        action="$(notify low 0 "$MESSAGE" "" "$PRP_BG" "$PRP_FG" "$PRP_FR")"
+        ;;
+    complete|unknown)
+        # Preserve old behavior for current Codex type and unknown future types.
+        play jobs-done
+        action="$(notify low 0 "$MESSAGE" "" "$ORN_BG" "$ORN_FG" "$ORN_FR")"
+        ;;
+esac
 
-if [[ -n "$PROJECT" ]]; then
-    MESSAGE="$MESSAGE ⊰ ${PROJECT##*/} ⊱"
-fi
-
-WINDOW_ID="${KITTY_WINDOW_ID:-}"
-KITTY_PID="${KITTY_PID:-}"
-
-action=$(dunstify -a "codex" -u low -t 20000 \
-    -h "string:fgcolor:#f2a170" \
-    -h "string:frcolor:#ea834b" \
-    -A "focus,Focus" \
-    "Codex" "$MESSAGE")
-
-echo "[$(date +%T)] type='$TYPE' action='$action' wid='$WINDOW_ID' pid='$KITTY_PID'" >>"$LOG_FILE"
-
-if [[ -f "$SOUND_FILE" ]] && command -v paplay >/dev/null 2>&1; then
-    paplay "$SOUND_FILE" >/dev/null 2>&1 & disown
-fi
+echo "[$(date +%T)] type='$TYPE' kind='$KIND' action='$action' app='$APP' wid='$WINDOW_ID' pid='$KITTY_PID'" >>"$LOG_FILE"
 
 if [[ "$action" == "focus" && -n "$WINDOW_ID" ]]; then
-    if [[ -n "$KITTY_PID" ]]; then
-        hyprctl dispatch focuswindow pid:"$KITTY_PID" >>"$LOG_FILE" 2>&1
-    fi
-    if command -v kitty >/dev/null 2>&1; then
-        kitty @ focus-window --match id:"$WINDOW_ID" >>"$LOG_FILE" 2>&1
-    fi
+    [[ -n "$KITTY_PID" ]] && hyprctl dispatch focuswindow pid:"$KITTY_PID" >>"$LOG_FILE" 2>&1
+    command -v kitty >/dev/null 2>&1 && kitty @ focus-window --match id:"$WINDOW_ID" >>"$LOG_FILE" 2>&1
 fi
