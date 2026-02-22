@@ -1263,7 +1263,7 @@
 )
 ; 📦 pacman: {{{
 
-(defpoll upgrades :initial 0 :interval "1m" 'paru -Qu | wc -l')
+(defpoll upgrades :initial 0 :interval "1m" 'yay -Qu | wc -l')
 (defvar pacman-hover false)
 
 (defwidget pacman []
@@ -1271,7 +1271,7 @@
     :cursor "pointer"
     :onhover "eww update pacman-hover=true"
     :onhoverlost "eww update pacman-hover=false"
-    :onclick 'kitty --title="terminalfloat" -e "paru" & disown'
+    :onclick 'kitty --title="terminalfloat" -e "yay" & disown'
     (label
       :class "tr-a pacman ramp-${
              upgrades < 1  ? "3" :
