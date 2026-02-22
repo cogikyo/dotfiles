@@ -24,7 +24,7 @@ case "$app" in
     Spotify) sound="none" ;;
     discord) sound="none" ;;
     Slack) sound="knock" ;;
-    claude|codex|󰯉) sound="none" ;;
+    claude|codex||󰯉|||) sound="none" ;;
     claude-input) sound="none" ;;
     kitty)
         if [[ "${summary,,}${body,,}" =~ (claude|codex|approval) ]]; then
