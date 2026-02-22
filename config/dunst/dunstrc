@@ -22,7 +22,7 @@
     font = "Albert Sans 16"
     line_height = 2
     markup = "full"
-    format = "<b><tt>%a</tt></b>: %s %b"
+    format = "<b>%a</b>: %s %b"
     fullscreen = "pushback"
     alignment = "left"
     vertical_alignment = "center"

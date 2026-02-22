@@ -31,12 +31,19 @@ source "$(dirname "${BASH_SOURCE[0]}")/../claude/claude-notify"
 if [[ "${1:-}" == "kitty" && "${2:-}" == *Approval* ]]; then
     HOOK_JSON='{}'
     TYPE="approval-requested"
-    # Dunst has no kitty env — resolve codex window for tab_icon/ws_icon
-    WINDOW_ID=$(kitty @ ls 2>/dev/null \
-        | jq -r '[.[].tabs[].windows[]
-            | select(.foreground_processes[].cmdline[] | test("codex"))]
-            | .[0].id // empty' 2>/dev/null)
-    KITTY_PID=$(pgrep -ox kitty)
+    # Dunst has no kitty env — find the kitty instance running codex
+    for sock in /tmp/kitty-*; do
+        [[ -S "$sock" ]] || continue
+        WINDOW_ID=$(kitty @ --to "unix:$sock" ls 2>/dev/null \
+            | jq -r '[.[].tabs[].windows[]
+                | select(.foreground_processes[].cmdline[] | test("codex"))]
+                | .[0].id // empty' 2>/dev/null)
+        if [[ -n "$WINDOW_ID" ]]; then
+            export KITTY_LISTEN_ON="unix:$sock"
+            KITTY_PID="${sock##*-}"
+            break
+        fi
+    done
 else
     HOOK_JSON="$1"
     [[ -z "$HOOK_JSON" ]] && HOOK_JSON='{}'
