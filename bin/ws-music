@@ -11,7 +11,7 @@ current_ws=$(hyprctl activeworkspace -j | jq '.id')
 
 if [[ "$current_ws" == "$MUSIC_WS" ]]; then
     monocle_origin=$(tail -n 1 "$MONOCLE_WS_FILE" 2>/dev/null || echo "")
-    
+
     if [[ -n "$monocle_origin" ]]; then
         hyprctl dispatch workspace "$MONOCLE_WS"
     else
@@ -24,7 +24,6 @@ else
     hyprctl keyword animation "workspaces, 1, 5, default, slidefade"
     hyprctl dispatch workspace "$MUSIC_WS" &
     change-bg "music"
-    sleep 0.5
     hyprctl keyword animation "workspaces, 1, 0.5, default, slide"
 fi
 
