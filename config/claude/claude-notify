@@ -2,32 +2,30 @@
 # dunst notifications for Claude Code hooks (settings.json)
 # reads hook JSON via stdin for context-aware summaries,
 # resolves workspace icons + kitty tab info per session
+#
+# sourced by sibling scripts (codex-notify) for shared infra
 
 # ╭──────────────────────────────────────────────────────────────────────────────╮
 # │ vars                                                                         │
 # ╰──────────────────────────────────────────────────────────────────────────────╯
 
-TYPE="${1:-idle}"
-MESSAGE="${2:-}"
-
 SOUND_DIR="$HOME/dotfiles/share/sounds"
+QUIET=52428 # ~80% paplay volume (65536 = 100%)
+LOUD=72089  # ~110%
 ICON_DIR="$HOME/dotfiles/config/eww/art/ws-icons"
 WINDOW_ID="${KITTY_WINDOW_ID:-}"
 KITTY_PID="${KITTY_PID:-}"
 
 # ╭──────────────────────────────────────────────────────────────────────────────╮
-# │ stdin context                                                                │
+# │ context                                                                      │
 # ╰──────────────────────────────────────────────────────────────────────────────╯
 
-HOOK_JSON=""
-[[ ! -t 0 ]] && HOOK_JSON=$(cat)
-
-# Pull a field from hook JSON, strip markdown, truncate to $3 chars
+# Pull field $1 from HOOK_JSON, strip markdown, truncate to $3 chars
 summary() {
     local field="$1" fallback="$2" max="${3:-80}"
     if [[ -n "$HOOK_JSON" ]]; then
         local val
-        val=$(jq -r ".$field // empty" <<< "$HOOK_JSON" 2>/dev/null)
+        val=$(jq -r --arg f "$field" '.[$f] // empty' <<< "$HOOK_JSON" 2>/dev/null)
         if [[ -n "$val" ]]; then
             echo "$val" \
                 | sed -E 's/^#{1,6} //; s/\*\*//g; s/`//g; s/^\s+//' \
@@ -55,7 +53,7 @@ tab_icon() {
     [[ -n "$icon" ]] && echo "$icon"
 }
 
-# Workspace icon SVG (resolved from Claude's kitty window, not active ws)
+# Workspace icon SVG (resolved from kitty window, not active ws)
 ws_icon() {
     command -v hyprctl &>/dev/null || return 0
     local ws
@@ -76,7 +74,11 @@ ws_icon() {
 # │ notification                                                                 │
 # ╰──────────────────────────────────────────────────────────────────────────────╯
 
-play() { paplay ${2:+--volume=$2} "$SOUND_DIR/$1.ogg" & disown; }
+play() {
+    local args=()
+    [[ -n "${2:-}" ]] && args+=(--volume="$2")
+    paplay "${args[@]}" "$SOUND_DIR/$1.ogg" & disown
+}
 
 notify() {
     local urgency="$1" timeout="$2" title="$3" body="$4"
@@ -93,7 +95,7 @@ notify() {
         "$title" "$body")
 
     if [[ "$action" == "focus" && -n "$WINDOW_ID" ]]; then
-        local log="/tmp/claude-notify.log"
+        local log="/tmp/${APP}-notify.log"
         [[ -n "$KITTY_PID" ]] && hyprctl dispatch focuswindow pid:"$KITTY_PID" >>"$log" 2>&1
         kitty @ focus-window --match id:"$WINDOW_ID" >>"$log" 2>&1
     fi
@@ -108,9 +110,18 @@ ORN_BG="#49353130" ORN_FG="#f2a170" ORN_FR="#ea834b"
 PRP_BG="#2a2d4580" PRP_FG="#b29ae8" PRP_FR="#9376d880"
 GRN_BG="#2a3d2580" GRN_FG="#95cb79" GRN_FR="#73ad5a80"
 
+# ── stop here when sourced ───────────────────────────────────────────────────────
+[[ "${BASH_SOURCE[0]}" == "$0" ]] || return 0
+
 # ╭──────────────────────────────────────────────────────────────────────────────╮
 # │ dispatch                                                                     │
 # ╰──────────────────────────────────────────────────────────────────────────────╯
+
+TYPE="${1:-idle}"
+MESSAGE="${2:-}"
+
+HOOK_JSON=""
+[[ ! -t 0 ]] && HOOK_JSON=$(cat)
 
 APP=$(tab_icon)
 APP="${APP:-claude}"
@@ -119,27 +130,30 @@ case "$TYPE" in
     start)
         sounds=(zug-zug work-work okie-dokie something-need-doing)
         pick="${sounds[$((RANDOM % ${#sounds[@]}))]}"
-        play "$pick"
+        play "$pick" "$QUIET"
         notify low 4000 "$(summary prompt "${MESSAGE:-$pick}")" "" \
             "$BLU_BG" "$BLU_FG" "$BLU_FR" &
         ;;
-    complete)
-        play jobs-done
-        notify low 0 "$(summary last_assistant_message 'Jobs done')" "" \
-            "$ORN_BG" "$ORN_FG" "$ORN_FR" &
-        ;;
     subagent)
-        play jobs-done
+        sounds=(zug-zug work-work okie-dokie something-need-doing)
+        pick="${sounds[$((RANDOM % ${#sounds[@]}))]}"
+        play "$pick" "$QUIET"
         agent=$(jq -r '.agent_type // "Agent"' <<< "$HOOK_JSON" 2>/dev/null)
         notify low 4000 "$agent: $(summary last_assistant_message Done 70)" "" \
             "$BLU_BG" "$BLU_FG" "$BLU_FR" &
         ;;
+    complete)
+        play jobs-done "$LOUD"
+        notify low 0 "$(summary last_assistant_message 'Jobs done')" "" \
+            "$ORN_BG" "$ORN_FG" "$ORN_FR" &
+        ;;
     idle)
-        play hey-listen 32768
+        play hey-listen "$QUIET"
         notify low 0 "$(summary message 'Waiting for input')" "" \
             "$PRP_BG" "$PRP_FG" "$PRP_FR" &
         ;;
     permission)
+        play hey-listen "$LOUD"
         notify normal 0 "$(summary message 'Permission needed')" "" \
             "$GRN_BG" "$GRN_FG" "$GRN_FR" &
         ;;
