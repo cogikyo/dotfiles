@@ -8,6 +8,9 @@ notifications = ["approval-requested"]
 [projects."/home/cullyn/dotfiles"]
 trust_level = "trusted"
 
+[projects."/home/cullyn/acr"]
+trust_level = "trusted"
+
 [notice]
 hide_full_access_warning = true
 
