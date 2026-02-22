@@ -5,8 +5,17 @@
 # codex spawns notify scripts with restricted env — re-export session vars
 # for D-Bus (dunstify) and PulseAudio (paplay)
 
+LOG="/tmp/codex-notify.log"
+exec >> "$LOG" 2>&1
+
 export DBUS_SESSION_BUS_ADDRESS="unix:path=/run/user/$(id -u)/bus"
 export XDG_RUNTIME_DIR="/run/user/$(id -u)"
+
+echo "--- $(date) ---"
+echo "DBUS=$DBUS_SESSION_BUS_ADDRESS"
+echo "XDG=$XDG_RUNTIME_DIR"
+echo "args: $*"
+echo "which dunstify: $(which dunstify 2>&1)"
 
 # shellcheck source=../claude/claude-notify
 source "$(dirname "${BASH_SOURCE[0]}")/../claude/claude-notify"
@@ -25,21 +34,21 @@ case "$TYPE" in
         pick="${sounds[$((RANDOM % ${#sounds[@]}))]}"
         play "$pick" "$QUIET"
         notify low 4000 "$(summary last-assistant-message "$pick")" "" \
-            "$BLU_BG" "$BLU_FG" "$BLU_FR" &
+            "$BLU_BG" "$BLU_FG" "$BLU_FR" "" &
         ;;
     agent-turn-complete)
         play jobs-done "$LOUD"
         notify low 0 "$(summary last-assistant-message 'Jobs done')" "" \
-            "$ORN_BG" "$ORN_FG" "$ORN_FR" &
+            "$ORN_BG" "$ORN_FG" "$ORN_FR" "-active" &
         ;;
     idle)
         play hey-listen "$QUIET"
         notify low 0 "$(summary last-assistant-message 'Waiting for input')" "" \
-            "$PRP_BG" "$PRP_FG" "$PRP_FR" &
+            "$PRP_BG" "$PRP_FG" "$PRP_FR" "" &
         ;;
     approval-requested)
         play hey-listen "$LOUD"
         notify normal 0 "$(summary last-assistant-message 'Permission needed')" "" \
-            "$GRN_BG" "$GRN_FG" "$GRN_FR" &
+            "$GRN_BG" "$GRN_FG" "$GRN_FR" "-monocle" &
         ;;
 esac
