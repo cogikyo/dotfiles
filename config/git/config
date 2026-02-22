@@ -17,5 +17,5 @@
 	insteadOf = https://git.linecode.net/
 [url "git@git.linecode.dev:"]
 	insteadOf = https://git.linecode.dev/
-[include]
+[includeIf "gitdir:/Users/"]
 	path = ~/.config/git/config-mac
