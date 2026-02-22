@@ -1,9 +1,11 @@
 #!/usr/bin/env bash
 # Focus editor window and switch to a specific tab/action.
-# Usage: editor-focus [--term|--nvim|--nvimtree]
+# Usage: editor-focus [--term|--nvim|--nvimtree|--git|--xplr]
 #   --term      Focus editor's term tab, or spawn floating terminal (default)
 #   --nvim      Focus editor's nvim tab (closes NvimTree if it's the active pane)
 #   --nvimtree  Focus editor's nvim tab and open/focus NvimTree
+#   --git       Focus editor's git (lazygit) tab
+#   --xplr      Focus editor's xplr tab
 
 mode="${1:---term}"
 
@@ -24,8 +26,24 @@ fi
 
 current=$(hyprctl activewindow -j | jq -r '.address')
 
-# If editor is already focused, toggle back to previous window
-if [[ "$current" == "$addr" && "$mode" != "--term" ]]; then
+sock="/tmp/kitty-$pid"
+[[ -S "$sock" ]] || { hyprctl dispatch focuswindow "address:$addr"; exit 0; }
+
+kitty_state=$(kitty @ --to "unix:$sock" ls)
+wid=$(echo "$kitty_state" | jq -r '.[0].id')
+active_tab_id=$(echo "$kitty_state" | jq -r '.[0].tabs[] | select(.is_focused) | .windows[0].env.KITTY_TAB_ID // empty')
+
+# Map mode to target tab id
+case "$mode" in
+    --term)     target_tab="${wid}-term" ;;
+    --nvim)     target_tab="${wid}-nvim" ;;
+    --nvimtree) target_tab="${wid}-nvim" ;;
+    --git)      target_tab="${wid}-git" ;;
+    --xplr)     target_tab="${wid}-xplr" ;;
+esac
+
+# If editor is focused and already on the target tab, toggle back
+if [[ "$current" == "$addr" && "$active_tab_id" == "$target_tab" ]]; then
     prev=$(hyprctl clients -j | jq -r \
         '[.[] | select(.focusHistoryID == 1)] | .[0].address')
     [[ -n "$prev" && "$prev" != "null" ]] && hyprctl dispatch focuswindow "address:$prev"
@@ -34,10 +52,6 @@ fi
 
 hyprctl dispatch focuswindow "address:$addr"
 
-sock="/tmp/kitty-$pid"
-[[ -S "$sock" ]] || exit 0
-
-wid=$(kitty @ --to "unix:$sock" ls | jq -r '.[0].id')
 nvim_match="env:KITTY_TAB_ID=${wid}-nvim"
 
 case "$mode" in
@@ -58,5 +72,13 @@ case "$mode" in
         kitty @ --to "unix:$sock" send-text --match "$nvim_match" \
             $'\x1b:lua local v=require("nvim-tree.view"); if v.is_visible() then vim.fn.win_gotoid(v.get_winnr()) else require("nvim-tree.api").tree.open() end\r' \
             2>/dev/null || true
+        ;;
+    --git)
+        kitty @ --to "unix:$sock" focus-tab \
+            --match "env:KITTY_TAB_ID=${wid}-git" 2>/dev/null || true
+        ;;
+    --xplr)
+        kitty @ --to "unix:$sock" focus-tab \
+            --match "env:KITTY_TAB_ID=${wid}-xplr" 2>/dev/null || true
         ;;
 esac
