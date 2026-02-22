@@ -18,9 +18,9 @@ record () {
     mpvpaper -o "--loop --brightness=-3 --contrast=10 --saturation=-42 --hue=69" "$DISPLAY" "$VID_PATH/record.mp4" & disown
 }
 
-blackhole () {
-    mpvpaper -o "--loop --brightness=3  --contrast=6  --saturation=-50  --hue=-8 --gamma=-20" "$DISPLAY" "$VID_PATH/blackhole.webm" & disown
-}
+# blackhole () {
+#     mpvpaper -o "--loop --brightness=3  --contrast=6  --saturation=-50  --hue=-8 --gamma=-20" "$DISPLAY" "$VID_PATH/blackhole.webm" & disown
+# }
 
 
 case "$background_choice" in
