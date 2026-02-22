@@ -66,8 +66,8 @@ ws_icon() {
         ws=$(hyprctl activeworkspace -j 2>/dev/null | jq -r '.id // empty' 2>/dev/null)
     fi
     local -A map=([1]=network [2]=learn [3]=dna [4]=dotfiles [5]=music)
-    local name="${map[$ws]:-}"
-    [[ -n "$name" ]] && echo "$ICON_DIR/${name}-active.svg"
+    local name="${map[$ws]:-}" suffix="${1:-}"
+    [[ -n "$name" ]] && echo "$ICON_DIR/${name}${suffix}.svg"
 }
 
 # ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -82,10 +82,10 @@ play() {
 
 notify() {
     local urgency="$1" timeout="$2" title="$3" body="$4"
-    local bg="$5" fg="$6" fr="$7"
+    local bg="$5" fg="$6" fr="$7" icon_suffix="${8:-}"
 
     local icon icon_args=()
-    icon=$(ws_icon)
+    icon=$(ws_icon "$icon_suffix")
     [[ -n "$icon" && -f "$icon" ]] && icon_args=(-I "$icon")
 
     local action
@@ -132,7 +132,7 @@ case "$TYPE" in
         pick="${sounds[$((RANDOM % ${#sounds[@]}))]}"
         play "$pick" "$QUIET"
         notify low 4000 "$(summary prompt "${MESSAGE:-$pick}")" "" \
-            "$BLU_BG" "$BLU_FG" "$BLU_FR" &
+            "$BLU_BG" "$BLU_FG" "$BLU_FR" "" &
         ;;
     subagent)
         sounds=(zug-zug work-work okie-dokie something-need-doing)
@@ -140,21 +140,21 @@ case "$TYPE" in
         play "$pick" "$QUIET"
         agent=$(jq -r '.agent_type // "Agent"' <<< "$HOOK_JSON" 2>/dev/null)
         notify low 4000 "$agent: $(summary last_assistant_message Done 70)" "" \
-            "$BLU_BG" "$BLU_FG" "$BLU_FR" &
+            "$BLU_BG" "$BLU_FG" "$BLU_FR" "" &
         ;;
     complete)
         play jobs-done "$LOUD"
         notify low 0 "$(summary last_assistant_message 'Jobs done')" "" \
-            "$ORN_BG" "$ORN_FG" "$ORN_FR" &
+            "$ORN_BG" "$ORN_FG" "$ORN_FR" "-active" &
         ;;
     idle)
         play hey-listen "$QUIET"
         notify low 0 "$(summary message 'Waiting for input')" "" \
-            "$PRP_BG" "$PRP_FG" "$PRP_FR" &
+            "$PRP_BG" "$PRP_FG" "$PRP_FR" "" &
         ;;
     permission)
         play hey-listen "$LOUD"
         notify normal 0 "$(summary message 'Permission needed')" "" \
-            "$GRN_BG" "$GRN_FG" "$GRN_FR" &
+            "$GRN_BG" "$GRN_FG" "$GRN_FR" "-monocle" &
         ;;
 esac

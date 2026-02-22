@@ -34,6 +34,7 @@ alias niol='clear && source ~/.zshrc'
 alias ls='echo; lsd'
 alias n='nvim'
 alias c='claude'
+alias cx='claude'
 alias zz='cd ~'
 alias m="make"
 alias j="just"
