@@ -119,13 +119,19 @@
 Build a custom ISO with all repo and AUR packages pre-cached for a nearly offline install. Requires `archiso`:
 
 ```sh
-sudo ~/.local/bin/build-iso --clean
+sudo ./build.sh --clean
 ```
 
 Write to USB:
 
 ```sh
-sudo build-iso --usb /dev/sdX
+sudo ./build.sh --usb /dev/sdX
+```
+
+Tag, push, and create a GitHub release with the ISO:
+
+```sh
+sudo ./build.sh --clean --release
 ```
 
 > Rebuild the ISO periodically to pick up package updates.

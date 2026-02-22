@@ -7,7 +7,7 @@ set -euo pipefail
 #  Builds a live ISO with all repo + AUR packages pre-cached in a [localrepo],
 #  so archinstall resolves from local disk instead of downloading.
 #
-#  Usage: sudo build-iso [--usb /dev/sdX] [--skip-aur] [--clean] [--release]
+#  Usage: sudo ./build.sh [--usb /dev/sdX] [--skip-aur] [--clean] [--release]
 # =============================================================================
 
 VERSION="0.1.0"
@@ -15,7 +15,7 @@ VERSION="0.1.0"
 # -- paths --------------------------------------------------------------------
 
 SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
-DOTFILES="$(cd "$SCRIPT_DIR/.." && pwd)"
+DOTFILES="$SCRIPT_DIR"
 ISO_DIR="$DOTFILES/iso"
 WORK_DIR="$ISO_DIR/work"
 OUT_DIR="$ISO_DIR/out"
@@ -62,7 +62,7 @@ phase() { printf '\n%b=== Phase %s ===%b\n\n' "$BOLD" "$*" "$RESET"; }
 
 usage() {
     cat <<EOF
-Usage: sudo build-iso [OPTIONS]
+Usage: sudo ./build.sh [OPTIONS]
 
 Build a custom Arch Linux ISO with pre-cached packages.
 
@@ -497,7 +497,7 @@ publish_release() {
         --title "$tag" \
         --notes "Custom Arch Linux ISO with pre-cached packages (repo + AUR).
 
-Built with \`build-iso v$VERSION\` — includes dotfiles, localrepo, and archinstall auto-configuration.
+Built with \`build.sh v$VERSION\` — includes dotfiles, localrepo, and archinstall auto-configuration.
 
 **ISO:** \`$iso_name\` ($iso_size)" \
         "$iso_file"
@@ -541,7 +541,7 @@ main() {
     done
 
     echo
-    printf '%b%s%b\n' "$BOLD" "build-iso v$VERSION" "$RESET"
+    printf '%b%s%b\n' "$BOLD" "build.sh v$VERSION" "$RESET"
     printf '%b%s%b\n' "$FAINT" "Custom Arch ISO with pre-cached packages" "$RESET"
     echo
 
