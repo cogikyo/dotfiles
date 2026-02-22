@@ -1,0 +1,62 @@
+#!/usr/bin/env bash
+# Focus editor window and switch to a specific tab/action.
+# Usage: editor-focus [--term|--nvim|--nvimtree]
+#   --term      Focus editor's term tab, or spawn floating terminal (default)
+#   --nvim      Focus editor's nvim tab (closes NvimTree if it's the active pane)
+#   --nvimtree  Focus editor's nvim tab and open/focus NvimTree
+
+mode="${1:---term}"
+
+ws=$(hyprctl activeworkspace -j | jq '.id')
+
+read -r addr pid < <(hyprctl clients -j | jq -r --argjson ws "$ws" \
+    '[.[] | select(.workspace.id == $ws and .initialTitle == "editor")] | .[0] | "\(.address) \(.pid)"')
+
+if [[ -z "$addr" || "$addr" == "null" ]]; then
+    case "$mode" in
+        --term)
+            kitty --title "terminalfloat" --directory "$(active-cwd)" \
+                --session "$HOME/.config/kitty/sessions/term.conf"
+            ;;
+    esac
+    exit 0
+fi
+
+current=$(hyprctl activewindow -j | jq -r '.address')
+
+# If editor is already focused, toggle back to previous window
+if [[ "$current" == "$addr" && "$mode" != "--term" ]]; then
+    prev=$(hyprctl clients -j | jq -r \
+        '[.[] | select(.focusHistoryID == 1)] | .[0].address')
+    [[ -n "$prev" && "$prev" != "null" ]] && hyprctl dispatch focuswindow "address:$prev"
+    exit 0
+fi
+
+hyprctl dispatch focuswindow "address:$addr"
+
+sock="/tmp/kitty-$pid"
+[[ -S "$sock" ]] || exit 0
+
+wid=$(kitty @ --to "unix:$sock" ls | jq -r '.[0].id')
+nvim_match="env:KITTY_TAB_ID=${wid}-nvim"
+
+case "$mode" in
+    --term)
+        kitty @ --to "unix:$sock" focus-tab \
+            --match "env:KITTY_TAB_ID=${wid}-term" 2>/dev/null || true
+        ;;
+    --nvim)
+        kitty @ --to "unix:$sock" focus-tab \
+            --match "$nvim_match" 2>/dev/null || true
+        kitty @ --to "unix:$sock" send-text --match "$nvim_match" \
+            $'\x1b:lua if vim.bo.filetype=="NvimTree" then require("nvim-tree.api").tree.close() end\r' \
+            2>/dev/null || true
+        ;;
+    --nvimtree)
+        kitty @ --to "unix:$sock" focus-tab \
+            --match "$nvim_match" 2>/dev/null || true
+        kitty @ --to "unix:$sock" send-text --match "$nvim_match" \
+            $'\x1b:lua local v=require("nvim-tree.view"); if v.is_visible() then vim.fn.win_gotoid(v.get_winnr()) else require("nvim-tree.api").tree.open() end\r' \
+            2>/dev/null || true
+        ;;
+esac
