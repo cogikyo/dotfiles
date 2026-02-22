@@ -232,8 +232,8 @@ local general = {
 		{ sorter = "ByIRelativePath", reverse = false },
 	},
 
-	initial_mode = "preview_mode",
-	initial_layout = "preview",
+	initial_mode = "default",
+	initial_layout = "default",
 	start_fifo = nil,
 
 	global_key_bindings = {
