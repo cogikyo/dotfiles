@@ -9,7 +9,7 @@ export EDITOR=nvim
 export VISUAL=nvim
 export DOTS="$HOME/dotfiles"
 export CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.config/claude}"
-export AGENTS_CONFIG_DIR="${AGENTS_CONFIG_DIR:-$HOME/.config/agents}"
+export AGENTS_CONFIG_DIR="${AGENTS_CONFIG_DIR:-$HOME/.codex}"
 export CODEX_HOME="${CODEX_HOME:-$AGENTS_CONFIG_DIR}"
 
 export FZF_DEFAULT_OPTS="\

@@ -1,0 +1,20 @@
+model = "gpt-5.3-codex"
+model_reasoning_effort = "high"
+notify = ["/usr/bin/env", "bash", "/home/cullyn/dotfiles/config/codex/codex-notify"]
+
+[tui]
+notifications = ["approval-requested"]
+
+[projects."/home/cullyn/dotfiles"]
+trust_level = "trusted"
+
+[notice]
+hide_full_access_warning = true
+
+[notice.model_migrations]
+"gpt-5.1-codex-max" = "gpt-5.2-codex"
+
+[features]
+shell_snapshot = true
+collab = true
+multi_agent = true
