@@ -24,8 +24,8 @@ case "$app" in
     Spotify) sound="none" ;;
     discord) sound="none" ;;
     Slack) sound="knock" ;;
-    claude) sound="fruit" ;;
-    claude-input) sound="reward" ;;
+    claude) sound="none" ;;
+    claude-input) sound="none" ;;
     kitty)
         # Only suppress kitty notifications mentioning Claude
         if [[ "${summary,,}${body,,}" == *claude* ]]; then
