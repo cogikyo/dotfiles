@@ -7,6 +7,7 @@ MESSAGE="${2:-}"
 # Get Kitty window/tab info and Claude variant if available
 TAB_TITLE=""
 WINDOW_ID="${KITTY_WINDOW_ID:-}"
+KITTY_PID="${KITTY_PID:-}"
 
 if [[ -n "$WINDOW_ID" ]] && command -v kitty &>/dev/null; then
     # Get tab title for this window
@@ -33,18 +34,47 @@ notify_with_action() {
         -A "focus,Focus" \
         "$title" "$body")
 
+    local log="/tmp/claude-notify.log"
+    echo "[$(date +%T)] action='$action' wid='$wid' KITTY_PID='$KITTY_PID'" >>"$log"
+
     if [[ "$action" == "focus" && -n "$wid" ]]; then
-        kitty @ focus-window --match id:"$wid" 2>/dev/null
+        if [[ -n "$KITTY_PID" ]]; then
+            hyprctl dispatch focuswindow pid:"$KITTY_PID" >>"$log" 2>&1
+        fi
+        kitty @ focus-window --match id:"$wid" >>"$log" 2>&1
     fi
 }
 
+SOUND_DIR="$HOME/dotfiles/share/sounds"
+
+# Palette (fg=_3, frame=_1)
+BLU_FG="#8aa4f3" BLU_FR="#6380ec" # blu_3 / blu_1
+ORN_FG="#f2a170" ORN_FR="#ea834b" # orn_3 / orn_1
+PRP_FG="#b29ae8" PRP_FR="#9376d8" # prp_3 / prp_1
+GRN_FG="#95cb79" GRN_FR="#73ad5a" # grn_3 / grn_1
+# RBY_FG="#f08898" RBY_FR="#f36978" # rby_3 / rby_1
+
 case "$TYPE" in
+    start)
+        START_SOUNDS=("zug-zug" "work-work" "okie-dokie" "something-need-doing")
+        PICK="${START_SOUNDS[$((RANDOM % ${#START_SOUNDS[@]}))]}"
+        paplay "$SOUND_DIR/$PICK.ogg" & disown
+        declare -A SOUND_MSGS=([zug-zug]="Be happy to" [work-work]="Work work" [okie-dokie]="Okie dokie" [something-need-doing]="Something need doing?")
+        BODY="${MESSAGE:-${SOUND_MSGS[$PICK]}}${TAB_TITLE:+ ⊰ $TAB_TITLE ⊱ }"
+        notify_with_action "claude" "low" "4000" "Claude" "$BODY" "$WINDOW_ID" "$BLU_FG" "$BLU_FR" &
+        ;;
     idle)
+        paplay --volume=32768 "$SOUND_DIR/hey-listen.ogg" & disown
         BODY="${MESSAGE:-Waiting for input}${TAB_TITLE:+ ⊰ $TAB_TITLE ⊱ }"
-        notify_with_action "claude" "low" "6000" "Claude" "$BODY" "$WINDOW_ID" "#f2a170" "#ea834b" &
+        notify_with_action "claude" "low" "8000" "Claude" "$BODY" "$WINDOW_ID" "$PRP_FG" "$PRP_FR" &
+        ;;
+    complete)
+        paplay "$SOUND_DIR/jobs-done.ogg" & disown
+        BODY="${MESSAGE:-Jobs done}${TAB_TITLE:+ ⊰ $TAB_TITLE ⊱ }"
+        notify_with_action "claude" "low" "20000" "Claude" "$BODY" "$WINDOW_ID" "$ORN_FG" "$ORN_FR" &
         ;;
     permission)
-        BODY="${MESSAGE:-Permission needed}${TAB_TITLE:+ ⊰ $TAB_TITLE ⊱}"
-        notify_with_action "claude-input" "normal" "8000" "Claude" "$BODY" "$WINDOW_ID" "#95cb79" "#5aba6d" &
+        BODY="${MESSAGE:-Permission needed}${TAB_TITLE:+ ⊰ $TAB_TITLE ⊱ }"
+        notify_with_action "claude-input" "normal" "20000" "Claude" "$BODY" "$WINDOW_ID" "$GRN_FG" "$GRN_FR" &
         ;;
 esac
