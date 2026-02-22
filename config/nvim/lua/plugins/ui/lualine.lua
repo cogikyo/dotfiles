@@ -14,6 +14,19 @@ return {
 			return
 		end
 
+		local ext_ns = vim.api.nvim_create_namespace("lualine_ext_bg")
+		for _, hl in ipairs({ "StatusLine", "StatusLineNC", "lualine_c_normal", "lualine_c_inactive" }) do
+			vim.api.nvim_set_hl(ext_ns, hl, { bg = p.bg, fg = p.bg })
+		end
+		vim.api.nvim_create_autocmd("BufWinEnter", {
+			callback = function()
+				local ft = vim.bo.filetype
+				if ft == "NvimTree" or ft == "undotree" or ft == "diff" then
+					vim.api.nvim_win_set_hl_ns(vim.api.nvim_get_current_win(), ext_ns)
+				end
+			end,
+		})
+
 		local hide_in_width = function()
 			return vim.fn.winwidth(0) > 80
 		end
@@ -112,7 +125,7 @@ return {
 				separator = " ",
 			},
 			show_name = true,
-			}
+		}
 
 		local search = {
 			function()
@@ -142,26 +155,20 @@ return {
 				local text = type(label) == "function" and label() or label
 				return ext_icon .. " " .. text
 			end
+			local function make_sections(label_color)
+				return {
+					lualine_a = { { get_label, color = label_color, separator = "" } },
+					lualine_b = { { function() return "" end, color = { fg = label_color.bg, bg = p.bg }, padding = 0 } },
+					lualine_c = { { function() return string.rep(" ", vim.api.nvim_win_get_width(0)) end, color = { fg = p.bg, bg = p.bg }, padding = 0 } },
+					lualine_x = {},
+					lualine_y = {},
+					lualine_z = {},
+				}
+			end
 			return {
 				filetypes = { ft },
-				sections = {
-					lualine_a = {
-						{
-							get_label,
-							color = { fg = p.blk_1, bg = active_bg, gui = "bold" },
-							separator = { right = "" },
-						},
-					},
-				},
-				inactive_sections = {
-					lualine_a = {
-						{
-							get_label,
-							color = { fg = inactive_fg, bg = inactive_bg, gui = "bold" },
-							separator = { right = "" },
-						},
-					},
-				},
+				sections = make_sections({ fg = p.blk_1, bg = active_bg, gui = "bold" }),
+				inactive_sections = make_sections({ fg = inactive_fg, bg = inactive_bg, gui = "bold" }),
 			}
 		end
 
@@ -176,6 +183,7 @@ return {
 				theme = "vagari",
 				section_separators = { left = "", right = "" },
 				component_separators = { left = "⊸", right = "⟜" },
+				always_divide_middle = false,
 			},
 			sections = {
 				lualine_a = { mode },
@@ -261,7 +269,7 @@ return {
 						end
 					end
 					return "Files"
-				end, "󰙅", { active_bg = p.blu_2, inactive_bg = p.glc_1, inactive_fg = p.blu_1 }),
+				end, "󰙅", { active_bg = p.orn_2, inactive_bg = p.glc_1, inactive_fg = p.blu_1 }),
 				make_extension("undotree", "Undotree", "󰕍"),
 				make_extension("diff", "Undodiff", "󰕛"),
 			},
