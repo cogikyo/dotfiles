@@ -43,8 +43,8 @@ summary() {
 # │ environment                                                                  │
 # ╰──────────────────────────────────────────────────────────────────────────────╯
 
-# Kitty tab icon (nerd font glyph extracted from decorators)
-tab_suffix() {
+# Kitty tab icon (nerd font glyph extracted from decorators, used as app name)
+tab_icon() {
     [[ -n "$WINDOW_ID" ]] && command -v kitty &>/dev/null || return 0
     local title icon
     title=$(kitty @ ls 2>/dev/null \
@@ -52,7 +52,7 @@ tab_suffix() {
             '.[] | .tabs[] | select(.windows[] | .id == ($w | tonumber)) | .title' \
             2>/dev/null) || return 0
     icon=$(sed -E 's/^[⊰⟜] (.*) [⊱⊸]$/\1/' <<< "$title" | xargs)
-    [[ -n "$icon" ]] && echo " ⊰ $icon ⊱"
+    [[ -n "$icon" ]] && echo "$icon"
 }
 
 # Workspace icon SVG (resolved from Claude's kitty window, not active ws)
@@ -87,7 +87,7 @@ notify() {
     [[ -n "$icon" && -f "$icon" ]] && icon_args=(-I "$icon")
 
     local action
-    action=$(dunstify -a "claude" -u "$urgency" -t "$timeout" \
+    action=$(dunstify -a "$APP" -u "$urgency" -t "$timeout" \
         -h "string:bgcolor:$bg" -h "string:fgcolor:$fg" -h "string:frcolor:$fr" \
         "${icon_args[@]}" -A "focus,Focus" \
         "$title" "$body")
@@ -112,36 +112,35 @@ GRN_BG="#2a3d2580" GRN_FG="#95cb79" GRN_FR="#73ad5a80"
 # │ dispatch                                                                     │
 # ╰──────────────────────────────────────────────────────────────────────────────╯
 
-TAB=$(tab_suffix)
+APP=$(tab_icon)
+APP="${APP:-claude}"
 
 case "$TYPE" in
     start)
         sounds=(zug-zug work-work okie-dokie something-need-doing)
         pick="${sounds[$((RANDOM % ${#sounds[@]}))]}"
         play "$pick"
-        declare -A msgs=([zug-zug]="Be happy to" [work-work]="Work work"
-                         [okie-dokie]="Okie dokie" [something-need-doing]="Something need doing?")
-        notify low 4000 "${MESSAGE:-${msgs[$pick]}}$TAB" "" \
+        notify low 4000 "$(summary prompt "${MESSAGE:-$pick}")" "" \
             "$BLU_BG" "$BLU_FG" "$BLU_FR" &
         ;;
     complete)
         play jobs-done
-        notify low 20000 "$(summary last_assistant_message 'Jobs done')$TAB" "" \
+        notify low 20000 "$(summary last_assistant_message 'Jobs done')" "" \
             "$ORN_BG" "$ORN_FG" "$ORN_FR" &
         ;;
     subagent)
         play jobs-done
         agent=$(jq -r '.agent_type // "Agent"' <<< "$HOOK_JSON" 2>/dev/null)
-        notify low 12000 "$agent: $(summary last_assistant_message Done 70)$TAB" "" \
+        notify low 12000 "$agent: $(summary last_assistant_message Done 70)" "" \
             "$ORN_BG" "$ORN_FG" "$ORN_FR" &
         ;;
     idle)
         play hey-listen 32768
-        notify low 8000 "$(summary message 'Waiting for input')$TAB" "" \
+        notify low 8000 "$(summary message 'Waiting for input')" "" \
             "$PRP_BG" "$PRP_FG" "$PRP_FR" &
         ;;
     permission)
-        notify normal 20000 "$(summary message 'Permission needed')$TAB" "" \
+        notify normal 20000 "$(summary message 'Permission needed')" "" \
             "$GRN_BG" "$GRN_FG" "$GRN_FR" &
         ;;
 esac
