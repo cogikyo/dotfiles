@@ -86,6 +86,7 @@ local function yank_path(motion)
 	if motion then
 		vim.cmd("normal! " .. motion)
 	end
+	_G.context_yank = true
 	vim.cmd('normal! "+y')
 	local selection = vim.fn.getreg("+")
 	local path = vim.fn.expand("%:p")
@@ -112,12 +113,18 @@ local function yank_diagnostics()
 		table.insert(lines, "  |- " .. d.message:gsub("\n", " "))
 	end
 	vim.fn.setreg("+", table.concat(lines, "\n"))
+
+	local ns = vim.api.nvim_create_namespace("context_yank")
+	vim.api.nvim_buf_add_highlight(0, ns, "ContextYank", line - 1, 0, -1)
+	vim.defer_fn(function()
+		vim.api.nvim_buf_clear_namespace(0, ns, 0, -1)
+	end, 350)
+
 	vim.notify("Yanked " .. #diagnostics .. " diagnostic(s)", vim.log.levels.INFO)
 end
 
 map("n", "<A-f>", ':let @+=expand("%:p")<CR>', desc("Yank file path"))
-map("v", "<A-c>", yank_path, desc("Yank file path + selection"))
-map("n", "<A-g>", yank_paragrah("gv"), desc("Yank file path + selection (last visual)"))
+map("v", "<A-b>", yank_path, desc("Yank file path + selection"))
 map("n", "<A-p>", yank_paragrah("vap"), desc("Yank file path + paragraph"))
 map("n", "<A-w>", yank_diagnostics, desc("Yank file path + diagnostics"))
 

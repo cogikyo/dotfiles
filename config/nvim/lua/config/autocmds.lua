@@ -40,7 +40,12 @@ au("FileType", {
 au("TextYankPost", {
 	group = "HighlightYank",
 	callback = function()
-		vim.highlight.on_yank({ timeout = 69 })
+		if _G.context_yank then
+			vim.highlight.on_yank({ higroup = "GitSignsChangeLn", timeout = 350 })
+			_G.context_yank = false
+		else
+			vim.highlight.on_yank({ timeout = 69 })
+		end
 	end,
 })
 
