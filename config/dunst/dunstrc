@@ -26,7 +26,7 @@
     fullscreen = "pushback"
     alignment = "left"
     vertical_alignment = "center"
-    show_age_threshold = 60
+    show_age_threshold = -1
     word_wrap = false
     ellipsize = "end"
     ignore_newline = "no"
