@@ -4,10 +4,10 @@
 
 # Workspaces: name|sub|cmd
 declare -A WS=(
-    [1]="[S] Network|chat, email, calendar|slack"
-    [2]="[E] Assist|adjacent tools|tableplus"
-    [3]="[T] Master|primary desktop|"
-    [4]="[D] Config|settings, dotfiles|"
+    [2]="[S] Network|chat, email, calendar|slack"
+    [3]="[E] Assist|adjacent tools|tableplus"
+    [4]="[T] Master|primary desktop|"
+    [5]="[D] Config|settings, dotfiles|"
 )
 
 a_flag="" # [a]plication
@@ -179,22 +179,22 @@ main() {
     dunstify -a "layout" -u low "$layout_name" "$sub_msg"
 
     case "$n_flag" in
-    1 | 2)
+    2 | 3)
         hyprctl dispatch exec "$ws_cmd"
         sleep 0.5
         ;;
-    3)
+    4)
         editor "$app_path"
         IFS='|' read -ra parts <<< "${APP[$a_flag]}"
         browser "${parts[@]:1}"
         terminal "$app_path"
         ;;
-    4)
+    5)
         dotfiles
         ;;
     esac
 
-    if [[ "$n_flag" -eq 3 || "$n_flag" -eq 4 ]]; then
+    if [[ "$n_flag" -eq 4 || "$n_flag" -eq 5 ]]; then
         split -d
         arrange_layout
         resize-slave
