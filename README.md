@@ -116,7 +116,7 @@
 <details open>
 <summary>🚀 <b>Custom ISO</b> (recommended)</summary>
 
-Build a custom ISO with all repo and AUR packages pre-cached for a nearly offline install. Requires `archiso`:
+Download the latest pre-built ISO from [GitHub Releases](https://github.com/cogikyo/dotfiles/releases/latest), or build one locally with `archiso`:
 
 ```sh
 sudo ./build.sh --clean
@@ -155,7 +155,7 @@ Write to USB using [dd](https://wiki.archlinux.org/title/Dd) — use the **disk*
 **Custom ISO** — dotfiles and packages are already on disk:
 
 ```sh
-dotfiles
+bootstrap
 ```
 
 **Stock Arch ISO** — downloads dotfiles and packages from the network:
