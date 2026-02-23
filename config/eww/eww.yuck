@@ -736,7 +736,7 @@
     :onhover "eww update player-hover=true"
     :onhoverlost "eww update player-hover=false"
     :onmiddleclick "${browser} www.google.com/search?q='${pctl.artist}' & disown"
-    :onrightclick "hyprctl dispatch workspace 5 & change-bg 'music' & disown"
+    :onrightclick "hyprctl dispatch workspace 1 & change-bg 'music' & disown"
     (box
       :class "playerbox"
       :style "margin-left: -5px; background-image: url('${matches("${pctl.status}", "Playing") ? album-art-path : playerctl-img}');"
@@ -762,7 +762,7 @@
     :onclick "playerctl --player=${player-client} play-pause"
     :onscroll "bin/music_info seek {}"
     :onmiddleclick "${browser} www.google.com/search?q='${pctl.artist}' & disown"
-    :onrightclick "hyprctl dispatch workspace 5 & change-bg 'music' & disown"
+    :onrightclick "hyprctl dispatch workspace 1 & change-bg 'music' & disown"
     (box
       :class "album-art ${music-hover ? "album-art-hover" : ""}"
       :style "background-image: url('${matches("${pctl.status}", "Playing") ? album-art-path : playerctl-img}');"
@@ -1086,7 +1086,7 @@
   (eventbox
     :onhover "eww update ws-h${num}=true"
     :onhoverlost "eww update ws-h${num}=false"
-    :onclick "${num == "5" ? "change-bg 'music';" : "change-bg;"} hyprctl dispatch workspace ${num} & disown"
+    :onclick "${num == "1" ? "change-bg 'music';" : "change-bg;"} hyprctl dispatch workspace ${num} & disown"
     :cursor "pointer"
     :onmiddleclick "hyprctl dispatch workspace ${num} & disown"
     :tooltip "  ${desc}  "
@@ -1111,11 +1111,11 @@
       :class "tr-a workspacesbox ${ws-hover ? "workspacesbox-hover" : ""} ${monocle-origin != "" ? "workspacesbox-monocle" : ""}"
       :halign "center" :space-evenly false :spacing 10
       :orientation "vertical"
-      (workspace :icon "network"  :num "1" :hover ws-h1 :desc " chat 'n networking")
-      (workspace :icon "learn"    :num "2" :hover ws-h2 :desc " documents 'n such" )
-      (workspace :icon "dna"      :num "3" :hover ws-h3 :desc " primary desktop" )
-      (workspace :icon "dotfiles" :num "4" :hover ws-h4 :desc " settings 'n secondary work" )
-      (workspace :icon "music"    :num "5" :hover ws-h5 :desc " music" )
+      (workspace :icon "music"    :num "1" :hover ws-h1 :desc " music" )
+      (workspace :icon "network"  :num "2" :hover ws-h2 :desc " chat 'n networking")
+      (workspace :icon "learn"    :num "3" :hover ws-h3 :desc " documents 'n such" )
+      (workspace :icon "dna"      :num "4" :hover ws-h4 :desc " primary desktop" )
+      (workspace :icon "dotfiles" :num "5" :hover ws-h5 :desc " settings 'n secondary work" )
     )
   )
 )

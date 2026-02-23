@@ -59,7 +59,7 @@ hypr:
   sessions:
     dotfiles:
       name: dotfiles
-      workspace: 4
+      workspace: 5
       project: dotfiles
       urls:
         - "https://github.com/cogikyo/dotfiles"
@@ -69,7 +69,7 @@ hypr:
         - { command: "kitty --title claude", title: claude, role: slave }
     acr:
       name: acr
-      workspace: 3
+      workspace: 4
       project: cogikyo/acr
       urls:
         - "localhost:3002"
@@ -79,7 +79,7 @@ hypr:
         - { command: "kitty --title claude", title: claude, role: slave }
     cogikyo:
       name: cogikyo
-      workspace: 3
+      workspace: 4
       project: cogikyo/cogikyo.com
       urls:
         - "localhost:3000"
