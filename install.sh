@@ -420,7 +420,7 @@ run_arch_mode() {
     fi
 
     ok "Installation complete"
-    banner_end "ARCH BOOTSTRAP" "SUCCESS" "reboot and run ./install.sh all"
+    banner_end "ARCH BOOTSTRAP" "SUCCESS" "reboot and run: ~/dotfiles/install.sh all"
     info "Next steps:"
     step "1. Reboot into the new system"
     step "2. Log in as your configured user"
