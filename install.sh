@@ -316,7 +316,8 @@ run_arch_mode() {
         command -v curl >/dev/null || die "curl is required"
     fi
 
-    trap 'rm -f "$config" "$tmp_source_config"' EXIT
+    cleanup_arch_tmp() { rm -f /tmp/arch_config.json /tmp/arch_source_config.json; }
+    trap cleanup_arch_tmp EXIT
 
     firmware_mode="bios"
     if [[ -d /sys/firmware/efi ]]; then
