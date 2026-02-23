@@ -136,7 +136,7 @@ open_tab() {
         kitty @ launch --type=tab --copy-env "${env_args[@]}" --tab-title="$title" --cwd="$cwd" \
             zsh -c 'cd "$(xplr --print-pwd-as-result)" 2>/dev/null; exec zsh' >/dev/null
     elif [[ -n "$cmd" ]]; then
-        kitty @ launch --type=tab --hold --copy-env "${env_args[@]}" --tab-title="$title" --cwd="$cwd" "$cmd" >/dev/null
+        kitty @ launch --type=tab --hold --copy-env "${env_args[@]}" --tab-title="$title" --cwd="$cwd" $cmd >/dev/null
     else
         kitty @ launch --type=tab --copy-env "${env_args[@]}" --tab-title="$title" --cwd="$cwd" >/dev/null
     fi
