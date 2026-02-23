@@ -116,8 +116,6 @@
 <details open>
 <summary>🚀 <b>Custom ISO</b> (recommended)</summary>
 
-Download the latest pre-built ISO from [GitHub Releases](https://github.com/cogikyo/dotfiles/releases/latest), or build one locally with `archiso`:
-
 ```sh
 sudo ./build.sh --clean
 ```
@@ -134,7 +132,7 @@ Tag, push, and create a GitHub release with the ISO:
 sudo ./build.sh --clean --release
 ```
 
-> Rebuild the ISO periodically to pick up package updates.
+> Download the latest pre-built ISO from [GitHub Releases](https://github.com/cogikyo/dotfiles/releases/latest), or build one locally with `archiso`:
 
 </details>
 
