@@ -1372,6 +1372,15 @@ step_fonts() {
         ok "Fonts extracted to $FONT_DIR"
     fi
 
+    # Optionally rebuild Vagari from source (only needed after editing build plan)
+    local BUILD_SCRIPT="$DOTFILES/etc/iosevka/build.sh"
+    if [[ -f "$BUILD_SCRIPT" ]]; then
+        if confirm "Rebuild Vagari font from source? (only needed if you edited the build plan)" "n"; then
+            info "Building Vagari (this takes a while)..."
+            bash "$BUILD_SCRIPT"
+        fi
+    fi
+
     info "Refreshing font cache..."
     fc-cache -f
     ok "Fonts installed"
