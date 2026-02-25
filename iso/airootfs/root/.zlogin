@@ -16,7 +16,7 @@ printf '  \033[1;33mCustom Arch ISO — offline install with pre-cached packages
 printf '\n'
 printf '  \033[1mInstall steps:\033[0m\n'
 printf '    1. Connect to Wi-Fi (optional):  \033[35miwctl\033[0m\n'
-printf '    2. Run the installer:            \033[35mdotfiles\033[0m\n'
+printf '    2. Run the installer:            \033[35mbootstrap\033[0m\n'
 printf '    3. Reboot and run:               \033[35m~/dotfiles/install.sh all\033[0m\n'
 printf '\n'
 printf '  \033[90mLocal repo packages: pacman -Sl localrepo\033[0m\n'
