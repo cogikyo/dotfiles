@@ -10,6 +10,7 @@ Custom Kitty tab bar with:
 
 from os import getlogin, uname
 from pathlib import Path
+from unicodedata import east_asian_width
 
 from kitty.boss import get_boss
 from kitty.fast_data_types import Screen, get_options
@@ -46,7 +47,6 @@ ICON_USER = "⼈"  # user indicator
 ICON_HOST = " ⾥"  # host indicator
 
 # Layout
-RIGHT_MARGIN = -8
 MAX_CWD_DEPTH = 2  # max directory levels to show
 
 
@@ -87,6 +87,11 @@ _right_status_length = 0
 # ╭──────────────────────────────────────────────────────────────────────────────╮
 # │ Utilities                                                                    │
 # ╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+def _display_width(text: str) -> int:
+    """Terminal display width accounting for wide (CJK) characters."""
+    return sum(2 if east_asian_width(c) in ("W", "F") else 1 for c in text)
 
 
 def get_cwd() -> str:
@@ -345,9 +350,7 @@ def draw_tab(
     ]
 
     # Calculate right status width
-    _right_status_length = RIGHT_MARGIN + 2
-    for cell in cells:
-        _right_status_length += len(str(cell[1]))
+    _right_status_length = sum(_display_width(cell[2]) for cell in cells)
 
     # Draw components
     draw_icon(screen, index)
