@@ -177,8 +177,7 @@ STEP_DEFS=(
     "secrets|Decrypt age-encrypted secrets to target paths|no|"
     "repos|Clone repositories and create directories|no|secrets"
     "system|Install system configs and enable services|yes|"
-    "swap|Set up btrfs swap subvolume and swapfile|yes|"
-    "hibernate|Configure suspend-then-hibernate|yes|swap"
+    "hibernate|Configure swapfile and suspend-then-hibernate|yes|"
     "fonts|Extract fonts and optionally build Iosevka|no|"
     "go|Build Go binaries (hyprd, ewwd, statusline, newtab)|no|"
     "firefox|Configure Firefox profile, theme, and preferences|no|repos"
@@ -1198,87 +1197,118 @@ healthcheck_system() {
 # =================================================================================================
 #  STEP {SWAP}: Provision btrfs swap subvolume/file and fstab entry  {{{
 
-step_swap() {
-    header "Setting up swap"
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  STEP {HIBERNATE}: Configure swapfile and suspend-then-hibernate  {{{
+
+step_hibernate() {
+    header "Configuring hibernation"
     needs_sudo
 
     local SWAP_SIZE="16G"
     local SWAP_DIR="/swap"
     local SWAP_FILE="$SWAP_DIR/swapfile"
+    local root_fs
+    root_fs=$(findmnt -no FSTYPE / 2>/dev/null || true)
 
-    # Ensure /swap is a dedicated btrfs subvolume
-    if sudo btrfs subvolume show "$SWAP_DIR" &>/dev/null; then
-        ok "Swap subvolume already exists at $SWAP_DIR"
-    else
-        if [[ -e "$SWAP_DIR" ]]; then
-            err "$SWAP_DIR exists but is not a btrfs subvolume. Refusing to modify it automatically."
-            return 1
-        fi
-        info "Creating btrfs swap subvolume at $SWAP_DIR..."
-        sudo btrfs subvolume create "$SWAP_DIR"
+    if [[ "$root_fs" != "btrfs" ]]; then
+        err "Root filesystem is $root_fs, not btrfs — this step only supports btrfs"
+        return 1
     fi
 
-    # Prevent compression for swap extents.
-    sudo btrfs property set "$SWAP_DIR" compression none &>/dev/null || true
+    # --- Swapfile setup (needed for hibernate; zram can't hibernate) ---
+    # btrfs mount options (nodatacow, compress) are per-filesystem, not per-subvolume.
+    # COW must be disabled via chattr +C on the directory after mounting.
 
-    # Check if swapfile is active
+    local root_uuid root_dev
+    root_uuid=$(findmnt -no UUID /)
+    root_dev=$(findmnt -no SOURCE / | sed 's/\[.*//') # strip [/@] suffix
+
+    # 1. Create @swap subvolume at btrfs top level (sibling of @, @home, etc.)
+    if findmnt "$SWAP_DIR" &>/dev/null; then
+        ok "Swap subvolume already mounted at $SWAP_DIR"
+    else
+        local toplevel
+        toplevel=$(mktemp -d)
+        sudo mount -o subvolid=5 "$root_dev" "$toplevel"
+
+        if [[ -d "$toplevel/@swap" ]]; then
+            ok "@swap subvolume already exists"
+        else
+            info "Creating @swap subvolume at btrfs top level..."
+            if [[ -e "$SWAP_DIR" ]]; then
+                sudo btrfs subvolume delete "$SWAP_DIR" 2>/dev/null \
+                    || sudo rm -rf "$SWAP_DIR"
+            fi
+            sudo btrfs subvolume create "$toplevel/@swap"
+        fi
+
+        sudo umount "$toplevel"
+        rmdir "$toplevel"
+
+        # 2. Add fstab entry with NORMAL options (nodatacow is per-fs, not per-subvol)
+        if ! grep -q 'subvol=/@swap' /etc/fstab 2>/dev/null; then
+            info "Adding @swap mount to /etc/fstab..."
+            printf 'UUID=%s %s btrfs subvol=/@swap,noatime 0 0\n' \
+                "$root_uuid" "$SWAP_DIR" | sudo tee -a /etc/fstab > /dev/null
+        fi
+
+        sudo mkdir -p "$SWAP_DIR"
+        sudo systemctl daemon-reload
+        info "Mounting @swap subvolume..."
+        if ! sudo mount "$SWAP_DIR"; then
+            err "Failed to mount $SWAP_DIR — check /etc/fstab"
+            return 1
+        fi
+    fi
+
+    # 3. Disable COW on the directory (files created inside inherit NOCOW)
+    sudo chattr +C "$SWAP_DIR" 2>/dev/null || true
+
+    # 4. Create swapfile if not already active
     if swapon --show=NAME --noheadings | sed 's/^[[:space:]]*//' | grep -Fxq "$SWAP_FILE"; then
         ok "Swapfile already active: $SWAP_FILE"
     else
         if [[ -e "$SWAP_FILE" ]]; then
-            warn "Existing inactive swapfile found, recreating: $SWAP_FILE"
+            warn "Existing inactive swapfile found, recreating..."
             sudo swapoff "$SWAP_FILE" 2>/dev/null || true
             sudo rm -f "$SWAP_FILE"
         fi
 
-        info "Creating ${SWAP_SIZE} swapfile with btrfs mkswapfile..."
-        sudo btrfs filesystem mkswapfile --size "$SWAP_SIZE" --uuid clear "$SWAP_FILE"
+        info "Creating ${SWAP_SIZE} swapfile..."
+        if ! sudo btrfs filesystem mkswapfile --size "$SWAP_SIZE" --uuid clear "$SWAP_FILE" 2>/dev/null \
+            || [[ ! -s "$SWAP_FILE" ]]; then
+            # mkswapfile can fail if m (compression) attribute conflicts with C (NOCOW).
+            # Fallback: create empty file, force NOCOW, then fill with dd.
+            warn "btrfs mkswapfile failed, falling back to manual creation..."
+            sudo rm -f "$SWAP_FILE"
+            sudo truncate -s 0 "$SWAP_FILE"
+            sudo chattr +C "$SWAP_FILE"
+            sudo chattr -m "$SWAP_FILE" 2>/dev/null || true
+            sudo dd if=/dev/zero of="$SWAP_FILE" bs=1M count=16384 status=progress
+            sudo chmod 600 "$SWAP_FILE"
+            sudo mkswap "$SWAP_FILE"
+        fi
 
         info "Activating swap..."
-        sudo swapon "$SWAP_FILE"
+        if ! sudo swapon "$SWAP_FILE"; then
+            err "Failed to activate swapfile"
+            return 1
+        fi
     fi
 
-    # Add to fstab if not present
+    # Add swapfile to fstab if not present
     if awk -v swap_path="$SWAP_FILE" '$0 !~ /^[[:space:]]*#/ && $1 == swap_path && $3 == "swap" {found=1} END {exit(found ? 0 : 1)}' /etc/fstab; then
-        ok "Swapfile already in /etc/fstab"
+        ok "Swapfile in /etc/fstab"
     else
         info "Adding swapfile to /etc/fstab..."
         printf '%s none swap defaults,pri=10 0 0\n' "$SWAP_FILE" | sudo tee -a /etc/fstab > /dev/null
         ok "Added to /etc/fstab"
     fi
 
-    ok "Swap setup complete"
-}
-
-healthcheck_swap() {
-    local root_fs
-    root_fs=$(findmnt -no FSTYPE / 2>/dev/null || true)
-    [[ "$root_fs" == "btrfs" ]] || return "$STEP_SKIPPED_RC"
-
-    [[ -f /swap/swapfile ]] || { err "Healthcheck failed: /swap/swapfile missing"; return 1; }
-    if ! awk '$0 !~ /^[[:space:]]*#/ && $1 == "/swap/swapfile" && $3 == "swap" {found=1} END {exit(found ? 0 : 1)}' /etc/fstab; then
-        err "Healthcheck failed: /swap/swapfile is missing from /etc/fstab"
-        return 1
-    fi
-    return 0
-}
-
-# }}}
-# =================================================================================================
-
-# =================================================================================================
-#  STEP {HIBERNATE}: Configure resume args, hooks, and initramfs for hibernate  {{{
-
-step_hibernate() {
-    header "Configuring hibernation"
-    needs_sudo
-
-    local SWAP_FILE="/swap/swapfile"
-
-    if [[ ! -f "$SWAP_FILE" ]]; then
-        err "Swapfile not found at $SWAP_FILE. Run the 'swap' step first."
-        return 1
-    fi
+    # --- Hibernation setup ---
 
     # Get resume parameters
     local RESUME_OFFSET=""
@@ -1348,14 +1378,37 @@ step_hibernate() {
 }
 
 healthcheck_hibernate() {
-    if [[ ! -f /swap/swapfile ]]; then
-        err "Healthcheck failed: /swap/swapfile missing"
-        return 1
-    fi
-    if ! grep -q 'HOOKS=.*resume' /etc/mkinitcpio.conf; then
-        err "Healthcheck failed: mkinitcpio resume hook is missing"
-        return 1
-    fi
+    local root_fs
+    root_fs=$(findmnt -no FSTYPE / 2>/dev/null || true)
+    [[ "$root_fs" == "btrfs" ]] || return "$STEP_SKIPPED_RC"
+
+    # Swap mount
+    findmnt /swap &>/dev/null \
+        || { err "Healthcheck: /swap is not a separate mount (expected @swap subvolume)"; return 1; }
+
+    # Swapfile
+    [[ -s /swap/swapfile ]] || { err "Healthcheck: /swap/swapfile missing or empty"; return 1; }
+    swapon --show=NAME --noheadings | sed 's/^[[:space:]]*//' | grep -Fxq "/swap/swapfile" \
+        || { err "Healthcheck: /swap/swapfile is not active"; return 1; }
+    awk '$0 !~ /^[[:space:]]*#/ && $1 == "/swap/swapfile" && $3 == "swap" {found=1} END {exit(found ? 0 : 1)}' /etc/fstab \
+        || { err "Healthcheck: /swap/swapfile missing from /etc/fstab"; return 1; }
+
+    # Resume hook
+    grep -q 'HOOKS=.*resume' /etc/mkinitcpio.conf \
+        || { err "Healthcheck: mkinitcpio resume hook missing"; return 1; }
+
+    # Boot params
+    local loader_entry
+    loader_entry=$(find /boot/loader/entries/ -name '*_linux.conf' 2>/dev/null | head -1)
+    [[ -n "$loader_entry" ]] || { err "Healthcheck: no systemd-boot loader entry found"; return 1; }
+    grep -q 'resume=UUID=' "$loader_entry" \
+        || { err "Healthcheck: resume=UUID missing from $loader_entry"; return 1; }
+    grep -q 'resume_offset=' "$loader_entry" \
+        || { err "Healthcheck: resume_offset missing from $loader_entry"; return 1; }
+
+    # Sleep config
+    [[ -f /etc/systemd/sleep.conf.d/hibernate.conf ]] \
+        || { err "Healthcheck: sleep.conf.d/hibernate.conf missing"; return 1; }
     return 0
 }
 
