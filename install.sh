@@ -181,7 +181,7 @@ STEP_DEFS=(
     "hibernate|Configure suspend-then-hibernate|yes|swap"
     "fonts|Extract fonts and optionally build Iosevka|no|"
     "go|Build Go binaries (hyprd, ewwd, statusline, newtab)|no|"
-    "firefox|Configure Firefox profile, theme, and preferences|no|"
+    "firefox|Configure Firefox profile, theme, and preferences|no|repos"
     "shell|Change default shell to zsh|yes|"
     "dns|Set up systemd-resolved with Cloudflare DNS-over-TLS|yes|system"
 )
@@ -1015,6 +1015,15 @@ step_repos() {
         fi
     fi
 
+    # Symlink vagari.nvim into lazy.nvim dev path
+    local vagari_nvim="$HOME/vagari/vagari.nvim"
+    local dev_link="$HOME/nvim/vagari.nvim"
+    if [[ -d "$vagari_nvim" ]]; then
+        mkdir -p "$HOME/nvim"
+        ln -sfn "$vagari_nvim" "$dev_link"
+        ok "Linked $dev_link -> $vagari_nvim"
+    fi
+
     echo
     ok "Cloned $cloned repos ($skipped already exist)"
     if [[ $failed -gt 0 ]]; then
@@ -1127,7 +1136,7 @@ step_system() {
     # Enable services
     echo
     info "Enabling services..."
-    local SERVICES=(bluetooth sddm earlyoom)
+    local SERVICES=(bluetooth sddm earlyoom logid)
     for svc in "${SERVICES[@]}"; do
         if systemctl is-enabled "$svc" &>/dev/null; then
             ok "$svc already enabled"
@@ -1589,14 +1598,12 @@ step_firefox() {
         return 1
     fi
 
-    # Install vagari.firefox userChrome CSS
-    local vagari_dir="$HOME/vagari.firefox"
+    # Install vagari.firefox userChrome CSS (cloned by repos step)
+    local vagari_dir="$HOME/vagari/vagari.firefox"
 
     if [[ ! -d "$vagari_dir" ]]; then
-        info "Cloning vagari.firefox..."
-        git clone https://github.com/cogikyo/vagari.firefox.git "$vagari_dir"
-    else
-        ok "vagari.firefox already cloned at $vagari_dir"
+        err "vagari.firefox not found at $vagari_dir — run the repos step first"
+        return 1
     fi
 
     local chrome_dir="$FIREFOX_PROFILE_DIR/chrome"
@@ -1620,23 +1627,21 @@ step_firefox() {
     ln -sfv "$userjs_src" "$userjs_dst"
     ok "user.js linked"
 
-    # Update newtab config with profile path
-    local config_yaml="$DOTFILES/daemons/config.yaml"
+    # Write newtab local config with profile path (machine-specific, not tracked in git)
+    local local_config="$DOTFILES/daemons/newtab/local.config.yaml"
     local new_db_path="${FIREFOX_PROFILE_DIR#"$HOME"/}/places.sqlite"
 
-    if [[ ! -f "$config_yaml" ]]; then
-        warn "daemons/config.yaml not found, skipping newtab config update"
-    else
-        local current_db
-        current_db=$(grep 'firefox_db:' "$config_yaml" | sed 's/.*firefox_db:[[:space:]]*//' | tr -d '"')
+    local current_db=""
+    if [[ -f "$local_config" ]]; then
+        current_db=$(grep 'firefox_db:' "$local_config" | sed 's/.*firefox_db:[[:space:]]*//' | tr -d '"')
+    fi
 
-        if [[ "$current_db" == "$new_db_path" ]]; then
-            ok "newtab config already points to correct profile"
-        else
-            info "Updating newtab firefox_db path..."
-            sed -i "s|firefox_db:.*|firefox_db: \"$new_db_path\"|" "$config_yaml"
-            ok "Updated firefox_db to $new_db_path"
-        fi
+    if [[ "$current_db" == "$new_db_path" ]]; then
+        ok "newtab local config already points to correct profile"
+    else
+        info "Writing newtab local config..."
+        printf 'firefox_db: "%s"\n' "$new_db_path" > "$local_config"
+        ok "Wrote firefox_db to newtab/local.config.yaml"
     fi
 
     echo

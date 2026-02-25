@@ -17,6 +17,7 @@ import (
 )
 
 const configPath = "dotfiles/daemons/config.yaml"
+const newtabLocalPath = "dotfiles/daemons/newtab/local.config.yaml"
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Root
@@ -350,6 +351,14 @@ func Load() *Config {
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		fmt.Fprintf(os.Stderr, "daemons: config parse error: %v\n", err)
 		return Default()
+	}
+
+	// Overlay newtab local config (machine-specific overrides, not tracked in git).
+	localPath := filepath.Join(home, newtabLocalPath)
+	if localData, err := os.ReadFile(localPath); err == nil {
+		if err := yaml.Unmarshal(localData, &cfg.Newtab); err != nil {
+			fmt.Fprintf(os.Stderr, "daemons: newtab local config parse error: %v\n", err)
+		}
 	}
 
 	return cfg

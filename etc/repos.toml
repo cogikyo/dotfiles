@@ -17,17 +17,9 @@ path = "~/vagari/vagari.nvim"
 repo = "cogikyo/vagari.firefox"
 path = "~/vagari/vagari.firefox"
 
-[cogikyo.com]
-repo = "cogikyo/cogikyo.com"
-path = "~/cogikyo/cogikyo.com"
-
 [acr]
 repo = "cogikyo/acr"
 path = "~/cogikyo/acr"
-
-[wangare]
-repo = "cogikyo/wangare"
-path = "~/cogikyo/wangare"
 
 [cullyn.dev]
 repo = "cogikyo/cullyn.dev"
