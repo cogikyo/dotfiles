@@ -647,15 +647,11 @@ step_link() {
             [[ "$name" == "." || "$name" == ".." ]] && continue
             target="$dst/$name"
 
-            if [[ -d "$item" && ! -L "$item" ]]; then
-                if [[ -e "$target" && ! -d "$target" ]]; then
-                    rm -f "$target"
-                fi
-                mkdir -p "$target"
-                link_tree_contents "$item" "$target"
-            else
-                link_or_skip "$item" "$target"
+            # Replace real dirs with symlinks (apps like GLava need dir symlinks)
+            if [[ -d "$item" && ! -L "$item" && -d "$target" && ! -L "$target" ]]; then
+                rm -rf "$target"
             fi
+            link_or_skip "$item" "$target"
         done
         shopt -u dotglob nullglob
     }
