@@ -47,6 +47,8 @@ type daemonConfig struct {
 	Newtab newtabConfig `yaml:"newtab"`
 }
 
+const newtabLocalPath = "dotfiles/daemons/newtab/local.config.yaml"
+
 func loadConfig() newtabConfig {
 	cfg := newtabConfig{
 		Port:         ":42069",
@@ -64,6 +66,11 @@ func loadConfig() newtabConfig {
 	dc.Newtab = cfg
 	if err := yaml.Unmarshal(data, &dc); err != nil {
 		return cfg
+	}
+
+	// Overlay local config (machine-specific overrides, not tracked in git).
+	if localData, err := os.ReadFile(filepath.Join(homeDir, newtabLocalPath)); err == nil {
+		yaml.Unmarshal(localData, &dc.Newtab)
 	}
 
 	return dc.Newtab
