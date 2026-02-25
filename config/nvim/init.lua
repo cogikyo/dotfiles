@@ -49,6 +49,16 @@ require("lazy").setup({
 			lazy = true,
 			opts = { style = "storm" },
 		},
+		{
+			"cocopon/iceberg.vim",
+			lazy = true,
+		},
+		{
+			"catppuccin/nvim",
+			name = "catppuccin",
+			lazy = true,
+			opts = { flavour = "macchiato" },
+		},
 
 		{ import = "plugins.dev" },
 		-- lewis6991/gitsigns.nvim: inline git hunks and blame
