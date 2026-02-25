@@ -951,6 +951,20 @@ step_repos() {
         fi
     fi
 
+    # After ISO install, dotfiles are a re-initialized repo with no real history.
+    # Fetch and reset to the upstream to restore full git history and permissions.
+    local snap_msg
+    snap_msg=$(git -C "$DOTFILES" log -1 --format=%s 2>/dev/null || true)
+    if [[ "$snap_msg" == "ISO install snapshot" ]]; then
+        info "Restoring dotfiles from upstream (ISO snapshot detected)..."
+        if git -C "$DOTFILES" fetch origin master; then
+            git -C "$DOTFILES" reset --hard origin/master
+            ok "Dotfiles restored with full history"
+        else
+            warn "Failed to fetch dotfiles upstream — manual 'git pull' needed"
+        fi
+    fi
+
     # Parse repos.toml and clone
     local repo="" path="" cloned=0 skipped=0 failed=0
 
