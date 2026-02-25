@@ -8,6 +8,9 @@ etc/secrets/identity
 # External plugins (managed separately)
 config/xplr/plugins/preview/
 
+# Machine-specific local overrides
+daemons/newtab/local.config.yaml
+
 # ISO build artifacts
 iso/work/
 iso/out/
