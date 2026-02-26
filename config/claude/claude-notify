@@ -128,33 +128,31 @@ APP="${APP:-claude}"
 
 case "$TYPE" in
     start)
-        sounds=(zug-zug work-work okie-dokie something-need-doing)
+        sounds=(sdv-collect-item civ6-notification civ5-worker-select ssb-ready)
         pick="${sounds[$((RANDOM % ${#sounds[@]}))]}"
         play "$pick" "$QUIET"
         notify low 4000 "$(summary prompt "${MESSAGE:-$pick}")" "" \
-            "$BLU_BG" "$BLU_FG" "$BLU_FR" "" &
+            "$BLU_BG" "$BLU_FG" "$BLU_FR" "" </dev/null &>/dev/null & disown
         ;;
     subagent)
-        sounds=(zug-zug work-work okie-dokie something-need-doing)
-        pick="${sounds[$((RANDOM % ${#sounds[@]}))]}"
-        play "$pick" "$QUIET"
+        play sdv-frog "$QUIET"
         agent=$(jq -r '.agent_type // "Agent"' <<< "$HOOK_JSON" 2>/dev/null)
         notify low 4000 "$agent: $(summary last_assistant_message Done 70)" "" \
-            "$BLU_BG" "$BLU_FG" "$BLU_FR" "" &
+            "$BLU_BG" "$BLU_FG" "$BLU_FR" "" </dev/null &>/dev/null & disown
         ;;
     complete)
         play jobs-done "$LOUD"
         notify low 0 "$(summary last_assistant_message 'Jobs done')" "" \
-            "$ORN_BG" "$ORN_FG" "$ORN_FR" "-active" &
+            "$ORN_BG" "$ORN_FG" "$ORN_FR" "-active" </dev/null &>/dev/null & disown
         ;;
     idle)
         play hey-listen "$QUIET"
         notify low 0 "$(summary message 'Waiting for input')" "" \
-            "$PRP_BG" "$PRP_FG" "$PRP_FR" "" &
+            "$PRP_BG" "$PRP_FG" "$PRP_FR" "" </dev/null &>/dev/null & disown
         ;;
     permission)
         play hey-listen "$LOUD"
         notify normal 0 "$(summary message 'Permission needed')" "" \
-            "$GRN_BG" "$GRN_FG" "$GRN_FR" "-monocle" &
+            "$GRN_BG" "$GRN_FG" "$GRN_FR" "-monocle" </dev/null &>/dev/null & disown
         ;;
 esac
