@@ -1110,6 +1110,8 @@ step_system() {
         ["security/faillock.conf"]="/etc/security/faillock.conf"
         ["loader.conf"]="/boot/loader/loader.conf"
         ["logid.cfg"]="/etc/logid.cfg"
+        ["systemd/logid.service.d/restart.conf"]="/etc/systemd/system/logid.service.d/restart.conf"
+        ["libinput/local-overrides.quirks"]="/etc/libinput/local-overrides.quirks"
         ["gifview.desktop"]="/usr/share/applications/gifview.desktop"
     )
 
@@ -1178,6 +1180,9 @@ healthcheck_system() {
         "/etc/sddm.conf.d/hyprland.desktop"
         "/etc/systemd/resolved.conf"
         "/etc/systemd/sleep.conf.d/hibernate.conf"
+        "/etc/logid.cfg"
+        "/etc/systemd/system/logid.service.d/restart.conf"
+        "/etc/libinput/local-overrides.quirks"
     )
     local path
 
