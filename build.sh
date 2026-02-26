@@ -67,11 +67,11 @@ Usage: sudo ./build.sh [OPTIONS]
 Build a custom Arch Linux ISO with pre-cached packages.
 
 Options:
-  --usb /dev/sdX   Write ISO to USB device after build
-  --skip-aur       Skip AUR package builds
-  --clean          Remove work/out dirs before building
-  --release        Tag, push, and create a GitHub release with the ISO
-  -h, --help       Show this help
+  --usb [/dev/sdX]   Write ISO to USB device (lists drives if no device given)
+  --skip-aur         Skip AUR package builds
+  --clean            Remove work/out dirs before building
+  --release          Tag, push, and create a GitHub release (skips build if ISO exists)
+  -h, --help         Show this help
 
 Version: $VERSION
 EOF
@@ -91,8 +91,6 @@ read_package_list() {
 
 preflight() {
     phase "0: Preflight"
-
-    [[ $EUID -eq 0 ]] || die "Must be run as root (use sudo)"
 
     local missing=()
     for cmd in mkarchiso pacman makepkg repo-add git; do
@@ -117,9 +115,11 @@ Install archiso: pacman -S archiso"
     info "Repo packages: $repo_count"
     info "AUR packages:  $aur_count"
 
-    if [[ -n "$USB_DEVICE" ]]; then
+    if [[ -n "$USB_DEVICE" && "$USB_DEVICE" != "__pick__" ]]; then
         [[ -b "$USB_DEVICE" ]] || die "USB device not found: $USB_DEVICE"
         info "USB target:    $USB_DEVICE"
+    elif [[ "$USB_DEVICE" == "__pick__" ]]; then
+        info "USB target:    (will select interactively)"
     fi
 }
 
@@ -156,6 +156,9 @@ prepare_profile() {
         --exclude='./iso/airootfs/var' \
         --exclude='./iso/airootfs/root/dotfiles' \
         --exclude='./.git' \
+        --exclude='./share/videos/*.mp4' \
+        --exclude='./daemons/newtab/dna.webm' \
+        --exclude='./etc/fonts.tar.gz' \
         -cf - . | tar -xf - -C "$airootfs_dotfiles"
 
     # NOTE: mkarchiso uses cp --no-preserve=mode, so chmod here has no effect.
@@ -323,6 +326,14 @@ build_aur_packages() {
     userdel -r "$build_user" 2>/dev/null || true
     rm -f "/etc/sudoers.d/$build_user"
 
+    # Remove debug packages — they bloat the ISO with symbols we don't need
+    local debug_count
+    debug_count=$(find "$LOCALREPO_DIR" -name '*-debug-*.pkg.tar.*' ! -name '*.sig' | wc -l)
+    if [[ $debug_count -gt 0 ]]; then
+        find "$LOCALREPO_DIR" -name '*-debug-*.pkg.tar.*' -delete
+        info "Removed $debug_count debug packages"
+    fi
+
     ok "AUR builds complete: $built built, $skipped cached, $failed failed"
     [[ $failed -eq 0 ]] || warn "Some AUR packages failed to build — install will fall back to network"
 }
@@ -381,12 +392,57 @@ build_iso() {
 #  Phase 6: Write to USB
 # =============================================================================
 
+pick_usb_device() {
+    echo
+    info "Removable block devices:"
+    echo
+
+    local -a devices=()
+    local idx=0
+
+    while IFS= read -r line; do
+        local dev size model tran
+        dev=$(echo "$line" | awk '{print $1}')
+        size=$(echo "$line" | awk '{print $2}')
+        model=$(echo "$line" | awk '{$1=$2=""; sub(/^[ \t]+/, ""); print}')
+        tran=$(lsblk -ndo TRAN "/dev/$dev" 2>/dev/null || true)
+
+        # Only show USB drives (skip internal disks)
+        [[ "$tran" == "usb" ]] || continue
+
+        ((++idx))
+        devices+=("/dev/$dev")
+        printf '  %b%d)%b  /dev/%-8s  %6s  %s\n' "$BOLD" "$idx" "$RESET" "$dev" "$size" "$model"
+    done < <(lsblk -ndpo NAME,SIZE,MODEL --nodeps | sed 's|/dev/||')
+
+    echo
+
+    if [[ ${#devices[@]} -eq 0 ]]; then
+        die "No USB drives found"
+    fi
+
+    printf '%b  ?  %b Select drive %b[1-%d]%b: ' '\033[0;35m' '\033[0m' "$FAINT" "${#devices[@]}" "$RESET"
+    local choice
+    read -r choice
+
+    if [[ ! "$choice" =~ ^[0-9]+$ ]] || (( choice < 1 || choice > ${#devices[@]} )); then
+        die "Invalid selection: $choice"
+    fi
+
+    USB_DEVICE="${devices[$((choice - 1))]}"
+    ok "Selected: $USB_DEVICE"
+}
+
 write_to_usb() {
     phase "6: Write to USB"
 
     if [[ -z "$USB_DEVICE" ]]; then
         info "No --usb specified, skipping USB write"
         return 0
+    fi
+
+    if [[ "$USB_DEVICE" == "__pick__" ]]; then
+        pick_usb_device
     fi
 
     local iso_file
@@ -510,13 +566,22 @@ Built with \`build.sh v$VERSION\` — includes dotfiles, localrepo, and archinst
 # =============================================================================
 
 main() {
+    # Self-elevate to root if needed
+    if [[ $EUID -ne 0 ]]; then
+        exec sudo "$0" "$@"
+    fi
+
     # Parse arguments
     while [[ $# -gt 0 ]]; do
         case "$1" in
             --usb)
-                [[ -n "${2:-}" ]] || die "--usb requires a device argument"
-                USB_DEVICE="$2"
-                shift 2
+                if [[ -n "${2:-}" && "${2:-}" != --* ]]; then
+                    USB_DEVICE="$2"
+                    shift 2
+                else
+                    USB_DEVICE="__pick__"
+                    shift
+                fi
                 ;;
             --skip-aur)
                 SKIP_AUR=1
@@ -545,12 +610,24 @@ main() {
     printf '%b%s%b\n' "$FAINT" "Custom Arch ISO with pre-cached packages" "$RESET"
     echo
 
-    preflight
-    prepare_profile
-    cache_repo_packages
-    build_aur_packages
-    create_repo_db
-    build_iso
+    # Skip build phases if we only need to release/write an existing ISO
+    local existing_iso
+    existing_iso=$(find "$OUT_DIR" -name '*.iso' -printf '%T@ %p\n' 2>/dev/null | sort -rn | head -1 | cut -d' ' -f2-)
+
+    if [[ -n "$existing_iso" && $CLEAN -eq 0 && ($RELEASE -eq 1 || "$USB_DEVICE" != "") ]]; then
+        local iso_size
+        iso_size=$(du -h "$existing_iso" | cut -f1)
+        ok "Using existing ISO: $(basename "$existing_iso") ($iso_size)"
+        info "Pass --clean to force a full rebuild"
+    else
+        preflight
+        prepare_profile
+        cache_repo_packages
+        build_aur_packages
+        create_repo_db
+        build_iso
+    fi
+
     write_to_usb
     publish_release
 
