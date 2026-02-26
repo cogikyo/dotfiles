@@ -59,17 +59,17 @@ case "$TYPE" in
         pick="${sounds[$((RANDOM % ${#sounds[@]}))]}"
         play "$pick" "$QUIET"
         notify low 4000 "$(summary last-assistant-message "$pick")" "" \
-            "$BLU_BG" "$BLU_FG" "$BLU_FR" "" &
+            "$BLU_BG" "$BLU_FG" "$BLU_FR" "" </dev/null &>/dev/null & disown
         ;;
     agent-turn-complete)
         play jobs-done "$LOUD"
         notify low 0 "$(summary last-assistant-message 'Jobs done')" "" \
-            "$ORN_BG" "$ORN_FG" "$ORN_FR" "-active" &
+            "$ORN_BG" "$ORN_FG" "$ORN_FR" "-active" </dev/null &>/dev/null & disown
         ;;
     idle)
         play hey-listen "$QUIET"
         notify low 0 "$(summary last-assistant-message 'Waiting for input')" "" \
-            "$PRP_BG" "$PRP_FG" "$PRP_FR" "" &
+            "$PRP_BG" "$PRP_FG" "$PRP_FR" "" </dev/null &>/dev/null & disown
         ;;
     approval-requested)
         # delay: dunstify blocks when called from within a dunst script handler
