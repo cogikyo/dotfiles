@@ -131,18 +131,18 @@ case "$TYPE" in
         sounds=(sdv-collect-item civ6-notification civ5-worker-select ssb-ready)
         pick="${sounds[$((RANDOM % ${#sounds[@]}))]}"
         play "$pick" "$QUIET"
-        notify low 4000 "$(summary prompt "${MESSAGE:-$pick}")" "" \
+        notify low 2000 "$(summary prompt "${MESSAGE:-$pick}")" "" \
             "$BLU_BG" "$BLU_FG" "$BLU_FR" "" </dev/null &>/dev/null & disown
         ;;
     subagent)
         play sdv-frog "$QUIET"
         agent=$(jq -r '.agent_type // "Agent"' <<< "$HOOK_JSON" 2>/dev/null)
-        notify low 4000 "$agent: $(summary last_assistant_message Done 70)" "" \
+        notify low 2000 "$agent: $(summary last_assistant_message Done 70)" "" \
             "$BLU_BG" "$BLU_FG" "$BLU_FR" "" </dev/null &>/dev/null & disown
         ;;
     complete)
         play jobs-done "$LOUD"
-        notify low 0 "$(summary last_assistant_message 'Jobs done')" "" \
+        notify low 20000 "$(summary last_assistant_message 'Jobs done')" "" \
             "$ORN_BG" "$ORN_FG" "$ORN_FR" "-active" </dev/null &>/dev/null & disown
         ;;
     idle)
