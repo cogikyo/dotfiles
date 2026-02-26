@@ -13,6 +13,7 @@ set -euo pipefail
 DOTFILES="${DOTFILES:-$HOME/dotfiles}"
 PKG_LIST="$DOTFILES/etc/packages.lst"
 AUR_LIST="$DOTFILES/etc/packages-aur.lst"
+OPT_LIST="$DOTFILES/etc/packages-optional.lst"
 
 # Colors
 RED='\033[0;31m'
@@ -47,9 +48,22 @@ save_lists() {
   old_pkg=$(cat "$PKG_LIST" 2>/dev/null || true)
   old_aur=$(cat "$AUR_LIST" 2>/dev/null || true)
 
-  # Save new lists (explicit only)
-  new_pkg=$(yay -Qenq | sort)
-  new_aur=$(yay -Qemq | sort)
+  # Read optional list — these packages stay in their own file
+  local opt=""
+  [[ -f "$OPT_LIST" ]] && opt=$(sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$OPT_LIST" | sort)
+
+  # Save new lists (explicit only), filtering out optional packages
+  local all_pkg all_aur
+  all_pkg=$(yay -Qenq | sort)
+  all_aur=$(yay -Qemq | sort)
+
+  if [[ -n "$opt" ]]; then
+    new_pkg=$(comm -23 <(echo "$all_pkg") <(echo "$opt"))
+    new_aur=$(comm -23 <(echo "$all_aur") <(echo "$opt"))
+  else
+    new_pkg="$all_pkg"
+    new_aur="$all_aur"
+  fi
 
   echo "$new_pkg" > "$PKG_LIST"
   echo "$new_aur" > "$AUR_LIST"
@@ -84,9 +98,24 @@ do_update() {
   yay -Syu
 
   info "Removing orphaned packages..."
-  local orphans
-  local orphan_list
+  local orphan_list=()
   mapfile -t orphan_list < <(yay -Qdtq 2>/dev/null || true)
+
+  # Exclude optional packages from orphan removal
+  if [[ ${#orphan_list[@]} -gt 0 && -f "$OPT_LIST" ]]; then
+    local opt_set
+    opt_set=$(sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$OPT_LIST")
+    local filtered=()
+    for pkg in "${orphan_list[@]}"; do
+      if ! grep -qxF "$pkg" <<< "$opt_set"; then
+        filtered+=("$pkg")
+      else
+        warn "Keeping orphan $pkg (in packages-optional.lst)"
+      fi
+    done
+    orphan_list=("${filtered[@]+"${filtered[@]}"}")
+  fi
+
   if [[ ${#orphan_list[@]} -gt 0 ]]; then
     yay -Rns "${orphan_list[@]}"
   else
@@ -247,6 +276,7 @@ do_dry_install() {
       success "All AUR packages already installed"
     fi
   fi
+
 }
 
 check_sources() {
@@ -289,8 +319,9 @@ usage() {
   echo "  -h, --help    Show this help"
   echo
   echo "Package lists (explicit only — deps resolve automatically):"
-  echo "  etc/packages.lst      Repo packages"
-  echo "  etc/packages-aur.lst  AUR packages"
+  echo "  etc/packages.lst          Repo packages (cached in ISO)"
+  echo "  etc/packages-aur.lst      AUR packages (cached in ISO)"
+  echo "  etc/packages-optional.lst Optional packages (installed post-boot)"
 }
 
 main() {
@@ -299,11 +330,11 @@ main() {
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
-      --install)  mode="install"; shift ;;
-      --check)    mode="check"; shift ;;
-      --dry-run)  dry_run=true; shift ;;
-      -h|--help)  usage; exit 0 ;;
-      *)          error "Unknown option: $1"; usage; exit 1 ;;
+      --install)   mode="install"; shift ;;
+      --check)     mode="check"; shift ;;
+      --dry-run)   dry_run=true; shift ;;
+      -h|--help)   usage; exit 0 ;;
+      *)           error "Unknown option: $1"; usage; exit 1 ;;
     esac
   done
 

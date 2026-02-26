@@ -16,6 +16,7 @@ Commands:
   {STEP}           Run specific step by name
 
 Options:
+  --optional       Also install optional packages (use with 'packages' step)
   -l, --list       List available steps
   -c, --check      Run healthchecks for all (or specified) steps
   -h, --help       Show this help
@@ -41,6 +42,7 @@ if [[ "${ARCH:-0}" != "1" ]] && [[ -d /run/archiso ]]; then
     ARCH=1
 fi
 ARCH="${ARCH:-0}"
+OPTIONAL=0
 
 # }}}
 # =================================================================================================
@@ -525,23 +527,19 @@ step_packages() {
 
     "$DOTFILES/bin/update" --install
 
-    # Build eww from source with Wayland support (AUR package lacks the flag)
-    local eww_bin="$HOME/.local/bin/eww"
-    if [[ -x "$eww_bin" ]]; then
-        ok "eww already installed"
-    else
-        info "Building eww with Wayland support..."
-        has cargo || { err "cargo not found — install rustup and run: rustup default stable"; return 1; }
-        local eww_src="${XDG_CACHE_HOME:-$HOME/.cache}/eww"
-        if [[ -d "$eww_src/.git" ]]; then
-            git -C "$eww_src" pull --ff-only
+    # Optional packages (only when --optional is passed)
+    if [[ "$OPTIONAL" -eq 1 ]]; then
+        local opt_list="$DOTFILES/etc/packages-optional.lst"
+        if [[ -f "$opt_list" ]]; then
+            local opt_pkgs=()
+            mapfile -t opt_pkgs < <(sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$opt_list")
+            if (( ${#opt_pkgs[@]} > 0 )); then
+                info "Installing ${#opt_pkgs[@]} optional packages..."
+                yay -S --needed "${opt_pkgs[@]}"
+            fi
         else
-            rm -rf "$eww_src"
-            git clone https://github.com/elkowar/eww.git "$eww_src"
+            warn "Optional package list not found: $opt_list"
         fi
-        (cd "$eww_src" && cargo build --release --no-default-features --features=wayland)
-        install -Dm755 "$eww_src/target/release/eww" "$eww_bin"
-        ok "eww installed to $eww_bin"
     fi
 
     # Clean up localrepo if it was injected by the live USB installer
@@ -2137,6 +2135,16 @@ main() {
 
     ensure_dotfiles_checkout "$@"
     validate_healthcheck_coverage
+
+    # Parse --optional before step dispatch
+    local args=()
+    for arg in "$@"; do
+        case "$arg" in
+            --optional) OPTIONAL=1 ;;
+            *)          args+=("$arg") ;;
+        esac
+    done
+    set -- "${args[@]}"
 
     if [[ $# -eq 0 ]]; then
         usage

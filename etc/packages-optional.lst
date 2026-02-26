@@ -1,0 +1,6 @@
+# Optional packages — not cached in the ISO, install post-boot with:
+#   ./install.sh packages --optional
+brave-bin
+openai-codex-bin
+tableplus
+vial-appimage
