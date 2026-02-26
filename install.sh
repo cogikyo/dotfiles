@@ -1101,6 +1101,7 @@ step_system() {
     declare -A SYSTEM_FILES=(
         ["bluetooth/main.conf"]="/etc/bluetooth/main.conf"
         ["udev/81-bluetooth-hci.rules"]="/etc/udev/rules.d/81-bluetooth-hci.rules"
+        ["udev/91-logid-restart.rules"]="/etc/udev/rules.d/91-logid-restart.rules"
         ["udev/92-viia.rules"]="/etc/udev/rules.d/92-viia.rules"
         ["sddm.conf.d/autologin.conf"]="/etc/sddm.conf.d/autologin.conf"
         ["sddm.conf.d/hyprland.desktop"]="/etc/sddm.conf.d/hyprland.desktop"
@@ -1110,6 +1111,7 @@ step_system() {
         ["loader.conf"]="/boot/loader/loader.conf"
         ["logid.cfg"]="/etc/logid.cfg"
         ["systemd/logid.service.d/restart.conf"]="/etc/systemd/system/logid.service.d/restart.conf"
+        ["systemd/logid-restart.service"]="/etc/systemd/system/logid-restart.service"
         ["libinput/local-overrides.quirks"]="/etc/libinput/local-overrides.quirks"
         ["gifview.desktop"]="/usr/share/applications/gifview.desktop"
     )
@@ -1174,6 +1176,7 @@ healthcheck_system() {
     local checks=(
         "/etc/bluetooth/main.conf"
         "/etc/udev/rules.d/81-bluetooth-hci.rules"
+        "/etc/udev/rules.d/91-logid-restart.rules"
         "/etc/udev/rules.d/92-viia.rules"
         "/etc/sddm.conf.d/autologin.conf"
         "/etc/sddm.conf.d/hyprland.desktop"
@@ -1181,6 +1184,7 @@ healthcheck_system() {
         "/etc/systemd/sleep.conf.d/hibernate.conf"
         "/etc/logid.cfg"
         "/etc/systemd/system/logid.service.d/restart.conf"
+        "/etc/systemd/system/logid-restart.service"
         "/etc/libinput/local-overrides.quirks"
     )
     local path
