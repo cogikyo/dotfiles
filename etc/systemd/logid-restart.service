@@ -1,0 +1,7 @@
+[Unit]
+Description=Restart logid after device connect
+
+[Service]
+Type=oneshot
+ExecStartPre=/usr/bin/sleep 5
+ExecStart=/usr/bin/systemctl restart logid.service
