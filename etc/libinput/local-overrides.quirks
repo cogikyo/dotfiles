@@ -1,0 +1,4 @@
+[Logitech MX Master 3S]
+MatchVendor=0x046D
+MatchName=*MX Master 3S*
+AttrEventCode=-REL_WHEEL_HI_RES;-REL_HWHEEL_HI_RES;
