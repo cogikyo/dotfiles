@@ -146,6 +146,7 @@ func getCachePath() string {
 type Credentials struct {
 	ClaudeAiOauth *struct {
 		AccessToken string `json:"accessToken"`
+		ExpiresAt   int64  `json:"expiresAt"`
 	} `json:"claudeAiOauth"`
 }
 
@@ -164,26 +165,78 @@ func getCredsPath() string {
 	return filepath.Join(home, ".claude", ".credentials.json")
 }
 
-func getAccessToken() string {
-	var data []byte
-	var err error
-
-	// On macOS, use Keychain
-	if runtime.GOOS == "darwin" {
-		cmd := exec.Command("security", "find-generic-password", "-s", "Claude Code-credentials", "-w")
-		data, err = cmd.Output()
-		if err != nil {
-			return ""
+// findKeychainServices returns all keychain service names matching "Claude Code-credentials*".
+func findKeychainServices() []string {
+	cmd := exec.Command("security", "dump-keychain")
+	out, err := cmd.Output()
+	if err != nil {
+		return nil
+	}
+	const prefix = "Claude Code-credentials"
+	var services []string
+	seen := make(map[string]bool)
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSpace(line)
+		// Match: "svce"<blob>="Claude Code-credentials..."
+		if !strings.HasPrefix(line, `"svce"<blob>="`) {
+			continue
 		}
-		data = []byte(strings.TrimSpace(string(data)))
-	} else {
-		// On Linux, read from file
-		data, err = os.ReadFile(getCredsPath())
-		if err != nil {
-			return ""
+		// Extract value between quotes
+		start := strings.Index(line, `="`) + 2
+		end := strings.LastIndex(line, `"`)
+		if start < 2 || end <= start {
+			continue
+		}
+		svc := line[start:end]
+		if strings.HasPrefix(svc, prefix) && !seen[svc] {
+			seen[svc] = true
+			services = append(services, svc)
 		}
 	}
+	return services
+}
 
+func getAccessToken() string {
+	if runtime.GOOS == "darwin" {
+		return getAccessTokenMacOS()
+	}
+	// Linux: read from file
+	data, err := os.ReadFile(getCredsPath())
+	if err != nil {
+		return ""
+	}
+	return parseAccessToken(data)
+}
+
+func getAccessTokenMacOS() string {
+	services := findKeychainServices()
+	if len(services) == 0 {
+		return ""
+	}
+
+	var bestToken string
+	var bestExpiry int64
+
+	for _, svc := range services {
+		cmd := exec.Command("security", "find-generic-password", "-s", svc, "-w")
+		data, err := cmd.Output()
+		if err != nil {
+			continue
+		}
+		data = []byte(strings.TrimSpace(string(data)))
+		var creds Credentials
+		if err := json.Unmarshal(data, &creds); err != nil || creds.ClaudeAiOauth == nil {
+			continue
+		}
+		if creds.ClaudeAiOauth.ExpiresAt > bestExpiry {
+			bestExpiry = creds.ClaudeAiOauth.ExpiresAt
+			bestToken = creds.ClaudeAiOauth.AccessToken
+		}
+	}
+	return bestToken
+}
+
+func parseAccessToken(data []byte) string {
 	var creds Credentials
 	if err := json.Unmarshal(data, &creds); err != nil {
 		return ""
