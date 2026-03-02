@@ -13,3 +13,23 @@
 
 2025/10/19 (11:22:45) | ===> btop++ v.1.4.0
 2025/10/19 (11:22:45) | WARNING: Failed to join _runner thread on exit!
+
+2026/03/02 (09:33:19) | ===> btop++ v.1.4.0
+2026/03/02 (09:33:19) | INFO: Logger set to INFO
+2026/03/02 (09:33:19) | INFO: Running on /dev/ttys013
+2026/03/02 (09:33:21) | INFO: Quitting! Runtime: 00:00:02
+
+2026/03/02 (09:33:25) | ===> btop++ v.1.4.0
+2026/03/02 (09:33:25) | INFO: Logger set to INFO
+2026/03/02 (09:33:25) | INFO: Running on /dev/ttys013
+2026/03/02 (09:33:49) | INFO: Quitting! Runtime: 00:00:24
+
+2026/03/02 (09:33:50) | ===> btop++ v.1.4.0
+2026/03/02 (09:33:50) | INFO: Logger set to INFO
+2026/03/02 (09:33:50) | INFO: Running on /dev/ttys013
+2026/03/02 (09:34:28) | INFO: Quitting! Runtime: 00:00:38
+
+2026/03/02 (09:34:33) | ===> btop++ v.1.4.0
+2026/03/02 (09:34:33) | INFO: Logger set to INFO
+2026/03/02 (09:34:33) | INFO: Running on /dev/ttys013
+2026/03/02 (09:34:41) | INFO: Quitting! Runtime: 00:00:08
