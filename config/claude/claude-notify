@@ -83,10 +83,18 @@ play() {
 notify() {
     local urgency="$1" timeout="$2" title="$3" body="$4"
     local bg="$5" fg="$6" fr="$7" icon_suffix="${8:-}"
+    local remind_sound="${9:-}" remind_vol="${10:-}"
 
     local icon icon_args=()
     icon=$(ws_icon "$icon_suffix")
     [[ -n "$icon" && -f "$icon" ]] && icon_args=(-I "$icon")
+
+    # reminder loop: replay sound every 30s while notification persists
+    local remind_pid=""
+    if [[ "$timeout" == "0" && -n "$remind_sound" ]]; then
+        ( while true; do sleep 30; play "$remind_sound" "$remind_vol"; done ) &
+        remind_pid=$!
+    fi
 
     local action
     action=$(dunstify -a "$APP" -u "$urgency" -t "$timeout" \
@@ -94,6 +102,8 @@ notify() {
         -h "string:bgcolor:$bg" -h "string:fgcolor:$fg" -h "string:frcolor:$fr" \
         "${icon_args[@]}" -A "focus,Focus" \
         "$title" "$body")
+
+    [[ -n "$remind_pid" ]] && kill "$remind_pid" 2>/dev/null
 
     if [[ "$action" == "focus" && -n "$WINDOW_ID" ]]; then
         local log="/tmp/${APP}-notify.log"
@@ -142,16 +152,19 @@ case "$TYPE" in
     complete)
         play jobs-done "$LOUD"
         notify normal 0 "$(summary last_assistant_message 'Jobs done')" "" \
-            "$ORN_BG" "$ORN_FG" "$ORN_FR" "-active" </dev/null &>/dev/null & disown
+            "$ORN_BG" "$ORN_FG" "$ORN_FR" "-active" \
+            "jobs-done" "$QUIET" </dev/null &>/dev/null & disown
         ;;
     idle)
         play hey-listen "$QUIET"
         notify normal 0 "$(summary message 'Waiting for input')" "" \
-            "$PRP_BG" "$PRP_FG" "$PRP_FR" "-idle" </dev/null &>/dev/null & disown
+            "$PRP_BG" "$PRP_FG" "$PRP_FR" "-idle" \
+            "hey-listen" "$QUIET" </dev/null &>/dev/null & disown
         ;;
     permission)
         play ssb-ready
         notify normal 0 "$(summary message 'Permission needed')" "" \
-            "$GRN_BG" "$GRN_FG" "$GRN_FR" "-monocle" </dev/null &>/dev/null & disown
+            "$GRN_BG" "$GRN_FG" "$GRN_FR" "-monocle" \
+            "ssb-ready" "$QUIET" </dev/null &>/dev/null & disown
         ;;
 esac
