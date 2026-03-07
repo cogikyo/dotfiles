@@ -108,12 +108,10 @@ sddm
 shellharden
 slurp
 socat
-sof-firmware
 spotify-launcher
 sqlc
 starship
 strongswan
-sudo
 tailwindcss-language-server
 thunar
 tldr
@@ -134,7 +132,6 @@ wget
 wireplumber
 wl-clipboard
 words
-wpa_supplicant
 xdg-desktop-portal-gtk
 xdg-desktop-portal-hyprland
 xplr
