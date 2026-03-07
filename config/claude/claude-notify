@@ -90,6 +90,7 @@ notify() {
 
     local action
     action=$(dunstify -a "$APP" -u "$urgency" -t "$timeout" \
+        -r "$((${WINDOW_ID:-0} + 100000))" \
         -h "string:bgcolor:$bg" -h "string:fgcolor:$fg" -h "string:frcolor:$fr" \
         "${icon_args[@]}" -A "focus,Focus" \
         "$title" "$body")
