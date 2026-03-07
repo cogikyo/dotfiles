@@ -29,7 +29,7 @@ GEOM=$(cat "$GEOM_FILE")
 case $mode in
     clipboard)
         grim -g "$GEOM" - | wl-copy
-        notify "saved to clipboard"
+        # notify "saved to clipboard"
         ;;
     file)
         FILE="/tmp/screenshot_$(date +%s).png"
