@@ -27,8 +27,10 @@ return {
 				vim.keymap.set(mode, l, r, opts)
 			end
 
-			map("n", "]h", nav_hunk("next"), { desc = "Next hunk" })
-			map("n", "[h", nav_hunk("prev"), { desc = "Previous hunk" })
+			map("n", "]h", nav_hunk("next"), { desc = "Next hunk (file)" })
+			map("n", "[h", nav_hunk("prev"), { desc = "Previous hunk (file)" })
+			map("n", "<A-n>", function() gs.nav_hunk("next", { target = "all" }) end, { desc = "Next hunk (all files)" })
+			map("n", "<A-N>", function() gs.nav_hunk("prev", { target = "all" }) end, { desc = "Previous hunk (all files)" })
 			map("n", "<leader>hs", gs.stage_hunk, { desc = "Stage hunk" })
 			map("n", "<leader>hr", gs.reset_hunk, { desc = "Reset hunk" })
 			map("v", "<leader>hs", function()
