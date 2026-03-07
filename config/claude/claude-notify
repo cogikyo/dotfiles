@@ -128,10 +128,8 @@ APP="${APP:-claude}"
 
 case "$TYPE" in
     start)
-        sounds=(sdv-collect-item civ6-notification civ5-worker-select ssb-ready)
-        pick="${sounds[$((RANDOM % ${#sounds[@]}))]}"
-        play "$pick" "$QUIET"
-        notify low 2000 "$(summary prompt "${MESSAGE:-$pick}")" "" \
+        play civ5-worker-select "$LOUD"
+        notify low 2000 "$(summary prompt "$MESSAGE")" "" \
             "$BLU_BG" "$BLU_FG" "$BLU_FR" "" </dev/null &>/dev/null & disown
         ;;
     subagent)
@@ -142,16 +140,16 @@ case "$TYPE" in
         ;;
     complete)
         play jobs-done "$LOUD"
-        notify low 20000 "$(summary last_assistant_message 'Jobs done')" "" \
+        notify normal 0 "$(summary last_assistant_message 'Jobs done')" "" \
             "$ORN_BG" "$ORN_FG" "$ORN_FR" "-active" </dev/null &>/dev/null & disown
         ;;
     idle)
         play hey-listen "$QUIET"
-        notify low 0 "$(summary message 'Waiting for input')" "" \
-            "$PRP_BG" "$PRP_FG" "$PRP_FR" "" </dev/null &>/dev/null & disown
+        notify normal 0 "$(summary message 'Waiting for input')" "" \
+            "$PRP_BG" "$PRP_FG" "$PRP_FR" "-idle" </dev/null &>/dev/null & disown
         ;;
     permission)
-        play hey-listen "$LOUD"
+        play ssb-ready
         notify normal 0 "$(summary message 'Permission needed')" "" \
             "$GRN_BG" "$GRN_FG" "$GRN_FR" "-monocle" </dev/null &>/dev/null & disown
         ;;
