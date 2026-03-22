@@ -9,7 +9,7 @@ local function setup()
 		"html", "css", -- web/templates
 		"json", "jsonc", "yaml", "toml", "xml", -- data/config formats
 		"graphql", "proto", "http", -- API schemas
-		"dockerfile", "gitignore", "diff", "hcl", "terraform", -- infra/tooling
+		"dockerfile", "gitignore", "diff", "hcl", "terraform", "hyprlang", -- infra/tooling
 		"regex", "sql", -- text/query helpers
 	})
 
