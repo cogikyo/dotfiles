@@ -588,6 +588,10 @@ step_link() {
                 ((unchanged_count++))
                 return 0
             fi
+            # Real directory in the way (e.g. leftover from content-level linking)
+            if [[ -d "$target" && ! -L "$target" ]]; then
+                rm -rf "$target"
+            fi
         fi
 
         ln -sfn "$src" "$target"
@@ -597,25 +601,8 @@ step_link() {
     verify_link_mapping() {
         local src="$1"
         local dst="$2"
-        local src_real dst_real src_file rel_file dst_file
-
-        if [[ -d "$src" && ! -L "$src" ]]; then
-            [[ -d "$dst" ]] || return 1
-            while IFS= read -r -d '' src_file; do
-                rel_file="${src_file#"$src"/}"
-                dst_file="$dst/$rel_file"
-                [[ -e "$dst_file" || -L "$dst_file" ]] || return 1
-                src_real=$(canonpath "$src_file")
-                dst_real=$(canonpath "$dst_file")
-                [[ "$src_real" == "$dst_real" ]] || return 1
-            done < <(find "$src" \( -type f -o -type l \) -print0)
-            return 0
-        fi
-
         [[ -e "$dst" || -L "$dst" ]] || return 1
-        src_real=$(canonpath "$src")
-        dst_real=$(canonpath "$dst")
-        [[ "$src_real" == "$dst_real" ]]
+        [[ "$(canonpath "$src")" == "$(canonpath "$dst")" ]]
     }
 
     ensure_user_skills_linked() {
@@ -633,29 +620,8 @@ step_link() {
         skills_linked=1
     }
 
-    link_tree_contents() {
-        local src="$1"
-        local dst="$2"
-        mkdir -p "$dst"
-
-        local item name target
-        shopt -s dotglob nullglob
-        for item in "$src"/*; do
-            name=$(basename "$item")
-            [[ "$name" == "." || "$name" == ".." ]] && continue
-            target="$dst/$name"
-
-            # Replace real dirs with symlinks (apps like GLava need dir symlinks)
-            if [[ -d "$item" && ! -L "$item" && -d "$target" && ! -L "$target" ]]; then
-                rm -rf "$target"
-            fi
-            link_or_skip "$item" "$target"
-        done
-        shopt -u dotglob nullglob
-    }
-
-    # Config directories -> ~/.config/<name> (content-level sync via symlinks)
-    info "Linking config content into ~/.config/..."
+    # Config directories -> ~/.config/<name> (directory-level symlinks)
+    info "Linking config into ~/.config/..."
     mkdir -p "$HOME/.config"
     mkdir -p "$HOME/.local/bin"
 
@@ -667,11 +633,7 @@ step_link() {
             claude|codex|firefox) continue ;;
         esac
 
-        if [[ -d "$item" && ! -L "$item" ]]; then
-            link_tree_contents "$item" "$HOME/.config/$name"
-        else
-            link_or_skip "$item" "$HOME/.config/$name"
-        fi
+        link_or_skip "$item" "$HOME/.config/$name"
 
         if verify_link_mapping "$item" "$HOME/.config/$name"; then
             ok "$name linked"
@@ -744,31 +706,13 @@ step_link() {
 }
 
 healthcheck_link() {
-    local item name src dst src_real dst_real src_file rel_file dst_file
-    local checked_entries=0
+    local item name checked_entries=0
 
     verify_link_mapping() {
         local src="$1"
         local dst="$2"
-        local src_real dst_real src_file rel_file dst_file
-
-        if [[ -d "$src" && ! -L "$src" ]]; then
-            [[ -d "$dst" ]] || return 1
-            while IFS= read -r -d '' src_file; do
-                rel_file="${src_file#"$src"/}"
-                dst_file="$dst/$rel_file"
-                [[ -e "$dst_file" || -L "$dst_file" ]] || return 1
-                src_real=$(canonpath "$src_file")
-                dst_real=$(canonpath "$dst_file")
-                [[ "$src_real" == "$dst_real" ]] || return 1
-            done < <(find "$src" \( -type f -o -type l \) -print0)
-            return 0
-        fi
-
         [[ -e "$dst" || -L "$dst" ]] || return 1
-        src_real=$(canonpath "$src")
-        dst_real=$(canonpath "$dst")
-        [[ "$src_real" == "$dst_real" ]]
+        [[ "$(canonpath "$src")" == "$(canonpath "$dst")" ]]
     }
 
     info "Healthcheck(link)"
@@ -790,7 +734,7 @@ healthcheck_link() {
         }
         ((checked_entries++))
     done
-    ok "~/.config mirror links"
+    ok "$HOME/.config mirror links"
 
     step "Verify partial links for claude/codex and shell"
     verify_link_mapping "$DOTFILES/config/claude/settings.json" "$HOME/.config/claude/settings.json" || {
