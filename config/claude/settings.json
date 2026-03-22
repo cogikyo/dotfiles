@@ -17,7 +17,6 @@
       "Skill"
     ]
   },
-  "model": "opus",
   "hooks": {
     "UserPromptSubmit": [
       {
@@ -83,5 +82,6 @@
   "outputStyle": "explanatory",
   "promptSuggestionEnabled": false,
   "preferredNotifChannel": "none",
-  "shiftTabHint": false
+  "shiftTabHint": false,
+  "voiceEnabled": true
 }
