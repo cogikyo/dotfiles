@@ -9,7 +9,7 @@ return {
 		{ "<leader>t<leader>", "<cmd>Telescope find_files<cr>",     desc = "Find files" },
 		{ "<leader>e<leader>", "<cmd>Telescope oldfiles<cr>",       desc = "Recent files" },
 		{ "<leader>s<leader>", "<cmd>Telescope live_grep<cr>",      desc = "Live grep" },
-		{ "<leader>g<leader>", "<cmd>Telescope grep_string<cr>",    desc = "Grep string under cursor" },
+		{ "<leader>g<leader>", "<cmd>Telescope git_status<cr>",      desc = "Git status" },
 		{ "<leader>tg",        "<cmd>Telescope git_files<cr>",      desc = "Git files" },
 		{ "<leader>tb",        "<cmd>Telescope buffers<cr>",        desc = "Buffers" },
 		{ "<leader>th",        "<cmd>Telescope help_tags<cr>",      desc = "Help tags" },
