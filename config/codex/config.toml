@@ -8,17 +8,11 @@ notifications = ["approval-requested"]
 [projects."/home/cullyn/dotfiles"]
 trust_level = "trusted"
 
-[projects."/home/cullyn/acr"]
-trust_level = "trusted"
-
-[projects."/home/cullyn/cogikyo/tagmatic"]
+[projects."/home/cullyn/vagari.firefox"]
 trust_level = "trusted"
 
 [notice]
 hide_full_access_warning = true
-
-[notice.model_migrations]
-"gpt-5.1-codex-max" = "gpt-5.2-codex"
 
 [features]
 shell_snapshot = true
