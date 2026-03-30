@@ -1,8 +1,11 @@
 return {
-	"brenoprata10/nvim-highlight-colors",
+	"catgoose/nvim-colorizer.lua",
 	opts = {
-		render = "background",
-		enable_named_colors = false,
-		enable_tailwind = true,
+		user_default_options = {
+			css = true,
+			tailwind = true,
+			names = false,
+			mode = "background",
+		},
 	},
 }
