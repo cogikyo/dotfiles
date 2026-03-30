@@ -1010,7 +1010,6 @@
     :onclick "bin/pulse_info set_default ${content} & disown"
     :onmiddleclick "kitty --title='terminalfloat' -e pulsemixer & disown"
     :onrightclick "bin/pulse_info mute ${content} & disown"
-    :onmiddleclick "bluetoothctl connect 14:3F:A6:10:A1:B5 & disown"
     :onscroll "bin/pulse_info change_volume ${content} {} & disown"
     :cursor "pointer"
     :tooltip "  ${icon-on} ${content}: ${value}% "
@@ -1046,11 +1045,15 @@
 )
 
 (defwidget bluetooth-status [value]
-  (label
-    :class "tr-c ${(matches(sink-name, "WH-1000XM4") || matches(sink-name, "OpenFit")) ? "" : "music-inactive"}"
-    :text "${(matches(sink-name, "WH-1000XM4") || matches(sink-name, "OpenFit")) ? "󰂯 " : "󰂲 "}"
-    :style "margin-left: -2px; margin-top: 2px;"
-    :tooltip " Bluetooth ${(matches(sink-name, "WH-1000XM4") || matches(sink-name, "pixel buds")) ? "Connected" : "Disconnected"}  "
+  (eventbox
+    :onmiddleclick "bluetoothctl connect 14:3F:A6:10:A1:B5 & disown"
+    :cursor "pointer"
+    (label
+      :class "tr-c ${(matches(sink-name, "WH-1000XM4") || matches(sink-name, "OpenFit")) ? "" : "music-inactive"}"
+      :text "${(matches(sink-name, "WH-1000XM4") || matches(sink-name, "OpenFit")) ? "󰂯 " : "󰂲 "}"
+      :style "margin-left: -2px; margin-top: 2px;"
+      :tooltip " Bluetooth ${(matches(sink-name, "WH-1000XM4") || matches(sink-name, "pixel buds")) ? "Connected" : "Disconnected"}  "
+    )
   )
 )
 
@@ -1271,7 +1274,7 @@
     :cursor "pointer"
     :onhover "eww update pacman-hover=true"
     :onhoverlost "eww update pacman-hover=false"
-    :onclick 'kitty --title="terminalfloat" -e "yay" & disown'
+    :onclick 'kitty --title="terminal" -e "yay" & disown'
     (label
       :class "tr-a pacman ramp-${
              upgrades < 1  ? "3" :
