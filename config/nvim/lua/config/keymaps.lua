@@ -246,19 +246,7 @@ map("n", "<leader>g=", "mlgg=G`lzvzt", desc("Indent file"))
 -- stylua: ignore start
 map("n", "<leader>mu", ":Lazy update<CR>",                         desc("Update plugins"))
 map("n", "<leader>ut", ":UndotreeToggle<CR>",                      desc("Undo tree"))
-map("n", "<leader>ct", function()
-	local buf = vim.api.nvim_get_current_buf()
-	local tw = not vim.b[buf].colorizer_tailwind
-	vim.b[buf].colorizer_tailwind = tw
-	require("colorizer").detach_from_buffer(buf)
-	require("colorizer").attach_to_buffer(buf, {
-		css = true,
-		tailwind = tw,
-		names = false,
-		mode = "background",
-	})
-	vim.notify("Tailwind colors " .. (tw and "on" or "off"), vim.log.levels.INFO)
-end, desc("Toggle tailwind colors"))
+map("n", "<leader>ct", ":ColorizerToggle<CR>", desc("Toggle colors"))
 map("n", "<leader>st", ":set spell!<CR>",                          desc("Toggle spell"))
 map("n", "<leader>sc", ":let @/ = ''<CR>",                         desc("Clear search"))
 map("n", "<leader>wt", ":set wrap!<CR> :echo 'wrap toggled'<CR>",  desc("Toggle wrap"))
