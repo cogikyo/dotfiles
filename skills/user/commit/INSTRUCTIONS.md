@@ -59,7 +59,7 @@ Launch one Task agent (`subagent_type: "Bash"`) per logical group, run **sequent
 
 **Prompt template for sub-agents:**
 
-````
+```
 Commit changes for: [brief description]
 
 Changes:
@@ -72,18 +72,15 @@ git add [files] && git commit -m "$(cat <<'EOF'
 verb(scope): description
 EOF
 )"
-````
+```
 
 Do NOT touch files outside this list.
-
 ```
 
 ### 4. Commit Message Format
 
 ```
-
 verb(scope/context): short summary
-
 ```
 
 **Scope**: Auto-detect from paths, always use 2 levels for feature-heavy areas
@@ -99,52 +96,39 @@ verb(scope/context): short summary
 
 - Summary line: terse, no filler words, no verbose explanations
 - **Bulleted body is MANDATORY** when a commit touches 2+ files or makes 2+ distinct changes:
-```
+  ```
+  verb(scope): short summary
 
-verb(scope): short summary
-
-- change one
-- change two
-- change three
-
-```
+  - change one
+  - change two
+  - change three
+  ```
 - Each bullet: short phrase, not a full sentence, one line, no wrapping
 - Single-file single-change commits: summary line only, no body needed
 
 **Never do this:**
 
 ```
-
 # BAD: long verbose summary, no bullets
-
 fix(nvim): update the LSP configuration to handle the new diagnostic handler registration and also fix the null pointer issue that was causing crashes
 
 # BAD: one-word lazy commit
-
 fix
 
 # BAD: cramming unrelated changes into one commit
-
 edit(config): various tweaks
 
 # BAD: scope too broad, "and" = two commits
-
 feat(creatives): org owner collaborator visibility and approved-only downloads
-
 # GOOD: split into two commits with sub-scopes
-
 adjust(creatives/permissions): org owner collaborator visibility
 adjust(creatives/download): restrict downloads to approved-only
 
 # BAD: top-level scope when sub-feature is obvious
-
 fix(creatives): prevent stale video preview during navigation
-
 # GOOD: drill into the sub-feature
-
 fix(creatives/video): prevent stale preview during navigation
-
-````
+```
 
 ### 5. Commit Types
 
@@ -193,7 +177,7 @@ verb(scope): short summary
 - another change
 EOF
 )"
-````
+```
 
 **Default: atomic commits** — one logical change per commit. Separate commits for separate concerns, even if they're small. Only group when changes are genuinely part of the same logical unit (not just "edited in the same session"). When grouped, bulleted body is mandatory.
 
@@ -264,3 +248,45 @@ git commit -m "fix(nvim/lsp): null check on handler"
 git add -p nvim/lua/plugins/lsp.lua
 git commit -m "add(nvim/lsp): diagnostic virtual text toggle"
 ```
+
+### App/Feature Commits (larger codebases)
+
+For monorepos or feature-heavy projects, use `scope/context` to namespace:
+
+```
+add(creatives/status): CreativeStatus component and rename Legal to Compliance
+
+- Introduce CreativeStatus component with context-aware display labels
+- Users see "IN REVIEW" instead of internal ADMIN_REVIEW/LEGAL_REVIEW statuses
+- Add label prop to base Status component for custom display text
+- Rename "Legal Review" to "Compliance Review" in sections, reviewers, and filter options
+```
+
+```
+adjust(creatives/permissions): restrict user view to read-only comments and show all admin actions
+
+- Hide comment input for non-admin in detail and preview views
+- Admin detail page always shows actions and edit regardless of reviewer assignment
+- Reorder approve before reject in preview action footer
+- Rename "Collaborators" label to "Users"
+```
+
+```
+feat(creatives/download): BulkDownload modal with JSZip for user creative downloads
+
+- Add BulkDownloadModal that resolves asset URLs concurrently and bundles into ZIP
+- Add useCreativesDownloadList hook with period filter support for user schema
+- Replace bulk upload button in filters toolbar with download button
+- Export creativesListSchema and DownloadConfig for reuse
+```
+
+```
+improve(creatives/upload): bulk upload flow with multi-file auto-switch
+
+- Add multiple file selection support to FilePicker with onMultipleFiles callback
+- Auto-switch from NewCreative to BulkUpload when multiple files are dropped
+- Accept initialFiles prop on BulkUpload to pre-populate the queue
+- Remove separate bulk upload button from admin ListPage
+```
+
+Note the verb choices: `add` for a new component, `adjust` for permission changes, `feat` for a whole new feature, `improve` for a smoother existing flow. Never `refactor` unless it's purely internal restructuring.
