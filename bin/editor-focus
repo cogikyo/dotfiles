@@ -17,7 +17,7 @@ read -r addr pid < <(hyprctl clients -j | jq -r --argjson ws "$ws" \
 if [[ -z "$addr" || "$addr" == "null" ]]; then
     case "$mode" in
         --term)
-            kitty --title "terminalfloat" --directory "$(active-cwd)" \
+            kitty --title "terminal" --directory "$(active-cwd)" \
                 --session "$HOME/.config/kitty/sessions/term.conf"
             ;;
     esac
