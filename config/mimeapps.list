@@ -21,6 +21,7 @@ image/jpeg=imv.desktop;
 text/plain=nvim.desktop
 text/html=firefox-developer-edition.desktop
 text/xml=nvim.desktop;
+x-scheme-handler/claude-cli=claude-code-url-handler.desktop
 
 [Added Associations]
 x-scheme-handler/http=firefox-developer-edition.desktop;
