@@ -3,7 +3,7 @@ return {
 	dependencies = { "nvim-treesitter/nvim-treesitter" },
 	opts = {
 		server = { override = false },
-		document_color = { enabled = true, inline_symbol = "█" },
-		conceal = { enabled = true, symbol = "…" },
+		document_color = { enabled = false },
+		conceal = { enabled = false },
 	},
 }

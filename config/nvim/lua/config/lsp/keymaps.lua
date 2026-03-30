@@ -73,9 +73,9 @@ function M.setup()
 				tsmap("<leader>fa", action("source.fixAll.ts"), "Fix All")
 			end
 
-			-- Auto-enable inlay hints for TS
+			-- Start with inlay hints disabled for TS (toggle with <leader>ht)
 			if client.name == "ts_ls" then
-				vim.lsp.inlay_hint.enable(true, { bufnr = event.buf })
+				vim.lsp.inlay_hint.enable(false, { bufnr = event.buf })
 			end
 
 			-- Codelens refresh

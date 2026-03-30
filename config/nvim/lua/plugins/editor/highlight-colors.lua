@@ -3,9 +3,14 @@ return {
 	opts = {
 		user_default_options = {
 			css = true,
-			tailwind = true,
+			tailwind = false,
 			names = false,
 			mode = "background",
+		},
+		filetypes = {
+			"*",
+			css = { tailwind = true },
+			scss = { tailwind = true },
 		},
 	},
 }

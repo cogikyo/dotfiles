@@ -118,14 +118,13 @@ local function yank_diagnostics()
 	vim.api.nvim_buf_add_highlight(0, ns, "ContextYank", line - 1, 0, -1)
 	vim.defer_fn(function()
 		vim.api.nvim_buf_clear_namespace(0, ns, 0, -1)
-	end, 350)
+	end, 300)
 
 	vim.notify("Yanked " .. #diagnostics .. " diagnostic(s)", vim.log.levels.INFO)
 end
 
 map("n", "<A-f>", ':let @+=expand("%:p")<CR>', desc("Yank file path"))
-map("v", "<A-b>", yank_path, desc("Yank file path + selection"))
-map("n", "<A-p>", yank_paragrah("vap"), desc("Yank file path + paragraph"))
+map("n", "<A-q>", yank_paragrah("vap"), desc("Yank file path + paragraph"))
 map("n", "<A-w>", yank_diagnostics, desc("Yank file path + diagnostics"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
@@ -220,7 +219,6 @@ map("i", ":", ":<C-g>u")
 map("n", "<leader><C-o>",  ":bp<CR>zvzt",             desc("Previous buffer"))
 map("n", "<leader><C-i>",  ":bn<CR>zvzt",             desc("Next buffer"))
 map("n", "<leader>b<C-w>", ":bd!<CR>zvzt",            desc("Delete buffer"))
-map("n", "<leader>pt",     ":InspectTree<CR>",        desc("Tree sitter inspect"))
 map("n", "<leader>pc",     ":Inspect<CR>",            desc("TS inspect"))
 map("n", "<Down>",         "<C-w>j",                  desc("Window down"))
 map("n", "<Up>",           "<C-w>k",                  desc("Window up"))
@@ -248,7 +246,19 @@ map("n", "<leader>g=", "mlgg=G`lzvzt", desc("Indent file"))
 -- stylua: ignore start
 map("n", "<leader>mu", ":Lazy update<CR>",                         desc("Update plugins"))
 map("n", "<leader>ut", ":UndotreeToggle<CR>",                      desc("Undo tree"))
-map("n", "<leader>ct", ":HighlightColors Toggle<CR>",              desc("Toggle colors"))
+map("n", "<leader>ct", function()
+	local buf = vim.api.nvim_get_current_buf()
+	local tw = not vim.b[buf].colorizer_tailwind
+	vim.b[buf].colorizer_tailwind = tw
+	require("colorizer").detach_from_buffer(buf)
+	require("colorizer").attach_to_buffer(buf, {
+		css = true,
+		tailwind = tw,
+		names = false,
+		mode = "background",
+	})
+	vim.notify("Tailwind colors " .. (tw and "on" or "off"), vim.log.levels.INFO)
+end, desc("Toggle tailwind colors"))
 map("n", "<leader>st", ":set spell!<CR>",                          desc("Toggle spell"))
 map("n", "<leader>sc", ":let @/ = ''<CR>",                         desc("Clear search"))
 map("n", "<leader>wt", ":set wrap!<CR> :echo 'wrap toggled'<CR>",  desc("Toggle wrap"))
