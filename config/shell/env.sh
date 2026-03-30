@@ -2,6 +2,7 @@
 
 export PATH="$HOME/.cargo/bin:$HOME/.go/bin:$HOME/.local/bin:$PATH"
 export GOPATH="$HOME/.go"
+export GOPRIVATE="git.linecode.dev/*"
 
 # export TERM=xterm-256color  # Let terminal set its own (kitty needs xterm-kitty for undercurls)
 export PAGER=nvimpager
