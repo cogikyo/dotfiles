@@ -15,8 +15,8 @@ elif [[ "$ws" == "5" || "$current" == "5" ]]; then
     anim="slidevert"
 fi
 
-hyprctl keyword animation "workspaces, 1, 0.5, default, $anim"
+hyprctl keyword animation "workspaces, 1, 3, default, $anim"
 hyprctl dispatch workspace "$ws"
 change-bg "kill"
-hyprctl keyword animation "workspaces, 1, 0.5, default, slide"
+hyprctl keyword animation "workspaces, 1, 3, default, slide"
 
