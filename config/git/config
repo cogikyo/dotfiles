@@ -13,8 +13,6 @@
 	rebase = true
 [init]
     defaultBranch = master
-[url "git@git.linecode.net:"]
-	insteadOf = https://git.linecode.net/
 [url "git@git.linecode.dev:"]
 	insteadOf = https://git.linecode.dev/
 [includeIf "gitdir:/Users/"]
