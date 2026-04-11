@@ -1,7 +1,7 @@
 [user]
 	name = cullyn
 	email = cullyn.newman@gmail.com
-	signingkey = /home/cullyn/.ssh/costello.pub
+	signingkey = ~/.ssh/cullyn.pub
 [core]
 	editor = nvim
     ignorecase = false
