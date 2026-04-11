@@ -1058,6 +1058,7 @@ step_system() {
         ["systemd/logid-restart.service"]="/etc/systemd/system/logid-restart.service"
         ["libinput/local-overrides.quirks"]="/etc/libinput/local-overrides.quirks"
         ["gifview.desktop"]="/usr/share/applications/gifview.desktop"
+        ["pam.d/hyprlock"]="/etc/pam.d/hyprlock"
     )
 
     local installed=0

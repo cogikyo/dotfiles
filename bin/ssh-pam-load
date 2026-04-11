@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# ssh-pam-load — Load SSH keys into ssh-agent using PAM auth token.
+# Called by pam_exec(8) with expose_authtok after successful hyprlock auth.
+# The login password is passed on stdin and used as the SSH key passphrase.
+
+set -euo pipefail
+
+IFS= read -rs _SSH_AUTHTOK
+export _SSH_AUTHTOK
+
+export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR}/ssh-agent.socket"
+export SSH_ASKPASS="$HOME/.local/bin/ssh-askpass-env"
+export SSH_ASKPASS_REQUIRE=force
+
+for pub in "$HOME"/.ssh/*.pub; do
+    key="${pub%.pub}"
+    [ -f "$key" ] && setsid ssh-add "$key" </dev/null >/dev/null 2>&1 || true
+done
+
+unset _SSH_AUTHTOK

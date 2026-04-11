@@ -1,0 +1,11 @@
+[Unit]
+Description=SSH Agent (key manager)
+
+[Service]
+Type=simple
+Environment=SSH_AUTH_SOCK=%t/ssh-agent.socket
+ExecStart=/usr/bin/ssh-agent -D -a %t/ssh-agent.socket
+ExecStartPost=/bin/sleep 0
+
+[Install]
+WantedBy=default.target
