@@ -38,4 +38,6 @@ bluetoothctl connect 14:3F:A6:10:A1:B5 & disown
 dunstify -a "attention" -u low "$USER@$HOSTNAME" "こんにちは"
 eww-open
 
+hyprlock
+
 exit 0
