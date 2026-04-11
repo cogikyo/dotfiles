@@ -10,6 +10,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -21,6 +22,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -63,6 +65,7 @@ const (
 	barContext   = "㊋"
 	barFilled    = "◉"
 	barEmpty     = "○"
+	iconError    = "󰅜"
 )
 
 var barProgress = []string{"󰪞", "󰪟", "󰪠", "󰪡", "󰪢", "󰪣", "󰪤", "󰪥", "󰪦", "󰪧"}
@@ -117,15 +120,24 @@ type UsagePeriod struct {
 }
 
 type CachedUsage struct {
-	FetchedAt int64         `json:"fetched_at"`
-	Response  UsageResponse `json:"response"`
+	FetchedAt int64          `json:"fetched_at"`
+	Response  *UsageResponse `json:"response"`  // nil when API failed (negative cache)
+	Error     string         `json:"error,omitempty"` // reason for failure
+}
+
+// Request stats for debugging rate limits
+type RequestStats struct {
+	FirstRequest int64 `json:"first_request"`
+	Count        int   `json:"count"`
 }
 
 // ─────────────────────────────────────────────────
 // Cache Configuration
 // ─────────────────────────────────────────────────
 
-const cacheTTL = 60 * time.Second
+const cacheTTL = 5 * time.Minute
+const negCacheTTL = 60 * time.Second       // transient errors (timeout, etc)
+const rateLimitCacheTTL = 10 * time.Minute // back off hard on 429
 
 func getCacheDir() string {
 	if xdg := os.Getenv("XDG_CACHE_HOME"); xdg != "" {
@@ -143,10 +155,39 @@ func getCachePath() string {
 // Credentials
 // ─────────────────────────────────────────────────
 
+type OAuthData struct {
+	AccessToken      string   `json:"accessToken"`
+	RefreshToken     string   `json:"refreshToken"`
+	ExpiresAt        int64    `json:"expiresAt"`
+	Scopes           []string `json:"scopes"`
+	SubscriptionType string   `json:"subscriptionType,omitempty"`
+	RateLimitTier    string   `json:"rateLimitTier,omitempty"`
+}
+
 type Credentials struct {
-	ClaudeAiOauth *struct {
-		AccessToken string `json:"accessToken"`
-	} `json:"claudeAiOauth"`
+	ClaudeAiOauth *OAuthData `json:"claudeAiOauth"`
+}
+
+// OAuth refresh constants
+const (
+	oauthTokenURL = "https://platform.claude.com/v1/oauth/token"
+	oauthClientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
+	// Refresh 5 minutes before actual expiry to avoid races
+	expiryBuffer = 5 * time.Minute
+)
+
+type TokenRefreshRequest struct {
+	GrantType    string `json:"grant_type"`
+	RefreshToken string `json:"refresh_token"`
+	ClientID     string `json:"client_id"`
+	Scope        string `json:"scope"`
+}
+
+type TokenRefreshResponse struct {
+	AccessToken  string `json:"access_token"`
+	RefreshToken string `json:"refresh_token"`
+	ExpiresIn    int    `json:"expires_in"`
+	Scope        string `json:"scope"`
 }
 
 func getCredsPath() string {
@@ -164,31 +205,213 @@ func getCredsPath() string {
 	return filepath.Join(home, ".claude", ".credentials.json")
 }
 
-func getAccessToken() string {
-	var data []byte
-	var err error
+// findKeychainServices returns all keychain service names matching "Claude Code-credentials*".
+func findKeychainServices() []string {
+	cmd := exec.Command("security", "dump-keychain")
+	out, err := cmd.Output()
+	if err != nil {
+		return nil
+	}
+	const prefix = "Claude Code-credentials"
+	var services []string
+	seen := make(map[string]bool)
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSpace(line)
+		// Match: "svce"<blob>="Claude Code-credentials..."
+		if !strings.HasPrefix(line, `"svce"<blob>="`) {
+			continue
+		}
+		// Extract value between quotes
+		start := strings.Index(line, `="`) + 2
+		end := strings.LastIndex(line, `"`)
+		if start < 2 || end <= start {
+			continue
+		}
+		svc := line[start:end]
+		if strings.HasPrefix(svc, prefix) && !seen[svc] {
+			seen[svc] = true
+			services = append(services, svc)
+		}
+	}
+	return services
+}
 
-	// On macOS, use Keychain
+func getAccessToken() string {
 	if runtime.GOOS == "darwin" {
-		cmd := exec.Command("security", "find-generic-password", "-s", "Claude Code-credentials", "-w")
-		data, err = cmd.Output()
+		return getAccessTokenMacOS()
+	}
+	// Linux: read from file
+	data, err := os.ReadFile(getCredsPath())
+	if err != nil {
+		return ""
+	}
+	return parseAccessToken(data)
+}
+
+func isTokenExpired(expiresAt int64) bool {
+	expiryTime := time.UnixMilli(expiresAt)
+	return time.Now().Add(expiryBuffer).After(expiryTime)
+}
+
+func refreshToken(oauth *OAuthData) (*TokenRefreshResponse, error) {
+	scope := strings.Join(oauth.Scopes, " ")
+	if scope == "" {
+		scope = "user:inference user:profile user:mcp_servers user:sessions:claude_code"
+	}
+
+	reqBody := TokenRefreshRequest{
+		GrantType:    "refresh_token",
+		RefreshToken: oauth.RefreshToken,
+		ClientID:     oauthClientID,
+		Scope:        scope,
+	}
+
+	body, err := json.Marshal(reqBody)
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	req, err := http.NewRequest("POST", oauthTokenURL, bytes.NewReader(body))
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("refresh failed: %d", resp.StatusCode)
+	}
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var tokenResp TokenRefreshResponse
+	if err := json.Unmarshal(respBody, &tokenResp); err != nil {
+		return nil, err
+	}
+	return &tokenResp, nil
+}
+
+func updateKeychainEntry(svc string, creds *Credentials) {
+	data, err := json.Marshal(creds)
+	if err != nil {
+		return
+	}
+
+	// Get the account name from the existing entry
+	cmd := exec.Command("security", "find-generic-password", "-s", svc)
+	out, err := cmd.Output()
+	if err != nil {
+		return
+	}
+	// Parse account name from output: "acct"<blob>="..."
+	account := ""
+	for _, line := range strings.Split(string(out), "\n") {
+		line = strings.TrimSpace(line)
+		if strings.HasPrefix(line, `"acct"<blob>="`) {
+			start := strings.Index(line, `="`) + 2
+			end := strings.LastIndex(line, `"`)
+			if start >= 2 && end > start {
+				account = line[start:end]
+			}
+		}
+	}
+	if account == "" {
+		return
+	}
+
+	// Update the keychain entry
+	cmd = exec.Command("security", "add-generic-password", "-U",
+		"-a", account, "-s", svc, "-w", string(data))
+	cmd.Run()
+}
+
+type keychainEntry struct {
+	service string
+	creds   Credentials
+}
+
+func getAccessTokenMacOS() string {
+	services := findKeychainServices()
+	if len(services) == 0 {
+		return ""
+	}
+
+	// Collect all entries
+	var entries []keychainEntry
+	for _, svc := range services {
+		cmd := exec.Command("security", "find-generic-password", "-s", svc, "-w")
+		data, err := cmd.Output()
 		if err != nil {
-			return ""
+			continue
 		}
 		data = []byte(strings.TrimSpace(string(data)))
-	} else {
-		// On Linux, read from file
-		data, err = os.ReadFile(getCredsPath())
-		if err != nil {
-			return ""
+		var creds Credentials
+		if err := json.Unmarshal(data, &creds); err != nil || creds.ClaudeAiOauth == nil {
+			continue
+		}
+		entries = append(entries, keychainEntry{service: svc, creds: creds})
+	}
+
+	if len(entries) == 0 {
+		return ""
+	}
+
+	// Find the entry with the latest expiry
+	best := 0
+	for i, e := range entries {
+		if e.creds.ClaudeAiOauth.ExpiresAt > entries[best].creds.ClaudeAiOauth.ExpiresAt {
+			best = i
 		}
 	}
 
+	entry := &entries[best]
+	oauth := entry.creds.ClaudeAiOauth
+
+	// If not expired, use it directly
+	if !isTokenExpired(oauth.ExpiresAt) {
+		return oauth.AccessToken
+	}
+
+	// Token expired — try to refresh
+	if oauth.RefreshToken == "" {
+		return ""
+	}
+
+	tokenResp, err := refreshToken(oauth)
+	if err != nil {
+		return ""
+	}
+
+	// Update credentials and persist to keychain
+	oauth.AccessToken = tokenResp.AccessToken
+	if tokenResp.RefreshToken != "" {
+		oauth.RefreshToken = tokenResp.RefreshToken
+	}
+	oauth.ExpiresAt = time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second).UnixMilli()
+
+	updateKeychainEntry(entry.service, &entry.creds)
+
+	return oauth.AccessToken
+}
+
+func parseAccessToken(data []byte) string {
 	var creds Credentials
 	if err := json.Unmarshal(data, &creds); err != nil {
 		return ""
 	}
 	if creds.ClaudeAiOauth == nil {
+		return ""
+	}
+	if isTokenExpired(creds.ClaudeAiOauth.ExpiresAt) {
 		return ""
 	}
 	return creds.ClaudeAiOauth.AccessToken
@@ -332,75 +555,172 @@ func loadCache() (*CachedUsage, bool) {
 	if err := json.Unmarshal(data, &cached); err != nil {
 		return nil, false
 	}
-	// Check TTL
-	if time.Since(time.Unix(cached.FetchedAt, 0)) > cacheTTL {
+	age := time.Since(time.Unix(cached.FetchedAt, 0))
+	ttl := cacheTTL
+	if cached.Response == nil {
+		if cached.Error == "rate limited" {
+			ttl = rateLimitCacheTTL
+		} else {
+			ttl = negCacheTTL
+		}
+	}
+	if age > ttl {
 		return nil, false
 	}
 	return &cached, true
 }
 
-func saveCache(resp *UsageResponse) {
+func getStatsPath() string {
+	return filepath.Join(getCacheDir(), "usage-stats.json")
+}
+
+func recordRequest() RequestStats {
+	var stats RequestStats
+	data, err := os.ReadFile(getStatsPath())
+	if err == nil {
+		json.Unmarshal(data, &stats)
+	}
+	now := time.Now()
+	// Reset daily: if first request was on a different day, start fresh
+	if stats.FirstRequest != 0 {
+		first := time.Unix(stats.FirstRequest, 0)
+		y1, m1, d1 := first.Date()
+		y2, m2, d2 := now.Date()
+		if y1 != y2 || m1 != m2 || d1 != d2 {
+			stats = RequestStats{}
+		}
+	}
+	if stats.FirstRequest == 0 {
+		stats.FirstRequest = now.Unix()
+	}
+	stats.Count++
+	if out, err := json.Marshal(stats); err == nil {
+		os.WriteFile(getStatsPath(), out, 0644)
+	}
+	return stats
+}
+
+func getRequestStats() RequestStats {
+	var stats RequestStats
+	data, err := os.ReadFile(getStatsPath())
+	if err == nil {
+		json.Unmarshal(data, &stats)
+	}
+	return stats
+}
+
+func formatStatsDuration(stats RequestStats) string {
+	if stats.FirstRequest == 0 || stats.Count == 0 {
+		return ""
+	}
+	elapsed := time.Since(time.Unix(stats.FirstRequest, 0))
+	if elapsed < time.Minute {
+		return fmt.Sprintf("%dreq/%ds", stats.Count, int(elapsed.Seconds()))
+	}
+	return fmt.Sprintf("%dreq/%dm", stats.Count, int(elapsed.Minutes()))
+}
+
+// saveCache persists a result (or nil for negative cache) to disk.
+func saveCache(resp *UsageResponse, errMsg string) {
 	cached := CachedUsage{
 		FetchedAt: time.Now().Unix(),
-		Response:  *resp,
+		Response:  resp,
+		Error:     errMsg,
 	}
 	data, err := json.Marshal(cached)
 	if err != nil {
 		return
 	}
-	// Ensure cache directory exists
 	os.MkdirAll(getCacheDir(), 0755)
 	os.WriteFile(getCachePath(), data, 0644)
 }
 
-func fetchUsageFromAPI() *UsageResponse {
+func fetchUsageFromAPI() (*UsageResponse, string) {
 	token := getAccessToken()
 	if token == "" {
-		return nil
+		return nil, "no auth"
 	}
+
+	recordRequest()
 
 	client := &http.Client{Timeout: 2 * time.Second}
 	req, err := http.NewRequest("GET", "https://api.anthropic.com/api/oauth/usage", nil)
 	if err != nil {
-		return nil
+		return nil, ""
 	}
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("anthropic-beta", "oauth-2025-04-20")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return nil
+		return nil, "timeout"
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == 429 {
+		return nil, "rate limited"
+	}
+	if resp.StatusCode == 401 || resp.StatusCode == 403 {
+		return nil, "auth expired"
+	}
 	if resp.StatusCode != 200 {
-		return nil
+		return nil, fmt.Sprintf("http %d", resp.StatusCode)
 	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil
+		return nil, ""
 	}
 
 	var usage UsageResponse
 	if err := json.Unmarshal(body, &usage); err != nil {
-		return nil
+		return nil, ""
 	}
 
-	return &usage
+	return &usage, ""
 }
 
-func getUsageLimits() *UsageResponse {
-	// Try cache first
+type usageResult struct {
+	resp *UsageResponse
+	err  string
+}
+
+func getLockPath() string {
+	return filepath.Join(getCacheDir(), "usage-cache.lock")
+}
+
+func getUsageLimits() usageResult {
+	// Try cache first — no lock needed for reads
 	if cached, ok := loadCache(); ok {
-		return &cached.Response
+		return usageResult{resp: cached.Response, err: cached.Error}
 	}
-	// Fetch from API
-	resp := fetchUsageFromAPI()
-	if resp != nil {
-		saveCache(resp)
+
+	// Cache miss — acquire exclusive lock so only one instance fetches
+	os.MkdirAll(getCacheDir(), 0755)
+	lockFile, err := os.OpenFile(getLockPath(), os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		// Can't lock, just fetch (better than no data)
+		resp, errMsg := fetchUsageFromAPI()
+		return usageResult{resp: resp, err: errMsg}
 	}
-	return resp
+	defer lockFile.Close()
+
+	// Non-blocking try: if another instance holds the lock, return stale/empty
+	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		// Another instance is fetching — return empty rather than block the render
+		return usageResult{}
+	}
+	defer syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
+
+	// Re-check cache after acquiring lock (another instance may have just written it)
+	if cached, ok := loadCache(); ok {
+		return usageResult{resp: cached.Response, err: cached.Error}
+	}
+
+	// We hold the lock and cache is stale — fetch
+	resp, errMsg := fetchUsageFromAPI()
+	saveCache(resp, errMsg)
+	return usageResult{resp: resp, err: errMsg}
 }
 
 // ─────────────────────────────────────────────────
@@ -497,7 +817,7 @@ func main() {
 	// Parallel fetch: git status and usage API
 	var wg sync.WaitGroup
 	var gitStatus *GitStatus
-	var usageResp *UsageResponse
+	var usage usageResult
 
 	wg.Add(2)
 	go func() {
@@ -506,7 +826,7 @@ func main() {
 	}()
 	go func() {
 		defer wg.Done()
-		usageResp = getUsageLimits()
+		usage = getUsageLimits()
 	}()
 	wg.Wait()
 
@@ -541,23 +861,32 @@ func main() {
 	}
 
 	// Usage limits
-	if usageResp != nil {
-		if usageResp.FiveHour != nil {
-			pct := int(usageResp.FiveHour.Utilization)
+	if usage.resp != nil {
+		if usage.resp.FiveHour != nil {
+			pct := int(usage.resp.FiveHour.Utilization)
 			color := pctColor(pct)
 			icon := progressIcon(pct)
-			resetTime := formatResetTime(usageResp.FiveHour.ResetsAt)
+			resetTime := formatResetTime(usage.resp.FiveHour.ResetsAt)
 			out.WriteString(gray + sep + reset)
 			fmt.Fprintf(&out, "%s%s %d%%%s%s", color, icon, pct, resetTime, reset)
 		}
 
-		if usageResp.SevenDay != nil {
-			pct := int(usageResp.SevenDay.Utilization)
+		if usage.resp.SevenDay != nil {
+			pct := int(usage.resp.SevenDay.Utilization)
 			color := pctColor(pct)
 			icon := progressIcon(pct)
-			resetDate := formatResetDate(usageResp.SevenDay.ResetsAt)
+			resetDate := formatResetDate(usage.resp.SevenDay.ResetsAt)
 			out.WriteString(gray + sep + reset)
 			fmt.Fprintf(&out, "%s%s %d%%%s%s", color, icon, pct, resetDate, reset)
+		}
+	} else if usage.err != "" {
+		stats := getRequestStats()
+		statStr := formatStatsDuration(stats)
+		out.WriteString(gray + sep + reset)
+		if statStr != "" {
+			fmt.Fprintf(&out, "%s%s %s %s(%s)%s", brRed, iconError, usage.err, gray, statStr, reset)
+		} else {
+			fmt.Fprintf(&out, "%s%s %s%s", brRed, iconError, usage.err, reset)
 		}
 	}
 
