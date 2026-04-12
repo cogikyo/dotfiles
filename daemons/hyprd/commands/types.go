@@ -66,6 +66,21 @@ type ThreeBodyState struct {
 	Shadow string `json:"shadow"` // Address of hidden slave (in shadow workspace)
 }
 
+// MonocleWindow tracks a single window displaced during monocle mode.
+type MonocleWindow struct {
+	Address  string `json:"address"`
+	OriginWS int    `json:"origin_ws"`
+}
+
+// MonocleState tracks all windows displaced from a workspace during monocle mode,
+// plus the focused window that was floated and resized.
+type MonocleState struct {
+	Focused      string          `json:"focused"`                // Address of the monocled (floated) window
+	Master       string          `json:"master"`                 // Address of the original master window
+	Windows      []MonocleWindow `json:"windows"`
+	HadThreeBody bool            `json:"had_three_body"`         // Whether three-body was active before monocle
+}
+
 // StateManager abstracts daemon state access for commands, providing
 // hidden window management, split ratios, displaced master tracking,
 // and configuration. Implemented by daemon.State.
@@ -88,6 +103,12 @@ type StateManager interface {
 
 	GetProjectPath(ws int) string                  // Returns project root for workspace, or ""
 	SetProjectPath(ws int, path string)             // Sets project root for workspace
+
+	GetMonocle(ws int) *MonocleState               // Returns monocle state for workspace, or nil
+	SetMonocle(ws int, ms *MonocleState)            // Sets monocle state for workspace
+	ClearMonocle(ws int)                            // Removes monocle state for workspace
+	AllMonocle() map[int]*MonocleState              // Returns copy of all monocle states
+	HasAnyMonocle() bool                            // Returns true if any workspace has monocle active
 
 	GetConfig() *config.HyprConfig
 }

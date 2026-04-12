@@ -57,6 +57,8 @@ func main() {
 		cmdSplit()
 	case "hide":
 		cmdHide()
+	case "monocle":
+		cmdMonocle()
 	case "swap":
 		cmdSwap()
 	case "ws":
@@ -175,6 +177,20 @@ func cmdHide() {
 	}
 
 	resp, err := client.Send("hide")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(resp)
+}
+
+func cmdMonocle() {
+	if !client.IsRunning() {
+		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
+		os.Exit(1)
+	}
+
+	resp, err := client.Send("monocle")
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)

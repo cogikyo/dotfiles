@@ -229,6 +229,13 @@ func (d *Daemon) handleCommand(command string) string {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
+	case "monocle":
+		monocle := commands.NewMonocle(d.hypr, d.state)
+		result, err := monocle.Execute()
+		if err != nil {
+			return fmt.Sprintf("error: %v", err)
+		}
+		return result
 	case "three-body":
 		return d.handleThreeBody(arg)
 	case "layout":

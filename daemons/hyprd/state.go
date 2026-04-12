@@ -19,6 +19,7 @@ type State struct {
 	DisplacedMasters map[int]string                   `json:"displaced_masters,omitempty"` // Original master window per workspace
 	ThreeBody        map[int]*commands.ThreeBodyState `json:"three_body,omitempty"`        // Three-body layout state per workspace
 	ProjectPaths     map[int]string                   `json:"project_paths,omitempty"`     // Project root per workspace (resolved via zoxide)
+	Monocle          map[int]*commands.MonocleState   `json:"monocle,omitempty"`           // Windows displaced per workspace during monocle
 	SplitRatio       string                           `json:"split_ratio"`                 // Master/slave split identifier
 	config *config.HyprConfig // Daemon configuration
 }
@@ -32,6 +33,7 @@ func NewState(cfg *config.HyprConfig) *State {
 		DisplacedMasters:   make(map[int]string),
 		ThreeBody:          make(map[int]*commands.ThreeBodyState),
 		ProjectPaths:       make(map[int]string),
+		Monocle:            make(map[int]*commands.MonocleState),
 		SplitRatio:         "default",
 		config:             cfg,
 	}
@@ -191,6 +193,55 @@ func (s *State) SetProjectPath(ws int, path string) {
 	}
 }
 
+// GetMonocle returns a copy of monocle state for a workspace, or nil if inactive.
+func (s *State) GetMonocle(ws int) *commands.MonocleState {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	ms := s.Monocle[ws]
+	if ms == nil {
+		return nil
+	}
+	copied := *ms
+	copied.Windows = make([]commands.MonocleWindow, len(ms.Windows))
+	copy(copied.Windows, ms.Windows)
+	return &copied
+}
+
+// SetMonocle stores monocle state for a workspace.
+func (s *State) SetMonocle(ws int, ms *commands.MonocleState) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.Monocle[ws] = ms
+}
+
+// ClearMonocle removes monocle state for a workspace.
+func (s *State) ClearMonocle(ws int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.Monocle, ws)
+}
+
+// AllMonocle returns a copy of all monocle states.
+func (s *State) AllMonocle() map[int]*commands.MonocleState {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make(map[int]*commands.MonocleState, len(s.Monocle))
+	for k, v := range s.Monocle {
+		copied := *v
+		copied.Windows = make([]commands.MonocleWindow, len(v.Windows))
+		copy(copied.Windows, v.Windows)
+		result[k] = &copied
+	}
+	return result
+}
+
+// HasAnyMonocle returns true if any workspace has monocle mode active.
+func (s *State) HasAnyMonocle() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return len(s.Monocle) > 0
+}
+
 // ClearWindowState removes all tracked state for a window address.
 // Called when a window closes to prevent stale references.
 // Returns the ThreeBodyState the window belonged to (if any) for caller cleanup.
@@ -212,6 +263,19 @@ func (s *State) ClearWindowState(addr string) *commands.ThreeBodyState {
 			return &removed
 		}
 	}
+
+	for ws, ms := range s.Monocle {
+		for i, mw := range ms.Windows {
+			if mw.Address == addr {
+				ms.Windows = append(ms.Windows[:i], ms.Windows[i+1:]...)
+				if len(ms.Windows) == 0 {
+					delete(s.Monocle, ws)
+				}
+				return nil
+			}
+		}
+	}
+
 	return nil
 }
 

@@ -10,17 +10,17 @@ import (
 	"strconv"
 	"strings"
 
-	"dotfiles/daemons/hyprd/hypr"
 	"dotfiles/daemons/daemon"
+	"dotfiles/daemons/hyprd/hypr"
 )
 
 // EventLoop synchronizes daemon state by listening to Hyprland's event socket
 // and notifying subscribers of workspace changes.
 type EventLoop struct {
-	hypr  *hypr.Client                    // Hyprland IPC client
-	state *State                          // Shared daemon state
-	subs  *daemon.SubscriptionManager     // Pub/sub for workspace events
-	done  <-chan struct{}                 // Shutdown signal
+	hypr  *hypr.Client                // Hyprland IPC client
+	state *State                      // Shared daemon state
+	subs  *daemon.SubscriptionManager // Pub/sub for workspace events
+	done  <-chan struct{}             // Shutdown signal
 }
 
 // NewEventLoop creates an EventLoop.
@@ -158,6 +158,7 @@ func (e *EventLoop) handleEvent(line string) {
 			addr = "0x" + addr
 		}
 		e.handleThreeBodyClose(addr)
+		e.handleMonocleClose(addr)
 		e.state.ClearWindowState(addr)
 		e.updateOccupied()
 		e.notifyWorkspace()
@@ -184,6 +185,22 @@ func (e *EventLoop) handleThreeBodyClose(addr string) {
 			e.state.ClearThreeBody(ws)
 			return
 		}
+	}
+}
+
+// handleMonocleClose restores displaced windows when the focused monocle
+// window closes. Hidden windows that close while parked are cleaned up later
+// by ClearWindowState.
+func (e *EventLoop) handleMonocleClose(addr string) {
+	for ws, ms := range e.state.AllMonocle() {
+		if ms.Focused != addr {
+			continue
+		}
+		for _, mw := range ms.Windows {
+			e.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", mw.OriginWS, mw.Address))
+		}
+		e.state.ClearMonocle(ws)
+		return
 	}
 }
 
