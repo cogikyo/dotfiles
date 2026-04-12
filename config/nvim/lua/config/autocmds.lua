@@ -41,7 +41,7 @@ au("TextYankPost", {
 	group = "HighlightYank",
 	callback = function()
 		if _G.context_yank then
-			vim.highlight.on_yank({ higroup = "GitSignsChangeLn", timeout = 350 })
+			vim.highlight.on_yank({ higroup = "GitSignsChangeLn", timeout = 100 })
 			_G.context_yank = false
 		else
 			vim.highlight.on_yank({ timeout = 69 })
