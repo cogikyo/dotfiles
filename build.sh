@@ -519,9 +519,16 @@ publish_release() {
     read -r tag
     tag="${tag:-$default_tag}"
 
-    # Validate tag doesn't already exist
+    # Handle existing tag
     if _as_user git -C "$DOTFILES" rev-parse "refs/tags/$tag" &>/dev/null; then
-        die "Tag '$tag' already exists"
+        printf '%b  ?  %b Tag '\''%s'\'' already exists. Reuse it? %b[Y/n]%b: ' '\033[0;35m' '\033[0m' "$tag" "$FAINT" "$RESET"
+        local reuse
+        read -r reuse
+        [[ "$reuse" =~ ^[Nn]$ ]] && die "Aborted"
+        # Delete old tag + release so we can recreate
+        _as_user git -C "$DOTFILES" tag -d "$tag" &>/dev/null
+        _as_user git -C "$DOTFILES" push origin ":refs/tags/$tag" &>/dev/null || true
+        _as_user gh release delete "$tag" --yes &>/dev/null || true
     fi
 
     # Commit any staged/unstaged changes
@@ -541,7 +548,8 @@ publish_release() {
     _as_user git -C "$DOTFILES" push origin "$tag"
 
     # Create GitHub release with ISO attached
-    local iso_size
+    local iso_name iso_size
+    iso_name=$(basename "$iso_file")
     iso_size=$(du -h "$iso_file" | cut -f1)
 
     info "Creating GitHub release (uploading $iso_size ISO — this may take a while)..."
