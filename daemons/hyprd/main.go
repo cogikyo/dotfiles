@@ -63,6 +63,8 @@ func main() {
 		cmdWS()
 	case "focus":
 		cmdFocus()
+	case "tab":
+		cmdTab()
 	case "query":
 		cmdQuery()
 	case "subscribe":
@@ -233,6 +235,25 @@ func cmdFocus() {
 	fmt.Println(resp)
 }
 
+func cmdTab() {
+	if !client.IsRunning() {
+		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
+		os.Exit(1)
+	}
+
+	if len(os.Args) < 3 {
+		fmt.Fprintln(os.Stderr, "usage: hyprd tab {term|nvim|nvimtree|git|xplr}")
+		os.Exit(1)
+	}
+
+	resp, err := client.Send("tab " + os.Args[2])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(resp)
+}
+
 func cmdQuery() {
 	if !client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
@@ -343,6 +364,7 @@ Window commands:
   hyprd split -x|-d|-l   Set specific split ratio
   hyprd ws <n>           Switch to workspace n, focus master
   hyprd focus <class> [title]  Focus window, unhide if hidden
+  hyprd tab <name>            Focus editor + switch kitty tab (term|nvim|nvimtree|git|xplr)
 
 Three-body (2-visible, 1-shadow window management):
   hyprd three-body editor    Focus/launch editor window

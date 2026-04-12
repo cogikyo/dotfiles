@@ -2,12 +2,12 @@
 
 ## hyprd — kitty integration (next)
 
-### Editor focus → `hyprd focus` upgrade
-- [ ] Add kitty remote control: tab switching via `KITTY_TAB_ID` (kitty @ focus-tab)
-- [ ] Add nvim commands: nvimtree toggle/focus (kitty @ send-text)
-- [ ] Add toggle-back: if already focused on target tab, focus previous window
-- [ ] Binds: update `binds.conf` editor-focus section to use `hyprd focus`
-- [ ] Delete `bin/editor-focus`
+### Editor focus → `hyprd tab` command
+- [x] Kitty remote control: tab switching via `KITTY_TAB_ID` (kitty @ focus-tab)
+- [x] Nvim commands: nvimtree toggle/focus (kitty @ send-text)
+- [x] Toggle-back: if already focused on target tab, focus previous window
+- [x] Binds: `binds.conf` updated to use `hyprd tab {term|nvim|nvimtree|git|xplr}`
+- [x] `bin/editor-focus` deleted
 
 ### Kitty tab management → `hyprd tabs`
 - [ ] New command: `hyprd tabs init [session-type]` — create tabs with KITTY_TAB_ID, titles, CWDs

@@ -86,8 +86,9 @@ type Window struct {
 	Class        string `json:"class"`
 	Title        string `json:"title"`
 	InitialTitle string `json:"initialTitle"`
-	Pid          int    `json:"pid"`
-	Mapped       bool   `json:"mapped"` // whether window is visible
+	Pid            int  `json:"pid"`
+	Mapped         bool `json:"mapped"`         // whether window is visible
+	FocusHistoryID int  `json:"focusHistoryID"` // 0 = active, 1 = previous, etc.
 }
 
 // WsRef is a workspace reference used in window and monitor queries.

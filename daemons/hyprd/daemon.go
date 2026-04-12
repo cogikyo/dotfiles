@@ -212,6 +212,13 @@ func (d *Daemon) handleCommand(command string) string {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
+	case "tab":
+		tab := commands.NewTab(d.hypr, d.state)
+		result, err := tab.Execute(strings.TrimSpace(arg))
+		if err != nil {
+			return fmt.Sprintf("error: %v", err)
+		}
+		return result
 	case "query":
 		topic := arg
 		if topic == "" {
