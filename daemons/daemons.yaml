@@ -61,8 +61,8 @@ hypr:
       - "GLava"
     hidden_workspace: "special:hiddenSlaves"
     monocle:
-      width: 3190
-      height: 1920
+      width: 2882
+      height: 1864
       offset_x: 0
       offset_y: 25
   three_body:
