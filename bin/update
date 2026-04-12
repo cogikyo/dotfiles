@@ -89,6 +89,7 @@ save_lists() {
     [[ -n "$added" ]] && info "New AUR packages:" && while IFS= read -r p; do printf '  + %s\n' "$p"; done <<< "$added"
     [[ -n "$removed" ]] && info "Removed AUR packages:" && while IFS= read -r p; do printf '  - %s\n' "$p"; done <<< "$removed"
   fi
+  return 0
 }
 
 do_update() {
