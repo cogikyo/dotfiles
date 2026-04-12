@@ -188,7 +188,7 @@ func (d *Daemon) handleCommand(command string) string {
 		return result
 	case "ws":
 		if arg == "" {
-			return "error: workspace number required"
+			return "error: workspace target required"
 		}
 		ws := commands.NewWS(d.hypr, d.state)
 		result, err := ws.Execute(arg)

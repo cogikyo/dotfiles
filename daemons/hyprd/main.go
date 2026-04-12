@@ -375,10 +375,12 @@ Usage:
 Window commands:
   hyprd bg <mode>        Background: code, music, kill, lock, ensure
   hyprd hide             Toggle hide/show slave (special workspace)
+  hyprd monocle          Toggle monocle (isolate focused window)
   hyprd swap             Toggle swap between master and slave
   hyprd split            Cycle split ratio (xs → default → lg)
-  hyprd split -x|-d|-l   Set specific split ratio
+  hyprd split -x|-l      Set specific split ratio
   hyprd ws <n>           Switch to workspace n, focus master
+  hyprd ws up|down       Move active window between workspaces 2..5
   hyprd focus <class> [title]  Focus window, unhide if hidden
   hyprd tab <name>            Focus editor + switch kitty tab (term|nvim|nvimtree|git|xplr)
 

@@ -18,8 +18,8 @@ func NewSplit(h *hypr.Client, s StateManager) *Split {
 }
 
 // Execute sets or cycles the split ratio. Supported flags: "xs", "default", "lg",
-// "toggle" (toggles default/xs), "reapply" (reapplies current and centers cursor),
-// or empty to cycle xs -> default -> lg. Ignored for floating windows.
+// "reapply" (reapplies current and centers cursor), or empty to cycle xs -> default -> lg.
+// Ignored for floating windows.
 func (s *Split) Execute(flag string) (string, error) {
 	win, err := s.hypr.ActiveWindow()
 	if err != nil {
@@ -37,11 +37,6 @@ func (s *Split) Execute(flag string) (string, error) {
 	case "lg", "-l":
 		return s.setRatio("lg")
 	case "default":
-		return s.setRatio("default")
-	case "toggle", "-d":
-		if current == "default" {
-			return s.setRatio("xs")
-		}
 		return s.setRatio("default")
 	case "reapply", "-r":
 		result, err := s.setRatio(current)
