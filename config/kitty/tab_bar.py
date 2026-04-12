@@ -2,13 +2,14 @@
 # pyright: reportCallIssue=false
 # pyright: reportGeneralTypeIssues=false
 # pyright: reportAttributeAccessIssue=false
-"""
-Custom Kitty tab bar with:
-  - Left: Icon → CWD → Tab titles
-  - Right: user@hostname status
+"""Custom kitty tab bar via the draw_tab callback.
+
+Layout: Icon → Tab titles (left) | CWD (child→root) → hostname (right).
+Accent color switches to red when an agent window is detected.
 """
 
-from os import getlogin, uname
+from getpass import getuser
+from os import uname
 from pathlib import Path
 from unicodedata import east_asian_width
 
@@ -29,25 +30,27 @@ from kitty.utils import color_as_int
 # │ Configuration                                                                │
 # ╰──────────────────────────────────────────────────────────────────────────────╯
 
-ICON_MAIN = "  "  # arch logo
-ICON_CLAUDE = " 󰯉 "  # claude icon
+ICON_MAIN = "  "  # arch logo prefix
+ICON_AGENT = " 󰯉 "  # agent icon prefix
+AGENT_NAMES = ("claude", "codex")  # known AI agent CLIs
 
 SEP_LEFT = ""  # left-pointing powerline arrow
 SEP_RIGHT = ""  # right-pointing powerline arrow
 SEP_SOFT = ""  # soft separator between same-bg tabs
 
-TRUNCATE = " ⽙"  # shown when cwd is truncated
-ICON_HOME = " ⾕"  # home indicator
-CWD_SPACER = " 󰓩 "  # decorative spacer after cwd
+ICON_HOME_DIR = " ⾕"  # home indicator
+ICON_USER_TRUNCATED = " ⽙"  # shown when cwd is truncated
 
-ICON_ROOT_DESCENDED = "  "  # root indicator when path has multiple parts
+ICON_GIT_DIR = "  "  # if parent is git folder
+ICON_GIT_OPENED = "  "  # git folder has multiple parts
+
 ICON_ROOT_BASE = "  "  # root indicator when at root
+ICON_ROOT_DESCENDED = " "  # root indicator when path has multiple parts
 
-ICON_USER = "⼈"  # user indicator
 ICON_HOST = " ⾥"  # host indicator
 
 # Layout
-MAX_CWD_DEPTH = 2  # max directory levels to show
+MAX_CWD_DEPTH = 6  # max directory levels to show in right status
 
 
 # ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -62,10 +65,9 @@ class Colors:
         opts = get_options()
         self.fg = as_rgb(color_as_int(opts.background))
         self.bg = as_rgb(color_as_int(opts.color4))  # blue accent
-        self.red = as_rgb(color_as_int(opts.color1))  # red accent for claude
+        self.red = as_rgb(color_as_int(opts.color1))  # red accent for agent windows
         self.accent = as_rgb(color_as_int(opts.selection_background))
         self.active_bg = as_rgb(color_as_int(opts.active_tab_background))
-
         # Tab bar background (with fallback)
         bar_bg = opts.tab_bar_background if opts.tab_bar_background else 0
         self.bar_bg = as_rgb(color_as_int(bar_bg)) if bar_bg else 0
@@ -75,14 +77,16 @@ colors = Colors()
 
 
 def get_accent() -> int:
-    """Get the accent color based on window type (red for Claude, blue otherwise)."""
+    """Return accent color — red for agent windows, blue otherwise."""
     boss = get_boss()
-    if boss and is_claude_window(boss.active_tab_manager):
+    if boss and is_agent_window(boss.active_tab_manager):
         return colors.red
     return colors.bg
 
 
+# shared between draw_tab (writes) and draw_tab_title (reads) to reserve space
 _right_status_length = 0
+_current_icon_width = 0
 
 # ╭──────────────────────────────────────────────────────────────────────────────╮
 # │ Utilities                                                                    │
@@ -90,12 +94,22 @@ _right_status_length = 0
 
 
 def _display_width(text: str) -> int:
-    """Terminal display width accounting for wide (CJK) characters."""
+    """Return terminal display width accounting for wide (CJK) characters."""
     return sum(2 if east_asian_width(c) in ("W", "F") else 1 for c in text)
 
 
-def get_cwd() -> str:
-    """Get formatted current working directory from active window."""
+def _is_git_repo(path: str) -> bool:
+    """Check if path is inside a git repository."""
+    p = Path(path)
+    while p != p.parent:
+        if (p / ".git").exists():
+            return True
+        p = p.parent
+    return False
+
+
+def get_cwd_right() -> str:
+    """Build CWD string in child→root order for right-aligned display."""
     boss = get_boss()
     tab_manager = boss.active_tab_manager
     if not tab_manager:
@@ -104,91 +118,108 @@ def get_cwd() -> str:
     if not window or not hasattr(window, "cwd_of_child"):
         return ""
     cwd = window.cwd_of_child
-
     if not cwd:
-        return ICON_ROOT_BASE
+        return "/"
 
     parts = list(Path(cwd).parts)
-
     if not parts:
-        return ICON_ROOT_BASE
+        return "/"
 
-    # Replace /home/user or /Users/user with home icon
+    is_git = _is_git_repo(cwd)
+
+    # Determine root icon and extract directory parts
     if len(parts) > 1 and parts[1] in ("home", "Users"):
-        parts[0] = ICON_HOME
-        parts[1:3] = []
-    else:
-        # Use different root icon based on path depth
-        if len(parts) > 1:
-            parts[0] = ICON_ROOT_DESCENDED
+        dir_parts = parts[3:]  # skip /, home, username
+        if is_git:
+            root = ICON_GIT_DIR if len(dir_parts) <= 1 else ICON_GIT_OPENED
         else:
-            parts[0] = ICON_ROOT_BASE
+            root = ICON_HOME_DIR
+    else:
+        dir_parts = parts[1:]
+        if is_git:
+            root = ICON_GIT_DIR if len(dir_parts) <= 1 else ICON_GIT_OPENED
+        else:
+            root = ICON_ROOT_BASE if len(parts) == 1 else ICON_ROOT_DESCENDED
 
-    # Limit to MAX_CWD_DEPTH directories (excluding the icon prefix)
-    dir_parts = parts[1:]  # directories without the icon
+    if not dir_parts:
+        return root
+
+    # Limit depth, then reverse: child/parent/root
     if len(dir_parts) > MAX_CWD_DEPTH:
-        # Show truncation symbol + last MAX_CWD_DEPTH directories
-        return TRUNCATE + "/".join(dir_parts[-MAX_CWD_DEPTH:])
+        dir_parts = dir_parts[-MAX_CWD_DEPTH:]
+        return "/".join(reversed(dir_parts)) + ICON_USER_TRUNCATED
 
-    return parts[0] + "/".join(dir_parts)
+    return "/".join(reversed(dir_parts)) + root
 
 
-# ╭─────────────────────────────────────────────────────────────────────────────╮
+# ╭──────────────────────────────────────────────────────────────────────────────╮
 # │ Drawing Components                                                          │
-# ╰─────────────────────────────────────────────────────────────────────────────╯
+# ╰──────────────────────────────────────────────────────────────────────────────╯
 
 
-def get_window_title() -> str:
-    """Get the active window's title."""
-    boss = get_boss()
-    if not boss:
-        return ""
-    tm = boss.active_tab_manager
-    if not tm:
-        return ""
-    window = tm.active_window
-    if not window:
-        return ""
-    return window.title or ""
+def _agent_from_window(window) -> str:
+    """Return agent name if a known AI CLI is the foreground process."""
+    try:
+        for proc in window.child.foreground_processes:
+            cmdline = proc.get("cmdline") or []
+            if not cmdline:
+                continue
+            name = cmdline[0].rsplit("/", 1)[-1].lower()
+            for agent in AGENT_NAMES:
+                if agent in name:
+                    return agent
+    except (AttributeError, TypeError):
+        pass
+    return ""
 
 
-def is_claude_window(tab_manager) -> bool:
-    """Check if any window in the tab manager was launched as a Claude window.
-
-    This checks the initial title set when the window was created
-    (e.g., via `kitty --title claude`), not the current active title.
-    """
+def is_agent_window(tab_manager) -> bool:
+    """Check if any window in the tab manager is running an AI agent."""
     if not tab_manager:
         return False
     try:
-        # Check all tabs and their windows
         for tab in tab_manager.tabs:
             for window in tab.windows:
-                # Try override_title first (set by --title flag), then title
                 title = getattr(window, "override_title", None) or getattr(
                     window, "title", ""
                 )
-                if title and "claude" in title.lower():
+                if title:
+                    title_lower = title.lower()
+                    for agent in AGENT_NAMES:
+                        if agent in title_lower:
+                            return True
+                if _agent_from_window(window):
                     return True
     except (AttributeError, TypeError):
         pass
     return False
 
 
+def _detect_active_agent(tab_manager) -> str:
+    """Return the agent name running in the active window, or empty string."""
+    if not tab_manager:
+        return ""
+    window = tab_manager.active_window
+    if not window:
+        return ""
+    return _agent_from_window(window)
+
+
 def draw_icon(screen: Screen, index: int) -> int:
     """Draw the main icon (only on first tab)."""
+    global _current_icon_width
     if index != 1:
         return 0
 
     fg_prev, bg_prev = screen.cursor.fg, screen.cursor.bg
 
-    # Choose icon based on initial window title (e.g., kitty launched with --title claude)
-    icon = ICON_MAIN
     boss = get_boss()
-    if boss:
-        tm = boss.active_tab_manager
-        if is_claude_window(tm):
-            icon = ICON_CLAUDE
+    tm = boss.active_tab_manager if boss else None
+    if tm and is_agent_window(tm):
+        agent = _detect_active_agent(tm)
+        icon = ICON_AGENT + (agent or "agents")
+    else:
+        icon = ICON_MAIN + getuser()
 
     accent = get_accent()
 
@@ -196,34 +227,13 @@ def draw_icon(screen: Screen, index: int) -> int:
     screen.cursor.fg, screen.cursor.bg = colors.fg, accent
     screen.draw(icon)
 
-    # Separator
+    # Separator: icon → bar_bg
     screen.cursor.fg, screen.cursor.bg = accent, bg_prev
     screen.draw(SEP_LEFT)
 
+    _current_icon_width = _display_width(icon + SEP_LEFT)
     screen.cursor.fg, screen.cursor.bg = fg_prev, bg_prev
-    screen.cursor.x = len(ICON_MAIN + SEP_LEFT)
-    return screen.cursor.x
-
-
-def draw_cwd(screen: Screen, index: int) -> int:
-    """Draw the current working directory (only at index 1, shows active tab's cwd)."""
-    if index != 1:
-        return 0
-
-    fg_prev, bg_prev = screen.cursor.fg, screen.cursor.bg
-    cwd = get_cwd()  # Get active tab's CWD
-
-    # CWD text
-    screen.cursor.fg, screen.cursor.bg = get_accent(), colors.active_bg
-    screen.draw(cwd)
-
-    # Separator + spacer
-    screen.cursor.fg, screen.cursor.bg = colors.active_bg, colors.bar_bg
-    screen.draw(SEP_LEFT)
-    screen.draw(CWD_SPACER)
-
-    screen.cursor.fg, screen.cursor.bg = fg_prev, bg_prev
-    screen.cursor.x = len(cwd) + 9
+    screen.cursor.x = _current_icon_width
     return screen.cursor.x
 
 
@@ -259,8 +269,8 @@ def draw_tab_title(
         needs_soft_sep = False
 
     # Ensure cursor is past icon
-    if screen.cursor.x <= len(ICON_MAIN):
-        screen.cursor.x = len(ICON_MAIN)
+    if screen.cursor.x <= _current_icon_width:
+        screen.cursor.x = _current_icon_width
 
     # Draw tab content
     screen.draw(" ")
@@ -302,9 +312,8 @@ def _draw_soft_separator(
 
 
 def draw_right_status(screen: Screen, is_last: bool, cells: list) -> int:
-    """Draw the right-aligned status (user@host)."""
+    """Draw the right-aligned status (cwd + hostname)."""
     if not is_last:
-        screen.cursor.bg = colors.fg
         return screen.cursor.x
 
     draw_attributed_string(Formatter.reset, screen)
@@ -335,27 +344,28 @@ def draw_tab(
     is_last: bool,
     extra_data: ExtraData,
 ) -> int:
-    """Main entry point for drawing each tab."""
+    """Kitty draw_tab callback — entry point for rendering each tab."""
     global _right_status_length
 
-    # Build right status cells: separator | user | hostname
-    user_text = ICON_USER + getlogin() + " " + SEP_RIGHT
+    # Build right status cells: separator | cwd | hostname
+    cwd_text = " " + get_cwd_right() + " " + SEP_RIGHT
     host_text = uname()[1] + ICON_HOST
     accent = get_accent()
 
     cells = [
         (colors.active_bg, colors.bar_bg, SEP_RIGHT),
-        (accent, colors.active_bg, user_text),
+        (accent, colors.active_bg, cwd_text),
         (colors.fg, accent, host_text),
     ]
 
     # Calculate right status width
     _right_status_length = sum(_display_width(cell[2]) for cell in cells)
 
-    # Draw components
+    # Draw components: Icon → Tabs → Right status
     draw_icon(screen, index)
-    draw_cwd(screen, index)
     draw_tab_title(draw_data, screen, tab, index, extra_data)
-    draw_right_status(screen, is_last, cells)
+
+    if is_last:
+        draw_right_status(screen, is_last, cells)
 
     return screen.cursor.x
