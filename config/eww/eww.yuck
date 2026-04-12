@@ -736,7 +736,7 @@
     :onhover "eww update player-hover=true"
     :onhoverlost "eww update player-hover=false"
     :onmiddleclick "${browser} www.google.com/search?q='${pctl.artist}' & disown"
-    :onrightclick "hyprctl dispatch workspace 1 & change-bg 'music' & disown"
+    :onrightclick "hyprctl dispatch workspace 1 & disown"
     (box
       :class "playerbox"
       :style "margin-left: -5px; background-image: url('${matches("${pctl.status}", "Playing") ? album-art-path : playerctl-img}');"
@@ -762,7 +762,7 @@
     :onclick "playerctl --player=${player-client} play-pause"
     :onscroll "bin/music_info seek {}"
     :onmiddleclick "${browser} www.google.com/search?q='${pctl.artist}' & disown"
-    :onrightclick "hyprctl dispatch workspace 1 & change-bg 'music' & disown"
+    :onrightclick "hyprctl dispatch workspace 1 & disown"
     (box
       :class "album-art ${music-hover ? "album-art-hover" : ""}"
       :style "background-image: url('${matches("${pctl.status}", "Playing") ? album-art-path : playerctl-img}');"
@@ -1089,7 +1089,7 @@
   (eventbox
     :onhover "eww update ws-h${num}=true"
     :onhoverlost "eww update ws-h${num}=false"
-    :onclick "${num == "1" ? "change-bg 'music';" : "change-bg;"} hyprctl dispatch workspace ${num} & disown"
+    :onclick "hyprctl dispatch workspace ${num} & disown"
     :cursor "pointer"
     :onmiddleclick "hyprctl dispatch workspace ${num} & disown"
     :tooltip "  ${desc}  "
