@@ -74,7 +74,7 @@ hypr:
       class: kitty
       title: agents
       command: "kitty --title=agents --session ~/.config/kitty/sessions/agents.conf"
-      notify_or: true
+
     browser:
       class: firefox-developer-edition
       command: firefox-developer-edition

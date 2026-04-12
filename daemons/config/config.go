@@ -184,10 +184,9 @@ type MonocleConfig struct {
 
 // ThreeBodyWindow defines a window that participates in the three-body layout.
 type ThreeBodyWindow struct {
-	Class    string `yaml:"class"`
-	Title    string `yaml:"title"`
-	Command  string `yaml:"command"`
-	NotifyOr bool   `yaml:"notify_or"`
+	Class   string `yaml:"class"`
+	Title   string `yaml:"title"`
+	Command string `yaml:"command"`
 }
 
 // Session defines a workspace layout for automated window spawning and arrangement.
@@ -328,10 +327,9 @@ func Default() *Config {
 					Command: "kitty --title=editor --session ~/.config/kitty/sessions/editor.conf",
 				},
 				"agents": {
-					Class:    "kitty",
-					Title:    "agents",
-					Command:  "kitty --title=agents --session ~/.config/kitty/sessions/agents.conf",
-					NotifyOr: true,
+					Class:   "kitty",
+					Title:   "agents",
+					Command: "kitty --title=agents --session ~/.config/kitty/sessions/agents.conf",
 				},
 				"browser": {
 					Class:   "firefox-developer-edition",

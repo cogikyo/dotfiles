@@ -45,7 +45,7 @@ func (tb *ThreeBody) Execute(name string) (string, error) {
 		return "", fmt.Errorf("unknown three-body window: %s", name)
 	}
 
-	if spec.NotifyOr && tb.hasNotify != nil && tb.hasNotify() {
+	if name == "agents" && tb.hasNotify != nil && tb.hasNotify() {
 		if tb.notifyAct != nil {
 			tb.notifyAct()
 		}
@@ -294,7 +294,7 @@ func (tb *ThreeBody) swap(state *ThreeBodyState, wsID int) (string, error) {
 	}
 	actualSlave := slaves[0].Address
 
-	// Batch: restore shadow + hide current slave atomically (no retile flicker)
+	// Restore shadow + hide slave in one batch to minimize retile flicker
 	batch := fmt.Sprintf(
 		"dispatch movetoworkspacesilent %d,address:%s; "+
 			"dispatch movetoworkspacesilent %s,address:%s; "+
