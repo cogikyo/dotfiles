@@ -19,6 +19,7 @@ hyprd split -x|-d|-l     # set specific ratio
 hyprd hide               # move slave to special workspace
 hyprd swap               # exchange master/slave positions
 hyprd ws <n>             # switch workspace, focus master
+hyprd ws up|down         # move active window between workspaces 2..5
 hyprd focus <class> [title]  # focus window by class, unhide if needed
 ```
 

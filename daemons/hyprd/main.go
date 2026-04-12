@@ -201,7 +201,7 @@ func cmdWS() {
 	}
 
 	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: hyprd ws <number>")
+		fmt.Fprintln(os.Stderr, "usage: hyprd ws <number|up|down>")
 		os.Exit(1)
 	}
 
