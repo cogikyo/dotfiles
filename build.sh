@@ -511,11 +511,8 @@ publish_release() {
     branch=$(_as_user git -C "$DOTFILES" branch --show-current)
     [[ "$branch" == "master" ]] || die "Not on master branch (on: $branch)"
 
-    # Suggest a tag based on the ISO filename date
-    local iso_name
-    iso_name=$(basename "$iso_file")
-    local default_tag="iso-$(echo "$iso_name" | grep -oP '\d{4}\.\d{2}\.\d{2}')"
-    [[ -n "$default_tag" && "$default_tag" != "iso-" ]] || default_tag="iso-$(date +%Y.%m.%d)"
+    # Always use today's date for the release tag
+    local default_tag="iso-$(date +%Y.%m.%d)"
 
     printf '\n%b  ?  %b Release tag %b[%s]%b: ' '\033[0;35m' '\033[0m' "$FAINT" "$default_tag" "$RESET"
     local tag
@@ -622,9 +619,24 @@ main() {
     else
         preflight
         prepare_profile
-        cache_repo_packages
-        build_aur_packages
+
+        local do_cache=1
+        if [[ -t 0 ]]; then
+            printf '\n%b  ?  %b Update and cache packages? %b[Y/n]%b: ' '\033[0;35m' '\033[0m' "$FAINT" "$RESET"
+            local yn
+            read -r yn
+            [[ "$yn" =~ ^[Nn]$ ]] && do_cache=0
+        fi
+
+        if [[ $do_cache -eq 1 ]]; then
+            cache_repo_packages
+            build_aur_packages
+        else
+            info "Skipping package cache update"
+        fi
+
         create_repo_db
+
         build_iso
     fi
 
