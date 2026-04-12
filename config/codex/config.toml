@@ -17,6 +17,9 @@ trust_level = "trusted"
 [projects."/home/cullyn/LeadPier"]
 trust_level = "trusted"
 
+[projects."/home/cullyn"]
+trust_level = "trusted"
+
 [notice]
 hide_full_access_warning = true
 
