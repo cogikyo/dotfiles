@@ -14,6 +14,9 @@ trust_level = "trusted"
 [projects."/home/cullyn/nvim/vagari.nvim"]
 trust_level = "trusted"
 
+[projects."/home/cullyn/LeadPier"]
+trust_level = "trusted"
+
 [notice]
 hide_full_access_warning = true
 
