@@ -42,6 +42,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
+	"strconv"
 	"strings"
 )
 
@@ -177,6 +179,12 @@ func (d *Daemon) handleCommand(command string) string {
 	}
 
 	switch cmd {
+	case "notify-or":
+		if hasNotifications() {
+			runCmd("dunstctl", "action")
+			return "notification: action"
+		}
+		return d.handleCommand(arg)
 	case "status":
 		return "running"
 	case "ping":
@@ -209,6 +217,16 @@ func (d *Daemon) handleCommand(command string) string {
 		}
 		return result
 	case "swap":
+		// When three-body is active, swap shadow into master position
+		tb := commands.NewThreeBody(d.hypr, d.state)
+		tbResult, tbErr := tb.SwapMaster()
+		if tbErr != nil {
+			return fmt.Sprintf("error: %v", tbErr)
+		}
+		if tbResult != "" {
+			return tbResult
+		}
+		// No three-body active — fall through to normal swap
 		swap := commands.NewSwap(d.hypr, d.state)
 		result, err := swap.Execute()
 		if err != nil {
@@ -251,6 +269,8 @@ func (d *Daemon) handleCommand(command string) string {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
+	case "three-body":
+		return d.handleThreeBody(arg)
 	case "layout":
 		layout := commands.NewLayout(d.hypr, d.state)
 		result, err := layout.Execute(arg)
@@ -261,6 +281,98 @@ func (d *Daemon) handleCommand(command string) string {
 	default:
 		return fmt.Sprintf("unknown command: %s", cmd)
 	}
+}
+
+// handleThreeBody parses and executes three-body subcommands.
+func (d *Daemon) handleThreeBody(arg string) string {
+	parts := strings.SplitN(arg, " ", 2)
+	subcmd := ""
+	subarg := ""
+	if len(parts) >= 1 {
+		subcmd = parts[0]
+	}
+	if len(parts) >= 2 {
+		subarg = parts[1]
+	}
+
+	switch subcmd {
+	case "focus":
+		class, title, launchCmd := parseThreeBodyFocus(subarg)
+		tb := commands.NewThreeBody(d.hypr, d.state)
+		result, err := tb.Focus(class, title, launchCmd)
+		if err != nil {
+			return fmt.Sprintf("error: %v", err)
+		}
+		return result
+	case "swap":
+		fallbacks := parseSwapFallbacks(subarg)
+		tb := commands.NewThreeBody(d.hypr, d.state)
+		result, err := tb.Swap(fallbacks)
+		if err != nil {
+			return fmt.Sprintf("error: %v", err)
+		}
+		return result
+	default:
+		return "usage: three-body {focus|swap}"
+	}
+}
+
+// parseThreeBodyFocus splits "class [title] [-- launch-cmd]" into components.
+func parseThreeBodyFocus(arg string) (class, title, launchCmd string) {
+	// Split on " -- " to separate search args from launch command
+	parts := strings.SplitN(arg, " -- ", 2)
+	if len(parts) == 2 {
+		launchCmd = parts[1]
+	}
+
+	searchParts := strings.SplitN(strings.TrimSpace(parts[0]), " ", 2)
+	if len(searchParts) >= 1 {
+		class = searchParts[0]
+	}
+	if len(searchParts) >= 2 {
+		title = searchParts[1]
+	}
+	return
+}
+
+// parseSwapFallbacks parses "class title -- cmd || class title -- cmd || ..." into WindowSpecs.
+func parseSwapFallbacks(arg string) []commands.WindowSpec {
+	if arg == "" {
+		return nil
+	}
+
+	segments := strings.Split(arg, " || ")
+	var specs []commands.WindowSpec
+	for _, seg := range segments {
+		seg = strings.TrimSpace(seg)
+		if seg == "" {
+			continue
+		}
+		class, title, launchCmd := parseThreeBodyFocus(seg)
+		if class != "" {
+			specs = append(specs, commands.WindowSpec{
+				Class:     class,
+				Title:     title,
+				LaunchCmd: launchCmd,
+			})
+		}
+	}
+	return specs
+}
+
+// hasNotifications returns true if dunst has displayed notifications.
+func hasNotifications() bool {
+	out, err := exec.Command("dunstctl", "count", "displayed").Output()
+	if err != nil {
+		return false
+	}
+	n, err := strconv.Atoi(strings.TrimSpace(string(out)))
+	return err == nil && n > 0
+}
+
+// runCmd executes a command without waiting for output.
+func runCmd(name string, args ...string) {
+	exec.Command(name, args...).Run()
 }
 
 // query returns JSON-encoded state for a specific topic or all state if topic is "all".
@@ -292,6 +404,14 @@ func (d *Daemon) query(topic string) (string, error) {
 
 	case "split":
 		return fmt.Sprintf(`"%s"`, d.state.GetSplitRatio()), nil
+
+	case "three-body":
+		allTB := d.state.AllThreeBody()
+		if len(allTB) == 0 {
+			return "null", nil
+		}
+		jsonData, err := json.Marshal(allTB)
+		return string(jsonData), err
 
 	case "all", "":
 		jsonData, err := d.state.JSON()

@@ -16,11 +16,12 @@ type State struct {
 	Workspace          int   `json:"workspace"`           // Current active workspace ID
 	OccupiedWorkspaces []int `json:"occupied_workspaces"` // Workspace IDs with windows
 
-	Monocle          *commands.MonocleState          `json:"monocle,omitempty"`          // Active monocle mode state
-	Hidden           map[string]*commands.HiddenState `json:"hidden,omitempty"`           // Windows in special workspace by address
-	DisplacedMasters map[int]string                   `json:"displaced_masters,omitempty"` // Original master window per workspace
-	SplitRatio       string                           `json:"split_ratio"`                 // Master/slave split identifier
-	Geometry         *commands.MonitorGeometry        `json:"geometry,omitempty"`          // Cached monitor dimensions
+	Monocle          *commands.MonocleState              `json:"monocle,omitempty"`           // Active monocle mode state
+	Hidden           map[string]*commands.HiddenState   `json:"hidden,omitempty"`            // Windows in special workspace by address
+	DisplacedMasters map[int]string                     `json:"displaced_masters,omitempty"` // Original master window per workspace
+	ThreeBody        map[int]*commands.ThreeBodyState   `json:"three_body,omitempty"`        // Three-body layout state per workspace
+	SplitRatio       string                             `json:"split_ratio"`                 // Master/slave split identifier
+	Geometry         *commands.MonitorGeometry          `json:"geometry,omitempty"`           // Cached monitor dimensions
 
 	config *config.HyprConfig // Daemon configuration
 }
@@ -32,6 +33,7 @@ func NewState(cfg *config.HyprConfig) *State {
 		OccupiedWorkspaces: []int{},
 		Hidden:             make(map[string]*commands.HiddenState),
 		DisplacedMasters:   make(map[int]string),
+		ThreeBody:          make(map[int]*commands.ThreeBodyState),
 		SplitRatio:         "default",
 		config:             cfg,
 	}
@@ -152,9 +154,48 @@ func (s *State) GetDisplacedMaster(ws int) string {
 	return s.DisplacedMasters[ws]
 }
 
+// GetThreeBody returns a copy of three-body state for a workspace, or nil if inactive.
+func (s *State) GetThreeBody(ws int) *commands.ThreeBodyState {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	tb := s.ThreeBody[ws]
+	if tb == nil {
+		return nil
+	}
+	copy := *tb
+	return &copy
+}
+
+// SetThreeBody stores three-body state for a workspace.
+func (s *State) SetThreeBody(ws int, tb *commands.ThreeBodyState) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.ThreeBody[ws] = tb
+}
+
+// ClearThreeBody removes three-body state for a workspace.
+func (s *State) ClearThreeBody(ws int) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.ThreeBody, ws)
+}
+
+// AllThreeBody returns a copy of all three-body states.
+func (s *State) AllThreeBody() map[int]*commands.ThreeBodyState {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	result := make(map[int]*commands.ThreeBodyState, len(s.ThreeBody))
+	for k, v := range s.ThreeBody {
+		copy := *v
+		result[k] = &copy
+	}
+	return result
+}
+
 // ClearWindowState removes all tracked state for a window address.
 // Called when a window closes to prevent stale references.
-func (s *State) ClearWindowState(addr string) {
+// Returns the ThreeBodyState the window belonged to (if any) for caller cleanup.
+func (s *State) ClearWindowState(addr string) *commands.ThreeBodyState {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -167,6 +208,15 @@ func (s *State) ClearWindowState(addr string) {
 			delete(s.DisplacedMasters, ws)
 		}
 	}
+
+	for ws, tb := range s.ThreeBody {
+		if tb.Master == addr || tb.Active == addr || tb.Shadow == addr {
+			removed := *tb
+			delete(s.ThreeBody, ws)
+			return &removed
+		}
+	}
+	return nil
 }
 
 func (s *State) SetGeometry(g *commands.MonitorGeometry) {

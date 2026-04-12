@@ -83,9 +83,10 @@ type Window struct {
 	Workspace WsRef  `json:"workspace"`
 	Floating  bool   `json:"floating"`
 	Pinned    bool   `json:"pinned"`
-	Class     string `json:"class"`
-	Title     string `json:"title"`
-	Pid       int    `json:"pid"`
+	Class        string `json:"class"`
+	Title        string `json:"title"`
+	InitialTitle string `json:"initialTitle"`
+	Pid          int    `json:"pid"`
 	Mapped    bool   `json:"mapped"` // whether window is visible
 }
 

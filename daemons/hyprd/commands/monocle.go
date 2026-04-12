@@ -61,6 +61,9 @@ func (m *Monocle) Execute() (string, error) {
 func (m *Monocle) enter(win *hypr.Window) (string, error) {
 	cfg := m.state.GetConfig()
 
+	// Dissolve three-body if this window is part of one
+	m.dissolveThreeBody(win)
+
 	// Determine position (master or slave index)
 	position, err := m.getPosition(win)
 	if err != nil {
@@ -165,6 +168,22 @@ func (m *Monocle) getPosition(win *hypr.Window) (string, error) {
 	}
 
 	return "0", nil
+}
+
+// dissolveThreeBody restores the shadow window and clears three-body state
+// when a member enters monocle mode.
+func (m *Monocle) dissolveThreeBody(win *hypr.Window) {
+	tb := m.state.GetThreeBody(win.Workspace.ID)
+	if tb == nil {
+		return
+	}
+
+	if tb.Master == win.Address || tb.Active == win.Address || tb.Shadow == win.Address {
+		// Restore shadow to workspace before dissolving
+		m.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s",
+			win.Workspace.ID, tb.Shadow))
+		m.state.ClearThreeBody(win.Workspace.ID)
+	}
 }
 
 // FormatAddress ensures window addresses have the "0x" prefix for Hyprland commands.

@@ -158,8 +158,9 @@ type ShadowColors struct {
 
 // WindowsConfig controls which windows hyprd manages and where to hide slave windows.
 type WindowsConfig struct {
-	IgnoredClasses  []string `yaml:"ignored_classes"`
-	HiddenWorkspace string   `yaml:"hidden_workspace"`
+	IgnoredClasses   []string `yaml:"ignored_classes"`
+	HiddenWorkspace  string   `yaml:"hidden_workspace"`
+	ShadowWorkspace  string   `yaml:"shadow_workspace"`
 }
 
 // Session defines a workspace layout for automated window spawning and arrangement.
@@ -287,6 +288,7 @@ func Default() *Config {
 			Windows: WindowsConfig{
 				IgnoredClasses:  []string{"GLava"},
 				HiddenWorkspace: "special:hiddenSlaves",
+				ShadowWorkspace: "special:shadow",
 			},
 			Sessions: map[string]Session{
 				"dotfiles": {

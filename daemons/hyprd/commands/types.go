@@ -67,6 +67,14 @@ type HiddenState struct {
 	SlaveIndex int    `json:"slave_index"` // Slave position to restore to
 }
 
+// ThreeBodyState tracks a three-window layout where only master + one slave are visible.
+// The third window is hidden in a shadow workspace, swapped in on demand.
+type ThreeBodyState struct {
+	Master string `json:"master"` // Address of master window (always visible, left)
+	Active string `json:"active"` // Address of visible slave (right, full height)
+	Shadow string `json:"shadow"` // Address of hidden slave (in shadow workspace)
+}
+
 // MonitorGeometry holds computed screen dimensions for window positioning and monocle sizing.
 // Computed by ComputeGeometry from raw dimensions, reserved areas, and monocle ratios.
 type MonitorGeometry struct {
@@ -97,6 +105,11 @@ type StateManager interface {
 
 	GetDisplacedMaster(ws int) string    // Returns window address of displaced master on workspace
 	SetDisplacedMaster(ws int, addr string)
+
+	GetThreeBody(ws int) *ThreeBodyState          // Returns three-body state for workspace, or nil
+	SetThreeBody(ws int, tb *ThreeBodyState)       // Sets three-body state for workspace
+	ClearThreeBody(ws int)                         // Removes three-body state for workspace
+	AllThreeBody() map[int]*ThreeBodyState         // Returns copy of all three-body states
 
 	GetGeometry() *MonitorGeometry
 

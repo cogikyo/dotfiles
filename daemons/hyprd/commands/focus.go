@@ -85,13 +85,18 @@ func (f *Focus) Execute(class, title string) (string, error) {
 	return fmt.Sprintf("focused: %s (%s)", target.Title, target.Address), nil
 }
 
-// matchesTarget returns true if window matches the search criteria, preferring exact title match over case-insensitive class match.
+// matchesTarget returns true if window matches the search criteria.
+// When title is provided, both class and title must match.
+// Title is checked against both current and initial title.
 func matchesTarget(w *hypr.Window, class, title string) bool {
-	if title != "" && w.Title == title {
+	if class == "" {
+		return false
+	}
+	if !strings.EqualFold(w.Class, class) {
+		return false
+	}
+	if title == "" {
 		return true
 	}
-	if class != "" && strings.EqualFold(w.Class, class) {
-		return true
-	}
-	return false
+	return w.Title == title || w.InitialTitle == title
 }

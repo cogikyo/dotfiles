@@ -157,6 +157,7 @@ func (e *EventLoop) handleEvent(line string) {
 		if !strings.HasPrefix(addr, "0x") {
 			addr = "0x" + addr
 		}
+		e.handleThreeBodyClose(addr)
 		e.state.ClearWindowState(addr)
 		e.updateOccupied()
 		e.notifyWorkspace()
@@ -164,6 +165,25 @@ func (e *EventLoop) handleEvent(line string) {
 	case "movewindow":
 		e.updateOccupied()
 		e.notifyWorkspace()
+	}
+}
+
+// handleThreeBodyClose restores the shadow window when a three-body member closes.
+// Must be called before ClearWindowState (which removes the three-body entry).
+func (e *EventLoop) handleThreeBodyClose(addr string) {
+	allTB := e.state.AllThreeBody()
+	for ws, tb := range allTB {
+		if tb.Shadow == addr {
+			// Shadow closed — just dissolve, remaining windows are already visible
+			e.state.ClearThreeBody(ws)
+			return
+		}
+		if tb.Active == addr || tb.Master == addr {
+			// Visible member closed — restore shadow to workspace before dissolving
+			e.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", ws, tb.Shadow))
+			e.state.ClearThreeBody(ws)
+			return
+		}
 	}
 }
 

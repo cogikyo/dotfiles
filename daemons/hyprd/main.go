@@ -70,6 +70,10 @@ func main() {
 		cmdSubscribe()
 	case "layout":
 		cmdLayout()
+	case "three-body":
+		cmdThreeBody()
+	case "notify-or":
+		cmdNotifyOr()
 	case "help", "-h", "--help":
 		cmdHelp()
 	default:
@@ -281,6 +285,46 @@ func cmdLayout() {
 	fmt.Println(resp)
 }
 
+func cmdNotifyOr() {
+	if !client.IsRunning() {
+		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
+		os.Exit(1)
+	}
+
+	if len(os.Args) < 3 {
+		fmt.Fprintln(os.Stderr, "usage: hyprd notify-or <command> [args...]")
+		os.Exit(1)
+	}
+
+	cmd := "notify-or " + strings.Join(os.Args[2:], " ")
+	resp, err := client.Send(cmd)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(resp)
+}
+
+func cmdThreeBody() {
+	if !client.IsRunning() {
+		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
+		os.Exit(1)
+	}
+
+	if len(os.Args) < 3 {
+		fmt.Fprintln(os.Stderr, "usage: hyprd three-body focus <class> [title] [-- <launch-cmd>]")
+		os.Exit(1)
+	}
+
+	cmd := "three-body " + strings.Join(os.Args[2:], " ")
+	resp, err := client.Send(cmd)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(resp)
+}
+
 func cmdHelp() {
 	fmt.Println(`hyprd — Unified Hyprland daemon
 
@@ -298,11 +342,15 @@ Window commands:
   hyprd ws <n>           Switch to workspace n, focus master
   hyprd focus <class> [title]  Focus window, unhide if hidden
 
+Three-body (2-visible, 1-shadow window management):
+  hyprd three-body focus <class> [title]              Focus/swap window
+  hyprd three-body focus <class> [title] -- <cmd>     Focus or launch if missing
+
 Sessions:
   hyprd layout --list    List available sessions
   hyprd layout <name>    Open session (loads from ~/.config/hyprd/sessions.yaml)
 
 Query/Subscribe (for eww):
-  hyprd query [topic]    Get state (workspace|monocle|hidden|split|all)
+  hyprd query [topic]    Get state (workspace|monocle|hidden|split|three-body|all)
   hyprd subscribe [...]  Stream events (workspace monocle split)`)
 }

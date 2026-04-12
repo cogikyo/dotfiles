@@ -39,6 +39,11 @@ func (h *Hide) Execute() (string, error) {
 		return "ignored: floating window", nil
 	}
 
+	// Block manual hiding when three-body is active on this workspace
+	if tb := h.state.GetThreeBody(win.Workspace.ID); tb != nil {
+		return "three-body active: use three-body focus to swap", nil
+	}
+
 	tiled, err := GetTiledWindows(h.hypr, win.Workspace.ID, cfg.Windows.IgnoredClasses)
 	if err != nil {
 		return "", err
