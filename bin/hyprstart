@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-change-bg "code"
+hyprd bg ensure
 
 # Wait for internet connection before opening layouts
 max_attempts=10

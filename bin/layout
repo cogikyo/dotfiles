@@ -197,7 +197,7 @@ main() {
     esac
 
     if [[ "$n_flag" -eq 4 || "$n_flag" -eq 5 ]]; then
-        split -d
+        hyprd split -d
         arrange_layout
         resize-slave
     fi

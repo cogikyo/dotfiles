@@ -20,12 +20,10 @@ if [[ "$current_ws" == "$MUSIC_WS" ]]; then
         [[ "$prev_ws" == "$MUSIC_WS" ]] && prev_ws=4
         hyprctl dispatch workspace "$prev_ws"
     fi
-    change-bg "kill"
     hyprctl keyword animation "workspaces, 1, 0.5, default, slide"
 else
     hyprctl keyword animation "workspaces, 1, 5, default, slidevert"
-    hyprctl dispatch workspace "$MUSIC_WS" &
-    change-bg "music"
+    hyprctl dispatch workspace "$MUSIC_WS"
     hyprctl keyword animation "workspaces, 1, 0.5, default, slide"
 fi
 
