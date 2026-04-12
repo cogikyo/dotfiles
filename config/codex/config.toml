@@ -1,9 +1,13 @@
 model = "gpt-5.4"
-model_reasoning_effort = "high"
+model_reasoning_effort = "medium"
 notify = ["/home/cullyn/dotfiles/config/codex/codex-notify"]
+personality = "pragmatic"
+approvals_reviewer = "user"
 
 [tui]
 notifications = ["approval-requested"]
+status_line = ["model-with-reasoning", "current-dir", "model-name", "git-branch", "context-usage", "five-hour-limit", "weekly-limit", "thread-title"]
+theme = "catppuccin-macchiato"
 
 [projects."/home/cullyn/dotfiles"]
 trust_level = "trusted"
