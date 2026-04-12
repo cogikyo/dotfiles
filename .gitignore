@@ -16,3 +16,5 @@ iso/work/
 iso/out/
 iso/airootfs/var/
 iso/airootfs/root/dotfiles/
+
+.codex
