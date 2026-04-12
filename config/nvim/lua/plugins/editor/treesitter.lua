@@ -7,7 +7,7 @@ local function setup()
 		"go", "gomod", "gosum", "gotmpl", "gowork", "templ", -- Go stack
 		"javascript", "typescript", "tsx", "jsdoc", -- JS/TS stack
 		"html", "css", -- web/templates
-		"json", "jsonc", "yaml", "toml", "xml", -- data/config formats
+		"json", "yaml", "toml", "xml", -- data/config formats
 		"graphql", "proto", "http", -- API schemas
 		"dockerfile", "gitignore", "diff", "hcl", "terraform", "hyprlang", "yuck", -- infra/tooling
 		"regex", "sql", -- text/query helpers
@@ -94,12 +94,24 @@ local function setup()
 
 	-- Swap keymaps
 	local swap = require("nvim-treesitter-textobjects.swap")
-	vim.keymap.set("n", "<leader>ra", function() swap.swap_next("@parameter.inner") end)
-	vim.keymap.set("n", "<leader>rf", function() swap.swap_next("@function.outer") end)
-	vim.keymap.set("n", "<leader>rc", function() swap.swap_next("@class.outer") end)
-	vim.keymap.set("n", "<leader>rA", function() swap.swap_previous("@parameter.inner") end)
-	vim.keymap.set("n", "<leader>rF", function() swap.swap_previous("@function.outer") end)
-	vim.keymap.set("n", "<leader>rC", function() swap.swap_previous("@class.outer") end)
+	vim.keymap.set("n", "<leader>ra", function()
+		swap.swap_next("@parameter.inner")
+	end)
+	vim.keymap.set("n", "<leader>rf", function()
+		swap.swap_next("@function.outer")
+	end)
+	vim.keymap.set("n", "<leader>rc", function()
+		swap.swap_next("@class.outer")
+	end)
+	vim.keymap.set("n", "<leader>rA", function()
+		swap.swap_previous("@parameter.inner")
+	end)
+	vim.keymap.set("n", "<leader>rF", function()
+		swap.swap_previous("@function.outer")
+	end)
+	vim.keymap.set("n", "<leader>rC", function()
+		swap.swap_previous("@class.outer")
+	end)
 
 	-- Autotag
 	require("nvim-ts-autotag").setup()
