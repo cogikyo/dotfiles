@@ -122,10 +122,12 @@ browser() {
 
 editor() {
     local path="$HOME/$1"
+    local session="editor"
     if [[ ! -d "$path" ]]; then
         error "path does not exist: $path"
     fi
-    hyprctl dispatch exec "env PROJECT_PATH=$path kitty --title=editor --session ~/.config/kitty/sessions/editor.conf"
+    [[ "$1" == "LeadPier" ]] && session="leadpier"
+    hyprctl dispatch exec "env PROJECT_PATH=$path kitty --title=editor --session ~/.config/kitty/sessions/${session}.conf"
     sleep 0.25
 }
 

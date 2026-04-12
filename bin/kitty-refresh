@@ -10,6 +10,7 @@ while [[ "${1:-}" == -* ]]; do
         -r) refresh=true; shift ;;
         -s) search_pattern="$2"; shift 2 ;;
         --agents) mode="agents"; shift ;;
+        --leadpier) mode="leadpier"; shift ;;
         *) echo "Unknown option: $1"; exit 1 ;;
     esac
 done
@@ -20,6 +21,9 @@ if [[ -n "$search_pattern" && "$mode" == "term" ]]; then
     if echo "$_kitty_state" | jq -e --arg prefix "${_window_id}-agents-" \
         '.[0].tabs[].windows[0].env.KITTY_TAB_ID | select(. != null and startswith($prefix))' &>/dev/null; then
         mode="agents"
+    elif echo "$_kitty_state" | jq -e --arg prefix "${_window_id}-lp-" \
+        '.[0].tabs[].windows[0].env.KITTY_TAB_ID | select(. != null and startswith($prefix))' &>/dev/null; then
+        mode="leadpier"
     fi
 fi
 
@@ -38,10 +42,45 @@ if [[ "$mode" == "agents" ]]; then
         [plan]='claude'
         [git]='claude'
     )
+    declare -A CWDS=()
     TAB_ORDER=(xplr master dev plan git)
     PREFIX="agents-"
     FOCUS_TAB="master"
     USAGE="kitty-refresh [-r] --agents {master|dev|plan|git|all}"
+elif [[ "$mode" == "leadpier" ]]; then
+    _lp="$HOME/LeadPier"
+
+    # Find most recently active backend service by file modification time
+    _recent_svc=$(find "$_lp/backend/services" -name "*.go" -printf '%T@ %h\n' 2>/dev/null \
+        | sort -rn | head -1 | awk '{print $2}' \
+        | sed "s|$_lp/backend/services/||" | cut -d/ -f1)
+    [[ -z "$_recent_svc" ]] && _recent_svc="leads"
+
+    declare -A TABS=(
+        [fe-nvim]="«   »"
+        [be-nvim]="«   »"
+        [term]="« 󰠳  »"
+        [fe-build]="«   »"
+        [be-build]="«   »"
+    )
+    declare -A CMDS=(
+        [fe-nvim]='nvim'
+        [be-nvim]='nvim'
+        [term]=''
+        [fe-build]='yarn dev'
+        [be-build]='pier watch'
+    )
+    declare -A CWDS=(
+        [fe-nvim]="$_lp/frontend"
+        [be-nvim]="$_lp/backend/services/$_recent_svc"
+        [term]="$_lp"
+        [fe-build]="$_lp/frontend"
+        [be-build]="$_lp/backend/core/runner"
+    )
+    TAB_ORDER=(fe-nvim be-nvim term fe-build be-build)
+    PREFIX="lp-"
+    FOCUS_TAB="fe-nvim"
+    USAGE="kitty-refresh [-r] --leadpier {fe-nvim|be-nvim|term|fe-build|be-build|all}"
 else
     declare -A TABS=(
         [xplr]="⟜ 󰭎  ⊸"
@@ -57,6 +96,7 @@ else
         [build]='just watch'
         [git]='lazygit'
     )
+    declare -A CWDS=()
     TAB_ORDER=(xplr nvim term build git)
     PREFIX=""
     FOCUS_TAB="nvim"
@@ -68,14 +108,13 @@ kitty_state=$(kitty @ ls)
 # Handle -s search mode: parse "term:agents" format and find matching tab
 # e.g., "build:plan" means: use "build" in term session OR "plan" in agents session
 if [[ -n "$search_pattern" ]]; then
-    # Parse term:agents format (e.g., "nvim:master", "build:plan", or just "xplr")
-    if [[ "$search_pattern" == *":"* ]]; then
-        term_name="${search_pattern%%:*}"
-        agents_name="${search_pattern##*:}"
-        [[ "$mode" == "agents" ]] && tab_name="$agents_name" || tab_name="$term_name"
-    else
-        tab_name="$search_pattern"
-    fi
+    # Parse term:agents:leadpier format (e.g., "nvim:master:fe-nvim", "build:plan:fe-build", or just "xplr")
+    IFS=':' read -ra parts <<< "$search_pattern"
+    case "$mode" in
+        agents)   tab_name="${parts[1]:-${parts[0]}}" ;;
+        leadpier) tab_name="${parts[2]:-${parts[0]}}" ;;
+        *)        tab_name="${parts[0]}" ;;
+    esac
 
     # Check if tab name is valid
     if [[ -z "${TABS[$tab_name]:-}" ]]; then
@@ -119,13 +158,14 @@ open_tab() {
     local tab_id="${window_id}-${PREFIX}${name}"
     local title="${TABS[$name]}"
     local cmd="${CMDS[$name]}"
+    local tab_cwd="${CWDS[$name]:-$cwd}"
 
     if [[ "$name" == "build" ]]; then
-        just --list --justfile "$cwd/justfile" &>/dev/null || { "$refresh" && kitty @ close-tab --match "env:KITTY_TAB_ID=${tab_id}" 2>/dev/null || true; return 0; }
+        just --list --justfile "$tab_cwd/justfile" &>/dev/null || { "$refresh" && kitty @ close-tab --match "env:KITTY_TAB_ID=${tab_id}" 2>/dev/null || true; return 0; }
     fi
 
     if [[ "$name" == "git" ]]; then
-        git -C "$cwd" rev-parse --git-dir &>/dev/null || { "$refresh" && kitty @ close-tab --match "env:KITTY_TAB_ID=${tab_id}" 2>/dev/null || true; return 0; }
+        git -C "$tab_cwd" rev-parse --git-dir &>/dev/null || { "$refresh" && kitty @ close-tab --match "env:KITTY_TAB_ID=${tab_id}" 2>/dev/null || true; return 0; }
     fi
 
     "$refresh" && kitty @ close-tab --match "env:KITTY_TAB_ID=${tab_id}" 2>/dev/null || true
@@ -133,12 +173,12 @@ open_tab() {
     local env_args=(--env KITTY_TAB_ID="$tab_id")
 
     if [[ "$cmd" == "xplr" ]]; then
-        kitty @ launch --type=tab --copy-env "${env_args[@]}" --tab-title="$title" --cwd="$cwd" \
+        kitty @ launch --type=tab --copy-env "${env_args[@]}" --tab-title="$title" --cwd="$tab_cwd" \
             zsh -c 'cd "$(xplr --print-pwd-as-result)" 2>/dev/null; exec zsh' >/dev/null
     elif [[ -n "$cmd" ]]; then
-        kitty @ launch --type=tab --hold --copy-env "${env_args[@]}" --tab-title="$title" --cwd="$cwd" "$cmd" >/dev/null
+        kitty @ launch --type=tab --hold --copy-env "${env_args[@]}" --tab-title="$title" --cwd="$tab_cwd" "$cmd" >/dev/null
     else
-        kitty @ launch --type=tab --copy-env "${env_args[@]}" --tab-title="$title" --cwd="$cwd" >/dev/null
+        kitty @ launch --type=tab --copy-env "${env_args[@]}" --tab-title="$title" --cwd="$tab_cwd" >/dev/null
     fi
 }
 
