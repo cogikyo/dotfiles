@@ -511,20 +511,24 @@ publish_release() {
     branch=$(_as_user git -C "$DOTFILES" branch --show-current)
     [[ "$branch" == "master" ]] || die "Not on master branch (on: $branch)"
 
-    # Suggest a tag based on the ISO filename date
-    local iso_name
-    iso_name=$(basename "$iso_file")
-    local default_tag="iso-$(echo "$iso_name" | grep -oP '\d{4}\.\d{2}\.\d{2}')"
-    [[ -n "$default_tag" && "$default_tag" != "iso-" ]] || default_tag="iso-$(date +%Y.%m.%d)"
+    # Always use today's date for the release tag
+    local default_tag="iso-$(date +%Y.%m.%d)"
 
     printf '\n%b  ?  %b Release tag %b[%s]%b: ' '\033[0;35m' '\033[0m' "$FAINT" "$default_tag" "$RESET"
     local tag
     read -r tag
     tag="${tag:-$default_tag}"
 
-    # Validate tag doesn't already exist
+    # Handle existing tag
     if _as_user git -C "$DOTFILES" rev-parse "refs/tags/$tag" &>/dev/null; then
-        die "Tag '$tag' already exists"
+        printf '%b  ?  %b Tag '\''%s'\'' already exists. Reuse it? %b[Y/n]%b: ' '\033[0;35m' '\033[0m' "$tag" "$FAINT" "$RESET"
+        local reuse
+        read -r reuse
+        [[ "$reuse" =~ ^[Nn]$ ]] && die "Aborted"
+        # Delete old tag + release so we can recreate
+        _as_user git -C "$DOTFILES" tag -d "$tag" &>/dev/null
+        _as_user git -C "$DOTFILES" push origin ":refs/tags/$tag" &>/dev/null || true
+        _as_user gh release delete "$tag" --yes &>/dev/null || true
     fi
 
     # Commit any staged/unstaged changes
@@ -544,7 +548,8 @@ publish_release() {
     _as_user git -C "$DOTFILES" push origin "$tag"
 
     # Create GitHub release with ISO attached
-    local iso_size
+    local iso_name iso_size
+    iso_name=$(basename "$iso_file")
     iso_size=$(du -h "$iso_file" | cut -f1)
 
     info "Creating GitHub release (uploading $iso_size ISO — this may take a while)..."
@@ -622,9 +627,24 @@ main() {
     else
         preflight
         prepare_profile
-        cache_repo_packages
-        build_aur_packages
+
+        local do_cache=1
+        if [[ -t 0 ]]; then
+            printf '\n%b  ?  %b Update and cache packages? %b[Y/n]%b: ' '\033[0;35m' '\033[0m' "$FAINT" "$RESET"
+            local yn
+            read -r yn
+            [[ "$yn" =~ ^[Nn]$ ]] && do_cache=0
+        fi
+
+        if [[ $do_cache -eq 1 ]]; then
+            cache_repo_packages
+            build_aur_packages
+        else
+            info "Skipping package cache update"
+        fi
+
         create_repo_db
+
         build_iso
     fi
 

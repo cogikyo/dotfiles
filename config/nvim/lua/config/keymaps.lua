@@ -118,14 +118,22 @@ local function yank_diagnostics()
 	vim.api.nvim_buf_add_highlight(0, ns, "ContextYank", line - 1, 0, -1)
 	vim.defer_fn(function()
 		vim.api.nvim_buf_clear_namespace(0, ns, 0, -1)
-	end, 300)
+	end, 100)
 
 	vim.notify("Yanked " .. #diagnostics .. " diagnostic(s)", vim.log.levels.INFO)
+end
+
+local function yank_selection(motion)
+	return function()
+		yank_path(motion)
+	end
 end
 
 map("n", "<A-f>", ':let @+=expand("%:p")<CR>', desc("Yank file path"))
 map("n", "<A-q>", yank_paragrah("vap"), desc("Yank file path + paragraph"))
 map("n", "<A-w>", yank_diagnostics, desc("Yank file path + diagnostics"))
+map("v", "<A-b>", yank_selection(nil), desc("Yank file path + selection"))
+map("n", "<A-b>", yank_selection("gv"), desc("Yank file path + last selection"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ space: add empty lines above/below                                          │
