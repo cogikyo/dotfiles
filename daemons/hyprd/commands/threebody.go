@@ -271,34 +271,49 @@ func (tb *ThreeBody) findByAddress(clients []hypr.Window, master, active, shadow
 	return nil
 }
 
-// swap sends the active slave to shadow and pulls the shadow slave back.
+// swap swaps the current slave with the shadow window.
+// Detects actual master/slave positions so manual swaps are respected.
+// Uses batch dispatch to avoid visible retiling jank.
 func (tb *ThreeBody) swap(state *ThreeBodyState, wsID int) (string, error) {
 	cfg := tb.state.GetConfig()
 	shadowWS := cfg.Windows.ShadowWorkspace
 
-	// Hide current active slave
-	if err := tb.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s",
-		shadowWS, state.Active)); err != nil {
-		return "", fmt.Errorf("hide active: %w", err)
+	// Detect actual positions — master may have changed via manual swap
+	tiled, err := GetTiledWindows(tb.hypr, wsID, cfg.Windows.IgnoredClasses)
+	if err != nil {
+		return "", fmt.Errorf("get tiled: %w", err)
+	}
+	if len(tiled) < 2 {
+		return "", fmt.Errorf("expected 2 tiled windows, got %d", len(tiled))
 	}
 
-	// Restore shadow slave to workspace
-	if err := tb.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s",
-		wsID, state.Shadow)); err != nil {
-		return "", fmt.Errorf("restore shadow: %w", err)
+	actualMaster := tiled[0].Address
+	slaves := GetSlaves(tiled)
+	if len(slaves) == 0 {
+		return "", fmt.Errorf("no slave window found")
+	}
+	actualSlave := slaves[0].Address
+
+	// Batch: restore shadow + hide current slave atomically (no retile flicker)
+	batch := fmt.Sprintf(
+		"dispatch movetoworkspacesilent %d,address:%s; "+
+			"dispatch movetoworkspacesilent %s,address:%s; "+
+			"dispatch focuswindow address:%s",
+		wsID, state.Shadow,
+		shadowWS, actualSlave,
+		state.Shadow,
+	)
+	if _, err := tb.hypr.Request("[[BATCH]]" + batch); err != nil {
+		return "", fmt.Errorf("swap batch: %w", err)
 	}
 
-	// Focus the newly visible slave
-	tb.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", state.Shadow))
-
-	// Update state: swap active and shadow
 	tb.state.SetThreeBody(wsID, &ThreeBodyState{
-		Master: state.Master,
+		Master: actualMaster,
 		Active: state.Shadow,
-		Shadow: state.Active,
+		Shadow: actualSlave,
 	})
 
-	return fmt.Sprintf("swapped: active=%s shadow=%s", state.Shadow, state.Active), nil
+	return fmt.Sprintf("swapped: active=%s shadow=%s", state.Shadow, actualSlave), nil
 }
 
 // focusWithEnroll handles focus when no three-body state exists yet.
