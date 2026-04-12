@@ -14,9 +14,10 @@ killall glava & disown
 dunstctl close-all
 dunstctl set-paused true
 
+sleep 1
+
 playerctl pause
 start=$SECONDS
-sleep "$GRACE"
 hyprlock --grace "$GRACE"
 elapsed=$((SECONDS - start))
 
