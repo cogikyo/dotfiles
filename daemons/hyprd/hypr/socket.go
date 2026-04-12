@@ -77,17 +77,17 @@ func (c *Client) Request(command string) ([]byte, error) {
 
 // Window represents a Hyprland window with geometry, workspace assignment, and metadata.
 type Window struct {
-	Address   string `json:"address"` // unique window handle
-	At        [2]int `json:"at"`      // [x, y] position
-	Size      [2]int `json:"size"`    // [width, height]
-	Workspace WsRef  `json:"workspace"`
-	Floating  bool   `json:"floating"`
-	Pinned    bool   `json:"pinned"`
+	Address      string `json:"address"` // unique window handle
+	At           [2]int `json:"at"`      // [x, y] position
+	Size         [2]int `json:"size"`    // [width, height]
+	Workspace    WsRef  `json:"workspace"`
+	Floating     bool   `json:"floating"`
+	Pinned       bool   `json:"pinned"`
 	Class        string `json:"class"`
 	Title        string `json:"title"`
 	InitialTitle string `json:"initialTitle"`
 	Pid          int    `json:"pid"`
-	Mapped    bool   `json:"mapped"` // whether window is visible
+	Mapped       bool   `json:"mapped"` // whether window is visible
 }
 
 // WsRef is a workspace reference used in window and monitor queries.
@@ -144,15 +144,15 @@ func (c *Client) Dispatch(args string) error {
 // Monitor represents a physical or virtual display with geometry and workspace info.
 type Monitor struct {
 	ID            int    `json:"id"`
-	Name          string `json:"name"`          // e.g., "DP-1", "HDMI-A-1"
-	Width         int    `json:"width"`         // resolution width
-	Height        int    `json:"height"`        // resolution height
-	X             int    `json:"x"`             // position in compositor space
-	Y             int    `json:"y"`             // position in compositor space
-	Focused       bool   `json:"focused"`       // currently active monitor
-	ActiveWS      WsRef  `json:"activeWorkspace"`
-	ReservedTop   int    `json:"reserved"`      // reserved pixels at top (bars, etc.)
-	ReservedRight int    `json:"reservedB"`     // reserved pixels at right
+	Name          string `json:"name"`            // e.g., "DP-1", "HDMI-A-1"
+	Width         int    `json:"width"`           // resolution width
+	Height        int    `json:"height"`          // resolution height
+	X             int    `json:"x"`               // position in compositor space
+	Y             int    `json:"y"`               // position in compositor space
+	Focused       bool   `json:"focused"`         // currently active monitor
+	ActiveWS      WsRef  `json:"activeWorkspace"` //
+	ReservedTop   int    `json:"reserved"`        // reserved pixels at top (bars, etc.)
+	ReservedRight int    `json:"reservedB"`       // reserved pixels at right
 }
 
 // Monitors queries all displays currently known to Hyprland.

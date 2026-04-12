@@ -1,23 +1,73 @@
 package commands
 
 import (
+	"dotfiles/daemons/config"
+	"dotfiles/daemons/hyprd/hypr"
 	"encoding/json"
 	"fmt"
+	"os/exec"
 	"strings"
-
-	"dotfiles/daemons/hyprd/hypr"
 )
 
 // ThreeBody manages a three-window layout where only master + one slave are visible.
 // The third window is hidden in a shadow workspace, swapped in on focus.
 type ThreeBody struct {
-	hypr  *hypr.Client
-	state StateManager
+	hypr      *hypr.Client
+	state     StateManager
+	hasNotify func() bool // checks if dunst has notifications
+	notifyAct func()      // runs dunstctl action
 }
 
 // NewThreeBody creates a ThreeBody command handler.
 func NewThreeBody(h *hypr.Client, s StateManager) *ThreeBody {
 	return &ThreeBody{hypr: h, state: s}
+}
+
+// SetNotifyHooks injects notification check/action functions for notify-or behavior.
+func (tb *ThreeBody) SetNotifyHooks(check func() bool, action func()) {
+	tb.hasNotify = check
+	tb.notifyAct = action
+}
+
+// threeBodyOrder defines the deterministic iteration order for fallbacks.
+var threeBodyOrder = []string{"editor", "agents", "browser"}
+
+// Execute handles named three-body subcommands (editor, agents, browser, shadow).
+func (tb *ThreeBody) Execute(name string) (string, error) {
+	cfg := tb.state.GetConfig()
+
+	if name == "shadow" {
+		return tb.executeShadow(cfg)
+	}
+
+	spec, ok := cfg.ThreeBody[name]
+	if !ok {
+		return "", fmt.Errorf("unknown three-body window: %s", name)
+	}
+
+	if spec.NotifyOr && tb.hasNotify != nil && tb.hasNotify() {
+		if tb.notifyAct != nil {
+			tb.notifyAct()
+		}
+		return "notification: action", nil
+	}
+
+	return tb.Focus(spec.Class, spec.Title, spec.Command)
+}
+
+// executeShadow swaps active/shadow, launching missing windows from config fallbacks.
+func (tb *ThreeBody) executeShadow(cfg *config.HyprConfig) (string, error) {
+	var fallbacks []WindowSpec
+	for _, name := range threeBodyOrder {
+		if w, ok := cfg.ThreeBody[name]; ok {
+			fallbacks = append(fallbacks, WindowSpec{
+				Class:     w.Class,
+				Title:     w.Title,
+				LaunchCmd: w.Command,
+			})
+		}
+	}
+	return tb.Swap(fallbacks)
 }
 
 // WindowSpec describes an expected window for three-body enrollment fallbacks.
@@ -91,7 +141,8 @@ func (tb *ThreeBody) Swap(fallbacks []WindowSpec) (string, error) {
 			}
 		}
 		if !found && fb.LaunchCmd != "" {
-			if err := tb.hypr.Dispatch(fmt.Sprintf("exec %s", fb.LaunchCmd)); err != nil {
+			cmd := tb.withProjectPath(fb.LaunchCmd, ws.ID)
+			if err := tb.hypr.Dispatch(fmt.Sprintf("exec %s", cmd)); err != nil {
 				return "", fmt.Errorf("launch: %w", err)
 			}
 			return fmt.Sprintf("launched missing: %s %s", fb.Class, fb.Title), nil
@@ -284,13 +335,49 @@ func (tb *ThreeBody) focusWithEnroll(wsID int, class, title, launchCmd string, c
 
 	// Window doesn't exist — launch it if we have a command
 	if launchCmd != "" {
-		if err := tb.hypr.Dispatch(fmt.Sprintf("exec %s", launchCmd)); err != nil {
+		cmd := tb.withProjectPath(launchCmd, wsID)
+		if err := tb.hypr.Dispatch(fmt.Sprintf("exec %s", cmd)); err != nil {
 			return "", fmt.Errorf("launch: %w", err)
 		}
-		return fmt.Sprintf("launched: %s", launchCmd), nil
+		return fmt.Sprintf("launched: %s", cmd), nil
 	}
 
 	return fmt.Sprintf("not found: %s %s", class, title), nil
+}
+
+// zoxideRecent returns the most recent directory from zoxide history.
+func zoxideRecent() string {
+	out, err := exec.Command("zoxide", "query", "-l").Output()
+	if err != nil {
+		return ""
+	}
+	lines := strings.SplitN(strings.TrimSpace(string(out)), "\n", 2)
+	if len(lines) == 0 || lines[0] == "" {
+		return ""
+	}
+	return lines[0]
+}
+
+// resolveProjectPath returns the project path for the current workspace.
+// Priority: state (explicitly set via layout/project command) > zoxide most recent.
+// Zoxide is always queried fresh — it's fast and avoids stale cache.
+func (tb *ThreeBody) resolveProjectPath(wsID int) string {
+	if p := tb.state.GetProjectPath(wsID); p != "" {
+		return p
+	}
+	return zoxideRecent()
+}
+
+// withProjectPath prepends PROJECT_PATH to kitty session commands.
+func (tb *ThreeBody) withProjectPath(cmd string, wsID int) string {
+	if !strings.Contains(cmd, "kitty") || !strings.Contains(cmd, "--session") {
+		return cmd
+	}
+	project := tb.resolveProjectPath(wsID)
+	if project == "" {
+		return cmd
+	}
+	return fmt.Sprintf("env PROJECT_PATH=%s %s", project, cmd)
 }
 
 // enroll sets up three-body state from exactly 3 tiled windows.

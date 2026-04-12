@@ -37,10 +37,16 @@ hypr:
       top: 86
       bottom: 32
       left: 0
-  monocle:
-    workspace: 6
-    width_ratio: 0.83
-    height_ratio: 0.94
+  background:
+    display: "HDMI-A-1"
+    video_path: "~/dotfiles/share/videos"
+    socket: "/tmp/mpvpaper.sock"
+    wallpaper:
+      file: "dna.mp4"
+      brightness: 6
+      contrast: 9
+      saturation: -16
+      hue: -24
   split:
     xs: "0.37"
     default: "0.4942"
@@ -48,14 +54,25 @@ hypr:
   style:
     border:
       default: "rgb(f2a170)"
-      monocle: "rgb(5aba6d)"
     shadow:
       default: "rgba(e56b2c32)"
-      monocle: "rgba(2d9a4342)"
   windows:
     ignored_classes:
       - "GLava"
     hidden_workspace: "special:hiddenSlaves"
+  three_body:
+    editor:
+      class: kitty
+      title: editor
+      command: "kitty --title=editor --session ~/.config/kitty/sessions/editor.conf"
+    agents:
+      class: kitty
+      title: agents
+      command: "kitty --title=agents --session ~/.config/kitty/sessions/agents.conf"
+      notify_or: true
+    browser:
+      class: firefox-developer-edition
+      command: firefox-developer-edition
   sessions:
     dotfiles:
       name: dotfiles
@@ -63,16 +80,6 @@ hypr:
       project: dotfiles
       urls:
         - "https://github.com/cogikyo/dotfiles"
-      windows:
-        - { command: "kitty --title terminal", title: terminal, role: master }
-        - { title: firefox, role: slave }
-        - { command: "kitty --title claude", title: claude, role: slave }
-    acr:
-      name: acr
-      workspace: 4
-      project: cogikyo/acr
-      urls:
-        - "localhost:3002"
       windows:
         - { command: "kitty --title terminal", title: terminal, role: master }
         - { title: firefox, role: slave }

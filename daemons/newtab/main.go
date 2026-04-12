@@ -20,7 +20,7 @@ import (
 // ═══════════════════════════════════════════════════════════════════════════
 
 const (
-	daemonConfigPath = "dotfiles/daemons/config.yaml"
+	daemonConfigPath = "dotfiles/daemons/daemons.yaml"
 	googleSuggest    = "https://suggestqueries.google.com/complete/search?client=firefox&q="
 )
 

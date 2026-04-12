@@ -3,7 +3,7 @@
 //
 // hyprd connects to Hyprland's IPC sockets to monitor workspace changes,
 // window events, and execute window management commands. It maintains
-// state for features like monocle mode, split ratios, and hidden windows.
+// state for features like split ratios, hidden windows, and three-body layouts.
 //
 // # Architecture
 //
@@ -17,7 +17,6 @@
 //
 // Clients connect via Unix socket and send text commands:
 //
-//   - monocle: Toggle focused window to float on dedicated workspace
 //   - split: Cycle or set the master/slave split ratio
 //   - hide: Toggle visibility of slave windows
 //   - swap: Exchange master and slave window positions
@@ -30,8 +29,8 @@
 // # Integration
 //
 // hyprd provides real-time state updates to eww widgets through a
-// subscription mechanism. Widgets subscribe to topics (workspace, monocle,
-// split) and receive JSON events when state changes.
+// subscription mechanism. Widgets subscribe to topics (workspace, split)
+// and receive JSON events when state changes.
 package main
 
 import (
@@ -52,8 +51,8 @@ func main() {
 	switch os.Args[1] {
 	case "status":
 		cmdStatus()
-	case "monocle":
-		cmdMonocle()
+	case "bg":
+		cmdBG()
 	case "split":
 		cmdSplit()
 	case "hide":
@@ -72,8 +71,8 @@ func main() {
 		cmdLayout()
 	case "three-body":
 		cmdThreeBody()
-	case "notify-or":
-		cmdNotifyOr()
+	case "project":
+		cmdProject()
 	case "help", "-h", "--help":
 		cmdHelp()
 	default:
@@ -98,6 +97,25 @@ func runDaemon() {
 		fmt.Fprintf(os.Stderr, "hyprd: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func cmdBG() {
+	if !client.IsRunning() {
+		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
+		os.Exit(1)
+	}
+
+	if len(os.Args) < 3 {
+		fmt.Fprintln(os.Stderr, "usage: hyprd bg {ensure|kill}")
+		os.Exit(1)
+	}
+
+	resp, err := client.Send("bg " + os.Args[2])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(resp)
 }
 
 func cmdStatus() {
@@ -127,20 +145,6 @@ func cmdStatus() {
 	} else {
 		fmt.Println("running")
 	}
-}
-
-func cmdMonocle() {
-	if !client.IsRunning() {
-		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
-		os.Exit(1)
-	}
-
-	resp, err := client.Send("monocle")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println(resp)
 }
 
 func cmdSplit() {
@@ -285,26 +289,6 @@ func cmdLayout() {
 	fmt.Println(resp)
 }
 
-func cmdNotifyOr() {
-	if !client.IsRunning() {
-		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
-		os.Exit(1)
-	}
-
-	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: hyprd notify-or <command> [args...]")
-		os.Exit(1)
-	}
-
-	cmd := "notify-or " + strings.Join(os.Args[2:], " ")
-	resp, err := client.Send(cmd)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println(resp)
-}
-
 func cmdThreeBody() {
 	if !client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
@@ -312,11 +296,29 @@ func cmdThreeBody() {
 	}
 
 	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: hyprd three-body focus <class> [title] [-- <launch-cmd>]")
+		fmt.Fprintln(os.Stderr, "usage: hyprd three-body {editor|agents|browser|shadow}")
 		os.Exit(1)
 	}
 
-	cmd := "three-body " + strings.Join(os.Args[2:], " ")
+	resp, err := client.Send("three-body " + os.Args[2])
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(resp)
+}
+
+func cmdProject() {
+	if !client.IsRunning() {
+		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
+		os.Exit(1)
+	}
+
+	cmd := "project"
+	if len(os.Args) > 2 {
+		cmd += " " + strings.Join(os.Args[2:], " ")
+	}
+
 	resp, err := client.Send(cmd)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
@@ -334,7 +336,7 @@ Usage:
   hyprd status --json    Return full state as JSON
 
 Window commands:
-  hyprd monocle          Toggle monocle mode (float to WS6)
+  hyprd bg <mode>        Background: code, music, kill, lock, ensure
   hyprd hide             Toggle hide/show slave (special workspace)
   hyprd swap             Toggle swap between master and slave
   hyprd split            Cycle split ratio (xs → default → lg)
@@ -343,14 +345,16 @@ Window commands:
   hyprd focus <class> [title]  Focus window, unhide if hidden
 
 Three-body (2-visible, 1-shadow window management):
-  hyprd three-body focus <class> [title]              Focus/swap window
-  hyprd three-body focus <class> [title] -- <cmd>     Focus or launch if missing
+  hyprd three-body editor    Focus/launch editor window
+  hyprd three-body agents    Focus/launch agents (checks notifications first)
+  hyprd three-body browser   Focus/launch browser window
+  hyprd three-body shadow    Toggle active/shadow slave
 
 Sessions:
   hyprd layout --list    List available sessions
   hyprd layout <name>    Open session (loads from ~/.config/hyprd/sessions.yaml)
 
 Query/Subscribe (for eww):
-  hyprd query [topic]    Get state (workspace|monocle|hidden|split|three-body|all)
-  hyprd subscribe [...]  Stream events (workspace monocle split)`)
+  hyprd query [topic]    Get state (workspace|hidden|split|three-body|all)
+  hyprd subscribe [...]  Stream events (workspace split)`)
 }

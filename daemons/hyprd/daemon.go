@@ -3,7 +3,7 @@
 //
 // hyprd connects to Hyprland's IPC sockets to monitor workspace changes,
 // window events, and execute window management commands. It maintains
-// state for features like monocle mode, split ratios, and hidden windows.
+// state for features like split ratios, hidden windows, and three-body layouts.
 //
 // # Architecture
 //
@@ -17,34 +17,38 @@
 //
 // Clients connect via Unix socket and send text commands:
 //
-//   - monocle: Toggle focused window to float on dedicated workspace
 //   - split: Cycle or set the master/slave split ratio
 //   - hide: Toggle visibility of slave windows
 //   - swap: Exchange master and slave window positions
 //   - ws: Switch workspace with automatic master focus
 //   - focus: Focus window by class, unhiding if necessary
 //   - layout: Apply predefined window arrangements
+//   - three-body: Three-window layout with shadow workspace swapping
 //   - query: Retrieve current state as JSON
 //   - subscribe: Stream state change events
 //
 // # Integration
 //
 // hyprd provides real-time state updates to eww widgets through a
-// subscription mechanism. Widgets subscribe to topics (workspace, monocle,
-// split) and receive JSON events when state changes.
+// subscription mechanism. Widgets subscribe to topics (workspace, split)
+// and receive JSON events when state changes.
 package main
 
 import (
-	"dotfiles/daemons/hyprd/commands"
 	"dotfiles/daemons/config"
-	"dotfiles/daemons/hyprd/hypr"
 	"dotfiles/daemons/daemon"
+	"dotfiles/daemons/hyprd/commands"
+	"dotfiles/daemons/hyprd/hypr"
 	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
+
+	"github.com/fsnotify/fsnotify"
 )
 
 const SocketPath = "/tmp/hyprd.sock"
@@ -88,10 +92,6 @@ func (d *Daemon) Run() error {
 	}
 	fmt.Printf("hyprd: connected to hyprland (%d clients)\n", len(clients))
 
-	if err := d.initGeometry(); err != nil {
-		fmt.Fprintf(os.Stderr, "hyprd: geometry query failed, using defaults: %v\n", err)
-	}
-
 	if err := d.server.Start(); err != nil {
 		return err
 	}
@@ -103,6 +103,8 @@ func (d *Daemon) Run() error {
 			fmt.Fprintf(os.Stderr, "hyprd: event loop error: %v\n", err)
 		}
 	}()
+
+	go d.watchConfig(d.server.Done())
 
 	sig := d.server.WaitForSignal()
 	fmt.Printf("\nhyprd: received %s, shutting down\n", sig)
@@ -121,52 +123,9 @@ func (d *Daemon) sendInitialState(sub *daemon.Subscriber, topics []string) {
 		sub.SendEvent("workspace", data)
 	}
 
-	if sub.WantsTopic("monocle") {
-		monocle := d.state.GetMonocle()
-		var data any
-		if monocle != nil {
-			data = map[string]any{
-				"address":   monocle.Address,
-				"origin_ws": monocle.OriginWS,
-			}
-		}
-		sub.SendEvent("monocle", data)
-	}
-
 	if sub.WantsTopic("split") {
 		sub.SendEvent("split", d.state.GetSplitRatio())
 	}
-}
-
-// initGeometry queries monitor dimensions from Hyprland and computes monocle window size.
-func (d *Daemon) initGeometry() error {
-	monitor, err := d.hypr.FocusedMonitor()
-	if err != nil {
-		return err
-	}
-
-	width := d.config.Monitor.Width
-	height := d.config.Monitor.Height
-	if monitor != nil {
-		width = monitor.Width
-		height = monitor.Height
-	}
-
-	geo := commands.ComputeGeometry(
-		width,
-		height,
-		d.config.Monitor.Reserved.Top,
-		d.config.Monitor.Reserved.Bottom,
-		d.config.Monitor.Reserved.Left,
-		d.config.Monocle.WidthRatio,
-		d.config.Monocle.HeightRatio,
-	)
-	d.state.SetGeometry(geo)
-	if monitor != nil {
-		fmt.Printf("hyprd: monitor %s (%dx%d), monocle %dx%d\n",
-			monitor.Name, width, height, geo.MonocleW, geo.MonocleH)
-	}
-	return nil
 }
 
 // handleCommand parses and routes incoming client commands, returning results as strings.
@@ -179,12 +138,6 @@ func (d *Daemon) handleCommand(command string) string {
 	}
 
 	switch cmd {
-	case "notify-or":
-		if hasNotifications() {
-			runCmd("dunstctl", "action")
-			return "notification: action"
-		}
-		return d.handleCommand(arg)
 	case "status":
 		return "running"
 	case "ping":
@@ -195,9 +148,9 @@ func (d *Daemon) handleCommand(command string) string {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return string(data)
-	case "monocle":
-		monocle := commands.NewMonocle(d.hypr, d.state)
-		result, err := monocle.Execute()
+	case "bg":
+		bg := commands.NewBG(&d.config.Background)
+		result, err := bg.Execute(arg)
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
 		}
@@ -278,86 +231,70 @@ func (d *Daemon) handleCommand(command string) string {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
+	case "project":
+		return d.handleProject(arg)
 	default:
 		return fmt.Sprintf("unknown command: %s", cmd)
 	}
 }
 
-// handleThreeBody parses and executes three-body subcommands.
+// handleThreeBody routes named three-body subcommands.
 func (d *Daemon) handleThreeBody(arg string) string {
-	parts := strings.SplitN(arg, " ", 2)
-	subcmd := ""
-	subarg := ""
-	if len(parts) >= 1 {
-		subcmd = parts[0]
+	name := strings.TrimSpace(arg)
+	if name == "" {
+		return "usage: three-body {editor|agents|browser|shadow}"
 	}
-	if len(parts) >= 2 {
-		subarg = parts[1]
+	tb := commands.NewThreeBody(d.hypr, d.state)
+	tb.SetNotifyHooks(hasNotifications, func() { runCmd("dunstctl", "action") })
+	result, err := tb.Execute(name)
+	if err != nil {
+		return fmt.Sprintf("error: %v", err)
+	}
+	return result
+}
+
+// handleProject gets or sets the project path for the current workspace.
+// "project" or "project get" returns the current path.
+// "project set <path>" sets it explicitly.
+// "project clear" removes it.
+func (d *Daemon) handleProject(arg string) string {
+	wsData, err := d.hypr.Request("j/activeworkspace")
+	if err != nil {
+		return fmt.Sprintf("error: %v", err)
+	}
+	var ws struct {
+		ID int `json:"id"`
+	}
+	if err := json.Unmarshal(wsData, &ws); err != nil {
+		return fmt.Sprintf("error: parse workspace: %v", err)
 	}
 
-	switch subcmd {
-	case "focus":
-		class, title, launchCmd := parseThreeBodyFocus(subarg)
-		tb := commands.NewThreeBody(d.hypr, d.state)
-		result, err := tb.Focus(class, title, launchCmd)
-		if err != nil {
-			return fmt.Sprintf("error: %v", err)
+	parts := strings.SplitN(strings.TrimSpace(arg), " ", 2)
+	sub := parts[0]
+	val := ""
+	if len(parts) > 1 {
+		val = parts[1]
+	}
+
+	switch sub {
+	case "", "get":
+		p := d.state.GetProjectPath(ws.ID)
+		if p == "" {
+			return fmt.Sprintf("ws%d: (none)", ws.ID)
 		}
-		return result
-	case "swap":
-		fallbacks := parseSwapFallbacks(subarg)
-		tb := commands.NewThreeBody(d.hypr, d.state)
-		result, err := tb.Swap(fallbacks)
-		if err != nil {
-			return fmt.Sprintf("error: %v", err)
+		return fmt.Sprintf("ws%d: %s", ws.ID, p)
+	case "set":
+		if val == "" {
+			return "usage: project set <path>"
 		}
-		return result
+		d.state.SetProjectPath(ws.ID, val)
+		return fmt.Sprintf("ws%d: %s", ws.ID, val)
+	case "clear":
+		d.state.SetProjectPath(ws.ID, "")
+		return fmt.Sprintf("ws%d: cleared", ws.ID)
 	default:
-		return "usage: three-body {focus|swap}"
+		return "usage: project [get|set <path>|clear]"
 	}
-}
-
-// parseThreeBodyFocus splits "class [title] [-- launch-cmd]" into components.
-func parseThreeBodyFocus(arg string) (class, title, launchCmd string) {
-	// Split on " -- " to separate search args from launch command
-	parts := strings.SplitN(arg, " -- ", 2)
-	if len(parts) == 2 {
-		launchCmd = parts[1]
-	}
-
-	searchParts := strings.SplitN(strings.TrimSpace(parts[0]), " ", 2)
-	if len(searchParts) >= 1 {
-		class = searchParts[0]
-	}
-	if len(searchParts) >= 2 {
-		title = searchParts[1]
-	}
-	return
-}
-
-// parseSwapFallbacks parses "class title -- cmd || class title -- cmd || ..." into WindowSpecs.
-func parseSwapFallbacks(arg string) []commands.WindowSpec {
-	if arg == "" {
-		return nil
-	}
-
-	segments := strings.Split(arg, " || ")
-	var specs []commands.WindowSpec
-	for _, seg := range segments {
-		seg = strings.TrimSpace(seg)
-		if seg == "" {
-			continue
-		}
-		class, title, launchCmd := parseThreeBodyFocus(seg)
-		if class != "" {
-			specs = append(specs, commands.WindowSpec{
-				Class:     class,
-				Title:     title,
-				LaunchCmd: launchCmd,
-			})
-		}
-	}
-	return specs
 }
 
 // hasNotifications returns true if dunst has displayed notifications.
@@ -375,6 +312,57 @@ func runCmd(name string, args ...string) {
 	exec.Command(name, args...).Run()
 }
 
+// watchConfig monitors hyprd.yaml for changes and hot-reloads the config pointer.
+func (d *Daemon) watchConfig(done <-chan struct{}) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd: config watcher: %v\n", err)
+		return
+	}
+	configFile := filepath.Join(home, "dotfiles/daemons/daemons.yaml")
+
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd: config watcher: %v\n", err)
+		return
+	}
+	defer watcher.Close()
+
+	if err := watcher.Add(configFile); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd: config watcher: %v\n", err)
+		return
+	}
+
+	var debounce *time.Timer
+	for {
+		select {
+		case <-done:
+			return
+		case event, ok := <-watcher.Events:
+			if !ok {
+				return
+			}
+			if event.Op&fsnotify.Write == 0 {
+				continue
+			}
+			if debounce != nil {
+				debounce.Stop()
+			}
+			debounce = time.AfterFunc(100*time.Millisecond, func() {
+				cfg := config.Load()
+				d.state.ReloadConfig(&cfg.Hypr)
+				d.config = &cfg.Hypr
+				fmt.Printf("hyprd: config reloaded\n")
+			})
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return
+			}
+			fmt.Fprintf(os.Stderr, "hyprd: config watcher error: %v\n", err)
+		}
+	}
+}
+
 // query returns JSON-encoded state for a specific topic or all state if topic is "all".
 func (d *Daemon) query(topic string) (string, error) {
 	switch topic {
@@ -384,14 +372,6 @@ func (d *Daemon) query(topic string) (string, error) {
 			"occupied": d.state.GetOccupied(),
 		}
 		jsonData, err := json.Marshal(data)
-		return string(jsonData), err
-
-	case "monocle":
-		monocle := d.state.GetMonocle()
-		if monocle == nil {
-			return "null", nil
-		}
-		jsonData, err := json.Marshal(monocle)
 		return string(jsonData), err
 
 	case "hidden":

@@ -1,11 +1,10 @@
 package main
 
 import (
+	"dotfiles/daemons/config"
+	"dotfiles/daemons/hyprd/commands"
 	"encoding/json"
 	"sync"
-
-	"dotfiles/daemons/hyprd/commands"
-	"dotfiles/daemons/config"
 )
 
 // State tracks workspace information and window management state for commands.
@@ -16,13 +15,11 @@ type State struct {
 	Workspace          int   `json:"workspace"`           // Current active workspace ID
 	OccupiedWorkspaces []int `json:"occupied_workspaces"` // Workspace IDs with windows
 
-	Monocle          *commands.MonocleState              `json:"monocle,omitempty"`           // Active monocle mode state
-	Hidden           map[string]*commands.HiddenState   `json:"hidden,omitempty"`            // Windows in special workspace by address
-	DisplacedMasters map[int]string                     `json:"displaced_masters,omitempty"` // Original master window per workspace
-	ThreeBody        map[int]*commands.ThreeBodyState   `json:"three_body,omitempty"`        // Three-body layout state per workspace
-	SplitRatio       string                             `json:"split_ratio"`                 // Master/slave split identifier
-	Geometry         *commands.MonitorGeometry          `json:"geometry,omitempty"`           // Cached monitor dimensions
-
+	Hidden           map[string]*commands.HiddenState `json:"hidden,omitempty"`            // Windows in special workspace by address
+	DisplacedMasters map[int]string                   `json:"displaced_masters,omitempty"` // Original master window per workspace
+	ThreeBody        map[int]*commands.ThreeBodyState `json:"three_body,omitempty"`        // Three-body layout state per workspace
+	ProjectPaths     map[int]string                   `json:"project_paths,omitempty"`     // Project root per workspace (resolved via zoxide)
+	SplitRatio       string                           `json:"split_ratio"`                 // Master/slave split identifier
 	config *config.HyprConfig // Daemon configuration
 }
 
@@ -34,6 +31,7 @@ func NewState(cfg *config.HyprConfig) *State {
 		Hidden:             make(map[string]*commands.HiddenState),
 		DisplacedMasters:   make(map[int]string),
 		ThreeBody:          make(map[int]*commands.ThreeBodyState),
+		ProjectPaths:       make(map[int]string),
 		SplitRatio:         "default",
 		config:             cfg,
 	}
@@ -71,23 +69,6 @@ func (s *State) GetOccupied() []int {
 	result := make([]int, len(s.OccupiedWorkspaces))
 	copy(result, s.OccupiedWorkspaces)
 	return result
-}
-
-func (s *State) SetMonocle(m *commands.MonocleState) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.Monocle = m
-}
-
-// GetMonocle returns a copy of monocle state, or nil if inactive.
-func (s *State) GetMonocle() *commands.MonocleState {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	if s.Monocle == nil {
-		return nil
-	}
-	m := *s.Monocle
-	return &m
 }
 
 // GetHidden returns a copy of all hidden window states.
@@ -192,6 +173,24 @@ func (s *State) AllThreeBody() map[int]*commands.ThreeBodyState {
 	return result
 }
 
+// GetProjectPath returns the project root for a workspace, or empty if unset.
+func (s *State) GetProjectPath(ws int) string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.ProjectPaths[ws]
+}
+
+// SetProjectPath stores the project root for a workspace.
+func (s *State) SetProjectPath(ws int, path string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	if path == "" {
+		delete(s.ProjectPaths, ws)
+	} else {
+		s.ProjectPaths[ws] = path
+	}
+}
+
 // ClearWindowState removes all tracked state for a window address.
 // Called when a window closes to prevent stale references.
 // Returns the ThreeBodyState the window belonged to (if any) for caller cleanup.
@@ -199,9 +198,6 @@ func (s *State) ClearWindowState(addr string) *commands.ThreeBodyState {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if s.Monocle != nil && s.Monocle.Address == addr {
-		s.Monocle = nil
-	}
 	delete(s.Hidden, addr)
 	for ws, a := range s.DisplacedMasters {
 		if a == addr {
@@ -219,23 +215,15 @@ func (s *State) ClearWindowState(addr string) *commands.ThreeBodyState {
 	return nil
 }
 
-func (s *State) SetGeometry(g *commands.MonitorGeometry) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.Geometry = g
-}
-
-// GetGeometry returns a copy of cached monitor geometry, or nil if unset.
-func (s *State) GetGeometry() *commands.MonitorGeometry {
+func (s *State) GetConfig() *config.HyprConfig {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	if s.Geometry == nil {
-		return nil
-	}
-	g := *s.Geometry
-	return &g
+	return s.config
 }
 
-func (s *State) GetConfig() *config.HyprConfig {
-	return s.config
+// ReloadConfig swaps the config pointer under write lock, preserving all runtime state.
+func (s *State) ReloadConfig(cfg *config.HyprConfig) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.config = cfg
 }

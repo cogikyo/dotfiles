@@ -1,6 +1,6 @@
 // Package config provides unified YAML-based configuration for all daemons.
 //
-// Configuration is loaded from ~/dotfiles/daemons/config.yaml. If the file does
+// Configuration is loaded from ~/dotfiles/daemons/daemons.yaml. If the file does
 // not exist or contains errors, sensible defaults are used. The Config struct
 // contains top-level sections for each daemon (eww, hypr, newtab).
 package config
@@ -16,14 +16,14 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-const configPath = "dotfiles/daemons/config.yaml"
+const configPath = "dotfiles/daemons/daemons.yaml"
 const newtabLocalPath = "dotfiles/daemons/newtab/local.config.yaml"
 
 // ═══════════════════════════════════════════════════════════════════════════
 // Root
 // ═══════════════════════════════════════════════════════════════════════════
 
-// Config is the root configuration loaded from ~/dotfiles/daemons/config.yaml.
+// Config is the root configuration loaded from ~/dotfiles/daemons/daemons.yaml.
 type Config struct {
 	Eww    EwwConfig    `yaml:"eww"`
 	Hypr   HyprConfig   `yaml:"hypr"`
@@ -100,14 +100,33 @@ type NetworkConfig struct {
 // ═══════════════════════════════════════════════════════════════════════════
 
 // HyprConfig is the configuration for hyprd, controlling monitor geometry,
-// monocle mode, split ratios, visual styling, window management, and sessions.
+// split ratios, visual styling, window management, and sessions.
 type HyprConfig struct {
-	Monitor  MonitorConfig      `yaml:"monitor"`
-	Monocle  MonocleConfig      `yaml:"monocle"`
-	Split    SplitConfig        `yaml:"split"`
-	Style    StyleConfig        `yaml:"style"`
-	Windows  WindowsConfig      `yaml:"windows"`
-	Sessions map[string]Session `yaml:"sessions"`
+	Monitor    MonitorConfig              `yaml:"monitor"`
+	Background BackgroundConfig           `yaml:"background"`
+	Split      SplitConfig                `yaml:"split"`
+	Style      StyleConfig                `yaml:"style"`
+	Windows    WindowsConfig              `yaml:"windows"`
+	ThreeBody  map[string]ThreeBodyWindow `yaml:"three_body"`
+	Sessions   map[string]Session         `yaml:"sessions"`
+}
+
+// BackgroundConfig controls mpvpaper video wallpaper.
+// A single mpvpaper process runs with an IPC socket for health checks.
+type BackgroundConfig struct {
+	Display   string    `yaml:"display"`
+	VideoPath string    `yaml:"video_path"`
+	Socket    string    `yaml:"socket"`
+	Wallpaper Wallpaper `yaml:"wallpaper"`
+}
+
+// Wallpaper defines the video file and mpv visual properties for mpvpaper.
+type Wallpaper struct {
+	File       string `yaml:"file"`
+	Brightness int    `yaml:"brightness"`
+	Contrast   int    `yaml:"contrast"`
+	Saturation int    `yaml:"saturation"`
+	Hue        int    `yaml:"hue"`
 }
 
 // MonitorConfig defines physical monitor dimensions and reserved screen areas.
@@ -122,13 +141,6 @@ type ReservedConfig struct {
 	Top    int `yaml:"top"`
 	Bottom int `yaml:"bottom"`
 	Left   int `yaml:"left"`
-}
-
-// MonocleConfig controls single-window fullscreen mode.
-type MonocleConfig struct {
-	Workspace   int     `yaml:"workspace"`
-	WidthRatio  float64 `yaml:"width_ratio"`
-	HeightRatio float64 `yaml:"height_ratio"`
 }
 
 // SplitConfig defines predefined master-slave split ratios.
@@ -147,13 +159,11 @@ type StyleConfig struct {
 // BorderColors specifies border colors using Hyprland color formats.
 type BorderColors struct {
 	Default string `yaml:"default"`
-	Monocle string `yaml:"monocle"`
 }
 
 // ShadowColors specifies shadow colors using Hyprland color formats.
 type ShadowColors struct {
 	Default string `yaml:"default"`
-	Monocle string `yaml:"monocle"`
 }
 
 // WindowsConfig controls which windows hyprd manages and where to hide slave windows.
@@ -161,6 +171,14 @@ type WindowsConfig struct {
 	IgnoredClasses   []string `yaml:"ignored_classes"`
 	HiddenWorkspace  string   `yaml:"hidden_workspace"`
 	ShadowWorkspace  string   `yaml:"shadow_workspace"`
+}
+
+// ThreeBodyWindow defines a window that participates in the three-body layout.
+type ThreeBodyWindow struct {
+	Class    string `yaml:"class"`
+	Title    string `yaml:"title"`
+	Command  string `yaml:"command"`
+	NotifyOr bool   `yaml:"notify_or"`
 }
 
 // Session defines a workspace layout for automated window spawning and arrangement.
@@ -177,21 +195,6 @@ type WindowConfig struct {
 	Command string `yaml:"command"`
 	Title   string `yaml:"title"`
 	Role    string `yaml:"role"`
-}
-
-// UsableHeight returns the screen height available for windows after subtracting reserved areas.
-func (c *HyprConfig) UsableHeight() int {
-	return c.Monitor.Height - c.Monitor.Reserved.Top - c.Monitor.Reserved.Bottom
-}
-
-// MonocleWidth returns the monocle window width based on monitor width and width ratio.
-func (c *HyprConfig) MonocleWidth() int {
-	return int(float64(c.Monitor.Width) * c.Monocle.WidthRatio)
-}
-
-// MonocleHeight returns the monocle window height based on usable height and height ratio.
-func (c *HyprConfig) MonocleHeight() int {
-	return int(float64(c.UsableHeight()) * c.Monocle.HeightRatio)
 }
 
 // IsIgnored returns true if the given window class is in the IgnoredClasses list.
@@ -265,10 +268,17 @@ func Default() *Config {
 					Left:   0,
 				},
 			},
-			Monocle: MonocleConfig{
-				Workspace:   6,
-				WidthRatio:  0.83,
-				HeightRatio: 0.94,
+			Background: BackgroundConfig{
+				Display:   "HDMI-A-1",
+				VideoPath: "~/dotfiles/share/videos",
+				Socket:    "/tmp/mpvpaper.sock",
+				Wallpaper: Wallpaper{
+					File:       "dna.mp4",
+					Brightness: 6,
+					Contrast:   9,
+					Saturation: -16,
+					Hue:        -24,
+				},
 			},
 			Split: SplitConfig{
 				XS:      "0.37",
@@ -278,17 +288,32 @@ func Default() *Config {
 			Style: StyleConfig{
 				Border: BorderColors{
 					Default: "rgb(f2a170)",
-					Monocle: "rgb(5aba6d)",
 				},
 				Shadow: ShadowColors{
 					Default: "rgba(e56b2c32)",
-					Monocle: "rgba(2d9a4342)",
 				},
 			},
 			Windows: WindowsConfig{
 				IgnoredClasses:  []string{"GLava"},
 				HiddenWorkspace: "special:hiddenSlaves",
 				ShadowWorkspace: "special:shadow",
+			},
+			ThreeBody: map[string]ThreeBodyWindow{
+				"editor": {
+					Class:   "kitty",
+					Title:   "editor",
+					Command: "kitty --title=editor --session ~/.config/kitty/sessions/editor.conf",
+				},
+				"agents": {
+					Class:    "kitty",
+					Title:    "agents",
+					Command:  "kitty --title=agents --session ~/.config/kitty/sessions/agents.conf",
+					NotifyOr: true,
+				},
+				"browser": {
+					Class:   "firefox-developer-edition",
+					Command: "firefox-developer-edition",
+				},
 			},
 			Sessions: map[string]Session{
 				"dotfiles": {
@@ -335,7 +360,7 @@ func Default() *Config {
 	}
 }
 
-// Load reads config from ~/dotfiles/daemons/config.yaml, falling back to defaults on any error.
+// Load reads config from ~/dotfiles/daemons/daemons.yaml, falling back to defaults on any error.
 func Load() *Config {
 	cfg := Default()
 

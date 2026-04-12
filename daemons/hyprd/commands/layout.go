@@ -76,6 +76,11 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 
 	homeDir, _ := os.UserHomeDir()
 
+	// Store project path in state for this workspace
+	if s.Project != "" {
+		l.state.SetProjectPath(s.Workspace, fmt.Sprintf("%s/%s", homeDir, s.Project))
+	}
+
 	// Spawn windows defined in config
 	for _, w := range s.Windows {
 		if w.Command == "" {
