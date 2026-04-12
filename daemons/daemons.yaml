@@ -60,6 +60,11 @@ hypr:
     ignored_classes:
       - "GLava"
     hidden_workspace: "special:hiddenSlaves"
+    monocle:
+      width: 3190
+      height: 1920
+      offset_x: 0
+      offset_y: 25
   three_body:
     editor:
       class: kitty

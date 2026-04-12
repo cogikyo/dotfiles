@@ -75,10 +75,10 @@ type MonocleWindow struct {
 // MonocleState tracks all windows displaced from a workspace during monocle mode,
 // plus the focused window that was floated and resized.
 type MonocleState struct {
-	Focused      string          `json:"focused"`                // Address of the monocled (floated) window
-	Master       string          `json:"master"`                 // Address of the original master window
-	Windows      []MonocleWindow `json:"windows"`
-	HadThreeBody bool            `json:"had_three_body"`         // Whether three-body was active before monocle
+	Focused        string          `json:"focused"`                  // Address of the monocled (floated) window
+	Master         string          `json:"master"`                   // Address of the original master window
+	Windows        []MonocleWindow `json:"windows"`
+	SavedThreeBody *ThreeBodyState `json:"saved_three_body,omitempty"` // Full three-body state to restore
 }
 
 // StateManager abstracts daemon state access for commands, providing

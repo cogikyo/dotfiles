@@ -174,10 +174,12 @@ type WindowsConfig struct {
 	Monocle          MonocleConfig `yaml:"monocle"`
 }
 
-// MonocleConfig controls single-window monocle mode sizing.
+// MonocleConfig controls single-window monocle mode sizing and position.
 type MonocleConfig struct {
-	WidthRatio  float64 `yaml:"width_ratio"`
-	HeightRatio float64 `yaml:"height_ratio"`
+	Width   int `yaml:"width"`
+	Height  int `yaml:"height"`
+	OffsetX int `yaml:"offset_x"`
+	OffsetY int `yaml:"offset_y"`
 }
 
 // ThreeBodyWindow defines a window that participates in the three-body layout.
@@ -204,19 +206,14 @@ type WindowConfig struct {
 	Role    string `yaml:"role"`
 }
 
-// UsableHeight returns the screen height available for windows after subtracting reserved areas.
-func (c *HyprConfig) UsableHeight() int {
-	return c.Monitor.Height - c.Monitor.Reserved.Top - c.Monitor.Reserved.Bottom
+// MonocleSize returns the configured monocle window dimensions.
+func (c *HyprConfig) MonocleSize() (w, h int) {
+	return c.Windows.Monocle.Width, c.Windows.Monocle.Height
 }
 
-// MonocleWidth returns the monocle window width based on monitor width and width ratio.
-func (c *HyprConfig) MonocleWidth() int {
-	return int(float64(c.Monitor.Width) * c.Windows.Monocle.WidthRatio)
-}
-
-// MonocleHeight returns the monocle window height based on usable height and height ratio.
-func (c *HyprConfig) MonocleHeight() int {
-	return int(float64(c.UsableHeight()) * c.Windows.Monocle.HeightRatio)
+// MonocleOffset returns the x/y offset from center for monocle windows.
+func (c *HyprConfig) MonocleOffset() (x, y int) {
+	return c.Windows.Monocle.OffsetX, c.Windows.Monocle.OffsetY
 }
 
 // IsIgnored returns true if the given window class is in the IgnoredClasses list.
@@ -320,8 +317,8 @@ func Default() *Config {
 				HiddenWorkspace: "special:hiddenSlaves",
 				ShadowWorkspace: "special:shadow",
 				Monocle: MonocleConfig{
-					WidthRatio:  0.83,
-					HeightRatio: 0.94,
+					Width:  3190,
+					Height: 1920,
 				},
 			},
 			ThreeBody: map[string]ThreeBodyWindow{

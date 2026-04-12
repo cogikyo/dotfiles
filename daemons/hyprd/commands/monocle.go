@@ -42,12 +42,12 @@ func (m *Monocle) activate() (string, error) {
 
 	cfg := m.state.GetConfig()
 
-	// Dissolve three-body if active (restore shadow to workspace first)
-	hadThreeBody := false
+	// Save and dissolve three-body if active
+	var savedTB *ThreeBodyState
 	if tb := m.state.GetThreeBody(wsID); tb != nil {
 		m.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", wsID, tb.Shadow))
 		m.state.ClearThreeBody(wsID)
-		hadThreeBody = true
+		savedTB = tb
 	}
 
 	tiled, err := GetTiledWindows(m.hypr, wsID, cfg.Windows.IgnoredClasses)
@@ -66,7 +66,6 @@ func (m *Monocle) activate() (string, error) {
 		return "monocle: no active window", nil
 	}
 
-	// Track original master before displacing windows
 	master := tiled[0].Address
 
 	monoWS := fmt.Sprintf("special:mono%d", wsID)
@@ -86,58 +85,60 @@ func (m *Monocle) activate() (string, error) {
 		})
 	}
 
-	// Float and resize the focused window to monocle dimensions
-	w := cfg.MonocleWidth()
-	h := cfg.MonocleHeight()
+	// Float, resize, center, and offset the focused window
+	w, h := cfg.MonocleSize()
+	ox, oy := cfg.MonocleOffset()
 	batch := fmt.Sprintf(
 		"dispatch togglefloating; "+
 			"dispatch resizeactive exact %d %d; "+
-			"dispatch centerwindow",
-		w, h,
+			"dispatch centerwindow; "+
+			"dispatch moveactive %d %d",
+		w, h, ox, oy,
 	)
 	m.hypr.Request("[[BATCH]]" + batch)
 	centerCursor(m.hypr)
 
 	m.state.SetMonocle(wsID, &MonocleState{
-		Focused:      active.Address,
-		Master:       master,
-		Windows:      displaced,
-		HadThreeBody: hadThreeBody,
+		Focused:        active.Address,
+		Master:         master,
+		Windows:        displaced,
+		SavedThreeBody: savedTB,
 	})
 	return fmt.Sprintf("monocle: ws%d, %d windows hidden", wsID, len(displaced)), nil
 }
 
-// deactivateAll unfloats monocled windows and restores all displaced windows.
-// If three-body was active before monocle, re-enrolls by detecting current positions.
+// deactivateAll unfloats monocled windows, restores displaced windows,
+// and re-enrolls three-body with the exact saved state.
 func (m *Monocle) deactivateAll() (string, error) {
 	all := m.state.AllMonocle()
 	restored := 0
-
 	cfg := m.state.GetConfig()
 
 	for ws, ms := range all {
-		// Unfloat the focused window first
+		// Step 1: unfloat the monocled window
 		if ms.Focused != "" {
 			m.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", ms.Focused))
 			m.hypr.Dispatch("togglefloating")
 		}
 
-		// Restore displaced windows
+		// Step 2: restore all displaced windows
 		for _, mw := range ms.Windows {
-			if err := m.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s",
-				mw.OriginWS, mw.Address)); err != nil {
-				return "", fmt.Errorf("monocle restore %s: %w", mw.Address, err)
-			}
+			m.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s",
+				mw.OriginWS, mw.Address))
 			restored++
 		}
 
-		// Ensure original master is back in master position (leftmost).
-		// After unfloat + restore, the focused window may have taken master.
-		m.restoreMasterPosition(ws, ms.Master, cfg)
+		// Step 3: fix master position — all windows are now tiled
+		m.ensureMaster(ws, ms.Master, cfg)
 
-		// Re-enroll three-body by detecting actual positions
-		if ms.HadThreeBody {
-			m.reenrollThreeBody(ws, ms.Focused, cfg)
+		// Step 4: restore three-body with saved state
+		if ms.SavedThreeBody != nil {
+			m.restoreThreeBody(ws, ms.SavedThreeBody, cfg)
+		}
+
+		// Step 5: refocus the window that was monocled
+		if ms.Focused != "" {
+			m.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", ms.Focused))
 		}
 
 		m.state.ClearMonocle(ws)
@@ -146,9 +147,8 @@ func (m *Monocle) deactivateAll() (string, error) {
 	return fmt.Sprintf("monocle off: %d windows restored", restored), nil
 }
 
-// restoreMasterPosition ensures the original master window is in master (leftmost) position.
-// After monocle deactivation, the unfloated window may have taken master position.
-func (m *Monocle) restoreMasterPosition(wsID int, masterAddr string, cfg *config.HyprConfig) {
+// ensureMaster puts the desired window in master position if it isn't already.
+func (m *Monocle) ensureMaster(wsID int, masterAddr string, cfg *config.HyprConfig) {
 	if masterAddr == "" {
 		return
 	}
@@ -158,63 +158,25 @@ func (m *Monocle) restoreMasterPosition(wsID int, masterAddr string, cfg *config
 		return
 	}
 
-	// Already in master position
 	if tiled[0].Address == masterAddr {
-		return
+		return // already master
 	}
 
-	// Focus the original master and swap it into master position
+	// Focus the desired master (currently a slave) and swap it into master
 	m.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", masterAddr))
 	m.hypr.Dispatch("layoutmsg swapwithmaster master")
 }
 
-// reenrollThreeBody detects current tiling positions and re-enrolls three-body.
-// The focused (monocled) window becomes the active slave if it's not master.
-func (m *Monocle) reenrollThreeBody(wsID int, focused string, cfg *config.HyprConfig) {
-	tiled, err := GetTiledWindows(m.hypr, wsID, cfg.Windows.IgnoredClasses)
-	if err != nil || len(tiled) != 3 {
-		return
-	}
-
-	master := tiled[0]
-	slaves := GetSlaves(tiled)
-	if len(slaves) != 2 {
-		return
-	}
-
-	// Determine active/shadow: the focused window stays visible, the other hides
-	var active, shadow *hypr.Window
-	if master.Address == focused {
-		// Focused is master — pick first slave as active, second as shadow
-		active = &slaves[0]
-		shadow = &slaves[1]
-	} else {
-		for i := range slaves {
-			if slaves[i].Address == focused {
-				active = &slaves[i]
-			} else {
-				shadow = &slaves[i]
-			}
-		}
-		// Focused not found in slaves (closed?) — pick defaults
-		if active == nil {
-			active = &slaves[0]
-			shadow = &slaves[1]
-		}
-	}
-
-	if shadow == nil {
-		return
-	}
-
+// restoreThreeBody re-enrolls three-body with the exact saved addresses.
+func (m *Monocle) restoreThreeBody(wsID int, saved *ThreeBodyState, cfg *config.HyprConfig) {
+	// Hide the saved shadow window
 	m.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s",
-		cfg.Windows.ShadowWorkspace, shadow.Address))
+		cfg.Windows.ShadowWorkspace, saved.Shadow))
 
-	m.state.SetThreeBody(wsID, &ThreeBodyState{
-		Master: master.Address,
-		Active: active.Address,
-		Shadow: shadow.Address,
-	})
+	// Focus the active slave
+	m.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", saved.Active))
+
+	m.state.SetThreeBody(wsID, saved)
 }
 
 func (m *Monocle) activeWorkspace() (int, error) {
