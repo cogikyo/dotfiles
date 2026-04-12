@@ -92,8 +92,16 @@ local function yank_path(motion)
 	local path = vim.fn.expand("%:p")
 	vim.fn.setreg("+", path .. "\n\n" .. selection .. "\n")
 end
-local function yank_paragrah(motion)
+local function yank_selection(motion)
 	return function()
+		if motion == "gv" then
+			local s = vim.fn.getpos("'<")
+			local e = vim.fn.getpos("'>")
+			if s[2] == 0 or (s[2] == e[2] and s[3] == e[3]) then
+				yank_path("vap")
+				return
+			end
+		end
 		yank_path(motion)
 	end
 end
@@ -123,17 +131,11 @@ local function yank_diagnostics()
 	vim.notify("Yanked " .. #diagnostics .. " diagnostic(s)", vim.log.levels.INFO)
 end
 
-local function yank_selection(motion)
-	return function()
-		yank_path(motion)
-	end
-end
-
 map("n", "<A-f>", ':let @+=expand("%:p")<CR>', desc("Yank file path"))
-map("n", "<A-q>", yank_paragrah("vap"), desc("Yank file path + paragraph"))
+map("n", "<A-q>", yank_selection("vap"), desc("Yank file path + paragraph"))
 map("n", "<A-w>", yank_diagnostics, desc("Yank file path + diagnostics"))
 map("v", "<A-b>", yank_selection(nil), desc("Yank file path + selection"))
-map("n", "<A-b>", yank_selection("gv"), desc("Yank file path + last selection"))
+map("n", "<A-b>", yank_selection("gv"), desc("Yank file path + last selection (or paragraph)"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ space: add empty lines above/below                                          │
