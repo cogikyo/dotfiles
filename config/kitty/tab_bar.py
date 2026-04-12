@@ -88,6 +88,10 @@ def get_accent() -> int:
 _right_status_length = 0
 _current_icon_width = 0
 
+# per-cycle cache — invalidated each time the first tab (index=1) is drawn
+_cache: dict[str, object] = {}
+_cache_cycle = -1
+
 # ╭──────────────────────────────────────────────────────────────────────────────╮
 # │ Utilities                                                                    │
 # ╰──────────────────────────────────────────────────────────────────────────────╯
@@ -99,17 +103,33 @@ def _display_width(text: str) -> int:
 
 
 def _is_git_repo(path: str) -> bool:
-    """Check if path is inside a git repository."""
+    """Check if path is inside a git repository (cached per draw cycle)."""
+    cached = _cache.get("git_repo")
+    if cached is not None:
+        return cached
     p = Path(path)
+    result = False
     while p != p.parent:
         if (p / ".git").exists():
-            return True
+            result = True
+            break
         p = p.parent
-    return False
+    _cache["git_repo"] = result
+    return result
 
 
 def get_cwd_right() -> str:
-    """Build CWD string in child→root order for right-aligned display."""
+    """Build CWD string in child→root order for right-aligned display (cached per draw cycle)."""
+    cached = _cache.get("cwd_right")
+    if cached is not None:
+        return cached
+    result = _compute_cwd_right()
+    _cache["cwd_right"] = result
+    return result
+
+
+def _compute_cwd_right() -> str:
+    """Compute the CWD string (uncached)."""
     boss = get_boss()
     tab_manager = boss.active_tab_manager
     if not tab_manager:
@@ -174,8 +194,13 @@ def _agent_from_window(window) -> str:
 
 
 def is_agent_window(tab_manager) -> bool:
-    """Check if any window in the tab manager is running an AI agent."""
+    """Check if any window in the tab manager is running an AI agent (cached per draw cycle)."""
+    cached = _cache.get("is_agent")
+    if cached is not None:
+        return cached
+    result = False
     if not tab_manager:
+        _cache["is_agent"] = False
         return False
     try:
         for tab in tab_manager.tabs:
@@ -187,22 +212,33 @@ def is_agent_window(tab_manager) -> bool:
                     title_lower = title.lower()
                     for agent in AGENT_NAMES:
                         if agent in title_lower:
-                            return True
+                            result = True
+                            break
+                if result:
+                    break
                 if _agent_from_window(window):
-                    return True
+                    result = True
+                    break
+            if result:
+                break
     except (AttributeError, TypeError):
         pass
-    return False
+    _cache["is_agent"] = result
+    return result
 
 
 def _detect_active_agent(tab_manager) -> str:
-    """Return the agent name running in the active window, or empty string."""
+    """Return the agent name running in the active window, or empty string (cached per draw cycle)."""
+    cached = _cache.get("active_agent")
+    if cached is not None:
+        return cached
     if not tab_manager:
-        return ""
-    window = tab_manager.active_window
-    if not window:
-        return ""
-    return _agent_from_window(window)
+        result = ""
+    else:
+        window = tab_manager.active_window
+        result = _agent_from_window(window) if window else ""
+    _cache["active_agent"] = result
+    return result
 
 
 def draw_icon(screen: Screen, index: int) -> int:
@@ -345,7 +381,12 @@ def draw_tab(
     extra_data: ExtraData,
 ) -> int:
     """Kitty draw_tab callback — entry point for rendering each tab."""
-    global _right_status_length
+    global _right_status_length, _cache_cycle
+
+    # Invalidate per-cycle cache on first tab
+    if index == 1:
+        _cache_cycle += 1
+        _cache.clear()
 
     # Build right status cells: separator | cwd | hostname
     cwd_text = " " + get_cwd_right() + " " + SEP_RIGHT
