@@ -1,0 +1,10 @@
+[Unit]
+Description=Firefox new tab HTTP server
+
+[Service]
+ExecStart=%h/.local/bin/newtab
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

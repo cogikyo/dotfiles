@@ -1,0 +1,11 @@
+[Unit]
+Description=Hyprland window management daemon
+After=graphical-session.target
+
+[Service]
+ExecStart=%h/.local/bin/hyprd
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target
