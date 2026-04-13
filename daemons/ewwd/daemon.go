@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 const SocketPath = "/tmp/ewwd.sock"
@@ -195,10 +196,21 @@ func (d *Daemon) openWindows() string {
 		return "open: no windows configured"
 	}
 
-	// Ensure eww daemon is running
+	// Ensure eww daemon is running, kill stale state if needed
 	if err := exec.Command("eww", "ping").Run(); err != nil {
-		if err := exec.Command("eww", "daemon").Run(); err != nil {
-			return fmt.Sprintf("error: eww daemon failed: %v", err)
+		exec.Command("eww", "kill").Run()
+		time.Sleep(200 * time.Millisecond)
+		exec.Command("eww", "daemon").Start()
+		ready := false
+		for range 50 {
+			if exec.Command("eww", "ping").Run() == nil {
+				ready = true
+				break
+			}
+			time.Sleep(200 * time.Millisecond)
+		}
+		if !ready {
+			return "error: eww daemon failed to start"
 		}
 	}
 
