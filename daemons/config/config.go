@@ -36,6 +36,7 @@ type Config struct {
 
 // EwwConfig defines all provider-specific settings for the ewwd daemon.
 type EwwConfig struct {
+	Windows    []string         `yaml:"windows"`
 	Weather    WeatherConfig    `yaml:"weather"`
 	Timer      TimerConfig      `yaml:"timer"`
 	Audio      AudioConfig      `yaml:"audio"`
@@ -69,6 +70,7 @@ type AudioConfig struct {
 	DefaultSinkVolume   int               `yaml:"default_sink_volume"`
 	DefaultSourceVolume int               `yaml:"default_source_volume"`
 	NameMappings        map[string]string `yaml:"name_mappings"`
+	BluetoothNames      []string          `yaml:"bluetooth_names"`
 }
 
 // BrightnessConfig defines preset brightness levels for common scenarios.
@@ -102,14 +104,28 @@ type NetworkConfig struct {
 // HyprConfig is the configuration for hyprd, controlling monitor geometry,
 // split ratios, visual styling, window management, and sessions.
 type HyprConfig struct {
-	Monitor    MonitorConfig              `yaml:"monitor"`
-	Background BackgroundConfig           `yaml:"background"`
-	Split      SplitConfig                `yaml:"split"`
-	Style      StyleConfig                `yaml:"style"`
-	Windows    WindowsConfig              `yaml:"windows"`
-	Tabs       map[string]TabProfile        `yaml:"tabs"`
-	ThreeBody  map[string]ThreeBodyWindow `yaml:"three_body"`
-	Sessions   map[string]Session         `yaml:"sessions"`
+	Monitor        MonitorConfig              `yaml:"monitor"`
+	Background     BackgroundConfig           `yaml:"background"`
+	Init           InitConfig                 `yaml:"init"`
+	Split          SplitConfig                `yaml:"split"`
+	Style          StyleConfig                `yaml:"style"`
+	Notify         NotifyConfig               `yaml:"notify"`
+	Windows        WindowsConfig              `yaml:"windows"`
+	Tabs           map[string]TabProfile      `yaml:"tabs"`
+	ThreeBody      map[string]ThreeBodyWindow `yaml:"three_body"`
+	Sessions       map[string]Session         `yaml:"sessions"`
+	ActiveSessions map[int]string             `yaml:"active_sessions"`
+}
+
+// InitConfig controls the one-time boot sequence that runs when hyprd starts
+// on a fresh Hyprland session (no existing windows).
+type InitConfig struct {
+	Sessions       []string `yaml:"sessions"`        // Layout sessions to open (by name)
+	Execs          []string `yaml:"execs"`           // Commands to launch (via hyprctl dispatch exec)
+	Workspace      int      `yaml:"workspace"`       // Workspace to focus after init
+	Lock           bool     `yaml:"lock"`            // Run hyprlock after init
+	Greeting       string   `yaml:"greeting"`        // Notification message on boot
+	NetworkTimeout int      `yaml:"network_timeout"` // Seconds to wait for network (0 = skip)
 }
 
 // BackgroundConfig controls mpvpaper video wallpaper.
@@ -167,12 +183,37 @@ type ShadowColors struct {
 	Default string `yaml:"default"`
 }
 
+// NotifyConfig defines notification routing, Dunst presentation, and sound policy.
+type NotifyConfig struct {
+	SoundsDir           string                 `yaml:"sounds_dir"`
+	WorkspaceIconsDir   string                 `yaml:"workspace_icons_dir"`
+	WorkspaceIcons      map[int]string         `yaml:"workspace_icons"`
+	QuietVolume         int                    `yaml:"quiet_volume"`
+	LoudVolume          int                    `yaml:"loud_volume"`
+	Styles              map[string]NotifyStyle `yaml:"styles"`
+	UrgencySounds       map[string]string      `yaml:"urgency_sounds"`
+	AppSounds           map[string]string      `yaml:"app_sounds"`
+	SilentApps          []string               `yaml:"silent_apps"`
+	KittySilentPatterns []string               `yaml:"kitty_silent_patterns"`
+}
+
+// NotifyStyle defines optional Dunst hint overrides for a notification class.
+type NotifyStyle struct {
+	Urgency    string `yaml:"urgency"`
+	Timeout    int    `yaml:"timeout"`
+	Background string `yaml:"background"`
+	Foreground string `yaml:"foreground"`
+	Frame      string `yaml:"frame"`
+	IconSuffix string `yaml:"icon_suffix"`
+	Persistent bool   `yaml:"persistent"`
+}
+
 // WindowsConfig controls which windows hyprd manages and where to hide slave windows.
 type WindowsConfig struct {
-	IgnoredClasses   []string      `yaml:"ignored_classes"`
-	HiddenWorkspace  string        `yaml:"hidden_workspace"`
-	ShadowWorkspace  string        `yaml:"shadow_workspace"`
-	Monocle          MonocleConfig `yaml:"monocle"`
+	IgnoredClasses  []string      `yaml:"ignored_classes"`
+	HiddenWorkspace string        `yaml:"hidden_workspace"`
+	ShadowWorkspace string        `yaml:"shadow_workspace"`
+	Monocle         MonocleConfig `yaml:"monocle"`
 }
 
 // MonocleConfig controls single-window monocle mode sizing and position.
@@ -194,10 +235,10 @@ type TabProfile struct {
 type TabDef struct {
 	Name       string `yaml:"name"`
 	Title      string `yaml:"title"`
-	Command    string `yaml:"command"`      // empty = plain shell
-	CWD        string `yaml:"cwd"`          // base directory, expands ~/
-	CWDResolve string `yaml:"cwd_resolve"`  // "recent-git": find child dir with latest commit
-	Requires   string `yaml:"requires"`     // "justfile" or "git", skip tab if missing
+	Command    string `yaml:"command"`     // empty = plain shell
+	CWD        string `yaml:"cwd"`         // base directory, expands ~/
+	CWDResolve string `yaml:"cwd_resolve"` // "recent-git": find child dir with latest commit
+	Requires   string `yaml:"requires"`    // "justfile" or "git", skip tab if missing
 }
 
 // ThreeBodyWindow defines a window that participates in the three-body layout.
@@ -208,19 +249,42 @@ type ThreeBodyWindow struct {
 }
 
 // Session defines a workspace layout for automated window spawning and arrangement.
+// Three-body sessions specify Body (references to ThreeBody keys) and optionally
+// Browser config for URLs. Simple sessions use Command for a single window.
 type Session struct {
-	Name      string         `yaml:"name" json:"name"`
-	Workspace int            `yaml:"workspace" json:"workspace"`
-	Project   string         `yaml:"project" json:"project"`
-	URLs      []string       `yaml:"urls" json:"urls"`
-	Windows   []WindowConfig `yaml:"windows" json:"windows"`
+	Name      string            `yaml:"name" json:"name"`
+	Workspace int               `yaml:"workspace" json:"workspace"`
+	Project   string            `yaml:"project" json:"project"`
+	Body      []string          `yaml:"body" json:"body"`       // three-body window keys (e.g. ["editor", "browser", "agents"])
+	Browser   BrowserConfig     `yaml:"browser" json:"browser"` // URL config for the browser body member
+	Tabs      map[string]string `yaml:"tabs" json:"tabs"`       // per-body tab profile overrides (body key → tab profile name)
+	Command   string            `yaml:"command" json:"command"` // simple single-window session (e.g. "slack")
 }
 
-// WindowConfig defines a window to spawn and its position in the master/slave layout.
-type WindowConfig struct {
-	Command string `yaml:"command"`
-	Title   string `yaml:"title"`
-	Role    string `yaml:"role"`
+// BrowserConfig declares URLs to open in the browser body member.
+// Pinned tabs and tab groups are modeled for future WebExtension support;
+// the current implementation flattens everything into sequential URL opens.
+type BrowserConfig struct {
+	Pinned []string       `yaml:"pinned" json:"pinned"` // URLs to pin (future: WebExtension)
+	Groups []BrowserGroup `yaml:"groups" json:"groups"` // tab groups (future: WebExtension)
+	URLs   []string       `yaml:"urls" json:"urls"`     // ungrouped tabs
+}
+
+// BrowserGroup defines a named set of URLs that belong together in a Firefox tab group.
+type BrowserGroup struct {
+	Name string   `yaml:"name" json:"name"`
+	URLs []string `yaml:"urls" json:"urls"`
+}
+
+// AllURLs returns all URLs flattened in open order: pinned first, then groups, then ungrouped.
+func (b *BrowserConfig) AllURLs() []string {
+	var urls []string
+	urls = append(urls, b.Pinned...)
+	for _, g := range b.Groups {
+		urls = append(urls, g.URLs...)
+	}
+	urls = append(urls, b.URLs...)
+	return urls
 }
 
 // MonocleSize returns the configured monocle window dimensions.
@@ -258,6 +322,7 @@ type NewtabConfig struct {
 func Default() *Config {
 	return &Config{
 		Eww: EwwConfig{
+			Windows: []string{"today", "workspaces", "computer", "music", "player"},
 			Weather: WeatherConfig{
 				APIKeyFile:   "~/.local/.owm_api_key",
 				PollInterval: 60 * time.Second,
@@ -276,6 +341,7 @@ func Default() *Config {
 				DefaultSinkVolume:   69,
 				DefaultSourceVolume: 150,
 				NameMappings:        map[string]string{"cullyn": "pixel buds"},
+				BluetoothNames:      []string{"WH-1000XM4", "OpenFit", "pixel buds"},
 			},
 			Brightness: BrightnessConfig{
 				Min:     2,
@@ -316,6 +382,20 @@ func Default() *Config {
 					Hue:        -24,
 				},
 			},
+			Init: InitConfig{
+				Sessions: []string{"dotfiles"},
+				Execs: []string{
+					"glava -e bars_rc.glsl",
+					"glava -e bars_r_rc.glsl",
+					"glava -e radial_rc.glsl",
+					"spotify-launcher",
+					"bluetoothctl connect 14:3F:A6:10:A1:B5",
+				},
+				Workspace:      1,
+				Lock:           true,
+				Greeting:       "こんにちは",
+				NetworkTimeout: 10,
+			},
 			Split: SplitConfig{
 				XS:      "0.37",
 				Default: "0.4942",
@@ -328,6 +408,89 @@ func Default() *Config {
 				Shadow: ShadowColors{
 					Default: "rgba(e56b2c32)",
 				},
+			},
+			Notify: NotifyConfig{
+				SoundsDir:         "~/dotfiles/share/sounds",
+				WorkspaceIconsDir: "~/dotfiles/config/eww/art/ws-icons",
+				WorkspaceIcons: map[int]string{
+					1: "network",
+					2: "learn",
+					3: "dna",
+					4: "dotfiles",
+					5: "music",
+				},
+				QuietVolume: 52428,
+				LoudVolume:  72089,
+				Styles: map[string]NotifyStyle{
+					"start": {
+						Urgency:    "low",
+						Timeout:    2000,
+						Background: "#25284180",
+						Foreground: "#8aa4f3",
+						Frame:      "#6380ec80",
+					},
+					"subagent": {
+						Urgency:    "low",
+						Timeout:    2000,
+						Background: "#25284180",
+						Foreground: "#8aa4f3",
+						Frame:      "#6380ec80",
+					},
+					"complete": {
+						Urgency:    "normal",
+						Timeout:    0,
+						Background: "#49353130",
+						Foreground: "#f2a170",
+						Frame:      "#ea834b",
+						IconSuffix: "-active",
+						Persistent: true,
+					},
+					"idle": {
+						Urgency:    "normal",
+						Timeout:    0,
+						Background: "#2a2d4580",
+						Foreground: "#b29ae8",
+						Frame:      "#9376d880",
+						IconSuffix: "-idle",
+						Persistent: true,
+					},
+					"permission": {
+						Urgency:    "normal",
+						Timeout:    0,
+						Background: "#2a3d2580",
+						Foreground: "#95cb79",
+						Frame:      "#73ad5a80",
+						IconSuffix: "-monocle",
+						Persistent: true,
+					},
+				},
+				UrgencySounds: map[string]string{
+					"low":      "none",
+					"normal":   "moondrop",
+					"critical": "gems",
+				},
+				AppSounds: map[string]string{
+					"timer":     "jackpot",
+					"attention": "discovery",
+					"chat":      "reward",
+					"work":      "fruit",
+					"wf-start":  "discovery",
+					"wf-end":    "reward",
+					"Slack":     "knock",
+				},
+				SilentApps: []string{
+					"Spotify",
+					"discord",
+					"claude",
+					"codex",
+					"claude-input",
+					"",
+					"󰯉",
+					"",
+					"",
+					"",
+				},
+				KittySilentPatterns: []string{"claude", "codex", "approval"},
 			},
 			Windows: WindowsConfig{
 				IgnoredClasses:  []string{"GLava"},
@@ -355,39 +518,79 @@ func Default() *Config {
 				},
 			},
 			Sessions: map[string]Session{
+				"slack": {
+					Name:      "slack",
+					Workspace: 2,
+					Command:   "slack",
+				},
+				"discord": {
+					Name:      "discord",
+					Workspace: 2,
+					Command:   "discord",
+				},
+				"tableplus": {
+					Name:      "tableplus",
+					Workspace: 3,
+					Command:   "tableplus",
+				},
+				"inkscape": {
+					Name:      "inkscape",
+					Workspace: 3,
+					Command:   "inkscape",
+				},
+				"obs": {
+					Name:      "obs",
+					Workspace: 3,
+					Command:   "obs",
+				},
+				"gimp": {
+					Name:      "gimp",
+					Workspace: 3,
+					Command:   "gimp",
+				},
+				"leadpier": {
+					Name:      "leadpier",
+					Workspace: 4,
+					Project:   "LeadPier",
+					Body:      []string{"editor", "browser", "agents"},
+					Browser: BrowserConfig{
+						URLs: []string{"http://localhost:4000"},
+					},
+					Tabs: map[string]string{"editor": "leadpier"},
+				},
 				"dotfiles": {
 					Name:      "dotfiles",
-					Workspace: 4,
+					Workspace: 5,
 					Project:   "dotfiles",
-					URLs:      []string{"https://github.com/cogikyo/dotfiles"},
-					Windows: []WindowConfig{
-						{Command: "kitty --title terminal", Title: "terminal", Role: "master"},
-						{Title: "firefox", Role: "slave"},
-						{Command: "kitty --title claude", Title: "claude", Role: "slave"},
+					Body:      []string{"editor", "browser", "agents"},
+					Browser: BrowserConfig{
+						URLs: []string{"https://github.com/cogikyo/dotfiles"},
 					},
 				},
 				"acr": {
 					Name:      "acr",
 					Workspace: 3,
 					Project:   "cogikyo/acr",
-					URLs:      []string{"localhost:3002"},
-					Windows: []WindowConfig{
-						{Command: "kitty --title terminal", Title: "terminal", Role: "master"},
-						{Title: "firefox", Role: "slave"},
-						{Command: "kitty --title claude", Title: "claude", Role: "slave"},
+					Body:      []string{"editor", "browser", "agents"},
+					Browser: BrowserConfig{
+						URLs: []string{"localhost:3002"},
 					},
 				},
 				"cogikyo": {
 					Name:      "cogikyo",
-					Workspace: 3,
+					Workspace: 4,
 					Project:   "cogikyo/cogikyo.com",
-					URLs:      []string{"localhost:3000"},
-					Windows: []WindowConfig{
-						{Command: "kitty --title terminal", Title: "terminal", Role: "master"},
-						{Title: "firefox", Role: "slave"},
-						{Command: "kitty --title claude", Title: "claude", Role: "slave"},
+					Body:      []string{"editor", "browser", "agents"},
+					Browser: BrowserConfig{
+						URLs: []string{"localhost:3000"},
 					},
 				},
+			},
+			ActiveSessions: map[int]string{
+				2: "slack",
+				3: "tableplus",
+				4: "leadpier",
+				5: "dotfiles",
 			},
 		},
 		Newtab: NewtabConfig{
@@ -427,7 +630,27 @@ func Load() *Config {
 		}
 	}
 
+	cfg.Hypr.Notify.UrgencySounds = lowercaseKeys(cfg.Hypr.Notify.UrgencySounds)
+	cfg.Hypr.Notify.AppSounds = lowercaseKeys(cfg.Hypr.Notify.AppSounds)
+	cfg.Hypr.Notify.SilentApps = lowercaseSlice(cfg.Hypr.Notify.SilentApps)
+
 	return cfg
+}
+
+func lowercaseKeys(m map[string]string) map[string]string {
+	out := make(map[string]string, len(m))
+	for k, v := range m {
+		out[strings.ToLower(k)] = v
+	}
+	return out
+}
+
+func lowercaseSlice(s []string) []string {
+	out := make([]string, len(s))
+	for i, v := range s {
+		out[i] = strings.ToLower(v)
+	}
+	return out
 }
 
 // ExpandPath converts ~/ prefix to absolute home directory path, leaving other paths unchanged.

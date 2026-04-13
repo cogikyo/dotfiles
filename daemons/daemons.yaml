@@ -1,4 +1,10 @@
 eww:
+  windows:
+    - today
+    - workspaces
+    - computer
+    - music
+    - player
   weather:
     api_key_file: "~/.local/.owm_api_key"
     poll_interval: 60s
@@ -16,6 +22,10 @@ eww:
     default_source_volume: 150
     name_mappings:
       cullyn: "pixel buds"
+    bluetooth_names:
+      - "WH-1000XM4"
+      - "OpenFit"
+      - "pixel buds"
   brightness:
     min: 2
     max: 10
@@ -47,6 +57,19 @@ hypr:
       contrast: 9
       saturation: -16
       hue: -24
+  init:
+    sessions:
+      - dotfiles
+    execs:
+      - "glava -e bars_rc.glsl"
+      - "glava -e bars_r_rc.glsl"
+      - "glava -e radial_rc.glsl"
+      - "spotify-launcher"
+      - "bluetoothctl connect 14:3F:A6:10:A1:B5"
+    workspace: 1
+    lock: true
+    greeting: "こんにちは"
+    network_timeout: 10
   split:
     xs: "0.37"
     default: "0.4942"
@@ -56,6 +79,81 @@ hypr:
       default: "rgb(f2a170)"
     shadow:
       default: "rgba(e56b2c32)"
+  notify:
+    sounds_dir: "~/dotfiles/share/sounds"
+    workspace_icons_dir: "~/dotfiles/config/eww/art/ws-icons"
+    workspace_icons:
+      1: network
+      2: learn
+      3: dna
+      4: dotfiles
+      5: music
+    quiet_volume: 52428
+    loud_volume: 72089
+    styles:
+      start:
+        urgency: low
+        timeout: 2000
+        background: "#25284180"
+        foreground: "#8aa4f3"
+        frame: "#6380ec80"
+      subagent:
+        urgency: low
+        timeout: 2000
+        background: "#25284180"
+        foreground: "#8aa4f3"
+        frame: "#6380ec80"
+      complete:
+        urgency: normal
+        timeout: 0
+        background: "#49353130"
+        foreground: "#f2a170"
+        frame: "#ea834b"
+        icon_suffix: "-active"
+        persistent: true
+      idle:
+        urgency: normal
+        timeout: 0
+        background: "#2a2d4580"
+        foreground: "#b29ae8"
+        frame: "#9376d880"
+        icon_suffix: "-idle"
+        persistent: true
+      permission:
+        urgency: normal
+        timeout: 0
+        background: "#2a3d2580"
+        foreground: "#95cb79"
+        frame: "#73ad5a80"
+        icon_suffix: "-monocle"
+        persistent: true
+    urgency_sounds:
+      low: none
+      normal: moondrop
+      critical: gems
+    app_sounds:
+      timer: jackpot
+      attention: discovery
+      chat: reward
+      work: fruit
+      wf-start: discovery
+      wf-end: reward
+      Slack: knock
+    silent_apps:
+      - Spotify
+      - discord
+      - claude
+      - codex
+      - claude-input
+      - 
+      - 󰯉
+      - 
+      - 
+      - 
+    kitty_silent_patterns:
+      - claude
+      - codex
+      - approval
   windows:
     ignored_classes:
       - "GLava"
@@ -107,26 +205,68 @@ hypr:
       class: firefox-developer-edition
       command: firefox-developer-edition
   sessions:
+    slack:
+      name: slack
+      workspace: 2
+      command: slack
+    discord:
+      name: discord
+      workspace: 2
+      command: discord
+    tableplus:
+      name: tableplus
+      workspace: 3
+      command: tableplus
+    inkscape:
+      name: inkscape
+      workspace: 3
+      command: inkscape
+    obs:
+      name: obs
+      workspace: 3
+      command: obs
+    gimp:
+      name: gimp
+      workspace: 3
+      command: gimp
+    leadpier:
+      name: leadpier
+      workspace: 4
+      project: LeadPier
+      body: [editor, browser, agents]
+      browser:
+        pinned:
+          - "http://localhost:4000"
+        groups:
+          - name: docs
+            urls:
+              - "https://docs.leadpier.com"
+              - "https://api.leadpier.com/docs"
+        urls:
+          - "https://github.com/leadpier"
+      tabs:
+        editor: leadpier
     dotfiles:
       name: dotfiles
       workspace: 5
       project: dotfiles
-      urls:
-        - "https://github.com/cogikyo/dotfiles"
-      windows:
-        - { command: "kitty --title terminal", title: terminal, role: master }
-        - { title: firefox, role: slave }
-        - { command: "kitty --title claude", title: claude, role: slave }
+      body: [editor, browser, agents]
+      browser:
+        urls:
+          - "https://github.com/cogikyo/dotfiles"
     cogikyo:
       name: cogikyo
       workspace: 4
       project: cogikyo/cogikyo.com
-      urls:
-        - "localhost:3000"
-      windows:
-        - { command: "kitty --title terminal", title: terminal, role: master }
-        - { title: firefox, role: slave }
-        - { command: "kitty --title claude", title: claude, role: slave }
+      body: [editor, browser, agents]
+      browser:
+        urls:
+          - "localhost:3000"
+  active_sessions:
+    2: slack
+    3: tableplus
+    4: leadpier
+    5: dotfiles
 
 newtab:
   port: ":42069"
