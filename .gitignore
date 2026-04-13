@@ -9,7 +9,7 @@ etc/secrets/identity
 config/xplr/plugins/preview/
 
 # Machine-specific local overrides
-daemons/newtab/local.config.yaml
+daemons/configs/*.local.yaml
 
 # ISO build artifacts
 iso/work/
