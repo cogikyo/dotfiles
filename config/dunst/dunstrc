@@ -44,7 +44,7 @@
     dmenu = "/usr/bin/bmenu -p dunst:"
     browser = "/usr/bin/xdg-open"
     always_run_script = true
-    script = "/usr/bin/alert"
+    script = "/home/cullyn/.local/bin/hyprd notify dunst"
     title = "Dunst"
     class = "Dunst"
     corner_radius = 8
@@ -71,7 +71,6 @@
     background = "#82414120"
     foreground = "#f7768e"
     frame_color = "#f34658"
-    script = "/usr/bin/alert critical"
     timeout = 8
 
 [kitty-claude]
@@ -88,4 +87,4 @@
     appname = "kitty"
     summary = ".*Approval requested.*"
     format = ""
-    script = /home/cullyn/dotfiles/config/codex/codex-notify
+    script = "/home/cullyn/.local/bin/hyprd notify dunst approval"

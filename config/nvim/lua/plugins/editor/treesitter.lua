@@ -6,7 +6,7 @@ local function setup()
 		"bash", "python", -- scripting
 		"go", "gomod", "gosum", "gotmpl", "gowork", "templ", -- Go stack
 		"javascript", "typescript", "tsx", "jsdoc", -- JS/TS stack
-		"html", "css", -- web/templates
+		"html", "css", "scss", -- web/templates
 		"json", "yaml", "toml", "xml", -- data/config formats
 		"graphql", "proto", "http", -- API schemas
 		"dockerfile", "gitignore", "diff", "hcl", "terraform", "hyprlang", "yuck", -- infra/tooling

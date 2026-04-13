@@ -644,20 +644,15 @@ step_link() {
     done
 
     # Claude: partial linking
-    info "Linking claude settings, skills, and scripts..."
+    info "Linking claude settings and skills..."
     step "Linking skills (claude)"
     ensure_user_skills_linked
 
     step "Linking config (claude)"
     mkdir -p "$HOME/.config/claude"
     link_or_skip "$DOTFILES/config/claude/settings.json" "$HOME/.config/claude/settings.json"
-    link_or_skip "$DOTFILES/config/claude/claude-notify" "$HOME/.local/bin/claude-notify"
     verify_link_mapping "$DOTFILES/config/claude/settings.json" "$HOME/.config/claude/settings.json" || {
         err "Linking failed verification for ~/.config/claude/settings.json"
-        return 1
-    }
-    verify_link_mapping "$DOTFILES/config/claude/claude-notify" "$HOME/.local/bin/claude-notify" || {
-        err "Linking failed verification for ~/.local/bin/claude-notify"
         return 1
     }
     ok "claude linked"
@@ -670,13 +665,8 @@ step_link() {
     step "Linking config (codex)"
     mkdir -p "$codex_home"
     link_or_skip "$DOTFILES/config/codex/config.toml" "$codex_home/config.toml"
-    link_or_skip "$DOTFILES/config/codex/codex-notify" "$HOME/.local/bin/codex-notify"
     verify_link_mapping "$DOTFILES/config/codex/config.toml" "$codex_home/config.toml" || {
         err "Linking failed verification for $codex_home/config.toml"
-        return 1
-    }
-    verify_link_mapping "$DOTFILES/config/codex/codex-notify" "$HOME/.local/bin/codex-notify" || {
-        err "Linking failed verification for ~/.local/bin/codex-notify"
         return 1
     }
     ok "codex linked"
@@ -742,18 +732,8 @@ healthcheck_link() {
         return 1
     }
     ((checked_entries++))
-    verify_link_mapping "$DOTFILES/config/claude/claude-notify" "$HOME/.local/bin/claude-notify" || {
-        err "Healthcheck failed: ~/.local/bin/claude-notify is not linked"
-        return 1
-    }
-    ((checked_entries++))
     verify_link_mapping "$DOTFILES/config/codex/config.toml" "$HOME/.codex/config.toml" || {
         err "Healthcheck failed: ~/.codex/config.toml is not linked"
-        return 1
-    }
-    ((checked_entries++))
-    verify_link_mapping "$DOTFILES/config/codex/codex-notify" "$HOME/.local/bin/codex-notify" || {
-        err "Healthcheck failed: ~/.local/bin/codex-notify is not linked"
         return 1
     }
     ((checked_entries++))

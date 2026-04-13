@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
 
+workspace() {
+    hyprd query workspace 2>/dev/null | jq -r '.current // empty'
+}
+
 if [[ "$1" == "-u" ]]; then
     # Unlock: exit submap, restore workspace, restart eww & glava
     hyprctl dispatch submap reset
@@ -7,7 +11,7 @@ if [[ "$1" == "-u" ]]; then
         ws=$(cat /tmp/pseudo-lock-ws)
         hyprctl dispatch workspace "$ws"
     fi
-    eww-open &
+    ewwd open &
     glava -e "bars_rc.glsl" & disown
     glava -e "bars_r_rc.glsl" & disown
     glava -e "radial_rc.glsl" & disown
@@ -18,7 +22,8 @@ if [[ "$1" == "-u" ]]; then
     fi
 else
     # Lock: save workspace, move to WS 6, kill eww & glava, enter submap
-    ws=$(tail -n 1 /tmp/eww/workspace)
+    ws=$(workspace)
+    [[ -n "$ws" ]] || ws=$(hyprctl activeworkspace -j 2>/dev/null | jq -r '.id // 1')
     echo "$ws" > /tmp/pseudo-lock-ws
     # Save music state and pause if playing
     if [[ "$(playerctl status 2>/dev/null)" == "Playing" ]]; then

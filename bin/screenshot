@@ -7,7 +7,7 @@ set -euo pipefail
 #   -f         region to file (path copied to clipboard, for Claude)
 #   -s         region saved to ~/media/screenshots/
 
-notify() { dunstify "screenshot" "$1" -u low -a "grim"; }
+notify() { hyprd notify send -a grim -u low "screenshot" "$1"; }
 
 mode="clipboard"
 while getopts "fs" opt; do

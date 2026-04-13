@@ -5,7 +5,12 @@ hyprctl dispatch submap reset
 
 GRACE=6
 
-ws=$(tail -n 1 /tmp/eww/workspace)
+workspace() {
+    hyprd query workspace 2>/dev/null | jq -r '.current // empty'
+}
+
+ws=$(workspace)
+[[ -n "$ws" ]] || ws=$(hyprctl activeworkspace -j 2>/dev/null | jq -r '.id // 1')
 hyprctl dispatch workspace 6
 
 killall eww -9 & disown
@@ -26,15 +31,11 @@ glava -e "bars_rc.glsl" & disown
 glava -e "bars_r_rc.glsl" & disown
 glava -e "radial_rc.glsl" & disown
 
-ps -ef | rg weather_info | rg -v rg | awk '{print $2}' | xargs kill
-eval "$HOME/dotfiles/config/eww/bin/weather_info" & disown
-eval "$HOME/dotfiles/config/eww/bin/date_info" & disown
-
 bluetoothctl connect 14:3F:A6:10:A1:B5 & disown
 
-eww-open & disown
+ewwd open & disown
 if ((elapsed > GRACE)); then
-    dunstify -a "attention" -u low "$USER@$HOSTNAME" "こんにちは"
+    hyprd notify send -a attention -u low "$USER@$HOSTNAME" "こんにちは"
 else
    playerctl play
 fi

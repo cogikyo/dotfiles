@@ -27,7 +27,7 @@ else
 fi
 
 if [[ "$s_label" == "" ]]; then
-    dunstify "no region selected, aborting" -a "wf-end" -u critical -t 1000
+    hyprd notify send -a wf-end -u critical -t 1000 "no region selected, aborting"
     exit 1
 fi
 
@@ -81,12 +81,12 @@ cleanup() {
         pactl unload-module "$remapped_input"
     fi
 
-    dunstify "🎬 screen recording ended" -a "wf-end" -u low -t 1000
+    hyprd notify send -a wf-end -u low -t 1000 "screen recording ended"
 }
 
 # =============================================================================
 
-dunstify "📽️ recording $label" -a "wf-start" -u low -t 2000 && sleep 2.1
+hyprd notify send -a wf-start -u low -t 2000 "recording $label" && sleep 2.1
 
 wf-recorder "$C" "$D" "$a" "$f" "$g"
 

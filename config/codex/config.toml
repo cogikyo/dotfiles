@@ -1,8 +1,8 @@
 model = "gpt-5.4"
-model_reasoning_effort = "medium"
+model_reasoning_effort = "xhigh"
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
-notify = ["/home/cullyn/dotfiles/config/codex/codex-notify"]
+notify = ["/home/cullyn/.local/bin/hyprd notify hook codex"]
 personality = "pragmatic"
 approvals_reviewer = "user"
 

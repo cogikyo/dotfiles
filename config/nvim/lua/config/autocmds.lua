@@ -159,7 +159,7 @@ au("BufReadPost", {
 au("BufWritePost", {
 	group = "EwwRestart",
 	pattern = { "eww.yuck", "eww.scss" },
-	command = ":silent !eww-open",
+	command = ":silent !ewwd open",
 })
 
 au("BufWritePost", {

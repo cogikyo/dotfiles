@@ -24,7 +24,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/cullyn/dotfiles/config/claude/claude-notify start"
+            "command": "/home/cullyn/.local/bin/hyprd notify hook claude start"
           }
         ]
       }
@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/cullyn/dotfiles/config/claude/claude-notify complete"
+            "command": "/home/cullyn/.local/bin/hyprd notify hook claude complete"
           }
         ]
       }
@@ -46,7 +46,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/cullyn/dotfiles/config/claude/claude-notify subagent"
+            "command": "/home/cullyn/.local/bin/hyprd notify hook claude subagent"
           }
         ]
       }
@@ -57,7 +57,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/cullyn/dotfiles/config/claude/claude-notify permission"
+            "command": "/home/cullyn/.local/bin/hyprd notify hook claude permission"
           }
         ]
       },
@@ -66,7 +66,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/home/cullyn/dotfiles/config/claude/claude-notify idle"
+            "command": "/home/cullyn/.local/bin/hyprd notify hook claude idle"
           }
         ]
       }

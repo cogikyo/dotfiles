@@ -22,7 +22,6 @@ setopt AUTO_CD
 chpwd() {
     echo
     lsd
-    [[ -z "$CLAUDECODE" ]] && echo "$PWD" > /tmp/last-project
 }
 
 alias install='~/dotfiles/install.sh'
@@ -65,7 +64,7 @@ function etree () {
     erd -L "$L" --suppress-size --threads 16 --layout inverted
 }
 
-alias ew='eww-open'
+alias ew='ewwd open'
 alias ews='eww inspector & disown && exit'
 alias el='eww logs'
 
