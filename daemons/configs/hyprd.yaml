@@ -26,6 +26,7 @@ init:
     - "bluetoothctl connect 14:3F:A6:10:A1:B5"
   workspace: 1
   lock: true
+  lock_delay: 3s
   greeting: "こんにちは"
   network_timeout: 10
 split:

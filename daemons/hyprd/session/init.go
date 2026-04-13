@@ -66,8 +66,13 @@ func (i *Init) Execute() (string, error) {
 	}
 
 	if init.Lock {
+		if init.LockDelay > 0 {
+			fmt.Printf("hyprd init: waiting %s before lock\n", init.LockDelay)
+			time.Sleep(init.LockDelay)
+		}
 		fmt.Println("hyprd init: locking screen")
 		exec.Command("hyprlock").Run()
+		exec.Command("ewwd", "open").Run()
 	}
 
 	fmt.Println("hyprd init: complete")

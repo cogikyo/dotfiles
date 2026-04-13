@@ -1,6 +1,9 @@
 package config
 
-import "slices"
+import (
+	"slices"
+	"time"
+)
 
 // HyprConfig configures hyprd window/session behavior.
 type HyprConfig struct {
@@ -22,9 +25,10 @@ type InitConfig struct {
 	Sessions       []string `yaml:"sessions"`
 	Execs          []string `yaml:"execs"`
 	Workspace      int      `yaml:"workspace"`
-	Lock           bool     `yaml:"lock"`
-	Greeting       string   `yaml:"greeting"`
-	NetworkTimeout int      `yaml:"network_timeout"`
+	Lock           bool          `yaml:"lock"`
+	LockDelay      time.Duration `yaml:"lock_delay"`
+	Greeting       string        `yaml:"greeting"`
+	NetworkTimeout int           `yaml:"network_timeout"`
 }
 
 // BackgroundConfig controls mpvpaper video wallpaper.
