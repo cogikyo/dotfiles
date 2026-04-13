@@ -36,7 +36,6 @@ gpart
 gpm
 gptfdisk
 grml-zsh-config
-grub
 hdparm
 hyperv
 intel-ucode
@@ -53,7 +52,6 @@ libusb-compat
 linux
 linux-atm
 linux-firmware
-linux-firmware-marvell
 livecd-sounds
 lsscsi
 lvm2
@@ -75,7 +73,6 @@ nbd
 ndisc6
 nfs-utils
 nilfs-utils
-nmap
 ntfs-3g
 nvme-cli
 open-iscsi
@@ -99,10 +96,8 @@ rsync
 rxvt-unicode-terminfo
 screen
 sdparm
-sequoia-sq
 sg3_utils
 smartmontools
-sof-firmware
 squashfs-tools
 sudo
 syslinux
