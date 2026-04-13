@@ -39,6 +39,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 )
 
 var client = daemon.NewClient(SocketPath)
@@ -131,7 +132,17 @@ func requireArg(usage string) string {
 	return os.Args[2]
 }
 
-func cmdInit()    { sendCommand("init") }
+func cmdInit() {
+	// Init is called via exec-once in hyprland.conf and may race the daemon.
+	// Wait up to 10s for the daemon socket to appear.
+	for range 100 {
+		if client.IsRunning() {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	sendCommand("init")
+}
 func cmdHide()    { sendCommand("hide") }
 func cmdMonocle() { sendCommand("monocle") }
 func cmdSwap()    { sendCommand("swap") }

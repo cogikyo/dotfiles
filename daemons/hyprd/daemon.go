@@ -112,16 +112,8 @@ func (d *Daemon) Run() error {
 
 	go d.watchConfig(d.server.Done())
 
-	// Fresh boot: no windows exist yet, run init sequence
-	if len(clients) == 0 {
-		go func() {
-			fmt.Println("hyprd: fresh session detected, running init")
-			init := d.newInit()
-			if _, err := init.Execute(); err != nil {
-				fmt.Fprintf(os.Stderr, "hyprd: init error: %v\n", err)
-			}
-		}()
-	}
+	// Init is triggered externally via `exec-once = hyprd init` in hyprland.conf.
+	// This ensures it runs exactly once per Hyprland session, after the daemon is ready.
 
 	sig := d.server.WaitForSignal()
 	fmt.Printf("\nhyprd: received %s, shutting down\n", sig)
