@@ -46,6 +46,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
@@ -56,10 +57,10 @@ const SocketPath = "/tmp/hyprd.sock"
 // Daemon coordinates Hyprland IPC, state management, and command execution.
 // It handles client requests over a Unix socket and publishes state changes to subscribers.
 type Daemon struct {
-	hypr   *hypr.Client       // Hyprland IPC connection
-	state  *State             // Thread-safe workspace and window state
-	server *daemon.Server     // Unix socket command server
-	config *config.HyprConfig // Monitor geometry and layout configuration
+	hypr   *hypr.Client                      // Hyprland IPC connection
+	state  *State                            // Thread-safe workspace and window state
+	server *daemon.Server                    // Unix socket command server
+	config atomic.Pointer[config.HyprConfig] // Monitor geometry and layout configuration
 }
 
 // New connects to Hyprland's IPC socket and initializes the daemon state.
@@ -73,10 +74,10 @@ func New() (*Daemon, error) {
 
 	state := NewState(&cfg.Hypr)
 	d := &Daemon{
-		hypr:   hyprClient,
-		state:  state,
-		config: &cfg.Hypr,
+		hypr:  hyprClient,
+		state: state,
 	}
+	d.config.Store(&cfg.Hypr)
 
 	d.server = daemon.NewServer(SocketPath, d.handleCommand)
 	d.server.OnSubscribe = d.sendInitialState
@@ -85,6 +86,8 @@ func New() (*Daemon, error) {
 }
 
 // Run starts the command server and event loop, blocking until SIGINT/SIGTERM.
+// On a fresh Hyprland session (no existing windows), the init sequence runs
+// automatically in the background.
 func (d *Daemon) Run() error {
 	clients, err := d.hypr.Clients()
 	if err != nil {
@@ -106,6 +109,17 @@ func (d *Daemon) Run() error {
 
 	go d.watchConfig(d.server.Done())
 
+	// Fresh boot: no windows exist yet, run init sequence
+	if len(clients) == 0 {
+		go func() {
+			fmt.Println("hyprd: fresh session detected, running init")
+			init := d.newInit()
+			if _, err := init.Execute(); err != nil {
+				fmt.Fprintf(os.Stderr, "hyprd: init error: %v\n", err)
+			}
+		}()
+	}
+
 	sig := d.server.WaitForSignal()
 	fmt.Printf("\nhyprd: received %s, shutting down\n", sig)
 	d.server.Shutdown()
@@ -116,11 +130,7 @@ func (d *Daemon) Run() error {
 // sendInitialState bootstraps a subscriber with the current state for their topics.
 func (d *Daemon) sendInitialState(sub *daemon.Subscriber, topics []string) {
 	if sub.WantsTopic("workspace") {
-		data := map[string]any{
-			"current":  d.state.GetWorkspace(),
-			"occupied": d.state.GetOccupied(),
-		}
-		sub.SendEvent("workspace", data)
+		sub.SendEvent("workspace", d.workspacePayload())
 	}
 
 	if sub.WantsTopic("split") {
@@ -149,7 +159,7 @@ func (d *Daemon) handleCommand(command string) string {
 		}
 		return string(data)
 	case "bg":
-		bg := commands.NewBG(&d.config.Background)
+		bg := commands.NewBG(&d.config.Load().Background)
 		result, err := bg.Execute(arg)
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
@@ -242,9 +252,17 @@ func (d *Daemon) handleCommand(command string) string {
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
 		}
+		d.notifyWorkspace()
 		return result
 	case "three-body":
 		return d.handleThreeBody(arg)
+	case "init":
+		init := d.newInit()
+		result, err := init.Execute()
+		if err != nil {
+			return fmt.Sprintf("error: %v", err)
+		}
+		return result
 	case "layout":
 		layout := commands.NewLayout(d.hypr, d.state)
 		result, err := layout.Execute(arg)
@@ -254,6 +272,8 @@ func (d *Daemon) handleCommand(command string) string {
 		return result
 	case "project":
 		return d.handleProject(arg)
+	case "notify":
+		return d.handleNotify(arg)
 	default:
 		return fmt.Sprintf("unknown command: %s", cmd)
 	}
@@ -272,6 +292,22 @@ func (d *Daemon) handleThreeBody(arg string) string {
 		return fmt.Sprintf("error: %v", err)
 	}
 	return result
+}
+
+func (d *Daemon) handleNotify(arg string) string {
+	var req NotifyRequest
+	if err := json.Unmarshal([]byte(arg), &req); err != nil {
+		return fmt.Sprintf("error: parse notify request: %v", err)
+	}
+
+	notifier := NewNotifier(d.hypr, d.state, d.config.Load())
+	go func() {
+		if err := notifier.Handle(req); err != nil {
+			fmt.Fprintf(os.Stderr, "hyprd notify: %v\n", err)
+		}
+	}()
+
+	return "ok"
 }
 
 // handleProject gets or sets the project path for the current workspace.
@@ -318,6 +354,21 @@ func (d *Daemon) handleProject(arg string) string {
 	}
 }
 
+func (d *Daemon) newInit() *commands.Init {
+	init := commands.NewInit(d.hypr, d.state)
+	init.SetNotify(func(app, urgency, title, body string) {
+		notifier := NewNotifier(d.hypr, d.state, d.config.Load())
+		notifier.Handle(NotifyRequest{
+			Source:  "send",
+			App:     app,
+			Urgency: urgency,
+			Summary: title,
+			Body:    body,
+		})
+	})
+	return init
+}
+
 // hasNotifications returns true if dunst has displayed notifications.
 func hasNotifications() bool {
 	out, err := exec.Command("dunstctl", "count", "displayed").Output()
@@ -330,7 +381,9 @@ func hasNotifications() bool {
 
 // runCmd executes a command without waiting for output.
 func runCmd(name string, args ...string) {
-	exec.Command(name, args...).Run()
+	if err := exec.Command(name, args...).Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd: runCmd %s: %v\n", name, err)
+	}
 }
 
 // watchConfig monitors daemons.yaml for changes and hot-reloads the config pointer.
@@ -379,7 +432,7 @@ func (d *Daemon) watchConfig(done <-chan struct{}) {
 			debounce = time.AfterFunc(100*time.Millisecond, func() {
 				cfg := config.Load()
 				d.state.ReloadConfig(&cfg.Hypr)
-				d.config = &cfg.Hypr
+				d.config.Store(&cfg.Hypr)
 				fmt.Printf("hyprd: config reloaded\n")
 			})
 		case err, ok := <-watcher.Errors:
@@ -395,10 +448,7 @@ func (d *Daemon) watchConfig(done <-chan struct{}) {
 func (d *Daemon) query(topic string) (string, error) {
 	switch topic {
 	case "workspace":
-		data := map[string]any{
-			"current":  d.state.GetWorkspace(),
-			"occupied": d.state.GetOccupied(),
-		}
+		data := d.workspacePayload()
 		jsonData, err := json.Marshal(data)
 		return string(jsonData), err
 
@@ -428,4 +478,41 @@ func (d *Daemon) query(topic string) (string, error) {
 	default:
 		return "", fmt.Errorf("unknown topic: %s", topic)
 	}
+}
+
+func (d *Daemon) workspacePayload() map[string]any {
+	current := d.state.GetWorkspace()
+	occupied := d.state.GetOccupied()
+	monocle := d.state.ActiveMonocleWorkspace()
+
+	return map[string]any{
+		"current":      current,
+		"current_str":  strconv.Itoa(current),
+		"occupied":     occupied,
+		"occupied_str": joinWorkspaceIDs(occupied),
+		"monocle":      monocle,
+		"monocle_str":  workspaceIDString(monocle),
+	}
+}
+
+func joinWorkspaceIDs(ids []int) string {
+	parts := make([]string, len(ids))
+	for i, id := range ids {
+		parts[i] = strconv.Itoa(id)
+	}
+	return strings.Join(parts, " ")
+}
+
+func workspaceIDString(id int) string {
+	if id <= 0 {
+		return ""
+	}
+	return strconv.Itoa(id)
+}
+
+func (d *Daemon) notifyWorkspace() {
+	if d.server == nil || d.server.Subs == nil {
+		return
+	}
+	d.server.Subs.Notify("workspace", d.workspacePayload())
 }

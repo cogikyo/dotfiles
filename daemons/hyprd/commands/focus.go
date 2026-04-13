@@ -10,8 +10,8 @@ import (
 
 // Focus searches all workspaces for windows matching class/title criteria and brings them into view, automatically unhiding from special workspaces when needed.
 type Focus struct {
-	hypr  *hypr.Client  // Hyprland IPC client
-	state StateManager  // Window state tracker
+	hypr  *hypr.Client // Hyprland IPC client
+	state StateManager // Window state tracker
 }
 
 // NewFocus creates a Focus command handler.

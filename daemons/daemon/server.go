@@ -53,12 +53,12 @@ type SubscribeHandler func(sub *Subscriber, topics []string)
 
 // Server manages a Unix socket daemon, routing commands to handlers and managing subscriptions.
 type Server struct {
-	SocketPath  string                // Path to the Unix domain socket
-	Subs        *SubscriptionManager  // Manages client subscriptions to events
-	Handler     CommandHandler        // Processes non-subscribe commands
-	OnSubscribe SubscribeHandler      // Optional callback invoked on new subscriptions
-	done        chan struct{}         // Signals server shutdown
-	listener    net.Listener          // Unix socket listener
+	SocketPath  string               // Path to the Unix domain socket
+	Subs        *SubscriptionManager // Manages client subscriptions to events
+	Handler     CommandHandler       // Processes non-subscribe commands
+	OnSubscribe SubscribeHandler     // Optional callback invoked on new subscriptions
+	done        chan struct{}        // Signals server shutdown
+	listener    net.Listener         // Unix socket listener
 }
 
 // NewServer creates a Server that listens on socketPath and routes commands to handler.

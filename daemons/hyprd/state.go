@@ -21,7 +21,8 @@ type State struct {
 	ProjectPaths     map[int]string                   `json:"project_paths,omitempty"`     // Project root per workspace (resolved via zoxide)
 	Monocle          map[int]*commands.MonocleState   `json:"monocle,omitempty"`           // Windows displaced per workspace during monocle
 	SplitRatio       string                           `json:"split_ratio"`                 // Master/slave split identifier
-	config *config.HyprConfig // Daemon configuration
+	ActiveSessions   map[int]string                   `json:"active_sessions,omitempty"`   // Runtime override of active session per workspace
+	config           *config.HyprConfig               // Daemon configuration
 }
 
 // NewState creates a State with default values and the given configuration.
@@ -34,6 +35,7 @@ func NewState(cfg *config.HyprConfig) *State {
 		ThreeBody:          make(map[int]*commands.ThreeBodyState),
 		ProjectPaths:       make(map[int]string),
 		Monocle:            make(map[int]*commands.MonocleState),
+		ActiveSessions:     make(map[int]string),
 		SplitRatio:         "default",
 		config:             cfg,
 	}
@@ -242,6 +244,16 @@ func (s *State) HasAnyMonocle() bool {
 	return len(s.Monocle) > 0
 }
 
+// ActiveMonocleWorkspace returns the workspace ID currently in monocle mode, or 0 if none.
+func (s *State) ActiveMonocleWorkspace() int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	for ws := range s.Monocle {
+		return ws
+	}
+	return 0
+}
+
 // ClearWindowState removes all tracked state for a window address.
 // Called when a window closes to prevent stale references.
 // Returns the ThreeBodyState the window belonged to (if any) for caller cleanup.
@@ -277,6 +289,24 @@ func (s *State) ClearWindowState(addr string) *commands.ThreeBodyState {
 	}
 
 	return nil
+}
+
+// GetActiveSession returns the active session name for a workspace.
+// Checks runtime overrides first, then falls back to config.
+func (s *State) GetActiveSession(ws int) string {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	if name, ok := s.ActiveSessions[ws]; ok {
+		return name
+	}
+	return s.config.ActiveSessions[ws]
+}
+
+// SetActiveSession sets the active session for a workspace at runtime.
+func (s *State) SetActiveSession(ws int, name string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.ActiveSessions[ws] = name
 }
 
 func (s *State) GetConfig() *config.HyprConfig {

@@ -215,7 +215,7 @@ func (t *Tabs) refreshSingle(kitty *KittyClient, profile *config.TabProfile, tab
 	if origIdx >= 0 {
 		newIdx, _ := kitty.TabIndex(tabID)
 		if newIdx > origIdx {
-			for i := 0; i < newIdx-origIdx; i++ {
+			for range newIdx - origIdx {
 				kitty.MoveTabBackward()
 			}
 		}

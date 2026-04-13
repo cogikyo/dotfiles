@@ -9,8 +9,8 @@ import (
 
 // Hide toggles window visibility by moving slaves to/from special workspaces while preserving their position in the stack.
 type Hide struct {
-	hypr  *hypr.Client  // Hyprland IPC client
-	state StateManager  // Tracks hidden window metadata for restoration
+	hypr  *hypr.Client // Hyprland IPC client
+	state StateManager // Tracks hidden window metadata for restoration
 }
 
 // NewHide creates a Hide command handler.
@@ -66,10 +66,7 @@ func (h *Hide) hide(win *hypr.Window, tiled []hypr.Window) (string, error) {
 	hiddenWS := cfg.Windows.HiddenWorkspace
 
 	slaves := GetSlaves(tiled)
-	slaveIndex := SlaveIndex(slaves, win.Address)
-	if slaveIndex < 0 {
-		slaveIndex = 0
-	}
+	slaveIndex := max(SlaveIndex(slaves, win.Address), 0)
 
 	h.state.AddHidden(&HiddenState{
 		Address:    win.Address,

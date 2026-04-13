@@ -8,8 +8,8 @@ import (
 
 // Split manages master/slave split ratios with cycling and direct ratio selection.
 type Split struct {
-	hypr  *hypr.Client   // Hyprland IPC client
-	state StateManager   // Persistent state storage
+	hypr  *hypr.Client // Hyprland IPC client
+	state StateManager // Persistent state storage
 }
 
 // NewSplit creates a Split handler with the given Hyprland client and state manager.

@@ -8,8 +8,8 @@ import (
 
 // Swap exchanges windows between master and slave positions with undo support.
 type Swap struct {
-	hypr  *hypr.Client   // Hyprland IPC client
-	state StateManager   // Persistent state storage
+	hypr  *hypr.Client // Hyprland IPC client
+	state StateManager // Persistent state storage
 }
 
 // NewSwap creates a Swap handler with the given Hyprland client and state manager.

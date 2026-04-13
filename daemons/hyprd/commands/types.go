@@ -75,8 +75,8 @@ type MonocleWindow struct {
 // MonocleState tracks all windows displaced from a workspace during monocle mode,
 // plus the focused window that was floated and resized.
 type MonocleState struct {
-	Focused        string          `json:"focused"`                  // Address of the monocled (floated) window
-	Master         string          `json:"master"`                   // Address of the original master window
+	Focused        string          `json:"focused"` // Address of the monocled (floated) window
+	Master         string          `json:"master"`  // Address of the original master window
 	Windows        []MonocleWindow `json:"windows"`
 	SavedThreeBody *ThreeBodyState `json:"saved_three_body,omitempty"` // Full three-body state to restore
 }
@@ -93,22 +93,25 @@ type StateManager interface {
 	GetSplitRatio() string // Returns "xs", "default", or "lg"
 	SetSplitRatio(ratio string)
 
-	GetDisplacedMaster(ws int) string    // Returns window address of displaced master on workspace
+	GetDisplacedMaster(ws int) string // Returns window address of displaced master on workspace
 	SetDisplacedMaster(ws int, addr string)
 
-	GetThreeBody(ws int) *ThreeBodyState          // Returns three-body state for workspace, or nil
-	SetThreeBody(ws int, tb *ThreeBodyState)       // Sets three-body state for workspace
-	ClearThreeBody(ws int)                         // Removes three-body state for workspace
-	AllThreeBody() map[int]*ThreeBodyState         // Returns copy of all three-body states
+	GetThreeBody(ws int) *ThreeBodyState     // Returns three-body state for workspace, or nil
+	SetThreeBody(ws int, tb *ThreeBodyState) // Sets three-body state for workspace
+	ClearThreeBody(ws int)                   // Removes three-body state for workspace
+	AllThreeBody() map[int]*ThreeBodyState   // Returns copy of all three-body states
 
-	GetProjectPath(ws int) string                  // Returns project root for workspace, or ""
-	SetProjectPath(ws int, path string)             // Sets project root for workspace
+	GetProjectPath(ws int) string       // Returns project root for workspace, or ""
+	SetProjectPath(ws int, path string) // Sets project root for workspace
 
-	GetMonocle(ws int) *MonocleState               // Returns monocle state for workspace, or nil
-	SetMonocle(ws int, ms *MonocleState)            // Sets monocle state for workspace
-	ClearMonocle(ws int)                            // Removes monocle state for workspace
-	AllMonocle() map[int]*MonocleState              // Returns copy of all monocle states
-	HasAnyMonocle() bool                            // Returns true if any workspace has monocle active
+	GetMonocle(ws int) *MonocleState     // Returns monocle state for workspace, or nil
+	SetMonocle(ws int, ms *MonocleState) // Sets monocle state for workspace
+	ClearMonocle(ws int)                 // Removes monocle state for workspace
+	AllMonocle() map[int]*MonocleState   // Returns copy of all monocle states
+	HasAnyMonocle() bool                 // Returns true if any workspace has monocle active
+
+	GetActiveSession(ws int) string
+	SetActiveSession(ws int, name string)
 
 	GetConfig() *config.HyprConfig
 }

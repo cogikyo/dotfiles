@@ -4,9 +4,10 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"net"
 	"os"
-	"sort"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -107,13 +108,7 @@ func (e *EventLoop) updateOccupied() error {
 		}
 	}
 
-	occupied := make([]int, 0, len(wsSet))
-	for ws := range wsSet {
-		occupied = append(occupied, ws)
-	}
-	sort.Ints(occupied)
-
-	e.state.SetOccupied(occupied)
+	e.state.SetOccupied(slices.Sorted(maps.Keys(wsSet)))
 	return nil
 }
 
@@ -208,9 +203,17 @@ func (e *EventLoop) notifyWorkspace() {
 	if e.subs == nil {
 		return
 	}
+	current := e.state.GetWorkspace()
+	occupied := e.state.GetOccupied()
+	monocle := e.state.ActiveMonocleWorkspace()
+
 	data := map[string]any{
-		"current":  e.state.GetWorkspace(),
-		"occupied": e.state.GetOccupied(),
+		"current":      current,
+		"current_str":  strconv.Itoa(current),
+		"occupied":     occupied,
+		"occupied_str": joinWorkspaceIDs(occupied),
+		"monocle":      monocle,
+		"monocle_str":  workspaceIDString(monocle),
 	}
 	e.subs.Notify("workspace", data)
 }

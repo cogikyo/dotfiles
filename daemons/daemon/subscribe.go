@@ -9,15 +9,15 @@ import (
 
 // Subscriber represents a client connection receiving events for subscribed topics.
 type Subscriber struct {
-	conn   net.Conn         // Client connection
-	topics map[string]bool  // Topics the client is subscribed to
-	mu     sync.Mutex       // Protects concurrent writes to conn
+	conn   net.Conn        // Client connection
+	topics map[string]bool // Topics the client is subscribed to
+	mu     sync.Mutex      // Protects concurrent writes to conn
 }
 
 // SubscriptionManager coordinates event delivery to active subscribers.
 type SubscriptionManager struct {
-	mu          sync.RWMutex   // Protects subscribers slice
-	subscribers []*Subscriber  // Active client subscriptions
+	mu          sync.RWMutex  // Protects subscribers slice
+	subscribers []*Subscriber // Active client subscriptions
 }
 
 // NewSubscriptionManager creates a SubscriptionManager.

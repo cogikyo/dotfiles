@@ -39,9 +39,19 @@ type KittyTab struct {
 
 // KittyPane represents a pane (window) within a kitty tab.
 type KittyPane struct {
-	IsFocused bool              `json:"is_focused"`
-	CWD       string            `json:"cwd"`
-	Env       map[string]string `json:"env"`
+	ID                  int               `json:"id"`
+	Title               string            `json:"title"`
+	IsFocused           bool              `json:"is_focused"`
+	CWD                 string            `json:"cwd"`
+	Env                 map[string]string `json:"env"`
+	ForegroundProcesses []KittyProcess    `json:"foreground_processes"`
+}
+
+// KittyProcess represents a process reported by kitty for a pane.
+type KittyProcess struct {
+	Cmdline []string `json:"cmdline"`
+	CWD     string   `json:"cwd"`
+	PID     int      `json:"pid"`
 }
 
 // FullState queries the complete kitty state including all tabs and their env vars.
@@ -76,7 +86,7 @@ func (k *KittyClient) State() (*KittyState, error) {
 			continue
 		}
 		for _, w := range tab.Windows {
-			if w.IsFocused {
+			if w.IsFocused && w.Env != nil {
 				state.ActiveTabID = w.Env["KITTY_TAB_ID"]
 			}
 		}
@@ -89,6 +99,12 @@ func (k *KittyClient) State() (*KittyState, error) {
 func (k *KittyClient) FocusTab(tabID string) error {
 	return exec.Command("kitty", "@", "--to", k.socketPath,
 		"focus-tab", "--match", "env:KITTY_TAB_ID="+tabID).Run()
+}
+
+// FocusWindow focuses the kitty window/pane with the given numeric ID.
+func (k *KittyClient) FocusWindow(id int) error {
+	return exec.Command("kitty", "@", "--to", k.socketPath,
+		"focus-window", "--match", fmt.Sprintf("id:%d", id)).Run()
 }
 
 // SendText sends keystrokes to the window matched by KITTY_TAB_ID.
@@ -141,7 +157,7 @@ func (k *KittyClient) TabIndex(tabID string) (int, error) {
 	}
 	for i, tab := range windows[0].Tabs {
 		for _, pane := range tab.Windows {
-			if pane.Env["KITTY_TAB_ID"] == tabID {
+			if pane.Env != nil && pane.Env["KITTY_TAB_ID"] == tabID {
 				return i, nil
 			}
 		}

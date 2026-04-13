@@ -77,18 +77,18 @@ func (c *Client) Request(command string) ([]byte, error) {
 
 // Window represents a Hyprland window with geometry, workspace assignment, and metadata.
 type Window struct {
-	Address      string `json:"address"` // unique window handle
-	At           [2]int `json:"at"`      // [x, y] position
-	Size         [2]int `json:"size"`    // [width, height]
-	Workspace    WsRef  `json:"workspace"`
-	Floating     bool   `json:"floating"`
-	Pinned       bool   `json:"pinned"`
-	Class        string `json:"class"`
-	Title        string `json:"title"`
-	InitialTitle string `json:"initialTitle"`
-	Pid            int  `json:"pid"`
-	Mapped         bool `json:"mapped"`         // whether window is visible
-	FocusHistoryID int  `json:"focusHistoryID"` // 0 = active, 1 = previous, etc.
+	Address        string `json:"address"` // unique window handle
+	At             [2]int `json:"at"`      // [x, y] position
+	Size           [2]int `json:"size"`    // [width, height]
+	Workspace      WsRef  `json:"workspace"`
+	Floating       bool   `json:"floating"`
+	Pinned         bool   `json:"pinned"`
+	Class          string `json:"class"`
+	Title          string `json:"title"`
+	InitialTitle   string `json:"initialTitle"`
+	Pid            int    `json:"pid"`
+	Mapped         bool   `json:"mapped"`         // whether window is visible
+	FocusHistoryID int    `json:"focusHistoryID"` // 0 = active, 1 = previous, etc.
 }
 
 // WsRef is a workspace reference used in window and monitor queries.

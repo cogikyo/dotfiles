@@ -51,6 +51,8 @@ func main() {
 	switch os.Args[1] {
 	case "status":
 		cmdStatus()
+	case "init":
+		cmdInit()
 	case "bg":
 		cmdBG()
 	case "split":
@@ -79,6 +81,8 @@ func main() {
 		cmdThreeBody()
 	case "project":
 		cmdProject()
+	case "notify":
+		cmdNotify()
 	case "help", "-h", "--help":
 		cmdHelp()
 	default:
@@ -105,23 +109,48 @@ func runDaemon() {
 	}
 }
 
-func cmdBG() {
+func sendCommand(cmd string) {
 	if !client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
 		os.Exit(1)
 	}
-
-	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: hyprd bg {ensure|kill}")
-		os.Exit(1)
-	}
-
-	resp, err := client.Send("bg " + os.Args[2])
+	resp, err := client.Send(cmd)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
 	fmt.Println(resp)
+}
+
+func requireArg(usage string) string {
+	if len(os.Args) < 3 {
+		fmt.Fprintln(os.Stderr, usage)
+		os.Exit(1)
+	}
+	return os.Args[2]
+}
+
+func cmdInit()    { sendCommand("init") }
+func cmdHide()    { sendCommand("hide") }
+func cmdMonocle() { sendCommand("monocle") }
+func cmdSwap()    { sendCommand("swap") }
+func cmdSplit()   { sendCommand("split " + strings.Join(os.Args[2:], " ")) }
+func cmdLayout()  { sendCommand("layout " + strings.Join(os.Args[2:], " ")) }
+func cmdProject() { sendCommand("project " + strings.Join(os.Args[2:], " ")) }
+func cmdQuery()   { sendCommand("query " + strings.Join(os.Args[2:], " ")) }
+func cmdBG()      { sendCommand("bg " + requireArg("usage: hyprd bg {ensure|kill}")) }
+func cmdWS()      { sendCommand("ws " + requireArg("usage: hyprd ws <number|up|down>")) }
+func cmdTab()     { sendCommand("tab " + requireArg("usage: hyprd tab {term|nvim|nvimtree|git|xplr}")) }
+func cmdThreeBody() {
+	sendCommand("three-body " + requireArg("usage: hyprd three-body {editor|agents|browser|shadow}"))
+}
+func cmdFocus() {
+	_ = requireArg("usage: hyprd focus <class> [title]")
+	sendCommand("focus " + strings.Join(os.Args[2:], " "))
+}
+func cmdTabs() {
+	_ = requireArg("usage: hyprd tabs {init|refresh} <profile|name> <pid>")
+	sendCommand("tabs " + strings.Join(os.Args[2:], " "))
 }
 
 func cmdStatus() {
@@ -153,164 +182,6 @@ func cmdStatus() {
 	}
 }
 
-func cmdSplit() {
-	if !client.IsRunning() {
-		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
-		os.Exit(1)
-	}
-
-	cmd := "split"
-	if len(os.Args) > 2 {
-		cmd += " " + os.Args[2]
-	}
-
-	resp, err := client.Send(cmd)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println(resp)
-}
-
-func cmdHide() {
-	if !client.IsRunning() {
-		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
-		os.Exit(1)
-	}
-
-	resp, err := client.Send("hide")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println(resp)
-}
-
-func cmdMonocle() {
-	if !client.IsRunning() {
-		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
-		os.Exit(1)
-	}
-
-	resp, err := client.Send("monocle")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println(resp)
-}
-
-func cmdSwap() {
-	if !client.IsRunning() {
-		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
-		os.Exit(1)
-	}
-
-	resp, err := client.Send("swap")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println(resp)
-}
-
-func cmdWS() {
-	if !client.IsRunning() {
-		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
-		os.Exit(1)
-	}
-
-	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: hyprd ws <number|up|down>")
-		os.Exit(1)
-	}
-
-	resp, err := client.Send("ws " + os.Args[2])
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println(resp)
-}
-
-func cmdFocus() {
-	if !client.IsRunning() {
-		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
-		os.Exit(1)
-	}
-
-	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: hyprd focus <class> [title]")
-		os.Exit(1)
-	}
-
-	cmd := "focus " + strings.Join(os.Args[2:], " ")
-	resp, err := client.Send(cmd)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println(resp)
-}
-
-func cmdTab() {
-	if !client.IsRunning() {
-		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
-		os.Exit(1)
-	}
-
-	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: hyprd tab {term|nvim|nvimtree|git|xplr}")
-		os.Exit(1)
-	}
-
-	resp, err := client.Send("tab " + os.Args[2])
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println(resp)
-}
-
-func cmdTabs() {
-	if !client.IsRunning() {
-		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
-		os.Exit(1)
-	}
-
-	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: hyprd tabs {init|refresh} <profile|name> <pid>")
-		os.Exit(1)
-	}
-
-	cmd := "tabs " + strings.Join(os.Args[2:], " ")
-	resp, err := client.Send(cmd)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println(resp)
-}
-
-func cmdQuery() {
-	if !client.IsRunning() {
-		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
-		os.Exit(1)
-	}
-
-	topic := "all"
-	if len(os.Args) > 2 {
-		topic = os.Args[2]
-	}
-
-	resp, err := client.Send("query " + topic)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println(resp)
-}
-
 func cmdSubscribe() {
 	if !client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
@@ -329,68 +200,12 @@ func cmdSubscribe() {
 	}
 }
 
-func cmdLayout() {
-	if !client.IsRunning() {
-		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
-		os.Exit(1)
-	}
-
-	arg := ""
-	if len(os.Args) > 2 {
-		arg = os.Args[2]
-	}
-
-	resp, err := client.Send("layout " + arg)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println(resp)
-}
-
-func cmdThreeBody() {
-	if !client.IsRunning() {
-		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
-		os.Exit(1)
-	}
-
-	if len(os.Args) < 3 {
-		fmt.Fprintln(os.Stderr, "usage: hyprd three-body {editor|agents|browser|shadow}")
-		os.Exit(1)
-	}
-
-	resp, err := client.Send("three-body " + os.Args[2])
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println(resp)
-}
-
-func cmdProject() {
-	if !client.IsRunning() {
-		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
-		os.Exit(1)
-	}
-
-	cmd := "project"
-	if len(os.Args) > 2 {
-		cmd += " " + strings.Join(os.Args[2:], " ")
-	}
-
-	resp, err := client.Send(cmd)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-	fmt.Println(resp)
-}
-
 func cmdHelp() {
 	fmt.Println(`hyprd — Unified Hyprland daemon
 
 Usage:
-  hyprd                  Start daemon (foreground)
+  hyprd                  Start daemon (foreground, auto-inits on fresh session)
+  hyprd init             Manually run the boot sequence
   hyprd status           Check if daemon is running
   hyprd status --json    Return full state as JSON
 
@@ -420,5 +235,11 @@ Sessions:
 
 Query/Subscribe (for eww):
   hyprd query [topic]    Get state (workspace|hidden|split|three-body|all)
-  hyprd subscribe [...]  Stream events (workspace split)`)
+  hyprd subscribe [...]  Stream events (workspace split)
+
+Notifications:
+  hyprd notify hook claude <event>     Read Claude hook JSON from stdin
+  hyprd notify hook codex              Read Codex notify JSON from argv/stdin
+  hyprd notify dunst [approval]        Handle Dunst script callbacks
+  hyprd notify kitty-finish <command>  Emit kitty command-finish notification`)
 }
