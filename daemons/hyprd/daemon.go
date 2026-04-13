@@ -333,7 +333,9 @@ func runCmd(name string, args ...string) {
 	exec.Command(name, args...).Run()
 }
 
-// watchConfig monitors hyprd.yaml for changes and hot-reloads the config pointer.
+// watchConfig monitors daemons.yaml for changes and hot-reloads the config pointer.
+// Watches the parent directory (not the file) because editors like nvim do
+// rename-and-replace on save, which creates a new inode and kills file-level watches.
 func (d *Daemon) watchConfig(done <-chan struct{}) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -341,6 +343,8 @@ func (d *Daemon) watchConfig(done <-chan struct{}) {
 		return
 	}
 	configFile := filepath.Join(home, "dotfiles/daemons/daemons.yaml")
+	configDir := filepath.Dir(configFile)
+	configBase := filepath.Base(configFile)
 
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -349,7 +353,7 @@ func (d *Daemon) watchConfig(done <-chan struct{}) {
 	}
 	defer watcher.Close()
 
-	if err := watcher.Add(configFile); err != nil {
+	if err := watcher.Add(configDir); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd: config watcher: %v\n", err)
 		return
 	}
@@ -363,7 +367,10 @@ func (d *Daemon) watchConfig(done <-chan struct{}) {
 			if !ok {
 				return
 			}
-			if event.Op&fsnotify.Write == 0 {
+			if filepath.Base(event.Name) != configBase {
+				continue
+			}
+			if event.Op&(fsnotify.Write|fsnotify.Create) == 0 {
 				continue
 			}
 			if debounce != nil {
