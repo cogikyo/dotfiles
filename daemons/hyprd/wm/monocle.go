@@ -44,10 +44,6 @@ func (m *Monocle) activate() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if len(tiled) < 2 {
-		return "monocle: need at least 2 tiled windows", nil
-	}
-
 	active, err := m.hypr.ActiveWindow()
 	if err != nil {
 		return "", err
