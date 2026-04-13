@@ -1,9 +1,0 @@
-#!/usr/bin/env bash
-# Print the most recent working directory (written by chpwd hook).
-
-if [[ -f /tmp/last-project ]]; then
-    proj=$(cat /tmp/last-project)
-    [[ -d "$proj" ]] && { echo "$proj"; exit 0; }
-fi
-
-echo "$HOME"
