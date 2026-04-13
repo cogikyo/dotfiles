@@ -24,6 +24,11 @@ return {
 			go = { "goimports", "gofumpt" },
 			templ = { "templ" },
 		},
+		formatters = {
+			prettierd = {
+				prepend_args = { "--print-width", "200" },
+			},
+		},
 		format_on_save = { timeout_ms = 500 },
 	},
 }
