@@ -1460,6 +1460,14 @@ install_daemon_services() {
 
     systemctl --user daemon-reload
 
+    # Ensure ssh-agent is enabled (linked by link step, needed by daemons)
+    if [[ -f "$service_dir/ssh-agent.service" ]]; then
+        if ! systemctl --user is-enabled ssh-agent &>/dev/null; then
+            systemctl --user enable --now ssh-agent
+            ok "ssh-agent enabled and started"
+        fi
+    fi
+
     for name in "${daemons[@]}"; do
         if systemctl --user is-active "$name" &>/dev/null; then
             info "Restarting $name..."
@@ -1513,13 +1521,33 @@ step_go() {
 
 healthcheck_go() {
     local name module_dir build_path desc is_daemon output_dir install_dir
+    local has_bus=0
+    has_user_bus && has_bus=1
+
     for name in "${!GO_BINARIES[@]}"; do
         IFS='|' read -r module_dir build_path desc is_daemon output_dir <<< "${GO_BINARIES[$name]}"
         install_dir="$HOME/.local/bin"
         [[ -n "$output_dir" ]] && install_dir="$DOTFILES/$output_dir"
+
         if [[ ! -x "$install_dir/$name" ]]; then
             err "Healthcheck failed: missing Go binary '$install_dir/$name'"
             return 1
+        fi
+
+        if [[ "$is_daemon" == "yes" && $has_bus -eq 1 ]]; then
+            local service_dir="$HOME/.config/systemd/user"
+            if [[ ! -f "$service_dir/$name.service" ]]; then
+                err "Healthcheck failed: missing service file '$name.service'"
+                return 1
+            fi
+            if ! systemctl --user is-enabled "$name" &>/dev/null; then
+                err "Healthcheck failed: '$name.service' not enabled"
+                return 1
+            fi
+            if ! systemctl --user is-active "$name" &>/dev/null; then
+                err "Healthcheck failed: '$name.service' not running"
+                return 1
+            fi
         fi
     done
     return 0
@@ -1679,7 +1707,7 @@ step_firefox() {
     ok "user.js linked"
 
     # Write newtab local config with profile path (machine-specific, not tracked in git)
-    local local_config="$DOTFILES/daemons/newtab/local.config.yaml"
+    local local_config="$DOTFILES/daemons/configs/newtab.local.yaml"
     local new_db_path="${FIREFOX_PROFILE_DIR#"$HOME"/}/places.sqlite"
 
     local current_db=""
