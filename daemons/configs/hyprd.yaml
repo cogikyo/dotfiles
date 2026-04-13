@@ -137,10 +137,10 @@ tabs:
     focus: master
     tabs:
       - { name: xplr, title: "⊰   ⊱", command: codex }
-      - { name: master, title: "⊰ 󰯉  ⊱", command: claude }
+      - { name: master, title: "⊰ 󰯉  ⊱", command: "claude --effort high" }
       - { name: dev, title: "⊰   ⊱", command: codex }
-      - { name: plan, title: "⊰   ⊱", command: claude }
-      - { name: git, title: "⊰   ⊱", command: claude }
+      - { name: plan, title: "⊰   ⊱", command: "claude --effort max" }
+      - { name: git, title: "⊰   ⊱", command: "claude --effort low" }
   leadpier:
     prefix: "lp-"
     focus: fe-nvim

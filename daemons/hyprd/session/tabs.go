@@ -331,7 +331,7 @@ func (t *Tabs) buildLaunchArgs(tab config.TabDef, tabID, cwd string) []string {
 	case tab.Command == "xplr":
 		args = append(args, "zsh", "-c", `cd "$(xplr --print-pwd-as-result)" 2>/dev/null; exec zsh`)
 	case tab.Command != "":
-		args = append(args, "--hold", tab.Command)
+		args = append(args, "--hold", "zsh", "-lc", tab.Command)
 	}
 	return args
 }
