@@ -28,7 +28,6 @@
     :tooltip "  ${desc}  "
     (box
       :style "background-image: url('art/ws-icons/${icon}${
-                workspace-info.monocle_str == num ? "-monocle" :
                 hover ? "-hover" :
                 workspace-info.current_str == num ? "-active" :
                 "${matches(workspace-info.occupied_str, "${num}") ? "" : "-empty"}"
@@ -44,7 +43,7 @@
     :onhoverlost "eww update ws-hover=false"
     :onrightclick "hyprctl dispatch workspace previous"
     (box
-      :class "tr-a workspacesbox ${ws-hover ? "workspacesbox-hover" : ""} ${workspace-info.monocle_str != "" ? "workspacesbox-monocle" : ""}"
+      :class "tr-a workspacesbox ${ws-hover ? "workspacesbox-hover" : ""}"
       :halign "center" :space-evenly false :spacing 10
       :orientation "vertical"
       (workspace :icon "music"    :num "1" :hover ws-h1 :desc " music")
