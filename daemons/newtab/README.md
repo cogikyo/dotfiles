@@ -15,11 +15,13 @@ Firefox's built-in new tab is slow and cluttered. Extensions that replace it can
 
 ## Setup
 
-Update the Firefox profile path in `main.go`:
+Update `../configs/newtab.yaml` for your machine. The optional `../configs/newtab.local.yaml` file can hold untracked overrides.
 
-```sh
-ls ~/.mozilla/firefox/ | grep -E '\.default|\.dev-edition'
-sed -i "s/sdfm8kqz.dev-edition-default/YOUR_PROFILE/" main.go
+```yaml
+port: ":42069"
+firefox_db: ".mozilla/firefox/YOUR_PROFILE/places.sqlite"
+static_dir: "dotfiles/daemons/newtab"
+history_limit: 15
 ```
 
 Set Firefox to use it:
@@ -34,4 +36,4 @@ Set Firefox to use it:
 install-go.sh newtab
 ```
 
-Runs on `:42069`. Started automatically via `exec-once = newtab` in hyprland.conf.
+Runs on `:42069`. Started automatically via `exec-once = newtab` in `hyprland.conf`.

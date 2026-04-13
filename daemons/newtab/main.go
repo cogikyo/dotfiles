@@ -11,8 +11,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	_ "modernc.org/sqlite"
 	"gopkg.in/yaml.v3"
+	_ "modernc.org/sqlite"
 )
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -20,7 +20,8 @@ import (
 // ═══════════════════════════════════════════════════════════════════════════
 
 const (
-	daemonConfigPath = "dotfiles/daemons/daemons.yaml"
+	newtabConfigPath = "dotfiles/daemons/configs/newtab.yaml"
+	newtabLocalPath  = "dotfiles/daemons/configs/newtab.local.yaml"
 	googleSuggest    = "https://suggestqueries.google.com/complete/search?client=firefox&q="
 )
 
@@ -43,12 +44,6 @@ type newtabConfig struct {
 	HistoryLimit int    `yaml:"history_limit"`
 }
 
-type daemonConfig struct {
-	Newtab newtabConfig `yaml:"newtab"`
-}
-
-const newtabLocalPath = "dotfiles/daemons/newtab/local.config.yaml"
-
 func loadConfig() newtabConfig {
 	cfg := newtabConfig{
 		Port:         ":42069",
@@ -57,23 +52,21 @@ func loadConfig() newtabConfig {
 		HistoryLimit: 15,
 	}
 
-	data, err := os.ReadFile(filepath.Join(homeDir, daemonConfigPath))
+	data, err := os.ReadFile(filepath.Join(homeDir, newtabConfigPath))
 	if err != nil {
 		return cfg
 	}
 
-	var dc daemonConfig
-	dc.Newtab = cfg
-	if err := yaml.Unmarshal(data, &dc); err != nil {
+	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return cfg
 	}
 
 	// Overlay local config (machine-specific overrides, not tracked in git).
 	if localData, err := os.ReadFile(filepath.Join(homeDir, newtabLocalPath)); err == nil {
-		yaml.Unmarshal(localData, &dc.Newtab)
+		yaml.Unmarshal(localData, &cfg)
 	}
 
-	return dc.Newtab
+	return cfg
 }
 
 func dbPath(cfg newtabConfig) string {

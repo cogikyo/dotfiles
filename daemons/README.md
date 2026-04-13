@@ -40,6 +40,25 @@ Go daemons and services for Hyprland, eww, and Firefox.
 - **[ewwd](ewwd/)** — System utilities: GPU stats, audio, brightness, music, network, date, weather, timer
 - **[newtab](newtab/)** — Firefox new tab page: local HTTP server with bookmarks, history, and suggestions
 
+## Layout
+
+The repository is organized around one daemon per top-level directory, with shared config files under `daemons/configs/`.
+
+```text
+daemons/
+├── configs/
+│   ├── ewwd.yaml
+│   ├── hyprd.yaml
+│   ├── newtab.yaml
+│   └── newtab.local.yaml
+├── daemon/         # shared Unix socket server/client helpers
+├── ewwd/           # eww status daemon
+├── hyprd/          # Hyprland daemon
+└── newtab/         # Firefox new tab server
+```
+
+`hyprd` is further split into `notify/`, `session/`, `state/`, `windows/`, and `wm/` to keep concerns separated without pulling notification handling out of the daemon itself.
+
 ## Shared infrastructure
 
 The `daemon/` package provides the Unix socket server/client and subscription system used by hyprd and ewwd. It handles socket lifecycle, command routing, and event streaming. (newtab uses its own HTTP server and separate go.mod.)
@@ -60,6 +79,8 @@ install-go.sh --list   # see available
 ```
 
 Binaries go to `~/.local/bin/`.
+
+Config files are stored in `daemons/configs/` in the source tree. The daemon-specific docs below describe how each daemon consumes its config file.
 
 ### Hyprland startup
 

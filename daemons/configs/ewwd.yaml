@@ -1,0 +1,39 @@
+windows:
+  - today
+  - workspaces
+  - computer
+  - music
+  - player
+weather:
+  api_key_file: "~/.local/.owm_api_key"
+  poll_interval: 60s
+timer:
+  default_minutes: 90
+  default_alarm_hours: 6
+  min_alarm_hours: 3
+audio:
+  source_offset: 50
+  source_max: 150
+  sink_max: 100
+  volume_step: 10
+  poll_interval: 2s
+  default_sink_volume: 69
+  default_source_volume: 150
+  name_mappings:
+    cullyn: "pixel buds"
+  bluetooth_names:
+    - "WH-1000XM4"
+    - "OpenFit"
+    - "pixel buds"
+brightness:
+  min: 2
+  max: 10
+  night: 4
+  default: 10
+date:
+  birth_date: "1996-02-26"
+gpu:
+  device_path: "/sys/class/drm/card0/device"
+  poll_interval: 500ms
+network:
+  poll_interval: 1s

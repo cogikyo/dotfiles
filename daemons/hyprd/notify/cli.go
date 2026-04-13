@@ -1,6 +1,7 @@
-package main
+package notify
 
 import (
+	"dotfiles/daemons/daemon"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -9,8 +10,8 @@ import (
 	"strings"
 )
 
-func cmdNotify() {
-	req, err := parseNotifyArgs(os.Args[2:])
+func CmdNotify(client *daemon.Client, args []string) {
+	req, err := parseNotifyArgs(args)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
@@ -202,7 +203,6 @@ func parseSendNotify(args []string) (NotifyRequest, error) {
 				}
 			}
 		default:
-			// Remaining args are title [body]
 			req.Summary = args[i]
 			if i+1 < len(args) {
 				req.Body = strings.Join(args[i+1:], " ")

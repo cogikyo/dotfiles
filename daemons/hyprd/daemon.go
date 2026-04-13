@@ -37,8 +37,11 @@ package main
 import (
 	"dotfiles/daemons/config"
 	"dotfiles/daemons/daemon"
-	"dotfiles/daemons/hyprd/commands"
 	"dotfiles/daemons/hyprd/hypr"
+	notifypkg "dotfiles/daemons/hyprd/notify"
+	"dotfiles/daemons/hyprd/session"
+	"dotfiles/daemons/hyprd/state"
+	"dotfiles/daemons/hyprd/wm"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -58,26 +61,26 @@ const SocketPath = "/tmp/hyprd.sock"
 // It handles client requests over a Unix socket and publishes state changes to subscribers.
 type Daemon struct {
 	hypr   *hypr.Client                      // Hyprland IPC connection
-	state  *State                            // Thread-safe workspace and window state
+	state  *state.State                      // Thread-safe workspace and window state
 	server *daemon.Server                    // Unix socket command server
 	config atomic.Pointer[config.HyprConfig] // Monitor geometry and layout configuration
 }
 
 // New connects to Hyprland's IPC socket and initializes the daemon state.
 func New() (*Daemon, error) {
-	cfg := config.Load()
+	cfg := config.LoadHypr()
 
 	hyprClient, err := hypr.NewClient()
 	if err != nil {
 		return nil, fmt.Errorf("connect to hyprland: %w", err)
 	}
 
-	state := NewState(&cfg.Hypr)
+	stateStore := state.NewState(&cfg)
 	d := &Daemon{
 		hypr:  hyprClient,
-		state: state,
+		state: stateStore,
 	}
-	d.config.Store(&cfg.Hypr)
+	d.config.Store(&cfg)
 
 	d.server = daemon.NewServer(SocketPath, d.handleCommand)
 	d.server.OnSubscribe = d.sendInitialState
@@ -159,21 +162,21 @@ func (d *Daemon) handleCommand(command string) string {
 		}
 		return string(data)
 	case "bg":
-		bg := commands.NewBG(&d.config.Load().Background)
+		bg := session.NewBG(&d.config.Load().Background)
 		result, err := bg.Execute(arg)
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
 	case "split":
-		split := commands.NewSplit(d.hypr, d.state)
+		split := wm.NewSplit(d.hypr, d.state)
 		result, err := split.Execute(arg)
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
 	case "hide":
-		hide := commands.NewHide(d.hypr, d.state)
+		hide := wm.NewHide(d.hypr, d.state)
 		result, err := hide.Execute()
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
@@ -181,7 +184,7 @@ func (d *Daemon) handleCommand(command string) string {
 		return result
 	case "swap":
 		// When three-body is active, swap shadow into master position
-		tb := commands.NewThreeBody(d.hypr, d.state)
+		tb := wm.NewThreeBody(d.hypr, d.state)
 		tbResult, tbErr := tb.SwapMaster()
 		if tbErr != nil {
 			return fmt.Sprintf("error: %v", tbErr)
@@ -190,7 +193,7 @@ func (d *Daemon) handleCommand(command string) string {
 			return tbResult
 		}
 		// No three-body active — fall through to normal swap
-		swap := commands.NewSwap(d.hypr, d.state)
+		swap := wm.NewSwap(d.hypr, d.state)
 		result, err := swap.Execute()
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
@@ -200,7 +203,7 @@ func (d *Daemon) handleCommand(command string) string {
 		if arg == "" {
 			return "error: workspace target required"
 		}
-		ws := commands.NewWS(d.hypr, d.state)
+		ws := wm.NewWS(d.hypr, d.state)
 		result, err := ws.Execute(arg)
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
@@ -216,21 +219,21 @@ func (d *Daemon) handleCommand(command string) string {
 		if len(parts) >= 2 {
 			title = parts[1]
 		}
-		focus := commands.NewFocus(d.hypr, d.state)
+		focus := wm.NewFocus(d.hypr, d.state)
 		result, err := focus.Execute(class, title)
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
 	case "tab":
-		tab := commands.NewTab(d.hypr, d.state)
+		tab := session.NewTab(d.hypr, d.state)
 		result, err := tab.Execute(strings.TrimSpace(arg))
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
 	case "tabs":
-		tabs := commands.NewTabs(d.state)
+		tabs := session.NewTabs(d.state)
 		result, err := tabs.Execute(strings.TrimSpace(arg))
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
@@ -247,7 +250,7 @@ func (d *Daemon) handleCommand(command string) string {
 		}
 		return result
 	case "monocle":
-		monocle := commands.NewMonocle(d.hypr, d.state)
+		monocle := wm.NewMonocle(d.hypr, d.state)
 		result, err := monocle.Execute()
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
@@ -264,7 +267,7 @@ func (d *Daemon) handleCommand(command string) string {
 		}
 		return result
 	case "layout":
-		layout := commands.NewLayout(d.hypr, d.state)
+		layout := session.NewLayout(d.hypr, d.state)
 		result, err := layout.Execute(arg)
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
@@ -285,7 +288,7 @@ func (d *Daemon) handleThreeBody(arg string) string {
 	if name == "" {
 		return "usage: three-body {editor|agents|browser|shadow}"
 	}
-	tb := commands.NewThreeBody(d.hypr, d.state)
+	tb := wm.NewThreeBody(d.hypr, d.state)
 	tb.SetNotifyHooks(hasNotifications, func() { runCmd("dunstctl", "action") })
 	result, err := tb.Execute(name)
 	if err != nil {
@@ -295,12 +298,12 @@ func (d *Daemon) handleThreeBody(arg string) string {
 }
 
 func (d *Daemon) handleNotify(arg string) string {
-	var req NotifyRequest
+	var req notifypkg.NotifyRequest
 	if err := json.Unmarshal([]byte(arg), &req); err != nil {
 		return fmt.Sprintf("error: parse notify request: %v", err)
 	}
 
-	notifier := NewNotifier(d.hypr, d.state, d.config.Load())
+	notifier := notifypkg.NewNotifier(d.hypr, d.config.Load())
 	go func() {
 		if err := notifier.Handle(req); err != nil {
 			fmt.Fprintf(os.Stderr, "hyprd notify: %v\n", err)
@@ -354,11 +357,11 @@ func (d *Daemon) handleProject(arg string) string {
 	}
 }
 
-func (d *Daemon) newInit() *commands.Init {
-	init := commands.NewInit(d.hypr, d.state)
+func (d *Daemon) newInit() *session.Init {
+	init := session.NewInit(d.hypr, d.state)
 	init.SetNotify(func(app, urgency, title, body string) {
-		notifier := NewNotifier(d.hypr, d.state, d.config.Load())
-		notifier.Handle(NotifyRequest{
+		notifier := notifypkg.NewNotifier(d.hypr, d.config.Load())
+		notifier.Handle(notifypkg.NotifyRequest{
 			Source:  "send",
 			App:     app,
 			Urgency: urgency,
@@ -386,7 +389,7 @@ func runCmd(name string, args ...string) {
 	}
 }
 
-// watchConfig monitors daemons.yaml for changes and hot-reloads the config pointer.
+// watchConfig monitors configs/hyprd.yaml for changes and hot-reloads the config pointer.
 // Watches the parent directory (not the file) because editors like nvim do
 // rename-and-replace on save, which creates a new inode and kills file-level watches.
 func (d *Daemon) watchConfig(done <-chan struct{}) {
@@ -395,7 +398,7 @@ func (d *Daemon) watchConfig(done <-chan struct{}) {
 		fmt.Fprintf(os.Stderr, "hyprd: config watcher: %v\n", err)
 		return
 	}
-	configFile := filepath.Join(home, "dotfiles/daemons/daemons.yaml")
+	configFile := filepath.Join(home, config.ConfigPath("hyprd"))
 	configDir := filepath.Dir(configFile)
 	configBase := filepath.Base(configFile)
 
@@ -430,9 +433,9 @@ func (d *Daemon) watchConfig(done <-chan struct{}) {
 				debounce.Stop()
 			}
 			debounce = time.AfterFunc(100*time.Millisecond, func() {
-				cfg := config.Load()
-				d.state.ReloadConfig(&cfg.Hypr)
-				d.config.Store(&cfg.Hypr)
+				cfg := config.LoadHypr()
+				d.state.ReloadConfig(&cfg)
+				d.config.Store(&cfg)
 				fmt.Printf("hyprd: config reloaded\n")
 			})
 		case err, ok := <-watcher.Errors:

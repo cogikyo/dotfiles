@@ -1,4 +1,4 @@
-package commands
+package wm
 
 import (
 	"encoding/json"
@@ -6,22 +6,19 @@ import (
 	"strings"
 
 	"dotfiles/daemons/hyprd/hypr"
+	"dotfiles/daemons/hyprd/state"
+	"dotfiles/daemons/hyprd/windows"
 )
 
-// Focus searches all workspaces for windows matching class/title criteria and brings them into view, automatically unhiding from special workspaces when needed.
 type Focus struct {
-	hypr  *hypr.Client // Hyprland IPC client
-	state StateManager // Window state tracker
+	hypr  *hypr.Client
+	state *state.State
 }
 
-// NewFocus creates a Focus command handler.
-func NewFocus(h *hypr.Client, s StateManager) *Focus {
+func NewFocus(h *hypr.Client, s *state.State) *Focus {
 	return &Focus{hypr: h, state: s}
 }
 
-// Execute finds and focuses a window by class (required) and title (optional).
-// Prefers windows on the current workspace, falls back to hidden windows, and
-// automatically unhides from special workspaces before focusing.
 func (f *Focus) Execute(class, title string) (string, error) {
 	if class == "" {
 		return "", fmt.Errorf("class required")
@@ -38,7 +35,6 @@ func (f *Focus) Execute(class, title string) (string, error) {
 	if err := json.Unmarshal(wsData, &ws); err != nil {
 		return "", fmt.Errorf("parse workspace: %w", err)
 	}
-	currentWS := ws.ID
 
 	clients, err := f.hypr.Clients()
 	if err != nil {
@@ -47,18 +43,15 @@ func (f *Focus) Execute(class, title string) (string, error) {
 
 	var target *hypr.Window
 	var hiddenTarget *hypr.Window
-
 	for i := range clients {
 		c := &clients[i]
-		if !matchesTarget(c, class, title) {
+		if !windows.MatchesTarget(c, class, title) {
 			continue
 		}
-
-		if c.Workspace.ID == currentWS {
+		if c.Workspace.ID == ws.ID {
 			target = c
 			break
 		}
-
 		if strings.HasPrefix(c.Workspace.Name, "special:hiddenSlaves") {
 			hiddenTarget = c
 		}
@@ -67,36 +60,17 @@ func (f *Focus) Execute(class, title string) (string, error) {
 	if target == nil {
 		target = hiddenTarget
 	}
-
 	if target == nil {
 		return fmt.Sprintf("not found: %s %s", class, title), nil
 	}
 
 	if strings.HasPrefix(target.Workspace.Name, "special:") {
 		hide := NewHide(f.hypr, f.state)
-		_, err := hide.UnhideByAddress(target.Address, currentWS)
-		if err != nil {
+		if _, err := hide.UnhideByAddress(target.Address, ws.ID); err != nil {
 			return "", fmt.Errorf("unhide: %w", err)
 		}
 	}
 
 	f.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", target.Address))
-
 	return fmt.Sprintf("focused: %s (%s)", target.Title, target.Address), nil
-}
-
-// matchesTarget returns true if window matches the search criteria.
-// When title is provided, both class and title must match.
-// Title is checked against both current and initial title.
-func matchesTarget(w *hypr.Window, class, title string) bool {
-	if class == "" {
-		return false
-	}
-	if !strings.EqualFold(w.Class, class) {
-		return false
-	}
-	if title == "" {
-		return true
-	}
-	return w.Title == title || w.InitialTitle == title
 }

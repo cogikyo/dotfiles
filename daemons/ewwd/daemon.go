@@ -21,12 +21,12 @@ type Daemon struct {
 	providers []providers.Provider // Data sources
 	ctx       context.Context      // Cancellation context
 	cancel    context.CancelFunc   // Triggers provider shutdown
-	config    *config.Config       // YAML configuration
+	config    config.EwwConfig     // YAML configuration
 }
 
 // New loads configuration and initializes the daemon with server and state.
 func New() (*Daemon, error) {
-	cfg := config.Load()
+	cfg := config.LoadEww()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	state := NewState()
@@ -86,7 +86,7 @@ func (d *Daemon) Run() error {
 
 // initProviders instantiates all providers with their configuration.
 func (d *Daemon) initProviders() {
-	cfg := d.config.Eww
+	cfg := d.config
 	d.providers = []providers.Provider{
 		providers.NewGPU(d.state, cfg.GPU),
 		providers.NewNetwork(d.state, cfg.Network),
@@ -190,7 +190,7 @@ func (d *Daemon) handleAction(providerName string, args []string) string {
 
 // openWindows ensures the eww daemon is running, reloads config, and opens configured windows.
 func (d *Daemon) openWindows() string {
-	windows := d.config.Eww.Windows
+	windows := d.config.Windows
 	if len(windows) == 0 {
 		return "open: no windows configured"
 	}

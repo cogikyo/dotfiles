@@ -13,19 +13,20 @@ import (
 
 	"dotfiles/daemons/daemon"
 	"dotfiles/daemons/hyprd/hypr"
+	"dotfiles/daemons/hyprd/state"
 )
 
 // EventLoop synchronizes daemon state by listening to Hyprland's event socket
 // and notifying subscribers of workspace changes.
 type EventLoop struct {
 	hypr  *hypr.Client                // Hyprland IPC client
-	state *State                      // Shared daemon state
+	state *state.State                // Shared daemon state
 	subs  *daemon.SubscriptionManager // Pub/sub for workspace events
 	done  <-chan struct{}             // Shutdown signal
 }
 
 // NewEventLoop creates an EventLoop.
-func NewEventLoop(hypr *hypr.Client, state *State, subs *daemon.SubscriptionManager, done <-chan struct{}) *EventLoop {
+func NewEventLoop(hypr *hypr.Client, state *state.State, subs *daemon.SubscriptionManager, done <-chan struct{}) *EventLoop {
 	return &EventLoop{
 		hypr:  hypr,
 		state: state,

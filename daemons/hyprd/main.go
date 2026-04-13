@@ -35,6 +35,7 @@ package main
 
 import (
 	"dotfiles/daemons/daemon"
+	notifypkg "dotfiles/daemons/hyprd/notify"
 	"fmt"
 	"os"
 	"strings"
@@ -152,6 +153,7 @@ func cmdTabs() {
 	_ = requireArg("usage: hyprd tabs {init|refresh} <profile|name> <pid>")
 	sendCommand("tabs " + strings.Join(os.Args[2:], " "))
 }
+func cmdNotify() { notifypkg.CmdNotify(client, os.Args[2:]) }
 
 func cmdStatus() {
 	jsonOutput := false
@@ -231,7 +233,7 @@ Three-body (2-visible, 1-shadow window management):
 
 Sessions:
   hyprd layout --list    List available sessions
-  hyprd layout <name>    Open session (loads from ~/.config/hyprd/sessions.yaml)
+  hyprd layout <name>    Open session (loads from ~/dotfiles/daemons/configs/hyprd.yaml)
 
 Query/Subscribe (for eww):
   hyprd query [topic]    Get state (workspace|hidden|split|three-body|all)

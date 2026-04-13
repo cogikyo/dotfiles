@@ -1,25 +1,22 @@
-package commands
+package wm
 
 import (
 	"fmt"
 
 	"dotfiles/daemons/hyprd/hypr"
+	"dotfiles/daemons/hyprd/state"
+	"dotfiles/daemons/hyprd/windows"
 )
 
-// Split manages master/slave split ratios with cycling and direct ratio selection.
 type Split struct {
-	hypr  *hypr.Client // Hyprland IPC client
-	state StateManager // Persistent state storage
+	hypr  *hypr.Client
+	state *state.State
 }
 
-// NewSplit creates a Split handler with the given Hyprland client and state manager.
-func NewSplit(h *hypr.Client, s StateManager) *Split {
+func NewSplit(h *hypr.Client, s *state.State) *Split {
 	return &Split{hypr: h, state: s}
 }
 
-// Execute sets or cycles the split ratio. Supported flags: "xs", "default", "lg",
-// "reapply" (reapplies current and centers cursor), or empty to cycle xs -> default -> lg.
-// Ignored for floating windows.
 func (s *Split) Execute(flag string) (string, error) {
 	win, err := s.hypr.ActiveWindow()
 	if err != nil {
@@ -30,7 +27,6 @@ func (s *Split) Execute(flag string) (string, error) {
 	}
 
 	current := s.state.GetSplitRatio()
-
 	switch flag {
 	case "xs", "-x":
 		return s.setRatio("xs")
@@ -43,14 +39,13 @@ func (s *Split) Execute(flag string) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		centerCursor(s.hypr)
+		windows.CenterCursor(s.hypr)
 		return result, nil
 	default:
 		return s.cycle(current)
 	}
 }
 
-// setRatio applies the specified split ratio by dispatching the mfact layoutmsg to Hyprland.
 func (s *Split) setRatio(ratio string) (string, error) {
 	cfg := s.state.GetConfig()
 
@@ -73,7 +68,6 @@ func (s *Split) setRatio(ratio string) (string, error) {
 	return fmt.Sprintf("split: %s (%s)", ratio, mfact), nil
 }
 
-// cycle advances to the next split ratio in the sequence: xs -> default -> lg -> xs.
 func (s *Split) cycle(current string) (string, error) {
 	var next string
 	switch current {

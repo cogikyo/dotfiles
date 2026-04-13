@@ -74,15 +74,16 @@ Each provider implements the `providers.Provider` interface and runs in its own 
 
 ## Configuration
 
-`~/.config/ewwd/config.yaml` — provider settings, API keys, poll intervals
+`../configs/ewwd.yaml` — provider settings, API keys, poll intervals
+
+`ewwd` reads its config from the repo-level daemon config directory and uses that to initialize providers, set polling cadence, and wire provider-specific options.
 
 ## Structure
 
 ```
 ewwd/
-├── main.go              # CLI entry, command routing to daemon socket
 ├── daemon.go            # lifecycle, provider coordination, command handler
-├── state.go             # generic thread-safe state store
-├── config/              # YAML config loading
-└── providers/           # gpu, audio, brightness, music, network, date, weather, timer
+├── main.go              # CLI entry, command routing to daemon socket
+├── providers/           # gpu, audio, brightness, music, network, date, weather, timer
+└── state.go             # generic thread-safe state store
 ```

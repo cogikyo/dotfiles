@@ -48,19 +48,23 @@ eww integration:
 
 ## Configuration
 
-`~/.config/hyprd/config.yaml` — monitor geometry, split ratios, monocle sizing, colors
+`../configs/hyprd.yaml` — monitor geometry, split ratios, monocle sizing, colors
 
-`~/.config/hyprd/sessions.yaml` — session definitions for `hyprd layout`
+Session definitions live in the same `hyprd.yaml` file so layout names and startup behavior stay in one place.
+
+`hyprd` reads its config from the repo-level daemon config directory and uses that to drive startup, session layout spawning, and workspace behavior.
 
 ## Structure
 
 ```
 hyprd/
-├── main.go              # CLI entry, command routing to daemon socket
 ├── daemon.go            # lifecycle, server setup, command handler
-├── state.go             # thread-safe workspace and window state
 ├── events.go            # Hyprland event subscription loop
-├── config/              # YAML config loading
-├── commands/            # monocle, split, hide, swap, ws, focus, layout
-└── hypr/                # Hyprland IPC socket client
+├── hypr/                # Hyprland IPC socket client
+├── main.go              # CLI entry, command routing to daemon socket
+├── notify/              # notification formatting and delivery
+├── session/             # startup, layout spawning, session orchestration
+├── state/               # shared daemon state and derived view state
+├── windows/             # window matching and window-centric helpers
+└── wm/                  # window/workspace actions: monocle, split, hide, swap, ws, focus
 ```

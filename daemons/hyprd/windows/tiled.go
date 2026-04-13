@@ -1,14 +1,15 @@
-package commands
+package windows
 
 import (
-	"dotfiles/daemons/hyprd/hypr"
 	"fmt"
 	"slices"
 	"sort"
+
+	"dotfiles/daemons/hyprd/hypr"
 )
 
-// centerCursor moves the cursor to the center of the currently active window.
-func centerCursor(h *hypr.Client) {
+// CenterCursor moves the cursor to the center of the currently active window.
+func CenterCursor(h *hypr.Client) {
 	win, err := h.ActiveWindow()
 	if err != nil || win == nil {
 		return
@@ -18,8 +19,7 @@ func centerCursor(h *hypr.Client) {
 	h.Dispatch(fmt.Sprintf("movecursor %d %d", x, y))
 }
 
-// GetTiledWindows returns non-floating windows on wsID, sorted by X position (leftmost first).
-// Windows with classes in ignoredClasses are excluded from the results.
+// GetTiledWindows returns non-floating windows on wsID, sorted by X position.
 func GetTiledWindows(h *hypr.Client, wsID int, ignoredClasses []string) ([]hypr.Window, error) {
 	clients, err := h.Clients()
 	if err != nil {
@@ -57,7 +57,6 @@ func GetSlaves(tiled []hypr.Window) []hypr.Window {
 	if len(tiled) < 2 {
 		return nil
 	}
-
 	masterX := tiled[0].At[0]
 	var slaves []hypr.Window
 	for _, w := range tiled[1:] {
@@ -65,11 +64,9 @@ func GetSlaves(tiled []hypr.Window) []hypr.Window {
 			slaves = append(slaves, w)
 		}
 	}
-
 	sort.Slice(slaves, func(i, j int) bool {
 		return slaves[i].At[1] < slaves[j].At[1]
 	})
-
 	return slaves
 }
 

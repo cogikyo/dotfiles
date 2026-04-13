@@ -1,0 +1,4 @@
+port: ":42069"
+firefox_db: ".mozilla/firefox/sdfm8kqz.dev-edition-default/places.sqlite"
+static_dir: "dotfiles/daemons/newtab"
+history_limit: 15
