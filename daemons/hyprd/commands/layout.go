@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -22,7 +23,12 @@ func NewLayout(h *hypr.Client, s StateManager) *Layout {
 	return &Layout{hypr: h, state: s}
 }
 
-// Execute opens the named session or lists available sessions (when arg is empty, "--list", or "-l").
+// Execute routes layout subcommands:
+//
+//	hyprd layout 4          — open the active session for workspace 4
+//	hyprd layout set 4 cog  — change ws4's active session to "cog"
+//	hyprd layout list       — show all sessions grouped by workspace
+//	hyprd layout dotfiles   — open a session by name (legacy/explicit)
 func (l *Layout) Execute(arg string) (string, error) {
 	cfg := l.state.GetConfig()
 	sessions := cfg.Sessions
@@ -30,29 +36,101 @@ func (l *Layout) Execute(arg string) (string, error) {
 		sessions = config.Default().Hypr.Sessions
 	}
 
-	if arg == "" || arg == "--list" || arg == "-l" {
-		return listSessions(sessions), nil
+	parts := strings.Fields(arg)
+	if len(parts) == 0 || arg == "--list" || arg == "-l" || arg == "list" {
+		return l.listByWorkspace(sessions, cfg.ActiveSessions), nil
 	}
 
-	session, ok := sessions[arg]
+	// "layout set <ws> <session>"
+	if parts[0] == "set" {
+		return l.setActive(parts[1:], sessions)
+	}
+
+	// "layout <number>" — open active session for that workspace
+	if ws, err := strconv.Atoi(parts[0]); err == nil {
+		return l.openByWorkspace(ws, sessions)
+	}
+
+	// "layout <name>" — open session by name (legacy/explicit)
+	session, ok := sessions[parts[0]]
 	if !ok {
-		return "", fmt.Errorf("unknown session: %s (use --list to see available)", arg)
+		return "", fmt.Errorf("unknown session: %s (use 'layout list')", parts[0])
 	}
-
 	return l.openSession(session)
 }
 
-// listSessions formats session names with workspace IDs for display.
-func listSessions(sessions map[string]config.Session) string {
-	var names []string
-	for name, s := range sessions {
-		names = append(names, fmt.Sprintf("%s (ws%d)", name, s.Workspace))
+// setActive changes the active session for a workspace.
+func (l *Layout) setActive(args []string, sessions map[string]config.Session) (string, error) {
+	if len(args) < 2 {
+		return "", fmt.Errorf("usage: layout set <workspace> <session>")
 	}
-	sort.Strings(names)
-	return "sessions: " + strings.Join(names, ", ")
+	ws, err := strconv.Atoi(args[0])
+	if err != nil {
+		return "", fmt.Errorf("invalid workspace: %s", args[0])
+	}
+	name := args[1]
+	if _, ok := sessions[name]; !ok {
+		return "", fmt.Errorf("unknown session: %s", name)
+	}
+	l.state.SetActiveSession(ws, name)
+	return fmt.Sprintf("ws%d active: %s", ws, name), nil
 }
 
-// openSession spawns windows, opens URLs, and arranges the layout on the target workspace.
+// openByWorkspace resolves the active session for a workspace and opens it.
+func (l *Layout) openByWorkspace(ws int, sessions map[string]config.Session) (string, error) {
+	name := l.state.GetActiveSession(ws)
+	if name == "" {
+		return "", fmt.Errorf("no active session for ws%d (use 'layout set %d <session>')", ws, ws)
+	}
+	session, ok := sessions[name]
+	if !ok {
+		return "", fmt.Errorf("active session %q for ws%d not found in config", name, ws)
+	}
+	// Ensure the session targets the right workspace
+	session.Workspace = ws
+	return l.openSession(session)
+}
+
+// listByWorkspace shows sessions grouped by workspace with the active one marked.
+func (l *Layout) listByWorkspace(sessions map[string]config.Session, active map[int]string) string {
+	// Group sessions by workspace
+	byWS := make(map[int][]string)
+	for name, s := range sessions {
+		byWS[s.Workspace] = append(byWS[s.Workspace], name)
+	}
+
+	var lines []string
+	var wsNums []int
+	for ws := range byWS {
+		wsNums = append(wsNums, ws)
+	}
+	sort.Ints(wsNums)
+
+	for _, ws := range wsNums {
+		names := byWS[ws]
+		sort.Strings(names)
+		activeName := active[ws]
+		// Check runtime override
+		if rt := l.state.GetActiveSession(ws); rt != "" {
+			activeName = rt
+		}
+		var formatted []string
+		for _, n := range names {
+			if n == activeName {
+				formatted = append(formatted, "*"+n)
+			} else {
+				formatted = append(formatted, n)
+			}
+		}
+		lines = append(lines, fmt.Sprintf("ws%d: %s", ws, strings.Join(formatted, ", ")))
+	}
+	return strings.Join(lines, "\n")
+}
+
+// openSession spawns windows and arranges the layout on the target workspace.
+// Three-body sessions (Body field set) spawn from ThreeBody config and let
+// auto-enrollment handle master/slave arrangement. Simple sessions spawn a
+// single command.
 func (l *Layout) openSession(s config.Session) (string, error) {
 	// Switch to workspace
 	l.hypr.Dispatch(fmt.Sprintf("workspace %d", s.Workspace))
@@ -63,9 +141,10 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 		return "", err
 	}
 
+	cfg := l.state.GetConfig()
 	var wsWindows []hypr.Window
 	for _, c := range clients {
-		if c.Workspace.ID == s.Workspace && !c.Pinned && c.Class != "GLava" {
+		if c.Workspace.ID == s.Workspace && !c.Pinned && !cfg.IsIgnored(c.Class) {
 			wsWindows = append(wsWindows, c)
 		}
 	}
@@ -81,103 +160,67 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 		l.state.SetProjectPath(s.Workspace, fmt.Sprintf("%s/%s", homeDir, s.Project))
 	}
 
-	// Spawn windows defined in config
-	for _, w := range s.Windows {
-		if w.Command == "" {
+	// Simple single-command session (slack, tableplus, etc.)
+	if s.Command != "" {
+		l.hypr.Dispatch(fmt.Sprintf("exec %s", s.Command))
+		return fmt.Sprintf("opened session: %s on ws%d", s.Name, s.Workspace), nil
+	}
+
+	// Three-body session — spawn from ThreeBody config
+	if len(s.Body) == 0 {
+		return "", fmt.Errorf("session %q has no body or command", s.Name)
+	}
+
+	urls := s.Browser.AllURLs()
+
+	for _, name := range s.Body {
+		tbw, ok := cfg.ThreeBody[name]
+		if !ok {
+			return "", fmt.Errorf("session %q references unknown three-body window %q", s.Name, name)
+		}
+
+		// Browser body member: open URLs instead of (or before) launching
+		if name == "browser" || strings.Contains(strings.ToLower(tbw.Class), "firefox") {
+			if len(urls) > 0 {
+				// First URL opens a new window
+				l.hypr.Dispatch(fmt.Sprintf("exec %s '%s'", tbw.Command, urls[0]))
+				time.Sleep(500 * time.Millisecond)
+				// Remaining URLs open as tabs in that window
+				for _, url := range urls[1:] {
+					l.hypr.Dispatch(fmt.Sprintf("exec %s '%s'", tbw.Command, url))
+					time.Sleep(300 * time.Millisecond)
+				}
+			} else {
+				l.hypr.Dispatch(fmt.Sprintf("exec %s", tbw.Command))
+				time.Sleep(500 * time.Millisecond)
+			}
 			continue
 		}
-		cmd := w.Command
+
+		// Kitty body members: inject PROJECT_PATH and tab profile
+		cmd := tbw.Command
 		if s.Project != "" && strings.Contains(cmd, "kitty") {
-			// Set PROJECT_PATH for kitty sessions
 			cmd = fmt.Sprintf("env PROJECT_PATH=%s/%s %s", homeDir, s.Project, cmd)
 		}
 		l.hypr.Dispatch(fmt.Sprintf("exec %s", cmd))
 		time.Sleep(500 * time.Millisecond)
 	}
 
-	// Open browser with URLs
-	if len(s.URLs) > 0 {
-		l.hypr.Dispatch(fmt.Sprintf("exec firefox-developer-edition --new-window '%s'", s.URLs[0]))
-		time.Sleep(500 * time.Millisecond)
-
-		for _, url := range s.URLs[1:] {
-			l.hypr.Dispatch(fmt.Sprintf("exec firefox-developer-edition '%s'", url))
-			time.Sleep(300 * time.Millisecond)
-		}
-	}
-
-	// Wait for windows to appear then arrange
+	// Wait for windows to settle, then apply default split
 	time.Sleep(1500 * time.Millisecond)
-	l.arrangeLayout(s.Workspace)
+	l.hypr.Dispatch(fmt.Sprintf("layoutmsg mfact exact %s", cfg.Split.Default))
 
-	return fmt.Sprintf("opened session: %s on ws%d", s.Name, s.Workspace), nil
-}
-
-// arrangeLayout moves terminal to master and orders firefox/claude in the slave stack.
-func (l *Layout) arrangeLayout(wsID int) {
-	clients, err := l.hypr.Clients()
-	if err != nil {
-		return
-	}
-
-	// Find windows by title/class
-	var terminal, firefox, claude *hypr.Window
-	for i := range clients {
-		c := &clients[i]
-		if c.Workspace.ID != wsID || c.Floating || c.Class == "GLava" {
-			continue
-		}
-
-		// Match by title first
-		switch c.Title {
-		case "terminal":
-			terminal = c
-		case "claude":
-			claude = c
-		}
-
-		// Firefox matched by class (has dynamic titles)
-		if strings.Contains(strings.ToLower(c.Class), "firefox") {
-			firefox = c
-		}
-	}
-
-	// Swap terminal to master position
-	if terminal != nil {
-		l.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", terminal.Address))
-		l.hypr.Dispatch("layoutmsg swapwithmaster")
-		time.Sleep(100 * time.Millisecond)
-	}
-
-	// Ensure firefox is above claude in slave stack
-	if firefox != nil && claude != nil {
-		// Re-query positions
-		clients, err = l.hypr.Clients()
-		if err != nil {
-			return
-		}
+	// Focus the master (first body member, which is first spawned → leftmost)
+	if first, ok := cfg.ThreeBody[s.Body[0]]; ok {
+		clients, _ = l.hypr.Clients()
 		for i := range clients {
 			c := &clients[i]
-			if c.Address == firefox.Address {
-				firefox = c
+			if c.Workspace.ID == s.Workspace && matchesTarget(c, first.Class, first.Title) {
+				l.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", c.Address))
+				break
 			}
-			if c.Address == claude.Address {
-				claude = c
-			}
-		}
-
-		if claude.At[1] < firefox.At[1] {
-			l.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", claude.Address))
-			l.hypr.Dispatch("layoutmsg swapnext")
 		}
 	}
 
-	// Focus master
-	if terminal != nil {
-		l.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", terminal.Address))
-	}
-
-	// Apply default split
-	cfg := l.state.GetConfig()
-	l.hypr.Dispatch(fmt.Sprintf("layoutmsg mfact exact %s", cfg.Split.Default))
+	return fmt.Sprintf("opened session: %s on ws%d", s.Name, s.Workspace), nil
 }
