@@ -107,10 +107,10 @@ func (tb *ThreeBody) Swap(fallbacks []WindowSpec) (string, error) {
 		// All 3 present — enroll with first slave as active, second as shadow
 		slaves := GetSlaves(tiled)
 		if len(slaves) == 2 {
-			if err := tb.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s",
-				cfg.Windows.ShadowWorkspace, slaves[1].Address)); err != nil {
+			if err := tb.hideShadow(slaves[1].Address); err != nil {
 				return "", fmt.Errorf("hide shadow: %w", err)
 			}
+			tb.setFadeRules(tiled[0], slaves[0], slaves[1])
 			tb.state.SetThreeBody(ws.ID, &ThreeBodyState{
 				Master: tiled[0].Address,
 				Active: slaves[0].Address,
@@ -171,8 +171,6 @@ func (tb *ThreeBody) SwapMaster() (string, error) {
 		return "", nil // No three-body — return empty so caller falls through to normal swap
 	}
 
-	cfg := tb.state.GetConfig()
-
 	// Restore shadow to workspace (becomes a new slave)
 	if err := tb.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s",
 		ws.ID, state.Shadow)); err != nil {
@@ -184,8 +182,7 @@ func (tb *ThreeBody) SwapMaster() (string, error) {
 	tb.hypr.Dispatch("layoutmsg swapwithmaster master")
 
 	// Now hide old master (which is now a slave)
-	if err := tb.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s",
-		cfg.Windows.ShadowWorkspace, state.Master)); err != nil {
+	if err := tb.hideShadow(state.Master); err != nil {
 		return "", fmt.Errorf("hide old master: %w", err)
 	}
 
@@ -276,7 +273,6 @@ func (tb *ThreeBody) findByAddress(clients []hypr.Window, master, active, shadow
 // Uses batch dispatch to avoid visible retiling jank.
 func (tb *ThreeBody) swap(state *ThreeBodyState, wsID int) (string, error) {
 	cfg := tb.state.GetConfig()
-	shadowWS := cfg.Windows.ShadowWorkspace
 
 	// Detect actual positions — master may have changed via manual swap
 	tiled, err := GetTiledWindows(tb.hypr, wsID, cfg.Windows.IgnoredClasses)
@@ -300,7 +296,7 @@ func (tb *ThreeBody) swap(state *ThreeBodyState, wsID int) (string, error) {
 			"dispatch movetoworkspacesilent %s,address:%s; "+
 			"dispatch focuswindow address:%s",
 		wsID, state.Shadow,
-		shadowWS, actualSlave,
+		cfg.Windows.ShadowWorkspace, actualSlave,
 		state.Shadow,
 	)
 	if _, err := tb.hypr.Request("[[BATCH]]" + batch); err != nil {
@@ -339,12 +335,14 @@ func (tb *ThreeBody) focusWithEnroll(wsID int, class, title, launchCmd string, c
 		}
 	}
 
-	// Not found — check shadow workspace (might belong to another workspace's three-body)
-	for i := range clients {
-		c := &clients[i]
-		if strings.HasPrefix(c.Workspace.Name, cfg.Windows.ShadowWorkspace) && matchesTarget(c, class, title) {
-			tb.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", c.Address))
-			return fmt.Sprintf("focused (shadow): %s", c.Address), nil
+	// Not found — check if it's another workspace's shadow (floating invisible)
+	for _, otherState := range tb.state.AllThreeBody() {
+		for i := range clients {
+			c := &clients[i]
+			if c.Address == otherState.Shadow && matchesTarget(c, class, title) {
+				tb.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", c.Address))
+				return fmt.Sprintf("focused (shadow): %s", c.Address), nil
+			}
 		}
 	}
 
@@ -395,10 +393,29 @@ func (tb *ThreeBody) withProjectPath(cmd string, wsID int) string {
 	return fmt.Sprintf("env PROJECT_PATH=%s %s", project, cmd)
 }
 
+// hideShadow moves a window to the shadow workspace where it's hidden but preserved.
+func (tb *ThreeBody) hideShadow(addr string) error {
+	cfg := tb.state.GetConfig()
+	return tb.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s",
+		cfg.Windows.ShadowWorkspace, addr))
+}
+
+// setFadeRules sets "animation fade" windowrules for three-body windows so
+// workspace moves use fade instead of popin. Rules are set via dynamic keyword
+// and persist for the session.
+func (tb *ThreeBody) setFadeRules(windows ...hypr.Window) {
+	for _, w := range windows {
+		rule := fmt.Sprintf("match:class %s", w.Class)
+		if w.InitialTitle != "" {
+			rule += fmt.Sprintf(" match:initialTitle %s", w.InitialTitle)
+		}
+		tb.hypr.Request(fmt.Sprintf("keyword windowrule %s, animation fade", rule))
+	}
+}
+
 // enroll sets up three-body state from exactly 3 tiled windows.
 // Master is the leftmost. Target becomes the active slave, the other becomes shadow.
 func (tb *ThreeBody) enroll(tiled []hypr.Window, wsID int, class, title string) (string, error) {
-	cfg := tb.state.GetConfig()
 	master := tiled[0]
 	slaves := GetSlaves(tiled)
 
@@ -423,11 +440,11 @@ func (tb *ThreeBody) enroll(tiled []hypr.Window, wsID int, class, title string) 
 		shadow = &slaves[1]
 
 		// Hide the shadow
-		if err := tb.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s",
-			cfg.Windows.ShadowWorkspace, shadow.Address)); err != nil {
+		if err := tb.hideShadow(shadow.Address); err != nil {
 			return "", fmt.Errorf("hide shadow: %w", err)
 		}
 
+		tb.setFadeRules(master, *active, *shadow)
 		tb.state.SetThreeBody(wsID, &ThreeBodyState{
 			Master: master.Address,
 			Active: active.Address,
@@ -443,14 +460,14 @@ func (tb *ThreeBody) enroll(tiled []hypr.Window, wsID int, class, title string) 
 	}
 
 	// Hide the shadow slave
-	if err := tb.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s",
-		cfg.Windows.ShadowWorkspace, shadow.Address)); err != nil {
+	if err := tb.hideShadow(shadow.Address); err != nil {
 		return "", fmt.Errorf("hide shadow: %w", err)
 	}
 
 	// Focus the target
 	tb.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", active.Address))
 
+	tb.setFadeRules(master, *active, *shadow)
 	tb.state.SetThreeBody(wsID, &ThreeBodyState{
 		Master: master.Address,
 		Active: active.Address,

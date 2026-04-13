@@ -1,11 +1,10 @@
 package commands
 
 import (
+	"dotfiles/daemons/hyprd/hypr"
 	"fmt"
 	"slices"
 	"sort"
-
-	"dotfiles/daemons/hyprd/hypr"
 )
 
 // centerCursor moves the cursor to the center of the currently active window.
