@@ -62,7 +62,8 @@ func (t *Tab) Execute(tabName string) (string, error) {
 		return fmt.Sprintf("focused editor (no kitty socket): %s", editor.Address), nil
 	}
 
-	targetTabID := fmt.Sprintf("%d-%s", state.WindowID, kittyTab)
+	prefix := t.editorPrefix()
+	targetTabID := fmt.Sprintf("%d-%s%s", state.WindowID, prefix, kittyTab)
 
 	// Already focused on target tab — do nothing
 	activeAddr, _ := t.activeWindowAddress()
@@ -82,7 +83,7 @@ func (t *Tab) Execute(tabName string) (string, error) {
 	kitty.FocusTab(targetTabID)
 
 	// Handle nvim special cases
-	nvimTabID := fmt.Sprintf("%d-nvim", state.WindowID)
+	nvimTabID := fmt.Sprintf("%d-%snvim", state.WindowID, prefix)
 	switch tabName {
 	case "nvim":
 		kitty.SendText(nvimTabID, nvimCloseTree)
@@ -164,6 +165,17 @@ func (t *Tab) previousWindowAddress() (string, error) {
 		}
 	}
 	return "", nil
+}
+
+// editorPrefix returns the tab ID prefix for the "editor" profile from config.
+func (t *Tab) editorPrefix() string {
+	cfg := t.state.GetConfig()
+	if cfg.Tabs != nil {
+		if p, ok := cfg.Tabs["editor"]; ok {
+			return p.Prefix
+		}
+	}
+	return "ed-"
 }
 
 // spawnTerminal launches a floating terminal when no editor exists.

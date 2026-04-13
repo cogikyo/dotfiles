@@ -67,6 +67,8 @@ func main() {
 		cmdFocus()
 	case "tab":
 		cmdTab()
+	case "tabs":
+		cmdTabs()
 	case "query":
 		cmdQuery()
 	case "subscribe":
@@ -270,6 +272,26 @@ func cmdTab() {
 	fmt.Println(resp)
 }
 
+func cmdTabs() {
+	if !client.IsRunning() {
+		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
+		os.Exit(1)
+	}
+
+	if len(os.Args) < 3 {
+		fmt.Fprintln(os.Stderr, "usage: hyprd tabs {init|refresh} <profile|name> <pid>")
+		os.Exit(1)
+	}
+
+	cmd := "tabs " + strings.Join(os.Args[2:], " ")
+	resp, err := client.Send(cmd)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(resp)
+}
+
 func cmdQuery() {
 	if !client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "hyprd: daemon not running")
@@ -383,6 +405,8 @@ Window commands:
   hyprd ws up|down       Move active window between workspaces 2..5
   hyprd focus <class> [title]  Focus window, unhide if hidden
   hyprd tab <name>            Focus editor + switch kitty tab (term|nvim|nvimtree|git|xplr)
+  hyprd tabs init <profile> <pid>    Create tabs from profile (editor|agents|leadpier)
+  hyprd tabs refresh <name|all> <pid> Refresh tab(s) in current profile
 
 Three-body (2-visible, 1-shadow window management):
   hyprd three-body editor    Focus/launch editor window

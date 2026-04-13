@@ -107,6 +107,7 @@ type HyprConfig struct {
 	Split      SplitConfig                `yaml:"split"`
 	Style      StyleConfig                `yaml:"style"`
 	Windows    WindowsConfig              `yaml:"windows"`
+	Tabs       map[string]TabProfile        `yaml:"tabs"`
 	ThreeBody  map[string]ThreeBodyWindow `yaml:"three_body"`
 	Sessions   map[string]Session         `yaml:"sessions"`
 }
@@ -180,6 +181,23 @@ type MonocleConfig struct {
 	Height  int `yaml:"height"`
 	OffsetX int `yaml:"offset_x"`
 	OffsetY int `yaml:"offset_y"`
+}
+
+// TabProfile defines a set of kitty tabs managed as a unit (e.g., editor, agents).
+type TabProfile struct {
+	Prefix string   `yaml:"prefix"`
+	Focus  string   `yaml:"focus"`
+	Tabs   []TabDef `yaml:"tabs"`
+}
+
+// TabDef defines a single kitty tab within a profile.
+type TabDef struct {
+	Name       string `yaml:"name"`
+	Title      string `yaml:"title"`
+	Command    string `yaml:"command"`      // empty = plain shell
+	CWD        string `yaml:"cwd"`          // base directory, expands ~/
+	CWDResolve string `yaml:"cwd_resolve"`  // "recent-git": find child dir with latest commit
+	Requires   string `yaml:"requires"`     // "justfile" or "git", skip tab if missing
 }
 
 // ThreeBodyWindow defines a window that participates in the three-body layout.

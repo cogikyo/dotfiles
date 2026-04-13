@@ -65,6 +65,34 @@ hypr:
       height: 1864
       offset_x: 0
       offset_y: 25
+  tabs:
+    editor:
+      prefix: "ed-"
+      focus: nvim
+      tabs:
+        - { name: xplr, title: "⟜ 󰭎  ⊸", command: xplr }
+        - { name: nvim, title: "⟜   ⊸", command: nvim }
+        - { name: term, title: "⟜   ⊸" }
+        - { name: build, title: "⟜   ⊸", command: "just watch", requires: justfile }
+        - { name: git, title: "⟜   ⊸", command: lazygit, requires: git }
+    agents:
+      prefix: "agents-"
+      focus: master
+      tabs:
+        - { name: xplr, title: "⊰   ⊱", command: codex }
+        - { name: master, title: "⊰ 󰯉  ⊱", command: claude }
+        - { name: dev, title: "⊰   ⊱", command: codex }
+        - { name: plan, title: "⊰   ⊱", command: claude }
+        - { name: git, title: "⊰   ⊱", command: claude }
+    leadpier:
+      prefix: "lp-"
+      focus: fe-nvim
+      tabs:
+        - { name: fe-nvim, title: "«   »", command: nvim, cwd: "~/LeadPier/frontend" }
+        - { name: be-nvim, title: "«   »", command: nvim, cwd: "~/LeadPier/backend/services", cwd_resolve: recent-git }
+        - { name: term, title: "« 󰠳  »", cwd: "~/LeadPier" }
+        - { name: fe-build, title: "«   »", command: "yarn dev", cwd: "~/LeadPier/frontend" }
+        - { name: be-build, title: "«   »", command: "pier watch", cwd: "~/LeadPier/backend/core/runner" }
   three_body:
     editor:
       class: kitty
