@@ -359,53 +359,53 @@ func getWeatherIcon(id int, night bool) string {
 		// Day icons
 		switch {
 		case id < 300:
-			return " " // thunderstorm
+			return " "
 		case id < 500:
-			return " " // drizzle
+			return " "
 		case id == 504:
-			return " " // extreme rain
+			return " "
 		case id < 600:
-			return " " // rain
+			return " "
 		case id < 700:
-			return " " // snow
+			return " "
 		case id == 711:
-			return " " // smoke
+			return " "
 		case id == 781:
-			return " " // tornado
+			return " "
 		case id < 800:
-			return " " // atmosphere (fog, mist, etc.)
+			return " "
 		case id == 800:
-			return " " // clear
+			return " "
 		case id < 803:
-			return " " // few clouds
+			return " "
 		default:
-			return " " // cloudy
+			return " "
 		}
 	} else {
 		// Night icons
 		switch {
 		case id < 300:
-			return " " // thunderstorm
+			return " "
 		case id < 500:
-			return " " // drizzle
+			return " "
 		case id == 504:
-			return " " // extreme rain
+			return " "
 		case id < 600:
-			return " " // rain
+			return " "
 		case id < 700:
-			return " " // snow
+			return " "
 		case id == 711:
-			return " " // smoke
+			return " "
 		case id == 781:
-			return " " // tornado
+			return " "
 		case id < 800:
-			return " " // atmosphere (fog, mist, etc.)
+			return " "
 		case id == 800:
-			return " " // clear night
+			return " "
 		case id < 803:
-			return " " // few clouds night
+			return " "
 		default:
-			return " " // cloudy
+			return " "
 		}
 	}
 }
@@ -414,63 +414,63 @@ func getWeatherIcon(id int, night bool) string {
 func getMoonPhase(phase int) (icon, desc string) {
 	switch {
 	case phase == 0:
-		return " ", "New Moon (0%)"
+		return " ", "New Moon (0%)"
 	case phase <= 4:
-		return " ", "Waxing Crescent (0-4%)"
+		return " ", "Waxing Crescent (0-4%)"
 	case phase <= 8:
-		return " ", "Waxing Crescent (4-8%)"
+		return " ", "Waxing Crescent (4-8%)"
 	case phase <= 12:
-		return " ", "Waxing Crescent (8-12%)"
+		return " ", "Waxing Crescent (8-12%)"
 	case phase <= 16:
-		return " ", "Waxing Crescent (12-16%)"
+		return " ", "Waxing Crescent (12-16%)"
 	case phase <= 20:
-		return " ", "Waxing Crescent (16-20%)"
+		return " ", "Waxing Crescent (16-20%)"
 	case phase <= 24:
-		return " ", "Waxing Crescent (20-24%)"
+		return " ", "Waxing Crescent (20-24%)"
 	case phase == 25:
-		return " ", "First Quarter (25%)"
+		return " ", "First Quarter (25%)"
 	case phase <= 29:
-		return " ", "Waxing Gibbous (25-29%)"
+		return " ", "Waxing Gibbous (25-29%)"
 	case phase <= 33:
-		return " ", "Waxing Gibbous (29-33%)"
+		return " ", "Waxing Gibbous (29-33%)"
 	case phase <= 37:
-		return " ", "Waxing Gibbous (33-37%)"
+		return " ", "Waxing Gibbous (33-37%)"
 	case phase <= 41:
-		return " ", "Waxing Gibbous (37-41%)"
+		return " ", "Waxing Gibbous (37-41%)"
 	case phase <= 45:
-		return " ", "Waxing Gibbous (41-45%)"
+		return " ", "Waxing Gibbous (41-45%)"
 	case phase <= 49:
-		return " ", "Waxing Gibbous (45-49%)"
+		return " ", "Waxing Gibbous (45-49%)"
 	case phase == 50:
-		return " ", "Full Moon (50%)"
+		return " ", "Full Moon (50%)"
 	case phase <= 54:
-		return " ", "Waning Gibbous (50-54%)"
+		return " ", "Waning Gibbous (50-54%)"
 	case phase <= 58:
-		return " ", "Waning Gibbous (54-58%)"
+		return " ", "Waning Gibbous (54-58%)"
 	case phase <= 62:
-		return " ", "Waning Gibbous (58-62%)"
+		return " ", "Waning Gibbous (58-62%)"
 	case phase <= 66:
-		return " ", "Waning Gibbous (62-66%)"
+		return " ", "Waning Gibbous (62-66%)"
 	case phase <= 70:
-		return " ", "Waning Gibbous (66-70%)"
+		return " ", "Waning Gibbous (66-70%)"
 	case phase <= 74:
-		return " ", "Waning Gibbous (70-74%)"
+		return " ", "Waning Gibbous (70-74%)"
 	case phase == 75:
-		return " ", "Third Quarter (75%)"
+		return " ", "Third Quarter (75%)"
 	case phase <= 79:
-		return " ", "Waning Crescent (75-79%)"
+		return " ", "Waning Crescent (75-79%)"
 	case phase <= 83:
-		return " ", "Waning Crescent (79-83%)"
+		return " ", "Waning Crescent (79-83%)"
 	case phase <= 87:
-		return " ", "Waning Crescent (83-87%)"
+		return " ", "Waning Crescent (83-87%)"
 	case phase <= 91:
-		return " ", "Waning Crescent (87-91%)"
+		return " ", "Waning Crescent (87-91%)"
 	case phase <= 95:
-		return " ", "Waning Crescent (91-95%)"
+		return " ", "Waning Crescent (91-95%)"
 	case phase <= 99:
-		return " ", "Waning Crescent (95-99%)"
+		return " ", "Waning Crescent (95-99%)"
 	default:
-		return " ", "New Moon (100%)"
+		return " ", "New Moon (100%)"
 	}
 }
 
@@ -478,31 +478,31 @@ func getMoonPhase(phase int) (icon, desc string) {
 func getBeaufortScale(knots int) (icon, desc string) {
 	switch {
 	case knots < 1:
-		return " ", "calm"
+		return " ", "calm"
 	case knots < 4:
-		return " ", "light air"
+		return " ", "light air"
 	case knots < 7:
-		return " ", "light breeze"
+		return " ", "light breeze"
 	case knots < 11:
-		return " ", "gentle breeze"
+		return " ", "gentle breeze"
 	case knots < 17:
-		return " ", "moderate breeze"
+		return " ", "moderate breeze"
 	case knots < 22:
-		return " ", "fresh breeze"
+		return " ", "fresh breeze"
 	case knots < 28:
-		return " ", "strong breeze"
+		return " ", "strong breeze"
 	case knots < 34:
-		return " ", "near gale"
+		return " ", "near gale"
 	case knots < 41:
-		return " ", "gale"
+		return " ", "gale"
 	case knots < 48:
-		return " ", "strong gale"
+		return " ", "strong gale"
 	case knots < 56:
-		return " ", "storm"
+		return " ", "storm"
 	case knots < 64:
-		return " ", "violent storm"
+		return " ", "violent storm"
 	default:
-		return " ", "hurricane"
+		return " ", "hurricane"
 	}
 }
 

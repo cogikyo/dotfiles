@@ -18,6 +18,7 @@ type NetworkState struct {
 	Name     string `json:"name"`      // Connection or interface name
 	Iface    string `json:"iface"`     // Network interface name
 	VPN      bool   `json:"vpn"`       // Active VPN connection detected
+	LinkRamp int    `json:"link_ramp"` // Link type bucket used by the widget for icon color
 	Down     int    `json:"down"`      // Download speed in KB/s
 	Up       int    `json:"up"`        // Upload speed in KB/s
 	DownRamp int    `json:"down_ramp"` // Download speed bucket (1-12) for visual indicators
@@ -88,6 +89,7 @@ func (n *Network) read() *NetworkState {
 			Icon:     "󰖪",
 			Name:     "error",
 			Iface:    "lo",
+			LinkRamp: 1,
 			DownFmt:  "000<sub>K</sub>",
 			UpFmt:    "000<sub>K</sub>",
 			DownRamp: 1,
@@ -125,6 +127,7 @@ func (n *Network) read() *NetworkState {
 			Name:     "disconnected",
 			Iface:    "lo",
 			VPN:      hasVPN,
+			LinkRamp: 1,
 			DownFmt:  "000<sub>K</sub>",
 			UpFmt:    "000<sub>K</sub>",
 			DownRamp: 1,
@@ -133,7 +136,7 @@ func (n *Network) read() *NetworkState {
 	}
 
 	// Determine icon and display name
-	icon := ""
+	icon := ""
 	name := iface
 	if connType == "802-11-wireless" {
 		icon = "󰖩"
@@ -165,12 +168,24 @@ func (n *Network) read() *NetworkState {
 		Name:     name,
 		Iface:    iface,
 		VPN:      hasVPN,
+		LinkRamp: getLinkRamp(connType),
 		Down:     downKB,
 		Up:       upKB,
 		DownRamp: getRamp(downKB),
 		UpRamp:   getRamp(upKB),
 		DownFmt:  fmtSpeed(downKB),
 		UpFmt:    fmtSpeed(upKB),
+	}
+}
+
+func getLinkRamp(connType string) int {
+	switch connType {
+	case "802-11-wireless":
+		return 9
+	case "802-3-ethernet":
+		return 4
+	default:
+		return 1
 	}
 }
 

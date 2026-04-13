@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"os"
 	"os/exec"
@@ -17,7 +18,7 @@ import (
 )
 
 const (
-	musicPollInterval  = 2 * time.Second
+	musicPollInterval  = 1 * time.Second
 	musicPlayer        = "spotify"
 	albumArtPath       = "/tmp/eww/album_art.png"
 	defaultVolumeDelta = 0.05 // 5%
@@ -26,12 +27,18 @@ const (
 
 // MusicState represents current playback state for the eww statusbar.
 type MusicState struct {
-	Status  string `json:"status"`   // "Playing", "Paused", or "Stopped"
-	Volume  string `json:"volume"`   // Range: "0.0" to "1.0"
-	Artist  string `json:"artist"`   // Current track artist
-	Album   string `json:"album"`    // Current track album
-	Title   string `json:"title"`    // Current track title
-	ArtPath string `json:"art_path"` // Local filesystem path to cached album art
+	Status        string `json:"status"`         // "Playing", "Paused", or "Stopped"
+	Playing       bool   `json:"playing"`        // Convenience flag for active playback state
+	Volume        string `json:"volume"`         // Range: "0.0" to "1.0"
+	VolumePercent int    `json:"volume_percent"` // Playback volume scaled to 0-100 for widgets
+	Artist        string `json:"artist"`         // Current track artist
+	Album         string `json:"album"`          // Current track album
+	AlbumShort    string `json:"album_short"`    // Widget-friendly truncated album name
+	Title         string `json:"title"`          // Current track title
+	TitleShort    string `json:"title_short"`    // Widget-friendly truncated song title
+	SingleTrack   bool   `json:"single_track"`   // Album and title collapse to one display line
+	Progress      int    `json:"progress"`       // Playback progress percentage (0-100)
+	ArtPath       string `json:"art_path"`       // Local filesystem path to cached album art
 }
 
 // Music monitors Spotify playback via playerctl, caching album art and providing playback control actions.
@@ -167,13 +174,14 @@ func (m *Music) parseFollowLine(line string) {
 	}
 
 	state := MusicState{
-		Status:  parts[0],
-		Volume:  parts[1],
-		Artist:  parts[2],
-		Album:   parts[3],
-		Title:   parts[4],
-		ArtPath: albumArtPath,
+		Status:   parts[0],
+		Volume:   parts[1],
+		Artist:   parts[2],
+		Album:    parts[3],
+		Title:    parts[4],
+		Progress: m.getProgress(),
 	}
+	state = musicState(state.Status, state.Volume, state.Artist, state.Album, state.Title, state.Progress)
 
 	artURL := parts[5]
 
@@ -191,7 +199,8 @@ func (m *Music) parseFollowLine(line string) {
 		state.Volume != m.last.Volume ||
 		state.Artist != m.last.Artist ||
 		state.Album != m.last.Album ||
-		state.Title != m.last.Title {
+		state.Title != m.last.Title ||
+		state.Progress != m.last.Progress {
 
 		m.last = state
 		m.state.Set("music", &state)
@@ -213,7 +222,8 @@ func (m *Music) updateAndNotify() {
 		state.Volume != m.last.Volume ||
 		state.Artist != m.last.Artist ||
 		state.Album != m.last.Album ||
-		state.Title != m.last.Title {
+		state.Title != m.last.Title ||
+		state.Progress != m.last.Progress {
 
 		m.last = state
 		m.state.Set("music", &state)
@@ -227,14 +237,14 @@ func (m *Music) updateAndNotify() {
 func (m *Music) getCurrentState() MusicState {
 	status := m.playerctl("status")
 	if status == "" || status == "No players found" {
-		return MusicState{
-			Status:  "Stopped",
-			Volume:  "0",
-			Artist:  "Spotify",
-			Album:   "Waiting for player to start...",
-			Title:   "Waiting for player to start...",
-			ArtPath: albumArtPath,
-		}
+		return musicState(
+			"Stopped",
+			"0",
+			"Spotify",
+			"Waiting for player to start...",
+			"Waiting for player to start...",
+			0,
+		)
 	}
 
 	volume := m.playerctl("volume")
@@ -242,6 +252,7 @@ func (m *Music) getCurrentState() MusicState {
 	album := m.playerctlMetadata("album")
 	title := m.playerctlMetadata("title")
 	artURL := m.playerctlMetadata("mpris:artUrl")
+	progress := m.getProgress()
 
 	// Download album art if available
 	if artURL != "" && artURL != m.lastArtURL {
@@ -249,14 +260,47 @@ func (m *Music) getCurrentState() MusicState {
 		m.lastArtURL = artURL
 	}
 
+	return musicState(status, volume, artist, album, title, progress)
+}
+
+func musicState(status, volume, artist, album, title string, progress int) MusicState {
 	return MusicState{
-		Status:  status,
-		Volume:  volume,
-		Artist:  artist,
-		Album:   album,
-		Title:   title,
-		ArtPath: albumArtPath,
+		Status:        status,
+		Playing:       status == "Playing",
+		Volume:        volume,
+		VolumePercent: musicVolumePercent(volume),
+		Artist:        artist,
+		Album:         album,
+		AlbumShort:    truncateForWidget(album, 15),
+		Title:         title,
+		TitleShort:    truncateForWidget(title, 15),
+		SingleTrack:   title == album,
+		Progress:      progress,
+		ArtPath:       albumArtPath,
 	}
+}
+
+func truncateForWidget(value string, limit int) string {
+	if limit <= 0 || len(value) <= limit {
+		return value
+	}
+	return value[:limit] + "..."
+}
+
+func musicVolumePercent(volume string) int {
+	parsed, err := strconv.ParseFloat(volume, 64)
+	if err != nil {
+		return 0
+	}
+
+	percent := int(math.Round(parsed * 100))
+	if percent < 0 {
+		return 0
+	}
+	if percent > 100 {
+		return 100
+	}
+	return percent
 }
 
 // playerctl executes a playerctl command and returns trimmed stdout, or empty string on error.
@@ -275,6 +319,36 @@ func (m *Music) playerctlMetadata(field string) string {
 		return ""
 	}
 	return strings.TrimSpace(string(out))
+}
+
+// playerctlFormat retrieves formatted playerctl metadata output, returning empty string on error.
+func (m *Music) playerctlFormat(format string) string {
+	out, err := exec.Command("playerctl", "--player="+musicPlayer, "metadata", "--format", format).Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+}
+
+// getProgress returns playback progress as a percentage in the range 0-100.
+func (m *Music) getProgress() int {
+	lengthStr := m.playerctlFormat("{{ mpris:length }}")
+	positionStr := m.playerctlFormat("{{ position }}")
+
+	length, err1 := strconv.ParseFloat(lengthStr, 64)
+	position, err2 := strconv.ParseFloat(positionStr, 64)
+	if err1 != nil || err2 != nil || length <= 0 {
+		return 0
+	}
+
+	progress := int(math.Round(position / length * 100))
+	if progress < 0 {
+		return 0
+	}
+	if progress > 100 {
+		return 100
+	}
+	return progress
 }
 
 // downloadAlbumArt fetches album art from URL and atomically writes it to the cache path.
@@ -362,9 +436,33 @@ func (m *Music) HandleAction(args []string) (string, error) {
 	}
 }
 
-// changeVolume adjusts player volume.
+// changeVolume adjusts player volume, or sets an absolute value when asked.
 func (m *Music) changeVolume(args []string) (string, error) {
 	direction := args[0]
+
+	if direction == "set" {
+		if len(args) < 2 {
+			return "", errors.New("volume set requires a value")
+		}
+
+		value, err := strconv.ParseFloat(args[1], 64)
+		if err != nil {
+			return "", fmt.Errorf("invalid volume: %s", args[1])
+		}
+
+		if value < 0 {
+			value = 0
+		}
+		if value > 1 {
+			value = 1
+		}
+
+		m.playerctlRun("volume", fmt.Sprintf("%.2f", value))
+		newVol := m.playerctl("volume")
+		m.updateAndNotify()
+		return fmt.Sprintf("volume=%s", newVol), nil
+	}
+
 	amount := defaultVolumeDelta
 
 	if len(args) > 1 {

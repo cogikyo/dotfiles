@@ -22,9 +22,9 @@ import "context"
 
 // Provider monitors a subsystem and pushes state updates via notify callback.
 type Provider interface {
-	Name() string                                              // Returns provider identifier for query/subscribe topics
-	Start(ctx context.Context, notify func(data any)) error   // Starts background monitoring; calls notify on state changes
-	Stop() error                                               // Gracefully stops the provider and releases resources
+	Name() string                                           // Returns provider identifier for query/subscribe topics
+	Start(ctx context.Context, notify func(data any)) error // Starts background monitoring; calls notify on state changes
+	Stop() error                                            // Gracefully stops the provider and releases resources
 }
 
 // ActionProvider adds command handling for interactive control (e.g., volume adjust, brightness set).

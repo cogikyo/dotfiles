@@ -9,8 +9,8 @@ import (
 // State provides thread-safe storage for provider data using a generic key-value map.
 // This avoids needing typed getters/setters for each provider's data structure.
 type State struct {
-	mu   sync.RWMutex      // Protects concurrent access
-	data map[string]any    // Provider data keyed by topic name
+	mu   sync.RWMutex   // Protects concurrent access
+	data map[string]any // Provider data keyed by topic name
 }
 
 // NewState creates an initialized state store.

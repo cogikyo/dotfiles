@@ -17,6 +17,7 @@ import (
 type TimerState struct {
 	Timer       string `json:"timer"`        // HH:MM countdown remaining
 	Alarm       string `json:"alarm"`        // HH:MM target time or remaining
+	AlarmTarget string `json:"alarm_target"` // HH:MM target clock time for the alarm
 	TimerActive bool   `json:"timer_active"` // Timer countdown is running
 	AlarmActive bool   `json:"alarm_active"` // Alarm countdown is running
 }
@@ -118,6 +119,7 @@ func (t *Timer) getStateLocked() *TimerState {
 	return &TimerState{
 		Timer:       timerStr,
 		Alarm:       alarmStr,
+		AlarmTarget: fmt.Sprintf("%02d:%02d", t.alarmTargetHour, t.alarmTargetMin),
 		TimerActive: t.timerRunning,
 		AlarmActive: t.alarmRunning,
 	}

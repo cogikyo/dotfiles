@@ -52,6 +52,8 @@ func main() {
 	switch os.Args[1] {
 	case "status":
 		cmdStatus()
+	case "open":
+		cmdOpen()
 	case "query":
 		cmdQuery()
 	case "subscribe":
@@ -111,6 +113,20 @@ func cmdStatus() {
 	} else {
 		fmt.Println("running")
 	}
+}
+
+func cmdOpen() {
+	if !client.IsRunning() {
+		fmt.Fprintln(os.Stderr, "ewwd: daemon not running")
+		os.Exit(1)
+	}
+
+	resp, err := client.Send("open")
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(resp)
 }
 
 func cmdQuery() {
@@ -174,7 +190,8 @@ func cmdHelp() {
 	fmt.Println(`ewwd — System utilities daemon for eww
 
 Usage:
-  ewwd                  Start daemon (foreground)
+  ewwd                  Start daemon (foreground, auto-opens eww windows)
+  ewwd open             Reload eww config and reopen configured windows
   ewwd status           Check if daemon is running
   ewwd status --json    Return full state as JSON
 

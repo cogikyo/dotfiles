@@ -21,21 +21,22 @@ var (
 
 // AudioState represents current audio device volumes and names, exposed to eww statusbar.
 type AudioState struct {
-	Sink       int    `json:"sink"`        // output volume (0-100)
-	SinkName   string `json:"sink_name"`   // output device name with custom mappings applied
-	Source     int    `json:"source"`      // input volume (0-100), displayed with configured offset
-	SourceName string `json:"source_name"` // input device name with custom mappings applied
+	Sink          int    `json:"sink"`           // output volume (0-100)
+	SinkName      string `json:"sink_name"`      // output device name with custom mappings applied
+	SinkBluetooth bool   `json:"sink_bluetooth"` // default sink matches a configured Bluetooth device name
+	Source        int    `json:"source"`         // input volume (0-100), displayed with configured offset
+	SourceName    string `json:"source_name"`    // input device name with custom mappings applied
 }
 
 // Audio monitors PulseAudio volume and provides control via pulsemixer,
 // polling at configured intervals and applying custom device name mappings.
 type Audio struct {
-	state  StateSetter             // state storage
-	config config.AudioConfig      // volume limits, offsets, and name mappings
-	notify func(data any)          // change notification callback
-	done   chan struct{}           // shutdown signal
-	active bool                    // whether provider is running
-	last   AudioState              // cached state for change detection
+	state  StateSetter        // state storage
+	config config.AudioConfig // volume limits, offsets, and name mappings
+	notify func(data any)     // change notification callback
+	done   chan struct{}      // shutdown signal
+	active bool               // whether provider is running
+	last   AudioState         // cached state for change detection
 }
 
 // NewAudio creates an Audio provider with the given configuration.
@@ -100,11 +101,14 @@ func (a *Audio) updateAndNotify() {
 
 // getCurrentState reads current audio levels from pulsemixer.
 func (a *Audio) getCurrentState() AudioState {
+	sinkName := a.getName("sink")
+
 	return AudioState{
-		Sink:       a.getVolume("sink"),
-		SinkName:   a.getName("sink"),
-		Source:     a.sourceDisplayValue(a.getVolume("source")),
-		SourceName: a.getName("source"),
+		Sink:          a.getVolume("sink"),
+		SinkName:      sinkName,
+		SinkBluetooth: a.isBluetoothDevice(sinkName),
+		Source:        a.sourceDisplayValue(a.getVolume("source")),
+		SourceName:    a.getName("source"),
 	}
 }
 
@@ -172,6 +176,15 @@ func (a *Audio) getName(deviceType string) string {
 		}
 	}
 	return ""
+}
+
+func (a *Audio) isBluetoothDevice(name string) bool {
+	for _, candidate := range a.config.BluetoothNames {
+		if strings.EqualFold(name, candidate) {
+			return true
+		}
+	}
+	return false
 }
 
 // setVolume sets the volume for the default sink or source via pulsemixer.

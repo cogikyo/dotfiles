@@ -3,11 +3,12 @@ package main
 import (
 	"context"
 	"dotfiles/daemons/config"
-	"dotfiles/daemons/ewwd/providers"
 	"dotfiles/daemons/daemon"
+	"dotfiles/daemons/ewwd/providers"
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 )
 
@@ -15,12 +16,12 @@ const SocketPath = "/tmp/ewwd.sock"
 
 // Daemon orchestrates providers and routes commands between clients and state updates.
 type Daemon struct {
-	state     *State                  // Thread-safe data store
-	server    *daemon.Server          // Unix socket server
-	providers []providers.Provider    // Data sources
-	ctx       context.Context         // Cancellation context
-	cancel    context.CancelFunc      // Triggers provider shutdown
-	config    *config.Config          // YAML configuration
+	state     *State               // Thread-safe data store
+	server    *daemon.Server       // Unix socket server
+	providers []providers.Provider // Data sources
+	ctx       context.Context      // Cancellation context
+	cancel    context.CancelFunc   // Triggers provider shutdown
+	config    *config.Config       // YAML configuration
 }
 
 // New loads configuration and initializes the daemon with server and state.
@@ -61,6 +62,13 @@ func (d *Daemon) Run() error {
 			}
 		}(p)
 	}
+
+	// Open eww windows
+	go func() {
+		if result := d.openWindows(); result != "" {
+			fmt.Printf("ewwd: %s\n", result)
+		}
+	}()
 
 	// Wait for signal
 	sig := d.server.WaitForSignal()
@@ -132,6 +140,8 @@ func (d *Daemon) handleCommand(command string) string {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
+	case "open":
+		return d.openWindows()
 	case "action":
 		// Format: action <provider> [args...]
 		actionParts := strings.Fields(arg)
@@ -176,4 +186,29 @@ func (d *Daemon) handleAction(providerName string, args []string) string {
 		}
 	}
 	return fmt.Sprintf("error: unknown provider: %s", providerName)
+}
+
+// openWindows ensures the eww daemon is running, reloads config, and opens configured windows.
+func (d *Daemon) openWindows() string {
+	windows := d.config.Eww.Windows
+	if len(windows) == 0 {
+		return "open: no windows configured"
+	}
+
+	// Ensure eww daemon is running
+	if err := exec.Command("eww", "ping").Run(); err != nil {
+		if err := exec.Command("eww", "daemon").Run(); err != nil {
+			return fmt.Sprintf("error: eww daemon failed: %v", err)
+		}
+	}
+
+	exec.Command("eww", "reload").Run()
+	exec.Command("eww", "close-all").Run()
+
+	args := append([]string{"open-many"}, windows...)
+	if err := exec.Command("eww", args...).Run(); err != nil {
+		return fmt.Sprintf("error: eww open-many: %v", err)
+	}
+
+	return fmt.Sprintf("open: %s", strings.Join(windows, " "))
 }

@@ -18,12 +18,12 @@ type BrightnessState struct {
 
 // Brightness provides action-driven screen brightness control via wlr-brightness over gdbus.
 type Brightness struct {
-	state  StateSetter                 // state storage
-	config config.BrightnessConfig     // min, max, night mode, and default values
-	notify func(data any)              // change notification callback
-	done   chan struct{}               // shutdown signal
-	active bool                        // whether provider is running
-	level  int                         // current brightness level (2-10)
+	state  StateSetter             // state storage
+	config config.BrightnessConfig // min, max, night mode, and default values
+	notify func(data any)          // change notification callback
+	done   chan struct{}           // shutdown signal
+	active bool                    // whether provider is running
+	level  int                     // current brightness level (2-10)
 }
 
 // NewBrightness creates a Brightness provider with the given configuration.

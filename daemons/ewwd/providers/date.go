@@ -108,13 +108,13 @@ func clockHourIcon(hour int) string {
 	}
 
 	icons := map[int]string{
-		1: "", 2: "", 3: "", 4: "", 5: "", 6: "",
-		7: "", 8: "", 9: "", 10: "", 11: "", 12: "",
+		1: "", 2: "", 3: "", 4: "", 5: "", 6: "",
+		7: "", 8: "", 9: "", 10: "", 11: "", 12: "",
 	}
 	if icon, ok := icons[h]; ok {
 		return icon
 	}
-	return ""
+	return ""
 }
 
 // clockMinuteIcon maps minutes to 5-minute interval clockface icon (0-55 minutes).
@@ -122,11 +122,11 @@ func clockMinuteIcon(minute int) string {
 	interval := minute / 5
 
 	icons := map[int]string{
-		0: "", 1: "", 2: "", 3: "", 4: "", 5: "", 6: "",
-		7: "", 8: "", 9: "", 10: "", 11: "", 12: "",
+		0: "", 1: "", 2: "", 3: "", 4: "", 5: "", 6: "",
+		7: "", 8: "", 9: "", 10: "", 11: "", 12: "",
 	}
 	if icon, ok := icons[interval]; ok {
 		return icon
 	}
-	return ""
+	return ""
 }
