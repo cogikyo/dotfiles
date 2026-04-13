@@ -1,0 +1,57 @@
+; workspaces
+
+(defwindow workspaces
+  :monitor 0 :stacking "bottom" :exclusive false :focusable false
+  :geometry (geometry :anchor "top right" :x "0px" :y "0px")
+  (workspaces)
+)
+
+(defvar ws-hover false)
+(defvar ws-h1 false)
+(defvar ws-h2 false)
+(defvar ws-h3 false)
+(defvar ws-h4 false)
+(defvar ws-h5 false)
+
+(deflisten workspace-info
+  :initial '{"current":5,"current_str":"5","occupied":[5],"occupied_str":"5","monocle":0,"monocle_str":""}'
+  'hyprd subscribe workspace | jq --unbuffered -c ".data"'
+)
+
+(defwidget workspace [icon num desc hover]
+  (eventbox
+    :onhover "eww update ws-h${num}=true"
+    :onhoverlost "eww update ws-h${num}=false"
+    :onclick "hyprd ws ${num} & disown"
+    :cursor "pointer"
+    :onmiddleclick "hyprd ws ${num} & disown"
+    :tooltip "  ${desc}  "
+    (box
+      :style "background-image: url('art/ws-icons/${icon}${
+                workspace-info.monocle_str == num ? "-monocle" :
+                hover ? "-hover" :
+                workspace-info.current_str == num ? "-active" :
+                "${matches(workspace-info.occupied_str, "${num}") ? "" : "-empty"}"
+              }.svg');"
+      :class "workspace ws-${num}"
+    )
+  )
+)
+
+(defwidget workspaces []
+  (eventbox
+    :onhover "eww update ws-hover=true"
+    :onhoverlost "eww update ws-hover=false"
+    :onrightclick "hyprctl dispatch workspace previous"
+    (box
+      :class "tr-a workspacesbox ${ws-hover ? "workspacesbox-hover" : ""} ${workspace-info.monocle_str != "" ? "workspacesbox-monocle" : ""}"
+      :halign "center" :space-evenly false :spacing 10
+      :orientation "vertical"
+      (workspace :icon "music"    :num "1" :hover ws-h1 :desc " music")
+      (workspace :icon "network"  :num "2" :hover ws-h2 :desc " chat 'n networking")
+      (workspace :icon "learn"    :num "3" :hover ws-h3 :desc " documents 'n such")
+      (workspace :icon "dna"      :num "4" :hover ws-h4 :desc " primary desktop")
+      (workspace :icon "dotfiles" :num "5" :hover ws-h5 :desc " settings 'n secondary work")
+    )
+  )
+)

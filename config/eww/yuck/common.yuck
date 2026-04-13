@@ -1,0 +1,28 @@
+;; ============================================================================
+;; setup + shared widgets
+
+(deflisten cycle-6
+  :initial 0
+  'while true; do echo 0; sleep 6; echo 1; sleep 6; done'
+)
+
+(deflisten cycle-5
+  :initial 0
+  'while true; do echo 0; sleep 5; echo 1; sleep 5; done'
+)
+
+(defvar browser "firefox-developer-edition")
+(defvar terminal "kitty")
+
+; Combination of slide and fade revealer
+(defwidget slide-n-fade [direction bool]
+  (revealer
+    :transition "slide${direction}"
+    :reveal bool
+    (revealer
+      :transition "crossfade"
+      :reveal bool
+      (children)
+    )
+  )
+)
