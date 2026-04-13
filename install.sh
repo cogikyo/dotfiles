@@ -1037,8 +1037,6 @@ step_system() {
         ["systemd/logid.service.d/restart.conf"]="/etc/systemd/system/logid.service.d/restart.conf"
         ["systemd/logid-restart.service"]="/etc/systemd/system/logid-restart.service"
         ["libinput/local-overrides.quirks"]="/etc/libinput/local-overrides.quirks"
-        ["gifview.desktop"]="/usr/share/applications/gifview.desktop"
-        ["pam.d/hyprlock"]="/etc/pam.d/hyprlock"
     )
 
     local installed=0
@@ -1069,6 +1067,22 @@ step_system() {
     done
 
     ok "Installed $installed system configs ($skipped already up to date)"
+
+    # Sync IgnorePkg from dotfiles ignore list
+    local ignore_file="$DOTFILES/etc/pacman.d/ignore.conf"
+    if [[ -f "$ignore_file" ]]; then
+        local pkgs
+        pkgs=$(grep -v '^#' "$ignore_file" | grep -v '^$' | tr '\n' ' ' | sed 's/ $//')
+        if [[ -n "$pkgs" ]]; then
+            local pacman_conf="/etc/pacman.conf"
+            if grep -q '^IgnorePkg' "$pacman_conf"; then
+                sudo sed -i "s/^IgnorePkg.*$/IgnorePkg = $pkgs/" "$pacman_conf"
+            else
+                sudo sed -i "s/^#IgnorePkg.*/IgnorePkg = $pkgs/" "$pacman_conf"
+            fi
+            ok "IgnorePkg synced ($(echo "$pkgs" | wc -w) packages)"
+        fi
+    fi
 
     # Enable services
     echo
