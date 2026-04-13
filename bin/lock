@@ -3,7 +3,7 @@
 # Exit pseudo-lock submap if active (clean transition to real lock)
 hyprctl dispatch submap reset
 
-GRACE=6
+GRACE=2
 
 workspace() {
     hyprd query workspace 2>/dev/null | jq -r '.current // empty'
@@ -35,7 +35,7 @@ bluetoothctl connect 14:3F:A6:10:A1:B5 & disown
 
 ewwd open & disown
 if ((elapsed > GRACE)); then
-    hyprd notify send -a attention -u low "$USER@$HOSTNAME" "こんにちは"
+    hyprd notify send -a attention -u low -t 1000 "$USER@$HOSTNAME" "こんにちは"
 else
    playerctl play
 fi
