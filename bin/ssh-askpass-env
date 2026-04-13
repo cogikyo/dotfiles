@@ -1,4 +1,0 @@
-#!/bin/sh
-# Minimal SSH_ASKPASS helper — returns passphrase from environment.
-# Used by ssh-pam-load to feed the PAM auth token to ssh-add.
-printf '%s\n' "$_SSH_AUTHTOK"

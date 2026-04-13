@@ -64,6 +64,7 @@ function etree () {
     erd -L "$L" --suppress-size --threads 16 --layout inverted
 }
 
+alias sshadd='ssh-add ~/.ssh/cogikyo ~/.ssh/trend ~/.ssh/cullyn'
 alias ew='ewwd open'
 alias ews='eww inspector & disown && exit'
 alias el='eww logs'
