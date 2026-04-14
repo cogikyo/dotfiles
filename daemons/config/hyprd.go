@@ -183,10 +183,10 @@ type Session struct {
 
 // BrowserConfig declares URLs to open in the browser body member.
 type BrowserConfig struct {
-	Snapshot string         `yaml:"snapshot" json:"snapshot"`
-	Pinned   []string       `yaml:"pinned" json:"pinned"`
-	Groups   []BrowserGroup `yaml:"groups" json:"groups"`
-	URLs     []string       `yaml:"urls" json:"urls"`
+	Snapshot string         `yaml:"snapshot,omitempty" json:"snapshot,omitempty"`
+	Pinned   []string       `yaml:"pinned,omitempty" json:"pinned,omitempty"`
+	Groups   []BrowserGroup `yaml:"groups,omitempty" json:"groups,omitempty"`
+	URLs     []string       `yaml:"urls,omitempty" json:"urls,omitempty"`
 }
 
 // BrowserGroup defines a named set of URLs that belong together in a Firefox tab group.

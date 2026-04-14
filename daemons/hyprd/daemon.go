@@ -267,6 +267,8 @@ func (d *Daemon) handleCommand(command string) string {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
+	case "browser":
+		return d.handleBrowser(arg)
 	case "project":
 		return d.handleProject(arg)
 	case "notify":
@@ -326,6 +328,15 @@ func (d *Daemon) handleThreeBody(arg string) string {
 	tb := wm.NewThreeBody(d.hypr, d.state)
 	tb.SetNotifyHooks(hasNotifications, func() { runCmd("dunstctl", "action") })
 	result, err := tb.Execute(name)
+	if err != nil {
+		return fmt.Sprintf("error: %v", err)
+	}
+	return result
+}
+
+func (d *Daemon) handleBrowser(arg string) string {
+	browser := session.NewBrowser(d.hypr, d.state)
+	result, err := browser.Execute(strings.TrimSpace(arg))
 	if err != nil {
 		return fmt.Sprintf("error: %v", err)
 	}

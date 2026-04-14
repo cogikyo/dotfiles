@@ -80,6 +80,8 @@ func main() {
 		cmdSubscribe()
 	case "layout":
 		cmdLayout()
+	case "browser":
+		cmdBrowser()
 	case "three-body":
 		cmdThreeBody()
 	case "shadow":
@@ -157,6 +159,10 @@ func cmdMonocle() { sendCommand("monocle") }
 func cmdSwap()    { sendCommand("swap") }
 func cmdSplit()   { sendCommand("split " + strings.Join(os.Args[2:], " ")) }
 func cmdLayout()  { sendCommand("layout " + strings.Join(os.Args[2:], " ")) }
+func cmdBrowser() {
+	_ = requireArg("usage: hyprd browser {windows|snapshot|show|hypr|restore} ...")
+	sendCommand("browser " + strings.Join(os.Args[2:], " "))
+}
 func cmdProject() { sendCommand("project " + strings.Join(os.Args[2:], " ")) }
 func cmdQuery()   { sendCommand("query " + strings.Join(os.Args[2:], " ")) }
 func cmdBG()      { sendCommand("bg " + requireArg("usage: hyprd bg {ensure|kill}")) }
@@ -259,6 +265,13 @@ Shadow workspace (special:shadow):
 Sessions:
   hyprd layout --list    List available sessions
   hyprd layout <name>    Open session (loads from ~/dotfiles/daemons/configs/hyprd.yaml)
+
+Browser snapshots:
+  hyprd browser windows [--all] [--profile <name|path>]
+  hyprd browser snapshot <name> [active|largest|index] [--profile <name|path>]
+  hyprd browser show <name> [snapshot]
+  hyprd browser hypr <name> [snapshot]
+  hyprd browser restore <name> [snapshot] [--mode urls|exact] [--force] [--dry-run]
 
 Query/Subscribe (for eww):
   hyprd query [topic]    Get state (workspace|hidden|split|three-body|all)

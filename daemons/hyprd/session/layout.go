@@ -146,7 +146,11 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 		return "", fmt.Errorf("session %q has no body or command", s.Name)
 	}
 
-	urls := s.Browser.AllURLs()
+	browserCfg, err := NewBrowser(l.hypr, l.state).ResolveLaunchConfig(s.Browser)
+	if err != nil {
+		return "", err
+	}
+	urls := browserCfg.AllURLs()
 	for _, name := range s.Body {
 		tbw, ok := cfg.ThreeBody[name]
 		if !ok {
