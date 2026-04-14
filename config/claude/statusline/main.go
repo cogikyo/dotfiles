@@ -433,27 +433,34 @@ func parseAccessToken(data []byte) string {
 // Color Helpers
 // ─────────────────────────────────────────────────
 
-func pctColor(pct int) string {
+var pctColors = []string{blue, brBlue, green, brGreen, brYello, yellow, red, brRed, pink}
+
+// pctTier returns the index into pctColors for a given percent.
+func pctTier(pct int) int {
 	switch {
 	case pct < 10:
-		return blue
+		return 0
 	case pct < 20:
-		return brBlue
+		return 1
 	case pct < 30:
-		return green
+		return 2
 	case pct < 40:
-		return brGreen
+		return 3
 	case pct < 50:
-		return brYello
+		return 4
 	case pct < 60:
-		return yellow
+		return 5
 	case pct < 70:
-		return red
+		return 6
 	case pct < 90:
-		return brRed
+		return 7
 	default:
-		return pink
+		return 8
 	}
+}
+
+func pctColor(pct int) string {
+	return pctColors[pctTier(pct)]
 }
 
 func progressIcon(pct int) string {
@@ -461,12 +468,12 @@ func progressIcon(pct int) string {
 	return barProgress[idx]
 }
 
-func buildBar(filled int) string {
+func buildBar(filled, total int) string {
 	var b strings.Builder
 	for range filled {
 		b.WriteString(barFilled)
 	}
-	for range 10 - filled {
+	for range total - filled {
 		b.WriteString(barEmpty)
 	}
 	return b.String()
@@ -1025,8 +1032,9 @@ func main() {
 		pct := total * 100 / size
 		colorRef := min(size, 250_000)
 		colorPct := min(total*100/colorRef, 100)
-		color := pctColor(colorPct)
-		bar := buildBar(colorPct / 10)
+		tier := pctTier(colorPct)
+		color := pctColors[tier]
+		bar := buildBar(tier+1, len(pctColors))
 		out.WriteString(gray + sep + reset)
 		fmt.Fprintf(&out, "%s%s%s %d%%%s", color, barContext, bar, pct, reset)
 	}
