@@ -37,6 +37,7 @@ package main
 import (
 	"dotfiles/daemons/config"
 	"dotfiles/daemons/daemon"
+	"dotfiles/daemons/hyprd/browser"
 	"dotfiles/daemons/hyprd/hypr"
 	notifypkg "dotfiles/daemons/hyprd/notify"
 	"dotfiles/daemons/hyprd/session"
@@ -335,8 +336,8 @@ func (d *Daemon) handleThreeBody(arg string) string {
 }
 
 func (d *Daemon) handleBrowser(arg string) string {
-	browser := session.NewBrowser(d.hypr, d.state)
-	result, err := browser.Execute(strings.TrimSpace(arg))
+	b := browser.NewBrowser(d.hypr, d.state)
+	result, err := b.Execute(strings.TrimSpace(arg))
 	if err != nil {
 		return fmt.Sprintf("error: %v", err)
 	}

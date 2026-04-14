@@ -1,4 +1,4 @@
-package session
+package browser
 
 import (
 	"encoding/binary"

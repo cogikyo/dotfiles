@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"dotfiles/daemons/config"
+	"dotfiles/daemons/hyprd/browser"
 	"dotfiles/daemons/hyprd/hypr"
 	"dotfiles/daemons/hyprd/state"
 	"dotfiles/daemons/hyprd/windows"
@@ -146,20 +147,20 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 		return "", fmt.Errorf("session %q has no body or command", s.Name)
 	}
 
-	browser := NewBrowser(l.hypr, l.state)
+	b := browser.NewBrowser(l.hypr, l.state)
 	for _, name := range s.Body {
 		tbw, ok := cfg.ThreeBody[name]
 		if !ok {
 			return "", fmt.Errorf("session %q references unknown three-body window %q", s.Name, name)
 		}
 		if name == "browser" || strings.Contains(strings.ToLower(tbw.Class), "firefox") {
-			if browser.UsesExactRestore(s.Browser) {
-				if _, err := browser.RestoreConfiguredSnapshot(s.Browser, false); err != nil {
+			if b.UsesExactRestore(s.Browser) {
+				if _, err := b.RestoreConfiguredSnapshot(s.Browser, false); err != nil {
 					return "", err
 				}
 				time.Sleep(1500 * time.Millisecond)
 			} else {
-				browserCfg, err := browser.ResolveLaunchConfig(s.Browser)
+				browserCfg, err := b.ResolveLaunchConfig(s.Browser)
 				if err != nil {
 					return "", err
 				}
