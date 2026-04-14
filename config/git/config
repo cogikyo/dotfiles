@@ -7,6 +7,8 @@
     ignorecase = false
 [gpg]
 	format = ssh
+[gpg "ssh"]
+	allowedSignersFile = ~/.config/git/allowed_signers
 [commit]
 	gpgsign = true
 [pull]
@@ -17,3 +19,7 @@
 	insteadOf = https://git.linecode.dev/
 [includeIf "gitdir:/Users/"]
 	path = ~/.config/git/config-mac
+[includeIf "hasconfig:remote.*.url:git@git.linecode.dev:*/**"]
+	path = ~/.config/git/config-work
+[includeIf "hasconfig:remote.*.url:git@git.trendcapital.io:*/**"]
+	path = ~/.config/git/config-work

@@ -1,0 +1,3 @@
+[user]
+	email = cullyn@trendcapital.com
+	signingkey = ~/.ssh/trend.pub
