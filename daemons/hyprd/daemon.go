@@ -251,6 +251,8 @@ func (d *Daemon) handleCommand(command string) string {
 		return result
 	case "three-body":
 		return d.handleThreeBody(arg)
+	case "shadow":
+		return d.handleShadow(arg)
 	case "init":
 		init := d.newInit()
 		result, err := init.Execute()
@@ -271,6 +273,47 @@ func (d *Daemon) handleCommand(command string) string {
 		return d.handleNotify(arg)
 	default:
 		return fmt.Sprintf("unknown command: %s", cmd)
+	}
+}
+
+// handleShadow toggles visibility of the shadow workspace or lists its windows.
+// Useful when hyprd loses three-body state (e.g., after rebuild) and windows
+// are stranded on special:shadow — user can inspect and rescue them manually.
+func (d *Daemon) handleShadow(arg string) string {
+	shadowWS := d.config.Load().Windows.ShadowWorkspace
+	special := strings.TrimPrefix(shadowWS, "special:")
+
+	switch strings.TrimSpace(arg) {
+	case "", "toggle":
+		if err := d.hypr.Dispatch("togglespecialworkspace " + special); err != nil {
+			return fmt.Sprintf("error: %v", err)
+		}
+		return "toggled " + shadowWS
+	case "list":
+		clients, err := d.hypr.Clients()
+		if err != nil {
+			return fmt.Sprintf("error: %v", err)
+		}
+		var stranded []map[string]string
+		for _, c := range clients {
+			if c.Workspace.Name == shadowWS {
+				stranded = append(stranded, map[string]string{
+					"address": c.Address,
+					"class":   c.Class,
+					"title":   c.Title,
+				})
+			}
+		}
+		if len(stranded) == 0 {
+			return "[]"
+		}
+		data, err := json.MarshalIndent(stranded, "", "  ")
+		if err != nil {
+			return fmt.Sprintf("error: %v", err)
+		}
+		return string(data)
+	default:
+		return "usage: shadow [toggle|list]"
 	}
 }
 

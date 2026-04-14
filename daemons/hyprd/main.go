@@ -82,6 +82,8 @@ func main() {
 		cmdLayout()
 	case "three-body":
 		cmdThreeBody()
+	case "shadow":
+		cmdShadow()
 	case "project":
 		cmdProject()
 	case "notify":
@@ -163,6 +165,7 @@ func cmdTab()     { sendCommand("tab " + requireArg("usage: hyprd tab <name|alia
 func cmdThreeBody() {
 	sendCommand("three-body " + requireArg("usage: hyprd three-body {editor|agents|browser|shadow}"))
 }
+func cmdShadow() { sendCommand("shadow " + strings.Join(os.Args[2:], " ")) }
 func cmdFocus() {
 	_ = requireArg("usage: hyprd focus <class> [title]")
 	sendCommand("focus " + strings.Join(os.Args[2:], " "))
@@ -248,6 +251,10 @@ Three-body (2-visible, 1-shadow window management):
   hyprd three-body agents    Focus/launch agents (checks notifications first)
   hyprd three-body browser   Focus/launch browser window
   hyprd three-body shadow    Toggle active/shadow slave
+
+Shadow workspace (special:shadow):
+  hyprd shadow               Toggle visibility of shadow workspace
+  hyprd shadow list          List windows parked on shadow workspace
 
 Sessions:
   hyprd layout --list    List available sessions
