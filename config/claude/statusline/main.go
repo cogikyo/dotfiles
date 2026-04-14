@@ -891,25 +891,28 @@ func formatResetDate(isoTime string) string {
 // Output Formatting
 // ─────────────────────────────────────────────────
 
-// gitStateColor picks a color for the directory/branch based on repo state:
-// clean → blue, ahead → green, behind → red, ahead+behind → magenta,
-// dirty (but synced) → yellow.
+// gitStateColor picks a color for the directory/branch based on repo state.
+// Priority (high → low): any staged → cyan; unstaged changes only → light
+// blue; ahead+behind → magenta; ahead → green; behind → red; clean → blue.
 func gitStateColor(gs *GitStatus) string {
 	if gs == nil {
 		return blue
 	}
+	staged := gs.Staged > 0
+	unstaged := gs.Modified+gs.Untracked+gs.Deleted+gs.Renamed+gs.Conflicted > 0
 	ahead := gs.Ahead > 0
 	behind := gs.Behind > 0
-	dirty := gs.Staged+gs.Modified+gs.Untracked+gs.Deleted+gs.Renamed+gs.Conflicted > 0
 	switch {
+	case staged:
+		return cyan
+	case unstaged:
+		return brBlue
 	case ahead && behind:
 		return magenta
 	case ahead:
 		return green
 	case behind:
 		return red
-	case dirty:
-		return yellow
 	default:
 		return blue
 	}
@@ -991,12 +994,12 @@ func main() {
 	} else if dir == home {
 		displayDir = ""
 	}
-	dirColor := gitStateColor(gitStatus)
-	out.WriteString(dirColor + iconModel + bold + dirColor + displayDir + reset)
+	out.WriteString(red + iconModel + bold + red + displayDir + reset)
 
 	// Git info
 	if gitStatus != nil && gitStatus.Branch != "" {
-		out.WriteString(" " + dirColor + gitBranch + gitStatus.Branch + reset)
+		branchColor := gitStateColor(gitStatus)
+		out.WriteString(" " + branchColor + gitBranch + gitStatus.Branch + reset)
 		out.WriteString(buildGitStats(gitStatus))
 	}
 
