@@ -52,6 +52,11 @@ const (
 const (
 	sep          = " ╼╾ "
 	iconModel    = "󰯉 "
+	iconEffortLo = "󰤟"
+	iconEffortMd = "󰤢"
+	iconEffortHi = "󰤥"
+	iconEffortMx = "󰤨"
+	iconEffortUn = "󰤫"
 	gitBranch    = " "
 	gitAhead     = "⮭"
 	gitBehind    = "⮯"
@@ -78,6 +83,11 @@ type Input struct {
 	Workspace struct {
 		CurrentDir string `json:"current_dir"`
 	} `json:"workspace"`
+	Model struct {
+		ID          string `json:"id"`
+		DisplayName string `json:"display_name"`
+	} `json:"model"`
+	SessionID     string `json:"session_id"`
 	ContextWindow struct {
 		ContextWindowSize int `json:"context_window_size"`
 		CurrentUsage      *struct {
@@ -121,11 +131,11 @@ type UsagePeriod struct {
 
 type CachedUsage struct {
 	FetchedAt int64          `json:"fetched_at"`
-	Response  *UsageResponse `json:"response"`  // nil when API failed (negative cache)
+	Response  *UsageResponse `json:"response"`        // nil when API failed (negative cache)
 	Error     string         `json:"error,omitempty"` // reason for failure
 }
 
-// Request stats for debugging rate limits
+// RequestStats are for debugging rate limits
 type RequestStats struct {
 	FirstRequest int64 `json:"first_request"`
 	Count        int   `json:"count"`
@@ -135,9 +145,11 @@ type RequestStats struct {
 // Cache Configuration
 // ─────────────────────────────────────────────────
 
-const cacheTTL = 5 * time.Minute
-const negCacheTTL = 60 * time.Second       // transient errors (timeout, etc)
-const rateLimitCacheTTL = 10 * time.Minute // back off hard on 429
+const (
+	cacheTTL          = 5 * time.Minute
+	negCacheTTL       = 60 * time.Second // transient errors (timeout, etc)
+	rateLimitCacheTTL = 10 * time.Minute // back off hard on 429
+)
 
 func getCacheDir() string {
 	if xdg := os.Getenv("XDG_CACHE_HOME"); xdg != "" {
@@ -215,7 +227,7 @@ func findKeychainServices() []string {
 	const prefix = "Claude Code-credentials"
 	var services []string
 	seen := make(map[string]bool)
-	for _, line := range strings.Split(string(out), "\n") {
+	for line := range strings.SplitSeq(string(out), "\n") {
 		line = strings.TrimSpace(line)
 		// Match: "svce"<blob>="Claude Code-credentials..."
 		if !strings.HasPrefix(line, `"svce"<blob>="`) {
@@ -314,7 +326,7 @@ func updateKeychainEntry(svc string, creds *Credentials) {
 	}
 	// Parse account name from output: "acct"<blob>="..."
 	account := ""
-	for _, line := range strings.Split(string(out), "\n") {
+	for line := range strings.SplitSeq(string(out), "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, `"acct"<blob>="`) {
 			start := strings.Index(line, `="`) + 2
@@ -458,6 +470,120 @@ func buildBar(filled int) string {
 		b.WriteString(barEmpty)
 	}
 	return b.String()
+}
+
+// ─────────────────────────────────────────────────
+// Effort Level
+// ─────────────────────────────────────────────────
+
+func claudeConfigDir() string {
+	if d := os.Getenv("CLAUDE_CONFIG_DIR"); d != "" {
+		return d
+	}
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".config", "claude")
+}
+
+// scanCmdlineForEffort reads /proc/<pid>/cmdline and returns the value of the
+// --effort flag if present. Supports both "--effort X" and "--effort=X" forms.
+// Returns "" if not found or if the process is not a claude binary.
+func scanCmdlineForEffort(pid int) string {
+	data, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
+	if err != nil {
+		return ""
+	}
+	args := strings.Split(strings.TrimRight(string(data), "\x00"), "\x00")
+	if len(args) == 0 {
+		return ""
+	}
+	// Require the executable to contain "claude" so we don't match unrelated parents.
+	exe := filepath.Base(args[0])
+	if !strings.Contains(exe, "claude") {
+		return ""
+	}
+	for i, a := range args {
+		if a == "--effort" && i+1 < len(args) {
+			return args[i+1]
+		}
+		if strings.HasPrefix(a, "--effort=") {
+			return strings.TrimPrefix(a, "--effort=")
+		}
+	}
+	return ""
+}
+
+// pidForSession finds the PID whose sessions/<pid>.json contains the given
+// sessionId. Returns 0 if not found.
+func pidForSession(sessionID string) int {
+	if sessionID == "" {
+		return 0
+	}
+	matches, err := filepath.Glob(filepath.Join(claudeConfigDir(), "sessions", "*.json"))
+	if err != nil {
+		return 0
+	}
+	for _, m := range matches {
+		data, err := os.ReadFile(m)
+		if err != nil {
+			continue
+		}
+		var s struct {
+			PID       int    `json:"pid"`
+			SessionID string `json:"sessionId"`
+		}
+		if json.Unmarshal(data, &s) != nil {
+			continue
+		}
+		if s.SessionID == sessionID && s.PID > 0 {
+			return s.PID
+		}
+	}
+	return 0
+}
+
+// readSettingsEffort reads effortLevel from settings.json in CLAUDE_CONFIG_DIR.
+func readSettingsEffort() string {
+	data, err := os.ReadFile(filepath.Join(claudeConfigDir(), "settings.json"))
+	if err != nil {
+		return ""
+	}
+	var s struct {
+		EffortLevel string `json:"effortLevel"`
+	}
+	if json.Unmarshal(data, &s) != nil {
+		return ""
+	}
+	return s.EffortLevel
+}
+
+func getEffortLevel(sessionID string) string {
+	if lvl := scanCmdlineForEffort(os.Getppid()); lvl != "" {
+		return lvl
+	}
+	if pid := pidForSession(sessionID); pid > 0 {
+		if lvl := scanCmdlineForEffort(pid); lvl != "" {
+			return lvl
+		}
+	}
+	if lvl := readSettingsEffort(); lvl != "" {
+		return lvl
+	}
+	return ""
+}
+
+func effortIcon(level string) (string, string) {
+	switch level {
+	case "low":
+		return iconEffortLo, brBlue
+	case "medium":
+		return iconEffortMd, blue
+	case "high":
+		return iconEffortHi, yellow
+	case "max":
+		return iconEffortMx, pink
+	default:
+		return iconEffortUn, gray
+	}
 }
 
 // ─────────────────────────────────────────────────
@@ -764,6 +890,31 @@ func formatResetDate(isoTime string) string {
 // ─────────────────────────────────────────────────
 // Output Formatting
 // ─────────────────────────────────────────────────
+
+// gitStateColor picks a color for the directory/branch based on repo state:
+// clean → blue, ahead → green, behind → red, ahead+behind → magenta,
+// dirty (but synced) → yellow.
+func gitStateColor(gs *GitStatus) string {
+	if gs == nil {
+		return blue
+	}
+	ahead := gs.Ahead > 0
+	behind := gs.Behind > 0
+	dirty := gs.Staged+gs.Modified+gs.Untracked+gs.Deleted+gs.Renamed+gs.Conflicted > 0
+	switch {
+	case ahead && behind:
+		return magenta
+	case ahead:
+		return green
+	case behind:
+		return red
+	case dirty:
+		return yellow
+	default:
+		return blue
+	}
+}
+
 func buildGitStats(gs *GitStatus) string {
 	var stats strings.Builder
 	if gs.Ahead > 0 {
@@ -840,12 +991,25 @@ func main() {
 	} else if dir == home {
 		displayDir = ""
 	}
-	out.WriteString(red + iconModel + bold + red + displayDir + reset)
+	dirColor := gitStateColor(gitStatus)
+	out.WriteString(dirColor + iconModel + bold + dirColor + displayDir + reset)
 
 	// Git info
 	if gitStatus != nil && gitStatus.Branch != "" {
-		out.WriteString(" " + yellow + gitBranch + gitStatus.Branch + reset)
+		out.WriteString(" " + dirColor + gitBranch + gitStatus.Branch + reset)
 		out.WriteString(buildGitStats(gitStatus))
+	}
+
+	// Model name + effort level
+	if input.Model.DisplayName != "" {
+		name := input.Model.DisplayName
+		if i := strings.Index(name, " ("); i >= 0 {
+			name = name[:i]
+		}
+		level := getEffortLevel(input.SessionID)
+		icon, color := effortIcon(level)
+		out.WriteString(gray + sep + reset)
+		fmt.Fprintf(&out, "%s%s %s%s", color, icon, name, reset)
 	}
 
 	// Context window bar

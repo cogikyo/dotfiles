@@ -149,8 +149,8 @@ tabs:
     focus: fe-nvim
     tabs:
       - { name: fe-nvim, title: "«   »", command: nvim, cwd: "~/LeadPier/frontend" }
-      - { name: be-nvim, title: "«   »", command: nvim, cwd: "~/LeadPier/backend/services", cwd_resolve: recent-git }
-      - { name: term, title: "« 󰠳  »", cwd: "~/LeadPier" }
+      - { name: be-nvim, title: "«   »", command: nvim, cwd: "~/LeadPier/backend" }
+      - { name: nvim,    title: "« 󰠳  »", command: nvim, cwd: "~/LeadPier" }
       - { name: fe-build, title: "«   »", command: "yarn dev", cwd: "~/LeadPier/frontend" }
       - { name: be-build, title: "«   »", command: "pier watch", cwd: "~/LeadPier/backend/core/runner" }
 
