@@ -1,5 +1,5 @@
 model = "gpt-5.4"
-model_reasoning_effort = "xhigh"
+model_reasoning_effort = "high"
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
 notify = ["/home/cullyn/.local/bin/hyprd notify hook codex"]
@@ -28,6 +28,9 @@ trust_level = "trusted"
 
 [notice]
 hide_full_access_warning = true
+
+[notice.model_migrations]
+"gpt-5.3-codex" = "gpt-5.4"
 
 [features]
 shell_snapshot = true
