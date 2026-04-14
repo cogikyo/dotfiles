@@ -106,7 +106,7 @@ func (t *Tabs) refresh(args []string) (string, error) {
 	}
 
 	windowID := windows[0].ID
-	profileName := t.detectProfile(windows[0])
+	profileName := detectTabProfile(t.state.GetConfig(), windows[0])
 	profile, err := t.getProfile(profileName)
 	if err != nil {
 		return "", err
@@ -116,7 +116,7 @@ func (t *Tabs) refresh(args []string) (string, error) {
 		return t.refreshAll(kitty, profile, windowID)
 	}
 
-	tabName := t.resolveAlias(nameOrAlias, profileName)
+	tabName := resolveTabAlias(nameOrAlias, profileName)
 	tabDef := t.findTab(profile, tabName)
 	if tabDef == nil {
 		return "", fmt.Errorf("tab %q not in profile %s", tabName, profileName)
@@ -199,46 +199,6 @@ func (t *Tabs) getProfile(name string) (*config.TabProfile, error) {
 		return nil, fmt.Errorf("unknown profile: %s", name)
 	}
 	return &profile, nil
-}
-
-func (t *Tabs) detectProfile(win KittyOSWindow) string {
-	cfg := t.state.GetConfig()
-	windowID := win.ID
-	prefix := fmt.Sprintf("%d-", windowID)
-
-	for _, tab := range win.Tabs {
-		for _, pane := range tab.Windows {
-			id := pane.Env["KITTY_TAB_ID"]
-			if id == "" || !strings.HasPrefix(id, prefix) {
-				continue
-			}
-			suffix := id[len(prefix):]
-			for name, profile := range cfg.Tabs {
-				if profile.Prefix != "" && strings.HasPrefix(suffix, profile.Prefix) {
-					return name
-				}
-			}
-		}
-	}
-	return "editor"
-}
-
-func (t *Tabs) resolveAlias(alias, profileName string) string {
-	if !strings.Contains(alias, ":") {
-		return alias
-	}
-
-	parts := strings.Split(alias, ":")
-	profileOrder := map[string]int{"editor": 0, "agents": 1, "leadpier": 2}
-	idx, ok := profileOrder[profileName]
-	if !ok || idx >= len(parts) {
-		return parts[0]
-	}
-	name := parts[idx]
-	if name == "" {
-		return parts[0]
-	}
-	return name
 }
 
 func (t *Tabs) resolveDefaultCWD(win KittyOSWindow) string {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"dotfiles/daemons/config"
 	"dotfiles/daemons/hyprd/hypr"
 	"dotfiles/daemons/hyprd/state"
 )
@@ -25,13 +26,9 @@ func NewTab(h *hypr.Client, s *state.State) *Tab {
 
 func (t *Tab) Execute(tabName string) (string, error) {
 	if tabName == "" {
-		return "", fmt.Errorf("usage: tab {term|nvim|nvimtree|git|xplr}")
+		return "", fmt.Errorf("usage: tab <name|alias>")
 	}
-
-	kittyTab := tabName
-	if tabName == "nvimtree" {
-		kittyTab = "nvim"
-	}
+	actionName := baseTabName(tabName)
 
 	wsID, err := t.activeWorkspace()
 	if err != nil {
@@ -44,7 +41,7 @@ func (t *Tab) Execute(tabName string) (string, error) {
 	}
 
 	if editor == nil {
-		if tabName == "term" {
+		if actionName == "term" {
 			return t.spawnTerminal(wsID)
 		}
 		return "no editor on workspace", nil
@@ -57,8 +54,47 @@ func (t *Tab) Execute(tabName string) (string, error) {
 		return fmt.Sprintf("focused editor (no kitty socket): %s", editor.Address), nil
 	}
 
-	prefix := t.editorPrefix()
-	targetTabID := fmt.Sprintf("%d-%s%s", st.WindowID, prefix, kittyTab)
+	windows, err := kitty.FullState()
+	if err != nil {
+		return "", err
+	}
+	if len(windows) == 0 {
+		return "", fmt.Errorf("no kitty windows")
+	}
+
+	cfg := t.state.GetConfig()
+	profileName := detectTabProfile(cfg, windows[0])
+	profile, ok := cfg.Tabs[profileName]
+	if !ok {
+		return "", fmt.Errorf("unknown profile: %s", profileName)
+	}
+
+	currentTab := activeProfileTabName(cfg, profileName, windows[0])
+	t.rememberTabState(wsID, profileName, &profile, currentTab)
+
+	targetTab := resolveTabAlias(tabName, profileName)
+	if !strings.Contains(tabName, ":") && profileTab(cfg, profileName, targetTab) == nil {
+		var rememberedTab, rememberedContext string
+		if mem := t.state.GetTabMemory(wsID, profileName); mem != nil {
+			rememberedTab = mem.ByAction[normalizeTabAction(tabName)]
+			rememberedContext = mem.Context
+		}
+		if resolved := pickSemanticTab(&profile, normalizeTabAction(tabName), currentTab, rememberedTab, rememberedContext); resolved != "" {
+			targetTab = resolved
+		}
+	}
+	if actionName == "nvimtree" && targetTab == actionName {
+		targetTab = "nvim"
+	}
+	if profileTab(cfg, profileName, targetTab) == nil {
+		return "", fmt.Errorf("tab %q not in profile %s", targetTab, profileName)
+	}
+
+	prefix := tabProfilePrefix(cfg, profileName)
+	if prefix == "" {
+		prefix = "ed-"
+	}
+	targetTabID := fmt.Sprintf("%d-%s%s", st.WindowID, prefix, targetTab)
 
 	activeAddr, _ := t.activeWindowAddress()
 	if activeAddr == editor.Address && st.ActiveTabID == targetTabID {
@@ -73,17 +109,24 @@ func (t *Tab) Execute(tabName string) (string, error) {
 	}
 
 	t.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", editor.Address))
-	kitty.FocusTab(targetTabID)
-
-	nvimTabID := fmt.Sprintf("%d-%snvim", st.WindowID, prefix)
-	switch tabName {
-	case "nvim":
-		kitty.SendText(nvimTabID, nvimCloseTree)
-	case "nvimtree":
-		kitty.SendText(nvimTabID, nvimFocusTree)
+	if err := kitty.FocusTab(targetTabID); err != nil {
+		return "", err
 	}
 
-	return fmt.Sprintf("tab: %s", tabName), nil
+	switch actionName {
+	case "nvim":
+		if err := kitty.SendText(targetTabID, nvimCloseTree); err != nil {
+			return "", err
+		}
+	case "nvimtree":
+		if err := kitty.SendText(targetTabID, nvimFocusTree); err != nil {
+			return "", err
+		}
+	}
+
+	t.rememberTabState(wsID, profileName, &profile, targetTab)
+
+	return fmt.Sprintf("tab: %s", targetTab), nil
 }
 
 func (t *Tab) activeWorkspace() (int, error) {
@@ -153,16 +196,6 @@ func (t *Tab) previousWindowAddress() (string, error) {
 	return "", nil
 }
 
-func (t *Tab) editorPrefix() string {
-	cfg := t.state.GetConfig()
-	if cfg.Tabs != nil {
-		if p, ok := cfg.Tabs["editor"]; ok {
-			return p.Prefix
-		}
-	}
-	return "ed-"
-}
-
 func (t *Tab) spawnTerminal(wsID int) (string, error) {
 	project := t.state.GetProjectPath(wsID)
 	if project == "" {
@@ -170,4 +203,14 @@ func (t *Tab) spawnTerminal(wsID int) (string, error) {
 	}
 	t.hypr.Dispatch(fmt.Sprintf("exec kitty --title terminal --directory %s --session ~/.config/kitty/sessions/term.conf", project))
 	return "spawned terminal", nil
+}
+
+func (t *Tab) rememberTabState(wsID int, profileName string, profile *config.TabProfile, tabName string) {
+	context := tabContext(tabName)
+	for _, action := range actionKeysForTab(profile, tabName) {
+		t.state.RememberTab(wsID, profileName, action, tabName, context)
+	}
+	if context != "" {
+		t.state.RememberTab(wsID, profileName, "", "", context)
+	}
 }

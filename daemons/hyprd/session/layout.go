@@ -111,6 +111,7 @@ func (l *Layout) listByWorkspace(sessions map[string]config.Session, active map[
 
 func (l *Layout) openSession(s config.Session) (string, error) {
 	l.hypr.Dispatch(fmt.Sprintf("workspace %d", s.Workspace))
+	l.state.SetActiveSession(s.Workspace, s.Name)
 
 	clients, err := l.hypr.Clients()
 	if err != nil {
@@ -162,10 +163,7 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 			continue
 		}
 
-		cmd := tbw.Command
-		if s.Project != "" && strings.Contains(cmd, "kitty") {
-			cmd = fmt.Sprintf("env PROJECT_PATH=%s/%s %s", homeDir, s.Project, cmd)
-		}
+		cmd := l.withSessionLaunchEnv(s, name, tbw.Command, homeDir)
 		l.hypr.Dispatch(fmt.Sprintf("exec %s", cmd))
 		time.Sleep(500 * time.Millisecond)
 	}
@@ -185,4 +183,23 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 	}
 
 	return fmt.Sprintf("opened session: %s on ws%d", s.Name, s.Workspace), nil
+}
+
+func (l *Layout) withSessionLaunchEnv(s config.Session, bodyName, cmd, homeDir string) string {
+	if !strings.Contains(cmd, "kitty") || !strings.Contains(cmd, "--session") {
+		return cmd
+	}
+
+	var env []string
+	if s.Project != "" {
+		env = append(env, fmt.Sprintf("PROJECT_PATH=%s/%s", homeDir, s.Project))
+	}
+	if profile := s.Tabs[bodyName]; profile != "" {
+		env = append(env, "HYPRD_TAB_PROFILE="+profile)
+	}
+	if len(env) == 0 {
+		return cmd
+	}
+
+	return fmt.Sprintf("env %s %s", strings.Join(env, " "), cmd)
 }

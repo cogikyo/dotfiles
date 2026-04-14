@@ -22,9 +22,9 @@ type HyprConfig struct {
 
 // InitConfig controls the one-time boot sequence that runs when hyprd starts.
 type InitConfig struct {
-	Sessions       []string `yaml:"sessions"`
-	Execs          []string `yaml:"execs"`
-	Workspace      int      `yaml:"workspace"`
+	Sessions       []string      `yaml:"sessions"`
+	Execs          []string      `yaml:"execs"`
+	Workspace      int           `yaml:"workspace"`
 	Lock           bool          `yaml:"lock"`
 	LockDelay      time.Duration `yaml:"lock_delay"`
 	Greeting       string        `yaml:"greeting"`
@@ -152,13 +152,14 @@ type ThreeBodyWindow struct {
 
 // Session defines a workspace layout for automated window spawning and arrangement.
 type Session struct {
-	Name      string            `yaml:"name" json:"name"`
-	Workspace int               `yaml:"workspace" json:"workspace"`
-	Project   string            `yaml:"project" json:"project"`
-	Body      []string          `yaml:"body" json:"body"`
-	Browser   BrowserConfig     `yaml:"browser" json:"browser"`
-	Tabs      map[string]string `yaml:"tabs" json:"tabs"`
-	Command   string            `yaml:"command" json:"command"`
+	Name      string        `yaml:"name" json:"name"`
+	Workspace int           `yaml:"workspace" json:"workspace"`
+	Project   string        `yaml:"project" json:"project"`
+	Body      []string      `yaml:"body" json:"body"`
+	Browser   BrowserConfig `yaml:"browser" json:"browser"`
+	// Tabs maps three-body members like "editor" to kitty tab profiles like "leadpier".
+	Tabs    map[string]string `yaml:"tabs" json:"tabs"`
+	Command string            `yaml:"command" json:"command"`
 }
 
 // BrowserConfig declares URLs to open in the browser body member.

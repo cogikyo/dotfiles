@@ -11,15 +11,16 @@ import (
 type State struct {
 	mu sync.RWMutex
 
-	Workspace          int                     `json:"workspace"`
-	OccupiedWorkspaces []int                   `json:"occupied_workspaces"`
-	Hidden             map[string]*HiddenState `json:"hidden,omitempty"`
-	DisplacedMasters   map[int]string          `json:"displaced_masters,omitempty"`
-	ThreeBody          map[int]*ThreeBodyState `json:"three_body,omitempty"`
-	ProjectPaths       map[int]string          `json:"project_paths,omitempty"`
-	Monocle            map[int]*MonocleState   `json:"monocle,omitempty"`
-	SplitRatio         string                  `json:"split_ratio"`
-	ActiveSessions     map[int]string          `json:"active_sessions,omitempty"`
+	Workspace          int                           `json:"workspace"`
+	OccupiedWorkspaces []int                         `json:"occupied_workspaces"`
+	Hidden             map[string]*HiddenState       `json:"hidden,omitempty"`
+	DisplacedMasters   map[int]string                `json:"displaced_masters,omitempty"`
+	ThreeBody          map[int]*ThreeBodyState       `json:"three_body,omitempty"`
+	ProjectPaths       map[int]string                `json:"project_paths,omitempty"`
+	Monocle            map[int]*MonocleState         `json:"monocle,omitempty"`
+	SplitRatio         string                        `json:"split_ratio"`
+	ActiveSessions     map[int]string                `json:"active_sessions,omitempty"`
+	TabMemory          map[int]map[string]*TabMemory `json:"tab_memory,omitempty"`
 	config             *config.HyprConfig
 }
 
@@ -34,6 +35,7 @@ func NewState(cfg *config.HyprConfig) *State {
 		ProjectPaths:       make(map[int]string),
 		Monocle:            make(map[int]*MonocleState),
 		ActiveSessions:     make(map[int]string),
+		TabMemory:          make(map[int]map[string]*TabMemory),
 		SplitRatio:         "default",
 		config:             cfg,
 	}

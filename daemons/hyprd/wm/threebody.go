@@ -46,10 +46,11 @@ func (tb *ThreeBody) Execute(name string) (string, error) {
 		}
 		return "notification: action", nil
 	}
-	return tb.Focus(spec.Class, spec.Title, spec.Command)
+	return tb.Focus(name, spec.Class, spec.Title, spec.Command)
 }
 
 type WindowSpec struct {
+	Name      string
 	Class     string
 	Title     string
 	LaunchCmd string
@@ -59,7 +60,7 @@ func (tb *ThreeBody) executeShadow(cfg *config.HyprConfig) (string, error) {
 	var fallbacks []WindowSpec
 	for _, name := range threeBodyOrder {
 		if w, ok := cfg.ThreeBody[name]; ok {
-			fallbacks = append(fallbacks, WindowSpec{Class: w.Class, Title: w.Title, LaunchCmd: w.Command})
+			fallbacks = append(fallbacks, WindowSpec{Name: name, Class: w.Class, Title: w.Title, LaunchCmd: w.Command})
 		}
 	}
 	return tb.Swap(fallbacks)
@@ -111,7 +112,7 @@ func (tb *ThreeBody) Swap(fallbacks []WindowSpec) (string, error) {
 			}
 		}
 		if !found && fb.LaunchCmd != "" {
-			cmd := tb.withProjectPath(fb.LaunchCmd, wsID)
+			cmd := tb.withSessionLaunchEnv(fb.LaunchCmd, wsID, fb.Name)
 			if err := tb.hypr.Dispatch(fmt.Sprintf("exec %s", cmd)); err != nil {
 				return "", fmt.Errorf("launch: %w", err)
 			}
@@ -144,7 +145,7 @@ func (tb *ThreeBody) SwapMaster() (string, error) {
 	return fmt.Sprintf("master swapped: master=%s shadow=%s", tbState.Shadow, tbState.Master), nil
 }
 
-func (tb *ThreeBody) Focus(class, title, launchCmd string) (string, error) {
+func (tb *ThreeBody) Focus(bodyName, class, title, launchCmd string) (string, error) {
 	if class == "" {
 		return "", fmt.Errorf("class required")
 	}
@@ -163,7 +164,7 @@ func (tb *ThreeBody) Focus(class, title, launchCmd string) (string, error) {
 	if tbState != nil {
 		return tb.focusWithState(tbState, wsID, class, title, clients)
 	}
-	return tb.focusWithEnroll(wsID, class, title, launchCmd, clients)
+	return tb.focusWithEnroll(wsID, bodyName, class, title, launchCmd, clients)
 }
 
 func (tb *ThreeBody) focusWithState(st *state.ThreeBodyState, wsID int, class, title string, clients []hypr.Window) (string, error) {
@@ -221,7 +222,7 @@ func (tb *ThreeBody) swap(st *state.ThreeBodyState, wsID int) (string, error) {
 	return fmt.Sprintf("swapped: active=%s shadow=%s", st.Shadow, actualSlave), nil
 }
 
-func (tb *ThreeBody) focusWithEnroll(wsID int, class, title, launchCmd string, clients []hypr.Window) (string, error) {
+func (tb *ThreeBody) focusWithEnroll(wsID int, bodyName, class, title, launchCmd string, clients []hypr.Window) (string, error) {
 	cfg := tb.state.GetConfig()
 	tiled, err := windows.GetTiledWindows(tb.hypr, wsID, cfg.Windows.IgnoredClasses)
 	if err != nil {
@@ -251,7 +252,7 @@ func (tb *ThreeBody) focusWithEnroll(wsID int, class, title, launchCmd string, c
 	}
 
 	if launchCmd != "" {
-		cmd := tb.withProjectPath(launchCmd, wsID)
+		cmd := tb.withSessionLaunchEnv(launchCmd, wsID, bodyName)
 		if err := tb.hypr.Dispatch(fmt.Sprintf("exec %s", cmd)); err != nil {
 			return "", fmt.Errorf("launch: %w", err)
 		}
@@ -279,15 +280,23 @@ func (tb *ThreeBody) resolveProjectPath(wsID int) string {
 	return zoxideRecent()
 }
 
-func (tb *ThreeBody) withProjectPath(cmd string, wsID int) string {
+func (tb *ThreeBody) withSessionLaunchEnv(cmd string, wsID int, bodyName string) string {
 	if !strings.Contains(cmd, "kitty") || !strings.Contains(cmd, "--session") {
 		return cmd
 	}
-	project := tb.resolveProjectPath(wsID)
-	if project == "" {
+
+	var env []string
+	if project := tb.resolveProjectPath(wsID); project != "" {
+		env = append(env, "PROJECT_PATH="+project)
+	}
+	if profile := tb.state.SessionTabProfile(wsID, bodyName); profile != "" {
+		env = append(env, "HYPRD_TAB_PROFILE="+profile)
+	}
+	if len(env) == 0 {
 		return cmd
 	}
-	return fmt.Sprintf("env PROJECT_PATH=%s %s", project, cmd)
+
+	return fmt.Sprintf("env %s %s", strings.Join(env, " "), cmd)
 }
 
 func (tb *ThreeBody) hideShadow(addr string) error {
