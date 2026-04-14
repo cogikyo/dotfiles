@@ -73,7 +73,7 @@ const (
 	iconError    = "󰅜"
 )
 
-var barProgress = []string{"󰪞", "󰪟", "󰪠", "󰪡", "󰪢", "󰪣", "󰪤", "󰪥", "󰪦", "󰪧"}
+var barProgress = []string{"󰪞", "󰪟", "󰪠", "󰪡", "󰪢", "󰪣", "󰪤", "󰪥", "", ""}
 
 // ─────────────────────────────────────────────────
 // Input Types (from Claude Code JSON)
@@ -505,8 +505,8 @@ func scanCmdlineForEffort(pid int) string {
 		if a == "--effort" && i+1 < len(args) {
 			return args[i+1]
 		}
-		if strings.HasPrefix(a, "--effort=") {
-			return strings.TrimPrefix(a, "--effort=")
+		if after, ok := strings.CutPrefix(a, "--effort="); ok {
+			return after
 		}
 	}
 	return ""
@@ -904,9 +904,9 @@ func gitStateColor(gs *GitStatus) string {
 	behind := gs.Behind > 0
 	switch {
 	case staged:
-		return cyan
+		return yellow
 	case unstaged:
-		return brBlue
+		return cyan
 	case ahead && behind:
 		return magenta
 	case ahead:
@@ -1015,14 +1015,18 @@ func main() {
 		fmt.Fprintf(&out, "%s%s %s%s", color, icon, name, reset)
 	}
 
-	// Context window bar
+	// Context window bar.
+	// Percent reflects true usage against the model's full window (1M/2M/…),
+	// but color + fill scale against a 250k comfort budget so the bar tracks where we actually want to stay.
 	if input.ContextWindow.CurrentUsage != nil && input.ContextWindow.ContextWindowSize > 0 {
 		usage := input.ContextWindow.CurrentUsage
 		total := usage.InputTokens + usage.CacheCreationTokens + usage.CacheReadTokens
 		size := input.ContextWindow.ContextWindowSize
 		pct := total * 100 / size
-		color := pctColor(pct)
-		bar := buildBar(pct / 10)
+		colorRef := min(size, 250_000)
+		colorPct := min(total*100/colorRef, 100)
+		color := pctColor(colorPct)
+		bar := buildBar(colorPct / 10)
 		out.WriteString(gray + sep + reset)
 		fmt.Fprintf(&out, "%s%s%s %d%%%s", color, barContext, bar, pct, reset)
 	}
