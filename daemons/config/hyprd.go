@@ -184,6 +184,9 @@ type Session struct {
 // BrowserConfig declares URLs to open in the browser body member.
 type BrowserConfig struct {
 	Snapshot string         `yaml:"snapshot,omitempty" json:"snapshot,omitempty"`
+	Mode     string         `yaml:"mode,omitempty" json:"mode,omitempty"`
+	Force    bool           `yaml:"force,omitempty" json:"force,omitempty"`
+	Profile  string         `yaml:"profile,omitempty" json:"profile,omitempty"`
 	Pinned   []string       `yaml:"pinned,omitempty" json:"pinned,omitempty"`
 	Groups   []BrowserGroup `yaml:"groups,omitempty" json:"groups,omitempty"`
 	URLs     []string       `yaml:"urls,omitempty" json:"urls,omitempty"`

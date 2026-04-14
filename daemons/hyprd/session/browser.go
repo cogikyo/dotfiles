@@ -210,6 +210,29 @@ func (b *Browser) SnapshotConfig(name, snapshotID string) (config.BrowserConfig,
 	return summarizeFirefoxWindow(store.Windows[0]).Browser, nil
 }
 
+func (b *Browser) UsesExactRestore(cfg config.BrowserConfig) bool {
+	return browserMode(cfg) == "exact"
+}
+
+func (b *Browser) RestoreConfiguredSnapshot(cfg config.BrowserConfig, dryRun bool) (string, error) {
+	if !b.UsesExactRestore(cfg) {
+		return "", fmt.Errorf("browser restore mode %q is not exact", browserMode(cfg))
+	}
+	if cfg.Snapshot == "" {
+		return "", fmt.Errorf("browser exact restore requires snapshot")
+	}
+
+	dir, store, err := b.loadSnapshotSession(cfg.Snapshot, "")
+	if err != nil {
+		return "", err
+	}
+	profile, err := discoverFirefoxProfile(cfg.Profile)
+	if err != nil {
+		return "", err
+	}
+	return b.restoreSnapshotExact(cfg.Snapshot, dir, store, profile, cfg.Force, dryRun)
+}
+
 func (b *Browser) executeWindows(args []string) (string, error) {
 	var profileArg string
 	all := false
@@ -1350,6 +1373,14 @@ func shellQuoteCommand(parts []string) string {
 		quoted[i] = strconv.Quote(part)
 	}
 	return strings.Join(quoted, " ")
+}
+
+func browserMode(cfg config.BrowserConfig) string {
+	mode := strings.ToLower(strings.TrimSpace(cfg.Mode))
+	if mode == "" {
+		return "urls"
+	}
+	return mode
 }
 
 func optionalArg(args []string, idx int) string {

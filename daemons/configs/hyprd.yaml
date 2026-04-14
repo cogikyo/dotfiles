@@ -202,8 +202,8 @@ sessions:
       - agents
     browser:
       snapshot: leadpier
-      urls:
-        - http://localhost:4000
+      mode: exact
+      force: true
     tabs:
       editor: leadpier
   dotfiles:

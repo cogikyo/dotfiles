@@ -1,6 +1,10 @@
 package session
 
-import "testing"
+import (
+	"testing"
+
+	"dotfiles/daemons/config"
+)
 
 func TestSummarizeFirefoxWindowPreservesPinnedAndGroups(t *testing.T) {
 	window := firefoxWindow{
@@ -70,5 +74,15 @@ func TestSlugifySnapshotName(t *testing.T) {
 	}
 	if want := "leadpier-browser-snapshot"; got != want {
 		t.Fatalf("slug = %q, want %q", got, want)
+	}
+}
+
+func TestBrowserModeDefaultsAndExact(t *testing.T) {
+	if got, want := browserMode(config.BrowserConfig{}), "urls"; got != want {
+		t.Fatalf("default mode = %q, want %q", got, want)
+	}
+
+	if got, want := browserMode(config.BrowserConfig{Mode: " exact "}), "exact"; got != want {
+		t.Fatalf("trimmed mode = %q, want %q", got, want)
 	}
 }
