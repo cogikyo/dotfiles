@@ -5,6 +5,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"time"
 )
 
 // Client provides methods for sending commands to a daemon over Unix sockets.
@@ -29,6 +30,7 @@ func (c *Client) Send(command string) (string, error) {
 		return "", err
 	}
 
+	conn.SetReadDeadline(time.Now().Add(15 * time.Second))
 	buf := make([]byte, 64*1024)
 	n, err := conn.Read(buf)
 	if err != nil {
