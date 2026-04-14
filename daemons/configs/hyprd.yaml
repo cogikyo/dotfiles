@@ -192,6 +192,7 @@ sessions:
     name: gimp
     workspace: 3
     command: gimp
+
   leadpier:
     name: leadpier
     workspace: 4
@@ -206,6 +207,7 @@ sessions:
       force: true
     tabs:
       editor: leadpier
+
   dotfiles:
     name: dotfiles
     workspace: 5
