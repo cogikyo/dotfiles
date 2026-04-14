@@ -70,10 +70,8 @@ func (t *Tabs) init(args []string) (string, error) {
 		if !t.checkRequires(tab.Requires, cwd) {
 			continue
 		}
-		tabID := fmt.Sprintf("%d-%s%s", windowID, profile.Prefix, tab.Name)
-		launchArgs := t.buildLaunchArgs(tab, tabID, cwd)
-		if err := kitty.Launch(launchArgs...); err != nil {
-			return "", fmt.Errorf("launch tab %s: %w", tab.Name, err)
+		if err := t.launchTab(kitty, profile, tab, windowID, cwd); err != nil {
+			return "", err
 		}
 		created++
 	}
@@ -142,10 +140,8 @@ func (t *Tabs) refreshAll(kitty *KittyClient, profile *config.TabProfile, window
 		if !t.checkRequires(tab.Requires, cwd) {
 			continue
 		}
-		tabID := fmt.Sprintf("%d-%s%s", windowID, profile.Prefix, tab.Name)
-		launchArgs := t.buildLaunchArgs(tab, tabID, cwd)
-		if err := kitty.Launch(launchArgs...); err != nil {
-			return "", fmt.Errorf("launch tab %s: %w", tab.Name, err)
+		if err := t.launchTab(kitty, profile, tab, windowID, cwd); err != nil {
+			return "", err
 		}
 		created++
 	}
@@ -172,9 +168,8 @@ func (t *Tabs) refreshSingle(kitty *KittyClient, profile *config.TabProfile, tab
 		return fmt.Sprintf("tabs refresh: %s (skipped, requires %s)", tab.Name, tab.Requires), nil
 	}
 
-	launchArgs := t.buildLaunchArgs(tab, tabID, cwd)
-	if err := kitty.Launch(launchArgs...); err != nil {
-		return "", fmt.Errorf("launch tab %s: %w", tab.Name, err)
+	if err := t.launchTab(kitty, profile, tab, windowID, cwd); err != nil {
+		return "", err
 	}
 
 	if origIdx >= 0 {
@@ -224,16 +219,7 @@ func (t *Tabs) resolveDefaultCWD(win KittyOSWindow) string {
 }
 
 func (t *Tabs) resolveCWD(tab config.TabDef, defaultCWD string) string {
-	base := defaultCWD
-	if tab.CWD != "" {
-		base = config.ExpandPath(tab.CWD)
-	}
-	if tab.CWDResolve == "recent-git" {
-		if resolved := recentGitChild(base); resolved != "" {
-			return resolved
-		}
-	}
-	return base
+	return t.resolveBaseCWD(tab.CWD, tab.CWDResolve, defaultCWD)
 }
 
 func recentGitChild(parent string) string {
@@ -279,6 +265,36 @@ func (t *Tabs) checkRequires(requires, cwd string) bool {
 	}
 }
 
+func (t *Tabs) launchTab(kitty *KittyClient, profile *config.TabProfile, tab config.TabDef, windowID int, cwd string) error {
+	tabID := fmt.Sprintf("%d-%s%s", windowID, profile.Prefix, tab.Name)
+	launchArgs := t.buildLaunchArgs(tab, tabID, cwd)
+	if err := kitty.Launch(launchArgs...); err != nil {
+		return fmt.Errorf("launch tab %s: %w", tab.Name, err)
+	}
+
+	if tab.Layout != "" {
+		if err := kitty.GotoLayout(tabID, tab.Layout); err != nil {
+			return fmt.Errorf("set layout for tab %s: %w", tab.Name, err)
+		}
+	}
+
+	for _, pane := range tab.Panes {
+		paneCWD := t.resolvePaneCWD(pane, cwd)
+		launchArgs = t.buildPaneLaunchArgs(tabID, pane, paneCWD)
+		if err := kitty.Launch(launchArgs...); err != nil {
+			return fmt.Errorf("launch pane for tab %s: %w", tab.Name, err)
+		}
+	}
+
+	if tab.Layout != "" && len(tab.Panes) > 0 {
+		if err := kitty.GotoLayout(tabID, tab.Layout); err != nil {
+			return fmt.Errorf("reapply layout for tab %s: %w", tab.Name, err)
+		}
+	}
+
+	return nil
+}
+
 func (t *Tabs) buildLaunchArgs(tab config.TabDef, tabID, cwd string) []string {
 	args := []string{
 		"--type=tab",
@@ -294,6 +310,43 @@ func (t *Tabs) buildLaunchArgs(tab config.TabDef, tabID, cwd string) []string {
 		args = append(args, "--hold", "zsh", "-lc", tab.Command)
 	}
 	return args
+}
+
+func (t *Tabs) buildPaneLaunchArgs(tabID string, pane config.TabPane, cwd string) []string {
+	args := []string{
+		"--copy-env",
+		"--match", "env:KITTY_TAB_ID=" + tabID,
+		"--env", "KITTY_TAB_ID=" + tabID,
+		"--cwd=" + cwd,
+	}
+	if pane.Location != "" {
+		args = append(args, "--location="+pane.Location)
+	}
+	if pane.Bias != 0 {
+		args = append(args, "--bias", strconv.Itoa(pane.Bias))
+	}
+	switch {
+	case pane.Command != "":
+		args = append(args, "--hold", "zsh", "-lc", pane.Command)
+	}
+	return args
+}
+
+func (t *Tabs) resolvePaneCWD(pane config.TabPane, defaultCWD string) string {
+	return t.resolveBaseCWD(pane.CWD, pane.CWDResolve, defaultCWD)
+}
+
+func (t *Tabs) resolveBaseCWD(cwd, cwdResolve, defaultCWD string) string {
+	base := defaultCWD
+	if cwd != "" {
+		base = config.ExpandPath(cwd)
+	}
+	if cwdResolve == "recent-git" {
+		if resolved := recentGitChild(base); resolved != "" {
+			return resolved
+		}
+	}
+	return base
 }
 
 func (t *Tabs) findTab(profile *config.TabProfile, name string) *config.TabDef {

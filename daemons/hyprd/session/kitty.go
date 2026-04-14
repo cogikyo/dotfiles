@@ -105,6 +105,11 @@ func (k *KittyClient) Launch(args ...string) error {
 	return exec.Command("kitty", cmdArgs...).Run()
 }
 
+func (k *KittyClient) GotoLayout(tabID, layout string) error {
+	return exec.Command("kitty", "@", "--to", k.socketPath,
+		"goto-layout", "--match", "env:KITTY_TAB_ID="+tabID, layout).Run()
+}
+
 func (k *KittyClient) CloseTab(tabID string) error {
 	out, err := exec.Command("kitty", "@", "--to", k.socketPath,
 		"close-tab", "--match", "env:KITTY_TAB_ID="+tabID).CombinedOutput()

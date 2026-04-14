@@ -141,12 +141,23 @@ type TabProfile struct {
 
 // TabDef defines a single kitty tab within a profile.
 type TabDef struct {
-	Name       string `yaml:"name"`
-	Title      string `yaml:"title"`
+	Name       string    `yaml:"name"`
+	Title      string    `yaml:"title"`
+	Command    string    `yaml:"command"`
+	CWD        string    `yaml:"cwd"`
+	CWDResolve string    `yaml:"cwd_resolve"`
+	Requires   string    `yaml:"requires"`
+	Layout     string    `yaml:"layout"`
+	Panes      []TabPane `yaml:"panes"`
+}
+
+// TabPane defines an extra pane to create inside a kitty tab after the primary pane.
+type TabPane struct {
 	Command    string `yaml:"command"`
 	CWD        string `yaml:"cwd"`
 	CWDResolve string `yaml:"cwd_resolve"`
-	Requires   string `yaml:"requires"`
+	Location   string `yaml:"location"`
+	Bias       int    `yaml:"bias"`
 }
 
 // ThreeBodyWindow defines a window that participates in the three-body layout.
@@ -375,10 +386,10 @@ func DefaultHypr() HyprConfig {
 				Focus:  "fe-nvim",
 				Tabs: []TabDef{
 					{Name: "fe-nvim", Title: "«   »", Command: "nvim", CWD: "~/LeadPier/frontend"},
-					{Name: "be-nvim", Title: "«   »", Command: "nvim", CWD: "~/LeadPier/backend/services", CWDResolve: "recent-git"},
-					{Name: "term", Title: "« 󰠳  »", CWD: "~/LeadPier"},
-					{Name: "fe-build", Title: "«   »", Command: "yarn dev", CWD: "~/LeadPier/frontend"},
-					{Name: "be-build", Title: "«   »", Command: "pier watch", CWD: "~/LeadPier/backend/core/runner"},
+					{Name: "be-nvim", Title: "«   »", Command: "nvim", CWD: "~/LeadPier/backend"},
+					{Name: "nvim", Title: "« 󰠳  »", Command: "nvim", CWD: "~/LeadPier"},
+					{Name: "fe-build", Title: "«   »", Command: "yarn dev", CWD: "~/LeadPier/frontend", Layout: "fat:bias=80", Panes: []TabPane{{CWD: "~/LeadPier/frontend"}}},
+					{Name: "be-build", Title: "«   »", Command: "pier watch", CWD: "~/LeadPier/backend/core/runner", Layout: "fat:bias=80", Panes: []TabPane{{CWD: "~/LeadPier/backend/core/runner"}}},
 				},
 			},
 		},
