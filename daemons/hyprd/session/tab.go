@@ -87,6 +87,9 @@ func (t *Tab) Execute(tabName string) (string, error) {
 		targetTab = "nvim"
 	}
 	if profileTab(cfg, profileName, targetTab) == nil {
+		if actionName == "term" {
+			return t.spawnTerminal(wsID)
+		}
 		return "", fmt.Errorf("tab %q not in profile %s", targetTab, profileName)
 	}
 
@@ -94,7 +97,10 @@ func (t *Tab) Execute(tabName string) (string, error) {
 	if prefix == "" {
 		prefix = "ed-"
 	}
-	targetTabID := fmt.Sprintf("%d-%s%s", st.WindowID, prefix, targetTab)
+	targetTabID := runtimeTabID(windows[0], &profile, targetTab)
+	if targetTabID == "" {
+		targetTabID = fmt.Sprintf("%d-%s%s", st.WindowID, prefix, targetTab)
+	}
 
 	activeAddr, _ := t.activeWindowAddress()
 	if activeAddr == editor.Address && st.ActiveTabID == targetTabID {

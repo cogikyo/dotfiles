@@ -100,7 +100,8 @@ func activeProfileTabName(cfg *config.HyprConfig, profileName string, win KittyO
 			if !pane.IsFocused {
 				continue
 			}
-			return profileTabNameFromID(win.ID, profile.Prefix, pane.Env["KITTY_TAB_ID"])
+			name := profileTabNameFromID(win.ID, profile.Prefix, pane.Env["KITTY_TAB_ID"])
+			return normalizeProfileTabName(&profile, name)
 		}
 	}
 	return ""
@@ -117,6 +118,38 @@ func profileTabNameFromID(windowID int, prefix, tabID string) string {
 	return tabID[len(fullPrefix):]
 }
 
+func normalizeProfileTabName(profile *config.TabProfile, tabName string) string {
+	if profile == nil || tabName == "" {
+		return tabName
+	}
+	if hasProfileTab(profile, tabName) {
+		return tabName
+	}
+	if tabName == "term" && hasProfileTab(profile, "nvim") {
+		return "nvim"
+	}
+	return tabName
+}
+
+func runtimeTabID(win KittyOSWindow, profile *config.TabProfile, targetTab string) string {
+	if profile == nil {
+		return ""
+	}
+	for _, tab := range win.Tabs {
+		for _, pane := range tab.Windows {
+			tabID := pane.Env["KITTY_TAB_ID"]
+			if tabID == "" {
+				continue
+			}
+			name := profileTabNameFromID(win.ID, profile.Prefix, tabID)
+			if normalizeProfileTabName(profile, name) == targetTab {
+				return tabID
+			}
+		}
+	}
+	return fmt.Sprintf("%d-%s%s", win.ID, profile.Prefix, targetTab)
+}
+
 func normalizeTabAction(nameOrAlias string) string {
 	switch baseTabName(nameOrAlias) {
 	case "nvimtree":
@@ -131,16 +164,14 @@ func semanticCandidates(profile *config.TabProfile, action string) []string {
 		return nil
 	}
 
+	var matches []string
 	if hasProfileTab(profile, action) {
-		return []string{action}
+		matches = append(matches, action)
 	}
-
 	suffix := action
 	if action == "git" && !hasProfileTab(profile, "git") {
 		suffix = "build"
 	}
-
-	var matches []string
 	for _, tab := range profile.Tabs {
 		if strings.HasSuffix(tab.Name, "-"+suffix) {
 			matches = append(matches, tab.Name)
