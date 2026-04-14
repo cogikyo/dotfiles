@@ -1,6 +1,7 @@
 package browser
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -105,21 +106,15 @@ func (b *Browser) RestoreConfiguredSnapshot(cfg config.BrowserConfig, dryRun boo
 }
 
 func (b *Browser) executeWindows(args []string) (string, error) {
-	var profileArg string
+	profileArg, rest, err := parseProfileFlag(args, browserWindowsUsage)
+	if err != nil {
+		return "", err
+	}
 	all := false
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
+	for _, arg := range rest {
 		switch {
 		case arg == "--all":
 			all = true
-		case arg == "--profile":
-			if i+1 >= len(args) {
-				return "", fmt.Errorf(browserWindowsUsage)
-			}
-			i++
-			profileArg = args[i]
-		case strings.HasPrefix(arg, "--profile="):
-			profileArg = strings.TrimPrefix(arg, "--profile=")
 		default:
 			return "", fmt.Errorf(browserWindowsUsage)
 		}
@@ -174,19 +169,13 @@ func (b *Browser) executeWindows(args []string) (string, error) {
 }
 
 func (b *Browser) executeSnapshot(args []string) (string, error) {
-	var profileArg string
+	profileArg, rest, err := parseProfileFlag(args, browserSnapshotUsage)
+	if err != nil {
+		return "", err
+	}
 	var positional []string
-	for i := 0; i < len(args); i++ {
-		arg := args[i]
+	for _, arg := range rest {
 		switch {
-		case arg == "--profile":
-			if i+1 >= len(args) {
-				return "", fmt.Errorf(browserSnapshotUsage)
-			}
-			i++
-			profileArg = args[i]
-		case strings.HasPrefix(arg, "--profile="):
-			profileArg = strings.TrimPrefix(arg, "--profile=")
 		case strings.HasPrefix(arg, "--"):
 			return "", fmt.Errorf(browserSnapshotUsage)
 		default:
@@ -249,6 +238,28 @@ func (b *Browser) executeHypr(args []string) (string, error) {
 		return "", err
 	}
 	return strings.TrimRight(string(out), "\n"), nil
+}
+
+// parseProfileFlag extracts --profile <val> or --profile=<val> from args,
+// returning the resolved profile value, the remaining args with the flag
+// removed, and an error if --profile was given without a value.
+func parseProfileFlag(args []string, usage string) (profile string, rest []string, err error) {
+	for i := 0; i < len(args); i++ {
+		arg := args[i]
+		switch {
+		case arg == "--profile":
+			if i+1 >= len(args) {
+				return "", nil, errors.New(usage)
+			}
+			i++
+			profile = args[i]
+		case strings.HasPrefix(arg, "--profile="):
+			profile = strings.TrimPrefix(arg, "--profile=")
+		default:
+			rest = append(rest, arg)
+		}
+	}
+	return profile, rest, nil
 }
 
 func browserMode(cfg config.BrowserConfig) string {
