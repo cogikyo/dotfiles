@@ -154,14 +154,14 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 		}
 		if name == "browser" || strings.Contains(strings.ToLower(tbw.Class), "firefox") {
 			if len(urls) > 0 {
-				l.hypr.Dispatch(fmt.Sprintf("exec %s '%s'", tbw.Command, urls[0]))
+				l.hypr.Dispatch(fmt.Sprintf("exec %s", browserLaunchCmd(tbw.Command, "new-window", urls[0])))
 				time.Sleep(500 * time.Millisecond)
 				for _, url := range urls[1:] {
-					l.hypr.Dispatch(fmt.Sprintf("exec %s '%s'", tbw.Command, url))
+					l.hypr.Dispatch(fmt.Sprintf("exec %s", browserLaunchCmd(tbw.Command, "new-tab", url)))
 					time.Sleep(300 * time.Millisecond)
 				}
 			} else {
-				l.hypr.Dispatch(fmt.Sprintf("exec %s", tbw.Command))
+				l.hypr.Dispatch(fmt.Sprintf("exec %s", browserLaunchCmd(tbw.Command, "new-window", "about:blank")))
 				time.Sleep(500 * time.Millisecond)
 			}
 			continue
@@ -234,4 +234,11 @@ func (l *Layout) withSessionLaunchEnv(s config.Session, bodyName, cmd, homeDir s
 	}
 
 	return fmt.Sprintf("env %s %s", strings.Join(env, " "), cmd)
+}
+
+func browserLaunchCmd(cmd, mode, url string) string {
+	if url == "" {
+		url = "about:blank"
+	}
+	return fmt.Sprintf("%s --%s %q", cmd, mode, url)
 }
