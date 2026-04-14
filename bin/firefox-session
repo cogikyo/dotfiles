@@ -1,0 +1,728 @@
+#!/usr/bin/env python3
+"""Capture and restore Firefox Developer Edition browser session snapshots.
+
+Usage examples:
+  firefox-session windows
+  firefox-session snapshot leadpier
+  firefox-session show leadpier
+  firefox-session hypr leadpier
+  firefox-session restore leadpier --mode urls
+  firefox-session restore leadpier --mode exact --dry-run
+"""
+
+from __future__ import annotations
+
+import argparse
+import configparser
+import ctypes
+import ctypes.util
+import json
+import os
+import re
+import shutil
+import signal
+import struct
+import subprocess
+import sys
+import time
+from copy import deepcopy
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Any
+
+MOZLZ4_MAGIC = b"mozLz40\x00"
+DEFAULT_STATE_DIR = Path.home() / ".local" / "state" / "firefox-sessions"
+FIREFOX_TITLE_SUFFIX = " — Firefox Developer Edition"
+TRIVIAL_URLS = {
+    "",
+    "about:blank",
+    "about:home",
+    "about:newtab",
+    "http://localhost:42069/",
+    "https://localhost:42069/",
+}
+
+
+def eprint(*args: Any) -> None:
+    print(*args, file=sys.stderr)
+
+
+def fail(message: str, code: int = 1) -> None:
+    eprint(f"firefox-session: {message}")
+    raise SystemExit(code)
+
+
+def now_stamp() -> str:
+    return datetime.now().astimezone().strftime("%Y%m%d-%H%M%S")
+
+
+def state_dir() -> Path:
+    raw = os.environ.get("FIREFOX_SESSION_DIR")
+    return Path(raw).expanduser() if raw else DEFAULT_STATE_DIR
+
+
+def slugify(value: str) -> str:
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", value.strip()).strip("-")
+    if not slug:
+        fail("snapshot name must contain at least one visible character")
+    return slug
+
+
+def quote_yaml_scalar(value: Any) -> str:
+    if value is True:
+        return "true"
+    if value is False:
+        return "false"
+    if value is None:
+        return "null"
+    if isinstance(value, (int, float)):
+        return str(value)
+    return json.dumps(str(value), ensure_ascii=False)
+
+
+def dump_yaml(data: Any, indent: int = 0) -> str:
+    pad = " " * indent
+    if isinstance(data, dict):
+        lines: list[str] = []
+        for key, value in data.items():
+            if isinstance(value, (dict, list)) and value:
+                lines.append(f"{pad}{key}:")
+                lines.append(dump_yaml(value, indent + 2))
+            elif isinstance(value, (dict, list)):
+                empty = "{}" if isinstance(value, dict) else "[]"
+                lines.append(f"{pad}{key}: {empty}")
+            else:
+                lines.append(f"{pad}{key}: {quote_yaml_scalar(value)}")
+        return "\n".join(lines)
+    if isinstance(data, list):
+        lines = []
+        for item in data:
+            if isinstance(item, (dict, list)) and item:
+                lines.append(f"{pad}-")
+                lines.append(dump_yaml(item, indent + 2))
+            elif isinstance(item, (dict, list)):
+                empty = "{}" if isinstance(item, dict) else "[]"
+                lines.append(f"{pad}- {empty}")
+            else:
+                lines.append(f"{pad}- {quote_yaml_scalar(item)}")
+        return "\n".join(lines)
+    return f"{pad}{quote_yaml_scalar(data)}"
+
+
+class MozLz4:
+    def __init__(self) -> None:
+        name = ctypes.util.find_library("lz4") or "liblz4.so.1"
+        self.lib = ctypes.CDLL(name)
+        self.lib.LZ4_decompress_safe.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_int,
+            ctypes.c_int,
+        ]
+        self.lib.LZ4_decompress_safe.restype = ctypes.c_int
+        self.lib.LZ4_compress_default.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_void_p,
+            ctypes.c_int,
+            ctypes.c_int,
+        ]
+        self.lib.LZ4_compress_default.restype = ctypes.c_int
+        self.lib.LZ4_compressBound.argtypes = [ctypes.c_int]
+        self.lib.LZ4_compressBound.restype = ctypes.c_int
+
+    def decode(self, path: Path) -> dict[str, Any]:
+        raw = path.read_bytes()
+        if raw[:8] != MOZLZ4_MAGIC:
+            fail(f"{path} is not a Mozilla jsonlz4 file")
+        out_len = struct.unpack("<I", raw[8:12])[0]
+        comp = raw[12:]
+        src = ctypes.create_string_buffer(comp, len(comp))
+        dst = ctypes.create_string_buffer(out_len)
+        written = self.lib.LZ4_decompress_safe(src, dst, len(comp), out_len)
+        if written < 0:
+            fail(f"failed to decode {path}")
+        return json.loads(dst.raw[:written])
+
+    def encode(self, data: dict[str, Any], path: Path) -> None:
+        raw = json.dumps(data, ensure_ascii=False, separators=(",", ":")).encode("utf-8")
+        bound = self.lib.LZ4_compressBound(len(raw))
+        src = ctypes.create_string_buffer(raw, len(raw))
+        dst = ctypes.create_string_buffer(bound)
+        written = self.lib.LZ4_compress_default(src, dst, len(raw), bound)
+        if written <= 0:
+            fail(f"failed to encode {path}")
+        payload = MOZLZ4_MAGIC + struct.pack("<I", len(raw)) + dst.raw[:written]
+        path.write_bytes(payload)
+
+
+MOZLZ4 = MozLz4()
+
+
+@dataclass
+class Profile:
+    root: Path
+    name: str
+    install_key: str | None = None
+
+
+def firefox_root() -> Path:
+    for candidate in (
+        Path.home() / ".config" / "mozilla" / "firefox",
+        Path.home() / ".mozilla" / "firefox",
+    ):
+        if (candidate / "profiles.ini").exists():
+            return candidate
+    fail("could not find Firefox profile root")
+
+
+def load_ini(path: Path) -> configparser.ConfigParser:
+    parser = configparser.ConfigParser()
+    parser.read(path)
+    return parser
+
+
+def discover_profile(raw: str | None = None) -> Profile:
+    root = firefox_root()
+    profiles = load_ini(root / "profiles.ini")
+    installs_path = root / "installs.ini"
+    installs = load_ini(installs_path) if installs_path.exists() else configparser.ConfigParser()
+
+    if raw:
+        candidate = Path(raw).expanduser()
+        if candidate.exists():
+            return Profile(candidate, candidate.name)
+
+        for section in profiles.sections():
+            if not section.startswith("Profile"):
+                continue
+            name = profiles.get(section, "Name", fallback="")
+            rel = profiles.get(section, "IsRelative", fallback="1") == "1"
+            path_value = profiles.get(section, "Path", fallback="")
+            profile_path = (root / path_value) if rel else Path(path_value)
+            if raw in {name, path_value, profile_path.name}:
+                return Profile(profile_path, name or profile_path.name)
+        fail(f"profile {raw!r} not found")
+
+    for section in installs.sections():
+        default_path = installs.get(section, "Default", fallback="")
+        if default_path:
+            profile_path = root / default_path
+            return Profile(profile_path, profile_path.name, install_key=section)
+
+    for section in profiles.sections():
+        if not section.startswith("Profile"):
+            continue
+        if profiles.get(section, "Default", fallback="0") != "1":
+            continue
+        name = profiles.get(section, "Name", fallback="")
+        rel = profiles.get(section, "IsRelative", fallback="1") == "1"
+        path_value = profiles.get(section, "Path", fallback="")
+        profile_path = (root / path_value) if rel else Path(path_value)
+        return Profile(profile_path, name or profile_path.name)
+
+    fail("could not determine default Firefox profile")
+
+
+def session_source_file(profile: Profile) -> Path:
+    candidates = [
+        profile.root / "sessionstore-backups" / "recovery.jsonlz4",
+        profile.root / "sessionstore-backups" / "recovery.baklz4",
+        profile.root / "sessionstore.jsonlz4",
+        profile.root / "sessionstore-backups" / "previous.jsonlz4",
+    ]
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
+    fail(f"no sessionstore file found in {profile.root}")
+
+
+def selected_entry(tab: dict[str, Any]) -> dict[str, Any]:
+    entries = tab.get("entries") or []
+    index = max(0, int(tab.get("index", 1)) - 1)
+    if not entries:
+        return {}
+    return entries[index] if index < len(entries) else entries[-1]
+
+
+def selected_tab_title(window: dict[str, Any]) -> str:
+    tabs = window.get("tabs") or []
+    if not tabs:
+        return ""
+    index = max(0, int(window.get("selected", 1)) - 1)
+    tab = tabs[index] if index < len(tabs) else tabs[-1]
+    return str(selected_entry(tab).get("title") or "")
+
+
+def selected_tab_url(window: dict[str, Any]) -> str:
+    tabs = window.get("tabs") or []
+    if not tabs:
+        return ""
+    index = max(0, int(window.get("selected", 1)) - 1)
+    tab = tabs[index] if index < len(tabs) else tabs[-1]
+    return str(selected_entry(tab).get("url") or "")
+
+
+def window_last_accessed(window: dict[str, Any]) -> int:
+    access = [int(tab.get("lastAccessed", 0) or 0) for tab in window.get("tabs") or []]
+    return max(access or [0])
+
+
+def current_hypr_firefox_title() -> str | None:
+    try:
+        proc = subprocess.run(
+            ["hyprctl", "activewindow", "-j"],
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return None
+
+    data = json.loads(proc.stdout)
+    if data.get("class") != "firefox-developer-edition":
+        return None
+    title = str(data.get("title") or "")
+    return title.removesuffix(FIREFOX_TITLE_SUFFIX).strip()
+
+
+def window_is_interesting(window: dict[str, Any]) -> bool:
+    tabs = window.get("tabs") or []
+    if len(tabs) > 1:
+        return True
+    if window.get("groups"):
+        return True
+    if any(tab.get("pinned") for tab in tabs):
+        return True
+    urls = [str(selected_entry(tab).get("url") or "") for tab in tabs]
+    return any(url not in TRIVIAL_URLS for url in urls)
+
+
+def resolve_window_index(session: dict[str, Any], raw: str | None) -> int:
+    windows = session.get("windows") or []
+    if not windows:
+        fail("session file has no windows")
+
+    if raw:
+        if raw.isdigit():
+            index = int(raw) - 1
+            if 0 <= index < len(windows):
+                return index
+            fail(f"window index {raw} is out of range")
+        if raw == "largest":
+            return max(
+                range(len(windows)),
+                key=lambda idx: (
+                    len(windows[idx].get("tabs") or []),
+                    len(windows[idx].get("groups") or []),
+                    window_last_accessed(windows[idx]),
+                ),
+            )
+        if raw != "active":
+            fail(f"unknown window selector {raw!r}")
+
+    active_title = current_hypr_firefox_title()
+    if active_title:
+        for idx, window in enumerate(windows):
+            title = selected_tab_title(window)
+            if title and (title == active_title or active_title.startswith(title) or title.startswith(active_title)):
+                return idx
+
+    interesting = [idx for idx, window in enumerate(windows) if window_is_interesting(window)]
+    pool = interesting or list(range(len(windows)))
+    return max(
+        pool,
+        key=lambda idx: (
+            len(windows[idx].get("groups") or []),
+            len(windows[idx].get("tabs") or []),
+            window_last_accessed(windows[idx]),
+        ),
+    )
+
+
+def summarize_window(window: dict[str, Any]) -> dict[str, Any]:
+    groups = window.get("groups") or []
+    groups_by_id = {group["id"]: group for group in groups if "id" in group}
+    tabs_summary = []
+
+    for position, tab in enumerate(window.get("tabs") or [], start=1):
+        entry = selected_entry(tab)
+        group_id = tab.get("groupId") or tab.get("group")
+        group = groups_by_id.get(group_id)
+        tabs_summary.append(
+            {
+                "position": position,
+                "title": str(entry.get("title") or ""),
+                "url": str(entry.get("url") or ""),
+                "pinned": bool(tab.get("pinned", False)),
+                "hidden": bool(tab.get("hidden", False)),
+                "group_id": group_id,
+                "group": group.get("name") if group else None,
+                "group_color": group.get("color") if group else None,
+            }
+        )
+
+    browser = {"pinned": [], "groups": [], "urls": []}
+    for tab in tabs_summary:
+        if tab["hidden"]:
+            continue
+        if tab["pinned"]:
+            browser["pinned"].append(tab["url"])
+        elif not tab["group_id"]:
+            browser["urls"].append(tab["url"])
+
+    seen_group_ids: set[str] = set()
+    for group in groups:
+        group_id = group.get("id")
+        if not group_id:
+            continue
+        seen_group_ids.add(group_id)
+        urls = [tab["url"] for tab in tabs_summary if tab["group_id"] == group_id and not tab["hidden"]]
+        browser["groups"].append(
+            {
+                "name": group.get("name"),
+                "color": group.get("color"),
+                "collapsed": bool(group.get("collapsed", False)),
+                "urls": urls,
+            }
+        )
+
+    for group_id in {tab["group_id"] for tab in tabs_summary if tab["group_id"]} - seen_group_ids:
+        urls = [tab["url"] for tab in tabs_summary if tab["group_id"] == group_id and not tab["hidden"]]
+        browser["groups"].append(
+            {
+                "name": group_id,
+                "color": None,
+                "collapsed": False,
+                "urls": urls,
+            }
+        )
+
+    hypr_order = list(browser["pinned"])
+    for group in browser["groups"]:
+        hypr_order.extend(group["urls"])
+    hypr_order.extend(browser["urls"])
+    live_order = [tab["url"] for tab in tabs_summary if not tab["hidden"]]
+
+    return {
+        "selected_tab": int(window.get("selected", 1)),
+        "tab_count": len(window.get("tabs") or []),
+        "group_count": len(groups),
+        "selected_title": selected_tab_title(window),
+        "selected_url": selected_tab_url(window),
+        "tabs": tabs_summary,
+        "browser": browser,
+        "hypr_order_matches_tabs": hypr_order == live_order,
+    }
+
+
+def snapshot_root(session: dict[str, Any], window_index: int) -> dict[str, Any]:
+    root: dict[str, Any] = {}
+    for key in ("version", "session", "global", "maxSplitViewId"):
+        if key in session:
+            root[key] = deepcopy(session[key])
+    root["windows"] = [deepcopy(session["windows"][window_index])]
+    root["selectedWindow"] = 1
+    root["_closedWindows"] = []
+    root["savedGroups"] = deepcopy(session.get("savedGroups", []))
+    return root
+
+
+def name_dir(name: str) -> Path:
+    return state_dir() / slugify(name)
+
+
+def latest_snapshot_dir(name: str) -> Path:
+    latest = name_dir(name) / "latest"
+    if latest.is_symlink():
+        return latest.resolve()
+    if latest.exists():
+        return latest
+    fail(f"no snapshot found for {name!r}")
+
+
+def load_snapshot(name: str, raw_snapshot: str | None = None) -> tuple[Path, dict[str, Any]]:
+    base = name_dir(name)
+    snapshot_dir = (base / raw_snapshot) if raw_snapshot else latest_snapshot_dir(name)
+    session_file = snapshot_dir / "session.json"
+    if not session_file.exists():
+        fail(f"snapshot session file not found: {session_file}")
+    return snapshot_dir, json.loads(session_file.read_text())
+
+
+def write_snapshot_files(
+    name: str,
+    profile: Profile,
+    session_file: Path,
+    window_index: int,
+    session: dict[str, Any],
+) -> Path:
+    snapshot_id = now_stamp()
+    target_dir = name_dir(name) / snapshot_id
+    target_dir.mkdir(parents=True, exist_ok=False)
+
+    summary = summarize_window(session["windows"][window_index])
+    summary_doc = {
+        "name": slugify(name),
+        "created_at": datetime.now().astimezone().isoformat(timespec="seconds"),
+        "profile": {
+            "name": profile.name,
+            "path": str(profile.root),
+            "install_key": profile.install_key,
+        },
+        "source": {
+            "session_file": str(session_file),
+            "window_index": window_index + 1,
+        },
+        "window": {
+            "selected_tab": summary["selected_tab"],
+            "tab_count": summary["tab_count"],
+            "group_count": summary["group_count"],
+            "selected_title": summary["selected_title"],
+            "selected_url": summary["selected_url"],
+            "hypr_order_matches_tabs": summary["hypr_order_matches_tabs"],
+        },
+        "browser": summary["browser"],
+        "tabs": summary["tabs"],
+    }
+
+    (target_dir / "snapshot.yaml").write_text(dump_yaml(summary_doc) + "\n")
+    (target_dir / "session.json").write_text(
+        json.dumps(snapshot_root(session, window_index), ensure_ascii=False, indent=2) + "\n"
+    )
+
+    latest_link = name_dir(name) / "latest"
+    tmp_link = name_dir(name) / ".latest.tmp"
+    if tmp_link.exists() or tmp_link.is_symlink():
+        tmp_link.unlink()
+    tmp_link.symlink_to(snapshot_id)
+    tmp_link.replace(latest_link)
+    return target_dir
+
+
+def cmd_windows(args: argparse.Namespace) -> None:
+    profile = discover_profile(args.profile)
+    source = session_source_file(profile)
+    session = MOZLZ4.decode(source)
+    active_title = current_hypr_firefox_title()
+
+    print(f"profile: {profile.name} ({profile.root})")
+    print(f"session: {source}")
+    if active_title:
+        print(f"active_hypr_title: {active_title}")
+
+    for idx, window in enumerate(session.get("windows") or [], start=1):
+        summary = summarize_window(window)
+        interesting = window_is_interesting(window)
+        if not args.all and not interesting:
+            continue
+        mark = "*" if active_title and summary["selected_title"] and (
+            summary["selected_title"] == active_title
+            or active_title.startswith(summary["selected_title"])
+            or summary["selected_title"].startswith(active_title)
+        ) else " "
+        tags = []
+        if interesting:
+            tags.append("interesting")
+        if summary["group_count"]:
+            tags.append(f"groups={summary['group_count']}")
+        print(
+            f"{mark} {idx:02d} tabs={summary['tab_count']} "
+            f"selected={summary['selected_tab']} "
+            f"title={summary['selected_title']!r} "
+            f"url={summary['selected_url']!r} "
+            + (" ".join(tags) if tags else "")
+        )
+
+
+def cmd_snapshot(args: argparse.Namespace) -> None:
+    profile = discover_profile(args.profile)
+    source = session_source_file(profile)
+    session = MOZLZ4.decode(source)
+    window_index = resolve_window_index(session, args.window)
+    target_dir = write_snapshot_files(args.name, profile, source, window_index, session)
+    print(target_dir)
+
+
+def cmd_show(args: argparse.Namespace) -> None:
+    snapshot_dir = latest_snapshot_dir(args.name) if args.snapshot is None else name_dir(args.name) / args.snapshot
+    summary = snapshot_dir / "snapshot.yaml"
+    if not summary.exists():
+        fail(f"snapshot summary not found: {summary}")
+    print(summary.read_text(), end="")
+
+
+def cmd_hypr(args: argparse.Namespace) -> None:
+    _, session = load_snapshot(args.name, args.snapshot)
+    window = session["windows"][0]
+    browser = summarize_window(window)["browser"]
+    doc = {
+        "browser": {
+            "pinned": browser["pinned"],
+            "groups": [{"name": group["name"], "urls": group["urls"]} for group in browser["groups"]],
+            "urls": browser["urls"],
+        }
+    }
+    print(dump_yaml(doc))
+
+
+def firefox_running() -> list[int]:
+    try:
+        proc = subprocess.run(
+            ["pgrep", "-f", "/usr/lib/firefox-developer-edition/firefox|firefox-developer-edition"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+    except FileNotFoundError:
+        return []
+    pids = []
+    for line in proc.stdout.splitlines():
+        line = line.strip()
+        if line.isdigit():
+            pids.append(int(line))
+    return pids
+
+
+def stop_firefox(force: bool) -> None:
+    pids = firefox_running()
+    if not pids:
+        return
+    if not force:
+        fail("Firefox is running; rerun with --force for exact restore")
+
+    for pid in pids:
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+
+    deadline = time.time() + 15
+    while time.time() < deadline:
+        if not firefox_running():
+            return
+        time.sleep(0.25)
+    fail("Firefox did not exit cleanly after SIGTERM")
+
+
+def backup_profile_session_files(profile: Profile) -> Path:
+    backup_dir = state_dir() / "_restore-backups" / now_stamp()
+    backup_dir.mkdir(parents=True, exist_ok=False)
+
+    for name in ("sessionstore.jsonlz4", "sessionCheckpoints.json"):
+        source = profile.root / name
+        if source.exists():
+            shutil.move(str(source), str(backup_dir / name))
+
+    backups_dir = profile.root / "sessionstore-backups"
+    if backups_dir.exists():
+        shutil.move(str(backups_dir), str(backup_dir / "sessionstore-backups"))
+    (profile.root / "sessionstore-backups").mkdir(exist_ok=True)
+
+    return backup_dir
+
+
+def launch_firefox(profile: Profile, dry_run: bool) -> None:
+    cmd = [
+        "firefox-developer-edition",
+        "--new-instance",
+        "--profile",
+        str(profile.root),
+    ]
+    if dry_run:
+        print(" ".join(json.dumps(part) for part in cmd))
+        return
+    subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+
+
+def restore_urls(session: dict[str, Any], dry_run: bool) -> None:
+    tabs = [tab for tab in summarize_window(session["windows"][0])["tabs"] if not tab["hidden"] and tab["url"]]
+    if not tabs:
+        fail("snapshot has no visible tabs to restore")
+
+    commands = []
+    first = tabs[0]["url"]
+    commands.append(["firefox-developer-edition", "--new-window", first])
+    for tab in tabs[1:]:
+        commands.append(["firefox-developer-edition", "--new-tab", tab["url"]])
+
+    for cmd in commands:
+        print(" ".join(json.dumps(part) for part in cmd))
+        if not dry_run:
+            subprocess.run(cmd, check=True)
+            time.sleep(0.2)
+
+
+def restore_exact(name: str, session: dict[str, Any], profile: Profile, force: bool, dry_run: bool) -> None:
+    target = profile.root / "sessionstore.jsonlz4"
+    backup_dir = state_dir() / "_restore-backups" / now_stamp()
+    if dry_run:
+        print(f"would stop Firefox (force={force})")
+        print(f"would back up session files into {backup_dir}")
+        print(f"would write {target}")
+        print(f"would launch firefox-developer-edition --new-instance --profile {profile.root}")
+        return
+
+    stop_firefox(force=force)
+    backup_dir = backup_profile_session_files(profile)
+    MOZLZ4.encode(session, target)
+    launch_firefox(profile, dry_run=False)
+    print(f"restored {name} into {profile.root}")
+    print(f"backup: {backup_dir}")
+
+
+def cmd_restore(args: argparse.Namespace) -> None:
+    _, session = load_snapshot(args.name, args.snapshot)
+    profile = discover_profile(args.profile)
+
+    if args.mode == "urls":
+        restore_urls(session, dry_run=args.dry_run)
+        return
+    restore_exact(args.name, session, profile, force=args.force, dry_run=args.dry_run)
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(prog="firefox-session")
+    sub = parser.add_subparsers(dest="command", required=True)
+
+    p_windows = sub.add_parser("windows", help="list live Firefox session windows")
+    p_windows.add_argument("--profile")
+    p_windows.add_argument("--all", action="store_true", help="include trivial blank/newtab windows")
+    p_windows.set_defaults(func=cmd_windows)
+
+    p_snapshot = sub.add_parser("snapshot", help="capture a timestamped session snapshot")
+    p_snapshot.add_argument("name")
+    p_snapshot.add_argument("window", nargs="?", default="active", help="window selector: active, largest, or 1-based index")
+    p_snapshot.add_argument("--profile")
+    p_snapshot.set_defaults(func=cmd_snapshot)
+
+    p_show = sub.add_parser("show", help="print a snapshot summary")
+    p_show.add_argument("name")
+    p_show.add_argument("snapshot", nargs="?", help="snapshot id, defaults to latest")
+    p_show.set_defaults(func=cmd_show)
+
+    p_hypr = sub.add_parser("hypr", help="print a hyprd browser YAML snippet from a snapshot")
+    p_hypr.add_argument("name")
+    p_hypr.add_argument("snapshot", nargs="?", help="snapshot id, defaults to latest")
+    p_hypr.set_defaults(func=cmd_hypr)
+
+    p_restore = sub.add_parser("restore", help="restore a snapshot")
+    p_restore.add_argument("name")
+    p_restore.add_argument("snapshot", nargs="?", help="snapshot id, defaults to latest")
+    p_restore.add_argument("--mode", choices=("urls", "exact"), default="urls")
+    p_restore.add_argument("--profile", help="profile name or path override for exact restore")
+    p_restore.add_argument("--force", action="store_true", help="terminate Firefox for exact restore")
+    p_restore.add_argument("--dry-run", action="store_true")
+    p_restore.set_defaults(func=cmd_restore)
+
+    return parser
+
+
+def main() -> None:
+    parser = build_parser()
+    args = parser.parse_args()
+    args.func(args)
+
+
+if __name__ == "__main__":
+    main()

@@ -201,6 +201,7 @@ sessions:
       - browser
       - agents
     browser:
+      snapshot: leadpier
       urls:
         - http://localhost:4000
     tabs:
