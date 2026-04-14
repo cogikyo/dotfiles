@@ -66,6 +66,7 @@ class Colors:
         self.fg = as_rgb(color_as_int(opts.background))
         self.bg = as_rgb(color_as_int(opts.color4))  # blue accent
         self.red = as_rgb(color_as_int(opts.color1))  # red accent for agent windows
+        self.pink = as_rgb(color_as_int(opts.color13))  # pink accent for ssh sessions
         self.accent = as_rgb(color_as_int(opts.selection_background))
         self.active_bg = as_rgb(color_as_int(opts.active_tab_background))
         # Tab bar background (with fallback)
@@ -77,10 +78,13 @@ colors = Colors()
 
 
 def get_accent() -> int:
-    """Return accent color — red for agent windows, blue otherwise."""
+    """Return accent color — red for agents, pink for ssh, blue otherwise."""
     boss = get_boss()
-    if boss and is_agent_window(boss.active_tab_manager):
+    tm = boss.active_tab_manager if boss else None
+    if tm and is_agent_window(tm):
         return colors.red
+    if tm and _detect_ssh_active(tm)[1]:
+        return colors.pink
     return colors.bg
 
 
@@ -241,6 +245,72 @@ def _detect_active_agent(tab_manager) -> str:
     return result
 
 
+SSH_VALUE_OPTS = {
+    "-b", "-c", "-D", "-E", "-e", "-F", "-I", "-i", "-J", "-L", "-l",
+    "-m", "-O", "-o", "-p", "-Q", "-R", "-S", "-W", "-w",
+}
+
+
+def _parse_ssh_destination(cmdline: list) -> str:
+    """Return the destination arg from an ssh cmdline, or empty string."""
+    i = 1
+    while i < len(cmdline):
+        arg = cmdline[i]
+        if arg.startswith("-") and arg != "-":
+            # Attached value form like -p2222
+            if len(arg) > 2 and arg[:2] in SSH_VALUE_OPTS:
+                i += 1
+                continue
+            if arg in SSH_VALUE_OPTS:
+                i += 2
+                continue
+            i += 1
+            continue
+        return arg
+    return ""
+
+
+def _ssh_from_window(window) -> tuple:
+    """Return (user, host) when the active window is SSH'd to a *different* machine."""
+    local_host = uname()[1].split(".")[0]
+    try:
+        for proc in window.child.foreground_processes:
+            cmdline = proc.get("cmdline") or []
+            if not cmdline:
+                continue
+            name = cmdline[0].rsplit("/", 1)[-1].lower()
+            if name != "ssh":
+                continue
+            dest = _parse_ssh_destination(cmdline)
+            if not dest:
+                continue
+            if "@" in dest:
+                user, host = dest.split("@", 1)
+            else:
+                user, host = "", dest
+            host = host.split(".")[0]
+            if host == local_host or host in ("localhost", "127.0.0.1", "::1"):
+                continue
+            return user, host
+    except (AttributeError, TypeError):
+        pass
+    return "", ""
+
+
+def _detect_ssh_active(tab_manager) -> tuple:
+    """Return (user, host) for ssh in the active window, or ('', '') (cached per draw cycle)."""
+    cached = _cache.get("active_ssh")
+    if cached is not None:
+        return cached
+    if not tab_manager:
+        result = ("", "")
+    else:
+        window = tab_manager.active_window
+        result = _ssh_from_window(window) if window else ("", "")
+    _cache["active_ssh"] = result
+    return result
+
+
 def draw_icon(screen: Screen, index: int) -> int:
     """Draw the main icon (only on first tab)."""
     global _current_icon_width
@@ -390,7 +460,16 @@ def draw_tab(
 
     # Build right status cells: separator | cwd | hostname
     cwd_text = " " + get_cwd_right() + " " + SEP_RIGHT
-    host_text = uname()[1] + ICON_HOST
+    boss = get_boss()
+    tm = boss.active_tab_manager if boss else None
+    ssh_user, ssh_host = _detect_ssh_active(tm) if tm else ("", "")
+    if ssh_host:
+        if ssh_user and ssh_user != getuser():
+            host_text = f"{ssh_user}@{ssh_host}{ICON_HOST}"
+        else:
+            host_text = f"{ssh_host}{ICON_HOST}"
+    else:
+        host_text = uname()[1] + ICON_HOST
     accent = get_accent()
 
     cells = [
