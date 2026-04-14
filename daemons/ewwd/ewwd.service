@@ -1,7 +1,0 @@
-[Unit]
-Description=System utilities daemon for eww
-
-[Service]
-ExecStart=%h/.local/bin/ewwd
-Restart=on-failure
-RestartSec=2

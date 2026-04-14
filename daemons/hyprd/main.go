@@ -138,12 +138,10 @@ func requireArg(usage string) string {
 }
 
 func cmdInit() {
-	// Push Wayland env to the user bus, then start our daemons so they
-	// inherit it. Without this, ewwd spawns `eww daemon` without
-	// WAYLAND_DISPLAY and eww exits immediately. Both calls are idempotent.
+	// Push Wayland env to the user bus so hyprd.service inherits it.
 	exec.Command("systemctl", "--user", "import-environment",
 		"WAYLAND_DISPLAY", "XDG_CURRENT_DESKTOP", "HYPRLAND_INSTANCE_SIGNATURE").Run()
-	exec.Command("systemctl", "--user", "start", "ewwd.service", "hyprd.service").Run()
+	exec.Command("systemctl", "--user", "start", "hyprd.service").Run()
 
 	// Wait up to 10s for the daemon socket to appear.
 	for range 100 {

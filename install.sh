@@ -1436,7 +1436,7 @@ healthcheck_fonts() {
 # Binary definitions: name -> module_dir|build_path|description|is_daemon|output_dir
 declare -A GO_BINARIES=(
     ["hyprd"]="daemons|./hyprd|Hyprland window management daemon|yes|"
-    ["ewwd"]="daemons|./ewwd|System utilities daemon for eww|yes|"
+    ["ewwd"]="daemons|./ewwd|System utilities daemon for eww|no|"
     ["statusline"]="config/claude/statusline|.|Claude Code statusline generator|no|config/claude/statusline"
     ["newtab"]="daemons/newtab|.|Firefox new tab HTTP server|yes|"
 )
@@ -1461,7 +1461,7 @@ build_go_binary() {
 
 # Daemons whose lifecycle is tied to Hyprland — started by hyprland.conf's
 # exec-once (so they inherit WAYLAND_DISPLAY), not by default.target.
-HYPRLAND_LIFECYCLE_DAEMONS=(hyprd ewwd)
+HYPRLAND_LIFECYCLE_DAEMONS=(hyprd)
 
 is_hyprland_lifecycle_daemon() {
     local target="$1" name
