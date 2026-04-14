@@ -680,6 +680,15 @@ step_link() {
     }
     ok ".zshrc linked"
 
+    # .zshenv symlink (ensures env.sh loads for non-interactive shells, e.g. zsh -lc)
+    info "Linking .zshenv..."
+    link_or_skip "$DOTFILES/config/zsh/zshenv" "$HOME/.zshenv"
+    verify_link_mapping "$DOTFILES/config/zsh/zshenv" "$HOME/.zshenv" || {
+        err "Linking failed verification for ~/.zshenv"
+        return 1
+    }
+    ok ".zshenv linked"
+
     # Scripts -> ~/.local/bin/
     info "Linking scripts to ~/.local/bin/..."
 
@@ -739,6 +748,11 @@ healthcheck_link() {
     ((checked_entries++))
     verify_link_mapping "$DOTFILES/config/zsh/zshrc" "$HOME/.zshrc" || {
         err "Healthcheck failed: ~/.zshrc is not linked"
+        return 1
+    }
+    ((checked_entries++))
+    verify_link_mapping "$DOTFILES/config/zsh/zshenv" "$HOME/.zshenv" || {
+        err "Healthcheck failed: ~/.zshenv is not linked"
         return 1
     }
     ((checked_entries++))
