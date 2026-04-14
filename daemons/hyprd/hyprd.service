@@ -5,6 +5,3 @@ Description=Hyprland window management daemon
 ExecStart=%h/.local/bin/hyprd
 Restart=on-failure
 RestartSec=2
-
-[Install]
-WantedBy=default.target

@@ -15,6 +15,26 @@ import (
 
 const SocketPath = "/tmp/ewwd.sock"
 
+// importSystemdEnv copies vars from `systemctl --user show-environment` into
+// our process env, filling in anything we're missing. We do this because
+// systemd may have started us before Hyprland imported WAYLAND_DISPLAY et al.
+func importSystemdEnv() {
+	out, err := exec.Command("systemctl", "--user", "show-environment").Output()
+	if err != nil {
+		return
+	}
+	for _, line := range strings.Split(string(out), "\n") {
+		eq := strings.IndexByte(line, '=')
+		if eq <= 0 {
+			continue
+		}
+		key := line[:eq]
+		if os.Getenv(key) == "" {
+			os.Setenv(key, line[eq+1:])
+		}
+	}
+}
+
 // Daemon orchestrates providers and routes commands between clients and state updates.
 type Daemon struct {
 	state     *State               // Thread-safe data store
@@ -46,6 +66,10 @@ func New() (*Daemon, error) {
 
 // Run starts the daemon and blocks until shutdown.
 func (d *Daemon) Run() error {
+	// Pull Wayland env from systemd if we were started before Hyprland
+	// imported it. Children spawned later (e.g. eww daemon) need it.
+	importSystemdEnv()
+
 	if err := d.server.Start(); err != nil {
 		return err
 	}
@@ -196,11 +220,21 @@ func (d *Daemon) openWindows() string {
 		return "open: no windows configured"
 	}
 
+	if os.Getenv("WAYLAND_DISPLAY") == "" {
+		importSystemdEnv()
+		if os.Getenv("WAYLAND_DISPLAY") == "" {
+			return "error: WAYLAND_DISPLAY not set"
+		}
+	}
+
 	// Ensure eww daemon is running, kill stale state if needed
 	if err := exec.Command("eww", "ping").Run(); err != nil {
 		exec.Command("eww", "kill").Run()
 		time.Sleep(200 * time.Millisecond)
-		exec.Command("eww", "daemon").Start()
+		cmd := exec.Command("eww", "daemon")
+		if err := cmd.Start(); err == nil {
+			go cmd.Wait() // reap the child so it doesn't zombie
+		}
 		ready := false
 		for range 50 {
 			if exec.Command("eww", "ping").Run() == nil {

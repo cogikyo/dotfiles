@@ -1445,6 +1445,18 @@ build_go_binary() {
     ok "Installed $name -> $install_dir/$name"
 }
 
+# Daemons whose lifecycle is tied to Hyprland — started by hyprland.conf's
+# exec-once (so they inherit WAYLAND_DISPLAY), not by default.target.
+HYPRLAND_LIFECYCLE_DAEMONS=(hyprd ewwd)
+
+is_hyprland_lifecycle_daemon() {
+    local target="$1" name
+    for name in "${HYPRLAND_LIFECYCLE_DAEMONS[@]}"; do
+        [[ "$name" == "$target" ]] && return 0
+    done
+    return 1
+}
+
 install_daemon_services() {
     local service_dir="$HOME/.config/systemd/user"
     mkdir -p "$service_dir"
@@ -1483,14 +1495,30 @@ install_daemon_services() {
     fi
 
     for name in "${daemons[@]}"; do
-        if systemctl --user is-active "$name" &>/dev/null; then
-            info "Restarting $name..."
-            systemctl --user restart "$name"
-            ok "$name restarted"
+        if is_hyprland_lifecycle_daemon "$name"; then
+            # Hyprland-lifecycle: started by hyprland.conf exec-once, not systemd.
+            # Disable any stale default.target enablement from older installs.
+            if systemctl --user is-enabled "$name" &>/dev/null; then
+                systemctl --user disable "$name" &>/dev/null || true
+                ok "$name disabled (started by hyprland.conf instead)"
+            fi
+            if systemctl --user is-active "$name" &>/dev/null; then
+                info "Restarting $name..."
+                systemctl --user restart "$name"
+                ok "$name restarted"
+            else
+                ok "$name installed (will start with Hyprland)"
+            fi
         else
-            info "Enabling $name..."
-            systemctl --user enable --now "$name"
-            ok "$name enabled and started"
+            if systemctl --user is-active "$name" &>/dev/null; then
+                info "Restarting $name..."
+                systemctl --user restart "$name"
+                ok "$name restarted"
+            else
+                info "Enabling $name..."
+                systemctl --user enable --now "$name"
+                ok "$name enabled and started"
+            fi
         fi
     done
 }
@@ -1553,6 +1581,11 @@ healthcheck_go() {
             if [[ ! -f "$service_dir/$name.service" ]]; then
                 err "Healthcheck failed: missing service file '$name.service'"
                 return 1
+            fi
+            # Hyprland-lifecycle daemons are started by hyprland.conf, not systemd,
+            # so they may not be enabled or active outside a live Hyprland session.
+            if is_hyprland_lifecycle_daemon "$name"; then
+                continue
             fi
             if ! systemctl --user is-enabled "$name" &>/dev/null; then
                 err "Healthcheck failed: '$name.service' not enabled"

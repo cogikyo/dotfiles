@@ -38,6 +38,7 @@ import (
 	notifypkg "dotfiles/daemons/hyprd/notify"
 	"fmt"
 	"os"
+	"os/exec"
 	"strings"
 	"time"
 )
@@ -133,7 +134,13 @@ func requireArg(usage string) string {
 }
 
 func cmdInit() {
-	// Init is called via exec-once in hyprland.conf and may race the daemon.
+	// Push Wayland env to the user bus, then start our daemons so they
+	// inherit it. Without this, ewwd spawns `eww daemon` without
+	// WAYLAND_DISPLAY and eww exits immediately. Both calls are idempotent.
+	exec.Command("systemctl", "--user", "import-environment",
+		"WAYLAND_DISPLAY", "XDG_CURRENT_DESKTOP", "HYPRLAND_INSTANCE_SIGNATURE").Run()
+	exec.Command("systemctl", "--user", "start", "ewwd.service", "hyprd.service").Run()
+
 	// Wait up to 10s for the daemon socket to appear.
 	for range 100 {
 		if client.IsRunning() {
@@ -152,7 +159,7 @@ func cmdProject() { sendCommand("project " + strings.Join(os.Args[2:], " ")) }
 func cmdQuery()   { sendCommand("query " + strings.Join(os.Args[2:], " ")) }
 func cmdBG()      { sendCommand("bg " + requireArg("usage: hyprd bg {ensure|kill}")) }
 func cmdWS()      { sendCommand("ws " + requireArg("usage: hyprd ws <number|up|down>")) }
-func cmdTab()     { sendCommand("tab " + requireArg("usage: hyprd tab {term|nvim|nvimtree|git|xplr}")) }
+func cmdTab()     { sendCommand("tab " + requireArg("usage: hyprd tab <name|alias>")) }
 func cmdThreeBody() {
 	sendCommand("three-body " + requireArg("usage: hyprd three-body {editor|agents|browser|shadow}"))
 }
@@ -232,7 +239,7 @@ Window commands:
   hyprd ws <n>           Switch to workspace n, focus master
   hyprd ws up|down       Move active window between workspaces 2..5
   hyprd focus <class> [title]  Focus window, unhide if hidden
-  hyprd tab <name>            Focus editor + switch kitty tab (term|nvim|nvimtree|git|xplr)
+  hyprd tab <name|alias>      Focus editor + switch kitty tab (aliases like nvim::fe-nvim supported)
   hyprd tabs init <profile> <pid>    Create tabs from profile (editor|agents|leadpier)
   hyprd tabs refresh <name|all> <pid> Refresh tab(s) in current profile
 
