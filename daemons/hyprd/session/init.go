@@ -5,6 +5,8 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"sort"
+	"strconv"
 	"time"
 
 	"dotfiles/daemons/hyprd/hypr"
@@ -41,10 +43,17 @@ func (i *Init) Execute() (string, error) {
 	}
 
 	layout := NewLayout(i.hypr, i.state)
-	for _, name := range init.Sessions {
-		result, err := layout.Execute(name)
+	var initWS []int
+	for ws, as := range cfg.ActiveSessions {
+		if as.Init {
+			initWS = append(initWS, ws)
+		}
+	}
+	sort.Ints(initWS)
+	for _, ws := range initWS {
+		result, err := layout.Execute(strconv.Itoa(ws))
 		if err != nil {
-			fmt.Printf("hyprd init: session %s: %v\n", name, err)
+			fmt.Printf("hyprd init: ws%d: %v\n", ws, err)
 		} else {
 			fmt.Printf("hyprd init: %s\n", result)
 		}

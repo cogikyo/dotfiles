@@ -16,8 +16,6 @@ background:
     saturation: -16
     hue: -24
 init:
-  sessions:
-    - dotfiles
   execs:
     - "glava -e bars_rc.glsl"
     - "glava -e bars_r_rc.glsl"
@@ -166,6 +164,7 @@ three_body:
   browser:
     class: firefox-developer-edition
     command: firefox-developer-edition
+
 sessions:
   slack:
     name: slack
@@ -227,7 +226,7 @@ sessions:
       urls:
         - localhost:3000
 active_sessions:
-  2: slack
-  3: tableplus
-  4: leadpier
-  5: dotfiles
+  2: { session: slack, init: true }
+  3: { session: tableplus, init: true }
+  4: { session: leadpier, init: true }
+  5: { session: dotfiles, init: true }

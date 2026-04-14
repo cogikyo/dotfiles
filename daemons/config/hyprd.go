@@ -17,12 +17,18 @@ type HyprConfig struct {
 	Tabs           map[string]TabProfile      `yaml:"tabs"`
 	ThreeBody      map[string]ThreeBodyWindow `yaml:"three_body"`
 	Sessions       map[string]Session         `yaml:"sessions"`
-	ActiveSessions map[int]string             `yaml:"active_sessions"`
+	ActiveSessions map[int]ActiveSession      `yaml:"active_sessions"`
+}
+
+// ActiveSession binds a session to a workspace and controls whether it opens on boot.
+type ActiveSession struct {
+	Session string `yaml:"session"`
+	Init    bool   `yaml:"init"`
 }
 
 // InitConfig controls the one-time boot sequence that runs when hyprd starts.
+// Sessions to open on boot come from ActiveSessions entries with init: true.
 type InitConfig struct {
-	Sessions       []string      `yaml:"sessions"`
 	Execs          []string      `yaml:"execs"`
 	Workspace      int           `yaml:"workspace"`
 	Lock           bool          `yaml:"lock"`
@@ -226,7 +232,6 @@ func DefaultHypr() HyprConfig {
 			},
 		},
 		Init: InitConfig{
-			Sessions: []string{"dotfiles"},
 			Execs: []string{
 				"glava -e bars_rc.glsl",
 				"glava -e bars_r_rc.glsl",
@@ -417,11 +422,11 @@ func DefaultHypr() HyprConfig {
 				Browser:   BrowserConfig{URLs: []string{"localhost:3000"}},
 			},
 		},
-		ActiveSessions: map[int]string{
-			2: "slack",
-			3: "tableplus",
-			4: "leadpier",
-			5: "dotfiles",
+		ActiveSessions: map[int]ActiveSession{
+			2: {Session: "slack", Init: true},
+			3: {Session: "tableplus", Init: true},
+			4: {Session: "leadpier", Init: true},
+			5: {Session: "dotfiles", Init: true},
 		},
 	}
 }

@@ -76,7 +76,7 @@ func (l *Layout) openByWorkspace(ws int, sessions map[string]config.Session) (st
 	return l.openSession(session)
 }
 
-func (l *Layout) listByWorkspace(sessions map[string]config.Session, active map[int]string) string {
+func (l *Layout) listByWorkspace(sessions map[string]config.Session, active map[int]config.ActiveSession) string {
 	byWS := make(map[int][]string)
 	for name, s := range sessions {
 		byWS[s.Workspace] = append(byWS[s.Workspace], name)
@@ -92,7 +92,7 @@ func (l *Layout) listByWorkspace(sessions map[string]config.Session, active map[
 	for _, ws := range wsNums {
 		names := byWS[ws]
 		sort.Strings(names)
-		activeName := active[ws]
+		activeName := active[ws].Session
 		if rt := l.state.GetActiveSession(ws); rt != "" {
 			activeName = rt
 		}

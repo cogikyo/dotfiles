@@ -24,7 +24,7 @@ func (s *State) GetActiveSession(ws int) string {
 	if name, ok := s.ActiveSessions[ws]; ok {
 		return name
 	}
-	return s.config.ActiveSessions[ws]
+	return s.config.ActiveSessions[ws].Session
 }
 
 func (s *State) SetActiveSession(ws int, name string) {
