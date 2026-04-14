@@ -170,10 +170,12 @@ sessions:
     name: slack
     workspace: 2
     command: slack
+    monocle: true
   discord:
     name: discord
     workspace: 2
     command: discord
+    monocle: true
   tableplus:
     name: tableplus
     workspace: 3

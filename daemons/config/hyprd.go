@@ -166,6 +166,8 @@ type Session struct {
 	// Tabs maps three-body members like "editor" to kitty tab profiles like "leadpier".
 	Tabs    map[string]string `yaml:"tabs" json:"tabs"`
 	Command string            `yaml:"command" json:"command"`
+	// Monocle applies monocle sizing to the spawned window after session opens.
+	Monocle bool `yaml:"monocle" json:"monocle"`
 }
 
 // BrowserConfig declares URLs to open in the browser body member.
@@ -386,8 +388,8 @@ func DefaultHypr() HyprConfig {
 			"browser": {Class: "firefox-developer-edition", Command: "firefox-developer-edition"},
 		},
 		Sessions: map[string]Session{
-			"slack":     {Name: "slack", Workspace: 2, Command: "slack"},
-			"discord":   {Name: "discord", Workspace: 2, Command: "discord"},
+			"slack":     {Name: "slack", Workspace: 2, Command: "slack", Monocle: true},
+			"discord":   {Name: "discord", Workspace: 2, Command: "discord", Monocle: true},
 			"tableplus": {Name: "tableplus", Workspace: 3, Command: "tableplus"},
 			"inkscape":  {Name: "inkscape", Workspace: 3, Command: "inkscape"},
 			"obs":       {Name: "obs", Workspace: 3, Command: "obs"},

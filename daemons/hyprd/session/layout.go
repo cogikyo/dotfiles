@@ -136,6 +136,10 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 
 	if s.Command != "" {
 		l.hypr.Dispatch(fmt.Sprintf("exec %s", s.Command))
+		if s.Monocle {
+			time.Sleep(1500 * time.Millisecond)
+			l.applyMonocle(s.Workspace)
+		}
 		return fmt.Sprintf("opened session: %s on ws%d", s.Name, s.Workspace), nil
 	}
 	if len(s.Body) == 0 {
@@ -182,7 +186,35 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 		}
 	}
 
+	if s.Monocle {
+		l.applyMonocle(s.Workspace)
+	}
+
 	return fmt.Sprintf("opened session: %s on ws%d", s.Name, s.Workspace), nil
+}
+
+// applyMonocle floats + resizes the active window on wsID to the configured monocle
+// dimensions and tracks the state so `hyprd monocle` can toggle it off later.
+func (l *Layout) applyMonocle(wsID int) {
+	active, err := l.hypr.ActiveWindow()
+	if err != nil || active == nil {
+		return
+	}
+
+	cfg := l.state.GetConfig()
+	w, h := cfg.MonocleSize()
+	ox, oy := cfg.MonocleOffset()
+	batch := fmt.Sprintf(
+		"dispatch togglefloating; dispatch resizeactive exact %d %d; dispatch centerwindow; dispatch moveactive %d %d",
+		w, h, ox, oy,
+	)
+	l.hypr.Request("[[BATCH]]" + batch)
+	windows.CenterCursor(l.hypr)
+
+	l.state.SetMonocle(wsID, &state.MonocleState{
+		Focused: active.Address,
+		Master:  active.Address,
+	})
 }
 
 func (l *Layout) withSessionLaunchEnv(s config.Session, bodyName, cmd, homeDir string) string {
