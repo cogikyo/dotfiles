@@ -52,6 +52,9 @@ alias ld='lazydocker'
 alias uvpn='vpn up'
 alias dvpn='vpn down'
 
+alias fe='cd ~/LeadPier/frontend'
+alias bk='cd ~/LeadPier/backend'
+
 alias oc='ouch compress'
 alias od='ouch decompress'
 alias ol='ouch list --tree'
