@@ -133,15 +133,17 @@ tabs:
       - { name: term, title: "⟜   ⊸" }
       - { name: build, title: "⟜   ⊸", command: "just watch", requires: justfile }
       - { name: git, title: "⟜   ⊸", command: lazygit, requires: git }
+
   agents:
     prefix: "agents-"
     focus: master
     tabs:
-      - { name: xplr, title: "⊰   ⊱", command: codex }
+      - { name: xplr, title: "⊰   ⊱", command: "codex -c model=\"gpt-5.4\" -c model_reasoning_effort=\"xhigh\"" }
       - { name: master, title: "⊰ 󰯉  ⊱", command: "claude --effort high" }
-      - { name: dev, title: "⊰   ⊱", command: codex }
+      - { name: dev, title: "⊰   ⊱", command: "codex -c model=\"gpt-5.3-codex\" -c model_reasoning_effort=\"high\"" }
       - { name: plan, title: "⊰   ⊱", command: "claude --effort max" }
       - { name: git, title: "⊰   ⊱", command: "claude --effort low" }
+
   leadpier:
     prefix: "lp-"
     focus: fe-nvim
@@ -151,6 +153,7 @@ tabs:
       - { name: term, title: "« 󰠳  »", cwd: "~/LeadPier" }
       - { name: fe-build, title: "«   »", command: "yarn dev", cwd: "~/LeadPier/frontend" }
       - { name: be-build, title: "«   »", command: "pier watch", cwd: "~/LeadPier/backend/core/runner" }
+
 three_body:
   editor:
     class: kitty
@@ -212,17 +215,6 @@ sessions:
     browser:
       urls:
         - https://github.com/cogikyo/dotfiles
-  acr:
-    name: acr
-    workspace: 3
-    project: cogikyo/acr
-    body:
-      - editor
-      - browser
-      - agents
-    browser:
-      urls:
-        - localhost:3002
   cogikyo:
     name: cogikyo
     workspace: 4
