@@ -1,12 +1,8 @@
 // Package hypr provides Hyprland IPC socket communication.
 //
-// It connects to the Hyprland compositor via Unix domain sockets located at
-// $XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/. The command socket
-// (.socket.sock) accepts text commands and returns JSON or plain text responses.
-// The event socket (.socket2.sock) streams newline-delimited events.
-//
-// Commands use the format "j/command" for JSON output or "command args" for
-// dispatcher actions.
+// Sockets live at $XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.
+// `.socket.sock` accepts request/response text commands; `.socket2.sock` streams newline-delimited events.
+// Request format: "j/command" for JSON output, "dispatch args" for dispatcher actions, bare command for plain text.
 package hypr
 
 import (
@@ -17,13 +13,18 @@ import (
 	"path/filepath"
 )
 
-// Client communicates with Hyprland via Unix domain sockets for commands and events.
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ client & transport                                                           │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
+// Client communicates with Hyprland via its Unix sockets.
 type Client struct {
-	socketPath string // path to .socket.sock
+	socketPath string // .socket.sock
 }
 
-// NewClient creates a Client by resolving the socket path from HYPRLAND_INSTANCE_SIGNATURE.
-// Returns an error if the environment variable is unset or the socket doesn't exist.
+// NewClient resolves the command socket from HYPRLAND_INSTANCE_SIGNATURE.
+// Errors if the env var is unset (Hyprland not running) or the socket is missing.
+// XDG_RUNTIME_DIR falls back to /run/user/$UID.
 func NewClient() (*Client, error) {
 	sig := os.Getenv("HYPRLAND_INSTANCE_SIGNATURE")
 	if sig == "" {
@@ -43,18 +44,17 @@ func NewClient() (*Client, error) {
 	return &Client{socketPath: socketPath}, nil
 }
 
-// SocketPath returns the command socket path (.socket.sock).
 func (c *Client) SocketPath() string {
 	return c.socketPath
 }
 
-// EventSocketPath returns the event socket path (.socket2.sock).
 func (c *Client) EventSocketPath() string {
 	return filepath.Join(filepath.Dir(c.socketPath), ".socket2.sock")
 }
 
-// Request sends a command to Hyprland and returns the raw response.
-// The command should be formatted as "j/command" for JSON or "dispatch args" for actions.
+// Request sends a command and returns the raw response.
+//
+// Response is read in a single 64KiB Read — large outputs (many clients, etc.) may be truncated.
 func (c *Client) Request(command string) ([]byte, error) {
 	conn, err := net.Dial("unix", c.socketPath)
 	if err != nil {
@@ -75,11 +75,15 @@ func (c *Client) Request(command string) ([]byte, error) {
 	return buf[:n], nil
 }
 
-// Window represents a Hyprland window with geometry, workspace assignment, and metadata.
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ windows                                                                      │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
+// Window mirrors the JSON returned by `hyprctl -j clients`.
 type Window struct {
-	Address        string `json:"address"` // unique window handle
-	At             [2]int `json:"at"`      // [x, y] position
-	Size           [2]int `json:"size"`    // [width, height]
+	Address        string `json:"address"`
+	At             [2]int `json:"at"`   // [x, y]
+	Size           [2]int `json:"size"` // [w, h]
 	Workspace      WsRef  `json:"workspace"`
 	Floating       bool   `json:"floating"`
 	Pinned         bool   `json:"pinned"`
@@ -87,17 +91,16 @@ type Window struct {
 	Title          string `json:"title"`
 	InitialTitle   string `json:"initialTitle"`
 	Pid            int    `json:"pid"`
-	Mapped         bool   `json:"mapped"`         // whether window is visible
-	FocusHistoryID int    `json:"focusHistoryID"` // 0 = active, 1 = previous, etc.
+	Mapped         bool   `json:"mapped"`
+	FocusHistoryID int    `json:"focusHistoryID"` // 0 = active, 1 = previous, ...
 }
 
-// WsRef is a workspace reference used in window and monitor queries.
+// WsRef is a workspace reference embedded in window and monitor queries.
 type WsRef struct {
 	ID   int    `json:"id"`
-	Name string `json:"name"` // e.g., "1", "2", or custom name
+	Name string `json:"name"`
 }
 
-// Clients queries all windows currently managed by Hyprland.
 func (c *Client) Clients() ([]Window, error) {
 	data, err := c.Request("j/clients")
 	if err != nil {
@@ -111,7 +114,7 @@ func (c *Client) Clients() ([]Window, error) {
 	return windows, nil
 }
 
-// ActiveWindow returns the currently focused window, or nil if no window has focus.
+// ActiveWindow returns the focused window, or nil if none has focus.
 func (c *Client) ActiveWindow() (*Window, error) {
 	data, err := c.Request("j/activewindow")
 	if err != nil {
@@ -124,13 +127,14 @@ func (c *Client) ActiveWindow() (*Window, error) {
 	}
 
 	if w.Address == "" {
-		return nil, nil // No active window
+		// Hyprland returns `{}` (not an error) when no window is active.
+		return nil, nil
 	}
 	return &w, nil
 }
 
-// Dispatch executes a Hyprland dispatcher command (e.g., "movefocus l", "workspace 1").
-// Returns an error if Hyprland responds with anything other than "ok".
+// Dispatch executes a Hyprland dispatcher command (e.g. "movefocus l", "workspace 1").
+// Errors when the response isn't "ok".
 func (c *Client) Dispatch(args string) error {
 	resp, err := c.Request("dispatch " + args)
 	if err != nil {
@@ -142,21 +146,27 @@ func (c *Client) Dispatch(args string) error {
 	return nil
 }
 
-// Monitor represents a physical or virtual display with geometry and workspace info.
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ monitors                                                                     │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
+// Monitor mirrors the JSON returned by `hyprctl -j monitors`.
+//
+// FIXME: ReservedTop/ReservedRight JSON tags look wrong — Hyprland returns `reserved` as a [L,T,R,B] array, not
+// scalar fields named `reserved`/`reservedB`.
 type Monitor struct {
 	ID            int    `json:"id"`
-	Name          string `json:"name"`            // e.g., "DP-1", "HDMI-A-1"
-	Width         int    `json:"width"`           // resolution width
-	Height        int    `json:"height"`          // resolution height
-	X             int    `json:"x"`               // position in compositor space
-	Y             int    `json:"y"`               // position in compositor space
-	Focused       bool   `json:"focused"`         // currently active monitor
-	ActiveWS      WsRef  `json:"activeWorkspace"` //
-	ReservedTop   int    `json:"reserved"`        // reserved pixels at top (bars, etc.)
-	ReservedRight int    `json:"reservedB"`       // reserved pixels at right
+	Name          string `json:"name"`
+	Width         int    `json:"width"`
+	Height        int    `json:"height"`
+	X             int    `json:"x"`
+	Y             int    `json:"y"`
+	Focused       bool   `json:"focused"`
+	ActiveWS      WsRef  `json:"activeWorkspace"`
+	ReservedTop   int    `json:"reserved"`
+	ReservedRight int    `json:"reservedB"`
 }
 
-// Monitors queries all displays currently known to Hyprland.
 func (c *Client) Monitors() ([]Monitor, error) {
 	data, err := c.Request("j/monitors")
 	if err != nil {
@@ -170,8 +180,8 @@ func (c *Client) Monitors() ([]Monitor, error) {
 	return monitors, nil
 }
 
-// FocusedMonitor returns the currently focused monitor, falling back to the first
-// monitor if none are marked as focused. Returns nil only if no monitors exist.
+// FocusedMonitor returns the focused monitor, falling back to monitors[0].
+// Returns (nil, nil) only when no monitors exist.
 func (c *Client) FocusedMonitor() (*Monitor, error) {
 	monitors, err := c.Monitors()
 	if err != nil {

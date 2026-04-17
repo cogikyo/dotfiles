@@ -1,37 +1,10 @@
-// Package main implements ewwd, a system utilities daemon for eww statusbar integration.
+// Package main implements ewwd, the system-utilities daemon feeding the eww statusbar.
 //
-// ewwd provides real-time system data to eww widgets through a Unix socket interface.
-// It uses a provider-based architecture where each provider monitors a specific system
-// resource and publishes updates to subscribers.
+// Architecture: Daemon (lifecycle, command routing), State (thread-safe store), and a set of
+// Provider goroutines that each monitor a subsystem and publish updates to subscribers over
+// a Unix socket.
 //
-// # Architecture
-//
-// The daemon consists of three main components:
-//
-//   - Daemon: Manages the lifecycle, command routing, and provider coordination
-//   - State: Thread-safe storage for all provider data using a generic map
-//   - Providers: Independent goroutines that monitor system resources and publish updates
-//
-// # Providers
-//
-// Each provider implements the providers.Provider interface and runs in its own goroutine:
-//
-//   - gpu: AMD GPU statistics (utilization, VRAM, memory clock)
-//   - network: Network speed monitoring
-//   - date: Date/time with clockface icons
-//   - brightness: Screen brightness control
-//   - audio: PulseAudio volume control
-//   - music: Spotify playback status
-//   - timer: Timer and alarm countdown
-//   - weather: OpenWeatherMap data
-//
-// # Usage
-//
-//	ewwd                  Start daemon (foreground)
-//	ewwd status           Check if daemon is running
-//	ewwd query [topic]    Get current state
-//	ewwd subscribe [...]  Stream events to stdout
-//	ewwd action <p> ...   Execute provider action
+// Run `ewwd help` for the CLI surface.
 package main
 
 import (
@@ -86,6 +59,7 @@ func runDaemon() {
 	}
 }
 
+// cmdStatus prints "running"/"not running" (or state JSON with --json/-j) and exits non-zero when unreachable.
 func cmdStatus() {
 	jsonOutput := false
 	for _, arg := range os.Args[2:] {

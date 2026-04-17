@@ -7,31 +7,31 @@ import (
 	"dotfiles/daemons/config"
 )
 
-// DateState provides formatted date/time fields and personal life counter for statusbar display.
+// DateState is the formatted date/time plus weeks-alive counter for the statusbar.
 type DateState struct {
-	Weekday      string `json:"weekday"`       // Full weekday name
-	WeekdayShort string `json:"weekday_short"` // 3-letter weekday abbreviation
-	Month        string `json:"month"`         // Full month name
-	MonthShort   string `json:"month_short"`   // 3-letter month abbreviation
-	Day          string `json:"day"`           // Day of month (zero-padded)
-	ClockHour    string `json:"clock_hour"`    // Clock icon for current hour
-	ClockMinute  string `json:"clock_minute"`  // Clock icon for 5-minute interval
-	WeeksAlive   int    `json:"weeks_alive"`   // Weeks since configured birth date
+	Weekday      string `json:"weekday"`
+	WeekdayShort string `json:"weekday_short"`
+	Month        string `json:"month"`
+	MonthShort   string `json:"month_short"`
+	Day          string `json:"day"`           // zero-padded
+	ClockHour    string `json:"clock_hour"`    // Nerd Font clockface glyph
+	ClockMinute  string `json:"clock_minute"`  // Nerd Font clockface glyph, 5-minute bucket
+	WeeksAlive   int    `json:"weeks_alive"`   // weeks since config.BirthDate
 }
 
-// Date updates date/time state every minute, aligned to minute boundaries for efficiency.
+// Date ticks once a minute, aligned to the top of each minute.
 type Date struct {
 	state     StateSetter
 	done      chan struct{}
 	active    bool
-	birthDate time.Time // For weeks_alive calculation
+	birthDate time.Time
 }
 
-// NewDate creates a Date provider with birth date from config (fallback: 1996-02-26).
+// NewDate constructs a Date provider, falling back to 1996-02-26 when cfg.BirthDate is unparseable.
 func NewDate(state StateSetter, cfg config.DateConfig) Provider {
 	birthDate, err := time.Parse("2006-01-02", cfg.BirthDate)
 	if err != nil {
-		birthDate, _ = time.Parse("2006-01-02", "1996-02-26") // Fallback
+		birthDate, _ = time.Parse("2006-01-02", "1996-02-26")
 	}
 
 	return &Date{
@@ -45,18 +45,15 @@ func (d *Date) Name() string {
 	return "date"
 }
 
-// Start sends initial state then updates every minute, aligned to minute boundaries for efficiency.
 func (d *Date) Start(ctx context.Context, notify func(data any)) error {
 	d.active = true
 
-	// Initial update
 	state := d.read()
 	d.state.Set("date", state)
 	notify(state)
 
-	// Update every minute (aligned to minute boundary)
 	for {
-		// Sleep until next minute
+		// Align wake-up to the top of the next minute so the clock updates crisply.
 		now := time.Now()
 		sleepDuration := time.Duration(60-now.Second())*time.Second - time.Duration(now.Nanosecond())
 		if sleepDuration <= 0 {
@@ -100,7 +97,6 @@ func (d *Date) read() *DateState {
 	}
 }
 
-// clockHourIcon maps 24-hour time to 12-hour clockface icon.
 func clockHourIcon(hour int) string {
 	h := hour % 12
 	if h == 0 {
@@ -117,7 +113,6 @@ func clockHourIcon(hour int) string {
 	return ""
 }
 
-// clockMinuteIcon maps minutes to 5-minute interval clockface icon (0-55 minutes).
 func clockMinuteIcon(minute int) string {
 	interval := minute / 5
 

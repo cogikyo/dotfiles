@@ -15,6 +15,7 @@ import (
 	"dotfiles/daemons/hyprd/windows"
 )
 
+// Layout opens and arranges per-workspace sessions defined in config.
 type Layout struct {
 	hypr  *hypr.Client
 	state *state.State
@@ -24,6 +25,11 @@ func NewLayout(h *hypr.Client, s *state.State) *Layout {
 	return &Layout{hypr: h, state: s}
 }
 
+// Execute dispatches the layout subcommand:
+//   - empty or "list" prints sessions grouped by workspace.
+//   - "set <ws> <name>" records the active session for a workspace.
+//   - numeric arg opens the active session on that workspace.
+//   - any other token is a session name to open directly.
 func (l *Layout) Execute(arg string) (string, error) {
 	cfg := l.state.GetConfig()
 	sessions := cfg.Sessions
@@ -206,8 +212,9 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 	return fmt.Sprintf("opened session: %s on ws%d", s.Name, s.Workspace), nil
 }
 
-// applyMonocle floats + resizes the active window on wsID to the configured monocle
-// dimensions and tracks the state so `hyprd monocle` can toggle it off later.
+// applyMonocle floats and resizes the active window to the configured monocle dimensions.
+//
+// Records MonocleState on wsID so `hyprd monocle` can toggle it off later.
 func (l *Layout) applyMonocle(wsID int) {
 	active, err := l.hypr.ActiveWindow()
 	if err != nil || active == nil {

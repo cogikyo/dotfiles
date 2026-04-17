@@ -48,20 +48,22 @@ import (
 // CommandHandler processes a command string and returns a response.
 type CommandHandler func(command string) string
 
-// SubscribeHandler is invoked when a client subscribes; use it to send initial state.
+// SubscribeHandler runs on new subscriptions; typically used to push initial state.
 type SubscribeHandler func(sub *Subscriber, topics []string)
 
-// Server manages a Unix socket daemon, routing commands to handlers and managing subscriptions.
+// Server owns a Unix socket, routing commands to a Handler and dispatching events via Subs.
+//
+// OnSubscribe is optional. Handler must be set before Start.
 type Server struct {
-	SocketPath  string               // Path to the Unix domain socket
-	Subs        *SubscriptionManager // Manages client subscriptions to events
-	Handler     CommandHandler       // Processes non-subscribe commands
-	OnSubscribe SubscribeHandler     // Optional callback invoked on new subscriptions
-	done        chan struct{}        // Signals server shutdown
-	listener    net.Listener         // Unix socket listener
+	SocketPath  string
+	Subs        *SubscriptionManager
+	Handler     CommandHandler
+	OnSubscribe SubscribeHandler
+	done        chan struct{}
+	listener    net.Listener
 }
 
-// NewServer creates a Server that listens on socketPath and routes commands to handler.
+// NewServer returns a Server bound to socketPath with handler for non-subscribe commands.
 func NewServer(socketPath string, handler CommandHandler) *Server {
 	return &Server{
 		SocketPath: socketPath,
@@ -71,8 +73,9 @@ func NewServer(socketPath string, handler CommandHandler) *Server {
 	}
 }
 
-// Start begins listening on the socket and accepting connections.
-// It removes any stale socket file and restricts access to the current user.
+// Start listens on SocketPath and spawns the accept loop.
+//
+// Any stale socket file is removed first. The new socket is chmod 0600 so only the current user can connect.
 func (s *Server) Start() error {
 	os.Remove(s.SocketPath)
 
@@ -91,7 +94,7 @@ func (s *Server) Start() error {
 	return nil
 }
 
-// Shutdown stops the server, closes the listener, and removes the socket file.
+// Shutdown closes the listener, removes the socket file, and signals Done.
 func (s *Server) Shutdown() {
 	close(s.done)
 	if s.listener != nil {
@@ -100,12 +103,12 @@ func (s *Server) Shutdown() {
 	os.Remove(s.SocketPath)
 }
 
-// Done returns a channel that is closed when the server shuts down.
+// Done returns a channel closed when Shutdown is called.
 func (s *Server) Done() <-chan struct{} {
 	return s.done
 }
 
-// WaitForSignal blocks until SIGINT or SIGTERM is received and returns the signal.
+// WaitForSignal blocks until SIGINT or SIGTERM arrives and returns it.
 func (s *Server) WaitForSignal() os.Signal {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
@@ -145,6 +148,7 @@ func (s *Server) handleClient(conn net.Conn) {
 				s.OnSubscribe(sub, topics)
 			}
 		})
+		// Block until the client disconnects; Read unblocks on EOF.
 		buf := make([]byte, 1)
 		conn.Read(buf)
 		s.Subs.Unsubscribe(conn)

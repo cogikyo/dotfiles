@@ -10,7 +10,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// Load returns the combined daemon configuration using the split YAML files.
+// Load returns the combined configuration for every daemon.
+//
+// Each per-daemon loader falls back to its Default* values when the YAML is missing or malformed.
+// Errors are logged to stderr and never fatal.
 func Load() *Config {
 	return &Config{
 		Eww:    LoadEww(),
@@ -19,7 +22,7 @@ func Load() *Config {
 	}
 }
 
-// LoadEww loads the ewwd daemon config from configs/ewwd.yaml.
+// LoadEww loads ewwd config from configs/ewwd.yaml, falling back to DefaultEww.
 func LoadEww() EwwConfig {
 	cfg := DefaultEww()
 	if err := loadYAMLFile(ConfigPath("ewwd"), &cfg); err != nil {
@@ -28,7 +31,9 @@ func LoadEww() EwwConfig {
 	return cfg
 }
 
-// LoadHypr loads the hyprd daemon config from configs/hyprd.yaml.
+// LoadHypr loads hyprd config from configs/hyprd.yaml, falling back to DefaultHypr.
+//
+// AppSounds, UrgencySounds, and SilentApps are lowercased for case-insensitive libnotify matching.
 func LoadHypr() HyprConfig {
 	cfg := DefaultHypr()
 	if err := loadYAMLFile(ConfigPath("hyprd"), &cfg); err != nil {
@@ -40,7 +45,9 @@ func LoadHypr() HyprConfig {
 	return cfg
 }
 
-// LoadNewtab loads the newtab config and overlays configs/newtab.local.yaml if present.
+// LoadNewtab loads newtab config from configs/newtab.yaml and overlays configs/newtab.local.yaml when present.
+//
+// The local file holds machine-specific values (bookmarks, paths) and is gitignored.
 func LoadNewtab() NewtabConfig {
 	cfg := DefaultNewtab()
 	if err := loadYAMLFile(ConfigPath("newtab"), &cfg); err != nil {

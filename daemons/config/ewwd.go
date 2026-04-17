@@ -2,9 +2,9 @@ package config
 
 import "time"
 
-// EwwConfig defines all provider-specific settings for the ewwd daemon.
+// EwwConfig holds all provider-specific settings for the ewwd daemon.
 type EwwConfig struct {
-	Windows    []string         `yaml:"windows"`
+	Windows    []string         `yaml:"windows"` // eww window names to open on startup
 	Weather    WeatherConfig    `yaml:"weather"`
 	Timer      TimerConfig      `yaml:"timer"`
 	Audio      AudioConfig      `yaml:"audio"`
@@ -14,49 +14,52 @@ type EwwConfig struct {
 	Network    NetworkConfig    `yaml:"network"`
 }
 
-// WeatherConfig configures OpenWeatherMap API integration for live weather updates.
+// WeatherConfig configures the OpenWeatherMap polling loop.
 type WeatherConfig struct {
-	APIKeyFile   string        `yaml:"api_key_file"`
-	PollInterval time.Duration `yaml:"poll_interval"`
+	APIKeyFile   string        `yaml:"api_key_file"`  // path to plaintext file containing the OWM API key
+	PollInterval time.Duration `yaml:"poll_interval"` // how often to refetch from the OWM API
 }
 
-// TimerConfig defines default durations and constraints for timer and alarm operations.
+// TimerConfig defines default durations and constraints for timer/alarm widgets.
 type TimerConfig struct {
-	DefaultMinutes    int `yaml:"default_minutes"`
-	DefaultAlarmHours int `yaml:"default_alarm_hours"`
-	MinAlarmHours     int `yaml:"min_alarm_hours"`
+	DefaultMinutes    int `yaml:"default_minutes"`     // initial timer length in minutes
+	DefaultAlarmHours int `yaml:"default_alarm_hours"` // initial alarm offset from now, in hours
+	MinAlarmHours     int `yaml:"min_alarm_hours"`     // minimum allowed alarm offset, in hours
 }
 
-// AudioConfig controls PulseAudio source/sink volumes with custom limits and aliases.
+// AudioConfig controls PulseAudio source/sink volumes with per-device aliases.
+//
+// SourceMax may exceed 100 because PulseAudio allows source boost beyond
+// unity gain; SinkMax is typically capped at 100 to avoid clipping.
 type AudioConfig struct {
-	SourceOffset        int               `yaml:"source_offset"`
-	SourceMax           int               `yaml:"source_max"`
-	SinkMax             int               `yaml:"sink_max"`
-	VolumeStep          int               `yaml:"volume_step"`
-	PollInterval        time.Duration     `yaml:"poll_interval"`
-	DefaultSinkVolume   int               `yaml:"default_sink_volume"`
-	DefaultSourceVolume int               `yaml:"default_source_volume"`
-	NameMappings        map[string]string `yaml:"name_mappings"`
-	BluetoothNames      []string          `yaml:"bluetooth_names"`
+	SourceOffset        int               `yaml:"source_offset"`         // % subtracted from source volume before display
+	SourceMax           int               `yaml:"source_max"`            // maximum source volume %, may exceed 100 (boost)
+	SinkMax             int               `yaml:"sink_max"`              // maximum sink volume %, typically <= 100
+	VolumeStep          int               `yaml:"volume_step"`           // % per up/down action
+	PollInterval        time.Duration     `yaml:"poll_interval"`         // how often to refresh volume state
+	DefaultSinkVolume   int               `yaml:"default_sink_volume"`   // sink volume % applied on startup
+	DefaultSourceVolume int               `yaml:"default_source_volume"` // source volume % applied on startup
+	NameMappings        map[string]string `yaml:"name_mappings"`         // raw device name -> display alias
+	BluetoothNames      []string          `yaml:"bluetooth_names"`       // substrings identifying bluetooth devices for icon selection
 }
 
-// BrightnessConfig defines preset brightness levels for common scenarios.
+// BrightnessConfig defines preset brightness levels (0-based step indexes, not %).
 type BrightnessConfig struct {
 	Min     int `yaml:"min"`
 	Max     int `yaml:"max"`
-	Night   int `yaml:"night"`
-	Default int `yaml:"default"`
+	Night   int `yaml:"night"`   // night mode preset
+	Default int `yaml:"default"` // preset applied on startup
 }
 
-// DateConfig provides reference dates for date-based calculations.
+// DateConfig provides reference dates for date-based widgets (age, countdowns).
 type DateConfig struct {
-	BirthDate string `yaml:"birth_date"`
+	BirthDate string `yaml:"birth_date"` // ISO-8601 date
 }
 
-// GPUConfig enables AMD GPU monitoring via sysfs device nodes.
+// GPUConfig enables AMD GPU monitoring via sysfs.
 type GPUConfig struct {
-	DevicePath   string        `yaml:"device_path"`
-	PollInterval time.Duration `yaml:"poll_interval"`
+	DevicePath   string        `yaml:"device_path"`   // sysfs root, e.g. /sys/class/drm/card0/device
+	PollInterval time.Duration `yaml:"poll_interval"` // how often to sample GPU stats
 }
 
 // NetworkConfig controls polling frequency for network interface statistics.

@@ -1,3 +1,5 @@
+// Package windows provides class/title matching and tiling helpers over hypr.Window values.
+// Shared by the wm and session packages.
 package windows
 
 import (
@@ -6,7 +8,8 @@ import (
 	"dotfiles/daemons/hyprd/hypr"
 )
 
-// MatchesTarget returns true if a window matches the requested class/title criteria.
+// MatchesTarget reports whether w matches class (case-insensitive, required) and title.
+// Empty title matches any; otherwise title is exact-matched against Title or InitialTitle.
 func MatchesTarget(w *hypr.Window, class, title string) bool {
 	if class == "" {
 		return false

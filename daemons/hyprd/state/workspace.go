@@ -1,5 +1,6 @@
 package state
 
+// SetDisplacedMaster records the former master for a workspace; empty addr clears the entry.
 func (s *State) SetDisplacedMaster(ws int, addr string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

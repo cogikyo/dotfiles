@@ -11,22 +11,21 @@ import (
 	"dotfiles/daemons/config"
 )
 
-// BrightnessState represents the current screen brightness level for eww statusbar.
+// BrightnessState holds the current screen brightness level.
 type BrightnessState struct {
-	Level int `json:"level"` // brightness level (2-10, multiplied by 10 for percentage display)
+	Level int `json:"level"` // 2-10; times 10 for percent display
 }
 
-// Brightness provides action-driven screen brightness control via wlr-brightness over gdbus.
+// Brightness drives wlr-brightness via gdbus. Action-only — no polling loop; Start just blocks.
 type Brightness struct {
-	state  StateSetter             // state storage
-	config config.BrightnessConfig // min, max, night mode, and default values
-	notify func(data any)          // change notification callback
-	done   chan struct{}           // shutdown signal
-	active bool                    // whether provider is running
-	level  int                     // current brightness level (2-10)
+	state  StateSetter
+	config config.BrightnessConfig
+	notify func(data any)
+	done   chan struct{}
+	active bool
+	level  int
 }
 
-// NewBrightness creates a Brightness provider with the given configuration.
 func NewBrightness(state StateSetter, cfg config.BrightnessConfig) Provider {
 	return &Brightness{
 		state:  state,
@@ -36,22 +35,18 @@ func NewBrightness(state StateSetter, cfg config.BrightnessConfig) Provider {
 	}
 }
 
-// Name returns "brightness".
 func (b *Brightness) Name() string {
 	return "brightness"
 }
 
-// Start sends initial brightness state and blocks until shutdown (action-driven, no polling).
 func (b *Brightness) Start(ctx context.Context, notify func(data any)) error {
 	b.active = true
 	b.notify = notify
 
-	// Send initial state
 	state := &BrightnessState{Level: b.level}
 	b.state.Set("brightness", state)
 	notify(state)
 
-	// Brightness is action-driven, just wait for shutdown
 	select {
 	case <-ctx.Done():
 		return nil
@@ -60,7 +55,6 @@ func (b *Brightness) Start(ctx context.Context, notify func(data any)) error {
 	}
 }
 
-// Stop signals the provider to shut down.
 func (b *Brightness) Stop() error {
 	if b.active {
 		close(b.done)
@@ -69,7 +63,7 @@ func (b *Brightness) Stop() error {
 	return nil
 }
 
-// HandleAction processes reset, night, and adjust commands, returning the new brightness level.
+// HandleAction supports: reset, night, adjust <up|down>. Returns the new level as a string.
 func (b *Brightness) HandleAction(args []string) (string, error) {
 	if len(args) == 0 {
 		return "", errors.New("action required: reset, night, adjust")
@@ -100,7 +94,6 @@ func (b *Brightness) HandleAction(args []string) (string, error) {
 		return "", fmt.Errorf("unknown action: %s", args[0])
 	}
 
-	// Update state and notify subscribers
 	state := &BrightnessState{Level: b.level}
 	b.state.Set("brightness", state)
 	if b.notify != nil {
@@ -110,9 +103,8 @@ func (b *Brightness) HandleAction(args []string) (string, error) {
 	return strconv.Itoa(b.level), nil
 }
 
-// setBrightness invokes wlr-brightness-control via gdbus to set the actual screen brightness.
+// setBrightness invokes wlr-brightness-control over gdbus, passing a 0.0-1.0 value.
 func (b *Brightness) setBrightness(value float64) {
-	// wlr-brightness-control via gdbus
 	if err := exec.Command("gdbus", "call", "-e",
 		"-d", "de.mherzberg",
 		"-o", "/de/mherzberg/wlrbrightness",

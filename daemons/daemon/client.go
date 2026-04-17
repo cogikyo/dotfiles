@@ -8,17 +8,19 @@ import (
 	"time"
 )
 
-// Client provides methods for sending commands to a daemon over Unix sockets.
+// Client dials a daemon's Unix socket for one-shot or streaming commands.
 type Client struct {
-	SocketPath string // Path to the Unix domain socket
+	SocketPath string
 }
 
-// NewClient creates a Client for the given socket path.
+// NewClient returns a Client bound to socketPath. The socket is not dialed until use.
 func NewClient(socketPath string) *Client {
 	return &Client{SocketPath: socketPath}
 }
 
-// Send transmits a command to the daemon and returns the response.
+// Send dials the daemon, writes command, and returns the first response read.
+//
+// Read deadline is 15s and the response is capped at 64 KiB. Use Stream for long-running or larger payloads.
 func (c *Client) Send(command string) (string, error) {
 	conn, err := net.Dial("unix", c.SocketPath)
 	if err != nil {
@@ -40,9 +42,9 @@ func (c *Client) Send(command string) (string, error) {
 	return string(buf[:n]), nil
 }
 
-// Stream sends a command and continuously writes response lines to stdout.
-// It keeps the connection open until the server closes it, making it suitable
-// for subscribe commands that receive ongoing events.
+// Stream sends command and copies newline-delimited response lines to stdout until the server closes.
+//
+// Intended for subscribe commands.
 func (c *Client) Stream(command string) error {
 	conn, err := net.Dial("unix", c.SocketPath)
 	if err != nil {
@@ -67,7 +69,9 @@ func (c *Client) Stream(command string) error {
 	}
 }
 
-// IsRunning checks if the daemon is running and responsive via ping/pong exchange.
+// IsRunning returns true when the daemon answers "ping" with "pong".
+//
+// Dial or read failures are treated as not-running.
 func (c *Client) IsRunning() bool {
 	conn, err := net.Dial("unix", c.SocketPath)
 	if err != nil {

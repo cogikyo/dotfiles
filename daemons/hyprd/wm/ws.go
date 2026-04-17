@@ -16,6 +16,10 @@ const (
 	maxManagedWorkspace = 5
 )
 
+// WS dispatches workspace navigation and per-workspace window moves.
+//
+// "up"/"down" shift the active window between managed workspaces, clamped to [min,max]ManagedWorkspace.
+// A numeric arg switches the active workspace and focuses its master.
 type WS struct {
 	hypr  *hypr.Client
 	state *state.State
@@ -25,6 +29,11 @@ func NewWS(h *hypr.Client, s *state.State) *WS {
 	return &WS{hypr: h, state: s}
 }
 
+// Execute runs a workspace command.
+//
+// wsArg accepts "up", "down", or a workspace ID as a decimal string.
+// Switching across the 1↔5 boundary animates as `slidevert` to match the virtual row/column layout.
+// Triggers a background refresh via session.EnsureBG on switch.
 func (w *WS) Execute(wsArg string) (string, error) {
 	switch wsArg {
 	case "up":
@@ -112,6 +121,7 @@ func (w *WS) moveActiveWindow(delta int) (string, error) {
 	return fmt.Sprintf("moved %s: ws %d -> %d", win.Class, currentWS, targetWS), nil
 }
 
+// normalizeWorkspaceState unwinds three-body and displaced-master state before a cross-workspace move.
 func (w *WS) normalizeWorkspaceState(wsID int) error {
 	if tb := w.state.GetThreeBody(wsID); tb != nil {
 		if err := w.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", wsID, tb.Shadow)); err != nil {

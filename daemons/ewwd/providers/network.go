@@ -11,34 +11,33 @@ import (
 	"dotfiles/daemons/config"
 )
 
-// NetworkState contains real-time network connection and throughput metrics for UI display.
+// NetworkState is the connection and throughput snapshot exported to the statusbar.
 type NetworkState struct {
-	Type     string `json:"type"`      // Connection type (ethernet/wireless)
-	Icon     string `json:"icon"`      // Display icon for connection type
-	Name     string `json:"name"`      // Connection or interface name
-	Iface    string `json:"iface"`     // Network interface name
-	VPN      bool   `json:"vpn"`       // Active VPN connection detected
-	LinkRamp int    `json:"link_ramp"` // Link type bucket used by the widget for icon color
-	Down     int    `json:"down"`      // Download speed in KB/s
-	Up       int    `json:"up"`        // Upload speed in KB/s
-	DownRamp int    `json:"down_ramp"` // Download speed bucket (1-12) for visual indicators
-	UpRamp   int    `json:"up_ramp"`   // Upload speed bucket (1-12) for visual indicators
-	DownFmt  string `json:"down_fmt"`  // Formatted download speed with units
-	UpFmt    string `json:"up_fmt"`    // Formatted upload speed with units
+	Type     string `json:"type"`      // nmcli connection type (ethernet/wireless)
+	Icon     string `json:"icon"`      // display icon for connection type
+	Name     string `json:"name"`      // connection name, or iface for ethernet
+	Iface    string `json:"iface"`     // kernel network interface
+	VPN      bool   `json:"vpn"`       // active VPN present
+	LinkRamp int    `json:"link_ramp"` // link-type bucket for widget icon color
+	Down     int    `json:"down"`      // KB/s
+	Up       int    `json:"up"`        // KB/s
+	DownRamp int    `json:"down_ramp"` // 1-12 bucket
+	UpRamp   int    `json:"up_ramp"`   // 1-12 bucket
+	DownFmt  string `json:"down_fmt"`  // pre-formatted with Pango <sub> units
+	UpFmt    string `json:"up_fmt"`    // pre-formatted with Pango <sub> units
 }
 
-// Network monitors network connection state and throughput using nmcli and sysfs statistics.
+// Network polls nmcli for connection state and derives throughput from /sys/class/net byte counters.
 type Network struct {
 	state  StateSetter
 	config config.NetworkConfig
 	done   chan struct{}
 	active bool
 
-	prevRx int64 // Previous receive bytes for speed calculation
-	prevTx int64 // Previous transmit bytes for speed calculation
+	prevRx int64
+	prevTx int64
 }
 
-// NewNetwork creates a Network provider that tracks speed deltas between poll intervals.
 func NewNetwork(state StateSetter, cfg config.NetworkConfig) Provider {
 	return &Network{
 		state:  state,
@@ -51,7 +50,6 @@ func (n *Network) Name() string {
 	return "network"
 }
 
-// Start polls network connection state and speed at configured intervals, notifying subscribers of changes.
 func (n *Network) Start(ctx context.Context, notify func(data any)) error {
 	n.active = true
 	ticker := time.NewTicker(n.config.PollInterval)
@@ -81,7 +79,6 @@ func (n *Network) Stop() error {
 }
 
 func (n *Network) read() *NetworkState {
-	// Get active connections from nmcli
 	out, err := exec.Command("nmcli", "-t", "-f", "TYPE,NAME,DEVICE", "connection", "show", "--active").Output()
 	if err != nil {
 		return &NetworkState{
@@ -99,7 +96,7 @@ func (n *Network) read() *NetworkState {
 
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 
-	// Find ethernet or wireless connection
+	// Pick the first ethernet/wireless line; VPN is reported as an independent flag.
 	var connType, connName, iface string
 	var hasVPN bool
 
@@ -119,7 +116,6 @@ func (n *Network) read() *NetworkState {
 		}
 	}
 
-	// Handle no connection
 	if iface == "" {
 		return &NetworkState{
 			Type:     "none",
@@ -135,7 +131,6 @@ func (n *Network) read() *NetworkState {
 		}
 	}
 
-	// Determine icon and display name
 	icon := ""
 	name := iface
 	if connType == "802-11-wireless" {
@@ -143,11 +138,11 @@ func (n *Network) read() *NetworkState {
 		name = connName
 	}
 
-	// Read byte counts
 	rx := readInt64File(fmt.Sprintf("/sys/class/net/%s/statistics/rx_bytes", iface))
 	tx := readInt64File(fmt.Sprintf("/sys/class/net/%s/statistics/tx_bytes", iface))
 
-	// Calculate speed (KB/s)
+	// First poll has no prior sample; leave speeds at 0.
+	// Counter resets and interface flaps produce negative deltas — clamp to 0.
 	var downKB, upKB int
 	if n.prevRx > 0 {
 		downKB = int((rx - n.prevRx) / 1024)
@@ -195,7 +190,7 @@ func readInt64File(path string) int64 {
 	return v
 }
 
-// getRamp maps network speed to a 1-12 scale for visual indicators like bar graphs.
+// getRamp buckets KB/s into a 1-12 scale for the bar-graph widget.
 func getRamp(kb int) int {
 	switch {
 	case kb < 5:
@@ -225,7 +220,7 @@ func getRamp(kb int) int {
 	}
 }
 
-// fmtSpeed formats KB/s into display string with HTML subscript units (K/M).
+// fmtSpeed renders KB/s with a Pango <sub> unit suffix (K for KB/s, M for MB/s).
 func fmtSpeed(kb int) string {
 	if kb < 1000 {
 		return fmt.Sprintf("%03d<sub>K</sub>", kb)

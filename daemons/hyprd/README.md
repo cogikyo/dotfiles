@@ -15,8 +15,9 @@ hyprd/
 │   └── socket.go               #   command socket + event socket primitives
 │
 ├── session/                    # startup, layout spawning, kitty tabs
-│   ├── init.go                 #   Init.Execute: startup orchestration (bg → net → layouts → execs → lock)
+│   ├── init.go                 #   Init.Execute: startup orchestration (bg → net → layouts → execs → pseudo-lock)
 │   ├── layout.go               #   Layout.openSession: spawns windows from sessions.<name>.body
+│   ├── lock.go                 #   Lock.{Pseudo,Unlock,Full}: visual blackout, audio/notify pause, restore
 │   ├── bg.go                   #   mpvpaper wallpaper lifecycle
 │   ├── kitty.go                #   kitty remote-control client (list/focus/send-text)
 │   ├── tab.go                  #   `hyprd tab <name>` - switch tab in focused kitty
@@ -85,9 +86,11 @@ systemd → hyprd (main.go)
           │       └─ focuswindow <master>
           ├─ exec init.execs                 # glava, spotify, bluetooth
           ├─ workspace init.workspace
-          ├─ greeting notification
-          └─ hyprlock (if init.lock)
+          └─ Lock.Pseudo (if init.lock)      # blackout + submap
 ```
+
+Unlock restores the saved workspace and re-runs `init.execs` so the glava/bluetooth restore surface
+lives in one place.
 
 ## Commands
 
@@ -127,19 +130,27 @@ hyprd tabs init <profile> <pid>  # hydrate tab titles on kitty spawn
 hyprd tabs refresh <name> <pid>  # re-apply titles
 ```
 
+### Lock
+
+```bash
+hyprd lock             # pseudo-lock: workspace blackout + dunst pause + music pause + submap
+hyprd lock unlock      # exit pseudo-lock (alias: hyprd lock -u)
+hyprd lock full        # wraps hyprlock --grace 2 with the pseudo-lock pre/post hooks
+```
+
 ### Query and subscribe
 
 Used by eww widgets for real-time state.
 
 ```bash
-hyprd query [topic]      # get state as JSON (workspace|monocle|hidden|split|all)
-hyprd subscribe [...]    # stream events (workspace monocle split)
+hyprd query [topic]      # get state as JSON (workspace|hidden|split|three-body|all)
+hyprd subscribe [...]    # stream events (workspace split)
 ```
 
 eww integration:
 
 ```yuck
-(deflisten hyprd `hyprd subscribe workspace monocle split`)
+(deflisten hyprd `hyprd subscribe workspace split`)
 (label :text {hyprd?.workspace?.current ?: "?"})
 ```
 
@@ -149,7 +160,7 @@ eww integration:
 
 - `monitor` — geometry and reserved margins
 - `background` — mpvpaper wallpaper
-- `init` — boot sequence (sessions, execs, greeting, lock)
+- `init` — boot sequence (sessions, execs, lock)
 - `split` — master ratio presets (xs / default / lg)
 - `style` — border and shadow colors
 - `notify` — sounds, icons, per-style appearance

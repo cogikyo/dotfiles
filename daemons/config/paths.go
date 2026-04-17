@@ -6,19 +6,21 @@ import (
 	"strings"
 )
 
+// Paths returned by this file are $HOME-relative; loadYAMLFile joins them with os.UserHomeDir().
 const configsDir = "dotfiles/daemons/configs"
 
-// ConfigPath returns the relative config path for a daemon YAML file.
+// ConfigPath returns the $HOME-relative path to a daemon's YAML config.
 func ConfigPath(name string) string {
 	return filepath.Join(configsDir, name+".yaml")
 }
 
-// LocalConfigPath returns the relative path for a daemon-specific local override.
+// LocalConfigPath returns the $HOME-relative path to a daemon's gitignored local override.
 func LocalConfigPath(name string) string {
 	return filepath.Join(configsDir, name+".local.yaml")
 }
 
-// ExpandPath converts "~/..." into an absolute path under the current home.
+// ExpandPath resolves a leading "~/" against the current user's home directory.
+// Returns the input unchanged on missing prefix or home-lookup failure.
 func ExpandPath(path string) string {
 	if strings.HasPrefix(path, "~/") {
 		home, err := os.UserHomeDir()

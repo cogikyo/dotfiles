@@ -69,6 +69,15 @@ type browserSnapshotWindow struct {
 	HyprOrderMatchesTabs bool   `yaml:"hypr_order_matches_tabs"`
 }
 
+// writeSnapshot persists window windowIndex of store under a slugified name.
+//
+// Layout under browserStateRoot():
+//
+//	<slug>/<timestamp>/snapshot.yaml  — human-readable summary + BrowserConfig
+//	<slug>/<timestamp>/session.json   — single-window session envelope (uncompressed)
+//	<slug>/latest                     — symlink to the newest <timestamp>
+//
+// Returns the absolute path to the new snapshot directory.
 func (b *Browser) writeSnapshot(name string, profile firefoxProfile, windowIndex int, store *firefoxSessionStore) (string, error) {
 	slug, err := slugifySnapshotName(name)
 	if err != nil {
@@ -138,6 +147,10 @@ func (b *Browser) writeSnapshot(name string, profile firefoxProfile, windowIndex
 	return targetDir, nil
 }
 
+// snapshotSessionJSON builds a single-window session envelope suitable for writing back via encodeMozillaLZ4File.
+//
+// Envelope-level fields (version, session, global, maxSplitViewId, savedGroups) pass through verbatim so the
+// restored session looks identical to Firefox aside from the narrowed window list.
 func snapshotSessionJSON(raw firefoxSessionEnvelope, windowIndex int) ([]byte, error) {
 	if windowIndex < 0 || windowIndex >= len(raw.Windows) {
 		return nil, fmt.Errorf("window index %d is out of range", windowIndex+1)
@@ -166,6 +179,7 @@ func snapshotSessionJSON(raw firefoxSessionEnvelope, windowIndex int) ([]byte, e
 	return json.MarshalIndent(doc, "", "  ")
 }
 
+// updateLatestSnapshotLink atomically points baseDir/latest at snapshotID via a temp symlink + rename.
 func updateLatestSnapshotLink(baseDir, snapshotID string) error {
 	latest := filepath.Join(baseDir, "latest")
 	tmp := filepath.Join(baseDir, ".latest.tmp")
@@ -181,6 +195,16 @@ func updateLatestSnapshotLink(baseDir, snapshotID string) error {
 	return nil
 }
 
+// summarizeFirefoxWindow projects a session-store window into a snapshot summary and a launch-ready BrowserConfig.
+//
+// Grouping rules:
+//   - Pinned tabs -> BrowserConfig.Pinned (never assigned to a group).
+//   - Ungrouped visible tabs -> BrowserConfig.URLs.
+//   - Grouped tabs -> BrowserConfig.Groups, preserving declared order, then appending orphan groups referenced by
+//     tabs but missing from window.Groups (older session files).
+//
+// HyprOrderMatchesTabs is true when re-launching the BrowserConfig would reproduce the tab order.
+// Callers surface this to flag when URL-mode restore would scramble the layout.
 func summarizeFirefoxWindow(window firefoxWindow) browserWindowSummary {
 	groupByID := make(map[string]firefoxGroup, len(window.Groups))
 	for _, group := range window.Groups {
@@ -272,6 +296,10 @@ func summarizeFirefoxWindow(window firefoxWindow) browserWindowSummary {
 	}
 }
 
+// resolveSnapshotDir finds the on-disk directory for a snapshot.
+//
+// snapshotID may be "" to mean latest.
+// Both the current and legacy state roots are searched so snapshots taken before the hyprd rename still resolve.
 func resolveSnapshotDir(name, snapshotID string) (string, error) {
 	slug, err := slugifySnapshotName(name)
 	if err != nil {
@@ -335,6 +363,7 @@ func latestSnapshotDir(baseDir string) (string, error) {
 	return filepath.Join(baseDir, dirs[len(dirs)-1]), nil
 }
 
+// browserStateRoot returns $XDG_STATE_HOME/hyprd/browser-sessions, defaulting to ~/.local/state/hyprd/browser-sessions.
 func browserStateRoot() (string, error) {
 	if stateHome := os.Getenv("XDG_STATE_HOME"); stateHome != "" {
 		return filepath.Join(stateHome, "hyprd", "browser-sessions"), nil
@@ -346,6 +375,9 @@ func browserStateRoot() (string, error) {
 	return filepath.Join(home, ".local", "state", "hyprd", "browser-sessions"), nil
 }
 
+// legacyBrowserStateRoot is the pre-rename location.
+//
+// Still read so old snapshots keep resolving; new snapshots are only written under browserStateRoot().
 func legacyBrowserStateRoot() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {

@@ -1,3 +1,7 @@
+// Package notify handles desktop notifications for hyprd.
+//
+// Accepts NotifyRequest events from external sources (Claude Code, Codex, dunst script rules, kitty cmd-finish,
+// notify-send-style CLI), renders them via dunstify, and plays optional sounds via paplay.
 package notify
 
 import (
@@ -6,6 +10,7 @@ import (
 	"time"
 )
 
+// Each entry must exist as <name>.ogg under config.Notify.SoundsDir.
 var codexStartSounds = []string{
 	"zug-zug",
 	"work-work",
@@ -13,7 +18,13 @@ var codexStartSounds = []string{
 	"something-need-doing",
 }
 
-// NotifyRequest is the compact, daemon-facing notification event model.
+// NotifyRequest is the daemon-facing notification event.
+//
+// Populated per-source:
+//   - claude/codex: Prompt, Message, LastAssistantMessage, AgentType, KittyPID/WindowID (from env).
+//   - dunst: App, Summary, Body, Urgency, IconPath.
+//   - send: App, Summary, Body, Urgency, Timeout (notify-send shaped).
+//   - kitty: Command.
 type NotifyRequest struct {
 	Source               string `json:"source"`
 	Event                string `json:"event"`
@@ -55,7 +66,7 @@ type kittyContext struct {
 	App         string
 }
 
-// Notifier routes compact notification requests through Dunst and paplay.
+// Notifier routes notification requests through dunstify and paplay.
 type Notifier struct {
 	hypr *hypr.Client
 	cfg  *config.HyprConfig

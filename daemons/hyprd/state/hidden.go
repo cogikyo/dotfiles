@@ -1,26 +1,31 @@
 package state
 
-// HiddenState tracks a window moved to the special workspace for temporary hiding.
+// HiddenState records a window stashed on the special workspace.
+//
+// OriginWS and SlaveIndex are kept so the window can be restored to its prior layout position.
 type HiddenState struct {
 	Address    string `json:"address"`
 	OriginWS   int    `json:"origin_ws"`
 	SlaveIndex int    `json:"slave_index"`
 }
 
-// ThreeBodyState tracks a three-window layout where only master + one slave are visible.
+// ThreeBodyState is a three-window layout where Master is always visible.
+//
+// Exactly one of Active or Shadow is rendered; the other lives on the special workspace until toggled.
 type ThreeBodyState struct {
 	Master string `json:"master"`
 	Active string `json:"active"`
 	Shadow string `json:"shadow"`
 }
 
-// MonocleWindow tracks a single window displaced during monocle mode.
 type MonocleWindow struct {
 	Address  string `json:"address"`
 	OriginWS int    `json:"origin_ws"`
 }
 
-// MonocleState tracks windows displaced from a workspace during monocle mode.
+// MonocleState holds the per-workspace monocle snapshot.
+//
+// SavedThreeBody is set only when monocle was entered over a three-body layout, so the pair can be restored on exit.
 type MonocleState struct {
 	Focused        string          `json:"focused"`
 	Master         string          `json:"master"`
@@ -28,6 +33,7 @@ type MonocleState struct {
 	SavedThreeBody *ThreeBodyState `json:"saved_three_body,omitempty"`
 }
 
+// GetHidden returns a deep copy of the hidden-window map; safe to mutate.
 func (s *State) GetHidden() map[string]*HiddenState {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

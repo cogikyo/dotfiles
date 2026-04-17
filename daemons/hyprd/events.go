@@ -16,16 +16,16 @@ import (
 	"dotfiles/daemons/hyprd/state"
 )
 
-// EventLoop synchronizes daemon state by listening to Hyprland's event socket
-// and notifying subscribers of workspace changes.
+// EventLoop mirrors Hyprland's event stream into daemon state and fans out workspace changes to subscribers.
+//
+// Shutdown is driven exclusively by closing the done channel passed at construction.
 type EventLoop struct {
-	hypr  *hypr.Client                // Hyprland IPC client
-	state *state.State                // Shared daemon state
-	subs  *daemon.SubscriptionManager // Pub/sub for workspace events
-	done  <-chan struct{}             // Shutdown signal
+	hypr  *hypr.Client
+	state *state.State
+	subs  *daemon.SubscriptionManager
+	done  <-chan struct{}
 }
 
-// NewEventLoop creates an EventLoop.
 func NewEventLoop(hypr *hypr.Client, state *state.State, subs *daemon.SubscriptionManager, done <-chan struct{}) *EventLoop {
 	return &EventLoop{
 		hypr:  hypr,
@@ -35,8 +35,9 @@ func NewEventLoop(hypr *hypr.Client, state *state.State, subs *daemon.Subscripti
 	}
 }
 
-// Run connects to Hyprland's event socket, performs initial state sync,
-// then processes events until the done channel closes.
+// Run dials Hyprland's event socket, seeds state from a one-shot query, then dispatches events until shutdown.
+//
+// A scanner error during shutdown is treated as normal termination.
 func (e *EventLoop) Run() error {
 	socketPath := e.hypr.EventSocketPath()
 
@@ -60,14 +61,13 @@ func (e *EventLoop) Run() error {
 		default:
 		}
 
-		line := scanner.Text()
-		e.handleEvent(line)
+		e.handleEvent(scanner.Text())
 	}
 
 	if err := scanner.Err(); err != nil {
 		select {
 		case <-e.done:
-			return nil // Normal shutdown
+			return nil
 		default:
 			return fmt.Errorf("event read error: %w", err)
 		}
@@ -102,9 +102,10 @@ func (e *EventLoop) updateOccupied() error {
 		return err
 	}
 
+	// exclude special workspaces (id <= 0): scratchpads, shadow, etc.
 	wsSet := make(map[int]bool)
 	for _, c := range clients {
-		if c.Workspace.ID > 0 { // Skip special workspaces
+		if c.Workspace.ID > 0 {
 			wsSet[c.Workspace.ID] = true
 		}
 	}
@@ -113,6 +114,8 @@ func (e *EventLoop) updateOccupied() error {
 	return nil
 }
 
+// handleEvent parses an "event>>data" line and applies it to state.
+// Payload schema: https://wiki.hypr.land/IPC/ — unrecognized events are dropped.
 func (e *EventLoop) handleEvent(line string) {
 	parts := strings.SplitN(line, ">>", 2)
 	if len(parts) != 2 {
@@ -123,6 +126,7 @@ func (e *EventLoop) handleEvent(line string) {
 
 	switch event {
 	case "workspace", "workspacev2":
+		// workspacev2 payload is "id,name"; workspace is just "id".
 		wsStr := data
 		if idx := strings.Index(data, ","); idx > 0 {
 			wsStr = data[:idx]
@@ -133,6 +137,7 @@ func (e *EventLoop) handleEvent(line string) {
 		}
 
 	case "focusedmon":
+		// payload is "monname,workspaceid".
 		if idx := strings.LastIndex(data, ","); idx >= 0 {
 			if ws, err := strconv.Atoi(data[idx+1:]); err == nil {
 				e.state.SetWorkspace(ws)
@@ -140,43 +145,36 @@ func (e *EventLoop) handleEvent(line string) {
 			}
 		}
 
-	case "createworkspace", "destroyworkspace":
-		e.updateOccupied()
-		e.notifyWorkspace()
-
-	case "openwindow":
+	case "createworkspace", "destroyworkspace", "openwindow", "movewindow":
 		e.updateOccupied()
 		e.notifyWorkspace()
 
 	case "closewindow":
+		// closewindow emits bare hex (no 0x prefix).
 		addr := data
 		if !strings.HasPrefix(addr, "0x") {
 			addr = "0x" + addr
 		}
+		// Three-body / monocle cleanup must run before ClearWindowState wipes the entries they read.
 		e.handleThreeBodyClose(addr)
 		e.handleMonocleClose(addr)
 		e.state.ClearWindowState(addr)
 		e.updateOccupied()
 		e.notifyWorkspace()
-
-	case "movewindow":
-		e.updateOccupied()
-		e.notifyWorkspace()
 	}
 }
 
-// handleThreeBodyClose restores the shadow window when a three-body member closes.
-// Must be called before ClearWindowState (which removes the three-body entry).
+// handleThreeBodyClose dissolves a three-body triple when any member closes.
+// If a visible member (active/master) closes, the hidden shadow is pulled back before dissolving.
+//
+// Caller contract: run before ClearWindowState, which wipes the entries this reads.
 func (e *EventLoop) handleThreeBodyClose(addr string) {
-	allTB := e.state.AllThreeBody()
-	for ws, tb := range allTB {
+	for ws, tb := range e.state.AllThreeBody() {
 		if tb.Shadow == addr {
-			// Shadow closed — just dissolve, remaining windows are already visible
 			e.state.ClearThreeBody(ws)
 			return
 		}
 		if tb.Active == addr || tb.Master == addr {
-			// Visible member closed — restore shadow to workspace before dissolving
 			e.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", ws, tb.Shadow))
 			e.state.ClearThreeBody(ws)
 			return
@@ -184,9 +182,8 @@ func (e *EventLoop) handleThreeBodyClose(addr string) {
 	}
 }
 
-// handleMonocleClose restores displaced windows when the focused monocle
-// window closes. Hidden windows that close while parked are cleaned up later
-// by ClearWindowState.
+// handleMonocleClose restores displaced windows when the focused monocle window closes.
+// Hidden members that close on the special workspace are swept later by ClearWindowState.
 func (e *EventLoop) handleMonocleClose(addr string) {
 	for ws, ms := range e.state.AllMonocle() {
 		if ms.Focused != addr {
@@ -206,15 +203,12 @@ func (e *EventLoop) notifyWorkspace() {
 	}
 	current := e.state.GetWorkspace()
 	occupied := e.state.GetOccupied()
-	monocle := e.state.ActiveMonocleWorkspace()
 
 	data := map[string]any{
 		"current":      current,
 		"current_str":  strconv.Itoa(current),
 		"occupied":     occupied,
 		"occupied_str": joinWorkspaceIDs(occupied),
-		"monocle":      monocle,
-		"monocle_str":  workspaceIDString(monocle),
 	}
 	e.subs.Notify("workspace", data)
 }

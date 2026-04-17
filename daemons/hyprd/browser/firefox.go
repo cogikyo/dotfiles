@@ -11,13 +11,17 @@ import (
 	"time"
 )
 
+// firefoxBinary is the fallback launcher when three_body.browser.command is unset.
 const firefoxBinary = "firefox-developer-edition"
 
 var (
+	// firefoxTitleSuffixes are stripped from Hypr window titles so they compare against session-store tab titles.
 	firefoxTitleSuffixes = []string{
 		" — Firefox Developer Edition",
 		" — Mozilla Firefox",
 	}
+	// trivialBrowserURLs flag blank/home-only windows so snapshot heuristics skip them.
+	// localhost:42069 is the newtab daemon.
 	trivialBrowserURLs = map[string]struct{}{
 		"":                         {},
 		"about:blank":              {},
@@ -28,6 +32,9 @@ var (
 	}
 )
 
+// firefoxRunningPIDs returns PIDs of running Firefox Developer Edition processes.
+//
+// pgrep exit code 1 (no matches) and a missing pgrep binary are both empty-slice, not errors.
 func firefoxRunningPIDs() ([]int, error) {
 	cmd := exec.Command("pgrep", "-f", "/usr/lib/firefox-developer-edition/firefox|firefox-developer-edition")
 	out, err := cmd.Output()
@@ -56,6 +63,9 @@ func firefoxRunningPIDs() ([]int, error) {
 	return pids, nil
 }
 
+// stopFirefox ensures no Firefox process is running before an exact restore rewrites sessionstore files.
+//
+// Without force it errors when PIDs exist. With force it SIGTERMs them and polls up to 15s for exit.
 func stopFirefox(force bool) error {
 	pids, err := firefoxRunningPIDs()
 	if err != nil {
@@ -128,6 +138,9 @@ func trimFirefoxTitle(title string) string {
 	return strings.TrimSpace(title)
 }
 
+// titlesMatch does a loose compare: exact match or one being a prefix of the other.
+//
+// Firefox truncates long titles with ellipses in some contexts, so prefix match covers the cut-off Hypr title case.
 func titlesMatch(a, b string) bool {
 	a = strings.TrimSpace(a)
 	b = strings.TrimSpace(b)

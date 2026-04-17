@@ -7,25 +7,29 @@ import (
 	"sync"
 )
 
-// Subscriber represents a client connection receiving events for subscribed topics.
+// Subscriber is a single client connection receiving events for a topic set.
+//
+// mu serializes writes on conn so Notify and SendEvent can safely race.
 type Subscriber struct {
-	conn   net.Conn        // Client connection
-	topics map[string]bool // Topics the client is subscribed to
-	mu     sync.Mutex      // Protects concurrent writes to conn
+	conn   net.Conn
+	topics map[string]bool
+	mu     sync.Mutex
 }
 
-// SubscriptionManager coordinates event delivery to active subscribers.
+// SubscriptionManager fans out events to active Subscribers. Safe for concurrent use.
 type SubscriptionManager struct {
-	mu          sync.RWMutex  // Protects subscribers slice
-	subscribers []*Subscriber // Active client subscriptions
+	mu          sync.RWMutex
+	subscribers []*Subscriber
 }
 
-// NewSubscriptionManager creates a SubscriptionManager.
+// NewSubscriptionManager returns an empty SubscriptionManager.
 func NewSubscriptionManager() *SubscriptionManager {
 	return &SubscriptionManager{}
 }
 
-// Subscribe registers conn to receive events for topics, then calls onSubscribe to send initial state.
+// Subscribe registers conn for topics and invokes onSubscribe (if non-nil) under the manager lock.
+//
+// Holding the lock guarantees initial-state emission happens before any Notify can race it.
 func (m *SubscriptionManager) Subscribe(conn net.Conn, topics []string, onSubscribe func(sub *Subscriber)) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -46,7 +50,7 @@ func (m *SubscriptionManager) Subscribe(conn net.Conn, topics []string, onSubscr
 	}
 }
 
-// Unsubscribe removes the subscriber associated with the given connection.
+// Unsubscribe removes the subscriber bound to conn. No-op if not found.
 func (m *SubscriptionManager) Unsubscribe(conn net.Conn) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -59,7 +63,10 @@ func (m *SubscriptionManager) Unsubscribe(conn net.Conn) {
 	}
 }
 
-// Notify broadcasts a JSON event to all subscribers interested in topic.
+// Notify broadcasts {event: topic, data: data} as a newline-terminated JSON frame to matching subscribers.
+//
+// Matches are subscribers whose topic set contains topic or "*".
+// Marshal and write errors are swallowed; dead connections are evicted later by Unsubscribe, not here.
 func (m *SubscriptionManager) Notify(topic string, data any) {
 	m.mu.RLock()
 	defer m.mu.RUnlock()
@@ -84,7 +91,9 @@ func (m *SubscriptionManager) Notify(topic string, data any) {
 	}
 }
 
-// SendEvent writes a JSON event to the subscriber's connection.
+// SendEvent writes a single newline-terminated JSON event directly to sub.
+//
+// Intended for initial-state pushes from OnSubscribe callbacks.
 func (sub *Subscriber) SendEvent(topic string, data any) {
 	event := map[string]any{"event": topic, "data": data}
 	if jsonData, err := json.Marshal(event); err == nil {
@@ -94,16 +103,18 @@ func (sub *Subscriber) SendEvent(topic string, data any) {
 	}
 }
 
-// WantsTopic reports whether the subscriber is interested in the given topic.
+// WantsTopic reports whether sub is subscribed to topic (or the "*" wildcard).
 func (sub *Subscriber) WantsTopic(topic string) bool {
 	return sub.topics[topic] || sub.topics["*"]
 }
 
-// ParseSubscribeCommand extracts topics from cmd, defaulting to ["*"] if none specified.
+// ParseSubscribeCommand extracts topics from a "subscribe [topic...]" command.
+//
+// Returns ["*"] when no topics are given.
 func ParseSubscribeCommand(cmd string) []string {
 	parts := strings.Fields(cmd)
 	if len(parts) < 2 {
-		return []string{"*"} // Subscribe to all
+		return []string{"*"}
 	}
 	return parts[1:]
 }

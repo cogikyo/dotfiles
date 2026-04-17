@@ -25,35 +25,34 @@ const (
 	defaultSeekDelta   = 10   // 10 seconds
 )
 
-// MusicState represents current playback state for the eww statusbar.
+// MusicState is the Spotify playback snapshot exported to the statusbar.
 type MusicState struct {
-	Status        string `json:"status"`         // "Playing", "Paused", or "Stopped"
-	Playing       bool   `json:"playing"`        // Convenience flag for active playback state
-	Volume        string `json:"volume"`         // Range: "0.0" to "1.0"
-	VolumePercent int    `json:"volume_percent"` // Playback volume scaled to 0-100 for widgets
-	Artist        string `json:"artist"`         // Current track artist
-	Album         string `json:"album"`          // Current track album
-	AlbumShort    string `json:"album_short"`    // Widget-friendly truncated album name
-	Title         string `json:"title"`          // Current track title
-	TitleShort    string `json:"title_short"`    // Widget-friendly truncated song title
-	SingleTrack   bool   `json:"single_track"`   // Album and title collapse to one display line
-	Progress      int    `json:"progress"`       // Playback progress percentage (0-100)
-	ArtPath       string `json:"art_path"`       // Local filesystem path to cached album art
+	Status        string `json:"status"`         // "Playing" | "Paused" | "Stopped"
+	Playing       bool   `json:"playing"`        // Status == "Playing"
+	Volume        string `json:"volume"`         // raw playerctl volume, "0.0" to "1.0"
+	VolumePercent int    `json:"volume_percent"` // Volume scaled to 0-100
+	Artist        string `json:"artist"`
+	Album         string `json:"album"`
+	AlbumShort    string `json:"album_short"`  // truncated for widget width
+	Title         string `json:"title"`
+	TitleShort    string `json:"title_short"`  // truncated for widget width
+	SingleTrack   bool   `json:"single_track"` // title == album; widget collapses to one line
+	Progress      int    `json:"progress"`     // playback progress 0-100
+	ArtPath       string `json:"art_path"`     // path to cached album art (fixed)
 }
 
-// Music monitors Spotify playback via playerctl, caching album art and providing playback control actions.
+// Music monitors Spotify via playerctl and exposes playback-control actions.
 type Music struct {
-	state      StateSetter    // State storage backend
-	notify     func(data any) // Callback for state changes
-	done       chan struct{}  // Shutdown signal
-	active     bool           // Whether provider is running
-	last       MusicState     // Last known state for change detection
-	lastArtURL string         // URL of currently cached album art
-	mu         sync.Mutex     // Protects state and lastArtURL
-	wg         sync.WaitGroup // Tracks background album art downloads
+	state      StateSetter
+	notify     func(data any)
+	done       chan struct{}
+	active     bool
+	last       MusicState
+	lastArtURL string
+	mu         sync.Mutex     // guards last, lastArtURL
+	wg         sync.WaitGroup // tracks in-flight album-art downloads
 }
 
-// NewMusic creates a Music provider for Spotify playback monitoring.
 func NewMusic(state StateSetter) Provider {
 	return &Music{
 		state: state,
@@ -65,23 +64,24 @@ func (m *Music) Name() string {
 	return "music"
 }
 
-// Start monitors Spotify playback using playerctl follow mode for real-time updates, with a fallback polling mechanism.
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ lifecycle                                                                    │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
+// Start runs playerctl --follow for event-driven metadata updates alongside a 1s poll
+// that covers fields follow mode omits (progress, in particular).
 func (m *Music) Start(ctx context.Context, notify func(data any)) error {
 	m.active = true
 	m.notify = notify
 
-	// Ensure album art directory exists
 	if err := os.MkdirAll(filepath.Dir(albumArtPath), 0o755); err != nil {
 		fmt.Fprintf(os.Stderr, "music: failed to create album art directory: %v\n", err)
 	}
 
-	// Send initial state
 	m.updateAndNotify()
 
-	// Start playerctl follow mode in background
 	go m.followMode(ctx)
 
-	// Fallback poll ticker in case follow mode fails
 	ticker := time.NewTicker(musicPollInterval)
 	defer ticker.Stop()
 
@@ -97,17 +97,21 @@ func (m *Music) Start(ctx context.Context, notify func(data any)) error {
 	}
 }
 
-// Stop shuts down the provider and waits for pending album art downloads to complete.
+// Stop signals shutdown and waits for in-flight art downloads so we don't leak partial files.
 func (m *Music) Stop() error {
 	if m.active {
 		close(m.done)
 		m.active = false
-		m.wg.Wait() // Wait for album art downloads to complete
+		m.wg.Wait()
 	}
 	return nil
 }
 
-// followMode continuously streams metadata changes from playerctl, automatically restarting on failure.
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ playerctl follow mode                                                        │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
+// followMode streams metadata changes from playerctl, reconnecting after any failure.
 func (m *Music) followMode(ctx context.Context) {
 	for {
 		select {
@@ -155,7 +159,7 @@ func (m *Music) followMode(ctx context.Context) {
 
 		cmd.Wait()
 
-		// playerctl died, wait before retry
+		// Back off briefly before reconnecting.
 		select {
 		case <-ctx.Done():
 			return
@@ -166,7 +170,8 @@ func (m *Music) followMode(ctx context.Context) {
 	}
 }
 
-// parseFollowLine parses tab-separated playerctl output and triggers album art downloads when URLs change.
+// parseFollowLine parses one tab-separated line and kicks off art downloads and change notifications.
+// Fields: status, volume, artist, album, title, artUrl.
 func (m *Music) parseFollowLine(line string) {
 	parts := strings.Split(line, "\t")
 	if len(parts) < 6 {
@@ -188,13 +193,12 @@ func (m *Music) parseFollowLine(line string) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// Download album art if URL changed
 	if artURL != "" && artURL != m.lastArtURL {
 		m.wg.Go(func() { m.downloadAlbumArt(artURL) })
 		m.lastArtURL = artURL
 	}
 
-	// Only notify if state changed (excluding art path comparison)
+	// ArtPath is fixed (albumArtPath) so we skip it in change detection.
 	if state.Status != m.last.Status ||
 		state.Volume != m.last.Volume ||
 		state.Artist != m.last.Artist ||
@@ -210,14 +214,16 @@ func (m *Music) parseFollowLine(line string) {
 	}
 }
 
-// updateAndNotify polls playerctl for current state and notifies only if state has changed.
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ polling fallback                                                             │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
 func (m *Music) updateAndNotify() {
 	state := m.getCurrentState()
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	// Only notify if state changed
 	if state.Status != m.last.Status ||
 		state.Volume != m.last.Volume ||
 		state.Artist != m.last.Artist ||
@@ -233,7 +239,8 @@ func (m *Music) updateAndNotify() {
 	}
 }
 
-// getCurrentState queries playerctl for all metadata fields and returns a default "waiting" state if player is unavailable.
+// getCurrentState builds a MusicState from per-field playerctl calls, with a "waiting" placeholder
+// when no player is reachable.
 func (m *Music) getCurrentState() MusicState {
 	status := m.playerctl("status")
 	if status == "" || status == "No players found" {
@@ -254,7 +261,6 @@ func (m *Music) getCurrentState() MusicState {
 	artURL := m.playerctlMetadata("mpris:artUrl")
 	progress := m.getProgress()
 
-	// Download album art if available
 	if artURL != "" && artURL != m.lastArtURL {
 		m.wg.Go(func() { m.downloadAlbumArt(artURL) })
 		m.lastArtURL = artURL
@@ -262,6 +268,10 @@ func (m *Music) getCurrentState() MusicState {
 
 	return musicState(status, volume, artist, album, title, progress)
 }
+
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ helpers and playerctl wrappers                                               │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 func musicState(status, volume, artist, album, title string, progress int) MusicState {
 	return MusicState{
@@ -303,7 +313,6 @@ func musicVolumePercent(volume string) int {
 	return percent
 }
 
-// playerctl executes a playerctl command and returns trimmed stdout, or empty string on error.
 func (m *Music) playerctl(cmd string) string {
 	out, err := exec.Command("playerctl", "--player="+musicPlayer, cmd).Output()
 	if err != nil {
@@ -312,7 +321,6 @@ func (m *Music) playerctl(cmd string) string {
 	return strings.TrimSpace(string(out))
 }
 
-// playerctlMetadata retrieves a specific metadata field from playerctl, returning empty string on error.
 func (m *Music) playerctlMetadata(field string) string {
 	out, err := exec.Command("playerctl", "--player="+musicPlayer, "metadata", field).Output()
 	if err != nil {
@@ -321,7 +329,6 @@ func (m *Music) playerctlMetadata(field string) string {
 	return strings.TrimSpace(string(out))
 }
 
-// playerctlFormat retrieves formatted playerctl metadata output, returning empty string on error.
 func (m *Music) playerctlFormat(format string) string {
 	out, err := exec.Command("playerctl", "--player="+musicPlayer, "metadata", "--format", format).Output()
 	if err != nil {
@@ -330,7 +337,6 @@ func (m *Music) playerctlFormat(format string) string {
 	return strings.TrimSpace(string(out))
 }
 
-// getProgress returns playback progress as a percentage in the range 0-100.
 func (m *Music) getProgress() int {
 	lengthStr := m.playerctlFormat("{{ mpris:length }}")
 	positionStr := m.playerctlFormat("{{ position }}")
@@ -351,7 +357,7 @@ func (m *Music) getProgress() int {
 	return progress
 }
 
-// downloadAlbumArt fetches album art from URL and atomically writes it to the cache path.
+// downloadAlbumArt writes to albumArtPath atomically via tmp-file + rename so eww never sees a torn write.
 func (m *Music) downloadAlbumArt(url string) {
 	if url == "" {
 		return
@@ -367,7 +373,6 @@ func (m *Music) downloadAlbumArt(url string) {
 		return
 	}
 
-	// Create temp file first, then rename for atomic write
 	tmpFile := albumArtPath + ".tmp"
 	f, err := os.Create(tmpFile)
 	if err != nil {
@@ -384,7 +389,6 @@ func (m *Music) downloadAlbumArt(url string) {
 	os.Rename(tmpFile, albumArtPath)
 }
 
-// playerctlRun executes a playerctl command, logging errors to stderr.
 func (m *Music) playerctlRun(args ...string) {
 	fullArgs := append([]string{"--player=" + musicPlayer}, args...)
 	if err := exec.Command("playerctl", fullArgs...).Run(); err != nil {
@@ -392,7 +396,11 @@ func (m *Music) playerctlRun(args ...string) {
 	}
 }
 
-// HandleAction processes playback control commands (play, pause, toggle, next, previous, volume, seek).
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ actions                                                                      │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
+// HandleAction supports: play, pause, toggle, next, previous, volume, seek.
 func (m *Music) HandleAction(args []string) (string, error) {
 	if len(args) == 0 {
 		return "", errors.New("action required: play, pause, toggle, volume, seek")
@@ -436,7 +444,7 @@ func (m *Music) HandleAction(args []string) (string, error) {
 	}
 }
 
-// changeVolume adjusts player volume, or sets an absolute value when asked.
+// changeVolume accepts "up|down [delta]" for relative steps, or "set <0.0-1.0>" for absolute.
 func (m *Music) changeVolume(args []string) (string, error) {
 	direction := args[0]
 
@@ -480,13 +488,11 @@ func (m *Music) changeVolume(args []string) (string, error) {
 	volArg := fmt.Sprintf("%s%.2f", sign, amount)
 	m.playerctlRun("volume", volArg)
 
-	// Get new volume and return
 	newVol := m.playerctl("volume")
 	m.updateAndNotify()
 	return fmt.Sprintf("volume=%s", newVol), nil
 }
 
-// changeSeek adjusts playback position.
 func (m *Music) changeSeek(direction string) (string, error) {
 	sign := "+"
 	if direction == "down" {

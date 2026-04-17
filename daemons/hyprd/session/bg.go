@@ -18,6 +18,9 @@ func NewBG(cfg *config.BackgroundConfig) *BG {
 	return &BG{cfg: cfg}
 }
 
+// Execute runs the given mode:
+//   - "ensure" spawns mpvpaper if no live IPC socket responds.
+//   - "kill" pkills every mpvpaper instance.
 func (b *BG) Execute(mode string) (string, error) {
 	switch mode {
 	case "ensure":
@@ -60,9 +63,11 @@ func (b *BG) spawn() {
 
 func (b *BG) killAll() {
 	exec.Command("pkill", "mpvpaper").Run()
+	// settle so a following spawn does not race socket teardown
 	time.Sleep(100 * time.Millisecond)
 }
 
+// EnsureBG spawns the wallpaper if not already running; for init-time callers that do not need the BG handle.
 func EnsureBG(cfg *config.BackgroundConfig) {
 	bg := NewBG(cfg)
 	bg.Execute("ensure")

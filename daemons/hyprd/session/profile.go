@@ -8,8 +8,12 @@ import (
 	"dotfiles/daemons/config"
 )
 
+// tabProfileOrder maps profile names to their slot in colon-separated aliases like "nvim:agents-nvim:leadpier-nvim".
 var tabProfileOrder = map[string]int{"editor": 0, "agents": 1, "leadpier": 2}
 
+// detectTabProfile infers the tab profile of a kitty window by matching KITTY_TAB_ID suffixes against profile prefixes.
+//
+// Falls back to "editor" when nothing matches.
 func detectTabProfile(cfg *config.HyprConfig, win KittyOSWindow) string {
 	if cfg == nil || cfg.Tabs == nil {
 		return "editor"
@@ -35,6 +39,10 @@ func detectTabProfile(cfg *config.HyprConfig, win KittyOSWindow) string {
 	return "editor"
 }
 
+// resolveTabAlias picks the profile-specific name out of a colon-separated alias.
+//
+// "nvim:agents-nvim:leadpier-nvim" resolves to "agents-nvim" when profileName is "agents".
+// Empty slots fall back to the first entry.
 func resolveTabAlias(alias, profileName string) string {
 	if !strings.Contains(alias, ":") {
 		return alias
@@ -196,6 +204,13 @@ func findProfileTab(profile *config.TabProfile, name string) *config.TabDef {
 	return nil
 }
 
+// pickSemanticTab chooses a tab when an action (nvim, git, build) matches multiple candidates in a profile.
+//
+// Preference order:
+//   - remembered tab for this action
+//   - tab sharing a context prefix with the current tab
+//   - remembered context prefix
+//   - profile's focus tab context prefix
 func pickSemanticTab(profile *config.TabProfile, action, currentTab, rememberedTab, rememberedContext string) string {
 	candidates := semanticCandidates(profile, action)
 	if len(candidates) == 0 {

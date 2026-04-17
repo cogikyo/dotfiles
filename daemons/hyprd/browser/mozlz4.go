@@ -8,8 +8,15 @@ import (
 	"github.com/pierrec/lz4/v4"
 )
 
+// mozLz40 header layout:
+//   [0:8]   magic bytes "mozLz40\0"
+//   [8:12]  little-endian uint32 decompressed size
+//   [12:]   raw LZ4 block (not framed) — use UncompressBlock/CompressBlock, NOT the streaming reader/writer.
 var mozillaLZ4Magic = []byte("mozLz40\x00")
 
+// decodeMozillaLZ4File reads a mozLz40-wrapped LZ4 block from path and returns the decompressed payload.
+//
+// Firefox uses this wrapping for sessionstore.jsonlz4, recovery.jsonlz4, and similar files.
 func decodeMozillaLZ4File(path string) ([]byte, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -28,6 +35,9 @@ func decodeMozillaLZ4File(path string) ([]byte, error) {
 	return out[:n], nil
 }
 
+// encodeMozillaLZ4File writes data to path wrapped in the mozLz40 header Firefox expects.
+//
+// Used to produce session files during exact restore.
 func encodeMozillaLZ4File(path string, data []byte) error {
 	dst := make([]byte, lz4.CompressBlockBound(len(data)))
 	n, err := lz4.CompressBlock(data, dst, nil)

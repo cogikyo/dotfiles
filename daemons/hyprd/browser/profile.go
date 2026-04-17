@@ -11,6 +11,10 @@ import (
 	"dotfiles/daemons/config"
 )
 
+// firefoxProfile locates a single profile on disk.
+//
+// InstallKey is the section header from installs.ini (Firefox's per-install hash tying a binary to a profile).
+// Empty when the profile was resolved without consulting installs.ini.
 type firefoxProfile struct {
 	Root       string
 	Name       string
@@ -19,6 +23,16 @@ type firefoxProfile struct {
 
 type iniFile map[string]map[string]string
 
+// discoverFirefoxProfile resolves a Firefox profile directory.
+//
+// Resolution order:
+//  1. raw is a path that exists on disk — use it directly.
+//  2. raw matches a profiles.ini Name, Path, or basename — use that.
+//  3. Otherwise pick the default:
+//     a. first installs.ini section with a Default= entry (per-install default), or
+//     b. first profiles.ini Profile section with Default=1.
+//
+// installs.ini takes precedence because Firefox itself prefers it when multiple installs share a profile root.
 func discoverFirefoxProfile(raw string) (firefoxProfile, error) {
 	root, err := firefoxRoot()
 	if err != nil {
@@ -90,6 +104,9 @@ func discoverFirefoxProfile(raw string) (firefoxProfile, error) {
 	return firefoxProfile{}, fmt.Errorf("could not determine default Firefox profile")
 }
 
+// firefoxRoot returns the directory containing profiles.ini.
+//
+// The XDG path (~/.config/mozilla/firefox) wins over legacy ~/.mozilla/firefox; Developer Edition defaults to XDG.
 func firefoxRoot() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {

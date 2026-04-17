@@ -1,34 +1,24 @@
-// Package providers implements modular system monitoring and control components
-// for the ewwd daemon.
+// Package providers implements the subsystem monitors feeding ewwd's shared state.
 //
-// Each provider monitors a specific subsystem (audio, network, weather, etc.)
-// and exposes its state through a unified interface. Providers run as background
-// goroutines, pushing state updates to subscribers via the notify callback.
-//
-// Available providers:
-//   - Audio: PulseAudio volume monitoring and control via pulsemixer
-//   - Brightness: Screen brightness control via wlr-brightness
-//   - Date: Date, time, and weeks-alive counter for statusbar
-//   - GPU: AMD GPU metrics from /sys/class/drm/
-//   - Music: Spotify playback monitoring and control via playerctl
-//   - Network: Network speed monitoring via nmcli and /sys/class/net/
-//   - Timer: Timer and alarm countdown with desktop notifications
-//   - Weather: OpenWeatherMap integration for conditions and forecasts
-//
-// Providers that support user commands implement the ActionProvider interface.
+// Each provider owns one external data source (pulsemixer, nmcli, sysfs, OpenWeatherMap, etc.)
+// and runs as a background goroutine, pushing snapshots via the notify callback.
+// Providers with user-driven side effects also implement ActionProvider.
 package providers
 
 import "context"
 
-// Provider monitors a subsystem and pushes state updates via notify callback.
+// Provider monitors a subsystem and pushes state snapshots via notify.
+//
+// Name doubles as the query/subscribe topic string. Start must block until ctx is done or Stop
+// is called; it should emit an initial snapshot before entering its poll/event loop.
 type Provider interface {
-	Name() string                                           // Returns provider identifier for query/subscribe topics
-	Start(ctx context.Context, notify func(data any)) error // Starts background monitoring; calls notify on state changes
-	Stop() error                                            // Gracefully stops the provider and releases resources
+	Name() string
+	Start(ctx context.Context, notify func(data any)) error
+	Stop() error
 }
 
-// ActionProvider adds command handling for interactive control (e.g., volume adjust, brightness set).
+// ActionProvider accepts interactive commands (volume adjust, timer start, etc.) alongside monitoring.
 type ActionProvider interface {
 	Provider
-	HandleAction(args []string) (string, error) // Processes command args, returns result or error
+	HandleAction(args []string) (string, error)
 }

@@ -6,35 +6,32 @@ import (
 	"sync"
 )
 
-// State provides thread-safe storage for provider data using a generic key-value map.
-// This avoids needing typed getters/setters for each provider's data structure.
+// State is a thread-safe map of provider topic -> any-typed payload.
+// Providers stash their own structs without daemon-level typing; JSON is rendered on demand.
 type State struct {
-	mu   sync.RWMutex   // Protects concurrent access
-	data map[string]any // Provider data keyed by topic name
+	mu   sync.RWMutex
+	data map[string]any
 }
 
-// NewState creates an initialized state store.
 func NewState() *State {
 	return &State{
 		data: make(map[string]any),
 	}
 }
 
-// Set atomically updates a topic's data.
 func (s *State) Set(key string, value any) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	s.data[key] = value
 }
 
-// Get returns the current data for a topic, or nil if not set.
 func (s *State) Get(key string) any {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.data[key]
 }
 
-// GetAll returns a copy of all state data.
+// GetAll returns a shallow copy so callers can iterate without holding the lock.
 func (s *State) GetAll() map[string]any {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -43,7 +40,6 @@ func (s *State) GetAll() map[string]any {
 	return result
 }
 
-// JSON marshals all state data to JSON for client consumption.
 func (s *State) JSON() ([]byte, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

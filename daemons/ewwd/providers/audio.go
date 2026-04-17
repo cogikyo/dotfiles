@@ -19,27 +19,25 @@ var (
 	audioNameRe = regexp.MustCompile(`Name:\s*([A-Za-z0-9-]+)`)
 )
 
-// AudioState represents current audio device volumes and names, exposed to eww statusbar.
+// AudioState is the PulseAudio snapshot exported to the eww statusbar.
 type AudioState struct {
-	Sink          int    `json:"sink"`           // output volume (0-100)
-	SinkName      string `json:"sink_name"`      // output device name with custom mappings applied
-	SinkBluetooth bool   `json:"sink_bluetooth"` // default sink matches a configured Bluetooth device name
-	Source        int    `json:"source"`         // input volume (0-100), displayed with configured offset
-	SourceName    string `json:"source_name"`    // input device name with custom mappings applied
+	Sink          int    `json:"sink"`           // output volume, 0-100
+	SinkName      string `json:"sink_name"`      // after config.NameMappings alias
+	SinkBluetooth bool   `json:"sink_bluetooth"` // sink name matches config.BluetoothNames
+	Source        int    `json:"source"`         // input volume, 0-100, post-SourceOffset for display
+	SourceName    string `json:"source_name"`    // after config.NameMappings alias
 }
 
-// Audio monitors PulseAudio volume and provides control via pulsemixer,
-// polling at configured intervals and applying custom device name mappings.
+// Audio polls PulseAudio via pulsemixer and exposes volume-control actions.
 type Audio struct {
-	state  StateSetter        // state storage
-	config config.AudioConfig // volume limits, offsets, and name mappings
-	notify func(data any)     // change notification callback
-	done   chan struct{}      // shutdown signal
-	active bool               // whether provider is running
-	last   AudioState         // cached state for change detection
+	state  StateSetter
+	config config.AudioConfig
+	notify func(data any)
+	done   chan struct{}
+	active bool
+	last   AudioState
 }
 
-// NewAudio creates an Audio provider with the given configuration.
 func NewAudio(state StateSetter, cfg config.AudioConfig) Provider {
 	return &Audio{
 		state:  state,
@@ -48,17 +46,18 @@ func NewAudio(state StateSetter, cfg config.AudioConfig) Provider {
 	}
 }
 
-// Name returns "audio".
 func (a *Audio) Name() string {
 	return "audio"
 }
 
-// Start polls audio state at configured intervals and notifies on changes.
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ lifecycle                                                                    │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
 func (a *Audio) Start(ctx context.Context, notify func(data any)) error {
 	a.active = true
 	a.notify = notify
 
-	// Send initial state
 	a.updateAndNotify()
 
 	ticker := time.NewTicker(a.config.PollInterval)
@@ -76,7 +75,6 @@ func (a *Audio) Start(ctx context.Context, notify func(data any)) error {
 	}
 }
 
-// Stop shuts down the polling loop.
 func (a *Audio) Stop() error {
 	if a.active {
 		close(a.done)
@@ -85,11 +83,10 @@ func (a *Audio) Stop() error {
 	return nil
 }
 
-// updateAndNotify polls current audio state and notifies if changed.
+// updateAndNotify publishes a fresh snapshot only when it differs from the last.
 func (a *Audio) updateAndNotify() {
 	state := a.getCurrentState()
 
-	// Only notify if state changed
 	if state != a.last {
 		a.last = state
 		a.state.Set("audio", &state)
@@ -99,7 +96,10 @@ func (a *Audio) updateAndNotify() {
 	}
 }
 
-// getCurrentState reads current audio levels from pulsemixer.
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ pulsemixer queries                                                           │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
 func (a *Audio) getCurrentState() AudioState {
 	sinkName := a.getName("sink")
 
@@ -112,7 +112,7 @@ func (a *Audio) getCurrentState() AudioState {
 	}
 }
 
-// getID extracts the numeric ID of the default sink or source from pulsemixer output.
+// getID parses the numeric ID of the default sink/source from `pulsemixer --list-*s` output.
 func (a *Audio) getID(deviceType string) string {
 	listArg := "--list-" + deviceType + "s"
 	out, err := exec.Command("pulsemixer", listArg).Output()
@@ -120,7 +120,6 @@ func (a *Audio) getID(deviceType string) string {
 		return ""
 	}
 
-	// Find line with "Default" and extract numeric ID
 	for line := range strings.SplitSeq(string(out), "\n") {
 		if strings.Contains(line, "Default") {
 			if m := audioIDRe.FindStringSubmatch(line); len(m) > 1 {
@@ -131,7 +130,6 @@ func (a *Audio) getID(deviceType string) string {
 	return ""
 }
 
-// getVolume queries the current volume (0-100) of the default sink or source.
 func (a *Audio) getVolume(deviceType string) int {
 	id := a.getID(deviceType)
 	if id == "" {
@@ -144,7 +142,7 @@ func (a *Audio) getVolume(deviceType string) int {
 		return 0
 	}
 
-	// Output is "X Y" for left/right channels, take first
+	// pulsemixer emits "L R" per channel; take the left channel.
 	parts := strings.Fields(string(out))
 	if len(parts) == 0 {
 		return 0
@@ -154,7 +152,7 @@ func (a *Audio) getVolume(deviceType string) int {
 	return vol
 }
 
-// getName retrieves the device name from pulsemixer and applies custom mappings from config.
+// getName returns the default device name with config.NameMappings aliases applied.
 func (a *Audio) getName(deviceType string) string {
 	listArg := "--list-" + deviceType + "s"
 	out, err := exec.Command("pulsemixer", listArg).Output()
@@ -162,12 +160,10 @@ func (a *Audio) getName(deviceType string) string {
 		return ""
 	}
 
-	// Find line with "Default" and extract Name
 	for line := range strings.SplitSeq(string(out), "\n") {
 		if strings.Contains(line, "Default") {
 			if m := audioNameRe.FindStringSubmatch(line); len(m) > 1 {
 				name := m[1]
-				// Custom name mappings from config
 				if mapped, ok := a.config.NameMappings[name]; ok {
 					return mapped
 				}
@@ -187,7 +183,6 @@ func (a *Audio) isBluetoothDevice(name string) bool {
 	return false
 }
 
-// setVolume sets the volume for the default sink or source via pulsemixer.
 func (a *Audio) setVolume(deviceType string, volume int) {
 	id := a.getID(deviceType)
 	if id == "" {
@@ -200,7 +195,7 @@ func (a *Audio) setVolume(deviceType string, volume int) {
 	}
 }
 
-// sourceDisplayValue subtracts the configured offset from source volume for display purposes.
+// sourceDisplayValue collapses mic volumes at or below SourceOffset to zero for a clean dead zone.
 func (a *Audio) sourceDisplayValue(actual int) int {
 	if actual <= a.config.SourceOffset {
 		return 0
@@ -208,7 +203,11 @@ func (a *Audio) sourceDisplayValue(actual int) int {
 	return actual - a.config.SourceOffset
 }
 
-// HandleAction processes mute, change_volume, and set_default commands, returning formatted state.
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ actions                                                                      │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
+// HandleAction supports: mute <sink|source>, change_volume <sink|source> <up|down>, set_default <sink|source|both>.
 func (a *Audio) HandleAction(args []string) (string, error) {
 	if len(args) == 0 {
 		return "", errors.New("action required: mute, change_volume, set_default")
@@ -237,19 +236,17 @@ func (a *Audio) HandleAction(args []string) (string, error) {
 		return "", fmt.Errorf("unknown action: %s", args[0])
 	}
 
-	// Update state after action
 	a.updateAndNotify()
 
 	state := a.getCurrentState()
 	return fmt.Sprintf("sink=%d source=%d", state.Sink, state.Source), nil
 }
 
-// mute sets device volume to 0.
 func (a *Audio) mute(deviceType string) {
 	a.setVolume(deviceType, 0)
 }
 
-// changeVolume adjusts volume by configured step size, handling source offset logic for low volumes.
+// changeVolume steps by config.VolumeStep with source volume snapping in and out of the dead zone.
 func (a *Audio) changeVolume(deviceType, direction string) {
 	current := a.getVolume(deviceType)
 	maxVol := a.config.SinkMax
@@ -257,7 +254,7 @@ func (a *Audio) changeVolume(deviceType, direction string) {
 	if deviceType == "source" {
 		maxVol = a.config.SourceMax
 
-		// If source is at or below offset, jump to offset before adjusting
+		// Stepping up from the dead zone seeds at SourceOffset so the first tick is audible.
 		if current <= a.config.SourceOffset && direction == "up" {
 			a.setVolume(deviceType, a.config.SourceOffset)
 			current = a.config.SourceOffset
@@ -271,7 +268,7 @@ func (a *Audio) changeVolume(deviceType, direction string) {
 
 	newVol := min(max(current+delta, 0), maxVol)
 
-	// For source, if going below offset, snap to 0
+	// Stepping down through SourceOffset snaps straight to 0.
 	if deviceType == "source" && newVol < a.config.SourceOffset && direction == "down" {
 		newVol = 0
 	}
@@ -279,7 +276,6 @@ func (a *Audio) changeVolume(deviceType, direction string) {
 	a.setVolume(deviceType, newVol)
 }
 
-// setDefault sets sink, source, or both to configured default volumes.
 func (a *Audio) setDefault(target string) {
 	if target == "sink" || target == "both" {
 		a.setVolume("sink", a.config.DefaultSinkVolume)

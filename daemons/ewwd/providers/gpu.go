@@ -12,17 +12,17 @@ import (
 	"dotfiles/daemons/config"
 )
 
-// GPUState contains AMD GPU metrics for consumption by UI widgets and monitoring tools.
+// GPUState is an AMD GPU metrics snapshot. All numeric fields ship as pre-formatted strings.
 type GPUState struct {
-	GPUBusy   string `json:"gpu_busy"`   // GPU utilization percentage
-	MemBusy   string `json:"mem_busy"`   // Memory controller utilization percentage
-	MCLK      string `json:"mclk"`       // Memory clock speed in MHz
-	MCLKLevel string `json:"mclk_level"` // Active memory clock level (0-N)
-	VRAM      string `json:"vram"`       // VRAM usage percentage
+	GPUBusy   string `json:"gpu_busy"`   // utilization percent
+	MemBusy   string `json:"mem_busy"`   // memory controller utilization percent
+	MCLK      string `json:"mclk"`       // memory clock in MHz
+	MCLKLevel string `json:"mclk_level"` // active memory clock level (0-N)
+	VRAM      string `json:"vram"`       // VRAM usage percent
 	Used      string `json:"used"`       // VRAM used in bytes
 }
 
-// GPU monitors AMD GPU metrics by reading sysfs device attributes.
+// GPU polls AMD GPU metrics out of sysfs device attributes (config.DevicePath).
 type GPU struct {
 	state  StateSetter
 	config config.GPUConfig
@@ -30,7 +30,6 @@ type GPU struct {
 	active bool
 }
 
-// NewGPU creates a GPU provider configured to read from the specified device path.
 func NewGPU(state StateSetter, cfg config.GPUConfig) Provider {
 	return &GPU{
 		state:  state,
@@ -43,13 +42,11 @@ func (g *GPU) Name() string {
 	return "gpu"
 }
 
-// Start polls GPU metrics at configured intervals and notifies subscribers of state changes.
 func (g *GPU) Start(ctx context.Context, notify func(data any)) error {
 	g.active = true
 	ticker := time.NewTicker(g.config.PollInterval)
 	defer ticker.Stop()
 
-	// Initial read
 	if state := g.read(); state != nil {
 		g.state.Set("gpu", state)
 		notify(state)
@@ -83,11 +80,10 @@ func (g *GPU) read() *GPUState {
 	gpuBusy := readFile(path + "/gpu_busy_percent")
 	memBusy := readFile(path + "/mem_busy_percent")
 
-	// Parse mclk from pp_dpm_mclk (line with * is active)
+	// pp_dpm_mclk format: "<level>: <freq>Mhz[ *]" per line, '*' marks the active level.
 	mclkData := readFile(path + "/pp_dpm_mclk")
 	mclk, mclkLevel := parseMCLK(mclkData)
 
-	// Calculate VRAM percentage
 	totalStr := readFile(path + "/mem_info_vram_total")
 	usedStr := readFile(path + "/mem_info_vram_used")
 	vram := calculateVRAMPercent(totalStr, usedStr)

@@ -40,18 +40,6 @@ func (s *State) AllMonocle() map[int]*MonocleState {
 	return out
 }
 
-// ActiveMonocleWorkspace returns one workspace currently in monocle mode, or 0 if none.
-//
-// Multiple workspaces may each hold their own monocle; iteration order is not defined.
-func (s *State) ActiveMonocleWorkspace() int {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	for ws := range s.Monocle {
-		return ws
-	}
-	return 0
-}
-
 // ClearWindowState purges every trace of addr from the store on window-close.
 //
 // Clears Hidden, any DisplacedMasters mapping, drops the containing ThreeBody entry, and removes addr from any

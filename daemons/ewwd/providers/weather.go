@@ -14,47 +14,48 @@ import (
 	"dotfiles/daemons/config"
 )
 
-// WeatherState contains comprehensive weather data from OpenWeatherMap for UI display.
+// WeatherState is the OpenWeatherMap snapshot exported to the statusbar.
 type WeatherState struct {
-	Icon      string `json:"icon"`       // Weather condition icon
-	Desc      string `json:"desc"`       // Weather description
-	Temp      int    `json:"temp"`       // Current temperature in Celsius
-	FeelsLike int    `json:"feels_like"` // Feels-like temperature in Celsius
-	TempMorn  int    `json:"temp_morn"`  // Morning temperature forecast
-	TempDay   int    `json:"temp_day"`   // Daytime temperature forecast
-	TempEve   int    `json:"temp_eve"`   // Evening temperature forecast
-	TempNight int    `json:"temp_night"` // Nighttime temperature forecast
-	TempMax   int    `json:"temp_max"`   // Maximum temperature for the day
-	UVI       int    `json:"uvi"`        // UV index
-	UVIDesc   string `json:"uvi_desc"`   // UV index severity (low/moderate/high/extreme)
-	AQI       int    `json:"aqi"`        // Air Quality Index (1-5)
-	AQIDesc   string `json:"aqi_desc"`   // AQI description (good/moderate/poor/extreme)
-	Rain1h    int    `json:"rain_1h"`    // Rain probability next hour (percentage)
-	RainDay   int    `json:"rain_day"`   // Rain probability today (percentage)
-	Clouds    int    `json:"clouds"`     // Cloud coverage percentage
-	WindSpeed int    `json:"wind_speed"` // Wind speed in m/s
-	BFIcon    string `json:"bf_icon"`    // Beaufort scale icon
-	BFDesc    string `json:"bf_desc"`    // Beaufort scale description (calm/breeze/gale/etc)
-	Sunset    string `json:"sunset"`     // Sunset time formatted HH:MM
-	Moon      string `json:"moon"`       // Moon phase icon
-	MoonDesc  string `json:"moon_desc"`  // Moon phase description
-	Night     bool   `json:"night"`      // Current time is after sunset
+	Icon      string `json:"icon"`       // Nerd Font glyph, day/night variant
+	Desc      string `json:"desc"`       // short condition name (e.g. "Clouds")
+	Temp      int    `json:"temp"`       // C
+	FeelsLike int    `json:"feels_like"` // C
+	TempMorn  int    `json:"temp_morn"`  // today's morning forecast, C
+	TempDay   int    `json:"temp_day"`   // today's midday forecast, C
+	TempEve   int    `json:"temp_eve"`   // today's evening forecast, C
+	TempNight int    `json:"temp_night"` // today's overnight forecast, C
+	TempMax   int    `json:"temp_max"`   // today's high, C
+	UVI       int    `json:"uvi"`
+	UVIDesc   string `json:"uvi_desc"` // low | moderate | high | intense | extreme
+	AQI       int    `json:"aqi"`      // OpenWeatherMap AQI, 1-5
+	AQIDesc   string `json:"aqi_desc"` // good | moderate | poor | intense | extreme
+	Rain1h    int    `json:"rain_1h"`  // precipitation probability next hour, %
+	RainDay   int    `json:"rain_day"` // precipitation probability today, %
+	Clouds    int    `json:"clouds"`   // %
+	WindSpeed int    `json:"wind_speed"` // m/s
+	BFIcon    string `json:"bf_icon"`
+	BFDesc    string `json:"bf_desc"`
+	Sunset    string `json:"sunset"` // HH:MM local
+	Moon      string `json:"moon"`
+	MoonDesc  string `json:"moon_desc"`
+	Night     bool   `json:"night"` // local time is past sunset
 }
 
-// Weather fetches current conditions and forecasts from OpenWeatherMap API using configured location.
+// Weather pulls current conditions + forecasts from the OpenWeatherMap One Call API,
+// plus AQI from the legacy air_pollution endpoint.
 type Weather struct {
 	state  StateSetter
 	config config.WeatherConfig
 	done   chan struct{}
 	active bool
-	client *http.Client // Reused HTTP client for connection pooling
+	client *http.Client // reused for connection pooling
 
-	lat    string // Latitude loaded from config file
-	lon    string // Longitude loaded from config file
-	apiKey string // API key loaded from config file
+	lat    string
+	lon    string
+	apiKey string
 }
 
-// NewWeather creates a Weather provider that loads credentials at start time from configured file paths.
+// NewWeather constructs a Weather provider. Credentials and coordinates load lazily in Start.
 func NewWeather(state StateSetter, cfg config.WeatherConfig) Provider {
 	return &Weather{
 		state:  state,
@@ -67,18 +68,21 @@ func (w *Weather) Name() string {
 	return "weather"
 }
 
-// Start fetches weather data at configured intervals, continuing on errors to avoid daemon failure.
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ lifecycle                                                                    │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
+// Start loads credentials, emits an initial fetch, then polls at config.PollInterval.
+// Transient errors log to stderr; credential failure silently disables the provider.
 func (w *Weather) Start(ctx context.Context, notify func(data any)) error {
 	w.active = true
 	w.client = &http.Client{Timeout: 10 * time.Second}
 
-	// Load location and API key from files
 	if err := w.loadCredentials(); err != nil {
 		fmt.Fprintf(os.Stderr, "ewwd: weather config error: %v\n", err)
-		return nil // Don't fail the daemon, just skip weather updates
+		return nil
 	}
 
-	// Initial fetch
 	if state := w.fetch(); state != nil {
 		w.state.Set("weather", state)
 		notify(state)
@@ -110,14 +114,19 @@ func (w *Weather) Stop() error {
 	return nil
 }
 
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ credentials and geolocation                                                  │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
 type geoResponse struct {
 	Status string  `json:"status"`
 	Lat    float64 `json:"lat"`
 	Lon    float64 `json:"lon"`
 }
 
+// loadCredentials reads the API key, then resolves location via IP geolocation with a
+// fallback to ~/.local/.location ("LAT LON").
 func (w *Weather) loadCredentials() error {
-	// Read API key
 	keyPath := config.ExpandPath(w.config.APIKeyFile)
 	keyData, err := os.ReadFile(keyPath)
 	if err != nil {
@@ -125,7 +134,6 @@ func (w *Weather) loadCredentials() error {
 	}
 	w.apiKey = strings.TrimSpace(string(keyData))
 
-	// Auto-detect location via IP geolocation, fall back to file
 	if err := w.geolocate(); err != nil {
 		fmt.Fprintf(os.Stderr, "ewwd: geolocation failed (%v), trying fallback\n", err)
 
@@ -146,6 +154,7 @@ func (w *Weather) loadCredentials() error {
 	return nil
 }
 
+// geolocate queries ip-api.com for approximate coordinates based on public IP.
 func (w *Weather) geolocate() error {
 	resp, err := w.client.Get("http://ip-api.com/json/")
 	if err != nil {
@@ -175,8 +184,16 @@ func (w *Weather) geolocate() error {
 	return nil
 }
 
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ api fetch and parse                                                          │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
+// ╓
+// ║ https://openweathermap.org/api/one-call-3 — current + forecast data
+// ║ https://openweathermap.org/api/air-pollution — AQI data
+// ╙
+
 func (w *Weather) fetch() *WeatherState {
-	// Fetch weather data
 	weatherURL := fmt.Sprintf(
 		"https://api.openweathermap.org/data/3.0/onecall?lat=%s&lon=%s&units=metric&exclude=minutely&appid=%s",
 		w.lat, w.lon, w.apiKey,
@@ -187,7 +204,6 @@ func (w *Weather) fetch() *WeatherState {
 		return nil
 	}
 
-	// Fetch air quality data
 	airURL := fmt.Sprintf(
 		"http://api.openweathermap.org/data/2.5/air_pollution?lat=%s&lon=%s&appid=%s",
 		w.lat, w.lon, w.apiKey,
@@ -265,21 +281,18 @@ func (w *Weather) parse(weatherData, airData []byte) *WeatherState {
 		return nil
 	}
 
-	// Validate response
+	// Need at least one current condition and today's daily entry to build state.
 	if len(weather.Current.Weather) == 0 || len(weather.Daily) == 0 {
 		return nil
 	}
 
-	// Determine if night
 	now := time.Now().Unix()
 	sunset := weather.Current.Sunset
 	night := now > sunset
 
-	// Weather ID for icon selection
 	id := weather.Current.Weather[0].ID
 	desc := weather.Current.Weather[0].Main
 
-	// Convert temperatures (round to nearest int)
 	temp := roundToInt(weather.Current.Temp)
 	feelsLike := roundToInt(weather.Current.FeelsLike)
 	tempMorn := roundToInt(weather.Daily[0].Temp.Morn)
@@ -288,37 +301,31 @@ func (w *Weather) parse(weatherData, airData []byte) *WeatherState {
 	tempNight := roundToInt(weather.Daily[0].Temp.Night)
 	tempMax := roundToInt(weather.Daily[0].Temp.Max)
 
-	// UVI
 	uvi := roundToInt(weather.Current.UVI)
 	uviDesc := getUVIDesc(uvi)
 
-	// AQI
 	aqi := 0
 	if len(air.List) > 0 {
 		aqi = air.List[0].Main.AQI
 	}
 	aqiDesc := getAQIDesc(aqi)
 
-	// Rain probability
 	rain1h := 0
 	if len(weather.Hourly) > 0 {
 		rain1h = int(weather.Hourly[0].Pop * 100)
 	}
 	rainDay := int(weather.Daily[0].Pop * 100)
 
-	// Wind
 	windSpeed := roundToInt(weather.Current.WindSpeed)
+	// Beaufort scale is defined in knots; 1 m/s = 1.943844 kn.
 	knots := roundToInt(weather.Current.WindSpeed * 1.943844)
 	bfIcon, bfDesc := getBeaufortScale(knots)
 
-	// Sunset time formatted
 	sunsetTime := time.Unix(sunset, 0).Format("15:04")
 
-	// Moon phase
 	moonPhase := int(weather.Daily[0].MoonPhase * 100)
 	moon, moonDesc := getMoonPhase(moonPhase)
 
-	// Weather icon
 	icon := getWeatherIcon(id, night)
 
 	return &WeatherState{
@@ -352,11 +359,17 @@ func roundToInt(f float64) int {
 	return int(math.Round(f))
 }
 
-// getWeatherIcon maps OpenWeatherMap condition ID to Nerd Font icon, adjusted for day/night.
-// See https://openweathermap.org/weather-conditions#How-to-get-icon-URL
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ icon and description mapping                                                 │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
+// ╓
+// ║ https://openweathermap.org/weather-conditions — condition ID groups
+// ╙
+
+// getWeatherIcon picks a Nerd Font glyph for an OWM condition ID, with separate day and night ramps.
 func getWeatherIcon(id int, night bool) string {
 	if !night {
-		// Day icons
 		switch {
 		case id < 300:
 			return " "
@@ -382,7 +395,6 @@ func getWeatherIcon(id int, night bool) string {
 			return " "
 		}
 	} else {
-		// Night icons
 		switch {
 		case id < 300:
 			return " "
@@ -410,7 +422,7 @@ func getWeatherIcon(id int, night bool) string {
 	}
 }
 
-// getMoonPhase maps moon phase percentage (0-100) to icon and human-readable description.
+// getMoonPhase maps a 0-100 phase percentage to a Nerd Font glyph and label.
 func getMoonPhase(phase int) (icon, desc string) {
 	switch {
 	case phase == 0:
@@ -474,7 +486,7 @@ func getMoonPhase(phase int) (icon, desc string) {
 	}
 }
 
-// getBeaufortScale converts wind speed (knots) to Beaufort scale 0-12 with icon and description.
+// getBeaufortScale maps wind speed in knots to Beaufort icon and label.
 func getBeaufortScale(knots int) (icon, desc string) {
 	switch {
 	case knots < 1:
@@ -506,7 +518,7 @@ func getBeaufortScale(knots int) (icon, desc string) {
 	}
 }
 
-// getUVIDesc maps UV index to WHO standard severity categories.
+// getUVIDesc maps UV index to the WHO severity label.
 func getUVIDesc(uvi int) string {
 	switch {
 	case uvi <= 2:
@@ -522,7 +534,7 @@ func getUVIDesc(uvi int) string {
 	}
 }
 
-// getAQIDesc maps OpenWeatherMap AQI scale (1-5) to quality descriptions.
+// getAQIDesc maps OWM AQI (1-5) to a quality label.
 func getAQIDesc(aqi int) string {
 	switch aqi {
 	case 1:

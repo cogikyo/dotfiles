@@ -10,6 +10,14 @@ import (
 	"strings"
 )
 
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ entry point                                                                  │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
+// CmdNotify parses args, builds a NotifyRequest, and forwards it to the daemon.
+//
+// Exits non-zero on parse error or when the daemon is down.
+// Dunst script events silently no-op when the daemon is down: dunst rules fire regardless of daemon state.
 func CmdNotify(client *daemon.Client, args []string) {
 	req, err := parseNotifyArgs(args)
 	if err != nil {
@@ -37,6 +45,10 @@ func CmdNotify(client *daemon.Client, args []string) {
 	}
 }
 
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ arg parsing                                                                  │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
 func parseNotifyArgs(args []string) (NotifyRequest, error) {
 	if len(args) == 0 {
 		return NotifyRequest{}, fmt.Errorf("usage: hyprd notify {hook|dunst|kitty-finish}")
@@ -61,6 +73,10 @@ func parseNotifyArgs(args []string) (NotifyRequest, error) {
 	}
 }
 
+// parseHookNotify builds a request from Claude Code or Codex hook invocations.
+//
+// Payload comes from argv[1] (if JSON-shaped) or stdin.
+// KITTY_PID/KITTY_WINDOW_ID are read from env so the daemon can resolve the originating terminal.
 func parseHookNotify(args []string) (NotifyRequest, error) {
 	if len(args) == 0 {
 		return NotifyRequest{}, fmt.Errorf("usage: hyprd notify hook {claude|codex}")
@@ -106,6 +122,8 @@ func parseHookNotify(args []string) (NotifyRequest, error) {
 	}
 }
 
+// parseDunstNotify builds a request from a dunst script rule.
+// Positional args win; otherwise falls back to DUNST_* env vars injected by dunst.
 func parseDunstNotify(args []string) (NotifyRequest, error) {
 	event := "script"
 	if len(args) > 0 && args[0] == "approval" {
@@ -136,6 +154,12 @@ func dunstPayload(args []string) (app, summary, body, iconPath, urgency string) 
 		os.Getenv("DUNST_URGENCY")
 }
 
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ payload + env helpers                                                        │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
+// readJSONPayload unmarshals raw (or stdin if raw is empty) into a generic map.
+// Returns an empty map on parse error so callers can treat missing keys as absent fields.
 func readJSONPayload(raw string) map[string]any {
 	if strings.TrimSpace(raw) == "" {
 		raw = readOptionalStdin()
@@ -151,6 +175,7 @@ func readJSONPayload(raw string) map[string]any {
 	return payload
 }
 
+// readOptionalStdin returns piped stdin contents, or "" when stdin is a tty.
 func readOptionalStdin() string {
 	info, err := os.Stdin.Stat()
 	if err != nil || info.Mode()&os.ModeCharDevice != 0 {
@@ -164,6 +189,7 @@ func readOptionalStdin() string {
 	return string(data)
 }
 
+// payloadString returns the first string-valued key found among keys.
 func payloadString(payload map[string]any, keys ...string) string {
 	for _, key := range keys {
 		if value, ok := payload[key]; ok {
@@ -180,6 +206,8 @@ func looksLikeJSON(value string) bool {
 	return strings.HasPrefix(value, "{") || strings.HasPrefix(value, "[")
 }
 
+// parseSendNotify parses a notify-send-style invocation: optional -a/-u/-t flags, then title and optional body.
+// Args after title are joined into body.
 func parseSendNotify(args []string) (NotifyRequest, error) {
 	req := NotifyRequest{Source: "send", Urgency: "normal"}
 	i := 0
@@ -217,6 +245,7 @@ func parseSendNotify(args []string) (NotifyRequest, error) {
 	return req, nil
 }
 
+// limitText trims whitespace and truncates to max runes (not bytes) to avoid splitting multi-byte characters.
 func limitText(value string, max int) string {
 	value = strings.TrimSpace(value)
 	if value == "" {

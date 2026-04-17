@@ -1,3 +1,8 @@
+// Package state is the thread-safe store for hyprd runtime state.
+//
+// Tracks workspace occupancy, hidden windows, displaced masters, three-body and monocle layouts, split ratios, active
+// sessions, and per-workspace tab memory. Access is guarded by a single RWMutex; state serializes to JSON for
+// subscriber event streams.
 package state
 
 import (
@@ -7,7 +12,9 @@ import (
 	"dotfiles/daemons/config"
 )
 
-// State tracks workspace information and window management state.
+// State holds all hyprd runtime fields plus the mutex guarding them.
+//
+// Exported fields are JSON-serialized for subscribers; always go through the accessor methods so mu is held.
 type State struct {
 	mu sync.RWMutex
 
@@ -24,7 +31,6 @@ type State struct {
 	config             *config.HyprConfig
 }
 
-// NewState creates a State with default values and the given configuration.
 func NewState(cfg *config.HyprConfig) *State {
 	return &State{
 		Workspace:          1,
@@ -41,7 +47,7 @@ func NewState(cfg *config.HyprConfig) *State {
 	}
 }
 
-// JSON serializes the State to JSON bytes under read lock.
+// JSON marshals the current State snapshot for subscriber event streams.
 func (s *State) JSON() ([]byte, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -92,6 +98,7 @@ func (s *State) GetConfig() *config.HyprConfig {
 	return s.config
 }
 
+// ReloadConfig swaps in a new HyprConfig from the hot-reload path.
 func (s *State) ReloadConfig(cfg *config.HyprConfig) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

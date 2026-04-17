@@ -1,6 +1,6 @@
 package providers
 
-// StateSetter allows providers to publish state updates to the daemon's shared store.
+// StateSetter is the daemon's shared store from a provider's point of view (write-only).
 type StateSetter interface {
-	Set(key string, value any) // Stores a value under the given key
+	Set(key string, value any)
 }

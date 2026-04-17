@@ -8,7 +8,7 @@ import (
 	"dotfiles/daemons/hyprd/hypr"
 )
 
-// CenterCursor moves the cursor to the center of the currently active window.
+// CenterCursor moves the cursor to the center of the active window; no-op when there is none.
 func CenterCursor(h *hypr.Client) {
 	win, err := h.ActiveWindow()
 	if err != nil || win == nil {
@@ -19,7 +19,7 @@ func CenterCursor(h *hypr.Client) {
 	h.Dispatch(fmt.Sprintf("movecursor %d %d", x, y))
 }
 
-// GetTiledWindows returns non-floating windows on wsID, sorted by X position.
+// GetTiledWindows returns non-floating windows on wsID sorted by X position.
 func GetTiledWindows(h *hypr.Client, wsID int, ignoredClasses []string) ([]hypr.Window, error) {
 	clients, err := h.Clients()
 	if err != nil {
@@ -40,7 +40,7 @@ func GetTiledWindows(h *hypr.Client, wsID int, ignoredClasses []string) ([]hypr.
 	return tiled, nil
 }
 
-// GetMaster returns the leftmost tiled window on wsID, or nil if none exist.
+// GetMaster returns the leftmost tiled window on wsID, or nil if none.
 func GetMaster(h *hypr.Client, wsID int, ignoredClasses []string) (*hypr.Window, error) {
 	tiled, err := GetTiledWindows(h, wsID, ignoredClasses)
 	if err != nil {
@@ -52,7 +52,8 @@ func GetMaster(h *hypr.Client, wsID int, ignoredClasses []string) (*hypr.Window,
 	return &tiled[0], nil
 }
 
-// GetSlaves returns all tiled windows right of the master, sorted by Y position.
+// GetSlaves returns tiled windows right of the master, sorted by Y.
+// Expects tiled as returned by GetTiledWindows (X-sorted, master at index 0).
 func GetSlaves(tiled []hypr.Window) []hypr.Window {
 	if len(tiled) < 2 {
 		return nil
@@ -70,12 +71,11 @@ func GetSlaves(tiled []hypr.Window) []hypr.Window {
 	return slaves
 }
 
-// IsMaster checks if the window with addr is the leftmost in tiled.
 func IsMaster(tiled []hypr.Window, addr string) bool {
 	return len(tiled) > 0 && tiled[0].Address == addr
 }
 
-// SlaveIndex returns the index of a window in the slave stack, or -1 if not found.
+// SlaveIndex returns addr's index in slaves, or -1 if absent.
 func SlaveIndex(slaves []hypr.Window, addr string) int {
 	for i, s := range slaves {
 		if s.Address == addr {

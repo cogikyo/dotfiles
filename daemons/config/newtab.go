@@ -1,11 +1,11 @@
 package config
 
-// NewtabConfig defines settings for the newtab HTTP server.
+// NewtabConfig configures the newtab HTTP server.
 type NewtabConfig struct {
-	Port         string `yaml:"port"`
-	FirefoxDB    string `yaml:"firefox_db"`
-	StaticDir    string `yaml:"static_dir"`
-	HistoryLimit int    `yaml:"history_limit"`
+	Port         string `yaml:"port"`         // listen address, including leading colon (e.g. ":42069")
+	FirefoxDB    string `yaml:"firefox_db"`   // $HOME-relative path to Firefox places.sqlite
+	StaticDir    string `yaml:"static_dir"`   // $HOME-relative path to static asset root
+	HistoryLimit int    `yaml:"history_limit"` // max recent-history rows surfaced to the page
 }
 
 // DefaultNewtab returns sensible defaults for the newtab server.

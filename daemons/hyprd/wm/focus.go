@@ -1,3 +1,6 @@
+// Package wm implements hyprd's window-manager command set (focus, hide, swap, split, ws, monocle, threebody).
+//
+// Each command is a small struct bound to a hypr.Client and shared state, exposing Execute.
 package wm
 
 import (
@@ -10,6 +13,9 @@ import (
 	"dotfiles/daemons/hyprd/windows"
 )
 
+// Focus routes focus to a window matching class/title.
+//
+// Preference: match on the active workspace, else match on special:hiddenSlaves (unhidden before focus).
 type Focus struct {
 	hypr  *hypr.Client
 	state *state.State
@@ -19,6 +25,9 @@ func NewFocus(h *hypr.Client, s *state.State) *Focus {
 	return &Focus{hypr: h, state: s}
 }
 
+// Execute focuses a window by class (required) and optional title.
+// Matches on special:hiddenSlaves are unhidden onto the active workspace first.
+// A missing match is not an error.
 func (f *Focus) Execute(class, title string) (string, error) {
 	if class == "" {
 		return "", fmt.Errorf("class required")
