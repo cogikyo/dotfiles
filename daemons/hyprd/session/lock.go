@@ -1,6 +1,8 @@
 package session
 
 import (
+	"dotfiles/daemons/hyprd/hypr"
+	"dotfiles/daemons/hyprd/state"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -8,13 +10,10 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"dotfiles/daemons/hyprd/hypr"
-	"dotfiles/daemons/hyprd/state"
 )
 
 // Pseudo-lock parks the session on a workspace reserved for the visual blackout, so normal workspaces
-// stay untouched while eww/glava are down.
+// stay untouched while eww widgets are hidden and glava is down.
 const pseudoLockWorkspace = 6
 
 // Grace window for hyprlock: if the user cancels before this elapses, the pre-lock music state resumes.
@@ -158,16 +157,16 @@ func (l *Lock) capture() *lockState {
 // Called with l.mu held.
 func (l *Lock) enterBlackout() {
 	l.hypr.Dispatch(fmt.Sprintf("workspace %d", pseudoLockWorkspace))
-	exec.Command("killall", "-9", "eww").Run()
+	exec.Command("eww", "close-all").Run()
 	exec.Command("killall", "glava").Run()
 	exec.Command("dunstctl", "close-all").Run()
 	exec.Command("dunstctl", "set-paused", "true").Run()
 	exec.Command("playerctl", "pause").Run()
 }
 
-// exitBlackout reverses enterBlackout: restores workspace, respawns eww + init.execs, unpauses dunst and
-// optionally resumes music. Re-runs init.execs for the glava/bluetooth restart so those commands stay
-// defined in one place.
+// exitBlackout reverses enterBlackout: restores workspace, reopens eww widgets + init.execs, unpauses
+// dunst and optionally resumes music. Re-runs init.execs for the glava/bluetooth restart so those
+// commands stay defined in one place.
 // Called with l.mu held.
 func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) {
 	l.hypr.Dispatch(fmt.Sprintf("workspace %d", saved.workspace))
@@ -176,7 +175,16 @@ func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) {
 	for _, cmd := range cfg.Init.Execs {
 		l.hypr.Dispatch(fmt.Sprintf("exec %s", cmd))
 	}
-	exec.Command("ewwd", "open").Start()
+	// Prefer reopening via the running ewwd; if it's gone, respawn it — the fresh daemon auto-opens windows.
+	if exec.Command("ewwd", "status").Run() == nil {
+		exec.Command("ewwd", "open").Start()
+	} else {
+		cmd := exec.Command("setsid", "ewwd")
+		cmd.Stdin = nil
+		cmd.Stdout = nil
+		cmd.Stderr = nil
+		cmd.Start()
+	}
 
 	if resumeMusic {
 		exec.Command("playerctl", "play").Run()
