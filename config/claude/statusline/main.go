@@ -1,11 +1,8 @@
-// Claude Code custom statusline renderer.
+// Package main implements the Claude Code custom statusline renderer.
 //
-// Reads JSON from stdin (via Claude Code's statusline hook) and prints an
-// ANSI-colored, Nerd Font status string to stdout. Segments are separated
-// by box-drawing delimiters (╼╾) and include: working directory, git branch
-// and file-status counts, context window usage bar, and rate-limit gauges
-// (5-hour / 7-day) from the Anthropic usage API. Git status and API calls
-// run concurrently; API responses are cached to disk with a 60s TTL.
+// Reads JSON from stdin (the Claude Code statusline hook) and prints an ANSI-colored Nerd Font string to stdout.
+// Segments are delimited by ╼╾ and cover: working directory, git state, context usage, and 5h/7d rate gauges.
+// Git status and the usage-API call run concurrently; API responses cache to disk with a 5-minute positive TTL.
 package main
 
 import (
@@ -26,9 +23,10 @@ import (
 	"time"
 )
 
-// ─────────────────────────────────────────────────
-// ANSI Colors
-// ─────────────────────────────────────────────────
+// ╭────────────────────────────────────────────────────────────────────────────╮
+// │ ANSI colors and Nerd Font icons                                            │
+// ╰────────────────────────────────────────────────────────────────────────────╯
+
 const (
 	bold    = "\033[1m"
 	reset   = "\033[0m"
@@ -46,39 +44,41 @@ const (
 	pink    = "\033[95m"
 )
 
-// ─────────────────────────────────────────────────
-// Icons
-// ─────────────────────────────────────────────────
 const (
-	sep          = " ╼╾ "
-	iconModel    = "󰯉 "
-	iconEffortLo = "󰤟"
-	iconEffortMd = "󰤢"
-	iconEffortHi = "󰤥"
-	iconEffortMx = "󰤨"
-	iconEffortUn = "󰤫"
-	gitBranch    = " "
-	gitAhead     = "⮭"
-	gitBehind    = "⮯"
-	gitStaged    = ""
-	gitModified  = " "
-	gitUntracked = " "
-	gitDeleted   = "󰚃 "
-	gitStashed   = "󰸧 "
-	gitRenamed   = "󰑕 "
-	gitConflict  = " "
-	barContext   = "㊋"
-	barFilled    = "◉"
-	barEmpty     = "○"
-	iconError    = "󰅜"
+	sep           = " ╼╾ "
+	iconModel     = "󰯉 "
+	iconEffortLo  = "󰤟"
+	iconEffortMd  = "󰤢"
+	iconEffortHi  = "󰤥"
+	iconEffortXHi = "󰤨"
+	iconEffortMx  = ""
+	iconEffortAu  = "󰙴"
+	iconEffortUn  = "󰤫"
+	gitBranch     = " "
+	gitAhead      = "⮭"
+	gitBehind     = "⮯"
+	gitStaged     = ""
+	gitModified   = " "
+	gitUntracked  = " "
+	gitDeleted    = "󰚃 "
+	gitStashed    = "󰸧 "
+	gitRenamed    = "󰑕 "
+	gitConflict   = " "
+	barContext    = "㊋"
+	barFilled     = "◉"
+	barEmpty      = "○"
+	iconError     = "󰅜"
 )
 
 var barProgress = []string{"󰪞", "󰪟", "󰪠", "󰪡", "󰪢", "󰪣", "󰪤", "󰪥", "", ""}
 
-// ─────────────────────────────────────────────────
-// Input Types (from Claude Code JSON)
-// ─────────────────────────────────────────────────
+// ╭────────────────────────────────────────────────────────────────────────────╮
+// │ Types                                                                      │
+// ╰────────────────────────────────────────────────────────────────────────────╯
 
+// Input mirrors the statusline JSON payload Claude Code writes to stdin.
+//
+// Only fields the renderer consumes are declared; extras are ignored.
 type Input struct {
 	Workspace struct {
 		CurrentDir string `json:"current_dir"`
@@ -98,56 +98,60 @@ type Input struct {
 	} `json:"context_window"`
 }
 
-// ─────────────────────────────────────────────────
-// Git Types
-// ─────────────────────────────────────────────────
-
+// GitStatus is the parsed result of `git status --porcelain=v2 --branch --show-stash`.
 type GitStatus struct {
 	Branch     string
-	Ahead      int
-	Behind     int
-	Staged     int
-	Modified   int
+	Ahead      int // commits ahead of upstream
+	Behind     int // commits behind upstream
+	Staged     int // index entries with any change vs HEAD
+	Modified   int // worktree modifications (M/T in the Y column)
 	Untracked  int
 	Deleted    int
 	Stashed    int
 	Renamed    int
-	Conflicted int
+	Conflicted int // unmerged entries
 }
 
-// ─────────────────────────────────────────────────
-// Usage API Types
-// ─────────────────────────────────────────────────
-
+// UsageResponse is the shape returned by the Anthropic OAuth usage endpoint.
+//
+// Either period may be nil if the account has no data for that window.
 type UsageResponse struct {
 	FiveHour *UsagePeriod `json:"five_hour"`
 	SevenDay *UsagePeriod `json:"seven_day"`
 }
 
+// UsagePeriod is a single rate-limit window.
 type UsagePeriod struct {
-	Utilization float64 `json:"utilization"`
-	ResetsAt    string  `json:"resets_at"`
+	Utilization float64 `json:"utilization"` // percent, 0-100+
+	ResetsAt    string  `json:"resets_at"`   // RFC3339
 }
 
+// CachedUsage is the on-disk cache envelope for the usage API.
+//
+// A nil Response with a non-empty Error is a negative cache entry.
+// Expiry is tiered: cacheTTL for success, rateLimitCacheTTL for 429s, negCacheTTL for other errors.
 type CachedUsage struct {
 	FetchedAt int64          `json:"fetched_at"`
-	Response  *UsageResponse `json:"response"`        // nil when API failed (negative cache)
-	Error     string         `json:"error,omitempty"` // reason for failure
+	Response  *UsageResponse `json:"response"`
+	Error     string         `json:"error,omitempty"`
 }
 
-// RequestStats are for debugging rate limits
+// RequestStats tracks how many usage-API calls have been made today.
+//
+// Surfaced next to error messages so repeated failures are visible.
 type RequestStats struct {
-	FirstRequest int64 `json:"first_request"`
+	FirstRequest int64 `json:"first_request"` // unix seconds of first request this day
 	Count        int   `json:"count"`
 }
 
-// ─────────────────────────────────────────────────
-// Cache Configuration
-// ─────────────────────────────────────────────────
+// ╭────────────────────────────────────────────────────────────────────────────╮
+// │ Cache and credentials                                                      │
+// ╰────────────────────────────────────────────────────────────────────────────╯
 
+// Disk-cache TTLs balance liveness against hitting the API on every prompt render.
 const (
 	cacheTTL          = 5 * time.Minute
-	negCacheTTL       = 60 * time.Second // transient errors (timeout, etc)
+	negCacheTTL       = 60 * time.Second // transient errors (timeout, etc.)
 	rateLimitCacheTTL = 10 * time.Minute // back off hard on 429
 )
 
@@ -163,28 +167,27 @@ func getCachePath() string {
 	return filepath.Join(getCacheDir(), "usage-cache.json")
 }
 
-// ─────────────────────────────────────────────────
-// Credentials
-// ─────────────────────────────────────────────────
-
+// OAuthData is the persisted Claude OAuth credential blob.
+//
+// Matches the shape Claude Code writes to the credentials file and the macOS keychain entry.
 type OAuthData struct {
 	AccessToken      string   `json:"accessToken"`
 	RefreshToken     string   `json:"refreshToken"`
-	ExpiresAt        int64    `json:"expiresAt"`
+	ExpiresAt        int64    `json:"expiresAt"` // unix milliseconds
 	Scopes           []string `json:"scopes"`
 	SubscriptionType string   `json:"subscriptionType,omitempty"`
 	RateLimitTier    string   `json:"rateLimitTier,omitempty"`
 }
 
+// Credentials is the top-level JSON wrapper stored at the credentials path.
 type Credentials struct {
 	ClaudeAiOauth *OAuthData `json:"claudeAiOauth"`
 }
 
-// OAuth refresh constants
 const (
 	oauthTokenURL = "https://platform.claude.com/v1/oauth/token"
 	oauthClientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
-	// Refresh 5 minutes before actual expiry to avoid races
+	// Refresh slightly before actual expiry to avoid racing a request against the cutover.
 	expiryBuffer = 5 * time.Minute
 )
 
@@ -217,7 +220,10 @@ func getCredsPath() string {
 	return filepath.Join(home, ".claude", ".credentials.json")
 }
 
-// findKeychainServices returns all keychain service names matching "Claude Code-credentials*".
+// findKeychainServices returns every macOS keychain service name matching "Claude Code-credentials*".
+//
+// Multiple entries can exist (e.g. per profile); getAccessTokenMacOS picks the one with the latest expiry.
+// Returns nil if `security dump-keychain` fails or no entry matches.
 func findKeychainServices() []string {
 	cmd := exec.Command("security", "dump-keychain")
 	out, err := cmd.Output()
@@ -229,11 +235,10 @@ func findKeychainServices() []string {
 	seen := make(map[string]bool)
 	for line := range strings.SplitSeq(string(out), "\n") {
 		line = strings.TrimSpace(line)
-		// Match: "svce"<blob>="Claude Code-credentials..."
+		// dump-keychain format: `"svce"<blob>="<service name>"`
 		if !strings.HasPrefix(line, `"svce"<blob>="`) {
 			continue
 		}
-		// Extract value between quotes
 		start := strings.Index(line, `="`) + 2
 		end := strings.LastIndex(line, `"`)
 		if start < 2 || end <= start {
@@ -248,11 +253,13 @@ func findKeychainServices() []string {
 	return services
 }
 
+// getAccessToken returns a usable OAuth access token, or "" if none is available.
+//
+// macOS reads the keychain and refreshes on expiry; Linux reads the credentials file without refreshing.
 func getAccessToken() string {
 	if runtime.GOOS == "darwin" {
 		return getAccessTokenMacOS()
 	}
-	// Linux: read from file
 	data, err := os.ReadFile(getCredsPath())
 	if err != nil {
 		return ""
@@ -260,11 +267,16 @@ func getAccessToken() string {
 	return parseAccessToken(data)
 }
 
+// isTokenExpired reports whether expiresAt (unix millis) is within expiryBuffer of now.
 func isTokenExpired(expiresAt int64) bool {
 	expiryTime := time.UnixMilli(expiresAt)
 	return time.Now().Add(expiryBuffer).After(expiryTime)
 }
 
+// refreshToken exchanges the OAuth refresh token for a fresh access token.
+//
+// 5s HTTP timeout so a hanging auth server can't stall the render.
+// Returns an error on transport failures or non-200 responses; the caller persists the new token.
 func refreshToken(oauth *OAuthData) (*TokenRefreshResponse, error) {
 	scope := strings.Join(oauth.Scopes, " ")
 	if scope == "" {
@@ -312,19 +324,22 @@ func refreshToken(oauth *OAuthData) (*TokenRefreshResponse, error) {
 	return &tokenResp, nil
 }
 
+// updateKeychainEntry writes refreshed credentials back to the keychain for svc.
+//
+// The account name is recovered from the existing entry because `security add-generic-password -U` requires -a and -s.
+// Silently no-ops on any error to keep the renderer best-effort.
 func updateKeychainEntry(svc string, creds *Credentials) {
 	data, err := json.Marshal(creds)
 	if err != nil {
 		return
 	}
 
-	// Get the account name from the existing entry
 	cmd := exec.Command("security", "find-generic-password", "-s", svc)
 	out, err := cmd.Output()
 	if err != nil {
 		return
 	}
-	// Parse account name from output: "acct"<blob>="..."
+	// find-generic-password format: `"acct"<blob>="<account>"`
 	account := ""
 	for line := range strings.SplitSeq(string(out), "\n") {
 		line = strings.TrimSpace(line)
@@ -340,7 +355,6 @@ func updateKeychainEntry(svc string, creds *Credentials) {
 		return
 	}
 
-	// Update the keychain entry
 	cmd = exec.Command("security", "add-generic-password", "-U",
 		"-a", account, "-s", svc, "-w", string(data))
 	cmd.Run()
@@ -351,13 +365,16 @@ type keychainEntry struct {
 	creds   Credentials
 }
 
+// getAccessTokenMacOS reads every Claude keychain entry and returns the access token from the latest-expiring one.
+//
+// Refreshes in place and writes the new token back to the keychain when expired.
+// Returns "" when no entry exists, none parse, or refresh fails.
 func getAccessTokenMacOS() string {
 	services := findKeychainServices()
 	if len(services) == 0 {
 		return ""
 	}
 
-	// Collect all entries
 	var entries []keychainEntry
 	for _, svc := range services {
 		cmd := exec.Command("security", "find-generic-password", "-s", svc, "-w")
@@ -377,7 +394,7 @@ func getAccessTokenMacOS() string {
 		return ""
 	}
 
-	// Find the entry with the latest expiry
+	// Pick the entry with the furthest-out expiry — most likely still valid.
 	best := 0
 	for i, e := range entries {
 		if e.creds.ClaudeAiOauth.ExpiresAt > entries[best].creds.ClaudeAiOauth.ExpiresAt {
@@ -388,12 +405,10 @@ func getAccessTokenMacOS() string {
 	entry := &entries[best]
 	oauth := entry.creds.ClaudeAiOauth
 
-	// If not expired, use it directly
 	if !isTokenExpired(oauth.ExpiresAt) {
 		return oauth.AccessToken
 	}
 
-	// Token expired — try to refresh
 	if oauth.RefreshToken == "" {
 		return ""
 	}
@@ -403,7 +418,7 @@ func getAccessTokenMacOS() string {
 		return ""
 	}
 
-	// Update credentials and persist to keychain
+	// Some refresh responses omit refresh_token; keep the existing one in that case.
 	oauth.AccessToken = tokenResp.AccessToken
 	if tokenResp.RefreshToken != "" {
 		oauth.RefreshToken = tokenResp.RefreshToken
@@ -415,6 +430,10 @@ func getAccessTokenMacOS() string {
 	return oauth.AccessToken
 }
 
+// parseAccessToken extracts a non-expired access token from the Linux credentials file contents.
+//
+// Returns "" if the blob is malformed, empty, or within expiryBuffer of expiration.
+// Linux has no refresh path here — the caller must re-auth out of band.
 func parseAccessToken(data []byte) string {
 	var creds Credentials
 	if err := json.Unmarshal(data, &creds); err != nil {
@@ -429,10 +448,11 @@ func parseAccessToken(data []byte) string {
 	return creds.ClaudeAiOauth.AccessToken
 }
 
-// ─────────────────────────────────────────────────
-// Color Helpers
-// ─────────────────────────────────────────────────
+// ╭────────────────────────────────────────────────────────────────────────────╮
+// │ Percent-tier helpers and effort level                                      │
+// ╰────────────────────────────────────────────────────────────────────────────╯
 
+// pctColors ramps cool → warm → alarm across 9 tiers; see pctTier for boundaries.
 var pctColors = []string{blue, brBlue, green, brGreen, brYello, yellow, red, brRed, pink}
 
 // pctTier returns the index into pctColors for a given percent.
@@ -479,10 +499,6 @@ func buildBar(filled, total int) string {
 	return b.String()
 }
 
-// ─────────────────────────────────────────────────
-// Effort Level
-// ─────────────────────────────────────────────────
-
 func claudeConfigDir() string {
 	if d := os.Getenv("CLAUDE_CONFIG_DIR"); d != "" {
 		return d
@@ -491,9 +507,12 @@ func claudeConfigDir() string {
 	return filepath.Join(home, ".config", "claude")
 }
 
-// scanCmdlineForEffort reads /proc/<pid>/cmdline and returns the value of the
-// --effort flag if present. Supports both "--effort X" and "--effort=X" forms.
-// Returns "" if not found or if the process is not a claude binary.
+// scanCmdlineForEffort reads /proc/<pid>/cmdline and returns the --effort value.
+//
+// Handles both "--effort X" and "--effort=X" forms.
+// The exe name must contain "claude" so an unrelated parent (e.g. a shell) can't match by accident.
+// Returns "" when the file is unreadable, the exe doesn't match, or the flag is absent.
+// Linux-only: /proc/<pid>/cmdline doesn't exist on macOS.
 func scanCmdlineForEffort(pid int) string {
 	data, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
 	if err != nil {
@@ -503,7 +522,6 @@ func scanCmdlineForEffort(pid int) string {
 	if len(args) == 0 {
 		return ""
 	}
-	// Require the executable to contain "claude" so we don't match unrelated parents.
 	exe := filepath.Base(args[0])
 	if !strings.Contains(exe, "claude") {
 		return ""
@@ -519,8 +537,10 @@ func scanCmdlineForEffort(pid int) string {
 	return ""
 }
 
-// pidForSession finds the PID whose sessions/<pid>.json contains the given
-// sessionId. Returns 0 if not found.
+// pidForSession locates the claude PID owning sessionID by scanning $CLAUDE_CONFIG_DIR/sessions.
+//
+// Fallback path for when os.Getppid() isn't the claude process (e.g. under a helper wrapper).
+// Returns 0 when sessionID is empty, the glob fails, or no session file matches.
 func pidForSession(sessionID string) int {
 	if sessionID == "" {
 		return 0
@@ -548,7 +568,10 @@ func pidForSession(sessionID string) int {
 	return 0
 }
 
-// readSettingsEffort reads effortLevel from settings.json in CLAUDE_CONFIG_DIR.
+// readSettingsEffort returns the effortLevel key from $CLAUDE_CONFIG_DIR/settings.json.
+//
+// Last-resort default when neither the parent nor the session process exposes --effort on its cmdline.
+// Returns "" on any read or parse failure.
 func readSettingsEffort() string {
 	data, err := os.ReadFile(filepath.Join(claudeConfigDir(), "settings.json"))
 	if err != nil {
@@ -563,6 +586,9 @@ func readSettingsEffort() string {
 	return s.EffortLevel
 }
 
+// getEffortLevel resolves the effort level from parent cmdline, then session-owning claude cmdline, then settings.json.
+//
+// Returns "" if no source yields a value.
 func getEffortLevel(sessionID string) string {
 	if lvl := scanCmdlineForEffort(os.Getppid()); lvl != "" {
 		return lvl
@@ -586,24 +612,30 @@ func effortIcon(level string) (string, string) {
 		return iconEffortMd, blue
 	case "high":
 		return iconEffortHi, yellow
+	case "xhigh":
+		return iconEffortXHi, red
 	case "max":
 		return iconEffortMx, pink
+	case "auto":
+		return iconEffortAu, blue
 	default:
 		return iconEffortUn, gray
 	}
 }
 
-// ─────────────────────────────────────────────────
-// Git Status
-// ─────────────────────────────────────────────────
+// ╭────────────────────────────────────────────────────────────────────────────╮
+// │ Git status                                                                 │
+// ╰────────────────────────────────────────────────────────────────────────────╯
+
+// getGitStatus returns a populated GitStatus for dir, or nil if dir isn't a git worktree or git fails.
+//
+// Uses porcelain=v2 for a version-stable parser and --no-optional-locks to avoid blocking on a concurrent index lock.
 func getGitStatus(dir string) *GitStatus {
-	// Check if directory is a git repo
 	cmd := exec.Command("git", "-C", dir, "rev-parse", "--git-dir")
 	if err := cmd.Run(); err != nil {
 		return nil
 	}
 
-	// Get porcelain v2 output with branch info and stash
 	cmd = exec.Command("git", "-C", dir, "--no-optional-locks", "status", "--porcelain=v2", "--branch", "--show-stash")
 	out, err := cmd.Output()
 	if err != nil {
@@ -624,7 +656,7 @@ func getGitStatus(dir string) *GitStatus {
 			gs.Branch = strings.TrimPrefix(line, "# branch.head ")
 
 		case strings.HasPrefix(line, "# branch.ab "):
-			// Format: "# branch.ab +N -M"
+			// format: "# branch.ab +N -M"
 			parts := strings.Fields(line)
 			if len(parts) >= 4 {
 				if v, err := strconv.Atoi(strings.TrimPrefix(parts[2], "+")); err == nil {
@@ -641,10 +673,10 @@ func getGitStatus(dir string) *GitStatus {
 			}
 
 		case strings.HasPrefix(line, "#"):
-			continue // Skip other headers
+			continue
 
 		default:
-			// Entry lines: type XY ...
+			// entry lines: "<type> <XY> ..."
 			if len(line) < 4 {
 				continue
 			}
@@ -652,7 +684,7 @@ func getGitStatus(dir string) *GitStatus {
 			xy := line[2:4]
 
 			switch entryType {
-			case '1': // Tracked file changes
+			case '1': // tracked file change
 				x, y := xy[0], xy[1]
 				if x != '.' && x != ' ' {
 					gs.Staged++
@@ -663,11 +695,11 @@ func getGitStatus(dir string) *GitStatus {
 				if y == 'D' {
 					gs.Deleted++
 				}
-			case '2': // Renamed
+			case '2': // renamed/copied
 				gs.Renamed++
-			case 'u': // Unmerged (conflict)
+			case 'u': // unmerged (conflict)
 				gs.Conflicted++
-			case '?': // Untracked
+			case '?': // untracked
 				gs.Untracked++
 			}
 		}
@@ -676,9 +708,13 @@ func getGitStatus(dir string) *GitStatus {
 	return gs
 }
 
-// ─────────────────────────────────────────────────
-// Usage API with Caching
-// ─────────────────────────────────────────────────
+// ╭────────────────────────────────────────────────────────────────────────────╮
+// │ Usage API with caching                                                     │
+// ╰────────────────────────────────────────────────────────────────────────────╯
+
+// loadCache reads the on-disk cache and returns it if still within its TTL.
+//
+// TTL varies by result kind: cacheTTL for success, rateLimitCacheTTL for 429s, negCacheTTL otherwise.
 func loadCache() (*CachedUsage, bool) {
 	data, err := os.ReadFile(getCachePath())
 	if err != nil {
@@ -707,6 +743,9 @@ func getStatsPath() string {
 	return filepath.Join(getCacheDir(), "usage-stats.json")
 }
 
+// recordRequest increments the daily request counter and persists it.
+//
+// The counter resets at local midnight so error-badge stats stay interpretable ("4req/12m" today).
 func recordRequest() RequestStats {
 	var stats RequestStats
 	data, err := os.ReadFile(getStatsPath())
@@ -714,7 +753,6 @@ func recordRequest() RequestStats {
 		json.Unmarshal(data, &stats)
 	}
 	now := time.Now()
-	// Reset daily: if first request was on a different day, start fresh
 	if stats.FirstRequest != 0 {
 		first := time.Unix(stats.FirstRequest, 0)
 		y1, m1, d1 := first.Date()
@@ -753,7 +791,9 @@ func formatStatsDuration(stats RequestStats) string {
 	return fmt.Sprintf("%dreq/%dm", stats.Count, int(elapsed.Minutes()))
 }
 
-// saveCache persists a result (or nil for negative cache) to disk.
+// saveCache persists a response (or a negative-cache entry with errMsg) to disk.
+//
+// Write errors are swallowed — a missing cache just triggers another fetch next render.
 func saveCache(resp *UsageResponse, errMsg string) {
 	cached := CachedUsage{
 		FetchedAt: time.Now().Unix(),
@@ -768,6 +808,11 @@ func saveCache(resp *UsageResponse, errMsg string) {
 	os.WriteFile(getCachePath(), data, 0644)
 }
 
+// fetchUsageFromAPI calls the Anthropic OAuth usage endpoint.
+//
+// Returns the parsed response or a short diagnostic: "no auth", "timeout", "rate limited", "auth expired", "http NNN".
+// The error string is user-facing — it's what the statusline renders next to iconError.
+// 2s client timeout so a slow API can't stall the render.
 func fetchUsageFromAPI() (*UsageResponse, string) {
 	token := getAccessToken()
 	if token == "" {
@@ -822,43 +867,43 @@ func getLockPath() string {
 	return filepath.Join(getCacheDir(), "usage-cache.lock")
 }
 
+// getUsageLimits returns usage data, preferring the disk cache.
+//
+// Cache miss path: take a non-blocking flock so at most one render hits the API; others return empty.
+// After acquiring the lock, re-check the cache in case a sibling just populated it.
 func getUsageLimits() usageResult {
-	// Try cache first — no lock needed for reads
 	if cached, ok := loadCache(); ok {
 		return usageResult{resp: cached.Response, err: cached.Error}
 	}
 
-	// Cache miss — acquire exclusive lock so only one instance fetches
 	os.MkdirAll(getCacheDir(), 0755)
 	lockFile, err := os.OpenFile(getLockPath(), os.O_CREATE|os.O_RDWR, 0644)
 	if err != nil {
-		// Can't lock, just fetch (better than no data)
+		// Lock unavailable — fetch anyway; stale data beats no data.
 		resp, errMsg := fetchUsageFromAPI()
 		return usageResult{resp: resp, err: errMsg}
 	}
 	defer lockFile.Close()
 
-	// Non-blocking try: if another instance holds the lock, return stale/empty
 	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-		// Another instance is fetching — return empty rather than block the render
+		// Another render is fetching; yield rather than block prompt drawing.
 		return usageResult{}
 	}
 	defer syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
 
-	// Re-check cache after acquiring lock (another instance may have just written it)
+	// Double-check: a sibling may have written the cache while we waited.
 	if cached, ok := loadCache(); ok {
 		return usageResult{resp: cached.Response, err: cached.Error}
 	}
 
-	// We hold the lock and cache is stale — fetch
 	resp, errMsg := fetchUsageFromAPI()
 	saveCache(resp, errMsg)
 	return usageResult{resp: resp, err: errMsg}
 }
 
-// ─────────────────────────────────────────────────
-// Date Formatting
-// ─────────────────────────────────────────────────
+// formatResetTime renders an RFC3339 timestamp as " (3pm)" in local time for the 5-hour window reset.
+//
+// Returns "" if parsing fails.
 func formatResetTime(isoTime string) string {
 	if isoTime == "" {
 		return ""
@@ -867,7 +912,6 @@ func formatResetTime(isoTime string) string {
 	if err != nil {
 		return ""
 	}
-	// Format: "3pm" style (hour + am/pm)
 	hour := t.Local().Hour()
 	suffix := "am"
 	if hour >= 12 {
@@ -882,6 +926,9 @@ func formatResetTime(isoTime string) string {
 	return fmt.Sprintf(" (%d%s)", hour, suffix)
 }
 
+// formatResetDate renders an RFC3339 timestamp as " (M/D)" in local time for the 7-day window reset.
+//
+// Returns "" if parsing fails.
 func formatResetDate(isoTime string) string {
 	if isoTime == "" {
 		return ""
@@ -890,17 +937,16 @@ func formatResetDate(isoTime string) string {
 	if err != nil {
 		return ""
 	}
-	// Format: "1/24" style (month/day)
 	return fmt.Sprintf(" (%d/%d)", t.Local().Month(), t.Local().Day())
 }
 
-// ─────────────────────────────────────────────────
-// Output Formatting
-// ─────────────────────────────────────────────────
+// ╭────────────────────────────────────────────────────────────────────────────╮
+// │ Output formatting and main                                                 │
+// ╰────────────────────────────────────────────────────────────────────────────╯
 
-// gitStateColor picks a color for the directory/branch based on repo state.
-// Priority (high → low): any staged → cyan; unstaged changes only → light
-// blue; ahead+behind → magenta; ahead → green; behind → red; clean → blue.
+// gitStateColor picks a branch color under a highest-signal-wins ordering.
+//
+// Order: staged yellow, unstaged cyan, diverged magenta, ahead green, behind red, clean blue.
 func gitStateColor(gs *GitStatus) string {
 	if gs == nil {
 		return blue
@@ -961,7 +1007,6 @@ func buildGitStats(gs *GitStatus) string {
 }
 
 func main() {
-	// Read JSON input from stdin
 	inputData, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		return
@@ -975,7 +1020,7 @@ func main() {
 	dir := input.Workspace.CurrentDir
 	home, _ := os.UserHomeDir()
 
-	// Parallel fetch: git status and usage API
+	// Fan out git and usage lookups — both are I/O-bound and independent.
 	var wg sync.WaitGroup
 	var gitStatus *GitStatus
 	var usage usageResult
@@ -991,10 +1036,10 @@ func main() {
 	}()
 	wg.Wait()
 
-	// Build output
 	var out strings.Builder
 
-	// Directory (with home replaced by empty - matches bash behavior)
+	// ├─ directory ──────────────────────────────────────────────────────────────┤
+	// Strip $HOME prefix so repo dirs read as "dotfiles/…" instead of "/home/…/dotfiles/…".
 	displayDir := dir
 	if after, found := strings.CutPrefix(dir, home+"/"); found {
 		displayDir = after
@@ -1003,16 +1048,17 @@ func main() {
 	}
 	out.WriteString(red + iconModel + bold + red + displayDir + reset)
 
-	// Git info
+	// ├─ git branch and file-status counts ──────────────────────────────────────┤
 	if gitStatus != nil && gitStatus.Branch != "" {
 		branchColor := gitStateColor(gitStatus)
 		out.WriteString(" " + branchColor + gitBranch + gitStatus.Branch + reset)
 		out.WriteString(buildGitStats(gitStatus))
 	}
 
-	// Model name + effort level
+	// ├─ model name + effort level ──────────────────────────────────────────────┤
 	if input.Model.DisplayName != "" {
 		name := input.Model.DisplayName
+		// DisplayName often includes a parenthetical (e.g. "Sonnet 4.5 (1M)"); trim it.
 		if i := strings.Index(name, " ("); i >= 0 {
 			name = name[:i]
 		}
@@ -1022,9 +1068,9 @@ func main() {
 		fmt.Fprintf(&out, "%s%s %s%s", color, icon, name, reset)
 	}
 
-	// Context window bar.
-	// Percent reflects true usage against the model's full window (1M/2M/…),
-	// but color + fill scale against a 250k comfort budget so the bar tracks where we actually want to stay.
+	// ├─ context window bar ─────────────────────────────────────────────────────┤
+	// Percent reflects true usage against the model's full window (1M/2M/…).
+	// Color and fill scale against a 250k "comfort budget" so the bar tracks where we want to stay, not the hard cap.
 	if input.ContextWindow.CurrentUsage != nil && input.ContextWindow.ContextWindowSize > 0 {
 		usage := input.ContextWindow.CurrentUsage
 		total := usage.InputTokens + usage.CacheCreationTokens + usage.CacheReadTokens
@@ -1039,7 +1085,7 @@ func main() {
 		fmt.Fprintf(&out, "%s%s%s %d%%%s", color, barContext, bar, pct, reset)
 	}
 
-	// Usage limits
+	// ├─ rate-limit gauges (5-hour / 7-day) ─────────────────────────────────────┤
 	if usage.resp != nil {
 		if usage.resp.FiveHour != nil {
 			pct := int(usage.resp.FiveHour.Utilization)
@@ -1069,6 +1115,5 @@ func main() {
 		}
 	}
 
-	// Final reset and output
 	fmt.Print(out.String() + reset)
 }
