@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bufio"
 	"database/sql"
 	"encoding/json"
 	"io"
@@ -59,10 +60,10 @@ type newtabConfig struct {
 // loadConfig layers newtab.yaml then newtab.local.yaml over built-in defaults.
 //
 // Read or parse failures silently fall back to what loaded so far; the service must start without a config file.
+// FirefoxDB is intentionally empty by default — main() resolves it via resolveFirefoxDB when unset or stale.
 func loadConfig() newtabConfig {
 	cfg := newtabConfig{
 		Port:         ":42069",
-		FirefoxDB:    ".mozilla/firefox/sdfm8kqz.dev-edition-default/places.sqlite",
 		StaticDir:    "dotfiles/daemons/newtab",
 		HistoryLimit: 15,
 	}
@@ -83,11 +84,90 @@ func loadConfig() newtabConfig {
 	return cfg
 }
 
+// resolveFirefoxDB returns an absolute path to places.sqlite.
+//
+// If the configured path resolves to an existing file it wins. Otherwise we scan both
+// Firefox profile roots (legacy ~/.mozilla/firefox and XDG ~/.config/mozilla/firefox),
+// preferring a profile named dev-edition-default, then any profile marked Default=1.
+func resolveFirefoxDB(configured string) string {
+	if configured != "" {
+		abs := configured
+		if !filepath.IsAbs(abs) {
+			abs = filepath.Join(homeDir, abs)
+		}
+		if _, err := os.Stat(abs); err == nil {
+			return abs
+		}
+	}
+
+	roots := []string{
+		filepath.Join(homeDir, ".mozilla", "firefox"),
+		filepath.Join(homeDir, ".config", "mozilla", "firefox"),
+	}
+
+	var fallback string
+	for _, root := range roots {
+		iniPath := filepath.Join(root, "profiles.ini")
+		f, err := os.Open(iniPath)
+		if err != nil {
+			continue
+		}
+		section, name, path := "", "", ""
+		scanner := bufio.NewScanner(f)
+		flush := func() {
+			if !strings.HasPrefix(section, "Profile") || path == "" {
+				return
+			}
+			db := filepath.Join(root, path, "places.sqlite")
+			if _, err := os.Stat(db); err != nil {
+				return
+			}
+			if name == "dev-edition-default" {
+				fallback = db
+				return
+			}
+			if fallback == "" {
+				fallback = db
+			}
+		}
+		for scanner.Scan() {
+			line := strings.TrimSpace(scanner.Text())
+			if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
+				flush()
+				section = strings.TrimSuffix(strings.TrimPrefix(line, "["), "]")
+				name, path = "", ""
+				continue
+			}
+			key, value, ok := strings.Cut(line, "=")
+			if !ok {
+				continue
+			}
+			switch strings.TrimSpace(key) {
+			case "Name":
+				name = strings.TrimSpace(value)
+			case "Path":
+				path = strings.TrimSpace(value)
+			}
+		}
+		flush()
+		f.Close()
+		if fallback != "" && strings.Contains(fallback, "dev-edition-default") {
+			return fallback
+		}
+	}
+	return fallback
+}
+
 // dbPath returns a SQLite DSN opening places.sqlite read-only and immutable.
 //
 // immutable=1 lets us query while Firefox holds a write lock on the live DB.
+// cfg.FirefoxDB is expected to be absolute (main() resolves it at startup).
 func dbPath(cfg newtabConfig) string {
-	return "file:" + filepath.Join(homeDir, cfg.FirefoxDB) + "?mode=ro&immutable=1"
+	p := cfg.FirefoxDB
+	if !filepath.IsAbs(p) {
+		p = filepath.Join(homeDir, p)
+	}
+	return "file:" + p + "?mode=ro&immutable=1"
 }
 
 func staticPath(cfg newtabConfig) string {
@@ -125,6 +205,13 @@ type HistoryEntry struct {
 
 func main() {
 	cfg := loadConfig()
+	resolved := resolveFirefoxDB(cfg.FirefoxDB)
+	if resolved == "" {
+		log.Printf("warning: no Firefox places.sqlite found (configured=%q); bookmarks/history queries will fail until Firefox is run", cfg.FirefoxDB)
+	} else {
+		log.Printf("firefox places.sqlite: %s", resolved)
+		cfg.FirefoxDB = resolved
+	}
 
 	mux := http.NewServeMux()
 

@@ -9,10 +9,11 @@ type NewtabConfig struct {
 }
 
 // DefaultNewtab returns sensible defaults for the newtab server.
+//
+// FirefoxDB is left empty; callers resolve it by scanning Firefox profile roots at startup.
 func DefaultNewtab() NewtabConfig {
 	return NewtabConfig{
 		Port:         ":42069",
-		FirefoxDB:    ".mozilla/firefox/sdfm8kqz.dev-edition-default/places.sqlite",
 		StaticDir:    "dotfiles/daemons/newtab",
 		HistoryLimit: 15,
 	}
