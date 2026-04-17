@@ -78,8 +78,10 @@ function M.setup()
 				vim.lsp.inlay_hint.enable(false, { bufnr = event.buf })
 			end
 
-			-- Codelens refresh
-			if client:supports_method(vim.lsp.protocol.Methods.textDocument_codeLens, event.buf) then
+			-- Skip gopls codelens overlays; they add inline action banners above go.mod.
+			if client.name ~= "gopls"
+				and client:supports_method(vim.lsp.protocol.Methods.textDocument_codeLens, event.buf)
+			then
 				vim.lsp.codelens.enable(true, { bufnr = event.buf })
 			end
 		end,
