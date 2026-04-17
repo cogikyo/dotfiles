@@ -10,6 +10,10 @@ import (
 	"dotfiles/daemons/hyprd/windows"
 )
 
+// Monocle zooms the active window to a configured size, parking siblings on special:mono<wsID>.
+// A second invocation on the same workspace tears it down; other workspaces are untouched.
+//
+// Three-body state is saved and restored around the monocle lifecycle.
 type Monocle struct {
 	hypr  *hypr.Client
 	state *state.State
@@ -19,13 +23,24 @@ func NewMonocle(h *hypr.Client, s *state.State) *Monocle {
 	return &Monocle{hypr: h, state: s}
 }
 
+// Execute toggles monocle on the current workspace.
 func (m *Monocle) Execute() (string, error) {
-	if m.state.HasAnyMonocle() {
-		return m.deactivateAll()
+	wsID, err := m.activeWorkspace()
+	if err != nil {
+		return "", err
+	}
+	if m.state.GetMonocle(wsID) != nil {
+		return m.deactivate(wsID)
 	}
 	return m.activate()
 }
 
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ activate / deactivate                                                        │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
+// activate floats the active window at monocle geometry and parks siblings on special:mono<wsID>.
+// Any three-body state is saved so deactivate can rebuild it.
 func (m *Monocle) activate() (string, error) {
 	wsID, err := m.activeWorkspace()
 	if err != nil {
@@ -80,33 +95,39 @@ func (m *Monocle) activate() (string, error) {
 	return fmt.Sprintf("monocle: ws%d, %d windows hidden", wsID, len(displaced)), nil
 }
 
-func (m *Monocle) deactivateAll() (string, error) {
-	all := m.state.AllMonocle()
-	restored := 0
+// deactivate tears down monocle on wsID: pulls parked windows back, restores master, rebuilds saved three-body.
+func (m *Monocle) deactivate(wsID int) (string, error) {
+	ms := m.state.GetMonocle(wsID)
+	if ms == nil {
+		return "", nil
+	}
 	cfg := m.state.GetConfig()
 
-	for ws, ms := range all {
-		if ms.Focused != "" {
-			m.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", ms.Focused))
-			m.hypr.Dispatch("togglefloating")
-		}
-		for _, mw := range ms.Windows {
-			m.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", mw.OriginWS, mw.Address))
-			restored++
-		}
-		m.ensureMaster(ws, ms.Master, cfg)
-		if ms.SavedThreeBody != nil {
-			m.restoreThreeBody(ws, ms.SavedThreeBody, cfg)
-		}
-		if ms.Focused != "" {
-			m.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", ms.Focused))
-		}
-		m.state.ClearMonocle(ws)
+	if ms.Focused != "" {
+		m.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", ms.Focused))
+		m.hypr.Dispatch("togglefloating")
 	}
+	for _, mw := range ms.Windows {
+		m.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", mw.OriginWS, mw.Address))
+	}
+	m.ensureMaster(wsID, ms.Master, cfg)
+	if ms.SavedThreeBody != nil {
+		m.restoreThreeBody(wsID, ms.SavedThreeBody, cfg)
+	}
+	if ms.Focused != "" {
+		m.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", ms.Focused))
+	}
+	m.state.ClearMonocle(wsID)
 
-	return fmt.Sprintf("monocle off: %d windows restored", restored), nil
+	return fmt.Sprintf("monocle off: ws%d, %d windows restored", wsID, len(ms.Windows)), nil
 }
 
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ restore helpers                                                              │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
+// ensureMaster swaps the saved master back to position 0 if it drifted.
+// Hyprland may re-tile in a different order when windows return from the special workspace.
 func (m *Monocle) ensureMaster(wsID int, masterAddr string, cfg *config.HyprConfig) {
 	if masterAddr == "" {
 		return

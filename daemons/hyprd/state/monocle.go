@@ -1,5 +1,6 @@
 package state
 
+// GetMonocle returns a deep copy of the workspace's MonocleState, or nil when not in monocle mode.
 func (s *State) GetMonocle(ws int) *MonocleState {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -25,6 +26,7 @@ func (s *State) ClearMonocle(ws int) {
 	delete(s.Monocle, ws)
 }
 
+// AllMonocle returns a deep copy of every active monocle workspace keyed by workspace ID.
 func (s *State) AllMonocle() map[int]*MonocleState {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -38,12 +40,9 @@ func (s *State) AllMonocle() map[int]*MonocleState {
 	return out
 }
 
-func (s *State) HasAnyMonocle() bool {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-	return len(s.Monocle) > 0
-}
-
+// ActiveMonocleWorkspace returns one workspace currently in monocle mode, or 0 if none.
+//
+// Multiple workspaces may each hold their own monocle; iteration order is not defined.
 func (s *State) ActiveMonocleWorkspace() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -53,6 +52,12 @@ func (s *State) ActiveMonocleWorkspace() int {
 	return 0
 }
 
+// ClearWindowState purges every trace of addr from the store on window-close.
+//
+// Clears Hidden, any DisplacedMasters mapping, drops the containing ThreeBody entry, and removes addr from any
+// MonocleState (deleting the state entirely when it empties).
+//
+// Returns the removed ThreeBodyState so the caller can restore the surviving pair, or nil if none matched.
 func (s *State) ClearWindowState(addr string) *ThreeBodyState {
 	s.mu.Lock()
 	defer s.mu.Unlock()
