@@ -1,42 +1,108 @@
 # Comment Style Guide
 
-## Comment Tiers
+## Default: no comment
 
-Match comment depth to the code's role:
+Most code doesn't need a comment. Good names and structure carry the meaning.
 
-| Tier            | When                                                          | What to include                                                         |
-| --------------- | ------------------------------------------------------------- | ----------------------------------------------------------------------- |
-| **Thorough**    | Shared/reusable code: utils, types, interfaces, exported APIs | Full doc: purpose, params, returns, errors, example. LSP-hover friendly |
-| **Intentional** | Core entities: handlers, orchestrators, main runners          | Purpose doc + coupling/implementation notes when they prevent foot-guns |
-| **Minimal**     | Helpers, small idiomatic functions                            | Only when syntax is unfamiliar or internal library quirks exist         |
+Before writing or keeping a comment, run the reader check:
 
-These are guidelines, not rigid rules. Adjust based on context.
+- Is there enough info without it?
+- Does it help scanning or searching for functionality?
+- Is it accurate now, and will it stay accurate?
+- Could it be tighter?
+- Would removing it make the file easier to read?
 
-## Formatting Rules
+If the code is unclear, **prefer `FIXME` over prose explanation** — the fix is the real answer, narration is a workaround.
 
-- **Doc comments**: capitalize first word, end with period. Complete sentences
-- **Inline comments**: relaxed — lowercase fragments fine, periods optional
-- **Never wrap mid-sentence**: one thought per line, soft limit ~120 chars
-- **Bulleted lists**: welcome in doc comments for enumerating behavior, params, etc
-- **Imperative voice** for inline comments: "Retry up to 3 times" not "Retries up to 3 times"
+### FIXME categories
 
-## Doc Comment Structure (All Languages)
+- `FIXME: idiomatic` — not idiomatic for the language
+- `FIXME: clarity` — naming, structure, or flow obscures intent
+- `FIXME: simplify` — can be shorter or less indirect
 
-Hybrid format — prose summary lead, then tags/sections only when they add value:
+Grep-able breadcrumbs for future cleanup. Use these instead of explaining why the code is awkward.
+
+## When a comment earns its place
+
+- **Contract** — what an exported API promises (inputs, outputs, errors).
+- **Coupling** — non-obvious dependencies on or from other code.
+- **Invariant** — locking discipline, ordering, state-machine rules.
+- **External format** — quirks of a file format, protocol, or third-party API.
+- **Surprise** — workaround, hard-won fix, counterintuitive approach.
+
+If a comment fits none of these, delete it.
+
+Signal, not noise. Less is more.
+
+## Formatting rules
+
+### One sentence per line
+
+If a sentence needs wrapping, the comment is too verbose. Rewrite it shorter, or split it into two sentences.
+
+Bad — one sentence wrapped:
+```go
+// App/urgency keys and SilentApps are normalized to lowercase so dispatch
+// logic can match against libnotify metadata case-insensitively.
+```
+
+Good — one line:
+```go
+// Notify keys and SilentApps are lowercased for case-insensitive libnotify matching.
+```
+
+Or two short lines, each a complete sentence:
+```go
+// Notify keys and SilentApps are lowercased.
+// libnotify metadata matches case-insensitively.
+```
+
+### Other formatting
+
+- Doc comments: capitalize first word, end with period, complete sentences.
+- Inline comments: lowercase fragments fine, periods optional.
+- Hard limit 120 chars per line. Target ~80. Rarely hit 120.
+- Imperative voice for inline comments ("Retry up to 3 times", not "Retries up to 3 times").
+- Bulleted lists are good when enumerating steps, behaviors, or options.
+
+## Comment tiers
+
+Guidelines, not rules. Adjust for context.
+
+| Tier            | When                                              | What to include                                      |
+| --------------- | ------------------------------------------------- | ---------------------------------------------------- |
+| **Thorough**    | Exported APIs, shared types, interfaces           | Purpose, params, returns, errors, example if useful  |
+| **Intentional** | Core entities: handlers, orchestrators, runners   | Purpose + coupling/invariant notes                   |
+| **Minimal**     | Helpers, small idiomatic functions                | Nothing unless syntax or a quirk is rare             |
+
+## Package-level comments
+
+Nearly every file should have a package/file header. They can be longer than per-function docs when they explain what the file does and how it fits with siblings.
+
+Judgement call — tiny or incidental files don't need one.
+
+Go:
+```go
+// Package foo does X. It owns Y.
+// Callers should go through Bar rather than touching fields directly.
+package foo
+```
+
+## Doc comment structure
+
+Hybrid: summary line, optional short body (one sentence per line), optional structured block (params, returns, example) only when it adds value.
 
 ```
-[summary line — starts with function/type name where convention requires]
+[summary — starts with identifier name where convention requires]
 
-[prose body — brief, covers behavior, edge cases, coupling notes]
+[short body — one sentence per line]
 
-[tags/sections — only when they improve clarity or LSP experience]
-
-[example — when non-obvious usage exists]
+[structured block — only if genuinely helpful]
 ```
 
-## Section Headers
+## Section headers
 
-Use comment-box decorative styles for file sections in **large files (~100+ lines)**:
+For files 100+ lines, use comment-box dividers to partition major regions:
 
 ```
 # ╭───────────────────────────────────────────────────────────────────────────────╮
@@ -44,106 +110,66 @@ Use comment-box decorative styles for file sections in **large files (~100+ line
 # ╰───────────────────────────────────────────────────────────────────────────────╯
 ```
 
+Sub-section label:
 ```
 # ├─ sub-section label ──────────────────────────────────────────────────────────┤
 ```
 
+External references (specs, upstream docs, APIs):
 ```
 # ╓
-# ║ https://some-external-doc — what this link is for
-# ║ https://another-reference — brief description
+# ║ https://some-external-doc — purpose
+# ║ https://another-reference — purpose
 # ╙
 ```
 
-- **Major section** (`╭╮╰╯`): group large logical blocks within a file
-- **Sub-section** (`├┤`): label smaller divisions within a major section
-- **External references** (`╓║╙`): link to relevant docs, specs, or APIs
+Box width 80 chars. Adapt the comment prefix per language (`#`, `//`, etc).
 
-Box width is 80 chars (matching comment-box.nvim config). Adapt comment prefix to language (`#`, `//`, etc).
-
-Works in any language, not just bash/configs. The rule is file size, not file type.
-
-## Role of Comments
-
-- **Contract-first**: describe what code promises, not how it works internally
-- **Coupling notes**: when a function depends on or is depended on by non-obvious code, say so
-- **Implementation notes**: only when the approach is surprising or fragile
+File size drives the decision, not file type. Don't decorate small files.
 
 ## Markers
 
-| Marker  | Meaning                                   |
-| ------- | ----------------------------------------- |
-| `TODO`  | Planned improvement, not blocking         |
-| `FIXME` | Known bug or correctness issue            |
-| `HACK`  | Intentional shortcut, explain why         |
-| `NOTE`  | Non-actionable context for future readers |
+| Marker              | Meaning                                            |
+| ------------------- | -------------------------------------------------- |
+| `TODO`              | Planned improvement, not blocking                  |
+| `FIXME: idiomatic`  | Not idiomatic for the language                     |
+| `FIXME: clarity`    | Naming, structure, or flow obscures intent         |
+| `FIXME: simplify`   | Can be shorter or less indirect                    |
+| `HACK`              | Intentional shortcut, explain why                  |
+| `NOTE`              | Non-actionable context for future readers          |
 
-Scribe can leave markers when it finds issues needing user input. Always confirm with user before adding FIXME/HACK.
+Scribe can leave markers when it finds issues needing user input. Confirm before adding `FIXME:*` or `HACK` (these imply follow-up work).
 
 ---
 
 ## Go
 
-Follow [godoc conventions](https://go.dev/doc/comment) with extras:
+Follow [godoc conventions](https://go.dev/doc/comment):
+
+- Start doc comment with the identifier name.
+- Use `//`, not `/* */`.
+- Bulleted lists via indented lines.
+- Package doc above `package` declaration (or in `doc.go`).
 
 ```go
-// ParseConfig reads a YAML config file at path and
-// returns a validated Config.
+// ParseConfig reads a YAML file at path and returns a validated Config.
 //
 // Missing fields fall back to defaults:
-//   - Timeout defaults to 30s
-//   - Port defaults to 8080
-//
-// Deprecated: Use LoadConfig instead.
+//   - Timeout: 30s
+//   - Port: 8080
 ```
-
-- Start doc comment with the function/type name
-- Use `//` style (not `/* */`)
-- Section headers: `// Deprecated:`, bulleted lists, code examples via indented lines
-- Package comments go in `doc.go` or above `package` declaration
 
 ## TypeScript
 
-Use [TSDoc](https://tsdoc.org/) in `/** */` blocks:
-
-```typescript
-/**
- * Parse and validate a YAML config file.
- *
- * @remarks
- * Falls back to defaults for missing fields.
- *
- * @param path - absolute path to config
- * @returns validated config object
- */
-```
-
-- `@remarks` for extended description
-- `@param`, `@returns` when params/returns aren't self-evident from types
-- `@example` for non-trivial usage
-- `@deprecated` with migration path
+TSDoc in `/** */` blocks. Use `@param`, `@returns`, `@example`, `@deprecated` only when they add information not obvious from types.
 
 ## Bash / Shell
 
-- File header: purpose + usage (1-2 lines)
-- Section separators for logical blocks (comment-box style)
-- Inline comments for cryptic bash syntax (parameter expansion, process substitution, etc.)
+- File header: purpose + usage, 1-2 lines.
+- Section dividers for logical blocks.
+- Inline comments for cryptic syntax (parameter expansion, process substitution, etc).
 
-```bash
-#!/usr/bin/env bash
-# Install and link dotfiles.
-# Usage: ./install [step]
+## Config files (YAML, TOML, Hyprland, etc.)
 
-set -euo pipefail
-
-source "$HOME/.config/shell/env.sh"
-
-# parameter expansion: default to 'all' if unset
-step="${1:-all}"
-```
-
-## Config Files (YAML, TOML, Hyprland, etc.)
-
-- Section headers are essential — these are often monolithic files
-- Inline comments for non-obvious values or references to other config
-- Group related settings visually
+- Section headers are essential — these tend to be monolithic.
+- Inline comments for non-obvious values or cross-file references.
