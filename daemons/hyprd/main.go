@@ -1,36 +1,8 @@
-// Package main implements hyprd, a daemon for managing Hyprland window layouts
-// and state synchronization with eww widgets.
+// Package main is the hyprd entry point.
 //
-// hyprd connects to Hyprland's IPC sockets to monitor workspace changes,
-// window events, and execute window management commands. It maintains
-// state for features like split ratios, hidden windows, and three-body layouts.
-//
-// # Architecture
-//
-// The daemon consists of three main components:
-//
-//   - Daemon: Manages the command socket and routes client requests
-//   - EventLoop: Subscribes to Hyprland events and updates state
-//   - State: Thread-safe storage for workspace and window tracking
-//
-// # Commands
-//
-// Clients connect via Unix socket and send text commands:
-//
-//   - split: Cycle or set the master/slave split ratio
-//   - hide: Toggle visibility of slave windows
-//   - swap: Exchange master and slave window positions
-//   - ws: Switch workspace with automatic master focus
-//   - focus: Focus window by class, unhiding if necessary
-//   - layout: Apply predefined window arrangements
-//   - query: Retrieve current state as JSON
-//   - subscribe: Stream state change events
-//
-// # Integration
-//
-// hyprd provides real-time state updates to eww widgets through a
-// subscription mechanism. Widgets subscribe to topics (workspace, split)
-// and receive JSON events when state changes.
+// With no args it runs the daemon in the foreground (see daemon.go).
+// With a verb it acts as a thin client over the Unix socket, forwarding to the running daemon.
+// `hyprd help` prints the full command vocabulary.
 package main
 
 import (
@@ -88,6 +60,8 @@ func main() {
 		cmdShadow()
 	case "project":
 		cmdProject()
+	case "lock":
+		cmdLock()
 	case "notify":
 		cmdNotify()
 	case "help", "-h", "--help":
@@ -137,13 +111,13 @@ func requireArg(usage string) string {
 	return os.Args[2]
 }
 
+// cmdInit pushes Wayland env into user systemd (so hyprd.service inherits it), starts the unit, waits up to 10s for
+// the socket, then triggers the daemon's session-setup sequence.
 func cmdInit() {
-	// Push Wayland env to the user bus so hyprd.service inherits it.
 	exec.Command("systemctl", "--user", "import-environment",
 		"WAYLAND_DISPLAY", "XDG_CURRENT_DESKTOP", "HYPRLAND_INSTANCE_SIGNATURE").Run()
 	exec.Command("systemctl", "--user", "start", "hyprd.service").Run()
 
-	// Wait up to 10s for the daemon socket to appear.
 	for range 100 {
 		if client.IsRunning() {
 			break
@@ -162,6 +136,7 @@ func cmdBrowser() {
 	sendCommand("browser " + strings.Join(os.Args[2:], " "))
 }
 func cmdProject() { sendCommand("project " + strings.Join(os.Args[2:], " ")) }
+func cmdLock()    { sendCommand("lock " + strings.Join(os.Args[2:], " ")) }
 func cmdQuery()   { sendCommand("query " + strings.Join(os.Args[2:], " ")) }
 func cmdBG()      { sendCommand("bg " + requireArg("usage: hyprd bg {ensure|kill}")) }
 func cmdWS()      { sendCommand("ws " + requireArg("usage: hyprd ws <number|up|down>")) }
@@ -263,6 +238,11 @@ Shadow workspace (special:shadow):
 Sessions:
   hyprd layout --list    List available sessions
   hyprd layout <name>    Open session (loads from ~/dotfiles/daemons/configs/hyprd.yaml)
+
+Lock:
+  hyprd lock             Pseudo-lock (visual blackout + submap)
+  hyprd lock unlock      Exit pseudo-lock (alias: -u)
+  hyprd lock full        Full lock (wraps hyprlock with pre/post hooks)
 
 Browser snapshots:
   hyprd browser windows [--all] [--profile <name|path>]

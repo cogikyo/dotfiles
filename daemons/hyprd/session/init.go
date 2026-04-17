@@ -7,6 +7,7 @@ package session
 import (
 	"fmt"
 	"net"
+	"os"
 	"sort"
 	"strconv"
 	"time"
@@ -20,7 +21,8 @@ import (
 // Injected to avoid importing the notify package here, which would create a cycle.
 type NotifyFunc func(app, urgency, title, body string)
 
-// Init drives first-boot session setup: background, network wait, per-workspace layouts, post-init execs, and lock.
+// Init drives first-boot session setup: background, network wait, per-workspace layouts, post-init execs,
+// and an optional pseudo-lock to hide the session until the user returns.
 type Init struct {
 	hypr   *hypr.Client
 	state  *state.State
@@ -92,14 +94,15 @@ func (i *Init) Execute() (string, error) {
 		i.hypr.Dispatch(fmt.Sprintf("workspace %d", init.Workspace))
 	}
 
-	if init.Lock {
+	if init.Lock && i.lock != nil {
 		if init.LockDelay > 0 {
-			fmt.Printf("hyprd init: waiting %s before lock\n", init.LockDelay)
+			fmt.Printf("hyprd init: waiting %s before pseudo-lock\n", init.LockDelay)
 			time.Sleep(init.LockDelay)
 		}
-		fmt.Println("hyprd init: locking screen")
-		exec.Command("hyprlock").Run()
-		exec.Command("ewwd", "open").Run()
+		fmt.Println("hyprd init: pseudo-locking")
+		if _, err := i.lock.Pseudo(); err != nil {
+			fmt.Fprintf(os.Stderr, "hyprd init: pseudo-lock: %v\n", err)
+		}
 	}
 
 	fmt.Println("hyprd init: complete")

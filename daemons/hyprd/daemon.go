@@ -1,37 +1,3 @@
-// Package main implements hyprd, a daemon for managing Hyprland window layouts
-// and state synchronization with eww widgets.
-//
-// hyprd connects to Hyprland's IPC sockets to monitor workspace changes,
-// window events, and execute window management commands. It maintains
-// state for features like split ratios, hidden windows, and three-body layouts.
-//
-// # Architecture
-//
-// The daemon consists of three main components:
-//
-//   - Daemon: Manages the command socket and routes client requests
-//   - EventLoop: Subscribes to Hyprland events and updates state
-//   - State: Thread-safe storage for workspace and window tracking
-//
-// # Commands
-//
-// Clients connect via Unix socket and send text commands:
-//
-//   - split: Cycle or set the master/slave split ratio
-//   - hide: Toggle visibility of slave windows
-//   - swap: Exchange master and slave window positions
-//   - ws: Switch workspace with automatic master focus
-//   - focus: Focus window by class, unhiding if necessary
-//   - layout: Apply predefined window arrangements
-//   - three-body: Three-window layout with shadow workspace swapping
-//   - query: Retrieve current state as JSON
-//   - subscribe: Stream state change events
-//
-// # Integration
-//
-// hyprd provides real-time state updates to eww widgets through a
-// subscription mechanism. Widgets subscribe to topics (workspace, split)
-// and receive JSON events when state changes.
 package main
 
 import (
@@ -58,16 +24,24 @@ import (
 
 const SocketPath = "/tmp/hyprd.sock"
 
-// Daemon coordinates Hyprland IPC, state management, and command execution.
-// It handles client requests over a Unix socket and publishes state changes to subscribers.
+// Daemon owns the Hyprland IPC client, shared state, command server, and hot-reloadable config.
+//
+// Lifecycle: New dials Hyprland and builds the server; Run launches the event loop and config watcher, then blocks on
+// SIGINT/SIGTERM.
+// Shutdown closes the server's done channel, which unwinds every goroutine spawned.
+//
+// config is atomic so the watcher can swap it without locking command handlers.
 type Daemon struct {
-	hypr   *hypr.Client                      // Hyprland IPC connection
-	state  *state.State                      // Thread-safe workspace and window state
-	server *daemon.Server                    // Unix socket command server
-	config atomic.Pointer[config.HyprConfig] // Monitor geometry and layout configuration
+	hypr   *hypr.Client
+	state  *state.State
+	server *daemon.Server
+	config atomic.Pointer[config.HyprConfig]
+	// lockCtl persists across commands so pseudo/full/unlock share the same saved workspace+music snapshot.
+	lockCtl *session.Lock
 }
 
-// New connects to Hyprland's IPC socket and initializes the daemon state.
+// New connects to Hyprland's IPC socket and prepares the daemon.
+// The returned Daemon is idle until Run is called.
 func New() (*Daemon, error) {
 	cfg := config.LoadHypr()
 
@@ -78,8 +52,9 @@ func New() (*Daemon, error) {
 
 	stateStore := state.NewState(&cfg)
 	d := &Daemon{
-		hypr:  hyprClient,
-		state: stateStore,
+		hypr:    hyprClient,
+		state:   stateStore,
+		lockCtl: session.NewLock(hyprClient, stateStore),
 	}
 	d.config.Store(&cfg)
 
@@ -89,9 +64,10 @@ func New() (*Daemon, error) {
 	return d, nil
 }
 
-// Run starts the command server and event loop, blocking until SIGINT/SIGTERM.
-// On a fresh Hyprland session (no existing windows), the init sequence runs
-// automatically in the background.
+// Run starts the server, event loop, and config watcher, then blocks until SIGINT/SIGTERM.
+//
+// Session init is not invoked here — it fires externally via `exec-once = hyprd init` in hyprland.conf so it runs
+// exactly once per session, after this daemon is listening.
 func (d *Daemon) Run() error {
 	clients, err := d.hypr.Clients()
 	if err != nil {
@@ -113,9 +89,6 @@ func (d *Daemon) Run() error {
 
 	go d.watchConfig(d.server.Done())
 
-	// Init is triggered externally via `exec-once = hyprd init` in hyprland.conf.
-	// This ensures it runs exactly once per Hyprland session, after the daemon is ready.
-
 	sig := d.server.WaitForSignal()
 	fmt.Printf("\nhyprd: received %s, shutting down\n", sig)
 	d.server.Shutdown()
@@ -123,7 +96,7 @@ func (d *Daemon) Run() error {
 	return nil
 }
 
-// sendInitialState bootstraps a subscriber with the current state for their topics.
+// sendInitialState replays current state to a fresh subscriber so widgets paint immediately.
 func (d *Daemon) sendInitialState(sub *daemon.Subscriber, topics []string) {
 	if sub.WantsTopic("workspace") {
 		sub.SendEvent("workspace", d.workspacePayload())
@@ -134,7 +107,9 @@ func (d *Daemon) sendInitialState(sub *daemon.Subscriber, topics []string) {
 	}
 }
 
-// handleCommand parses and routes incoming client commands, returning results as strings.
+// handleCommand routes a client request by its first token.
+//
+// Contract: handlers return a plain string; errors are serialized as "error: <msg>" so clients can parse uniformly.
 func (d *Daemon) handleCommand(command string) string {
 	parts := strings.SplitN(command, " ", 2)
 	cmd := parts[0]
@@ -176,7 +151,7 @@ func (d *Daemon) handleCommand(command string) string {
 		}
 		return result
 	case "swap":
-		// When three-body is active, swap shadow into master position
+		// three-body intercepts swap to rotate shadow→master instead of master/slave exchange.
 		tb := wm.NewThreeBody(d.hypr, d.state)
 		tbResult, tbErr := tb.SwapMaster()
 		if tbErr != nil {
@@ -185,7 +160,6 @@ func (d *Daemon) handleCommand(command string) string {
 		if tbResult != "" {
 			return tbResult
 		}
-		// No three-body active — fall through to normal swap
 		swap := wm.NewSwap(d.hypr, d.state)
 		result, err := swap.Execute()
 		if err != nil {
@@ -261,6 +235,12 @@ func (d *Daemon) handleCommand(command string) string {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
+	case "lock":
+		result, err := d.lockCtl.Execute(arg)
+		if err != nil {
+			return fmt.Sprintf("error: %v", err)
+		}
+		return result
 	case "layout":
 		layout := session.NewLayout(d.hypr, d.state)
 		result, err := layout.Execute(arg)
@@ -279,9 +259,10 @@ func (d *Daemon) handleCommand(command string) string {
 	}
 }
 
-// handleShadow toggles visibility of the shadow workspace or lists its windows.
-// Useful when hyprd loses three-body state (e.g., after rebuild) and windows
-// are stranded on special:shadow — user can inspect and rescue them manually.
+// handleShadow toggles the special shadow workspace or lists its parked windows.
+//
+// Rescue path for when hyprd loses three-body state (daemon rebuild, crash) and windows are stranded on
+// special:shadow with no visible member to pull them back.
 func (d *Daemon) handleShadow(arg string) string {
 	shadowWS := d.config.Load().Windows.ShadowWorkspace
 	special := strings.TrimPrefix(shadowWS, "special:")
@@ -320,7 +301,6 @@ func (d *Daemon) handleShadow(arg string) string {
 	}
 }
 
-// handleThreeBody routes named three-body subcommands.
 func (d *Daemon) handleThreeBody(arg string) string {
 	name := strings.TrimSpace(arg)
 	if name == "" {
@@ -360,10 +340,8 @@ func (d *Daemon) handleNotify(arg string) string {
 	return "ok"
 }
 
-// handleProject gets or sets the project path for the current workspace.
-// "project" or "project get" returns the current path.
-// "project set <path>" sets it explicitly.
-// "project clear" removes it.
+// handleProject reads or mutates the project path bound to the active workspace.
+// Subcommands: "" | "get", "set <path>", "clear".
 func (d *Daemon) handleProject(arg string) string {
 	wsData, err := d.hypr.Request("j/activeworkspace")
 	if err != nil {
@@ -406,6 +384,7 @@ func (d *Daemon) handleProject(arg string) string {
 
 func (d *Daemon) newInit() *session.Init {
 	init := session.NewInit(d.hypr, d.state)
+	init.SetLock(d.lockCtl)
 	init.SetNotify(func(app, urgency, title, body string) {
 		notifier := notifypkg.NewNotifier(d.hypr, d.config.Load())
 		notifier.Handle(notifypkg.NotifyRequest{
@@ -419,7 +398,8 @@ func (d *Daemon) newInit() *session.Init {
 	return init
 }
 
-// hasNotifications returns true if dunst has displayed notifications.
+// hasNotifications reports whether dunst is currently displaying any notifications.
+// Errors are treated as "none displayed".
 func hasNotifications() bool {
 	out, err := exec.Command("dunstctl", "count", "displayed").Output()
 	if err != nil {
@@ -429,16 +409,18 @@ func hasNotifications() bool {
 	return err == nil && n > 0
 }
 
-// runCmd executes a command without waiting for output.
+// runCmd runs a command synchronously, discarding stdout/stderr and logging exec errors.
 func runCmd(name string, args ...string) {
 	if err := exec.Command(name, args...).Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd: runCmd %s: %v\n", name, err)
 	}
 }
 
-// watchConfig monitors configs/hyprd.yaml for changes and hot-reloads the config pointer.
-// Watches the parent directory (not the file) because editors like nvim do
-// rename-and-replace on save, which creates a new inode and kills file-level watches.
+// watchConfig hot-reloads configs/hyprd.yaml into d.config on change.
+//
+// Watches the parent directory, not the file: editors like nvim rename-and-replace on save, which swaps the inode and
+// kills file-level watches.
+// Writes are debounced 100ms to coalesce multi-step saves.
 func (d *Daemon) watchConfig(done <-chan struct{}) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -494,7 +476,7 @@ func (d *Daemon) watchConfig(done <-chan struct{}) {
 	}
 }
 
-// query returns JSON-encoded state for a specific topic or all state if topic is "all".
+// query returns JSON-encoded state for a single topic; "all" or "" returns the full blob.
 func (d *Daemon) query(topic string) (string, error) {
 	switch topic {
 	case "workspace":
@@ -533,15 +515,12 @@ func (d *Daemon) query(topic string) (string, error) {
 func (d *Daemon) workspacePayload() map[string]any {
 	current := d.state.GetWorkspace()
 	occupied := d.state.GetOccupied()
-	monocle := d.state.ActiveMonocleWorkspace()
 
 	return map[string]any{
 		"current":      current,
 		"current_str":  strconv.Itoa(current),
 		"occupied":     occupied,
 		"occupied_str": joinWorkspaceIDs(occupied),
-		"monocle":      monocle,
-		"monocle_str":  workspaceIDString(monocle),
 	}
 }
 
@@ -551,13 +530,6 @@ func joinWorkspaceIDs(ids []int) string {
 		parts[i] = strconv.Itoa(id)
 	}
 	return strings.Join(parts, " ")
-}
-
-func workspaceIDString(id int) string {
-	if id <= 0 {
-		return ""
-	}
-	return strconv.Itoa(id)
 }
 
 func (d *Daemon) notifyWorkspace() {
