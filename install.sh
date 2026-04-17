@@ -1767,23 +1767,6 @@ step_firefox() {
     ln -sfv "$userjs_src" "$userjs_dst"
     ok "user.js linked"
 
-    # Write newtab local config with profile path (machine-specific, not tracked in git)
-    local local_config="$DOTFILES/daemons/configs/newtab.local.yaml"
-    local new_db_path="${FIREFOX_PROFILE_DIR#"$HOME"/}/places.sqlite"
-
-    local current_db=""
-    if [[ -f "$local_config" ]]; then
-        current_db=$(grep 'firefox_db:' "$local_config" | sed 's/.*firefox_db:[[:space:]]*//' | tr -d '"')
-    fi
-
-    if [[ "$current_db" == "$new_db_path" ]]; then
-        ok "newtab local config already points to correct profile"
-    else
-        info "Writing newtab local config..."
-        printf 'firefox_db: "%s"\n' "$new_db_path" > "$local_config"
-        ok "Wrote firefox_db to newtab/local.config.yaml"
-    fi
-
     echo
     ok "Firefox configured"
     warn "Restart Firefox for changes to take effect"

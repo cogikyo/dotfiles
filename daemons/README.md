@@ -48,9 +48,7 @@ The repository is organized around one daemon per top-level directory, with shar
 daemons/
 ├── configs/
 │   ├── ewwd.yaml
-│   ├── hyprd.yaml
-│   ├── newtab.yaml
-│   └── newtab.local.yaml
+│   └── hyprd.yaml
 ├── daemon/         # shared Unix socket server/client helpers
 ├── ewwd/           # eww status daemon
 ├── hyprd/          # Hyprland daemon

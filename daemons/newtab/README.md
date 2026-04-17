@@ -15,14 +15,7 @@ Firefox's built-in new tab is slow and cluttered. Extensions that replace it can
 
 ## Setup
 
-Update `../configs/newtab.yaml` for your machine. The optional `../configs/newtab.local.yaml` file can hold untracked overrides.
-
-```yaml
-port: ":42069"
-firefox_db: ".mozilla/firefox/YOUR_PROFILE/places.sqlite"
-static_dir: "dotfiles/daemons/newtab"
-history_limit: 15
-```
+No config file. The server picks its Firefox profile at startup by scanning `~/.mozilla/firefox` and `~/.config/mozilla/firefox` — preferring `dev-edition-default`, then any profile marked `Default=1` in `profiles.ini`. Port, static dir, and history limit are baked in as constants in `main.go`.
 
 Set Firefox to use it:
 

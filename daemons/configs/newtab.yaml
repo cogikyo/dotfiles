@@ -1,5 +1,0 @@
-port: ":42069"
-# firefox_db is auto-detected (scans ~/.mozilla/firefox and ~/.config/mozilla/firefox
-# for the dev-edition-default profile). Override via daemons/configs/newtab.local.yaml.
-static_dir: "dotfiles/daemons/newtab"
-history_limit: 15

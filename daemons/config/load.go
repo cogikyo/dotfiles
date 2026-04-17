@@ -45,18 +45,10 @@ func LoadHypr() HyprConfig {
 	return cfg
 }
 
-// LoadNewtab loads newtab config from configs/newtab.yaml and overlays configs/newtab.local.yaml when present.
-//
-// The local file holds machine-specific values (bookmarks, paths) and is gitignored.
+// LoadNewtab returns newtab defaults. The newtab daemon resolves its Firefox DB at runtime
+// by scanning profile roots, so there is no YAML config to load.
 func LoadNewtab() NewtabConfig {
-	cfg := DefaultNewtab()
-	if err := loadYAMLFile(ConfigPath("newtab"), &cfg); err != nil {
-		logConfigError("newtab", err)
-	}
-	if err := loadYAMLFile(LocalConfigPath("newtab"), &cfg); err != nil && !errors.Is(err, os.ErrNotExist) {
-		logConfigError("newtab local", err)
-	}
-	return cfg
+	return DefaultNewtab()
 }
 
 func loadYAMLFile(relPath string, dst any) error {

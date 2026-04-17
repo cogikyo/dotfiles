@@ -1,7 +1,6 @@
 // Package main implements newtab, an HTTP service backing the custom new-tab page.
 //
 // It queries Firefox's places.sqlite for history and bookmarks, proxies Google suggest, and serves JSON.
-// Config loads from newtab.yaml with an optional newtab.local.yaml override.
 package main
 
 import (
@@ -16,7 +15,6 @@ import (
 	"path/filepath"
 	"strings"
 
-	"gopkg.in/yaml.v3"
 	_ "modernc.org/sqlite"
 )
 
@@ -25,8 +23,9 @@ import (
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
 const (
-	newtabConfigPath = "dotfiles/daemons/configs/newtab.yaml"
-	newtabLocalPath  = "dotfiles/daemons/configs/newtab.local.yaml"
+	defaultPort         = ":42069"
+	defaultStaticDir    = "dotfiles/daemons/newtab"
+	defaultHistoryLimit = 15
 
 	// Google's Firefox-format suggest endpoint. Returns [query, [suggestions...]].
 	googleSuggest = "https://suggestqueries.google.com/complete/search?client=firefox&q="
@@ -51,55 +50,16 @@ var homeDir = os.Getenv("HOME")
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
 type newtabConfig struct {
-	Port         string `yaml:"port"`
-	FirefoxDB    string `yaml:"firefox_db"`
-	StaticDir    string `yaml:"static_dir"`
-	HistoryLimit int    `yaml:"history_limit"`
+	Port         string
+	FirefoxDB    string
+	StaticDir    string
+	HistoryLimit int
 }
 
-// loadConfig layers newtab.yaml then newtab.local.yaml over built-in defaults.
-//
-// Read or parse failures silently fall back to what loaded so far; the service must start without a config file.
-// FirefoxDB is intentionally empty by default — main() resolves it via resolveFirefoxDB when unset or stale.
-func loadConfig() newtabConfig {
-	cfg := newtabConfig{
-		Port:         ":42069",
-		StaticDir:    "dotfiles/daemons/newtab",
-		HistoryLimit: 15,
-	}
-
-	data, err := os.ReadFile(filepath.Join(homeDir, newtabConfigPath))
-	if err != nil {
-		return cfg
-	}
-
-	if err := yaml.Unmarshal(data, &cfg); err != nil {
-		return cfg
-	}
-
-	if localData, err := os.ReadFile(filepath.Join(homeDir, newtabLocalPath)); err == nil {
-		yaml.Unmarshal(localData, &cfg)
-	}
-
-	return cfg
-}
-
-// resolveFirefoxDB returns an absolute path to places.sqlite.
-//
-// If the configured path resolves to an existing file it wins. Otherwise we scan both
+// resolveFirefoxDB returns an absolute path to places.sqlite by scanning both
 // Firefox profile roots (legacy ~/.mozilla/firefox and XDG ~/.config/mozilla/firefox),
 // preferring a profile named dev-edition-default, then any profile marked Default=1.
-func resolveFirefoxDB(configured string) string {
-	if configured != "" {
-		abs := configured
-		if !filepath.IsAbs(abs) {
-			abs = filepath.Join(homeDir, abs)
-		}
-		if _, err := os.Stat(abs); err == nil {
-			return abs
-		}
-	}
-
+func resolveFirefoxDB() string {
 	roots := []string{
 		filepath.Join(homeDir, ".mozilla", "firefox"),
 		filepath.Join(homeDir, ".config", "mozilla", "firefox"),
@@ -204,13 +164,16 @@ type HistoryEntry struct {
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
 func main() {
-	cfg := loadConfig()
-	resolved := resolveFirefoxDB(cfg.FirefoxDB)
-	if resolved == "" {
-		log.Printf("warning: no Firefox places.sqlite found (configured=%q); bookmarks/history queries will fail until Firefox is run", cfg.FirefoxDB)
+	cfg := newtabConfig{
+		Port:         defaultPort,
+		StaticDir:    defaultStaticDir,
+		HistoryLimit: defaultHistoryLimit,
+		FirefoxDB:    resolveFirefoxDB(),
+	}
+	if cfg.FirefoxDB == "" {
+		log.Print("warning: no Firefox places.sqlite found; bookmarks/history queries will fail until Firefox is run")
 	} else {
-		log.Printf("firefox places.sqlite: %s", resolved)
-		cfg.FirefoxDB = resolved
+		log.Printf("firefox places.sqlite: %s", cfg.FirefoxDB)
 	}
 
 	mux := http.NewServeMux()
