@@ -66,6 +66,9 @@ func (m *Monocle) activate() (string, error) {
 	if active == nil {
 		return "monocle: no active window", nil
 	}
+	if len(tiled) == 0 {
+		return "monocle: no tiled windows", nil
+	}
 
 	master := tiled[0].Address
 	monoWS := fmt.Sprintf("special:mono%d", wsID)
