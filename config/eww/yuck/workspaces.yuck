@@ -14,7 +14,7 @@
 (defvar ws-h5 false)
 
 (deflisten workspace-info
-  :initial '{"current":5,"current_str":"5","occupied":[5],"occupied_str":"5","monocle":0,"monocle_str":""}'
+  :initial '{"current":5,"current_str":"5","occupied":[5],"occupied_str":"5"}'
   'hyprd subscribe workspace | jq --unbuffered -c ".data"'
 )
 
