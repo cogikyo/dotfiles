@@ -25,7 +25,6 @@ init:
   workspace: 1
   lock: true
   lock_delay: 3s
-  greeting: "こんにちは"
   network_timeout: 10
 split:
   xs: "0.37"

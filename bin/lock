@@ -34,10 +34,8 @@ glava -e "radial_rc.glsl" & disown
 bluetoothctl connect 14:3F:A6:10:A1:B5 & disown
 
 ewwd open & disown
-if ((elapsed > GRACE)); then
-    hyprd notify send -a attention -u low -t 1000 "$USER@$HOSTNAME" "こんにちは"
-else
-   playerctl play
+if ((elapsed <= GRACE)); then
+    playerctl play
 fi
 sleep 1
 dunstctl set-paused false
