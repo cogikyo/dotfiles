@@ -1,6 +1,11 @@
 # Compiled binaries
 config/claude/statusline-bin
 config/claude/statusline/statusline
+daemons/ewwd/ewwd
+daemons/hyprd/hyprd
+daemons/newtab/newtab
+daemons/newtab/newtab-server
+daemons/statusline/statusline
 
 # Plaintext secrets (safety net)
 etc/secrets/identity

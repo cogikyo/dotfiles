@@ -1,6 +1,6 @@
 module newtab-server
 
-go 1.25
+go 1.26.2
 
 require modernc.org/sqlite v1.34.5
 

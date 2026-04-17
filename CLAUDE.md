@@ -83,11 +83,26 @@ Editing any of these requires `install.sh go` to take effect (running binaries a
 
 ## Conventions
 
+- Prefer Go for new implementation work outside repo-root install/bootstrap shell (`install.sh`, `build.sh`) and genuinely shell-shaped helpers in `bin/`. If logic grows beyond straightforward command orchestration, move it into `daemons/` or a dedicated Go command/package instead of growing Bash.
 - Bash: `#!/usr/bin/env bash` + `set -euo pipefail`.
 - Logging: `info()` (blue), `success()`/`ok()` (green), `warn()` (yellow), `error()`/`err()` (red). Match existing style in neighboring scripts.
 - Commits: Conventional Commits. Split unrelated changes into separate commits — do not bundle.
 - Files are mostly symlinks on the live system; editing the repo IS the edit.
 - When writing files with Nerd Font / multi-width UTF glyphs, use Python (`Write`/`Edit` corrupts them).
+
+## Go (`go 1.26.2`)
+
+- Stdlib-first. Prefer `context`, `log/slog`, `errors.Is`/`As`/`Join`, `slices`, `maps`, `iter`, `cmp`, `min`/`max`/`clear`, `sync.WaitGroup.Go`, `testing/synctest`, and `os.Root` before custom helpers or third-party deps.
+- Run `gofmt`/`goimports`, `go fix`, `go vet`, and targeted `go test` in every touched Go module after meaningful edits.
+- Prefer concrete types and package-level functions. Define interfaces at the consumer boundary when multiple implementations or tests actually need them; do not start with interface-first design.
+- Pass `context.Context` as the first parameter for request/lifecycle-bound work. Do not store contexts in structs.
+- Keep error flow left-aligned. Return early, wrap with `%w`, use `errors.Is`/`As` instead of string matching, and keep error strings lowercase with no trailing punctuation.
+- Keep goroutine lifetimes obvious. Prefer synchronous APIs. Use `WaitGroup.Go` over `Add`/`Done` unless the older pattern is genuinely clearer, and use `testing/synctest` for time/concurrency-heavy tests.
+- Make zero values useful. Avoid pointer params just to save copies. Use pointer receivers for mutation or mutex-bearing structs, and do not mix receiver types on the same type.
+- Prefer modern language/library idioms when they improve clarity: `for range n` for counted loops, iterator-based helpers via `iter`/`maps`/`slices`, and `new(expr)` for optional pointer fields when it reads better.
+- For filesystem work that joins a trusted base with untrusted relative names, prefer `os.OpenRoot`/`os.OpenInRoot` over `filepath.Join` + `os.Open`.
+- Use generics to remove real duplication, not to build abstraction towers. If a concrete function is clearer, keep it concrete.
+- In tests, prefer plain `testing`, table-driven cases, subtests, and clear `got`/`want` failures over assert DSLs.
 
 ## Gotchas
 
