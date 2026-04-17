@@ -170,13 +170,10 @@ Usage:
   ewwd status --json    Return full state as JSON
 
 Query/Subscribe (for eww):
-  ewwd query [topic]    Get state (gpu|network|date|brightness|audio|music|timer|weather|...)
-  ewwd subscribe [...]  Stream events (gpu network date brightness audio music timer weather)
+  ewwd query [topic]    Get state (gpu|network|date|audio|music|timer|weather|...)
+  ewwd subscribe [...]  Stream events (gpu network date audio music timer weather)
 
 Actions (for eww buttons/scrolls):
-  ewwd action brightness reset              Set to 100%
-  ewwd action brightness night              Set to 40%
-  ewwd action brightness adjust up          Increase by 10%
   ewwd action audio mute <sink|source>      Mute device
   ewwd action audio change_volume sink up   Adjust ±10
   ewwd action audio set_default both        Preset volumes
@@ -202,7 +199,6 @@ Providers:
   gpu        - AMD GPU stats (busy%, VRAM, mclk)
   network    - Network speed monitoring
   date       - Date/time, clockface icons, weeks alive
-  brightness - Screen brightness control
   audio      - PulseAudio volume (sink/source with offset)
   music      - Spotify playback (status, track info, album art)
   timer      - Timer/alarm countdown with notifications

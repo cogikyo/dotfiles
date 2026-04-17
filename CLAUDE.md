@@ -65,7 +65,7 @@ All are `set -euo pipefail` bash (except `bin/eww` which is a committed prebuilt
 Go workspace. One module, multiple `cmd/`-style entry dirs. See `daemons/README.md` for architecture + sockets.
 
 - `hyprd` — Hyprland window management: monocle, split ratios, hide/show, swap, workspaces, session layouts. Socket: `/tmp/hyprd.sock`.
-- `ewwd`  — System signals for eww: GPU, audio, brightness, music, network, date, weather, timer. Socket: `/tmp/ewwd.sock`.
+- `ewwd`  — System signals for eww: GPU, audio, music, network, date, weather, timer. Socket: `/tmp/ewwd.sock`.
 - `newtab`— Firefox new-tab page backend.
 - `statusline` — Claude Code statusline.
 

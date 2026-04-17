@@ -25,11 +25,6 @@ audio:
     - "WH-1000XM4"
     - "OpenFit"
     - "pixel buds"
-brightness:
-  min: 2
-  max: 10
-  night: 4
-  default: 10
 date:
   birth_date: "1996-02-26"
 gpu:

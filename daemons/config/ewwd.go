@@ -8,7 +8,6 @@ type EwwConfig struct {
 	Weather    WeatherConfig    `yaml:"weather"`
 	Timer      TimerConfig      `yaml:"timer"`
 	Audio      AudioConfig      `yaml:"audio"`
-	Brightness BrightnessConfig `yaml:"brightness"`
 	Date       DateConfig       `yaml:"date"`
 	GPU        GPUConfig        `yaml:"gpu"`
 	Network    NetworkConfig    `yaml:"network"`
@@ -41,14 +40,6 @@ type AudioConfig struct {
 	DefaultSourceVolume int               `yaml:"default_source_volume"` // source volume % applied on startup
 	NameMappings        map[string]string `yaml:"name_mappings"`         // raw device name -> display alias
 	BluetoothNames      []string          `yaml:"bluetooth_names"`       // substrings identifying bluetooth devices for icon selection
-}
-
-// BrightnessConfig defines preset brightness levels (0-based step indexes, not %).
-type BrightnessConfig struct {
-	Min     int `yaml:"min"`
-	Max     int `yaml:"max"`
-	Night   int `yaml:"night"`   // night mode preset
-	Default int `yaml:"default"` // preset applied on startup
 }
 
 // DateConfig provides reference dates for date-based widgets (age, countdowns).
@@ -90,12 +81,6 @@ func DefaultEww() EwwConfig {
 			DefaultSourceVolume: 150,
 			NameMappings:        map[string]string{"cullyn": "pixel buds"},
 			BluetoothNames:      []string{"WH-1000XM4", "OpenFit", "pixel buds"},
-		},
-		Brightness: BrightnessConfig{
-			Min:     2,
-			Max:     10,
-			Night:   4,
-			Default: 10,
 		},
 		Date: DateConfig{
 			BirthDate: "1996-02-26",

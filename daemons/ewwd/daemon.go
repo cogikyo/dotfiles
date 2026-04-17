@@ -108,7 +108,6 @@ func (d *Daemon) initProviders() {
 		providers.NewGPU(d.state, cfg.GPU),
 		providers.NewNetwork(d.state, cfg.Network),
 		providers.NewDate(d.state, cfg.Date),
-		providers.NewBrightness(d.state, cfg.Brightness),
 		providers.NewAudio(d.state, cfg.Audio),
 		providers.NewMusic(d.state),
 		providers.NewTimer(d.state, cfg.Timer),

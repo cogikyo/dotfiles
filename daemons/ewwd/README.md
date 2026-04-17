@@ -16,13 +16,13 @@ ewwd status --json       # full state dump
 ewwd query               # all state as JSON
 ewwd query gpu           # specific provider
 
-ewwd subscribe gpu audio brightness music  # stream events (for eww deflisten)
+ewwd subscribe gpu audio music  # stream events (for eww deflisten)
 ```
 
 eww integration:
 
 ```yuck
-(deflisten ewwd `ewwd subscribe gpu audio brightness music date weather`)
+(deflisten ewwd `ewwd subscribe gpu audio music date weather`)
 (label :text {ewwd?.audio?.sink?.volume ?: "?"})
 ```
 
@@ -31,11 +31,6 @@ eww integration:
 Triggered by eww button clicks and scroll events.
 
 ```bash
-# Brightness
-ewwd action brightness reset              # set to 100%
-ewwd action brightness night              # set to 40%
-ewwd action brightness adjust up          # increase by 10%
-
 # Audio
 ewwd action audio mute <sink|source>      # mute device
 ewwd action audio change_volume sink up   # adjust ±10
@@ -63,7 +58,6 @@ ewwd action timer alarm up <minutes>      # add minutes
 |------------|---------------------|-------------------------------------------|
 | gpu        | sysfs               | AMD GPU busy%, VRAM, memory clock         |
 | audio      | PulseAudio          | sink/source volumes with offset           |
-| brightness | sysfs               | screen brightness percentage              |
 | music      | D-Bus (Spotify)     | playback status, track info, album art    |
 | network    | /proc/net/dev       | upload/download speeds                    |
 | date       | time                | time, date, clockface icons, weeks alive  |
@@ -84,6 +78,6 @@ Each provider implements the `providers.Provider` interface and runs in its own 
 ewwd/
 ├── daemon.go            # lifecycle, provider coordination, command handler
 ├── main.go              # CLI entry, command routing to daemon socket
-├── providers/           # gpu, audio, brightness, music, network, date, weather, timer
+├── providers/           # gpu, audio, music, network, date, weather, timer
 └── state.go             # generic thread-safe state store
 ```

@@ -37,7 +37,7 @@ Go daemons and services for Hyprland, eww, and Firefox.
 ## Daemons
 
 - **[hyprd](hyprd/)** — Window management: monocle, split ratios, hide/show, swap, workspace nav, session layouts
-- **[ewwd](ewwd/)** — System utilities: GPU stats, audio, brightness, music, network, date, weather, timer
+- **[ewwd](ewwd/)** — System utilities: GPU stats, audio, music, network, date, weather, timer
 - **[newtab](newtab/)** — Firefox new tab page: local HTTP server with bookmarks, history, and suggestions
 
 ## Layout
