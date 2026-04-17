@@ -86,3 +86,67 @@ func TestBrowserModeDefaultsAndExact(t *testing.T) {
 		t.Fatalf("trimmed mode = %q, want %q", got, want)
 	}
 }
+
+func TestSelectedEntryClampsIndex(t *testing.T) {
+	tab := firefoxTab{
+		Entries: []firefoxEntry{
+			{Title: "first"},
+			{Title: "second"},
+			{Title: "third"},
+		},
+	}
+
+	cases := []struct {
+		name  string
+		index int
+		want  string
+	}{
+		{name: "negative", index: -2, want: "first"},
+		{name: "zero", index: 0, want: "first"},
+		{name: "middle", index: 2, want: "second"},
+		{name: "past end", index: 99, want: "third"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			tab.Index = tc.index
+			if got := selectedEntry(tab).Title; got != tc.want {
+				t.Fatalf("selectedEntry(%d) = %q, want %q", tc.index, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestSelectedWindowTabClampsSelection(t *testing.T) {
+	window := firefoxWindow{
+		Tabs: []firefoxTab{
+			{Entries: []firefoxEntry{{Title: "first"}}},
+			{Entries: []firefoxEntry{{Title: "second"}}},
+			{Entries: []firefoxEntry{{Title: "third"}}},
+		},
+	}
+
+	cases := []struct {
+		name     string
+		selected int
+		want     string
+	}{
+		{name: "negative", selected: -2, want: "first"},
+		{name: "zero", selected: 0, want: "first"},
+		{name: "middle", selected: 2, want: "second"},
+		{name: "past end", selected: 99, want: "third"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			window.Selected = tc.selected
+			got := selectedWindowTab(window)
+			if got == nil {
+				t.Fatalf("selectedWindowTab(%d) = nil", tc.selected)
+			}
+			if title := selectedEntry(*got).Title; title != tc.want {
+				t.Fatalf("selectedWindowTab(%d) = %q, want %q", tc.selected, title, tc.want)
+			}
+		})
+	}
+}

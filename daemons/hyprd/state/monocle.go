@@ -1,5 +1,7 @@
 package state
 
+import "slices"
+
 // GetMonocle returns a deep copy of the workspace's MonocleState, or nil when not in monocle mode.
 func (s *State) GetMonocle(ws int) *MonocleState {
 	s.mu.RLock()
@@ -9,8 +11,7 @@ func (s *State) GetMonocle(ws int) *MonocleState {
 		return nil
 	}
 	copied := *ms
-	copied.Windows = make([]MonocleWindow, len(ms.Windows))
-	copy(copied.Windows, ms.Windows)
+	copied.Windows = slices.Clone(ms.Windows)
 	return &copied
 }
 
@@ -33,8 +34,7 @@ func (s *State) AllMonocle() map[int]*MonocleState {
 	out := make(map[int]*MonocleState, len(s.Monocle))
 	for k, v := range s.Monocle {
 		copied := *v
-		copied.Windows = make([]MonocleWindow, len(v.Windows))
-		copy(copied.Windows, v.Windows)
+		copied.Windows = slices.Clone(v.Windows)
 		out[k] = &copied
 	}
 	return out
@@ -68,7 +68,7 @@ func (s *State) ClearWindowState(addr string) *ThreeBodyState {
 	for ws, ms := range s.Monocle {
 		for i, mw := range ms.Windows {
 			if mw.Address == addr {
-				ms.Windows = append(ms.Windows[:i], ms.Windows[i+1:]...)
+				ms.Windows = slices.Delete(ms.Windows, i, i+1)
 				if len(ms.Windows) == 0 {
 					delete(s.Monocle, ws)
 				}

@@ -35,9 +35,7 @@ func (s *State) Get(key string) any {
 func (s *State) GetAll() map[string]any {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	result := make(map[string]any, len(s.data))
-	maps.Copy(result, s.data)
-	return result
+	return maps.Clone(s.data)
 }
 
 func (s *State) JSON() ([]byte, error) {

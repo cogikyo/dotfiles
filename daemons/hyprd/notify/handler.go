@@ -135,7 +135,7 @@ func (n *Notifier) handleCodex(req NotifyRequest) error {
 			Style:       "start",
 			Sound:       pick,
 			Volume:      n.cfg.Notify.QuietVolume,
-			Timeout:     ptr(4000),
+			Timeout:     new(4000),
 			FocusAction: true,
 		}, ctx)
 	case "agent-turn-complete":
@@ -145,8 +145,8 @@ func (n *Notifier) handleCodex(req NotifyRequest) error {
 			Style:       "complete",
 			Sound:       "jobs-done",
 			Volume:      n.cfg.Notify.LoudVolume,
-			Urgency:     ptr("low"),
-			Persistent:  ptr(false),
+			Urgency:     new("low"),
+			Persistent:  new(false),
 			FocusAction: true,
 		}, ctx)
 	case "idle":
@@ -156,9 +156,9 @@ func (n *Notifier) handleCodex(req NotifyRequest) error {
 			Style:       "idle",
 			Sound:       "hey-listen",
 			Volume:      n.cfg.Notify.QuietVolume,
-			Urgency:     ptr("low"),
-			Persistent:  ptr(false),
-			IconSuffix:  ptr(""),
+			Urgency:     new("low"),
+			Persistent:  new(false),
+			IconSuffix:  new(""),
 			FocusAction: true,
 		}, ctx)
 	case "approval-requested":
@@ -188,7 +188,7 @@ func (n *Notifier) handleKitty(req NotifyRequest) error {
 		App:     "kitty",
 		Title:   " Finished",
 		Body:    command,
-		Timeout: ptr(5000),
+		Timeout: new(5000),
 	}, nil)
 }
 

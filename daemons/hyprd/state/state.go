@@ -7,6 +7,7 @@ package state
 
 import (
 	"encoding/json"
+	"slices"
 	"sync"
 
 	"dotfiles/daemons/config"
@@ -75,9 +76,7 @@ func (s *State) SetOccupied(workspaces []int) {
 func (s *State) GetOccupied() []int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	out := make([]int, len(s.OccupiedWorkspaces))
-	copy(out, s.OccupiedWorkspaces)
-	return out
+	return slices.Clone(s.OccupiedWorkspaces)
 }
 
 func (s *State) SetSplitRatio(ratio string) {

@@ -7,13 +7,13 @@ import (
 	"bufio"
 	"database/sql"
 	"encoding/json"
-	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	_ "modernc.org/sqlite"
 )
@@ -44,6 +44,8 @@ const (
 )
 
 var homeDir = os.Getenv("HOME")
+
+var suggestClient = &http.Client{Timeout: 5 * time.Second}
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
 // │ config                                                                       │
@@ -210,6 +212,10 @@ func writeError(w http.ResponseWriter, err error) {
 	http.Error(w, err.Error(), http.StatusInternalServerError)
 }
 
+func openPlacesDB(cfg newtabConfig) (*sql.DB, error) {
+	return sql.Open("sqlite", dbPath(cfg))
+}
+
 // ╭──────────────────────────────────────────────────────────────────────────────╮
 // │ handlers                                                                     │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
@@ -220,7 +226,7 @@ func writeError(w http.ResponseWriter, err error) {
 // The 'tags' folder itself is filtered out so tag entries don't surface as bookmarks.
 func handleBookmarks(cfg newtabConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		db, err := sql.Open("sqlite", dbPath(cfg))
+		db, err := openPlacesDB(cfg)
 		if err != nil {
 			writeError(w, err)
 			return
@@ -264,6 +270,10 @@ func handleBookmarks(cfg newtabConfig) http.HandlerFunc {
 			}
 			bookmarks = append(bookmarks, b)
 		}
+		if err := rows.Err(); err != nil {
+			writeError(w, err)
+			return
+		}
 
 		writeJSON(w, bookmarks)
 	}
@@ -276,7 +286,7 @@ func handleBookmarks(cfg newtabConfig) http.HandlerFunc {
 // The 1e12 divisor rescales microsecond timestamps to the same order of magnitude as visit counts.
 func handleHistory(cfg newtabConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		db, err := sql.Open("sqlite", dbPath(cfg))
+		db, err := openPlacesDB(cfg)
 		if err != nil {
 			writeError(w, err)
 			return
@@ -333,6 +343,10 @@ func handleHistory(cfg newtabConfig) http.HandlerFunc {
 			}
 			history = append(history, h)
 		}
+		if err := rows.Err(); err != nil {
+			writeError(w, err)
+			return
+		}
 
 		writeJSON(w, history)
 	}
@@ -349,21 +363,26 @@ func handleSuggest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp, err := http.Get(googleSuggest + url.QueryEscape(query))
+	req, err := http.NewRequestWithContext(r.Context(), http.MethodGet, googleSuggest+url.QueryEscape(query), nil)
+	if err != nil {
+		writeJSON(w, []string{})
+		return
+	}
+
+	resp, err := suggestClient.Do(req)
 	if err != nil {
 		writeJSON(w, []string{})
 		return
 	}
 	defer resp.Body.Close()
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
+	if resp.StatusCode != http.StatusOK {
 		writeJSON(w, []string{})
 		return
 	}
 
 	var result []any
-	if err := json.Unmarshal(body, &result); err != nil || len(result) < 2 {
+	if err := json.NewDecoder(resp.Body).Decode(&result); err != nil || len(result) < 2 {
 		writeJSON(w, []string{})
 		return
 	}

@@ -3,6 +3,7 @@ package daemon
 import (
 	"encoding/json"
 	"net"
+	"slices"
 	"strings"
 	"sync"
 )
@@ -34,7 +35,7 @@ func (m *SubscriptionManager) Subscribe(conn net.Conn, topics []string, onSubscr
 	m.mu.Lock()
 	defer m.mu.Unlock()
 
-	topicMap := make(map[string]bool)
+	topicMap := make(map[string]bool, len(topics))
 	for _, t := range topics {
 		topicMap[t] = true
 	}
@@ -57,7 +58,7 @@ func (m *SubscriptionManager) Unsubscribe(conn net.Conn) {
 
 	for i, sub := range m.subscribers {
 		if sub.conn == conn {
-			m.subscribers = append(m.subscribers[:i], m.subscribers[i+1:]...)
+			m.subscribers = slices.Delete(m.subscribers, i, i+1)
 			return
 		}
 	}

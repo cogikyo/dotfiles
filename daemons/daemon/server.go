@@ -37,11 +37,13 @@
 package daemon
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"os"
 	"os/signal"
 	"strings"
+	"sync"
 	"syscall"
 )
 
@@ -55,12 +57,13 @@ type SubscribeHandler func(sub *Subscriber, topics []string)
 //
 // OnSubscribe is optional. Handler must be set before Start.
 type Server struct {
-	SocketPath  string
-	Subs        *SubscriptionManager
-	Handler     CommandHandler
-	OnSubscribe SubscribeHandler
-	done        chan struct{}
-	listener    net.Listener
+	SocketPath   string
+	Subs         *SubscriptionManager
+	Handler      CommandHandler
+	OnSubscribe  SubscribeHandler
+	done         chan struct{}
+	listener     net.Listener
+	shutdownOnce sync.Once
 }
 
 // NewServer returns a Server bound to socketPath with handler for non-subscribe commands.
@@ -77,7 +80,9 @@ func NewServer(socketPath string, handler CommandHandler) *Server {
 //
 // Any stale socket file is removed first. The new socket is chmod 0600 so only the current user can connect.
 func (s *Server) Start() error {
-	os.Remove(s.SocketPath)
+	if err := os.Remove(s.SocketPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("remove stale socket: %w", err)
+	}
 
 	listener, err := net.Listen("unix", s.SocketPath)
 	if err != nil {
@@ -96,11 +101,15 @@ func (s *Server) Start() error {
 
 // Shutdown closes the listener, removes the socket file, and signals Done.
 func (s *Server) Shutdown() {
-	close(s.done)
-	if s.listener != nil {
-		s.listener.Close()
-	}
-	os.Remove(s.SocketPath)
+	s.shutdownOnce.Do(func() {
+		close(s.done)
+		if s.listener != nil {
+			_ = s.listener.Close()
+		}
+		if err := os.Remove(s.SocketPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+			fmt.Fprintf(os.Stderr, "remove socket %s: %v\n", s.SocketPath, err)
+		}
+	})
 }
 
 // Done returns a channel closed when Shutdown is called.
@@ -112,6 +121,7 @@ func (s *Server) Done() <-chan struct{} {
 func (s *Server) WaitForSignal() os.Signal {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(sigCh)
 	return <-sigCh
 }
 
@@ -119,6 +129,9 @@ func (s *Server) acceptLoop() {
 	for {
 		conn, err := s.listener.Accept()
 		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				return
+			}
 			select {
 			case <-s.done:
 				return

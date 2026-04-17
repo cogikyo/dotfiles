@@ -111,12 +111,8 @@ func (d *Daemon) sendInitialState(sub *daemon.Subscriber, topics []string) {
 //
 // Contract: handlers return a plain string; errors are serialized as "error: <msg>" so clients can parse uniformly.
 func (d *Daemon) handleCommand(command string) string {
-	parts := strings.SplitN(command, " ", 2)
-	cmd := parts[0]
-	arg := ""
-	if len(parts) > 1 {
-		arg = parts[1]
-	}
+	cmd, arg, _ := strings.Cut(command, " ")
+	arg = strings.TrimSpace(arg)
 
 	switch cmd {
 	case "status":
@@ -177,15 +173,8 @@ func (d *Daemon) handleCommand(command string) string {
 		}
 		return result
 	case "focus":
-		parts := strings.SplitN(arg, " ", 2)
-		class := ""
-		title := ""
-		if len(parts) >= 1 {
-			class = parts[0]
-		}
-		if len(parts) >= 2 {
-			title = parts[1]
-		}
+		class, title, _ := strings.Cut(arg, " ")
+		title = strings.TrimSpace(title)
 		focus := wm.NewFocus(d.hypr, d.state)
 		result, err := focus.Execute(class, title)
 		if err != nil {
@@ -354,12 +343,8 @@ func (d *Daemon) handleProject(arg string) string {
 		return fmt.Sprintf("error: parse workspace: %v", err)
 	}
 
-	parts := strings.SplitN(strings.TrimSpace(arg), " ", 2)
-	sub := parts[0]
-	val := ""
-	if len(parts) > 1 {
-		val = parts[1]
-	}
+	sub, val, _ := strings.Cut(strings.TrimSpace(arg), " ")
+	val = strings.TrimSpace(val)
 
 	switch sub {
 	case "", "get":

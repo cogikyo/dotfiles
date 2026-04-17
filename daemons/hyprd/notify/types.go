@@ -75,7 +75,3 @@ type Notifier struct {
 func NewNotifier(h *hypr.Client, cfg *config.HyprConfig) *Notifier {
 	return &Notifier{hypr: h, cfg: cfg}
 }
-
-func ptr[T any](v T) *T {
-	return &v
-}

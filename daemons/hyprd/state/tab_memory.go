@@ -1,5 +1,7 @@
 package state
 
+import "maps"
+
 // TabMemory records the last kitty tab used for each action in a profile.
 //
 // Context (usually the project path) disambiguates memory across project switches within the same workspace+profile.
@@ -25,9 +27,7 @@ func (s *State) GetTabMemory(ws int, profile string) *TabMemory {
 	copy := &TabMemory{Context: mem.Context}
 	if len(mem.ByAction) > 0 {
 		copy.ByAction = make(map[string]string, len(mem.ByAction))
-		for k, v := range mem.ByAction {
-			copy.ByAction[k] = v
-		}
+		maps.Copy(copy.ByAction, mem.ByAction)
 	}
 	return copy
 }

@@ -103,7 +103,7 @@ func (e *EventLoop) updateOccupied() error {
 	}
 
 	// exclude special workspaces (id <= 0): scratchpads, shadow, etc.
-	wsSet := make(map[int]bool)
+	wsSet := make(map[int]bool, len(clients))
 	for _, c := range clients {
 		if c.Workspace.ID > 0 {
 			wsSet[c.Workspace.ID] = true
@@ -117,12 +117,10 @@ func (e *EventLoop) updateOccupied() error {
 // handleEvent parses an "event>>data" line and applies it to state.
 // Payload schema: https://wiki.hypr.land/IPC/ — unrecognized events are dropped.
 func (e *EventLoop) handleEvent(line string) {
-	parts := strings.SplitN(line, ">>", 2)
-	if len(parts) != 2 {
+	event, data, ok := strings.Cut(line, ">>")
+	if !ok {
 		return
 	}
-
-	event, data := parts[0], parts[1]
 
 	switch event {
 	case "workspace", "workspacev2":

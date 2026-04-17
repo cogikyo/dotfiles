@@ -22,7 +22,7 @@ func importSystemdEnv() {
 	if err != nil {
 		return
 	}
-	for _, line := range strings.Split(string(out), "\n") {
+	for line := range strings.SplitSeq(string(out), "\n") {
 		eq := strings.IndexByte(line, '=')
 		if eq <= 0 {
 			continue
@@ -126,12 +126,8 @@ func (d *Daemon) sendInitialState(sub *daemon.Subscriber, topics []string) {
 }
 
 func (d *Daemon) handleCommand(command string) string {
-	parts := strings.SplitN(command, " ", 2)
-	cmd := parts[0]
-	arg := ""
-	if len(parts) > 1 {
-		arg = parts[1]
-	}
+	cmd, arg, _ := strings.Cut(command, " ")
+	arg = strings.TrimSpace(arg)
 
 	switch cmd {
 	case "status":

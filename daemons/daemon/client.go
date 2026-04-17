@@ -32,7 +32,9 @@ func (c *Client) Send(command string) (string, error) {
 		return "", err
 	}
 
-	conn.SetReadDeadline(time.Now().Add(15 * time.Second))
+	if err := conn.SetDeadline(time.Now().Add(15 * time.Second)); err != nil {
+		return "", err
+	}
 	buf := make([]byte, 64*1024)
 	n, err := conn.Read(buf)
 	if err != nil {
@@ -79,7 +81,12 @@ func (c *Client) IsRunning() bool {
 	}
 	defer conn.Close()
 
-	conn.Write([]byte("ping"))
+	if err := conn.SetDeadline(time.Now().Add(2 * time.Second)); err != nil {
+		return false
+	}
+	if _, err := conn.Write([]byte("ping")); err != nil {
+		return false
+	}
 	buf := make([]byte, 64)
 	n, err := conn.Read(buf)
 	if err != nil {

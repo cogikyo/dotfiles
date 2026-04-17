@@ -241,13 +241,7 @@ func selectedEntry(tab firefoxTab) firefoxEntry {
 	if len(tab.Entries) == 0 {
 		return firefoxEntry{}
 	}
-	index := tab.Index - 1
-	if index < 0 {
-		index = 0
-	}
-	if index >= len(tab.Entries) {
-		index = len(tab.Entries) - 1
-	}
+	index := min(max(tab.Index-1, 0), len(tab.Entries)-1)
 	return tab.Entries[index]
 }
 
@@ -271,13 +265,7 @@ func selectedWindowTab(window firefoxWindow) *firefoxTab {
 	if len(window.Tabs) == 0 {
 		return nil
 	}
-	index := window.Selected - 1
-	if index < 0 {
-		index = 0
-	}
-	if index >= len(window.Tabs) {
-		index = len(window.Tabs) - 1
-	}
+	index := min(max(window.Selected-1, 0), len(window.Tabs)-1)
 	return &window.Tabs[index]
 }
 
