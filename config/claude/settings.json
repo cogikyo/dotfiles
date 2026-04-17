@@ -80,9 +80,9 @@
     "gopls-lsp@claude-plugins-official": true
   },
   "outputStyle": "explanatory",
-  "effortLevel": "high",
   "promptSuggestionEnabled": false,
   "voiceEnabled": false,
   "preferredNotifChannel": "none",
-  "shiftTabHint": false
+  "shiftTabHint": false,
+  "effortLevel": "medium"
 }
