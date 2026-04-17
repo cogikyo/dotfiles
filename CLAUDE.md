@@ -93,7 +93,9 @@ Editing any of these requires `install.sh go` to take effect (running binaries a
 ## Go (`go 1.26.2`)
 
 - Stdlib-first. Prefer `context`, `log/slog`, `errors.Is`/`As`/`Join`, `slices`, `maps`, `iter`, `cmp`, `min`/`max`/`clear`, `sync.WaitGroup.Go`, `testing/synctest`, and `os.Root` before custom helpers or third-party deps.
-- Run `gofmt`/`goimports`, `go fix`, `go vet`, and targeted `go test` in every touched Go module after meaningful edits.
+- Default Go workflow after most non-trivial code edits: run `gofmt`/`goimports`, `go fix`, `go vet`, and targeted `go test` in each touched Go module. Skip only for docs/comments-only changes or when a tool is clearly inapplicable.
+- Build when the edit affects a runnable binary, installed artifact, or restart-worthy behavior. Do not default to `install.sh go`; it rebuilds every Go binary and may restart services.
+- Prefer targeted builds for only the affected binary or binaries. Build the binaries that import the touched package, not the whole repo. `statusline` usually should be rebuilt after edits; daemon binaries should be rebuilt only when their runnable code or dependencies changed.
 - Prefer concrete types and package-level functions. Define interfaces at the consumer boundary when multiple implementations or tests actually need them; do not start with interface-first design.
 - Pass `context.Context` as the first parameter for request/lifecycle-bound work. Do not store contexts in structs.
 - Keep error flow left-aligned. Return early, wrap with `%w`, use `errors.Is`/`As` instead of string matching, and keep error strings lowercase with no trailing punctuation.
@@ -108,6 +110,6 @@ Editing any of these requires `install.sh go` to take effect (running binaries a
 
 - `config/claude/` and `config/codex/` are NOT linked wholesale — only `settings.json` / `config.toml` are. Don't assume adding a file under `config/claude/` will appear in `~/.config/claude/`.
 - `etc/` changes need `install.sh system` to land on the live system.
-- Daemon edits need `install.sh go` to take effect.
+- Go binary changes only need the affected binary rebuilt to take effect. Avoid defaulting to `install.sh go` unless you intentionally want a full rebuild/restart sweep.
 - `iso/work/` and `iso/out/` are build output of `build.sh`; don't hand-edit.
 - `AGENTS.md` at repo root is a symlink to this file (Codex reads `AGENTS.md`, Claude reads `CLAUDE.md`).
