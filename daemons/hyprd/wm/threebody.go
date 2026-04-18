@@ -255,7 +255,7 @@ func (tb *ThreeBody) swap(st *state.ThreeBodyState, wsID int) (string, error) {
 	}
 	actualSlave := slaves[0].Address
 
-	batch := fmt.Sprintf("dispatch movetoworkspacesilent %d,address:%s; dispatch movetoworkspacesilent %s,address:%s; dispatch focuswindow address:%s", wsID, st.Shadow, cfg.Windows.ShadowWorkspace, actualSlave, st.Shadow)
+	batch := fmt.Sprintf("dispatch movetoworkspacesilent %s,address:%s; dispatch movetoworkspacesilent %d,address:%s; dispatch focuswindow address:%s", cfg.Windows.ShadowWorkspace, actualSlave, wsID, st.Shadow, st.Shadow)
 	if _, err := tb.hypr.Request("[[BATCH]]" + batch); err != nil {
 		return "", fmt.Errorf("swap batch: %w", err)
 	}
