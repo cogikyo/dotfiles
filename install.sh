@@ -1051,6 +1051,9 @@ step_system() {
         ["systemd/logid.service.d/restart.conf"]="/etc/systemd/system/logid.service.d/restart.conf"
         ["systemd/logid-restart.service"]="/etc/systemd/system/logid-restart.service"
         ["libinput/local-overrides.quirks"]="/etc/libinput/local-overrides.quirks"
+        ["firefox-developer-edition/autoconfig.js"]="/usr/lib/firefox-developer-edition/defaults/pref/autoconfig.js"
+        ["firefox-developer-edition/firefox.cfg"]="/usr/lib/firefox-developer-edition/firefox.cfg"
+        ["pacman.d/hooks/firefox-autoconfig.hook"]="/etc/pacman.d/hooks/firefox-autoconfig.hook"
     )
 
     local installed=0
@@ -1139,6 +1142,9 @@ healthcheck_system() {
         "/etc/systemd/system/logid.service.d/restart.conf"
         "/etc/systemd/system/logid-restart.service"
         "/etc/libinput/local-overrides.quirks"
+        "/usr/lib/firefox-developer-edition/defaults/pref/autoconfig.js"
+        "/usr/lib/firefox-developer-edition/firefox.cfg"
+        "/etc/pacman.d/hooks/firefox-autoconfig.hook"
     )
     local path
 

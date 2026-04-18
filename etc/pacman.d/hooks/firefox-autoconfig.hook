@@ -1,0 +1,10 @@
+[Trigger]
+Operation = Install
+Operation = Upgrade
+Type = Package
+Target = firefox-developer-edition
+
+[Action]
+Description = Restoring Firefox autoconfig (disable Ctrl+U)...
+When = PostTransaction
+Exec = /bin/sh -c 'cp /home/cullyn/dotfiles/etc/firefox-developer-edition/autoconfig.js /usr/lib/firefox-developer-edition/defaults/pref/autoconfig.js && cp /home/cullyn/dotfiles/etc/firefox-developer-edition/firefox.cfg /usr/lib/firefox-developer-edition/firefox.cfg'
