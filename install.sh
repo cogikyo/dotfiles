@@ -13,6 +13,7 @@ Post-installation script for dotfiles.
 
 Commands:
   all              Run all steps in order
+  update           Pull latest changes for all repos in repos.toml
   {STEP}           Run specific step by name
 
 Options:
@@ -2190,6 +2191,90 @@ run_healthchecks() {
     [[ $failed -eq 0 ]]
 }
 
+run_update() {
+    header "Pulling latest for all repos"
+
+    local repos_file="$DOTFILES/etc/repos.toml"
+    if [[ ! -f "$repos_file" ]]; then
+        err "Repos manifest not found: $repos_file"
+        return 1
+    fi
+
+    local updated=0 skipped=0 failed=0
+    local paths=()
+
+    # Collect paths from repos.toml
+    while IFS= read -r line; do
+        line="${line%%#*}"
+        line="${line#"${line%%[![:space:]]*}"}"
+        [[ -z "$line" ]] && continue
+
+        local key="${line%%=*}"
+        local val="${line#*=}"
+        key="${key#"${key%%[![:space:]]*}"}"
+        key="${key%"${key##*[![:space:]]}"}"
+        val="${val#"${val%%[![:space:]]*}"}"
+        val="${val%"${val##*[![:space:]]}"}"
+        val="${val#\"}" val="${val%\"}"
+
+        if [[ "$key" == "path" && -n "$val" ]]; then
+            paths+=("${val/#\~/$HOME}")
+        fi
+    done < "$repos_file"
+
+    for expanded in "${paths[@]}"; do
+        if [[ ! -d "$expanded/.git" ]]; then
+            warn "Not a git repo, skipping: $expanded"
+            ((skipped++))
+            continue
+        fi
+
+        local branch
+        branch=$(git -C "$expanded" symbolic-ref --short HEAD 2>/dev/null || true)
+        if [[ -z "$branch" ]]; then
+            warn "Detached HEAD, skipping: $expanded"
+            ((skipped++))
+            continue
+        fi
+
+        if ! git -C "$expanded" fetch --quiet 2>/dev/null; then
+            warn "Fetch failed: $expanded"
+            ((failed++))
+            continue
+        fi
+
+        local upstream
+        upstream=$(git -C "$expanded" rev-parse --verify "@{upstream}" 2>/dev/null || true)
+        if [[ -z "$upstream" ]]; then
+            warn "No upstream configured, skipping: $expanded"
+            ((skipped++))
+            continue
+        fi
+
+        local local_rev upstream_rev
+        local_rev=$(git -C "$expanded" rev-parse HEAD)
+        upstream_rev=$(git -C "$expanded" rev-parse "@{upstream}")
+
+        if [[ "$local_rev" == "$upstream_rev" ]]; then
+            ok "Already up to date: $expanded"
+            ((updated++))
+            continue
+        fi
+
+        info "Pulling $expanded ($branch)..."
+        if git -C "$expanded" merge --ff-only 2>/dev/null; then
+            ((updated++))
+        else
+            warn "Could not fast-forward $expanded — local branch has diverged"
+            ((failed++))
+        fi
+    done
+
+    echo
+    ok "Updated $updated repos ($skipped skipped, $failed failed)"
+    [[ $failed -eq 0 ]]
+}
+
 main() {
     if [[ "$ARCH" == "1" ]]; then
         run_arch_mode "$@"
@@ -2230,6 +2315,9 @@ main() {
         all)
             banner "post-install" "all"
             run_all
+            ;;
+        update)
+            run_update
             ;;
         *)
             banner "post-install" "$*"
