@@ -13,16 +13,19 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/fsnotify/fsnotify"
 )
 
 const SocketPath = "/tmp/hyprd.sock"
+const stateFile = "/tmp/hyprd-state.json"
 
 // Daemon owns the Hyprland IPC client, shared state, command server, and hot-reloadable config.
 //
@@ -37,7 +40,8 @@ type Daemon struct {
 	server *daemon.Server
 	config atomic.Pointer[config.HyprConfig]
 	// lockCtl persists across commands so pseudo/full/unlock share the same saved workspace+music snapshot.
-	lockCtl *session.Lock
+	lockCtl   *session.Lock
+	restartCh chan struct{}
 }
 
 // New connects to Hyprland's IPC socket and prepares the daemon.
@@ -52,9 +56,10 @@ func New() (*Daemon, error) {
 
 	stateStore := state.NewState(&cfg)
 	d := &Daemon{
-		hypr:    hyprClient,
-		state:   stateStore,
-		lockCtl: session.NewLock(hyprClient, stateStore),
+		hypr:      hyprClient,
+		state:     stateStore,
+		lockCtl:   session.NewLock(hyprClient, stateStore),
+		restartCh: make(chan struct{}, 1),
 	}
 	d.config.Store(&cfg)
 
@@ -89,11 +94,21 @@ func (d *Daemon) Run() error {
 
 	go d.watchConfig(d.server.Done())
 
-	sig := d.server.WaitForSignal()
-	fmt.Printf("\nhyprd: received %s, shutting down\n", sig)
-	d.server.Shutdown()
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
+	defer signal.Stop(sigCh)
 
-	return nil
+	select {
+	case sig := <-sigCh:
+		fmt.Printf("\nhyprd: received %s, shutting down\n", sig)
+		d.server.Shutdown()
+		return nil
+	case <-d.restartCh:
+		time.Sleep(50 * time.Millisecond)
+		fmt.Println("hyprd: restarting...")
+		d.server.Shutdown()
+		return d.execSelf()
+	}
 }
 
 // sendInitialState replays current state to a fresh subscriber so widgets paint immediately.
@@ -243,6 +258,8 @@ func (d *Daemon) handleCommand(command string) string {
 		return d.handleProject(arg)
 	case "notify":
 		return d.handleNotify(arg)
+	case "rebuild":
+		return d.handleRebuild()
 	default:
 		return fmt.Sprintf("unknown command: %s", cmd)
 	}
@@ -327,6 +344,64 @@ func (d *Daemon) handleNotify(arg string) string {
 	}()
 
 	return "ok"
+}
+
+func (d *Daemon) handleRebuild() string {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return fmt.Sprintf("error: %v", err)
+	}
+	srcDir := filepath.Join(home, "dotfiles", "daemons")
+	binPath := filepath.Join(home, ".local", "bin", "hyprd")
+	tmpBin := binPath + ".new"
+
+	cmd := exec.Command("go", "build", "-o", tmpBin, "./hyprd")
+	cmd.Dir = srcDir
+	if out, err := cmd.CombinedOutput(); err != nil {
+		os.Remove(tmpBin)
+		return fmt.Sprintf("error: build failed: %v\n%s", err, out)
+	}
+
+	stateData, err := d.state.JSON()
+	if err != nil {
+		os.Remove(tmpBin)
+		return fmt.Sprintf("error: state dump: %v", err)
+	}
+	if err := os.WriteFile(stateFile, stateData, 0600); err != nil {
+		os.Remove(tmpBin)
+		return fmt.Sprintf("error: state write: %v", err)
+	}
+
+	if err := os.Rename(tmpBin, binPath); err != nil {
+		os.Remove(tmpBin)
+		os.Remove(stateFile)
+		return fmt.Sprintf("error: install: %v", err)
+	}
+
+	select {
+	case d.restartCh <- struct{}{}:
+	default:
+	}
+	return "rebuilt: restarting..."
+}
+
+func (d *Daemon) restoreState() {
+	data, err := os.ReadFile(stateFile)
+	if err != nil {
+		return
+	}
+	os.Remove(stateFile)
+	if err := d.state.Restore(data); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd: state restore: %v\n", err)
+		return
+	}
+	fmt.Println("hyprd: state restored")
+}
+
+func (d *Daemon) execSelf() error {
+	home, _ := os.UserHomeDir()
+	bin := filepath.Join(home, ".local", "bin", "hyprd")
+	return syscall.Exec(bin, []string{"hyprd"}, os.Environ())
 }
 
 // handleProject reads or mutates the project path bound to the active workspace.

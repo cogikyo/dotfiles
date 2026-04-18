@@ -97,6 +97,45 @@ func (s *State) GetConfig() *config.HyprConfig {
 	return s.config
 }
 
+// Restore loads previously serialized state, preserving the current config.
+func (s *State) Restore(data []byte) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	var snap State
+	if err := json.Unmarshal(data, &snap); err != nil {
+		return err
+	}
+
+	s.Workspace = snap.Workspace
+	s.OccupiedWorkspaces = snap.OccupiedWorkspaces
+	s.SplitRatio = snap.SplitRatio
+
+	if snap.Hidden != nil {
+		s.Hidden = snap.Hidden
+	}
+	if snap.DisplacedMasters != nil {
+		s.DisplacedMasters = snap.DisplacedMasters
+	}
+	if snap.ThreeBody != nil {
+		s.ThreeBody = snap.ThreeBody
+	}
+	if snap.ProjectPaths != nil {
+		s.ProjectPaths = snap.ProjectPaths
+	}
+	if snap.Monocle != nil {
+		s.Monocle = snap.Monocle
+	}
+	if snap.ActiveSessions != nil {
+		s.ActiveSessions = snap.ActiveSessions
+	}
+	if snap.TabMemory != nil {
+		s.TabMemory = snap.TabMemory
+	}
+
+	return nil
+}
+
 // ReloadConfig swaps in a new HyprConfig from the hot-reload path.
 func (s *State) ReloadConfig(cfg *config.HyprConfig) {
 	s.mu.Lock()

@@ -64,6 +64,8 @@ func main() {
 		cmdLock()
 	case "notify":
 		cmdNotify()
+	case "rebuild":
+		cmdRebuild()
 	case "help", "-h", "--help":
 		cmdHelp()
 	default:
@@ -83,6 +85,7 @@ func runDaemon() {
 		fmt.Fprintf(os.Stderr, "hyprd: %v\n", err)
 		os.Exit(1)
 	}
+	d.restoreState()
 
 	if err := d.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd: %v\n", err)
@@ -153,7 +156,8 @@ func cmdTabs() {
 	_ = requireArg("usage: hyprd tabs {init|refresh} <profile|name> <pid>")
 	sendCommand("tabs " + strings.Join(os.Args[2:], " "))
 }
-func cmdNotify() { notifypkg.CmdNotify(client, os.Args[2:]) }
+func cmdNotify()  { notifypkg.CmdNotify(client, os.Args[2:]) }
+func cmdRebuild() { sendCommand("rebuild") }
 
 func cmdStatus() {
 	jsonOutput := false
@@ -210,6 +214,7 @@ Usage:
   hyprd init             Manually run the boot sequence
   hyprd status           Check if daemon is running
   hyprd status --json    Return full state as JSON
+  hyprd rebuild          Rebuild binary and hot-restart (preserves state)
 
 Window commands:
   hyprd bg <mode>        Background: code, music, kill, lock, ensure
