@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# vim: set foldmethod=marker foldlevel=0:
 
 set -euo pipefail
 
@@ -981,20 +980,23 @@ step_repos() {
 
 healthcheck_repos() {
     local repos_file="$DOTFILES/etc/repos.toml"
-    local line key val path expanded
-    local expected=0
-    local missing=0
-
     [[ -f "$repos_file" ]] || { err "Healthcheck failed: missing repos manifest"; return 1; }
+
+    local names=() paths=()
+    local cur_name=""
 
     while IFS= read -r line; do
         line="${line%%#*}"
         line="${line#"${line%%[![:space:]]*}"}"
-        line="${line%"${line##*[![:space:]]}"}"
         [[ -z "$line" ]] && continue
 
-        key="${line%%=*}"
-        val="${line#*=}"
+        if [[ "$line" =~ ^\[([^]]+)\] ]]; then
+            cur_name="${BASH_REMATCH[1]}"
+            continue
+        fi
+
+        local key="${line%%=*}"
+        local val="${line#*=}"
         key="${key#"${key%%[![:space:]]*}"}"
         key="${key%"${key##*[![:space:]]}"}"
         val="${val#"${val%%[![:space:]]*}"}"
@@ -1002,19 +1004,47 @@ healthcheck_repos() {
         val="${val#\"}" val="${val%\"}"
 
         if [[ "$key" == "path" && -n "$val" ]]; then
-            ((++expected))
-            expanded="${val/#\~/$HOME}"
-            if [[ ! -d "$expanded" ]]; then
-                err "Healthcheck failed: repo path missing '$expanded'"
-                ((++missing))
-            fi
+            names+=("$cur_name")
+            paths+=("${val/#\~/$HOME}")
         fi
     done < "$repos_file"
 
-    if (( expected == 0 )); then
+    if (( ${#paths[@]} == 0 )); then
         warn "No repo paths found in manifest during healthcheck"
         return 0
     fi
+
+    local missing=0
+    local total=${#paths[@]}
+
+    for i in "${!paths[@]}"; do
+        local name="${names[$i]}"
+        local expanded="${paths[$i]}"
+        local connector="├──"
+        (( i == total - 1 )) && connector="└──"
+
+        if [[ ! -d "$expanded" ]]; then
+            printf '  %s %b%-16s%b %b%s%b\n' "$connector" "$BOLD" "$name" "$RESET" "$RED" "missing" "$RESET"
+            ((++missing))
+            continue
+        fi
+
+        if [[ ! -d "$expanded/.git" ]]; then
+            printf '  %s %b%-16s%b %b%s%b\n' "$connector" "$BOLD" "$name" "$RESET" "$YELLOW" "not a git repo" "$RESET"
+            ((++missing))
+            continue
+        fi
+
+        local branch
+        branch=$(git -C "$expanded" symbolic-ref --short HEAD 2>/dev/null || echo "detached")
+
+        local dirty=""
+        if [[ -n $(git -C "$expanded" status --porcelain 2>/dev/null) ]]; then
+            dirty=" ${YELLOW}*${RESET}"
+        fi
+
+        printf '  %s %b%-16s%b %s%b\n' "$connector" "$BOLD" "$name" "$RESET" "$branch" "$dirty"
+    done
 
     (( missing == 0 )) || return 1
     return 0
@@ -2201,13 +2231,18 @@ run_update() {
     fi
 
     local updated=0 skipped=0 failed=0
-    local paths=()
+    local names=() paths=()
+    local cur_name=""
 
-    # Collect paths from repos.toml
     while IFS= read -r line; do
         line="${line%%#*}"
         line="${line#"${line%%[![:space:]]*}"}"
         [[ -z "$line" ]] && continue
+
+        if [[ "$line" =~ ^\[([^]]+)\] ]]; then
+            cur_name="${BASH_REMATCH[1]}"
+            continue
+        fi
 
         local key="${line%%=*}"
         local val="${line#*=}"
@@ -2218,36 +2253,45 @@ run_update() {
         val="${val#\"}" val="${val%\"}"
 
         if [[ "$key" == "path" && -n "$val" ]]; then
+            names+=("$cur_name")
             paths+=("${val/#\~/$HOME}")
         fi
     done < "$repos_file"
 
-    for expanded in "${paths[@]}"; do
+    for i in "${!paths[@]}"; do
+        local name="${names[$i]}"
+        local expanded="${paths[$i]}"
+
         if [[ ! -d "$expanded/.git" ]]; then
-            warn "Not a git repo, skipping: $expanded"
-            ((skipped++))
+            step "$name — not cloned, skipping"
+            ((skipped += 1))
             continue
         fi
 
         local branch
         branch=$(git -C "$expanded" symbolic-ref --short HEAD 2>/dev/null || true)
         if [[ -z "$branch" ]]; then
-            warn "Detached HEAD, skipping: $expanded"
-            ((skipped++))
+            step "$name — detached HEAD, skipping"
+            ((skipped += 1))
             continue
         fi
 
+        local dirty=""
+        if [[ -n $(git -C "$expanded" status --porcelain 2>/dev/null) ]]; then
+            dirty=" (dirty)"
+        fi
+
         if ! git -C "$expanded" fetch --quiet 2>/dev/null; then
-            warn "Fetch failed: $expanded"
-            ((failed++))
+            step "$name — fetch failed$dirty"
+            ((failed += 1))
             continue
         fi
 
         local upstream
         upstream=$(git -C "$expanded" rev-parse --verify "@{upstream}" 2>/dev/null || true)
         if [[ -z "$upstream" ]]; then
-            warn "No upstream configured, skipping: $expanded"
-            ((skipped++))
+            step "$name — no upstream configured, skipping"
+            ((skipped += 1))
             continue
         fi
 
@@ -2256,17 +2300,17 @@ run_update() {
         upstream_rev=$(git -C "$expanded" rev-parse "@{upstream}")
 
         if [[ "$local_rev" == "$upstream_rev" ]]; then
-            ok "Already up to date: $expanded"
-            ((updated++))
+            step "$name — up to date$dirty"
+            ((updated += 1))
             continue
         fi
 
-        info "Pulling $expanded ($branch)..."
-        if git -C "$expanded" merge --ff-only 2>/dev/null; then
-            ((updated++))
+        if git -C "$expanded" merge --ff-only &>/dev/null; then
+            step "$name — updated$dirty"
+            ((updated += 1))
         else
-            warn "Could not fast-forward $expanded — local branch has diverged"
-            ((failed++))
+            step "$name — diverged, cannot fast-forward$dirty"
+            ((failed += 1))
         fi
     done
 
