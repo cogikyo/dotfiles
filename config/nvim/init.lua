@@ -33,11 +33,11 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
-	dev = { path = "~/nvim" },
+	dev = { path = "~/vagari" },
 	spec = {
 		{
 			"cogikyo/vagari.nvim",
-			dev = true,
+			dev = false,
 			priority = 1000,
 			lazy = false,
 			config = function()
