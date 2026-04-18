@@ -55,10 +55,14 @@ func (tb *ThreeBody) Execute(name string) (string, error) {
 		return "", fmt.Errorf("unknown three-body window: %s", name)
 	}
 	if name == "agents" && tb.hasNotify != nil && tb.hasNotify() {
+		result, err := tb.Focus(name, spec.Class, spec.Title, spec.Command)
+		if err != nil {
+			return "", err
+		}
 		if tb.notifyAct != nil {
 			tb.notifyAct()
 		}
-		return "notification: action", nil
+		return fmt.Sprintf("notification: action (%s)", result), nil
 	}
 	return tb.Focus(name, spec.Class, spec.Title, spec.Command)
 }
@@ -283,12 +287,14 @@ func (tb *ThreeBody) focusWithEnroll(wsID int, bodyName, class, title, launchCmd
 		}
 	}
 
-	for _, otherState := range tb.state.AllThreeBody() {
+	for otherWsID, otherState := range tb.state.AllThreeBody() {
 		for i := range clients {
 			c := &clients[i]
 			if c.Address == otherState.Shadow && windows.MatchesTarget(c, class, title) {
-				tb.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", c.Address))
-				return fmt.Sprintf("focused (shadow): %s", c.Address), nil
+				if err := tb.hypr.Dispatch(fmt.Sprintf("workspace %d", otherWsID)); err != nil {
+					return "", fmt.Errorf("switch to enrolled workspace: %w", err)
+				}
+				return tb.swap(otherState, otherWsID)
 			}
 		}
 	}
