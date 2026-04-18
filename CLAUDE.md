@@ -29,7 +29,7 @@ Go workspace. One module, multiple binaries. Sockets at `/tmp/{hyprd,ewwd}.sock`
 - `newtab` — Firefox new-tab backend
 - `statusline` — Claude Code statusline
 
-Prefer targeted builds (`go build ./cmd/hyprd`) over `install.sh go` (rebuilds everything).
+After editing `hyprd`, run `hyprd rebuild` — it builds, preserves runtime state, and hot-restarts in place. For other daemons, use targeted builds (`go build -o ~/.local/bin/<name> ./<name>`).
 
 ## Secrets
 
