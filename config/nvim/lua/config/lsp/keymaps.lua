@@ -50,6 +50,10 @@ function M.setup()
 			map("<leader>ht", function()
 				vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = event.buf }))
 			end, "Toggle Inlay Hints")
+			map("<leader>tl", function()
+				local enabled = vim.lsp.codelens.is_enabled({ bufnr = event.buf })
+				vim.lsp.codelens.enable(not enabled, { bufnr = event.buf })
+			end, "Toggle Code Lens")
 
 			local client = vim.lsp.get_client_by_id(event.data.client_id)
 			if not client then
@@ -78,11 +82,10 @@ function M.setup()
 				vim.lsp.inlay_hint.enable(false, { bufnr = event.buf })
 			end
 
-			-- Skip gopls codelens overlays; they add inline action banners above go.mod.
 			if client.name ~= "gopls"
 				and client:supports_method(vim.lsp.protocol.Methods.textDocument_codeLens, event.buf)
 			then
-				vim.lsp.codelens.enable(true, { bufnr = event.buf })
+				vim.lsp.codelens.enable(false, { bufnr = event.buf })
 			end
 		end,
 	})
