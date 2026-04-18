@@ -90,10 +90,11 @@ func (m *Monocle) activate() (string, error) {
 	windows.CenterCursor(m.hypr)
 
 	m.state.SetMonocle(wsID, &state.MonocleState{
-		Focused:        active.Address,
-		Master:         master,
-		Windows:        displaced,
-		SavedThreeBody: savedTB,
+		Focused:         active.Address,
+		Master:          master,
+		Windows:         displaced,
+		SavedThreeBody:  savedTB,
+		SavedSplitRatio: m.state.GetSplitRatio(),
 	})
 	return fmt.Sprintf("monocle: ws%d, %d windows hidden", wsID, len(displaced)), nil
 }
@@ -117,6 +118,7 @@ func (m *Monocle) deactivate(wsID int) (string, error) {
 	if ms.SavedThreeBody != nil {
 		m.restoreThreeBody(wsID, ms.SavedThreeBody, cfg)
 	}
+	m.restoreSplitRatio(ms.SavedSplitRatio, cfg)
 	if ms.Focused != "" {
 		m.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", ms.Focused))
 	}
@@ -144,6 +146,24 @@ func (m *Monocle) ensureMaster(wsID int, masterAddr string, cfg *config.HyprConf
 	}
 	m.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", masterAddr))
 	m.hypr.Dispatch("layoutmsg swapwithmaster master")
+}
+
+func (m *Monocle) restoreSplitRatio(ratio string, cfg *config.HyprConfig) {
+	if ratio == "" {
+		ratio = "default"
+	}
+	var mfact string
+	switch ratio {
+	case "xs":
+		mfact = cfg.Split.XS
+	case "lg":
+		mfact = cfg.Split.LG
+	default:
+		ratio = "default"
+		mfact = cfg.Split.Default
+	}
+	m.hypr.Dispatch(fmt.Sprintf("layoutmsg mfact exact %s", mfact))
+	m.state.SetSplitRatio(ratio)
 }
 
 func (m *Monocle) restoreThreeBody(wsID int, saved *state.ThreeBodyState, cfg *config.HyprConfig) {

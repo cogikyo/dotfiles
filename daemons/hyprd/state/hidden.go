@@ -31,6 +31,7 @@ type MonocleState struct {
 	Master         string          `json:"master"`
 	Windows        []MonocleWindow `json:"windows"`
 	SavedThreeBody *ThreeBodyState `json:"saved_three_body,omitempty"`
+	SavedSplitRatio string         `json:"saved_split_ratio,omitempty"`
 }
 
 // GetHidden returns a deep copy of the hidden-window map; safe to mutate.
