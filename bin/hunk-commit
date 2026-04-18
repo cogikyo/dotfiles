@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-diff=$(git diff --cached)
+root=$(git rev-parse --show-toplevel) || { echo "Not in a git repo."; exit 1; }
+diff=$(git -C "$root" diff --cached)
 
 if [[ -z "$diff" ]]; then
 	echo "No staged changes to commit."
