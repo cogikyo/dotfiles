@@ -1589,6 +1589,17 @@ step_go() {
     local built=0
 
     for name in "${!GO_BINARIES[@]}"; do
+        if [[ "$name" == "hyprd" ]] && pgrep -x hyprd &>/dev/null; then
+            info "hyprd is running — using hot-rebuild"
+            if hyprd rebuild; then
+                ok "hyprd rebuilt and hot-restarted"
+                ((++built))
+            else
+                err "hyprd rebuild failed"
+                ((++failed))
+            fi
+            continue
+        fi
         if build_go_binary "$name"; then
             ((++built))
         else
@@ -1604,12 +1615,60 @@ step_go() {
         return 1
     fi
 
+    upgrade_go_tools
+
     local service_rc=0
     install_daemon_services || service_rc=$?
     if [[ $service_rc -eq "$STEP_SKIPPED_RC" ]]; then
         return 0
     fi
     return "$service_rc"
+}
+
+upgrade_go_tools() {
+    local gobin
+    gobin="$(go env GOPATH)/bin"
+    [[ -d "$gobin" ]] || return 0
+
+    local tools=()
+    local bin mod
+    for bin in "$gobin"/*; do
+        [[ -x "$bin" ]] || continue
+        mod=$(go version -m "$bin" 2>/dev/null | awk '/^\tpath/ {print $2}') || continue
+        [[ -z "$mod" ]] && continue
+        # skip private modules (matches GOPRIVATE patterns)
+        for pat in ${GOPRIVATE//,/ }; do
+            pat="${pat%/\*}"
+            [[ "$mod" == "$pat"* ]] && continue 2
+        done
+        tools+=("$mod")
+    done
+
+    [[ ${#tools[@]} -eq 0 ]] && return 0
+
+    echo
+    if ! confirm "Update ${#tools[@]} Go tools in $gobin?" "n"; then
+        info "Skipping Go tool updates"
+        return 0
+    fi
+
+    local updated=0 failed=0
+    for mod in "${tools[@]}"; do
+        if go install "$mod@latest" 2>/dev/null; then
+            ok "Updated $(basename "$mod")"
+            ((++updated))
+        else
+            warn "Failed to update $mod"
+            ((++failed))
+        fi
+    done
+
+    echo
+    if [[ $failed -eq 0 ]]; then
+        ok "All $updated tools updated"
+    else
+        warn "$updated updated, $failed failed"
+    fi
 }
 
 healthcheck_go() {
