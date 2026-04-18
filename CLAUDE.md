@@ -1,115 +1,53 @@
 # CLAUDE.md
 
-Agent orientation for this repo. Terse by design — skim, then dig.
-
 Arch + Hyprland (Wayland) dotfiles. Single-user. Root of repo = `~/dotfiles`.
 
 ## Layout
 
-- `config/` → symlinked wholesale into `~/.config/` by `install.sh link`, **except** `claude/`, `codex/`, `firefox/` (handled per-file below)
-- `bin/` → symlinked into `~/.local/bin/` (on PATH via `config/shell/env.sh`)
-- `daemons/` → Go sources for `hyprd`, `ewwd`, `newtab`, `statusline`; built into `~/.local/bin/` by `install.sh go`
-- `etc/` → system configs copied into `/etc/…` by `install.sh system` (needs sudo)
-- `share/` → static assets (sounds, videos, wallpapers, banners)
-- `skills/` → agent skills, linked by `skills/link.sh` (see Skills below)
-- `iso/` → archiso profile for custom live ISO; `iso/work/` and `iso/out/` are build artifacts (gitignored)
-- `install.sh` → post-install step runner (see Install steps)
-- `build.sh` → builds/releases the custom Arch ISO (sudo; root only)
-- `README.md` → human-facing showcase; **this file is the agent contract**
+- `config/` → symlinked into `~/.config/` by `install.sh link`
+- `bin/` → symlinked into `~/.local/bin/` (legacy; being replaced by `daemons/`)
+- `daemons/` → Go workspace, multiple `cmd/`-style binaries; built into `~/.local/bin/` by `install.sh go`. See `daemons/README.md`.
+- `etc/` → system configs **copied** to `/etc/` by `install.sh system` (not symlinked)
+- `skills/` → agent skills, linked by `skills/link.sh`
+- `iso/` → archiso profile; `iso/work/` and `iso/out/` are gitignored build artifacts
+- `share/` → static assets
 
-## Symlink rules
+Everything in `config/` and `bin/` is symlinked wholesale except: `config/claude/settings.json`, `config/codex/config.toml`, and `config/firefox/` are linked individually or handled specially. Editing the repo IS editing the live system.
 
-Editing source of truth lives in this repo. `~/.config/*`, `~/.local/bin/*`, and `~/.codex/*` are symlinks **into this repo** — edit here, not there.
+## Install
 
-Exceptions (NOT wholesale-linked from `config/`):
-- `config/claude/settings.json` → individual link to `~/.config/claude/settings.json`
-- `config/codex/config.toml` → individual link to `~/.codex/config.toml`
-- `config/firefox/` → handled by `install.sh firefox` (profile merge, not a plain symlink)
+`./install.sh all` | `./install.sh <name>` | `--list` | `--check`
 
-`etc/` is **copied** (not symlinked) on `install.sh system`. Edits there won't propagate until re-run.
+Steps: `packages`, `link`, `secrets`, `repos`, `system`, `hibernate`, `fonts`, `go`, `eww`, `firefox`, `shell`, `dns`.
 
-## Install steps
+## Daemons
 
-`./install.sh all` runs everything. Individual steps: `./install.sh <name>`. `--list` for current list, `--check` for healthchecks.
+Go workspace. One module, multiple binaries. Sockets at `/tmp/{hyprd,ewwd}.sock`.
 
-```
-01 packages    — paru/pacman from etc/packages*.lst (sudo)
-02 link        — symlink config/ and bin/ (also `bin/relink`)
-03 secrets     — decrypt age-encrypted etc/secrets/ to targets
-04 repos       — clone repos, mkdir user dirs (needs 03)
-05 system      — copy etc/ → /etc/, enable services (sudo)
-06 hibernate   — swapfile + suspend-then-hibernate (sudo)
-07 fonts       — extract etc/fonts.tar.gz; optional Iosevka build
-08 go          — build daemons/ → ~/.local/bin/
-09 eww         — install prebuilt bin/eww (EWW_BUILD=1 to rebuild from source)
-10 firefox     — profile, theme, user.js (needs 04)
-11 shell       — chsh to zsh (sudo)
-12 dns         — systemd-resolved + Cloudflare DoT (sudo, needs 05)
-```
+- `hyprd` — Hyprland window management
+- `ewwd` — system signals for eww widgets
+- `newtab` — Firefox new-tab backend
+- `statusline` — Claude Code statusline
 
-## bin/ scripts
-
-All are `set -euo pipefail` bash (except `bin/eww` which is a committed prebuilt binary).
-
-- `relink`    → shim for `install.sh link`
-- `update`    → paru update, orphan cleanup, writes `etc/packages*.lst`
-- `secrets`   → age encrypt/decrypt for `etc/secrets/` (passphrase-protected identity)
-- `vpn`       → NetworkManager L2TP helper (`TrendCapitalVPN` by default)
-- `screenshot`→ Hyprland region shot with freeze
-- `record`    → screen record (VAAPI h264)
-- `hunk-commit`→ interactive staged-hunk commit splitter
-- `eww`       → **prebuilt** eww binary (patched); do not treat as text
-
-## Daemons (`daemons/`)
-
-Go workspace. One module, multiple `cmd/`-style entry dirs. See `daemons/README.md` for architecture + sockets.
-
-- `hyprd` — Hyprland window management: monocle, split ratios, hide/show, swap, workspaces, session layouts. Socket: `/tmp/hyprd.sock`.
-- `ewwd`  — System signals for eww: GPU, audio, music, network, date, weather, timer. Socket: `/tmp/ewwd.sock`.
-- `newtab`— Firefox new-tab page backend.
-- `statusline` — Claude Code statusline.
-
-Editing any of these requires `install.sh go` to take effect (running binaries are in `~/.local/bin/`). Configs live in `daemons/configs/` (and `*.local.yaml` files there are gitignored for machine overrides).
+Prefer targeted builds (`go build ./cmd/hyprd`) over `install.sh go` (rebuilds everything).
 
 ## Secrets
 
-`etc/secrets/` uses age with a passphrase-protected identity. `bin/secrets` is the CLI. `etc/secrets/identity` (plaintext) is gitignored as a safety net — never commit plaintext keys.
-
-## Skills
-
-- `skills/user/` — user-level skills (commit, learn, scribe). Linked to both `~/.codex/skills/` and `~/.claude/skills/` by `skills/link.sh user`.
-- `skills/project/` — per-project skills (e.g. `endof`). Linked to `./.codex/skills/` and `./.claude/skills/` by `skills/link.sh project [name]`.
-- `skills/link.sh` is called from `install.sh link` for user skills; project skills opt-in.
+`etc/secrets/` uses age with passphrase-protected identity. CLI: `bin/secrets`.
 
 ## Conventions
 
-- Prefer Go for new implementation work outside repo-root install/bootstrap shell (`install.sh`, `build.sh`) and genuinely shell-shaped helpers in `bin/`. If logic grows beyond straightforward command orchestration, move it into `daemons/` or a dedicated Go command/package instead of growing Bash.
+- Prefer Go for new work. Bash only for genuinely shell-shaped helpers. If bash logic grows, move to `daemons/`.
 - Bash: `#!/usr/bin/env bash` + `set -euo pipefail`.
-- Logging: `info()` (blue), `success()`/`ok()` (green), `warn()` (yellow), `error()`/`err()` (red). Match existing style in neighboring scripts.
-- Commits: Conventional Commits. Split unrelated changes into separate commits — do not bundle.
-- Files are mostly symlinks on the live system; editing the repo IS the edit.
-- When writing files with Nerd Font / multi-width UTF glyphs, use Python (`Write`/`Edit` corrupts them).
+- Logging: `info()` (blue), `success()`/`ok()` (green), `warn()` (yellow), `error()`/`err()` (red).
+- Nerd Font / multi-width UTF glyphs: use Python (`Write`/`Edit` corrupts them).
 
 ## Go (`go 1.26.2`)
 
-- Stdlib-first. Prefer `context`, `log/slog`, `errors.Is`/`As`/`Join`, `slices`, `maps`, `iter`, `cmp`, `min`/`max`/`clear`, `sync.WaitGroup.Go`, `testing/synctest`, and `os.Root` before custom helpers or third-party deps.
-- Default Go workflow after most non-trivial code edits: run `gofmt`/`goimports`, `go fix`, `go vet`, and targeted `go test` in each touched Go module. Skip only for docs/comments-only changes or when a tool is clearly inapplicable.
-- Build when the edit affects a runnable binary, installed artifact, or restart-worthy behavior. Do not default to `install.sh go`; it rebuilds every Go binary and may restart services.
-- Prefer targeted builds for only the affected binary or binaries. Build the binaries that import the touched package, not the whole repo. `statusline` usually should be rebuilt after edits; daemon binaries should be rebuilt only when their runnable code or dependencies changed.
-- Prefer concrete types and package-level functions. Define interfaces at the consumer boundary when multiple implementations or tests actually need them; do not start with interface-first design.
-- Pass `context.Context` as the first parameter for request/lifecycle-bound work. Do not store contexts in structs.
-- Keep error flow left-aligned. Return early, wrap with `%w`, use `errors.Is`/`As` instead of string matching, and keep error strings lowercase with no trailing punctuation.
-- Keep goroutine lifetimes obvious. Prefer synchronous APIs. Use `WaitGroup.Go` over `Add`/`Done` unless the older pattern is genuinely clearer, and use `testing/synctest` for time/concurrency-heavy tests.
-- Make zero values useful. Avoid pointer params just to save copies. Use pointer receivers for mutation or mutex-bearing structs, and do not mix receiver types on the same type.
-- Prefer modern language/library idioms when they improve clarity: `for range n` for counted loops, iterator-based helpers via `iter`/`maps`/`slices`, and `new(expr)` for optional pointer fields when it reads better.
-- For filesystem work that joins a trusted base with untrusted relative names, prefer `os.OpenRoot`/`os.OpenInRoot` over `filepath.Join` + `os.Open`.
-- Use generics to remove real duplication, not to build abstraction towers. If a concrete function is clearer, keep it concrete.
-- In tests, prefer plain `testing`, table-driven cases, subtests, and clear `got`/`want` failures over assert DSLs.
+Bias toward modern Go. Stdlib-first — prefer `log/slog`, `errors.Is`/`As`/`Join`, `slices`, `maps`, `iter`, `cmp`, `sync.WaitGroup.Go`, `testing/synctest`, `os.Root`/`os.OpenInRoot` before reaching for custom helpers or deps.
 
-## Gotchas
+Modern idioms: `for range n`, iterator helpers via `iter`/`maps`/`slices`, `new(expr)` for optional pointer fields.
 
-- `config/claude/` and `config/codex/` are NOT linked wholesale — only `settings.json` / `config.toml` are. Don't assume adding a file under `config/claude/` will appear in `~/.config/claude/`.
-- `etc/` changes need `install.sh system` to land on the live system.
-- Go binary changes only need the affected binary rebuilt to take effect. Avoid defaulting to `install.sh go` unless you intentionally want a full rebuild/restart sweep.
-- `iso/work/` and `iso/out/` are build output of `build.sh`; don't hand-edit.
-- `AGENTS.md` at repo root is a symlink to this file (Codex reads `AGENTS.md`, Claude reads `CLAUDE.md`).
+Workflow after non-trivial edits: `gofmt`/`goimports`, `go fix`, `go vet`, targeted `go test`. Build only affected binaries.
+
+Concrete types and package-level functions by default. Interfaces only at consumer boundaries when actually needed.
