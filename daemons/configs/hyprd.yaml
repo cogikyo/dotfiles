@@ -27,9 +27,9 @@ init:
   lock_delay: 3s
   network_timeout: 10
 split:
-  xs: "0.37"
-  default: "0.4942"
-  lg: "0.77"
+  xs: "0.3695"
+  default: "0.4939"
+  lg: "0.7699"
 style:
   border:
     default: "rgb(f2a170)"
@@ -139,7 +139,7 @@ tabs:
       - { name: master, title: "⊰ 󰯉  ⊱", command: "claude --effort high" }
       - { name: dev, title: "⊰   ⊱", command: "codex -c model=\"gpt-5.3-codex\" -c model_reasoning_effort=\"high\"" }
       - { name: plan, title: "⊰   ⊱", command: "claude --effort max" }
-      - { name: git, title: "⊰   ⊱", command: "claude --effort low" }
+      - { name: git, title: "⊰   ⊱", command: "codex -c model=\"gpt-5.3-codex\" -c model_reasoning_effort=\"low\"" }
 
   leadpier:
     prefix: "lp-"
