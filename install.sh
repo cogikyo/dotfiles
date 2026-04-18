@@ -572,7 +572,7 @@ step_link() {
     local linked_count=0
     local unchanged_count=0
     local skills_linked=0
-    local codex_home="$HOME/.codex"
+    local codex_home="$HOME/.config/agents"
 
     link_or_skip() {
         local src="$1"
@@ -612,7 +612,7 @@ step_link() {
             return 0
         fi
 
-        if ! skills_output=$(CODEX_HOME="$codex_home" AGENTS_CONFIG_DIR="$codex_home" "$DOTFILES/skills/link.sh" user 2>&1); then
+        if ! skills_output=$(AGENTS_CONFIG_DIR="$codex_home" "$DOTFILES/skills/link.sh" user 2>&1); then
             err "Linking skills failed"
             [[ -n "$skills_output" ]] && printf '%s\n' "$skills_output" >&2
             return 1
@@ -741,8 +741,8 @@ healthcheck_link() {
         return 1
     }
     ((checked_entries++))
-    verify_link_mapping "$DOTFILES/config/codex/config.toml" "$HOME/.codex/config.toml" || {
-        err "Healthcheck failed: ~/.codex/config.toml is not linked"
+    verify_link_mapping "$DOTFILES/config/codex/config.toml" "$HOME/.config/agents/config.toml" || {
+        err "Healthcheck failed: ~/.config/agents/config.toml is not linked"
         return 1
     }
     ((checked_entries++))

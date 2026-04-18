@@ -11,8 +11,7 @@ export EDITOR=nvim
 export VISUAL=nvim
 export DOTS="$HOME/dotfiles"
 export CLAUDE_CONFIG_DIR="${CLAUDE_CONFIG_DIR:-$HOME/.config/claude}"
-export AGENTS_CONFIG_DIR="${AGENTS_CONFIG_DIR:-$HOME/.codex}"
-export CODEX_HOME="${CODEX_HOME:-$AGENTS_CONFIG_DIR}"
+export CODEX_HOME="${CODEX_HOME:-$HOME/.config/agents}"
 
 export FZF_DEFAULT_OPTS="\
 --color=bg+:#222536,bg:#222536,spinner:#b29ae8,hl:#f8b486 \

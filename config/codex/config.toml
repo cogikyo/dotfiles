@@ -2,13 +2,22 @@ model = "gpt-5.3-codex"
 model_reasoning_effort = "medium"
 approval_policy = "never"
 sandbox_mode = "danger-full-access"
-notify = ["/home/cullyn/.local/bin/hyprd notify hook codex"]
+notify = ["/home/cullyn/dotfiles/config/codex/codex-notify"]
 personality = "pragmatic"
 approvals_reviewer = "user"
 
 [tui]
 notifications = ["approval-requested"]
-status_line = ["model-with-reasoning", "current-dir", "model-name", "git-branch", "context-usage", "five-hour-limit", "weekly-limit", "thread-title"]
+status_line = [
+  "model-with-reasoning",
+  "current-dir",
+  "model-name",
+  "git-branch",
+  "context-usage",
+  "five-hour-limit",
+  "weekly-limit",
+  "thread-title",
+]
 theme = "catppuccin-macchiato"
 
 [projects."/home/cullyn/dotfiles"]
