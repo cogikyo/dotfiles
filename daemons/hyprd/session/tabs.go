@@ -118,7 +118,7 @@ func (t *Tabs) refresh(args []string) (string, error) {
 		return t.refreshAll(kitty, profile, windowID)
 	}
 
-	tabName := resolveTabAlias(nameOrAlias, profileName)
+	tabName := resolveTabAlias(t.state.GetConfig(), nameOrAlias, profileName)
 	tabDef := t.findTab(profile, tabName)
 	if tabDef == nil {
 		return "", fmt.Errorf("tab %q not in profile %s", tabName, profileName)

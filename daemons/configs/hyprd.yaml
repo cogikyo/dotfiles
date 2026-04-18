@@ -122,6 +122,7 @@ windows:
     offset_y: 25
 tabs:
   editor:
+    order: 0
     prefix: "ed-"
     focus: nvim
     tabs:
@@ -132,6 +133,7 @@ tabs:
       - { name: git, title: "⟜   ⊸", command: lazygit, requires: git }
 
   agents:
+    order: 1
     prefix: "agents-"
     focus: master
     tabs:
@@ -142,6 +144,7 @@ tabs:
       - { name: git, title: "⊰   ⊱", command: "codex -c model=\"gpt-5.3-codex\" -c model_reasoning_effort=\"low\"" }
 
   leadpier:
+    order: 2
     prefix: "lp-"
     focus: fe-nvim
     tabs:

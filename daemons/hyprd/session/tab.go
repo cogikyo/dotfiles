@@ -83,7 +83,7 @@ func (t *Tab) Execute(tabName string) (string, error) {
 	currentTab := activeProfileTabName(cfg, profileName, windows[0])
 	t.rememberTabState(wsID, profileName, &profile, currentTab)
 
-	targetTab := resolveTabAlias(tabName, profileName)
+	targetTab := resolveTabAlias(cfg, tabName, profileName)
 	if !strings.Contains(tabName, ":") && profileTab(cfg, profileName, targetTab) == nil {
 		var rememberedTab, rememberedContext string
 		if mem := t.state.GetTabMemory(wsID, profileName); mem != nil {

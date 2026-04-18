@@ -8,9 +8,6 @@ import (
 	"dotfiles/daemons/config"
 )
 
-// tabProfileOrder maps profile names to their slot in colon-separated aliases like "nvim:agents-nvim:leadpier-nvim".
-var tabProfileOrder = map[string]int{"editor": 0, "agents": 1, "leadpier": 2}
-
 // detectTabProfile infers the tab profile of a kitty window by matching KITTY_TAB_ID suffixes against profile prefixes.
 //
 // Falls back to "editor" when nothing matches.
@@ -41,19 +38,22 @@ func detectTabProfile(cfg *config.HyprConfig, win KittyOSWindow) string {
 
 // resolveTabAlias picks the profile-specific name out of a colon-separated alias.
 //
-// "nvim:agents-nvim:leadpier-nvim" resolves to "agents-nvim" when profileName is "agents".
-// Empty slots fall back to the first entry.
-func resolveTabAlias(alias, profileName string) string {
+// "nvim:agents-nvim:leadpier-nvim" resolves to "agents-nvim" when profileName is "agents"
+// (assuming agents has order=1 in the config). Empty slots fall back to the first entry.
+func resolveTabAlias(cfg *config.HyprConfig, alias, profileName string) string {
 	if !strings.Contains(alias, ":") {
 		return alias
 	}
 
 	parts := strings.Split(alias, ":")
-	idx, ok := tabProfileOrder[profileName]
-	if !ok || idx >= len(parts) {
+	if cfg == nil || cfg.Tabs == nil {
 		return parts[0]
 	}
-	name := parts[idx]
+	profile, ok := cfg.Tabs[profileName]
+	if !ok || profile.Order >= len(parts) {
+		return parts[0]
+	}
+	name := parts[profile.Order]
 	if name == "" {
 		return parts[0]
 	}

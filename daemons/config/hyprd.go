@@ -155,6 +155,7 @@ type MonocleConfig struct {
 
 // TabProfile defines a set of kitty tabs managed as a unit.
 type TabProfile struct {
+	Order  int      `yaml:"order"`  // positional index for colon-separated tab aliases
 	Prefix string   `yaml:"prefix"` // applied to each tab name (disambiguates across profiles)
 	Focus  string   `yaml:"focus"`  // name of the tab to focus after spawn
 	Tabs   []TabDef `yaml:"tabs"`
@@ -402,88 +403,9 @@ func DefaultHypr() HyprConfig {
 				Height: 1920,
 			},
 		},
-		Tabs: map[string]TabProfile{
-			"editor": {
-				Prefix: "ed-",
-				Focus:  "nvim",
-				Tabs: []TabDef{
-					{Name: "xplr", Title: "⟜ 󰭎  ⊸", Command: "xplr"},
-					{Name: "nvim", Title: "⟜   ⊸", Command: "nvim"},
-					{Name: "term", Title: "⟜   ⊸"},
-					{Name: "build", Title: "⟜   ⊸", Command: "just watch", Requires: "justfile"},
-					{Name: "git", Title: "⟜   ⊸", Command: "lazygit", Requires: "git"},
-				},
-			},
-			"agents": {
-				Prefix: "agents-",
-				Focus:  "master",
-				Tabs: []TabDef{
-					{Name: "xplr", Title: "⊰   ⊱", Command: "codex"},
-					{Name: "master", Title: "⊰ 󰯉  ⊱", Command: "claude"},
-					{Name: "dev", Title: "⊰   ⊱", Command: "codex"},
-					{Name: "plan", Title: "⊰   ⊱", Command: "claude"},
-					{Name: "git", Title: "⊰   ⊱", Command: "claude"},
-				},
-			},
-			"leadpier": {
-				Prefix: "lp-",
-				Focus:  "fe-nvim",
-				Tabs: []TabDef{
-					{Name: "fe-nvim", Title: "«   »", Command: "nvim", CWD: "~/LeadPier/frontend"},
-					{Name: "be-nvim", Title: "«   »", Command: "nvim", CWD: "~/LeadPier/backend"},
-					{Name: "nvim", Title: "« 󰠳  »", Command: "nvim", CWD: "~/LeadPier"},
-					{Name: "fe-build", Title: "«   »", Command: "yarn dev", CWD: "~/LeadPier/frontend", Layout: "fat:bias=80", Panes: []TabPane{{CWD: "~/LeadPier/frontend"}}},
-					{Name: "be-build", Title: "«   »", Command: "pier watch", CWD: "~/LeadPier/backend/core/runner", Layout: "fat:bias=80", Panes: []TabPane{{CWD: "~/LeadPier/backend/core/runner"}}},
-				},
-			},
-		},
-		ThreeBody: map[string]ThreeBodyWindow{
-			"editor":  {Class: "kitty", Title: "editor", Command: "kitty --title=editor --session ~/.config/kitty/sessions/editor.conf"},
-			"agents":  {Class: "kitty", Title: "agents", Command: "kitty --title=agents --session ~/.config/kitty/sessions/agents.conf"},
-			"browser": {Class: "firefox-developer-edition", Command: "firefox-developer-edition"},
-		},
-		Sessions: map[string]Session{
-			"slack":     {Name: "slack", Workspace: 2, Command: "slack", Monocle: true},
-			"discord":   {Name: "discord", Workspace: 2, Command: "discord", Monocle: true},
-			"tableplus": {Name: "tableplus", Workspace: 3, Command: "tableplus"},
-			"inkscape":  {Name: "inkscape", Workspace: 3, Command: "inkscape"},
-			"obs":       {Name: "obs", Workspace: 3, Command: "obs"},
-			"gimp":      {Name: "gimp", Workspace: 3, Command: "gimp"},
-			"leadpier": {
-				Name:      "leadpier",
-				Workspace: 4,
-				Project:   "LeadPier",
-				Body:      []string{"editor", "browser", "agents"},
-				Browser:   BrowserConfig{URLs: []string{"http://localhost:4000"}},
-				Tabs:      map[string]string{"editor": "leadpier"},
-			},
-			"dotfiles": {
-				Name:      "dotfiles",
-				Workspace: 5,
-				Project:   "dotfiles",
-				Body:      []string{"editor", "browser", "agents"},
-				Browser:   BrowserConfig{URLs: []string{"https://github.com/cogikyo/dotfiles"}},
-			},
-			"acr": {
-				Name:      "acr",
-				Workspace: 3,
-				Project:   "cogikyo/acr",
-				Body:      []string{"editor", "browser", "agents"},
-				Browser:   BrowserConfig{URLs: []string{"localhost:3002"}},
-			},
-			"cogikyo": {
-				Name:      "cogikyo",
-				Workspace: 4,
-				Project:   "cogikyo/cogikyo.com",
-				Body:      []string{"editor", "browser", "agents"},
-				Browser:   BrowserConfig{URLs: []string{"localhost:3000"}},
-			},
-		},
-		ActiveSessions: map[int]ActiveSession{
-			2: {Session: "slack", Init: true},
-			3: {Session: "tableplus", Init: true},
-			4: {Session: "leadpier", Init: true},
-			5: {Session: "dotfiles", Init: true},
-		},
+		Tabs:           map[string]TabProfile{},
+		ThreeBody:      map[string]ThreeBodyWindow{},
+		Sessions:       map[string]Session{},
+		ActiveSessions: map[int]ActiveSession{},
 	}
 }
