@@ -266,18 +266,6 @@ func (tb *ThreeBody) focusWithEnroll(wsID int, bodyName, class, title, launchCmd
 		}
 	}
 
-	for otherWsID, otherState := range tb.state.AllThreeBody() {
-		for i := range clients {
-			c := &clients[i]
-			if c.Address == otherState.Shadow && windows.MatchesTarget(c, class, title) {
-				if err := tb.hypr.Dispatch(fmt.Sprintf("workspace %d", otherWsID)); err != nil {
-					return "", fmt.Errorf("switch to enrolled workspace: %w", err)
-				}
-				return tb.swap(otherState, otherWsID)
-			}
-		}
-	}
-
 	if launchCmd != "" {
 		cmd := tb.withSessionLaunchEnv(launchCmd, wsID, bodyName)
 		if err := tb.hypr.Dispatch(fmt.Sprintf("exec %s", cmd)); err != nil {
