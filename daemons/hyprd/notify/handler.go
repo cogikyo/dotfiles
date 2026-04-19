@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"dotfiles/daemons/hyprd/wm"
 )
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -219,10 +221,16 @@ func (n *Notifier) handleDunst(req NotifyRequest) error {
 	switch req.Event {
 	case "script":
 		sound := n.soundForDunst(req.App, req.Summary, req.Body, req.Urgency)
-		if sound == "" {
-			return nil
+		if sound != "" {
+			if err := n.playSound(sound, 0); err != nil {
+				return err
+			}
 		}
-		return n.playSound(sound, 0)
+		if class := n.focusClassForDunst(req.App); class != "" {
+			_, err := wm.NewFocus(n.hypr, n.state).Execute(class, "")
+			return err
+		}
+		return nil
 	default:
 		return fmt.Errorf("unknown dunst event: %s", req.Event)
 	}
@@ -394,4 +402,8 @@ func (n *Notifier) lookupUrgencySound(urgency string) string {
 func (n *Notifier) lookupAppSound(app string) (string, bool) {
 	sound, ok := n.cfg.Notify.AppSounds[strings.ToLower(app)]
 	return sound, ok
+}
+
+func (n *Notifier) focusClassForDunst(app string) string {
+	return strings.TrimSpace(n.cfg.Notify.FocusApps[strings.ToLower(app)])
 }

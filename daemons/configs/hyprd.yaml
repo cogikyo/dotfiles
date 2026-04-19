@@ -1,3 +1,119 @@
+tabs:
+  editor:
+    order: 0
+    prefix: "ed-"
+    focus: nvim
+    tabs:
+      - { name: xplr, title: "⟜ 󰭎  ⊸", command: xplr }
+      - { name: nvim, title: "⟜   ⊸", command: nvim }
+      - { name: term, title: "⟜   ⊸" }
+      - { name: build, title: "⟜   ⊸", command: "just watch", requires: justfile }
+      - { name: git, title: "⟜   ⊸", command: lazygit, requires: git }
+
+  agents:
+    order: 1
+    prefix: "agents-"
+    focus: master
+    tabs:
+      - { name: xplr, title: "⊰   ⊱", command: "opencode -m openai/gpt-5.4" }
+      - { name: master, title: "⊰ 󰯉  ⊱", command: "claude --model claude-opus-4-6 --effort high" }
+      - { name: dev, title: "⊰   ⊱", command: "opencode -m openai/gpt-5.4" }
+      - { name: plan, title: "⊰   ⊱", command: "claude --model claude-opus-4-7 --effort xhigh" }
+      - { name: git, title: "⊰   ⊱", command: "opencode -m openai/gpt-5.3-codex" }
+
+  leadpier:
+    order: 2
+    prefix: "lp-"
+    focus: fe-nvim
+    tabs:
+      - { name: fe-nvim, title: "«   »", command: nvim, cwd: "~/LeadPier/frontend" }
+      - { name: be-nvim, title: "«   »", command: nvim, cwd: "~/LeadPier/backend" }
+      - { name: nvim,    title: "« 󰠳  »", command: nvim, cwd: "~/LeadPier" }
+      - { name: fe-build, title: "«   »", command: "yarn dev", cwd: "~/LeadPier/frontend", layout: "fat:bias=80", panes: [{ cwd: "~/LeadPier/frontend" }] }
+      - { name: be-build, title: "«   »", command: "pier watch", cwd: "~/LeadPier/backend/core/runner", layout: "fat:bias=80", panes: [{ cwd: "~/LeadPier/backend/core/runner" }] }
+
+three_body:
+  editor:
+    class: kitty
+    title: editor
+    command: "kitty --title=editor --session ~/.config/kitty/sessions/editor.conf"
+  agents:
+    class: kitty
+    title: agents
+    command: "kitty --title=agents --session ~/.config/kitty/sessions/agents.conf"
+  browser:
+    class: firefox-developer-edition
+    command: firefox-developer-edition
+
+sessions:
+
+  slack:
+    name: slack
+    workspace: 2
+    command: slack
+    monocle: true
+  discord:
+    name: discord
+    workspace: 2
+    command: discord
+    monocle: true
+  tableplus:
+    name: tableplus
+    workspace: 3
+    command: tableplus
+  inkscape:
+    name: inkscape
+    workspace: 3
+    command: inkscape
+  obs:
+    name: obs
+    workspace: 3
+    command: obs
+  gimp:
+    name: gimp
+    workspace: 3
+    command: gimp
+
+  leadpier:
+    name: leadpier
+    workspace: 4
+    project: LeadPier
+    body:
+      - editor
+      - browser
+      - agents
+    browser:
+      snapshot: leadpier
+      mode: exact
+      force: true
+    tabs:
+      editor: leadpier
+
+  dotfiles:
+    name: dotfiles
+    workspace: 5
+    project: dotfiles
+    body:
+      - editor
+      - browser
+      - agents
+
+  cogikyo:
+    name: cogikyo
+    workspace: 4
+    project: cogikyo/cogikyo.com
+    body:
+      - editor
+      - browser
+      - agents
+
+active_sessions:
+  2: { session: slack, init: true }
+  3: { session: tableplus, init: true }
+  4: { session: leadpier, init: true }
+  5: { session: dotfiles, init: true }
+
+
 monitor:
   width: 3840
   height: 2160
@@ -98,6 +214,9 @@ notify:
     wf-start: discovery
     wf-end: reward
     Slack: knock
+  focus_apps:
+    Slack: slack
+    firefox-developer-edition: firefox-developer-edition
   silent_apps:
     - Spotify
     - discord
@@ -124,122 +243,3 @@ windows:
     height: 1864
     offset_x: 0
     offset_y: 25
-
-tabs:
-  editor:
-    order: 0
-    prefix: "ed-"
-    focus: nvim
-    tabs:
-      - { name: xplr, title: "⟜ 󰭎  ⊸", command: xplr }
-      - { name: nvim, title: "⟜   ⊸", command: nvim }
-      - { name: term, title: "⟜   ⊸" }
-      - { name: build, title: "⟜   ⊸", command: "just watch", requires: justfile }
-      - { name: git, title: "⟜   ⊸", command: lazygit, requires: git }
-
-  agents:
-    order: 1
-    prefix: "agents-"
-    focus: master
-    tabs:
-      - { name: xplr, title: "⊰   ⊱", command: "opencode -m openai/gpt-5.4" }
-      - { name: master, title: "⊰ 󰯉  ⊱", command: "claude --effort high" }
-      - { name: dev, title: "⊰   ⊱", command: "opencode -m openai/gpt-5.4" }
-      - { name: plan, title: "⊰   ⊱", command: "claude --effort max" }
-      - { name: git, title: "⊰   ⊱", command: "opencode -m openai/gpt-5.3-codex" }
-
-  leadpier:
-    order: 2
-    prefix: "lp-"
-    focus: fe-nvim
-    tabs:
-      - { name: fe-nvim, title: "«   »", command: nvim, cwd: "~/LeadPier/frontend" }
-      - { name: be-nvim, title: "«   »", command: nvim, cwd: "~/LeadPier/backend" }
-      - { name: nvim,    title: "« 󰠳  »", command: nvim, cwd: "~/LeadPier" }
-      - { name: fe-build, title: "«   »", command: "yarn dev", cwd: "~/LeadPier/frontend", layout: "fat:bias=80", panes: [{ cwd: "~/LeadPier/frontend" }] }
-      - { name: be-build, title: "«   »", command: "pier watch", cwd: "~/LeadPier/backend/core/runner", layout: "fat:bias=80", panes: [{ cwd: "~/LeadPier/backend/core/runner" }] }
-
-three_body:
-  editor:
-    class: kitty
-    title: editor
-    command: "kitty --title=editor --session ~/.config/kitty/sessions/editor.conf"
-  agents:
-    class: kitty
-    title: agents
-    command: "kitty --title=agents --session ~/.config/kitty/sessions/agents.conf"
-  browser:
-    class: firefox-developer-edition
-    command: firefox-developer-edition
-
-sessions:
-
-  slack:
-    name: slack
-    workspace: 2
-    command: slack
-    monocle: true
-  discord:
-    name: discord
-    workspace: 2
-    command: discord
-    monocle: true
-  tableplus:
-    name: tableplus
-    workspace: 3
-    command: tableplus
-  inkscape:
-    name: inkscape
-    workspace: 3
-    command: inkscape
-  obs:
-    name: obs
-    workspace: 3
-    command: obs
-  gimp:
-    name: gimp
-    workspace: 3
-    command: gimp
-
-  leadpier:
-    name: leadpier
-    workspace: 4
-    project: LeadPier
-    body:
-      - editor
-      - browser
-      - agents
-    browser:
-      snapshot: leadpier
-      mode: exact
-      force: true
-    tabs:
-      editor: leadpier
-
-  dotfiles:
-    name: dotfiles
-    workspace: 5
-    project: dotfiles
-    body:
-      - editor
-      - browser
-      - agents
-    browser:
-      urls:
-        - https://github.com/cogikyo/dotfiles
-  cogikyo:
-    name: cogikyo
-    workspace: 4
-    project: cogikyo/cogikyo.com
-    body:
-      - editor
-      - browser
-      - agents
-    browser:
-      urls:
-        - localhost:3000
-active_sessions:
-  2: { session: slack, init: true }
-  3: { session: tableplus, init: true }
-  4: { session: leadpier, init: true }
-  5: { session: dotfiles, init: true }

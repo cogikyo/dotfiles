@@ -113,6 +113,7 @@ type NotifyConfig struct {
 	Styles              map[string]NotifyStyle `yaml:"styles"`                // notification class -> Dunst hint overrides
 	UrgencySounds       map[string]string      `yaml:"urgency_sounds"`        // urgency -> sound name (or "none")
 	AppSounds           map[string]string      `yaml:"app_sounds"`            // app name -> sound name; takes precedence over urgency
+	FocusApps           map[string]string      `yaml:"focus_apps"`            // dunst app name -> Hyprland window class to focus on arrival
 	SilentApps          []string               `yaml:"silent_apps"`           // app names that suppress sound entirely
 	KittySilentPatterns []string               `yaml:"kitty_silent_patterns"` // substrings in kitty titles that suppress sound
 }
@@ -376,6 +377,10 @@ func DefaultHypr() HyprConfig {
 				"wf-start":  "discovery",
 				"wf-end":    "reward",
 				"Slack":     "knock",
+			},
+			FocusApps: map[string]string{
+				"Slack":                     "slack",
+				"firefox-developer-edition": "firefox-developer-edition",
 			},
 			SilentApps: []string{
 				"Spotify",

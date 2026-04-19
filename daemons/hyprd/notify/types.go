@@ -13,6 +13,7 @@ package notify
 import (
 	"dotfiles/daemons/config"
 	"dotfiles/daemons/hyprd/hypr"
+	"dotfiles/daemons/hyprd/state"
 	"time"
 )
 
@@ -68,10 +69,11 @@ type kittyContext struct {
 
 // Notifier routes notification requests through dunstify and paplay.
 type Notifier struct {
-	hypr *hypr.Client
-	cfg  *config.HyprConfig
+	hypr  *hypr.Client
+	state *state.State
+	cfg   *config.HyprConfig
 }
 
-func NewNotifier(h *hypr.Client, cfg *config.HyprConfig) *Notifier {
-	return &Notifier{hypr: h, cfg: cfg}
+func NewNotifier(h *hypr.Client, s *state.State, cfg *config.HyprConfig) *Notifier {
+	return &Notifier{hypr: h, state: s, cfg: cfg}
 }

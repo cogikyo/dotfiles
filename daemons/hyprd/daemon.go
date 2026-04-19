@@ -342,7 +342,7 @@ func (d *Daemon) handleNotify(arg string) string {
 		return fmt.Sprintf("error: parse notify request: %v", err)
 	}
 
-	notifier := notifypkg.NewNotifier(d.hypr, d.config.Load())
+	notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load())
 	go func() {
 		if err := notifier.Handle(req); err != nil {
 			fmt.Fprintf(os.Stderr, "hyprd notify: %v\n", err)
@@ -455,7 +455,7 @@ func (d *Daemon) newInit() *session.Init {
 	init := session.NewInit(d.hypr, d.state)
 	init.SetLock(d.lockCtl)
 	init.SetNotify(func(app, urgency, title, body string) {
-		notifier := notifypkg.NewNotifier(d.hypr, d.config.Load())
+		notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load())
 		notifier.Handle(notifypkg.NotifyRequest{
 			Source:  "send",
 			App:     app,

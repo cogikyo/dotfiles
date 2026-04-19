@@ -42,6 +42,7 @@ func LoadHypr() HyprConfig {
 	}
 	cfg.Notify.UrgencySounds = lowercaseKeys(cfg.Notify.UrgencySounds)
 	cfg.Notify.AppSounds = lowercaseKeys(cfg.Notify.AppSounds)
+	cfg.Notify.FocusApps = lowercaseKeys(cfg.Notify.FocusApps)
 	cfg.Notify.SilentApps = lowercaseSlice(cfg.Notify.SilentApps)
 	return cfg
 }
