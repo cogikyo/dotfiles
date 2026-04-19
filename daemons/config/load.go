@@ -13,6 +13,7 @@ import (
 )
 
 // Load returns the combined configuration for every daemon.
+//
 // Errors are logged to stderr and never fatal.
 func Load() *Config {
 	return &Config{
@@ -32,6 +33,7 @@ func LoadEww() EwwConfig {
 }
 
 // LoadHypr loads hyprd config from configs/hyprd.yaml.
+//
 // Sound and app maps are lowercased for case-insensitive libnotify matching.
 func LoadHypr() HyprConfig {
 	cfg := DefaultHypr()

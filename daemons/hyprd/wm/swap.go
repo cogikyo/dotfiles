@@ -11,6 +11,7 @@ import (
 )
 
 // Swap promotes the active slave to master, or restores the displaced master.
+//
 // Per-workspace displaced-master state is tracked in state.State so the toggle survives focus changes.
 type Swap struct {
 	hypr  *hypr.Client

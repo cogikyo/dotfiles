@@ -1,9 +1,12 @@
 // Package browser provides Firefox session snapshot and restore primitives for hyprd.
 //
-// It:
-//  1. Reads Firefox profile and sessionstore data.
-//  2. Creates named snapshots from selected browser windows.
-//  3. Restores snapshots by URL replay or exact session-file replacement.
+// It translates Firefox profile and sessionstore data into reproducible launch
+// state for Hyprland workflows.
+//
+// Responsibilities:
+// - Discover Firefox profiles and load sessionstore payloads.
+// - Create named snapshots from selected browser windows.
+// - Restore snapshots by URL replay or exact session-file replacement.
 package browser
 
 // browser.go defines the Browser command surface and shared subcommand dispatch helpers.

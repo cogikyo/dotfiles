@@ -1,9 +1,9 @@
 // Package main implements newtab, the HTTP backend for the Firefox custom new-tab page.
 //
-// It:
-//   - serves static assets and JSON endpoints for the page
-//   - queries Firefox places.sqlite for bookmarks and history
-//   - proxies suggestion requests to Google's Firefox endpoint
+// Responsibilities:
+// - Serve static assets and JSON endpoints for the page.
+// - Query Firefox places.sqlite for bookmarks and history.
+// - Proxy suggestion requests to Google's Firefox endpoint.
 package main
 
 // main.go defines server startup, Firefox DB discovery, and API handlers.

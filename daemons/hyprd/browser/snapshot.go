@@ -170,6 +170,7 @@ func updateLatestSnapshotLink(baseDir, snapshotID string) error {
 }
 
 // summarizeFirefoxWindow projects a session-store window into a launch-ready BrowserConfig.
+//
 // Pinned tabs go to Pinned, ungrouped visible to URLs, grouped to Groups.
 // HyprOrderMatchesTabs is true when URL-mode restore preserves the original tab order.
 func summarizeFirefoxWindow(window firefoxWindow) browserWindowSummary {

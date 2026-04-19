@@ -34,7 +34,8 @@ const stateFile = "/tmp/hyprd-state.json"
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
 // Daemon owns the Hyprland IPC client, shared state, command server, and hot-reloadable config.
-// config is atomic so the watcher can swap it without locking command handlers.
+//
+// Config is atomic so the watcher can swap it without locking command handlers.
 type Daemon struct {
 	hypr      *hypr.Client
 	state     *state.State
@@ -487,6 +488,7 @@ func runCmd(name string, args ...string) {
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
 // watchConfig hot-reloads hyprd.yaml on change.
+//
 // Watches the parent directory because nvim rename-and-replaces on save, killing file-level watches.
 func (d *Daemon) watchConfig(done <-chan struct{}) {
 	home, err := os.UserHomeDir()

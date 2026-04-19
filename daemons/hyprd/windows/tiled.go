@@ -1,9 +1,9 @@
 // Package windows provides reusable window-selection helpers over Hyprland client lists.
 //
-// It:
-//  1. Filters and orders tiled windows for master/slave layouts.
-//  2. Matches windows by class/title for command targeting.
-//  3. Exposes geometry helpers reused by wm and session packages.
+// Responsibilities:
+// - Filter and order tiled windows for master/slave layouts.
+// - Match windows by class/title for command targeting.
+// - Expose geometry helpers reused by wm and session packages.
 package windows
 
 // tiled.go implements tiled-window ordering, master/slave extraction, and cursor-centering helpers.

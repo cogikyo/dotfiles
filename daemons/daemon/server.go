@@ -1,9 +1,9 @@
 // Package daemon provides Unix-socket request/response and pub/sub primitives for local daemons.
 //
-// It:
-//   - serves command handlers over Unix domain sockets
-//   - manages topic subscriptions and event fan-out
-//   - exposes client helpers for one-shot and streaming calls
+// Responsibilities:
+// - Serve command handlers over Unix domain sockets.
+// - Manage topic subscriptions and event fan-out.
+// - Expose client helpers for one-shot and streaming calls.
 package daemon
 
 // server.go defines the daemon socket server lifecycle and command dispatch loop.

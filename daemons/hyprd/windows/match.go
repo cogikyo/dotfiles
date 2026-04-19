@@ -9,6 +9,7 @@ import (
 )
 
 // MatchesTarget reports whether w matches class (case-insensitive, required) and title.
+//
 // Empty title matches any; otherwise title is exact-matched against Title or InitialTitle.
 func MatchesTarget(w *hypr.Window, class, title string) bool {
 	if class == "" {

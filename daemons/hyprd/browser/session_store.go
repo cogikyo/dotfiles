@@ -14,6 +14,7 @@ import (
 var defaultSessionCheckpoints = []byte("{\"profile-after-change\":true,\"final-ui-startup\":true,\"sessionstore-windows-restored\":true}\n")
 
 // firefoxSessionEnvelope mirrors Firefox's sessionstore JSON top-level structure.
+//
 // Only Windows is inspected; remaining fields pass through verbatim to survive schema changes.
 type firefoxSessionEnvelope struct {
 	Version        json.RawMessage   `json:"version,omitempty"`

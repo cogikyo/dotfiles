@@ -1,9 +1,9 @@
 // Package main provides the hyprd daemon process and CLI front-end.
 //
-// It:
-//  1. Boots and supervises the daemon runtime.
-//  2. Routes CLI verbs over the Unix socket protocol.
-//  3. Exposes status, subscription, and maintenance commands.
+// Responsibilities:
+// - Boot and supervise the daemon runtime.
+// - Route CLI verbs over the Unix socket protocol.
+// - Expose status, subscription, and maintenance commands.
 package main
 
 // main.go is the executable entrypoint that parses CLI verbs and forwards daemon commands.

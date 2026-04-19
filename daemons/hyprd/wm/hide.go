@@ -12,6 +12,7 @@ import (
 )
 
 // Hide parks the active slave on a special workspace and restores it with its original slave index on unhide.
+//
 // Refused for master windows, workspaces with fewer than 3 tiled windows, or workspaces running three-body.
 type Hide struct {
 	hypr  *hypr.Client

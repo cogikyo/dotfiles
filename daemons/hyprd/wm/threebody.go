@@ -3,18 +3,18 @@ package wm
 // threebody.go manages three-body enrollment, focus rotation, and shadow swapping for configured body windows.
 
 import (
-	"encoding/json"
-	"fmt"
-	"os/exec"
-	"strings"
-
 	"dotfiles/daemons/config"
 	"dotfiles/daemons/hyprd/hypr"
 	"dotfiles/daemons/hyprd/state"
 	"dotfiles/daemons/hyprd/windows"
+	"encoding/json"
+	"fmt"
+	"os/exec"
+	"strings"
 )
 
 // ThreeBody implements a 3-window layout: master + active slave + hidden shadow.
+//
 // Invariant: when enrolled, exactly two windows are tiled and the shadow is parked on cfg.Windows.ShadowWorkspace.
 type ThreeBody struct {
 	hypr      *hypr.Client
@@ -349,6 +349,7 @@ func (tb *ThreeBody) setFadeRules(windows ...hypr.Window) {
 }
 
 // enroll turns 3 tiled windows into a three-body: the matching slave becomes active, the other becomes shadow.
+//
 // If only the master matches, slaves are assigned arbitrarily.
 func (tb *ThreeBody) enroll(tiled []hypr.Window, wsID int, class, title string) (string, error) {
 	master := tiled[0]

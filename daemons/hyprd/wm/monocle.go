@@ -13,6 +13,7 @@ import (
 )
 
 // Monocle zooms the active window to a configured size, parking siblings until toggled off.
+//
 // Three-body state is saved and restored around the monocle lifecycle.
 type Monocle struct {
 	hypr  *hypr.Client

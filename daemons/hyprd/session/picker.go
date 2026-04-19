@@ -3,6 +3,8 @@ package session
 // picker.go drives the interactive eww session picker and applies selected workspace/session targets.
 
 import (
+	"dotfiles/daemons/hyprd/hypr"
+	"dotfiles/daemons/hyprd/state"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -11,9 +13,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-
-	"dotfiles/daemons/hyprd/hypr"
-	"dotfiles/daemons/hyprd/state"
 )
 
 // Picker manages the layout-picker overlay driven by Hyprland submap keys and rendered by eww.

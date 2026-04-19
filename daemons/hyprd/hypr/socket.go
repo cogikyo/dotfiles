@@ -1,9 +1,11 @@
 // Package hypr wraps Hyprland IPC socket communication for hyprd commands.
 //
-// It:
-//  1. Resolves command/event socket paths from Hyprland runtime environment.
-//  2. Sends requests and dispatcher commands over Unix sockets.
-//  3. Decodes typed window and monitor payloads from Hyprland JSON endpoints.
+// It exposes a thin typed client over Hyprland's command and event sockets.
+//
+// Responsibilities:
+// - Resolve command and event socket paths from runtime environment variables.
+// - Send requests and dispatcher commands over Unix sockets.
+// - Decode typed window and monitor payloads from Hyprland JSON endpoints.
 package hypr
 
 // socket.go defines the IPC client transport plus typed helpers for clients, active window, and monitors.
