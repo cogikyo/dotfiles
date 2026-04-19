@@ -1,4 +1,3 @@
--- LSP keymaps (LspAttach autocmd)
 local M = {}
 
 local function diag_jump(count)
@@ -60,7 +59,6 @@ function M.setup()
 				return
 			end
 
-			-- TypeScript-specific actions
 			if client.name == "ts_ls" then
 				local tsmap = function(keys, func, d)
 					vim.keymap.set("n", keys, func, { buffer = event.buf, desc = "TS: " .. d })
@@ -77,7 +75,6 @@ function M.setup()
 				tsmap("<leader>fa", action("source.fixAll.ts"), "Fix All")
 			end
 
-			-- Start with inlay hints disabled for TS (toggle with <leader>ht)
 			if client.name == "ts_ls" then
 				vim.lsp.inlay_hint.enable(false, { bufnr = event.buf })
 			end

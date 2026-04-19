@@ -33,12 +33,6 @@ return {
 	config = function()
 		local ok, telescope = pcall(require, "telescope")
 		if not ok then
-			vim.api.nvim_echo({
-				{
-					"Error: telescope plugin not found... skipping relevant setup()",
-					"Error",
-				},
-			}, true, {})
 			return
 		end
 
@@ -46,7 +40,10 @@ return {
 
 		local actions = require("telescope.actions")
 
-		-- Hook Picker.new to apply dynamic layout based on columns
+		-- ╭─────────────────────────────────────────────────────────────────────╮
+		-- │ layout: switch strategy based on terminal width                     │
+		-- ╰─────────────────────────────────────────────────────────────────────╯
+
 		local Picker = require("telescope.pickers")
 		local config = require("telescope.config")
 		local original_new = Picker.new

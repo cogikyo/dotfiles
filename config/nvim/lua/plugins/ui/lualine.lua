@@ -14,6 +14,10 @@ return {
 			return
 		end
 
+		-- ╭─────────────────────────────────────────────────────────────────────╮
+		-- │ sidebar: hide statusline background in utility windows              │
+		-- ╰─────────────────────────────────────────────────────────────────────╯
+
 		local ext_ns = vim.api.nvim_create_namespace("lualine_ext_bg")
 		for _, hl in ipairs({ "StatusLine", "StatusLineNC", "lualine_c_normal", "lualine_c_inactive" }) do
 			vim.api.nvim_set_hl(ext_ns, hl, { bg = p.bg, fg = p.bg })
@@ -26,6 +30,10 @@ return {
 				end
 			end,
 		})
+
+		-- ╭─────────────────────────────────────────────────────────────────────╮
+		-- │ components: mode, branch, diagnostics, diff, search, lsp           │
+		-- ╰─────────────────────────────────────────────────────────────────────╯
 
 		local hide_in_width = function()
 			return vim.fn.winwidth(0) > 80
@@ -142,6 +150,10 @@ return {
 			color = { fg = p.orn_2 },
 		}
 
+		-- ╭─────────────────────────────────────────────────────────────────────╮
+		-- │ extensions: nvimtree, undotree sidebar labels                       │
+		-- ╰─────────────────────────────────────────────────────────────────────╯
+
 		local function icon()
 			return [[ ]]
 		end
@@ -177,6 +189,10 @@ return {
 			cond = require("lazy.status").has_updates,
 			color = { fg = p.glc_4 },
 		}
+
+		-- ╭─────────────────────────────────────────────────────────────────────╮
+		-- │ layout: active, inactive, tabline                                   │
+		-- ╰─────────────────────────────────────────────────────────────────────╯
 
 		lualine.setup({
 			options = {

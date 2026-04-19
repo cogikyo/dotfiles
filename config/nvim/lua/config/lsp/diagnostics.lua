@@ -1,4 +1,3 @@
--- Diagnostic configuration
 local M = {}
 
 function M.setup()
@@ -16,7 +15,6 @@ function M.setup()
 		},
 		virtual_text = { source = false, spacing = 2 },
 	})
-
 end
 
 return M

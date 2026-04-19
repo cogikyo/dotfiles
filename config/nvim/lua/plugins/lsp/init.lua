@@ -1,4 +1,3 @@
--- Core LSP configuration
 local servers = require("config.lsp.servers")
 
 return {

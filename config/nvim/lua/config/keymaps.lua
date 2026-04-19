@@ -1,5 +1,5 @@
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
--- │ helpers: one liner keymaps                                                  │
+-- │ helpers: map wrappers with desc/remap/expr variants                        │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 local function map(mode, lhs, rhs, opts)
 	local keymap_opts = vim.tbl_extend("force", { silent = true }, opts or {})

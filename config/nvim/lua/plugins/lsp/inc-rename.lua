@@ -2,8 +2,7 @@ return {
 	"smjonas/inc-rename.nvim",
 	event = "LspAttach",
 	dependencies = {
-		-- use dressing input to avoid race condition with sh.vim syntax
-		-- loading on Neovim 0.11.x (E184: ShFoldIfDoFor command not found)
+		-- dressing input avoids E184 race with sh.vim syntax loading on 0.11.x
 		{ "stevearc/dressing.nvim", opts = {} },
 	},
 	opts = {

@@ -1,4 +1,3 @@
--- Mason ecosystem: package management for LSP servers, formatters, linters
 local servers = require("config.lsp.servers")
 
 local tools = {

@@ -1,4 +1,3 @@
--- Linting via nvim-lint
 return {
 	"mfussenegger/nvim-lint",
 	event = { "BufReadPre", "BufNewFile" },

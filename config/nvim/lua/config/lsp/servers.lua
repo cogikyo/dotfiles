@@ -1,4 +1,3 @@
--- LSP server names (shared by lsp init and mason ensure_installed)
 return {
 	"bashls",
 	"gopls",

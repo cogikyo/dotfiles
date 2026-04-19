@@ -233,7 +233,6 @@ return {
 			},
 		})
 
-		-- Auto-close nvim when NvimTree is the last window
 		vim.api.nvim_create_autocmd("QuitPre", {
 			callback = function()
 				local tree_wins = {}

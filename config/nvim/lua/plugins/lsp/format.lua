@@ -1,4 +1,3 @@
--- Formatting via conform.nvim
 return {
 	"stevearc/conform.nvim",
 	event = { "BufWritePre" },

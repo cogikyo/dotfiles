@@ -10,6 +10,10 @@ return {
 		local api = vim.api
 		local fn = vim.fn
 
+		-- ╭─────────────────────────────────────────────────────────────────────╮
+		-- │ navigation: hunks within and across changed files                   │
+		-- ╰─────────────────────────────────────────────────────────────────────╯
+
 		local function git_root()
 			local root = fn.systemlist("git rev-parse --show-toplevel")[1]
 			if vim.v.shell_error ~= 0 then
@@ -167,6 +171,10 @@ return {
 			return { fn.line("."), fn.line("v") }
 		end
 
+		-- ╭─────────────────────────────────────────────────────────────────────╮
+		-- │ keymaps: hunk operations, blame, diff                               │
+		-- ╰─────────────────────────────────────────────────────────────────────╯
+
 		local function on_attach(bufnr)
 			local function map(mode, lhs, rhs, desc)
 				vim.keymap.set(mode, lhs, rhs, { buffer = bufnr, desc = desc })
@@ -231,6 +239,10 @@ return {
 			map("n", "<leader>hH", diff_head_previous, "Diff against HEAD~")
 			map({ "o", "x" }, "ih", ":<C-U>Gitsigns select_hunk<CR>", "Select hunk")
 		end
+
+		-- ╭─────────────────────────────────────────────────────────────────────╮
+		-- │ setup: sign characters, highlights                                  │
+		-- ╰─────────────────────────────────────────────────────────────────────╯
 
 		gitsigns.setup({
 			signs = {

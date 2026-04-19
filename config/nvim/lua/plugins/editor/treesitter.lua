@@ -1,5 +1,4 @@
 local function setup()
-	-- Install parsers (async by default)
 	-- stylua: ignore
 	require("nvim-treesitter").install({
 		"c", "lua", "luadoc", "vim", "vimdoc", "query", "markdown", "markdown_inline", -- required/docs
@@ -13,7 +12,6 @@ local function setup()
 		"regex", "sql", -- text/query helpers
 	})
 
-	-- Enable treesitter highlighting + indentation for all filetypes
 	vim.api.nvim_create_autocmd("FileType", {
 		group = vim.api.nvim_create_augroup("TreesitterStart", { clear = true }),
 		callback = function(args)
@@ -23,7 +21,6 @@ local function setup()
 		end,
 	})
 
-	-- Textobjects
 	require("nvim-treesitter-textobjects").setup({
 		select = {
 			lookahead = true,
@@ -34,7 +31,6 @@ local function setup()
 		},
 	})
 
-	-- Select keymaps
 	local select = function(capture)
 		return function()
 			require("nvim-treesitter-textobjects.select").select_textobject(capture, "textobjects")
@@ -58,7 +54,6 @@ local function setup()
 		vim.keymap.set({ "x", "o" }, lhs, select(capture))
 	end
 
-	-- Move keymaps
 	local move = require("nvim-treesitter-textobjects.move")
 	local move_maps = {
 		{ "]f", move.goto_next_start, "@function.outer" },
@@ -92,7 +87,6 @@ local function setup()
 		end)
 	end
 
-	-- Swap keymaps
 	local swap = require("nvim-treesitter-textobjects.swap")
 	vim.keymap.set("n", "<leader>ra", function()
 		swap.swap_next("@parameter.inner")
@@ -113,10 +107,7 @@ local function setup()
 		swap.swap_previous("@class.outer")
 	end)
 
-	-- Autotag
 	require("nvim-ts-autotag").setup()
-
-	-- Context
 	require("treesitter-context").setup()
 	vim.api.nvim_set_hl(0, "TreesitterContext", { link = "Folded" })
 	vim.api.nvim_set_hl(0, "TreesitterContextLineNumber", { link = "Folded" })
