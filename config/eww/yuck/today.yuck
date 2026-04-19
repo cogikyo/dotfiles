@@ -6,7 +6,7 @@
   :geometry (geometry :width "45%" :anchor "top center")
   (centerbox
     (box :halign "end" (weather))
-    (box :halign "center" (time))
+    (box :halign "center" :style "margin-right: 6px;" (time))
     (box :halign "start" (date))
   )
 )
