@@ -45,10 +45,10 @@
       :halign "center" :space-evenly false :spacing 10
       :orientation "vertical"
       (workspace :icon "music"    :num "1" :hover ws-h1 :desc " music")
-      (workspace :icon "network"  :num "2" :hover ws-h2 :desc " chat 'n networking")
-      (workspace :icon "learn"    :num "3" :hover ws-h3 :desc " documents 'n such")
-      (workspace :icon "dna"      :num "4" :hover ws-h4 :desc " primary desktop")
-      (workspace :icon "dotfiles" :num "5" :hover ws-h5 :desc " settings 'n secondary work")
+      (workspace :icon "network"  :num "2" :hover ws-h2 :desc "󰭹 chat")
+      (workspace :icon "learn"    :num "3" :hover ws-h3 :desc " secondary")
+      (workspace :icon "dna"      :num "4" :hover ws-h4 :desc " primary")
+      (workspace :icon "dotfiles" :num "5" :hover ws-h5 :desc " settings")
     )
   )
 )
