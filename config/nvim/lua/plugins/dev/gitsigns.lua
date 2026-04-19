@@ -204,11 +204,6 @@ return {
 				gitsigns.reset_hunk(selected_lines())
 			end
 
-			local function stage_hunk_and_commit()
-				gitsigns.stage_hunk()
-				vim.cmd("!hunk-commit")
-			end
-
 			local function blame_line_full()
 				gitsigns.blame_line({ full = true })
 			end
@@ -229,7 +224,6 @@ return {
 			map("n", "<leader>hu", gitsigns.undo_stage_hunk, "Undo stage hunk")
 			map("n", "<leader>hR", gitsigns.reset_buffer, "Reset buffer")
 			map("n", "<leader>hp", gitsigns.preview_hunk, "Preview hunk")
-			map("n", "<leader>hc", stage_hunk_and_commit, "Stage hunk + commit via Claude")
 			map("n", "<leader>hb", blame_line_full, "Blame line")
 			map("n", "<leader>hB", gitsigns.toggle_current_line_blame, "Toggle line blame")
 			map("n", "<leader>hw", gitsigns.toggle_word_diff, "Toggle word diff")
