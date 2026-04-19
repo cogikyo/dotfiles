@@ -24,6 +24,15 @@ type UsageWindow = {
   resetAt?: string
 }
 
+type ResetParts = {
+  duration: string
+  exact: string
+}
+
+type SessionProvider = {
+  providerID?: string
+}
+
 type QuotaState = {
   windows: UsageWindow[]
   note?: string
@@ -83,20 +92,58 @@ function resetAtFromWindow(window: Record<string, unknown>, fallback?: Record<st
   return new Date(Date.now() + resetAfterSeconds * 1000).toISOString()
 }
 
-function formatReset(resetAt?: string) {
-  if (!resetAt) return '--'
-  const ms = new Date(resetAt).getTime() - Date.now()
-  if (!Number.isFinite(ms)) return '--'
-  if (ms <= 0) return 'now'
+function formatReset(resetAt?: string): ResetParts {
+  if (!resetAt) return { duration: '--', exact: '--' }
+  const resetDate = new Date(resetAt)
+  const ms = resetDate.getTime() - Date.now()
+  if (!Number.isFinite(ms)) return { duration: '--', exact: '--' }
+  if (ms <= 0) return { duration: 'now', exact: 'now' }
 
   const totalMinutes = Math.ceil(ms / 60_000)
   const days = Math.floor(totalMinutes / (24 * 60))
   const hours = Math.floor((totalMinutes % (24 * 60)) / 60)
   const minutes = totalMinutes % 60
 
-  if (days > 0) return `${days}d${hours}h`
-  if (hours > 0) return `${hours}h${minutes}m`
-  return `${minutes}m`
+  const duration =
+    days > 0 ? `${days}d ${String(hours).padStart(2, '0')}h`
+    : hours > 0 ? `${hours}h ${String(minutes).padStart(2, '0')}m`
+    : `${String(minutes).padStart(2, '0')}m`
+
+  const now = new Date()
+  const sameDay = resetDate.toDateString() === now.toDateString()
+  const time = new Intl.DateTimeFormat(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(resetDate)
+  const date = new Intl.DateTimeFormat(undefined, {
+    month: 'numeric',
+    day: 'numeric',
+  }).format(resetDate)
+
+  return {
+    duration,
+    exact: sameDay ? time : `${date} ${time}`,
+  }
+}
+
+function providerIDForSession(api: TuiPluginApi, sessionID: string) {
+  const messages = api.state.session.messages(sessionID) as ReadonlyArray<SessionProvider | {
+    model?: SessionProvider
+  }>
+
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index]
+    if ('providerID' in message && typeof message.providerID === 'string') {
+      return message.providerID
+    }
+
+    if ('model' in message && typeof message.model?.providerID === 'string') {
+      return message.model.providerID
+    }
+  }
+
+  return undefined
 }
 
 function bar(percent: number) {
@@ -179,10 +226,21 @@ async function loadQuotaState(): Promise<QuotaState> {
   return { windows }
 }
 
-function QuotaPanel(props: { api: TuiPluginApi }) {
+function QuotaPanel(props: { api: TuiPluginApi; sessionID: string }) {
   const [state, setState] = createSignal<QuotaState>({ windows: [] })
+  const [isVisible, setIsVisible] = createSignal(false)
+
+  const syncVisibility = () => {
+    setIsVisible(providerIDForSession(props.api, props.sessionID) === 'openai')
+  }
 
   const refresh = () => {
+    syncVisibility()
+    if (!isVisible()) {
+      setState({ windows: [] })
+      return
+    }
+
     void loadQuotaState()
       .then((next) => setState(next))
       .catch((error: unknown) => {
@@ -193,28 +251,54 @@ function QuotaPanel(props: { api: TuiPluginApi }) {
 
   refresh()
   const timer = setInterval(refresh, REFRESH_MS)
+  const disposeMessageUpdated = props.api.event.on('message.updated', (event) => {
+    if (event.properties.sessionID !== props.sessionID) return
+    refresh()
+  })
+  const disposeMessageRemoved = props.api.event.on('message.removed', (event) => {
+    if (event.properties.sessionID !== props.sessionID) return
+    refresh()
+  })
+  const disposeSessionUpdated = props.api.event.on('session.updated', (event) => {
+    if (event.properties.sessionID !== props.sessionID) return
+    syncVisibility()
+  })
   onCleanup(() => clearInterval(timer))
+  onCleanup(disposeMessageUpdated)
+  onCleanup(disposeMessageRemoved)
+  onCleanup(disposeSessionUpdated)
 
   return (
-    <box flexDirection="column" gap={0} paddingLeft={1}>
-      <text fg={props.api.theme.current.text}>
-        <b>Quota</b>
-      </text>
-      <text fg={props.api.theme.current.textMuted}>● OAI</text>
-      <For each={state().windows}>
-        {(window) => (
-          <box flexDirection="row" gap={1}>
-            <text fg={props.api.theme.current.textMuted}>{window.label.padEnd(2, ' ')}</text>
-            <text fg={props.api.theme.current.text}>{Math.round(window.remainingPercent)}%</text>
-            <text fg={tone(props.api, window.remainingPercent)}>{bar(window.remainingPercent)}</text>
-            <text fg={props.api.theme.current.textMuted}>{formatReset(window.resetAt)}</text>
-          </box>
-        )}
-      </For>
-      <Show when={state().note}>
-        <text fg={props.api.theme.current.error}>{state().note}</text>
-      </Show>
-    </box>
+    <Show when={isVisible()}>
+      <box flexDirection="column" gap={0} paddingLeft={1}>
+        <box flexDirection="row" gap={0}>
+          <text fg={props.api.theme.current.text}>Quota</text>
+          <text fg={props.api.theme.current.textMuted}> [OAI]</text>
+        </box>
+        <For each={state().windows}>
+          {(window) => (
+            <box flexDirection="row" gap={1}>
+              <text fg={props.api.theme.current.textMuted}>{window.label.padEnd(2, ' ')}</text>
+              <text fg={props.api.theme.current.text}>{String(Math.round(window.remainingPercent)).padStart(2, '0')}%</text>
+              <text fg={tone(props.api, window.remainingPercent)}>{bar(window.remainingPercent)}</text>
+              {(() => {
+                const reset = formatReset(window.resetAt)
+                return (
+                  <>
+                    <text fg={props.api.theme.current.textMuted}>{reset.duration}</text>
+                    <box flexGrow={1} />
+                    <text fg={props.api.theme.current.textMuted}>{reset.exact}</text>
+                  </>
+                )
+              })()}
+            </box>
+          )}
+        </For>
+        <Show when={state().note}>
+          <text fg={props.api.theme.current.error}>{state().note}</text>
+        </Show>
+      </box>
+    </Show>
   )
 }
 
@@ -237,8 +321,11 @@ const tui: TuiPlugin = async (api) => {
   api.slots.register({
     order: 100,
     slots: {
-      sidebar_content() {
-        return <QuotaPanel api={api} />
+      sidebar_title() {
+        return null
+      },
+      sidebar_content(_ctx, props: { session_id: string }) {
+        return <QuotaPanel api={api} sessionID={props.session_id} />
       },
     },
   })
