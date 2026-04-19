@@ -1,13 +1,15 @@
 package config
 
+// hyprd.go declares hyprd's window, session, style, and notification configuration.
+
 import (
 	"slices"
 	"time"
 )
 
-// ╭───────────────────────────────────────────────────────────────────────────╮
-// │ root config                                                               │
-// ╰───────────────────────────────────────────────────────────────────────────╯
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ root config                                                                  │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 // HyprConfig configures hyprd window and session behavior.
 type HyprConfig struct {
@@ -24,14 +26,13 @@ type HyprConfig struct {
 	ActiveSessions map[int]ActiveSession      `yaml:"active_sessions"`
 }
 
-// ╭───────────────────────────────────────────────────────────────────────────╮
-// │ boot / environment                                                        │
-// ╰───────────────────────────────────────────────────────────────────────────╯
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ boot / environment                                                           │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// InitConfig controls the one-time boot sequence that runs when hyprd starts.
+// InitConfig controls the one-time boot sequence (env setup before sessions).
 //
-// Sessions opened on boot come from ActiveSessions entries with init: true;
-// this config only covers the environment setup that precedes them.
+// Sessions opened on boot come from ActiveSessions entries with init: true.
 type InitConfig struct {
 	Execs          []string      `yaml:"execs"`           // commands run once at hyprd startup
 	Workspace      int           `yaml:"workspace"`       // workspace to focus after boot
@@ -42,69 +43,67 @@ type InitConfig struct {
 
 // BackgroundConfig controls the mpvpaper video wallpaper.
 type BackgroundConfig struct {
-	Display   string    `yaml:"display"`    // monitor name (e.g. "HDMI-A-1")
+	Display   string    `yaml:"display"`    // monitor name, e.g. "HDMI-A-1"
 	VideoPath string    `yaml:"video_path"` // directory containing wallpaper videos
 	Socket    string    `yaml:"socket"`     // mpv IPC socket path
 	Wallpaper Wallpaper `yaml:"wallpaper"`
 }
 
-// Wallpaper picks a video file and tunes mpv visual properties.
+// Wallpaper selects a video file and tunes mpv visual properties.
 type Wallpaper struct {
-	File       string `yaml:"file"` // filename relative to BackgroundConfig.VideoPath
+	File       string `yaml:"file"` // filename relative to VideoPath
 	Brightness int    `yaml:"brightness"`
 	Contrast   int    `yaml:"contrast"`
 	Saturation int    `yaml:"saturation"`
 	Hue        int    `yaml:"hue"`
 }
 
-// ╭───────────────────────────────────────────────────────────────────────────╮
-// │ layout / style                                                            │
-// ╰───────────────────────────────────────────────────────────────────────────╯
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ layout / style                                                               │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// MonitorConfig defines physical monitor dimensions and reserved screen areas.
+// MonitorConfig defines physical monitor dimensions and reserved screen edges.
 type MonitorConfig struct {
-	Width    int            `yaml:"width"`  // px
-	Height   int            `yaml:"height"` // px
+	Width    int            `yaml:"width"`
+	Height   int            `yaml:"height"`
 	Reserved ReservedConfig `yaml:"reserved"`
 }
 
-// ReservedConfig specifies screen edges (px) to exclude from layout calculations.
+// ReservedConfig specifies screen-edge insets (px) excluded from tiling layout.
 type ReservedConfig struct {
 	Top    int `yaml:"top"`
 	Bottom int `yaml:"bottom"`
 	Left   int `yaml:"left"`
 }
 
-// SplitConfig defines predefined master-slave split ratios (stringified floats 0-1).
+// SplitConfig defines named master-slave split ratios (stringified floats 0-1).
 type SplitConfig struct {
 	XS      string `yaml:"xs"`
 	Default string `yaml:"default"`
 	LG      string `yaml:"lg"`
 }
 
-// StyleConfig defines visual styling for borders and shadows.
+// StyleConfig defines border and shadow colors.
 type StyleConfig struct {
 	Border BorderColors `yaml:"border"`
 	Shadow ShadowColors `yaml:"shadow"`
 }
 
-// BorderColors specifies border colors in Hyprland's color format (e.g. "rgb(f2a170)").
+// BorderColors uses Hyprland color format, e.g. "rgb(f2a170)".
 type BorderColors struct {
 	Default string `yaml:"default"`
 }
 
-// ShadowColors specifies shadow colors in Hyprland's color format (e.g. "rgba(e56b2c32)").
+// ShadowColors uses Hyprland color format, e.g. "rgba(e56b2c32)".
 type ShadowColors struct {
 	Default string `yaml:"default"`
 }
 
-// ╭───────────────────────────────────────────────────────────────────────────╮
-// │ notifications                                                             │
-// ╰───────────────────────────────────────────────────────────────────────────╯
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ notifications                                                                │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 // NotifyConfig defines notification routing, presentation, and sound policy.
-//
-// LoadHypr lowercases UrgencySounds, AppSounds, and SilentApps, so YAML entries can be written in any case.
 type NotifyConfig struct {
 	SoundsDir           string                 `yaml:"sounds_dir"`            // directory containing sound files
 	WorkspaceIconsDir   string                 `yaml:"workspace_icons_dir"`   // directory containing workspace icon PNGs
@@ -112,13 +111,13 @@ type NotifyConfig struct {
 	QuietVolume         int                    `yaml:"quiet_volume"`          // paplay volume (0-65536) for low-priority sounds
 	LoudVolume          int                    `yaml:"loud_volume"`           // paplay volume (0-65536) for high-priority sounds
 	Styles              map[string]NotifyStyle `yaml:"styles"`                // notification class -> Dunst hint overrides
-	UrgencySounds       map[string]string      `yaml:"urgency_sounds"`        // libnotify urgency -> sound name (or "none")
-	AppSounds           map[string]string      `yaml:"app_sounds"`            // app name -> sound name, takes precedence over urgency
+	UrgencySounds       map[string]string      `yaml:"urgency_sounds"`        // urgency -> sound name (or "none")
+	AppSounds           map[string]string      `yaml:"app_sounds"`            // app name -> sound name; takes precedence over urgency
 	SilentApps          []string               `yaml:"silent_apps"`           // app names that suppress sound entirely
 	KittySilentPatterns []string               `yaml:"kitty_silent_patterns"` // substrings in kitty titles that suppress sound
 }
 
-// NotifyStyle defines optional Dunst hint overrides for a notification class.
+// NotifyStyle defines Dunst hint overrides for a notification class.
 type NotifyStyle struct {
 	Urgency    string `yaml:"urgency"`     // low, normal, critical
 	Timeout    int    `yaml:"timeout"`     // ms; 0 means persistent
@@ -129,11 +128,11 @@ type NotifyStyle struct {
 	Persistent bool   `yaml:"persistent"`  // prevents Dunst timeout from closing
 }
 
-// ╭───────────────────────────────────────────────────────────────────────────╮
-// │ windows / workspaces                                                      │
-// ╰───────────────────────────────────────────────────────────────────────────╯
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ windows / workspaces                                                         │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// WindowsConfig controls which windows hyprd manages and how special workspaces are named.
+// WindowsConfig controls tiling policy and special workspace naming.
 type WindowsConfig struct {
 	IgnoredClasses  []string      `yaml:"ignored_classes"`  // window classes hyprd ignores for tiling/events
 	HiddenWorkspace string        `yaml:"hidden_workspace"` // Hyprland special workspace name for stashed windows
@@ -145,86 +144,84 @@ type WindowsConfig struct {
 type MonocleConfig struct {
 	Width   int `yaml:"width"`
 	Height  int `yaml:"height"`
-	OffsetX int `yaml:"offset_x"` // offset from monitor center
-	OffsetY int `yaml:"offset_y"` // offset from monitor center
+	OffsetX int `yaml:"offset_x"`
+	OffsetY int `yaml:"offset_y"`
 }
 
-// ╭───────────────────────────────────────────────────────────────────────────╮
-// │ kitty tab profiles                                                        │
-// ╰───────────────────────────────────────────────────────────────────────────╯
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ kitty tab profiles                                                           │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 // TabProfile defines a set of kitty tabs managed as a unit.
 type TabProfile struct {
 	Order  int      `yaml:"order"`  // positional index for colon-separated tab aliases
-	Prefix string   `yaml:"prefix"` // applied to each tab name (disambiguates across profiles)
-	Focus  string   `yaml:"focus"`  // name of the tab to focus after spawn
+	Prefix string   `yaml:"prefix"` // disambiguates tab names across profiles
+	Focus  string   `yaml:"focus"`  // tab to focus after spawn
 	Tabs   []TabDef `yaml:"tabs"`
 }
 
 // TabDef defines a single kitty tab within a profile.
 type TabDef struct {
 	Name       string    `yaml:"name"`
-	Title      string    `yaml:"title"`       // displayed in the kitty tab bar
-	Command    string    `yaml:"command"`     // command to run in the tab
-	CWD        string    `yaml:"cwd"`         // starting directory, may contain "~/"
-	CWDResolve string    `yaml:"cwd_resolve"` // optional strategy for resolving CWD (e.g. "git-root")
-	Requires   string    `yaml:"requires"`    // file/marker that must exist in CWD; tab is skipped otherwise
-	Layout     string    `yaml:"layout"`      // kitty layout name, e.g. "fat:bias=80"
-	Panes      []TabPane `yaml:"panes"`       // extra panes created after the primary command
+	Title      string    `yaml:"title"`
+	Command    string    `yaml:"command"`
+	CWD        string    `yaml:"cwd"`         // may contain "~/"
+	CWDResolve string    `yaml:"cwd_resolve"` // e.g. "git-root"
+	Requires   string    `yaml:"requires"`    // must exist in CWD or tab is skipped
+	Layout     string    `yaml:"layout"`      // e.g. "fat:bias=80"
+	Panes      []TabPane `yaml:"panes"`
 }
 
-// TabPane defines an extra pane created inside a kitty tab after the primary pane.
+// TabPane defines an extra pane created inside a kitty tab.
 type TabPane struct {
 	Command    string `yaml:"command"`
 	CWD        string `yaml:"cwd"`
 	CWDResolve string `yaml:"cwd_resolve"`
-	Location   string `yaml:"location"` // kitty launch --location value (hsplit, vsplit, etc.)
-	Bias       int    `yaml:"bias"`     // split bias (% of parent occupied)
+	Location   string `yaml:"location"` // hsplit, vsplit, etc.
+	Bias       int    `yaml:"bias"`     // % of parent
 }
 
-// ╭───────────────────────────────────────────────────────────────────────────╮
-// │ sessions / three-body                                                     │
-// ╰───────────────────────────────────────────────────────────────────────────╯
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ sessions / three-body                                                        │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 // ThreeBodyWindow defines a window that participates in the three-body layout.
 type ThreeBodyWindow struct {
-	Class   string `yaml:"class"`   // Hyprland class to match
-	Title   string `yaml:"title"`   // Hyprland title to match (optional)
-	Command string `yaml:"command"` // command used to spawn the window when missing
+	Class   string `yaml:"class"`
+	Title   string `yaml:"title"`   // optional
+	Command string `yaml:"command"` // spawn command when missing
 }
 
-// ActiveSession binds a session to a workspace and controls whether it opens on boot.
+// ActiveSession binds a session to a workspace.
 type ActiveSession struct {
 	Session string `yaml:"session"` // key into HyprConfig.Sessions
-	Init    bool   `yaml:"init"`    // spawn during InitConfig run
+	Init    bool   `yaml:"init"`    // spawn on boot
 }
 
 // Session defines a workspace layout for automated window spawning and arrangement.
 type Session struct {
-	Name      string        `yaml:"name" json:"name"`
-	Workspace int           `yaml:"workspace" json:"workspace"`
-	Project   string        `yaml:"project" json:"project"` // project directory or repo identifier
-	Body      []string      `yaml:"body" json:"body"`       // three-body member order (editor, browser, agents, ...)
-	Browser   BrowserConfig `yaml:"browser" json:"browser"`
-	// Tabs maps three-body members (e.g. "editor") to kitty tab profile names (e.g. "leadpier").
-	Tabs    map[string]string `yaml:"tabs" json:"tabs"`
-	Command string            `yaml:"command" json:"command"` // single-window sessions that don't use three-body
-	// Monocle applies monocle sizing to the spawned window after the session opens.
-	Monocle bool `yaml:"monocle" json:"monocle"`
+	Name      string            `yaml:"name" json:"name"`
+	Workspace int               `yaml:"workspace" json:"workspace"`
+	Project   string            `yaml:"project" json:"project"`
+	Body      []string          `yaml:"body" json:"body"` // three-body member order
+	Browser   BrowserConfig     `yaml:"browser" json:"browser"`
+	Tabs      map[string]string `yaml:"tabs" json:"tabs"`       // body member -> tab profile name
+	Command   string            `yaml:"command" json:"command"` // single-window sessions (no three-body)
+	Monocle   bool              `yaml:"monocle" json:"monocle"`
 }
 
-// BrowserConfig declares URLs and tab-group state to open in the browser body member.
+// BrowserConfig declares URLs and tab-group state for the browser body member.
 type BrowserConfig struct {
-	Snapshot string         `yaml:"snapshot,omitempty" json:"snapshot,omitempty"` // named snapshot to restore
-	Mode     string         `yaml:"mode,omitempty" json:"mode,omitempty"`         // open strategy (new, existing, etc.)
-	Force    bool           `yaml:"force,omitempty" json:"force,omitempty"`       // reopen even if matching tabs exist
-	Profile  string         `yaml:"profile,omitempty" json:"profile,omitempty"`   // Firefox profile flag passthrough
-	Pinned   []string       `yaml:"pinned,omitempty" json:"pinned,omitempty"`     // URLs opened as pinned tabs
-	Groups   []BrowserGroup `yaml:"groups,omitempty" json:"groups,omitempty"`     // named tab groups
-	URLs     []string       `yaml:"urls,omitempty" json:"urls,omitempty"`         // ungrouped URLs
+	Snapshot string         `yaml:"snapshot,omitempty" json:"snapshot,omitempty"`
+	Mode     string         `yaml:"mode,omitempty" json:"mode,omitempty"`
+	Force    bool           `yaml:"force,omitempty" json:"force,omitempty"`
+	Profile  string         `yaml:"profile,omitempty" json:"profile,omitempty"`
+	Pinned   []string       `yaml:"pinned,omitempty" json:"pinned,omitempty"`
+	Groups   []BrowserGroup `yaml:"groups,omitempty" json:"groups,omitempty"`
+	URLs     []string       `yaml:"urls,omitempty" json:"urls,omitempty"`
 }
 
-// BrowserGroup defines a named set of URLs that belong together in a Firefox tab group.
+// BrowserGroup defines a named set of URLs in a Firefox tab group.
 type BrowserGroup struct {
 	Name      string   `yaml:"name" json:"name"`
 	Color     string   `yaml:"color,omitempty" json:"color,omitempty"`
@@ -232,11 +229,11 @@ type BrowserGroup struct {
 	URLs      []string `yaml:"urls" json:"urls"`
 }
 
-// ╭───────────────────────────────────────────────────────────────────────────╮
-// │ methods                                                                   │
-// ╰───────────────────────────────────────────────────────────────────────────╯
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ methods                                                                      │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// AllURLs returns every URL flattened in open order: pinned, then each group, then loose URLs.
+// AllURLs returns every URL in open order: pinned, groups, then loose URLs.
 func (b *BrowserConfig) AllURLs() []string {
 	var urls []string
 	urls = append(urls, b.Pinned...)
@@ -247,26 +244,26 @@ func (b *BrowserConfig) AllURLs() []string {
 	return urls
 }
 
-// MonocleSize returns the configured monocle window dimensions in pixels.
+// MonocleSize returns the monocle window dimensions (px).
 func (c *HyprConfig) MonocleSize() (w, h int) {
 	return c.Windows.Monocle.Width, c.Windows.Monocle.Height
 }
 
-// MonocleOffset returns the x/y offset (px) from monitor center for monocle windows.
+// MonocleOffset returns the x/y offset (px) from monitor center.
 func (c *HyprConfig) MonocleOffset() (x, y int) {
 	return c.Windows.Monocle.OffsetX, c.Windows.Monocle.OffsetY
 }
 
-// IsIgnored reports whether the given Hyprland window class is in IgnoredClasses.
+// IsIgnored reports whether the window class is in IgnoredClasses.
 func (c *HyprConfig) IsIgnored(class string) bool {
 	return slices.Contains(c.Windows.IgnoredClasses, class)
 }
 
-// ╭───────────────────────────────────────────────────────────────────────────╮
-// │ defaults                                                                  │
-// ╰───────────────────────────────────────────────────────────────────────────╯
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ defaults                                                                     │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// DefaultHypr returns sensible defaults for hyprd.
+// DefaultHypr returns hyprd defaults.
 func DefaultHypr() HyprConfig {
 	return HyprConfig{
 		Monitor: MonitorConfig{

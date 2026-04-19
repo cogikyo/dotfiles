@@ -1,41 +1,12 @@
-// Package daemon provides shared infrastructure for Unix socket daemons.
+// Package daemon provides Unix-socket request/response and pub/sub primitives for local daemons.
 //
-// The package implements a client/server architecture for inter-process
-// communication over Unix domain sockets. Daemons expose a socket that clients
-// can connect to for sending commands and receiving responses.
-//
-// # Server
-//
-// Server manages the Unix socket lifecycle, accepting connections and routing
-// commands to a user-provided handler. It handles graceful shutdown via signals
-// and cleans up the socket file on exit.
-//
-//	server := daemon.NewServer("/tmp/my.sock", handleCommand)
-//	server.Start()
-//	server.WaitForSignal()
-//	server.Shutdown()
-//
-// # Client
-//
-// Client provides methods for connecting to a running daemon. It supports
-// one-shot request/response communication as well as streaming subscriptions.
-//
-//	client := daemon.NewClient("/tmp/my.sock")
-//	response, err := client.Send("status")
-//
-// # Subscriptions
-//
-// The subscription mechanism allows clients to receive real-time updates from
-// the daemon. Clients subscribe to topics and receive JSON events when the
-// daemon calls Notify on the SubscriptionManager.
-//
-//	// Server side
-//	server.Subs.Notify("window", windowData)
-//
-//	// Client side
-//	client.Stream("subscribe window workspace")
+// It:
+//   - serves command handlers over Unix domain sockets
+//   - manages topic subscriptions and event fan-out
+//   - exposes client helpers for one-shot and streaming calls
 package daemon
 
+// server.go defines the daemon socket server lifecycle and command dispatch loop.
 import (
 	"errors"
 	"fmt"
@@ -50,12 +21,10 @@ import (
 // CommandHandler processes a command string and returns a response.
 type CommandHandler func(command string) string
 
-// SubscribeHandler runs on new subscriptions; typically used to push initial state.
+// SubscribeHandler is called on new subscriptions to push initial state.
 type SubscribeHandler func(sub *Subscriber, topics []string)
 
 // Server owns a Unix socket, routing commands to a Handler and dispatching events via Subs.
-//
-// OnSubscribe is optional. Handler must be set before Start.
 type Server struct {
 	SocketPath   string
 	Subs         *SubscriptionManager
@@ -66,7 +35,7 @@ type Server struct {
 	shutdownOnce sync.Once
 }
 
-// NewServer returns a Server bound to socketPath with handler for non-subscribe commands.
+// NewServer returns a Server bound to socketPath.
 func NewServer(socketPath string, handler CommandHandler) *Server {
 	return &Server{
 		SocketPath: socketPath,
@@ -76,9 +45,7 @@ func NewServer(socketPath string, handler CommandHandler) *Server {
 	}
 }
 
-// Start listens on SocketPath and spawns the accept loop.
-//
-// Any stale socket file is removed first. The new socket is chmod 0600 so only the current user can connect.
+// Start removes any stale socket, listens on SocketPath (chmod 0600), and spawns the accept loop.
 func (s *Server) Start() error {
 	if err := os.Remove(s.SocketPath); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return fmt.Errorf("remove stale socket: %w", err)
@@ -99,7 +66,7 @@ func (s *Server) Start() error {
 	return nil
 }
 
-// Shutdown closes the listener, removes the socket file, and signals Done.
+// Shutdown closes the listener, removes the socket file, and signals Done. Safe to call multiple times.
 func (s *Server) Shutdown() {
 	s.shutdownOnce.Do(func() {
 		close(s.done)
@@ -112,12 +79,12 @@ func (s *Server) Shutdown() {
 	})
 }
 
-// Done returns a channel closed when Shutdown is called.
+// Done returns a channel that closes when Shutdown is called.
 func (s *Server) Done() <-chan struct{} {
 	return s.done
 }
 
-// WaitForSignal blocks until SIGINT or SIGTERM arrives and returns it.
+// WaitForSignal blocks until SIGINT or SIGTERM and returns the signal received.
 func (s *Server) WaitForSignal() os.Signal {
 	sigCh := make(chan os.Signal, 1)
 	signal.Notify(sigCh, syscall.SIGINT, syscall.SIGTERM)
@@ -161,9 +128,8 @@ func (s *Server) handleClient(conn net.Conn) {
 				s.OnSubscribe(sub, topics)
 			}
 		})
-		// Block until the client disconnects; Read unblocks on EOF.
 		buf := make([]byte, 1)
-		conn.Read(buf)
+		conn.Read(buf) // block until client disconnects (EOF)
 		s.Subs.Unsubscribe(conn)
 		conn.Close()
 		return

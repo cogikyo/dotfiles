@@ -1,6 +1,8 @@
 package providers
 
-// StateSetter is the daemon's shared store from a provider's point of view (write-only).
+// base.go defines small shared abstractions used by multiple providers.
+
+// StateSetter is the write-only view of the daemon's shared state store.
 type StateSetter interface {
 	Set(key string, value any)
 }

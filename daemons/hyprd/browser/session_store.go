@@ -1,5 +1,7 @@
 package browser
 
+// session_store.go loads and parses Firefox sessionstore payloads and resolves target windows for snapshots.
+
 import (
 	"encoding/json"
 	"fmt"
@@ -8,15 +10,11 @@ import (
 	"strconv"
 )
 
-// defaultSessionCheckpoints is written next to a restored sessionstore to convince Firefox of a clean shutdown.
-//
-// Without it, Firefox shows the "would you like to restore" prompt and overrides the injected session.
+// defaultSessionCheckpoints fakes a clean shutdown so Firefox trusts the injected session file.
 var defaultSessionCheckpoints = []byte("{\"profile-after-change\":true,\"final-ui-startup\":true,\"sessionstore-windows-restored\":true}\n")
 
-// firefoxSessionEnvelope mirrors Firefox's sessionstore JSON.
-//
-// RawMessage fields pass through verbatim when snapshots are written; only Windows is inspected.
-// Keeping the rest opaque means this package does not break when Firefox adds new top-level keys.
+// firefoxSessionEnvelope mirrors Firefox's sessionstore JSON top-level structure.
+// Only Windows is inspected; remaining fields pass through verbatim to survive schema changes.
 type firefoxSessionEnvelope struct {
 	Version        json.RawMessage   `json:"version,omitempty"`
 	Session        json.RawMessage   `json:"session,omitempty"`
@@ -28,6 +26,7 @@ type firefoxSessionEnvelope struct {
 
 type firefoxSessionStore struct {
 	Source  string
+	Payload []byte
 	Raw     firefoxSessionEnvelope
 	Windows []firefoxWindow
 }
@@ -38,10 +37,7 @@ type firefoxWindow struct {
 	Groups   []firefoxGroup `json:"groups"`
 }
 
-// firefoxTab mirrors one entry in window.tabs.
-//
-// Index is 1-based into Entries (history stack); the selected entry is the tab's current URL.
-// GroupID is the current key; Group is retained for older session files that used the flat "group" field.
+// firefoxTab mirrors one entry in window.tabs; Index is 1-based into Entries (history stack).
 type firefoxTab struct {
 	Index        int            `json:"index"`
 	Entries      []firefoxEntry `json:"entries"`
@@ -98,7 +94,7 @@ func parseFirefoxSession(payload []byte, source string) (*firefoxSessionStore, e
 		return nil, fmt.Errorf("parse %s: %w", source, err)
 	}
 
-	store := &firefoxSessionStore{Source: source, Raw: raw}
+	store := &firefoxSessionStore{Source: source, Payload: payload, Raw: raw}
 	store.Windows = make([]firefoxWindow, 0, len(raw.Windows))
 	for i, windowRaw := range raw.Windows {
 		var window firefoxWindow
@@ -107,14 +103,11 @@ func parseFirefoxSession(payload []byte, source string) (*firefoxSessionStore, e
 		}
 		store.Windows = append(store.Windows, window)
 	}
+	store.Raw.Windows = nil
 	return store, nil
 }
 
-// firefoxSessionSourceFile picks the freshest session file available, matching Firefox's own recovery order:
-//   - recovery.jsonlz4 (most recent flush, written while running)
-//   - recovery.baklz4  (prior recovery rotated aside)
-//   - sessionstore.jsonlz4 (written at clean shutdown)
-//   - previous.jsonlz4 (last successful session before the current one)
+// firefoxSessionSourceFile returns the first existing session file in Firefox's recovery priority order.
 func firefoxSessionSourceFile(profile firefoxProfile) (string, error) {
 	candidates := []string{
 		filepath.Join(profile.Root, "sessionstore-backups", "recovery.jsonlz4"),
@@ -130,10 +123,7 @@ func firefoxSessionSourceFile(profile firefoxProfile) (string, error) {
 	return "", fmt.Errorf("no sessionstore file found in %s", profile.Root)
 }
 
-// resolveWindowIndex picks a window from store per selector:
-//   - "" or "active": match Hypr active-window title, else best-interesting
-//   - "largest":      window with most groups, then most tabs, then most-recent access
-//   - numeric:        1-based window index
+// resolveWindowIndex picks a window by selector: "active" (Hypr title match), "largest", or 1-based index.
 func (b *Browser) resolveWindowIndex(store *firefoxSessionStore, selector string) (int, error) {
 	if len(store.Windows) == 0 {
 		return 0, fmt.Errorf("session file has no windows")
@@ -206,9 +196,6 @@ func pickBestWindow(windows []firefoxWindow, pool []int) int {
 	return best
 }
 
-// windowIsInteresting hides blank scratch windows from snapshot listings.
-//
-// Qualifies: multiple tabs, any group, any pinned tab, or any tab URL outside trivialBrowserURLs.
 func windowIsInteresting(window firefoxWindow) bool {
 	if len(window.Tabs) > 1 || len(window.Groups) > 0 {
 		return true
@@ -234,9 +221,6 @@ func windowLastAccessed(window firefoxWindow) int64 {
 	return best
 }
 
-// selectedEntry returns the history entry pointed at by tab.Index (1-based).
-//
-// Out-of-range indices clamp to the nearest valid entry so a malformed session file still yields a usable title/URL.
 func selectedEntry(tab firefoxTab) firefoxEntry {
 	if len(tab.Entries) == 0 {
 		return firefoxEntry{}

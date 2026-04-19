@@ -1,7 +1,10 @@
 package browser
 
+// profile.go discovers Firefox profile roots from profiles.ini/installs.ini and resolves profile selectors.
+
 import (
 	"bufio"
+	"cmp"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -11,10 +14,6 @@ import (
 	"dotfiles/daemons/config"
 )
 
-// firefoxProfile locates a single profile on disk.
-//
-// InstallKey is the section header from installs.ini (Firefox's per-install hash tying a binary to a profile).
-// Empty when the profile was resolved without consulting installs.ini.
 type firefoxProfile struct {
 	Root       string
 	Name       string
@@ -23,16 +22,7 @@ type firefoxProfile struct {
 
 type iniFile map[string]map[string]string
 
-// discoverFirefoxProfile resolves a Firefox profile directory.
-//
-// Resolution order:
-//  1. raw is a path that exists on disk — use it directly.
-//  2. raw matches a profiles.ini Name, Path, or basename — use that.
-//  3. Otherwise pick the default:
-//     a. first installs.ini section with a Default= entry (per-install default), or
-//     b. first profiles.ini Profile section with Default=1.
-//
-// installs.ini takes precedence because Firefox itself prefers it when multiple installs share a profile root.
+// discoverFirefoxProfile resolves a profile: raw path > profiles.ini name > installs.ini default > Default=1.
 func discoverFirefoxProfile(raw string) (firefoxProfile, error) {
 	root, err := firefoxRoot()
 	if err != nil {
@@ -70,7 +60,7 @@ func discoverFirefoxProfile(raw string) (firefoxProfile, error) {
 			if raw == profiles.get(section, "Name") || raw == profiles.get(section, "Path") || raw == filepath.Base(profilePath) {
 				return firefoxProfile{
 					Root: profilePath,
-					Name: firstNonEmpty(profiles.get(section, "Name"), filepath.Base(profilePath)),
+					Name: cmp.Or(profiles.get(section, "Name"), filepath.Base(profilePath)),
 				}, nil
 			}
 		}
@@ -97,16 +87,13 @@ func discoverFirefoxProfile(raw string) (firefoxProfile, error) {
 		profilePath := resolveFirefoxProfilePath(root, profiles.get(section, "Path"), profiles.get(section, "IsRelative") != "0")
 		return firefoxProfile{
 			Root: profilePath,
-			Name: firstNonEmpty(profiles.get(section, "Name"), filepath.Base(profilePath)),
+			Name: cmp.Or(profiles.get(section, "Name"), filepath.Base(profilePath)),
 		}, nil
 	}
 
 	return firefoxProfile{}, fmt.Errorf("could not determine default Firefox profile")
 }
 
-// firefoxRoot returns the directory containing profiles.ini.
-//
-// The XDG path (~/.config/mozilla/firefox) wins over legacy ~/.mozilla/firefox; Developer Edition defaults to XDG.
 func firefoxRoot() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -195,7 +182,7 @@ func profileNameForPath(profiles iniFile, root, target string) string {
 		}
 		path := resolveFirefoxProfilePath(root, profiles.get(section, "Path"), profiles.get(section, "IsRelative") != "0")
 		if filepath.Clean(path) == target {
-			return firstNonEmpty(profiles.get(section, "Name"), filepath.Base(target))
+			return cmp.Or(profiles.get(section, "Name"), filepath.Base(target))
 		}
 	}
 	return filepath.Base(target)

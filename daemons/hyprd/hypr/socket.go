@@ -1,9 +1,12 @@
-// Package hypr provides Hyprland IPC socket communication.
+// Package hypr wraps Hyprland IPC socket communication for hyprd commands.
 //
-// Sockets live at $XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.
-// `.socket.sock` accepts request/response text commands; `.socket2.sock` streams newline-delimited events.
-// Request format: "j/command" for JSON output, "dispatch args" for dispatcher actions, bare command for plain text.
+// It:
+//  1. Resolves command/event socket paths from Hyprland runtime environment.
+//  2. Sends requests and dispatcher commands over Unix sockets.
+//  3. Decodes typed window and monitor payloads from Hyprland JSON endpoints.
 package hypr
+
+// socket.go defines the IPC client transport plus typed helpers for clients, active window, and monitors.
 
 import (
 	"encoding/json"
@@ -19,12 +22,10 @@ import (
 
 // Client communicates with Hyprland via its Unix sockets.
 type Client struct {
-	socketPath string // .socket.sock
+	socketPath string
 }
 
 // NewClient resolves the command socket from HYPRLAND_INSTANCE_SIGNATURE.
-// Errors if the env var is unset (Hyprland not running) or the socket is missing.
-// XDG_RUNTIME_DIR falls back to /run/user/$UID.
 func NewClient() (*Client, error) {
 	sig := os.Getenv("HYPRLAND_INSTANCE_SIGNATURE")
 	if sig == "" {
@@ -44,17 +45,17 @@ func NewClient() (*Client, error) {
 	return &Client{socketPath: socketPath}, nil
 }
 
+// SocketPath returns the path to the command socket.
 func (c *Client) SocketPath() string {
 	return c.socketPath
 }
 
+// EventSocketPath returns the path to the event-streaming socket.
 func (c *Client) EventSocketPath() string {
 	return filepath.Join(filepath.Dir(c.socketPath), ".socket2.sock")
 }
 
 // Request sends a command and returns the raw response.
-//
-// Response is read in a single 64KiB Read — large outputs (many clients, etc.) may be truncated.
 func (c *Client) Request(command string) ([]byte, error) {
 	conn, err := net.Dial("unix", c.socketPath)
 	if err != nil {
@@ -79,11 +80,11 @@ func (c *Client) Request(command string) ([]byte, error) {
 // │ windows                                                                      │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// Window mirrors the JSON returned by `hyprctl -j clients`.
+// Window mirrors the JSON from `hyprctl -j clients`.
 type Window struct {
 	Address        string `json:"address"`
-	At             [2]int `json:"at"`   // [x, y]
-	Size           [2]int `json:"size"` // [w, h]
+	At             [2]int `json:"at"`
+	Size           [2]int `json:"size"`
 	Workspace      WsRef  `json:"workspace"`
 	Floating       bool   `json:"floating"`
 	Pinned         bool   `json:"pinned"`
@@ -92,15 +93,16 @@ type Window struct {
 	InitialTitle   string `json:"initialTitle"`
 	Pid            int    `json:"pid"`
 	Mapped         bool   `json:"mapped"`
-	FocusHistoryID int    `json:"focusHistoryID"` // 0 = active, 1 = previous, ...
+	FocusHistoryID int    `json:"focusHistoryID"`
 }
 
-// WsRef is a workspace reference embedded in window and monitor queries.
+// WsRef is a workspace id/name pair embedded in other Hyprland types.
 type WsRef struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
 }
 
+// Clients returns all windows from `hyprctl -j clients`.
 func (c *Client) Clients() ([]Window, error) {
 	data, err := c.Request("j/clients")
 	if err != nil {
@@ -114,7 +116,7 @@ func (c *Client) Clients() ([]Window, error) {
 	return windows, nil
 }
 
-// ActiveWindow returns the focused window, or nil if none has focus.
+// ActiveWindow returns the focused window, or nil when nothing has focus.
 func (c *Client) ActiveWindow() (*Window, error) {
 	data, err := c.Request("j/activewindow")
 	if err != nil {
@@ -127,14 +129,12 @@ func (c *Client) ActiveWindow() (*Window, error) {
 	}
 
 	if w.Address == "" {
-		// Hyprland returns `{}` (not an error) when no window is active.
 		return nil, nil
 	}
 	return &w, nil
 }
 
-// Dispatch executes a Hyprland dispatcher command (e.g. "movefocus l", "workspace 1").
-// Errors when the response isn't "ok".
+// Dispatch executes a Hyprland dispatcher command.
 func (c *Client) Dispatch(args string) error {
 	resp, err := c.Request("dispatch " + args)
 	if err != nil {
@@ -150,10 +150,9 @@ func (c *Client) Dispatch(args string) error {
 // │ monitors                                                                     │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// Monitor mirrors the JSON returned by `hyprctl -j monitors`.
+// Monitor mirrors the JSON from `hyprctl -j monitors`.
 //
-// FIXME: ReservedTop/ReservedRight JSON tags look wrong — Hyprland returns `reserved` as a [L,T,R,B] array, not
-// scalar fields named `reserved`/`reservedB`.
+// TODO: reserved tags are wrong; Hyprland returns `reserved` as a [L,T,R,B] array.
 type Monitor struct {
 	ID            int    `json:"id"`
 	Name          string `json:"name"`
@@ -167,6 +166,7 @@ type Monitor struct {
 	ReservedRight int    `json:"reservedB"`
 }
 
+// Monitors returns all monitors from `hyprctl -j monitors`.
 func (c *Client) Monitors() ([]Monitor, error) {
 	data, err := c.Request("j/monitors")
 	if err != nil {
@@ -181,7 +181,6 @@ func (c *Client) Monitors() ([]Monitor, error) {
 }
 
 // FocusedMonitor returns the focused monitor, falling back to monitors[0].
-// Returns (nil, nil) only when no monitors exist.
 func (c *Client) FocusedMonitor() (*Monitor, error) {
 	monitors, err := c.Monitors()
 	if err != nil {

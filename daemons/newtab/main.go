@@ -1,8 +1,12 @@
-// Package main implements newtab, an HTTP service backing the custom new-tab page.
+// Package main implements newtab, the HTTP backend for the Firefox custom new-tab page.
 //
-// It queries Firefox's places.sqlite for history and bookmarks, proxies Google suggest, and serves JSON.
+// It:
+//   - serves static assets and JSON endpoints for the page
+//   - queries Firefox places.sqlite for bookmarks and history
+//   - proxies suggestion requests to Google's Firefox endpoint
 package main
 
+// main.go defines server startup, Firefox DB discovery, and API handlers.
 import (
 	"bufio"
 	"database/sql"
@@ -27,19 +31,14 @@ const (
 	defaultStaticDir    = "dotfiles/daemons/newtab"
 	defaultHistoryLimit = 15
 
-	// Google's Firefox-format suggest endpoint. Returns [query, [suggestions...]].
+	// Google suggest endpoint (Firefox format); returns [query, [suggestions...]].
 	googleSuggest = "https://suggestqueries.google.com/complete/search?client=firefox&q="
 )
 
-// SQL fragments shared by both branches of handleHistory so filtering stays identical.
+// SQL fragments shared by handleHistory so both branches filter identically.
 const (
-	// Exclude internal Firefox URLs (about:config, moz-extension://, etc).
-	urlFilter = "p.url NOT LIKE 'about:%' AND p.url NOT LIKE 'moz-%'"
-
-	// Drop rows with no usable title — they render as blank suggestions.
+	urlFilter   = "p.url NOT LIKE 'about:%' AND p.url NOT LIKE 'moz-%'"
 	titleFilter = "p.title IS NOT NULL AND p.title != ''"
-
-	// Exclude places inserted by bookmarks but never visited.
 	visitFilter = "p.visit_count > 0"
 )
 
@@ -58,9 +57,7 @@ type newtabConfig struct {
 	HistoryLimit int
 }
 
-// resolveFirefoxDB returns an absolute path to places.sqlite by scanning both
-// Firefox profile roots (legacy ~/.mozilla/firefox and XDG ~/.config/mozilla/firefox),
-// preferring a profile named dev-edition-default, then any profile marked Default=1.
+// resolveFirefoxDB finds places.sqlite by scanning Firefox profile roots (~/.mozilla/firefox, ~/.config/mozilla/firefox), preferring dev-edition-default.
 func resolveFirefoxDB() string {
 	roots := []string{
 		filepath.Join(homeDir, ".mozilla", "firefox"),
@@ -120,10 +117,7 @@ func resolveFirefoxDB() string {
 	return fallback
 }
 
-// dbPath returns a SQLite DSN opening places.sqlite read-only and immutable.
-//
-// immutable=1 lets us query while Firefox holds a write lock on the live DB.
-// cfg.FirefoxDB is expected to be absolute (main() resolves it at startup).
+// dbPath returns a SQLite DSN with mode=ro&immutable=1 so we can query while Firefox holds a write lock.
 func dbPath(cfg newtabConfig) string {
 	p := cfg.FirefoxDB
 	if !filepath.IsAbs(p) {
@@ -140,9 +134,9 @@ func staticPath(cfg newtabConfig) string {
 // │ types                                                                        │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// Bookmark is one moz_bookmarks row joined with its place, folder, keyword, and aggregated tags.
+// Bookmark is a moz_bookmarks row joined with its place, folder, keyword, and tags.
 //
-// Keyword and Tags are pointers so absent values serialize as JSON null rather than empty string.
+// Pointer fields serialize as JSON null when absent.
 type Bookmark struct {
 	Folder  string  `json:"folder"`
 	Title   string  `json:"title"`
@@ -151,9 +145,9 @@ type Bookmark struct {
 	Tags    *string `json:"tags"`
 }
 
-// HistoryEntry is one row from moz_places.
+// HistoryEntry is a row from moz_places.
 //
-// LastVisit is unix seconds, converted from Firefox's microsecond-precision last_visit_date.
+// LastVisit is unix seconds (Firefox stores microseconds; divided at query time).
 type HistoryEntry struct {
 	Title      string `json:"title"`
 	URL        string `json:"url"`
@@ -194,8 +188,6 @@ func main() {
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
 // withCORS wraps next with permissive CORS and a JSON content type.
-//
-// The frontend is served from the same process, so wildcard origin is fine.
 func withCORS(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Access-Control-Allow-Origin", "*")
@@ -220,10 +212,9 @@ func openPlacesDB(cfg newtabConfig) (*sql.DB, error) {
 // │ handlers                                                                     │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// handleBookmarks returns all bookmarks grouped by folder, with keyword and tag metadata attached.
+// handleBookmarks returns all bookmarks grouped by folder with keyword and tag metadata.
 //
-// Firefox's tag model: tags are bookmarks whose parent is the top-level 'tags' folder, linked via moz_bookmarks.fk.
-// The 'tags' folder itself is filtered out so tag entries don't surface as bookmarks.
+// Firefox tags are bookmarks whose parent is the top-level "tags" folder; these are aggregated via subquery and the folder itself is excluded.
 func handleBookmarks(cfg newtabConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		db, err := openPlacesDB(cfg)
@@ -281,9 +272,8 @@ func handleBookmarks(cfg newtabConfig) http.HandlerFunc {
 
 // handleHistory returns recent or query-matched places from moz_places.
 //
-// No ?q=: most-recently-visited entries.
-// With ?q=: case-insensitive substring match on title/URL, ranked by visit_count blended with recency.
-// The 1e12 divisor rescales microsecond timestamps to the same order of magnitude as visit counts.
+// Without ?q=: most-recently-visited entries.
+// With ?q=: case-insensitive substring match on title/URL, ranked by visit_count blended with recency (1e12 divisor rescales microsecond timestamps to visit-count magnitude).
 func handleHistory(cfg newtabConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		db, err := openPlacesDB(cfg)
@@ -352,10 +342,10 @@ func handleHistory(cfg newtabConfig) http.HandlerFunc {
 	}
 }
 
-// handleSuggest proxies Google's Firefox-format suggest API as a flat JSON array of strings.
+// handleSuggest proxies Google suggest and returns a flat JSON string array.
 //
-// Upstream shape is [query, [suggestions...], ...]; only index 1 is used.
-// Upstream or decode failures return [] instead of an error so the frontend renders cleanly.
+// Upstream shape is [query, [suggestions...], ...]; only index 1 is extracted.
+// Failures return [] so the frontend degrades cleanly.
 func handleSuggest(w http.ResponseWriter, r *http.Request) {
 	query := r.URL.Query().Get("q")
 	if query == "" {

@@ -1,5 +1,7 @@
 package wm
 
+// monocle.go toggles monocle mode by floating the focused window and parking sibling windows per workspace.
+
 import (
 	"encoding/json"
 	"fmt"
@@ -10,9 +12,7 @@ import (
 	"dotfiles/daemons/hyprd/windows"
 )
 
-// Monocle zooms the active window to a configured size, parking siblings on special:mono<wsID>.
-// A second invocation on the same workspace tears it down; other workspaces are untouched.
-//
+// Monocle zooms the active window to a configured size, parking siblings until toggled off.
 // Three-body state is saved and restored around the monocle lifecycle.
 type Monocle struct {
 	hypr  *hypr.Client
@@ -39,8 +39,7 @@ func (m *Monocle) Execute() (string, error) {
 // │ activate / deactivate                                                        │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// activate floats the active window at monocle geometry and parks siblings on special:mono<wsID>.
-// Any three-body state is saved so deactivate can rebuild it.
+// activate floats the active window at monocle geometry and parks siblings, saving any three-body state.
 func (m *Monocle) activate() (string, error) {
 	wsID, err := m.activeWorkspace()
 	if err != nil {
@@ -99,7 +98,7 @@ func (m *Monocle) activate() (string, error) {
 	return fmt.Sprintf("monocle: ws%d, %d windows hidden", wsID, len(displaced)), nil
 }
 
-// deactivate tears down monocle on wsID: pulls parked windows back, restores master, rebuilds saved three-body.
+// deactivate restores parked windows, master position, three-body state, and split ratio.
 func (m *Monocle) deactivate(wsID int) (string, error) {
 	ms := m.state.GetMonocle(wsID)
 	if ms == nil {
@@ -131,8 +130,7 @@ func (m *Monocle) deactivate(wsID int) (string, error) {
 // │ restore helpers                                                              │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// ensureMaster swaps the saved master back to position 0 if it drifted.
-// Hyprland may re-tile in a different order when windows return from the special workspace.
+// ensureMaster swaps the saved master back to position 0 if Hyprland re-tiled in a different order.
 func (m *Monocle) ensureMaster(wsID int, masterAddr string, cfg *config.HyprConfig) {
 	if masterAddr == "" {
 		return

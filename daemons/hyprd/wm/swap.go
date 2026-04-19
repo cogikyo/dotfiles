@@ -1,5 +1,7 @@
 package wm
 
+// swap.go toggles master ownership by promoting the active slave or restoring the displaced master.
+
 import (
 	"fmt"
 
@@ -8,9 +10,8 @@ import (
 	"dotfiles/daemons/hyprd/windows"
 )
 
-// Swap promotes the active slave to master, or restores the displaced master when the active window already holds it.
-//
-// Per-workspace displaced-master state lives in state.State so the toggle survives focus changes.
+// Swap promotes the active slave to master, or restores the displaced master.
+// Per-workspace displaced-master state is tracked in state.State so the toggle survives focus changes.
 type Swap struct {
 	hypr  *hypr.Client
 	state *state.State
@@ -20,7 +21,7 @@ func NewSwap(h *hypr.Client, s *state.State) *Swap {
 	return &Swap{hypr: h, state: s}
 }
 
-// Execute toggles master for the active window; floating windows are ignored.
+// Execute toggles master for the active window.
 func (s *Swap) Execute() (string, error) {
 	win, err := s.hypr.ActiveWindow()
 	if err != nil {

@@ -1,6 +1,9 @@
 package browser
 
+// snapshot.go writes snapshot artifacts and summarizes Firefox windows into launch-ready browser config.
+
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -18,14 +21,9 @@ import (
 var snapshotNamePattern = regexp.MustCompile(`[^A-Za-z0-9._-]+`)
 
 type browserWindowSummary struct {
-	SelectedTab          int                  `yaml:"selected_tab"`
-	TabCount             int                  `yaml:"tab_count"`
-	GroupCount           int                  `yaml:"group_count"`
-	SelectedTitle        string               `yaml:"selected_title,omitempty"`
-	SelectedURL          string               `yaml:"selected_url,omitempty"`
-	HyprOrderMatchesTabs bool                 `yaml:"hypr_order_matches_tabs"`
-	Browser              config.BrowserConfig `yaml:"-"`
-	Tabs                 []browserTabSummary  `yaml:"-"`
+	browserSnapshotWindow `yaml:",inline"`
+	Browser               config.BrowserConfig `yaml:"-"`
+	Tabs                  []browserTabSummary  `yaml:"-"`
 }
 
 type browserTabSummary struct {
@@ -69,15 +67,6 @@ type browserSnapshotWindow struct {
 	HyprOrderMatchesTabs bool   `yaml:"hypr_order_matches_tabs"`
 }
 
-// writeSnapshot persists window windowIndex of store under a slugified name.
-//
-// Layout under browserStateRoot():
-//
-//	<slug>/<timestamp>/snapshot.yaml  — human-readable summary + BrowserConfig
-//	<slug>/<timestamp>/session.json   — single-window session envelope (uncompressed)
-//	<slug>/latest                     — symlink to the newest <timestamp>
-//
-// Returns the absolute path to the new snapshot directory.
 func (b *Browser) writeSnapshot(name string, profile firefoxProfile, windowIndex int, store *firefoxSessionStore) (string, error) {
 	slug, err := slugifySnapshotName(name)
 	if err != nil {
@@ -112,14 +101,7 @@ func (b *Browser) writeSnapshot(name string, profile firefoxProfile, windowIndex
 			SessionFile: store.Source,
 			WindowIndex: windowIndex + 1,
 		},
-		Window: browserSnapshotWindow{
-			SelectedTab:          windowSummary.SelectedTab,
-			TabCount:             windowSummary.TabCount,
-			GroupCount:           windowSummary.GroupCount,
-			SelectedTitle:        windowSummary.SelectedTitle,
-			SelectedURL:          windowSummary.SelectedURL,
-			HyprOrderMatchesTabs: windowSummary.HyprOrderMatchesTabs,
-		},
+		Window:  windowSummary.browserSnapshotWindow,
 		Browser: windowSummary.Browser,
 		Tabs:    windowSummary.Tabs,
 	}
@@ -132,7 +114,7 @@ func (b *Browser) writeSnapshot(name string, profile firefoxProfile, windowIndex
 		return "", err
 	}
 
-	sessionData, err := snapshotSessionJSON(store.Raw, windowIndex)
+	sessionData, err := snapshotSessionJSON(store.Payload, windowIndex)
 	if err != nil {
 		return "", err
 	}
@@ -147,39 +129,31 @@ func (b *Browser) writeSnapshot(name string, profile firefoxProfile, windowIndex
 	return targetDir, nil
 }
 
-// snapshotSessionJSON builds a single-window session envelope suitable for writing back via encodeMozillaLZ4File.
-//
-// Envelope-level fields (version, session, global, maxSplitViewId, savedGroups) pass through verbatim so the
-// restored session looks identical to Firefox aside from the narrowed window list.
-func snapshotSessionJSON(raw firefoxSessionEnvelope, windowIndex int) ([]byte, error) {
-	if windowIndex < 0 || windowIndex >= len(raw.Windows) {
+// snapshotSessionJSON narrows the session to a single window, preserving all other top-level keys verbatim.
+func snapshotSessionJSON(payload []byte, windowIndex int) ([]byte, error) {
+	var doc map[string]json.RawMessage
+	if err := json.Unmarshal(payload, &doc); err != nil {
+		return nil, fmt.Errorf("unmarshal session envelope: %w", err)
+	}
+
+	var windows []json.RawMessage
+	if err := json.Unmarshal(doc["windows"], &windows); err != nil {
+		return nil, fmt.Errorf("unmarshal windows array: %w", err)
+	}
+	if windowIndex < 0 || windowIndex >= len(windows) {
 		return nil, fmt.Errorf("window index %d is out of range", windowIndex+1)
 	}
 
-	doc := map[string]any{
-		"windows":        []json.RawMessage{raw.Windows[windowIndex]},
-		"selectedWindow": 1,
-		"_closedWindows": []any{},
+	narrowed, err := json.Marshal([]json.RawMessage{windows[windowIndex]})
+	if err != nil {
+		return nil, err
 	}
-	if len(raw.Version) > 0 {
-		doc["version"] = json.RawMessage(raw.Version)
-	}
-	if len(raw.Session) > 0 {
-		doc["session"] = json.RawMessage(raw.Session)
-	}
-	if len(raw.Global) > 0 {
-		doc["global"] = json.RawMessage(raw.Global)
-	}
-	if len(raw.MaxSplitViewID) > 0 {
-		doc["maxSplitViewId"] = json.RawMessage(raw.MaxSplitViewID)
-	}
-	if len(raw.SavedGroups) > 0 {
-		doc["savedGroups"] = json.RawMessage(raw.SavedGroups)
-	}
+	doc["windows"] = narrowed
+	doc["selectedWindow"] = json.RawMessage(`1`)
+	doc["_closedWindows"] = json.RawMessage(`[]`)
 	return json.MarshalIndent(doc, "", "  ")
 }
 
-// updateLatestSnapshotLink atomically points baseDir/latest at snapshotID via a temp symlink + rename.
 func updateLatestSnapshotLink(baseDir, snapshotID string) error {
 	latest := filepath.Join(baseDir, "latest")
 	tmp := filepath.Join(baseDir, ".latest.tmp")
@@ -195,16 +169,9 @@ func updateLatestSnapshotLink(baseDir, snapshotID string) error {
 	return nil
 }
 
-// summarizeFirefoxWindow projects a session-store window into a snapshot summary and a launch-ready BrowserConfig.
-//
-// Grouping rules:
-//   - Pinned tabs -> BrowserConfig.Pinned (never assigned to a group).
-//   - Ungrouped visible tabs -> BrowserConfig.URLs.
-//   - Grouped tabs -> BrowserConfig.Groups, preserving declared order, then appending orphan groups referenced by
-//     tabs but missing from window.Groups (older session files).
-//
-// HyprOrderMatchesTabs is true when re-launching the BrowserConfig would reproduce the tab order.
-// Callers surface this to flag when URL-mode restore would scramble the layout.
+// summarizeFirefoxWindow projects a session-store window into a launch-ready BrowserConfig.
+// Pinned tabs go to Pinned, ungrouped visible to URLs, grouped to Groups.
+// HyprOrderMatchesTabs is true when URL-mode restore preserves the original tab order.
 func summarizeFirefoxWindow(window firefoxWindow) browserWindowSummary {
 	groupByID := make(map[string]firefoxGroup, len(window.Groups))
 	for _, group := range window.Groups {
@@ -229,6 +196,7 @@ func summarizeFirefoxWindow(window firefoxWindow) browserWindowSummary {
 	}
 
 	browserCfg := config.BrowserConfig{}
+	groupURLs := map[string][]string{}
 	for _, tab := range summaryTabs {
 		if tab.Hidden || tab.URL == "" {
 			continue
@@ -238,6 +206,8 @@ func summarizeFirefoxWindow(window firefoxWindow) browserWindowSummary {
 			browserCfg.Pinned = append(browserCfg.Pinned, tab.URL)
 		case tab.GroupID == "":
 			browserCfg.URLs = append(browserCfg.URLs, tab.URL)
+		default:
+			groupURLs[tab.GroupID] = append(groupURLs[tab.GroupID], tab.URL)
 		}
 	}
 
@@ -247,17 +217,12 @@ func summarizeFirefoxWindow(window firefoxWindow) browserWindowSummary {
 			continue
 		}
 		seenGroups[group.ID] = struct{}{}
-		groupCfg := config.BrowserGroup{
+		browserCfg.Groups = append(browserCfg.Groups, config.BrowserGroup{
 			Name:      groupName(group, group.ID),
 			Color:     group.Color,
 			Collapsed: group.Collapsed,
-		}
-		for _, tab := range summaryTabs {
-			if !tab.Hidden && tab.URL != "" && tab.GroupID == group.ID {
-				groupCfg.URLs = append(groupCfg.URLs, tab.URL)
-			}
-		}
-		browserCfg.Groups = append(browserCfg.Groups, groupCfg)
+			URLs:      groupURLs[group.ID],
+		})
 	}
 
 	for _, tab := range summaryTabs {
@@ -268,13 +233,10 @@ func summarizeFirefoxWindow(window firefoxWindow) browserWindowSummary {
 			continue
 		}
 		seenGroups[tab.GroupID] = struct{}{}
-		groupCfg := config.BrowserGroup{Name: firstNonEmpty(tab.Group, tab.GroupID)}
-		for _, candidate := range summaryTabs {
-			if !candidate.Hidden && candidate.URL != "" && candidate.GroupID == tab.GroupID {
-				groupCfg.URLs = append(groupCfg.URLs, candidate.URL)
-			}
-		}
-		browserCfg.Groups = append(browserCfg.Groups, groupCfg)
+		browserCfg.Groups = append(browserCfg.Groups, config.BrowserGroup{
+			Name: cmp.Or(tab.Group, tab.GroupID),
+			URLs: groupURLs[tab.GroupID],
+		})
 	}
 
 	var liveOrder []string
@@ -285,21 +247,19 @@ func summarizeFirefoxWindow(window firefoxWindow) browserWindowSummary {
 	}
 
 	return browserWindowSummary{
-		SelectedTab:          max(window.Selected, 1),
-		TabCount:             len(window.Tabs),
-		GroupCount:           len(window.Groups),
-		SelectedTitle:        selectedTabTitle(window),
-		SelectedURL:          selectedTabURL(window),
-		HyprOrderMatchesTabs: slices.Equal(browserCfg.AllURLs(), liveOrder),
-		Browser:              browserCfg,
-		Tabs:                 summaryTabs,
+		browserSnapshotWindow: browserSnapshotWindow{
+			SelectedTab:          max(window.Selected, 1),
+			TabCount:             len(window.Tabs),
+			GroupCount:           len(window.Groups),
+			SelectedTitle:        selectedTabTitle(window),
+			SelectedURL:          selectedTabURL(window),
+			HyprOrderMatchesTabs: slices.Equal(browserCfg.AllURLs(), liveOrder),
+		},
+		Browser: browserCfg,
+		Tabs:    summaryTabs,
 	}
 }
 
-// resolveSnapshotDir finds the on-disk directory for a snapshot.
-//
-// snapshotID may be "" to mean latest.
-// Both the current and legacy state roots are searched so snapshots taken before the hyprd rename still resolve.
 func resolveSnapshotDir(name, snapshotID string) (string, error) {
 	slug, err := slugifySnapshotName(name)
 	if err != nil {
@@ -363,7 +323,6 @@ func latestSnapshotDir(baseDir string) (string, error) {
 	return filepath.Join(baseDir, dirs[len(dirs)-1]), nil
 }
 
-// browserStateRoot returns $XDG_STATE_HOME/hyprd/browser-sessions, defaulting to ~/.local/state/hyprd/browser-sessions.
 func browserStateRoot() (string, error) {
 	if stateHome := os.Getenv("XDG_STATE_HOME"); stateHome != "" {
 		return filepath.Join(stateHome, "hyprd", "browser-sessions"), nil
@@ -375,9 +334,6 @@ func browserStateRoot() (string, error) {
 	return filepath.Join(home, ".local", "state", "hyprd", "browser-sessions"), nil
 }
 
-// legacyBrowserStateRoot is the pre-rename location.
-//
-// Still read so old snapshots keep resolving; new snapshots are only written under browserStateRoot().
 func legacyBrowserStateRoot() (string, error) {
 	home, err := os.UserHomeDir()
 	if err != nil {

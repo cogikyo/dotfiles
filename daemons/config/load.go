@@ -1,5 +1,7 @@
 package config
 
+// load.go loads daemon YAML files and falls back to compiled defaults on error.
+
 import (
 	"errors"
 	"fmt"
@@ -11,8 +13,6 @@ import (
 )
 
 // Load returns the combined configuration for every daemon.
-//
-// Each per-daemon loader falls back to its Default* values when the YAML is missing or malformed.
 // Errors are logged to stderr and never fatal.
 func Load() *Config {
 	return &Config{
@@ -22,7 +22,7 @@ func Load() *Config {
 	}
 }
 
-// LoadEww loads ewwd config from configs/ewwd.yaml, falling back to DefaultEww.
+// LoadEww loads ewwd config from configs/ewwd.yaml.
 func LoadEww() EwwConfig {
 	cfg := DefaultEww()
 	if err := loadYAMLFile(ConfigPath("ewwd"), &cfg); err != nil {
@@ -31,9 +31,8 @@ func LoadEww() EwwConfig {
 	return cfg
 }
 
-// LoadHypr loads hyprd config from configs/hyprd.yaml, falling back to DefaultHypr.
-//
-// AppSounds, UrgencySounds, and SilentApps are lowercased for case-insensitive libnotify matching.
+// LoadHypr loads hyprd config from configs/hyprd.yaml.
+// Sound and app maps are lowercased for case-insensitive libnotify matching.
 func LoadHypr() HyprConfig {
 	cfg := DefaultHypr()
 	if err := loadYAMLFile(ConfigPath("hyprd"), &cfg); err != nil {
@@ -45,8 +44,7 @@ func LoadHypr() HyprConfig {
 	return cfg
 }
 
-// LoadNewtab returns newtab defaults. The newtab daemon resolves its Firefox DB at runtime
-// by scanning profile roots, so there is no YAML config to load.
+// LoadNewtab returns newtab defaults (no YAML; Firefox DB is resolved at runtime).
 func LoadNewtab() NewtabConfig {
 	return DefaultNewtab()
 }

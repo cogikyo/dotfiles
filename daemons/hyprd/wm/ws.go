@@ -1,4 +1,12 @@
+// Package wm implements hyprd window-management commands backed by Hyprland IPC and shared state.
+//
+// It:
+//  1. Applies workspace and layout mutations (ws, split, swap, hide).
+//  2. Manages higher-order layouts (monocle and three-body).
+//  3. Resolves focus and recovery flows for hidden or shadowed windows.
 package wm
+
+// ws.go handles workspace switching and cross-workspace active-window moves.
 
 import (
 	"encoding/json"
@@ -16,10 +24,7 @@ const (
 	maxManagedWorkspace = 5
 )
 
-// WS dispatches workspace navigation and per-workspace window moves.
-//
-// "up"/"down" shift the active window between managed workspaces, clamped to [min,max]ManagedWorkspace.
-// A numeric arg switches the active workspace and focuses its master.
+// WS dispatches workspace switches (numeric) and window moves ("up"/"down") across managed workspaces.
 type WS struct {
 	hypr  *hypr.Client
 	state *state.State
@@ -29,11 +34,8 @@ func NewWS(h *hypr.Client, s *state.State) *WS {
 	return &WS{hypr: h, state: s}
 }
 
-// Execute runs a workspace command.
-//
-// wsArg accepts "up", "down", or a workspace ID as a decimal string.
-// Switching across the 1↔5 boundary animates as `slidevert` to match the virtual row/column layout.
-// Triggers a background refresh via session.EnsureBG on switch.
+// Execute accepts "up", "down", or a workspace ID.
+// Switches across the 1↔5 boundary animate as `slidevert` to match the virtual row/column layout.
 func (w *WS) Execute(wsArg string) (string, error) {
 	switch wsArg {
 	case "up":

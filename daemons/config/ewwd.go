@@ -1,16 +1,17 @@
 package config
 
+// ewwd.go declares ewwd provider settings and their default values.
 import "time"
 
-// EwwConfig holds all provider-specific settings for the ewwd daemon.
+// EwwConfig holds settings for every ewwd provider.
 type EwwConfig struct {
-	Windows    []string         `yaml:"windows"` // eww window names to open on startup
-	Weather    WeatherConfig    `yaml:"weather"`
-	Timer      TimerConfig      `yaml:"timer"`
-	Audio      AudioConfig      `yaml:"audio"`
-	Date       DateConfig       `yaml:"date"`
-	GPU        GPUConfig        `yaml:"gpu"`
-	Network    NetworkConfig    `yaml:"network"`
+	Windows []string      `yaml:"windows"` // eww window names to open on startup
+	Weather WeatherConfig `yaml:"weather"`
+	Timer   TimerConfig   `yaml:"timer"`
+	Audio   AudioConfig   `yaml:"audio"`
+	Date    DateConfig    `yaml:"date"`
+	GPU     GPUConfig     `yaml:"gpu"`
+	Network NetworkConfig `yaml:"network"`
 }
 
 // WeatherConfig configures the OpenWeatherMap polling loop.
@@ -26,10 +27,9 @@ type TimerConfig struct {
 	MinAlarmHours     int `yaml:"min_alarm_hours"`     // minimum allowed alarm offset, in hours
 }
 
-// AudioConfig controls PulseAudio source/sink volumes with per-device aliases.
+// AudioConfig controls PulseAudio volume with per-device aliases.
 //
-// SourceMax may exceed 100 because PulseAudio allows source boost beyond
-// unity gain; SinkMax is typically capped at 100 to avoid clipping.
+// SourceMax may exceed 100 (PulseAudio allows boost beyond unity gain).
 type AudioConfig struct {
 	SourceOffset        int               `yaml:"source_offset"`         // % subtracted from source volume before display
 	SourceMax           int               `yaml:"source_max"`            // maximum source volume %, may exceed 100 (boost)
@@ -58,7 +58,7 @@ type NetworkConfig struct {
 	PollInterval time.Duration `yaml:"poll_interval"`
 }
 
-// DefaultEww returns sensible defaults for the ewwd daemon.
+// DefaultEww returns ewwd defaults.
 func DefaultEww() EwwConfig {
 	return EwwConfig{
 		Windows: []string{"today", "workspaces", "computer", "music", "player"},

@@ -1,5 +1,6 @@
 package daemon
 
+// client.go implements a Unix socket client for request/response and event streaming.
 import (
 	"bufio"
 	"io"
@@ -13,14 +14,12 @@ type Client struct {
 	SocketPath string
 }
 
-// NewClient returns a Client bound to socketPath. The socket is not dialed until use.
+// NewClient returns a Client bound to socketPath.
 func NewClient(socketPath string) *Client {
 	return &Client{SocketPath: socketPath}
 }
 
-// Send dials the daemon, writes command, and returns the first response read.
-//
-// Read deadline is 15s and the response is capped at 64 KiB. Use Stream for long-running or larger payloads.
+// Send writes command and returns the first response (15s deadline, 64 KiB cap).
 func (c *Client) Send(command string) (string, error) {
 	conn, err := net.Dial("unix", c.SocketPath)
 	if err != nil {
@@ -44,9 +43,7 @@ func (c *Client) Send(command string) (string, error) {
 	return string(buf[:n]), nil
 }
 
-// Stream sends command and copies newline-delimited response lines to stdout until the server closes.
-//
-// Intended for subscribe commands.
+// Stream sends command and copies newline-delimited response lines to stdout until EOF.
 func (c *Client) Stream(command string) error {
 	conn, err := net.Dial("unix", c.SocketPath)
 	if err != nil {
@@ -72,8 +69,6 @@ func (c *Client) Stream(command string) error {
 }
 
 // IsRunning returns true when the daemon answers "ping" with "pong".
-//
-// Dial or read failures are treated as not-running.
 func (c *Client) IsRunning() bool {
 	conn, err := net.Dial("unix", c.SocketPath)
 	if err != nil {

@@ -1,6 +1,6 @@
-// Package windows provides class/title matching and tiling helpers over hypr.Window values.
-// Shared by the wm and session packages.
 package windows
+
+// match.go implements class/title matching used by focus, three-body, and session targeting flows.
 
 import (
 	"strings"

@@ -1,10 +1,17 @@
-// Package browser exposes Firefox session inspection and restoration for hyprd.
+// Package browser provides Firefox session snapshot and restore primitives for hyprd.
 //
-// Reads Firefox's mozlz4-compressed sessionstore files, produces named snapshots, and restores a saved set of tabs
-// either by URL (--mode urls) or by replacing the session file wholesale (--mode exact).
+// It:
+//  1. Reads Firefox profile and sessionstore data.
+//  2. Creates named snapshots from selected browser windows.
+//  3. Restores snapshots by URL replay or exact session-file replacement.
 package browser
 
+// browser.go defines the Browser command surface and shared subcommand dispatch helpers.
+
 import (
+	"dotfiles/daemons/config"
+	"dotfiles/daemons/hyprd/hypr"
+	"dotfiles/daemons/hyprd/state"
 	"errors"
 	"fmt"
 	"os"
@@ -12,15 +19,11 @@ import (
 	"strconv"
 	"strings"
 
-	"dotfiles/daemons/config"
-	"dotfiles/daemons/hyprd/hypr"
-	"dotfiles/daemons/hyprd/state"
-
 	"gopkg.in/yaml.v3"
 )
 
 const (
-	browserUsage         = "usage: browser {windows|snapshot|show|hypr|restore} ..."
+	browserUsage         = "usage: browser {windows|snapshot|show|hypr|restore}"
 	browserWindowsUsage  = "usage: browser windows [--all] [--profile <name|path>]"
 	browserSnapshotUsage = "usage: browser snapshot <name> [active|largest|index] [--profile <name|path>]"
 	browserShowUsage     = "usage: browser show <name> [snapshot]"
@@ -28,22 +31,17 @@ const (
 	browserRestoreUsage  = "usage: browser restore <name> [snapshot] [--mode urls|exact] [--profile <name|path>] [--force] [--dry-run]"
 )
 
-// Browser is the hyprd subcommand handler for Firefox session inspection, snapshotting, and restoration.
 type Browser struct {
 	hypr  *hypr.Client
 	state *state.State
 }
 
-// NewBrowser returns a Browser using h for active-window queries and s for the configured browser command.
-//
-// Both may be nil; helpers then fall back to firefoxBinary and skip Hypr active-window detection.
+// NewBrowser returns a Browser wired to the given Hyprland and state backends (either may be nil).
 func NewBrowser(h *hypr.Client, s *state.State) *Browser {
 	return &Browser{hypr: h, state: s}
 }
 
-// Execute dispatches a browser subcommand.
-//
-// args is the raw argument string following "browser" (e.g. "snapshot work active").
+// Execute dispatches a browser subcommand (e.g. "snapshot work active").
 func (b *Browser) Execute(args string) (string, error) {
 	parts := strings.Fields(args)
 	if len(parts) == 0 {
@@ -66,9 +64,7 @@ func (b *Browser) Execute(args string) (string, error) {
 	}
 }
 
-// ResolveLaunchConfig materializes cfg by pulling tab/group data from the snapshot named in cfg.Snapshot.
-//
-// If the snapshot is missing but cfg already lists URLs, cfg is returned as-is so launch proceeds from inline config.
+// ResolveLaunchConfig populates cfg from the named snapshot, falling back to inline URLs if the snapshot is missing.
 func (b *Browser) ResolveLaunchConfig(cfg config.BrowserConfig) (config.BrowserConfig, error) {
 	if cfg.Snapshot == "" {
 		return cfg, nil
@@ -85,9 +81,7 @@ func (b *Browser) ResolveLaunchConfig(cfg config.BrowserConfig) (config.BrowserC
 	return snapshotCfg, nil
 }
 
-// SnapshotConfig returns the BrowserConfig derived from the first window of the named snapshot.
-//
-// snapshotID may be "" for latest. Errors when the snapshot has no windows.
+// SnapshotConfig returns the BrowserConfig for the first window of the named snapshot.
 func (b *Browser) SnapshotConfig(name, snapshotID string) (config.BrowserConfig, error) {
 	_, store, err := b.loadSnapshotSession(name, snapshotID)
 	if err != nil {
@@ -99,14 +93,11 @@ func (b *Browser) SnapshotConfig(name, snapshotID string) (config.BrowserConfig,
 	return summarizeFirefoxWindow(store.Windows[0]).Browser, nil
 }
 
-// UsesExactRestore reports whether cfg opts into session-file replacement (mode "exact") over per-URL launch.
 func (b *Browser) UsesExactRestore(cfg config.BrowserConfig) bool {
 	return browserMode(cfg) == "exact"
 }
 
-// RestoreConfiguredSnapshot performs an exact restore driven by cfg.
-//
-// Requires cfg.Mode == "exact" and a non-empty cfg.Snapshot. dryRun prints the planned actions without touching disk.
+// RestoreConfiguredSnapshot performs an exact session-file restore using cfg.Snapshot.
 func (b *Browser) RestoreConfiguredSnapshot(cfg config.BrowserConfig, dryRun bool) (string, error) {
 	if !b.UsesExactRestore(cfg) {
 		return "", fmt.Errorf("browser restore mode %q is not exact", browserMode(cfg))
@@ -115,7 +106,7 @@ func (b *Browser) RestoreConfiguredSnapshot(cfg config.BrowserConfig, dryRun boo
 		return "", fmt.Errorf("browser exact restore requires snapshot")
 	}
 
-	dir, store, err := b.loadSnapshotSession(cfg.Snapshot, "")
+	dir, _, err := b.loadSnapshotSession(cfg.Snapshot, "")
 	if err != nil {
 		return "", err
 	}
@@ -123,7 +114,7 @@ func (b *Browser) RestoreConfiguredSnapshot(cfg config.BrowserConfig, dryRun boo
 	if err != nil {
 		return "", err
 	}
-	return b.restoreSnapshotExact(cfg.Snapshot, dir, store, profile, cfg.Force, dryRun)
+	return b.restoreSnapshotExact(cfg.Snapshot, dir, profile, cfg.Force, dryRun)
 }
 
 func (b *Browser) executeWindows(args []string) (string, error) {
@@ -261,9 +252,6 @@ func (b *Browser) executeHypr(args []string) (string, error) {
 	return strings.TrimRight(string(out), "\n"), nil
 }
 
-// parseProfileFlag extracts --profile <val> or --profile=<val> from args.
-//
-// Returns the value, the remaining args with the flag stripped, and usage as an error when --profile lacks a value.
 func parseProfileFlag(args []string, usage string) (profile string, rest []string, err error) {
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -304,13 +292,4 @@ func shellQuoteCommand(parts []string) string {
 		quoted[i] = strconv.Quote(part)
 	}
 	return strings.Join(quoted, " ")
-}
-
-func firstNonEmpty(values ...string) string {
-	for _, value := range values {
-		if value != "" {
-			return value
-		}
-	}
-	return ""
 }

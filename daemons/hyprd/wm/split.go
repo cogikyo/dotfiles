@@ -1,5 +1,7 @@
 package wm
 
+// split.go applies and cycles configured mfact presets for the current tiling layout.
+
 import (
 	"fmt"
 
@@ -8,7 +10,7 @@ import (
 	"dotfiles/daemons/hyprd/windows"
 )
 
-// Split controls the master/slave mfact ratio via named presets (xs, default, lg) from cfg.Split.
+// Split controls the master/slave mfact ratio via named presets from cfg.Split.
 type Split struct {
 	hypr  *hypr.Client
 	state *state.State
@@ -18,14 +20,7 @@ func NewSplit(h *hypr.Client, s *state.State) *Split {
 	return &Split{hypr: h, state: s}
 }
 
-// Execute applies or cycles the master/slave split ratio.
-//
-// Flags:
-//   - "xs"/"-x", "lg"/"-l", "default" — set that preset.
-//   - "reapply"/"-r" — re-send the current preset and recenter the cursor.
-//   - anything else — cycle xs → default → lg → xs.
-//
-// Floating windows are ignored.
+// Execute applies or cycles the split ratio: "xs"/"-x", "lg"/"-l", "default", "reapply"/"-r", or cycle.
 func (s *Split) Execute(flag string) (string, error) {
 	win, err := s.hypr.ActiveWindow()
 	if err != nil {

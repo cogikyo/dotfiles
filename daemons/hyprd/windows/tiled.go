@@ -1,4 +1,12 @@
+// Package windows provides reusable window-selection helpers over Hyprland client lists.
+//
+// It:
+//  1. Filters and orders tiled windows for master/slave layouts.
+//  2. Matches windows by class/title for command targeting.
+//  3. Exposes geometry helpers reused by wm and session packages.
 package windows
+
+// tiled.go implements tiled-window ordering, master/slave extraction, and cursor-centering helpers.
 
 import (
 	"fmt"
@@ -8,7 +16,7 @@ import (
 	"dotfiles/daemons/hyprd/hypr"
 )
 
-// CenterCursor moves the cursor to the center of the active window; no-op when there is none.
+// CenterCursor moves the cursor to the center of the active window.
 func CenterCursor(h *hypr.Client) {
 	win, err := h.ActiveWindow()
 	if err != nil || win == nil {
@@ -52,8 +60,7 @@ func GetMaster(h *hypr.Client, wsID int, ignoredClasses []string) (*hypr.Window,
 	return &tiled[0], nil
 }
 
-// GetSlaves returns tiled windows right of the master, sorted by Y.
-// Expects tiled as returned by GetTiledWindows (X-sorted, master at index 0).
+// GetSlaves returns tiled windows right of the master, sorted by Y position.
 func GetSlaves(tiled []hypr.Window) []hypr.Window {
 	if len(tiled) < 2 {
 		return nil
@@ -71,6 +78,7 @@ func GetSlaves(tiled []hypr.Window) []hypr.Window {
 	return slaves
 }
 
+// IsMaster reports whether addr is the leftmost tiled window.
 func IsMaster(tiled []hypr.Window, addr string) bool {
 	return len(tiled) > 0 && tiled[0].Address == addr
 }

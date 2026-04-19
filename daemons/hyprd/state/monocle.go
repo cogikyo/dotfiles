@@ -1,8 +1,10 @@
 package state
 
+// monocle.go provides monocle state accessors and shared window-close cleanup across layout maps.
+
 import "slices"
 
-// GetMonocle returns a deep copy of the workspace's MonocleState, or nil when not in monocle mode.
+// GetMonocle returns a deep copy of the workspace's monocle state, or nil if inactive.
 func (s *State) GetMonocle(ws int) *MonocleState {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -27,7 +29,7 @@ func (s *State) ClearMonocle(ws int) {
 	delete(s.Monocle, ws)
 }
 
-// AllMonocle returns a deep copy of every active monocle workspace keyed by workspace ID.
+// AllMonocle returns a deep copy of every active monocle state keyed by workspace.
 func (s *State) AllMonocle() map[int]*MonocleState {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -40,10 +42,7 @@ func (s *State) AllMonocle() map[int]*MonocleState {
 	return out
 }
 
-// ClearWindowState purges every trace of addr from the store on window-close.
-//
-// Clears Hidden, any DisplacedMasters mapping, drops the containing ThreeBody entry, and removes addr from any
-// MonocleState (deleting the state entirely when it empties).
+// ClearWindowState purges all traces of addr from Hidden, DisplacedMasters, ThreeBody, and Monocle on window-close.
 //
 // Returns the removed ThreeBodyState so the caller can restore the surviving pair, or nil if none matched.
 func (s *State) ClearWindowState(addr string) *ThreeBodyState {

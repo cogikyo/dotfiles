@@ -1,5 +1,7 @@
 package notify
 
+// handler.go routes notify events by source and executes the sound-plus-dunst dispatch pipeline.
+
 import (
 	"dotfiles/daemons/config"
 	"fmt"
@@ -16,13 +18,6 @@ import (
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
 // Handle dispatches a NotifyRequest to the per-source handler.
-//
-// Event vocabularies:
-//   - claude: start, subagent, complete, idle, permission.
-//   - codex: agent-turn-start, agent-turn-complete, idle, approval-requested.
-//   - dunst: script, approval-requested.
-//   - kitty: cmd-finish.
-//   - send: free-form.
 func (n *Notifier) Handle(req NotifyRequest) error {
 	switch req.Source {
 	case "claude":
@@ -44,7 +39,6 @@ func (n *Notifier) Handle(req NotifyRequest) error {
 // │ source handlers                                                              │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// handleSend forwards a notify-send-style request with no style lookup, sound, or focus action.
 func (n *Notifier) handleSend(req NotifyRequest) error {
 	urgency := req.Urgency
 	if urgency == "" {
@@ -176,8 +170,7 @@ func (n *Notifier) handleCodex(req NotifyRequest) error {
 	}
 }
 
-// handleKitty fires after a shell command finishes in a kitty window.
-// Claude invocations are skipped — those go through the richer claude hook path.
+// handleKitty skips claude commands (handled via the richer hook path).
 func (n *Notifier) handleKitty(req NotifyRequest) error {
 	command := strings.TrimSpace(req.Command)
 	if command == "" || strings.HasPrefix(command, "claude") {
@@ -230,8 +223,7 @@ func (n *Notifier) handleDunst(req NotifyRequest) error {
 // │ dispatch pipeline                                                            │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// dispatch honors an optional pre-send delay, plays the sound, then sends the dunstify notification.
-// Delay debounces rapid paired events (e.g. approval-requested arriving alongside a start event).
+// dispatch plays the sound and sends the dunstify notification, honoring an optional debounce delay.
 func (n *Notifier) dispatch(spec notificationSpec, ctx *kittyContext) error {
 	if spec.Delay > 0 {
 		time.Sleep(spec.Delay)
@@ -244,9 +236,7 @@ func (n *Notifier) dispatch(spec notificationSpec, ctx *kittyContext) error {
 	return n.sendDunst(spec, ctx)
 }
 
-// sendDunst invokes dunstify.
-// For focus-action notifications it re-arms on timeout so it stays visible until the user focuses or dismisses it.
-// Non-focus specs run detached and return.
+// sendDunst invokes dunstify, re-arming focus-action notifications on timeout until dismissed.
 func (n *Notifier) sendDunst(spec notificationSpec, ctx *kittyContext) error {
 	style := n.style(spec.Style)
 	persistent := style.Persistent
@@ -282,9 +272,7 @@ func (n *Notifier) sendDunst(spec notificationSpec, ctx *kittyContext) error {
 	return nil
 }
 
-// buildDunstArgs assembles the dunstify argv from spec + style + context.
-// Non-nil spec fields override style defaults.
-// Replace-ID = ctx.WindowID+100000 so repeat notifications for the same pane coalesce.
+// buildDunstArgs assembles the dunstify argv; non-nil spec fields override style defaults.
 func (n *Notifier) buildDunstArgs(spec notificationSpec, ctx *kittyContext, style config.NotifyStyle) []string {
 	app := strings.TrimSpace(spec.App)
 	if app == "" {
@@ -334,8 +322,6 @@ func (n *Notifier) buildDunstArgs(spec notificationSpec, ctx *kittyContext, styl
 	return args
 }
 
-// playSound runs paplay detached on <SoundsDir>/<name>.ogg.
-// "" and "none" mean no sound; volume=0 uses the paplay default.
 func (n *Notifier) playSound(name string, volume int) error {
 	if name == "" || name == "none" {
 		return nil
@@ -354,9 +340,7 @@ func (n *Notifier) playSound(name string, volume int) error {
 // │ config lookups                                                               │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// soundForDunst picks a sound for a dunst script event.
-// Silent apps and kitty messages matching KittySilentPatterns return "".
-// App-specific mappings win over urgency-level mappings.
+// soundForDunst picks a sound for a dunst script event (app mappings win over urgency mappings).
 func (n *Notifier) soundForDunst(app, summary, body, urgency string) string {
 	if n.isSilentApp(app) {
 		return ""

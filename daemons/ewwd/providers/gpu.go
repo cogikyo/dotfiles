@@ -1,5 +1,6 @@
 package providers
 
+// gpu.go samples AMD GPU counters from sysfs and formats them for widget display.
 import (
 	"context"
 	"fmt"
@@ -12,17 +13,16 @@ import (
 	"dotfiles/daemons/config"
 )
 
-// GPUState is an AMD GPU metrics snapshot. All numeric fields ship as pre-formatted strings.
+// GPUState fields are pre-formatted strings for direct statusbar rendering.
 type GPUState struct {
-	GPUBusy   string `json:"gpu_busy"`   // utilization percent
-	MemBusy   string `json:"mem_busy"`   // memory controller utilization percent
-	MCLK      string `json:"mclk"`       // memory clock in MHz
-	MCLKLevel string `json:"mclk_level"` // active memory clock level (0-N)
-	VRAM      string `json:"vram"`       // VRAM usage percent
-	Used      string `json:"used"`       // VRAM used in bytes
+	GPUBusy   string `json:"gpu_busy"`
+	MemBusy   string `json:"mem_busy"`
+	MCLK      string `json:"mclk"`
+	MCLKLevel string `json:"mclk_level"`
+	VRAM      string `json:"vram"`
+	Used      string `json:"used"`
 }
 
-// GPU polls AMD GPU metrics out of sysfs device attributes (config.DevicePath).
 type GPU struct {
 	state  StateSetter
 	config config.GPUConfig
@@ -80,7 +80,6 @@ func (g *GPU) read() *GPUState {
 	gpuBusy := readFile(path + "/gpu_busy_percent")
 	memBusy := readFile(path + "/mem_busy_percent")
 
-	// pp_dpm_mclk format: "<level>: <freq>Mhz[ *]" per line, '*' marks the active level.
 	mclkData := readFile(path + "/pp_dpm_mclk")
 	mclk, mclkLevel := parseMCLK(mclkData)
 

@@ -1,5 +1,7 @@
 package main
 
+// events.go consumes Hyprland event-socket lines and mirrors them into state plus subscriber updates.
+
 import (
 	"bufio"
 	"encoding/json"
@@ -16,9 +18,7 @@ import (
 	"dotfiles/daemons/hyprd/state"
 )
 
-// EventLoop mirrors Hyprland's event stream into daemon state and fans out workspace changes to subscribers.
-//
-// Shutdown is driven exclusively by closing the done channel passed at construction.
+// EventLoop mirrors Hyprland's event stream into daemon state and notifies subscribers.
 type EventLoop struct {
 	hypr  *hypr.Client
 	state *state.State
@@ -35,9 +35,7 @@ func NewEventLoop(hypr *hypr.Client, state *state.State, subs *daemon.Subscripti
 	}
 }
 
-// Run dials Hyprland's event socket, seeds state from a one-shot query, then dispatches events until shutdown.
-//
-// A scanner error during shutdown is treated as normal termination.
+// Run dials Hyprland's event socket, seeds state, then dispatches events until shutdown.
 func (e *EventLoop) Run() error {
 	socketPath := e.hypr.EventSocketPath()
 
@@ -102,7 +100,6 @@ func (e *EventLoop) updateOccupied() error {
 		return err
 	}
 
-	// exclude special workspaces (id <= 0): scratchpads, shadow, etc.
 	wsSet := make(map[int]bool, len(clients))
 	for _, c := range clients {
 		if c.Workspace.ID > 0 {
@@ -114,8 +111,11 @@ func (e *EventLoop) updateOccupied() error {
 	return nil
 }
 
-// handleEvent parses an "event>>data" line and applies it to state.
-// Payload schema: https://wiki.hypr.land/IPC/ — unrecognized events are dropped.
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ Event dispatch                                                               │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
+// handleEvent dispatches a Hyprland "event>>data" line.
 func (e *EventLoop) handleEvent(line string) {
 	event, data, ok := strings.Cut(line, ">>")
 	if !ok {
@@ -124,7 +124,6 @@ func (e *EventLoop) handleEvent(line string) {
 
 	switch event {
 	case "workspace", "workspacev2":
-		// workspacev2 payload is "id,name"; workspace is just "id".
 		wsStr := data
 		if idx := strings.Index(data, ","); idx > 0 {
 			wsStr = data[:idx]
@@ -135,7 +134,6 @@ func (e *EventLoop) handleEvent(line string) {
 		}
 
 	case "focusedmon":
-		// payload is "monname,workspaceid".
 		if idx := strings.LastIndex(data, ","); idx >= 0 {
 			if ws, err := strconv.Atoi(data[idx+1:]); err == nil {
 				e.state.SetWorkspace(ws)
@@ -148,13 +146,11 @@ func (e *EventLoop) handleEvent(line string) {
 		e.notifyWorkspace()
 
 	case "closewindow":
-		// closewindow emits bare hex (no 0x prefix).
-		addr := data
+		addr := data // closewindow emits bare hex (no 0x prefix)
 		if !strings.HasPrefix(addr, "0x") {
 			addr = "0x" + addr
 		}
-		// Three-body / monocle cleanup must run before ClearWindowState wipes the entries they read.
-		e.handleThreeBodyClose(addr)
+		e.handleThreeBodyClose(addr) // must run before ClearWindowState wipes the entries
 		e.handleMonocleClose(addr)
 		e.state.ClearWindowState(addr)
 		e.updateOccupied()
@@ -162,10 +158,7 @@ func (e *EventLoop) handleEvent(line string) {
 	}
 }
 
-// handleThreeBodyClose dissolves a three-body triple when any member closes.
-// If a visible member (active/master) closes, the hidden shadow is pulled back before dissolving.
-//
-// Caller contract: run before ClearWindowState, which wipes the entries this reads.
+// handleThreeBodyClose dissolves a three-body triple when any member closes, pulling the shadow back if needed.
 func (e *EventLoop) handleThreeBodyClose(addr string) {
 	for ws, tb := range e.state.AllThreeBody() {
 		if tb.Shadow == addr {
@@ -181,7 +174,6 @@ func (e *EventLoop) handleThreeBodyClose(addr string) {
 }
 
 // handleMonocleClose restores displaced windows when the focused monocle window closes.
-// Hidden members that close on the special workspace are swept later by ClearWindowState.
 func (e *EventLoop) handleMonocleClose(addr string) {
 	for ws, ms := range e.state.AllMonocle() {
 		if ms.Focused != addr {

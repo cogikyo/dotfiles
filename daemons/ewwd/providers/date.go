@@ -1,25 +1,24 @@
 package providers
 
+// date.go publishes wall-clock date/time fields and age-derived display metrics.
+
 import (
 	"context"
-	"time"
-
 	"dotfiles/daemons/config"
+	"time"
 )
 
-// DateState is the formatted date/time plus weeks-alive counter for the statusbar.
 type DateState struct {
 	Weekday      string `json:"weekday"`
 	WeekdayShort string `json:"weekday_short"`
 	Month        string `json:"month"`
 	MonthShort   string `json:"month_short"`
-	Day          string `json:"day"`           // zero-padded
-	ClockHour    string `json:"clock_hour"`    // Nerd Font clockface glyph
-	ClockMinute  string `json:"clock_minute"`  // Nerd Font clockface glyph, 5-minute bucket
-	WeeksAlive   int    `json:"weeks_alive"`   // weeks since config.BirthDate
+	Day          string `json:"day"`
+	ClockHour    string `json:"clock_hour"`
+	ClockMinute  string `json:"clock_minute"`
+	WeeksAlive   int    `json:"weeks_alive"`
 }
 
-// Date ticks once a minute, aligned to the top of each minute.
 type Date struct {
 	state     StateSetter
 	done      chan struct{}
@@ -27,7 +26,7 @@ type Date struct {
 	birthDate time.Time
 }
 
-// NewDate constructs a Date provider, falling back to 1996-02-26 when cfg.BirthDate is unparseable.
+// NewDate constructs a Date provider, falling back to 1996-02-26 if cfg.BirthDate is unparseable.
 func NewDate(state StateSetter, cfg config.DateConfig) Provider {
 	birthDate, err := time.Parse("2006-01-02", cfg.BirthDate)
 	if err != nil {
@@ -53,7 +52,7 @@ func (d *Date) Start(ctx context.Context, notify func(data any)) error {
 	notify(state)
 
 	for {
-		// Align wake-up to the top of the next minute so the clock updates crisply.
+		// Align to the top of each minute.
 		now := time.Now()
 		sleepDuration := time.Duration(60-now.Second())*time.Second - time.Duration(now.Nanosecond())
 		if sleepDuration <= 0 {

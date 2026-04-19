@@ -1,12 +1,12 @@
-// Package main implements ewwd, the system-utilities daemon feeding the eww statusbar.
+// Package main implements ewwd, the daemon that publishes system state for eww widgets.
 //
-// Architecture: Daemon (lifecycle, command routing), State (thread-safe store), and a set of
-// Provider goroutines that each monitor a subsystem and publish updates to subscribers over
-// a Unix socket.
-//
-// Run `ewwd help` for the CLI surface.
+// It:
+//   - starts providers and keeps shared widget state synchronized
+//   - serves query, subscribe, and action commands over a Unix socket
+//   - exposes a CLI for daemon lifecycle and provider actions
 package main
 
+// main.go contains the ewwd CLI entrypoint and command routing.
 import (
 	"dotfiles/daemons/daemon"
 	"fmt"
@@ -59,7 +59,7 @@ func runDaemon() {
 	}
 }
 
-// cmdStatus prints "running"/"not running" (or state JSON with --json/-j) and exits non-zero when unreachable.
+// cmdStatus prints "running"/"not running" and exits non-zero when unreachable.
 func cmdStatus() {
 	jsonOutput := false
 	for _, arg := range os.Args[2:] {

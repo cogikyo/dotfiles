@@ -1,5 +1,7 @@
 package browser
 
+// browser_test.go covers snapshot summarization and helper selection behavior for browser restore logic.
+
 import (
 	"testing"
 

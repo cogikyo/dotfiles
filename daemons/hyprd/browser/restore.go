@@ -1,5 +1,7 @@
 package browser
 
+// restore.go implements browser restore flows, including dry-runs, profile backup, and exact session injection.
+
 import (
 	"fmt"
 	"os"
@@ -69,13 +71,9 @@ func (b *Browser) executeRestore(args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return b.restoreSnapshotExact(name, dir, store, profile, force, dryRun)
+	return b.restoreSnapshotExact(name, dir, profile, force, dryRun)
 }
 
-// restoreSnapshotURLs relaunches the snapshot's first-window tabs by invoking the browser once per URL.
-//
-// The first tab uses --new-window, the rest --new-tab.
-// The 200ms sleep gives Firefox time to attach later tabs to the new window instead of spawning separate ones.
 func (b *Browser) restoreSnapshotURLs(store *firefoxSessionStore, dryRun bool) (string, error) {
 	if len(store.Windows) == 0 {
 		return "", fmt.Errorf("snapshot has no windows")
@@ -115,17 +113,7 @@ func (b *Browser) restoreSnapshotURLs(store *firefoxSessionStore, dryRun bool) (
 	return fmt.Sprintf("restored urls: %d tabs", len(tabs)), nil
 }
 
-// restoreSnapshotExact replaces the profile's session files with the snapshot and relaunches Firefox.
-//
-// Required sequence:
-//  1. Stop Firefox (or refuse unless force=true).
-//  2. Move sessionstore.jsonlz4, sessionCheckpoints.json, and sessionstore-backups/ into a timestamped backup.
-//  3. Write the snapshot payload to sessionstore.jsonlz4 and mirror it to sessionstore-backups/recovery{,.bak}lz4.
-//  4. Write defaultSessionCheckpoints so Firefox trusts the replacement.
-//  5. Launch the configured browser against this profile.
-//
-// store is unused here — kept for parity with restoreSnapshotURLs so callers can swap modes without reloading.
-func (b *Browser) restoreSnapshotExact(name, snapshotDir string, store *firefoxSessionStore, profile firefoxProfile, force, dryRun bool) (string, error) {
+func (b *Browser) restoreSnapshotExact(name, snapshotDir string, profile firefoxProfile, force, dryRun bool) (string, error) {
 	target := filepath.Join(profile.Root, "sessionstore.jsonlz4")
 	backupDir, err := restoreBackupDir()
 	if err != nil {

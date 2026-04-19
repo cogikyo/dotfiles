@@ -1,12 +1,13 @@
 package config
 
+// paths.go resolves daemon config file locations and expands "~/" paths.
+
 import (
 	"os"
 	"path/filepath"
 	"strings"
 )
 
-// Paths returned by this file are $HOME-relative; loadYAMLFile joins them with os.UserHomeDir().
 const configsDir = "dotfiles/daemons/configs"
 
 // ConfigPath returns the $HOME-relative path to a daemon's YAML config.
@@ -20,7 +21,6 @@ func LocalConfigPath(name string) string {
 }
 
 // ExpandPath resolves a leading "~/" against the current user's home directory.
-// Returns the input unchanged on missing prefix or home-lookup failure.
 func ExpandPath(path string) string {
 	if strings.HasPrefix(path, "~/") {
 		home, err := os.UserHomeDir()

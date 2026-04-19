@@ -1,5 +1,6 @@
 package providers
 
+// timer.go implements the timer/alarm provider and its user-triggered actions.
 import (
 	"context"
 	"errors"
@@ -13,18 +14,16 @@ import (
 	"dotfiles/daemons/config"
 )
 
-// TimerState is the combined countdown-timer and clock-based alarm snapshot.
 type TimerState struct {
 	Timer       string `json:"timer"`        // HH:MM remaining
-	Alarm       string `json:"alarm"`        // HH:MM remaining when running, else target time
-	AlarmTarget string `json:"alarm_target"` // HH:MM absolute target clock time
+	Alarm       string `json:"alarm"`        // HH:MM remaining (running) or target time (idle)
+	AlarmTarget string `json:"alarm_target"` // HH:MM absolute target
 	TimerActive bool   `json:"timer_active"`
 	AlarmActive bool   `json:"alarm_active"`
 }
 
-// Timer runs two independent minute-granularity countdowns: a duration timer and a wall-clock alarm.
-// Both fire dunstify notifications on start/reset/complete. Action-driven — Start emits one snapshot
-// and blocks; every state transition flows through HandleAction.
+// Timer runs two independent minute-granularity countdowns with dunstify notifications.
+// Action-driven: Start emits one snapshot and blocks; transitions flow through HandleAction.
 type Timer struct {
 	state  StateSetter
 	config config.TimerConfig
@@ -37,12 +36,12 @@ type Timer struct {
 	timerHours   int
 	timerMinutes int
 	timerRunning bool
-	timerStop    chan struct{} // close to halt the timer goroutine
+	timerStop    chan struct{}
 
-	alarmTargetHour int // 0-23
-	alarmTargetMin  int // 0-59
+	alarmTargetHour int
+	alarmTargetMin  int
 	alarmRunning    bool
-	alarmStop       chan struct{} // close to halt the alarm goroutine
+	alarmStop       chan struct{}
 }
 
 func NewTimer(state StateSetter, cfg config.TimerConfig) Provider {
@@ -97,8 +96,7 @@ func (t *Timer) resetTimerValues() {
 	t.timerMinutes = t.config.DefaultMinutes % 60
 }
 
-// resetAlarmValues seeds the alarm DefaultAlarmHours ahead, clipping to MinAlarmHours when
-// the current minute is within 30 of the next hour so rollover doesn't truncate the wait.
+// resetAlarmValues seeds the alarm DefaultAlarmHours ahead, clipping to MinAlarmHours near the hour boundary.
 func (t *Timer) resetAlarmValues() {
 	now := time.Now()
 	minutesUntilNextHour := 60 - now.Minute()
@@ -112,7 +110,7 @@ func (t *Timer) resetAlarmValues() {
 	t.alarmTargetMin = 0
 }
 
-// getStateLocked builds the current TimerState. Caller must hold t.mu.
+// getStateLocked builds the current TimerState; caller must hold t.mu.
 func (t *Timer) getStateLocked() *TimerState {
 	timerStr := fmt.Sprintf("%02d:%02d", t.timerHours, t.timerMinutes)
 
@@ -139,8 +137,7 @@ func (t *Timer) getState() *TimerState {
 	return t.getStateLocked()
 }
 
-// alarmRemaining returns minutes until alarmTarget, rolling to tomorrow if already past today.
-// Caller must hold t.mu.
+// alarmRemaining returns minutes until alarmTarget, rolling to tomorrow if past; caller must hold t.mu.
 func (t *Timer) alarmRemaining() int {
 	now := time.Now()
 	target := time.Date(now.Year(), now.Month(), now.Day(),
@@ -165,7 +162,7 @@ func (t *Timer) updateAndNotify() {
 // │ actions                                                                      │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// HandleAction accepts "timer|alarm <start|reset|up N|down N>" and returns the new display value.
+// HandleAction accepts "timer|alarm <start|reset|up|down>" and returns the new display value.
 func (t *Timer) HandleAction(args []string) (string, error) {
 	if len(args) == 0 {
 		return "", errors.New("action required: timer/alarm with start/reset/up/down")
@@ -321,8 +318,7 @@ func (t *Timer) adjustAlarm(direction string, minutes int) {
 // │ countdown loops                                                              │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// countdownLoop fires onTick on each minute boundary until it returns true, then onComplete once.
-// Closing stopChan exits immediately.
+// countdownLoop fires onTick each minute until it returns true, then calls onComplete.
 func (t *Timer) countdownLoop(stopChan chan struct{}, onTick func() bool, onComplete func()) {
 	for {
 		now := time.Now()
@@ -392,7 +388,7 @@ func (t *Timer) stopTimerCountdown() {
 	t.stopTimerCountdownLocked()
 }
 
-// stopTimerCountdownLocked halts the timer goroutine. Caller must hold t.mu.
+// stopTimerCountdownLocked halts the timer goroutine; caller must hold t.mu.
 func (t *Timer) stopTimerCountdownLocked() {
 	if t.timerRunning && t.timerStop != nil {
 		close(t.timerStop)
@@ -407,7 +403,7 @@ func (t *Timer) stopAlarmCountdown() {
 	t.stopAlarmCountdownLocked()
 }
 
-// stopAlarmCountdownLocked halts the alarm goroutine. Caller must hold t.mu.
+// stopAlarmCountdownLocked halts the alarm goroutine; caller must hold t.mu.
 func (t *Timer) stopAlarmCountdownLocked() {
 	if t.alarmRunning && t.alarmStop != nil {
 		close(t.alarmStop)
@@ -416,7 +412,7 @@ func (t *Timer) stopAlarmCountdownLocked() {
 	}
 }
 
-// notifyDunst posts a dunstify notification; appName, timeoutMs, and urgency are optional.
+// notifyDunst posts a dunstify notification.
 func (t *Timer) notifyDunst(appName, message string, timeoutMs int, urgency string) {
 	args := []string{}
 	if appName != "" {

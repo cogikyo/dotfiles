@@ -1,9 +1,12 @@
-// Package main is the hyprd entry point.
+// Package main provides the hyprd daemon process and CLI front-end.
 //
-// With no args it runs the daemon in the foreground (see daemon.go).
-// With a verb it acts as a thin client over the Unix socket, forwarding to the running daemon.
-// `hyprd help` prints the full command vocabulary.
+// It:
+//  1. Boots and supervises the daemon runtime.
+//  2. Routes CLI verbs over the Unix socket protocol.
+//  3. Exposes status, subscription, and maintenance commands.
 package main
+
+// main.go is the executable entrypoint that parses CLI verbs and forwards daemon commands.
 
 import (
 	"dotfiles/daemons/daemon"
@@ -50,6 +53,8 @@ func main() {
 		cmdQuery()
 	case "subscribe":
 		cmdSubscribe()
+	case "picker":
+		cmdPicker()
 	case "layout":
 		cmdLayout()
 	case "browser":
@@ -114,8 +119,7 @@ func requireArg(usage string) string {
 	return os.Args[2]
 }
 
-// cmdInit pushes Wayland env into user systemd (so hyprd.service inherits it), starts the unit, waits up to 10s for
-// the socket, then triggers the daemon's session-setup sequence.
+// cmdInit imports Wayland env into systemd, starts hyprd.service, and waits for the socket.
 func cmdInit() {
 	exec.Command("systemctl", "--user", "import-environment",
 		"WAYLAND_DISPLAY", "XDG_CURRENT_DESKTOP", "HYPRLAND_INSTANCE_SIGNATURE").Run()
@@ -133,6 +137,7 @@ func cmdHide()    { sendCommand("hide") }
 func cmdMonocle() { sendCommand("monocle") }
 func cmdSwap()    { sendCommand("swap") }
 func cmdSplit()   { sendCommand("split " + strings.Join(os.Args[2:], " ")) }
+func cmdPicker()  { sendCommand("picker " + strings.Join(os.Args[2:], " ")) }
 func cmdLayout()  { sendCommand("layout " + strings.Join(os.Args[2:], " ")) }
 func cmdBrowser() {
 	_ = requireArg("usage: hyprd browser {windows|snapshot|show|hypr|restore} ...")
@@ -241,6 +246,9 @@ Shadow workspace (special:shadow):
   hyprd shadow list          List windows parked on shadow workspace
 
 Sessions:
+  hyprd picker open      Open interactive layout picker overlay
+  hyprd picker close     Close picker without action
+  hyprd picker confirm   Confirm selection (open session on workspace)
   hyprd layout --list    List available sessions
   hyprd layout <name>    Open session (loads from ~/dotfiles/daemons/configs/hyprd.yaml)
 

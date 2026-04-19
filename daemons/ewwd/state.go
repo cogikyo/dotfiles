@@ -1,13 +1,13 @@
 package main
 
+// state.go provides a thread-safe topic-keyed store shared by ewwd providers.
 import (
 	"encoding/json"
 	"maps"
 	"sync"
 )
 
-// State is a thread-safe map of provider topic -> any-typed payload.
-// Providers stash their own structs without daemon-level typing; JSON is rendered on demand.
+// State is a thread-safe map of provider topic to untyped payload, rendered as JSON on demand.
 type State struct {
 	mu   sync.RWMutex
 	data map[string]any
@@ -31,7 +31,7 @@ func (s *State) Get(key string) any {
 	return s.data[key]
 }
 
-// GetAll returns a shallow copy so callers can iterate without holding the lock.
+// GetAll returns a shallow copy for lock-free iteration.
 func (s *State) GetAll() map[string]any {
 	s.mu.RLock()
 	defer s.mu.RUnlock()

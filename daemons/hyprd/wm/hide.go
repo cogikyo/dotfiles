@@ -1,5 +1,7 @@
 package wm
 
+// hide.go hides slave windows on a special workspace and restores them to their recorded slave position.
+
 import (
 	"fmt"
 	"strings"
@@ -9,9 +11,8 @@ import (
 	"dotfiles/daemons/hyprd/windows"
 )
 
-// Hide parks the active slave on a special workspace and restores it (with its original slave index) on unhide.
-//
-// Refused: master windows, workspaces with fewer than 3 tiled windows, workspaces running three-body.
+// Hide parks the active slave on a special workspace and restores it with its original slave index on unhide.
+// Refused for master windows, workspaces with fewer than 3 tiled windows, or workspaces running three-body.
 type Hide struct {
 	hypr  *hypr.Client
 	state *state.State
@@ -22,11 +23,6 @@ func NewHide(h *hypr.Client, s *state.State) *Hide {
 }
 
 // Execute toggles hide/unhide on the active window.
-//
-// Rules:
-//   - Active on the hidden workspace → unhide.
-//   - Floating, master, or three-body-managed → refuse.
-//   - Need ≥ 3 tiled windows on the workspace to hide one.
 func (h *Hide) Execute() (string, error) {
 	win, err := h.hypr.ActiveWindow()
 	if err != nil {
@@ -89,14 +85,13 @@ func (h *Hide) unhide(win *hypr.Window) (string, error) {
 		return "", fmt.Errorf("unhide window: %w", err)
 	}
 	if hidden != nil {
-		h.restoreSlavePosition(win.Address, destWS, hidden.SlaveIndex)
+		h.restoreSlavePosition(destWS, hidden.SlaveIndex)
 	}
 	return fmt.Sprintf("unhidden: %s to ws%d", win.Address, destWS), nil
 }
 
-// restoreSlavePosition walks the unhidden window back up the slave stack to its original index.
-// Hyprland lands restored windows at the tail, so this issues `swapprev` N times.
-func (h *Hide) restoreSlavePosition(addr string, wsID int, targetIndex int) {
+// restoreSlavePosition issues N `swapprev` dispatches to walk the window from the tail to its saved index.
+func (h *Hide) restoreSlavePosition(wsID int, targetIndex int) {
 	cfg := h.state.GetConfig()
 	tiled, err := windows.GetTiledWindows(h.hypr, wsID, cfg.Windows.IgnoredClasses)
 	if err != nil || len(tiled) < 2 {
@@ -116,11 +111,7 @@ func (h *Hide) isOnHiddenWorkspace(win *hypr.Window, hiddenWS string) bool {
 	return strings.HasPrefix(win.Workspace.Name, hiddenWS)
 }
 
-// UnhideByAddress unhides a known-hidden window to destWS.
-// A non-positive destWS resolves to the stored origin, or 1 as last resort.
-// Used by Focus to pull a match off the hidden workspace before focusing.
-//
-// NOTE: the caller's addr is dispatched verbatim — it shadows any stored HiddenState address.
+// UnhideByAddress unhides a known-hidden window to destWS (falls back to stored origin, then ws 1).
 func (h *Hide) UnhideByAddress(addr string, destWS int) (string, error) {
 	hidden := h.state.RemoveHidden(addr)
 	if destWS <= 0 && hidden != nil {
@@ -134,7 +125,7 @@ func (h *Hide) UnhideByAddress(addr string, destWS int) (string, error) {
 		return "", fmt.Errorf("unhide window: %w", err)
 	}
 	if hidden != nil {
-		h.restoreSlavePosition(addr, destWS, hidden.SlaveIndex)
+		h.restoreSlavePosition(destWS, hidden.SlaveIndex)
 	}
 	return fmt.Sprintf("unhidden: %s to ws%d", addr, destWS), nil
 }

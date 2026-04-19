@@ -1,5 +1,7 @@
 package notify
 
+// helpers.go provides shared helpers for sound selection, detached commands, env parsing, and tab icons.
+
 import (
 	"os"
 	"os/exec"
@@ -8,7 +10,6 @@ import (
 	"time"
 )
 
-// pickSound returns a time-indexed entry — cheap variety without math/rand seeding.
 func pickSound(options []string) string {
 	if len(options) == 0 {
 		return ""
@@ -16,7 +17,6 @@ func pickSound(options []string) string {
 	return options[time.Now().UnixNano()%int64(len(options))]
 }
 
-// runDetached starts a command and reaps it in a goroutine so the notifier doesn't block on exit.
 func runDetached(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
 	if err := cmd.Start(); err != nil {
@@ -35,8 +35,7 @@ func envInt(name string) int {
 	return n
 }
 
-// tabIcon extracts the middle field from a kitty tab titled "<workspace> <icon> <name>".
-// Titles that don't match the 3-field convention are returned unchanged.
+// tabIcon extracts the icon field from a kitty tab titled "<workspace> <icon> <name>".
 func tabIcon(title string) string {
 	fields := strings.Fields(title)
 	if len(fields) == 3 {

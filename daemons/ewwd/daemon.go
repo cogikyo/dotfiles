@@ -1,5 +1,6 @@
 package main
 
+// daemon.go defines ewwd runtime orchestration, provider wiring, and socket command handlers.
 import (
 	"context"
 	"dotfiles/daemons/config"
@@ -15,8 +16,7 @@ import (
 
 const SocketPath = "/tmp/ewwd.sock"
 
-// importSystemdEnv backfills env vars spawned children need (WAYLAND_DISPLAY et al.)
-// when ewwd starts before Hyprland has populated the systemd user environment.
+// importSystemdEnv backfills env vars (WAYLAND_DISPLAY et al.) from the systemd user environment.
 func importSystemdEnv() {
 	out, err := exec.Command("systemctl", "--user", "show-environment").Output()
 	if err != nil {
@@ -34,13 +34,13 @@ func importSystemdEnv() {
 	}
 }
 
-// Daemon orchestrates providers and routes commands between clients and state updates.
+// Daemon orchestrates providers and routes client commands to state updates.
 type Daemon struct {
 	state     *State
 	server    *daemon.Server
 	providers []providers.Provider
 	ctx       context.Context
-	cancel    context.CancelFunc // cancel triggers provider shutdown
+	cancel    context.CancelFunc
 	config    config.EwwConfig
 }
 
@@ -62,7 +62,7 @@ func New() (*Daemon, error) {
 	return d, nil
 }
 
-// Run starts the server, launches providers, opens eww windows, and blocks until signal.
+// Run starts the server, launches providers, opens eww windows, and blocks until signalled.
 func (d *Daemon) Run() error {
 	importSystemdEnv()
 
@@ -83,7 +83,7 @@ func (d *Daemon) Run() error {
 		}(p)
 	}
 
-	// eww startup can take seconds; don't block signal handling on it.
+	// eww startup can take seconds; don't block signal handling.
 	go func() {
 		if result := d.openWindows(); result != "" {
 			fmt.Printf("ewwd: %s\n", result)
@@ -116,7 +116,6 @@ func (d *Daemon) initProviders() {
 }
 
 // sendInitialState replays current state so new subscribers render without waiting for the next tick.
-// topics is unused; filtering is delegated to sub.WantsTopic per entry.
 func (d *Daemon) sendInitialState(sub *daemon.Subscriber, topics []string) {
 	for topic, data := range d.state.GetAll() {
 		if data != nil && sub.WantsTopic(topic) {
@@ -153,7 +152,6 @@ func (d *Daemon) handleCommand(command string) string {
 	case "open":
 		return d.openWindows()
 	case "action":
-		// format: action <provider> [args...]
 		actionParts := strings.Fields(arg)
 		if len(actionParts) == 0 {
 			return "error: provider name required"
@@ -166,8 +164,7 @@ func (d *Daemon) handleCommand(command string) string {
 	}
 }
 
-// query returns JSON for a topic, the whole store for "all"/"", or "null" for unknown topics.
-// Unknown topics return "null" (not error) to keep eww widget bindings simple.
+// query returns JSON for a topic, the whole store for "all", or "null" for unknown topics.
 func (d *Daemon) query(topic string) (string, error) {
 	if topic == "all" || topic == "" {
 		jsonData, err := d.state.JSON()
@@ -198,7 +195,7 @@ func (d *Daemon) handleAction(providerName string, args []string) string {
 	return fmt.Sprintf("error: unknown provider: %s", providerName)
 }
 
-// openWindows ensures the eww daemon is running, reloads config, then opens configured windows.
+// openWindows ensures the eww daemon is running, reloads config, and opens configured windows.
 func (d *Daemon) openWindows() string {
 	windows := d.config.Windows
 	if len(windows) == 0 {
@@ -212,13 +209,13 @@ func (d *Daemon) openWindows() string {
 		}
 	}
 
-	// Ping first; on failure, kill stale daemon and respawn, waiting up to 10s for readiness.
+	// Kill stale daemon and respawn, waiting up to 10s for readiness.
 	if err := exec.Command("eww", "ping").Run(); err != nil {
 		exec.Command("eww", "kill").Run()
 		time.Sleep(200 * time.Millisecond)
 		cmd := exec.Command("eww", "daemon")
 		if err := cmd.Start(); err == nil {
-			go cmd.Wait() // reap the child to avoid a zombie
+			go cmd.Wait()
 		}
 		ready := false
 		for range 50 {

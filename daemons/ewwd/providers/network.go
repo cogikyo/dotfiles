@@ -1,5 +1,6 @@
 package providers
 
+// network.go reads link status from nmcli and computes traffic rates from sysfs counters.
 import (
 	"context"
 	"fmt"
@@ -11,23 +12,21 @@ import (
 	"dotfiles/daemons/config"
 )
 
-// NetworkState is the connection and throughput snapshot exported to the statusbar.
 type NetworkState struct {
-	Type     string `json:"type"`      // nmcli connection type (ethernet/wireless)
-	Icon     string `json:"icon"`      // display icon for connection type
-	Name     string `json:"name"`      // connection name, or iface for ethernet
-	Iface    string `json:"iface"`     // kernel network interface
-	VPN      bool   `json:"vpn"`       // active VPN present
-	LinkRamp int    `json:"link_ramp"` // link-type bucket for widget icon color
+	Type     string `json:"type"`
+	Icon     string `json:"icon"`
+	Name     string `json:"name"`
+	Iface    string `json:"iface"`
+	VPN      bool   `json:"vpn"`
+	LinkRamp int    `json:"link_ramp"` // link-type bucket for widget color
 	Down     int    `json:"down"`      // KB/s
 	Up       int    `json:"up"`        // KB/s
 	DownRamp int    `json:"down_ramp"` // 1-12 bucket
 	UpRamp   int    `json:"up_ramp"`   // 1-12 bucket
-	DownFmt  string `json:"down_fmt"`  // pre-formatted with Pango <sub> units
-	UpFmt    string `json:"up_fmt"`    // pre-formatted with Pango <sub> units
+	DownFmt  string `json:"down_fmt"`  // Pango-formatted with <sub> units
+	UpFmt    string `json:"up_fmt"`    // Pango-formatted with <sub> units
 }
 
-// Network polls nmcli for connection state and derives throughput from /sys/class/net byte counters.
 type Network struct {
 	state  StateSetter
 	config config.NetworkConfig
@@ -96,7 +95,6 @@ func (n *Network) read() *NetworkState {
 
 	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
 
-	// Pick the first ethernet/wireless line; VPN is reported as an independent flag.
 	var connType, connName, iface string
 	var hasVPN bool
 
@@ -141,8 +139,7 @@ func (n *Network) read() *NetworkState {
 	rx := readInt64File(fmt.Sprintf("/sys/class/net/%s/statistics/rx_bytes", iface))
 	tx := readInt64File(fmt.Sprintf("/sys/class/net/%s/statistics/tx_bytes", iface))
 
-	// First poll has no prior sample; leave speeds at 0.
-	// Counter resets and interface flaps produce negative deltas — clamp to 0.
+	// First poll has no prior sample; counter resets clamp to 0.
 	var downKB, upKB int
 	if n.prevRx > 0 {
 		downKB = int((rx - n.prevRx) / 1024)
@@ -190,7 +187,7 @@ func readInt64File(path string) int64 {
 	return v
 }
 
-// getRamp buckets KB/s into a 1-12 scale for the bar-graph widget.
+// getRamp buckets KB/s into a 1-12 scale for the bar widget.
 func getRamp(kb int) int {
 	switch {
 	case kb < 5:
@@ -220,7 +217,7 @@ func getRamp(kb int) int {
 	}
 }
 
-// fmtSpeed renders KB/s with a Pango <sub> unit suffix (K for KB/s, M for MB/s).
+// fmtSpeed renders KB/s with a Pango <sub> unit suffix.
 func fmtSpeed(kb int) string {
 	if kb < 1000 {
 		return fmt.Sprintf("%03d<sub>K</sub>", kb)
