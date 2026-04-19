@@ -77,15 +77,31 @@ Guidelines, not rules. Adjust for context.
 
 ## Package-level comments
 
-Nearly every file should have a package/file header. They can be longer than per-function docs when they explain what the file does and how it fits with siblings.
+For Go code, this is required:
+- Each package needs a detailed package-level doc comment.
+- Prefer placing that package doc in the main entry file (the most important file), not only in a tiny side file.
+- Each `.go` file needs a file-level purpose comment.
+- File-level purpose comments go between the `package` declaration and the `import` block (if imports exist).
+- Use a consistent package-doc shape:
+  - First line: `Package <name> <does what>.`
+  - Optional short context paragraph when needed.
+  - Optional `Responsibilities:` block using `-` bullets (not numbered lists).
 
-Judgement call — tiny or incidental files don't need one.
+File-level comments can be longer than per-function docs when they explain what the file does and how it fits with sibling files.
 
 Go:
 ```go
-// Package foo does X. It owns Y.
-// Callers should go through Bar rather than touching fields directly.
-package foo
+// Package windows provides reusable window-selection helpers over Hyprland client lists.
+//
+// Responsibilities:
+// - Filter and order tiled windows for master/slave layouts.
+// - Match windows by class/title for command targeting.
+// - Expose geometry helpers reused by wm and session packages.
+package windows
+
+// tiled.go defines tiled-window filtering, matching, and geometry helpers.
+
+import "context"
 ```
 
 ## Doc comment structure
@@ -149,7 +165,11 @@ Follow [godoc conventions](https://go.dev/doc/comment):
 - Start doc comment with the identifier name.
 - Use `//`, not `/* */`.
 - Bulleted lists via indented lines.
-- Package doc above `package` declaration (or in `doc.go`).
+- Package doc above `package` declaration.
+- For this skill, prefer package docs in the main entry file when practical.
+- Add a file-purpose comment between `package` and `import`.
+- Use `Responsibilities:` + `-` bullets for package responsibilities when listing behavior.
+- For multi-line type/function/method docs, keep a one-line summary, then a blank `//` line, then details.
 
 ```go
 // ParseConfig reads a YAML file at path and returns a validated Config.
@@ -157,6 +177,33 @@ Follow [godoc conventions](https://go.dev/doc/comment):
 // Missing fields fall back to defaults:
 //   - Timeout: 30s
 //   - Port: 8080
+```
+
+Preferred multi-line identifier doc shape:
+```go
+// ThreeBody implements a 3-window layout: master + active slave + hidden shadow.
+//
+// Invariant: when enrolled, exactly two windows are tiled and the shadow is parked on cfg.Windows.ShadowWorkspace.
+type ThreeBody struct {
+	// ...
+}
+```
+
+Avoid:
+```go
+// ThreeBody implements a 3-window layout: master + active slave + hidden shadow.
+// Invariant: when enrolled, exactly two windows are tiled and the shadow is parked on cfg.Windows.ShadowWorkspace.
+```
+
+File-purpose example:
+```go
+package main
+
+// daemon.go defines ewwd runtime orchestration, provider wiring, and socket command handlers.
+
+import (
+	"context"
+)
 ```
 
 ## TypeScript

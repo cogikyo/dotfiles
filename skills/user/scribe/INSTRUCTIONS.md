@@ -38,6 +38,19 @@ Add or update comments for specific files. User provides paths or context about 
 6. Never wrap a single sentence across lines. If a sentence is too long, rewrite it shorter or split it into two.
 7. If better naming or file organization would eliminate the need for a comment, suggest it instead.
 
+Go-specific requirements:
+- Treat these as required for Go-related edits, not optional style choices.
+- Ensure each Go package has a detailed package doc comment. Prefer placing it in the main entry file (most important file), not only in a tiny side file.
+- Keep package docs consistent: `Package <name> ...` summary, then optional `Responsibilities:` section with `-` bullets (not numbered).
+- Ensure each Go source file has a file-level purpose comment between the `package` declaration and the `import` block (if imports exist).
+- The file-level comment should be one clear sentence describing what the file primarily defines/orchestrates, e.g. `// daemon.go defines ewwd runtime orchestration, provider wiring, and socket command handlers.`
+- For multi-line Go doc comments on types/functions/methods, format as:
+  - One summary line tied to the identifier.
+  - One blank comment line (`//`).
+  - Follow-up details (invariants, behavior notes, lists).
+- Do not place detail lines directly under the summary without that blank separator.
+- If either comment is missing during `/scribe update`, add it.
+
 ### `/scribe question`
 
 Answer a question about code using comments + source as context.
@@ -55,4 +68,5 @@ Answer a question about code using comments + source as context.
 - **FIXME over prose.** When code is unclear, leave a `FIXME: idiomatic|clarity|simplify` marker rather than explaining the awkwardness.
 - **Reader check.** Before keeping a comment: enough info to navigate? aids searching? accurate? could be tighter? would removing help?
 - **Language-aware.** Apply the correct doc convention per language (see style guide).
+- **Go docs are required.** For Go work, require both package-level and per-file purpose comments in the mandated placement.
 - **Markers are tools.** TODO/FIXME/HACK/NOTE are grep-able breadcrumbs; confirm with user before adding FIXME/HACK.
