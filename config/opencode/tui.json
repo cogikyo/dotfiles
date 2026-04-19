@@ -18,6 +18,14 @@
     "theme_list": "<leader>_",
     "agent_list": "<leader>a",
     "status_view": "<leader>s",
+    "input_line_home": "home,ctrl+a",
+    "input_line_end": "end,ctrl+e",
+    "input_select_line_home": "shift+home,ctrl+shift+a",
+    "input_select_line_end": "shift+end,ctrl+shift+e",
+    "input_buffer_home": "alt+home",
+    "input_buffer_end": "alt+end",
+    "input_select_buffer_home": "alt+shift+home",
+    "input_select_buffer_end": "alt+shift+end",
     "session_share": "none",
     "session_unshare": "none"
   }
