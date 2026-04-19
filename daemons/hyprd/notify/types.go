@@ -20,7 +20,9 @@ var agentStartSounds = []string{
 type NotifyRequest struct {
 	Source               string `json:"source"`
 	Event                string `json:"event"`
+	NotificationID       int    `json:"notification_id,omitempty"`
 	App                  string `json:"app,omitempty"`
+	DesktopEntry         string `json:"desktop_entry,omitempty"`
 	Summary              string `json:"summary,omitempty"`
 	Body                 string `json:"body,omitempty"`
 	Urgency              string `json:"urgency,omitempty"`

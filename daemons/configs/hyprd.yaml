@@ -221,6 +221,10 @@ notify:
   focus_apps:
     Slack: slack
     firefox-developer-edition: firefox-developer-edition
+  action_focus_apps:
+    Firefox: { workspace: 2, class: firefox-developer-edition }
+    Firefox Developer Edition: { workspace: 2, class: firefox-developer-edition }
+    firefox-developer-edition: { workspace: 2, class: firefox-developer-edition }
   silent_apps:
     - Spotify
     - discord

@@ -120,27 +120,31 @@ func parseHookNotify(args []string) (NotifyRequest, error) {
 
 // parseDunstNotify accepts positional args or falls back to DUNST_* env vars.
 func parseDunstNotify(args []string) (NotifyRequest, error) {
-	app, summary, body, iconPath, urgency := dunstPayload(args)
+	app, summary, body, iconPath, urgency, desktopEntry, notificationID := dunstPayload(args)
 	return NotifyRequest{
-		Source:   "dunst",
-		Event:    "script",
-		App:      limitText(app, 128),
-		Summary:  limitText(summary, 512),
-		Body:     limitText(body, 512),
-		IconPath: strings.TrimSpace(iconPath),
-		Urgency:  limitText(strings.ToLower(strings.TrimSpace(urgency)), 32),
+		Source:         "dunst",
+		Event:          "script",
+		NotificationID: notificationID,
+		App:            limitText(app, 128),
+		DesktopEntry:   limitText(desktopEntry, 128),
+		Summary:        limitText(summary, 512),
+		Body:           limitText(body, 512),
+		IconPath:       strings.TrimSpace(iconPath),
+		Urgency:        limitText(strings.ToLower(strings.TrimSpace(urgency)), 32),
 	}, nil
 }
 
-func dunstPayload(args []string) (app, summary, body, iconPath, urgency string) {
+func dunstPayload(args []string) (app, summary, body, iconPath, urgency, desktopEntry string, notificationID int) {
 	if len(args) >= 5 {
-		return args[0], args[1], args[2], args[3], args[4]
+		return args[0], args[1], args[2], args[3], args[4], os.Getenv("DUNST_DESKTOP_ENTRY"), envInt("DUNST_ID")
 	}
 	return os.Getenv("DUNST_APP_NAME"),
 		os.Getenv("DUNST_SUMMARY"),
 		os.Getenv("DUNST_BODY"),
 		os.Getenv("DUNST_ICON_PATH"),
-		os.Getenv("DUNST_URGENCY")
+		os.Getenv("DUNST_URGENCY"),
+		os.Getenv("DUNST_DESKTOP_ENTRY"),
+		envInt("DUNST_ID")
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮

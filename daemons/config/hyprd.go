@@ -105,17 +105,25 @@ type ShadowColors struct {
 
 // NotifyConfig defines notification routing, presentation, and sound policy.
 type NotifyConfig struct {
-	SoundsDir           string                 `yaml:"sounds_dir"`            // directory containing sound files
-	WorkspaceIconsDir   string                 `yaml:"workspace_icons_dir"`   // directory containing workspace icon PNGs
-	WorkspaceIcons      map[int]string         `yaml:"workspace_icons"`       // workspace number -> icon basename
-	QuietVolume         int                    `yaml:"quiet_volume"`          // paplay volume (0-65536) for low-priority sounds
-	LoudVolume          int                    `yaml:"loud_volume"`           // paplay volume (0-65536) for high-priority sounds
-	Styles              map[string]NotifyStyle `yaml:"styles"`                // notification class -> Dunst hint overrides
-	UrgencySounds       map[string]string      `yaml:"urgency_sounds"`        // urgency -> sound name (or "none")
-	AppSounds           map[string]string      `yaml:"app_sounds"`            // app name -> sound name; takes precedence over urgency
-	FocusApps           map[string]string      `yaml:"focus_apps"`            // dunst app name -> Hyprland window class to focus on arrival
-	SilentApps          []string               `yaml:"silent_apps"`           // app names that suppress sound entirely
-	KittySilentPatterns []string               `yaml:"kitty_silent_patterns"` // substrings in kitty titles that suppress sound
+	SoundsDir           string                       `yaml:"sounds_dir"`            // directory containing sound files
+	WorkspaceIconsDir   string                       `yaml:"workspace_icons_dir"`   // directory containing workspace icon PNGs
+	WorkspaceIcons      map[int]string               `yaml:"workspace_icons"`       // workspace number -> icon basename
+	QuietVolume         int                          `yaml:"quiet_volume"`          // paplay volume (0-65536) for low-priority sounds
+	LoudVolume          int                          `yaml:"loud_volume"`           // paplay volume (0-65536) for high-priority sounds
+	Styles              map[string]NotifyStyle       `yaml:"styles"`                // notification class -> Dunst hint overrides
+	UrgencySounds       map[string]string            `yaml:"urgency_sounds"`        // urgency -> sound name (or "none")
+	AppSounds           map[string]string            `yaml:"app_sounds"`            // app name -> sound name; takes precedence over urgency
+	FocusApps           map[string]string            `yaml:"focus_apps"`            // dunst app name -> Hyprland window class to focus on arrival
+	ActionFocusApps     map[string]NotifyFocusTarget `yaml:"action_focus_apps"`     // dunst app/desktop-entry -> window target to focus on click
+	SilentApps          []string                     `yaml:"silent_apps"`           // app names that suppress sound entirely
+	KittySilentPatterns []string                     `yaml:"kitty_silent_patterns"` // substrings in kitty titles that suppress sound
+}
+
+// NotifyFocusTarget describes the window/workspace to focus when a notification action fires.
+type NotifyFocusTarget struct {
+	Workspace int    `yaml:"workspace"`
+	Class     string `yaml:"class"`
+	Title     string `yaml:"title"`
 }
 
 // NotifyStyle defines Dunst hint overrides for a notification class.
@@ -381,6 +389,11 @@ func DefaultHypr() HyprConfig {
 			FocusApps: map[string]string{
 				"Slack":                     "slack",
 				"firefox-developer-edition": "firefox-developer-edition",
+			},
+			ActionFocusApps: map[string]NotifyFocusTarget{
+				"Firefox":                   {Workspace: 2, Class: "firefox-developer-edition"},
+				"Firefox Developer Edition": {Workspace: 2, Class: "firefox-developer-edition"},
+				"firefox-developer-edition": {Workspace: 2, Class: "firefox-developer-edition"},
 			},
 			SilentApps: []string{
 				"Spotify",
