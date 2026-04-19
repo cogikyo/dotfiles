@@ -1,0 +1,27 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "autoupdate": "notify",
+  "plugin": [
+    "@leo000001/opencode-quota-sidebar@latest"
+  ],
+  "share": "manual",
+  "snapshot": true,
+  "skills": {
+    "paths": [
+      "{env:HOME}/dotfiles/skills/user"
+    ]
+  },
+  "compaction": {
+    "auto": true,
+    "prune": true,
+    "reserved": 10000
+  },
+  "watcher": {
+    "ignore": [
+      ".git/**",
+      "node_modules/**",
+      "dist/**",
+      "build/**"
+    ]
+  }
+}

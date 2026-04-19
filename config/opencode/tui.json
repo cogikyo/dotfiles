@@ -1,0 +1,24 @@
+{
+  "$schema": "https://opencode.ai/tui.json",
+  "theme": "vagari",
+  "plugin": [
+    "@leo000001/opencode-quota-sidebar@latest"
+  ],
+  "mouse": true,
+  "diff_style": "auto",
+  "scroll_speed": 3,
+  "scroll_acceleration": {
+    "enabled": true
+  },
+  "keybinds": {
+    "leader": "ctrl+space",
+    "command_list": "<leader>t",
+    "tool_details": "<leader>d",
+    "model_list": "<leader>m",
+    "theme_list": "<leader>_",
+    "agent_list": "<leader>a",
+    "status_view": "<leader>s",
+    "session_share": "none",
+    "session_unshare": "none"
+  }
+}

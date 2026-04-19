@@ -33,12 +33,17 @@ project_links_for_skill() {
         local target project_dir
         target=$(readlink -f "$link" 2>/dev/null || true)
         [[ "$target" == "$norm_skill" ]] || continue
-        project_dir="${link%/.codex/skills/"$skill_name"}"
+        case "$link" in
+            */.opencode/skills/"$skill_name") project_dir="${link%/.opencode/skills/"$skill_name"}" ;;
+            */.claude/skills/"$skill_name") project_dir="${link%/.claude/skills/"$skill_name"}" ;;
+            */.agents/skills/"$skill_name") project_dir="${link%/.agents/skills/"$skill_name"}" ;;
+            *) continue ;;
+        esac
         links+=("$project_dir")
     done < <(
         find "$HOME" \
             \( -path "$HOME/.cache" -o -path "$HOME/.local/share" -o -path "$HOME/.cargo" -o -path "$HOME/.rustup" -o -path "$HOME/.npm" -o -path "$HOME/.pnpm-store" \) -prune \
-            -o -type l -path "*/.codex/skills/$skill_name" -print 2>/dev/null
+            -o \( -type l -path "*/.opencode/skills/$skill_name" -o -type l -path "*/.claude/skills/$skill_name" -o -type l -path "*/.agents/skills/$skill_name" \) -print 2>/dev/null
     )
 
     if (( ${#links[@]} == 0 )); then
@@ -60,10 +65,11 @@ find_skill() {
     return 1
 }
 
-# User skills should be linked in $CODEX_HOME/skills/<name>.
-# Config-dir compatibility paths are also accepted:
+# User skills should be available through OpenCode's configured skills paths.
+# Compatibility paths are also accepted:
+#   ${CLAUDE_HOME:-~/.claude}/skills/<name>
 #   ${CLAUDE_CONFIG_DIR:-~/.config/claude}/skills/<name>
-#   ${AGENTS_CONFIG_DIR:-~/.codex}/skills/<name>
+#   ${AGENTS_HOME:-~/.agents}/skills/<name>
 check_link() {
     local skill_name="$1"
     local skill_path="$2"
@@ -76,46 +82,48 @@ check_link() {
         local norm_skill
         LINK_DETAIL="symlink=missing"
         norm_skill=$(readlink -f "$skill_path")
-        local codex_home="${CODEX_HOME:-$HOME/.codex}"
+        local opencode_config_file="${OPENCODE_CONFIG_FILE:-$HOME/.config/opencode/opencode.json}"
+        local claude_home="${CLAUDE_HOME:-$HOME/.claude}"
         local claude_config_dir="${CLAUDE_CONFIG_DIR:-$HOME/.config/claude}"
-        local agents_config_dir="${AGENTS_CONFIG_DIR:-$HOME/.codex}"
-        local codex_link="$codex_home/skills/$skill_name"
+        local agents_home="${AGENTS_HOME:-$HOME/.agents}"
+        local claude_link="$claude_home/skills/$skill_name"
+        local claude_config_link="$claude_config_dir/skills/$skill_name"
+        local agents_link="$agents_home/skills/$skill_name"
         local candidates=(
-            "$codex_link"
-            "$claude_config_dir/skills/$skill_name"
-            "$agents_config_dir/skills/$skill_name"
-            "$HOME/.agents/skills/$skill_name"
+            "$claude_link"
+            "$claude_config_link"
+            "$agents_link"
         )
 
-        for link in "${candidates[@]}"; do
-            if [[ -L "$link" ]]; then
-                local norm_target
-                target=$(readlink -f "$link" 2>/dev/null || true)
-                norm_target="${target%/}"
-                if [[ "$norm_target" == "$norm_skill" ]]; then
-                    ok=1
-                    LINK_DETAIL="symlink=${link} -> ${norm_target}"
-                    break
-                fi
-            fi
-        done
+        if [[ -f "$opencode_config_file" ]] && grep -Fq '{env:HOME}/dotfiles/skills/user' "$opencode_config_file"; then
+            ok=1
+            LINK_DETAIL="opencode=config:$opencode_config_file"
+        fi
 
         if [[ $ok -eq 0 ]]; then
-            local agents_link="$HOME/.agents/skills/$skill_name"
-            local codex_skill_link="$codex_link"
-            local claude_link="$claude_config_dir/skills/$skill_name"
-            local agents_config_link="$agents_config_dir/skills/$skill_name"
+            for link in "${candidates[@]}"; do
+                if [[ -L "$link" ]]; then
+                    local norm_target
+                    target=$(readlink -f "$link" 2>/dev/null || true)
+                    norm_target="${target%/}"
+                    if [[ "$norm_target" == "$norm_skill" ]]; then
+                        ok=1
+                        LINK_DETAIL="symlink=${link} -> ${norm_target}"
+                        break
+                    fi
+                fi
+            done
+        fi
 
-            if [[ -d "$codex_skill_link" && ! -L "$codex_skill_link" ]]; then
-                ERRORS+=("$codex_skill_link is a real directory, not a symlink — run link.sh user")
-            elif [[ -d "$agents_link" && ! -L "$agents_link" ]]; then
+        if [[ $ok -eq 0 ]]; then
+            if [[ -d "$agents_link" && ! -L "$agents_link" ]]; then
                 ERRORS+=("$agents_link is a real directory, not a symlink — run link.sh user")
             elif [[ -d "$claude_link" && ! -L "$claude_link" ]]; then
                 ERRORS+=("$claude_link is a real directory, not a symlink — run link.sh user")
-            elif [[ -d "$agents_config_link" && ! -L "$agents_config_link" ]]; then
-                ERRORS+=("$agents_config_link is a real directory, not a symlink — run link.sh user")
+            elif [[ -d "$claude_config_link" && ! -L "$claude_config_link" ]]; then
+                ERRORS+=("$claude_config_link is a real directory, not a symlink — run link.sh user")
             else
-                ERRORS+=("Not linked in \$CODEX_HOME/skills, \$CLAUDE_CONFIG_DIR/skills, or \$AGENTS_CONFIG_DIR/skills — run link.sh user")
+                ERRORS+=("Not available via OpenCode config or Claude/agents compatibility dirs — run link.sh user")
             fi
         fi
     fi

@@ -22,4 +22,6 @@ iso/out/
 iso/airootfs/var/
 iso/airootfs/root/dotfiles/
 
-.codex
+.agents/skills
+.claude/skills
+.opencode/skills

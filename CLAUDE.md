@@ -12,7 +12,7 @@ Arch + Hyprland (Wayland) dotfiles. Single-user. Root of repo = `~/dotfiles`.
 - `iso/` → archiso profile; `iso/work/` and `iso/out/` are gitignored build artifacts
 - `share/` → static assets
 
-Everything in `config/` and `bin/` is symlinked wholesale except: `config/claude/settings.json`, `config/codex/config.toml`, and `config/firefox/` are linked individually or handled specially. Editing the repo IS editing the live system.
+Everything in `config/` and `bin/` is symlinked wholesale except: `config/claude/settings.json` and `config/firefox/` are linked individually or handled specially. Editing the repo IS editing the live system.
 
 ## Install
 

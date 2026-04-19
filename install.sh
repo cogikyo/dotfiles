@@ -572,7 +572,6 @@ step_link() {
     local linked_count=0
     local unchanged_count=0
     local skills_linked=0
-    local codex_home="$HOME/.config/agents"
 
     link_or_skip() {
         local src="$1"
@@ -612,7 +611,7 @@ step_link() {
             return 0
         fi
 
-        if ! skills_output=$(AGENTS_CONFIG_DIR="$codex_home" "$DOTFILES/skills/link.sh" user 2>&1); then
+        if ! skills_output=$("$DOTFILES/skills/link.sh" user 2>&1); then
             err "Linking skills failed"
             [[ -n "$skills_output" ]] && printf '%s\n' "$skills_output" >&2
             return 1
@@ -630,7 +629,7 @@ step_link() {
         name=$(basename "$item")
 
         case "$name" in
-            claude|codex|firefox) continue ;;
+            claude|firefox) continue ;;
         esac
 
         link_or_skip "$item" "$HOME/.config/$name"
@@ -643,11 +642,12 @@ step_link() {
         fi
     done
 
-    # Claude: partial linking
-    info "Linking claude settings and skills..."
-    step "Linking skills (claude)"
+    info "Linking shared agent skills..."
+    step "Linking skills"
     ensure_user_skills_linked
 
+    # Claude: partial linking
+    info "Linking claude settings..."
     step "Linking config (claude)"
     mkdir -p "$HOME/.config/claude"
     link_or_skip "$DOTFILES/config/claude/settings.json" "$HOME/.config/claude/settings.json"
@@ -656,20 +656,6 @@ step_link() {
         return 1
     }
     ok "claude linked"
-
-    # Codex: partial linking
-    info "Linking codex settings..."
-    step "Linking skills (codex)"
-    ensure_user_skills_linked
-
-    step "Linking config (codex)"
-    mkdir -p "$codex_home"
-    link_or_skip "$DOTFILES/config/codex/config.toml" "$codex_home/config.toml"
-    verify_link_mapping "$DOTFILES/config/codex/config.toml" "$codex_home/config.toml" || {
-        err "Linking failed verification for $codex_home/config.toml"
-        return 1
-    }
-    ok "codex linked"
 
     # .zshrc symlink
     info "Linking .zshrc..."
@@ -721,11 +707,11 @@ healthcheck_link() {
     ((checked_entries += 2))
     ok "required directories"
 
-    step "Verify ~/.config mirrors dotfiles/config/* (excluding claude/codex/firefox)"
+    step "Verify ~/.config mirrors dotfiles/config/* (excluding claude/firefox)"
     for item in "$DOTFILES"/config/*; do
         name=$(basename "$item")
         case "$name" in
-            claude|codex|firefox) continue ;;
+            claude|firefox) continue ;;
         esac
         verify_link_mapping "$item" "$HOME/.config/$name" || {
             err "Healthcheck failed: ~/.config/$name is not linked to $item"
@@ -735,14 +721,19 @@ healthcheck_link() {
     done
     ok "$HOME/.config mirror links"
 
-    step "Verify partial links for claude/codex and shell"
+    step "Verify Claude links, shared skills, and shell"
     verify_link_mapping "$DOTFILES/config/claude/settings.json" "$HOME/.config/claude/settings.json" || {
         err "Healthcheck failed: ~/.config/claude/settings.json is not linked"
         return 1
     }
     ((checked_entries++))
-    verify_link_mapping "$DOTFILES/config/codex/config.toml" "$HOME/.config/agents/config.toml" || {
-        err "Healthcheck failed: ~/.config/agents/config.toml is not linked"
+    [[ -d "$HOME/.claude/skills" ]] || {
+        err "Healthcheck failed: ~/.claude/skills is missing"
+        return 1
+    }
+    ((checked_entries++))
+    [[ -d "$HOME/.agents/skills" ]] || {
+        err "Healthcheck failed: ~/.agents/skills is missing"
         return 1
     }
     ((checked_entries++))

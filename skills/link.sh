@@ -2,8 +2,8 @@
 
 # Skills linking script
 # Usage:
-#   link.sh user              - Symlink all user skills to $CODEX_HOME/skills (with Claude compatibility links)
-#   link.sh project [name]    - Symlink project skill(s) to ./.codex/skills/ (with .claude compatibility)
+#   link.sh user              - Symlink user skills into Claude/agents compatibility dirs
+#   link.sh project [name]    - Symlink project skill(s) to ./.opencode/skills/ (with compatibility links)
 
 set -euo pipefail
 
@@ -25,7 +25,7 @@ guard_against_self_linking() {
 
     if [[ -n "$source_real" && -n "$target_real" && "$source_real" == "$target_real" ]]; then
         echo "Refusing to link: $target_dir resolves to source directory $source_dir"
-        echo "Choose a different target (for example \$CODEX_HOME/skills) to avoid self-referential links."
+        echo "Choose a different target (for example ./.opencode/skills) to avoid self-referential links."
         exit 1
     fi
 }
@@ -67,12 +67,12 @@ link_all_skills() {
 }
 
 link_user_skills() {
-    local codex_home target_dir claude_config_dir agents_config_dir
+    local target_dir claude_home claude_config_dir agents_home
 
-    codex_home="${CODEX_HOME:-${HOME}/.codex}"
-    target_dir="$codex_home/skills"
+    target_dir="${HOME}/.claude-skills"
+    claude_home="${CLAUDE_HOME:-${HOME}/.claude}"
     claude_config_dir="${CLAUDE_CONFIG_DIR:-${HOME}/.config/claude}"
-    agents_config_dir="${AGENTS_CONFIG_DIR:-${HOME}/.codex}"
+    agents_home="${AGENTS_HOME:-${HOME}/.agents}"
 
     mkdir -p "$target_dir"
 
@@ -86,18 +86,18 @@ link_user_skills() {
     echo "Linking user skills to $target_dir..."
     link_all_skills "$USER_SKILLS_DIR" "$target_dir"
 
-    link_config_skills_dir "Claude" "$target_dir" "$claude_config_dir" "link.sh user"
-    if [[ "$agents_config_dir" != "$claude_config_dir" && "$agents_config_dir" != "$codex_home" ]]; then
-        link_config_skills_dir "agents tools" "$target_dir" "$agents_config_dir" "link.sh user"
-    fi
+    link_config_skills_dir "Claude" "$target_dir" "$claude_home" "link.sh user"
+    link_config_skills_dir "Claude config" "$target_dir" "$claude_config_dir" "link.sh user"
+    link_config_skills_dir "agents tools" "$target_dir" "$agents_home" "link.sh user"
 }
 
 link_project_skill() {
     local skill_name="${1:-}"
     local skill_path
-    local project_codex_dir="$PWD/.codex"
+    local project_opencode_dir="$PWD/.opencode"
     local project_claude_dir="$PWD/.claude"
-    local target_dir="$project_codex_dir/skills"
+    local project_agents_dir="$PWD/.agents"
+    local target_dir="$project_opencode_dir/skills"
 
     mkdir -p "$target_dir"
     guard_against_self_linking "$PROJECT_SKILLS_DIR" "$target_dir"
@@ -117,6 +117,7 @@ link_project_skill() {
     fi
 
     link_config_skills_dir "project Claude" "$target_dir" "$project_claude_dir" "link.sh project"
+    link_config_skills_dir "project agents" "$target_dir" "$project_agents_dir" "link.sh project"
 }
 
 case "${1:-}" in
@@ -128,8 +129,8 @@ case "${1:-}" in
         ;;
     *)
         echo "Usage:"
-        echo "  link.sh user              - Link all user skills to \$CODEX_HOME/skills"
-        echo "  link.sh project [name]    - Link project skill(s) to ./.codex/skills/"
+        echo "  link.sh user              - Link all user skills for Claude/agents compatibility"
+        echo "  link.sh project [name]    - Link project skill(s) to ./.opencode/skills/"
         exit 1
         ;;
 esac
