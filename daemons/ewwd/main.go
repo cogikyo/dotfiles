@@ -1,12 +1,13 @@
 // Package main implements ewwd, the daemon that publishes system state for eww widgets.
 //
-// It:
-//   - starts providers and keeps shared widget state synchronized
-//   - serves query, subscribe, and action commands over a Unix socket
-//   - exposes a CLI for daemon lifecycle and provider actions
+// Responsibilities:
+// - Start providers and keep shared widget state synchronized.
+// - Serve query, subscribe, and action commands over a Unix socket.
+// - Expose a CLI for daemon lifecycle and provider actions.
 package main
 
 // main.go contains the ewwd CLI entrypoint and command routing.
+
 import (
 	"dotfiles/daemons/daemon"
 	"fmt"
@@ -170,8 +171,8 @@ Usage:
   ewwd status --json    Return full state as JSON
 
 Query/Subscribe (for eww):
-  ewwd query [topic]    Get state (gpu|network|date|audio|music|timer|weather|...)
-  ewwd subscribe [...]  Stream events (gpu network date audio music timer weather)
+  ewwd query [topic]    Get state (network|date|audio|music|timer|weather|...)
+  ewwd subscribe [...]  Stream events (network date audio music timer weather)
 
 Actions (for eww buttons/scrolls):
   ewwd action audio mute <sink|source>      Mute device
@@ -196,7 +197,6 @@ Actions (for eww buttons/scrolls):
   ewwd action timer alarm reset             Stop and reset to +6 hours
 
 Providers:
-  gpu        - AMD GPU stats (busy%, VRAM, mclk)
   network    - Network speed monitoring
   date       - Date/time, clockface icons, weeks alive
   audio      - PulseAudio volume (sink/source with offset)

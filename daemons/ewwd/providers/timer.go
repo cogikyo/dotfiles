@@ -1,8 +1,10 @@
 package providers
 
 // timer.go implements the timer/alarm provider and its user-triggered actions.
+
 import (
 	"context"
+	"dotfiles/daemons/config"
 	"errors"
 	"fmt"
 	"os"
@@ -10,8 +12,6 @@ import (
 	"strconv"
 	"sync"
 	"time"
-
-	"dotfiles/daemons/config"
 )
 
 type TimerState struct {
@@ -23,6 +23,7 @@ type TimerState struct {
 }
 
 // Timer runs two independent minute-granularity countdowns with dunstify notifications.
+//
 // Action-driven: Start emits one snapshot and blocks; transitions flow through HandleAction.
 type Timer struct {
 	state  StateSetter

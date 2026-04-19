@@ -27,8 +27,5 @@ audio:
     - "pixel buds"
 date:
   birth_date: "1996-02-26"
-gpu:
-  device_path: "/sys/class/drm/card0/device"
-  poll_interval: 500ms
 network:
   poll_interval: 1s

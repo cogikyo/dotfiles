@@ -1,6 +1,7 @@
 package main
 
 // daemon.go defines ewwd runtime orchestration, provider wiring, and socket command handlers.
+
 import (
 	"context"
 	"dotfiles/daemons/config"
@@ -105,7 +106,6 @@ func (d *Daemon) Run() error {
 func (d *Daemon) initProviders() {
 	cfg := d.config
 	d.providers = []providers.Provider{
-		providers.NewGPU(d.state, cfg.GPU),
 		providers.NewNetwork(d.state, cfg.Network),
 		providers.NewDate(d.state, cfg.Date),
 		providers.NewAudio(d.state, cfg.Audio),

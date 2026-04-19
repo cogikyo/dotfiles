@@ -222,6 +222,6 @@
 
 (defpoll sensors
   :interval "0.5s"
-  :initial `{ "nvme-pci-0100":{ "Adapter": "PCI adapter", "Composite":{ "temp1_input": 42.850, "temp1_max": 79.850, "temp1_min": -5.150, "temp1_crit": 84.850, "temp1_alarm": 0.000 } }, "amdgpu-pci-0d00":{ "Adapter": "PCI adapter", "vddgfx":{ "in0_input": 0.750 }, "fan1":{ "fan1_input": 0.000, "fan1_min": 0.000, "fan1_max": 3630.000 }, "edge":{ "temp1_input": 57.000, "temp1_crit": 100.000, "temp1_crit_hyst": -273.150, "temp1_emergency": 105.000 }, "junction":{ "temp2_input": 57.000, "temp2_crit": 110.000, "temp2_crit_hyst": -273.150, "temp2_emergency": 115.000 }, "mem":{ "temp3_input": 60.000, "temp3_crit": 105.000, "temp3_crit_hyst": -273.150, "temp3_emergency": 110.000 }, "PPT":{ "power1_average": 21.000, "power1_cap": 190.000 } }, "k10temp-pci-00c3":{ "Adapter": "PCI adapter", "Tctl":{ "temp1_input": 64.000 }, "Tccd1":{ "temp3_input": 65.500 } } }`
+  :initial `{ "nvme-pci-0100":{ "Adapter": "PCI adapter", "Composite":{ "temp1_input": 42.850, "temp1_max": 79.850, "temp1_min": -5.150, "temp1_crit": 84.850, "temp1_alarm": 0.000 } }, "k10temp-pci-00c3":{ "Adapter": "PCI adapter", "Tctl":{ "temp1_input": 64.000 }, "Tccd1":{ "temp3_input": 65.500 } } }`
   `sensors -j`
 )

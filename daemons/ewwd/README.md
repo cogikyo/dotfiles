@@ -14,15 +14,15 @@ ewwd status --json       # full state dump
 
 ```bash
 ewwd query               # all state as JSON
-ewwd query gpu           # specific provider
+ewwd query audio         # specific provider
 
-ewwd subscribe gpu audio music  # stream events (for eww deflisten)
+ewwd subscribe audio music  # stream events (for eww deflisten)
 ```
 
 eww integration:
 
 ```yuck
-(deflisten ewwd `ewwd subscribe gpu audio music date weather`)
+(deflisten ewwd `ewwd subscribe audio music date weather`)
 (label :text {ewwd?.audio?.sink?.volume ?: "?"})
 ```
 
@@ -56,7 +56,6 @@ ewwd action timer alarm up <minutes>      # add minutes
 
 | Provider   | Source              | Data                                      |
 |------------|---------------------|-------------------------------------------|
-| gpu        | sysfs               | AMD GPU busy%, VRAM, memory clock         |
 | audio      | PulseAudio          | sink/source volumes with offset           |
 | music      | D-Bus (Spotify)     | playback status, track info, album art    |
 | network    | /proc/net/dev       | upload/download speeds                    |
@@ -78,6 +77,6 @@ Each provider implements the `providers.Provider` interface and runs in its own 
 ewwd/
 ├── daemon.go            # lifecycle, provider coordination, command handler
 ├── main.go              # CLI entry, command routing to daemon socket
-├── providers/           # gpu, audio, music, network, date, weather, timer
+├── providers/           # audio, music, network, date, weather, timer
 └── state.go             # generic thread-safe state store
 ```

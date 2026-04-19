@@ -10,7 +10,6 @@ type EwwConfig struct {
 	Timer   TimerConfig   `yaml:"timer"`
 	Audio   AudioConfig   `yaml:"audio"`
 	Date    DateConfig    `yaml:"date"`
-	GPU     GPUConfig     `yaml:"gpu"`
 	Network NetworkConfig `yaml:"network"`
 }
 
@@ -47,12 +46,6 @@ type DateConfig struct {
 	BirthDate string `yaml:"birth_date"` // ISO-8601 date
 }
 
-// GPUConfig enables AMD GPU monitoring via sysfs.
-type GPUConfig struct {
-	DevicePath   string        `yaml:"device_path"`   // sysfs root, e.g. /sys/class/drm/card0/device
-	PollInterval time.Duration `yaml:"poll_interval"` // how often to sample GPU stats
-}
-
 // NetworkConfig controls polling frequency for network interface statistics.
 type NetworkConfig struct {
 	PollInterval time.Duration `yaml:"poll_interval"`
@@ -84,10 +77,6 @@ func DefaultEww() EwwConfig {
 		},
 		Date: DateConfig{
 			BirthDate: "1996-02-26",
-		},
-		GPU: GPUConfig{
-			DevicePath:   "/sys/class/drm/card0/device",
-			PollInterval: 500 * time.Millisecond,
 		},
 		Network: NetworkConfig{
 			PollInterval: 1 * time.Second,
