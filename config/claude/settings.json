@@ -81,7 +81,7 @@
     "gopls-lsp@claude-plugins-official": true
   },
   "outputStyle": "explanatory",
-  "effortLevel": "medium",
+  "effortLevel": "high",
   "promptSuggestionEnabled": false,
   "awaySummaryEnabled": false,
   "voiceEnabled": false,
