@@ -1,9 +1,18 @@
+// Package notify handles hyprd notification intake, styling, and delivery.
+//
+// It normalizes source-specific events into a single dispatch pipeline.
+//
+// Responsibilities:
+// - Normalize notification requests from CLI and hook sources.
+// - Resolve kitty and workspace context for icons and focus actions.
+// - Dispatch dunst notifications and optional sound effects.
 package notify
 
 // handler.go routes notify events by source and executes the sound-plus-dunst dispatch pipeline.
 
 import (
 	"dotfiles/daemons/config"
+	"dotfiles/daemons/hyprd/wm"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -11,8 +20,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"dotfiles/daemons/hyprd/wm"
 )
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -151,6 +158,15 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 			Title:       title,
 			Style:       "subagent",
 			Sound:       "sdv-frog",
+			Volume:      n.cfg.Notify.QuietVolume,
+			FocusAction: true,
+		}, ctx)
+	case "step-finish":
+		return n.dispatch(notificationSpec{
+			App:         ctx.App,
+			Title:       preferredSummary(req.Message, "Step finished", 80),
+			Style:       "subagent",
+			Sound:       "civ6-notification",
 			Volume:      n.cfg.Notify.QuietVolume,
 			FocusAction: true,
 		}, ctx)

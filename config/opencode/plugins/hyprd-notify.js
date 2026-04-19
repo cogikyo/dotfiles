@@ -21,6 +21,21 @@ export const HyprdNotifyPlugin = async () => {
   const seenAgentParts = new Map()
   const seenStepFinishParts = new Map()
   const todoStatuses = new Map()
+  const lastAssistantMessages = new Map()
+
+  async function completeSession(sessionID) {
+    if (!activeSessions.has(sessionID)) return
+
+    activeSessions.delete(sessionID)
+
+    const lastAssistantMessage = cleanText(lastAssistantMessages.get(sessionID) || "")
+    await notify({
+      app: "opencode",
+      type: "complete",
+      message: lastAssistantMessage || "Jobs done",
+      last_assistant_message: lastAssistantMessage,
+    })
+  }
 
   return {
     event: async ({ event }) => {
@@ -32,6 +47,7 @@ export const HyprdNotifyPlugin = async () => {
           if (!part?.sessionID || !part?.id) return
 
           if (part.type === "text" && part?.time?.end) {
+            lastAssistantMessages.set(part.sessionID, part.text)
             return
           }
 
@@ -84,7 +100,7 @@ export const HyprdNotifyPlugin = async () => {
           }
 
           if (status === "idle") {
-            activeSessions.delete(sessionID)
+            await completeSession(sessionID)
           }
           return
         }
@@ -92,7 +108,7 @@ export const HyprdNotifyPlugin = async () => {
           const sessionID = event.properties?.sessionID
           if (!sessionID) return
 
-          activeSessions.delete(sessionID)
+          await completeSession(sessionID)
           return
         }
         case "permission.asked": {
@@ -168,9 +184,12 @@ export const HyprdNotifyPlugin = async () => {
           seenAgentParts.delete(sessionID)
           seenStepFinishParts.delete(sessionID)
           todoStatuses.delete(sessionID)
+          lastAssistantMessages.delete(sessionID)
           return
         }
       }
     },
   }
 }
+
+export default HyprdNotifyPlugin
