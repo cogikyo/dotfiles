@@ -1,0 +1,7 @@
+[Unit]
+Description=OpenCode shared backend
+
+[Service]
+ExecStart=/usr/bin/opencode serve --hostname 127.0.0.1 --port 4096
+Restart=on-failure
+RestartSec=2

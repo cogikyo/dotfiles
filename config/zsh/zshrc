@@ -45,10 +45,12 @@ alias build='~/dotfiles/build.sh'
 alias niol='clear && source ~/.zshrc'
 alias ls='echo; lsd'
 alias n='nvim'
-alias c='opencode'
-alias cl='claude --effort low'
-alias cc='claude --effort high'
-alias cm='claude --effort max'
+function c() {
+    opencode attach http://127.0.0.1:4096 --dir "$PWD" "$@"
+}
+alias cl='claude --model claude-sonnet-4-6 --effort high'
+alias cc='claude --model claude-opus-4-6 --effort high'
+alias ch='claude --model claude-opus-4-7 --effort xhigh'
 alias zz='cd ~'
 alias l='z ~/LeadPier'
 alias jw="just watch"

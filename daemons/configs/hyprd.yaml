@@ -15,11 +15,11 @@ tabs:
     prefix: "agents-"
     focus: master
     tabs:
-      - { name: xplr, title: "⊰   ⊱", command: "opencode -m openai/gpt-5.4" }
+      - { name: xplr, title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
       - { name: master, title: "⊰ 󰯉  ⊱", command: "claude --model claude-opus-4-6 --effort high" }
-      - { name: dev, title: "⊰   ⊱", command: "opencode -m openai/gpt-5.4" }
+      - { name: dev, title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
       - { name: plan, title: "⊰   ⊱", command: "claude --model claude-opus-4-7 --effort xhigh" }
-      - { name: git, title: "⊰   ⊱", command: "opencode -m openai/gpt-5.3-codex" }
+      - { name: git, title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
 
   leadpier:
     order: 2

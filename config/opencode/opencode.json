@@ -3,6 +3,9 @@
   "autoupdate": false,
   "share": "manual",
   "snapshot": true,
+  "plugin": [
+    "file:///home/cullyn/dotfiles/config/opencode/plugins/hyprd-notify.js"
+  ],
   "skills": {
     "paths": [
       "{env:HOME}/dotfiles/skills/user"

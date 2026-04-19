@@ -119,7 +119,7 @@ func requireArg(usage string) string {
 	return os.Args[2]
 }
 
-// cmdInit imports Wayland env into systemd, starts hyprd.service, and waits for the socket.
+// cmdInit imports Wayland env into systemd, starts user services, and waits for hyprd.
 func cmdInit() {
 	exec.Command("systemctl", "--user", "import-environment",
 		"WAYLAND_DISPLAY", "HYPRLAND_INSTANCE_SIGNATURE",
@@ -131,7 +131,7 @@ func cmdInit() {
 		"GDK_BACKEND", "GDK_DPI_SCALE",
 		"SDL_VIDEODRIVER",
 	).Run()
-	exec.Command("systemctl", "--user", "start", "hyprd.service").Run()
+	exec.Command("systemctl", "--user", "start", "hyprd.service", "opencode.service").Run()
 
 	for range 100 {
 		if client.IsRunning() {
