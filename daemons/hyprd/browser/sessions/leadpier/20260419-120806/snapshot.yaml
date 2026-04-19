@@ -1,0 +1,67 @@
+name: leadpier
+created_at: "2026-04-19T12:08:06-07:00"
+profile:
+    name: dev-edition-default
+    path: /home/cullyn/.mozilla/firefox/sdfm8kqz.dev-edition-default
+    install_key: 46F492E0ACFF84D4
+source:
+    session_file: /home/cullyn/.mozilla/firefox/sdfm8kqz.dev-edition-default/sessionstore-backups/recovery.jsonlz4
+    window_index: 2
+window:
+    selected_tab: 5
+    tab_count: 6
+    group_count: 3
+    selected_title: https://local.leadpier.com:4000/
+    selected_url: https://local.leadpier.com:4000/
+    hypr_order_matches_tabs: true
+browser:
+    pinned:
+        - https://git.linecode.dev/
+        - https://git.trendcapital.io/leadpier/leadpierui
+    groups:
+        - name: local
+          color: blue
+          urls:
+            - https://localhost:4000/
+            - http://localhost:4001/
+        - name: staging
+          color: orange
+          urls:
+            - https://local.leadpier.com:4000/
+        - name: prod
+          color: green
+          urls:
+            - https://beta.leadpier.com/dashboard
+tabs:
+    - position: 1
+      title: Linecode
+      url: https://git.linecode.dev/
+      pinned: true
+    - position: 2
+      title: https://git.trendcapital.io/leadpier/leadpierui
+      url: https://git.trendcapital.io/leadpier/leadpierui
+      pinned: true
+    - position: 3
+      title: https://localhost:4000/
+      url: https://localhost:4000/
+      group_id: 1776625590997-19
+      group: local
+      group_color: blue
+    - position: 4
+      title: http://localhost:4001/
+      url: http://localhost:4001/
+      group_id: 1776625590997-19
+      group: local
+      group_color: blue
+    - position: 5
+      title: https://local.leadpier.com:4000/
+      url: https://local.leadpier.com:4000/
+      group_id: 1776625621988-1
+      group: staging
+      group_color: orange
+    - position: 6
+      title: LeadPier | Dashboard
+      url: https://beta.leadpier.com/dashboard
+      group_id: 1776625644331-95
+      group: prod
+      group_color: green

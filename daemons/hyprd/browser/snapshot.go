@@ -73,7 +73,7 @@ func (b *Browser) writeSnapshot(name string, profile firefoxProfile, windowIndex
 		return "", err
 	}
 
-	root, err := browserStateRoot()
+	root, err := repoSessionsRoot()
 	if err != nil {
 		return "", err
 	}
@@ -324,6 +324,14 @@ func latestSnapshotDir(baseDir string) (string, error) {
 	return filepath.Join(baseDir, dirs[len(dirs)-1]), nil
 }
 
+func repoSessionsRoot() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, "dotfiles", "daemons", "hyprd", "browser", "sessions"), nil
+}
+
 func browserStateRoot() (string, error) {
 	if stateHome := os.Getenv("XDG_STATE_HOME"); stateHome != "" {
 		return filepath.Join(stateHome, "hyprd", "browser-sessions"), nil
@@ -345,6 +353,9 @@ func legacyBrowserStateRoot() (string, error) {
 
 func snapshotRoots() []string {
 	var roots []string
+	if root, err := repoSessionsRoot(); err == nil {
+		roots = append(roots, root)
+	}
 	if root, err := browserStateRoot(); err == nil {
 		roots = append(roots, root)
 	}
