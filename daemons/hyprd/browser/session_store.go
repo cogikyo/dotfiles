@@ -73,8 +73,8 @@ func (b *Browser) loadFirefoxSession(profile firefoxProfile) (*firefoxSessionSto
 	return parseFirefoxSession(payload, source)
 }
 
-func (b *Browser) loadSnapshotSession(name, snapshotID string) (string, *firefoxSessionStore, error) {
-	dir, err := resolveSnapshotDir(name, snapshotID)
+func (b *Browser) loadSnapshotSession(name string) (string, *firefoxSessionStore, error) {
+	dir, err := resolveSnapshotDir(name)
 	if err != nil {
 		return "", nil, err
 	}

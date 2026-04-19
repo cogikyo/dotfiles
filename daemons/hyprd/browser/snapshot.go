@@ -11,7 +11,6 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-	"time"
 
 	"dotfiles/daemons/config"
 
@@ -38,13 +37,12 @@ type browserTabSummary struct {
 }
 
 type browserSnapshotSummary struct {
-	Name      string                `yaml:"name"`
-	CreatedAt string                `yaml:"created_at"`
-	Profile   browserProfileSummary `yaml:"profile"`
-	Source    browserSourceSummary  `yaml:"source"`
-	Window    browserSnapshotWindow `yaml:"window"`
-	Browser   config.BrowserConfig  `yaml:"browser"`
-	Tabs      []browserTabSummary   `yaml:"tabs,omitempty"`
+	Name    string                `yaml:"name"`
+	Profile browserProfileSummary `yaml:"profile"`
+	Source  browserSourceSummary  `yaml:"source"`
+	Window  browserSnapshotWindow `yaml:"window"`
+	Browser config.BrowserConfig  `yaml:"browser"`
+	Tabs    []browserTabSummary   `yaml:"tabs,omitempty"`
 }
 
 type browserProfileSummary struct {
@@ -77,21 +75,14 @@ func (b *Browser) writeSnapshot(name string, profile firefoxProfile, windowIndex
 	if err != nil {
 		return "", err
 	}
-	baseDir := filepath.Join(root, slug)
-	if err := os.MkdirAll(baseDir, 0o755); err != nil {
-		return "", err
-	}
-
-	snapshotID := time.Now().Format("20060102-150405")
-	targetDir := filepath.Join(baseDir, snapshotID)
-	if err := os.Mkdir(targetDir, 0o755); err != nil {
+	dir := filepath.Join(root, slug)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", err
 	}
 
 	windowSummary := summarizeFirefoxWindow(store.Windows[windowIndex])
 	summary := browserSnapshotSummary{
-		Name:      slug,
-		CreatedAt: time.Now().Format(time.RFC3339),
+		Name: slug,
 		Profile: browserProfileSummary{
 			Name:       profile.Name,
 			Path:       profile.Root,
@@ -110,7 +101,7 @@ func (b *Browser) writeSnapshot(name string, profile firefoxProfile, windowIndex
 	if err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(filepath.Join(targetDir, "snapshot.yaml"), summaryData, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "snapshot.yaml"), summaryData, 0o644); err != nil {
 		return "", err
 	}
 
@@ -119,14 +110,11 @@ func (b *Browser) writeSnapshot(name string, profile firefoxProfile, windowIndex
 		return "", err
 	}
 	sessionData = append(sessionData, '\n')
-	if err := os.WriteFile(filepath.Join(targetDir, "session.json"), sessionData, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(dir, "session.json"), sessionData, 0o644); err != nil {
 		return "", err
 	}
 
-	if err := updateLatestSnapshotLink(baseDir, snapshotID); err != nil {
-		return "", err
-	}
-	return targetDir, nil
+	return dir, nil
 }
 
 // snapshotSessionJSON narrows the session to a single window, preserving all other top-level keys verbatim.
@@ -152,21 +140,6 @@ func snapshotSessionJSON(payload []byte, windowIndex int) ([]byte, error) {
 	doc["selectedWindow"] = json.RawMessage(`1`)
 	doc["_closedWindows"] = json.RawMessage(`[]`)
 	return json.MarshalIndent(doc, "", "  ")
-}
-
-func updateLatestSnapshotLink(baseDir, snapshotID string) error {
-	latest := filepath.Join(baseDir, "latest")
-	tmp := filepath.Join(baseDir, ".latest.tmp")
-	if err := os.RemoveAll(tmp); err != nil {
-		return err
-	}
-	if err := os.Symlink(snapshotID, tmp); err != nil {
-		return err
-	}
-	if err := os.Rename(tmp, latest); err != nil {
-		return err
-	}
-	return nil
 }
 
 // summarizeFirefoxWindow projects a session-store window into a launch-ready BrowserConfig.
@@ -261,67 +234,19 @@ func summarizeFirefoxWindow(window firefoxWindow) browserWindowSummary {
 	}
 }
 
-func resolveSnapshotDir(name, snapshotID string) (string, error) {
+func resolveSnapshotDir(name string) (string, error) {
 	slug, err := slugifySnapshotName(name)
 	if err != nil {
 		return "", err
 	}
 
 	for _, root := range snapshotRoots() {
-		baseDir := filepath.Join(root, slug)
-		if snapshotID != "" {
-			candidate := filepath.Join(baseDir, snapshotID)
-			if isDir(candidate) {
-				return candidate, nil
-			}
-			continue
-		}
-
-		dir, err := latestSnapshotDir(baseDir)
-		if err == nil {
+		dir := filepath.Join(root, slug)
+		if fileExists(filepath.Join(dir, "session.json")) {
 			return dir, nil
 		}
 	}
-
-	if snapshotID == "" {
-		return "", fmt.Errorf("no snapshot found for %q", slug)
-	}
-	return "", fmt.Errorf("snapshot %q not found for %q", snapshotID, slug)
-}
-
-func latestSnapshotDir(baseDir string) (string, error) {
-	latest := filepath.Join(baseDir, "latest")
-	if info, err := os.Lstat(latest); err == nil {
-		if info.Mode()&os.ModeSymlink != 0 {
-			resolved, err := filepath.EvalSymlinks(latest)
-			if err != nil {
-				return "", err
-			}
-			if isDir(resolved) {
-				return resolved, nil
-			}
-		}
-		if info.IsDir() {
-			return latest, nil
-		}
-	}
-
-	entries, err := os.ReadDir(baseDir)
-	if err != nil {
-		return "", err
-	}
-
-	var dirs []string
-	for _, entry := range entries {
-		if entry.IsDir() && entry.Name() != "latest" {
-			dirs = append(dirs, entry.Name())
-		}
-	}
-	if len(dirs) == 0 {
-		return "", fmt.Errorf("no snapshot directories in %s", baseDir)
-	}
-	slices.Sort(dirs)
-	return filepath.Join(baseDir, dirs[len(dirs)-1]), nil
+	return "", fmt.Errorf("no snapshot found for %q", slug)
 }
 
 func repoSessionsRoot() (string, error) {

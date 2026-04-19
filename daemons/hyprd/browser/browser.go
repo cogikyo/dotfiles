@@ -30,9 +30,9 @@ const (
 	browserUsage         = "usage: browser {launch|windows|snapshot|show|hypr|restore}"
 	browserWindowsUsage  = "usage: browser windows [--all] [--profile <name|path>]"
 	browserSnapshotUsage = "usage: browser snapshot <name> [active|largest|index] [--profile <name|path>]"
-	browserShowUsage     = "usage: browser show <name> [snapshot]"
-	browserHyprUsage     = "usage: browser hypr <name> [snapshot]"
-	browserRestoreUsage  = "usage: browser restore <name> [snapshot] [--mode urls|exact] [--profile <name|path>] [--force] [--dry-run]"
+	browserShowUsage    = "usage: browser show <name>"
+	browserHyprUsage    = "usage: browser hypr <name>"
+	browserRestoreUsage = "usage: browser restore <name> [--mode urls|exact] [--profile <name|path>] [--force] [--dry-run]"
 )
 
 type Browser struct {
@@ -76,7 +76,7 @@ func (b *Browser) ResolveLaunchConfig(cfg config.BrowserConfig) (config.BrowserC
 		return cfg, nil
 	}
 
-	snapshotCfg, err := b.SnapshotConfig(cfg.Snapshot, "")
+	snapshotCfg, err := b.SnapshotConfig(cfg.Snapshot)
 	if err != nil {
 		if len(cfg.AllURLs()) > 0 {
 			return cfg, nil
@@ -88,8 +88,8 @@ func (b *Browser) ResolveLaunchConfig(cfg config.BrowserConfig) (config.BrowserC
 }
 
 // SnapshotConfig returns the BrowserConfig for the first window of the named snapshot.
-func (b *Browser) SnapshotConfig(name, snapshotID string) (config.BrowserConfig, error) {
-	_, store, err := b.loadSnapshotSession(name, snapshotID)
+func (b *Browser) SnapshotConfig(name string) (config.BrowserConfig, error) {
+	_, store, err := b.loadSnapshotSession(name)
 	if err != nil {
 		return config.BrowserConfig{}, err
 	}
@@ -112,7 +112,7 @@ func (b *Browser) RestoreConfiguredSnapshot(cfg config.BrowserConfig, dryRun boo
 		return "", fmt.Errorf("browser exact restore requires snapshot")
 	}
 
-	dir, _, err := b.loadSnapshotSession(cfg.Snapshot, "")
+	dir, _, err := b.loadSnapshotSession(cfg.Snapshot)
 	if err != nil {
 		return "", err
 	}
@@ -227,10 +227,10 @@ func (b *Browser) executeSnapshot(args []string) (string, error) {
 }
 
 func (b *Browser) executeShow(args []string) (string, error) {
-	if len(args) < 1 || len(args) > 2 {
+	if len(args) != 1 {
 		return "", fmt.Errorf(browserShowUsage)
 	}
-	dir, err := resolveSnapshotDir(args[0], optionalArg(args, 1))
+	dir, err := resolveSnapshotDir(args[0])
 	if err != nil {
 		return "", err
 	}
@@ -243,10 +243,10 @@ func (b *Browser) executeShow(args []string) (string, error) {
 }
 
 func (b *Browser) executeHypr(args []string) (string, error) {
-	if len(args) < 1 || len(args) > 2 {
+	if len(args) != 1 {
 		return "", fmt.Errorf(browserHyprUsage)
 	}
-	cfg, err := b.SnapshotConfig(args[0], optionalArg(args, 1))
+	cfg, err := b.SnapshotConfig(args[0])
 	if err != nil {
 		return "", err
 	}
@@ -283,13 +283,6 @@ func browserMode(cfg config.BrowserConfig) string {
 		return "urls"
 	}
 	return mode
-}
-
-func optionalArg(args []string, idx int) string {
-	if idx >= len(args) {
-		return ""
-	}
-	return args[idx]
 }
 
 func shellQuoteCommand(parts []string) string {

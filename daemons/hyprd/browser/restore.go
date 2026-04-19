@@ -49,7 +49,7 @@ func (b *Browser) executeRestore(args []string) (string, error) {
 			positional = append(positional, arg)
 		}
 	}
-	if len(positional) < 1 || len(positional) > 2 {
+	if len(positional) != 1 {
 		return "", fmt.Errorf(browserRestoreUsage)
 	}
 	if mode != "urls" && mode != "exact" {
@@ -57,8 +57,7 @@ func (b *Browser) executeRestore(args []string) (string, error) {
 	}
 
 	name := positional[0]
-	snapshotID := optionalArg(positional, 1)
-	dir, store, err := b.loadSnapshotSession(name, snapshotID)
+	dir, store, err := b.loadSnapshotSession(name)
 	if err != nil {
 		return "", err
 	}

@@ -269,9 +269,9 @@ Browser:
   hyprd browser launch [--profile <name|path>]
   hyprd browser windows [--all] [--profile <name|path>]
   hyprd browser snapshot <name> [active|largest|index] [--profile <name|path>]
-  hyprd browser show <name> [snapshot]
-  hyprd browser hypr <name> [snapshot]
-  hyprd browser restore <name> [snapshot] [--mode urls|exact] [--force] [--dry-run]
+  hyprd browser show <name>
+  hyprd browser hypr <name>
+  hyprd browser restore <name> [--mode urls|exact] [--force] [--dry-run]
 
 Query/Subscribe (for eww):
   hyprd query [topic]    Get state (workspace|hidden|split|three-body|all)
