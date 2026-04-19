@@ -1,5 +1,3 @@
-; workspaces
-
 (defwindow workspaces
   :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :anchor "top right" :x "0px" :y "0px")

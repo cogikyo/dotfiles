@@ -1,4 +1,5 @@
-; computer
+;; ============================================================================
+;; window
 
 (defwindow computer
   :monitor 0 :stacking "bottom" :exclusive false :focusable false
@@ -10,7 +11,8 @@
   )
 )
 
-; network
+;; ----------------------------------------------------------------------------
+;; network
 
 (deflisten net-info
   :initial `{"type":"none","icon":"󰖪","name":"disconnected","iface":"lo","vpn":false,"link_ramp":1,"down":0,"up":0,"down_ramp":1,"up_ramp":1,"down_fmt":"0<sub>K</sub>","up_fmt":"0<sub>K</sub>"}`
@@ -54,7 +56,8 @@
   )
 )
 
-; helpers
+;; ----------------------------------------------------------------------------
+;; helpers
 
 (defwidget num-to-block [load]
   (label
@@ -139,7 +142,8 @@
   )
 )
 
-; cpu
+;; ----------------------------------------------------------------------------
+;; cpu
 
 (defvar cpu-hover false)
 (defvar cores "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
@@ -177,7 +181,8 @@
   )
 )
 
-; memory
+;; ----------------------------------------------------------------------------
+;; memory
 
 (defvar range16 "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
 (defvar memory-hover false)

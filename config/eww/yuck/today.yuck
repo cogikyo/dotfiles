@@ -1,4 +1,5 @@
-; today
+;; ============================================================================
+;; window
 
 (defwindow today
   :monitor 0 :stacking "bottom" :exclusive false :focusable false
@@ -10,7 +11,8 @@
   )
 )
 
-; weather
+;; ----------------------------------------------------------------------------
+;; weather
 
 (deflisten weather
   :initial '{"icon":" ","desc":"","bf_icon":" ","bf_desc":"calm","wind_speed":0,"sunset":"","moon":" ","moon_desc":"","night":false,"temp":0,"temp_morn":0,"temp_day":0,"temp_max":0,"temp_eve":0,"temp_night":0,"feels_like":0,"uvi":0,"uvi_desc":"low","aqi":0,"aqi_desc":"good","rain_1h":0,"rain_day":0,"clouds":0}'
@@ -128,7 +130,8 @@
   )
 )
 
-; time
+;; ----------------------------------------------------------------------------
+;; time
 
 (defvar hour-active false)
 (defvar minute-active false)
@@ -248,7 +251,8 @@
   )
 )
 
-; date
+;; ----------------------------------------------------------------------------
+;; date
 
 (deflisten date
   :initial '{"weekday":"?","weekday_short":"?","month":"?","month_short":"?","day":"?","clock_hour":"","clock_minute":"","weeks_alive":4732}'

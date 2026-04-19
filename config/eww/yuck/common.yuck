@@ -1,5 +1,5 @@
 ;; ============================================================================
-;; setup + shared widgets
+;; shared variables + widgets
 
 (deflisten cycle-6
   :initial 0
@@ -14,7 +14,6 @@
 (defvar browser "firefox-developer-edition")
 (defvar terminal "kitty")
 
-; Combination of slide and fade revealer
 (defwidget slide-n-fade [direction bool]
   (revealer
     :transition "slide${direction}"

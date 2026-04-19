@@ -1,4 +1,5 @@
-; player
+;; ============================================================================
+;; player
 
 (defwindow player
   :monitor 0 :stacking "bottom" :exclusive false :focusable false
@@ -19,7 +20,8 @@
   )
 )
 
-; music
+;; ----------------------------------------------------------------------------
+;; music
 
 (defwindow music
   :monitor 0 :stacking "bottom" :exclusive false :focusable false
@@ -168,7 +170,8 @@
   )
 )
 
-; audio
+;; ----------------------------------------------------------------------------
+;; audio
 
 (deflisten audio-info
   :initial '{"source":80,"source_name":"Scarlett","sink":69,"sink_name":"WH-1000XM4","sink_bluetooth":true}'
