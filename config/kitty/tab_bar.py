@@ -5,7 +5,7 @@
 """Custom kitty tab bar via the draw_tab callback.
 
 Layout: Icon → Tab titles (left) | CWD (child→root) → hostname (right).
-Accent color switches to red when an agent window is detected.
+Accent color follows the active agent: red for claude, yellow for opencode, blue otherwise.
 """
 
 from getpass import getuser
@@ -65,7 +65,8 @@ class Colors:
         opts = get_options()
         self.fg = as_rgb(color_as_int(opts.background))
         self.bg = as_rgb(color_as_int(opts.color4))  # blue accent
-        self.red = as_rgb(color_as_int(opts.color1))  # red accent for agent windows
+        self.red = as_rgb(color_as_int(opts.color1))  # red accent for claude
+        self.yellow = as_rgb(color_as_int(opts.color3))  # yellow/orange accent for opencode
         self.pink = as_rgb(color_as_int(opts.color13))  # pink accent for ssh sessions
         self.accent = as_rgb(color_as_int(opts.selection_background))
         self.active_bg = as_rgb(color_as_int(opts.active_tab_background))
@@ -78,13 +79,17 @@ colors = Colors()
 
 
 def get_accent() -> int:
-    """Return accent color — red for agents, pink for ssh, blue otherwise."""
+    """Return accent color — red for claude, yellow for opencode, pink for ssh, blue otherwise."""
     boss = get_boss()
     tm = boss.active_tab_manager if boss else None
-    if tm and is_agent_window(tm):
-        return colors.red
-    if tm and _detect_ssh_active(tm)[1]:
-        return colors.pink
+    if tm:
+        agent = _detect_active_agent(tm)
+        if agent == "claude":
+            return colors.red
+        if agent == "opencode":
+            return colors.yellow
+        if _detect_ssh_active(tm)[1]:
+            return colors.pink
     return colors.bg
 
 
@@ -246,8 +251,26 @@ def _detect_active_agent(tab_manager) -> str:
 
 
 SSH_VALUE_OPTS = {
-    "-b", "-c", "-D", "-E", "-e", "-F", "-I", "-i", "-J", "-L", "-l",
-    "-m", "-O", "-o", "-p", "-Q", "-R", "-S", "-W", "-w",
+    "-b",
+    "-c",
+    "-D",
+    "-E",
+    "-e",
+    "-F",
+    "-I",
+    "-i",
+    "-J",
+    "-L",
+    "-l",
+    "-m",
+    "-O",
+    "-o",
+    "-p",
+    "-Q",
+    "-R",
+    "-S",
+    "-W",
+    "-w",
 }
 
 
