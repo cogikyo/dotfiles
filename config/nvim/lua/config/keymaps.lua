@@ -87,6 +87,7 @@ local function set_context_register(location, content)
 	if language == "" then
 		language = "text"
 	end
+	content = content:gsub("\n+$", "")
 	vim.fn.setreg("+", string.format("```%s\n%s\n\n%s\n```\n", language, location, content))
 end
 
@@ -103,7 +104,7 @@ end
 
 local function yank_file_path()
 	local path = vim.fn.expand("%:p")
-	vim.fn.setreg("+", path)
+	vim.fn.setreg("+", path .. "\n\n")
 end
 
 local function yank_selection(motion)
