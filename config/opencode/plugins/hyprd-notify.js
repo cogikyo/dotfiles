@@ -18,9 +18,9 @@ async function notify(payload) {
 
 export const HyprdNotifyPlugin = async () => {
   const activeSessions = new Set()
-  const lastAssistantMessages = new Map()
   const seenAgentParts = new Map()
   const seenStepFinishParts = new Map()
+  const todoStatuses = new Map()
 
   return {
     event: async ({ event }) => {
@@ -32,10 +32,6 @@ export const HyprdNotifyPlugin = async () => {
           if (!part?.sessionID || !part?.id) return
 
           if (part.type === "text" && part?.time?.end) {
-            const text = cleanText(part.text)
-            if (text) {
-              lastAssistantMessages.set(part.sessionID, text)
-            }
             return
           }
 
@@ -97,11 +93,6 @@ export const HyprdNotifyPlugin = async () => {
           if (!sessionID) return
 
           activeSessions.delete(sessionID)
-          await notify({
-            app: "opencode",
-            type: "complete",
-            last_assistant_message: cleanText(lastAssistantMessages.get(sessionID)),
-          })
           return
         }
         case "permission.asked": {
@@ -128,6 +119,32 @@ export const HyprdNotifyPlugin = async () => {
           })
           return
         }
+        case "todo.updated": {
+          const sessionID = event.properties?.sessionID
+          const todos = Array.isArray(event.properties?.todos) ? event.properties.todos : null
+          if (!sessionID || !todos) return
+
+          const previous = todoStatuses.get(sessionID)
+          const next = new Map()
+
+          for (const todo of todos) {
+            const content = cleanText(todo?.content)
+            const status = cleanText(todo?.status, 32)
+            if (!content || !status) continue
+
+            next.set(content, status)
+            if (previous && previous.get(content) !== "completed" && status === "completed") {
+              await notify({
+                app: "opencode",
+                type: "todo-complete",
+                message: content,
+              })
+            }
+          }
+
+          todoStatuses.set(sessionID, next)
+          return
+        }
         case "session.error": {
           const sessionID = event.properties?.sessionID
           const message = cleanText(event.properties?.error?.message || event.properties?.error?.name || "Session error")
@@ -148,9 +165,9 @@ export const HyprdNotifyPlugin = async () => {
           if (!sessionID) return
 
           activeSessions.delete(sessionID)
-          lastAssistantMessages.delete(sessionID)
           seenAgentParts.delete(sessionID)
           seenStepFinishParts.delete(sessionID)
+          todoStatuses.delete(sessionID)
           return
         }
       }

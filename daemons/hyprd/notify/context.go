@@ -220,6 +220,9 @@ func (n *Notifier) focusContext(ctx *kittyContext) {
 
 func preferredSummary(primary, fallback string, max int) string {
 	text := sanitizeLine(primary)
+	if isSDKSummaryMarker(text) {
+		text = ""
+	}
 	if text == "" {
 		text = sanitizeLine(fallback)
 	}
@@ -231,6 +234,15 @@ func preferredSummary(primary, fallback string, max int) string {
 		return string(runes[:max])
 	}
 	return text
+}
+
+func isSDKSummaryMarker(text string) bool {
+	switch strings.ToLower(strings.TrimSpace(text)) {
+	case "tool-calls", "stop", "length", "content-filter", "pause", "other", "unknown":
+		return true
+	default:
+		return false
+	}
 }
 
 // sanitizeLine returns the first non-blank line with markdown noise stripped.

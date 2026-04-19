@@ -152,10 +152,10 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 			Volume:      n.cfg.Notify.QuietVolume,
 			FocusAction: true,
 		}, ctx)
-	case "step-finish":
+	case "todo-complete":
 		return n.dispatch(notificationSpec{
 			App:         ctx.App,
-			Title:       preferredSummary(req.Message, "Step finished", 80),
+			Title:       preferredSummary(req.Message, "Todo complete", 80),
 			Style:       "subagent",
 			Sound:       "civ6-notification",
 			Volume:      n.cfg.Notify.QuietVolume,
