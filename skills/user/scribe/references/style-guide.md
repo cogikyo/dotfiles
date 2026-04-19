@@ -216,6 +216,32 @@ TSDoc in `/** */` blocks. Use `@param`, `@returns`, `@example`, `@deprecated` on
 - Section dividers for logical blocks.
 - Inline comments for cryptic syntax (parameter expansion, process substitution, etc).
 
+## Markdown
+
+Markdown prose follows the same density principles as code comments.
+
+- One sentence per line. Never wrap mid-sentence.
+- Lines should not approach 120 characters — if they do, rewrite shorter or split.
+- Use blank lines as structural punctuation to separate distinct ideas.
+- Whitespace is a form of emphasis — dense blocks are hard to scan.
+- Bullet points: keep each item to one or two lines.
+- Headers create scannable structure; prefer them over long unbroken prose.
+
+Bad — paragraph blob:
+```md
+This module handles authentication and session management. It validates tokens against the auth provider, refreshes expired sessions, and maintains a local cache of active sessions for fast lookup. The cache is invalidated when the provider signals a revocation.
+```
+
+Good — one sentence per line, whitespace separating ideas:
+```md
+This module handles authentication and session management.
+
+It validates tokens against the auth provider and refreshes expired sessions.
+A local cache of active sessions provides fast lookup.
+
+The cache is invalidated when the provider signals a revocation.
+```
+
 ## Config files (YAML, TOML, Hyprland, etc.)
 
 - Section headers are essential — these tend to be monolithic.
