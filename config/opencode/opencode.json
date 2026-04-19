@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "autoupdate": "notify",
+  "autoupdate": false,
   "share": "manual",
   "snapshot": true,
   "skills": {
