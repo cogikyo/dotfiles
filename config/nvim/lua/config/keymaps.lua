@@ -82,6 +82,14 @@ map("x", "<leader>p", '"_dP', desc("Paste (preserve register)"))
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ context: yank with file path prepended                                      │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
+local function set_context_register(location, content)
+	local language = vim.fn.fnamemodify(location, ":e")
+	if language == "" then
+		language = "text"
+	end
+	vim.fn.setreg("+", string.format("```%s\n%s\n\n%s\n```\n", language, location, content))
+end
+
 local function yank_path(motion)
 	if motion then
 		vim.cmd("normal! " .. motion)
@@ -90,8 +98,14 @@ local function yank_path(motion)
 	vim.cmd('normal! "+y')
 	local selection = vim.fn.getreg("+")
 	local path = vim.fn.expand("%:p")
-	vim.fn.setreg("+", path .. "\n\n" .. selection .. "\n")
+	set_context_register(path, selection)
 end
+
+local function yank_file_path()
+	local path = vim.fn.expand("%:p")
+	vim.fn.setreg("+", path)
+end
+
 local function yank_selection(motion)
 	return function()
 		if motion == "gv" then
@@ -108,19 +122,20 @@ end
 local function yank_diagnostics()
 	local path = vim.fn.expand("%:p")
 	local line = vim.fn.line(".")
+	local location = path .. ":" .. line
 	local diagnostics = vim.diagnostic.get(0, { lnum = line - 1 }) -- 0-indexed
 
 	if #diagnostics == 0 then
-		vim.fn.setreg("+", path .. ":" .. line .. "\n  |- (no diagnostics)")
+		set_context_register(location, "(no diagnostics)")
 		vim.notify("No diagnostics on this line", vim.log.levels.WARN)
 		return
 	end
 
-	local lines = { path .. ":" .. line }
+	local lines = {}
 	for _, d in ipairs(diagnostics) do
 		table.insert(lines, "  |- " .. d.message:gsub("\n", " "))
 	end
-	vim.fn.setreg("+", table.concat(lines, "\n"))
+	set_context_register(location, table.concat(lines, "\n"))
 
 	local ns = vim.api.nvim_create_namespace("context_yank")
 	vim.api.nvim_buf_add_highlight(0, ns, "ContextYank", line - 1, 0, -1)
@@ -131,7 +146,7 @@ local function yank_diagnostics()
 	vim.notify("Yanked " .. #diagnostics .. " diagnostic(s)", vim.log.levels.INFO)
 end
 
-map("n", "<A-f>", ':let @+=expand("%:p")<CR>', desc("Yank file path"))
+map("n", "<A-f>", yank_file_path, desc("Yank file path"))
 map("n", "<A-q>", yank_selection("vap"), desc("Yank file path + paragraph"))
 map("n", "<A-w>", yank_diagnostics, desc("Yank file path + diagnostics"))
 map("v", "<A-b>", yank_selection(nil), desc("Yank file path + selection"))
