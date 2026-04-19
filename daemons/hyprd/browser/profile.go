@@ -188,6 +188,19 @@ func profileNameForPath(profiles iniFile, root, target string) string {
 	return filepath.Base(target)
 }
 
+// setFirefoxPref appends a user_pref line to the profile's prefs.js.
+// Firefox last-write-wins for duplicate keys, so appending is safe.
+func setFirefoxPref(profile firefoxProfile, key, value string) error {
+	prefsPath := filepath.Join(profile.Root, "prefs.js")
+	f, err := os.OpenFile(prefsPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
+	if err != nil {
+		return fmt.Errorf("set pref %s: %w", key, err)
+	}
+	defer f.Close()
+	_, err = fmt.Fprintf(f, "user_pref(\"%s\", %s);\n", key, value)
+	return err
+}
+
 func fileExists(path string) bool {
 	info, err := os.Stat(path)
 	return err == nil && !info.IsDir()

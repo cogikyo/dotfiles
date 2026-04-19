@@ -126,6 +126,7 @@ func (b *Browser) restoreSnapshotExact(name, snapshotDir string, profile firefox
 			fmt.Sprintf("would back up session files into %s", backupDir),
 			fmt.Sprintf("would write %s", target),
 			fmt.Sprintf("would write %s", filepath.Join(profile.Root, "sessionstore-backups", "recovery.jsonlz4")),
+			fmt.Sprintf("would set resume_session_once=true in %s", filepath.Join(profile.Root, "prefs.js")),
 			fmt.Sprintf("would launch %s", shellQuoteCommand(append(b.browserCommandParts(), "--new-instance", "--profile", profile.Root))),
 		}
 		return strings.Join(lines, "\n"), nil
@@ -158,6 +159,10 @@ func (b *Browser) restoreSnapshotExact(name, snapshotDir string, profile firefox
 		}
 	}
 	if err := os.WriteFile(filepath.Join(profile.Root, "sessionCheckpoints.json"), defaultSessionCheckpoints, 0o644); err != nil {
+		return "", err
+	}
+
+	if err := setFirefoxPref(profile, "browser.sessionstore.resume_session_once", "true"); err != nil {
 		return "", err
 	}
 
