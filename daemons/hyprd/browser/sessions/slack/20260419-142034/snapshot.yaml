@@ -1,0 +1,31 @@
+name: slack
+created_at: "2026-04-19T14:20:34-07:00"
+profile:
+    name: dev-edition-default
+    path: /home/cullyn/.mozilla/firefox/sdfm8kqz.dev-edition-default
+    install_key: 46F492E0ACFF84D4
+source:
+    session_file: /home/cullyn/.mozilla/firefox/sdfm8kqz.dev-edition-default/sessionstore-backups/recovery.jsonlz4
+    window_index: 1
+window:
+    selected_tab: 2
+    tab_count: 3
+    group_count: 0
+    selected_title: Telegram Web
+    selected_url: https://web.telegram.org/k/#777000
+    hypr_order_matches_tabs: true
+browser:
+    urls:
+        - https://mail.google.com/mail/u/1/#inbox
+        - https://web.telegram.org/k/#777000
+        - https://mail.google.com/mail/u/0/#inbox
+tabs:
+    - position: 1
+      title: Inbox - cullyn@cogikyo.com - COGIKYO Mail
+      url: https://mail.google.com/mail/u/1/#inbox
+    - position: 2
+      title: Telegram Web
+      url: https://web.telegram.org/k/#777000
+    - position: 3
+      title: Inbox - cullyn.newman@gmail.com - Gmail
+      url: https://mail.google.com/mail/u/0/#inbox

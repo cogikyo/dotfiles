@@ -51,7 +51,11 @@ sessions:
     name: slack
     workspace: 2
     command: slack
-    monocle: true
+    browser:
+      snapshot: slack
+      mode: exact
+      force: true
+
   discord:
     name: discord
     workspace: 2
