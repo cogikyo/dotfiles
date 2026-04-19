@@ -122,7 +122,15 @@ func requireArg(usage string) string {
 // cmdInit imports Wayland env into systemd, starts hyprd.service, and waits for the socket.
 func cmdInit() {
 	exec.Command("systemctl", "--user", "import-environment",
-		"WAYLAND_DISPLAY", "XDG_CURRENT_DESKTOP", "HYPRLAND_INSTANCE_SIGNATURE").Run()
+		"WAYLAND_DISPLAY", "HYPRLAND_INSTANCE_SIGNATURE",
+		"XDG_CURRENT_DESKTOP", "XDG_SESSION_TYPE", "XDG_SESSION_DESKTOP",
+		"HYPRCURSOR_THEME", "HYPRCURSOR_SIZE",
+		"XCURSOR_THEME", "XCURSOR_SIZE",
+		"QT_QPA_PLATFORM", "QT_QPA_PLATFORMTHEME",
+		"QT_WAYLAND_DISABLE_WINDOWDECORATION", "QT_SCALE_FACTOR", "QT_STYLE_OVERRIDE",
+		"GDK_BACKEND", "GDK_DPI_SCALE",
+		"SDL_VIDEODRIVER",
+	).Run()
 	exec.Command("systemctl", "--user", "start", "hyprd.service").Run()
 
 	for range 100 {
