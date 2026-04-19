@@ -138,6 +138,14 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 
 	if s.Command != "" {
 		l.hypr.Dispatch(fmt.Sprintf("exec %s", s.Command))
+
+		if s.Browser.Snapshot != "" || len(s.Browser.AllURLs()) > 0 {
+			time.Sleep(500 * time.Millisecond)
+			if err := l.launchSessionBrowser(s, cfg); err != nil {
+				return "", err
+			}
+		}
+
 		if s.Monocle {
 			time.Sleep(1500 * time.Millisecond)
 			l.applyMonocle(s.Workspace)
@@ -148,35 +156,14 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 		return "", fmt.Errorf("session %q has no body or command", s.Name)
 	}
 
-	b := browser.NewBrowser(l.hypr, l.state)
 	for _, name := range s.Body {
 		tbw, ok := cfg.ThreeBody[name]
 		if !ok {
 			return "", fmt.Errorf("session %q references unknown three-body window %q", s.Name, name)
 		}
 		if name == "browser" || strings.Contains(strings.ToLower(tbw.Class), "firefox") {
-			if b.UsesExactRestore(s.Browser) {
-				if _, err := b.RestoreConfiguredSnapshot(s.Browser, false); err != nil {
-					return "", err
-				}
-				time.Sleep(1500 * time.Millisecond)
-			} else {
-				browserCfg, err := b.ResolveLaunchConfig(s.Browser)
-				if err != nil {
-					return "", err
-				}
-				urls := browserCfg.AllURLs()
-				if len(urls) > 0 {
-					l.hypr.Dispatch(fmt.Sprintf("exec %s", browserLaunchCmd(tbw.Command, "new-window", urls[0])))
-					time.Sleep(500 * time.Millisecond)
-					for _, url := range urls[1:] {
-						l.hypr.Dispatch(fmt.Sprintf("exec %s", browserLaunchCmd(tbw.Command, "new-tab", url)))
-						time.Sleep(300 * time.Millisecond)
-					}
-				} else {
-					l.hypr.Dispatch(fmt.Sprintf("exec %s", browserLaunchCmd(tbw.Command, "new-window", "about:blank")))
-					time.Sleep(500 * time.Millisecond)
-				}
+			if err := l.launchSessionBrowser(s, cfg); err != nil {
+				return "", err
 			}
 			continue
 		}
@@ -246,6 +233,40 @@ func (l *Layout) withSessionLaunchEnv(s config.Session, bodyName, cmd, homeDir s
 	}
 
 	return fmt.Sprintf("env %s %s", strings.Join(env, " "), cmd)
+}
+
+func (l *Layout) launchSessionBrowser(s config.Session, cfg *config.HyprConfig) error {
+	b := browser.NewBrowser(l.hypr, l.state)
+	if b.UsesExactRestore(s.Browser) {
+		if _, err := b.RestoreConfiguredSnapshot(s.Browser, false); err != nil {
+			return err
+		}
+		time.Sleep(1500 * time.Millisecond)
+		return nil
+	}
+
+	tbw, ok := cfg.ThreeBody["browser"]
+	if !ok {
+		return fmt.Errorf("no three-body browser config for URL launch")
+	}
+
+	browserCfg, err := b.ResolveLaunchConfig(s.Browser)
+	if err != nil {
+		return err
+	}
+	urls := browserCfg.AllURLs()
+	if len(urls) > 0 {
+		l.hypr.Dispatch(fmt.Sprintf("exec %s", browserLaunchCmd(tbw.Command, "new-window", urls[0])))
+		time.Sleep(500 * time.Millisecond)
+		for _, url := range urls[1:] {
+			l.hypr.Dispatch(fmt.Sprintf("exec %s", browserLaunchCmd(tbw.Command, "new-tab", url)))
+			time.Sleep(300 * time.Millisecond)
+		}
+	} else {
+		l.hypr.Dispatch(fmt.Sprintf("exec %s", browserLaunchCmd(tbw.Command, "new-window", "about:blank")))
+		time.Sleep(500 * time.Millisecond)
+	}
+	return nil
 }
 
 func browserLaunchCmd(cmd, mode, url string) string {
