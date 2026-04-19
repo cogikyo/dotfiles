@@ -43,7 +43,7 @@ three_body:
     command: "kitty --title=agents --session ~/.config/kitty/sessions/agents.conf"
   browser:
     class: firefox-developer-edition
-    command: firefox-developer-edition
+    command: hyprd browser launch
 
 sessions:
 

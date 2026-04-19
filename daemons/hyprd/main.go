@@ -265,7 +265,8 @@ Lock:
   hyprd lock unlock      Exit pseudo-lock (alias: -u)
   hyprd lock full        Full lock (wraps hyprlock with pre/post hooks)
 
-Browser snapshots:
+Browser:
+  hyprd browser launch [--profile <name|path>]
   hyprd browser windows [--all] [--profile <name|path>]
   hyprd browser snapshot <name> [active|largest|index] [--profile <name|path>]
   hyprd browser show <name> [snapshot]

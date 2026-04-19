@@ -5,7 +5,9 @@ package browser
 import (
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
@@ -13,7 +15,10 @@ import (
 	"time"
 )
 
-const firefoxBinary = "firefox-developer-edition"
+const (
+	firefoxBinary  = "firefox-developer-edition"
+	firefoxNewtab  = "http://localhost:42069"
+)
 
 var (
 	// firefoxTitleSuffixes are stripped to normalize Hypr window titles for session-store comparison.
@@ -27,8 +32,7 @@ var (
 		"about:blank":              {},
 		"about:home":               {},
 		"about:newtab":             {},
-		"http://localhost:42069/":  {},
-		"https://localhost:42069/": {},
+		"http://localhost:42069/": {},
 	}
 )
 
@@ -93,21 +97,27 @@ func stopFirefox(force bool) error {
 
 func (b *Browser) launchFirefoxProfile(profile firefoxProfile) error {
 	cmd := append(slices.Clone(b.browserCommandParts()), "--new-instance", "--profile", profile.Root)
+	// Dispatch through Hyprland so Firefox inherits Hyprland's env (Wayland, Qt, cursor vars).
+	if b.hypr != nil {
+		return b.hypr.Dispatch(fmt.Sprintf("exec %s", shellQuoteCommand(cmd)))
+	}
 	return exec.Command(cmd[0], cmd[1:]...).Start()
 }
 
-func (b *Browser) browserCommandParts() []string {
-	if b.state != nil {
-		cfg := b.state.GetConfig()
-		if cfg != nil {
-			if browser, ok := cfg.ThreeBody["browser"]; ok {
-				parts := strings.Fields(strings.TrimSpace(browser.Command))
-				if len(parts) > 0 {
-					return parts
-				}
-			}
-		}
+// clearSessionStore removes sessionstore files so Firefox starts without prior session state.
+func clearSessionStore(profile firefoxProfile) {
+	os.Remove(filepath.Join(profile.Root, "sessionstore.jsonlz4"))
+	backupsDir := filepath.Join(profile.Root, "sessionstore-backups")
+	entries, err := os.ReadDir(backupsDir)
+	if err != nil {
+		return
 	}
+	for _, e := range entries {
+		os.Remove(filepath.Join(backupsDir, e.Name()))
+	}
+}
+
+func (b *Browser) browserCommandParts() []string {
 	return []string{firefoxBinary}
 }
 

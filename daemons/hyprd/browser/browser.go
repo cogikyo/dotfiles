@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -26,7 +27,7 @@ import (
 )
 
 const (
-	browserUsage         = "usage: browser {windows|snapshot|show|hypr|restore}"
+	browserUsage         = "usage: browser {launch|windows|snapshot|show|hypr|restore}"
 	browserWindowsUsage  = "usage: browser windows [--all] [--profile <name|path>]"
 	browserSnapshotUsage = "usage: browser snapshot <name> [active|largest|index] [--profile <name|path>]"
 	browserShowUsage     = "usage: browser show <name> [snapshot]"
@@ -52,6 +53,8 @@ func (b *Browser) Execute(args string) (string, error) {
 	}
 
 	switch parts[0] {
+	case "launch":
+		return b.executeLaunch(parts[1:])
 	case "windows":
 		return b.executeWindows(parts[1:])
 	case "snapshot":
@@ -295,4 +298,35 @@ func shellQuoteCommand(parts []string) string {
 		quoted[i] = strconv.Quote(part)
 	}
 	return strings.Join(quoted, " ")
+}
+
+// executeLaunch clears prior session state and launches Firefox cleanly via Hyprland.
+// Used as the three-body browser command so normal launches don't inherit pinned tabs
+// or other session artifacts from a previous exact restore.
+func (b *Browser) executeLaunch(args []string) (string, error) {
+	profileArg := ""
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--profile" && i+1 < len(args) {
+			i++
+			profileArg = args[i]
+		}
+	}
+
+	profile, err := discoverFirefoxProfile(profileArg)
+	if err != nil {
+		return "", err
+	}
+	clearSessionStore(profile)
+
+	cmd := append(b.browserCommandParts(), firefoxNewtab)
+	if b.hypr != nil {
+		if err := b.hypr.Dispatch(fmt.Sprintf("exec %s", strings.Join(cmd, " "))); err != nil {
+			return "", err
+		}
+	} else {
+		if err := exec.Command(cmd[0], cmd[1:]...).Start(); err != nil {
+			return "", err
+		}
+	}
+	return "launched browser (session cleared)", nil
 }
