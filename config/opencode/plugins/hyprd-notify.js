@@ -19,7 +19,6 @@ async function notify(payload) {
 export const HyprdNotifyPlugin = async () => {
   const activeSessions = new Set()
   const seenAgentParts = new Map()
-  const seenStepFinishParts = new Map()
   const todoStatuses = new Map()
   const lastAssistantMessages = new Map()
 
@@ -57,12 +56,6 @@ export const HyprdNotifyPlugin = async () => {
             seenAgentParts.set(part.sessionID, seenParts)
           }
 
-          let seenStepParts = seenStepFinishParts.get(part.sessionID)
-          if (!seenStepParts) {
-            seenStepParts = new Set()
-            seenStepFinishParts.set(part.sessionID, seenStepParts)
-          }
-
           if ((part.type === "subtask" || part.type === "agent") && !seenParts.has(part.id)) {
             seenParts.add(part.id)
             await notify({
@@ -70,15 +63,6 @@ export const HyprdNotifyPlugin = async () => {
               type: "subagent",
               agent_type: cleanText(part.agent || part.name || "Agent", 128),
               message: cleanText(part.description || part.prompt || part.name || "Done"),
-            })
-          }
-
-          if (part.type === "step-finish" && !seenStepParts.has(part.id)) {
-            seenStepParts.add(part.id)
-            await notify({
-              app: "opencode",
-              type: "step-finish",
-              message: cleanText(part.reason || "Step finished"),
             })
           }
 
@@ -182,7 +166,6 @@ export const HyprdNotifyPlugin = async () => {
 
           activeSessions.delete(sessionID)
           seenAgentParts.delete(sessionID)
-          seenStepFinishParts.delete(sessionID)
           todoStatuses.delete(sessionID)
           lastAssistantMessages.delete(sessionID)
           return
