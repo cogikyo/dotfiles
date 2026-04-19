@@ -1,9 +1,0 @@
-{
-  "sidebar": {
-    "enabled": true,
-    "titleMode": "auto",
-    "showCost": true,
-    "showQuota": true,
-    "includeChildren": true
-  }
-}

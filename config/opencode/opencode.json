@@ -1,9 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "autoupdate": "notify",
-  "plugin": [
-    "@leo000001/opencode-quota-sidebar@latest"
-  ],
   "share": "manual",
   "snapshot": true,
   "skills": {
