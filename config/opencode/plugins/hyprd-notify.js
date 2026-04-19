@@ -21,11 +21,15 @@ export const HyprdNotifyPlugin = async () => {
   const seenAgentParts = new Map()
   const todoStatuses = new Map()
   const lastAssistantMessages = new Map()
+  const lastTodoCompletedAt = new Map()
 
   async function completeSession(sessionID) {
     if (!activeSessions.has(sessionID)) return
 
     activeSessions.delete(sessionID)
+
+    const lastTodoAt = lastTodoCompletedAt.get(sessionID) || 0
+    if (Date.now() - lastTodoAt < 1500) return
 
     const lastAssistantMessage = cleanText(lastAssistantMessages.get(sessionID) || "")
     await notify({
@@ -134,6 +138,7 @@ export const HyprdNotifyPlugin = async () => {
 
             next.set(content, status)
             if (previous && previous.get(content) !== "completed" && status === "completed") {
+              lastTodoCompletedAt.set(sessionID, Date.now())
               await notify({
                 app: "opencode",
                 type: "todo-complete",
@@ -168,11 +173,10 @@ export const HyprdNotifyPlugin = async () => {
           seenAgentParts.delete(sessionID)
           todoStatuses.delete(sessionID)
           lastAssistantMessages.delete(sessionID)
+          lastTodoCompletedAt.delete(sessionID)
           return
         }
       }
     },
   }
 }
-
-export default HyprdNotifyPlugin
