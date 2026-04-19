@@ -16,7 +16,6 @@ import (
 	"dotfiles/daemons/hyprd/hypr"
 	"dotfiles/daemons/hyprd/session"
 	"dotfiles/daemons/hyprd/state"
-	"dotfiles/daemons/hyprd/windows"
 )
 
 const (
@@ -75,16 +74,7 @@ func (w *WS) Execute(wsArg string) (string, error) {
 
 	w.hypr.Request("keyword animation workspaces, 1, 3, default, slide")
 
-	master, err := windows.GetMaster(w.hypr, ws, cfg.Windows.IgnoredClasses)
-	if err != nil {
-		return fmt.Sprintf("ws %d (no focus)", ws), nil
-	}
-	if master == nil {
-		return fmt.Sprintf("ws %d (empty)", ws), nil
-	}
-
-	w.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", master.Address))
-	return fmt.Sprintf("ws %d (focused %s)", ws, master.Class), nil
+	return fmt.Sprintf("ws %d", ws), nil
 }
 
 func (w *WS) moveActiveWindow(delta int) (string, error) {
