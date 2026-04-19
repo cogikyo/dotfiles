@@ -1,11 +1,3 @@
-// Package notify handles hyprd notification intake, styling, and delivery.
-//
-// It normalizes source-specific events into a single dispatch pipeline.
-//
-// Responsibilities:
-// - Normalize notification requests from CLI and hook sources.
-// - Resolve kitty and workspace context for icons and focus actions.
-// - Dispatch dunst notifications and optional sound effects.
 package notify
 
 // types.go defines request/spec/context structs plus the Notifier type shared by notify handlers.
