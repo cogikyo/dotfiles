@@ -32,7 +32,7 @@ from kitty.utils import color_as_int
 
 ICON_MAIN = "  "  # arch logo prefix
 ICON_AGENT = " 󰯉 "  # agent icon prefix
-AGENT_NAMES = ("claude", "codex")  # known AI agent CLIs
+AGENT_NAMES = ("claude", "opencode")  # known AI agent CLIs
 
 SEP_LEFT = ""  # left-pointing powerline arrow
 SEP_RIGHT = ""  # right-pointing powerline arrow

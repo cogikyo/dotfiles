@@ -24,10 +24,10 @@ func (n *Notifier) resolveContext(req NotifyRequest, fallbackApp string) *kittyC
 		App:      strings.TrimSpace(req.App),
 	}
 
-	if ctx.PID == 0 && (req.Source == "codex" || req.Source == "claude") {
+	if ctx.PID == 0 && usesKittyEnv(req.Source) {
 		ctx.PID = envInt("KITTY_PID")
 	}
-	if ctx.WindowID == 0 && (req.Source == "codex" || req.Source == "claude") {
+	if ctx.WindowID == 0 && usesKittyEnv(req.Source) {
 		ctx.WindowID = envInt("KITTY_WINDOW_ID")
 	}
 
@@ -44,6 +44,15 @@ func (n *Notifier) resolveContext(req NotifyRequest, fallbackApp string) *kittyC
 		ctx.App = fallbackApp
 	}
 	return ctx
+}
+
+func usesKittyEnv(source string) bool {
+	switch source {
+	case "claude", "opencode":
+		return true
+	default:
+		return false
+	}
 }
 
 func (n *Notifier) workspaceForPID(pid int) int {

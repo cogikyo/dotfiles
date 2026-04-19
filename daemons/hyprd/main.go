@@ -270,7 +270,7 @@ Query/Subscribe (for eww):
 
 Notifications:
   hyprd notify hook claude <event>     Read Claude hook JSON from stdin
-  hyprd notify hook codex              Read Codex notify JSON from argv/stdin
-  hyprd notify dunst [approval]        Handle Dunst script callbacks
+  hyprd notify hook opencode           Read OpenCode notify JSON from argv/stdin
+	  hyprd notify dunst                   Handle Dunst script callbacks
   hyprd notify kitty-finish <command>  Emit kitty command-finish notification`)
 }

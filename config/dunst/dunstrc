@@ -79,9 +79,9 @@
     summary = ".*Claude.*"
     skip_display = true
 
-[kitty-codex]
+[kitty-opencode]
     appname = "kitty"
-    summary = ".*Codex.*"
+    summary = ".*[Oo]pen[Cc]ode.*"
     skip_display = true
 
 # Approval toasts get special handling: silent display + focus steal via hyprd

@@ -381,7 +381,7 @@ func DefaultHypr() HyprConfig {
 				"Spotify",
 				"discord",
 				"claude",
-				"codex",
+				"opencode",
 				"claude-input",
 				"",
 				"󰯉",
@@ -389,7 +389,7 @@ func DefaultHypr() HyprConfig {
 				"",
 				"",
 			},
-			KittySilentPatterns: []string{"claude", "codex", "approval"},
+			KittySilentPatterns: []string{"claude", "opencode", "approval"},
 		},
 		Windows: WindowsConfig{
 			IgnoredClasses:  []string{"GLava"},

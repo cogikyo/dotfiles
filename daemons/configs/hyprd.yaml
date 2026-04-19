@@ -102,7 +102,7 @@ notify:
     - Spotify
     - discord
     - claude
-    - codex
+    - opencode
     - claude-input
     - 
     - 󰯉
@@ -111,7 +111,7 @@ notify:
     - 
   kitty_silent_patterns:
     - claude
-    - codex
+    - opencode
     - approval
 
 windows:
@@ -142,11 +142,11 @@ tabs:
     prefix: "agents-"
     focus: master
     tabs:
-      - { name: xplr, title: "⊰   ⊱", command: "codex -c model=\"gpt-5.4\" -c model_reasoning_effort=\"xhigh\"" }
+      - { name: xplr, title: "⊰   ⊱", command: "opencode -m openai/gpt-5.4" }
       - { name: master, title: "⊰ 󰯉  ⊱", command: "claude --effort high" }
-      - { name: dev, title: "⊰   ⊱", command: "codex -c model=\"gpt-5.3-codex\" -c model_reasoning_effort=\"high\"" }
+      - { name: dev, title: "⊰   ⊱", command: "opencode -m openai/gpt-5.4" }
       - { name: plan, title: "⊰   ⊱", command: "claude --effort max" }
-      - { name: git, title: "⊰   ⊱", command: "codex -c model=\"gpt-5.3-codex\" -c model_reasoning_effort=\"low\"" }
+      - { name: git, title: "⊰   ⊱", command: "opencode -m openai/gpt-5.3-codex" }
 
   leadpier:
     order: 2

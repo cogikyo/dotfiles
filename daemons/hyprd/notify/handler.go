@@ -22,8 +22,8 @@ func (n *Notifier) Handle(req NotifyRequest) error {
 	switch req.Source {
 	case "claude":
 		return n.handleClaude(req)
-	case "codex":
-		return n.handleCodex(req)
+	case "opencode":
+		return n.handleOpencode(req)
 	case "kitty":
 		return n.handleKitty(req)
 	case "dunst":
@@ -117,63 +117,93 @@ func (n *Notifier) handleClaude(req NotifyRequest) error {
 	}
 }
 
-func (n *Notifier) handleCodex(req NotifyRequest) error {
-	ctx := n.resolveContext(req, "codex")
+func (n *Notifier) handleOpencode(req NotifyRequest) error {
+	ctx := n.resolveContext(req, "opencode")
 
 	switch req.Event {
-	case "agent-turn-start":
-		pick := pickSound(codexStartSounds)
+	case "start":
 		return n.dispatch(notificationSpec{
 			App:         ctx.App,
-			Title:       preferredSummary(req.LastAssistantMessage, pick, 80),
+			Title:       preferredSummary(req.Message, "Working", 80),
 			Style:       "start",
-			Sound:       pick,
-			Volume:      n.cfg.Notify.QuietVolume,
-			Timeout:     new(4000),
+			Sound:       "civ5-worker-select",
+			Volume:      n.cfg.Notify.LoudVolume,
 			FocusAction: true,
 		}, ctx)
-	case "agent-turn-complete":
+	case "complete":
 		return n.dispatch(notificationSpec{
 			App:         ctx.App,
 			Title:       preferredSummary(req.LastAssistantMessage, "Jobs done", 80),
 			Style:       "complete",
 			Sound:       "jobs-done",
 			Volume:      n.cfg.Notify.LoudVolume,
-			Urgency:     new("low"),
-			Persistent:  new(false),
+			FocusAction: true,
+		}, ctx)
+	case "subagent":
+		title := fmt.Sprintf("%s: %s",
+			preferredSummary(req.AgentType, "Agent", 32),
+			preferredSummary(req.Message, "Done", 70),
+		)
+		return n.dispatch(notificationSpec{
+			App:         ctx.App,
+			Title:       title,
+			Style:       "subagent",
+			Sound:       "sdv-frog",
+			Volume:      n.cfg.Notify.QuietVolume,
+			FocusAction: true,
+		}, ctx)
+	case "step-finish":
+		return n.dispatch(notificationSpec{
+			App:         ctx.App,
+			Title:       preferredSummary(req.Message, "Step finished", 80),
+			Style:       "subagent",
+			Sound:       "civ6-notification",
+			Volume:      n.cfg.Notify.QuietVolume,
 			FocusAction: true,
 		}, ctx)
 	case "idle":
 		return n.dispatch(notificationSpec{
 			App:         ctx.App,
-			Title:       preferredSummary(req.LastAssistantMessage, "Waiting for input", 80),
+			Title:       preferredSummary(req.Message, "Waiting for input", 80),
 			Style:       "idle",
 			Sound:       "hey-listen",
 			Volume:      n.cfg.Notify.QuietVolume,
-			Urgency:     new("low"),
-			Persistent:  new(false),
-			IconSuffix:  new(""),
 			FocusAction: true,
 		}, ctx)
-	case "approval-requested":
+	case "permission":
 		return n.dispatch(notificationSpec{
 			App:         ctx.App,
-			Title:       "Permission needed",
+			Title:       preferredSummary(req.Message, "Permission needed", 80),
+			Style:       "permission",
+			Sound:       "ssb-ready",
+			FocusAction: true,
+		}, ctx)
+	case "question":
+		return n.dispatch(notificationSpec{
+			App:         ctx.App,
+			Title:       preferredSummary(req.Message, "Question asked", 80),
 			Style:       "permission",
 			Sound:       "hey-listen",
+			FocusAction: true,
+		}, ctx)
+	case "error":
+		return n.dispatch(notificationSpec{
+			App:         ctx.App,
+			Title:       preferredSummary(req.Message, "Session error", 80),
+			Style:       "permission",
+			Sound:       "something-need-doing",
 			Volume:      n.cfg.Notify.LoudVolume,
-			Delay:       300 * time.Millisecond,
 			FocusAction: true,
 		}, ctx)
 	default:
-		return fmt.Errorf("unknown codex event: %s", req.Event)
+		return fmt.Errorf("unknown opencode event: %s", req.Event)
 	}
 }
 
-// handleKitty skips claude commands (handled via the richer hook path).
+// handleKitty skips claude and opencode commands (handled via the richer hook path).
 func (n *Notifier) handleKitty(req NotifyRequest) error {
 	command := strings.TrimSpace(req.Command)
-	if command == "" || strings.HasPrefix(command, "claude") {
+	if command == "" || strings.HasPrefix(command, "claude") || strings.HasPrefix(command, "opencode") {
 		return nil
 	}
 
@@ -187,27 +217,6 @@ func (n *Notifier) handleKitty(req NotifyRequest) error {
 
 func (n *Notifier) handleDunst(req NotifyRequest) error {
 	switch req.Event {
-	case "approval-requested":
-		ctx := n.resolveContext(req, "")
-		if ctx.PID == 0 {
-			ctx = n.findKittyContext([]string{"codex", "claude"})
-		}
-		app := req.App
-		if app == "" {
-			app = "codex"
-		}
-		if ctx != nil && ctx.App != "" {
-			app = ctx.App
-		}
-		return n.dispatch(notificationSpec{
-			App:         app,
-			Title:       "Permission needed",
-			Style:       "permission",
-			Sound:       "hey-listen",
-			Volume:      n.cfg.Notify.LoudVolume,
-			Delay:       300 * time.Millisecond,
-			FocusAction: true,
-		}, ctx)
 	case "script":
 		sound := n.soundForDunst(req.App, req.Summary, req.Body, req.Urgency)
 		if sound == "" {
@@ -298,7 +307,7 @@ func (n *Notifier) buildDunstArgs(spec notificationSpec, ctx *kittyContext, styl
 	}
 
 	args := []string{"-a", app, "-u", urgency, "-t", strconv.Itoa(timeout)}
-	if ctx != nil && ctx.WindowID > 0 {
+	if !spec.NoReplace && ctx != nil && ctx.WindowID > 0 {
 		args = append(args, "-r", strconv.Itoa(ctx.WindowID+100000))
 	}
 	if style.Background != "" {

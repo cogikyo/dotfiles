@@ -47,7 +47,7 @@ hyprd/
 │   └── tiled.go                #   sorted tiled window list, cursor centering
 │
 └── notify/                     # notification formatting + delivery (dunst bridge)
-    ├── handler.go              #   dispatch by source (claude/codex/kitty/dunst/send)
+    ├── handler.go              #   dispatch by source (claude/opencode/kitty/dunst/send)
     ├── cli.go                  #   `hyprd notify ...` CLI parsing
     ├── context.go              #   per-ws notification context
     ├── helpers.go              #   sound/icon resolution from config

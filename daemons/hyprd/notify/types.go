@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-var codexStartSounds = []string{
+var agentStartSounds = []string{
 	"zug-zug",
 	"work-work",
 	"okie-dokie",
@@ -51,6 +51,7 @@ type notificationSpec struct {
 	Sound       string
 	Volume      int
 	Delay       time.Duration
+	NoReplace   bool
 	FocusAction bool
 	Urgency     *string
 	Timeout     *int

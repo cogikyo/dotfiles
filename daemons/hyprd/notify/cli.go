@@ -74,7 +74,7 @@ func parseNotifyArgs(args []string) (NotifyRequest, error) {
 
 func parseHookNotify(args []string) (NotifyRequest, error) {
 	if len(args) == 0 {
-		return NotifyRequest{}, fmt.Errorf("usage: hyprd notify hook {claude|codex}")
+		return NotifyRequest{}, fmt.Errorf("usage: hyprd notify hook {claude|opencode}")
 	}
 
 	switch args[0] {
@@ -93,7 +93,7 @@ func parseHookNotify(args []string) (NotifyRequest, error) {
 			KittyPID:             envInt("KITTY_PID"),
 			KittyWindowID:        envInt("KITTY_WINDOW_ID"),
 		}, nil
-	case "codex":
+	case "opencode":
 		raw := ""
 		if len(args) > 1 && looksLikeJSON(args[1]) {
 			raw = args[1]
@@ -104,8 +104,9 @@ func parseHookNotify(args []string) (NotifyRequest, error) {
 			event = args[1]
 		}
 		return NotifyRequest{
-			Source:               "codex",
+			Source:               "opencode",
 			Event:                limitText(event, 128),
+			App:                  limitText(payloadString(payload, "app"), 128),
 			Message:              limitText(payloadString(payload, "message"), 512),
 			LastAssistantMessage: limitText(payloadString(payload, "last_assistant_message", "last-assistant-message"), 512),
 			AgentType:            limitText(payloadString(payload, "agent_type"), 128),
@@ -119,16 +120,10 @@ func parseHookNotify(args []string) (NotifyRequest, error) {
 
 // parseDunstNotify accepts positional args or falls back to DUNST_* env vars.
 func parseDunstNotify(args []string) (NotifyRequest, error) {
-	event := "script"
-	if len(args) > 0 && args[0] == "approval" {
-		event = "approval-requested"
-		args = args[1:]
-	}
-
 	app, summary, body, iconPath, urgency := dunstPayload(args)
 	return NotifyRequest{
 		Source:   "dunst",
-		Event:    event,
+		Event:    "script",
 		App:      limitText(app, 128),
 		Summary:  limitText(summary, 512),
 		Body:     limitText(body, 512),
