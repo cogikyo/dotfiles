@@ -47,14 +47,10 @@ func (tb *ThreeBody) Execute(name string) (string, error) {
 		return "", fmt.Errorf("unknown three-body window: %s", name)
 	}
 	if name == "agents" && tb.hasNotify != nil && tb.hasNotify() {
-		result, err := tb.Focus(name, spec.Class, spec.Title, spec.Command)
-		if err != nil {
-			return "", err
-		}
 		if tb.notifyAct != nil {
 			tb.notifyAct()
 		}
-		return fmt.Sprintf("notification: action (%s)", result), nil
+		return "notification: action", nil
 	}
 	return tb.Focus(name, spec.Class, spec.Title, spec.Command)
 }
