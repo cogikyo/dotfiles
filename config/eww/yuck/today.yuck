@@ -73,35 +73,35 @@
         :tooltip "  ${weather.icon}${weather.desc} with ${weather.clouds}% cloud coverage and a ${weather.bf_desc}  "
       )
       (slide-n-fade :bool weather-info :direction "right"
-        (label
-          :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
-          :markup " <small>${weather.clouds}<small>%</small></small>"
-          :style "margin-top: 2px; margin-left: 2px;"
-          :tooltip "   ${weather.clouds}% cloud coverage "
+        (box :space-evenly false :spacing 5
+          (label
+            :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
+            :markup " <small>${weather.clouds}<small>%</small></small>"
+            :style "margin-top: 2px; margin-left: -5px;"
+            :tooltip "  ${weather.clouds}% cloud coverage "
+          )
+          (label
+            :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
+            :markup "${weather.bf_icon}"
+            :style "margin: 6px -4px 0 0;"
+            :tooltip "   ${weather.bf_icon}${weather.bf_desc} (${weather.wind_speed}m/s)  "
+          )
+          (label
+            :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
+            :markup "<i><small>${weather.wind_speed}m<sup>-1</sup></small></i>"
+            :style "margin-top: 2px;"
+            :tooltip "   ${weather.bf_icon}${weather.bf_desc} (${weather.wind_speed}m/s)  "
+          )
         )
-      )
-      (label
-        :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
-        :markup "${weather.bf_icon}"
-        :style "margin: 6px ${weather-info ? "-4" : "-2"}px 0 ${weather-info ? "0" : "-6"}px;"
-        :tooltip "   ${weather.bf_icon}${weather.bf_desc} (${weather.wind_speed}m/s)  "
-      )
-      (slide-n-fade :bool weather-info :direction "right"
-        (label
-          :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
-          :markup "<i><small>${weather.wind_speed}m<sup>-1</sup></small></i>"
-          :style "margin-top: 2px;"
-          :tooltip "   ${weather.bf_icon}${weather.bf_desc} (${weather.wind_speed}m/s)  "
-        )
-      )
-      (label
-        :class "weather-${cycle-5 == 0 ? "rain" : "base-alt" }"
-        :markup "<tt><small><sub> </sub>${weather-info ? "${weather.rain_day}" : "${weather.rain_1h}"}<small>%</small></small></tt>"
-        :style "margin-top: 6px; margin-left: ${weather-info ? "3px" : "-6px"};"
-        :tooltip "   ${weather.rain_day}% chance of rain today, ${weather.rain_1h}% in the next hour  "
       )
       (slide-n-fade :bool weather-info :direction "right"
         (box :space-evenly false :spacing 8
+          (label
+            :class "weather-${cycle-5 == 0 ? "rain" : "base-alt" }"
+            :markup "<tt><small><sub> </sub>${weather.rain_day}<small>%</small></small></tt>"
+            :style "margin-top: 6px; margin-left: 3px;"
+            :tooltip "   ${weather.rain_day}% chance of rain today, ${weather.rain_1h}% in the next hour  "
+          )
           (label
             :class "weather-index-${cycle-5 == 1 ? "${weather.uvi_desc}" : "base"}"
             :markup "<tt>󰓠<small> </small>${weather.uvi}</tt>"
@@ -121,7 +121,7 @@
         :text "${weather.moon}"
         :style "
           margin-top: -8px;
-          margin-left: ${weather-info ? "-2" : "-12" }px;
+          margin-left: ${weather-info ? "-2" : "-18" }px;
           transition: margin 0.25s ease-out;
         "
         :tooltip "  ${weather.moon} ${weather.moon_desc}  "
