@@ -318,7 +318,7 @@ func (b *Browser) executeLaunch(args []string) (string, error) {
 	}
 	clearSessionStore(profile)
 
-	cmd := append(b.browserCommandParts(), firefoxNewtab)
+	cmd := append(b.browserCommandParts(), "--new-window", firefoxNewtab)
 	if b.hypr != nil {
 		if err := b.hypr.Dispatch(fmt.Sprintf("exec %s", strings.Join(cmd, " "))); err != nil {
 			return "", err
