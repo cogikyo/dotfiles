@@ -1,13 +1,11 @@
+# Vagari colorscheme for zsh-syntax-highlighting.
 typeset -gA ZSH_HIGHLIGHT_STYLES
 
 ZSH_HIGHLIGHT_HIGHLIGHTERS+=(regexp)
 
-# https://github.com/zsh-users/zsh-syntax-highlighting/blob/master/docs/highlighters/main.md
-
-# Other Plugins
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#4e5492"
 
-# Regex
+# Regex — warn on destructive commands, hint filesystem mutations
 ZSH_HIGHLIGHT_REGEXP+=('^trash .*' fg=#824141)
 ZSH_HIGHLIGHT_REGEXP+=('^rm .*'    fg=#f36978)
 ZSH_HIGHLIGHT_REGEXP+=('^rm -rf.*' fg=#f34658,bold)

@@ -1,11 +1,11 @@
 #!/bin/sh
+# Shared env vars sourced by zshenv (and any POSIX shell).
 
 export PATH="$HOME/.cargo/bin:$HOME/.go/bin:$HOME/.local/bin:$PATH"
 export GOPATH="$HOME/.go"
 export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
 export GOPRIVATE="git.linecode.dev/*"
 
-# export TERM=xterm-256color  # Let terminal set its own (kitty needs xterm-kitty for undercurls)
 export PAGER=nvimpager
 export EDITOR=nvim
 export VISUAL=nvim

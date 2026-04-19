@@ -256,7 +256,7 @@ for key, val in pairs(general) do
 	xplr.config.general[key] = val
 end
 
--- Custom formatters: style entire row based on selection/focus state
+-- Row formatters: restyle columns based on selection/focus state
 local selection_style = { fg = "Cyan", add_modifiers = { "Dim" } }
 local focus_selection_style = { fg = "Cyan", add_modifiers = { "Bold" } }
 

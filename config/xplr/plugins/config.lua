@@ -58,7 +58,7 @@ if preview_ok then
 		},
 	})
 
-	-- Override plugin's layout with vertical (Table above, Preview below)
+	-- Vertical layout: Table above, Preview below
 	xplr.config.layouts.custom.preview = {
 		Horizontal = {
 			config = {
@@ -98,7 +98,7 @@ if preview_ok then
 		},
 	}
 
-	-- Custom modes (defined after plugins so all keybindings are inherited)
+	-- Modes defined after plugins so all keybindings are inherited
 	local function inherit_default_keys()
 		local keys = {}
 		for k, v in pairs(on_key) do
@@ -107,7 +107,6 @@ if preview_ok then
 		return keys
 	end
 
-	-- Preview mode (default startup mode)
 	local preview_keys = inherit_default_keys()
 	preview_keys["P"] = {
 		help = "close preview",
@@ -132,7 +131,6 @@ if preview_ok then
 		},
 	}
 
-	-- Selection mode (shows selection panel instead of preview)
 	local selection_keys = inherit_default_keys()
 	selection_keys["P"] = {
 		help = "back to preview",

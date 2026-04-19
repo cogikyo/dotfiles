@@ -1,3 +1,9 @@
+# Interactive zsh config. Loaded after zshenv.
+
+# ╭──────────────────────────────────────────────────────────────────────────╮
+# │ Prompt & Init                                                          │
+# ╰──────────────────────────────────────────────────────────────────────────╯
+
 eval "$(starship init zsh)"
 eval "$(zoxide init zsh)"
 
@@ -5,7 +11,10 @@ function command_not_found_handler {
     return 127
 }
 
-# history
+# ╭──────────────────────────────────────────────────────────────────────────╮
+# │ History                                                                │
+# ╰──────────────────────────────────────────────────────────────────────────╯
+
 HISTFILE=~/.histfile
 HISTSIZE=10000
 SAVEHIST=10000
@@ -17,15 +26,22 @@ setopt SHARE_HISTORY
 setopt HIST_REDUCE_BLANKS
 setopt AUTO_CD
 
+# ╭──────────────────────────────────────────────────────────────────────────╮
+# │ Hooks                                                                  │
+# ╰──────────────────────────────────────────────────────────────────────────╯
+
 chpwd() {
     echo
     lsd
 }
 
+# ╭──────────────────────────────────────────────────────────────────────────╮
+# │ Aliases                                                                │
+# ╰──────────────────────────────────────────────────────────────────────────╯
+
 alias install='~/dotfiles/install.sh'
 alias build='~/dotfiles/build.sh'
 
-# aliases
 alias niol='clear && source ~/.zshrc'
 alias ls='echo; lsd'
 alias n='nvim'
@@ -55,6 +71,7 @@ alias oc='ouch compress'
 alias od='ouch decompress'
 alias ol='ouch list --tree'
 alias man='man --pager=$PAGER'
+
 function etree () {
     echo
     if [[ -z $1 ]]; then
@@ -70,17 +87,19 @@ alias ew='ewwd open'
 alias ews='eww inspector & disown && exit'
 alias el='eww logs'
 
-# plugins
+# ╭──────────────────────────────────────────────────────────────────────────╮
+# │ Plugins                                                                │
+# ╰──────────────────────────────────────────────────────────────────────────╯
+
 if [[ ! -f ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh ]]; then
     command git clone https://github.com/agkozak/zcomet.git ${ZDOTDIR:-${HOME}}/.zcomet/bin
 fi
 source ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh
 
-# plugin settings (before loading)
 ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
 ZSH_AUTOSUGGEST_STRATEGY=(history completion)
 
-# plugins (order matters - syntax highlighting must be last)
+# Order matters -- syntax highlighting must load last.
 zcomet load zsh-users/zsh-completions
 zcomet load zsh-users/zsh-autosuggestions
 zcomet load Aloxaf/fzf-tab
@@ -88,16 +107,19 @@ zcomet load zsh-users/zsh-syntax-highlighting
 
 autoload -U compinit; compinit
 
-# fix keys
+# ╭──────────────────────────────────────────────────────────────────────────╮
+# │ Key Bindings                                                           │
+# ╰──────────────────────────────────────────────────────────────────────────╯
+
 bindkey -v
 export KEYTIMEOUT=01
 bindkey '^[[H'     vi-beginning-of-line
 bindkey '^[[F'     vi-end-of-line
 bindkey '^[[3~'    delete-char
-bindkey '^[[1;5C'  forward-word   # C-left
-bindkey '^[[1;5D'  backward-word  # C-right
-bindkey '^[[1;5A'  history-incremental-search-backward # C-up
-bindkey '^[[1;5B'  history-incremental-search-forward  # C-down
+bindkey '^[[1;5C'  forward-word   # C-Right
+bindkey '^[[1;5D'  backward-word  # C-Left
+bindkey '^[[1;5A'  history-incremental-search-backward # C-Up
+bindkey '^[[1;5B'  history-incremental-search-forward  # C-Down
 
 eval "$(atuin init zsh --disable-up-arrow)"
 

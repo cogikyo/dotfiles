@@ -3,7 +3,7 @@
     enable_posix_regex = true
     origin = "top-left"
     width = "(100, 715)"
-    offset = "(2265, 18)"
+    offset = "(2265, 18)" # right-aligned on 3440-wide ultrawide
     notification_limit = 1
     progress_bar = true
     progress_bar_height = 10
@@ -22,7 +22,7 @@
     font = "Albert Sans 16"
     line_height = 2
     markup = "full"
-    format = "<b>%a</b>: %s %b"
+    format = "<b>%a</b>: %s %b" # %a=appname, %s=summary, %b=body
     fullscreen = "pushback"
     alignment = "left"
     vertical_alignment = "center"
@@ -44,7 +44,7 @@
     dmenu = "/usr/bin/bmenu -p dunst:"
     browser = "/usr/bin/xdg-open"
     always_run_script = true
-    script = "/home/cullyn/.local/bin/hyprd notify dunst"
+    script = "/home/cullyn/.local/bin/hyprd notify dunst" # daemons/hyprd — plays sound + handles focus
     title = "Dunst"
     class = "Dunst"
     corner_radius = 8
@@ -73,6 +73,7 @@
     frame_color = "#f34658"
     timeout = 8
 
+# Suppress agent status toasts from kitty — handled by statusline daemon instead
 [kitty-claude]
     appname = "kitty"
     summary = ".*Claude.*"
@@ -83,6 +84,7 @@
     summary = ".*Codex.*"
     skip_display = true
 
+# Approval toasts get special handling: silent display + focus steal via hyprd
 [kitty-approval]
     appname = "kitty"
     summary = ".*Approval requested.*"

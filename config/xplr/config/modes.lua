@@ -66,8 +66,7 @@ on_key["R"] = {
 	messages = { { BashExec = [===[ renamer ]===] } },
 }
 
--- Toggle preview with P from default mode (set here as placeholder,
--- fully functional only after preview plugin loads in plugins/config.lua)
+-- Placeholder; fully wired after preview plugin loads in plugins/config.lua
 on_key["P"] = {
 	help = "toggle preview",
 	messages = {

@@ -4,7 +4,7 @@
 	signingkey = ~/.ssh/cullyn.pub
 [core]
 	editor = nvim
-    ignorecase = false
+	ignorecase = false
 [gpg]
 	format = ssh
 [gpg "ssh"]
@@ -14,11 +14,11 @@
 [pull]
 	rebase = true
 [init]
-    defaultBranch = master
+	defaultBranch = master
 [url "git@git.linecode.dev:"]
 	insteadOf = https://git.linecode.dev/
 [includeIf "gitdir:/Users/"]
-	path = ~/.config/git/config-mac
+	path = ~/.config/git/config-mac ; macOS key paths differ
 [includeIf "hasconfig:remote.*.url:git@git.linecode.dev:*/**"]
 	path = ~/.config/git/config-work
 [includeIf "hasconfig:remote.*.url:git@git.trendcapital.io:*/**"]
