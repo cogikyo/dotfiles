@@ -1711,7 +1711,6 @@ step_eww() {
     header "Installing eww"
 
     local eww_bin="$HOME/.local/bin/eww"
-    local bundled="$DOTFILES/bin/eww"
 
     if [[ "${EWW_BUILD:-0}" == "1" ]]; then
         info "Building eww from source with Wayland support..."
@@ -1719,7 +1718,6 @@ step_eww() {
         local eww_src="${XDG_CACHE_HOME:-$HOME/.cache}/eww"
         local poll_ms="${EWW_POLL_INTERVAL_MS:-500}"
         if [[ -d "$eww_src/.git" ]]; then
-            # Revert patch before pulling, then reapply
             git -C "$eww_src" checkout -- .
             git -C "$eww_src" pull --ff-only
         else
@@ -1727,25 +1725,18 @@ step_eww() {
             git clone https://github.com/elkowar/eww.git "$eww_src"
         fi
 
-        # Patch builtin poll interval to be configurable via env var
         info "Applying poll interval patch..."
         git -C "$eww_src" apply "$DOTFILES/etc/eww-poll-interval.patch"
 
         info "Building with EWW_POLL_INTERVAL_MS=${poll_ms}..."
         (cd "$eww_src" && EWW_POLL_INTERVAL_MS="$poll_ms" cargo build --release --no-default-features --features=wayland)
         strip "$eww_src/target/release/eww"
-        install -Dm755 "$eww_src/target/release/eww" "$bundled"
-        ok "eww built (poll interval: ${poll_ms}ms) and updated in dotfiles"
+        mkdir -p "$(dirname "$eww_bin")"
+        install -Dm755 "$eww_src/target/release/eww" "$eww_bin"
+        ok "eww built (poll interval: ${poll_ms}ms) and installed to $eww_bin"
     fi
 
-    # The link step handles bin/* -> ~/.local/bin/, so just verify
-    if [[ -L "$eww_bin" ]] && [[ "$(readlink -f "$eww_bin")" == "$(readlink -f "$bundled")" ]]; then
-        ok "eww already linked"
-    else
-        mkdir -p "$(dirname "$eww_bin")"
-        ln -sf "$bundled" "$eww_bin"
-        ok "eww symlinked to $eww_bin"
-    fi
+    [[ -x "$eww_bin" ]] || { err "eww not found at $eww_bin — run with EWW_BUILD=1 to build from source"; return 1; }
 
     "$eww_bin" --version
 }
