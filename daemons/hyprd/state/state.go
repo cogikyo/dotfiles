@@ -1,9 +1,12 @@
-// Package state is the thread-safe store for hyprd runtime state.
+// Package state stores hyprd runtime state behind a single mutex.
 //
-// Tracks workspace occupancy, hidden windows, displaced masters, three-body and monocle layouts, split ratios, active
-// sessions, and per-workspace tab memory. Access is guarded by a single RWMutex; state serializes to JSON for
-// subscriber event streams.
+// It:
+//  1. Tracks workspace, layout, and window-placement runtime data.
+//  2. Persists per-workspace session selection and tab memory.
+//  3. Exposes safe copy-on-read helpers for concurrent command handlers.
 package state
+
+// state.go defines the core State container plus config wiring and full-state serialization/restoration.
 
 import (
 	"encoding/json"
@@ -13,9 +16,9 @@ import (
 	"dotfiles/daemons/config"
 )
 
-// State holds all hyprd runtime fields plus the mutex guarding them.
+// State holds all hyprd runtime fields, guarded by a single RWMutex.
 //
-// Exported fields are JSON-serialized for subscribers; always go through the accessor methods so mu is held.
+// Exported fields are JSON-serialized for subscriber event streams; always use accessor methods.
 type State struct {
 	mu sync.RWMutex
 
@@ -48,7 +51,7 @@ func NewState(cfg *config.HyprConfig) *State {
 	}
 }
 
-// JSON marshals the current State snapshot for subscriber event streams.
+// JSON returns the full state snapshot as JSON for subscriber event streams.
 func (s *State) JSON() ([]byte, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -97,7 +100,7 @@ func (s *State) GetConfig() *config.HyprConfig {
 	return s.config
 }
 
-// Restore loads previously serialized state, preserving the current config.
+// Restore loads previously serialized state while preserving the current config.
 func (s *State) Restore(data []byte) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -136,7 +139,7 @@ func (s *State) Restore(data []byte) error {
 	return nil
 }
 
-// ReloadConfig swaps in a new HyprConfig from the hot-reload path.
+// ReloadConfig swaps in a new HyprConfig during hot-reload.
 func (s *State) ReloadConfig(cfg *config.HyprConfig) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

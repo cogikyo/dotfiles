@@ -1,5 +1,7 @@
 package main
 
+// daemon.go wires daemon lifecycle, command routing, config hot-reload, and self-restart behavior.
+
 import (
 	"dotfiles/daemons/config"
 	"dotfiles/daemons/daemon"
@@ -27,25 +29,23 @@ import (
 const SocketPath = "/tmp/hyprd.sock"
 const stateFile = "/tmp/hyprd-state.json"
 
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ Daemon                                                                       │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
 // Daemon owns the Hyprland IPC client, shared state, command server, and hot-reloadable config.
-//
-// Lifecycle: New dials Hyprland and builds the server; Run launches the event loop and config watcher, then blocks on
-// SIGINT/SIGTERM.
-// Shutdown closes the server's done channel, which unwinds every goroutine spawned.
-//
 // config is atomic so the watcher can swap it without locking command handlers.
 type Daemon struct {
-	hypr   *hypr.Client
-	state  *state.State
-	server *daemon.Server
-	config atomic.Pointer[config.HyprConfig]
-	// lockCtl persists across commands so pseudo/full/unlock share the same saved workspace+music snapshot.
+	hypr      *hypr.Client
+	state     *state.State
+	server    *daemon.Server
+	config    atomic.Pointer[config.HyprConfig]
 	lockCtl   *session.Lock
+	pickerCtl *session.Picker
 	restartCh chan struct{}
 }
 
 // New connects to Hyprland's IPC socket and prepares the daemon.
-// The returned Daemon is idle until Run is called.
 func New() (*Daemon, error) {
 	cfg := config.LoadHypr()
 
@@ -59,6 +59,7 @@ func New() (*Daemon, error) {
 		hypr:      hyprClient,
 		state:     stateStore,
 		lockCtl:   session.NewLock(hyprClient, stateStore),
+		pickerCtl: session.NewPicker(hyprClient, stateStore),
 		restartCh: make(chan struct{}, 1),
 	}
 	d.config.Store(&cfg)
@@ -70,9 +71,6 @@ func New() (*Daemon, error) {
 }
 
 // Run starts the server, event loop, and config watcher, then blocks until SIGINT/SIGTERM.
-//
-// Session init is not invoked here — it fires externally via `exec-once = hyprd init` in hyprland.conf so it runs
-// exactly once per session, after this daemon is listening.
 func (d *Daemon) Run() error {
 	clients, err := d.hypr.Clients()
 	if err != nil {
@@ -111,7 +109,7 @@ func (d *Daemon) Run() error {
 	}
 }
 
-// sendInitialState replays current state to a fresh subscriber so widgets paint immediately.
+// sendInitialState seeds a new subscriber with current values so eww widgets don't flicker.
 func (d *Daemon) sendInitialState(sub *daemon.Subscriber, topics []string) {
 	if sub.WantsTopic("workspace") {
 		sub.SendEvent("workspace", d.workspacePayload())
@@ -122,9 +120,11 @@ func (d *Daemon) sendInitialState(sub *daemon.Subscriber, topics []string) {
 	}
 }
 
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ Command dispatch                                                             │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
 // handleCommand routes a client request by its first token.
-//
-// Contract: handlers return a plain string; errors are serialized as "error: <msg>" so clients can parse uniformly.
 func (d *Daemon) handleCommand(command string) string {
 	cmd, arg, _ := strings.Cut(command, " ")
 	arg = strings.TrimSpace(arg)
@@ -162,7 +162,6 @@ func (d *Daemon) handleCommand(command string) string {
 		}
 		return result
 	case "swap":
-		// three-body intercepts swap to rotate shadow→master instead of master/slave exchange.
 		tb := wm.NewThreeBody(d.hypr, d.state)
 		tbResult, tbErr := tb.SwapMaster()
 		if tbErr != nil {
@@ -245,6 +244,12 @@ func (d *Daemon) handleCommand(command string) string {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
+	case "picker":
+		result, err := d.pickerCtl.Execute(arg)
+		if err != nil {
+			return fmt.Sprintf("error: %v", err)
+		}
+		return result
 	case "layout":
 		layout := session.NewLayout(d.hypr, d.state)
 		result, err := layout.Execute(arg)
@@ -265,10 +270,10 @@ func (d *Daemon) handleCommand(command string) string {
 	}
 }
 
-// handleShadow toggles the special shadow workspace or lists its parked windows.
-//
-// Rescue path for when hyprd loses three-body state (daemon rebuild, crash) and windows are stranded on
-// special:shadow with no visible member to pull them back.
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ Subcommand handlers                                                          │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
 func (d *Daemon) handleShadow(arg string) string {
 	shadowWS := d.config.Load().Windows.ShadowWorkspace
 	special := strings.TrimPrefix(shadowWS, "special:")
@@ -346,6 +351,11 @@ func (d *Daemon) handleNotify(arg string) string {
 	return "ok"
 }
 
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ Hot rebuild                                                                  │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
+// handleRebuild builds a new binary, dumps state, swaps the binary, and signals a restart.
 func (d *Daemon) handleRebuild() string {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -404,8 +414,6 @@ func (d *Daemon) execSelf() error {
 	return syscall.Exec(bin, []string{"hyprd"}, os.Environ())
 }
 
-// handleProject reads or mutates the project path bound to the active workspace.
-// Subcommands: "" | "get", "set <path>", "clear".
 func (d *Daemon) handleProject(arg string) string {
 	wsData, err := d.hypr.Request("j/activeworkspace")
 	if err != nil {
@@ -459,7 +467,6 @@ func (d *Daemon) newInit() *session.Init {
 }
 
 // hasNotifications reports whether dunst is currently displaying any notifications.
-// Errors are treated as "none displayed".
 func hasNotifications() bool {
 	out, err := exec.Command("dunstctl", "count", "displayed").Output()
 	if err != nil {
@@ -469,18 +476,18 @@ func hasNotifications() bool {
 	return err == nil && n > 0
 }
 
-// runCmd runs a command synchronously, discarding stdout/stderr and logging exec errors.
 func runCmd(name string, args ...string) {
 	if err := exec.Command(name, args...).Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd: runCmd %s: %v\n", name, err)
 	}
 }
 
-// watchConfig hot-reloads configs/hyprd.yaml into d.config on change.
-//
-// Watches the parent directory, not the file: editors like nvim rename-and-replace on save, which swaps the inode and
-// kills file-level watches.
-// Writes are debounced 100ms to coalesce multi-step saves.
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ Config watcher                                                               │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
+// watchConfig hot-reloads hyprd.yaml on change.
+// Watches the parent directory because nvim rename-and-replaces on save, killing file-level watches.
 func (d *Daemon) watchConfig(done <-chan struct{}) {
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -536,7 +543,10 @@ func (d *Daemon) watchConfig(done <-chan struct{}) {
 	}
 }
 
-// query returns JSON-encoded state for a single topic; "all" or "" returns the full blob.
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ Query / subscribe                                                            │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
 func (d *Daemon) query(topic string) (string, error) {
 	switch topic {
 	case "workspace":

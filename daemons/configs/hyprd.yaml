@@ -5,6 +5,7 @@ monitor:
     top: 86
     bottom: 32
     left: 0
+
 background:
   display: "HDMI-A-1"
   video_path: "~/dotfiles/share/videos"
@@ -15,6 +16,7 @@ background:
     contrast: 9
     saturation: -16
     hue: -24
+
 init:
   execs:
     - "glava -e bars_rc.glsl"
@@ -35,6 +37,7 @@ style:
     default: "rgb(f2a170)"
   shadow:
     default: "rgba(e56b2c32)"
+
 notify:
   sounds_dir: "~/dotfiles/share/sounds"
   workspace_icons_dir: "~/dotfiles/config/eww/art/ws-icons"
@@ -110,6 +113,7 @@ notify:
     - claude
     - codex
     - approval
+
 windows:
   ignored_classes:
     - "GLava"
@@ -120,6 +124,7 @@ windows:
     height: 1864
     offset_x: 0
     offset_y: 25
+
 tabs:
   editor:
     order: 0
@@ -168,6 +173,7 @@ three_body:
     command: firefox-developer-edition
 
 sessions:
+
   slack:
     name: slack
     workspace: 2

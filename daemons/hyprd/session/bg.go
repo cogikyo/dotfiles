@@ -1,5 +1,7 @@
 package session
 
+// bg.go manages mpvpaper background process startup, health checks, and teardown.
+
 import (
 	"fmt"
 	"net"
@@ -18,9 +20,7 @@ func NewBG(cfg *config.BackgroundConfig) *BG {
 	return &BG{cfg: cfg}
 }
 
-// Execute runs the given mode:
-//   - "ensure" spawns mpvpaper if no live IPC socket responds.
-//   - "kill" pkills every mpvpaper instance.
+// Execute runs "ensure" (spawn if dead) or "kill" (pkill all).
 func (b *BG) Execute(mode string) (string, error) {
 	switch mode {
 	case "ensure":
@@ -67,7 +67,7 @@ func (b *BG) killAll() {
 	time.Sleep(100 * time.Millisecond)
 }
 
-// EnsureBG spawns the wallpaper if not already running; for init-time callers that do not need the BG handle.
+// EnsureBG spawns the wallpaper if not already running.
 func EnsureBG(cfg *config.BackgroundConfig) {
 	bg := NewBG(cfg)
 	bg.Execute("ensure")

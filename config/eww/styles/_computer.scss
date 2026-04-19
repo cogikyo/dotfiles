@@ -1,0 +1,15 @@
+.computerbox {
+  background: $bg;
+  border-top: 1px solid $blu-2;
+  border-left: 3px solid $blu-1;
+  padding: 6px 1.3em 4px;
+  margin: 16px 8px;
+  border-radius: 17px 420px 69px;
+  box-shadow: 3px 2px 3px 1px rgba($blu-0, 0.42);
+  font-family: monospace;
+
+  &-hover {
+    border-color: $orn-3;
+    box-shadow: 3px 2px 3px 1px rgba($rby-1, 0.42);
+  }
+}

@@ -1,0 +1,87 @@
+@mixin cycle($color, $duration: 4s) {
+  color: $color;
+  transition: color $duration ease-in-out;
+}
+
+@mixin imagebox($position: "left") {
+  transition: all 0.25s $ease-out-snap;
+
+  $x: 1px;
+  $margin: 20px;
+
+  background-repeat: no-repeat;
+  background-size: 105%;
+  background-position: center;
+  min-width: 94px;
+  min-height: 95px;
+  opacity: 0.95;
+
+  border-style: solid;
+  border-color: $blu-1;
+  border-width: 0 2px 3px 0;
+  border-radius: 0 5% 100%;
+  box-shadow: $x 3px 7px 1px rgba($blu-0, 0.42);
+  margin: 0 $margin $margin 0;
+
+  @if $position == "right" {
+    $x: -1px;
+
+    border-width: 0 0 3px 2px;
+    border-radius: 32% 0 32% 87%;
+    margin: 0 0 $margin $margin;
+  }
+
+  &-hover {
+    opacity: 0.99;
+    min-height: 180px;
+    min-width: 180px;
+    border-color: $orn-3;
+    box-shadow: $x 3px 6px 1px rgba($rby-1, 0.69);
+  }
+}
+
+@mixin svgbox($direction: "down") {
+  background: {
+    size: 120%;
+    repeat: no-repeat;
+    position: center;
+    color: rgba($bg, 0.87);
+  }
+
+  min: {
+    width: 64px;
+    height: 64px;
+  }
+
+  border: {
+    style: solid;
+    color: $blu-2;
+    width: 1px 0 1px 2px;
+    radius: 50% 0% 48% 87%;
+  }
+
+  @if $direction == "up" {
+    border-radius: 50% 28% 0% 87%;
+  }
+
+  margin: 30px 0 30px 30px;
+  box-shadow: -2px 0 6px 1px rgba($blu-0, 0.42);
+
+  &-hover {
+    background-color: rgba($bg, 0.88);
+
+    min: {
+      width: 128px;
+      height: 128px;
+    }
+
+    border-radius: 42% 0% 42% 48%;
+
+    @if $direction == "up" {
+      border-radius: 42% 32% 0% 48%;
+    }
+
+    border-color: $orn-3;
+    box-shadow: -2px 0 6px 1px rgba($rby-1, 0.52);
+  }
+}

@@ -1,0 +1,25 @@
+.workspace {
+  transition: all 0.25s $ease-out-snap;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 90%;
+  min-width: 36px;
+  min-height: 36px;
+  margin-bottom: 10px;
+}
+
+.workspacesbox {
+  background: $bg;
+  border-color: $blu-1;
+  border-style: solid;
+  border-width: 0 0 2px 2px;
+  border-radius: 100px;
+  box-shadow: 0 0 5px 1px rgba($blu-1, 0.32);
+  padding: 20px 12px 10px;
+  margin: -10px -2px 20px 20px;
+
+  &-hover {
+    border-color: $orn-3;
+    box-shadow: 0 0 5px 1px rgba($rby-1, 0.42);
+  }
+}

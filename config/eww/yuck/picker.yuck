@@ -1,0 +1,74 @@
+(defvar picker-visible false)
+(defvar picker-data '{"ws":4,"occupied":"","sessions":[],"count":0}')
+
+(defwindow picker
+  :monitor 0
+  :stacking "fg"
+  :exclusive false
+  :focusable false
+  :geometry (geometry :anchor "center")
+  (picker-widget)
+)
+
+(defwidget picker-ws [icon num]
+  (eventbox
+    :onclick "hyprd picker ws ${num} & disown"
+    :cursor "pointer"
+    (box
+      :class "picker-ws ${picker-data.ws == num ? "picker-ws-selected" : ""}"
+      :style "background-image: url('art/ws-icons/${icon}${ picker-data.ws == num ? "-active" : "${matches(picker-data.occupied, "${num}") ? "" : "-empty"}" }.svg');"
+    )
+  )
+)
+
+(defwidget picker-session-slot [idx]
+  (revealer
+    :transition "crossfade"
+    :reveal {picker-data.count > idx}
+    :visible {picker-data.count > idx}
+    (eventbox
+      :onclick "hyprd picker confirm & disown"
+      :cursor "pointer"
+      (box
+        :class "picker-session ${
+          picker-data.count > idx && picker-data.sessions[idx].selected ? "picker-session-selected" : ""} ${
+          picker-data.count > idx && picker-data.sessions[idx].active ? "picker-session-active" : ""}"
+        (label :text {picker-data.count > idx ? picker-data.sessions[idx].name : ""})
+      )
+    )
+  )
+)
+
+(defwidget picker-widget []
+  (revealer
+    :transition "crossfade"
+    :reveal picker-visible
+    (box
+      :orientation "v"
+      :space-evenly false
+      :spacing 16
+      (box
+        :class "picker-workspaces"
+        :halign "center"
+        :space-evenly false
+        :spacing 20
+        (picker-ws :icon "network"  :num 2)
+        (picker-ws :icon "learn"    :num 3)
+        (picker-ws :icon "dna"      :num 4)
+        (picker-ws :icon "dotfiles" :num 5)
+      )
+      (box
+        :class "picker-sessions"
+        :halign "center"
+        :space-evenly false
+        :spacing 10
+        (picker-session-slot :idx 0)
+        (picker-session-slot :idx 1)
+        (picker-session-slot :idx 2)
+        (picker-session-slot :idx 3)
+        (picker-session-slot :idx 4)
+        (picker-session-slot :idx 5)
+      )
+    )
+  )
+)

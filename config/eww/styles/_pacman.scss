@@ -1,0 +1,9 @@
+.pacman {
+  font-size: 0.9em;
+
+  &-hover {
+    font-size: 1.25em;
+    color: $orn-3;
+    text-shadow: 0 0 3px rgba($rby-1, 0.69);
+  }
+}

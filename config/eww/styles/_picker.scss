@@ -1,0 +1,53 @@
+.picker {
+  background: rgba($bg, 0.94);
+  border: 1px solid $blu-1;
+  padding: 24px 32px 20px;
+  box-shadow: 0 2px 8px rgba($drk-3, 0.4);
+
+  &-workspaces {
+    margin-bottom: 4px;
+  }
+
+  &-ws {
+    transition: all 0.15s $ease-out-snap;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 90%;
+    min-width: 42px;
+    min-height: 42px;
+
+    &-selected {
+      opacity: 1;
+      min-width: 60px;
+      min-height: 60px;
+    }
+  }
+
+  &-sessions {
+    min-height: 28px;
+  }
+
+  &-session {
+    padding: 4px 14px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: $slt-4;
+    font-size: 0.95em;
+    transition: all 0.15s $ease-out-snap;
+
+    &-selected {
+      border-color: $orn-3;
+      color: $orn-2;
+      background: rgba($orn-0, 0.08);
+    }
+
+    &-active {
+      color: $blu-2;
+
+      &.picker-session-selected {
+        border-color: $orn-3;
+        color: $orn-3;
+      }
+    }
+  }
+}

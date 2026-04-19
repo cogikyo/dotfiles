@@ -1,5 +1,7 @@
 package session
 
+// lock.go implements pseudo-lock and full-lock lifecycles with restore of workspace, UI services, and audio.
+
 import (
 	"dotfiles/daemons/hyprd/hypr"
 	"dotfiles/daemons/hyprd/state"
@@ -12,17 +14,12 @@ import (
 	"time"
 )
 
-// Pseudo-lock parks the session on a workspace reserved for the visual blackout, so normal workspaces
-// stay untouched while eww widgets are hidden and glava is down.
-const pseudoLockWorkspace = 6
+const pseudoLockWorkspace = 6         // workspace reserved for the visual blackout
+const fullLockGrace = 2 * time.Second // hyprlock cancel window that resumes music
 
-// Grace window for hyprlock: if the user cancels before this elapses, the pre-lock music state resumes.
-const fullLockGrace = 2 * time.Second
-
-// Lock owns the pseudo-lock and full-lock lifecycles: visual blackout, audio/notification pause, and restore.
+// Lock owns pseudo-lock and full-lock lifecycles: visual blackout, audio/notification pause, and restore.
 //
-// Reentry is serialized by mu; saved != nil means a lock (pseudo or full) is active.
-// inFull tracks whether a hyprlock process is currently blocking the screen so callers don't race it.
+// Serialized by mu; saved != nil means a lock is active, inFull means hyprlock is blocking.
 type Lock struct {
 	hypr   *hypr.Client
 	state  *state.State
@@ -40,11 +37,7 @@ func NewLock(h *hypr.Client, s *state.State) *Lock {
 	return &Lock{hypr: h, state: s}
 }
 
-// Execute routes lock subcommands.
-//
-//	""|"pseudo"      → pseudo-lock (blackout + submap)
-//	"-u"|"unlock"    → exit pseudo-lock
-//	"full"           → run hyprlock with pre/post hooks
+// Execute routes: "pseudo" (default), "unlock"/"-u", or "full".
 func (l *Lock) Execute(arg string) (string, error) {
 	switch strings.TrimSpace(arg) {
 	case "", "pseudo":
@@ -58,7 +51,7 @@ func (l *Lock) Execute(arg string) (string, error) {
 	}
 }
 
-// Pseudo enters pseudo-lock: blackout + submap. No-op if any lock is already active.
+// Pseudo enters pseudo-lock (blackout + submap); no-op if any lock is already active.
 func (l *Lock) Pseudo() (string, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -71,7 +64,7 @@ func (l *Lock) Pseudo() (string, error) {
 	return "lock: pseudo", nil
 }
 
-// Unlock exits pseudo-lock. Refuses while hyprlock is up — hyprlock owns the unlock UX there.
+// Unlock exits pseudo-lock; refuses while hyprlock is active.
 func (l *Lock) Unlock() (string, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -88,15 +81,14 @@ func (l *Lock) Unlock() (string, error) {
 	return "lock: unlocked", nil
 }
 
-// Full runs hyprlock with pre/post blackout hooks. Returns immediately; hyprlock and restore run in a
-// goroutine so hyprd keeps serving commands while the screen is locked.
+// Full runs hyprlock asynchronously with pre/post blackout hooks.
 func (l *Lock) Full() (string, error) {
 	l.mu.Lock()
 	if l.inFull {
 		l.mu.Unlock()
 		return "lock: hyprlock already running", nil
 	}
-	// Clean transition from pseudo → full: drop submap, reuse blackout state if already applied.
+	// Pseudo → full: drop submap, reuse existing blackout state.
 	l.hypr.Dispatch("submap reset")
 	if l.saved == nil {
 		l.saved = l.capture()
@@ -111,8 +103,7 @@ func (l *Lock) Full() (string, error) {
 }
 
 func (l *Lock) runHyprlock(saved *lockState) {
-	// Match the pre-migration script: give killall a beat before handing the display to hyprlock.
-	time.Sleep(time.Second)
+	time.Sleep(time.Second) // let killall settle before hyprlock takes the display
 
 	start := time.Now()
 	exec.Command("hyprlock", "--grace", strconv.Itoa(int(fullLockGrace/time.Second))).Run()
@@ -125,13 +116,12 @@ func (l *Lock) runHyprlock(saved *lockState) {
 		return
 	}
 	l.saved = nil
-	// Only resume music if the user cancelled inside the grace window; a true idle-lock should wake silent.
+	// Only resume music if cancelled inside the grace window; idle-lock wakes silent.
 	resumeMusic := saved.musicPlaying && elapsed <= fullLockGrace
 	l.exitBlackout(saved, resumeMusic)
 }
 
-// capture snapshots the current workspace and music state so Unlock/Full can restore them.
-// Called with l.mu held.
+// capture snapshots workspace and music state for later restore. Called with l.mu held.
 func (l *Lock) capture() *lockState {
 	ws := l.state.GetWorkspace()
 	if ws <= 0 {
@@ -153,8 +143,6 @@ func (l *Lock) capture() *lockState {
 	}
 }
 
-// enterBlackout hides visual surfaces, silences audio, and pauses notifications.
-// Called with l.mu held.
 func (l *Lock) enterBlackout() {
 	l.hypr.Dispatch(fmt.Sprintf("workspace %d", pseudoLockWorkspace))
 	exec.Command("eww", "close-all").Run()
@@ -164,10 +152,7 @@ func (l *Lock) enterBlackout() {
 	exec.Command("playerctl", "pause").Run()
 }
 
-// exitBlackout reverses enterBlackout: restores workspace, reopens eww widgets + init.execs, unpauses
-// dunst and optionally resumes music. Re-runs init.execs for the glava/bluetooth restart so those
-// commands stay defined in one place.
-// Called with l.mu held.
+// exitBlackout restores workspace, reopens eww/glava via init.execs, and unpauses dunst.
 func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) {
 	l.hypr.Dispatch(fmt.Sprintf("workspace %d", saved.workspace))
 
@@ -175,7 +160,7 @@ func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) {
 	for _, cmd := range cfg.Init.Execs {
 		l.hypr.Dispatch(fmt.Sprintf("exec %s", cmd))
 	}
-	// Prefer reopening via the running ewwd; if it's gone, respawn it — the fresh daemon auto-opens windows.
+	// Reopen via running ewwd; if gone, respawn (fresh daemon auto-opens windows).
 	if exec.Command("ewwd", "status").Run() == nil {
 		exec.Command("ewwd", "open").Start()
 	} else {
@@ -189,7 +174,7 @@ func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) {
 	if resumeMusic {
 		exec.Command("playerctl", "play").Run()
 	}
-	// Unpause dunst after eww is back so a flood of queued notifications doesn't clobber startup.
+	// Delay dunst unpause so queued notifications don't clobber eww startup.
 	time.AfterFunc(time.Second, func() {
 		exec.Command("dunstctl", "set-paused", "false").Run()
 	})

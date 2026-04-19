@@ -1,5 +1,7 @@
 package session
 
+// tabs.go initializes and refreshes kitty tab layouts from configured tab profiles.
+
 import (
 	"fmt"
 	"os"
@@ -21,9 +23,7 @@ func NewTabs(state *state.State) *Tabs {
 	return &Tabs{state: state}
 }
 
-// Execute dispatches the tabs subcommand:
-//   - "init <profile> <pid>" populates a fresh kitty window.
-//   - "refresh <name|all> <pid>" rebuilds one or all tabs in place.
+// Execute dispatches "init <profile> <pid>" or "refresh <name|all> <pid>".
 func (t *Tabs) Execute(args string) (string, error) {
 	parts := strings.Fields(args)
 	if len(parts) < 2 {
@@ -362,7 +362,7 @@ func (t *Tabs) findTab(profile *config.TabProfile, name string) *config.TabDef {
 	return nil
 }
 
-// closeLauncherTab removes the initial launcher tab kitty opens at startup, identified by empty KITTY_TAB_ID.
+// closeLauncherTab removes kitty's initial launcher tab (empty KITTY_TAB_ID).
 func (t *Tabs) closeLauncherTab(kitty *KittyClient, win KittyOSWindow) {
 	for _, tab := range win.Tabs {
 		for _, pane := range tab.Windows {

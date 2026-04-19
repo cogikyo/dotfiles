@@ -1,0 +1,83 @@
+* {
+  all: unset;
+}
+
+window {
+  background-color: transparent;
+  color: $blu-2;
+  font-family: sans-serif, monospace;
+  font-size: 20px;
+}
+
+tooltip {
+  background-color: rgba($bg, 0.9);
+  color: $orn-2;
+  font-family: "Architects Daughter", cursive;
+  font-size: 1.25em;
+  border: 1px solid $orn-3;
+  border-radius: 10px 24px 12px 20px;
+}
+
+$ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
+
+.tr-c {
+  transition: color 0.5s $ease-out-snap;
+}
+
+.tr-m {
+  transition: margin 0.25s $ease-out-snap;
+}
+
+.tr-a {
+  transition: all 0.25s $ease-out-snap;
+}
+
+.ramp {
+  &-1 {
+    color: $glc-3;
+  }
+
+  &-2 {
+    color: $blu-0;
+  }
+
+  &-3 {
+    color: $blu-1;
+  }
+
+  &-4 {
+    color: $blu-2;
+  }
+
+  &-5 {
+    color: $sky-2;
+  }
+
+  &-6 {
+    color: $sky-4;
+  }
+
+  &-7 {
+    color: $grn-3;
+  }
+
+  &-8 {
+    color: $sun-3;
+  }
+
+  &-9 {
+    color: $orn-3;
+  }
+
+  &-10 {
+    color: $rby-3;
+  }
+
+  &-11 {
+    color: $rby-1;
+  }
+
+  &-12 {
+    color: $pnk-1;
+  }
+}

@@ -1,0 +1,226 @@
+.weather {
+  background: $bg;
+  padding: 4px 12px 4px 1.1em;
+  margin: 16px 8px;
+  border-right: 3px solid $blu-1;
+  border-top: 1px solid $blu-1;
+  border-radius: 420px 17px 420px 69px;
+  box-shadow: -3px 2px 3px 1px rgba($blu-0, 0.32);
+
+  &-hover {
+    border-color: $orn-3;
+    box-shadow: -3px 2px 3px 1px rgba($rby-1, 0.32);
+  }
+
+  &-base {
+    @include cycle($blu-0);
+
+    &-alt {
+      @include cycle($blu-4);
+    }
+  }
+
+  &-moon {
+    color: $glu-3;
+
+    &-full {
+      color: $brt-3;
+    }
+  }
+
+  &-air {
+    @include cycle($sky-4);
+  }
+
+  &-rain {
+    @include cycle($blu-0);
+  }
+
+  &-morning {
+    @include cycle($blu-0);
+  }
+
+  &-day {
+    @include cycle($sun-2);
+  }
+
+  &-max {
+    @include cycle($rby-3);
+  }
+
+  &-evening {
+    @include cycle($prp-1);
+  }
+
+  &-night {
+    @include cycle($glc-5);
+  }
+
+  &-index {
+    &-base {
+      @include cycle($blu-2);
+    }
+
+    &-low,
+    &-good {
+      @include cycle($grn-3);
+    }
+
+    &-moderate {
+      @include cycle($sun-1);
+    }
+
+    &-high,
+    &-poor {
+      @include cycle($sun-4);
+    }
+
+    &-intense {
+      @include cycle($rby-2);
+    }
+
+    &-extreme {
+      @include cycle($pnk-2);
+    }
+  }
+}
+
+.time {
+  background: $bg;
+  border-radius: 27px 27px 69px 69px;
+  border-width: 0 1px 3px;
+  border-style: solid;
+  border-color: $blu-1;
+  box-shadow: 0 2px 3px 1px rgba($blu-0, 0.42);
+  margin: -7px 10px 8px;
+  transition: all 0.5s $ease-out-snap;
+
+  &-hover {
+    transition: all 0.5s $ease-out-snap;
+    border-color: $orn-3;
+    box-shadow: 0 2px 3px 1px rgba($rby-1, 0.42);
+  }
+
+  &-text {
+    font-family: Archivo, monospace;
+    color: $blu-2;
+    font-weight: 500;
+    font-size: 2.5em;
+    margin-top: 4px;
+    transition: all 0.5s $ease-out-snap;
+  }
+
+  &-clockface {
+    font-size: 8px;
+    margin: 4px 2px 0 0;
+  }
+
+  &-hour,
+  &-minute {
+    &-inactive {
+      transition: color 0.5s $ease-out-snap;
+      color: $blu-1;
+    }
+
+    &-active {
+      transition: color 0.5s $ease-out-snap;
+      color: $orn-3;
+
+      &:hover {
+        color: $rby-3;
+        transition: all 0.25s $ease-out-snap;
+      }
+    }
+  }
+
+  &-alarm {
+    margin-top: 7px;
+    margin-right: -4px;
+    margin-left: 4px;
+
+    &-icon {
+      margin-bottom: 1px;
+      font-size: 0.85em;
+    }
+
+    &-subtext {
+      font-size: 0.75em;
+      margin-top: 2px;
+      margin-right: 2px;
+    }
+  }
+
+  &-timer {
+    margin-top: 8px;
+    margin-left: -2px;
+    margin-right: 2px;
+
+    &-subtext {
+      font-family: monospace;
+      margin-top: 1px;
+      font-size: 0.75em;
+    }
+  }
+}
+
+.date {
+  background: $bg;
+  padding: 4px 1.1em;
+  margin: 16px 8px;
+  border-left: 3px solid $blu-1;
+  border-top: 1px solid $blu-1;
+  border-radius: 17px 420px 69px;
+  box-shadow: 3px 2px 3px 1px rgba($blu-0, 0.42);
+
+  &-hover {
+    border-color: $orn-3;
+    box-shadow: 3px 2px 3px 1px rgba($rby-1, 0.42);
+  }
+
+  &-base {
+    @include cycle($blu-2);
+
+    &-alt {
+      @include cycle($blu-4);
+    }
+  }
+
+  &-alive {
+    @include cycle($pnk-3);
+  }
+
+  &-dead {
+    @include cycle($glc-5);
+  }
+
+  &-day {
+    font-weight: bold;
+    font-size: 1.1em;
+  }
+
+  &-weeks {
+    font-family: Archivo, monospace;
+  }
+
+  &-Monday {
+    @include cycle($pnk-4);
+  }
+
+  &-Tuesday,
+  &-Thursday {
+    @include cycle($emr-4);
+  }
+
+  &-Wednesday {
+    @include cycle($orn-4);
+  }
+
+  &-Friday {
+    @include cycle($rby-4);
+  }
+
+  &-Saturday,
+  &-Sunday {
+    @include cycle($prp-3);
+  }
+}

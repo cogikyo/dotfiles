@@ -1,8 +1,6 @@
-;; Live Eww config.
-;; Archived widgets live in `./archive/legacy-widgets.yuck` and are not included.
-
 (include "./yuck/common.yuck")
 (include "./yuck/today.yuck")
 (include "./yuck/computer.yuck")
 (include "./yuck/music.yuck")
 (include "./yuck/workspaces.yuck")
+(include "./yuck/picker.yuck")

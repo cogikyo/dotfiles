@@ -1,5 +1,7 @@
 package session
 
+// layout.go opens configured workspace sessions, launches body windows, and applies initial layout state.
+
 import (
 	"fmt"
 	"os"
@@ -25,11 +27,7 @@ func NewLayout(h *hypr.Client, s *state.State) *Layout {
 	return &Layout{hypr: h, state: s}
 }
 
-// Execute dispatches the layout subcommand:
-//   - empty or "list" prints sessions grouped by workspace.
-//   - "set <ws> <name>" records the active session for a workspace.
-//   - numeric arg opens the active session on that workspace.
-//   - any other token is a session name to open directly.
+// Execute dispatches: "list", "set <ws> <name>", a workspace number, or a session name.
 func (l *Layout) Execute(arg string) (string, error) {
 	cfg := l.state.GetConfig()
 	sessions := cfg.Sessions
@@ -126,15 +124,12 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 	}
 
 	cfg := l.state.GetConfig()
-	var wsWindows []hypr.Window
 	for _, c := range clients {
 		if c.Workspace.ID == s.Workspace && !c.Pinned && !cfg.IsIgnored(c.Class) {
-			wsWindows = append(wsWindows, c)
+			l.hypr.Dispatch(fmt.Sprintf("closewindow address:%s", c.Address))
 		}
 	}
-	if len(wsWindows) > 0 {
-		return fmt.Sprintf("ws%d already has %d windows", s.Workspace, len(wsWindows)), nil
-	}
+	time.Sleep(300 * time.Millisecond)
 
 	homeDir, _ := os.UserHomeDir()
 	if s.Project != "" {
@@ -212,9 +207,6 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 	return fmt.Sprintf("opened session: %s on ws%d", s.Name, s.Workspace), nil
 }
 
-// applyMonocle floats and resizes the active window to the configured monocle dimensions.
-//
-// Records MonocleState on wsID so `hyprd monocle` can toggle it off later.
 func (l *Layout) applyMonocle(wsID int) {
 	active, err := l.hypr.ActiveWindow()
 	if err != nil || active == nil {

@@ -1,5 +1,7 @@
 package session
 
+// tab.go resolves tab actions/aliases and focuses or toggles a target tab in the workspace editor kitty.
+
 import (
 	"encoding/json"
 	"fmt"
@@ -10,14 +12,13 @@ import (
 	"dotfiles/daemons/hyprd/state"
 )
 
-// Escape sequences sent into nvim via kitty send-text.
-// \x1b exits insert mode, \r submits the :lua, \x0c (Ctrl-L) forces redraw.
+// Nvim escape sequences sent via kitty send-text: \x1b exits insert, \r submits :lua, \x0c redraws.
 const (
 	nvimCloseTree = "\x1b:lua if vim.bo.filetype==\"NvimTree\" then require(\"nvim-tree.api\").tree.close() end\r\x0c"
 	nvimFocusTree = "\x1b:lua local v=require(\"nvim-tree.view\"); if v.is_visible() then vim.fn.win_gotoid(v.get_winnr()) else require(\"nvim-tree.api\").tree.open() end\r\x0c"
 )
 
-// Tab focuses or toggles a named tab inside the workspace's editor kitty.
+// Tab focuses or toggles a named tab inside the workspace's editor kitty instance.
 type Tab struct {
 	hypr  *hypr.Client
 	state *state.State
@@ -27,14 +28,10 @@ func NewTab(h *hypr.Client, s *state.State) *Tab {
 	return &Tab{hypr: h, state: s}
 }
 
-// Execute focuses the tab matching tabName on the active workspace.
+// Execute focuses the named tab, resolving aliases and semantic actions (nvim/git/build).
 //
-// tabName may be a bare name, a colon-separated alias, or a semantic action (nvim/git/build).
-// Pulls the editor in from the shadow workspace when stashed there.
-// Re-focusing the already-active tab toggles back to the previous window.
-// "term" with no editor present spawns a fresh terminal in the project dir.
-//
-// Depends on KITTY_TAB_ID env tagging installed by Tabs.init; without it, only a raw editor-window focus is possible.
+// Re-focusing the active tab toggles back to the previous window.
+// Pulls the editor from the shadow workspace if stashed there.
 func (t *Tab) Execute(tabName string) (string, error) {
 	if tabName == "" {
 		return "", fmt.Errorf("usage: tab <name|alias>")

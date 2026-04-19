@@ -1,5 +1,7 @@
 package session
 
+// kitty.go wraps kitty remote-control commands and typed state decoding for tab/session automation.
+
 import (
 	"encoding/json"
 	"fmt"
@@ -16,9 +18,9 @@ func NewKittyClient(pid int) *KittyClient {
 	return &KittyClient{socketPath: fmt.Sprintf("unix:/tmp/kitty-%d", pid)}
 }
 
-// KittyState is a minimal snapshot of the first OS window.
+// KittyState is a snapshot of the first OS window.
 //
-// ActiveTabID is the KITTY_TAB_ID env of the focused pane, empty when the focused pane has no such env.
+// ActiveTabID is empty when the focused pane lacks a KITTY_TAB_ID env (e.g. the launcher tab).
 type KittyState struct {
 	WindowID    int
 	ActiveTabID string
@@ -51,7 +53,6 @@ type KittyProcess struct {
 	PID     int      `json:"pid"`
 }
 
-// FullState parses `kitty @ ls` into OS-window snapshots.
 func (k *KittyClient) FullState() ([]KittyOSWindow, error) {
 	out, err := exec.Command("kitty", "@", "--to", k.socketPath, "ls").Output()
 	if err != nil {
@@ -65,9 +66,7 @@ func (k *KittyClient) FullState() ([]KittyOSWindow, error) {
 	return windows, nil
 }
 
-// State returns the focused tab ID of the first OS window.
-//
-// Errors when kitty has no windows. ActiveTabID is empty when the focused pane lacks KITTY_TAB_ID (e.g. launcher tab).
+// State returns the KittyState of the first OS window.
 func (k *KittyClient) State() (*KittyState, error) {
 	windows, err := k.FullState()
 	if err != nil {
@@ -116,9 +115,7 @@ func (k *KittyClient) GotoLayout(tabID, layout string) error {
 		"goto-layout", "--match", "env:KITTY_TAB_ID="+tabID, layout).Run()
 }
 
-// CloseTab closes the tab with the given KITTY_TAB_ID.
-//
-// A missing tab is idempotent: kitty prints "No matching" and exits non-zero, which we swallow.
+// CloseTab closes the tab with the given KITTY_TAB_ID; a missing tab is a no-op.
 func (k *KittyClient) CloseTab(tabID string) error {
 	out, err := exec.Command("kitty", "@", "--to", k.socketPath,
 		"close-tab", "--match", "env:KITTY_TAB_ID="+tabID).CombinedOutput()
@@ -141,9 +138,7 @@ func (k *KittyClient) MoveTabBackward() error {
 		"action", "move_tab_backward").Run()
 }
 
-// TabIndex returns the position of the tab with the given KITTY_TAB_ID in the first OS window.
-//
-// Returns (-1, nil) when the lookup succeeded but the tab is absent.
+// TabIndex returns the position of tabID in the first OS window, or -1 if absent.
 func (k *KittyClient) TabIndex(tabID string) (int, error) {
 	windows, err := k.FullState()
 	if err != nil {

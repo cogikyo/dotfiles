@@ -1,0 +1,74 @@
+.systemctl {
+  &box {
+    @include svgbox("up");
+  }
+
+  &-hide {
+    opacity: 0;
+    margin-top: -100px;
+  }
+
+  &-restart {
+    transition: margin 0.25s $ease-out-snap;
+    color: $emr-1;
+    font-size: 1.2em;
+    margin: 0 0 -65px 20px;
+  }
+
+  &-poweroff {
+    transition: margin 0.25s $ease-out-snap;
+    color: $rby-1;
+    font-size: 1.5em;
+    margin-top: -30px;
+    margin-left: -5px;
+  }
+
+  &-lock {
+    transition: margin 0.25s $ease-out-snap;
+    color: $blu-1;
+    font-size: 1.3em;
+    margin: -80px 0 0 27px;
+  }
+}
+
+.screenctlbox {
+  @include svgbox("down");
+}
+
+.dunst {
+  &box {
+    @include svgbox(up);
+
+    margin-top: 10px;
+  }
+
+  &-count {
+    color: $blu-0;
+    transition: all 0.25s $ease-out-snap;
+    font-family: monospace;
+    font-size: 14px;
+    margin-left: 38px;
+    margin-top: 6px;
+    border: 1px solid $glc-3;
+    padding: 0 5px;
+    border-radius: 24px;
+
+    &-alert {
+      border: 0;
+      padding: 0;
+      color: $pnk-1;
+      font-size: 18px;
+      margin-left: 42px;
+      margin-top: 6px;
+    }
+
+    &-empty {
+      border: 0;
+      padding: 0;
+      color: $glc-3;
+      font-size: 18px;
+      margin-left: 44px;
+      margin-top: 7px;
+    }
+  }
+}
