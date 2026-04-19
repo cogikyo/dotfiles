@@ -158,11 +158,11 @@ notify:
   sounds_dir: "~/dotfiles/share/sounds"
   workspace_icons_dir: "~/dotfiles/config/eww/art/ws-icons"
   workspace_icons:
-    1: network
-    2: learn
-    3: dna
-    4: dotfiles
-    5: music
+    1: music
+    2: network
+    3: learn
+    4: dna
+    5: dotfiles
   quiet_volume: 52428
   loud_volume: 72089
   styles:
