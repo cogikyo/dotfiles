@@ -1,6 +1,0 @@
-#!/usr/bin/env bash
-# bin/relink - Symlink configs and scripts
-# Delegates to the install script's link step.
-
-DOTFILES="${DOTFILES:-$HOME/dotfiles}"
-exec "$DOTFILES/install.sh" link
