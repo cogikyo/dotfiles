@@ -5,7 +5,8 @@ System utilities daemon for eww statusbar integration. Uses a provider-based arc
 ## Commands
 
 ```bash
-ewwd                     # start daemon (foreground)
+ewwd                     # start daemon (foreground, auto-opens eww windows)
+ewwd open                # reload eww config and reopen configured windows
 ewwd status              # check if running
 ewwd status --json       # full state dump
 ```
@@ -37,11 +38,15 @@ ewwd action audio change_volume sink up   # adjust ±10
 ewwd action audio set_default both        # preset volumes
 
 # Music (Spotify)
+ewwd action music play                    # start playback
+ewwd action music pause                   # pause playback
 ewwd action music toggle                  # play/pause
 ewwd action music next                    # next track
 ewwd action music previous                # previous track
-ewwd action music volume up [0.05]        # adjust volume
+ewwd action music volume up [0.05]        # increase volume
+ewwd action music volume down [0.05]      # decrease volume
 ewwd action music seek up                 # seek forward 10s
+ewwd action music seek down               # seek backward 10s
 
 # Timer/Alarm
 ewwd action timer timer start             # start countdown
@@ -67,9 +72,9 @@ Each provider implements the `providers.Provider` interface and runs in its own 
 
 ## Configuration
 
-`../configs/ewwd.yaml` — provider settings, API keys, poll intervals
+`../config/ewwd.yaml` — provider settings, API keys, poll intervals.
 
-`ewwd` reads its config from the repo-level daemon config directory and uses that to initialize providers, set polling cadence, and wire provider-specific options.
+`ewwd` reads its config from `daemons/config/` and uses it to initialize providers, set polling cadence, and wire provider-specific options.
 
 ## Structure
 

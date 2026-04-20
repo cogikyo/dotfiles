@@ -37,25 +37,27 @@ Go daemons and services for Hyprland, eww, and Firefox.
 ## Daemons
 
 - **[hyprd](hyprd/)** — Window management: monocle, split ratios, hide/show, swap, workspace nav, session layouts
-- **[ewwd](ewwd/)** — System utilities: GPU stats, audio, music, network, date, weather, timer
+- **[ewwd](ewwd/)** — System utilities: audio, music, network, date, weather, timer
 - **[newtab](newtab/)** — Firefox new tab page: local HTTP server with bookmarks, history, and suggestions
 
 ## Layout
 
-The repository is organized around one daemon per top-level directory, with shared config files under `daemons/configs/`.
+The repository is organized around one daemon per top-level directory, with shared config files under `daemons/config/`.
 
 ```text
 daemons/
-├── configs/
-│   ├── ewwd.yaml
-│   └── hyprd.yaml
-├── daemon/         # shared Unix socket server/client helpers
-├── ewwd/           # eww status daemon
-├── hyprd/          # Hyprland daemon
-└── newtab/         # Firefox new tab server
+├── config/
+│   ├── ewwd.yaml       # ewwd provider settings
+│   ├── hyprd.yaml      # hyprd sessions, windows, notify settings
+│   ├── load.go         # YAML loader with local-override merging
+│   └── paths.go        # config path resolution
+├── daemon/             # shared Unix socket server/client helpers
+├── ewwd/               # eww status daemon
+├── hyprd/              # Hyprland daemon
+└── newtab/             # Firefox new tab server (separate go.mod)
 ```
 
-`hyprd` is further split into `notify/`, `session/`, `state/`, `windows/`, and `wm/` to keep concerns separated without pulling notification handling out of the daemon itself.
+`hyprd` is further split into `browser/`, `notify/`, `session/`, `state/`, `windows/`, and `wm/` to keep concerns separated.
 
 ## Shared infrastructure
 
@@ -71,20 +73,19 @@ daemon/
 ## Installation
 
 ```bash
-install-go.sh          # build all
-install-go.sh hyprd    # build one
-install-go.sh --list   # see available
+./install.sh go          # build all
 ```
 
 Binaries go to `~/.local/bin/`.
+If `hyprd` is already running, `install.sh go` uses `hyprd rebuild` for hot-restart.
 
-Config files are stored in `daemons/configs/` in the source tree. The daemon-specific docs below describe how each daemon consumes its config file.
+Config files live in `daemons/config/` in the source tree.
+Each daemon reads its config at startup; see daemon-specific docs for details.
 
 ### Hyprland startup
 
 ```conf
 # hyprland.conf
-exec-once = hyprd
+exec-once = hyprd init   # imports env, starts daemons, runs boot sequence
 exec-once = ewwd
-exec-once = newtab
 ```
