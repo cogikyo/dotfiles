@@ -152,14 +152,12 @@ func (l *Lock) enterBlackout() {
 	exec.Command("playerctl", "pause").Run()
 }
 
-// exitBlackout restores workspace, reopens eww/glava via init.execs, and unpauses dunst.
+// exitBlackout restores workspace, reopens eww/glava, reconnects bluetooth, and unpauses dunst.
 func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) {
 	l.hypr.Dispatch(fmt.Sprintf("workspace %d", saved.workspace))
 
 	cfg := l.state.GetConfig()
-	for _, cmd := range cfg.Init.Execs {
-		l.hypr.Dispatch(fmt.Sprintf("exec %s", cmd))
-	}
+	dispatchStartup(l.hypr, cfg.Bluetooth)
 	// Reopen via running ewwd; if gone, respawn (fresh daemon auto-opens windows).
 	if exec.Command("ewwd", "status").Run() == nil {
 		exec.Command("ewwd", "open").Start()

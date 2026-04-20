@@ -4,7 +4,6 @@ package wm
 
 import (
 	"fmt"
-	"strings"
 
 	"dotfiles/daemons/hyprd/hypr"
 	"dotfiles/daemons/hyprd/state"
@@ -33,8 +32,7 @@ func (h *Hide) Execute() (string, error) {
 		return "no active window", nil
 	}
 
-	cfg := h.state.GetConfig()
-	if h.isOnHiddenWorkspace(win, cfg.Windows.HiddenWorkspace) {
+	if windows.IsOnHiddenWorkspace(win) {
 		return h.unhide(win)
 	}
 	if win.Floating {
@@ -44,7 +42,7 @@ func (h *Hide) Execute() (string, error) {
 		return "three-body active: use three-body focus to swap", nil
 	}
 
-	tiled, err := windows.GetTiledWindows(h.hypr, win.Workspace.ID, cfg.Windows.IgnoredClasses)
+	tiled, err := windows.GetTiledWindows(h.hypr, win.Workspace.ID)
 	if err != nil {
 		return "", err
 	}
@@ -58,8 +56,6 @@ func (h *Hide) Execute() (string, error) {
 }
 
 func (h *Hide) hide(win *hypr.Window, tiled []hypr.Window) (string, error) {
-	cfg := h.state.GetConfig()
-	hiddenWS := cfg.Windows.HiddenWorkspace
 	slaves := windows.GetSlaves(tiled)
 	slaveIndex := max(windows.SlaveIndex(slaves, win.Address), 0)
 
@@ -69,10 +65,10 @@ func (h *Hide) hide(win *hypr.Window, tiled []hypr.Window) (string, error) {
 		SlaveIndex: slaveIndex,
 	})
 
-	if err := h.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s", hiddenWS, win.Address)); err != nil {
+	if err := h.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s", windows.HiddenWorkspace, win.Address)); err != nil {
 		return "", fmt.Errorf("hide window: %w", err)
 	}
-	return fmt.Sprintf("hidden: %s (slave %d) to %s", win.Address, slaveIndex, hiddenWS), nil
+	return fmt.Sprintf("hidden: %s (slave %d) to %s", win.Address, slaveIndex, windows.HiddenWorkspace), nil
 }
 
 func (h *Hide) unhide(win *hypr.Window) (string, error) {
@@ -93,8 +89,7 @@ func (h *Hide) unhide(win *hypr.Window) (string, error) {
 
 // restoreSlavePosition issues N `swapprev` dispatches to walk the window from the tail to its saved index.
 func (h *Hide) restoreSlavePosition(wsID int, targetIndex int) {
-	cfg := h.state.GetConfig()
-	tiled, err := windows.GetTiledWindows(h.hypr, wsID, cfg.Windows.IgnoredClasses)
+	tiled, err := windows.GetTiledWindows(h.hypr, wsID)
 	if err != nil || len(tiled) < 2 {
 		return
 	}
@@ -106,10 +101,6 @@ func (h *Hide) restoreSlavePosition(wsID int, targetIndex int) {
 			h.hypr.Dispatch("layoutmsg swapprev")
 		}
 	}
-}
-
-func (h *Hide) isOnHiddenWorkspace(win *hypr.Window, hiddenWS string) bool {
-	return strings.HasPrefix(win.Workspace.Name, hiddenWS)
 }
 
 // UnhideByAddress unhides a known-hidden window to destWS (falls back to stored origin, then ws 1).

@@ -55,7 +55,7 @@ func (m *Monocle) activate() (string, error) {
 		savedTB = tb
 	}
 
-	tiled, err := windows.GetTiledWindows(m.hypr, wsID, cfg.Windows.IgnoredClasses)
+	tiled, err := windows.GetTiledWindows(m.hypr, wsID)
 	if err != nil {
 		return "", err
 	}
@@ -114,9 +114,9 @@ func (m *Monocle) deactivate(wsID int) (string, error) {
 	for _, mw := range ms.Windows {
 		m.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", mw.OriginWS, mw.Address))
 	}
-	m.ensureMaster(wsID, ms.Master, cfg)
+	m.ensureMaster(wsID, ms.Master)
 	if ms.SavedThreeBody != nil {
-		m.restoreThreeBody(wsID, ms.SavedThreeBody, cfg)
+		m.restoreThreeBody(wsID, ms.SavedThreeBody)
 	}
 	m.restoreSplitRatio(ms.SavedSplitRatio, cfg)
 	if ms.Focused != "" {
@@ -132,11 +132,11 @@ func (m *Monocle) deactivate(wsID int) (string, error) {
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
 // ensureMaster swaps the saved master back to position 0 if Hyprland re-tiled in a different order.
-func (m *Monocle) ensureMaster(wsID int, masterAddr string, cfg *config.HyprConfig) {
+func (m *Monocle) ensureMaster(wsID int, masterAddr string) {
 	if masterAddr == "" {
 		return
 	}
-	tiled, err := windows.GetTiledWindows(m.hypr, wsID, cfg.Windows.IgnoredClasses)
+	tiled, err := windows.GetTiledWindows(m.hypr, wsID)
 	if err != nil || len(tiled) == 0 {
 		return
 	}
@@ -154,19 +154,19 @@ func (m *Monocle) restoreSplitRatio(ratio string, cfg *config.HyprConfig) {
 	var mfact string
 	switch ratio {
 	case "xs":
-		mfact = cfg.Split.XS
+		mfact = cfg.Windows.Split.XS
 	case "lg":
-		mfact = cfg.Split.LG
+		mfact = cfg.Windows.Split.LG
 	default:
 		ratio = "default"
-		mfact = cfg.Split.Default
+		mfact = cfg.Windows.Split.Default
 	}
 	m.hypr.Dispatch(fmt.Sprintf("layoutmsg mfact exact %s", mfact))
 	m.state.SetSplitRatio(ratio)
 }
 
-func (m *Monocle) restoreThreeBody(wsID int, saved *state.ThreeBodyState, cfg *config.HyprConfig) {
-	m.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s", cfg.Windows.ShadowWorkspace, saved.Shadow))
+func (m *Monocle) restoreThreeBody(wsID int, saved *state.ThreeBodyState) {
+	m.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s", windows.ShadowWorkspace, saved.Shadow))
 	m.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", saved.Active))
 	m.state.SetThreeBody(wsID, saved)
 }

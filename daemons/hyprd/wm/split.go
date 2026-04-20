@@ -10,7 +10,7 @@ import (
 	"dotfiles/daemons/hyprd/windows"
 )
 
-// Split controls the master/slave mfact ratio via named presets from cfg.Split.
+// Split controls the master/slave mfact ratio via named presets from cfg.Windows.Split.
 type Split struct {
 	hypr  *hypr.Client
 	state *state.State
@@ -56,12 +56,12 @@ func (s *Split) setRatio(ratio string) (string, error) {
 	var mfact string
 	switch ratio {
 	case "xs":
-		mfact = cfg.Split.XS
+		mfact = cfg.Windows.Split.XS
 	case "lg":
-		mfact = cfg.Split.LG
+		mfact = cfg.Windows.Split.LG
 	default:
 		ratio = "default"
-		mfact = cfg.Split.Default
+		mfact = cfg.Windows.Split.Default
 	}
 
 	if err := s.hypr.Dispatch(fmt.Sprintf("layoutmsg mfact exact %s", mfact)); err != nil {

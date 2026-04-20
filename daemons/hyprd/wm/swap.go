@@ -71,8 +71,7 @@ func (s *Swap) takeoverMaster(slave *hypr.Window, wsID int, masterAddr string) (
 }
 
 func (s *Swap) getMasterAddr(wsID int) (string, error) {
-	cfg := s.state.GetConfig()
-	master, err := windows.GetMaster(s.hypr, wsID, cfg.Windows.IgnoredClasses)
+	master, err := windows.GetMaster(s.hypr, wsID)
 	if err != nil {
 		return "", err
 	}

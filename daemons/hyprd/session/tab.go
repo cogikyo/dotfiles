@@ -10,6 +10,7 @@ import (
 	"dotfiles/daemons/config"
 	"dotfiles/daemons/hyprd/hypr"
 	"dotfiles/daemons/hyprd/state"
+	"dotfiles/daemons/hyprd/windows"
 )
 
 // Nvim escape sequences sent via kitty send-text: \x1b exits insert, \r submits :lua, \x0c redraws.
@@ -170,10 +171,9 @@ func (t *Tab) findEditor(wsID int) (*hypr.Window, error) {
 		}
 	}
 
-	cfg := t.state.GetConfig()
 	for i := range clients {
 		c := &clients[i]
-		if strings.HasPrefix(c.Workspace.Name, cfg.Windows.ShadowWorkspace) &&
+		if strings.HasPrefix(c.Workspace.Name, windows.ShadowWorkspace) &&
 			c.Class == "kitty" && c.InitialTitle == "editor" {
 			t.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", wsID, c.Address))
 			return c, nil

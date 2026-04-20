@@ -34,16 +34,16 @@ func LoadEww() EwwConfig {
 
 // LoadHypr loads hyprd config from configs/hyprd.yaml.
 //
+// Every value must be set in the YAML — there are no compiled defaults.
 // Sound and app maps are lowercased for case-insensitive libnotify matching.
 func LoadHypr() HyprConfig {
-	cfg := DefaultHypr()
+	var cfg HyprConfig
 	if err := loadYAMLFile(ConfigPath("hyprd"), &cfg); err != nil {
 		logConfigError("hyprd", err)
 	}
+	warnMissing(&cfg)
 	cfg.Notify.UrgencySounds = lowercaseKeys(cfg.Notify.UrgencySounds)
 	cfg.Notify.AppSounds = lowercaseKeys(cfg.Notify.AppSounds)
-	cfg.Notify.FocusApps = lowercaseKeys(cfg.Notify.FocusApps)
-	cfg.Notify.ActionFocusApps = lowercaseFocusTargets(cfg.Notify.ActionFocusApps)
 	cfg.Notify.SilentApps = lowercaseSlice(cfg.Notify.SilentApps)
 	cfg.Notify.KittySilentPatterns = lowercaseSlice(cfg.Notify.KittySilentPatterns)
 	return cfg
@@ -73,6 +73,24 @@ func logConfigError(section string, err error) {
 	fmt.Fprintf(os.Stderr, "daemons: %s config error: %v\n", section, err)
 }
 
+func warnMissing(cfg *HyprConfig) {
+	warn := func(section string) {
+		fmt.Fprintf(os.Stderr, "hyprd: warning: %q section missing from config\n", section)
+	}
+	if cfg.Background.Display == "" {
+		warn("background")
+	}
+	if cfg.Init.NetworkTimeout == 0 {
+		warn("init")
+	}
+	if cfg.Notify.AgentStyles == nil {
+		warn("notify")
+	}
+	if cfg.Windows.Split.Default == "" {
+		warn("windows")
+	}
+}
+
 func lowercaseKeys(m map[string]string) map[string]string {
 	out := make(map[string]string, len(m))
 	for k, v := range m {
@@ -89,10 +107,3 @@ func lowercaseSlice(s []string) []string {
 	return out
 }
 
-func lowercaseFocusTargets(m map[string]NotifyFocusTarget) map[string]NotifyFocusTarget {
-	out := make(map[string]NotifyFocusTarget, len(m))
-	for k, v := range m {
-		out[strings.ToLower(k)] = v
-	}
-	return out
-}

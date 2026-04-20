@@ -9,16 +9,35 @@ package session
 // init.go executes boot-time session initialization, including wallpaper, network wait, layout open, and pseudo-lock.
 
 import (
+	"dotfiles/daemons/config"
+	"dotfiles/daemons/hyprd/hypr"
+	"dotfiles/daemons/hyprd/state"
 	"fmt"
 	"net"
 	"os"
 	"sort"
 	"strconv"
 	"time"
-
-	"dotfiles/daemons/hyprd/hypr"
-	"dotfiles/daemons/hyprd/state"
 )
+
+const lockDelay = 3 * time.Second
+
+var startupExecs = []string{
+	"glava -e bars_rc.glsl",
+	"glava -e bars_r_rc.glsl",
+	"glava -e radial_rc.glsl",
+	"spotify-launcher",
+}
+
+// dispatchStartup runs hardcoded startup commands and optionally connects bluetooth.
+func dispatchStartup(h *hypr.Client, bt config.BluetoothConfig) {
+	for _, cmd := range startupExecs {
+		h.Dispatch(fmt.Sprintf("exec %s", cmd))
+	}
+	if bt.Enabled && bt.Device != "" {
+		h.Dispatch(fmt.Sprintf("exec bluetoothctl connect %s", bt.Device))
+	}
+}
 
 // NotifyFunc delivers a notification to the user, injected to break a cycle with the notify package.
 type NotifyFunc func(app, urgency, title, body string)
@@ -61,9 +80,9 @@ func (i *Init) Execute() (string, error) {
 
 	layout := NewLayout(i.hypr, i.state)
 	var initWS []int
-	for ws, as := range cfg.ActiveSessions {
-		if as.Init {
-			initWS = append(initWS, ws)
+	for _, s := range cfg.Sessions {
+		if s.Init {
+			initWS = append(initWS, s.Workspace)
 		}
 	}
 	sort.Ints(initWS)
@@ -76,20 +95,15 @@ func (i *Init) Execute() (string, error) {
 		}
 	}
 
-	for _, cmd := range init.Execs {
-		i.hypr.Dispatch(fmt.Sprintf("exec %s", cmd))
-		time.Sleep(200 * time.Millisecond)
-	}
+	dispatchStartup(i.hypr, cfg.Bluetooth)
 
 	if init.Workspace > 0 {
 		i.hypr.Dispatch(fmt.Sprintf("workspace %d", init.Workspace))
 	}
 
 	if init.Lock && i.lock != nil {
-		if init.LockDelay > 0 {
-			fmt.Printf("hyprd init: waiting %s before pseudo-lock\n", init.LockDelay)
-			time.Sleep(init.LockDelay)
-		}
+		fmt.Printf("hyprd init: waiting %s before pseudo-lock\n", lockDelay)
+		time.Sleep(lockDelay)
 		fmt.Println("hyprd init: pseudo-locking")
 		if _, err := i.lock.Pseudo(); err != nil {
 			fmt.Fprintf(os.Stderr, "hyprd init: pseudo-lock: %v\n", err)

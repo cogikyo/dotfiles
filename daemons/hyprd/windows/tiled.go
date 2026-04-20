@@ -12,9 +12,27 @@ import (
 	"fmt"
 	"slices"
 	"sort"
+	"strings"
 
 	"dotfiles/daemons/hyprd/hypr"
 )
+
+const (
+	HiddenWorkspace = "special:hiddenSlaves"
+	ShadowWorkspace = "special:shadow"
+)
+
+var IgnoredClasses = []string{"GLava"}
+
+// IsIgnored reports whether class is in IgnoredClasses.
+func IsIgnored(class string) bool {
+	return slices.Contains(IgnoredClasses, class)
+}
+
+// IsOnHiddenWorkspace reports whether the window is parked on the hidden workspace.
+func IsOnHiddenWorkspace(w *hypr.Window) bool {
+	return strings.HasPrefix(w.Workspace.Name, HiddenWorkspace)
+}
 
 // CenterCursor moves the cursor to the center of the active window.
 func CenterCursor(h *hypr.Client) {
@@ -28,7 +46,7 @@ func CenterCursor(h *hypr.Client) {
 }
 
 // GetTiledWindows returns non-floating windows on wsID sorted by X position.
-func GetTiledWindows(h *hypr.Client, wsID int, ignoredClasses []string) ([]hypr.Window, error) {
+func GetTiledWindows(h *hypr.Client, wsID int) ([]hypr.Window, error) {
 	clients, err := h.Clients()
 	if err != nil {
 		return nil, err
@@ -36,7 +54,7 @@ func GetTiledWindows(h *hypr.Client, wsID int, ignoredClasses []string) ([]hypr.
 
 	var tiled []hypr.Window
 	for _, c := range clients {
-		if c.Workspace.ID == wsID && !c.Floating && !slices.Contains(ignoredClasses, c.Class) {
+		if c.Workspace.ID == wsID && !c.Floating && !IsIgnored(c.Class) {
 			tiled = append(tiled, c)
 		}
 	}
@@ -49,8 +67,8 @@ func GetTiledWindows(h *hypr.Client, wsID int, ignoredClasses []string) ([]hypr.
 }
 
 // GetMaster returns the leftmost tiled window on wsID, or nil if none.
-func GetMaster(h *hypr.Client, wsID int, ignoredClasses []string) (*hypr.Window, error) {
-	tiled, err := GetTiledWindows(h, wsID, ignoredClasses)
+func GetMaster(h *hypr.Client, wsID int) (*hypr.Window, error) {
+	tiled, err := GetTiledWindows(h, wsID)
 	if err != nil {
 		return nil, err
 	}

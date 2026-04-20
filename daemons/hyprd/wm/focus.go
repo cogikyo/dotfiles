@@ -44,7 +44,7 @@ func (f *Focus) Execute(class, title string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	hiddenPrefix := f.state.GetConfig().Windows.HiddenWorkspace
+	hiddenPrefix := windows.HiddenWorkspace
 
 	var target *hypr.Window
 	var hiddenTarget *hypr.Window

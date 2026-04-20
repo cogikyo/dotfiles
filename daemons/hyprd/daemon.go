@@ -10,6 +10,7 @@ import (
 	notifypkg "dotfiles/daemons/hyprd/notify"
 	"dotfiles/daemons/hyprd/session"
 	"dotfiles/daemons/hyprd/state"
+	"dotfiles/daemons/hyprd/windows"
 	"dotfiles/daemons/hyprd/wm"
 	"encoding/json"
 	"fmt"
@@ -276,7 +277,7 @@ func (d *Daemon) handleCommand(command string) string {
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
 func (d *Daemon) handleShadow(arg string) string {
-	shadowWS := d.config.Load().Windows.ShadowWorkspace
+	shadowWS := windows.ShadowWorkspace
 	special := strings.TrimPrefix(shadowWS, "special:")
 
 	switch strings.TrimSpace(arg) {

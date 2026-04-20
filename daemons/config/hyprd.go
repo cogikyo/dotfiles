@@ -3,8 +3,11 @@ package config
 // hyprd.go declares hyprd's window, session, and notification configuration.
 
 import (
-	"slices"
-	"time"
+	"fmt"
+	"strconv"
+	"strings"
+
+	"gopkg.in/yaml.v3"
 )
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -13,14 +16,13 @@ import (
 
 // HyprConfig configures hyprd window and session behavior.
 type HyprConfig struct {
-	Background     BackgroundConfig           `yaml:"background"`
-	Init           InitConfig                 `yaml:"init"`
-	Notify         NotifyConfig               `yaml:"notify"`
-	Windows        WindowsConfig              `yaml:"windows"`
-	Tabs           map[string]TabProfile      `yaml:"tabs"`
-	ThreeBody      map[string]ThreeBodyWindow `yaml:"three_body"`
-	Sessions       map[string]Session         `yaml:"sessions"`
-	ActiveSessions map[int]ActiveSession      `yaml:"active_sessions"`
+	Background BackgroundConfig      `yaml:"background"`
+	Bluetooth  BluetoothConfig       `yaml:"bluetooth"`
+	Init       InitConfig            `yaml:"init"`
+	Notify     NotifyConfig          `yaml:"notify"`
+	Windows    WindowsConfig         `yaml:"windows"`
+	Tabs       map[string]TabProfile `yaml:"tabs"`
+	Sessions   SessionsConfig        `yaml:"sessions"`
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -29,13 +31,17 @@ type HyprConfig struct {
 
 // InitConfig controls the one-time boot sequence (env setup before sessions).
 //
-// Sessions opened on boot come from ActiveSessions entries with init: true.
+// Sessions opened on boot are those with init: true in the session catalog.
 type InitConfig struct {
-	Execs          []string      `yaml:"execs"`           // commands run once at hyprd startup
-	Workspace      int           `yaml:"workspace"`       // workspace to focus after boot
-	Lock           bool          `yaml:"lock"`            // lock the session after boot completes
-	LockDelay      time.Duration `yaml:"lock_delay"`      // delay before locking (gives sessions time to settle)
-	NetworkTimeout int           `yaml:"network_timeout"` // seconds to wait for network before proceeding
+	Workspace      int  `yaml:"workspace"`       // workspace to focus after boot
+	Lock           bool `yaml:"lock"`            // lock the session after boot completes
+	NetworkTimeout int  `yaml:"network_timeout"` // seconds to wait for network before proceeding
+}
+
+// BluetoothConfig controls automatic device connection at startup and unlock.
+type BluetoothConfig struct {
+	Enabled bool   `yaml:"enabled"`
+	Device  string `yaml:"device"`
 }
 
 // BackgroundConfig controls the mpvpaper video wallpaper.
@@ -72,28 +78,15 @@ type SplitConfig struct {
 
 // NotifyConfig defines notification routing, presentation, and sound policy.
 type NotifyConfig struct {
-	SoundsDir           string                       `yaml:"sounds_dir"`            // directory containing sound files
-	WorkspaceIconsDir   string                       `yaml:"workspace_icons_dir"`   // directory containing workspace icon PNGs
-	WorkspaceIcons      map[int]string               `yaml:"workspace_icons"`       // workspace number -> icon basename
-	QuietVolume         int                          `yaml:"quiet_volume"`          // paplay volume (0-65536) for low-priority sounds
-	LoudVolume          int                          `yaml:"loud_volume"`           // paplay volume (0-65536) for high-priority sounds
-	Styles              map[string]NotifyStyle       `yaml:"styles"`                // notification class -> Dunst hint overrides
+	DefaultVolume       int                          `yaml:"default_volume"`        // paplay volume (0-65536); 0 defers to paplay default
+	AgentStyles         map[string]NotifyStyle       `yaml:"agent_styles"`          // event class -> dunst hints + sound
 	UrgencySounds       map[string]string            `yaml:"urgency_sounds"`        // urgency -> sound name (or "none")
 	AppSounds           map[string]string            `yaml:"app_sounds"`            // app name -> sound name; takes precedence over urgency
-	FocusApps           map[string]string            `yaml:"focus_apps"`            // dunst app name -> Hyprland window class to focus on arrival
-	ActionFocusApps     map[string]NotifyFocusTarget `yaml:"action_focus_apps"`     // dunst app/desktop-entry -> window target to focus on click
 	SilentApps          []string                     `yaml:"silent_apps"`           // external app names that suppress sound entirely
 	KittySilentPatterns []string                     `yaml:"kitty_silent_patterns"` // substrings in kitty notification content that suppress sound
 }
 
-// NotifyFocusTarget describes the window/workspace to focus when a notification action fires.
-type NotifyFocusTarget struct {
-	Workspace int    `yaml:"workspace"`
-	Class     string `yaml:"class"`
-	Title     string `yaml:"title"`
-}
-
-// NotifyStyle defines Dunst hint overrides for a notification class.
+// NotifyStyle defines dunst hints, sound, and volume for an agent event class.
 type NotifyStyle struct {
 	Urgency    string `yaml:"urgency"`     // low, normal, critical
 	Timeout    int    `yaml:"timeout"`     // ms; 0 means persistent
@@ -101,20 +94,19 @@ type NotifyStyle struct {
 	Foreground string `yaml:"foreground"`  // hex color
 	Frame      string `yaml:"frame"`       // border color
 	IconSuffix string `yaml:"icon_suffix"` // appended to the icon basename
-	Persistent bool   `yaml:"persistent"`  // prevents Dunst timeout from closing
+	Persistent bool   `yaml:"persistent"`  // prevents dunst timeout from closing
+	Sound      string `yaml:"sound"`       // sound file basename (without .ogg)
+	Volume     int    `yaml:"volume"`      // paplay volume; 0 defers to default_volume
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
 // │ windows / workspaces                                                         │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// WindowsConfig controls tiling policy and special workspace naming.
+// WindowsConfig controls tiling policy.
 type WindowsConfig struct {
-	IgnoredClasses  []string      `yaml:"ignored_classes"`  // window classes hyprd ignores for tiling/events
-	HiddenWorkspace string        `yaml:"hidden_workspace"` // Hyprland special workspace name for stashed windows
-	ShadowWorkspace string        `yaml:"shadow_workspace"` // Hyprland special workspace name for shadow windows
-	Split           SplitConfig   `yaml:"split"`
-	Monocle         MonocleConfig `yaml:"monocle"`
+	Split   SplitConfig   `yaml:"split"`
+	Monocle MonocleConfig `yaml:"monocle"`
 }
 
 // MonocleConfig controls single-window monocle mode sizing and offset (px).
@@ -164,21 +156,94 @@ type TabPane struct {
 
 // ThreeBodyWindow defines a window that participates in the three-body layout.
 type ThreeBodyWindow struct {
-	Class   string `yaml:"class"`
-	Title   string `yaml:"title"`   // optional
-	Command string `yaml:"command"` // spawn command when missing
+	Class   string
+	Title   string
+	Command string
 }
 
-// ActiveSession binds a session to a workspace.
-type ActiveSession struct {
-	Session string `yaml:"session"` // key into HyprConfig.Sessions
-	Init    bool   `yaml:"init"`    // spawn on boot
+// ThreeBody is the fixed set of window roles for three-body layouts.
+var ThreeBody = map[string]ThreeBodyWindow{
+	"editor":  {Class: "kitty", Title: "editor", Command: "kitty --title=editor --session ~/.config/kitty/sessions/editor.conf"},
+	"agents":  {Class: "kitty", Title: "agents", Command: "kitty --title=agents --session ~/.config/kitty/sessions/agents.conf"},
+	"browser": {Class: "firefox-developer-edition", Command: "hyprd browser launch"},
+}
+
+// SessionsConfig stores runtime-flat sessions keyed by name, while YAML groups them by workspace number first.
+type SessionsConfig map[string]Session
+
+// DefaultSession returns the init-marked session name for a workspace, or "" if none.
+func (s SessionsConfig) DefaultSession(ws int) string {
+	for _, session := range s {
+		if session.Workspace == ws && session.Init {
+			return session.Name
+		}
+	}
+	return ""
+}
+
+// UnmarshalYAML decodes workspace-grouped session YAML into the flat runtime map.
+func (s *SessionsConfig) UnmarshalYAML(value *yaml.Node) error {
+	if value.Kind == 0 || value.Tag == "!!null" {
+		*s = nil
+		return nil
+	}
+	if value.Kind != yaml.MappingNode {
+		return fmt.Errorf("sessions must be a mapping of workspace -> sessions")
+	}
+
+	out := make(SessionsConfig)
+	for i := 0; i < len(value.Content); i += 2 {
+		wsNode := value.Content[i]
+		groupNode := value.Content[i+1]
+
+		ws, err := strconv.Atoi(strings.TrimSpace(wsNode.Value))
+		if err != nil {
+			return fmt.Errorf("sessions: invalid workspace %q", wsNode.Value)
+		}
+		if groupNode.Kind != yaml.MappingNode {
+			return fmt.Errorf("sessions[%d] must be a mapping of session name -> config", ws)
+		}
+
+		for j := 0; j < len(groupNode.Content); j += 2 {
+			nameNode := groupNode.Content[j]
+			sessionNode := groupNode.Content[j+1]
+			name := strings.TrimSpace(nameNode.Value)
+			if name == "" {
+				return fmt.Errorf("sessions[%d]: session name cannot be empty", ws)
+			}
+			if _, exists := out[name]; exists {
+				return fmt.Errorf("sessions: duplicate session name %q", name)
+			}
+
+			var session Session
+			if err := sessionNode.Decode(&session); err != nil {
+				return fmt.Errorf("sessions[%d][%q]: %w", ws, name, err)
+			}
+			session.Name = name
+			session.Workspace = ws
+			out[name] = session
+		}
+	}
+
+	initPerWS := make(map[int]string)
+	for name, session := range out {
+		if session.Init {
+			if prev, dup := initPerWS[session.Workspace]; dup {
+				return fmt.Errorf("sessions[%d]: multiple init sessions: %q and %q", session.Workspace, prev, name)
+			}
+			initPerWS[session.Workspace] = name
+		}
+	}
+
+	*s = out
+	return nil
 }
 
 // Session defines a workspace layout for automated window spawning and arrangement.
 type Session struct {
-	Name      string            `yaml:"name" json:"name"`
-	Workspace int               `yaml:"workspace" json:"workspace"`
+	Name      string            `yaml:"-" json:"name"`      // derived from the session map key
+	Workspace int               `yaml:"-" json:"workspace"` // derived from the enclosing workspace key
+	Init      bool              `yaml:"init" json:"init"`   // spawn on boot; at most one per workspace
 	Project   string            `yaml:"project" json:"project"`
 	Body      []string          `yaml:"body" json:"body"` // three-body member order
 	Browser   BrowserConfig     `yaml:"browser" json:"browser"`
@@ -229,142 +294,4 @@ func (c *HyprConfig) MonocleSize() (w, h int) {
 // MonocleOffset returns the x/y offset (px) from monitor center.
 func (c *HyprConfig) MonocleOffset() (x, y int) {
 	return c.Windows.Monocle.OffsetX, c.Windows.Monocle.OffsetY
-}
-
-// IsIgnored reports whether the window class is in IgnoredClasses.
-func (c *HyprConfig) IsIgnored(class string) bool {
-	return slices.Contains(c.Windows.IgnoredClasses, class)
-}
-
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ defaults                                                                     │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
-
-// DefaultHypr returns hyprd defaults.
-func DefaultHypr() HyprConfig {
-	return HyprConfig{
-		Background: BackgroundConfig{
-			Display:   "HDMI-A-1",
-			VideoPath: "~/dotfiles/share/videos",
-			Socket:    "/tmp/mpvpaper.sock",
-			Wallpaper: Wallpaper{
-				File:       "dna.mp4",
-				Brightness: 6,
-				Contrast:   9,
-				Saturation: -16,
-				Hue:        -24,
-			},
-		},
-		Init: InitConfig{
-			Execs: []string{
-				"glava -e bars_rc.glsl",
-				"glava -e bars_r_rc.glsl",
-				"glava -e radial_rc.glsl",
-				"spotify-launcher",
-				"bluetoothctl connect 14:3F:A6:10:A1:B5",
-			},
-			Workspace:      1,
-			Lock:           true,
-			NetworkTimeout: 10,
-		},
-		Notify: NotifyConfig{
-			SoundsDir:         "~/dotfiles/share/sounds",
-			WorkspaceIconsDir: "~/dotfiles/config/eww/art/ws-icons",
-			WorkspaceIcons: map[int]string{
-				1: "network",
-				2: "learn",
-				3: "dna",
-				4: "dotfiles",
-				5: "music",
-			},
-			QuietVolume: 52428,
-			LoudVolume:  72089,
-			Styles: map[string]NotifyStyle{
-				"start": {
-					Urgency:    "low",
-					Timeout:    2000,
-					Background: "#25284180",
-					Foreground: "#8aa4f3",
-					Frame:      "#6380ec80",
-				},
-				"subagent": {
-					Urgency:    "low",
-					Timeout:    2000,
-					Background: "#25284180",
-					Foreground: "#8aa4f3",
-					Frame:      "#6380ec80",
-				},
-				"complete": {
-					Urgency:    "normal",
-					Timeout:    0,
-					Background: "#49353130",
-					Foreground: "#f2a170",
-					Frame:      "#ea834b",
-					IconSuffix: "-active",
-					Persistent: true,
-				},
-				"idle": {
-					Urgency:    "normal",
-					Timeout:    0,
-					Background: "#2a2d4580",
-					Foreground: "#b29ae8",
-					Frame:      "#9376d880",
-					IconSuffix: "-idle",
-					Persistent: true,
-				},
-				"permission": {
-					Urgency:    "normal",
-					Timeout:    0,
-					Background: "#2a3d2580",
-					Foreground: "#95cb79",
-					Frame:      "#73ad5a80",
-					IconSuffix: "-monocle",
-					Persistent: true,
-				},
-			},
-			UrgencySounds: map[string]string{
-				"low":      "none",
-				"normal":   "moondrop",
-				"critical": "gems",
-			},
-			AppSounds: map[string]string{
-				"timer":     "jackpot",
-				"attention": "discovery",
-				"chat":      "reward",
-				"work":      "fruit",
-				"wf-start":  "discovery",
-				"wf-end":    "reward",
-				"Slack":     "knock",
-			},
-			FocusApps: map[string]string{
-				"Slack":                     "slack",
-				"firefox-developer-edition": "firefox-developer-edition",
-			},
-			ActionFocusApps: map[string]NotifyFocusTarget{
-				"Firefox":                   {Workspace: 2, Class: "firefox-developer-edition"},
-				"Firefox Developer Edition": {Workspace: 2, Class: "firefox-developer-edition"},
-				"firefox-developer-edition": {Workspace: 2, Class: "firefox-developer-edition"},
-			},
-			SilentApps:          []string{"Spotify", "discord"},
-			KittySilentPatterns: []string{"claude", "opencode", "approval"},
-		},
-		Windows: WindowsConfig{
-			IgnoredClasses:  []string{"GLava"},
-			HiddenWorkspace: "special:hiddenSlaves",
-			ShadowWorkspace: "special:shadow",
-			Split: SplitConfig{
-				XS:      "0.37",
-				Default: "0.4942",
-				LG:      "0.77",
-			},
-			Monocle: MonocleConfig{
-				Width:  3190,
-				Height: 1920,
-			},
-		},
-		Tabs:           map[string]TabProfile{},
-		ThreeBody:      map[string]ThreeBodyWindow{},
-		Sessions:       map[string]Session{},
-		ActiveSessions: map[int]ActiveSession{},
-	}
 }

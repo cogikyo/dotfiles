@@ -15,7 +15,7 @@ import (
 
 // ThreeBody implements a 3-window layout: master + active slave + hidden shadow.
 //
-// Invariant: when enrolled, exactly two windows are tiled and the shadow is parked on cfg.Windows.ShadowWorkspace.
+// Invariant: when enrolled, exactly two windows are tiled and the shadow is parked on windows.ShadowWorkspace.
 type ThreeBody struct {
 	hypr      *hypr.Client
 	state     *state.State
@@ -37,12 +37,11 @@ var threeBodyOrder = []string{"editor", "agents", "browser"}
 
 // Execute dispatches a three-body command by body name ("shadow", or a configured body like "editor"/"agents"/"browser").
 func (tb *ThreeBody) Execute(name string) (string, error) {
-	cfg := tb.state.GetConfig()
 	if name == "shadow" {
-		return tb.executeShadow(cfg)
+		return tb.executeShadow()
 	}
 
-	spec, ok := cfg.ThreeBody[name]
+	spec, ok := config.ThreeBody[name]
 	if !ok {
 		return "", fmt.Errorf("unknown three-body window: %s", name)
 	}
@@ -68,10 +67,10 @@ type WindowSpec struct {
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
 // executeShadow builds fallbacks from threeBodyOrder and delegates to Swap.
-func (tb *ThreeBody) executeShadow(cfg *config.HyprConfig) (string, error) {
+func (tb *ThreeBody) executeShadow() (string, error) {
 	var fallbacks []WindowSpec
 	for _, name := range threeBodyOrder {
-		if w, ok := cfg.ThreeBody[name]; ok {
+		if w, ok := config.ThreeBody[name]; ok {
 			fallbacks = append(fallbacks, WindowSpec{Name: name, Class: w.Class, Title: w.Title, LaunchCmd: w.Command})
 		}
 	}
@@ -90,8 +89,7 @@ func (tb *ThreeBody) Swap(fallbacks []WindowSpec) (string, error) {
 		return tb.swap(tbState, wsID)
 	}
 
-	cfg := tb.state.GetConfig()
-	tiled, err := windows.GetTiledWindows(tb.hypr, wsID, cfg.Windows.IgnoredClasses)
+	tiled, err := windows.GetTiledWindows(tb.hypr, wsID)
 	if err != nil {
 		return "", err
 	}
@@ -217,8 +215,7 @@ func (tb *ThreeBody) findByAddress(clients []hypr.Window, master, active, shadow
 
 // swap is the core rotation, batched so Hyprland applies all three dispatches atomically.
 func (tb *ThreeBody) swap(st *state.ThreeBodyState, wsID int) (string, error) {
-	cfg := tb.state.GetConfig()
-	tiled, err := windows.GetTiledWindows(tb.hypr, wsID, cfg.Windows.IgnoredClasses)
+	tiled, err := windows.GetTiledWindows(tb.hypr, wsID)
 	if err != nil {
 		return "", fmt.Errorf("get tiled: %w", err)
 	}
@@ -233,7 +230,7 @@ func (tb *ThreeBody) swap(st *state.ThreeBodyState, wsID int) (string, error) {
 	}
 	actualSlave := slaves[0].Address
 
-	batch := fmt.Sprintf("dispatch movetoworkspacesilent %s,address:%s; dispatch movetoworkspacesilent %d,address:%s; dispatch focuswindow address:%s", cfg.Windows.ShadowWorkspace, actualSlave, wsID, st.Shadow, st.Shadow)
+	batch := fmt.Sprintf("dispatch movetoworkspacesilent %s,address:%s; dispatch movetoworkspacesilent %d,address:%s; dispatch focuswindow address:%s", windows.ShadowWorkspace, actualSlave, wsID, st.Shadow, st.Shadow)
 	if _, err := tb.hypr.Request("[[BATCH]]" + batch); err != nil {
 		return "", fmt.Errorf("swap batch: %w", err)
 	}
@@ -244,8 +241,7 @@ func (tb *ThreeBody) swap(st *state.ThreeBodyState, wsID int) (string, error) {
 
 // focusWithEnroll tries to enroll, focus a visible match, pull from another workspace's shadow, or spawn.
 func (tb *ThreeBody) focusWithEnroll(wsID int, bodyName, class, title, launchCmd string, clients []hypr.Window) (string, error) {
-	cfg := tb.state.GetConfig()
-	tiled, err := windows.GetTiledWindows(tb.hypr, wsID, cfg.Windows.IgnoredClasses)
+	tiled, err := windows.GetTiledWindows(tb.hypr, wsID)
 	if err != nil {
 		return "", err
 	}
@@ -317,8 +313,7 @@ func (tb *ThreeBody) withSessionLaunchEnv(cmd string, wsID int, bodyName string)
 }
 
 func (tb *ThreeBody) hideShadow(addr string) error {
-	cfg := tb.state.GetConfig()
-	return tb.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s", cfg.Windows.ShadowWorkspace, addr))
+	return tb.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s", windows.ShadowWorkspace, addr))
 }
 
 // setFadeRules installs fade animation rules so slide transitions don't expose the shadow workspace.

@@ -31,13 +31,10 @@ func NewLayout(h *hypr.Client, s *state.State) *Layout {
 func (l *Layout) Execute(arg string) (string, error) {
 	cfg := l.state.GetConfig()
 	sessions := cfg.Sessions
-	if len(sessions) == 0 {
-		sessions = config.Default().Hypr.Sessions
-	}
 
 	parts := strings.Fields(arg)
 	if len(parts) == 0 || arg == "--list" || arg == "-l" || arg == "list" {
-		return l.listByWorkspace(sessions, cfg.ActiveSessions), nil
+		return l.listByWorkspace(sessions), nil
 	}
 	if parts[0] == "set" {
 		return l.setActive(parts[1:], sessions)
@@ -52,7 +49,7 @@ func (l *Layout) Execute(arg string) (string, error) {
 	return l.openSession(session)
 }
 
-func (l *Layout) setActive(args []string, sessions map[string]config.Session) (string, error) {
+func (l *Layout) setActive(args []string, sessions config.SessionsConfig) (string, error) {
 	if len(args) < 2 {
 		return "", fmt.Errorf("usage: layout set <workspace> <session>")
 	}
@@ -61,14 +58,18 @@ func (l *Layout) setActive(args []string, sessions map[string]config.Session) (s
 		return "", fmt.Errorf("invalid workspace: %s", args[0])
 	}
 	name := args[1]
-	if _, ok := sessions[name]; !ok {
+	session, ok := sessions[name]
+	if !ok {
 		return "", fmt.Errorf("unknown session: %s", name)
+	}
+	if session.Workspace != ws {
+		return "", fmt.Errorf("session %q belongs to ws%d, not ws%d", name, session.Workspace, ws)
 	}
 	l.state.SetActiveSession(ws, name)
 	return fmt.Sprintf("ws%d active: %s", ws, name), nil
 }
 
-func (l *Layout) openByWorkspace(ws int, sessions map[string]config.Session) (string, error) {
+func (l *Layout) openByWorkspace(ws int, sessions config.SessionsConfig) (string, error) {
 	name := l.state.GetActiveSession(ws)
 	if name == "" {
 		return "", fmt.Errorf("no active session for ws%d (use 'layout set %d <session>')", ws, ws)
@@ -77,11 +78,13 @@ func (l *Layout) openByWorkspace(ws int, sessions map[string]config.Session) (st
 	if !ok {
 		return "", fmt.Errorf("active session %q for ws%d not found in config", name, ws)
 	}
-	session.Workspace = ws
+	if session.Workspace != ws {
+		return "", fmt.Errorf("active session %q belongs to ws%d, not ws%d", name, session.Workspace, ws)
+	}
 	return l.openSession(session)
 }
 
-func (l *Layout) listByWorkspace(sessions map[string]config.Session, active map[int]config.ActiveSession) string {
+func (l *Layout) listByWorkspace(sessions config.SessionsConfig) string {
 	byWS := make(map[int][]string)
 	for name, s := range sessions {
 		byWS[s.Workspace] = append(byWS[s.Workspace], name)
@@ -97,10 +100,7 @@ func (l *Layout) listByWorkspace(sessions map[string]config.Session, active map[
 	for _, ws := range wsNums {
 		names := byWS[ws]
 		sort.Strings(names)
-		activeName := active[ws].Session
-		if rt := l.state.GetActiveSession(ws); rt != "" {
-			activeName = rt
-		}
+		activeName := l.state.GetActiveSession(ws)
 		var formatted []string
 		for _, n := range names {
 			if n == activeName {
@@ -125,7 +125,7 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 
 	cfg := l.state.GetConfig()
 	for _, c := range clients {
-		if c.Workspace.ID == s.Workspace && !c.Pinned && !cfg.IsIgnored(c.Class) {
+		if c.Workspace.ID == s.Workspace && !c.Pinned && !windows.IsIgnored(c.Class) {
 			l.hypr.Dispatch(fmt.Sprintf("closewindow address:%s", c.Address))
 		}
 	}
@@ -141,7 +141,7 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 
 		if s.Browser.Snapshot != "" || len(s.Browser.AllURLs()) > 0 {
 			time.Sleep(500 * time.Millisecond)
-			if err := l.launchSessionBrowser(s, cfg); err != nil {
+			if err := l.launchSessionBrowser(s); err != nil {
 				return "", err
 			}
 		}
@@ -157,12 +157,12 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 	}
 
 	for _, name := range s.Body {
-		tbw, ok := cfg.ThreeBody[name]
+		tbw, ok := config.ThreeBody[name]
 		if !ok {
 			return "", fmt.Errorf("session %q references unknown three-body window %q", s.Name, name)
 		}
 		if name == "browser" || strings.Contains(strings.ToLower(tbw.Class), "firefox") {
-			if err := l.launchSessionBrowser(s, cfg); err != nil {
+			if err := l.launchSessionBrowser(s); err != nil {
 				return "", err
 			}
 			continue
@@ -174,9 +174,9 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 	}
 
 	time.Sleep(1500 * time.Millisecond)
-	l.hypr.Dispatch(fmt.Sprintf("layoutmsg mfact exact %s", cfg.Split.Default))
+	l.hypr.Dispatch(fmt.Sprintf("layoutmsg mfact exact %s", cfg.Windows.Split.Default))
 
-	if first, ok := cfg.ThreeBody[s.Body[0]]; ok {
+	if first, ok := config.ThreeBody[s.Body[0]]; ok {
 		clients, _ = l.hypr.Clients()
 		for i := range clients {
 			c := &clients[i]
@@ -235,7 +235,7 @@ func (l *Layout) withSessionLaunchEnv(s config.Session, bodyName, cmd, homeDir s
 	return fmt.Sprintf("env %s %s", strings.Join(env, " "), cmd)
 }
 
-func (l *Layout) launchSessionBrowser(s config.Session, cfg *config.HyprConfig) error {
+func (l *Layout) launchSessionBrowser(s config.Session) error {
 	b := browser.NewBrowser(l.hypr, l.state)
 	if b.UsesExactRestore(s.Browser) {
 		if _, err := b.RestoreConfiguredSnapshot(s.Browser, false); err != nil {
@@ -245,10 +245,7 @@ func (l *Layout) launchSessionBrowser(s config.Session, cfg *config.HyprConfig) 
 		return nil
 	}
 
-	tbw, ok := cfg.ThreeBody["browser"]
-	if !ok {
-		return fmt.Errorf("no three-body browser config for URL launch")
-	}
+	tbw := config.ThreeBody["browser"]
 
 	browserCfg, err := b.ResolveLaunchConfig(s.Browser)
 	if err != nil {

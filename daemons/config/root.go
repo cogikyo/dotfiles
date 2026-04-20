@@ -2,7 +2,7 @@
 //
 // Responsibilities:
 // - Define shared and per-daemon config structures.
-// - Provide compiled defaults and YAML-backed loaders.
+// - Provide YAML-backed loaders (no compiled defaults for hyprd).
 // - Resolve daemon config paths under the user's home directory.
 package config
 
@@ -13,13 +13,4 @@ type Config struct {
 	Eww    EwwConfig    `yaml:"eww"`
 	Hypr   HyprConfig   `yaml:"hypr"`
 	Newtab NewtabConfig `yaml:"newtab"`
-}
-
-// Default returns a Config with every daemon's compiled defaults.
-func Default() *Config {
-	return &Config{
-		Eww:    DefaultEww(),
-		Hypr:   DefaultHypr(),
-		Newtab: DefaultNewtab(),
-	}
 }

@@ -1,210 +1,8 @@
-tabs:
-  editor:
-    order: 0
-    prefix: "ed-"
-    focus: nvim
-    tabs:
-      - { name: xplr, title: "⟜ 󰭎  ⊸", command: xplr }
-      - { name: nvim, title: "⟜   ⊸", command: nvim }
-      - { name: term, title: "⟜   ⊸" }
-      - { name: build, title: "⟜   ⊸", command: "just watch", requires: justfile }
-      - { name: git, title: "⟜   ⊸", command: lazygit, requires: git }
+# Hyprd runtime configuration.
 
-  agents:
-    order: 1
-    prefix: "agents-"
-    focus: master
-    tabs:
-      - { name: xplr, title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
-      - { name: master, title: "⊰ 󰯉  ⊱", command: "claude --model claude-opus-4-6 --effort high" }
-      - { name: dev, title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
-      - { name: plan, title: "⊰   ⊱", command: "claude --model claude-opus-4-7 --effort xhigh" }
-      - { name: git, title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
-
-  leadpier:
-    order: 2
-    prefix: "lp-"
-    focus: fe-nvim
-    tabs:
-      - { name: fe-nvim, title: "«   »", command: nvim, cwd: "~/LeadPier/frontend" }
-      - { name: be-nvim, title: "«   »", command: nvim, cwd: "~/LeadPier/backend" }
-      - { name: nvim,    title: "« 󰠳  »", command: nvim, cwd: "~/LeadPier" }
-      - { name: fe-build, title: "«   »", command: "yarn dev", cwd: "~/LeadPier/frontend", layout: "fat:bias=80", panes: [{ cwd: "~/LeadPier/frontend" }] }
-      - { name: be-build, title: "«   »", command: "pier watch", cwd: "~/LeadPier/backend/core/runner", layout: "fat:bias=80", panes: [{ cwd: "~/LeadPier/backend/core/runner" }] }
-
-three_body:
-  editor:
-    class: kitty
-    title: editor
-    command: "kitty --title=editor --session ~/.config/kitty/sessions/editor.conf"
-  agents:
-    class: kitty
-    title: agents
-    command: "kitty --title=agents --session ~/.config/kitty/sessions/agents.conf"
-  browser:
-    class: firefox-developer-edition
-    command: hyprd browser launch
-
-active_sessions:
-  2: { session: slack, init: true }
-  3: { session: tableplus, init: false }
-  4: { session: leadpier, init: true }
-  5: { session: dotfiles, init: true }
-
-sessions:
-
-  slack:
-    name: slack
-    workspace: 2
-    command: slack
-    browser:
-      snapshot: slack
-      mode: exact
-      force: true
-
-  discord:
-    name: discord
-    workspace: 2
-    command: discord
-    monocle: true
-  tableplus:
-    name: tableplus
-    workspace: 3
-    command: tableplus
-  inkscape:
-    name: inkscape
-    workspace: 3
-    command: inkscape
-  obs:
-    name: obs
-    workspace: 3
-    command: obs
-  gimp:
-    name: gimp
-    workspace: 3
-    command: gimp
-
-  cogikyo:
-    name: cogikyo
-    workspace: 4
-    project: cogikyo/cogikyo.com
-    body:
-      - editor
-      - browser
-      - agents
-
-  leadpier:
-    name: leadpier
-    workspace: 4
-    project: LeadPier
-    body:
-      - editor
-      - browser
-      - agents
-    browser:
-      snapshot: leadpier
-      mode: exact
-      force: true
-    tabs:
-      editor: leadpier
-
-  dotfiles:
-    name: dotfiles
-    workspace: 5
-    project: dotfiles
-    body:
-      - editor
-      - browser
-      - agents
-
-init:
-  execs:
-    - "glava -e bars_rc.glsl"
-    - "glava -e bars_r_rc.glsl"
-    - "glava -e radial_rc.glsl"
-    - "spotify-launcher"
-    - "bluetoothctl connect 14:3F:A6:10:A1:B5"
-  lock_delay: 3s
-
-notify:
-  sounds_dir: "~/dotfiles/share/sounds"
-  workspace_icons_dir: "~/dotfiles/config/eww/art/ws-icons"
-  workspace_icons:
-    1: music
-    2: network
-    3: learn
-    4: dna
-    5: dotfiles
-  quiet_volume: 52428
-  loud_volume: 72089
-  styles:
-    start:
-      urgency: low
-      timeout: 2000
-      background: "#25284180"
-      foreground: "#8aa4f3"
-      frame: "#6380ec80"
-    subagent:
-      urgency: low
-      timeout: 2000
-      background: "#25284180"
-      foreground: "#8aa4f3"
-      frame: "#6380ec80"
-    complete:
-      urgency: normal
-      timeout: 0
-      background: "#49353130"
-      foreground: "#f2a170"
-      frame: "#ea834b"
-      icon_suffix: "-active"
-      persistent: true
-    idle:
-      urgency: normal
-      timeout: 0
-      background: "#2a2d4580"
-      foreground: "#b29ae8"
-      frame: "#9376d880"
-      icon_suffix: "-idle"
-      persistent: true
-    permission:
-      urgency: normal
-      timeout: 0
-      background: "#2a3d2580"
-      foreground: "#95cb79"
-      frame: "#73ad5a80"
-      icon_suffix: "-monocle"
-      persistent: true
-
-  urgency_sounds:
-    low: none
-    normal: moondrop
-    critical: gems
-  app_sounds:
-    timer: jackpot
-    attention: discovery
-    chat: reward
-    work: fruit
-    wf-start: discovery
-    wf-end: reward
-    Slack: knock
-
-  focus_apps:
-    Slack: slack
-    firefox-developer-edition: firefox-developer-edition
-
-  action_focus_apps:
-    Firefox: { workspace: 2, class: firefox-developer-edition }
-    Firefox Developer Edition: { workspace: 2, class: firefox-developer-edition }
-    firefox-developer-edition: { workspace: 2, class: firefox-developer-edition }
-
-  silent_apps:
-    - Spotify
-    - discord
-  kitty_silent_patterns:
-    - claude
-    - opencode
-    - approval
-
+# ╭───────────────────────────────────────────────────────────────────────────────╮
+# │ window-management tuning                                                      │
+# ╰───────────────────────────────────────────────────────────────────────────────╯
 windows:
   split:
     xs: "0.3695"
@@ -215,3 +13,254 @@ windows:
     height: 1864
     offset_x: 0
     offset_y: 25
+
+# ╭───────────────────────────────────────────────────────────────────────────────╮
+# │ session catalog                                                               │
+# ╰───────────────────────────────────────────────────────────────────────────────╯
+sessions:
+  # ├─ workspace 2 ──────────────────────────────────────────────────────────────┤
+  2: # communication-focused sessions.
+    slack:
+      init: true
+      command: slack
+      browser:
+        snapshot: slack
+        mode: exact
+        force: true
+
+    discord:
+      command: discord
+      monocle: true
+
+  # ├─ workspace 3 ──────────────────────────────────────────────────────────────┤
+  3: # utility and creative apps; mostly single window
+    tableplus:
+      command: tableplus
+    inkscape:
+      command: inkscape
+    obs:
+      command: obs
+    gimp:
+      command: gimp
+
+  # ├─ workspace 4 ──────────────────────────────────────────────────────────────┤
+  4: # primary project workspaces
+    cogikyo:
+      project: cogikyo/cogikyo.com
+      body:
+        - editor
+        - browser
+        - agents
+
+    leadpier:
+      init: true
+      project: LeadPier
+      body:
+        - editor
+        - browser
+        - agents
+      browser:
+        snapshot: leadpier
+        mode: exact
+        force: true
+      tabs:
+        editor: leadpier
+
+  # ├─ workspace 5 ──────────────────────────────────────────────────────────────┤
+  5: # personal infrastructure and dotfiles work.
+    dotfiles:
+      init: true
+      project: dotfiles
+      body:
+        - editor
+        - agents
+
+    vagari.firefox:
+      project: vagari/firefox
+      body:
+        - editor
+        - agents
+
+    vagari.nvim:
+      project: vagari/nvim
+      body:
+        - editor
+        - agents
+
+# ╭───────────────────────────────────────────────────────────────────────────────╮
+# │ kitty tab profiles                                                            │
+# ╰───────────────────────────────────────────────────────────────────────────────╯
+tabs:
+  editor: # ├─ editor profile ────────────────────────────────────────────────────┤
+    order: 0
+    prefix: "ed-"
+    focus: nvim
+    tabs:
+      - { name: xplr,  title: "⟜ 󰭎  ⊸", command: xplr }
+      - { name: nvim,  title: "⟜   ⊸", command: nvim }
+      - { name: term,  title: "⟜   ⊸", command: etree }
+      - { name: build, title: "⟜   ⊸", command: "just watch", requires: justfile }
+      - { name: git,   title: "⟜   ⊸", command: lazygit,      requires: git }
+
+  agents: # ├─ agents profile ─────────────────────────────────────────────────────┤
+    order: 1
+    prefix: "agents-"
+    focus: master
+    tabs:
+      - { name: xplr,   title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
+      - { name: master, title: "⊰ 󰯉  ⊱", command: "claude --model claude-opus-4-6 --effort high" }
+      - { name: dev,    title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
+      - { name: plan,   title: "⊰   ⊱", command: "claude --model claude-opus-4-7 --effort xhigh" }
+      - { name: git,    title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
+
+  leadpier: # ├─ leadpier profile ─────────────────────────────────────────────────┤
+    order: 2
+    prefix: "lp-"
+    focus: fe-nvim
+    tabs:
+      - { name: fe-nvim,  title: "«   »", command: nvim,         cwd: "~/LeadPier/frontend" }
+      - { name: be-nvim,  title: "«   »", command: nvim,         cwd: "~/LeadPier/backend" }
+      - { name: nvim,     title: "« 󰠳  »", command: nvim,         cwd: "~/LeadPier" }
+      - { name: fe-build, title: "«   »", command: "yarn dev",   cwd: "~/LeadPier/frontend",            layout: "fat:bias=80", panes: [{ cwd: "~/LeadPier/frontend" }] }
+      - { name: be-build, title: "«   »", command: "pier watch", cwd: "~/LeadPier/backend/core/runner", layout: "fat:bias=80", panes: [{ cwd: "~/LeadPier/backend/core/runner" }] }
+
+# ╭───────────────────────────────────────────────────────────────────────────────╮
+# │ background                                                                    │
+# ╰───────────────────────────────────────────────────────────────────────────────╯
+background:
+  display: "HDMI-A-1"
+  video_path: "~/dotfiles/share/videos"
+  socket: "/tmp/mpvpaper.sock"
+  wallpaper:
+    file: "dna.mp4"
+    brightness: 6
+    contrast: 9
+    saturation: -16
+    hue: -24
+
+# ╭───────────────────────────────────────────────────────────────────────────────╮
+# │ init                                                                          │
+# ╰───────────────────────────────────────────────────────────────────────────────╯
+init:
+  workspace: 1
+  lock: true
+  network_timeout: 10
+
+# ╭───────────────────────────────────────────────────────────────────────────────╮
+# │ bluetooth                                                                     │
+# ╰───────────────────────────────────────────────────────────────────────────────╯
+bluetooth:
+  enabled: true
+  device: "14:3F:A6:10:A1:B5"
+
+# ╭───────────────────────────────────────────────────────────────────────────────╮
+# │ notifications                                                                 │
+# ╰───────────────────────────────────────────────────────────────────────────────╯
+# Dunst styling, sound routing, workspace icons, and focus behavior.
+# This section drives both external app notifications and Hyprd's own notify hooks.
+
+notify:
+  # ├─ sound levels ─────────────────────────────────────────────────────────────┤
+  default_volume: 65536 # 65536 is paplay's nominal 100% volume; per-style volume overrides this.
+
+  # ├─ agent styles ─────────────────────────────────────────────────────────────┤
+  # Keys match the event class used by claude/opencode handlers.
+  # Each entry bundles dunst visual hints with sound + volume.
+  agent_styles:
+    start:
+      sound: civ5-worker-select
+      volume: 72089
+      urgency: low
+      timeout: 2000
+      background: "#25284180"
+      foreground: "#8aa4f3"
+      frame: "#6380ec80"
+    subagent:
+      sound: sdv-frog
+      volume: 52428
+      urgency: low
+      timeout: 2000
+      background: "#25284180"
+      foreground: "#8aa4f3"
+      frame: "#6380ec80"
+    complete:
+      sound: jobs-done
+      volume: 72089
+      urgency: normal
+      timeout: 0
+      background: "#49353130"
+      foreground: "#f2a170"
+      frame: "#ea834b"
+      icon_suffix: "-active"
+      persistent: true
+    idle:
+      sound: hey-listen
+      volume: 52428
+      urgency: normal
+      timeout: 0
+      background: "#2a2d4580"
+      foreground: "#b29ae8"
+      frame: "#9376d880"
+      icon_suffix: "-idle"
+      persistent: true
+    permission:
+      sound: ssb-ready
+      urgency: normal
+      timeout: 0
+      background: "#2a3d2580"
+      foreground: "#95cb79"
+      frame: "#73ad5a80"
+      icon_suffix: "-monocle"
+      persistent: true
+    todo-complete:
+      sound: civ6-notification
+      volume: 52428
+      urgency: low
+      timeout: 2000
+      background: "#25284180"
+      foreground: "#8aa4f3"
+      frame: "#6380ec80"
+    question:
+      sound: hey-listen
+      urgency: normal
+      timeout: 0
+      background: "#2a3d2580"
+      foreground: "#95cb79"
+      frame: "#73ad5a80"
+      icon_suffix: "-monocle"
+      persistent: true
+    error:
+      sound: something-need-doing
+      volume: 72089
+      urgency: normal
+      timeout: 0
+      background: "#2a3d2580"
+      foreground: "#95cb79"
+      frame: "#73ad5a80"
+      icon_suffix: "-monocle"
+      persistent: true
+
+  # ├─ sound routing ────────────────────────────────────────────────────────────┤
+  urgency_sounds:
+    low: none
+    normal: moondrop
+    critical: gems
+  app_sounds: # app-specific sounds override urgency-based sounds when both match.
+    timer: jackpot
+    attention: discovery
+    chat: reward
+    work: fruit
+    wf-start: discovery
+    wf-end: reward
+    Slack: knock
+
+  # ├─ silence filters ──────────────────────────────────────────────────────────┤
+  # These suppress sounds without suppressing the notification itself.
+  silent_apps:
+    - Spotify
+    - discord
+  kitty_silent_patterns:
+    - claude
+    - opencode
+    - approval
+
