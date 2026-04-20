@@ -181,12 +181,12 @@ func (n *Notifier) workspaceIconPath(ctx *kittyContext, suffix string) string {
 	if ctx == nil {
 		return ""
 	}
-	name := n.cfg.Notify.WorkspaceIcons[ctx.WorkspaceID]
+	name := workspaceIcons[ctx.WorkspaceID]
 	if name == "" {
 		return ""
 	}
 
-	path := filepath.Join(config.ExpandPath(n.cfg.Notify.WorkspaceIconsDir), name+suffix+".svg")
+	path := filepath.Join(config.ExpandPath(workspaceIconsDir), name+suffix+".svg")
 	if _, err := os.Stat(path); err == nil {
 		return path
 	}

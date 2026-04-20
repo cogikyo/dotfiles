@@ -2,7 +2,6 @@ package notify
 
 import (
 	"dotfiles/daemons/hyprd/hypr"
-	"dotfiles/daemons/hyprd/windows"
 	"fmt"
 	"os"
 	"strings"
@@ -13,9 +12,7 @@ import (
 )
 
 type dunstActionTarget struct {
-	Workspace int
-	Class     string
-	Title     string
+	Class string
 }
 
 type dunstActionEntry struct {
@@ -34,19 +31,14 @@ var globalDunstActionRouter = &dunstActionRouter{
 	pending: make(map[uint32]dunstActionEntry),
 }
 
+// actionFocusTargetForDunst derives a focus target from the notification's desktop entry,
+// which matches the Hyprland window class for standard apps.
 func (n *Notifier) actionFocusTargetForDunst(req NotifyRequest) (dunstActionTarget, bool) {
-	for _, key := range []string{
-		strings.ToLower(strings.TrimSpace(req.App)),
-		strings.ToLower(strings.TrimSpace(req.DesktopEntry)),
-	} {
-		if key == "" {
-			continue
-		}
-		if target, ok := n.cfg.Notify.ActionFocusApps[key]; ok {
-			return dunstActionTarget{Workspace: target.Workspace, Class: target.Class, Title: target.Title}, true
-		}
+	class := strings.ToLower(strings.TrimSpace(req.DesktopEntry))
+	if class == "" {
+		return dunstActionTarget{}, false
 	}
-	return dunstActionTarget{}, false
+	return dunstActionTarget{Class: class}, true
 }
 
 func (n *Notifier) rememberDunstAction(req NotifyRequest, target dunstActionTarget) {
@@ -159,8 +151,10 @@ func (r *dunstActionRouter) handleClose(signal *dbus.Signal) {
 	r.mu.Unlock()
 }
 
+const notifyFocusWorkspace = 2
+
 func (r *dunstActionRouter) focus(target dunstActionTarget) error {
-	if r.hypr == nil {
+	if r.hypr == nil || target.Class == "" {
 		return nil
 	}
 
@@ -169,30 +163,21 @@ func (r *dunstActionRouter) focus(target dunstActionTarget) error {
 		return err
 	}
 
-	var preferred *hypr.Window
+	// Prefer the instance on the communication workspace; fall back to any match.
 	var fallback *hypr.Window
 	for i := range clients {
-		client := &clients[i]
-		if !windows.MatchesTarget(client, target.Class, target.Title) {
+		if !strings.EqualFold(clients[i].Class, target.Class) {
 			continue
 		}
-		if target.Workspace > 0 && client.Workspace.ID == target.Workspace {
-			preferred = client
-			break
+		if clients[i].Workspace.ID == notifyFocusWorkspace {
+			return r.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", clients[i].Address))
 		}
 		if fallback == nil {
-			fallback = client
+			fallback = &clients[i]
 		}
 	}
-
-	switch {
-	case preferred != nil:
-		return r.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", preferred.Address))
-	case fallback != nil:
+	if fallback != nil {
 		return r.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", fallback.Address))
-	case target.Workspace > 0:
-		return r.hypr.Dispatch(fmt.Sprintf("workspace %d", target.Workspace))
-	default:
-		return nil
 	}
+	return nil
 }

@@ -12,7 +12,6 @@ package notify
 
 import (
 	"dotfiles/daemons/config"
-	"dotfiles/daemons/hyprd/wm"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -75,8 +74,6 @@ func (n *Notifier) handleClaude(req NotifyRequest) error {
 			App:         ctx.App,
 			Title:       preferredSummary(req.Prompt, req.Message, 80),
 			Style:       "start",
-			Sound:       "civ5-worker-select",
-			Volume:      n.cfg.Notify.LoudVolume,
 			FocusAction: true,
 		}, ctx)
 	case "subagent":
@@ -88,8 +85,6 @@ func (n *Notifier) handleClaude(req NotifyRequest) error {
 			App:         ctx.App,
 			Title:       title,
 			Style:       "subagent",
-			Sound:       "sdv-frog",
-			Volume:      n.cfg.Notify.QuietVolume,
 			FocusAction: true,
 		}, ctx)
 	case "complete":
@@ -97,8 +92,6 @@ func (n *Notifier) handleClaude(req NotifyRequest) error {
 			App:         ctx.App,
 			Title:       preferredSummary(req.LastAssistantMessage, "Jobs done", 80),
 			Style:       "complete",
-			Sound:       "jobs-done",
-			Volume:      n.cfg.Notify.LoudVolume,
 			FocusAction: true,
 		}, ctx)
 	case "idle":
@@ -106,8 +99,6 @@ func (n *Notifier) handleClaude(req NotifyRequest) error {
 			App:         ctx.App,
 			Title:       preferredSummary(req.Message, "Waiting for input", 80),
 			Style:       "idle",
-			Sound:       "hey-listen",
-			Volume:      n.cfg.Notify.QuietVolume,
 			FocusAction: true,
 		}, ctx)
 	case "permission":
@@ -115,7 +106,6 @@ func (n *Notifier) handleClaude(req NotifyRequest) error {
 			App:         ctx.App,
 			Title:       preferredSummary(req.Message, "Permission needed", 80),
 			Style:       "permission",
-			Sound:       "ssb-ready",
 			FocusAction: true,
 		}, ctx)
 	default:
@@ -132,8 +122,6 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 			App:         ctx.App,
 			Title:       preferredSummary(req.Message, "Working", 80),
 			Style:       "start",
-			Sound:       "civ5-worker-select",
-			Volume:      n.cfg.Notify.LoudVolume,
 			FocusAction: true,
 		}, ctx)
 	case "complete":
@@ -141,8 +129,6 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 			App:         ctx.App,
 			Title:       preferredSummary(req.LastAssistantMessage, "Jobs done", 80),
 			Style:       "complete",
-			Sound:       "jobs-done",
-			Volume:      n.cfg.Notify.LoudVolume,
 			FocusAction: true,
 		}, ctx)
 	case "subagent":
@@ -154,17 +140,13 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 			App:         ctx.App,
 			Title:       title,
 			Style:       "subagent",
-			Sound:       "sdv-frog",
-			Volume:      n.cfg.Notify.QuietVolume,
 			FocusAction: true,
 		}, ctx)
 	case "todo-complete":
 		return n.dispatch(notificationSpec{
 			App:         ctx.App,
 			Title:       preferredSummary(req.Message, "Todo complete", 80),
-			Style:       "subagent",
-			Sound:       "civ6-notification",
-			Volume:      n.cfg.Notify.QuietVolume,
+			Style:       "todo-complete",
 			FocusAction: true,
 		}, ctx)
 	case "idle":
@@ -172,8 +154,6 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 			App:         ctx.App,
 			Title:       preferredSummary(req.Message, "Waiting for input", 80),
 			Style:       "idle",
-			Sound:       "hey-listen",
-			Volume:      n.cfg.Notify.QuietVolume,
 			FocusAction: true,
 		}, ctx)
 	case "permission":
@@ -181,24 +161,20 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 			App:         ctx.App,
 			Title:       preferredSummary(req.Message, "Permission needed", 80),
 			Style:       "permission",
-			Sound:       "ssb-ready",
 			FocusAction: true,
 		}, ctx)
 	case "question":
 		return n.dispatch(notificationSpec{
 			App:         ctx.App,
 			Title:       preferredSummary(req.Message, "Question asked", 80),
-			Style:       "permission",
-			Sound:       "hey-listen",
+			Style:       "question",
 			FocusAction: true,
 		}, ctx)
 	case "error":
 		return n.dispatch(notificationSpec{
 			App:         ctx.App,
 			Title:       preferredSummary(req.Message, "Session error", 80),
-			Style:       "permission",
-			Sound:       "something-need-doing",
-			Volume:      n.cfg.Notify.LoudVolume,
+			Style:       "error",
 			FocusAction: true,
 		}, ctx)
 	default:
@@ -229,13 +205,9 @@ func (n *Notifier) handleDunst(req NotifyRequest) error {
 		}
 		sound := n.soundForDunst(req)
 		if sound != "" {
-			if err := n.playSound(sound, 0); err != nil {
+			if err := n.playSound(sound, n.cfg.Notify.DefaultVolume); err != nil {
 				return err
 			}
-		}
-		if class := n.focusClassForDunst(req.App); class != "" {
-			_, err := wm.NewFocus(n.hypr, n.state).Execute(class, "")
-			return err
 		}
 		return nil
 	default:
@@ -247,13 +219,23 @@ func (n *Notifier) handleDunst(req NotifyRequest) error {
 // │ dispatch pipeline                                                            │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// dispatch plays the sound and sends the dunstify notification, honoring an optional debounce delay.
+// dispatch resolves sound/volume from the agent style, plays the sound, and sends the dunst notification.
 func (n *Notifier) dispatch(spec notificationSpec, ctx *kittyContext) error {
 	if spec.Delay > 0 {
 		time.Sleep(spec.Delay)
 	}
-	if spec.Sound != "" {
-		if err := n.playSound(spec.Sound, spec.Volume); err != nil {
+
+	sound := spec.Sound
+	volume := spec.Volume
+	if style := n.style(spec.Style); sound == "" {
+		sound = style.Sound
+		if volume == 0 {
+			volume = style.Volume
+		}
+	}
+
+	if sound != "" {
+		if err := n.playSound(sound, volume); err != nil {
 			return err
 		}
 	}
@@ -351,7 +333,10 @@ func (n *Notifier) playSound(name string, volume int) error {
 		return nil
 	}
 
-	path := filepath.Join(config.ExpandPath(n.cfg.Notify.SoundsDir), name+".ogg")
+	path := filepath.Join(config.ExpandPath(soundsDir), name+".ogg")
+	if volume == 0 {
+		volume = n.cfg.Notify.DefaultVolume
+	}
 	args := []string{}
 	if volume > 0 {
 		args = append(args, "--volume="+strconv.Itoa(volume))
@@ -400,7 +385,7 @@ func (n *Notifier) style(name string) config.NotifyStyle {
 	if name == "" {
 		return config.NotifyStyle{}
 	}
-	if style, ok := n.cfg.Notify.Styles[name]; ok {
+	if style, ok := n.cfg.Notify.AgentStyles[name]; ok {
 		return style
 	}
 	return config.NotifyStyle{}
@@ -424,6 +409,3 @@ func (n *Notifier) lookupAppSound(app string) (string, bool) {
 	return sound, ok
 }
 
-func (n *Notifier) focusClassForDunst(app string) string {
-	return strings.TrimSpace(n.cfg.Notify.FocusApps[strings.ToLower(app)])
-}
