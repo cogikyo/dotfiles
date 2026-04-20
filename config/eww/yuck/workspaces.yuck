@@ -26,8 +26,8 @@
     :tooltip "  ${desc}  "
     (box
       :style "background-image: url('art/ws-icons/${icon}${
-                hover ? "-hover" :
-                workspace-info.current_str == num ? "-active" :
+                hover ? "-primary" :
+                workspace-info.current_str == num ? "-primary" :
                 "${matches(workspace-info.occupied_str, "${num}") ? "" : "-empty"}"
               }.svg');"
       :class "workspace ws-${num}"
