@@ -115,8 +115,8 @@ type NotifyConfig struct {
 	AppSounds           map[string]string            `yaml:"app_sounds"`            // app name -> sound name; takes precedence over urgency
 	FocusApps           map[string]string            `yaml:"focus_apps"`            // dunst app name -> Hyprland window class to focus on arrival
 	ActionFocusApps     map[string]NotifyFocusTarget `yaml:"action_focus_apps"`     // dunst app/desktop-entry -> window target to focus on click
-	SilentApps          []string                     `yaml:"silent_apps"`           // app names that suppress sound entirely
-	KittySilentPatterns []string                     `yaml:"kitty_silent_patterns"` // substrings in kitty titles that suppress sound
+	SilentApps          []string                     `yaml:"silent_apps"`           // external app names that suppress sound entirely
+	KittySilentPatterns []string                     `yaml:"kitty_silent_patterns"` // substrings in kitty notification content that suppress sound
 }
 
 // NotifyFocusTarget describes the window/workspace to focus when a notification action fires.
@@ -395,18 +395,7 @@ func DefaultHypr() HyprConfig {
 				"Firefox Developer Edition": {Workspace: 2, Class: "firefox-developer-edition"},
 				"firefox-developer-edition": {Workspace: 2, Class: "firefox-developer-edition"},
 			},
-			SilentApps: []string{
-				"Spotify",
-				"discord",
-				"claude",
-				"opencode",
-				"claude-input",
-				"",
-				"󰯉",
-				"",
-				"",
-				"",
-			},
+			SilentApps:          []string{"Spotify", "discord"},
 			KittySilentPatterns: []string{"claude", "opencode", "approval"},
 		},
 		Windows: WindowsConfig{

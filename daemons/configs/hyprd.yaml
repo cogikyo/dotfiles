@@ -228,14 +228,6 @@ notify:
   silent_apps:
     - Spotify
     - discord
-    - claude
-    - opencode
-    - claude-input
-    - 
-    - 󰯉
-    - 
-    - 
-    - 
   kitty_silent_patterns:
     - claude
     - opencode
