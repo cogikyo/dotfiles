@@ -8,6 +8,7 @@ const LIMITS = {
 }
 
 const TODO_COMPLETE_DEBOUNCE_MS = 1500
+const COMPLETE_DEBOUNCE_MS = 500
 
 const KITTY_PID = Number(process.env.KITTY_PID) || 0
 const KITTY_WINDOW_ID = Number(process.env.KITTY_WINDOW_ID) || 0
@@ -65,13 +66,12 @@ function newSessionState() {
     todoStatuses: null,
     lastAssistantMessage: "",
     lastTodoCompletedAt: 0,
+    completeTimer: null,
   }
 }
 
-export const HyprdNotifyPlugin = async () => {
+const server = async () => {
   const sessions = new Map()
-  let selectedSessionID = ""
-  let hasExplicitSelection = false
 
   function getSession(sessionID) {
     let state = sessions.get(sessionID)
@@ -82,36 +82,29 @@ export const HyprdNotifyPlugin = async () => {
     return state
   }
 
-  function isSelected(sessionID) {
-    if (selectedSessionID === "" || !hasExplicitSelection) return true
-    return sessionID === selectedSessionID
-  }
-
-  async function completeSession(sessionID) {
-    if (!isSelected(sessionID)) return
+  function scheduleComplete(sessionID) {
     const state = sessions.get(sessionID)
-    if (!state?.active) return
+    if (!state?.active || state.completeTimer) return
 
-    state.active = false
-    if (Date.now() - state.lastTodoCompletedAt < TODO_COMPLETE_DEBOUNCE_MS) return
+    state.completeTimer = setTimeout(async () => {
+      state.completeTimer = null
+      if (!state.active) return
+      state.active = false
 
-    const message = state.lastAssistantMessage
-    await notify({
-      type: "complete",
-      message: message || "Jobs done",
-      last_assistant_message: message,
-    })
+      if (Date.now() - state.lastTodoCompletedAt < TODO_COMPLETE_DEBOUNCE_MS) return
+
+      const message = state.lastAssistantMessage
+      await notify({
+        type: "complete",
+        message: message || "Jobs done",
+        last_assistant_message: message,
+      })
+    }, COMPLETE_DEBOUNCE_MS)
   }
 
   const handlers = {
-    "tui.session.select": ({ sessionID }) => {
-      selectedSessionID = cleanText(sessionID, LIMITS.id)
-      hasExplicitSelection = selectedSessionID !== ""
-    },
-
     "message.part.updated": async ({ part }) => {
       if (!part?.sessionID || !part?.id) return
-      if (!isSelected(part.sessionID)) return
 
       const state = getSession(part.sessionID)
 
@@ -132,46 +125,46 @@ export const HyprdNotifyPlugin = async () => {
 
     "session.status": async ({ sessionID, status }) => {
       if (!sessionID || typeof status?.type !== "string") return
-      if (!isSelected(sessionID)) return
 
       const state = getSession(sessionID)
       const type = status.type
 
-      if ((type === "busy" || type === "retry") && !state.active) {
-        state.active = true
-        await notify({
-          type: "start",
-          message: type === "retry" ? "Retrying" : "Working",
-        })
+      if (type === "busy" || type === "retry") {
+        clearTimeout(state.completeTimer)
+        state.completeTimer = null
+        if (!state.active) {
+          state.active = true
+          await notify({
+            type: "start",
+            message: type === "retry" ? "Retrying" : "Working",
+          })
+        }
         return
       }
 
       if (type === "idle") {
-        await completeSession(sessionID)
+        scheduleComplete(sessionID)
       }
     },
 
     "session.idle": async ({ sessionID }) => {
-      if (!sessionID || !isSelected(sessionID)) return
-      await completeSession(sessionID)
+      if (!sessionID) return
+      scheduleComplete(sessionID)
     },
 
-    "permission.asked": async ({ sessionID, permission, patterns }) => {
-      if (!isSelected(sessionID)) return
-      const perm = cleanText(permission, LIMITS.id)
-      const pats = Array.isArray(patterns) ? cleanText(patterns.join(", "), LIMITS.patterns) : ""
+    "permission.updated": async ({ sessionID, title, pattern }) => {
+      const perm = cleanText(title, LIMITS.id)
+      const pats = Array.isArray(pattern)
+        ? cleanText(pattern.join(", "), LIMITS.patterns)
+        : typeof pattern === "string"
+          ? cleanText(pattern, LIMITS.patterns)
+          : ""
       const message = perm ? (pats ? `${perm}: ${pats}` : perm) : "Permission needed"
       await notify({ type: "permission", message })
     },
 
-    "question.asked": async ({ sessionID, questions }) => {
-      if (!isSelected(sessionID)) return
-      const question = cleanText(questions?.[0]?.question)
-      await notify({ type: "question", message: question || "Question asked" })
-    },
-
     "todo.updated": async ({ sessionID, todos }) => {
-      if (!sessionID || !Array.isArray(todos) || !isSelected(sessionID)) return
+      if (!sessionID || !Array.isArray(todos)) return
 
       const state = getSession(sessionID)
       const previous = state.todoStatuses
@@ -198,22 +191,23 @@ export const HyprdNotifyPlugin = async () => {
     },
 
     "session.error": async ({ sessionID, error }) => {
-      if (sessionID && !isSelected(sessionID)) return
-      const message = cleanText(error?.message || error?.name || "Session error")
+      const message = cleanText(error?.data?.message || error?.name || "Session error")
       if (sessionID) {
         const state = sessions.get(sessionID)
-        if (state) state.active = false
+        if (state) {
+          clearTimeout(state.completeTimer)
+          state.completeTimer = null
+          state.active = false
+        }
       }
       await notify({ type: "error", message })
     },
 
-    "session.deleted": ({ sessionID }) => {
-      if (!sessionID) return
-      if (selectedSessionID === sessionID) {
-        selectedSessionID = ""
-        hasExplicitSelection = false
-      }
-      sessions.delete(sessionID)
+    "session.deleted": ({ info }) => {
+      if (!info?.id) return
+      const state = sessions.get(info.id)
+      if (state) clearTimeout(state.completeTimer)
+      sessions.delete(info.id)
     },
   }
 
@@ -225,3 +219,5 @@ export const HyprdNotifyPlugin = async () => {
     },
   }
 }
+
+export default { id: "hyprd-notify", server }
