@@ -19,7 +19,7 @@ return {
 			typescriptreact = { "prettierd" },
 			html = { "prettierd" },
 			markdown = { "prettierd" },
-			yaml = { "prettierd" },
+			yaml = {},
 			go = { "goimports", "gofumpt" },
 			templ = { "templ" },
 		},
