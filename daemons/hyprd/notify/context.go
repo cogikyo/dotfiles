@@ -31,6 +31,12 @@ func (n *Notifier) resolveContext(req NotifyRequest, fallbackApp string) *kittyC
 		ctx.WindowID = envInt("KITTY_WINDOW_ID")
 	}
 
+	if ctx.PID == 0 && usesKittyEnv(req.Source) {
+		if found := n.findKittyContext([]string{req.Source}); found != nil {
+			ctx = found
+		}
+	}
+
 	if ctx.PID > 0 {
 		ctx.WorkspaceID = n.workspaceForPID(ctx.PID)
 	}
