@@ -1,5 +1,5 @@
 (defvar picker-visible false)
-(defvar picker-data '{"ws":4,"occupied":"","sessions":[],"count":0}')
+(defvar picker-data '{"ws":4,"occupied":"","sessions":[],"count":0,"confirmed":false}')
 
 (defwindow picker
   :monitor 0
@@ -16,7 +16,11 @@
     :cursor "pointer"
     (box
       :class "picker-ws ${picker-data.ws == num ? "picker-ws-selected" : ""}"
-      :style "background-image: url('art/ws-icons/${icon}${ picker-data.ws == num ? "-active" : "${matches(picker-data.occupied, "${num}") ? "" : "-empty"}" }.svg');"
+      :style "background-image: url('art/ws-icons/${icon}${
+        picker-data.confirmed && picker-data.ws == num ? "-success" :
+        picker-data.ws == num ? "-primary" :
+        "${matches(picker-data.occupied, "${num}") ? "" : "-empty"}"
+      }.svg');"
     )
   )
 )
@@ -32,7 +36,8 @@
       (box
         :class "picker-session ${
           picker-data.count > idx && picker-data.sessions[idx].selected ? "picker-session-selected" : ""} ${
-          picker-data.count > idx && picker-data.sessions[idx].active ? "picker-session-active" : ""}"
+          picker-data.count > idx && picker-data.sessions[idx].active ? "picker-session-active" : ""} ${
+          picker-data.confirmed && picker-data.count > idx && picker-data.sessions[idx].selected ? "picker-session-confirmed" : ""}"
         (label :text {picker-data.count > idx ? picker-data.sessions[idx].name : ""})
       )
     )
@@ -44,6 +49,7 @@
     :transition "crossfade"
     :reveal picker-visible
     (box
+      :class "picker-panel picker-morph-${picker-data.ws} ${picker-data.confirmed ? 'picker-confirmed' : ''}"
       :orientation "v"
       :space-evenly false
       :spacing 16

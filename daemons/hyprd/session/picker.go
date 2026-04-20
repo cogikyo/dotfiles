@@ -20,18 +20,21 @@ type Picker struct {
 	hypr  *hypr.Client
 	state *state.State
 
-	mu     sync.Mutex
-	active bool
-	ws     int              // workspace cursor (1–5)
-	si     int              // session index within cache[ws]
-	cache  map[int][]string // ws → sorted session names
+	mu        sync.Mutex
+	active    bool
+	ws        int              // workspace cursor (2–5)
+	si        int              // session index within cache[ws]
+	selecting bool             // true once the user presses down to enter session selection
+	confirmed bool             // true during the brief green-flash after confirm
+	cache     map[int][]string // ws → sorted session names
 }
 
 type pickerPayload struct {
-	WS       int             `json:"ws"`
-	Occupied string          `json:"occupied"`
-	Sessions []pickerSession `json:"sessions"`
-	Count    int             `json:"count"`
+	WS        int             `json:"ws"`
+	Occupied  string          `json:"occupied"`
+	Sessions  []pickerSession `json:"sessions"`
+	Count     int             `json:"count"`
+	Confirmed bool            `json:"confirmed"`
 }
 
 type pickerSession struct {
@@ -93,6 +96,8 @@ func (p *Picker) open() (string, error) {
 		p.ws = 2
 	}
 	p.si = p.activeIndex(p.ws)
+	p.selecting = false
+	p.confirmed = false
 	p.active = true
 
 	p.hypr.Dispatch("submap picker")
@@ -138,23 +143,32 @@ func (p *Picker) move(dws, dsi int) (string, error) {
 		} else if p.ws > 5 {
 			p.ws = 2
 		}
+		p.selecting = false
 		p.si = p.activeIndex(p.ws)
 	}
 
 	if dsi != 0 {
-		sessions := p.cache[p.ws]
-		if len(sessions) > 0 {
-			p.si += dsi
-			if p.si < 0 {
-				p.si = len(sessions) - 1
-			} else if p.si >= len(sessions) {
-				p.si = 0
+		if !p.selecting {
+			if dsi > 0 {
+				p.selecting = true
+				p.si = p.activeIndex(p.ws)
+			}
+		} else {
+			sessions := p.cache[p.ws]
+			if len(sessions) > 0 {
+				p.si += dsi
+				if p.si < 0 {
+					p.selecting = false
+					p.si = p.activeIndex(p.ws)
+				} else if p.si >= len(sessions) {
+					p.si = len(sessions) - 1
+				}
 			}
 		}
 	}
 
 	p.pushState()
-	return fmt.Sprintf("picker: ws%d si%d", p.ws, p.si), nil
+	return fmt.Sprintf("picker: ws%d si%d selecting=%v", p.ws, p.si, p.selecting), nil
 }
 
 func (p *Picker) jumpWS(arg string) (string, error) {
@@ -171,6 +185,7 @@ func (p *Picker) jumpWS(arg string) (string, error) {
 	}
 
 	p.ws = ws
+	p.selecting = false
 	p.si = p.activeIndex(ws)
 	p.pushState()
 	return fmt.Sprintf("picker: jumped to ws%d", ws), nil
@@ -178,27 +193,44 @@ func (p *Picker) jumpWS(arg string) (string, error) {
 
 func (p *Picker) confirm() (string, error) {
 	p.mu.Lock()
-	defer p.mu.Unlock()
 
 	if !p.active {
+		p.mu.Unlock()
 		return "picker: not open", nil
 	}
 
 	sessions := p.cache[p.ws]
 	if len(sessions) == 0 {
+		p.mu.Unlock()
 		return "picker: no sessions for ws" + strconv.Itoa(p.ws), nil
 	}
 
-	name := sessions[p.si]
-	p.closeLocked()
-
-	layout := NewLayout(p.hypr, p.state)
-	layout.Execute(fmt.Sprintf("set %d %s", p.ws, name))
-	result, err := layout.Execute(strconv.Itoa(p.ws))
-	if err != nil {
-		return "", fmt.Errorf("picker confirm: %w", err)
+	if !p.selecting {
+		p.si = p.activeIndex(p.ws)
+		p.selecting = true
 	}
-	return fmt.Sprintf("picker: %s on ws%d — %s", name, p.ws, result), nil
+
+	name := sessions[p.si]
+	ws := p.ws
+
+	p.confirmed = true
+	p.pushState()
+	p.active = false
+	p.mu.Unlock()
+
+	go func() {
+		time.Sleep(350 * time.Millisecond)
+		p.hypr.Dispatch("submap reset")
+		exec.Command("eww", "update", "picker-visible=false").Run()
+		time.Sleep(200 * time.Millisecond)
+		exec.Command("eww", "close", "picker").Run()
+
+		layout := NewLayout(p.hypr, p.state)
+		layout.Execute(fmt.Sprintf("set %d %s", ws, name))
+		layout.Execute(strconv.Itoa(ws))
+	}()
+
+	return fmt.Sprintf("picker: confirmed %s on ws%d", name, ws), nil
 }
 
 func (p *Picker) activeIndex(ws int) int {
@@ -219,7 +251,7 @@ func (p *Picker) pushState() {
 	for i, name := range sessions {
 		items[i] = pickerSession{
 			Name:     name,
-			Selected: i == p.si,
+			Selected: p.selecting && i == p.si,
 			Active:   name == active,
 		}
 	}
@@ -231,10 +263,11 @@ func (p *Picker) pushState() {
 	}
 
 	payload := pickerPayload{
-		WS:       p.ws,
-		Occupied: strings.Join(occParts, " "),
-		Sessions: items,
-		Count:    len(items),
+		WS:        p.ws,
+		Occupied:  strings.Join(occParts, " "),
+		Sessions:  items,
+		Count:     len(items),
+		Confirmed: p.confirmed,
 	}
 
 	data, _ := json.Marshal(payload)
