@@ -1,0 +1,6 @@
+logs/
+profiler_data/
+plugin_config/
+plugin_manager/
+.sentinel/
+*.bak
