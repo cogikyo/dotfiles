@@ -62,7 +62,7 @@ hyprd/
 | Session definitions (dotfiles, leadpier, cogikyo) | `configs/hyprd.yaml` → `sessions.*` |
 | How a session maps to windows | `session/layout.go` → `Layout.openSession` |
 | Window types that make up a session | `configs/hyprd.yaml` → `three_body.*` |
-| Which session opens on which workspace at boot | `configs/hyprd.yaml` → `active_sessions` |
+| Which session opens on which workspace at boot | `configs/hyprd.yaml` → `sessions` entries with `init: true` |
 | Command routing (CLI → daemon) | `main.go` → `daemon.go` dispatch table |
 | Hyprland event → state update | `events.go` |
 | Adding a new `hyprd <cmd>` action | add file in `wm/`, register in `daemon.go` |
@@ -84,13 +84,13 @@ systemd → hyprd (main.go)
           │       ├─ for each body entry → exec three_body.<name>.command
           │       ├─ layoutmsg mfact exact <split.default>
           │       └─ focuswindow <master>
-          ├─ exec init.execs                 # glava, spotify, bluetooth
+          ├─ dispatchStartup                 # glava, spotify, bluetooth
           ├─ workspace init.workspace
           └─ Lock.Pseudo (if init.lock)      # blackout + submap
 ```
 
-Unlock restores the saved workspace and re-runs `init.execs` so the glava/bluetooth restore surface
-lives in one place.
+Unlock restores the saved workspace and calls `dispatchStartup` so the glava/spotify/bluetooth restore
+surface lives in one place.
 
 ## Commands
 
@@ -164,5 +164,5 @@ eww integration:
 - `windows` — ignored classes, hidden/shadow workspace names, split presets, monocle sizing
 - `tabs` — kitty tab profiles (editor, agents, leadpier)
 - `three_body` — window building blocks (class, title, command) referenced by sessions
-- `sessions` — named layouts composed of `three_body` bodies + project paths + browser URLs
-- `active_sessions` — default session per workspace
+- `sessions` — layouts grouped by workspace, then keyed by session name
+- `sessions` — each session may set `init: true` to launch on boot (at most one per workspace)
