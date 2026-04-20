@@ -21,8 +21,7 @@ import (
 const (
 	musicPollInterval  = 1 * time.Second
 	musicPlayer        = "spotify"
-	albumArtPath       = "/tmp/eww/album_art.png"
-	canvasVideoPath    = "/tmp/eww/canvas.mp4"
+	albumArtPath = "/tmp/eww/album_art.png"
 	defaultVolumeDelta = 0.05 // 5%
 	defaultSeekDelta   = 10   // 10 seconds
 )
@@ -39,9 +38,9 @@ type MusicState struct {
 	TitleShort    string `json:"title_short"`
 	SingleTrack   bool   `json:"single_track"` // title == album; widget collapses to one line
 	Progress      int    `json:"progress"`
-	ArtPath       string `json:"art_path"`
-	HasCanvas     bool   `json:"has_canvas"`
-	CanvasPath    string `json:"canvas_path"`
+	ArtPath     string `json:"art_path"`
+	HasCanvas   bool   `json:"has_canvas"`
+	CanvasFrame string `json:"canvas_frame"`
 }
 
 type Music struct {
@@ -55,7 +54,7 @@ type Music struct {
 	mu           sync.Mutex
 	wg           sync.WaitGroup
 	canvas       *CanvasClient
-	mpv          *MpvManager
+	player       *CanvasPlayer
 }
 
 func NewMusic(state StateSetter, spDc string) Provider {
@@ -63,9 +62,10 @@ func NewMusic(state StateSetter, spDc string) Provider {
 		state: state,
 		done:  make(chan struct{}),
 	}
-	if spDc != "" {
-		m.canvas = NewCanvasClient(spDc)
-		m.mpv = NewMpvManager()
+	if client := NewCanvasClient(spDc); client != nil {
+		m.canvas = client
+		m.player = NewCanvasPlayer()
+		fmt.Println("ewwd: canvas enabled (sp_dc resolved)")
 	}
 	return m
 }
@@ -112,8 +112,8 @@ func (m *Music) Stop() error {
 		close(m.done)
 		m.active = false
 		m.wg.Wait()
-		if m.mpv != nil {
-			m.mpv.Stop()
+		if m.player != nil {
+			m.player.Clear()
 		}
 	}
 	return nil
@@ -218,9 +218,9 @@ func (m *Music) parseFollowLine(line string) {
 	}
 
 	state.HasCanvas = m.last.HasCanvas
-	state.CanvasPath = m.last.CanvasPath
+	state.CanvasFrame = m.last.CanvasFrame
 
-	m.syncMpv(state)
+	m.syncCanvas(state)
 
 	if state.Status != m.last.Status ||
 		state.Volume != m.last.Volume ||
@@ -248,9 +248,9 @@ func (m *Music) updateAndNotify() {
 	defer m.mu.Unlock()
 
 	state.HasCanvas = m.last.HasCanvas
-	state.CanvasPath = m.last.CanvasPath
+	state.CanvasFrame = m.last.CanvasFrame
 
-	m.syncMpv(state)
+	m.syncCanvas(state)
 
 	if state.Status != m.last.Status ||
 		state.Volume != m.last.Volume ||
@@ -423,49 +423,74 @@ func (m *Music) downloadAlbumArt(url string) {
 	os.Rename(tmpFile, albumArtPath)
 }
 
-// fetchAndPlayCanvas queries the Spotify Canvas API and launches mpv if a video exists.
 func (m *Music) fetchAndPlayCanvas(trackURI string) {
+	trackURI = strings.Replace(trackURI, "/com/spotify/track/", "spotify:track:", 1)
+
 	cdnURL, err := m.canvas.FetchCanvasURL(trackURI)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ewwd: canvas fetch: %v\n", err)
 	}
 
-	m.mu.Lock()
-	defer m.mu.Unlock()
-
 	if cdnURL == "" {
+		m.mu.Lock()
 		m.last.HasCanvas = false
-		m.last.CanvasPath = ""
-		if m.mpv != nil {
-			m.mpv.Stop()
+		m.last.CanvasFrame = ""
+		m.player.Clear()
+		m.state.Set("music", &m.last)
+		if m.notify != nil {
+			m.notify(&m.last)
 		}
-	} else {
-		if err := DownloadCanvas(cdnURL, canvasVideoPath); err != nil {
-			fmt.Fprintf(os.Stderr, "ewwd: canvas download: %v\n", err)
-			return
-		}
-		m.last.HasCanvas = true
-		m.last.CanvasPath = canvasVideoPath
-		if m.mpv != nil && m.last.Playing {
-			m.mpv.Play(canvasVideoPath)
-		}
+		m.mu.Unlock()
+		return
 	}
 
+	data, err := DownloadCanvasData(cdnURL)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ewwd: canvas download: %v\n", err)
+		return
+	}
+
+	if err := m.player.Load(data); err != nil {
+		fmt.Fprintf(os.Stderr, "ewwd: canvas frames: %v\n", err)
+		return
+	}
+
+	m.mu.Lock()
+	m.last.HasCanvas = true
+	m.last.CanvasFrame = m.player.CurrentFrame()
+	if m.last.Playing {
+		m.player.Play(m.canvasTickCallback())
+	}
 	m.state.Set("music", &m.last)
 	if m.notify != nil {
 		m.notify(&m.last)
 	}
+	m.mu.Unlock()
 }
 
-// syncMpv starts or stops mpv based on playback state and canvas availability. Caller holds mu.
-func (m *Music) syncMpv(state MusicState) {
-	if m.mpv == nil {
+func (m *Music) canvasTickCallback() func(string) {
+	return func(frame string) {
+		m.mu.Lock()
+		m.last.CanvasFrame = frame
+		m.state.Set("music", &m.last)
+		if m.notify != nil {
+			m.notify(&m.last)
+		}
+		m.mu.Unlock()
+	}
+}
+
+// syncCanvas starts or stops frame cycling based on playback state. Caller holds mu.
+func (m *Music) syncCanvas(state MusicState) {
+	if m.player == nil {
 		return
 	}
-	if state.Playing && state.HasCanvas {
-		m.mpv.Play(state.CanvasPath)
-	} else {
-		m.mpv.Stop()
+	if state.Playing && state.HasCanvas && m.player.HasFrames() {
+		if !m.player.IsPlaying() {
+			m.player.Play(m.canvasTickCallback())
+		}
+	} else if !state.Playing {
+		m.player.Stop()
 	}
 }
 

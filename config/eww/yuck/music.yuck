@@ -15,7 +15,7 @@
     :onrightclick "hyprctl dispatch workspace 1 & disown"
     (box
       :class "playerbox"
-      :style "margin-left: -5px; background-image: url('${pctl.playing ? pctl.art_path : playerctl-img}');"
+      :style "margin-left: -5px; background-image: url('${pctl.has_canvas ? pctl.canvas_frame : (pctl.playing ? pctl.art_path : playerctl-img)}'); ${pctl.has_canvas ? 'transition: none;' : ''}"
     )
   )
 )
@@ -34,7 +34,7 @@
 )
 
 (deflisten pctl
-  :initial '{ "status":"Paused", "playing":false, "volume":"1.0", "volume_percent":100, "artist":"", "album":"", "album_short":"", "title":"", "title_short":"", "single_track":false, "progress":0, "art_path":"/tmp/eww/album_art.png" }'
+  :initial '{ "status":"Paused", "playing":false, "volume":"1.0", "volume_percent":100, "artist":"", "album":"", "album_short":"", "title":"", "title_short":"", "single_track":false, "progress":0, "art_path":"/tmp/eww/album_art.png", "has_canvas":false, "canvas_frame":"" }'
   'ewwd subscribe music | jq --unbuffered -c ".data"'
 )
 

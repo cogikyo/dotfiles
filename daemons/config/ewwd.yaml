@@ -29,3 +29,4 @@ date:
   birth_date: "1996-02-26"
 network:
   poll_interval: 1s
+music: {}  # sp_dc auto-resolved from Firefox cookies; set sp_dc: "..." to override
