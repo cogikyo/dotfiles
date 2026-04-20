@@ -118,7 +118,6 @@ func parseHookNotify(args []string) (NotifyRequest, error) {
 	}
 }
 
-// parseDunstNotify accepts positional args or falls back to DUNST_* env vars.
 func parseDunstNotify(args []string) (NotifyRequest, error) {
 	app, summary, body, iconPath, urgency, desktopEntry, notificationID := dunstPayload(args)
 	return NotifyRequest{
@@ -126,6 +125,7 @@ func parseDunstNotify(args []string) (NotifyRequest, error) {
 		Event:          "script",
 		NotificationID: notificationID,
 		App:            limitText(app, 128),
+		Category:       strings.TrimSpace(os.Getenv("DUNST_CATEGORY")),
 		DesktopEntry:   limitText(desktopEntry, 128),
 		Summary:        limitText(summary, 512),
 		Body:           limitText(body, 512),

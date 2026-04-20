@@ -16,7 +16,6 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -55,12 +54,10 @@ func (n *Notifier) handleSend(req NotifyRequest) error {
 	}
 
 	spec := notificationSpec{
-		App:   req.App,
-		Title: req.Summary,
-		Body:  req.Body,
-	}
-	if urgency != "" {
-		spec.Urgency = &urgency
+		App:     req.App,
+		Title:   req.Summary,
+		Body:    req.Body,
+		Urgency: &urgency,
 	}
 	if req.Timeout > 0 {
 		spec.Timeout = &req.Timeout
@@ -230,7 +227,7 @@ func (n *Notifier) handleDunst(req NotifyRequest) error {
 		if target, ok := n.actionFocusTargetForDunst(req); ok {
 			n.rememberDunstAction(req, target)
 		}
-		sound := n.soundForDunst(req.App, req.Summary, req.Body, req.Urgency)
+		sound := n.soundForDunst(req)
 		if sound != "" {
 			if err := n.playSound(sound, 0); err != nil {
 				return err
@@ -324,7 +321,7 @@ func (n *Notifier) buildDunstArgs(spec notificationSpec, ctx *kittyContext, styl
 		iconSuffix = *spec.IconSuffix
 	}
 
-	args := []string{"-a", app, "-u", urgency, "-t", strconv.Itoa(timeout)}
+	args := []string{"-a", app, "-u", urgency, "-t", strconv.Itoa(timeout), "-h", "string:category:hyprd"}
 	if !spec.NoReplace && ctx != nil && ctx.WindowID > 0 {
 		args = append(args, "-r", strconv.Itoa(ctx.WindowID+100000))
 	}
@@ -367,21 +364,29 @@ func (n *Notifier) playSound(name string, volume int) error {
 // │ config lookups                                                               │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// soundForDunst picks a sound for a dunst script event (app mappings win over urgency mappings).
-func (n *Notifier) soundForDunst(app, summary, body, urgency string) string {
+// soundForDunst picks a sound for a dunst script event.
+//
+// Notifications dispatched by hyprd itself carry category "hyprd" — skip those
+// to avoid double-sounding through the dunst script callback loop.
+func (n *Notifier) soundForDunst(req NotifyRequest) string {
+	if req.Category == "hyprd" {
+		return ""
+	}
+
+	app := strings.ToLower(req.App)
 	if n.isSilentApp(app) {
 		return ""
 	}
 	if strings.EqualFold(app, "kitty") {
-		content := strings.ToLower(summary + " " + body)
+		content := strings.ToLower(req.Summary + " " + req.Body)
 		for _, needle := range n.cfg.Notify.KittySilentPatterns {
-			if needle != "" && strings.Contains(content, strings.ToLower(needle)) {
+			if needle != "" && strings.Contains(content, needle) {
 				return ""
 			}
 		}
 	}
 
-	sound := n.lookupUrgencySound(urgency)
+	sound := n.lookupUrgencySound(req.Urgency)
 	if appSound, ok := n.lookupAppSound(app); ok {
 		sound = appSound
 	}
@@ -402,7 +407,12 @@ func (n *Notifier) style(name string) config.NotifyStyle {
 }
 
 func (n *Notifier) isSilentApp(app string) bool {
-	return slices.Contains(n.cfg.Notify.SilentApps, strings.ToLower(app))
+	for _, silent := range n.cfg.Notify.SilentApps {
+		if silent != "" && silent == app {
+			return true
+		}
+	}
+	return false
 }
 
 func (n *Notifier) lookupUrgencySound(urgency string) string {

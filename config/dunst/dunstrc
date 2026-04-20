@@ -84,9 +84,7 @@
     summary = ".*[Oo]pen[Cc]ode.*"
     skip_display = true
 
-# Approval toasts get special handling: silent display + focus steal via hyprd
 [kitty-approval]
     appname = "kitty"
     summary = ".*Approval requested.*"
     format = ""
-    script = "/home/cullyn/.local/bin/hyprd notify dunst approval"

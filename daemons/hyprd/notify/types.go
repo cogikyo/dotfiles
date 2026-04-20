@@ -9,19 +9,13 @@ import (
 	"time"
 )
 
-var agentStartSounds = []string{
-	"zug-zug",
-	"work-work",
-	"okie-dokie",
-	"something-need-doing",
-}
-
 // NotifyRequest is the daemon-facing notification event, populated per-source by the CLI layer.
 type NotifyRequest struct {
 	Source               string `json:"source"`
 	Event                string `json:"event"`
 	NotificationID       int    `json:"notification_id,omitempty"`
 	App                  string `json:"app,omitempty"`
+	Category             string `json:"category,omitempty"`
 	DesktopEntry         string `json:"desktop_entry,omitempty"`
 	Summary              string `json:"summary,omitempty"`
 	Body                 string `json:"body,omitempty"`

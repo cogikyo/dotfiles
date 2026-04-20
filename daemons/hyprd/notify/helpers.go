@@ -1,21 +1,11 @@
 package notify
 
-// helpers.go provides shared helpers for sound selection, detached commands, env parsing, and tab icons.
-
 import (
 	"os"
 	"os/exec"
 	"strconv"
 	"strings"
-	"time"
 )
-
-func pickSound(options []string) string {
-	if len(options) == 0 {
-		return ""
-	}
-	return options[time.Now().UnixNano()%int64(len(options))]
-}
 
 func runDetached(name string, args ...string) error {
 	cmd := exec.Command(name, args...)
