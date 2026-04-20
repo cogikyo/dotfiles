@@ -14,7 +14,7 @@ etc/secrets/identity
 config/xplr/plugins/preview/
 
 # Machine-specific local overrides
-daemons/configs/*.local.yaml
+daemons/config/*.local.yaml
 
 # ISO build artifacts
 iso/work/

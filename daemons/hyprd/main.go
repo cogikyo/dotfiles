@@ -258,7 +258,7 @@ Sessions:
   hyprd picker close     Close picker without action
   hyprd picker confirm   Confirm selection (open session on workspace)
   hyprd layout --list    List available sessions
-  hyprd layout <name>    Open session (loads from ~/dotfiles/daemons/configs/hyprd.yaml)
+  hyprd layout <name>    Open session (loads from ~/dotfiles/daemons/config/hyprd.yaml)
 
 Lock:
   hyprd lock             Pseudo-lock (visual blackout + submap)

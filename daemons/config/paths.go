@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const configsDir = "dotfiles/daemons/configs"
+const configsDir = "dotfiles/daemons/config"
 
 // ConfigPath returns the $HOME-relative path to a daemon's YAML config.
 func ConfigPath(name string) string {
