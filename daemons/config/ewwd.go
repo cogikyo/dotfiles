@@ -11,6 +11,12 @@ type EwwConfig struct {
 	Audio   AudioConfig   `yaml:"audio"`
 	Date    DateConfig    `yaml:"date"`
 	Network NetworkConfig `yaml:"network"`
+	Music   MusicConfig   `yaml:"music"`
+}
+
+// MusicConfig configures the music provider's Spotify Canvas integration.
+type MusicConfig struct {
+	SpDc string `yaml:"sp_dc"` // open.spotify.com session cookie for Canvas API auth
 }
 
 // WeatherConfig configures the OpenWeatherMap polling loop.

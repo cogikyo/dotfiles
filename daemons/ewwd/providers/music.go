@@ -22,6 +22,7 @@ const (
 	musicPollInterval  = 1 * time.Second
 	musicPlayer        = "spotify"
 	albumArtPath       = "/tmp/eww/album_art.png"
+	canvasVideoPath    = "/tmp/eww/canvas.mp4"
 	defaultVolumeDelta = 0.05 // 5%
 	defaultSeekDelta   = 10   // 10 seconds
 )
@@ -39,24 +40,34 @@ type MusicState struct {
 	SingleTrack   bool   `json:"single_track"` // title == album; widget collapses to one line
 	Progress      int    `json:"progress"`
 	ArtPath       string `json:"art_path"`
+	HasCanvas     bool   `json:"has_canvas"`
+	CanvasPath    string `json:"canvas_path"`
 }
 
 type Music struct {
-	state      StateSetter
-	notify     func(data any)
-	done       chan struct{}
-	active     bool
-	last       MusicState
-	lastArtURL string
-	mu         sync.Mutex
-	wg         sync.WaitGroup
+	state        StateSetter
+	notify       func(data any)
+	done         chan struct{}
+	active       bool
+	last         MusicState
+	lastArtURL   string
+	lastTrackURI string
+	mu           sync.Mutex
+	wg           sync.WaitGroup
+	canvas       *CanvasClient
+	mpv          *MpvManager
 }
 
-func NewMusic(state StateSetter) Provider {
-	return &Music{
+func NewMusic(state StateSetter, spDc string) Provider {
+	m := &Music{
 		state: state,
 		done:  make(chan struct{}),
 	}
+	if spDc != "" {
+		m.canvas = NewCanvasClient(spDc)
+		m.mpv = NewMpvManager()
+	}
+	return m
 }
 
 func (m *Music) Name() string {
@@ -101,6 +112,9 @@ func (m *Music) Stop() error {
 		close(m.done)
 		m.active = false
 		m.wg.Wait()
+		if m.mpv != nil {
+			m.mpv.Stop()
+		}
 	}
 	return nil
 }
@@ -125,7 +139,7 @@ func (m *Music) followMode(ctx context.Context) {
 			"--follow",
 			"metadata",
 			"--format",
-			`{{status}}	{{volume}}	{{artist}}	{{album}}	{{title}}	{{mpris:artUrl}}`,
+			`{{status}}	{{volume}}	{{artist}}	{{album}}	{{title}}	{{mpris:artUrl}}	{{mpris:trackid}}`,
 		)
 
 		stdout, err := cmd.StdoutPipe()
@@ -167,7 +181,7 @@ func (m *Music) followMode(ctx context.Context) {
 	}
 }
 
-// parseFollowLine parses a tab-separated metadata line (status, volume, artist, album, title, artUrl).
+// parseFollowLine parses a tab-separated metadata line (status, volume, artist, album, title, artUrl, trackid).
 func (m *Music) parseFollowLine(line string) {
 	parts := strings.Split(line, "\t")
 	if len(parts) < 6 {
@@ -185,6 +199,10 @@ func (m *Music) parseFollowLine(line string) {
 	state = musicState(state.Status, state.Volume, state.Artist, state.Album, state.Title, state.Progress)
 
 	artURL := parts[5]
+	var trackURI string
+	if len(parts) >= 7 {
+		trackURI = parts[6]
+	}
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
@@ -193,6 +211,16 @@ func (m *Music) parseFollowLine(line string) {
 		m.wg.Go(func() { m.downloadAlbumArt(artURL) })
 		m.lastArtURL = artURL
 	}
+
+	if trackURI != "" && trackURI != m.lastTrackURI && m.canvas != nil {
+		m.lastTrackURI = trackURI
+		m.wg.Go(func() { m.fetchAndPlayCanvas(trackURI) })
+	}
+
+	state.HasCanvas = m.last.HasCanvas
+	state.CanvasPath = m.last.CanvasPath
+
+	m.syncMpv(state)
 
 	if state.Status != m.last.Status ||
 		state.Volume != m.last.Volume ||
@@ -218,6 +246,11 @@ func (m *Music) updateAndNotify() {
 
 	m.mu.Lock()
 	defer m.mu.Unlock()
+
+	state.HasCanvas = m.last.HasCanvas
+	state.CanvasPath = m.last.CanvasPath
+
+	m.syncMpv(state)
 
 	if state.Status != m.last.Status ||
 		state.Volume != m.last.Volume ||
@@ -253,11 +286,17 @@ func (m *Music) getCurrentState() MusicState {
 	album := m.playerctlMetadata("album")
 	title := m.playerctlMetadata("title")
 	artURL := m.playerctlMetadata("mpris:artUrl")
+	trackURI := m.playerctlMetadata("mpris:trackid")
 	progress := m.getProgress()
 
 	if artURL != "" && artURL != m.lastArtURL {
 		m.wg.Go(func() { m.downloadAlbumArt(artURL) })
 		m.lastArtURL = artURL
+	}
+
+	if trackURI != "" && trackURI != m.lastTrackURI && m.canvas != nil {
+		m.lastTrackURI = trackURI
+		m.wg.Go(func() { m.fetchAndPlayCanvas(trackURI) })
 	}
 
 	return musicState(status, volume, artist, album, title, progress)
@@ -382,6 +421,52 @@ func (m *Music) downloadAlbumArt(url string) {
 	}
 
 	os.Rename(tmpFile, albumArtPath)
+}
+
+// fetchAndPlayCanvas queries the Spotify Canvas API and launches mpv if a video exists.
+func (m *Music) fetchAndPlayCanvas(trackURI string) {
+	cdnURL, err := m.canvas.FetchCanvasURL(trackURI)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ewwd: canvas fetch: %v\n", err)
+	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	if cdnURL == "" {
+		m.last.HasCanvas = false
+		m.last.CanvasPath = ""
+		if m.mpv != nil {
+			m.mpv.Stop()
+		}
+	} else {
+		if err := DownloadCanvas(cdnURL, canvasVideoPath); err != nil {
+			fmt.Fprintf(os.Stderr, "ewwd: canvas download: %v\n", err)
+			return
+		}
+		m.last.HasCanvas = true
+		m.last.CanvasPath = canvasVideoPath
+		if m.mpv != nil && m.last.Playing {
+			m.mpv.Play(canvasVideoPath)
+		}
+	}
+
+	m.state.Set("music", &m.last)
+	if m.notify != nil {
+		m.notify(&m.last)
+	}
+}
+
+// syncMpv starts or stops mpv based on playback state and canvas availability. Caller holds mu.
+func (m *Music) syncMpv(state MusicState) {
+	if m.mpv == nil {
+		return
+	}
+	if state.Playing && state.HasCanvas {
+		m.mpv.Play(state.CanvasPath)
+	} else {
+		m.mpv.Stop()
+	}
 }
 
 func (m *Music) playerctlRun(args ...string) {

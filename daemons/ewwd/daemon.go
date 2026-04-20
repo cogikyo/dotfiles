@@ -109,7 +109,7 @@ func (d *Daemon) initProviders() {
 		providers.NewNetwork(d.state, cfg.Network),
 		providers.NewDate(d.state, cfg.Date),
 		providers.NewAudio(d.state, cfg.Audio),
-		providers.NewMusic(d.state),
+		providers.NewMusic(d.state, cfg.Music.SpDc),
 		providers.NewTimer(d.state, cfg.Timer),
 		providers.NewWeather(d.state, cfg.Weather),
 	}
