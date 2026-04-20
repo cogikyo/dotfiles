@@ -188,17 +188,17 @@ notify:
     start:
       style: secondary
       sound: civ5-worker-select
-      volume: 100
+      volume: 110
       timeout: 2000
     subagent:
       style: secondary
       sound: sdv-frog
-      volume: 80
+      volume: 85
       timeout: 2000
     todo-complete:
       style: secondary
       sound: civ6-notification
-      volume: 90
+      volume: 85
       timeout: 2000
 
     complete:
