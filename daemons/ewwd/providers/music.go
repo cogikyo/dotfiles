@@ -275,9 +275,9 @@ func musicState(status, volume, artist, album, title string, progress int) Music
 		VolumePercent: musicVolumePercent(volume),
 		Artist:        artist,
 		Album:         album,
-		AlbumShort:    truncateForWidget(album, 15),
+		AlbumShort:    truncateForWidget(album, 40),
 		Title:         title,
-		TitleShort:    truncateForWidget(title, 15),
+		TitleShort:    truncateForWidget(title, 40),
 		SingleTrack:   title == album,
 		Progress:      progress,
 		ArtPath:       albumArtPath,
@@ -285,10 +285,11 @@ func musicState(status, volume, artist, album, title string, progress int) Music
 }
 
 func truncateForWidget(value string, limit int) string {
-	if limit <= 0 || len(value) <= limit {
+	runes := []rune(value)
+	if limit <= 0 || len(runes) <= limit {
 		return value
 	}
-	return value[:limit] + "..."
+	return string(runes[:limit]) + "..."
 }
 
 func musicVolumePercent(volume string) int {
