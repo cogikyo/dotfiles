@@ -83,8 +83,11 @@ func warnMissing(cfg *HyprConfig) {
 	if cfg.Init.NetworkTimeout == 0 {
 		warn("init")
 	}
-	if cfg.Notify.AgentStyles == nil {
-		warn("notify")
+	if cfg.Notify.AgentEvents == nil {
+		warn("notify.agent_events")
+	}
+	if cfg.Notify.Styles == nil {
+		warn("notify.styles")
 	}
 	if cfg.Windows.Split.Default == "" {
 		warn("windows")

@@ -44,8 +44,6 @@ type notificationSpec struct {
 	FocusAction bool
 	Urgency     *string
 	Timeout     *int
-	Persistent  *bool
-	IconSuffix  *string
 }
 
 type kittyContext struct {

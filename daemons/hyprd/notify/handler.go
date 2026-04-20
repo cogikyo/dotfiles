@@ -245,10 +245,13 @@ func (n *Notifier) dispatch(spec notificationSpec, ctx *kittyContext) error {
 // sendDunst invokes dunstify, re-arming focus-action notifications on timeout until dismissed.
 func (n *Notifier) sendDunst(spec notificationSpec, ctx *kittyContext) error {
 	style := n.style(spec.Style)
-	persistent := style.Persistent
-	if spec.Persistent != nil {
-		persistent = *spec.Persistent
+
+	timeout := style.Timeout
+	if spec.Timeout != nil {
+		timeout = *spec.Timeout
 	}
+	persistent := timeout == 0
+
 	args := n.buildDunstArgs(spec, ctx, style)
 
 	if !spec.FocusAction || ctx == nil || ctx.WindowID == 0 {
@@ -279,7 +282,7 @@ func (n *Notifier) sendDunst(spec notificationSpec, ctx *kittyContext) error {
 }
 
 // buildDunstArgs assembles the dunstify argv; non-nil spec fields override style defaults.
-func (n *Notifier) buildDunstArgs(spec notificationSpec, ctx *kittyContext, style config.NotifyStyle) []string {
+func (n *Notifier) buildDunstArgs(spec notificationSpec, ctx *kittyContext, style config.ResolvedStyle) []string {
 	app := strings.TrimSpace(spec.App)
 	if app == "" {
 		app = "hyprd"
@@ -299,9 +302,6 @@ func (n *Notifier) buildDunstArgs(spec notificationSpec, ctx *kittyContext, styl
 	}
 
 	iconSuffix := style.IconSuffix
-	if spec.IconSuffix != nil {
-		iconSuffix = *spec.IconSuffix
-	}
 
 	args := []string{"-a", app, "-u", urgency, "-t", strconv.Itoa(timeout), "-h", "string:category:hyprd"}
 	if !spec.NoReplace && ctx != nil && ctx.WindowID > 0 {
@@ -337,12 +337,11 @@ func (n *Notifier) playSound(name string, volume int) error {
 	if volume == 0 {
 		volume = n.cfg.Notify.DefaultVolume
 	}
-	args := []string{}
-	if volume > 0 {
-		args = append(args, "--volume="+strconv.Itoa(volume))
+	if volume == 0 {
+		volume = 100
 	}
-	args = append(args, path)
-	return runDetached("paplay", args...)
+	paVolume := volume * 65536 / 100
+	return runDetached("paplay", "--volume="+strconv.Itoa(paVolume), path)
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -381,14 +380,11 @@ func (n *Notifier) soundForDunst(req NotifyRequest) string {
 	return sound
 }
 
-func (n *Notifier) style(name string) config.NotifyStyle {
+func (n *Notifier) style(name string) config.ResolvedStyle {
 	if name == "" {
-		return config.NotifyStyle{}
+		return config.ResolvedStyle{}
 	}
-	if style, ok := n.cfg.Notify.AgentStyles[name]; ok {
-		return style
-	}
-	return config.NotifyStyle{}
+	return n.cfg.Notify.ResolveEvent(name)
 }
 
 func (n *Notifier) isSilentApp(app string) bool {

@@ -156,95 +156,79 @@ bluetooth:
 # ╭───────────────────────────────────────────────────────────────────────────────╮
 # │ notifications                                                                 │
 # ╰───────────────────────────────────────────────────────────────────────────────╯
-# Dunst styling, sound routing, workspace icons, and focus behavior.
-# This section drives both external app notifications and Hyprd's own notify hooks.
-
 notify:
-  # ├─ sound levels ─────────────────────────────────────────────────────────────┤
-  default_volume: 65536 # 65536 is paplay's nominal 100% volume; per-style volume overrides this.
+  default_volume: 100 # percentage; 100 = paplay 65536. Per-event volume overrides this.
 
-  # ├─ agent styles ─────────────────────────────────────────────────────────────┤
-  # Keys match the event class used by claude/opencode handlers.
-  # Each entry bundles dunst visual hints with sound + volume.
-  agent_styles:
-    start:
-      sound: civ5-worker-select
-      volume: 72089
-      urgency: low
-      timeout: 2000
-      background: "#25284180"
-      foreground: "#8aa4f3"
-      frame: "#6380ec80"
-    subagent:
-      sound: sdv-frog
-      volume: 52428
-      urgency: low
-      timeout: 2000
-      background: "#25284180"
-      foreground: "#8aa4f3"
-      frame: "#6380ec80"
-    complete:
-      sound: jobs-done
-      volume: 72089
-      urgency: normal
-      timeout: 0
+  # ├─ visual styles ────────────────────────────────────────────────────────────┤
+  styles:
+    primary:
       background: "#49353130"
       foreground: "#f2a170"
       frame: "#ea834b"
-      icon_suffix: "-active"
-      persistent: true
-    idle:
-      sound: hey-listen
-      volume: 52428
-      urgency: normal
-      timeout: 0
-      background: "#2a2d4580"
-      foreground: "#b29ae8"
-      frame: "#9376d880"
-      icon_suffix: "-idle"
-      persistent: true
-    permission:
-      sound: ssb-ready
-      urgency: normal
-      timeout: 0
-      background: "#2a3d2580"
-      foreground: "#95cb79"
-      frame: "#73ad5a80"
-      icon_suffix: "-monocle"
-      persistent: true
-    todo-complete:
-      sound: civ6-notification
-      volume: 52428
-      urgency: low
-      timeout: 2000
+    secondary:
       background: "#25284180"
       foreground: "#8aa4f3"
       frame: "#6380ec80"
-    question:
-      sound: hey-listen
-      urgency: normal
-      timeout: 0
+    tertiary:
+      background: "#2a2d4580"
+      foreground: "#b29ae8"
+      frame: "#9376d880"
+    success:
       background: "#2a3d2580"
       foreground: "#95cb79"
       frame: "#73ad5a80"
-      icon_suffix: "-monocle"
-      persistent: true
     error:
+      background: "#49313130"
+      foreground: "#f34658"
+      frame: "#ea4b53"
+
+  # ├─ agent events ─────────────────────────────────────────────────────────────┤
+  # Persistent = timeout 0. Urgency derived: low if timeout > 0, normal otherwise.
+  agent_events:
+    start:
+      style: secondary
+      sound: civ5-worker-select
+      volume: 100
+      timeout: 2000
+    subagent:
+      style: secondary
+      sound: sdv-frog
+      volume: 80
+      timeout: 2000
+    todo-complete:
+      style: secondary
+      sound: civ6-notification
+      volume: 90
+      timeout: 2000
+
+    complete:
+      style: primary
+      sound: jobs-done
+      volume: 110
+
+    idle:
+      style: success
+      sound: hey-listen
+      volume: 85
+
+    permission:
+      style: tertiary
+      sound: ssb-ready
+    question:
+      style: tertiary
+      sound: hey-listen
+
+    error:
+      style: error
       sound: something-need-doing
-      volume: 72089
-      urgency: normal
-      timeout: 0
-      background: "#2a3d2580"
-      foreground: "#95cb79"
-      frame: "#73ad5a80"
-      icon_suffix: "-monocle"
-      persistent: true
+      volume: 100
 
   # ├─ sound routing ────────────────────────────────────────────────────────────┤
-  urgency_sounds:
+  urgency_sounds: # common urgency levels
     low: none
     normal: moondrop
     critical: gems
+
   app_sounds: # app-specific sounds override urgency-based sounds when both match.
     timer: jackpot
     attention: discovery
@@ -255,11 +239,10 @@ notify:
     Slack: knock
 
   # ├─ silence filters ──────────────────────────────────────────────────────────┤
-  # These suppress sounds without suppressing the notification itself.
-  silent_apps:
+  silent_apps: # these suppress sounds without suppressing the notification itself.
     - Spotify
     - discord
-  kitty_silent_patterns:
+  kitty_silent_patterns: # these silence agent based notications, favoring agent styles instead
     - claude
     - opencode
     - approval

@@ -78,25 +78,67 @@ type SplitConfig struct {
 
 // NotifyConfig defines notification routing, presentation, and sound policy.
 type NotifyConfig struct {
-	DefaultVolume       int                          `yaml:"default_volume"`        // paplay volume (0-65536); 0 defers to paplay default
-	AgentStyles         map[string]NotifyStyle       `yaml:"agent_styles"`          // event class -> dunst hints + sound
-	UrgencySounds       map[string]string            `yaml:"urgency_sounds"`        // urgency -> sound name (or "none")
-	AppSounds           map[string]string            `yaml:"app_sounds"`            // app name -> sound name; takes precedence over urgency
-	SilentApps          []string                     `yaml:"silent_apps"`           // external app names that suppress sound entirely
-	KittySilentPatterns []string                     `yaml:"kitty_silent_patterns"` // substrings in kitty notification content that suppress sound
+	DefaultVolume       int                    `yaml:"default_volume"`        // percentage (100 = paplay 65536)
+	Styles              map[string]VisualStyle `yaml:"styles"`                // named color themes for dunst hints
+	AgentEvents         map[string]AgentEvent  `yaml:"agent_events"`         // event class -> style + sound + timing
+	UrgencySounds       map[string]string      `yaml:"urgency_sounds"`       // urgency -> sound name (or "none")
+	AppSounds           map[string]string      `yaml:"app_sounds"`           // app name -> sound name; takes precedence over urgency
+	SilentApps          []string               `yaml:"silent_apps"`          // external app names that suppress sound entirely
+	KittySilentPatterns []string               `yaml:"kitty_silent_patterns"`// substrings in kitty notification content that suppress sound
 }
 
-// NotifyStyle defines dunst hints, sound, and volume for an agent event class.
-type NotifyStyle struct {
-	Urgency    string `yaml:"urgency"`     // low, normal, critical
-	Timeout    int    `yaml:"timeout"`     // ms; 0 means persistent
-	Background string `yaml:"background"`  // hex color with optional alpha
-	Foreground string `yaml:"foreground"`  // hex color
-	Frame      string `yaml:"frame"`       // border color
-	IconSuffix string `yaml:"icon_suffix"` // appended to the icon basename
-	Persistent bool   `yaml:"persistent"`  // prevents dunst timeout from closing
-	Sound      string `yaml:"sound"`       // sound file basename (without .ogg)
-	Volume     int    `yaml:"volume"`      // paplay volume; 0 defers to default_volume
+// VisualStyle defines dunst color hints for a notification theme.
+type VisualStyle struct {
+	Background string `yaml:"background"`
+	Foreground string `yaml:"foreground"`
+	Frame      string `yaml:"frame"`
+}
+
+// AgentEvent binds a visual style to sound and timing for an agent event class.
+type AgentEvent struct {
+	Style   string `yaml:"style"`
+	Sound   string `yaml:"sound"`
+	Volume  int    `yaml:"volume"`  // percentage (100 = paplay 65536); 0 defers to default_volume
+	Timeout int    `yaml:"timeout"` // ms; 0 means persistent
+}
+
+// ResolvedStyle flattens an AgentEvent and its VisualStyle for notification dispatch.
+type ResolvedStyle struct {
+	Sound      string
+	Volume     int
+	Timeout    int
+	Urgency    string
+	Persistent bool
+	IconSuffix string
+	Background string
+	Foreground string
+	Frame      string
+}
+
+// ResolveEvent combines an AgentEvent with its VisualStyle into a dispatch-ready struct.
+func (c *NotifyConfig) ResolveEvent(name string) ResolvedStyle {
+	event, ok := c.AgentEvents[name]
+	if !ok {
+		return ResolvedStyle{}
+	}
+	visual := c.Styles[event.Style]
+
+	urgency := "normal"
+	if event.Timeout > 0 {
+		urgency = "low"
+	}
+
+	return ResolvedStyle{
+		Sound:      event.Sound,
+		Volume:     event.Volume,
+		Timeout:    event.Timeout,
+		Urgency:    urgency,
+		Persistent: event.Timeout == 0,
+		IconSuffix: "-" + event.Style,
+		Background: visual.Background,
+		Foreground: visual.Foreground,
+		Frame:      visual.Frame,
+	}
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
