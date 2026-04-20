@@ -953,7 +953,7 @@ step_repos() {
     fi
 
     # Symlink vagari.nvim into lazy.nvim dev path
-    local vagari_nvim="$HOME/vagari/vagari.nvim"
+    local vagari_nvim="$HOME/vagari/nvim"
     local dev_link="$HOME/nvim/vagari.nvim"
     if [[ -d "$vagari_nvim" ]]; then
         mkdir -p "$HOME/nvim"
@@ -1817,7 +1817,7 @@ step_firefox() {
     fi
 
     # Install vagari.firefox userChrome CSS (cloned by repos step)
-    local vagari_dir="$HOME/vagari/vagari.firefox"
+    local vagari_dir="$HOME/vagari/firefox"
 
     if [[ ! -d "$vagari_dir" ]]; then
         err "vagari.firefox not found at $vagari_dir — run the repos step first"

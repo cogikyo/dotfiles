@@ -11,20 +11,24 @@ path = "~/vagari/vagari"
 
 [vagari.nvim]
 repo = "cogikyo/vagari.nvim"
-path = "~/vagari/vagari.nvim"
+path = "~/vagari/nvim"
 
 [vagari.firefox]
 repo = "cogikyo/vagari.firefox"
-path = "~/vagari/vagari.firefox"
+path = "~/vagari/firefox"
 
 [cullyn.dev]
 repo = "cogikyo/cullyn.dev"
-path = "~/projects/cullyn.dev"
+path = "~/cogikyo/cullyn.dev"
 
 [hgmx-builder]
 repo = "cogikyo/hgmx-builder"
-path = "~/projects/hgmx-builder"
+path = "~/cogikyo/hgmx-builder"
+
+[hgmx]
+repo = "cogikyo/hgmx"
+path = "~/cogikyo/hgmx"
 
 [kaizen]
 repo = "cogikyo/kaizen"
-path = "~/projects/kaizen"
+path = "~/cogikyo/kaizen"
