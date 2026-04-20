@@ -45,6 +45,12 @@ three_body:
     class: firefox-developer-edition
     command: hyprd browser launch
 
+active_sessions:
+  2: { session: slack, init: true }
+  3: { session: tableplus, init: false }
+  4: { session: leadpier, init: true }
+  5: { session: dotfiles, init: true }
+
 sessions:
 
   slack:
@@ -78,6 +84,15 @@ sessions:
     workspace: 3
     command: gimp
 
+  cogikyo:
+    name: cogikyo
+    workspace: 4
+    project: cogikyo/cogikyo.com
+    body:
+      - editor
+      - browser
+      - agents
+
   leadpier:
     name: leadpier
     workspace: 4
@@ -102,41 +117,6 @@ sessions:
       - browser
       - agents
 
-  cogikyo:
-    name: cogikyo
-    workspace: 4
-    project: cogikyo/cogikyo.com
-    body:
-      - editor
-      - browser
-      - agents
-
-active_sessions:
-  2: { session: slack, init: true }
-  3: { session: tableplus, init: true }
-  4: { session: leadpier, init: true }
-  5: { session: dotfiles, init: true }
-
-
-monitor:
-  width: 3840
-  height: 2160
-  reserved:
-    top: 86
-    bottom: 32
-    left: 0
-
-background:
-  display: "HDMI-A-1"
-  video_path: "~/dotfiles/share/videos"
-  socket: "/tmp/mpvpaper.sock"
-  wallpaper:
-    file: "dna.mp4"
-    brightness: 6
-    contrast: 9
-    saturation: -16
-    hue: -24
-
 init:
   execs:
     - "glava -e bars_rc.glsl"
@@ -144,19 +124,7 @@ init:
     - "glava -e radial_rc.glsl"
     - "spotify-launcher"
     - "bluetoothctl connect 14:3F:A6:10:A1:B5"
-  workspace: 1
-  lock: true
   lock_delay: 3s
-  network_timeout: 10
-split:
-  xs: "0.3695"
-  default: "0.4939"
-  lg: "0.7699"
-style:
-  border:
-    default: "rgb(f2a170)"
-  shadow:
-    default: "rgba(e56b2c32)"
 
 notify:
   sounds_dir: "~/dotfiles/share/sounds"
@@ -206,6 +174,7 @@ notify:
       frame: "#73ad5a80"
       icon_suffix: "-monocle"
       persistent: true
+
   urgency_sounds:
     low: none
     normal: moondrop
@@ -218,13 +187,16 @@ notify:
     wf-start: discovery
     wf-end: reward
     Slack: knock
+
   focus_apps:
     Slack: slack
     firefox-developer-edition: firefox-developer-edition
+
   action_focus_apps:
     Firefox: { workspace: 2, class: firefox-developer-edition }
     Firefox Developer Edition: { workspace: 2, class: firefox-developer-edition }
     firefox-developer-edition: { workspace: 2, class: firefox-developer-edition }
+
   silent_apps:
     - Spotify
     - discord
@@ -234,10 +206,10 @@ notify:
     - approval
 
 windows:
-  ignored_classes:
-    - "GLava"
-  hidden_workspace: "special:hiddenSlaves"
-  shadow_workspace: "special:shadow"
+  split:
+    xs: "0.3695"
+    default: "0.4939"
+    lg: "0.7699"
   monocle:
     width: 2882
     height: 1864

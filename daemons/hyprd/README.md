@@ -156,17 +156,13 @@ eww integration:
 
 ## Configuration
 
-`../configs/hyprd.yaml` — single source of truth for:
+`../configs/hyprd.yaml` — overrides compiled defaults for:
 
-- `monitor` — geometry and reserved margins
 - `background` — mpvpaper wallpaper
 - `init` — boot sequence (sessions, execs, lock)
-- `split` — master ratio presets (xs / default / lg)
-- `style` — border and shadow colors
 - `notify` — sounds, icons, per-style appearance
-- `windows` — ignored classes, hidden/shadow workspace names, monocle sizing
+- `windows` — ignored classes, hidden/shadow workspace names, split presets, monocle sizing
 - `tabs` — kitty tab profiles (editor, agents, leadpier)
 - `three_body` — window building blocks (class, title, command) referenced by sessions
 - `sessions` — named layouts composed of `three_body` bodies + project paths + browser URLs
 - `active_sessions` — default session per workspace
-```

@@ -1,6 +1,6 @@
 package config
 
-// hyprd.go declares hyprd's window, session, style, and notification configuration.
+// hyprd.go declares hyprd's window, session, and notification configuration.
 
 import (
 	"slices"
@@ -13,11 +13,8 @@ import (
 
 // HyprConfig configures hyprd window and session behavior.
 type HyprConfig struct {
-	Monitor        MonitorConfig              `yaml:"monitor"`
 	Background     BackgroundConfig           `yaml:"background"`
 	Init           InitConfig                 `yaml:"init"`
-	Split          SplitConfig                `yaml:"split"`
-	Style          StyleConfig                `yaml:"style"`
 	Notify         NotifyConfig               `yaml:"notify"`
 	Windows        WindowsConfig              `yaml:"windows"`
 	Tabs           map[string]TabProfile      `yaml:"tabs"`
@@ -59,44 +56,14 @@ type Wallpaper struct {
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ layout / style                                                               │
+// │ windows / layout                                                             │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
-
-// MonitorConfig defines physical monitor dimensions and reserved screen edges.
-type MonitorConfig struct {
-	Width    int            `yaml:"width"`
-	Height   int            `yaml:"height"`
-	Reserved ReservedConfig `yaml:"reserved"`
-}
-
-// ReservedConfig specifies screen-edge insets (px) excluded from tiling layout.
-type ReservedConfig struct {
-	Top    int `yaml:"top"`
-	Bottom int `yaml:"bottom"`
-	Left   int `yaml:"left"`
-}
 
 // SplitConfig defines named master-slave split ratios (stringified floats 0-1).
 type SplitConfig struct {
 	XS      string `yaml:"xs"`
 	Default string `yaml:"default"`
 	LG      string `yaml:"lg"`
-}
-
-// StyleConfig defines border and shadow colors.
-type StyleConfig struct {
-	Border BorderColors `yaml:"border"`
-	Shadow ShadowColors `yaml:"shadow"`
-}
-
-// BorderColors uses Hyprland color format, e.g. "rgb(f2a170)".
-type BorderColors struct {
-	Default string `yaml:"default"`
-}
-
-// ShadowColors uses Hyprland color format, e.g. "rgba(e56b2c32)".
-type ShadowColors struct {
-	Default string `yaml:"default"`
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -146,6 +113,7 @@ type WindowsConfig struct {
 	IgnoredClasses  []string      `yaml:"ignored_classes"`  // window classes hyprd ignores for tiling/events
 	HiddenWorkspace string        `yaml:"hidden_workspace"` // Hyprland special workspace name for stashed windows
 	ShadowWorkspace string        `yaml:"shadow_workspace"` // Hyprland special workspace name for shadow windows
+	Split           SplitConfig   `yaml:"split"`
 	Monocle         MonocleConfig `yaml:"monocle"`
 }
 
@@ -275,15 +243,6 @@ func (c *HyprConfig) IsIgnored(class string) bool {
 // DefaultHypr returns hyprd defaults.
 func DefaultHypr() HyprConfig {
 	return HyprConfig{
-		Monitor: MonitorConfig{
-			Width:  3840,
-			Height: 2160,
-			Reserved: ReservedConfig{
-				Top:    86,
-				Bottom: 32,
-				Left:   0,
-			},
-		},
 		Background: BackgroundConfig{
 			Display:   "HDMI-A-1",
 			VideoPath: "~/dotfiles/share/videos",
@@ -307,15 +266,6 @@ func DefaultHypr() HyprConfig {
 			Workspace:      1,
 			Lock:           true,
 			NetworkTimeout: 10,
-		},
-		Split: SplitConfig{
-			XS:      "0.37",
-			Default: "0.4942",
-			LG:      "0.77",
-		},
-		Style: StyleConfig{
-			Border: BorderColors{Default: "rgb(f2a170)"},
-			Shadow: ShadowColors{Default: "rgba(e56b2c32)"},
 		},
 		Notify: NotifyConfig{
 			SoundsDir:         "~/dotfiles/share/sounds",
@@ -402,6 +352,11 @@ func DefaultHypr() HyprConfig {
 			IgnoredClasses:  []string{"GLava"},
 			HiddenWorkspace: "special:hiddenSlaves",
 			ShadowWorkspace: "special:shadow",
+			Split: SplitConfig{
+				XS:      "0.37",
+				Default: "0.4942",
+				LG:      "0.77",
+			},
 			Monocle: MonocleConfig{
 				Width:  3190,
 				Height: 1920,
