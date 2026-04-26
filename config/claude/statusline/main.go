@@ -1,25 +1,18 @@
 // Package main implements the Claude Code custom statusline renderer.
 //
 // Reads JSON from stdin (the Claude Code statusline hook) and prints an ANSI-colored Nerd Font string to stdout.
-// Segments are delimited by ╼╾ and cover: working directory, git state, context usage, and 5h/7d rate gauges.
-// Git status and the usage-API call run concurrently; API responses cache to disk with a 5-minute positive TTL.
+// Segments are delimited by ╼╾ and cover: working directory, git state, model/effort, context usage, and 5h/7d rate gauges.
 package main
 
 import (
 	"bufio"
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"runtime"
 	"strconv"
 	"strings"
-	"sync"
-	"syscall"
 	"time"
 )
 
@@ -87,7 +80,9 @@ type Input struct {
 		ID          string `json:"id"`
 		DisplayName string `json:"display_name"`
 	} `json:"model"`
-	SessionID     string `json:"session_id"`
+	Effort struct {
+		Level string `json:"level"`
+	} `json:"effort"`
 	ContextWindow struct {
 		ContextWindowSize int `json:"context_window_size"`
 		CurrentUsage      *struct {
@@ -96,6 +91,16 @@ type Input struct {
 			CacheReadTokens     int `json:"cache_read_input_tokens"`
 		} `json:"current_usage"`
 	} `json:"context_window"`
+	RateLimits *struct {
+		FiveHour *struct {
+			UsedPercentage float64 `json:"used_percentage"`
+			ResetsAt       int64   `json:"resets_at"`
+		} `json:"five_hour"`
+		SevenDay *struct {
+			UsedPercentage float64 `json:"used_percentage"`
+			ResetsAt       int64   `json:"resets_at"`
+		} `json:"seven_day"`
+	} `json:"rate_limits"`
 }
 
 // GitStatus is the parsed result of `git status --porcelain=v2 --branch --show-stash`.
@@ -112,341 +117,6 @@ type GitStatus struct {
 	Conflicted int // unmerged entries
 }
 
-// UsageResponse is the shape returned by the Anthropic OAuth usage endpoint.
-//
-// Either period may be nil if the account has no data for that window.
-type UsageResponse struct {
-	FiveHour *UsagePeriod `json:"five_hour"`
-	SevenDay *UsagePeriod `json:"seven_day"`
-}
-
-// UsagePeriod is a single rate-limit window.
-type UsagePeriod struct {
-	Utilization float64 `json:"utilization"` // percent, 0-100+
-	ResetsAt    string  `json:"resets_at"`   // RFC3339
-}
-
-// CachedUsage is the on-disk cache envelope for the usage API.
-//
-// A nil Response with a non-empty Error is a negative cache entry.
-// Expiry is tiered: cacheTTL for success, rateLimitCacheTTL for 429s, negCacheTTL for other errors.
-type CachedUsage struct {
-	FetchedAt int64          `json:"fetched_at"`
-	Response  *UsageResponse `json:"response"`
-	Error     string         `json:"error,omitempty"`
-}
-
-// RequestStats tracks how many usage-API calls have been made today.
-//
-// Surfaced next to error messages so repeated failures are visible.
-type RequestStats struct {
-	FirstRequest int64 `json:"first_request"` // unix seconds of first request this day
-	Count        int   `json:"count"`
-}
-
-// ╭────────────────────────────────────────────────────────────────────────────╮
-// │ Cache and credentials                                                      │
-// ╰────────────────────────────────────────────────────────────────────────────╯
-
-// Disk-cache TTLs balance liveness against hitting the API on every prompt render.
-const (
-	cacheTTL          = 5 * time.Minute
-	negCacheTTL       = 60 * time.Second // transient errors (timeout, etc.)
-	rateLimitCacheTTL = 10 * time.Minute // back off hard on 429
-)
-
-func getCacheDir() string {
-	if xdg := os.Getenv("XDG_CACHE_HOME"); xdg != "" {
-		return filepath.Join(xdg, "claude")
-	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".cache", "claude")
-}
-
-func getCachePath() string {
-	return filepath.Join(getCacheDir(), "usage-cache.json")
-}
-
-// OAuthData is the persisted Claude OAuth credential blob.
-//
-// Matches the shape Claude Code writes to the credentials file and the macOS keychain entry.
-type OAuthData struct {
-	AccessToken      string   `json:"accessToken"`
-	RefreshToken     string   `json:"refreshToken"`
-	ExpiresAt        int64    `json:"expiresAt"` // unix milliseconds
-	Scopes           []string `json:"scopes"`
-	SubscriptionType string   `json:"subscriptionType,omitempty"`
-	RateLimitTier    string   `json:"rateLimitTier,omitempty"`
-}
-
-// Credentials is the top-level JSON wrapper stored at the credentials path.
-type Credentials struct {
-	ClaudeAiOauth *OAuthData `json:"claudeAiOauth"`
-}
-
-const (
-	oauthTokenURL = "https://platform.claude.com/v1/oauth/token"
-	oauthClientID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
-	// Refresh slightly before actual expiry to avoid racing a request against the cutover.
-	expiryBuffer = 5 * time.Minute
-)
-
-type TokenRefreshRequest struct {
-	GrantType    string `json:"grant_type"`
-	RefreshToken string `json:"refresh_token"`
-	ClientID     string `json:"client_id"`
-	Scope        string `json:"scope"`
-}
-
-type TokenRefreshResponse struct {
-	AccessToken  string `json:"access_token"`
-	RefreshToken string `json:"refresh_token"`
-	ExpiresIn    int    `json:"expires_in"`
-	Scope        string `json:"scope"`
-}
-
-func getCredsPath() string {
-	if xdg := os.Getenv("XDG_CONFIG_HOME"); xdg != "" {
-		p := filepath.Join(xdg, "claude", ".credentials.json")
-		if _, err := os.Stat(p); err == nil {
-			return p
-		}
-	}
-	home, _ := os.UserHomeDir()
-	xdgPath := filepath.Join(home, ".config", "claude", ".credentials.json")
-	if _, err := os.Stat(xdgPath); err == nil {
-		return xdgPath
-	}
-	return filepath.Join(home, ".claude", ".credentials.json")
-}
-
-// findKeychainServices returns every macOS keychain service name matching "Claude Code-credentials*".
-//
-// Multiple entries can exist (e.g. per profile); getAccessTokenMacOS picks the one with the latest expiry.
-// Returns nil if `security dump-keychain` fails or no entry matches.
-func findKeychainServices() []string {
-	cmd := exec.Command("security", "dump-keychain")
-	out, err := cmd.Output()
-	if err != nil {
-		return nil
-	}
-	const prefix = "Claude Code-credentials"
-	var services []string
-	seen := make(map[string]bool)
-	for line := range strings.SplitSeq(string(out), "\n") {
-		line = strings.TrimSpace(line)
-		// dump-keychain format: `"svce"<blob>="<service name>"`
-		if !strings.HasPrefix(line, `"svce"<blob>="`) {
-			continue
-		}
-		start := strings.Index(line, `="`) + 2
-		end := strings.LastIndex(line, `"`)
-		if start < 2 || end <= start {
-			continue
-		}
-		svc := line[start:end]
-		if strings.HasPrefix(svc, prefix) && !seen[svc] {
-			seen[svc] = true
-			services = append(services, svc)
-		}
-	}
-	return services
-}
-
-// getAccessToken returns a usable OAuth access token, or "" if none is available.
-//
-// macOS reads the keychain and refreshes on expiry; Linux reads the credentials file without refreshing.
-func getAccessToken() string {
-	if runtime.GOOS == "darwin" {
-		return getAccessTokenMacOS()
-	}
-	data, err := os.ReadFile(getCredsPath())
-	if err != nil {
-		return ""
-	}
-	return parseAccessToken(data)
-}
-
-// isTokenExpired reports whether expiresAt (unix millis) is within expiryBuffer of now.
-func isTokenExpired(expiresAt int64) bool {
-	expiryTime := time.UnixMilli(expiresAt)
-	return time.Now().Add(expiryBuffer).After(expiryTime)
-}
-
-// refreshToken exchanges the OAuth refresh token for a fresh access token.
-//
-// 5s HTTP timeout so a hanging auth server can't stall the render.
-// Returns an error on transport failures or non-200 responses; the caller persists the new token.
-func refreshToken(oauth *OAuthData) (*TokenRefreshResponse, error) {
-	scope := strings.Join(oauth.Scopes, " ")
-	if scope == "" {
-		scope = "user:inference user:profile user:mcp_servers user:sessions:claude_code"
-	}
-
-	reqBody := TokenRefreshRequest{
-		GrantType:    "refresh_token",
-		RefreshToken: oauth.RefreshToken,
-		ClientID:     oauthClientID,
-		Scope:        scope,
-	}
-
-	body, err := json.Marshal(reqBody)
-	if err != nil {
-		return nil, err
-	}
-
-	client := &http.Client{Timeout: 5 * time.Second}
-	req, err := http.NewRequest("POST", oauthTokenURL, bytes.NewReader(body))
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("refresh failed: %d", resp.StatusCode)
-	}
-
-	respBody, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, err
-	}
-
-	var tokenResp TokenRefreshResponse
-	if err := json.Unmarshal(respBody, &tokenResp); err != nil {
-		return nil, err
-	}
-	return &tokenResp, nil
-}
-
-// updateKeychainEntry writes refreshed credentials back to the keychain for svc.
-//
-// The account name is recovered from the existing entry because `security add-generic-password -U` requires -a and -s.
-// Silently no-ops on any error to keep the renderer best-effort.
-func updateKeychainEntry(svc string, creds *Credentials) {
-	data, err := json.Marshal(creds)
-	if err != nil {
-		return
-	}
-
-	cmd := exec.Command("security", "find-generic-password", "-s", svc)
-	out, err := cmd.Output()
-	if err != nil {
-		return
-	}
-	// find-generic-password format: `"acct"<blob>="<account>"`
-	account := ""
-	for line := range strings.SplitSeq(string(out), "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, `"acct"<blob>="`) {
-			start := strings.Index(line, `="`) + 2
-			end := strings.LastIndex(line, `"`)
-			if start >= 2 && end > start {
-				account = line[start:end]
-			}
-		}
-	}
-	if account == "" {
-		return
-	}
-
-	cmd = exec.Command("security", "add-generic-password", "-U",
-		"-a", account, "-s", svc, "-w", string(data))
-	cmd.Run()
-}
-
-type keychainEntry struct {
-	service string
-	creds   Credentials
-}
-
-// getAccessTokenMacOS reads every Claude keychain entry and returns the access token from the latest-expiring one.
-//
-// Refreshes in place and writes the new token back to the keychain when expired.
-// Returns "" when no entry exists, none parse, or refresh fails.
-func getAccessTokenMacOS() string {
-	services := findKeychainServices()
-	if len(services) == 0 {
-		return ""
-	}
-
-	var entries []keychainEntry
-	for _, svc := range services {
-		cmd := exec.Command("security", "find-generic-password", "-s", svc, "-w")
-		data, err := cmd.Output()
-		if err != nil {
-			continue
-		}
-		data = []byte(strings.TrimSpace(string(data)))
-		var creds Credentials
-		if err := json.Unmarshal(data, &creds); err != nil || creds.ClaudeAiOauth == nil {
-			continue
-		}
-		entries = append(entries, keychainEntry{service: svc, creds: creds})
-	}
-
-	if len(entries) == 0 {
-		return ""
-	}
-
-	// Pick the entry with the furthest-out expiry — most likely still valid.
-	best := 0
-	for i, e := range entries {
-		if e.creds.ClaudeAiOauth.ExpiresAt > entries[best].creds.ClaudeAiOauth.ExpiresAt {
-			best = i
-		}
-	}
-
-	entry := &entries[best]
-	oauth := entry.creds.ClaudeAiOauth
-
-	if !isTokenExpired(oauth.ExpiresAt) {
-		return oauth.AccessToken
-	}
-
-	if oauth.RefreshToken == "" {
-		return ""
-	}
-
-	tokenResp, err := refreshToken(oauth)
-	if err != nil {
-		return ""
-	}
-
-	// Some refresh responses omit refresh_token; keep the existing one in that case.
-	oauth.AccessToken = tokenResp.AccessToken
-	if tokenResp.RefreshToken != "" {
-		oauth.RefreshToken = tokenResp.RefreshToken
-	}
-	oauth.ExpiresAt = time.Now().Add(time.Duration(tokenResp.ExpiresIn) * time.Second).UnixMilli()
-
-	updateKeychainEntry(entry.service, &entry.creds)
-
-	return oauth.AccessToken
-}
-
-// parseAccessToken extracts a non-expired access token from the Linux credentials file contents.
-//
-// Returns "" if the blob is malformed, empty, or within expiryBuffer of expiration.
-// Linux has no refresh path here — the caller must re-auth out of band.
-func parseAccessToken(data []byte) string {
-	var creds Credentials
-	if err := json.Unmarshal(data, &creds); err != nil {
-		return ""
-	}
-	if creds.ClaudeAiOauth == nil {
-		return ""
-	}
-	if isTokenExpired(creds.ClaudeAiOauth.ExpiresAt) {
-		return ""
-	}
-	return creds.ClaudeAiOauth.AccessToken
-}
 
 // ╭────────────────────────────────────────────────────────────────────────────╮
 // │ Percent-tier helpers and effort level                                      │
@@ -497,111 +167,6 @@ func buildBar(filled, total int) string {
 		b.WriteString(barEmpty)
 	}
 	return b.String()
-}
-
-func claudeConfigDir() string {
-	if d := os.Getenv("CLAUDE_CONFIG_DIR"); d != "" {
-		return d
-	}
-	home, _ := os.UserHomeDir()
-	return filepath.Join(home, ".config", "claude")
-}
-
-// scanCmdlineForEffort reads /proc/<pid>/cmdline and returns the --effort value.
-//
-// Handles both "--effort X" and "--effort=X" forms.
-// The exe name must contain "claude" so an unrelated parent (e.g. a shell) can't match by accident.
-// Returns "" when the file is unreadable, the exe doesn't match, or the flag is absent.
-// Linux-only: /proc/<pid>/cmdline doesn't exist on macOS.
-func scanCmdlineForEffort(pid int) string {
-	data, err := os.ReadFile(fmt.Sprintf("/proc/%d/cmdline", pid))
-	if err != nil {
-		return ""
-	}
-	args := strings.Split(strings.TrimRight(string(data), "\x00"), "\x00")
-	if len(args) == 0 {
-		return ""
-	}
-	exe := filepath.Base(args[0])
-	if !strings.Contains(exe, "claude") {
-		return ""
-	}
-	for i, a := range args {
-		if a == "--effort" && i+1 < len(args) {
-			return args[i+1]
-		}
-		if after, ok := strings.CutPrefix(a, "--effort="); ok {
-			return after
-		}
-	}
-	return ""
-}
-
-// pidForSession locates the claude PID owning sessionID by scanning $CLAUDE_CONFIG_DIR/sessions.
-//
-// Fallback path for when os.Getppid() isn't the claude process (e.g. under a helper wrapper).
-// Returns 0 when sessionID is empty, the glob fails, or no session file matches.
-func pidForSession(sessionID string) int {
-	if sessionID == "" {
-		return 0
-	}
-	matches, err := filepath.Glob(filepath.Join(claudeConfigDir(), "sessions", "*.json"))
-	if err != nil {
-		return 0
-	}
-	for _, m := range matches {
-		data, err := os.ReadFile(m)
-		if err != nil {
-			continue
-		}
-		var s struct {
-			PID       int    `json:"pid"`
-			SessionID string `json:"sessionId"`
-		}
-		if json.Unmarshal(data, &s) != nil {
-			continue
-		}
-		if s.SessionID == sessionID && s.PID > 0 {
-			return s.PID
-		}
-	}
-	return 0
-}
-
-// readSettingsEffort returns the effortLevel key from $CLAUDE_CONFIG_DIR/settings.json.
-//
-// Last-resort default when neither the parent nor the session process exposes --effort on its cmdline.
-// Returns "" on any read or parse failure.
-func readSettingsEffort() string {
-	data, err := os.ReadFile(filepath.Join(claudeConfigDir(), "settings.json"))
-	if err != nil {
-		return ""
-	}
-	var s struct {
-		EffortLevel string `json:"effortLevel"`
-	}
-	if json.Unmarshal(data, &s) != nil {
-		return ""
-	}
-	return s.EffortLevel
-}
-
-// getEffortLevel resolves the effort level from parent cmdline, then session-owning claude cmdline, then settings.json.
-//
-// Returns "" if no source yields a value.
-func getEffortLevel(sessionID string) string {
-	if lvl := scanCmdlineForEffort(os.Getppid()); lvl != "" {
-		return lvl
-	}
-	if pid := pidForSession(sessionID); pid > 0 {
-		if lvl := scanCmdlineForEffort(pid); lvl != "" {
-			return lvl
-		}
-	}
-	if lvl := readSettingsEffort(); lvl != "" {
-		return lvl
-	}
-	return ""
 }
 
 func effortIcon(level string) (string, string) {
@@ -709,235 +274,23 @@ func getGitStatus(dir string) *GitStatus {
 }
 
 // ╭────────────────────────────────────────────────────────────────────────────╮
-// │ Usage API with caching                                                     │
+// │ Rate-limit reset formatting                                                │
 // ╰────────────────────────────────────────────────────────────────────────────╯
 
-// loadCache reads the on-disk cache and returns it if still within its TTL.
-//
-// TTL varies by result kind: cacheTTL for success, rateLimitCacheTTL for 429s, negCacheTTL otherwise.
-func loadCache() (*CachedUsage, bool) {
-	data, err := os.ReadFile(getCachePath())
-	if err != nil {
-		return nil, false
-	}
-	var cached CachedUsage
-	if err := json.Unmarshal(data, &cached); err != nil {
-		return nil, false
-	}
-	age := time.Since(time.Unix(cached.FetchedAt, 0))
-	ttl := cacheTTL
-	if cached.Response == nil {
-		if cached.Error == "rate limited" {
-			ttl = rateLimitCacheTTL
-		} else {
-			ttl = negCacheTTL
-		}
-	}
-	if age > ttl {
-		return nil, false
-	}
-	return &cached, true
-}
-
-func getStatsPath() string {
-	return filepath.Join(getCacheDir(), "usage-stats.json")
-}
-
-// recordRequest increments the daily request counter and persists it.
-//
-// The counter resets at local midnight so error-badge stats stay interpretable ("4req/12m" today).
-func recordRequest() RequestStats {
-	var stats RequestStats
-	data, err := os.ReadFile(getStatsPath())
-	if err == nil {
-		json.Unmarshal(data, &stats)
-	}
-	now := time.Now()
-	if stats.FirstRequest != 0 {
-		first := time.Unix(stats.FirstRequest, 0)
-		y1, m1, d1 := first.Date()
-		y2, m2, d2 := now.Date()
-		if y1 != y2 || m1 != m2 || d1 != d2 {
-			stats = RequestStats{}
-		}
-	}
-	if stats.FirstRequest == 0 {
-		stats.FirstRequest = now.Unix()
-	}
-	stats.Count++
-	if out, err := json.Marshal(stats); err == nil {
-		os.WriteFile(getStatsPath(), out, 0644)
-	}
-	return stats
-}
-
-func getRequestStats() RequestStats {
-	var stats RequestStats
-	data, err := os.ReadFile(getStatsPath())
-	if err == nil {
-		json.Unmarshal(data, &stats)
-	}
-	return stats
-}
-
-func formatStatsDuration(stats RequestStats) string {
-	if stats.FirstRequest == 0 || stats.Count == 0 {
+func formatResetTime(epoch int64) string {
+	if epoch == 0 {
 		return ""
 	}
-	elapsed := time.Since(time.Unix(stats.FirstRequest, 0))
-	if elapsed < time.Minute {
-		return fmt.Sprintf("%dreq/%ds", stats.Count, int(elapsed.Seconds()))
-	}
-	return fmt.Sprintf("%dreq/%dm", stats.Count, int(elapsed.Minutes()))
+	t := time.Unix(epoch, 0).Local()
+	return fmt.Sprintf(" (%02d:%02d)", t.Hour(), t.Minute())
 }
 
-// saveCache persists a response (or a negative-cache entry with errMsg) to disk.
-//
-// Write errors are swallowed — a missing cache just triggers another fetch next render.
-func saveCache(resp *UsageResponse, errMsg string) {
-	cached := CachedUsage{
-		FetchedAt: time.Now().Unix(),
-		Response:  resp,
-		Error:     errMsg,
-	}
-	data, err := json.Marshal(cached)
-	if err != nil {
-		return
-	}
-	os.MkdirAll(getCacheDir(), 0755)
-	os.WriteFile(getCachePath(), data, 0644)
-}
-
-// fetchUsageFromAPI calls the Anthropic OAuth usage endpoint.
-//
-// Returns the parsed response or a short diagnostic: "no auth", "timeout", "rate limited", "auth expired", "http NNN".
-// The error string is user-facing — it's what the statusline renders next to iconError.
-// 2s client timeout so a slow API can't stall the render.
-func fetchUsageFromAPI() (*UsageResponse, string) {
-	token := getAccessToken()
-	if token == "" {
-		return nil, "no auth"
-	}
-
-	recordRequest()
-
-	client := &http.Client{Timeout: 2 * time.Second}
-	req, err := http.NewRequest("GET", "https://api.anthropic.com/api/oauth/usage", nil)
-	if err != nil {
-		return nil, ""
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("anthropic-beta", "oauth-2025-04-20")
-
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, "timeout"
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode == 429 {
-		return nil, "rate limited"
-	}
-	if resp.StatusCode == 401 || resp.StatusCode == 403 {
-		return nil, "auth expired"
-	}
-	if resp.StatusCode != 200 {
-		return nil, fmt.Sprintf("http %d", resp.StatusCode)
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, ""
-	}
-
-	var usage UsageResponse
-	if err := json.Unmarshal(body, &usage); err != nil {
-		return nil, ""
-	}
-
-	return &usage, ""
-}
-
-type usageResult struct {
-	resp *UsageResponse
-	err  string
-}
-
-func getLockPath() string {
-	return filepath.Join(getCacheDir(), "usage-cache.lock")
-}
-
-// getUsageLimits returns usage data, preferring the disk cache.
-//
-// Cache miss path: take a non-blocking flock so at most one render hits the API; others return empty.
-// After acquiring the lock, re-check the cache in case a sibling just populated it.
-func getUsageLimits() usageResult {
-	if cached, ok := loadCache(); ok {
-		return usageResult{resp: cached.Response, err: cached.Error}
-	}
-
-	os.MkdirAll(getCacheDir(), 0755)
-	lockFile, err := os.OpenFile(getLockPath(), os.O_CREATE|os.O_RDWR, 0644)
-	if err != nil {
-		// Lock unavailable — fetch anyway; stale data beats no data.
-		resp, errMsg := fetchUsageFromAPI()
-		return usageResult{resp: resp, err: errMsg}
-	}
-	defer lockFile.Close()
-
-	if err := syscall.Flock(int(lockFile.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
-		// Another render is fetching; yield rather than block prompt drawing.
-		return usageResult{}
-	}
-	defer syscall.Flock(int(lockFile.Fd()), syscall.LOCK_UN)
-
-	// Double-check: a sibling may have written the cache while we waited.
-	if cached, ok := loadCache(); ok {
-		return usageResult{resp: cached.Response, err: cached.Error}
-	}
-
-	resp, errMsg := fetchUsageFromAPI()
-	saveCache(resp, errMsg)
-	return usageResult{resp: resp, err: errMsg}
-}
-
-// formatResetTime renders an RFC3339 timestamp as " (3pm)" in local time for the 5-hour window reset.
-//
-// Returns "" if parsing fails.
-func formatResetTime(isoTime string) string {
-	if isoTime == "" {
+func formatResetDate(epoch int64) string {
+	if epoch == 0 {
 		return ""
 	}
-	t, err := time.Parse(time.RFC3339, isoTime)
-	if err != nil {
-		return ""
-	}
-	hour := t.Local().Hour()
-	suffix := "am"
-	if hour >= 12 {
-		suffix = "pm"
-		if hour > 12 {
-			hour -= 12
-		}
-	}
-	if hour == 0 {
-		hour = 12
-	}
-	return fmt.Sprintf(" (%d%s)", hour, suffix)
-}
-
-// formatResetDate renders an RFC3339 timestamp as " (M/D)" in local time for the 7-day window reset.
-//
-// Returns "" if parsing fails.
-func formatResetDate(isoTime string) string {
-	if isoTime == "" {
-		return ""
-	}
-	t, err := time.Parse(time.RFC3339, isoTime)
-	if err != nil {
-		return ""
-	}
-	return fmt.Sprintf(" (%d/%d)", t.Local().Month(), t.Local().Day())
+	t := time.Unix(epoch, 0).Local()
+	return fmt.Sprintf(" (%02d/%02d %02d:%02d)", t.Month(), t.Day(), t.Hour(), t.Minute())
 }
 
 // ╭────────────────────────────────────────────────────────────────────────────╮
@@ -1019,22 +372,7 @@ func main() {
 
 	dir := input.Workspace.CurrentDir
 	home, _ := os.UserHomeDir()
-
-	// Fan out git and usage lookups — both are I/O-bound and independent.
-	var wg sync.WaitGroup
-	var gitStatus *GitStatus
-	var usage usageResult
-
-	wg.Add(2)
-	go func() {
-		defer wg.Done()
-		gitStatus = getGitStatus(dir)
-	}()
-	go func() {
-		defer wg.Done()
-		usage = getUsageLimits()
-	}()
-	wg.Wait()
+	gitStatus := getGitStatus(dir)
 
 	var out strings.Builder
 
@@ -1057,15 +395,10 @@ func main() {
 
 	// ├─ model name + effort level ──────────────────────────────────────────────┤
 	if input.Model.DisplayName != "" {
-		name := input.Model.DisplayName
-		// DisplayName often includes a parenthetical (e.g. "Sonnet 4.5 (1M)"); trim it.
-		if i := strings.Index(name, " ("); i >= 0 {
-			name = name[:i]
-		}
-		level := getEffortLevel(input.SessionID)
+		level := input.Effort.Level
 		icon, color := effortIcon(level)
 		out.WriteString(gray + sep + reset)
-		fmt.Fprintf(&out, "%s%s %s%s", color, icon, name, reset)
+		fmt.Fprintf(&out, "%s%s %s%s", color, icon, input.Model.DisplayName, reset)
 	}
 
 	// ├─ context window bar ─────────────────────────────────────────────────────┤
@@ -1086,32 +419,20 @@ func main() {
 	}
 
 	// ├─ rate-limit gauges (5-hour / 7-day) ─────────────────────────────────────┤
-	if usage.resp != nil {
-		if usage.resp.FiveHour != nil {
-			pct := int(usage.resp.FiveHour.Utilization)
+	if input.RateLimits != nil {
+		if fh := input.RateLimits.FiveHour; fh != nil {
+			pct := int(fh.UsedPercentage)
 			color := pctColor(pct)
 			icon := progressIcon(pct)
-			resetTime := formatResetTime(usage.resp.FiveHour.ResetsAt)
 			out.WriteString(gray + sep + reset)
-			fmt.Fprintf(&out, "%s%s %d%%%s%s", color, icon, pct, resetTime, reset)
+			fmt.Fprintf(&out, "%s%s %d%%%s%s", color, icon, pct, formatResetTime(fh.ResetsAt), reset)
 		}
-
-		if usage.resp.SevenDay != nil {
-			pct := int(usage.resp.SevenDay.Utilization)
+		if sd := input.RateLimits.SevenDay; sd != nil {
+			pct := int(sd.UsedPercentage)
 			color := pctColor(pct)
 			icon := progressIcon(pct)
-			resetDate := formatResetDate(usage.resp.SevenDay.ResetsAt)
 			out.WriteString(gray + sep + reset)
-			fmt.Fprintf(&out, "%s%s %d%%%s%s", color, icon, pct, resetDate, reset)
-		}
-	} else if usage.err != "" {
-		stats := getRequestStats()
-		statStr := formatStatsDuration(stats)
-		out.WriteString(gray + sep + reset)
-		if statStr != "" {
-			fmt.Fprintf(&out, "%s%s %s %s(%s)%s", brRed, iconError, usage.err, gray, statStr, reset)
-		} else {
-			fmt.Fprintf(&out, "%s%s %s%s", brRed, iconError, usage.err, reset)
+			fmt.Fprintf(&out, "%s%s %d%%%s%s", color, icon, pct, formatResetDate(sd.ResetsAt), reset)
 		}
 	}
 
