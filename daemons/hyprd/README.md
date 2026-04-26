@@ -1,6 +1,8 @@
 # hyprd
 
-Window management daemon for Hyprland. Connects to Hyprland's IPC sockets to track workspace changes and window events, then exposes commands and state over a Unix socket.
+Hyprland daemon and CLI.
+Connects to Hyprland's IPC sockets to manage windows, workspaces, and sessions, then exposes commands over a Unix socket.
+CLI-only tools (screenshot, SSH) run directly without the daemon.
 
 ## Structure
 
@@ -10,6 +12,13 @@ hyprd/
 ├── daemon.go                   # lifecycle, server setup, command dispatch table
 ├── events.go                   # Hyprland event subscription loop → state updates
 ├── hyprd.service               # systemd user unit
+│
+├── cli/                        # CLI-only commands (no daemon socket, run directly)
+│   ├── screenshot.go           #   region screenshot: wayfreeze + grim + satty
+│   └── ssh.go                  #   PAM-driven SSH key loading via ssh-agent
+│
+├── vpn/                        # VPN connection management via NetworkManager
+│   └── vpn.go                  #   list, status, toggle, up, down (nmcli)
 │
 ├── browser/                    # Firefox session snapshot and restore
 │   ├── browser.go              #   subcommand dispatch (windows/snapshot/show/hypr/restore)
@@ -78,8 +87,10 @@ hyprd/
 | Window types that make up a session | `config/hyprd.yaml` → `three_body.*` |
 | Which session opens on which workspace at boot | `config/hyprd.yaml` → `sessions` entries with `init: true` |
 | Command routing (CLI → daemon) | `main.go` → `daemon.go` dispatch table |
+| CLI-only tools (no daemon needed) | `cli/` — screenshot, SSH |
 | Hyprland event → state update | `events.go` |
-| Adding a new `hyprd <cmd>` action | add file in `wm/`, register in `daemon.go` |
+| Adding a new daemon command | add file in `wm/`, register in `daemon.go` |
+| Adding a new CLI-only tool | add file in `cli/`, register in `main.go` |
 | Notification styling and sounds | `config/hyprd.yaml` → `notify.*`, logic in `notify/handler.go` |
 | Notification click-to-focus | `notify/actions.go` — D-Bus ActionInvoked listener |
 | Kitty tab profiles (editor/agents/leadpier) | `config/hyprd.yaml` → `tabs.*`, logic in `session/tab.go` + `tabs.go` |
@@ -187,6 +198,19 @@ hyprd browser hypr <name>
 hyprd browser restore <name> [--mode urls|exact] [--force] [--dry-run]
 ```
 
+### Screenshot
+
+```bash
+hyprd screenshot              # region screenshot to clipboard (wayfreeze + grim)
+hyprd screenshot annotate     # region screenshot → satty annotation → clipboard
+```
+
+### SSH
+
+```bash
+hyprd ssh pam-load            # load SSH keys via PAM auth token (called from hyprlock)
+```
+
 ### Notifications
 
 ```bash
@@ -195,6 +219,21 @@ hyprd notify hook opencode            # read OpenCode notify JSON from argv/stdi
 hyprd notify dunst                    # handle Dunst script callbacks
 hyprd notify kitty-finish <command>   # emit kitty command-finish notification
 ```
+
+### VPN
+
+```bash
+hyprd vpn work             # toggle configured NetworkManager VPN alias
+hyprd vpn work up|down     # connect/disconnect explicitly
+hyprd vpn work status      # status for one alias/connection
+hyprd vpn install work     # import staged .nmconnection into NetworkManager
+hyprd vpn install work --replace
+hyprd vpn export work      # export NetworkManager profile to staged file
+hyprd vpn status           # active VPN summary
+hyprd vpn list             # list NetworkManager VPN connections
+```
+
+VPN aliases live in `config/hyprd.yaml` under `vpn.connections`. Importable profiles are staged under `~/.local/share/dotfiles/vpn/` and should be encrypted through `etc/secrets`; live imported connections and keyring passwords stay in NetworkManager.
 
 ### Query and subscribe
 
