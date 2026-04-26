@@ -20,14 +20,14 @@
 )
 
 (defvar network-hover false)
-(defvar vpn-name "TrendCapitalVPN")
+(defvar vpn-name "work")
 
 (defwidget network []
   (eventbox
     :onhover "eww update network-hover=true"
     :onhoverlost "eww update network-hover=false"
     :onclick "${terminal} --title='terminalfloat' -e nmtui & disown"
-    :onmiddleclick "nmcli connection ${net-info.vpn ? 'down' : 'up'} '${vpn-name}'"
+    :onmiddleclick "hyprd vpn ${vpn-name}"
     :cursor "pointer"
     (box
       :class "computerbox ${network-hover ? "computerbox-hover" : "" }"

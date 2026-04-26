@@ -20,9 +20,22 @@ type HyprConfig struct {
 	Bluetooth  BluetoothConfig       `yaml:"bluetooth"`
 	Init       InitConfig            `yaml:"init"`
 	Notify     NotifyConfig          `yaml:"notify"`
+	VPN        VPNConfig             `yaml:"vpn"`
 	Windows    WindowsConfig         `yaml:"windows"`
 	Tabs       map[string]TabProfile `yaml:"tabs"`
 	Sessions   SessionsConfig        `yaml:"sessions"`
+}
+
+// VPNConfig maps portable aliases to local NetworkManager connection profiles.
+type VPNConfig struct {
+	Connections map[string]VPNConnection `yaml:"connections"`
+}
+
+// VPNConnection describes a NetworkManager VPN profile managed by hyprd.
+type VPNConnection struct {
+	Name    string `yaml:"name"`    // NetworkManager connection name
+	Type    string `yaml:"type"`    // nmcli import type, e.g. l2tp, openvpn, wireguard
+	Profile string `yaml:"profile"` // staged import/export file under $HOME
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -80,11 +93,11 @@ type SplitConfig struct {
 type NotifyConfig struct {
 	DefaultVolume       int                    `yaml:"default_volume"`        // percentage (100 = paplay 65536)
 	Styles              map[string]VisualStyle `yaml:"styles"`                // named color themes for dunst hints
-	AgentEvents         map[string]AgentEvent  `yaml:"agent_events"`         // event class -> style + sound + timing
-	UrgencySounds       map[string]string      `yaml:"urgency_sounds"`       // urgency -> sound name (or "none")
-	AppSounds           map[string]string      `yaml:"app_sounds"`           // app name -> sound name; takes precedence over urgency
-	SilentApps          []string               `yaml:"silent_apps"`          // external app names that suppress sound entirely
-	KittySilentPatterns []string               `yaml:"kitty_silent_patterns"`// substrings in kitty notification content that suppress sound
+	AgentEvents         map[string]AgentEvent  `yaml:"agent_events"`          // event class -> style + sound + timing
+	UrgencySounds       map[string]string      `yaml:"urgency_sounds"`        // urgency -> sound name (or "none")
+	AppSounds           map[string]string      `yaml:"app_sounds"`            // app name -> sound name; takes precedence over urgency
+	SilentApps          []string               `yaml:"silent_apps"`           // external app names that suppress sound entirely
+	KittySilentPatterns []string               `yaml:"kitty_silent_patterns"` // substrings in kitty notification content that suppress sound
 }
 
 // VisualStyle defines dunst color hints for a notification theme.
