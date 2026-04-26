@@ -182,7 +182,7 @@ STEP_DEFS=(
     "hibernate|Configure swapfile and suspend-then-hibernate|yes|"
     "fonts|Extract fonts and optionally build Iosevka|no|"
     "go|Build Go binaries (hyprd, ewwd, statusline, newtab)|no|"
-    "eww|Install eww (EWW_BUILD=1 EWW_POLL_INTERVAL_MS=500 to rebuild)|no|"
+    "eww|Install eww widget system|no|"
     "firefox|Configure Firefox profile, theme, and preferences|no|repos"
     "shell|Change default shell to zsh|yes|"
     "dns|Set up systemd-resolved with Cloudflare DNS-over-TLS|yes|system"
@@ -1713,34 +1713,37 @@ step_eww() {
     header "Installing eww"
 
     local eww_bin="$HOME/.local/bin/eww"
+    local eww_src="${XDG_CACHE_HOME:-$HOME/.cache}/eww"
+    local poll_ms="${EWW_POLL_INTERVAL_MS:-500}"
 
-    if [[ "${EWW_BUILD:-0}" == "1" ]]; then
-        info "Building eww from source with Wayland support..."
-        has cargo || { err "cargo not found — install rustup and run: rustup default stable"; return 1; }
-        local eww_src="${XDG_CACHE_HOME:-$HOME/.cache}/eww"
-        local poll_ms="${EWW_POLL_INTERVAL_MS:-500}"
-        if [[ -d "$eww_src/.git" ]]; then
-            git -C "$eww_src" checkout -- .
-            git -C "$eww_src" pull --ff-only
-        else
-            rm -rf "$eww_src"
-            git clone https://github.com/elkowar/eww.git "$eww_src"
+    if [[ -x "$eww_bin" ]]; then
+        "$eww_bin" --version
+        if ! confirm "Rebuild eww from source?" "n"; then
+            ok "Keeping existing eww"
+            return 0
         fi
-
-        info "Applying poll interval patch..."
-        git -C "$eww_src" apply "$DOTFILES/etc/eww-poll-interval.patch"
-
-        info "Building with EWW_POLL_INTERVAL_MS=${poll_ms}..."
-        (cd "$eww_src" && EWW_POLL_INTERVAL_MS="$poll_ms" cargo build --release --no-default-features --features=wayland)
-        strip "$eww_src/target/release/eww"
-        mkdir -p "$(dirname "$eww_bin")"
-        install -Dm755 "$eww_src/target/release/eww" "$eww_bin"
-        ok "eww built (poll interval: ${poll_ms}ms) and installed to $eww_bin"
     fi
 
-    [[ -x "$eww_bin" ]] || { err "eww not found at $eww_bin — run with EWW_BUILD=1 to build from source"; return 1; }
+    info "Building eww from source with Wayland support..."
+    has cargo || { err "cargo not found — install rustup and run: rustup default stable"; return 1; }
 
-    "$eww_bin" --version
+    if [[ -d "$eww_src/.git" ]]; then
+        git -C "$eww_src" checkout -- .
+        git -C "$eww_src" pull --ff-only
+    else
+        rm -rf "$eww_src"
+        git clone https://github.com/elkowar/eww.git "$eww_src"
+    fi
+
+    info "Applying poll interval patch..."
+    git -C "$eww_src" apply "$DOTFILES/etc/eww-poll-interval.patch"
+
+    info "Building with EWW_POLL_INTERVAL_MS=${poll_ms}..."
+    (cd "$eww_src" && EWW_POLL_INTERVAL_MS="$poll_ms" cargo build --release --no-default-features --features=wayland)
+    strip "$eww_src/target/release/eww"
+    mkdir -p "$(dirname "$eww_bin")"
+    install -Dm755 "$eww_src/target/release/eww" "$eww_bin"
+    ok "eww built (poll interval: ${poll_ms}ms) and installed to $eww_bin"
 }
 
 healthcheck_eww() {
