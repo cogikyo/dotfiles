@@ -121,8 +121,8 @@ tabs:
       - { name: fe-nvim,  title: "«   »", command: nvim,         cwd: "~/LeadPier/frontend" }
       - { name: be-nvim,  title: "«   »", command: nvim,         cwd: "~/LeadPier/backend" }
       - { name: nvim,     title: "« 󰠳  »", command: nvim,         cwd: "~/LeadPier" }
-      - { name: fe-build, title: "«   »", command: "yarn dev",   cwd: "~/LeadPier/frontend",            layout: "fat:bias=80", panes: [{ cwd: "~/LeadPier/frontend" }] }
-      - { name: be-build, title: "«   »", command: "pier watch", cwd: "~/LeadPier/backend/core/runner", layout: "fat:bias=80", panes: [{ cwd: "~/LeadPier/backend/core/runner" }] }
+      - { name: fe-build, title: "«   »", command: lazygit,       cwd: "~/LeadPier/frontend",          layout: "fat:bias=80", panes: [{ command: "yarn dev", cwd: "~/LeadPier/frontend" }] }
+      - { name: be-build, title: "«   »", command: "cd $(grep -m1 backend/services ~/.local/state/lazygit/state.yml | awk '{print $NF}') && lazygit", cwd: "~/LeadPier/backend", layout: "fat:bias=80", panes: [{ command: "pier watch", cwd: "~/LeadPier/backend/core/runner" }] }
 
 # ╭───────────────────────────────────────────────────────────────────────────────╮
 # │ background                                                                    │
