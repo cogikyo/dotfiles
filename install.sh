@@ -455,6 +455,26 @@ is_yay_usable() {
     yay --version &>/dev/null
 }
 
+sync_ignorepkg() {
+    local ignore_file="$DOTFILES/etc/pacman.d/ignore.conf"
+    [[ -f "$ignore_file" ]] || return 0
+
+    local pkgs
+    pkgs=$(grep -v '^#' "$ignore_file" | grep -v '^$' | tr '\n' ' ' | sed 's/ $//')
+    [[ -n "$pkgs" ]] || return 0
+
+    local pacman_conf="/etc/pacman.conf"
+    if grep -q '^IgnorePkg' "$pacman_conf"; then
+        sudo sed -i "s/^IgnorePkg.*$/IgnorePkg = $pkgs/" "$pacman_conf"
+    elif grep -q '^#IgnorePkg' "$pacman_conf"; then
+        sudo sed -i "s/^#IgnorePkg.*/IgnorePkg = $pkgs/" "$pacman_conf"
+    else
+        printf '\nIgnorePkg = %s\n' "$pkgs" | sudo tee -a "$pacman_conf" >/dev/null
+    fi
+
+    ok "IgnorePkg synced ($(wc -w <<< "$pkgs") packages)"
+}
+
 needs_sudo() {
     if [[ $EUID -eq 0 ]]; then
         return 0
@@ -520,6 +540,7 @@ step_packages() {
     header "Installing packages"
 
     needs_sudo
+    sync_ignorepkg
 
     # Only bootstrap yay if no localrepo (non-ISO install)
     if ! grep -q '^\[localrepo\]' /etc/pacman.conf 2>/dev/null; then
@@ -533,10 +554,18 @@ step_packages() {
         local opt_list="$DOTFILES/etc/packages-optional.lst"
         if [[ -f "$opt_list" ]]; then
             local opt_pkgs=()
+            local opt_ignore=""
             mapfile -t opt_pkgs < <(sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$opt_list")
+            if [[ -f "$DOTFILES/etc/pacman.d/ignore.conf" ]]; then
+                opt_ignore=$(sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$DOTFILES/etc/pacman.d/ignore.conf" | paste -sd, -)
+            fi
             if (( ${#opt_pkgs[@]} > 0 )); then
                 info "Installing ${#opt_pkgs[@]} optional packages..."
-                yay -S --needed "${opt_pkgs[@]}"
+                if [[ -n "$opt_ignore" ]]; then
+                    yay -S --needed --ignore "$opt_ignore" "${opt_pkgs[@]}"
+                else
+                    yay -S --needed "${opt_pkgs[@]}"
+                fi
             fi
         else
             warn "Optional package list not found: $opt_list"
@@ -1108,21 +1137,7 @@ step_system() {
 
     ok "Installed $installed system configs ($skipped already up to date)"
 
-    # Sync IgnorePkg from dotfiles ignore list
-    local ignore_file="$DOTFILES/etc/pacman.d/ignore.conf"
-    if [[ -f "$ignore_file" ]]; then
-        local pkgs
-        pkgs=$(grep -v '^#' "$ignore_file" | grep -v '^$' | tr '\n' ' ' | sed 's/ $//')
-        if [[ -n "$pkgs" ]]; then
-            local pacman_conf="/etc/pacman.conf"
-            if grep -q '^IgnorePkg' "$pacman_conf"; then
-                sudo sed -i "s/^IgnorePkg.*$/IgnorePkg = $pkgs/" "$pacman_conf"
-            else
-                sudo sed -i "s/^#IgnorePkg.*/IgnorePkg = $pkgs/" "$pacman_conf"
-            fi
-            ok "IgnorePkg synced ($(echo "$pkgs" | wc -w) packages)"
-        fi
-    fi
+    sync_ignorepkg
 
     # Enable services
     echo
