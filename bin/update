@@ -33,6 +33,28 @@ require_yay() {
   has yay || { error "yay not found. Run install.sh packages first."; exit 1; }
 }
 
+ignore_csv() {
+  local ignore_file="$DOTFILES/etc/pacman.d/ignore.conf"
+  [[ -f "$ignore_file" ]] || return 0
+  sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$ignore_file" | paste -sd, -
+}
+
+ignore_list() {
+  local ignore_file="$DOTFILES/etc/pacman.d/ignore.conf"
+  [[ -f "$ignore_file" ]] || return 0
+  sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$ignore_file"
+}
+
+pkg_in_list() {
+  local needle="$1"
+  shift
+  local item
+  for item in "$@"; do
+    [[ "$item" == "$needle" ]] && return 0
+  done
+  return 1
+}
+
 # -git packages that have stable/binary alternatives
 # format: git-name|alternative|reason
 REPLACEMENTS=(
@@ -96,7 +118,13 @@ do_update() {
   require_yay
 
   info "Updating system..."
-  yay -Syu
+  local ignore
+  ignore=$(ignore_csv)
+  if [[ -n "$ignore" ]]; then
+    yay --ignore "$ignore" -Syu
+  else
+    yay -Syu
+  fi
 
   info "Removing orphaned packages..."
   local orphan_list=()
@@ -144,12 +172,10 @@ do_install() {
     exit 1
   fi
 
-  # Sync package databases
-  info "Syncing package databases..."
-  sudo pacman -Sy --noconfirm
-
   # Detect localrepo (ISO install path — all packages are pre-built)
   local has_localrepo=0
+  local ignore
+  ignore=$(ignore_csv)
   if grep -q '^\[localrepo\]' /etc/pacman.conf 2>/dev/null; then
     local cached
     cached=$(pacman -Sl localrepo 2>/dev/null | wc -l)
@@ -159,11 +185,24 @@ do_install() {
 
   # Repo packages
   local repo_pkgs=()
+  local filtered_repo_pkgs=()
+  local ignored_pkgs=()
   mapfile -t repo_pkgs < <(sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$PKG_LIST")
+  mapfile -t ignored_pkgs < <(ignore_list)
+  local pkg
+  for pkg in "${repo_pkgs[@]}"; do
+    if pkg_in_list "$pkg" "${ignored_pkgs[@]}" && pacman -Qq "$pkg" &>/dev/null; then
+      continue
+    fi
+    filtered_repo_pkgs+=("$pkg")
+  done
+  repo_pkgs=("${filtered_repo_pkgs[@]}")
   local pkg_count=${#repo_pkgs[@]}
   if (( pkg_count > 0 )); then
-    info "Installing $pkg_count repo packages..."
-    sudo pacman -S --needed --noconfirm "${repo_pkgs[@]}"
+    info "Installing and upgrading $pkg_count repo packages..."
+    local pacman_cmd=(sudo pacman -Syu --needed --noconfirm)
+    [[ -n "$ignore" ]] && pacman_cmd+=(--ignore "$ignore")
+    "${pacman_cmd[@]}" "${repo_pkgs[@]}"
     success "Repo packages done"
   fi
 
@@ -185,16 +224,22 @@ do_install() {
       if [[ $has_localrepo -eq 1 ]]; then
         info "Installing $aur_count AUR packages from local cache..."
         install_cmd=(sudo pacman -S --needed --noconfirm)
+        [[ -n "$ignore" ]] && install_cmd+=(--ignore "$ignore")
       else
         require_yay
         local yay_flags=(--needed)
         [[ $noninteractive -eq 1 ]] && yay_flags+=(--noconfirm)
+        [[ -n "$ignore" ]] && yay_flags+=(--ignore "$ignore")
         info "Installing $aur_count AUR packages from AUR (one at a time)..."
         install_cmd=(yay -S "${yay_flags[@]}")
       fi
 
       local aur_failed=() aur_installed=0 aur_skipped=0
       for pkg in "${aur_pkgs[@]}"; do
+        if pkg_in_list "$pkg" "${ignored_pkgs[@]}" && pacman -Qq "$pkg" &>/dev/null; then
+          ((++aur_skipped))
+          continue
+        fi
         if pacman -Qq "$pkg" &>/dev/null; then
           ((++aur_skipped))
           continue
