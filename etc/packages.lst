@@ -113,6 +113,7 @@ spotify-launcher
 sqlc
 starship
 strongswan
+sudo
 tailscale
 tailwindcss-language-server
 thunar
@@ -134,6 +135,7 @@ wget
 wireplumber
 wl-clipboard
 words
+wpa_supplicant
 xdg-desktop-portal-gtk
 xdg-desktop-portal-hyprland
 xplr
