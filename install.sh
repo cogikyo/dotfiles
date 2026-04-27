@@ -1522,6 +1522,41 @@ build_go_binary() {
     ok "Installed $name -> $install_dir/$name"
 }
 
+restart_hyprd_after_build() {
+    if ! has_user_bus; then
+        warn "hyprd rebuilt, but no user session bus is available for restart"
+        return "$STEP_SKIPPED_RC"
+    fi
+
+    if systemctl --user is-active hyprd &>/dev/null; then
+        info "Restarting hyprd..."
+        systemctl --user restart hyprd
+        ok "hyprd restarted"
+    else
+        ok "hyprd installed (will start with Hyprland)"
+    fi
+}
+
+build_or_rebuild_hyprd() {
+    if ! pgrep -x hyprd &>/dev/null; then
+        build_go_binary hyprd
+        return $?
+    fi
+
+    info "hyprd is running — trying hot-rebuild"
+    if hyprd rebuild; then
+        ok "hyprd rebuilt and hot-restarted"
+        return 0
+    fi
+
+    warn "hyprd rebuild unavailable or failed; falling back to normal rebuild + restart"
+    build_go_binary hyprd || return 1
+    restart_hyprd_after_build
+    local rc=$?
+    [[ $rc -eq 0 || $rc -eq "$STEP_SKIPPED_RC" ]] || return "$rc"
+    return 0
+}
+
 # Daemons whose lifecycle is tied to Hyprland — started by hyprland.conf's
 # exec-once (so they inherit WAYLAND_DISPLAY), not by default.target.
 HYPRLAND_LIFECYCLE_DAEMONS=(hyprd)
@@ -1615,13 +1650,11 @@ step_go() {
     local built=0
 
     for name in "${!GO_BINARIES[@]}"; do
-        if [[ "$name" == "hyprd" ]] && pgrep -x hyprd &>/dev/null; then
-            info "hyprd is running — using hot-rebuild"
-            if hyprd rebuild; then
-                ok "hyprd rebuilt and hot-restarted"
+        if [[ "$name" == "hyprd" ]]; then
+            if build_or_rebuild_hyprd; then
                 ((++built))
             else
-                err "hyprd rebuild failed"
+                err "hyprd build failed"
                 ((++failed))
             fi
             continue
