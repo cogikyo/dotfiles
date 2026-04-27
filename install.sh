@@ -586,6 +586,24 @@ healthcheck_packages() {
         err "Healthcheck failed: yay is not runnable"
         return 1
     fi
+
+    local list pkg
+    local missing=()
+    for list in "$DOTFILES/etc/packages.lst" "$DOTFILES/etc/packages-aur.lst"; do
+        [[ -f "$list" ]] || continue
+        while IFS= read -r pkg; do
+            [[ -n "$pkg" ]] || continue
+            if ! pacman -Qq "$pkg" &>/dev/null; then
+                missing+=("$pkg")
+            fi
+        done < <(sed -e 's/#.*$//' -e '/^[[:space:]]*$/d' "$list")
+    done
+
+    if (( ${#missing[@]} > 0 )); then
+        err "Healthcheck failed: missing packages from saved lists: ${missing[*]}"
+        return 1
+    fi
+
     return 0
 }
 
