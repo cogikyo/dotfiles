@@ -80,7 +80,7 @@ function etree () {
     else
         L=$1
     fi
-    erd -L "$L" --suppress-size --threads 16 --layout inverted
+    erd -L "$L" --suppress-size --threads 16 --dir-order last --sort rname --color force --layout inverted | head -n -2
 }
 
 alias sshadd='ssh-add ~/.ssh/cogikyo ~/.ssh/trend ~/.ssh/cullyn'
