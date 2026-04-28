@@ -6,7 +6,7 @@
 // - Provide lock, picker, and tab-control helpers used by daemon commands.
 package session
 
-// init.go executes boot-time session initialization, including wallpaper, network wait, layout open, and pseudo-lock.
+// init.go executes boot-time session initialization, including wallpaper, optional early lock, network wait, and layout open.
 
 import (
 	"dotfiles/daemons/config"
@@ -19,8 +19,6 @@ import (
 	"strconv"
 	"time"
 )
-
-const lockDelay = 3 * time.Second
 
 var startupExecs = []string{
 	"glava -e bars_rc.glsl",
@@ -42,7 +40,7 @@ func dispatchStartup(h *hypr.Client, bt config.BluetoothConfig) {
 // NotifyFunc delivers a notification to the user, injected to break a cycle with the notify package.
 type NotifyFunc func(app, urgency, title, body string)
 
-// Init drives first-boot session setup: background, network wait, per-workspace layouts, and pseudo-lock.
+// Init drives first-boot session setup: background, optional early lock, network wait, and per-workspace layouts.
 type Init struct {
 	hypr   *hypr.Client
 	state  *state.State
@@ -62,7 +60,7 @@ func (i *Init) SetNotify(fn NotifyFunc) {
 	i.notify = fn
 }
 
-// Execute runs the full init sequence: background, network, workspace layouts, execs, and pseudo-lock.
+// Execute runs the full init sequence: background, optional early lock, network, workspace layouts, and startup execs.
 //
 // Inter-dispatch sleeps are tuned for Hyprland to settle; shortening them races layout application.
 func (i *Init) Execute() (string, error) {
@@ -71,6 +69,14 @@ func (i *Init) Execute() (string, error) {
 
 	EnsureBG(&cfg.Background)
 	fmt.Println("hyprd init: background ready")
+
+	fullLocked := init.Lock && i.lock != nil
+	if fullLocked {
+		fmt.Println("hyprd init: full-locking")
+		if _, err := i.lock.FullImmediate(); err != nil {
+			fmt.Fprintf(os.Stderr, "hyprd init: full-lock: %v\n", err)
+		}
+	}
 
 	if init.NetworkTimeout > 0 {
 		if ok := i.waitNetwork(init.NetworkTimeout); ok {
@@ -95,19 +101,12 @@ func (i *Init) Execute() (string, error) {
 		}
 	}
 
-	dispatchStartup(i.hypr, cfg.Bluetooth)
-
-	if init.Workspace > 0 {
-		i.hypr.Dispatch(fmt.Sprintf("workspace %d", init.Workspace))
+	if !fullLocked {
+		dispatchStartup(i.hypr, cfg.Bluetooth)
 	}
 
-	if init.Lock && i.lock != nil {
-		fmt.Printf("hyprd init: waiting %s before pseudo-lock\n", lockDelay)
-		time.Sleep(lockDelay)
-		fmt.Println("hyprd init: pseudo-locking")
-		if _, err := i.lock.Pseudo(); err != nil {
-			fmt.Fprintf(os.Stderr, "hyprd init: pseudo-lock: %v\n", err)
-		}
+	if init.Workspace > 0 && !fullLocked {
+		i.hypr.Dispatch(fmt.Sprintf("workspace %d", init.Workspace))
 	}
 
 	fmt.Println("hyprd init: complete")

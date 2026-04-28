@@ -7,7 +7,9 @@ import (
 	"dotfiles/daemons/hyprd/state"
 	"encoding/json"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -16,6 +18,8 @@ import (
 
 const pseudoLockWorkspace = 6         // workspace reserved for the visual blackout
 const fullLockGrace = 2 * time.Second // hyprlock cancel window that resumes music
+const fullLockDelay = time.Second     // let killall settle before manual hyprlock takes the display
+const pamLoadFlag = "hyprd-ssh-pam-load"
 
 // Lock owns pseudo-lock and full-lock lifecycles: visual blackout, audio/notification pause, and restore.
 //
@@ -83,6 +87,15 @@ func (l *Lock) Unlock() (string, error) {
 
 // Full runs hyprlock asynchronously with pre/post blackout hooks.
 func (l *Lock) Full() (string, error) {
+	return l.full(fullLockDelay, fullLockGrace, false)
+}
+
+// FullImmediate runs hyprlock without startup delay or grace, for boot-time authentication.
+func (l *Lock) FullImmediate() (string, error) {
+	return l.full(0, 0, true)
+}
+
+func (l *Lock) full(delay, grace time.Duration, loadSSH bool) (string, error) {
 	l.mu.Lock()
 	if l.inFull {
 		l.mu.Unlock()
@@ -98,15 +111,24 @@ func (l *Lock) Full() (string, error) {
 	l.inFull = true
 	l.mu.Unlock()
 
-	go l.runHyprlock(saved)
+	go l.runHyprlock(saved, delay, grace, loadSSH)
 	return "lock: full", nil
 }
 
-func (l *Lock) runHyprlock(saved *lockState) {
-	time.Sleep(time.Second) // let killall settle before hyprlock takes the display
+func (l *Lock) runHyprlock(saved *lockState, delay, grace time.Duration, loadSSH bool) {
+	if delay > 0 {
+		time.Sleep(delay)
+	}
+	if loadSSH {
+		flag := filepath.Join(runtimeDir(), pamLoadFlag)
+		if f, err := os.Create(flag); err == nil {
+			f.Close()
+			defer os.Remove(flag)
+		}
+	}
 
 	start := time.Now()
-	exec.Command("hyprlock", "--grace", strconv.Itoa(int(fullLockGrace/time.Second))).Run()
+	exec.Command("hyprlock", "--grace", strconv.Itoa(int(grace/time.Second))).Run()
 	elapsed := time.Since(start)
 
 	l.mu.Lock()
@@ -117,8 +139,15 @@ func (l *Lock) runHyprlock(saved *lockState) {
 	}
 	l.saved = nil
 	// Only resume music if cancelled inside the grace window; idle-lock wakes silent.
-	resumeMusic := saved.musicPlaying && elapsed <= fullLockGrace
+	resumeMusic := saved.musicPlaying && grace > 0 && elapsed <= grace
 	l.exitBlackout(saved, resumeMusic)
+}
+
+func runtimeDir() string {
+	if dir := os.Getenv("XDG_RUNTIME_DIR"); dir != "" {
+		return dir
+	}
+	return fmt.Sprintf("/run/user/%d", os.Getuid())
 }
 
 // capture snapshots workspace and music state for later restore. Called with l.mu held.

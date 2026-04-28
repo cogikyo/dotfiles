@@ -6,9 +6,12 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"syscall"
 )
+
+const pamLoadFlag = "hyprd-ssh-pam-load"
 
 // SSH dispatches SSH subcommands (currently only pam-load).
 func SSH() {
@@ -20,6 +23,14 @@ func SSH() {
 }
 
 func pamLoad() {
+	runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
+	if runtimeDir == "" {
+		runtimeDir = fmt.Sprintf("/run/user/%d", os.Getuid())
+	}
+	if _, err := os.Stat(filepath.Join(runtimeDir, pamLoadFlag)); err != nil {
+		return
+	}
+
 	authtok, err := readPAMAuthToken()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd ssh pam-load: %v\n", err)
@@ -31,10 +42,6 @@ func pamLoad() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd ssh pam-load: %v\n", err)
 		os.Exit(1)
-	}
-	runtimeDir := os.Getenv("XDG_RUNTIME_DIR")
-	if runtimeDir == "" {
-		runtimeDir = fmt.Sprintf("/run/user/%d", os.Getuid())
 	}
 	exe, err := os.Executable()
 	if err != nil {
