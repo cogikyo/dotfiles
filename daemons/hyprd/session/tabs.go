@@ -311,7 +311,7 @@ func (t *Tabs) buildLaunchArgs(tab config.TabDef, tabID, cwd string) []string {
 	case tab.Command == "xplr":
 		args = append(args, "zsh", "-c", `cd "$(xplr --print-pwd-as-result)" 2>/dev/null; exec zsh`)
 	case tab.Command != "":
-		args = append(args, "--hold", "zsh", "-lc", tab.Command)
+		args = append(args, "--hold", "zsh", "-lic", tab.Command)
 	}
 	return args
 }
@@ -331,7 +331,7 @@ func (t *Tabs) buildPaneLaunchArgs(tabID string, pane config.TabPane, cwd string
 	}
 	switch {
 	case pane.Command != "":
-		args = append(args, "--hold", "zsh", "-lc", pane.Command)
+		args = append(args, "--hold", "zsh", "-lic", pane.Command)
 	}
 	return args
 }
