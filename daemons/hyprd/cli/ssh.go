@@ -1,9 +1,11 @@
 package cli
 
-// ssh.go implements PAM-driven SSH key loading via ssh-agent.
+// ssh.go implements PAM-driven secret loading: SSH keys via ssh-agent and gnome-keyring unlock.
 
 import (
+	"encoding/binary"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -37,6 +39,8 @@ func pamLoad() {
 		os.Exit(1)
 	}
 	defer os.Unsetenv("_SSH_AUTHTOK")
+
+	unlockKeyring(authtok, runtimeDir)
 
 	home, err := os.UserHomeDir()
 	if err != nil {
@@ -96,4 +100,21 @@ func readPAMAuthToken() (string, error) {
 		return "", fmt.Errorf("empty PAM auth token")
 	}
 	return tok, nil
+}
+
+// unlockKeyring unlocks the gnome-keyring login keyring via the daemon's control socket protocol.
+func unlockKeyring(password, runtimeDir string) {
+	conn, err := net.Dial("unix", filepath.Join(runtimeDir, "keyring", "control"))
+	if err != nil {
+		return
+	}
+	defer conn.Close()
+
+	const opUnlock = 2
+	buf := make([]byte, 12+len(password))
+	binary.BigEndian.PutUint32(buf[0:], opUnlock)
+	binary.BigEndian.PutUint32(buf[4:], 1)
+	binary.BigEndian.PutUint32(buf[8:], uint32(len(password)))
+	copy(buf[12:], password)
+	conn.Write(buf)
 }
