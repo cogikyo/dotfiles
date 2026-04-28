@@ -105,41 +105,7 @@ func (b *Browser) writeSnapshot(name string, profile firefoxProfile, windowIndex
 		return "", err
 	}
 
-	sessionData, err := snapshotSessionJSON(store.Payload, windowIndex)
-	if err != nil {
-		return "", err
-	}
-	sessionData = append(sessionData, '\n')
-	if err := os.WriteFile(filepath.Join(dir, "session.json"), sessionData, 0o644); err != nil {
-		return "", err
-	}
-
 	return dir, nil
-}
-
-// snapshotSessionJSON narrows the session to a single window, preserving all other top-level keys verbatim.
-func snapshotSessionJSON(payload []byte, windowIndex int) ([]byte, error) {
-	var doc map[string]json.RawMessage
-	if err := json.Unmarshal(payload, &doc); err != nil {
-		return nil, fmt.Errorf("unmarshal session envelope: %w", err)
-	}
-
-	var windows []json.RawMessage
-	if err := json.Unmarshal(doc["windows"], &windows); err != nil {
-		return nil, fmt.Errorf("unmarshal windows array: %w", err)
-	}
-	if windowIndex < 0 || windowIndex >= len(windows) {
-		return nil, fmt.Errorf("window index %d is out of range", windowIndex+1)
-	}
-
-	narrowed, err := json.Marshal([]json.RawMessage{windows[windowIndex]})
-	if err != nil {
-		return nil, err
-	}
-	doc["windows"] = narrowed
-	doc["selectedWindow"] = json.RawMessage(`1`)
-	doc["_closedWindows"] = json.RawMessage(`[]`)
-	return json.MarshalIndent(doc, "", "  ")
 }
 
 // summarizeFirefoxWindow projects a session-store window into a launch-ready BrowserConfig.
@@ -234,6 +200,125 @@ func summarizeFirefoxWindow(window firefoxWindow) browserWindowSummary {
 	}
 }
 
+// SnapshotSelectedTitle returns the selected tab title from a named snapshot's metadata.
+func SnapshotSelectedTitle(name string) (string, error) {
+	dir, err := resolveSnapshotDir(name)
+	if err != nil {
+		return "", err
+	}
+	data, err := os.ReadFile(filepath.Join(dir, "snapshot.yaml"))
+	if err != nil {
+		return "", err
+	}
+	var summary browserSnapshotSummary
+	if err := yaml.Unmarshal(data, &summary); err != nil {
+		return "", err
+	}
+	return summary.Window.SelectedTitle, nil
+}
+
+// ClaimWindow finds a Firefox window matching the snapshot's selected title and moves it to the target workspace.
+func (b *Browser) ClaimWindow(snapshot string, workspace int) error {
+	if b.hypr == nil {
+		return fmt.Errorf("no hyprland client")
+	}
+
+	title, err := SnapshotSelectedTitle(snapshot)
+	if err != nil {
+		return err
+	}
+
+	clients, err := b.hypr.Clients()
+	if err != nil {
+		return err
+	}
+
+	for _, c := range clients {
+		if !strings.Contains(strings.ToLower(c.Class), "firefox") {
+			continue
+		}
+		if c.Workspace.ID == workspace {
+			return nil
+		}
+		if titlesMatch(trimFirefoxTitle(c.Title), title) {
+			return b.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", workspace, c.Address))
+		}
+	}
+
+	return fmt.Errorf("no Firefox window matching %q for snapshot %q", title, snapshot)
+}
+
+// buildSessionPayload constructs a minimal Firefox session JSON from snapshot metadata.
+// This avoids storing raw Firefox session data (which contains cookies, formdata, storage).
+func buildSessionPayload(dir string) ([]byte, error) {
+	data, err := os.ReadFile(filepath.Join(dir, "snapshot.yaml"))
+	if err != nil {
+		return nil, err
+	}
+	var meta browserSnapshotSummary
+	if err := yaml.Unmarshal(data, &meta); err != nil {
+		return nil, err
+	}
+
+	tabs := make([]map[string]any, 0, len(meta.Tabs))
+	for _, tab := range meta.Tabs {
+		t := map[string]any{
+			"entries": []map[string]string{{"url": tab.URL, "title": tab.Title}},
+			"index":   1,
+		}
+		if tab.Pinned {
+			t["pinned"] = true
+		}
+		if tab.Hidden {
+			t["hidden"] = true
+		}
+		if tab.GroupID != "" {
+			t["groupId"] = tab.GroupID
+		}
+		tabs = append(tabs, t)
+	}
+
+	seen := map[string]bool{}
+	var groups []map[string]any
+	for _, tab := range meta.Tabs {
+		if tab.GroupID == "" || seen[tab.GroupID] {
+			continue
+		}
+		seen[tab.GroupID] = true
+		groups = append(groups, map[string]any{
+			"id":    tab.GroupID,
+			"name":  tab.Group,
+			"color": tab.GroupColor,
+		})
+	}
+
+	window := map[string]any{
+		"tabs":     tabs,
+		"selected": meta.Window.SelectedTab,
+	}
+	if len(groups) > 0 {
+		window["groups"] = groups
+	}
+
+	session := map[string]any{
+		"version":        []any{"sessionrestore", 1},
+		"windows":        []any{window},
+		"selectedWindow": 1,
+		"_closedWindows": []any{},
+	}
+	return json.MarshalIndent(session, "", "  ")
+}
+
+// loadSnapshotPayload returns Firefox session JSON for a named snapshot,
+// generating it from snapshot.yaml metadata.
+func loadSnapshotPayload(name string) ([]byte, error) {
+	dir, err := resolveSnapshotDir(name)
+	if err != nil {
+		return nil, err
+	}
+	return buildSessionPayload(dir)
+}
+
 func resolveSnapshotDir(name string) (string, error) {
 	slug, err := slugifySnapshotName(name)
 	if err != nil {
@@ -242,7 +327,7 @@ func resolveSnapshotDir(name string) (string, error) {
 
 	for _, root := range snapshotRoots() {
 		dir := filepath.Join(root, slug)
-		if fileExists(filepath.Join(dir, "session.json")) {
+		if fileExists(filepath.Join(dir, "snapshot.yaml")) {
 			return dir, nil
 		}
 	}

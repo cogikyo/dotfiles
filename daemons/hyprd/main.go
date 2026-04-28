@@ -22,11 +22,6 @@ import (
 var client = daemon.NewClient(SocketPath)
 
 func main() {
-	if os.Getenv("HYPRD_SSH_ASKPASS") == "1" {
-		fmt.Println(os.Getenv("_SSH_AUTHTOK"))
-		return
-	}
-
 	if len(os.Args) < 2 {
 		runDaemon()
 		return

@@ -5,7 +5,6 @@ package browser
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"path/filepath"
 	"strconv"
 )
@@ -78,11 +77,11 @@ func (b *Browser) loadSnapshotSession(name string) (string, *firefoxSessionStore
 	if err != nil {
 		return "", nil, err
 	}
-	data, err := os.ReadFile(filepath.Join(dir, "session.json"))
+	data, err := buildSessionPayload(dir)
 	if err != nil {
-		return "", nil, err
+		return "", nil, fmt.Errorf("build session for snapshot %q: %w", name, err)
 	}
-	store, err := parseFirefoxSession(data, filepath.Join(dir, "session.json"))
+	store, err := parseFirefoxSession(data, filepath.Join(dir, "snapshot.yaml"))
 	if err != nil {
 		return "", nil, err
 	}

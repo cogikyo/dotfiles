@@ -1115,6 +1115,7 @@ step_system() {
         ["pam.d/hyprlock"]="/etc/pam.d/hyprlock"
         ["systemd/resolved.conf"]="/etc/systemd/resolved.conf"
         ["systemd/sleep.conf.d/hibernate.conf"]="/etc/systemd/sleep.conf.d/hibernate.conf"
+        ["systemd/hibernate-zram.conf"]="/etc/systemd/system/systemd-hibernate.service.d/zram.conf"
         ["security/faillock.conf"]="/etc/security/faillock.conf"
         ["loader.conf"]="/boot/loader/loader.conf"
         ["logid.cfg"]="/etc/logid.cfg"
@@ -1152,6 +1153,18 @@ step_system() {
         sudo cp "$src_path" "$dst_path"
         ((installed++))
     done
+
+    # Same drop-in for suspend-then-hibernate (bash assoc arrays can't have duplicate keys)
+    local sth_dir="/etc/systemd/system/systemd-suspend-then-hibernate.service.d"
+    local sth_conf="$sth_dir/zram.conf"
+    local sth_src="$DOTFILES/etc/systemd/hibernate-zram.conf"
+    if [[ -f "$sth_conf" ]] && diff -q "$sth_src" "$sth_conf" &>/dev/null; then
+        :
+    else
+        sudo mkdir -p "$sth_dir"
+        sudo cp "$sth_src" "$sth_conf"
+        ((installed++))
+    fi
 
     ok "Installed $installed system configs ($skipped already up to date)"
 
@@ -1231,7 +1244,10 @@ step_hibernate() {
     header "Configuring hibernation"
     needs_sudo
 
-    local SWAP_SIZE="16G"
+    local ram_gb
+    ram_gb=$(awk '/MemTotal/ { printf "%d", ($2 / 1048576) + 1 }' /proc/meminfo)
+    local SWAP_SIZE="${ram_gb}G"
+    info "Detected ${ram_gb}G RAM — sizing swapfile to ${SWAP_SIZE}"
     local SWAP_DIR="/swap"
     local SWAP_FILE="$SWAP_DIR/swapfile"
     local root_fs
@@ -1291,10 +1307,26 @@ step_hibernate() {
     # 3. Disable COW on the directory (files created inside inherit NOCOW)
     sudo chattr +C "$SWAP_DIR" 2>/dev/null || true
 
-    # 4. Create swapfile if not already active
+    # 4. Create swapfile if not already active (or resize if too small)
     if swapon --show=NAME --noheadings | sed 's/^[[:space:]]*//' | grep -Fxq "$SWAP_FILE"; then
-        ok "Swapfile already active: $SWAP_FILE"
-    else
+        local current_size_gb
+        current_size_gb=$(awk -v f="$SWAP_FILE" '$1 == f { printf "%d", $3 / 1048576 }' /proc/swaps)
+        if (( current_size_gb < ram_gb )); then
+            warn "Swapfile is ${current_size_gb}G but need ${ram_gb}G for hibernate"
+            read -rp "Resize swapfile? [y/N] " resize_ans
+            if [[ "${resize_ans,,}" == "y" ]]; then
+                info "Deactivating and removing old swapfile..."
+                sudo swapoff "$SWAP_FILE"
+                sudo rm -f "$SWAP_FILE"
+            else
+                info "Keeping existing ${current_size_gb}G swapfile"
+            fi
+        else
+            ok "Swapfile already active: $SWAP_FILE (${current_size_gb}G)"
+        fi
+    fi
+
+    if ! swapon --show=NAME --noheadings | sed 's/^[[:space:]]*//' | grep -Fxq "$SWAP_FILE"; then
         if [[ -e "$SWAP_FILE" ]]; then
             warn "Existing inactive swapfile found, recreating..."
             sudo swapoff "$SWAP_FILE" 2>/dev/null || true
@@ -1311,7 +1343,7 @@ step_hibernate() {
             sudo truncate -s 0 "$SWAP_FILE"
             sudo chattr +C "$SWAP_FILE"
             sudo chattr -m "$SWAP_FILE" 2>/dev/null || true
-            sudo dd if=/dev/zero of="$SWAP_FILE" bs=1M count=16384 status=progress
+            sudo dd if=/dev/zero of="$SWAP_FILE" bs=1M count=$((ram_gb * 1024)) status=progress
             sudo chmod 600 "$SWAP_FILE"
             sudo mkswap "$SWAP_FILE"
         fi

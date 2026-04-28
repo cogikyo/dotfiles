@@ -3,6 +3,7 @@ package browser
 // restore.go implements browser restore flows, including dry-runs, profile backup, and exact session injection.
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,6 +11,8 @@ import (
 	"slices"
 	"strings"
 	"time"
+
+	"dotfiles/daemons/config"
 )
 
 func (b *Browser) executeRestore(args []string) (string, error) {
@@ -113,33 +116,109 @@ func (b *Browser) restoreSnapshotURLs(store *firefoxSessionStore, dryRun bool) (
 }
 
 func (b *Browser) restoreSnapshotExact(name, snapshotDir string, profile firefoxProfile, force, dryRun bool) (string, error) {
-	target := filepath.Join(profile.Root, "sessionstore.jsonlz4")
-	backupDir, err := restoreBackupDir()
+	payload, err := buildSessionPayload(snapshotDir)
+	if err != nil {
+		return "", err
+	}
+	return b.injectAndLaunch(payload, profile, force, dryRun)
+}
+
+func restoreBackupDir() (string, error) {
+	root, err := browserStateRoot()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(root, "_restore-backups", time.Now().Format("20060102-150405")), nil
+}
+
+// BatchExactEntry pairs a browser config with its target workspace for batch restore.
+type BatchExactEntry struct {
+	Config    config.BrowserConfig
+	Workspace int
+}
+
+// RestoreBatchExact merges windows from multiple snapshots into one Firefox session and restores once.
+func (b *Browser) RestoreBatchExact(entries []BatchExactEntry, dryRun bool) (string, error) {
+	if len(entries) == 0 {
+		return "", fmt.Errorf("no snapshots to restore")
+	}
+
+	var dirs []string
+	for _, e := range entries {
+		dir, err := resolveSnapshotDir(e.Config.Snapshot)
+		if err != nil {
+			return "", fmt.Errorf("snapshot %q: %w", e.Config.Snapshot, err)
+		}
+		dirs = append(dirs, dir)
+	}
+
+	profile, err := discoverFirefoxProfile(entries[0].Config.Profile)
 	if err != nil {
 		return "", err
 	}
 
-	if dryRun {
-		lines := []string{
-			fmt.Sprintf("would stop Firefox (force=%t)", force),
-			fmt.Sprintf("would back up session files into %s", backupDir),
-			fmt.Sprintf("would write %s", target),
-			fmt.Sprintf("would write %s", filepath.Join(profile.Root, "sessionstore-backups", "recovery.jsonlz4")),
-			fmt.Sprintf("would set resume_session_once=true in %s", filepath.Join(profile.Root, "prefs.js")),
-			fmt.Sprintf("would launch %s", shellQuoteCommand(append(b.browserCommandParts(), "--new-instance", "--profile", profile.Root))),
+	payload, err := mergeSnapshotPayloads(dirs)
+	if err != nil {
+		return "", err
+	}
+
+	force := false
+	for _, e := range entries {
+		if e.Config.Force {
+			force = true
+			break
 		}
-		return strings.Join(lines, "\n"), nil
+	}
+
+	return b.injectAndLaunch(payload, profile, force, dryRun)
+}
+
+// mergeSnapshotPayloads generates session JSON from each snapshot's metadata and combines their windows.
+func mergeSnapshotPayloads(dirs []string) ([]byte, error) {
+	var allWindows []json.RawMessage
+
+	for _, dir := range dirs {
+		payload, err := buildSessionPayload(dir)
+		if err != nil {
+			return nil, fmt.Errorf("build session for %s: %w", dir, err)
+		}
+		var doc map[string]json.RawMessage
+		if err := json.Unmarshal(payload, &doc); err != nil {
+			return nil, fmt.Errorf("unmarshal session from %s: %w", dir, err)
+		}
+		var windows []json.RawMessage
+		if err := json.Unmarshal(doc["windows"], &windows); err != nil {
+			return nil, fmt.Errorf("unmarshal windows from %s: %w", dir, err)
+		}
+		allWindows = append(allWindows, windows...)
+	}
+
+	merged, err := json.Marshal(allWindows)
+	if err != nil {
+		return nil, err
+	}
+
+	session := map[string]json.RawMessage{
+		"version":        json.RawMessage(`["sessionrestore",1]`),
+		"windows":        merged,
+		"selectedWindow": json.RawMessage(`1`),
+		"_closedWindows": json.RawMessage(`[]`),
+	}
+	return json.MarshalIndent(session, "", "  ")
+}
+
+// injectAndLaunch stops Firefox, backs up session files, injects the payload, and launches.
+func (b *Browser) injectAndLaunch(payload []byte, profile firefoxProfile, force, dryRun bool) (string, error) {
+	target := filepath.Join(profile.Root, "sessionstore.jsonlz4")
+
+	if dryRun {
+		return fmt.Sprintf("would stop Firefox (force=%t)\nwould inject %d bytes into %s\nwould launch Firefox", force, len(payload), target), nil
 	}
 
 	if err := stopFirefox(force); err != nil {
 		return "", err
 	}
-	backupDir, err = backupFirefoxSessionFiles(profile)
-	if err != nil {
-		return "", err
-	}
-
-	payload, err := os.ReadFile(filepath.Join(snapshotDir, "session.json"))
+	backupDir, err := backupFirefoxSessionFiles(profile)
 	if err != nil {
 		return "", err
 	}
@@ -168,15 +247,7 @@ func (b *Browser) restoreSnapshotExact(name, snapshotDir string, profile firefox
 	if err := b.launchFirefoxProfile(profile); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("restored %s into %s\nbackup: %s", name, profile.Root, backupDir), nil
-}
-
-func restoreBackupDir() (string, error) {
-	root, err := browserStateRoot()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(root, "_restore-backups", time.Now().Format("20060102-150405")), nil
+	return fmt.Sprintf("restored %d windows into %s\nbackup: %s", len(payload), profile.Root, backupDir), nil
 }
 
 func backupFirefoxSessionFiles(profile firefoxProfile) (string, error) {

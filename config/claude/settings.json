@@ -81,11 +81,11 @@
     "gopls-lsp@claude-plugins-official": true
   },
   "outputStyle": "explanatory",
-  "effortLevel": "high",
+  "effortLevel": "low",
   "promptSuggestionEnabled": false,
   "awaySummaryEnabled": false,
-  "voiceEnabled": false,
-  "shiftTabHint": false,
   "theme": "dark-ansi",
-  "editorMode": "vim"
+  "editorMode": "vim",
+  "voiceEnabled": false,
+  "shiftTabHint": false
 }

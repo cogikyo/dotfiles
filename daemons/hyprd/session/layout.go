@@ -19,8 +19,20 @@ import (
 
 // Layout opens and arranges per-workspace sessions defined in config.
 type Layout struct {
-	hypr  *hypr.Client
-	state *state.State
+	hypr        *hypr.Client
+	state       *state.State
+	skipBrowser map[string]bool
+}
+
+// SkipBrowser marks sessions whose browser was already restored (e.g. by batch exact restore during init).
+// Layout will claim the existing Firefox window instead of launching a new one.
+func (l *Layout) SkipBrowser(names ...string) {
+	if l.skipBrowser == nil {
+		l.skipBrowser = make(map[string]bool)
+	}
+	for _, n := range names {
+		l.skipBrowser[n] = true
+	}
 }
 
 func NewLayout(h *hypr.Client, s *state.State) *Layout {
@@ -237,6 +249,14 @@ func (l *Layout) withSessionLaunchEnv(s config.Session, bodyName, cmd, homeDir s
 
 func (l *Layout) launchSessionBrowser(s config.Session) error {
 	b := browser.NewBrowser(l.hypr, l.state)
+
+	if l.skipBrowser[s.Name] && s.Browser.Snapshot != "" {
+		if err := b.ClaimWindow(s.Browser.Snapshot, s.Workspace); err != nil {
+			fmt.Fprintf(os.Stderr, "layout: claim browser window for %s: %v\n", s.Name, err)
+		}
+		return nil
+	}
+
 	if b.UsesExactRestore(s.Browser) {
 		if _, err := b.RestoreConfiguredSnapshot(s.Browser, false); err != nil {
 			return err

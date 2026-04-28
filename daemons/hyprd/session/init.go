@@ -9,15 +9,18 @@ package session
 // init.go executes boot-time session initialization, including wallpaper, optional early lock, network wait, and layout open.
 
 import (
-	"dotfiles/daemons/config"
-	"dotfiles/daemons/hyprd/hypr"
-	"dotfiles/daemons/hyprd/state"
 	"fmt"
 	"net"
 	"os"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
+
+	"dotfiles/daemons/config"
+	"dotfiles/daemons/hyprd/browser"
+	"dotfiles/daemons/hyprd/hypr"
+	"dotfiles/daemons/hyprd/state"
 )
 
 var startupExecs = []string{
@@ -92,6 +95,31 @@ func (i *Init) Execute() (string, error) {
 		}
 	}
 	sort.Ints(initWS)
+
+	b := browser.NewBrowser(i.hypr, i.state)
+	var exactEntries []browser.BatchExactEntry
+	for _, ws := range initWS {
+		for _, s := range cfg.Sessions {
+			if s.Workspace == ws && s.Init && b.UsesExactRestore(s.Browser) {
+				exactEntries = append(exactEntries, browser.BatchExactEntry{
+					Config:    s.Browser,
+					Workspace: ws,
+				})
+				layout.SkipBrowser(s.Name)
+			}
+		}
+	}
+
+	if len(exactEntries) > 0 {
+		result, err := b.RestoreBatchExact(exactEntries, false)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "hyprd init: batch browser restore: %v\n", err)
+		} else {
+			fmt.Printf("hyprd init: %s\n", result)
+		}
+		i.waitForFirefoxWindows(len(exactEntries))
+	}
+
 	for _, ws := range initWS {
 		result, err := layout.Execute(strconv.Itoa(ws))
 		if err != nil {
@@ -111,6 +139,26 @@ func (i *Init) Execute() (string, error) {
 
 	fmt.Println("hyprd init: complete")
 	return "init: complete", nil
+}
+
+func (i *Init) waitForFirefoxWindows(expected int) {
+	deadline := time.Now().Add(10 * time.Second)
+	for time.Now().Before(deadline) {
+		clients, err := i.hypr.Clients()
+		if err != nil {
+			return
+		}
+		count := 0
+		for _, c := range clients {
+			if strings.Contains(strings.ToLower(c.Class), "firefox") {
+				count++
+			}
+		}
+		if count >= expected {
+			return
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
 }
 
 func (i *Init) waitNetwork(timeout int) bool {

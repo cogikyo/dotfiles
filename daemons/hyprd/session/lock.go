@@ -87,7 +87,8 @@ func (l *Lock) Unlock() (string, error) {
 
 // Full runs hyprlock asynchronously with pre/post blackout hooks.
 func (l *Lock) Full() (string, error) {
-	return l.full(fullLockDelay, fullLockGrace, false)
+	// DEBUG: temporarily load SSH/keyring on plain Full() too, for testing without reboot.
+	return l.full(fullLockDelay, fullLockGrace, true)
 }
 
 // FullImmediate runs hyprlock without startup delay or grace, for boot-time authentication.
