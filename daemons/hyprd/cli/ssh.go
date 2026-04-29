@@ -4,7 +4,6 @@ package cli
 
 import (
 	"encoding/binary"
-	"encoding/hex"
 	"fmt"
 	"io"
 	"net"
@@ -66,7 +65,11 @@ func pamLoad() {
 	}
 	debugLog("authtok received: len=%d", len(authtok))
 
-	unlockKeyring(authtok, runtimeDir)
+	if err := unlockKeyring(authtok, runtimeDir); err != nil {
+		debugLog("keyring unlock: %v", err)
+	} else {
+		debugLog("keyring unlock: ok")
+	}
 
 	// pam_exec runs without $HOME; resolve via uid lookup instead.
 	home, err := resolveHome()
@@ -125,14 +128,6 @@ func resolveHome() (string, error) {
 func readPAMAuthToken() (string, error) {
 	raw, err := io.ReadAll(os.Stdin)
 	debugLog("stdin: read=%d bytes err=%v", len(raw), err)
-	if len(raw) > 0 {
-		preview := raw
-		if len(preview) > 64 {
-			preview = preview[:64]
-		}
-		debugLog("stdin hex: %s", hex.EncodeToString(preview))
-		debugLog("stdin trailing-byte=0x%02x", raw[len(raw)-1])
-	}
 	s := string(raw)
 	tok := strings.TrimRight(s, "\r\n\x00")
 	debugLog("after trim: len=%d", len(tok))
@@ -143,15 +138,17 @@ func readPAMAuthToken() (string, error) {
 }
 
 // unlockKeyring unlocks the gnome-keyring login keyring via the daemon's control socket protocol.
-func unlockKeyring(password, runtimeDir string) {
+func unlockKeyring(password, runtimeDir string) error {
 	conn, err := net.Dial("unix", filepath.Join(runtimeDir, "keyring", "control"))
 	if err != nil {
-		return
+		return err
 	}
 	defer conn.Close()
 
 	// Credential byte — server verifies UID via SO_PEERCRED.
-	conn.Write([]byte{0})
+	if _, err := conn.Write([]byte{0}); err != nil {
+		return err
+	}
 
 	const opUnlock = 1
 	packetLen := 4 + 4 + 4 + len(password)
@@ -160,8 +157,19 @@ func unlockKeyring(password, runtimeDir string) {
 	binary.BigEndian.PutUint32(buf[4:], opUnlock)
 	binary.BigEndian.PutUint32(buf[8:], uint32(len(password)))
 	copy(buf[12:], password)
-	conn.Write(buf)
+	if _, err := conn.Write(buf); err != nil {
+		return err
+	}
 
 	var resp [8]byte
-	conn.Read(resp[:])
+	if _, err := io.ReadFull(conn, resp[:]); err != nil {
+		return err
+	}
+	if size := binary.BigEndian.Uint32(resp[0:]); size != uint32(len(resp)) {
+		return fmt.Errorf("unexpected response size %d", size)
+	}
+	if result := binary.BigEndian.Uint32(resp[4:]); result != 0 {
+		return fmt.Errorf("denied by keyring daemon (result %d)", result)
+	}
+	return nil
 }
