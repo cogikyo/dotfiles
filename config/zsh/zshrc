@@ -1,7 +1,5 @@
-# Interactive zsh config. Loaded after zshenv.
-
 # ╭──────────────────────────────────────────────────────────────────────────╮
-# │ Prompt & Init                                                          │
+# │ Prompt & Init                                                            │
 # ╰──────────────────────────────────────────────────────────────────────────╯
 
 eval "$(starship init zsh)"
@@ -12,22 +10,35 @@ function command_not_found_handler {
 }
 
 # ╭──────────────────────────────────────────────────────────────────────────╮
-# │ History                                                                │
+# │ History                                                                  │
 # ╰──────────────────────────────────────────────────────────────────────────╯
 
 HISTFILE=~/.histfile
 HISTSIZE=10000
 SAVEHIST=10000
-setopt INC_APPEND_HISTORY
-setopt HIST_IGNORE_ALL_DUPS
-setopt HIST_IGNORE_DUPS
-setopt HIST_FIND_NO_DUPS
-setopt SHARE_HISTORY
-setopt HIST_REDUCE_BLANKS
-setopt AUTO_CD
+
+setopt EXTENDED_HISTORY       # Store timestamps and command durations.
+setopt SHARE_HISTORY          # Share history across active shell sessions.
+setopt HIST_IGNORE_SPACE      # Do not save commands that start with a space.
+setopt HIST_IGNORE_ALL_DUPS   # Remove older duplicates when adding commands.
+setopt HIST_FIND_NO_DUPS      # Skip duplicates during history searches.
+setopt HIST_EXPIRE_DUPS_FIRST # Prefer pruning duplicates when history is full.
+setopt HIST_SAVE_NO_DUPS      # Do not write duplicate entries to the history file.
+setopt HIST_REDUCE_BLANKS     # Collapse extra whitespace before saving commands.
+setopt HIST_VERIFY            # Show history-expanded commands before running them.
+setopt HIST_NO_STORE          # Do not store the `history` command itself.
+
+setopt AUTO_CD                # Change directories by typing the path directly.
+setopt AUTO_PUSHD             # Add previous directories to the stack on `cd`.
+setopt PUSHD_IGNORE_DUPS      # Keep only one stack entry per directory.
+setopt PUSHD_SILENT           # Do not print the stack after directory changes.
+setopt EXTENDED_GLOB          # Enable richer glob patterns like negation and grouping.
+setopt GLOB_DOTS              # Include dotfiles in glob matches.
+setopt NUMERIC_GLOB_SORT      # Sort numbers naturally: file2 before file10.
+setopt INTERACTIVE_COMMENTS   # Allow comments in interactive commands.
 
 # ╭──────────────────────────────────────────────────────────────────────────╮
-# │ Hooks                                                                  │
+# │ Hooks                                                                    │
 # ╰──────────────────────────────────────────────────────────────────────────╯
 
 chpwd() {
@@ -36,7 +47,7 @@ chpwd() {
 }
 
 # ╭──────────────────────────────────────────────────────────────────────────╮
-# │ Aliases                                                                │
+# │ Aliases                                                                  │
 # ╰──────────────────────────────────────────────────────────────────────────╯
 
 alias install='~/dotfiles/install.sh'
@@ -89,7 +100,7 @@ alias ews='eww inspector & disown && exit'
 alias el='eww logs'
 
 # ╭──────────────────────────────────────────────────────────────────────────╮
-# │ Plugins                                                                │
+# │ Plugins                                                                  │
 # ╰──────────────────────────────────────────────────────────────────────────╯
 
 if [[ ! -f ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh ]]; then
@@ -106,10 +117,12 @@ zcomet load zsh-users/zsh-autosuggestions
 zcomet load Aloxaf/fzf-tab
 zcomet load zsh-users/zsh-syntax-highlighting
 
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+
 autoload -U compinit; compinit
 
 # ╭──────────────────────────────────────────────────────────────────────────╮
-# │ Key Bindings                                                           │
+# │ Key Bindings                                                             │
 # ╰──────────────────────────────────────────────────────────────────────────╯
 
 bindkey -v
