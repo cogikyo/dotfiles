@@ -128,7 +128,7 @@ func requireArg(usage string) string {
 
 // cmdInit imports Wayland env into systemd, starts user services, and waits for hyprd.
 func cmdInit() {
-	exec.Command("systemctl", "--user", "import-environment",
+	envNames := []string{
 		"WAYLAND_DISPLAY", "HYPRLAND_INSTANCE_SIGNATURE",
 		"XDG_CURRENT_DESKTOP", "XDG_SESSION_TYPE", "XDG_SESSION_DESKTOP",
 		"HYPRCURSOR_THEME", "HYPRCURSOR_SIZE",
@@ -137,7 +137,11 @@ func cmdInit() {
 		"QT_WAYLAND_DISABLE_WINDOWDECORATION", "QT_SCALE_FACTOR", "QT_STYLE_OVERRIDE",
 		"GDK_BACKEND", "GDK_DPI_SCALE",
 		"SDL_VIDEODRIVER",
-	).Run()
+	}
+	systemdArgs := append([]string{"--user", "import-environment"}, envNames...)
+	exec.Command("systemctl", systemdArgs...).Run()
+	dbusArgs := append([]string{"--systemd"}, envNames...)
+	exec.Command("dbus-update-activation-environment", dbusArgs...).Run()
 	exec.Command("systemctl", "--user", "start", "hyprd.service", "opencode.service").Run()
 
 	for range 100 {
