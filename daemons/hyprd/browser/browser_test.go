@@ -3,9 +3,14 @@ package browser
 // browser_test.go covers snapshot summarization and helper selection behavior for browser restore logic.
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"dotfiles/daemons/config"
+
+	"gopkg.in/yaml.v3"
 )
 
 func TestSummarizeFirefoxWindowPreservesPinnedAndGroups(t *testing.T) {
@@ -150,5 +155,112 @@ func TestSelectedWindowTabClampsSelection(t *testing.T) {
 				t.Fatalf("selectedWindowTab(%d) = %q, want %q", tc.selected, title, tc.want)
 			}
 		})
+	}
+}
+
+func TestBuildSessionPayloadPreservesCollapsedGroups(t *testing.T) {
+	dir := t.TempDir()
+	meta := browserSnapshotSummary{
+		Window: browserSnapshotWindow{SelectedTab: 1},
+		Tabs: []browserTabSummary{
+			{Position: 1, Title: "Pinned", URL: "https://git.example.com", Pinned: true},
+			{Position: 2, Title: "Local", URL: "https://local.example.com", GroupID: "grp-local", Group: "local", GroupColor: "blue", Collapsed: true},
+		},
+	}
+	data, err := yaml.Marshal(meta)
+	if err != nil {
+		t.Fatalf("marshal snapshot: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "snapshot.yaml"), data, 0o644); err != nil {
+		t.Fatalf("write snapshot: %v", err)
+	}
+
+	payload, err := buildSessionPayload(dir)
+	if err != nil {
+		t.Fatalf("buildSessionPayload returned error: %v", err)
+	}
+
+	var doc struct {
+		Windows []struct {
+			Groups []struct {
+				ID        string `json:"id"`
+				Name      string `json:"name"`
+				Color     string `json:"color"`
+				Collapsed bool   `json:"collapsed"`
+			} `json:"groups"`
+		} `json:"windows"`
+	}
+	if err := json.Unmarshal(payload, &doc); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if got, want := len(doc.Windows), 1; got != want {
+		t.Fatalf("window count = %d, want %d", got, want)
+	}
+	if got, want := len(doc.Windows[0].Groups), 1; got != want {
+		t.Fatalf("group count = %d, want %d", got, want)
+	}
+	group := doc.Windows[0].Groups[0]
+	if group.ID != "grp-local" || group.Name != "local" || group.Color != "blue" || !group.Collapsed {
+		t.Fatalf("group = %+v, want collapsed local group", group)
+	}
+}
+
+func TestSetFirefoxPrefUpserts(t *testing.T) {
+	profile := firefoxProfile{Root: t.TempDir()}
+	prefsPath := filepath.Join(profile.Root, "prefs.js")
+	initial := "user_pref(\"browser.foo\", true);\nuser_pref(\"browser.sessionstore.resume_session_once\", false);\n"
+	if err := os.WriteFile(prefsPath, []byte(initial), 0o644); err != nil {
+		t.Fatalf("write prefs: %v", err)
+	}
+
+	if err := setFirefoxPref(profile, "browser.sessionstore.resume_session_once", "true"); err != nil {
+		t.Fatalf("setFirefoxPref returned error: %v", err)
+	}
+	if err := setFirefoxPref(profile, "browser.sessionstore.resume_session_once", "true"); err != nil {
+		t.Fatalf("setFirefoxPref second call returned error: %v", err)
+	}
+
+	data, err := os.ReadFile(prefsPath)
+	if err != nil {
+		t.Fatalf("read prefs: %v", err)
+	}
+	got := string(data)
+	want := "user_pref(\"browser.foo\", true);\nuser_pref(\"browser.sessionstore.resume_session_once\", true);\n"
+	if got != want {
+		t.Fatalf("prefs = %q, want %q", got, want)
+	}
+}
+
+func TestClearSessionStoreRemovesOnlySessionFiles(t *testing.T) {
+	profile := firefoxProfile{Root: t.TempDir()}
+	backupsDir := filepath.Join(profile.Root, "sessionstore-backups")
+	if err := os.MkdirAll(backupsDir, 0o755); err != nil {
+		t.Fatalf("mkdir backups: %v", err)
+	}
+	for _, path := range []string{
+		filepath.Join(profile.Root, "sessionstore.jsonlz4"),
+		filepath.Join(backupsDir, "recovery.jsonlz4"),
+		filepath.Join(backupsDir, "upgrade.jsonlz4-20260428"),
+		filepath.Join(backupsDir, "keep.txt"),
+	} {
+		if err := os.WriteFile(path, []byte("x"), 0o644); err != nil {
+			t.Fatalf("write %s: %v", path, err)
+		}
+	}
+
+	if err := clearSessionStore(profile); err != nil {
+		t.Fatalf("clearSessionStore returned error: %v", err)
+	}
+	for _, path := range []string{
+		filepath.Join(profile.Root, "sessionstore.jsonlz4"),
+		filepath.Join(backupsDir, "recovery.jsonlz4"),
+		filepath.Join(backupsDir, "upgrade.jsonlz4-20260428"),
+	} {
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("%s still exists or stat failed unexpectedly: %v", path, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(backupsDir, "keep.txt")); err != nil {
+		t.Fatalf("keep.txt should remain: %v", err)
 	}
 }

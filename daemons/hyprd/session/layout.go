@@ -137,6 +137,9 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 
 	cfg := l.state.GetConfig()
 	for _, c := range clients {
+		if l.shouldPreserveSkippedBrowserWindow(s, c) {
+			continue
+		}
 		if c.Workspace.ID == s.Workspace && !c.Pinned && !windows.IsIgnored(c.Class) {
 			l.hypr.Dispatch(fmt.Sprintf("closewindow address:%s", c.Address))
 		}
@@ -204,6 +207,16 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 	}
 
 	return fmt.Sprintf("opened session: %s on ws%d", s.Name, s.Workspace), nil
+}
+
+func (l *Layout) shouldPreserveSkippedBrowserWindow(s config.Session, c hypr.Window) bool {
+	if !l.skipBrowser[s.Name] || s.Browser.Snapshot == "" || c.Workspace.ID != s.Workspace {
+		return false
+	}
+	if !strings.Contains(strings.ToLower(c.Class), "firefox") {
+		return false
+	}
+	return browser.SnapshotMatchesWindowTitle(s.Browser.Snapshot, c.Title)
 }
 
 func (l *Layout) applyMonocle(wsID int) {

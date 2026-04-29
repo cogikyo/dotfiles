@@ -30,9 +30,9 @@ const (
 	browserUsage         = "usage: browser {launch|windows|snapshot|show|hypr|restore}"
 	browserWindowsUsage  = "usage: browser windows [--all] [--profile <name|path>]"
 	browserSnapshotUsage = "usage: browser snapshot <name> [active|largest|index] [--profile <name|path>]"
-	browserShowUsage    = "usage: browser show <name>"
-	browserHyprUsage    = "usage: browser hypr <name>"
-	browserRestoreUsage = "usage: browser restore <name> [--mode urls|exact] [--profile <name|path>] [--force] [--dry-run]"
+	browserShowUsage     = "usage: browser show <name>"
+	browserHyprUsage     = "usage: browser hypr <name>"
+	browserRestoreUsage  = "usage: browser restore <name> [--mode urls|exact] [--profile <name|path>] [--force] [--dry-run]"
 )
 
 type Browser struct {
@@ -309,7 +309,9 @@ func (b *Browser) executeLaunch(args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	clearSessionStore(profile)
+	if err := clearSessionStore(profile); err != nil {
+		return "", err
+	}
 
 	cmd := append(b.browserCommandParts(), "--new-window", firefoxNewtab)
 	if b.hypr != nil {

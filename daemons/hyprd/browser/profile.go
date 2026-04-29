@@ -188,17 +188,42 @@ func profileNameForPath(profiles iniFile, root, target string) string {
 	return filepath.Base(target)
 }
 
-// setFirefoxPref appends a user_pref line to the profile's prefs.js.
-// Firefox last-write-wins for duplicate keys, so appending is safe.
+// setFirefoxPref upserts a user_pref line in the profile's prefs.js.
+// Firefox last-write-wins for duplicate keys, but keeping one line avoids prefs.js churn.
 func setFirefoxPref(profile firefoxProfile, key, value string) error {
 	prefsPath := filepath.Join(profile.Root, "prefs.js")
-	f, err := os.OpenFile(prefsPath, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0o644)
-	if err != nil {
+	line := fmt.Sprintf("user_pref(\"%s\", %s);", key, value)
+
+	data, err := os.ReadFile(prefsPath)
+	if err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("read pref %s: %w", key, err)
+	}
+
+	prefix := fmt.Sprintf("user_pref(\"%s\",", key)
+	var lines []string
+	replaced := false
+	for raw := range strings.SplitSeq(strings.TrimRight(string(data), "\n"), "\n") {
+		if strings.HasPrefix(strings.TrimSpace(raw), prefix) {
+			if replaced {
+				continue
+			}
+			lines = append(lines, line)
+			replaced = true
+			continue
+		}
+		if raw != "" || len(data) > 0 {
+			lines = append(lines, raw)
+		}
+	}
+	if !replaced {
+		lines = append(lines, line)
+	}
+
+	contents := strings.Join(lines, "\n") + "\n"
+	if err := os.WriteFile(prefsPath, []byte(contents), 0o644); err != nil {
 		return fmt.Errorf("set pref %s: %w", key, err)
 	}
-	defer f.Close()
-	_, err = fmt.Fprintf(f, "user_pref(\"%s\", %s);\n", key, value)
-	return err
+	return nil
 }
 
 func fileExists(path string) bool {

@@ -16,8 +16,8 @@ import (
 )
 
 const (
-	firefoxBinary  = "firefox-developer-edition"
-	firefoxNewtab  = "http://localhost:42069"
+	firefoxBinary = "firefox-developer-edition"
+	firefoxNewtab = "http://localhost:42069"
 )
 
 var (
@@ -28,10 +28,10 @@ var (
 	}
 	// trivialBrowserURLs are ignored by snapshot heuristics when picking "interesting" windows.
 	trivialBrowserURLs = map[string]struct{}{
-		"":                         {},
-		"about:blank":              {},
-		"about:home":               {},
-		"about:newtab":             {},
+		"":                        {},
+		"about:blank":             {},
+		"about:home":              {},
+		"about:newtab":            {},
 		"http://localhost:42069/": {},
 	}
 )
@@ -104,17 +104,36 @@ func (b *Browser) launchFirefoxProfile(profile firefoxProfile) error {
 	return exec.Command(cmd[0], cmd[1:]...).Start()
 }
 
-// clearSessionStore removes sessionstore files so Firefox starts without prior session state.
-func clearSessionStore(profile firefoxProfile) {
-	os.Remove(filepath.Join(profile.Root, "sessionstore.jsonlz4"))
+// clearSessionStore removes Firefox sessionstore files so normal browser launches don't inherit exact restores.
+func clearSessionStore(profile firefoxProfile) error {
+	if err := removeIfExists(filepath.Join(profile.Root, "sessionstore.jsonlz4")); err != nil {
+		return err
+	}
+
 	backupsDir := filepath.Join(profile.Root, "sessionstore-backups")
-	entries, err := os.ReadDir(backupsDir)
+	for _, name := range []string{"recovery.jsonlz4", "recovery.baklz4", "previous.jsonlz4"} {
+		if err := removeIfExists(filepath.Join(backupsDir, name)); err != nil {
+			return err
+		}
+	}
+	upgrades, err := filepath.Glob(filepath.Join(backupsDir, "upgrade.jsonlz4-*"))
 	if err != nil {
-		return
+		return err
 	}
-	for _, e := range entries {
-		os.Remove(filepath.Join(backupsDir, e.Name()))
+	for _, path := range upgrades {
+		if err := removeIfExists(path); err != nil {
+			return err
+		}
 	}
+	return nil
+}
+
+func removeIfExists(path string) error {
+	err := os.Remove(path)
+	if err == nil || errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	return fmt.Errorf("remove %s: %w", path, err)
 }
 
 func (b *Browser) browserCommandParts() []string {

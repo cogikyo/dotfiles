@@ -34,6 +34,7 @@ type browserTabSummary struct {
 	GroupID    string `yaml:"group_id,omitempty"`
 	Group      string `yaml:"group,omitempty"`
 	GroupColor string `yaml:"group_color,omitempty"`
+	Collapsed  bool   `yaml:"collapsed,omitempty"`
 }
 
 type browserSnapshotSummary struct {
@@ -132,6 +133,7 @@ func summarizeFirefoxWindow(window firefoxWindow) browserWindowSummary {
 			GroupID:    groupID,
 			Group:      groupName(group, groupID),
 			GroupColor: group.Color,
+			Collapsed:  group.Collapsed,
 		})
 	}
 
@@ -206,15 +208,20 @@ func SnapshotSelectedTitle(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	data, err := os.ReadFile(filepath.Join(dir, "snapshot.yaml"))
+	summary, err := readSnapshotSummary(dir)
 	if err != nil {
 		return "", err
 	}
-	var summary browserSnapshotSummary
-	if err := yaml.Unmarshal(data, &summary); err != nil {
-		return "", err
-	}
 	return summary.Window.SelectedTitle, nil
+}
+
+// SnapshotMatchesWindowTitle reports whether a live Firefox window title matches a snapshot's selected tab.
+func SnapshotMatchesWindowTitle(snapshot, windowTitle string) bool {
+	title, err := SnapshotSelectedTitle(snapshot)
+	if err != nil {
+		return false
+	}
+	return titlesMatch(trimFirefoxTitle(windowTitle), title)
 }
 
 // ClaimWindow finds a Firefox window matching the snapshot's selected title and moves it to the target workspace.
@@ -237,10 +244,10 @@ func (b *Browser) ClaimWindow(snapshot string, workspace int) error {
 		if !strings.Contains(strings.ToLower(c.Class), "firefox") {
 			continue
 		}
-		if c.Workspace.ID == workspace {
-			return nil
-		}
 		if titlesMatch(trimFirefoxTitle(c.Title), title) {
+			if c.Workspace.ID == workspace {
+				return nil
+			}
 			return b.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", workspace, c.Address))
 		}
 	}
@@ -251,12 +258,8 @@ func (b *Browser) ClaimWindow(snapshot string, workspace int) error {
 // buildSessionPayload constructs a minimal Firefox session JSON from snapshot metadata.
 // This avoids storing raw Firefox session data (which contains cookies, formdata, storage).
 func buildSessionPayload(dir string) ([]byte, error) {
-	data, err := os.ReadFile(filepath.Join(dir, "snapshot.yaml"))
+	meta, err := readSnapshotSummary(dir)
 	if err != nil {
-		return nil, err
-	}
-	var meta browserSnapshotSummary
-	if err := yaml.Unmarshal(data, &meta); err != nil {
 		return nil, err
 	}
 
@@ -286,9 +289,10 @@ func buildSessionPayload(dir string) ([]byte, error) {
 		}
 		seen[tab.GroupID] = true
 		groups = append(groups, map[string]any{
-			"id":    tab.GroupID,
-			"name":  tab.Group,
-			"color": tab.GroupColor,
+			"id":        tab.GroupID,
+			"name":      tab.Group,
+			"color":     tab.GroupColor,
+			"collapsed": tab.Collapsed,
 		})
 	}
 
@@ -307,6 +311,18 @@ func buildSessionPayload(dir string) ([]byte, error) {
 		"_closedWindows": []any{},
 	}
 	return json.MarshalIndent(session, "", "  ")
+}
+
+func readSnapshotSummary(dir string) (browserSnapshotSummary, error) {
+	data, err := os.ReadFile(filepath.Join(dir, "snapshot.yaml"))
+	if err != nil {
+		return browserSnapshotSummary{}, err
+	}
+	var summary browserSnapshotSummary
+	if err := yaml.Unmarshal(data, &summary); err != nil {
+		return browserSnapshotSummary{}, err
+	}
+	return summary, nil
 }
 
 // loadSnapshotPayload returns Firefox session JSON for a named snapshot,

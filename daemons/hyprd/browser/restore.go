@@ -55,6 +55,7 @@ func (b *Browser) executeRestore(args []string) (string, error) {
 	if len(positional) != 1 {
 		return "", fmt.Errorf(browserRestoreUsage)
 	}
+	mode = strings.ToLower(strings.TrimSpace(mode))
 	if mode != "urls" && mode != "exact" {
 		return "", fmt.Errorf(browserRestoreUsage)
 	}
@@ -69,7 +70,7 @@ func (b *Browser) executeRestore(args []string) (string, error) {
 		return b.restoreSnapshotURLs(store, dryRun)
 	}
 
-	profile, err := discoverFirefoxProfile(profileArg)
+	profile, err := restoreProfileForSnapshot(dir, profileArg)
 	if err != nil {
 		return "", err
 	}
@@ -152,14 +153,23 @@ func (b *Browser) RestoreBatchExact(entries []BatchExactEntry, dryRun bool) (str
 		dirs = append(dirs, dir)
 	}
 
-	profile, err := discoverFirefoxProfile(entries[0].Config.Profile)
-	if err != nil {
-		return "", err
-	}
-
+	var profile firefoxProfile
 	payload, err := mergeSnapshotPayloads(dirs)
 	if err != nil {
 		return "", err
+	}
+	for i, dir := range dirs {
+		candidate, err := restoreProfileForSnapshot(dir, entries[i].Config.Profile)
+		if err != nil {
+			return "", err
+		}
+		if i == 0 {
+			profile = candidate
+			continue
+		}
+		if filepath.Clean(candidate.Root) != filepath.Clean(profile.Root) {
+			return "", fmt.Errorf("cannot batch restore snapshots with different profiles: %s and %s", profile.Root, candidate.Root)
+		}
 	}
 
 	force := false
@@ -171,6 +181,28 @@ func (b *Browser) RestoreBatchExact(entries []BatchExactEntry, dryRun bool) (str
 	}
 
 	return b.injectAndLaunch(payload, profile, force, dryRun)
+}
+
+func restoreProfileForSnapshot(snapshotDir, override string) (firefoxProfile, error) {
+	if override != "" {
+		return discoverFirefoxProfile(override)
+	}
+
+	meta, err := readSnapshotSummary(snapshotDir)
+	if err != nil {
+		return firefoxProfile{}, err
+	}
+	if meta.Profile.Path != "" && isDir(meta.Profile.Path) {
+		return firefoxProfile{
+			Root:       filepath.Clean(meta.Profile.Path),
+			Name:       meta.Profile.Name,
+			InstallKey: meta.Profile.InstallKey,
+		}, nil
+	}
+	if meta.Profile.Name != "" {
+		return discoverFirefoxProfile(meta.Profile.Name)
+	}
+	return discoverFirefoxProfile("")
 }
 
 // mergeSnapshotPayloads generates session JSON from each snapshot's metadata and combines their windows.
@@ -247,7 +279,17 @@ func (b *Browser) injectAndLaunch(payload []byte, profile firefoxProfile, force,
 	if err := b.launchFirefoxProfile(profile); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("restored %d windows into %s\nbackup: %s", len(payload), profile.Root, backupDir), nil
+	return fmt.Sprintf("restored %d windows into %s\nbackup: %s", countPayloadWindows(payload), profile.Root, backupDir), nil
+}
+
+func countPayloadWindows(payload []byte) int {
+	var doc struct {
+		Windows []json.RawMessage `json:"windows"`
+	}
+	if err := json.Unmarshal(payload, &doc); err != nil {
+		return 0
+	}
+	return len(doc.Windows)
 }
 
 func backupFirefoxSessionFiles(profile firefoxProfile) (string, error) {
