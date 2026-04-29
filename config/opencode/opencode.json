@@ -7,6 +7,49 @@
   ],
   "share": "manual",
   "snapshot": true,
+  "permission": {
+    "external_directory": {
+      "~/**": "allow",
+      "/tmp/**": "allow"
+    },
+    "doom_loop": "ask",
+    "bash": {
+      "*": "allow",
+      "rm -r *": "deny",
+      "rm -R *": "deny",
+      "rm -f -r *": "deny",
+      "rm -fR *": "deny",
+      "rm -Rf *": "deny",
+      "rm -fr *": "deny",
+      "rm -rf *": "deny",
+      "rm --recursive *": "deny",
+      "sudo rm -r *": "deny",
+      "sudo rm -R *": "deny",
+      "sudo rm -f -r *": "deny",
+      "sudo rm -fR *": "deny",
+      "sudo rm -Rf *": "deny",
+      "sudo rm -fr *": "deny",
+      "sudo rm -rf *": "deny",
+      "sudo rm --recursive *": "deny",
+      "trash *": "allow",
+      "trash-put *": "allow",
+      "gio trash *": "allow",
+      "git push --force*": "ask",
+      "git push * --force*": "ask",
+      "git push -f*": "ask",
+      "git push * -f*": "ask",
+      "git push --delete*": "ask",
+      "git push * --delete*": "ask",
+      "git reset --hard*": "ask",
+      "git clean *": "ask",
+      "git checkout -- *": "ask",
+      "git restore *": "ask",
+      "git commit --amend*": "ask",
+      "git rebase *": "ask",
+      "git branch -D *": "ask",
+      "git reflog expire *": "deny"
+    }
+  },
   "skills": {
     "paths": [
       "{env:HOME}/dotfiles/skills/user"
