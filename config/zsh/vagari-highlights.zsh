@@ -6,14 +6,14 @@ ZSH_HIGHLIGHT_HIGHLIGHTERS+=(regexp)
 ZSH_AUTOSUGGEST_HIGHLIGHT_STYLE="fg=#4e5492"
 
 # Regex — warn on destructive commands, hint filesystem mutations
-ZSH_HIGHLIGHT_REGEXP+=('^trash .*' fg=#824141)
-ZSH_HIGHLIGHT_REGEXP+=('^rm .*'    fg=#f36978)
-ZSH_HIGHLIGHT_REGEXP+=('^rm -rf.*' fg=#f34658,bold)
-ZSH_HIGHLIGHT_REGEXP+=('^touch' fg=#f5d599)
-ZSH_HIGHLIGHT_REGEXP+=('^mkdir' fg=#f4ce88)
-ZSH_HIGHLIGHT_REGEXP+=('^mv' fg=#75e6d5)
-ZSH_HIGHLIGHT_REGEXP+=('^ln' fg=#38d2ba)
-ZSH_HIGHLIGHT_REGEXP+=('^cp' fg=#2bb198)
+ZSH_HIGHLIGHT_REGEXP+=('^trash .*' 'fg=#824141')
+ZSH_HIGHLIGHT_REGEXP+=('^rm .*'    'fg=#f36978')
+ZSH_HIGHLIGHT_REGEXP+=('^rm -rf.*' 'fg=#f34658,bold')
+ZSH_HIGHLIGHT_REGEXP+=('^touch' 'fg=#f5d599')
+ZSH_HIGHLIGHT_REGEXP+=('^mkdir' 'fg=#f4ce88')
+ZSH_HIGHLIGHT_REGEXP+=('^mv' 'fg=#75e6d5')
+ZSH_HIGHLIGHT_REGEXP+=('^ln' 'fg=#38d2ba')
+ZSH_HIGHLIGHT_REGEXP+=('^cp' 'fg=#2bb198')
 
 # Main
 ZSH_HIGHLIGHT_STYLES[default]='fg=#aeb9f8'
