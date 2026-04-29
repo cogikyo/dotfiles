@@ -76,9 +76,10 @@ func (i *Init) Execute() (string, error) {
 	fullLocked := init.Lock && i.lock != nil
 	if fullLocked {
 		fmt.Println("hyprd init: full-locking")
-		if _, err := i.lock.FullImmediate(); err != nil {
+		if _, err := i.lock.FullImmediateWait(); err != nil {
 			fmt.Fprintf(os.Stderr, "hyprd init: full-lock: %v\n", err)
 		}
+		fmt.Println("hyprd init: unlocked")
 	}
 
 	if init.NetworkTimeout > 0 {
@@ -133,7 +134,7 @@ func (i *Init) Execute() (string, error) {
 		dispatchStartup(i.hypr, cfg.Bluetooth)
 	}
 
-	if init.Workspace > 0 && !fullLocked {
+	if init.Workspace > 0 {
 		i.hypr.Dispatch(fmt.Sprintf("workspace %d", init.Workspace))
 	}
 

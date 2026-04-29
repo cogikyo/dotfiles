@@ -87,7 +87,6 @@ func (l *Lock) Unlock() (string, error) {
 
 // Full runs hyprlock asynchronously with pre/post blackout hooks.
 func (l *Lock) Full() (string, error) {
-	// DEBUG: temporarily load SSH/keyring on plain Full() too, for testing without reboot.
 	return l.full(fullLockDelay, fullLockGrace, true)
 }
 
@@ -96,11 +95,37 @@ func (l *Lock) FullImmediate() (string, error) {
 	return l.full(0, 0, true)
 }
 
+// FullImmediateWait runs the boot-time full lock synchronously so startup work
+// does not open private workspace layouts behind the lock screen.
+func (l *Lock) FullImmediateWait() (string, error) {
+	return l.fullBlocking(0, 0, true)
+}
+
 func (l *Lock) full(delay, grace time.Duration, loadSSH bool) (string, error) {
+	saved, result, err := l.startFull()
+	if saved == nil || err != nil {
+		return result, err
+	}
+
+	go l.runHyprlock(saved, delay, grace, loadSSH)
+	return "lock: full", nil
+}
+
+func (l *Lock) fullBlocking(delay, grace time.Duration, loadSSH bool) (string, error) {
+	saved, result, err := l.startFull()
+	if saved == nil || err != nil {
+		return result, err
+	}
+
+	l.runHyprlock(saved, delay, grace, loadSSH)
+	return "lock: full", nil
+}
+
+func (l *Lock) startFull() (*lockState, string, error) {
 	l.mu.Lock()
 	if l.inFull {
 		l.mu.Unlock()
-		return "lock: hyprlock already running", nil
+		return nil, "lock: hyprlock already running", nil
 	}
 	// Pseudo → full: drop submap, reuse existing blackout state.
 	l.hypr.Dispatch("submap reset")
@@ -111,9 +136,7 @@ func (l *Lock) full(delay, grace time.Duration, loadSSH bool) (string, error) {
 	saved := l.saved
 	l.inFull = true
 	l.mu.Unlock()
-
-	go l.runHyprlock(saved, delay, grace, loadSSH)
-	return "lock: full", nil
+	return saved, "lock: full", nil
 }
 
 func (l *Lock) runHyprlock(saved *lockState, delay, grace time.Duration, loadSSH bool) {
