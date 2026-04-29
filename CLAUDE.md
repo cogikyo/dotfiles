@@ -68,6 +68,7 @@ Stay on scope, but flag opportunities so a separate session can handle them.
 
 - Prefer Go for new work. Bash only for genuinely shell-shaped helpers. If bash logic grows, move to `daemons/`.
 - Bash: `#!/usr/bin/env bash` + `set -euo pipefail`.
+- Interactive zsh enables `EXTENDED_GLOB`; use extended glob features when useful, but quote literal `#`, `^`, and `~` values in sourced zsh files, especially hex colors like `'fg=#824141'`.
 - Logging: `info()` (blue), `success()`/`ok()` (green), `warn()` (yellow), `error()`/`err()` (red).
 - Nerd Font / multi-width UTF glyphs: use Python (`Write`/`Edit` corrupts them).
 
