@@ -479,16 +479,103 @@ func (d *Daemon) tryDunstAction() bool {
 	if before == 0 {
 		return false
 	}
+	kind := latestDisplayedNotificationKind()
 	activeBefore := d.activeWindowAddress()
+	if kind.App != "" && kind.Category != "hyprd" {
+		d.prefocusNotificationApp(kind.App)
+	}
 
 	if err := exec.Command("dunstctl", "action").Run(); err != nil {
 		exec.Command("dunstctl", "close").Run()
 		return false
 	}
+	if kind.Category == "hyprd" {
+		return true
+	}
 
 	time.Sleep(75 * time.Millisecond)
 	activeAfter := d.activeWindowAddress()
 	return activeBefore != "" && activeAfter != "" && activeAfter != activeBefore
+}
+
+func (d *Daemon) prefocusNotificationApp(app string) {
+	class := notificationAppClass(app)
+	if class == "" {
+		return
+	}
+
+	clients, err := d.hypr.Clients()
+	if err != nil {
+		return
+	}
+	var fallback string
+	for _, client := range clients {
+		if !strings.EqualFold(client.Class, class) {
+			continue
+		}
+		if fallback == "" {
+			fallback = client.Address
+		}
+		if client.Workspace.ID == 2 {
+			d.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", client.Address))
+			return
+		}
+	}
+	if fallback != "" {
+		d.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", fallback))
+	}
+}
+
+type displayedNotificationKind struct {
+	App      string
+	Category string
+}
+
+func notificationAppClass(app string) string {
+	switch strings.ToLower(strings.TrimSpace(app)) {
+	case "slack":
+		return "Slack"
+	case "discord":
+		return "discord"
+	case "firefox developer edition":
+		return "firefox-developer-edition"
+	default:
+		return ""
+	}
+}
+
+func latestDisplayedNotificationKind() displayedNotificationKind {
+	displayed := displayedNotifications()
+	if displayed == 0 {
+		return displayedNotificationKind{}
+	}
+	history, err := exec.Command("dunstctl", "history").Output()
+	if err != nil {
+		return displayedNotificationKind{}
+	}
+	var payload struct {
+		Data [][]map[string]struct {
+			Data any `json:"data"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(history, &payload); err != nil || len(payload.Data) == 0 {
+		return displayedNotificationKind{}
+	}
+	for i, item := range payload.Data[0] {
+		if i >= displayed {
+			break
+		}
+		category, _ := item["category"].Data.(string)
+		if category == "hyprd" {
+			app, _ := item["appname"].Data.(string)
+			return displayedNotificationKind{App: app, Category: category}
+		}
+		app, _ := item["appname"].Data.(string)
+		if notificationAppClass(app) != "" {
+			return displayedNotificationKind{App: app, Category: category}
+		}
+	}
+	return displayedNotificationKind{}
 }
 
 func displayedNotifications() int {
