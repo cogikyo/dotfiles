@@ -18,7 +18,10 @@ import (
 	"dotfiles/daemons/hyprd/windows"
 )
 
-const sessionWindowTimeout = 15 * time.Second
+const (
+	sessionWindowTimeout       = 5 * time.Second
+	sessionBrowserClaimTimeout = 5 * time.Second
+)
 
 // Layout opens and arranges per-workspace sessions defined in config.
 type Layout struct {
@@ -155,22 +158,25 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 	}
 
 	if s.Command != "" {
-		l.hypr.Dispatch(fmt.Sprintf("exec %s", s.Command))
-		commandWindow := l.waitForRoleWindow(s, s.Name, sessionWindowTimeout)
+		l.execOnWorkspace(s.Workspace, s.Command)
+		roles := []string{s.Name}
 
 		if s.Browser.Snapshot != "" || len(s.Browser.AllURLs()) > 0 {
 			if err := l.launchSessionBrowser(s); err != nil {
 				return "", err
 			}
-			if commandWindow != nil {
-				l.arrangePair(s, commandWindow)
-			}
+			roles = append(roles, "browser")
+		}
+
+		windowsByRole := l.waitForSessionRoles(s, roles, sessionWindowTimeout)
+		if commandWindow := windowsByRole[s.Name]; commandWindow != nil {
+			l.arrangePair(s, commandWindow, windowsByRole["browser"])
 		}
 
 		if s.Monocle {
 			l.applyMonocle(s.Workspace)
 		}
-		return fmt.Sprintf("opened session: %s on ws%d", s.Name, s.Workspace), nil
+		return l.sessionResult(s, roles, windowsByRole), nil
 	}
 	if len(s.Body) == 0 {
 		return "", fmt.Errorf("session %q has no body or command", s.Name)
@@ -185,23 +191,22 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 			if err := l.launchSessionBrowser(s); err != nil {
 				return "", err
 			}
-			l.waitForRoleWindow(s, name, sessionWindowTimeout)
 			continue
 		}
 
 		cmd := l.withSessionLaunchEnv(s, name, tbw.Command, homeDir)
-		l.hypr.Dispatch(fmt.Sprintf("exec %s", cmd))
-		l.waitForRoleWindow(s, name, sessionWindowTimeout)
+		l.execOnWorkspace(s.Workspace, cmd)
 	}
+	windowsByRole := l.waitForSessionRoles(s, s.Body, sessionWindowTimeout)
 
 	l.hypr.Dispatch(fmt.Sprintf("layoutmsg mfact exact %s", cfg.Windows.Split.Default))
-	l.arrangeThreeBody(s)
+	l.arrangeThreeBody(s, windowsByRole)
 
 	if s.Monocle {
 		l.applyMonocle(s.Workspace)
 	}
 
-	return fmt.Sprintf("opened session: %s on ws%d", s.Name, s.Workspace), nil
+	return l.sessionResult(s, s.Body, windowsByRole), nil
 }
 
 func (l *Layout) shouldPreserveSkippedBrowserWindow(s config.Session, c hypr.Window) bool {
@@ -283,21 +288,25 @@ func (l *Layout) launchSessionBrowser(s config.Session) error {
 	}
 	urls := browserCfg.AllURLs()
 	if len(urls) > 0 {
-		l.hypr.Dispatch(fmt.Sprintf("exec %s", browserLaunchCmd(tbw.Command, "new-window", urls[0])))
+		l.execOnWorkspace(s.Workspace, browserLaunchCmd(tbw.Command, "new-window", urls[0]))
 		time.Sleep(500 * time.Millisecond)
 		for _, url := range urls[1:] {
-			l.hypr.Dispatch(fmt.Sprintf("exec %s", browserLaunchCmd(tbw.Command, "new-tab", url)))
+			l.execOnWorkspace(s.Workspace, browserLaunchCmd(tbw.Command, "new-tab", url))
 			time.Sleep(300 * time.Millisecond)
 		}
 	} else {
-		l.hypr.Dispatch(fmt.Sprintf("exec %s", browserLaunchCmd(tbw.Command, "new-window", "about:blank")))
+		l.execOnWorkspace(s.Workspace, browserLaunchCmd(tbw.Command, "new-window", "about:blank"))
 		time.Sleep(500 * time.Millisecond)
 	}
 	return nil
 }
 
+func (l *Layout) execOnWorkspace(workspace int, cmd string) {
+	l.hypr.Dispatch(fmt.Sprintf("exec [workspace %d silent] %s", workspace, cmd))
+}
+
 func (l *Layout) claimBrowserWindow(b *browser.Browser, s config.Session) error {
-	deadline := time.Now().Add(sessionWindowTimeout)
+	deadline := time.Now().Add(sessionBrowserClaimTimeout)
 	var lastErr error
 	for time.Now().Before(deadline) {
 		if err := b.ClaimWindow(s.Browser.Snapshot, s.Workspace); err == nil {
@@ -310,32 +319,36 @@ func (l *Layout) claimBrowserWindow(b *browser.Browser, s config.Session) error 
 	return lastErr
 }
 
-func (l *Layout) waitForRoleWindow(s config.Session, role string, timeout time.Duration) *hypr.Window {
+func (l *Layout) waitForSessionRoles(s config.Session, roles []string, timeout time.Duration) map[string]*hypr.Window {
+	found := make(map[string]*hypr.Window)
 	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		if w := l.findRoleWindow(s, role); w != nil && w.Mapped {
-			return w
+	for {
+		clients, err := l.hypr.Clients()
+		if err == nil {
+			for _, role := range roles {
+				if found[role] != nil {
+					continue
+				}
+				for i := range clients {
+					c := &clients[i]
+					if c.Workspace.ID != s.Workspace || c.Pinned || windows.IsIgnored(c.Class) {
+						continue
+					}
+					if l.matchesRole(s, c, role) {
+						found[role] = c
+						break
+					}
+				}
+			}
+			if len(found) == len(roles) {
+				return found
+			}
+		}
+		if !time.Now().Before(deadline) {
+			return found
 		}
 		time.Sleep(250 * time.Millisecond)
 	}
-	return l.findRoleWindow(s, role)
-}
-
-func (l *Layout) findRoleWindow(s config.Session, role string) *hypr.Window {
-	clients, err := l.hypr.Clients()
-	if err != nil {
-		return nil
-	}
-	for i := range clients {
-		c := &clients[i]
-		if c.Workspace.ID != s.Workspace || c.Pinned || windows.IsIgnored(c.Class) {
-			continue
-		}
-		if l.matchesRole(s, c, role) {
-			return c
-		}
-	}
-	return nil
 }
 
 func (l *Layout) matchesRole(s config.Session, w *hypr.Window, role string) bool {
@@ -356,44 +369,77 @@ func commandName(cmd string) string {
 	return filepath.Base(fields[0])
 }
 
-func (l *Layout) arrangePair(s config.Session, master *hypr.Window) {
-	if master == nil {
-		return
+func (l *Layout) sessionResult(s config.Session, roles []string, found map[string]*hypr.Window) string {
+	missing := missingRoles(roles, found)
+	if len(missing) == 0 {
+		return fmt.Sprintf("opened session: %s on ws%d (%d/%d windows)", s.Name, s.Workspace, len(found), len(roles))
 	}
-	browserWindow := l.waitForRoleWindow(s, "browser", sessionWindowTimeout)
-	if browserWindow == nil {
+	return fmt.Sprintf("opened session: %s on ws%d (%d/%d windows; missing %s)", s.Name, s.Workspace, len(found), len(roles), strings.Join(missing, ","))
+}
+
+func missingRoles(roles []string, found map[string]*hypr.Window) []string {
+	var missing []string
+	for _, role := range roles {
+		if found[role] == nil {
+			missing = append(missing, role)
+		}
+	}
+	return missing
+}
+
+func (l *Layout) arrangePair(s config.Session, master, browserWindow *hypr.Window) {
+	if master == nil || browserWindow == nil {
 		return
 	}
 	l.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", s.Workspace, master.Address))
 	l.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", s.Workspace, browserWindow.Address))
-	l.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", master.Address))
-	l.hypr.Dispatch("layoutmsg swapwithmaster master")
+	l.ensureMaster(s.Workspace, master.Address)
 }
 
-func (l *Layout) arrangeThreeBody(s config.Session) {
+func (l *Layout) arrangeThreeBody(s config.Session, windowsByRole map[string]*hypr.Window) {
 	masterRole, slaveRole, shadowRole := l.initialRoles(s)
-	master := l.waitForRoleWindow(s, masterRole, sessionWindowTimeout)
-	slave := l.waitForRoleWindow(s, slaveRole, sessionWindowTimeout)
-	var shadow *hypr.Window
-	if shadowRole != "" {
-		shadow = l.waitForRoleWindow(s, shadowRole, sessionWindowTimeout)
-	}
+	master := windowsByRole[masterRole]
+	slave := windowsByRole[slaveRole]
+	shadow := windowsByRole[shadowRole]
 	if master == nil || slave == nil {
 		return
 	}
 
 	l.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", s.Workspace, master.Address))
 	l.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", s.Workspace, slave.Address))
-	l.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", master.Address))
-	l.hypr.Dispatch("layoutmsg swapwithmaster master")
 
 	if shadow != nil {
 		l.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent special:shadow,address:%s", shadow.Address))
 	}
+	l.ensureMaster(s.Workspace, master.Address)
 	l.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", slave.Address))
 	if shadow != nil {
 		l.state.SetThreeBody(s.Workspace, &state.ThreeBodyState{Master: master.Address, Active: slave.Address, Shadow: shadow.Address})
 	}
+}
+
+func (l *Layout) ensureMaster(workspace int, address string) {
+	current, err := windows.GetMaster(l.hypr, workspace)
+	if err != nil || current == nil || current.Address == address {
+		return
+	}
+	if !l.focusWindow(address, 500*time.Millisecond) {
+		return
+	}
+	l.hypr.Dispatch("layoutmsg swapwithmaster master")
+}
+
+func (l *Layout) focusWindow(address string, timeout time.Duration) bool {
+	l.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", address))
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		active, err := l.hypr.ActiveWindow()
+		if err == nil && active != nil && active.Address == address {
+			return true
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	return false
 }
 
 func (l *Layout) initialRoles(s config.Session) (master, slave, shadow string) {

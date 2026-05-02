@@ -201,6 +201,10 @@ func (t *Tabs) getProfile(name string) (*config.TabProfile, error) {
 }
 
 func (t *Tabs) resolveDefaultCWD(win KittyOSWindow) string {
+	if project := os.Getenv("PROJECT_PATH"); project != "" {
+		return config.ExpandPath(project)
+	}
+
 	for _, tab := range win.Tabs {
 		if !tab.IsFocused {
 			continue

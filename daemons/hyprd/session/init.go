@@ -112,6 +112,7 @@ func (i *Init) Execute() (string, error) {
 	}
 
 	if len(exactEntries) > 0 {
+		i.hypr.Dispatch(fmt.Sprintf("workspace %d", exactEntries[0].Workspace))
 		result, err := b.RestoreBatchExact(exactEntries, false)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "hyprd init: batch browser restore: %v\n", err)
@@ -143,7 +144,7 @@ func (i *Init) Execute() (string, error) {
 }
 
 func (i *Init) waitForFirefoxWindows(expected int) {
-	deadline := time.Now().Add(10 * time.Second)
+	deadline := time.Now().Add(5 * time.Second)
 	for time.Now().Before(deadline) {
 		clients, err := i.hypr.Clients()
 		if err != nil {
