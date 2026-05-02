@@ -327,6 +327,8 @@
        id="nodes"
        selcue="1"
        gradientdrag="1"
+       changelayer="0"
+       changepage="0"
        pathflash_enabled="1"
        pathflash_unselected="0"
        pathflash_timeout="500"
@@ -1016,7 +1018,9 @@
        id="boot"
        theme="custom"
        canvas="dark"
-       enabled="0">
+       enabled="0"
+       showsplash="0"
+       showwelcome="0">
       <group
          id="shown"
          ver1.2.2="1" />
@@ -1087,8 +1091,8 @@
      id="desktop"
      style="fill:#b6bbd8;-inkscape-font-specification:'Chillax Variable Medium';font-family:'Chillax Variable';font-size:4px;line-height:0;text-decoration-color:#000000;stop-color:#000000;text-orientation:auto;font-weight:500;letter-spacing:-0.1px;stroke-width:0.2;stroke-linecap:round;stroke-miterlimit:3.9;stroke-linejoin:round">
     <group
-       width="2179"
-       height="1080"
+       width="3626"
+       height="2050"
        x="0"
        y="0"
        maximized="1"
@@ -1122,7 +1126,8 @@
        iconsize="16"
        width="32">
       <group
-         id="buttons" />
+         id="buttons"
+         showLPETool="0" />
     </group>
     <group
        id="controlbars"
