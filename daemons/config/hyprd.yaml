@@ -24,7 +24,7 @@ sessions:
       init: true
       command: slack
       browser:
-        snapshot: slack
+        snapshot: coms
         mode: exact
         force: true
 
@@ -40,8 +40,6 @@ sessions:
       command: inkscape
     obs:
       command: obs
-    gimp:
-      command: gimp
 
   # ├─ workspace 4 ──────────────────────────────────────────────────────────────┤
   4: # primary project workspaces
