@@ -24,7 +24,7 @@ type Picker struct {
 	active    bool
 	ws        int              // workspace cursor (2–5)
 	si        int              // session index within cache[ws]
-	selecting bool             // true once the user presses down to enter session selection
+	selecting bool             // true once the user starts cycling session options
 	confirmed bool             // true during the brief green-flash after confirm
 	cache     map[int][]string // ws → sorted session names
 }
@@ -54,13 +54,13 @@ func (p *Picker) Execute(arg string) (string, error) {
 	case "close":
 		return p.close()
 	case "left":
-		return p.move(-1, 0)
-	case "right":
-		return p.move(1, 0)
-	case "up":
 		return p.move(0, -1)
-	case "down":
+	case "right":
 		return p.move(0, 1)
+	case "up":
+		return p.move(-1, 0)
+	case "down":
+		return p.move(1, 0)
 	case "confirm":
 		return p.confirm()
 	default:
@@ -87,8 +87,16 @@ func (p *Picker) open() (string, error) {
 		}
 		p.cache[s.Workspace] = append(p.cache[s.Workspace], name)
 	}
-	for ws := range p.cache {
-		sort.Strings(p.cache[ws])
+	for ws, sessions := range p.cache {
+		sort.Slice(sessions, func(i, j int) bool {
+			left := cfg.Sessions[sessions[i]]
+			right := cfg.Sessions[sessions[j]]
+			if left.Init != right.Init {
+				return left.Init
+			}
+			return sessions[i] < sessions[j]
+		})
+		p.cache[ws] = sessions
 	}
 
 	p.ws = p.state.GetWorkspace()
@@ -143,32 +151,26 @@ func (p *Picker) move(dws, dsi int) (string, error) {
 		} else if p.ws > 5 {
 			p.ws = 2
 		}
-		p.selecting = false
-		p.si = p.activeIndex(p.ws)
+		p.selectFirst(p.ws)
 	}
 
 	if dsi != 0 {
-		if !p.selecting {
-			if dsi > 0 {
+		sessions := p.cache[p.ws]
+		if len(sessions) > 0 {
+			if !p.selecting {
 				p.selecting = true
 				p.si = p.activeIndex(p.ws)
 			}
-		} else {
-			sessions := p.cache[p.ws]
-			if len(sessions) > 0 {
-				p.si += dsi
-				if p.si < 0 {
-					p.selecting = false
-					p.si = p.activeIndex(p.ws)
-				} else if p.si >= len(sessions) {
-					p.si = len(sessions) - 1
-				}
-			}
+			p.si = wrapIndex(p.si+dsi, len(sessions))
 		}
 	}
 
 	p.pushState()
 	return fmt.Sprintf("picker: ws%d si%d selecting=%v", p.ws, p.si, p.selecting), nil
+}
+
+func wrapIndex(i, n int) int {
+	return ((i % n) + n) % n
 }
 
 func (p *Picker) jumpWS(arg string) (string, error) {
@@ -185,10 +187,14 @@ func (p *Picker) jumpWS(arg string) (string, error) {
 	}
 
 	p.ws = ws
-	p.selecting = false
-	p.si = p.activeIndex(ws)
+	p.selectFirst(ws)
 	p.pushState()
 	return fmt.Sprintf("picker: jumped to ws%d", ws), nil
+}
+
+func (p *Picker) selectFirst(ws int) {
+	p.si = 0
+	p.selecting = len(p.cache[ws]) > 0
 }
 
 func (p *Picker) confirm() (string, error) {
