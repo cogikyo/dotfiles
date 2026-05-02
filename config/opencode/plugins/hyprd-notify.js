@@ -1,4 +1,5 @@
 const SOCKET_PATH = "/tmp/hyprd.sock"
+const KITTY_CONTEXT_PATH = "/tmp/opencode-kitty-context.json"
 
 const LIMITS = {
   id: 128,
@@ -10,12 +11,23 @@ const LIMITS = {
 const TODO_COMPLETE_DEBOUNCE_MS = 1500
 const COMPLETE_DEBOUNCE_MS = 500
 
-const KITTY_PID = Number(process.env.KITTY_PID) || 0
-const KITTY_WINDOW_ID = Number(process.env.KITTY_WINDOW_ID) || 0
-
 function cleanText(value, max = LIMITS.message) {
   if (typeof value !== "string") return ""
   return value.replace(/\s+/g, " ").trim().slice(0, max)
+}
+
+async function kittyContext(sessionID) {
+  if (!sessionID) return { kitty_pid: 0, kitty_window_id: 0 }
+  try {
+    const contexts = await Bun.file(KITTY_CONTEXT_PATH).json()
+    const ctx = contexts?.[sessionID]
+    return {
+      kitty_pid: Number(ctx?.kitty_pid) || 0,
+      kitty_window_id: Number(ctx?.kitty_window_id) || 0,
+    }
+  } catch {
+    return { kitty_pid: 0, kitty_window_id: 0 }
+  }
 }
 
 async function send(command) {
@@ -47,14 +59,15 @@ async function send(command) {
 }
 
 async function notify(payload) {
+  const ctx = await kittyContext(payload.sessionID)
   const req = {
     source: "opencode",
     event: payload.type,
     message: payload.message ?? "",
     last_assistant_message: payload.last_assistant_message ?? "",
     agent_type: payload.agent_type ?? "",
-    kitty_pid: KITTY_PID,
-    kitty_window_id: KITTY_WINDOW_ID,
+    kitty_pid: ctx.kitty_pid,
+    kitty_window_id: ctx.kitty_window_id,
   }
   await send("notify " + JSON.stringify(req))
 }
@@ -95,6 +108,7 @@ const server = async () => {
 
       const message = state.lastAssistantMessage
       await notify({
+        sessionID,
         type: "complete",
         message: message || "Jobs done",
         last_assistant_message: message,
@@ -116,6 +130,7 @@ const server = async () => {
       if ((part.type === "subtask" || part.type === "agent") && !state.seenAgentParts.has(part.id)) {
         state.seenAgentParts.add(part.id)
         await notify({
+          sessionID: part.sessionID,
           type: "subagent",
           agent_type: cleanText(part.agent || part.name || "Agent", LIMITS.id),
           message: cleanText(part.description || part.prompt || part.name || "Done"),
@@ -135,6 +150,7 @@ const server = async () => {
         if (!state.active) {
           state.active = true
           await notify({
+            sessionID,
             type: "start",
             message: type === "retry" ? "Retrying" : "Working",
           })
@@ -160,7 +176,7 @@ const server = async () => {
           ? cleanText(pattern, LIMITS.patterns)
           : ""
       const message = perm ? (pats ? `${perm}: ${pats}` : perm) : "Permission needed"
-      await notify({ type: "permission", message })
+      await notify({ sessionID, type: "permission", message })
     },
 
     "todo.updated": async ({ sessionID, todos }) => {
@@ -186,7 +202,7 @@ const server = async () => {
 
       if (completed.length > 0) {
         state.lastTodoCompletedAt = Date.now()
-        await Promise.all(completed.map((message) => notify({ type: "todo-complete", message })))
+        await Promise.all(completed.map((message) => notify({ sessionID, type: "todo-complete", message })))
       }
     },
 
@@ -200,7 +216,7 @@ const server = async () => {
           state.active = false
         }
       }
-      await notify({ type: "error", message })
+      await notify({ sessionID, type: "error", message })
     },
 
     "session.deleted": ({ info }) => {

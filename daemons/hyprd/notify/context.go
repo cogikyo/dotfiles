@@ -31,7 +31,7 @@ func (n *Notifier) resolveContext(req NotifyRequest, fallbackApp string) *kittyC
 		ctx.WindowID = envInt("KITTY_WINDOW_ID")
 	}
 
-	if ctx.PID == 0 && usesKittyEnv(req.Source) {
+	if ctx.PID == 0 && usesKittyEnv(req.Source) && allowKittyScanFallback(req.Source) {
 		if found := n.findKittyContext([]string{req.Source}); found != nil {
 			ctx = found
 		}
@@ -40,16 +40,23 @@ func (n *Notifier) resolveContext(req NotifyRequest, fallbackApp string) *kittyC
 	if ctx.PID > 0 {
 		ctx.WorkspaceID = n.workspaceForPID(ctx.PID)
 	}
+	if ctx.PID > 0 && ctx.WindowID > 0 {
+		ctx.TabID, ctx.App = n.tabContext(ctx.PID, ctx.WindowID)
+	}
 	if ctx.WorkspaceID == 0 {
 		ctx.WorkspaceID = n.activeWorkspaceID()
-	}
-	if ctx.App == "" && ctx.PID > 0 && ctx.WindowID > 0 {
-		ctx.App = n.tabIcon(ctx.PID, ctx.WindowID)
 	}
 	if ctx.App == "" {
 		ctx.App = fallbackApp
 	}
 	return ctx
+}
+
+func allowKittyScanFallback(source string) bool {
+	// OpenCode can have multiple concurrent sessions. Guessing by foreground
+	// process can attach a notification to the wrong tab, so require explicit
+	// kitty metadata from the plugin for focus actions.
+	return source != "opencode"
 }
 
 func usesKittyEnv(source string) bool {
@@ -88,22 +95,26 @@ func (n *Notifier) activeWorkspaceID() int {
 	return ws.ID
 }
 
-func (n *Notifier) tabIcon(pid, windowID int) string {
+func (n *Notifier) tabContext(pid, windowID int) (string, string) {
 	client := session.NewKittyClient(pid)
 	windows, err := client.FullState()
 	if err != nil {
-		return ""
+		return "", ""
 	}
 	for _, win := range windows {
 		for _, tab := range win.Tabs {
 			for _, pane := range tab.Windows {
 				if pane.ID == windowID {
-					return tabIcon(tab.Title)
+					tabID := ""
+					if pane.Env != nil {
+						tabID = pane.Env["KITTY_TAB_ID"]
+					}
+					return tabID, tabIcon(tab.Title)
 				}
 			}
 		}
 	}
-	return ""
+	return "", ""
 }
 
 // findKittyContext scans kitty control sockets for a foreground process matching any of the given names.
@@ -167,6 +178,7 @@ func (n *Notifier) findKittyContext(processes []string) *kittyContext {
 						best = &kittyContext{
 							PID:         pid,
 							WindowID:    pane.ID,
+							TabID:       pane.Env["KITTY_TAB_ID"],
 							WorkspaceID: n.workspaceForPID(pid),
 							App:         tabIcon(tab.Title),
 						}
@@ -215,8 +227,14 @@ func (n *Notifier) focusContext(ctx *kittyContext) {
 		}
 	}
 
-	if ctx.PID > 0 && ctx.WindowID > 0 {
-		_ = session.NewKittyClient(ctx.PID).FocusWindow(ctx.WindowID)
+	if ctx.PID > 0 {
+		kitty := session.NewKittyClient(ctx.PID)
+		if ctx.TabID != "" {
+			_ = kitty.FocusTab(ctx.TabID)
+		}
+		if ctx.WindowID > 0 {
+			_ = kitty.FocusWindow(ctx.WindowID)
+		}
 	}
 }
 

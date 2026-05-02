@@ -49,6 +49,7 @@ type notificationSpec struct {
 type kittyContext struct {
 	PID         int
 	WindowID    int
+	TabID       string
 	WorkspaceID int
 	App         string
 }
