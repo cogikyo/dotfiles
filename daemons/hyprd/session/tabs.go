@@ -67,6 +67,9 @@ func (t *Tabs) init(args []string) (string, error) {
 
 	windowID := windows[0].ID
 	defaultCWD := t.resolveDefaultCWD(windows[0])
+	if len(args) > 2 && args[2] != "" {
+		defaultCWD = config.ExpandPath(args[2])
+	}
 
 	created := 0
 	for _, tab := range profile.Tabs {
@@ -315,7 +318,7 @@ func (t *Tabs) buildLaunchArgs(tab config.TabDef, tabID, cwd string) []string {
 	case tab.Command == "xplr":
 		args = append(args, "zsh", "-c", `cd "$(xplr --print-pwd-as-result)" 2>/dev/null; exec zsh -l`)
 	case tab.Command != "":
-		args = append(args, "--env", "HYPRD_LAUNCH_COMMAND="+tab.Command)
+		args = append(args, "--env", "HYPRD_LAUNCH_COMMAND="+withResolvedPWD(tab.Command, cwd))
 		args = append(args, persistentZshCommand()...)
 	}
 	return args
@@ -336,10 +339,14 @@ func (t *Tabs) buildPaneLaunchArgs(tabID string, pane config.TabPane, cwd string
 	}
 	switch {
 	case pane.Command != "":
-		args = append(args, "--env", "HYPRD_LAUNCH_COMMAND="+pane.Command)
+		args = append(args, "--env", "HYPRD_LAUNCH_COMMAND="+withResolvedPWD(pane.Command, cwd))
 		args = append(args, persistentZshCommand()...)
 	}
 	return args
+}
+
+func withResolvedPWD(command, cwd string) string {
+	return strings.ReplaceAll(command, "$PWD", cwd)
 }
 
 func persistentZshCommand() []string {

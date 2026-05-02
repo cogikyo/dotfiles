@@ -54,9 +54,9 @@ type KittyProcess struct {
 }
 
 func (k *KittyClient) FullState() ([]KittyOSWindow, error) {
-	out, err := exec.Command("kitty", "@", "--to", k.socketPath, "ls").Output()
+	out, err := exec.Command("kitty", "@", "--to", k.socketPath, "ls").CombinedOutput()
 	if err != nil {
-		return nil, fmt.Errorf("kitty ls: %w", err)
+		return nil, fmt.Errorf("kitty ls: %w: %s", err, strings.TrimSpace(string(out)))
 	}
 
 	var windows []KittyOSWindow
