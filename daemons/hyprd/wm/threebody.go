@@ -20,15 +20,15 @@ type ThreeBody struct {
 	hypr      *hypr.Client
 	state     *state.State
 	hasNotify func() bool
-	notifyAct func()
+	notifyAct func() bool
 }
 
 func NewThreeBody(h *hypr.Client, s *state.State) *ThreeBody {
 	return &ThreeBody{hypr: h, state: s}
 }
 
-// SetNotifyHooks wires a notification bridge so "agents" can absorb a pending action instead of switching focus.
-func (tb *ThreeBody) SetNotifyHooks(check func() bool, action func()) {
+// SetNotifyHooks wires a notification bridge so "agents" can try a pending action before switching focus.
+func (tb *ThreeBody) SetNotifyHooks(check func() bool, action func() bool) {
 	tb.hasNotify = check
 	tb.notifyAct = action
 }
@@ -45,11 +45,10 @@ func (tb *ThreeBody) Execute(name string) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("unknown three-body window: %s", name)
 	}
-	if name == "agents" && tb.hasNotify != nil && tb.hasNotify() {
-		if tb.notifyAct != nil {
-			tb.notifyAct()
+	if name == "agents" && tb.hasNotify != nil && tb.hasNotify() && tb.notifyAct != nil {
+		if tb.notifyAct() {
+			return "notification: action", nil
 		}
-		return "notification: action", nil
 	}
 	return tb.Focus(name, spec.Class, spec.Title, spec.Command)
 }
@@ -256,6 +255,10 @@ func (tb *ThreeBody) focusWithEnroll(wsID int, bodyName, class, title, launchCmd
 			tb.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", c.Address))
 			return fmt.Sprintf("focused (no three-body): %s", c.Address), nil
 		}
+	}
+
+	if bodyName == "agents" && wsID >= 1 && wsID <= 3 {
+		return fmt.Sprintf("not found: %s %s", class, title), nil
 	}
 
 	if launchCmd != "" {

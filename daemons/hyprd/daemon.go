@@ -320,7 +320,7 @@ func (d *Daemon) handleThreeBody(arg string) string {
 		return "usage: three-body {editor|agents|browser|shadow}"
 	}
 	tb := wm.NewThreeBody(d.hypr, d.state)
-	tb.SetNotifyHooks(hasNotifications, func() { runCmd("dunstctl", "action") })
+	tb.SetNotifyHooks(hasDisplayedNotifications, d.tryDunstAction)
 	result, err := tb.Execute(name)
 	if err != nil {
 		return fmt.Sprintf("error: %v", err)
@@ -468,20 +468,53 @@ func (d *Daemon) newInit() *session.Init {
 	return init
 }
 
-// hasNotifications reports whether dunst is currently displaying any notifications.
-func hasNotifications() bool {
-	out, err := exec.Command("dunstctl", "count", "displayed").Output()
-	if err != nil {
-		return false
-	}
-	n, err := strconv.Atoi(strings.TrimSpace(string(out)))
-	return err == nil && n > 0
+// hasDisplayedNotifications keeps the agents keybind's old behavior: Dunst gets
+// first chance whenever a visible notification exists.
+func hasDisplayedNotifications() bool {
+	return displayedNotifications() > 0
 }
 
-func runCmd(name string, args ...string) {
-	if err := exec.Command(name, args...).Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "hyprd: runCmd %s: %v\n", name, err)
+func (d *Daemon) tryDunstAction() bool {
+	before := displayedNotifications()
+	if before == 0 {
+		return false
 	}
+	activeBefore := d.activeWindowAddress()
+
+	if err := exec.Command("dunstctl", "action").Run(); err != nil {
+		exec.Command("dunstctl", "close").Run()
+		return false
+	}
+
+	time.Sleep(75 * time.Millisecond)
+	activeAfter := d.activeWindowAddress()
+	return activeBefore != "" && activeAfter != "" && activeAfter != activeBefore
+}
+
+func displayedNotifications() int {
+	out, err := exec.Command("dunstctl", "count", "displayed").Output()
+	if err != nil {
+		return 0
+	}
+	n, err := strconv.Atoi(strings.TrimSpace(string(out)))
+	if err != nil {
+		return 0
+	}
+	return n
+}
+
+func (d *Daemon) activeWindowAddress() string {
+	data, err := d.hypr.Request("j/activewindow")
+	if err != nil {
+		return ""
+	}
+	var win struct {
+		Address string `json:"address"`
+	}
+	if err := json.Unmarshal(data, &win); err != nil {
+		return ""
+	}
+	return win.Address
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
