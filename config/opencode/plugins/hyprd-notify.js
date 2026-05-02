@@ -1,3 +1,5 @@
+import fs from "node:fs/promises"
+
 const SOCKET_PATH = "/tmp/hyprd.sock"
 const KITTY_CONTEXT_PATH = "/tmp/opencode-kitty-context.json"
 
@@ -21,12 +23,24 @@ async function kittyContext(sessionID) {
   try {
     const contexts = await Bun.file(KITTY_CONTEXT_PATH).json()
     const ctx = contexts?.[sessionID]
+    const kitty_pid = Number(ctx?.kitty_pid) || 0
+    const kitty_window_id = Number(ctx?.kitty_window_id) || 0
+    if (!kitty_pid || !kitty_window_id) return { kitty_pid: 0, kitty_window_id: 0 }
+    if (!(await isSocket(`/tmp/kitty-${kitty_pid}`))) return { kitty_pid: 0, kitty_window_id: 0 }
     return {
-      kitty_pid: Number(ctx?.kitty_pid) || 0,
-      kitty_window_id: Number(ctx?.kitty_window_id) || 0,
+      kitty_pid,
+      kitty_window_id,
     }
   } catch {
     return { kitty_pid: 0, kitty_window_id: 0 }
+  }
+}
+
+async function isSocket(path) {
+  try {
+    return (await fs.stat(path)).isSocket()
+  } catch {
+    return false
   }
 }
 
