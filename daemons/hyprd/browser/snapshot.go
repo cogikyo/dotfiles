@@ -4,6 +4,8 @@ package browser
 
 import (
 	"cmp"
+	"dotfiles/daemons/config"
+	"dotfiles/daemons/hyprd/hypr"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -11,8 +13,6 @@ import (
 	"regexp"
 	"slices"
 	"strings"
-
-	"dotfiles/daemons/config"
 
 	"gopkg.in/yaml.v3"
 )
@@ -226,6 +226,10 @@ func SnapshotMatchesWindowTitle(snapshot, windowTitle string) bool {
 
 // ClaimWindow finds a Firefox window matching the snapshot's selected title and moves it to the target workspace.
 func (b *Browser) ClaimWindow(snapshot string, workspace int) error {
+	return b.claimWindow(snapshot, workspace, nil)
+}
+
+func (b *Browser) claimWindow(snapshot string, workspace int, allow func(hypr.Window) bool) error {
 	if b.hypr == nil {
 		return fmt.Errorf("no hyprland client")
 	}
@@ -244,6 +248,9 @@ func (b *Browser) ClaimWindow(snapshot string, workspace int) error {
 		if !strings.Contains(strings.ToLower(c.Class), "firefox") {
 			continue
 		}
+		if allow != nil && !allow(c) {
+			continue
+		}
 		if titlesMatch(trimFirefoxTitle(c.Title), title) {
 			if c.Workspace.ID == workspace {
 				return nil
@@ -255,7 +262,20 @@ func (b *Browser) ClaimWindow(snapshot string, workspace int) error {
 	return fmt.Errorf("no Firefox window matching %q for snapshot %q", title, snapshot)
 }
 
+// ClaimWindowForSession finds a matching Firefox window from a managed session profile.
+func (b *Browser) ClaimWindowForSession(snapshot, sessionName string, cfg config.BrowserConfig, workspace int) error {
+	profile, err := ManagedProfileForSession(sessionName, cfg)
+	if err != nil {
+		return err
+	}
+	return b.claimWindow(snapshot, workspace, func(c hypr.Window) bool {
+		// Hyprland reports the Firefox content PID; the profile flag usually lives on an ancestor process.
+		return processTreeUsesProfile(c.Pid, profile.Root)
+	})
+}
+
 // buildSessionPayload constructs a minimal Firefox session JSON from snapshot metadata.
+//
 // This avoids storing raw Firefox session data (which contains cookies, formdata, storage).
 func buildSessionPayload(dir string) ([]byte, error) {
 	meta, err := readSnapshotSummary(dir)
@@ -325,8 +345,7 @@ func readSnapshotSummary(dir string) (browserSnapshotSummary, error) {
 	return summary, nil
 }
 
-// loadSnapshotPayload returns Firefox session JSON for a named snapshot,
-// generating it from snapshot.yaml metadata.
+// loadSnapshotPayload returns Firefox session JSON generated from a named snapshot's metadata.
 func loadSnapshotPayload(name string) ([]byte, error) {
 	dir, err := resolveSnapshotDir(name)
 	if err != nil {

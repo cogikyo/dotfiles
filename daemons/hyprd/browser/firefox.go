@@ -13,6 +13,8 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	"dotfiles/daemons/config"
 )
 
 const (
@@ -64,6 +66,93 @@ func firefoxRunningPIDs() ([]int, error) {
 	return pids, nil
 }
 
+// FirefoxRunning reports whether Firefox Developer Edition appears to be running.
+func FirefoxRunning() bool {
+	pids, err := firefoxRunningPIDs()
+	return err == nil && len(pids) > 0
+}
+
+func firefoxProfilePIDs(profile firefoxProfile) ([]int, error) {
+	pids, err := firefoxRunningPIDs()
+	if err != nil {
+		return nil, err
+	}
+	var matched []int
+	for _, pid := range pids {
+		args, err := processArgs(pid)
+		if err != nil {
+			continue
+		}
+		if argsUseProfile(args, profile.Root) {
+			matched = append(matched, pid)
+		}
+	}
+	return matched, nil
+}
+
+func processArgs(pid int) ([]string, error) {
+	data, err := os.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "cmdline"))
+	if err != nil {
+		return nil, err
+	}
+	trimmed := strings.TrimRight(string(data), "\x00")
+	if trimmed == "" {
+		return nil, nil
+	}
+	return strings.Split(trimmed, "\x00"), nil
+}
+
+func argsUseProfile(args []string, profileRoot string) bool {
+	profileRoot = filepath.Clean(profileRoot)
+	for i, arg := range args {
+		switch {
+		case arg == "--profile" || arg == "-profile" || arg == "-P":
+			if i+1 < len(args) && profileArgMatches(args[i+1], profileRoot) {
+				return true
+			}
+		case strings.HasPrefix(arg, "--profile="):
+			if profileArgMatches(strings.TrimPrefix(arg, "--profile="), profileRoot) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func profileArgMatches(raw, profileRoot string) bool {
+	return filepath.Clean(config.ExpandPath(raw)) == profileRoot
+}
+
+func processTreeUsesProfile(pid int, profileRoot string) bool {
+	for range 32 {
+		args, err := processArgs(pid)
+		if err == nil && argsUseProfile(args, profileRoot) {
+			return true
+		}
+		parent, err := processParent(pid)
+		if err != nil || parent <= 1 || parent == pid {
+			return false
+		}
+		pid = parent
+	}
+	return false
+}
+
+func processParent(pid int) (int, error) {
+	data, err := os.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "status"))
+	if err != nil {
+		return 0, err
+	}
+	for line := range strings.SplitSeq(string(data), "\n") {
+		value, ok := strings.CutPrefix(line, "PPid:")
+		if !ok {
+			continue
+		}
+		return strconv.Atoi(strings.TrimSpace(value))
+	}
+	return 0, fmt.Errorf("no parent pid for %d", pid)
+}
+
 // stopFirefox ensures no Firefox is running; with force it SIGTERMs and polls up to 15s.
 func stopFirefox(force bool) error {
 	pids, err := firefoxRunningPIDs()
@@ -93,6 +182,36 @@ func stopFirefox(force bool) error {
 		time.Sleep(250 * time.Millisecond)
 	}
 	return fmt.Errorf("Firefox did not exit cleanly after SIGTERM")
+}
+
+func stopFirefoxProfile(profile firefoxProfile, force bool) error {
+	pids, err := firefoxProfilePIDs(profile)
+	if err != nil {
+		return err
+	}
+	if len(pids) == 0 {
+		return nil
+	}
+	if !force {
+		return fmt.Errorf("firefox profile %s is running; rerun with --force for exact restore", profile.Root)
+	}
+
+	for _, pid := range pids {
+		_ = syscall.Kill(pid, syscall.SIGTERM)
+	}
+
+	deadline := time.Now().Add(15 * time.Second)
+	for time.Now().Before(deadline) {
+		pids, err = firefoxProfilePIDs(profile)
+		if err != nil {
+			return err
+		}
+		if len(pids) == 0 {
+			return nil
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
+	return fmt.Errorf("Firefox profile %s did not exit cleanly after SIGTERM", profile.Root)
 }
 
 func (b *Browser) launchFirefoxProfile(profile firefoxProfile) error {

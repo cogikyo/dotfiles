@@ -6,6 +6,7 @@ import (
 	"bufio"
 	"cmp"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -92,6 +93,137 @@ func discoverFirefoxProfile(raw string) (firefoxProfile, error) {
 	}
 
 	return firefoxProfile{}, fmt.Errorf("could not determine default Firefox profile")
+}
+
+// ManagedProfileForSession returns a hyprd-owned Firefox profile for a layout session.
+//
+// The first restore clones the snapshot source profile so exact restores keep browser state.
+// Future restarts are isolated to the managed layout profile.
+func ManagedProfileForSession(sessionName string, cfg config.BrowserConfig) (firefoxProfile, error) {
+	slug, err := slugifySnapshotName(sessionName)
+	if err != nil {
+		return firefoxProfile{}, err
+	}
+	source, err := sourceProfileForBrowserConfig(cfg)
+	if err != nil {
+		return firefoxProfile{}, err
+	}
+	root, err := managedFirefoxProfilesRoot()
+	if err != nil {
+		return firefoxProfile{}, err
+	}
+	profile := firefoxProfile{
+		Root: filepath.Join(root, slug),
+		Name: "hyprd-" + slug,
+	}
+	if isDir(profile.Root) {
+		return profile, nil
+	}
+	if err := cloneFirefoxProfile(source.Root, profile.Root); err != nil {
+		return firefoxProfile{}, err
+	}
+	return profile, nil
+}
+
+func sourceProfileForBrowserConfig(cfg config.BrowserConfig) (firefoxProfile, error) {
+	if cfg.Profile != "" {
+		return discoverFirefoxProfile(cfg.Profile)
+	}
+	if cfg.Snapshot != "" {
+		dir, err := resolveSnapshotDir(cfg.Snapshot)
+		if err != nil {
+			return firefoxProfile{}, err
+		}
+		return restoreProfileForSnapshot(dir, "")
+	}
+	return discoverFirefoxProfile("")
+}
+
+func managedFirefoxProfilesRoot() (string, error) {
+	if stateHome := os.Getenv("XDG_STATE_HOME"); stateHome != "" {
+		return filepath.Join(stateHome, "hyprd", "firefox-profiles"), nil
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(home, ".local", "state", "hyprd", "firefox-profiles"), nil
+}
+
+func cloneFirefoxProfile(source, target string) error {
+	if filepath.Clean(source) == filepath.Clean(target) {
+		return nil
+	}
+	if err := os.MkdirAll(target, 0o700); err != nil {
+		return err
+	}
+	return filepath.WalkDir(source, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		rel, err := filepath.Rel(source, path)
+		if err != nil {
+			return err
+		}
+		if rel == "." {
+			return nil
+		}
+		name := entry.Name()
+		if shouldSkipProfileCloneEntry(name) {
+			if entry.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		dest := filepath.Join(target, rel)
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		mode := info.Mode()
+		if entry.IsDir() {
+			return os.MkdirAll(dest, mode.Perm())
+		}
+		if mode.Type()&os.ModeSymlink != 0 {
+			link, err := os.Readlink(path)
+			if err != nil {
+				return err
+			}
+			return os.Symlink(link, dest)
+		}
+		if !mode.IsRegular() {
+			return nil
+		}
+		return copyProfileFile(path, dest, mode.Perm())
+	})
+}
+
+func shouldSkipProfileCloneEntry(name string) bool {
+	switch name {
+	case ".parentlock", "lock", "parent.lock", "sessionstore.jsonlz4", "sessionCheckpoints.json":
+		return true
+	case "sessionstore-backups", "startupCache", "cache2", "thumbnails", "shader-cache", "crashes", "minidumps":
+		return true
+	}
+	return strings.HasSuffix(name, ".tmp") || strings.HasSuffix(name, ".sqlite-wal") || strings.HasSuffix(name, ".sqlite-shm")
+}
+
+func copyProfileFile(source, target string, perm os.FileMode) error {
+	if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
+		return err
+	}
+	in, err := os.Open(source)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+	out, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, perm)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+	_, err = io.Copy(out, in)
+	return err
 }
 
 func firefoxRoot() (string, error) {
@@ -189,7 +321,8 @@ func profileNameForPath(profiles iniFile, root, target string) string {
 }
 
 // setFirefoxPref upserts a user_pref line in the profile's prefs.js.
-// Firefox last-write-wins for duplicate keys, but keeping one line avoids prefs.js churn.
+//
+// Firefox prefs are last-write-wins, but keeping one line avoids prefs.js churn.
 func setFirefoxPref(profile firefoxProfile, key, value string) error {
 	prefsPath := filepath.Join(profile.Root, "prefs.js")
 	line := fmt.Sprintf("user_pref(\"%s\", %s);", key, value)

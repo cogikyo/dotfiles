@@ -119,7 +119,19 @@ func (b *Browser) restoreSnapshotExact(name, snapshotDir string, profile firefox
 	if err != nil {
 		return "", err
 	}
-	return b.injectAndLaunch(payload, profile, force, dryRun)
+	return b.injectAndLaunchWithStop(payload, profile, force, dryRun, func(force bool) error {
+		return stopFirefox(force)
+	})
+}
+
+func (b *Browser) restoreSnapshotExactManaged(name, snapshotDir string, profile firefoxProfile, force, dryRun bool) (string, error) {
+	payload, err := buildSessionPayload(snapshotDir)
+	if err != nil {
+		return "", err
+	}
+	return b.injectAndLaunchWithStop(payload, profile, force, dryRun, func(force bool) error {
+		return stopFirefoxProfile(profile, force)
+	})
 }
 
 func restoreBackupDir() (string, error) {
@@ -154,13 +166,19 @@ func restoreProfileForSnapshot(snapshotDir, override string) (firefoxProfile, er
 
 // injectAndLaunch stops Firefox, backs up session files, injects the payload, and launches.
 func (b *Browser) injectAndLaunch(payload []byte, profile firefoxProfile, force, dryRun bool) (string, error) {
+	return b.injectAndLaunchWithStop(payload, profile, force, dryRun, func(force bool) error {
+		return stopFirefox(force)
+	})
+}
+
+func (b *Browser) injectAndLaunchWithStop(payload []byte, profile firefoxProfile, force, dryRun bool, stop func(bool) error) (string, error) {
 	target := filepath.Join(profile.Root, "sessionstore.jsonlz4")
 
 	if dryRun {
 		return fmt.Sprintf("would stop Firefox (force=%t)\nwould inject %d bytes into %s\nwould launch Firefox", force, len(payload), target), nil
 	}
 
-	if err := stopFirefox(force); err != nil {
+	if err := stop(force); err != nil {
 		return "", err
 	}
 	backupDir, err := backupFirefoxSessionFiles(profile)

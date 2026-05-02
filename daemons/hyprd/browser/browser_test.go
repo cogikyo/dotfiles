@@ -84,6 +84,76 @@ func TestSlugifySnapshotName(t *testing.T) {
 	}
 }
 
+func TestManagedProfileForSessionClonesSnapshotSource(t *testing.T) {
+	stateHome := t.TempDir()
+	t.Setenv("XDG_STATE_HOME", stateHome)
+
+	source := filepath.Join(t.TempDir(), "source.default")
+	if err := os.MkdirAll(filepath.Join(source, "sessionstore-backups"), 0o755); err != nil {
+		t.Fatalf("mkdir source: %v", err)
+	}
+	for path, data := range map[string]string{
+		filepath.Join(source, "prefs.js"):                                 "user_pref(\"browser.foo\", true);\n",
+		filepath.Join(source, "sessionstore.jsonlz4"):                     "stale session",
+		filepath.Join(source, ".parentlock"):                              "lock",
+		filepath.Join(source, "sessionstore-backups", "recovery.jsonlz4"): "stale recovery",
+	} {
+		if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
+			t.Fatalf("write %s: %v", path, err)
+		}
+	}
+
+	snapshotDir := filepath.Join(stateHome, "hyprd", "browser-sessions", "managed-test")
+	if err := os.MkdirAll(snapshotDir, 0o755); err != nil {
+		t.Fatalf("mkdir snapshot: %v", err)
+	}
+	summary := browserSnapshotSummary{
+		Name:    "managed-test",
+		Profile: browserProfileSummary{Name: "default", Path: source},
+		Window:  browserSnapshotWindow{SelectedTab: 1},
+	}
+	data, err := yaml.Marshal(summary)
+	if err != nil {
+		t.Fatalf("marshal snapshot: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(snapshotDir, "snapshot.yaml"), data, 0o644); err != nil {
+		t.Fatalf("write snapshot: %v", err)
+	}
+
+	profile, err := ManagedProfileForSession("LeadPier", config.BrowserConfig{Snapshot: "managed-test"})
+	if err != nil {
+		t.Fatalf("ManagedProfileForSession returned error: %v", err)
+	}
+	if got, want := profile.Root, filepath.Join(stateHome, "hyprd", "firefox-profiles", "LeadPier"); got != want {
+		t.Fatalf("profile root = %q, want %q", got, want)
+	}
+	if !fileExists(filepath.Join(profile.Root, "prefs.js")) {
+		t.Fatalf("prefs.js was not copied")
+	}
+	for _, path := range []string{
+		filepath.Join(profile.Root, "sessionstore.jsonlz4"),
+		filepath.Join(profile.Root, ".parentlock"),
+		filepath.Join(profile.Root, "sessionstore-backups"),
+	} {
+		if _, err := os.Stat(path); err == nil {
+			t.Fatalf("%s should not have been cloned", path)
+		}
+	}
+}
+
+func TestArgsUseProfile(t *testing.T) {
+	profile := filepath.Join(t.TempDir(), "hyprd-profile")
+	if !argsUseProfile([]string{"firefox", "--profile", profile}, profile) {
+		t.Fatalf("--profile arg did not match")
+	}
+	if !argsUseProfile([]string{"firefox", "--profile=" + profile}, profile) {
+		t.Fatalf("--profile= arg did not match")
+	}
+	if argsUseProfile([]string{"firefox", "--profile", filepath.Join(t.TempDir(), "other")}, profile) {
+		t.Fatalf("different profile should not match")
+	}
+}
+
 func TestBrowserModeDefaultsAndExact(t *testing.T) {
 	if got, want := browserMode(config.BrowserConfig{}), "urls"; got != want {
 		t.Fatalf("default mode = %q, want %q", got, want)

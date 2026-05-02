@@ -239,15 +239,21 @@ func (l *Layout) launchSessionBrowser(s config.Session) error {
 	b := browser.NewBrowser(l.hypr, l.state)
 
 	if b.UsesExactRestore(s.Browser) {
-		if _, err := b.RestoreConfiguredSnapshot(s.Browser, false); err != nil {
+		if err := l.claimManagedBrowserWindow(b, s); err == nil {
+			return nil
+		}
+		if _, err := b.RestoreConfiguredSnapshotForSession(s.Name, s.Browser, false); err != nil {
 			return err
 		}
-		if err := l.claimBrowserWindow(b, s); err != nil {
+		if err := l.claimManagedBrowserWindow(b, s); err != nil {
 			fmt.Fprintf(os.Stderr, "layout: claim browser window for %s: %v\n", s.Name, err)
 		}
 		return nil
 	}
+	return l.launchSessionBrowserURLs(b, s)
+}
 
+func (l *Layout) launchSessionBrowserURLs(b *browser.Browser, s config.Session) error {
 	tbw := config.ThreeBody["browser"]
 
 	browserCfg, err := b.ResolveLaunchConfig(s.Browser)
@@ -278,6 +284,20 @@ func (l *Layout) claimBrowserWindow(b *browser.Browser, s config.Session) error 
 	var lastErr error
 	for time.Now().Before(deadline) {
 		if err := b.ClaimWindow(s.Browser.Snapshot, s.Workspace); err == nil {
+			return nil
+		} else {
+			lastErr = err
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
+	return lastErr
+}
+
+func (l *Layout) claimManagedBrowserWindow(b *browser.Browser, s config.Session) error {
+	deadline := time.Now().Add(sessionBrowserClaimTimeout)
+	var lastErr error
+	for time.Now().Before(deadline) {
+		if err := b.ClaimWindowForSession(s.Browser.Snapshot, s.Name, s.Browser, s.Workspace); err == nil {
 			return nil
 		} else {
 			lastErr = err
