@@ -329,6 +329,9 @@ func connectionExists(name string) (bool, error) {
 }
 
 func label(conn connection) string {
+	if strings.EqualFold(conn.Alias, conn.Name) {
+		return conn.Name
+	}
 	if conn.Alias != "" && conn.Alias != conn.Name {
 		return fmt.Sprintf("%s -> %s", conn.Alias, conn.Name)
 	}

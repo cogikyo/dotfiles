@@ -181,8 +181,8 @@ bluetooth:
 # ╰───────────────────────────────────────────────────────────────────────────────╯
 vpn:
   connections:
-    work:
-      name: TrendCapitalVPN
+    trend:
+      name: Trend
       type: l2tp
       profile: ~/.local/share/dotfiles/vpn/work.nmconnection
 

@@ -253,12 +253,12 @@ hyprd notify kitty-finish <command>   # emit kitty command-finish notification
 ### VPN
 
 ```bash
-hyprd vpn work             # toggle configured NetworkManager VPN alias
-hyprd vpn work up|down     # connect/disconnect explicitly
-hyprd vpn work status      # status for one alias/connection
-hyprd vpn install work     # import staged .nmconnection into NetworkManager
-hyprd vpn install work --replace
-hyprd vpn export work      # export NetworkManager profile to staged file
+hyprd vpn trend            # toggle configured NetworkManager VPN alias
+hyprd vpn trend up|down    # connect/disconnect explicitly
+hyprd vpn trend status     # status for one alias/connection
+hyprd vpn install trend    # import staged .nmconnection into NetworkManager
+hyprd vpn install trend --replace
+hyprd vpn export trend     # export NetworkManager profile to staged file
 hyprd vpn status           # active VPN summary
 hyprd vpn list             # list NetworkManager VPN connections
 ```
