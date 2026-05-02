@@ -119,14 +119,23 @@ tabs:
         title: "«   »"
         command: nvim
         cwd: "~/LeadPier/frontend"
+        actions:
+          nvim: {}
       - name: be-nvim
         title: "«   »"
         command: nvim
         cwd: "~/LeadPier/backend"
+        actions:
+          nvim: {}
       - name: pier
         title: "« 󰠳  »"
         command: nvim
         cwd: "~/LeadPier/.pier/pier"
+        actions:
+          nvim:
+            pane: 0
+          term:
+            pane: 1
         layout: "fat:bias=80"
         panes:
           - cwd: "~/LeadPier/.pier/pier"
@@ -134,6 +143,8 @@ tabs:
         title: "«   »"
         command: lazygit
         cwd: "~/LeadPier/frontend"
+        actions:
+          git: {}
         layout: "fat:bias=80"
         panes:
           - command: "yarn dev"
@@ -142,6 +153,8 @@ tabs:
         title: "«   »"
         command: "cd $(grep -m1 backend/services ~/.local/state/lazygit/state.yml | awk '{print $NF}') && lazygit"
         cwd: "~/LeadPier/backend"
+        actions:
+          git: {}
         layout: "fat:bias=80"
         panes:
           - command: "pier watch"

@@ -98,11 +98,11 @@ func activeProfileTabName(cfg *config.HyprConfig, profileName string, win KittyO
 	}
 
 	for _, tab := range win.Tabs {
-		if !tab.IsFocused {
+		if !tabSelected(tab) {
 			continue
 		}
 		for _, pane := range tab.Windows {
-			if !pane.IsFocused {
+			if !paneSelected(pane) {
 				continue
 			}
 			name := profileTabNameFromID(win.ID, profile.Prefix, pane.Env["KITTY_TAB_ID"])
@@ -173,12 +173,17 @@ func semanticCandidates(profile *config.TabProfile, action string) []string {
 	if hasProfileTab(profile, action) {
 		matches = append(matches, action)
 	}
+	for _, tab := range profile.Tabs {
+		if _, ok := tab.Actions[action]; ok && !slices.Contains(matches, tab.Name) {
+			matches = append(matches, tab.Name)
+		}
+	}
 	suffix := action
 	if action == "git" && !hasProfileTab(profile, "git") {
 		suffix = "build"
 	}
 	for _, tab := range profile.Tabs {
-		if strings.HasSuffix(tab.Name, "-"+suffix) {
+		if strings.HasSuffix(tab.Name, "-"+suffix) && !slices.Contains(matches, tab.Name) {
 			matches = append(matches, tab.Name)
 		}
 	}
@@ -249,19 +254,43 @@ func actionKeysForTab(profile *config.TabProfile, tabName string) []string {
 	}
 
 	var actions []string
+	if tab := findProfileTab(profile, tabName); tab != nil {
+		for action := range tab.Actions {
+			actions = append(actions, action)
+		}
+	}
 	switch {
 	case tabName == "nvim" || strings.HasSuffix(tabName, "-nvim"):
-		actions = append(actions, "nvim")
+		if !slices.Contains(actions, "nvim") {
+			actions = append(actions, "nvim")
+		}
 	case tabName == "git":
-		actions = append(actions, "git")
+		if !slices.Contains(actions, "git") {
+			actions = append(actions, "git")
+		}
 	case tabName == "build":
-		actions = append(actions, "build")
+		if !slices.Contains(actions, "build") {
+			actions = append(actions, "build")
+		}
 	case strings.HasSuffix(tabName, "-build"):
 		if hasProfileTab(profile, "git") {
-			actions = append(actions, "build")
+			if !slices.Contains(actions, "build") {
+				actions = append(actions, "build")
+			}
 		} else {
-			actions = append(actions, "git")
+			if !slices.Contains(actions, "git") {
+				actions = append(actions, "git")
+			}
 		}
 	}
 	return actions
+}
+
+func tabAction(profile *config.TabProfile, tabName, action string) (config.TabAction, bool) {
+	tab := findProfileTab(profile, tabName)
+	if tab == nil || tab.Actions == nil {
+		return config.TabAction{}, false
+	}
+	actionConfig, ok := tab.Actions[action]
+	return actionConfig, ok
 }

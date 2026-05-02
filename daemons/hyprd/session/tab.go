@@ -81,14 +81,15 @@ func (t *Tab) Execute(tabName string) (string, error) {
 	currentTab := activeProfileTabName(cfg, profileName, windows[0])
 	t.rememberTabState(wsID, profileName, &profile, currentTab)
 
+	action := normalizeTabAction(tabName)
 	targetTab := resolveTabAlias(cfg, tabName, profileName)
 	if !strings.Contains(tabName, ":") && profileTab(cfg, profileName, targetTab) == nil {
 		var rememberedTab, rememberedContext string
 		if mem := t.state.GetTabMemory(wsID, profileName); mem != nil {
-			rememberedTab = mem.ByAction[normalizeTabAction(tabName)]
+			rememberedTab = mem.ByAction[action]
 			rememberedContext = mem.Context
 		}
-		if resolved := pickSemanticTab(&profile, normalizeTabAction(tabName), currentTab, rememberedTab, rememberedContext); resolved != "" {
+		if resolved := pickSemanticTab(&profile, action, currentTab, rememberedTab, rememberedContext); resolved != "" {
 			targetTab = resolved
 		}
 	}
@@ -110,9 +111,17 @@ func (t *Tab) Execute(tabName string) (string, error) {
 	if targetTabID == "" {
 		targetTabID = fmt.Sprintf("%d-%s%s", st.WindowID, prefix, targetTab)
 	}
+	actionConfig, hasActionConfig := tabAction(&profile, targetTab, action)
 
 	activeAddr, _ := t.activeWindowAddress()
 	if activeAddr == editor.Address && st.ActiveTabID == targetTabID {
+		if hasActionConfig && activePaneIndex(windows[0], targetTabID) != actionConfig.Pane {
+			if err := kitty.FocusPane(targetTabID, actionConfig.Pane); err != nil {
+				return "", err
+			}
+			t.rememberTabState(wsID, profileName, &profile, targetTab)
+			return fmt.Sprintf("tab: %s", targetTab), nil
+		}
 		prevAddr, err := t.previousWindowAddress()
 		if err == nil && prevAddr != "" && prevAddr != editor.Address {
 			if err := t.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", prevAddr)); err != nil {
@@ -126,6 +135,11 @@ func (t *Tab) Execute(tabName string) (string, error) {
 	t.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", editor.Address))
 	if err := kitty.FocusTab(targetTabID); err != nil {
 		return "", err
+	}
+	if hasActionConfig {
+		if err := kitty.FocusPane(targetTabID, actionConfig.Pane); err != nil {
+			return "", err
+		}
 	}
 
 	switch actionName {

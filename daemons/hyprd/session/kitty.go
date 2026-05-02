@@ -27,12 +27,15 @@ type KittyState struct {
 }
 
 type KittyOSWindow struct {
-	ID   int        `json:"id"`
-	Tabs []KittyTab `json:"tabs"`
+	ID        int        `json:"id"`
+	IsFocused bool       `json:"is_focused"`
+	IsActive  bool       `json:"is_active"`
+	Tabs      []KittyTab `json:"tabs"`
 }
 
 type KittyTab struct {
 	ID        int         `json:"id"`
+	IsActive  bool        `json:"is_active"`
 	IsFocused bool        `json:"is_focused"`
 	Title     string      `json:"title"`
 	Windows   []KittyPane `json:"windows"`
@@ -41,6 +44,7 @@ type KittyTab struct {
 type KittyPane struct {
 	ID                  int               `json:"id"`
 	Title               string            `json:"title"`
+	IsActive            bool              `json:"is_active"`
 	IsFocused           bool              `json:"is_focused"`
 	CWD                 string            `json:"cwd"`
 	Env                 map[string]string `json:"env"`
@@ -78,11 +82,11 @@ func (k *KittyClient) State() (*KittyState, error) {
 
 	state := &KittyState{WindowID: windows[0].ID}
 	for _, tab := range windows[0].Tabs {
-		if !tab.IsFocused {
+		if !tabSelected(tab) {
 			continue
 		}
 		for _, w := range tab.Windows {
-			if w.IsFocused && w.Env != nil {
+			if paneSelected(w) && w.Env != nil {
 				state.ActiveTabID = w.Env["KITTY_TAB_ID"]
 			}
 		}
@@ -100,7 +104,35 @@ func (k *KittyClient) FocusWindow(id int) error {
 		"focus-window", "--match", fmt.Sprintf("id:%d", id)).Run()
 }
 
+func (k *KittyClient) FocusPane(tabID string, paneIndex int) error {
+	if paneIndex < 0 {
+		return nil
+	}
+	windows, err := k.FullState()
+	if err != nil {
+		return err
+	}
+	for _, osWindow := range windows {
+		for _, tab := range osWindow.Tabs {
+			if !tabHasID(tab, tabID) {
+				continue
+			}
+			if paneIndex >= len(tab.Windows) {
+				return fmt.Errorf("pane %d not in tab %s", paneIndex, tabID)
+			}
+			return k.FocusWindow(tab.Windows[paneIndex].ID)
+		}
+	}
+	return nil
+}
+
 func (k *KittyClient) SendText(tabID, text string) error {
+	if paneID, err := k.activePaneID(tabID); err != nil {
+		return err
+	} else if paneID != 0 {
+		return exec.Command("kitty", "@", "--to", k.socketPath,
+			"send-text", "--match", fmt.Sprintf("id:%d", paneID), text).Run()
+	}
 	return exec.Command("kitty", "@", "--to", k.socketPath,
 		"send-text", "--match", "env:KITTY_TAB_ID="+tabID, text).Run()
 }
@@ -155,4 +187,58 @@ func (k *KittyClient) TabIndex(tabID string) (int, error) {
 		}
 	}
 	return -1, nil
+}
+
+func activePaneIndex(win KittyOSWindow, tabID string) int {
+	for _, tab := range win.Tabs {
+		if !tabSelected(tab) || !tabHasID(tab, tabID) {
+			continue
+		}
+		for i, pane := range tab.Windows {
+			if paneSelected(pane) {
+				return i
+			}
+		}
+	}
+	return -1
+}
+
+func (k *KittyClient) activePaneID(tabID string) (int, error) {
+	windows, err := k.FullState()
+	if err != nil {
+		return 0, err
+	}
+	for _, win := range windows {
+		for _, tab := range win.Tabs {
+			if !tabHasID(tab, tabID) {
+				continue
+			}
+			for _, pane := range tab.Windows {
+				if paneSelected(pane) {
+					return pane.ID, nil
+				}
+			}
+			if len(tab.Windows) > 0 {
+				return tab.Windows[0].ID, nil
+			}
+		}
+	}
+	return 0, nil
+}
+
+func tabHasID(tab KittyTab, tabID string) bool {
+	for _, pane := range tab.Windows {
+		if pane.Env != nil && pane.Env["KITTY_TAB_ID"] == tabID {
+			return true
+		}
+	}
+	return false
+}
+
+func tabSelected(tab KittyTab) bool {
+	return tab.IsFocused || tab.IsActive
+}
+
+func paneSelected(pane KittyPane) bool {
+	return pane.IsFocused || pane.IsActive
 }

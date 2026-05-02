@@ -186,14 +186,23 @@ type TabProfile struct {
 
 // TabDef defines a single kitty tab within a profile.
 type TabDef struct {
-	Name       string    `yaml:"name"`
-	Title      string    `yaml:"title"`
-	Command    string    `yaml:"command"`
-	CWD        string    `yaml:"cwd"`         // may contain "~/"
-	CWDResolve string    `yaml:"cwd_resolve"` // e.g. "git-root"
-	Requires   string    `yaml:"requires"`    // must exist in CWD or tab is skipped
-	Layout     string    `yaml:"layout"`      // e.g. "fat:bias=80"
-	Panes      []TabPane `yaml:"panes"`
+	Name       string     `yaml:"name"`
+	Title      string     `yaml:"title"`
+	Command    string     `yaml:"command"`
+	CWD        string     `yaml:"cwd"`         // may contain "~/"
+	CWDResolve string     `yaml:"cwd_resolve"` // e.g. "git-root"
+	Requires   string     `yaml:"requires"`    // must exist in CWD or tab is skipped
+	Layout     string     `yaml:"layout"`      // e.g. "fat:bias=80"
+	Actions    TabActions `yaml:"actions"`     // semantic actions this tab can satisfy
+	Panes      []TabPane  `yaml:"panes"`
+}
+
+// TabActions maps semantic tab actions (nvim, git, term) to action-specific behavior.
+type TabActions map[string]TabAction
+
+// TabAction configures behavior when a semantic action resolves to a tab.
+type TabAction struct {
+	Pane int `yaml:"pane"` // zero-based kitty pane index to focus after focusing the tab
 }
 
 // TabPane defines an extra pane created inside a kitty tab.
