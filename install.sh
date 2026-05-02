@@ -694,12 +694,19 @@ step_link() {
     ensure_user_skills_linked
 
     # Claude: partial linking
-    info "Linking claude settings..."
+    info "Linking claude settings and global instructions..."
     step "Linking config (claude)"
     mkdir -p "$HOME/.config/claude"
     link_or_skip "$DOTFILES/config/claude/settings.json" "$HOME/.config/claude/settings.json"
     verify_link_mapping "$DOTFILES/config/claude/settings.json" "$HOME/.config/claude/settings.json" || {
         err "Linking failed verification for ~/.config/claude/settings.json"
+        return 1
+    }
+
+    step "Linking global instructions (claude)"
+    link_or_skip "$DOTFILES/config/opencode/AGENTS.md" "$HOME/.claude/CLAUDE.md"
+    verify_link_mapping "$DOTFILES/config/opencode/AGENTS.md" "$HOME/.claude/CLAUDE.md" || {
+        err "Linking failed verification for ~/.claude/CLAUDE.md"
         return 1
     }
     ok "claude linked"
@@ -813,6 +820,11 @@ healthcheck_link() {
     step "Verify Claude links, shared skills, and shell"
     verify_link_mapping "$DOTFILES/config/claude/settings.json" "$HOME/.config/claude/settings.json" || {
         err "Healthcheck failed: ~/.config/claude/settings.json is not linked"
+        return 1
+    }
+    ((checked_entries++))
+    verify_link_mapping "$DOTFILES/config/opencode/AGENTS.md" "$HOME/.claude/CLAUDE.md" || {
+        err "Healthcheck failed: ~/.claude/CLAUDE.md is not linked to config/opencode/AGENTS.md"
         return 1
     }
     ((checked_entries++))
