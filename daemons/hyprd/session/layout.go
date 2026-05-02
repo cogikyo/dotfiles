@@ -25,20 +25,8 @@ const (
 
 // Layout opens and arranges per-workspace sessions defined in config.
 type Layout struct {
-	hypr        *hypr.Client
-	state       *state.State
-	skipBrowser map[string]bool
-}
-
-// SkipBrowser marks sessions whose browser was already restored (e.g. by batch exact restore during init).
-// Layout will claim the existing Firefox window instead of launching a new one.
-func (l *Layout) SkipBrowser(names ...string) {
-	if l.skipBrowser == nil {
-		l.skipBrowser = make(map[string]bool)
-	}
-	for _, n := range names {
-		l.skipBrowser[n] = true
-	}
+	hypr  *hypr.Client
+	state *state.State
 }
 
 func NewLayout(h *hypr.Client, s *state.State) *Layout {
@@ -143,9 +131,6 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 
 	cfg := l.state.GetConfig()
 	for _, c := range clients {
-		if l.shouldPreserveSkippedBrowserWindow(s, c) {
-			continue
-		}
 		if c.Workspace.ID == s.Workspace && !c.Pinned && !windows.IsIgnored(c.Class) {
 			l.hypr.Dispatch(fmt.Sprintf("closewindow address:%s", c.Address))
 		}
@@ -209,16 +194,6 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 	return l.sessionResult(s, s.Body, windowsByRole), nil
 }
 
-func (l *Layout) shouldPreserveSkippedBrowserWindow(s config.Session, c hypr.Window) bool {
-	if !l.skipBrowser[s.Name] || s.Browser.Snapshot == "" || c.Workspace.ID != s.Workspace {
-		return false
-	}
-	if !strings.Contains(strings.ToLower(c.Class), "firefox") {
-		return false
-	}
-	return browser.SnapshotMatchesWindowTitle(s.Browser.Snapshot, c.Title)
-}
-
 func (l *Layout) applyMonocle(wsID int) {
 	active, err := l.hypr.ActiveWindow()
 	if err != nil || active == nil {
@@ -262,13 +237,6 @@ func (l *Layout) withSessionLaunchEnv(s config.Session, bodyName, cmd, homeDir s
 
 func (l *Layout) launchSessionBrowser(s config.Session) error {
 	b := browser.NewBrowser(l.hypr, l.state)
-
-	if l.skipBrowser[s.Name] && s.Browser.Snapshot != "" {
-		if err := l.claimBrowserWindow(b, s); err != nil {
-			fmt.Fprintf(os.Stderr, "layout: claim browser window for %s: %v\n", s.Name, err)
-		}
-		return nil
-	}
 
 	if b.UsesExactRestore(s.Browser) {
 		if _, err := b.RestoreConfiguredSnapshot(s.Browser, false); err != nil {

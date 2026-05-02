@@ -11,8 +11,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-
-	"dotfiles/daemons/config"
 )
 
 func (b *Browser) executeRestore(args []string) (string, error) {
@@ -132,57 +130,6 @@ func restoreBackupDir() (string, error) {
 	return filepath.Join(root, "_restore-backups", time.Now().Format("20060102-150405")), nil
 }
 
-// BatchExactEntry pairs a browser config with its target workspace for batch restore.
-type BatchExactEntry struct {
-	Config    config.BrowserConfig
-	Workspace int
-}
-
-// RestoreBatchExact merges windows from multiple snapshots into one Firefox session and restores once.
-func (b *Browser) RestoreBatchExact(entries []BatchExactEntry, dryRun bool) (string, error) {
-	if len(entries) == 0 {
-		return "", fmt.Errorf("no snapshots to restore")
-	}
-
-	var dirs []string
-	for _, e := range entries {
-		dir, err := resolveSnapshotDir(e.Config.Snapshot)
-		if err != nil {
-			return "", fmt.Errorf("snapshot %q: %w", e.Config.Snapshot, err)
-		}
-		dirs = append(dirs, dir)
-	}
-
-	var profile firefoxProfile
-	payload, err := mergeSnapshotPayloads(dirs)
-	if err != nil {
-		return "", err
-	}
-	for i, dir := range dirs {
-		candidate, err := restoreProfileForSnapshot(dir, entries[i].Config.Profile)
-		if err != nil {
-			return "", err
-		}
-		if i == 0 {
-			profile = candidate
-			continue
-		}
-		if filepath.Clean(candidate.Root) != filepath.Clean(profile.Root) {
-			return "", fmt.Errorf("cannot batch restore snapshots with different profiles: %s and %s", profile.Root, candidate.Root)
-		}
-	}
-
-	force := false
-	for _, e := range entries {
-		if browserForce(e.Config) {
-			force = true
-			break
-		}
-	}
-
-	return b.injectAndLaunch(payload, profile, force, dryRun)
-}
-
 func restoreProfileForSnapshot(snapshotDir, override string) (firefoxProfile, error) {
 	if override != "" {
 		return discoverFirefoxProfile(override)
@@ -203,40 +150,6 @@ func restoreProfileForSnapshot(snapshotDir, override string) (firefoxProfile, er
 		return discoverFirefoxProfile(meta.Profile.Name)
 	}
 	return discoverFirefoxProfile("")
-}
-
-// mergeSnapshotPayloads generates session JSON from each snapshot's metadata and combines their windows.
-func mergeSnapshotPayloads(dirs []string) ([]byte, error) {
-	var allWindows []json.RawMessage
-
-	for _, dir := range dirs {
-		payload, err := buildSessionPayload(dir)
-		if err != nil {
-			return nil, fmt.Errorf("build session for %s: %w", dir, err)
-		}
-		var doc map[string]json.RawMessage
-		if err := json.Unmarshal(payload, &doc); err != nil {
-			return nil, fmt.Errorf("unmarshal session from %s: %w", dir, err)
-		}
-		var windows []json.RawMessage
-		if err := json.Unmarshal(doc["windows"], &windows); err != nil {
-			return nil, fmt.Errorf("unmarshal windows from %s: %w", dir, err)
-		}
-		allWindows = append(allWindows, windows...)
-	}
-
-	merged, err := json.Marshal(allWindows)
-	if err != nil {
-		return nil, err
-	}
-
-	session := map[string]json.RawMessage{
-		"version":        json.RawMessage(`["sessionrestore",1]`),
-		"windows":        merged,
-		"selectedWindow": json.RawMessage(`1`),
-		"_closedWindows": json.RawMessage(`[]`),
-	}
-	return json.MarshalIndent(session, "", "  ")
 }
 
 // injectAndLaunch stops Firefox, backs up session files, injects the payload, and launches.
