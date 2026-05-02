@@ -1173,8 +1173,17 @@ step_system() {
     # Enable services
     echo
     info "Enabling services..."
-    local SERVICES=(bluetooth sddm earlyoom logid)
+    local SERVICES=(bluetooth sddm earlyoom logid tailscaled)
+    local START_SERVICES=(bluetooth earlyoom logid tailscaled)
+    local service_errors=0
     for svc in "${SERVICES[@]}"; do
+        local unit_files
+        unit_files=$(systemctl list-unit-files --no-legend "${svc}.service" 2>/dev/null || true)
+        if [[ -z "$unit_files" ]]; then
+            warn "$svc service not found; install its package first"
+            continue
+        fi
+
         if systemctl is-enabled "$svc" &>/dev/null; then
             ok "$svc already enabled"
         else
@@ -1182,10 +1191,40 @@ step_system() {
             if sudo systemctl enable "$svc" &>/dev/null; then
                 ok "$svc enabled"
             else
-                warn "Could not enable $svc in current environment"
+                warn "$svc installed but not enabled"
             fi
         fi
+
+        if [[ $chroot_mode -eq 1 ]]; then
+            warn "Skipping $svc runtime status check in chroot"
+        elif ! systemctl is-active "$svc" &>/dev/null && array_contains "$svc" "${START_SERVICES[@]}"; then
+            info "Starting $svc..."
+            if sudo systemctl start "$svc" &>/dev/null; then
+                ok "$svc running"
+            elif systemctl is-failed "$svc" &>/dev/null; then
+                err "$svc failed and is not running"
+                ((service_errors++))
+            elif systemctl is-enabled "$svc" &>/dev/null; then
+                warn "$svc enabled but not running"
+            else
+                warn "$svc installed but not enabled"
+            fi
+        elif systemctl is-active "$svc" &>/dev/null; then
+            ok "$svc running"
+        elif systemctl is-failed "$svc" &>/dev/null; then
+            err "$svc failed and is not running"
+            ((service_errors++))
+        elif systemctl is-enabled "$svc" &>/dev/null; then
+            warn "$svc enabled but not running"
+        else
+            warn "$svc installed but not enabled"
+        fi
     done
+
+    if (( service_errors > 0 )); then
+        err "$service_errors system service(s) failed"
+        return 1
+    fi
 
     # Reload udev rules
     if [[ $chroot_mode -eq 1 ]]; then
