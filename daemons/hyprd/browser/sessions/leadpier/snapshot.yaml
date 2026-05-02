@@ -1,18 +1,17 @@
 name: leadpier
-created_at: "2026-04-19T12:08:06-07:00"
 profile:
     name: dev-edition-default
     path: /home/cullyn/.mozilla/firefox/sdfm8kqz.dev-edition-default
     install_key: 46F492E0ACFF84D4
 source:
     session_file: /home/cullyn/.mozilla/firefox/sdfm8kqz.dev-edition-default/sessionstore-backups/recovery.jsonlz4
-    window_index: 2
+    window_index: 1
 window:
-    selected_tab: 5
-    tab_count: 6
+    selected_tab: 7
+    tab_count: 7
     group_count: 3
-    selected_title: https://local.leadpier.com:4000/
-    selected_url: https://local.leadpier.com:4000/
+    selected_title: Query - UI for VictoriaLogs
+    selected_url: https://vl.tdcl.io/select/vmui/?#/?step=5s&query=*&g0.range_input=5m&g0.end_input=2026-05-02T19%3A27%3A18&g0.relative_time=last_5_minutes
     hypr_order_matches_tabs: true
 browser:
     pinned:
@@ -21,24 +20,27 @@ browser:
     groups:
         - name: local
           color: blue
+          collapsed: true
           urls:
             - https://localhost:4000/
-            - http://localhost:4001/
+            - http://localhost:9428/select/vmui/#/?step=5s&query=*&g0.range_input=5m&g0.end_input=2026-04-27T19%3A00%3A57&g0.relative_time=last_5_minutes
+            - http://localhost:4001/login
         - name: staging
           color: orange
+          collapsed: true
           urls:
-            - https://local.leadpier.com:4000/
+            - https://local.leadpier.com:4000/login
         - name: prod
           color: green
           urls:
-            - https://beta.leadpier.com/dashboard
+            - https://vl.tdcl.io/select/vmui/?#/?step=5s&query=*&g0.range_input=5m&g0.end_input=2026-05-02T19%3A27%3A18&g0.relative_time=last_5_minutes
 tabs:
     - position: 1
-      title: Linecode
+      title: cullyn - Dashboard - Linecode
       url: https://git.linecode.dev/
       pinned: true
     - position: 2
-      title: https://git.trendcapital.io/leadpier/leadpierui
+      title: LeadPier / LeadPier UI · GitLab
       url: https://git.trendcapital.io/leadpier/leadpierui
       pinned: true
     - position: 3
@@ -47,21 +49,31 @@ tabs:
       group_id: 1776625590997-19
       group: local
       group_color: blue
+      collapsed: true
     - position: 4
-      title: http://localhost:4001/
-      url: http://localhost:4001/
+      title: http://localhost:9428/select/vmui/#/?step=5s&query=*&g0.range_input=5m&g0.end_input=2026-04-27T19%3A00%3A57&g0.relative_time=last_5_minutes
+      url: http://localhost:9428/select/vmui/#/?step=5s&query=*&g0.range_input=5m&g0.end_input=2026-04-27T19%3A00%3A57&g0.relative_time=last_5_minutes
       group_id: 1776625590997-19
       group: local
       group_color: blue
+      collapsed: true
     - position: 5
-      title: https://local.leadpier.com:4000/
-      url: https://local.leadpier.com:4000/
+      title: Leadpier - Peak Your Performance
+      url: http://localhost:4001/login
+      group_id: 1776625590997-19
+      group: local
+      group_color: blue
+      collapsed: true
+    - position: 6
+      title: Leadpier - Peak Your Performance
+      url: https://local.leadpier.com:4000/login
       group_id: 1776625621988-1
       group: staging
       group_color: orange
-    - position: 6
-      title: LeadPier | Dashboard
-      url: https://beta.leadpier.com/dashboard
+      collapsed: true
+    - position: 7
+      title: Query - UI for VictoriaLogs
+      url: https://vl.tdcl.io/select/vmui/?#/?step=5s&query=*&g0.range_input=5m&g0.end_input=2026-05-02T19%3A27%3A18&g0.relative_time=last_5_minutes
       group_id: 1776625644331-95
       group: prod
       group_color: green
