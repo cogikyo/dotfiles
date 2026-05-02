@@ -19,17 +19,19 @@ import (
 const pseudoLockWorkspace = 6         // workspace reserved for the visual blackout
 const fullLockGrace = 2 * time.Second // hyprlock cancel window that resumes music
 const fullLockDelay = time.Second     // let killall settle before manual hyprlock takes the display
+const idleUnlockSuppress = 2 * time.Second
 const pamLoadFlag = "hyprd-ssh-pam-load"
 
 // Lock owns pseudo-lock and full-lock lifecycles: visual blackout, audio/notification pause, and restore.
 //
 // Serialized by mu; saved != nil means a lock is active, inFull means hyprlock is blocking.
 type Lock struct {
-	hypr   *hypr.Client
-	state  *state.State
-	mu     sync.Mutex
-	saved  *lockState
-	inFull bool
+	hypr            *hypr.Client
+	state           *state.State
+	mu              sync.Mutex
+	saved           *lockState
+	inFull          bool
+	idleUnlockAfter time.Time
 }
 
 type lockState struct {
@@ -41,17 +43,21 @@ func NewLock(h *hypr.Client, s *state.State) *Lock {
 	return &Lock{hypr: h, state: s}
 }
 
-// Execute routes: "pseudo" (default), "unlock"/"-u", or "full".
+// Execute routes pseudo, idle pseudo-lock, unlock, idle unlock, and full lock.
 func (l *Lock) Execute(arg string) (string, error) {
 	switch strings.TrimSpace(arg) {
 	case "", "pseudo":
 		return l.Pseudo()
+	case "idle":
+		return l.Idle()
 	case "-u", "unlock":
 		return l.Unlock()
+	case "idle-unlock":
+		return l.IdleUnlock()
 	case "full":
 		return l.Full()
 	default:
-		return "", fmt.Errorf("usage: lock [pseudo|unlock|full]")
+		return "", fmt.Errorf("usage: lock [pseudo|idle|unlock|idle-unlock|full]")
 	}
 }
 
@@ -68,19 +74,51 @@ func (l *Lock) Pseudo() (string, error) {
 	return "lock: pseudo", nil
 }
 
+// Idle enters pseudo-lock from hypridle. Entering blackout/submap can itself
+// create a synthetic resume event, so idle resume briefly ignores unlocks.
+func (l *Lock) Idle() (string, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.saved != nil {
+		return "lock: already active", nil
+	}
+	l.saved = l.capture()
+	l.idleUnlockAfter = time.Now().Add(idleUnlockSuppress)
+	l.enterBlackout()
+	l.hypr.Dispatch("submap pseudolock")
+	return "lock: idle", nil
+}
+
 // Unlock exits pseudo-lock; refuses while hyprlock is active.
 func (l *Lock) Unlock() (string, error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	return l.unlockLocked()
+}
+
+// IdleUnlock exits an idle pseudo-lock unless this is hypridle's synthetic
+// resume caused by entering the pseudo-lock itself.
+func (l *Lock) IdleUnlock() (string, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if !l.idleUnlockAfter.IsZero() && time.Now().Before(l.idleUnlockAfter) {
+		return "lock: idle unlock suppressed", nil
+	}
+	return l.unlockLocked()
+}
+
+func (l *Lock) unlockLocked() (string, error) {
 	if l.inFull {
 		return "lock: hyprlock active", nil
 	}
 	l.hypr.Dispatch("submap reset")
 	if l.saved == nil {
+		l.idleUnlockAfter = time.Time{}
 		return "lock: not active", nil
 	}
 	saved := l.saved
 	l.saved = nil
+	l.idleUnlockAfter = time.Time{}
 	l.exitBlackout(saved, saved.musicPlaying)
 	return "lock: unlocked", nil
 }
