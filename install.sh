@@ -1297,6 +1297,17 @@ step_hibernate() {
         return 1
     fi
 
+    # Recover from a failed migration where a new /swap mount hides the old
+    # active /swap/swapfile. swapon still reports the path, but the file cannot
+    # be inspected until the mount is temporarily removed.
+    if swapon --show=NAME --noheadings | sed 's/^[[:space:]]*//' | grep -Fxq "$SWAP_FILE" \
+        && [[ ! -e "$SWAP_FILE" ]] \
+        && findmnt "$SWAP_DIR" &>/dev/null; then
+        warn "Active swapfile is hidden behind $SWAP_DIR mount; recovering..."
+        sudo umount "$SWAP_DIR"
+        sudo swapoff "$SWAP_FILE"
+    fi
+
     # --- Swapfile setup (needed for hibernate; zram can't hibernate) ---
     # btrfs mount options (nodatacow, compress) are per-filesystem, not per-subvolume.
     # COW must be disabled via chattr +C on the directory after mounting.
@@ -1318,6 +1329,10 @@ step_hibernate() {
         else
             info "Creating @swap subvolume at btrfs top level..."
             if [[ -e "$SWAP_DIR" ]]; then
+                if swapon --show=NAME --noheadings | sed 's/^[[:space:]]*//' | grep -Fxq "$SWAP_FILE"; then
+                    info "Deactivating old swapfile before replacing $SWAP_DIR..."
+                    sudo swapoff "$SWAP_FILE"
+                fi
                 sudo btrfs subvolume delete "$SWAP_DIR" 2>/dev/null \
                     || sudo rm -rf "$SWAP_DIR"
             fi
@@ -1482,6 +1497,11 @@ healthcheck_hibernate() {
         || { err "Healthcheck: /swap is not a separate mount (expected @swap subvolume)"; return 1; }
 
     # Swapfile
+    if swapon --show=NAME --noheadings | sed 's/^[[:space:]]*//' | grep -Fxq "/swap/swapfile" \
+        && [[ ! -e /swap/swapfile ]]; then
+        err "Healthcheck: active /swap/swapfile is hidden behind the /swap mount; rerun './install.sh hibernate'"
+        return 1
+    fi
     [[ -s /swap/swapfile ]] || { err "Healthcheck: /swap/swapfile missing or empty"; return 1; }
     swapon --show=NAME --noheadings | sed 's/^[[:space:]]*//' | grep -Fxq "/swap/swapfile" \
         || { err "Healthcheck: /swap/swapfile is not active"; return 1; }
