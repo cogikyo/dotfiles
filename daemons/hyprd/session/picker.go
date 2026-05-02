@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -281,10 +282,8 @@ func (p *Picker) pushState() {
 }
 
 func (p *Picker) activeSession(ws int) string {
-	for _, occupied := range p.state.GetOccupied() {
-		if occupied == ws {
-			return p.state.GetActiveSession(ws)
-		}
+	if slices.Contains(p.state.GetOccupied(), ws) {
+		return p.state.GetActiveSession(ws)
 	}
 	return ""
 }
