@@ -198,7 +198,7 @@ notify:
     start:
       style: secondary
       sound: civ5-worker-select
-      volume: 110
+      volume: 90
       timeout: 2000
     subagent:
       style: secondary

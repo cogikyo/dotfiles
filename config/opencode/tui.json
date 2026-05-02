@@ -12,11 +12,12 @@
   },
   "keybinds": {
     "leader": "ctrl+space",
-    "command_list": "<leader>t",
+    "command_list": "<leader>l",
     "tool_details": "<leader>d",
     "model_list": "<leader>m",
     "theme_list": "<leader>_",
     "agent_list": "<leader>a",
+    "session_list": "<leader>r",
     "status_view": "<leader>s",
     "input_line_home": "home,ctrl+a",
     "input_line_end": "end,ctrl+e",
