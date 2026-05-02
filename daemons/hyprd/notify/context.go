@@ -238,6 +238,13 @@ func (n *Notifier) focusContext(ctx *kittyContext) {
 	}
 }
 
+func notificationID(ctx *kittyContext) int {
+	if ctx == nil || ctx.PID <= 0 || ctx.WindowID <= 0 {
+		return 0
+	}
+	return 100000 + ctx.PID*1000 + ctx.WindowID
+}
+
 // ╭──────────────────────────────────────────────────────────────────────────────╮
 // │ text shaping                                                                 │
 // ╰──────────────────────────────────────────────────────────────────────────────╯

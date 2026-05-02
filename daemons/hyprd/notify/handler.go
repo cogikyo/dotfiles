@@ -247,7 +247,7 @@ func (n *Notifier) sendDunst(spec notificationSpec, ctx *kittyContext) error {
 
 	args := n.buildDunstArgs(spec, ctx, style)
 
-	if !spec.FocusAction || ctx == nil || ctx.WindowID == 0 {
+	if !spec.FocusAction || notificationID(ctx) == 0 {
 		return runDetached("dunstify", args...)
 	}
 
@@ -297,8 +297,10 @@ func (n *Notifier) buildDunstArgs(spec notificationSpec, ctx *kittyContext, styl
 	iconSuffix := style.IconSuffix
 
 	args := []string{"-a", app, "-u", urgency, "-t", strconv.Itoa(timeout), "-h", "string:category:hyprd"}
-	if !spec.NoReplace && ctx != nil && ctx.WindowID > 0 {
-		args = append(args, "-r", strconv.Itoa(ctx.WindowID+100000))
+	if !spec.NoReplace {
+		if id := notificationID(ctx); id > 0 {
+			args = append(args, "-r", strconv.Itoa(id))
+		}
 	}
 	if style.Background != "" {
 		args = append(args, "-h", "string:bgcolor:"+style.Background)
@@ -314,7 +316,7 @@ func (n *Notifier) buildDunstArgs(spec notificationSpec, ctx *kittyContext, styl
 	} else if spec.IconPath != "" {
 		args = append(args, "-I", spec.IconPath)
 	}
-	if spec.FocusAction && ctx != nil && ctx.WindowID > 0 {
+	if spec.FocusAction && notificationID(ctx) > 0 {
 		args = append(args, "-A", "focus,Focus")
 	}
 	args = append(args, spec.Title, spec.Body)
@@ -397,4 +399,3 @@ func (n *Notifier) lookupAppSound(app string) (string, bool) {
 	sound, ok := n.cfg.Notify.AppSounds[strings.ToLower(app)]
 	return sound, ok
 }
-
