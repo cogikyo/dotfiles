@@ -151,7 +151,7 @@ return {
 			-- copy paths ──────────────────────────────────────────────────
 			map("yp",      api.fs.copy.relative_path,        "Copy Relative Path")
 			map("yP",      api.fs.copy.absolute_path,        "Copy Absolute Path")
-			map("<A-f>",   api.fs.copy.relative_path,        "Copy Relative Path")
+			map("<A-f>",   api.fs.copy.absolute_path,        "Copy Absolute Path")
 			map("<A-F>",   api.fs.copy.absolute_path,        "Copy Absolute Path")
 
 			-- tree settings ───────────────────────────────────────────────
