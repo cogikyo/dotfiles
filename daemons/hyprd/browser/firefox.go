@@ -181,7 +181,7 @@ func stopFirefox(force bool) error {
 		}
 		time.Sleep(250 * time.Millisecond)
 	}
-	return fmt.Errorf("Firefox did not exit cleanly after SIGTERM")
+	return fmt.Errorf("firefox did not exit cleanly after SIGTERM")
 }
 
 func stopFirefoxProfile(profile firefoxProfile, force bool) error {
@@ -211,7 +211,7 @@ func stopFirefoxProfile(profile firefoxProfile, force bool) error {
 		}
 		time.Sleep(250 * time.Millisecond)
 	}
-	return fmt.Errorf("Firefox profile %s did not exit cleanly after SIGTERM", profile.Root)
+	return fmt.Errorf("firefox profile %s did not exit cleanly after SIGTERM", profile.Root)
 }
 
 func (b *Browser) launchFirefoxProfile(profile firefoxProfile) error {
