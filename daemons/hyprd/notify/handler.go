@@ -163,6 +163,13 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 			Style:       "permission",
 			FocusAction: true,
 		}, ctx)
+	case "question":
+		return n.dispatch(notificationSpec{
+			App:         ctx.App,
+			Title:       preferredSummary(req.Message, "Question asked", 80),
+			Style:       "question",
+			FocusAction: true,
+		}, ctx)
 	case "error":
 		return n.dispatch(notificationSpec{
 			App:         ctx.App,

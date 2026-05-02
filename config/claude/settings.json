@@ -87,5 +87,6 @@
   "theme": "dark-ansi",
   "editorMode": "vim",
   "voiceEnabled": false,
-  "shiftTabHint": false
+  "shiftTabHint": false,
+  "preferredNotifChannel": "none"
 }

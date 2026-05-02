@@ -182,15 +182,28 @@ const server = async () => {
       scheduleComplete(sessionID)
     },
 
-    "permission.updated": async ({ sessionID, title, pattern }) => {
-      const perm = cleanText(title, LIMITS.id)
-      const pats = Array.isArray(pattern)
-        ? cleanText(pattern.join(", "), LIMITS.patterns)
-        : typeof pattern === "string"
-          ? cleanText(pattern, LIMITS.patterns)
+    "permission.asked": async ({ sessionID, permission, patterns, title, pattern }) => {
+      const perm = cleanText(permission || title, LIMITS.id)
+      const rawPatterns = patterns ?? pattern
+      const pats = Array.isArray(rawPatterns)
+        ? cleanText(rawPatterns.join(", "), LIMITS.patterns)
+        : typeof rawPatterns === "string"
+          ? cleanText(rawPatterns, LIMITS.patterns)
           : ""
       const message = perm ? (pats ? `${perm}: ${pats}` : perm) : "Permission needed"
       await notify({ sessionID, type: "permission", message })
+    },
+
+    "permission.updated": async (props) => {
+      await handlers["permission.asked"](props)
+    },
+
+    "question.asked": async ({ sessionID, questions }) => {
+      const first = Array.isArray(questions) ? questions[0] : null
+      const header = cleanText(first?.header, LIMITS.id)
+      const question = cleanText(first?.question)
+      const message = header ? (question ? `${header}: ${question}` : header) : question || "Question asked"
+      await notify({ sessionID, type: "question", message })
     },
 
     "todo.updated": async ({ sessionID, todos }) => {
