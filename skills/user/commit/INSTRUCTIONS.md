@@ -2,6 +2,52 @@
 
 Smart git commits that handle messy states safely. Default to atomic commits — one logical change per commit. No user interaction needed unless grouping is genuinely ambiguous.
 
+## Modes
+
+- `/commit quick`: fast in-session path for small, obvious changes from the current conversation.
+- `/commit`: full safety path for messy, stale, or ambiguous worktrees.
+
+Use quick mode only when the user explicitly asks for it or the invocation includes `quick`.
+
+## Quick Mode
+
+Fast path for a few-line or few-file change that is clearly related to the current session or context the user just supplied.
+
+### Use Quick Mode When
+
+- The changed files are related to this session's work or user-provided context.
+- The diff is small enough to understand from `git status` and `git diff`.
+- The commit grouping is obvious and atomic.
+- There is no need to detangle unrelated WIP.
+
+### Do Not Use Quick Mode When
+
+- There are multiple unrelated logical changes.
+- The worktree contains substantial changes not made or discussed in this session.
+- A file mixes unrelated concerns that require careful hunk selection.
+- The requested commit needs a fresh agent to detangle lots of changes.
+- Any staging decision is unclear.
+
+If quick mode is unsafe or ambiguous, say why briefly and fall back to the full workflow.
+
+### Quick Workflow
+
+1. Inspect only the essentials:
+
+```bash
+git status --short
+git diff
+git diff --cached
+```
+
+2. Stage only files or hunks that belong to the current session's atomic change.
+3. Commit directly with the message rules below.
+4. Run `git status --short` after commit to confirm the result.
+
+Quick mode intentionally skips the safety stash and sub-agent cycle. Do not stash, pop, restore, or launch sub-agents unless quick mode proves inappropriate.
+
+If there are already staged changes, include them only when they are clearly part of the same current-session atomic commit. Otherwise stop and ask before changing the index.
+
 ## Core Principles
 
 **Ignore git log style.** Do NOT mimic recent commit messages from `git log`. The history may contain lazy one-word commits (`fix`, `fixes`, `wip`) — never reproduce that style. Always follow the format rules below, regardless of what the log looks like.
@@ -10,7 +56,7 @@ Smart git commits that handle messy states safely. Default to atomic commits —
 
 **If the summary line needs "and", it's two commits.** A summary like "org owner visibility and approved-only downloads" is two separate concerns — split them. Each commit should have one verb, one scope, one purpose. If you can't describe it without a conjunction, split it.
 
-## Workflow
+## Full Workflow
 
 ### 1. Safety Stash
 
@@ -104,6 +150,7 @@ verb(scope/context): short summary
   - change three
   ```
 - Each bullet: short phrase, not a full sentence, one line, no wrapping
+- Body bullets must be contiguous: no blank lines between bullet points
 - Single-file single-change commits: summary line only, no body needed
 
 **Never do this:**
