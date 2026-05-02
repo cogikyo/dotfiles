@@ -118,11 +118,37 @@ tabs:
     prefix: "lp-"
     focus: fe-nvim
     tabs:
-      - { name: fe-nvim,  title: "«   »", command: nvim,         cwd: "~/LeadPier/frontend" }
-      - { name: be-nvim,  title: "«   »", command: nvim,         cwd: "~/LeadPier/backend" }
-      - { name: nvim,     title: "« 󰠳  »", command: nvim,         cwd: "~/LeadPier" }
-      - { name: fe-build, title: "«   »", command: lazygit,       cwd: "~/LeadPier/frontend",          layout: "fat:bias=80", panes: [{ command: "yarn dev", cwd: "~/LeadPier/frontend" }] }
-      - { name: be-build, title: "«   »", command: "cd $(grep -m1 backend/services ~/.local/state/lazygit/state.yml | awk '{print $NF}') && lazygit", cwd: "~/LeadPier/backend", layout: "fat:bias=80", panes: [{ command: "pier watch", cwd: "~/LeadPier/backend/core/runner" }] }
+      - name: fe-nvim
+        title: "«   »"
+        command: nvim
+        cwd: "~/LeadPier/frontend"
+      - name: be-nvim
+        title: "«   »"
+        command: nvim
+        cwd: "~/LeadPier/backend"
+      - name: pier
+        title: "« 󰠳  »"
+        command: nvim
+        cwd: "~/LeadPier/.pier/pier"
+        layout: "fat:bias=80"
+        panes:
+          - cwd: "~/LeadPier/.pier/pier"
+      - name: fe-build
+        title: "«   »"
+        command: lazygit
+        cwd: "~/LeadPier/frontend"
+        layout: "fat:bias=80"
+        panes:
+          - command: "yarn dev"
+            cwd: "~/LeadPier/frontend"
+      - name: be-build
+        title: "«   »"
+        command: "cd $(grep -m1 backend/services ~/.local/state/lazygit/state.yml | awk '{print $NF}') && lazygit"
+        cwd: "~/LeadPier/backend"
+        layout: "fat:bias=80"
+        panes:
+          - command: "pier watch"
+            cwd: "~/LeadPier/backend/core/runner"
 
 # ╭───────────────────────────────────────────────────────────────────────────────╮
 # │ background                                                                    │
@@ -198,8 +224,8 @@ notify:
     start:
       style: secondary
       sound: civ5-worker-select
-      volume: 90
-      timeout: 750
+      volume: 100
+      timeout: 1500
     subagent:
       style: secondary
       sound: sdv-frog
