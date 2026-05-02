@@ -108,9 +108,9 @@ tabs:
     focus: master
     tabs:
       - { name: xplr,   title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
-      - { name: master, title: "⊰ 󰯉  ⊱", command: "claude --model claude-opus-4-6 --effort high" }
+      - { name: master, title: "⊰ 󰯉  ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
       - { name: dev,    title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
-      - { name: plan,   title: "⊰   ⊱", command: "claude --model claude-opus-4-7 --effort xhigh" }
+      - { name: plan,   title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
       - { name: git,    title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
 
   leadpier: # ├─ leadpier profile ─────────────────────────────────────────────────┤
@@ -199,12 +199,12 @@ notify:
       style: secondary
       sound: civ5-worker-select
       volume: 90
-      timeout: 2000
+      timeout: 750
     subagent:
       style: secondary
       sound: sdv-frog
       volume: 85
-      timeout: 2000
+      timeout: 2500
     todo-complete:
       style: secondary
       sound: civ6-notification
