@@ -234,7 +234,7 @@ func (p *Picker) confirm() (string, error) {
 }
 
 func (p *Picker) activeIndex(ws int) int {
-	active := p.state.GetActiveSession(ws)
+	active := p.activeSession(ws)
 	for i, name := range p.cache[ws] {
 		if name == active {
 			return i
@@ -245,7 +245,7 @@ func (p *Picker) activeIndex(ws int) int {
 
 func (p *Picker) pushState() {
 	sessions := p.cache[p.ws]
-	active := p.state.GetActiveSession(p.ws)
+	active := p.activeSession(p.ws)
 
 	items := make([]pickerSession, len(sessions))
 	for i, name := range sessions {
@@ -272,4 +272,13 @@ func (p *Picker) pushState() {
 
 	data, _ := json.Marshal(payload)
 	exec.Command("eww", "update", fmt.Sprintf("picker-data=%s", data)).Run()
+}
+
+func (p *Picker) activeSession(ws int) string {
+	for _, occupied := range p.state.GetOccupied() {
+		if occupied == ws {
+			return p.state.GetActiveSession(ws)
+		}
+	}
+	return ""
 }
