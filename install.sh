@@ -676,7 +676,7 @@ step_link() {
         name=$(basename "$item")
 
         case "$name" in
-            claude|firefox) continue ;;
+            claude|firefox|obs-studio) continue ;;
         esac
 
         link_or_skip "$item" "$HOME/.config/$name"
@@ -703,6 +703,48 @@ step_link() {
         return 1
     }
     ok "claude linked"
+
+    # OBS: partial setup. Profile settings are linked; scenes are seeded once so
+    # PipeWire portal tokens and source-local state can churn outside dotfiles.
+    info "Linking obs-studio profile and scenes..."
+    step "Linking config (obs-studio)"
+    if [[ -L "$HOME/.config/obs-studio" ]]; then
+        rm -f "$HOME/.config/obs-studio"
+    elif [[ -e "$HOME/.config/obs-studio" && ! -d "$HOME/.config/obs-studio" ]]; then
+        rm -f "$HOME/.config/obs-studio"
+    fi
+    mkdir -p \
+        "$HOME/.config/obs-studio/basic/profiles/Costello" \
+        "$HOME/.config/obs-studio/basic/scenes"
+    link_or_skip "$DOTFILES/config/obs-studio/basic/profiles/Costello/basic.ini" \
+        "$HOME/.config/obs-studio/basic/profiles/Costello/basic.ini"
+    verify_link_mapping "$DOTFILES/config/obs-studio/basic/profiles/Costello/basic.ini" \
+        "$HOME/.config/obs-studio/basic/profiles/Costello/basic.ini" || {
+        err "Linking failed verification for ~/.config/obs-studio/basic/profiles/Costello/basic.ini"
+        return 1
+    }
+    local obs_scene_target="$HOME/.config/obs-studio/basic/scenes/Costello.json"
+    if [[ -L "$obs_scene_target" ]]; then
+        rm -f "$obs_scene_target"
+        cp "$DOTFILES/config/obs-studio/basic/scenes/Costello.json" "$obs_scene_target"
+    elif [[ ! -e "$obs_scene_target" ]]; then
+        cp "$DOTFILES/config/obs-studio/basic/scenes/Costello.json" "$obs_scene_target"
+    fi
+    [[ -f "$obs_scene_target" && ! -L "$obs_scene_target" ]] || {
+        err "OBS scene seed failed: $obs_scene_target is not a local file"
+        return 1
+    }
+    if [[ ! -e "$HOME/.config/obs-studio/user.ini" ]]; then
+        cat >"$HOME/.config/obs-studio/user.ini" <<'EOF'
+[Basic]
+Profile=Costello
+ProfileDir=Costello
+SceneCollection=Costello
+SceneCollectionFile=Costello.json
+ConfigOnNewProfile=true
+EOF
+    fi
+    ok "obs-studio linked"
 
     # .zshrc symlink
     info "Linking .zshrc..."
@@ -754,11 +796,11 @@ healthcheck_link() {
     ((checked_entries += 2))
     ok "required directories"
 
-    step "Verify ~/.config mirrors dotfiles/config/* (excluding claude/firefox)"
+    step "Verify ~/.config mirrors dotfiles/config/* (excluding claude/firefox/obs-studio)"
     for item in "$DOTFILES"/config/*; do
         name=$(basename "$item")
         case "$name" in
-            claude|firefox) continue ;;
+            claude|firefox|obs-studio) continue ;;
         esac
         verify_link_mapping "$item" "$HOME/.config/$name" || {
             err "Healthcheck failed: ~/.config/$name is not linked to $item"
@@ -771,6 +813,18 @@ healthcheck_link() {
     step "Verify Claude links, shared skills, and shell"
     verify_link_mapping "$DOTFILES/config/claude/settings.json" "$HOME/.config/claude/settings.json" || {
         err "Healthcheck failed: ~/.config/claude/settings.json is not linked"
+        return 1
+    }
+    ((checked_entries++))
+    verify_link_mapping "$DOTFILES/config/obs-studio/basic/profiles/Costello/basic.ini" \
+        "$HOME/.config/obs-studio/basic/profiles/Costello/basic.ini" || {
+        err "Healthcheck failed: ~/.config/obs-studio/basic/profiles/Costello/basic.ini is not linked"
+        return 1
+    }
+    ((checked_entries++))
+    [[ -f "$HOME/.config/obs-studio/basic/scenes/Costello.json" \
+        && ! -L "$HOME/.config/obs-studio/basic/scenes/Costello.json" ]] || {
+        err "Healthcheck failed: ~/.config/obs-studio/basic/scenes/Costello.json is not a local seeded file"
         return 1
     }
     ((checked_entries++))

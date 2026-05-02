@@ -1,3 +1,5 @@
+global.ini
+user.ini
 logs/
 profiler_data/
 plugin_config/
