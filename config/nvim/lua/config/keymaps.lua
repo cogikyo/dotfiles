@@ -116,6 +116,7 @@ local function yank_selection(motion)
 				yank_path("vap")
 				return
 			end
+			vim.cmd("normal! m'")
 		end
 		yank_path(motion)
 	end
