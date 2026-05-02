@@ -59,6 +59,10 @@ sessions:
         - editor
         - browser
         - agents
+      layout:
+        master: editor
+        slave: browser
+        shadow: agents
       browser:
         snapshot: leadpier
         mode: exact

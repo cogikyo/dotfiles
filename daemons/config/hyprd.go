@@ -301,10 +301,18 @@ type Session struct {
 	Init      bool              `yaml:"init" json:"init"`   // spawn on boot; at most one per workspace
 	Project   string            `yaml:"project" json:"project"`
 	Body      []string          `yaml:"body" json:"body"` // three-body member order
+	Layout    SessionLayout     `yaml:"layout" json:"layout"`
 	Browser   BrowserConfig     `yaml:"browser" json:"browser"`
 	Tabs      map[string]string `yaml:"tabs" json:"tabs"`       // body member -> tab profile name
 	Command   string            `yaml:"command" json:"command"` // single-window sessions (no three-body)
 	Monocle   bool              `yaml:"monocle" json:"monocle"`
+}
+
+// SessionLayout optionally pins initial tiled roles after all session windows map.
+type SessionLayout struct {
+	Master string `yaml:"master" json:"master"`
+	Slave  string `yaml:"slave" json:"slave"`
+	Shadow string `yaml:"shadow" json:"shadow"`
 }
 
 // BrowserConfig declares URLs and tab-group state for the browser body member.
