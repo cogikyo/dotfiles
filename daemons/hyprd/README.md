@@ -190,13 +190,43 @@ hyprd lock full        # wraps hyprlock --grace 2 with the pseudo-lock pre/post 
 ### Browser
 
 ```bash
-hyprd browser launch [--profile <name|path>]
 hyprd browser windows [--all] [--profile <name|path>]
 hyprd browser snapshot <name> [active|largest|index] [--profile <name|path>]
 hyprd browser show <name>
 hyprd browser hypr <name>
-hyprd browser restore <name> [--mode urls|exact] [--force] [--dry-run]
+hyprd browser restore <name> [--mode exact|urls] [--profile <name|path>] [--force] [--dry-run]
+hyprd browser launch [--profile <name|path>]
 ```
+
+Browser snapshots are the Firefox layout primitive for sessions. The normal flow is:
+
+1. Arrange the Firefox window how you want it.
+2. Save it with `hyprd browser snapshot <name>`; use `largest` or a numeric window index if the active window is not the one you want.
+3. Reference it in `daemons/config/hyprd.yaml` as `browser: <name>`.
+4. Open the session with `hyprd layout <session>` or let `hyprd init` restore init sessions at boot.
+
+`browser: <name>` is shorthand for an exact forced restore of that snapshot. Use the expanded map only for profile overrides or non-snapshot URL launches:
+
+```yaml
+browser: leadpier
+
+browser:
+  snapshot: leadpier
+  profile: dev-edition
+
+browser:
+  urls:
+    - https://example.com
+```
+
+Command meanings:
+
+- `windows` lists Firefox windows from the sessionstore; without `--all`, trivial/new-tab windows are filtered out.
+- `snapshot` writes a named snapshot under `browser/sessions/` from the selected Firefox window. Selectors are `active`, `largest`, or a 1-based window index.
+- `show` prints the saved snapshot YAML summary.
+- `hypr` prints a launch config generated from the snapshot; mostly useful for inspection now that session config can use `browser: <name>`.
+- `restore` manually restores a snapshot. It defaults to exact session replacement with force; pass `--mode urls` to replay visible tabs into a normal Firefox window instead.
+- `launch` clears the profile sessionstore and opens a clean new-tab window; this is used internally by the three-body browser command for non-snapshot launches.
 
 ### Screenshot
 

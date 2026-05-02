@@ -23,14 +23,12 @@ sessions:
     slack:
       init: true
       command: slack
-      browser:
-        snapshot: coms
-        mode: exact
-        force: true
+      browser: coms
 
     discord:
       command: discord
       monocle: true
+      browser: coms
 
   # ├─ workspace 3 ──────────────────────────────────────────────────────────────┤
   3: # utility and creative apps; mostly single window
@@ -61,10 +59,7 @@ sessions:
         master: editor
         slave: browser
         shadow: agents
-      browser:
-        snapshot: leadpier
-        mode: exact
-        force: true
+      browser: leadpier
       tabs:
         editor: leadpier
 

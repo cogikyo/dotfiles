@@ -120,7 +120,7 @@ func (b *Browser) RestoreConfiguredSnapshot(cfg config.BrowserConfig, dryRun boo
 	if err != nil {
 		return "", err
 	}
-	return b.restoreSnapshotExact(cfg.Snapshot, dir, profile, cfg.Force, dryRun)
+	return b.restoreSnapshotExact(cfg.Snapshot, dir, profile, browserForce(cfg), dryRun)
 }
 
 func (b *Browser) executeWindows(args []string) (string, error) {
@@ -280,9 +280,16 @@ func parseProfileFlag(args []string, usage string) (profile string, rest []strin
 func browserMode(cfg config.BrowserConfig) string {
 	mode := strings.ToLower(strings.TrimSpace(cfg.Mode))
 	if mode == "" {
+		if cfg.Snapshot != "" {
+			return "exact"
+		}
 		return "urls"
 	}
 	return mode
+}
+
+func browserForce(cfg config.BrowserConfig) bool {
+	return cfg.Force || (cfg.Snapshot != "" && browserMode(cfg) == "exact")
 }
 
 func shellQuoteCommand(parts []string) string {

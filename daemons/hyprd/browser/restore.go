@@ -17,7 +17,7 @@ import (
 
 func (b *Browser) executeRestore(args []string) (string, error) {
 	var (
-		mode       = "urls"
+		mode       = "exact"
 		profileArg string
 		force      bool
 		dryRun     bool
@@ -74,7 +74,7 @@ func (b *Browser) executeRestore(args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return b.restoreSnapshotExact(name, dir, profile, force, dryRun)
+	return b.restoreSnapshotExact(name, dir, profile, force || mode == "exact", dryRun)
 }
 
 func (b *Browser) restoreSnapshotURLs(store *firefoxSessionStore, dryRun bool) (string, error) {
@@ -174,7 +174,7 @@ func (b *Browser) RestoreBatchExact(entries []BatchExactEntry, dryRun bool) (str
 
 	force := false
 	for _, e := range entries {
-		if e.Config.Force {
+		if browserForce(e.Config) {
 			force = true
 			break
 		}

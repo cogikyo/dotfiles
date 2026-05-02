@@ -315,7 +315,7 @@ type SessionLayout struct {
 	Shadow string `yaml:"shadow" json:"shadow"`
 }
 
-// BrowserConfig declares URLs and tab-group state for the browser body member.
+// BrowserConfig declares a snapshot restore or URL/tab-group launch for the browser body member.
 type BrowserConfig struct {
 	Snapshot string         `yaml:"snapshot,omitempty" json:"snapshot,omitempty"`
 	Mode     string         `yaml:"mode,omitempty" json:"mode,omitempty"`
@@ -324,6 +324,22 @@ type BrowserConfig struct {
 	Pinned   []string       `yaml:"pinned,omitempty" json:"pinned,omitempty"`
 	Groups   []BrowserGroup `yaml:"groups,omitempty" json:"groups,omitempty"`
 	URLs     []string       `yaml:"urls,omitempty" json:"urls,omitempty"`
+}
+
+// UnmarshalYAML accepts `browser: snapshot-name` as the common exact-restore shorthand.
+func (b *BrowserConfig) UnmarshalYAML(value *yaml.Node) error {
+	if value.Kind == yaml.ScalarNode {
+		b.Snapshot = strings.TrimSpace(value.Value)
+		return nil
+	}
+
+	type rawBrowserConfig BrowserConfig
+	var raw rawBrowserConfig
+	if err := value.Decode(&raw); err != nil {
+		return err
+	}
+	*b = BrowserConfig(raw)
+	return nil
 }
 
 // BrowserGroup defines a named set of URLs in a Firefox tab group.

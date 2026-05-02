@@ -66,6 +66,25 @@ sessions:
 	}
 }
 
+func TestHyprBrowserSnapshotShorthand(t *testing.T) {
+	var cfg HyprConfig
+	data := `
+sessions:
+  2:
+    slack:
+      command: slack
+      browser: coms
+`
+
+	if err := yaml.Unmarshal([]byte(data), &cfg); err != nil {
+		t.Fatalf("unmarshal: %v", err)
+	}
+
+	if got := cfg.Sessions["slack"].Browser.Snapshot; got != "coms" {
+		t.Fatalf("browser snapshot = %q, want coms", got)
+	}
+}
+
 func TestHyprSessionsRejectMultipleInit(t *testing.T) {
 	var cfg HyprConfig
 	data := `

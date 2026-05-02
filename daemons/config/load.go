@@ -34,7 +34,7 @@ func LoadEww() EwwConfig {
 
 // LoadHypr loads hyprd config from configs/hyprd.yaml.
 //
-// Every value must be set in the YAML — there are no compiled defaults.
+// Most values must be set in the YAML; browser snapshot entries have restore defaults.
 // Sound and app maps are lowercased for case-insensitive libnotify matching.
 func LoadHypr() HyprConfig {
 	var cfg HyprConfig
@@ -109,4 +109,3 @@ func lowercaseSlice(s []string) []string {
 	}
 	return out
 }
-

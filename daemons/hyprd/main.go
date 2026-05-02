@@ -282,7 +282,7 @@ Browser:
   hyprd browser snapshot <name> [active|largest|index] [--profile <name|path>]
   hyprd browser show <name>
   hyprd browser hypr <name>
-  hyprd browser restore <name> [--mode urls|exact] [--force] [--dry-run]
+  hyprd browser restore <name> [--mode urls|exact] [--profile <name|path>] [--force] [--dry-run]
 
 Query/Subscribe (for eww):
   hyprd query [topic]    Get state (workspace|hidden|split|three-body|all)
