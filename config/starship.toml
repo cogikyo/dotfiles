@@ -34,7 +34,7 @@ show_always = true
 [hostname]
 style = "blu_2"
 ssh_only = false
-format = "[$hostname ⾥]($style)"
+format = "[⾥$hostname]($style)"
 trim_at = "."
 
 [cmd_duration]
