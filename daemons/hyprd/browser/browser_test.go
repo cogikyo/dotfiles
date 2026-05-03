@@ -154,6 +154,56 @@ func TestArgsUseProfile(t *testing.T) {
 	}
 }
 
+func TestDiscoverFirefoxProfileAcceptsAbsoluteDirectory(t *testing.T) {
+	root := t.TempDir()
+	t.Setenv("HOME", root)
+	firefoxDir := filepath.Join(root, ".mozilla", "firefox")
+	profileDir := filepath.Join(root, ".local", "state", "hyprd", "firefox-profiles", "leadpier")
+	if err := os.MkdirAll(firefoxDir, 0o755); err != nil {
+		t.Fatalf("mkdir firefox root: %v", err)
+	}
+	if err := os.MkdirAll(profileDir, 0o755); err != nil {
+		t.Fatalf("mkdir profile: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(firefoxDir, "profiles.ini"), nil, 0o644); err != nil {
+		t.Fatalf("write profiles.ini: %v", err)
+	}
+
+	profile, err := discoverFirefoxProfile(profileDir)
+	if err != nil {
+		t.Fatalf("discoverFirefoxProfile returned error: %v", err)
+	}
+	if profile.Root != profileDir || profile.Name != "leadpier" {
+		t.Fatalf("profile = %+v, want root %q name leadpier", profile, profileDir)
+	}
+}
+
+func TestSnapshotProfileFallsBackToNamedManagedProfile(t *testing.T) {
+	stateHome := t.TempDir()
+	t.Setenv("XDG_STATE_HOME", stateHome)
+	profileDir := filepath.Join(stateHome, "hyprd", "firefox-profiles", "leadpier")
+	if err := os.MkdirAll(profileDir, 0o755); err != nil {
+		t.Fatalf("mkdir managed profile: %v", err)
+	}
+
+	profile, err := (&Browser{}).snapshotProfile("", "leadpier", "active")
+	if err != nil {
+		t.Fatalf("snapshotProfile returned error: %v", err)
+	}
+	if profile.Root != profileDir {
+		t.Fatalf("profile root = %q, want %q", profile.Root, profileDir)
+	}
+}
+
+func TestSnapshotProfileErrorsWhenNoTargetProfile(t *testing.T) {
+	t.Setenv("XDG_STATE_HOME", t.TempDir())
+
+	_, err := (&Browser{}).snapshotProfile("", "missing", "active")
+	if err == nil {
+		t.Fatalf("snapshotProfile returned nil error")
+	}
+}
+
 func TestBrowserModeDefaultsAndExact(t *testing.T) {
 	if got, want := browserMode(config.BrowserConfig{}), "urls"; got != want {
 		t.Fatalf("default mode = %q, want %q", got, want)

@@ -231,7 +231,7 @@ func (b *Browser) executeSnapshot(args []string) (string, error) {
 		selector = positional[1]
 	}
 
-	profile, err := discoverFirefoxProfile(profileArg)
+	profile, err := b.snapshotProfile(profileArg, name, selector)
 	if err != nil {
 		return "", err
 	}
@@ -245,6 +245,41 @@ func (b *Browser) executeSnapshot(args []string) (string, error) {
 		return "", err
 	}
 	return b.writeSnapshot(name, profile, windowIndex, store)
+}
+
+func (b *Browser) snapshotProfile(profileArg, name, selector string) (firefoxProfile, error) {
+	if profileArg != "" || selector != "active" {
+		return discoverFirefoxProfile(profileArg)
+	}
+	if profile, ok := b.activeFirefoxProfile(); ok {
+		return profile, nil
+	}
+	if profile, ok := b.focusedWorkspaceFirefoxProfile(); ok {
+		return profile, nil
+	}
+	if profile, ok := b.namedManagedFirefoxProfile(name); ok {
+		return profile, nil
+	}
+	return firefoxProfile{}, fmt.Errorf("could not resolve Firefox profile for snapshot %q; pass --profile or focus a Firefox window", name)
+}
+
+func (b *Browser) namedManagedFirefoxProfile(name string) (firefoxProfile, bool) {
+	slug, err := slugifySnapshotName(name)
+	if err != nil {
+		return firefoxProfile{}, false
+	}
+	root, err := managedFirefoxProfilesRoot()
+	if err != nil {
+		return firefoxProfile{}, false
+	}
+	profile := firefoxProfile{
+		Root: filepath.Join(root, slug),
+		Name: "hyprd-" + slug,
+	}
+	if !isDir(profile.Root) {
+		return firefoxProfile{}, false
+	}
+	return profile, true
 }
 
 func (b *Browser) executeShow(args []string) (string, error) {

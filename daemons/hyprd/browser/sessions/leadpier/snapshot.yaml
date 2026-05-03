@@ -1,22 +1,21 @@
 name: leadpier
 profile:
-    name: dev-edition-default
-    path: /home/cullyn/.mozilla/firefox/sdfm8kqz.dev-edition-default
-    install_key: 46F492E0ACFF84D4
+    name: hyprd-leadpier
+    path: /home/cullyn/.local/state/hyprd/firefox-profiles/leadpier
 source:
-    session_file: /home/cullyn/.mozilla/firefox/sdfm8kqz.dev-edition-default/sessionstore-backups/recovery.jsonlz4
+    session_file: /home/cullyn/.local/state/hyprd/firefox-profiles/leadpier/sessionstore-backups/recovery.jsonlz4
     window_index: 1
 window:
-    selected_tab: 7
-    tab_count: 7
+    selected_tab: 2
+    tab_count: 8
     group_count: 3
-    selected_title: Query - UI for VictoriaLogs
-    selected_url: https://vl.tdcl.io/select/vmui/?#/?step=5s&query=*&g0.range_input=5m&g0.end_input=2026-05-02T19%3A27%3A18&g0.relative_time=last_5_minutes
+    selected_title: cullyn - Dashboard - Linecode
+    selected_url: https://git.linecode.dev/
     hypr_order_matches_tabs: true
 browser:
     pinned:
-        - https://git.linecode.dev/
         - https://git.trendcapital.io/leadpier/leadpierui
+        - https://git.linecode.dev/
     groups:
         - name: local
           color: blue
@@ -32,16 +31,18 @@ browser:
             - https://local.leadpier.com:4000/login
         - name: prod
           color: green
+          collapsed: true
           urls:
+            - https://beta.leadpier.com/dashboard
             - https://vl.tdcl.io/select/vmui/?#/?step=5s&query=*&g0.range_input=5m&g0.end_input=2026-05-02T19%3A27%3A18&g0.relative_time=last_5_minutes
 tabs:
     - position: 1
-      title: cullyn - Dashboard - Linecode
-      url: https://git.linecode.dev/
-      pinned: true
-    - position: 2
       title: LeadPier / LeadPier UI · GitLab
       url: https://git.trendcapital.io/leadpier/leadpierui
+      pinned: true
+    - position: 2
+      title: cullyn - Dashboard - Linecode
+      url: https://git.linecode.dev/
       pinned: true
     - position: 3
       title: https://localhost:4000/
@@ -72,8 +73,16 @@ tabs:
       group_color: orange
       collapsed: true
     - position: 7
-      title: Query - UI for VictoriaLogs
+      title: LeadPier | Dashboard
+      url: https://beta.leadpier.com/dashboard
+      group_id: 1776625644331-95
+      group: prod
+      group_color: green
+      collapsed: true
+    - position: 8
+      title: 403 Forbidden
       url: https://vl.tdcl.io/select/vmui/?#/?step=5s&query=*&g0.range_input=5m&g0.end_input=2026-05-02T19%3A27%3A18&g0.relative_time=last_5_minutes
       group_id: 1776625644331-95
       group: prod
       group_color: green
+      collapsed: true

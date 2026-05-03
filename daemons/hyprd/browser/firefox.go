@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"dotfiles/daemons/config"
+	"dotfiles/daemons/hyprd/hypr"
 )
 
 const (
@@ -103,20 +104,22 @@ func processArgs(pid int) ([]string, error) {
 }
 
 func argsUseProfile(args []string, profileRoot string) bool {
-	profileRoot = filepath.Clean(profileRoot)
+	profileArg, ok := profileArgFromArgs(args)
+	return ok && profileArgMatches(profileArg, profileRoot)
+}
+
+func profileArgFromArgs(args []string) (string, bool) {
 	for i, arg := range args {
 		switch {
 		case arg == "--profile" || arg == "-profile" || arg == "-P":
-			if i+1 < len(args) && profileArgMatches(args[i+1], profileRoot) {
-				return true
+			if i+1 < len(args) {
+				return args[i+1], true
 			}
 		case strings.HasPrefix(arg, "--profile="):
-			if profileArgMatches(strings.TrimPrefix(arg, "--profile="), profileRoot) {
-				return true
-			}
+			return strings.TrimPrefix(arg, "--profile="), true
 		}
 	}
-	return false
+	return "", false
 }
 
 func profileArgMatches(raw, profileRoot string) bool {
@@ -260,17 +263,85 @@ func (b *Browser) browserCommandParts() []string {
 }
 
 func (b *Browser) currentFirefoxTitle() string {
-	if b.hypr == nil {
-		return ""
-	}
-	active, err := b.hypr.ActiveWindow()
-	if err != nil || active == nil {
-		return ""
-	}
-	if !strings.Contains(strings.ToLower(active.Class), "firefox") {
+	active := b.activeFirefoxWindow()
+	if active == nil {
 		return ""
 	}
 	return trimFirefoxTitle(active.Title)
+}
+
+func (b *Browser) activeFirefoxWindow() *hypr.Window {
+	if b.hypr == nil {
+		return nil
+	}
+	active, err := b.hypr.ActiveWindow()
+	if err != nil || active == nil {
+		return nil
+	}
+	if !strings.Contains(strings.ToLower(active.Class), "firefox") {
+		return nil
+	}
+	return active
+}
+
+func (b *Browser) activeFirefoxProfile() (firefoxProfile, bool) {
+	active := b.activeFirefoxWindow()
+	if active == nil {
+		return firefoxProfile{}, false
+	}
+	return firefoxProfileFromWindow(*active)
+}
+
+func (b *Browser) focusedWorkspaceFirefoxProfile() (firefoxProfile, bool) {
+	if b.hypr == nil {
+		return firefoxProfile{}, false
+	}
+	monitor, err := b.hypr.FocusedMonitor()
+	if err != nil || monitor == nil {
+		return firefoxProfile{}, false
+	}
+	clients, err := b.hypr.Clients()
+	if err != nil {
+		return firefoxProfile{}, false
+	}
+	best := hypr.Window{FocusHistoryID: int(^uint(0) >> 1)}
+	for _, client := range clients {
+		if client.Workspace.ID != monitor.ActiveWS.ID {
+			continue
+		}
+		if !strings.Contains(strings.ToLower(client.Class), "firefox") {
+			continue
+		}
+		if client.FocusHistoryID < best.FocusHistoryID {
+			best = client
+		}
+	}
+	if best.Address == "" {
+		return firefoxProfile{}, false
+	}
+	return firefoxProfileFromWindow(best)
+}
+
+func firefoxProfileFromWindow(window hypr.Window) (firefoxProfile, bool) {
+	return firefoxProfileFromPID(window.Pid)
+}
+
+func firefoxProfileFromPID(pid int) (firefoxProfile, bool) {
+	for pid > 1 {
+		args, err := processArgs(pid)
+		if err == nil {
+			if raw, ok := profileArgFromArgs(args); ok {
+				profile, err := discoverFirefoxProfile(raw)
+				return profile, err == nil
+			}
+		}
+		parent, err := processParent(pid)
+		if err != nil || parent <= 1 || parent == pid {
+			return firefoxProfile{}, false
+		}
+		pid = parent
+	}
+	return firefoxProfile{}, false
 }
 
 func trimFirefoxTitle(title string) string {

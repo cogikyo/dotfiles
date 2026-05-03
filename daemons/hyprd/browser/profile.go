@@ -46,7 +46,7 @@ func discoverFirefoxProfile(raw string) (firefoxProfile, error) {
 
 	if raw != "" {
 		candidate := config.ExpandPath(raw)
-		if fileExists(candidate) {
+		if isDir(candidate) {
 			return firefoxProfile{
 				Root: filepath.Clean(candidate),
 				Name: filepath.Base(candidate),
