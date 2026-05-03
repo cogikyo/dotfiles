@@ -63,15 +63,6 @@ sessions:
       tabs:
         editor: leadpier
 
-  # ├─ workspace 5 ──────────────────────────────────────────────────────────────┤
-  5: # personal infrastructure and dotfiles work.
-    dotfiles:
-      init: true
-      project: dotfiles
-      body:
-        - editor
-        - agents
-
     vagari.firefox:
       project: vagari/firefox
       body:
@@ -80,6 +71,15 @@ sessions:
 
     vagari.nvim:
       project: vagari/nvim
+      body:
+        - editor
+        - agents
+
+  # ├─ workspace 5 ──────────────────────────────────────────────────────────────┤
+  5: # personal infrastructure and dotfiles work.
+    dotfiles:
+      init: true
+      project: dotfiles
       body:
         - editor
         - agents
