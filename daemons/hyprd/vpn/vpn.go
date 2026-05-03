@@ -76,14 +76,18 @@ func (v *VPN) Execute(arg string) (string, error) {
 		}
 		return v.toggle(conn)
 	case "install", "import":
-		if len(fields) < 2 {
-			return "", fmt.Errorf("usage: vpn install <alias>")
+		replace := true
+		if len(fields) > 1 && fields[len(fields)-1] == "--no-replace" {
+			replace = false
+			fields = fields[:len(fields)-1]
+		}
+		if len(fields) == 1 {
+			return v.installAll(replace)
 		}
 		conn, err := v.resolveConfigured(fields[1])
 		if err != nil {
 			return "", err
 		}
-		replace := len(fields) > 2 && fields[2] == "--replace"
 		return v.install(conn, replace)
 	case "export":
 		if len(fields) < 2 {
@@ -110,7 +114,7 @@ func (v *VPN) Execute(arg string) (string, error) {
 			case "toggle":
 				return v.toggle(conn)
 			case "install", "import":
-				replace := len(fields) > 2 && fields[2] == "--replace"
+				replace := len(fields) <= 2 || fields[2] != "--no-replace"
 				return v.install(conn, replace)
 			case "export":
 				return v.export(conn)
@@ -283,6 +287,49 @@ func (v *VPN) install(conn connection, replace bool) (string, error) {
 		return "", err
 	}
 	return fmt.Sprintf("vpn installed: %s from %s", label(conn), conn.Profile), nil
+}
+
+func (v *VPN) installAll(replace bool) (string, error) {
+	conns, err := v.configuredConnections()
+	if err != nil {
+		return "", err
+	}
+
+	var lines []string
+	for _, conn := range conns {
+		msg, err := v.install(conn, replace)
+		if err != nil {
+			if !replace && strings.Contains(err.Error(), "connection already exists") {
+				lines = append(lines, fmt.Sprintf("vpn already installed: %s", label(conn)))
+				continue
+			}
+			return "", err
+		}
+		lines = append(lines, msg)
+	}
+	return strings.Join(lines, "\n"), nil
+}
+
+func (v *VPN) configuredConnections() ([]connection, error) {
+	if v.config == nil || len(v.config.Connections) == 0 {
+		return nil, fmt.Errorf("no vpn connections configured")
+	}
+
+	aliases := make([]string, 0, len(v.config.Connections))
+	for alias := range v.config.Connections {
+		aliases = append(aliases, alias)
+	}
+	sort.Strings(aliases)
+
+	conns := make([]connection, 0, len(aliases))
+	for _, alias := range aliases {
+		conn, err := v.resolveConfigured(alias)
+		if err != nil {
+			return nil, err
+		}
+		conns = append(conns, conn)
+	}
+	return conns, nil
 }
 
 func (v *VPN) export(conn connection) (string, error) {

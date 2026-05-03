@@ -257,7 +257,8 @@ hyprd vpn trend            # toggle configured NetworkManager VPN alias
 hyprd vpn trend up|down    # connect/disconnect explicitly
 hyprd vpn trend status     # status for one alias/connection
 hyprd vpn install trend    # import staged .nmconnection into NetworkManager
-hyprd vpn install trend --replace
+hyprd vpn install          # import all configured staged VPN profiles
+hyprd vpn install trend --no-replace
 hyprd vpn export trend     # export NetworkManager profile to staged file
 hyprd vpn status           # active VPN summary
 hyprd vpn list             # list NetworkManager VPN connections

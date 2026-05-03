@@ -295,7 +295,7 @@ Screenshot:
 VPN:
   hyprd vpn trend               Toggle configured NetworkManager VPN alias
   hyprd vpn trend up|down       Connect/disconnect explicitly
-  hyprd vpn install trend       Import staged .nmconnection via NetworkManager
+  hyprd vpn install [trend]     Replace/import staged .nmconnection profiles
   hyprd vpn export trend        Export NetworkManager profile to staged file
 
 Notifications:

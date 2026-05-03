@@ -182,6 +182,7 @@ STEP_DEFS=(
     "hibernate|Configure swapfile and suspend-then-hibernate|yes|"
     "fonts|Extract fonts and optionally build Iosevka|no|"
     "go|Build Go binaries (hyprd, ewwd, statusline, newtab)|no|"
+    "vpn|Import decrypted NetworkManager VPN profiles|yes|secrets,go"
     "eww|Install eww widget system|no|"
     "firefox|Configure Firefox profile, theme, and preferences|no|repos"
     "shell|Change default shell to zsh|yes|"
@@ -1925,6 +1926,37 @@ healthcheck_go() {
             fi
         fi
     done
+    return 0
+}
+
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  STEP {VPN}: Import decrypted NetworkManager VPN profiles  {{{
+
+step_vpn() {
+    header "Importing VPN profiles"
+
+    needs_sudo
+    has nmcli || { err "nmcli not found. Install NetworkManager first."; return 1; }
+
+    local hyprd="$HOME/.local/bin/hyprd"
+    [[ -x "$hyprd" ]] || { err "hyprd not found at $hyprd. Run install.sh go first."; return 1; }
+
+    "$hyprd" vpn install
+}
+
+healthcheck_vpn() {
+    has nmcli || return "$STEP_SKIPPED_RC"
+
+    local profile="$HOME/.local/share/dotfiles/vpn/work.nmconnection"
+    [[ -f "$profile" ]] || return "$STEP_SKIPPED_RC"
+
+    if ! nmcli connection show Trend &>/dev/null; then
+        err "Healthcheck failed: missing NetworkManager VPN connection 'Trend'"
+        return 1
+    fi
     return 0
 }
 
