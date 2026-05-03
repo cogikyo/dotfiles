@@ -19,8 +19,8 @@ au("FileType", {
 	group = "FormatOptions",
 	callback = function()
 		vim.schedule(function()
-			-- c:wrap-comments q:gq n:numbered-lists j:join-leader r:enter-leader l:no-break 1:no-break-after-1-char
-			vim.opt_local.formatoptions = "cqnjrl1"
+			-- q:gq n:numbered-lists j:join-leader r:enter-leader l:no-break 1:no-break-after-1-char
+			vim.opt_local.formatoptions = "qnjrl1"
 		end)
 	end,
 })
@@ -31,6 +31,15 @@ au("FileType", {
 	callback = function()
 		vim.opt_local.tabstop = 2
 		vim.opt_local.shiftwidth = 2
+	end,
+})
+
+au("FileType", {
+	group = "MarkdownNoAutoWrap",
+	pattern = "markdown",
+	callback = function()
+		vim.opt_local.textwidth = 0
+		vim.opt_local.formatoptions:remove({ "t", "a" })
 	end,
 })
 
