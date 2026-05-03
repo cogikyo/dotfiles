@@ -205,7 +205,7 @@ func (d *Daemon) handleCommand(command string) string {
 		}
 		return result
 	case "tabs":
-		tabs := session.NewTabs(d.state)
+		tabs := session.NewTabs(d.hypr, d.state)
 		result, err := tabs.Execute(strings.TrimSpace(arg))
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)

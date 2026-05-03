@@ -252,7 +252,7 @@ Window commands:
   hyprd focus <class> [title]  Focus window, unhide if hidden
   hyprd tab <name|alias>      Focus editor + switch kitty tab (aliases like nvim::fe-nvim supported)
   hyprd tabs init <profile> <pid>    Create tabs from profile (editor|agents|leadpier)
-  hyprd tabs refresh <name|all> <pid> Refresh tab(s) in current profile
+  hyprd tabs refresh <name|all> [pid] Refresh tab(s) in focused kitty by default
 
 Three-body (2-visible, 1-shadow window management):
   hyprd three-body editor    Focus/launch editor window

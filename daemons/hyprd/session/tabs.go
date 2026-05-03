@@ -11,23 +11,25 @@ import (
 	"strings"
 
 	"dotfiles/daemons/config"
+	"dotfiles/daemons/hyprd/hypr"
 	"dotfiles/daemons/hyprd/state"
 )
 
 // Tabs initializes and refreshes the tab layout of a kitty editor window per its config profile.
 type Tabs struct {
+	hypr  *hypr.Client
 	state *state.State
 }
 
-func NewTabs(state *state.State) *Tabs {
-	return &Tabs{state: state}
+func NewTabs(h *hypr.Client, state *state.State) *Tabs {
+	return &Tabs{hypr: h, state: state}
 }
 
-// Execute dispatches "init <profile> <pid>" or "refresh <name|all> <pid>".
+// Execute dispatches "init <profile> <pid>" or "refresh <name|all> [pid]".
 func (t *Tabs) Execute(args string) (string, error) {
 	parts := strings.Fields(args)
 	if len(parts) < 2 {
-		return "", fmt.Errorf("usage: tabs {init|refresh} <profile|name> <pid>")
+		return "", fmt.Errorf("usage: tabs init <profile> <pid> | tabs refresh <name|current|all> [pid]")
 	}
 
 	switch parts[0] {
@@ -91,14 +93,14 @@ func (t *Tabs) init(args []string) (string, error) {
 }
 
 func (t *Tabs) refresh(args []string) (string, error) {
-	if len(args) < 2 {
-		return "", fmt.Errorf("usage: tabs refresh <name|all> <pid>")
+	if len(args) < 1 {
+		return "", fmt.Errorf("usage: tabs refresh <name|current|all> [pid]")
 	}
 
 	nameOrAlias := args[0]
-	pid, err := strconv.Atoi(args[1])
+	pid, err := t.refreshPID(args)
 	if err != nil {
-		return "", fmt.Errorf("invalid pid: %s", args[1])
+		return "", err
 	}
 
 	kitty := NewKittyClient(pid)
@@ -122,11 +124,46 @@ func (t *Tabs) refresh(args []string) (string, error) {
 	}
 
 	tabName := resolveTabAlias(t.state.GetConfig(), nameOrAlias, profileName)
+	if nameOrAlias == "current" {
+		tabName = activeProfileTabName(t.state.GetConfig(), profileName, windows[0])
+	}
 	tabDef := t.findTab(profile, tabName)
+	if tabDef == nil {
+		if resolved := pickSemanticTab(profile, normalizeTabAction(nameOrAlias), "", "", ""); resolved != "" {
+			tabName = resolved
+			tabDef = t.findTab(profile, tabName)
+		}
+	}
 	if tabDef == nil {
 		return "", fmt.Errorf("tab %q not in profile %s", tabName, profileName)
 	}
 	return t.refreshSingle(kitty, profile, *tabDef, windowID)
+}
+
+func (t *Tabs) refreshPID(args []string) (int, error) {
+	if len(args) >= 2 {
+		pid, err := strconv.Atoi(args[1])
+		if err != nil {
+			return 0, fmt.Errorf("invalid pid: %s", args[1])
+		}
+		if pid == 0 {
+			return t.activeKittyPID()
+		}
+		return pid, nil
+	}
+
+	return t.activeKittyPID()
+}
+
+func (t *Tabs) activeKittyPID() (int, error) {
+	win, err := t.hypr.ActiveWindow()
+	if err != nil {
+		return 0, err
+	}
+	if win == nil || win.Pid == 0 || win.Class != "kitty" {
+		return 0, fmt.Errorf("usage: tabs refresh <name|current|all> [pid]")
+	}
+	return win.Pid, nil
 }
 
 func (t *Tabs) refreshAll(kitty *KittyClient, profile *config.TabProfile, windowID int) (string, error) {
@@ -161,14 +198,10 @@ func (t *Tabs) refreshAll(kitty *KittyClient, profile *config.TabProfile, window
 func (t *Tabs) refreshSingle(kitty *KittyClient, profile *config.TabProfile, tab config.TabDef, windowID int) (string, error) {
 	tabID := fmt.Sprintf("%d-%s%s", windowID, profile.Prefix, tab.Name)
 	origIdx, _ := kitty.TabIndex(tabID)
+	defaultCWD := t.resolveDefaultCWDForTab(kitty, tabID)
 	kitty.FocusTab(tabID)
 	kitty.CloseTab(tabID)
 
-	windows, err := kitty.FullState()
-	if err != nil {
-		return "", err
-	}
-	defaultCWD := t.resolveDefaultCWD(windows[0])
 	cwd := t.resolveCWD(tab, defaultCWD)
 
 	if !t.checkRequires(tab.Requires, cwd) {
@@ -189,6 +222,32 @@ func (t *Tabs) refreshSingle(kitty *KittyClient, profile *config.TabProfile, tab
 	}
 
 	return fmt.Sprintf("tabs refresh: %s", tab.Name), nil
+}
+
+func (t *Tabs) resolveDefaultCWDForTab(kitty *KittyClient, tabID string) string {
+	windows, err := kitty.FullState()
+	if err != nil || len(windows) == 0 {
+		home, _ := os.UserHomeDir()
+		return home
+	}
+
+	for _, tab := range windows[0].Tabs {
+		if !tabHasID(tab, tabID) {
+			continue
+		}
+		for _, pane := range tab.Windows {
+			if paneSelected(pane) && pane.CWD != "" {
+				return pane.CWD
+			}
+		}
+		for _, pane := range tab.Windows {
+			if pane.CWD != "" {
+				return pane.CWD
+			}
+		}
+	}
+
+	return t.resolveDefaultCWD(windows[0])
 }
 
 func (t *Tabs) getProfile(name string) (*config.TabProfile, error) {
