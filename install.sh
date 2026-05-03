@@ -1526,9 +1526,11 @@ step_hibernate() {
 
     info "Updating resume parameters in $LOADER_ENTRY..."
     sudo sed -i -E \
+        -e '/^[[:space:]]*resume=UUID=/d' \
+        -e '/^[[:space:]]*resume_offset=/d' \
         -e 's/[[:space:]]resume=UUID=[^[:space:]]+//g' \
         -e 's/[[:space:]]resume_offset=[^[:space:]]+//g' \
-        -e "s|^options.*|& resume=UUID=$RESUME_UUID resume_offset=$RESUME_OFFSET|" \
+        -e "s|^options[[:space:]].*|& resume=UUID=$RESUME_UUID resume_offset=$RESUME_OFFSET|" \
         "$LOADER_ENTRY"
     ok "Updated systemd-boot entry"
 
