@@ -360,7 +360,7 @@ func (d *Daemon) handleNotify(arg string) string {
 // │ Hot rebuild                                                                  │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// handleRebuild builds ./cmd/hyprd from ~/dotfiles/cmds, installs ~/.local/bin/hyprd, and restarts in place.
+// handleRebuild builds ./cmd/hyprd from the dotfiles Go workspace, installs ~/.local/bin/hyprd, and restarts in place.
 //
 // Runtime state is written to stateFile before the binary swap and consumed once by restoreState after exec.
 func (d *Daemon) handleRebuild() string {
@@ -369,8 +369,14 @@ func (d *Daemon) handleRebuild() string {
 		return fmt.Sprintf("error: %v", err)
 	}
 	srcDir := filepath.Join(home, "dotfiles", "cmds")
+	if dotfiles := os.Getenv("DOTFILES"); dotfiles != "" {
+		srcDir = filepath.Join(dotfiles, "cmds")
+	}
 	binPath := filepath.Join(home, ".local", "bin", "hyprd")
 	tmpBin := binPath + ".new"
+	if err := os.MkdirAll(filepath.Dir(binPath), 0755); err != nil {
+		return fmt.Sprintf("error: install dir: %v", err)
+	}
 
 	cmd := exec.Command("go", "build", "-o", tmpBin, "./cmd/hyprd")
 	cmd.Dir = srcDir

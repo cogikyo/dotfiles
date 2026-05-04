@@ -181,7 +181,7 @@ STEP_DEFS=(
     "system|Install system configs and enable services|yes|"
     "hibernate|Configure swapfile and suspend-then-hibernate|yes|"
     "fonts|Extract fonts and optionally build Iosevka|no|"
-    "go|Build Go binaries (hyprd, ewwd, statusline, newtab)|no|"
+    "go|Build Go binaries (dctl, hyprd, ewwd, statusline, newtab)|no|"
     "vpn|Import decrypted NetworkManager VPN profiles|yes|secrets,go"
     "eww|Install eww widget system|no|"
     "firefox|Configure Firefox profile, theme, and preferences|no|repos"
@@ -1658,6 +1658,7 @@ healthcheck_fonts() {
 
 # Binary definitions: name -> module_dir|build_path|description|is_daemon|output_dir
 declare -A GO_BINARIES=(
+    ["dctl"]="cmds|./cmd/dctl|Dotfiles control plane|no|"
     ["hyprd"]="cmds|./cmd/hyprd|Hyprland window management daemon|yes|"
     ["ewwd"]="cmds|./cmd/ewwd|System utilities daemon for eww|no|"
     ["statusline"]="cmds|./cmd/statusline|Claude Code statusline generator|no|"
@@ -1678,6 +1679,7 @@ build_go_binary() {
     fi
 
     info "Building $name from $module_dir/$build_path"
+    mkdir -p "$install_dir"
     (cd "$full_path" && go build -o "$install_dir/$name" "$build_path")
     ok "Installed $name -> $install_dir/$name"
 }

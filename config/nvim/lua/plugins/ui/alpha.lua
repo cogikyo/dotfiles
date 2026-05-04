@@ -22,7 +22,7 @@ return {
 				[[    `-..,..-'       `-..,..-'       `-..,..-'      ]],
 			},
 			opts = {
-				hl = "@function.call",
+				hl = "Macro",
 				shrink_margin = false,
 				position = "center",
 			},

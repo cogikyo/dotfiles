@@ -159,7 +159,9 @@ func restoreProfileForSnapshot(snapshotDir, override string) (firefoxProfile, er
 		}, nil
 	}
 	if meta.Profile.Name != "" {
-		return discoverFirefoxProfile(meta.Profile.Name)
+		if profile, err := discoverFirefoxProfile(meta.Profile.Name); err == nil {
+			return profile, nil
+		}
 	}
 	return discoverFirefoxProfile("")
 }

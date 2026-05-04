@@ -178,6 +178,41 @@ func TestDiscoverFirefoxProfileAcceptsAbsoluteDirectory(t *testing.T) {
 	}
 }
 
+func TestRestoreProfileForSnapshotFallsBackToDefaultWhenRecordedProfileIsMissing(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	firefoxDir := filepath.Join(home, ".mozilla", "firefox")
+	defaultProfile := filepath.Join(firefoxDir, "default-release")
+	if err := os.MkdirAll(defaultProfile, 0o755); err != nil {
+		t.Fatalf("mkdir default profile: %v", err)
+	}
+	profilesINI := "[Profile0]\nName=dev-edition-default\nIsRelative=1\nPath=default-release\nDefault=1\n"
+	if err := os.WriteFile(filepath.Join(firefoxDir, "profiles.ini"), []byte(profilesINI), 0o644); err != nil {
+		t.Fatalf("write profiles.ini: %v", err)
+	}
+
+	snapshotDir := t.TempDir()
+	summary := browserSnapshotSummary{
+		Profile: browserProfileSummary{Name: "hyprd-leadpier", Path: filepath.Join(home, ".local", "state", "hyprd", "firefox-profiles", "leadpier")},
+	}
+	data, err := yaml.Marshal(summary)
+	if err != nil {
+		t.Fatalf("marshal snapshot: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(snapshotDir, "snapshot.yaml"), data, 0o644); err != nil {
+		t.Fatalf("write snapshot: %v", err)
+	}
+
+	profile, err := restoreProfileForSnapshot(snapshotDir, "")
+	if err != nil {
+		t.Fatalf("restoreProfileForSnapshot returned error: %v", err)
+	}
+	if profile.Root != defaultProfile {
+		t.Fatalf("profile root = %q, want %q", profile.Root, defaultProfile)
+	}
+}
+
 func TestSnapshotProfileFallsBackToNamedManagedProfile(t *testing.T) {
 	stateHome := t.TempDir()
 	t.Setenv("XDG_STATE_HOME", stateHome)
