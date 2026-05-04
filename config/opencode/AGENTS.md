@@ -83,4 +83,4 @@ cullyn...
 - prefers concrete systems analogies over generic productivity or corporate metaphors.
 - has background in biology, mathematics, physics; analogies in these domains are great for explaining things.
 - most interested in evolutionary memetics and entropy.
-
+- constanly makes typos; sorry about that.
