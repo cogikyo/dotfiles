@@ -1,5 +1,6 @@
 gui:
   showCommandLog: false
+notARepository: skip
 promptToReturnFromSubprocess: false
 git:
   overrideGpg: true
