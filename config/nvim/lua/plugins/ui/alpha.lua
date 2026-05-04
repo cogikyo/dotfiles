@@ -22,7 +22,7 @@ return {
 				[[    `-..,..-'       `-..,..-'       `-..,..-'      ]],
 			},
 			opts = {
-				hl = "@lsp.typemod.function.defaultLibrary",
+				hl = "@function.call",
 				shrink_margin = false,
 				position = "center",
 			},
