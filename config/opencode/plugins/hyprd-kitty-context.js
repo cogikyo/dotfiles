@@ -78,6 +78,12 @@ async function writeContext(sessionID) {
     const contexts = await readContexts()
     await pruneContexts(contexts)
 
+    for (const [id, ctx] of Object.entries(contexts)) {
+      if (id !== sessionID && Number(ctx?.kitty_pid) === KITTY_PID && Number(ctx?.kitty_window_id) === KITTY_WINDOW_ID) {
+        delete contexts[id]
+      }
+    }
+
     contexts[sessionID] = {
       kitty_pid: KITTY_PID,
       kitty_window_id: KITTY_WINDOW_ID,

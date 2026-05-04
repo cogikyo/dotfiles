@@ -77,6 +77,8 @@ async function send(command) {
 
 async function notify(payload, parentFor) {
   const ctx = await kittyContext(payload.sessionID, parentFor)
+  if (payload.type === "idle" && (!ctx.kitty_pid || !ctx.kitty_window_id)) return
+
   const req = {
     source: "opencode",
     event: payload.type,
