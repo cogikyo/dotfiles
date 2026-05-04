@@ -44,7 +44,7 @@
     dmenu = "/usr/bin/bmenu -p dunst:"
     browser = "/usr/bin/xdg-open"
     always_run_script = true
-    script = "/home/cullyn/.local/bin/hyprd notify dunst" # daemons/hyprd — plays sound + handles focus
+    script = "/home/cullyn/.local/bin/hyprd notify dunst" # cmds/cmd/hyprd — plays sound + handles focus
     title = "Dunst"
     class = "Dunst"
     corner_radius = 8

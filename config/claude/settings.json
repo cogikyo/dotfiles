@@ -75,7 +75,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "/home/cullyn/dotfiles/config/claude/statusline/statusline"
+    "command": "/home/cullyn/.local/bin/statusline"
   },
   "enabledPlugins": {
     "gopls-lsp@claude-plugins-official": true

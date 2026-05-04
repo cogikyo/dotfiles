@@ -5,8 +5,8 @@ Arch + Hyprland (Wayland) dotfiles. Single-user. Root of repo = `~/dotfiles`.
 ## Layout
 
 - `config/` → symlinked into `~/.config/` by `install.sh link`
-- `bin/` → symlinked into `~/.local/bin/` (legacy; being replaced by `daemons/`)
-- `daemons/` → Go workspace, multiple `cmd/`-style binaries; built into `~/.local/bin/` by `install.sh go`. See `daemons/README.md`.
+- `bin/` → symlinked into `~/.local/bin/` (legacy; being replaced by `cmds/`)
+- `cmds/` → Go command workspace; built into `~/.local/bin/` by `install.sh go`. See `cmds/README.md`.
 - `etc/` → system configs **copied** to `/etc/` by `install.sh system` (not symlinked)
 - `skills/` → agent skills, linked by `skills/link.sh`
 - `iso/` → archiso profile; `iso/work/` and `iso/out/` are gitignored build artifacts
@@ -21,9 +21,9 @@ Editing the repo IS editing the live system.
 
 Steps: `packages`, `link`, `secrets`, `repos`, `system`, `hibernate`, `fonts`, `go`, `eww`, `firefox`, `shell`, `dns`.
 
-## Daemons
+## Commands
 
-Go workspace. One module, multiple binaries. Sockets at `/tmp/{hyprd,ewwd}.sock`.
+Go command workspace. One module, multiple binaries. Sockets at `/tmp/{hyprd,ewwd}.sock`.
 
 - `hyprd` — Hyprland window management
 - `ewwd` — system signals for eww widgets
@@ -31,11 +31,11 @@ Go workspace. One module, multiple binaries. Sockets at `/tmp/{hyprd,ewwd}.sock`
 - `statusline` — Claude Code statusline
 
 After editing `hyprd`, run `hyprd rebuild` — it builds, preserves runtime state, and hot-restarts in place.
-For other daemons, use targeted builds (`go build -o ~/.local/bin/<name> ./<name>`).
+For other commands, use targeted builds from `cmds/` (`go build -o ~/.local/bin/<name> ./cmd/<name>`).
 
 ## Conventions
 
-- Prefer Go for new work. Bash only for genuinely shell-shaped helpers. If bash logic grows, move to `daemons/`.
+- Prefer Go for new work. Bash only for genuinely shell-shaped helpers. If bash logic grows, move to `cmds/`.
 - Bash: `#!/usr/bin/env bash` + `set -euo pipefail`.
 - Interactive zsh enables `EXTENDED_GLOB`; use extended glob features when useful, but quote literal `#`, `^`, and `~` values in sourced zsh files, especially hex colors like `'fg=#824141'`.
 - Logging: `info()` (blue), `success()`/`ok()` (green), `warn()` (yellow), `error()`/`err()` (red).

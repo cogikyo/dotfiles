@@ -1658,10 +1658,10 @@ healthcheck_fonts() {
 
 # Binary definitions: name -> module_dir|build_path|description|is_daemon|output_dir
 declare -A GO_BINARIES=(
-    ["hyprd"]="daemons|./hyprd|Hyprland window management daemon|yes|"
-    ["ewwd"]="daemons|./ewwd|System utilities daemon for eww|no|"
-    ["statusline"]="config/claude/statusline|.|Claude Code statusline generator|no|config/claude/statusline"
-    ["newtab"]="daemons/newtab|.|Firefox new tab HTTP server|yes|"
+    ["hyprd"]="cmds|./cmd/hyprd|Hyprland window management daemon|yes|"
+    ["ewwd"]="cmds|./cmd/ewwd|System utilities daemon for eww|no|"
+    ["statusline"]="cmds|./cmd/statusline|Claude Code statusline generator|no|"
+    ["newtab"]="cmds|./cmd/newtab|Firefox new tab HTTP server|yes|"
 )
 
 build_go_binary() {
@@ -1743,8 +1743,7 @@ install_daemon_services() {
         IFS='|' read -r module_dir _ _ is_daemon <<< "${GO_BINARIES[$name]}"
         [[ "$is_daemon" == "yes" ]] || continue
 
-        local src="$DOTFILES/$module_dir/$name/$name.service"
-        # newtab has its own module dir
+        local src="$DOTFILES/$module_dir/cmd/$name/$name.service"
         [[ -f "$src" ]] || src="$DOTFILES/$module_dir/$name.service"
 
         if [[ ! -f "$src" ]]; then

@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package providers;
+
+option go_package = "dotfiles/cmds/internal/ewwd/providers";
+
+message CanvasRequest {
+  message Track {
+    string track_uri = 1;
+  }
+  repeated Track tracks = 1;
+}
+
+message CanvasResponse {
+  message Canvas {
+    string id = 1;
+    string canvas_url = 2;
+    string track_uri = 5;
+    message Artist {
+      string artist_uri = 1;
+      string artist_name = 2;
+      string artist_img_url = 3;
+    }
+    Artist artist = 6;
+    string other_id = 9;
+    string canvas_uri = 11;
+  }
+  repeated Canvas canvases = 1;
+}

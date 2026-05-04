@@ -157,7 +157,7 @@ prepare_profile() {
         --exclude='./iso/airootfs/root/dotfiles' \
         --exclude='./.git' \
         --exclude='./share/videos/*.mp4' \
-        --exclude='./daemons/newtab/dna.webm' \
+        --exclude='./cmds/cmd/newtab/dna.webm' \
         --exclude='./etc/fonts.tar.gz' \
         -cf - . | tar -xf - -C "$airootfs_dotfiles"
 

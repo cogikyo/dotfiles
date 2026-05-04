@@ -1,11 +1,10 @@
 # Compiled binaries
-config/claude/statusline-bin
-config/claude/statusline/statusline
-daemons/ewwd/ewwd
-daemons/hyprd/hyprd
-daemons/newtab/newtab
-daemons/newtab/newtab-server
-daemons/statusline/statusline
+cmds/cmd/dctl/dctl
+cmds/cmd/ewwd/ewwd
+cmds/cmd/hyprd/hyprd
+cmds/cmd/newtab/newtab
+cmds/cmd/newtab/newtab-server
+cmds/cmd/statusline/statusline
 
 # Plaintext secrets (safety net)
 etc/secrets/identity
@@ -14,7 +13,7 @@ etc/secrets/identity
 config/xplr/plugins/preview/
 
 # Machine-specific local overrides
-daemons/config/*.local.yaml
+cmds/config/*.local.yaml
 
 # ISO build artifacts
 iso/work/
