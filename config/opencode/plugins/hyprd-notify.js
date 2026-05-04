@@ -18,22 +18,24 @@ function cleanText(value, max = LIMITS.message) {
   return value.replace(/\s+/g, " ").trim().slice(0, max)
 }
 
-async function kittyContext(sessionID) {
+async function kittyContext(sessionID, parentFor) {
   if (!sessionID) return { kitty_pid: 0, kitty_window_id: 0 }
   try {
     const contexts = await Bun.file(KITTY_CONTEXT_PATH).json()
-    const ctx = contexts?.[sessionID]
-    const kitty_pid = Number(ctx?.kitty_pid) || 0
-    const kitty_window_id = Number(ctx?.kitty_window_id) || 0
-    if (!kitty_pid || !kitty_window_id) return { kitty_pid: 0, kitty_window_id: 0 }
-    if (!(await isSocket(`/tmp/kitty-${kitty_pid}`))) return { kitty_pid: 0, kitty_window_id: 0 }
-    return {
-      kitty_pid,
-      kitty_window_id,
+
+    for (let id = sessionID, seen = new Set(); id && !seen.has(id); id = parentFor?.(id)) {
+      seen.add(id)
+      const ctx = contexts?.[id]
+      const kitty_pid = Number(ctx?.kitty_pid) || 0
+      const kitty_window_id = Number(ctx?.kitty_window_id) || 0
+      if (!kitty_pid || !kitty_window_id) continue
+      if (!(await isSocket(`/tmp/kitty-${kitty_pid}`))) continue
+      return { kitty_pid, kitty_window_id }
     }
   } catch {
-    return { kitty_pid: 0, kitty_window_id: 0 }
   }
+
+  return { kitty_pid: 0, kitty_window_id: 0 }
 }
 
 async function isSocket(path) {
@@ -72,8 +74,8 @@ async function send(command) {
   await done
 }
 
-async function notify(payload) {
-  const ctx = await kittyContext(payload.sessionID)
+async function notify(payload, parentFor) {
+  const ctx = await kittyContext(payload.sessionID, parentFor)
   const req = {
     source: "opencode",
     event: payload.type,
@@ -94,6 +96,8 @@ function newSessionState() {
     lastAssistantMessage: "",
     lastTodoCompletedAt: 0,
     completeTimer: null,
+    parentID: "",
+    title: "",
   }
 }
 
@@ -109,6 +113,14 @@ const server = async () => {
     return state
   }
 
+  function parentFor(sessionID) {
+    return sessions.get(sessionID)?.parentID || ""
+  }
+
+  async function sendNotify(payload) {
+    await notify(payload, parentFor)
+  }
+
   function scheduleComplete(sessionID) {
     const state = sessions.get(sessionID)
     if (!state?.active || state.completeTimer) return
@@ -120,11 +132,13 @@ const server = async () => {
 
       if (Date.now() - state.lastTodoCompletedAt < TODO_COMPLETE_DEBOUNCE_MS) return
 
-      const message = state.lastAssistantMessage
-      await notify({
+      const isSubagent = state.parentID !== ""
+      const message = state.lastAssistantMessage || state.title
+      await sendNotify({
         sessionID,
-        type: "complete",
-        message: message || "Jobs done",
+        type: isSubagent ? "subagent" : "complete",
+        agent_type: isSubagent ? state.title : "",
+        message: message || (isSubagent ? "Done" : "Jobs done"),
         last_assistant_message: message,
       })
     }, COMPLETE_DEBOUNCE_MS)
@@ -143,7 +157,7 @@ const server = async () => {
 
       if ((part.type === "subtask" || part.type === "agent") && !state.seenAgentParts.has(part.id)) {
         state.seenAgentParts.add(part.id)
-        await notify({
+        await sendNotify({
           sessionID: part.sessionID,
           type: "subagent",
           agent_type: cleanText(part.agent || part.name || "Agent", LIMITS.id),
@@ -163,7 +177,7 @@ const server = async () => {
         state.completeTimer = null
         if (!state.active) {
           state.active = true
-          await notify({
+          await sendNotify({
             sessionID,
             type: "start",
             message: type === "retry" ? "Retrying" : "Working",
@@ -191,7 +205,7 @@ const server = async () => {
           ? cleanText(rawPatterns, LIMITS.patterns)
           : ""
       const message = perm ? (pats ? `${perm}: ${pats}` : perm) : "Permission needed"
-      await notify({ sessionID, type: "permission", message })
+      await sendNotify({ sessionID, type: "permission", message })
     },
 
     "permission.updated": async (props) => {
@@ -203,7 +217,7 @@ const server = async () => {
       const header = cleanText(first?.header, LIMITS.id)
       const question = cleanText(first?.question)
       const message = header ? (question ? `${header}: ${question}` : header) : question || "Question asked"
-      await notify({ sessionID, type: "question", message })
+      await sendNotify({ sessionID, type: "question", message })
     },
 
     "todo.updated": async ({ sessionID, todos }) => {
@@ -229,8 +243,24 @@ const server = async () => {
 
       if (completed.length > 0) {
         state.lastTodoCompletedAt = Date.now()
-        await Promise.all(completed.map((message) => notify({ sessionID, type: "todo-complete", message })))
+        await Promise.all(completed.map((message) => sendNotify({ sessionID, type: "todo-complete", message })))
       }
+    },
+
+    "session.created": ({ sessionID, info }) => {
+      const id = sessionID || info?.id
+      if (!id) return
+      const state = getSession(id)
+      state.parentID = typeof info?.parentID === "string" ? info.parentID : ""
+      state.title = cleanText(info?.title, LIMITS.id)
+    },
+
+    "session.updated": ({ sessionID, info }) => {
+      const id = sessionID || info?.id
+      if (!id) return
+      const state = getSession(id)
+      state.parentID = typeof info?.parentID === "string" ? info.parentID : ""
+      state.title = cleanText(info?.title, LIMITS.id)
     },
 
     "session.error": async ({ sessionID, error }) => {
@@ -243,7 +273,7 @@ const server = async () => {
           state.active = false
         }
       }
-      await notify({ sessionID, type: "error", message })
+      await sendNotify({ sessionID, type: "error", message })
     },
 
     "session.deleted": ({ info }) => {
