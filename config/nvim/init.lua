@@ -37,7 +37,7 @@ require("lazy").setup({
 	spec = {
 		{
 			"cogikyo/vagari.nvim",
-			dev = false,
+			dir = "~/vagari/nvim",
 			priority = 1000,
 			lazy = false,
 			config = function()
@@ -58,6 +58,22 @@ require("lazy").setup({
 			name = "catppuccin",
 			lazy = true,
 			opts = { flavour = "macchiato" },
+		},
+		{
+			"ellisonleao/gruvbox.nvim",
+			lazy = true,
+		},
+		{
+			"navarasu/onedark.nvim",
+			lazy = true,
+		},
+		{
+			"shaunsingh/nord.nvim",
+			lazy = true,
+		},
+		{
+			"altercation/vim-colors-solarized",
+			lazy = true,
 		},
 
 		{ import = "plugins.dev" },
