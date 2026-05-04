@@ -6,10 +6,25 @@ local function diag_jump(count)
 	end
 end
 
+local function disable_semantic_tokens(client, bufnr)
+	client.server_capabilities.semanticTokensProvider = nil
+
+	if vim.lsp.semantic_tokens then
+		vim.lsp.semantic_tokens.enable(false, { bufnr = bufnr })
+	end
+end
+
 function M.setup()
 	vim.api.nvim_create_autocmd("LspAttach", {
 		group = vim.api.nvim_create_augroup("lsp-attach", { clear = true }),
 		callback = function(event)
+			local client = vim.lsp.get_client_by_id(event.data.client_id)
+			if not client then
+				return
+			end
+
+			disable_semantic_tokens(client, event.buf)
+
 			local map = function(keys, func, d, mode)
 				mode = mode or "n"
 				vim.keymap.set(mode, keys, func, { buffer = event.buf, desc = "LSP: " .. d })
@@ -53,11 +68,6 @@ function M.setup()
 				local enabled = vim.lsp.codelens.is_enabled({ bufnr = event.buf })
 				vim.lsp.codelens.enable(not enabled, { bufnr = event.buf })
 			end, "Toggle Code Lens")
-
-			local client = vim.lsp.get_client_by_id(event.data.client_id)
-			if not client then
-				return
-			end
 
 			if client.name == "ts_ls" then
 				local tsmap = function(keys, func, d)
