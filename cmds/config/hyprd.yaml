@@ -241,21 +241,21 @@ notify:
       sound: sdv-frog
       volume: 85
       timeout: 2500
-    todo-complete:
-      style: secondary
-      sound: civ6-notification
-      volume: 85
-      timeout: 2000
-
-    complete:
-      style: primary
-      sound: jobs-done
-      volume: 110
 
     idle:
       style: success
       sound: hey-listen
       volume: 85
+      timeout: 2000
+    todo-complete:
+      style: success
+      sound: civ6-notification
+      volume: 85
+
+    complete:
+      style: primary
+      sound: jobs-done
+      volume: 110
 
     permission:
       style: tertiary

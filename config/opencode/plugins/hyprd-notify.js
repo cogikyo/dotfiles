@@ -12,6 +12,7 @@ const LIMITS = {
 
 const TODO_COMPLETE_DEBOUNCE_MS = 1500
 const COMPLETE_DEBOUNCE_MS = 500
+const IDLE_REMINDER_MS = 10 * 60 * 1000
 
 function cleanText(value, max = LIMITS.message) {
   if (typeof value !== "string") return ""
@@ -96,6 +97,7 @@ function newSessionState() {
     lastAssistantMessage: "",
     lastTodoCompletedAt: 0,
     completeTimer: null,
+    idleTimer: null,
     parentID: "",
     title: "",
   }
@@ -121,6 +123,29 @@ const server = async () => {
     await notify(payload, parentFor)
   }
 
+  function clearIdleReminder(state) {
+    clearTimeout(state.idleTimer)
+    state.idleTimer = null
+  }
+
+  function scheduleIdleReminder(sessionID) {
+    const state = sessions.get(sessionID)
+    if (!state || state.active || state.idleTimer) return
+
+    state.idleTimer = setTimeout(async () => {
+      state.idleTimer = null
+      if (state.active) return
+
+      const message = state.lastAssistantMessage || state.title || "Still idle"
+      await sendNotify({
+        sessionID,
+        type: "idle",
+        message,
+      })
+      scheduleIdleReminder(sessionID)
+    }, IDLE_REMINDER_MS)
+  }
+
   function scheduleComplete(sessionID) {
     const state = sessions.get(sessionID)
     if (!state?.active || state.completeTimer) return
@@ -130,7 +155,10 @@ const server = async () => {
       if (!state.active) return
       state.active = false
 
-      if (Date.now() - state.lastTodoCompletedAt < TODO_COMPLETE_DEBOUNCE_MS) return
+      if (Date.now() - state.lastTodoCompletedAt < TODO_COMPLETE_DEBOUNCE_MS) {
+        scheduleIdleReminder(sessionID)
+        return
+      }
 
       const isSubagent = state.parentID !== ""
       const message = state.lastAssistantMessage || state.title
@@ -141,6 +169,7 @@ const server = async () => {
         message: message || (isSubagent ? "Done" : "Jobs done"),
         last_assistant_message: message,
       })
+      scheduleIdleReminder(sessionID)
     }, COMPLETE_DEBOUNCE_MS)
   }
 
@@ -175,6 +204,7 @@ const server = async () => {
       if (type === "busy" || type === "retry") {
         clearTimeout(state.completeTimer)
         state.completeTimer = null
+        clearIdleReminder(state)
         if (!state.active) {
           state.active = true
           await sendNotify({
@@ -270,6 +300,7 @@ const server = async () => {
         if (state) {
           clearTimeout(state.completeTimer)
           state.completeTimer = null
+          clearIdleReminder(state)
           state.active = false
         }
       }
@@ -279,7 +310,10 @@ const server = async () => {
     "session.deleted": ({ info }) => {
       if (!info?.id) return
       const state = sessions.get(info.id)
-      if (state) clearTimeout(state.completeTimer)
+      if (state) {
+        clearTimeout(state.completeTimer)
+        clearIdleReminder(state)
+      }
       sessions.delete(info.id)
     },
   }
