@@ -180,30 +180,39 @@ verb(scope): short summary
 Each verb should tell the reader what kind of change happened without reading the diff.
 Never use `update`; it is too generic.
 
-| Type       | Use When                                           |
-| ---------- | -------------------------------------------------- |
-| `feat`     | Major new functionality or an entirely new feature |
-| `add`      | New file, option, component, or small addition     |
-| `extend`   | Existing feature gains a new capability            |
-| `improve`  | Better UX/DX or smoother flow                      |
-| `adjust`   | Behavior, permissions, ordering, or thresholds     |
-| `edit`     | Static content or values change                    |
-| `fix`      | Bug fix                                            |
-| `refactor` | Internal restructure with same behavior            |
-| `style`    | Formatting or whitespace                           |
-| `docs`     | Documentation                                      |
-| `test`     | Tests                                              |
-| `chore`    | Build, dependencies, or config                     |
-| `ci`       | CI/CD                                              |
+| Type       | Use When                                            |
+| ---------- | --------------------------------------------------- |
+| `feat`     | Major new functionality or an entirely new feature  |
+| `add`      | New file, option, component, or small addition      |
+| `extend`   | Existing feature gains a new capability             |
+| `improve`  | General quality improvement not covered above       |
+| `adjust`   | Small behavior, permission, ordering, or threshold  |
+| `edit`     | Static content or values change                     |
+| `fix`      | Bug fix                                             |
+| `ui`       | Visual presentation, layout, styling, or components |
+| `ux`       | User flow, interaction, copy, affordance, or feel   |
+| `dx`       | Developer workflow, tooling, ergonomics, or clarity |
+| `refactor` | Internal code restructure with same behavior        |
+| `reorg`    | File, directory, module, or ownership reshuffle     |
+| `style`    | Formatting or whitespace                            |
+| `docs`     | Documentation                                       |
+| `test`     | Tests                                               |
+| `chore`    | Build, dependencies, or config                      |
+| `ci`       | CI/CD                                               |
 
 Verb distinctions:
 
-- Do not default to `refactor`; it means same external behavior.
-- Use `improve` for a better user or developer experience.
-- Use `adjust` for behavior or logic tweaks.
+- Do not default to `improve` or `adjust`; choose a more specific verb when one fits.
+- Use `ui` for focused visual or component presentation work.
+- Use `ux` for focused interaction, flow, wording, affordance, or user-facing feel.
+- Use `dx` for focused developer workflow, tooling, naming clarity, or maintainer ergonomics.
+- Use `improve` only when the change is a broad quality improvement that is not clearly UI, UX, DX, behavior, or bug fix.
+- Use `adjust` for small behavior or logic tweaks, especially permissions, ordering, thresholds, defaults, or policy.
 - Use `edit` for static content or value changes.
 - Use `add` for small additions.
 - Use `feat` for significant new workflows or features.
+- Use `refactor` for code structure changes that preserve behavior.
+- Use `reorg` for moving files, directories, modules, commands, docs, or ownership boundaries.
 - Add `!` for breaking changes, e.g. `edit(api)!: rename endpoints`.
 
 Examples:
@@ -211,9 +220,13 @@ Examples:
 - New status component: `add`
 - Restricting user permissions: `adjust`
 - New date filter field: `add`
+- Restyling a status pill: `ui`
+- Rewording empty-state copy: `ux`
+- Clarifying command help text for maintainers: `dx`
 - Whole download modal with ZIP bundling: `feat`
-- Multi-file picker auto-switches to bulk mode: `improve`
+- Multi-file picker auto-switches to bulk mode: `ux`
 - Moving code between files with same behavior: `refactor`
+- Moving command packages into a new workspace layout: `reorg`
 
 ## Bad Messages
 
@@ -369,7 +382,7 @@ feat(creatives/download): BulkDownload modal with ZIP bundling
 ```
 
 ```text
-improve(creatives/upload): bulk upload flow with multi-file auto-switch
+ux(creatives/upload): bulk upload flow with multi-file auto-switch
 
 - add multiple file selection support to FilePicker
 - auto-switch from NewCreative to BulkUpload for multi-file drops
