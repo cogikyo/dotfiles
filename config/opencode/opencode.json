@@ -7,6 +7,9 @@
   ],
   "share": "manual",
   "snapshot": true,
+  "plugin": [
+    "file:///home/cullyn/dotfiles/config/opencode/plugins/hyprd-notify.js"
+  ],
   "permission": {
     "external_directory": {
       "~/**": "allow",

@@ -476,6 +476,36 @@ sync_ignorepkg() {
     ok "IgnorePkg synced ($(wc -w <<< "$pkgs") packages)"
 }
 
+install_opencode_user_service() {
+    local src="$DOTFILES/config/systemd/user/opencode.service"
+    local dst_dir="$HOME/.config/systemd/user"
+    local dst="$dst_dir/opencode.service"
+
+    [[ -f "$src" ]] || return 0
+
+    if ! has_user_bus; then
+        warn "No user session bus available; skipping opencode user service reload"
+        return 0
+    fi
+
+    mkdir -p "$dst_dir"
+
+    if [[ ! -L "$dst" || "$(canonpath "$dst")" != "$(canonpath "$src")" ]]; then
+        ln -sfn "$src" "$dst"
+        ok "opencode user service linked"
+    fi
+
+    systemctl --user daemon-reload
+
+    if systemctl --user is-active opencode.service &>/dev/null; then
+        info "Restarting opencode.service with resource limits..."
+        systemctl --user restart opencode.service
+        ok "opencode.service restarted"
+    else
+        ok "opencode.service installed (will start with hyprd)"
+    fi
+}
+
 needs_sudo() {
     if [[ $EUID -eq 0 ]]; then
         return 0
@@ -1246,6 +1276,8 @@ step_system() {
     ok "Installed $installed system configs ($skipped already up to date)"
 
     sync_ignorepkg
+
+    install_opencode_user_service
 
     # Enable services
     echo

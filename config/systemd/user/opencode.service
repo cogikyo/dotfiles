@@ -5,3 +5,7 @@ Description=OpenCode shared backend
 ExecStart=/usr/bin/opencode serve --hostname 127.0.0.1 --port 4096
 Restart=on-failure
 RestartSec=2
+Nice=10
+CPUWeight=25
+IOWeight=25
+CPUQuota=1000%
