@@ -334,7 +334,13 @@ func (n *Notifier) buildDunstArgs(spec notificationSpec, ctx *kittyContext, styl
 
 	iconSuffix := style.IconSuffix
 
-	args := []string{"-a", app, "-u", urgency, "-t", strconv.Itoa(timeout), "-h", "string:category:hyprd"}
+	args := []string{
+		"-a", app,
+		"-u", urgency,
+		"-t", strconv.Itoa(timeout),
+		"-h", "string:category:hyprd",
+		"-h", "string:desktop-entry:hyprd",
+	}
 	if !spec.NoReplace {
 		if id := notificationID(ctx); id > 0 {
 			args = append(args, "-r", strconv.Itoa(id))
@@ -397,7 +403,7 @@ func soundWorker() {
 // Notifications dispatched by hyprd itself carry category "hyprd" — skip those
 // to avoid double-sounding through the dunst script callback loop.
 func (n *Notifier) soundForDunst(req NotifyRequest) string {
-	if req.Category == "hyprd" {
+	if req.Category == "hyprd" || req.DesktopEntry == "hyprd" {
 		return ""
 	}
 
