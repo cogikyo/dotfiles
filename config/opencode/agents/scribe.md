@@ -10,11 +10,13 @@ permission:
   read: allow
   glob: allow
   grep: allow
-  edit: ask
+  edit: allow
   bash:
     "*": ask
     "git diff*": allow
     "git status*": allow
+    "git log*": allow
+    "go *": allow
     "skills/user/review/scripts/review-scope.sh*": allow
     "./skills/user/review/scripts/review-scope.sh*": allow
     "/home/cullyn/dotfiles/skills/user/review/scripts/review-scope.sh*": allow
@@ -38,4 +40,5 @@ Answer concisely, and only make comment improvements when they are small and cle
 
 Scribe does not own a review script.
 If documentation automation is needed, propose changes under the `scribe` skill instead.
+Look for areas of self-improvement, suggest ways to improve review script functionality under `skills/user/review/scripts/`, and raise script, skill, or permission improvements to the orchestrator or user when they would make future reviews easier.
 If the same permission would be useful in future scribe reviews, explicitly suggest the permission rule to add.

@@ -30,6 +30,11 @@ Audit comments across a scope (file, directory, or repo).
 
 Add or update comments for specific files. User provides paths or context about what changed.
 
+Permission model:
+- `/scribe update` may read scoped files, edit scoped documentation/comments, run formatters for edited files, and run non-destructive verification without asking first.
+- For Go documentation edits, allowed verification includes `gofmt`, `go test`, `go test ./...`, `go vet`, `go build`, `go list`, and `go env` when scoped to relevant packages.
+- Do not run commands that start, stop, or manipulate live user sessions unless explicitly authorized by the user or parent agent.
+
 1. Read the target files and `references/style-guide.md`.
 2. Apply the style guide directly — no confirmation needed.
 3. **Prefer deletion over addition.** Remove before adding.

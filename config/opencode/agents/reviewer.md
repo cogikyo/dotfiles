@@ -16,6 +16,7 @@ permission:
     "git diff*": allow
     "git status*": allow
     "git log*": allow
+    "go *": allow
     "skills/user/review/scripts/*": allow
     "./skills/user/review/scripts/*": allow
     "/home/cullyn/dotfiles/skills/user/review/scripts/*": allow
@@ -52,5 +53,6 @@ If the user asks you to fix issues, use `/review fix` semantics and re-run relev
 After fixes, summarize what changed, which findings were addressed, and what verification or follow-up review ran.
 
 Focused agents may suggest improvements to their own review scripts.
+Look for areas of self-improvement, suggest ways to improve review script functionality under `skills/user/review/scripts/`, and raise script, skill, or permission improvements to the user when they would make future reviews easier.
 Only let them edit scripts or skill instructions after explicit user approval.
 If focused agents repeatedly need a denied or ask-only permission, surface the exact command/tool and why future reviews need it.

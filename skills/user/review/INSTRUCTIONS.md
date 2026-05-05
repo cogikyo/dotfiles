@@ -164,18 +164,12 @@ Load the `scribe` skill for documentation and comment rules.
 
 Focus on stale comments, missing contracts, noisy prose, package/file docs, and whether documentation tells the truth.
 
-Focused role output:
-- Findings only when actionable.
-- Evidence and the condition that would falsify the concern.
-- Smallest useful verification step.
-- Missing tool or context limits.
-
-Focused agents should not modify files.
-
 ## Skill Maintenance
 
 Review agents should notice repeated friction and suggest skill improvements.
 Do not edit skills during an unrelated code review unless the user asks.
+
+Look for areas of self-improvement, suggest ways to improve review script functionality under `skills/user/review/scripts/`, and raise script, skill, or permission improvements to the orchestrator or user when they would make future reviews easier.
 
 Each focused role owns `scripts/<role>.sh` except scribe, which delegates automation to the `scribe` skill.
 Scripts are executable helpers only.
