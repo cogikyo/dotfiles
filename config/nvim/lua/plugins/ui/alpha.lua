@@ -22,7 +22,7 @@ return {
 				[[    `-..,..-'       `-..,..-'       `-..,..-'      ]],
 			},
 			opts = {
-				hl = "Macro",
+				hl = "AlphaHeader",
 				shrink_margin = false,
 				position = "center",
 			},
