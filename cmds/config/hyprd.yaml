@@ -130,13 +130,13 @@ tabs:
       - name: pier
         title: "« 󰠳  »"
         command: nvim
-        cwd: "~/LeadPier/.pier/pier"
+        cwd: "~/LeadPier"
         actions:
           nvim:
             pane: 0
           term:
             pane: 1
-        layout: "fat:bias=80"
+        layout: "fat:bias=50"
         panes:
           - cwd: "~/LeadPier/.pier/pier"
       - name: fe-build
