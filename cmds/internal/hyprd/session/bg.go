@@ -3,9 +3,11 @@ package session
 // bg.go manages mpvpaper background process startup, health checks, and teardown.
 
 import (
+	"encoding/json"
 	"fmt"
 	"net"
 	"os/exec"
+	"strings"
 	"time"
 
 	"dotfiles/cmds/internal/config"
@@ -38,8 +40,11 @@ func (b *BG) ensure() (string, error) {
 		return "bg: running", nil
 	}
 	b.killAll()
-	b.spawn()
-	return "bg: spawned", nil
+	display, err := b.spawn()
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("bg: spawned on %s", display), nil
 }
 
 func (b *BG) isAlive() bool {
@@ -51,14 +56,54 @@ func (b *BG) isAlive() bool {
 	return true
 }
 
-func (b *BG) spawn() {
+func (b *BG) spawn() (string, error) {
 	v := &b.cfg.Wallpaper
+	display, err := b.resolveDisplay()
+	if err != nil {
+		return "", err
+	}
 	videoPath := config.ExpandPath(b.cfg.VideoPath)
 	fullPath := videoPath + "/" + v.File
 	opts := fmt.Sprintf("--loop --input-ipc-server=%s --brightness=%d --contrast=%d --saturation=%d --hue=%d",
 		b.cfg.Socket, v.Brightness, v.Contrast, v.Saturation, v.Hue)
-	cmd := exec.Command("mpvpaper", "-o", opts, b.cfg.Display, fullPath)
-	cmd.Start()
+	cmd := exec.Command("mpvpaper", "-o", opts, display, fullPath)
+	if err := cmd.Start(); err != nil {
+		return "", fmt.Errorf("start mpvpaper: %w", err)
+	}
+	return display, nil
+}
+
+func (b *BG) resolveDisplay() (string, error) {
+	display := strings.TrimSpace(b.cfg.Display)
+	if display != "" && display != "auto" {
+		return display, nil
+	}
+
+	data, err := exec.Command("hyprctl", "-j", "monitors").Output()
+	if err != nil {
+		return "", fmt.Errorf("query hyprland monitors: %w", err)
+	}
+
+	var monitors []struct {
+		Name     string `json:"name"`
+		Focused  bool   `json:"focused"`
+		Disabled bool   `json:"disabled"`
+	}
+	if err := json.Unmarshal(data, &monitors); err != nil {
+		return "", fmt.Errorf("parse hyprland monitors: %w", err)
+	}
+
+	for _, m := range monitors {
+		if m.Focused && !m.Disabled && m.Name != "" {
+			return m.Name, nil
+		}
+	}
+	for _, m := range monitors {
+		if !m.Disabled && m.Name != "" {
+			return m.Name, nil
+		}
+	}
+	return "", fmt.Errorf("no active hyprland monitors")
 }
 
 func (b *BG) killAll() {
