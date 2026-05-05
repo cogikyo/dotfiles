@@ -27,7 +27,8 @@ permission:
     profiler: allow
     janitor: allow
     architect: allow
-    renovator: allow
+    modernizer: allow
+    simplifier: allow
     scribe: allow
   todowrite: allow
 color: warning

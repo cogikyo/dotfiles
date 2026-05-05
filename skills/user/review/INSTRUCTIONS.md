@@ -145,10 +145,10 @@ Architect is for conceptual shape, not every review.
 
 Look for hidden concepts, misleading abstractions, bad boundaries, missing vocabulary, unclear module responsibilities, and designs that make the wrong thing easy.
 
-### `/review renovator`
+### `/review modernize`
 
-Run the renovator role against the inferred or supplied scope.
-The renovator owns `scripts/renovator.sh`.
+Run the modernizer role against the inferred or supplied scope.
+The modernizer owns `scripts/modernize.sh`.
 
 Use when changes touch old APIs, dependencies, compatibility paths, migrations, fallbacks, language idioms, or version-specific behavior.
 
@@ -156,6 +156,18 @@ Look for deprecated APIs, legacy fallbacks, compatibility cruft without concrete
 
 Do not recommend churn for novelty.
 Modernization must reduce future error or remove obsolete complexity.
+
+### `/review simplify`
+
+Run the simplifier role against the inferred or supplied scope.
+The simplifier owns `scripts/simplify.sh`.
+
+Use when changes increase cognitive load, add large files, deepen nesting, spread simple behavior across too many places, or duplicate concepts.
+
+Look for accidental complexity, huge files, deep branching, excessive indirection, duplicate logic, weak names, needless state, and code that can be made easier to read by deleting or collapsing structure.
+
+Prefer fewer lines, fewer concepts, flatter control flow, and obvious data flow.
+Do not trade explicitness for clever terseness.
 
 ### `/review scribe`
 
