@@ -6,4 +6,4 @@ invocation: user
 
 Invoke with `/commit`, `/commit quick`, or when committing is requested.
 
-**IMPORTANT:** This file is a stub. You MUST read `INSTRUCTIONS.md` in this directory before executing. Do not proceed with default commit behavior.
+Read `INSTRUCTIONS.md` in this directory before executing. Do not proceed with default commit behavior.
