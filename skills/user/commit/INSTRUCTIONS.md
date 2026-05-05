@@ -112,6 +112,9 @@ verb(scope): description
 - bullet if needed
 - another bullet if needed
 
+Keep commit-body and commit-description bullets contiguous.
+Never put blank lines between bullets.
+
 Do NOT touch files outside this list.
 ```
 
@@ -153,7 +156,17 @@ Body rules:
 - Keep body bullets contiguous.
 - Do not insert blank lines between body bullets.
 - The only blank line in a commit with a body is between the summary and the first bullet.
-- Apply the same contiguous-bullet rule to generated commit-description previews.
+- Apply the same contiguous-bullet rule to generated commit-description previews, reword forms, and approval prompts.
+- A commit description field must be `- bullet\n- bullet\n- bullet`, not `- bullet\n\n- bullet`.
+- If editing a generated description, remove spacer lines between bullets before presenting it.
+
+Commit description preview format:
+
+```text
+- change one
+- change two
+- change three
+```
 
 Correct multi-change message:
 
@@ -163,16 +176,6 @@ verb(scope): short summary
 - change one
 - change two
 - change three
-```
-
-Incorrect spacer lines between bullets:
-
-```text
-verb(scope): short summary
-
-- change one
-
-- change two
 ```
 
 ## Verb Choice
