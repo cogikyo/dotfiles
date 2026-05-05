@@ -712,6 +712,17 @@ step_link() {
     }
     ok "claude linked"
 
+    # Harpoon reads ~/.config/nvim/harpoon.json, but saves to stdpath("data").
+    # Link the writable cache path back to the editor-owned config file.
+    info "Linking Harpoon state..."
+    step "Linking nvim Harpoon state"
+    link_or_skip "$DOTFILES/config/nvim/harpoon.json" "$HOME/.local/share/nvim/harpoon.json"
+    verify_link_mapping "$DOTFILES/config/nvim/harpoon.json" "$HOME/.local/share/nvim/harpoon.json" || {
+        err "Linking failed verification for ~/.local/share/nvim/harpoon.json"
+        return 1
+    }
+    ok "Harpoon state linked"
+
     # OBS: partial setup. Profile settings are linked; scenes are seeded once so
     # PipeWire portal tokens and source-local state can churn outside dotfiles.
     info "Linking obs-studio profile and scenes..."
@@ -836,6 +847,11 @@ healthcheck_link() {
     ((checked_entries++))
     verify_link_mapping "$DOTFILES/config/opencode/AGENTS.md" "$HOME/.claude/CLAUDE.md" || {
         err "Healthcheck failed: ~/.claude/CLAUDE.md is not linked to config/opencode/AGENTS.md"
+        return 1
+    }
+    ((checked_entries++))
+    verify_link_mapping "$DOTFILES/config/nvim/harpoon.json" "$HOME/.local/share/nvim/harpoon.json" || {
+        err "Healthcheck failed: ~/.local/share/nvim/harpoon.json is not linked"
         return 1
     }
     ((checked_entries++))
