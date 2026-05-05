@@ -154,7 +154,6 @@ tabs:
           git: {}
         layout: "fat:bias=80"
         panes:
-          - command: "yarn dev"
             cwd: "~/LeadPier/frontend"
       - name: be-build
         title: "«   »"
@@ -164,7 +163,6 @@ tabs:
           git: {}
         layout: "fat:bias=80"
         panes:
-          - command: "pier watch"
             cwd: "~/LeadPier/backend/core/runner"
 
 # ╭───────────────────────────────────────────────────────────────────────────────╮
