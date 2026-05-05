@@ -29,7 +29,7 @@
     show_age_threshold = -1
     word_wrap = false
     ellipsize = "end"
-    ignore_newline = "no"
+    ignore_newline = "yes"
     stack_duplicates = true
     hide_duplicate_count = false
     show_indicators = false
@@ -44,7 +44,7 @@
     dmenu = "/usr/bin/bmenu -p dunst:"
     browser = "/usr/bin/xdg-open"
     always_run_script = true
-    script = "/home/cullyn/.local/bin/hyprd notify dunst" # cmds/cmd/hyprd — plays sound + handles focus
+    script = "/home/cullyn/.local/bin/hyprd-notify-dunst" # cmds/cmd/hyprd — plays sound + handles focus
     title = "Dunst"
     class = "Dunst"
     corner_radius = 8

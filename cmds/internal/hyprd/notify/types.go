@@ -67,6 +67,11 @@ type Notifier struct {
 	cfg   *config.HyprConfig
 }
 
+type idleBackoff struct {
+	NextAllowed time.Time
+	Interval    time.Duration
+}
+
 func NewNotifier(h *hypr.Client, s *state.State, cfg *config.HyprConfig) *Notifier {
 	return &Notifier{hypr: h, state: s, cfg: cfg}
 }

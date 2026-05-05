@@ -17,8 +17,31 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
+
+const (
+	idleBackoffInitial = 10 * time.Minute
+	idleBackoffStep    = 10 * time.Minute
+	idleBackoffMax     = 30 * time.Minute
+)
+
+var globalIdleGate = struct {
+	sync.Mutex
+	byKey map[string]idleBackoff
+}{byKey: make(map[string]idleBackoff)}
+
+var soundQueue = make(chan soundRequest, 32)
+
+type soundRequest struct {
+	path   string
+	volume int
+}
+
+func init() {
+	go soundWorker()
+}
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
 // │ router                                                                       │
@@ -67,6 +90,7 @@ func (n *Notifier) handleSend(req NotifyRequest) error {
 
 func (n *Notifier) handleClaude(req NotifyRequest) error {
 	ctx := n.resolveContext(req, "claude")
+	n.trackAgentActivity(req, ctx)
 
 	switch req.Event {
 	case "start":
@@ -95,6 +119,9 @@ func (n *Notifier) handleClaude(req NotifyRequest) error {
 			FocusAction: true,
 		}, ctx)
 	case "idle":
+		if !n.allowIdleNotification(req, ctx) {
+			return nil
+		}
 		return n.dispatch(notificationSpec{
 			App:         ctx.App,
 			Title:       preferredSummary(req.Message, "Waiting for input", 80),
@@ -115,6 +142,7 @@ func (n *Notifier) handleClaude(req NotifyRequest) error {
 
 func (n *Notifier) handleOpencode(req NotifyRequest) error {
 	ctx := n.resolveContext(req, "opencode")
+	n.trackAgentActivity(req, ctx)
 
 	switch req.Event {
 	case "start":
@@ -150,6 +178,9 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 			FocusAction: true,
 		}, ctx)
 	case "idle":
+		if !n.allowIdleNotification(req, ctx) {
+			return nil
+		}
 		return n.dispatch(notificationSpec{
 			App:         ctx.App,
 			Title:       preferredSummary(req.Message, "Waiting for input", 80),
@@ -219,7 +250,7 @@ func (n *Notifier) handleDunst(req NotifyRequest) error {
 // │ dispatch pipeline                                                            │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// dispatch resolves sound/volume from the agent style, plays the sound, and sends the dunst notification.
+// dispatch resolves sound/volume from the agent style, queues the sound, and sends the dunst notification.
 func (n *Notifier) dispatch(spec notificationSpec, ctx *kittyContext) error {
 	if spec.Delay > 0 {
 		time.Sleep(spec.Delay)
@@ -342,8 +373,19 @@ func (n *Notifier) playSound(name string, volume int) error {
 	if volume == 0 {
 		volume = 100
 	}
-	paVolume := volume * 65536 / 100
-	return runDetached("paplay", "--volume="+strconv.Itoa(paVolume), path)
+	select {
+	case soundQueue <- soundRequest{path: path, volume: volume}:
+	default:
+		go func() { soundQueue <- soundRequest{path: path, volume: volume} }()
+	}
+	return nil
+}
+
+func soundWorker() {
+	for req := range soundQueue {
+		paVolume := req.volume * 65536 / 100
+		_ = exec.Command("paplay", "--volume="+strconv.Itoa(paVolume), req.path).Run()
+	}
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -387,6 +429,54 @@ func (n *Notifier) style(name string) config.ResolvedStyle {
 		return config.ResolvedStyle{}
 	}
 	return n.cfg.Notify.ResolveEvent(name)
+}
+
+func (n *Notifier) trackAgentActivity(req NotifyRequest, ctx *kittyContext) {
+	if req.Event == "idle" {
+		return
+	}
+
+	globalIdleGate.Lock()
+	delete(globalIdleGate.byKey, idleNotificationKey(req, ctx))
+	globalIdleGate.Unlock()
+}
+
+func (n *Notifier) allowIdleNotification(req NotifyRequest, ctx *kittyContext) bool {
+	now := time.Now()
+	key := idleNotificationKey(req, ctx)
+
+	globalIdleGate.Lock()
+	defer globalIdleGate.Unlock()
+
+	backoff := globalIdleGate.byKey[key]
+	if !backoff.NextAllowed.IsZero() && now.Before(backoff.NextAllowed) {
+		return false
+	}
+
+	interval := backoff.Interval
+	if interval == 0 {
+		interval = idleBackoffInitial
+	} else if interval < idleBackoffMax {
+		interval += idleBackoffStep
+		if interval > idleBackoffMax {
+			interval = idleBackoffMax
+		}
+	}
+	globalIdleGate.byKey[key] = idleBackoff{NextAllowed: now.Add(interval), Interval: interval}
+	return true
+}
+
+func idleNotificationKey(req NotifyRequest, ctx *kittyContext) string {
+	if id := notificationID(ctx); id > 0 {
+		return req.Source + ":" + strconv.Itoa(id)
+	}
+	if ctx != nil && ctx.App != "" {
+		return req.Source + ":" + ctx.App
+	}
+	if req.App != "" {
+		return req.Source + ":" + req.App
+	}
+	return req.Source
 }
 
 func (n *Notifier) isSilentApp(app string) bool {
