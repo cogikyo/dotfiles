@@ -3,6 +3,11 @@ return {
 	event = { "BufWritePre" },
 	cmd = { "ConformInfo" },
 	opts = {
+		formatters = {
+			stylua = {
+				prepend_args = { "--column-width", "120", "--collapse-simple-statement", "FunctionOnly" },
+			},
+		},
 		formatters_by_ft = {
 			bash = { "shellharden" },
 			sh = { "shellharden" },
