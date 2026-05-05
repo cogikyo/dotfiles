@@ -187,7 +187,7 @@ return {
 			},
 			renderer = {
 				root_folder_label = false,
-				highlight_git = "icon",
+				highlight_git = "all",
 				indent_markers = {
 					enable = true,
 					inline_arrows = true,
