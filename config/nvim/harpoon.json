@@ -1,1 +1,25 @@
-{"menu": {"borderchars": ["─", "│", "─", "│", "╭", "╮", "╯", "╰"]}, "projects": {"/home/cullyn/LeadPier/frontend": {"mark": {"marks": [{"col": 72, "row": 45, "filename": "README.md"}, {"col": 22, "row": 20, "filename": "NvimTree_1"}, {"col": 0, "row": 6, "filename": "packages/shared/src/realtime/client.ts"}]}, "term": {"cmds": []}}, "/home/cullyn/LeadPier": {"mark": {"marks": [{"col": 3, "row": 105, "filename": ".pier/pier/README.md"}, {"col": 0, "row": 1, "filename": "backend/core/staging-backend/docker-compose.yml"}]}, "term": {"cmds": []}}, "/home/cullyn/vagari/nvim": {"mark": {"marks": [{"col": 27, "row": 324, "filename": "lua/vagari/thalamus.lua"}, {"col": 0, "row": 1, "filename": "lua/vagari/highlights.lua"}, {"col": 1, "row": 25, "filename": "lua/vagari/languages.lua"}, {"col": 40, "row": 76, "filename": "lua/vagari/plugins.lua"}, {"col": 0, "row": 1, "filename": "test/go_http.go"}]}, "term": {"cmds": []}}, "/home/cullyn/dotfiles": {"mark": {"marks": [{"col": 0, "row": 67, "filename": "config/hypr/hyprland.conf"}, {"col": 4, "row": 20, "filename": "config/hypr/binds.conf"}, {"col": 11, "row": 42, "filename": "config/nvim/init.lua"}, {"col": 8, "row": 166, "filename": "cmds/config/hyprd.yaml"}, {"col": 63, "row": 249, "filename": "config/nvim/lua/config/keymaps.lua"}, {"col": 23, "row": 86, "filename": "config/opencode/AGENTS.md"}]}, "term": {"cmds": []}}, "/home/cullyn/vagari.firefox": {"mark": {"marks": [{"col": 0, "row": 144, "filename": "css/_tab-bar.css"}, {"col": 40, "row": 62, "filename": "css/userChrome.css"}]}, "term": {"cmds": []}}}, "global_settings": {"mark_branch": false, "save_on_toggle": false, "tabline": false, "excluded_filetypes": ["harpoon"], "save_on_change": true, "tabline_suffix": "   ", "enter_on_sendcmd": false, "tabline_prefix": "   ", "tmux_autoclose_windows": false}}
+{
+  "version": 1,
+  "projects": {
+    "/home/cullyn/dotfiles": {
+      "pins": [
+        "config/nvim/lua/plugins/editor/harpoon.lua",
+        "config/nvim/lua/plugins/editor/harpoon.json"
+      ],
+      "visits": {
+        "config/nvim/harpoon.json": {
+          "count": 3,
+          "last": 1777964663
+        },
+        "config/nvim/lua/plugins/editor/harpoon.json": {
+          "count": 2,
+          "last": 1777962829
+        },
+        "config/nvim/lua/plugins/editor/harpoon.lua": {
+          "count": 2,
+          "last": 1777962723
+        }
+      }
+    }
+  }
+}

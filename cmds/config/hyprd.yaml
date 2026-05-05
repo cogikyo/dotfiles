@@ -39,6 +39,18 @@ sessions:
     obs:
       command: obs
 
+    harpoon:
+      project: cogikyo/harpoon
+      body:
+        - editor
+        - agents
+
+    vagari.nvim:
+      project: vagari/nvim
+      body:
+        - editor
+        - agents
+
   # ├─ workspace 4 ──────────────────────────────────────────────────────────────┤
   4: # primary project workspaces
     cogikyo:
@@ -69,12 +81,6 @@ sessions:
         - editor
         - agents
 
-    vagari.nvim:
-      project: vagari/nvim
-      body:
-        - editor
-        - agents
-
   # ├─ workspace 5 ──────────────────────────────────────────────────────────────┤
   5: # personal infrastructure and dotfiles work.
     dotfiles:
@@ -83,6 +89,7 @@ sessions:
       body:
         - editor
         - agents
+
 
 # ╭───────────────────────────────────────────────────────────────────────────────╮
 # │ kitty tab profiles                                                            │

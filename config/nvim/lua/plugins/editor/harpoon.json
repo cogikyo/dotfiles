@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "projects": {
+    "/home/cullyn/LeadPier": {
+      "pins": [
+        ".pier/pier/README.md",
+        "backend/core/staging-backend/docker-compose.yml"
+      ]
+    },
+    "/home/cullyn/LeadPier/frontend": {
+      "pins": [
+        "README.md",
+        "NvimTree_1",
+        "packages/shared/src/realtime/client.ts"
+      ]
+    },
+    "/home/cullyn/dotfiles": {
+      "pins": [
+        "config/hypr/hyprland.conf",
+        "config/hypr/binds.conf",
+        "config/nvim/init.lua",
+        "cmds/config/hyprd.yaml",
+        "config/nvim/lua/config/keymaps.lua",
+        "config/opencode/AGENTS.md"
+      ]
+    },
+    "/home/cullyn/vagari.firefox": {
+      "pins": [
+        "css/_tab-bar.css",
+        "css/userChrome.css"
+      ]
+    },
+    "/home/cullyn/vagari/nvim": {
+      "pins": [
+        "lua/vagari/thalamus.lua",
+        "lua/vagari/highlights.lua",
+        "lua/vagari/languages.lua",
+        "lua/vagari/plugins.lua",
+        "test/go_http.go"
+      ]
+    }
+  }
+}

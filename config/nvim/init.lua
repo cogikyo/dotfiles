@@ -108,7 +108,7 @@ require("lazy").setup({
 		-- goolord/alpha-nvim: start screen dashboard
 		-- gen740/smoothcursor.nvim: animated cursor trail
 		-- nvim-lualine/lualine.nvim: statusline with LSP progress
-		-- "ThePrimeagen/harpoon": quick file marks/teleport
+		-- "cogikyo/harpoon": quick file marks/teleport
 		-- nvim-tree/nvim-tree.lua: file explorer
 		"ggandor/lightspeed.nvim", -- fast motion/word jumps
 		"mbbill/undotree", -- visual undo tree panel
