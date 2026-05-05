@@ -30,20 +30,55 @@ guard_against_self_linking() {
     fi
 }
 
+link_config_dir() {
+    local consumer_name="$1"
+    local target_dir="$2"
+    local config_dir="$3"
+    local link_name="$4"
+    local rerun_cmd="$5"
+    local config_link="$config_dir/$link_name"
+
+    mkdir -p "$config_dir"
+    if [[ -e "$config_link" && ! -L "$config_link" ]]; then
+        echo "Keeping existing directory at $config_link"
+        echo "If $consumer_name should read from $target_dir, remove it and run $rerun_cmd again."
+    else
+        ln -sfnv "$target_dir" "$config_link"
+    fi
+}
+
 link_config_skills_dir() {
     local consumer_name="$1"
     local target_dir="$2"
     local config_dir="$3"
     local rerun_cmd="$4"
-    local config_skills="$config_dir/skills"
 
-    mkdir -p "$config_dir"
-    if [[ -e "$config_skills" && ! -L "$config_skills" ]]; then
-        echo "Keeping existing directory at $config_skills"
-        echo "If $consumer_name should read from $target_dir, remove it and run $rerun_cmd again."
-    else
-        ln -sfnv "$target_dir" "$config_skills"
-    fi
+    link_config_dir "$consumer_name" "$target_dir" "$config_dir" "skills" "$rerun_cmd"
+}
+
+link_opencode_skill_commands() {
+    local source_dir="$1"
+    local commands_dir="$2"
+
+    mkdir -p "$commands_dir"
+
+    for skill in "$source_dir"/*; do
+        [[ -d "$skill" ]] || continue
+        local name skill_file command_file command_target
+        name=$(basename "$skill")
+        skill_file="$skill/SKILL.md"
+        [[ -f "$skill_file" ]] || continue
+        command_file="$commands_dir/$name.md"
+        command_target=$(realpath --relative-to="$commands_dir" "$skill_file")
+
+        if [[ -e "$command_file" && ! -L "$command_file" ]]; then
+            echo "Keeping existing command file at $command_file"
+            echo "If OpenCode should read $skill_file for /$name, remove it and run link.sh user again."
+            continue
+        fi
+
+        ln -sfnv "$command_target" "$command_file"
+    done
 }
 
 link_all_skills() {
@@ -67,40 +102,24 @@ link_all_skills() {
 }
 
 link_user_skills() {
-    local target_dir claude_home claude_config_dir agents_home opencode_config_dir opencode_commands_dir opencode_commands_link
+    local claude_home claude_config_dir agents_home opencode_config_dir
 
-    target_dir="${HOME}/.claude-skills"
     claude_home="${CLAUDE_HOME:-${HOME}/.claude}"
     claude_config_dir="${CLAUDE_CONFIG_DIR:-${HOME}/.config/claude}"
     agents_home="${AGENTS_HOME:-${HOME}/.agents}"
     opencode_config_dir="${OPENCODE_CONFIG_DIR:-${HOME}/.config/opencode}"
-    opencode_commands_dir="${OPENCODE_COMMANDS_DIR:-${HOME}/.local/share/opencode/skill-commands}"
-    opencode_commands_link="$opencode_config_dir/commands"
-
-    mkdir -p "$target_dir"
 
     if [[ ! -d "$USER_SKILLS_DIR" ]]; then
         echo "No user skills directory found at $USER_SKILLS_DIR"
         exit 1
     fi
 
-    guard_against_self_linking "$USER_SKILLS_DIR" "$target_dir"
-
-    echo "Linking user skills to $target_dir..."
-    link_all_skills "$USER_SKILLS_DIR" "$target_dir"
-
-    link_config_skills_dir "Claude" "$target_dir" "$claude_home" "link.sh user"
-    link_config_skills_dir "Claude config" "$target_dir" "$claude_config_dir" "link.sh user"
-    link_config_skills_dir "agents tools" "$target_dir" "$agents_home" "link.sh user"
-
-    if [[ -L "$opencode_commands_link" ]]; then
-        local opencode_commands_target opencode_commands_real
-        opencode_commands_target="$(readlink "$opencode_commands_link")"
-        opencode_commands_real="$(canonpath "$opencode_commands_link")"
-        if [[ "$opencode_commands_target" == "$opencode_commands_dir" || ( -n "$opencode_commands_real" && "$opencode_commands_real" == "$(canonpath "$opencode_commands_dir")" ) ]]; then
-            rm -v "$opencode_commands_link"
-        fi
-    fi
+    echo "Linking user skills from $USER_SKILLS_DIR..."
+    link_config_skills_dir "Claude" "$USER_SKILLS_DIR" "$claude_home" "link.sh user"
+    link_config_skills_dir "Claude config" "$USER_SKILLS_DIR" "$claude_config_dir" "link.sh user"
+    link_config_skills_dir "agents tools" "$USER_SKILLS_DIR" "$agents_home" "link.sh user"
+    link_config_skills_dir "OpenCode" "$USER_SKILLS_DIR" "$opencode_config_dir" "link.sh user"
+    link_opencode_skill_commands "$USER_SKILLS_DIR" "$opencode_config_dir/commands"
 }
 
 link_project_skill() {
