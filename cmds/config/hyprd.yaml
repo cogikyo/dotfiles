@@ -131,7 +131,7 @@ tabs:
       - name: be-nvim
         title: "«   »"
         command: nvim
-        cwd: "~/LeadPier/backend"
+        cwd: "~/LeadPier/backend/services"
         actions:
           nvim: {}
       - name: pier
@@ -145,7 +145,7 @@ tabs:
             pane: 1
         layout: "fat:bias=50"
         panes:
-          - cwd: "~/LeadPier/.pier/pier"
+          - cwd: "~/LeadPier"
       - name: fe-build
         title: "«   »"
         command: lazygit
