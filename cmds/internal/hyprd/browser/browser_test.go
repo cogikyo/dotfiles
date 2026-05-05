@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"dotfiles/cmds/internal/config"
+	"dotfiles/cmds/internal/hyprd/hypr"
+	"dotfiles/cmds/internal/hyprd/state"
 
 	"gopkg.in/yaml.v3"
 )
@@ -151,6 +153,63 @@ func TestArgsUseProfile(t *testing.T) {
 	}
 	if argsUseProfile([]string{"firefox", "--profile", filepath.Join(t.TempDir(), "other")}, profile) {
 		t.Fatalf("different profile should not match")
+	}
+}
+
+func TestFirefoxOpenTargetUsesVisibleWorkspaceWindowFirst(t *testing.T) {
+	clients := []hypr.Window{
+		{Address: "shadow", Class: "firefox-developer-edition", Workspace: hypr.WsRef{ID: -98, Name: "special:shadow"}},
+		{Address: "older", Class: "firefox-developer-edition", Workspace: hypr.WsRef{ID: 4}, FocusHistoryID: 5},
+		{Address: "recent", InitialClass: "firefox-developer-edition", Workspace: hypr.WsRef{ID: 4}, FocusHistoryID: 1},
+	}
+	target, ok := firefoxOpenTargetForWorkspace(clients, 4, nil)
+	if !ok {
+		t.Fatalf("firefoxOpenTargetForWorkspace returned no target")
+	}
+	if target.Window.Address != "recent" || target.NeedsThreeBodySwap {
+		t.Fatalf("target = %+v, want visible recent window without swap", target)
+	}
+}
+
+func TestFirefoxOpenTargetFallsBackToThreeBodyShadow(t *testing.T) {
+	clients := []hypr.Window{
+		{Address: "editor", Class: "kitty", Workspace: hypr.WsRef{ID: 4}, FocusHistoryID: 0},
+		{Address: "shadow", Class: "firefox-developer-edition", Workspace: hypr.WsRef{ID: -98, Name: "special:shadow"}, FocusHistoryID: 7},
+	}
+	target, ok := firefoxOpenTargetForWorkspace(clients, 4, &state.ThreeBodyState{Shadow: "shadow"})
+	if !ok {
+		t.Fatalf("firefoxOpenTargetForWorkspace returned no target")
+	}
+	if target.Window.Address != "shadow" || !target.NeedsThreeBodySwap || target.WorkspaceID != 4 {
+		t.Fatalf("target = %+v, want shadow window with swap on workspace 4", target)
+	}
+}
+
+func TestFirefoxOpenTargetIgnoresStaleThreeBodyShadow(t *testing.T) {
+	clients := []hypr.Window{
+		{Address: "visible", Class: "firefox-developer-edition", Workspace: hypr.WsRef{ID: 4}, FocusHistoryID: 1},
+		{Address: "stale", Class: "firefox-developer-edition", Workspace: hypr.WsRef{ID: 2, Name: "2"}, FocusHistoryID: 0},
+	}
+	target, ok := firefoxOpenTargetForWorkspace(clients, 4, &state.ThreeBodyState{Shadow: "stale"})
+	if !ok {
+		t.Fatalf("firefoxOpenTargetForWorkspace returned no target")
+	}
+	if target.Window.Address != "visible" || target.NeedsThreeBodySwap {
+		t.Fatalf("target = %+v, want visible workspace Firefox when shadow state is stale", target)
+	}
+}
+
+func TestFirefoxOpenTargetPrefersThreeBodyBrowserOverStrayVisibleWindow(t *testing.T) {
+	clients := []hypr.Window{
+		{Address: "stray", Class: "firefox-developer-edition", Workspace: hypr.WsRef{ID: 4}, FocusHistoryID: 1},
+		{Address: "shadow", Class: "firefox-developer-edition", Workspace: hypr.WsRef{ID: -98, Name: "special:shadow"}, FocusHistoryID: 7},
+	}
+	target, ok := firefoxOpenTargetForWorkspace(clients, 4, &state.ThreeBodyState{Master: "editor", Active: "agents", Shadow: "shadow"})
+	if !ok {
+		t.Fatalf("firefoxOpenTargetForWorkspace returned no target")
+	}
+	if target.Window.Address != "shadow" || !target.NeedsThreeBodySwap {
+		t.Fatalf("target = %+v, want three-body shadow instead of stray visible Firefox", target)
 	}
 }
 

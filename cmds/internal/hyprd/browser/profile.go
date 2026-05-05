@@ -117,12 +117,32 @@ func ManagedProfileForSession(sessionName string, cfg config.BrowserConfig) (fir
 		Name: "hyprd-" + slug,
 	}
 	if isDir(profile.Root) {
+		if err := ensureExternalLinksOpenInTabs(profile); err != nil {
+			return firefoxProfile{}, err
+		}
 		return profile, nil
 	}
 	if err := cloneFirefoxProfile(source.Root, profile.Root); err != nil {
 		return firefoxProfile{}, err
 	}
+	if err := ensureExternalLinksOpenInTabs(profile); err != nil {
+		return firefoxProfile{}, err
+	}
 	return profile, nil
+}
+
+func ensureExternalLinksOpenInTabs(profile firefoxProfile) error {
+	// Managed profiles are cloned outside the repo-managed user.js path, so keep Firefox remoting tab-safe here too.
+	for key, value := range map[string]string{
+		"browser.link.open_newwindow":                   "3",
+		"browser.link.open_newwindow.override.external": "3",
+		"browser.link.open_newwindow.restriction":       "0",
+	} {
+		if err := setFirefoxPref(profile, key, value); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func sourceProfileForBrowserConfig(cfg config.BrowserConfig) (firefoxProfile, error) {

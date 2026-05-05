@@ -7,6 +7,12 @@ user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
 user_pref("layout.css.devPixelsPerPx", "1.1");
 user_pref("browser.toolbars.bookmarks.visibility", "never");
 
+// Desktop entries route external URLs through `hyprd browser open`.
+// hyprd focuses or swaps the workspace-local Firefox first, then Firefox remoting opens a tab there.
+user_pref("browser.link.open_newwindow", 3);
+user_pref("browser.link.open_newwindow.override.external", 3);
+user_pref("browser.link.open_newwindow.restriction", 0);
+
 // Built-in surfaces that are replaced by local workflows.
 user_pref("pdfjs.sidebarViewOnLoad", 0);
 user_pref("extensions.pocket.enabled", false);

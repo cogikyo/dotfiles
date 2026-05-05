@@ -159,7 +159,7 @@ func cmdSplit()   { sendCommand("split " + strings.Join(os.Args[2:], " ")) }
 func cmdPicker()  { sendCommand("picker " + strings.Join(os.Args[2:], " ")) }
 func cmdLayout()  { sendCommand("layout " + strings.Join(os.Args[2:], " ")) }
 func cmdBrowser() {
-	_ = requireArg("usage: hyprd browser {windows|snapshot|show|hypr|restore} ...")
+	_ = requireArg("usage: hyprd browser {launch|open|windows|snapshot|show|hypr|restore} ...")
 	sendCommand("browser " + strings.Join(os.Args[2:], " "))
 }
 func cmdProject() { sendCommand("project " + strings.Join(os.Args[2:], " ")) }
@@ -278,6 +278,7 @@ Lock:
 
 Browser:
   hyprd browser launch [--profile <name|path>]
+  hyprd browser open <url>
   hyprd browser windows [--all] [--profile <name|path>]
   hyprd browser snapshot <name> [active|largest|index] [--profile <name|path>]
   hyprd browser show <name>

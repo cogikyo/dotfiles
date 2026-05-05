@@ -1,0 +1,11 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Hyprd Browser
+Comment=Route external URLs to the Firefox window owned by this Hyprland workspace
+Exec=/home/cullyn/.local/bin/hyprd browser open %u
+Terminal=false
+NoDisplay=true
+Icon=firefox-developer-edition
+Categories=Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml+xml;application/xml;application/json;application/pdf;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/chrome;x-scheme-handler/ftp;

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Firefox Developer Edition
+Comment=Route external URLs through hyprd workspace-local browser selection
+Exec=/home/cullyn/.local/bin/hyprd browser open %u
+Terminal=false
+Icon=firefox-developer-edition
+StartupWMClass=firefox-developer-edition
+DBusActivatable=false
+Categories=Network;WebBrowser;
+MimeType=text/html;text/xml;application/xhtml+xml;application/xml;application/json;application/pdf;x-scheme-handler/http;x-scheme-handler/https;x-scheme-handler/chrome;x-scheme-handler/ftp;
+StartupNotify=true

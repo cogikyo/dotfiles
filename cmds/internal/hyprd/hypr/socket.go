@@ -91,6 +91,7 @@ type Window struct {
 	Floating       bool   `json:"floating"`
 	Pinned         bool   `json:"pinned"`
 	Class          string `json:"class"`
+	InitialClass   string `json:"initialClass"`
 	Title          string `json:"title"`
 	InitialTitle   string `json:"initialTitle"`
 	Pid            int    `json:"pid"`
@@ -118,7 +119,7 @@ func (c *Client) Clients() ([]Window, error) {
 	return windows, nil
 }
 
-// ActiveWindow returns the focused window, or nil when nothing has focus.
+// ActiveWindow returns the focused window, or nil when Hyprland has no active window.
 func (c *Client) ActiveWindow() (*Window, error) {
 	data, err := c.Request("j/activewindow")
 	if err != nil {
@@ -183,6 +184,8 @@ func (c *Client) Monitors() ([]Monitor, error) {
 }
 
 // FocusedMonitor returns the focused monitor, falling back to monitors[0].
+//
+// Browser URL routing uses this only when active-window workspace data is unavailable.
 func (c *Client) FocusedMonitor() (*Monitor, error) {
 	monitors, err := c.Monitors()
 	if err != nil {

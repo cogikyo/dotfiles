@@ -1,8 +1,13 @@
-// Package browser provides Firefox session snapshot and restore primitives for hyprd.
+// Package browser provides Firefox workspace routing plus session snapshot and restore primitives for hyprd.
 //
-// It translates Firefox profile and sessionstore data into reproducible launch state for Hyprland workflows.
+// External URL opens enter through `hyprd browser open`, usually from repo-managed desktop entries.
+// Routing is workspace-local.
+// The active window's workspace is used first; the focused monitor's workspace is the fallback.
+// Three-body state owns browser selection and can swap a shadow Firefox into view before CLI remoting.
+// No browser on another workspace is used as a fallback.
 //
 // Responsibilities:
+// - Route external URLs to the Firefox instance owned by the current workspace.
 // - Discover Firefox profiles and load sessionstore payloads.
 // - Create named snapshots from selected browser windows.
 // - Restore snapshots by URL replay or exact session-file replacement.
@@ -21,12 +26,14 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
 
 const (
-	browserUsage         = "usage: browser {launch|windows|snapshot|show|hypr|restore}"
+	browserUsage         = "usage: browser {launch|open|windows|snapshot|show|hypr|restore}"
+	browserOpenUsage     = "usage: browser open <url>"
 	browserWindowsUsage  = "usage: browser windows [--all] [--profile <name|path>]"
 	browserSnapshotUsage = "usage: browser snapshot <name> [active|largest|index] [--profile <name|path>]"
 	browserShowUsage     = "usage: browser show <name>"
@@ -55,6 +62,8 @@ func (b *Browser) Execute(args string) (string, error) {
 	switch parts[0] {
 	case "launch":
 		return b.executeLaunch(parts[1:])
+	case "open":
+		return b.executeOpen(parts[1:])
 	case "windows":
 		return b.executeWindows(parts[1:])
 	case "snapshot":
@@ -68,6 +77,49 @@ func (b *Browser) Execute(args string) (string, error) {
 	default:
 		return "", fmt.Errorf(browserUsage)
 	}
+}
+
+// executeOpen routes a URL to the Firefox instance owned by the current workspace.
+//
+// The active window chooses the workspace when possible; the focused monitor is only a fallback.
+// Firefox CLI remoting runs after the target is focused or swapped into view.
+// If no workspace-owned Firefox exists, this starts a new window instead of falling across workspaces.
+func (b *Browser) executeOpen(args []string) (string, error) {
+	if len(args) != 1 || strings.TrimSpace(args[0]) == "" {
+		return "", fmt.Errorf(browserOpenUsage)
+	}
+	url := args[0]
+
+	if target, ok := b.focusedWorkspaceFirefoxOpenTarget(); ok {
+		if err := b.openURLInFirefoxTarget(target, url); err != nil {
+			return "", err
+		}
+		return "opened browser URL", nil
+	}
+
+	cmd := append(b.browserCommandParts(), "--new-window", url)
+	if err := exec.Command(cmd[0], cmd[1:]...).Start(); err != nil {
+		return "", err
+	}
+
+	return "opened browser URL", nil
+}
+
+func (b *Browser) openURLInFirefoxTarget(target firefoxOpenTarget, url string) error {
+	if err := b.focusFirefoxOpenTarget(target); err != nil {
+		return err
+	}
+	time.Sleep(250 * time.Millisecond)
+
+	cmd := b.browserCommandParts()
+	if target.Profile.Root != "" {
+		cmd = append(cmd, "--profile", target.Profile.Root)
+	}
+	cmd = append(cmd, "--new-tab", url)
+	if err := exec.Command(cmd[0], cmd[1:]...).Start(); err != nil {
+		return err
+	}
+	return nil
 }
 
 // ResolveLaunchConfig populates cfg from the named snapshot, falling back to inline URLs if the snapshot is missing.
@@ -375,9 +427,9 @@ func (b *Browser) executeLaunch(args []string) (string, error) {
 		return "", err
 	}
 
-	cmd := append(b.browserCommandParts(), "--new-window", firefoxNewtab)
+	cmd := append(b.browserCommandParts(), "--profile", profile.Root, "--new-window", firefoxNewtab)
 	if b.hypr != nil {
-		if err := b.hypr.Dispatch(fmt.Sprintf("exec %s", strings.Join(cmd, " "))); err != nil {
+		if err := b.hypr.Dispatch(fmt.Sprintf("exec %s", shellQuoteCommand(cmd))); err != nil {
 			return "", err
 		}
 	} else {

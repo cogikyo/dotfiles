@@ -784,6 +784,16 @@ EOF
     done
 
     ok "scripts linked"
+
+    # Desktop entries -> ~/.local/share/applications/
+    info "Linking desktop entries to ~/.local/share/applications/..."
+
+    for entry in "$DOTFILES"/share/applications/*.desktop; do
+        [[ -f "$entry" ]] || continue
+        link_or_skip "$entry" "$HOME/.local/share/applications/$(basename "$entry")"
+    done
+
+    ok "desktop entries linked"
     ok "Linking complete (updated: $linked_count, unchanged: $unchanged_count)"
 }
 

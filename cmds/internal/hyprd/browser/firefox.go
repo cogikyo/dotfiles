@@ -1,6 +1,6 @@
 package browser
 
-// firefox.go handles Firefox process lifecycle checks and title matching against session-store window metadata.
+// firefox.go handles Firefox process checks, profile detection, and workspace-local URL-open targeting.
 
 import (
 	"errors"
@@ -16,6 +16,8 @@ import (
 
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/hypr"
+	"dotfiles/cmds/internal/hyprd/state"
+	"dotfiles/cmds/internal/hyprd/windows"
 )
 
 const (
@@ -38,6 +40,13 @@ var (
 		"http://localhost:42069/": {},
 	}
 )
+
+type firefoxOpenTarget struct {
+	Window             hypr.Window
+	Profile            firefoxProfile
+	WorkspaceID        int
+	NeedsThreeBodySwap bool
+}
 
 func firefoxRunningPIDs() ([]int, error) {
 	cmd := exec.Command("pgrep", "-f", "/usr/lib/firefox-developer-edition/firefox|firefox-developer-edition")
@@ -293,33 +302,149 @@ func (b *Browser) activeFirefoxProfile() (firefoxProfile, bool) {
 }
 
 func (b *Browser) focusedWorkspaceFirefoxProfile() (firefoxProfile, bool) {
-	if b.hypr == nil {
+	target, ok := b.focusedWorkspaceFirefoxOpenTarget()
+	if !ok {
 		return firefoxProfile{}, false
 	}
-	monitor, err := b.hypr.FocusedMonitor()
-	if err != nil || monitor == nil {
-		return firefoxProfile{}, false
+	return target.Profile, target.Profile.Root != ""
+}
+
+func (b *Browser) focusedWorkspaceFirefoxOpenTarget() (firefoxOpenTarget, bool) {
+	if b.hypr == nil {
+		return firefoxOpenTarget{}, false
+	}
+	workspaceID, err := b.currentWorkspaceID()
+	if err != nil {
+		return firefoxOpenTarget{}, false
 	}
 	clients, err := b.hypr.Clients()
 	if err != nil {
-		return firefoxProfile{}, false
+		return firefoxOpenTarget{}, false
 	}
-	best := hypr.Window{FocusHistoryID: int(^uint(0) >> 1)}
-	for _, client := range clients {
-		if client.Workspace.ID != monitor.ActiveWS.ID {
+	return firefoxOpenTargetForWorkspace(clients, workspaceID, b.threeBodyState(workspaceID))
+}
+
+// currentWorkspaceID returns the workspace that should own an external browser open.
+//
+// The active window wins because launchers can run while focus remains on the invoking app.
+// The focused monitor is only a fallback for empty workspaces or missing active-window data.
+func (b *Browser) currentWorkspaceID() (int, error) {
+	if b.hypr == nil {
+		return 0, fmt.Errorf("no hyprland client")
+	}
+	active, err := b.hypr.ActiveWindow()
+	if err == nil && active != nil && active.Workspace.ID > 0 {
+		return active.Workspace.ID, nil
+	}
+	monitor, err := b.hypr.FocusedMonitor()
+	if err != nil {
+		return 0, err
+	}
+	if monitor == nil {
+		return 0, fmt.Errorf("no focused monitor")
+	}
+	return monitor.ActiveWS.ID, nil
+}
+
+func (b *Browser) threeBodyState(workspaceID int) *state.ThreeBodyState {
+	if b.state == nil {
+		return nil
+	}
+	return b.state.GetThreeBody(workspaceID)
+}
+
+// firefoxOpenTargetForWorkspace chooses the Firefox instance owned by workspaceID.
+//
+// Three-body state wins over stray visible Firefox windows.
+// Shadow, active, and master addresses define workspace ownership.
+// It never falls back to a Firefox window from another workspace.
+func firefoxOpenTargetForWorkspace(clients []hypr.Window, workspaceID int, threeBody *state.ThreeBodyState) (firefoxOpenTarget, bool) {
+	if target, ok := threeBodyFirefoxOpenTarget(clients, workspaceID, threeBody); ok {
+		return target, true
+	}
+	if best, ok := visibleWorkspaceFirefoxWindow(clients, workspaceID); ok {
+		return firefoxOpenTargetFromWindow(best, workspaceID, false)
+	}
+	return firefoxOpenTarget{}, false
+}
+
+func threeBodyFirefoxOpenTarget(clients []hypr.Window, workspaceID int, threeBody *state.ThreeBodyState) (firefoxOpenTarget, bool) {
+	if threeBody == nil || threeBody.Shadow == "" {
+		return firefoxOpenTarget{}, false
+	}
+	for _, address := range []string{threeBody.Active, threeBody.Master} {
+		if address == "" {
 			continue
 		}
-		if !strings.Contains(strings.ToLower(client.Class), "firefox") {
+		for _, client := range clients {
+			if client.Address == address && client.Workspace.ID == workspaceID && isFirefoxWindow(client) {
+				return firefoxOpenTargetFromWindow(client, workspaceID, false)
+			}
+		}
+	}
+	for _, client := range clients {
+		if client.Address != threeBody.Shadow || client.Workspace.Name != windows.ShadowWorkspace || !isFirefoxWindow(client) {
+			continue
+		}
+		return firefoxOpenTargetFromWindow(client, workspaceID, true)
+	}
+	return firefoxOpenTarget{}, false
+}
+
+func visibleWorkspaceFirefoxWindow(clients []hypr.Window, workspaceID int) (hypr.Window, bool) {
+	best := hypr.Window{FocusHistoryID: int(^uint(0) >> 1)}
+	for _, client := range clients {
+		if client.Workspace.ID != workspaceID || !isFirefoxWindow(client) {
 			continue
 		}
 		if client.FocusHistoryID < best.FocusHistoryID {
 			best = client
 		}
 	}
-	if best.Address == "" {
-		return firefoxProfile{}, false
+	return best, best.Address != ""
+}
+
+func firefoxOpenTargetFromWindow(window hypr.Window, workspaceID int, needsThreeBodySwap bool) (firefoxOpenTarget, bool) {
+	profile, _ := firefoxProfileFromWindow(window)
+	return firefoxOpenTarget{Window: window, Profile: profile, WorkspaceID: workspaceID, NeedsThreeBodySwap: needsThreeBodySwap}, true
+}
+
+func isFirefoxWindow(window hypr.Window) bool {
+	return strings.Contains(strings.ToLower(window.Class), "firefox") || strings.Contains(strings.ToLower(window.InitialClass), "firefox")
+}
+
+func (b *Browser) focusFirefoxOpenTarget(target firefoxOpenTarget) error {
+	if b.hypr == nil {
+		return nil
 	}
-	return firefoxProfileFromWindow(best)
+	if target.NeedsThreeBodySwap {
+		return b.swapThreeBodyShadowIntoView(target.WorkspaceID, target.Window.Address)
+	}
+	return b.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", target.Window.Address))
+}
+
+// swapThreeBodyShadowIntoView makes the workspace-owned shadow Firefox active before CLI remoting.
+//
+// Firefox sends `--new-tab` to the active instance for that profile.
+// Remoting before the swap can open on the wrong window.
+func (b *Browser) swapThreeBodyShadowIntoView(workspaceID int, shadowAddress string) error {
+	tiled, err := windows.GetTiledWindows(b.hypr, workspaceID)
+	if err != nil {
+		return err
+	}
+	slaves := windows.GetSlaves(tiled)
+	if len(slaves) == 0 {
+		return fmt.Errorf("no visible three-body slave on workspace %d", workspaceID)
+	}
+	activeAddress := slaves[0].Address
+	batch := fmt.Sprintf("dispatch movetoworkspacesilent %s,address:%s; dispatch movetoworkspacesilent %d,address:%s; dispatch focuswindow address:%s", windows.ShadowWorkspace, activeAddress, workspaceID, shadowAddress, shadowAddress)
+	if _, err := b.hypr.Request("[[BATCH]]" + batch); err != nil {
+		return err
+	}
+	if b.state != nil && len(tiled) > 0 {
+		b.state.SetThreeBody(workspaceID, &state.ThreeBodyState{Master: tiled[0].Address, Active: shadowAddress, Shadow: activeAddress})
+	}
+	return nil
 }
 
 func firefoxProfileFromWindow(window hypr.Window) (firefoxProfile, bool) {
