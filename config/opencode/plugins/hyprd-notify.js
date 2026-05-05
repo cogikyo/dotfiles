@@ -13,7 +13,10 @@ const LIMITS = {
 const TODO_COMPLETE_DEBOUNCE_MS = 1500
 const COMPLETE_DEBOUNCE_MS = 500
 const PERMISSION_DEBOUNCE_MS = 1500
+const NOTIFY_DEDUPE_MS = 1000
 const IDLE_REMINDER_MS = 10 * 60 * 1000
+
+const recentNotifies = new Map()
 
 function cleanText(value, max = LIMITS.message) {
   if (typeof value !== "string") return ""
@@ -76,6 +79,27 @@ async function send(command) {
   await done
 }
 
+function shouldSendNotify(req) {
+  const now = Date.now()
+  const key = JSON.stringify([
+    req.source,
+    req.event,
+    req.message,
+    req.last_assistant_message,
+    req.agent_type,
+    req.kitty_pid,
+    req.kitty_window_id,
+  ])
+  const previous = recentNotifies.get(key) || 0
+  if (now - previous < NOTIFY_DEDUPE_MS) return false
+
+  recentNotifies.set(key, now)
+  for (const [oldKey, seenAt] of recentNotifies) {
+    if (now - seenAt > NOTIFY_DEDUPE_MS) recentNotifies.delete(oldKey)
+  }
+  return true
+}
+
 async function notify(payload, parentFor) {
   const ctx = await kittyContext(payload.sessionID, parentFor)
   if (payload.type === "idle" && (!ctx.kitty_pid || !ctx.kitty_window_id)) return
@@ -89,6 +113,7 @@ async function notify(payload, parentFor) {
     kitty_pid: ctx.kitty_pid,
     kitty_window_id: ctx.kitty_window_id,
   }
+  if (!shouldSendNotify(req)) return
   await send("notify " + JSON.stringify(req))
 }
 
