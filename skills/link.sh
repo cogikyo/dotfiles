@@ -2,7 +2,7 @@
 
 # Skills linking script
 # Usage:
-#   link.sh user              - Symlink user skills into Claude/agents compatibility dirs
+#   link.sh user              - Link user skills for Claude/agents compatibility
 #   link.sh project [name]    - Symlink project skill(s) to ./.opencode/skills/ (with compatibility links)
 
 set -euo pipefail
@@ -67,12 +67,15 @@ link_all_skills() {
 }
 
 link_user_skills() {
-    local target_dir claude_home claude_config_dir agents_home
+    local target_dir claude_home claude_config_dir agents_home opencode_config_dir opencode_commands_dir opencode_commands_link
 
     target_dir="${HOME}/.claude-skills"
     claude_home="${CLAUDE_HOME:-${HOME}/.claude}"
     claude_config_dir="${CLAUDE_CONFIG_DIR:-${HOME}/.config/claude}"
     agents_home="${AGENTS_HOME:-${HOME}/.agents}"
+    opencode_config_dir="${OPENCODE_CONFIG_DIR:-${HOME}/.config/opencode}"
+    opencode_commands_dir="${OPENCODE_COMMANDS_DIR:-${HOME}/.local/share/opencode/skill-commands}"
+    opencode_commands_link="$opencode_config_dir/commands"
 
     mkdir -p "$target_dir"
 
@@ -89,6 +92,15 @@ link_user_skills() {
     link_config_skills_dir "Claude" "$target_dir" "$claude_home" "link.sh user"
     link_config_skills_dir "Claude config" "$target_dir" "$claude_config_dir" "link.sh user"
     link_config_skills_dir "agents tools" "$target_dir" "$agents_home" "link.sh user"
+
+    if [[ -L "$opencode_commands_link" ]]; then
+        local opencode_commands_target opencode_commands_real
+        opencode_commands_target="$(readlink "$opencode_commands_link")"
+        opencode_commands_real="$(canonpath "$opencode_commands_link")"
+        if [[ "$opencode_commands_target" == "$opencode_commands_dir" || ( -n "$opencode_commands_real" && "$opencode_commands_real" == "$(canonpath "$opencode_commands_dir")" ) ]]; then
+            rm -v "$opencode_commands_link"
+        fi
+    fi
 }
 
 link_project_skill() {
@@ -129,7 +141,7 @@ case "${1:-}" in
         ;;
     *)
         echo "Usage:"
-        echo "  link.sh user              - Link all user skills for Claude/agents compatibility"
+        echo "  link.sh user              - Link user skills for Claude/agents compatibility"
         echo "  link.sh project [name]    - Link project skill(s) to ./.opencode/skills/"
         exit 1
         ;;

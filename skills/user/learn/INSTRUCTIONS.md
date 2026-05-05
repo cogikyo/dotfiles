@@ -24,8 +24,14 @@ Reports pass/fail for each skill in `user/` and `project/`, plus:
 - **project** → `~/dotfiles/skills/project/<name>/`
 
 After creating, link them:
+
 - user skills: `~/dotfiles/skills/link.sh user`
 - project skills (inside a project): `~/dotfiles/skills/link.sh project <name>`
+
+OpenCode is the primary consumer.
+User skills are loaded through OpenCode's configured `skills.paths`, which should point at `~/dotfiles/skills/user`.
+Do not generate OpenCode command files for user skills.
+Slash-command behavior should live in skill instructions, not in local generated command prompts.
 
 **2. Gather requirements:**
 
@@ -64,7 +70,7 @@ This validates:
 - YAML frontmatter present
 - No forbidden files (README.md, etc.)
 - Slash-command list stays in sync across SKILL.md and INSTRUCTIONS.md (when both define command docs)
-- User skills are linked from a supported config skills directory
+- User skills are available through OpenCode built-in discovery paths or an explicit `skills.paths` override
 
 ---
 
