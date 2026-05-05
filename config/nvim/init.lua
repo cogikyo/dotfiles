@@ -40,9 +40,7 @@ require("lazy").setup({
 			dir = "~/vagari/nvim",
 			priority = 1000,
 			lazy = false,
-			config = function()
-				vim.cmd.colorscheme("vagari")
-			end,
+			config = function() vim.cmd.colorscheme("vagari") end,
 		},
 		{
 			"folke/tokyonight.nvim",
