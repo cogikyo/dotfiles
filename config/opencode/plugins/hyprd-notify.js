@@ -12,6 +12,7 @@ const LIMITS = {
 
 const TODO_COMPLETE_DEBOUNCE_MS = 1500
 const COMPLETE_DEBOUNCE_MS = 500
+const PERMISSION_DEBOUNCE_MS = 1500
 const IDLE_REMINDER_MS = 10 * 60 * 1000
 
 function cleanText(value, max = LIMITS.message) {
@@ -100,6 +101,8 @@ function newSessionState() {
     lastTodoCompletedAt: 0,
     completeTimer: null,
     idleTimer: null,
+    lastPermissionAt: 0,
+    lastPermissionMessage: "",
     parentID: "",
     title: "",
   }
@@ -237,6 +240,15 @@ const server = async () => {
           ? cleanText(rawPatterns, LIMITS.patterns)
           : ""
       const message = perm ? (pats ? `${perm}: ${pats}` : perm) : "Permission needed"
+
+      if (sessionID) {
+        const state = getSession(sessionID)
+        const now = Date.now()
+        if (state.lastPermissionMessage === message && now - state.lastPermissionAt < PERMISSION_DEBOUNCE_MS) return
+        state.lastPermissionMessage = message
+        state.lastPermissionAt = now
+      }
+
       await sendNotify({ sessionID, type: "permission", message })
     },
 
