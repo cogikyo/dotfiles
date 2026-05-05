@@ -6,4 +6,4 @@ invocation: user
 
 Invoke with `/commit`, `/commit quick`, or when committing is requested.
 
-Read `INSTRUCTIONS.md` in this directory before executing. Do not proceed with default commit behavior.
+Read `/home/cullyn/dotfiles/skills/user/commit/INSTRUCTIONS.md` before executing. Do not proceed with default commit behavior.
