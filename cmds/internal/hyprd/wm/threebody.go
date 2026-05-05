@@ -46,11 +46,63 @@ func (tb *ThreeBody) Execute(name string) (string, error) {
 		return "", fmt.Errorf("unknown three-body window: %s", name)
 	}
 	if name == "agents" && tb.hasNotify != nil && tb.hasNotify() && tb.notifyAct != nil {
+		if msg, err := tb.focusShadowedBody(name, spec.Class, spec.Title); err != nil {
+			return "", err
+		} else if msg != "" {
+			return tb.notifyActionAfter(msg)
+		}
 		if tb.notifyAct() {
 			return "notification: action", nil
 		}
 	}
 	return tb.Focus(name, spec.Class, spec.Title, spec.Command)
+}
+
+func (tb *ThreeBody) notifyActionAfter(prefix string) (string, error) {
+	if tb.notifyAct() {
+		return prefix + "; notification: action", nil
+	}
+	return prefix, nil
+}
+
+func (tb *ThreeBody) focusShadowedBody(bodyName, class, title string) (string, error) {
+	wsID, err := tb.activeWorkspace()
+	if err != nil {
+		return "", err
+	}
+
+	clients, err := tb.hypr.Clients()
+	if err != nil {
+		return "", err
+	}
+	if st := tb.state.GetThreeBody(wsID); st != nil && shadowMatches(clients, st, class, title) {
+		return tb.Focus(bodyName, class, title, "")
+	}
+
+	for shadowWS, st := range tb.state.AllThreeBody() {
+		if shadowWS == wsID || !shadowMatches(clients, st, class, title) {
+			continue
+		}
+		if err := tb.hypr.Dispatch(fmt.Sprintf("workspace %d", shadowWS)); err != nil {
+			return "", fmt.Errorf("focus three-body workspace: %w", err)
+		}
+		msg, err := tb.swap(st, shadowWS)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("workspace %d; %s", shadowWS, msg), nil
+	}
+	return "", nil
+}
+
+func shadowMatches(clients []hypr.Window, st *state.ThreeBodyState, class, title string) bool {
+	for i := range clients {
+		c := &clients[i]
+		if c.Address == st.Shadow && c.Workspace.Name == windows.ShadowWorkspace && windows.MatchesTarget(c, class, title) {
+			return true
+		}
+	}
+	return false
 }
 
 // WindowSpec is a flat view of a ThreeBody config entry for fallback iteration.
