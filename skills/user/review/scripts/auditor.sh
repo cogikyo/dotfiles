@@ -2,13 +2,26 @@
 
 set -euo pipefail
 
+safe_pathspec=(
+    .
+    ':!configs/local.gcfg'
+    ':!**/.env'
+    ':!**/.env.*'
+    ':!**/*credential*'
+    ':!**/*secret*'
+    ':!**/*key*'
+    ':!**/*.pem'
+    ':!**/*.key'
+    ':!**/runtime/*config*'
+)
+
 dirty_changed_lines() {
-    git diff --cached --no-ext-diff --unified=0
-    git diff --no-ext-diff --unified=0
+    git diff --cached --no-ext-diff --unified=0 -- "${safe_pathspec[@]}"
+    git diff --no-ext-diff --unified=0 -- "${safe_pathspec[@]}"
 }
 
 dirty_scan() {
-    local pattern='RemoveAll|os\.Rename|docker[[:space:]]+compose|COMPOSE_PROJECT_NAME|ReadPassword|Authorization|token'
+    local pattern='0\.0\.0\.0|http\.Serve|POST[[:space:]]+/|extractTar|HasPrefix\([[:space:]]*filepath\.Clean|tar[[:alnum:]_]*\.NewReader|\.\./|filepath\.Join|RemoveAll|os\.Rename|docker[[:space:]]+compose|COMPOSE_PROJECT_NAME|ReadPassword|Authorization|token|--drop-[[:alnum:]-]+|drop[[:space:]_-]*(database|schema|table|all)'
 
     if dirty_changed_lines | grep -niE "^[-+][^-+].*($pattern)"; then
         printf 'auditor dirty-scan found high-blast-radius patterns\n' >&2
@@ -27,7 +40,7 @@ commands:
   dirty-scan  read-only scan of staged and unstaged diffs for high-blast-radius patterns
 
 patterns:
-  RemoveAll, os.Rename, docker compose, COMPOSE_PROJECT_NAME, ReadPassword, Authorization, token
+  bind-all hosts, http serving, POST routes, tar extraction, path traversal, destructive drops, secrets, broad filesystem/process operations
 EOF
         ;;
     dirty-scan)

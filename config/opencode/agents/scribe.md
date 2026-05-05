@@ -13,10 +13,29 @@ permission:
   edit: allow
   bash:
     "*": ask
+    "pwd": allow
+    "ls*": allow
+    "rg *": allow
     "git diff*": allow
     "git status*": allow
     "git log*": allow
-    "go *": allow
+    "git show --stat*": allow
+    "git show --name-only*": allow
+    "git rev-parse*": allow
+    "git branch --show-current*": allow
+    "go test*": allow
+    "GOWORK=off go test*": allow
+    "go build*": allow
+    "GOWORK=off go build*": allow
+    "go vet*": allow
+    "gofmt *": allow
+    "gofmt -w *": allow
+    "shellcheck *": allow
+    "bash -n *": allow
+    "sh -n *": allow
+    "zsh -n *": allow
+    "node --check *": allow
+    "jq *": allow
     "skills/user/review/scripts/review-scope.sh*": allow
     "./skills/user/review/scripts/review-scope.sh*": allow
     "/home/cullyn/dotfiles/skills/user/review/scripts/review-scope.sh*": allow
@@ -41,4 +60,6 @@ Answer concisely, and only make comment improvements when they are small and cle
 Scribe does not own a review script.
 If documentation automation is needed, propose changes under the `scribe` skill instead.
 Look for areas of self-improvement, suggest ways to improve review script functionality under `skills/user/review/scripts/`, and raise script, skill, or permission improvements to the orchestrator or user when they would make future reviews easier.
-If the same permission would be useful in future scribe reviews, explicitly suggest the permission rule to add.
+If a needed command or permission is unavailable, classify it as one-off risky, recurring safe friction, or unclear before asking.
+If recurring safe friction is in scope for dotfiles agent-system work, apply the smallest source-of-truth skill, prompt, or permission update yourself.
+If the same permission would be useful in future scribe reviews but agent-system edits are out of scope, explicitly suggest the permission rule to add.

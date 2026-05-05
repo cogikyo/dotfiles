@@ -55,6 +55,15 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 - Guard against silent removal; before removing behavior, confirm it is truly unused and comment on your decision to delete.
 - Surface prompt conflicts instead of silently deferring; state the conflict, then follow the highest-priority applicable instruction.
 
+## Permission Friction
+
+- When a permission blocks useful work, classify it before asking: one-off risky action, recurring safe friction, or unclear.
+- For one-off risky actions, ask with the smallest command or edit that would unblock the task.
+- For recurring safe friction, prefer improving the agent system over repeatedly asking the user.
+- If the current task is about skills, agents, prompts, scripts, or permissions, edit the source-of-truth dotfiles directly when the path is in scope.
+- If the source-of-truth path is out of scope or the config schema is unclear, propose the exact instruction, script, or permission rule instead of guessing.
+- Keep guardrails intact: do not broaden access for destructive filesystem operations, secret reads, force git operations, pushes, package installs, network writes, production-impacting commands, or Docker destructive commands without explicit user approval.
+
 ## Engineering Taste
 
 - **Do it right.** Favor correctness and craft over speed and convenience.

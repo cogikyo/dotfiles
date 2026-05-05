@@ -2,13 +2,26 @@
 
 set -euo pipefail
 
+safe_pathspec=(
+    .
+    ':!configs/local.gcfg'
+    ':!**/.env'
+    ':!**/.env.*'
+    ':!**/*credential*'
+    ':!**/*secret*'
+    ':!**/*key*'
+    ':!**/*.pem'
+    ':!**/*.key'
+    ':!**/runtime/*config*'
+)
+
 dirty_changed_lines() {
-    git diff --cached --no-ext-diff --unified=0
-    git diff --no-ext-diff --unified=0
+    git diff --cached --no-ext-diff --unified=0 -- "${safe_pathspec[@]}"
+    git diff --no-ext-diff --unified=0 -- "${safe_pathspec[@]}"
 }
 
 dirty_scan() {
-    local pattern='RunStreamingEnv|docker[[:space:]]+compose|\.View\([[:space:]]*\)'
+    local pattern='RunStreamingEnv|RunRunnerCommand|BuildRunner|http\.DefaultClient|docker[[:space:]]+compose|\.View\([[:space:]]*\)'
 
     if dirty_changed_lines | grep -niE "^[-+][^-+].*($pattern)"; then
         printf 'profiler dirty-scan found performance-sensitive patterns\n' >&2
@@ -27,7 +40,7 @@ commands:
   dirty-scan  read-only scan of staged and unstaged diffs for performance-sensitive patterns
 
 patterns:
-  RunStreamingEnv, docker compose, changed View() callsites
+  runner command loops/call chains, http.DefaultClient, RunStreamingEnv, docker compose, changed View() callsites
 EOF
         ;;
     dirty-scan)

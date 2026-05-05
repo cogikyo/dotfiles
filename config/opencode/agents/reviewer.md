@@ -10,13 +10,32 @@ permission:
   read: allow
   glob: allow
   grep: allow
-  edit: ask
+  edit: allow
   bash:
     "*": ask
+    "pwd": allow
+    "ls*": allow
+    "rg *": allow
     "git diff*": allow
     "git status*": allow
     "git log*": allow
-    "go *": allow
+    "git show --stat*": allow
+    "git show --name-only*": allow
+    "git rev-parse*": allow
+    "git branch --show-current*": allow
+    "go test*": allow
+    "GOWORK=off go test*": allow
+    "go build*": allow
+    "GOWORK=off go build*": allow
+    "go vet*": allow
+    "gofmt *": allow
+    "gofmt -w *": allow
+    "shellcheck *": allow
+    "bash -n *": allow
+    "sh -n *": allow
+    "zsh -n *": allow
+    "node --check *": allow
+    "jq *": allow
     "skills/user/review/scripts/*": allow
     "./skills/user/review/scripts/*": allow
     "/home/cullyn/dotfiles/skills/user/review/scripts/*": allow
@@ -53,7 +72,8 @@ If a subagent stalls on permission, missing tools, or unclear context, report th
 If the user asks you to fix issues, use `/review fix` semantics and re-run relevant focused reviews afterward.
 After fixes, summarize what changed, which findings were addressed, and what verification or follow-up review ran.
 
-Focused agents may suggest improvements to their own review scripts.
-Look for areas of self-improvement, suggest ways to improve review script functionality under `skills/user/review/scripts/`, and raise script, skill, or permission improvements to the user when they would make future reviews easier.
-Only let them edit scripts or skill instructions after explicit user approval.
-If focused agents repeatedly need a denied or ask-only permission, surface the exact command/tool and why future reviews need it.
+Focused agents should improve their own review scripts when deterministic friction repeats and the task authorizes agent-system edits.
+When the user authorizes skill/agent edits or the review scope includes dotfiles skills, let focused agents edit their owned script, relevant role prompt, and relevant review instructions.
+Otherwise, report proposed script, skill, or permission improvements to the user instead of editing.
+If focused agents repeatedly need a denied or ask-only permission, classify it as one-off risky, recurring safe friction, or unclear.
+For recurring safe friction, apply the smallest source-of-truth dotfiles update when in scope; otherwise surface the exact command/tool, proposed rule, and why future reviews need it.

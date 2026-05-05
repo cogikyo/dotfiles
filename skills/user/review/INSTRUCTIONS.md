@@ -67,7 +67,11 @@ Orchestrator summary requirements:
 
 Anti-stall rule:
 - If a focused pass needs a blocked command, edit, network request, LSP query, or missing permission, it must return the blocked action and why it matters instead of waiting silently.
-- If the same permission would likely be needed in future reviews, suggest the exact permission rule to add.
+- Classify blocked actions before asking: one-off risky action, recurring safe friction, or unclear.
+- If the same permission would likely be needed in future reviews and is recurring safe friction, apply the smallest skill, script, prompt, or permission improvement when the task scope authorizes dotfiles agent edits.
+- If the task scope does not authorize agent-system edits, suggest the exact permission rule or instruction change to add.
+- Prefer read-only deterministic helpers in `skills/user/review/scripts/` over ad hoc shell pipelines that cause permission churn.
+- For Go tests blocked by go.work module exclusion errors, use the debugger helper or retry once with `GOWORK=off` when the command is otherwise the same and does not cross module boundaries.
 
 ### `/review fix`
 
@@ -178,8 +182,10 @@ Focus on stale comments, missing contracts, noisy prose, package/file docs, and 
 
 ## Skill Maintenance
 
-Review agents should notice repeated friction and suggest skill improvements.
-Do not edit skills during an unrelated code review unless the user asks.
+Review agents should notice repeated friction and improve the review system when authorized.
+If the task is about dotfiles skills, agents, prompts, scripts, or permissions, agents should edit the source-of-truth dotfiles directly when the path is in scope.
+If review scope explicitly includes dotfiles skills or agents, agents may edit their owned script, relevant role prompt, and relevant review instructions to remove repeated friction.
+During unrelated code reviews, report proposed self-improvements instead of editing skills unless the user authorizes it.
 
 Look for areas of self-improvement, suggest ways to improve review script functionality under `skills/user/review/scripts/`, and raise script, skill, or permission improvements to the orchestrator or user when they would make future reviews easier.
 
@@ -189,11 +195,12 @@ Do not put agent instructions, role definitions, or review prose in scripts.
 
 Agents manage their own script.
 When a role repeatedly needs a deterministic check, the agent should propose a script change that would have helped.
-If the user approves, the agent may edit its own script and the relevant review skill instructions.
+If authorized, the agent may edit its own script, role prompt, and the relevant review skill instructions.
 If the script change needs new permissions, include those permissions in the proposal.
 
 Role scripts are stubs until a real command earns its place.
 A useful script command should be deterministic, small, and easier to verify than model judgment.
+It should be read-only by default, avoid likely secret paths, and prefer narrow git diffs or file-name scans over broad filesystem reads.
 
 Suggested improvements should name:
 - The skill or script to change.

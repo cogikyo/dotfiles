@@ -17,8 +17,9 @@ go_test() {
         return 0
     fi
 
-    if [[ "$output" == *'directory prefix '*" does not contain modules listed in go.work"* ]]; then
-        printf 'go test hit parent go.work prefix error; retrying once with GOWORK=off\n' >&2
+    if [[ "$output" == *'directory prefix '*" does not contain modules listed in go.work"* ]] || \
+        [[ "$output" == *' is contained in a module that is not one of the workspace modules listed in go.work'* ]]; then
+        printf 'go test hit go.work module exclusion; retrying once with GOWORK=off\n' >&2
         GOWORK=off go test "${args[@]}"
         return $?
     fi
@@ -32,7 +33,7 @@ case "${1:-help}" in
 debugger review helper
 
 commands:
-  go-test [go test args...]  run go test; retry once with GOWORK=off on parent go.work prefix errors
+  go-test [go test args...]  run go test; retry once with GOWORK=off on go.work module exclusion errors
 EOF
         ;;
     go-test)
