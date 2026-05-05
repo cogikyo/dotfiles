@@ -18,9 +18,9 @@
       "pins": [
         "config/hypr/hyprland.conf",
         "config/hypr/binds.conf",
-        "config/nvim/init.lua",
-        "cmds/config/hyprd.yaml",
         "config/nvim/lua/config/keymaps.lua",
+        "cmds/config/hyprd.yaml",
+        "config/nvim/init.lua",
         "config/opencode/AGENTS.md"
       ]
     },
