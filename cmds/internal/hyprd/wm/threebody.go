@@ -62,11 +62,15 @@ func (tb *ThreeBody) Execute(name string) (string, error) {
 }
 
 func (tb *ThreeBody) ignoreOnCurrentWorkspace(name string) bool {
+	wsID, err := tb.activeWorkspace()
+	return err == nil && ignoreBodyOnWorkspace(name, wsID)
+}
+
+func ignoreBodyOnWorkspace(name string, wsID int) bool {
 	if name != "editor" && name != "agents" {
 		return false
 	}
-	wsID, err := tb.activeWorkspace()
-	return err == nil && wsID >= 1 && wsID <= 2
+	return wsID >= 1 && wsID <= 2
 }
 
 func (tb *ThreeBody) notifyActionAfter(prefix string) (string, error) {
@@ -176,6 +180,9 @@ func (tb *ThreeBody) Swap(fallbacks []WindowSpec) (string, error) {
 		return "", err
 	}
 	for _, fb := range fallbacks {
+		if ignoreBodyOnWorkspace(fb.Name, wsID) {
+			continue
+		}
 		found := false
 		for i := range clients {
 			c := &clients[i]
