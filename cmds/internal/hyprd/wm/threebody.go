@@ -45,9 +45,6 @@ func (tb *ThreeBody) Execute(name string) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("unknown three-body window: %s", name)
 	}
-	if tb.ignoreOnCurrentWorkspace(name) {
-		return fmt.Sprintf("ignored on workspace 1-2: %s", name), nil
-	}
 	if name == "agents" && tb.hasNotify != nil && tb.hasNotify() && tb.notifyAct != nil {
 		if msg, err := tb.focusShadowedBody(name, spec.Class, spec.Title); err != nil {
 			return "", err
@@ -57,6 +54,9 @@ func (tb *ThreeBody) Execute(name string) (string, error) {
 		if tb.notifyAct() {
 			return "notification: action", nil
 		}
+	}
+	if tb.ignoreOnCurrentWorkspace(name) {
+		return fmt.Sprintf("ignored on workspace 1-2: %s", name), nil
 	}
 	return tb.Focus(name, spec.Class, spec.Title, spec.Command)
 }
