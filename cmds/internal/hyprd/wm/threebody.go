@@ -45,6 +45,9 @@ func (tb *ThreeBody) Execute(name string) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("unknown three-body window: %s", name)
 	}
+	if tb.ignoreOnCurrentWorkspace(name) {
+		return fmt.Sprintf("ignored on workspace 1-2: %s", name), nil
+	}
 	if name == "agents" && tb.hasNotify != nil && tb.hasNotify() && tb.notifyAct != nil {
 		if msg, err := tb.focusShadowedBody(name, spec.Class, spec.Title); err != nil {
 			return "", err
@@ -56,6 +59,14 @@ func (tb *ThreeBody) Execute(name string) (string, error) {
 		}
 	}
 	return tb.Focus(name, spec.Class, spec.Title, spec.Command)
+}
+
+func (tb *ThreeBody) ignoreOnCurrentWorkspace(name string) bool {
+	if name != "editor" && name != "agents" {
+		return false
+	}
+	wsID, err := tb.activeWorkspace()
+	return err == nil && wsID >= 1 && wsID <= 2
 }
 
 func (tb *ThreeBody) notifyActionAfter(prefix string) (string, error) {
@@ -309,7 +320,7 @@ func (tb *ThreeBody) focusWithEnroll(wsID int, bodyName, class, title, launchCmd
 		}
 	}
 
-	if bodyName == "agents" && wsID >= 1 && wsID <= 3 {
+	if bodyName == "agents" && wsID >= 1 && wsID <= 2 {
 		return fmt.Sprintf("not found: %s %s", class, title), nil
 	}
 
