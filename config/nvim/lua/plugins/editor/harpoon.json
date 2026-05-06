@@ -19,7 +19,8 @@
         "README.md",
         "packages/shared/src/realtime/client.ts",
         "apps/admin/src/pages/Configuration/Tracking/index.tsx",
-        "apps/admin/src/pages/Users/UserDetails/Tracking/index.tsx"
+        "apps/admin/src/pages/Users/UserDetails/Tracking/index.tsx",
+        "apps/admin/src/pages/Configuration/PartnerManagement/:partnerId/index.tsx"
       ]
     },
     "/home/cullyn/dotfiles": {
