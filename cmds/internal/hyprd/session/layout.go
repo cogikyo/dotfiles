@@ -347,6 +347,9 @@ func (l *Layout) matchesRole(s config.Session, w *hypr.Window, role string) bool
 	if tbw, ok := config.ThreeBody[role]; ok {
 		return windows.MatchesTarget(w, tbw.Class, tbw.Title)
 	}
+	if role == s.Name && s.Class != "" {
+		return windows.MatchesTarget(w, s.Class, "")
+	}
 	return strings.EqualFold(w.Class, role) || strings.EqualFold(w.Class, commandName(s.Command))
 }
 

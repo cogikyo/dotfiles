@@ -38,6 +38,12 @@ sessions:
       command: inkscape
     obs:
       command: obs
+    sheets:
+      command: libreoffice --calc
+      class: libreoffice-calc
+    zathura:
+      command: zathura
+      class: org.pwmt.zathura
 
     harpoon:
       project: cogikyo/harpoon

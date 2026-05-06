@@ -314,6 +314,7 @@ type Session struct {
 	Browser   BrowserConfig     `yaml:"browser" json:"browser"`
 	Tabs      map[string]string `yaml:"tabs" json:"tabs"`       // body member -> tab profile name
 	Command   string            `yaml:"command" json:"command"` // single-window sessions (no three-body)
+	Class     string            `yaml:"class" json:"class"`     // explicit window class for single-command sessions
 	Monocle   bool              `yaml:"monocle" json:"monocle"`
 }
 
