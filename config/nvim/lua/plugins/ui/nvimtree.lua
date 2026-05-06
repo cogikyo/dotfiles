@@ -6,6 +6,7 @@ return {
 		if not ok then
 			return
 		end
+		local NestedGit = require("config.nvim-tree-nested-git")
 
 		local function on_attach(bufnr)
 			local api = require("nvim-tree.api")
@@ -186,6 +187,17 @@ return {
 				signcolumn = "no",
 			},
 			renderer = {
+				decorators = {
+					"Git",
+					"Open",
+					"Hidden",
+					"Modified",
+					"Bookmark",
+					"Diagnostics",
+					"Copied",
+					NestedGit,
+					"Cut",
+				},
 				root_folder_label = false,
 				highlight_git = "all",
 				indent_markers = {
