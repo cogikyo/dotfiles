@@ -16,9 +16,8 @@
     },
     "/home/cullyn/LeadPier/frontend": {
       "pins": [
-        "README.md",
-        "NvimTree_1",
-        "packages/shared/src/realtime/client.ts"
+        "packages/shared/src/realtime/client.ts",
+        "packages/shared/src/components/Creatives/Detail/Page.tsx"
       ]
     },
     "/home/cullyn/dotfiles": {

@@ -38,12 +38,6 @@ sessions:
       command: inkscape
     obs:
       command: obs
-    sheets:
-      command: libreoffice --calc
-      class: libreoffice-calc
-    zathura:
-      command: zathura
-      class: org.pwmt.zathura
 
     harpoon:
       project: cogikyo/harpoon
@@ -53,6 +47,12 @@ sessions:
 
     vagari.nvim:
       project: vagari/nvim
+      body:
+        - editor
+        - agents
+
+    vagari.firefox:
+      project: vagari/firefox
       body:
         - editor
         - agents
@@ -80,12 +80,6 @@ sessions:
       browser: leadpier
       tabs:
         editor: leadpier
-
-    vagari.firefox:
-      project: vagari/firefox
-      body:
-        - editor
-        - agents
 
   # ├─ workspace 5 ──────────────────────────────────────────────────────────────┤
   5: # personal infrastructure and dotfiles work.
@@ -137,7 +131,7 @@ tabs:
       - name: be-nvim
         title: "«   »"
         command: nvim
-        cwd: "~/LeadPier/backend/services"
+        cwd: "~/LeadPier/backend"
         actions:
           nvim: {}
       - name: pier
@@ -151,7 +145,7 @@ tabs:
             pane: 1
         layout: "fat:bias=50"
         panes:
-          - cwd: "~/LeadPier"
+          - cwd: "~/LeadPier/pier"
       - name: fe-build
         title: "«   »"
         command: lazygit
@@ -160,6 +154,7 @@ tabs:
           git: {}
         layout: "fat:bias=80"
         panes:
+          - command: ""
             cwd: "~/LeadPier/frontend"
       - name: be-build
         title: "«   »"
@@ -169,6 +164,7 @@ tabs:
           git: {}
         layout: "fat:bias=80"
         panes:
+          - command: "pier reload"
             cwd: "~/LeadPier/backend/core/runner"
 
 # ╭───────────────────────────────────────────────────────────────────────────────╮
