@@ -16,9 +16,10 @@ import (
 	"time"
 )
 
-const pseudoLockWorkspace = 6         // workspace reserved for the visual blackout
-const fullLockGrace = 2 * time.Second // hyprlock cancel window that resumes music
-const fullLockDelay = time.Second     // let killall settle before manual hyprlock takes the display
+const pseudoLockWorkspace = 6           // workspace reserved for the visual blackout
+const fullLockGrace = 2 * time.Second   // hyprlock cancel window that resumes music
+const fullLockDelay = time.Second       // let killall settle before manual hyprlock takes the display
+const fullLockBGKillDelay = time.Second // give hyprlock time to capture its screenshot background
 const idleUnlockSuppress = 2 * time.Second
 
 // pamLoadFlag is the runtime handshake consumed by `hyprd ssh pam-load` from pam_exec.
@@ -192,7 +193,21 @@ func (l *Lock) runHyprlock(saved *lockState, delay, grace time.Duration, loadSSH
 	}
 
 	start := time.Now()
-	exec.Command("hyprlock", "--grace", strconv.Itoa(int(grace/time.Second))).Run()
+	cmd := exec.Command("hyprlock", "--grace", strconv.Itoa(int(grace/time.Second)))
+	if err := cmd.Start(); err == nil {
+		done := make(chan struct{})
+		go func() {
+			cmd.Wait()
+			close(done)
+		}()
+
+		select {
+		case <-done:
+		case <-time.After(fullLockBGKillDelay):
+			NewBG(&l.state.GetConfig().Background).killAll()
+			<-done
+		}
+	}
 	elapsed := time.Since(start)
 
 	l.mu.Lock()
@@ -251,6 +266,7 @@ func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) {
 
 	cfg := l.state.GetConfig()
 	dispatchStartup(l.hypr, cfg.Bluetooth)
+	EnsureBG(&cfg.Background)
 	// Reopen via running ewwd; if gone, respawn (fresh daemon auto-opens windows).
 	if exec.Command("ewwd", "status").Run() == nil {
 		exec.Command("ewwd", "open").Start()
