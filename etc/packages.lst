@@ -92,6 +92,7 @@ pipewire-alsa
 pipewire-jack
 pipewire-pulse
 playerctl
+poppler
 pulsemixer
 python-pip
 python-pynvim

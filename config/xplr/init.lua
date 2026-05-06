@@ -21,3 +21,18 @@ require("config.layouts")
 require("config.modes")
 require("plugins")
 require("plugins.config")
+
+return {
+	on_focus_change = {
+		{ CallLuaSilently = "custom.preview.clear_image" },
+	},
+	on_directory_change = {
+		{ CallLuaSilently = "custom.preview.clear_image" },
+	},
+	on_mode_switch = {
+		{ CallLuaSilently = "custom.preview.clear_image" },
+	},
+	on_layout_switch = {
+		{ CallLuaSilently = "custom.preview.clear_image" },
+	},
+}
