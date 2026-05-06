@@ -11,7 +11,7 @@ end
 
 local function js_formatters(bufnr)
 	if oxc_root(bufnr) then
-		return { "oxlint", "oxfmt" }
+		return { "oxfmt" }
 	end
 	return { "prettierd" }
 end
