@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -43,6 +44,7 @@ type Daemon struct {
 	ctx       context.Context
 	cancel    context.CancelFunc
 	config    config.EwwConfig
+	openMu    sync.Mutex
 }
 
 func New() (*Daemon, error) {
@@ -197,6 +199,9 @@ func (d *Daemon) handleAction(providerName string, args []string) string {
 
 // openWindows ensures the eww daemon is running, reloads config, and opens configured windows.
 func (d *Daemon) openWindows() string {
+	d.openMu.Lock()
+	defer d.openMu.Unlock()
+
 	windows := d.config.Windows
 	if len(windows) == 0 {
 		return "open: no windows configured"

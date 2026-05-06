@@ -63,7 +63,7 @@ func DefaultEww() EwwConfig {
 		Windows: []string{"today", "workspaces", "computer", "music", "player"},
 		Weather: WeatherConfig{
 			APIKeyFile:   "~/.local/.owm_api_key",
-			PollInterval: 60 * time.Second,
+			PollInterval: 10 * time.Minute,
 		},
 		Timer: TimerConfig{
 			DefaultMinutes:    90,
