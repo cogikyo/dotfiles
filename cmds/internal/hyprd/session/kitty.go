@@ -79,9 +79,12 @@ func (k *KittyClient) State() (*KittyState, error) {
 	if len(windows) == 0 {
 		return nil, fmt.Errorf("no kitty windows")
 	}
+	return stateFromWindow(windows[0]), nil
+}
 
-	state := &KittyState{WindowID: windows[0].ID}
-	for _, tab := range windows[0].Tabs {
+func stateFromWindow(win KittyOSWindow) *KittyState {
+	state := &KittyState{WindowID: win.ID}
+	for _, tab := range win.Tabs {
 		if !tabSelected(tab) {
 			continue
 		}
@@ -91,7 +94,7 @@ func (k *KittyClient) State() (*KittyState, error) {
 			}
 		}
 	}
-	return state, nil
+	return state
 }
 
 func (k *KittyClient) FocusTab(tabID string) error {

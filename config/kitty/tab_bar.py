@@ -26,6 +26,10 @@ from kitty.tab_bar import (
 )
 from kitty.utils import color_as_int
 
+USER = getuser()
+HOST = uname()[1]
+LOCAL_HOST = HOST.split(".")[0]
+
 # ╭──────────────────────────────────────────────────────────────────────────────╮
 # │ Configuration                                                                │
 # ╰──────────────────────────────────────────────────────────────────────────────╯
@@ -202,8 +206,20 @@ def _agent_from_window(window) -> str:
     return ""
 
 
+def _agent_from_title(window) -> str:
+    """Return agent name if the window title identifies a known agent."""
+    title = getattr(window, "override_title", None) or getattr(window, "title", "")
+    if not title:
+        return ""
+    title_lower = title.lower()
+    for agent in AGENT_NAMES:
+        if agent in title_lower:
+            return agent
+    return ""
+
+
 def is_agent_window(tab_manager) -> bool:
-    """Check if any window in the tab manager is running an AI agent (cached per draw cycle)."""
+    """Check tab/window titles for an agent without probing every child process."""
     cached = _cache.get("is_agent")
     if cached is not None:
         return cached
@@ -214,18 +230,7 @@ def is_agent_window(tab_manager) -> bool:
     try:
         for tab in tab_manager.tabs:
             for window in tab.windows:
-                title = getattr(window, "override_title", None) or getattr(
-                    window, "title", ""
-                )
-                if title:
-                    title_lower = title.lower()
-                    for agent in AGENT_NAMES:
-                        if agent in title_lower:
-                            result = True
-                            break
-                if result:
-                    break
-                if _agent_from_window(window):
+                if _agent_from_title(window):
                     result = True
                     break
             if result:
@@ -245,7 +250,9 @@ def _detect_active_agent(tab_manager) -> str:
         result = ""
     else:
         window = tab_manager.active_window
-        result = _agent_from_window(window) if window else ""
+        result = _agent_from_title(window) if window else ""
+        if not result and window:
+            result = _agent_from_window(window)
     _cache["active_agent"] = result
     return result
 
@@ -295,7 +302,6 @@ def _parse_ssh_destination(cmdline: list) -> str:
 
 def _ssh_from_window(window) -> tuple:
     """Return (user, host) when the active window is SSH'd to a *different* machine."""
-    local_host = uname()[1].split(".")[0]
     try:
         for proc in window.child.foreground_processes:
             cmdline = proc.get("cmdline") or []
@@ -312,7 +318,7 @@ def _ssh_from_window(window) -> tuple:
             else:
                 user, host = "", dest
             host = host.split(".")[0]
-            if host == local_host or host in ("localhost", "127.0.0.1", "::1"):
+            if host == LOCAL_HOST or host in ("localhost", "127.0.0.1", "::1"):
                 continue
             return user, host
     except (AttributeError, TypeError):
@@ -344,11 +350,11 @@ def draw_icon(screen: Screen, index: int) -> int:
 
     boss = get_boss()
     tm = boss.active_tab_manager if boss else None
-    if tm and is_agent_window(tm):
-        agent = _detect_active_agent(tm)
+    agent = _detect_active_agent(tm) if tm else ""
+    if tm and (agent or is_agent_window(tm)):
         icon = ICON_AGENT + (agent or "agents")
     else:
-        icon = ICON_MAIN + getuser()
+        icon = ICON_MAIN + USER
 
     accent = get_accent()
 
@@ -487,12 +493,12 @@ def draw_tab(
     tm = boss.active_tab_manager if boss else None
     ssh_user, ssh_host = _detect_ssh_active(tm) if tm else ("", "")
     if ssh_host:
-        if ssh_user and ssh_user != getuser():
+        if ssh_user and ssh_user != USER:
             host_text = f"{ssh_user}@{ssh_host}{ICON_HOST}"
         else:
             host_text = f"{ssh_host}{ICON_HOST}"
     else:
-        host_text = uname()[1] + ICON_HOST
+        host_text = HOST + ICON_HOST
     accent = get_accent()
 
     cells = [

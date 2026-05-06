@@ -57,19 +57,15 @@ func (t *Tab) Execute(tabName string) (string, error) {
 	}
 
 	kitty := NewKittyClient(editor.Pid)
-	st, err := kitty.State()
+	windows, err := kitty.FullState()
 	if err != nil {
 		t.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", editor.Address))
 		return fmt.Sprintf("focused editor (no kitty socket): %s", editor.Address), nil
 	}
-
-	windows, err := kitty.FullState()
-	if err != nil {
-		return "", err
-	}
 	if len(windows) == 0 {
 		return "", fmt.Errorf("no kitty windows")
 	}
+	st := stateFromWindow(windows[0])
 
 	cfg := t.state.GetConfig()
 	profileName := detectTabProfile(cfg, windows[0])
