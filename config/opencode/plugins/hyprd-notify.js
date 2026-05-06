@@ -166,7 +166,7 @@ const server = async () => {
       state.idleTimer = null
       if (state.active) return
 
-      const message = state.lastAssistantMessage || state.title || "Still idle"
+      const message = state.title || state.lastAssistantMessage || "Still idle"
       await sendNotify({
         sessionID,
         type: "idle",
