@@ -16,8 +16,10 @@
     },
     "/home/cullyn/LeadPier/frontend": {
       "pins": [
+        "README.md",
         "packages/shared/src/realtime/client.ts",
-        "packages/shared/src/components/Creatives/Detail/Page.tsx"
+        "apps/admin/src/pages/Configuration/Tracking/index.tsx",
+        "apps/admin/src/pages/Users/UserDetails/Tracking/index.tsx"
       ]
     },
     "/home/cullyn/dotfiles": {
