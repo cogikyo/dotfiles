@@ -14,8 +14,9 @@ return {
 		-- │ navigation: hunks within and across changed files                   │
 		-- ╰─────────────────────────────────────────────────────────────────────╯
 
-		local function git_root()
-			local root = fn.systemlist("git rev-parse --show-toplevel")[1]
+		local function git_root(path)
+			local dir = path ~= "" and fn.fnamemodify(path, ":p:h") or fn.getcwd()
+			local root = fn.systemlist("git -C " .. fn.shellescape(dir) .. " rev-parse --show-toplevel")[1]
 			if vim.v.shell_error ~= 0 then
 				return nil
 			end
@@ -37,8 +38,8 @@ return {
 			gitsigns.nav_hunk(direction)
 		end
 
-		local function get_changed_files()
-			local root = git_root()
+		local function get_changed_files(path)
+			local root = git_root(path)
 			if not root then
 				return {}, {}
 			end
@@ -99,12 +100,12 @@ return {
 		end
 
 		local function switch_to_changed_file(direction)
-			local files, untracked_set = get_changed_files()
+			local current_file = fn.fnamemodify(api.nvim_buf_get_name(0), ":p")
+			local files, untracked_set = get_changed_files(current_file)
 			if #files == 0 then
 				return
 			end
 
-			local current_file = api.nvim_buf_get_name(0)
 			local current_index
 
 			for index, file in ipairs(files) do
@@ -177,7 +178,7 @@ return {
 			map("n", "]h", next_hunk, "Next hunk (file)")
 			map("n", "[h", prev_hunk, "Previous hunk (file)")
 			map("n", "<C-n>", next_hunk_all_files, "Next hunk (all files)")
-			map("n", "<C-N>", prev_hunk_all_files, "Previous hunk (all files)")
+			map("n", "<C-p>", prev_hunk_all_files, "Previous hunk (all files)")
 			map("n", "<leader>hs", gitsigns.stage_hunk, "Stage hunk")
 			map("n", "<leader>hr", gitsigns.reset_hunk, "Reset hunk")
 			map("v", "<leader>hs", stage_selection, "Stage hunk")
