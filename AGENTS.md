@@ -40,6 +40,7 @@ For other commands, use targeted builds from `cmds/` (`go build -o ~/.local/bin/
 - Interactive zsh enables `EXTENDED_GLOB`; use extended glob features when useful, but quote literal `#`, `^`, and `~` values in sourced zsh files, especially hex colors like `'fg=#824141'`.
 - Logging: `info()` (blue), `success()`/`ok()` (green), `warn()` (yellow), `error()`/`err()` (red).
 - Nerd Font / multi-width UTF glyphs: use Python (`Write`/`Edit` corrupts them).
+- Python one-offs: use `uv run --with <package>... python <script>` or `uv run --with <package>... python - <<'PY'`; do not install packages into system Python or leave activated venvs behind.
 - Commit note: always include `config/nvim/lua/plugins/editor/harpoon.json` when it appears changed; it often changes incidentally and can be included in any commit without mention.
 
 ## Go (`go 1.26.2`)

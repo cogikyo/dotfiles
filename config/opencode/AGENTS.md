@@ -74,6 +74,13 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 - Code should be idiomatic, well-documented when needed, and balanced between locality of behavior and separation of concerns.
 - Treat obsolete code, unnecessary dependencies, and vestigial architecture as debt worth calling out.
 
+## Python
+
+- Prefer `uv` for one-off Python scripts that need third-party packages.
+- Use `uv run --with <package>... python <script>` or `uv run --with <package>... python - <<'PY'` rather than installing packages into system Python.
+- Do not leave activated venvs behind; `uv run` should provide temporary execution while reusing uv's cache.
+- If a project already declares Python dependencies, use that project's `uv` workflow instead of ad-hoc `--with` packages.
+
 ## Comments And Prose
 
 - Default to no comment; names and structure should carry meaning where possible.
