@@ -15,6 +15,7 @@ const COMPLETE_DEBOUNCE_MS = 500
 const PERMISSION_DEBOUNCE_MS = 1500
 const NOTIFY_DEDUPE_MS = 1000
 const IDLE_REMINDER_MS = 10 * 60 * 1000
+const IDLE_CONTEXT_MAX_AGE_MS = 30 * 1000
 
 const recentNotifies = new Map()
 
@@ -24,7 +25,7 @@ function cleanText(value, max = LIMITS.message) {
 }
 
 async function kittyContext(sessionID, parentFor) {
-  if (!sessionID) return { kitty_pid: 0, kitty_window_id: 0 }
+  if (!sessionID) return { kitty_pid: 0, kitty_window_id: 0, updated_at: 0 }
   try {
     const contexts = await Bun.file(KITTY_CONTEXT_PATH).json()
 
@@ -33,14 +34,19 @@ async function kittyContext(sessionID, parentFor) {
       const ctx = contexts?.[id]
       const kitty_pid = Number(ctx?.kitty_pid) || 0
       const kitty_window_id = Number(ctx?.kitty_window_id) || 0
+      const updated_at = Number(ctx?.updated_at) || 0
       if (!kitty_pid || !kitty_window_id) continue
       if (!(await isSocket(`/tmp/kitty-${kitty_pid}`))) continue
-      return { kitty_pid, kitty_window_id }
+      return { kitty_pid, kitty_window_id, updated_at }
     }
   } catch {
   }
 
-  return { kitty_pid: 0, kitty_window_id: 0 }
+  return { kitty_pid: 0, kitty_window_id: 0, updated_at: 0 }
+}
+
+function hasFreshIdleContext(ctx) {
+  return ctx.updated_at > 0 && Date.now() - ctx.updated_at <= IDLE_CONTEXT_MAX_AGE_MS
 }
 
 async function isSocket(path) {
@@ -102,7 +108,7 @@ function shouldSendNotify(req) {
 
 async function notify(payload, parentFor) {
   const ctx = await kittyContext(payload.sessionID, parentFor)
-  if (payload.type === "idle" && (!ctx.kitty_pid || !ctx.kitty_window_id)) return
+  if (payload.type === "idle" && (!ctx.kitty_pid || !ctx.kitty_window_id || !hasFreshIdleContext(ctx))) return
 
   const req = {
     source: "opencode",

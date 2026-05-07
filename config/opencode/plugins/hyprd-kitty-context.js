@@ -71,6 +71,25 @@ async function pruneContexts(contexts) {
   }
 }
 
+function isThisPane(ctx) {
+  return Number(ctx?.kitty_pid) === KITTY_PID && Number(ctx?.kitty_window_id) === KITTY_WINDOW_ID
+}
+
+async function clearPaneContext() {
+  if (!KITTY_PID || !KITTY_WINDOW_ID) return
+
+  await withLock(async () => {
+    const contexts = await readContexts()
+    await pruneContexts(contexts)
+
+    for (const [id, ctx] of Object.entries(contexts)) {
+      if (isThisPane(ctx)) delete contexts[id]
+    }
+
+    await fs.writeFile(CONTEXT_PATH, JSON.stringify(contexts), { mode: 0o600 })
+  })
+}
+
 async function writeContext(sessionID) {
   if (!sessionID || !KITTY_PID || !KITTY_WINDOW_ID) return
 
@@ -79,9 +98,7 @@ async function writeContext(sessionID) {
     await pruneContexts(contexts)
 
     for (const [id, ctx] of Object.entries(contexts)) {
-      if (id !== sessionID && Number(ctx?.kitty_pid) === KITTY_PID && Number(ctx?.kitty_window_id) === KITTY_WINDOW_ID) {
-        delete contexts[id]
-      }
+      if (id !== sessionID && isThisPane(ctx)) delete contexts[id]
     }
 
     contexts[sessionID] = {
@@ -95,8 +112,6 @@ async function writeContext(sessionID) {
 }
 
 const tui = async (api) => {
-  let lastSessionID = ""
-
   const sync = () => {
     const current = api.route.current
     if (current.name !== "session") return
@@ -104,15 +119,34 @@ const tui = async (api) => {
     const sessionID = current.params?.sessionID
     if (typeof sessionID !== "string" || sessionID === "") return
 
-    lastSessionID = sessionID
     void writeContext(sessionID)
   }
 
   sync()
   const timer = setInterval(sync, WRITE_INTERVAL_MS)
-  api.lifecycle.onDispose(() => clearInterval(timer))
+  const disposers = [
+    api.event.on("session.status", () => sync()),
+    api.event.on("session.created", () => sync()),
+    api.event.on("tui.session.select", (event) => {
+      const sessionID = event.properties?.sessionID
+      if (typeof sessionID !== "string" || sessionID === "") return
 
-  api.event.on("session.status", () => sync())
+      void writeContext(sessionID)
+    }),
+    api.event.on("tui.command.execute", (event) => {
+      if (event.properties?.command !== "session.new") return
+
+      void clearPaneContext()
+      setTimeout(sync, 50)
+      setTimeout(sync, 250)
+    }),
+  ]
+
+  api.lifecycle.onDispose(() => {
+    clearInterval(timer)
+    for (const dispose of disposers) dispose()
+    void clearPaneContext()
+  })
 }
 
 export default { id: "hyprd-kitty-context", tui }
