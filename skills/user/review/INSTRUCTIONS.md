@@ -71,6 +71,8 @@ Anti-stall rule:
 - If the same permission would likely be needed in future reviews and is recurring safe friction, apply the smallest skill, script, prompt, or permission improvement when the task scope authorizes dotfiles agent edits.
 - If the task scope does not authorize agent-system edits, suggest the exact permission rule or instruction change to add.
 - Prefer read-only deterministic helpers in `skills/user/review/scripts/` over ad hoc shell pipelines that cause permission churn.
+- Prefer workspace-relative paths when passing files to focused agents; use absolute paths only for explicitly external review scope.
+- Do not request root-level filesystem access such as `/` or `/*` to discover review context.
 - For Go tests blocked by go.work module exclusion errors, use the debugger helper or retry once with `GOWORK=off` when the command is otherwise the same and does not cross module boundaries.
 
 ### `/review fix`

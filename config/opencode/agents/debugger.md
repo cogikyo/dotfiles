@@ -8,6 +8,14 @@ temperature: 0
 permission:
   skill: allow
   read: allow
+  external_directory:
+    "$HOME/**": allow
+    "/home/cullyn/**": allow
+    "/home/cullyn/.ssh/**": deny
+    "/home/cullyn/.gnupg/**": deny
+    "/home/cullyn/.password-store/**": deny
+    "/home/cullyn/.local/share/keyrings/**": deny
+    "/tmp/**": allow
   glob: allow
   grep: allow
   edit: allow

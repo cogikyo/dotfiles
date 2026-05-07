@@ -21,6 +21,12 @@
   "permission": {
     "external_directory": {
       "~/**": "allow",
+      "$HOME/**": "allow",
+      "/home/cullyn/**": "allow",
+      "/home/cullyn/.ssh/**": "deny",
+      "/home/cullyn/.gnupg/**": "deny",
+      "/home/cullyn/.password-store/**": "deny",
+      "/home/cullyn/.local/share/keyrings/**": "deny",
       "/tmp/**": "allow"
     },
     "doom_loop": "ask",

@@ -4,14 +4,17 @@
     "/home/cullyn/LeadPier": {
       "pins": [
         "pier/README.md",
+        "pier/context/AGENTS.md",
         "backend/core/staging-backend/docker-compose.yml",
         "backend/core/runner/core.go"
       ]
     },
     "/home/cullyn/LeadPier/backend": {
       "pins": [
-        "core/runner/core.go",
-        "core/staging-backend/docker-compose.yml"
+        "services/notify/init.notify.go",
+        "services/compliance/init.compliance.go",
+        "services/partner/feedback/init.feedback.go",
+        "services/partner/init.partner.go"
       ]
     },
     "/home/cullyn/LeadPier/frontend": {
@@ -19,7 +22,8 @@
         "README.md",
         "packages/shared/src/realtime/client.ts",
         "apps/admin/src/pages/Configuration/Tracking/index.tsx",
-        "apps/admin/src/pages/Users/UserDetails/Tracking/index.tsx"
+        "apps/admin/src/pages/Users/UserDetails/Tracking/index.tsx",
+        "apps/admin/src/pages/Configuration/PartnerManagement/:partnerId/index.tsx"
       ]
     },
     "/home/cullyn/dotfiles": {
