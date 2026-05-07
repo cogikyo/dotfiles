@@ -22,17 +22,11 @@ return {
 			return root
 		end
 
-		local function git_lines(root, args)
-			return fn.systemlist("git -C " .. fn.shellescape(root) .. " " .. args)
-		end
+		local function git_lines(root, args) return fn.systemlist("git -C " .. fn.shellescape(root) .. " " .. args) end
 
-		local function hunk_edge(direction)
-			return direction == "next" and "first" or "last"
-		end
+		local function hunk_edge(direction) return direction == "next" and "first" or "last" end
 
-		local function diff_hunk_key(direction)
-			return direction == "next" and "]h" or "[h"
-		end
+		local function diff_hunk_key(direction) return direction == "next" and "]h" or "[h" end
 
 		local function nav_hunk(direction)
 			if vim.wo.diff then
@@ -75,18 +69,14 @@ return {
 
 		local function jump_to_hunk_on_attach(is_untracked, direction)
 			if is_untracked then
-				vim.schedule(function()
-					api.nvim_win_set_cursor(0, { 1, 0 })
-				end)
+				vim.schedule(function() api.nvim_win_set_cursor(0, { 1, 0 }) end)
 				return
 			end
 
 			local augroup = api.nvim_create_augroup("GitsignsNavJump", { clear = true })
 			local jumped = false
 
-			local function jump()
-				gitsigns.nav_hunk(hunk_edge(direction))
-			end
+			local function jump() gitsigns.nav_hunk(hunk_edge(direction)) end
 
 			api.nvim_create_autocmd("User", {
 				group = augroup,
@@ -167,55 +157,27 @@ return {
 			end)
 		end
 
-		local function selected_lines()
-			return { fn.line("."), fn.line("v") }
-		end
+		local function selected_lines() return { fn.line("."), fn.line("v") } end
 
 		-- ╭─────────────────────────────────────────────────────────────────────╮
 		-- │ keymaps: hunk operations, blame, diff                               │
 		-- ╰─────────────────────────────────────────────────────────────────────╯
 
 		local function on_attach(bufnr)
-			local function map(mode, lhs, rhs, desc)
-				vim.keymap.set(mode, lhs, rhs, { buffer = bufnr, desc = desc })
-			end
-
-			local function next_hunk()
-				nav_hunk("next")
-			end
-
-			local function prev_hunk()
-				nav_hunk("prev")
-			end
-
-			local function next_hunk_all_files()
-				nav_hunk_all_files("next")
-			end
-
-			local function prev_hunk_all_files()
-				nav_hunk_all_files("prev")
-			end
-
-			local function stage_selection()
-				gitsigns.stage_hunk(selected_lines())
-			end
-
-			local function reset_selection()
-				gitsigns.reset_hunk(selected_lines())
-			end
-
-			local function blame_line_full()
-				gitsigns.blame_line({ full = true })
-			end
-
-			local function diff_head_previous()
-				gitsigns.diffthis("~")
-			end
+			local function map(mode, lhs, rhs, desc) vim.keymap.set(mode, lhs, rhs, { buffer = bufnr, desc = desc }) end
+			local function next_hunk() nav_hunk("next") end
+			local function prev_hunk() nav_hunk("prev") end
+			local function next_hunk_all_files() nav_hunk_all_files("next") end
+			local function prev_hunk_all_files() nav_hunk_all_files("prev") end
+			local function stage_selection() gitsigns.stage_hunk(selected_lines()) end
+			local function reset_selection() gitsigns.reset_hunk(selected_lines()) end
+			local function blame_line_full() gitsigns.blame_line({ full = true }) end
+			local function diff_head_previous() gitsigns.diffthis("~") end
 
 			map("n", "]h", next_hunk, "Next hunk (file)")
 			map("n", "[h", prev_hunk, "Previous hunk (file)")
-			map("n", "<A-n>", next_hunk_all_files, "Next hunk (all files)")
-			map("n", "<A-N>", prev_hunk_all_files, "Previous hunk (all files)")
+			map("n", "<C-n>", next_hunk_all_files, "Next hunk (all files)")
+			map("n", "<C-N>", prev_hunk_all_files, "Previous hunk (all files)")
 			map("n", "<leader>hs", gitsigns.stage_hunk, "Stage hunk")
 			map("n", "<leader>hr", gitsigns.reset_hunk, "Reset hunk")
 			map("v", "<leader>hs", stage_selection, "Stage hunk")
