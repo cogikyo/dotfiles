@@ -138,10 +138,10 @@ format = "[ ╼╾](blu_2) [$symbol$output]($style)"
 
 [custom.tailscale]
 when = "tailscale status --json | jq -e '.BackendState == \"Running\"' >/dev/null"
-command = "tailscale status --json | jq -r '.CurrentTailnet.Name as $name | ([.Peer[] | select(.Online == true)] | length) as $n | if $n > 1 then \"\\($name) \\($n)\" else $name end'"
+command = "tailscale status --json | jq -r '.CurrentTailnet.Name as $name | ([.Peer[] | select(.Online == true and (.ShareeNode != true))] | length) as $n | (if (.Self.Capabilities // [] | index(\"funnel\")) then \"󰼸\" else \"󱁉\" end) as $symbol | if $n > 0 then \"\\($symbol) \\($name) \\($n)\" else \"\\($symbol) \\($name)\" end'"
 style = "pnk_3"
-symbol = "󱁉 "
-format = "[ ╼╾](blu_2) [$symbol$output]($style)"
+symbol = ""
+format = "[ ╼╾](blu_2) [$output]($style)"
 
 
 [custom.golang]
