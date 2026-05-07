@@ -7,6 +7,7 @@ return {
 	"cssls",
 	"html",
 	"jsonls",
+	"yamlls",
 	"dockerls",
 	"docker_compose_language_service",
 	"emmet_ls",

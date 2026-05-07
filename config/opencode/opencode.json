@@ -4,6 +4,41 @@
   "enabled_providers": ["anthropic", "openai"],
   "share": "manual",
   "snapshot": true,
+  "lsp": {
+    "css": {
+      "command": ["vscode-css-language-server", "--stdio"],
+      "extensions": [".css", ".scss"]
+    },
+    "html": {
+      "command": ["vscode-html-language-server", "--stdio"],
+      "extensions": [".html"]
+    },
+    "json": {
+      "command": ["vscode-json-language-server", "--stdio"],
+      "extensions": [".json", ".jsonc"]
+    },
+    "marksman": {
+      "command": ["marksman", "server"],
+      "extensions": [".md", ".mdx"]
+    },
+    "tailwindcss": {
+      "command": ["tailwindcss-language-server", "--stdio"],
+      "extensions": [".html", ".css", ".js", ".jsx", ".ts", ".tsx"]
+    },
+    "taplo": {
+      "command": ["taplo", "lsp", "stdio"],
+      "extensions": [".toml"]
+    },
+    "yaml-ls": {
+      "command": ["yaml-language-server", "--stdio"],
+      "extensions": [".yaml", ".yml"]
+    }
+  },
+  "formatter": {
+    "prettier": {
+      "disabled": true
+    }
+  },
   "plugin": [
     "file:///home/cullyn/dotfiles/config/opencode/plugins/hyprd-notify.js"
   ],

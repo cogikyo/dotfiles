@@ -2,6 +2,7 @@
 Description=OpenCode shared backend
 
 [Service]
+Environment=PATH=/home/cullyn/.local/share/nvim/mason/bin:/home/cullyn/.local/bin:/home/cullyn/.cargo/bin:/home/cullyn/.go/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl:/usr/lib/rustup/bin
 ExecStart=/usr/bin/opencode serve --hostname 127.0.0.1 --port 4096
 Restart=on-failure
 RestartSec=2
