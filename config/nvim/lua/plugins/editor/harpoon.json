@@ -4,17 +4,15 @@
     "/home/cullyn/LeadPier": {
       "pins": [
         "pier/README.md",
-        "pier/context/AGENTS.md",
         "backend/core/staging-backend/docker-compose.yml",
         "backend/core/runner/core.go"
       ]
     },
     "/home/cullyn/LeadPier/backend": {
       "pins": [
+        "services/partner/init.partner.go",
         "services/notify/init.notify.go",
-        "services/compliance/init.compliance.go",
-        "services/partner/feedback/init.feedback.go",
-        "services/partner/init.partner.go"
+        "services/compliance/init.compliance.go"
       ]
     },
     "/home/cullyn/LeadPier/frontend": {

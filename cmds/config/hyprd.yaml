@@ -131,7 +131,7 @@ tabs:
       - name: be-nvim
         title: "«   »"
         command: nvim
-        cwd: "~/LeadPier/backend"
+        cwd: "~/LeadPier/backend/services"
         actions:
           nvim: {}
       - name: pier
