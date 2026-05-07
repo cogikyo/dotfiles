@@ -88,7 +88,7 @@ func (d *Daemon) Run() error {
 
 	// eww startup can take seconds; don't block signal handling.
 	go func() {
-		if result := d.openWindows(); result != "" {
+		if result := d.openWindows(true); result != "" {
 			fmt.Printf("ewwd: %s\n", result)
 		}
 	}()
@@ -152,7 +152,9 @@ func (d *Daemon) handleCommand(command string) string {
 		}
 		return result
 	case "open":
-		return d.openWindows()
+		return d.openWindows(true)
+	case "restore":
+		return d.openWindows(false)
 	case "action":
 		actionParts := strings.Fields(arg)
 		if len(actionParts) == 0 {
@@ -197,8 +199,8 @@ func (d *Daemon) handleAction(providerName string, args []string) string {
 	return fmt.Sprintf("error: unknown provider: %s", providerName)
 }
 
-// openWindows ensures the eww daemon is running, reloads config, and opens configured windows.
-func (d *Daemon) openWindows() string {
+// openWindows ensures the eww daemon is running and opens configured windows.
+func (d *Daemon) openWindows(reload bool) string {
 	d.openMu.Lock()
 	defer d.openMu.Unlock()
 
@@ -235,8 +237,10 @@ func (d *Daemon) openWindows() string {
 		}
 	}
 
-	exec.Command("eww", "reload").Run()
 	exec.Command("eww", "close-all").Run()
+	if reload {
+		exec.Command("eww", "reload").Run()
+	}
 
 	args := append([]string{"open-many"}, windows...)
 	if err := exec.Command("eww", args...).Run(); err != nil {

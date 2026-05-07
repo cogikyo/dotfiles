@@ -269,7 +269,7 @@ func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) {
 	EnsureBG(&cfg.Background)
 	// Reopen via running ewwd; if gone, respawn (fresh daemon auto-opens windows).
 	if exec.Command("ewwd", "status").Run() == nil {
-		exec.Command("ewwd", "open").Start()
+		exec.Command("ewwd", "restore").Start()
 	} else {
 		cmd := exec.Command("setsid", "ewwd")
 		cmd.Stdin = nil
