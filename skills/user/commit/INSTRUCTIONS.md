@@ -288,6 +288,9 @@ git commit -m "fix(nvim/lsp): correct handler registration"
 
 Commit with body:
 
+Use a single message string for the entire body.
+Do not pass one `-m` per bullet, because Git inserts a blank paragraph between every `-m` flag.
+
 ```bash
 git commit -m "$(cat <<'EOF'
 verb(scope): short summary
