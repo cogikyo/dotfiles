@@ -182,7 +182,7 @@ STEP_DEFS=(
     "hibernate|Configure swapfile and suspend-then-hibernate|yes|"
     "fonts|Extract fonts and optionally build Iosevka|no|"
     "go|Build Go binaries (dctl, hyprd, ewwd, statusline, newtab)|no|"
-    "vpn|Import decrypted NetworkManager VPN profiles|yes|secrets,go"
+    "vpn|Load decrypted NetworkManager VPN profiles|yes|secrets,go"
     "eww|Install eww widget system|no|"
     "firefox|Configure Firefox profile, theme, and preferences|no|repos"
     "shell|Change default shell to zsh|yes|"
@@ -1220,6 +1220,7 @@ step_system() {
         ["sddm.conf.d/autologin.conf"]="/etc/sddm.conf.d/autologin.conf"
         ["sddm.conf.d/hyprland.desktop"]="/etc/sddm.conf.d/hyprland.desktop"
         ["pam.d/hyprlock"]="/etc/pam.d/hyprlock"
+        ["polkit-1/rules.d/49-networkmanager-cullyn.rules"]="/etc/polkit-1/rules.d/49-networkmanager-cullyn.rules"
         ["systemd/resolved.conf"]="/etc/systemd/resolved.conf"
         ["systemd/sleep.conf.d/hibernate.conf"]="/etc/systemd/sleep.conf.d/hibernate.conf"
         ["systemd/hibernate-zram.conf"]="/etc/systemd/system/systemd-hibernate.service.d/zram.conf"
@@ -1976,10 +1977,10 @@ healthcheck_go() {
 # =================================================================================================
 
 # =================================================================================================
-#  STEP {VPN}: Import decrypted NetworkManager VPN profiles  {{{
+#  STEP {VPN}: Load decrypted NetworkManager VPN profiles  {{{
 
 step_vpn() {
-    header "Importing VPN profiles"
+    header "Loading VPN profiles"
 
     needs_sudo
     has nmcli || { err "nmcli not found. Install NetworkManager first."; return 1; }
@@ -1993,13 +1994,9 @@ step_vpn() {
 healthcheck_vpn() {
     has nmcli || return "$STEP_SKIPPED_RC"
 
-    local profile="$HOME/.local/share/dotfiles/vpn/work.nmconnection"
-    [[ -f "$profile" ]] || return "$STEP_SKIPPED_RC"
-
-    if ! nmcli connection show Trend &>/dev/null; then
-        err "Healthcheck failed: missing NetworkManager VPN connection 'Trend'"
-        return 1
-    fi
+    local hyprd="$HOME/.local/bin/hyprd"
+    [[ -x "$hyprd" ]] || return "$STEP_SKIPPED_RC"
+    "$hyprd" vpn list >/dev/null
     return 0
 }
 

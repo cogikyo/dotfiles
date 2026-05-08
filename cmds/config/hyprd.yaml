@@ -201,9 +201,7 @@ bluetooth:
 # ╰───────────────────────────────────────────────────────────────────────────────╯
 vpn:
   connections:
-    trend:
-      name: Trend
-      type: l2tp
+    Trend:
       profile: ~/.local/share/dotfiles/vpn/work.nmconnection
 
 # ╭───────────────────────────────────────────────────────────────────────────────╮

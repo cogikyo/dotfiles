@@ -294,10 +294,11 @@ Screenshot:
   hyprd screenshot annotate     Region screenshot → satty annotation → clipboard
 
 VPN:
-  hyprd vpn trend               Toggle configured NetworkManager VPN alias
-  hyprd vpn trend up|down       Connect/disconnect explicitly
-  hyprd vpn install [trend]     Replace/import staged .nmconnection profiles
-  hyprd vpn export trend        Export NetworkManager profile to staged file
+  hyprd vpn Trend               Toggle configured NetworkManager VPN connection
+  hyprd vpn Trend up|down       Connect/disconnect explicitly
+  hyprd vpn install [Trend]     Load staged .nmconnection profiles
+  hyprd vpn install Trend --reset-secrets
+  hyprd vpn export Trend        Export NetworkManager profile to staged file
 
 Notifications:
   hyprd notify hook claude <event>     Read Claude hook JSON from stdin

@@ -26,16 +26,14 @@ type HyprConfig struct {
 	Sessions   SessionsConfig        `yaml:"sessions"`
 }
 
-// VPNConfig maps portable aliases to local NetworkManager connection profiles.
+// VPNConfig lists NetworkManager VPN profiles that can be loaded from secrets.
 type VPNConfig struct {
 	Connections map[string]VPNConnection `yaml:"connections"`
 }
 
 // VPNConnection describes a NetworkManager VPN profile managed by hyprd.
 type VPNConnection struct {
-	Name    string `yaml:"name"`    // NetworkManager connection name
-	Type    string `yaml:"type"`    // nmcli import type, e.g. l2tp, openvpn, wireguard
-	Profile string `yaml:"profile"` // staged import/export file under $HOME
+	Profile string `yaml:"profile"` // staged NetworkManager keyfile under $HOME
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮

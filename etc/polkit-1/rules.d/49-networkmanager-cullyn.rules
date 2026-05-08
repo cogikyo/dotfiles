@@ -1,0 +1,5 @@
+polkit.addRule(function(action, subject) {
+  if (subject.user == "cullyn" && action.id == "org.freedesktop.NetworkManager.network-control") {
+    return polkit.Result.YES;
+  }
+});

@@ -253,18 +253,19 @@ hyprd notify kitty-finish <command>   # emit kitty command-finish notification
 ### VPN
 
 ```bash
-hyprd vpn trend            # toggle configured NetworkManager VPN alias
-hyprd vpn trend up|down    # connect/disconnect explicitly
-hyprd vpn trend status     # status for one alias/connection
-hyprd vpn install trend    # import staged .nmconnection into NetworkManager
-hyprd vpn install          # import all configured staged VPN profiles
-hyprd vpn install trend --no-replace
-hyprd vpn export trend     # export NetworkManager profile to staged file
+hyprd vpn Trend            # toggle configured NetworkManager VPN connection
+hyprd vpn Trend up|down    # connect/disconnect explicitly
+hyprd vpn Trend status     # status for one connection
+hyprd vpn install Trend    # load staged .nmconnection into NetworkManager
+hyprd vpn install          # load all configured staged VPN profiles
+hyprd vpn install Trend --no-replace
+hyprd vpn install Trend --reset-secrets
+hyprd vpn export Trend     # export NetworkManager profile to staged file
 hyprd vpn status           # active VPN summary
 hyprd vpn list             # list NetworkManager VPN connections
 ```
 
-VPN aliases live in `config/hyprd.yaml` under `vpn.connections`. Importable profiles are staged under `~/.local/share/dotfiles/vpn/` and should be encrypted through `etc/secrets`; live imported connections and keyring passwords stay in NetworkManager.
+Configured VPN profile paths live in `config/hyprd.yaml` under `vpn.connections`. Profiles are staged under `~/.local/share/dotfiles/vpn/` and should be encrypted through `etc/secrets`; `hyprd vpn install` prompts for a missing VPN password, updates the staged profile from NetworkManager, and then expects `secrets sync --force` to encrypt it.
 
 ### Query and subscribe
 

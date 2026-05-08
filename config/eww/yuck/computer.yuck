@@ -20,7 +20,7 @@
 )
 
 (defvar network-hover false)
-(defvar vpn-name "work")
+(defvar vpn-name "Trend")
 
 (defwidget network []
   (eventbox
