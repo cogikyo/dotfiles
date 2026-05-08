@@ -28,8 +28,11 @@ return {
 		local function hunk_edge(direction) return direction == "next" and "first" or "last" end
 
 		local function diff_hunk_key(direction) return direction == "next" and "]h" or "[h" end
+		local function show_hunk_linehl() gitsigns.toggle_linehl(true) end
 
 		local function nav_hunk(direction)
+			show_hunk_linehl()
+
 			if vim.wo.diff then
 				vim.cmd.normal({ diff_hunk_key(direction), bang = true })
 				return
@@ -130,6 +133,8 @@ return {
 		end
 
 		local function nav_hunk_all_files(direction)
+			show_hunk_linehl()
+
 			local start_win = api.nvim_get_current_win()
 			local start_buf = api.nvim_get_current_buf()
 			local start_line = api.nvim_win_get_cursor(start_win)[1]
