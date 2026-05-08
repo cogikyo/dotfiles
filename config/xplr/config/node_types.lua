@@ -23,7 +23,7 @@ local node_types = {
 			["*"] = meta(" ", "Green"),
 		},
 		application = {
-			["*"] = meta("󰶭 ", "Yellow"),
+			["*"] = meta("󰶭 ", "Green"),
 		},
 		text = {
 			["*"] = meta(" ", "White"),
