@@ -108,9 +108,6 @@ local function setup()
 	end)
 
 	require("nvim-ts-autotag").setup()
-	require("treesitter-context").setup()
-	vim.api.nvim_set_hl(0, "TreesitterContext", { link = "Folded" })
-	vim.api.nvim_set_hl(0, "TreesitterContextLineNumber", { link = "Folded" })
 end
 
 return {
@@ -120,7 +117,6 @@ return {
 	build = ":TSUpdate",
 	dependencies = {
 		{ "nvim-treesitter/nvim-treesitter-textobjects", branch = "main" },
-		"nvim-treesitter/nvim-treesitter-context",
 		"windwp/nvim-ts-autotag",
 	},
 	config = setup,
