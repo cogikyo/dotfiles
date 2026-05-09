@@ -23,7 +23,7 @@ permission:
     "*": ask
     "pwd": allow
     "ls*": allow
-    "rg *": allow
+    "rg *": deny
     "git diff*": allow
     "git status*": allow
     "git log*": allow
@@ -44,10 +44,10 @@ permission:
     "zsh -n *": allow
     "node --check *": allow
     "jq *": allow
-    "../skills/user/review/scripts/review-scope.sh*": allow
-    "skills/user/review/scripts/review-scope.sh*": allow
-    "./skills/user/review/scripts/review-scope.sh*": allow
-    "/home/cullyn/dotfiles/skills/user/review/scripts/review-scope.sh*": allow
+    "../skills/review/scripts/review-scope.sh*": allow
+    "skills/review/scripts/review-scope.sh*": allow
+    "./skills/review/scripts/review-scope.sh*": allow
+    "/home/cullyn/dotfiles/skills/review/scripts/review-scope.sh*": allow
   todowrite: deny
   task: deny
 color: info
@@ -68,7 +68,7 @@ Answer concisely, and only make comment improvements when they are small and cle
 
 Scribe does not own a review script.
 If documentation automation is needed, propose changes under the `scribe` skill instead.
-Look for areas of self-improvement, suggest ways to improve review script functionality under `skills/user/review/scripts/`, and raise script, skill, or permission improvements to the orchestrator or user when they would make future reviews easier.
+Look for areas of self-improvement, suggest ways to improve review script functionality under `skills/review/scripts/`, and raise script, skill, or permission improvements to the orchestrator or user when they would make future reviews easier.
 If a needed command or permission is unavailable, classify it as one-off risky, recurring safe friction, or unclear before asking.
 If recurring safe friction is in scope for dotfiles agent-system work, apply the smallest source-of-truth skill, prompt, or permission update yourself.
 If the same permission would be useful in future scribe reviews but agent-system edits are out of scope, explicitly suggest the permission rule to add.

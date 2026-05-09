@@ -682,14 +682,14 @@ step_link() {
         [[ "$(canonpath "$src")" == "$(canonpath "$dst")" ]]
     }
 
-    ensure_user_skills_linked() {
+    ensure_skills_linked() {
         local skills_output
 
         if [[ "$skills_linked" -eq 1 ]]; then
             return 0
         fi
 
-        if ! skills_output=$("$DOTFILES/skills/link.sh" user 2>&1); then
+        if ! skills_output=$("$DOTFILES/skills/learn/scripts/link.sh" 2>&1); then
             err "Linking skills failed"
             [[ -n "$skills_output" ]] && printf '%s\n' "$skills_output" >&2
             return 1
@@ -722,7 +722,7 @@ step_link() {
 
     info "Linking shared agent skills..."
     step "Linking skills"
-    ensure_user_skills_linked
+    ensure_skills_linked
 
     # Claude: partial linking
     info "Linking claude settings and global instructions..."

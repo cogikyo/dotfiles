@@ -10,7 +10,7 @@ Run linter on all skills: `scripts/audit.sh`
 
 Or lint a specific skill by name: `scripts/audit.sh learn`
 
-Reports pass/fail for each skill in `user/` and `project/`, plus:
+Reports pass/fail for each immediate skill directory under `skills/`, plus:
 - Per-check status (`✔`, `✖`, faint `->` for skip)
 - Compact per-check metadata (counts/limits/context), including command lists for command-sync
 
@@ -18,19 +18,15 @@ Reports pass/fail for each skill in `user/` and `project/`, plus:
 
 ### `/learn new`
 
-**1. Ask scope:**
+**1. Choose name:**
 
-- **user** → `~/dotfiles/skills/user/<name>/`
-- **project** → `~/dotfiles/skills/project/<name>/`
+- Skill path → `~/dotfiles/skills/<name>/`
 
-After creating, link them:
-
-- user skills: `~/dotfiles/skills/link.sh user`
-- project skills (inside a project): `~/dotfiles/skills/link.sh project <name>`
+After creating, run `~/dotfiles/skills/learn/scripts/link.sh` if compatibility links need refreshing.
 
 OpenCode is the primary consumer.
-User skills are loaded through OpenCode's configured `skills.paths`, which should point at `~/dotfiles/skills/user`.
-Do not generate OpenCode command files for user skills.
+Skills are loaded through OpenCode's configured `skills.paths`, which should point at `~/dotfiles/skills`.
+Do not generate OpenCode command files for skills.
 Slash-command behavior should live in skill instructions, not in local generated command prompts.
 
 **2. Gather requirements:**
@@ -64,13 +60,13 @@ After creating, run: `scripts/audit.sh <skill-name>`
 
 This validates:
 
-- Correct path depth (user/\<name\> or project/\<name\>, not nested)
+- Correct path depth (`skills/\<name\>`, not nested)
 - Required files exist (SKILL.md, INSTRUCTIONS.md)
 - SKILL.md stays lean (<30 lines, <200 words)
 - YAML frontmatter present
 - No forbidden files (README.md, etc.)
 - Slash-command list stays in sync across SKILL.md and INSTRUCTIONS.md (when both define command docs)
-- User skills are available through OpenCode built-in discovery paths or an explicit `skills.paths` override
+- OpenCode config has `skills.paths` pointing at `~/dotfiles/skills`
 
 ---
 
@@ -79,7 +75,7 @@ This validates:
 **1. Identify skill:**
 
 - User specifies skill name, OR
-- Use `AskUserQuestion` to ask which skill to edit
+- Ask the user which skill to edit
 
 **2. Read current state:**
 

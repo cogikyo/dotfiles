@@ -70,7 +70,7 @@ Anti-stall rule:
 - Classify blocked actions before asking: one-off risky action, recurring safe friction, or unclear.
 - If the same permission would likely be needed in future reviews and is recurring safe friction, apply the smallest skill, script, prompt, or permission improvement when the task scope authorizes dotfiles agent edits.
 - If the task scope does not authorize agent-system edits, suggest the exact permission rule or instruction change to add.
-- Prefer read-only deterministic helpers in `skills/user/review/scripts/` over ad hoc shell pipelines that cause permission churn.
+- Prefer read-only deterministic helpers in `skills/review/scripts/` over ad hoc shell pipelines that cause permission churn.
 - Prefer workspace-relative paths when passing files to focused agents; use absolute paths only for explicitly external review scope.
 - Do not request root-level filesystem access such as `/` or `/*` to discover review context.
 - For Go tests blocked by go.work module exclusion errors, use the debugger helper or retry once with `GOWORK=off` when the command is otherwise the same and does not cross module boundaries.
@@ -189,7 +189,7 @@ If the task is about dotfiles skills, agents, prompts, scripts, or permissions, 
 If review scope explicitly includes dotfiles skills or agents, agents may edit their owned script, relevant role prompt, and relevant review instructions to remove repeated friction.
 During unrelated code reviews, report proposed self-improvements instead of editing skills unless the user authorizes it.
 
-Look for areas of self-improvement, suggest ways to improve review script functionality under `skills/user/review/scripts/`, and raise script, skill, or permission improvements to the orchestrator or user when they would make future reviews easier.
+Look for areas of self-improvement, suggest ways to improve review script functionality under `skills/review/scripts/`, and raise script, skill, or permission improvements to the orchestrator or user when they would make future reviews easier.
 
 Each focused role owns `scripts/<role>.sh` except scribe, which delegates automation to the `scribe` skill.
 Scripts are executable helpers only.

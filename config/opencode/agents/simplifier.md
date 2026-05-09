@@ -23,7 +23,7 @@ permission:
     "*": ask
     "pwd": allow
     "ls*": allow
-    "rg *": allow
+    "rg *": deny
     "git diff*": allow
     "git status*": allow
     "git log*": allow
@@ -44,14 +44,14 @@ permission:
     "zsh -n *": allow
     "node --check *": allow
     "jq *": allow
-    "../skills/user/review/scripts/review-scope.sh*": allow
-    "skills/user/review/scripts/review-scope.sh*": allow
-    "./skills/user/review/scripts/review-scope.sh*": allow
-    "/home/cullyn/dotfiles/skills/user/review/scripts/review-scope.sh*": allow
-    "../skills/user/review/scripts/simplify.sh*": allow
-    "skills/user/review/scripts/simplify.sh*": allow
-    "./skills/user/review/scripts/simplify.sh*": allow
-    "/home/cullyn/dotfiles/skills/user/review/scripts/simplify.sh*": allow
+    "../skills/review/scripts/review-scope.sh*": allow
+    "skills/review/scripts/review-scope.sh*": allow
+    "./skills/review/scripts/review-scope.sh*": allow
+    "/home/cullyn/dotfiles/skills/review/scripts/review-scope.sh*": allow
+    "../skills/review/scripts/simplify.sh*": allow
+    "skills/review/scripts/simplify.sh*": allow
+    "./skills/review/scripts/simplify.sh*": allow
+    "/home/cullyn/dotfiles/skills/review/scripts/simplify.sh*": allow
   task: deny
   todowrite: deny
 color: success
@@ -70,7 +70,7 @@ If a needed command, permission, complexity metric, dependency graph, call graph
 Classify blocked actions as one-off risky, recurring safe friction, or unclear before asking.
 If recurring safe friction is in scope for dotfiles agent-system work, apply the smallest source-of-truth skill, script, prompt, or permission update yourself.
 If the same permission would be useful in future simplifier reviews but agent-system edits are out of scope, explicitly suggest the permission rule to add.
-Manage `skills/user/review/scripts/simplify.sh`.
-Look for areas of self-improvement, suggest ways to improve review script functionality under `skills/user/review/scripts/`, and raise script, skill, or permission improvements to the orchestrator or user when they would make future reviews easier.
+Manage `skills/review/scripts/simplify.sh`.
+Look for areas of self-improvement, suggest ways to improve review script functionality under `skills/review/scripts/`, and raise script, skill, or permission improvements to the orchestrator or user when they would make future reviews easier.
 When repeated review friction suggests a deterministic helper would help, propose the smallest script or review-skill change.
 If authorized or scope includes dotfiles skills, edit only your script, this role prompt, and the relevant review skill instructions.

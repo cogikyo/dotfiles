@@ -23,7 +23,7 @@ permission:
     "*": ask
     "pwd": allow
     "ls*": allow
-    "rg *": allow
+    "rg *": deny
     "git diff*": allow
     "git status*": allow
     "git log*": allow
@@ -44,10 +44,10 @@ permission:
     "zsh -n *": allow
     "node --check *": allow
     "jq *": allow
-    "../skills/user/review/scripts/*": allow
-    "skills/user/review/scripts/*": allow
-    "./skills/user/review/scripts/*": allow
-    "/home/cullyn/dotfiles/skills/user/review/scripts/*": allow
+    "../skills/review/scripts/*": allow
+    "skills/review/scripts/*": allow
+    "./skills/review/scripts/*": allow
+    "/home/cullyn/dotfiles/skills/review/scripts/*": allow
   task:
     "*": deny
     debugger: allow

@@ -76,6 +76,7 @@
     "doom_loop": "ask",
     "bash": {
       "*": "allow",
+      "rg *": "deny",
       "rm -r *": "deny",
       "rm -R *": "deny",
       "rm -f -r *": "deny",
@@ -137,7 +138,7 @@
     }
   },
   "skills": {
-    "paths": ["{env:HOME}/dotfiles/skills/user"]
+    "paths": ["{env:HOME}/dotfiles/skills"]
   },
   "compaction": {
     "auto": true,
