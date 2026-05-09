@@ -178,7 +178,7 @@ STEP_DEFS=(
     "link|Symlink configs and scripts|no|"
     "secrets|Decrypt age-encrypted secrets to target paths|no|"
     "repos|Clone repositories and create directories|no|secrets"
-    "system|Install system configs and enable services|yes|"
+    "system|Install system configs and enable services|yes|link"
     "hibernate|Configure swapfile and suspend-then-hibernate|yes|"
     "fonts|Extract fonts and optionally build Iosevka|no|"
     "go|Build Go binaries (dctl, hyprd, ewwd, statusline, newtab)|no|"
@@ -476,10 +476,19 @@ sync_ignorepkg() {
     ok "IgnorePkg synced ($(wc -w <<< "$pkgs") packages)"
 }
 
+same_system_file() {
+    local src="$1"
+    local dst="$2"
+
+    [[ -f "$dst" ]] || return 1
+    diff -q "$src" "$dst" &>/dev/null || sudo cmp -s "$src" "$dst"
+}
+
 install_opencode_user_service() {
     local src="$DOTFILES/config/systemd/user/opencode.service"
     local dst_dir="$HOME/.config/systemd/user"
     local dst="$dst_dir/opencode.service"
+    local changed=0
 
     [[ -f "$src" ]] || return 0
 
@@ -490,17 +499,22 @@ install_opencode_user_service() {
 
     mkdir -p "$dst_dir"
 
-    if [[ ! -L "$dst" || "$(canonpath "$dst")" != "$(canonpath "$src")" ]]; then
+    if [[ -e "$dst" && "$dst" -ef "$src" ]]; then
+        :
+    elif [[ ! -L "$dst" || "$(canonpath "$dst")" != "$(canonpath "$src")" ]]; then
         ln -sfn "$src" "$dst"
         ok "opencode user service linked"
+        changed=1
     fi
 
     systemctl --user daemon-reload
 
     if systemctl --user is-active opencode.service &>/dev/null; then
-        info "Restarting opencode.service with resource limits..."
-        systemctl --user restart opencode.service
-        ok "opencode.service restarted"
+        if (( changed )); then
+            info "Restarting opencode.service with resource limits..."
+            systemctl --user restart opencode.service
+            ok "opencode.service restarted"
+        fi
     else
         ok "opencode.service installed (will start with hyprd)"
     fi
@@ -886,11 +900,6 @@ healthcheck_link() {
         return 1
     }
     ((checked_entries++))
-    [[ -d "$HOME/.agents/skills" ]] || {
-        err "Healthcheck failed: ~/.agents/skills is missing"
-        return 1
-    }
-    ((checked_entries++))
     verify_link_mapping "$DOTFILES/config/zsh/zshrc" "$HOME/.zshrc" || {
         err "Healthcheck failed: ~/.zshrc is not linked"
         return 1
@@ -1223,6 +1232,9 @@ step_system() {
         ["systemd/resolved.conf"]="/etc/systemd/resolved.conf"
         ["systemd/sleep.conf.d/hibernate.conf"]="/etc/systemd/sleep.conf.d/hibernate.conf"
         ["systemd/hibernate-zram.conf"]="/etc/systemd/system/systemd-hibernate.service.d/zram.conf"
+        ["systemd/system.conf.d/cpu-lanes.conf"]="/etc/systemd/system.conf.d/cpu-lanes.conf"
+        ["systemd/bluetooth.service.d/cpu-lane.conf"]="/etc/systemd/system/bluetooth.service.d/cpu-lane.conf"
+        ["systemd/rtkit-daemon.service.d/cpu-lane.conf"]="/etc/systemd/system/rtkit-daemon.service.d/cpu-lane.conf"
         ["security/faillock.conf"]="/etc/security/faillock.conf"
         ["loader.conf"]="/boot/loader/loader.conf"
         ["logid.cfg"]="/etc/logid.cfg"
@@ -1251,7 +1263,7 @@ step_system() {
         dst_dir=$(dirname "$dst_path")
         [[ -d "$dst_dir" ]] || sudo mkdir -p "$dst_dir"
 
-        if [[ -f "$dst_path" ]] && diff -q "$src_path" "$dst_path" &>/dev/null; then
+        if same_system_file "$src_path" "$dst_path"; then
             ((skipped++))
             continue
         fi
@@ -1274,6 +1286,13 @@ step_system() {
     fi
 
     ok "Installed $installed system configs ($skipped already up to date)"
+
+    if [[ $chroot_mode -eq 1 ]]; then
+        warn "Skipping systemd daemon-reload in chroot"
+    else
+        info "Reloading systemd units..."
+        sudo systemctl daemon-reload
+    fi
 
     sync_ignorepkg
 
@@ -1355,6 +1374,9 @@ healthcheck_system() {
         "/etc/pam.d/hyprlock"
         "/etc/systemd/resolved.conf"
         "/etc/systemd/sleep.conf.d/hibernate.conf"
+        "/etc/systemd/system.conf.d/cpu-lanes.conf"
+        "/etc/systemd/system/bluetooth.service.d/cpu-lane.conf"
+        "/etc/systemd/system/rtkit-daemon.service.d/cpu-lane.conf"
         "/etc/logid.cfg"
         "/etc/systemd/system/logid.service.d/restart.conf"
         "/etc/systemd/system/logid-restart.service"

@@ -46,6 +46,13 @@ chpwd() {
     lsd
 }
 
+autoload -Uz add-zsh-hook
+
+command_output_spacer() {
+    print
+}
+add-zsh-hook preexec command_output_spacer
+
 # ╭──────────────────────────────────────────────────────────────────────────╮
 # │ Aliases                                                                  │
 # ╰──────────────────────────────────────────────────────────────────────────╯

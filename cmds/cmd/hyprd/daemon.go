@@ -33,6 +33,8 @@ const SocketPath = "/tmp/hyprd.sock"
 // stateFile is the one-shot handoff used by `hyprd rebuild` before execing the new binary.
 const stateFile = "/tmp/hyprd-state.json"
 
+const computeCPUs = "0-6,8-14,16-1023"
+
 // ╭──────────────────────────────────────────────────────────────────────────────╮
 // │ Daemon                                                                       │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
@@ -378,7 +380,7 @@ func (d *Daemon) handleRebuild() string {
 		return fmt.Sprintf("error: install dir: %v", err)
 	}
 
-	cmd := exec.Command("go", "build", "-o", tmpBin, "./cmd/hyprd")
+	cmd := exec.Command("taskset", "-c", computeCPUs, "go", "build", "-o", tmpBin, "./cmd/hyprd")
 	cmd.Dir = srcDir
 	if out, err := cmd.CombinedOutput(); err != nil {
 		os.Remove(tmpBin)

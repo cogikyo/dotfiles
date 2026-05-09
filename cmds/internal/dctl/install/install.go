@@ -98,7 +98,7 @@ var stepDefs = []StepDef{
 	{Name: "link", Description: "Symlink configs and scripts", Risk: "home symlink changes", FixCommand: "dctl install link --dry-run", SupportsDryRun: true},
 	{Name: "secrets", Description: "Decrypt age-encrypted secrets", Risk: "writes secret targets", FixCommand: "dctl secrets decrypt --dry-run"},
 	{Name: "repos", Description: "Clone repositories and create directories", Risk: "network and filesystem changes", FixCommand: "dctl repos sync", Depends: []string{"secrets"}},
-	{Name: "system", Description: "Install system configs and enable services", Risk: "writes /etc, /boot, and service state", FixCommand: "dctl install system --dry-run", Sudo: true, SupportsDryRun: true},
+	{Name: "system", Description: "Install system configs and enable services", Risk: "writes /etc, /boot, and service state", FixCommand: "dctl install system --dry-run", Sudo: true, SupportsDryRun: true, Depends: []string{"link"}},
 	{Name: "hibernate", Description: "Configure swapfile and suspend-then-hibernate", Risk: "modifies swap, fstab, boot loader, and initramfs", FixCommand: "dctl install hibernate --dry-run", Sudo: true, SupportsDryRun: true},
 	{Name: "fonts", Description: "Extract fonts and optionally build Iosevka", Risk: "writes user font cache", FixCommand: "dctl install fonts --dry-run", SupportsDryRun: true},
 	{Name: "go", Description: "Build Go binaries", Risk: "writes built binaries and user services", FixCommand: "dctl install go --dry-run", SupportsDryRun: true},
@@ -730,6 +730,9 @@ var systemFiles = map[string]string{
 	"systemd/resolved.conf":                                   "/etc/systemd/resolved.conf",
 	"systemd/sleep.conf.d/hibernate.conf":                     "/etc/systemd/sleep.conf.d/hibernate.conf",
 	"systemd/hibernate-zram.conf":                             "/etc/systemd/system/systemd-hibernate.service.d/zram.conf",
+	"systemd/system.conf.d/cpu-lanes.conf":                    "/etc/systemd/system.conf.d/cpu-lanes.conf",
+	"systemd/bluetooth.service.d/cpu-lane.conf":               "/etc/systemd/system/bluetooth.service.d/cpu-lane.conf",
+	"systemd/rtkit-daemon.service.d/cpu-lane.conf":            "/etc/systemd/system/rtkit-daemon.service.d/cpu-lane.conf",
 	"security/faillock.conf":                                  "/etc/security/faillock.conf",
 	"loader.conf":                                             "/boot/loader/loader.conf",
 	"logid.cfg":                                               "/etc/logid.cfg",
@@ -761,7 +764,7 @@ func installSystem(ctx context.Context, root paths.Root, out *output.Printer, op
 			out.Warn("Source missing: %s", src)
 			continue
 		}
-		if sameFileBytes(src, dst) {
+		if sameSystemFileBytes(ctx, runner, src, dst) {
 			skipped++
 			continue
 		}
@@ -779,6 +782,9 @@ func installSystem(ctx context.Context, root paths.Root, out *output.Printer, op
 	out.OK("Installed %d system configs (%d already up to date)", installed, skipped)
 	if opts.DryRun {
 		return nil
+	}
+	if _, err := runner.Run(ctx, "", "sudo", "systemctl", "daemon-reload"); err != nil {
+		return err
 	}
 	var failures []string
 	for _, svc := range []string{"bluetooth", "sddm", "earlyoom", "logid", "tailscaled"} {
@@ -964,6 +970,14 @@ func sameFileBytes(a, b string) bool {
 	}
 	bb, err := os.ReadFile(b)
 	return err == nil && string(ab) == string(bb)
+}
+
+func sameSystemFileBytes(ctx context.Context, runner execx.Runner, a, b string) bool {
+	if sameFileBytes(a, b) {
+		return true
+	}
+	_, err := runner.Run(ctx, "", "sudo", "cmp", "-s", a, b)
+	return err == nil
 }
 
 func ensureSwapSubvolume(ctx context.Context, runner execx.Runner, rootDev, rootUUID string) error {
