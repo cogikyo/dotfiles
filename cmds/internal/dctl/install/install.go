@@ -726,7 +726,6 @@ var systemFiles = map[string]string{
 	"udev/91-logid-restart.rules":                             "/etc/udev/rules.d/91-logid-restart.rules",
 	"udev/92-viia.rules":                                      "/etc/udev/rules.d/92-viia.rules",
 	"sddm.conf.d/autologin.conf":                              "/etc/sddm.conf.d/autologin.conf",
-	"sddm.conf.d/hyprland.desktop":                            "/etc/sddm.conf.d/hyprland.desktop",
 	"pam.d/hyprlock":                                          "/etc/pam.d/hyprlock",
 	"systemd/resolved.conf":                                   "/etc/systemd/resolved.conf",
 	"systemd/sleep.conf.d/hibernate.conf":                     "/etc/systemd/sleep.conf.d/hibernate.conf",
