@@ -14,4 +14,4 @@ Manage code comments and documentation with a consistent style guide.
 - `/scribe update` - Update/add comments for a set of files (free rein)
 - `/scribe question` - Answer a question about code, clean up comments along the way
 
-Read `INSTRUCTIONS.md` for full guidance.
+Read `/home/cullyn/dotfiles/skills/scribe/INSTRUCTIONS.md` before executing.

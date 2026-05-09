@@ -22,4 +22,4 @@ Review code changes or code areas with explicit scope control, focused criticism
 - `/review simplify` - Simplicity and complexity review
 - `/review scribe` - Documentation and comment review
 
-Read `INSTRUCTIONS.md` for full guidance.
+Read `/home/cullyn/dotfiles/skills/review/INSTRUCTIONS.md` before executing.

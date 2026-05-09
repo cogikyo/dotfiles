@@ -76,7 +76,7 @@
     "doom_loop": "ask",
     "bash": {
       "*": "allow",
-      "rg *": "deny",
+      "rg *": "ask",
       "rm -r *": "deny",
       "rm -R *": "deny",
       "rm -f -r *": "deny",

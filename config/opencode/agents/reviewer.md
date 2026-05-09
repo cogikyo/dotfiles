@@ -23,7 +23,7 @@ permission:
     "*": ask
     "pwd": allow
     "ls*": allow
-    "rg *": deny
+    "rg *": ask
     "git diff*": allow
     "git status*": allow
     "git log*": allow

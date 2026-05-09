@@ -55,6 +55,14 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 - Guard against silent removal; before removing behavior, confirm it is truly unused and comment on your decision to delete.
 - Surface prompt conflicts instead of silently deferring; state the conflict, then follow the highest-priority applicable instruction.
 
+## Tool Discipline
+
+- Never run noisy or unbounded shell `rg` from a broad or uncertain root such as `/`, `$HOME`, `/home/cullyn`, `.`, or an unverified current directory.
+- Use `Glob`, `Grep`, or `Read` for bounded searches in known project paths.
+- For system/process debugging, constrain `rg` to a specific subtree or file set and use `--no-messages` or `-s` so permission-denied spam does not flood context.
+- If exploration needs broad discovery, delegate it to the `explore` subagent with an explicit scope and thoroughness level.
+- If a shell search is still necessary, first verify the working directory and constrain the command with includes, excludes, or a specific subdirectory.
+
 ## Permission Friction
 
 - When a permission blocks useful work, classify it before asking: one-off risky action, recurring safe friction, or unclear.

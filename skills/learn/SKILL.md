@@ -13,4 +13,4 @@ Create skills to extend agent capabilities with specialized knowledge and workfl
 - `/learn edit` - Edit an existing skill
 - `/learn audit` - Lint all skills
 
-Read `INSTRUCTIONS.md` for full guidance.
+Read `/home/cullyn/dotfiles/skills/learn/INSTRUCTIONS.md` before executing.
