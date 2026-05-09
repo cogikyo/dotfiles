@@ -79,6 +79,54 @@ map("n", "<leader>gy", 'mlgg"+yG`lzvzt', desc("Yank file to clipboard"))
 map("n", "<leader>wd", "dt<space>", desc("Delete word"))
 map("x", "<leader>p", '"_dP', desc("Paste (preserve register)"))
 
+local function markdown_html_to_clipboard(lines)
+	if vim.fn.executable("pandoc") == 0 then
+		vim.notify("pandoc is required for Markdown rich copy", vim.log.levels.ERROR)
+		return
+	end
+	if vim.fn.executable("wl-copy") == 0 then
+		vim.notify("wl-copy is required for Markdown rich copy", vim.log.levels.ERROR)
+		return
+	end
+
+	local markdown = table.concat(lines, "\n")
+	vim.fn.setreg("+", markdown)
+	local pandoc = vim.system({ "pandoc", "--from", "gfm", "--to", "html" }, { stdin = markdown, text = true }):wait()
+	if pandoc.code ~= 0 then
+		vim.notify("pandoc failed: " .. vim.trim(pandoc.stderr or ""), vim.log.levels.ERROR)
+		return
+	end
+
+	vim.system({ "wl-copy", "--type", "text/html" }, { stdin = pandoc.stdout, text = true }, function(copy)
+		vim.schedule(function()
+			if copy.code ~= 0 then
+				vim.notify("wl-copy failed: " .. vim.trim(copy.stderr or ""), vim.log.levels.ERROR)
+				return
+			end
+
+			vim.notify("Yanked Markdown as rich HTML", vim.log.levels.INFO)
+		end)
+	end)
+end
+
+local function yank_markdown_html_selection()
+	local start_line = vim.fn.line("'<")
+	local end_line = vim.fn.line("'>")
+	if start_line > end_line then
+		start_line, end_line = end_line, start_line
+	end
+
+	local lines = vim.api.nvim_buf_get_lines(0, start_line - 1, end_line, false)
+	markdown_html_to_clipboard(lines)
+end
+
+local function yank_markdown_html_buffer()
+	markdown_html_to_clipboard(vim.api.nvim_buf_get_lines(0, 0, -1, false))
+end
+
+map("x", "<leader>mh", yank_markdown_html_selection, desc("Yank Markdown as rich HTML"))
+map("n", "<leader>mH", yank_markdown_html_buffer, desc("Yank file as rich HTML"))
+
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ context: yank with file path prepended                                      │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
