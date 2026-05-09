@@ -1,3 +1,5 @@
 [user]
 	email = cullyn@trendcapital.com
 	signingkey = ~/.ssh/trend.pub
+[core]
+	sshCommand = ssh -o IdentitiesOnly=yes -o BatchMode=yes -o PreferredAuthentications=publickey -o PasswordAuthentication=no -i ~/.ssh/trend

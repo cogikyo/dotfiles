@@ -21,5 +21,9 @@
 	path = ~/.config/git/config-mac ; macOS key paths differ
 [includeIf "hasconfig:remote.*.url:git@git.linecode.dev:*/**"]
 	path = ~/.config/git/config-work
+[includeIf "hasconfig:remote.*.url:https://git.linecode.dev/**"]
+	path = ~/.config/git/config-work
 [includeIf "hasconfig:remote.*.url:git@git.trendcapital.io:*/**"]
+	path = ~/.config/git/config-work
+[includeIf "hasconfig:remote.*.url:https://git.trendcapital.io/**"]
 	path = ~/.config/git/config-work
