@@ -44,6 +44,7 @@ permission:
     "zsh -n *": allow
     "node --check *": allow
     "jq *": allow
+    "../skills/user/review/scripts/*": allow
     "skills/user/review/scripts/*": allow
     "./skills/user/review/scripts/*": allow
     "/home/cullyn/dotfiles/skills/user/review/scripts/*": allow

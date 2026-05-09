@@ -44,9 +44,11 @@ permission:
     "zsh -n *": allow
     "node --check *": allow
     "jq *": allow
+    "../skills/user/review/scripts/review-scope.sh*": allow
     "skills/user/review/scripts/review-scope.sh*": allow
     "./skills/user/review/scripts/review-scope.sh*": allow
     "/home/cullyn/dotfiles/skills/user/review/scripts/review-scope.sh*": allow
+    "../skills/user/review/scripts/profiler.sh*": allow
     "skills/user/review/scripts/profiler.sh*": allow
     "./skills/user/review/scripts/profiler.sh*": allow
     "/home/cullyn/dotfiles/skills/user/review/scripts/profiler.sh*": allow
