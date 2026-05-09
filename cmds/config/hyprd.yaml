@@ -164,7 +164,7 @@ tabs:
           git: {}
         layout: "fat:bias=80"
         panes:
-          - command: "pier reload"
+          - command: ""
             cwd: "~/LeadPier/backend/core/runner"
 
 # ╭───────────────────────────────────────────────────────────────────────────────╮
