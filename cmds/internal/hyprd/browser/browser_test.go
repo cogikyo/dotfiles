@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"dotfiles/cmds/internal/config"
@@ -422,6 +423,104 @@ func TestBuildSessionPayloadPreservesCollapsedGroups(t *testing.T) {
 	group := doc.Windows[0].Groups[0]
 	if group.ID != "grp-local" || group.Name != "local" || group.Color != "blue" || !group.Collapsed {
 		t.Fatalf("group = %+v, want collapsed local group", group)
+	}
+}
+
+func TestBuildCombinedSessionPayloadIncludesAllSnapshotWindows(t *testing.T) {
+	first := writeTestSnapshot(t, "Coms", []browserTabSummary{
+		{Position: 1, Title: "Pinned", URL: "https://chat.example.com", Pinned: true},
+		{Position: 2, Title: "Slack", URL: "https://slack.example.com"},
+	})
+	second := writeTestSnapshot(t, "LeadPier", []browserTabSummary{
+		{Position: 1, Title: "LeadPier", URL: "https://leadpier.example.com", GroupID: "grp-work", Group: "work", GroupColor: "blue", Collapsed: true},
+	})
+
+	payload, err := buildCombinedSessionPayload([]string{first, second})
+	if err != nil {
+		t.Fatalf("buildCombinedSessionPayload returned error: %v", err)
+	}
+
+	var doc struct {
+		Windows []struct {
+			Tabs []struct {
+				Pinned bool `json:"pinned"`
+			} `json:"tabs"`
+			Groups []struct {
+				Name      string `json:"name"`
+				Collapsed bool   `json:"collapsed"`
+			} `json:"groups"`
+		} `json:"windows"`
+	}
+	if err := json.Unmarshal(payload, &doc); err != nil {
+		t.Fatalf("unmarshal payload: %v", err)
+	}
+	if got, want := len(doc.Windows), 2; got != want {
+		t.Fatalf("window count = %d, want %d", got, want)
+	}
+	if !doc.Windows[0].Tabs[0].Pinned {
+		t.Fatalf("first window pinned tab was not preserved")
+	}
+	if got := doc.Windows[1].Groups; len(got) != 1 || got[0].Name != "work" || !got[0].Collapsed {
+		t.Fatalf("second window groups = %+v, want collapsed work group", got)
+	}
+}
+
+func TestRestoreConfiguredSnapshotsUsesSharedDefaultProfile(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_STATE_HOME", filepath.Join(home, ".state"))
+
+	firefoxDir := filepath.Join(home, ".mozilla", "firefox")
+	defaultProfile := filepath.Join(firefoxDir, "default-release")
+	if err := os.MkdirAll(defaultProfile, 0o755); err != nil {
+		t.Fatalf("mkdir default profile: %v", err)
+	}
+	profilesINI := "[Profile0]\nName=dev-edition-default\nIsRelative=1\nPath=default-release\nDefault=1\n"
+	if err := os.WriteFile(filepath.Join(firefoxDir, "profiles.ini"), []byte(profilesINI), 0o644); err != nil {
+		t.Fatalf("write profiles.ini: %v", err)
+	}
+
+	snapshotRoot := filepath.Join(home, "dotfiles", "cmds", "internal", "hyprd", "browser", "sessions", "coms")
+	writeSnapshotSummary(t, snapshotRoot, browserSnapshotSummary{
+		Name:    "coms",
+		Profile: browserProfileSummary{Name: "hyprd-coms", Path: filepath.Join(home, ".state", "hyprd", "firefox-profiles", "coms")},
+		Window:  browserSnapshotWindow{SelectedTab: 1, SelectedTitle: "Coms"},
+		Tabs:    []browserTabSummary{{Position: 1, Title: "Coms", URL: "https://chat.example.com"}},
+	})
+
+	out, err := (&Browser{}).RestoreConfiguredSnapshots([]config.BrowserConfig{{Snapshot: "coms"}}, true)
+	if err != nil {
+		t.Fatalf("RestoreConfiguredSnapshots returned error: %v", err)
+	}
+	if !strings.Contains(out, defaultProfile) {
+		t.Fatalf("dry-run output %q does not use shared default profile %q", out, defaultProfile)
+	}
+	if isDir(filepath.Join(home, ".state", "hyprd", "firefox-profiles", "coms")) {
+		t.Fatalf("managed profile directory was created during shared restore")
+	}
+}
+
+func writeTestSnapshot(t *testing.T, title string, tabs []browserTabSummary) string {
+	t.Helper()
+	dir := t.TempDir()
+	writeSnapshotSummary(t, dir, browserSnapshotSummary{
+		Window: browserSnapshotWindow{SelectedTab: 1, SelectedTitle: title},
+		Tabs:   tabs,
+	})
+	return dir
+}
+
+func writeSnapshotSummary(t *testing.T, dir string, summary browserSnapshotSummary) {
+	t.Helper()
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir snapshot: %v", err)
+	}
+	data, err := yaml.Marshal(summary)
+	if err != nil {
+		t.Fatalf("marshal snapshot: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "snapshot.yaml"), data, 0o644); err != nil {
+		t.Fatalf("write snapshot: %v", err)
 	}
 }
 

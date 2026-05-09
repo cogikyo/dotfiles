@@ -13,10 +13,10 @@ import (
 	"net"
 	"os"
 	"sort"
-	"strconv"
 	"time"
 
 	"dotfiles/cmds/internal/config"
+	"dotfiles/cmds/internal/hyprd/browser"
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
 )
@@ -87,18 +87,24 @@ func (i *Init) Execute() (string, error) {
 	}
 
 	layout := NewLayout(i.hypr, i.state)
-	var initWS []int
+	var initSessions []config.Session
 	for _, s := range cfg.Sessions {
 		if s.Init {
-			initWS = append(initWS, s.Workspace)
+			initSessions = append(initSessions, s)
 		}
 	}
-	sort.Ints(initWS)
+	sort.Slice(initSessions, func(a, b int) bool {
+		return initSessions[a].Workspace < initSessions[b].Workspace
+	})
 
-	for _, ws := range initWS {
-		result, err := layout.Execute(strconv.Itoa(ws))
+	if err := layout.restoreInitBrowsers(initSessions); err != nil {
+		return "", fmt.Errorf("browser restore: %w", err)
+	}
+
+	for _, session := range initSessions {
+		result, err := layout.openSession(session)
 		if err != nil {
-			fmt.Printf("hyprd init: ws%d: %v\n", ws, err)
+			fmt.Printf("hyprd init: ws%d: %v\n", session.Workspace, err)
 		} else {
 			fmt.Printf("hyprd init: %s\n", result)
 		}
@@ -114,6 +120,33 @@ func (i *Init) Execute() (string, error) {
 
 	fmt.Println("hyprd init: complete")
 	return "init: complete", nil
+}
+
+func (l *Layout) restoreInitBrowsers(sessions []config.Session) error {
+	var browserConfigs []config.BrowserConfig
+	var browserSessions []config.Session
+	b := browser.NewBrowser(l.hypr, l.state)
+	for _, session := range sessions {
+		if session.Browser.Snapshot == "" || !b.UsesExactRestore(session.Browser) {
+			continue
+		}
+		browserConfigs = append(browserConfigs, session.Browser)
+		browserSessions = append(browserSessions, session)
+	}
+	if len(browserConfigs) == 0 {
+		return nil
+	}
+
+	if _, err := b.RestoreConfiguredSnapshots(browserConfigs, false); err != nil {
+		return err
+	}
+	l.markBatchRestoredBrowsers(browserSessions)
+	for _, session := range browserSessions {
+		if err := l.claimBrowserWindow(b, session); err != nil {
+			fmt.Fprintf(os.Stderr, "init: claim browser window for %s: %v\n", session.Name, err)
+		}
+	}
+	return nil
 }
 
 func (i *Init) waitNetwork(timeout int) bool {

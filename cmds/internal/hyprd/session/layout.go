@@ -25,8 +25,9 @@ const (
 
 // Layout opens and arranges per-workspace sessions defined in config.
 type Layout struct {
-	hypr  *hypr.Client
-	state *state.State
+	hypr                  *hypr.Client
+	state                 *state.State
+	batchRestoredBrowsers map[string]struct{}
 }
 
 func NewLayout(h *hypr.Client, s *state.State) *Layout {
@@ -132,6 +133,9 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 	cfg := l.state.GetConfig()
 	for _, c := range clients {
 		if c.Workspace.ID == s.Workspace && !c.Pinned && !windows.IsIgnored(c.Class) {
+			if preserveSessionBrowserWindow(s, c) {
+				continue
+			}
 			l.hypr.Dispatch(fmt.Sprintf("closewindow address:%s", c.Address))
 		}
 	}
@@ -239,19 +243,40 @@ func (l *Layout) launchSessionBrowser(s config.Session) error {
 	b := browser.NewBrowser(l.hypr, l.state)
 
 	if b.UsesExactRestore(s.Browser) {
-		// Exact restores use a per-session Firefox profile, so existing windows can be claimed across restarts.
-		if err := l.claimManagedBrowserWindow(b, s); err == nil {
+		if err := l.claimBrowserWindow(b, s); err == nil {
 			return nil
 		}
-		if _, err := b.RestoreConfiguredSnapshotForSession(s.Name, s.Browser, false); err != nil {
+		if l.browserRestoredInBatch(s.Name) {
+			return fmt.Errorf("browser window for batch-restored session %q was not found", s.Name)
+		}
+		if _, err := b.RestoreConfiguredSnapshot(s.Browser, false); err != nil {
 			return err
 		}
-		if err := l.claimManagedBrowserWindow(b, s); err != nil {
+		if err := l.claimBrowserWindow(b, s); err != nil {
 			fmt.Fprintf(os.Stderr, "layout: claim browser window for %s: %v\n", s.Name, err)
 		}
 		return nil
 	}
 	return l.launchSessionBrowserURLs(b, s)
+}
+
+func preserveSessionBrowserWindow(s config.Session, c hypr.Window) bool {
+	if s.Browser.Snapshot == "" || !strings.Contains(strings.ToLower(c.Class), "firefox") {
+		return false
+	}
+	return true
+}
+
+func (l *Layout) markBatchRestoredBrowsers(sessions []config.Session) {
+	l.batchRestoredBrowsers = make(map[string]struct{}, len(sessions))
+	for _, session := range sessions {
+		l.batchRestoredBrowsers[session.Name] = struct{}{}
+	}
+}
+
+func (l *Layout) browserRestoredInBatch(name string) bool {
+	_, ok := l.batchRestoredBrowsers[name]
+	return ok
 }
 
 func (l *Layout) launchSessionBrowserURLs(b *browser.Browser, s config.Session) error {
@@ -285,20 +310,6 @@ func (l *Layout) claimBrowserWindow(b *browser.Browser, s config.Session) error 
 	var lastErr error
 	for time.Now().Before(deadline) {
 		if err := b.ClaimWindow(s.Browser.Snapshot, s.Workspace); err == nil {
-			return nil
-		} else {
-			lastErr = err
-		}
-		time.Sleep(250 * time.Millisecond)
-	}
-	return lastErr
-}
-
-func (l *Layout) claimManagedBrowserWindow(b *browser.Browser, s config.Session) error {
-	deadline := time.Now().Add(sessionBrowserClaimTimeout)
-	var lastErr error
-	for time.Now().Before(deadline) {
-		if err := b.ClaimWindowForSession(s.Browser.Snapshot, s.Name, s.Browser, s.Workspace); err == nil {
 			return nil
 		} else {
 			lastErr = err

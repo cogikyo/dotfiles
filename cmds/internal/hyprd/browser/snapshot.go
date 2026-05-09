@@ -333,6 +333,38 @@ func buildSessionPayload(dir string) ([]byte, error) {
 	return json.MarshalIndent(session, "", "  ")
 }
 
+func buildCombinedSessionPayload(dirs []string) ([]byte, error) {
+	if len(dirs) == 0 {
+		return nil, fmt.Errorf("no browser snapshots to restore")
+	}
+
+	combined := map[string]any{
+		"version":        []any{"sessionrestore", 1},
+		"windows":        []any{},
+		"selectedWindow": 1,
+		"_closedWindows": []any{},
+	}
+	windows := make([]json.RawMessage, 0, len(dirs))
+	for _, dir := range dirs {
+		payload, err := buildSessionPayload(dir)
+		if err != nil {
+			return nil, err
+		}
+		var doc struct {
+			Windows []json.RawMessage `json:"windows"`
+		}
+		if err := json.Unmarshal(payload, &doc); err != nil {
+			return nil, fmt.Errorf("parse generated session for %s: %w", dir, err)
+		}
+		if len(doc.Windows) == 0 {
+			return nil, fmt.Errorf("snapshot %s generated no Firefox windows", dir)
+		}
+		windows = append(windows, doc.Windows...)
+	}
+	combined["windows"] = windows
+	return json.MarshalIndent(combined, "", "  ")
+}
+
 func readSnapshotSummary(dir string) (browserSnapshotSummary, error) {
 	data, err := os.ReadFile(filepath.Join(dir, "snapshot.yaml"))
 	if err != nil {

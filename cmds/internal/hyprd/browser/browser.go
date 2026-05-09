@@ -176,6 +176,38 @@ func (b *Browser) RestoreConfiguredSnapshot(cfg config.BrowserConfig, dryRun boo
 	return b.restoreSnapshotExact(cfg.Snapshot, dir, profile, browserForce(cfg), dryRun)
 }
 
+// RestoreConfiguredSnapshots restores multiple exact snapshot layouts into one shared Firefox profile.
+func (b *Browser) RestoreConfiguredSnapshots(configs []config.BrowserConfig, dryRun bool) (string, error) {
+	if len(configs) == 0 {
+		return "", fmt.Errorf("no browser snapshots to restore")
+	}
+
+	dirs := make([]string, 0, len(configs))
+	for _, cfg := range configs {
+		if !b.UsesExactRestore(cfg) {
+			return "", fmt.Errorf("browser restore mode %q is not exact", browserMode(cfg))
+		}
+		if cfg.Snapshot == "" {
+			return "", fmt.Errorf("browser exact restore requires snapshot")
+		}
+		dir, _, err := b.loadSnapshotSession(cfg.Snapshot)
+		if err != nil {
+			return "", err
+		}
+		dirs = append(dirs, dir)
+	}
+
+	profile, err := sharedRestoreProfile(configs)
+	if err != nil {
+		return "", err
+	}
+	payload, err := buildCombinedSessionPayload(dirs)
+	if err != nil {
+		return "", err
+	}
+	return b.injectAndLaunch(payload, profile, true, dryRun)
+}
+
 // RestoreConfiguredSnapshotForSession exact-restores cfg.Snapshot into a hyprd-managed per-session profile.
 func (b *Browser) RestoreConfiguredSnapshotForSession(sessionName string, cfg config.BrowserConfig, dryRun bool) (string, error) {
 	if !b.UsesExactRestore(cfg) {
@@ -194,6 +226,23 @@ func (b *Browser) RestoreConfiguredSnapshotForSession(sessionName string, cfg co
 		return "", err
 	}
 	return b.restoreSnapshotExactManaged(cfg.Snapshot, dir, profile, browserForce(cfg), dryRun)
+}
+
+func sharedRestoreProfile(configs []config.BrowserConfig) (firefoxProfile, error) {
+	selector := ""
+	for _, cfg := range configs {
+		if strings.TrimSpace(cfg.Profile) == "" {
+			continue
+		}
+		if selector == "" {
+			selector = cfg.Profile
+			continue
+		}
+		if cfg.Profile != selector {
+			return firefoxProfile{}, fmt.Errorf("browser batch restore requires one shared Firefox profile, got %q and %q", selector, cfg.Profile)
+		}
+	}
+	return discoverFirefoxProfile(selector)
 }
 
 func (b *Browser) executeWindows(args []string) (string, error) {
