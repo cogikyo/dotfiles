@@ -8,7 +8,7 @@ return {
 				regenerate_cgo = true,
 				run_govulncheck = true,
 				test = true,
-				tidy = true,
+				tidy = false,
 				upgrade_dependency = true,
 				vendor = true,
 			},

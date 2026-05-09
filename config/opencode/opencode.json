@@ -5,6 +5,15 @@
   "share": "manual",
   "snapshot": true,
   "lsp": {
+    "gopls": {
+      "command": ["gopls"],
+      "extensions": [".go"],
+      "initialization": {
+        "codelenses": {
+          "tidy": false
+        }
+      }
+    },
     "css": {
       "command": ["vscode-css-language-server", "--stdio"],
       "extensions": [".css", ".scss"]
