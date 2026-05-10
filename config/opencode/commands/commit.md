@@ -1,1 +1,1 @@
-../../../skills/user/commit/SKILL.md
+/home/cullyn/dotfiles/skills/commit/SKILL.md

@@ -6,4 +6,7 @@ invocation: user
 
 Invoke with `/commit`, `/commit quick`, or when committing is requested.
 
-Read `/home/cullyn/dotfiles/skills/commit/INSTRUCTIONS.md` before executing. Do not proceed with default commit behavior.
+If session already in progress, likely means to commit only work relevant to the sesion.
+If no extra provided, usually means to commit everything.
+
+Read `/home/cullyn/dotfiles/skills/commit/INSTRUCTIONS.md` before executing.

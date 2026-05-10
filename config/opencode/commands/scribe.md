@@ -1,1 +1,1 @@
-../../../skills/user/scribe/SKILL.md
+/home/cullyn/dotfiles/skills/scribe/SKILL.md

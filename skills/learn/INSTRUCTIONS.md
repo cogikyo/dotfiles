@@ -26,8 +26,9 @@ After creating, run `~/dotfiles/skills/learn/scripts/link.sh` if compatibility l
 
 OpenCode is the primary consumer.
 Skills are loaded through OpenCode's configured `skills.paths`, which should point at `~/dotfiles/skills`.
-Do not generate OpenCode command files for skills.
-Slash-command behavior should live in skill instructions, not in local generated command prompts.
+Keep `~/.config/opencode/skills` linked to `~/dotfiles/skills` too, because OpenCode also discovers that conventional global path directly.
+Keep OpenCode command files linked from `~/.config/opencode/commands/<name>.md` to `~/dotfiles/skills/<name>/SKILL.md` when a skill should be invokable as a slash command.
+This makes command edits write back to the skill source of truth.
 
 **2. Gather requirements:**
 
@@ -67,6 +68,8 @@ This validates:
 - No forbidden files (README.md, etc.)
 - Slash-command list stays in sync across SKILL.md and INSTRUCTIONS.md (when both define command docs)
 - OpenCode config has `skills.paths` pointing at `~/dotfiles/skills`
+- `~/.config/opencode/skills` resolves to `~/dotfiles/skills`
+- Top-level slash-command shims symlink to each matching SKILL.md under `~/.config/opencode/commands/`
 
 ---
 

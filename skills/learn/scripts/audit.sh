@@ -36,6 +36,9 @@ opencode_config_has_skills_path() {
 
 check_opencode_config() {
     local config_file="${OPENCODE_CONFIG_FILE:-$HOME/.config/opencode/opencode.json}"
+    local opencode_dir
+    opencode_dir="$(dirname "$config_file")"
+    local skills_link="$opencode_dir/skills"
 
     if opencode_config_has_skills_path; then
         eval "$1+=(\"pass|opencode-config|skills.paths includes $SKILLS_DIR\")"
@@ -46,6 +49,16 @@ check_opencode_config() {
         else
             eval "$1+=(\"fail|opencode-config|missing=$config_file\")"
         fi
+    fi
+
+    if [[ -L "$skills_link" && "$(readlink -f "$skills_link")" == "$SKILLS_DIR" ]]; then
+        eval "$1+=(\"pass|opencode-link|$skills_link -> $SKILLS_DIR\")"
+    elif [[ -e "$skills_link" && ! -L "$skills_link" ]]; then
+        ERRORS+=("OpenCode skills path is a real directory, expected symlink to $SKILLS_DIR: $skills_link")
+        eval "$1+=(\"fail|opencode-link|real directory at $skills_link\")"
+    else
+        ERRORS+=("OpenCode skills symlink missing or broken: $skills_link -> $SKILLS_DIR")
+        eval "$1+=(\"fail|opencode-link|missing or broken: $skills_link\")"
     fi
 }
 
@@ -135,8 +148,24 @@ lint_skill() {
         else
             check_lines+=("skip|commands-sync|SKILL=[$skill_cmds_joined] | INSTRUCTIONS=[$instruction_cmds_joined]")
         fi
+
+        local config_file="${OPENCODE_CONFIG_FILE:-$HOME/.config/opencode/opencode.json}"
+        local commands_dir
+        commands_dir="$(dirname "$config_file")/commands"
+        local command_file="$commands_dir/$skill_name.md"
+
+        if [[ ! -e "$command_file" ]]; then
+            ERRORS+=("Missing OpenCode command shim: $command_file")
+            check_lines+=("fail|command-shims|missing=$command_file")
+        elif [[ ! -L "$command_file" || "$(readlink -f "$command_file")" != "$SKILLS_DIR/$skill_name/SKILL.md" ]]; then
+            ERRORS+=("OpenCode command shim must symlink to matching SKILL.md: $command_file")
+            check_lines+=("fail|command-shims|invalid=$command_file")
+        else
+            check_lines+=("pass|command-shims|$command_file -> $SKILLS_DIR/$skill_name/SKILL.md")
+        fi
     else
         check_lines+=("skip|commands-sync|requires SKILL.md and INSTRUCTIONS.md")
+        check_lines+=("skip|command-shims|requires SKILL.md and INSTRUCTIONS.md")
     fi
 
     check_opencode_config check_lines

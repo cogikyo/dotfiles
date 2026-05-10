@@ -1,1 +1,1 @@
-../../../skills/user/review/SKILL.md
+/home/cullyn/dotfiles/skills/review/SKILL.md

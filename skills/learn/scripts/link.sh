@@ -41,6 +41,31 @@ link_compat_skills_dir() {
     info "$label skills -> $SKILLS_DIR"
 }
 
+link_opencode_commands() {
+    local commands_dir="$OPENCODE_DIR/commands"
+    mkdir -p "$commands_dir"
+
+    local skill_dir skill_name command_path target
+    for skill_dir in "$SKILLS_DIR"/*/; do
+        [[ -d "$skill_dir" && -f "$skill_dir/SKILL.md" ]] || continue
+
+        skill_name="$(basename "${skill_dir%/}")"
+        command_path="$commands_dir/$skill_name.md"
+        target="${skill_dir%/}/SKILL.md"
+
+        if [[ -e "$command_path" && ! -L "$command_path" ]] && ! grep -Fq "Load the \`$skill_name\` skill and execute \`/$skill_name \$ARGUMENTS\`." "$command_path"; then
+            warn "keeping real OpenCode command at $command_path"
+            continue
+        fi
+
+        rm -f "$command_path"
+        ln -s "$target" "$command_path"
+        info "OpenCode command /$skill_name -> $target"
+    done
+}
+
 ensure_opencode_config
+link_compat_skills_dir "OpenCode" "$OPENCODE_DIR"
+link_opencode_commands
 link_compat_skills_dir "Claude" "${CLAUDE_HOME:-$HOME/.claude}"
 link_compat_skills_dir "Claude config" "${CLAUDE_CONFIG_DIR:-$HOME/.config/claude}"
