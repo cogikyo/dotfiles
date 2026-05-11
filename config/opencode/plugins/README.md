@@ -20,6 +20,10 @@ Keep the context file path, schema, stale window, and Kitty socket probe here in
 It shows ChatGPT usage-limit windows only for OpenAI sessions.
 Its plugin ID is `cullyn.openai-quota-sidebar`.
 
+`opencode/markdown-context.tsx` is a TUI sidebar content section loaded by `tui.json`.
+It lists Markdown files backed by completed `read` tool calls.
+Its plugin ID is `opencode-markdown-context`.
+
 `opencode/statusline.tsx` is a TUI prompt wrapper loaded by `tui.json`.
 It injects statusline chrome into `session_prompt` while forwarding the real prompt props/ref unchanged.
 Its plugin ID is `opencode-statusline`.
@@ -87,6 +91,20 @@ Only `hint` is customized.
 The statusline intentionally omits provider, model, and effort because OpenCode already renders those in prompt metadata.
 It owns cwd, git status, and a Claude-style context pressure bar on the preview/status row.
 OpenCode's native prompt keeps numeric context usage and command-list keybind hints on the right side of that row.
+
+## Markdown Context Contract
+
+`opencode/markdown-context.tsx` is a trust surface, not a recommender.
+It must only show Markdown files that have hard evidence in the current session state.
+
+Read entries require a completed `read` tool part whose input contains a `.md`, `.mdx`, or `.markdown` path.
+Do not add inferred, discovered, grep-only, or path-proximity entries to this plugin.
+
+The global `~/.config/opencode/AGENTS.md` file is intentionally omitted because it is always loaded for this setup.
+The sidebar section is hidden until at least one Markdown read exists.
+
+Compacted read entries are still shown with a `C` marker when OpenCode marks the completed tool part that way.
+Fresh read entries use an `R` marker.
 
 ## Typechecking
 

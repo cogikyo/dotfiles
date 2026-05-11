@@ -4,6 +4,7 @@ import type {
   TuiPluginApi,
   TuiPluginModule,
 } from "@opencode-ai/plugin/tui";
+import { createTextAttributes } from "@opentui/core";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -17,6 +18,7 @@ const REFRESH_MS = 60_000;
 const BAR_WIDTH = 10;
 const DURATION_WIDTH = 7;
 const EXACT_WIDTH = 10;
+const BOLD = createTextAttributes({ bold: true });
 
 type AuthFile = {
   openai?: {
@@ -271,7 +273,7 @@ function UsagePanel(props: { api: TuiPluginApi; sessionID: string }) {
     <Show when={isVisible()}>
       <box flexDirection="column" gap={0} paddingLeft={1}>
         <box flexDirection="row" gap={0}>
-          <text fg={props.api.theme.current.text}>Usage Limits</text>
+          <text fg={props.api.theme.current.text} attributes={BOLD}>Usage Limits</text>
           <text fg={props.api.theme.current.textMuted}> [OpenAI]</text>
         </box>
         <For each={state().windows}>
