@@ -13,6 +13,8 @@ import (
 	"dotfiles/cmds/internal/config"
 )
 
+const bgStartTimeout = 2 * time.Second
+
 // BG manages a single mpvpaper wallpaper process.
 type BG struct {
 	cfg *config.BackgroundConfig
@@ -44,6 +46,9 @@ func (b *BG) ensure() (string, error) {
 	if err != nil {
 		return "", err
 	}
+	if !b.waitAlive(bgStartTimeout) {
+		return "", fmt.Errorf("bg: spawned on %s but IPC did not become ready", display)
+	}
 	return fmt.Sprintf("bg: spawned on %s", display), nil
 }
 
@@ -56,6 +61,17 @@ func (b *BG) isAlive() bool {
 	return true
 }
 
+func (b *BG) waitAlive(timeout time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if b.isAlive() {
+			return true
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	return b.isAlive()
+}
+
 func (b *BG) spawn() (string, error) {
 	v := &b.cfg.Wallpaper
 	display, err := b.resolveDisplay()
@@ -66,9 +82,12 @@ func (b *BG) spawn() (string, error) {
 	fullPath := videoPath + "/" + v.File
 	opts := fmt.Sprintf("--loop --input-ipc-server=%s --brightness=%d --contrast=%d --saturation=%d --hue=%d",
 		b.cfg.Socket, v.Brightness, v.Contrast, v.Saturation, v.Hue)
-	cmd := exec.Command("mpvpaper", "-o", opts, display, fullPath)
+	cmd := exec.Command("mpvpaper", "-p", "-o", opts, display, fullPath)
 	if err := cmd.Start(); err != nil {
 		return "", fmt.Errorf("start mpvpaper: %w", err)
+	}
+	if err := cmd.Process.Release(); err != nil {
+		return "", fmt.Errorf("release mpvpaper: %w", err)
 	}
 	return display, nil
 }
