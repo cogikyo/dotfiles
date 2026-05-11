@@ -20,6 +20,8 @@ type BG struct {
 	cfg *config.BackgroundConfig
 }
 
+const backgroundCPUs = "0-6,8-14,16-1023"
+
 func NewBG(cfg *config.BackgroundConfig) *BG {
 	return &BG{cfg: cfg}
 }
@@ -82,7 +84,7 @@ func (b *BG) spawn() (string, error) {
 	fullPath := videoPath + "/" + v.File
 	opts := fmt.Sprintf("--loop --input-ipc-server=%s --brightness=%d --contrast=%d --saturation=%d --hue=%d",
 		b.cfg.Socket, v.Brightness, v.Contrast, v.Saturation, v.Hue)
-	cmd := exec.Command("mpvpaper", "-p", "-o", opts, display, fullPath)
+	cmd := exec.Command("taskset", "-c", backgroundCPUs, "mpvpaper", "-p", "-o", opts, display, fullPath)
 	if err := cmd.Start(); err != nil {
 		return "", fmt.Errorf("start mpvpaper: %w", err)
 	}
