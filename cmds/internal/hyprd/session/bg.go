@@ -13,7 +13,11 @@ import (
 	"dotfiles/cmds/internal/config"
 )
 
-const bgStartTimeout = 2 * time.Second
+const (
+	bgStartTimeout     = 2 * time.Second
+	bgBootStartTimeout = 2 * time.Second
+	bgFrameSettle      = 250 * time.Millisecond
+)
 
 // BG manages a single mpvpaper wallpaper process.
 type BG struct {
@@ -30,7 +34,7 @@ func NewBG(cfg *config.BackgroundConfig) *BG {
 func (b *BG) Execute(mode string) (string, error) {
 	switch mode {
 	case "ensure":
-		return b.ensure()
+		return b.ensure(bgStartTimeout)
 	case "kill":
 		b.killAll()
 		return "bg: killed", nil
@@ -39,7 +43,7 @@ func (b *BG) Execute(mode string) (string, error) {
 	}
 }
 
-func (b *BG) ensure() (string, error) {
+func (b *BG) ensure(timeout time.Duration) (string, error) {
 	if b.isAlive() {
 		return "bg: running", nil
 	}
@@ -48,9 +52,10 @@ func (b *BG) ensure() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if !b.waitAlive(bgStartTimeout) {
+	if !b.waitAlive(timeout) {
 		return "", fmt.Errorf("bg: spawned on %s but IPC did not become ready", display)
 	}
+	time.Sleep(bgFrameSettle)
 	return fmt.Sprintf("bg: spawned on %s", display), nil
 }
 
@@ -134,7 +139,15 @@ func (b *BG) killAll() {
 }
 
 // EnsureBG spawns the wallpaper if not already running.
-func EnsureBG(cfg *config.BackgroundConfig) {
+func EnsureBG(cfg *config.BackgroundConfig) error {
 	bg := NewBG(cfg)
-	bg.Execute("ensure")
+	_, err := bg.Execute("ensure")
+	return err
+}
+
+// EnsureBGBoot waits long enough for cold-boot display and media startup before locking.
+func EnsureBGBoot(cfg *config.BackgroundConfig) error {
+	bg := NewBG(cfg)
+	_, err := bg.ensure(bgBootStartTimeout)
+	return err
 }

@@ -68,7 +68,9 @@ func (i *Init) Execute() (string, error) {
 	cfg := i.state.GetConfig()
 	init := cfg.Init
 
-	EnsureBG(&cfg.Background)
+	if err := EnsureBGBoot(&cfg.Background); err != nil {
+		return "", fmt.Errorf("background ready before lock: %w", err)
+	}
 	fmt.Println("hyprd init: background ready")
 
 	fullLocked := init.Lock && i.lock != nil

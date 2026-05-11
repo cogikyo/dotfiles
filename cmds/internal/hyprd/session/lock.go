@@ -248,7 +248,9 @@ func (l *Lock) enterBlackout() {
 // exitBlackout restores workspace, reopens eww/glava, reconnects bluetooth, and unpauses dunst.
 func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) {
 	cfg := l.state.GetConfig()
-	EnsureBG(&cfg.Background)
+	if err := EnsureBG(&cfg.Background); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd lock: background: %v\n", err)
+	}
 	l.hypr.Dispatch(fmt.Sprintf("workspace %d", saved.workspace))
 
 	dispatchStartup(l.hypr, cfg.Bluetooth)
