@@ -1,11 +1,17 @@
+// @ts-nocheck -- OpenCode plugin event types are incomplete; keep runtime behavior stable until local event types exist.
 import fs from "node:fs/promises"
+import {
+  ensureKittyContextDir,
+  isSocket,
+  KITTY_CONTEXT_LOCK_PATH,
+  KITTY_CONTEXT_PATH,
+  kittySocketPath,
+  STALE_CONTEXT_MS,
+} from "./context.ts"
 
-const CONTEXT_PATH = "/tmp/opencode-kitty-context.json"
-const LOCK_PATH = "/tmp/opencode-kitty-context.lock"
 const WRITE_INTERVAL_MS = 1000
 const LOCK_RETRY_MS = 25
 const LOCK_TIMEOUT_MS = 1000
-const STALE_CONTEXT_MS = 24 * 60 * 60 * 1000
 
 const KITTY_PID = Number(process.env.KITTY_PID) || 0
 const KITTY_WINDOW_ID = Number(process.env.KITTY_WINDOW_ID) || 0
@@ -14,19 +20,12 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-async function isSocket(path) {
-  try {
-    return (await fs.stat(path)).isSocket()
-  } catch {
-    return false
-  }
-}
-
 async function withLock(fn) {
+  await ensureKittyContextDir()
   const start = Date.now()
   while (true) {
     try {
-      await fs.mkdir(LOCK_PATH, { mode: 0o700 })
+      await fs.mkdir(KITTY_CONTEXT_LOCK_PATH, { mode: 0o700 })
       break
     } catch (error) {
       if (error?.code !== "EEXIST" || Date.now() - start > LOCK_TIMEOUT_MS) return fn()
@@ -37,13 +36,13 @@ async function withLock(fn) {
   try {
     return await fn()
   } finally {
-    await fs.rm(LOCK_PATH, { recursive: true, force: true })
+    await fs.rm(KITTY_CONTEXT_LOCK_PATH, { recursive: true, force: true })
   }
 }
 
 async function readContexts() {
   try {
-    const parsed = JSON.parse(await fs.readFile(CONTEXT_PATH, "utf8"))
+    const parsed = JSON.parse(await fs.readFile(KITTY_CONTEXT_PATH, "utf8"))
     return parsed && typeof parsed === "object" ? parsed : {}
   } catch {
     return {}
@@ -64,7 +63,7 @@ async function pruneContexts(contexts) {
 
     let exists = sockets.get(pid)
     if (exists === undefined) {
-      exists = await isSocket(`/tmp/kitty-${pid}`)
+      exists = await isSocket(kittySocketPath(pid))
       sockets.set(pid, exists)
     }
     if (!exists) delete contexts[sessionID]
@@ -86,7 +85,7 @@ async function clearPaneContext() {
       if (isThisPane(ctx)) delete contexts[id]
     }
 
-    await fs.writeFile(CONTEXT_PATH, JSON.stringify(contexts), { mode: 0o600 })
+    await fs.writeFile(KITTY_CONTEXT_PATH, JSON.stringify(contexts), { mode: 0o600 })
   })
 }
 
@@ -107,7 +106,7 @@ async function writeContext(sessionID) {
       updated_at: Date.now(),
     }
 
-    await fs.writeFile(CONTEXT_PATH, JSON.stringify(contexts), { mode: 0o600 })
+    await fs.writeFile(KITTY_CONTEXT_PATH, JSON.stringify(contexts), { mode: 0o600 })
   })
 }
 

@@ -49,7 +49,7 @@
     }
   },
   "plugin": [
-    "file:///home/cullyn/dotfiles/config/opencode/plugins/hyprd-notify.js"
+    "file:///home/cullyn/dotfiles/config/opencode/plugins/hyprd/notify.ts"
   ],
   "agent": {
     "build": {

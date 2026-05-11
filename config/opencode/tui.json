@@ -2,8 +2,9 @@
   "$schema": "https://opencode.ai/tui.json",
   "theme": "vagari",
   "plugin": [
-    "file:///home/cullyn/dotfiles/config/opencode/plugins/hyprd-kitty-context.js",
-    "file:///home/cullyn/dotfiles/config/opencode/plugins/openai-quota-sidebar/src/tui.tsx"
+    "file:///home/cullyn/dotfiles/config/opencode/plugins/hyprd/kitty.ts",
+    "file:///home/cullyn/dotfiles/config/opencode/plugins/openai/usage.tsx",
+    "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/statusline.tsx"
   ],
   "mouse": true,
   "diff_style": "auto",

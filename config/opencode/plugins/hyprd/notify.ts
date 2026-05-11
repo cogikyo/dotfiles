@@ -1,7 +1,7 @@
-import fs from "node:fs/promises"
+// @ts-nocheck -- OpenCode plugin event types are incomplete; keep runtime behavior stable until local event types exist.
+import { EMPTY_KITTY_CONTEXT, isSocket, KITTY_CONTEXT_PATH, kittySocketPath } from "./context.ts"
 
 const SOCKET_PATH = "/tmp/hyprd.sock"
-const KITTY_CONTEXT_PATH = "/tmp/opencode-kitty-context.json"
 
 const LIMITS = {
   id: 128,
@@ -14,6 +14,7 @@ const TODO_COMPLETE_DEBOUNCE_MS = 1500
 const COMPLETE_DEBOUNCE_MS = 500
 const PERMISSION_DEBOUNCE_MS = 1500
 const NOTIFY_DEDUPE_MS = 1000
+const START_TITLE_WAIT_MS = 300
 const IDLE_REMINDER_MS = 10 * 60 * 1000
 const IDLE_CONTEXT_MAX_AGE_MS = 30 * 1000
 
@@ -24,8 +25,18 @@ function cleanText(value, max = LIMITS.message) {
   return value.replace(/\s+/g, " ").trim().slice(0, max)
 }
 
+function cleanSessionTitle(value) {
+  const title = cleanText(value)
+  const normalized = cleanText(title.replace(/^New Session\s+-\s*/i, ""), LIMITS.id)
+  return !normalized || /^New Session$/i.test(normalized) ? "" : normalized
+}
+
+function startMessage(state) {
+  return state.title ? `Working on "${state.title}"` : "Working"
+}
+
 async function kittyContext(sessionID, parentFor) {
-  if (!sessionID) return { kitty_pid: 0, kitty_window_id: 0, updated_at: 0 }
+  if (!sessionID) return EMPTY_KITTY_CONTEXT
   try {
     const contexts = await Bun.file(KITTY_CONTEXT_PATH).json()
 
@@ -36,25 +47,17 @@ async function kittyContext(sessionID, parentFor) {
       const kitty_window_id = Number(ctx?.kitty_window_id) || 0
       const updated_at = Number(ctx?.updated_at) || 0
       if (!kitty_pid || !kitty_window_id) continue
-      if (!(await isSocket(`/tmp/kitty-${kitty_pid}`))) continue
+      if (!(await isSocket(kittySocketPath(kitty_pid)))) continue
       return { kitty_pid, kitty_window_id, updated_at }
     }
   } catch {
   }
 
-  return { kitty_pid: 0, kitty_window_id: 0, updated_at: 0 }
+  return EMPTY_KITTY_CONTEXT
 }
 
 function hasFreshIdleContext(ctx) {
   return ctx.updated_at > 0 && Date.now() - ctx.updated_at <= IDLE_CONTEXT_MAX_AGE_MS
-}
-
-async function isSocket(path) {
-  try {
-    return (await fs.stat(path)).isSocket()
-  } catch {
-    return false
-  }
 }
 
 async function send(command) {
@@ -127,10 +130,13 @@ function newSessionState() {
   return {
     active: false,
     seenAgentParts: new Set(),
+    assistantPartText: new Map(),
     todoStatuses: null,
     lastAssistantMessage: "",
     lastTodoCompletedAt: 0,
     completeTimer: null,
+    startTimer: null,
+    startNotified: false,
     idleTimer: null,
     lastPermissionAt: 0,
     lastPermissionMessage: "",
@@ -164,6 +170,34 @@ const server = async () => {
     state.idleTimer = null
   }
 
+  function clearStartNotify(state) {
+    clearTimeout(state.startTimer)
+    state.startTimer = null
+  }
+
+  async function sendStartNotify(sessionID, message) {
+    const state = sessions.get(sessionID)
+    if (!state?.active || state.startNotified) return
+
+    clearStartNotify(state)
+    state.startNotified = true
+    await sendNotify({
+      sessionID,
+      type: "start",
+      message: message || startMessage(state),
+    })
+  }
+
+  function scheduleStartNotify(sessionID) {
+    const state = sessions.get(sessionID)
+    if (!state?.active || state.startNotified || state.startTimer) return
+
+    state.startTimer = setTimeout(async () => {
+      state.startTimer = null
+      await sendStartNotify(sessionID)
+    }, START_TITLE_WAIT_MS)
+  }
+
   function scheduleIdleReminder(sessionID) {
     const state = sessions.get(sessionID)
     if (!state || state.active || state.idleTimer) return
@@ -190,6 +224,7 @@ const server = async () => {
       state.completeTimer = null
       if (!state.active) return
       state.active = false
+      clearStartNotify(state)
 
       if (Date.now() - state.lastTodoCompletedAt < TODO_COMPLETE_DEBOUNCE_MS) {
         scheduleIdleReminder(sessionID)
@@ -209,14 +244,32 @@ const server = async () => {
     }, COMPLETE_DEBOUNCE_MS)
   }
 
+  function updateAssistantPartText(state, partID, text) {
+    if (!partID) return
+
+    const message = cleanText(text)
+    if (!message) return
+
+    state.assistantPartText.set(partID, message)
+    state.lastAssistantMessage = message
+  }
+
   const handlers = {
+    "message.part.delta": async ({ sessionID, partID, field, delta }) => {
+      if (!sessionID || !partID || field !== "text" || typeof delta !== "string") return
+
+      const state = getSession(sessionID)
+      const text = (state.assistantPartText.get(partID) || "") + delta
+      updateAssistantPartText(state, partID, text)
+    },
+
     "message.part.updated": async ({ part }) => {
       if (!part?.sessionID || !part?.id) return
 
       const state = getSession(part.sessionID)
 
       if (part.type === "text" && part?.time?.end) {
-        state.lastAssistantMessage = cleanText(part.text)
+        updateAssistantPartText(state, part.id, part.text)
         return
       }
 
@@ -241,13 +294,13 @@ const server = async () => {
         clearTimeout(state.completeTimer)
         state.completeTimer = null
         clearIdleReminder(state)
+
         if (!state.active) {
           state.active = true
-          await sendNotify({
-            sessionID,
-            type: "start",
-            message: type === "retry" ? "Retrying" : "Working",
-          })
+          state.startNotified = false
+          if (type === "retry") await sendStartNotify(sessionID, "Retrying")
+          else if (state.title) await sendStartNotify(sessionID)
+          else scheduleStartNotify(sessionID)
         }
         return
       }
@@ -322,20 +375,22 @@ const server = async () => {
       }
     },
 
-    "session.created": ({ sessionID, info }) => {
+    "session.created": async ({ sessionID, info }) => {
       const id = sessionID || info?.id
       if (!id) return
       const state = getSession(id)
       state.parentID = typeof info?.parentID === "string" ? info.parentID : ""
-      state.title = cleanText(info?.title, LIMITS.id)
+      state.title = cleanSessionTitle(info?.title)
+      if (state.active && state.title && !state.startNotified) await sendStartNotify(id)
     },
 
-    "session.updated": ({ sessionID, info }) => {
+    "session.updated": async ({ sessionID, info }) => {
       const id = sessionID || info?.id
       if (!id) return
       const state = getSession(id)
       state.parentID = typeof info?.parentID === "string" ? info.parentID : ""
-      state.title = cleanText(info?.title, LIMITS.id)
+      state.title = cleanSessionTitle(info?.title)
+      if (state.active && state.title && !state.startNotified) await sendStartNotify(id)
     },
 
     "session.error": async ({ sessionID, error }) => {
@@ -345,6 +400,7 @@ const server = async () => {
         if (state) {
           clearTimeout(state.completeTimer)
           state.completeTimer = null
+          clearStartNotify(state)
           clearIdleReminder(state)
           state.active = false
         }
@@ -357,6 +413,7 @@ const server = async () => {
       const state = sessions.get(info.id)
       if (state) {
         clearTimeout(state.completeTimer)
+        clearStartNotify(state)
         clearIdleReminder(state)
       }
       sessions.delete(info.id)
