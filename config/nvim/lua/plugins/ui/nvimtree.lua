@@ -111,6 +111,16 @@ return {
 				})
 			end
 
+			local function copy_absolute_path_with_spacing()
+				local node = cursor_node()
+				if not node or not node.absolute_path then
+					return
+				end
+
+				vim.fn.setreg("+", node.absolute_path .. "\n\n")
+				vim.notify("Copied absolute path", vim.log.levels.INFO)
+			end
+
 			-- stylua: ignore start
 			-- navigation ──────────────────────────────────────────────────
 			map("<Up>",    function() vim.cmd("normal! k") end, "Up")
@@ -152,8 +162,8 @@ return {
 			-- copy paths ──────────────────────────────────────────────────
 			map("yp",      api.fs.copy.relative_path,        "Copy Relative Path")
 			map("yP",      api.fs.copy.absolute_path,        "Copy Absolute Path")
-			map("<A-f>",   api.fs.copy.absolute_path,        "Copy Absolute Path")
-			map("<A-F>",   api.fs.copy.absolute_path,        "Copy Absolute Path")
+			map("<A-f>",   copy_absolute_path_with_spacing,  "Copy Absolute Path")
+			map("<A-F>",   copy_absolute_path_with_spacing,  "Copy Absolute Path")
 
 			-- tree settings ───────────────────────────────────────────────
 			map("cd",      api.tree.change_root_to_node,     "CD")
