@@ -13,7 +13,7 @@
     "enabled": true
   },
   "keybinds": {
-    "leader": "ctrl+space",
+    "leader": "ctrl+l",
     "command_list": "<leader>l",
     "tool_details": "<leader>d",
     "model_list": "<leader>m",
