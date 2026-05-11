@@ -15,6 +15,7 @@ const COMPLETE_DEBOUNCE_MS = 500
 const PERMISSION_DEBOUNCE_MS = 1500
 const NOTIFY_DEDUPE_MS = 1000
 const START_TITLE_WAIT_MS = 300
+const NEW_SESSION_START_MESSAGE = "New Session started"
 const IDLE_REMINDER_MS = 10 * 60 * 1000
 const IDLE_CONTEXT_MAX_AGE_MS = 30 * 1000
 
@@ -28,11 +29,16 @@ function cleanText(value, max = LIMITS.message) {
 function cleanSessionTitle(value) {
   const title = cleanText(value)
   const normalized = cleanText(title.replace(/^New Session\s+-\s*/i, ""), LIMITS.id)
-  return !normalized || /^New Session$/i.test(normalized) ? "" : normalized
+  return isPlaceholderSessionTitle(normalized) ? "" : normalized
+}
+
+function isPlaceholderSessionTitle(value) {
+  const title = cleanText(value, LIMITS.id).toLowerCase()
+  return !title || title === "new session" || title === "session start info here"
 }
 
 function startMessage(state) {
-  return state.title ? `Working on "${state.title}"` : "Working"
+  return state.title ? `Working on "${state.title}"` : NEW_SESSION_START_MESSAGE
 }
 
 async function kittyContext(sessionID, parentFor) {

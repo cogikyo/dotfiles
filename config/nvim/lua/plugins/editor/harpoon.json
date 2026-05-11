@@ -15,6 +15,11 @@
         "services/compliance/init.compliance.go"
       ]
     },
+    "/home/cullyn/LeadPier/backend/services": {
+      "pins": [
+        "notify/init.notify.go"
+      ]
+    },
     "/home/cullyn/LeadPier/frontend": {
       "pins": [
         "packages/shared/src/realtime/client.ts",
