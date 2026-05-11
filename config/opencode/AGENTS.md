@@ -57,11 +57,9 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 
 ## Tool Discipline
 
-- Never run noisy or unbounded shell `rg` from a broad or uncertain root such as `/`, `$HOME`, `/home/cullyn`, `.`, or an unverified current directory.
-- Use `Glob`, `Grep`, or `Read` for bounded searches in known project paths.
-- For system/process debugging, constrain `rg` to a specific subtree or file set and use `--no-messages` or `-s` so permission-denied spam does not flood context.
-- If exploration needs broad discovery, delegate it to the `explore` subagent with an explicit scope and thoroughness level.
-- If a shell search is still necessary, first verify the working directory and constrain the command with includes, excludes, or a specific subdirectory.
+- Broad searches are allowed when broad discovery is the task, but suppress expected filesystem noise with `--no-messages` or `-s`.
+- If the target subtree is known, search that subtree directly instead of starting from `$HOME` and encoding the subtree in the pattern.
+- Prefer `Glob`, `Grep`, and `Read` for ordinary codebase search; use shell `rg` when flags, counts, archive output, or pipelines matter.
 
 ## Permission Friction
 
@@ -81,13 +79,6 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 - Leave things better when the improvement is meaningful and in scope.
 - Code should be idiomatic, well-documented when needed, and balanced between locality of behavior and separation of concerns.
 - Treat obsolete code, unnecessary dependencies, and vestigial architecture as debt worth calling out.
-
-## Python
-
-- Prefer `uv` for one-off Python scripts that need third-party packages.
-- Use `uv run --with <package>... python <script>` or `uv run --with <package>... python - <<'PY'` rather than installing packages into system Python.
-- Do not leave activated venvs behind; `uv run` should provide temporary execution while reusing uv's cache.
-- If a project already declares Python dependencies, use that project's `uv` workflow instead of ad-hoc `--with` packages.
 
 ## Comments And Prose
 
