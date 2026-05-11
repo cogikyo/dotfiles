@@ -122,6 +122,10 @@ func (l *Layout) listByWorkspace(sessions config.SessionsConfig) string {
 }
 
 func (l *Layout) openSession(s config.Session) (string, error) {
+	if err := validateSessionBrowser(s); err != nil {
+		return "", err
+	}
+
 	l.hypr.Dispatch(fmt.Sprintf("workspace %d", s.Workspace))
 	l.state.SetActiveSession(s.Workspace, s.Name)
 
@@ -133,7 +137,7 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 	cfg := l.state.GetConfig()
 	for _, c := range clients {
 		if c.Workspace.ID == s.Workspace && !c.Pinned && !windows.IsIgnored(c.Class) {
-			if preserveSessionBrowserWindow(s, c) {
+			if l.browserRestoredInBatch(s.Name) && preserveSessionBrowserWindow(s, c) {
 				continue
 			}
 			l.hypr.Dispatch(fmt.Sprintf("closewindow address:%s", c.Address))
@@ -249,7 +253,7 @@ func (l *Layout) launchSessionBrowser(s config.Session) error {
 		if l.browserRestoredInBatch(s.Name) {
 			return fmt.Errorf("browser window for batch-restored session %q was not found", s.Name)
 		}
-		if _, err := b.RestoreConfiguredSnapshot(s.Browser, false); err != nil {
+		if _, err := b.RestoreConfiguredSnapshotForSession(s.Name, s.Browser, false); err != nil {
 			return err
 		}
 		if err := l.claimBrowserWindow(b, s); err != nil {
@@ -257,7 +261,44 @@ func (l *Layout) launchSessionBrowser(s config.Session) error {
 		}
 		return nil
 	}
-	return l.launchSessionBrowserURLs(b, s)
+	return fmt.Errorf("session %q browser layout requires exact browser snapshot restore", s.Name)
+}
+
+func validateSessionBrowser(s config.Session) error {
+	if !sessionUsesBrowser(s) {
+		return nil
+	}
+	if strings.TrimSpace(s.Browser.Snapshot) == "" {
+		return fmt.Errorf("session %q browser layout requires explicit browser snapshot config", s.Name)
+	}
+	if !(&browser.Browser{}).UsesExactRestore(s.Browser) {
+		return fmt.Errorf("session %q browser layout requires exact browser snapshot restore", s.Name)
+	}
+	return nil
+}
+
+func validateBrowserBody(s config.Session) error {
+	return validateSessionBrowser(s)
+}
+
+func sessionUsesBrowser(s config.Session) bool {
+	if sessionBodyHasBrowser(s) {
+		return true
+	}
+	return s.Command != "" && (s.Browser.Snapshot != "" || len(s.Browser.AllURLs()) > 0)
+}
+
+func sessionBodyHasBrowser(s config.Session) bool {
+	for _, name := range s.Body {
+		if name == "browser" {
+			return true
+		}
+		tbw, ok := config.ThreeBody[name]
+		if ok && strings.Contains(strings.ToLower(tbw.Class), "firefox") {
+			return true
+		}
+	}
+	return false
 }
 
 func preserveSessionBrowserWindow(s config.Session, c hypr.Window) bool {
@@ -279,28 +320,6 @@ func (l *Layout) browserRestoredInBatch(name string) bool {
 	return ok
 }
 
-func (l *Layout) launchSessionBrowserURLs(b *browser.Browser, s config.Session) error {
-	tbw := config.ThreeBody["browser"]
-
-	browserCfg, err := b.ResolveLaunchConfig(s.Browser)
-	if err != nil {
-		return err
-	}
-	urls := browserCfg.AllURLs()
-	if len(urls) > 0 {
-		l.execOnWorkspace(s.Workspace, browserLaunchCmd(tbw.Command, "new-window", urls[0]))
-		time.Sleep(500 * time.Millisecond)
-		for _, url := range urls[1:] {
-			l.execOnWorkspace(s.Workspace, browserLaunchCmd(tbw.Command, "new-tab", url))
-			time.Sleep(300 * time.Millisecond)
-		}
-	} else {
-		l.execOnWorkspace(s.Workspace, browserLaunchCmd(tbw.Command, "new-window", "about:blank"))
-		time.Sleep(500 * time.Millisecond)
-	}
-	return nil
-}
-
 func (l *Layout) execOnWorkspace(workspace int, cmd string) {
 	l.hypr.Dispatch(fmt.Sprintf("exec [workspace %d silent] %s", workspace, cmd))
 }
@@ -309,7 +328,13 @@ func (l *Layout) claimBrowserWindow(b *browser.Browser, s config.Session) error 
 	deadline := time.Now().Add(sessionBrowserClaimTimeout)
 	var lastErr error
 	for time.Now().Before(deadline) {
-		if err := b.ClaimWindow(s.Browser.Snapshot, s.Workspace); err == nil {
+		claim := b.ClaimWindowForSession
+		if l.browserRestoredInBatch(s.Name) {
+			claim = func(snapshot, _ string, _ config.BrowserConfig, workspace int) error {
+				return b.ClaimWindow(snapshot, workspace)
+			}
+		}
+		if err := claim(s.Browser.Snapshot, s.Name, s.Browser, s.Workspace); err == nil {
 			return nil
 		} else {
 			lastErr = err
@@ -459,11 +484,4 @@ func (l *Layout) initialRoles(s config.Session) (master, slave, shadow string) {
 		shadow = s.Body[2]
 	}
 	return master, slave, shadow
-}
-
-func browserLaunchCmd(cmd, mode, url string) string {
-	if url == "" {
-		url = "about:blank"
-	}
-	return fmt.Sprintf("%s --%s %q", cmd, mode, url)
 }

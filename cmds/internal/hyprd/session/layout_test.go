@@ -3,6 +3,7 @@ package session
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"dotfiles/cmds/internal/config"
@@ -10,6 +11,66 @@ import (
 
 	"gopkg.in/yaml.v3"
 )
+
+func TestValidateBrowserBodyRequiresExplicitSnapshot(t *testing.T) {
+	s := config.Session{
+		Name:    "urls-layout",
+		Body:    []string{"editor", "browser"},
+		Browser: config.BrowserConfig{URLs: []string{"https://example.com"}},
+	}
+
+	err := validateBrowserBody(s)
+	if err == nil {
+		t.Fatalf("browser body without snapshot should fail")
+	}
+	if !strings.Contains(err.Error(), "requires explicit browser snapshot config") {
+		t.Fatalf("error = %q", err)
+	}
+}
+
+func TestValidateBrowserBodyRejectsURLModeSnapshot(t *testing.T) {
+	s := config.Session{
+		Name:    "url-mode-layout",
+		Body:    []string{"editor", "browser"},
+		Browser: config.BrowserConfig{Snapshot: "coms", Mode: "urls"},
+	}
+
+	err := validateBrowserBody(s)
+	if err == nil {
+		t.Fatalf("browser body with URL mode should fail")
+	}
+	if !strings.Contains(err.Error(), "requires exact browser snapshot restore") {
+		t.Fatalf("error = %q", err)
+	}
+}
+
+func TestValidateBrowserBodyRejectsCommandSessionBrowserURLs(t *testing.T) {
+	s := config.Session{
+		Name:    "command-with-browser",
+		Command: "kitty",
+		Browser: config.BrowserConfig{URLs: []string{"https://example.com"}},
+	}
+
+	err := validateBrowserBody(s)
+	if err == nil {
+		t.Fatalf("command session browser URLs should fail")
+	}
+	if !strings.Contains(err.Error(), "requires explicit browser snapshot config") {
+		t.Fatalf("error = %q", err)
+	}
+}
+
+func TestValidateBrowserBodyAllowsCommandSessionBrowserSnapshot(t *testing.T) {
+	s := config.Session{
+		Name:    "command-with-browser",
+		Command: "slack",
+		Browser: config.BrowserConfig{Snapshot: "coms"},
+	}
+
+	if err := validateBrowserBody(s); err != nil {
+		t.Fatalf("command session browser snapshot should be allowed: %v", err)
+	}
+}
 
 func TestPreserveSessionBrowserWindowMatchesSnapshotTitle(t *testing.T) {
 	home := t.TempDir()
