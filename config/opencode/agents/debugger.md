@@ -6,52 +6,7 @@ reasoningEffort: medium
 textVerbosity: low
 temperature: 0
 permission:
-  skill: allow
-  read: allow
-  external_directory:
-    "$HOME/**": allow
-    "/home/cullyn/**": allow
-    "/home/cullyn/.ssh/**": deny
-    "/home/cullyn/.gnupg/**": deny
-    "/home/cullyn/.password-store/**": deny
-    "/home/cullyn/.local/share/keyrings/**": deny
-    "/tmp/**": allow
-  glob: allow
-  grep: allow
-  edit: allow
-  bash:
-    "*": ask
-    "pwd": allow
-    "ls*": allow
-    "rg *": ask
-    "git diff*": allow
-    "git status*": allow
-    "git log*": allow
-    "git show --stat*": allow
-    "git show --name-only*": allow
-    "git rev-parse*": allow
-    "git branch --show-current*": allow
-    "go test*": allow
-    "GOWORK=off go test*": allow
-    "go build*": allow
-    "GOWORK=off go build*": allow
-    "go vet*": allow
-    "gofmt *": allow
-    "gofmt -w *": allow
-    "shellcheck *": allow
-    "bash -n *": allow
-    "sh -n *": allow
-    "zsh -n *": allow
-    "node --check *": allow
-    "jq *": allow
-    "../skills/review/scripts/review-scope.sh*": allow
-    "skills/review/scripts/review-scope.sh*": allow
-    "./skills/review/scripts/review-scope.sh*": allow
-    "/home/cullyn/dotfiles/skills/review/scripts/review-scope.sh*": allow
-    "../skills/review/scripts/debugger.sh*": allow
-    "skills/review/scripts/debugger.sh*": allow
-    "./skills/review/scripts/debugger.sh*": allow
-    "/home/cullyn/dotfiles/skills/review/scripts/debugger.sh*": allow
+  edit: deny
   task: deny
   todowrite: deny
 color: error
