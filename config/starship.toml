@@ -8,7 +8,7 @@ palette = 'vagari'                           # palette definition must be last
 # ============================================================================
 
 format = """
-[╭╼╾  $sudo$username ╼╾ $hostname${custom.vpn}${custom.tailscale} ╼╾ $time$python$lua${custom.golang}$package$shell](blu_2) $status $cmd_duration
+[╭╼╾ $sudo$username ╼╾ $hostname${custom.vpn}${custom.tailscale} ╼╾ $time$python$lua${custom.golang}$package$shell](blu_2) $status $cmd_duration
 [╞╾](blu_2)$directory$git_branch$git_commit$git_state$git_status
 [╰╼╾ $character](blu_2)
 """
@@ -52,7 +52,7 @@ format = "[$symbol$branch(:$remote_branch)]($style)"
 
 [git_status]
 style = "orn_3"
-format = '[ $ahead_behind$conflicted$staged$renamed$deleted$modified$untracked$stashed]($style)'
+format = '[ $ahead_behind$conflicted$modified$staged$renamed$deleted$untracked$stashed]($style)'
 conflicted = "[ ](pnk_3)"
 stashed = "[󰸧 ${count} ](slt_2)"
 modified = "[ ${count} ](sky_2)"
