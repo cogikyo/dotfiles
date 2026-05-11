@@ -18,6 +18,11 @@ user_pref("pdfjs.sidebarViewOnLoad", 0);
 user_pref("extensions.pocket.enabled", false);
 user_pref("browser.newtabpage.enabled", false);
 
+// Disalbe tab previews
+user_pref("browser.tabs.hoverPreview.enabled", false);
+user_pref("browser.tabs.cardPreview.enabled", false);
+user_pref("browser.tabs.groups.hoverPreview.enabled", false);
+
 // New tab recommendations and sponsored content.
 user_pref("browser.discovery.enabled", false);
 user_pref("browser.newtabpage.activity-stream.feeds.topsites", false);
