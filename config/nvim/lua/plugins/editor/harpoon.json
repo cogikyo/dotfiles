@@ -17,7 +17,10 @@
     },
     "/home/cullyn/LeadPier/backend/services": {
       "pins": [
-        "notify/init.notify.go"
+        "notify/init.notify.go",
+        "partner/init.partner.go",
+        "compliance/init.compliance.go",
+        "partner/feedback/init.feedback.go"
       ]
     },
     "/home/cullyn/LeadPier/frontend": {
