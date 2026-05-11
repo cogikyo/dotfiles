@@ -13,9 +13,12 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"syscall"
 )
 
 var client = daemon.NewClient(SocketPath)
+
+const daemonLockPath = "/tmp/ewwd.lock"
 
 func main() {
 	if len(os.Args) < 2 {
@@ -49,6 +52,12 @@ func runDaemon() {
 		fmt.Fprintln(os.Stderr, "ewwd: daemon already running")
 		os.Exit(1)
 	}
+	lock, err := acquireDaemonLock()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ewwd: %v\n", err)
+		os.Exit(1)
+	}
+	defer lock.Close()
 
 	d, err := New()
 	if err != nil {
@@ -60,6 +69,18 @@ func runDaemon() {
 		fmt.Fprintf(os.Stderr, "ewwd: %v\n", err)
 		os.Exit(1)
 	}
+}
+
+func acquireDaemonLock() (*os.File, error) {
+	file, err := os.OpenFile(daemonLockPath, os.O_CREATE|os.O_RDWR, 0o600)
+	if err != nil {
+		return nil, fmt.Errorf("open daemon lock: %w", err)
+	}
+	if err := syscall.Flock(int(file.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		file.Close()
+		return nil, fmt.Errorf("daemon already running or starting")
+	}
+	return file, nil
 }
 
 // cmdStatus prints "running"/"not running" and exits non-zero when unreachable.

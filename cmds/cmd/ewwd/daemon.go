@@ -216,25 +216,9 @@ func (d *Daemon) openWindows(reload bool) string {
 		}
 	}
 
-	// Kill stale daemon and respawn, waiting up to 10s for readiness.
-	if err := exec.Command("eww", "ping").Run(); err != nil {
-		exec.Command("eww", "kill").Run()
-		time.Sleep(200 * time.Millisecond)
-		cmd := exec.Command("eww", "daemon")
-		if err := cmd.Start(); err == nil {
-			go cmd.Wait()
-		}
-		ready := false
-		for range 50 {
-			if exec.Command("eww", "ping").Run() == nil {
-				ready = true
-				break
-			}
-			time.Sleep(200 * time.Millisecond)
-		}
-		if !ready {
-			return "error: eww daemon failed to start"
-		}
+	killOpenMany()
+	if !restartEwwDaemon() {
+		return "error: eww daemon failed to start"
 	}
 
 	exec.Command("eww", "close-all").Run()
@@ -248,4 +232,44 @@ func (d *Daemon) openWindows(reload bool) string {
 	}
 
 	return fmt.Sprintf("open: %s", strings.Join(windows, " "))
+}
+
+func killOpenMany() {
+	pattern := "(^|/)eww open-many "
+	exec.Command("pkill", "-TERM", "-f", pattern).Run()
+	for range 20 {
+		if exec.Command("pgrep", "-f", pattern).Run() != nil {
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	exec.Command("pkill", "-KILL", "-f", pattern).Run()
+}
+
+func restartEwwDaemon() bool {
+	exec.Command("eww", "kill").Run()
+	killEwwDaemon()
+	cmd := exec.Command("eww", "daemon")
+	if err := cmd.Start(); err == nil {
+		go cmd.Wait()
+	}
+	for range 50 {
+		if exec.Command("eww", "ping").Run() == nil {
+			return true
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+	return false
+}
+
+func killEwwDaemon() {
+	pattern := "(^|/)eww daemon$"
+	exec.Command("pkill", "-TERM", "-f", pattern).Run()
+	for range 20 {
+		if exec.Command("pgrep", "-f", pattern).Run() != nil {
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	exec.Command("pkill", "-KILL", "-f", pattern).Run()
 }
