@@ -56,9 +56,9 @@ return {
 				config.values.layout_config.horizontal =
 					vim.tbl_extend("force", config.values.layout_config.horizontal or {}, {
 						prompt_position = "top",
-						preview_width = 0.65,
-						width = 0.65,
-						height = 0.65,
+						preview_width = 0.5,
+						width = 0.92,
+						height = 0.9,
 					})
 			elseif cols >= 140 then
 				config.values.layout_strategy = "vertical"
@@ -66,20 +66,20 @@ return {
 				config.values.layout_config.vertical =
 					vim.tbl_extend("force", config.values.layout_config.vertical or {}, {
 						prompt_position = "bottom",
-						preview_height = 0.65,
+						preview_height = 0.5,
 						mirror = true,
-						width = 0.75,
-						height = 0.75,
+						width = 0.94,
+						height = 0.92,
 					})
 			else
 				config.values.layout_strategy = "vertical"
 				config.values.sorting_strategy = "ascending"
-				config.values.layout_config.horizontal =
-					vim.tbl_extend("force", config.values.layout_config.horizontal or {}, {
+				config.values.layout_config.vertical =
+					vim.tbl_extend("force", config.values.layout_config.vertical or {}, {
 						prompt_position = "top",
-						preview_height = 0.65,
-						width = 0.65,
-						height = 0.65,
+						preview_height = 0.5,
+						width = 0.96,
+						height = 0.92,
 					})
 			end
 			return original_new(self, opts)
@@ -89,7 +89,7 @@ return {
 			defaults = {
 				prompt_prefix = " 󰭎  ",
 				selection_caret = "  ",
-				path_display = { "smart" },
+				path_display = { "truncate" },
         -- stylua: ignore start
 				file_ignore_patterns = {
 					"%.png$", "%.jpg$", "%.jpeg$", "%.gif$", "%.bmp$", "%.ico$", "%.webp$", "%.svg$",
