@@ -40,6 +40,7 @@ local GROUPS = {
 	{ "<leader>e", group = "Explorer" },
 	{ "<leader>f", group = "Diagnostics" },
 	{ "<leader>g", group = "General" },
+	{ "<leader>l", group = "LazyGit" },
 	{ "<leader>h", group = "Git Hunk", mode = { "n", "v" } },
 	{ "<leader>m", group = "Markdown/Manage" },
 	{ "<leader>n", group = "Harpoon" },
@@ -201,6 +202,85 @@ map("n", "<A-q>", yank_selection("vap"), desc("Yank file path + paragraph"))
 map("n", "<A-w>", yank_diagnostics, desc("Yank file path + diagnostics"))
 map("v", "<A-b>", yank_selection(nil), desc("Yank file path + selection"))
 map("n", "<A-b>", yank_selection("gv"), desc("Yank file path + last selection (or paragraph)"))
+
+-- ╭─────────────────────────────────────────────────────────────────────────────╮
+-- │ git: temporary lazygit terminal                                             │
+-- ╰─────────────────────────────────────────────────────────────────────────────╯
+local function current_buffer_dir()
+	local path = vim.api.nvim_buf_get_name(0)
+	if path ~= "" then
+		local dir = vim.fn.fnamemodify(path, ":p:h")
+		if vim.fn.isdirectory(dir) == 1 then
+			return dir
+		end
+	end
+	return vim.uv.cwd()
+end
+
+local function lazygit_cwd(path)
+	if not path or path == "" then
+		return current_buffer_dir()
+	end
+
+	local expanded = vim.fn.fnamemodify(path, ":p")
+	if vim.fn.isdirectory(expanded) == 1 then
+		return expanded
+	end
+	return vim.fn.fnamemodify(expanded, ":h")
+end
+
+local function open_lazygit(path)
+	if vim.fn.executable("lazygit") == 0 then
+		vim.notify("lazygit is not installed", vim.log.levels.ERROR)
+		return
+	end
+
+	local cwd = lazygit_cwd(path)
+	local bufnr = vim.api.nvim_create_buf(false, true)
+	local columns = vim.o.columns
+	local lines = vim.o.lines - vim.o.cmdheight
+	local width = math.max(80, math.floor(columns * 0.92))
+	local height = math.max(24, math.floor(lines * 0.9))
+	width = math.min(width, columns)
+	height = math.min(height, lines)
+
+	local win = vim.api.nvim_open_win(bufnr, true, {
+		relative = "editor",
+		width = width,
+		height = height,
+		row = math.floor((lines - height) / 2),
+		col = math.floor((columns - width) / 2),
+		style = "minimal",
+		border = "rounded",
+		title = " lazygit: " .. vim.fn.fnamemodify(cwd, ":~") .. " ",
+		title_pos = "center",
+	})
+
+	vim.bo[bufnr].bufhidden = "wipe"
+	vim.fn.termopen({ "lazygit" }, {
+		cwd = cwd,
+		on_exit = function(_, code)
+			vim.schedule(function()
+				if vim.api.nvim_win_is_valid(win) then
+					vim.api.nvim_win_close(win, true)
+				end
+				if vim.api.nvim_buf_is_valid(bufnr) then
+					vim.api.nvim_buf_delete(bufnr, { force = true })
+				end
+				if code ~= 0 then
+					vim.notify("lazygit exited with code " .. code, vim.log.levels.WARN)
+				end
+			end)
+		end,
+	})
+	vim.cmd("startinsert")
+end
+
+vim.api.nvim_create_user_command("Lazygit", function(opts)
+	open_lazygit(opts.args)
+end, { nargs = "?", complete = "dir", desc = "Open lazygit in the current file directory" })
+
+map("n", "<leader>lg", open_lazygit, desc("LazyGit"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ space: add empty lines above/below                                          │
