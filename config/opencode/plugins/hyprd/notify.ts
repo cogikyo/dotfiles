@@ -14,7 +14,7 @@ const TODO_COMPLETE_DEBOUNCE_MS = 1500
 const COMPLETE_DEBOUNCE_MS = 500
 const PERMISSION_DEBOUNCE_MS = 1500
 const NOTIFY_DEDUPE_MS = 1000
-const START_TITLE_WAIT_MS = 300
+const START_TITLE_WAIT_MS = 1200
 const NEW_SESSION_START_MESSAGE = "New Session started"
 const IDLE_REMINDER_MS = 10 * 60 * 1000
 const IDLE_CONTEXT_MAX_AGE_MS = 30 * 1000
@@ -34,11 +34,61 @@ function cleanSessionTitle(value) {
 
 function isPlaceholderSessionTitle(value) {
   const title = cleanText(value, LIMITS.id).toLowerCase()
-  return !title || title === "new session" || title === "session start info here"
+  return !title || title === "new session" || title === "session start info here" || isTimestampTitle(title)
+}
+
+function isTimestampTitle(value) {
+  return /^\d{4}-\d{2}-\d{2}t\d{2}:\d{2}:\d{2}(?:\.\d+)?z$/i.test(cleanText(value, LIMITS.id))
 }
 
 function startMessage(state) {
-  return state.title ? `Working on "${state.title}"` : NEW_SESSION_START_MESSAGE
+  const subject = state.lastUserMessage || state.title
+  return subject ? `Working on "${subject}"` : NEW_SESSION_START_MESSAGE
+}
+
+function cleanPromptText(value) {
+  return cleanText(String(value || "").replace(/\[Image\s+\d+\]/gi, " "))
+}
+
+function messageRole(value) {
+  return cleanText(value?.role || value?.metadata?.role || value?.author?.role || value?.type, LIMITS.status).toLowerCase()
+}
+
+function partRole(value) {
+  return cleanText(value?.role || value?.author?.role, LIMITS.status).toLowerCase()
+}
+
+function messageID(value) {
+  return value?.messageID || value?.messageId || value?.metadata?.messageID || value?.metadata?.messageId || value?.message?.id || value?.metadata?.id || value?.id || ""
+}
+
+function partMessageID(part, props) {
+  return props?.messageID || props?.messageId || props?.message?.id || part?.messageID || part?.messageId || part?.message?.id || ""
+}
+
+function messageSessionID(value) {
+  return value?.sessionID || value?.sessionId || value?.metadata?.sessionID || value?.metadata?.sessionId || value?.session?.id || ""
+}
+
+function textFromMessage(value) {
+  if (!value) return ""
+  if (typeof value === "string") return cleanPromptText(value)
+  if (Array.isArray(value)) return cleanPromptText(value.map(textFromMessage).filter(Boolean).join(" "))
+  if (typeof value !== "object") return ""
+
+  for (const key of ["text", "message", "prompt", "input"]) {
+    if (typeof value[key] === "string") {
+      const text = cleanPromptText(value[key])
+      if (text) return text
+    }
+  }
+
+  for (const key of ["parts", "content", "messages"]) {
+    const text = textFromMessage(value[key])
+    if (text) return text
+  }
+
+  return ""
 }
 
 async function kittyContext(sessionID, parentFor) {
@@ -139,6 +189,9 @@ function newSessionState() {
     assistantPartText: new Map(),
     todoStatuses: null,
     lastAssistantMessage: "",
+    lastUserMessage: "",
+    lastUserMessageAt: 0,
+    inactiveAt: 0,
     lastTodoCompletedAt: 0,
     completeTimer: null,
     startTimer: null,
@@ -153,6 +206,8 @@ function newSessionState() {
 
 const server = async () => {
   const sessions = new Map()
+  const messageRoles = new Map()
+  const messageSessions = new Map()
 
   function getSession(sessionID) {
     let state = sessions.get(sessionID)
@@ -212,7 +267,7 @@ const server = async () => {
       state.idleTimer = null
       if (state.active) return
 
-      const message = state.title || state.lastAssistantMessage || "Still idle"
+      const message = state.lastUserMessage || state.title || state.lastAssistantMessage || "Still idle"
       await sendNotify({
         sessionID,
         type: "idle",
@@ -226,10 +281,12 @@ const server = async () => {
     const state = sessions.get(sessionID)
     if (!state?.active || state.completeTimer) return
 
+    const inactiveAt = Date.now()
     state.completeTimer = setTimeout(async () => {
       state.completeTimer = null
       if (!state.active) return
       state.active = false
+      state.inactiveAt = inactiveAt
       clearStartNotify(state)
 
       if (Date.now() - state.lastTodoCompletedAt < TODO_COMPLETE_DEBOUNCE_MS) {
@@ -260,7 +317,33 @@ const server = async () => {
     state.lastAssistantMessage = message
   }
 
+  async function updateUserMessage(sessionID, message) {
+    const text = textFromMessage(message)
+    if (!text) return
+
+    const state = getSession(sessionID)
+    state.lastUserMessage = text
+    state.lastUserMessageAt = Date.now()
+    if (state.active && !state.startNotified) await sendStartNotify(sessionID)
+  }
+
+  async function handleMessageUpdated(props) {
+    const msg = props?.message || props?.info || props
+    const msgID = messageID(msg) || messageID(props)
+    const role = messageRole(msg) || partRole(props)
+    const id = props?.sessionID || props?.sessionId || messageSessionID(msg) || messageSessionID(props)
+    if (msgID && role) messageRoles.set(msgID, role)
+    if (msgID && id) messageSessions.set(msgID, id)
+    if (!id || role !== "user") return
+
+    await updateUserMessage(id, msg)
+  }
+
   const handlers = {
+    "message.created": handleMessageUpdated,
+
+    "message.updated": handleMessageUpdated,
+
     "message.part.delta": async ({ sessionID, partID, field, delta }) => {
       if (!sessionID || !partID || field !== "text" || typeof delta !== "string") return
 
@@ -269,20 +352,29 @@ const server = async () => {
       updateAssistantPartText(state, partID, text)
     },
 
-    "message.part.updated": async ({ part }) => {
-      if (!part?.sessionID || !part?.id) return
+    "message.part.updated": async (props) => {
+      const { sessionID, part } = props
+      const msgID = partMessageID(part, props)
+      const id = sessionID || part?.sessionID || messageSessions.get(msgID)
+      if (!id || !part) return
 
-      const state = getSession(part.sessionID)
+      const state = getSession(id)
+      const role = partRole(part) || messageRole(props?.message) || partRole(props) || messageRoles.get(msgID)
 
-      if (part.type === "text" && part?.time?.end) {
+      if (part.type === "text" && role === "user" && textFromMessage(part)) {
+        await updateUserMessage(id, part)
+        return
+      }
+
+      if (part.id && part.type === "text" && (role === "assistant" || (!role && part?.time?.end))) {
         updateAssistantPartText(state, part.id, part.text)
         return
       }
 
-      if ((part.type === "subtask" || part.type === "agent") && !state.seenAgentParts.has(part.id)) {
+      if (part.id && (part.type === "subtask" || part.type === "agent") && !state.seenAgentParts.has(part.id)) {
         state.seenAgentParts.add(part.id)
         await sendNotify({
-          sessionID: part.sessionID,
+          sessionID: id,
           type: "subagent",
           agent_type: cleanText(part.agent || part.name || "Agent", LIMITS.id),
           message: cleanText(part.description || part.prompt || part.name || "Done"),
@@ -304,8 +396,9 @@ const server = async () => {
         if (!state.active) {
           state.active = true
           state.startNotified = false
+          if (type !== "retry" && state.lastUserMessageAt <= state.inactiveAt) state.lastUserMessage = ""
           if (type === "retry") await sendStartNotify(sessionID, "Retrying")
-          else if (state.title) await sendStartNotify(sessionID)
+          else if (state.lastUserMessage) await sendStartNotify(sessionID)
           else scheduleStartNotify(sessionID)
         }
         return
@@ -386,8 +479,9 @@ const server = async () => {
       if (!id) return
       const state = getSession(id)
       state.parentID = typeof info?.parentID === "string" ? info.parentID : ""
-      state.title = cleanSessionTitle(info?.title)
-      if (state.active && state.title && !state.startNotified) await sendStartNotify(id)
+      const title = cleanSessionTitle(info?.title)
+      if (title) state.title = title
+      if (state.active && state.title && !state.startNotified) scheduleStartNotify(id)
     },
 
     "session.updated": async ({ sessionID, info }) => {
@@ -395,8 +489,9 @@ const server = async () => {
       if (!id) return
       const state = getSession(id)
       state.parentID = typeof info?.parentID === "string" ? info.parentID : ""
-      state.title = cleanSessionTitle(info?.title)
-      if (state.active && state.title && !state.startNotified) await sendStartNotify(id)
+      const title = cleanSessionTitle(info?.title)
+      if (title) state.title = title
+      if (state.active && state.title && !state.startNotified) scheduleStartNotify(id)
     },
 
     "session.error": async ({ sessionID, error }) => {
