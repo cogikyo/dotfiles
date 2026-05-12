@@ -91,6 +91,10 @@ function textFromMessage(value) {
   return ""
 }
 
+function isUntimedUserTextPart(part) {
+  return part?.type === "text" && !part.synthetic && !part.ignored && !part.time && textFromMessage(part)
+}
+
 async function kittyContext(sessionID, parentFor) {
   if (!sessionID) return EMPTY_KITTY_CONTEXT
   try {
@@ -361,7 +365,7 @@ const server = async () => {
       const state = getSession(id)
       const role = partRole(part) || messageRole(props?.message) || partRole(props) || messageRoles.get(msgID)
 
-      if (part.type === "text" && role === "user" && textFromMessage(part)) {
+      if (part.type === "text" && (role === "user" || (!role && isUntimedUserTextPart(part)))) {
         await updateUserMessage(id, part)
         return
       }
@@ -522,6 +526,13 @@ const server = async () => {
   }
 
   return {
+    "chat.message": async (input, output) => {
+      const sessionID = input?.sessionID || output?.message?.sessionID
+      if (!sessionID) return
+
+      await updateUserMessage(sessionID, output?.parts || output?.message)
+    },
+
     event: async ({ event }) => {
       if (!event || typeof event.type !== "string") return
       const handler = handlers[event.type]
