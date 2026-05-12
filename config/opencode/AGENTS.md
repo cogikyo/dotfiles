@@ -59,6 +59,10 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 
 - Broad searches are allowed when broad discovery is the task, but suppress expected filesystem noise with `--no-messages` or `-s`.
 - If the target subtree is known, search that subtree directly instead of starting from `$HOME` and encoding the subtree in the pattern.
+- For `Glob` and `Grep`, put the target directory in `path` and keep `pattern`/`include` relative to that directory.
+- Never use `path: "/"` or root-level patterns like `/*` for code discovery; they crawl `/proc`, `/run`, `/var`, and other hostile system trees.
+- Bad: `Glob(pattern="/home/cullyn/project/src/**/*.ts", path="/")`.
+- Good: `Glob(pattern="src/**/*.ts", path="/home/cullyn/project")`.
 - Prefer `Glob`, `Grep`, and `Read` for ordinary codebase search; use shell `rg` when flags, counts, archive output, or pipelines matter.
 
 ## Permission Friction

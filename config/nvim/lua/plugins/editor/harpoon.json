@@ -5,7 +5,8 @@
       "pins": [
         "pier/README.md",
         "backend/core/staging-backend/docker-compose.yml",
-        "backend/core/runner/core.go"
+        "backend/core/runner/core.go",
+        "pier/skills/partner-feedback/SKILL.md"
       ]
     },
     "/home/cullyn/LeadPier/backend": {
