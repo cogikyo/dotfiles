@@ -16,6 +16,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -87,6 +88,8 @@ func main() {
 }
 
 func runDaemon() {
+	reapExitedChildren()
+
 	if client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "hyprd: daemon already running")
 		os.Exit(1)
@@ -102,6 +105,16 @@ func runDaemon() {
 	if err := d.Run(); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd: %v\n", err)
 		os.Exit(1)
+	}
+}
+
+func reapExitedChildren() {
+	for {
+		var status syscall.WaitStatus
+		pid, err := syscall.Wait4(-1, &status, syscall.WNOHANG, nil)
+		if pid <= 0 || err != nil {
+			return
+		}
 	}
 }
 

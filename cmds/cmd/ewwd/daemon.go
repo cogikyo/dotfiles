@@ -200,7 +200,7 @@ func (d *Daemon) handleAction(providerName string, args []string) string {
 }
 
 // openWindows ensures the eww daemon is running and opens configured windows.
-func (d *Daemon) openWindows(reload bool) string {
+func (d *Daemon) openWindows(_ bool) string {
 	d.openMu.Lock()
 	defer d.openMu.Unlock()
 
@@ -216,17 +216,10 @@ func (d *Daemon) openWindows(reload bool) string {
 		}
 	}
 
-	killOpenMany()
-	if !restartEwwDaemon() {
-		return "error: eww daemon failed to start"
-	}
+	killEwwProcesses()
+	killWidgetCommands()
 
-	exec.Command("eww", "close-all").Run()
-	if reload {
-		exec.Command("eww", "reload").Run()
-	}
-
-	args := append([]string{"open-many"}, windows...)
+	args := append([]string{"--restart", "open-many"}, windows...)
 	if err := exec.Command("eww", args...).Run(); err != nil {
 		return fmt.Sprintf("error: eww open-many: %v", err)
 	}
@@ -234,36 +227,25 @@ func (d *Daemon) openWindows(reload bool) string {
 	return fmt.Sprintf("open: %s", strings.Join(windows, " "))
 }
 
-func killOpenMany() {
-	pattern := "(^|/)eww open-many "
-	exec.Command("pkill", "-TERM", "-f", pattern).Run()
-	for range 20 {
-		if exec.Command("pgrep", "-f", pattern).Run() != nil {
-			return
-		}
-		time.Sleep(50 * time.Millisecond)
-	}
-	exec.Command("pkill", "-KILL", "-f", pattern).Run()
-}
-
-func restartEwwDaemon() bool {
+func killEwwProcesses() {
 	exec.Command("eww", "kill").Run()
-	killEwwDaemon()
-	cmd := exec.Command("eww", "daemon")
-	if err := cmd.Start(); err == nil {
-		go cmd.Wait()
-	}
-	for range 50 {
-		if exec.Command("eww", "ping").Run() == nil {
-			return true
-		}
-		time.Sleep(200 * time.Millisecond)
-	}
-	return false
+	killPattern("(^|/)eww (daemon|open-many)( |$)")
 }
 
-func killEwwDaemon() {
-	pattern := "(^|/)eww daemon$"
+func killWidgetCommands() {
+	patterns := []string{
+		"sh -c ewwd subscribe ",
+		"sh -c while true; do hyprd subscribe ",
+		"sh -c while true; do echo 0; sleep ",
+		"(^|/)ewwd subscribe (network|date|audio|music|timer|weather)$",
+		"(^|/)hyprd subscribe workspace$",
+	}
+	for _, pattern := range patterns {
+		killPattern(pattern)
+	}
+}
+
+func killPattern(pattern string) {
 	exec.Command("pkill", "-TERM", "-f", pattern).Run()
 	for range 20 {
 		if exec.Command("pgrep", "-f", pattern).Run() != nil {

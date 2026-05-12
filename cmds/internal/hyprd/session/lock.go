@@ -256,13 +256,9 @@ func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) {
 	dispatchStartup(l.hypr, cfg.Bluetooth)
 	// Reopen via running ewwd; if gone, respawn (fresh daemon auto-opens windows).
 	if exec.Command("ewwd", "status").Run() == nil {
-		exec.Command("ewwd", "restore").Start()
+		startDetached("ewwd", "restore")
 	} else {
-		cmd := exec.Command("setsid", "ewwd")
-		cmd.Stdin = nil
-		cmd.Stdout = nil
-		cmd.Stderr = nil
-		cmd.Start()
+		startDetached("setsid", "ewwd")
 	}
 
 	if resumeMusic {
@@ -272,6 +268,16 @@ func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) {
 	time.AfterFunc(time.Second, func() {
 		exec.Command("dunstctl", "set-paused", "false").Run()
 	})
+}
+
+func startDetached(name string, args ...string) {
+	cmd := exec.Command(name, args...)
+	cmd.Stdin = nil
+	cmd.Stdout = nil
+	cmd.Stderr = nil
+	if err := cmd.Start(); err == nil {
+		go cmd.Wait()
+	}
 }
 
 func playerctlStatus() string {

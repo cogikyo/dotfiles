@@ -13,7 +13,7 @@
 
 (deflisten workspace-info
   :initial '{"current":5,"current_str":"5","occupied":[5],"occupied_str":"5"}'
-  'while true; do hyprd subscribe workspace | jq --unbuffered -c ".data"; sleep 0.5; done'
+  'hyprd subscribe workspace | jq --unbuffered -c ".data"'
 )
 
 (defwidget workspace [icon num desc hover]

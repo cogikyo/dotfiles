@@ -3,9 +3,11 @@ package daemon
 // client.go implements a Unix socket client for request/response and event streaming.
 import (
 	"bufio"
+	"errors"
 	"io"
 	"net"
 	"os"
+	"syscall"
 	"time"
 )
 
@@ -64,7 +66,12 @@ func (c *Client) Stream(command string) error {
 			}
 			return err
 		}
-		os.Stdout.WriteString(line)
+		if _, err := os.Stdout.WriteString(line); err != nil {
+			if errors.Is(err, syscall.EPIPE) {
+				return nil
+			}
+			return err
+		}
 	}
 }
 
