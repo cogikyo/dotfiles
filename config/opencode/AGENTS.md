@@ -59,7 +59,10 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 
 - Broad searches are allowed when broad discovery is the task, but suppress expected filesystem noise with `--no-messages` or `-s`.
 - If the target subtree is known, search that subtree directly instead of starting from `$HOME` and encoding the subtree in the pattern.
-- For `Glob` and `Grep`, put the target directory in `path` and keep `pattern`/`include` relative to that directory.
+- Never use `$HOME` or `/home/cullyn` as the search `path` for project code unless the task is explicitly about home-directory discovery.
+- For `Glob` and `Grep`, put the nearest known project or package directory in `path` and keep `pattern`/`include` relative to that directory.
+- Bad: `Glob(pattern="LeadPier/backend/services/compliance", path="/home/cullyn")`.
+- Good: `Glob(pattern="backend/services/compliance", path="/home/cullyn/LeadPier")`.
 - Never use `path: "/"` or root-level patterns like `/*` for code discovery; they crawl `/proc`, `/run`, `/var`, and other hostile system trees.
 - Bad: `Glob(pattern="/home/cullyn/project/src/**/*.ts", path="/")`.
 - Good: `Glob(pattern="src/**/*.ts", path="/home/cullyn/project")`.
