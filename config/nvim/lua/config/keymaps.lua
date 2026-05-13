@@ -17,18 +17,10 @@ local function with_desc(description, extra)
 	end
 	return o
 end
-local function desc(description)
-	return with_desc(description)
-end
-local function remap(description)
-	return with_desc(description, { remap = true })
-end
-local function remap_explicit(description)
-	return with_desc(description, { remap = true, silent = false })
-end
-local function expr(description)
-	return with_desc(description, { expr = true })
-end
+local function desc(description) return with_desc(description) end
+local function remap(description) return with_desc(description, { remap = true }) end
+local function remap_explicit(description) return with_desc(description, { remap = true, silent = false }) end
+local function expr(description) return with_desc(description, { expr = true }) end
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ groups: secondary leader groups                                             │
@@ -64,11 +56,11 @@ map("v", "<C-s>", "<Esc>:w<CR>", desc("Save"))
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ quit: exit, force quit, escape                                              │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
-map("n", "q:", "<Nop>")
+map("n", "q:", ":q<CR>")
 map("n", "q", "<Nop>")
 map("n", "qq", ":q<CR>", desc("Quit"))
 map("n", "<C-c>", "<Esc>", desc("Escape"))
-map("n", "<leader>q", "<Nop>")
+map("n", "<leader>q", ":q!<CR>", remap_explicit("Force quit"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ copy: clipboard yank operations                                             │
@@ -122,9 +114,7 @@ local function yank_markdown_html_selection()
 	markdown_html_to_clipboard(lines)
 end
 
-local function yank_markdown_html_buffer()
-	markdown_html_to_clipboard(vim.api.nvim_buf_get_lines(0, 0, -1, false))
-end
+local function yank_markdown_html_buffer() markdown_html_to_clipboard(vim.api.nvim_buf_get_lines(0, 0, -1, false)) end
 
 map("x", "<leader>mh", yank_markdown_html_selection, desc("Yank Markdown as rich HTML"))
 map("n", "<leader>mH", yank_markdown_html_buffer, desc("Yank file as rich HTML"))
@@ -199,9 +189,7 @@ local function yank_diagnostics(opts)
 
 	local ns = vim.api.nvim_create_namespace("context_yank")
 	vim.api.nvim_buf_add_highlight(0, ns, "ContextYank", line - 1, 0, -1)
-	vim.defer_fn(function()
-		vim.api.nvim_buf_clear_namespace(0, ns, 0, -1)
-	end, 100)
+	vim.defer_fn(function() vim.api.nvim_buf_clear_namespace(0, ns, 0, -1) end, 100)
 
 	vim.notify("Yanked " .. #diagnostics .. " diagnostic(s)", vim.log.levels.INFO)
 	return true
@@ -288,9 +276,11 @@ local function open_lazygit(path)
 	vim.cmd("startinsert")
 end
 
-vim.api.nvim_create_user_command("Lazygit", function(opts)
-	open_lazygit(opts.args)
-end, { nargs = "?", complete = "dir", desc = "Open lazygit in the current file directory" })
+vim.api.nvim_create_user_command(
+	"Lazygit",
+	function(opts) open_lazygit(opts.args) end,
+	{ nargs = "?", complete = "dir", desc = "Open lazygit in the current file directory" }
+)
 
 map("n", "<leader>lg", open_lazygit, desc("LazyGit"))
 
