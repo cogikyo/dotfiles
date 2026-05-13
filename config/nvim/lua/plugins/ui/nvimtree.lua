@@ -10,6 +10,8 @@ return {
 
 		local function on_attach(bufnr)
 			local api = require("nvim-tree.api")
+			local core = require("nvim-tree.core")
+			local view = require("nvim-tree.view")
 			local function map(lhs, rhs, d)
 				vim.keymap.set(
 					"n",
@@ -121,14 +123,66 @@ return {
 				vim.notify("Copied absolute path", vim.log.levels.INFO)
 			end
 
+			local function has_git_status(node)
+				if not node then
+					return false
+				end
+
+				if type(node.get_git_xy) == "function" then
+					local ok_status, status = pcall(node.get_git_xy, node)
+					if ok_status and status ~= nil and #status > 0 then
+						return true
+					end
+				end
+
+				return NestedGit.is_dirty(node)
+			end
+
+			local function navigate_git(direction)
+				local explorer = core.get_explorer()
+				if not explorer then
+					return
+				end
+
+				local first_line = core.get_nodes_starting_line()
+				local nodes_by_line = explorer:get_nodes_by_line(first_line)
+				local cursor = explorer:get_cursor_position()
+				local cursor_line = cursor and cursor[1] or first_line
+				local first_git_line
+				local next_git_line
+
+				local start_line = direction == "next" and first_line or #nodes_by_line
+				local end_line = direction == "next" and #nodes_by_line or first_line
+				local step = direction == "next" and 1 or -1
+
+				for line = start_line, end_line, step do
+					if has_git_status(nodes_by_line[line]) then
+						first_git_line = first_git_line or line
+
+						if
+							(direction == "next" and line > cursor_line) or (direction == "prev" and line < cursor_line)
+						then
+							next_git_line = line
+							break
+						end
+					end
+				end
+
+				if next_git_line then
+					view.set_cursor({ next_git_line, 0 })
+				elseif vim.o.wrapscan and first_git_line then
+					view.set_cursor({ first_git_line, 0 })
+				end
+			end
+
 			-- stylua: ignore start
 			-- navigation ──────────────────────────────────────────────────
 			map("<Up>",    function() vim.cmd("normal! k") end, "Up")
 			map("<Down>",  function() vim.cmd("normal! j") end, "Down")
 			map("<Right>", nav_right,                         "Open/enter dir/open file")
 			map("<Left>",  nav_left,                          "Close dir/go to parent")
-			map("[",       api.node.navigate.git.prev,        "Prev Git")
-			map("]",       api.node.navigate.git.next,        "Next Git")
+			map("[",       function() navigate_git("prev") end, "Prev Git")
+			map("]",       function() navigate_git("next") end, "Next Git")
 
 			-- open / close ────────────────────────────────────────────────
 			map("<CR>",    api.node.open.preview,             "Preview")
