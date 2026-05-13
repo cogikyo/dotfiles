@@ -6,7 +6,7 @@ windows:
   - player
 weather:
   api_key_file: "~/.local/.owm_api_key"
-  poll_interval: 10m
+  poll_interval: 1h
 timer:
   default_minutes: 90
   default_alarm_hours: 6
