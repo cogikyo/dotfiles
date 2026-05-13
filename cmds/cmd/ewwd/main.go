@@ -157,7 +157,7 @@ func cmdSubscribe() {
 		cmd += " " + strings.Join(os.Args[2:], " ")
 	}
 
-	err := client.Stream(cmd)
+	err := client.StreamReconnect(cmd)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)

@@ -11,6 +11,8 @@ import (
 	"time"
 )
 
+var errOutputClosed = errors.New("output closed")
+
 // Client dials a daemon's Unix socket for one-shot or streaming commands.
 type Client struct {
 	SocketPath string
@@ -47,6 +49,21 @@ func (c *Client) Send(command string) (string, error) {
 
 // Stream sends command and copies newline-delimited response lines to stdout until EOF.
 func (c *Client) Stream(command string) error {
+	return c.streamOnce(command)
+}
+
+// StreamReconnect streams a subscription command, reconnecting when the daemon restarts.
+func (c *Client) StreamReconnect(command string) error {
+	for {
+		err := c.streamOnce(command)
+		if errors.Is(err, errOutputClosed) {
+			return nil
+		}
+		time.Sleep(250 * time.Millisecond)
+	}
+}
+
+func (c *Client) streamOnce(command string) error {
 	conn, err := net.Dial("unix", c.SocketPath)
 	if err != nil {
 		return err
@@ -68,7 +85,7 @@ func (c *Client) Stream(command string) error {
 		}
 		if _, err := os.Stdout.WriteString(line); err != nil {
 			if errors.Is(err, syscall.EPIPE) {
-				return nil
+				return errOutputClosed
 			}
 			return err
 		}
