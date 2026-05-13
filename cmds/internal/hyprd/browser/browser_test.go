@@ -87,63 +87,6 @@ func TestSlugifySnapshotName(t *testing.T) {
 	}
 }
 
-func TestManagedProfileForSessionClonesSnapshotSource(t *testing.T) {
-	stateHome := t.TempDir()
-	t.Setenv("XDG_STATE_HOME", stateHome)
-
-	source := filepath.Join(t.TempDir(), "source.default")
-	if err := os.MkdirAll(filepath.Join(source, "sessionstore-backups"), 0o755); err != nil {
-		t.Fatalf("mkdir source: %v", err)
-	}
-	for path, data := range map[string]string{
-		filepath.Join(source, "prefs.js"):                                 "user_pref(\"browser.foo\", true);\n",
-		filepath.Join(source, "sessionstore.jsonlz4"):                     "stale session",
-		filepath.Join(source, ".parentlock"):                              "lock",
-		filepath.Join(source, "sessionstore-backups", "recovery.jsonlz4"): "stale recovery",
-	} {
-		if err := os.WriteFile(path, []byte(data), 0o644); err != nil {
-			t.Fatalf("write %s: %v", path, err)
-		}
-	}
-
-	snapshotDir := filepath.Join(stateHome, "hyprd", "browser-sessions", "managed-test")
-	if err := os.MkdirAll(snapshotDir, 0o755); err != nil {
-		t.Fatalf("mkdir snapshot: %v", err)
-	}
-	summary := browserSnapshotSummary{
-		Name:    "managed-test",
-		Profile: browserProfileSummary{Name: "default", Path: source},
-		Window:  browserSnapshotWindow{SelectedTab: 1},
-	}
-	data, err := yaml.Marshal(summary)
-	if err != nil {
-		t.Fatalf("marshal snapshot: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(snapshotDir, "snapshot.yaml"), data, 0o644); err != nil {
-		t.Fatalf("write snapshot: %v", err)
-	}
-
-	profile, err := ManagedProfileForSession("LeadPier", config.BrowserConfig{Snapshot: "managed-test"})
-	if err != nil {
-		t.Fatalf("ManagedProfileForSession returned error: %v", err)
-	}
-	if got, want := profile.Root, filepath.Join(stateHome, "hyprd", "firefox-profiles", "LeadPier"); got != want {
-		t.Fatalf("profile root = %q, want %q", got, want)
-	}
-	if !fileExists(filepath.Join(profile.Root, "prefs.js")) {
-		t.Fatalf("prefs.js was not copied")
-	}
-	for _, path := range []string{
-		filepath.Join(profile.Root, "sessionstore.jsonlz4"),
-		filepath.Join(profile.Root, ".parentlock"),
-		filepath.Join(profile.Root, "sessionstore-backups"),
-	} {
-		if _, err := os.Stat(path); err == nil {
-			t.Fatalf("%s should not have been cloned", path)
-		}
-	}
-}
-
 func TestArgsUseProfile(t *testing.T) {
 	profile := filepath.Join(t.TempDir(), "hyprd-profile")
 	if !argsUseProfile([]string{"firefox", "--profile", profile}, profile) {
@@ -218,7 +161,7 @@ func TestDiscoverFirefoxProfileAcceptsAbsoluteDirectory(t *testing.T) {
 	root := t.TempDir()
 	t.Setenv("HOME", root)
 	firefoxDir := filepath.Join(root, ".mozilla", "firefox")
-	profileDir := filepath.Join(root, ".local", "state", "hyprd", "firefox-profiles", "leadpier")
+	profileDir := filepath.Join(root, "profiles", "leadpier")
 	if err := os.MkdirAll(firefoxDir, 0o755); err != nil {
 		t.Fatalf("mkdir firefox root: %v", err)
 	}
@@ -238,10 +181,84 @@ func TestDiscoverFirefoxProfileAcceptsAbsoluteDirectory(t *testing.T) {
 	}
 }
 
-func TestRestoreProfileForSnapshotFallsBackToDefaultWhenRecordedProfileIsMissing(t *testing.T) {
+func TestProfileForSnapshotUsesMainForComsAndManagedForOthers(t *testing.T) {
+	home := setupFirefoxHome(t)
+	mainProfile := filepath.Join(home, ".mozilla", "firefox", "default-release")
+
+	coms, err := profileForSnapshot("coms", false)
+	if err != nil {
+		t.Fatalf("profileForSnapshot(coms) returned error: %v", err)
+	}
+	if !coms.Main || coms.Root != mainProfile {
+		t.Fatalf("coms profile = %+v, want main profile %q", coms, mainProfile)
+	}
+
+	leadpier, err := profileForSnapshot("leadpier", false)
+	if err != nil {
+		t.Fatalf("profileForSnapshot(leadpier) returned error: %v", err)
+	}
+	wantRoot := filepath.Join(home, ".local", "share", "hyprd", "firefox-profiles", "leadpier")
+	if leadpier.Main || leadpier.Root != wantRoot || leadpier.Name != "hyprd-leadpier" {
+		t.Fatalf("leadpier profile = %+v, want managed profile %q", leadpier, wantRoot)
+	}
+}
+
+func TestProfileForSnapshotSeedsManagedProfile(t *testing.T) {
+	home := setupFirefoxHome(t)
+	mainProfile := filepath.Join(home, ".mozilla", "firefox", "default-release")
+	for _, path := range []string{
+		filepath.Join(mainProfile, "prefs.js"),
+		filepath.Join(mainProfile, "cookies.sqlite"),
+		filepath.Join(mainProfile, "parent.lock"),
+		filepath.Join(mainProfile, "cache2", "ignored"),
+	} {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", path, err)
+		}
+		if err := os.WriteFile(path, []byte(filepath.Base(path)), 0o644); err != nil {
+			t.Fatalf("write %s: %v", path, err)
+		}
+	}
+
+	profile, err := profileForSnapshot("leadpier", true)
+	if err != nil {
+		t.Fatalf("profileForSnapshot returned error: %v", err)
+	}
+	for _, name := range []string{"prefs.js", "cookies.sqlite"} {
+		if _, err := os.Stat(filepath.Join(profile.Root, name)); err != nil {
+			t.Fatalf("seeded profile missing %s: %v", name, err)
+		}
+	}
+	for _, path := range []string{filepath.Join(profile.Root, "parent.lock"), filepath.Join(profile.Root, "cache2", "ignored")} {
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			t.Fatalf("volatile path %s was copied or stat failed unexpectedly: %v", path, err)
+		}
+	}
+}
+
+func TestRestoreConfiguredSnapshotUsesManagedProfileForNonComs(t *testing.T) {
+	home := setupFirefoxHome(t)
+	snapshotRoot := filepath.Join(home, "dotfiles", "cmds", "internal", "hyprd", "browser", "sessions", "leadpier")
+	writeSnapshotSummary(t, snapshotRoot, browserSnapshotSummary{
+		Name:   "leadpier",
+		Window: browserSnapshotWindow{SelectedTab: 1, SelectedTitle: "LeadPier"},
+		Tabs:   []browserTabSummary{{Position: 1, Title: "LeadPier", URL: "https://leadpier.example.com"}},
+	})
+
+	out, err := (&Browser{}).RestoreConfiguredSnapshot(config.BrowserConfig{Snapshot: "leadpier"}, true)
+	if err != nil {
+		t.Fatalf("RestoreConfiguredSnapshot returned error: %v", err)
+	}
+	wantRoot := filepath.Join(home, ".local", "share", "hyprd", "firefox-profiles", "leadpier")
+	if !strings.Contains(out, wantRoot) {
+		t.Fatalf("dry-run output %q does not use managed profile %q", out, wantRoot)
+	}
+}
+
+func setupFirefoxHome(t *testing.T) string {
+	t.Helper()
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-
 	firefoxDir := filepath.Join(home, ".mozilla", "firefox")
 	defaultProfile := filepath.Join(firefoxDir, "default-release")
 	if err := os.MkdirAll(defaultProfile, 0o755); err != nil {
@@ -251,52 +268,7 @@ func TestRestoreProfileForSnapshotFallsBackToDefaultWhenRecordedProfileIsMissing
 	if err := os.WriteFile(filepath.Join(firefoxDir, "profiles.ini"), []byte(profilesINI), 0o644); err != nil {
 		t.Fatalf("write profiles.ini: %v", err)
 	}
-
-	snapshotDir := t.TempDir()
-	summary := browserSnapshotSummary{
-		Profile: browserProfileSummary{Name: "hyprd-leadpier", Path: filepath.Join(home, ".local", "state", "hyprd", "firefox-profiles", "leadpier")},
-	}
-	data, err := yaml.Marshal(summary)
-	if err != nil {
-		t.Fatalf("marshal snapshot: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(snapshotDir, "snapshot.yaml"), data, 0o644); err != nil {
-		t.Fatalf("write snapshot: %v", err)
-	}
-
-	profile, err := restoreProfileForSnapshot(snapshotDir, "")
-	if err != nil {
-		t.Fatalf("restoreProfileForSnapshot returned error: %v", err)
-	}
-	if profile.Root != defaultProfile {
-		t.Fatalf("profile root = %q, want %q", profile.Root, defaultProfile)
-	}
-}
-
-func TestSnapshotProfileFallsBackToNamedManagedProfile(t *testing.T) {
-	stateHome := t.TempDir()
-	t.Setenv("XDG_STATE_HOME", stateHome)
-	profileDir := filepath.Join(stateHome, "hyprd", "firefox-profiles", "leadpier")
-	if err := os.MkdirAll(profileDir, 0o755); err != nil {
-		t.Fatalf("mkdir managed profile: %v", err)
-	}
-
-	profile, err := (&Browser{}).snapshotProfile("", "leadpier", "active")
-	if err != nil {
-		t.Fatalf("snapshotProfile returned error: %v", err)
-	}
-	if profile.Root != profileDir {
-		t.Fatalf("profile root = %q, want %q", profile.Root, profileDir)
-	}
-}
-
-func TestSnapshotProfileErrorsWhenNoTargetProfile(t *testing.T) {
-	t.Setenv("XDG_STATE_HOME", t.TempDir())
-
-	_, err := (&Browser{}).snapshotProfile("", "missing", "active")
-	if err == nil {
-		t.Fatalf("snapshotProfile returned nil error")
-	}
+	return home
 }
 
 func TestBrowserModeDefaultsAndExact(t *testing.T) {
@@ -306,7 +278,7 @@ func TestBrowserModeDefaultsAndExact(t *testing.T) {
 	if got, want := browserMode(config.BrowserConfig{Snapshot: "coms"}), "exact"; got != want {
 		t.Fatalf("snapshot mode = %q, want %q", got, want)
 	}
-	if got, want := browserForce(config.BrowserConfig{Snapshot: "coms"}), true; got != want {
+	if got, want := browserForce(config.BrowserConfig{Snapshot: "coms"}), false; got != want {
 		t.Fatalf("snapshot force = %t, want %t", got, want)
 	}
 
@@ -468,7 +440,6 @@ func TestBuildCombinedSessionPayloadIncludesAllSnapshotWindows(t *testing.T) {
 func TestRestoreConfiguredSnapshotsUsesSharedDefaultProfile(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
-	t.Setenv("XDG_STATE_HOME", filepath.Join(home, ".state"))
 
 	firefoxDir := filepath.Join(home, ".mozilla", "firefox")
 	defaultProfile := filepath.Join(firefoxDir, "default-release")
@@ -482,10 +453,9 @@ func TestRestoreConfiguredSnapshotsUsesSharedDefaultProfile(t *testing.T) {
 
 	snapshotRoot := filepath.Join(home, "dotfiles", "cmds", "internal", "hyprd", "browser", "sessions", "coms")
 	writeSnapshotSummary(t, snapshotRoot, browserSnapshotSummary{
-		Name:    "coms",
-		Profile: browserProfileSummary{Name: "hyprd-coms", Path: filepath.Join(home, ".state", "hyprd", "firefox-profiles", "coms")},
-		Window:  browserSnapshotWindow{SelectedTab: 1, SelectedTitle: "Coms"},
-		Tabs:    []browserTabSummary{{Position: 1, Title: "Coms", URL: "https://chat.example.com"}},
+		Name:   "coms",
+		Window: browserSnapshotWindow{SelectedTab: 1, SelectedTitle: "Coms"},
+		Tabs:   []browserTabSummary{{Position: 1, Title: "Coms", URL: "https://chat.example.com"}},
 	})
 
 	out, err := (&Browser{}).RestoreConfiguredSnapshots([]config.BrowserConfig{{Snapshot: "coms"}}, true)
@@ -494,9 +464,6 @@ func TestRestoreConfiguredSnapshotsUsesSharedDefaultProfile(t *testing.T) {
 	}
 	if !strings.Contains(out, defaultProfile) {
 		t.Fatalf("dry-run output %q does not use shared default profile %q", out, defaultProfile)
-	}
-	if isDir(filepath.Join(home, ".state", "hyprd", "firefox-profiles", "coms")) {
-		t.Fatalf("managed profile directory was created during shared restore")
 	}
 }
 

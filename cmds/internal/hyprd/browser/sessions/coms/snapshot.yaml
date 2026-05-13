@@ -1,11 +1,4 @@
 name: coms
-profile:
-    name: dev-edition-default
-    path: /home/cullyn/.mozilla/firefox/sdfm8kqz.dev-edition-default
-    install_key: 46F492E0ACFF84D4
-source:
-    session_file: /home/cullyn/.mozilla/firefox/sdfm8kqz.dev-edition-default/sessionstore-backups/recovery.jsonlz4
-    window_index: 1
 window:
     selected_tab: 1
     tab_count: 4

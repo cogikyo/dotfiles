@@ -1,10 +1,4 @@
 name: leadpier
-profile:
-    name: hyprd-leadpier
-    path: /home/cullyn/.local/state/hyprd/firefox-profiles/leadpier
-source:
-    session_file: /home/cullyn/.local/state/hyprd/firefox-profiles/leadpier/sessionstore-backups/recovery.jsonlz4
-    window_index: 1
 window:
     selected_tab: 2
     tab_count: 8

@@ -39,22 +39,9 @@ type browserTabSummary struct {
 
 type browserSnapshotSummary struct {
 	Name    string                `yaml:"name"`
-	Profile browserProfileSummary `yaml:"profile"`
-	Source  browserSourceSummary  `yaml:"source"`
 	Window  browserSnapshotWindow `yaml:"window"`
 	Browser config.BrowserConfig  `yaml:"browser"`
 	Tabs    []browserTabSummary   `yaml:"tabs,omitempty"`
-}
-
-type browserProfileSummary struct {
-	Name       string `yaml:"name"`
-	Path       string `yaml:"path"`
-	InstallKey string `yaml:"install_key,omitempty"`
-}
-
-type browserSourceSummary struct {
-	SessionFile string `yaml:"session_file"`
-	WindowIndex int    `yaml:"window_index"`
 }
 
 type browserSnapshotWindow struct {
@@ -66,7 +53,7 @@ type browserSnapshotWindow struct {
 	HyprOrderMatchesTabs bool   `yaml:"hypr_order_matches_tabs"`
 }
 
-func (b *Browser) writeSnapshot(name string, profile firefoxProfile, windowIndex int, store *firefoxSessionStore) (string, error) {
+func (b *Browser) writeSnapshot(name string, _ firefoxProfile, windowIndex int, store *firefoxSessionStore) (string, error) {
 	slug, err := slugifySnapshotName(name)
 	if err != nil {
 		return "", err
@@ -83,16 +70,7 @@ func (b *Browser) writeSnapshot(name string, profile firefoxProfile, windowIndex
 
 	windowSummary := summarizeFirefoxWindow(store.Windows[windowIndex])
 	summary := browserSnapshotSummary{
-		Name: slug,
-		Profile: browserProfileSummary{
-			Name:       profile.Name,
-			Path:       profile.Root,
-			InstallKey: profile.InstallKey,
-		},
-		Source: browserSourceSummary{
-			SessionFile: store.Source,
-			WindowIndex: windowIndex + 1,
-		},
+		Name:    slug,
 		Window:  windowSummary.browserSnapshotWindow,
 		Browser: windowSummary.Browser,
 		Tabs:    windowSummary.Tabs,
@@ -262,18 +240,6 @@ func (b *Browser) claimWindow(snapshot string, workspace int, allow func(hypr.Wi
 	return fmt.Errorf("no Firefox window matching %q for snapshot %q", title, snapshot)
 }
 
-// ClaimWindowForSession finds a matching Firefox window from a managed session profile.
-func (b *Browser) ClaimWindowForSession(snapshot, sessionName string, cfg config.BrowserConfig, workspace int) error {
-	profile, err := ManagedProfileForSession(sessionName, cfg)
-	if err != nil {
-		return err
-	}
-	return b.claimWindow(snapshot, workspace, func(c hypr.Window) bool {
-		// Hyprland reports the Firefox content PID; the profile flag usually lives on an ancestor process.
-		return processTreeUsesProfile(c.Pid, profile.Root)
-	})
-}
-
 // buildSessionPayload constructs minimal Firefox session JSON from snapshot metadata.
 //
 // This avoids storing raw Firefox session data (which contains cookies, formdata, storage).
@@ -410,18 +376,6 @@ func repoSessionsRoot() (string, error) {
 	return filepath.Join(home, "dotfiles", "cmds", "internal", "hyprd", "browser", "sessions"), nil
 }
 
-// browserStateRoot returns the runtime snapshot/backup root outside the dotfiles repo.
-func browserStateRoot() (string, error) {
-	if stateHome := os.Getenv("XDG_STATE_HOME"); stateHome != "" {
-		return filepath.Join(stateHome, "hyprd", "browser-sessions"), nil
-	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(home, ".local", "state", "hyprd", "browser-sessions"), nil
-}
-
 // legacyBrowserStateRoot is read-only compatibility for snapshots from the pre-hyprd browser helper.
 func legacyBrowserStateRoot() (string, error) {
 	home, err := os.UserHomeDir()
@@ -431,13 +385,10 @@ func legacyBrowserStateRoot() (string, error) {
 	return filepath.Join(home, ".local", "state", "firefox-sessions"), nil
 }
 
-// snapshotRoots lists snapshot lookup roots in precedence order: repo, runtime state, then legacy state.
+// snapshotRoots lists snapshot lookup roots in precedence order: repo, then legacy state.
 func snapshotRoots() []string {
 	var roots []string
 	if root, err := repoSessionsRoot(); err == nil {
-		roots = append(roots, root)
-	}
-	if root, err := browserStateRoot(); err == nil {
 		roots = append(roots, root)
 	}
 	if root, err := legacyBrowserStateRoot(); err == nil {

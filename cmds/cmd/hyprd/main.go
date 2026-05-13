@@ -290,13 +290,14 @@ Lock:
   hyprd lock full        Full lock (wraps hyprlock with pre/post hooks)
 
 Browser:
-  hyprd browser launch [--profile <name|path>]
+  hyprd browser launch
   hyprd browser open <url>
-  hyprd browser windows [--all] [--profile <name|path>]
-  hyprd browser snapshot <name> [active|largest|index] [--profile <name|path>]
+  hyprd browser windows [--all]
+  hyprd browser snapshot <name> [active|largest|index]
   hyprd browser show <name>
   hyprd browser hypr <name>
-  hyprd browser restore <name> [--mode urls|exact] [--profile <name|path>] [--force] [--dry-run]
+  hyprd browser restore <name> [--force] [--dry-run]
+  hyprd browser profile refresh <name> [--force] [--dry-run]
 
 Query/Subscribe (for eww):
   hyprd query [topic]    Get state (workspace|hidden|split|three-body|all)

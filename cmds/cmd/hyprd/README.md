@@ -25,7 +25,7 @@ hyprd/
 │   ├── firefox.go              #   profile discovery + sessionstore loading
 │   ├── mozlz4.go               #   Mozilla LZ4 decompression
 │   ├── profile.go              #   Firefox profile path resolution
-│   ├── restore.go              #   snapshot restore (URL replay or exact session replacement)
+│   ├── restore.go              #   exact session replacement restore
 │   ├── session_store.go        #   sessionstore JSON parsing
 │   ├── snapshot.go             #   named snapshot creation from browser windows
 │   ├── browser_test.go         #   tests
@@ -190,12 +190,13 @@ hyprd lock full        # wraps hyprlock --grace 2 with the pseudo-lock pre/post 
 ### Browser
 
 ```bash
-hyprd browser windows [--all] [--profile <name|path>]
-hyprd browser snapshot <name> [active|largest|index] [--profile <name|path>]
+hyprd browser windows [--all]
+hyprd browser snapshot <name> [active|largest|index]
 hyprd browser show <name>
 hyprd browser hypr <name>
-hyprd browser restore <name> [--mode exact|urls] [--profile <name|path>] [--force] [--dry-run]
-hyprd browser launch [--profile <name|path>]
+hyprd browser restore <name> [--force] [--dry-run]
+hyprd browser profile refresh <name> [--force] [--dry-run]
+hyprd browser launch
 ```
 
 Browser snapshots are the Firefox layout primitive for sessions. The normal flow is:
@@ -205,14 +206,10 @@ Browser snapshots are the Firefox layout primitive for sessions. The normal flow
 3. Reference it in `cmds/config/hyprd.yaml` as `browser: <name>`.
 4. Open the session with `hyprd layout <session>` or let `hyprd init` restore init sessions at boot.
 
-`browser: <name>` is shorthand for an exact forced restore of that snapshot. Use the expanded map only for profile overrides or non-snapshot URL launches:
+`browser: <name>` is shorthand for an exact restore of that snapshot. Use the expanded map only for non-snapshot URL launches:
 
 ```yaml
 browser: leadpier
-
-browser:
-  snapshot: leadpier
-  profile: dev-edition
 
 browser:
   urls:
@@ -225,7 +222,8 @@ Command meanings:
 - `snapshot` writes a named snapshot under `browser/sessions/` from the selected Firefox window. Selectors are `active`, `largest`, or a 1-based window index.
 - `show` prints the saved snapshot YAML summary.
 - `hypr` prints a launch config generated from the snapshot; mostly useful for inspection now that session config can use `browser: <name>`.
-- `restore` manually restores a snapshot. It defaults to exact session replacement with force; pass `--mode urls` to replay visible tabs into a normal Firefox window instead.
+- `restore` manually restores a snapshot exactly by replacing Firefox session files. `coms` uses the main Firefox profile; other snapshots use persistent profiles under `~/.local/share/hyprd/firefox-profiles/` seeded from the main profile on first use.
+- `profile refresh` overwrites a persistent layout profile from the main Firefox profile and re-injects that layout's snapshot. It refuses for `coms` because `coms` is the main profile.
 - `launch` clears the profile sessionstore and opens a clean new-tab window; this is used internally by the three-body browser command for non-snapshot launches.
 
 ### Screenshot

@@ -7,6 +7,7 @@ import (
 	"cmp"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -19,6 +20,7 @@ type firefoxProfile struct {
 	Root       string
 	Name       string
 	InstallKey string
+	Main       bool
 }
 
 type iniFile map[string]map[string]string
@@ -78,6 +80,7 @@ func discoverFirefoxProfile(raw string) (firefoxProfile, error) {
 			Root:       profilePath,
 			Name:       profileNameForPath(profiles, root, profilePath),
 			InstallKey: section,
+			Main:       raw == "",
 		}, nil
 	}
 
@@ -89,22 +92,33 @@ func discoverFirefoxProfile(raw string) (firefoxProfile, error) {
 		return firefoxProfile{
 			Root: profilePath,
 			Name: cmp.Or(profiles.get(section, "Name"), filepath.Base(profilePath)),
+			Main: raw == "",
 		}, nil
 	}
 
 	return firefoxProfile{}, fmt.Errorf("could not determine default Firefox profile")
 }
 
-// ManagedProfileForSession returns a runtime Firefox profile owned by one layout session.
-//
-// Profiles live under XDG_STATE_HOME/hyprd/firefox-profiles, falling back to ~/.local/state/hyprd/firefox-profiles.
-// The first restore clones the snapshot source profile so exact restores keep browser state.
-func ManagedProfileForSession(sessionName string, cfg config.BrowserConfig) (firefoxProfile, error) {
-	slug, err := slugifySnapshotName(sessionName)
+const mainFirefoxSnapshot = "coms"
+
+func profileForSnapshot(snapshot string, create bool) (firefoxProfile, error) {
+	main, err := discoverFirefoxProfile("")
 	if err != nil {
 		return firefoxProfile{}, err
 	}
-	source, err := sourceProfileForBrowserConfig(cfg)
+	slug, err := slugifySnapshotName(snapshot)
+	if err != nil {
+		return firefoxProfile{}, err
+	}
+	if slug == mainFirefoxSnapshot {
+		main.Main = true
+		return main, nil
+	}
+	return layoutFirefoxProfile(snapshot, main, create)
+}
+
+func layoutFirefoxProfile(snapshot string, seed firefoxProfile, create bool) (firefoxProfile, error) {
+	slug, err := slugifySnapshotName(snapshot)
 	if err != nil {
 		return firefoxProfile{}, err
 	}
@@ -116,70 +130,91 @@ func ManagedProfileForSession(sessionName string, cfg config.BrowserConfig) (fir
 		Root: filepath.Join(root, slug),
 		Name: "hyprd-" + slug,
 	}
-	if isDir(profile.Root) {
-		if err := ensureExternalLinksOpenInTabs(profile); err != nil {
-			return firefoxProfile{}, err
-		}
+	if !create || isDir(profile.Root) {
 		return profile, nil
 	}
-	if err := cloneFirefoxProfile(source.Root, profile.Root); err != nil {
-		return firefoxProfile{}, err
-	}
-	if err := ensureExternalLinksOpenInTabs(profile); err != nil {
+	if err := seedFirefoxProfile(seed, profile.Root); err != nil {
 		return firefoxProfile{}, err
 	}
 	return profile, nil
 }
 
-func ensureExternalLinksOpenInTabs(profile firefoxProfile) error {
-	// Managed profiles are cloned outside the repo-managed user.js path, so keep Firefox remoting tab-safe here too.
-	for key, value := range map[string]string{
-		"browser.link.open_newwindow":                   "3",
-		"browser.link.open_newwindow.override.external": "3",
-		"browser.link.open_newwindow.restriction":       "0",
-	} {
-		if err := setFirefoxPref(profile, key, value); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func sourceProfileForBrowserConfig(cfg config.BrowserConfig) (firefoxProfile, error) {
-	if cfg.Profile != "" {
-		return discoverFirefoxProfile(cfg.Profile)
-	}
-	if cfg.Snapshot != "" {
-		dir, err := resolveSnapshotDir(cfg.Snapshot)
-		if err != nil {
-			return firefoxProfile{}, err
-		}
-		return restoreProfileForSnapshot(dir, "")
-	}
-	return discoverFirefoxProfile("")
-}
-
 func managedFirefoxProfilesRoot() (string, error) {
-	if stateHome := os.Getenv("XDG_STATE_HOME"); stateHome != "" {
-		return filepath.Join(stateHome, "hyprd", "firefox-profiles"), nil
+	if dataHome := strings.TrimSpace(os.Getenv("XDG_DATA_HOME")); dataHome != "" {
+		return filepath.Join(config.ExpandPath(dataHome), "hyprd", "firefox-profiles"), nil
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(home, ".local", "state", "hyprd", "firefox-profiles"), nil
+	return filepath.Join(home, ".local", "share", "hyprd", "firefox-profiles"), nil
 }
 
-func cloneFirefoxProfile(source, target string) error {
-	if filepath.Clean(source) == filepath.Clean(target) {
-		return nil
-	}
-	if err := os.MkdirAll(target, 0o700); err != nil {
+func seedFirefoxProfile(seed firefoxProfile, target string) error {
+	parent := filepath.Dir(target)
+	if err := os.MkdirAll(parent, 0o755); err != nil {
 		return err
 	}
-	return filepath.WalkDir(source, func(path string, entry os.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
+	tmp, err := os.MkdirTemp(parent, ".seed-*")
+	if err != nil {
+		return err
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = os.RemoveAll(tmp)
+		}
+	}()
+	if err := copyFirefoxProfile(seed.Root, tmp); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, target); err != nil {
+		return err
+	}
+	committed = true
+	return nil
+}
+
+func refreshFirefoxProfile(seed firefoxProfile, target firefoxProfile) error {
+	parent := filepath.Dir(target.Root)
+	if err := os.MkdirAll(parent, 0o755); err != nil {
+		return err
+	}
+	tmp, err := os.MkdirTemp(parent, ".refresh-*")
+	if err != nil {
+		return err
+	}
+	committed := false
+	defer func() {
+		if !committed {
+			_ = os.RemoveAll(tmp)
+		}
+	}()
+	if err := copyFirefoxProfile(seed.Root, tmp); err != nil {
+		return err
+	}
+	old := target.Root + ".old"
+	_ = os.RemoveAll(old)
+	if isDir(target.Root) {
+		if err := os.Rename(target.Root, old); err != nil {
+			return err
+		}
+	}
+	if err := os.Rename(tmp, target.Root); err != nil {
+		if isDir(old) {
+			_ = os.Rename(old, target.Root)
+		}
+		return err
+	}
+	_ = os.RemoveAll(old)
+	committed = true
+	return nil
+}
+
+func copyFirefoxProfile(source, target string) error {
+	return filepath.WalkDir(source, func(path string, entry fs.DirEntry, err error) error {
+		if err != nil {
+			return err
 		}
 		rel, err := filepath.Rel(source, path)
 		if err != nil {
@@ -188,48 +223,47 @@ func cloneFirefoxProfile(source, target string) error {
 		if rel == "." {
 			return nil
 		}
-		name := entry.Name()
-		if shouldSkipProfileCloneEntry(name) {
+		if skipFirefoxProfilePath(rel, entry) {
 			if entry.IsDir() {
 				return filepath.SkipDir
 			}
 			return nil
 		}
+
 		dest := filepath.Join(target, rel)
 		info, err := entry.Info()
 		if err != nil {
 			return err
 		}
 		mode := info.Mode()
-		if entry.IsDir() {
+		switch {
+		case mode.IsDir():
 			return os.MkdirAll(dest, mode.Perm())
-		}
-		if mode.Type()&os.ModeSymlink != 0 {
+		case mode.Type()&os.ModeSymlink != 0:
 			link, err := os.Readlink(path)
 			if err != nil {
 				return err
 			}
 			return os.Symlink(link, dest)
-		}
-		if !mode.IsRegular() {
+		case mode.IsRegular():
+			return copyRegularFile(path, dest, mode.Perm())
+		default:
 			return nil
 		}
-		return copyProfileFile(path, dest, mode.Perm())
 	})
 }
 
-func shouldSkipProfileCloneEntry(name string) bool {
+func skipFirefoxProfilePath(rel string, entry fs.DirEntry) bool {
+	name := entry.Name()
 	switch name {
-	case ".parentlock", "lock", "parent.lock", "sessionstore.jsonlz4", "sessionCheckpoints.json":
-		return true
-	case "sessionstore-backups", "startupCache", "cache2", "thumbnails", "shader-cache", "crashes", "minidumps":
+	case "parent.lock", "lock", ".parentlock", "cache2", "startupCache", "hyprd-restore-backups", "sessionstore-backups":
 		return true
 	}
-	return strings.HasSuffix(name, ".tmp") || strings.HasSuffix(name, ".sqlite-wal") || strings.HasSuffix(name, ".sqlite-shm")
+	return strings.HasPrefix(rel, "minidumps") || strings.HasPrefix(rel, "crashes")
 }
 
-func copyProfileFile(source, target string, perm os.FileMode) error {
-	if err := os.MkdirAll(filepath.Dir(target), 0o700); err != nil {
+func copyRegularFile(source, target string, mode fs.FileMode) error {
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
 		return err
 	}
 	in, err := os.Open(source)
@@ -237,13 +271,16 @@ func copyProfileFile(source, target string, perm os.FileMode) error {
 		return err
 	}
 	defer in.Close()
-	out, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, perm)
+	out, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
 	if err != nil {
 		return err
 	}
-	defer out.Close()
-	_, err = io.Copy(out, in)
-	return err
+	_, copyErr := io.Copy(out, in)
+	closeErr := out.Close()
+	if copyErr != nil {
+		return copyErr
+	}
+	return closeErr
 }
 
 func firefoxRoot() (string, error) {

@@ -247,13 +247,10 @@ func (l *Layout) launchSessionBrowser(s config.Session) error {
 	b := browser.NewBrowser(l.hypr, l.state)
 
 	if b.UsesExactRestore(s.Browser) {
-		if err := l.claimBrowserWindow(b, s); err == nil {
-			return nil
-		}
 		if l.browserRestoredInBatch(s.Name) {
-			return fmt.Errorf("browser window for batch-restored session %q was not found", s.Name)
+			return l.claimBrowserWindow(b, s)
 		}
-		if _, err := b.RestoreConfiguredSnapshotForSession(s.Name, s.Browser, false); err != nil {
+		if _, err := b.RestoreConfiguredSnapshot(s.Browser, false); err != nil {
 			return err
 		}
 		if err := l.claimBrowserWindow(b, s); err != nil {
@@ -328,13 +325,7 @@ func (l *Layout) claimBrowserWindow(b *browser.Browser, s config.Session) error 
 	deadline := time.Now().Add(sessionBrowserClaimTimeout)
 	var lastErr error
 	for time.Now().Before(deadline) {
-		claim := b.ClaimWindowForSession
-		if l.browserRestoredInBatch(s.Name) {
-			claim = func(snapshot, _ string, _ config.BrowserConfig, workspace int) error {
-				return b.ClaimWindow(snapshot, workspace)
-			}
-		}
-		if err := claim(s.Browser.Snapshot, s.Name, s.Browser, s.Workspace); err == nil {
+		if err := b.ClaimWindowForSnapshot(s.Browser.Snapshot, s.Workspace); err == nil {
 			return nil
 		} else {
 			lastErr = err
