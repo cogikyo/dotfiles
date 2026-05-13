@@ -95,6 +95,9 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 - Never wrap a single sentence across multiple lines; if it wants to wrap, rewrite it shorter or split it into separate sentences.
 - Prefer concise, complete sentences over dense paragraphs.
 - Use blank lines as structural punctuation in Markdown.
+- Put one blank line before and after fenced code blocks: relevant text, blank line, fence, code, fence, blank line, more text.
+- Fence every multi-line code snippet, pseudo-code block, table-like mapping, command transcript, or structured example.
+- Do not place multi-line code or aligned mappings directly in prose.
 - Keep manual line breaks intentional; lines over 120 characters are acceptable when preserving one clear sentence per line is the better trade-off.
 
 ## User Details

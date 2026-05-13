@@ -167,14 +167,14 @@
     "markdownListEnumeration": "glu_2",
     "markdownImage": "sky_1",
     "markdownImageText": "sky_1",
-    "markdownCodeBlock": "blu_3",
+    "markdownCodeBlock": "fg",
     "syntaxComment": "slt_2",
     "syntaxKeyword": "prp_2",
     "syntaxFunction": "orn_4",
-    "syntaxVariable": "brt_0",
+    "syntaxVariable": "fg",
     "syntaxString": "grn_3",
     "syntaxNumber": "pnk_2",
-    "syntaxType": "blu_2",
+    "syntaxType": "brt_1",
     "syntaxOperator": "sky_4",
     "syntaxPunctuation": "glu_2"
   }
