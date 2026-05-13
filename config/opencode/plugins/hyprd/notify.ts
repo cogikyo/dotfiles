@@ -15,6 +15,7 @@ const COMPLETE_DEBOUNCE_MS = 500
 const PERMISSION_DEBOUNCE_MS = 1500
 const NOTIFY_DEDUPE_MS = 1000
 const START_TITLE_WAIT_MS = 1200
+const START_CONTEXT_RETRY_MS = 500
 const NEW_SESSION_START_MESSAGE = "New Session started"
 const IDLE_REMINDER_MS = 10 * 60 * 1000
 const IDLE_CONTEXT_MAX_AGE_MS = 30 * 1000
@@ -122,6 +123,7 @@ function hasFreshIdleContext(ctx) {
 
 async function send(command) {
   let resolveDone
+  let response = ""
   const done = new Promise((r) => {
     resolveDone = r
   })
@@ -132,7 +134,9 @@ async function send(command) {
         open(socket) {
           socket.write(command)
         },
-        data() {},
+        data(_socket, data) {
+          response += new TextDecoder().decode(data)
+        },
         close() {
           resolveDone()
         },
@@ -143,14 +147,14 @@ async function send(command) {
     })
   } catch {
     resolveDone()
-    return
+    return false
   }
   await done
+  return response.trim() === "ok"
 }
 
-function shouldSendNotify(req) {
-  const now = Date.now()
-  const key = JSON.stringify([
+function notifyKey(req) {
+  return JSON.stringify([
     req.source,
     req.event,
     req.message,
@@ -159,19 +163,25 @@ function shouldSendNotify(req) {
     req.kitty_pid,
     req.kitty_window_id,
   ])
-  const previous = recentNotifies.get(key) || 0
-  if (now - previous < NOTIFY_DEDUPE_MS) return false
+}
 
+function recentEnough(key) {
+  const previous = recentNotifies.get(key) || 0
+  return Date.now() - previous < NOTIFY_DEDUPE_MS
+}
+
+function markNotified(key) {
+  const now = Date.now()
   recentNotifies.set(key, now)
   for (const [oldKey, seenAt] of recentNotifies) {
     if (now - seenAt > NOTIFY_DEDUPE_MS) recentNotifies.delete(oldKey)
   }
-  return true
 }
 
 async function notify(payload, parentFor) {
   const ctx = await kittyContext(payload.sessionID, parentFor)
-  if (payload.type === "idle" && (!ctx.kitty_pid || !ctx.kitty_window_id || !hasFreshIdleContext(ctx))) return
+  if (!ctx.kitty_pid || !ctx.kitty_window_id) return false
+  if (payload.type === "idle" && !hasFreshIdleContext(ctx)) return false
 
   const req = {
     source: "opencode",
@@ -182,8 +192,12 @@ async function notify(payload, parentFor) {
     kitty_pid: ctx.kitty_pid,
     kitty_window_id: ctx.kitty_window_id,
   }
-  if (!shouldSendNotify(req)) return
-  await send("notify " + JSON.stringify(req))
+  const key = notifyKey(req)
+  if (recentEnough(key)) return false
+
+  const sent = await send("notify " + JSON.stringify(req))
+  if (sent) markNotified(key)
+  return sent
 }
 
 function newSessionState() {
@@ -227,7 +241,7 @@ const server = async () => {
   }
 
   async function sendNotify(payload) {
-    await notify(payload, parentFor)
+    return await notify(payload, parentFor)
   }
 
   function clearIdleReminder(state) {
@@ -240,27 +254,32 @@ const server = async () => {
     state.startTimer = null
   }
 
-  async function sendStartNotify(sessionID, message) {
+  async function trySendStartNotify(sessionID, message) {
     const state = sessions.get(sessionID)
-    if (!state?.active || state.startNotified) return
+    if (!state?.active || state.startNotified) return false
 
     clearStartNotify(state)
-    state.startNotified = true
-    await sendNotify({
+    const sent = await sendNotify({
       sessionID,
       type: "start",
       message: message || startMessage(state),
     })
+    if (sent) {
+      state.startNotified = true
+      return true
+    }
+    if (state.active) scheduleStartNotify(sessionID, message, START_CONTEXT_RETRY_MS)
+    return false
   }
 
-  function scheduleStartNotify(sessionID) {
+  function scheduleStartNotify(sessionID, message, delay = START_TITLE_WAIT_MS) {
     const state = sessions.get(sessionID)
     if (!state?.active || state.startNotified || state.startTimer) return
 
     state.startTimer = setTimeout(async () => {
       state.startTimer = null
-      await sendStartNotify(sessionID)
-    }, START_TITLE_WAIT_MS)
+      await trySendStartNotify(sessionID, message)
+    }, delay)
   }
 
   function scheduleIdleReminder(sessionID) {
@@ -328,7 +347,7 @@ const server = async () => {
     const state = getSession(sessionID)
     state.lastUserMessage = text
     state.lastUserMessageAt = Date.now()
-    if (state.active && !state.startNotified) await sendStartNotify(sessionID)
+    if (state.active && !state.startNotified) scheduleStartNotify(sessionID)
   }
 
   async function handleMessageUpdated(props) {
@@ -401,8 +420,8 @@ const server = async () => {
           state.active = true
           state.startNotified = false
           if (type !== "retry" && state.lastUserMessageAt <= state.inactiveAt) state.lastUserMessage = ""
-          if (type === "retry") await sendStartNotify(sessionID, "Retrying")
-          else if (state.lastUserMessage) await sendStartNotify(sessionID)
+          if (type === "retry") await trySendStartNotify(sessionID, "Retrying")
+          else if (state.lastUserMessage) scheduleStartNotify(sessionID)
           else scheduleStartNotify(sessionID)
         }
         return

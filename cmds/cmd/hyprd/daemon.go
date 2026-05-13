@@ -349,6 +349,10 @@ func (d *Daemon) handleNotify(arg string) string {
 	}
 
 	notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load())
+	if !notifier.CanDispatch(req) {
+		return "missing-context"
+	}
+
 	go func() {
 		if err := notifier.Handle(req); err != nil {
 			fmt.Fprintf(os.Stderr, "hyprd notify: %v\n", err)

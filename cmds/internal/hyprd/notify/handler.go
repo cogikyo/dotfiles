@@ -47,6 +47,14 @@ func init() {
 // │ router                                                                       │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
+// CanDispatch reports whether a request has enough context for visible delivery.
+func (n *Notifier) CanDispatch(req NotifyRequest) bool {
+	if req.Source != "opencode" {
+		return true
+	}
+	return hasOpencodeContext(n.resolveContext(req, ""))
+}
+
 // Handle dispatches a NotifyRequest to the per-source handler.
 func (n *Notifier) Handle(req NotifyRequest) error {
 	switch req.Source {
@@ -141,7 +149,10 @@ func (n *Notifier) handleClaude(req NotifyRequest) error {
 }
 
 func (n *Notifier) handleOpencode(req NotifyRequest) error {
-	ctx := n.resolveContext(req, "opencode")
+	ctx := n.resolveContext(req, "")
+	if !hasOpencodeContext(ctx) {
+		return nil
+	}
 	n.trackAgentActivity(req, ctx)
 
 	switch req.Event {
@@ -211,6 +222,14 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 	default:
 		return fmt.Errorf("unknown opencode event: %s", req.Event)
 	}
+}
+
+func hasOpencodeContext(ctx *kittyContext) bool {
+	if ctx == nil {
+		return false
+	}
+	app := strings.TrimSpace(ctx.App)
+	return ctx.PID > 0 && ctx.WindowID > 0 && app != "" && !strings.EqualFold(app, "opencode")
 }
 
 // handleKitty skips claude and opencode commands (handled via the richer hook path).
