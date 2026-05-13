@@ -32,7 +32,7 @@ func NewTab(h *hypr.Client, s *state.State) *Tab {
 // Execute focuses the named tab, resolving aliases and semantic actions (nvim/git/build).
 //
 // Re-focusing the active tab toggles back to the previous window.
-// Pulls the editor from the shadow workspace if stashed there.
+// Pulls the editor from the shadow workspace only when it belongs to this workspace.
 func (t *Tab) Execute(tabName string) (string, error) {
 	if tabName == "" {
 		return "", fmt.Errorf("usage: tab <name|alias>")
@@ -181,16 +181,28 @@ func (t *Tab) findEditor(wsID int) (*hypr.Window, error) {
 		}
 	}
 
-	for i := range clients {
-		c := &clients[i]
-		if strings.HasPrefix(c.Workspace.Name, windows.ShadowWorkspace) &&
-			c.Class == "kitty" && c.InitialTitle == "editor" {
-			t.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", wsID, c.Address))
-			return c, nil
-		}
+	if shadow := shadowEditorForWorkspace(clients, t.state.GetThreeBody(wsID)); shadow != nil {
+		t.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", wsID, shadow.Address))
+		return shadow, nil
 	}
 
 	return nil, nil
+}
+
+func shadowEditorForWorkspace(clients []hypr.Window, tb *state.ThreeBodyState) *hypr.Window {
+	if tb == nil || tb.Shadow == "" {
+		return nil
+	}
+
+	for i := range clients {
+		c := &clients[i]
+		if c.Address == tb.Shadow && strings.HasPrefix(c.Workspace.Name, windows.ShadowWorkspace) &&
+			c.Class == "kitty" && c.InitialTitle == "editor" {
+			return c
+		}
+	}
+
+	return nil
 }
 
 func (t *Tab) activeWindowAddress() (string, error) {
