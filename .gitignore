@@ -24,3 +24,5 @@ iso/airootfs/root/dotfiles/
 .agents/skills
 .claude/skills
 .opencode/skills
+
+.ruff_cache
