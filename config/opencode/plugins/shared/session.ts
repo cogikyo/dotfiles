@@ -18,6 +18,8 @@ export type SessionUsage = {
   colorPercent: number
 }
 
+const AUTOCOMPACT_CONTEXT_LIMIT = 150_000
+
 type AssistantLike = Extract<Message, { role: 'assistant' }>
 type UserLike = Extract<Message, { role: 'user' }>
 
@@ -63,12 +65,15 @@ export function sessionContextUsage(api: TuiPluginApi, sessionID: string): Sessi
   const meta = sessionMeta(api, sessionID)
   const model = findModel(api.state.provider, meta.providerID, meta.modelID)
   const tokens = contextTokenTotal(latestAssistantMessage(messages))
-  const limit = model?.limit.context
-  const percent = limit ? (tokens / limit) * 100 : 0
-  const colorLimit = limit ? Math.min(limit, 250_000) : undefined
-  const colorPercent = colorLimit ? Math.min(100, (tokens / colorLimit) * 100) : percent
+  const limit = contextCompactionLimit(model?.limit.context)
+  const percent = limit ? Math.min(100, (tokens / limit) * 100) : 0
 
-  return { tokens, limit, percent, colorPercent }
+  return { tokens, limit, percent, colorPercent: percent }
+}
+
+function contextCompactionLimit(modelLimit?: number) {
+  if (!modelLimit) return undefined
+  return Math.min(modelLimit, AUTOCOMPACT_CONTEXT_LIMIT)
 }
 
 function latestModelMessage(messages: ReadonlyArray<Message>): (AssistantLike | UserLike) | undefined {

@@ -1,5 +1,4 @@
 export const icons = {
-  sep: ' ╼╾ ',
   model: '󰯉 ',
   effort: {
     low: '󰤟',

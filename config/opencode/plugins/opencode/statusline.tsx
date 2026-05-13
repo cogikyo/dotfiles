@@ -249,10 +249,6 @@ function contextBar(percent: number) {
   return icons.barFilled.repeat(filled) + icons.barEmpty.repeat(9 - filled);
 }
 
-function Sep(props: { api: TuiPluginApi }) {
-  return <text fg={colors(props.api.theme.current).muted}>{icons.sep}</text>;
-}
-
 function gitStateColor(api: TuiPluginApi, status: GitStatus) {
   const c = colors(api.theme.current);
   if (status.behind > 0 || status.conflicted > 0) return c.brightRed;

@@ -90,6 +90,7 @@ Only `hint` is customized.
 
 The statusline intentionally omits provider, model, and effort because OpenCode already renders those in prompt metadata.
 It owns cwd, git status, and a Claude-style context pressure bar on the preview/status row.
+The pressure bar normalizes against a local `150K` auto-compaction window instead of the model's advertised max context.
 OpenCode's native prompt keeps numeric context usage and command-list keybind hints on the right side of that row.
 
 ## Markdown Context Contract
