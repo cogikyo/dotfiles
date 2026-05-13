@@ -1,5 +1,28 @@
 local M = {}
 
+local function restart_lsp()
+	local clients = vim.lsp.get_clients({ bufnr = 0 })
+	if vim.tbl_isempty(clients) then
+		vim.notify("No active LSP clients for this buffer", vim.log.levels.WARN)
+		return
+	end
+
+	local names = {}
+	for _, client in ipairs(clients) do
+		names[client.name] = true
+	end
+
+	for name in pairs(names) do
+		vim.lsp.enable(name, false)
+	end
+
+	vim.defer_fn(function()
+		for name in pairs(names) do
+			vim.lsp.enable(name, true)
+		end
+	end, 300)
+end
+
 local function diag_jump(count)
 	return function()
 		vim.diagnostic.jump({ count = count })
@@ -15,6 +38,8 @@ local function disable_semantic_tokens(client, bufnr)
 end
 
 function M.setup()
+	vim.api.nvim_create_user_command("LspRestart", restart_lsp, { desc = "Restart LSP clients for current buffer" })
+
 	vim.api.nvim_create_autocmd("LspAttach", {
 		group = vim.api.nvim_create_augroup("lsp-attach", { clear = true }),
 		callback = function(event)
@@ -60,7 +85,7 @@ function M.setup()
 			map("[d", diag_jump(-1), "Previous Diagnostic")
 			map("]d", diag_jump(1), "Next Diagnostic")
 
-			map("<leader>Rs", "<cmd>LspRestart<CR>", "Restart LSP")
+			map("<leader>gq", "<cmd>LspRestart<CR>", "Restart LSP")
 			map("<leader>ht", function()
 				vim.lsp.inlay_hint.enable(not vim.lsp.inlay_hint.is_enabled({ bufnr = event.buf }))
 			end, "Toggle Inlay Hints")

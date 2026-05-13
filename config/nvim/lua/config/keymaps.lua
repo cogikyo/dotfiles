@@ -468,6 +468,6 @@ map("n", "<leader>r<leader>", ":%s///g<Left><Left><Left>", remap_explicit("Repla
 map("n", "<leader>rw", ":%s/<C-r><C-w>//g<Left><Left>", remap_explicit("Replace word in file"))
 map("n", "<leader>rp", '"ryiwvip:s/<C-r>r//g<Left><Left>', remap_explicit("Replace word in paragraph"))
 map("n", "<leader>rs", "1z=", desc("Fix spelling"))
-map("n", "<leader>Rs", ":LspRestart<CR>", desc("Restart LSP"))
+map("n", "<leader>gq", ":LspRestart<CR>", desc("Restart LSP"))
 
 return { groups = GROUPS }
