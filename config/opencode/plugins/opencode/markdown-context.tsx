@@ -9,6 +9,9 @@ import { colors } from '../shared/colors.ts'
 const id = 'opencode-markdown-context'
 const MAX_READS = 8
 const MAX_LABEL_LENGTH = 30
+const MAX_ROOT_LENGTH = 8
+const MAX_PARENT_LENGTH = 12
+const MIN_LEAF_LENGTH = 6
 const BOLD = createTextAttributes({ bold: true })
 
 type MarkdownContextItem = {
@@ -160,19 +163,52 @@ function compactPath(label: string) {
   const leaf = parts.at(-1) ?? label
   const parent = parts.at(-2) ?? ''
   const root = parts[0]
-  const candidates = [
-    `${root}/.../${parent}/${leaf}`,
-    `${root}/.../${leaf}`,
-    `.../${parent}/${leaf}`,
-    `.../${leaf}`,
-  ]
 
-  return candidates.find((candidate) => candidate.length <= MAX_LABEL_LENGTH) ?? truncateLabel(candidates.at(-1) ?? label)
+  return compactRootParentLeaf(root, parent, leaf)
 }
 
 function truncateLabel(label: string) {
   if (label.length <= MAX_LABEL_LENGTH) return label
   return `${label.slice(0, Math.max(0, MAX_LABEL_LENGTH - 3))}...`
+}
+
+function compactRootParentLeaf(root: string, parent: string, leaf: string) {
+  const full = `${root}/.../${parent}/${leaf}`
+  if (full.length <= MAX_LABEL_LENGTH) return full
+
+  const segmentBudget = MAX_LABEL_LENGTH - '/...//'.length
+  if (segmentBudget < 3) return truncateLabel(full)
+
+  const rootLength = Math.min(root.length, Math.max(1, Math.min(MAX_ROOT_LENGTH, segmentBudget - MIN_LEAF_LENGTH)))
+  const remaining = segmentBudget - rootLength
+  const parentLength = Math.min(parent.length, Math.max(1, Math.min(MAX_PARENT_LENGTH, remaining - MIN_LEAF_LENGTH)))
+  const leafLength = remaining - parentLength
+  const candidate = `${truncateMiddle(root, rootLength)}/.../${truncateMiddle(parent, parentLength)}/${truncateFileName(leaf, leafLength)}`
+
+  if (candidate.length <= MAX_LABEL_LENGTH) return candidate
+  return truncateLabel(full)
+}
+
+function truncateMiddle(value: string, maxLength: number) {
+  if (maxLength <= 0) return ''
+  if (value.length <= maxLength) return value
+  if (maxLength <= 3) return '.'.repeat(maxLength)
+
+  const headLength = Math.ceil((maxLength - 3) / 2)
+  const tailLength = Math.floor((maxLength - 3) / 2)
+  return `${value.slice(0, headLength)}...${value.slice(value.length - tailLength)}`
+}
+
+function truncateFileName(value: string, maxLength: number) {
+  if (value.length <= maxLength) return value
+
+  const ext = path.extname(value)
+  if (ext.length > 1 && maxLength > ext.length) {
+    const stemLength = Math.min(3, maxLength - ext.length)
+    return `${value.slice(0, stemLength)}${ext}`
+  }
+
+  return truncateMiddle(value, maxLength)
 }
 
 function sourceColor(api: TuiPluginApi, item: MarkdownContextItem) {

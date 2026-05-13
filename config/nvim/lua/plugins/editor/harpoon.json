@@ -43,7 +43,8 @@
         "config/nvim/init.lua",
         "cmds/config/hyprd.yaml",
         "config/nvim/lua/config/keymaps.lua",
-        "config/opencode/AGENTS.md"
+        "config/opencode/AGENTS.md",
+        "config/kitty/kitty.conf"
       ]
     },
     "/home/cullyn/vagari.firefox": {
