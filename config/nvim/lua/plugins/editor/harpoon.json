@@ -32,7 +32,8 @@
         "apps/admin/src/pages/Users/UserDetails/Tracking/index.tsx",
         "packages/shared/src/components/Creatives/Detail/Page.tsx",
         "apps/admin/src/pages/Configuration/PartnerManagement/:partnerId/index.tsx",
-        "README.md"
+        "README.md",
+        "packages/shared/src/pages/Portal/Notifications/registry.ts"
       ]
     },
     "/home/cullyn/dotfiles": {

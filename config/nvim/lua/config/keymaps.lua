@@ -131,14 +131,17 @@ map("n", "<leader>mH", yank_markdown_html_buffer, desc("Yank file as rich HTML")
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ context: yank with file path prepended                                      │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
-local function set_context_register(location, content)
-	local language = vim.fn.fnamemodify(location, ":e")
+local function set_context_register(location, content, language)
+	language = language or vim.fn.fnamemodify(location, ":e")
 	if language == "" then
 		language = "text"
 	end
 	content = content:gsub("\n+$", "")
 	vim.fn.setreg("+", string.format("```%s\n%s\n\n%s\n```\n", language, location, content))
 end
+
+_G.context_yank_api = _G.context_yank_api or {}
+_G.context_yank_api.set_register = set_context_register
 
 local function yank_path(motion)
 	if motion then
@@ -170,16 +173,21 @@ local function yank_selection(motion)
 		yank_path(motion)
 	end
 end
-local function yank_diagnostics()
+local function yank_diagnostics(opts)
+	opts = opts or {}
 	local path = vim.fn.expand("%:p")
 	local line = vim.fn.line(".")
 	local location = path .. ":" .. line
 	local diagnostics = vim.diagnostic.get(0, { lnum = line - 1 }) -- 0-indexed
 
 	if #diagnostics == 0 then
+		if opts.silent_empty then
+			return false
+		end
+
 		set_context_register(location, "(no diagnostics)")
 		vim.notify("No diagnostics on this line", vim.log.levels.WARN)
-		return
+		return false
 	end
 
 	local lines = {}
@@ -195,7 +203,10 @@ local function yank_diagnostics()
 	end, 100)
 
 	vim.notify("Yanked " .. #diagnostics .. " diagnostic(s)", vim.log.levels.INFO)
+	return true
 end
+
+_G.context_yank_api.diagnostics = yank_diagnostics
 
 map("n", "<A-f>", yank_file_path, desc("Yank file path"))
 map("n", "<A-q>", yank_selection("vap"), desc("Yank file path + paragraph"))
