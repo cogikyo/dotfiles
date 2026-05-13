@@ -71,19 +71,32 @@ func (w *Weather) Name() string {
 // │ lifecycle                                                                    │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// Start loads credentials, emits an initial fetch, then polls at PollInterval.
+const weatherStartupRetryInterval = time.Minute
+
+// Start loads credentials, publishes the first successful fetch, then polls at PollInterval.
 func (w *Weather) Start(ctx context.Context, notify func(data any)) error {
 	w.active = true
 	w.client = &http.Client{Timeout: 10 * time.Second}
 
-	if err := w.loadCredentials(); err != nil {
-		fmt.Fprintf(os.Stderr, "ewwd: weather config error: %v\n", err)
-		return nil
-	}
+	for {
+		if w.apiKey == "" || w.lat == "" || w.lon == "" {
+			if err := w.loadCredentials(); err != nil {
+				fmt.Fprintf(os.Stderr, "ewwd: weather config error: %v\n", err)
+				if w.wait(ctx, weatherStartupRetryInterval) {
+					return nil
+				}
+				continue
+			}
+		}
 
-	if state := w.fetch(); state != nil {
-		w.state.Set("weather", state)
-		notify(state)
+		state := w.fetch()
+		if state != nil {
+			w.publish(notify, state)
+			break
+		}
+		if w.wait(ctx, weatherStartupRetryInterval) {
+			return nil
+		}
 	}
 
 	ticker := time.NewTicker(w.config.PollInterval)
@@ -97,11 +110,29 @@ func (w *Weather) Start(ctx context.Context, notify func(data any)) error {
 			return nil
 		case <-ticker.C:
 			if state := w.fetch(); state != nil {
-				w.state.Set("weather", state)
-				notify(state)
+				w.publish(notify, state)
 			}
 		}
 	}
+}
+
+func (w *Weather) wait(ctx context.Context, d time.Duration) bool {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return true
+	case <-w.done:
+		return true
+	case <-timer.C:
+		return false
+	}
+}
+
+func (w *Weather) publish(notify func(data any), state *WeatherState) {
+	w.state.Set("weather", state)
+	notify(state)
 }
 
 func (w *Weather) Stop() error {
@@ -197,13 +228,12 @@ func (w *Weather) fetch() *WeatherState {
 	}
 
 	airURL := fmt.Sprintf(
-		"http://api.openweathermap.org/data/2.5/air_pollution?lat=%s&lon=%s&appid=%s",
+		"https://api.openweathermap.org/data/2.5/air_pollution?lat=%s&lon=%s&appid=%s",
 		w.lat, w.lon, w.apiKey,
 	)
 	airData, err := w.httpGet(airURL)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ewwd: air quality fetch error: %v\n", err)
-		return nil
 	}
 
 	return w.parse(weatherData, airData)
@@ -268,12 +298,14 @@ func (w *Weather) parse(weatherData, airData []byte) *WeatherState {
 	}
 
 	var air airResponse
-	if err := json.Unmarshal(airData, &air); err != nil {
-		fmt.Fprintf(os.Stderr, "ewwd: air parse error: %v\n", err)
-		return nil
+	if len(airData) > 0 {
+		if err := json.Unmarshal(airData, &air); err != nil {
+			fmt.Fprintf(os.Stderr, "ewwd: air parse error: %v\n", err)
+		}
 	}
 
 	if len(weather.Current.Weather) == 0 || len(weather.Daily) == 0 {
+		fmt.Fprintf(os.Stderr, "ewwd: weather parse error: missing current weather or daily forecast\n")
 		return nil
 	}
 

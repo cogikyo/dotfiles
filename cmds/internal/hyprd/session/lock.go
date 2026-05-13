@@ -37,8 +37,9 @@ type Lock struct {
 }
 
 type lockState struct {
-	workspace    int
-	musicPlaying bool
+	workspace      int
+	musicPlaying   bool
+	restoreWidgets bool
 }
 
 func NewLock(h *hypr.Client, s *state.State) *Lock {
@@ -127,22 +128,22 @@ func (l *Lock) unlockLocked() (string, error) {
 
 // Full runs hyprlock asynchronously with pre/post blackout hooks.
 func (l *Lock) Full() (string, error) {
-	return l.full(fullLockDelay, fullLockGrace, true)
+	return l.full(fullLockDelay, fullLockGrace, true, true)
 }
 
 // FullImmediate runs hyprlock without startup delay or grace, for boot-time authentication.
 func (l *Lock) FullImmediate() (string, error) {
-	return l.full(0, 0, true)
+	return l.full(0, 0, true, true)
 }
 
 // FullImmediateWait runs the boot-time full lock synchronously so startup work
 // does not open private workspace layouts behind the lock screen.
 func (l *Lock) FullImmediateWait() (string, error) {
-	return l.fullBlocking(0, 0, true)
+	return l.fullBlocking(0, 0, true, false)
 }
 
-func (l *Lock) full(delay, grace time.Duration, loadSSH bool) (string, error) {
-	saved, result, err := l.startFull()
+func (l *Lock) full(delay, grace time.Duration, loadSSH, restoreWidgets bool) (string, error) {
+	saved, result, err := l.startFull(restoreWidgets)
 	if saved == nil || err != nil {
 		return result, err
 	}
@@ -151,8 +152,8 @@ func (l *Lock) full(delay, grace time.Duration, loadSSH bool) (string, error) {
 	return "lock: full", nil
 }
 
-func (l *Lock) fullBlocking(delay, grace time.Duration, loadSSH bool) (string, error) {
-	saved, result, err := l.startFull()
+func (l *Lock) fullBlocking(delay, grace time.Duration, loadSSH, restoreWidgets bool) (string, error) {
+	saved, result, err := l.startFull(restoreWidgets)
 	if saved == nil || err != nil {
 		return result, err
 	}
@@ -161,7 +162,7 @@ func (l *Lock) fullBlocking(delay, grace time.Duration, loadSSH bool) (string, e
 	return "lock: full", nil
 }
 
-func (l *Lock) startFull() (*lockState, string, error) {
+func (l *Lock) startFull(restoreWidgets bool) (*lockState, string, error) {
 	l.mu.Lock()
 	if l.inFull {
 		l.mu.Unlock()
@@ -171,6 +172,7 @@ func (l *Lock) startFull() (*lockState, string, error) {
 	l.hypr.Dispatch("submap reset")
 	if l.saved == nil {
 		l.saved = l.capture()
+		l.saved.restoreWidgets = restoreWidgets
 		l.enterBlackout()
 	}
 	saved := l.saved
@@ -231,8 +233,9 @@ func (l *Lock) capture() *lockState {
 		ws = 1
 	}
 	return &lockState{
-		workspace:    ws,
-		musicPlaying: playerctlStatus() == "Playing",
+		workspace:      ws,
+		musicPlaying:   playerctlStatus() == "Playing",
+		restoreWidgets: true,
 	}
 }
 
@@ -254,11 +257,8 @@ func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) {
 	l.hypr.Dispatch(fmt.Sprintf("workspace %d", saved.workspace))
 
 	dispatchStartup(l.hypr, cfg.Bluetooth)
-	// Reopen via running ewwd; if gone, respawn (fresh daemon auto-opens windows).
-	if exec.Command("ewwd", "status").Run() == nil {
-		startDetached("ewwd", "restore")
-	} else {
-		startDetached("setsid", "ewwd")
+	if saved.restoreWidgets {
+		restoreEwwWidgets()
 	}
 
 	if resumeMusic {
@@ -268,6 +268,30 @@ func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) {
 	time.AfterFunc(time.Second, func() {
 		exec.Command("dunstctl", "set-paused", "false").Run()
 	})
+}
+
+// restoreEwwWidgets reopens widgets through ewwd once the daemon socket is ready.
+func restoreEwwWidgets() {
+	if !waitEwwdReady(7 * time.Second) {
+		startDetached("setsid", "ewwd", "--no-open")
+		if !waitEwwdReady(7 * time.Second) {
+			return
+		}
+	}
+	startDetached("ewwd", "restore")
+}
+
+func waitEwwdReady(timeout time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+	for {
+		if exec.Command("ewwd", "status").Run() == nil {
+			return true
+		}
+		if !time.Now().Before(deadline) {
+			return false
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
 }
 
 func startDetached(name string, args ...string) {

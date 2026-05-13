@@ -22,11 +22,13 @@ const daemonLockPath = "/tmp/ewwd.lock"
 
 func main() {
 	if len(os.Args) < 2 {
-		runDaemon()
+		runDaemon(true)
 		return
 	}
 
 	switch os.Args[1] {
+	case "--no-open":
+		runDaemon(false)
 	case "status":
 		cmdStatus()
 	case "open":
@@ -47,7 +49,7 @@ func main() {
 	}
 }
 
-func runDaemon() {
+func runDaemon(autoOpen bool) {
 	if client.IsRunning() {
 		fmt.Fprintln(os.Stderr, "ewwd: daemon already running")
 		os.Exit(1)
@@ -59,7 +61,7 @@ func runDaemon() {
 	}
 	defer lock.Close()
 
-	d, err := New()
+	d, err := New(autoOpen)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "ewwd: %v\n", err)
 		os.Exit(1)
@@ -189,6 +191,7 @@ func cmdHelp() {
 
 Usage:
   ewwd                  Start daemon (foreground, auto-opens eww windows)
+  ewwd --no-open        Start daemon without opening eww windows
   ewwd open             Reload eww config and reopen configured windows
   ewwd restore          Reopen configured windows without reloading config
   ewwd status           Check if daemon is running

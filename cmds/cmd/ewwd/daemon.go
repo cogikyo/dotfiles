@@ -44,19 +44,21 @@ type Daemon struct {
 	ctx       context.Context
 	cancel    context.CancelFunc
 	config    config.EwwConfig
+	autoOpen  bool
 	openMu    sync.Mutex
 }
 
-func New() (*Daemon, error) {
+func New(autoOpen bool) (*Daemon, error) {
 	cfg := config.LoadEww()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	state := NewState()
 	d := &Daemon{
-		state:  state,
-		ctx:    ctx,
-		cancel: cancel,
-		config: cfg,
+		state:    state,
+		ctx:      ctx,
+		cancel:   cancel,
+		config:   cfg,
+		autoOpen: autoOpen,
 	}
 
 	d.server = daemon.NewServer(SocketPath, d.handleCommand)
@@ -65,7 +67,7 @@ func New() (*Daemon, error) {
 	return d, nil
 }
 
-// Run starts the server, launches providers, opens eww windows, and blocks until signalled.
+// Run starts the server, launches providers, optionally opens eww windows, and blocks until signalled.
 func (d *Daemon) Run() error {
 	importSystemdEnv()
 
@@ -86,12 +88,14 @@ func (d *Daemon) Run() error {
 		}(p)
 	}
 
-	// eww startup can take seconds; don't block signal handling.
-	go func() {
-		if result := d.openWindows(true); result != "" {
-			fmt.Printf("ewwd: %s\n", result)
-		}
-	}()
+	if d.autoOpen {
+		// eww startup can take seconds; don't block signal handling.
+		go func() {
+			if result := d.openWindows(true); result != "" {
+				fmt.Printf("ewwd: %s\n", result)
+			}
+		}()
+	}
 
 	sig := d.server.WaitForSignal()
 	fmt.Printf("\newwd: received %s, shutting down\n", sig)
@@ -200,7 +204,7 @@ func (d *Daemon) handleAction(providerName string, args []string) string {
 }
 
 // openWindows ensures the eww daemon is running and opens configured windows.
-func (d *Daemon) openWindows(_ bool) string {
+func (d *Daemon) openWindows(reload bool) string {
 	d.openMu.Lock()
 	defer d.openMu.Unlock()
 
@@ -216,10 +220,16 @@ func (d *Daemon) openWindows(_ bool) string {
 		}
 	}
 
-	killEwwProcesses()
-	killWidgetCommands()
+	if err := ensureEwwDaemon(); err != nil {
+		return fmt.Sprintf("error: %v", err)
+	}
+	if reload {
+		if err := exec.Command("eww", "reload").Run(); err != nil {
+			return fmt.Sprintf("error: eww reload: %v", err)
+		}
+	}
 
-	args := append([]string{"--restart", "open-many"}, windows...)
+	args := append([]string{"open-many"}, windows...)
 	if err := exec.Command("eww", args...).Run(); err != nil {
 		return fmt.Sprintf("error: eww open-many: %v", err)
 	}
@@ -227,31 +237,22 @@ func (d *Daemon) openWindows(_ bool) string {
 	return fmt.Sprintf("open: %s", strings.Join(windows, " "))
 }
 
-func killEwwProcesses() {
-	exec.Command("eww", "kill").Run()
-	killPattern("(^|/)eww (daemon|open-many)( |$)")
-}
-
-func killWidgetCommands() {
-	patterns := []string{
-		"sh -c ewwd subscribe ",
-		"sh -c while true; do hyprd subscribe ",
-		"sh -c while true; do echo 0; sleep ",
-		"(^|/)ewwd subscribe (network|date|audio|music|timer|weather)$",
-		"(^|/)hyprd subscribe workspace$",
+func ensureEwwDaemon() error {
+	if exec.Command("eww", "ping").Run() == nil {
+		return nil
 	}
-	for _, pattern := range patterns {
-		killPattern(pattern)
-	}
-}
 
-func killPattern(pattern string) {
-	exec.Command("pkill", "-TERM", "-f", pattern).Run()
+	cmd := exec.Command("eww", "daemon")
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("eww daemon: %w", err)
+	}
+	go cmd.Wait()
+
 	for range 20 {
-		if exec.Command("pgrep", "-f", pattern).Run() != nil {
-			return
+		if exec.Command("eww", "ping").Run() == nil {
+			return nil
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	exec.Command("pkill", "-KILL", "-f", pattern).Run()
+	return fmt.Errorf("eww daemon did not become ready")
 }
