@@ -739,6 +739,7 @@ var systemFiles = map[string]string{
 	"systemd/logid.service.d/restart.conf":                    "/etc/systemd/system/logid.service.d/restart.conf",
 	"systemd/logid-restart.service":                           "/etc/systemd/system/logid-restart.service",
 	"libinput/local-overrides.quirks":                         "/etc/libinput/local-overrides.quirks",
+	"nftables.conf":                                           "/etc/nftables.conf",
 	"firefox-developer-edition/autoconfig.js":                 "/usr/lib/firefox-developer-edition/defaults/pref/autoconfig.js",
 	"firefox-developer-edition/firefox.cfg":                   "/usr/lib/firefox-developer-edition/firefox.cfg",
 	"pacman.d/hooks/firefox-autoconfig.hook":                  "/etc/pacman.d/hooks/firefox-autoconfig.hook",
@@ -787,13 +788,13 @@ func installSystem(ctx context.Context, root paths.Root, out *output.Printer, op
 		return err
 	}
 	var failures []string
-	for _, svc := range []string{"bluetooth", "sddm", "earlyoom", "logid", "tailscaled"} {
+	for _, svc := range []string{"bluetooth", "sddm", "earlyoom", "logid", "tailscaled", "nftables"} {
 		if _, err := runner.Run(ctx, "", "sudo", "systemctl", "enable", svc); err != nil {
 			out.Warn("enable %s failed: %v", svc, err)
 			failures = append(failures, "enable "+svc)
 		}
 	}
-	for _, svc := range []string{"bluetooth", "earlyoom", "logid", "tailscaled"} {
+	for _, svc := range []string{"bluetooth", "earlyoom", "logid", "tailscaled", "nftables"} {
 		if _, err := runner.Run(ctx, "", "sudo", "systemctl", "start", svc); err != nil {
 			out.Warn("start %s failed: %v", svc, err)
 			failures = append(failures, "start "+svc)

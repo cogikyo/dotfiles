@@ -1241,6 +1241,7 @@ step_system() {
         ["systemd/logid.service.d/restart.conf"]="/etc/systemd/system/logid.service.d/restart.conf"
         ["systemd/logid-restart.service"]="/etc/systemd/system/logid-restart.service"
         ["libinput/local-overrides.quirks"]="/etc/libinput/local-overrides.quirks"
+        ["nftables.conf"]="/etc/nftables.conf"
         ["firefox-developer-edition/autoconfig.js"]="/usr/lib/firefox-developer-edition/defaults/pref/autoconfig.js"
         ["firefox-developer-edition/firefox.cfg"]="/usr/lib/firefox-developer-edition/firefox.cfg"
         ["pacman.d/hooks/firefox-autoconfig.hook"]="/etc/pacman.d/hooks/firefox-autoconfig.hook"
@@ -1301,8 +1302,8 @@ step_system() {
     # Enable services
     echo
     info "Enabling services..."
-    local SERVICES=(bluetooth sddm earlyoom logid tailscaled)
-    local START_SERVICES=(bluetooth earlyoom logid tailscaled)
+    local SERVICES=(bluetooth sddm earlyoom logid tailscaled nftables)
+    local START_SERVICES=(bluetooth earlyoom logid tailscaled nftables)
     local service_errors=0
     for svc in "${SERVICES[@]}"; do
         local unit_files
@@ -1394,6 +1395,7 @@ healthcheck_system() {
         "/etc/systemd/system/logid.service.d/restart.conf"
         "/etc/systemd/system/logid-restart.service"
         "/etc/libinput/local-overrides.quirks"
+        "/etc/nftables.conf"
         "/usr/lib/firefox-developer-edition/defaults/pref/autoconfig.js"
         "/usr/lib/firefox-developer-edition/firefox.cfg"
         "/etc/pacman.d/hooks/firefox-autoconfig.hook"
