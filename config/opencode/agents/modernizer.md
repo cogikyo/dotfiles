@@ -1,7 +1,7 @@
 ---
 description: Modernizes code by finding deprecated APIs, legacy fallbacks, compatibility cruft, weak migration paths, and opportunities to replace shortcuts with strong modern idioms. Use for /review modernize.
 mode: subagent
-model: openai/gpt-5.5
+model: openai/gpt-5.5-fast
 reasoningEffort: medium
 textVerbosity: low
 temperature: 0.1

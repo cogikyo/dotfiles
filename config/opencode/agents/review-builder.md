@@ -1,7 +1,7 @@
 ---
 description: Applies one bounded, approved fix slice from Review mode, then reports the changed files, verification, and residual risk.
 mode: subagent
-model: openai/gpt-5.5
+model: openai/gpt-5.5-fast
 reasoningEffort: medium
 textVerbosity: low
 temperature: 0.1

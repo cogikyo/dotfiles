@@ -1,7 +1,7 @@
 ---
 description: Simplifies code by fighting accidental complexity, large files, deep nesting, over-indirection, duplication, and entropy. Use for /review simplify.
 mode: subagent
-model: openai/gpt-5.5
+model: openai/gpt-5.5-fast
 reasoningEffort: medium
 textVerbosity: low
 temperature: 0.1

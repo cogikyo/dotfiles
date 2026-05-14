@@ -1,7 +1,7 @@
 ---
 description: Review mode. Orchestrates focused review agents, digests their findings, drafts fix plans, and coordinates approved fix workers while preserving the main context window.
 mode: all
-model: openai/gpt-5.5
+model: openai/gpt-5.5-fast
 reasoningEffort: high
 textVerbosity: low
 temperature: 0.1

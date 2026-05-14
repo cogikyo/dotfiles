@@ -1,7 +1,7 @@
 ---
 description: Audits changes for production safety, credentials exposure, destructive operations, privacy leaks, permission mistakes, and critical operational risk. Use for /review auditor and blast-radius checks.
 mode: subagent
-model: openai/gpt-5.5
+model: openai/gpt-5.5-fast
 reasoningEffort: medium
 textVerbosity: low
 temperature: 0

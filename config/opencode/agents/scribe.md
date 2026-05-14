@@ -1,7 +1,7 @@
 ---
 description: Documents code by reviewing and updating comments and documentation using the scribe skill. Use for /review scribe, comment audits, doc cleanup, package/file docs, and questions where clearer comments should be left behind.
 mode: subagent
-model: openai/gpt-5.5
+model: openai/gpt-5.5-fast
 reasoningEffort: low
 textVerbosity: low
 temperature: 0.1

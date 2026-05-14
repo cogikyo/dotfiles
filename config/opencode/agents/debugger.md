@@ -1,7 +1,7 @@
 ---
 description: Debugs code review by finding subtle bugs, broken assumptions, edge cases, race conditions, error handling gaps, and incorrect control flow. Use for /review debugger or when correctness is the main concern.
 mode: subagent
-model: openai/gpt-5.5
+model: openai/gpt-5.5-fast
 reasoningEffort: medium
 textVerbosity: low
 temperature: 0

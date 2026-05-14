@@ -1,7 +1,7 @@
 ---
 description: Cleans up architecture review by checking locality, duplication, coupling, cohesion, state ownership, and whether the design is becoming patchwork slop. Use for /review janitor.
 mode: subagent
-model: openai/gpt-5.5
+model: openai/gpt-5.5-fast
 reasoningEffort: medium
 textVerbosity: low
 temperature: 0.1

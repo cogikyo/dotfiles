@@ -1,7 +1,7 @@
 ---
 description: "Reviews big-picture clarity: system shape, module boundaries, conceptual naming, abstraction level, and whether the design tells the truth. Use /review architect selectively when architecture-level readability matters."
 mode: subagent
-model: openai/gpt-5.5
+model: openai/gpt-5.5-fast
 reasoningEffort: medium
 textVerbosity: low
 temperature: 0.1

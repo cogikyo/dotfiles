@@ -1,7 +1,7 @@
 ---
 description: Profiles code for wasted work, N+1 queries, bad algorithms, unnecessary IO, avoidable allocations, slow design, and shortcuts that create long-term performance debt. Use for /review profiler.
 mode: subagent
-model: openai/gpt-5.5
+model: openai/gpt-5.5-fast
 reasoningEffort: medium
 textVerbosity: low
 temperature: 0.1
