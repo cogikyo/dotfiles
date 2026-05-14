@@ -1354,6 +1354,19 @@ step_system() {
         return 1
     fi
 
+    if [[ $chroot_mode -eq 1 ]]; then
+        warn "Skipping Tailscale SSH setup in chroot"
+    elif command -v tailscale &>/dev/null; then
+        info "Enabling Tailscale SSH..."
+        if sudo tailscale set --ssh=true &>/dev/null; then
+            ok "Tailscale SSH enabled"
+        else
+            warn "Tailscale SSH not enabled; run 'sudo tailscale set --ssh=true' after logging in"
+        fi
+    else
+        warn "tailscale command not found; install tailscale first"
+    fi
+
     # Reload udev rules
     if [[ $chroot_mode -eq 1 ]]; then
         warn "Skipping udev reload in chroot"

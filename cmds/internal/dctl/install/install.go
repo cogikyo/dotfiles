@@ -799,6 +799,16 @@ func installSystem(ctx context.Context, root paths.Root, out *output.Printer, op
 			failures = append(failures, "start "+svc)
 		}
 	}
+	if _, err := runner.Run(ctx, "", "tailscale", "version"); err == nil {
+		out.SubStep("info", "Enabling Tailscale SSH")
+		if _, err := runner.Run(ctx, "", "sudo", "tailscale", "set", "--ssh=true"); err != nil {
+			out.Warn("Tailscale SSH not enabled; run 'sudo tailscale set --ssh=true' after logging in: %v", err)
+		} else {
+			out.OK("Tailscale SSH enabled")
+		}
+	} else {
+		out.Warn("tailscale command not found; install tailscale first")
+	}
 	if _, err := runner.Run(ctx, "", "sudo", "udevadm", "control", "--reload-rules"); err != nil {
 		failures = append(failures, "udev reload")
 	}
