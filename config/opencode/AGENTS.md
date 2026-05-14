@@ -95,8 +95,14 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 - Never wrap a single sentence across multiple lines; if it wants to wrap, rewrite it shorter or split it into separate sentences.
 - Prefer concise, complete sentences over dense paragraphs.
 - Use blank lines as structural punctuation in Markdown.
+- Do not use `text` code fences for ordinary prose, lists, migration orders, findings, summaries, or simple path lists.
+- Prefer normal Markdown structure for prose: bullets, numbered lists, short headings, blockquotes, and inline code.
+- Use fenced blocks only when the content needs literal formatting, copyable input, or syntax highlighting.
+- When a fence is needed, prefer the most specific language tag, such as `bash`, `go`, `json`, `diff`, or `markdown`.
+- Prefer `bash` fences for shell commands, command output, directory trees, path lists, and simple fixed-width structures when the content is shell-adjacent or benefits from terminal-style highlighting.
+- Use `text` fences only for rare cases like diagrams, raw terminal transcripts, or intentionally unhighlighted fixed-width artifacts.
 - Put one blank line before and after fenced code blocks: relevant text, blank line, fence, code, fence, blank line, more text.
-- Fence every multi-line code snippet, pseudo-code block, table-like mapping, command transcript, or structured example.
+- Fence every multi-line code snippet, pseudo-code block, command transcript, or structured example that must preserve exact spacing.
 - Do not place multi-line code or aligned mappings directly in prose.
 - Keep manual line breaks intentional; lines over 120 characters are acceptable when preserving one clear sentence per line is the better trade-off.
 
