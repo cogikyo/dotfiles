@@ -7,6 +7,43 @@ return {
 			return
 		end
 		local NestedGit = require("config.nvim-tree-nested-git")
+		local TestFiles = require("nvim-tree.api").Decorator:extend()
+
+		local test_file_patterns = {
+			"_test%.go$",
+			"%.test%.[%w_%-]+$",
+			"%.spec%.[%w_%-]+$",
+			"%.cy%.[jt]sx?$",
+			"%.e2e%.[jt]sx?$",
+			"^test_.*%.py$",
+			"_test%.py$",
+			"_test%.rb$",
+			"_spec%.rb$",
+		}
+
+		local function is_test_file(name)
+			for _, pattern in ipairs(test_file_patterns) do
+				if name:match(pattern) then
+					return true
+				end
+			end
+
+			return false
+		end
+
+		function TestFiles:new()
+			self.enabled = true
+			self.highlight_range = "name"
+			self.icon_placement = "none"
+		end
+
+		function TestFiles:highlight_group(node)
+			if node.type == "file" and is_test_file(node.name or "") then
+				return "NvimTreeTestFile"
+			end
+		end
+
+		vim.api.nvim_set_hl(0, "NvimTreeTestFile", { link = "Comment", default = true })
 
 		local function on_attach(bufnr)
 			local api = require("nvim-tree.api")
@@ -260,6 +297,7 @@ return {
 					"Diagnostics",
 					"Copied",
 					NestedGit,
+					TestFiles,
 					"Cut",
 				},
 				root_folder_label = false,
