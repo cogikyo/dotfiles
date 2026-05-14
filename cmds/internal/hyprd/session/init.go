@@ -127,27 +127,27 @@ func (i *Init) Execute() (string, error) {
 }
 
 func (l *Layout) restoreInitBrowsers(sessions []config.Session) error {
-	var browserConfigs []config.BrowserConfig
 	var browserSessions []config.Session
 	b := browser.NewBrowser(l.hypr, l.state)
 	for _, session := range sessions {
-		if session.Browser.Snapshot == "" || !b.UsesExactRestore(session.Browser) {
+		if session.Browser.Snapshot != "coms" || !b.UsesExactRestore(session.Browser) {
 			continue
 		}
-		browserConfigs = append(browserConfigs, session.Browser)
 		browserSessions = append(browserSessions, session)
 	}
-	if len(browserConfigs) == 0 {
+	if len(browserSessions) == 0 {
 		return nil
 	}
 
-	if _, err := b.RestoreConfiguredSnapshots(browserConfigs, false); err != nil {
-		return err
+	for _, session := range browserSessions {
+		if _, err := b.RestoreConfiguredSnapshot(session.Browser, false); err != nil {
+			return err
+		}
 	}
 	l.markBatchRestoredBrowsers(browserSessions)
 	for _, session := range browserSessions {
 		if err := l.claimBrowserWindow(b, session); err != nil {
-			fmt.Fprintf(os.Stderr, "init: claim browser window for %s: %v\n", session.Name, err)
+			return fmt.Errorf("claim browser window for %s: %w", session.Name, err)
 		}
 	}
 	return nil
