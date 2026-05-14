@@ -1,10 +1,30 @@
 // @ts-nocheck -- Patches OpenTUI internals that are not exposed through OpenCode's public TUI API.
 import type { TuiPlugin, TuiPluginModule } from "@opencode-ai/plugin/tui";
-import { MarkdownRenderable, RGBA, SyntaxStyle } from "@opentui/core";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
+import { addDefaultParsers, MarkdownRenderable, RGBA, SyntaxStyle } from "@opentui/core";
 
 const id = "opencode-code-blocks";
 const PATCHED = Symbol.for("cullyn.opencode.code-blocks.patched");
 const RENDER_PATCHED = Symbol.for("cullyn.opencode.code-blocks.render-patched");
+const pluginDir = dirname(fileURLToPath(import.meta.url));
+const sqlParserDir = resolve(pluginDir, "../../tree-sitter/sql");
+const sqlRegisteredClients = new WeakSet<object>();
+const sqlParser = {
+  filetype: "sql",
+  aliases: ["postgres", "postgresql", "pgsql", "psql"],
+  wasm: resolve(sqlParserDir, "tree-sitter-sql.wasm"),
+  queries: {
+    highlights: [resolve(sqlParserDir, "highlights.scm")],
+  },
+};
+
+const registerSqlParser = (client: any) => {
+  if (!client || sqlRegisteredClients.has(client) || typeof client.addFiletypeParser !== "function") return;
+
+  client.addFiletypeParser(sqlParser);
+  sqlRegisteredClients.add(client);
+};
 
 const c = (hex: string) => RGBA.fromHex(hex);
 const p = {
@@ -42,6 +62,12 @@ const p = {
 };
 
 const tui: TuiPlugin = async (api) => {
+  try {
+    addDefaultParsers([sqlParser]);
+  } catch {
+    // Some OpenCode builds expose a bundled parser registry that cannot be mutated from plugins.
+  }
+
   const proto = MarkdownRenderable?.prototype as any;
   if (!proto || proto[PATCHED]) return;
 
@@ -73,12 +99,15 @@ const tui: TuiPlugin = async (api) => {
     "character.special": { fg: p.sky_0 },
     number: { fg: p.pnk_2 },
     "number.float": { fg: p.pnk_4, italic: true },
+    float: { fg: p.pnk_4, italic: true },
     boolean: { fg: p.cyn_2 },
     variable: { fg: p.fg },
+    parameter: { fg: p.orn_4 },
     "variable.parameter": { fg: p.orn_4 },
     "variable.parameter.builtin": { fg: p.orn_3 },
     "variable.builtin": { fg: p.rby_3, italic: true },
     "variable.member": { fg: p.blu_3 },
+    field: { fg: p.blu_3 },
     property: { fg: p.blu_3 },
     module: { fg: p.brt_3 },
     "module.go": { fg: p.tyr_3 },
@@ -98,6 +127,7 @@ const tui: TuiPlugin = async (api) => {
     "type.parameter": { fg: p.glu_3, italic: true },
     attribute: { fg: p.prp_3, italic: true },
     "attribute.builtin": { fg: p.rby_3, italic: true },
+    storageclass: { fg: p.glu_3, italic: true },
     constant: { fg: p.sun_4 },
     "constant.builtin": { fg: p.rby_2, italic: true },
     "constant.macro": { fg: p.sun_2, italic: true },
@@ -105,6 +135,7 @@ const tui: TuiPlugin = async (api) => {
     "keyword.function": { fg: p.prp_2, bold: true },
     "keyword.type": { fg: p.prp_2, bold: true },
     "keyword.return": { fg: p.prp_2, italic: true },
+    conditional: { fg: p.prp_1, italic: true },
     "keyword.conditional": { fg: p.prp_1, italic: true },
     "keyword.repeat": { fg: p.prp_1, italic: true },
     "keyword.operator": { fg: p.prp_1, italic: true },
@@ -123,6 +154,7 @@ const tui: TuiPlugin = async (api) => {
   });
 
   const styleCodeBlock = (renderable: any) => {
+    registerSqlParser(renderable.treeSitterClient ?? renderable._treeSitterClient);
     renderable.bg = codeBlockBackground();
     renderable.marginTop = 1;
     renderable.marginBottom = Math.max(Number(renderable.marginBottom ?? 0), 1);
