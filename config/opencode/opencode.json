@@ -56,10 +56,10 @@
       "color": "secondary"
     },
     "plan": {
-      "color": "primary"
+      "color": "accent"
     },
     "review": {
-      "color": "accent"
+      "color": "primary"
     }
   },
   "permission": {
