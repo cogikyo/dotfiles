@@ -93,6 +93,7 @@ alias oc='ouch compress'
 alias od='ouch decompress'
 alias ol='ouch list --tree'
 alias man='man --pager=$PAGER'
+alias explicit='sudo pacman -D --asexplicit'
 
 function etree () {
     echo
