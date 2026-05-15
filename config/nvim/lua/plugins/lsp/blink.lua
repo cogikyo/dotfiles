@@ -36,7 +36,7 @@ return {
 				window = { border = "rounded" },
 			},
 			menu = {
-				auto_show = false,
+				auto_show = true,
 				border = "rounded",
 				draw = {
 					columns = { { "kind_icon" }, { "label", "label_description", gap = 1 } },
