@@ -30,7 +30,7 @@ func healthFor(ctx context.Context, root paths.Root, step string) []health.Check
 	case "repos":
 		return reposHealth(ctx, root, runner)
 	case "system":
-		return systemHealth(root)
+		return systemHealth(ctx, root, runner)
 	case "hibernate":
 		return hibernateHealth(ctx, runner)
 	case "go":
@@ -180,7 +180,7 @@ func reposHealth(ctx context.Context, root paths.Root, runner execx.Runner) []he
 	return checks
 }
 
-func systemHealth(root paths.Root) []health.Check {
+func systemHealth(ctx context.Context, root paths.Root, runner execx.Runner) []health.Check {
 	keys := make([]string, 0, len(systemFiles))
 	for key := range systemFiles {
 		keys = append(keys, key)
@@ -206,6 +206,8 @@ func systemHealth(root paths.Root) []health.Check {
 		}
 		checks = append(checks, ok(id, srcRel, dst))
 	}
+	checks = append(checks, serviceActiveCheck(ctx, runner, "system:earlyoom-active", "earlyoom service", "earlyoom", health.Warn, "run dctl install system"))
+	checks = append(checks, sysctlCheck(ctx, runner, "system:swappiness", "vm.swappiness", "100"))
 	return checks
 }
 
@@ -480,6 +482,18 @@ func serviceActiveCheck(ctx context.Context, runner execx.Runner, id, name, serv
 		return health.Check{ID: id, Name: name, Status: inactive, Observed: strings.TrimSpace(out), Fix: fix}
 	}
 	return ok(id, name, strings.TrimSpace(out))
+}
+
+func sysctlCheck(ctx context.Context, runner execx.Runner, id, key, expected string) health.Check {
+	out, err := runner.Output(ctx, "", "sysctl", "-n", key)
+	observed := strings.TrimSpace(out)
+	if err != nil {
+		return warn(id, key, err.Error(), "run dctl install system")
+	}
+	if observed != expected {
+		return warn(id, key, observed, "run sudo sysctl --system or reboot")
+	}
+	return ok(id, key, observed)
 }
 
 func userServiceCheck(ctx context.Context, root paths.Root, runner execx.Runner, name string) health.Check {

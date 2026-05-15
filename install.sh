@@ -1230,9 +1230,12 @@ step_system() {
         ["pam.d/hyprlock"]="/etc/pam.d/hyprlock"
         ["polkit-1/rules.d/49-networkmanager-cullyn.rules"]="/etc/polkit-1/rules.d/49-networkmanager-cullyn.rules"
         ["systemd/resolved.conf"]="/etc/systemd/resolved.conf"
+        ["systemd/zram-generator.conf"]="/etc/systemd/zram-generator.conf"
         ["systemd/sleep.conf.d/hibernate.conf"]="/etc/systemd/sleep.conf.d/hibernate.conf"
         ["systemd/hibernate-zram.conf"]="/etc/systemd/system/systemd-hibernate.service.d/zram.conf"
+        ["systemd/earlyoom.service.d/memory-pressure.conf"]="/etc/systemd/system/earlyoom.service.d/memory-pressure.conf"
         ["systemd/system.conf.d/cpu-lanes.conf"]="/etc/systemd/system.conf.d/cpu-lanes.conf"
+        ["sysctl.d/99-memory-pressure.conf"]="/etc/sysctl.d/99-memory-pressure.conf"
         ["systemd/bluetooth.service.d/cpu-lane.conf"]="/etc/systemd/system/bluetooth.service.d/cpu-lane.conf"
         ["systemd/rtkit-daemon.service.d/cpu-lane.conf"]="/etc/systemd/system/rtkit-daemon.service.d/cpu-lane.conf"
         ["security/faillock.conf"]="/etc/security/faillock.conf"
@@ -1262,7 +1265,10 @@ step_system() {
 
         local dst_dir
         dst_dir=$(dirname "$dst_path")
-        [[ -d "$dst_dir" ]] || sudo mkdir -p "$dst_dir"
+        if [[ ! -d "$dst_dir" ]] && ! sudo mkdir -p "$dst_dir"; then
+            err "Failed to create $dst_dir"
+            return 1
+        fi
 
         if same_system_file "$src_path" "$dst_path"; then
             ((skipped++))
@@ -1270,7 +1276,10 @@ step_system() {
         fi
 
         info "Installing $src -> $dst_path"
-        sudo cp "$src_path" "$dst_path"
+        if ! sudo cp "$src_path" "$dst_path"; then
+            err "Failed to install $src -> $dst_path"
+            return 1
+        fi
         ((installed++))
     done
 
@@ -1281,8 +1290,10 @@ step_system() {
     if [[ -f "$sth_conf" ]] && diff -q "$sth_src" "$sth_conf" &>/dev/null; then
         :
     else
-        sudo mkdir -p "$sth_dir"
-        sudo cp "$sth_src" "$sth_conf"
+        if ! sudo mkdir -p "$sth_dir" || ! sudo cp "$sth_src" "$sth_conf"; then
+            err "Failed to install suspend-then-hibernate zram drop-in"
+            return 1
+        fi
         ((installed++))
     fi
 
@@ -1293,6 +1304,13 @@ step_system() {
     else
         info "Reloading systemd units..."
         sudo systemctl daemon-reload
+
+        info "Applying sysctl settings..."
+        if sudo sysctl --system &>/dev/null; then
+            ok "sysctl settings applied"
+        else
+            warn "sysctl settings were installed but not applied"
+        fi
     fi
 
     sync_ignorepkg
@@ -1349,6 +1367,15 @@ step_system() {
             warn "$svc installed but not enabled"
         fi
     done
+
+    if [[ $chroot_mode -eq 0 ]] && systemctl is-active earlyoom &>/dev/null; then
+        info "Restarting earlyoom to apply memory-pressure policy..."
+        if sudo systemctl restart earlyoom &>/dev/null; then
+            ok "earlyoom restarted"
+        else
+            warn "earlyoom restart failed"
+        fi
+    fi
 
     if (( service_errors > 0 )); then
         err "$service_errors system service(s) failed"

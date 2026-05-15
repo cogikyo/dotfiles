@@ -728,9 +728,12 @@ var systemFiles = map[string]string{
 	"sddm.conf.d/autologin.conf":                              "/etc/sddm.conf.d/autologin.conf",
 	"pam.d/hyprlock":                                          "/etc/pam.d/hyprlock",
 	"systemd/resolved.conf":                                   "/etc/systemd/resolved.conf",
+	"systemd/zram-generator.conf":                             "/etc/systemd/zram-generator.conf",
 	"systemd/sleep.conf.d/hibernate.conf":                     "/etc/systemd/sleep.conf.d/hibernate.conf",
 	"systemd/hibernate-zram.conf":                             "/etc/systemd/system/systemd-hibernate.service.d/zram.conf",
+	"systemd/earlyoom.service.d/memory-pressure.conf":         "/etc/systemd/system/earlyoom.service.d/memory-pressure.conf",
 	"systemd/system.conf.d/cpu-lanes.conf":                    "/etc/systemd/system.conf.d/cpu-lanes.conf",
+	"sysctl.d/99-memory-pressure.conf":                        "/etc/sysctl.d/99-memory-pressure.conf",
 	"systemd/bluetooth.service.d/cpu-lane.conf":               "/etc/systemd/system/bluetooth.service.d/cpu-lane.conf",
 	"systemd/rtkit-daemon.service.d/cpu-lane.conf":            "/etc/systemd/system/rtkit-daemon.service.d/cpu-lane.conf",
 	"security/faillock.conf":                                  "/etc/security/faillock.conf",
@@ -787,6 +790,9 @@ func installSystem(ctx context.Context, root paths.Root, out *output.Printer, op
 	if _, err := runner.Run(ctx, "", "sudo", "systemctl", "daemon-reload"); err != nil {
 		return err
 	}
+	if _, err := runner.Run(ctx, "", "sudo", "sysctl", "--system"); err != nil {
+		out.Warn("sysctl settings were installed but not applied: %v", err)
+	}
 	var failures []string
 	for _, svc := range []string{"bluetooth", "sddm", "earlyoom", "logid", "tailscaled", "nftables"} {
 		if _, err := runner.Run(ctx, "", "sudo", "systemctl", "enable", svc); err != nil {
@@ -799,6 +805,10 @@ func installSystem(ctx context.Context, root paths.Root, out *output.Printer, op
 			out.Warn("start %s failed: %v", svc, err)
 			failures = append(failures, "start "+svc)
 		}
+	}
+	if _, err := runner.Run(ctx, "", "sudo", "systemctl", "restart", "earlyoom"); err != nil {
+		out.Warn("restart earlyoom failed: %v", err)
+		failures = append(failures, "restart earlyoom")
 	}
 	if _, err := runner.Run(ctx, "", "tailscale", "version"); err == nil {
 		out.SubStep("info", "Enabling Tailscale SSH")
