@@ -273,6 +273,7 @@ notify:
     error:
       style: error
       sound: something-need-doing
+      timeout: 2500
       volume: 100
 
   # ├─ sound routing ────────────────────────────────────────────────────────────┤
