@@ -94,6 +94,7 @@ pipewire-jack
 pipewire-pulse
 playerctl
 poppler
+postgresql
 pulsemixer
 python-pip
 python-pynvim
