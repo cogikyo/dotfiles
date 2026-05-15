@@ -8,7 +8,7 @@ palette = 'vagari'                           # palette definition must be last
 # ============================================================================
 
 format = """
-[╭╼╾ $sudo$username ╼╾ $hostname${custom.vpn}${custom.tailscale} ╼╾ $time$python$lua${custom.golang}$package$shell](blu_2) $status $cmd_duration
+[╭╼╾ $sudo$username ╼╾ ${custom.hostname_abbott}${custom.hostname_costello}${custom.hostname_other}${custom.vpn}${custom.tailscale} ╼╾ $time$python$lua${custom.golang}$package$shell](blu_2) $status $cmd_duration
 [╞╾](blu_2)$directory$git_branch$git_commit$git_state$git_status
 [╰╼╾ $character](blu_2)
 """
@@ -36,6 +36,25 @@ style = "blu_2"
 ssh_only = false
 format = "[⾥$hostname]($style)"
 trim_at = "."
+disabled = true
+
+[custom.hostname_abbott]
+when = 'h=$(uname -n); [ "${h%%.*}" = abbott ]'
+command = 'h=$(uname -n); printf %s "${h%%.*}"'
+style = "blu_0"
+format = "[⾥$output]($style)"
+
+[custom.hostname_costello]
+when = 'h=$(uname -n); [ "${h%%.*}" = costello ]'
+command = 'h=$(uname -n); printf %s "${h%%.*}"'
+style = "blu_2"
+format = "[⾥$output]($style)"
+
+[custom.hostname_other]
+when = 'h=$(uname -n); h=${h%%.*}; [ "$h" != abbott ] && [ "$h" != costello ]'
+command = 'h=$(uname -n); printf %s "${h%%.*}"'
+style = "pnk_3"
+format = "[⾥$output]($style)"
 
 [cmd_duration]
 min_time = 420
