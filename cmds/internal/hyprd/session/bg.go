@@ -4,6 +4,7 @@ package session
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"os/exec"
@@ -18,6 +19,8 @@ const (
 	bgBootStartTimeout = 2 * time.Second
 	bgFrameSettle      = 250 * time.Millisecond
 )
+
+var errNoActiveMonitors = errors.New("no active hyprland monitors")
 
 // BG manages a single mpvpaper wallpaper process.
 type BG struct {
@@ -50,6 +53,9 @@ func (b *BG) ensure(timeout time.Duration) (string, error) {
 	b.killAll()
 	display, err := b.spawn()
 	if err != nil {
+		if errors.Is(err, errNoActiveMonitors) {
+			return "bg: no active monitors", nil
+		}
 		return "", err
 	}
 	if !b.waitAlive(timeout) {
@@ -129,7 +135,7 @@ func (b *BG) resolveDisplay() (string, error) {
 			return m.Name, nil
 		}
 	}
-	return "", fmt.Errorf("no active hyprland monitors")
+	return "", errNoActiveMonitors
 }
 
 func (b *BG) killAll() {
