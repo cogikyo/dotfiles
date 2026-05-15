@@ -415,8 +415,8 @@ return {
 			},
 			signcolumn = true,
 			numhl = true,
-			linehl = true,
-			word_diff = true,
+			linehl = false,
+			word_diff = false,
 			current_line_blame = true,
 			on_attach = on_attach,
 		})
