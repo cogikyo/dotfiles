@@ -5,7 +5,7 @@
   :monitor 0 :stacking "bottom" :exclusive false :focusable false
   :geometry (geometry :width "45%" :anchor "top center")
   (centerbox
-    (box :halign "end" (weather))
+    (box :halign "end"    :style "margin-right: 6px;" (weather))
     (box :halign "center" :style "margin-right: 6px;" (time))
     (box :halign "start" (date))
   )
