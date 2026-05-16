@@ -28,7 +28,6 @@ sessions:
     discord:
       command: discord
       monocle: true
-      browser: coms
 
   # ├─ workspace 3 ──────────────────────────────────────────────────────────────┤
   3: # utility and creative apps; mostly single window
