@@ -104,8 +104,9 @@ Do not add inferred, discovered, grep-only, or path-proximity entries to this pl
 The global `~/.config/opencode/AGENTS.md` file is intentionally omitted because it is always loaded for this setup.
 The sidebar section is hidden until at least one Markdown read exists.
 
-Compacted read entries are still shown with a `C` marker when OpenCode marks the completed tool part that way.
-Fresh read entries use an `R` marker.
+Compacted read entries are shown with a red `C` marker when OpenCode marks the completed tool part that way.
+Fresh read entries use source markers: green `R` for `README.md`, blue `A` for `AGENTS.md`, cyan `S` for `SKILL.md`, yellow `I` for `INSTRUCTIONS.md` or `INSTRUCTION.md`, magenta `P` for uppercase partial context docs like `DATABASE.md`, orange `D` for directory/repo-named context docs, and muted `M` for generic other Markdown.
+Carrier files omit their filename in labels because the marker carries that information.
 
 ## Typechecking
 

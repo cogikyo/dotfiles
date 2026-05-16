@@ -2,22 +2,25 @@
 import type { Message, ToolPart } from '@opencode-ai/sdk/v2'
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from '@opencode-ai/plugin/tui'
 import { createTextAttributes } from '@opentui/core'
+import { statSync } from 'node:fs'
 import path from 'node:path'
 import { For, Show, createSignal, onCleanup } from 'solid-js'
 import { colors } from '../shared/colors.ts'
 
 const id = 'opencode-markdown-context'
-const MAX_READS = 8
 const MAX_LABEL_LENGTH = 30
 const MAX_ROOT_LENGTH = 8
 const MAX_PARENT_LENGTH = 12
 const MIN_LEAF_LENGTH = 6
 const BOLD = createTextAttributes({ bold: true })
 
+type MarkdownSourceKind = 'readme' | 'agents' | 'skill' | 'instructions' | 'partial' | 'directory' | 'markdown'
+
 type MarkdownContextItem = {
   key: string
   path: string
   label: string
+  kind: MarkdownSourceKind
   compacted: boolean
   time: number
 }
@@ -68,7 +71,7 @@ function MarkdownContext(props: { api: TuiPluginApi; sessionID: string }) {
             {(item) => (
               <box flexDirection="row" gap={0}>
                 <text fg={sourceColor(props.api, item)} wrapMode="none">
-                  {item.compacted ? 'C ' : 'R '}
+                  {sourceIcon(item)}
                 </text>
                 <text fg={props.api.theme.current.textMuted} wrapMode="none">
                   {item.label}
@@ -96,7 +99,7 @@ function markdownContextItems(api: TuiPluginApi, sessionID: string) {
     }
   }
 
-  return Array.from(reads.values()).sort((left, right) => right.time - left.time).slice(0, MAX_READS)
+  return Array.from(reads.values()).sort((left, right) => right.time - left.time)
 }
 
 function markdownReadItem(api: TuiPluginApi, part: ReturnType<TuiPluginApi['state']['part']>[number]): MarkdownContextItem | undefined {
@@ -106,11 +109,13 @@ function markdownReadItem(api: TuiPluginApi, part: ReturnType<TuiPluginApi['stat
 
   const filePath = markdownPathFromInput(tool.state.input)
   if (!filePath) return undefined
+  const kind = markdownSourceKind(filePath)
 
   return {
     key: filePath,
     path: filePath,
-    label: displayPath(api, filePath),
+    label: displayPath(api, filePath, kind),
+    kind,
     compacted: tool.state.time.compacted !== undefined,
     time: tool.state.time.end,
   }
@@ -137,39 +142,117 @@ function isMarkdownPath(value: string) {
   return /\.(md|mdx|markdown)$/i.test(value.split(/[?#]/, 1)[0])
 }
 
+function markdownSourceKind(filePath: string): MarkdownSourceKind {
+  const leaf = path.basename(filePath).toLowerCase()
+
+  if (leaf === 'readme.md') return 'readme'
+  if (leaf === 'agents.md') return 'agents'
+  if (leaf === 'skill.md') return 'skill'
+  if (leaf === 'instruction.md' || leaf === 'instructions.md') return 'instructions'
+  if (/^[A-Z][A-Z0-9_-]*\.md$/.test(path.basename(filePath))) return 'partial'
+  if (isDirectoryContextDoc(filePath)) return 'directory'
+  return 'markdown'
+}
+
+function isDirectoryContextDoc(filePath: string) {
+  const parsed = path.parse(filePath)
+  if (isDirectory(path.join(parsed.dir, parsed.name))) return true
+
+  const contextDir = correspondingPierContextDirectory(filePath)
+  return contextDir !== undefined && isDirectory(contextDir)
+}
+
+function correspondingPierContextDirectory(filePath: string) {
+  const parsed = path.parse(filePath)
+  const segments = parsed.dir.split(path.sep)
+
+  for (let index = segments.length - 2; index >= 0; index--) {
+    if (segments[index] !== 'pier' || segments[index + 1] !== 'context') continue
+
+    const root = segments.slice(0, index).join(path.sep) || path.sep
+    return path.join(root, ...segments.slice(index + 2), parsed.name)
+  }
+
+  return undefined
+}
+
+function isDirectory(value: string) {
+  try {
+    return statSync(value).isDirectory()
+  } catch {
+    return false
+  }
+}
+
 function normalizeFilePath(value: string) {
   const clean = value.replace(/^file:\/\//, '').split(/[?#]/, 1)[0]
   if (clean.startsWith('~/')) return path.join(process.env.HOME || '~', clean.slice(2))
   return clean
 }
 
-function displayPath(api: TuiPluginApi, filePath: string) {
-  const cwd = api.state.path.directory || api.state.path.worktree || ''
-  const home = process.env.HOME || ''
-  let label = filePath
-
-  if (cwd && filePath.startsWith(cwd + path.sep)) label = filePath.slice(cwd.length + 1)
-  else if (home && filePath.startsWith(home + path.sep)) label = filePath.slice(home.length + 1)
-
-  return compactPath(label)
+function displayPath(api: TuiPluginApi, filePath: string, kind: MarkdownSourceKind) {
+  return compactPath(contextLabel(api, filePath, kind), kind)
 }
 
-function compactPath(label: string) {
-  if (label.length <= MAX_LABEL_LENGTH) return label
+function relativePath(api: TuiPluginApi, filePath: string) {
+  const cwd = api.state.path.directory || api.state.path.worktree || ''
+  const home = process.env.HOME || ''
 
+  if (cwd && filePath.startsWith(cwd + path.sep)) return filePath.slice(cwd.length + 1)
+  if (home && filePath.startsWith(home + path.sep)) return filePath.slice(home.length + 1)
+  return filePath
+}
+
+function contextLabel(api: TuiPluginApi, filePath: string, kind: MarkdownSourceKind) {
+  const label = relativePath(api, filePath)
+
+  if (kind === 'readme' || kind === 'agents' || kind === 'skill' || kind === 'instructions') {
+    const dir = path.dirname(label)
+    return dir === '.' ? contextRootName(api, filePath) : dir
+  }
+
+  return stripMarkdownExtension(label)
+}
+
+function contextRootName(api: TuiPluginApi, filePath: string) {
+  const root = api.state.path.worktree || api.state.path.directory || path.dirname(filePath)
+  return path.basename(root) || path.basename(path.dirname(filePath)) || path.basename(filePath)
+}
+
+function stripMarkdownExtension(label: string) {
+  return label.replace(/\.(md|mdx|markdown)$/i, '')
+}
+
+function compactPath(label: string, kind: MarkdownSourceKind) {
   const parts = label.split(path.sep).filter(Boolean)
-  if (parts.length <= 2) return truncateLabel(label)
+  if (parts.length <= 2) return label.length <= MAX_LABEL_LENGTH ? label : truncateLabel(label)
 
   const leaf = parts.at(-1) ?? label
   const parent = parts.at(-2) ?? ''
   const root = parts[0]
 
+  if (kind !== 'partial' && kind !== 'markdown' && kind !== 'directory') return compactRootLeaf(root, leaf)
   return compactRootParentLeaf(root, parent, leaf)
 }
 
 function truncateLabel(label: string) {
   if (label.length <= MAX_LABEL_LENGTH) return label
   return `${label.slice(0, Math.max(0, MAX_LABEL_LENGTH - 3))}...`
+}
+
+function compactRootLeaf(root: string, leaf: string) {
+  const full = `${root}/.../${leaf}`
+  if (full.length <= MAX_LABEL_LENGTH) return full
+
+  const segmentBudget = MAX_LABEL_LENGTH - '/.../'.length
+  if (segmentBudget < 2) return truncateLabel(full)
+
+  const rootLength = Math.min(root.length, Math.max(1, Math.min(MAX_ROOT_LENGTH, segmentBudget - MIN_LEAF_LENGTH)))
+  const leafLength = segmentBudget - rootLength
+  const candidate = `${truncateMiddle(root, rootLength)}/.../${truncateFileName(leaf, leafLength)}`
+
+  if (candidate.length <= MAX_LABEL_LENGTH) return candidate
+  return truncateLabel(full)
 }
 
 function compactRootParentLeaf(root: string, parent: string, leaf: string) {
@@ -213,8 +296,45 @@ function truncateFileName(value: string, maxLength: number) {
 
 function sourceColor(api: TuiPluginApi, item: MarkdownContextItem) {
   const c = colors(api.theme.current)
-  if (item.compacted) return c.orange
-  return c.green
+  if (item.compacted) return c.red
+
+  switch (item.kind) {
+    case 'readme':
+      return c.green
+    case 'agents':
+      return c.blue
+    case 'skill':
+      return c.cyan
+    case 'instructions':
+      return c.yellow
+    case 'partial':
+      return c.magenta
+    case 'directory':
+      return c.orange
+    case 'markdown':
+      return c.muted
+  }
+}
+
+function sourceIcon(item: MarkdownContextItem) {
+  if (item.compacted) return 'C '
+
+  switch (item.kind) {
+    case 'readme':
+      return 'R '
+    case 'agents':
+      return 'A '
+    case 'skill':
+      return 'S '
+    case 'instructions':
+      return 'I '
+    case 'partial':
+      return 'P '
+    case 'directory':
+      return 'D '
+    case 'markdown':
+      return 'M '
+  }
 }
 
 const tui: TuiPlugin = async (api) => {
