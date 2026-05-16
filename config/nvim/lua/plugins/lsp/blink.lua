@@ -24,6 +24,7 @@ return {
 			},
 			["<Down>"] = { "select_next", "fallback" },
 			["<Up>"] = { "select_prev", "fallback" },
+			["<CR>"] = { "accept", "fallback" },
 			["<Right>"] = { "accept", "fallback" },
 			["<Left>"] = { "hide", "fallback" },
 		},
