@@ -57,7 +57,7 @@ map("v", "<C-s>", "<Esc>:w<CR>", desc("Save"))
 -- │ quit: exit, force quit, escape                                              │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 map("n", "q:", ":q<CR>")
-map("n", "q", "<Nop>")
+map("n", "q", "<Nop>", desc("Disable native macro recording"))
 map("n", "qq", ":q<CR>", desc("Quit"))
 map("n", "<C-c>", "<Esc>", desc("Escape"))
 map("n", "<leader>q", ":q!<CR>", remap_explicit("Force quit"))
