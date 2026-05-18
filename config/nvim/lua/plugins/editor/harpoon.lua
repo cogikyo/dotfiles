@@ -1,6 +1,15 @@
+local function existing_dir(paths)
+	for _, path in ipairs(paths) do
+		local dir = vim.fn.expand(path)
+		if vim.uv.fs_stat(dir) then
+			return dir
+		end
+	end
+end
+
 return {
 	"cogikyo/harpoon",
-	dir = "~/cogikyo/harpoon",
+	dir = existing_dir({ "~/cogikyo/harpoon", "~/vagari/harpoon" }),
 	keys = {
 		{ "<leader>nn", function() require("harpoon.mark").add_file() end, desc = "Pin file" },
 		{ "<leader>nl", function() require("harpoon.ui").toggle_quick_menu() end, desc = "Quick menu" },

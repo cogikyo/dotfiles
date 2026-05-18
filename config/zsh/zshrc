@@ -2,6 +2,13 @@
 # │ Prompt & Init                                                            │
 # ╰──────────────────────────────────────────────────────────────────────────╯
 
+[[ -f "$HOME/.config/shell/env.sh" ]] && source "$HOME/.config/shell/env.sh"
+
+if [[ -n "${SSH_CONNECTION:-}" || -n "${SSH_TTY:-}" ]]; then
+    export TERM=xterm-256color
+    stty erase '^?' 2>/dev/null || true
+fi
+
 eval "$(starship init zsh)"
 eval "$(zoxide init zsh)"
 
@@ -119,18 +126,26 @@ if [[ ! -f ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh ]]; then
 fi
 source ${ZDOTDIR:-${HOME}}/.zcomet/bin/zcomet.zsh
 
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+
+# zsh-completions must be on fpath before compinit; UI plugins load after.
+zcomet load zsh-users/zsh-completions
+autoload -U compinit; compinit
+
 ZSH_AUTOSUGGEST_BUFFER_MAX_SIZE=20
-ZSH_AUTOSUGGEST_STRATEGY=(history completion)
+ZSH_AUTOSUGGEST_HISTORY_IGNORE=$'*\n*'
+ZSH_AUTOSUGGEST_STRATEGY=(history_after_first_char)
+
+_zsh_autosuggest_strategy_history_after_first_char() {
+    local prefix=$1
+    (( ${#prefix} < 2 )) && return
+    _zsh_autosuggest_strategy_history "$prefix"
+}
 
 # Order matters -- syntax highlighting must load last.
-zcomet load zsh-users/zsh-completions
 zcomet load zsh-users/zsh-autosuggestions
 zcomet load Aloxaf/fzf-tab
 zcomet load zsh-users/zsh-syntax-highlighting
-
-zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
-
-autoload -U compinit; compinit
 
 # ╭──────────────────────────────────────────────────────────────────────────╮
 # │ Key Bindings                                                             │
@@ -138,6 +153,8 @@ autoload -U compinit; compinit
 
 bindkey -v
 export KEYTIMEOUT=01
+bindkey '^?'      backward-delete-char
+bindkey '^H'      backward-delete-char
 bindkey '^[[H'     vi-beginning-of-line
 bindkey '^[[F'     vi-end-of-line
 bindkey '^[[3~'    delete-char

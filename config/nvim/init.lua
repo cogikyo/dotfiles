@@ -32,12 +32,15 @@ if not (vim.uv or vim.loop).fs_stat(lazypath) then
 end
 vim.opt.rtp:prepend(lazypath)
 
+local vagari_dir = vim.fn.expand("~/vagari/nvim")
+
 require("lazy").setup({
 	dev = { path = "~/vagari" },
 	spec = {
 		{
 			"cogikyo/vagari.nvim",
-			dir = "~/vagari/nvim",
+			branch = "master",
+			dir = vim.uv.fs_stat(vagari_dir) and vagari_dir or nil,
 			priority = 1000,
 			lazy = false,
 			config = function() vim.cmd.colorscheme("vagari") end,
