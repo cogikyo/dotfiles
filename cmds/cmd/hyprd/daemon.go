@@ -169,6 +169,10 @@ func (d *Daemon) handleCommand(command string) string {
 		}
 		return result
 	case "swap":
+		monocle := wm.NewMonocle(d.hypr, d.state)
+		if _, err := monocle.DeactivateIfActive(); err != nil {
+			return fmt.Sprintf("error: %v", err)
+		}
 		tb := wm.NewThreeBody(d.hypr, d.state)
 		tbResult, tbErr := tb.SwapMaster()
 		if tbErr != nil {
@@ -323,6 +327,10 @@ func (d *Daemon) handleThreeBody(arg string) string {
 	name := strings.TrimSpace(arg)
 	if name == "" {
 		return "usage: three-body {editor|agents|browser|shadow}"
+	}
+	monocle := wm.NewMonocle(d.hypr, d.state)
+	if _, err := monocle.DeactivateIfActive(); err != nil {
+		return fmt.Sprintf("error: %v", err)
 	}
 	tb := wm.NewThreeBody(d.hypr, d.state)
 	tb.SetNotifyHooks(hasDisplayedNotifications, d.tryDunstAction)

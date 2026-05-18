@@ -36,6 +36,18 @@ func (m *Monocle) Execute() (string, error) {
 	return m.activate()
 }
 
+// DeactivateIfActive deactivates monocle on the current workspace without toggling it on.
+func (m *Monocle) DeactivateIfActive() (string, error) {
+	wsID, err := m.activeWorkspace()
+	if err != nil {
+		return "", err
+	}
+	if m.state.GetMonocle(wsID) == nil {
+		return "", nil
+	}
+	return m.deactivate(wsID)
+}
+
 // ╭──────────────────────────────────────────────────────────────────────────────╮
 // │ activate / deactivate                                                        │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
