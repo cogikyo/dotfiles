@@ -143,7 +143,7 @@ tabs:
             pane: 0
           term:
             pane: 1
-        layout: "fat:bias=50"
+        layout: "fat:bias=80"
         panes:
           - cwd: "~/LeadPier/pier"
       - name: fe-build
