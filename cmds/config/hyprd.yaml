@@ -36,7 +36,8 @@ sessions:
     inkscape:
       command: inkscape
     obs:
-      command: obs
+      command: sh -c 'obs & exec kitty --title=obs-recordings --directory ~/media/recordings --session ~/.config/kitty/sessions/recordings.conf'
+      class: kitty
 
     harpoon:
       project: cogikyo/harpoon
@@ -110,11 +111,11 @@ tabs:
     prefix: "agents-"
     focus: master
     tabs:
-      - { name: xplr,   title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
+      - { name: xplr,   title: "⊰   ⊱", command: "xplr" }
       - { name: master, title: "⊰ 󰯉  ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
       - { name: dev,    title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
       - { name: plan,   title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
-      - { name: git,    title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
+      - { name: git,    title: "⊰   ⊱", command: "lazygit" }
 
   leadpier: # ├─ leadpier profile ─────────────────────────────────────────────────┤
     order: 2
