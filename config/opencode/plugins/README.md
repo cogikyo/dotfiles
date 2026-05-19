@@ -24,6 +24,10 @@ Its plugin ID is `cullyn.openai-quota-sidebar`.
 It lists Markdown files backed by completed `read` tool calls.
 Its plugin ID is `opencode-markdown-context`.
 
+`opencode/media-context/index.tsx` is a TUI sidebar content section loaded by `tui.json`.
+It lists registered media references for the current session, previews local images with Kitty, and opens videos with `xdg-open`.
+Its plugin ID is `opencode-media-context`.
+
 `opencode/statusline.tsx` is a TUI prompt wrapper loaded by `tui.json`.
 It injects statusline chrome into `session_prompt` while forwarding the real prompt props/ref unchanged.
 Its plugin ID is `opencode-statusline`.
@@ -77,6 +81,43 @@ Failures should degrade to a coarse `OpenAI usage unavailable` or `Usage windows
 
 The plugin deactivates `internal:sidebar-context` while active because it owns the `sidebar_title` and `sidebar_content` slots.
 On dispose it reactivates that internal plugin only if this plugin deactivated it.
+
+## Media Context Contract
+
+Media context has both a server hook and a TUI sidebar.
+`opencode/media-context/prompt.ts` is loaded by `opencode.json`; `opencode/media-context/index.tsx` is loaded by `tui.json`.
+
+The server hook registers attached media and detected local video paths, resolves image handles into provider-safe file parts, emits local-only notices for video handles, and preserves media handles in compaction context.
+Any persisted part created by the plugin and pushed into `output.parts` must use an ID beginning with `prt`.
+Never derive plugin-created part IDs from `output.message.id`; old `msg_*media-context-*` rows were history poison because OpenCode rejects persisted parts whose IDs do not start with `prt`.
+
+`opencode/media-context/registry.ts` owns the runtime registry.
+The registry lives at `${XDG_RUNTIME_DIR}/opencode/media-context/<session>.json` with a `/tmp/opencode-${uid}/media-context` fallback.
+It is sidecar/runtime state, not an authority to recreate visible chat history.
+Registry directories are mode `0700`; registry JSON files are mode `0600`.
+Registry writes use a per-session lock and atomic replace.
+
+Media files get stable per-session timestamp handles in the exact form `@HH_MM_SS`.
+If multiple media files register in the same second, later handles append `_2`, `_3`, and so on.
+Missing backing files are hidden from the sidebar and cannot resolve, but registry entries are retained so timestamp handles are not reused while the runtime registry exists.
+
+`opencode/media-context/index.tsx` lists current-session media reconciled against currently loaded session messages.
+Registry-only entries are hidden on restore when persisted messages are unavailable, empty, or stale.
+The sidebar can discover media from loaded persisted file parts when the TUI exposes them.
+On event-driven refresh, the TUI may backfill attached media and detected video paths from the most recent 100 current-session messages, capped at 20 registrations per refresh.
+It does not scan old sessions or full history.
+Image rows display `I <timestamp-handle>`; video rows display `V <local-basename>` with handle fallback.
+Clicking an image row opens a borderless full-screen OpenTUI backdrop while Kitty draws the image preview out-of-band; clicking a video row opens the file with `xdg-open`.
+
+Local image previews are attempted for `file://` URLs and any existing `source.path`, including clipboard backing paths.
+Unsupported `http(s):`, internal, relative, and malformed URLs are not registered because they cannot be dereferenced later as local files.
+Video `source.path` and `file://` registrations use the same local-file guard as sidebar discovery.
+Detected local video paths are registration-only unless they are later referenced by handle; even then, videos stay local-only and are not pushed as provider file parts.
+
+The plugin reuses `config/xplr/bin/kitty-preview.py` via `python3` with argv-only spawning for image previews.
+Kitty overlay coordinates use a centered terminal rectangle under the backdrop.
+It clears the Kitty overlay on backdrop close, session navigation, session commands, slot cleanup, and plugin disposal.
+Backing local files must remain available for handles to resolve after compaction.
 
 ## Statusline Contract
 

@@ -51,7 +51,8 @@
     }
   },
   "plugin": [
-    "file:///home/cullyn/dotfiles/config/opencode/plugins/hyprd/notify.ts"
+    "file:///home/cullyn/dotfiles/config/opencode/plugins/hyprd/notify.ts",
+    "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/media-context/prompt.ts"
   ],
   "agent": {
     "build": {

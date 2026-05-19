@@ -19,8 +19,6 @@
     },
     "/home/cullyn/LeadPier/backend/services": {
       "pins": [
-        "routing/CONTEXT/SMART_ALGORITHM.md",
-        "statistics/s.stats.reports.admin.go",
         "notify/init.notify.go",
         "partner/init.partner.go",
         "compliance/init.compliance.go",

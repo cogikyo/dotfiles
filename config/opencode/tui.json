@@ -6,6 +6,7 @@
     "file:///home/cullyn/dotfiles/config/opencode/plugins/hyprd/kitty.ts",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/openai/usage.tsx",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/markdown-context.tsx",
+    "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/media-context/index.tsx",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/statusline.tsx"
   ],
   "mouse": true,
