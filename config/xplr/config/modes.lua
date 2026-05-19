@@ -1,5 +1,22 @@
 local modes = xplr.config.modes.builtin
 local on_key = modes.default.key_bindings.on_key
+local sort_on_key = modes.sort.key_bindings.on_key
+
+local sort_modified = sort_on_key["l"]
+local sort_modified_reverse = sort_on_key["L"]
+local sort_mime = sort_on_key["m"]
+local sort_mime_reverse = sort_on_key["M"]
+
+sort_on_key["m"] = sort_modified
+sort_on_key["t"] = sort_mime
+
+if sort_modified_reverse then
+	sort_on_key["M"] = sort_modified_reverse
+end
+
+if sort_mime_reverse then
+	sort_on_key["T"] = sort_mime_reverse
+end
 
 modes.create_directory.prompt = "  (create dir)  "
 modes.create_file.prompt = "  (create file)  "

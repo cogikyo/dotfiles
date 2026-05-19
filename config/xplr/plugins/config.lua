@@ -41,7 +41,7 @@ require("nuke").setup({
 
 local nuke_on_key = xplr.config.modes.custom.nuke.key_bindings.on_key
 on_key["v"] = nuke_on_key.v
-on_key["s"] = nuke_on_key.s
+on_key["S"] = nuke_on_key.s
 on_key["right"] = {
 	help = "open/archive",
 	messages = {
