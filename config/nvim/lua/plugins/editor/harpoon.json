@@ -19,6 +19,8 @@
     },
     "/home/cullyn/LeadPier/backend/services": {
       "pins": [
+        "routing/CONTEXT/THEORY.md",
+        "statistics/s.stats.reports.admin.go",
         "notify/init.notify.go",
         "partner/init.partner.go",
         "compliance/init.compliance.go",

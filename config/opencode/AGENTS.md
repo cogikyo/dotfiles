@@ -52,6 +52,7 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 - Cut reassurance, recap, throat-clearing, generic caveats, and obvious narration.
 - Raise confusion early when naming, structure, or intent is unclear; quick clarifications can save lots of time, but do your best to gather from context what the true intent is.
 - Pause on vague requests, missing context, stale instructions, or conflicting rules when judgment says clarification will prevent wasted work.
+- Unexpected file changes usually come from formatters, linters, another agent, or the human editing concurrently. Do not revert them; raise them only when they confuse or conflict with the task.
 - Guard against silent removal; before removing behavior, confirm it is truly unused and comment on your decision to delete.
 - Surface prompt conflicts instead of silently deferring; state the conflict, then follow the highest-priority applicable instruction.
 
