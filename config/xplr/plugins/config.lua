@@ -34,6 +34,8 @@ require("nuke").setup({
 		run_executables = false,
 		custom = {
 			{ extension = "gz", command = "tar tf {} | nvimpager" },
+			{ mime_regex = "text/.*", command = "${VISUAL:-${EDITOR:-nvim}} {}" },
+			{ mime_regex = "application/(json|x-sh|x-python|x-shellscript|xml|yaml)", command = "${VISUAL:-${EDITOR:-nvim}} {}" },
 			{ mime_regex = ".*", command = "xdg-open {}" },
 		},
 	},
@@ -96,7 +98,7 @@ on_key["alt-i"] = {
 				case "$mime" in
 					image/*) imv "${XPLR_FOCUS_PATH:?}" >/dev/null 2>&1 & ;;
 					video/*) mpv "${XPLR_FOCUS_PATH:?}" >/dev/null 2>&1 & ;;
-					*) xdg-open "${XPLR_FOCUS_PATH:?}" >/dev/null 2>&1 & ;;
+					*) "$XPLR" -m 'LogError: %q' "not an image or video: $mime" ;;
 				esac
 			]===],
 		},
