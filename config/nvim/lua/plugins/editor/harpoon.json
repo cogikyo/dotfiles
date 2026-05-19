@@ -19,6 +19,8 @@
     },
     "/home/cullyn/LeadPier/backend/services": {
       "pins": [
+        "routing/CONTEXT/SMART_ALGORITHM.md",
+        "statistics/s.stats.reports.admin.go",
         "notify/init.notify.go",
         "partner/init.partner.go",
         "compliance/init.compliance.go",
@@ -27,12 +29,13 @@
     },
     "/home/cullyn/LeadPier/frontend": {
       "pins": [
+        "apps/admin/src/pages/statistics/Partners/Tiers.tsx",
+        "apps/admin/src/pages/Configuration/Algorithms/index.tsx",
         "apps/admin/src/pages/Compliance/Dashboard/Organizations.tsx",
         "packages/shared/src/components/Stats/SnapshotCard.tsx",
         "packages/shared/src/realtime/client.ts",
         "apps/admin/src/pages/Configuration/Tracking/index.tsx",
-        "apps/admin/src/pages/Users/UserDetails/Tracking/index.tsx",
-        "packages/shared/src/components/Creatives/Detail/Page.tsx"
+        "apps/admin/src/pages/Users/UserDetails/Tracking/index.tsx"
       ]
     },
     "/home/cullyn/dotfiles": {
