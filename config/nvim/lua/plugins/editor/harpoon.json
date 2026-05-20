@@ -35,7 +35,8 @@
         "packages/shared/src/components/Stats/SnapshotCard.tsx",
         "packages/shared/src/realtime/client.ts",
         "apps/admin/src/pages/Configuration/Tracking/index.tsx",
-        "apps/admin/src/pages/Users/UserDetails/Tracking/index.tsx"
+        "apps/admin/src/pages/Users/UserDetails/Tracking/index.tsx",
+        "apps/admin/src/pages/admin-list-management/index.tsx"
       ]
     },
     "/home/cullyn/dotfiles": {
