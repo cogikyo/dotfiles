@@ -1,18 +1,15 @@
 name: coms
 window:
-    selected_tab: 1
-    tab_count: 4
+    selected_tab: 2
+    tab_count: 2
     group_count: 0
-    selected_title: Telegram Web
-    selected_url: https://web.telegram.org/k/
+    selected_title: Inbox - cullyn.newman@gmail.com - Gmail
+    selected_url: https://mail.google.com/mail/u/0/#inbox
     hypr_order_matches_tabs: true
 browser:
     pinned:
         - https://web.telegram.org/k/
         - https://mail.google.com/mail/u/0/#inbox
-    urls:
-        - https://mail.google.com/mail/u/1/#inbox
-        - https://mail.google.com/mail/u/2/#inbox
 tabs:
     - position: 1
       title: Telegram Web
@@ -22,9 +19,3 @@ tabs:
       title: Inbox - cullyn.newman@gmail.com - Gmail
       url: https://mail.google.com/mail/u/0/#inbox
       pinned: true
-    - position: 3
-      title: Inbox - cullyn@cogikyo.com - COGIKYO Mail
-      url: https://mail.google.com/mail/u/1/#inbox
-    - position: 4
-      title: Inbox - cullyn@trendcapital.com - Trend Capital Mail
-      url: https://mail.google.com/mail/u/2/#inbox
