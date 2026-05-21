@@ -19,18 +19,20 @@
     },
     "/home/cullyn/LeadPier/backend/services": {
       "pins": [
+        "routing/init.routing.go",
         "routing/CONTEXT/THEORY.md",
         "statistics/s.stats.reports.admin.go",
         "notify/init.notify.go",
         "partner/init.partner.go",
         "compliance/init.compliance.go",
-        "partner/feedback/init.feedback.go"
+        "partner/feedback/init.feedback.go",
+        "routing/s.api.smart_algorithm.go"
       ]
     },
     "/home/cullyn/LeadPier/frontend": {
       "pins": [
         "apps/admin/src/pages/statistics/Partners/Tiers.tsx",
-        "apps/admin/src/pages/Configuration/Algorithms/index.tsx",
+        "apps/admin/src/pages/Configuration/Algorithms/Smart/index.tsx",
         "apps/admin/src/pages/Compliance/Dashboard/Organizations.tsx",
         "packages/shared/src/components/Stats/SnapshotCard.tsx",
         "packages/shared/src/realtime/client.ts",
