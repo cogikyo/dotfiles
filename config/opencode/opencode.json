@@ -4,6 +4,7 @@
   "enabled_providers": ["anthropic", "openai"],
   "model": "openai/gpt-5.5-fast",
   "small_model": "openai/gpt-5.5-fast",
+  "default_agent": "drive",
   "share": "manual",
   "snapshot": true,
   "lsp": {
@@ -54,20 +55,6 @@
     "file:///home/cullyn/dotfiles/config/opencode/plugins/hyprd/notify.ts",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/media-context/prompt.ts"
   ],
-  "agent": {
-    "build": {
-      "model": "openai/gpt-5.5-fast",
-      "color": "secondary"
-    },
-    "plan": {
-      "model": "openai/gpt-5.5-fast",
-      "color": "accent"
-    },
-    "review": {
-      "model": "openai/gpt-5.5-fast",
-      "color": "primary"
-    }
-  },
   "provider": {
     "openai": {
       "models": {

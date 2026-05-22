@@ -19,14 +19,14 @@
     },
     "/home/cullyn/LeadPier/backend/services": {
       "pins": [
-        "routing/init.routing.go",
+        "routing/s.api.smart_algorithm.go",
         "routing/CONTEXT/THEORY.md",
         "statistics/s.stats.reports.admin.go",
         "notify/init.notify.go",
         "partner/init.partner.go",
         "compliance/init.compliance.go",
         "partner/feedback/init.feedback.go",
-        "routing/s.api.smart_algorithm.go"
+        "routing/CONTEXT/AGENTS.md"
       ]
     },
     "/home/cullyn/LeadPier/frontend": {
