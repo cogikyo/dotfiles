@@ -3,4 +3,3 @@ bun.lock
 # Tracked package files are local dependency metadata; ignore regenerated package manager noise.
 package.json
 package-lock.json
-skills

@@ -1,1 +1,0 @@
-/home/cullyn/dotfiles/skills/learn/SKILL.md

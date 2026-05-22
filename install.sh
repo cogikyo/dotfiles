@@ -663,7 +663,6 @@ step_link() {
 
     local linked_count=0
     local unchanged_count=0
-    local skills_linked=0
 
     link_or_skip() {
         local src="$1"
@@ -696,20 +695,6 @@ step_link() {
         [[ "$(canonpath "$src")" == "$(canonpath "$dst")" ]]
     }
 
-    ensure_skills_linked() {
-        local skills_output
-
-        if [[ "$skills_linked" -eq 1 ]]; then
-            return 0
-        fi
-
-        if ! skills_output=$("$DOTFILES/skills/learn/scripts/link.sh" 2>&1); then
-            err "Linking skills failed"
-            [[ -n "$skills_output" ]] && printf '%s\n' "$skills_output" >&2
-            return 1
-        fi
-        skills_linked=1
-    }
 
     # Config directories -> ~/.config/<name> (directory-level symlinks)
     info "Linking config into ~/.config/..."
@@ -734,9 +719,6 @@ step_link() {
         fi
     done
 
-    info "Linking shared agent skills..."
-    step "Linking skills"
-    ensure_skills_linked
 
     # Claude: partial linking
     info "Linking claude settings and global instructions..."
@@ -872,7 +854,7 @@ healthcheck_link() {
     done
     ok "$HOME/.config mirror links"
 
-    step "Verify Claude links, shared skills, and shell"
+    step "Verify Claude links and shell"
     verify_link_mapping "$DOTFILES/config/claude/settings.json" "$HOME/.config/claude/settings.json" || {
         err "Healthcheck failed: ~/.config/claude/settings.json is not linked"
         return 1
@@ -892,11 +874,6 @@ healthcheck_link() {
     [[ -f "$HOME/.config/obs-studio/basic/scenes/Costello.json" \
         && ! -L "$HOME/.config/obs-studio/basic/scenes/Costello.json" ]] || {
         err "Healthcheck failed: ~/.config/obs-studio/basic/scenes/Costello.json is not a local seeded file"
-        return 1
-    }
-    ((checked_entries++))
-    [[ -d "$HOME/.claude/skills" ]] || {
-        err "Healthcheck failed: ~/.claude/skills is missing"
         return 1
     }
     ((checked_entries++))

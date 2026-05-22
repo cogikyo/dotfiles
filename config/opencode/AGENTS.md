@@ -74,9 +74,21 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 - When a permission blocks useful work, classify it before asking: one-off risky action, recurring safe friction, or unclear.
 - For one-off risky actions, ask with the smallest command or edit that would unblock the task.
 - For recurring safe friction, prefer improving the agent system over repeatedly asking the user.
-- If the current task is about skills, agents, prompts, scripts, or permissions, edit the source-of-truth dotfiles directly when the path is in scope.
+- If the current task explicitly asks for skills, agents, prompts, scripts, or permissions edits, edit the source-of-truth dotfiles directly when the path is in scope.
 - If the source-of-truth path is out of scope or the config schema is unclear, propose the exact instruction, script, or permission rule instead of guessing.
 - Keep guardrails intact: do not broaden access for destructive filesystem operations, secret reads, force git operations, pushes, package installs, network writes, production-impacting commands, or Docker destructive commands without explicit user approval.
+
+## Agent-System Improvement Loop
+
+- Recurring friction is signal for system improvement, not permission for a self-modifying loop.
+- Workers report improvement candidates upward; they do not call `shared.improve` directly unless explicitly made a lead.
+- Managers dedupe and classify repeated worker feedback, then call or relay `shared.improve` when a prompt, script, documentation, or permission change could reduce future error.
+- Masters and Drive decide whether improvement packets are in scope and present concrete plans to the user before persistent source-of-truth edits.
+- `shared.improve` is read-only: it proposes approval packets and does not edit files, call child agents, maintain todos, or broaden permissions automatically.
+- Source-of-truth improvements may target agent prompts, orchestration docs, local `AGENTS.md`, other Markdown docs, scripts, commands, or narrow permission rules when explicitly approved and useful.
+- Scripts can be suggested or created when approved, deterministic, and safer than repeated manual steps.
+- Persistent source-of-truth edits require explicit approval unless the user already requested that exact edit scope.
+- Keep guardrails intact for destructive filesystem operations, secret reads, force git operations, pushes, package installs, network writes, production-impacting commands, and Docker destructive commands.
 
 ## Engineering Taste
 
@@ -119,3 +131,12 @@ cullyn...
 - has background in biology, mathematics, physics; analogies in these domains are great for explaining things.
 - most interested in evolutionary memetics and entropy.
 - constanly makes typos; sorry about that.
+
+
+## OpenCode Layout
+
+- Agent prompts live under `config/opencode/agents/`.
+- Shared orchestration read files live under `config/opencode/orchestrate/`.
+- The review scope helper is `config/opencode/agents/review.sh`, next to `agents/review.md`.
+- There is no central contracts or scripts directory under `config/opencode/`.
+- Do not add local skill configuration or learning commands without explicit approval.

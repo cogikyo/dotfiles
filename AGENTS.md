@@ -8,12 +8,27 @@ Arch + Hyprland (Wayland) dotfiles. Single-user. Root of repo = `~/dotfiles`.
 - `bin/` → symlinked into `~/.local/bin/` (legacy; being replaced by `cmds/`)
 - `cmds/` → Go command workspace; built into `~/.local/bin/` by `install.sh go`. See `cmds/README.md`.
 - `etc/` → system configs **copied** to `/etc/` by `install.sh system` (not symlinked)
-- `skills/` → flat agent skills loaded by OpenCode; `/learn` owns audit/link scripts under `skills/learn/scripts/`
+- `config/opencode/commands/` → OpenCode slash commands
+- `config/opencode/agents/*.md` → flat invokable OpenCode agent prompts, with dot names for pseudo-domains
+- `config/opencode/orchestrate/` → shared OpenCode orchestration read files for masters, managers, and workers
+- `config/opencode/agents/review.sh` → review master scope helper kept next to `agents/review.md`
 - `iso/` → archiso profile; `iso/work/` and `iso/out/` are gitignored build artifacts
 - `share/` → static assets
 
 Everything in `config/` and `bin/` is symlinked wholesale except: `config/claude/settings.json` and `config/firefox/` are linked individually or handled specially.
 Editing the repo IS editing the live system.
+
+## Harness
+
+Operationally, `opencodde` is the primary agent harness used.
+
+`config/opencode/AGENTS.md` is global context file that is always in use.
+`config/opencode/opencode.json` wires config, providers, permissions, and plugins.
+`config/opencode/agents/*.md` define large set of modes and subagents.
+
+Command and plugin paths live under `config/opencode/`.
+Edits under `config/opencode/` affect the live system through symlinks.
+Restart OpenCode for those edits to affect running sessions.
 
 ## Install
 

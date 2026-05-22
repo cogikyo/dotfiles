@@ -177,9 +177,6 @@
       "terraform destroy*": "ask"
     }
   },
-  "skills": {
-    "paths": ["{env:HOME}/dotfiles/skills"]
-  },
   "compaction": {
     "auto": true,
     "prune": true,
