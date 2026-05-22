@@ -58,21 +58,13 @@ return {
 				)
 			end
 
-			local function cursor_node()
-				return api.tree.get_node_under_cursor()
-			end
+			local function cursor_node() return api.tree.get_node_under_cursor() end
 
-			local function is_file(node)
-				return node and node.type == "file"
-			end
+			local function is_file(node) return node and node.type == "file" end
 
-			local function is_open_dir(node)
-				return node and node.type == "directory" and node.open
-			end
+			local function is_open_dir(node) return node and node.type == "directory" and node.open end
 
-			local function is_closed_dir(node)
-				return node and node.type == "directory" and not node.open
-			end
+			local function is_closed_dir(node) return node and node.type == "directory" and not node.open end
 
 			local function nav_right()
 				local node = cursor_node()
@@ -325,7 +317,7 @@ return {
 							unstaged = "",
 							staged = "",
 							unmerged = "",
-							renamed = "",
+							renamed = "󰑕",
 							deleted = "󰮈",
 							untracked = "",
 							ignored = "",
