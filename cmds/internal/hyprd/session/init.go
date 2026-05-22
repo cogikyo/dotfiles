@@ -9,9 +9,11 @@ package session
 // init.go executes boot-time session initialization, including wallpaper, optional early lock, network wait, and layout open.
 
 import (
+	"context"
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
 	"sort"
 	"time"
 
@@ -28,14 +30,50 @@ var startupExecs = []string{
 	"spotify-launcher",
 }
 
+const (
+	bluetoothctlPath         = "/usr/bin/bluetoothctl"
+	bluetoothConnectAttempts = 8
+	bluetoothRetryDelay      = 2 * time.Second
+	bluetoothTryTimeout      = 8 * time.Second
+)
+
 // dispatchStartup runs hardcoded startup commands and optionally connects bluetooth.
 func dispatchStartup(h *hypr.Client, bt config.BluetoothConfig) {
 	for _, cmd := range startupExecs {
 		h.Dispatch(fmt.Sprintf("exec %s", cmd))
 	}
 	if bt.Enabled && bt.Device != "" {
-		h.Dispatch(fmt.Sprintf("exec bluetoothctl connect %s", bt.Device))
+		connectBluetooth(bt.Device)
 	}
+}
+
+func connectBluetooth(device string) {
+	go func() {
+		var lastErr error
+		var lastOut []byte
+		for attempt := 1; attempt <= bluetoothConnectAttempts; attempt++ {
+			ctx, cancel := context.WithTimeout(context.Background(), bluetoothTryTimeout)
+			cmd := exec.CommandContext(ctx, bluetoothctlPath, "connect", device)
+			out, err := cmd.CombinedOutput()
+			cancel()
+			if err == nil {
+				if attempt > 1 {
+					fmt.Printf("hyprd bluetooth: connected %s after %d attempts\n", device, attempt)
+				}
+				return
+			}
+			lastErr = err
+			lastOut = out
+			if attempt < bluetoothConnectAttempts {
+				time.Sleep(bluetoothRetryDelay)
+			}
+		}
+		if len(lastOut) > 0 {
+			fmt.Fprintf(os.Stderr, "hyprd bluetooth: connect %s failed after %d attempts: %v: %s\n", device, bluetoothConnectAttempts, lastErr, lastOut)
+			return
+		}
+		fmt.Fprintf(os.Stderr, "hyprd bluetooth: connect %s failed after %d attempts: %v\n", device, bluetoothConnectAttempts, lastErr)
+	}()
 }
 
 // NotifyFunc delivers a notification to the user, injected to break a cycle with the notify package.
