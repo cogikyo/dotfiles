@@ -3,11 +3,11 @@
   "projects": {
     "/home/cullyn/LeadPier": {
       "pins": [
-        "pier/README.md",
-        "backend/core/staging-backend/docker-compose.yml",
         "backend/core/runner/core.go",
-        "pier/skills/partner-feedback/SKILL.md",
-        "backend/common/microservices/orm_helpers.go"
+        "backend/core/staging-backend/docker-compose.yml",
+        "pier/README.md",
+        "backend/common/microservices/orm_helpers.go",
+        "pier/skills/partner-feedback/SKILL.md"
       ]
     },
     "/home/cullyn/LeadPier/backend": {

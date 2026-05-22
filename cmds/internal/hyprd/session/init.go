@@ -120,7 +120,7 @@ func (i *Init) Execute() (string, error) {
 		i.hypr.Dispatch(fmt.Sprintf("workspace %d", init.Workspace))
 	}
 
-	restoreEwwWidgets()
+	restoreEwwWidgets(true)
 
 	fmt.Println("hyprd init: complete")
 	return "init: complete", nil

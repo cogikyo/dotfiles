@@ -258,7 +258,7 @@ func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) {
 
 	dispatchStartup(l.hypr, cfg.Bluetooth)
 	if saved.restoreWidgets {
-		restoreEwwWidgets()
+		restoreEwwWidgets(false)
 	}
 
 	if resumeMusic {
@@ -271,14 +271,18 @@ func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) {
 }
 
 // restoreEwwWidgets reopens widgets through ewwd once the daemon socket is ready.
-func restoreEwwWidgets() {
+func restoreEwwWidgets(reload bool) {
 	if !waitEwwdReady(7 * time.Second) {
 		startDetached("setsid", "ewwd", "--no-open")
 		if !waitEwwdReady(7 * time.Second) {
 			return
 		}
 	}
-	startDetached("ewwd", "restore")
+	if reload {
+		startDetached("ewwd", "open")
+	} else {
+		startDetached("ewwd", "restore")
+	}
 }
 
 func waitEwwdReady(timeout time.Duration) bool {
