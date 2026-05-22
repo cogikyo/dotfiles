@@ -239,23 +239,18 @@ notify:
     start:
       style: secondary
       sound: civ5-worker-select
-      volume: 105
-      timeout: 1500
-    idle:
-      style: secondary
-      sound: sdv-frog
       volume: 95
-      timeout: 20000
+      timeout: 1000
 
     subagent:
       style: success
       sound: sdv-collect-item
-      volume: 75
+      volume: 65
       timeout: 2500
     todo-complete:
       style: success
       sound: civ6-notification
-      volume: 85
+      volume: 65
       timeout: 2500
 
     complete:
@@ -263,6 +258,10 @@ notify:
       sound: jobs-done
       volume: 110
 
+    idle:
+      style: tertiary
+      sound: sdv-frog
+      volume: 95
     permission:
       style: tertiary
       sound: ssb-ready
