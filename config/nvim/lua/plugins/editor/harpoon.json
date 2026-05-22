@@ -25,8 +25,7 @@
         "notify/init.notify.go",
         "partner/init.partner.go",
         "compliance/init.compliance.go",
-        "partner/feedback/init.feedback.go",
-        "routing/CONTEXT/AGENTS.md"
+        "partner/feedback/init.feedback.go"
       ]
     },
     "/home/cullyn/LeadPier/frontend": {
@@ -37,8 +36,7 @@
         "packages/shared/src/components/Stats/SnapshotCard.tsx",
         "packages/shared/src/realtime/client.ts",
         "apps/admin/src/pages/Configuration/Tracking/index.tsx",
-        "apps/admin/src/pages/Users/UserDetails/Tracking/index.tsx",
-        "apps/admin/src/pages/admin-list-management/index.tsx"
+        "apps/admin/src/pages/Users/UserDetails/Tracking/index.tsx"
       ]
     },
     "/home/cullyn/dotfiles": {
