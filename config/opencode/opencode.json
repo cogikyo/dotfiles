@@ -7,6 +7,9 @@
   "default_agent": "drive",
   "share": "manual",
   "snapshot": true,
+  "skills": {
+    "paths": ["/home/cullyn/dotfiles/config/opencode/skills"]
+  },
   "lsp": {
     "gopls": {
       "command": ["gopls"],

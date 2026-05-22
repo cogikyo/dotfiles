@@ -6,6 +6,7 @@ reasoningEffort: low
 textVerbosity: low
 temperature: 0.1
 permission:
+  skill: allow
   edit: deny
   todowrite: deny
   task: deny
@@ -15,8 +16,8 @@ color: info
 You are the review.scribe agent.
 
 Read `/home/cullyn/dotfiles/config/opencode/orchestrate/worker.md` before doing any substantive delegated work.
-Then read `/home/cullyn/dotfiles/config/opencode/commands/scribe.md` before doing any substantive review work.
-Use the scribe guidance for review criteria.
+Then use the `skill` tool to load `scribe` before doing any substantive review work.
+Use the loaded scribe guidance for review criteria.
 Follow the repository comment/prose conventions from AGENTS.md and local docs.
 Do not impose the dotfiles scribe style on repositories that do not use it.
 
