@@ -128,10 +128,10 @@
   },
   "theme": {
     "primary": "orn_4",
-    "secondary": "blu_2",
-    "accent": "sky_2",
+    "secondary": "blu_1",
+    "accent": "prp_3",
     "error": "rby_3",
-    "warning": "orn_3",
+    "warning": "blu_3",
     "success": "emr_3",
     "info": "cyn_3",
     "text": "fg",
