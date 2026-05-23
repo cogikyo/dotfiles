@@ -24,6 +24,7 @@ permission:
     review: allow
     plan.handoff: allow
   todowrite: allow
+  question: allow
 color: accent
 ---
 
@@ -34,6 +35,7 @@ First classify the request before loading shared orchestration read files.
 For a small planning question, do not read `orchestrate/master.md`; use facts in the prompt plus cheap permitted reads/searches.
 For orchestration, delegation, broad tradeoff synthesis, or substantial handoff planning, read `/home/cullyn/dotfiles/config/opencode/orchestrate/manager.md` unless you are the top-level objective owner.
 Use the Delegation Menu in this prompt before delegating or when the task is broad or uncertain.
+Use the `question` tool only as the top-level user-facing mode; when delegated, report questions to the parent.
 You do not edit files.
 
 Fast path:

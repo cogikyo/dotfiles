@@ -51,22 +51,108 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 ### Engineering Culture
 
 - **Do it right** --- favor correctness and craft over speed and convenience.
-  - When something feels off, inspect it instead of explaining it away or guessing.
-  - Code should be idiomatic, easy to read, and the ultimate source of truth.
-  - Contently be striving for the ideal balanced between locality of behavior and separation of concerns.
-- **Avoid Fallbacks** --- proper error handling cases are better complexity soup of attempting to be backwards compatible.
+  - When something feels weird, inspect it instead of guessing.
+  - Code should be idiomatic, readable, and the source of truth.
+  - Keep balancing locality of behavior with separation of concerns.
+- **Avoid Fallbacks** --- explicit errors and proper handling beat compatibility soup.
   - Treat obsolete code, unnecessary dependencies, and vestigial architecture as debt worth calling out.
-- **Think outside the box** -- bring creativity, ingenuity, and cross-domain pattern recognition without being asked.
-  - Look for the simpler hidden problem behind the stated problem, often the solution is hidden behind improper assumptions.
+- **Think outside the box** --- bring creativity, ingenuity, and cross-domain pattern recognition.
+  - Look for the simpler hidden problem behind the stated problem.
 
-### General Code Shape
+### Naming
+
+- Let folders, packages, files, receivers, modules, and boundaries carry namespace.
+  - Avoid stutter: don't repeat domain context already supplied by the path or package.
+- Prefer short, contextual names.
+  - Shorter names should usually mean more core, local, or important concepts.
+  - Generic names are good only for genuinely core, stable, widely understood concepts.
+  - More generic should imply more core and less likely to change.
+- Use specific names near edges, workflows, and idiomatic domain details.
+- Avoid `utils`, `shared`, and `helpers` as ownership names unless they are literal grouping roots with clearer packages underneath.
+- Treat long names as a smell for missing context, weak boundaries, or parameters stuffed into names.
+  - Treat 3+ word names as a design smell except real compound concepts.
+- Technical or framework names are fine when they are the honest domain or interface term, not camouflage.
+- Do not name one-off values just to avoid literals.
+  - Extract constants when the name carries domain meaning, reuse, config, validation, or rendering structure.
+
+### Architecture
+
+- Keep code together while the shape is forming; let it grow before carving seams.
+- Solidify or split boundaries once shape, contracts, or established conventions are real.
+- Prefer vertical slices over horizontal architecture that scatters one feature across vague layers.
+- Prefer top-down readability and early returns over deep branching.
+- Treat file size as a smell, not a rule, suggest refactoring when appropriate.
+
+#### Abstraction
+
+- Check existing abstractions and utilities first.
+- Discover the working shape before extracting; discover, then exploit.
+- A large function is fine until it works; then decompose for readability, testability, or reuse.
+- Avoid one-off local helpers unless they flatten deep nesting, improve readability, clarify ownership, or point toward likely reuse.
+- Good abstractions remove knowledge from callers; they do not just move code elsewhere.
+
+#### Coupling
+
+- Coupling is not automatically bad; hidden coupling is the enemy.
+- Name the coupling, then either make it explicit or move the behavior to the owner.
+
+| Type       | Smell                                                                            | Repair move                                                                        |
+| ---------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Ownership  | Behavior or invariants live away from the concept that owns them.                | Move behavior near the owner or make the boundary explicit.                        |
+| Temporal   | Hidden call-order rituals.                                                       | Encode sequence in the API, type, constructor, state machine, or boundary.         |
+| State      | Globals, shared mutation, or duplicated state make distant behavior interact.    | Choose an owner and one sync path.                                                 |
+| Semantic   | Strings, config, or names carry hidden meaning.                                  | Use typed/domain concepts, meaningful constants or enums, and boundary validation. |
+| Boundary   | Transport, framework, API, DB, UI, shell, or prompt shapes leak into core logic. | Translate at the edge.                                                             |
+| Structural | Callers depend on broad objects, private fields, or stamp data.                  | Pass narrow data or ask the owner through a method or function.                    |
+| Control    | Flags and modes make callers steer callee internals.                             | Split operations or use clearer types.                                             |
+| Utility    | Generic helpers collect unrelated domain knowledge.                              | Return behavior to the domain or split by owner.                                   |
+
+### Composition
+
+- Avoid pure FP or OOP ideology.
+- Prefer vertical slices and domain-shaped code.
+- Domain concepts can have rich methods when they own invariants.
+- Pure transforms can be functions or pipelines.
+- IO, DTO, and framework shapes should be explicit and kept at boundaries.
+- Interfaces should be thin and meaningful.
+- Handlers can contain deep logic when that keeps a vertical flow readable.
+
+#### State
+
+- State placement is contextual; codify explicit ownership instead of a universal location rule.
+- Prefer an authoritative owner first.
+  - Minimize synchronization paths.
+  - Keep state local when it stays local.
+  - Protect invariants where they can be enforced.
+- Mixed or duplicated state is the danger zone.
+- Be deliberate about where state is captured: UI state, DB state, config state, process state, and derived state should not blur together.
+
+#### Boundaries
+
+- A good boundary acts like a membrane.
+  - Translate outside shapes into inside shapes.
+  - Validate outside claims.
+  - Contain side effects, logging, formatting, retries, and auth.
+- External shapes should not leak everywhere.
+- Validate once at the edge, then internal code can trust typed/domain shapes.
+- Fallbacks and defaults are dangerous when they hide broken contracts.
+- Keep frontend, backend, and model names aligned when they represent the same domain concept.
+- Edge shapes include API/HTTP/RPC, DB, UI, shell/process/filesystem, config/env/secrets, and LLM/prompt/agent harnesses.
+
+### Verification
+
+- Run the smallest relevant check that can falsify the change.
+- Prefer targeted tests and builds over broad repo-wide cleanup unless asked.
+- Use LSP, formatters, and code actions when appropriate to fix mechanical issues before handing back.
+- If verification is skipped or blocked, say exactly what remains unverified.
+- Do not fix unrelated failures or assume unexpected file changes are formatter churn; the user or other agents may be editing concurrently.
+- Let formatters own formatting, then re-read if tooling changed files.
 
 ## Interaction
 
 - Push back when the approach seems wrong. Use evidence to make your case.
 - Question assumptions when evidence, ambiguity, or risk suggests the request may be wrong.
 - Default terse: answer in the fewest words that preserve correctness, nuance, and next action.
-- Be terse, but not opaque. Less is more.
 - Cut reassurance, recap, throat-clearing, generic caveats, and obvious narration.
 - Raise confusion early when naming, structure, or intent is unclear; quick clarifications can save lots of time, but do your best to gather from context what the true intent is.
 - Pause on vague requests, missing context, stale instructions, or conflicting rules when judgment says clarification will prevent wasted work.

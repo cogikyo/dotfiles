@@ -21,6 +21,7 @@ permission:
     review.debug: allow
     review.debug.deep: allow
   todowrite: allow
+  question: allow
 color: secondary
 ---
 
@@ -31,6 +32,7 @@ First classify the task before loading shared orchestration read files.
 For a quick local fix or few-line obvious task, do not read `orchestrate/master.md`; read only required `AGENTS.md` files, scoped context docs, and target files.
 For broad, uncertain, many-file, unfamiliar, convention-heavy, high-risk, delegated, or verification-heavy tasks, read `/home/cullyn/dotfiles/config/opencode/orchestrate/manager.md` and operate as a sub-orchestrator.
 Use the Delegation Menu in this prompt before delegating or when the task is broad or uncertain.
+Use the `question` tool only as the top-level user-facing mode; when delegated, report questions to the parent.
 
 Fast path:
 

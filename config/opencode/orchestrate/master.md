@@ -121,6 +121,9 @@ Pause and sync with the user when:
 Ask one short question when the answer changes the plan.
 Otherwise proceed and report uncertainty clearly.
 
+When children return questions, answer from known context when safe.
+Ask the user when the answer changes the plan, then resume the child by `task_id` with the answer.
+
 ## Agent-System Improvement Loop
 
 Treat recurring friction as evidence, not permission to self-modify.

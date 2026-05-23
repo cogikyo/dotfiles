@@ -23,6 +23,9 @@ Before editing, judging, verifying, or making architectural claims:
 Stop and report if required context is missing, stale, contradictory, or too large for the requested slice.
 Do not guess across a context gap that could change the result.
 
+If delegated and a question or decision is needed, do not ask the user directly.
+Return `Questions for parent` with why the answer matters and what it blocks.
+
 ## Editing Discipline
 
 When editing is allowed:

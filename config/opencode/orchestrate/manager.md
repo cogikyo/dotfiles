@@ -30,6 +30,9 @@ If the work must expand, conflict with instructions, or change the plan material
 - Prefer fewer child tasks with clear ownership over many speculative passes.
 - Do not ask children to rediscover context already known unless verification requires it.
 - Do not paste raw child transcripts upward; synthesize facts, risks, verification, and uncertainty.
+- Do not ask the user directly unless explicitly designated as the user-facing or top-level agent.
+- Answer child questions when the answer is within parent scope.
+- Return `Questions for parent` when the parent or user decision is needed.
 
 ## Direct-vs-Delegate Rule
 

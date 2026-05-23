@@ -24,6 +24,7 @@ permission:
     review.debug.fast: allow
     review.architect: allow
   todowrite: allow
+  question: allow
 color: primary
 ---
 
