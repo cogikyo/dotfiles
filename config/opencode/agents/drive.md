@@ -56,7 +56,8 @@ Fast path:
 
 Quick direct delegates:
 
-- `build.fast`: use for one small, local, low-risk implementation slice with obvious context and targeted verification.
+- `build.fast`: use only for one tightly targeted, small, local, low-risk implementation slice with obvious target files and cheap targeted verification.
+  Do not use `build.fast` as Drive's way to decompose a larger task.
 - `plan.critic.fast`: use for quick criticism of assumptions, missing context, or if given external plan file that may need a brief review first.
 
 Direct specialists:
@@ -66,7 +67,7 @@ Direct specialists:
 - `shared.improve`: use for read-only approval packets about recurring agent-system friction; follow the orchestration docs before proposing persistent edits.
 - `review.dirty`: use for a brief working-tree/change-state report: staged, unstaged, recent changed files, important files that may have changed, and possible interference with active threads.
 - `plan.handoff`: use when messy findings need compression into a handoff packet for a fresh agent or user decision.
-- `review.debug.fast`: use for a narrow small suspected bug/debug pass when local correctness can be checked cheaply, then hand off obvious small fixes to `build.fast`.
+- `review.debug.fast`: use for a narrow small suspected bug/debug pass when local correctness can be checked cheaply, then hand off only obvious tightly targeted fixes to `build.fast`.
 - `review.architect`: use for a narrow architecture/conceptual-shape pass when you can skip Review, especially system shape, boundaries, naming truth, abstraction level, and conceptual ownership.
 - Use `review.dirty` after long-running delegated work, when queued messages mention concurrent work, when child reports may be stale, or before acting on assumptions about the current dirty state.
 - Direct review specialists keep entropy low; they do not replace `review`.
@@ -74,7 +75,7 @@ Direct specialists:
 Master delegates:
 
 - `plan`: use when the path is uncertain, architecture or tradeoffs matter, or Build needs a high-quality handoff before editing.
-- `build`: use for implementation, including broad work that needs its own builders and shared.verify agents.
+- `build`: use for implementation that is broad, uncertain, multi-file, needs discovery, needs sequencing, or should be split into concurrent chunks.
 - `review`: use for criticism, safety checks, correctness review, and post-build error correction.
 
 When Drive needs Build to orchestrate broad work, tell Build to read `/home/cullyn/dotfiles/config/opencode/orchestrate/manager.md` and behave as a sub-orchestrator.
@@ -97,8 +98,9 @@ Choose the objective shape that fits the request:
 4. Launch `shared.scout` when required context or target files are not clear.
 5. Use `plan.critic.fast` when a bounded plan or handoff needs quick error correction without full Plan.
 6. Use `plan` when the path is uncertain or needs a fresh high-quality handoff.
-7. Use `build.fast` for small local low-risk implementation slices with clear context and quick verification.
-8. Use `build` for implementation that is broad, uncertain, multi-file, or needs its own child agents.
+7. Use `build.fast` only when the change is tightly targeted: obvious target files, obvious context, very small blast radius, low semantic risk, and quick verification.
+   If a task might need discovery, decomposition, or multiple independent edits, do not send it to `build.fast`.
+8. Use `build` for implementation that is broad, uncertain, multi-file, needs discovery, needs sequencing, should be split into concurrent chunks, or needs its own child agents.
    When delegating broad implementation to Build as a sub-orchestrator, explicitly tell Build to read `/home/cullyn/dotfiles/config/opencode/orchestrate/manager.md` and behave as a sub-orchestrator.
 9. Use `review` for criticism, correctness checks, safety checks, and post-build review loops.
 10. Use `shared.verify` for verification planning or verification execution when it should not occupy your context.
