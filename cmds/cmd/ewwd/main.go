@@ -35,6 +35,8 @@ func main() {
 		cmdOpen("open")
 	case "restore":
 		cmdOpen("restore")
+	case "close":
+		cmdOpen("close")
 	case "query":
 		cmdQuery()
 	case "subscribe":
@@ -192,8 +194,9 @@ func cmdHelp() {
 Usage:
   ewwd                  Start daemon (foreground, auto-opens eww windows)
   ewwd --no-open        Start daemon without opening eww windows
-  ewwd open             Reload eww config and reopen configured windows
-  ewwd restore          Reopen configured windows without reloading config
+  ewwd open             Reload eww config and reconcile configured windows
+  ewwd restore          Reconcile configured windows without reloading config
+  ewwd close            Mark widgets closed and run eww close-all
   ewwd status           Check if daemon is running
   ewwd status --json    Return full state as JSON
 

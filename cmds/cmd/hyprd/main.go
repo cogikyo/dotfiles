@@ -142,7 +142,7 @@ func requireArg(usage string) string {
 // cmdInit imports Wayland env into systemd, starts user services, and then asks the daemon to run init.
 func cmdInit() {
 	envNames := []string{
-		"WAYLAND_DISPLAY", "HYPRLAND_INSTANCE_SIGNATURE",
+		"PATH", "WAYLAND_DISPLAY", "HYPRLAND_INSTANCE_SIGNATURE",
 		"XDG_CURRENT_DESKTOP", "XDG_SESSION_TYPE", "XDG_SESSION_DESKTOP",
 		"HYPRCURSOR_THEME", "HYPRCURSOR_SIZE",
 		"XCURSOR_THEME", "XCURSOR_SIZE",
@@ -152,18 +152,52 @@ func cmdInit() {
 		"SDL_VIDEODRIVER",
 	}
 	systemdArgs := append([]string{"--user", "import-environment"}, envNames...)
-	exec.Command("systemctl", systemdArgs...).Run()
+	runInitCommand("systemctl", systemdArgs...)
 	dbusArgs := append([]string{"--systemd"}, envNames...)
-	exec.Command("dbus-update-activation-environment", dbusArgs...).Run()
-	exec.Command("systemctl", "--user", "start", "hyprd.service", "opencode.service").Run()
+	runInitCommand("dbus-update-activation-environment", dbusArgs...)
+	runInitCommand("systemctl", "--user", "start", "hyprland-session.target")
+	runInitCommand("systemctl", "--user", "start", "hyprd.service", "ewwd.service", "opencode.service")
 
-	for range 100 {
+	if !waitHyprdReady(10 * time.Second) {
+		fmt.Fprintln(os.Stderr, "hyprd init: hyprd.service did not become ready; skipping daemon init")
+		os.Exit(1)
+	}
+	if !waitEwwdReady(10 * time.Second) {
+		fmt.Fprintln(os.Stderr, "hyprd init: ewwd.service did not become ready; continuing with degraded widgets")
+	}
+	sendCommand("init")
+}
+
+func runInitCommand(name string, args ...string) {
+	if err := exec.Command(name, args...).Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd init: %s %s: %v\n", name, strings.Join(args, " "), err)
+	}
+}
+
+func waitHyprdReady(timeout time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+	for {
 		if client.IsRunning() {
-			break
+			return true
+		}
+		if !time.Now().Before(deadline) {
+			return false
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	sendCommand("init")
+}
+
+func waitEwwdReady(timeout time.Duration) bool {
+	deadline := time.Now().Add(timeout)
+	for {
+		if exec.Command("ewwd", "status").Run() == nil {
+			return true
+		}
+		if !time.Now().Before(deadline) {
+			return false
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
 }
 func cmdHide()    { sendCommand("hide") }
 func cmdMonocle() { sendCommand("monocle") }

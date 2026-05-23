@@ -241,11 +241,30 @@ func (l *Lock) capture() *lockState {
 
 func (l *Lock) enterBlackout() {
 	l.hypr.Dispatch(fmt.Sprintf("workspace %d", pseudoLockWorkspace))
-	exec.Command("eww", "close-all").Run()
+	closeEwwWidgets()
 	exec.Command("killall", "glava").Run()
 	exec.Command("dunstctl", "close-all").Run()
 	exec.Command("dunstctl", "set-paused", "true").Run()
 	exec.Command("playerctl", "pause").Run()
+}
+
+func closeEwwWidgets() {
+	if out, err := exec.Command("ewwd", "close").CombinedOutput(); err == nil {
+		return
+	} else {
+		fmt.Fprintf(os.Stderr, "hyprd lock: ewwd close unavailable: %v%s; falling back to eww close-all\n", err, commandOutput(out))
+	}
+	if out, err := exec.Command("eww", "close-all").CombinedOutput(); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd lock: eww close-all: %v%s\n", err, commandOutput(out))
+	}
+}
+
+func commandOutput(out []byte) string {
+	trimmed := strings.TrimSpace(string(out))
+	if trimmed == "" {
+		return ""
+	}
+	return ": " + trimmed
 }
 
 // exitBlackout restores workspace, reopens eww/glava, reconnects bluetooth, and unpauses dunst.
@@ -273,8 +292,11 @@ func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) {
 // restoreEwwWidgets reopens widgets through ewwd once the daemon socket is ready.
 func restoreEwwWidgets(reload bool) {
 	if !waitEwwdReady(7 * time.Second) {
-		startDetached("setsid", "ewwd", "--no-open")
+		if err := exec.Command("systemctl", "--user", "start", "ewwd.service").Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "hyprd lock: start ewwd.service: %v\n", err)
+		}
 		if !waitEwwdReady(7 * time.Second) {
+			fmt.Fprintln(os.Stderr, "hyprd lock: ewwd unavailable after service start")
 			return
 		}
 	}
@@ -303,9 +325,15 @@ func startDetached(name string, args ...string) {
 	cmd.Stdin = nil
 	cmd.Stdout = nil
 	cmd.Stderr = nil
-	if err := cmd.Start(); err == nil {
-		go cmd.Wait()
+	if err := cmd.Start(); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd lock: start %s %s: %v\n", name, strings.Join(args, " "), err)
+		return
 	}
+	go func() {
+		if err := cmd.Wait(); err != nil {
+			fmt.Fprintf(os.Stderr, "hyprd lock: %s %s: %v\n", name, strings.Join(args, " "), err)
+		}
+	}()
 }
 
 func playerctlStatus() string {

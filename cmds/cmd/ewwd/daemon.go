@@ -38,14 +38,15 @@ func importSystemdEnv() {
 
 // Daemon orchestrates providers and routes client commands to state updates.
 type Daemon struct {
-	state     *State
-	server    *daemon.Server
-	providers []providers.Provider
-	ctx       context.Context
-	cancel    context.CancelFunc
-	config    config.EwwConfig
-	autoOpen  bool
-	openMu    sync.Mutex
+	state       *State
+	server      *daemon.Server
+	providers   []providers.Provider
+	ctx         context.Context
+	cancel      context.CancelFunc
+	config      config.EwwConfig
+	autoOpen    bool
+	openMu      sync.Mutex
+	desiredOpen bool
 }
 
 func New(autoOpen bool) (*Daemon, error) {
@@ -87,6 +88,8 @@ func (d *Daemon) Run() error {
 			}
 		}(p)
 	}
+
+	go d.healthLoop()
 
 	if d.autoOpen {
 		// eww startup can take seconds; don't block signal handling.
@@ -159,6 +162,8 @@ func (d *Daemon) handleCommand(command string) string {
 		return d.openWindows(true)
 	case "restore":
 		return d.openWindows(false)
+	case "close":
+		return d.closeWindows()
 	case "action":
 		actionParts := strings.Fields(arg)
 		if len(actionParts) == 0 {
@@ -203,56 +208,143 @@ func (d *Daemon) handleAction(providerName string, args []string) string {
 	return fmt.Sprintf("error: unknown provider: %s", providerName)
 }
 
-// openWindows ensures the eww daemon is running and opens configured windows.
+// openWindows ensures the eww daemon is running and reconciles configured windows.
 func (d *Daemon) openWindows(reload bool) string {
 	d.openMu.Lock()
 	defer d.openMu.Unlock()
 
+	result, ok := d.reconcileWindowsLocked(reload)
+	if ok {
+		d.desiredOpen = true
+	}
+	return result
+}
+
+func (d *Daemon) closeWindows() string {
+	d.openMu.Lock()
+	defer d.openMu.Unlock()
+
+	d.desiredOpen = false
+	if out, err := exec.Command("eww", "close-all").CombinedOutput(); err != nil {
+		return fmt.Sprintf("error: eww close-all: %v%s", err, commandOutput(out))
+	}
+	return "close: all windows"
+}
+
+func (d *Daemon) reconcileWindowsLocked(reload bool) (string, bool) {
 	windows := d.config.Windows
+	verb := "restore"
+	if reload {
+		verb = "open"
+	}
 	if len(windows) == 0 {
-		return "open: no windows configured"
+		return verb + ": no windows configured", false
 	}
 
 	if os.Getenv("WAYLAND_DISPLAY") == "" {
 		importSystemdEnv()
 		if os.Getenv("WAYLAND_DISPLAY") == "" {
-			return "error: WAYLAND_DISPLAY not set"
+			return "error: WAYLAND_DISPLAY not set", false
 		}
 	}
 
 	if err := ensureEwwDaemon(); err != nil {
-		return fmt.Sprintf("error: %v", err)
+		return fmt.Sprintf("error: %v", err), false
 	}
 	if reload {
-		if err := exec.Command("eww", "reload").Run(); err != nil {
-			return fmt.Sprintf("error: eww reload: %v", err)
+		if out, err := exec.Command("eww", "reload").CombinedOutput(); err != nil {
+			return fmt.Sprintf("error: eww reload: %v%s", err, commandOutput(out)), false
+		}
+	}
+
+	for _, window := range windows {
+		if out, err := exec.Command("eww", "close", window).CombinedOutput(); err != nil && len(out) > 0 {
+			fmt.Fprintf(os.Stderr, "ewwd: eww close %s ignored: %v%s\n", window, err, commandOutput(out))
 		}
 	}
 
 	args := append([]string{"open-many"}, windows...)
-	if err := exec.Command("eww", args...).Run(); err != nil {
-		return fmt.Sprintf("error: eww open-many: %v", err)
+	if out, err := exec.Command("eww", args...).CombinedOutput(); err != nil {
+		return fmt.Sprintf("error: eww open-many: %v%s", err, commandOutput(out)), false
 	}
 
-	return fmt.Sprintf("open: %s", strings.Join(windows, " "))
+	return fmt.Sprintf("%s: %s", verb, strings.Join(windows, " ")), true
+}
+
+func (d *Daemon) healthLoop() {
+	ticker := time.NewTicker(10 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-d.ctx.Done():
+			return
+		case <-ticker.C:
+		}
+
+		d.openMu.Lock()
+		if !d.desiredOpen {
+			d.openMu.Unlock()
+			continue
+		}
+		if exec.Command("eww", "ping").Run() == nil {
+			d.openMu.Unlock()
+			continue
+		}
+
+		fmt.Fprintln(os.Stderr, "ewwd: eww ping failed; restarting daemon and reconciling windows")
+		if out, err := exec.Command("eww", "kill").CombinedOutput(); err != nil && len(out) > 0 {
+			fmt.Fprintf(os.Stderr, "ewwd: eww kill ignored: %v%s\n", err, commandOutput(out))
+		}
+		result, ok := d.reconcileWindowsLocked(false)
+		if !ok {
+			fmt.Fprintf(os.Stderr, "ewwd: health reconcile failed: %s\n", result)
+		}
+		d.openMu.Unlock()
+	}
 }
 
 func ensureEwwDaemon() error {
-	if exec.Command("eww", "ping").Run() == nil {
+	if out, err := exec.Command("eww", "ping").CombinedOutput(); err == nil {
 		return nil
+	} else if len(out) > 0 {
+		fmt.Fprintf(os.Stderr, "ewwd: initial eww ping failed: %v%s\n", err, commandOutput(out))
 	}
 
 	cmd := exec.Command("eww", "daemon")
+	cmd.Stdout = os.Stderr
+	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("eww daemon: %w", err)
 	}
-	go cmd.Wait()
+	waitErr := make(chan error, 1)
+	go func() { waitErr <- cmd.Wait() }()
 
+	var lastPing []byte
+	var lastPingErr error
 	for range 20 {
-		if exec.Command("eww", "ping").Run() == nil {
+		select {
+		case err := <-waitErr:
+			if err != nil {
+				return fmt.Errorf("eww daemon exited before ready: %w", err)
+			}
+			return fmt.Errorf("eww daemon exited before ready")
+		default:
+		}
+
+		lastPing, lastPingErr = exec.Command("eww", "ping").CombinedOutput()
+		if lastPingErr == nil {
 			return nil
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	return fmt.Errorf("eww daemon did not become ready")
+	return fmt.Errorf("eww daemon did not become ready: last ping: %v%s", lastPingErr, commandOutput(lastPing))
+}
+
+func commandOutput(out []byte) string {
+	trimmed := strings.TrimSpace(string(out))
+	if trimmed == "" {
+		return ""
+	}
+	return ": " + trimmed
 }

@@ -1,11 +1,11 @@
 [Unit]
-Description=Hyprland window management daemon
+Description=Eww widget daemon
 PartOf=hyprland-session.target
 StartLimitIntervalSec=30s
 StartLimitBurst=5
 
 [Service]
 Environment=PATH=%h/.local/bin:%h/.cargo/bin:%h/.go/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl:/usr/lib/rustup/bin
-ExecStart=%h/.local/bin/hyprd
+ExecStart=%h/.local/bin/ewwd --no-open
 Restart=on-failure
-RestartSec=2
+RestartSec=2s
