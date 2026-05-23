@@ -240,6 +240,19 @@ const server = async () => {
     return sessions.get(sessionID)?.parentID || ""
   }
 
+  function hasActiveDescendant(sessionID, seen = new Set()) {
+    if (!sessionID || seen.has(sessionID)) return false
+    seen.add(sessionID)
+
+    for (const [id, state] of sessions) {
+      if (state.parentID !== sessionID) continue
+      if (state.active || state.completeTimer) return true
+      if (hasActiveDescendant(id, seen)) return true
+    }
+
+    return false
+  }
+
   async function sendNotify(payload) {
     return await notify(payload, parentFor)
   }
@@ -284,11 +297,11 @@ const server = async () => {
 
   function scheduleIdleReminder(sessionID) {
     const state = sessions.get(sessionID)
-    if (!state || state.active || state.idleTimer) return
+    if (!state || state.active || state.idleTimer || hasActiveDescendant(sessionID)) return
 
     state.idleTimer = setTimeout(async () => {
       state.idleTimer = null
-      if (state.active) return
+      if (state.active || hasActiveDescendant(sessionID)) return
 
       const message = state.lastUserMessage || state.title || state.lastAssistantMessage || "Still idle"
       await sendNotify({
@@ -308,12 +321,19 @@ const server = async () => {
     state.completeTimer = setTimeout(async () => {
       state.completeTimer = null
       if (!state.active) return
+
+      if (hasActiveDescendant(sessionID)) return
+
       state.active = false
       state.inactiveAt = inactiveAt
       clearStartNotify(state)
 
       if (Date.now() - state.lastTodoCompletedAt < TODO_COMPLETE_DEBOUNCE_MS) {
         scheduleIdleReminder(sessionID)
+        if (state.parentID) {
+          scheduleComplete(state.parentID)
+          scheduleIdleReminder(state.parentID)
+        }
         return
       }
 
@@ -327,6 +347,10 @@ const server = async () => {
         last_assistant_message: message,
       })
       scheduleIdleReminder(sessionID)
+      if (state.parentID) {
+        scheduleComplete(state.parentID)
+        scheduleIdleReminder(state.parentID)
+      }
     }, COMPLETE_DEBOUNCE_MS)
   }
 
@@ -527,6 +551,10 @@ const server = async () => {
           clearStartNotify(state)
           clearIdleReminder(state)
           state.active = false
+          if (state.parentID) {
+            scheduleComplete(state.parentID)
+            scheduleIdleReminder(state.parentID)
+          }
         }
       }
       await sendNotify({ sessionID, type: "error", message })
@@ -539,6 +567,10 @@ const server = async () => {
         clearTimeout(state.completeTimer)
         clearStartNotify(state)
         clearIdleReminder(state)
+        if (state.parentID) {
+          scheduleComplete(state.parentID)
+          scheduleIdleReminder(state.parentID)
+        }
       }
       sessions.delete(info.id)
     },
