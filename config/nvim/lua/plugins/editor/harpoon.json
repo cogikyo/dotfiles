@@ -30,8 +30,8 @@
     },
     "/home/cullyn/LeadPier/frontend": {
       "pins": [
-        "apps/admin/src/pages/statistics/Partners/Tiers.tsx",
         "apps/admin/src/pages/Configuration/Algorithms/Smart/index.tsx",
+        "apps/admin/src/pages/statistics/Partners/Tiers.tsx",
         "apps/admin/src/pages/Compliance/Dashboard/Organizations.tsx",
         "packages/shared/src/components/Stats/SnapshotCard.tsx",
         "packages/shared/src/realtime/client.ts",
