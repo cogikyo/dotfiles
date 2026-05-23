@@ -81,12 +81,24 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 - Solidify or split boundaries once shape, contracts, or established conventions are real.
 - Prefer vertical slices over horizontal architecture that scatters one feature across vague layers.
 - Prefer top-down readability and early returns over deep branching.
-- Treat file size as a smell, not a rule, suggest refactoring when appropriate.
+- Treat file size, child counts, and nesting depth as cognitive-load smells, not rules.
+
+#### Cognitive Load
+
+- Treat local complexity as a working-memory budget.
+- Around 6 visible concepts in one scene is a pressure point: more usually means chunk, split, rename, or reframe.
+- Around 3 layers of variation is a pressure point: more usually means a missing axis, boundary, or domain concept.
+- Use these numbers as smells, not laws.
+- Fewer than 3 meaningful children in a directory often wants to be flatter.
+- More than 6 meaningful children in a directory often wants grouping, stronger names, or clearer ownership.
+- Some directories and files legitimately exceed these numbers when stable and scan-friendly.
+- Prefer chunking by domain ownership over mechanical size limits.
+- Split when a simpler mental model appears, not just because a count tripped.
 
 #### Abstraction
 
 - Check existing abstractions and utilities first.
-- Discover the working shape before extracting; discover, then exploit.
+- Discover the working shape before extracting; **discover, then exploit**.
 - A large function is fine until it works; then decompose for readability, testability, or reuse.
 - Avoid one-off local helpers unless they flatten deep nesting, improve readability, clarify ownership, or point toward likely reuse.
 - Good abstractions remove knowledge from callers; they do not just move code elsewhere.
