@@ -262,6 +262,7 @@ notify:
       style: tertiary
       sound: sdv-frog
       volume: 95
+      timeout: 5000
     permission:
       style: tertiary
       sound: ssb-ready
