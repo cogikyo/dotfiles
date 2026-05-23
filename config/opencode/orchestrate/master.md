@@ -126,10 +126,12 @@ Ask the user when the answer changes the plan, then resume the child by `task_id
 
 ## Agent-System Improvement Loop
 
-Treat recurring friction as evidence, not permission to self-modify.
-Receive worker and manager improvement candidates, decide whether they are in scope, and use `shared.improve` when a read-only approval packet would reduce future error.
+Treat recurring or durable friction as evidence, not permission to self-modify.
+Receive worker and manager improvement candidates, decide whether they are one-off noise, useful to relay, ready for `shared.improve`, or a user decision.
+Use `shared.improve` for recurring or durable prompt, script, documentation, or permission friction when the next step should be user approval, not direct editing.
 
 Masters and Drive present concrete improvement plans to the user before persistent agent-system or other source-of-truth edits.
+Distinguish source-of-truth edits from optional mirrors before asking for approval.
 If the user already approved the exact edit scope, delegate implementation through the normal Build path and verify the changed source of truth.
 Keep guardrails intact for destructive filesystem operations, secret reads, force git operations, pushes, package installs, network writes, production-impacting commands, and Docker destructive commands.
 
@@ -145,5 +147,7 @@ For each child result, extract:
 - What facts are now known.
 - What verification ran or was blocked.
 - What risks or contradictions remain.
-- Whether recurring friction suggests an agent-system improvement packet.
+- Whether recurring or durable friction, including repeated prompt/tool confusion, suggests an agent-system improvement packet.
+- Whether the candidate should be ignored as one-off, relayed upward, sent to `shared.improve`, or asked of the user.
+- What source-of-truth files and optional mirrors may be involved.
 - What next action follows.

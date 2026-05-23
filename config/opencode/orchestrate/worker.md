@@ -55,11 +55,13 @@ Do not include long transcripts unless exact output is necessary evidence.
 
 ## Improvement Candidates
 
-Report recurring friction upward when observed.
+Report recurring or durable friction upward when observed.
+Durable single-event friction can be enough when it reveals a workflow gap likely to cause future agent error.
 Do not call `shared.improve` directly unless the parent explicitly designates you as a lead.
 Keep improvement candidates separate from the task result and do not broaden scope to fix them.
 
 Useful signals include blocked commands, repeated mistakes, prompt ambiguity, missing docs, useful scripts, permission friction, and stale or contradictory instructions.
+If the parent requested a custom report format, append `Improvement candidates` when the list is non-empty.
 
 ## Worker Report Packet
 

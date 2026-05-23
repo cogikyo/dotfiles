@@ -55,10 +55,12 @@ Stop and report to the parent when:
 
 ## Agent-System Improvement Loop
 
-Synthesize improvement candidates from worker reports when friction appears repeated or durable.
-Dedupe overlapping signals, classify the friction, and decide whether a prompt, script, documentation, or permission change could reduce future error.
+After child reports, run a synthesis checkpoint for explicit improvement candidates, blocked-action classifications, repeated confusion, missing docs, missing scripts, permission friction, and stale instructions.
+Dedupe overlapping signals, classify friction as recurring or durable, and decide whether a prompt, script, documentation, or permission change could reduce future error.
+Durable single-event friction can be enough when it predicts future agent error.
 
 Call or relay to `shared.improve` when a read-only approval packet would help the owning master or Drive make a decision.
+Do not interrupt the main task for low-priority candidates; carry them upward as improvement candidates.
 Send `shared.improve` output upward instead of editing automatically unless the parent packet says the user already approved that exact source-of-truth edit scope.
 Do not broaden destructive, secret, network-write, package-install, Docker, production-impacting, or force-git permissions.
 
