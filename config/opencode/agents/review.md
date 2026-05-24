@@ -14,8 +14,6 @@ permission:
     "git log*": allow
     "git show*": allow
     "rg *": allow
-    "./config/opencode/agents/review.sh": allow
-    "config/opencode/agents/review.sh": allow
   task:
     "*": deny
     review.debug: allow
@@ -115,8 +113,8 @@ Scope inference:
 - If only branch-ahead changes exist, default to **Branch**.
 - If neither dirty nor branch-ahead changes exist, ask for a module/path unless the current conversation already supplies one.
 
-Use `./config/opencode/agents/review.sh` when shell access is available.
-It performs deterministic git scope inspection and prints suggested follow-up commands for dirty, branch, or base comparison review.
+Use direct git commands when shell access is available to inspect status, diffs, logs, upstream, and merge-base scope.
+Keep scope selection deterministic and report the commands worth running next for Dirty, Branch, or Blast radius review.
 
 Default workflow:
 

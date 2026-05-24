@@ -11,7 +11,6 @@ Arch + Hyprland (Wayland) dotfiles. Single-user. Root of repo = `~/dotfiles`.
 - `config/opencode/commands/` → OpenCode slash commands
 - `config/opencode/agents/*.md` → flat invokable OpenCode agent prompts, with dot names for pseudo-domains
 - `config/opencode/orchestrate/` → shared OpenCode orchestration read files for masters, managers, and workers
-- `config/opencode/agents/review.sh` → review master scope helper kept next to `agents/review.md`
 - `iso/` → archiso profile; `iso/work/` and `iso/out/` are gitignored build artifacts
 - `share/` → static assets
 
