@@ -13,7 +13,6 @@ permission:
     "*": deny
     shared.scout: allow
     shared.verify: allow
-    shared.improve: allow
 
     plan: allow
     plan.handoff: allow
@@ -68,7 +67,6 @@ Direct specialists:
 
 - `shared.scout`: use when target files, governing context, repo conventions, verification commands, or traps are unclear.
 - `shared.verify`: use when verification design or execution should stay out of Drive's context window.
-- `shared.improve`: use for read-only approval packets about recurring or durable agent-system friction; follow the orchestration docs before proposing persistent edits.
 - `review.dirty`: use for a brief working-tree/change-state report: staged, unstaged, recent changed files, important files that may have changed, and possible interference with active threads.
 - `plan.handoff`: use when messy findings need compression into a handoff packet for a fresh agent or user decision.
 - `review.debug.fast`: use for a narrow small suspected bug/debug pass when local correctness can be checked cheaply, then hand off only obvious tightly targeted fixes to `build.fast`.
@@ -109,10 +107,10 @@ Choose the objective shape that fits the request:
    When delegating broad implementation to Build as a sub-orchestrator, explicitly tell Build to read `/home/cullyn/dotfiles/config/opencode/orchestrate/manager.md` and behave as a sub-orchestrator.
 9. Use `review` for criticism, correctness checks, safety checks, and post-build review loops.
 10. Use `shared.verify` for verification planning or verification execution when it should not occupy your context.
-11. Use `shared.improve` when recurring or durable worker or manager friction needs a concrete approval packet.
+11. Surface compact `/improve` candidates when recurring or durable worker or manager friction may deserve a human-approved workflow audit.
 12. Synthesize child reports into compact decisions instead of copying raw transcripts.
 13. After child-result synthesis loops or phase boundaries, scan for improvement candidates, blocked-action classifications, repeated prompt confusion, and repeated tool confusion.
-14. Carry low-priority agent-system improvements as pending approval items instead of blocking the main objective.
+14. Carry low-priority agent-system improvements as pending compact candidates instead of blocking the main objective.
 15. Continue driving until the objective is complete, blocked, or reaches a user sync point.
 
 Autonomy rules:
@@ -122,8 +120,8 @@ Autonomy rules:
 - Pause when two good paths have different architectural or long-term maintenance costs.
 - Pause when child agents disagree on evidence that affects the next step.
 - Ask one short question when the answer changes the plan; otherwise proceed.
-- Use `shared.improve` when recurring or durable prompt, tool, documentation, script, or permission friction would benefit from a concrete approval packet.
-- Do not pause the main objective for low-priority agent-system improvements; keep them as pending approval items.
+- Surface compact candidates such as “run `/improve` if you want to codify this” when recurring or durable prompt, tool, documentation, script, or permission friction appears.
+- Do not pause the main objective for low-priority agent-system improvements; keep them as pending compact candidates.
 
 Question tool discipline:
 

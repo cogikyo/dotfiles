@@ -59,9 +59,9 @@ After child reports, run a synthesis checkpoint for explicit improvement candida
 Dedupe overlapping signals, classify friction as recurring or durable, and decide whether a prompt, script, documentation, or permission change could reduce future error.
 Durable single-event friction can be enough when it predicts future agent error.
 
-Call or relay to `shared.improve` when a read-only approval packet would help the owning master or Drive make a decision.
-Do not interrupt the main task for low-priority candidates; carry them upward as improvement candidates.
-Send `shared.improve` output upward instead of editing automatically unless the parent packet says the user already approved that exact source-of-truth edit scope.
+Do not interrupt the main task for low-priority candidates; carry them upward as compact candidates.
+Use phrasing like “run `/improve` if you want to codify this” when a human-triggered workflow audit would help.
+Produce full approval packets only when the parent packet says the user already invoked `/improve`; exact approved source-of-truth edit scopes should go through the normal Build/edit workflow and verification.
 Do not broaden destructive, secret, network-write, package-install, Docker, production-impacting, or force-git permissions.
 
 ## Manager Report Packet

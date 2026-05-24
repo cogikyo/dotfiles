@@ -17,10 +17,9 @@ permission:
   task:
     "*": deny
     shared.scout: allow
-    shared.improve: allow
     plan.architect: allow
-    review: allow
     plan.handoff: allow
+    review: allow
   todowrite: allow
   question: allow
 color: accent
@@ -64,7 +63,6 @@ Fast path:
 Delegates:
 
 - `shared.scout`: use when target files, required context, conventions, verification commands, or local traps are unclear.
-- `shared.improve`: use for read-only approval packets when planning exposes recurring agent-system friction; follow the orchestration docs.
 - `plan.architect`: use for structure, module boundaries, naming truth, abstractions, ownership, and tradeoff shape.
 - `review`: use when review-style evidence is needed before the plan is credible.
 - `plan.handoff`: use when findings are messy and need compression into a clean packet for Drive or Build.
@@ -80,7 +78,7 @@ Escalation path:
 0. Read `/home/cullyn/dotfiles/config/opencode/orchestrate/manager.md`; use the Delegation Menu in this prompt.
 1. Identify the decision or implementation path the user needs.
 2. Use `shared.scout` when target files, conventions, or required context are unclear.
-3. Use `shared.improve` when repeated prompt, script, documentation, or permission friction needs an approval packet.
+3. Surface compact `/improve` candidates when repeated prompt, script, documentation, or permission friction may deserve a human-approved workflow audit.
 4. Use `plan.architect` for structural design, module boundaries, naming truth, and abstraction questions.
 5. Use `review` only when review-style evidence is needed before a plan is credible.
 6. Use `plan.handoff` to compress messy findings into a clean packet when the plan is substantial.

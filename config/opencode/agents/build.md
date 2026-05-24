@@ -15,7 +15,6 @@ permission:
     build.deep: allow
     build.scribe: allow
     shared.verify: allow
-    shared.improve: allow
     review: allow
     review.debug.fast: allow
     review.debug: allow
@@ -66,7 +65,6 @@ Delegates:
 - `build.deep`: use for subtle logic, architecture-sensitive edits, broad multi-file slices, or high regression risk.
 - `build.scribe`: use for bounded documentation/comment-only slices, especially approved documentation/comment updates or explicit doc drift fixes.
 - `shared.verify`: use when verification design or execution would consume too much Build context.
-- `shared.improve`: use for read-only approval packets when recurring worker friction suggests agent-system changes; follow the orchestration docs.
 - `review`: use when the completed change needs focused criticism before reporting done.
 - `review.debug.fast`: use for quick/local correctness checks around a small suspected bug or failed verification.
 - `review.debug`: use for balanced correctness review when fast/deep is not clearly called for.
@@ -93,7 +91,7 @@ Escalation path:
 3. Use `build.deep` for subtle logic, architecture-sensitive changes, broad multi-file edits, or high regression risk.
 4. Use `review.debug.fast`, `review.debug`, or `review.debug.deep` when failures or suspicious behavior require correctness-focused investigation.
 5. Use `shared.verify` to run or design focused verification when verification would consume too much context.
-6. Use `shared.improve` when repeated prompt, script, documentation, or permission friction needs an approval packet.
+6. Surface compact `/improve` candidates when repeated prompt, script, documentation, or permission friction may deserve a human-approved workflow audit.
 7. Use `review` when the completed change needs criticism before reporting done.
 
 Direct-edit rules:

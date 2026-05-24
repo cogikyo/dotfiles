@@ -34,7 +34,6 @@ permission:
     build.deep: allow
     build.scribe: allow
     shared.verify: allow
-    shared.improve: allow
   todowrite: allow
   question: allow
 color: error
@@ -85,7 +84,6 @@ Fix and verification roles:
 - `build.deep`: use for approved code fixes involving subtle behavior, architecture, broad multi-file changes, or high regression risk.
 - `build.scribe`: use for approved documentation/comment-only fixes raised by review.scribe or an explicit user request.
 - `shared.verify`: use for focused verification design or execution after findings or fixes.
-- `shared.improve`: use for read-only approval packets when recurring review friction suggests agent-system changes; follow the orchestration docs.
 - `plan`: use when top-level Review needs a fix plan or handoff from review findings before human sync or approved build.
 - `plan.critic.deep`: use only to critique a Plan-produced fix plan or handoff; do not use it to critique code or replace focused reviewers.
 
@@ -164,7 +162,7 @@ Anti-stall rules:
 
 - If a focused pass needs a blocked command, edit, network request, LSP query, or missing permission, it must return the blocked action and why it matters instead of waiting silently.
 - Classify blocked actions before asking: one-off risky action, recurring safe friction, or unclear.
-- If the same permission would likely be needed in future reviews and is recurring safe friction, report the improvement candidate upward or use `shared.improve` for an approval packet.
+- If the same permission would likely be needed in future reviews and is recurring safe friction, report the improvement candidate upward and suggest `/improve` if the human wants to codify it.
 - If agent-system edits are not explicitly approved, suggest the exact permission rule or instruction change instead of editing.
 - Prefer workspace-relative paths when passing files to focused agents; use absolute paths only for explicitly external review scope.
 - Do not request root-level filesystem access such as `/` or `/*` to discover review context.
