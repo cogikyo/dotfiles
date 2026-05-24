@@ -10,10 +10,12 @@ Accent color follows the active agent; busy OpenCode tabs use manual vagari mode
 
 import json
 import os
+import re
 import time
 from getpass import getuser
 from os import uname
 from pathlib import Path
+from typing import TypedDict
 from unicodedata import east_asian_width
 
 from kitty.boss import get_boss
@@ -32,6 +34,7 @@ from kitty.utils import color_as_int
 USER = getuser()
 HOST = uname()[1]
 LOCAL_HOST = HOST.split(".")[0]
+ANSI_ESCAPE_RE = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
 # ╭──────────────────────────────────────────────────────────────────────────────╮
 # │ Configuration                                                                │
@@ -79,6 +82,10 @@ def _rgb(hex_value: str) -> int:
     return as_rgb(int(hex_value.removeprefix("#"), 16))
 
 
+def _raw_rgb(color: int) -> int:
+    return color >> 8 if color & 0xFF == 2 else color
+
+
 # Intentional manual coupling to vagari + OpenCode role semantics.
 # Keep this semantic: the OpenCode context stores agent/status, not theme colors.
 VAGARI_OPENCODE_MODE_HEX = {
@@ -102,7 +109,6 @@ OPENCODE_AGENT_COLORS = {
     agent: _rgb(VAGARI_OPENCODE_MODE_HEX[mode])
     for agent, mode in OPENCODE_AGENT_MODES.items()
 }
-OPENCODE_AGENT_FALLBACK = _rgb(VAGARI_OPENCODE_MODE_HEX["primary"])
 
 
 class Colors:
@@ -145,10 +151,20 @@ _right_status_length = 0
 _current_icon_width = 0
 
 # per-cycle cache — invalidated each time the first tab (index=1) is drawn
-_cache: dict[str, object] = {}
-_cache_cycle = -1
+_git_repo_cache: bool | None = None
+_cwd_right_cache: str | None = None
+_has_agent_tab_title_cache: bool | None = None
+_active_agent_cache: str | None = None
+_active_ssh_cache: tuple[str, str] | None = None
 
-_kitty_context_cache: dict[str, object] = {
+
+class KittyContextCache(TypedDict):
+    checked_at: float
+    mtime_ns: int | None
+    contexts: tuple
+
+
+_kitty_context_cache: KittyContextCache = {
     "checked_at": 0.0,
     "mtime_ns": None,
     "contexts": (),
@@ -162,6 +178,10 @@ _kitty_context_cache: dict[str, object] = {
 def _display_width(text: str) -> int:
     """Return terminal display width accounting for wide (CJK) characters."""
     return sum(2 if east_asian_width(c) in ("W", "F") else 1 for c in text)
+
+
+def _strip_ansi(text: str) -> str:
+    return ANSI_ESCAPE_RE.sub("", text)
 
 
 def _as_int(value) -> int:
@@ -263,11 +283,9 @@ def _kitty_window_id(window) -> int:
     return 0
 
 
-def _opencode_agent_color(agent) -> int:
+def _opencode_agent_color(agent) -> int | None:
     name = str(agent or "").lower()
-    if name in OPENCODE_AGENT_COLORS:
-        return OPENCODE_AGENT_COLORS[name]
-    return OPENCODE_AGENT_COLORS.get(name.split(".", 1)[0], OPENCODE_AGENT_FALLBACK)
+    return OPENCODE_AGENT_COLORS.get(name.split(".", 1)[0])
 
 
 def _opencode_busy_context_is_live(ctx) -> bool:
@@ -310,41 +328,32 @@ def _opencode_context_for_tab(tab, index: int | None = None):
     return _opencode_context_for_window_ids(window_ids)
 
 
-def _opencode_agent_fg_for_tab(tab, index: int | None = None) -> int | None:
-    ctx = _opencode_context_for_tab(tab, index)
-    if not ctx or not ctx.get("agent"):
-        return None
-    return _opencode_agent_color(ctx.get("agent"))
-
-
-def _opencode_busy_fg_for_tab(tab, index: int | None = None) -> int | None:
-    ctx = _opencode_context_for_tab(tab, index)
-    if not ctx:
-        return None
-    if str(
-        ctx.get("status", "")
-    ).lower() != "busy" or not _opencode_busy_context_is_live(ctx):
-        return None
-    return _opencode_agent_color(ctx.get("agent"))
-
 
 def _tab_pill_colors(
     tab, base_bg: int, base_fg: int, index: int | None = None
 ) -> tuple:
-    return base_bg, _opencode_busy_fg_for_tab(tab, index) or _opencode_agent_fg_for_tab(
-        tab, index
-    ) or base_fg
+    ctx = _opencode_context_for_tab(tab, index)
+    if not ctx:
+        return base_bg, base_fg
 
-
-def _tab_pill_bg(tab, base_bg: int, index: int | None = None) -> int:
-    return base_bg
+    agent = ctx.get("agent")
+    is_busy = (
+        str(ctx.get("status", "")).lower() == "busy"
+        and _opencode_busy_context_is_live(ctx)
+    )
+    if is_busy and not agent:
+        return base_bg, base_fg
+    if agent:
+        color = _opencode_agent_color(agent)
+        return base_bg, color if color is not None else base_fg
+    return base_bg, base_fg
 
 
 def _is_git_repo(path: str) -> bool:
     """Check if path is inside a git repository (cached per draw cycle)."""
-    cached = _cache.get("git_repo")
-    if cached is not None:
-        return cached
+    global _git_repo_cache
+    if _git_repo_cache is not None:
+        return _git_repo_cache
     p = Path(path)
     result = False
     while p != p.parent:
@@ -352,24 +361,23 @@ def _is_git_repo(path: str) -> bool:
             result = True
             break
         p = p.parent
-    _cache["git_repo"] = result
+    _git_repo_cache = result
     return result
 
 
 def get_cwd_right() -> str:
     """Build CWD string in child→root order for right-aligned display (cached per draw cycle)."""
-    cached = _cache.get("cwd_right")
-    if cached is not None:
-        return cached
-    result = _compute_cwd_right()
-    _cache["cwd_right"] = result
-    return result
+    global _cwd_right_cache
+    if _cwd_right_cache is not None:
+        return _cwd_right_cache
+    _cwd_right_cache = _compute_cwd_right()
+    return _cwd_right_cache
 
 
 def _compute_cwd_right() -> str:
     """Compute the CWD string (uncached)."""
     boss = get_boss()
-    tab_manager = boss.active_tab_manager
+    tab_manager = boss.active_tab_manager if boss else None
     if not tab_manager:
         return ""
     window = tab_manager.active_window
@@ -443,14 +451,14 @@ def _agent_from_title(window) -> str:
     return ""
 
 
-def is_agent_window(tab_manager) -> bool:
+def _has_agent_tab_title(tab_manager) -> bool:
     """Check tab/window titles for an agent without probing every child process."""
-    cached = _cache.get("is_agent")
-    if cached is not None:
-        return cached
+    global _has_agent_tab_title_cache
+    if _has_agent_tab_title_cache is not None:
+        return _has_agent_tab_title_cache
     result = False
     if not tab_manager:
-        _cache["is_agent"] = False
+        _has_agent_tab_title_cache = False
         return False
     try:
         for tab in tab_manager.tabs:
@@ -462,15 +470,15 @@ def is_agent_window(tab_manager) -> bool:
                 break
     except (AttributeError, TypeError):
         pass
-    _cache["is_agent"] = result
+    _has_agent_tab_title_cache = result
     return result
 
 
 def _detect_active_agent(tab_manager) -> str:
     """Return the agent name running in the active window, or empty string (cached per draw cycle)."""
-    cached = _cache.get("active_agent")
-    if cached is not None:
-        return cached
+    global _active_agent_cache
+    if _active_agent_cache is not None:
+        return _active_agent_cache
     if not tab_manager:
         result = ""
     else:
@@ -478,7 +486,7 @@ def _detect_active_agent(tab_manager) -> str:
         result = _agent_from_title(window) if window else ""
         if not result and window:
             result = _agent_from_window(window)
-    _cache["active_agent"] = result
+    _active_agent_cache = result
     return result
 
 
@@ -553,15 +561,15 @@ def _ssh_from_window(window) -> tuple:
 
 def _detect_ssh_active(tab_manager) -> tuple:
     """Return (user, host) for ssh in the active window, or ('', '') (cached per draw cycle)."""
-    cached = _cache.get("active_ssh")
-    if cached is not None:
-        return cached
+    global _active_ssh_cache
+    if _active_ssh_cache is not None:
+        return _active_ssh_cache
     if not tab_manager:
         result = ("", "")
     else:
         window = tab_manager.active_window
         result = _ssh_from_window(window) if window else ("", "")
-    _cache["active_ssh"] = result
+    _active_ssh_cache = result
     return result
 
 
@@ -576,7 +584,7 @@ def draw_icon(screen: Screen, index: int) -> int:
     boss = get_boss()
     tm = boss.active_tab_manager if boss else None
     agent = _detect_active_agent(tm) if tm else ""
-    if tm and (agent or is_agent_window(tm)):
+    if tm and (agent or _has_agent_tab_title(tm)):
         icon = ICON_AGENT + (agent or "agents")
     else:
         icon = ICON_MAIN + USER
@@ -625,8 +633,7 @@ def draw_tab_title(
 
     # Determine next tab background for separator style
     if extra_data.next_tab:
-        next_tab_base_bg = as_rgb(draw_data.tab_bg(extra_data.next_tab))
-        next_tab_bg = _tab_pill_bg(extra_data.next_tab, next_tab_base_bg)
+        next_tab_bg = as_rgb(draw_data.tab_bg(extra_data.next_tab))
         needs_soft_sep = next_tab_bg == tab_bg
     else:
         next_tab_bg = default_bg
@@ -640,10 +647,13 @@ def draw_tab_title(
     screen.draw(" ")
     screen.cursor.bg = tab_bg
     screen.cursor.fg = tab_fg
-    title_draw_data = (
-        _draw_data_with_tab_fg(draw_data, tab_fg) if tab_fg != base_fg else draw_data
-    )
-    draw_title(title_draw_data, screen, tab, index)
+    if tab_fg != base_fg:
+        title_draw_data = _draw_data_with_tab_fg(draw_data, tab_fg)
+        title_tab = _tab_with_fg(tab, tab_fg)
+    else:
+        title_draw_data = draw_data
+        title_tab = tab
+    draw_title(title_draw_data, screen, title_tab, index)
 
     # Draw appropriate separator
     if needs_soft_sep:
@@ -659,8 +669,16 @@ def draw_tab_title(
 
 def _draw_data_with_tab_fg(draw_data: DrawData, fg: int) -> DrawData:
     if hasattr(draw_data, "_replace"):
-        return draw_data._replace(active_fg=fg, inactive_fg=fg)
+        raw_fg = _raw_rgb(fg)
+        return draw_data._replace(active_fg=raw_fg, inactive_fg=raw_fg)
     return draw_data
+
+
+def _tab_with_fg(tab: TabBarData, fg: int) -> TabBarData:
+    if hasattr(tab, "_replace"):
+        raw_fg = _raw_rgb(fg)
+        return tab._replace(active_fg=raw_fg, inactive_fg=raw_fg, title=_strip_ansi(tab.title))
+    return tab
 
 
 def _draw_soft_separator(
@@ -685,11 +703,8 @@ def _draw_soft_separator(
     screen.cursor.fg = prev_fg
 
 
-def draw_right_status(screen: Screen, is_last: bool, cells: list) -> int:
+def draw_right_status(screen: Screen, cells: list) -> int:
     """Draw the right-aligned status (cwd + hostname)."""
-    if not is_last:
-        return screen.cursor.x
-
     draw_attributed_string(Formatter.reset, screen)
     screen.cursor.x = screen.columns - _right_status_length
     screen.cursor.fg = 0
@@ -719,12 +734,16 @@ def draw_tab(
     extra_data: ExtraData,
 ) -> int:
     """Kitty draw_tab callback — entry point for rendering each tab."""
-    global _right_status_length, _cache_cycle
+    global _right_status_length, _git_repo_cache, _cwd_right_cache, _has_agent_tab_title_cache
+    global _active_agent_cache, _active_ssh_cache
 
     # Invalidate per-cycle cache on first tab
     if index == 1:
-        _cache_cycle += 1
-        _cache.clear()
+        _git_repo_cache = None
+        _cwd_right_cache = None
+        _has_agent_tab_title_cache = None
+        _active_agent_cache = None
+        _active_ssh_cache = None
 
     # Build right status cells: separator | cwd | hostname
     cwd_text = " " + get_cwd_right() + " " + SEP_RIGHT
@@ -754,6 +773,6 @@ def draw_tab(
     draw_tab_title(draw_data, screen, tab, index, extra_data, max_title_length)
 
     if is_last:
-        draw_right_status(screen, is_last, cells)
+        draw_right_status(screen, cells)
 
     return screen.cursor.x
