@@ -10,7 +10,6 @@ import {
 } from "./context.ts"
 
 const WRITE_INTERVAL_MS = 1000
-const STALE_BUSY_STATUS_MS = 30_000
 const LOCK_RETRY_MS = 25
 const LOCK_TIMEOUT_MS = 1000
 
@@ -90,8 +89,6 @@ async function clearPaneContext() {
   })
 }
 
-const sessionStatuses = new Map()
-
 function currentAgent(api, sessionID) {
   const messages = api.state.session.messages(sessionID)
   for (let index = messages.length - 1; index >= 0; index -= 1) {
@@ -99,48 +96,6 @@ function currentAgent(api, sessionID) {
     if ("agent" in message && message.agent) return message.agent
   }
   return undefined
-}
-
-function normalizeStatus(status) {
-  let type = ""
-  if (typeof status?.type === "string") type = status.type
-  else if (typeof status === "string") type = status
-
-  if (type === "busy" || type === "retry") return "busy"
-  if (type === "idle") return "idle"
-  return type
-}
-
-function rememberStatus(sessionID, status, now = Date.now()) {
-  if (typeof sessionID !== "string" || sessionID === "") return undefined
-
-  const type = normalizeStatus(status)
-  if (!type) return undefined
-
-  const entry = { type, updatedAt: now }
-  sessionStatuses.set(sessionID, entry)
-  return entry
-}
-
-function stateStatus(api, sessionID) {
-  try {
-    return normalizeStatus(api.state?.session?.status?.(sessionID))
-  } catch {
-    return ""
-  }
-}
-
-function currentStatus(api, sessionID) {
-  const now = Date.now()
-  const observed = stateStatus(api, sessionID)
-  if (observed) return rememberStatus(sessionID, observed, now)
-
-  const remembered = sessionStatuses.get(sessionID)
-  if (!remembered) return { type: "idle", updatedAt: now }
-  if (remembered.type === "busy" && now - remembered.updatedAt > STALE_BUSY_STATUS_MS) {
-    return rememberStatus(sessionID, "idle", now)
-  }
-  return remembered
 }
 
 async function writeContext(api, sessionID) {
@@ -155,13 +110,10 @@ async function writeContext(api, sessionID) {
     }
 
     const agent = currentAgent(api, sessionID)
-    const status = currentStatus(api, sessionID)
     contexts[sessionID] = {
       kitty_pid: KITTY_PID,
       kitty_window_id: KITTY_WINDOW_ID,
       updated_at: Date.now(),
-      status_updated_at: status.updatedAt,
-      status: status.type,
       ...(agent ? { agent } : {}),
     }
 
@@ -183,14 +135,6 @@ const tui = async (api) => {
   sync()
   const timer = setInterval(sync, WRITE_INTERVAL_MS)
   const disposers = [
-    api.event.on("session.status", (event) => {
-      rememberStatus(event.properties?.sessionID, event.properties?.status)
-      sync()
-    }),
-    api.event.on("session.idle", (event) => {
-      rememberStatus(event.properties?.sessionID, "idle")
-      sync()
-    }),
     api.event.on("session.created", () => sync()),
     api.event.on("tui.session.select", (event) => {
       const sessionID = event.properties?.sessionID

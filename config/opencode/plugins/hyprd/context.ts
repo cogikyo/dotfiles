@@ -15,9 +15,7 @@ export type KittyContext = {
   kitty_pid: number
   kitty_window_id: number
   updated_at: number
-  status_updated_at?: number
   agent?: string
-  status?: "busy" | "idle" | string
 }
 
 export type KittyContexts = Record<string, KittyContext>

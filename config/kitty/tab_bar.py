@@ -5,12 +5,11 @@
 """Custom kitty tab bar via the draw_tab callback.
 
 Layout: Icon → Tab titles (left) | CWD (child→root) → hostname (right).
-Accent color follows the active agent; busy OpenCode tabs use manual vagari mode colors.
+Accent color follows the active agent, ssh pink, or normal blue.
 """
 
 import json
 import os
-import re
 import time
 from getpass import getuser
 from os import uname
@@ -34,7 +33,6 @@ from kitty.utils import color_as_int
 USER = getuser()
 HOST = uname()[1]
 LOCAL_HOST = HOST.split(".")[0]
-ANSI_ESCAPE_RE = re.compile(r"\x1b(?:[@-Z\\-_]|\[[0-?]*[ -/]*[@-~])")
 
 # ╭──────────────────────────────────────────────────────────────────────────────╮
 # │ Configuration                                                                │
@@ -70,11 +68,6 @@ KITTY_CONTEXT_PATH = (
 )
 KITTY_CONTEXT_READ_TTL_SECONDS = 0.5
 KITTY_CONTEXT_STALE_SECONDS = 24 * 60 * 60
-OPENCODE_BUSY_CONTEXT_TTL_SECONDS = 2.5
-OPENCODE_BUSY_BG_ALPHA = 0.10
-OPENCODE_ACTIVE_BUSY_BG_ALPHA = 0.20
-
-
 # ╭──────────────────────────────────────────────────────────────────────────────╮
 # │ Colors                                                                       │
 # ╰──────────────────────────────────────────────────────────────────────────────╯
@@ -84,31 +77,8 @@ def _rgb(hex_value: str) -> int:
     return as_rgb(int(hex_value.removeprefix("#"), 16))
 
 
-def _raw_rgb(color: int) -> int:
-    return color >> 8 if color & 0xFF == 2 else color
-
-
-def _rgb_channels(color: int) -> tuple[int, int, int]:
-    raw = _raw_rgb(color)
-    return (raw >> 16) & 0xFF, (raw >> 8) & 0xFF, raw & 0xFF
-
-
-def _blend_rgb(fg: int, bg: int, alpha: float) -> int:
-    fr, fg_channel, fb = _rgb_channels(fg)
-    br, bg_channel, bb = _rgb_channels(bg)
-    return (
-        round(fr * alpha + br * (1 - alpha)) << 16
-        | round(fg_channel * alpha + bg_channel * (1 - alpha)) << 8
-        | round(fb * alpha + bb * (1 - alpha))
-    )
-
-
-def _blend_for_screen(fg: int, bg: int, alpha: float) -> int:
-    return as_rgb(_blend_rgb(fg, bg, alpha))
-
-
 # Intentional manual coupling to vagari + OpenCode role semantics.
-# Keep this semantic: the OpenCode context stores agent/status, not theme colors.
+# Keep this semantic: the OpenCode context stores the agent name, not theme colors.
 OPENCODE_AGENT_COLORS = {
     "drive": _rgb("#f8b486"),
     "plan": _rgb("#b29ae8"),
@@ -159,7 +129,6 @@ _current_icon_width = 0
 # per-cycle cache — invalidated each time the first tab (index=1) is drawn
 _git_repo_cache: bool | None = None
 _cwd_right_cache: str | None = None
-_has_agent_tab_title_cache: bool | None = None
 _active_agent_cache: str | None = None
 _active_ssh_cache: tuple[str, str] | None = None
 
@@ -184,10 +153,6 @@ _kitty_context_cache: KittyContextCache = {
 def _display_width(text: str) -> int:
     """Return terminal display width accounting for wide (CJK) characters."""
     return sum(2 if east_asian_width(c) in ("W", "F") else 1 for c in text)
-
-
-def _strip_ansi(text: str) -> str:
-    return ANSI_ESCAPE_RE.sub("", text)
 
 
 def _as_int(value) -> int:
@@ -242,43 +207,6 @@ def _fresh_opencode_contexts(data) -> tuple:
     return tuple(contexts)
 
 
-def _tab_id(tab) -> int:
-    for attr in ("tab_id", "id"):
-        value = _as_int(getattr(tab, attr, 0))
-        if value:
-            return value
-    return 0
-
-
-def _actual_tab(tab, index: int | None = None):
-    boss = get_boss()
-    tab_manager = boss.active_tab_manager if boss else None
-    tabs = tuple(getattr(tab_manager, "tabs", ()) or ())
-    tab_id = _tab_id(tab)
-
-    if tab_id:
-        for candidate in tabs:
-            if _tab_id(candidate) == tab_id:
-                return candidate
-
-    if index is not None and 0 < index <= len(tabs):
-        return tabs[index - 1]
-
-    return tab
-
-
-def _tab_windows(tab, index: int | None = None) -> tuple:
-    actual = _actual_tab(tab, index)
-    windows = getattr(actual, "windows", None)
-    if windows is not None:
-        try:
-            return tuple(windows)
-        except TypeError:
-            return ()
-
-    active_window = getattr(actual, "active_window", None)
-    return (active_window,) if active_window else ()
-
 
 def _kitty_window_id(window) -> int:
     # KITTY_WINDOW_ID is kitty's per-pty window id; window.id is the usual Python API surface.
@@ -289,32 +217,9 @@ def _kitty_window_id(window) -> int:
     return 0
 
 
-def _window_has_agent(window) -> bool:
-    return bool(_agent_from_title(window) or _agent_from_window(window))
-
-
 def _opencode_agent_color(agent) -> int | None:
     name = str(agent or "").lower()
     return OPENCODE_AGENT_COLORS.get(name.split(".", 1)[0])
-
-
-def _opencode_busy_context_is_live(ctx) -> bool:
-    status_updated_at = _as_int(ctx.get("status_updated_at")) or _as_int(
-        ctx.get("updated_at")
-    )
-    return bool(
-        status_updated_at
-        and time.time() * 1000 - status_updated_at
-        <= OPENCODE_BUSY_CONTEXT_TTL_SECONDS * 1000
-    )
-
-
-def _opencode_context_is_busy(ctx) -> bool:
-    return bool(
-        ctx
-        and str(ctx.get("status", "")).lower() == "busy"
-        and _opencode_busy_context_is_live(ctx)
-    )
 
 
 def _opencode_context_for_window_ids(window_ids: set[int]):
@@ -334,43 +239,6 @@ def _opencode_color_for_active_window(tab_manager) -> int | None:
     ctx = _opencode_context_for_window_ids({window_id})
     agent = ctx.get("agent") if ctx else None
     return _opencode_agent_color(agent) if agent else None
-
-
-def _opencode_context_for_tab(tab, index: int | None = None):
-    actual = _actual_tab(tab, index)
-    window = getattr(actual, "active_window", None) or getattr(
-        tab, "active_window", None
-    )
-    if not window or not _window_has_agent(window):
-        return None
-
-    window_id = _kitty_window_id(window)
-    if not window_id:
-        return None
-
-    return _opencode_context_for_window_ids({window_id})
-
-
-def _tab_pill_colors(
-    tab, base_bg: int, base_fg: int, index: int | None = None
-) -> tuple:
-    ctx = _opencode_context_for_tab(tab, index)
-    if not ctx:
-        return base_bg, base_fg
-
-    agent = ctx.get("agent")
-    tab_fg = base_fg
-    if agent:
-        color = _opencode_agent_color(agent)
-        tab_fg = color if color is not None else base_fg
-    if _opencode_context_is_busy(ctx):
-        alpha = (
-            OPENCODE_ACTIVE_BUSY_BG_ALPHA
-            if getattr(tab, "is_active", False)
-            else OPENCODE_BUSY_BG_ALPHA
-        )
-        return _blend_for_screen(tab_fg, base_bg, alpha), tab_fg
-    return base_bg, tab_fg
 
 
 def _is_git_repo(path: str) -> bool:
@@ -473,29 +341,6 @@ def _agent_from_title(window) -> str:
         if agent in title_lower:
             return agent
     return ""
-
-
-def _has_agent_tab_title(tab_manager) -> bool:
-    """Check tab/window titles for an agent without probing every child process."""
-    global _has_agent_tab_title_cache
-    if _has_agent_tab_title_cache is not None:
-        return _has_agent_tab_title_cache
-    result = False
-    if not tab_manager:
-        _has_agent_tab_title_cache = False
-        return False
-    try:
-        for tab in tab_manager.tabs:
-            for window in tab.windows:
-                if _agent_from_title(window):
-                    result = True
-                    break
-            if result:
-                break
-    except (AttributeError, TypeError):
-        pass
-    _has_agent_tab_title_cache = result
-    return result
 
 
 def _detect_active_agent(tab_manager) -> str:
@@ -643,9 +488,8 @@ def draw_tab_title(
     if screen.cursor.x >= screen.columns - _right_status_length:
         return screen.cursor.x
 
-    base_fg = screen.cursor.fg
-    tab_bg, tab_fg = _tab_pill_colors(tab, screen.cursor.bg, base_fg, index)
-    screen.cursor.bg, screen.cursor.fg = tab_bg, tab_fg
+    tab_fg = screen.cursor.fg
+    tab_bg = screen.cursor.bg
 
     # Opening separator for first tab
     if index == 1:
@@ -657,10 +501,7 @@ def draw_tab_title(
 
     # Determine next tab background for separator style
     if extra_data.next_tab:
-        next_base_bg = as_rgb(draw_data.tab_bg(extra_data.next_tab))
-        next_tab_bg, _ = _tab_pill_colors(
-            extra_data.next_tab, next_base_bg, base_fg, index + 1
-        )
+        next_tab_bg = as_rgb(draw_data.tab_bg(extra_data.next_tab))
         needs_soft_sep = next_tab_bg == tab_bg
     else:
         next_tab_bg = default_bg
@@ -674,12 +515,7 @@ def draw_tab_title(
     screen.draw(" ")
     screen.cursor.bg = tab_bg
     screen.cursor.fg = tab_fg
-    if tab_fg != base_fg:
-        title_draw_data = _draw_data_with_tab_fg(draw_data, tab_fg)
-    else:
-        title_draw_data = draw_data
-    title_tab = _tab_for_draw(tab, tab_fg if tab_fg != base_fg else None)
-    draw_title(title_draw_data, screen, title_tab, index)
+    draw_title(draw_data, screen, tab, index)
 
     # Draw appropriate separator
     if needs_soft_sep:
@@ -691,23 +527,6 @@ def draw_tab_title(
         screen.draw(SEP_LEFT)
 
     return screen.cursor.x
-
-
-def _draw_data_with_tab_fg(draw_data: DrawData, fg: int) -> DrawData:
-    if hasattr(draw_data, "_replace"):
-        raw_fg = _raw_rgb(fg)
-        return draw_data._replace(active_fg=raw_fg, inactive_fg=raw_fg)
-    return draw_data
-
-
-def _tab_for_draw(tab: TabBarData, fg: int | None) -> TabBarData:
-    if not hasattr(tab, "_replace") or fg is None:
-        return tab
-
-    raw_fg = _raw_rgb(fg)
-    return tab._replace(
-        active_fg=raw_fg, inactive_fg=raw_fg, title=_strip_ansi(tab.title)
-    )
 
 
 def _draw_soft_separator(
@@ -763,18 +582,13 @@ def draw_tab(
     extra_data: ExtraData,
 ) -> int:
     """Kitty draw_tab callback — entry point for rendering each tab."""
-    global \
-        _right_status_length, \
-        _git_repo_cache, \
-        _cwd_right_cache, \
-        _has_agent_tab_title_cache
+    global _right_status_length, _git_repo_cache, _cwd_right_cache
     global _active_agent_cache, _active_ssh_cache
 
     # Invalidate per-cycle cache on first tab
     if index == 1:
         _git_repo_cache = None
         _cwd_right_cache = None
-        _has_agent_tab_title_cache = None
         _active_agent_cache = None
         _active_ssh_cache = None
 
