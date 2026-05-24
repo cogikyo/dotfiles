@@ -9,6 +9,7 @@ import {
   isExistingFile,
   listSessionMedia,
   mediaPart,
+  mediaReference,
   registerSessionMedia,
   type MediaRegistryEntry,
 } from "./registry";
@@ -222,7 +223,7 @@ function mediaItemColor(api: TuiPluginApi, item: MediaItem) {
 }
 
 function mediaItemLabel(item: MediaItem) {
-  if (item.entry.kind !== "video") return item.entry.handle;
+  if (item.entry.kind !== "video") return mediaReference(item.entry);
   return basename(item.entry.path) || item.entry.handle;
 }
 

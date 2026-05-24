@@ -1,11 +1,14 @@
 import { createHash } from "node:crypto";
-import { closeSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { chmodSync, closeSync, copyFileSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const HANDLE_PATTERN = /(?:^|[^A-Za-z0-9_.\\/-])(@(?:[01]\d|2[0-3])_[0-5]\d_[0-5]\d(?:_(?:[2-9]|[1-9]\d+))?)(?![A-Za-z0-9_\\/-]|\.[A-Za-z0-9])/g;
 const HANDLE_EXACT_PATTERN = /^@(?:[01]\d|2[0-3])_[0-5]\d_[0-5]\d(?:_(?:[2-9]|[1-9]\d+))?$/;
+const ALIAS_PATTERN = /(?:^|[^A-Za-z0-9_.\\/-])(@[a-z0-9](?:[a-z0-9-]{0,46}[a-z0-9])?)(?![A-Za-z0-9_\\/-]|\.[A-Za-z0-9])/g;
+const ALIAS_EXACT_PATTERN = /^@[a-z0-9](?:[a-z0-9-]{0,46}[a-z0-9])?$/;
+const NAME_EXACT_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,46}[a-z0-9])?$/;
 const MAX_REGISTRY_BYTES = 256 * 1024;
 const MAX_REGISTRY_ENTRIES = 200;
 const MAX_DATA_IMAGE_BYTES = 2 * 1024 * 1024;
@@ -52,6 +55,10 @@ export type MediaRegistryEntry = {
   kind: MediaKind;
   hash: string;
   source: string;
+  name?: string;
+  alias?: string;
+  nameSource?: string;
+  nameUpdatedAt?: number;
   createdAt: number;
   updatedAt: number;
 };
@@ -86,7 +93,7 @@ export function registerSessionMedia(sessionID: string, messageID: string | unde
 
       const existing = entries.find((entry) => sameMedia(entry, messageID, part, hash, path));
       if (existing) {
-        existing.path = path;
+        if (!existing.name || existing.kind !== "image" || !isExistingFile(existing.path)) existing.path = path;
         existing.mime = part.mime || existing.mime;
         existing.kind = kind;
         existing.source = mediaSourceLabel(part);
@@ -127,18 +134,51 @@ export function listSessionMedia(sessionID: string) {
   }
 }
 
-export function resolveMediaReferences(sessionID: string, text: string) {
-  const requested = new Set<string>();
-  HANDLE_PATTERN.lastIndex = 0;
-  for (const match of text.matchAll(HANDLE_PATTERN)) {
-    if (match[1]) requested.add(match[1]);
+export function mediaReference(entry: MediaRegistryEntry) {
+  return entry.alias || entry.handle;
+}
+
+export function updateImageName(sessionID: string, handle: string, name: string, source: string) {
+  const cleanName = normalizeStoredName(name);
+  if (!cleanName) return undefined;
+
+  try {
+    return withRegistryLock(sessionID, () => {
+      const entries = readWritableRegistry(sessionID);
+      if (!entries) return undefined;
+
+      const entry = entries.find((candidate) => candidate.handle === handle);
+      if (!entry || entry.kind !== "image" || !isExistingFile(entry.path)) return undefined;
+
+      const alias = uniqueAlias(entries, entry, cleanName);
+      const finalName = alias.slice(1);
+      const nextPath = uniqueNamedCachePath(finalName, extensionForEntry(entry));
+      copyFileSync(entry.path, nextPath);
+      chmodSync(nextPath, 0o600);
+
+      const now = Date.now();
+      entry.path = nextPath;
+      entry.name = finalName;
+      entry.alias = alias;
+      entry.nameSource = source || "model";
+      entry.nameUpdatedAt = now;
+      entry.updatedAt = now;
+      writeRegistry(sessionID, entries);
+      return entry;
+    });
+  } catch {
+    return undefined;
   }
+}
+
+export function resolveMediaReferences(sessionID: string, text: string) {
+  const requested = requestedMediaReferences(text);
   if (requested.size === 0) return [];
 
   const entries = readRegistry(sessionID);
   const resolved: MediaRegistryEntry[] = [];
   for (const entry of entries) {
-    if (!requested.has(entry.handle)) continue;
+    if (!entryReferences(entry).some((reference) => requested.has(reference))) continue;
     if (!isExistingFile(entry.path)) continue;
     resolved.push(entry);
   }
@@ -146,6 +186,7 @@ export function resolveMediaReferences(sessionID: string, text: string) {
 }
 
 export function mediaFilePartForEntry(entry: MediaRegistryEntry, sessionID: string, messageID: string, index: number): PersistedMediaFilePart {
+  const reference = mediaReference(entry);
   return {
     id: filePartID(messageID, index),
     sessionID,
@@ -153,12 +194,12 @@ export function mediaFilePartForEntry(entry: MediaRegistryEntry, sessionID: stri
     type: "file",
     mime: entry.mime,
     kind: entry.kind,
-    filename: `${entry.handle.slice(1)}${extensionForMime(entry.mime, entry.kind)}`,
+    filename: `${reference.slice(1)}${extensionForMime(entry.mime, entry.kind)}`,
     url: pathToFileURL(entry.path).href,
     source: {
       type: "file",
       path: entry.path,
-      text: { value: entry.handle, start: 0, end: entry.handle.length },
+      text: { value: reference, start: 0, end: reference.length },
     },
   };
 }
@@ -373,9 +414,72 @@ function normalizeEntry(value: Partial<MediaRegistryEntry>): MediaRegistryEntry 
     kind: normalizeKind(value.kind, value.mime),
     hash: value.hash || sha256(`${value.path}:${value.handle}`),
     source: value.source || "unknown source",
+    name: normalizeStoredName(value.name),
+    alias: normalizeStoredAlias(value.alias, value.name),
+    nameSource: typeof value.nameSource === "string" ? value.nameSource.slice(0, 80) : undefined,
+    nameUpdatedAt: typeof value.nameUpdatedAt === "number" ? value.nameUpdatedAt : undefined,
     createdAt: value.createdAt || Date.now(),
     updatedAt: value.updatedAt || Date.now(),
   };
+}
+
+function requestedMediaReferences(text: string) {
+  const requested = new Set<string>();
+  HANDLE_PATTERN.lastIndex = 0;
+  ALIAS_PATTERN.lastIndex = 0;
+
+  for (const match of text.matchAll(HANDLE_PATTERN)) {
+    if (match[1]) requested.add(match[1]);
+  }
+  for (const match of text.matchAll(ALIAS_PATTERN)) {
+    if (match[1]) requested.add(match[1]);
+  }
+
+  return requested;
+}
+
+function entryReferences(entry: MediaRegistryEntry) {
+  return entry.alias ? [entry.handle, entry.alias] : [entry.handle];
+}
+
+function normalizeStoredName(value: unknown) {
+  if (typeof value !== "string") return undefined;
+  const clean = value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48).replace(/-+$/g, "");
+  return NAME_EXACT_PATTERN.test(clean) ? clean : undefined;
+}
+
+function normalizeStoredAlias(alias: unknown, name: unknown) {
+  if (typeof alias === "string" && ALIAS_EXACT_PATTERN.test(alias)) return alias;
+  const cleanName = normalizeStoredName(name);
+  return cleanName ? `@${cleanName}` : undefined;
+}
+
+function uniqueAlias(entries: MediaRegistryEntry[], current: MediaRegistryEntry, name: string) {
+  const used = new Set(entries.filter((entry) => entry.handle !== current.handle).flatMap(entryReferences));
+  for (let index = 1; index <= 200; index++) {
+    const candidateName = index === 1 ? name : withNumericSuffix(name, index);
+    const alias = `@${candidateName}`;
+    if (!used.has(alias)) return alias;
+  }
+  return `@${withNumericSuffix(name, Date.now() % 100_000)}`;
+}
+
+function withNumericSuffix(name: string, index: number) {
+  const suffix = `-${index}`;
+  return `${name.slice(0, Math.max(1, 48 - suffix.length)).replace(/-+$/g, "")}${suffix}`;
+}
+
+function uniqueNamedCachePath(name: string, ext: string) {
+  for (let index = 1; index <= 200; index++) {
+    const suffix = index === 1 ? "" : `-${index}`;
+    const candidate = join(cacheDir(), `${name}${suffix}${ext}`);
+    if (!existsSync(candidate)) return candidate;
+  }
+  return join(cacheDir(), `${name}-${Date.now().toString(36)}${ext}`);
+}
+
+function extensionForEntry(entry: MediaRegistryEntry) {
+  return extname(entry.path) || extensionForMime(entry.mime, entry.kind) || ".img";
 }
 
 function isDefined<T>(value: T | undefined): value is T {

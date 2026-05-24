@@ -87,7 +87,8 @@ On dispose it reactivates that internal plugin only if this plugin deactivated i
 Media context has both a server hook and a TUI sidebar.
 `opencode/media-context/prompt.ts` is loaded by `opencode.json`; `opencode/media-context/index.tsx` is loaded by `tui.json`.
 
-The server hook registers attached media and detected local video paths, resolves image handles into provider-safe file parts, emits local-only notices for video handles, and preserves media handles in compaction context.
+The server hook registers attached media and detected local video paths, resolves image handles and aliases into provider-safe file parts, emits local-only notices for video handles, and preserves media references in compaction context.
+It also enqueues newly attached images for async sidecar naming after the session becomes idle.
 Any persisted part created by the plugin and pushed into `output.parts` must use an ID beginning with `prt`.
 Never derive plugin-created part IDs from `output.message.id`; old `msg_*media-context-*` rows were history poison because OpenCode rejects persisted parts whose IDs do not start with `prt`.
 
@@ -98,7 +99,9 @@ Registry directories are mode `0700`; registry JSON files are mode `0600`.
 Registry writes use a per-session lock and atomic replace.
 
 Media files get stable per-session timestamp handles in the exact form `@HH_MM_SS`.
+Newly attached images may additionally get generated aliases in the exact form `@lowercase-slug`.
 If multiple media files register in the same second, later handles append `_2`, `_3`, and so on.
+Generated aliases are capped at 3 words, sanitized to safe lowercase filename characters, and collision-suffixed.
 Missing backing files are hidden from the sidebar and cannot resolve, but registry entries are retained so timestamp handles are not reused while the runtime registry exists.
 
 `opencode/media-context/index.tsx` lists current-session media reconciled against currently loaded session messages.
@@ -106,18 +109,26 @@ Registry-only entries are hidden on restore when persisted messages are unavaila
 The sidebar can discover media from loaded persisted file parts when the TUI exposes them.
 On event-driven refresh, the TUI may backfill attached media and detected video paths from the most recent 100 current-session messages, capped at 20 registrations per refresh.
 It does not scan old sessions or full history.
-Image rows display `I <timestamp-handle>`; video rows display `V <local-basename>` with handle fallback.
+Image rows display `I <generated-name>` when a model alias exists and `I <timestamp-handle>` otherwise; video rows display `V <local-basename>` with handle fallback.
 Clicking an image row opens a borderless full-screen OpenTUI backdrop while Kitty draws the image preview out-of-band; clicking a video row opens the file with `xdg-open`.
 
 Local image previews are attempted for `file://` URLs and any existing `source.path`, including clipboard backing paths.
 Unsupported `http(s):`, internal, relative, and malformed URLs are not registered because they cannot be dereferenced later as local files.
 Video `source.path` and `file://` registrations use the same local-file guard as sidebar discovery.
 Detected local video paths are registration-only unless they are later referenced by handle; even then, videos stay local-only and are not pushed as provider file parts.
+Videos are never model-named.
 
 The plugin reuses `config/xplr/bin/kitty-preview.py` via `python3` with argv-only spawning for image previews.
 Kitty overlay coordinates use a centered terminal rectangle under the backdrop.
 It clears the Kitty overlay on backdrop close, session navigation, session commands, slot cleanup, and plugin disposal.
 Backing local files must remain available for handles to resolve after compaction.
+
+Image naming is configured through the `opencode.json` server plugin tuple under `imageNames`.
+The default model is `openai/gpt-5.4-mini`, and the tuple can disable naming with `{ "imageNames": { "enabled": false } }`.
+No OpenCode session prompt APIs are used for naming because they persist rows and stats.
+The current non-persistent path calls OpenAI Responses API directly with `store: false`, using existing OpenCode OpenAI auth from `auth.json` or `OPENAI_API_KEY` as a fallback.
+Naming failures are swallowed and leave timestamp handles intact.
+Named images are copied into the media-context runtime cache under the generated filename; original source files are not renamed.
 
 ## Statusline Contract
 
@@ -146,7 +157,8 @@ The global `~/.config/opencode/AGENTS.md` file is intentionally omitted because 
 The sidebar section is hidden until at least one Markdown read exists.
 
 Compacted read entries are shown with a red `C` marker when OpenCode marks the completed tool part that way.
-Fresh read entries use source markers: green `R` for `README.md`, blue `A` for `AGENTS.md`, cyan `S` for `SKILL.md`, yellow `I` for `INSTRUCTIONS.md` or `INSTRUCTION.md`, magenta `P` for uppercase partial context docs like `DATABASE.md`, orange `D` for directory/repo-named context docs, and muted `M` for generic other Markdown.
+Fresh read entries use source markers: green `R` for `README.md`, blue `A` for `AGENTS.md`, orange `O` for `config/opencode/orchestrate/master.md`, cyan `S` for `SKILL.md`, yellow `I` for uppercase pointer docs like `GO.md` or `DATABASE.md`, and muted `M` for generic Markdown.
+`S` labels show the parent skill directory, such as `commit` or `scribe`.
 Carrier files omit their filename in labels because the marker carries that information.
 
 ## Typechecking

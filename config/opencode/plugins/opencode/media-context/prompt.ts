@@ -4,16 +4,20 @@ import {
   listSessionMedia,
   mediaFilePartForEntry,
   mediaPart,
+  mediaReference,
   registerSessionMedia,
   resolveMediaReferences,
   videoPathParts,
   type MediaRegistryEntry,
 } from "./registry";
+import { createImageNamer } from "./naming";
 
 const id = "opencode-media-context-prompt";
 let partIDCounter = 0;
 
-const server: Plugin = async () => {
+const server: Plugin = async (_input, options) => {
+  const namer = createImageNamer(options);
+
   return {
     "chat.message": async (input, output) => {
       const sessionID = input.sessionID;
@@ -23,7 +27,10 @@ const server: Plugin = async () => {
 
       for (const part of output.parts.map(mediaPart).filter(isDefined)) {
         const entry = registerSessionMedia(sessionID, messageID, part);
-        if (entry) registered.push(entry);
+        if (entry) {
+          registered.push(entry);
+          if (entry.kind === "image" && !entry.name && entry.createdAt === entry.updatedAt) namer.enqueue(entry);
+        }
       }
 
       for (const part of videoPathParts(text)) {
@@ -60,6 +67,16 @@ const server: Plugin = async () => {
       if (entries.length === 0) return;
       output.context.push(`Media references available after compaction: ${formatHandles(entries)}.`);
     },
+    event: async ({ event }) => {
+      const { type, properties } = event as { type?: string; properties?: { sessionID?: string; status?: { type?: string }; info?: { id?: string } } };
+      const sessionID = properties?.sessionID || properties?.info?.id;
+      if (!sessionID) return;
+
+      if (type === "session.idle" || (type === "session.status" && properties?.status?.type === "idle")) {
+        namer.drain(sessionID);
+      }
+      if (type === "session.deleted") namer.clear(sessionID);
+    },
   };
 };
 
@@ -78,7 +95,7 @@ function userText(parts: unknown[]) {
 }
 
 function formatHandles(entries: MediaRegistryEntry[]) {
-  return entries.map((entry) => `${entry.kind === "video" ? "V" : "I"} ${entry.handle}`).join(", ");
+  return entries.map((entry) => `${entry.kind === "video" ? "V" : "I"} ${mediaReference(entry)}`).join(", ");
 }
 
 function isTextPart(part: unknown): part is { type: "text"; text: string } {

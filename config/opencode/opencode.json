@@ -56,7 +56,10 @@
   },
   "plugin": [
     "file:///home/cullyn/dotfiles/config/opencode/plugins/hyprd/notify.ts",
-    "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/media-context/prompt.ts"
+    [
+      "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/media-context/prompt.ts",
+      { "imageNames": { "enabled": true, "model": "openai/gpt-5.4-mini" } }
+    ]
   ],
   "provider": {
     "openai": {
