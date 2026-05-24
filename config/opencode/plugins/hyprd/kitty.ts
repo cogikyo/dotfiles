@@ -10,6 +10,7 @@ import {
 } from "./context.ts"
 
 const WRITE_INTERVAL_MS = 1000
+const STALE_BUSY_STATUS_MS = 30_000
 const LOCK_RETRY_MS = 25
 const LOCK_TIMEOUT_MS = 1000
 
@@ -110,11 +111,36 @@ function normalizeStatus(status) {
   return type
 }
 
-function rememberStatus(sessionID, status) {
-  if (typeof sessionID !== "string" || sessionID === "") return
+function rememberStatus(sessionID, status, now = Date.now()) {
+  if (typeof sessionID !== "string" || sessionID === "") return undefined
 
   const type = normalizeStatus(status)
-  if (type) sessionStatuses.set(sessionID, type)
+  if (!type) return undefined
+
+  const entry = { type, updatedAt: now }
+  sessionStatuses.set(sessionID, entry)
+  return entry
+}
+
+function stateStatus(api, sessionID) {
+  try {
+    return normalizeStatus(api.state?.session?.status?.(sessionID))
+  } catch {
+    return ""
+  }
+}
+
+function currentStatus(api, sessionID) {
+  const now = Date.now()
+  const observed = stateStatus(api, sessionID)
+  if (observed) return rememberStatus(sessionID, observed, now)
+
+  const remembered = sessionStatuses.get(sessionID)
+  if (!remembered) return { type: "idle", updatedAt: now }
+  if (remembered.type === "busy" && now - remembered.updatedAt > STALE_BUSY_STATUS_MS) {
+    return rememberStatus(sessionID, "idle", now)
+  }
+  return remembered
 }
 
 async function writeContext(api, sessionID) {
@@ -129,11 +155,13 @@ async function writeContext(api, sessionID) {
     }
 
     const agent = currentAgent(api, sessionID)
+    const status = currentStatus(api, sessionID)
     contexts[sessionID] = {
       kitty_pid: KITTY_PID,
       kitty_window_id: KITTY_WINDOW_ID,
       updated_at: Date.now(),
-      status: sessionStatuses.get(sessionID) ?? "idle",
+      status_updated_at: status.updatedAt,
+      status: status.type,
       ...(agent ? { agent } : {}),
     }
 

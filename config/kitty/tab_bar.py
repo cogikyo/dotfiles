@@ -70,8 +70,9 @@ KITTY_CONTEXT_PATH = (
 )
 KITTY_CONTEXT_READ_TTL_SECONDS = 0.5
 KITTY_CONTEXT_STALE_SECONDS = 24 * 60 * 60
-OPENCODE_BUSY_CONTEXT_TTL_SECONDS = 1
-OPENCODE_BUSY_BG_ALPHA = 0.15
+OPENCODE_BUSY_CONTEXT_TTL_SECONDS = 2.5
+OPENCODE_BUSY_BG_ALPHA = 0.10
+OPENCODE_ACTIVE_BUSY_BG_ALPHA = 0.20
 
 
 # ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -288,16 +289,23 @@ def _kitty_window_id(window) -> int:
     return 0
 
 
+def _window_has_agent(window) -> bool:
+    return bool(_agent_from_title(window) or _agent_from_window(window))
+
+
 def _opencode_agent_color(agent) -> int | None:
     name = str(agent or "").lower()
     return OPENCODE_AGENT_COLORS.get(name.split(".", 1)[0])
 
 
 def _opencode_busy_context_is_live(ctx) -> bool:
-    updated_at = _as_int(ctx.get("updated_at"))
+    status_updated_at = _as_int(ctx.get("status_updated_at")) or _as_int(
+        ctx.get("updated_at")
+    )
     return bool(
-        updated_at
-        and time.time() * 1000 - updated_at <= OPENCODE_BUSY_CONTEXT_TTL_SECONDS * 1000
+        status_updated_at
+        and time.time() * 1000 - status_updated_at
+        <= OPENCODE_BUSY_CONTEXT_TTL_SECONDS * 1000
     )
 
 
@@ -329,16 +337,18 @@ def _opencode_color_for_active_window(tab_manager) -> int | None:
 
 
 def _opencode_context_for_tab(tab, index: int | None = None):
-    windows = _tab_windows(tab, index)
-    if not windows:
+    actual = _actual_tab(tab, index)
+    window = getattr(actual, "active_window", None) or getattr(
+        tab, "active_window", None
+    )
+    if not window or not _window_has_agent(window):
         return None
 
-    window_ids = {_kitty_window_id(window) for window in windows}
-    window_ids.discard(0)
-    if not window_ids:
+    window_id = _kitty_window_id(window)
+    if not window_id:
         return None
 
-    return _opencode_context_for_window_ids(window_ids)
+    return _opencode_context_for_window_ids({window_id})
 
 
 def _tab_pill_colors(
@@ -354,7 +364,12 @@ def _tab_pill_colors(
         color = _opencode_agent_color(agent)
         tab_fg = color if color is not None else base_fg
     if _opencode_context_is_busy(ctx):
-        return _blend_for_screen(tab_fg, base_bg, OPENCODE_BUSY_BG_ALPHA), tab_fg
+        alpha = (
+            OPENCODE_ACTIVE_BUSY_BG_ALPHA
+            if getattr(tab, "is_active", False)
+            else OPENCODE_BUSY_BG_ALPHA
+        )
+        return _blend_for_screen(tab_fg, base_bg, alpha), tab_fg
     return base_bg, tab_fg
 
 
@@ -593,8 +608,8 @@ def draw_icon(screen: Screen, index: int) -> int:
     boss = get_boss()
     tm = boss.active_tab_manager if boss else None
     agent = _detect_active_agent(tm) if tm else ""
-    if tm and (agent or _has_agent_tab_title(tm)):
-        icon = ICON_AGENT + (agent or "agents")
+    if agent:
+        icon = ICON_AGENT + agent
     else:
         icon = ICON_MAIN + USER
 
