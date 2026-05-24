@@ -250,7 +250,7 @@ func (n *Notifier) sendDunst(spec notificationSpec, ctx *kittyContext) error {
 
 	args := n.buildDunstArgs(spec, ctx, style)
 
-	if !spec.FocusAction || notificationID(ctx) == 0 {
+	if !spec.FocusAction || paneNotificationID(ctx) == 0 {
 		return runDetached("dunstify", args...)
 	}
 
@@ -307,7 +307,7 @@ func (n *Notifier) buildDunstArgs(spec notificationSpec, ctx *kittyContext, styl
 		"-h", "string:desktop-entry:hyprd",
 	}
 	if !spec.NoReplace {
-		if id := notificationID(ctx); id > 0 {
+		if id := replacementNotificationID(ctx, spec.Style); id > 0 {
 			args = append(args, "-r", strconv.Itoa(id))
 		}
 	}
@@ -325,7 +325,7 @@ func (n *Notifier) buildDunstArgs(spec notificationSpec, ctx *kittyContext, styl
 	} else if spec.IconPath != "" {
 		args = append(args, "-I", spec.IconPath)
 	}
-	if spec.FocusAction && notificationID(ctx) > 0 {
+	if spec.FocusAction && paneNotificationID(ctx) > 0 {
 		args = append(args, "-A", "focus,Focus")
 	}
 	args = append(args, spec.Title, spec.Body)
@@ -438,7 +438,7 @@ func (n *Notifier) allowIdleNotification(req NotifyRequest, ctx *kittyContext) b
 }
 
 func idleNotificationKey(req NotifyRequest, ctx *kittyContext) string {
-	if id := notificationID(ctx); id > 0 {
+	if id := paneNotificationID(ctx); id > 0 {
 		return req.Source + ":" + strconv.Itoa(id)
 	}
 	if ctx != nil && ctx.App != "" {

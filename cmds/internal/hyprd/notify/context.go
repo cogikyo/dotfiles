@@ -7,6 +7,7 @@ import (
 	"dotfiles/cmds/internal/hyprd/session"
 	"encoding/json"
 	"fmt"
+	"hash/fnv"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -238,11 +239,25 @@ func (n *Notifier) focusContext(ctx *kittyContext) {
 	}
 }
 
-func notificationID(ctx *kittyContext) int {
+func paneNotificationID(ctx *kittyContext) int {
 	if ctx == nil || ctx.PID <= 0 || ctx.WindowID <= 0 {
 		return 0
 	}
 	return 100000 + ctx.PID*1000 + ctx.WindowID
+}
+
+func replacementNotificationID(ctx *kittyContext, group string) int {
+	if paneNotificationID(ctx) == 0 {
+		return 0
+	}
+	group = strings.TrimSpace(group)
+	if group == "" {
+		group = "default"
+	}
+
+	h := fnv.New32a()
+	_, _ = fmt.Fprintf(h, "%d:%d:%s", ctx.PID, ctx.WindowID, group)
+	return 100000 + int(h.Sum32()%2000000000)
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮

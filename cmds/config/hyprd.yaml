@@ -241,6 +241,11 @@ notify:
       sound: civ5-worker-select
       volume: 95
       timeout: 1000
+    idle:
+      style: secondary
+      sound: sdv-frog
+      volume: 95
+      timeout: 5000
 
     subagent:
       style: success
@@ -258,11 +263,6 @@ notify:
       sound: jobs-done
       volume: 110
 
-    idle:
-      style: tertiary
-      sound: sdv-frog
-      volume: 95
-      timeout: 5000
     permission:
       style: tertiary
       sound: ssb-ready
