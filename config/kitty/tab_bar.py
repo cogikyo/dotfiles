@@ -98,25 +98,8 @@ OPENCODE_AGENT_MODES = {
     "build.fast": "secondary",
     "build.scribe": "secondary",
     "plan": "accent",
-    "plan.architect": "accent",
-    "plan.critic.deep": "warning",
-    "plan.critic.fast": "warning",
-    "plan.handoff": "info",
     "review": "error",
-    "review.architect": "accent",
-    "review.audit": "error",
-    "review.debug": "error",
-    "review.debug.deep": "error",
-    "review.debug.fast": "error",
-    "review.dirty": "error",
-    "review.janitor": "primary",
-    "review.modernize": "secondary",
-    "review.profile": "info",
-    "review.scribe": "info",
-    "review.simplify": "success",
-    "shared.improve": "info",
-    "shared.scout": "info",
-    "shared.verify": "success",
+    "build": "secondary",
 }
 
 OPENCODE_AGENT_COLORS = {
@@ -313,7 +296,7 @@ def _opencode_color_for_active_window(tab_manager) -> int | None:
     return _opencode_agent_color(agent) if agent else None
 
 
-def _opencode_busy_fg_for_tab(tab, index: int | None = None) -> int | None:
+def _opencode_context_for_tab(tab, index: int | None = None):
     windows = _tab_windows(tab, index)
     if not windows:
         return None
@@ -323,7 +306,18 @@ def _opencode_busy_fg_for_tab(tab, index: int | None = None) -> int | None:
     if not window_ids:
         return None
 
-    ctx = _opencode_context_for_window_ids(window_ids)
+    return _opencode_context_for_window_ids(window_ids)
+
+
+def _opencode_agent_fg_for_tab(tab, index: int | None = None) -> int | None:
+    ctx = _opencode_context_for_tab(tab, index)
+    if not ctx or not ctx.get("agent"):
+        return None
+    return _opencode_agent_color(ctx.get("agent"))
+
+
+def _opencode_busy_fg_for_tab(tab, index: int | None = None) -> int | None:
+    ctx = _opencode_context_for_tab(tab, index)
     if not ctx:
         return None
     if str(ctx.get("status", "")).lower() != "busy" or not _opencode_busy_context_is_live(ctx):
@@ -332,10 +326,7 @@ def _opencode_busy_fg_for_tab(tab, index: int | None = None) -> int | None:
 
 
 def _tab_pill_colors(tab, base_bg: int, base_fg: int, index: int | None = None) -> tuple:
-    busy_fg = _opencode_busy_fg_for_tab(tab, index)
-    if busy_fg is None:
-        return base_bg, base_fg
-    return base_bg, busy_fg
+    return base_bg, _opencode_busy_fg_for_tab(tab, index) or _opencode_agent_fg_for_tab(tab, index) or base_fg
 
 
 def _tab_pill_bg(tab, base_bg: int, index: int | None = None) -> int:
@@ -614,7 +605,6 @@ def draw_tab_title(
         return screen.cursor.x
 
     base_fg = screen.cursor.fg
-    busy_fg = _opencode_busy_fg_for_tab(tab, index)
     tab_bg, tab_fg = _tab_pill_colors(tab, screen.cursor.bg, base_fg, index)
     screen.cursor.bg, screen.cursor.fg = tab_bg, tab_fg
 
@@ -643,10 +633,8 @@ def draw_tab_title(
     screen.draw(" ")
     screen.cursor.bg = tab_bg
     screen.cursor.fg = tab_fg
-    if busy_fg is None:
-        draw_title(draw_data, screen, tab, index)
-    else:
-        _draw_title_text(screen, tab, max_title_length)
+    title_draw_data = _draw_data_with_tab_fg(draw_data, tab_fg) if tab_fg != base_fg else draw_data
+    draw_title(title_draw_data, screen, tab, index)
 
     # Draw appropriate separator
     if needs_soft_sep:
@@ -660,23 +648,10 @@ def draw_tab_title(
     return screen.cursor.x
 
 
-def _draw_title_text(screen: Screen, tab: TabBarData, max_title_length: int) -> None:
-    title = str(getattr(tab, "title", "") or "")
-    if max_title_length > 0:
-        title = _truncate_display(title, max_title_length)
-    screen.draw(title)
-
-
-def _truncate_display(text: str, max_width: int) -> str:
-    width = 0
-    chars = []
-    for char in text:
-        char_width = 2 if east_asian_width(char) in ("W", "F") else 1
-        if width + char_width > max_width:
-            break
-        chars.append(char)
-        width += char_width
-    return "".join(chars)
+def _draw_data_with_tab_fg(draw_data: DrawData, fg: int) -> DrawData:
+    if hasattr(draw_data, "_replace"):
+        return draw_data._replace(active_fg=fg, inactive_fg=fg)
+    return draw_data
 
 
 def _draw_soft_separator(
