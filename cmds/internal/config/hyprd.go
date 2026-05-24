@@ -136,7 +136,7 @@ func (c *NotifyConfig) ResolveEvent(name string) ResolvedStyle {
 
 	urgency := "normal"
 	if event.Timeout > 0 {
-		urgency = "low"
+		urgency = "critical"
 	}
 
 	return ResolvedStyle{

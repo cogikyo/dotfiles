@@ -234,7 +234,7 @@ notify:
       frame: "#ea4b53"
 
   # ├─ agent events ─────────────────────────────────────────────────────────────┤
-  # Persistent = timeout 0. Urgency derived: low if timeout > 0, normal otherwise.
+  # Persistent = timeout 0. Urgency derived: critical if timeout > 0, normal otherwise.
   agent_events:
     start:
       style: secondary

@@ -46,8 +46,10 @@ func TestDunstArgsUseTimeoutDrivenStickiness(t *testing.T) {
 	completeID := strconv.Itoa(replacementNotificationID(ctx, "complete"))
 	idleID := strconv.Itoa(replacementNotificationID(ctx, "idle"))
 
+	assertFlagValue(t, completeArgs, "-u", "normal")
 	assertFlagValue(t, completeArgs, "-t", "0")
 	assertFlagValue(t, completeArgs, "-r", completeID)
+	assertFlagValue(t, idleArgs, "-u", "critical")
 	assertFlagValue(t, idleArgs, "-t", "5000")
 	assertFlagValue(t, idleArgs, "-r", idleID)
 
