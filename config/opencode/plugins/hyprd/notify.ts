@@ -173,6 +173,7 @@ function newSessionState() {
     seenAgentParts: new Set(),
     assistantPartText: new Map(),
     todoStatuses: null,
+    hasOpenTodos: false,
     lastAssistantMessage: "",
     lastUserMessage: "",
     lastUserMessageAt: 0,
@@ -289,7 +290,7 @@ const server = async () => {
       state.completeTimer = null
       if (!state.active) return
 
-      if (hasActiveDescendant(sessionID)) return
+      if (state.hasOpenTodos || hasActiveDescendant(sessionID)) return
 
       state.active = false
       state.inactiveAt = inactiveAt
@@ -468,6 +469,7 @@ const server = async () => {
       const previous = state.todoStatuses
       const next = new Map()
       const completed = []
+      let open = 0
 
       for (const todo of todos) {
         const content = cleanText(todo?.content)
@@ -475,12 +477,16 @@ const server = async () => {
         if (!content || !status) continue
 
         next.set(content, status)
+        if (status === "pending" || status === "in_progress") open++
         if (previous && previous.get(content) !== "completed" && status === "completed") {
           completed.push(content)
         }
       }
 
       state.todoStatuses = next
+      state.hasOpenTodos = open > 0
+
+      if (!state.hasOpenTodos && state.active) scheduleComplete(sessionID)
 
       if (completed.length > 0) {
         state.lastTodoCompletedAt = Date.now()
