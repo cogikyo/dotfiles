@@ -19,8 +19,6 @@
   'ewwd subscribe weather | jq --unbuffered -c ".data"'
 )
 
-(defvar weather-info false)
-
 (defwidget daily-temp [temp margin color]
   (label
     :class "weather-${cycle-5 == 1 ? "${color}" : "base-alt" }"
@@ -32,12 +30,12 @@
 
 (defwidget weather []
   (eventbox
-    :onhover "eww update weather-info=true"
-    :onhoverlost "eww update weather-info=false"
+    :onhover "eww update hover=weather"
+    :onhoverlost "eww update hover=''"
     :onclick "${browser} https://www.windy.com/?hrrrConus,45.445,-122.764,9 & disown"
     :cursor "pointer"
     (box
-      :class "weather ${weather-info ? "weather-hover" : "" }"
+      :class "weather ${hover == "weather" ? "weather-hover" : "" }"
       :halign "end" :space-evenly false :spacing 8
       (label
         :class "weather-${cycle-6 == 0 ?
@@ -48,7 +46,7 @@
         :style "margin-right: -6px;"
         :tooltip "  ${weather.icon}reported: ${weather.temp}   󰈷 feels: ${weather.feels_like}  "
       )
-      (slide-n-fade :bool weather-info :direction "right"
+      (slide-n-fade :bool {hover == "weather"} :direction "right"
         (box :space-evenly false :spacing 3
           (label
             :class "weather-${cycle-6 == 0 ?
@@ -69,10 +67,10 @@
       (label
         :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
         :markup "<b>${weather.desc}</b>"
-        :style "margin-top: 2px; margin-left: ${weather-info ? "2" : "-4"}px;"
+        :style "margin-top: 2px; margin-left: ${hover == "weather" ? "2" : "-4"}px;"
         :tooltip "  ${weather.icon}${weather.desc} with ${weather.clouds}% cloud coverage and a ${weather.bf_desc}  "
       )
-      (slide-n-fade :bool weather-info :direction "right"
+      (slide-n-fade :bool {hover == "weather"} :direction "right"
         (box :space-evenly false :spacing 5
           (label
             :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
@@ -94,7 +92,7 @@
           )
         )
       )
-      (slide-n-fade :bool weather-info :direction "right"
+      (slide-n-fade :bool {hover == "weather"} :direction "right"
         (box :space-evenly false :spacing 8
           (label
             :class "weather-${cycle-5 == 0 ? "rain" : "base-alt" }"
@@ -121,7 +119,7 @@
         :text "${weather.moon}"
         :style "
           margin-top: -8px;
-          margin-left: ${weather-info ? "-2" : "-18" }px;
+          margin-left: ${hover == "weather" ? "-2" : "-18" }px;
           transition: margin 0.25s ease-out;
         "
         :tooltip "  ${weather.moon} ${weather.moon_desc}  "
@@ -136,8 +134,6 @@
 (defvar hour-active false)
 (defvar minute-active false)
 (defvar fine-adjust false)
-(defvar timer-visible false)
-
 (defpoll time
   :interval "1s"
   :initial '{"hour":"04", "minute":"20", "second":"00"}'
@@ -151,15 +147,15 @@
 
 (defwidget time []
   (eventbox
-    :onhover "eww update timer-visible=true"
-    :onhoverlost "eww update timer-visible=false"
+    :onhover "eww update hover=time"
+    :onhoverlost "eww update hover='' hour-active=false minute-active=false"
     :onmiddleclick "eww update fine-adjust=${fine-adjust ? "false" : "true"}"
     (box
-      :class "time ${timer-visible ? "time-hover" : ""}"
+      :class "time ${hover == "time" ? "time-hover" : ""}"
       :halign "center"
       :space-evenly false
       :spacing 3
-      :style "padding: 0 ${timer-visible ? "0.9" : "1.318" }em;"
+      :style "padding: 0 ${hover == "time" ? "0.9" : "1.318" }em;"
       (alarm)
       (clock :child "hour" :text {time.hour} :bool hour-active)
       (clockface)
@@ -199,7 +195,7 @@
 
 (defwidget time-revealer [app direction child bool icon text subtext]
   (slide-n-fade
-    :bool timer-visible
+    :bool {hover == "time"}
     :direction {direction == "left" ? "right" : "left"}
     (eventbox
       :class "time-${app} time-${child}-${bool ? "active" : "inactive" }"
@@ -259,20 +255,18 @@
   'ewwd subscribe date | jq --unbuffered -c ".data"'
 )
 
-(defvar date-hover false)
-
 (defwidget date []
   (eventbox
-    :onhover "eww update date-hover=true"
-    :onhoverlost "eww update date-hover=false"
+    :onhover "eww update hover=date"
+    :onhoverlost "eww update hover=''"
     :onclick "${browser} https://calendar.google.com/calendar/u/0/r & disown"
     (box
-      :class "date ${date-hover ? "date-hover" : ""}"
+      :class "date ${hover == "date" ? "date-hover" : ""}"
       :halign "start"
       :space-evenly false
       :spacing 4
       (slide-n-fade
-        :bool date-hover
+        :bool {hover == "date"}
         :direction "left"
         (label
           :class "date-weeks date-${cycle-6 == 0 ? "dead" : "alive"}"
@@ -283,13 +277,13 @@
       )
       (label
         :class "date-${cycle-6 == 0 ? "${date.weekday}" : "base"}"
-        :text " 󰃭 ${date-hover ? date.weekday : date.weekday_short}"
+        :text " 󰃭 ${hover == "date" ? date.weekday : date.weekday_short}"
         :style "margin-right: -4px; margin-left: -2px;"
         :tooltip "  󰃭 ${date.weekday}, ${date.month} ${date.day} "
       )
       (label
         :class "date-month date-${cycle-6 == 1 ? "base" : "base-alt"}"
-        :text ", ${date-hover ? date.month : date.month_short}"
+        :text ", ${hover == "date" ? date.month : date.month_short}"
         :style "margin-top: 1px;"
         :tooltip "  󰃭 ${date.weekday}, ${date.month} ${date.day} "
       )
@@ -299,7 +293,7 @@
         :style "margin-top: 1px; margin-left: 2px;"
         :tooltip "  󰃭 ${date.weekday}, ${date.month} ${date.day} "
       )
-      (slide-n-fade :bool date-hover :direction "right"
+      (slide-n-fade :bool {hover == "date"} :direction "right"
         (label
           :class "date-${cycle-6 == 0 ? "dead" : "alive"}"
           :markup " ${weather.sunset}"

@@ -39,22 +39,21 @@
 )
 
 (defvar playerctl-img `/home/cullyn/.config/eww/art/player.png`)
-(defvar music-hover false)
 
 (defwidget music []
   (eventbox
-    :onhover "eww update music-hover=true"
-    :onhoverlost "eww update music-hover=false"
+    :onhover "eww update hover=music"
+    :onhoverlost "eww update hover=''"
     (box
-      :class "music-info ${music-hover ? "music-info-hover" : ""}"
+      :class "music-info ${hover == "music" ? "music-info-hover" : ""}"
       :style "
-        padding-left: ${music-hover ? "1" : "0.8"}em;
-        padding-right: ${music-hover ? "1" : "0.6"}em;
+        padding-left: ${hover == "music" ? "1" : "0.8"}em;
+        padding-right: ${hover == "music" ? "1" : "0.6"}em;
         transition: padding 0.25s ease-out;
       "
       :space-evenly false
       :spacing 16
-      (slide-n-fade :direction "left" :bool music-hover
+      (slide-n-fade :direction "left" :bool {hover == "music"}
         (eventbox
           :class "tr-a music-progress-circle-icon-${pctl.playing ? "playing" : "paused" }"
           :cursor "pointer"
@@ -63,7 +62,7 @@
         )
       )
       (music-progress)
-      (slide-n-fade :direction "right" :bool music-hover
+      (slide-n-fade :direction "right" :bool {hover == "music"}
         (eventbox
           :class "tr-a music-progress-circle-icon-${pctl.playing ? "playing" : "paused" }"
           :cursor "pointer"
@@ -75,7 +74,7 @@
         :class "tr-c music-${pctl.playing ? "artist" : "inactive" }"
         :text "󰠃 ${pctl.artist}"
         :tooltip " 󰠃 ${pctl.artist} "
-        :style "margin-left: ${music-hover ? "-2" : "-12"}px;"
+        :style "margin-left: ${hover == "music" ? "-2" : "-12"}px;"
       )
       (label
         :class "tr-c music-${pctl.playing ? "album" : "inactive" }"
@@ -97,7 +96,7 @@
       )
       (slide-n-fade
         :direction "left"
-        :bool music-hover
+        :bool {hover == "music"}
         (music-volume :value {pctl.volume_percent})
       )
     )
@@ -178,14 +177,12 @@
   'ewwd subscribe audio | jq --unbuffered -c ".data"'
 )
 
-(defvar audio-hover false)
-
 (defwidget audio []
   (eventbox
-    :onhover "eww update audio-hover=true"
-    :onhoverlost "eww update audio-hover=false"
+    :onhover "eww update hover=audio"
+    :onhoverlost "eww update hover=''"
     (box
-      :class "audio ${audio-hover ? "audio-hover" : ""}"
+      :class "audio ${hover == "audio" ? "audio-hover" : ""}"
       :space-evenly false :spacing 10
       (audio-control
         :content "source"
@@ -239,7 +236,7 @@
           :text {value == 0 ? "${icon-off}" : "${icon-on}"}
         )
       )
-      (slide-n-fade :bool audio-hover :direction "right"
+      (slide-n-fade :bool {hover == "audio"} :direction "right"
         (label :class "audio-${content}-text" :text name)
       )
     )

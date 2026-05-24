@@ -19,19 +19,18 @@
   'ewwd subscribe network | jq --unbuffered -c ".data"'
 )
 
-(defvar network-hover false)
 (defvar vpn-name "Trend")
 
 (defwidget network []
   (eventbox
-    :onhover "eww update network-hover=true"
-    :onhoverlost "eww update network-hover=false"
+    :onhover "eww update hover=network"
+    :onhoverlost "eww update hover=''"
     :onclick "${terminal} --title='terminalfloat' -e nmtui & disown"
     :onmiddleclick "hyprd vpn ${vpn-name}"
     :cursor "pointer"
     (box
-      :class "computerbox ${network-hover ? "computerbox-hover" : "" }"
-      :space-evenly false :spacing "${network-hover ? "6" : "2" }"
+      :class "computerbox ${hover == "network" ? "computerbox-hover" : "" }"
+      :space-evenly false :spacing "${hover == "network" ? "6" : "2" }"
       (label
         :class "tr-c ramp-7"
         :visible {net-info.vpn}
@@ -39,17 +38,17 @@
       )
       (label
         :class "tr-c ramp-${net-info.link_ramp}"
-        :text "${net-info.icon}${network-hover ? " ": "  "}"
+        :text "${net-info.icon}${hover == "network" ? " ": "  "}"
       )
-      (slide-n-fade :bool network-hover :direction "right"
+      (slide-n-fade :bool {hover == "network"} :direction "right"
         (label :class "tr-c ramp-${net-info.link_ramp}" :markup "${net-info.name} ")
       )
-      (label :class "tr-c ramp-${net-info.down_ramp}" :text "󰁆${network-hover ? "": " "}")
-      (slide-n-fade :bool network-hover :direction "right"
+      (label :class "tr-c ramp-${net-info.down_ramp}" :text "󰁆${hover == "network" ? "": " "}")
+      (slide-n-fade :bool {hover == "network"} :direction "right"
         (label :class "tr-c ramp-${net-info.down_ramp}" :markup "<small>${net-info.down_fmt}</small>")
       )
       (label :class "tr-c ramp-${net-info.up_ramp}" :text "󰁞")
-      (slide-n-fade :bool network-hover :direction "right"
+      (slide-n-fade :bool {hover == "network"} :direction "right"
         (label :class "tr-c ramp-${net-info.up_ramp}" :markup "<small>${net-info.up_fmt}</small>")
       )
     )
@@ -145,18 +144,17 @@
 ;; ----------------------------------------------------------------------------
 ;; cpu
 
-(defvar cpu-hover false)
 (defvar cores "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
 
 (defwidget cpu []
   (eventbox
-    :onhover "eww update cpu-hover=true"
-    :onhoverlost "eww update cpu-hover=false"
+    :onhover "eww update hover=cpu"
+    :onhoverlost "eww update hover=''"
     :onclick "${terminal} --title='terminalfloat' -e btop & disown"
     :cursor "pointer"
     (box
-      :class "computerbox ${cpu-hover ? "computerbox-hover" : "" }"
-      :space-evenly false :spacing "${cpu-hover ? "12" : "8" }"
+      :class "computerbox ${hover == "cpu" ? "computerbox-hover" : "" }"
+      :space-evenly false :spacing "${hover == "cpu" ? "12" : "8" }"
       (temp-ramp
         :current {round(sensors.nvme-pci-0100.Composite.temp1_input,0)}
         :percent {round(
@@ -165,12 +163,12 @@
           sensors.nvme-pci-0100.Composite.temp1_max * - 1) * 100
         ,0)}
         :max {sensors.nvme-pci-0100.Composite.temp1_max}
-        :bool cpu-hover
+        :bool {hover == "cpu"}
       )
       (label-ramp
         :icon ""
         :percent {EWW_CPU.avg}
-        :bool cpu-hover
+        :bool {hover == "cpu"}
       )
       (box :space-evenly false :spacing 2
         (for num in cores
@@ -185,21 +183,20 @@
 ;; memory
 
 (defvar range16 "[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15]")
-(defvar memory-hover false)
 
 (defwidget memory []
   (eventbox
-    :onhover "eww update memory-hover=true"
-    :onhoverlost "eww update memory-hover=false"
+    :onhover "eww update hover=memory"
+    :onhoverlost "eww update hover=''"
     :onclick "${terminal} --title='terminalfloat' -e btop & disown"
     :cursor "pointer"
     (box
-      :class "computerbox ${memory-hover ? "computerbox-hover" : "" }"
+      :class "computerbox ${hover == "memory" ? "computerbox-hover" : "" }"
       :space-evenly false :spacing 8
       (label-ramp
         :icon "󰍛"
         :percent {EWW_RAM.used_mem_perc}
-        :bool memory-hover
+        :bool {hover == "memory"}
       )
       (box :space-evenly false :spacing 3
         (for n in range16

@@ -13,6 +13,7 @@
 
 (defvar browser "firefox-developer-edition")
 (defvar terminal "kitty")
+(defvar hover "")
 
 (defwidget slide-n-fade [direction bool]
   (revealer
