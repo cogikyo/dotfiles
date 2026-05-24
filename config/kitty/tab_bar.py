@@ -71,6 +71,7 @@ KITTY_CONTEXT_PATH = (
 KITTY_CONTEXT_READ_TTL_SECONDS = 0.5
 KITTY_CONTEXT_STALE_SECONDS = 24 * 60 * 60
 OPENCODE_BUSY_CONTEXT_TTL_SECONDS = 1
+OPENCODE_BUSY_BG_ALPHA = 0.15
 
 
 # ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -86,28 +87,32 @@ def _raw_rgb(color: int) -> int:
     return color >> 8 if color & 0xFF == 2 else color
 
 
+def _rgb_channels(color: int) -> tuple[int, int, int]:
+    raw = _raw_rgb(color)
+    return (raw >> 16) & 0xFF, (raw >> 8) & 0xFF, raw & 0xFF
+
+
+def _blend_rgb(fg: int, bg: int, alpha: float) -> int:
+    fr, fg_channel, fb = _rgb_channels(fg)
+    br, bg_channel, bb = _rgb_channels(bg)
+    return (
+        round(fr * alpha + br * (1 - alpha)) << 16
+        | round(fg_channel * alpha + bg_channel * (1 - alpha)) << 8
+        | round(fb * alpha + bb * (1 - alpha))
+    )
+
+
+def _blend_for_screen(fg: int, bg: int, alpha: float) -> int:
+    return as_rgb(_blend_rgb(fg, bg, alpha))
+
+
 # Intentional manual coupling to vagari + OpenCode role semantics.
 # Keep this semantic: the OpenCode context stores agent/status, not theme colors.
-VAGARI_OPENCODE_MODE_HEX = {
-    "primary": "#f8b486",
-    "secondary": "#6380ec",
-    "accent": "#b29ae8",
-    "error": "#f08898",
-    "warning": "#8aa4f3",
-    "success": "#5fc976",
-    "info": "#50dec8",
-}
-
-OPENCODE_AGENT_MODES = {
-    "drive": "primary",
-    "plan": "accent",
-    "review": "error",
-    "build": "secondary",
-}
-
 OPENCODE_AGENT_COLORS = {
-    agent: _rgb(VAGARI_OPENCODE_MODE_HEX[mode])
-    for agent, mode in OPENCODE_AGENT_MODES.items()
+    "drive": _rgb("#f8b486"),
+    "plan": _rgb("#b29ae8"),
+    "review": _rgb("#f08898"),
+    "build": _rgb("#4a6be3"),
 }
 
 
@@ -296,6 +301,14 @@ def _opencode_busy_context_is_live(ctx) -> bool:
     )
 
 
+def _opencode_context_is_busy(ctx) -> bool:
+    return bool(
+        ctx
+        and str(ctx.get("status", "")).lower() == "busy"
+        and _opencode_busy_context_is_live(ctx)
+    )
+
+
 def _opencode_context_for_window_ids(window_ids: set[int]):
     for ctx in _read_opencode_contexts():
         kitty_window_id = _as_int(ctx.get("kitty_window_id"))
@@ -328,7 +341,6 @@ def _opencode_context_for_tab(tab, index: int | None = None):
     return _opencode_context_for_window_ids(window_ids)
 
 
-
 def _tab_pill_colors(
     tab, base_bg: int, base_fg: int, index: int | None = None
 ) -> tuple:
@@ -337,16 +349,13 @@ def _tab_pill_colors(
         return base_bg, base_fg
 
     agent = ctx.get("agent")
-    is_busy = (
-        str(ctx.get("status", "")).lower() == "busy"
-        and _opencode_busy_context_is_live(ctx)
-    )
-    if is_busy and not agent:
-        return base_bg, base_fg
+    tab_fg = base_fg
     if agent:
         color = _opencode_agent_color(agent)
-        return base_bg, color if color is not None else base_fg
-    return base_bg, base_fg
+        tab_fg = color if color is not None else base_fg
+    if _opencode_context_is_busy(ctx):
+        return _blend_for_screen(tab_fg, base_bg, OPENCODE_BUSY_BG_ALPHA), tab_fg
+    return base_bg, tab_fg
 
 
 def _is_git_repo(path: str) -> bool:
@@ -633,7 +642,10 @@ def draw_tab_title(
 
     # Determine next tab background for separator style
     if extra_data.next_tab:
-        next_tab_bg = as_rgb(draw_data.tab_bg(extra_data.next_tab))
+        next_base_bg = as_rgb(draw_data.tab_bg(extra_data.next_tab))
+        next_tab_bg, _ = _tab_pill_colors(
+            extra_data.next_tab, next_base_bg, base_fg, index + 1
+        )
         needs_soft_sep = next_tab_bg == tab_bg
     else:
         next_tab_bg = default_bg
@@ -649,10 +661,9 @@ def draw_tab_title(
     screen.cursor.fg = tab_fg
     if tab_fg != base_fg:
         title_draw_data = _draw_data_with_tab_fg(draw_data, tab_fg)
-        title_tab = _tab_with_fg(tab, tab_fg)
     else:
         title_draw_data = draw_data
-        title_tab = tab
+    title_tab = _tab_for_draw(tab, tab_fg if tab_fg != base_fg else None)
     draw_title(title_draw_data, screen, title_tab, index)
 
     # Draw appropriate separator
@@ -674,11 +685,14 @@ def _draw_data_with_tab_fg(draw_data: DrawData, fg: int) -> DrawData:
     return draw_data
 
 
-def _tab_with_fg(tab: TabBarData, fg: int) -> TabBarData:
-    if hasattr(tab, "_replace"):
-        raw_fg = _raw_rgb(fg)
-        return tab._replace(active_fg=raw_fg, inactive_fg=raw_fg, title=_strip_ansi(tab.title))
-    return tab
+def _tab_for_draw(tab: TabBarData, fg: int | None) -> TabBarData:
+    if not hasattr(tab, "_replace") or fg is None:
+        return tab
+
+    raw_fg = _raw_rgb(fg)
+    return tab._replace(
+        active_fg=raw_fg, inactive_fg=raw_fg, title=_strip_ansi(tab.title)
+    )
 
 
 def _draw_soft_separator(
@@ -734,7 +748,11 @@ def draw_tab(
     extra_data: ExtraData,
 ) -> int:
     """Kitty draw_tab callback — entry point for rendering each tab."""
-    global _right_status_length, _git_repo_cache, _cwd_right_cache, _has_agent_tab_title_cache
+    global \
+        _right_status_length, \
+        _git_repo_cache, \
+        _cwd_right_cache, \
+        _has_agent_tab_title_cache
     global _active_agent_cache, _active_ssh_cache
 
     # Invalidate per-cycle cache on first tab
