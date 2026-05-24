@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"time"
 )
 
 // ThreeBody implements a 3-window layout: master + active slave + hidden shadow.
@@ -34,6 +35,8 @@ func (tb *ThreeBody) SetNotifyHooks(check func() bool, action func() bool) {
 }
 
 var threeBodyOrder = []string{"editor", "agents", "browser"}
+
+const threeBodyLaunchTTL = 5 * time.Second
 
 // Execute dispatches a three-body command by body name ("shadow", or a configured body like "editor"/"agents"/"browser").
 func (tb *ThreeBody) Execute(name string) (string, error) {
@@ -187,16 +190,13 @@ func (tb *ThreeBody) Swap(fallbacks []WindowSpec) (string, error) {
 		for i := range clients {
 			c := &clients[i]
 			if c.Workspace.ID == wsID && windows.MatchesTarget(c, fb.Class, fb.Title) {
+				tb.clearLaunch(wsID, fb.Name)
 				found = true
 				break
 			}
 		}
 		if !found && fb.LaunchCmd != "" {
-			cmd := tb.withSessionLaunchEnv(fb.LaunchCmd, wsID, fb.Name)
-			if err := tb.hypr.Dispatch(fmt.Sprintf("exec %s", cmd)); err != nil {
-				return "", fmt.Errorf("launch: %w", err)
-			}
-			return fmt.Sprintf("launched missing: %s %s", fb.Class, fb.Title), nil
+			return tb.launch(wsID, fb.Name, fb.LaunchCmd, fmt.Sprintf("launched missing: %s %s", fb.Class, fb.Title))
 		}
 	}
 	return "all fallback windows already present but not enough tiled", nil
@@ -322,6 +322,7 @@ func (tb *ThreeBody) focusWithEnroll(wsID int, bodyName, class, title, launchCmd
 	for i := range clients {
 		c := &clients[i]
 		if c.Workspace.ID == wsID && windows.MatchesTarget(c, class, title) {
+			tb.clearLaunch(wsID, bodyName)
 			tb.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", c.Address))
 			return fmt.Sprintf("focused (no three-body): %s", c.Address), nil
 		}
@@ -332,13 +333,33 @@ func (tb *ThreeBody) focusWithEnroll(wsID int, bodyName, class, title, launchCmd
 	}
 
 	if launchCmd != "" {
-		cmd := tb.withSessionLaunchEnv(launchCmd, wsID, bodyName)
-		if err := tb.hypr.Dispatch(fmt.Sprintf("exec %s", cmd)); err != nil {
-			return "", fmt.Errorf("launch: %w", err)
-		}
-		return fmt.Sprintf("launched: %s", cmd), nil
+		return tb.launch(wsID, bodyName, launchCmd, "")
 	}
 	return fmt.Sprintf("not found: %s %s", class, title), nil
+}
+
+func (tb *ThreeBody) launch(wsID int, bodyName, launchCmd, msg string) (string, error) {
+	if !tb.state.ClaimThreeBodyLaunch(tb.launchKey(wsID, bodyName), threeBodyLaunchTTL) {
+		return fmt.Sprintf("launch pending: %s", bodyName), nil
+	}
+
+	cmd := tb.withSessionLaunchEnv(launchCmd, wsID, bodyName)
+	if err := tb.hypr.Dispatch(fmt.Sprintf("exec %s", cmd)); err != nil {
+		tb.clearLaunch(wsID, bodyName)
+		return "", fmt.Errorf("launch: %w", err)
+	}
+	if msg != "" {
+		return msg, nil
+	}
+	return fmt.Sprintf("launched: %s", cmd), nil
+}
+
+func (tb *ThreeBody) clearLaunch(wsID int, bodyName string) {
+	tb.state.ClearThreeBodyLaunch(tb.launchKey(wsID, bodyName))
+}
+
+func (tb *ThreeBody) launchKey(wsID int, bodyName string) string {
+	return fmt.Sprintf("%d:%s", wsID, bodyName)
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮

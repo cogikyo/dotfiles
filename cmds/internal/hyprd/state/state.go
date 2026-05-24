@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"slices"
 	"sync"
+	"time"
 
 	"dotfiles/cmds/internal/config"
 )
@@ -32,6 +33,7 @@ type State struct {
 	SplitRatio         string                        `json:"split_ratio"`
 	ActiveSessions     map[int]string                `json:"active_sessions,omitempty"`
 	TabMemory          map[int]map[string]*TabMemory `json:"tab_memory,omitempty"`
+	pendingLaunches    map[string]time.Time          `json:"-"`
 	config             *config.HyprConfig
 }
 
@@ -46,6 +48,7 @@ func NewState(cfg *config.HyprConfig) *State {
 		Monocle:            make(map[int]*MonocleState),
 		ActiveSessions:     make(map[int]string),
 		TabMemory:          make(map[int]map[string]*TabMemory),
+		pendingLaunches:    make(map[string]time.Time),
 		SplitRatio:         "default",
 		config:             cfg,
 	}
@@ -134,6 +137,9 @@ func (s *State) Restore(data []byte) error {
 	}
 	if snap.TabMemory != nil {
 		s.TabMemory = snap.TabMemory
+	}
+	if s.pendingLaunches == nil {
+		s.pendingLaunches = make(map[string]time.Time)
 	}
 
 	return nil

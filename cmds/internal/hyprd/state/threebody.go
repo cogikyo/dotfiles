@@ -1,5 +1,7 @@
 package state
 
+import "time"
+
 // threebody.go provides copy-safe accessors for per-workspace three-body layout state.
 
 // GetThreeBody returns a deep copy of the workspace's three-body state, or nil if inactive.
@@ -36,4 +38,25 @@ func (s *State) AllThreeBody() map[int]*ThreeBodyState {
 		out[k] = &copy
 	}
 	return out
+}
+
+func (s *State) ClaimThreeBodyLaunch(key string, ttl time.Duration) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if s.pendingLaunches == nil {
+		s.pendingLaunches = make(map[string]time.Time)
+	}
+	now := time.Now()
+	if expires, ok := s.pendingLaunches[key]; ok && now.Before(expires) {
+		return false
+	}
+	s.pendingLaunches[key] = now.Add(ttl)
+	return true
+}
+
+func (s *State) ClearThreeBodyLaunch(key string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	delete(s.pendingLaunches, key)
 }
