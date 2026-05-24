@@ -93,10 +93,6 @@ VAGARI_OPENCODE_MODE_HEX = {
 
 OPENCODE_AGENT_MODES = {
     "drive": "primary",
-    "build": "secondary",
-    "build.deep": "secondary",
-    "build.fast": "secondary",
-    "build.scribe": "secondary",
     "plan": "accent",
     "review": "error",
     "build": "secondary",
@@ -116,7 +112,9 @@ class Colors:
         opts = get_options()
         self.fg = as_rgb(color_as_int(opts.background))
         self.bg = as_rgb(color_as_int(opts.color4))  # blue accent
-        self.yellow = as_rgb(color_as_int(opts.color3))  # yellow/orange accent for opencode
+        self.yellow = as_rgb(
+            color_as_int(opts.color3)
+        )  # yellow/orange accent for opencode
         self.pink = as_rgb(color_as_int(opts.color13))  # pink accent for ssh sessions
         self.accent = as_rgb(color_as_int(opts.selection_background))
         self.active_bg = as_rgb(color_as_int(opts.active_tab_background))
@@ -274,7 +272,10 @@ def _opencode_agent_color(agent) -> int:
 
 def _opencode_busy_context_is_live(ctx) -> bool:
     updated_at = _as_int(ctx.get("updated_at"))
-    return bool(updated_at and time.time() * 1000 - updated_at <= OPENCODE_BUSY_CONTEXT_TTL_SECONDS * 1000)
+    return bool(
+        updated_at
+        and time.time() * 1000 - updated_at <= OPENCODE_BUSY_CONTEXT_TTL_SECONDS * 1000
+    )
 
 
 def _opencode_context_for_window_ids(window_ids: set[int]):
@@ -320,13 +321,19 @@ def _opencode_busy_fg_for_tab(tab, index: int | None = None) -> int | None:
     ctx = _opencode_context_for_tab(tab, index)
     if not ctx:
         return None
-    if str(ctx.get("status", "")).lower() != "busy" or not _opencode_busy_context_is_live(ctx):
+    if str(
+        ctx.get("status", "")
+    ).lower() != "busy" or not _opencode_busy_context_is_live(ctx):
         return None
     return _opencode_agent_color(ctx.get("agent"))
 
 
-def _tab_pill_colors(tab, base_bg: int, base_fg: int, index: int | None = None) -> tuple:
-    return base_bg, _opencode_busy_fg_for_tab(tab, index) or _opencode_agent_fg_for_tab(tab, index) or base_fg
+def _tab_pill_colors(
+    tab, base_bg: int, base_fg: int, index: int | None = None
+) -> tuple:
+    return base_bg, _opencode_busy_fg_for_tab(tab, index) or _opencode_agent_fg_for_tab(
+        tab, index
+    ) or base_fg
 
 
 def _tab_pill_bg(tab, base_bg: int, index: int | None = None) -> int:
@@ -633,7 +640,9 @@ def draw_tab_title(
     screen.draw(" ")
     screen.cursor.bg = tab_bg
     screen.cursor.fg = tab_fg
-    title_draw_data = _draw_data_with_tab_fg(draw_data, tab_fg) if tab_fg != base_fg else draw_data
+    title_draw_data = (
+        _draw_data_with_tab_fg(draw_data, tab_fg) if tab_fg != base_fg else draw_data
+    )
     draw_title(title_draw_data, screen, tab, index)
 
     # Draw appropriate separator
