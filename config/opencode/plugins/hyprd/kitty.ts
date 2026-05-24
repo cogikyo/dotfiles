@@ -89,7 +89,35 @@ async function clearPaneContext() {
   })
 }
 
-async function writeContext(sessionID) {
+const sessionStatuses = new Map()
+
+function currentAgent(api, sessionID) {
+  const messages = api.state.session.messages(sessionID)
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index]
+    if ("agent" in message && message.agent) return message.agent
+  }
+  return undefined
+}
+
+function normalizeStatus(status) {
+  let type = ""
+  if (typeof status?.type === "string") type = status.type
+  else if (typeof status === "string") type = status
+
+  if (type === "busy" || type === "retry") return "busy"
+  if (type === "idle") return "idle"
+  return type
+}
+
+function rememberStatus(sessionID, status) {
+  if (typeof sessionID !== "string" || sessionID === "") return
+
+  const type = normalizeStatus(status)
+  if (type) sessionStatuses.set(sessionID, type)
+}
+
+async function writeContext(api, sessionID) {
   if (!sessionID || !KITTY_PID || !KITTY_WINDOW_ID) return
 
   await withLock(async () => {
@@ -100,10 +128,13 @@ async function writeContext(sessionID) {
       if (id !== sessionID && isThisPane(ctx)) delete contexts[id]
     }
 
+    const agent = currentAgent(api, sessionID)
     contexts[sessionID] = {
       kitty_pid: KITTY_PID,
       kitty_window_id: KITTY_WINDOW_ID,
       updated_at: Date.now(),
+      status: sessionStatuses.get(sessionID) ?? "idle",
+      ...(agent ? { agent } : {}),
     }
 
     await fs.writeFile(KITTY_CONTEXT_PATH, JSON.stringify(contexts), { mode: 0o600 })
@@ -118,19 +149,26 @@ const tui = async (api) => {
     const sessionID = current.params?.sessionID
     if (typeof sessionID !== "string" || sessionID === "") return
 
-    void writeContext(sessionID)
+    void writeContext(api, sessionID)
   }
 
   sync()
   const timer = setInterval(sync, WRITE_INTERVAL_MS)
   const disposers = [
-    api.event.on("session.status", () => sync()),
+    api.event.on("session.status", (event) => {
+      rememberStatus(event.properties?.sessionID, event.properties?.status)
+      sync()
+    }),
+    api.event.on("session.idle", (event) => {
+      rememberStatus(event.properties?.sessionID, "idle")
+      sync()
+    }),
     api.event.on("session.created", () => sync()),
     api.event.on("tui.session.select", (event) => {
       const sessionID = event.properties?.sessionID
       if (typeof sessionID !== "string" || sessionID === "") return
 
-      void writeContext(sessionID)
+      void writeContext(api, sessionID)
     }),
     api.event.on("tui.command.execute", (event) => {
       if (event.properties?.command !== "session.new") return

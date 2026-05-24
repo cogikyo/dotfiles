@@ -5,9 +5,12 @@
 """Custom kitty tab bar via the draw_tab callback.
 
 Layout: Icon → Tab titles (left) | CWD (child→root) → hostname (right).
-Accent color follows the active agent: yellow for opencode, blue otherwise.
+Accent color follows the active agent; busy OpenCode tabs use manual vagari mode colors.
 """
 
+import json
+import os
+import time
 from getpass import getuser
 from os import uname
 from pathlib import Path
@@ -56,10 +59,71 @@ ICON_HOST = " ⾥"  # host indicator
 # Layout
 MAX_CWD_DEPTH = 6  # max directory levels to show in right status
 
+# OpenCode writes this file from config/opencode/plugins/hyprd/kitty.ts.
+KITTY_CONTEXT_PATH = (
+    Path(os.environ["XDG_RUNTIME_DIR"]) / "opencode" / "kitty-context.json"
+    if os.environ.get("XDG_RUNTIME_DIR")
+    else Path("/tmp") / f"opencode-{os.getuid()}" / "kitty-context.json"
+)
+KITTY_CONTEXT_READ_TTL_SECONDS = 0.5
+KITTY_CONTEXT_STALE_SECONDS = 24 * 60 * 60
+OPENCODE_BUSY_CONTEXT_TTL_SECONDS = 5
+
 
 # ╭──────────────────────────────────────────────────────────────────────────────╮
 # │ Colors                                                                       │
 # ╰──────────────────────────────────────────────────────────────────────────────╯
+
+
+def _rgb(hex_value: str) -> int:
+    return as_rgb(int(hex_value.removeprefix("#"), 16))
+
+
+# Intentional manual coupling to vagari + OpenCode agent frontmatter.
+# Keep this semantic: the OpenCode context stores agent/status, not theme colors.
+VAGARI_OPENCODE_MODE_HEX = {
+    "primary": "#f2a170",
+    "accent": "#a188df",
+    "secondary": "#8aa4f3",
+    "error": "#f07a88",
+    "success": "#95cb79",
+    "info": "#6bbdec",
+    "warning": "#f5b855",
+}
+
+OPENCODE_AGENT_MODES = {
+    "drive": "primary",
+    "build": "secondary",
+    "build.deep": "secondary",
+    "build.fast": "secondary",
+    "build.scribe": "secondary",
+    "plan": "accent",
+    "plan.architect": "accent",
+    "plan.critic.deep": "warning",
+    "plan.critic.fast": "warning",
+    "plan.handoff": "info",
+    "review": "error",
+    "review.architect": "accent",
+    "review.audit": "error",
+    "review.debug": "error",
+    "review.debug.deep": "error",
+    "review.debug.fast": "error",
+    "review.dirty": "error",
+    "review.janitor": "primary",
+    "review.modernize": "secondary",
+    "review.profile": "info",
+    "review.scribe": "info",
+    "review.simplify": "success",
+    "shared.improve": "info",
+    "shared.scout": "info",
+    "shared.verify": "success",
+}
+
+OPENCODE_AGENT_COLORS = {
+    agent: _rgb(VAGARI_OPENCODE_MODE_HEX[mode])
+    for agent, mode in OPENCODE_AGENT_MODES.items()
+}
+OPENCODE_AGENT_FALLBACK = _rgb(VAGARI_OPENCODE_MODE_HEX["primary"])
 
 
 class Colors:
@@ -82,13 +146,14 @@ colors = Colors()
 
 
 def get_accent() -> int:
-    """Return accent color — yellow for opencode, pink for ssh, blue otherwise."""
+    """Return accent color — OpenCode mode, pink for ssh, blue otherwise."""
     boss = get_boss()
     tm = boss.active_tab_manager if boss else None
     if tm:
         agent = _detect_active_agent(tm)
         if agent == "opencode":
-            return colors.yellow
+            ctx_color = _opencode_color_for_active_window(tm)
+            return ctx_color if ctx_color is not None else colors.yellow
         if _detect_ssh_active(tm)[1]:
             return colors.pink
     return colors.bg
@@ -102,6 +167,12 @@ _current_icon_width = 0
 _cache: dict[str, object] = {}
 _cache_cycle = -1
 
+_kitty_context_cache: dict[str, object] = {
+    "checked_at": 0.0,
+    "mtime_ns": None,
+    "contexts": (),
+}
+
 # ╭──────────────────────────────────────────────────────────────────────────────╮
 # │ Utilities                                                                    │
 # ╰──────────────────────────────────────────────────────────────────────────────╯
@@ -110,6 +181,165 @@ _cache_cycle = -1
 def _display_width(text: str) -> int:
     """Return terminal display width accounting for wide (CJK) characters."""
     return sum(2 if east_asian_width(c) in ("W", "F") else 1 for c in text)
+
+
+def _as_int(value) -> int:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _read_opencode_contexts() -> tuple:
+    now = time.monotonic()
+    if now - float(_kitty_context_cache["checked_at"]) < KITTY_CONTEXT_READ_TTL_SECONDS:
+        return _kitty_context_cache["contexts"]
+
+    _kitty_context_cache["checked_at"] = now
+    try:
+        stat = KITTY_CONTEXT_PATH.stat()
+    except OSError:
+        _kitty_context_cache["mtime_ns"] = None
+        _kitty_context_cache["contexts"] = ()
+        return ()
+
+    if stat.st_mtime_ns == _kitty_context_cache["mtime_ns"]:
+        return _kitty_context_cache["contexts"]
+
+    try:
+        data = json.loads(KITTY_CONTEXT_PATH.read_text())
+    except (OSError, TypeError, ValueError, UnicodeDecodeError):
+        contexts = ()
+    else:
+        contexts = _fresh_opencode_contexts(data)
+
+    _kitty_context_cache["mtime_ns"] = stat.st_mtime_ns
+    _kitty_context_cache["contexts"] = contexts
+    return contexts
+
+
+def _fresh_opencode_contexts(data) -> tuple:
+    if not isinstance(data, dict):
+        return ()
+
+    now_ms = time.time() * 1000
+    stale_ms = KITTY_CONTEXT_STALE_SECONDS * 1000
+    contexts = []
+    for ctx in data.values():
+        if not isinstance(ctx, dict):
+            continue
+        updated_at = _as_int(ctx.get("updated_at"))
+        if not updated_at or now_ms - updated_at > stale_ms:
+            continue
+        contexts.append(ctx)
+    return tuple(contexts)
+
+
+def _tab_id(tab) -> int:
+    for attr in ("tab_id", "id"):
+        value = _as_int(getattr(tab, attr, 0))
+        if value:
+            return value
+    return 0
+
+
+def _actual_tab(tab, index: int | None = None):
+    boss = get_boss()
+    tab_manager = boss.active_tab_manager if boss else None
+    tabs = tuple(getattr(tab_manager, "tabs", ()) or ())
+    tab_id = _tab_id(tab)
+
+    if tab_id:
+        for candidate in tabs:
+            if _tab_id(candidate) == tab_id:
+                return candidate
+
+    if index is not None and 0 < index <= len(tabs):
+        return tabs[index - 1]
+
+    return tab
+
+
+def _tab_windows(tab, index: int | None = None) -> tuple:
+    actual = _actual_tab(tab, index)
+    windows = getattr(actual, "windows", None)
+    if windows is not None:
+        try:
+            return tuple(windows)
+        except TypeError:
+            return ()
+
+    active_window = getattr(actual, "active_window", None)
+    return (active_window,) if active_window else ()
+
+
+def _kitty_window_id(window) -> int:
+    # KITTY_WINDOW_ID is kitty's per-pty window id; window.id is the usual Python API surface.
+    for attr in ("id", "window_id", "kitty_window_id"):
+        value = _as_int(getattr(window, attr, 0))
+        if value:
+            return value
+    return 0
+
+
+def _opencode_agent_color(agent) -> int:
+    name = str(agent or "").lower()
+    if name in OPENCODE_AGENT_COLORS:
+        return OPENCODE_AGENT_COLORS[name]
+    return OPENCODE_AGENT_COLORS.get(name.split(".", 1)[0], OPENCODE_AGENT_FALLBACK)
+
+
+def _opencode_busy_context_is_live(ctx) -> bool:
+    updated_at = _as_int(ctx.get("updated_at"))
+    return bool(updated_at and time.time() * 1000 - updated_at <= OPENCODE_BUSY_CONTEXT_TTL_SECONDS * 1000)
+
+
+def _opencode_context_for_window_ids(window_ids: set[int]):
+    for ctx in _read_opencode_contexts():
+        kitty_window_id = _as_int(ctx.get("kitty_window_id"))
+        if kitty_window_id and kitty_window_id in window_ids:
+            return ctx
+    return None
+
+
+def _opencode_color_for_active_window(tab_manager) -> int | None:
+    window = getattr(tab_manager, "active_window", None)
+    window_id = _kitty_window_id(window) if window else 0
+    if not window_id:
+        return None
+
+    ctx = _opencode_context_for_window_ids({window_id})
+    agent = ctx.get("agent") if ctx else None
+    return _opencode_agent_color(agent) if agent else None
+
+
+def _opencode_busy_fg_for_tab(tab, index: int | None = None) -> int | None:
+    windows = _tab_windows(tab, index)
+    if not windows:
+        return None
+
+    window_ids = {_kitty_window_id(window) for window in windows}
+    window_ids.discard(0)
+    if not window_ids:
+        return None
+
+    ctx = _opencode_context_for_window_ids(window_ids)
+    if not ctx:
+        return None
+    if str(ctx.get("status", "")).lower() != "busy" or not _opencode_busy_context_is_live(ctx):
+        return None
+    return _opencode_agent_color(ctx.get("agent"))
+
+
+def _tab_pill_colors(tab, base_bg: int, base_fg: int, index: int | None = None) -> tuple:
+    busy_fg = _opencode_busy_fg_for_tab(tab, index)
+    if busy_fg is None:
+        return base_bg, base_fg
+    return base_bg, busy_fg
+
+
+def _tab_pill_bg(tab, base_bg: int, index: int | None = None) -> int:
+    return base_bg
 
 
 def _is_git_repo(path: str) -> bool:
@@ -382,19 +612,21 @@ def draw_tab_title(
     if screen.cursor.x >= screen.columns - _right_status_length:
         return screen.cursor.x
 
-    tab_bg, tab_fg = screen.cursor.bg, screen.cursor.fg
+    tab_bg, tab_fg = _tab_pill_colors(tab, screen.cursor.bg, screen.cursor.fg, index)
+    screen.cursor.bg, screen.cursor.fg = tab_bg, tab_fg
 
     # Opening separator for first tab
     if index == 1:
         screen.cursor.fg, screen.cursor.bg = tab_bg, colors.bar_bg
         screen.draw(SEP_RIGHT)
-        screen.cursor.bg = tab_bg
+        screen.cursor.bg, screen.cursor.fg = tab_bg, tab_fg
 
     default_bg = as_rgb(int(draw_data.default_bg))
 
     # Determine next tab background for separator style
     if extra_data.next_tab:
-        next_tab_bg = as_rgb(draw_data.tab_bg(extra_data.next_tab))
+        next_tab_base_bg = as_rgb(draw_data.tab_bg(extra_data.next_tab))
+        next_tab_bg = _tab_pill_bg(extra_data.next_tab, next_tab_base_bg)
         needs_soft_sep = next_tab_bg == tab_bg
     else:
         next_tab_bg = default_bg
