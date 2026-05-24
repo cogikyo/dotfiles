@@ -1,6 +1,7 @@
 package session
 
 import (
+	"strings"
 	"testing"
 
 	"dotfiles/cmds/internal/hyprd/hypr"
@@ -32,5 +33,28 @@ func TestShadowEditorForWorkspaceRequiresStoredShadowAddress(t *testing.T) {
 	got := shadowEditorForWorkspace(clients, &state.ThreeBodyState{Shadow: "owned"})
 	if got == nil || got.Address != "owned" {
 		t.Fatalf("shadowEditorForWorkspace returned %+v, want owned shadow editor", got)
+	}
+}
+
+func TestLuaQuoteEscapesNvimPath(t *testing.T) {
+	got := luaQuote(`/tmp/a "quoted" path\name.md` + "\nnext")
+	want := `"/tmp/a \"quoted\" path\\name.md\nnext"`
+	if got != want {
+		t.Fatalf("luaQuote() = %q, want %q", got, want)
+	}
+}
+
+func TestNvimOpenFileUsesEscapedEditCommand(t *testing.T) {
+	got := nvimOpenFile(`/tmp/a "quoted" path.md`)
+
+	for _, want := range []string{
+		"\x1b:lua local p=",
+		`/tmp/a \"quoted\" path.md`,
+		`vim.cmd("edit "..vim.fn.fnameescape(p))`,
+		"\r\x0c",
+	} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("nvimOpenFile() missing %q in %q", want, got)
+		}
 	}
 }

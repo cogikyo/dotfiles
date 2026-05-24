@@ -129,6 +129,13 @@ func sendCommand(cmd string) {
 		os.Exit(1)
 	}
 	fmt.Println(resp)
+	if daemonResponseFailed(resp) {
+		os.Exit(1)
+	}
+}
+
+func daemonResponseFailed(resp string) bool {
+	return strings.HasPrefix(resp, "error:")
 }
 
 func requireArg(usage string) string {
@@ -214,7 +221,10 @@ func cmdLock()    { sendCommand("lock " + strings.Join(os.Args[2:], " ")) }
 func cmdQuery()   { sendCommand("query " + strings.Join(os.Args[2:], " ")) }
 func cmdBG()      { sendCommand("bg " + requireArg("usage: hyprd bg {ensure|kill}")) }
 func cmdWS()      { sendCommand("ws " + requireArg("usage: hyprd ws <number|up|down>")) }
-func cmdTab()     { sendCommand("tab " + requireArg("usage: hyprd tab <name|alias>")) }
+func cmdTab() {
+	_ = requireArg("usage: hyprd tab <name|alias> [-- <path>]")
+	sendCommand("tab " + strings.Join(os.Args[2:], " "))
+}
 func cmdThreeBody() {
 	sendCommand("three-body " + requireArg("usage: hyprd three-body {editor|agents|browser|shadow}"))
 }
@@ -297,7 +307,7 @@ Window commands:
   hyprd ws <n>           Switch to workspace n, focus master
   hyprd ws up|down       Move active window between workspaces 2..5
   hyprd focus <class> [title]  Focus window, unhide if hidden
-  hyprd tab <name|alias>      Focus editor + switch kitty tab (aliases like nvim::fe-nvim supported)
+  hyprd tab <name|alias> [-- <path>]  Focus editor + switch kitty tab; nvim can open a path
   hyprd tabs init <profile> <pid>    Create tabs from profile (editor|agents|leadpier)
   hyprd tabs refresh <name|all> [pid] Refresh tab(s) in focused kitty by default
 

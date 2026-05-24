@@ -15,8 +15,11 @@ import (
 
 // Nvim escape sequences sent via kitty send-text: \x1b exits insert, \r submits :lua, \x0c redraws.
 const (
-	nvimCloseTree = "\x1b:lua if vim.bo.filetype==\"NvimTree\" then require(\"nvim-tree.api\").tree.close() end\r\x0c"
-	nvimFocusTree = "\x1b:lua local v=require(\"nvim-tree.view\"); if v.is_visible() then vim.fn.win_gotoid(v.get_winnr()) else require(\"nvim-tree.api\").tree.open() end\r\x0c"
+	nvimCommandPrefix = "\x1b:lua "
+	nvimCommandSuffix = "\r\x0c"
+	nvimCloseTreeLua  = `if vim.bo.filetype=="NvimTree" then require("nvim-tree.api").tree.close() end`
+	nvimCloseTree     = nvimCommandPrefix + nvimCloseTreeLua + nvimCommandSuffix
+	nvimFocusTree     = "\x1b:lua local v=require(\"nvim-tree.view\"); if v.is_visible() then vim.fn.win_gotoid(v.get_winnr()) else require(\"nvim-tree.api\").tree.open() end\r\x0c"
 )
 
 // Tab focuses or toggles a named tab inside the workspace's editor kitty instance.
@@ -33,11 +36,14 @@ func NewTab(h *hypr.Client, s *state.State) *Tab {
 //
 // Re-focusing the active tab toggles back to the previous window.
 // Pulls the editor from the shadow workspace only when it belongs to this workspace.
-func (t *Tab) Execute(tabName string) (string, error) {
+func (t *Tab) Execute(tabName, filePath string) (string, error) {
 	if tabName == "" {
 		return "", fmt.Errorf("usage: tab <name|alias>")
 	}
 	actionName := baseTabName(tabName)
+	if filePath != "" && actionName != "nvim" {
+		return "", fmt.Errorf("path argument is only supported for nvim")
+	}
 
 	wsID, err := t.activeWorkspace()
 	if err != nil {
@@ -115,6 +121,15 @@ func (t *Tab) Execute(tabName string) (string, error) {
 			if err := kitty.FocusPane(targetTabID, actionConfig.Pane); err != nil {
 				return "", err
 			}
+			if filePath == "" {
+				t.rememberTabState(wsID, profileName, &profile, targetTab)
+				return fmt.Sprintf("tab: %s", targetTab), nil
+			}
+		}
+		if filePath != "" {
+			if err := kitty.SendText(targetTabID, nvimOpenFile(filePath)); err != nil {
+				return "", err
+			}
 			t.rememberTabState(wsID, profileName, &profile, targetTab)
 			return fmt.Sprintf("tab: %s", targetTab), nil
 		}
@@ -140,7 +155,11 @@ func (t *Tab) Execute(tabName string) (string, error) {
 
 	switch actionName {
 	case "nvim":
-		if err := kitty.SendText(targetTabID, nvimCloseTree); err != nil {
+		text := nvimCloseTree
+		if filePath != "" {
+			text = nvimOpenFile(filePath)
+		}
+		if err := kitty.SendText(targetTabID, text); err != nil {
 			return "", err
 		}
 	case "nvimtree":
@@ -239,6 +258,37 @@ func (t *Tab) spawnTerminal(wsID int) (string, error) {
 	}
 	t.hypr.Dispatch(fmt.Sprintf("exec kitty --title terminal --directory %s --session ~/.config/kitty/sessions/term.conf", project))
 	return "spawned terminal", nil
+}
+
+func nvimOpenFile(filePath string) string {
+	return nvimCommandPrefix + "local p=" + luaQuote(filePath) + "; " + nvimCloseTreeLua + `; vim.cmd("edit "..vim.fn.fnameescape(p))` + nvimCommandSuffix
+}
+
+func luaQuote(value string) string {
+	var b strings.Builder
+	b.WriteByte('"')
+	for i := range len(value) {
+		switch c := value[i]; c {
+		case '\\':
+			b.WriteString(`\\`)
+		case '"':
+			b.WriteString(`\"`)
+		case '\n':
+			b.WriteString(`\n`)
+		case '\r':
+			b.WriteString(`\r`)
+		case '\t':
+			b.WriteString(`\t`)
+		default:
+			if c < 0x20 || c == 0x7f {
+				fmt.Fprintf(&b, `\%03d`, c)
+			} else {
+				b.WriteByte(c)
+			}
+		}
+	}
+	b.WriteByte('"')
+	return b.String()
 }
 
 func (t *Tab) rememberTabState(wsID int, profileName string, profile *config.TabProfile, tabName string) {

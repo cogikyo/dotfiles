@@ -207,8 +207,9 @@ func (d *Daemon) handleCommand(command string) string {
 		}
 		return result
 	case "tab":
+		tabName, filePath := parseTabArg(arg)
 		tab := session.NewTab(d.hypr, d.state)
-		result, err := tab.Execute(strings.TrimSpace(arg))
+		result, err := tab.Execute(tabName, filePath)
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
 		}
@@ -279,6 +280,14 @@ func (d *Daemon) handleCommand(command string) string {
 	default:
 		return fmt.Sprintf("unknown command: %s", cmd)
 	}
+}
+
+func parseTabArg(arg string) (string, string) {
+	name, filePath, ok := strings.Cut(strings.TrimSpace(arg), " -- ")
+	if !ok {
+		return strings.TrimSpace(arg), ""
+	}
+	return strings.TrimSpace(name), strings.TrimSpace(filePath)
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
