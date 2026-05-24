@@ -2,7 +2,6 @@
 import type { Message, ToolPart } from '@opencode-ai/sdk/v2'
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from '@opencode-ai/plugin/tui'
 import { createTextAttributes } from '@opentui/core'
-import { statSync } from 'node:fs'
 import path from 'node:path'
 import { For, Show, createSignal, onCleanup } from 'solid-js'
 import { colors } from '../shared/colors.ts'
@@ -14,7 +13,7 @@ const MAX_PARENT_LENGTH = 12
 const MIN_LEAF_LENGTH = 6
 const BOLD = createTextAttributes({ bold: true })
 
-type MarkdownSourceKind = 'readme' | 'agents' | 'skill' | 'instructions' | 'partial' | 'directory' | 'markdown'
+type MarkdownSourceKind = 'readme' | 'agents' | 'skill' | 'orchestrate' | 'partial' | 'markdown'
 
 type MarkdownContextItem = {
   key: string
@@ -148,40 +147,18 @@ function markdownSourceKind(filePath: string): MarkdownSourceKind {
   if (leaf === 'readme.md') return 'readme'
   if (leaf === 'agents.md') return 'agents'
   if (leaf === 'skill.md') return 'skill'
-  if (leaf === 'instruction.md' || leaf === 'instructions.md') return 'instructions'
+  if (isMasterOrchestrationDoc(filePath)) return 'orchestrate'
   if (/^[A-Z][A-Z0-9_-]*\.md$/.test(path.basename(filePath))) return 'partial'
-  if (isDirectoryContextDoc(filePath)) return 'directory'
   return 'markdown'
 }
 
-function isDirectoryContextDoc(filePath: string) {
-  const parsed = path.parse(filePath)
-  if (isDirectory(path.join(parsed.dir, parsed.name))) return true
-
-  const contextDir = correspondingPierContextDirectory(filePath)
-  return contextDir !== undefined && isDirectory(contextDir)
-}
-
-function correspondingPierContextDirectory(filePath: string) {
-  const parsed = path.parse(filePath)
-  const segments = parsed.dir.split(path.sep)
-
-  for (let index = segments.length - 2; index >= 0; index--) {
-    if (segments[index] !== 'pier' || segments[index + 1] !== 'context') continue
-
-    const root = segments.slice(0, index).join(path.sep) || path.sep
-    return path.join(root, ...segments.slice(index + 2), parsed.name)
-  }
-
-  return undefined
-}
-
-function isDirectory(value: string) {
-  try {
-    return statSync(value).isDirectory()
-  } catch {
-    return false
-  }
+function isMasterOrchestrationDoc(filePath: string) {
+  const normalized = filePath.split(path.sep).join('/')
+  return (
+    normalized === 'config/opencode/orchestrate/master.md' ||
+    normalized.endsWith('/config/opencode/orchestrate/master.md') ||
+    normalized.endsWith('/.config/opencode/orchestrate/master.md')
+  )
 }
 
 function normalizeFilePath(value: string) {
@@ -206,7 +183,12 @@ function relativePath(api: TuiPluginApi, filePath: string) {
 function contextLabel(api: TuiPluginApi, filePath: string, kind: MarkdownSourceKind) {
   const label = relativePath(api, filePath)
 
-  if (kind === 'readme' || kind === 'agents' || kind === 'skill' || kind === 'instructions') {
+  if (kind === 'skill') {
+    const dir = path.dirname(label)
+    return dir === '.' ? path.basename(path.dirname(filePath)) || contextRootName(api, filePath) : path.basename(dir)
+  }
+
+  if (kind === 'readme' || kind === 'agents' || kind === 'orchestrate') {
     const dir = path.dirname(label)
     return dir === '.' ? contextRootName(api, filePath) : dir
   }
@@ -231,7 +213,7 @@ function compactPath(label: string, kind: MarkdownSourceKind) {
   const parent = parts.at(-2) ?? ''
   const root = parts[0]
 
-  if (kind !== 'partial' && kind !== 'markdown' && kind !== 'directory') return compactRootLeaf(root, leaf)
+  if (kind !== 'partial' && kind !== 'markdown') return compactRootLeaf(root, leaf)
   return compactRootParentLeaf(root, parent, leaf)
 }
 
@@ -305,12 +287,10 @@ function sourceColor(api: TuiPluginApi, item: MarkdownContextItem) {
       return c.blue
     case 'skill':
       return c.cyan
-    case 'instructions':
-      return c.yellow
-    case 'partial':
-      return c.magenta
-    case 'directory':
+    case 'orchestrate':
       return c.orange
+    case 'partial':
+      return c.yellow
     case 'markdown':
       return c.muted
   }
@@ -326,12 +306,10 @@ function sourceIcon(item: MarkdownContextItem) {
       return 'A '
     case 'skill':
       return 'S '
-    case 'instructions':
-      return 'I '
+    case 'orchestrate':
+      return 'O '
     case 'partial':
-      return 'P '
-    case 'directory':
-      return 'D '
+      return 'I '
     case 'markdown':
       return 'M '
   }
