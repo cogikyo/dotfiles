@@ -67,7 +67,7 @@ KITTY_CONTEXT_PATH = (
 )
 KITTY_CONTEXT_READ_TTL_SECONDS = 0.5
 KITTY_CONTEXT_STALE_SECONDS = 24 * 60 * 60
-OPENCODE_BUSY_CONTEXT_TTL_SECONDS = 5
+OPENCODE_BUSY_CONTEXT_TTL_SECONDS = 1
 
 
 # ╭──────────────────────────────────────────────────────────────────────────────╮
@@ -79,16 +79,16 @@ def _rgb(hex_value: str) -> int:
     return as_rgb(int(hex_value.removeprefix("#"), 16))
 
 
-# Intentional manual coupling to vagari + OpenCode agent frontmatter.
+# Intentional manual coupling to vagari + OpenCode role semantics.
 # Keep this semantic: the OpenCode context stores agent/status, not theme colors.
 VAGARI_OPENCODE_MODE_HEX = {
-    "primary": "#f2a170",
-    "accent": "#a188df",
-    "secondary": "#8aa4f3",
-    "error": "#f07a88",
-    "success": "#95cb79",
-    "info": "#6bbdec",
-    "warning": "#f5b855",
+    "primary": "#f8b486",
+    "secondary": "#6380ec",
+    "accent": "#b29ae8",
+    "error": "#f08898",
+    "warning": "#8aa4f3",
+    "success": "#5fc976",
+    "info": "#50dec8",
 }
 
 OPENCODE_AGENT_MODES = {
@@ -605,6 +605,7 @@ def draw_tab_title(
     tab: TabBarData,
     index: int,
     extra_data: ExtraData,
+    max_title_length: int,
 ) -> int:
     """Draw the tab title with appropriate separators."""
     global _right_status_length
@@ -612,7 +613,9 @@ def draw_tab_title(
     if screen.cursor.x >= screen.columns - _right_status_length:
         return screen.cursor.x
 
-    tab_bg, tab_fg = _tab_pill_colors(tab, screen.cursor.bg, screen.cursor.fg, index)
+    base_fg = screen.cursor.fg
+    busy_fg = _opencode_busy_fg_for_tab(tab, index)
+    tab_bg, tab_fg = _tab_pill_colors(tab, screen.cursor.bg, base_fg, index)
     screen.cursor.bg, screen.cursor.fg = tab_bg, tab_fg
 
     # Opening separator for first tab
@@ -639,7 +642,11 @@ def draw_tab_title(
     # Draw tab content
     screen.draw(" ")
     screen.cursor.bg = tab_bg
-    draw_title(draw_data, screen, tab, index)
+    screen.cursor.fg = tab_fg
+    if busy_fg is None:
+        draw_title(draw_data, screen, tab, index)
+    else:
+        _draw_title_text(screen, tab, max_title_length)
 
     # Draw appropriate separator
     if needs_soft_sep:
@@ -651,6 +658,25 @@ def draw_tab_title(
         screen.draw(SEP_LEFT)
 
     return screen.cursor.x
+
+
+def _draw_title_text(screen: Screen, tab: TabBarData, max_title_length: int) -> None:
+    title = str(getattr(tab, "title", "") or "")
+    if max_title_length > 0:
+        title = _truncate_display(title, max_title_length)
+    screen.draw(title)
+
+
+def _truncate_display(text: str, max_width: int) -> str:
+    width = 0
+    chars = []
+    for char in text:
+        char_width = 2 if east_asian_width(char) in ("W", "F") else 1
+        if width + char_width > max_width:
+            break
+        chars.append(char)
+        width += char_width
+    return "".join(chars)
 
 
 def _draw_soft_separator(
@@ -741,7 +767,7 @@ def draw_tab(
 
     # Draw components: Icon → Tabs → Right status
     draw_icon(screen, index)
-    draw_tab_title(draw_data, screen, tab, index, extra_data)
+    draw_tab_title(draw_data, screen, tab, index, extra_data, max_title_length)
 
     if is_last:
         draw_right_status(screen, is_last, cells)
