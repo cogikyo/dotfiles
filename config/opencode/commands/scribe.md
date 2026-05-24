@@ -7,5 +7,10 @@ invocation: user
 
 # scribe
 
-Use the `skill` tool to load `scribe`.
-Infer review or update mode from the user request and current context.
+Treat
+
+```text
+$ARGUMENTS
+```
+
+as mode, filter input, or user context for skill `scribe`.

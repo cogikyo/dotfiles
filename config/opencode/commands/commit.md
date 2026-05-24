@@ -7,8 +7,10 @@ invocation: user
 
 # commit
 
-Treat
-`$ARGUMENTS`
-as the command arguments for this invocation.
+Treat the following text (if any):
 
-Use the `skill` tool to load `commit`.
+```text
+$ARGUMENTS
+```
+
+as mode, filter input, or user context for skill `commit`.
