@@ -165,11 +165,30 @@ Carrier files omit their filename in labels because the marker carries that info
 
 ## Typechecking
 
-Run from `config/opencode`:
+Plugins are loaded directly from source by OpenCode and Bun, so the usual check is an ephemeral Bun run with no local install.
 
-```sh
-node node_modules/typescript/bin/tsc --noEmit --project tsconfig.json
+From the repo root:
+
+```bash
+bunx --package typescript tsc --noEmit --project config/opencode/tsconfig.json
+git diff --check -- config/opencode/plugins
 ```
+
+From `config/opencode`:
+
+```bash
+bunx --package typescript tsc --noEmit --project tsconfig.json
+git diff --check -- plugins
+```
+
+If local dependencies are useful for editor/LSP state, install them with Bun and keep scripts disabled:
+
+```bash
+bun install --cwd config/opencode --ignore-scripts
+```
+
+`npx --yes --package typescript tsc --noEmit --project config/opencode/tsconfig.json` is a fallback from the repo root.
+Use `--package typescript`; plain `npx tsc` can resolve the unrelated `tsc` package.
 
 The Hyprd plugins currently keep `@ts-nocheck` because OpenCode plugin event payload types are incomplete locally.
 Remove that suppression once local event and payload types exist.
