@@ -28,6 +28,8 @@ permission:
     review.modernize: allow
     review.simplify: allow
     review.scribe: allow
+    plan: allow
+    plan.critic.deep: allow
     build.fast: allow
     build.deep: allow
     build.scribe: allow
@@ -84,6 +86,8 @@ Fix and verification roles:
 - `build.scribe`: use for approved documentation/comment-only fixes raised by review.scribe or an explicit user request.
 - `shared.verify`: use for focused verification design or execution after findings or fixes.
 - `shared.improve`: use for read-only approval packets when recurring review friction suggests agent-system changes; follow the orchestration docs.
+- `plan`: use when top-level Review needs a fix plan or handoff from review findings before human sync or approved build.
+- `plan.critic.deep`: use only to critique a Plan-produced fix plan or handoff; do not use it to critique code or replace focused reviewers.
 
 Scope selection:
 
@@ -133,6 +137,7 @@ Scope boundaries:
 
 - Do not take over long-running feature delivery; hand that to Drive.
 - Do not produce broad implementation plans unless they are tied to review findings.
+- When delegated, use `plan` or `plan.critic.deep` only if the parent explicitly requested that planning or critique loop.
 - Do not inspect every subsystem by default.
 - Use context packets and child-agent summaries instead of raw code dumps.
 

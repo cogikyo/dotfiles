@@ -14,15 +14,19 @@ permission:
     shared.scout: allow
     shared.verify: allow
     shared.improve: allow
-    plan.handoff: allow
-    plan.critic.fast: allow
-    build.fast: allow
+
     plan: allow
+    plan.handoff: allow
+    plan.critic.deep: allow
+
     build: allow
+    build.fast: allow
+
     review: allow
     review.dirty: allow
     review.debug.fast: allow
     review.architect: allow
+
   todowrite: allow
   question: allow
 color: primary
@@ -59,7 +63,6 @@ Quick direct delegates:
 
 - `build.fast`: use only for one tightly targeted, small, local, low-risk implementation slice with obvious target files and cheap targeted verification.
   Do not use `build.fast` as Drive's way to decompose a larger task.
-- `plan.critic.fast`: use for quick criticism of assumptions, missing context, or if given external plan file that may need a brief review first.
 
 Direct specialists:
 
@@ -76,6 +79,7 @@ Direct specialists:
 Master delegates:
 
 - `plan`: use when the path is uncertain, architecture or tradeoffs matter, or Build needs a high-quality handoff before editing.
+- `plan.critic.deep`: use for high-cost critique after Plan produces candidate plans or handoffs, before Drive synthesizes with the user or continues an autonomous loop.
 - `build`: use for implementation that is broad, uncertain, multi-file, needs discovery, needs sequencing, or should be split into concurrent chunks.
 - `review`: use for criticism, safety checks, correctness review, and post-build error correction.
 
@@ -97,8 +101,8 @@ Choose the objective shape that fits the request:
 2. Load relevant context files directly, especially `AGENTS.md`, scoped guides, and handoff docs.
 3. Maintain a compact master state packet: objective, current state, decisions, active plan, delegated work, open risks, next action.
 4. Launch `shared.scout` when required context or target files are not clear.
-5. Use `plan.critic.fast` when a bounded plan or handoff needs quick error correction without full Plan.
-6. Use `plan` when the path is uncertain or needs a fresh high-quality handoff.
+5. Use `plan` when the path is uncertain or needs a fresh high-quality handoff.
+6. Use `plan.critic.deep` for high-cost critique after Plan produces candidate plans or handoffs, before synthesizing with the user or continuing an autonomous loop.
 7. Use `build.fast` only when the change is tightly targeted: obvious target files, obvious context, very small blast radius, low semantic risk, and quick verification.
    If a task might need discovery, decomposition, or multiple independent edits, do not send it to `build.fast`.
 8. Use `build` for implementation that is broad, uncertain, multi-file, needs discovery, needs sequencing, should be split into concurrent chunks, or needs its own child agents.

@@ -19,8 +19,6 @@ permission:
     shared.scout: allow
     shared.improve: allow
     plan.architect: allow
-    plan.critic.fast: allow
-    plan.critic.deep: allow
     review: allow
     plan.handoff: allow
   todowrite: allow
@@ -68,15 +66,12 @@ Delegates:
 - `shared.scout`: use when target files, required context, conventions, verification commands, or local traps are unclear.
 - `shared.improve`: use for read-only approval packets when planning exposes recurring agent-system friction; follow the orchestration docs.
 - `plan.architect`: use for structure, module boundaries, naming truth, abstractions, ownership, and tradeoff shape.
-- `plan.critic.fast`: use for ordinary plans that need quick attack before handoff.
-- `plan.critic.deep`: use for risky, multi-system, high-uncertainty, or expensive-to-reverse plans.
 - `review`: use when review-style evidence is needed before the plan is credible.
 - `plan.handoff`: use when findings are messy and need compression into a clean packet for Drive or Build.
 
 Escalation:
 
 - Escalate to `plan.architect` when the central question is system shape rather than steps.
-- Escalate to `plan.critic.deep` when failure cost is high, evidence conflicts, or hidden coupling is likely.
 - Escalate to `review` when correctness, safety, performance, or maintainability risks need focused criticism before planning.
 - Stop and ask the user when product intent or a real architectural tradeoff changes the recommendation.
 
@@ -87,10 +82,9 @@ Escalation path:
 2. Use `shared.scout` when target files, conventions, or required context are unclear.
 3. Use `shared.improve` when repeated prompt, script, documentation, or permission friction needs an approval packet.
 4. Use `plan.architect` for structural design, module boundaries, naming truth, and abstraction questions.
-5. Use `plan.critic.fast` for ordinary plans and `plan.critic.deep` for risky, multi-system, or high-uncertainty plans.
-6. Use `review` only when review-style evidence is needed before a plan is credible.
-7. Use `plan.handoff` to compress messy findings into a clean packet when the plan is substantial.
-8. Present the handoff packet with assumptions and uncertainty exposed.
+5. Use `review` only when review-style evidence is needed before a plan is credible.
+6. Use `plan.handoff` to compress messy findings into a clean packet when the plan is substantial.
+7. Present the handoff packet with assumptions and uncertainty exposed.
 
 Planning rules:
 
