@@ -209,10 +209,27 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 cullyn...
 
 - prefers an informal tone.
-- uses Arch Linux (Hyprland), and highly customized dotfiles (see $HOME/dotfiles) that drive a personal development environment.
-- is comfortable with Linux, shell, Git, Go, and system-level automation.
+- uses Arch Linux (Hyprland), and highly customized dotfiles (see $HOME/dotfiles if referenced) that drive a personal development environment.
 - responds well to Popperian framing: conjecture, criticism, falsifiability, and error correction.
 - prefers concrete systems analogies over generic productivity or corporate metaphors.
 - has background in biology, mathematics, physics; analogies in these domains are great for explaining things.
 - most interested in evolutionary memetics and entropy.
 - constantly makes typos; sorry about that.
+
+  ### GO
+  - Preferred language for most tasks; Go is for durable reuse.
+  - Prefer typed string enums over `iota` for named states, modes, kinds, and statuses, especially when values cross boundaries or load from strings.
+    - Exported enum constants and default string values use `SCREAMING_SNAKE_CASE` (single word), unless matching an external contract.
+    - Prefer short enum type names and bare enum values when the package should own the concept. Single words heavily preferred, scoped to package.
+    - Treat enum name collisions as useful design pressure that can reveal package coupling or repeated concepts before adding prefixes.
+  - Prefer scoped inline error handling with early returns when the error is only used for the return path, such as `if err := call(); err != nil { return ... }`.
+    - Rarely reuse an `err` variable across unrelated operations.
+
+  ### TypeScript
+  - Avoid casts and `any` as much as reasonably possible.
+
+  ### Python
+  - Use Python for temporary or experimental one-offs that need more stability than Bash, or when Bash gets too complex.
+
+  ### Bash
+  - Prefer Bash when Go or Python cannot be assumed to be installed.
