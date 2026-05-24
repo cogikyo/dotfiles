@@ -126,6 +126,8 @@ func (i *Init) Execute() (string, error) {
 		}
 	}
 
+	restoreEwwWidgets(true)
+
 	layout := NewLayout(i.hypr, i.state)
 	var initSessions []config.Session
 	for _, s := range cfg.Sessions {
@@ -157,8 +159,6 @@ func (i *Init) Execute() (string, error) {
 	if init.Workspace > 0 {
 		i.hypr.Dispatch(fmt.Sprintf("workspace %d", init.Workspace))
 	}
-
-	restoreEwwWidgets(true)
 
 	fmt.Println("hyprd init: complete")
 	return "init: complete", nil

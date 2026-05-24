@@ -9,6 +9,7 @@ import (
 	"math"
 	"net/http"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -89,9 +90,14 @@ func (w *Weather) Start(ctx context.Context, notify func(data any)) error {
 			}
 		}
 
+		if cached := w.loadCache(); cached != nil {
+			w.publish(notify, cached)
+		}
+
 		state := w.fetch()
 		if state != nil {
 			w.publish(notify, state)
+			w.saveCache(state)
 			break
 		}
 		if w.wait(ctx, weatherStartupRetryInterval) {
@@ -111,8 +117,54 @@ func (w *Weather) Start(ctx context.Context, notify func(data any)) error {
 		case <-ticker.C:
 			if state := w.fetch(); state != nil {
 				w.publish(notify, state)
+				w.saveCache(state)
 			}
 		}
+	}
+}
+
+func (w *Weather) cachePath() (string, error) {
+	dir, err := os.UserCacheDir()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(dir, "ewwd", "weather.json"), nil
+}
+
+func (w *Weather) loadCache() *WeatherState {
+	path, err := w.cachePath()
+	if err != nil {
+		return nil
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil
+	}
+	var state WeatherState
+	if err := json.Unmarshal(data, &state); err != nil {
+		fmt.Fprintf(os.Stderr, "ewwd: weather cache parse error: %v\n", err)
+		return nil
+	}
+	return &state
+}
+
+func (w *Weather) saveCache(state *WeatherState) {
+	path, err := w.cachePath()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ewwd: weather cache path error: %v\n", err)
+		return
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		fmt.Fprintf(os.Stderr, "ewwd: weather cache mkdir error: %v\n", err)
+		return
+	}
+	data, err := json.Marshal(state)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ewwd: weather cache marshal error: %v\n", err)
+		return
+	}
+	if err := os.WriteFile(path, data, 0o644); err != nil {
+		fmt.Fprintf(os.Stderr, "ewwd: weather cache write error: %v\n", err)
 	}
 }
 
