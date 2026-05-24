@@ -297,11 +297,11 @@ const server = async () => {
 
   function scheduleIdleReminder(sessionID) {
     const state = sessions.get(sessionID)
-    if (!state || state.active || state.idleTimer || hasActiveDescendant(sessionID)) return
+    if (!state || state.parentID || state.active || state.idleTimer || hasActiveDescendant(sessionID)) return
 
     state.idleTimer = setTimeout(async () => {
       state.idleTimer = null
-      if (state.active || hasActiveDescendant(sessionID)) return
+      if (state.parentID || state.active || hasActiveDescendant(sessionID)) return
 
       const message = state.lastUserMessage || state.title || state.lastAssistantMessage || "Still idle"
       await sendNotify({
@@ -526,6 +526,7 @@ const server = async () => {
       if (!id) return
       const state = getSession(id)
       state.parentID = typeof info?.parentID === "string" ? info.parentID : ""
+      if (state.parentID) clearIdleReminder(state)
       const title = cleanSessionTitle(info?.title)
       if (title) state.title = title
       if (state.active && state.title && !state.startNotified) scheduleStartNotify(id)
@@ -536,6 +537,7 @@ const server = async () => {
       if (!id) return
       const state = getSession(id)
       state.parentID = typeof info?.parentID === "string" ? info.parentID : ""
+      if (state.parentID) clearIdleReminder(state)
       const title = cleanSessionTitle(info?.title)
       if (title) state.title = title
       if (state.active && state.title && !state.startNotified) scheduleStartNotify(id)
