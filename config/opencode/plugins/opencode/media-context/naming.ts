@@ -1,12 +1,10 @@
 import type { PluginOptions } from "@opencode-ai/plugin";
 import { promises as fs } from "node:fs";
-import os from "node:os";
 import path from "node:path";
 import { updateImageName, type MediaRegistryEntry } from "./registry";
 
 const DEFAULT_OPTIONS: ImageNameOptions = {
   enabled: true,
-  model: "openai/gpt-5.4-mini",
   timeoutMs: 30_000,
   maxBytes: 8 * 1024 * 1024,
   concurrency: 1,
@@ -15,14 +13,19 @@ const PROMPT = `Name this image for a developer sidebar and file alias.
 Return only 1-3 short concrete words.
 Do not include a file extension, quotes, markdown, or a sentence.
 Prefer visible subject and role over generic words like image or screenshot.`;
+const SYSTEM = "You generate terse lowercase-ish image aliases. Return only the alias words and never call tools.";
 const STOP_WORDS = new Set(["a", "an", "the", "image", "photo", "picture", "screenshot"]);
 
 type ImageNameOptions = {
   enabled: boolean;
-  model: string;
   timeoutMs: number;
   maxBytes: number;
   concurrency: number;
+};
+
+export type NamingModel = {
+  providerID: string;
+  modelID: string;
 };
 
 type Job = {
@@ -30,26 +33,50 @@ type Job = {
   handle: string;
   path: string;
   mime: string;
+  model: NamingModel;
 };
 
-export function createImageNamer(options: PluginOptions | undefined) {
-  const config = parseImageNameOptions(options);
+type OpenCodeClient = {
+  session: {
+    create(input: { body: { title: string } }): unknown;
+    prompt(input: { path: { id: string }; body: SessionPromptBody }): unknown;
+    delete(input: { path: { id: string } }): unknown;
+  };
+};
+
+type SessionPromptBody = {
+  model: NamingModel;
+  system: string;
+  tools: Record<string, never>;
+  parts: Array<{ type: "text"; text: string } | { type: "file"; mime: string; url: string }>;
+};
+
+type CreateImageNamerInput = {
+  client: OpenCodeClient;
+  options?: PluginOptions;
+  ignoredSessions: Set<string>;
+};
+
+export function createImageNamer(input: CreateImageNamerInput) {
+  const config = parseImageNameOptions(input.options);
   const pending = new Map<string, Job>();
   const running = new Set<string>();
-  const readySessions = new Set<string>();
   let active = 0;
+  let defaultModel: NamingModel | undefined;
 
   const startNext = () => {
     if (!config.enabled) return;
     while (active < config.concurrency) {
-      const next = firstPendingJob(pending, running, readySessions);
+      const next = firstPendingJob(pending, running);
       if (!next) return;
 
       const [key, job] = next;
       pending.delete(key);
       running.add(key);
       active++;
-      void nameImage(job, config).catch(() => undefined).finally(() => {
+      void nameImage(job, config, input.client, input.ignoredSessions).catch((error) => {
+        logNameFailure(job, "name", error);
+      }).finally(() => {
         running.delete(key);
         active--;
         startNext();
@@ -58,25 +85,32 @@ export function createImageNamer(options: PluginOptions | undefined) {
   };
 
   return {
-    enqueue(entry: MediaRegistryEntry) {
+    setDefaultModel(model: NamingModel | undefined) {
+      defaultModel = model;
+    },
+    enqueue(entry: MediaRegistryEntry, model: NamingModel | undefined) {
       if (!config.enabled || entry.kind !== "image" || entry.name) return;
-      const key = jobKey(entry.sessionID, entry.handle);
-      if (running.has(key)) return;
-      pending.set(key, {
+      const job = {
         sessionID: entry.sessionID,
         handle: entry.handle,
         path: entry.path,
         mime: entry.mime,
-      });
-      readySessions.delete(entry.sessionID);
+        model: model ?? defaultModel,
+      };
+      if (!job.model) {
+        logNameFailure({ ...job, model: { providerID: "unknown", modelID: "unknown" } }, "model", new Error("OpenCode model unavailable for image naming"));
+        return;
+      }
+      const key = jobKey(entry.sessionID, entry.handle);
+      if (pending.has(key) || running.has(key)) return;
+      pending.set(key, { ...job, model: job.model });
+      startNext();
     },
     drain(sessionID: string) {
       if (!config.enabled) return;
-      readySessions.add(sessionID);
       startNext();
     },
     clear(sessionID: string) {
-      readySessions.delete(sessionID);
       for (const [key, job] of pending) {
         if (job.sessionID === sessionID) pending.delete(key);
       }
@@ -84,11 +118,58 @@ export function createImageNamer(options: PluginOptions | undefined) {
   };
 }
 
+export function modelFromValue(value: unknown): NamingModel | undefined {
+  if (typeof value === "string") return modelFromString(value);
+  const candidate = value as { providerID?: unknown; modelID?: unknown; provider?: unknown; model?: unknown } | undefined;
+  if (typeof candidate?.providerID === "string" && typeof candidate.modelID === "string") {
+    return cleanModel(candidate.providerID, candidate.modelID);
+  }
+  if (typeof candidate?.provider === "string" && typeof candidate.model === "string") {
+    return cleanModel(candidate.provider, candidate.model);
+  }
+  return undefined;
+}
+
+export function modelFromChatPayload(input: unknown, output: unknown) {
+  return firstModel(
+    modelAt(output, ["message", "model"]),
+    modelAt(output, ["model"]),
+    modelAt(input, ["model"]),
+    modelAt(input, ["message", "model"]),
+    modelAt(input, ["session", "model"]),
+  );
+}
+
+function modelAt(value: unknown, path: string[]) {
+  let current = value;
+  for (const key of path) {
+    if (!current || typeof current !== "object") return undefined;
+    current = (current as Record<string, unknown>)[key];
+  }
+  return modelFromValue(current);
+}
+
+function firstModel(...models: Array<NamingModel | undefined>) {
+  return models.find(Boolean);
+}
+
+function modelFromString(value: string) {
+  const clean = value.trim();
+  const slash = clean.indexOf("/");
+  if (slash <= 0 || slash === clean.length - 1) return undefined;
+  return cleanModel(clean.slice(0, slash), clean.slice(slash + 1));
+}
+
+function cleanModel(providerID: string, modelID: string) {
+  const provider = providerID.trim();
+  const model = modelID.trim();
+  return provider && model ? { providerID: provider, modelID: model } : undefined;
+}
+
 function parseImageNameOptions(options: PluginOptions | undefined): ImageNameOptions {
   const root = objectOption(options?.imageNames);
   return {
     enabled: booleanOption(root?.enabled, DEFAULT_OPTIONS.enabled),
-    model: stringOption(root?.model, DEFAULT_OPTIONS.model),
     timeoutMs: integerOption(root?.timeoutMs, DEFAULT_OPTIONS.timeoutMs, 1_000, 120_000),
     maxBytes: integerOption(root?.maxBytes, DEFAULT_OPTIONS.maxBytes, 64 * 1024, 20 * 1024 * 1024),
     concurrency: integerOption(root?.concurrency, DEFAULT_OPTIONS.concurrency, 1, 3),
@@ -99,100 +180,130 @@ function jobKey(sessionID: string, handle: string) {
   return `${sessionID}:${handle}`;
 }
 
-function firstPendingJob(pending: Map<string, Job>, running: Set<string>, readySessions: Set<string>) {
+function firstPendingJob(pending: Map<string, Job>, running: Set<string>) {
   for (const item of pending) {
-    if (!running.has(item[0]) && readySessions.has(item[1].sessionID)) return item;
+    if (!running.has(item[0])) return item;
   }
   return undefined;
 }
 
-async function nameImage(job: Job, options: ImageNameOptions) {
-  const raw = await requestImageName(job.path, job.mime, options);
+async function nameImage(job: Job, options: ImageNameOptions, client: OpenCodeClient, ignoredSessions: Set<string>) {
+  let raw: string;
+  try {
+    raw = await requestImageName(job, options, client, ignoredSessions);
+  } catch (error) {
+    throw stageError("request", error);
+  }
+
   const name = slugFromModelText(raw);
-  if (!name) return;
-  updateImageName(job.sessionID, job.handle, name, "openai-responses");
+  if (!name) throw stageError("sanitize", new Error("empty image name from model"));
+
+  const entry = updateImageName(job.sessionID, job.handle, name, modelSource(job.model));
+  if (!entry) throw stageError("registry", new Error("registry rename failed"));
 }
 
-async function requestImageName(filePath: string, mime: string, options: ImageNameOptions) {
-  const model = openAIModelID(options.model);
-  if (!model) throw new Error("media-context image naming only supports openai/* models");
+async function requestImageName(job: Job, options: ImageNameOptions, client: OpenCodeClient, ignoredSessions: Set<string>) {
+  const imageURL = await dataURL(job.path, job.mime, options.maxBytes);
+  const session = await client.session.create({ body: { title: "media-context image naming" } });
+  const sessionID = sessionIDFromCreateResponse(session);
+  if (!sessionID) throw new Error("temporary OpenCode session id unavailable");
 
-  const bearer = await openAIBearerToken();
-  if (!bearer) throw new Error("OpenAI auth unavailable");
+  ignoredSessions.add(sessionID);
+  let prompt: Promise<unknown> | undefined;
 
-  const imageURL = await dataURL(filePath, mime, options.maxBytes);
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), options.timeoutMs);
   try {
-    const response = await fetch("https://api.openai.com/v1/responses", {
-      method: "POST",
-      signal: controller.signal,
-      headers: {
-        Authorization: `Bearer ${bearer}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model,
-        store: false,
-        max_output_tokens: 32,
-        input: [
-          {
-            role: "user",
-            content: [
-              { type: "input_text", text: PROMPT },
-              { type: "input_image", image_url: imageURL, detail: "low" },
-            ],
-          },
+    prompt = Promise.resolve(client.session.prompt({
+      path: { id: sessionID },
+      body: {
+        model: job.model,
+        system: SYSTEM,
+        tools: {},
+        parts: [
+          { type: "text", text: PROMPT },
+          { type: "file", mime: imageMime(job.mime, job.path), url: imageURL },
         ],
-      }),
-    });
-    if (!response.ok) throw new Error(`OpenAI image naming HTTP ${response.status}`);
-    return outputText(await response.json());
+      },
+    }));
+
+    const response = await withTimeout(prompt, options.timeoutMs);
+    return assistantText(response);
   } finally {
+    try {
+      await Promise.resolve(client.session.delete({ path: { id: sessionID } }));
+    } finally {
+      clearIgnoredSession(ignoredSessions, sessionID, prompt);
+    }
+  }
+}
+
+function clearIgnoredSession(ignoredSessions: Set<string>, sessionID: string, prompt: Promise<unknown> | undefined) {
+  if (!prompt) {
+    ignoredSessions.delete(sessionID);
+    return;
+  }
+
+  const timeout = setTimeout(() => ignoredSessions.delete(sessionID), 5_000);
+  void prompt.finally(() => {
     clearTimeout(timeout);
-  }
+    ignoredSessions.delete(sessionID);
+  }).catch(() => undefined);
 }
 
-function openAIModelID(value: string) {
-  const slash = value.indexOf("/");
-  if (slash < 0) return value;
-  return value.slice(0, slash) === "openai" ? value.slice(slash + 1) : undefined;
+function sessionIDFromCreateResponse(value: unknown): string | undefined {
+  const candidate = value as { id?: unknown; session?: { id?: unknown }; data?: { id?: unknown; session?: { id?: unknown } } } | undefined;
+  const id = candidate?.id ?? candidate?.session?.id ?? candidate?.data?.id ?? candidate?.data?.session?.id;
+  return typeof id === "string" && id ? id : undefined;
 }
 
-async function openAIBearerToken() {
-  const auth = await openCodeOpenAIAuth();
-  if (auth?.type === "api" && auth.key) return auth.key;
-  if (auth?.type === "oauth" && auth.access && !isExpired(auth.expires)) return auth.access;
-
-  const env = process.env.OPENAI_API_KEY?.trim();
-  return env || undefined;
-}
-
-type OpenAIAuth = {
-  type?: string;
-  key?: string;
-  access?: string;
-  expires?: number;
-};
-
-async function openCodeOpenAIAuth(): Promise<OpenAIAuth | undefined> {
+async function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
+  let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
-    const raw = await fs.readFile(path.join(openCodeDataDir(), "auth.json"), "utf8");
-    const parsed = JSON.parse(raw) as { openai?: OpenAIAuth };
-    return parsed.openai;
-  } catch {
-    return undefined;
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error(`OpenCode image naming timed out after ${timeoutMs}ms`)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timeout) clearTimeout(timeout);
   }
 }
 
-function openCodeDataDir() {
-  const xdg = process.env.XDG_DATA_HOME?.trim();
-  if (xdg) return path.join(path.resolve(xdg), "opencode");
-  return path.join(os.homedir(), ".local", "share", "opencode");
+function modelSource(model: NamingModel) {
+  return `opencode:${model.providerID}/${model.modelID}`.slice(0, 80);
 }
 
-function isExpired(expires: number | undefined) {
-  return typeof expires === "number" && expires > 0 && expires <= Math.floor(Date.now() / 1000) + 60;
+function logNameFailure(job: Job, stage: string, error: unknown) {
+  const label = error instanceof NameStageError ? error.stage : stage;
+  console.warn(`[media-context] image naming failed session=${safeID(job.sessionID)} handle=${job.handle} model=${safeModel(job.model)} stage=${label} error=${errorMessage(error)}`);
+}
+
+class NameStageError extends Error {
+  constructor(readonly stage: string, cause: unknown) {
+    super(errorMessage(cause));
+  }
+}
+
+function stageError(stage: string, error: unknown) {
+  return new NameStageError(stage, error);
+}
+
+function safeID(value: string) {
+  return value.replace(/[^a-zA-Z0-9_.-]+/g, "_").slice(0, 80) || "session";
+}
+
+function safeModel(model: NamingModel) {
+  return `${safeID(model.providerID)}/${safeID(model.modelID)}`;
+}
+
+function errorMessage(error: unknown) {
+  return sanitizeErrorMessage(error instanceof Error ? error.message : String(error));
+}
+
+function sanitizeErrorMessage(message: string) {
+  return message
+    .replace(/(^|[\s'"])(\/(?:[^\s'",)]+\/?)+)/g, "$1[path]")
+    .replace(/\b(?:sk|sess)-[a-zA-Z0-9_-]+/g, "[token]");
 }
 
 async function dataURL(filePath: string, mime: string, maxBytes: number) {
@@ -217,10 +328,25 @@ function imageMime(mime: string, filePath: string) {
   return "image/png";
 }
 
-function outputText(payload: unknown) {
-  const candidate = payload as { output_text?: unknown; output?: Array<{ content?: Array<{ text?: unknown }> }> };
-  if (typeof candidate.output_text === "string") return candidate.output_text;
-  return candidate.output?.flatMap((item) => item.content ?? []).map((item) => item.text).filter((text): text is string => typeof text === "string").join(" ") ?? "";
+function assistantText(payload: unknown) {
+  return assistantTextParts(payload).join(" ");
+}
+
+function assistantTextParts(value: unknown): string[] {
+  if (Array.isArray(value)) return value.flatMap(assistantTextParts);
+  if (!value || typeof value !== "object") return [];
+
+  const candidate = value as Record<string, unknown>;
+  const text = candidate.type === "text" && typeof candidate.text === "string" ? [candidate.text] : [];
+  if (typeof candidate.output_text === "string") text.push(candidate.output_text);
+  for (const key of ["parts", "content", "output"]) {
+    const items = candidate[key];
+    if (Array.isArray(items)) text.push(...items.flatMap(assistantTextParts));
+  }
+  for (const key of ["message", "assistant", "data"]) {
+    text.push(...assistantTextParts(candidate[key]));
+  }
+  return text;
 }
 
 function slugFromModelText(value: string) {
@@ -240,10 +366,6 @@ function objectOption(value: unknown) {
 
 function booleanOption(value: unknown, fallback: boolean) {
   return typeof value === "boolean" ? value : fallback;
-}
-
-function stringOption(value: unknown, fallback: string) {
-  return typeof value === "string" && value.trim() ? value.trim() : fallback;
 }
 
 function integerOption(value: unknown, fallback: number, min: number, max: number) {

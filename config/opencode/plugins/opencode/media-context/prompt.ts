@@ -10,17 +10,24 @@ import {
   videoPathParts,
   type MediaRegistryEntry,
 } from "./registry";
-import { createImageNamer } from "./naming";
+import { createImageNamer, modelFromChatPayload, modelFromValue } from "./naming";
 
 const id = "opencode-media-context-prompt";
 let partIDCounter = 0;
 
-const server: Plugin = async (_input, options) => {
-  const namer = createImageNamer(options);
+const server: Plugin = async (input, options) => {
+  const internalSessions = new Set<string>();
+  const namer = createImageNamer({ client: input.client, options, ignoredSessions: internalSessions });
 
   return {
+    config: async (cfg) => {
+      namer.setDefaultModel(modelFromValue((cfg as { model?: unknown }).model));
+    },
     "chat.message": async (input, output) => {
       const sessionID = input.sessionID;
+      if (internalSessions.has(sessionID)) return;
+
+      const model = modelFromChatPayload(input, output);
       const messageID = output.message.id;
       const text = userText(output.parts);
       const registered: MediaRegistryEntry[] = [];
@@ -29,7 +36,7 @@ const server: Plugin = async (_input, options) => {
         const entry = registerSessionMedia(sessionID, messageID, part);
         if (entry) {
           registered.push(entry);
-          if (entry.kind === "image" && !entry.name && entry.createdAt === entry.updatedAt) namer.enqueue(entry);
+          if (entry.kind === "image" && !entry.name) namer.enqueue(entry, model);
         }
       }
 

@@ -124,11 +124,13 @@ It clears the Kitty overlay on backdrop close, session navigation, session comma
 Backing local files must remain available for handles to resolve after compaction.
 
 Image naming is configured through the `opencode.json` server plugin tuple under `imageNames`.
-The default model is `openai/gpt-5.4-mini`, and the tuple can disable naming with `{ "imageNames": { "enabled": false } }`.
-No OpenCode session prompt APIs are used for naming because they persist rows and stats.
-The current non-persistent path calls OpenAI Responses API directly with `store: false`, using existing OpenCode OpenAI auth from `auth.json` or `OPENAI_API_KEY` as a fallback.
+The tuple can disable naming with `{ "imageNames": { "enabled": false } }`.
+Naming reuses the current OpenCode prompt model and auth by creating a temporary session, prompting it with the image, then deleting that session best-effort.
+If the prompt model is unavailable, the plugin falls back to the configured default OpenCode model when exposed by the config hook.
+It does not read `OPENAI_API_KEY`, parse provider auth files, or call provider APIs directly.
 Naming failures are swallowed and leave timestamp handles intact.
 Named images are copied into the media-context runtime cache under the generated filename; original source files are not renamed.
+OpenCode does not currently expose a true non-persistent completion API, so temp session/stat persistence depends on best-effort deletion and future API support.
 
 ## Statusline Contract
 

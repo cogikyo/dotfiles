@@ -4,7 +4,7 @@ import type { Message } from "@opencode-ai/sdk/v2";
 import { createTextAttributes } from "@opentui/core";
 import { spawn, type ChildProcess } from "node:child_process";
 import { basename } from "node:path";
-import { For, Show, createSignal, onCleanup, onMount } from "solid-js";
+import { For, Show, createEffect, createSignal, onCleanup, onMount, untrack } from "solid-js";
 import {
   isExistingFile,
   listSessionMedia,
@@ -21,6 +21,8 @@ const BOLD = createTextAttributes({ bold: true });
 const KITTY_WAIT_TIMEOUT_MS = 2_000;
 const MAX_DISCOVERY_MESSAGES = 100;
 const MAX_DISCOVERY_REGISTRATIONS = 20;
+const RENAME_POLL_INTERVAL_MS = 1_000;
+const RENAME_POLL_LIMIT = 30;
 let activePreviewToken = 0;
 let kittyQueue = Promise.resolve();
 const activeDisplays = new Set<ChildProcess>();
@@ -49,13 +51,24 @@ function MediaContext(props: {
   const [items, setItems] = createSignal<MediaItem[]>(mediaItems(props.api, props.sessionID));
   const [expanded, setExpanded] = createSignal(true);
   let refreshTimer: ReturnType<typeof setTimeout> | undefined;
-  const refresh = () => {
+  let renamePollTimer: ReturnType<typeof setTimeout> | undefined;
+  let renamePolls = 0;
+  let unnamedSignature = unnamedImageSignature(items());
+  const resetRenamePoll = () => {
+    if (renamePollTimer) clearTimeout(renamePollTimer);
+    renamePollTimer = undefined;
+    renamePolls = 0;
+    unnamedSignature = "";
+  };
+  const refreshForSession = (sessionID: string) => {
     try {
-      setItems(mediaItems(props.api, props.sessionID));
+      setItems(mediaItems(props.api, sessionID));
     } catch {
       setItems([]);
     }
+    scheduleRenamePoll();
   };
+  const refresh = () => refreshForSession(props.sessionID);
   const scheduleRefresh = () => {
     if (refreshTimer) clearTimeout(refreshTimer);
     refreshTimer = setTimeout(() => {
@@ -63,6 +76,21 @@ function MediaContext(props: {
       refresh();
       props.api.renderer.requestRender();
     }, 50);
+  };
+  const scheduleRenamePoll = () => {
+    const nextUnnamedSignature = unnamedImageSignature(items());
+    if (nextUnnamedSignature !== unnamedSignature) {
+      unnamedSignature = nextUnnamedSignature;
+      renamePolls = 0;
+    }
+    if (!nextUnnamedSignature) return;
+    if (renamePollTimer || renamePolls >= RENAME_POLL_LIMIT) return;
+    renamePollTimer = setTimeout(() => {
+      renamePollTimer = undefined;
+      renamePolls++;
+      refresh();
+      props.api.renderer.requestRender();
+    }, RENAME_POLL_INTERVAL_MS);
   };
 
   const disposers = [
@@ -73,10 +101,20 @@ function MediaContext(props: {
     props.api.event.on("session.compacted", (event) => event.properties.sessionID === props.sessionID && scheduleRefresh()),
   ];
 
+  createEffect(() => {
+    const sessionID = props.sessionID;
+    untrack(() => {
+      resetRenamePoll();
+      refreshForSession(sessionID);
+      props.api.renderer.requestRender();
+    });
+  });
+
   onMount(scheduleRefresh);
 
   onCleanup(() => {
     if (refreshTimer) clearTimeout(refreshTimer);
+    if (renamePollTimer) clearTimeout(renamePollTimer);
     for (const dispose of disposers) dispose();
   });
 
@@ -216,6 +254,14 @@ function KittyImageLayer(props: { api: TuiPluginApi; preview: PreviewState }) {
   return (
     <box width="100%" height="100%" onSizeChange={scheduleDraw} />
   );
+}
+
+function unnamedImageSignature(items: MediaItem[]) {
+  return items
+    .filter((item) => item.entry.kind === "image" && !item.entry.name)
+    .map((item) => item.entry.handle)
+    .sort()
+    .join("\0");
 }
 
 function mediaItemColor(api: TuiPluginApi, item: MediaItem) {

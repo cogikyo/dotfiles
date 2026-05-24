@@ -22,15 +22,17 @@ Image naming is configured on the server plugin tuple in `opencode.json`:
 ```json
 [
   "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/media-context/prompt.ts",
-  { "imageNames": { "enabled": true, "model": "openai/gpt-5.4-mini" } }
+  { "imageNames": { "enabled": true } }
 ]
 ```
 
 The naming job is sidecar-only.
-It queues only images registered by the `chat.message` send path, drains after the session becomes idle, and never scans sidebar discovery or old history.
-It does not call OpenCode session prompt APIs because those persist messages and stats.
-The current non-persistent path calls OpenAI's Responses API directly with `store: false`, using existing OpenCode OpenAI auth from `auth.json` or `OPENAI_API_KEY` as a fallback.
-If auth is missing, expired, unsupported, or the configured model is wrong, naming silently leaves timestamp handles intact.
+It queues only images registered by the `chat.message` send path and starts naming asynchronously after registration.
+It reuses the current OpenCode prompt model and auth by creating a temporary OpenCode session, prompting it with the image, then deleting that session in a best-effort `finally`.
+If the current prompt model is unavailable, the plugin falls back to the configured default OpenCode model when OpenCode exposes it to the config hook.
+It does not read `OPENAI_API_KEY`, parse OpenCode auth files, or call provider APIs directly.
+If the provider/model lacks image support or the temporary prompt fails, naming warns once for that image and leaves timestamp handles intact.
+OpenCode docs do not currently expose a true non-persistent completion API, so temp session rows and stats are deleted best-effort but true non-persistence depends on OpenCode API support.
 
 Named image files are copied into the media-context runtime cache under the generated filename.
 Original source files are not renamed.
