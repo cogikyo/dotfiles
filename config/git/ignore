@@ -1,0 +1,73 @@
+# Global Git excludes for local/generated artifacts.
+# Keep this to files that should almost never be committed.
+
+# OS / editors
+.DS_Store
+Thumbs.db
+*~
+*.swp
+*.swo
+.idea/
+.vscode/
+
+# Environment / secrets
+.env
+.env.*
+!.env.example
+!.env.sample
+.direnv/
+
+# Logs / temp
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.python-version
+.venv/
+venv/
+env/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyre/
+.tox/
+.nox/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.ipynb_checkpoints/
+pip-wheel-metadata/
+*.egg-info/
+
+# JavaScript / TypeScript
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tsbuildinfo
+.eslintcache
+.parcel-cache/
+.turbo/
+.next/
+.nuxt/
+.svelte-kit/
+coverage/
+
+# Go
+*.test
+*.prof
+coverage.out
+.coverprofile
+
+# Build tool caches
+.cache/
+.gradle/
+target/
