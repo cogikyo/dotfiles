@@ -58,8 +58,6 @@ func (n *Notifier) CanDispatch(req NotifyRequest) bool {
 // Handle dispatches a NotifyRequest to the per-source handler.
 func (n *Notifier) Handle(req NotifyRequest) error {
 	switch req.Source {
-	case "claude":
-		return n.handleClaude(req)
 	case "opencode":
 		return n.handleOpencode(req)
 	case "kitty":
@@ -94,58 +92,6 @@ func (n *Notifier) handleSend(req NotifyRequest) error {
 	}
 
 	return n.dispatch(spec, nil)
-}
-
-func (n *Notifier) handleClaude(req NotifyRequest) error {
-	ctx := n.resolveContext(req, "claude")
-	n.trackAgentActivity(req, ctx)
-
-	switch req.Event {
-	case "start":
-		return n.dispatch(notificationSpec{
-			App:         ctx.App,
-			Title:       preferredSummary(req.Prompt, req.Message, 80),
-			Style:       "start",
-			FocusAction: true,
-		}, ctx)
-	case "subagent":
-		title := fmt.Sprintf("%s: %s",
-			preferredSummary(req.AgentType, "Agent", 32),
-			preferredSummary(req.LastAssistantMessage, "Done", 70),
-		)
-		return n.dispatch(notificationSpec{
-			App:         ctx.App,
-			Title:       title,
-			Style:       "subagent",
-			FocusAction: true,
-		}, ctx)
-	case "complete":
-		return n.dispatch(notificationSpec{
-			App:         ctx.App,
-			Title:       preferredSummary(req.LastAssistantMessage, "Jobs done", 80),
-			Style:       "complete",
-			FocusAction: true,
-		}, ctx)
-	case "idle":
-		if !n.allowIdleNotification(req, ctx) {
-			return nil
-		}
-		return n.dispatch(notificationSpec{
-			App:         ctx.App,
-			Title:       preferredSummary(req.Message, "Waiting for input", 80),
-			Style:       "idle",
-			FocusAction: true,
-		}, ctx)
-	case "permission":
-		return n.dispatch(notificationSpec{
-			App:         ctx.App,
-			Title:       preferredSummary(req.Message, "Permission needed", 80),
-			Style:       "permission",
-			FocusAction: true,
-		}, ctx)
-	default:
-		return fmt.Errorf("unknown claude event: %s", req.Event)
-	}
 }
 
 func (n *Notifier) handleOpencode(req NotifyRequest) error {
@@ -232,10 +178,10 @@ func hasOpencodeContext(ctx *kittyContext) bool {
 	return ctx.PID > 0 && ctx.WindowID > 0 && app != "" && !strings.EqualFold(app, "opencode")
 }
 
-// handleKitty skips claude and opencode commands (handled via the richer hook path).
+// handleKitty skips opencode commands, which are handled via the richer hook path.
 func (n *Notifier) handleKitty(req NotifyRequest) error {
 	command := strings.TrimSpace(req.Command)
-	if command == "" || strings.HasPrefix(command, "claude") || strings.HasPrefix(command, "opencode") {
+	if command == "" || strings.HasPrefix(command, "opencode") {
 		return nil
 	}
 

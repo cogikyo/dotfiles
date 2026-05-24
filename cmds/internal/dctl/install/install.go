@@ -408,12 +408,12 @@ func linkMappings(root paths.Root) ([]fileMapping, error) {
 	}
 	for _, item := range items {
 		name := item.Name()
-		if slices.Contains([]string{"claude", "firefox", "obs-studio"}, name) {
+		if slices.Contains([]string{"firefox", "obs-studio"}, name) {
 			continue
 		}
 		out = append(out, fileMapping{root.Config(name), filepath.Join(root.Home, ".config", name)})
 	}
-	out = append(out, fileMapping{root.Config("claude", "settings.json"), filepath.Join(root.Home, ".config", "claude", "settings.json")}, fileMapping{root.Config("opencode", "AGENTS.md"), filepath.Join(root.Home, ".claude", "CLAUDE.md")}, fileMapping{root.Config("obs-studio", "basic", "profiles", "Costello", "basic.ini"), filepath.Join(root.Home, ".config", "obs-studio", "basic", "profiles", "Costello", "basic.ini")}, fileMapping{root.Config("zsh", "zshrc"), filepath.Join(root.Home, ".zshrc")}, fileMapping{root.Config("zsh", "zshenv"), filepath.Join(root.Home, ".zshenv")})
+	out = append(out, fileMapping{root.Config("obs-studio", "basic", "profiles", "Costello", "basic.ini"), filepath.Join(root.Home, ".config", "obs-studio", "basic", "profiles", "Costello", "basic.ini")}, fileMapping{root.Config("zsh", "zshrc"), filepath.Join(root.Home, ".zshrc")}, fileMapping{root.Config("zsh", "zshenv"), filepath.Join(root.Home, ".zshenv")})
 	bin, err := os.ReadDir(root.Bin())
 	if err == nil {
 		for _, item := range bin {
@@ -490,7 +490,7 @@ type goBinary struct {
 	daemon                                bool
 }
 
-var goBinaries = []goBinary{{"dctl", "cmds", "./cmd/dctl", "", false}, {"hyprd", "cmds", "./cmd/hyprd", "", true}, {"ewwd", "cmds", "./cmd/ewwd", "", false}, {"statusline", "cmds", "./cmd/statusline", "", false}, {"newtab", "cmds", "./cmd/newtab", "", true}}
+var goBinaries = []goBinary{{"dctl", "cmds", "./cmd/dctl", "", false}, {"hyprd", "cmds", "./cmd/hyprd", "", true}, {"ewwd", "cmds", "./cmd/ewwd", "", false}, {"newtab", "cmds", "./cmd/newtab", "", true}}
 
 func installGo(ctx context.Context, root paths.Root, out *output.Printer, opts Options, runner execx.Runner) error {
 	out.Header("Building Go binaries")

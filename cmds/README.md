@@ -1,6 +1,6 @@
 # cmds
 
-Go command workspace for Hyprland, eww, Firefox, Claude Code, and dotfiles management.
+Go command workspace for Hyprland, eww, Firefox, and dotfiles management.
 
 ## Why
 
@@ -40,7 +40,6 @@ Go command workspace for Hyprland, eww, Firefox, Claude Code, and dotfiles manag
 - **[hyprd](cmd/hyprd/)** — Window management: monocle, split ratios, hide/show, swap, workspace nav, session layouts
 - **[ewwd](cmd/ewwd/)** — System utilities: audio, music, network, date, weather, timer
 - **[newtab](cmd/newtab/)** — Firefox new tab page: local HTTP server with bookmarks, history, and suggestions
-- **[statusline](cmd/statusline/)** — Claude Code statusline renderer
 
 ## Layout
 
@@ -53,7 +52,6 @@ cmds/
 │   ├── ewwd/
 │   ├── hyprd/
 │   ├── newtab/
-│   └── statusline/
 ├── config/             # runtime YAML config
 └── internal/           # shared and command-private packages
     ├── config/         # typed config loader

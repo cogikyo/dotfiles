@@ -4,7 +4,6 @@ cmds/cmd/ewwd/ewwd
 cmds/cmd/hyprd/hyprd
 cmds/cmd/newtab/newtab
 cmds/cmd/newtab/newtab-server
-cmds/cmd/statusline/statusline
 
 # Plaintext secrets (safety net)
 etc/secrets/identity
@@ -22,7 +21,6 @@ iso/airootfs/var/
 iso/airootfs/root/dotfiles/
 
 .agents/skills
-.claude/skills
 .opencode/skills
 
 .ruff_cache

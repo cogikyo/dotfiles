@@ -73,12 +73,7 @@
     frame_color = "#f34658"
     timeout = 8
 
-# Suppress agent status toasts from kitty — handled by statusline daemon instead
-[kitty-claude]
-    appname = "kitty"
-    summary = ".*Claude.*"
-    skip_display = true
-
+# Suppress agent status toasts from kitty — handled by agent hooks instead
 [kitty-opencode]
     appname = "kitty"
     summary = ".*[Oo]pen[Cc]ode.*"

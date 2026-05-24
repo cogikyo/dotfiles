@@ -181,7 +181,7 @@ STEP_DEFS=(
     "system|Install system configs and enable services|yes|link"
     "hibernate|Configure swapfile and suspend-then-hibernate|yes|"
     "fonts|Extract fonts and optionally build Iosevka|no|"
-    "go|Build Go binaries (dctl, hyprd, ewwd, statusline, newtab)|no|"
+    "go|Build Go binaries (dctl, hyprd, ewwd, newtab)|no|"
     "vpn|Load decrypted NetworkManager VPN profiles|yes|secrets,go"
     "eww|Install eww widget system|no|"
     "firefox|Configure Firefox profile, theme, and preferences|no|repos"
@@ -706,7 +706,7 @@ step_link() {
         name=$(basename "$item")
 
         case "$name" in
-            claude|firefox|obs-studio) continue ;;
+            firefox|obs-studio) continue ;;
         esac
 
         link_or_skip "$item" "$HOME/.config/$name"
@@ -719,24 +719,6 @@ step_link() {
         fi
     done
 
-
-    # Claude: partial linking
-    info "Linking claude settings and global instructions..."
-    step "Linking config (claude)"
-    mkdir -p "$HOME/.config/claude"
-    link_or_skip "$DOTFILES/config/claude/settings.json" "$HOME/.config/claude/settings.json"
-    verify_link_mapping "$DOTFILES/config/claude/settings.json" "$HOME/.config/claude/settings.json" || {
-        err "Linking failed verification for ~/.config/claude/settings.json"
-        return 1
-    }
-
-    step "Linking global instructions (claude)"
-    link_or_skip "$DOTFILES/config/opencode/AGENTS.md" "$HOME/.claude/CLAUDE.md"
-    verify_link_mapping "$DOTFILES/config/opencode/AGENTS.md" "$HOME/.claude/CLAUDE.md" || {
-        err "Linking failed verification for ~/.claude/CLAUDE.md"
-        return 1
-    }
-    ok "claude linked"
 
     # OBS: partial setup. Profile settings are linked; scenes are seeded once so
     # PipeWire portal tokens and source-local state can churn outside dotfiles.
@@ -840,11 +822,11 @@ healthcheck_link() {
     ((checked_entries += 2))
     ok "required directories"
 
-    step "Verify ~/.config mirrors dotfiles/config/* (excluding claude/firefox/obs-studio)"
+    step "Verify ~/.config mirrors dotfiles/config/* (excluding firefox/obs-studio)"
     for item in "$DOTFILES"/config/*; do
         name=$(basename "$item")
         case "$name" in
-            claude|firefox|obs-studio) continue ;;
+            firefox|obs-studio) continue ;;
         esac
         verify_link_mapping "$item" "$HOME/.config/$name" || {
             err "Healthcheck failed: ~/.config/$name is not linked to $item"
@@ -854,17 +836,7 @@ healthcheck_link() {
     done
     ok "$HOME/.config mirror links"
 
-    step "Verify Claude links and shell"
-    verify_link_mapping "$DOTFILES/config/claude/settings.json" "$HOME/.config/claude/settings.json" || {
-        err "Healthcheck failed: ~/.config/claude/settings.json is not linked"
-        return 1
-    }
-    ((checked_entries++))
-    verify_link_mapping "$DOTFILES/config/opencode/AGENTS.md" "$HOME/.claude/CLAUDE.md" || {
-        err "Healthcheck failed: ~/.claude/CLAUDE.md is not linked to config/opencode/AGENTS.md"
-        return 1
-    }
-    ((checked_entries++))
+    step "Verify special links and shell"
     verify_link_mapping "$DOTFILES/config/obs-studio/basic/profiles/Costello/basic.ini" \
         "$HOME/.config/obs-studio/basic/profiles/Costello/basic.ini" || {
         err "Healthcheck failed: ~/.config/obs-studio/basic/profiles/Costello/basic.ini is not linked"
@@ -1743,7 +1715,6 @@ declare -A GO_BINARIES=(
     ["dctl"]="cmds|./cmd/dctl|Dotfiles control plane|no|"
     ["hyprd"]="cmds|./cmd/hyprd|Hyprland window management daemon|yes|"
     ["ewwd"]="cmds|./cmd/ewwd|System utilities daemon for eww|no|"
-    ["statusline"]="cmds|./cmd/statusline|Claude Code statusline generator|no|"
     ["newtab"]="cmds|./cmd/newtab|Firefox new tab HTTP server|yes|"
 )
 

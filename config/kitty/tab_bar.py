@@ -5,7 +5,7 @@
 """Custom kitty tab bar via the draw_tab callback.
 
 Layout: Icon → Tab titles (left) | CWD (child→root) → hostname (right).
-Accent color follows the active agent: red for claude, yellow for opencode, blue otherwise.
+Accent color follows the active agent: yellow for opencode, blue otherwise.
 """
 
 from getpass import getuser
@@ -36,7 +36,7 @@ LOCAL_HOST = HOST.split(".")[0]
 
 ICON_MAIN = "  "  # arch logo prefix
 ICON_AGENT = " 󰯉 "  # agent icon prefix
-AGENT_NAMES = ("claude", "opencode")  # known AI agent CLIs
+AGENT_NAMES = ("opencode",)  # known AI agent CLIs
 
 SEP_LEFT = ""  # left-pointing powerline arrow
 SEP_RIGHT = ""  # right-pointing powerline arrow
@@ -69,7 +69,6 @@ class Colors:
         opts = get_options()
         self.fg = as_rgb(color_as_int(opts.background))
         self.bg = as_rgb(color_as_int(opts.color4))  # blue accent
-        self.red = as_rgb(color_as_int(opts.color1))  # red accent for claude
         self.yellow = as_rgb(color_as_int(opts.color3))  # yellow/orange accent for opencode
         self.pink = as_rgb(color_as_int(opts.color13))  # pink accent for ssh sessions
         self.accent = as_rgb(color_as_int(opts.selection_background))
@@ -83,13 +82,11 @@ colors = Colors()
 
 
 def get_accent() -> int:
-    """Return accent color — red for claude, yellow for opencode, pink for ssh, blue otherwise."""
+    """Return accent color — yellow for opencode, pink for ssh, blue otherwise."""
     boss = get_boss()
     tm = boss.active_tab_manager if boss else None
     if tm:
         agent = _detect_active_agent(tm)
-        if agent == "claude":
-            return colors.red
         if agent == "opencode":
             return colors.yellow
         if _detect_ssh_active(tm)[1]:

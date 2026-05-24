@@ -50,7 +50,7 @@ func CmdNotify(client *daemon.Client, args []string) {
 
 func parseNotifyArgs(args []string) (NotifyRequest, error) {
 	if len(args) == 0 {
-		return NotifyRequest{}, fmt.Errorf("usage: hyprd notify {hook|dunst|kitty-finish}")
+		return NotifyRequest{}, fmt.Errorf("usage: hyprd notify {hook|dunst|kitty-finish|send}")
 	}
 
 	switch args[0] {
@@ -74,25 +74,10 @@ func parseNotifyArgs(args []string) (NotifyRequest, error) {
 
 func parseHookNotify(args []string) (NotifyRequest, error) {
 	if len(args) == 0 {
-		return NotifyRequest{}, fmt.Errorf("usage: hyprd notify hook {claude|opencode}")
+		return NotifyRequest{}, fmt.Errorf("usage: hyprd notify hook opencode")
 	}
 
 	switch args[0] {
-	case "claude":
-		if len(args) < 2 {
-			return NotifyRequest{}, fmt.Errorf("usage: hyprd notify hook claude <start|subagent|complete|idle|permission>")
-		}
-		payload := readJSONPayload("")
-		return NotifyRequest{
-			Source:               "claude",
-			Event:                args[1],
-			Prompt:               limitText(payloadString(payload, "prompt"), 512),
-			Message:              limitText(payloadString(payload, "message"), 512),
-			LastAssistantMessage: limitText(payloadString(payload, "last_assistant_message", "last-assistant-message"), 512),
-			AgentType:            limitText(payloadString(payload, "agent_type"), 128),
-			KittyPID:             envInt("KITTY_PID"),
-			KittyWindowID:        envInt("KITTY_WINDOW_ID"),
-		}, nil
 	case "opencode":
 		raw := ""
 		if len(args) > 1 && looksLikeJSON(args[1]) {

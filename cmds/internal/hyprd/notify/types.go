@@ -1,7 +1,7 @@
 // Package notify normalizes external notification hooks and routes them through hyprd.
 //
 // Responsibilities:
-// - Parse CLI, Dunst, Claude, OpenCode, and kitty notification payloads.
+// - Parse CLI, Dunst, OpenCode, and kitty notification payloads.
 // - Dispatch daemon-facing requests for visual, sound, and focus behavior.
 // - Keep source-specific payload quirks out of the daemon command router.
 package notify
@@ -29,7 +29,6 @@ type NotifyRequest struct {
 	IconPath             string `json:"icon_path,omitempty"`
 	Timeout              int    `json:"timeout,omitempty"`
 	Command              string `json:"command,omitempty"`
-	Prompt               string `json:"prompt,omitempty"`
 	Message              string `json:"message,omitempty"`
 	LastAssistantMessage string `json:"last_assistant_message,omitempty"`
 	AgentType            string `json:"agent_type,omitempty"`

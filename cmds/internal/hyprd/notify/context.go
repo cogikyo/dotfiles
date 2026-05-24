@@ -61,7 +61,7 @@ func allowKittyScanFallback(source string) bool {
 
 func usesKittyEnv(source string) bool {
 	switch source {
-	case "claude", "opencode":
+	case "opencode":
 		return true
 	default:
 		return false

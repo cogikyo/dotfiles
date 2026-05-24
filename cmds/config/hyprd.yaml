@@ -296,6 +296,5 @@ notify:
     - Spotify
     - discord
   kitty_silent_patterns: # these silence agent based notications, favoring agent styles instead
-    - claude
     - opencode
     - approval

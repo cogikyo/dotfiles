@@ -67,9 +67,6 @@ function c() {
     opencode attach http://127.0.0.1:4096 --dir "$PWD" "$@"
 }
 alias cr='systemctl --user restart opencode && echo "opencode server restarted"'
-alias cl='claude --model claude-sonnet-4-6 --effort high'
-alias cc='claude --model claude-opus-4-6 --effort high'
-alias ch='claude --model claude-opus-4-7 --effort xhigh'
 alias zz='cd ~'
 alias l='z ~/LeadPier'
 alias s='cd "$(xplr --print-pwd-as-result)"'

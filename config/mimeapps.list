@@ -21,7 +21,6 @@ image/jpeg=imv.desktop;
 text/plain=nvim.desktop
 text/html=hyprd-browser.desktop
 text/xml=nvim.desktop;
-x-scheme-handler/claude-cli=claude-code-url-handler.desktop
 x-scheme-handler/about=hyprd-browser.desktop
 x-scheme-handler/unknown=hyprd-browser.desktop
 

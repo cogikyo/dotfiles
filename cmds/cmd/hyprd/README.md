@@ -68,7 +68,7 @@ hyprd/
 │   └── tiled.go                #   sorted tiled window list, cursor centering
 │
 └── notify/                     # notification formatting + delivery (dunst bridge)
-    ├── handler.go              #   dispatch by source (claude/opencode/kitty/dunst/send)
+    ├── handler.go              #   dispatch by source (opencode/kitty/dunst/send)
     ├── cli.go                  #   `hyprd notify ...` CLI parsing
     ├── actions.go              #   D-Bus listener for dunst notification click-to-focus
     ├── assets.go               #   sound/icon path constants
@@ -242,7 +242,6 @@ hyprd ssh pam-load            # load SSH keys via PAM auth token (called from hy
 ### Notifications
 
 ```bash
-hyprd notify hook claude <event>      # read Claude hook JSON from stdin
 hyprd notify hook opencode            # read OpenCode notify JSON from argv/stdin
 hyprd notify dunst                    # handle Dunst script callbacks
 hyprd notify kitty-finish <command>   # emit kitty command-finish notification

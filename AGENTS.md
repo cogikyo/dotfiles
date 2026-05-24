@@ -15,7 +15,7 @@ Arch + Hyprland (Wayland) dotfiles. Single-user. Root of repo = `~/dotfiles`.
 - `iso/` → archiso profile; `iso/work/` and `iso/out/` are gitignored build artifacts
 - `share/` → static assets
 
-Everything in `config/` and `bin/` is symlinked wholesale except: `config/claude/settings.json` and `config/firefox/` are linked individually or handled specially.
+Everything in `config/` and `bin/` is symlinked wholesale except: `config/firefox/` is handled specially.
 Editing the repo IS editing the live system.
 
 ## Harness
@@ -43,7 +43,6 @@ Go command workspace. One module, multiple binaries. Sockets at `/tmp/{hyprd,eww
 - `hyprd` — Hyprland window management
 - `ewwd` — system signals for eww widgets
 - `newtab` — Firefox new-tab backend
-- `statusline` — Claude Code statusline
 
 After editing `hyprd`, run `hyprd rebuild` — it builds, preserves runtime state, and hot-restarts in place.
 For other commands, use targeted builds from `cmds/` (`go build -o ~/.local/bin/<name> ./cmd/<name>`).
