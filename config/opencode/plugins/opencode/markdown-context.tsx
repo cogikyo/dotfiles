@@ -147,18 +147,19 @@ function markdownSourceKind(filePath: string): MarkdownSourceKind {
   if (leaf === 'readme.md') return 'readme'
   if (leaf === 'agents.md') return 'agents'
   if (leaf === 'skill.md') return 'skill'
-  if (isMasterOrchestrationDoc(filePath)) return 'orchestrate'
+  if (orchestrationRole(filePath)) return 'orchestrate'
   if (/^[A-Z][A-Z0-9_-]*\.md$/.test(path.basename(filePath))) return 'partial'
   return 'markdown'
 }
 
-function isMasterOrchestrationDoc(filePath: string) {
+function orchestrationRole(filePath: string) {
   const normalized = filePath.split(path.sep).join('/')
-  return (
-    normalized === 'config/opencode/orchestrate/master.md' ||
-    normalized.endsWith('/config/opencode/orchestrate/master.md') ||
-    normalized.endsWith('/.config/opencode/orchestrate/master.md')
-  )
+  const match = normalized.match(/(?:^|\/)(?:config\/opencode|\.config\/opencode)\/orchestrate\/(master|manager|worker)\.md$/)
+  return match ? titleCase(match[1]) : undefined
+}
+
+function titleCase(value: string) {
+  return `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`
 }
 
 function normalizeFilePath(value: string) {
@@ -188,7 +189,9 @@ function contextLabel(api: TuiPluginApi, filePath: string, kind: MarkdownSourceK
     return dir === '.' ? path.basename(path.dirname(filePath)) || contextRootName(api, filePath) : path.basename(dir)
   }
 
-  if (kind === 'readme' || kind === 'agents' || kind === 'orchestrate') {
+  if (kind === 'orchestrate') return orchestrationRole(filePath) ?? label
+
+  if (kind === 'readme' || kind === 'agents') {
     const dir = path.dirname(label)
     return dir === '.' ? contextRootName(api, filePath) : dir
   }
