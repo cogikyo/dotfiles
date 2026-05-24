@@ -66,7 +66,7 @@ alias n='nvim'
 function c() {
     opencode attach http://127.0.0.1:4096 --dir "$PWD" "$@"
 }
-alias cr='systemctl --user restart opencode && echo "opencode server restarted"'
+alias cr='pkill opencode && systemctl --user restart opencode && echo "opencode server restarted"'
 alias zz='cd ~'
 alias l='z ~/LeadPier'
 alias s='cd "$(xplr --print-pwd-as-result)"'
@@ -83,10 +83,6 @@ alias lg='lazygit'
 alias ld='lazydocker'
 alias uvpn='hyprd vpn Trend up'
 alias dvpn='hyprd vpn Trend down'
-
-alias fe='cd ~/LeadPier/frontend'
-alias bk='cd ~/LeadPier/backend'
-
 alias oc='ouch compress'
 alias od='ouch decompress'
 alias ol='ouch list --tree'
