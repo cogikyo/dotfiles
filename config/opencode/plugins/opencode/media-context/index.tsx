@@ -5,6 +5,7 @@ import { createTextAttributes } from "@opentui/core";
 import { spawn, type ChildProcess } from "node:child_process";
 import { basename } from "node:path";
 import { For, Show, createEffect, createSignal, onCleanup, onMount, untrack } from "solid-js";
+import { SidebarSection } from "../../shared/sidebar-section.tsx";
 import {
   isExistingFile,
   listSessionMedia,
@@ -49,7 +50,6 @@ function MediaContext(props: {
   onOpenImage: (preview: PreviewState) => void;
 }) {
   const [items, setItems] = createSignal<MediaItem[]>(mediaItems(props.api, props.sessionID));
-  const [expanded, setExpanded] = createSignal(true);
   let refreshTimer: ReturnType<typeof setTimeout> | undefined;
   let renamePollTimer: ReturnType<typeof setTimeout> | undefined;
   let renamePolls = 0;
@@ -138,31 +138,20 @@ function MediaContext(props: {
 
   return (
     <Show when={items().length > 0}>
-      <box flexDirection="column" gap={0}>
-        <box flexDirection="row" gap={0} onMouseDown={() => setExpanded((value) => !value)}>
-          <text fg={props.api.theme.current.text} wrapMode="none">
-            {expanded() ? "▼ " : "▶ "}
-          </text>
-          <text fg={props.api.theme.current.text} attributes={BOLD}>
-            Media Context
-          </text>
-          <text fg={props.api.theme.current.textMuted}>{` ${items().length} media`}</text>
-        </box>
-        <Show when={expanded()}>
-          <For each={items()}>
-            {(item, index) => (
-              <box flexDirection="row" gap={0} onMouseDown={() => openItem(item, index())}>
-                <text fg={mediaItemColor(props.api, item)} attributes={BOLD} wrapMode="none">
-                  {item.entry.kind === "video" ? "V " : "I "}
-                </text>
-                <text fg={mediaItemColor(props.api, item)} wrapMode="none">
-                  {mediaItemLabel(item)}
-                </text>
-              </box>
-            )}
-          </For>
-        </Show>
-      </box>
+      <SidebarSection api={props.api} title="Media Context" detail={`${items().length} media`}>
+        <For each={items()}>
+          {(item, index) => (
+            <box flexDirection="row" gap={0} onMouseDown={() => openItem(item, index())}>
+              <text fg={mediaItemColor(props.api, item)} attributes={BOLD} wrapMode="none">
+                {item.entry.kind === "video" ? "V " : "I "}
+              </text>
+              <text fg={mediaItemColor(props.api, item)} wrapMode="none">
+                {mediaItemLabel(item)}
+              </text>
+            </box>
+          )}
+        </For>
+      </SidebarSection>
     </Show>
   );
 }

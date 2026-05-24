@@ -1,17 +1,17 @@
 /** @jsxImportSource @opentui/solid */
 import type { Message, ToolPart } from '@opencode-ai/sdk/v2'
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from '@opencode-ai/plugin/tui'
-import { createTextAttributes } from '@opentui/core'
+import { spawn, type ChildProcess } from 'node:child_process'
 import path from 'node:path'
 import { For, Show, createSignal, onCleanup } from 'solid-js'
 import { colors } from '../shared/colors.ts'
+import { SidebarSection } from '../shared/sidebar-section.tsx'
 
 const id = 'opencode-markdown-context'
 const MAX_LABEL_LENGTH = 30
 const MAX_ROOT_LENGTH = 8
 const MAX_PARENT_LENGTH = 12
 const MIN_LEAF_LENGTH = 6
-const BOLD = createTextAttributes({ bold: true })
 
 type MarkdownSourceKind = 'readme' | 'agents' | 'skill' | 'orchestrate' | 'partial' | 'markdown'
 
@@ -26,7 +26,6 @@ type MarkdownContextItem = {
 
 function MarkdownContext(props: { api: TuiPluginApi; sessionID: string }) {
   const [revision, setRevision] = createSignal(0)
-  const [expanded, setExpanded] = createSignal(true)
   const refresh = () => setRevision((value) => value + 1)
 
   const disposers = [
@@ -57,31 +56,53 @@ function MarkdownContext(props: { api: TuiPluginApi; sessionID: string }) {
 
   return (
     <Show when={items().length > 0}>
-      <box flexDirection="column" gap={0}>
-        <box flexDirection="row" gap={0} onMouseDown={() => setExpanded((value) => !value)}>
-          <text fg={props.api.theme.current.text} wrapMode="none">
-            {expanded() ? '▼ ' : '▶ '}
-          </text>
-          <text fg={props.api.theme.current.text} attributes={BOLD}>Markdown Context</text>
-          <text fg={props.api.theme.current.textMuted}>{` ${items().length} read`}</text>
-        </box>
-        <Show when={expanded()}>
-          <For each={items()}>
-            {(item) => (
-              <box flexDirection="row" gap={0}>
-                <text fg={sourceColor(props.api, item)} wrapMode="none">
-                  {sourceIcon(item)}
-                </text>
-                <text fg={props.api.theme.current.textMuted} wrapMode="none">
-                  {item.label}
-                </text>
-              </box>
-            )}
-          </For>
-        </Show>
-      </box>
+      <SidebarSection api={props.api} title="Markdown Context" detail={`${items().length} read`}>
+        <For each={items()}>
+          {(item) => (
+            <box flexDirection="row" gap={0} onMouseDown={() => openMarkdown(props.api, item.path)}>
+              <text fg={sourceColor(props.api, item)} wrapMode="none">
+                {sourceIcon(item)}
+              </text>
+              <text fg={props.api.theme.current.textMuted} wrapMode="none">
+                {item.label}
+              </text>
+            </box>
+          )}
+        </For>
+      </SidebarSection>
     </Show>
   )
+}
+
+function openMarkdown(api: TuiPluginApi, filePath: string) {
+  let child: ChildProcess
+  try {
+    child = spawn('hyprd', ['tab', 'nvim', '--', filePath], { detached: true, stdio: 'ignore' })
+  } catch {
+    api.ui.toast({
+      variant: 'warning',
+      title: 'Markdown open failed',
+      message: filePath,
+    })
+    return
+  }
+
+  child.once('error', () => {
+    api.ui.toast({
+      variant: 'warning',
+      title: 'Markdown open failed',
+      message: filePath,
+    })
+  })
+  child.once('close', (code) => {
+    if (code === 0) return
+    api.ui.toast({
+      variant: 'warning',
+      title: 'Markdown open failed',
+      message: `hyprd exited ${code ?? 'without a status'}: ${filePath}`,
+    })
+  })
+  child.unref()
 }
 
 function markdownContextItems(api: TuiPluginApi, sessionID: string) {
