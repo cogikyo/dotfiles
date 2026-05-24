@@ -34,6 +34,7 @@ type NotifyRequest struct {
 	AgentType            string `json:"agent_type,omitempty"`
 	KittyPID             int    `json:"kitty_pid,omitempty"`
 	KittyWindowID        int    `json:"kitty_window_id,omitempty"`
+	birth                uint64
 }
 
 type notificationSpec struct {
@@ -49,6 +50,7 @@ type notificationSpec struct {
 	FocusAction bool
 	Urgency     *string
 	Timeout     *int
+	Birth       uint64
 }
 
 type kittyContext struct {

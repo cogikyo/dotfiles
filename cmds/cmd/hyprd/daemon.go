@@ -357,6 +357,7 @@ func (d *Daemon) handleNotify(arg string) string {
 	}
 
 	notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load())
+	req = notifier.Prepare(req)
 	if !notifier.CanDispatch(req) {
 		return "missing-context"
 	}

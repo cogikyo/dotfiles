@@ -1,7 +1,6 @@
 // @ts-nocheck -- OpenCode plugin event types are incomplete; keep runtime behavior stable until local event types exist.
 import { EMPTY_KITTY_CONTEXT, isSocket, KITTY_CONTEXT_PATH, kittySocketPath } from "./context.ts"
-
-const SOCKET_PATH = "/tmp/hyprd.sock"
+import { send } from "./socket.ts"
 
 const LIMITS = {
   id: 128,
@@ -119,38 +118,6 @@ async function kittyContext(sessionID, parentFor) {
 
 function hasFreshIdleContext(ctx) {
   return ctx.updated_at > 0 && Date.now() - ctx.updated_at <= IDLE_CONTEXT_MAX_AGE_MS
-}
-
-async function send(command) {
-  let resolveDone
-  let response = ""
-  const done = new Promise((r) => {
-    resolveDone = r
-  })
-  try {
-    await Bun.connect({
-      unix: SOCKET_PATH,
-      socket: {
-        open(socket) {
-          socket.write(command)
-        },
-        data(_socket, data) {
-          response += new TextDecoder().decode(data)
-        },
-        close() {
-          resolveDone()
-        },
-        error() {
-          resolveDone()
-        },
-      },
-    })
-  } catch {
-    resolveDone()
-    return false
-  }
-  await done
-  return response.trim() === "ok"
 }
 
 function notifyKey(req) {

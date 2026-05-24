@@ -1,5 +1,7 @@
 // @ts-nocheck -- OpenCode plugin event types are incomplete; keep runtime behavior stable until local event types exist.
 import fs from "node:fs/promises"
+import { execFile } from "node:child_process"
+import { promisify } from "node:util"
 import {
   ensureKittyContextDir,
   isSocket,
@@ -8,13 +10,16 @@ import {
   kittySocketPath,
   STALE_CONTEXT_MS,
 } from "./context.ts"
+import { send } from "./socket.ts"
 
 const WRITE_INTERVAL_MS = 1000
+const FOCUS_ACK_DEBOUNCE_MS = 1000
 const LOCK_RETRY_MS = 25
 const LOCK_TIMEOUT_MS = 1000
 
 const KITTY_PID = Number(process.env.KITTY_PID) || 0
 const KITTY_WINDOW_ID = Number(process.env.KITTY_WINDOW_ID) || 0
+const execFileAsync = promisify(execFile)
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -74,6 +79,45 @@ function isThisPane(ctx) {
   return Number(ctx?.kitty_pid) === KITTY_PID && Number(ctx?.kitty_window_id) === KITTY_WINDOW_ID
 }
 
+function selected(value) {
+  return Boolean(value?.is_focused || value?.is_active)
+}
+
+async function currentPaneFocused() {
+  if (!KITTY_PID || !KITTY_WINDOW_ID) return null
+
+  try {
+    const { stdout } = await execFileAsync("kitty", ["@", "--to", `unix:/tmp/kitty-${KITTY_PID}`, "ls"])
+    const windows = JSON.parse(stdout)
+    if (!Array.isArray(windows)) return null
+
+    for (const win of windows) {
+      if (!selected(win)) continue
+      for (const tab of win.tabs || []) {
+        if (!selected(tab)) continue
+        for (const pane of tab.windows || []) {
+          if (Number(pane?.id) === KITTY_WINDOW_ID) return selected(pane)
+        }
+      }
+    }
+  } catch {
+    return null
+  }
+
+  return false
+}
+
+async function notifyViewed() {
+  if (!KITTY_PID || !KITTY_WINDOW_ID) return false
+
+  return send("notify " + JSON.stringify({
+    source: "opencode",
+    event: "viewed",
+    kitty_pid: KITTY_PID,
+    kitty_window_id: KITTY_WINDOW_ID,
+  }))
+}
+
 async function clearPaneContext() {
   if (!KITTY_PID || !KITTY_WINDOW_ID) return
 
@@ -122,6 +166,9 @@ async function writeContext(api, sessionID) {
 }
 
 const tui = async (api) => {
+  let lastFocused = null
+  let lastFocusAckAt = 0
+
   const sync = () => {
     const current = api.route.current
     if (current.name !== "session") return
@@ -132,8 +179,27 @@ const tui = async (api) => {
     void writeContext(api, sessionID)
   }
 
-  sync()
-  const timer = setInterval(sync, WRITE_INTERVAL_MS)
+  const acknowledgeFocusedPane = async () => {
+    const focused = await currentPaneFocused()
+    if (focused === null) return
+
+    const wasFocused = lastFocused
+    lastFocused = focused
+    if (wasFocused !== false || !focused) return
+
+    const now = Date.now()
+    if (now - lastFocusAckAt < FOCUS_ACK_DEBOUNCE_MS) return
+
+    if (await notifyViewed()) lastFocusAckAt = now
+  }
+
+  const poll = () => {
+    sync()
+    void acknowledgeFocusedPane()
+  }
+
+  poll()
+  const timer = setInterval(poll, WRITE_INTERVAL_MS)
   const disposers = [
     api.event.on("session.created", () => sync()),
     api.event.on("tui.session.select", (event) => {

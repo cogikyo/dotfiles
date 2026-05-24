@@ -27,6 +27,23 @@ const (
 	idleBackoffMax     = 30 * time.Minute
 )
 
+var opencodePaneAckGroups = []string{
+	"start",
+	"complete",
+	"subagent",
+	"todo-complete",
+	"idle",
+	"permission",
+	"question",
+	"error",
+}
+
+var globalPaneNotifications = &paneNotificationRegistry{
+	active:   make(map[paneNotificationKey]uint64),
+	canceled: make(map[paneNotificationKey]map[uint64]struct{}),
+	ack:      make(map[paneNotificationKey]uint64),
+}
+
 var globalIdleGate = struct {
 	sync.Mutex
 	byKey map[string]idleBackoff
@@ -37,6 +54,20 @@ var soundQueue = make(chan soundRequest, 32)
 type soundRequest struct {
 	path   string
 	volume int
+}
+
+type paneNotificationKey struct {
+	PID      int
+	WindowID int
+	Group    string
+}
+
+type paneNotificationRegistry struct {
+	mu       sync.Mutex
+	next     uint64
+	active   map[paneNotificationKey]uint64
+	canceled map[paneNotificationKey]map[uint64]struct{}
+	ack      map[paneNotificationKey]uint64
 }
 
 func init() {
@@ -52,7 +83,26 @@ func (n *Notifier) CanDispatch(req NotifyRequest) bool {
 	if req.Source != "opencode" {
 		return true
 	}
+	if req.Event == "viewed" {
+		return paneNotificationID(opencodePaneContext(req)) > 0
+	}
 	return hasOpencodeContext(n.resolveContext(req, ""))
+}
+
+// Prepare stamps request-local ordering before asynchronous handling can race a viewed ack.
+func (n *Notifier) Prepare(req NotifyRequest) NotifyRequest {
+	if req.Source != "opencode" || req.Event == "viewed" {
+		return req
+	}
+	ctx := opencodePaneContext(req)
+	if paneNotificationID(ctx) == 0 {
+		return req
+	}
+	if !isPaneAckGroup(req.Event) {
+		return req
+	}
+	req.birth = globalPaneNotifications.Next()
+	return req
 }
 
 // Handle dispatches a NotifyRequest to the per-source handler.
@@ -95,6 +145,16 @@ func (n *Notifier) handleSend(req NotifyRequest) error {
 }
 
 func (n *Notifier) handleOpencode(req NotifyRequest) error {
+	if req.Event == "viewed" {
+		ctx := opencodePaneContext(req)
+		if paneNotificationID(ctx) == 0 {
+			return nil
+		}
+		n.trackAgentActivity(req, ctx)
+		n.acknowledgePane(ctx)
+		return nil
+	}
+
 	ctx := n.resolveContext(req, "")
 	if !hasOpencodeContext(ctx) {
 		return nil
@@ -108,6 +168,7 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 			Title:       preferredSummary(req.Message, "Working", 80),
 			Style:       "start",
 			FocusAction: true,
+			Birth:       req.birth,
 		}, ctx)
 	case "complete":
 		return n.dispatch(notificationSpec{
@@ -115,6 +176,7 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 			Title:       preferredSummary(req.LastAssistantMessage, "Jobs done", 80),
 			Style:       "complete",
 			FocusAction: true,
+			Birth:       req.birth,
 		}, ctx)
 	case "subagent":
 		title := fmt.Sprintf("%s: %s",
@@ -126,6 +188,7 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 			Title:       title,
 			Style:       "subagent",
 			FocusAction: true,
+			Birth:       req.birth,
 		}, ctx)
 	case "todo-complete":
 		return n.dispatch(notificationSpec{
@@ -133,6 +196,7 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 			Title:       preferredSummary(req.Message, "Todo complete", 80),
 			Style:       "todo-complete",
 			FocusAction: true,
+			Birth:       req.birth,
 		}, ctx)
 	case "idle":
 		if !n.allowIdleNotification(req, ctx) {
@@ -143,6 +207,7 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 			Title:       preferredSummary(req.Message, "Waiting for input", 80),
 			Style:       "idle",
 			FocusAction: true,
+			Birth:       req.birth,
 		}, ctx)
 	case "permission":
 		return n.dispatch(notificationSpec{
@@ -150,6 +215,7 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 			Title:       preferredSummary(req.Message, "Permission needed", 80),
 			Style:       "permission",
 			FocusAction: true,
+			Birth:       req.birth,
 		}, ctx)
 	case "question":
 		return n.dispatch(notificationSpec{
@@ -157,6 +223,7 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 			Title:       preferredSummary(req.Message, "Question asked", 80),
 			Style:       "question",
 			FocusAction: true,
+			Birth:       req.birth,
 		}, ctx)
 	case "error":
 		return n.dispatch(notificationSpec{
@@ -164,10 +231,15 @@ func (n *Notifier) handleOpencode(req NotifyRequest) error {
 			Title:       preferredSummary(req.Message, "Session error", 80),
 			Style:       "error",
 			FocusAction: true,
+			Birth:       req.birth,
 		}, ctx)
 	default:
 		return fmt.Errorf("unknown opencode event: %s", req.Event)
 	}
+}
+
+func opencodePaneContext(req NotifyRequest) *kittyContext {
+	return &kittyContext{PID: req.KittyPID, WindowID: req.KittyWindowID}
 }
 
 func hasOpencodeContext(ctx *kittyContext) bool {
@@ -254,8 +326,17 @@ func (n *Notifier) sendDunst(spec notificationSpec, ctx *kittyContext) error {
 		return runDetached("dunstify", args...)
 	}
 
+	key, token, tracked := globalPaneNotifications.Begin(ctx, spec.Style, spec.Birth)
+	if tracked {
+		defer globalPaneNotifications.End(key, token)
+	}
+
 	const maxPersistentRetries = 600 // ~10 min at 1s cadence
 	for i := range maxPersistentRetries + 1 {
+		if tracked && globalPaneNotifications.Canceled(key, token) {
+			return nil
+		}
+
 		cmd := exec.Command("dunstify", args...)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
@@ -270,6 +351,9 @@ func (n *Notifier) sendDunst(spec notificationSpec, ctx *kittyContext) error {
 			return nil
 		}
 		if !persistent || i >= maxPersistentRetries {
+			return nil
+		}
+		if tracked && globalPaneNotifications.Canceled(key, token) {
 			return nil
 		}
 		time.Sleep(time.Second)
@@ -357,6 +441,126 @@ func soundWorker() {
 		paVolume := req.volume * 65536 / 100
 		_ = exec.Command("paplay", "--volume="+strconv.Itoa(paVolume), req.path).Run()
 	}
+}
+
+// ╭──────────────────────────────────────────────────────────────────────────────╮
+// │ pane acknowledgement                                                         │
+// ╰──────────────────────────────────────────────────────────────────────────────╯
+
+func (n *Notifier) acknowledgePane(ctx *kittyContext) {
+	globalPaneNotifications.Cancel(ctx, opencodePaneAckGroups)
+	for _, group := range opencodePaneAckGroups {
+		closeDunstNotification(replacementNotificationID(ctx, group))
+	}
+}
+
+func (r *paneNotificationRegistry) Begin(ctx *kittyContext, group string, birth uint64) (paneNotificationKey, uint64, bool) {
+	key, ok := notificationKey(ctx, group)
+	if !ok {
+		return paneNotificationKey{}, 0, false
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if birth == 0 {
+		birth = r.nextLocked()
+	}
+	if token, active := r.active[key]; active {
+		r.cancelLocked(key, token)
+	}
+	r.active[key] = birth
+	if birth <= r.ack[key] {
+		r.cancelLocked(key, birth)
+	}
+	return key, birth, true
+}
+
+func (r *paneNotificationRegistry) Cancel(ctx *kittyContext, groups []string) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	epoch := r.nextLocked()
+	for _, group := range groups {
+		key, ok := notificationKey(ctx, group)
+		if !ok {
+			continue
+		}
+		r.ack[key] = epoch
+		if token, active := r.active[key]; active {
+			r.cancelLocked(key, token)
+		}
+	}
+}
+
+func (r *paneNotificationRegistry) Next() uint64 {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.nextLocked()
+}
+
+func (r *paneNotificationRegistry) Canceled(key paneNotificationKey, token uint64) bool {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	_, canceled := r.canceled[key][token]
+	return token != 0 && canceled
+}
+
+func (r *paneNotificationRegistry) End(key paneNotificationKey, token uint64) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	if r.active[key] == token {
+		delete(r.active, key)
+	}
+	if tokens := r.canceled[key]; tokens != nil {
+		delete(tokens, token)
+		if len(tokens) == 0 {
+			delete(r.canceled, key)
+		}
+	}
+}
+
+func (r *paneNotificationRegistry) nextLocked() uint64 {
+	r.next++
+	return r.next
+}
+
+func (r *paneNotificationRegistry) cancelLocked(key paneNotificationKey, token uint64) {
+	if token == 0 {
+		return
+	}
+	if r.canceled[key] == nil {
+		r.canceled[key] = make(map[uint64]struct{})
+	}
+	r.canceled[key][token] = struct{}{}
+}
+
+func notificationKey(ctx *kittyContext, group string) (paneNotificationKey, bool) {
+	if paneNotificationID(ctx) == 0 {
+		return paneNotificationKey{}, false
+	}
+	group = strings.TrimSpace(group)
+	if group == "" {
+		group = "default"
+	}
+	return paneNotificationKey{PID: ctx.PID, WindowID: ctx.WindowID, Group: group}, true
+}
+
+func isPaneAckGroup(group string) bool {
+	for _, ackGroup := range opencodePaneAckGroups {
+		if group == ackGroup {
+			return true
+		}
+	}
+	return false
+}
+
+func closeDunstNotification(id int) {
+	if id <= 0 {
+		return
+	}
+	_ = runDetached("dunstctl", "close", strconv.Itoa(id))
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮

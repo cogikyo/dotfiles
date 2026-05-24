@@ -58,6 +58,120 @@ func TestDunstArgsUseTimeoutDrivenStickiness(t *testing.T) {
 	}
 }
 
+func TestCanDispatchViewedRequiresOnlyPaneIDs(t *testing.T) {
+	n := &Notifier{}
+	if !n.CanDispatch(NotifyRequest{Source: "opencode", Event: "viewed", KittyPID: 1234, KittyWindowID: 7}) {
+		t.Fatal("viewed event with pane ids should dispatch without resolved app context")
+	}
+	if n.CanDispatch(NotifyRequest{Source: "opencode", Event: "viewed", KittyPID: 1234}) {
+		t.Fatal("viewed event without pane id should not dispatch")
+	}
+}
+
+func TestPaneNotificationCancellationIsTokenScoped(t *testing.T) {
+	ctx := &kittyContext{PID: 1234, WindowID: 7}
+	registry := &paneNotificationRegistry{
+		active:   make(map[paneNotificationKey]uint64),
+		canceled: make(map[paneNotificationKey]map[uint64]struct{}),
+		ack:      make(map[paneNotificationKey]uint64),
+	}
+
+	key1, token1, ok := registry.Begin(ctx, "complete", 0)
+	if !ok {
+		t.Fatal("expected valid pane notification key")
+	}
+	key2, token2, ok := registry.Begin(ctx, "complete", 0)
+	if !ok {
+		t.Fatal("expected valid replacement complete key")
+	}
+	if key1 != key2 {
+		t.Fatalf("same pane/group should reuse key: %v != %v", key1, key2)
+	}
+	if !registry.Canceled(key1, token1) {
+		t.Fatal("superseded complete notification was not canceled")
+	}
+	if registry.Canceled(key2, token2) {
+		t.Fatal("replacement complete notification inherited stale cancellation")
+	}
+
+	registry.End(key1, token1)
+	if registry.Canceled(key2, token2) {
+		t.Fatal("ending old notification canceled replacement token")
+	}
+
+	registry.Cancel(ctx, []string{"complete", "idle"})
+	if !registry.Canceled(key2, token2) {
+		t.Fatal("active complete notification was not canceled")
+	}
+	idleKey, ok := notificationKey(ctx, "idle")
+	if !ok {
+		t.Fatal("expected valid idle key")
+	}
+	if _, ok := registry.canceled[idleKey]; ok {
+		t.Fatal("inactive idle notification should not get a sticky cancellation")
+	}
+
+	key3, token3, ok := registry.Begin(ctx, "complete", 0)
+	if !ok {
+		t.Fatal("expected valid second replacement complete key")
+	}
+	if key2 != key3 {
+		t.Fatalf("same pane/group should reuse key: %v != %v", key2, key3)
+	}
+	if registry.Canceled(key3, token3) {
+		t.Fatal("new complete notification inherited canceled predecessor token")
+	}
+	if !registry.Canceled(key2, token2) {
+		t.Fatal("previous complete notification lost cancellation after replacement began")
+	}
+
+	registry.End(key2, token2)
+	if registry.Canceled(key3, token3) {
+		t.Fatal("ending canceled predecessor canceled replacement token")
+	}
+	registry.Cancel(ctx, []string{"complete"})
+	if !registry.Canceled(key3, token3) {
+		t.Fatal("replacement complete notification was not canceled")
+	}
+	registry.End(key3, token3)
+	if len(registry.active) != 0 || len(registry.canceled) != 0 {
+		t.Fatalf("registry did not clean up: active=%v canceled=%v", registry.active, registry.canceled)
+	}
+}
+
+func TestPaneNotificationAckSuppressesEarlierBirthOnly(t *testing.T) {
+	ctx := &kittyContext{PID: 1234, WindowID: 7}
+	registry := &paneNotificationRegistry{
+		active:   make(map[paneNotificationKey]uint64),
+		canceled: make(map[paneNotificationKey]map[uint64]struct{}),
+		ack:      make(map[paneNotificationKey]uint64),
+	}
+
+	earlier := registry.Next()
+	registry.Cancel(ctx, []string{"complete"})
+
+	key, token, ok := registry.Begin(ctx, "complete", earlier)
+	if !ok {
+		t.Fatal("expected valid pane notification key")
+	}
+	if token != earlier {
+		t.Fatalf("begin should preserve request birth token: got %d, want %d", token, earlier)
+	}
+	if !registry.Canceled(key, token) {
+		t.Fatal("ack did not suppress notification born before registration")
+	}
+	registry.End(key, token)
+
+	later := registry.Next()
+	key, token, ok = registry.Begin(ctx, "complete", later)
+	if !ok {
+		t.Fatal("expected valid later pane notification key")
+	}
+	if registry.Canceled(key, token) {
+		t.Fatal("ack permanently suppressed later notification")
+	}
+}
+
 func assertFlagValue(t *testing.T, args []string, flag, want string) {
 	t.Helper()
 	if !hasFlagValue(args, flag, want) {
