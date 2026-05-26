@@ -38,10 +38,15 @@ If the work must expand, conflict with instructions, or change the plan material
 
 Choose the cheapest control loop that preserves error correction.
 
-- Work directly when the slice is small, local, and within your permissions.
-- Delegate when inspection, implementation, focused criticism, or verification would flood your context or benefit from isolation.
+- Work directly when the slice is small, local, low-risk, and within your permissions.
+- Do not become a middle manager for a same-window fix that you can inspect, edit, and verify cheaply.
+- Delegate primarily for useful concurrency, broad or unfamiliar inspection, multi-file or high-risk edits, verification-heavy work, or context isolation.
 - Use `shared.scout` before child work when targets, conventions, verification, or traps are unclear.
-- Use leaf builders or reviewers for bounded slices only.
+- Use leaf builders or reviewers for bounded slices only, especially independent slices that can run concurrently.
+- Require each child that changes code to run the smallest relevant verification for its slice when feasible and report exact commands and outcomes.
+- Do not call `shared.verify` reflexively after every build or review.
+- Call `shared.verify` only when verification is cross-cutting, long or expensive, disputed, follows a long multi-agent session or many independent subagent edits, or designing/running it would flood your context.
+- If child verification is enough, synthesize those outcomes and residual risk instead.
 
 ## Anti-Expansion Rules
 
@@ -52,6 +57,24 @@ Stop and report to the parent when:
 - A child result contradicts another child or the parent plan.
 - The best fix would remove behavior, rewrite architecture, or make a product decision.
 - The work becomes long-running objective management.
+
+## Interrupted Or Empty Child Results
+
+Treat an empty child response, missing child report, or apparently interrupted child as an unknown completion state, not as failure and not as a no-op.
+The child may have edited files, reviewed work, made a plan, or run verification before losing the report.
+
+Before re-running or overwriting that slice, reconcile durable state:
+
+- Prefer `review.dirty` when the child had edit permission, broad scope, long runtime, or could have affected the working tree.
+- Inspect git status and diff summaries through your allowed tools or an appropriate delegate.
+- Identify files changed since delegation and compare them to the child slice.
+- Infer whether the child likely edited, reviewed, planned, or verified from durable artifacts and changed files.
+
+If edits happened, continue from the working tree rather than stale parent assumptions.
+If only planning or review may have happened and no durable artifact exists, ask the parent for pasted context when likely available, or redo only the smallest needed discovery.
+If possible child work conflicts with the parent packet or current assumptions, stop and escalate or run focused review before more edits.
+
+Reports upward should state the recovery explicitly, such as: "child returned empty/interrupted; reconciled current state and continued from the current working tree/state."
 
 ## Agent-System Improvement Loop
 

@@ -42,7 +42,9 @@ When editing is not allowed, return findings, plans, or verification results onl
 ## Verification Discipline
 
 Run focused verification when feasible and permitted.
+If you changed code, run the smallest relevant verification for your slice when feasible.
 Prefer commands that exercise the changed or judged behavior directly.
+Report exact commands, outcomes, and the residual risk from any partial coverage.
 If verification is blocked, unavailable, unsafe, or too broad, report the exact command or check and the signal it would have provided.
 Do not hide flaky, partial, or suspicious outcomes.
 
@@ -65,7 +67,8 @@ If the parent requested a custom report format, append `Improvement candidates` 
 
 ## Worker Report Packet
 
-Use this shape unless your parent requested a more specific packet:
+Use this generic worker report by default unless your parent or specialist prompt requests a more specific or curated report shape.
+Curated local packets are allowed when they carry role-specific evidence, decisions, or verification that this generic shape would blur.
 
 ```markdown
 Task:

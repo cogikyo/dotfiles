@@ -29,15 +29,6 @@ Writing rules:
 - Remove duplicate phrasing and low-value narration.
 - Include context files and verification commands when known.
 
-Return this shape:
-
-```markdown
-Recommended path:
-Evidence:
-Rejected alternatives:
-Execution slices:
-Context required:
-Risks:
-Verification:
-Questions before build:
-```
+Return the generic `Handoff Packet` from `/home/cullyn/dotfiles/config/opencode/orchestrate/master.md` unless the parent explicitly requested a different continuation format.
+Before producing that generic packet, read `master.md` unless the parent supplied the exact packet contract already.
+Use the source-of-truth packet labels and shape from `master.md`, not paraphrased category names.

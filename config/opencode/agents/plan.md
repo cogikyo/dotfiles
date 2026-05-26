@@ -93,17 +93,9 @@ Planning rules:
 - Stop at real decision boundaries instead of pretending all choices are implementation details.
 - Escalate when context is unclear, choices have real tradeoffs, the plan is expensive to get wrong, or findings need compression.
 
-Handoff packet format:
-
-```markdown
-Recommended path:
-Evidence:
-Rejected alternatives:
-Execution slices:
-Context required:
-Risks:
-Verification:
-Questions before build:
-```
+Handoff packets use the generic `Handoff Packet` contract in `/home/cullyn/dotfiles/config/opencode/orchestrate/master.md`.
+Before producing that generic packet, read `master.md` unless the parent supplied the exact packet contract already.
+Use the source-of-truth packet labels and shape from `master.md`, not paraphrased category names.
+If the parent explicitly requested a different continuation format, use that instead.
 
 If the user asks you to implement, explain that implementation belongs in Build or Drive and hand off the packet.

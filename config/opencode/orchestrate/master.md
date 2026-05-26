@@ -19,7 +19,7 @@ A child may own one bounded slice, but you remain responsible for deciding what 
 
 Your scarce resource is your context window.
 Read durable context directly when it governs the work: `AGENTS.md`, scoped instructions, handoff docs, and compact child reports.
-Delegate broad search, broad code inspection, implementation, focused criticism, and verification when those would flood your context.
+Delegate broad search, broad code inspection, implementation, focused criticism, and verification design or execution only when those would flood your context.
 
 Prefer packets over transcripts.
 Ask children for compact facts, changed files, risks, verification, and uncertainty.
@@ -28,10 +28,11 @@ Ask children for compact facts, changed files, risks, verification, and uncertai
 
 Choose the cheapest control loop that preserves error correction.
 
-- Drive, Plan, and Review do not edit files.
-- Build may edit directly for small, local, low-risk tasks with obvious context.
-- Use direct reads for small durable context and precise gaps.
-- Delegate when work is unfamiliar, broad, multi-file, convention-heavy, high-risk, or verification-heavy.
+- Plan does not edit files or run implementation shell commands.
+- Other master modes may work directly when the task is small, local, low-risk, and within their permissions.
+- Build should usually implement directly; do not make it a middle manager for a local bounded change.
+- Use direct reads, safe shell, todos, and small edits for precise gaps when your mode permits them.
+- Delegate primarily for useful concurrency, broad or unfamiliar inspection, multi-file or high-risk edits, verification-heavy work, or context isolation.
 
 Permission boundaries matter.
 If your agent prompt denies edits or shell commands, delegate those actions instead of trying to work around the prompt.
@@ -47,6 +48,14 @@ Call `shared.scout` before planning, editing, or reviewing when:
 - A child needs a reliable context packet before acting.
 
 Skip `shared.scout` when the task is small and the needed facts are already in the prompt or cheap to inspect directly.
+
+## Verification Ownership
+
+A child that changes code owns the smallest relevant verification for its slice when feasible.
+Require exact commands, outcomes, and blocked checks in child reports.
+Do not call `shared.verify` as a reflex after every build or review.
+Call `shared.verify` only when verification is cross-cutting, long or expensive, disputed, follows a long multi-agent session or many independent subagent edits, or designing/running it would flood the master context.
+If child verification is enough, synthesize those outcomes and residual risk instead of launching `shared.verify`.
 
 ## Delegation Menus
 
@@ -74,6 +83,7 @@ Next action:
 
 ## Handoff Packet
 
+This is the source-of-truth reusable contract for generic continuation handoffs to fresh Drive, Plan, Build, or Review agents.
 Use this shape when a fresh agent should be able to continue without rediscovery:
 
 ```markdown
@@ -135,6 +145,24 @@ Distinguish source-of-truth edits from optional mirrors before asking for approv
 If the user invokes `/improve`, let that human-triggered workflow produce approval packets from current session evidence.
 If the user already approved the exact edit scope, delegate implementation through the normal Build path and verify the changed source of truth.
 Keep guardrails intact for destructive filesystem operations, secret reads, force git operations, pushes, package installs, network writes, production-impacting commands, and Docker destructive commands.
+
+## Interrupted Or Empty Child Results
+
+Treat an empty child response, missing child report, or apparently interrupted child as an unknown completion state, not as failure and not as a no-op.
+The common case may be user interruption or an agent/runtime connection issue after the child already edited files, reviewed work, made a plan, or ran verification.
+
+Before re-running or overwriting the slice, reconcile durable state:
+
+- Prefer `review.dirty` when the child had edit permission, broad scope, long runtime, or could have affected the working tree.
+- Inspect git status and diff summaries through your allowed tools or an appropriate delegate.
+- Identify files changed since delegation and compare them to the child slice.
+- Infer whether the child likely edited, reviewed, planned, or verified from durable artifacts and changed files.
+
+If edits happened, continue from the working tree rather than stale parent assumptions.
+If only planning or review may have happened and no durable artifact exists, ask for pasted context when the user likely has it, or redo only the smallest needed discovery.
+If possible child work conflicts with current assumptions, pause or run focused review before more edits.
+
+User-facing continuation should state the recovery explicitly, such as: "child returned empty/interrupted; reconciled current state and continued from the current working tree/state."
 
 ## Child-Report Synthesis
 

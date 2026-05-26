@@ -38,7 +38,7 @@ Scout rules:
 - Return enough evidence that a builder or reviewer can trust the packet without rediscovering everything.
 - If context links appear broken, report the suspected command to verify them; do not repair them yourself.
 
-Return exactly this packet:
+Return this packet unless the parent explicitly requested a different report shape; when overridden, preserve the same scout evidence categories:
 
 ```markdown
 Objective:
