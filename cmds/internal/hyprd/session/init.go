@@ -38,7 +38,7 @@ const (
 )
 
 // dispatchStartup runs hardcoded startup commands and optionally connects bluetooth.
-func dispatchStartup(h *hypr.Client, bt config.BluetoothConfig) {
+func dispatchStartup(h hyprDispatcher, bt config.BluetoothConfig) {
 	for _, cmd := range startupExecs {
 		h.Dispatch(fmt.Sprintf("exec %s", cmd))
 	}

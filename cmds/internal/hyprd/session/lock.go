@@ -6,6 +6,7 @@ import (
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -24,11 +25,20 @@ const idleUnlockSuppress = 2 * time.Second
 // pamLoadFlag is the runtime handshake consumed by `hyprd ssh pam-load` from pam_exec.
 const pamLoadFlag = "hyprd-ssh-pam-load"
 
+type hyprDispatcher interface {
+	Dispatch(args string) error
+}
+
+type hyprIPC interface {
+	hyprDispatcher
+	Request(command string) ([]byte, error)
+}
+
 // Lock owns pseudo-lock and full-lock lifecycles: visual blackout, audio/notification pause, and restore.
 //
 // Serialized by mu; saved != nil means a lock is active, inFull means hyprlock is blocking.
 type Lock struct {
-	hypr            *hypr.Client
+	hypr            hyprIPC
 	state           *state.State
 	mu              sync.Mutex
 	saved           *lockState
@@ -66,63 +76,91 @@ func (l *Lock) Execute(arg string) (string, error) {
 
 // Pseudo enters pseudo-lock (blackout + submap); no-op if any lock is already active.
 func (l *Lock) Pseudo() (string, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	if l.saved != nil {
-		return "lock: already active", nil
-	}
-	l.saved = l.capture()
-	l.enterBlackout()
-	l.hypr.Dispatch("submap pseudolock")
-	return "lock: pseudo", nil
+	return l.enterPseudo("pseudo", false)
 }
 
 // Idle enters pseudo-lock from hypridle. Entering blackout/submap can itself
 // create a synthetic resume event, so idle resume briefly ignores unlocks.
 func (l *Lock) Idle() (string, error) {
+	return l.enterPseudo("idle", true)
+}
+
+func (l *Lock) enterPseudo(kind string, idle bool) (string, error) {
 	l.mu.Lock()
-	defer l.mu.Unlock()
 	if l.saved != nil {
+		l.mu.Unlock()
 		return "lock: already active", nil
 	}
-	l.saved = l.capture()
-	l.idleUnlockAfter = time.Now().Add(idleUnlockSuppress)
-	l.enterBlackout()
-	l.hypr.Dispatch("submap pseudolock")
-	return "lock: idle", nil
+
+	saved := l.capture()
+	if err := l.hypr.Dispatch(fmt.Sprintf("workspace %d", pseudoLockWorkspace)); err != nil {
+		l.mu.Unlock()
+		return "", fmt.Errorf("lock: switch to workspace %d: %w", pseudoLockWorkspace, err)
+	}
+	if err := l.hypr.Dispatch("submap pseudolock"); err != nil {
+		rollbackErr := errors.Join(
+			l.hypr.Dispatch("submap reset"),
+			l.hypr.Dispatch(fmt.Sprintf("workspace %d", saved.workspace)),
+		)
+		l.mu.Unlock()
+		if rollbackErr != nil {
+			return "", fmt.Errorf("lock: enter pseudolock: %w; rollback: %w", err, rollbackErr)
+		}
+		return "", fmt.Errorf("lock: enter pseudolock: %w", err)
+	}
+
+	if idle {
+		l.idleUnlockAfter = time.Now().Add(idleUnlockSuppress)
+	} else {
+		l.idleUnlockAfter = time.Time{}
+	}
+	l.saved = saved
+	l.mu.Unlock()
+
+	l.enterBlackout(saved)
+	return "lock: " + kind, nil
 }
 
 // Unlock exits pseudo-lock; refuses while hyprlock is active.
 func (l *Lock) Unlock() (string, error) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	return l.unlockLocked()
+	return l.unlock()
 }
 
 // IdleUnlock exits an idle pseudo-lock unless this is hypridle's synthetic
 // resume caused by entering the pseudo-lock itself.
 func (l *Lock) IdleUnlock() (string, error) {
 	l.mu.Lock()
-	defer l.mu.Unlock()
 	if !l.idleUnlockAfter.IsZero() && time.Now().Before(l.idleUnlockAfter) {
+		l.mu.Unlock()
 		return "lock: idle unlock suppressed", nil
 	}
-	return l.unlockLocked()
+	l.mu.Unlock()
+	return l.unlock()
 }
 
-func (l *Lock) unlockLocked() (string, error) {
+func (l *Lock) unlock() (string, error) {
+	l.mu.Lock()
 	if l.inFull {
+		l.mu.Unlock()
 		return "lock: hyprlock active", nil
 	}
-	l.hypr.Dispatch("submap reset")
+	if err := l.hypr.Dispatch("submap reset"); err != nil {
+		l.mu.Unlock()
+		return "", fmt.Errorf("lock: reset submap: %w", err)
+	}
 	if l.saved == nil {
 		l.idleUnlockAfter = time.Time{}
+		l.mu.Unlock()
 		return "lock: not active", nil
 	}
 	saved := l.saved
 	l.saved = nil
 	l.idleUnlockAfter = time.Time{}
-	l.exitBlackout(saved, saved.musicPlaying)
+	l.mu.Unlock()
+
+	if err := l.exitBlackout(saved, saved.musicPlaying); err != nil {
+		return "lock: unlocked", err
+	}
 	return "lock: unlocked", nil
 }
 
@@ -168,16 +206,31 @@ func (l *Lock) startFull(restoreWidgets bool) (*lockState, string, error) {
 		l.mu.Unlock()
 		return nil, "lock: hyprlock already running", nil
 	}
-	// Pseudo → full: drop submap, reuse existing blackout state.
-	l.hypr.Dispatch("submap reset")
-	if l.saved == nil {
-		l.saved = l.capture()
-		l.saved.restoreWidgets = restoreWidgets
-		l.enterBlackout()
+
+	needsBlackout := false
+	if l.saved != nil {
+		if err := l.hypr.Dispatch("submap reset"); err != nil {
+			l.mu.Unlock()
+			return nil, "", fmt.Errorf("lock: reset submap: %w", err)
+		}
+	} else {
+		saved := l.capture()
+		saved.restoreWidgets = restoreWidgets
+		if err := l.hypr.Dispatch(fmt.Sprintf("workspace %d", pseudoLockWorkspace)); err != nil {
+			l.mu.Unlock()
+			return nil, "", fmt.Errorf("lock: switch to workspace %d: %w", pseudoLockWorkspace, err)
+		}
+		l.saved = saved
+		needsBlackout = true
 	}
+
 	saved := l.saved
 	l.inFull = true
 	l.mu.Unlock()
+
+	if needsBlackout {
+		l.enterBlackout(saved)
+	}
 	return saved, "lock: full", nil
 }
 
@@ -199,14 +252,19 @@ func (l *Lock) runHyprlock(saved *lockState, delay, grace time.Duration, loadSSH
 	}
 
 	l.mu.Lock()
-	defer l.mu.Unlock()
 	l.inFull = false
 	if l.saved == nil {
+		l.mu.Unlock()
 		return
 	}
 	l.saved = nil
+	l.idleUnlockAfter = time.Time{}
 	resumeMusic := saved.musicPlaying
-	l.exitBlackout(saved, resumeMusic)
+	l.mu.Unlock()
+
+	if err := l.exitBlackout(saved, resumeMusic); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd lock: unlock after hyprlock: %v\n", err)
+	}
 }
 
 func runtimeDir() string {
@@ -216,7 +274,7 @@ func runtimeDir() string {
 	return fmt.Sprintf("/run/user/%d", os.Getuid())
 }
 
-// capture snapshots workspace and music state for later restore. Called with l.mu held.
+// capture snapshots workspace for later restore. Called with l.mu held.
 func (l *Lock) capture() *lockState {
 	ws := l.state.GetWorkspace()
 	if ws <= 0 {
@@ -234,18 +292,39 @@ func (l *Lock) capture() *lockState {
 	}
 	return &lockState{
 		workspace:      ws,
-		musicPlaying:   playerctlStatus() == "Playing",
 		restoreWidgets: true,
 	}
 }
 
-func (l *Lock) enterBlackout() {
-	l.hypr.Dispatch(fmt.Sprintf("workspace %d", pseudoLockWorkspace))
+func (l *Lock) enterBlackout(saved *lockState) {
+	if !l.active(saved) {
+		return
+	}
 	closeEwwWidgets()
+	if !l.active(saved) {
+		return
+	}
+
+	musicPlaying := playerctlStatus() == "Playing"
+	l.mu.Lock()
+	active := l.saved == saved
+	if active {
+		saved.musicPlaying = musicPlaying
+	}
+	l.mu.Unlock()
+	if !active {
+		return
+	}
 	exec.Command("killall", "glava").Run()
 	exec.Command("dunstctl", "close-all").Run()
 	exec.Command("dunstctl", "set-paused", "true").Run()
 	exec.Command("playerctl", "pause").Run()
+}
+
+func (l *Lock) active(saved *lockState) bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.saved == saved
 }
 
 func closeEwwWidgets() {
@@ -268,12 +347,14 @@ func commandOutput(out []byte) string {
 }
 
 // exitBlackout restores workspace, reopens eww/glava, reconnects bluetooth, and unpauses dunst.
-func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) {
+func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) error {
 	cfg := l.state.GetConfig()
+	if err := l.hypr.Dispatch(fmt.Sprintf("workspace %d", saved.workspace)); err != nil {
+		return fmt.Errorf("lock: restore workspace %d: %w", saved.workspace, err)
+	}
 	if err := EnsureBG(&cfg.Background); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd lock: background: %v\n", err)
 	}
-	l.hypr.Dispatch(fmt.Sprintf("workspace %d", saved.workspace))
 
 	dispatchStartup(l.hypr, cfg.Bluetooth)
 	if saved.restoreWidgets {
@@ -287,6 +368,7 @@ func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) {
 	time.AfterFunc(time.Second, func() {
 		exec.Command("dunstctl", "set-paused", "false").Run()
 	})
+	return nil
 }
 
 // restoreEwwWidgets reopens widgets through ewwd once the daemon socket is ready.

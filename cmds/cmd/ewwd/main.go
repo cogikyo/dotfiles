@@ -129,6 +129,13 @@ func cmdOpen(command string) {
 		os.Exit(1)
 	}
 	fmt.Println(resp)
+	if daemonResponseFailed(resp) {
+		os.Exit(1)
+	}
+}
+
+func daemonResponseFailed(resp string) bool {
+	return strings.HasPrefix(strings.TrimSpace(resp), "error:")
 }
 
 func cmdQuery() {
@@ -186,6 +193,9 @@ func cmdAction() {
 		os.Exit(1)
 	}
 	fmt.Println(resp)
+	if daemonResponseFailed(resp) {
+		os.Exit(1)
+	}
 }
 
 func cmdHelp() {
