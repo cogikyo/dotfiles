@@ -3,8 +3,6 @@ package session
 // lock.go implements pseudo-lock and full-lock lifecycles with restore of workspace, UI services, and audio.
 
 import (
-	"dotfiles/cmds/internal/hyprd/hypr"
-	"dotfiles/cmds/internal/hyprd/state"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -15,6 +13,9 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"dotfiles/cmds/internal/hyprd/hypr"
+	"dotfiles/cmds/internal/hyprd/state"
 )
 
 const pseudoLockWorkspace = 6         // workspace reserved for the visual blackout
@@ -300,10 +301,6 @@ func (l *Lock) enterBlackout(saved *lockState) {
 	if !l.active(saved) {
 		return
 	}
-	closeEwwWidgets()
-	if !l.active(saved) {
-		return
-	}
 
 	musicPlaying := playerctlStatus() == "Playing"
 	l.mu.Lock()
@@ -315,10 +312,24 @@ func (l *Lock) enterBlackout(saved *lockState) {
 	if !active {
 		return
 	}
+
 	exec.Command("killall", "glava").Run()
+	if !l.active(saved) {
+		return
+	}
 	exec.Command("dunstctl", "close-all").Run()
+	if !l.active(saved) {
+		return
+	}
 	exec.Command("dunstctl", "set-paused", "true").Run()
+	if !l.active(saved) {
+		return
+	}
 	exec.Command("playerctl", "pause").Run()
+	if !l.active(saved) {
+		return
+	}
+	l.closeEwwWidgets(saved)
 }
 
 func (l *Lock) active(saved *lockState) bool {
@@ -327,23 +338,30 @@ func (l *Lock) active(saved *lockState) bool {
 	return l.saved == saved
 }
 
-func closeEwwWidgets() {
-	if out, err := exec.Command("ewwd", "close").CombinedOutput(); err == nil {
+func (l *Lock) closeEwwWidgets(saved *lockState) {
+	if !l.active(saved) {
 		return
-	} else {
-		fmt.Fprintf(os.Stderr, "hyprd lock: ewwd close unavailable: %v%s; falling back to eww close-all\n", err, commandOutput(out))
 	}
-	if out, err := exec.Command("eww", "close-all").CombinedOutput(); err != nil {
-		fmt.Fprintf(os.Stderr, "hyprd lock: eww close-all: %v%s\n", err, commandOutput(out))
+	if err := exec.Command("systemctl", "--user", "--no-block", "stop", "ewwd.service").Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd lock: stop ewwd.service: %v\n", err)
+	}
+	if !l.active(saved) {
+		return
+	}
+	if err := exec.Command("pkill", "-x", "ewwd").Run(); err != nil && !isExitCode(err, 1) {
+		fmt.Fprintf(os.Stderr, "hyprd lock: pkill ewwd: %v\n", err)
+	}
+	if !l.active(saved) {
+		return
+	}
+	if err := exec.Command("pkill", "-x", "eww").Run(); err != nil && !isExitCode(err, 1) {
+		fmt.Fprintf(os.Stderr, "hyprd lock: pkill eww: %v\n", err)
 	}
 }
 
-func commandOutput(out []byte) string {
-	trimmed := strings.TrimSpace(string(out))
-	if trimmed == "" {
-		return ""
-	}
-	return ": " + trimmed
+func isExitCode(err error, code int) bool {
+	var exitErr *exec.ExitError
+	return errors.As(err, &exitErr) && exitErr.ExitCode() == code
 }
 
 // exitBlackout restores workspace, reopens eww/glava, reconnects bluetooth, and unpauses dunst.
@@ -373,20 +391,25 @@ func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) error {
 
 // restoreEwwWidgets reopens widgets through ewwd once the daemon socket is ready.
 func restoreEwwWidgets(reload bool) {
-	if !waitEwwdReady(7 * time.Second) {
-		if err := exec.Command("systemctl", "--user", "start", "ewwd.service").Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "hyprd lock: start ewwd.service: %v\n", err)
-		}
-		if !waitEwwdReady(7 * time.Second) {
+	action := "restore"
+	if reload {
+		action = "open"
+	}
+
+	if waitEwwdReady(0) {
+		startDetached("ewwd", action)
+		return
+	}
+	if err := exec.Command("systemctl", "--user", "--no-block", "start", "ewwd.service").Run(); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd lock: start ewwd.service: %v\n", err)
+	}
+	go func() {
+		if !waitEwwdReady(time.Second) {
 			fmt.Fprintln(os.Stderr, "hyprd lock: ewwd unavailable after service start")
 			return
 		}
-	}
-	if reload {
-		startDetached("ewwd", "open")
-	} else {
-		startDetached("ewwd", "restore")
-	}
+		startDetached("ewwd", action)
+	}()
 }
 
 func waitEwwdReady(timeout time.Duration) bool {

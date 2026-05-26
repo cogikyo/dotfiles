@@ -169,9 +169,6 @@ func cmdInit() {
 		fmt.Fprintln(os.Stderr, "hyprd init: hyprd.service did not become ready; skipping daemon init")
 		os.Exit(1)
 	}
-	if !waitEwwdReady(10 * time.Second) {
-		fmt.Fprintln(os.Stderr, "hyprd init: ewwd.service did not become ready; continuing with degraded widgets")
-	}
 	sendCommand("init")
 }
 
@@ -194,18 +191,6 @@ func waitHyprdReady(timeout time.Duration) bool {
 	}
 }
 
-func waitEwwdReady(timeout time.Duration) bool {
-	deadline := time.Now().Add(timeout)
-	for {
-		if exec.Command("ewwd", "status").Run() == nil {
-			return true
-		}
-		if !time.Now().Before(deadline) {
-			return false
-		}
-		time.Sleep(100 * time.Millisecond)
-	}
-}
 func cmdHide()    { sendCommand("hide") }
 func cmdMonocle() { sendCommand("monocle") }
 func cmdSwap()    { sendCommand("swap") }
