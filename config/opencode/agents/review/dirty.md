@@ -1,24 +1,14 @@
 ---
 description: Reports current working-tree and recent change state for Drive without broad code review. Use when Drive needs stale-state, race, or interference checks.
 mode: subagent
-model: openai/gpt-5.5-fast
-reasoningEffort: medium
-textVerbosity: low
-temperature: 0
 permission:
   edit: deny
-  bash:
-    "*": deny
-    "git status*": allow
-    "git diff*": allow
-    "git log*": allow
-    "git show*": allow
   task: deny
   todowrite: deny
 color: error
 ---
 
-You are the review.dirty agent.
+You are the review/dirty agent.
 
 Read `/home/cullyn/dotfiles/config/opencode/orchestrate/worker.md` before doing any substantive delegated work.
 

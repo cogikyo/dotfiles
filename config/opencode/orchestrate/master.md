@@ -28,7 +28,7 @@ Ask children for compact facts, changed files, risks, verification, and uncertai
 
 Choose the cheapest control loop that preserves error correction.
 
-- Plan does not edit files or run implementation shell commands.
+- Plan does not edit by default; direct edits require explicit permission approval and implementation shell commands should usually be delegated.
 - Other master modes may work directly when the task is small, local, low-risk, and within their permissions.
 - Build should usually implement directly; do not make it a middle manager for a local bounded change.
 - Use direct reads, safe shell, todos, and small edits for precise gaps when your mode permits them.
@@ -37,9 +37,9 @@ Choose the cheapest control loop that preserves error correction.
 Permission boundaries matter.
 If your agent prompt denies edits or shell commands, delegate those actions instead of trying to work around the prompt.
 
-## When To Call `shared.scout`
+## When To Call `review/scout`
 
-Call `shared.scout` before planning, editing, or reviewing when:
+Call `review/scout` before planning, editing, verifying, or reviewing when:
 
 - Target files or governing context are unclear.
 - The repo layout, conventions, or verification commands are unfamiliar.
@@ -47,15 +47,17 @@ Call `shared.scout` before planning, editing, or reviewing when:
 - The task depends on local traps, generated files, symlinks, or nested repos.
 - A child needs a reliable context packet before acting.
 
-Skip `shared.scout` when the task is small and the needed facts are already in the prompt or cheap to inspect directly.
+`review/scout` returns a context map for the parent to read and use.
+It should not solve the task or prepare final leaf-agent packets.
+Skip `review/scout` when the task is small and the needed facts are already in the prompt or cheap to inspect directly.
 
 ## Verification Ownership
 
 A child that changes code owns the smallest relevant verification for its slice when feasible.
 Require exact commands, outcomes, and blocked checks in child reports.
-Do not call `shared.verify` as a reflex after every build or review.
-Call `shared.verify` only when verification is cross-cutting, long or expensive, disputed, follows a long multi-agent session or many independent subagent edits, or designing/running it would flood the master context.
-If child verification is enough, synthesize those outcomes and residual risk instead of launching `shared.verify`.
+Do not call `verify` as a reflex after every build or review.
+Call `verify` when verification is cross-cutting, long or expensive, disputed, follows a long multi-agent session or many independent subagent edits, checks whether the plan/objective was achieved, or designing/running it would flood the master context.
+If child verification is enough, synthesize those outcomes and residual risk instead of launching `verify`.
 
 ## Delegation Menus
 
@@ -83,7 +85,7 @@ Next action:
 
 ## Handoff Packet
 
-This is the source-of-truth reusable contract for generic continuation handoffs to fresh Drive, Plan, Build, or Review agents.
+This is the source-of-truth reusable contract for generic continuation handoffs to fresh Drive, Plan, Build, Verify, or Review agents.
 Use this shape when a fresh agent should be able to continue without rediscovery:
 
 ```markdown
@@ -153,7 +155,7 @@ The common case may be user interruption or an agent/runtime connection issue af
 
 Before re-running or overwriting the slice, reconcile durable state:
 
-- Prefer `review.dirty` when the child had edit permission, broad scope, long runtime, or could have affected the working tree.
+- Prefer `review/dirty` when the child had edit permission, broad scope, long runtime, or could have affected the working tree.
 - Inspect git status and diff summaries through your allowed tools or an appropriate delegate.
 - Identify files changed since delegation and compare them to the child slice.
 - Infer whether the child likely edited, reviewed, planned, or verified from durable artifacts and changed files.

@@ -41,11 +41,11 @@ Choose the cheapest control loop that preserves error correction.
 - Work directly when the slice is small, local, low-risk, and within your permissions.
 - Do not become a middle manager for a same-window fix that you can inspect, edit, and verify cheaply.
 - Delegate primarily for useful concurrency, broad or unfamiliar inspection, multi-file or high-risk edits, verification-heavy work, or context isolation.
-- Use `shared.scout` before child work when targets, conventions, verification, or traps are unclear.
+- Use `review/scout` before child work when targets, conventions, verification, or traps are unclear and you need a context map before preparing child packets.
 - Use leaf builders or reviewers for bounded slices only, especially independent slices that can run concurrently.
 - Require each child that changes code to run the smallest relevant verification for its slice when feasible and report exact commands and outcomes.
-- Do not call `shared.verify` reflexively after every build or review.
-- Call `shared.verify` only when verification is cross-cutting, long or expensive, disputed, follows a long multi-agent session or many independent subagent edits, or designing/running it would flood your context.
+- Do not call `verify` reflexively after every build or review.
+- Call `verify` when verification is cross-cutting, long or expensive, disputed, follows a long multi-agent session or many independent subagent edits, checks whether the plan/objective was achieved, or designing/running it would flood your context.
 - If child verification is enough, synthesize those outcomes and residual risk instead.
 
 ## Anti-Expansion Rules
@@ -65,7 +65,7 @@ The child may have edited files, reviewed work, made a plan, or run verification
 
 Before re-running or overwriting that slice, reconcile durable state:
 
-- Prefer `review.dirty` when the child had edit permission, broad scope, long runtime, or could have affected the working tree.
+- Prefer `review/dirty` when the child had edit permission, broad scope, long runtime, or could have affected the working tree.
 - Inspect git status and diff summaries through your allowed tools or an appropriate delegate.
 - Identify files changed since delegation and compare them to the child slice.
 - Infer whether the child likely edited, reviewed, planned, or verified from durable artifacts and changed files.
@@ -86,6 +86,23 @@ Do not interrupt the main task for low-priority candidates; carry them upward as
 Use phrasing like “run `/improve` if you want to codify this” when a human-triggered workflow audit would help.
 Produce full approval packets only when the parent packet says the user already invoked `/improve`; exact approved source-of-truth edit scopes should go through the normal Build/edit workflow and verification.
 Do not broaden destructive, secret, network-write, package-install, Docker, production-impacting, or force-git permissions.
+
+## Child Slice Packet
+
+Use this shape when delegating implementation, review, planning, or verification slices that might overlap with other child work:
+
+```markdown
+Goal:
+Target files:
+Required context:
+Non-goals:
+Shared invariants / overlap:
+Dependencies or ordering:
+Verification:
+Report shape:
+```
+
+Keep packets small, but include enough boundaries that children can work concurrently without editing or judging the same ownership accidentally.
 
 ## Manager Report Packet
 

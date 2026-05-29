@@ -19,7 +19,7 @@
     },
     "/home/cullyn/LeadPier/backend/services": {
       "pins": [
-        "routing/s.api.smart_algorithm.go",
+        "routing/s.smart_algorithm.go",
         "routing/CONTEXT/THEORY.md",
         "statistics/s.stats.reports.admin.go",
         "notify/init.notify.go",

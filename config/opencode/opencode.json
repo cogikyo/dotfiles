@@ -68,6 +68,11 @@
           "options": {
             "serviceTier": "priority"
           }
+        },
+        "gpt-5.5-fast": {
+          "options": {
+            "serviceTier": "priority"
+          }
         }
       }
     }

@@ -39,6 +39,11 @@ When editing is allowed:
 
 When editing is not allowed, return findings, plans, or verification results only.
 
+Tool permissions are operational capability, not role scope.
+Bash access may be available so CLI tools can inspect, search, verify, and gather evidence without friction.
+If your role is read-only, do not mutate files, git state, system state, network state, secrets, or user data through Bash even when the command would be permitted.
+When mutation is needed to complete the slice, report the needed Build handoff instead of doing it yourself.
+
 ## Verification Discipline
 
 Run focused verification when feasible and permitted.
