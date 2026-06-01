@@ -23,6 +23,7 @@ text/html=hyprd-browser.desktop
 text/xml=nvim.desktop;
 x-scheme-handler/about=hyprd-browser.desktop
 x-scheme-handler/unknown=hyprd-browser.desktop
+x-scheme-handler/slack=slack.desktop
 
 [Added Associations]
 x-scheme-handler/http=hyprd-browser.desktop;firefox-developer-edition.desktop;
