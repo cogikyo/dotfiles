@@ -86,14 +86,18 @@ Rules of thumb:
 
 Section Headers: when already exist, user asks for it, or file is > ~300 lines.
 Sub-Section Label: deeply nested long functions that COULD be decomposed but is monolithic for legacy or other reasons.
-External Docs: when cotains links with context explations -- almost always good.
+External Docs: when links need context explanations -- almost always good.
+
+Default comment boxes and sub-section labels should extend to visual column 100 unless local convention says otherwise.
+Sub-section labels should have one blank line above and no blank line below; they attach to the code they introduce.
 
 ```bash
-# ╭───────────────────────────────────────────────────────────────────────────────╮
-# │ major section                                                                 │
-# ╰───────────────────────────────────────────────────────────────────────────────╯
+# ╭────────────────────────────────────────────────────────────────────────────────────────────────╮
+# │ major section                                                                                  │
+# ╰────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-# ├─ sub-section label ──────────────────────────────────────────────────────────┤
+# ├─ sub-section label ────────────────────────────────────────────────────────────────────────────┤
+do_the_thing
 
 # ╓
 # ║ https://some-external-doc — what this link is for
