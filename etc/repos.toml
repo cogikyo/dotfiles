@@ -9,6 +9,10 @@ path = "~/dotfiles"
 repo = "cogikyo/harpoon"
 path = "~/cogikyo/harpoon"
 
+[cogikyo]
+repo = "cogikyo/cogikyo"
+path = "~/cogikyo/cogikyo"
+
 [vagari]
 repo = "cogikyo/vagari"
 path = "~/vagari/vagari"
