@@ -25,6 +25,8 @@
     "agent_list": "<leader>a",
     "session_list": "<leader>r",
     "status_view": "<leader>s",
+    "messages_first": "ctrl+g",
+    "messages_last": "ctrl+alt+g",
     "input_line_home": "home,ctrl+a",
     "input_line_end": "end,ctrl+e",
     "input_select_line_home": "shift+home,ctrl+shift+a",
