@@ -35,8 +35,6 @@ const stateFile = "/tmp/hyprd-state.json"
 
 const computeCPUs = "0-6,8-14,16-1023"
 
-const bgReconnectSettle = 2 * time.Second
-
 // ╭──────────────────────────────────────────────────────────────────────────────╮
 // │ Daemon                                                                       │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
@@ -52,7 +50,6 @@ type Daemon struct {
 	lockCtl   *session.Lock
 	pickerCtl *session.Picker
 	restartCh chan struct{}
-	bgSeq     atomic.Uint64
 }
 
 // New connects to Hyprland's IPC socket and prepares the daemon.
@@ -94,7 +91,6 @@ func (d *Daemon) Run() error {
 	fmt.Printf("hyprd: listening on %s\n", SocketPath)
 
 	events := NewEventLoop(d.hypr, d.state, d.server.Subs, d.server.Done())
-	events.OnMonitorChanged(d.handleMonitorChanged)
 	go func() {
 		if err := events.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "hyprd: event loop error: %v\n", err)
@@ -129,40 +125,6 @@ func (d *Daemon) sendInitialState(sub *daemon.Subscriber, topics []string) {
 	if sub.WantsTopic("split") {
 		sub.SendEvent("split", d.state.GetSplitRatio())
 	}
-}
-
-func (d *Daemon) handleMonitorChanged(event, data string) {
-	seq := d.bgSeq.Add(1)
-
-	switch event {
-	case "monitorremoved":
-		bg := session.NewBG(&d.config.Load().Background)
-		result, err := bg.Execute("kill")
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "hyprd monitor: %s %s: %v\n", event, data, err)
-			return
-		}
-		fmt.Printf("hyprd monitor: %s %s: %s\n", event, data, result)
-		go d.ensureBGAfterMonitorSettle(seq, event, data)
-
-	case "monitoradded", "monitoraddedv2":
-		go d.ensureBGAfterMonitorSettle(seq, event, data)
-	}
-}
-
-func (d *Daemon) ensureBGAfterMonitorSettle(seq uint64, event, data string) {
-	time.Sleep(bgReconnectSettle)
-	if seq != d.bgSeq.Load() {
-		return
-	}
-
-	bg := session.NewBG(&d.config.Load().Background)
-	result, err := bg.Execute("ensure")
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "hyprd monitor: %s %s: %v\n", event, data, err)
-		return
-	}
-	fmt.Printf("hyprd monitor: %s %s: %s\n", event, data, result)
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮

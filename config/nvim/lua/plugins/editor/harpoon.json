@@ -20,12 +20,20 @@
     "/home/cullyn/LeadPier/backend/services": {
       "pins": [
         "routing/s.smart_algorithm.go",
-        "routing/CONTEXT/THEORY.md",
         "statistics/s.stats.reports.admin.go",
         "notify/init.notify.go",
         "partner/init.partner.go",
         "compliance/init.compliance.go",
-        "partner/feedback/init.feedback.go"
+        "partner/feedback/init.feedback.go",
+        "routing/init.routing.go",
+        "routing/s.api.smart_algorithm.go"
+      ]
+    },
+    "/home/cullyn/LeadPier/backend/services/routing": {
+      "pins": [
+        "smart/layout_reconcile.go",
+        "s.smart_algorithm.go",
+        "smart/rebalance.go"
       ]
     },
     "/home/cullyn/LeadPier/frontend": {

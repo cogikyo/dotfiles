@@ -20,11 +20,10 @@ import (
 
 // EventLoop mirrors Hyprland's event stream into daemon state and notifies subscribers.
 type EventLoop struct {
-	hypr           *hypr.Client
-	state          *state.State
-	subs           *daemon.SubscriptionManager
-	done           <-chan struct{}
-	monitorChanged func(event, data string)
+	hypr  *hypr.Client
+	state *state.State
+	subs  *daemon.SubscriptionManager
+	done  <-chan struct{}
 }
 
 func NewEventLoop(hypr *hypr.Client, state *state.State, subs *daemon.SubscriptionManager, done <-chan struct{}) *EventLoop {
@@ -34,10 +33,6 @@ func NewEventLoop(hypr *hypr.Client, state *state.State, subs *daemon.Subscripti
 		subs:  subs,
 		done:  done,
 	}
-}
-
-func (e *EventLoop) OnMonitorChanged(fn func(event, data string)) {
-	e.monitorChanged = fn
 }
 
 // Run dials Hyprland's event socket, seeds state, then dispatches events until shutdown.
@@ -144,11 +139,6 @@ func (e *EventLoop) handleEvent(line string) {
 				e.state.SetWorkspace(ws)
 				e.notifyWorkspace()
 			}
-		}
-
-	case "monitorremoved", "monitoradded", "monitoraddedv2":
-		if e.monitorChanged != nil {
-			e.monitorChanged(event, data)
 		}
 
 	case "createworkspace", "destroyworkspace", "openwindow", "movewindow":
