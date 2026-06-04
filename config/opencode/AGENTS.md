@@ -70,7 +70,7 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 - Use specific names near edges, workflows, and idiomatic domain details.
 - Avoid `utils`, `shared`, and `helpers` as ownership names unless they are literal grouping roots with clearer packages underneath.
 - Treat long names as a smell for missing context, weak boundaries, or parameters stuffed into names.
-  - Treat 3+ word names as a design smell except real compound concepts.
+  - Treat 3+ word names as a design smell except real compound pronouns.
 - Technical or framework names are fine when they are the honest domain or interface term, not camouflage.
 - Do not name one-off values just to avoid literals.
   - Extract constants when the name carries domain meaning, reuse, config, validation, or rendering structure.
@@ -154,11 +154,17 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 ### Verification
 
 - Run the smallest relevant check that can falsify the change.
-- Prefer targeted tests and builds over broad repo-wide cleanup unless asked.
+- Prefer targeted builds and checks over broad repo-wide cleanup unless asked.
 - Use LSP, formatters, and code actions when appropriate to fix mechanical issues before handing back.
 - If verification is skipped or blocked, say exactly what remains unverified.
 - Do not fix unrelated failures or assume unexpected file changes are formatter churn; the user or other agents may be editing concurrently.
 - Let formatters own formatting, then re-read if tooling changed files.
+
+#### Testing
+
+- Default to not adding tests. Seriously, don't.
+- Add tests only when the user specifically asks for unit or regression tests, or when parsing, edge cases, or complicated internals make tests the smallest useful way to clarify intended behavior.
+- If tests seem valuable but were not requested, propose them as an option instead of writing them.
 
 ## Interaction
 
