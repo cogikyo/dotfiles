@@ -69,6 +69,8 @@ func main() {
 		cmdProject()
 	case "lock":
 		cmdLock()
+	case "share":
+		cmdShare()
 	case "notify":
 		cmdNotify()
 	case "vpn":
@@ -203,6 +205,7 @@ func cmdBrowser() {
 }
 func cmdProject() { sendCommand("project " + strings.Join(os.Args[2:], " ")) }
 func cmdLock()    { sendCommand("lock " + strings.Join(os.Args[2:], " ")) }
+func cmdShare()   { sendCommand("share " + strings.Join(os.Args[2:], " ")) }
 func cmdQuery()   { sendCommand("query " + strings.Join(os.Args[2:], " ")) }
 func cmdBG()      { sendCommand("bg " + requireArg("usage: hyprd bg {ensure|kill}")) }
 func cmdWS()      { sendCommand("ws " + requireArg("usage: hyprd ws <number|up|down>")) }
@@ -317,6 +320,8 @@ Lock:
   hyprd lock             Pseudo-lock (visual blackout + submap)
   hyprd lock unlock      Exit pseudo-lock (alias: -u)
   hyprd lock full        Full lock (wraps hyprlock with pre/post hooks)
+  hyprd share            Toggle screen-share mode
+  hyprd share on|off     Enter/exit screen-share mode explicitly
 
 Browser:
   hyprd browser launch

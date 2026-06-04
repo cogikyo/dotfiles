@@ -23,10 +23,13 @@ import (
 	"dotfiles/cmds/internal/hyprd/state"
 )
 
-var startupExecs = []string{
+var glavaExecs = []string{
 	"glava -e bars_rc.glsl",
 	"glava -e bars_r_rc.glsl",
 	"glava -e radial_rc.glsl",
+}
+
+var startupExecs = []string{
 	"spotify-launcher",
 }
 
@@ -39,11 +42,18 @@ const (
 
 // dispatchStartup runs hardcoded startup commands and optionally connects bluetooth.
 func dispatchStartup(h hyprDispatcher, bt config.BluetoothConfig) {
+	dispatchGLava(h)
 	for _, cmd := range startupExecs {
 		h.Dispatch(fmt.Sprintf("exec %s", cmd))
 	}
 	if bt.Enabled && bt.Device != "" {
 		connectBluetooth(bt.Device)
+	}
+}
+
+func dispatchGLava(h hyprDispatcher) {
+	for _, cmd := range glavaExecs {
+		h.Dispatch(fmt.Sprintf("exec %s", cmd))
 	}
 }
 

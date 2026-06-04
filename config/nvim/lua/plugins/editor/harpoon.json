@@ -31,9 +31,12 @@
     },
     "/home/cullyn/LeadPier/backend/services/routing": {
       "pins": [
-        "smart/layout_reconcile.go",
         "s.smart_algorithm.go",
-        "smart/rebalance.go"
+        "smart/rebalance.go",
+        "smart/policy.go",
+        "smart/tier.go",
+        "smart/stats.go",
+        "models/db.smart_tier.go"
       ]
     },
     "/home/cullyn/LeadPier/frontend": {

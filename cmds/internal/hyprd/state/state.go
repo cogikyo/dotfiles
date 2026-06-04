@@ -33,6 +33,7 @@ type State struct {
 	SplitRatio         string                        `json:"split_ratio"`
 	ActiveSessions     map[int]string                `json:"active_sessions,omitempty"`
 	TabMemory          map[int]map[string]*TabMemory `json:"tab_memory,omitempty"`
+	ScreenShare        bool                          `json:"screen_share"`
 	pendingLaunches    map[string]time.Time          `json:"-"`
 	config             *config.HyprConfig
 }
@@ -97,6 +98,18 @@ func (s *State) GetSplitRatio() string {
 	return s.SplitRatio
 }
 
+func (s *State) SetScreenShare(active bool) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.ScreenShare = active
+}
+
+func (s *State) GetScreenShare() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.ScreenShare
+}
+
 func (s *State) GetConfig() *config.HyprConfig {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -116,6 +129,7 @@ func (s *State) Restore(data []byte) error {
 	s.Workspace = snap.Workspace
 	s.OccupiedWorkspaces = snap.OccupiedWorkspaces
 	s.SplitRatio = snap.SplitRatio
+	s.ScreenShare = snap.ScreenShare
 
 	if snap.Hidden != nil {
 		s.Hidden = snap.Hidden

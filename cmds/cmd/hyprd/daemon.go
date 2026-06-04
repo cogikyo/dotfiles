@@ -48,6 +48,7 @@ type Daemon struct {
 	server    *daemon.Server
 	config    atomic.Pointer[config.HyprConfig]
 	lockCtl   *session.Lock
+	shareCtl  *session.Share
 	pickerCtl *session.Picker
 	restartCh chan struct{}
 }
@@ -66,6 +67,7 @@ func New() (*Daemon, error) {
 		hypr:      hyprClient,
 		state:     stateStore,
 		lockCtl:   session.NewLock(hyprClient, stateStore),
+		shareCtl:  session.NewShare(hyprClient, stateStore),
 		pickerCtl: session.NewPicker(hyprClient, stateStore),
 		restartCh: make(chan struct{}, 1),
 	}
@@ -252,6 +254,12 @@ func (d *Daemon) handleCommand(command string) string {
 		return result
 	case "lock":
 		result, err := d.lockCtl.Execute(arg)
+		if err != nil {
+			return fmt.Sprintf("error: %v", err)
+		}
+		return result
+	case "share":
+		result, err := d.shareCtl.Execute(arg)
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
 		}

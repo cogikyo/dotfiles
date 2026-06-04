@@ -8,6 +8,7 @@ import (
 	"dotfiles/cmds/internal/daemon"
 	"dotfiles/cmds/internal/ewwd/providers"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -46,6 +47,7 @@ type Daemon struct {
 	config      config.EwwConfig
 	autoOpen    bool
 	openMu      sync.Mutex
+	reconcileMu sync.Mutex
 	desiredOpen bool
 }
 
@@ -211,27 +213,51 @@ func (d *Daemon) handleAction(providerName string, args []string) string {
 // openWindows ensures the eww daemon is running and reconciles configured windows.
 func (d *Daemon) openWindows(reload bool) string {
 	d.openMu.Lock()
-	defer d.openMu.Unlock()
+	d.desiredOpen = true
+	d.openMu.Unlock()
 
-	result, ok := d.reconcileWindowsLocked(reload)
-	if ok {
-		d.desiredOpen = true
-	}
-	return result
+	go d.reconcileLatest(reload)
+	return "open: scheduled"
 }
 
 func (d *Daemon) closeWindows() string {
 	d.openMu.Lock()
-	defer d.openMu.Unlock()
-
 	d.desiredOpen = false
-	if out, err := exec.Command("eww", "close-all").CombinedOutput(); err != nil {
-		return fmt.Sprintf("error: eww close-all: %v%s", err, commandOutput(out))
-	}
-	return "close: all windows"
+	d.openMu.Unlock()
+
+	go d.killEww()
+	return "close: scheduled"
 }
 
-func (d *Daemon) reconcileWindowsLocked(reload bool) (string, bool) {
+func (d *Daemon) desiredWidgetsOpen() bool {
+	d.openMu.Lock()
+	defer d.openMu.Unlock()
+	return d.desiredOpen
+}
+
+func (d *Daemon) reconcileLatest(reload bool) {
+	d.reconcileMu.Lock()
+	defer d.reconcileMu.Unlock()
+
+	if !d.desiredWidgetsOpen() {
+		d.killEww()
+		return
+	}
+
+	result, ok := d.reconcileWindows(reload)
+	if !ok {
+		fmt.Fprintf(os.Stderr, "ewwd: reconcile failed: %s\n", result)
+	}
+	if !d.desiredWidgetsOpen() {
+		d.killEww()
+		return
+	}
+	if result != "" {
+		fmt.Printf("ewwd: %s\n", result)
+	}
+}
+
+func (d *Daemon) reconcileWindows(reload bool) (string, bool) {
 	windows := d.config.Windows
 	verb := "restore"
 	if reload {
@@ -248,6 +274,7 @@ func (d *Daemon) reconcileWindowsLocked(reload bool) (string, bool) {
 		}
 	}
 
+	d.killEww()
 	if err := ensureEwwDaemon(); err != nil {
 		return fmt.Sprintf("error: %v", err), false
 	}
@@ -271,6 +298,12 @@ func (d *Daemon) reconcileWindowsLocked(reload bool) (string, bool) {
 	return fmt.Sprintf("%s: %s", verb, strings.Join(windows, " ")), true
 }
 
+func (d *Daemon) killEww() {
+	if out, err := exec.Command("pkill", "-x", "eww").CombinedOutput(); err != nil && !isExitCode(err, 1) {
+		fmt.Fprintf(os.Stderr, "ewwd: pkill eww: %v%s\n", err, commandOutput(out))
+	}
+}
+
 func (d *Daemon) healthLoop() {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
@@ -282,26 +315,21 @@ func (d *Daemon) healthLoop() {
 		case <-ticker.C:
 		}
 
-		d.openMu.Lock()
-		if !d.desiredOpen {
-			d.openMu.Unlock()
+		if !d.desiredWidgetsOpen() {
 			continue
 		}
 		if exec.Command("eww", "ping").Run() == nil {
-			d.openMu.Unlock()
 			continue
 		}
 
 		fmt.Fprintln(os.Stderr, "ewwd: eww ping failed; restarting daemon and reconciling windows")
-		if out, err := exec.Command("eww", "kill").CombinedOutput(); err != nil && len(out) > 0 {
-			fmt.Fprintf(os.Stderr, "ewwd: eww kill ignored: %v%s\n", err, commandOutput(out))
-		}
-		result, ok := d.reconcileWindowsLocked(false)
-		if !ok {
-			fmt.Fprintf(os.Stderr, "ewwd: health reconcile failed: %s\n", result)
-		}
-		d.openMu.Unlock()
+		go d.reconcileLatest(false)
 	}
+}
+
+func isExitCode(err error, code int) bool {
+	var exitErr *exec.ExitError
+	return errors.As(err, &exitErr) && exitErr.ExitCode() == code
 }
 
 func ensureEwwDaemon() error {
