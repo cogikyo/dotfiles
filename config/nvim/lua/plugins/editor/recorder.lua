@@ -6,11 +6,11 @@ return {
 	opts = {
 		slots = slots,
 		mapping = {
-			startStopRecording = "M",
+			startStopRecording = "Q",
 			playMacro = "@",
 			switchSlot = "<C-m>",
-			editMacro = "cm",
-			deleteAllMacros = "dm",
+			editMacro = "cQ",
+			deleteAllMacros = "dQ",
 		},
 	},
 	config = function(_, opts)
