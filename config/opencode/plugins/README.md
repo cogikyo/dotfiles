@@ -16,9 +16,9 @@ Its plugin ID is `hyprd-kitty-context`.
 `hyprd/context.ts` is the local contract between the Hyprd plugins.
 Keep the context file path, schema, stale window, and Kitty socket probe here instead of duplicating them.
 
-`openai/usage.tsx` is a TUI sidebar replacement loaded by `tui.json`.
-It shows ChatGPT usage-limit windows only for OpenAI sessions.
-Its plugin ID is `cullyn.openai-quota-sidebar`.
+`usage/index.tsx` is a TUI sidebar replacement loaded by `tui.json`.
+It shows OpenAI and Claude usage-limit windows for every session.
+Its plugin ID is `cullyn.usage-sidebar`.
 
 `opencode/markdown-context.tsx` is a TUI sidebar content section loaded by `tui.json`.
 It lists Markdown files backed by completed `read` tool calls.
@@ -64,10 +64,21 @@ Idle reminders require a fresh context because stale pane targeting is noisier t
 `notify.ts` sends commands to `/tmp/hyprd.sock`.
 That socket is expected to be owned by the current user session.
 
-## OpenAI Usage Contract
+## Usage Sidebar Contract
 
-`openai/usage.tsx` reads OpenCode auth from `${XDG_DATA_HOME:-~/.local/share}/opencode/auth.json`.
-It expects an OpenAI OAuth entry with an access token.
+`usage/index.tsx` reads OpenCode auth from `${XDG_DATA_HOME:-~/.local/share}/opencode/auth.json`.
+It expects OAuth entries with access tokens for providers it can display.
+
+The sidebar always displays both OpenAI and Claude sections so usage can guide model switching before the current session provider changes.
+The active provider label uses the theme primary color.
+Provider responses are cached per provider under `${XDG_CACHE_HOME:-~/.cache}/opencode/usage-sidebar/`.
+Provider lock files live under `${XDG_RUNTIME_DIR:-/tmp/opencode-${uid}}/opencode/` so multiple OpenCode sessions share one cache without stampeding private usage endpoints.
+Network refreshes are allowed at most once per provider per minute and are triggered by session message events; the one-minute UI timer only rereads cache and updates reset countdowns.
+When a rate-limited provider has prior data, the sidebar keeps showing stale windows with a muted stale note rather than replacing them with an error.
+
+### OpenAI Usage Adapter
+
+`usage/openai.ts` expects an OpenAI OAuth entry with an access token.
 
 The plugin calls `https://chatgpt.com/backend-api/wham/usage` with `Authorization: Bearer <token>`.
 When possible it derives `ChatGPT-Account-Id` from `openai.accountId` or the OAuth JWT payload object `https://api.openai.com/auth` field `chatgpt_account_id`.
@@ -77,7 +88,23 @@ Each window may contain `remaining_percent`, `used_percent`, `reset_at`, or `res
 The UI displays used percentage; if the API only returns remaining percentage, the plugin inverts it at the boundary.
 
 This endpoint and shape are private ChatGPT implementation details.
-Failures should degrade to a coarse `OpenAI usage unavailable` or `Usage windows unavailable` message rather than exposing local paths or token parsing details.
+OpenAI uses a one-minute minimum fetch interval, a one-minute transient-error backoff, and a ten-minute 429 backoff.
+Failures should degrade to a coarse `usage unavailable`, `HTTP <status>`, or `Usage windows unavailable` message rather than exposing local paths or token parsing details.
+
+### Claude Usage Adapter
+
+`usage/anthropic.ts` expects an Anthropic OAuth entry with an access token.
+
+The plugin calls `https://api.anthropic.com/api/oauth/usage` with `Authorization: Bearer <token>`, `anthropic-beta: oauth-2025-04-20`, and `anthropic-version: 2023-06-01`.
+The response is expected to expose `five_hour` and `seven_day` windows.
+Each window may contain `utilization` and `resets_at`.
+
+The UI displays only `H` for the five-hour window and `W` for the all-models weekly window.
+Model-specific weekly windows such as Sonnet or Opus are intentionally omitted.
+
+This endpoint and shape are private Anthropic implementation details surfaced by Claude Code OAuth flows.
+Claude uses a one-minute minimum fetch interval, a two-minute transient-error backoff, and a fifteen-minute 429 backoff because this usage endpoint is much tighter than model inference.
+Failures should degrade to a coarse `usage unavailable`, `HTTP <status>`, or `Usage windows unavailable` message rather than exposing local paths or token parsing details.
 
 The plugin deactivates `internal:sidebar-context` while active because it owns the `sidebar_title` and `sidebar_content` slots.
 On dispose it reactivates that internal plugin only if this plugin deactivated it.
