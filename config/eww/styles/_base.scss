@@ -2,17 +2,22 @@
   all: unset;
 }
 
+$font-ui: "Albert Sans", "Symbols Nerd Font", sans-serif;
+$font-mono: Vagari, "Symbols Nerd Font", monospace;
+$font-display: Archivo, "Symbols Nerd Font", sans-serif;
+$font-handwritten: "Architects Daughter", cursive;
+
 window {
   background-color: transparent;
   color: $blu-2;
-  font-family: sans-serif, monospace;
+  font-family: $font-ui;
   font-size: 20px;
 }
 
 tooltip {
   background-color: rgba($bg, 0.9);
   color: $orn-2;
-  font-family: "Architects Daughter", cursive;
+  font-family: $font-handwritten;
   font-size: 1.25em;
   border: 1px solid $orn-3;
   border-radius: 10px 24px 12px 20px;

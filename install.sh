@@ -1656,6 +1656,66 @@ healthcheck_hibernate() {
 # =================================================================================================
 #  STEP {FONTS}: Install bundled fonts and refresh font cache  {{{
 
+print_font_matches() {
+    if ! has fc-match; then
+        warn "fc-match not found; skipping font match summary"
+        return 0
+    fi
+
+    local family file resolved style spacing
+    local families=(
+        "sans-serif"
+        "serif"
+        "monospace"
+        "display"
+        "handwritten"
+        "Vagari"
+        "Symbols Nerd Font"
+        "Symbols Nerd Font Mono"
+        "Noto Color Emoji"
+        "Archivo"
+        "Albert Sans"
+    )
+
+    info "Applied font matches:"
+    for family in "${families[@]}"; do
+        file=$(fc-match -f '%{file}' "$family" 2>/dev/null || true)
+        resolved=$(fc-match -f '%{family}' "$family" 2>/dev/null || true)
+        style=$(fc-match -f '%{style}' "$family" 2>/dev/null || true)
+        spacing=$(fc-match -f '%{spacing}' "$family" 2>/dev/null || true)
+
+        [[ -n "$spacing" ]] || spacing="-"
+        printf '  %-22s -> %-26s %-12s spacing=%-4s %s\n' \
+            "$family" "${resolved:-?}" "${style:-?}" "$spacing" "${file:-?}"
+    done
+}
+
+font_match_contains() {
+    local request="$1" expected="$2" actual
+
+    has fc-match || return 1
+    actual=$(fc-match -f '%{file}|%{family}' "$request" 2>/dev/null) || return 1
+    [[ "$actual" == *"$expected"* ]]
+}
+
+warn_font_match_expectations() {
+    local failed=0 request expected
+
+    while IFS='|' read -r request expected; do
+        if ! font_match_contains "$request" "$expected"; then
+            warn "Font match mismatch: $request does not resolve through $expected"
+            failed=1
+        fi
+    done <<'EOF'
+monospace|Vagari
+Vagari|Vagari
+Symbols Nerd Font|SymbolsNerdFont-Regular.ttf
+Symbols Nerd Font Mono|SymbolsNerdFontMono-Regular.ttf
+EOF
+
+    return "$failed"
+}
+
 step_fonts() {
     header "Installing fonts"
 
@@ -1694,6 +1754,8 @@ step_fonts() {
 
     info "Refreshing font cache..."
     fc-cache -f
+    print_font_matches
+    warn_font_match_expectations || true
     ok "Fonts installed"
 }
 
@@ -1701,6 +1763,23 @@ healthcheck_fonts() {
     local font_dir="$HOME/.local/share/fonts"
     [[ -d "$font_dir" ]] || { err "Healthcheck failed: font directory missing"; return 1; }
     [[ -n "$(ls -A "$font_dir" 2>/dev/null)" ]] || { err "Healthcheck failed: font directory is empty"; return 1; }
+
+    has fc-match || { err "Healthcheck failed: fc-match not found"; return 1; }
+
+    local failed=0 request expected
+    while IFS='|' read -r request expected; do
+        if ! font_match_contains "$request" "$expected"; then
+            err "Healthcheck failed: $request does not resolve through $expected"
+            failed=1
+        fi
+    done <<'EOF'
+monospace|Vagari
+Vagari|Vagari
+Symbols Nerd Font|SymbolsNerdFont-Regular.ttf
+Symbols Nerd Font Mono|SymbolsNerdFontMono-Regular.ttf
+EOF
+
+    (( failed == 0 )) || return 1
     return 0
 }
 

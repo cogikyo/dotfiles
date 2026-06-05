@@ -6,7 +6,7 @@
   margin: 16px 8px;
   border-radius: 17px 420px 69px;
   box-shadow: 3px 2px 3px 1px rgba($blu-0, 0.42);
-  font-family: monospace;
+  font-family: $font-mono;
 
   &-hover {
     border-color: $orn-3;

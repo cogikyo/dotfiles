@@ -22,7 +22,7 @@
 (defwidget daily-temp [temp margin color]
   (label
     :class "weather-${cycle-5 == 1 ? "${color}" : "base-alt" }"
-    :markup "${temp}"
+    :markup "<tt>${temp}</tt>"
     :style "font-size: 0.7em; margin-top: ${margin}px;"
     :tooltip " ${color} ${temp}  "
   )
@@ -42,7 +42,7 @@
                "${weather.night ? "night" : "day"}"
                : "base-alt"
         }"
-        :markup "<b><tt>${weather.icon}</tt>${weather.temp}<sup> </sup></b>"
+        :markup "<b><tt>${weather.icon}${weather.temp}<sup> </sup></tt></b>"
         :style "margin-right: -6px;"
         :tooltip "  ${weather.icon}reported: ${weather.temp}   󰈷 feels: ${weather.feels_like}  "
       )
@@ -53,7 +53,7 @@
                   "${weather.night ? "night" : "day"}"
                   : "base-alt"
             }"
-            :markup " <small>${weather.feels_like}<sup> </sup></small>"
+            :markup " <tt><small>${weather.feels_like}<sup> </sup></small></tt>"
             :style "font-size: 0.8em; margin-right: 6px;"
             :tooltip "  󰈷 Feels like: ${weather.feels_like}  "
           )
@@ -74,7 +74,7 @@
         (box :space-evenly false :spacing 5
           (label
             :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
-            :markup " <small>${weather.clouds}<small>%</small></small>"
+            :markup " <tt><small>${weather.clouds}<small>%</small></small></tt>"
             :style "margin-top: 2px; margin-left: -5px;"
             :tooltip "  ${weather.clouds}% cloud coverage "
           )
@@ -86,7 +86,7 @@
           )
           (label
             :class "weather-${cycle-6 == 1 ? "air" : "base-alt" }"
-            :markup "<i><small>${weather.wind_speed}m<sup>-1</sup></small></i>"
+            :markup "<tt><i><small>${weather.wind_speed}m<sup>-1</sup></small></i></tt>"
             :style "margin-top: 2px;"
             :tooltip "   ${weather.bf_icon}${weather.bf_desc} (${weather.wind_speed}m/s)  "
           )

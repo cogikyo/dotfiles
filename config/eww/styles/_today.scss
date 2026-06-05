@@ -102,7 +102,7 @@
   }
 
   &-text {
-    font-family: Archivo, monospace;
+    font-family: $font-display;
     color: $blu-2;
     font-weight: 500;
     font-size: 2.5em;
@@ -156,7 +156,7 @@
     margin-right: 2px;
 
     &-subtext {
-      font-family: monospace;
+      font-family: $font-mono;
       margin-top: 1px;
       font-size: 0.75em;
     }
@@ -199,7 +199,7 @@
   }
 
   &-weeks {
-    font-family: Archivo, monospace;
+    font-family: $font-display;
   }
 
   &-Monday {
