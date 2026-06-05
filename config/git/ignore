@@ -71,3 +71,5 @@ coverage.out
 .cache/
 .gradle/
 target/
+
+**/.claude/settings.local.json

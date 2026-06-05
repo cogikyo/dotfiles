@@ -55,6 +55,7 @@
     }
   },
   "plugin": [
+    "opencode-claude-auth@1.5.4",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/hyprd/notify.ts",
     [
       "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/media-context/prompt.ts",
@@ -73,6 +74,13 @@
           "options": {
             "serviceTier": "priority"
           }
+        }
+      }
+    },
+    "anthropic": {
+      "models": {
+        "claude-opus-4-8": {
+          "name": "Claude Opus 4.8"
         }
       }
     }
