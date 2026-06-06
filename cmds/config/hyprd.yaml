@@ -60,10 +60,9 @@ sessions:
   # ├─ workspace 4 ──────────────────────────────────────────────────────────────┤
   4: # primary project workspaces
     cogikyo:
-      project: cogikyo/cogikyo.com
+      project: cogikyo/cogikyo
       body:
         - editor
-        - browser
         - agents
 
     leadpier:
