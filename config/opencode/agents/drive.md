@@ -5,6 +5,11 @@ permission:
   edit: deny # Drive owns control flow only; edits go through build/slice or build.
   "*": deny
 
+  external_directory:
+    "*": deny
+    "/home/cullyn/dotfiles/config/opencode": allow
+    "/home/cullyn/dotfiles/config/opencode/**": allow
+
   read: allow
   glob: allow
   grep: allow
