@@ -50,6 +50,13 @@
         "apps/admin/src/pages/Users/UserDetails/Tracking/index.tsx"
       ]
     },
+    "/home/cullyn/cogikyo/cogikyo": {
+      "pins": [
+        "README.md",
+        "AGENTS.md",
+        "specs/MASTER.md"
+      ]
+    },
     "/home/cullyn/dotfiles": {
       "pins": [
         "config/hypr/hyprland.conf",
