@@ -1,14 +1,14 @@
 name: leadpier
 window:
-    selected_tab: 2
-    tab_count: 8
+    selected_tab: 1
+    tab_count: 5
     group_count: 3
-    selected_title: cullyn - Dashboard - Linecode
-    selected_url: https://git.linecode.dev/
+    selected_title: 'improve(tracking/parse): preserve duplicate pasted placeholders (5c824879) · Commits · LeadPier / LeadPier UI · GitLab'
+    selected_url: https://git.trendcapital.io/leadpier/leadpierui/-/commit/5c8248799a5f3642545c6ae6b0b564ed7c845d9e
     hypr_order_matches_tabs: true
 browser:
     pinned:
-        - https://git.trendcapital.io/leadpier/leadpierui
+        - https://git.trendcapital.io/leadpier/leadpierui/-/commit/5c8248799a5f3642545c6ae6b0b564ed7c845d9e
         - https://git.linecode.dev/
     groups:
         - name: local
@@ -16,8 +16,6 @@ browser:
           collapsed: true
           urls:
             - https://localhost:4000/
-            - http://localhost:9428/select/vmui/#/?step=5s&query=*&g0.range_input=5m&g0.end_input=2026-04-27T19%3A00%3A57&g0.relative_time=last_5_minutes
-            - http://localhost:4001/login
         - name: staging
           color: orange
           collapsed: true
@@ -25,58 +23,34 @@ browser:
             - https://local.leadpier.com:4000/login
         - name: prod
           color: green
-          collapsed: true
           urls:
-            - https://beta.leadpier.com/dashboard
-            - https://vl.tdcl.io/select/vmui/?#/?step=5s&query=*&g0.range_input=5m&g0.end_input=2026-05-02T19%3A27%3A18&g0.relative_time=last_5_minutes
+            - https://beta.leadpier.com/dashboard?limit=50&offset=0&orderDirection=ASC&compareWith=2026-06-01%2C2026-05-25&cumulative=true&excludedTagIdsRequireAll=false&groupBy=DAY&orderBy=period&periodFrom=today&periodTo=today&tagIdsRequireAll=false
 tabs:
     - position: 1
-      title: LeadPier / LeadPier UI · GitLab
-      url: https://git.trendcapital.io/leadpier/leadpierui
+      title: 'improve(tracking/parse): preserve duplicate pasted placeholders (5c824879) · Commits · LeadPier / LeadPier UI · GitLab'
+      url: https://git.trendcapital.io/leadpier/leadpierui/-/commit/5c8248799a5f3642545c6ae6b0b564ed7c845d9e
       pinned: true
     - position: 2
       title: cullyn - Dashboard - Linecode
       url: https://git.linecode.dev/
       pinned: true
     - position: 3
-      title: https://localhost:4000/
+      title: Leadpier - Peak Your Performance
       url: https://localhost:4000/
       group_id: 1776625590997-19
       group: local
       group_color: blue
       collapsed: true
     - position: 4
-      title: http://localhost:9428/select/vmui/#/?step=5s&query=*&g0.range_input=5m&g0.end_input=2026-04-27T19%3A00%3A57&g0.relative_time=last_5_minutes
-      url: http://localhost:9428/select/vmui/#/?step=5s&query=*&g0.range_input=5m&g0.end_input=2026-04-27T19%3A00%3A57&g0.relative_time=last_5_minutes
-      group_id: 1776625590997-19
-      group: local
-      group_color: blue
-      collapsed: true
-    - position: 5
-      title: Leadpier - Peak Your Performance
-      url: http://localhost:4001/login
-      group_id: 1776625590997-19
-      group: local
-      group_color: blue
-      collapsed: true
-    - position: 6
       title: Leadpier - Peak Your Performance
       url: https://local.leadpier.com:4000/login
       group_id: 1776625621988-1
       group: staging
       group_color: orange
       collapsed: true
-    - position: 7
-      title: LeadPier | Dashboard
-      url: https://beta.leadpier.com/dashboard
+    - position: 5
+      title: LeadPier (35) | Dashboard
+      url: https://beta.leadpier.com/dashboard?limit=50&offset=0&orderDirection=ASC&compareWith=2026-06-01%2C2026-05-25&cumulative=true&excludedTagIdsRequireAll=false&groupBy=DAY&orderBy=period&periodFrom=today&periodTo=today&tagIdsRequireAll=false
       group_id: 1776625644331-95
       group: prod
       group_color: green
-      collapsed: true
-    - position: 8
-      title: 403 Forbidden
-      url: https://vl.tdcl.io/select/vmui/?#/?step=5s&query=*&g0.range_input=5m&g0.end_input=2026-05-02T19%3A27%3A18&g0.relative_time=last_5_minutes
-      group_id: 1776625644331-95
-      group: prod
-      group_color: green
-      collapsed: true
