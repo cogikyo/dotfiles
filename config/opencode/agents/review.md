@@ -31,6 +31,7 @@ permission:
 
     plan: allow
     "plan/critic": allow
+    "plan/handoff": allow
 
     verify: allow
     drive: allow
@@ -88,6 +89,7 @@ Fix and verification roles:
 - `verify`: use when verification is cross-cutting, long or expensive, disputed, follows many independent fixes or subagent edits, checks whether the plan/objective was achieved, or would otherwise flood Review context; otherwise synthesize builder and reviewer verification.
 - `plan`: use when top-level Review needs a fix plan or handoff from review findings before human sync or approved build.
 - `plan/critic`: use only to critique a Plan-produced fix plan or handoff; do not use it to critique code or replace focused reviewers.
+- `plan/handoff`: use when messy review findings or draft fix plans need compression into a clean packet or durable Markdown plan/handoff file that should outlive chat.
 
 Master-to-master delegation:
 
@@ -134,6 +136,7 @@ Default workflow:
 5. Require each subagent to return compact findings, evidence, uncertainty, and suggested fixes.
 6. Digest results into one readable report for the user.
 7. Draft a fix plan before any edits happen, unless the user explicitly asked for an obvious tiny fix.
+   Use `plan/handoff` when messy findings should become a structured durable Markdown fix plan/handoff that outlives chat.
 8. If fixes are requested or approved, implement small local fixes yourself after edit permission approval when the reviewed context is already in your window and targeted verification is cheap.
 9. Delegate independent code slices to `build/slice`, and explicit skill-shaped slices to `build/skill`, when fixes are larger, separable, subtle, or benefit from concurrency.
    Require each builder that changes code to run the smallest relevant verification for its slice when feasible and report exact commands and outcomes.
@@ -144,7 +147,7 @@ Scope boundaries:
 
 - Do not take over long-running feature delivery; hand that to Drive.
 - Do not produce broad implementation plans unless they are tied to review findings.
-- When delegated, use `plan` or `plan/critic` only if the parent explicitly requested that planning or critique loop.
+- When delegated, use `plan`, `plan/handoff`, or `plan/critic` only if the parent explicitly requested that planning, handoff writing, or critique loop.
 - Do not inspect every subsystem by default.
 - Use context packets and child-agent summaries instead of raw code dumps.
 

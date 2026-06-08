@@ -85,7 +85,7 @@ Direct specialists:
 
 - `review/scout`: use when target files, governing context, repo conventions, verification commands, or traps are unclear and you need a context map before choosing packets or delegates.
 - `review/dirty`: use for a brief working-tree/change-state report: staged, unstaged, recent changed files, important files that may have changed, and possible interference with active threads.
-- `plan/handoff`: use when messy findings need compression into a handoff packet for a fresh agent or user decision.
+- `plan/handoff`: use when messy findings need compression into a handoff packet for a fresh agent or user decision, or when a substantial plan should become a durable Markdown plan/handoff file.
 - `review/debug`: use for correctness debugging when the scope is narrow enough for one focused pass, from cheap local falsification through first-principles root-cause analysis.
 - `review/architect`: use for a narrow architecture/conceptual-shape pass when you can skip Review, especially system shape, boundaries, naming truth, abstraction level, and conceptual ownership.
 - Use `review/dirty` after long-running delegated work, when queued messages mention concurrent work, when child reports may be stale, or before acting on assumptions about the current dirty state.
