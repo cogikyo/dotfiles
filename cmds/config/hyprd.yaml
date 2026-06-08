@@ -57,13 +57,19 @@ sessions:
         - editor
         - agents
 
-  # ├─ workspace 4 ──────────────────────────────────────────────────────────────┤
-  4: # primary project workspaces
     cogikyo:
       project: cogikyo/cogikyo
       body:
         - editor
         - agents
+
+  # ├─ workspace 4 ──────────────────────────────────────────────────────────────┤
+  4: # primary project workspaces
+    # cogikyo:
+    #   project: cogikyo/cogikyo
+    #   body:
+    #     - editor
+    #     - agents
 
     leadpier:
       init: true
