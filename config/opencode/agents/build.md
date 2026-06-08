@@ -110,6 +110,9 @@ Direct-edit rules:
 
 - Preserve unrelated user changes.
 - Make the smallest correct change.
+- Use the native edit or patch tool exposed by the harness for ordinary file edits; in this runtime prefer `apply_patch`.
+- Do not treat missing Claude-style `Write` or `Edit` tool names as permission failure.
+- Use Python for generated, structured, or Unicode-sensitive edits when patching would be brittle; avoid Bash text-mutating commands unless the change is shell-shaped and verified afterward.
 - Read required context files before editing.
 - Do not broaden scope into opportunistic cleanup.
 - Do not broadly remove or rewrite docs/comments for style or verbosity unless the user explicitly requested that cleanup.

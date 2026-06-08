@@ -33,6 +33,10 @@ When editing is allowed:
 - Preserve unrelated user changes.
 - Stay inside target files plus necessary nearby code.
 - Make the smallest correct change.
+- Use the native edit or patch tool exposed by the harness for normal file edits.
+- In this opencode runtime that is usually `apply_patch`; do not assume Claude-style `Write` or `Edit` tool names exist.
+- Use Python for generated, structured, or Unicode-sensitive edits when a patch would be brittle.
+- Avoid Bash text-mutating commands for file edits unless the change is truly shell-shaped, and verify with a focused read, grep, or diff afterward.
 - Avoid opportunistic cleanup.
 - Follow local formatting and conventions.
 - Report every changed file.
