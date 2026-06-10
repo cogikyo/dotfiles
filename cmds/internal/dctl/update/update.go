@@ -1,7 +1,7 @@
 // Package update manages Arch package updates and saved package lists.
 //
 // Responsibilities:
-// - Update via yay while honoring repo ignore rules.
+// - Update via yay.
 // - Remove non-optional orphan packages.
 // - Save explicit repo and AUR package lists back into the dotfiles repo.
 package update
@@ -85,19 +85,12 @@ func Run(ctx context.Context, root paths.Root, out *output.Printer, runner execx
 	if err := requireYay(ctx, runner); err != nil {
 		return err
 	}
-	ignore, err := readIgnore(root)
-	if err != nil {
-		return err
-	}
 	optional, err := readPackageList(root.Etc("packages-optional.lst"))
 	if err != nil {
 		return err
 	}
 
 	updateCmd := []string{"-Syu"}
-	if len(ignore) > 0 {
-		updateCmd = []string{"--ignore", strings.Join(ignore, ","), "-Syu"}
-	}
 
 	if opts.DryRun {
 		out.Info("[dry-run] Would update system with: yay %s", strings.Join(updateCmd, " "))
@@ -166,16 +159,10 @@ func Install(ctx context.Context, root paths.Root, out *output.Printer, runner e
 	if err != nil {
 		return err
 	}
-	ignore, err := readIgnore(root)
-	if err != nil {
-		return err
-	}
 	installed, err := installedPackages(ctx, runner)
 	if err != nil {
 		return err
 	}
-	repoPkgs = filterInstalledIgnored(repoPkgs, ignore, installed)
-	aurPkgs = filterInstalledIgnored(aurPkgs, ignore, installed)
 
 	if opts.DryRun {
 		return dryInstall(out, repoPkgs, aurPkgs, installed)
@@ -188,9 +175,6 @@ func Install(ctx context.Context, root paths.Root, out *output.Printer, runner e
 	if len(repoPkgs) > 0 {
 		out.Step("Installing and upgrading %d repo packages...", len(repoPkgs))
 		args := []string{"pacman", "-Syu", "--needed", "--noconfirm"}
-		if len(ignore) > 0 {
-			args = append(args, "--ignore", strings.Join(ignore, ","))
-		}
 		args = append(args, repoPkgs...)
 		if _, err := runner.Run(ctx, "", "sudo", args...); err != nil {
 			return err
@@ -206,7 +190,7 @@ func Install(ctx context.Context, root paths.Root, out *output.Printer, runner e
 		out.OK("Rust stable toolchain installed")
 	}
 	if len(aurPkgs) > 0 {
-		if err := installAUR(ctx, out, runner, aurPkgs, ignore, hasLocalRepo, opts.NonInteractive); err != nil {
+		if err := installAUR(ctx, out, runner, aurPkgs, hasLocalRepo, opts.NonInteractive); err != nil {
 			return err
 		}
 	}
@@ -302,7 +286,7 @@ func dryInstall(out *output.Printer, repoPkgs, aurPkgs []string, installed map[s
 	return nil
 }
 
-func installAUR(ctx context.Context, out *output.Printer, runner execx.Runner, pkgs, ignore []string, localRepo bool, noninteractive bool) error {
+func installAUR(ctx context.Context, out *output.Printer, runner execx.Runner, pkgs []string, localRepo bool, noninteractive bool) error {
 	base := []string{}
 	name := "yay"
 	if localRepo {
@@ -316,9 +300,6 @@ func installAUR(ctx context.Context, out *output.Printer, runner execx.Runner, p
 		if noninteractive {
 			base = append(base, "--noconfirm")
 		}
-	}
-	if len(ignore) > 0 {
-		base = append(base, "--ignore", strings.Join(ignore, ","))
 	}
 	installed := 0
 	skipped := 0
@@ -359,10 +340,6 @@ func commandLines(ctx context.Context, runner execx.Runner, name string, args ..
 		return nil, err
 	}
 	return pkglist.ParseString(out), nil
-}
-
-func readIgnore(root paths.Root) ([]string, error) {
-	return readPackageList(root.Etc("pacman.d", "ignore.conf"))
 }
 
 func readPackageList(path string) ([]string, error) {
@@ -407,18 +384,6 @@ func filterOptional(pkgs, optional []string) ([]string, []string) {
 		out = append(out, pkg)
 	}
 	return out, kept
-}
-
-func filterInstalledIgnored(pkgs, ignored []string, installed map[string]bool) []string {
-	ignore := packageSet(ignored)
-	out := []string{}
-	for _, pkg := range pkgs {
-		if ignore[pkg] && installed[pkg] {
-			continue
-		}
-		out = append(out, pkg)
-	}
-	return out
 }
 
 func filterMissing(pkgs []string, installed map[string]bool) []string {

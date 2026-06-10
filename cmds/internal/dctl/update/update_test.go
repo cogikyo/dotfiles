@@ -70,9 +70,8 @@ vim
 	}
 }
 
-func TestRunDryRunUsesIgnoreAndKeepsOptionalOrphans(t *testing.T) {
+func TestRunDryRunKeepsOptionalOrphans(t *testing.T) {
 	root := testRoot(t)
-	writeFile(t, root.Etc("pacman.d", "ignore.conf"), "linux # pinned\n\n")
 	writeFile(t, root.Etc("packages-optional.lst"), "optional-orphan\n")
 	runner := &fakeRunner{outputs: map[string]string{
 		"yay -Qdtq": "dead-lib\noptional-orphan\n",
@@ -92,18 +91,17 @@ func TestRunDryRunUsesIgnoreAndKeepsOptionalOrphans(t *testing.T) {
 		t.Fatalf("dry-run removed orphan; calls=%#v", runner.calls)
 	}
 	text := stdout.String()
-	for _, want := range []string{"yay --ignore linux -Syu", "Keeping orphan optional-orphan", "- dead-lib", "Repo (explicit): 1 packages"} {
+	for _, want := range []string{"yay -Syu", "Keeping orphan optional-orphan", "- dead-lib", "Repo (explicit): 1 packages"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("output missing %q:\n%s", want, text)
 		}
 	}
 }
 
-func TestInstallBuildsRepoAndAURCommandsWithIgnoreFiltering(t *testing.T) {
+func TestInstallBuildsRepoAndAURCommands(t *testing.T) {
 	root := testRoot(t)
-	writeFile(t, root.Etc("packages.lst"), "vim\nlinux # already installed and ignored\n")
+	writeFile(t, root.Etc("packages.lst"), "vim\nlinux # already installed\n")
 	writeFile(t, root.Etc("packages-aur.lst"), "aur-one\n")
-	writeFile(t, root.Etc("pacman.d", "ignore.conf"), "linux\n")
 	pacmanConf := filepath.Join(t.TempDir(), "pacman.conf")
 	writeFile(t, pacmanConf, "[core]\n")
 	runner := &fakeRunner{
@@ -117,14 +115,11 @@ func TestInstallBuildsRepoAndAURCommandsWithIgnoreFiltering(t *testing.T) {
 		t.Fatalf("Install() error = %v", err)
 	}
 
-	if !hasCall(runner.calls, "sudo", "pacman", "-Syu", "--needed", "--noconfirm", "--ignore", "linux", "vim") {
-		t.Fatalf("missing filtered repo install command; calls=%#v", runner.calls)
+	if !hasCall(runner.calls, "sudo", "pacman", "-Syu", "--needed", "--noconfirm", "linux", "vim") {
+		t.Fatalf("missing repo install command; calls=%#v", runner.calls)
 	}
-	if !hasCall(runner.calls, "yay", "-S", "--needed", "--noconfirm", "--ignore", "linux", "aur-one") {
+	if !hasCall(runner.calls, "yay", "-S", "--needed", "--noconfirm", "aur-one") {
 		t.Fatalf("missing AUR install command; calls=%#v", runner.calls)
-	}
-	if hasCall(runner.calls, "sudo", "pacman", "-Syu", "--needed", "--noconfirm", "--ignore", "linux", "linux", "vim") {
-		t.Fatalf("ignored installed package was not filtered; calls=%#v", runner.calls)
 	}
 }
 

@@ -191,11 +191,6 @@ func TestEnsureResumeHook(t *testing.T) {
 }
 
 func TestConfigPlanningHelpers(t *testing.T) {
-	conf := "#IgnorePkg   = old\n"
-	got := upsertIgnorePkg(conf, []string{"linux", "firefox"})
-	if got != "IgnorePkg = linux firefox\n" {
-		t.Fatalf("IgnorePkg mismatch: %q", got)
-	}
 	if networkManagerDNSDropin() != "[main]\ndns=systemd-resolved\n" {
 		t.Fatalf("unexpected NetworkManager DNS drop-in")
 	}

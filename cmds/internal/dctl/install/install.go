@@ -1146,18 +1146,6 @@ func copyFile(src, dst string, mode fs.FileMode) error {
 	return err
 }
 
-func upsertIgnorePkg(content string, pkgs []string) string {
-	line := "IgnorePkg = " + strings.Join(pkgs, " ")
-	lines := strings.Split(content, "\n")
-	for n, l := range lines {
-		t := strings.TrimSpace(l)
-		if strings.HasPrefix(t, "IgnorePkg") || strings.HasPrefix(t, "#IgnorePkg") {
-			lines[n] = line
-			return strings.Join(lines, "\n")
-		}
-	}
-	return appendLine(content, line)
-}
 func upsertSwapSubvolFstab(content, uuid, mount string) string {
 	if strings.Contains(content, "subvol=/@swap") {
 		return content
