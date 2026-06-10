@@ -7,7 +7,8 @@
         "backend/core/staging-backend/docker-compose.yml",
         "pier/README.md",
         "backend/common/microservices/orm_helpers.go",
-        "pier/skills/partner-feedback/SKILL.md"
+        "pier/skills/partner-feedback/SKILL.md",
+        "pier/context/GO.md"
       ]
     },
     "/home/cullyn/LeadPier/backend": {
