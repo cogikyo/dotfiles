@@ -57,6 +57,11 @@ function usageBar(percent: number) {
   return "█".repeat(filled) + "░".repeat(BAR_WIDTH - filled);
 }
 
+function formatPercent(percent: number) {
+  const rounded = Math.max(0, Math.min(100, Math.round(percent)));
+  return rounded >= 100 ? "100" : `${String(rounded).padStart(2, "0")}%`;
+}
+
 export function UsageDashboard(props: {
   api: TuiPluginApi;
   providers: ProviderUsage[];
@@ -64,7 +69,6 @@ export function UsageDashboard(props: {
 }) {
   return (
     <box flexDirection="column" gap={0} paddingLeft={1}>
-      <text fg={props.api.theme.current.text} attributes={BOLD}>Usage Limits</text>
       <For each={props.providers}>
         {(provider) => (
           <box flexDirection="column" gap={0}>
@@ -87,7 +91,7 @@ export function UsageDashboard(props: {
                     {window.label.padEnd(2, " ")}
                   </text>
                   <text fg={usageColor(props.api.theme.current, window.usedPercent)}>
-                    {`${String(Math.round(window.usedPercent)).padStart(2, "0")}% `}
+                    {`${formatPercent(window.usedPercent)} `}
                   </text>
                   <text fg={usageColor(props.api.theme.current, window.usedPercent)}>
                     {`${usageBar(window.usedPercent)} `}
