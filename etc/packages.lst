@@ -83,6 +83,7 @@ npm
 nvtop
 oath-toolkit
 obs-studio
+openbsd-netcat
 openssh
 ouch
 pacman-contrib
@@ -136,6 +137,7 @@ uv
 wev
 wf-recorder
 wget
+whois
 wireplumber
 wl-clipboard
 words
