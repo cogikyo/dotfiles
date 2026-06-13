@@ -403,7 +403,7 @@ return {
 				change = { text = "┃◦" },
 				untracked = { text = "┋?" },
 				delete = { text = "╏-" },
-				topdelete = { text = "╏☠" },
+				topdelete = { text = "╏󰗩" },
 				changedelete = { text = "╋⊘" },
 			},
 			signs_staged = {
