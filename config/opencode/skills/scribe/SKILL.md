@@ -41,6 +41,10 @@ If better naming, organization, or structure would remove the need for a comment
 - Comments must earn their place by documenting contracts, coupling, invariants, external formats, surprises, fragile implementation details, or hard-won context.
 - Do not churn comments for taste.
 - Prefer deleting stale, redundant, or noisy comments over rewriting them.
+- Keep the leading doc comment on a declaration itself, godoc-style above it, especially when exported; the inline-side rule never strips a declaration's doc comment.
+- Apply the inline-side rule to members within a declaration: struct fields and enum, const, or var values prefer a short right-side inline comment over a block stacked above each member.
+- Reserve a block-above member comment for genuinely multi-sentence, load-bearing context; drop the member comment entirely when the name already carries the meaning.
+- This is language-aware; do not force inline comments where a language or format makes them awkward.
 - Preserve local repo conventions over this guide when they conflict.
 - Use one sentence per line in comments and Markdown prose where practical.
 - Never wrap a single sentence across multiple lines just to fill width.
@@ -128,6 +132,51 @@ Do not add broad TODO markers when the issue can be fixed within the current app
 - Use `//` comments rather than block comments for ordinary docs.
 - Put package comments in `doc.go` or immediately above the `package` declaration.
 - Use sections such as `Deprecated:` and indented examples only when they improve generated docs.
+- Doc-comment the declaration above it: exported functions, types, structs, methods, and exported top-level `const`/`var` still get their normal leading godoc comment starting with the symbol name.
+- Within a declaration, prefer right-side inline comments on struct fields and `const`/enum values; godoc renders them and they stay scannable. Avoid block narration stacked above each member; a one-line group note above a block is fine, and reserve a block-above member comment for genuinely multi-sentence context.
+
+> Bad: block comments stacked above self-evident fields.
+
+```go
+type Loop struct {
+	// Inbox is the channel that receives loop inputs.
+	Inbox chan Input
+	// Writer is the single goroutine allowed to mutate state.
+	Writer *Writer
+}
+```
+
+> Good: doc comment on the exported type, short side-comments on its fields.
+
+```go
+// Loop is the single-writer event loop; all state mutation flows through it.
+type Loop struct {
+	Inbox  chan Input // buffered; close signals shutdown
+	Writer *Writer    // sole mutator; enforces single-writer invariant
+}
+```
+
+> Bad: paragraph narration above each value.
+
+```go
+const (
+	// PENDING means the task has been accepted but not started.
+	PENDING Status = "PENDING"
+	// RUNNING means the task is actively executing right now.
+	RUNNING Status = "RUNNING"
+)
+```
+
+> Good: one-line type note above, side-comments only where they earn it.
+
+```go
+// Status tracks a task through its lifecycle.
+const (
+	PENDING Status = "PENDING" // accepted, not yet started
+	RUNNING Status = "RUNNING"
+	DONE    Status = "DONE" // terminal; no further transitions
+)
+```
 
 ### TypeScript
 
