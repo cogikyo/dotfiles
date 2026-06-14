@@ -81,14 +81,13 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 - Solidify or split boundaries once shape, contracts, or established conventions are real.
 - Prefer vertical slices over horizontal architecture that scatters one feature across vague layers.
 - Prefer top-down readability and early returns over deep branching.
-- Treat file size, child counts, and nesting depth as cognitive-load smells, not rules.
+- Treat file size, child counts, and nesting depth as cognitive-load as strong smells to be avoided.
 
 #### Cognitive Load
 
 - Treat local complexity as a working-memory budget.
 - Around 6 visible concepts in one scene is a pressure point: more usually means chunk, split, rename, or reframe.
 - Around 3 layers of variation is a pressure point: more usually means a missing axis, boundary, or domain concept.
-- Use these numbers as smells, not laws.
 - Fewer than 3 meaningful children in a directory often wants to be flatter.
 - More than 6 meaningful children in a directory often wants grouping, stronger names, or clearer ownership.
 - Some directories and files legitimately exceed these numbers when stable and scan-friendly.
@@ -163,7 +162,7 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 #### Testing
 
 - Default to not adding tests. Seriously, don't.
-- Add tests only when the user specifically asks for unit or regression tests, or when parsing, edge cases, or complicated internals make tests the smallest useful way to clarify intended behavior.
+- Add tests only when the user specifically asks for unit or regression tests, or when parsing, edge cases.
 - If tests seem valuable but were not requested, propose them as an option instead of writing them.
 
 ## Interaction
@@ -174,41 +173,39 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 - Cut reassurance, recap, throat-clearing, generic caveats, and obvious narration.
 - Raise confusion early when naming, structure, or intent is unclear; quick clarifications can save lots of time, but do your best to gather from context what the true intent is.
 - Pause on vague requests, missing context, stale instructions, or conflicting rules when judgment says clarification will prevent wasted work.
-- Unexpected file changes usually come from formatters, linters, another agent, or the human editing concurrently. Do not revert them; raise them only when they confuse or conflict with the task.
-- Guard against silent removal; before removing behavior, confirm it is truly unused and comment on your decision to delete.
+- Unexpected file changes usually come from formatters, linters, another agent, or the human editing concurrently. Do not revert them; raise them ONLY when they confuse or conflict with the task.
 - Surface prompt conflicts instead of silently deferring; state the conflict, then follow the highest-priority applicable instruction.
 
-## Tool Discipline
+## Prose Guidelines
 
-- Broad searches are allowed when broad discovery is the task, but suppress expected filesystem noise with `--no-messages` or `-s`.
-- If the target subtree is known, search that subtree directly instead of starting from `$HOME` and encoding the subtree in the pattern.
-- Never use `$HOME` or `/home/cullyn` as the search `path` for project code unless the task is explicitly about home-directory discovery.
-- For `Glob` and `Grep`, put the nearest known project or package directory in `path` and keep `pattern`/`include` relative to that directory.
-- Bad: `Glob(pattern="LeadPier/backend/services/compliance", path="/home/cullyn")`.
-- Good: `Glob(pattern="backend/services/compliance", path="/home/cullyn/LeadPier")`.
-- Never use `path: "/"` or root-level patterns like `/*` for code discovery; they crawl `/proc`, `/run`, `/var`, and other hostile system trees.
-- Bad: `Glob(pattern="/home/cullyn/project/src/**/*.ts", path="/")`.
-- Good: `Glob(pattern="src/**/*.ts", path="/home/cullyn/project")`.
-- Prefer `Glob`, `Grep`, and `Read` for ordinary codebase search; use shell `rg` when flags, counts, archive output, or pipelines matter.
+### Universal Prose
 
-## Comments And Prose
-
-- Default to no comment; names and structure should carry meaning where possible.
-- Comments must earn their place by documenting contracts, coupling, invariants, external formats, surprises, or hard-won context.
-- Use one sentence per line in comments and Markdown prose, unless they are very short sentences designed for impact.
+- Use one sentence per line in comments and Markdown prose, unless they are very short sentences (two fit < 100 chars) designed for impact.
+  - this prevents having to deal with word wrap, and forces nice readble output.
 - Never wrap a single sentence across multiple lines; if it wants to wrap, rewrite it shorter or split it into separate sentences.
 - Prefer concise, complete sentences over dense paragraphs.
 - Use blank lines as structural punctuation in Markdown.
-- Do not use `text` code fences for ordinary prose, lists, migration orders, findings, summaries, or simple path lists.
+- Avoid general LLM slop:
+  - "it's {this}, not {that}" linguistical patterns. seriously, frequent use of ", not" is a huge read flag.
+  - avoid em dashes best you can, they are very useful attention signals that should not be overused.
 - Prefer normal Markdown structure for prose: bullets, numbered lists, short headings, blockquotes, and inline code.
+- Keep manual line breaks intentional; lines over ~120 characters are acceptable when preserving one clear sentence per line is the better trade-off.
+
+### Code Comments
+
+- Default to no comment; names and structure should carry meaning where possible; dedicate skills or agents handle proper comments instead.
+- Comments must earn their place by documenting contracts, coupling, invariants, external formats, surprises, or hard-won context.
+
+### OpenCode Output
+
+- Do not use `text` code fences for ordinary prose, lists, migration orders, findings, summaries, or simple path lists.
+  - Use `text` fences only for rare cases like diagrams, raw terminal transcripts, or intentionally unhighlighted fixed-width artifacts.
 - Use fenced blocks only when the content needs literal formatting, copyable input, or syntax highlighting.
-- When a fence is needed, prefer the most specific language tag, such as `bash`, `go`, `json`, `diff`, or `markdown`.
-- Prefer `bash` fences for shell commands, command output, directory trees, path lists, and simple fixed-width structures when the content is shell-adjacent or benefits from terminal-style highlighting.
-- Use `text` fences only for rare cases like diagrams, raw terminal transcripts, or intentionally unhighlighted fixed-width artifacts.
 - Put one blank line before and after fenced code blocks: relevant text, blank line, fence, code, fence, blank line, more text.
+- When a fence is needed, prefer the most specific language tag, such as `bash`, `go`, `json`, `diff`, etc.
+- Prefer `bash` fences for shell commands, command output, directory trees, path lists, and simple fixed-width structures when the content is shell-adjacent or benefits from terminal-style highlighting.
 - Fence every multi-line code snippet, pseudo-code block, command transcript, or structured example that must preserve exact spacing.
 - Do not place multi-line code or aligned mappings directly in prose.
-- Keep manual line breaks intentional; lines over 120 characters are acceptable when preserving one clear sentence per line is the better trade-off.
 
 ## User Details
 
@@ -221,21 +218,7 @@ cullyn...
 - has background in biology, mathematics, physics; analogies in these domains are great for explaining things.
 - most interested in evolutionary memetics and entropy.
 - constantly makes typos; sorry about that.
-
-  ### GO
-  - Preferred language for most tasks; Go is for durable reuse.
-  - Prefer typed string enums over `iota` for named states, modes, kinds, and statuses, especially when values cross boundaries or load from strings.
-    - Exported enum constants and default string values use `SCREAMING_SNAKE_CASE` (single word), unless matching an external contract.
-    - Prefer short enum type names and bare enum values when the package should own the concept. Single words heavily preferred, scoped to package.
-    - Treat enum name collisions as useful design pressure that can reveal package coupling or repeated concepts before adding prefixes.
-  - Prefer scoped inline error handling with early returns when the error is only used for the return path, such as `if err := call(); err != nil { return ... }`.
-    - Rarely reuse an `err` variable across unrelated operations.
-
-  ### TypeScript
-  - Avoid casts and `any` as much as reasonably possible.
-
-  ### Python
-  - Use Python for temporary or experimental one-offs that need more stability than Bash, or when Bash gets too complex.
-
-  ### Bash
-  - Prefer Bash when Go or Python cannot be assumed to be installed.
+- writes and prefers most things in Go.
+- uses typescript only if project demands it.
+- likes python for one-off datascience, complicated scripts, short lived expirments.
+- appericates bash for dependency free scripting.
