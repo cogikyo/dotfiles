@@ -1,0 +1,10 @@
+[Unit]
+Description=Cogikyo daemon
+
+[Service]
+ExecStart=%h/.go/bin/cogikyo daemon
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target
