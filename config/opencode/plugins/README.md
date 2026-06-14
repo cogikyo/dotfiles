@@ -186,8 +186,7 @@ The global `~/.config/opencode/AGENTS.md` file is intentionally omitted because 
 The sidebar section is hidden until at least one Markdown read exists.
 
 Compacted read entries are shown with a red `C` marker when OpenCode marks the completed tool part that way.
-Fresh read entries use source markers: green `R` for `README.md`, blue `A` for `AGENTS.md`, orange `O` for core orchestration files as `Master`, `Manager`, or `Worker`, cyan `S` for `SKILL.md`, yellow `I` for uppercase pointer docs like `GO.md` or `DATABASE.md`, and muted `M` for generic Markdown.
-`S` labels show the parent skill directory, such as `commit` or `scribe`.
+Fresh read entries use source markers: green `R` for `README.md`, blue `A` for `AGENTS.md`, yellow `I` for uppercase pointer docs like `GO.md` or `DATABASE.md`, and muted `M` for generic Markdown.
 Carrier files omit their filename in labels because the marker carries that information.
 
 ## Typechecking

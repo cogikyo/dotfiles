@@ -13,7 +13,7 @@ const MAX_ROOT_LENGTH = 8
 const MAX_PARENT_LENGTH = 12
 const MIN_LEAF_LENGTH = 6
 
-type MarkdownSourceKind = 'readme' | 'agents' | 'skill' | 'orchestrate' | 'partial' | 'markdown'
+type MarkdownSourceKind = 'readme' | 'agents' | 'partial' | 'markdown'
 
 type MarkdownContextItem = {
   key: string
@@ -167,20 +167,8 @@ function markdownSourceKind(filePath: string): MarkdownSourceKind {
 
   if (leaf === 'readme.md') return 'readme'
   if (leaf === 'agents.md') return 'agents'
-  if (leaf === 'skill.md') return 'skill'
-  if (orchestrationRole(filePath)) return 'orchestrate'
   if (/^[A-Z][A-Z0-9_-]*\.md$/.test(path.basename(filePath))) return 'partial'
   return 'markdown'
-}
-
-function orchestrationRole(filePath: string) {
-  const normalized = filePath.split(path.sep).join('/')
-  const match = normalized.match(/(?:^|\/)(?:config\/opencode|\.config\/opencode)\/orchestrate\/(master|manager|worker)\.md$/)
-  return match ? titleCase(match[1]) : undefined
-}
-
-function titleCase(value: string) {
-  return `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`
 }
 
 function normalizeFilePath(value: string) {
@@ -204,13 +192,6 @@ function relativePath(api: TuiPluginApi, filePath: string) {
 
 function contextLabel(api: TuiPluginApi, filePath: string, kind: MarkdownSourceKind) {
   const label = relativePath(api, filePath)
-
-  if (kind === 'skill') {
-    const dir = path.dirname(label)
-    return dir === '.' ? path.basename(path.dirname(filePath)) || contextRootName(api, filePath) : path.basename(dir)
-  }
-
-  if (kind === 'orchestrate') return orchestrationRole(filePath) ?? label
 
   if (kind === 'readme' || kind === 'agents') {
     const dir = path.dirname(label)
@@ -309,10 +290,6 @@ function sourceColor(api: TuiPluginApi, item: MarkdownContextItem) {
       return c.green
     case 'agents':
       return c.blue
-    case 'skill':
-      return c.cyan
-    case 'orchestrate':
-      return c.orange
     case 'partial':
       return c.yellow
     case 'markdown':
@@ -328,10 +305,6 @@ function sourceIcon(item: MarkdownContextItem) {
       return 'R '
     case 'agents':
       return 'A '
-    case 'skill':
-      return 'S '
-    case 'orchestrate':
-      return 'O '
     case 'partial':
       return 'I '
     case 'markdown':
