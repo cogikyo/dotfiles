@@ -55,7 +55,8 @@
       "pins": [
         "README.md",
         "AGENTS.md",
-        "specs/MASTER.md"
+        ".specs/MASTER.md",
+        ".specs/decisions.md"
       ]
     },
     "/home/cullyn/dotfiles": {

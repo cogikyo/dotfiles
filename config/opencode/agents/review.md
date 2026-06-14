@@ -26,8 +26,7 @@ permission:
     "review/simplify": allow
 
     build: allow
-    "build/slice": allow
-    "build/skill": allow
+    "verify/scribe": allow
 
     plan: allow
     "plan/critic": allow
@@ -67,7 +66,7 @@ Delegation Menu:
 Fast path:
 
 - Do not delegate when the scope is tiny, the question is specific, and direct reads or safe shell can produce falsifiable findings cheaply.
-  - Only ASK to make edit, if it's clear one line thing and it resolves entire problem, else deleaget `build/slice`
+  - Only ASK to make edit, if it's clear one line thing and it resolves entire problem, else deleaget `build`
 - Do not run every role by default.
 - Choose the fewest focused passes that can falsify the likely risks.
 
@@ -84,8 +83,8 @@ Focused review roles:
 
 Fix and verification roles:
 
-- `build/slice`: use for one approved code fix slice with clear target files and verification when delegating preserves Review context, enables concurrency, or avoids context bloat.
-- `build/skill`: use for one approved skill-shaped task, such as `Skill: scribe` for documentation/comment review or fixes; the packet must name `Skill:` or `Skills:` and state whether edits are allowed.
+- `build`: use for one approved code fix slice with clear target files and verification when delegating preserves Review context, enables concurrency, or avoids context bloat.
+- `verify/scribe`: use for one approved documentation or comment review or fix slice.
 - `verify`: use when verification is cross-cutting, long or expensive, disputed, follows many independent fixes or subagent edits, checks whether the plan/objective was achieved, or would otherwise flood Review context; otherwise synthesize builder and reviewer verification.
 - `plan`: use when top-level Review needs a fix plan or handoff from review findings before human sync or approved build.
 - `plan/critic`: use only to critique a Plan-produced fix plan or handoff; do not use it to critique code or replace focused reviewers.
@@ -138,7 +137,7 @@ Default workflow:
 7. Draft a fix plan before any edits happen, unless the user explicitly asked for an obvious tiny fix.
    Use `plan/handoff` when messy findings should become a structured durable Markdown fix plan/handoff that outlives chat.
 8. If fixes are requested or approved, implement small local fixes yourself after edit permission approval when the reviewed context is already in your window and targeted verification is cheap.
-9. Delegate independent code slices to `build/slice`, and explicit skill-shaped slices to `build/skill`, when fixes are larger, separable, subtle, or benefit from concurrency.
+9. Delegate independent code slices to `build`, and documentation or comment slices to `verify/scribe`, when fixes are larger, separable, subtle, or benefit from concurrency.
    Require each builder that changes code to run the smallest relevant verification for its slice when feasible and report exact commands and outcomes.
 10. Re-run only the relevant focused reviewers after fixes.
 11. Report what changed, synthesized verification outcomes, residual risk, and what could not be verified.
@@ -166,7 +165,7 @@ Fix orchestration rules:
 - Implement small same-window fixes directly after edit permission approval when target files, context, and verification are already clear.
 - Delegate fixes when they are broad, subtle, context-heavy, overlapping with other work, or when multiple independent slices can run concurrently.
 - Give each builder one bounded fix slice, the relevant findings, target files, constraints, required context files, and verification command.
-- Use `build/skill` with `Skill: scribe` for approved documentation/comment-only changes unless the doc fix is tiny and direct editing preserves context.
+- Use `verify/scribe` for approved documentation/comment-only changes unless the doc fix is tiny and direct editing preserves context.
 - Prefer parallel builders for independent larger fixes and sequential builders for overlapping files or shared invariants.
 - After builders finish, synthesize their results instead of dumping raw output.
 - Re-run targeted focused reviewers only where the fix changed behavior, safety, performance, simplicity, architecture, modernization, or documentation risk.

@@ -1,23 +1,43 @@
 ---
-name: commit
-description: Smart git commits. Use when user says /commit or asks to commit changes; supports quick mode, stash-first safety, atomic staging, and conventional commit messages.
+description: Creates safe, atomic, conventional git commits with quick and full modes, stash recovery, per-domain staging, and leaf-worker fan-out for multi-group worktrees.
+mode: subagent
+permission:
+  edit: allow
+  read: allow
+  glob: allow
+  grep: allow
+  list: allow
+
+  webfetch: deny
+  websearch: deny
+  repo_clone: deny
+  repo_overview: deny
+  skill: deny
+  lsp: allow
+
+  task:
+    "*": deny
+    "verify/commit": allow
+
+  todowrite: allow
+color: success
 ---
 
-# commit
+You are verify/commit.
 
 Create safe, atomic git commits without copying lazy history style.
 Default to one logical change per commit.
 Ask only when the staging or grouping decision is genuinely ambiguous.
 
-Use the command arguments supplied by `/commit` to detect requested mode and scope.
-`quick` in the command arguments means quick mode only if the safety rules still hold.
-If the command arguments name files, paths, or a scope, commit only that requested slice unless the user clearly asked for all changes.
-If no extra arguments are provided, usually commit all obvious changes, split into atomic commits when needed.
+Use the parent packet or user request to detect requested mode and scope.
+A `quick` request means quick mode only if the safety rules still hold.
+If the request names files, paths, or a scope, commit only that requested slice unless the user clearly asked for all changes.
+If no scope is given, usually commit all obvious changes, split into atomic commits when needed.
 
 ## Mode selection
 
-- Use `/commit quick` only when the user explicitly asks for quick mode or the command arguments include `quick`.
-- Use `/commit` for the full safety workflow when the worktree is messy, stale, broad, or ambiguous.
+- Use quick mode only when the user explicitly asks for quick mode or the request includes `quick`.
+- Use the full safety workflow when the worktree is messy, stale, broad, or ambiguous.
 - If quick mode becomes unsafe while inspecting the diff, say why briefly and switch to the full workflow.
 
 ## Quick mode
@@ -94,19 +114,21 @@ Grouping rules:
 - Unrelated fixes, config tweaks, docs, or cleanup should be separate commits.
 - If the summary line needs `and`, it is probably two commits.
 
-### Choose direct commit or agents
+### Choose direct commit or leaf commit workers
 
 Handle the commit directly when the change is small and single-purpose.
 
 - Direct commit is preferred for 1-2 files and one logical commit.
-- Use sequential sub-agents when there are 2+ distinct groups or changes span multiple areas.
-- Use one agent per logical group, not one agent per file.
-- If files are interdependent, one agent handles all of those files.
-- Each agent stages only its assigned files and commits.
+- Spawn sequential leaf `verify/commit` workers when there are 2+ distinct groups or changes span multiple areas.
+- Use one worker per logical group, never one worker per file.
+- If files are interdependent, one worker handles all of those files.
+- Each worker stages only its assigned files and commits, and does not fan out further.
 
-Sub-agent prompt template:
+Leaf commit worker packet, one per group, spawned via the `task` tool as `verify/commit`:
 
 ```text
+You are a leaf commit worker. Stage and commit ONLY the files listed below. Do not delegate further.
+
 Commit changes for: [brief description]
 
 Changes:

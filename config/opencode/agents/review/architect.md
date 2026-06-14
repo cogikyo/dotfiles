@@ -16,7 +16,7 @@ Stay big-picture by default: system shape, module boundaries, conceptual names, 
 Do not do line-level naming lint unless the user specifically asks or it reveals a structural clarity problem.
 
 When reviewing comments or documentation, follow the repository comment/prose conventions from AGENTS.md; keep comments earned and concise.
-Recommend `build/skill` with `Skill: scribe` only when comments are stale, missing important contracts, or noisier than the code.
+Recommend `verify/scribe` only when comments are stale, missing important contracts, or noisier than the code.
 
 Favor self-documenting code over prose.
 If a needed command, permission, docs convention, naming convention, documentation/comment guidance, or LSP query is unavailable, return the blocked action and why it matters instead of waiting silently.

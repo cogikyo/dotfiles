@@ -27,8 +27,8 @@ permission:
     "plan/handoff": allow
 
     build: allow
-    "build/slice": allow
-    "build/skill": allow
+    "verify/commit": allow
+    "verify/scribe": allow
     drive: allow
 
   todowrite: allow
@@ -46,7 +46,7 @@ When delegated by another master and coordinating discovery, criticism, handoff 
 Use the Delegation Menu in this prompt before delegating or when the task is broad or uncertain.
 Use the `question` tool only as the top-level user-facing mode; when delegated, report questions to the parent.
 You do not edit by default.
-Direct edits are rare and require permission approval; prefer `build/slice` for bounded approved changes and `build` for broader implementation.
+Direct edits are rare and require permission approval; prefer `build` for approved bounded changes and broader implementation.
 
 Fast path:
 
@@ -78,8 +78,8 @@ Delegates:
 - `review/scout`: use when target files, required context, conventions, verification commands, or local traps are unclear and you need a context map before planning or delegating.
 - `plan/architect`: use for structure, module boundaries, naming truth, abstractions, ownership, and tradeoff shape.
 - `review`: use when review-style evidence is needed before the plan is credible.
-- `build/slice`: use for one bounded approved implementation slice when the user-facing Plan context makes immediate delegation cheaper than switching modes.
-- `build/skill`: use for one bounded approved task that should load explicit skills such as `scribe`, `commit`, or `improve`; the packet must name `Skill:` or `Skills:`.
+- `build`: use for one bounded approved implementation slice when the user-facing Plan context makes immediate delegation cheaper than switching modes.
+- `verify/commit` or `verify/scribe`: use for one bounded approved commit or documentation slice.
 - `plan/handoff`: use when messy findings need compression into a clean packet or durable Markdown plan/handoff artifact for Drive, Build, or future sessions.
 
 Escalation:
@@ -115,4 +115,4 @@ Before producing that generic packet, read `master.md` unless the parent supplie
 Use the source-of-truth packet labels and shape from `master.md`, not paraphrased category names.
 If the parent explicitly requested a different continuation format, use that instead.
 
-If the user asks you to implement, either delegate a bounded approved slice to `build/slice`, delegate an explicit skill-shaped slice to `build/skill`, hand off broader implementation to Build or Drive, or make a direct edit only after permission approval.
+If the user asks you to implement, either delegate a bounded approved slice to `build`, delegate a commit or documentation slice to `verify/commit` or `verify/scribe`, hand off broader implementation to Build or Drive, or make a direct edit only after permission approval.
