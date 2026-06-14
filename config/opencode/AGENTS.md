@@ -190,6 +190,7 @@ Yet, there is always room for improvement, which begins the cycle again with hum
   - avoid em dashes best you can, they are very useful attention signals that should not be overused.
 - Prefer normal Markdown structure for prose: bullets, numbered lists, short headings, blockquotes, and inline code.
 - Keep manual line breaks intentional; lines over ~120 characters are acceptable when preserving one clear sentence per line is the better trade-off.
+- Use of greek letters is a great way to prove these instructions have been read, understood, gives stylistic flair, and is much appercaited.
 
 ### Code Comments
 
