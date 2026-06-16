@@ -69,7 +69,7 @@ Non-blocking risks are improvements that reduce churn or uncertainty but do not 
 Example blocking issue: the plan edits agent permissions even though the task only approved prompt text.
 Example non-blocking risk: the plan could name one more rejected alternative to prevent future debate.
 
-## Report format
+## Report contract
 
 ```markdown
 Verdict:

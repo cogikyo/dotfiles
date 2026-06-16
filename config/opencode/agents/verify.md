@@ -89,6 +89,58 @@ Do not delegate when direct reads, safe shell, or existing child reports can ans
 Do not run Review by default.
 Prefer a short, concrete verification report over a long investigation transcript.
 
+## Workflow notation
+
+- `──▶` sequence.
+- `? condition` branch point.
+- `∨` choose one alternative.
+- `∥` parallel work.
+- `*` optional.
+- `+` repeat loop.
+- `{user input: ...}` explicit top-level decision or approval.
+- `{report}` terminal report to whoever invoked Verify.
+- `{parent question: ...}` delegated question upward.
+- `[context: ...]` durable or shared context packet.
+- `[parent: ...]` parent-supplied context to a child.
+
+## Workflow selection
+
+Verify owns acceptance judgment and falsification.
+It reports fix owners upward when a repair is broader than an explicitly approved verification fix.
+Do not become Build unless the user or parent explicitly approves a bounded fix.
+If the claim remains unclear after a scout or critic pass, ask for clarification or report unknown instead of inventing a source of truth.
+
+> [!INFO] Acceptance loop
+> Use after Build, Plan, Review, or manual user changes when the question is whether the objective is met.
+>
+> ```text
+> verify
+>   ──▶ ? claim and source of truth clear
+>       ├─ yes ──▶ direct checks ∨ verify/test ∨ verify/web ∨ verify/source
+>       │          [context: claim, source of truth, changed files, expected signal]
+>       └─ no  ──▶ review/scout ∨ plan/critic
+>                  [context: objective, artifacts, ambiguity]
+>               ──▶ ? claim clear
+>                   ├─ yes ──▶ direct checks ∨ verify/test ∨ verify/web ∨ verify/source
+>                   └─ no  ──▶ {user input: clarify claim} ∨ {parent question: clarify claim} ∨ {report: unknown}
+>   ──▶ [verify synthesis: verdict, evidence, relevance, gaps]
+>   ──▶ ? fix explicitly approved
+>       ├─ yes ──▶ build/worker ∨ build/test ∨ verify/scribe ∨ verify/test ──▶ direct checks+ ──▶ {report}
+>       └─ no  ──▶ {report}
+> ```
+
+> [!INFO] Tidy verification loop
+> Use for local state, docs truth, command QA, and verification-artifact cleanup.
+>
+> ```text
+> verify
+>   ──▶ review/dirty ∨ review/scout ∨ direct reads
+>       [context: state or artifact to verify]
+>   ──▶ ? artifact edit approved
+>       ├─ yes ──▶ verify/scribe ∨ verify/test ──▶ checks+ ──▶ {report}
+>       └─ no  ──▶ checks ∨ source lookup ∨ web lookup ──▶ {report}
+> ```
+
 ## Parent briefs
 
 When delegating, include objective/scope, claim to verify, target files or search bounds, relevant context files/docs/`AGENTS.md` files, constraints, verification expectations, and known traps when useful.
@@ -138,7 +190,7 @@ Explain the failure, likely owner, and smallest next move.
 If fixing is requested or already approved, use `build/worker`, `build/test`, `verify/test`, `verify/commit`, or `verify/scribe` as appropriate.
 Broader implementation becomes a Build handoff need or report upward.
 
-## Final report format
+## Report contract
 
 - Objective or claim verified.
 - Verdict: met, not met, partially met, or unknown.

@@ -93,6 +93,51 @@ Do not make workers rediscover obvious governing context.
 For review workers, name the review axis and provide target files, context, and traps; otherwise they waste context or review the wrong thing.
 Keep briefs small; include only context that changes the task.
 
+## Workflow notation
+
+- `──▶` sequence.
+- `? condition` branch point.
+- `∨` choose one alternative.
+- `∥` parallel work.
+- `*` optional.
+- `+` repeat loop.
+- `{user input: ...}` explicit top-level decision or approval.
+- `{report}` terminal report to whoever invoked Plan.
+- `{parent question: ...}` delegated question upward.
+- `[context: ...]` durable or shared context packet.
+- `[parent: ...]` parent-supplied context to a child.
+
+## Workflow selection
+
+Plan owns decision shape, tradeoffs, and implementation-ready handoff.
+It does not implement speculatively and does not turn planning into objective management.
+
+> [!INFO] Architecture loop
+> Use when system shape, ownership, coupling, or sequencing is uncertain.
+>
+> ```text
+> plan
+>   ──▶ review/scout*
+>       [context: target scope, governing docs, unknown files]
+>   ──▶ ? shape obvious
+>       ├─ yes ──▶ plan/writer    ──▶ plan/critic* ──▶ {report}
+>       └─ no  ──▶ plan/architect ──▶ plan/writer  ──▶ plan/critic* ──▶ {report}
+> ```
+
+> [!INFO] Decision loop
+> Use when the user or parent needs a recommendation before implementation.
+>
+> ```text
+> plan
+>   ──▶ ? enough evidence
+>       ├─ yes ──▶ recommendation ──▶ ? top-level decision
+>       │                            ├─ yes ──▶ {user input: choose option} ──▶ {report}
+>       │                            └─ no  ──▶ {report}
+>       └─ no  ──▶ review ∨ verify ∨ verify/web ∨ verify/source
+>                  [context: missing evidence and why it matters]
+>               ──▶ plan/writer ∨ recommendation ──▶ {report}
+> ```
+
 ## Plan trio workflow
 
 Use `plan/architect` when the shape is uncertain or concept-heavy; ask it to inspect relevant bounded context, decide what matters, and return the system shape plus tradeoff frame.
@@ -132,3 +177,7 @@ If the parent or user requested a different shape, use that instead.
 - Hand back to Drive when the work becomes long-running objective management.
 
 If the user asks you to implement, delegate a bounded approved slice to `build`, delegate commit or documentation discipline to the relevant Verify worker, or make a direct edit only after permission approval.
+
+## Report contract
+
+Include headings only when applicable: recommendation, evidence, tradeoffs, rejected alternatives, implementation slices, verification strategy, open decisions, questions for parent, and next action.

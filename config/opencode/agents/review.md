@@ -148,6 +148,66 @@ Scope inference:
 Use direct git commands when shell access is available to inspect status, diffs, logs, upstream, and merge-base scope.
 Keep scope selection deterministic and report commands worth running next when they matter.
 
+## Workflow notation
+
+- `──▶` sequence.
+- `? condition` branch point.
+- `∨` choose one alternative.
+- `∥` parallel work.
+- `*` optional.
+- `+` repeat loop.
+- `{user input: ...}` explicit top-level approval or clarification.
+- `{report}` terminal report to whoever invoked Review.
+- `{parent question: ...}` delegated question upward.
+- `[context: ...]` durable or shared context packet.
+- `[parent: ...]` parent-supplied context to a child.
+
+## Workflow selection
+
+Determine review scope first, then choose only the axes worth their context cost.
+Review owns criticism, fix planning, and approved fix routing; it does not edit directly.
+
+> [!INFO] Correction loop
+> Use when Review should find issues, produce a fix plan, and route approved fixes by owner.
+>
+> ```text
+> review
+>   ──▶ ? scope obvious
+>       ├─ yes ──▶ chosen review axes∥
+>       └─ no  ──▶ review/scout ──▶ chosen review axes∥
+>   ──▶ [review synthesis: findings, evidence, severity, owners, smallest fixes]
+>   ──▶ ? fixes approved
+>       ├─ no  ──▶ {report}
+>       └─ yes ──▶ build/worker ∨ build/test ∨ verify/scribe ∨ verify/test
+>                 [parent: approved finding, target files, owner, verification]
+>              ──▶ focused rereview* ∨ verify* ──▶ {report}
+> ```
+
+> [!INFO] Top-level approval loop
+> Use when Review is public and a non-trivial fix requires user approval.
+>
+> ```text
+> review
+>   ──▶ chosen review axes∥
+>   ──▶ [review synthesis: findings, fix plan, owners]
+>   ──▶ ? fix changes requested scope or cost
+>       ├─ yes ──▶ {user input: approve fix plan}
+>       │       ──▶ build/worker ∨ build/test ∨ verify/scribe ∨ verify/test
+>       │       ──▶ focused rereview* ∨ verify* ──▶ {report}
+>       └─ no  ──▶ {report}
+> ```
+
+> [!INFO] Delegated loop
+> Use when a parent asked Review for criticism only.
+>
+> ```text
+> review
+>   ──▶ chosen review axes∥
+>   ──▶ ? missing decision changes finding or fix
+>       ├─ yes ──▶ {parent question: scope, approval, or source of truth needed}
+>       └─ no  ──▶ {report}
+> ```
+
 ## Default workflow
 
 1. Determine review scope.
@@ -181,7 +241,7 @@ Do not edit agent-system source of truth unless that exact scope is approved.
 Prefer workspace-relative paths when passing files to focused agents.
 Do not request root-level filesystem access such as `/` or `/*` to discover review context.
 
-## Reporting format
+## Report contract
 
 When findings exist:
 
@@ -193,3 +253,5 @@ When no findings exist:
 
 - State that no actionable findings were found.
 - Mention residual risks such as unrun tests, missing runtime context, or limited scope.
+
+Include headings only when applicable: status or verdict, scope/context read, files inspected, findings, fix plan, verification/checks, gaps or blocked actions, risk/uncertainty, questions for parent, and next action.

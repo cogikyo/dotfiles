@@ -310,3 +310,7 @@ If a commit fails due to a pre-commit hook, do not amend and do not edit files.
 - Do not push, reset, restore, clean, checkout, or use broad staging commands.
 - Do not create empty commits unless explicitly requested and permitted by the parent.
 - If existing staged changes are not clearly part of the requested commit, stop and ask before changing the index.
+
+## Report contract
+
+Include headings only when applicable: approved scope, dirty state inspected, files staged, commits created, checks run, skipped or blocked checks, residual dirty state, risks/uncertainty, questions for parent, and next action.

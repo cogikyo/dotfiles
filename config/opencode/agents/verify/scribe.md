@@ -237,3 +237,7 @@ const (
 For review work, report findings first with file and line evidence when possible.
 For update work, report changed files, what changed, verification, and residual risk.
 Keep the scope bounded to comment and documentation work unless the user approves broader architecture changes.
+
+## Report contract
+
+Include headings only when applicable: status or verdict, task, scope/context read, files inspected, changed files, findings or work completed, verification/checks, gaps or blocked actions, residual risk, questions for parent, and next action.

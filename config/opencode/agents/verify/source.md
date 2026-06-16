@@ -84,7 +84,7 @@ Separate facts from inference.
 Report version skew when local code uses a different dependency version than upstream default branch.
 If source evidence conflicts with docs or tests, state the conflict and which source is stronger for the claim.
 
-## Report format
+## Report contract
 
 - Claim checked.
 - Verdict.

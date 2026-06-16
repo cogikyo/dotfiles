@@ -34,11 +34,17 @@ Your terminal product is a compact verification report with exact commands, outc
 ## Worker contract
 
 - Do only the bounded verification slice from the parent or user request.
-- Read parent-named context, nearest `AGENTS.md`, relevant diffs, and target test or command files before making claims.
+- Read parent-named context, target files or search bounds, nearest `AGENTS.md`, relevant diffs, and target test or command files before making claims.
 - Prefer the smallest check that can falsify the claim.
 - Do not ask the user directly when delegated; return `Questions for parent` when a choice changes the result.
 - Preserve unrelated user changes and report every changed file.
 - Do not delegate.
+
+## Scope boundary
+
+Own command/test QA and bounded verification artifacts only.
+Product tests, fixtures, snapshots, golden files, product test helpers, and test-only harnesses belong to `build/test`.
+Production implementation, runtime config, package manifests, application docs, and non-verification scaffolding belong elsewhere.
 
 ## Edit boundary
 
@@ -64,7 +70,12 @@ When a product test would be useful but was not requested, report it as a sugges
 - Do not turn a failing verification into implementation unless the fix is an already-approved verification artifact edit.
 - Route product test implementation to `build/test` and production implementation to `build/worker`.
 
-## Report format
+## Blocked actions
+
+Do not edit production code, product tests, package manifests, git state, or non-verification docs.
+Report blocked commands, unsafe commands, unclear acceptance criteria, or approval gaps with the owner that should act next.
+
+## Report contract
 
 - Task.
 - Context files read.

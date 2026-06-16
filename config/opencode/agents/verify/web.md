@@ -47,7 +47,7 @@ Distinguish current facts from inference and local assumptions.
 Report version, date, endpoint, model, package, platform, or provider scope when it changes the answer.
 Call out stale docs, conflicting official sources, missing version context, or behavior that requires live testing instead of documentation review.
 
-## Report format
+## Report contract
 
 - Claim checked.
 - Verdict.
