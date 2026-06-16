@@ -3,7 +3,6 @@ description: Creates safe, atomic, conventional git commits for approved scopes 
 mode: subagent
 hidden: true
 permission:
-  "*": deny
   edit: deny
   read: allow
   glob: allow

@@ -53,6 +53,8 @@ Return `Questions for parent` when a decision changes the result.
 - Avoid opportunistic cleanup.
 - Follow local formatting and conventions.
 - Report every changed file.
+- Do not add or edit product tests, fixtures, snapshots, golden files, test helpers, or test harnesses.
+- If tests are needed, report the smallest useful `build/test` slice with evidence instead of writing them.
 
 Tool permissions are operational capability, not role scope.
 Do not mutate files, git state, system state, network state, secrets, or user data outside the assigned slice even when a command would be permitted.

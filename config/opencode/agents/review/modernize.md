@@ -3,7 +3,6 @@ description: "Reviews modernization: deprecated APIs, lint issues, modern Go/TS 
 mode: subagent
 hidden: true
 permission:
-  "*": deny
   read: allow
   glob: allow
   grep: allow

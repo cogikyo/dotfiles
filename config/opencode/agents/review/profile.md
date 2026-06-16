@@ -3,7 +3,6 @@ description: "Reviews performance shape: algorithms, data structures, allocation
 mode: subagent
 hidden: true
 permission:
-  "*": deny
   read: allow
   glob: allow
   grep: allow

@@ -3,7 +3,6 @@ description: "Reviews cleanup: slop removal, duplicated knowledge, dead code, ow
 mode: subagent
 hidden: true
 permission:
-  "*": deny
   read: allow
   glob: allow
   grep: allow

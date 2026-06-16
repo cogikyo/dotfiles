@@ -4,7 +4,6 @@ description: Context mapper only. Finds the smallest useful files, governing doc
 mode: subagent
 hidden: true
 permission:
-  "*": deny
   read: allow
   glob: allow
   grep: allow

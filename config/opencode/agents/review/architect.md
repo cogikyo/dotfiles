@@ -3,7 +3,6 @@ description: "Reviews architecture truth: boundaries, naming, ownership, couplin
 mode: subagent
 hidden: true
 permission:
-  "*": deny
   read: allow
   glob: allow
   grep: allow

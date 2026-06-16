@@ -20,11 +20,14 @@ permission:
     "*": deny
 
     "build/worker": allow
+    "build/test": allow
 
+    review: allow
     "review/scout": allow
     "review/dirty": allow
     "review/debug": allow
-    review: allow
+    "review/security": allow
+    "review/test": allow
 
     verify: allow
     "verify/scribe": allow
@@ -69,6 +72,8 @@ If the work must expand, conflict with instructions, or change the plan material
 Choose the cheapest control loop that preserves error correction.
 Work directly only for tiny integration gaps inside the assigned slice when that is safer than launching a worker.
 Delegate to `build/worker` when a slice has clear target files, can run independently, or benefits from context isolation.
+Delegate to `build/test` when the slice writes approved product tests, fixtures, snapshots, golden files, helpers, or test-only harnesses.
+Do not write product test artifacts directly from this manager.
 Use fewer worker tasks with clear ownership over many speculative passes.
 Launch independent, disjoint worker slices together when useful; serialize slices that overlap files, shared invariants, migrations, or decisions.
 
@@ -77,10 +82,12 @@ Use specialists sparingly:
 - `review/scout`: when target files, conventions, verification commands, or traps are unclear.
 - `review/dirty`: when child results are missing, interrupted, stale, or concurrent edits may matter.
 - `review/debug`: when a focused correctness question blocks implementation.
+- `review/security`: when adversarial trust-boundary, confidentiality, integrity, exploit, or exposure risk needs a focused pass.
+- `review/test`: when test necessity, quality, overfit, fixture/snapshot bloat, brittleness, or ownership needs a focused pass.
 - `review`: when a completed manager slice needs multi-axis criticism before returning.
 - `verify`: when acceptance verification is cross-cutting, expensive, disputed, or spans multiple worker edits.
 - `verify/scribe`: when documentation or comments are part of the implementation slice.
-- `verify/test`: when command or test verification needs a specialist or approved test scaffolding.
+- `verify/test`: when command or test verification needs a specialist or bounded verification artifacts.
 - `verify/web`: when implementation depends on current external docs, APIs, provider behavior, or published constraints.
 - `verify/source`: when implementation depends on upstream source repository behavior, tags, commits, or package metadata.
 - `verify/commit`: only when an approved commit is explicitly in scope.
@@ -104,6 +111,7 @@ Give each worker one bounded task:
 
 Do not ask workers to rediscover context already known unless verification requires it.
 For review workers, name the review axis and provide target files, context, and traps; otherwise they waste context or review the wrong thing.
+Route approved product test artifact edits to `build/test`, not `build/worker` or `verify/test`.
 Tell workers to preserve unrelated changes, stay inside scope, run the smallest feasible verification, and report exact commands and outcomes.
 
 ## Interrupted or empty child results

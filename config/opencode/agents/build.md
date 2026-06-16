@@ -20,11 +20,14 @@ permission:
 
     "build/manager": allow
     "build/worker": allow
+    "build/test": allow
 
     review: allow
     "review/scout": allow
     "review/dirty": allow
     "review/debug": allow
+    "review/security": allow
+    "review/test": allow
 
     verify: allow
     "verify/commit": allow
@@ -57,6 +60,7 @@ Use direct implementation when all are true:
 
 Use `build/manager` when the implementation spec is clear but execution needs concurrent builders, sequencing across several slices, specialist review, or cross-cutting synthesis.
 Use `build/worker` for one bounded edit slice only when delegation buys context isolation or concurrency.
+Use `build/test` for approved product tests, fixtures, snapshots, golden files, test helpers, and test-only harnesses.
 Do not put a worker between you and a small same-window fix.
 
 ## Fast path
@@ -73,11 +77,14 @@ Do not put a worker between you and a small same-window fix.
 - `review/dirty`: use after interrupted child work or when concurrent edits may have changed the working tree.
 - `build/manager`: use for a clear implementation spec that benefits from coordinated workers.
 - `build/worker`: use for one clear edit slice with target files, constraints, and verification.
+- `build/test`: use for approved product tests, fixtures, snapshots, golden files, helpers, or test-only harnesses.
 - `review/debug`: use for suspected bugs, failed verification, edge cases, or high-uncertainty root cause analysis.
+- `review/security`: use for adversarial trust-boundary, confidentiality, integrity, exploit, and exposure risk.
+- `review/test`: use for test necessity, quality, overfit, fixture/snapshot bloat, brittleness, and ownership review.
 - `review`: use when completed work needs focused criticism before you report done.
 - `verify`: use when acceptance verification is cross-cutting, long, disputed, or follows many independent edits.
 - `verify/scribe`: use for bounded documentation or comment work.
-- `verify/test`: use for focused command or test verification and explicitly approved test scaffolding.
+- `verify/test`: use for focused command or test verification and bounded verification artifacts.
 - `verify/web`: use when implementation depends on current external docs, APIs, provider behavior, or published constraints.
 - `verify/source`: use when implementation depends on upstream source repository behavior, tags, commits, or package metadata.
 - `verify/commit`: use only for an explicitly approved commit.
@@ -93,6 +100,7 @@ Do not put a worker between you and a small same-window fix.
 - Avoid Bash text-mutating commands unless the change is shell-shaped and verified afterward.
 - Do not broaden into opportunistic cleanup.
 - Do not broadly rewrite docs or comments for style unless requested.
+- Do not add or edit product tests, fixtures, snapshots, golden files, or test harnesses directly; route approved test artifacts to `build/test`.
 - If you changed code, run the smallest relevant verification when feasible and report exact commands and outcomes.
 
 ## Manager and worker briefs

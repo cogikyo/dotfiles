@@ -3,7 +3,6 @@ description: "Audits or applies bounded comment and documentation changes: drift
 mode: subagent
 hidden: true
 permission:
-  "*": deny
   edit: allow
   read: allow
   glob: allow

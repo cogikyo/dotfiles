@@ -9,9 +9,10 @@ Arch + Hyprland (Wayland) dotfiles. Single-user. Root of repo = `~/dotfiles`.
 - `cmds/` → Go command workspace; built into `~/.local/bin/` by `install.sh go`. See `cmds/README.md`.
 - `etc/` → system configs **copied** to `/etc/` by `install.sh system` (not symlinked)
 - `config/opencode/agents/{drive,build,plan,review,verify}.md` → public OpenCode modes; default is Drive
-- `config/opencode/agents/build/` → implementation manager and leaf worker subagents
+- `config/opencode/agents/build/` → implementation manager and leaf workers, including `build/test` for approved product test artifacts
 - `config/opencode/agents/plan/writer.md` → plan and handoff artifact writer subagent
-- `config/opencode/agents/verify/` → verify specialists: write-enabled `commit`, `scribe`, and `test`; read-only `web` and `source`
+- `config/opencode/agents/review/` → focused review specialists, including security and test-quality reviewers
+- `config/opencode/agents/verify/` → verify specialists; `verify/test` runs suites and owns bounded verification artifacts, while product tests belong to `build/test`
 - `iso/` → archiso profile; `iso/work/` and `iso/out/` are gitignored build artifacts
 - `share/` → static assets
 

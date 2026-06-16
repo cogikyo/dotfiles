@@ -3,7 +3,6 @@ description: Verifies assumptions against current official web docs, APIs, provi
 mode: subagent
 hidden: true
 permission:
-  "*": deny
   read: allow
   glob: allow
   grep: allow

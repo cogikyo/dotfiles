@@ -3,7 +3,6 @@ description: Detail-focused plan critique for rules, assumptions, coupling, sequ
 mode: subagent
 hidden: true
 permission:
-  "*": deny
   edit: deny
   read: allow
   glob: allow

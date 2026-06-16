@@ -3,7 +3,6 @@ description: Writes chat plans and explicitly approved durable Markdown artifact
 mode: subagent
 hidden: true
 permission:
-  "*": deny
   edit: allow
   read: allow
   glob: allow

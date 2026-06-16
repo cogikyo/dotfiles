@@ -3,7 +3,6 @@ description: Big-picture mapper for system/tree shape, boundaries, conceptual mo
 mode: subagent
 hidden: true
 permission:
-  "*": deny
   edit: deny
   read: allow
   glob: allow

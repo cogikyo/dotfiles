@@ -3,7 +3,6 @@ description: "Reviews root cause and correctness: control flow, state transition
 mode: subagent
 hidden: true
 permission:
-  "*": deny
   read: allow
   glob: allow
   grep: allow

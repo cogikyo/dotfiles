@@ -3,7 +3,6 @@ description: Dirty-state scout for staged, unstaged, untracked, recent commits, 
 mode: subagent
 hidden: true
 permission:
-  "*": deny
   read: allow
   glob: allow
   grep: allow

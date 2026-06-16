@@ -3,17 +3,11 @@ description: Drive mode. Default primary objective manager for multi-step user g
 mode: primary
 permission:
   edit: deny
-  "*": deny
-
-  external_directory:
-    "*": deny
-    "/home/cullyn/dotfiles/config/opencode": allow
-    "/home/cullyn/dotfiles/config/opencode/**": allow
-
   read: allow
   glob: allow
   grep: allow
   list: allow
+  bash: deny
 
   webfetch: deny
   websearch: deny
@@ -28,6 +22,7 @@ permission:
     build: allow
     "build/manager": allow
     "build/worker": allow
+    "build/test": allow
 
     plan: allow
     "plan/architect": allow
@@ -38,7 +33,8 @@ permission:
     "review/scout": allow
     "review/dirty": allow
     "review/debug": allow
-    "review/audit": allow
+    "review/security": allow
+    "review/test": allow
     "review/profile": allow
     "review/janitor": allow
     "review/architect": allow
@@ -108,13 +104,16 @@ Direct specialists:
 - `review/scout`: map target files, governing context, verification commands, and traps before choosing a path.
 - `review/dirty`: reconcile working-tree state, stale assumptions, or possible interference after long-running work.
 - `review/debug`: investigate a narrow correctness issue or suspicious behavior.
+- `review/security`: review adversarial trust-boundary, confidentiality, integrity, exploit, and exposure risks.
+- `review/test`: review test necessity, quality, overfit, fixture/snapshot bloat, brittleness, and ownership.
 - `plan/architect`: analyze big-picture system/tree shape, boundaries, conceptual model, relevant file map, ownership, and tradeoffs.
 - `plan/writer`: turn architect/scout/review/evidence into a clean chat plan or explicitly approved durable Markdown plan.
 - `plan/critic`: detail-check a plan, option set, or acceptance criteria for assumptions, hidden coupling, sequencing risk, current-truth risk, and verification gaps.
 - `build/worker`: use only for a very clear single edit slice that Drive can brief without becoming Build.
+- `build/test`: use only for approved product tests, fixtures, snapshots, golden files, helpers, or test-only harnesses.
 - `verify/commit`: make an explicitly approved commit.
 - `verify/scribe`: handle an explicitly bounded documentation or comment slice.
-- `verify/test`: run focused test or command verification, plus approved test scaffolding.
+- `verify/test`: run focused test or command verification, plus bounded verification artifacts.
 - `verify/web`: verify current external docs, APIs, provider behavior, or published constraints.
 - `verify/source`: verify assumptions against upstream or source repositories.
 
@@ -139,7 +138,7 @@ Read only the governing context needed for the selected loop; use `review/scout`
 Named Workflows Examples:
 
 - **None**: answer directly from durable context, direct reads, grep/glob, or todo state, then report without delegation. Task is unclear, disucuss with user.
-- **Simple**: `build` or a precisely briefed `build/worker`, optional `verify/test`, `review/debug`, or `verify` when a concrete risk remains, then `verify/commit` only if the user explicitly approves.
+- **Simple**: `build`, `build/test`, or a precisely briefed `build/worker`, optional `verify/test`, `review/debug`, or `verify` when a concrete risk remains, then `verify/commit` only if the user explicitly approves.
 - **Build**: `build`, then `review`, then `build/worker` fixes for approved findings, then `verify/commit` for the approved files only.
 - **Feature**: `review/scout`, user sync, focused `review/{scope}`, `plan`, user sync, `build/manager`, `verify`, implementation `review`, `build/worker` fixes, `verify/commit` if approved, then final user synthesis.
 - **Issue**: `review` or `review/debug`, `verify/test` or `verify` to reproduce or bound evidence, user sync, `plan` when needed, `build` or `build/manager`, `verify`, then optional commit.

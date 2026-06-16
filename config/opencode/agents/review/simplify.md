@@ -3,7 +3,6 @@ description: "Reviews cognitive complexity and local mental load: visible concep
 mode: subagent
 hidden: true
 permission:
-  "*": deny
   read: allow
   glob: allow
   grep: allow

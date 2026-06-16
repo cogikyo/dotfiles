@@ -171,9 +171,11 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 - Question assumptions when evidence, ambiguity, or risk suggests the request may be wrong.
 - Default terse: answer in the fewest words that preserve correctness, nuance, and next action.
 - Cut reassurance, recap, throat-clearing, generic caveats, and obvious narration.
-- Raise confusion early when naming, structure, or intent is unclear; quick clarifications can save lots of time, but do your best to gather from context what the true intent is.
+- Raise confusion early when naming, structure, or intent is unclear;
+  - quick clarifications can save lots of time, but do your best to gather from context what the true intent is.
 - Pause on vague requests, missing context, stale instructions, or conflicting rules when judgment says clarification will prevent wasted work.
-- Unexpected file changes usually come from formatters, linters, another agent, or the human editing concurrently. Do not revert them; raise them ONLY when they confuse or conflict with the task.
+- Unexpected file changes usually come from formatters, linters, another agent, or the human editing concurrently.
+  - Do not revert them; raise them ONLY when they confuse or conflict with the task.
 - Surface prompt conflicts instead of silently deferring; state the conflict, then follow the highest-priority applicable instruction.
 
 ## Prose Guidelines
@@ -204,7 +206,8 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 - Use fenced blocks only when the content needs literal formatting, copyable input, or syntax highlighting.
 - Put one blank line before and after fenced code blocks: relevant text, blank line, fence, code, fence, blank line, more text.
 - When a fence is needed, prefer the most specific language tag, such as `bash`, `go`, `json`, `diff`, etc.
-- Prefer `bash` fences for shell commands, command output, directory trees, path lists, and simple fixed-width structures when the content is shell-adjacent or benefits from terminal-style highlighting.
+- Prefer `bash` fences for shell commands, command output, directory trees, path lists, and simple fixed-width structures
+  - ueful for hwen when the content is shell-adjacent or benefits from terminal-style highlighting.
 - Fence every multi-line code snippet, pseudo-code block, command transcript, or structured example that must preserve exact spacing.
 - Do not place multi-line code or aligned mappings directly in prose.
 

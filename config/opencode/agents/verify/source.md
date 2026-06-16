@@ -3,7 +3,6 @@ description: Verifies local claims, plans, or code assumptions against upstream 
 mode: subagent
 hidden: true
 permission:
-  "*": deny
   read: allow
   glob: allow
   grep: allow
@@ -32,9 +31,6 @@ permission:
     "git clone --depth 1 --single-branch * /tmp/opencode/*": ask
     "git clone --branch * --depth 1 --single-branch * /tmp/opencode/*": ask
     "git clone --filter=blob:none --depth 1 * /tmp/opencode/*": ask
-  external_directory:
-    "*": deny
-    "/tmp/opencode/**": allow
   edit: deny
   task: deny
   todowrite: deny
