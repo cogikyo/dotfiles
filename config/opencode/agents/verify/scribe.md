@@ -1,7 +1,6 @@
 ---
 description: "Audits or applies bounded comment and documentation changes: drift, redundancy, doc-comment structure, navigation headers, markers, and per-language conventions."
 mode: subagent
-hidden: true
 permission:
   edit: allow
   read: allow

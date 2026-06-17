@@ -1,7 +1,6 @@
 ---
 description: Verifies local claims, plans, or code assumptions against upstream source repositories, tags, commits, package metadata, and official repository docs.
 mode: subagent
-hidden: true
 permission:
   read: allow
   glob: allow

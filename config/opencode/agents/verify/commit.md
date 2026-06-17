@@ -1,7 +1,6 @@
 ---
 description: Creates safe, atomic, conventional git commits for approved scopes or dirty-state dissection without touching file contents.
 mode: subagent
-hidden: true
 permission:
   edit: deny
   read: allow

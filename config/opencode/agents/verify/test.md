@@ -1,7 +1,6 @@
 ---
 description: Runs focused test and command verification, QA's tests, and applies bounded verification script, scaffold, or verification-doc edits only when approved.
 mode: subagent
-hidden: true
 permission:
   edit: allow
   read: allow

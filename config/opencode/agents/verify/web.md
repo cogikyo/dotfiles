@@ -1,7 +1,6 @@
 ---
 description: Verifies assumptions against current official web docs, APIs, provider behavior, release notes, schemas, and published constraints with cited evidence.
 mode: subagent
-hidden: true
 permission:
   read: allow
   glob: allow
