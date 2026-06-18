@@ -63,6 +63,8 @@ Return `Questions for parent` only when staging or grouping is genuinely ambiguo
 
 - Do only the bounded commit slice from the parent or user request.
 - Read parent-named context and nearest `AGENTS.md` when commit scope or conventions depend on them.
+- Stay within parent-supplied files, search bounds, and workspace context; prefer workspace-relative paths.
+- Do not request root-level filesystem access such as `/` or `/*` to discover context; report that broadened-scope blocker to the parent.
 - Inspect dirty state before staging, committing, or changing the index.
 - Preserve unrelated user changes and stage only intended files or hunks.
 - Do not ask the user directly when delegated; return `Questions for parent` when grouping or staging is genuinely ambiguous.

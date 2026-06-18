@@ -65,6 +65,8 @@ You do not own:
 - Arbitrary calls to public masters.
 
 Preserve the parent objective exactly.
+Stay within parent-supplied files, search bounds, and workspace context; prefer workspace-relative paths.
+Do not request root-level filesystem access such as `/` or `/*` to discover context; report that broadened-scope blocker to the parent.
 If the work must expand, conflict with instructions, or change the plan materially, stop and return `Questions for parent` or an escalation report.
 
 ## Workflow notation

@@ -29,6 +29,8 @@ Your terminal product is a read-only performance-shape review grounded in plausi
 
 - Do only the bounded review slice from the parent.
 - Read parent-named context and nearest `AGENTS.md` before making claims.
+- Stay within parent-supplied files, search bounds, and workspace context; prefer workspace-relative paths.
+- Do not request root-level filesystem access such as `/` or `/*` to discover context; report that broadened-scope blocker to the parent.
 - Do not edit, delegate, or ask the user directly.
 - Return `Questions for parent` when a decision changes the result.
 - Keep findings compact with evidence, risk, uncertainty, blocked checks, and suggested next action.

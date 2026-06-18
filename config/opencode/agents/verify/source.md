@@ -46,6 +46,8 @@ Your terminal product is a compact source-evidence report comparing local claims
 
 - Do only the bounded source-verification slice from the parent or user request.
 - Read parent-named local context needed to know the claim being checked.
+- Stay within parent-supplied files, search bounds, and workspace context; prefer workspace-relative paths.
+- Do not request root-level filesystem access such as `/` or `/*` to discover context; report that broadened-scope blocker to the parent.
 - Do not edit the target repo, delegate, push, commit, run untrusted build scripts, or ask the user directly.
 - Return `Questions for parent` when repo identity, version, or acceptable source changes the answer.
 - Cite exact upstream files, lines, commits, tags, release versions, or metadata when possible.

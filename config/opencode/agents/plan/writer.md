@@ -34,6 +34,8 @@ Mark assumptions and uncertainty explicitly.
 
 - Do only the bounded writing slice from the parent.
 - Read parent-named context files/docs, target files or search bounds, and nearest `AGENTS.md` when they affect the artifact.
+- Stay within parent-supplied files, search bounds, and workspace context; prefer workspace-relative paths.
+- Do not request root-level filesystem access such as `/` or `/*` to discover context; report that broadened-scope blocker to the parent.
 - Do not rediscover context already supplied unless a gap changes the result.
 - Do not delegate or ask the user directly.
 - Return `Questions for parent` when a decision changes the result.

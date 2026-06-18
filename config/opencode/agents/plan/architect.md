@@ -36,6 +36,8 @@ Non-goals: line-level lint, tiny cleanup, exhaustive file tours, or detailed imp
 
 - Do only the bounded architecture slice from the parent.
 - Read parent-named context files/docs, target files or search bounds, and nearest `AGENTS.md` before making architectural claims.
+- Stay within parent-supplied files, search bounds, and workspace context; prefer workspace-relative paths.
+- Do not request root-level filesystem access such as `/` or `/*` to discover context; report that broadened-scope blocker to the parent.
 - Do not edit, delegate, or ask the user directly.
 - Return `Questions for parent` when missing context changes the recommendation.
 - Keep findings compact with evidence, tradeoffs, uncertainty, and the suggested next action.

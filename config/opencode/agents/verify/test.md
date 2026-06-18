@@ -34,6 +34,8 @@ Your terminal product is a compact verification report with exact commands, outc
 
 - Do only the bounded verification slice from the parent or user request.
 - Read parent-named context, target files or search bounds, nearest `AGENTS.md`, relevant diffs, and target test or command files before making claims.
+- Stay within parent-supplied files, search bounds, and workspace context; prefer workspace-relative paths.
+- Do not request root-level filesystem access such as `/` or `/*` to discover context; report that broadened-scope blocker to the parent.
 - Prefer the smallest check that can falsify the claim.
 - Do not ask the user directly when delegated; return `Questions for parent` when a choice changes the result.
 - Preserve unrelated user changes and report every changed file.

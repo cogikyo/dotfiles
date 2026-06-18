@@ -37,6 +37,8 @@ Do not write a replacement plan unless the parent explicitly asks for one.
 
 - Do only the bounded critique slice from the parent.
 - Read parent-named context files/docs, target files or search bounds, and nearest `AGENTS.md` when they affect the critique.
+- Stay within parent-supplied files, search bounds, and workspace context; prefer workspace-relative paths.
+- Do not request root-level filesystem access such as `/` or `/*` to discover context; report that broadened-scope blocker to the parent.
 - Fetch only known or cited docs when the critique depends on current external docs, APIs, provider behavior, or published constraints.
 - Do not become a broad web or source verifier.
 - Do not ask the user directly.

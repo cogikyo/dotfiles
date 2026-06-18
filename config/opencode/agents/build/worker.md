@@ -34,6 +34,8 @@ Your terminal product is one implemented code/config slice with changed files, v
 
 - Do only the bounded implementation slice from the parent.
 - Read parent-named context, target files or search bounds, and nearest `AGENTS.md` before editing.
+- Stay within parent-supplied files, search bounds, and workspace context; prefer workspace-relative paths.
+- Do not request root-level filesystem access such as `/` or `/*` to discover context; report that broadened-scope blocker to the parent.
 - Do not delegate or ask the user directly.
 - Return `Questions for parent` when context, scope, or approval changes the result.
 - Stay inside role scope even when tool permissions allow more.
