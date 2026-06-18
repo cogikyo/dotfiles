@@ -142,6 +142,18 @@ do_the_thing
 # ╙
 ```
 
+## Markdown callouts
+
+GitHub-style callouts are useful in skimmable human docs such as `README.md`, `AGENTS.md`, and durable instruction docs.
+Use `[!NOTE]`, `[!TIP]`, `[!IMPORTANT]`, `[!WARNING]`, and `[!CAUTION]`.
+Use them sparingly for visually important notes, not decoration, and preserve local convention over this preference.
+Prefer a title line plus one concise context line when practical.
+
+```markdown
+> [!TIP] Short main description.
+> One extra line of context.
+```
+
 ## Markers
 
 Markers are grep-able breadcrumbs, not a substitute for fixing known problems.
