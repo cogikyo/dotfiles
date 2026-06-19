@@ -20,14 +20,12 @@
     },
     "/home/cullyn/LeadPier/backend/services": {
       "pins": [
-        "scheduler/init.scheduler.go",
         "webhooks/init.tracking.go",
         "routing/init.routing.go",
+        "webhooks/conversions/MANAGER_GUIDE.md",
+        "scheduler/init.scheduler.go",
         "routing/CONTEXT/THEORY.md",
-        "routing/s.api.smart_algorithm.go",
-        "statistics/s.stats.reports.admin.go",
-        "routing/s.smart_algorithm.go",
-        "routing/CONTEXT/AGENTS.md"
+        "routing/s.api.smart_algorithm.go"
       ]
     },
     "/home/cullyn/LeadPier/backend/services/routing": {
