@@ -30,6 +30,8 @@ permission:
     "git commit --message*": allow
     "git commit --amend*": deny
     "git commit *--amend*": deny
+    "git commit --amend -m*": allow
+    "git commit --amend --message*": allow
     "git commit --no-verify*": deny
     "git commit *--no-verify*": deny
     "git commit --allow-empty*": deny
@@ -105,6 +107,16 @@ Use dirty-state dissection mode when the parent or user asks to dissect broader 
 
 Do not commit by mechanical file inventory.
 One commit per logical story beats one commit per file.
+
+### Reword mode
+
+Use reword mode only when the parent or user explicitly approves editing the most recent commit message or description.
+
+1. Inspect status, unstaged changes, staged changes, and recent history.
+2. Stop and return `Questions for parent` if staged changes exist, unless the parent explicitly approved including them in the amend.
+3. Do not stage files or hunks.
+4. Use `git commit --amend -m ...` or `git commit --amend --message ...` only to edit the message or description for `HEAD`.
+5. Do not use amend for content changes, commit squashing, reordering, or broader history rewrites.
 
 ## Atomicity rules
 
@@ -307,11 +319,11 @@ If a commit fails due to a pre-commit hook, do not amend and do not edit files.
 - Never commit secrets.
 - Do not update git config unless explicitly requested.
 - Do not skip hooks.
-- Do not amend.
+- Do not amend except in explicitly approved reword mode.
 - Do not push, reset, restore, clean, checkout, or use broad staging commands.
 - Do not create empty commits unless explicitly requested and permitted by the parent.
 - If existing staged changes are not clearly part of the requested commit, stop and ask before changing the index.
 
 ## Report contract
 
-Include headings only when applicable: approved scope, dirty state inspected, files staged, commits created, checks run, skipped or blocked checks, residual dirty state, risks/uncertainty, questions for parent, and next action.
+Include headings only when applicable: approved scope, dirty state inspected, files staged, commits created or amended, checks run, skipped or blocked checks, residual dirty state, risks/uncertainty, questions for parent, and next action.
