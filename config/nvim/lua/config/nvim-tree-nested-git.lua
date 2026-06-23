@@ -145,6 +145,11 @@ local function native_tree_root()
 	return explorer and explorer.absolute_path and find_git_root(explorer.absolute_path) or nil
 end
 
+local function native_project_loaded(root)
+	local ok, git = pcall(require, "nvim-tree.git")
+	return ok and git.get_project(root) ~= nil
+end
+
 local function native_git_glyphs()
 	local ok, core = pcall(require, "nvim-tree.core")
 	local explorer = ok and core.get_explorer()
@@ -288,6 +293,10 @@ local function statuses(node)
 
 	local root = find_git_root(node.absolute_path)
 	if not root or root == native_tree_root() then
+		return nil
+	end
+
+	if native_project_loaded(root) then
 		return nil
 	end
 
