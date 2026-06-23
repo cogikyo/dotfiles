@@ -140,7 +140,10 @@ Sub-section labels should have one blank line above and no blank line below; the
 do_the_thing
 
 # ╓
-# ║ https://some-external-doc — what this link is for
+# ║ https://some-external-doc
+# ║   — what this link is for
+# ║ https://some-external-doc2
+# ║   — what this link is for
 # ╙
 ```
 

@@ -20,12 +20,17 @@
     },
     "/home/cullyn/LeadPier/backend/services": {
       "pins": [
+        "partner/init.partner.go",
         "webhooks/init.tracking.go",
         "routing/init.routing.go",
-        "webhooks/conversions/MANAGER_GUIDE.md",
         "scheduler/init.scheduler.go",
-        "routing/CONTEXT/THEORY.md",
-        "routing/s.api.smart_algorithm.go"
+        "webhooks/conversions/MANAGER_GUIDE.md",
+        "webhooks/s.rest.tracking.go",
+        "webhooks/conversions/google.go",
+        "webhooks/conversions/conversion.go",
+        "webhooks/conversions/snapchat.go",
+        "webhooks/c.convert.go",
+        "routing/smart/lifecycle.go"
       ]
     },
     "/home/cullyn/LeadPier/backend/services/routing": {
