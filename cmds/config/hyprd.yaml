@@ -108,8 +108,8 @@ tabs:
       - { name: xplr,  title: "⟜ 󰭎  ⊸", command: xplr }
       - { name: nvim,  title: "⟜   ⊸", command: nvim }
       - { name: term,  title: "⟜   ⊸", command: "etree 1" }
-      - { name: build, title: "⟜   ⊸", command: "just watch", requires: justfile }
-      - { name: git,   title: "⟜   ⊸", command: lazygit,      requires: git }
+      - { name: build, title: "⟜   ⊸", command: "etree 2" }
+      - { name: git,   title: "⟜   ⊸", command: lazygit, requires: git }
 
   agents: # ├─ agents profile ─────────────────────────────────────────────────────┤
     order: 1

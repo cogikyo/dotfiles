@@ -77,6 +77,8 @@
   },
   "permission": {
     "external_directory": {
+      "/": "deny",
+      "/?": "deny",
       "~/**": "allow",
       "$HOME/**": "allow",
       "/home/cullyn/**": "allow",
