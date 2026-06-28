@@ -734,6 +734,7 @@ var systemFiles = map[string]string{
 	"systemd/earlyoom.service.d/memory-pressure.conf":         "/etc/systemd/system/earlyoom.service.d/memory-pressure.conf",
 	"systemd/system.conf.d/cpu-lanes.conf":                    "/etc/systemd/system.conf.d/cpu-lanes.conf",
 	"sysctl.d/99-memory-pressure.conf":                        "/etc/sysctl.d/99-memory-pressure.conf",
+	"modules-load.d/i2c-dev.conf":                             "/etc/modules-load.d/i2c-dev.conf",
 	"systemd/bluetooth.service.d/cpu-lane.conf":               "/etc/systemd/system/bluetooth.service.d/cpu-lane.conf",
 	"systemd/rtkit-daemon.service.d/cpu-lane.conf":            "/etc/systemd/system/rtkit-daemon.service.d/cpu-lane.conf",
 	"security/faillock.conf":                                  "/etc/security/faillock.conf",

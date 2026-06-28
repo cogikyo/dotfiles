@@ -17,6 +17,7 @@ bun
 calc
 chromium
 devtools
+ddcutil
 discord
 docker
 docker-compose
