@@ -3,6 +3,7 @@ package session
 // share.go toggles a presentation-safe desktop state for screen sharing.
 
 import (
+	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
 	"fmt"
@@ -12,20 +13,16 @@ import (
 	"time"
 )
 
-const (
-	normalGapsOut = "84,85,22,125"
-	shareGapsOut  = "12,16,12,16"
-)
-
 // Share owns screen-share mode: quiet notifications, close widgets, stop GLava, and tighten gaps.
 type Share struct {
-	hypr  *hypr.Client
-	state *state.State
-	mu    sync.Mutex
+	hypr    *hypr.Client
+	state   *state.State
+	gapsOut func() config.GapsOutConfig
+	mu      sync.Mutex
 }
 
-func NewShare(h *hypr.Client, s *state.State) *Share {
-	return &Share{hypr: h, state: s}
+func NewShare(h *hypr.Client, s *state.State, gapsOut func() config.GapsOutConfig) *Share {
+	return &Share{hypr: h, state: s, gapsOut: gapsOut}
 }
 
 // Execute toggles screen-share mode by default, with explicit on/off/status verbs for scripts.
@@ -57,7 +54,7 @@ func (s *Share) Execute(arg string) (string, error) {
 }
 
 func (s *Share) enter() (string, error) {
-	if err := s.setGaps(shareGapsOut); err != nil {
+	if err := s.setGaps(s.gaps().Share); err != nil {
 		return "", err
 	}
 	s.state.SetScreenShare(true)
@@ -71,7 +68,7 @@ func (s *Share) enter() (string, error) {
 }
 
 func (s *Share) exit() (string, error) {
-	if err := s.setGaps(normalGapsOut); err != nil {
+	if err := s.setGaps(s.gaps().Normal); err != nil {
 		return "", err
 	}
 
@@ -89,15 +86,23 @@ func (s *Share) active() bool {
 	if s.state.GetScreenShare() {
 		return true
 	}
+	normal := s.gaps().Normal
 	resp, err := s.hypr.Request("getoption general:gaps_out")
 	if err != nil {
 		return false
 	}
-	return !strings.Contains(string(resp), "84 85 22 125")
+	return !strings.Contains(string(resp), normal.OptionValue())
 }
 
-func (s *Share) setGaps(gaps string) error {
-	resp, err := s.hypr.Request("keyword general:gaps_out " + gaps)
+func (s *Share) gaps() config.GapsOutConfig {
+	if s.gapsOut == nil {
+		return config.DefaultGapsOutConfig()
+	}
+	return s.gapsOut().WithDefaults()
+}
+
+func (s *Share) setGaps(gaps config.OuterGaps) error {
+	resp, err := s.hypr.Request("keyword general:gaps_out " + gaps.KeywordValue())
 	if err != nil {
 		return fmt.Errorf("share: set gaps_out: %w", err)
 	}

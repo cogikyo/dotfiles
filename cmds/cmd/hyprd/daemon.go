@@ -67,11 +67,17 @@ func New() (*Daemon, error) {
 		hypr:      hyprClient,
 		state:     stateStore,
 		lockCtl:   session.NewLock(hyprClient, stateStore),
-		shareCtl:  session.NewShare(hyprClient, stateStore),
 		pickerCtl: session.NewPicker(hyprClient, stateStore),
 		restartCh: make(chan struct{}, 1),
 	}
 	d.config.Store(&cfg)
+	d.shareCtl = session.NewShare(hyprClient, stateStore, func() config.GapsOutConfig {
+		cfg := d.config.Load()
+		if cfg == nil {
+			return config.DefaultGapsOutConfig()
+		}
+		return cfg.Windows.GapsOut
+	})
 
 	d.server = daemon.NewServer(SocketPath, d.handleCommand)
 	d.server.OnSubscribe = d.sendInitialState

@@ -159,7 +159,79 @@ func (c *NotifyConfig) ResolveEvent(name string) ResolvedStyle {
 // WindowsConfig controls tiling policy.
 type WindowsConfig struct {
 	Split   SplitConfig   `yaml:"split"`
+	GapsOut GapsOutConfig `yaml:"gaps_out"`
 	Monocle MonocleConfig `yaml:"monocle"`
+}
+
+// GapsOutConfig stores normal and screen-share outer gaps in Hyprland's order:
+// top, right, bottom, left.
+type GapsOutConfig struct {
+	Normal OuterGaps `yaml:"normal"`
+	Share  OuterGaps `yaml:"share"`
+}
+
+// OuterGaps is Hyprland's four-value outer gap shape: top, right, bottom, left.
+type OuterGaps struct {
+	values [4]int
+	set    bool
+}
+
+// DefaultGapsOutConfig returns the fallback gaps used when config omits the key.
+func DefaultGapsOutConfig() GapsOutConfig {
+	return GapsOutConfig{
+		Normal: NewOuterGaps(85, 85, 30, 125),
+		Share:  NewOuterGaps(12, 16, 12, 16),
+	}
+}
+
+// NewOuterGaps constructs a fully specified outer-gaps tuple.
+func NewOuterGaps(top, right, bottom, left int) OuterGaps {
+	return OuterGaps{values: [4]int{top, right, bottom, left}, set: true}
+}
+
+// WithDefaults fills omitted normal/share gap values with safe defaults.
+func (c GapsOutConfig) WithDefaults() GapsOutConfig {
+	defaults := DefaultGapsOutConfig()
+	if !c.Normal.set {
+		c.Normal = defaults.Normal
+	}
+	if !c.Share.set {
+		c.Share = defaults.Share
+	}
+	return c
+}
+
+// UnmarshalYAML decodes `[top, right, bottom, left]` and rejects partial tuples.
+func (g *OuterGaps) UnmarshalYAML(value *yaml.Node) error {
+	if value.Kind == 0 || value.Tag == "!!null" {
+		*g = OuterGaps{}
+		return nil
+	}
+	if value.Kind != yaml.SequenceNode {
+		return fmt.Errorf("gaps_out values must be [top, right, bottom, left]")
+	}
+	if len(value.Content) != 4 {
+		return fmt.Errorf("gaps_out values must have 4 entries, got %d", len(value.Content))
+	}
+
+	var gaps [4]int
+	for i, node := range value.Content {
+		if err := node.Decode(&gaps[i]); err != nil {
+			return fmt.Errorf("gaps_out[%d]: %w", i, err)
+		}
+	}
+	*g = OuterGaps{values: gaps, set: true}
+	return nil
+}
+
+// KeywordValue formats gaps for `hyprctl keyword general:gaps_out`.
+func (g OuterGaps) KeywordValue() string {
+	return fmt.Sprintf("%d,%d,%d,%d", g.values[0], g.values[1], g.values[2], g.values[3])
+}
+
+// OptionValue formats gaps as Hyprland reports them from `getoption`.
+func (g OuterGaps) OptionValue() string {
+	return fmt.Sprintf("%d %d %d %d", g.values[0], g.values[1], g.values[2], g.values[3])
 }
 
 // MonocleConfig controls single-window monocle mode sizing and offset (px).
