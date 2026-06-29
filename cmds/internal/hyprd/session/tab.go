@@ -133,7 +133,7 @@ func (t *Tab) Execute(tabName, filePath string) (string, error) {
 			t.rememberTabState(wsID, profileName, &profile, targetTab)
 			return fmt.Sprintf("tab: %s", targetTab), nil
 		}
-		prevAddr, err := t.previousWindowAddress()
+		prevAddr, err := t.previousWindowAddress(wsID, editor.Address)
 		if err == nil && prevAddr != "" && prevAddr != editor.Address {
 			if err := t.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", prevAddr)); err != nil {
 				return "", err
@@ -238,17 +238,23 @@ func (t *Tab) activeWindowAddress() (string, error) {
 	return win.Address, nil
 }
 
-func (t *Tab) previousWindowAddress() (string, error) {
+func (t *Tab) previousWindowAddress(wsID int, editorAddress string) (string, error) {
 	clients, err := t.hypr.Clients()
 	if err != nil {
 		return "", err
 	}
+	bestFocusID := 0
+	bestAddress := ""
 	for _, c := range clients {
-		if c.FocusHistoryID == 1 {
-			return c.Address, nil
+		if c.Workspace.ID != wsID || c.Address == editorAddress || c.FocusHistoryID <= 0 {
+			continue
+		}
+		if bestAddress == "" || c.FocusHistoryID < bestFocusID {
+			bestFocusID = c.FocusHistoryID
+			bestAddress = c.Address
 		}
 	}
-	return "", nil
+	return bestAddress, nil
 }
 
 func (t *Tab) spawnTerminal(wsID int) (string, error) {
