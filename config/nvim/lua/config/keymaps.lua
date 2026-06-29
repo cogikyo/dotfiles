@@ -70,7 +70,7 @@ map("v", "<C-c>", 'ml"+y`l', desc("Yank to clipboard"))
 map("n", "<leader>y", '"+y', desc("Yank to clipboard"))
 map("n", "<leader>Y", '"+y$', desc("Yank line to clipboard"))
 map("n", "<leader>gy", 'mlgg"+yG`lzvzt', desc("Yank file to clipboard"))
-map("n", "<leader>wd", "dt<space>", desc("Delete word"))
+map("n", "<leader>wd", "dt<space>", desc("Delete to next Space"))
 map("x", "<leader>p", '"_dP', desc("Paste (preserve register)"))
 
 local function markdown_html_to_clipboard(lines)
@@ -197,9 +197,9 @@ end
 
 _G.context_yank_api.diagnostics = yank_diagnostics
 
-map("n", "<A-f>", yank_file_path, desc("Yank file path"))
 map("n", "<A-q>", yank_selection("vap"), desc("Yank file path + paragraph"))
 map("n", "<A-w>", yank_diagnostics, desc("Yank file path + diagnostics"))
+map("n", "<A-f>", yank_file_path, desc("Yank file path"))
 map("v", "<A-b>", yank_selection(nil), desc("Yank file path + selection"))
 map("n", "<A-b>", yank_selection("gv"), desc("Yank file path + last selection (or paragraph)"))
 
