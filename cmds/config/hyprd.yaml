@@ -31,7 +31,7 @@ sessions:
       monocle: true
 
   # ├─ workspace 3 ──────────────────────────────────────────────────────────────┤
-  3: # utility and creative apps; mostly single window
+  3: # alternate main workspace
     tableplus:
       command: tableplus
     inkscape:
