@@ -120,7 +120,11 @@ tabs:
       - { name: xplr,   title: "⊰   ⊱", command: "xplr" }
       - { name: master, title: "⊰ 󰯉  ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
       - { name: dev,    title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
-      - { name: plan,   title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
+      - name: plan
+        title: "⊰   ⊱"
+        command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\""
+        actions:
+          build: {}
       - { name: git,    title: "⊰   ⊱", command: "lazygit" }
 
   leadpier: # ├─ leadpier profile ─────────────────────────────────────────────────┤
@@ -158,6 +162,8 @@ tabs:
         cwd: "~/LeadPier/frontend"
         actions:
           git: {}
+          build:
+            pane: 1
         layout: "fat:bias=80"
         panes:
           - command: ""
@@ -168,6 +174,8 @@ tabs:
         cwd: "~/LeadPier/backend"
         actions:
           git: {}
+          build:
+            pane: 1
         layout: "fat:bias=80"
         panes:
           - command: ""
