@@ -19,7 +19,7 @@ type AnthropicUsagePayload = {
 };
 
 const id = "anthropic";
-const label = "Claude";
+const label = "Anthropic";
 const MIN_FETCH_INTERVAL_MS = 60_000;
 const ERROR_BACKOFF_MS = 2 * 60_000;
 const RATE_LIMIT_BACKOFF_MS = 15 * 60_000;

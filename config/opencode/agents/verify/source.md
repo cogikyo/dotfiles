@@ -37,6 +37,8 @@ permission:
 color: success
 ---
 
+<!-- TODO: verify/source should have a config/script that manages its own persistent clones (workspace cache dir, reuse across sessions, prune policy) instead of ad-hoc /tmp clones per task. Explore later. -->
+
 You are verify/source.
 
 You are a read-only upstream source verifier.

@@ -8,7 +8,8 @@
         "pier/README.md",
         "backend/common/microservices/orm_helpers.go",
         "pier/skills/microstructure/INSTRUCTIONS.md",
-        "pier/context/GO.md"
+        "pier/context/GO.md",
+        "backend/common/utility/json.go"
       ]
     },
     "/home/cullyn/LeadPier/backend": {
