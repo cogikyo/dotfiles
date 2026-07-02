@@ -26,6 +26,7 @@ permission:
     "git add . *": deny
     "git add -- .": deny
     "git add -- . *": deny
+    "git apply --cached *": allow
     "git commit -m*": allow
     "git commit --message*": allow
     "git commit --amend*": deny
@@ -39,6 +40,7 @@ permission:
     "git push*": deny
     "git reset*": deny
     "git restore*": deny
+    "git restore --staged *": allow
     "git clean*": deny
     "git checkout*": deny
   webfetch: deny
@@ -137,10 +139,14 @@ Use non-interactive file staging when whole files belong to one commit.
 Use patch staging when a single file contains separate concerns that must become separate commits.
 Use `git add -- <path>` for paths that could be mistaken for flags.
 Do not use broad staging shortcuts such as `git add .`, `git add -A`, or `git add --all`.
+Do not chain staging commands with `&&`, pipes, heredocs, or command substitutions.
+The permission matcher evaluates the whole command string, so run one git command at a time.
+For hunk-level staging, write a patch file under `/tmp/opencode/` and apply it with `git apply --cached <file>`.
+Prefer patch files over heredocs and scripted `git add -p` sessions.
 
 ```bash
 git add -- config/opencode/agents/verify/commit.md
-git add -p config/nvim/lua/plugins/lsp.lua
+git apply --cached /tmp/opencode/nvim-lsp.patch
 ```
 
 ## Commit message
