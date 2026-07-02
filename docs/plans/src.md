@@ -1,6 +1,6 @@
 # `src` — source inspection cache: build spec
 
-Status: implemented in this session, commit pending.
+Status: implemented and committed as `20cefb37`.
 Post-restart `verify/source` dry run and user `sudo pacman -S devtools` are still pending.
 Companion: `verify/source.md` agent rewiring in slice 4.
 

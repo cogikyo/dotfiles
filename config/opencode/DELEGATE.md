@@ -1,6 +1,6 @@
 # Delegate plugin status
 
-Status: implemented and committed through `886a5a4c`, with uncommitted fixes pending in this session.
+Status: implemented and committed through `9097587d`.
 
 ## Done
 
@@ -19,7 +19,7 @@ Status: implemented and committed through `886a5a4c`, with uncommitted fixes pen
 
 - Confirm the effort suffix is visible on new cards and child titles.
 - Confirm missing or unknown `subagent_type` returns an explicit error instead of a `replaceAll` crash.
-- Confirm `verify/commit` staging behavior under the new permissions.
+- `verify/commit` staging smoke passed when it created `20cefb37` and `9097587d` from exact scopes.
 - If the `src` permissions commit lands first, run the post-restart `verify/source` dry run for the new `src` permissions.
 
 ## Next roadmap after smoke
