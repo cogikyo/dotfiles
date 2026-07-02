@@ -2,8 +2,7 @@
 
 Build-ready plan for a plugin tool named exactly `task` that shadows the builtin Task tool.
 It accepts `{model, effort}` per call, checks provider usage limits before spawning, and renders as the native inline subagent card.
-Agent markdown files stay fully model-agnostic; model/effort judgment lives as prose in the drive agent's instructions.
-Provider physics (thresholds, wait budget) live in one config file, `delegate.json`.
+Agent markdown stays fully model-agnostic: model/effort judgment is prose in `drive.md`, provider physics (thresholds, wait budget) live in `delegate.json`.
 
 Rationale: static per-agent model frontmatter causes combinatoric explosion (6+ models × ~5 efforts × ~20 agents).
 The same agent legitimately spans the full range (e.g. verify/commit runs mini-fast/low for easy commits and heavy/high for multi-patch detangling).
@@ -11,16 +10,13 @@ Only the orchestrator at runtime can judge which model and effort a given delega
 
 ## Orientation for executor sessions
 
-Each phase below is self-contained; a fresh session executes one phase cold.
-Phases are likely run by different models; do not assume memory of prior phases beyond their committed artifacts.
+Each phase below is self-contained; a fresh session, likely a different model, executes one phase cold with no memory beyond committed artifacts.
 
 - Workspace: `~/.config/opencode` is a symlink into `~/dotfiles/config/opencode`; always edit the dotfiles paths.
 - Plugin style to match: see `plugins/usage/` and `plugins/hyprd/` (Bun, `.ts`/`.tsx`, small files per concern).
 - Server plugins register in `opencode.json`; TUI plugins register in `tui.json` (per `plugins/README.md`). Delegate is a server plugin.
 - House rules live in dotfiles `AGENTS.md` files: explicit errors over silent fallbacks, no tests unless asked, one sentence per line in markdown.
-- Phases 0–2 are one natural build slice.
-- Phase 3 needs the user's affinity opinions; the seeds below are hypotheses to be corrected.
-- Phase 4 is manual/interactive verification with the user in the TUI.
+- Phases 0–2 are one natural build slice; Phase 3 needs the user's affinity opinions (seeds are hypotheses); Phase 4 is manual TUI verification with the user.
 
 ## Source evidence
 
@@ -101,8 +97,7 @@ File:line anchors churn with upstream; re-verify against the Phase 0 reference c
 
 ## Phase 0 — reference clone
 
-Purpose: a durable clone for re-verifying file:line anchors before and during implementation, since upstream internals churn.
-This replaces the throwaway `/tmp/opencode/opencode-dev` used during discovery.
+Purpose: a durable clone for re-verifying file:line anchors as upstream churns, replacing the throwaway `/tmp/opencode/opencode-dev` discovery clone.
 
 Prerequisites: none.
 
@@ -249,11 +244,23 @@ Re-run this smoke list after every opencode upgrade (autoupdate is false, so bre
 - v1 typegen cast for `variant`: runtime-safe today; revisit when the SDK catches up.
 - Usage cache format coupling: both plugins are user-owned, so drift is local and self-inflicted.
 - Foreground blocking: the child run + wait budget pins the parent turn; keep `maxWaitMinutes` modest.
-- File:line anchors churn with upstream; the Phase 0 clone exists to re-verify before trusting any anchor.
 
 ## Non-goals
 
 - Sleep-until-reset overnight scheduler: needs background subagents + resume; separate project.
 - Subagent sidebar: obsoleted by the inline card.
-- v2 SDK adoption: nothing required from it, still churning, and v2 prompt removed per-request model.
-- Auto-fallback routing tables: the orchestrator re-picks; judgment stays in prose, not config.
+- v2 SDK adoption and auto-fallback routing tables: see Rejected alternatives.
+
+## Roadmap
+
+- Phase 4 TUI smoke remains: verify card click-through and that cards render resolved effort (e.g. "GPT-5.5 medium"); the effort-on-card change is committed but runtime-unverified.
+- Robustness fix: `task` calls missing `subagent_type` crash with `undefined is not an object (evaluating '_.replaceAll')`; validate args (subagent_type present and a known agent) and return an explicit tool error.
+- Capacity providers: `delegate.json` carries anthropic + openai only, so xai parent sessions error on `task`; the opencode-go provider is newly enabled in `opencode.json` but absent from `delegate.json`; add both once they show real usage signals.
+- Usage-plugin phase (deferred by user): xai weekly window via the Grok CLI consumer endpoint `GET https://cli-chat-proxy.grok.com/v1/billing?format=credits` with `Authorization: Bearer <opencode xai oauth access>` + `X-XAI-Token-Auth: xai-grok-cli`.
+  - Response: `currentPeriod{type: USAGE_PERIOD_TYPE_WEEKLY, start, end}`, `onDemandCap{val}`, `onDemandUsed{val}`, `prepaidBalance{val}`, optional `creditUsagePercent`.
+  - First falsifier: whether opencode's refreshed token is accepted (unconfirmed); no `~/.grok/auth.json` fallback.
+  - Widget needs note-plumbing to show draining balances; `cleanUsage` strips notes on the success path.
+- opencode-go usage: no public or API-key usage endpoint exists (verified against gateway source + live probe); the console reads its DB via cookie-authed RPC.
+  - User direction: cookie-simulation from the browser is the acceptable creative path for opencode-go, and possibly for xai/anthropic-style gaps.
+  - opencode-go reportedly has hourly/weekly/monthly windows and is draining-based; design later.
+- After usage works: weave xai (imagegen, x-search, websearch) and opencode-go into drive.md model affinities.
