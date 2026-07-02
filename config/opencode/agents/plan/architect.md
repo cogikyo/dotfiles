@@ -9,7 +9,10 @@ permission:
   grep: allow
   list: allow
 
-  bash: deny
+  bash:
+    "*": deny
+    "src find *": allow
+    "src ls": allow
   webfetch: deny
   websearch: deny
   repo_clone: deny

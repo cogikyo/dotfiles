@@ -37,9 +37,10 @@ Go command workspace for Hyprland, eww, Firefox, and dotfiles management.
 ## Commands
 
 - **[dctl](cmd/dctl/)** — Dotfiles control plane
-- **[hyprd](cmd/hyprd/)** — Window management: monocle, split ratios, hide/show, swap, workspace nav, session layouts
 - **[ewwd](cmd/ewwd/)** — System utilities: audio, music, network, date, weather, timer
+- **[hyprd](cmd/hyprd/)** — Window management: monocle, split ratios, hide/show, swap, workspace nav, session layouts
 - **[newtab](cmd/newtab/)** — Firefox new tab page: local HTTP server with bookmarks, history, and suggestions
+- **[src](cmd/src/)** — Source inspection cache for upstream repos, Go modules, npm package repos, and Arch package sources
 
 ## Layout
 
@@ -52,13 +53,15 @@ cmds/
 │   ├── ewwd/
 │   ├── hyprd/
 │   ├── newtab/
+│   └── src/
 ├── config/             # runtime YAML config
 └── internal/           # shared and command-private packages
     ├── config/         # typed config loader
     ├── daemon/         # Unix socket helpers
     ├── dctl/
     ├── ewwd/
-    └── hyprd/
+    ├── hyprd/
+    └── src/
 ```
 
 `hyprd` is further split into `browser/`, `notify/`, `session/`, `state/`, `windows/`, and `wm/` to keep concerns separated.

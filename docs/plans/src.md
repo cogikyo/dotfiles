@@ -1,6 +1,7 @@
 # `src` — source inspection cache: build spec
 
-Status: approved, unimplemented.
+Status: implemented in this session, commit pending.
+Post-restart `verify/source` dry run and user `sudo pacman -S devtools` are still pending.
 Companion: `verify/source.md` agent rewiring in slice 4.
 
 Objective: replace ad-hoc `/tmp/opencode` clones with a persistent, machine-owned inspection cache and a `src` CLI, then wire agent permissions to it.
@@ -51,7 +52,7 @@ Paths on stdout, diagnostics on stderr.
 1. find + ls: `cmds/cmd/src/main.go`, `cmds/internal/src/{src,find,ls}.go`.
    - Verify: gofmt/vet/build; `src find golang.org/x/sys` from `cmds/` hits GOMODCACHE; a miss exits 1; `src find opencode` → `~/repos/opencode`; `src ls` empty-ok.
 2. get: `internal/src/{get,resolve}.go`.
-   - Verify: `fzf@v0.60.0` clones then the second run is instant; detached HEAD + blob:none config present; `golang.org/x/text@v0.14.0` → GOMODCACHE with no clone; `arch:jq` has a PKGBUILD; `@badref` errors with no fallback and no dest dir.
+   - Verify: `github.com/junegunn/fzf@v0.60.0` clones then the second run is instant; detached HEAD + blob:none config present; `golang.org/x/text@v0.14.0` → GOMODCACHE with no clone; `arch:jq` has a PKGBUILD; `@badref` errors with no fallback and no dest dir.
 3. prune: `internal/src/prune.go`.
    - Verify: fake old entry pruned, fresh entry kept, unknown entry errors.
 4. Agent wiring.

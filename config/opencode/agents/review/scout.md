@@ -10,6 +10,8 @@ permission:
   bash:
     "*": deny
     "rg *": allow
+    "src find *": allow
+    "src ls": allow
     "git status*": allow
     "git diff*": allow
     "git log*": allow
