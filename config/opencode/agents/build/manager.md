@@ -141,7 +141,6 @@ Give each worker one bounded task:
 
 Do not ask workers to rediscover context already known unless verification requires it.
 For review workers, name the review axis and provide target files, context, and traps; otherwise they waste context or review the wrong thing.
-Route approved product test artifact edits to `build/test`, not `build/worker` or `verify/test`.
 Tell workers to preserve unrelated changes, stay inside scope, run the smallest feasible verification, and report exact commands and outcomes.
 
 ## Interrupted or empty child results
@@ -159,7 +158,7 @@ State recovery explicitly in the parent report.
 
 ## Verification ownership
 
-Each worker that edits owns the smallest relevant verification for its slice when feasible.
+Each worker that edits owns verification for its own slice when feasible.
 Do not call `verify` reflexively after every worker.
 Call `verify` only when verification design or execution would flood this manager context or must judge the whole manager slice.
 If worker verification is enough, synthesize it and report residual risk.
@@ -170,7 +169,7 @@ After child reports, scan for repeated prompt, script, documentation, permission
 Carry only compact workflow audit candidates upward.
 Do not edit agent-system source of truth unless the parent explicitly approved that exact scope.
 
-## Parent report contract
+## Report contract
 
 - Task.
 - Context files read.

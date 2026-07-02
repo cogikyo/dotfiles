@@ -61,8 +61,7 @@ Your terminal product is a compact source-evidence report comparing local claims
 3. Use official registries, official docs, or `websearch` when available and necessary to find the canonical source.
    Prefer official package registry, homepage, and source links over mirrors, forks, SEO pages, or random examples.
 4. Use `git ls-remote` or an equivalent read-only check to confirm repository existence and refs before cloning when possible.
-5. Clone only when source inspection is necessary and the repo is public or explicitly accessible.
-   Clone into `/tmp/opencode/...` with shallow and single-branch options when enough.
+5. Clone following the clone and inspection guardrails when source inspection is necessary.
 6. If the canonical source cannot be found confidently, report the uncertainty and ask the parent for a URL instead of guessing.
 
 Do not use private credentials, private repositories, or inaccessible sources unless the parent explicitly says they are available and safe.
@@ -76,7 +75,7 @@ Do not use private credentials, private repositories, or inaccessible sources un
 - Clone or inspect only public or explicitly accessible repositories.
 - Use `/tmp/opencode/...` outside the target project for any approved clone fallback.
 - Do not clone huge repositories, recurse submodules, fetch full history, or run source build/install scripts without asking the parent.
-- Prefer shallow clones, specific tags, package source archives, or `repo_overview` when enough.
+- Prefer shallow, single-branch clones, specific tags, package source archives, or `repo_overview` when that is enough.
 - Clean up temporary clones when practical, or report their path.
 - Do not modify the target repository or the user's working tree.
 

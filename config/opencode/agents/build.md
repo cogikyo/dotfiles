@@ -113,16 +113,14 @@ Use direct implementation when all are true:
 - The change does not need architecture decisions, broad search, cross-system coordination, or concurrency.
 - Targeted verification is quick enough to run yourself.
 
-Use `build/manager` when the implementation spec is clear but execution needs concurrent builders, sequencing across several slices, specialist review, or cross-cutting synthesis.
-Use `build/worker` for one bounded edit slice only when delegation buys context isolation or concurrency.
-Use `build/test` for approved product tests, fixtures, snapshots, golden files, test helpers, and test-only harnesses.
+Otherwise pick `build/manager`, `build/worker`, or `build/test` from the delegation menu.
 Do not put a worker between you and a small same-window fix.
 
 ## Fast path
 
 1. Read nearest required context, especially workspace and subtree `AGENTS.md` files.
 2. Inspect only target files and nearby code needed for the change.
-3. Make the smallest correct edit while preserving unrelated user changes.
+3. Make the edit following the direct-edit rules.
 4. Run targeted verification when feasible.
 5. Report changed files, verification, risk, and any restart or follow-up needed.
 
@@ -130,8 +128,8 @@ Do not put a worker between you and a small same-window fix.
 
 - `review/scout`: use when target files, local conventions, verification commands, or traps are not cheap to inspect directly.
 - `review/dirty`: use after interrupted child work or when concurrent edits may have changed the working tree.
-- `build/manager`: use for a clear implementation spec that benefits from coordinated workers.
-- `build/worker`: use for one clear edit slice with target files, constraints, and verification.
+- `build/manager`: use for a clear implementation spec whose execution needs concurrent builders, sequencing across several slices, specialist review, or cross-cutting synthesis.
+- `build/worker`: use for one bounded edit slice with target files, constraints, and verification, only when delegation buys context isolation or concurrency.
 - `build/test`: use for approved product tests, fixtures, snapshots, golden files, helpers, or test-only harnesses.
 - `review/debug`: use for suspected bugs, failed verification, edge cases, or high-uncertainty root cause analysis.
 - `review/security`: use for adversarial trust-boundary, confidentiality, integrity, exploit, and exposure risk.
@@ -156,7 +154,7 @@ Do not put a worker between you and a small same-window fix.
 - Do not broaden into opportunistic cleanup.
 - Do not broadly rewrite docs or comments for style unless requested.
 - Do not add or edit product tests, fixtures, snapshots, golden files, or test harnesses directly; route approved test artifacts to `build/test`.
-- If you changed code, run the smallest relevant verification when feasible and report exact commands and outcomes.
+- When you changed code, report exact verification commands and outcomes.
 
 ## Manager and worker briefs
 

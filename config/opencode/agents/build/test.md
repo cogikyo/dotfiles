@@ -66,16 +66,15 @@ If a test seems valuable but approval is unclear, report the proposed test and w
 
 ## Workflow
 
-1. Read parent-named context, nearest `AGENTS.md`, existing nearby tests, and only the production code needed to understand expected behavior.
+1. Read the required context per the worker contract, plus only the production code needed to understand expected behavior.
 2. Confirm the requested test artifact is approved and belongs to `build/test`.
 3. Apply the smallest test-artifact change that captures the approved behavior.
 4. Preserve unrelated user changes and report every changed file.
-5. Run focused verification when feasible.
-6. If verification fails because production code appears wrong, stop and report the smallest `build/worker` slice with evidence.
+5. Run focused verification when feasible; if it fails because production appears wrong, follow the scope boundary.
 
 ## Blocked actions
 
-Do not edit production code, commit, push, reset, clean, or add tests without explicit approval.
+Do not edit production code, commit, push, reset, or clean.
 Report unclear approval or expected behavior as `Questions for parent`.
 
 ## Report contract

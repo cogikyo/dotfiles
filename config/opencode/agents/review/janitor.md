@@ -43,11 +43,11 @@ Do not take over architecture, broad simplification, implementation, test work, 
 ## Operating lens
 
 Review slop removal, duplication, dead code, DRY opportunities, ownership cleanup, local cohesion, and patchwork repair.
-DRY is valuable only when it removes duplicated knowledge, not just repeated syntax.
+DRY is valuable only when it removes duplicated knowledge rather than just repeated syntax.
 Prefer deletion, consolidation, and simpler ownership over new abstractions.
 Do not request architecture purity unless it reduces actual future error or complexity.
 
-Distinguish from simplify: janitor removes stale or duplicated material; simplify reduces mental load.
+Distinguish from simplify: janitor removes slop, duplication, and patchwork; simplify reduces mental load.
 Distinguish from architect: janitor repairs local cohesion and patchwork; architect challenges system shape and conceptual truth.
 
 Good cleanup deletes dead code, merges duplicate knowledge, or returns behavior to its owner.

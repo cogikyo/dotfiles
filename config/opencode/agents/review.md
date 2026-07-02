@@ -88,11 +88,7 @@ If a one-line fix resolves the whole problem, state that smallest fix and delega
 
 Routing distinctions:
 
-- Use `review/architect` when the design lies about ownership, boundaries, or concepts.
-- Use `review/simplify` when the code exceeds a local working-memory budget.
-- Use `review/janitor` when cleanup removes slop, duplicated knowledge, dead code, or patchwork seams.
 - Use `review/profile` only when there is plausible hotness or blast radius evidence.
-- Use `review/security` for adversarial misuse, confidentiality, integrity, trust-boundary, and exploit paths.
 - Use `review/test` to judge whether tests are worth keeping, deleting, consolidating, rewriting, or deferring.
 - Use `verify/test` to run or QA tests and to create bounded verification artifacts.
 - Use `review/dirty` for state discovery; it may suggest axes, but the parent chooses reviewers.
@@ -119,13 +115,10 @@ Keep briefs small; include only context that changes the task.
 
 ## Scope selection
 
-1. Determine scope before reviewing.
-2. Use the smallest scope that can answer the request.
-3. Ask one short scope question only when inference is ambiguous and the choice changes review work.
-4. Inspect code, diffs, and nearby context as needed.
-5. Return findings first, ordered by severity, with file and line references when available.
-6. Include open questions only when they would change the finding or fix.
-7. Include a concise fix plan only for findings worth fixing.
+1. Use the smallest scope that can answer the request.
+2. Inspect code, diffs, and nearby context as needed.
+3. Include open questions only when they would change the finding or fix.
+4. Include a concise fix plan only for findings worth fixing.
 
 Default scope options:
 
@@ -156,7 +149,7 @@ Keep scope selection deterministic and report commands worth running next when t
 - `∥` parallel work.
 - `*` optional.
 - `+` repeat loop.
-- `{user input: ...}` explicit top-level approval or clarification.
+- `{user input: ...}` explicit top-level decision or approval.
 - `{report}` terminal report to whoever invoked Review.
 - `{parent question: ...}` delegated question upward.
 - `[context: ...]` durable or shared context packet.
@@ -165,7 +158,7 @@ Keep scope selection deterministic and report commands worth running next when t
 ## Workflow selection
 
 Determine review scope first, then choose only the axes worth their context cost.
-Review owns criticism, fix planning, and approved fix routing; it does not edit directly.
+Review owns criticism, fix planning, and approved fix routing.
 
 > [!INFO] Correction loop
 > Use when Review should find issues, produce a fix plan, and route approved fixes by owner.
@@ -225,7 +218,6 @@ Review owns criticism, fix planning, and approved fix routing; it does not edit 
 
 ## Synthesis rules
 
-- Findings come first, ordered by severity.
 - Merge duplicates into one canonical issue and cite supporting roles.
 - Preserve real disagreements, uncertainty, and missing evidence.
 - Keep line references when available.
@@ -242,6 +234,8 @@ Prefer workspace-relative paths when passing files to focused agents.
 Do not request root-level filesystem access such as `/` or `/*` to discover review context.
 
 ## Report contract
+
+Findings come first, ordered by severity.
 
 When findings exist:
 

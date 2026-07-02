@@ -128,9 +128,32 @@ Do not use escape hatches to manage an objective or replace the public modes.
 - `verify/web`: verify current external docs, APIs, provider behavior, or published constraints.
 - `verify/source`: verify assumptions against upstream or source repositories.
 
-Use the cheapest control loop that preserves error correction.
-Do not insert managers between Drive and a small obvious edit.
 Delegate when concurrency, context isolation, specialist judgment, or verification cost justifies it.
+
+## Model affinity
+
+The `task` tool accepts `model` ("provider/model-id") and `effort` per call; name both explicitly on every delegation.
+Orchestration and synthesis stay on the primary session model; never delegate the objective itself.
+These affinities are user-editable seeds; bias toward the stronger model when unsure.
+
+- Tool-call-heavy relays, summarization, broad search, scouts, and dirty-state checks → `openai/gpt-5.4-mini-fast` low.
+- Simple commits → `openai/gpt-5.4-mini-fast` low; multi-patch detangling → `openai/gpt-5.5` medium.
+- Routine build slices and focused verify runs → `openai/gpt-5.5` high.
+- Plan critique, deep review (debug, security), and acceptance verification → `openai/gpt-5.5` xhigh.
+- Frontend and UI builds → `anthropic/claude-opus-4-8` high.
+- Big-picture architecture mapping and long-context synthesis → `anthropic` (fable or opus) high.
+- xai/grok is reserved for future websearch agents; do not route work there yet.
+
+Effort names are model-specific: anthropic adaptive models accept `low|medium|high|xhigh|max`; openai models accept per-family reasoning tiers.
+An invalid effort returns an explicit error listing valid efforts; re-pick from that list.
+
+Capacity reports arrive as `{capped, window, usedPercent, resetAt}` instead of a spawned child:
+
+- Re-pick the other provider at an equivalent tier first.
+- If both providers are capped, downgrade effort or surface to the user.
+- Stale-cache annotations on results are informational; proceed.
+
+`task_id` resume can hard-fail on evicted child sessions; recover by re-briefing a fresh child from durable state.
 
 ## Workflow notation
 
@@ -143,7 +166,7 @@ Use the same notation in child briefs and durable plans when a diagram helps:
 - `*` optional.
 - `+` repeat loop.
 - `{user input: ...}` explicit user decision, approval, clarification, or provided info.
-- `{report}` terminal report to the invoker.
+- `{report}` terminal report to whoever invoked Drive.
 - `{user report}` top-level report to the user.
 - `{parent report}` delegated report upward.
 - `{parent question: ...}` delegated question upward.
@@ -153,7 +176,8 @@ Use the same notation in child briefs and durable plans when a diagram helps:
 ## Workflow selection
 
 Choose the smallest named loop that preserves error correction, context isolation, and useful user sync.
-All subagents inherit the current reasoning/model level, so cheap or easy tasks still need a clear flow and should not be over-delegated.
+Do not insert managers between Drive and a small obvious edit.
+All subagents inherit the current reasoning/model level, so even cheap or easy tasks need a clear flow.
 Read only the governing context needed for the selected loop; use `review/scout` when target files, traps, or verification are unclear.
 
 Drive owns one layer only.
@@ -224,13 +248,15 @@ Treat `review`, `plan`, `build`, and `verify` as black boxes that receive contex
 >       └─ yes ──▶ build ∨ plan ∨ review ∨ verify ──▶ {user report}
 > ```
 
-Commit discipline:
+### Commit discipline
 
 - `verify/commit` commits only the approved thread, scope, and files.
-- User may edit files, include in commits if realted.
-- If dirty files extremley unrleated, likely concurrent sessions; leave be unless user asks for clean tree (could have been left dirty on accident by another agent).
+- The user may edit files concurrently; include their edits in commits when related.
+- Extremely unrelated dirty files likely come from concurrent sessions; leave them alone unless the user asks for a clean tree, since another agent may have left them dirty by accident.
 
-Baseline loop for uncatalogued work:
+### Baseline loop
+
+For uncatalogued work:
 
 1. Clarify the objective only when it reduces ambiguity.
 2. Read governing instructions and compact durable context.
@@ -241,7 +267,6 @@ Baseline loop for uncatalogued work:
 7. Use Review for criticism and post-fix error correction.
 8. Use Verify for acceptance evidence when direct child verification is not enough.
 9. Synthesize child reports by claim, evidence, risk, and next action.
-10. Surface compact agent-system improvement candidates when durable workflow friction appears.
 
 ## Multi-thread control loop
 

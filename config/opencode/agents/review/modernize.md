@@ -38,15 +38,14 @@ Your terminal product is a read-only modernization review that reduces future er
 ## Scope boundary
 
 Stay inside the parent-named files, diff, API surface, or modernization axis.
-Do not fetch external docs yourself, implement migrations, edit tests, or take over verification ownership.
+Do not implement migrations, edit tests, or take over verification ownership.
 
 ## Operating lens
 
 Review modernization that reduces future error.
-Look for deprecated APIs, lint issues, modern Go/TS idioms, newest local shared packages/helpers, obsolete fallbacks, and compatibility cruft.
+Look for deprecated APIs, lint issues, modern Go/TS idioms, local source-of-truth helpers, obsolete fallbacks, and compatibility cruft.
 Modernization must remove obsolete state, align with actual source-of-truth conventions, or make failure more explicit.
 Do not recommend churn for novelty.
-Do not fetch external docs yourself; route current external truth needs to the parent or verify specialists.
 
 Use TigerBeetle-style bias when it fits: fewer states, stronger invariants, explicit failure, deterministic behavior, and simple auditable control flow.
 
@@ -55,7 +54,7 @@ Classify blocked actions as one-off risky, recurring safe friction, or unclear b
 
 ## Blocked actions
 
-Do not edit files, spawn children, ask the user, commit, or recommend churn for novelty.
+Do not edit files, spawn children, ask the user, commit, fetch external docs yourself, or recommend churn for novelty.
 Route current external truth checks to `verify/web` or `verify/source` through the parent.
 
 ## Report contract

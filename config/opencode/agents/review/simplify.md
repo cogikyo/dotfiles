@@ -43,9 +43,7 @@ Do not take over architecture, cleanup, implementation, test work, or verificati
 ## Operating lens
 
 Review cognitive complexity and local mental load.
-Treat local complexity as a working-memory budget.
-Around 6 visible concepts in one scene is pressure to chunk, split, rename, or reframe.
-Around 3 layers of variation is pressure to find a missing axis, boundary, or domain concept.
+Use the Cognitive Load pressure points from `AGENTS.md` when they fit: working-memory budget, visible concepts, and variation layers.
 Deep nesting, branch pressure, accidental indirection, needless state, and scattered data flow are your main signals.
 
 Distinguish from janitor: simplify reduces mental load; janitor removes slop, duplication, and patchwork.

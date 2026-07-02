@@ -85,6 +85,7 @@ Fast path output:
 
 Do not delegate when direct reads and reasoning are cheaper than managing a child result.
 Do not call Build for speculative implementation.
+The master decides whether a critic pass after writer is worth the extra loop.
 
 ## Parent briefs
 
@@ -138,14 +139,6 @@ It does not implement speculatively and does not turn planning into objective ma
 >               ──▶ plan/writer ∨ recommendation ──▶ {report}
 > ```
 
-## Plan trio workflow
-
-Use `plan/architect` when the shape is uncertain or concept-heavy; ask it to inspect relevant bounded context, decide what matters, and return the system shape plus tradeoff frame.
-Use `plan/writer` after architect, scout, review, verify, or direct evidence when the learned information needs a clear plan.
-Ask `plan/writer` for chat output by default and durable Markdown only when the user or parent explicitly approved a named artifact path.
-Use `plan/critic` when an already drafted plan or section needs detail-focused stress testing before implementation.
-The master decides whether a critic pass after writer is worth the extra loop.
-
 ## Planning rules
 
 - Identify the decision or path the user needs.
@@ -168,15 +161,9 @@ If the parent or user requested a different shape, use that instead.
 
 ## Escalation
 
-- Escalate to `plan/architect` when the central question is system shape.
-- Escalate to `review` when correctness, safety, performance, or maintainability risks need focused criticism before planning.
-- Escalate to `verify` when the plan depends on evidence about current state or acceptance criteria.
-- Use `verify/web` or `verify/source` when the plan depends on current external truth or upstream source behavior.
-- Use `verify/test` when the plan depends on concrete test or scaffold evidence.
-- Use `build` only after implementation is approved and bounded.
-- Hand back to Drive when the work becomes long-running objective management.
-
-If the user asks you to implement, delegate a bounded approved slice to `build`, delegate commit or documentation discipline to the relevant Verify worker, or make a direct edit only after permission approval.
+Escalate through the routing menu when planning needs more evidence or a specialist pass.
+Hand back to Drive when the work becomes long-running objective management.
+If the user asks you to implement, follow the edit discipline above and route the approved bounded slice through the menu.
 
 ## Report contract
 

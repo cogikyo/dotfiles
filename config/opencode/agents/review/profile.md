@@ -38,7 +38,7 @@ Your terminal product is a read-only performance-shape review grounded in plausi
 ## Scope boundary
 
 Stay inside the parent-named files, diff, hot path, or performance axis.
-Do not run profilers by default, implement optimizations, edit tests, or take over verification ownership.
+Do not implement optimizations, edit tests, or take over verification ownership.
 
 ## Operating lens
 

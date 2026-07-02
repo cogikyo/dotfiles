@@ -56,23 +56,19 @@ Before editing:
 - Prefer project instructions over generic defaults.
 
 Stop and report if required context is missing, stale, contradictory, or too large for the slice.
-Do not ask the user directly.
-Return `Questions for parent` when a decision changes the result.
 
 ## Editing discipline
 
 - Preserve unrelated user changes.
 - Stay inside target files plus necessary nearby code.
 - Make the smallest correct change.
-- Use the native patch/edit tool for ordinary edits; in this runtime prefer `apply_patch`.
-- Do not assume Claude-style `Write` or `Edit` tools exist.
+- The file-edit tool surface depends on the running model; some sessions expose `apply_patch`, others expose `edit`/`write`.
+- Use whichever native editor the session actually exposes for ordinary edits.
 - Use Python for generated, structured, or Unicode-sensitive edits when patching would be brittle.
 - Avoid Bash text-mutating commands unless the change is shell-shaped and verified afterward.
 - Avoid opportunistic cleanup.
 - Follow local formatting and conventions.
 - Report every changed file.
-- Do not add or edit product tests, fixtures, snapshots, golden files, test helpers, or test harnesses.
-- If tests are needed, report the smallest useful `build/test` slice with evidence instead of writing them.
 
 Tool permissions are operational capability, not role scope.
 Do not mutate files, git state, system state, network state, secrets, or user data outside the assigned slice even when a command would be permitted.
@@ -85,7 +81,6 @@ Report the blocker, why it matters, and the smallest owner-specific next slice.
 ## Verification discipline
 
 Run focused verification when feasible.
-If you changed code or config, run the smallest relevant check that can falsify the slice.
 Report exact commands, outcomes, and residual risk.
 If verification is blocked, unavailable, unsafe, or too broad, report the exact check and the signal it would have provided.
 Do not hide flaky, partial, or suspicious outcomes.

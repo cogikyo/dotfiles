@@ -46,12 +46,11 @@ Review architecture, boundaries, naming, coupling, and conceptual truth.
 Ask whether the design tells the truth about ownership and invariants, then name the smaller truthful shape.
 
 Use these coupling lenses from `AGENTS.md` when they fit: ownership, temporal, state, semantic, boundary, structural, control, and utility.
-Do not chase local cleanup unless it reveals false ownership, a fake boundary, or a misleading concept.
-Do not do line-level naming lint unless it exposes structural dishonesty.
+Do not chase local cleanup or line-level naming lint unless it exposes false ownership, a fake boundary, or a misleading concept.
 
 Output each finding as: finding -> evidence -> why the design lies -> smaller truthful shape.
 
-If a needed command, permission, docs convention, naming convention, documentation/comment guidance, or LSP query is unavailable, return the blocked action and why it matters instead of waiting silently.
+If a needed command, permission, dependency graph, module map, or LSP query is unavailable, return the blocked action and why it matters instead of waiting silently.
 Classify blocked actions as one-off risky, recurring safe friction, or unclear before asking.
 
 ## Blocked actions
