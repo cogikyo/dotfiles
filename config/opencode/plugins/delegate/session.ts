@@ -30,25 +30,29 @@ type AgentInfo = {
 };
 
 type PreparedTask = {
+  args: TaskArgs;
   agent: AgentInfo;
   model: ModelRef;
   variant?: string;
   permission: Rule[];
 };
 
-export async function prepareTask(client: Client, ctx: ToolContext, args: TaskArgs): Promise<PreparedTask> {
+export async function prepareTask(client: Client, ctx: ToolContext, input: unknown): Promise<PreparedTask> {
+  const args = taskArgs(input);
   const effort = parseEffort(args);
+  applyDisplayArgs(input, args, effort);
+  const agent = await readAgent(client, args.subagent_type);
 
   await askTaskPermission(ctx, { ...args, effort });
 
   const parentMessage = await readCurrentAssistantMessage(client, ctx);
-  const agent = await readAgent(client, args.subagent_type);
   const model = args.model ? parseModel(args.model) : (agent.model ?? parentMessage.model);
   const variant = effort ?? (args.model ? undefined : agent.model ? agent.variant : parentMessage.variant);
 
   await validateVariant(client, model, variant);
 
   return {
+    args,
     agent,
     model,
     variant,
@@ -67,18 +71,11 @@ export async function runChildTask(input: {
     ? await readExistingChild(input.client, input.args.task_id)
     : await createChild(input.client, input.ctx, input.args, input.prepared);
 
-  const metadata = {
-    sessionId: child.id,
-    parentSessionId: input.ctx.sessionID,
-    model: {
-      ...input.prepared.model,
-      ...(input.prepared.variant ? { variant: input.prepared.variant } : {}),
-    },
-  };
+  const metadata = { sessionId: child.id };
   const notes = [...input.capacityNotes];
 
   try {
-    await updateToolMetadata(input.ctx, { title: input.args.description, metadata });
+    await updateToolMetadata(input.ctx, { metadata });
   } catch (error) {
     notes.push(`delegate metadata update failed: ${errorMessage(error)}`);
   }
@@ -153,11 +150,57 @@ function parseModel(value: string): ModelRef {
   return { providerID: clean.slice(0, slash), modelID: clean.slice(slash + 1) };
 }
 
+function taskArgs(value: unknown): TaskArgs {
+  const root = object(value);
+  if (!root) throw new Error("delegate task arguments must be an object");
+
+  const args: TaskArgs = {
+    description: requiredString(root, "description").trim(),
+    prompt: requiredString(root, "prompt"),
+    subagent_type: requiredString(root, "subagent_type").trim(),
+  };
+  const model = optionalString(root, "model");
+  const effort = optionalString(root, "effort");
+  const taskID = optionalString(root, "task_id");
+  if (model !== undefined) args.model = model;
+  if (effort !== undefined) args.effort = effort;
+  if (taskID !== undefined) args.task_id = taskID;
+  return args;
+}
+
+function applyDisplayArgs(input: unknown, args: TaskArgs, effort: string | undefined) {
+  const description = effort ? `${args.description} · ${effort}` : args.description;
+  args.description = description;
+  if (effort) args.effort = effort;
+
+  const root = object(input);
+  if (!root) return;
+  root.description = description;
+  root.subagent_type = args.subagent_type;
+  if (effort) root.effort = effort;
+}
+
 function parseEffort(args: TaskArgs) {
-  if (!Object.hasOwn(args, "effort")) return undefined;
+  if (args.effort === undefined) return undefined;
   const clean = args.effort?.trim();
   if (!clean) throw new Error("delegate effort must not be empty when provided");
   return clean;
+}
+
+function requiredString(root: Record<string, unknown>, name: keyof TaskArgs) {
+  if (!Object.hasOwn(root, name) || root[name] === undefined) {
+    throw new Error(`delegate task missing required argument: ${name}`);
+  }
+  if (typeof root[name] !== "string") throw new Error(`delegate task argument ${name} must be a string`);
+  if (!root[name].trim()) throw new Error(`delegate task argument ${name} must not be empty`);
+  return root[name];
+}
+
+function optionalString(root: Record<string, unknown>, name: keyof TaskArgs) {
+  if (!Object.hasOwn(root, name) || root[name] === undefined) return undefined;
+  if (typeof root[name] !== "string") throw new Error(`delegate task argument ${name} must be a string`);
+  if (!root[name].trim()) throw new Error(`delegate task argument ${name} must not be empty when provided`);
+  return root[name];
 }
 
 async function askTaskPermission(ctx: ToolContext, args: TaskArgs) {
@@ -197,7 +240,7 @@ async function readAgent(client: Client, name: string): Promise<AgentInfo> {
   const agent = agents.map(object).find((item) => item?.name === name);
   if (!agent) {
     const names = agents.map(object).map((item) => string(item?.name)).filter(Boolean).join(", ");
-    throw new Error(`Unknown agent type: ${name} is not a valid agent type. Available agents: ${names}`);
+    throw new Error(`delegate task argument subagent_type must be a known agent, got ${JSON.stringify(name)}. Known agents: ${names || "none"}`);
   }
 
   return {

@@ -32,12 +32,12 @@ const server: Plugin = async ({ client }) => {
         async execute(args, ctx) {
           const prepared = await prepareTask(client, ctx, args);
           const capacity = await decideCapacity(prepared.model.providerID, config, ctx.abort);
-          if (capacity.action === "report") return renderCapacityReport(args, capacity.report) as never;
+          if (capacity.action === "report") return renderCapacityReport(prepared.args, capacity.report) as never;
 
           return (await runChildTask({
             client,
             ctx,
-            args,
+            args: prepared.args,
             prepared,
             capacityNotes: capacity.notes,
           })) as never;
