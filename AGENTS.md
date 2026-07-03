@@ -8,11 +8,9 @@ Arch + Hyprland (Wayland) dotfiles. Single-user. Root of repo = `~/dotfiles`.
 - `bin/` → symlinked into `~/.local/bin/` (legacy; being replaced by `cmds/`)
 - `cmds/` → Go command workspace; built into `~/.local/bin/` by `install.sh go`. See `cmds/README.md`.
 - `etc/` → system configs **copied** to `/etc/` by `install.sh system` (not symlinked)
-- `config/opencode/agents/{drive,build,plan,review,verify}.md` → public OpenCode modes; default is Drive
-- `config/opencode/agents/build/` → implementation manager and leaf workers, including `build/test` for approved product test artifacts
-- `config/opencode/agents/plan/writer.md` → plan and handoff artifact writer subagent
-- `config/opencode/agents/review/` → focused review specialists, including security and test-quality reviewers
-- `config/opencode/agents/verify/` → verify specialists; `verify/test` runs suites and owns bounded verification artifacts, while product tests belong to `build/test`
+- `config/opencode/agents/{scheme,collab,drive}.md` → primary OpenCode modes; scheme plans, collab steers, drive executes unattended
+- `config/opencode/agents/{scout,build,review,scribe,verify}/` → leaf fleet; scouts map, builders edit code, reviewers judge, scribes write prose and commits, verifiers collect evidence
+- `.spec/` → directory-scoped plan, spec, and logbook docs, committed by default; e.g. `config/opencode/.spec/orchestrate.md`
 - `iso/` → archiso profile; `iso/work/` and `iso/out/` are gitignored build artifacts
 - `share/` → static assets
 
@@ -25,7 +23,7 @@ Operationally, `opencodde` is the primary agent harness used.
 
 `config/opencode/AGENTS.md` is global context file that is always in use.
 `config/opencode/opencode.json` wires config, providers, permissions, and plugins.
-`config/opencode/agents/*.md` define public modes, while subdirectories hold workers, specialists, and managers.
+`config/opencode/agents/*.md` define primary modes, while subdirectories hold one-hop leaves.
 
 Plugin paths live under `config/opencode/`.
 Edits under `config/opencode/` affect the live system through symlinks.
