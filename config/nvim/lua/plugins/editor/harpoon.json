@@ -61,6 +61,7 @@
         "config/nvim/lua/config/keymaps.lua",
         "config/opencode/AGENTS.md",
         "config/kitty/kitty.conf",
+        "config/opencode/opencode.json",
         "config/kitty/tab_bar.py",
         "config/opencode/plugins/shared/colors.ts"
       ]
