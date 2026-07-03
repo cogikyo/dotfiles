@@ -2,5 +2,5 @@
   "thresholds": { "H": 90, "W": 85 },
   "maxWaitMinutes": 20,
   "staleCacheMinutes": 15,
-  "providers": { "anthropic": {}, "openai": {} }
+  "providers": { "anthropic": {}, "openai": {}, "xai": {}, "opencode-go": {} }
 }

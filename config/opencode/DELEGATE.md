@@ -22,16 +22,22 @@ Status: implemented and committed through `9097587d`.
 - `verify/commit` staging smoke passed when it created `20cefb37` and `9097587d` from exact scopes.
 - If the `src` permissions commit lands first, run the post-restart `verify/source` dry run for the new `src` permissions.
 
+## Usage plugin status
+
+Status: xai and opencode-go usage work is currently uncommitted, pending this session's commit. Runtime verification remains pending.
+
+- xai and opencode-go adapters are implemented in `plugins/usage/`, and both are registered in `index.tsx`.
+- The falsifier resolved: opencode's refreshed xai OAuth token got 401, so the adapter reads only the Grok CLI auth at `~/.grok/auth.json` (`key` + `expires_at`, never `refresh_token`).
+- The Grok CLI billing endpoint for this unified subscription returns tier and current period but no consumption percent, so xai renders an info reset/tier note with no windows; the true burn percent waits on a live inference SSE `rate_limits.updated` tap that is deliberately not built yet.
+- opencode-go has no API-key usage route upstream; the console `queryLiteSubscription` is browser-session `/_server` only, and browser cookie replay is deferred pending explicit live approval. The adapter shows a warn no-route note.
+- `delegate.json` now lists `xai` and `opencode-go` so delegating to those connected providers no longer errors. Neither yields numeric windows yet, so capacity proceeds ungated for both.
+
 ## Next roadmap after smoke
 
-- Resume usage plugin work.
-- xai usage should come from `GET https://cli-chat-proxy.grok.com/v1/billing?format=credits` with `Authorization: Bearer <opencode xai oauth access>` and `X-XAI-Token-Auth: xai-grok-cli`.
-- The first falsifier is whether opencode's refreshed xai OAuth token is accepted by that endpoint.
-- opencode-go usage needs browser-cookie or RPC simulation because there is no public or API-key endpoint.
-- Expect hourly, weekly, and monthly draining windows there.
-- Once usage signals exist, add xai and opencode-go to `delegate.json` and weave affinities for xai imagegen, x-search, websearch, and opencode-go models into `drive.md`.
+- Tap the xai inference SSE `rate_limits.updated` stream for a real burn percent, then promote the xai note to a numeric window.
+- Revisit opencode-go browser cookie replay only after explicit live approval; expect hourly, weekly, and monthly draining windows there.
+- Once numeric signals exist, weave affinities for xai imagegen, x-search, websearch, and opencode-go models into `drive.md`.
 - Consider the `@types/node` bump only if TypeScript dependency resolution keeps requiring local `node_modules` hydration.
-- The user still needs to install `devtools` with pacman after the `src` package commit.
 
 ## Rollback and risk
 

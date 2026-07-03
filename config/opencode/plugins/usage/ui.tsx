@@ -4,6 +4,16 @@ import { createTextAttributes } from "@opentui/core";
 import { For, Show } from "solid-js";
 import { usageColor } from "../shared/colors.ts";
 import type { ProviderUsage } from "./types.ts";
+import type { TuiThemeCurrent } from "@opencode-ai/plugin/tui";
+
+// A stale note on live windows stays muted; a windowless note takes its color from noteKind,
+// so xai reset/tier and opencode-go route notes render benign instead of as a red error.
+function noteColor(theme: TuiThemeCurrent, provider: ProviderUsage) {
+  if (provider.windows.length > 0) return theme.textMuted;
+  if (provider.noteKind === "info") return theme.info;
+  if (provider.noteKind === "warn") return theme.warning;
+  return theme.error;
+}
 
 const BAR_WIDTH = 10;
 const DURATION_WIDTH = 7;
@@ -114,13 +124,7 @@ export function UsageDashboard(props: {
               )}
             </For>
             <Show when={provider.note}>
-              <text
-                fg={
-                  provider.windows.length > 0
-                    ? props.api.theme.current.textMuted
-                    : props.api.theme.current.error
-                }
-              >
+              <text fg={noteColor(props.api.theme.current, provider)}>
                 {provider.note}
               </text>
             </Show>

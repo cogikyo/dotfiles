@@ -13,9 +13,11 @@ import {
   withProviderLock,
   writeProviderCache,
 } from "./cache.ts";
+import { opencodeGoUsage } from "./opencode-go.ts";
 import { openaiUsage } from "./openai.ts";
 import type { ProviderAdapter, ProviderUsage } from "./types.ts";
 import { UsageDashboard } from "./ui.tsx";
+import { xaiUsage } from "./xai.ts";
 
 const id = "cullyn.usage-sidebar";
 const INTERNAL_CONTEXT_PLUGIN_ID = "internal:sidebar-context";
@@ -25,7 +27,16 @@ const DEFAULT_ERROR_BACKOFF_MS = 60_000;
 const DEFAULT_RATE_LIMIT_BACKOFF_MS = 10 * 60_000;
 const DEFAULT_STALE_AFTER_MS = 2 * 60_000;
 const EVENT_REFRESH_DELAY_MS = 5_000;
-const adapters = [openaiUsage, anthropicUsage] satisfies ProviderAdapter[];
+const adapters = [
+  openaiUsage,
+  anthropicUsage,
+  xaiUsage,
+  opencodeGoUsage,
+] satisfies ProviderAdapter[];
+
+function isInformationalNote(usage: ProviderUsage) {
+  return usage.noteKind === "info" || usage.noteKind === "warn";
+}
 
 function pendingUsage(adapter: ProviderAdapter): ProviderUsage {
   return { id: adapter.id, label: adapter.label, windows: [] };
@@ -70,6 +81,12 @@ function cachedUsage(
     return { ...cache.usage, note };
   }
 
+  // Windowless informational/warn usage (e.g. xai reset/tier, opencode-go no-route) stays
+  // visible instead of collapsing to pending, unless a later fetch recorded a hard error.
+  if (cache.usage && !cache.error && isInformationalNote(cache.usage)) {
+    return cache.usage;
+  }
+
   if (cache.error) {
     const isCoolingDown = Boolean(
       cache.backoffUntil && Date.now() < cache.backoffUntil,
@@ -98,6 +115,8 @@ function cleanUsage(usage: ProviderUsage): ProviderUsage {
     id: usage.id,
     label: usage.label,
     windows: usage.windows,
+    note: usage.note,
+    noteKind: usage.noteKind,
   };
 }
 
@@ -141,7 +160,8 @@ async function fetchAndCache(adapter: ProviderAdapter) {
     return recordError(adapter, latest, "HTTP 429");
   }
 
-  if (usage.windows.length === 0) {
+  // Windowless usage is an error only when it is not a benign info/warn state.
+  if (usage.windows.length === 0 && !isInformationalNote(usage)) {
     return recordError(adapter, latest, usage.note || "usage unavailable");
   }
 

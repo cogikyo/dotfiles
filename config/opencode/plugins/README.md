@@ -17,7 +17,7 @@ Its plugin ID is `hyprd-kitty-context`.
 Keep the context file path, schema, stale window, and Kitty socket probe here instead of duplicating them.
 
 `usage/index.tsx` is a TUI sidebar replacement loaded by `tui.json`.
-It shows OpenAI and Claude usage-limit windows for every session.
+It shows OpenAI, Claude, xAI, and opencode-go usage sections for every session.
 Its plugin ID is `cullyn.usage-sidebar`.
 
 `opencode/markdown-context.tsx` is a TUI sidebar content section loaded by `tui.json`.
@@ -69,8 +69,10 @@ That socket is expected to be owned by the current user session.
 `usage/index.tsx` reads OpenCode auth from `${XDG_DATA_HOME:-~/.local/share}/opencode/auth.json`.
 It expects OAuth entries with access tokens for providers it can display.
 
-The sidebar always displays both OpenAI and Claude sections so usage can guide model switching before the current session provider changes.
+The sidebar always displays OpenAI, Claude, xAI, and opencode-go sections so usage can guide model switching before the current session provider changes.
 The active provider label uses the theme primary color.
+A `ProviderUsage.noteKind` of `info` or `warn` marks a windowless note as a benign state, so it renders in the theme info/warning color and stays cached and visible instead of collapsing to pending or a red error.
+Notes without `noteKind` keep the legacy red error path for OpenAI and Claude, so their `OAuth not found`, `HTTP <status>`, and `Usage windows unavailable` messages are unchanged.
 Provider responses are cached per provider under `${XDG_CACHE_HOME:-~/.cache}/opencode/usage-sidebar/`.
 Provider lock files live under `${XDG_RUNTIME_DIR:-/tmp/opencode-${uid}}/opencode/` so multiple OpenCode sessions share one cache without stampeding private usage endpoints.
 Network refreshes are allowed at most once per provider per minute and are triggered by session message events; the one-minute UI timer only rereads cache and updates reset countdowns.
@@ -105,6 +107,32 @@ Model-specific weekly windows such as Sonnet or Opus are intentionally omitted.
 This endpoint and shape are private Anthropic implementation details surfaced by Claude Code OAuth flows.
 Claude uses a one-minute minimum fetch interval, a two-minute transient-error backoff, and a fifteen-minute 429 backoff because this usage endpoint is much tighter than model inference.
 Failures should degrade to a coarse `usage unavailable`, `HTTP <status>`, or `Usage windows unavailable` message rather than exposing local paths or token parsing details.
+
+### xAI Usage Adapter
+
+`usage/xai.ts` reads only the Grok CLI auth at `~/.grok/auth.json`, never OpenCode's own xai OAuth.
+OpenCode's refreshed xai token was rejected with 401 on the billing endpoint, while the Grok CLI token is accepted.
+
+That file is an object keyed by `<issuer>::<client_id>`; the adapter picks the entry whose `oidc_issuer` is `https://auth.x.ai`.
+It reads `key` and `expires_at` only; it never reads or refreshes `refresh_token`.
+If the file, entry, or key is missing it returns no windows with a `Grok CLI auth unavailable` warn note; an expired `expires_at` returns `Grok CLI token expired` without any network call.
+
+When the token is fresh it calls `GET https://cli-chat-proxy.grok.com/v1/billing?format=credits` with `Authorization: Bearer <key>`, `X-XAI-Token-Auth: xai-grok-cli`, `Accept: application/json`, and `User-Agent: opencode-usage`.
+It reads the current period reset (`currentPeriod.end`), optional subscription tier fields, `creditUsagePercent`, `monthlyLimit`, `includedUsed`, `totalUsed`, `onDemandCap`, and `onDemandUsed` when present.
+A real percent (explicit `creditUsagePercent`, an included used/limit ratio, or an on-demand used/cap ratio with `cap > 0`) becomes a weekly `W` window with `resetAt` from `currentPeriod.end`.
+
+This unified subscription returns only config, current period, on-demand cap/used of 0, and tier, with no consumption percent.
+In that expected case the adapter returns no windows with an info note like `<tier> · W resets <duration>` or `weekly reset <duration>`; it never fakes 0%.
+The true burn percent likely appears only in live inference SSE `rate_limits.updated`, which is intentionally not tapped yet.
+xAI uses a five-minute minimum fetch interval, a five-minute transient-error backoff, and a fifteen-minute 429 backoff.
+
+### opencode-go Usage Adapter
+
+`usage/opencode-go.ts` has no usable usage route and does no network work.
+The API key has no usage route upstream, and the console `queryLiteSubscription` is a browser-session `/_server` call.
+Browser cookie replay is deferred because it needs live user approval.
+
+The adapter returns no windows with a `usage unavailable: no API-key route upstream` warn note on a long poll interval.
 
 The plugin deactivates `internal:sidebar-context` while active because it owns the `sidebar_title` and `sidebar_content` slots.
 On dispose it reactivates that internal plugin only if this plugin deactivated it.
