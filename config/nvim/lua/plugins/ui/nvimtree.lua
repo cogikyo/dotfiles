@@ -294,6 +294,7 @@ return {
 				},
 				root_folder_label = false,
 				highlight_git = "all",
+				highlight_hidden = "all",
 				indent_markers = {
 					enable = true,
 					inline_arrows = true,
