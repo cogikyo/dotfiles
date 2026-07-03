@@ -24,20 +24,20 @@ Status: delegate core is committed through `9097587d`, and usage providers are c
 
 ## Usage plugin status
 
-Status: xai and opencode-go usage work is committed as `8b72fc71`. Runtime verification remains pending.
+Status: xai usage is committed as `8b72fc71`; opencode-go browser-session usage is implemented after explicit approval.
 
 - xai and opencode-go adapters are implemented in `plugins/usage/`, and both are registered in `index.tsx`.
 - The falsifier resolved: opencode's refreshed xai OAuth token got 401, so the adapter reads only the Grok CLI auth at `~/.grok/auth.json` (`key` + `expires_at`, never `refresh_token`).
 - The xAI adapter does not refresh Grok CLI tokens.
 - If it shows `Grok CLI token expired`, run a Grok CLI command or login to refresh `~/.grok/auth.json`.
 - The Grok CLI billing endpoint for this unified subscription returns tier and current period but no consumption percent, so xai renders an info reset/tier note with no windows; the true burn percent waits on a live inference SSE `rate_limits.updated` tap that is deliberately not built yet.
-- opencode-go has no API-key usage route upstream; the console `queryLiteSubscription` is browser-session `/_server` only, and browser cookie replay is deferred pending explicit live approval. The adapter shows a warn no-route note.
-- `delegate.json` now lists `xai` and `opencode-go` so delegating to those connected providers no longer errors. Neither yields numeric windows yet, so capacity proceeds ungated for both.
+- opencode-go has no API-key usage route upstream; the adapter now uses the approved Firefox `auth` cookie path to query console usage without storing or logging the cookie.
+- `delegate.json` now lists `xai` and `opencode-go` so delegating to those connected providers no longer errors. xAI still yields no numeric burn percent; opencode-go can yield numeric windows when Firefox is signed in.
 
 ## Next roadmap after smoke
 
 - Tap the xai inference SSE `rate_limits.updated` stream for a real burn percent, then promote the xai note to a numeric window.
-- Revisit opencode-go browser cookie replay only after explicit live approval; expect hourly, weekly, and monthly draining windows there.
+- Keep opencode-go usage under observation because the SolidStart server function id and Seroval response shape are private console internals.
 - Once numeric signals exist, weave affinities for xai imagegen, x-search, websearch, and opencode-go models into `drive.md`.
 - Consider the `@types/node` bump only if TypeScript dependency resolution keeps requiring local `node_modules` hydration.
 
