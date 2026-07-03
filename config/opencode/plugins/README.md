@@ -71,12 +71,16 @@ It expects OAuth entries with access tokens for providers it can display.
 
 The sidebar always displays OpenAI, Claude, xAI, and opencode-go sections so usage can guide model switching before the current session provider changes.
 The active provider label uses the theme primary color.
-A `ProviderUsage.noteKind` of `info` or `warn` marks a windowless note as a benign state, so it renders in the theme info/warning color and stays cached and visible instead of collapsing to pending or a red error.
-Notes without `noteKind` keep the legacy red error path for OpenAI and Claude, so their `OAuth not found`, `HTTP <status>`, and `Usage windows unavailable` messages are unchanged.
+Each provider's note renders inline beside its label as a one or two word marker, colored by state: `error` red, `warn` amber, `info` muted, and a stale marker muted.
+A `ProviderUsage.noteKind` of `info` or `warn` marks a windowless note as a benign state, so it stays cached and visible instead of collapsing to pending or a red error.
+Notes without `noteKind` keep the legacy red error path for OpenAI and Claude, so their `no auth`, `<status>`, and `no windows` markers stay red.
+A provider with zero windows still renders placeholder rows with muted `--` percents, an empty bar, and `--` reset columns so column alignment matches healthy providers.
+Placeholder labels are per provider: OpenAI and Claude use `H` and `W`, OpenCode uses `H`, `W`, and `M`, while xAI uses only `W`; each adapter declares its `placeholders` and the UI stamps them onto `ProviderUsage`.
+A window may carry a reset period with an unknown `usedPercent`, which renders as a muted `--` percent and empty bar but keeps the real duration and exact reset columns.
 Provider responses are cached per provider under `${XDG_CACHE_HOME:-~/.cache}/opencode/usage-sidebar/`.
 Provider lock files live under `${XDG_RUNTIME_DIR:-/tmp/opencode-${uid}}/opencode/` so multiple OpenCode sessions share one cache without stampeding private usage endpoints.
-Network refreshes are allowed at most once per provider per minute and are triggered by session message events; the one-minute UI timer only rereads cache and updates reset countdowns.
-When a rate-limited provider has prior data, the sidebar keeps showing stale windows with a muted stale note rather than replacing them with an error.
+Network refreshes are allowed at most once per provider per minute; both the one-minute UI timer and session message events request a refresh, and `shouldFetch` plus the provider lock gate the actual fetch so idle instances re-fetch instead of showing stale data forever.
+When a rate-limited provider has prior data, the sidebar keeps showing stale windows with a muted note rather than replacing them with an error.
 
 ### OpenAI Usage Adapter
 
@@ -91,7 +95,7 @@ The UI displays used percentage; if the API only returns remaining percentage, t
 
 This endpoint and shape are private ChatGPT implementation details.
 OpenAI uses a one-minute minimum fetch interval, a one-minute transient-error backoff, and a ten-minute 429 backoff.
-Failures should degrade to a coarse `usage unavailable`, `HTTP <status>`, or `Usage windows unavailable` message rather than exposing local paths or token parsing details.
+Failures should degrade to a coarse `unavailable`, `<status>`, `429`, or `no windows` marker rather than exposing local paths or token parsing details.
 
 ### Claude Usage Adapter
 
@@ -106,7 +110,7 @@ Model-specific weekly windows such as Sonnet or Opus are intentionally omitted.
 
 This endpoint and shape are private Anthropic implementation details surfaced by Claude Code OAuth flows.
 Claude uses a one-minute minimum fetch interval, a two-minute transient-error backoff, and a fifteen-minute 429 backoff because this usage endpoint is much tighter than model inference.
-Failures should degrade to a coarse `usage unavailable`, `HTTP <status>`, or `Usage windows unavailable` message rather than exposing local paths or token parsing details.
+Failures should degrade to a coarse `unavailable`, `<status>`, `429`, or `no windows` marker rather than exposing local paths or token parsing details.
 
 ### xAI Usage Adapter
 
@@ -114,28 +118,35 @@ Failures should degrade to a coarse `usage unavailable`, `HTTP <status>`, or `Us
 OpenCode's refreshed xai token was rejected with 401 on the billing endpoint, while the Grok CLI token is accepted.
 
 The adapter does not refresh Grok CLI tokens.
-If it shows `Grok CLI token expired`, run a Grok CLI command or login to refresh `~/.grok/auth.json`.
+If it shows `expired`, run a Grok CLI command or login to refresh `~/.grok/auth.json`.
 
 That file is an object keyed by `<issuer>::<client_id>`; the adapter picks the entry whose `oidc_issuer` is `https://auth.x.ai`.
 It reads `key` and `expires_at` only; it never reads or refreshes `refresh_token`.
-If the file, entry, or key is missing it returns no windows with a `Grok CLI auth unavailable` warn note; an expired `expires_at` returns `Grok CLI token expired` without any network call.
+If the file, entry, or key is missing it returns no windows with a `no auth` warn note; an expired `expires_at` returns `expired` without any network call.
 
 When the token is fresh it calls `GET https://cli-chat-proxy.grok.com/v1/billing?format=credits` with `Authorization: Bearer <key>`, `X-XAI-Token-Auth: xai-grok-cli`, `Accept: application/json`, and `User-Agent: opencode-usage`.
 It reads the current period reset (`currentPeriod.end`), optional subscription tier fields, `creditUsagePercent`, `monthlyLimit`, `includedUsed`, `totalUsed`, `onDemandCap`, and `onDemandUsed` when present.
 A real percent (explicit `creditUsagePercent`, an included used/limit ratio, or an on-demand used/cap ratio with `cap > 0`) becomes a weekly `W` window with `resetAt` from `currentPeriod.end`.
 
 This unified subscription returns only config, current period, on-demand cap/used of 0, and tier, with no consumption percent.
-In that expected case the adapter returns no windows with an info note like `<tier> · W resets <duration>` or `weekly reset <duration>`; it never fakes 0%.
+In that expected case the adapter returns a single weekly `W` window with the real `currentPeriod.end` reset but no `usedPercent`, so the row shows a muted `--` cell instead of faking 0%.
 The true burn percent likely appears only in live inference SSE `rate_limits.updated`, which is intentionally not tapped yet.
 xAI uses a five-minute minimum fetch interval, a five-minute transient-error backoff, and a fifteen-minute 429 backoff.
 
 ### opencode-go Usage Adapter
 
-`usage/opencode-go.ts` has no usable usage route and does no network work.
-The API key has no usage route upstream, and the console `queryLiteSubscription` is a browser-session `/_server` call.
-Browser cookie replay is deferred because it needs live user approval.
+`usage/opencode-go.ts` has no API-key usage route upstream.
+It reads only Firefox's `auth` cookie for `opencode.ai` from `cookies.sqlite` and replays it to `https://opencode.ai` console routes.
+The cookie is never logged, cached, serialized, or sent to any other origin/provider.
 
-The adapter returns no windows with a `usage unavailable: no API-key route upstream` warn note on a long poll interval.
+The adapter first checks `/auth/status`, resolves the active workspace via `/auth`, discovers the SolidStart `queryLiteSubscription` server reference from the workspace `/usage` or `/go` route assets, then posts `[workspaceID]` to `/_server`.
+The server function id is cached in memory for a short TTL because it is build/hash dependent.
+Responses may be plain JSON or SolidStart/Seroval JavaScript chunks; the adapter extracts only the expected rolling, weekly, and monthly usage fields and does not evaluate remote code.
+
+The adapter displays as `OpenCode` (its id stays `opencode-go` and the cache path is unchanged) and renders `H`, `W`, and `M` windows when available.
+If Firefox is signed out or the browser session is expired, it shows the short warn note `sign in`.
+`sign in` is a browser-session problem; there is still no API-key usage route.
+Private console route drift degrades to `unavailable` or `no usage` rather than exposing local paths or cookie details.
 
 The plugin deactivates `internal:sidebar-context` while active because it owns the `sidebar_title` and `sidebar_content` slots.
 On dispose it reactivates that internal plugin only if this plugin deactivated it.

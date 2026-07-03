@@ -54,7 +54,7 @@ async function load(): Promise<ProviderUsage> {
   const anthropic = auth.anthropic;
 
   if (!anthropic || anthropic.type !== "oauth" || !anthropic.access) {
-    return usage([], "OAuth not found");
+    return usage([], "no auth");
   }
 
   const response = await fetch("https://api.anthropic.com/api/oauth/usage", {
@@ -66,7 +66,7 @@ async function load(): Promise<ProviderUsage> {
       "anthropic-version": "2023-06-01",
     },
   });
-  if (!response.ok) return usage([], `HTTP ${response.status}`);
+  if (!response.ok) return usage([], `${response.status}`);
 
   const payload = (await response.json()) as AnthropicUsagePayload;
   const windows = [
@@ -74,7 +74,7 @@ async function load(): Promise<ProviderUsage> {
     usageWindow("W", payload.seven_day),
   ].filter((window): window is UsageWindow => Boolean(window));
 
-  if (windows.length === 0) return usage([], "Usage windows unavailable");
+  if (windows.length === 0) return usage([], "no windows");
   return usage(windows);
 }
 

@@ -39,15 +39,21 @@ function isInformationalNote(usage: ProviderUsage) {
 }
 
 function pendingUsage(adapter: ProviderAdapter): ProviderUsage {
-  return { id: adapter.id, label: adapter.label, windows: [] };
+  return {
+    id: adapter.id,
+    label: adapter.label,
+    placeholders: adapter.placeholders,
+    windows: [],
+  };
 }
 
 function unavailableUsage(adapter: ProviderAdapter): ProviderUsage {
   return {
     id: adapter.id,
     label: adapter.label,
+    placeholders: adapter.placeholders,
     windows: [],
-    note: "usage unavailable",
+    note: "unavailable",
   };
 }
 
@@ -57,6 +63,10 @@ function minFetchIntervalMS(adapter: ProviderAdapter) {
 
 function errorBackoffMS(adapter: ProviderAdapter) {
   return adapter.poll?.errorBackoffMS ?? DEFAULT_ERROR_BACKOFF_MS;
+}
+
+function warnBackoffMS(adapter: ProviderAdapter) {
+  return adapter.poll?.warnBackoffMS ?? 0;
 }
 
 function rateLimitBackoffMS(adapter: ProviderAdapter) {
@@ -71,32 +81,28 @@ function cachedUsage(
   adapter: ProviderAdapter,
   cache: CachedProviderUsage,
 ): ProviderUsage {
+  // Always stamp identity from the adapter so renamed labels and per-provider placeholders
+  // take effect immediately, even while a stale cache still holds the old id/label/note.
+  const { id, label, placeholders } = adapter;
+
   if (cache.usage?.windows.length) {
     const age = cache.fetchedAt ? Date.now() - cache.fetchedAt : 0;
     const note = cache.error
-      ? `stale; ${cache.error}`
+      ? cache.error
       : age >= staleAfterMS(adapter)
         ? `stale ${formatAge(age)}`
         : undefined;
-    return { ...cache.usage, note };
+    return { ...cache.usage, id, label, placeholders, note };
   }
 
-  // Windowless informational/warn usage (e.g. xai reset/tier, opencode-go no-route) stays
-  // visible instead of collapsing to pending, unless a later fetch recorded a hard error.
+  // Windowless informational/warn usage (e.g. opencode-go no-route) stays visible instead of
+  // collapsing to pending, unless a later fetch recorded a hard error.
   if (cache.usage && !cache.error && isInformationalNote(cache.usage)) {
-    return cache.usage;
+    return { ...cache.usage, id, label, placeholders };
   }
 
   if (cache.error) {
-    const isCoolingDown = Boolean(
-      cache.backoffUntil && Date.now() < cache.backoffUntil,
-    );
-    return {
-      id: adapter.id,
-      label: adapter.label,
-      windows: [],
-      note: isCoolingDown ? `${cache.error}; cooling down` : cache.error,
-    };
+    return { id, label, placeholders, windows: [], note: cache.error };
   }
 
   return pendingUsage(adapter);
@@ -131,7 +137,7 @@ async function recordError(
     error,
     backoffUntil:
       Date.now() +
-      (error === "HTTP 429" ? rateLimitBackoffMS(adapter) : errorBackoffMS(adapter)),
+      (error === "429" ? rateLimitBackoffMS(adapter) : errorBackoffMS(adapter)),
   } satisfies CachedProviderUsage;
 
   await writeProviderCache(adapter.id, cache).catch(() => undefined);
@@ -153,21 +159,25 @@ async function fetchAndCache(adapter: ProviderAdapter) {
   try {
     usage = await adapter.load();
   } catch {
-    return recordError(adapter, latest, "usage unavailable");
+    return recordError(adapter, latest, "unavailable");
   }
 
-  if (usage.note === "HTTP 429") {
-    return recordError(adapter, latest, "HTTP 429");
+  if (usage.note === "429") {
+    return recordError(adapter, latest, "429");
   }
 
   // Windowless usage is an error only when it is not a benign info/warn state.
   if (usage.windows.length === 0 && !isInformationalNote(usage)) {
-    return recordError(adapter, latest, usage.note || "usage unavailable");
+    return recordError(adapter, latest, usage.note || "unavailable");
   }
 
   const cache = {
     fetchedAt: Date.now(),
     usage: cleanUsage(usage),
+    backoffUntil:
+      usage.windows.length === 0 && isInformationalNote(usage)
+        ? Date.now() + warnBackoffMS(adapter)
+        : undefined,
   } satisfies CachedProviderUsage;
   await writeProviderCache(adapter.id, cache).catch(() => undefined);
   return cachedUsage(adapter, cache);
@@ -210,7 +220,7 @@ function UsagePanel(props: { api: TuiPluginApi; sessionID: string }) {
   };
 
   refresh(true);
-  const timer = setInterval(() => refresh(false), UI_REFRESH_MS);
+  const timer = setInterval(() => refresh(true), UI_REFRESH_MS);
   const disposeMessageUpdated = props.api.event.on(
     "message.updated",
     (event) => {

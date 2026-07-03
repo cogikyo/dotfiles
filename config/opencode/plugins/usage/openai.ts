@@ -93,7 +93,7 @@ async function load(): Promise<ProviderUsage> {
   const openai = auth.openai;
 
   if (!openai || openai.type !== "oauth" || !openai.access) {
-    return usage([], "OAuth not found");
+    return usage([], "no auth");
   }
 
   const accountID = openai.accountId || accountIDFromToken(openai.access);
@@ -107,7 +107,7 @@ async function load(): Promise<ProviderUsage> {
   const response = await fetch("https://chatgpt.com/backend-api/wham/usage", {
     headers,
   });
-  if (!response.ok) return usage([], `HTTP ${response.status}`);
+  if (!response.ok) return usage([], `${response.status}`);
 
   const payload = (await response.json()) as OpenAIUsagePayload;
   const rateLimit = payload.rate_limit ?? {};
@@ -135,7 +135,7 @@ async function load(): Promise<ProviderUsage> {
     }
   }
 
-  if (windows.length === 0) return usage([], "Usage windows unavailable");
+  if (windows.length === 0) return usage([], "no windows");
   return usage(windows);
 }
 

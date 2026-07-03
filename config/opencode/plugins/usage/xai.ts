@@ -5,8 +5,9 @@ import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
 
 // xAI usage reads only the Grok CLI auth at ~/.grok/auth.json, never OpenCode's xai OAuth.
 // OpenCode's refreshed xai token got 401 on this billing endpoint; the Grok CLI token works.
-// This adapter surfaces subscription tier and current-period reset. A true burn percent
-// only appears in live inference SSE `rate_limits.updated`, which is deliberately not tapped here.
+// This adapter surfaces the current-period reset, and a burn percent only when the billing
+// payload exposes one. A true weekly burn percent otherwise appears only in live inference SSE
+// `rate_limits.updated`, which is deliberately not tapped here, so the weekly row stays unknown.
 const id = "xai";
 const label = "xAI";
 const ISSUER = "https://auth.x.ai";
@@ -90,37 +91,6 @@ function ratioPercent(used: number | undefined, limit: number | undefined) {
   return normalizePercent((used / limit) * 100);
 }
 
-function tierFrom(payload: BillingPayload) {
-  const direct = str(pick(payload, "subscriptionTier"));
-  if (direct) return direct;
-  const subscription = payload.subscription;
-  if (typeof subscription === "string") return str(subscription);
-  if (subscription && typeof subscription === "object") {
-    return str((subscription as { tier?: unknown }).tier);
-  }
-  return undefined;
-}
-
-function untilDuration(end: string) {
-  const ms = Date.parse(end) - Date.now();
-  if (!Number.isFinite(ms) || ms <= 0) return undefined;
-  const totalMinutes = Math.ceil(ms / 60_000);
-  const days = Math.floor(totalMinutes / (24 * 60));
-  const hours = Math.floor((totalMinutes % (24 * 60)) / 60);
-  if (days > 0) return `${days}d ${hours}h`;
-  const minutes = totalMinutes % 60;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
-}
-
-function resetNote(tier: string | undefined, end: string | undefined) {
-  const reset = end ? untilDuration(end) : undefined;
-  if (tier && reset) return `${tier} · W resets ${reset}`;
-  if (tier) return tier;
-  if (reset) return `weekly reset ${reset}`;
-  return "subscription active; no usage percent";
-}
-
 function isExpired(expiresAt: string | undefined) {
   if (typeof expiresAt !== "string") return true;
   const ms = Date.parse(expiresAt);
@@ -150,7 +120,6 @@ function xaiEntry(auth: GrokAuthFile) {
 function interpret(payload: BillingPayload): ProviderUsage {
   const period = payload.config?.currentPeriod ?? payload.currentPeriod ?? {};
   const end = str(period.end);
-  const tier = tierFrom(payload);
 
   const creditPercent = normalizePercent(num(pick(payload, "creditUsagePercent")));
   if (creditPercent !== undefined) {
@@ -172,17 +141,18 @@ function interpret(payload: BillingPayload): ProviderUsage {
     return usage([{ label: "W", usedPercent: onDemandPercent, resetAt: end }]);
   }
 
-  // No numeric signal (expected on this unified subscription): keep it informational, never fake 0%.
-  return usage([], resetNote(tier, end), "info");
+  // No numeric signal (expected on this unified subscription): render one weekly row with a
+  // real reset but an unknown percent, so the UI shows a muted "--" cell instead of faking 0%.
+  return usage([{ label: "W", resetAt: end }]);
 }
 
 async function load(): Promise<ProviderUsage> {
   const auth = await readGrokAuth();
-  if (!auth) return usage([], "Grok CLI auth unavailable", "warn");
+  if (!auth) return usage([], "no auth", "warn");
 
   const entry = xaiEntry(auth);
-  if (!entry?.key) return usage([], "Grok CLI auth unavailable", "warn");
-  if (isExpired(entry.expires_at)) return usage([], "Grok CLI token expired", "warn");
+  if (!entry?.key) return usage([], "no auth", "warn");
+  if (isExpired(entry.expires_at)) return usage([], "expired", "warn");
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
@@ -199,12 +169,12 @@ async function load(): Promise<ProviderUsage> {
     });
   } catch {
     // Timeout or network failure: degrade coarsely without leaking the token or endpoint details.
-    return usage([], "usage unavailable", "error");
+    return usage([], "unavailable", "error");
   } finally {
     clearTimeout(timeout);
   }
-  if (response.status === 429) return usage([], "HTTP 429", "error");
-  if (!response.ok) return usage([], `HTTP ${response.status}`, "error");
+  if (response.status === 429) return usage([], "429", "error");
+  if (!response.ok) return usage([], `${response.status}`, "error");
 
   const payload = (await response.json()) as BillingPayload;
   return interpret(payload);
@@ -213,6 +183,7 @@ async function load(): Promise<ProviderUsage> {
 export const xaiUsage: ProviderAdapter = {
   id,
   label,
+  placeholders: ["W"],
   poll: {
     minFetchIntervalMS: MIN_FETCH_INTERVAL_MS,
     errorBackoffMS: ERROR_BACKOFF_MS,

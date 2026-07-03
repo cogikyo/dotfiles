@@ -1,16 +1,16 @@
 /** @jsxImportSource @opentui/solid */
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui";
-import { createTextAttributes } from "@opentui/core";
+import { createTextAttributes, type RGBA } from "@opentui/core";
 import { For, Show } from "solid-js";
 import { usageColor } from "../shared/colors.ts";
 import type { ProviderUsage } from "./types.ts";
 import type { TuiThemeCurrent } from "@opencode-ai/plugin/tui";
 
-// A stale note on live windows stays muted; a windowless note takes its color from noteKind,
-// so xai reset/tier and opencode-go route notes render benign instead of as a red error.
+// The inline note beside the label takes its color from state: a stale note on live windows
+// and benign info notes stay muted, warn is amber, and a windowless hard error stays red.
 function noteColor(theme: TuiThemeCurrent, provider: ProviderUsage) {
   if (provider.windows.length > 0) return theme.textMuted;
-  if (provider.noteKind === "info") return theme.info;
+  if (provider.noteKind === "info") return theme.textMuted;
   if (provider.noteKind === "warn") return theme.warning;
   return theme.error;
 }
@@ -18,6 +18,9 @@ function noteColor(theme: TuiThemeCurrent, provider: ProviderUsage) {
 const BAR_WIDTH = 10;
 const DURATION_WIDTH = 7;
 const EXACT_WIDTH = 10;
+const PERCENT_WIDTH = 3;
+const DASH = "--";
+const PLACEHOLDER_LABELS = ["H", "W"];
 const BOLD = createTextAttributes({ bold: true });
 
 type ResetParts = {
@@ -72,11 +75,40 @@ function formatPercent(percent: number) {
   return rounded >= 100 ? "100" : `${String(rounded).padStart(2, "0")}%`;
 }
 
+// One usage row with fixed column widths. Real windows pass colored percent/bar; placeholder
+// rows for windowless providers pass muted dashes and an empty bar so alignment never shifts.
+function WindowRow(props: {
+  theme: TuiThemeCurrent;
+  label: string;
+  percent: string;
+  percentColor: RGBA;
+  bar: string;
+  barColor: RGBA;
+  duration: string;
+  exact: string;
+}) {
+  return (
+    <box flexDirection="row" gap={0}>
+      <text fg={props.theme.textMuted}>{props.label.padEnd(2, " ")}</text>
+      <text fg={props.percentColor}>{`${props.percent} `}</text>
+      <text fg={props.barColor}>{`${props.bar} `}</text>
+      <text fg={props.theme.textMuted}>
+        {`${props.duration.padStart(DURATION_WIDTH, " ")} `}
+      </text>
+      <box flexGrow={1} />
+      <text fg={props.theme.textMuted}>
+        {props.exact.padStart(EXACT_WIDTH, " ")}
+      </text>
+    </box>
+  );
+}
+
 export function UsageDashboard(props: {
   api: TuiPluginApi;
   providers: ProviderUsage[];
   activeProviderID: string;
 }) {
+  const theme = () => props.api.theme.current;
   return (
     <box flexDirection="column" gap={0} paddingLeft={1}>
       <For each={props.providers}>
@@ -86,47 +118,70 @@ export function UsageDashboard(props: {
               <text
                 fg={
                   provider.id === props.activeProviderID
-                    ? props.api.theme.current.primary
-                    : props.api.theme.current.text
+                    ? theme().primary
+                    : theme().text
                 }
                 attributes={BOLD}
               >
                 {provider.label}
               </text>
+              <Show when={provider.note}>
+                <text fg={noteColor(theme(), provider)}>
+                  {` ${provider.note}`}
+                </text>
+              </Show>
             </box>
-            <For each={provider.windows}>
-              {(window) => (
-                <box flexDirection="row" gap={0}>
-                  <text fg={props.api.theme.current.textMuted}>
-                    {window.label.padEnd(2, " ")}
-                  </text>
-                  <text fg={usageColor(props.api.theme.current, window.usedPercent)}>
-                    {`${formatPercent(window.usedPercent)} `}
-                  </text>
-                  <text fg={usageColor(props.api.theme.current, window.usedPercent)}>
-                    {`${usageBar(window.usedPercent)} `}
-                  </text>
-                  {(() => {
-                    const reset = formatReset(window.resetAt);
-                    return (
-                      <>
-                        <text fg={props.api.theme.current.textMuted}>
-                          {`${reset.duration.padStart(DURATION_WIDTH, " ")} `}
-                        </text>
-                        <box flexGrow={1} />
-                        <text fg={props.api.theme.current.textMuted}>
-                          {reset.exact.padStart(EXACT_WIDTH, " ")}
-                        </text>
-                      </>
-                    );
-                  })()}
-                </box>
-              )}
-            </For>
-            <Show when={provider.note}>
-              <text fg={noteColor(props.api.theme.current, provider)}>
-                {provider.note}
-              </text>
+            <Show
+              when={provider.windows.length > 0}
+              fallback={
+                <For each={provider.placeholders ?? PLACEHOLDER_LABELS}>
+                  {(label) => (
+                    <WindowRow
+                      theme={theme()}
+                      label={label}
+                      percent={DASH.padEnd(PERCENT_WIDTH, " ")}
+                      percentColor={theme().textMuted}
+                      bar={"░".repeat(BAR_WIDTH)}
+                      barColor={theme().textMuted}
+                      duration={DASH}
+                      exact={DASH}
+                    />
+                  )}
+                </For>
+              }
+            >
+              <For each={provider.windows}>
+                {(window) => {
+                  const reset = formatReset(window.resetAt);
+                  const pct = window.usedPercent;
+                  // Unknown percent (e.g. xAI weekly): muted "--" cell and empty bar, but keep
+                  // the real duration/exact reset columns so alignment matches healthy rows.
+                  return (
+                    <WindowRow
+                      theme={theme()}
+                      label={window.label}
+                      percent={
+                        pct !== undefined
+                          ? formatPercent(pct)
+                          : DASH.padEnd(PERCENT_WIDTH, " ")
+                      }
+                      percentColor={
+                        pct !== undefined
+                          ? usageColor(theme(), pct)
+                          : theme().textMuted
+                      }
+                      bar={pct !== undefined ? usageBar(pct) : "░".repeat(BAR_WIDTH)}
+                      barColor={
+                        pct !== undefined
+                          ? usageColor(theme(), pct)
+                          : theme().textMuted
+                      }
+                      duration={reset.duration}
+                      exact={reset.exact}
+                    />
+                  );
+                }}
+              </For>
             </Show>
           </box>
         )}
