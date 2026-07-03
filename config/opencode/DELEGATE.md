@@ -1,6 +1,6 @@
 # Delegate plugin status
 
-Status: implemented and committed through `9097587d`.
+Status: delegate core is committed through `9097587d`, and usage providers are committed through `8b72fc71`.
 
 ## Done
 
@@ -24,10 +24,12 @@ Status: implemented and committed through `9097587d`.
 
 ## Usage plugin status
 
-Status: xai and opencode-go usage work is currently uncommitted, pending this session's commit. Runtime verification remains pending.
+Status: xai and opencode-go usage work is committed as `8b72fc71`. Runtime verification remains pending.
 
 - xai and opencode-go adapters are implemented in `plugins/usage/`, and both are registered in `index.tsx`.
 - The falsifier resolved: opencode's refreshed xai OAuth token got 401, so the adapter reads only the Grok CLI auth at `~/.grok/auth.json` (`key` + `expires_at`, never `refresh_token`).
+- The xAI adapter does not refresh Grok CLI tokens.
+- If it shows `Grok CLI token expired`, run a Grok CLI command or login to refresh `~/.grok/auth.json`.
 - The Grok CLI billing endpoint for this unified subscription returns tier and current period but no consumption percent, so xai renders an info reset/tier note with no windows; the true burn percent waits on a live inference SSE `rate_limits.updated` tap that is deliberately not built yet.
 - opencode-go has no API-key usage route upstream; the console `queryLiteSubscription` is browser-session `/_server` only, and browser cookie replay is deferred pending explicit live approval. The adapter shows a warn no-route note.
 - `delegate.json` now lists `xai` and `opencode-go` so delegating to those connected providers no longer errors. Neither yields numeric windows yet, so capacity proceeds ungated for both.

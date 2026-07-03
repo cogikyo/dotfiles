@@ -113,6 +113,9 @@ Failures should degrade to a coarse `usage unavailable`, `HTTP <status>`, or `Us
 `usage/xai.ts` reads only the Grok CLI auth at `~/.grok/auth.json`, never OpenCode's own xai OAuth.
 OpenCode's refreshed xai token was rejected with 401 on the billing endpoint, while the Grok CLI token is accepted.
 
+The adapter does not refresh Grok CLI tokens.
+If it shows `Grok CLI token expired`, run a Grok CLI command or login to refresh `~/.grok/auth.json`.
+
 That file is an object keyed by `<issuer>::<client_id>`; the adapter picks the entry whose `oidc_issuer` is `https://auth.x.ai`.
 It reads `key` and `expires_at` only; it never reads or refreshes `refresh_token`.
 If the file, entry, or key is missing it returns no windows with a `Grok CLI auth unavailable` warn note; an expired `expires_at` returns `Grok CLI token expired` without any network call.
