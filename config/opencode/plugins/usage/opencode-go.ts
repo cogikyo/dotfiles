@@ -19,6 +19,7 @@ const ASSET_MARKERS = [
   "weeklyUsage",
   "monthlyUsage",
 ];
+const SERVER_REF_NAME_MARKERS = ["lite.subscription.get", "queryLiteSubscription"];
 
 type StatusPayload = {
   account?: unknown;
@@ -196,14 +197,30 @@ function extractServerRef(source: string) {
   for (const { index } of scored) {
     const call = callExpression(source, index) ?? source.slice(index, Math.min(source.length, index + 2_000));
     const strings = jsStrings(call);
-    if (strings.length < 2) continue;
+    if (strings.length >= 2) {
+      const [serverID, name] = strings.slice(-2);
+      if (!serverID || !name) continue;
+      return { id: serverID, name };
+    }
 
-    const [serverID, name] = strings.slice(-2);
+    const serverID = strings[0];
+    const name = serverRefNameNear(source, index);
     if (!serverID || !name) continue;
     return { id: serverID, name };
   }
 
   return undefined;
+}
+
+function serverRefNameNear(source: string, index: number) {
+  const start = Math.max(0, index - 2_000);
+  const sourceWindow = source.slice(start, Math.min(source.length, index + 2_000));
+  const markers = SERVER_REF_NAME_MARKERS.flatMap((marker) =>
+    indexesOf(sourceWindow, marker).map((markerIndex) => ({ marker, index: start + markerIndex })),
+  ).sort((a, b) => Math.abs(a.index - index) - Math.abs(b.index - index));
+  const name = markers[0]?.marker;
+  if (name === "queryLiteSubscription") return "lite.subscription.get";
+  return name;
 }
 
 function callExpression(source: string, start: number) {
@@ -276,31 +293,32 @@ function unquoteSingle(raw: string) {
 
 async function queryUsage(auth: string, ref: ServerRef, workspace: string): Promise<ServerResponse> {
   const serverID = `${ref.id}#${ref.name}`;
-  const attempts = [...new Set([encodeURIComponent(serverID), serverID])];
+  const response = await opencodeFetch(auth, "/_server", {
+    method: "POST",
+    headers: {
+      Accept: "application/json,text/javascript,*/*",
+      "Content-Type": "application/json",
+      "X-Server-Id": serverID,
+      "X-Server-Instance": "opencode-usage:0",
+    },
+    body: serverArgsBody(workspace),
+  });
 
-  for (const attempt of attempts) {
-    const response = await opencodeFetch(auth, "/_server", {
-      method: "POST",
-      headers: {
-        Accept: "application/json,text/javascript,*/*",
-        "Content-Type": "application/json",
-        "X-Server-Id": attempt,
-        "X-Server-Instance": "opencode-usage:0",
-      },
-      body: JSON.stringify([workspace]),
-    });
+  if (response.status === 401 || response.status === 403) return { kind: "sign-in" };
+  if (response.status === 429) return { kind: "rate-limit" };
+  if (response.status === 404 || !response.ok || response.headers.has("x-error")) return { kind: "stale-ref" };
 
-    if (response.status === 401 || response.status === 403) return { kind: "sign-in" };
-    if (response.status === 404) continue;
-    if (response.status === 429) return { kind: "rate-limit" };
-    if (!response.ok || response.headers.has("x-error")) continue;
-
-    const text = await response.text();
-    const payload = decodeUsagePayload(text);
-    if (payload !== undefined) return { kind: "ok", payload };
-  }
+  const text = await response.text();
+  const payload = decodeUsagePayload(text);
+  if (payload !== undefined) return { kind: "ok", payload };
 
   return { kind: "stale-ref" };
+}
+
+function serverArgsBody(workspace: string) {
+  // Seroval JSON for one string arg, empirically matching the current Solid server runtime.
+  // The top f/m fields are optional here, but the array node's i/l/o fields are required.
+  return JSON.stringify({ t: { t: 9, i: 0, l: 1, a: [{ t: 1, s: workspace }], o: 0 } });
 }
 
 function decodeUsagePayload(text: string): UsagePayload | undefined {
@@ -352,15 +370,65 @@ function usagePayloadFromText(text: string): UsagePayload | undefined {
 }
 
 function textWindow(text: string, key: string): UsageWindowPayload | null {
-  const index = text.indexOf(key);
-  if (index === -1) return null;
+  for (const index of indexesOf(text, key)) {
+    const object = objectAfterKey(text, key, index);
+    if (!object) continue;
 
-  const chunk = text.slice(index, index + 1_000);
-  const usagePercent = numberAfter(chunk, "usagePercent");
-  const resetInSec = numberAfter(chunk, "resetInSec");
-  if (usagePercent === undefined && resetInSec === undefined) return null;
+    const usagePercent = numberAfter(object, "usagePercent");
+    const resetInSec = numberAfter(object, "resetInSec");
+    if (usagePercent === undefined || resetInSec === undefined) continue;
 
-  return { usagePercent, resetInSec };
+    return { usagePercent, resetInSec };
+  }
+
+  return null;
+}
+
+function objectAfterKey(text: string, key: string, index: number) {
+  let cursor = index + key.length;
+  if (text[cursor] === '"' || text[cursor] === "'") cursor++;
+  while (isWhitespace(text[cursor])) cursor++;
+  if (text[cursor] !== ":" && text[cursor] !== "=") return undefined;
+  cursor++;
+  while (isWhitespace(text[cursor])) cursor++;
+  const open = text.indexOf("{", cursor);
+  if (open === -1 || open - cursor > 80) return undefined;
+  if (!/^\s*(?:\$R\[\d+\]=)?\s*$/.test(text.slice(cursor, open))) return undefined;
+  return balancedObject(text, open);
+}
+
+function balancedObject(text: string, open: number) {
+  let depth = 0;
+  let quote = "";
+  let escaped = false;
+  for (let i = open; i < text.length; i++) {
+    const char = text[i];
+
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+      } else if (char === "\\") {
+        escaped = true;
+      } else if (char === quote) {
+        quote = "";
+      }
+      continue;
+    }
+
+    if (char === '"' || char === "'" || char === "`") {
+      quote = char;
+      continue;
+    }
+    if (char === "{") depth++;
+    if (char === "}") depth--;
+    if (depth === 0) return text.slice(open, i + 1);
+  }
+
+  return undefined;
+}
+
+function isWhitespace(char: string | undefined) {
+  return char === " " || char === "\n" || char === "\r" || char === "\t";
 }
 
 function numberAfter(text: string, key: string) {

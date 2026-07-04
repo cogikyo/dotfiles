@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 
 type CookieRow = {
   host?: unknown;
@@ -142,8 +143,10 @@ async function queryCopiedCookies(Database: SQLiteModule["Database"], databasePa
 }
 
 function immutableURI(databasePath: string) {
-  const escaped = databasePath.replace(/#/g, "%23").replace(/\?/g, "%3F");
-  return `file:${escaped}?mode=ro&immutable=1`;
+  const uri = pathToFileURL(databasePath);
+  uri.searchParams.set("mode", "ro");
+  uri.searchParams.set("immutable", "1");
+  return uri.toString();
 }
 
 function resultFromRows(rows: CookieRow[]): CookieReadResult {
