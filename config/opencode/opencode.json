@@ -5,6 +5,10 @@
   "model": "openai/gpt-5.5-fast",
   "small_model": "openai/gpt-5.4-mini-fast",
   "default_agent": "collab",
+  "agent": {
+    "build": { "disable": true },
+    "plan": { "disable": true }
+  },
   "share": "manual",
   "snapshot": true,
   "lsp": {
