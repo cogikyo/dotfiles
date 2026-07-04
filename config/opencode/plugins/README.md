@@ -32,6 +32,10 @@ Its plugin ID is `opencode-media-context`.
 It injects statusline chrome into `session_prompt` while forwarding the real prompt props/ref unchanged.
 Its plugin ID is `opencode-statusline`.
 
+`delegate/index.ts` is the server-side `task` tool replacement loaded by `opencode.json`.
+It routes each task call to a per-call `{model, effort}`, runs the work in a child session, and gates spawns on provider capacity.
+Its plugin ID is `delegate-task`.
+
 `shared/` contains cross-plugin helpers.
 Keep helpers here only when more than one plugin owns the concept.
 
@@ -230,6 +234,33 @@ The sidebar section is hidden until at least one Markdown read exists.
 Compacted read entries are shown with a red `C` marker when OpenCode marks the completed tool part that way.
 Fresh read entries use source markers: green `R` for `README.md`, blue `A` for `AGENTS.md`, yellow `I` for uppercase pointer docs like `GO.md` or `DATABASE.md`, and muted `M` for generic Markdown.
 Carrier files omit their filename in labels because the marker carries that information.
+
+## Delegate Contract
+
+The `task` tool accepts optional `model`, `effort`, and `task_id` args beyond the upstream trio.
+`model` takes `provider/model-id`; when omitted the child uses the agent's model or inherits the current assistant message's model and effort.
+`effort` maps to the target model's reasoning variants; an invalid effort errors listing the valid efforts.
+An unknown `subagent_type` errors listing the known agents.
+`task_id` resumes an existing child session instead of creating one.
+
+The card description gets exactly one trailing `· effort` suffix.
+Any trailing known-effort suffixes are stripped before appending, so `task_id` resumes never accumulate `· high · high`.
+This display is a local description suffix until upstream TUI renders `message.variant`.
+
+`ContentFilterError` and refusal-shaped errors (a tolerant classifier on error name and message) return a normal delegate result instead of throwing.
+That result has `state="error"` and its output carries `blocked: content_filter`, the `child_session_id`, and re-brief advice.
+There is no auto-retry and no taint persistence.
+The policy: never resume a refusal-tainted child; reword the brief first, switch provider as a last resort.
+
+`config/opencode/delegate.json` is the capacity policy: per-window thresholds, `maxWaitMinutes`, `staleCacheMinutes`, and the provider allowlist.
+Delegating to a provider missing from `providers` errors; extend `delegate.json` deliberately.
+Capacity reads the usage-sidebar cache under `${XDG_CACHE_HOME:-~/.cache}/opencode/usage-sidebar/`; a missing, stale, or invalid cache proceeds un-gated with a note.
+When every capped window resets within `maxWaitMinutes`, the tool waits abortably for the latest reset and proceeds with a note.
+Otherwise it returns a capacity report instead of spawning a child: `{ capped, providerID, window, usedPercent, threshold, resetAt?, maxWaitMinutes, windows }`.
+Capacity and metadata notes are prepended to the child's output in brackets.
+
+Children inherit the parent session's deny rules and all `external_directory` rules.
+`todowrite` and `task` are denied unless the agent's own permissions declare them, and every `experimental.primary_tools` tool is denied.
 
 ## Typechecking
 
