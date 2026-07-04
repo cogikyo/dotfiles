@@ -35,6 +35,7 @@ permission:
     "scout/context": allow
     "scout/dirty": allow
     "scout/library": allow
+    "scout/web": allow
 
     "review/debug": allow
     "review/security": allow
@@ -50,6 +51,7 @@ permission:
     "verify/test": allow
     "verify/web": allow
     "verify/source": allow
+    "verify/x": allow
 
   todowrite: allow
   question: allow
@@ -103,6 +105,7 @@ Scheme dispatches scouts, reviewers, `scribe/spec`, and verifiers; build leaves 
 - `scout/context`: maps governing instructions, `AGENTS.md` scopes, conventions, and task-relevant files.
 - `scout/dirty`: reviews uncommitted and in-flight change state and cross-session interference.
 - `scout/library`: maps existing utils, stdlib, and language facilities that already solve the need.
+- `scout/web`: open-ended web reconnaissance; maps the option space, prior art, and ecosystem direction.
 - `build/worker`, `build/proto`, `build/canal`, `build/test`: implementation leaves; out of scheme's scope.
 - `review/debug`: root-causes correctness issues with discriminating checks.
 - `review/security`: adversarial trust-boundary review with credible exploit paths.
@@ -117,6 +120,7 @@ Scheme dispatches scouts, reviewers, `scribe/spec`, and verifiers; build leaves 
 - `verify/test`: runs suites and commands and QAs results.
 - `verify/web`: verifies claims against current official docs, with citations.
 - `verify/source`: verifies claims against upstream source.
+- `verify/x`: second-opinion verification via Grok, weighing live community signal from X against docs.
 
 ## Leaf briefs
 
@@ -127,13 +131,15 @@ Leaves inherit this session's permission envelope.
 
 ## Model routing
 
-The `task` tool accepts `model` ("provider/model-id") and `effort` per call; name both explicitly on every delegation.
+The `task` tool accepts `model` ("provider/model-id") and `effort` per call; name both for unpinned leaves, let pinned leaves (`scout/web`, `verify/x`) use their pins, and pass `effort` only for models with variants (xai models have none).
 Synthesis stays on the primary session model; bias toward the stronger model when unsure.
 
 - Tool-call-heavy relays, summaries, and `scout/*` passes → `openai/gpt-5.4-mini-fast` low.
 - Focused verify runs → `openai/gpt-5.5` high.
 - Deep review (debug, security, critic) and acceptance verification → `openai/gpt-5.5` xhigh.
 - Architecture mapping, long-context synthesis, and spec writing → `anthropic` (fable or opus) high.
+- Second opinions: `scout/web` and `verify/x` are cheaper dissent probes with different failure modes; run them alongside mainline web passes, never instead of them.
+- Democratic council: for contested or high-stakes judgments, rerun the same `review/*`, `verify/web`, or `verify/source` brief as parallel copies on `opencode-go/glm-5.2` and `xai/grok-build-0.1`, then synthesize; agreement counts only when the copies cite independent evidence, and disagreement is a finding.
 
 Effort names are model-specific; an invalid effort returns an error listing valid efforts, so re-pick from that list.
 Capacity reports arrive as `{capped, window, usedPercent, resetAt}` instead of a spawned child: re-pick the other provider at an equivalent tier, then downgrade effort.

@@ -8,7 +8,7 @@ const DESCRIPTION = [
   "Launch a specialized subagent task.",
   "Use model as provider/model-id to choose a runtime model for this task call.",
   "Use effort for the target model's reasoning variant; invalid efforts fail explicitly.",
-  "If model is omitted, the child inherits the current assistant message's model and effort.",
+  "If model is omitted, the child uses the agent's pinned model when one exists, else the current assistant message's model and effort.",
   "Capacity reports mean no child was spawned; pick another provider, lower effort, or ask the user.",
 ].join(" ");
 

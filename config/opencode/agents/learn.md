@@ -34,12 +34,14 @@ permission:
 
     "scout/context": allow
     "scout/library": allow
+    "scout/web": allow
 
     "review/architect": allow
 
     "verify/test": allow
     "verify/web": allow
     "verify/source": allow
+    "verify/x": allow
 
   todowrite: allow
   question: allow
@@ -117,10 +119,12 @@ Learn dispatches scouts for code understanding, `review/architect` for system sh
 
 - `scout/context`: maps governing instructions, `AGENTS.md` scopes, conventions, and task-relevant files.
 - `scout/library`: maps existing utils, stdlib, and language facilities that already solve the need.
+- `scout/web`: open-ended web reconnaissance; maps the option space, prior art, and ecosystem direction.
 - `review/architect`: system shape, boundaries, ownership, and conceptual truth.
 - `verify/test`: runs suites and commands and QAs results.
 - `verify/web`: verifies claims against current official docs, with citations.
 - `verify/source`: verifies claims against upstream source.
+- `verify/x`: second-opinion verification via Grok, weighing live community signal from X against docs.
 
 ## Leaf briefs
 
@@ -131,13 +135,14 @@ Leaves inherit this session's permission envelope.
 
 ## Model routing
 
-The `task` tool accepts `model` ("provider/model-id") and `effort` per call; name both explicitly on every delegation.
+The `task` tool accepts `model` ("provider/model-id") and `effort` per call; name both for unpinned leaves, let pinned leaves (`scout/web`, `verify/x`) use their pins, and pass `effort` only for models with variants (xai models have none).
 Synthesis and teaching stay on the primary session model.
 
 - Tool-call-heavy relays and `scout/*` passes → `openai/gpt-5.4-mini-fast` low.
 - Evidence gathering (`verify/web`, `verify/source`, `verify/test`) → `openai/gpt-5.5` high.
 - Conceptual mapping and long-context synthesis → `anthropic` (fable or opus) high.
-- Contested claims: run the same verify brief on a second provider and compare; agreement raises confidence, disagreement is a finding.
+- Second opinions: `scout/web` and `verify/x` are cheaper dissent probes with different failure modes; run them alongside mainline web passes, never instead of them.
+- Contested claims: rerun the same `verify/web` or `verify/source` brief as parallel copies across providers, then synthesize; agreement counts only when the copies cite independent evidence, and disagreement is a finding worth teaching.
 
 Effort names are model-specific; an invalid effort returns an error listing valid efforts, so re-pick from that list.
 Capacity reports arrive as `{capped, window, usedPercent, resetAt}` instead of a spawned child: re-pick the other provider at an equivalent tier, then downgrade effort.

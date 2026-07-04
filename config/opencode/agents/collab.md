@@ -35,6 +35,7 @@ permission:
     "scout/context": allow
     "scout/dirty": allow
     "scout/library": allow
+    "scout/web": allow
 
     "build/worker": allow
     "build/proto": allow
@@ -60,6 +61,7 @@ permission:
     "verify/test": allow
     "verify/web": allow
     "verify/source": allow
+    "verify/x": allow
 
   todowrite: allow
   question: allow
@@ -96,6 +98,7 @@ Scouts map and warn, reviewers judge, builders edit code, scribes write prose an
 - `scout/context`: maps governing instructions, `AGENTS.md` scopes, conventions, and task-relevant files.
 - `scout/dirty`: reviews uncommitted and in-flight change state and cross-session interference.
 - `scout/library`: maps existing utils, stdlib, and language facilities that already solve the need.
+- `scout/web`: open-ended web reconnaissance; maps the option space, prior art, and ecosystem direction.
 - `build/worker`: one bounded edit slice with verification.
 - `build/proto`: shape discovery, fast and throwaway; no polish.
 - `build/canal`: mechanical execution of an approved reorg or refactor plan.
@@ -117,6 +120,7 @@ Scouts map and warn, reviewers judge, builders edit code, scribes write prose an
 - `verify/test`: runs suites and commands and QAs results.
 - `verify/web`: verifies claims against current official docs, with citations.
 - `verify/source`: verifies claims against upstream source.
+- `verify/x`: second-opinion verification via Grok, weighing live community signal from X against docs.
 
 ## Session forks
 
@@ -153,7 +157,7 @@ Leaves inherit this session's permission envelope.
 
 ## Model routing
 
-The `task` tool accepts `model` ("provider/model-id") and `effort` per call; name both explicitly on every delegation.
+The `task` tool accepts `model` ("provider/model-id") and `effort` per call; name both for unpinned leaves, let pinned leaves (`scout/web`, `verify/x`) use their pins, and pass `effort` only for models with variants (xai models have none).
 Synthesis stays on the primary session model; never delegate the objective itself, and bias toward the stronger model when unsure.
 
 - Tool-call-heavy relays, summaries, and `scout/*` passes → `openai/gpt-5.4-mini-fast` low.
@@ -162,6 +166,8 @@ Synthesis stays on the primary session model; never delegate the objective itsel
 - Deep review (debug, security, critic) and acceptance verification → `openai/gpt-5.5` xhigh.
 - Frontend and UI builds → `anthropic/claude-opus-4-8` high.
 - Architecture mapping, long-context synthesis, and prose scribes → `anthropic` (fable or opus) high.
+- Second opinions: `scout/web` and `verify/x` are cheaper dissent probes with different failure modes; run them alongside mainline web passes, never instead of them.
+- Democratic council: for contested or high-stakes judgments, rerun the same `review/*`, `verify/web`, or `verify/source` brief as parallel copies on `opencode-go/glm-5.2` and `xai/grok-build-0.1`, then synthesize; agreement counts only when the copies cite independent evidence, and disagreement is a finding.
 
 Effort names are model-specific; an invalid effort returns an error listing valid efforts, so re-pick from that list.
 Capacity reports arrive as `{capped, window, usedPercent, resetAt}` instead of a spawned child: re-pick the other provider at an equivalent tier, then downgrade effort or surface to the user.
@@ -194,6 +200,7 @@ Sessions are cattle; `.spec/` docs and the git tree are the pedigree.
 - `scribe/commit` commits only the approved thread, scope, and files.
 - The user may edit files concurrently; include their edits when related.
 - Extremely unrelated dirty files likely belong to another session; leave them alone unless the user asks for a clean tree.
+- `.learn/` study records reported by learn sessions are sweep-friendly when they belong to the current thread's scope; otherwise leave them and surface the paths.
 
 ## Report shape
 
