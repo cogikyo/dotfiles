@@ -39,6 +39,7 @@ type BillingConfig = {
     end?: unknown;
   };
   subscriptionTier?: unknown;
+  isUnifiedBillingUser?: unknown;
   creditUsagePercent?: unknown;
   monthlyLimit?: unknown;
   includedUsed?: unknown;
@@ -117,16 +118,31 @@ function xaiEntry(auth: GrokAuthFile) {
   return undefined;
 }
 
+function unifiedBilling(payload: BillingPayload) {
+  if (pick(payload, "isUnifiedBillingUser") === true) return true;
+  const sub = payload.subscription;
+  if (!sub || typeof sub !== "object") return false;
+  return (sub as { isUnifiedBillingUser?: unknown }).isUnifiedBillingUser === true;
+}
+
 function interpret(payload: BillingPayload): ProviderUsage {
   const period = payload.config?.currentPeriod ?? payload.currentPeriod ?? {};
   const end = str(period.end);
 
-  const creditPercent = normalizePercent(num(pick(payload, "creditUsagePercent")));
+  const monthlyLimit = num(pick(payload, "monthlyLimit"));
+  const cap = num(pick(payload, "onDemandCap"));
+  const hasPositiveLimit = (monthlyLimit ?? 0) > 0 || (cap ?? 0) > 0;
+
+  let creditPercent = normalizePercent(num(pick(payload, "creditUsagePercent")));
+  // Unified subscriptions with no positive cap or limit carry no percent basis; a constant
+  // `creditUsagePercent: 0` in that shape is meaningless, so treat it as unknown, never 0%.
+  if (creditPercent === 0 && !hasPositiveLimit && unifiedBilling(payload)) {
+    creditPercent = undefined;
+  }
   if (creditPercent !== undefined) {
     return usage([{ label: "W", usedPercent: creditPercent, resetAt: end }]);
   }
 
-  const monthlyLimit = num(pick(payload, "monthlyLimit"));
   const includedPercent = ratioPercent(
     num(pick(payload, "totalUsed")) ?? num(pick(payload, "includedUsed")),
     monthlyLimit,
@@ -135,7 +151,6 @@ function interpret(payload: BillingPayload): ProviderUsage {
     return usage([{ label: "W", usedPercent: includedPercent, resetAt: end }]);
   }
 
-  const cap = num(pick(payload, "onDemandCap"));
   const onDemandPercent = ratioPercent(num(pick(payload, "onDemandUsed")), cap);
   if (cap !== undefined && cap > 0 && onDemandPercent !== undefined) {
     return usage([{ label: "W", usedPercent: onDemandPercent, resetAt: end }]);
