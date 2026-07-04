@@ -1,75 +1,58 @@
 # Fleet expansion: learn mode, alt-provider leaves, council doctrine
 
-Mid-drive scope expansion approved by the user's message of 2026-07-04; user AFK 8+ hours, this doc is the durable brief if the session dies.
-Goal: a fourth primary mode `learn`, dedicated alt-provider leaves, council/supplement doctrine in the primaries, and surviving invented leaves.
-End state: artifacts committed, doctrine landed, this doc deleted.
-
-## Approved scope (decode of the user's message)
-
-1. New fourth primary mode `learn` alongside scheme/collab/drive at `agents/learn.md`.
-   Green colored; leans heavily on web research and the `verify/*` and `scout/*` leaves.
-   Purely for understanding, clarifying, and verifying how things work; independent study mode, no code edits.
-   Socratic: asks the user questions to prove they roughly know the answers; teaching through questioning.
-   Source inspiration: Matt Pocock's skills repo, specifically his teach-style skill (exact name under research); synthesize into an agent mode rather than copying.
-2. After the opencode-go and xai usage integration completes (`.spec/delegate.md` runbook, nearly done): dedicated verify and scout leaves pinned to alternative providers, GLM 5.2 and xAI/X web-API search.
-   Doctrine: these run in conjunction with mainline web searches as supplements and alternative opinions, accepted as likely slightly less smart.
-   Council pattern: GLM 5.2 and grok can run as duplicate copies of other review briefs, democratic-council subagent runs; the parent synthesizes across the copies.
-   This council/supplement doctrine gets baked into the primaries' delegation/model-routing guidance.
-3. Open invitation: invent additional core primitive leaves inside build/review/verify/scribe where clear workflow value exists; propose, critique, land the survivors.
-4. Model budget this week: lots of Anthropic tokens (claude-fable subagents liberally) and lots of gpt-5.5; be liberal with reasoning effort; lots of critiques in core places and rounds of review/simplify.
+Scope approved by the user's 2026-07-04 message; user AFK, this doc is the durable brief if the session dies.
+Goal: fourth primary `learn`, alt-provider leaves, council doctrine in the primaries, invented-leaf proposals.
+End state: phase F critique rounds done, queued items handed to the user, this doc deleted.
 
 ## Decisions log
 
-- Harness/agent-file edits for this scope were approved by the user's 2026-07-04 message; `scribe/agents` is not currently spawnable, so drive authors harness artifacts directly under that approval, with critic/simplify review rounds before commit.
-- Learn is a synthesis of the teach-style skill, never a copy.
-- Alt-provider leaves are supplements to mainline search, never replacements.
+- Harness/agent-file edits approved by the 2026-07-04 message; drive authors directly with critic/simplify rounds before commit (`scribe/agents` not spawnable).
+- Learn synthesizes the teach skill (mattpocock/skills `skills/productivity/teach/SKILL.md`, MIT) rather than copying it.
+- Learn color is theme `success` green; the schema rejects raw "green".
+- `.learn/` write-surface convention mirrors `.spec/`.
+- Alt-provider leaves supplement mainline search; they never replace it, accepted as likely slightly less smart.
+- Council restricted to read-only review/verify leaves; agreement counts only with independent evidence.
+- `verify/x` uses session search tools for now: opencode 1.17.13 hardcodes xai to the Responses path and no plugin hook reaches `streamText.tools`, so native X-search is upstream-blocked (verified against anomalyco/opencode v1.17.13 source).
+- Phase E declined: no new invented leaves; the 26-leaf fleet sits at the cognitive ceiling and no gap was felt across a full drive session. Revisit only when a gap is felt twice.
 
 ## Phases
 
-### A. Research + synthesize learn mode --- in progress
+### A. Research + synthesize learn mode --- done
 
-Owns: research notes only, no repo files.
-Find the exact Matt Pocock teach-style skill; extract the Socratic questioning workflow; synthesize a mode design.
+Teach skill found and extracted; see decisions log.
 
-### B. Author learn.md + wire config --- pending
+### B. Author learn.md + wire config --- done
 
-Owns: `agents/learn.md`, `opencode.json`.
-Author the mode, run critique + simplify rounds, commit.
-Blocked on: A; mode-cycle position open question below.
+Landed as `5199aa3d` after review/critic (gpt-5.5 xhigh) + review/simplify (fable) rounds.
+Blockers fixed in review: shell-mutation guard, weakened commit-sweep claim, direct-answer escape hatch, diagnose-first output, stable-theory carve-out, record shape, topic-switch guard.
 
-### C. Alt-provider availability probe + dedicated leaves --- pending
+### C. Alt-provider leaves --- done
 
-Owns: new `verify/*` and `scout/*` leaf files pinned to GLM 5.2 and xAI/X web-API search.
-Probe availability first (GLM 5.2, X search via xai), then author leaves.
-Blocked on: `.spec/delegate.md` runbook completion.
+Availability verified live: `opencode-go/glm-5.2` spawns with effort high; `xai/grok-build-0.1` spawns effort-less with no variants; `xai/grok-4.3` listed.
+`scout/web` (pinned glm-5.2) and `verify/x` (pinned grok-4.3) landed as `902cfbec`.
 
-### D. Council doctrine into primaries --- pending
+### D. Council doctrine into primaries --- done
 
-Owns: delegation/model-routing guidance in `agents/{scheme,collab,drive}.md`; assumption: `learn.md` gets the same section once it exists.
-Bake in the supplement + democratic-council pattern with parent synthesis.
-Blocked on: C.
+Landed in all four primaries as `afda3b9c`, refined by a two-provider council critique (gpt-5.5 xhigh + glm-5.2 high copies): pin-aware model/effort rules, council scope, evidence rule, `.learn/` sweep scoped to current thread.
+Delegate tool description corrected for pinned-agent resolution.
 
-### E. Invented-leaf proposals --- pending
+### E. Invented-leaf proposals --- declined
 
-Owns: new leaf files under `agents/{build,review,verify,scribe}/` for survivors only.
-Propose, critique, land what survives.
+See decisions log.
 
-### F. Ongoing critique/simplify rounds --- pending
+### F. Critique/simplify rounds --- in progress
 
-Owns: no new files; review passes over core places per the budget note in scope item 4.
+Owns: no new files; review passes over plugins and cmds per the token-budget note (liberal claude-fable + gpt-5.5, high effort, rounds of review/critic + review/simplify).
 
 ## Next steps
 
-1. Finish phase A research; identify the exact teach-style skill name.
-2. Author and wire `learn.md` (phase B) with critique + simplify rounds; commit.
-3. On delegate runbook completion, probe GLM 5.2 and X search availability, then author the alt-provider leaves (phase C).
-4. Land council doctrine in the primaries (phase D), then run E and F.
+1. Run phase F critique/simplify rounds across `config/opencode/` plugins and `cmds/`.
+2. When F completes and queued items are handed off, delete this doc.
 
 ## Queued for user (record only, do not do)
 
-- Carried forward from `.spec/delegate.md`: collab-mode guidance on using xai and opencode-go models well, pending real usage signals; xai burn percent still lacks the inference SSE rate_limits tap, deliberately unbuilt.
-- Shared-doctrine triplication across the primaries (~90 lines × 3) and the 24× leaf-contract duplication want a sync ritual through `scribe/agents`.
-
-## Questions for user
-
-- Exact position of learn in the mode cycle keybinds/config, if any preference exists beyond color green.
+- Restart opencode: loads usage-plugin server-path fixes, the learn/scout-web/verify-x agents, and the delegate description tweak; pinned-path smoke dispatch pending restart.
+- Grok CLI token expired; run any Grok CLI command to refresh `~/.grok/auth.json` so the xai usage row recovers.
+- Upstream opencode: X-search needs a hook or config surface for provider server-side tools; watch releases or file the ask.
+- Shared-doctrine duplication (now 4 primaries + 26 leaves) wants a sync ritual through `scribe/agents`.
+- Carried from `.spec/delegate.md`: collab-mode guidance on xai/opencode-go models, pending real usage signals.
