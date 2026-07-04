@@ -37,6 +37,9 @@ type PreparedTask = {
   permission: Rule[];
 };
 
+const CONTENT_FILTER_ADVICE = "child unrecoverable; re-brief a fresh child (reword the brief first, switch provider as last resort); never resume this session";
+const KNOWN_EFFORTS = new Set(["default", "minimal", "low", "medium", "high", "xhigh"]);
+
 export async function prepareTask(client: Client, ctx: ToolContext, input: unknown): Promise<PreparedTask> {
   const args = taskArgs(input);
   const effort = parseEffort(args);
@@ -90,22 +93,31 @@ export async function runChildTask(input: {
   input.ctx.abort.addEventListener("abort", abort);
   try {
     if (input.ctx.abort.aborted) throw new Error("delegate task aborted before child prompt");
-    const response = await unwrap<Record<string, unknown>>(
-      input.client.session.prompt({
-        path: { id: child.id },
-        body: {
-          model: input.prepared.model,
-          ...(input.prepared.variant ? { variant: input.prepared.variant } : {}),
-          agent: input.prepared.agent.name,
-          parts: [{ type: "text", text: input.args.prompt }],
-        },
-        signal: input.ctx.abort,
-      } as never),
-      `prompt child session ${child.id}`,
-    );
+    let response: Record<string, unknown>;
+    try {
+      response = await unwrap<Record<string, unknown>>(
+        input.client.session.prompt({
+          path: { id: child.id },
+          body: {
+            model: input.prepared.model,
+            ...(input.prepared.variant ? { variant: input.prepared.variant } : {}),
+            agent: input.prepared.agent.name,
+            parts: [{ type: "text", text: input.args.prompt }],
+          },
+          signal: input.ctx.abort,
+        } as never),
+        `prompt child session ${child.id}`,
+      );
+    } catch (error) {
+      if (isContentFilterBlock(error)) return blockedResult(input.args, metadata, child.id);
+      throw error;
+    }
 
     const info = object(response.info);
-    if (info?.error) throw new Error(`delegate child failed: ${errorMessage(info.error)}`);
+    if (info?.error) {
+      if (isContentFilterBlock(info.error)) return blockedResult(input.args, metadata, child.id);
+      throw new Error(`delegate child failed: ${errorMessage(info.error)}`);
+    }
 
     const text = withCapacityNotes(lastTextPart(response), notes);
     return {
@@ -169,7 +181,8 @@ function taskArgs(value: unknown): TaskArgs {
 }
 
 function applyDisplayArgs(input: unknown, args: TaskArgs, effort: string | undefined) {
-  const description = effort ? `${args.description} · ${effort}` : args.description;
+  const base = stripEffortSuffix(args.description, effort);
+  const description = effort ? `${base} · ${effort}` : base;
   args.description = description;
   if (effort) args.effort = effort;
 
@@ -178,6 +191,18 @@ function applyDisplayArgs(input: unknown, args: TaskArgs, effort: string | undef
   root.description = description;
   root.subagent_type = args.subagent_type;
   if (effort) root.effort = effort;
+}
+
+function stripEffortSuffix(description: string, effort: string | undefined) {
+  const efforts = new Set(effort ? [...KNOWN_EFFORTS, effort] : KNOWN_EFFORTS);
+  let clean = description;
+
+  while (true) {
+    const match = clean.match(/^(.*) · ([^·\n]+)$/u);
+    if (!match) return clean;
+    if (!efforts.has(match[2].trim())) return clean;
+    clean = match[1].trimEnd();
+  }
 }
 
 function parseEffort(args: TaskArgs) {
@@ -405,9 +430,34 @@ function withCapacityNotes(text: string, notes: string[]) {
   return [`[${notes.join("; ")}]`, text].filter(Boolean).join("\n\n");
 }
 
+function blockedResult(args: TaskArgs, metadata: Record<string, unknown>, sessionID: string) {
+  const text = [`blocked: content_filter`, `child_session_id: ${sessionID}`, `advice: ${CONTENT_FILTER_ADVICE}`].join("\n");
+  return {
+    title: args.description,
+    metadata,
+    output: renderOutput({ sessionID, state: "error", text }),
+  };
+}
+
 function renderOutput(input: { sessionID: string; state: "completed" | "error"; text: string }) {
   const tag = input.state === "error" ? "task_error" : "task_result";
   return [`<task id="${input.sessionID}" state="${input.state}">`, `<${tag}>`, input.text, `</${tag}>`, "</task>"].join("\n");
+}
+
+function isContentFilterBlock(error: unknown) {
+  const root = object(error);
+  const name = string(root?.name) ?? (error instanceof Error ? error.name : undefined);
+  if (isContentFilterText(name)) return true;
+
+  const data = object(root?.data);
+  const message = string(root?.message) ?? string(data?.message) ?? (error instanceof Error || typeof error === "string" ? String(error) : undefined);
+  return isContentFilterText(message);
+}
+
+function isContentFilterText(value: string | undefined) {
+  if (!value) return false;
+  const compact = value.toLowerCase().replace(/[^a-z]/gu, "");
+  return compact.includes("contentfilter") || compact.includes("refusal");
 }
 
 function object(value: unknown): Record<string, unknown> | undefined {
