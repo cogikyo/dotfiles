@@ -1,14 +1,10 @@
+import { normalizePercent } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage } from "./types.ts";
 import { readOpencodeFirefoxAuthCookie } from "./firefox.ts";
 
 const id = "opencode-go";
 const label = "OpenCode";
 const ORIGIN = "https://opencode.ai";
-const MIN_FETCH_INTERVAL_MS = 60_000;
-const ERROR_BACKOFF_MS = 3 * 60_000;
-const SIGN_IN_BACKOFF_MS = 60_000;
-const RATE_LIMIT_BACKOFF_MS = 10 * 60_000;
-const STALE_AFTER_MS = 2 * 60_000;
 const DISCOVERY_TTL_MS = 20 * 60_000;
 const FETCH_TIMEOUT_MS = 15_000;
 const WORKSPACE_USAGE_ROUTES = ["usage", "go"];
@@ -20,11 +16,6 @@ const ASSET_MARKERS = [
   "monthlyUsage",
 ];
 const SERVER_REF_NAME_MARKERS = ["lite.subscription.get", "queryLiteSubscription"];
-
-type StatusPayload = {
-  account?: unknown;
-  current?: unknown;
-};
 
 type ServerRef = {
   id: string;
@@ -76,39 +67,16 @@ function cookieHeader(auth: string) {
   return `auth=${auth}`;
 }
 
-async function withTimeout<T>(run: (signal: AbortSignal) => Promise<T>) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
-  try {
-    return await run(controller.signal);
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
 async function opencodeFetch(auth: string, path: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers);
   headers.set("Cookie", cookieHeader(auth));
   headers.set("User-Agent", "opencode-usage");
 
-  return withTimeout((signal) =>
-    fetch(`${ORIGIN}${path}`, {
-      ...init,
-      signal,
-      headers,
-    }),
-  );
-}
-
-async function isSignedIn(auth: string) {
-  const response = await opencodeFetch(auth, "/auth/status", {
-    headers: { Accept: "application/json" },
+  return fetch(`${ORIGIN}${path}`, {
+    ...init,
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    headers,
   });
-  if (response.status === 401 || response.status === 403) return false;
-  if (!response.ok) return undefined;
-
-  const payload = (await response.json().catch(() => ({}))) as StatusPayload;
-  return Boolean(payload.account);
 }
 
 async function workspaceID(auth: string) {
@@ -454,7 +422,7 @@ function interpret(payload: UsagePayload) {
 function window(label: string, payload: UsageWindowPayload | null | undefined) {
   if (!payload) return undefined;
 
-  const usedPercent = percent(payload.usagePercent);
+  const usedPercent = normalizePercent(payload.usagePercent);
   if (usedPercent === undefined) return undefined;
 
   const resetInSec = numeric(payload.resetInSec);
@@ -468,13 +436,6 @@ function window(label: string, payload: UsageWindowPayload | null | undefined) {
   };
 }
 
-function percent(value: unknown) {
-  const numericValue = numeric(value);
-  if (numericValue === undefined) return undefined;
-  const expanded = numericValue > 0 && numericValue < 1 ? numericValue * 100 : numericValue;
-  return Math.max(0, Math.min(100, expanded));
-}
-
 function numeric(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
@@ -482,10 +443,6 @@ function numeric(value: unknown) {
 async function load(): Promise<ProviderUsage> {
   const auth = await readOpencodeFirefoxAuthCookie();
   if (!auth) return note("sign in", "warn");
-
-  const signedIn = await isSignedIn(auth).catch(() => undefined);
-  if (signedIn === false) return note("sign in", "warn");
-  if (signedIn === undefined) return note("unavailable", "error");
 
   const workspace = await workspaceID(auth).catch(() => undefined);
   if (workspace === "sign-in") return note("sign in", "warn");
@@ -519,8 +476,6 @@ async function load(): Promise<ProviderUsage> {
       return note("sign in", "warn");
     case "rate-limit":
       return note("429", "error");
-    default:
-      return note("unavailable", "error");
   }
 }
 
@@ -529,11 +484,11 @@ export const opencodeGoUsage: ProviderAdapter = {
   label,
   placeholders: ["H", "W", "M"],
   poll: {
-    minFetchIntervalMS: MIN_FETCH_INTERVAL_MS,
-    errorBackoffMS: ERROR_BACKOFF_MS,
-    warnBackoffMS: SIGN_IN_BACKOFF_MS,
-    rateLimitBackoffMS: RATE_LIMIT_BACKOFF_MS,
-    staleAfterMS: STALE_AFTER_MS,
+    minFetchIntervalMS: 60_000,
+    errorBackoffMS: 3 * 60_000,
+    warnBackoffMS: 60_000, // sign-in retry
+    rateLimitBackoffMS: 10 * 60_000,
+    staleAfterMS: 2 * 60_000,
   },
   load,
 };

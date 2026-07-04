@@ -1,4 +1,5 @@
 import { readAuth } from "./auth.ts";
+import { normalizePercent } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
 
 type AuthFile = {
@@ -20,10 +21,7 @@ type OpenAIUsagePayload = {
 
 const id = "openai";
 const label = "OpenAI";
-const MIN_FETCH_INTERVAL_MS = 60_000;
-const ERROR_BACKOFF_MS = 60_000;
-const RATE_LIMIT_BACKOFF_MS = 10 * 60_000;
-const STALE_AFTER_MS = 2 * 60_000;
+const FETCH_TIMEOUT_MS = 15_000;
 
 function usage(windows: UsageWindow[], note?: string): ProviderUsage {
   return { id, label, windows, note };
@@ -47,12 +45,6 @@ function decodeJwtPayload(token: string) {
 function accountIDFromToken(token: string) {
   return decodeJwtPayload(token)?.["https://api.openai.com/auth"]
     ?.chatgpt_account_id;
-}
-
-function normalizePercent(value: unknown) {
-  if (typeof value !== "number" || Number.isNaN(value)) return undefined;
-  const expanded = value > 0 && value < 1 ? value * 100 : value;
-  return Math.max(0, Math.min(100, expanded));
 }
 
 function resetAtFromWindow(
@@ -106,6 +98,7 @@ async function load(): Promise<ProviderUsage> {
 
   const response = await fetch("https://chatgpt.com/backend-api/wham/usage", {
     headers,
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
   if (!response.ok) return usage([], `${response.status}`);
 
@@ -143,10 +136,11 @@ export const openaiUsage: ProviderAdapter = {
   id,
   label,
   poll: {
-    minFetchIntervalMS: MIN_FETCH_INTERVAL_MS,
-    errorBackoffMS: ERROR_BACKOFF_MS,
-    rateLimitBackoffMS: RATE_LIMIT_BACKOFF_MS,
-    staleAfterMS: STALE_AFTER_MS,
+    minFetchIntervalMS: 60_000,
+    errorBackoffMS: 60_000,
+    warnBackoffMS: 0,
+    rateLimitBackoffMS: 10 * 60_000,
+    staleAfterMS: 2 * 60_000,
   },
   load,
 };

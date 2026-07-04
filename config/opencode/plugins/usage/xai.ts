@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { normalizePercent } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
 
 // xAI usage reads only the Grok CLI auth at ~/.grok/auth.json, never OpenCode's xai OAuth.
@@ -12,10 +13,6 @@ const id = "xai";
 const label = "xAI";
 const ISSUER = "https://auth.x.ai";
 const BILLING_URL = "https://cli-chat-proxy.grok.com/v1/billing?format=credits";
-const MIN_FETCH_INTERVAL_MS = 5 * 60_000;
-const ERROR_BACKOFF_MS = 5 * 60_000;
-const RATE_LIMIT_BACKOFF_MS = 15 * 60_000;
-const STALE_AFTER_MS = 10 * 60_000;
 // Bound the billing fetch so a hung endpoint cannot hold the shared usage provider lock indefinitely.
 const FETCH_TIMEOUT_MS = 15_000;
 
@@ -79,12 +76,6 @@ function str(value: unknown) {
 // Fields may sit top-level or under `config`; prefer top-level, fall back to config.
 function pick<K extends keyof BillingConfig>(payload: BillingPayload, key: K) {
   return payload[key] ?? payload.config?.[key];
-}
-
-function normalizePercent(value: number | undefined) {
-  if (value === undefined || Number.isNaN(value)) return undefined;
-  const expanded = value > 0 && value < 1 ? value * 100 : value;
-  return Math.max(0, Math.min(100, expanded));
 }
 
 function ratioPercent(used: number | undefined, limit: number | undefined) {
@@ -169,8 +160,6 @@ async function load(): Promise<ProviderUsage> {
   if (!entry?.key) return usage([], "no auth", "warn");
   if (isExpired(entry.expires_at)) return usage([], "expired", "warn");
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
   let response: Response;
   try {
     response = await fetch(BILLING_URL, {
@@ -180,13 +169,11 @@ async function load(): Promise<ProviderUsage> {
         Accept: "application/json",
         "User-Agent": "opencode-usage",
       },
-      signal: controller.signal,
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
   } catch {
     // Timeout or network failure: degrade coarsely without leaking the token or endpoint details.
     return usage([], "unavailable", "error");
-  } finally {
-    clearTimeout(timeout);
   }
   if (response.status === 429) return usage([], "429", "error");
   if (!response.ok) return usage([], `${response.status}`, "error");
@@ -200,10 +187,11 @@ export const xaiUsage: ProviderAdapter = {
   label,
   placeholders: ["W"],
   poll: {
-    minFetchIntervalMS: MIN_FETCH_INTERVAL_MS,
-    errorBackoffMS: ERROR_BACKOFF_MS,
-    rateLimitBackoffMS: RATE_LIMIT_BACKOFF_MS,
-    staleAfterMS: STALE_AFTER_MS,
+    minFetchIntervalMS: 5 * 60_000,
+    errorBackoffMS: 5 * 60_000,
+    warnBackoffMS: 0,
+    rateLimitBackoffMS: 15 * 60_000,
+    staleAfterMS: 10 * 60_000,
   },
   load,
 };

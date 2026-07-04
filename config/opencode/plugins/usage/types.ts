@@ -6,6 +6,13 @@ export type UsageWindow = {
   resetAt?: string;
 };
 
+export function normalizePercent(value: unknown): number | undefined {
+  if (value == null || typeof value !== "number") return undefined;
+  if (!Number.isFinite(value)) return undefined;
+  const expanded = value > 0 && value < 1 ? value * 100 : value;
+  return Math.max(0, Math.min(100, expanded));
+}
+
 export type NoteKind = "info" | "warn" | "error";
 
 export type ProviderUsage = {
@@ -27,12 +34,12 @@ export type ProviderAdapter = {
   // Window labels rendered as placeholder rows when a fetch yields no windows.
   // Defaults to ["H", "W"]; xAI overrides to ["W"] since it has no hourly window.
   placeholders?: string[];
-  poll?: {
-    minFetchIntervalMS?: number;
-    errorBackoffMS?: number;
-    warnBackoffMS?: number;
-    rateLimitBackoffMS?: number;
-    staleAfterMS?: number;
+  poll: {
+    minFetchIntervalMS: number;
+    errorBackoffMS: number;
+    warnBackoffMS: number;
+    rateLimitBackoffMS: number;
+    staleAfterMS: number;
   };
   load(): Promise<ProviderUsage>;
 };

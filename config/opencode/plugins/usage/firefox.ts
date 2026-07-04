@@ -4,13 +4,11 @@ import path from "node:path";
 import { pathToFileURL } from "node:url";
 
 type CookieRow = {
-  host?: unknown;
   path?: unknown;
   value?: unknown;
   expiry?: unknown;
   lastAccessed?: unknown;
   creationTime?: unknown;
-  originAttributes?: unknown;
 };
 
 type CandidateCookie = {
@@ -21,18 +19,9 @@ type CandidateCookie = {
   creationTime: number;
 };
 
-type CookieObservation = {
-  host: string;
-  path: string;
-  expired: boolean;
-  eligiblePath: boolean;
-  originAttributes: string;
-};
-
 type CookieReadResult = {
   cookies: CandidateCookie[];
-  observations: CookieObservation[];
-  opened: boolean;
+  rowCount: number;
 };
 
 type SQLiteDatabase = {
@@ -50,7 +39,7 @@ type SQLiteModule = {
 };
 
 const COOKIE_SQL = `
-  SELECT host, path, value, expiry, lastAccessed, creationTime, originAttributes
+  SELECT path, value, expiry, lastAccessed, creationTime
   FROM moz_cookies
   WHERE name = 'auth'
     AND (host = 'opencode.ai' OR host = '.opencode.ai')
@@ -58,39 +47,13 @@ const COOKIE_SQL = `
   LIMIT 100
 `;
 
-const EMPTY_RESULT: CookieReadResult = { cookies: [], observations: [], opened: false };
+const EMPTY_RESULT: CookieReadResult = { cookies: [], rowCount: 0 };
 const COOKIE_PATH_PROBES = ["/auth/status", "/workspace/wrk_probe/usage"];
 
 export async function readOpencodeFirefoxAuthCookie() {
-  const result = await readFirefoxAuthCookies();
-  return freshest(result.cookies)?.value;
-}
-
-export async function inspectOpencodeFirefoxAuthCookies() {
   const databases = await firefoxCookieDatabases();
   const results = await Promise.all(databases.map(readAuthCookies));
-  const observations = results.flatMap((result) => result.observations);
-
-  return {
-    databases: databases.length,
-    opened: results.filter((result) => result.opened).length,
-    authRows: observations.length,
-    validRows: results.flatMap((result) => result.cookies).length,
-    expiredRows: observations.filter((row) => row.expired).length,
-    eligiblePathRows: observations.filter((row) => row.eligiblePath).length,
-    hosts: counts(observations.map((row) => row.host)),
-    paths: counts(observations.map((row) => row.path)),
-    originAttributes: counts(observations.map((row) => row.originAttributes)),
-  };
-}
-
-async function readFirefoxAuthCookies() {
-  const databases = await firefoxCookieDatabases();
-  const results = await Promise.all(databases.map(readAuthCookies));
-  return {
-    cookies: results.flatMap((result) => result.cookies),
-    observations: results.flatMap((result) => result.observations),
-  };
+  return freshest(results.flatMap((result) => result.cookies))?.value;
 }
 
 async function readAuthCookies(databasePath: string): Promise<CookieReadResult> {
@@ -101,16 +64,18 @@ async function readAuthCookies(databasePath: string): Promise<CookieReadResult> 
     if (direct && hasRows(direct)) return direct;
 
     const copied = await queryCopiedCookies(Database, databasePath);
-    if (hasRows(copied) || !direct) return copied ?? queryCookies(Database, immutableURI(databasePath)) ?? EMPTY_RESULT;
+    if (copied && hasRows(copied)) return copied;
+    if (direct) return direct;
+    if (copied) return copied;
 
-    return direct;
+    return queryCookies(Database, immutableURI(databasePath)) ?? EMPTY_RESULT;
   } catch {
     return EMPTY_RESULT;
   }
 }
 
 function hasRows(result: CookieReadResult | undefined) {
-  return Boolean(result?.observations.length);
+  return Boolean(result?.rowCount);
 }
 
 function queryCookies(Database: SQLiteModule["Database"], databasePath: string) {
@@ -152,8 +117,7 @@ function immutableURI(databasePath: string) {
 function resultFromRows(rows: CookieRow[]): CookieReadResult {
   return {
     cookies: rows.map(cookieFromRow).filter((cookie): cookie is CandidateCookie => Boolean(cookie)),
-    observations: rows.map(observationFromRow),
-    opened: true,
+    rowCount: rows.length,
   };
 }
 
@@ -170,18 +134,6 @@ function cookieFromRow(row: CookieRow): CandidateCookie | undefined {
     expiry,
     lastAccessed: number(row.lastAccessed) ?? 0,
     creationTime: number(row.creationTime) ?? 0,
-  };
-}
-
-function observationFromRow(row: CookieRow): CookieObservation {
-  const expiry = number(row.expiry) ?? 0;
-  const path = string(row.path);
-  return {
-    host: string(row.host),
-    path,
-    expired: expiry > 0 && expiry <= Math.floor(Date.now() / 1000),
-    eligiblePath: eligiblePath(path),
-    originAttributes: string(row.originAttributes),
   };
 }
 
@@ -220,13 +172,6 @@ function number(value: unknown) {
 
 function string(value: unknown) {
   return typeof value === "string" ? value : "";
-}
-
-function counts(values: string[]) {
-  return Object.fromEntries(
-    [...values.reduce((counts, value) => counts.set(value || "<empty>", (counts.get(value || "<empty>") ?? 0) + 1), new Map<string, number>())]
-      .sort(([a], [b]) => a.localeCompare(b)),
-  );
 }
 
 async function firefoxCookieDatabases() {

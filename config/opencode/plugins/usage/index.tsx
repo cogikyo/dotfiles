@@ -22,10 +22,6 @@ import { xaiUsage } from "./xai.ts";
 const id = "cullyn.usage-sidebar";
 const INTERNAL_CONTEXT_PLUGIN_ID = "internal:sidebar-context";
 const UI_REFRESH_MS = 60_000;
-const DEFAULT_MIN_FETCH_INTERVAL_MS = 60_000;
-const DEFAULT_ERROR_BACKOFF_MS = 60_000;
-const DEFAULT_RATE_LIMIT_BACKOFF_MS = 10 * 60_000;
-const DEFAULT_STALE_AFTER_MS = 2 * 60_000;
 const EVENT_REFRESH_DELAY_MS = 5_000;
 const adapters = [
   openaiUsage,
@@ -47,36 +43,6 @@ function pendingUsage(adapter: ProviderAdapter): ProviderUsage {
   };
 }
 
-function unavailableUsage(adapter: ProviderAdapter): ProviderUsage {
-  return {
-    id: adapter.id,
-    label: adapter.label,
-    placeholders: adapter.placeholders,
-    windows: [],
-    note: "unavailable",
-  };
-}
-
-function minFetchIntervalMS(adapter: ProviderAdapter) {
-  return adapter.poll?.minFetchIntervalMS ?? DEFAULT_MIN_FETCH_INTERVAL_MS;
-}
-
-function errorBackoffMS(adapter: ProviderAdapter) {
-  return adapter.poll?.errorBackoffMS ?? DEFAULT_ERROR_BACKOFF_MS;
-}
-
-function warnBackoffMS(adapter: ProviderAdapter) {
-  return adapter.poll?.warnBackoffMS ?? 0;
-}
-
-function rateLimitBackoffMS(adapter: ProviderAdapter) {
-  return adapter.poll?.rateLimitBackoffMS ?? DEFAULT_RATE_LIMIT_BACKOFF_MS;
-}
-
-function staleAfterMS(adapter: ProviderAdapter) {
-  return adapter.poll?.staleAfterMS ?? DEFAULT_STALE_AFTER_MS;
-}
-
 function cachedUsage(
   adapter: ProviderAdapter,
   cache: CachedProviderUsage,
@@ -89,7 +55,7 @@ function cachedUsage(
     const age = cache.fetchedAt ? Date.now() - cache.fetchedAt : 0;
     const note = cache.error
       ? cache.error
-      : age >= staleAfterMS(adapter)
+      : age >= adapter.poll.staleAfterMS
         ? `stale ${formatAge(age)}`
         : undefined;
     return { ...cache.usage, id, label, placeholders, note };
@@ -137,7 +103,7 @@ async function recordError(
     error,
     backoffUntil:
       Date.now() +
-      (error === "429" ? rateLimitBackoffMS(adapter) : errorBackoffMS(adapter)),
+      (error === "429" ? adapter.poll.rateLimitBackoffMS : adapter.poll.errorBackoffMS),
   } satisfies CachedProviderUsage;
 
   await writeProviderCache(adapter.id, cache).catch(() => undefined);
@@ -148,7 +114,7 @@ function shouldFetch(adapter: ProviderAdapter, cache: CachedProviderUsage) {
   const now = Date.now();
   if (cache.backoffUntil && now < cache.backoffUntil) return false;
   if (!cache.fetchedAt) return true;
-  return now - cache.fetchedAt >= minFetchIntervalMS(adapter);
+  return now - cache.fetchedAt >= adapter.poll.minFetchIntervalMS;
 }
 
 async function fetchAndCache(adapter: ProviderAdapter) {
@@ -176,7 +142,7 @@ async function fetchAndCache(adapter: ProviderAdapter) {
     usage: cleanUsage(usage),
     backoffUntil:
       usage.windows.length === 0 && isInformationalNote(usage)
-        ? Date.now() + warnBackoffMS(adapter)
+        ? Date.now() + adapter.poll.warnBackoffMS
         : undefined,
   } satisfies CachedProviderUsage;
   await writeProviderCache(adapter.id, cache).catch(() => undefined);
@@ -207,7 +173,10 @@ function UsagePanel(props: { api: TuiPluginApi; sessionID: string }) {
     setActiveProviderID(sessionProviderID(props.api, props.sessionID));
     void Promise.all(
       adapters.map((adapter) =>
-        loadCached(adapter, allowNetwork).catch(() => unavailableUsage(adapter)),
+        loadCached(adapter, allowNetwork).catch(() => ({
+          ...pendingUsage(adapter),
+          note: "unavailable",
+        })),
       ),
     ).then((next) => setProviders(next));
   };
