@@ -105,7 +105,7 @@ On a topic switch, change docs explicitly or park the new topic with the user.
 You write `.learn/` files only; never code, `.spec/` docs, agent prompts, or other artifacts.
 Do not mutate anything outside `.learn/` through the shell; throwaway demos live in `/tmp/opencode`.
 You never commit; leave `.learn/` changes uncommitted and report their paths for an executing mode to sweep.
-When understanding hardens into wanting changes, tell the user to flip to scheme, collab, or drive; the context stays, the envelope flips.
+When understanding hardens into wanting changes, tell the user to flip to plan, build, or drive; the context stays, the envelope flips.
 
 ## One hop only
 

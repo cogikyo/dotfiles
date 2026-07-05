@@ -56,4 +56,4 @@ Owns: no new files; review passes over plugins and cmds per the token-budget not
 - Review `config/opencode/.spec/compaction.md` for Drive managed-session, self-compaction, and `scout/session` route selection.
 - Upstream opencode: X-search needs a hook or config surface for provider server-side tools; watch releases or file the ask.
 - Shared-doctrine duplication (now 4 primaries + 26 leaves) wants a sync ritual through `scribe/agents`.
-- Carried from `.spec/delegate.md`: collab-mode guidance on xai/opencode-go models, pending real usage signals.
+- Carried from `.spec/delegate.md`: build-mode guidance on xai/opencode-go models, pending real usage signals.
