@@ -1,6 +1,8 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
 import { normalizePercent } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
 
@@ -15,6 +17,8 @@ const ISSUER = "https://auth.x.ai";
 const BILLING_URL = "https://cli-chat-proxy.grok.com/v1/billing?format=credits";
 // Bound the billing fetch so a hung endpoint cannot hold the shared usage provider lock indefinitely.
 const FETCH_TIMEOUT_MS = 15_000;
+const GROK_REFRESH_TIMEOUT_MS = 30_000;
+const execFileAsync = promisify(execFile);
 
 type GrokAuthEntry = {
   key?: string;
@@ -101,6 +105,23 @@ async function readGrokAuth(): Promise<GrokAuthFile | undefined> {
   }
 }
 
+async function refreshGrokAuth() {
+  try {
+    await execFileAsync(process.env.GROK_CLI || "grok", ["models"], {
+      timeout: GROK_REFRESH_TIMEOUT_MS,
+      maxBuffer: 16_384,
+    });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function rereadAfterRefresh() {
+  if (!(await refreshGrokAuth())) return undefined;
+  return readGrokAuth();
+}
+
 function xaiEntry(auth: GrokAuthFile) {
   for (const [key, entry] of Object.entries(auth)) {
     if (!entry || typeof entry !== "object") continue;
@@ -153,10 +174,15 @@ function interpret(payload: BillingPayload): ProviderUsage {
 }
 
 async function load(): Promise<ProviderUsage> {
-  const auth = await readGrokAuth();
+  let auth = await readGrokAuth();
+  if (!auth) auth = await rereadAfterRefresh();
   if (!auth) return usage([], "no auth", "warn");
 
-  const entry = xaiEntry(auth);
+  let entry = xaiEntry(auth);
+  if (!entry?.key || isExpired(entry.expires_at)) {
+    auth = (await rereadAfterRefresh()) ?? auth;
+    entry = xaiEntry(auth);
+  }
   if (!entry?.key) return usage([], "no auth", "warn");
   if (isExpired(entry.expires_at)) return usage([], "expired", "warn");
 

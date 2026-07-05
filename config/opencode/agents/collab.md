@@ -124,10 +124,10 @@ Scouts map and warn, reviewers judge, builders edit code, scribes write prose an
 
 ## Session forks
 
-Big parallel work uses forked opencode sessions, never nested subagents.
-Only collab forks; drive and scheme never do.
-Recommend a fork when live threads have diverged enough to steer separately, or when parallel spec buildout would let the user steer each.
-The user confirms every spawn; never fork silently.
+Big parallel work uses managed opencode sessions, never nested subagents.
+Collab recommends and steers forks while the user is present; Drive may spawn managed sessions only from a durable `.spec/` packet.
+Recommend a fork when live threads have diverged enough to steer separately, when parallel spec buildout would let the user steer each, or when compaction pressure would otherwise erase error-correction state.
+The user confirms Collab spawns; Drive records unattended spawns and their recovery state in the spec instead of silently relying on chat memory.
 
 Flow (documented flow only; no helper tool yet):
 

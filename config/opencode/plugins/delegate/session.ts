@@ -312,17 +312,22 @@ async function deriveChildPermission(client: Client, parentSessionID: string, ag
     unwrap<Record<string, unknown>>(client.config.get({} as never), "read config"),
   ]);
 
-  const inherited = normalizeRules(parent.permission).filter(
+  const parentRules = normalizeRules(parent.permission);
+  const inherited = parentRules.filter(
     (rule) => rule.permission === "external_directory" || rule.action === "deny",
   );
   const agentRules = normalizeRules(agent.permission);
+  const defaultRules = defaultAgentRules(agent.name, agentRules);
+  const driveDenies = isDriveSession(parent)
+    ? askRulesAsDenies([...normalizeRules(config.permission), ...parentRules])
+    : [];
   const childDenies: Rule[] = [
     ...(hasPermissionRule(agentRules, "todowrite") ? [] : [deny("todowrite")]),
     ...(hasPermissionRule(agentRules, "task") ? [] : [deny("task")]),
     ...primaryTools(config).map(deny),
   ];
 
-  return dedupeRules([...inherited, ...childDenies]);
+  return dedupeRules([...defaultRules, ...agentRules, ...childDenies, ...driveDenies, ...inherited]);
 }
 
 async function readExistingChild(client: Client, sessionID: string) {
@@ -388,6 +393,30 @@ function hasPermissionRule(rules: Rule[], permission: string) {
   return rules.some((rule) => rule.permission === permission);
 }
 
+function defaultAgentRules(agentName: string, explicitRules: Rule[]) {
+  if (!agentName.startsWith("review/")) return [];
+
+  const rules: Rule[] = [];
+  for (const permission of ["read", "glob", "grep", "list", "webfetch", "websearch", "lsp"]) {
+    if (!hasPermissionRule(explicitRules, permission)) rules.push(allow(permission));
+  }
+  for (const permission of ["edit", "bash", "task", "todowrite", "question"]) {
+    if (!hasPermissionRule(explicitRules, permission)) rules.push(deny(permission));
+  }
+  return rules;
+}
+
+function isDriveSession(session: Record<string, unknown>) {
+  const agent = session.agent;
+  return string(agent) === "drive" || string(object(agent)?.name) === "drive";
+}
+
+function askRulesAsDenies(rules: Rule[]) {
+  return rules
+    .filter((rule) => rule.action === "ask")
+    .map((rule): Rule => ({ ...rule, action: "deny" }));
+}
+
 function primaryTools(config: Record<string, unknown>) {
   const experimental = object(config.experimental);
   return Array.isArray(experimental?.primary_tools) ? experimental.primary_tools.filter((item): item is string => typeof item === "string") : [];
@@ -395,6 +424,10 @@ function primaryTools(config: Record<string, unknown>) {
 
 function deny(permission: string): Rule {
   return { permission, pattern: "*", action: "deny" };
+}
+
+function allow(permission: string): Rule {
+  return { permission, pattern: "*", action: "allow" };
 }
 
 function dedupeRules(rules: Rule[]) {

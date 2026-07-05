@@ -121,8 +121,8 @@ Failures should degrade to a coarse `unavailable`, `<status>`, `429`, or `no win
 `usage/xai.ts` reads only the Grok CLI auth at `~/.grok/auth.json`, never OpenCode's own xai OAuth.
 OpenCode's refreshed xai token was rejected with 401 on the billing endpoint, while the Grok CLI token is accepted.
 
-The adapter does not refresh Grok CLI tokens.
-If it shows `expired`, run a Grok CLI command or login to refresh `~/.grok/auth.json`.
+Before returning `no auth` or `expired`, the adapter runs `grok models` once with a short timeout and then rereads `~/.grok/auth.json`.
+Set `GROK_CLI` to override the binary path; if noninteractive refresh still fails, login through Grok CLI.
 
 That file is an object keyed by `<issuer>::<client_id>`; the adapter picks the entry whose `oidc_issuer` is `https://auth.x.ai`.
 It reads `key` and `expires_at` only; it never reads or refreshes `refresh_token`.
@@ -260,6 +260,8 @@ Otherwise it returns a capacity report instead of spawning a child: `{ capped, p
 Capacity and metadata notes are prepended to the child's output in brackets.
 
 Children inherit the parent session's deny rules and all `external_directory` rules.
+Review leaves also get an explicit read-only profile: read/search/web/LSP are allowed, while edit, bash, task, todowrite, and question are denied unless that leaf declares its own permission rules.
+When the parent session is Drive, inherited `ask` rules are converted to child-session denies so unattended review cannot surface a TUI approval prompt.
 `todowrite` and `task` are denied unless the agent's own permissions declare them, and every `experimental.primary_tools` tool is denied.
 
 ## Typechecking

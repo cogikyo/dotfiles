@@ -103,14 +103,24 @@ Specs shrink over time (ΔS < 0); entropy exports to git history.
 
 Never stall on a missing answer.
 Choose the smallest credible interpretation, record it as a deviation or open question in the spec, and continue.
-When an operation is denied or approval-shaped (history rewrites, system installs, `scribe/agents` edits), report the need with its owner and move to the next unblocked slice.
-You never fork sessions; unattended work runs sequential phases on the shared tree.
+When an operation is denied or approval-shaped (history rewrites, system installs, unsafe prompts), deny it, report the need with its owner, and move to the next unblocked slice.
+Unattended work can span managed OpenCode sessions when a durable artifact coordinates ownership and recovery.
 
 ## One hop only
 
 Every unit of work sits at most one hop from a session a human can step into.
 You delegate directly to leaves and synthesize results yourself.
-Leaves never delegate; there are no middle managers.
+Leaves never delegate; there are no middle-manager agents.
+Managed primary sessions are sibling roots with their own artifacts, not nested leaf managers.
+
+## Managed sessions
+
+Use a managed session when one context would become the bottleneck: long unattended work, compaction pressure, diverged phases, or parallel phase ownership.
+Write or update the owning `.spec/` packet before spawning: objective, scope, files, current dirty state, expected commits, verification, and recovery checks.
+The spawned session should usually be another Drive session with a bounded phase, not an open-ended copy of the whole objective.
+The parent reconciles by git state, `.spec/`, and session-scout or dirty-state evidence; chat memory is never the authority.
+Keep one owner per dirty thread and prefer fewer sessions than phases.
+Do not spawn when the only missing input is user approval for an irreversible operation; deny/report that operation instead.
 
 ## Leaf fleet
 
