@@ -18,6 +18,7 @@ End state: permission-prompt hardening landed, Drive session doctrine updated, a
 - Future Drive should be allowed to spawn managed OpenCode sessions when a `.spec/` packet records objective, ownership, dirty state, recovery, and expected commits.
 - Managed sessions are sibling roots, not nested leaf managers; each session stays one hop from a human who can step into it.
 - Drive-mode approval prompts are a safety bug; the orchestrator should deny/report approval-shaped operations instead of letting leaf prompts reach the TUI.
+- Drive-created `task_id` resumes are disabled because an old child can carry stale ask-shaped permissions; Drive must re-brief a fresh child to apply the current AFK envelope.
 - xAI and OpenCode usage rows now appear live from the user's screenshots; the usage adapter now attempts one noninteractive `grok models` refresh before reporting `no auth` or `expired`.
 - The Fable block is likely a Fable 5 promotional weekly sub-bucket: Anthropic documents that promo Fable can consume up to 50% of weekly subscription limits and then block while overall weekly usage still has headroom.
 - `SubagentFooter` in upstream OpenCode v1.17.13 already has the model and variant data needed to render model and effort in the bottom subagent bar.

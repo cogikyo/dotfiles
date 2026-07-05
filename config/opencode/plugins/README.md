@@ -242,6 +242,7 @@ The `task` tool accepts optional `model`, `effort`, and `task_id` args beyond th
 `effort` maps to the target model's reasoning variants; an invalid effort errors listing the valid efforts.
 An unknown `subagent_type` errors listing the known agents.
 `task_id` resumes an existing child session instead of creating one.
+Drive parents reject `task_id` resumes so a stale child cannot keep older prompt-shaped permissions; re-brief a fresh child instead.
 
 The card description gets exactly one trailing `· effort` suffix.
 Any trailing known-effort suffixes are stripped before appending, so `task_id` resumes never accumulate `· high · high`.

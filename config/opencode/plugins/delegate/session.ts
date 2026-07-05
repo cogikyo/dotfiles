@@ -35,6 +35,7 @@ type PreparedTask = {
   model: ModelRef;
   variant?: string;
   permission: Rule[];
+  driveParent: boolean;
 };
 
 const CONTENT_FILTER_ADVICE = "child unrecoverable; re-brief a fresh child (reword the brief first, switch provider as last resort); never resume this session";
@@ -54,12 +55,15 @@ export async function prepareTask(client: Client, ctx: ToolContext, input: unkno
 
   await validateVariant(client, model, variant);
 
+  const childPermission = await deriveChildPermission(client, ctx.sessionID, agent);
+
   return {
     args,
     agent,
     model,
     variant,
-    permission: await deriveChildPermission(client, ctx.sessionID, agent),
+    permission: childPermission.rules,
+    driveParent: childPermission.driveParent,
   };
 }
 
@@ -70,6 +74,12 @@ export async function runChildTask(input: {
   prepared: PreparedTask;
   capacityNotes: string[];
 }) {
+  if (input.args.task_id && input.prepared.driveParent) {
+    throw new Error(
+      "delegate task_id resume is disabled from Drive; re-brief a fresh child so Drive can apply its current deny-only AFK envelope",
+    );
+  }
+
   const child = input.args.task_id
     ? await readExistingChild(input.client, input.args.task_id)
     : await createChild(input.client, input.ctx, input.args, input.prepared);
@@ -306,7 +316,11 @@ async function readProviderModel(client: Client, model: ModelRef): Promise<Recor
   throw new Error(`Unknown model ${model.providerID}/${model.modelID}. Known model keys include: ${names}`);
 }
 
-async function deriveChildPermission(client: Client, parentSessionID: string, agent: AgentInfo): Promise<Rule[]> {
+async function deriveChildPermission(
+  client: Client,
+  parentSessionID: string,
+  agent: AgentInfo,
+): Promise<{ rules: Rule[]; driveParent: boolean }> {
   const [parent, config] = await Promise.all([
     unwrap<Record<string, unknown>>(client.session.get({ path: { id: parentSessionID } } as never), `read parent session ${parentSessionID}`),
     unwrap<Record<string, unknown>>(client.config.get({} as never), "read config"),
@@ -318,7 +332,8 @@ async function deriveChildPermission(client: Client, parentSessionID: string, ag
   );
   const agentRules = normalizeRules(agent.permission);
   const defaultRules = defaultAgentRules(agent.name, agentRules);
-  const driveDenies = isDriveSession(parent)
+  const driveParent = isDriveSession(parent);
+  const driveDenies = driveParent
     ? askRulesAsDenies([...normalizeRules(config.permission), ...parentRules])
     : [];
   const childDenies: Rule[] = [
@@ -327,7 +342,10 @@ async function deriveChildPermission(client: Client, parentSessionID: string, ag
     ...primaryTools(config).map(deny),
   ];
 
-  return dedupeRules([...defaultRules, ...agentRules, ...childDenies, ...driveDenies, ...inherited]);
+  return {
+    rules: dedupeRules([...defaultRules, ...agentRules, ...childDenies, ...driveDenies, ...inherited]),
+    driveParent,
+  };
 }
 
 async function readExistingChild(client: Client, sessionID: string) {
