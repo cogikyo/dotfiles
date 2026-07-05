@@ -21,6 +21,9 @@ End state: permission-prompt hardening landed, Drive session doctrine updated, a
 - xAI and OpenCode usage rows now appear live from the user's screenshots; the usage adapter now attempts one noninteractive `grok models` refresh before reporting `no auth` or `expired`.
 - The Fable block is likely a Fable 5 promotional weekly sub-bucket: Anthropic documents that promo Fable can consume up to 50% of weekly subscription limits and then block while overall weekly usage still has headroom.
 - `SubagentFooter` in upstream OpenCode v1.17.13 already has the model and variant data needed to render model and effort in the bottom subagent bar.
+- OpenCode auto-compaction triggers from model context overflow math, not a fixed 100k token threshold.
+- Manual compaction in the v1.17.13 TUI uses `sdk.client.session.summarize(...)`, which posts to `/session/{id}/summarize` and calls `SessionCompaction.create(...)` before `prompt.loop(...)`.
+- OpenCode also exposes a v2 `session.compact` endpoint at `/api/session/{sessionID}/compact`; automation must choose the API surface that the plugin client actually exposes.
 
 ## Problem shape
 
@@ -45,9 +48,11 @@ Candidate mechanism:
 
 Open checks:
 
-- Inspect upstream OpenCode compaction hooks and config around `compaction.auto`, `compaction.prune`, `reserved`, and any `experimental.compaction.*` plugin hooks.
-- Determine whether a plugin can observe token usage and request compaction before the model is already degraded.
-- Verify whether the model can be instructed to self-summarize above a token threshold, or whether only the TUI/runtime can trigger compaction.
+- Source map found `packages/opencode/src/session/overflow.ts`: usable context is model context or input limit minus `compaction.reserved`, defaulting to a 20k-or-max-output buffer.
+- Source map found `packages/opencode/src/session/prompt.ts`: after a finished assistant turn, overflow creates an automatic compaction task before normal continuation.
+- Source map found `packages/opencode/src/session/compaction.ts`: `tail_turns`, `preserve_recent_tokens`, and `reserved` control what recent context survives summary.
+- Plugin hooks exist in `packages/plugin/src/index.ts`: `experimental.session.compacting` can append context or replace the compaction prompt, and `experimental.compaction.autocontinue` can disable the synthetic continue turn.
+- Still open: whether a TUI or server plugin can observe current token usage early enough and call `session.summarize` or `session.compact` before overflow.
 
 Risks:
 
@@ -125,7 +130,7 @@ Running task colors:
 ## Next steps
 
 1. Verify and land the delegate permission hardening plus Grok CLI refresh automation.
-2. Source-map OpenCode compaction hooks and choose an upstream, overlay, or plugin-slot path for the TUI instrumentation.
+2. Choose an upstream, overlay, or plugin-slot path for the TUI instrumentation.
 3. Draft `scout/session` as a proposed leaf in this spec, then review before editing agent files.
 4. Choose Route A, Route B, or a hybrid: checkpoint before compaction, spawn managed session when the checkpoint exceeds a bounded phase.
 
