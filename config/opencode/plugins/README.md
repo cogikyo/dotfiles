@@ -32,6 +32,14 @@ Its plugin ID is `opencode-media-context`.
 It injects statusline chrome into `session_prompt` while forwarding the real prompt props/ref unchanged.
 Its plugin ID is `opencode-statusline`.
 
+`opencode/continuity/server.ts` is the server-side continuity ledger loaded by `opencode.json`.
+It implements the hybrid continuity route: checkpoint before compaction, then renew into a fresh root Drive session when durable artifact state makes renewal safer.
+Its plugin ID is `opencode-continuity`.
+
+`opencode/continuity/index.tsx` is the TUI continuity sidebar loaded by `tui.json`.
+It shows artifact health, pressure, dirty coverage, lock state, and renewal target, and registers manual checkpoint, compact, and renewal commands.
+Its plugin ID is `opencode-continuity-ui`.
+
 `delegate/index.ts` is the server-side `task` tool replacement loaded by `opencode.json`.
 It routes each task call to a per-call `{model, effort}`, runs the work in a child session, and gates spawns on provider capacity.
 Its plugin ID is `delegate-task`.
@@ -43,6 +51,7 @@ Keep helpers here only when more than one plugin owns the concept.
 
 Server plugins go in `opencode.json`.
 TUI plugins go in `tui.json`.
+Restart OpenCode after changing plugin entries or source; running sessions keep the loaded plugin set.
 
 Plugin IDs should stay stable across file moves because OpenCode may persist plugin state by ID.
 The current IDs intentionally preserve the pre-reorg IDs where they existed.
@@ -204,6 +213,29 @@ It does not read `OPENAI_API_KEY`, parse provider auth files, or call provider A
 Naming failures are swallowed and leave timestamp handles intact.
 Named images are copied into the media-context runtime cache under the generated filename; original source files are not renamed.
 OpenCode does not currently expose a true non-persistent completion API, so temp session/stat persistence depends on best-effort deletion and future API support.
+
+## Continuity Contract
+
+Continuity has both a server hook and a TUI sidebar.
+`opencode/continuity/server.ts` is loaded by `opencode.json`; `opencode/continuity/index.tsx` is loaded by `tui.json`.
+
+Ledger files live under `${XDG_STATE_HOME:-~/.local/state}/opencode/continuity/<project>/`.
+Runtime locks live under `${XDG_RUNTIME_DIR:-/tmp/opencode-${uid}}/opencode/continuity/<project>/`.
+Ledger files are shared state and recovery hints, not git authority.
+Durable truth stays in `.spec/*.md` packets.
+
+The server only auto-summarizes or auto-renews Drive sessions.
+Automation requires a healthy `.spec` packet observed through structured session artifacts, such as read/file parts.
+If no healthy packet exists, the compaction hook still writes a ledger and appends recovery context, but automation will not renew.
+
+Renewal creates a fresh root Drive session.
+It does not use `session.fork` and does not set `parentID`.
+The renewal prompt names the spec packet(s), old session, dirty files, ledger key, and recovery checks.
+It uses `promptAsync` when available and falls back to `prompt`.
+
+The TUI sidebar recomputes pressure from loaded session messages and provider model limits.
+Dirty coverage compares the server ledger's dirty files with the TUI session diff so stale or cross-session changes are visible.
+Manual commands write the same ledger before compacting or renewing.
 
 ## Statusline Contract
 

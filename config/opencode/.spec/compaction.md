@@ -8,7 +8,7 @@ End state: permission-prompt hardening landed, Drive session doctrine updated, a
 
 - Permission prompt hardening: implemented in the working tree; restart required before running sessions use it.
 - Managed session doctrine: implemented in the working tree; restart required before running sessions use it.
-- Self-managed compaction: planning; no route selected yet.
+- Self-managed compaction: hybrid route selected; first continuity plugin slice implemented in the working tree.
 - `scout/session`: planning; no agent file should be added until this spec is reviewed.
 - TUI instrumentation: source mapped for subagent footer model/effort and running-task group/effort colors.
 
@@ -25,6 +25,9 @@ End state: permission-prompt hardening landed, Drive session doctrine updated, a
 - OpenCode auto-compaction triggers from model context overflow math, not a fixed 100k token threshold.
 - Manual compaction in the v1.17.13 TUI uses `sdk.client.session.summarize(...)`, which posts to `/session/{id}/summarize` and calls `SessionCompaction.create(...)` before `prompt.loop(...)`.
 - OpenCode also exposes a v2 `session.compact` endpoint at `/api/session/{sessionID}/compact`; automation must choose the API surface that the plugin client actually exposes.
+- Chosen route is hybrid: checkpoint into a machine ledger before compaction, keep `.spec/*.md` as durable truth, and renew into a fresh root Drive session when pressure makes renewal cheaper than in-place continuation.
+- The first continuity plugin slice adds server and TUI plugins, state ledger helpers, pressure calculation, manual commands, and config wiring.
+- Runtime ledgers are mutex/shared state only; raw chat is never silently promoted to authority.
 
 ## Problem shape
 
@@ -133,7 +136,7 @@ Running task colors:
 1. Verify and land the delegate permission hardening plus Grok CLI refresh automation.
 2. Choose an upstream, overlay, or plugin-slot path for the TUI instrumentation.
 3. Draft `scout/session` as a proposed leaf in this spec, then review before editing agent files.
-4. Choose Route A, Route B, or a hybrid: checkpoint before compaction, spawn managed session when the checkpoint exceeds a bounded phase.
+4. Restart OpenCode so the continuity plugins load, then observe one Drive session through checkpoint, compact, and renewal paths.
 
 ## Queued for user
 
