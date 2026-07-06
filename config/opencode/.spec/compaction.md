@@ -8,7 +8,7 @@ End state: permission-prompt hardening landed, Drive session doctrine updated, a
 
 - Permission prompt hardening: implemented in the working tree; restart required before running sessions use it.
 - Managed session doctrine: implemented in the working tree; restart required before running sessions use it.
-- Self-managed compaction: hybrid route selected; first continuity plugin slice implemented in the working tree.
+- Self-managed compaction: hybrid route landed as `fb189fb0`; restart and runtime observation remain.
 - `scout/session`: planning; no agent file should be added until this spec is reviewed.
 - TUI instrumentation: source mapped for subagent footer model/effort and running-task group/effort colors.
 
@@ -26,7 +26,7 @@ End state: permission-prompt hardening landed, Drive session doctrine updated, a
 - Manual compaction in the v1.17.13 TUI uses `sdk.client.session.summarize(...)`, which posts to `/session/{id}/summarize` and calls `SessionCompaction.create(...)` before `prompt.loop(...)`.
 - OpenCode also exposes a v2 `session.compact` endpoint at `/api/session/{sessionID}/compact`; automation must choose the API surface that the plugin client actually exposes.
 - Chosen route is hybrid: checkpoint into a machine ledger before compaction, keep `.spec/*.md` as durable truth, and renew into a fresh root Drive session when pressure makes renewal cheaper than in-place continuation.
-- The first continuity plugin slice adds server and TUI plugins, state ledger helpers, pressure calculation, manual commands, and config wiring.
+- The first continuity plugin slice landed as `fb189fb0` with server and TUI plugins, state ledger helpers, pressure calculation, manual commands, and config wiring.
 - Runtime ledgers are mutex/shared state only; raw chat is never silently promoted to authority.
 
 ## Problem shape
@@ -114,7 +114,7 @@ Non-goals:
 
 First acceptance test:
 
-- Given this repo with 18 unpushed commits and `fleet.md`, `scout/session` can say which session/thread owns `fleet.md`, which commits landed, which tasks remain, and whether any running child sessions need reconciliation.
+- Given this repo with active `.spec/` docs, unpushed commits, and at least one closed spec thread visible only through git history, `scout/session` can distinguish active owners from closed work and report which running child sessions need reconciliation.
 
 ## TUI instrumentation track
 
@@ -133,10 +133,9 @@ Running task colors:
 
 ## Next steps
 
-1. Verify and land the delegate permission hardening plus Grok CLI refresh automation.
-2. Choose an upstream, overlay, or plugin-slot path for the TUI instrumentation.
+1. Restart OpenCode so the continuity plugins load, then observe one Drive session through checkpoint, compact, and renewal paths.
+2. Choose an upstream, overlay, or plugin-slot path for the subagent footer and running-task TUI instrumentation.
 3. Draft `scout/session` as a proposed leaf in this spec, then review before editing agent files.
-4. Restart OpenCode so the continuity plugins load, then observe one Drive session through checkpoint, compact, and renewal paths.
 
 ## Queued for user
 
