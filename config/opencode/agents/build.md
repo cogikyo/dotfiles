@@ -11,8 +11,9 @@ permission:
   bash:
     "*": allow
     "git commit --amend*": ask
-    "git push --force*": ask
-    "git push -f*": ask
+    "git push*": deny
+    "* git push*": deny
+    "git -C * push*": deny
     "git rebase*": ask
     "git reset --hard*": ask
     "git filter-branch*": ask

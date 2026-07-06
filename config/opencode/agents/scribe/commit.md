@@ -33,6 +33,8 @@ permission:
     "git commit --allow-empty*": deny
     "git commit *--allow-empty*": deny
     "git push*": deny
+    "* git push*": deny
+    "git -C * push*": deny
     "git reset*": deny
     "git restore*": deny
     "git restore --staged *": allow
