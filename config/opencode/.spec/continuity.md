@@ -3,15 +3,9 @@
 Seeded 2026-07-06 while closing the old compaction packet.
 Owner: the Drive session landing the current dirty continuity slice; one owner per dirty thread.
 Goal: continuity automation must never interrupt a running agent, and the sidebar must be concise.
-End state: idle-gated automation and sidebar v3 are committed, typechecked, reviewed, and observed after an OpenCode restart.
+End state: idle-gated automation and sidebar v4 are committed, typechecked, reviewed, and observed after an OpenCode restart.
 
-## Dirty-state map (commit plan)
-
-1. hyprd agent tabs: `cmds/*`, `config/hypr/binds.conf`, `config/kitty/kitty.conf`; keybind changes are user-confirmed intentional.
-2. permissions: `config/opencode/opencode.json` (`/usr` allow, root grep deny), `plugins/delegate/session.ts`, README permissions paragraph only.
-3. scout/session: `config/opencode/agents/scout/session.md` plus the `scout/session` rows in `agents/{build,drive,plan}.md`.
-4. continuity v3: `plugins/opencode/continuity/{index.tsx,server.ts,state.ts}` plus remaining README continuity hunks.
-5. specs: delete `.spec/compaction.md`, add `.spec/ideas/{tui-instrumentation,usage-429}.md`, add this packet.
+The original five-slice commit plan (hyprd, permissions, scout/session, continuity v3, specs) all landed; see the commits in Status and git history for file ownership.
 
 ## Phase A: idle-gated automation (server.ts)
 
@@ -37,6 +31,30 @@ Shape:
 
 Rename vestigial `DirtyCoverage` type to `EditedFiles`; keep the persisted ledger field name `dirty` for compatibility and say so in a comment.
 
+## Phase D: sidebar v4 (curation + layout)
+
+Source: user observed sidebar v3 after restart and gave design feedback.
+Implementation deferred to the abbott session because visual iteration needs the user present to eyeball the TUI.
+
+Curation over recency:
+
+- Related sessions are curated only; a session appears when a model explicitly adds it to the ledger or scout/session marks it related.
+- Delete the recent-within-24h fallback in `relatedSessions()` (index.tsx); it surfaced unrelated sessions (e.g. a media session).
+- Shared-spec detection may stay as one curation input, but recency alone never qualifies.
+
+Open question (mechanism): how models add/mark related sessions.
+Candidate designs: a ledger `related` field written via a TUI command, a small plugin tool, or scout/session writing ledger entries.
+Not decided.
+
+Rows and layout:
+
+- Sessions actively running show a braille spinner.
+- Open question: detect running via the session status API vs ledger `lastEvent` freshness.
+- Simplify row-icon colors from the current level-color rainbow (illegible) to a few documented meanings, e.g. running / idle / stale.
+- Consistent padding across all sidebar rows.
+- Related sessions get model-assigned short display names: ALL CAPS, 3-4 words, type-first like commit types (e.g. ADJUST CONTINUITY SIDEBAR), stored so rows fit one line.
+- Row layout: icon + short name left, age/duration right-aligned (the current "10h" label), single line, no wrap.
+
 ## Verification
 
 - `node_modules/.bin/tsc -p config/opencode/tsconfig.json` clean.
@@ -45,19 +63,19 @@ Rename vestigial `DirtyCoverage` type to `EditedFiles`; keep the persisted ledge
 
 ## Status
 
-- Phase A: implemented and reviewed (plus child-session ledger skip); awaiting commit.
-- Phase B: implemented and reviewed, review fixes applied (merged status row, dead PressureNotice/pressureText/renewalIsBetter deleted, related-list corrections); awaiting commit.
-- Phase C: implemented and reviewed; awaiting commit.
-- Slice 1 (hyprd) committed as 77c08d21.
+- Phases A-C committed as 7a91be2c, c468a141, c5fc4bcd, 8e082f35; slice 1 (hyprd) committed as 77c08d21.
+- OpenCode restarted; runtime observation partially done.
+- User observed sidebar v3 and gave design feedback, captured as Phase D.
+- Phase D: not started; resumes on abbott after a master merge.
 
 ## Recovery checks
 
 - Reconcile against `git status`; chat is not authority.
-- If interrupted mid-commit, the slice map above defines ownership; commits are ordered 1, 3, 2, 4, 5 so README hunks split cleanly between slices 2 and 4.
 
 ## Next steps
 
-1. Land the five commits above.
-2. Restart OpenCode; observe idle-gated compact behavior and sidebar v3.
-3. Tune 90k/120k/200k thresholds per task if pressure feels wrong.
-4. Delete this packet once runtime observation passes.
+1. Merge master, then resume on abbott.
+2. Decide the Phase D curation mechanism (ledger `related` field vs plugin tool vs scout/session writes).
+3. Implement Phase D with the user present to eyeball the TUI.
+4. Finish runtime observation: confirm idle-gated compact behavior; tune 90k/120k/200k thresholds per task if pressure feels wrong.
+5. Delete this packet after Phase D lands and runtime observation passes.
