@@ -1,7 +1,8 @@
 import type { Plugin, PluginInput, PluginModule } from "@opencode-ai/plugin";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
-import { assessPressure, renewalIsBetter, type TokenMessage } from "./pressure.ts";
+import { assessPressure, renewalIsBetter, type PressureThresholds, type TokenMessage } from "./pressure.ts";
+import { readSettings } from "./settings.ts";
 import {
   emptyArtifactHealth,
   ledgerPath,
@@ -32,6 +33,7 @@ type ModelRef = { providerID: string; modelID: string };
 const server: Plugin = async ({ client, directory, worktree }) => {
   const projectPath = worktree || directory;
   const key = projectKey(projectPath);
+  const settings = readSettings();
   let reserved = 10_000;
 
   return {
@@ -44,7 +46,7 @@ const server: Plugin = async ({ client, directory, worktree }) => {
       const sessionID = sessionIDFromEvent(event);
       if (!sessionID || !isRelevantEvent(event.type)) return;
 
-      const ledger = await refreshLedger(client, { projectPath, projectKey: key, sessionID, lastEvent: event.type, reserved });
+      const ledger = await refreshLedger(client, { projectPath, projectKey: key, sessionID, lastEvent: event.type, reserved, thresholds: settings.pressure });
       if (!ledger || ledger.artifact.status !== "healthy" || !isDriveAgent(ledger.session.agent)) return;
 
       if (renewalIsBetter(pressureAssessment(ledger), true, ledger.dirty.files.length)) {
@@ -55,7 +57,7 @@ const server: Plugin = async ({ client, directory, worktree }) => {
       if (ledger.pressure.level === "compact") await summarizeFromLedger(client, ledger);
     },
     "experimental.session.compacting": async (input, output) => {
-      const ledger = await refreshLedger(client, { projectPath, projectKey: key, sessionID: input.sessionID, lastEvent: "experimental.session.compacting", reserved });
+      const ledger = await refreshLedger(client, { projectPath, projectKey: key, sessionID: input.sessionID, lastEvent: "experimental.session.compacting", reserved, thresholds: settings.pressure });
       if (!ledger) return;
 
       const summary = renderCheckpointSummary(ledger, "compaction");
@@ -72,7 +74,7 @@ const server: Plugin = async ({ client, directory, worktree }) => {
       ].join("\n"));
     },
     "experimental.compaction.autocontinue": async (input, output) => {
-      const ledger = await refreshLedger(client, { projectPath, projectKey: key, sessionID: input.sessionID, lastEvent: "experimental.compaction.autocontinue", reserved });
+      const ledger = await refreshLedger(client, { projectPath, projectKey: key, sessionID: input.sessionID, lastEvent: "experimental.compaction.autocontinue", reserved, thresholds: settings.pressure });
       if (!ledger || ledger.artifact.status !== "healthy" || !isDriveAgent(ledger.session.agent || input.agent)) return;
       if (!renewalIsBetter(pressureAssessment(ledger), true, ledger.dirty.files.length)) return;
 
@@ -84,7 +86,7 @@ const server: Plugin = async ({ client, directory, worktree }) => {
 
 async function refreshLedger(
   client: Client,
-  input: { projectPath: string; projectKey: string; sessionID: string; lastEvent: string; reserved: number },
+  input: { projectPath: string; projectKey: string; sessionID: string; lastEvent: string; reserved: number; thresholds: PressureThresholds },
 ) {
   try {
     const [session, records, dirty] = await Promise.all([
@@ -98,11 +100,11 @@ async function refreshLedger(
     const cwd = latestCwd(records) || string(session.directory) || input.projectPath;
     const artifact = artifactHealth(input.projectPath, cwd, records);
     const dirtyWithCoverage = await dirtyCoverage(input.projectPath, input.sessionID, sessionFiles);
-    const pressure = pressureSnapshot(messages, input.reserved, limit);
+    const pressure = pressureSnapshot(messages, input.reserved, limit, input.thresholds);
     const agent = sessionAgent(records) || string(session.agent);
     const seed: LedgerSeed = {
       project: { key: input.projectKey, path: input.projectPath },
-      session: { id: input.sessionID, agent, title: string(session.title) },
+      session: { id: input.sessionID, agent, title: string(session.title) || undefined },
       pressure,
       artifact,
       dirty: dirtyWithCoverage ?? dirty,
@@ -216,8 +218,8 @@ async function readMessages(client: Client, sessionID: string): Promise<MessageR
   });
 }
 
-function pressureSnapshot(messages: TokenMessage[], reserved: number, limit?: number): PressureSnapshot {
-  return { ...assessPressure({ messages, modelLimit: limit, reserved }), updatedAt: Date.now() };
+function pressureSnapshot(messages: TokenMessage[], reserved: number, limit: number | undefined, thresholds: PressureThresholds): PressureSnapshot {
+  return { ...assessPressure({ messages, modelLimit: limit, reserved, thresholds }), updatedAt: Date.now() };
 }
 
 function pressureAssessment(ledger: ContinuityLedger) {

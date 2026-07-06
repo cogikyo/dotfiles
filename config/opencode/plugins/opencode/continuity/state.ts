@@ -136,6 +136,18 @@ export function readLedger(project: string, sessionID: string): ContinuityLedger
   return readLedgerPath(ledgerPath(project, sessionID));
 }
 
+export function readProjectLedgers(project: string): ContinuityLedger[] {
+  const dir = path.join(stateBaseDir(), "opencode", "continuity", project);
+  try {
+    return readdirSync(dir)
+      .filter((entry) => entry.endsWith(".json"))
+      .flatMap((entry) => readLedgerPath(path.join(dir, entry)) ?? [])
+      .sort((left, right) => right.updatedAt - left.updatedAt);
+  } catch {
+    return [];
+  }
+}
+
 export function readLedgerPath(filePath: string): ContinuityLedger | undefined {
   try {
     if (!existsSync(filePath) || statSync(filePath).size > MAX_LEDGER_BYTES) return undefined;
@@ -165,7 +177,7 @@ export function upsertLedger(seed: LedgerSeed, update?: (ledger: ContinuityLedge
       version: LEDGER_VERSION,
       schema: "opencode-continuity/v1",
       project: seed.project,
-      session: seed.session,
+      session: { ...seed.session, title: seed.session.title || existing?.session.title },
       pressure: seed.pressure,
       artifact: seed.artifact,
       dirty: seed.dirty,

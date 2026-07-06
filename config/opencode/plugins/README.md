@@ -37,8 +37,11 @@ It implements the hybrid continuity route: checkpoint before compaction, then re
 Its plugin ID is `opencode-continuity`.
 
 `opencode/continuity/index.tsx` is the TUI continuity sidebar loaded by `tui.json`.
-It shows artifact health, pressure, dirty coverage, lock state, and renewal target, and registers manual checkpoint, compact, and renewal commands.
+It shows compact health chips, active WIP/lock/renewal hazards, related `.spec` sessions, and manual checkpoint, compact, and renewal commands.
 Its plugin ID is `opencode-continuity-ui`.
+
+`opencode/continuity/settings.json` is the shared continuity settings file read by both the server and TUI plugins at startup.
+Pressure thresholds are configured there because `opencode.json` rejects plugin-specific fields under `compaction`.
 
 `delegate/index.ts` is the server-side `task` tool replacement loaded by `opencode.json`.
 It routes each task call to a per-call `{model, effort}`, runs the work in a child session, and gates spawns on provider capacity.
@@ -233,9 +236,13 @@ It does not use `session.fork` and does not set `parentID`.
 The renewal prompt names the spec packet(s), old session, dirty files, ledger key, and recovery checks.
 It uses `promptAsync` when available and falls back to `prompt`.
 
-The TUI sidebar recomputes pressure from loaded session messages and provider model limits.
-Dirty coverage compares the server ledger's dirty files with the TUI session diff so stale or cross-session changes are visible.
+The TUI sidebar recomputes pressure from loaded session messages and shared continuity settings.
+WIP sync compares the server ledger's dirty files with the TUI session diff so stale or cross-session changes are visible without claiming files were opened or read.
+Related sessions are derived from project ledgers that share `.spec` packet paths, and sidebar rows navigate to those sessions.
 Manual commands write the same ledger before compacting or renewing.
+
+Pressure uses both percent-of-window and absolute token thresholds from `opencode/continuity/settings.json`.
+The current defaults checkpoint at 90k, compact at 120k, renew at 200k, and still renew when model remaining context falls under 12k.
 
 ## Statusline Contract
 

@@ -30,12 +30,13 @@ Remaining verification: none in this spec.
 ## Phase 4: `scout/session`
 
 Owner files: proposed under `config/opencode/agents/scout/`; no agent file should be added before review.
-Status: queued proposal.
+Status: queued proposal; direct file check confirmed no `config/opencode/agents/scout/session.md` exists yet.
 Purpose: map OpenCode session state so a parent, sibling, or fresh session can recover context without manually reading raw chat history.
 Inputs: structured session commands or storage after source verification, `.spec/` docs, `.learn/` docs, git status, recent commits, and active child-session metadata.
 Output: session graph, work threads, recovery packet, and hazards such as prompts, stale specs, overlapping dirty scopes, and compaction pressure.
 Non-goals: do not summarize every message, edit files, commit, spawn sessions, or choose the next owner.
 First acceptance test: with active specs, unpushed commits, and one closed thread visible through git history, it distinguishes active owners from closed work and flags sessions needing reconciliation.
+Runtime need: user confirmed this multiple-session relay is needed for proper compaction and continuity decisions.
 
 ## Phase 5: TUI instrumentation
 
@@ -48,8 +49,8 @@ Acceptance: running tasks show group and effort using both labels and color, wit
 
 ## Phase 6: continuity sidebar v2
 
-Owner files: `config/opencode/plugins/opencode/continuity/*` and this spec; no code changed yet.
-Status: user-corrected redesign, synthesized from UI and API review, awaiting build.
+Owner files: `config/opencode/plugins/opencode/continuity/*`, `config/opencode/plugins/shared/sidebar-section.tsx`, and this spec.
+Status: implemented in the current continuity WIP, awaiting commit and restarted-runtime observation.
 
 User correction (evidence):
 - The current key/value rows `packet:`, `pressure:`, `dirty:`, `lock:`, `renew:` are too noisy.
@@ -74,9 +75,18 @@ API review proposal (conjecture, plugin-feasible in the continuity sidebar):
 Not plugin-feasible: subagent footer and task-row instrumentation have no current published slot, so they still route through Phase 5's upstream or local-patch decision.
 
 Automation facts from landed code (evidence, runtime unobserved until restart):
-- Drive sessions with a healthy artifact can auto-summarize or create a fresh root Drive renewal session on the existing model-percent thresholds.
+- Drive sessions with a healthy artifact can auto-summarize or create a fresh root Drive renewal session on shared continuity settings.
 - Non-Drive modes receive only the compaction checkpoint hook and get no automatic renewal under current policy.
 - Manual TUI renew already exists and should be reviewed before renewal expands beyond Drive.
+
+## Phase 7: pressure threshold settings
+
+Owner files: `config/opencode/plugins/opencode/continuity/pressure.ts`, `config/opencode/plugins/opencode/continuity/settings.*`, server/TUI continuity plugins, and docs.
+Status: implemented in the current continuity WIP, awaiting commit and restarted-runtime observation.
+User correction: 120k is usually where compaction should happen soon; exact pressure depends on task, but letting Drive cruise much past it should be rare.
+Implementation direction: make pressure settings explicit and shared by server and TUI plugins, using absolute token thresholds plus percent/remaining-context guardrails.
+Chosen default: checkpoint at 90k, compact at 120k, renew at 200k, with percent guardrails at 75/90/96 and renewal when remaining context falls below 12k.
+Non-goal: do not change OpenCode's native `compaction` schema with plugin-specific keys.
 
 ## Decisions and deviations
 
@@ -97,21 +107,22 @@ Automation facts from landed code (evidence, runtime unobserved until restart):
 - The fleet cleanup packet is closed after `fbacb707`; future fleet ideas belong in the ideas packet unless they reopen an active implementation phase.
 - Continuity sidebar v2 keeps the `Continuity` name and health framing but replaces the noisy key/value rows with one health rollup plus chips, so exceptional rows stay hidden until active.
 - Cognitive pressure is anchored to absolute token thresholds near the ~120k dumb zone, not the model budget, because the usage indicator already owns budget.
+- Continuity automation now treats 120k as compact pressure by default, with settings available for task-specific tuning.
+- Continuity threshold settings live beside the plugin instead of under `opencode.json.compaction` because the upstream config schema rejects unknown compaction keys.
 
 ## Open questions for parent
 
 - Should Drive spawn managed sibling sessions automatically once a `.spec/` packet exists, or only after a human-approved seed?
 - Should local OpenCode UI changes be patched upstream, maintained as a local overlay, or deferred until a plugin slot exists?
 - Should `scout/session` read raw exported transcripts, or only structured session metadata plus durable artifacts?
-- Which token thresholds anchor cognitive pressure, 80k/120k/160k or 72k/96k/120k?
-- Should the misleading `open:`/`dirty` concept be reframed as a visible WIP/sync hazard or hidden entirely from the rollup?
+- Is active-only WIP hazard count enough, or should WIP details move behind a deliberate drilldown command?
 - Should manual TUI renew stay Drive-only, or expand to other modes once reviewed?
 
 ## Condensed next steps
 
 1. Restart OpenCode so the continuity plugins load.
 2. Observe one Drive runtime through checkpoint, compact, and renewal paths, then record the result here.
-3. Build continuity sidebar v2: health rollup, icon chips, active-only lock/renewal rows, and shared-`.spec` related-session navigation.
-4. Tune the cognitive-pressure thresholds and decide the WIP/sync hazard treatment while building.
+3. Observe continuity sidebar v2 after restart; keep the header compact and the expanded body calm.
+4. Validate the 90k/120k/200k pressure thresholds in a long Drive runtime and tune per task if needed.
 5. Choose the upstream, overlay, or plugin-slot path for subagent footer and running-task instrumentation.
 6. Review the `scout/session` proposal before any agent file is created.
