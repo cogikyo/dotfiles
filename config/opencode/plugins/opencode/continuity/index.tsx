@@ -1,7 +1,7 @@
 /** @jsxImportSource @opentui/solid */
 import type { Message } from "@opencode-ai/sdk/v2";
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui";
-import { For, Show, createSignal, onCleanup } from "solid-js";
+import { For, Show, createMemo, createSignal, onCleanup } from "solid-js";
 import { colors, pressureColor } from "../../shared/colors.ts";
 import { formatTokens, sessionMessages, sessionMeta } from "../../shared/session.ts";
 import { SidebarSection } from "../../shared/sidebar-section.tsx";
@@ -50,10 +50,10 @@ function ContinuityPanel(props: { api: TuiPluginApi; sessionID: string }) {
     for (const dispose of disposers) dispose();
   });
 
-  const state = () => {
+  const state = createMemo(() => {
     revision();
     return continuityState(props.api, props.sessionID);
-  };
+  });
 
   return (
     <SidebarSection api={props.api} title="Continuity" detail={`${state().pressure.percent.toFixed(0)}% ${state().artifact.status}`} initiallyExpanded={true}>

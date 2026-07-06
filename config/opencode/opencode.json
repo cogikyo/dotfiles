@@ -88,6 +88,10 @@
       "/home/cullyn/.gnupg/**": "deny",
       "/home/cullyn/.password-store/**": "deny",
       "/home/cullyn/.local/share/keyrings/**": "deny",
+      "/run/user/1000/opencode": "allow",
+      "/run/user/1000/opencode/continuity": "allow",
+      "/run/user/1000/opencode/continuity/*": "allow",
+      "/run/user/1000/opencode/continuity/**": "allow",
       "/tmp/**": "allow"
     },
     "doom_loop": "ask",
