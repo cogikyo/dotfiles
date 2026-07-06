@@ -9,7 +9,6 @@ permission:
   grep:
     "*": allow
     "/": deny
-  bash: allow
   edit: deny
   task: deny
   todowrite: deny

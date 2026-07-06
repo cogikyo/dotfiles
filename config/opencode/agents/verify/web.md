@@ -3,8 +3,6 @@ description: Verifies claims against current official docs, APIs, release notes,
 mode: subagent
 permission:
   edit: deny
-  webfetch: allow
-  websearch: allow
 color: success
 ---
 

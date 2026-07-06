@@ -3,8 +3,6 @@ description: Verifies claims against upstream source via the src cache and regis
 mode: subagent
 permission:
   edit: deny
-  webfetch: allow
-  websearch: allow
 color: success
 ---
 

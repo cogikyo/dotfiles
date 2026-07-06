@@ -8,27 +8,73 @@ permission:
   grep: allow
   list: allow
 
+  # Deltas over the shared baseline in opencode.json.
+  # Unattended: an ask is a silent hang, so every globally gated operation is denied outright.
+  doom_loop: deny
+
+  # Unlisted external paths fall through to the native ask default; deny instead,
+  # then restate the baseline allows and keep secret denies last so they always win.
+  external_directory:
+    "*": deny
+    "**": deny
+    "~/**": allow
+    "/home/cullyn/**": allow
+    "/usr": allow
+    "/usr/**": allow
+    "/tmp/**": allow
+    "/run/user/1000/opencode": allow
+    "/run/user/1000/opencode/**": allow
+    "/home/cullyn/.ssh/**": deny
+    "/home/cullyn/.gnupg/**": deny
+    "/home/cullyn/.password-store/**": deny
+    "/home/cullyn/.local/share/keyrings/**": deny
+
   bash:
-    "*": allow
     "git commit --amend*": deny
-    "git push*": deny
-    "* git push*": deny
-    "git -C * push*": deny
     "git rebase*": deny
     "git reset --hard*": deny
     "git filter-branch*": deny
-    "git reflog expire*": deny
     "git clean*": deny
+    "git checkout -- *": deny
+    "git restore *": deny
+    "git branch -D *": deny
+    # No GET re-allows: a later --method DELETE on the same call would ride an allow.
+    "gh api *": deny
     "sudo *": deny
-    "pacman *": deny
+    "su *": deny
+    "chmod *": deny
+    "chown *": deny
     "yay *": deny
+    "paru *": deny
+    # Read-only pacman queries only; space-separated forms so -Fy/-Syu refreshes stay denied.
+    "pacman *": deny
+    "pacman -Q*": allow
+    "pacman -F *": allow
+    "pacman -Si *": allow
+    "pacman -Ss *": allow
+    "pacman -Sl *": allow
+    "pacman -Sp *": allow
+    "npm install*": deny
+    "pnpm install*": deny
+    "yarn install*": deny
+    "bun install*": deny
+    "go install*": deny
+    "go get*": deny
+    "docker system prune*": deny
+    "docker compose down*": deny
+    "docker compose rm*": deny
+    "docker compose pull*": deny
+    "docker compose push*": deny
+    "docker rm*": deny
+    "docker rmi*": deny
+    "docker volume rm*": deny
+    "kubectl *": deny
+    "helm *": deny
+    "terraform apply*": deny
+    "terraform destroy*": deny
 
-  webfetch: allow
-  websearch: allow
   repo_clone: allow
   repo_overview: allow
-  skill: allow
-  lsp: allow
 
   task:
     "*": deny

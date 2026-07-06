@@ -4,8 +4,6 @@ mode: subagent
 model: xai/grok-4.3
 permission:
   edit: deny
-  webfetch: allow
-  websearch: allow
 color: success
 ---
 

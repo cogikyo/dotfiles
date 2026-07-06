@@ -4,8 +4,6 @@ mode: subagent
 model: opencode-go/glm-5.2
 permission:
   edit: deny
-  webfetch: allow
-  websearch: allow
 color: info
 ---
 

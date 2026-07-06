@@ -8,27 +8,9 @@ permission:
   grep: allow
   list: allow
 
-  bash:
-    "*": allow
-    "git commit --amend*": ask
-    "git push*": deny
-    "* git push*": deny
-    "git -C * push*": deny
-    "git rebase*": ask
-    "git reset --hard*": ask
-    "git filter-branch*": ask
-    "git clean*": ask
-    "rm -rf*": ask
-    "sudo *": ask
-    "pacman *": ask
-    "yay *": ask
-
-  webfetch: allow
-  websearch: allow
+  # Bash and web tools inherit the shared baseline in opencode.json.
   repo_clone: allow
   repo_overview: allow
-  skill: allow
-  lsp: allow
 
   task:
     "*": deny
