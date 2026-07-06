@@ -40,7 +40,9 @@ func (t *Tab) Execute(tabName, filePath string) (string, error) {
 	if tabName == "" {
 		return "", fmt.Errorf("usage: tab <name|alias>")
 	}
-	actionName := baseTabName(tabName)
+	cfg := t.state.GetConfig()
+	req := parseTabRequest(cfg, tabName)
+	actionName := req.actionName
 	if filePath != "" && actionName != "nvim" {
 		return "", fmt.Errorf("path argument is only supported for nvim")
 	}
@@ -50,14 +52,17 @@ func (t *Tab) Execute(tabName, filePath string) (string, error) {
 		return "", err
 	}
 
-	editor, err := t.findEditor(wsID)
+	editor, wsID, err := t.findTargetWindow(wsID, req)
 	if err != nil {
 		return "", err
 	}
 
 	if editor == nil {
-		if actionName == "term" {
+		if !req.explicit && actionName == "term" {
 			return t.spawnTerminal(wsID)
+		}
+		if req.explicit {
+			return fmt.Sprintf("no %s window", req.profileName), nil
 		}
 		return "no editor on workspace", nil
 	}
@@ -73,8 +78,10 @@ func (t *Tab) Execute(tabName, filePath string) (string, error) {
 	}
 	st := stateFromWindow(windows[0])
 
-	cfg := t.state.GetConfig()
 	profileName := detectTabProfile(cfg, windows[0])
+	if req.explicit {
+		profileName = req.profileName
+	}
 	profile, ok := cfg.Tabs[profileName]
 	if !ok {
 		return "", fmt.Errorf("unknown profile: %s", profileName)
@@ -83,9 +90,12 @@ func (t *Tab) Execute(tabName, filePath string) (string, error) {
 	currentTab := activeProfileTabName(cfg, profileName, windows[0])
 	t.rememberTabState(wsID, profileName, &profile, currentTab)
 
-	action := normalizeTabAction(tabName)
+	action := req.semanticAction
 	targetTab := resolveTabAlias(cfg, tabName, profileName)
-	if !strings.Contains(tabName, ":") && profileTab(cfg, profileName, targetTab) == nil {
+	if req.explicit {
+		targetTab = req.tabName
+	}
+	if !req.explicit && !strings.Contains(tabName, ":") && profileTab(cfg, profileName, targetTab) == nil {
 		var rememberedTab, rememberedContext string
 		if mem := t.state.GetTabMemory(wsID, profileName); mem != nil {
 			rememberedTab = mem.ByAction[action]
@@ -99,7 +109,7 @@ func (t *Tab) Execute(tabName, filePath string) (string, error) {
 		targetTab = "nvim"
 	}
 	if profileTab(cfg, profileName, targetTab) == nil {
-		if actionName == "term" {
+		if !req.explicit && actionName == "term" {
 			return t.spawnTerminal(wsID)
 		}
 		return "", fmt.Errorf("tab %q not in profile %s", targetTab, profileName)
@@ -133,6 +143,9 @@ func (t *Tab) Execute(tabName, filePath string) (string, error) {
 			t.rememberTabState(wsID, profileName, &profile, targetTab)
 			return fmt.Sprintf("tab: %s", targetTab), nil
 		}
+		if req.explicit {
+			return "already focused", nil
+		}
 		prevAddr, err := t.previousWindowAddress(wsID, editor.Address)
 		if err == nil && prevAddr != "" && prevAddr != editor.Address {
 			if err := t.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", prevAddr)); err != nil {
@@ -144,10 +157,11 @@ func (t *Tab) Execute(tabName, filePath string) (string, error) {
 	}
 
 	t.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", editor.Address))
-	if err := kitty.FocusTab(targetTabID); err != nil {
+	focusedByID, err := focusProfileTab(kitty, targetTabID, req.explicit, &profile, targetTab)
+	if err != nil {
 		return "", err
 	}
-	if hasActionConfig {
+	if hasActionConfig && focusedByID {
 		if err := kitty.FocusPane(targetTabID, actionConfig.Pane); err != nil {
 			return "", err
 		}
@@ -171,6 +185,203 @@ func (t *Tab) Execute(tabName, filePath string) (string, error) {
 	t.rememberTabState(wsID, profileName, &profile, targetTab)
 
 	return fmt.Sprintf("tab: %s", targetTab), nil
+}
+
+type tabRequest struct {
+	profileName    string
+	tabName        string
+	actionName     string
+	semanticAction string
+	explicit       bool
+}
+
+func parseTabRequest(cfg *config.HyprConfig, name string) tabRequest {
+	req := tabRequest{tabName: name, actionName: baseTabName(name), semanticAction: normalizeTabAction(name)}
+	profileName, tabName, ok := strings.Cut(name, ":")
+	if !ok || cfg == nil || cfg.Tabs == nil {
+		return req
+	}
+	profile, ok := cfg.Tabs[profileName]
+	if !ok {
+		return req
+	}
+	if tabName == "" {
+		tabName = profile.Focus
+	}
+	req.profileName = profileName
+	req.tabName = tabName
+	req.actionName = baseTabName(tabName)
+	req.semanticAction = normalizeTabAction(tabName)
+	req.explicit = true
+	return req
+}
+
+func (t *Tab) findTargetWindow(wsID int, req tabRequest) (*hypr.Window, int, error) {
+	if req.explicit && req.profileName == "agents" {
+		win, targetWS, err := t.findBodyWindow(wsID, "agents")
+		return win, targetWS, err
+	}
+
+	win, err := t.findEditor(wsID)
+	return win, wsID, err
+}
+
+func (t *Tab) findBodyWindow(wsID int, bodyName string) (*hypr.Window, int, error) {
+	spec, ok := config.ThreeBody[bodyName]
+	if !ok {
+		return nil, wsID, fmt.Errorf("unknown three-body window: %s", bodyName)
+	}
+	clients, err := t.hypr.Clients()
+	if err != nil {
+		return nil, wsID, err
+	}
+
+	if win := findBodyOnWorkspace(clients, wsID, spec); win != nil {
+		return t.focusBody(bodyName, spec, wsID, win.Address)
+	}
+	if ownerWS, addr := findBodyInThreeBody(clients, t.state.AllThreeBody(), spec, wsID); addr != "" {
+		return t.focusBody(bodyName, spec, ownerWS, addr)
+	}
+	for i := range clients {
+		c := &clients[i]
+		if c.Workspace.Name == windows.ShadowWorkspace || !windows.MatchesTarget(c, spec.Class, spec.Title) {
+			continue
+		}
+		return t.focusBody(bodyName, spec, c.Workspace.ID, c.Address)
+	}
+	if ownerWS, addr := findBodyInThreeBody(clients, t.state.AllThreeBody(), spec, 0); addr != "" {
+		return t.focusBody(bodyName, spec, ownerWS, addr)
+	}
+
+	return nil, wsID, nil
+}
+
+func (t *Tab) focusBody(_ string, spec config.ThreeBodyWindow, wsID int, addr string) (*hypr.Window, int, error) {
+	currentWS, err := t.activeWorkspace()
+	if err != nil {
+		return nil, wsID, err
+	}
+	if currentWS != wsID {
+		if err := t.hypr.Dispatch(fmt.Sprintf("workspace %d", wsID)); err != nil {
+			return nil, wsID, fmt.Errorf("focus workspace: %w", err)
+		}
+	}
+	if st := t.state.GetThreeBody(wsID); st != nil && addr == st.Shadow {
+		if err := t.swapBodyShadow(st, wsID); err != nil {
+			return nil, wsID, err
+		}
+	} else if err := t.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", addr)); err != nil {
+		return nil, wsID, err
+	}
+
+	clients, err := t.hypr.Clients()
+	if err != nil {
+		return nil, wsID, err
+	}
+	if win := findWindowByAddress(clients, addr); win != nil {
+		return win, wsID, nil
+	}
+	return findBodyOnWorkspace(clients, wsID, spec), wsID, nil
+}
+
+func (t *Tab) swapBodyShadow(st *state.ThreeBodyState, wsID int) error {
+	tiled, err := windows.GetTiledWindows(t.hypr, wsID)
+	if err != nil {
+		return fmt.Errorf("get tiled: %w", err)
+	}
+	if len(tiled) < 2 {
+		return fmt.Errorf("expected 2 tiled windows, got %d", len(tiled))
+	}
+	slaves := windows.GetSlaves(tiled)
+	if len(slaves) == 0 {
+		return fmt.Errorf("no slave window found")
+	}
+
+	actualMaster := tiled[0].Address
+	actualSlave := slaves[0].Address
+	batch := fmt.Sprintf("dispatch movetoworkspacesilent %s,address:%s; dispatch movetoworkspacesilent %d,address:%s; dispatch focuswindow address:%s", windows.ShadowWorkspace, actualSlave, wsID, st.Shadow, st.Shadow)
+	if _, err := t.hypr.Request("[[BATCH]]" + batch); err != nil {
+		return fmt.Errorf("swap batch: %w", err)
+	}
+	t.state.SetThreeBody(wsID, &state.ThreeBodyState{Master: actualMaster, Active: st.Shadow, Shadow: actualSlave})
+	return nil
+}
+
+func findBodyOnWorkspace(clients []hypr.Window, wsID int, spec config.ThreeBodyWindow) *hypr.Window {
+	for i := range clients {
+		c := &clients[i]
+		if c.Workspace.ID == wsID && windows.MatchesTarget(c, spec.Class, spec.Title) {
+			return c
+		}
+	}
+	return nil
+}
+
+func findBodyInThreeBody(clients []hypr.Window, states map[int]*state.ThreeBodyState, spec config.ThreeBodyWindow, preferredWS int) (int, string) {
+	if preferredWS != 0 {
+		if addr := matchingThreeBodyAddress(clients, states[preferredWS], spec); addr != "" {
+			return preferredWS, addr
+		}
+	}
+	for wsID, st := range states {
+		if wsID == preferredWS {
+			continue
+		}
+		if addr := matchingThreeBodyAddress(clients, st, spec); addr != "" {
+			return wsID, addr
+		}
+	}
+	return 0, ""
+}
+
+func matchingThreeBodyAddress(clients []hypr.Window, st *state.ThreeBodyState, spec config.ThreeBodyWindow) string {
+	if st == nil {
+		return ""
+	}
+	for _, addr := range []string{st.Master, st.Active, st.Shadow} {
+		if win := findWindowByAddress(clients, addr); win != nil && windows.MatchesTarget(win, spec.Class, spec.Title) {
+			return addr
+		}
+	}
+	return ""
+}
+
+func findWindowByAddress(clients []hypr.Window, addr string) *hypr.Window {
+	for i := range clients {
+		if clients[i].Address == addr {
+			return &clients[i]
+		}
+	}
+	return nil
+}
+
+func focusProfileTab(kitty *KittyClient, tabID string, explicit bool, profile *config.TabProfile, tabName string) (bool, error) {
+	if err := kitty.FocusTab(tabID); err == nil {
+		return true, nil
+	} else if !explicit {
+		return false, err
+	}
+
+	idx := profileTabIndex(profile, tabName)
+	if idx < 0 {
+		return false, fmt.Errorf("tab %q has no index fallback", tabName)
+	}
+	if err := kitty.GotoTab(idx + 1); err != nil {
+		return false, err
+	}
+	return false, nil
+}
+
+func profileTabIndex(profile *config.TabProfile, tabName string) int {
+	if profile == nil {
+		return -1
+	}
+	for i := range profile.Tabs {
+		if profile.Tabs[i].Name == tabName {
+			return i
+		}
+	}
+	return -1
 }
 
 func (t *Tab) activeWorkspace() (int, error) {

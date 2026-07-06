@@ -102,6 +102,11 @@ func (k *KittyClient) FocusTab(tabID string) error {
 		"focus-tab", "--match", "env:KITTY_TAB_ID="+tabID).Run()
 }
 
+func (k *KittyClient) GotoTab(index int) error {
+	return exec.Command("kitty", "@", "--to", k.socketPath,
+		"action", "goto_tab", fmt.Sprintf("%d", index)).Run()
+}
+
 func (k *KittyClient) FocusWindow(id int) error {
 	return exec.Command("kitty", "@", "--to", k.socketPath,
 		"focus-window", "--match", fmt.Sprintf("id:%d", id)).Run()

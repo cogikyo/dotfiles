@@ -115,17 +115,17 @@ tabs:
   agents: # ├─ agents profile ─────────────────────────────────────────────────────┤
     order: 1
     prefix: "agents-"
-    focus: master
+    focus: build
     tabs:
-      - { name: xplr,   title: "⊰   ⊱", command: "xplr" }
-      - { name: master, title: "⊰ 󰯉  ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
-      - { name: dev,    title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
+      - { name: scout, title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
+      - { name: build, title: "⊰ 󰯉  ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
+      - { name: drive, title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
       - name: plan
         title: "⊰   ⊱"
         command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\""
         actions:
           build: {}
-      - { name: git,    title: "⊰   ⊱", command: "lazygit" }
+      - { name: learn, title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
 
   leadpier: # ├─ leadpier profile ─────────────────────────────────────────────────┤
     order: 2
