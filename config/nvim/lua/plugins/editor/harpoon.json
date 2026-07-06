@@ -44,6 +44,11 @@
         "models/db.smart_tier.go"
       ]
     },
+    "/home/cullyn/LeadPier/frontend": {
+      "pins": [
+        "apps/admin/src/pages/partners/index.tsx"
+      ]
+    },
     "/home/cullyn/cogikyo/cogikyo": {
       "pins": [
         "README.md",

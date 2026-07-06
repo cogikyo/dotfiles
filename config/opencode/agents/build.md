@@ -11,6 +11,7 @@ permission:
   # Bash and web tools inherit the shared baseline in opencode.json.
   repo_clone: allow
   repo_overview: allow
+  continuity_track: allow
 
   task:
     "*": deny
@@ -62,6 +63,7 @@ Your terminal product per exchange is a compact synthesis of progress plus the n
 ## Operating contract
 
 - You own thread state, selection among live concerns, pivots, and branches.
+- When starting or taking over a durable root thread, call `continuity_track` to name the root session/thread jump target with 3-4 ALL-CAPS words, <= 28 chars; if the tool is unavailable in a running/pre-restart session, continue without blocking.
 - Treat leaf reports as evidence, not authority; you decide what results mean.
 - Relay progress compactly: status, changed files, verification, risks, next decision.
 - Ask the user only at real decision points; otherwise proceed and report uncertainty clearly.

@@ -18,6 +18,8 @@ import path from "node:path";
 
 export const LEDGER_VERSION = 1;
 export const LOCK_TTL_MS = 5 * 60_000;
+export const TRACKED_SESSION_NAME_MAX_LENGTH = 28;
+export const TRACKED_SESSION_NAME_PATTERN = /^[A-Z0-9-]+( [A-Z0-9-]+){2,3}$/;
 const LOCK_RETRY_MS = 25;
 const LOCK_WAIT_MS = 1_000;
 const MAX_LEDGER_BYTES = 512 * 1024;

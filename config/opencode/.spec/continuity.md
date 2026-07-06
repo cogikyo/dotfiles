@@ -9,71 +9,73 @@ The original five-slice commit plan (hyprd, permissions, scout/session, continui
 
 ## Phase A: idle-gated automation (server.ts)
 
-Problem: `event` currently triggers `summarizeFromLedger`/`renewFromLedger` on streaming events, so auto compaction can interrupt an active agent turn.
-Fix: refresh the ledger on relevant events, but run automation only when `event.type === "session.idle"`.
-Also drop `message.part.updated` and `session.status` from `isRelevantEvent`; per-chunk full message reads are churn.
-The `experimental.session.compacting` and `experimental.compaction.autocontinue` hooks stay unchanged.
+Status: committed.
+Ownership: `server.ts`.
+Recovery note: automation runs only on `session.idle`; streaming events only refresh the ledger.
 
 ## Phase B: sidebar v3 (index.tsx)
 
-User verdict on v2: still messy and wordy.
-Shape:
-
-- Collapsed chips stay minimal: pressure warn, locks, renewal, related count.
-- Expanded always opens with one muted status row: pressure icon, tokens, level.
-- Related sessions render as a flat clickable list (max 4), icon colored by level, muted age; drop the per-spec group header rows.
-- Related list holds root sessions only: shared-spec always (packet icon), non-shared only if active within 24h; subagents (agent contains `/` or session has `parentID`) excluded, and server.ts skips ledger writes for child sessions.
-- Lock rows compact to basenames and short ids.
-- Pressure/missing-packet/lock/renewal notice rows stay hidden until active.
-- Drop the panel subscription on `message.part.updated`; the 10s timer plus message/diff/compacted events are enough.
+Status: committed, then superseded by Phase D feedback.
+Ownership: `index.tsx` and child-session ledger filtering in `server.ts`.
+Recovery note: v3 was still too messy and wordy after restart.
 
 ## Phase C: hygiene (state.ts)
 
-Rename vestigial `DirtyCoverage` type to `EditedFiles`; keep the persisted ledger field name `dirty` for compatibility and say so in a comment.
+Status: committed.
+Ownership: `state.ts`.
+Recovery note: `DirtyCoverage` became `EditedFiles`, while persisted ledger field `dirty` stayed for compatibility.
 
 ## Phase D: sidebar v4 (curation + layout)
 
-Source: user observed sidebar v3 after restart and gave design feedback.
-Implementation deferred to the abbott session because visual iteration needs the user present to eyeball the TUI.
+Implementation is the current dirty slice.
 
-Curation over recency:
+Curation and membership:
 
-- Related sessions are curated only; recency alone never qualifies.
-- Delete the recent-within-24h fallback in `relatedSessions()` (index.tsx).
+- The Continuity sidebar is open by default.
+- Spec packets show basenames only, matching Markdown Context.
+- Spec packets use a lightbulb continuity icon, not a git/status icon.
+- Jump targets include only named sibling root sessions.
+- Membership is title-as-registry: a root session title matching 3-4 ALL-CAPS words, `[A-Z0-9-]+` words separated by spaces, and `<= 28` chars.
+- `continuity_track` renames and registers the current root session; Build and Drive prompts nudge agents to use it.
+- Recency alone never qualifies.
+- Shared-spec auto-membership is removed.
+- Media-context root sessions stay hidden unless explicitly renamed into the title pattern.
 - Root cause of the bad surfacing: the media-context plugin spawns ephemeral root sessions for image classification/renaming ("media-context image naming"); they carry fresh ledgers and no `parentID`, so the 24h-recency fallback pulled them into the list.
-- Shared-spec detection may stay as one curation input.
-
-Curation mechanism (decided direction, sub-questions open):
-
-- Membership in the related list requires BOTH a short display name AND explicit registration in a shared registry that tracks which sessions are related and managed.
-- The registry is the single source of truth for sidebar membership; ledgers keep tracking all sessions for recon.
-- The registry likely lives alongside the ledgers in the continuity state dir.
-- scout/session reads and writes the same registry so related-session info syncs across channels and sessions.
-- Open sub-questions: registry file shape, and who writes it (model TUI command vs plugin tool vs scout/session).
 
 Rows and layout:
 
-- Sessions actively running show a braille spinner.
-- Open question: detect running via the session status API vs ledger `lastEvent` freshness.
-- The level-color rainbow stays; the problem is discoverability of meanings, not the palette.
-- Document each color per `levelColor` in index.tsx: green=healthy, sky=watch, yellow=checkpoint, orange=compact, pink=renew, red=blocked, muted=stale.
-- Make the meanings discoverable: README legend at minimum; in-TUI legend optional, decide on abbott.
-- Consistent padding across all sidebar rows.
-- Related sessions get model-assigned short display names: ALL CAPS, 3-4 words, type-first like commit types (e.g. ADJUST CONTINUITY SIDEBAR), stored so rows fit one line.
-- Row layout: icon + short name left, age/duration right-aligned (the current "10h" label), single line, no wrap.
+- Tracked rows are single-line clickable rows.
+- Left side is icon + literal space + name.
+- Right side is relative last-updated age, right-justified.
+- Busy sessions show a braille spinner from the real TUI session status source.
+- Context pressure is removed from Continuity because the built-in footer/statusline cover it.
+- Lock rows show only when live locks exist.
+- The level-color rainbow may stay only where remaining rows still need it.
+- The tracked-sibling count chip is hidden when the count is zero.
 
 ## Verification
 
-- `node_modules/.bin/tsc -p config/opencode/tsconfig.json` clean.
-- `go vet` + `go test` for `cmds/internal/hyprd/session` before the hyprd commit.
-- Runtime observation still requires an OpenCode restart: watch one Drive run hit compact pressure and confirm summarize fires only at idle.
+- Prior static checks were clean before their commits; see Status commits for exact slices.
+- Runtime observation still requires an OpenCode restart: confirm idle-only compaction and live sidebar behavior.
+- Phase D runtime observation still requires an OpenCode restart and live sidebar check.
+
+## Decisions and deviations
+
+- Phase D uses title-as-registry instead of a separate registry file, so the registry shape question is closed.
+- The writer question is closed: `continuity_track` renames/registers the current root session.
+- Context pressure left Continuity because built-in footer/statusline own that signal.
+- No recent-session fallback and no shared-spec auto-membership remain.
+
+## Questions for parent
+
+- None queued.
 
 ## Status
 
 - Phases A-C committed as 7a91be2c, c468a141, c5fc4bcd, 8e082f35; slice 1 (hyprd) committed as 77c08d21.
-- OpenCode restarted; runtime observation partially done.
-- User observed sidebar v3 and gave design feedback, captured as Phase D.
-- Phase D: not started; resumes on abbott after a master merge.
+- OpenCode restarted; user observed sidebar v3 and gave Phase D feedback.
+- Phase D implementation is in progress as the current dirty slice.
+- Runtime observation after restart is still required.
 
 ## Recovery checks
 
@@ -81,8 +83,7 @@ Rows and layout:
 
 ## Next steps
 
-1. Merge master, then resume on abbott.
-2. Settle the registry sub-questions: file shape and writer (model TUI command vs plugin tool vs scout/session).
-3. Implement Phase D with the user present to eyeball the TUI: registry-gated curation, spinner, color legend (README + optional in-TUI).
-4. Finish runtime observation: confirm idle-gated compact behavior; tune 90k/120k/200k thresholds per task if pressure feels wrong.
-5. Delete this packet after Phase D lands and runtime observation passes.
+1. Finish the Phase D dirty slice if any intended implementation files remain unstaged or incomplete.
+2. Restart OpenCode and observe the live sidebar: default-open state, packet basenames, title-gated sibling roots, spinner, ages, and lock visibility.
+3. Finish idle-gated runtime observation: confirm summarize fires only at idle; tune 90k/120k/200k thresholds per task if pressure feels wrong.
+4. Delete this packet after Phase D lands and runtime observation passes.

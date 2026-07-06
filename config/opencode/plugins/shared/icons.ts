@@ -22,16 +22,19 @@ export const icons = {
     conflict: ' ',
   },
   context: '㊋',
+  continuity: '󱍅',
+  spinner: {
+    braille: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'],
+  },
+  progress: ['󰪞', '󰪟', '󰪠', '󰪡', '󰪢', '󰪣', '󰪤', '󰪥', '', ''],
   barFilled: '◉',
   barEmpty: '○',
   error: '󰅜',
 } as const
 
-export const progressIcons = ['󰪞', '󰪟', '󰪠', '󰪡', '󰪢', '󰪣', '󰪤', '󰪥', '', ''] as const
-
 export function progressIcon(percent: number) {
   const index = Math.max(0, Math.min(9, Math.trunc(percent / 10)))
-  return progressIcons[index]
+  return icons.progress[index]
 }
 
 export function effortIcon(value: string) {

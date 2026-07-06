@@ -1,4 +1,5 @@
 import type { Plugin, PluginInput, PluginModule } from "@opencode-ai/plugin";
+import { tool } from "@opencode-ai/plugin";
 import { assessPressure, type PressureThresholds, type TokenMessage } from "./pressure.ts";
 import { readSettings } from "./settings.ts";
 import {
@@ -9,6 +10,8 @@ import {
   renderCheckpointSummary,
   renderRenewalPrompt,
   resolveSpecFile,
+  TRACKED_SESSION_NAME_MAX_LENGTH,
+  TRACKED_SESSION_NAME_PATTERN,
   upsertLedger,
   withLedgerLock,
   withLedgerLockAsync,
@@ -37,6 +40,29 @@ const server: Plugin = async ({ client, directory, worktree }) => {
       const compaction = object((cfg as Record<string, unknown>).compaction);
       const value = compaction?.reserved;
       if (typeof value === "number" && Number.isFinite(value) && value > 0) reserved = value;
+    },
+    tool: {
+      continuity_track: tool({
+        description: "Name this root session as a continuity thread jump target. Name must be 3-4 ALL CAPS words and at most 28 chars.",
+        args: {
+          name: tool.schema.string().describe("3-4 ALL CAPS words, <= 28 chars, words may contain A-Z, 0-9, and hyphen"),
+        },
+        async execute(args, context) {
+          const name = args.name.trim();
+          if (!trackedSessionName(name)) throw new Error("continuity_track name must be 3-4 ALL CAPS words, <= 28 chars");
+
+          await unwrap(client.session.update({ path: { id: context.sessionID }, body: { title: name } } as never), "track continuity session");
+          await upsertTrackedTitle(client, {
+            projectPath: context.worktree || context.directory || projectPath,
+            sessionID: context.sessionID,
+            name,
+            reserved,
+            thresholds: settings.pressure,
+          });
+
+          return `continuity tracked as ${name}`;
+        },
+      }),
     },
     event: async ({ event }) => {
       const sessionID = sessionIDFromEvent(event);
@@ -118,6 +144,20 @@ async function refreshLedger(
     await log(client, "warn", `continuity ledger refresh failed for ${input.sessionID}: ${errorMessage(error)}`);
     return undefined;
   }
+}
+
+async function upsertTrackedTitle(
+  client: Client,
+  input: { projectPath: string; sessionID: string; name: string; reserved: number; thresholds: PressureThresholds },
+) {
+  const key = projectKey(input.projectPath);
+  const current = readLedger(key, input.sessionID);
+  if (!current) {
+    await refreshLedger(client, { projectPath: input.projectPath, projectKey: key, sessionID: input.sessionID, lastEvent: "continuity_track", reserved: input.reserved, thresholds: input.thresholds });
+    return;
+  }
+
+  upsertLedger({ ...seedFromLedger(current, "continuity_track"), session: { ...current.session, title: input.name } });
 }
 
 async function summarizeFromLedger(client: Client, ledger: ContinuityLedger) {
@@ -343,6 +383,10 @@ function isRelevantEvent(type: string) {
 
 function isDriveAgent(agent: string) {
   return agent.toLowerCase() === "drive";
+}
+
+function trackedSessionName(name: string) {
+  return name.length <= TRACKED_SESSION_NAME_MAX_LENGTH && TRACKED_SESSION_NAME_PATTERN.test(name);
 }
 
 function cleanRelative(value: string) {

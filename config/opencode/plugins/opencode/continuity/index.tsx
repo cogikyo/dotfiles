@@ -1,9 +1,9 @@
 /** @jsxImportSource @opentui/solid */
 import type { Message } from "@opencode-ai/sdk/v2";
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui";
-import { For, Show, createMemo, createSignal, onCleanup } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal, onCleanup } from "solid-js";
 import { colors } from "../../shared/colors.ts";
-import { formatTokens, sessionMessages, sessionMeta } from "../../shared/session.ts";
+import { sessionMessages, sessionMeta } from "../../shared/session.ts";
 import { SidebarSection } from "../../shared/sidebar-section.tsx";
 import { icons } from "../../shared/icons.ts";
 import { assessPressure, type PressureThresholds } from "./pressure.ts";
@@ -18,6 +18,8 @@ import {
   renderCheckpointSummary,
   renderRenewalPrompt,
   resolveSpecFile,
+  TRACKED_SESSION_NAME_MAX_LENGTH,
+  TRACKED_SESSION_NAME_PATTERN,
   upsertLedger,
   withLedgerLock,
   type ActiveLock,
@@ -34,11 +36,11 @@ type ContinuityLevel = "healthy" | "checkpoint" | "compact" | "renew" | "blocked
 
 type RelatedSession = {
   sessionID: string;
-  title?: string;
+  title: string;
   agent: string;
-  sharedSpec: boolean;
   updatedAt: number;
   level: ContinuityLevel;
+  busy: boolean;
 };
 
 type ContinuityState = LedgerSeed & {
@@ -47,10 +49,10 @@ type ContinuityState = LedgerSeed & {
   related: RelatedSession[];
 };
 
-const STALE_SESSION_MS = 24 * 60 * 60_000;
+const STALE_LEVEL_MS = 24 * 60 * 60_000;
+const SPINNER_MS = 120;
 const ui = {
-  pressure: icons.context,
-  packet: icons.git.staged.trimEnd(),
+  packet: icons.continuity,
   lock: icons.error,
   renew: icons.effort.auto,
   related: icons.git.branch.trimEnd(),
@@ -58,6 +60,7 @@ const ui = {
 
 function ContinuityPanel(props: { api: TuiPluginApi; sessionID: string; thresholds: PressureThresholds }) {
   const [revision, setRevision] = createSignal(0);
+  const [spinner, setSpinner] = createSignal(0);
   const refresh = () => setRevision((value) => value + 1);
   const timer = setInterval(refresh, REFRESH_MS);
   const disposers = [
@@ -70,6 +73,7 @@ function ContinuityPanel(props: { api: TuiPluginApi; sessionID: string; threshol
     props.api.event.on("session.compacted", (event) => {
       if (event.properties.sessionID === props.sessionID) refresh();
     }),
+    props.api.event.on("session.status", () => refresh()),
   ];
 
   onCleanup(() => {
@@ -82,11 +86,18 @@ function ContinuityPanel(props: { api: TuiPluginApi; sessionID: string; threshol
     return continuityState(props.api, props.sessionID, props.thresholds);
   });
 
+  createEffect(() => {
+    if (!state().related.some((session) => session.busy)) return;
+
+    const interval = setInterval(() => setSpinner((value) => value + 1), SPINNER_MS);
+    onCleanup(() => clearInterval(interval));
+  });
+
   return (
-    <SidebarSection api={props.api} title="Continuity" detail={<Summary api={props.api} state={state()} />} initiallyExpanded={false}>
+    <SidebarSection api={props.api} title="Continuity" detail={<Summary api={props.api} state={state()} />} initiallyExpanded={true}>
       <box flexDirection="column" gap={0}>
-        <StatusRow api={props.api} state={state()} thresholds={props.thresholds} />
-        <RelatedSessions api={props.api} sessions={state().related} />
+        <SpecPackets api={props.api} files={state().artifact.specFiles} />
+        <RelatedSessions api={props.api} sessions={state().related} spinner={spinner()} />
         <MissingPacketNotice api={props.api} state={state()} />
         <LockNotice api={props.api} locks={state().locks} />
         <RenewalNotice api={props.api} ledger={state().ledger} />
@@ -100,8 +111,8 @@ function Summary(props: { api: TuiPluginApi; state: ContinuityState }) {
 
   return (
     <box flexDirection="row" gap={0}>
-      <Show when={props.state.pressure.level === "compact" || props.state.pressure.level === "renew"}>
-        <Chip icon={ui.pressure} value="!" color={levelColor(c, props.state.pressure.level)} />
+      <Show when={props.state.related.length > 0}>
+        <Chip icon={ui.related} value={String(props.state.related.length)} color={c.magenta} />
       </Show>
       <Show when={props.state.locks.length > 0}>
         <Chip icon={ui.lock} value={String(props.state.locks.length)} color={c.orange} />
@@ -109,32 +120,12 @@ function Summary(props: { api: TuiPluginApi; state: ContinuityState }) {
       <Show when={renewalActive(props.state.ledger)}>
         <Chip icon={ui.renew} value={renewalChip(props.state.ledger)} color={props.state.ledger?.renewal?.error ? c.red : c.sky} />
       </Show>
-      <Show when={props.state.related.length > 0}>
-        <Chip icon={ui.related} value={String(props.state.related.length)} color={c.magenta} />
-      </Show>
     </box>
   );
 }
 
 function Chip(props: { icon: string; value: string; color: ReturnType<typeof colors>[keyof ReturnType<typeof colors>] }) {
   return <text fg={props.color} wrapMode="none">{` ${props.icon}${props.value}`}</text>;
-}
-
-function StatusRow(props: { api: TuiPluginApi; state: ContinuityState; thresholds: PressureThresholds }) {
-  const c = colors(props.api.theme.current);
-  const level = () => props.state.pressure.level;
-  const active = () => level() === "compact" || level() === "renew";
-  const label = () => {
-    const base = `${ui.pressure} ${formatTokens(props.state.pressure.tokens)} · ${level()}`;
-    if (level() === "renew") return `${base} ≥ ${formatTokens(props.thresholds.renewTokens)}`;
-    if (level() === "compact") return `${base} ≥ ${formatTokens(props.thresholds.compactTokens)}`;
-    return base;
-  };
-  return (
-    <text fg={active() ? levelColor(c, level()) : c.muted} wrapMode="none">
-      {label()}
-    </text>
-  );
 }
 
 function MissingPacketNotice(props: { api: TuiPluginApi; state: ContinuityState }) {
@@ -164,24 +155,40 @@ function RenewalNotice(props: { api: TuiPluginApi; ledger?: ContinuityLedger }) 
   );
 }
 
-function RelatedSessions(props: { api: TuiPluginApi; sessions: RelatedSession[] }) {
+function SpecPackets(props: { api: TuiPluginApi; files: string[] }) {
+  const c = colors(props.api.theme.current);
+  return (
+    <For each={props.files}>
+      {(file) => (
+        <box flexDirection="row" gap={0}>
+          <text fg={c.muted} wrapMode="none">{`${ui.packet} `}</text>
+          <text fg={c.muted} wrapMode="none">{fileLeaf(file)}</text>
+        </box>
+      )}
+    </For>
+  );
+}
+
+function RelatedSessions(props: { api: TuiPluginApi; sessions: RelatedSession[]; spinner: number }) {
   return (
     <Show when={props.sessions.length > 0}>
       <For each={props.sessions}>
-        {(session) => <RelatedRow api={props.api} session={session} />}
+        {(session) => <RelatedRow api={props.api} session={session} spinner={props.spinner} />}
       </For>
     </Show>
   );
 }
 
-function RelatedRow(props: { api: TuiPluginApi; session: RelatedSession }) {
+function RelatedRow(props: { api: TuiPluginApi; session: RelatedSession; spinner: number }) {
   const c = colors(props.api.theme.current);
   const color = levelColor(c, props.session.level);
+  const icon = () => props.session.busy ? icons.spinner.braille[props.spinner % icons.spinner.braille.length] : ui.related;
   return (
     <box flexDirection="row" gap={0} onMouseDown={() => props.api.route.navigate("session", { sessionID: props.session.sessionID })}>
-      <text fg={color} wrapMode="none">{`${props.session.sharedSpec ? ui.packet : ui.related} `}</text>
-      <text fg={c.text} wrapMode="none">{sessionLabel(props.session)}</text>
-      <text fg={c.muted} wrapMode="none">{` ${ageLabel(props.session.updatedAt)}`}</text>
+      <text fg={color} wrapMode="none" flexShrink={0}>{`${icon()} `}</text>
+      <text fg={c.text} wrapMode="none" flexShrink={1}>{props.session.title}</text>
+      <box flexGrow={1} />
+      <text fg={c.muted} wrapMode="none" flexShrink={0}>{ageLabel(props.session.updatedAt)}</text>
     </box>
   );
 }
@@ -227,14 +234,12 @@ function navigateRenewal(api: TuiPluginApi, ledger?: ContinuityLedger) {
   if (target) api.route.navigate("session", { sessionID: target });
 }
 
-function sessionLabel(session: RelatedSession) {
-  const title = session.title?.trim();
-  const base = title || `${titleCase(session.agent)} ${shortID(session.sessionID)}`;
-  return base.length > 34 ? `${base.slice(0, 31)}…` : base;
-}
-
 function shortID(sessionID: string) {
   return sessionID.slice(0, 8);
+}
+
+function fileLeaf(filePath: string) {
+  return filePath.split(/[\\/]/u).filter(Boolean).at(-1) || filePath;
 }
 
 // Lock purposes embed session ids and spec paths; show basenames and short ids only.
@@ -253,39 +258,40 @@ function ageLabel(updatedAt: number) {
   return `${Math.floor(hours / 24)}d`;
 }
 
-function titleCase(value: string) {
-  if (!value) return "Session";
-  return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-// Other root sessions in the project: shared-spec sessions always, otherwise only recently active ones.
+// Named sibling sessions are the curated continuity thread map.
 // Subagent (leaf) sessions never appear; their agent names carry a "/" and old leaf ledgers match that too.
-function relatedSessions(project: string, sessionID: string, specFiles: string[]): RelatedSession[] {
-  const specs = new Set(specFiles);
+function relatedSessions(api: TuiPluginApi, project: string, sessionID: string): RelatedSession[] {
   return readProjectLedgers(project)
     .filter((ledger) => ledger.session.id !== sessionID)
     .filter((ledger) => !ledger.renewal?.completedAt)
     .filter((ledger) => !ledger.session.agent.includes("/"))
-    .map((ledger) => ({ ledger, sharedSpec: ledger.artifact.specFiles.some((file) => specs.has(file)) }))
-    .filter(({ ledger, sharedSpec }) => sharedSpec || Date.now() - ledger.updatedAt < STALE_SESSION_MS)
-    .map(({ ledger, sharedSpec }) => ({
+    .filter((ledger) => trackedSessionName(ledger.session.title))
+    .map((ledger) => ({
       sessionID: ledger.session.id,
-      title: ledger.session.title,
+      title: ledger.session.title?.trim() ?? "",
       agent: ledger.session.agent,
-      sharedSpec,
       updatedAt: ledger.updatedAt,
       level: relatedLevel(ledger),
+      busy: sessionBusy(api, ledger),
     }))
-    .sort((left, right) => Number(right.sharedSpec) - Number(left.sharedSpec) || right.updatedAt - left.updatedAt)
-    .slice(0, 4);
+    .sort((left, right) => right.updatedAt - left.updatedAt);
 }
 
 function relatedLevel(ledger: ContinuityLedger): ContinuityLevel {
-  if (Date.now() - ledger.updatedAt > STALE_SESSION_MS) return "stale";
+  if (Date.now() - ledger.updatedAt > STALE_LEVEL_MS) return "stale";
   if (ledger.renewal?.error) return "blocked";
   if (ledger.pressure.level !== "low") return ledger.pressure.level;
   if (ledger.artifact.status !== "healthy") return "watch";
   return "healthy";
+}
+
+function trackedSessionName(title: string | undefined) {
+  const name = title?.trim() ?? "";
+  return name.length <= TRACKED_SESSION_NAME_MAX_LENGTH && TRACKED_SESSION_NAME_PATTERN.test(name);
+}
+
+function sessionBusy(api: TuiPluginApi, ledger: ContinuityLedger) {
+  return api.state.session.status(ledger.session.id)?.type === "busy";
 }
 
 function continuityState(api: TuiPluginApi, sessionID: string, thresholds: PressureThresholds) {
@@ -293,7 +299,7 @@ function continuityState(api: TuiPluginApi, sessionID: string, thresholds: Press
   const key = projectKey(projectPath);
   const ledger = readLedger(key, sessionID);
   const seed = ledgerSeed(api, sessionID, thresholds, ledger);
-  return { ledger, locks: readActiveLocks(key), related: relatedSessions(key, sessionID, seed.artifact.specFiles), ...seed };
+  return { ledger, locks: readActiveLocks(key), related: relatedSessions(api, key, sessionID), ...seed };
 }
 
 function ledgerSeed(api: TuiPluginApi, sessionID: string, thresholds: PressureThresholds, ledger?: ContinuityLedger): LedgerSeed {
