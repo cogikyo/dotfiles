@@ -38,19 +38,26 @@ Implementation deferred to the abbott session because visual iteration needs the
 
 Curation over recency:
 
-- Related sessions are curated only; a session appears when a model explicitly adds it to the ledger or scout/session marks it related.
-- Delete the recent-within-24h fallback in `relatedSessions()` (index.tsx); it surfaced unrelated sessions (e.g. a media session).
-- Shared-spec detection may stay as one curation input, but recency alone never qualifies.
+- Related sessions are curated only; recency alone never qualifies.
+- Delete the recent-within-24h fallback in `relatedSessions()` (index.tsx).
+- Root cause of the bad surfacing: the media-context plugin spawns ephemeral root sessions for image classification/renaming ("media-context image naming"); they carry fresh ledgers and no `parentID`, so the 24h-recency fallback pulled them into the list.
+- Shared-spec detection may stay as one curation input.
 
-Open question (mechanism): how models add/mark related sessions.
-Candidate designs: a ledger `related` field written via a TUI command, a small plugin tool, or scout/session writing ledger entries.
-Not decided.
+Curation mechanism (decided direction, sub-questions open):
+
+- Membership in the related list requires BOTH a short display name AND explicit registration in a shared registry that tracks which sessions are related and managed.
+- The registry is the single source of truth for sidebar membership; ledgers keep tracking all sessions for recon.
+- The registry likely lives alongside the ledgers in the continuity state dir.
+- scout/session reads and writes the same registry so related-session info syncs across channels and sessions.
+- Open sub-questions: registry file shape, and who writes it (model TUI command vs plugin tool vs scout/session).
 
 Rows and layout:
 
 - Sessions actively running show a braille spinner.
 - Open question: detect running via the session status API vs ledger `lastEvent` freshness.
-- Simplify row-icon colors from the current level-color rainbow (illegible) to a few documented meanings, e.g. running / idle / stale.
+- The level-color rainbow stays; the problem is discoverability of meanings, not the palette.
+- Document each color per `levelColor` in index.tsx: green=healthy, sky=watch, yellow=checkpoint, orange=compact, pink=renew, red=blocked, muted=stale.
+- Make the meanings discoverable: README legend at minimum; in-TUI legend optional, decide on abbott.
 - Consistent padding across all sidebar rows.
 - Related sessions get model-assigned short display names: ALL CAPS, 3-4 words, type-first like commit types (e.g. ADJUST CONTINUITY SIDEBAR), stored so rows fit one line.
 - Row layout: icon + short name left, age/duration right-aligned (the current "10h" label), single line, no wrap.
@@ -75,7 +82,7 @@ Rows and layout:
 ## Next steps
 
 1. Merge master, then resume on abbott.
-2. Decide the Phase D curation mechanism (ledger `related` field vs plugin tool vs scout/session writes).
-3. Implement Phase D with the user present to eyeball the TUI.
+2. Settle the registry sub-questions: file shape and writer (model TUI command vs plugin tool vs scout/session).
+3. Implement Phase D with the user present to eyeball the TUI: registry-gated curation, spinner, color legend (README + optional in-TUI).
 4. Finish runtime observation: confirm idle-gated compact behavior; tune 90k/120k/200k thresholds per task if pressure feels wrong.
 5. Delete this packet after Phase D lands and runtime observation passes.
