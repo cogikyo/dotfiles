@@ -239,7 +239,10 @@ It uses `promptAsync` when available and falls back to `prompt`.
 
 The TUI sidebar recomputes pressure from loaded session messages and shared continuity settings.
 Related sessions are the primary sidebar signal.
-They are root sessions from project ledgers: shared-`.spec` sessions always, other sessions only while recently active, capped at four; subagent sessions never appear and never get ledgers.
+They are named sibling root sessions from project ledgers.
+Register a root as a jump target with `continuity_track`, which writes a 3-4 word ALL-CAPS title.
+Recency and shared `.spec` packets do not add sessions to the sidebar.
+Subagent sessions never appear and never get ledgers.
 Lock rows show purposes with paths reduced to basenames and holder ids shortened.
 Sidebar rows navigate to their sessions.
 Edited files are recorded from session-local diffs for handoff context only; git status belongs to the statusline and normal verification workflow.
