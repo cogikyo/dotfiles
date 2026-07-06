@@ -44,7 +44,7 @@ Its plugin ID is `opencode-continuity-ui`.
 Pressure thresholds are configured there because `opencode.json` rejects plugin-specific fields under `compaction`.
 
 `delegate/index.ts` is the server-side `task` tool replacement loaded by `opencode.json`.
-It routes each task call to a per-call `{model, effort}` and runs the work in a child session.
+It routes each task call to a per-call `{model, effort}`, waits for exhausted provider windows to reset, and runs the work in a child session.
 Its plugin ID is `delegate-task`.
 
 `shared/` contains cross-plugin helpers.
@@ -302,6 +302,9 @@ The policy: never resume a refusal-tainted child; reword the brief first, switch
 
 `config/opencode/delegate.json` is the provider allowlist for delegation.
 Delegating to a provider missing from `providers` errors; extend `delegate.json` deliberately.
+Delegate reads the usage-sidebar cache under `${XDG_CACHE_HOME:-~/.cache}/opencode/usage-sidebar/` before spawning.
+When any usage window is at 100%, the tool waits abortably for the latest reset and then proceeds.
+There is no maximum wait and no stale-cache cutoff.
 Metadata notes are prepended to the child's output in brackets.
 
 Children inherit the parent session's deny rules and all `external_directory` rules.

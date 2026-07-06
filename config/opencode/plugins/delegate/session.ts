@@ -72,6 +72,7 @@ export async function runChildTask(input: {
   ctx: ToolContext;
   args: TaskArgs;
   prepared: PreparedTask;
+  notes: string[];
 }) {
   if (input.args.task_id && input.prepared.driveParent) {
     throw new Error(
@@ -84,7 +85,7 @@ export async function runChildTask(input: {
     : await createChild(input.client, input.ctx, input.args, input.prepared);
 
   const metadata = { sessionId: child.id };
-  const notes: string[] = [];
+  const notes = [...input.notes];
 
   try {
     await updateToolMetadata(input.ctx, { metadata });
