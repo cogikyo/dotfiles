@@ -8,7 +8,7 @@ Arch + Hyprland (Wayland) dotfiles. Single-user. Root of repo = `~/dotfiles`.
 - `bin/` → symlinked into `~/.local/bin/` (legacy; being replaced by `cmds/`)
 - `cmds/` → Go command workspace; built into `~/.local/bin/` by `install.sh go`. See `cmds/README.md`.
 - `etc/` → system configs **copied** to `/etc/` by `install.sh system` (not symlinked)
-- `config/opencode/agents/{plan,build,drive,learn}.md` → primary OpenCode modes; plan plans, build steers, drive executes unattended, learn teaches
+- `config/opencode/agents/{scheme,collab,drive,learn}.md` → primary OpenCode modes; scheme plans, collab steers, drive executes unattended, learn teaches
 - `config/opencode/agents/{scout,build,review,scribe,verify}/` → leaf fleet; scouts map, builders edit code, reviewers judge, scribes write prose and commits, verifiers collect evidence
 - `.spec/` → directory-scoped plan, spec, and logbook docs, committed by default; e.g. `config/opencode/.spec/orchestrate.md`
 - `iso/` → archiso profile; `iso/work/` and `iso/out/` are gitignored build artifacts

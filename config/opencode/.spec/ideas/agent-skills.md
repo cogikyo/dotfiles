@@ -28,7 +28,7 @@ Ledger owner: `scribe/spec` or primaries own this ideas file.
 
 ## Evidence
 
-- Current fleet: primaries `plan`, `build`, `drive`, `learn`; leaf groups scout/build/review/scribe/verify; no checked-in local `SKILL.md` files were observed in the seed session.
+- Current fleet: primaries `scheme`, `collab`, `drive`, `learn` (built-in `plan`/`build` disabled to avoid name collisions); leaf groups scout/build/review/scribe/verify; no checked-in local `SKILL.md` files were observed in the seed session.
 - The closed fleet thread recorded the 26-leaf fleet at its cognitive ceiling; invented leaves were declined unless a gap is felt twice.
 - OpenCode v1.17.13 source facts were checked at commit `10c894bdeef3618f5666fb506ef7f9491bb964d8`, but not run-verified here.
 - Checked source says default skills live under `config/opencode/skills/<name>/SKILL.md`, `skills.paths` is optional, `name` is required, and `description` is effectively required for triggering.

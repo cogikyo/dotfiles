@@ -125,7 +125,7 @@ function Summary(props: { api: TuiPluginApi; state: ContinuityState }) {
 }
 
 function Chip(props: { icon: string; value: string; color: ReturnType<typeof colors>[keyof ReturnType<typeof colors>] }) {
-  return <text fg={props.color} wrapMode="none">{` ${props.icon}${props.value}`}</text>;
+  return <text fg={props.color} wrapMode="none">{`${props.icon}${props.value}`}</text>;
 }
 
 function MissingPacketNotice(props: { api: TuiPluginApi; state: ContinuityState }) {
