@@ -46,6 +46,38 @@ Running task evidence: upstream `packages/tui/src/routes/session/index.tsx` owns
 Acceptance: leader-down into a child shows agent label, model, non-default effort, context, and cost in the bottom bar.
 Acceptance: running tasks show group and effort using both labels and color, with prefixes for scout, build, review, scribe, verify, and primaries.
 
+## Phase 6: continuity sidebar v2
+
+Owner files: `config/opencode/plugins/opencode/continuity/*` and this spec; no code changed yet.
+Status: user-corrected redesign, synthesized from UI and API review, awaiting build.
+
+User correction (evidence):
+- The current key/value rows `packet:`, `pressure:`, `dirty:`, `lock:`, `renew:` are too noisy.
+- `Continuity 14% healthy` is really pressure percent plus artifact status, not a real health score.
+- Pressure is model-window based, but the user says ~120k+ tokens is the cognitive dumb zone; model budget like 390k is not the main UI anchor because the usage indicator already owns budget.
+- `open:` rows are misleading: they mean ledger/git dirty files not covered by the current session diff, not files opened or read; the concept should become a WIP/sync hazard or be hidden.
+- Lock and renewal rows should show only when active.
+- The user keeps the `Continuity` name and health idea, and wants compact Nerd Font icon chips plus related sessions sharing a `.spec` packet with clickable sidebar navigation.
+
+UI review proposal (conjecture, to tune):
+- One always-visible health rollup, with exceptional rows hidden until they matter.
+- Absolute token thresholds around 80k/120k/160k or 72k/96k/120k.
+- Related-session rows grouped by shared `.spec` packet.
+- `SidebarSection` detail may need JSX or chip support to render icon chips.
+
+API review proposal (conjecture, plugin-feasible in the continuity sidebar):
+- Add or derive WIP sync, a health vector, cognitive pressure, and a spec-index reverse map.
+- Keep the old `dirty` field for compatibility.
+- Mark stale related sessions by last-seen.
+- Route navigation via `api.route.navigate('session', {sessionID})`.
+
+Not plugin-feasible: subagent footer and task-row instrumentation have no current published slot, so they still route through Phase 5's upstream or local-patch decision.
+
+Automation facts from landed code (evidence, runtime unobserved until restart):
+- Drive sessions with a healthy artifact can auto-summarize or create a fresh root Drive renewal session on the existing model-percent thresholds.
+- Non-Drive modes receive only the compaction checkpoint hook and get no automatic renewal under current policy.
+- Manual TUI renew already exists and should be reviewed before renewal expands beyond Drive.
+
 ## Decisions and deviations
 
 - The current live Drive session cannot spawn a new primary because its loaded higher-priority instructions still say not to fork sessions.
@@ -63,16 +95,23 @@ Acceptance: running tasks show group and effort using both labels and color, wit
 - Manual compaction in OpenCode v1.17.13 uses `session.summarize(...)`, while v2 also exposes `session.compact`; automation must use the API surface available to the plugin client.
 - The resolved Route A/Route B exploratory detail was condensed after `fb189fb0`; its surviving decision is the hybrid route above.
 - The fleet cleanup packet is closed after `fbacb707`; future fleet ideas belong in the ideas packet unless they reopen an active implementation phase.
+- Continuity sidebar v2 keeps the `Continuity` name and health framing but replaces the noisy key/value rows with one health rollup plus chips, so exceptional rows stay hidden until active.
+- Cognitive pressure is anchored to absolute token thresholds near the ~120k dumb zone, not the model budget, because the usage indicator already owns budget.
 
 ## Open questions for parent
 
 - Should Drive spawn managed sibling sessions automatically once a `.spec/` packet exists, or only after a human-approved seed?
 - Should local OpenCode UI changes be patched upstream, maintained as a local overlay, or deferred until a plugin slot exists?
 - Should `scout/session` read raw exported transcripts, or only structured session metadata plus durable artifacts?
+- Which token thresholds anchor cognitive pressure, 80k/120k/160k or 72k/96k/120k?
+- Should the misleading `open:`/`dirty` concept be reframed as a visible WIP/sync hazard or hidden entirely from the rollup?
+- Should manual TUI renew stay Drive-only, or expand to other modes once reviewed?
 
 ## Condensed next steps
 
 1. Restart OpenCode so the continuity plugins load.
 2. Observe one Drive runtime through checkpoint, compact, and renewal paths, then record the result here.
-3. Choose the upstream, overlay, or plugin-slot path for subagent footer and running-task instrumentation.
-4. Review the `scout/session` proposal before any agent file is created.
+3. Build continuity sidebar v2: health rollup, icon chips, active-only lock/renewal rows, and shared-`.spec` related-session navigation.
+4. Tune the cognitive-pressure thresholds and decide the WIP/sync hazard treatment while building.
+5. Choose the upstream, overlay, or plugin-slot path for subagent footer and running-task instrumentation.
+6. Review the `scout/session` proposal before any agent file is created.
