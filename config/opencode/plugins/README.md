@@ -239,9 +239,10 @@ It uses `promptAsync` when available and falls back to `prompt`.
 
 The TUI sidebar recomputes pressure from loaded session messages and shared continuity settings.
 Related sessions are the primary sidebar signal.
-They are named sibling root sessions from project ledgers.
-Register a root as a jump target with `continuity_track`, which writes a 3-4 word ALL-CAPS title.
-Recency and shared `.spec` packets do not add sessions to the sidebar.
+They are named sibling root sessions from project ledgers that share at least one `.spec` packet with the current session.
+Register a spec-backed root as a jump target with `continuity_track`, which writes a 3-4 word ALL-CAPS title.
+The tool refuses sessions without a readable `.spec` packet, so arbitrary named sessions cannot enter the continuity map.
+Recency, title, and shared `.spec` packets are not enough alone; a row needs both a tracked title and a shared packet.
 Subagent sessions never appear and never get ledgers.
 Lock rows show purposes with paths reduced to basenames and holder ids shortened.
 Sidebar rows navigate to their sessions.

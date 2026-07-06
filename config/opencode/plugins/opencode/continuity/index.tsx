@@ -258,14 +258,15 @@ function ageLabel(updatedAt: number) {
   return `${Math.floor(hours / 24)}d`;
 }
 
-// Named sibling sessions are the curated continuity thread map.
+// Named sibling sessions sharing the current spec packet are the curated continuity thread map.
 // Subagent (leaf) sessions never appear; their agent names carry a "/" and old leaf ledgers match that too.
-function relatedSessions(api: TuiPluginApi, project: string, sessionID: string): RelatedSession[] {
+function relatedSessions(api: TuiPluginApi, project: string, sessionID: string, specFiles: string[]): RelatedSession[] {
   return readProjectLedgers(project)
     .filter((ledger) => ledger.session.id !== sessionID)
     .filter((ledger) => !ledger.renewal?.completedAt)
     .filter((ledger) => !ledger.session.agent.includes("/"))
     .filter((ledger) => trackedSessionName(ledger.session.title))
+    .filter((ledger) => sharesSpecFile(ledger.artifact.specFiles, specFiles))
     .map((ledger) => ({
       sessionID: ledger.session.id,
       title: ledger.session.title?.trim() ?? "",
@@ -290,6 +291,12 @@ function trackedSessionName(title: string | undefined) {
   return name.length <= TRACKED_SESSION_NAME_MAX_LENGTH && TRACKED_SESSION_NAME_PATTERN.test(name);
 }
 
+function sharesSpecFile(left: string[], right: string[]) {
+  if (left.length === 0 || right.length === 0) return false;
+  const specFiles = new Set(left);
+  return right.some((file) => specFiles.has(file));
+}
+
 function sessionBusy(api: TuiPluginApi, ledger: ContinuityLedger) {
   return api.state.session.status(ledger.session.id)?.type === "busy";
 }
@@ -299,7 +306,7 @@ function continuityState(api: TuiPluginApi, sessionID: string, thresholds: Press
   const key = projectKey(projectPath);
   const ledger = readLedger(key, sessionID);
   const seed = ledgerSeed(api, sessionID, thresholds, ledger);
-  return { ledger, locks: readActiveLocks(key), related: relatedSessions(api, key, sessionID), ...seed };
+  return { ledger, locks: readActiveLocks(key), related: relatedSessions(api, key, sessionID, seed.artifact.specFiles), ...seed };
 }
 
 function ledgerSeed(api: TuiPluginApi, sessionID: string, thresholds: PressureThresholds, ledger?: ContinuityLedger): LedgerSeed {
@@ -308,7 +315,8 @@ function ledgerSeed(api: TuiPluginApi, sessionID: string, thresholds: PressureTh
   const meta = sessionMeta(api, sessionID);
   const pressure = pressureSnapshot(api, sessionID, messages, thresholds);
   const dirty = editedFiles(api, sessionID);
-  const artifact = ledger?.artifact ?? artifactHealth(api, messages);
+  const observedArtifact = artifactHealth(api, messages);
+  const artifact = observedArtifact.status === "healthy" ? observedArtifact : ledger?.artifact ?? observedArtifact;
 
   return {
     project: { key: projectKey(projectPath), path: projectPath },

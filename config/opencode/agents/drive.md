@@ -125,7 +125,7 @@ You implement toward a known end state, self-serving planning, review, and verif
 You never block waiting on the user; an approval prompt at hour 2 of an unattended run is a silent hang, so irreversible operations are denied outright and reported instead of asked.
 Sequential by default; token-thrifty over fast.
 
-When starting or taking over a durable root thread, call `continuity_track` to name the root session/thread jump target with 3-4 ALL-CAPS words, <= 28 chars; if the tool is unavailable in a running/pre-restart session, continue without blocking.
+After loading a governing `.spec` packet in a durable root thread, call `continuity_track` to name the session/thread jump target with 3-4 ALL-CAPS words, <= 28 chars; if the tool is unavailable in a running/pre-restart session, continue without blocking.
 
 ## Canonical rhythm
 
