@@ -68,11 +68,6 @@ export function assessPressure(input: {
   return { tokens, limit, reserved, usable, percent, remaining, level, shouldCheckpoint, shouldCompact, shouldRenew };
 }
 
-export function renewalIsBetter(pressure: PressureAssessment, healthyArtifact: boolean, _dirtyFiles: number) {
-  if (!healthyArtifact) return false;
-  return pressure.shouldRenew;
-}
-
 function contextTokens(message: TokenMessage) {
   if (message.role !== "assistant") return 0;
   const tokens = message.tokens;

@@ -1,7 +1,5 @@
 import type { Plugin, PluginInput, PluginModule } from "@opencode-ai/plugin";
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-import { assessPressure, renewalIsBetter, type PressureThresholds, type TokenMessage } from "./pressure.ts";
+import { assessPressure, type PressureThresholds, type TokenMessage } from "./pressure.ts";
 import { readSettings } from "./settings.ts";
 import {
   emptyArtifactHealth,
@@ -16,13 +14,11 @@ import {
   withLedgerLockAsync,
   type ArtifactHealth,
   type ContinuityLedger,
-  type DirtyCoverage,
   type LedgerSeed,
   type PressureSnapshot,
 } from "./state.ts";
 
 const id = "opencode-continuity";
-const execFileAsync = promisify(execFile);
 const MIN_AUTOMATION_INTERVAL_MS = 10 * 60_000;
 
 type Client = PluginInput["client"];
@@ -49,7 +45,10 @@ const server: Plugin = async ({ client, directory, worktree }) => {
       const ledger = await refreshLedger(client, { projectPath, projectKey: key, sessionID, lastEvent: event.type, reserved, thresholds: settings.pressure });
       if (!ledger || ledger.artifact.status !== "healthy" || !isDriveAgent(ledger.session.agent)) return;
 
-      if (renewalIsBetter(pressureAssessment(ledger), true, ledger.dirty.files.length)) {
+      // Automation runs only at idle so summarize/renew never interrupt a running turn.
+      if (event.type !== "session.idle") return;
+
+      if (ledger.pressure.level === "renew") {
         await renewFromLedger(client, ledger, "pressure-renewal");
         return;
       }
@@ -76,7 +75,7 @@ const server: Plugin = async ({ client, directory, worktree }) => {
     "experimental.compaction.autocontinue": async (input, output) => {
       const ledger = await refreshLedger(client, { projectPath, projectKey: key, sessionID: input.sessionID, lastEvent: "experimental.compaction.autocontinue", reserved, thresholds: settings.pressure });
       if (!ledger || ledger.artifact.status !== "healthy" || !isDriveAgent(ledger.session.agent || input.agent)) return;
-      if (!renewalIsBetter(pressureAssessment(ledger), true, ledger.dirty.files.length)) return;
+      if (ledger.pressure.level !== "renew") return;
 
       const renewed = await renewFromLedger(client, ledger, "post-compaction-renewal");
       if (renewed) output.enabled = false;
@@ -89,17 +88,19 @@ async function refreshLedger(
   input: { projectPath: string; projectKey: string; sessionID: string; lastEvent: string; reserved: number; thresholds: PressureThresholds },
 ) {
   try {
-    const [session, records, dirty] = await Promise.all([
+    const [session, records] = await Promise.all([
       readSession(client, input.sessionID),
       readMessages(client, input.sessionID),
-      dirtyCoverage(input.projectPath, input.sessionID, []),
     ]);
+    // Subagent (child) sessions never get ledgers; they would pollute related-session state.
+    if (typeof session.parentID === "string" && session.parentID !== "") return undefined;
+
     const limit = await readModelLimit(client, records);
     const messages = records.map((record) => record.info as TokenMessage);
     const sessionFiles = sessionDiffFiles(records);
     const cwd = latestCwd(records) || string(session.directory) || input.projectPath;
     const artifact = artifactHealth(input.projectPath, cwd, records);
-    const dirtyWithCoverage = await dirtyCoverage(input.projectPath, input.sessionID, sessionFiles);
+    const dirty = editedFiles(sessionFiles);
     const pressure = pressureSnapshot(messages, input.reserved, limit, input.thresholds);
     const agent = sessionAgent(records) || string(session.agent);
     const seed: LedgerSeed = {
@@ -107,7 +108,7 @@ async function refreshLedger(
       session: { id: input.sessionID, agent, title: string(session.title) || undefined },
       pressure,
       artifact,
-      dirty: dirtyWithCoverage ?? dirty,
+      dirty,
       lastEvent: input.lastEvent,
     };
 
@@ -222,21 +223,6 @@ function pressureSnapshot(messages: TokenMessage[], reserved: number, limit: num
   return { ...assessPressure({ messages, modelLimit: limit, reserved, thresholds }), updatedAt: Date.now() };
 }
 
-function pressureAssessment(ledger: ContinuityLedger) {
-  return {
-    tokens: ledger.pressure.tokens,
-    limit: ledger.pressure.limit,
-    reserved: ledger.pressure.reserved,
-    usable: ledger.pressure.usable,
-    percent: ledger.pressure.percent,
-    remaining: ledger.pressure.remaining,
-    level: ledger.pressure.level,
-    shouldCheckpoint: ledger.pressure.level !== "low",
-    shouldCompact: ledger.pressure.level === "compact" || ledger.pressure.level === "renew",
-    shouldRenew: ledger.pressure.level === "renew",
-  };
-}
-
 function artifactHealth(projectPath: string, cwd: string, records: MessageRecord[]): ArtifactHealth {
   const specFiles = Array.from(new Set(specFilesFromParts(projectPath, cwd, records))).sort();
   if (specFiles.length === 0) return emptyArtifactHealth();
@@ -263,42 +249,8 @@ function specFilesFromParts(projectPath: string, cwd: string, records: MessageRe
   return files;
 }
 
-async function dirtyCoverage(projectPath: string, _sessionID: string, sessionFiles: string[]): Promise<DirtyCoverage> {
-  const files = await gitDirtyFiles(projectPath);
-  const sessionSet = new Set(sessionFiles.map(cleanRelative));
-  const uncovered = files.filter((file) => !sessionSet.has(cleanRelative(file)));
-  const percent = files.length === 0 ? 100 : ((files.length - uncovered.length) / files.length) * 100;
-  return { files, sessionFiles, uncovered, percent, checkedAt: Date.now() };
-}
-
-async function gitDirtyFiles(projectPath: string) {
-  try {
-    const { stdout } = await execFileAsync(
-      "git",
-      ["-c", "core.fsmonitor=false", "-c", "core.untrackedCache=false", "-C", projectPath, "--no-optional-locks", "status", "--porcelain=v1", "-z"],
-      {
-        timeout: 1000,
-        maxBuffer: 512 * 1024,
-        env: {
-          HOME: process.env.HOME || "",
-          PATH: "/usr/bin:/bin",
-          LANG: process.env.LANG || "C.UTF-8",
-          LC_ALL: process.env.LC_ALL || "C.UTF-8",
-        },
-      },
-    );
-    const entries = stdout.split("\0").filter(Boolean);
-    const files: string[] = [];
-    for (let index = 0; index < entries.length; index += 1) {
-      const entry = entries[index];
-      const file = entry.slice(3);
-      if (file && !hasControlChars(file)) files.push(file);
-      if (entry[0] === "R" || entry[0] === "C") index += 1;
-    }
-    return files.sort();
-  } catch {
-    return [];
-  }
+function editedFiles(sessionFiles: string[]) {
+  return { files: Array.from(new Set(sessionFiles.map(cleanRelative))).sort() };
 }
 
 function sessionDiffFiles(records: MessageRecord[]) {
@@ -386,7 +338,7 @@ function sessionIDFromEvent(event: { type: string; properties: unknown }) {
 }
 
 function isRelevantEvent(type: string) {
-  return type === "message.updated" || type === "message.part.updated" || type === "session.diff" || type === "session.compacted" || type === "session.idle" || type === "session.status";
+  return type === "message.updated" || type === "session.diff" || type === "session.compacted" || type === "session.idle";
 }
 
 function isDriveAgent(agent: string) {
@@ -395,10 +347,6 @@ function isDriveAgent(agent: string) {
 
 function cleanRelative(value: string) {
   return value.replace(/^\.\//, "");
-}
-
-function hasControlChars(value: string) {
-  return /[\u0000-\u001f\u007f]/u.test(value);
 }
 
 async function log(client: Client, level: "info" | "warn" | "error", message: string) {

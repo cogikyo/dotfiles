@@ -229,16 +229,20 @@ Durable truth stays in `.spec/*.md` packets.
 
 The server only auto-summarizes or auto-renews Drive sessions.
 Automation requires a healthy `.spec` packet observed through structured session artifacts, such as read/file parts.
+Automation fires only on `session.idle`, so summarize and renew never interrupt a running turn; other events just refresh the ledger.
 If no healthy packet exists, the compaction hook still writes a ledger and appends recovery context, but automation will not renew.
 
 Renewal creates a fresh root Drive session.
 It does not use `session.fork` and does not set `parentID`.
-The renewal prompt names the spec packet(s), old session, dirty files, ledger key, and recovery checks.
+The renewal prompt names the spec packet(s), old session, edited files, ledger key, and recovery checks.
 It uses `promptAsync` when available and falls back to `prompt`.
 
 The TUI sidebar recomputes pressure from loaded session messages and shared continuity settings.
-WIP sync compares the server ledger's dirty files with the TUI session diff so stale or cross-session changes are visible without claiming files were opened or read.
-Related sessions are derived from project ledgers that share `.spec` packet paths, and sidebar rows navigate to those sessions.
+Related sessions are the primary sidebar signal.
+They are root sessions from project ledgers: shared-`.spec` sessions always, other sessions only while recently active, capped at four; subagent sessions never appear and never get ledgers.
+Lock rows show purposes with paths reduced to basenames and holder ids shortened.
+Sidebar rows navigate to their sessions.
+Edited files are recorded from session-local diffs for handoff context only; git status belongs to the statusline and normal verification workflow.
 Manual commands write the same ledger before compacting or renewing.
 
 Pressure uses both percent-of-window and absolute token thresholds from `opencode/continuity/settings.json`.

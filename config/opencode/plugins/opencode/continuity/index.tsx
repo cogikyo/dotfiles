@@ -23,7 +23,6 @@ import {
   type ActiveLock,
   type ArtifactHealth,
   type ContinuityLedger,
-  type DirtyCoverage,
   type LedgerSeed,
   type PressureSnapshot,
 } from "./state.ts";
@@ -37,7 +36,7 @@ type RelatedSession = {
   sessionID: string;
   title?: string;
   agent: string;
-  sharedSpecFiles: string[];
+  sharedSpec: boolean;
   updatedAt: number;
   level: ContinuityLevel;
 };
@@ -52,7 +51,6 @@ const STALE_SESSION_MS = 24 * 60 * 60_000;
 const ui = {
   pressure: icons.context,
   packet: icons.git.staged.trimEnd(),
-  wip: icons.git.modified.trimEnd(),
   lock: icons.error,
   renew: icons.effort.auto,
   related: icons.git.branch.trimEnd(),
@@ -65,9 +63,6 @@ function ContinuityPanel(props: { api: TuiPluginApi; sessionID: string; threshol
   const disposers = [
     props.api.event.on("message.updated", (event) => {
       if (event.properties.info.sessionID === props.sessionID) refresh();
-    }),
-    props.api.event.on("message.part.updated", (event) => {
-      if (event.properties.part.sessionID === props.sessionID) refresh();
     }),
     props.api.event.on("session.diff", (event) => {
       if (event.properties.sessionID === props.sessionID) refresh();
@@ -90,12 +85,11 @@ function ContinuityPanel(props: { api: TuiPluginApi; sessionID: string; threshol
   return (
     <SidebarSection api={props.api} title="Continuity" detail={<Summary api={props.api} state={state()} />} initiallyExpanded={false}>
       <box flexDirection="column" gap={0}>
-        <PressureNotice api={props.api} state={state()} thresholds={props.thresholds} />
+        <StatusRow api={props.api} state={state()} thresholds={props.thresholds} />
+        <RelatedSessions api={props.api} sessions={state().related} />
         <MissingPacketNotice api={props.api} state={state()} />
-        <WipNotice api={props.api} dirty={state().dirty} />
         <LockNotice api={props.api} locks={state().locks} />
         <RenewalNotice api={props.api} ledger={state().ledger} />
-        <RelatedSessions api={props.api} sessions={state().related} />
       </box>
     </SidebarSection>
   );
@@ -103,20 +97,11 @@ function ContinuityPanel(props: { api: TuiPluginApi; sessionID: string; threshol
 
 function Summary(props: { api: TuiPluginApi; state: ContinuityState }) {
   const c = colors(props.api.theme.current);
-  const level = healthLevel(props.state);
-  const color = levelColor(c, level);
 
   return (
     <box flexDirection="row" gap={0}>
-      <Chip icon={ui.pressure} value={formatTokens(props.state.pressure.tokens)} color={color} />
-      <Show when={props.state.artifact.specFiles.length > 0}>
-        <Chip icon={ui.packet} value={String(props.state.artifact.specFiles.length)} color={c.green} />
-      </Show>
-      <Show when={props.state.artifact.specFiles.length === 0}>
-        <Chip icon={ui.packet} value="!" color={c.yellow} />
-      </Show>
-      <Show when={props.state.dirty.uncovered.length > 0}>
-        <Chip icon={ui.wip} value={String(props.state.dirty.uncovered.length)} color={c.yellow} />
+      <Show when={props.state.pressure.level === "compact" || props.state.pressure.level === "renew"}>
+        <Chip icon={ui.pressure} value="!" color={levelColor(c, props.state.pressure.level)} />
       </Show>
       <Show when={props.state.locks.length > 0}>
         <Chip icon={ui.lock} value={String(props.state.locks.length)} color={c.orange} />
@@ -135,31 +120,27 @@ function Chip(props: { icon: string; value: string; color: ReturnType<typeof col
   return <text fg={props.color} wrapMode="none">{` ${props.icon}${props.value}`}</text>;
 }
 
-function PressureNotice(props: { api: TuiPluginApi; state: ContinuityState; thresholds: PressureThresholds }) {
+function StatusRow(props: { api: TuiPluginApi; state: ContinuityState; thresholds: PressureThresholds }) {
+  const c = colors(props.api.theme.current);
+  const level = () => props.state.pressure.level;
+  const active = () => level() === "compact" || level() === "renew";
+  const label = () => {
+    const base = `${ui.pressure} ${formatTokens(props.state.pressure.tokens)} · ${level()}`;
+    if (level() === "renew") return `${base} ≥ ${formatTokens(props.thresholds.renewTokens)}`;
+    if (level() === "compact") return `${base} ≥ ${formatTokens(props.thresholds.compactTokens)}`;
+    return base;
+  };
   return (
-    <Show when={props.state.pressure.level === "compact" || props.state.pressure.level === "renew"}>
-      <Notice
-        api={props.api}
-        icon={ui.pressure}
-        color={levelColor(colors(props.api.theme.current), props.state.pressure.level)}
-        text={pressureText(props.state, props.thresholds)}
-      />
-    </Show>
+    <text fg={active() ? levelColor(c, level()) : c.muted} wrapMode="none">
+      {label()}
+    </text>
   );
 }
 
 function MissingPacketNotice(props: { api: TuiPluginApi; state: ContinuityState }) {
   return (
-    <Show when={props.state.artifact.status !== "healthy" && props.state.pressure.level !== "low"}>
+    <Show when={props.state.artifact.status !== "healthy" && props.state.pressure.level === "renew"}>
       <Notice api={props.api} icon={ui.packet} color={colors(props.api.theme.current).yellow} text="spec packet missing; renewal disabled" />
-    </Show>
-  );
-}
-
-function WipNotice(props: { api: TuiPluginApi; dirty: DirtyCoverage }) {
-  return (
-    <Show when={props.dirty.uncovered.length > 0}>
-      <Notice api={props.api} icon={ui.wip} color={colors(props.api.theme.current).yellow} text={`wip elsewhere ${props.dirty.uncovered.length}`} />
     </Show>
   );
 }
@@ -168,7 +149,7 @@ function LockNotice(props: { api: TuiPluginApi; locks: ActiveLock[] }) {
   return (
     <Show when={props.locks.length > 0}>
       <For each={props.locks.slice(0, 2)}>
-        {(lock) => <Notice api={props.api} icon={ui.lock} color={colors(props.api.theme.current).orange} text={`${lock.purpose} held by ${lock.holder}`} />}
+        {(lock) => <Notice api={props.api} icon={ui.lock} color={colors(props.api.theme.current).orange} text={lockLabel(lock)} />}
       </For>
     </Show>
   );
@@ -178,10 +159,7 @@ function RenewalNotice(props: { api: TuiPluginApi; ledger?: ContinuityLedger }) 
   const color = () => props.ledger?.renewal?.error ? colors(props.api.theme.current).red : colors(props.api.theme.current).sky;
   return (
     <Show when={renewalActive(props.ledger)}>
-      <box flexDirection="row" gap={0} onMouseDown={() => navigateRenewal(props.api, props.ledger)}>
-        <text fg={color()} wrapMode="none">{`${ui.renew} `}</text>
-        <text fg={colors(props.api.theme.current).text} wrapMode="none">{renewalText(props.ledger)}</text>
-      </box>
+      <Notice api={props.api} icon={ui.renew} color={color()} text={renewalText(props.ledger)} onMouseDown={() => navigateRenewal(props.api, props.ledger)} />
     </Show>
   );
 }
@@ -189,15 +167,8 @@ function RenewalNotice(props: { api: TuiPluginApi; ledger?: ContinuityLedger }) 
 function RelatedSessions(props: { api: TuiPluginApi; sessions: RelatedSession[] }) {
   return (
     <Show when={props.sessions.length > 0}>
-      <For each={relatedGroups(props.sessions).slice(0, 2)}>
-        {(group) => (
-          <box flexDirection="column" gap={0}>
-            <Notice api={props.api} icon={ui.packet} color={colors(props.api.theme.current).magenta} text={`${shortSpec(group.specFile)} · ${group.sessions.length}`} />
-            <For each={group.sessions.slice(0, 2)}>
-              {(session) => <RelatedRow api={props.api} session={session} />}
-            </For>
-          </box>
-        )}
+      <For each={props.sessions}>
+        {(session) => <RelatedRow api={props.api} session={session} />}
       </For>
     </Show>
   );
@@ -208,28 +179,20 @@ function RelatedRow(props: { api: TuiPluginApi; session: RelatedSession }) {
   const color = levelColor(c, props.session.level);
   return (
     <box flexDirection="row" gap={0} onMouseDown={() => props.api.route.navigate("session", { sessionID: props.session.sessionID })}>
-      <text fg={color} wrapMode="none">{`  ${ui.related} `}</text>
-      <text fg={color} wrapMode="none">{sessionLabel(props.session)}</text>
+      <text fg={color} wrapMode="none">{`${props.session.sharedSpec ? ui.packet : ui.related} `}</text>
+      <text fg={c.text} wrapMode="none">{sessionLabel(props.session)}</text>
       <text fg={c.muted} wrapMode="none">{` ${ageLabel(props.session.updatedAt)}`}</text>
     </box>
   );
 }
 
-function Notice(props: { api: TuiPluginApi; icon: string; color: ReturnType<typeof colors>[keyof ReturnType<typeof colors>]; text: string }) {
+function Notice(props: { api: TuiPluginApi; icon: string; color: ReturnType<typeof colors>[keyof ReturnType<typeof colors>]; text: string; onMouseDown?: () => void }) {
   return (
-    <box flexDirection="row" gap={0}>
+    <box flexDirection="row" gap={0} onMouseDown={props.onMouseDown}>
       <text fg={props.color} wrapMode="none">{`${props.icon} `}</text>
       <text fg={colors(props.api.theme.current).text} wrapMode="none">{props.text}</text>
     </box>
   );
-}
-
-function healthLevel(state: ContinuityState): ContinuityLevel {
-  if (state.ledger?.renewal?.error) return "blocked";
-  if (state.pressure.level === "renew" && state.artifact.status !== "healthy") return "blocked";
-  if (state.pressure.level !== "low") return state.pressure.level;
-  if (state.dirty.uncovered.length > 0 || state.artifact.status !== "healthy") return "watch";
-  return "healthy";
 }
 
 function levelColor(c: ReturnType<typeof colors>, level: ContinuityLevel | PressureSnapshot["level"]) {
@@ -243,20 +206,13 @@ function levelColor(c: ReturnType<typeof colors>, level: ContinuityLevel | Press
   return c.green;
 }
 
-function pressureText(state: ContinuityState, thresholds: PressureThresholds) {
-  const tokens = formatTokens(state.pressure.tokens);
-  if (state.pressure.level === "renew") return `renewal pressure ${tokens}; threshold ${formatTokens(thresholds.renewTokens)}`;
-  if (state.pressure.level === "compact") return `compact pressure ${tokens}; threshold ${formatTokens(thresholds.compactTokens)}`;
-  return `checkpoint pressure ${tokens}; threshold ${formatTokens(thresholds.checkpointTokens)}`;
-}
-
 function renewalActive(ledger?: ContinuityLedger) {
   return !!(ledger?.renewal?.targetSessionID || ledger?.renewal?.error || ledger?.renewal?.attemptedAt);
 }
 
 function renewalChip(ledger?: ContinuityLedger) {
   if (ledger?.renewal?.error) return "!";
-  if (ledger?.renewal?.targetSessionID) return "1";
+  if (ledger?.renewal?.targetSessionID) return "";
   return "…";
 }
 
@@ -271,33 +227,20 @@ function navigateRenewal(api: TuiPluginApi, ledger?: ContinuityLedger) {
   if (target) api.route.navigate("session", { sessionID: target });
 }
 
-function relatedGroups(sessions: RelatedSession[]) {
-  const groups = new Map<string, RelatedSession[]>();
-  for (const session of sessions) {
-    for (const specFile of session.sharedSpecFiles) {
-      const group = groups.get(specFile) ?? [];
-      group.push(session);
-      groups.set(specFile, group);
-    }
-  }
-  return Array.from(groups.entries()).map(([specFile, sessions]) => ({ specFile, sessions: sessions.sort((left, right) => right.updatedAt - left.updatedAt) }));
-}
-
 function sessionLabel(session: RelatedSession) {
   const title = session.title?.trim();
   const base = title || `${titleCase(session.agent)} ${shortID(session.sessionID)}`;
   return base.length > 34 ? `${base.slice(0, 31)}…` : base;
 }
 
-function shortSpec(file: string) {
-  const clean = file.replace(/\.md$/u, "");
-  const index = clean.indexOf(".spec/");
-  if (index >= 0) return clean.slice(index);
-  return clean.length > 36 ? `…${clean.slice(-35)}` : clean;
-}
-
 function shortID(sessionID: string) {
   return sessionID.slice(0, 8);
+}
+
+// Lock purposes embed session ids and spec paths; show basenames and short ids only.
+function lockLabel(lock: ActiveLock) {
+  const purpose = lock.purpose.replace(/[^\s:|]*\//g, "").replace(/(ses_[a-zA-Z0-9]{8})[a-zA-Z0-9]*/g, "$1…");
+  return `${purpose} · ${shortID(lock.holder)}`;
 }
 
 function ageLabel(updatedAt: number) {
@@ -315,29 +258,33 @@ function titleCase(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+// Other root sessions in the project: shared-spec sessions always, otherwise only recently active ones.
+// Subagent (leaf) sessions never appear; their agent names carry a "/" and old leaf ledgers match that too.
 function relatedSessions(project: string, sessionID: string, specFiles: string[]): RelatedSession[] {
   const specs = new Set(specFiles);
-  if (specs.size === 0) return [];
   return readProjectLedgers(project)
     .filter((ledger) => ledger.session.id !== sessionID)
-    .map((ledger) => ({ ledger, sharedSpecFiles: ledger.artifact.specFiles.filter((file) => specs.has(file)) }))
-    .filter((item) => item.sharedSpecFiles.length > 0)
-    .map(({ ledger, sharedSpecFiles }) => ({
+    .filter((ledger) => !ledger.renewal?.completedAt)
+    .filter((ledger) => !ledger.session.agent.includes("/"))
+    .map((ledger) => ({ ledger, sharedSpec: ledger.artifact.specFiles.some((file) => specs.has(file)) }))
+    .filter(({ ledger, sharedSpec }) => sharedSpec || Date.now() - ledger.updatedAt < STALE_SESSION_MS)
+    .map(({ ledger, sharedSpec }) => ({
       sessionID: ledger.session.id,
       title: ledger.session.title,
       agent: ledger.session.agent,
-      sharedSpecFiles,
+      sharedSpec,
       updatedAt: ledger.updatedAt,
       level: relatedLevel(ledger),
     }))
-    .slice(0, 12);
+    .sort((left, right) => Number(right.sharedSpec) - Number(left.sharedSpec) || right.updatedAt - left.updatedAt)
+    .slice(0, 4);
 }
 
 function relatedLevel(ledger: ContinuityLedger): ContinuityLevel {
   if (Date.now() - ledger.updatedAt > STALE_SESSION_MS) return "stale";
   if (ledger.renewal?.error) return "blocked";
   if (ledger.pressure.level !== "low") return ledger.pressure.level;
-  if (ledger.dirty.uncovered.length > 0 || ledger.artifact.status !== "healthy") return "watch";
+  if (ledger.artifact.status !== "healthy") return "watch";
   return "healthy";
 }
 
@@ -354,7 +301,7 @@ function ledgerSeed(api: TuiPluginApi, sessionID: string, thresholds: PressureTh
   const messages = sessionMessages(api, sessionID) as ReadonlyArray<Message>;
   const meta = sessionMeta(api, sessionID);
   const pressure = pressureSnapshot(api, sessionID, messages, thresholds);
-  const dirty = dirtyCoverage(api, sessionID, ledger);
+  const dirty = editedFiles(api, sessionID);
   const artifact = ledger?.artifact ?? artifactHealth(api, messages);
 
   return {
@@ -403,13 +350,8 @@ function artifactHealth(api: TuiPluginApi, messages: ReadonlyArray<Message>): Ar
   return { status: "healthy", specFiles: existing, notes: ["durable .spec packet exists"], checkedAt: Date.now() };
 }
 
-function dirtyCoverage(api: TuiPluginApi, sessionID: string, ledger?: ContinuityLedger): DirtyCoverage {
-  const sessionFiles = api.state.session.diff(sessionID).map((file) => file.file).sort();
-  const files = Array.from(new Set([...(ledger?.dirty.files ?? []), ...sessionFiles])).sort();
-  const sessionSet = new Set(sessionFiles);
-  const uncovered = files.filter((file) => !sessionSet.has(file));
-  const percent = files.length === 0 ? 100 : ((files.length - uncovered.length) / files.length) * 100;
-  return { files, sessionFiles, uncovered, percent, checkedAt: Date.now() };
+function editedFiles(api: TuiPluginApi, sessionID: string) {
+  return { files: Array.from(new Set(api.state.session.diff(sessionID).map((file) => file.file))).sort() };
 }
 
 function writeCheckpoint(api: TuiPluginApi, sessionID: string, thresholds: PressureThresholds, reason: string) {
