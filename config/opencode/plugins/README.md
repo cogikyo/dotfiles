@@ -300,7 +300,7 @@ Otherwise it returns a capacity report instead of spawning a child: `{ capped, p
 Capacity and metadata notes are prepended to the child's output in brackets.
 
 Children inherit the parent session's deny rules and all `external_directory` rules.
-Review leaves also get an explicit read-only profile: read/search/web/LSP are allowed, while edit, bash, task, todowrite, and question are denied unless that leaf declares its own permission rules.
+Review leaves also get an explicit read-only profile: read/search/web/LSP are allowed, root-path grep is denied, and edit, bash, task, todowrite, and question are denied unless that leaf declares its own permission rules.
 When the parent session is Drive, inherited `ask` rules are converted to child-session denies so unattended review cannot surface a TUI approval prompt.
 `todowrite` and `task` are denied unless the agent's own permissions declare them, and every `experimental.primary_tools` tool is denied.
 

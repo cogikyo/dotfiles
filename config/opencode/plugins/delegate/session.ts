@@ -416,7 +416,10 @@ function defaultAgentRules(agentName: string, explicitRules: Rule[]) {
 
   const rules: Rule[] = [];
   for (const permission of ["read", "glob", "grep", "list", "webfetch", "websearch", "lsp"]) {
-    if (!hasPermissionRule(explicitRules, permission)) rules.push(allow(permission));
+    if (!hasPermissionRule(explicitRules, permission)) {
+      rules.push(allow(permission));
+      if (permission === "grep") rules.push({ permission: "grep", pattern: "/", action: "deny" });
+    }
   }
   for (const permission of ["edit", "bash", "task", "todowrite", "question"]) {
     if (!hasPermissionRule(explicitRules, permission)) rules.push(deny(permission));

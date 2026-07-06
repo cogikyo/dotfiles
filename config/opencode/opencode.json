@@ -84,6 +84,8 @@
       "~/**": "allow",
       "$HOME/**": "allow",
       "/home/cullyn/**": "allow",
+      "/usr": "allow",
+      "/usr/**": "allow",
       "/home/cullyn/.ssh/**": "deny",
       "/home/cullyn/.gnupg/**": "deny",
       "/home/cullyn/.password-store/**": "deny",
@@ -95,6 +97,10 @@
       "/tmp/**": "allow"
     },
     "doom_loop": "ask",
+    "grep": {
+      "*": "allow",
+      "/": "deny"
+    },
     "bash": {
       "*": "allow",
       "rg *": "allow",
