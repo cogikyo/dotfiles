@@ -35,6 +35,7 @@ permission:
     "scout/context": allow
     "scout/dirty": allow
     "scout/library": allow
+    "scout/session": allow
     "scout/web": allow
 
     "review/debug": allow
@@ -104,6 +105,7 @@ Plan dispatches scouts, reviewers, `scribe/spec`, and verifiers; build leaves an
 
 - `scout/context`: maps governing instructions, `AGENTS.md` scopes, conventions, and task-relevant files.
 - `scout/dirty`: reviews uncommitted and in-flight change state and cross-session interference.
+- `scout/session`: maps previous and active OpenCode sessions, continuity ledgers, owners, and recovery context.
 - `scout/library`: maps existing utils, stdlib, and language facilities that already solve the need.
 - `scout/web`: open-ended web reconnaissance; maps the option space, prior art, and ecosystem direction.
 - `build/worker`, `build/proto`, `build/canal`, `build/test`: implementation leaves; out of plan's scope.

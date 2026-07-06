@@ -35,6 +35,7 @@ permission:
     "scout/context": allow
     "scout/dirty": allow
     "scout/library": allow
+    "scout/session": allow
     "scout/web": allow
 
     "build/worker": allow
@@ -97,6 +98,7 @@ Scouts map and warn, reviewers judge, builders edit code, scribes write prose an
 
 - `scout/context`: maps governing instructions, `AGENTS.md` scopes, conventions, and task-relevant files.
 - `scout/dirty`: reviews uncommitted and in-flight change state and cross-session interference.
+- `scout/session`: maps previous and active OpenCode sessions, continuity ledgers, owners, and recovery context.
 - `scout/library`: maps existing utils, stdlib, and language facilities that already solve the need.
 - `scout/web`: open-ended web reconnaissance; maps the option space, prior art, and ecosystem direction.
 - `build/worker`: one bounded edit slice with verification.
