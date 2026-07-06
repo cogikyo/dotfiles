@@ -140,7 +140,7 @@ Synthesis and teaching stay on the primary session model.
 - Contested claims: rerun the same `verify/web` or `verify/source` brief as parallel copies across providers, then synthesize; agreement counts only when the copies cite independent evidence, and disagreement is a finding worth teaching.
 
 Effort names are model-specific; an invalid effort returns an error listing valid efforts, so re-pick from that list.
-Capacity reports arrive as `{capped, window, usedPercent, resetAt}` instead of a spawned child: re-pick the other provider at an equivalent tier, then downgrade effort.
+Provider allowlist errors mean the requested provider is missing from `delegate.json`; re-pick an allowed provider or record the missing policy.
 `task_id` resume can hard-fail on evicted child sessions; recover by re-briefing a fresh child from the durable brief.
 
 ## Recovery

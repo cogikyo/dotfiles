@@ -44,7 +44,7 @@ Its plugin ID is `opencode-continuity-ui`.
 Pressure thresholds are configured there because `opencode.json` rejects plugin-specific fields under `compaction`.
 
 `delegate/index.ts` is the server-side `task` tool replacement loaded by `opencode.json`.
-It routes each task call to a per-call `{model, effort}`, runs the work in a child session, and gates spawns on provider capacity.
+It routes each task call to a per-call `{model, effort}` and runs the work in a child session.
 Its plugin ID is `delegate-task`.
 
 `shared/` contains cross-plugin helpers.
@@ -300,12 +300,9 @@ That result has `state="error"` and its output carries `blocked: content_filter`
 There is no auto-retry and no taint persistence.
 The policy: never resume a refusal-tainted child; reword the brief first, switch provider as a last resort.
 
-`config/opencode/delegate.json` is the capacity policy: per-window thresholds, `maxWaitMinutes`, `staleCacheMinutes`, and the provider allowlist.
+`config/opencode/delegate.json` is the provider allowlist for delegation.
 Delegating to a provider missing from `providers` errors; extend `delegate.json` deliberately.
-Capacity reads the usage-sidebar cache under `${XDG_CACHE_HOME:-~/.cache}/opencode/usage-sidebar/`; a missing, stale, or invalid cache proceeds un-gated with a note.
-When every capped window resets within `maxWaitMinutes`, the tool waits abortably for the latest reset and proceeds with a note.
-Otherwise it returns a capacity report instead of spawning a child: `{ capped, providerID, window, usedPercent, threshold, resetAt?, maxWaitMinutes, windows }`.
-Capacity and metadata notes are prepended to the child's output in brackets.
+Metadata notes are prepended to the child's output in brackets.
 
 Children inherit the parent session's deny rules and all `external_directory` rules.
 Review leaves also get an explicit read-only profile: read/search/web/LSP are allowed, root-path grep is denied, and edit, bash, task, todowrite, and question are denied unless that leaf declares its own permission rules.

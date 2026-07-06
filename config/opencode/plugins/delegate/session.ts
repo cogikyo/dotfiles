@@ -72,7 +72,6 @@ export async function runChildTask(input: {
   ctx: ToolContext;
   args: TaskArgs;
   prepared: PreparedTask;
-  capacityNotes: string[];
 }) {
   if (input.args.task_id && input.prepared.driveParent) {
     throw new Error(
@@ -85,7 +84,7 @@ export async function runChildTask(input: {
     : await createChild(input.client, input.ctx, input.args, input.prepared);
 
   const metadata = { sessionId: child.id };
-  const notes = [...input.capacityNotes];
+  const notes: string[] = [];
 
   try {
     await updateToolMetadata(input.ctx, { metadata });
@@ -129,7 +128,7 @@ export async function runChildTask(input: {
       throw new Error(`delegate child failed: ${errorMessage(info.error)}`);
     }
 
-    const text = withCapacityNotes(lastTextPart(response), notes);
+    const text = withNotes(lastTextPart(response), notes);
     return {
       title: input.args.description,
       metadata,
@@ -138,14 +137,6 @@ export async function runChildTask(input: {
   } finally {
     input.ctx.abort.removeEventListener("abort", abort);
   }
-}
-
-export function renderCapacityReport(args: TaskArgs, report: unknown) {
-  return {
-    title: args.description,
-    metadata: { capacity: report },
-    output: JSON.stringify(report, null, 2),
-  };
 }
 
 async function updateToolMetadata(
@@ -479,7 +470,7 @@ function lastTextPart(value: unknown) {
   return "";
 }
 
-function withCapacityNotes(text: string, notes: string[]) {
+function withNotes(text: string, notes: string[]) {
   if (!notes.length) return text;
   return [`[${notes.join("; ")}]`, text].filter(Boolean).join("\n\n");
 }
