@@ -187,7 +187,6 @@ Sessions are cattle; `.spec/` docs and the git tree are the pedigree.
 - `scribe/commit` commits only the approved thread, scope, and files.
 - The user may edit files concurrently; include their edits when related.
 - Extremely unrelated dirty files likely belong to another session; leave them alone unless the user asks for a clean tree.
-- `.learn/` study records reported by learn sessions are sweep-friendly when they belong to the current thread's scope; otherwise leave them and surface the paths.
 
 ## Report shape
 
