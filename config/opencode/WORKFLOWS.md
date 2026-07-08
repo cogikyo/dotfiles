@@ -7,11 +7,12 @@ Frontmatter permissions in each mode file are the enforcement membrane; prose he
 ## Sources of truth
 
 - `WORKFLOWS.md`: how to orchestrate leaves and sessions.
-- `MODELS.md`: model, effort, council, and failure-handling policy.
+- `MODELS.md`: adaptive model routing, usage-aware effort, council, and failure-handling policy.
 - Mode files: persona, permissions, write boundaries, and terminal products.
 - Leaf agent files: exact leaf behavior; the catalog below is a routing summary only.
 
 Read this doc before the first dispatch of a session, and `MODELS.md` before routing leaves.
+Report recurring model strengths or failures back to the user so `MODELS.md` can evolve from observed performance.
 
 ## One hop only
 
@@ -66,6 +67,7 @@ Include objective and scope, target files or search bounds, governing context fi
 Name the review axis for every reviewer and the claim under test for every verifier; otherwise they waste context or check the wrong thing.
 Keep briefs small; include only context that changes the task.
 Leaves inherit the session's permission envelope.
+Model routing is adaptive per `MODELS.md`; leaf files define behavior, while primaries choose models per task and usage state.
 
 ## Workflow notation
 

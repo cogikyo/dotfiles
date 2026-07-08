@@ -1,7 +1,6 @@
 ---
 description: "Second-opinion verification via Grok: checks claims against live community signal on X, maintainer chatter, and the current web; supplements verify/web with an alternative provider lens; cited URLs; read-only."
 mode: subagent
-model: xai/grok-4.5
 permission:
   edit: deny
 color: success

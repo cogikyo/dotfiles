@@ -1,7 +1,6 @@
 ---
 description: "Open-ended web reconnaissance: maps the option space, prior art, ecosystem state, and current direction for a need; breadth over verdicts; cited URLs; read-only."
 mode: subagent
-model: opencode-go/glm-5.2
 permission:
   edit: deny
 color: info
