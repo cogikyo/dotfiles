@@ -11,7 +11,7 @@ Orchestration and deep review deserve the strongest models; leaves get the cheap
 
 The `task` tool accepts `model` as `provider/model-id` and `effort` per call.
 Name both on every routed leaf unless the parent intentionally lets the session default apply.
-Pass `effort` only for models with effort variants; xai models have none.
+Pass `effort` only for models with effort variants; `xai/grok-4.5` defaults to high reasoning, with `low` and `medium` as opt-down overrides.
 
 ## Usage and cost awareness
 
@@ -33,22 +33,23 @@ Cost and limit state are routing inputs, but quality gates still apply on final 
 | Deep review (debug, security, critic) and acceptance verification                 | `openai/gpt-5.5-fast`                        | xhigh    |
 | HTML/CSS, visual design decisions, and UX/UI client surface                       | `anthropic/claude-opus-4-8`                  | high     |
 | Concise spec writing, tight brief only                                            | `anthropic` fable                            | medium   |
-| Dissent probes and council copies                                                 | `opencode-go/glm-5.2`, `xai/grok-4.5`        | none     |
+| Dissent probes and council copies                                                 | `opencode-go/glm-5.2`                        | none     |
+| Dissent probes and council copies                                                 | `xai/grok-4.5`                               | high     |
 | GPT reserve when fast or priority usage is constrained                            | `openai/gpt-5.5`                             | low-high |
 
 ## Model ledger
 
 Rate and judge here as evidence lands; verdicts are provisional and should say how they could be wrong.
 
-| Model                       | Verdict                                                                                | Strengths                                                                                                                                                           | Failure modes                                                                    | Last judged |
-| --------------------------- | -------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- | ----------- |
-| `anthropic` fable           | Orchestration seat, almost exclusively; maybe concise spec/md writing.                 | Planning, judgment, synthesis, restrained Markdown; other models over-write prose.                                                                                  | Expensive; wasted on relay leaves; availability drama.                           | 2026-07-08  |
-| `anthropic/claude-opus-4-8` | HTML/CSS, visual design decisions, and UX/UI client surface.                           | Visual, UX, and product-shape reasoning.                                                                                                                            | Anecdotes of plan regressions vs fable; scarce usage can bottleneck.             | 2026-07-08  |
-| `openai/gpt-5.5-fast`       | Normal GPT leaf workhorse.                                                             | Relays, summaries, scouts, simple commits, build slices, verify runs, evidence gathering, TS/business logic, frontend state, data flow, integration, and logistics. | Premium $/token; keep off final review and acceptance when usage is tight.       | 2026-07-08  |
-| `openai/gpt-5.5`            | Reserve GPT fallback when fast or priority usage is constrained.                       | Same family fallback when usage limits or cost state argue against the fast lane.                                                                                   | Slower; do not use just because it feels more serious.                           | 2026-07-08  |
-| `openai/gpt-5.4-mini-fast`  | Rarely needed; `gpt-5.5` low covers its seats with better tool judgment.               | Cheap bulk fanout when cost truly dominates.                                                                                                                        | Weaker judgment shows up exactly when a leaf must decide something.              | 2026-07-08  |
-| `opencode-go/glm-5.2`       | Independent provider lens and cheap implementer candidate.                             | Different failure modes; useful when GPT or Opus usage is constrained.                                                                                              | Not a selector; agreement without independent evidence is noise.                 | 2026-07-08  |
-| `xai/grok-4.5`              | Serious TBD candidate for web research, build/tool-use workhorse, and second opinions. | Live X/community signal; independent provider lens; may earn broader routing seats.                                                                                 | `verify/x` may be unreliable; no effort variants; route where it earns the seat. | 2026-07-08  |
+| Model                       | Verdict                                                                                | Strengths                                                                                                        | Failure modes                                                              | Last judged |
+| --------------------------- | -------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------- | ----------- |
+| `anthropic` fable           | Orchestration seat, almost exclusively; maybe concise spec/md writing.                 | Planning, judgment, synthesis, restrained Markdown; other models over-write prose.                               | Expensive; wasted on relay leaves; availability drama.                     | 2026-07-08  |
+| `anthropic/claude-opus-4-8` | HTML/CSS, visual design decisions, and UX/UI client surface.                           | Visual, UX, and product-shape reasoning.                                                                         | Anecdotes of plan regressions vs fable; scarce usage can bottleneck.       | 2026-07-08  |
+| `openai/gpt-5.5-fast`       | Normal GPT leaf workhorse.                                                             | Relays, summaries, scouts, simple commits, build slices, verify runs, evidence gathering, all other general work | Premium $/token; keep off final review and acceptance when usage is tight. | 2026-07-08  |
+| `openai/gpt-5.5`            | Reserve GPT fallback when fast or priority usage is constrained.                       | Same family fallback when usage limits or cost state argue against the fast lane.                                | Slower; do not use just because it feels more serious.                     | 2026-07-08  |
+| `openai/gpt-5.4-mini-fast`  | Rarely needed; `gpt-5.5` low covers its seats with better tool judgment.               | Cheap bulk fanout when cost truly dominates.                                                                     | Weaker judgment shows up exactly when a leaf must decide something.        | 2026-07-08  |
+| `opencode-go/glm-5.2`       | Independent provider lens and cheap implementer candidate.                             | Different failure modes; useful when GPT or Opus usage is constrained.                                           | Not a selector; agreement without independent evidence is noise.           | 2026-07-08  |
+| `xai/grok-4.5`              | Serious TBD candidate for web research, build/tool-use workhorse, and second opinions. | Live X/community signal; independent provider lens; default to high resoning                                     | 2026-07-08                                                                 |
 
 ## Second opinions and council
 
