@@ -79,6 +79,13 @@
           }
         }
       }
+    },
+    "xai": {
+      "models": {
+        "grok-4.5": {
+          "name": "Grok 4.5"
+        }
+      }
     }
   },
   "permission": {
