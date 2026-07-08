@@ -53,11 +53,18 @@ function cachedUsage(
 
   if (cache.usage?.windows.length) {
     const age = cache.fetchedAt ? Date.now() - cache.fetchedAt : 0;
-    const note = cache.error
-      ? cache.error
-      : age >= adapter.poll.staleAfterMS
-        ? `stale ${formatAge(age)}`
-        : undefined;
+    if (cache.error) {
+      return {
+        ...cache.usage,
+        id,
+        label,
+        placeholders,
+        note: cache.error,
+        noteKind: "error",
+      };
+    }
+    const note =
+      age >= adapter.poll.staleAfterMS ? `stale ${formatAge(age)}` : undefined;
     return { ...cache.usage, id, label, placeholders, note };
   }
 
@@ -68,7 +75,14 @@ function cachedUsage(
   }
 
   if (cache.error) {
-    return { id, label, placeholders, windows: [], note: cache.error };
+    return {
+      id,
+      label,
+      placeholders,
+      windows: [],
+      note: cache.error,
+      noteKind: "error",
+    };
   }
 
   return pendingUsage(adapter);
@@ -117,9 +131,10 @@ function shouldFetch(adapter: ProviderAdapter, cache: CachedProviderUsage) {
   return now - cache.fetchedAt >= adapter.poll.minFetchIntervalMS;
 }
 
-async function fetchAndCache(adapter: ProviderAdapter) {
+async function fetchAndCache(adapter: ProviderAdapter, force = false) {
   const latest = await readProviderCache(adapter.id);
-  if (!shouldFetch(adapter, latest)) return cachedUsage(adapter, latest);
+  // Force (manual click) bypasses minFetchIntervalMS and backoffUntil; user intent is explicit.
+  if (!force && !shouldFetch(adapter, latest)) return cachedUsage(adapter, latest);
 
   let usage: ProviderUsage;
   try {
@@ -161,12 +176,24 @@ async function loadCached(adapter: ProviderAdapter, allowNetwork: boolean) {
   return cachedUsage(adapter, await readProviderCache(adapter.id));
 }
 
+async function manualRefresh(adapter: ProviderAdapter) {
+  const result = await withProviderLock(adapter.id, () =>
+    fetchAndCache(adapter, true),
+  );
+  if (result) return result;
+
+  return cachedUsage(adapter, await readProviderCache(adapter.id));
+}
+
 function UsagePanel(props: { api: TuiPluginApi; sessionID: string }) {
   const [providers, setProviders] = createSignal<ProviderUsage[]>(
     adapters.map(pendingUsage),
   );
   const [activeProviderID, setActiveProviderID] = createSignal(
     sessionProviderID(props.api, props.sessionID),
+  );
+  const [refreshingProviderIDs, setRefreshingProviderIDs] = createSignal(
+    new Set<string>(),
   );
 
   const refresh = (allowNetwork: boolean) => {
@@ -176,6 +203,7 @@ function UsagePanel(props: { api: TuiPluginApi; sessionID: string }) {
         loadCached(adapter, allowNetwork).catch(() => ({
           ...pendingUsage(adapter),
           note: "unavailable",
+          noteKind: "error" as const,
         })),
       ),
     ).then((next) => setProviders(next));
@@ -186,6 +214,36 @@ function UsagePanel(props: { api: TuiPluginApi; sessionID: string }) {
     setActiveProviderID(sessionProviderID(props.api, props.sessionID));
     if (eventRefreshTimer) clearTimeout(eventRefreshTimer);
     eventRefreshTimer = setTimeout(() => refresh(true), EVENT_REFRESH_DELAY_MS);
+  };
+
+  const markRefreshing = (providerID: string, active: boolean) => {
+    setRefreshingProviderIDs((current) => {
+      const next = new Set(current);
+      if (active) next.add(providerID);
+      else next.delete(providerID);
+      return next;
+    });
+  };
+
+  const refreshProvider = (providerID: string) => {
+    const adapter = adapters.find((item) => item.id === providerID);
+    if (!adapter) return;
+    if (refreshingProviderIDs().has(adapter.id)) return;
+    markRefreshing(adapter.id, true);
+    void manualRefresh(adapter)
+      .catch(() => ({
+        ...pendingUsage(adapter),
+        note: "unavailable",
+        noteKind: "error" as const,
+      }))
+      .then((next) => {
+        setProviders((current) =>
+          current.map((provider) =>
+            provider.id === adapter.id ? next : provider,
+          ),
+        );
+      })
+      .finally(() => markRefreshing(adapter.id, false));
   };
 
   refresh(true);
@@ -224,6 +282,8 @@ function UsagePanel(props: { api: TuiPluginApi; sessionID: string }) {
       api={props.api}
       providers={providers()}
       activeProviderID={activeProviderID()}
+      refreshingProviderIDs={refreshingProviderIDs()}
+      onRefresh={refreshProvider}
     />
   );
 }

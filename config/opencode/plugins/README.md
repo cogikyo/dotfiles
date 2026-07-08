@@ -91,7 +91,7 @@ Each provider's note renders inline beside its label as a one or two word marker
 A `ProviderUsage.noteKind` of `info` or `warn` marks a windowless note as a benign state, so it stays cached and visible instead of collapsing to pending or a red error.
 Notes without `noteKind` keep the legacy red error path for OpenAI and Claude, so their `no auth`, `<status>`, and `no windows` markers stay red.
 A provider with zero windows still renders placeholder rows with muted `--` percents, an empty bar, and `--` reset columns so column alignment matches healthy providers.
-Placeholder labels are per provider: OpenAI and Claude use `H` and `W`, OpenCode uses `H`, `W`, and `M`, while xAI uses only `W`; each adapter declares its `placeholders` and the UI stamps them onto `ProviderUsage`.
+Placeholder labels are per provider: OpenAI and Claude use `H` and `W`, OpenCode uses `H`, `W`, and `M`, while xAI uses `W` and `M`; each adapter declares its `placeholders` and the UI stamps them onto `ProviderUsage`.
 A window may carry a reset period with an unknown `usedPercent`, which renders as a muted `--` percent and empty bar but keeps the real duration and exact reset columns.
 Provider responses are cached per provider under `${XDG_CACHE_HOME:-~/.cache}/opencode/usage-sidebar/`.
 Provider lock files live under `${XDG_RUNTIME_DIR:-/tmp/opencode-${uid}}/opencode/` so multiple OpenCode sessions share one cache without stampeding private usage endpoints.
@@ -125,7 +125,7 @@ The UI displays only `H` for the five-hour window and `W` for the all-models wee
 Model-specific weekly windows such as Sonnet or Opus are intentionally omitted.
 
 This endpoint and shape are private Anthropic implementation details surfaced by Claude Code OAuth flows.
-Claude uses a one-minute minimum fetch interval, a two-minute transient-error backoff, and a fifteen-minute 429 backoff because this usage endpoint is much tighter than model inference.
+Claude uses a two-minute minimum fetch interval, a five-minute transient-error backoff, and a sixty-minute 429 backoff because this usage endpoint is much tighter than model inference.
 Failures should degrade to a coarse `unavailable`, `<status>`, `429`, or `no windows` marker rather than exposing local paths or token parsing details.
 
 ### xAI Usage Adapter
@@ -140,13 +140,14 @@ That file is an object keyed by `<issuer>::<client_id>`; the adapter picks the e
 It reads `key` and `expires_at` only; it never reads or refreshes `refresh_token`.
 If the file, entry, or key is missing it returns no windows with a `no auth` warn note; an expired `expires_at` returns `expired` without any network call.
 
-When the token is fresh it calls `GET https://cli-chat-proxy.grok.com/v1/billing?format=credits` with `Authorization: Bearer <key>`, `X-XAI-Token-Auth: xai-grok-cli`, `Accept: application/json`, and `User-Agent: opencode-usage`.
-It reads the current period reset (`currentPeriod.end`), optional subscription tier fields, `creditUsagePercent`, `monthlyLimit`, `includedUsed`, `totalUsed`, `onDemandCap`, and `onDemandUsed` when present.
-A real percent (explicit `creditUsagePercent`, an included used/limit ratio, or an on-demand used/cap ratio with `cap > 0`) becomes a weekly `W` window with `resetAt` from `currentPeriod.end`.
+When the token is fresh it polls two billing shapes in parallel with `Authorization: Bearer <key>`, `X-XAI-Token-Auth: xai-grok-cli`, `Accept: application/json`, and `User-Agent: opencode-usage`:
 
-This unified subscription returns only config, current period, on-demand cap/used of 0, and tier, with no consumption percent.
-In that expected case the adapter returns a single weekly `W` window with the real `currentPeriod.end` reset but no `usedPercent`, so the row shows a muted `--` cell instead of faking 0%.
-The true burn percent likely appears only in live inference SSE `rate_limits.updated`, which is intentionally not tapped yet.
+- `GET https://cli-chat-proxy.grok.com/v1/billing?format=usage` for the monthly credit pool (`used` / `monthlyLimit`, month `billingPeriodEnd`).
+- `GET https://cli-chat-proxy.grok.com/v1/billing?format=credits` for the unified weekly period (`currentPeriod.end`) and optional `creditUsagePercent`.
+
+A real monthly ratio becomes an `M` window; a real weekly `creditUsagePercent` becomes a `W` window.
+When credits exposes only the weekly reset, `W` still renders with a muted `--` percent rather than inventing a weekly burn from monthly used.
+Placeholder labels are `W` and `M` so a missing fetch still keeps column alignment.
 xAI uses a five-minute minimum fetch interval, a five-minute transient-error backoff, and a fifteen-minute 429 backoff.
 
 ### opencode-go Usage Adapter

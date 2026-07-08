@@ -8,14 +8,17 @@ import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
 
 // xAI usage reads only the Grok CLI auth at ~/.grok/auth.json, never OpenCode's xai OAuth.
 // OpenCode's refreshed xai token got 401 on this billing endpoint; the Grok CLI token works.
-// This adapter surfaces the current-period reset, and a burn percent only when the billing
-// payload exposes one. A true weekly burn percent otherwise appears only in live inference SSE
-// `rate_limits.updated`, which is deliberately not tapped here, so the weekly row stays unknown.
+//
+// Two billing shapes share one host path and split by query:
+// - `?format=usage` (and bare `/v1/billing`): monthly credit pool `used` / `monthlyLimit` + month end.
+// - `?format=credits`: unified weekly period reset, optional `creditUsagePercent`, no stable burn basis.
+// Both are polled so the sidebar can show monthly % and weekly reset without inventing a weekly %.
 const id = "xai";
 const label = "xAI";
 const ISSUER = "https://auth.x.ai";
-const BILLING_URL = "https://cli-chat-proxy.grok.com/v1/billing?format=credits";
-// Bound the billing fetch so a hung endpoint cannot hold the shared usage provider lock indefinitely.
+const BILLING_USAGE_URL = "https://cli-chat-proxy.grok.com/v1/billing?format=usage";
+const BILLING_CREDITS_URL = "https://cli-chat-proxy.grok.com/v1/billing?format=credits";
+// Bound each billing fetch so a hung endpoint cannot hold the shared usage provider lock indefinitely.
 const FETCH_TIMEOUT_MS = 15_000;
 const GROK_REFRESH_TIMEOUT_MS = 30_000;
 const execFileAsync = promisify(execFile);
@@ -39,10 +42,13 @@ type BillingConfig = {
     start?: unknown;
     end?: unknown;
   };
+  billingPeriodEnd?: unknown;
   subscriptionTier?: unknown;
   isUnifiedBillingUser?: unknown;
   creditUsagePercent?: unknown;
   monthlyLimit?: unknown;
+  // Live usage format uses bare `used`; older/history rows use included/total.
+  used?: unknown;
   includedUsed?: unknown;
   totalUsed?: unknown;
   onDemandCap?: unknown;
@@ -137,10 +143,18 @@ function unifiedBilling(payload: BillingPayload) {
   return (sub as { isUnifiedBillingUser?: unknown }).isUnifiedBillingUser === true;
 }
 
-function interpret(payload: BillingPayload): ProviderUsage {
+function weeklyReset(payload: BillingPayload) {
   const period = payload.config?.currentPeriod ?? payload.currentPeriod ?? {};
-  const end = str(period.end);
+  return str(period.end) ?? str(pick(payload, "billingPeriodEnd"));
+}
 
+function monthlyReset(payload: BillingPayload) {
+  return str(pick(payload, "billingPeriodEnd"));
+}
+
+// Credits shape: weekly period, optional creditUsagePercent. Never invent a weekly % from monthly used.
+function windowsFromCredits(payload: BillingPayload): UsageWindow[] {
+  const end = weeklyReset(payload);
   const monthlyLimit = num(pick(payload, "monthlyLimit"));
   const cap = num(pick(payload, "onDemandCap"));
   const hasPositiveLimit = (monthlyLimit ?? 0) > 0 || (cap ?? 0) > 0;
@@ -152,25 +166,95 @@ function interpret(payload: BillingPayload): ProviderUsage {
     creditPercent = undefined;
   }
   if (creditPercent !== undefined) {
-    return usage([{ label: "W", usedPercent: creditPercent, resetAt: end }]);
+    return [{ label: "W", usedPercent: creditPercent, resetAt: end }];
   }
 
-  const includedPercent = ratioPercent(
-    num(pick(payload, "totalUsed")) ?? num(pick(payload, "includedUsed")),
-    monthlyLimit,
-  );
-  if (includedPercent !== undefined) {
-    return usage([{ label: "W", usedPercent: includedPercent, resetAt: end }]);
+  // Weekly reset alone is still useful; percent stays unknown rather than faking 0%.
+  if (end) return [{ label: "W", resetAt: end }];
+  return [];
+}
+
+// Usage shape: monthly credit pool. Prefer live `used`, then total/included history aliases.
+function windowsFromUsage(payload: BillingPayload): UsageWindow[] {
+  const end = monthlyReset(payload);
+  const monthlyLimit = num(pick(payload, "monthlyLimit"));
+  const used =
+    num(pick(payload, "used")) ?? num(pick(payload, "totalUsed")) ?? num(pick(payload, "includedUsed"));
+  const monthlyPercent = ratioPercent(used, monthlyLimit);
+  if (monthlyPercent !== undefined) {
+    return [{ label: "M", usedPercent: monthlyPercent, resetAt: end }];
   }
 
+  const cap = num(pick(payload, "onDemandCap"));
   const onDemandPercent = ratioPercent(num(pick(payload, "onDemandUsed")), cap);
   if (cap !== undefined && cap > 0 && onDemandPercent !== undefined) {
-    return usage([{ label: "W", usedPercent: onDemandPercent, resetAt: end }]);
+    return [{ label: "M", usedPercent: onDemandPercent, resetAt: end }];
   }
+  return [];
+}
 
-  // No numeric signal (expected on this unified subscription): render one weekly row with a
-  // real reset but an unknown percent, so the UI shows a muted "--" cell instead of faking 0%.
-  return usage([{ label: "W", resetAt: end }]);
+function mergeWindows(parts: UsageWindow[][]): UsageWindow[] {
+  const byLabel = new Map<string, UsageWindow>();
+  // Prefer first non-empty percent per label; later rows only fill missing reset/percent.
+  for (const windows of parts) {
+    for (const window of windows) {
+      const prev = byLabel.get(window.label);
+      if (!prev) {
+        byLabel.set(window.label, { ...window });
+        continue;
+      }
+      if (prev.usedPercent === undefined && window.usedPercent !== undefined) {
+        prev.usedPercent = window.usedPercent;
+      }
+      if (!prev.resetAt && window.resetAt) prev.resetAt = window.resetAt;
+    }
+  }
+  // Stable sidebar order: weekly before monthly.
+  const order = ["W", "M"];
+  const ordered: UsageWindow[] = [];
+  for (const label of order) {
+    const window = byLabel.get(label);
+    if (window) ordered.push(window);
+  }
+  for (const [label, window] of byLabel) {
+    if (!order.includes(label)) ordered.push(window);
+  }
+  return ordered;
+}
+
+type FetchResult =
+  | { ok: true; payload: BillingPayload }
+  | { ok: false; status?: number; kind: "network" | "http" };
+
+async function fetchBilling(url: string, token: string): Promise<FetchResult> {
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        "X-XAI-Token-Auth": "xai-grok-cli",
+        Accept: "application/json",
+        "User-Agent": "opencode-usage",
+      },
+      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+    });
+  } catch {
+    return { ok: false, kind: "network" };
+  }
+  if (!response.ok) return { ok: false, kind: "http", status: response.status };
+  return { ok: true, payload: (await response.json()) as BillingPayload };
+}
+
+function statusNote(results: FetchResult[]): ProviderUsage | undefined {
+  if (results.some((result) => result.ok)) return undefined;
+  if (results.some((result) => result.kind === "http" && result.status === 429)) {
+    return usage([], "429", "error");
+  }
+  const http = results.find((result) => result.kind === "http" && result.status !== undefined);
+  if (http && http.kind === "http" && http.status !== undefined) {
+    return usage([], `${http.status}`, "error");
+  }
+  return usage([], "unavailable", "error");
 }
 
 async function load(): Promise<ProviderUsage> {
@@ -186,32 +270,27 @@ async function load(): Promise<ProviderUsage> {
   if (!entry?.key) return usage([], "no auth", "warn");
   if (isExpired(entry.expires_at)) return usage([], "expired", "warn");
 
-  let response: Response;
-  try {
-    response = await fetch(BILLING_URL, {
-      headers: {
-        Authorization: `Bearer ${entry.key}`,
-        "X-XAI-Token-Auth": "xai-grok-cli",
-        Accept: "application/json",
-        "User-Agent": "opencode-usage",
-      },
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-    });
-  } catch {
-    // Timeout or network failure: degrade coarsely without leaking the token or endpoint details.
-    return usage([], "unavailable", "error");
-  }
-  if (response.status === 429) return usage([], "429", "error");
-  if (!response.ok) return usage([], `${response.status}`, "error");
+  const token = entry.key;
+  const [usageResult, creditsResult] = await Promise.all([
+    fetchBilling(BILLING_USAGE_URL, token),
+    fetchBilling(BILLING_CREDITS_URL, token),
+  ]);
 
-  const payload = (await response.json()) as BillingPayload;
-  return interpret(payload);
+  const failed = statusNote([usageResult, creditsResult]);
+  if (failed) return failed;
+
+  const windows = mergeWindows([
+    usageResult.ok ? windowsFromUsage(usageResult.payload) : [],
+    creditsResult.ok ? windowsFromCredits(creditsResult.payload) : [],
+  ]);
+  if (windows.length === 0) return usage([], "no usage", "warn");
+  return usage(windows);
 }
 
 export const xaiUsage: ProviderAdapter = {
   id,
   label,
-  placeholders: ["W"],
+  placeholders: ["W", "M"],
   poll: {
     minFetchIntervalMS: 5 * 60_000,
     errorBackoffMS: 5 * 60_000,

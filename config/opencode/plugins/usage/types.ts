@@ -20,8 +20,8 @@ export type ProviderUsage = {
   label: string;
   windows: UsageWindow[];
   note?: string;
-  // noteKind classifies a windowless note: "info"/"warn" are benign states the
-  // sidebar keeps visible, while "error" (or undefined) keeps the legacy red error path.
+  // noteKind colors the inline note: "info" muted, "warn" amber, "error" red.
+  // Undefined keeps the legacy split — muted when windows exist (stale), red when windowless.
   noteKind?: NoteKind;
   // Expected window labels for placeholder rows when this provider has no windows;
   // stamped from the adapter so the UI shows the right shape per provider.
@@ -32,7 +32,7 @@ export type ProviderAdapter = {
   id: string;
   label: string;
   // Window labels rendered as placeholder rows when a fetch yields no windows.
-  // Defaults to ["H", "W"]; xAI overrides to ["W"] since it has no hourly window.
+  // Defaults to ["H", "W"]; xAI overrides to ["W", "M"] since it has no hourly window.
   placeholders?: string[];
   poll: {
     minFetchIntervalMS: number;

@@ -6,12 +6,16 @@ import { usageColor } from "../shared/colors.ts";
 import type { ProviderUsage } from "./types.ts";
 import type { TuiThemeCurrent } from "@opencode-ai/plugin/tui";
 
-// The inline note beside the label takes its color from state: a stale note on live windows
-// and benign info notes stay muted, warn is amber, and a windowless hard error stays red.
+// Note color follows noteKind: info muted, warn amber, error red.
+// Undefined noteKind is the legacy hard-error path (e.g. recordError "429") and stays red.
+// Stale age overlays on live windows are the one exception that stays muted.
 function noteColor(theme: TuiThemeCurrent, provider: ProviderUsage) {
-  if (provider.windows.length > 0) return theme.textMuted;
   if (provider.noteKind === "info") return theme.textMuted;
   if (provider.noteKind === "warn") return theme.warning;
+  if (provider.noteKind === "error") return theme.error;
+  if (provider.windows.length > 0 && provider.note?.startsWith("stale ")) {
+    return theme.textMuted;
+  }
   return theme.error;
 }
 
@@ -107,84 +111,100 @@ export function UsageDashboard(props: {
   api: TuiPluginApi;
   providers: ProviderUsage[];
   activeProviderID: string;
+  refreshingProviderIDs?: Set<string>;
+  onRefresh?: (providerID: string) => void;
 }) {
   const theme = () => props.api.theme.current;
   return (
     <box flexDirection="column" gap={0} paddingLeft={1}>
       <For each={props.providers}>
-        {(provider) => (
-          <box flexDirection="column" gap={0}>
-            <box flexDirection="row" gap={0}>
-              <text
-                fg={
-                  provider.id === props.activeProviderID
-                    ? theme().primary
-                    : theme().text
-                }
-                attributes={BOLD}
+        {(provider) => {
+          const refreshing = () =>
+            props.refreshingProviderIDs?.has(provider.id) ?? false;
+          // In-flight manual refresh: primary label, and "refreshing" only when no real note
+          // so 429/error/stale text stays visible once the fetch returns (or was already there).
+          const labelColor = () =>
+            refreshing() || provider.id === props.activeProviderID
+              ? theme().primary
+              : theme().text;
+          return (
+            <box flexDirection="column" gap={0}>
+              <box
+                flexDirection="row"
+                gap={0}
+                onMouseDown={() => props.onRefresh?.(provider.id)}
               >
-                {provider.label}
-              </text>
-              <Show when={provider.note}>
-                <text fg={noteColor(theme(), provider)}>
-                  {` ${provider.note}`}
+                <text fg={labelColor()} attributes={BOLD}>
+                  {provider.label}
                 </text>
+                <Show when={provider.note}>
+                  <text fg={noteColor(theme(), provider)}>
+                    {` ${provider.note}`}
+                  </text>
+                </Show>
+                <Show when={refreshing() && !provider.note}>
+                  <text fg={theme().primary}>{` refreshing`}</text>
+                </Show>
+              </box>
+              <Show
+                when={provider.windows.length > 0}
+                fallback={
+                  <For each={provider.placeholders ?? PLACEHOLDER_LABELS}>
+                    {(label) => (
+                      <WindowRow
+                        theme={theme()}
+                        label={label}
+                        percent={DASH.padEnd(PERCENT_WIDTH, " ")}
+                        percentColor={theme().textMuted}
+                        bar={"░".repeat(BAR_WIDTH)}
+                        barColor={theme().textMuted}
+                        duration={DASH}
+                        exact={DASH}
+                      />
+                    )}
+                  </For>
+                }
+              >
+                <For each={provider.windows}>
+                  {(window) => {
+                    const reset = formatReset(window.resetAt);
+                    const pct = window.usedPercent;
+                    // Unknown percent (e.g. xAI weekly): muted "--" cell and empty bar, but keep
+                    // the real duration/exact reset columns so alignment matches healthy rows.
+                    return (
+                      <WindowRow
+                        theme={theme()}
+                        label={window.label}
+                        percent={
+                          pct !== undefined
+                            ? formatPercent(pct)
+                            : DASH.padEnd(PERCENT_WIDTH, " ")
+                        }
+                        percentColor={
+                          pct !== undefined
+                            ? usageColor(theme(), pct)
+                            : theme().textMuted
+                        }
+                        bar={
+                          pct !== undefined
+                            ? usageBar(pct)
+                            : "░".repeat(BAR_WIDTH)
+                        }
+                        barColor={
+                          pct !== undefined
+                            ? usageColor(theme(), pct)
+                            : theme().textMuted
+                        }
+                        duration={reset.duration}
+                        exact={reset.exact}
+                      />
+                    );
+                  }}
+                </For>
               </Show>
             </box>
-            <Show
-              when={provider.windows.length > 0}
-              fallback={
-                <For each={provider.placeholders ?? PLACEHOLDER_LABELS}>
-                  {(label) => (
-                    <WindowRow
-                      theme={theme()}
-                      label={label}
-                      percent={DASH.padEnd(PERCENT_WIDTH, " ")}
-                      percentColor={theme().textMuted}
-                      bar={"░".repeat(BAR_WIDTH)}
-                      barColor={theme().textMuted}
-                      duration={DASH}
-                      exact={DASH}
-                    />
-                  )}
-                </For>
-              }
-            >
-              <For each={provider.windows}>
-                {(window) => {
-                  const reset = formatReset(window.resetAt);
-                  const pct = window.usedPercent;
-                  // Unknown percent (e.g. xAI weekly): muted "--" cell and empty bar, but keep
-                  // the real duration/exact reset columns so alignment matches healthy rows.
-                  return (
-                    <WindowRow
-                      theme={theme()}
-                      label={window.label}
-                      percent={
-                        pct !== undefined
-                          ? formatPercent(pct)
-                          : DASH.padEnd(PERCENT_WIDTH, " ")
-                      }
-                      percentColor={
-                        pct !== undefined
-                          ? usageColor(theme(), pct)
-                          : theme().textMuted
-                      }
-                      bar={pct !== undefined ? usageBar(pct) : "░".repeat(BAR_WIDTH)}
-                      barColor={
-                        pct !== undefined
-                          ? usageColor(theme(), pct)
-                          : theme().textMuted
-                      }
-                      duration={reset.duration}
-                      exact={reset.exact}
-                    />
-                  );
-                }}
-              </For>
-            </Show>
-          </box>
-        )}
+          );
+        }}
       </For>
     </box>
   );

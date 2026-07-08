@@ -75,11 +75,11 @@ export const anthropicUsage: ProviderAdapter = {
   id,
   label,
   poll: {
-    minFetchIntervalMS: 60_000,
-    errorBackoffMS: 2 * 60_000,
+    minFetchIntervalMS: 2 * 60_000,
+    errorBackoffMS: 5 * 60_000,
     warnBackoffMS: 0,
-    rateLimitBackoffMS: 15 * 60_000,
-    staleAfterMS: 2 * 60_000,
+    rateLimitBackoffMS: 60 * 60_000,
+    staleAfterMS: 5 * 60_000,
   },
   load,
 };
