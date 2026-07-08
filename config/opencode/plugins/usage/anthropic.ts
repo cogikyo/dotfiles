@@ -17,6 +17,21 @@ type AnthropicWindow = {
 type AnthropicUsagePayload = {
   five_hour?: AnthropicWindow | null;
   seven_day?: AnthropicWindow | null;
+  limits?: AnthropicLimit[] | null;
+};
+
+type AnthropicLimit = {
+  kind?: unknown;
+  group?: unknown;
+  percent?: unknown;
+  resets_at?: unknown;
+  scope?: AnthropicLimitScope | null;
+};
+
+type AnthropicLimitScope = {
+  model?: {
+    display_name?: unknown;
+  } | null;
 };
 
 const id = "anthropic";
@@ -39,6 +54,43 @@ function usageWindow(
   const usedPercent = normalizePercent(window.utilization);
   if (usedPercent === undefined) return undefined;
   return { label, usedPercent, resetAt: resetAt(window) };
+}
+
+function scopedLabel(displayName: string) {
+  const words = displayName
+    .trim()
+    .split(/\s+/)
+    .filter((word) => word.toLowerCase() !== "claude");
+  const first = Array.from(words[0] ?? "")[0];
+  return first?.toUpperCase();
+}
+
+function scopedWindow(limit: AnthropicLimit): UsageWindow | undefined {
+  if (limit.kind !== "weekly_scoped" || limit.group !== "weekly") {
+    return undefined;
+  }
+
+  const displayName = limit.scope?.model?.display_name;
+  if (typeof displayName !== "string") return undefined;
+
+  const label = scopedLabel(displayName);
+  if (!label) return undefined;
+
+  const usedPercent = normalizePercent(limit.percent);
+  if (usedPercent === undefined) return undefined;
+
+  return {
+    label,
+    usedPercent,
+    resetAt: typeof limit.resets_at === "string" ? limit.resets_at : undefined,
+  };
+}
+
+function scopedWindows(limits?: AnthropicLimit[] | null) {
+  if (!limits) return [];
+  return limits
+    .map(scopedWindow)
+    .filter((window): window is UsageWindow => Boolean(window));
 }
 
 async function load(): Promise<ProviderUsage> {
@@ -65,6 +117,7 @@ async function load(): Promise<ProviderUsage> {
   const windows = [
     usageWindow("H", payload.five_hour),
     usageWindow("W", payload.seven_day),
+    ...scopedWindows(payload.limits),
   ].filter((window): window is UsageWindow => Boolean(window));
 
   if (windows.length === 0) return usage([], "no windows");

@@ -118,11 +118,11 @@ Failures should degrade to a coarse `unavailable`, `<status>`, `429`, or `no win
 `usage/anthropic.ts` expects an Anthropic OAuth entry with an access token.
 
 The plugin calls `https://api.anthropic.com/api/oauth/usage` with `Authorization: Bearer <token>`, `anthropic-beta: oauth-2025-04-20`, and `anthropic-version: 2023-06-01`.
-The response is expected to expose `five_hour` and `seven_day` windows.
+The response is expected to expose `five_hour`, `seven_day`, and optional scoped weekly entries in `limits`.
 Each window may contain `utilization` and `resets_at`.
+Scoped weekly entries use `kind: "weekly_scoped"`, `group: "weekly"`, `percent`, `resets_at`, and `scope.model.display_name`.
 
-The UI displays only `H` for the five-hour window and `W` for the all-models weekly window.
-Model-specific weekly windows such as Sonnet or Opus are intentionally omitted.
+The UI displays `H` for the five-hour window, `W` for the all-models weekly window, and one-letter scoped weekly model bars such as `F` for Fable.
 
 This endpoint and shape are private Anthropic implementation details surfaced by Claude Code OAuth flows.
 Claude uses a two-minute minimum fetch interval, a five-minute transient-error backoff, and a sixty-minute 429 backoff because this usage endpoint is much tighter than model inference.

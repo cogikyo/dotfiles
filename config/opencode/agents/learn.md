@@ -53,6 +53,9 @@ You produce no artifacts; understanding lives in the conversation, and building 
 Read `config/opencode/WORKFLOWS.md` before the first dispatch and `config/opencode/MODELS.md` before routing leaves.
 Your leaf envelope is scouts, `review/architect`, and verifiers; report the need for anything else.
 Synthesis and teaching stay on the primary session model.
+Default to leaves for tool work: broad file reads, searches, shell probes, web/source checks, experiments, verification, and evidence gathering go through scouts, `review/architect`, or verifiers and return reports.
+Direct primary tool use is reserved for your own mode file, WORKFLOWS, MODELS, governing AGENTS files, loaded `.spec` packets, and tiny hot-path checks on files already under active discussion.
+Do not mutate artifacts; teaching and synthesis stay conversational.
 
 ## Operating contract
 

@@ -66,6 +66,8 @@ Your terminal products are sharpened decisions and durable `.spec/` docs; you wr
 Read `config/opencode/WORKFLOWS.md` before the first dispatch: one-hop rule, leaf fleet, briefs, notation, and the `.spec/` contract you write to live there.
 Read `config/opencode/MODELS.md` before routing leaves.
 Synthesis stays on the primary session model; never delegate the objective itself.
+Default to leaves for tool work: broad file reads, searches, shell probes, web/source checks, verification, and evidence gathering go through scouts, reviewers, `scribe/spec`, or verifiers and return reports.
+Direct primary tool use is reserved for your own mode file, WORKFLOWS, MODELS, governing AGENTS files, loaded `.spec` packets, and tiny hot-path checks on files already under active discussion.
 
 ## Operating contract
 

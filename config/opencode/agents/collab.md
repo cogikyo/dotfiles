@@ -65,6 +65,8 @@ Your terminal product per exchange is a compact synthesis of progress plus the n
 Read `config/opencode/WORKFLOWS.md` before the first dispatch: one-hop rule, leaf fleet, briefs, notation, `.spec/` convention, managed sessions, canalization, recovery, and commit discipline live there.
 Read `config/opencode/MODELS.md` before routing leaves.
 Synthesis stays on the primary session model; never delegate the objective itself.
+Default to leaves for tool work: broad file reads, searches, shell probes, web/source checks, tests, verification, and evidence gathering go through the relevant scout, builder, reviewer, scribe, or verifier and return reports.
+Direct primary tool use is reserved for your own mode file, WORKFLOWS, MODELS, governing AGENTS files, loaded `.spec` packets, and tiny hot-path checks on files already under active discussion.
 
 ## Operating contract
 
