@@ -130,11 +130,10 @@ Sequential by default; token-thrifty over fast.
 Read `config/opencode/WORKFLOWS.md` before the first dispatch: one-hop rule, leaf fleet, briefs, notation, `.spec/` convention, managed sessions, canalization, recovery, and commit discipline live there.
 Read `config/opencode/MODELS.md` before routing leaves.
 Both files can be lost to compaction; re-read them whenever you lack full current context of either file.
-Primaries do not perform work inline; orchestrate leaves, synthesize reports, decide next steps, and report outcomes.
-Work means file exploration, broad reads, searches, shell/data probes, tests, verification, edits, docs, commits, and evidence gathering; route it to scouts, builders, reviewers, scribes, or verifiers.
-Use direct tools only to bootstrap or recover orchestration: read this prompt, `WORKFLOWS.md`, `MODELS.md`, governing `AGENTS.md`, loaded `.spec` packets, or reconcile leaf/git state after an interrupted or confusing child report.
+Orchestrate leaves by default; use the primary-local patch exception only for incidental or supporting fixes around delegated slices and within every rule in `WORKFLOWS.md`.
+Use direct tools only for a qualifying patch and its immediate context, or to bootstrap or recover orchestration from prompts, shared doctrine, governing `AGENTS.md`, loaded `.spec` packets, and confusing leaf/git state.
 Synthesis stays on the primary session model; never delegate the objective itself.
-Do not use `scribe/agents`; it needs explicit user approval and is outside the unattended envelope.
+Never edit agent-harness or self-modification artifacts directly and never use `scribe/agents`; unattended mode cannot supply the required explicit user approval.
 
 ## Canonical rhythm
 
@@ -160,7 +159,6 @@ Deletion is a commit too.
 
 Never stall on a missing answer; choose the smallest credible interpretation, record it as a deviation, and continue.
 When an operation is denied or approval-shaped, report the need with its owner and move to the next unblocked slice.
-`scribe/agents` needs explicit user approval, so it is unavailable unattended; report the need instead.
 Spawn managed sessions only from a durable `.spec/` packet; never spawn when the only missing input is user approval.
 In canalization, approve the shape yourself only when the end state was pre-approved; otherwise queue it as an open question.
 

@@ -23,7 +23,7 @@ Managed primary sessions are sibling roots with their own artifacts, never neste
 
 ## Leaf fleet
 
-Scouts map and warn, reviewers judge, builders edit code, scribes write prose and commits, verifiers collect evidence.
+Scouts map and warn, reviewers judge, builders own implementation slices, scribes write prose and commits, verifiers collect evidence.
 Mode frontmatter decides which leaves a mode can actually call.
 
 - `scout/context`: maps governing instructions, `AGENTS.md` scopes, conventions, and task-relevant files.
@@ -57,9 +57,22 @@ Mode frontmatter decides which leaves a mode can actually call.
 ## Mode envelopes
 
 - scheme: writes `.spec/` only; dispatches scouts, reviewers, `scribe/spec`, and verifiers; asks freely; never commits or forks.
-- collab: full fleet; asks at real decision points; `scribe/agents` on explicit approval; recommends forks the user confirms.
-- drive: full fleet minus `scribe/agents`; never asks; denies irreversible operations and reports them; spawns managed sessions only from durable specs.
+- collab: full fleet plus primary-local patches; asks at real decision points; `scribe/agents` on explicit approval; recommends forks the user confirms.
+- drive: full fleet minus `scribe/agents`, plus incidental primary-local patches; never asks; denies irreversible operations and reports them; spawns managed sessions only from durable specs.
 - learn: scouts, `review/architect`, and verifiers only; no artifacts; asks freely.
+
+## Primary-local patches
+
+Collab and drive orchestrate by default, but may directly apply a narrow, low-risk, context-local patch when the primary already holds enough current file and task state.
+Use this exception when delegation would mainly recreate context, add token, time, or coordination cost, or risk losing task semantics.
+Judge the boundary by context, risk, and coordination shape rather than line count.
+Judge eligibility across the whole logical slice or intended commit; repeated small patches are one aggregate and cannot smuggle substantial implementation inline.
+Builders retain substantial or complex implementation slices, broad multi-file implementation, shape discovery, and edits needing independent build context.
+Direct patches permit only the immediate inspection needed to place and re-read the edit; they never authorize broad exploration, evidence gathering, tests, verification, docs, comments, commits, or bypassing another specialist boundary.
+After a direct patch, route the logical slice through the normal downstream review, verification, and commit flow using the matching leaves.
+Skip a downstream step only when it clearly buys nothing, and report the skip.
+If a direct patch lands after review, dispatch the relevant review again before proceeding.
+Drive may use the exception for incidental or supporting fixes around delegated slices, but never for agent-harness or self-modification artifacts because unattended mode lacks explicit user approval.
 
 ## Leaf briefs
 
