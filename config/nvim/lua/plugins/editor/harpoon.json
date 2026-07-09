@@ -25,13 +25,8 @@
         "webhooks/init.tracking.go",
         "routing/init.routing.go",
         "scheduler/init.scheduler.go",
-        "webhooks/conversions/MANAGER_GUIDE.md",
         "webhooks/s.rest.tracking.go",
-        "webhooks/conversions/google.go",
-        "webhooks/conversions/conversion.go",
-        "webhooks/conversions/snapchat.go",
-        "webhooks/c.convert.go",
-        "routing/smart/lifecycle.go"
+        "aggregation/migrate.go"
       ]
     },
     "/home/cullyn/LeadPier/backend/services/routing": {
@@ -45,9 +40,7 @@
       ]
     },
     "/home/cullyn/LeadPier/frontend": {
-      "pins": [
-        "apps/admin/src/pages/partners/index.tsx"
-      ]
+      "pins": ["apps/admin/src/pages/partners/index.tsx"]
     },
     "/home/cullyn/cogikyo/cogikyo": {
       "pins": [
@@ -72,10 +65,7 @@
       ]
     },
     "/home/cullyn/vagari.firefox": {
-      "pins": [
-        "css/_tab-bar.css",
-        "css/userChrome.css"
-      ]
+      "pins": ["css/_tab-bar.css", "css/userChrome.css"]
     },
     "/home/cullyn/vagari/nvim": {
       "pins": [
