@@ -12,52 +12,58 @@ Stronger models earn seats when judgment, ambiguity, multi-concern coordination,
 
 The `task` tool accepts `model` as `provider/model-id` and `effort` per call.
 Name both on every routed leaf unless the parent intentionally lets the session default apply.
+Supported GPT-5.6 efforts are `none`, `low`, `medium`, `high`, `xhigh`, and `max`.
 Pass `effort` only for models with effort variants; `xai/grok-4.5` defaults to high reasoning, with `medium` and `low` as opt-down overrides.
 For Grok leaves, prefer medium by default and high when reasoning load rises; do not route Grok at `low` as a default.
+Fast GPT routing uses the priority service tier for Sol and Terra, never a `-fast` model ID.
 
 ## Usage and cost awareness
 
 Before expensive or fanout routing, check usage and limit state when available.
 Prefer cheaper or less-constrained providers when the preferred provider is near or at its limit.
-For simple or independent leaf work, shift first to `xai/grok-4.5`; keep `openai/gpt-5.5-fast` for heavier leaf shape or after Grok fails.
-If Opus is near limit, let `xai/grok-4.5`, `openai/gpt-5.5-fast`, or `opencode-go/glm-5.2` take more work.
-If GPT priority usage is constrained, shift remaining GPT-shaped work to `openai/gpt-5.5`, `xai/grok-4.5`, or `opencode-go/glm-5.2` when they fit.
+For simple independent leaf work, shift first to `xai/grok-4.5`.
+When Sol priority or cost is constrained, use Terra for its moderate or harder bounded GPT seats and Luna for utility leaves.
+If GPT access is constrained, let `xai/grok-4.5` or `opencode-go/glm-5.2` take work that fits their failure modes.
 Cost and limit state are routing inputs, but quality gates still apply on final synthesis, acceptance, and risky edits.
 
 ## Routing defaults
 
-| Work                                                                      | Model                                        | Effort   |
-| ------------------------------------------------------------------------- | -------------------------------------------- | -------- |
-| Primary orchestration and synthesis                                       | `anthropic` fable                            | high     |
-| Relays, summaries, `scout/*` passes, simple commits                       | `xai/grok-4.5`                               | medium   |
-| Quick patches and small bounded edit slices                               | `xai/grok-4.5`                               | medium   |
-| Clear / very-bounded builds and verify runs (trust-earning default)       | `xai/grok-4.5`                               | medium   |
-| Ambiguous, multi-file, TypeScript, business logic, integration, logistics | `openai/gpt-5.5-fast`                        | medium   |
-| Multi-patch commit detangling and moderate multi-concern coordination     | `openai/gpt-5.5-fast`, then `openai/gpt-5.5` | medium   |
-| Unclear builds, or escalate after Grok fails / underperforms              | `openai/gpt-5.5-fast`                        | medium   |
-| Deep review (debug, security, critic) and acceptance verification         | `openai/gpt-5.5-fast`                        | xhigh    |
-| HTML/CSS, visual design decisions, and UX/UI client surface               | `anthropic/claude-opus-4-8`                  | high     |
-| Concise spec writing, tight brief only                                    | `anthropic` fable                            | medium   |
-| Dissent probes and council copies                                         | `opencode-go/glm-5.2`                        | none     |
-| Dissent probes and council copies                                         | `xai/grok-4.5`                               | high     |
-| GPT reserve when fast or priority usage is constrained                    | `openai/gpt-5.5`                             | low-high |
+| Work                                                                                                     | Model                       | Effort |
+| -------------------------------------------------------------------------------------------------------- | --------------------------- | ------ |
+| Primary orchestration and synthesis                                                                      | `openai/gpt-5.6-sol`        | high   |
+| Secondary (oftend limited) orchestration and synthesis                                                   | `anthropic fable`           | high   |
+| Concise spec writing, tight brief only                                                                   | `anthropic` fable           | medium |
+| Mechanical relays, classification, and other small utility seats                                         | `xai/grok-4.5`              | medium |
+| Independent throughput leaves, quick patches, and clear builds                                           | `xai/grok-4.5`              | high   |
+| Moderate multi-concern coordination and bounded implementation                                           | `openai/gpt-5.6-terra`      | high   |
+| Relays, summaries, `scout/*` passes, simple commits, and clear bounded work requiring tool judgment      | `openai/gpt-5.6-terra`      | medium |
+| Harder bounded builds                                                                                    | `openai/gpt-5.6-sol`        | medium |
+| Ambiguous, high-stakes, multi-file, TypeScript, business logic, integration, or logistics implementation | `openai/gpt-5.6-sol`        | high   |
+| Unclear builds, or escalation after Grok fails or underperforms                                          | `openai/gpt-5.6-sol`        | high   |
+| Deep review (debug, security, critic) and acceptance verification                                        | `openai/gpt-5.6-sol`        | xhigh  |
+| Exceptional quality-first work with a measured reason                                                    | `openai/gpt-5.6-sol`        | max    |
+| HTML/CSS, visual design decisions, and UX/UI client surface                                              | `anthropic/claude-opus-4-8` | high   |
+| Dissent probes and council copies                                                                        | `opencode-go/glm-5.2`       | high   |
+| Dissent probes and council copies                                                                        | `xai/grok-4.5`              | high   |
 
-When a build is clear and bounded, try Grok first and give deliberate trial seats while trust is forming.
-When ambiguity is moderate, occasional Grok trial builds are fine; escalate on multi-concern risk, acceptance stakes, or observed failure modes.
+Grok remains the default independent throughput leaf for clear work and deliberate quick patches; it's very fast and accurate.
+Luna owns utility seats and clear bounded GPT work when its medium-effort tool judgment is useful.
+Terra's workhorse seat is provisional because day-zero evidence suggests Luna or Sol may dominate it.
+Escalate on multi-concern risk, acceptance stakes, or observed failure modes.
 
 ## Model ledger
 
 Rate and judge here as evidence lands; verdicts are provisional and should say how they could be wrong.
 
-| Model                       | Verdict                                                                                                          | Strengths                                                                                     | Failure modes                                                                                    | Last judged |
-| --------------------------- | ---------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ | ----------- |
-| `anthropic` fable           | Orchestration seat, almost exclusively; maybe concise spec/md writing.                                           | Planning, judgment, synthesis, restrained Markdown; other models over-write prose.            | Expensive; wasted on relay leaves; availability drama.                                           | 2026-07-08  |
-| `anthropic/claude-opus-4-8` | HTML/CSS, visual design decisions, and UX/UI client surface.                                                     | Visual, UX, and product-shape reasoning.                                                      | Anecdotes of plan regressions vs fable; scarce usage can bottleneck.                             | 2026-07-08  |
-| `openai/gpt-5.5-fast`       | Escalation / complex leaf workhorse when Grok is insufficient or the task shape is heavier.                      | Ambiguous multi-file work, TS/business logic, integration, multi-patch detangle, deep review. | Premium $/token; keep off final review and acceptance when usage is tight.                       | 2026-07-08  |
-| `openai/gpt-5.5`            | Reserve GPT fallback when fast or priority usage is constrained.                                                 | Same family fallback when usage limits or cost state argue against the fast lane.             | Slower; do not use just because it feels more serious.                                           | 2026-07-08  |
-| `openai/gpt-5.4-mini-fast`  | Rarely needed; `gpt-5.5` low covers its seats with better tool judgment.                                         | Cheap bulk fanout when cost truly dominates.                                                  | Weaker judgment shows up exactly when a leaf must decide something.                              | 2026-07-08  |
-| `opencode-go/glm-5.2`       | Independent provider lens and cheap implementer candidate.                                                       | Different failure modes; useful when GPT or Opus usage is constrained.                        | Not a selector; agreement without independent evidence is noise.                                 | 2026-07-08  |
-| `xai/grok-4.5`              | Default fast leaf for quick delegation, patches, scouts, and clear builds; trust still earning on harder builds. | Speed; tool-use potential; independent provider lens; live X/community signal.                | Provisional: watch tool-judgment misses, incomplete patches, overconfidence on ambiguous builds. | 2026-07-08  |
+| Model                       | Verdict                                                                                         | Strengths                                                                      | Failure modes                                                                                                               | Last judged |
+| --------------------------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- | ----------- |
+| `openai/gpt-5.6-sol`        | Primary orchestration and synthesis seat, plus high-stakes implementation and deep acceptance.  | Multi-concern reasoning, synthesis, and sustained implementation judgment.     | Demote if high-effort outputs repeatedly lose acceptance or fail to justify their cost and latency against Luna or Terra.   | 2026-07-09  |
+| `openai/gpt-5.6-terra`      | Provisional moderate-complexity GPT workhorse and Sol fallback under priority or cost pressure. | Balanced bounded implementation and multi-concern coordination.                | Displace if Luna meets its acceptance rate on comparable tool-dependent work or Sol's extra quality justifies its overhead. | 2026-07-09  |
+| `openai/gpt-5.6-luna`       | Utility seat for relays, scouts, simple commits, and clear bounded GPT work.                    | Low-cost mechanical work and medium-effort tool judgment.                      | Escalate its seats if medium-effort leaves repeatedly miss tool choices, scope, or acceptance criteria.                     | 2026-07-09  |
+| `anthropic` fable           | Concise spec and Markdown specialist; it no longer owns primary orchestration.                  | Restrained Markdown and tight briefs; other models can over-write prose.       | Expensive; wasted on relay leaves; availability drama.                                                                      | 2026-07-08  |
+| `anthropic/claude-opus-4-8` | HTML/CSS, visual design decisions, and UX/UI client surface.                                    | Visual, UX, and product-shape reasoning.                                       | Anecdotes of plan regressions vs fable; scarce usage can bottleneck.                                                        | 2026-07-08  |
+| `opencode-go/glm-5.2`       | Independent provider lens and cheap implementer candidate.                                      | Different failure modes; useful when GPT or Opus usage is constrained.         | Not a selector; agreement without independent evidence is noise.                                                            | 2026-07-08  |
+| `xai/grok-4.5`              | Default independent throughput leaf for quick delegation, patches, and clear builds.            | Speed; tool-use potential; independent provider lens; live X/community signal. | Provisional: watch tool-judgment misses, incomplete patches, and overconfidence on ambiguous builds.                        | 2026-07-08  |
 
 ## Second opinions and council
 
@@ -72,11 +78,14 @@ Notice if a model is repeatedly strong or repeatedly making mistakes, then menti
 ## Effort guidance
 
 Start at the default in the routing table; escalate only when uncertainty changes the outcome.
-Medium is the Grok floor for relays, scouts, patches, and clear builds.
-High buys sustained reasoning for implementation, evidence gathering, and dissent seats.
-Xhigh is reserved for review and acceptance where a missed flaw is costly.
+Use `none` only when the model and task make reasoning unnecessary.
+Use `low` for Luna's mechanical relays, classification, and similar utility work.
+Use `medium` for Luna tool-judgment work, Terra's moderate bounded work, and the Grok floor for independent leaves.
+Use `high` for Sol orchestration and high-stakes implementation, Terra's harder bounded builds, and Grok evidence or dissent seats.
+Use `xhigh` for Sol review and acceptance where a missed flaw is costly.
+Use `max` only for exceptional Sol tasks with a measured quality-first reason.
 Bias toward the stronger model or higher effort when unsure; never run whole fleets at xhigh.
-Default leaf speed bias is Grok at medium or high; do not starve Grok of trial builds while trust is forming.
+Default independent leaf speed bias is Grok at medium or high; do not starve Grok of trial builds while trust is forming.
 
 ## Failure handling
 
