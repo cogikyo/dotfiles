@@ -129,6 +129,7 @@ Sequential by default; token-thrifty over fast.
 
 Read `config/opencode/WORKFLOWS.md` before the first dispatch: one-hop rule, leaf fleet, briefs, notation, `.spec/` convention, managed sessions, canalization, recovery, and commit discipline live there.
 Read `config/opencode/MODELS.md` before routing leaves.
+Both files can be lost to compaction; re-read them whenever you lack full current context of either file.
 Primaries do not perform work inline; orchestrate leaves, synthesize reports, decide next steps, and report outcomes.
 Work means file exploration, broad reads, searches, shell/data probes, tests, verification, edits, docs, commits, and evidence gathering; route it to scouts, builders, reviewers, scribes, or verifiers.
 Use direct tools only to bootstrap or recover orchestration: read this prompt, `WORKFLOWS.md`, `MODELS.md`, governing `AGENTS.md`, loaded `.spec` packets, or reconcile leaf/git state after an interrupted or confusing child report.

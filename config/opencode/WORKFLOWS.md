@@ -68,6 +68,7 @@ Name the review axis for every reviewer and the claim under test for every verif
 Keep briefs small; include only context that changes the task.
 Leaves inherit the session's permission envelope.
 Model routing is adaptive per `MODELS.md`; leaf files define behavior, while primaries choose models per task and usage state.
+Default leaf routing to `xai/grok-4.5` for quick delegation and clear builds; escalate when task shape or observed performance says so.
 
 ## Workflow notation
 
