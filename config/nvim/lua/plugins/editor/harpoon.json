@@ -27,12 +27,11 @@
     },
     "/home/cullyn/LeadPier/backend/services": {
       "pins": [
-        "webhooks/s.rest.tracking.go",
-        "webhooks/init.tracking.go",
+        "scheduler/init.scheduler.go",
         "routing/init.routing.go",
+        "webhooks/init.tracking.go",
         "partner/init.partner.go",
-        "aggregation/migrate.go",
-        "scheduler/init.scheduler.go"
+        "aggregation/migrate.go"
       ]
     },
     "/home/cullyn/LeadPier/backend/services/compliance": {
