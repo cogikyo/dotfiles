@@ -32,11 +32,12 @@ Cost and limit state are routing inputs, but quality gates still apply on final 
 | Mechanical relays, classification, and other small utility seats                     | `openai/gpt-5.6-terra`      | medium |
 | Routine `scout/*` passes and clear bounded work requiring tool judgment              | `openai/gpt-5.6-terra`      | medium |
 | Moderate multi-concern coordination and bounded implementation                       | `openai/gpt-5.6-terra`      | high   |
+| Deep review (debug, security, critic) and acceptance verification                    | `openai/gpt-5.6-terra`      | xhigh  |
 | Deliberate quick patches and clear mechanical builds after a concrete brief          | `xai/grok-4.5`              | medium |
 | Tightly specified, bounded mechanical build slice from an approved objective or spec | `xai/grok-4.5`              | medium |
+| Standard intial debug review, often finds issue fast and is correct                  | `xai/grok-4.5`              | high   |
 | Ambiguous, high-stakes, multi-file, ambitious implementation                         | `openai/gpt-5.6-sol`        | high   |
 | Escalation after other agents fails or underperforms                                 | `openai/gpt-5.6-sol`        | high   |
-| Deep review (debug, security, critic) and acceptance verification                    | `openai/gpt-5.6-sol`        | xhigh  |
 | HTML/CSS, visual design decisions, and UX/UI client surface                          | `anthropic/claude-opus-4-8` | high   |
 | Often good at planning, inventing, scheming. Good default .spec/ editing             | `anthropic/claude-opus-4-8` | high   |
 | Dissent probes and council copies                                                    | `anthropic/claude-opus-4-8` | high   |
