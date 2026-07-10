@@ -27,10 +27,10 @@
     },
     "/home/cullyn/LeadPier/backend/services": {
       "pins": [
-        "scheduler/init.scheduler.go",
-        "routing/init.routing.go",
-        "webhooks/init.tracking.go",
         "partner/init.partner.go",
+        "webhooks/init.tracking.go",
+        "routing/init.routing.go",
+        "scheduler/init.scheduler.go",
         "aggregation/migrate.go"
       ]
     },
@@ -55,7 +55,8 @@
     },
     "/home/cullyn/LeadPier/frontend": {
       "pins": [
-        "apps/admin/src/pages/partners/index.tsx"
+        "apps/admin/src/pages/partners/index.tsx",
+        "apps/admin/src/pages/users/$userId/tracking/index.tsx"
       ]
     },
     "/home/cullyn/cogikyo/cogikyo": {
