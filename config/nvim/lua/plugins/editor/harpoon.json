@@ -40,7 +40,9 @@
       ]
     },
     "/home/cullyn/LeadPier/frontend": {
-      "pins": ["apps/admin/src/pages/partners/index.tsx"]
+      "pins": [
+        "apps/admin/src/pages/partners/index.tsx"
+      ]
     },
     "/home/cullyn/cogikyo/cogikyo": {
       "pins": [
@@ -57,15 +59,19 @@
         "config/nvim/init.lua",
         "cmds/config/hyprd.yaml",
         "config/nvim/lua/config/keymaps.lua",
-        "config/opencode/AGENTS.md",
         "config/kitty/kitty.conf",
+        "config/opencode/MODELS.md",
+        "config/opencode/AGENTS.md",
         "config/opencode/opencode.json",
         "config/kitty/tab_bar.py",
         "config/opencode/plugins/shared/colors.ts"
       ]
     },
     "/home/cullyn/vagari.firefox": {
-      "pins": ["css/_tab-bar.css", "css/userChrome.css"]
+      "pins": [
+        "css/_tab-bar.css",
+        "css/userChrome.css"
+      ]
     },
     "/home/cullyn/vagari/nvim": {
       "pins": [

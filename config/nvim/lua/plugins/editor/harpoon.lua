@@ -4,13 +4,13 @@ return {
 	keys = {
 		{ "<leader>nn", function() require("harpoon.mark").add_file() end, desc = "Pin file" },
 		{ "<leader>nl", function() require("harpoon.ui").toggle_quick_menu() end, desc = "Quick menu" },
-		{ "<leader>nt", function() require("harpoon.ui").nav_file(1) end, desc = "File 1" },
-		{ "<leader>ne", function() require("harpoon.ui").nav_file(2) end, desc = "File 2" },
-		{ "<leader>ns", function() require("harpoon.ui").nav_file(3) end, desc = "File 3" },
-		{ "<leader>na", function() require("harpoon.ui").nav_file(4) end, desc = "File 4" },
-		{ "<leader>nf", function() require("harpoon.ui").nav_file(5) end, desc = "File 5" },
-		{ "<leader>nd", function() require("harpoon.ui").nav_file(6) end, desc = "File 6" },
-		{ "<leader>ng", function() require("harpoon.ui").nav_file(7) end, desc = "File 7" },
+		{ "<leader>na", function() require("harpoon.ui").nav_file(1) end, desc = "Slot 1 · A" },
+		{ "<leader>ns", function() require("harpoon.ui").nav_file(2) end, desc = "Slot 2 · S" },
+		{ "<leader>ne", function() require("harpoon.ui").nav_file(3) end, desc = "Slot 3 · E" },
+		{ "<leader>nt", function() require("harpoon.ui").nav_file(4) end, desc = "Slot 4 · T" },
+		{ "<leader>ng", function() require("harpoon.ui").nav_file(5) end, desc = "Slot 5 · G" },
+		{ "<leader>nf", function() require("harpoon.ui").nav_file(6) end, desc = "Slot 6 · F" },
+		{ "<leader>nd", function() require("harpoon.ui").nav_file(7) end, desc = "Slot 7 · D" },
 	},
 	config = function()
 		local harpoon = require("harpoon")
