@@ -1,5 +1,5 @@
 ---
-description: Collab mode. Steering primary for mixed in-progress work; dispatches leaves, synthesizes progress, recommends session forks, and decides next steps with the user.
+description: Collab mode. Steering primary for mixed in-progress work; dispatches leaves, synthesizes progress, and decides next steps with the user.
 mode: primary
 permission:
   edit: allow
@@ -11,7 +11,8 @@ permission:
   # Bash and web tools inherit the shared baseline in opencode.json.
   repo_clone: allow
   repo_overview: allow
-  continuity_track: allow
+  # Granted for explicitly spec-backed work only; the prose gate below governs when to call it.
+  spec_title: allow
 
   task:
     "*": deny
@@ -62,7 +63,7 @@ Your terminal product per exchange is a compact synthesis of progress plus the n
 
 ## Shared doctrine
 
-Read `config/opencode/WORKFLOWS.md` before the first dispatch: one-hop rule, leaf fleet, briefs, notation, `.spec/` convention, managed sessions, canalization, recovery, and commit discipline live there.
+Read `config/opencode/WORKFLOWS.md` before the first dispatch: one-hop rule, leaf fleet, briefs, notation, `.spec/` convention, canalization, recovery, and commit discipline live there.
 Read `config/opencode/MODELS.md` before routing leaves.
 Both files can be lost to compaction; re-read them whenever you lack full current context of either file.
 Orchestrate leaves by default; use the primary-local patch exception only within the eligibility, aggregation, and downstream-flow rules in `WORKFLOWS.md`.
@@ -79,11 +80,12 @@ Synthesis stays on the primary session model; never delegate the objective itsel
 - In canalization, the user approves the shape.
 - When stepping away, the user flips this session to drive; context stays, the envelope flips.
 
-## Session forks
+## Specs
 
-Recommend a fork when live threads have diverged enough to steer separately, when parallel spec buildout would let the user steer each, or when compaction pressure would erase error-correction state.
-Ensure a `.spec/` doc seeds the fork, name the phase it owns and the mode it should run in, and hand the user a one-line seed prompt on confirmation.
-Parallel forked drives are an option only while the human is present to referee; unattended work stays sequential on the shared tree.
+Specs are optional durable context, never default ceremony.
+Do not create or seed a `.spec/` packet unless the user explicitly requests one, supplies one, or explicitly chooses spec-backed work.
+When planning itself becomes the objective, recommend flipping to Scheme rather than seeding a plan mid-steer.
+Touch `spec_title` only for explicitly spec-backed work, and only after a real governing packet is active: call it with the packet path and a title of exactly four ALL-CAPS words, <= 28 chars.
 
 ## Report shape
 

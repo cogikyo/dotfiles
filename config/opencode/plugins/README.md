@@ -32,16 +32,9 @@ Its plugin ID is `opencode-media-context`.
 It injects statusline chrome into `session_prompt` while forwarding the real prompt props/ref unchanged.
 Its plugin ID is `opencode-statusline`.
 
-`opencode/continuity/server.ts` is the server-side continuity ledger loaded by `opencode.json`.
-It implements the hybrid continuity route: checkpoint before compaction, then renew into a fresh root Drive session when durable artifact state makes renewal safer.
-Its plugin ID is `opencode-continuity`.
-
-`opencode/continuity/index.tsx` is the TUI continuity sidebar loaded by `tui.json`.
-It shows compact health chips, active WIP/lock/renewal hazards, related `.spec` sessions, and manual checkpoint, compact, and renewal commands.
-Its plugin ID is `opencode-continuity-ui`.
-
-`opencode/continuity/settings.json` is the shared continuity settings file read by both the server and TUI plugins at startup.
-Pressure thresholds are configured there because `opencode.json` rejects plugin-specific fields under `compaction`.
+`opencode/spec-title.ts` is the server-side `spec_title` tool loaded by `opencode.json`.
+It renames the current root session after an existing project `.spec` Markdown file.
+Its plugin ID is `opencode-spec-title`.
 
 `delegate/index.ts` is the server-side `task` tool replacement loaded by `opencode.json`.
 It routes each task call to a per-call `{model, effort}`, waits for exhausted provider windows to reset, and runs the work in a child session.
@@ -218,40 +211,25 @@ Naming failures are swallowed and leave timestamp handles intact.
 Named images are copied into the media-context runtime cache under the generated filename; original source files are not renamed.
 OpenCode does not currently expose a true non-persistent completion API, so temp session/stat persistence depends on best-effort deletion and future API support.
 
-## Continuity Contract
+## Spec Title Contract
 
-Continuity has both a server hook and a TUI sidebar.
-`opencode/continuity/server.ts` is loaded by `opencode.json`; `opencode/continuity/index.tsx` is loaded by `tui.json`.
+`spec_title` is a server-only tool loaded by `opencode.json`.
+It renames the current root session and does nothing else.
+There is no TUI surface, no ledger, no persisted state, and no automation; nothing fires on session events.
 
-Ledger files live under `${XDG_STATE_HOME:-~/.local/state}/opencode/continuity/<project>/`.
-Runtime locks live under `${XDG_RUNTIME_DIR:-/tmp/opencode-${uid}}/opencode/continuity/<project>/`.
-Ledger files are shared state and recovery hints, not git authority.
-Durable truth stays in `.spec/*.md` packets.
+The tool takes two args.
+`path` is a project-relative or absolute `.spec/*.md` path.
+`title` is exactly four ALL-CAPS or hyphenated words separated by single ASCII spaces, at most 28 characters total.
 
-The server only auto-summarizes or auto-renews Drive sessions.
-Automation requires a healthy `.spec` packet observed through structured session artifacts, such as read/file parts.
-Automation fires only on `session.idle`, so summarize and renew never interrupt a running turn; other events just refresh the ledger.
-If no healthy packet exists, the compaction hook still writes a ledger and appends recovery context, but automation will not renew.
+Title validation rejects leading, trailing, repeated, Unicode, tab, and newline whitespace.
+Each word is `[A-Z0-9]` with optional internal hyphens, so `SPEC-TITLE FOUR WORD NAME` is accepted.
 
-Renewal creates a fresh root Drive session.
-It does not use `session.fork` and does not set `parentID`.
-The renewal prompt names the spec packet(s), old session, edited files, ledger key, and recovery checks.
-It uses `promptAsync` when available and falls back to `prompt`.
+Path validation lexically rejects paths outside the project before resolving them with `realpath`.
+It then requires the canonical target to be an existing regular `.md` file inside this project with a `.spec` path segment.
+Paths that escape through symlinks or lack a `.spec` segment are rejected.
 
-The TUI sidebar recomputes pressure from loaded session messages and shared continuity settings.
-Related sessions are the primary sidebar signal.
-They are named sibling root sessions from project ledgers that share at least one `.spec` packet with the current session.
-Register a spec-backed root as a jump target with `continuity_track`, which writes a 3-4 word ALL-CAPS title.
-The tool refuses sessions without a readable `.spec` packet, so arbitrary named sessions cannot enter the continuity map.
-Recency, title, and shared `.spec` packets are not enough alone; a row needs both a tracked title and a shared packet.
-Subagent sessions never appear and never get ledgers.
-Lock rows show purposes with paths reduced to basenames and holder ids shortened.
-Sidebar rows navigate to their sessions.
-Edited files are recorded from session-local diffs for handoff context only; git status belongs to the statusline and normal verification workflow.
-Manual commands write the same ledger before compacting or renewing.
-
-Pressure uses both percent-of-window and absolute token thresholds from `opencode/continuity/settings.json`.
-The current defaults checkpoint at 90k, compact at 120k, renew at 200k, and still renew when model remaining context falls under 12k.
+The tool only runs in root sessions; a session with a `parentID` is rejected.
+On success it updates the session title through the OpenCode client and returns `session titled <title>`.
 
 ## Statusline Contract
 
@@ -281,6 +259,7 @@ The sidebar section is hidden until at least one Markdown read exists.
 
 Compacted read entries are shown with a red `C` marker when OpenCode marks the completed tool part that way.
 Fresh read entries use source markers: green `R` for `README.md`, blue `A` for `AGENTS.md`, yellow `I` for uppercase pointer docs like `GO.md` or `DATABASE.md`, and muted `M` for generic Markdown.
+Any read under a `.spec` path segment takes precedence over filename kinds and renders with the cyan spec glyph (`icons.spec`), regardless of the file's name.
 Carrier files omit their filename in labels because the marker carries that information.
 
 ## Delegate Contract

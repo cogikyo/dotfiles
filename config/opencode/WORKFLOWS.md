@@ -19,7 +19,6 @@ Report recurring model strengths or failures back to the user so `MODELS.md` can
 Every unit of work sits at most one hop from a session a human can step into.
 Primaries delegate directly to leaves and synthesize results themselves.
 Leaves never delegate; there are no middle-manager agents.
-Managed primary sessions are sibling roots with their own artifacts, never nested leaf managers.
 
 ## Leaf fleet
 
@@ -28,7 +27,7 @@ Mode frontmatter decides which leaves a mode can actually call.
 
 - `scout/context`: maps governing instructions, `AGENTS.md` scopes, conventions, and task-relevant files.
 - `scout/dirty`: reviews uncommitted and in-flight change state and cross-session interference.
-- `scout/session`: maps previous and active OpenCode sessions, continuity ledgers, owners, and recovery context.
+- `scout/session`: maps previous and active OpenCode sessions, active specs, owners, and recovery context.
 - `scout/library`: maps existing utils, stdlib, and language facilities that already solve the need.
 - `scout/web`: open-ended web reconnaissance; maps the option space, prior art, and ecosystem direction.
 - `build/worker`: one bounded edit slice with verification.
@@ -56,9 +55,9 @@ Mode frontmatter decides which leaves a mode can actually call.
 
 ## Mode envelopes
 
-- scheme: writes `.spec/` only; dispatches scouts, reviewers, `scribe/spec`, and verifiers; asks freely; never commits or forks.
-- collab: full fleet plus primary-local patches; asks at real decision points; `scribe/agents` on explicit approval; recommends forks the user confirms.
-- drive: full fleet minus `scribe/agents`, plus incidental primary-local patches; never asks; denies irreversible operations and reports them; spawns managed sessions only from durable specs.
+- scheme: writes `.spec/` only; dispatches scouts, reviewers, `scribe/spec`, and verifiers; asks freely; carries `spec_title`; never commits.
+- collab: full fleet plus primary-local patches; asks at real decision points; `scribe/agents` on explicit approval; touches `.spec/` and `spec_title` only for explicitly spec-backed work.
+- drive: full fleet minus `scribe/agents`, plus incidental primary-local patches; never asks; denies irreversible operations and reports them; maintains an intermediate `.spec/` packet and `spec_title` only when durable context earns it.
 - learn: scouts, `review/architect`, and verifiers only; no artifacts; asks freely.
 
 ## Grok routing
@@ -109,26 +108,16 @@ Use this notation in leaf briefs and `.spec/` docs when a diagram helps:
 
 ## `.spec/` coordination
 
-`.spec/` is a directory-scoped convention for plan, spec, and logbook docs.
+`.spec/` is an optional, directory-scoped convention for durable plan and logbook context; it is never default ceremony.
+Reach for a packet only when durable context earns its keep: long-horizon execution, likely compaction, multi-phase recovery, or explicit user direction.
 Place it inside the directory that owns the concern; the repo root gets one only for genuinely whole-repo concerns.
 Committed by default; a repo opts out with one `.gitignore` line.
 
-Every doc includes: goal and end state, phase partition with file ownership per phase, per-phase status blocks, decisions log and deviations, open questions for the user, and condensed next steps.
-Specs shrink over time (ΔS < 0); entropy exports to git history.
-When parallel forked work is anticipated, partition file ownership per phase up front.
+Every useful packet carries: goal and end state, current status, durable decisions and constraints, and condensed next actions.
+Phase ownership, deviations, open user questions, verification, and recovery detail are conditional on actual complexity, never required scaffolding.
+Specs shrink over time (ΔS < 0); finished detail exports to git history.
 
-After loading a governing `.spec` packet in a durable root thread, modes with `continuity_track` call it to name the jump target with 3-4 ALL-CAPS words, <= 28 chars; if unavailable pre-restart, continue without blocking.
-
-## Managed sessions and forks
-
-Big parallel work uses managed OpenCode sessions, never nested subagents.
-Use one when a single context would become the bottleneck: long unattended work, compaction pressure, diverged phases, or parallel phase ownership.
-Write or update the owning `.spec/` packet before spawning: objective, scope, files, current dirty state, expected commits, verification, and recovery checks.
-The spawned session should be a bounded phase, usually in drive, never an open-ended copy of the whole objective.
-Siblings coordinate through artifacts only, the spec plus the git tree; no worktrees, code is read as it lands.
-The parent reconciles by git state, `.spec/`, and scout evidence; chat memory is never the authority.
-Keep one owner per dirty thread and prefer fewer sessions than phases.
-Approval split: collab recommends and the user confirms; drive spawns only from a durable spec; scheme and learn never fork.
+After a real governing `.spec` packet is active in a durable root thread, modes with `spec_title` call it with the packet path and a title of exactly four ALL-CAPS words, <= 28 chars; if unavailable pre-restart, continue without blocking.
 
 ## Canalization
 

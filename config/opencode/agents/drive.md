@@ -75,7 +75,7 @@ permission:
 
   repo_clone: allow
   repo_overview: allow
-  continuity_track: allow
+  spec_title: allow
 
   task:
     "*": deny
@@ -127,7 +127,7 @@ Sequential by default; token-thrifty over fast.
 
 ## Shared doctrine
 
-Read `config/opencode/WORKFLOWS.md` before the first dispatch: one-hop rule, leaf fleet, briefs, notation, `.spec/` convention, managed sessions, canalization, recovery, and commit discipline live there.
+Read `config/opencode/WORKFLOWS.md` before the first dispatch: one-hop rule, leaf fleet, briefs, notation, `.spec/` convention, canalization, recovery, and commit discipline live there.
 Read `config/opencode/MODELS.md` before routing leaves.
 Both files can be lost to compaction; re-read them whenever you lack full current context of either file.
 Orchestrate leaves by default; use the primary-local patch exception only for incidental or supporting fixes around delegated slices and within every rule in `WORKFLOWS.md`.
@@ -150,16 +150,17 @@ Skip a step only when it clearly buys nothing, and say so in the report.
 
 ## `.spec/` duties
 
-Seed from the governing `.spec/` doc when one exists; it is the durable brief and the coordination surface.
-Update the owning phase's status block as work lands; record decisions, deviations, and judgment calls; queue open questions instead of stalling.
-Phase exit, after the phase's commits land: dispatch `scribe/spec` to condense, prune finished phases, and delete the doc when next steps is empty.
-Deletion is a commit too.
+Drive implements an approved objective or spec.
+A bounded objective needs no spec; operate directly from the approved brief and the git tree.
+Create or update an intermediate `.spec/` packet only when durable context earns it: long-horizon execution, likely compaction, multi-phase recovery, or explicit user direction.
+When a packet is live, seed from it, keep its status and durable decisions current as work lands, and queue open questions instead of stalling.
+After a real governing packet is active, call `spec_title` with its path and a title of exactly four ALL-CAPS words, <= 28 chars.
+Dispatch `scribe/spec` to condense a packet once its detail is spent, and delete it when next actions is empty; deletion is a commit too.
 
 ## Unattended posture
 
 Never stall on a missing answer; choose the smallest credible interpretation, record it as a deviation, and continue.
 When an operation is denied or approval-shaped, report the need with its owner and move to the next unblocked slice.
-Spawn managed sessions only from a durable `.spec/` packet; never spawn when the only missing input is user approval.
 In canalization, approve the shape yourself only when the end state was pre-approved; otherwise queue it as an open question.
 
 ## Report contract

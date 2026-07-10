@@ -22,7 +22,7 @@ export const icons = {
     conflict: ' ',
   },
   context: '㊋',
-  continuity: '󱍅',
+  spec: '󱍅',
   spinner: {
     braille: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'],
   },

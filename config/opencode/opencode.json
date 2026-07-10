@@ -59,7 +59,7 @@
     "opencode-claude-auth@1.5.4",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/delegate/index.ts",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/hyprd/notify.ts",
-    "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/continuity/server.ts",
+    "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/spec-title.ts",
     [
       "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/media-context/prompt.ts",
       { "imageNames": { "enabled": true } }
@@ -97,6 +97,7 @@
     }
   },
   "permission": {
+    "spec_title": "deny",
     "external_directory": {
       "/": "deny",
       "/?": "deny",
@@ -110,9 +111,6 @@
       "/home/cullyn/.password-store/**": "deny",
       "/home/cullyn/.local/share/keyrings/**": "deny",
       "/run/user/1000/opencode": "allow",
-      "/run/user/1000/opencode/continuity": "allow",
-      "/run/user/1000/opencode/continuity/*": "allow",
-      "/run/user/1000/opencode/continuity/**": "allow",
       "/tmp/**": "allow"
     },
     "doom_loop": "ask",

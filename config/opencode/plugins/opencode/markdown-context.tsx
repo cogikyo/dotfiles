@@ -5,6 +5,7 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import path from 'node:path'
 import { For, Show, createSignal, onCleanup } from 'solid-js'
 import { colors } from '../shared/colors.ts'
+import { icons } from '../shared/icons.ts'
 import { SidebarSection } from '../shared/sidebar-section.tsx'
 
 const id = 'opencode-markdown-context'
@@ -13,7 +14,7 @@ const MAX_ROOT_LENGTH = 8
 const MAX_PARENT_LENGTH = 12
 const MIN_LEAF_LENGTH = 6
 
-type MarkdownSourceKind = 'readme' | 'agents' | 'partial' | 'markdown'
+type MarkdownSourceKind = 'readme' | 'agents' | 'partial' | 'spec' | 'markdown'
 
 type MarkdownContextItem = {
   key: string
@@ -163,11 +164,13 @@ function isMarkdownPath(value: string) {
 }
 
 function markdownSourceKind(filePath: string): MarkdownSourceKind {
-  const leaf = path.basename(filePath).toLowerCase()
+  const normalizedPath = path.normalize(filePath)
+  const leaf = path.basename(normalizedPath).toLowerCase()
 
+  if (normalizedPath.split(/[\\/]/u).includes('.spec')) return 'spec'
   if (leaf === 'readme.md') return 'readme'
   if (leaf === 'agents.md') return 'agents'
-  if (/^[A-Z][A-Z0-9_-]*\.md$/.test(path.basename(filePath))) return 'partial'
+  if (/^[A-Z][A-Z0-9_-]*\.md$/.test(path.basename(normalizedPath))) return 'partial'
   return 'markdown'
 }
 
@@ -218,7 +221,7 @@ function compactPath(label: string, kind: MarkdownSourceKind) {
   const parent = parts.at(-2) ?? ''
   const root = parts[0]
 
-  if (kind !== 'partial' && kind !== 'markdown') return compactRootLeaf(root, leaf)
+  if (kind === 'readme' || kind === 'agents') return compactRootLeaf(root, leaf)
   return compactRootParentLeaf(root, parent, leaf)
 }
 
@@ -292,6 +295,8 @@ function sourceColor(api: TuiPluginApi, item: MarkdownContextItem) {
       return c.blue
     case 'partial':
       return c.yellow
+    case 'spec':
+      return c.cyan
     case 'markdown':
       return c.muted
   }
@@ -307,6 +312,8 @@ function sourceIcon(item: MarkdownContextItem) {
       return 'A '
     case 'partial':
       return 'I '
+    case 'spec':
+      return `${icons.spec} `
     case 'markdown':
       return 'M '
   }
