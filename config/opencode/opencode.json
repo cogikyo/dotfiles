@@ -106,6 +106,7 @@
       "/home/cullyn/**": "allow",
       "/usr": "allow",
       "/usr/**": "allow",
+      "/var/cache/pacman/pkg/**": "allow",
       "/home/cullyn/.ssh/**": "deny",
       "/home/cullyn/.gnupg/**": "deny",
       "/home/cullyn/.password-store/**": "deny",

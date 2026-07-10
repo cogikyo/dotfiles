@@ -22,6 +22,8 @@ export const icons = {
     conflict: ' ',
   },
   context: '㊋',
+  agents: '󰯉',
+  doctrine: '',
   spec: '󱍅',
   spinner: {
     braille: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'],

@@ -48,6 +48,7 @@ Mode frontmatter decides which leaves a mode can actually call.
 - `scribe/banner`: glyph-width banners, via Python.
 - `scribe/agents`: agent prompts, skills, and `AGENTS.md` files, on explicit user approval only.
 - `scribe/commit`: atomic conventional commits for approved scopes.
+- `scribe/integrate`: attended ownership of one merge or rebase through semantic repair, final-tree audit, verification, and lineage accounting; Collab only.
 - `verify/test`: runs suites and commands and QAs results.
 - `verify/web`: verifies claims against current official docs, with citations.
 - `verify/source`: verifies claims against upstream source.
@@ -56,8 +57,8 @@ Mode frontmatter decides which leaves a mode can actually call.
 ## Mode envelopes
 
 - scheme: writes `.spec/` only; dispatches scouts, reviewers, `scribe/spec`, and verifiers; asks freely; carries `spec_title`; never commits.
-- collab: full fleet plus primary-local patches; asks at real decision points; `scribe/agents` on explicit approval; touches `.spec/` and `spec_title` only for explicitly spec-backed work.
-- drive: full fleet minus `scribe/agents`, plus incidental primary-local patches; never asks; denies irreversible operations and reports them; maintains an intermediate `.spec/` packet and `spec_title` only when durable context earns it.
+- collab: full fleet plus primary-local patches; asks at real decision points; `scribe/agents` on explicit approval; may dispatch `scribe/integrate` under the attended exception; touches `.spec/` and `spec_title` only for explicitly spec-backed work.
+- drive: full fleet minus `scribe/agents` and `scribe/integrate`, plus incidental primary-local patches; never asks; denies irreversible operations and reports them; maintains an intermediate `.spec/` packet and `spec_title` only when durable context earns it.
 - learn: scouts, `review/architect`, and verifiers only; no artifacts; asks freely.
 
 ## Grok routing
@@ -91,6 +92,13 @@ Leaves inherit the session's permission envelope.
 Model routing is adaptive per `MODELS.md`; leaf files define behavior, while primaries choose models per task and usage state.
 Default routine utility, scout, and tool-judgment leaves to Terra.
 Route Grok only after the problem, implementation shape, scope, and instructions are clear; never use it to explore before a build.
+
+## Child continuity
+
+- Except in Drive, resume with `task_id` when the concern, role, and implementation lineage remain the same, especially after user corrections, incremental context, or `Questions for parent`.
+- Start a fresh child when the role, independent-judgment need, or permission envelope changes, or when the prior child is refusal-tainted, missing, or evicted.
+- There is no direct child-to-parent RPC; fleet leaves do not ask the user and return `Questions for parent`, then the primary resumes that child with the answer.
+- Drive never resumes with `task_id`; re-brief a fresh child so its AFK permission envelope is current.
 
 ## Workflow notation
 
@@ -142,3 +150,8 @@ Sessions are cattle; `.spec/` docs and the git tree are the pedigree.
 - The user may edit files concurrently; include their edits when related.
 - Extremely unrelated dirty files likely belong to another session; leave them alone.
 - No history rewriting: no amend, rebase, force-push, or reset; a bad commit gets a follow-up commit.
+- Narrow attended exception: Collab may dispatch `scribe/integrate` to own one supported merge or rebase, whether explicitly requested or already active.
+- Collab supplies exact refs/OIDs and upstream meaning, semantic authority by concern, branch intent, dirty-state ownership, topology, empty/redundant policy, and feasible verification commands.
+- `scribe/integrate` preflights ownership, resolves and stages conflicts, preserves non-overridden branch intent, finishes every stop, audits conflict-free semantics, verifies, and accounts for final lineage without pushing.
+- Ambiguous semantics, unexplained concurrent work, unsupported active state, failed final audit, destructive recovery, and divergence return as `Questions for parent`; Collab resolves the decision and resumes that child when continuity still applies.
+- Drive and every unattended workflow must stop and report an active merge or rebase rather than continue it.

@@ -253,13 +253,17 @@ It must only show Markdown files that have hard evidence in the current session 
 
 Read entries require a completed `read` tool part whose input contains a `.md`, `.mdx`, or `.markdown` path.
 Do not add inferred, discovered, grep-only, or path-proximity entries to this plugin.
+Traversal aliases and existing filesystem aliases share one canonical row; the latest completed read supplies the path, label, and compacted state.
 
-The global `~/.config/opencode/AGENTS.md` file is intentionally omitted because it is always loaded for this setup.
+The global OpenCode config-root `AGENTS.md` file is intentionally omitted because it is always loaded for this setup.
 The sidebar section is hidden until at least one Markdown read exists.
 
 Compacted read entries are shown with a red `C` marker when OpenCode marks the completed tool part that way.
-Fresh read entries use source markers: green `R` for `README.md`, blue `A` for `AGENTS.md`, yellow `I` for uppercase pointer docs like `GO.md` or `DATABASE.md`, and muted `M` for generic Markdown.
+Fresh read entries use source markers: green `R` for `README.md`, blue `󰯉` for `AGENTS.md`, yellow `I` for uppercase pointer docs like `GO.md` or `DATABASE.md`, and muted `M` for generic Markdown.
+Markdown files directly in the OpenCode config root are doctrine, except existing `README.md` and `AGENTS.md` kinds.
+Fresh doctrine entries use the yellow `icons.doctrine` scroll glyph and the extensionless basename.
 Any read under a `.spec` path segment takes precedence over filename kinds and renders with the cyan spec glyph (`icons.spec`), regardless of the file's name.
+Spec labels remove the `.spec` segment and render the owning directory plus the extensionless path below `.spec`.
 Carrier files omit their filename in labels because the marker carries that information.
 
 ## Delegate Contract

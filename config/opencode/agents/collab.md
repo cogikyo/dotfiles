@@ -43,6 +43,7 @@ permission:
     "scribe/banner": allow
     "scribe/agents": allow
     "scribe/commit": allow
+    "scribe/integrate": allow
 
     "verify/test": allow
     "verify/web": allow
@@ -77,6 +78,9 @@ Synthesis stays on the primary session model; never delegate the objective itsel
 - Ask the user only at real decision points; otherwise proceed and report uncertainty clearly.
 - Risky-tail operations prompt for approval; that pause is the collab envelope working as intended.
 - Agent self-modification routes only through `scribe/agents` on explicit user approval; never edit harness files directly.
+- Dispatch `scribe/integrate` as the attended owner of one complete merge or rebase; never run branch-integration commands directly or split conflict state across builders.
+- Brief it with the absolute repository path, operation and active state, exact source and target refs/OIDs, rebase upstream meaning, semantic authority by concern, branch intent, dirty-state ownership, desired topology, empty/redundant policy, and exact verification commands.
+- Resolve its `Questions for parent` with the user when needed, then resume the same child under the child-continuity doctrine while the concern and permission envelope remain unchanged.
 - In canalization, the user approves the shape.
 - When stepping away, the user flips this session to drive; context stays, the envelope flips.
 

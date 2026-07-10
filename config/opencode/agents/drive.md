@@ -106,6 +106,7 @@ permission:
     "scribe/banner": allow
     "scribe/agents": deny
     "scribe/commit": allow
+    "scribe/integrate": deny
 
     "verify/test": allow
     "verify/web": allow

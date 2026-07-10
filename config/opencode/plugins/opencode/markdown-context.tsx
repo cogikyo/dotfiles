@@ -2,7 +2,9 @@
 import type { Message, ToolPart } from '@opencode-ai/sdk/v2'
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from '@opencode-ai/plugin/tui'
 import { spawn, type ChildProcess } from 'node:child_process'
+import { realpathSync } from 'node:fs'
 import path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { For, Show, createSignal, onCleanup } from 'solid-js'
 import { colors } from '../shared/colors.ts'
 import { icons } from '../shared/icons.ts'
@@ -14,7 +16,11 @@ const MAX_ROOT_LENGTH = 8
 const MAX_PARENT_LENGTH = 12
 const MIN_LEAF_LENGTH = 6
 
-type MarkdownSourceKind = 'readme' | 'agents' | 'partial' | 'spec' | 'markdown'
+type MarkdownSourceKind = 'readme' | 'agents' | 'doctrine' | 'partial' | 'spec' | 'markdown'
+
+const configRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
+const xdgConfigHome = process.env.XDG_CONFIG_HOME || path.join(process.env.HOME || '', '.config')
+const configRoots = [configRoot, path.join(xdgConfigHome, 'opencode')].map((root) => path.normalize(root))
 
 type MarkdownContextItem = {
   key: string
@@ -130,10 +136,11 @@ function markdownReadItem(api: TuiPluginApi, part: ReturnType<TuiPluginApi['stat
 
   const filePath = markdownPathFromInput(tool.state.input)
   if (!filePath) return undefined
+  if (isGlobalAgentsFile(filePath)) return undefined
   const kind = markdownSourceKind(filePath)
 
   return {
-    key: filePath,
+    key: markdownIdentity(filePath),
     path: filePath,
     label: displayPath(api, filePath, kind),
     kind,
@@ -170,14 +177,32 @@ function markdownSourceKind(filePath: string): MarkdownSourceKind {
   if (normalizedPath.split(/[\\/]/u).includes('.spec')) return 'spec'
   if (leaf === 'readme.md') return 'readme'
   if (leaf === 'agents.md') return 'agents'
+  if (isConfigRootFile(normalizedPath)) return 'doctrine'
   if (/^[A-Z][A-Z0-9_-]*\.md$/.test(path.basename(normalizedPath))) return 'partial'
   return 'markdown'
+}
+
+function isGlobalAgentsFile(filePath: string) {
+  return path.basename(filePath).toLowerCase() === 'agents.md' && isConfigRootFile(filePath)
+}
+
+function isConfigRootFile(filePath: string) {
+  return configRoots.includes(path.dirname(path.normalize(filePath)))
 }
 
 function normalizeFilePath(value: string) {
   const clean = value.replace(/^file:\/\//, '').split(/[?#]/, 1)[0]
   if (clean.startsWith('~/')) return path.join(process.env.HOME || '~', clean.slice(2))
   return clean
+}
+
+function markdownIdentity(filePath: string) {
+  const normalizedPath = path.normalize(filePath)
+  try {
+    return realpathSync.native(normalizedPath)
+  } catch {
+    return normalizedPath
+  }
 }
 
 function displayPath(api: TuiPluginApi, filePath: string, kind: MarkdownSourceKind) {
@@ -196,12 +221,24 @@ function relativePath(api: TuiPluginApi, filePath: string) {
 function contextLabel(api: TuiPluginApi, filePath: string, kind: MarkdownSourceKind) {
   const label = relativePath(api, filePath)
 
+  if (kind === 'spec') return specLabel(filePath)
+  if (kind === 'doctrine') return stripMarkdownExtension(path.basename(filePath))
+
   if (kind === 'readme' || kind === 'agents') {
     const dir = path.dirname(label)
     return dir === '.' ? contextRootName(api, filePath) : dir
   }
 
   return stripMarkdownExtension(label)
+}
+
+function specLabel(filePath: string) {
+  const parts = path.normalize(filePath).split(/[\\/]/u).filter(Boolean)
+  const specIndex = parts.lastIndexOf('.spec')
+  const owner = parts[specIndex - 1]
+  const nestedPath = parts.slice(specIndex + 1)
+
+  return stripMarkdownExtension([owner, ...nestedPath].filter(Boolean).join(path.sep))
 }
 
 function contextRootName(api: TuiPluginApi, filePath: string) {
@@ -293,6 +330,8 @@ function sourceColor(api: TuiPluginApi, item: MarkdownContextItem) {
       return c.green
     case 'agents':
       return c.blue
+    case 'doctrine':
+      return c.yellow
     case 'partial':
       return c.yellow
     case 'spec':
@@ -309,7 +348,9 @@ function sourceIcon(item: MarkdownContextItem) {
     case 'readme':
       return 'R '
     case 'agents':
-      return 'A '
+      return `${icons.agents} `
+    case 'doctrine':
+      return `${icons.doctrine} `
     case 'partial':
       return 'I '
     case 'spec':

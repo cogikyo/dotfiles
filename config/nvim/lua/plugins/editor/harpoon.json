@@ -1,6 +1,9 @@
 {
   "version": 1,
   "projects": {
+    "/home/cullyn": {
+      "pins": []
+    },
     "/home/cullyn/LeadPier": {
       "pins": [
         "backend/core/runner/core.go",
@@ -12,6 +15,9 @@
         "backend/common/utility/json.go"
       ]
     },
+    "/home/cullyn/LeadPier/.pier/pier": {
+      "pins": []
+    },
     "/home/cullyn/LeadPier/backend": {
       "pins": [
         "services/partner/init.partner.go",
@@ -21,13 +27,16 @@
     },
     "/home/cullyn/LeadPier/backend/services": {
       "pins": [
-        "partner/init.partner.go",
+        "webhooks/s.rest.tracking.go",
         "webhooks/init.tracking.go",
         "routing/init.routing.go",
-        "scheduler/init.scheduler.go",
-        "webhooks/s.rest.tracking.go",
-        "aggregation/migrate.go"
+        "partner/init.partner.go",
+        "aggregation/migrate.go",
+        "scheduler/init.scheduler.go"
       ]
+    },
+    "/home/cullyn/LeadPier/backend/services/compliance": {
+      "pins": []
     },
     "/home/cullyn/LeadPier/backend/services/routing": {
       "pins": [
@@ -38,6 +47,12 @@
         "smart/stats.go",
         "models/db.smart_tier.go"
       ]
+    },
+    "/home/cullyn/LeadPier/backend/services/statistics": {
+      "pins": []
+    },
+    "/home/cullyn/LeadPier/backend/services/webhooks": {
+      "pins": []
     },
     "/home/cullyn/LeadPier/frontend": {
       "pins": [
