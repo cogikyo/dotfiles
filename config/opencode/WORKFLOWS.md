@@ -61,6 +61,15 @@ Mode frontmatter decides which leaves a mode can actually call.
 - drive: full fleet minus `scribe/agents`, plus incidental primary-local patches; never asks; denies irreversible operations and reports them; spawns managed sessions only from durable specs.
 - learn: scouts, `review/architect`, and verifiers only; no artifacts; asks freely.
 
+## Grok routing
+
+Collab should strongly prefer Grok for already-scoped, concrete, bounded mechanical tweaks and clear mechanical builds when the user can steer.
+Drive may use Grok for a tightly specified, bounded mechanical build slice from an approved objective or spec.
+Grok is never the default explorer, coordinator, or implementation-shape selector.
+Scheme and learn have no Grok implementation seat.
+Grok may provide advisory adversarial dissent, council copies, `verify/x` live-X evidence, and an advisory `review/architect` dissent when useful.
+Grok never owns selection, synthesis, final acceptance, or binding judgment.
+
 ## Primary-local patches
 
 Collab and drive orchestrate by default, but may directly apply a narrow, low-risk, context-local patch when the primary already holds enough current file and task state.
@@ -81,7 +90,8 @@ Name the review axis for every reviewer and the claim under test for every verif
 Keep briefs small; include only context that changes the task.
 Leaves inherit the session's permission envelope.
 Model routing is adaptive per `MODELS.md`; leaf files define behavior, while primaries choose models per task and usage state.
-Default leaf routing to `xai/grok-4.5` for quick delegation and clear builds; escalate when task shape or observed performance says so.
+Default routine utility, scout, and tool-judgment leaves to Terra.
+Route Grok only after the problem, implementation shape, scope, and instructions are clear; never use it to explore before a build.
 
 ## Workflow notation
 

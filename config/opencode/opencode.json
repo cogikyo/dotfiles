@@ -3,7 +3,7 @@
   "autoupdate": false,
   "enabled_providers": ["anthropic", "openai", "xai", "opencode-go"],
   "model": "openai/gpt-5.6-sol",
-  "small_model": "openai/gpt-5.6-luna",
+  "small_model": "openai/gpt-5.4-mini-fast",
   "default_agent": "drive",
   "agent": {
     "build": { "disable": true },
@@ -62,7 +62,7 @@
     "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/continuity/server.ts",
     [
       "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/media-context/prompt.ts",
-      { "imageNames": { "enabled": true, "model": "openai/gpt-5.6-luna" } }
+      { "imageNames": { "enabled": true } }
     ]
   ],
   "provider": {
