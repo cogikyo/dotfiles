@@ -39,7 +39,10 @@ type PreparedTask = {
 };
 
 const CONTENT_FILTER_ADVICE = "child unrecoverable; re-brief a fresh child (reword the brief first, switch provider as last resort); never resume this session";
+const INTERRUPTED_ADVICE = "completion unknown; reconcile durable state before re-running because the child may have edited files";
 const KNOWN_EFFORTS = new Set(["default", "minimal", "low", "medium", "high", "xhigh"]);
+const STATUS_POLL_MS = 300;
+const STARTUP_TIMEOUT_MS = 120_000;
 
 export async function prepareTask(client: Client, ctx: ToolContext, input: unknown): Promise<PreparedTask> {
   const args = taskArgs(input);
@@ -81,7 +84,7 @@ export async function runChildTask(input: {
   }
 
   const child = input.args.task_id
-    ? await readExistingChild(input.client, input.args.task_id)
+    ? await readExistingChild(input.client, input.args.task_id, input.ctx.abort)
     : await createChild(input.client, input.ctx, input.args, input.prepared);
 
   const metadata = { sessionId: child.id };
@@ -93,20 +96,18 @@ export async function runChildTask(input: {
     notes.push(`delegate metadata update failed: ${errorMessage(error)}`);
   }
 
-  const abort = () => {
-    void unwrap(
-      input.client.session.abort({ path: { id: child.id } } as never),
-      `abort child session ${child.id}`,
-    ).catch(() => undefined);
-  };
+  const childAbort = createChildAbort(input.client, child.id);
+  const abort = childAbort.start;
 
   input.ctx.abort.addEventListener("abort", abort);
   try {
     if (input.ctx.abort.aborted) throw new Error("delegate task aborted before child prompt");
-    let response: Record<string, unknown>;
+    let completion: Awaited<ReturnType<typeof waitForChild>>;
     try {
-      response = await unwrap<Record<string, unknown>>(
-        input.client.session.prompt({
+      const initialMessages = await readChildMessages(input.client, child.id, input.ctx.abort);
+      const initialMessageIDs = new Set(initialMessages.map(messageID).filter((id): id is string => !!id));
+      await unwrap(
+        input.client.session.promptAsync({
           path: { id: child.id },
           body: {
             model: input.prepared.model,
@@ -118,11 +119,17 @@ export async function runChildTask(input: {
         } as never),
         `prompt child session ${child.id}`,
       );
+      completion = await waitForChild(input.client, child.id, initialMessageIDs, input.ctx.abort, childAbort.start);
     } catch (error) {
       if (isContentFilterBlock(error)) return blockedResult(input.args, metadata, child.id);
       throw error;
     }
 
+    if (completion.interruption) {
+      return interruptedResult(input.args, metadata, child.id, notes, completion.interruption);
+    }
+    const response = completion.assistant;
+    if (!response) return interruptedResult(input.args, metadata, child.id, notes);
     const info = object(response.info);
     if (info?.error) {
       if (isContentFilterBlock(info.error)) return blockedResult(input.args, metadata, child.id);
@@ -137,7 +144,165 @@ export async function runChildTask(input: {
     };
   } finally {
     input.ctx.abort.removeEventListener("abort", abort);
+    childAbort.stop();
   }
+}
+
+async function waitForChild(
+  client: Client,
+  sessionID: string,
+  initialMessageIDs: Set<string>,
+  signal: AbortSignal,
+  abortChild: () => void,
+) {
+  let active = false;
+  const startup = new AbortController();
+  const startupTimer = setTimeout(
+    () => startup.abort(new Error("delegate child startup timed out")),
+    STARTUP_TIMEOUT_MS,
+  );
+  const waitSignal = AbortSignal.any([signal, startup.signal]);
+
+  try {
+    while (true) {
+      await abortableDelay(STATUS_POLL_MS, waitSignal);
+      const statuses = await unwrap<Record<string, unknown>>(
+        client.session.status({ signal: waitSignal } as never),
+        `read child session ${sessionID} status`,
+      );
+      const status = object(statuses[sessionID]);
+      if (status?.type === "busy" || status?.type === "retry") {
+        active = true;
+        clearTimeout(startupTimer);
+        continue;
+      }
+      if (status && status.type !== "idle") continue;
+
+      const messages = await readChildMessages(client, sessionID, waitSignal);
+      const turnMessages = messages.filter((message) => {
+        const id = messageID(message);
+        return !!id && !initialMessageIDs.has(id);
+      });
+      if (!active && turnMessages.length) {
+        active = true;
+        clearTimeout(startupTimer);
+        continue;
+      }
+      if (!active) continue;
+      return { assistant: lastAssistantMessage(turnMessages) };
+    }
+  } catch (error) {
+    if (startup.signal.aborted && !signal.aborted) {
+      abortChild();
+      return { interruption: "child showed no activity within 120 seconds" };
+    }
+    throw error;
+  } finally {
+    clearTimeout(startupTimer);
+  }
+}
+
+function createChildAbort(client: Client, sessionID: string) {
+  const timers = new Set<ReturnType<typeof setTimeout>>();
+  let stopped = false;
+  let started = false;
+
+  const stop = () => {
+    stopped = true;
+    for (const timer of timers) clearTimeout(timer);
+    timers.clear();
+  };
+
+  const attempt = async () => {
+    if (stopped) return;
+    try {
+      const aborted = await unwrap<boolean>(
+        client.session.abort({ path: { id: sessionID } } as never),
+        `abort child session ${sessionID}`,
+      );
+      if (aborted) stop();
+    } catch {
+      // A later status-correlated attempt can still confirm and abort the runner.
+    }
+  };
+
+  const retry = async () => {
+    if (stopped) return;
+    try {
+      const statuses = await unwrap<Record<string, unknown>>(
+        client.session.status({} as never),
+        `read child session ${sessionID} status after abort`,
+      );
+      if (stopped) return;
+      const status = object(statuses[sessionID]);
+      if (!status || status.type === "idle") {
+        stop();
+        return;
+      }
+      if (status.type === "busy" || status.type === "retry") await attempt();
+    } catch {
+      // The next scheduled status check remains an independent chance to confirm liveness.
+    }
+  };
+
+  const schedule = (delay: number) => {
+    const timer = setTimeout(() => {
+      timers.delete(timer);
+      void retry();
+    }, delay);
+    timers.add(timer);
+  };
+
+  const start = () => {
+    if (started || stopped) return;
+    started = true;
+    void attempt();
+    schedule(1_000);
+    schedule(2_500);
+  };
+
+  return { start, stop };
+}
+
+async function readChildMessages(client: Client, sessionID: string, signal: AbortSignal) {
+  return unwrap<unknown[]>(
+    client.session.messages({ path: { id: sessionID }, signal } as never),
+    `read child session ${sessionID} messages`,
+  );
+}
+
+function lastAssistantMessage(messages: unknown[]) {
+  for (let index = messages.length - 1; index >= 0; index--) {
+    const message = object(messages[index]);
+    if (object(message?.info)?.role === "assistant") return message;
+  }
+  return undefined;
+}
+
+function messageID(message: unknown) {
+  return string(object(object(message)?.info)?.id);
+}
+
+function abortableDelay(milliseconds: number, signal: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal.aborted) {
+      reject(signal.reason ?? new Error("delegate task aborted"));
+      return;
+    }
+
+    const timer = setTimeout(done, milliseconds);
+    signal.addEventListener("abort", aborted, { once: true });
+
+    function done() {
+      signal.removeEventListener("abort", aborted);
+      resolve();
+    }
+
+    function aborted() {
+      clearTimeout(timer);
+      reject(signal.reason ?? new Error("delegate task aborted"));
+    }
+  });
 }
 
 async function updateToolMetadata(
@@ -340,13 +505,22 @@ async function deriveChildPermission(
   };
 }
 
-async function readExistingChild(client: Client, sessionID: string) {
+async function readExistingChild(client: Client, sessionID: string, signal: AbortSignal) {
   const session = await unwrap<Record<string, unknown>>(
     client.session.get({ path: { id: sessionID } } as never),
     `read child session ${sessionID}`,
   );
   const id = string(session.id);
   if (!id) throw new Error(`delegate child session ${sessionID} did not return an id`);
+
+  const statuses = await unwrap<Record<string, unknown>>(
+    client.session.status({ signal } as never),
+    `read child session ${sessionID} status before resume`,
+  );
+  const status = object(statuses[id]);
+  if (status && status.type !== "idle") {
+    throw new Error(`delegate cannot resume busy child session ${id}; task_id resumes require an idle child`);
+  }
   return { id };
 }
 
@@ -478,6 +652,24 @@ function withNotes(text: string, notes: string[]) {
 
 function blockedResult(args: TaskArgs, metadata: Record<string, unknown>, sessionID: string) {
   const text = [`blocked: content_filter`, `child_session_id: ${sessionID}`, `advice: ${CONTENT_FILTER_ADVICE}`].join("\n");
+  return {
+    title: args.description,
+    metadata,
+    output: renderOutput({ sessionID, state: "error", text }),
+  };
+}
+
+function interruptedResult(
+  args: TaskArgs,
+  metadata: Record<string, unknown>,
+  sessionID: string,
+  notes: string[],
+  reason = "child became idle without assistant output",
+) {
+  const text = withNotes(
+    [`interrupted: ${reason}`, `child_session_id: ${sessionID}`, `advice: ${INTERRUPTED_ADVICE}`].join("\n"),
+    notes,
+  );
   return {
     title: args.description,
     metadata,
