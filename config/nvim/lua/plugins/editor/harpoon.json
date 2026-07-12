@@ -61,7 +61,9 @@
     },
     "/home/cullyn/cogikyo/alrodriguez.studio": {
       "pins": [
-        ".spec/store.md"
+        ".spec/store.md",
+        ".spec/infra.md",
+        ".spec/creative.md"
       ]
     },
     "/home/cullyn/cogikyo/cogikyo": {
