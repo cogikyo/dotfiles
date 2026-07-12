@@ -18,20 +18,12 @@ import (
 //
 // Invariant: when enrolled, exactly two windows are tiled and the shadow is parked on windows.ShadowWorkspace.
 type ThreeBody struct {
-	hypr      *hypr.Client
-	state     *state.State
-	hasNotify func() bool
-	notifyAct func() bool
+	hypr  *hypr.Client
+	state *state.State
 }
 
 func NewThreeBody(h *hypr.Client, s *state.State) *ThreeBody {
 	return &ThreeBody{hypr: h, state: s}
-}
-
-// SetNotifyHooks wires a notification bridge so "agents" can try a pending action before switching focus.
-func (tb *ThreeBody) SetNotifyHooks(check func() bool, action func() bool) {
-	tb.hasNotify = check
-	tb.notifyAct = action
 }
 
 var threeBodyOrder = []string{"editor", "agents", "browser"}
@@ -47,16 +39,6 @@ func (tb *ThreeBody) Execute(name string) (string, error) {
 	spec, ok := config.ThreeBody[name]
 	if !ok {
 		return "", fmt.Errorf("unknown three-body window: %s", name)
-	}
-	if name == "agents" && tb.hasNotify != nil && tb.hasNotify() && tb.notifyAct != nil {
-		if msg, err := tb.focusShadowedBody(name, spec.Class, spec.Title); err != nil {
-			return "", err
-		} else if msg != "" {
-			return tb.notifyActionAfter(msg)
-		}
-		if tb.notifyAct() {
-			return "notification: action", nil
-		}
 	}
 	if tb.ignoreOnCurrentWorkspace(name) {
 		return fmt.Sprintf("ignored on workspace 1-2: %s", name), nil
@@ -74,53 +56,6 @@ func ignoreBodyOnWorkspace(name string, wsID int) bool {
 		return false
 	}
 	return wsID >= 1 && wsID <= 2
-}
-
-func (tb *ThreeBody) notifyActionAfter(prefix string) (string, error) {
-	if tb.notifyAct() {
-		return prefix + "; notification: action", nil
-	}
-	return prefix, nil
-}
-
-func (tb *ThreeBody) focusShadowedBody(bodyName, class, title string) (string, error) {
-	wsID, err := tb.activeWorkspace()
-	if err != nil {
-		return "", err
-	}
-
-	clients, err := tb.hypr.Clients()
-	if err != nil {
-		return "", err
-	}
-	if st := tb.state.GetThreeBody(wsID); st != nil && shadowMatches(clients, st, class, title) {
-		return tb.Focus(bodyName, class, title, "")
-	}
-
-	for shadowWS, st := range tb.state.AllThreeBody() {
-		if shadowWS == wsID || !shadowMatches(clients, st, class, title) {
-			continue
-		}
-		if err := tb.hypr.Dispatch(fmt.Sprintf("workspace %d", shadowWS)); err != nil {
-			return "", fmt.Errorf("focus three-body workspace: %w", err)
-		}
-		msg, err := tb.swap(st, shadowWS)
-		if err != nil {
-			return "", err
-		}
-		return fmt.Sprintf("workspace %d; %s", shadowWS, msg), nil
-	}
-	return "", nil
-}
-
-func shadowMatches(clients []hypr.Window, st *state.ThreeBodyState, class, title string) bool {
-	for i := range clients {
-		c := &clients[i]
-		if c.Address == st.Shadow && c.Workspace.Name == windows.ShadowWorkspace && windows.MatchesTarget(c, class, title) {
-			return true
-		}
-	}
-	return false
 }
 
 // WindowSpec is a flat view of a ThreeBody config entry for fallback iteration.
@@ -144,6 +79,46 @@ func (tb *ThreeBody) executeShadow() (string, error) {
 		}
 	}
 	return tb.Swap(fallbacks)
+}
+
+// RevealShadow swaps an address parked as a recorded three-body shadow into view.
+func (tb *ThreeBody) RevealShadow(address string) (bool, error) {
+	if address == "" {
+		return false, nil
+	}
+
+	var ownerWS int
+	var owner *state.ThreeBodyState
+	for wsID, st := range tb.state.AllThreeBody() {
+		if st.Shadow == address {
+			ownerWS = wsID
+			owner = st
+			break
+		}
+	}
+	if owner == nil {
+		return false, nil
+	}
+
+	clients, err := tb.hypr.Clients()
+	if err != nil {
+		return false, err
+	}
+	for i := range clients {
+		if clients[i].Address != address {
+			continue
+		}
+		if clients[i].Workspace.Name != windows.ShadowWorkspace {
+			return false, nil
+		}
+		if err := tb.hypr.Dispatch(fmt.Sprintf("workspace %d", ownerWS)); err != nil {
+			return true, fmt.Errorf("focus three-body workspace: %w", err)
+		}
+		_, err := tb.swap(owner, ownerWS)
+		return true, err
+	}
+
+	return false, nil
 }
 
 // Swap rotates the hidden shadow into view, enrolling or launching a missing fallback as needed.

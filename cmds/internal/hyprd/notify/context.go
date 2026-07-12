@@ -5,6 +5,7 @@ package notify
 import (
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/session"
+	"dotfiles/cmds/internal/hyprd/wm"
 	"encoding/json"
 	"fmt"
 	"hash/fnv"
@@ -221,7 +222,10 @@ func (n *Notifier) focusContext(ctx *kittyContext) {
 		if clients, err := n.hypr.Clients(); err == nil {
 			for _, c := range clients {
 				if c.Pid == ctx.PID {
-					_ = n.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", c.Address))
+					revealed, err := wm.NewThreeBody(n.hypr, n.state).RevealShadow(c.Address)
+					if err == nil && !revealed {
+						_ = n.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", c.Address))
+					}
 					break
 				}
 			}

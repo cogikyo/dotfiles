@@ -151,7 +151,7 @@ func (r *dunstActionRouter) handleClose(signal *dbus.Signal) {
 	r.mu.Unlock()
 }
 
-const notifyFocusWorkspace = 2
+const notifyFocusWorkspace = 1
 
 func (r *dunstActionRouter) focus(target dunstActionTarget) error {
 	if r.hypr == nil || target.Class == "" {
@@ -163,7 +163,7 @@ func (r *dunstActionRouter) focus(target dunstActionTarget) error {
 		return err
 	}
 
-	// Prefer the instance on the communication workspace; fall back to any match.
+	// Prefer the instance on the notification workspace; fall back to any match.
 	var fallback *hypr.Window
 	for i := range clients {
 		if !strings.EqualFold(clients[i].Class, target.Class) {
