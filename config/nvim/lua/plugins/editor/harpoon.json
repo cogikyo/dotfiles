@@ -59,6 +59,11 @@
         "apps/admin/src/pages/users/$userId/tracking/index.tsx"
       ]
     },
+    "/home/cullyn/cogikyo/alrodriguez.studio": {
+      "pins": [
+        ".spec/store.md"
+      ]
+    },
     "/home/cullyn/cogikyo/cogikyo": {
       "pins": [
         "README.md",

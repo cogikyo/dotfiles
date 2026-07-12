@@ -112,6 +112,7 @@
       "/home/cullyn/.password-store/**": "deny",
       "/home/cullyn/.local/share/keyrings/**": "deny",
       "/run/user/1000/opencode": "allow",
+      "/run/user/1000/opencode/**": "allow",
       "/tmp/**": "allow"
     },
     "doom_loop": "ask",
