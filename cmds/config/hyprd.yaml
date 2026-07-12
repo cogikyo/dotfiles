@@ -72,6 +72,12 @@ sessions:
     #     - editor
     #     - agents
 
+    alrodriguez.studio:
+      project: cogikyo/alrodriguez.studio
+      body:
+        - editor
+        - agents
+
     leadpier:
       init: true
       project: LeadPier
