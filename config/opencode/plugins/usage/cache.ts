@@ -7,6 +7,7 @@ export type CachedProviderUsage = {
   fetchedAt?: number;
   backoffUntil?: number;
   usage?: ProviderUsage;
+  windows?: UsageWindow[];
   error?: string;
 };
 
@@ -89,7 +90,7 @@ export function decodeProviderCache(
 
     const usage = root.usage === undefined ? undefined : object(root.usage);
     if (root.usage !== undefined && !usage) return unknownCache("malformed");
-    const rawWindows = usage?.windows;
+    const rawWindows = usage ? usage.windows : root.windows;
     if (rawWindows !== undefined && !Array.isArray(rawWindows)) {
       return unknownCache("malformed");
     }
@@ -214,7 +215,7 @@ function parseCachedWindow(
 ): CachedUsageWindow | undefined {
   const root = object(value);
   if (!root) return undefined;
-  if (typeof root.label !== "string" || !root.label.trim() || root.label.length > 8) {
+  if (typeof root.label !== "string" || !/^[A-Za-z0-9_-]{1,8}$/.test(root.label)) {
     return undefined;
   }
 
@@ -226,13 +227,14 @@ function parseCachedWindow(
     return undefined;
   }
 
-  const resetAt = optionalString(root.resetAt);
-  if (root.resetAt !== undefined && resetAt === undefined) return undefined;
-  const resetMS = resetAt === undefined ? undefined : Date.parse(resetAt);
+  const resetValue = optionalString(root.resetAt);
+  if (root.resetAt !== undefined && resetValue === undefined) return undefined;
+  const resetMS = resetValue === undefined ? undefined : Date.parse(resetValue);
   if (resetMS !== undefined && !Number.isFinite(resetMS)) return undefined;
+  const resetAt = resetMS === undefined ? undefined : new Date(resetMS).toISOString();
 
   return {
-    label: root.label.trim(),
+    label: root.label,
     usedPercent,
     resetAt,
     postReset:

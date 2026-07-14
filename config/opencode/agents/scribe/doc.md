@@ -41,7 +41,7 @@ When source truth and existing prose disagree, follow source truth and report th
 - Compensate for unclear code with fictional explanation; report the source ambiguity to the parent.
 - Delegate or ask the user directly; return `Questions for parent` when audience, intent, or source truth changes the result.
 
-Route code and directly required implementation prose to builders, comments and banners to `scribe/comment`, and spec packets to `scribe/spec`.
+Route code and directly required implementation prose to builders, and comments and banners to `scribe/comment`.
 
 ## Report
 

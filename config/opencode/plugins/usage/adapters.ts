@@ -10,7 +10,3 @@ export const usageAdapters = [
   xaiUsage,
   opencodeGoUsage,
 ] satisfies ProviderAdapter[];
-
-export function usageAdapter(providerID: string) {
-  return usageAdapters.find((adapter) => adapter.id === providerID);
-}

@@ -1,9 +1,9 @@
 import { normalizePercent } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage } from "./types.ts";
 import { readOpencodeFirefoxAuthCookie } from "./firefox.ts";
+import { usageProviders } from "./providers.ts";
 
-const id = "opencode-go";
-const label = "OpenCode";
+const { id, label, staleAfterMS } = usageProviders.opencodeGo;
 const ORIGIN = "https://opencode.ai";
 const DISCOVERY_TTL_MS = 20 * 60_000;
 const FETCH_TIMEOUT_MS = 15_000;
@@ -488,7 +488,7 @@ export const opencodeGoUsage: ProviderAdapter = {
     errorBackoffMS: 3 * 60_000,
     warnBackoffMS: 60_000, // sign-in retry
     rateLimitBackoffMS: 10 * 60_000,
-    staleAfterMS: 2 * 60_000,
+    staleAfterMS,
   },
   load,
 };

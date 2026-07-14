@@ -1,4 +1,7 @@
-import { readAuth } from "./auth.ts";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+import { readAuth, readClaudeCredentials } from "./auth.ts";
+import { usageProviders } from "./providers.ts";
 import { normalizePercent } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
 
@@ -34,12 +37,19 @@ type AnthropicLimitScope = {
   } | null;
 };
 
-const id = "anthropic";
-const label = "Anthropic";
+const { id, label, staleAfterMS } = usageProviders.anthropic;
 const FETCH_TIMEOUT_MS = 15_000;
+const CLAUDE_REFRESH_TIMEOUT_MS = 60_000;
+const RECOVER_COOLDOWN_MS = 5 * 60_000;
+const execFileAsync = promisify(execFile);
 
-function usage(windows: UsageWindow[], note?: string): ProviderUsage {
-  return { id, label, windows, note };
+// Single-flight: only one refresh in progress at a time.
+let refreshing: Promise<boolean> | null = null;
+// Cooldown: suppress repeated recovery attempts within a window.
+let lastRecoverAt = 0;
+
+function usage(windows: UsageWindow[], note?: string, noteKind?: ProviderUsage["noteKind"]): ProviderUsage {
+  return { id, label, windows, note, noteKind };
 }
 
 function resetAt(window: AnthropicWindow) {
@@ -93,17 +103,63 @@ function scopedWindows(limits?: AnthropicLimit[] | null) {
     .filter((window): window is UsageWindow => Boolean(window));
 }
 
-async function load(): Promise<ProviderUsage> {
-  const auth = await readAuth<AuthFile>();
-  const anthropic = auth.anthropic;
+function isExpired(expiresAt: string | undefined) {
+  if (typeof expiresAt !== "string") return true;
+  const ms = Date.parse(expiresAt);
+  if (!Number.isFinite(ms)) return true;
+  return Date.now() >= ms;
+}
 
-  if (!anthropic || anthropic.type !== "oauth" || !anthropic.access) {
-    return usage([], "no auth");
+async function triggerClaudeRefresh(): Promise<boolean> {
+  try {
+    await execFileAsync("claude", ["-p", ".", "--model", "haiku"], {
+      timeout: CLAUDE_REFRESH_TIMEOUT_MS,
+      maxBuffer: 16_384,
+      cwd: "/tmp",
+      shell: false,
+    });
+    return true;
+  } catch {
+    return false;
   }
+}
 
+async function tryRecoverAuth(): Promise<string | undefined> {
+  // Single-flight: deduplicate concurrent calls.
+  if (refreshing) return (await refreshing) ? readTokenFromClaude() : undefined;
+
+  // Cooldown: skip if we already tried recently.
+  if (Date.now() - lastRecoverAt < RECOVER_COOLDOWN_MS) return undefined;
+
+  const recovery = (async () => {
+    // Bail if no Claude credential file exists — nothing to refresh.
+    const creds = await readClaudeCredentials();
+    if (!creds) return false;
+
+    const ok = await triggerClaudeRefresh();
+    lastRecoverAt = Date.now();
+    return ok;
+  })();
+
+  refreshing = recovery;
+  try {
+    return (await recovery) ? readTokenFromClaude() : undefined;
+  } finally {
+    refreshing = null;
+  }
+}
+
+async function readTokenFromClaude(): Promise<string | undefined> {
+  const creds = await readClaudeCredentials();
+  if (!creds?.accessToken) return undefined;
+  if (isExpired(creds.expiresAt)) return undefined;
+  return creds.accessToken;
+}
+
+async function fetchUsage(token: string): Promise<ProviderUsage> {
   const response = await fetch("https://api.anthropic.com/api/oauth/usage", {
     headers: {
-      Authorization: `Bearer ${anthropic.access}`,
+      Authorization: `Bearer ${token}`,
       Accept: "application/json",
       "User-Agent": "opencode-usage",
       "anthropic-beta": "oauth-2025-04-20",
@@ -124,6 +180,27 @@ async function load(): Promise<ProviderUsage> {
   return usage(windows);
 }
 
+async function load(): Promise<ProviderUsage> {
+  const auth = await readAuth<AuthFile>();
+  const anthropic = auth.anthropic;
+
+  if (!anthropic || anthropic.type !== "oauth" || !anthropic.access) {
+    return usage([], "no auth");
+  }
+
+  const result = await fetchUsage(anthropic.access);
+  // Healthy path: got data or a non-401 error. No recovery needed.
+  if (result.note === undefined || result.note !== "401") return result;
+
+  // 401: attempt bounded recovery with Claude CLI, then retry once.
+  const recoveredToken = await tryRecoverAuth();
+  if (!recoveredToken) return usage([], "auth recovery failed", "warn");
+
+  const retried = await fetchUsage(recoveredToken);
+  // Post-recovery 401 stays hard; no further retries.
+  return retried;
+}
+
 export const anthropicUsage: ProviderAdapter = {
   id,
   label,
@@ -132,7 +209,7 @@ export const anthropicUsage: ProviderAdapter = {
     errorBackoffMS: 5 * 60_000,
     warnBackoffMS: 0,
     rateLimitBackoffMS: 60 * 60_000,
-    staleAfterMS: 5 * 60_000,
+    staleAfterMS,
   },
   load,
 };

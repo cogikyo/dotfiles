@@ -496,7 +496,9 @@ async function deriveChildPermission(
   const childDenies: Rule[] = [
     ...(hasPermissionRule(agentRules, "todowrite") ? [] : [deny("todowrite")]),
     ...(hasPermissionRule(agentRules, "task") ? [] : [deny("task")]),
-    ...primaryTools(config).map(deny),
+    ...primaryTools(config)
+      .filter((tool) => !hasPermissionRule(agentRules, tool))
+      .map(deny),
   ];
 
   return {

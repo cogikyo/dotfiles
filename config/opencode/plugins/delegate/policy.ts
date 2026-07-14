@@ -1,5 +1,5 @@
-import { usageAdapter } from "../usage/adapters.ts";
 import { inspectProviderCache } from "../usage/cache.ts";
+import { usageProvider } from "../usage/providers.ts";
 import type { DelegateConfig } from "./config.ts";
 
 export async function enforceProviderPolicy(providerID: string, config: DelegateConfig, signal: AbortSignal) {
@@ -7,21 +7,28 @@ export async function enforceProviderPolicy(providerID: string, config: Delegate
     throw new Error(`delegate provider policy missing for ${providerID}; add it to delegate.json.providers`);
   }
 
-  const adapter = usageAdapter(providerID);
-  if (!adapter) {
-    return [`delegate provider policy: ${providerID} has no usage adapter; proceeding un-gated`];
+  const provider = usageProvider(providerID);
+  if (!provider) {
+    return [`delegate provider policy: ${providerID} has no usage provider spec; proceeding un-gated`];
   }
 
-  const cache = await inspectProviderCache(providerID, adapter.poll.staleAfterMS);
+  const cache = await inspectProviderCache(providerID, provider.staleAfterMS);
   if (cache.issue) {
     return [`delegate provider policy: ${providerID} usage cache is ${cache.issue}; proceeding un-gated`];
   }
   if (!cache.windows.length) return [`delegate provider policy: ${providerID} usage cache has no windows; proceeding un-gated`];
 
+  const notes: string[] = [];
+  if (cache.windows.some((window) => window.postReset)) {
+    notes.push(`delegate provider policy: ${providerID} has post-reset usage treated as unknown`);
+  }
+  if (cache.windows.some((window) => window.usedPercent === undefined)) {
+    notes.push(`delegate provider policy: ${providerID} has unknown usage percentages`);
+  }
   const capped = cache.windows.filter(
     (window) => !window.postReset && window.usedPercent !== undefined && window.usedPercent >= 100,
   );
-  if (!capped.length) return [];
+  if (!capped.length) return notes;
 
   const waits = capped.flatMap((window) => {
     const ms = resetAtMs(window.resetAt);
@@ -34,10 +41,12 @@ export async function enforceProviderPolicy(providerID: string, config: Delegate
 
   const latest = waits.reduce((current, item) => (item.ms > current.ms ? item : current));
   const waitMs = latest.ms - Date.now();
-  if (waitMs <= 0) return [`delegate provider policy: ${providerID} capped window reset time has passed; proceeding with stale usage data`];
+  if (waitMs <= 0) {
+    return [...notes, `delegate provider policy: ${providerID} capped window reset time has passed; proceeding with stale usage data`];
+  }
 
   await sleepAbortably(waitMs, signal);
-  return [`delegate provider policy: waited ${formatMinutes(waitMs)} for ${providerID} usage reset`];
+  return [...notes, `delegate provider policy: waited ${formatMinutes(waitMs)} for ${providerID} usage reset`];
 }
 
 function resetAtMs(value: string | undefined) {

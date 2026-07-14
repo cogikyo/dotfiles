@@ -1,4 +1,5 @@
 import { readAuth } from "./auth.ts";
+import { usageProviders } from "./providers.ts";
 import { normalizePercent } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
 
@@ -27,8 +28,7 @@ type OpenAIUsagePayload = {
   rate_limit?: OpenAIRateLimit;
 };
 
-const id = "openai";
-const label = "OpenAI";
+const { id, label, staleAfterMS } = usageProviders.openai;
 const FETCH_TIMEOUT_MS = 15_000;
 const DAY_SECONDS = 24 * 60 * 60;
 const WEEK_SECONDS = 7 * DAY_SECONDS;
@@ -169,7 +169,7 @@ export const openaiUsage: ProviderAdapter = {
     errorBackoffMS: 60_000,
     warnBackoffMS: 0,
     rateLimitBackoffMS: 10 * 60_000,
-    staleAfterMS: 2 * 60_000,
+    staleAfterMS,
   },
   load,
 };

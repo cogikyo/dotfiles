@@ -3,6 +3,7 @@ import os from "node:os";
 import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { usageProviders } from "./providers.ts";
 import { normalizePercent } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
 
@@ -13,8 +14,7 @@ import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
 // - `?format=usage` (and bare `/v1/billing`): monthly credit pool `used` / `monthlyLimit` + month end.
 // - `?format=credits`: unified weekly period reset, optional `creditUsagePercent`, no stable burn basis.
 // Both are polled so the sidebar can show monthly % and weekly reset without inventing a weekly %.
-const id = "xai";
-const label = "xAI";
+const { id, label, staleAfterMS } = usageProviders.xai;
 const ISSUER = "https://auth.x.ai";
 const BILLING_USAGE_URL = "https://cli-chat-proxy.grok.com/v1/billing?format=usage";
 const BILLING_CREDITS_URL = "https://cli-chat-proxy.grok.com/v1/billing?format=credits";
@@ -296,7 +296,7 @@ export const xaiUsage: ProviderAdapter = {
     errorBackoffMS: 5 * 60_000,
     warnBackoffMS: 0,
     rateLimitBackoffMS: 15 * 60_000,
-    staleAfterMS: 10 * 60_000,
+    staleAfterMS,
   },
   load,
 };

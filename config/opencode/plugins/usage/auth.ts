@@ -41,3 +41,28 @@ export function usageLockPath(providerID: string) {
 export async function readAuth<T>() {
   return JSON.parse(await fs.readFile(authPath(), "utf8")) as T;
 }
+
+export function resolveClaudeConfigDir() {
+  const env = process.env.CLAUDE_CONFIG_DIR?.trim();
+  if (env) return path.resolve(env);
+  return path.join(os.homedir(), ".claude");
+}
+
+export function claudeCredentialsPath() {
+  return path.join(resolveClaudeConfigDir(), ".credentials.json");
+}
+
+export type ClaudeCredentials = {
+  accessToken?: string;
+  expiresAt?: string;
+};
+
+export async function readClaudeCredentials(): Promise<ClaudeCredentials | undefined> {
+  try {
+    const parsed = JSON.parse(await fs.readFile(claudeCredentialsPath(), "utf8")) as unknown;
+    if (!parsed || typeof parsed !== "object") return undefined;
+    return parsed as ClaudeCredentials;
+  } catch {
+    return undefined;
+  }
+}

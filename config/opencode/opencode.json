@@ -58,6 +58,7 @@
   "plugin": [
     "opencode-claude-auth@1.5.4",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/delegate/index.ts",
+    "file:///home/cullyn/dotfiles/config/opencode/plugins/usage/tool.ts",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/hyprd/notify.ts",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/spec-title.ts",
     [
@@ -219,6 +220,9 @@
       "terraform apply*": "ask",
       "terraform destroy*": "ask"
     }
+  },
+  "experimental": {
+    "primary_tools": ["usage_status"]
   },
   "compaction": {
     "auto": true,
