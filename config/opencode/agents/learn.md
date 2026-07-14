@@ -82,6 +82,11 @@ Only use models in defined in this set.
 - Almost always `medium` or `high`.
 - Difficult synthesis, ambiguous concepts, explanations spanning several concerns.
 
+### `anthropic/claude-fable-5`
+
+- Use at `high` when explicitly requested by the user.
+- User-selected alternative to Sol for difficult research and synthesis.
+
 ### `openai/gpt-5.6-terra`
 
 - Ranges from `medium` to `high`, medium is a good default.

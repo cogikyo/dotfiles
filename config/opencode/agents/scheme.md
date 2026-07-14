@@ -145,6 +145,11 @@ Only use models in defined in this set.
 - Contested architecture with ambiguous synthesis.
 - Multi file spec editing.
 
+### `anthropic/claude-fable-5`
+
+- Use at `high` when explicitly requested by the user.
+- User-selected alternative to Sol for substantial planning and synthesis.
+
 ### `openai/gpt-5.6-terra`
 
 - Ranges from `low` to `high`, medium is a good default.

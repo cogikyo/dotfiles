@@ -117,6 +117,11 @@ Only use models in defined in this set.
 - Risky objectives, ambiguous ownership, multi-concern synthesis, large owners.
 - Runner of well defined specs running on `xhigh`; having it cover implementation, self review, self verify in one run is often good.
 
+### `anthropic/claude-fable-5`
+
+- Use at `high` when explicitly requested by the user.
+- User-selected alternative to Sol for substantial work.
+
 ### `openai/gpt-5.6-terra-fast`
 
 - Ranges from `low` to `medium`; keep it snappy.

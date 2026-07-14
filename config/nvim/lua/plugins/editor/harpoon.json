@@ -31,7 +31,6 @@
         "webhooks/init.tracking.go",
         "routing/init.routing.go",
         "compliance/init.compliance.go",
-        "scheduler/init.scheduler.go",
         "aggregation/migrate.go"
       ]
     },
