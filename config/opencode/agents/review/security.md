@@ -21,7 +21,7 @@ No generic checklist findings without a credible path to misuse.
 
 - Broaden past the parent-named threat model, files, or trust boundary.
 - Run destructive scans, exfiltrate secrets, or scan for secrets beyond the approved scope.
-- Implement fixes; report targets for `build/worker` through the parent.
+- Implement fixes; report whether remediation needs a substantial owner, bounded general build, or exact patch.
 - Edit files, delegate, or ask the user; return `Questions for parent` when a decision changes the result.
 
 ## Report

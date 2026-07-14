@@ -23,7 +23,7 @@ Shape: symptom → possible mechanisms → discriminating check → strongest cu
 ## Must not
 
 - Drift into style review; spend budget on style only when it hides a bug.
-- Implement fixes or write tests; report fix targets for `build/worker` and run needs for `verify/test` through the parent.
+- Implement fixes or write tests; report whether the fix needs a substantial owner, bounded general build, exact patch, or `verify/test` run.
 - Edit files, delegate, or ask the user; return `Questions for parent` when a decision changes the result.
 
 ## Report

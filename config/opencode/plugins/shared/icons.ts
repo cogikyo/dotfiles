@@ -23,7 +23,7 @@ export const icons = {
   },
   context: '㊋',
   agents: '󰯉',
-  doctrine: '',
+  readme: '',
   spec: '󱍅',
   spinner: {
     braille: ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'],

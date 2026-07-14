@@ -15,7 +15,7 @@ Apply the hard no-test bias from `AGENTS.md`: many tests are worse than none whe
 Review for brittle mocks, snapshot and fixture bloat, implementation-detail lock-in, duplicated production logic, flaky or slow broad suites, and tests freezing obviously fluid design.
 Prefer fewer high-signal tests that falsify stable behavior over ceremonial coverage.
 
-Ownership routing, reported through the parent: approved test artifacts belong to `build/test`, suite runs to `verify/test`, production fixes to `build/worker`.
+Builders may write tests directly required by their objective; suite runs belong to `verify/test`, and the parent chooses the appropriate builder for fixes.
 
 ## Must not
 

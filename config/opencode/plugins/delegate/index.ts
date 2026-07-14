@@ -1,5 +1,6 @@
 import type { Plugin, PluginModule } from "@opencode-ai/plugin";
 import { tool } from "@opencode-ai/plugin";
+import { appendHeadroomSnapshot } from "../usage/headroom.ts";
 import { loadDelegateConfig } from "./config.ts";
 import { enforceProviderPolicy } from "./policy.ts";
 import { prepareTask, runChildTask } from "./session.ts";
@@ -43,6 +44,10 @@ const server: Plugin = async ({ client }) => {
           })) as never;
         },
       }),
+    },
+    "tool.definition": async ({ toolID }, output) => {
+      if (toolID !== "task" || !output.description.startsWith(DESCRIPTION)) return;
+      output.description = await appendHeadroomSnapshot(output.description);
     },
   };
 };

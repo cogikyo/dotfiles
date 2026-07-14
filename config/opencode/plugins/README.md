@@ -91,6 +91,16 @@ Provider lock files live under `${XDG_RUNTIME_DIR:-/tmp/opencode-${uid}}/opencod
 Network refreshes are allowed at most once per provider per minute; both the one-minute UI timer and session message events request a refresh, and `shouldFetch` plus the provider lock gate the actual fetch so idle instances re-fetch instead of showing stale data forever.
 When a rate-limited provider has prior data, the sidebar keeps showing stale windows with a muted note rather than replacing them with an error.
 
+The server-side delegate plugin reads those same cache files while OpenCode builds the `task` definition for a model request.
+It appends one bounded line of per-provider, per-window remaining headroom, reset proximity, and cache age to the existing description.
+This dynamic metadata reaches any primary request where `task` is available, including first turns, continuations, and post-compaction requests, without adding a tool call or persisted chat part.
+Denied tools are omitted before inference, so ordinary children with `task` denied do not receive the line; no user, title, summary, compaction, system, or unrelated tool text is modified.
+The reader performs four local cache reads and never performs provider requests, starts timers, refreshes data, or treats process memory as authoritative.
+Each adapter's `staleAfterMS` is the shared freshness threshold for the sidebar, delegate gate, and headroom renderer.
+Missing, unreadable, malformed, errored, windowless, or stale cache state renders explicit `?` headroom and cannot justify fanout.
+A window whose reset passed without a fetch after that reset also renders `?`; the renderer never assumes that capacity replenished.
+Fresh numeric values are rendered as `100 - usedPercent`, while each provider window and its reset proximity remain separate.
+
 ### OpenAI Usage Adapter
 
 `usage/openai.ts` expects an OpenAI OAuth entry with an access token.
@@ -259,10 +269,9 @@ The global OpenCode config-root `AGENTS.md` file is intentionally omitted becaus
 The sidebar section is hidden until at least one Markdown read exists.
 
 Compacted read entries are shown with a red `C` marker when OpenCode marks the completed tool part that way.
-Fresh read entries use source markers: green `R` for `README.md`, blue `󰯉` for `AGENTS.md`, yellow `I` for uppercase pointer docs like `GO.md` or `DATABASE.md`, and muted `M` for generic Markdown.
-Markdown files directly in the OpenCode config root are doctrine, except existing `README.md` and `AGENTS.md` kinds.
-Fresh doctrine entries use the yellow `icons.doctrine` scroll glyph and the extensionless basename.
-Any read under a `.spec` path segment takes precedence over filename kinds and renders with the cyan spec glyph (`icons.spec`), regardless of the file's name.
+Fresh read entries use source markers: green `icons.readme` scroll glyph for ordinary `README.md`, blue `󰯉` for `AGENTS.md`, yellow `I` for uppercase pointer docs like `GO.md` or `DATABASE.md`, and muted `M` for generic Markdown.
+There is no config-root doctrine classification; config-root detection remains only to suppress the always-loaded global `AGENTS.md`.
+Any read under a `.spec` path segment takes precedence over filename kinds, including a README under `.spec`, and renders with the cyan spec glyph (`icons.spec`).
 Spec labels remove the `.spec` segment and render the owning directory plus the extensionless path below `.spec`.
 Carrier files omit their filename in labels because the marker carries that information.
 
@@ -287,8 +296,8 @@ The policy: never resume a refusal-tainted child; reword the brief first, switch
 `config/opencode/delegate.json` is the provider allowlist for delegation.
 Delegating to a provider missing from `providers` errors; extend `delegate.json` deliberately.
 Delegate reads the usage-sidebar cache under `${XDG_CACHE_HOME:-~/.cache}/opencode/usage-sidebar/` before spawning.
-When any usage window is at 100%, the tool waits abortably for the latest reset and then proceeds.
-There is no maximum wait and no stale-cache cutoff.
+When any fresh usage window is at 100%, the tool waits abortably for the latest reset and then proceeds.
+There is no maximum wait; stale, errored, malformed, or post-reset-without-refetch data proceeds un-gated as explicit unknown.
 Metadata notes are prepended to the child's output in brackets.
 
 Children inherit the parent session's deny rules and all `external_directory` rules.

@@ -6,29 +6,23 @@ import type {
 } from "@opencode-ai/plugin/tui";
 import { createSignal, onCleanup } from "solid-js";
 import { sessionProviderID } from "../shared/session.ts";
-import { anthropicUsage } from "./anthropic.ts";
+import { usageAdapters } from "./adapters.ts";
 import {
+  cacheAgeMS,
   type CachedProviderUsage,
+  isCacheStale,
   readProviderCache,
   withProviderLock,
   writeProviderCache,
 } from "./cache.ts";
-import { opencodeGoUsage } from "./opencode-go.ts";
-import { openaiUsage } from "./openai.ts";
 import type { ProviderAdapter, ProviderUsage } from "./types.ts";
 import { UsageDashboard } from "./ui.tsx";
-import { xaiUsage } from "./xai.ts";
 
 const id = "cullyn.usage-sidebar";
 const INTERNAL_CONTEXT_PLUGIN_ID = "internal:sidebar-context";
 const UI_REFRESH_MS = 60_000;
 const EVENT_REFRESH_DELAY_MS = 5_000;
-const adapters = [
-  openaiUsage,
-  anthropicUsage,
-  xaiUsage,
-  opencodeGoUsage,
-] satisfies ProviderAdapter[];
+const adapters = usageAdapters;
 
 function isInformationalNote(usage: ProviderUsage) {
   return usage.noteKind === "info" || usage.noteKind === "warn";
@@ -52,7 +46,7 @@ function cachedUsage(
   const { id, label, placeholders } = adapter;
 
   if (cache.usage?.windows.length) {
-    const age = cache.fetchedAt ? Date.now() - cache.fetchedAt : 0;
+    const age = cacheAgeMS(cache.fetchedAt) ?? 0;
     if (cache.error) {
       return {
         ...cache.usage,
@@ -63,8 +57,9 @@ function cachedUsage(
         noteKind: "error",
       };
     }
-    const note =
-      age >= adapter.poll.staleAfterMS ? `stale ${formatAge(age)}` : undefined;
+    const note = isCacheStale(cache.fetchedAt, adapter.poll.staleAfterMS)
+      ? `stale ${formatAge(age)}`
+      : undefined;
     return { ...cache.usage, id, label, placeholders, note };
   }
 

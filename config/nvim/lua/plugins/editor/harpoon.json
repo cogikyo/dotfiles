@@ -27,7 +27,7 @@
     },
     "/home/cullyn/LeadPier/backend/services": {
       "pins": [
-        "webhooks/s.rest.tracking.go",
+        "partner/init.partner.go",
         "webhooks/init.tracking.go",
         "routing/init.routing.go",
         "scheduler/init.scheduler.go",
@@ -60,7 +60,11 @@
       ]
     },
     "/home/cullyn/cogikyo/alrodriguez.studio": {
-      "pins": [".spec/store.md", ".spec/infra.md", ".spec/creative.md"]
+      "pins": [
+        ".spec/store.md",
+        ".spec/infra.md",
+        ".spec/creative.md"
+      ]
     },
     "/home/cullyn/cogikyo/cogikyo": {
       "pins": [
@@ -86,7 +90,10 @@
       ]
     },
     "/home/cullyn/vagari.firefox": {
-      "pins": ["css/_tab-bar.css", "css/userChrome.css"]
+      "pins": [
+        "css/_tab-bar.css",
+        "css/userChrome.css"
+      ]
     },
     "/home/cullyn/vagari/nvim": {
       "pins": [

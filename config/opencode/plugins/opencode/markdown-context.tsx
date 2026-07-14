@@ -16,7 +16,7 @@ const MAX_ROOT_LENGTH = 8
 const MAX_PARENT_LENGTH = 12
 const MIN_LEAF_LENGTH = 6
 
-type MarkdownSourceKind = 'readme' | 'agents' | 'doctrine' | 'partial' | 'spec' | 'markdown'
+type MarkdownSourceKind = 'readme' | 'agents' | 'partial' | 'spec' | 'markdown'
 
 const configRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const xdgConfigHome = process.env.XDG_CONFIG_HOME || path.join(process.env.HOME || '', '.config')
@@ -177,7 +177,6 @@ function markdownSourceKind(filePath: string): MarkdownSourceKind {
   if (normalizedPath.split(/[\\/]/u).includes('.spec')) return 'spec'
   if (leaf === 'readme.md') return 'readme'
   if (leaf === 'agents.md') return 'agents'
-  if (isConfigRootFile(normalizedPath)) return 'doctrine'
   if (/^[A-Z][A-Z0-9_-]*\.md$/.test(path.basename(normalizedPath))) return 'partial'
   return 'markdown'
 }
@@ -222,7 +221,6 @@ function contextLabel(api: TuiPluginApi, filePath: string, kind: MarkdownSourceK
   const label = relativePath(api, filePath)
 
   if (kind === 'spec') return specLabel(filePath)
-  if (kind === 'doctrine') return stripMarkdownExtension(path.basename(filePath))
 
   if (kind === 'readme' || kind === 'agents') {
     const dir = path.dirname(label)
@@ -330,8 +328,6 @@ function sourceColor(api: TuiPluginApi, item: MarkdownContextItem) {
       return c.green
     case 'agents':
       return c.blue
-    case 'doctrine':
-      return c.yellow
     case 'partial':
       return c.yellow
     case 'spec':
@@ -346,11 +342,9 @@ function sourceIcon(item: MarkdownContextItem) {
 
   switch (item.kind) {
     case 'readme':
-      return 'R '
+      return `${icons.readme} `
     case 'agents':
       return `${icons.agents} `
-    case 'doctrine':
-      return `${icons.doctrine} `
     case 'partial':
       return 'I '
     case 'spec':
