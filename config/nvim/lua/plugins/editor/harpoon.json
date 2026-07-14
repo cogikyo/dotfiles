@@ -82,11 +82,7 @@
         "cmds/config/hyprd.yaml",
         "config/nvim/lua/config/keymaps.lua",
         "config/kitty/kitty.conf",
-        "config/opencode/MODELS.md",
-        "config/opencode/AGENTS.md",
-        "config/opencode/opencode.json",
-        "config/kitty/tab_bar.py",
-        "config/opencode/plugins/shared/colors.ts"
+        "config/opencode/agents/collab.md"
       ]
     },
     "/home/cullyn/vagari.firefox": {
