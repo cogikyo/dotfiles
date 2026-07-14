@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"os"
 	"os/exec"
 	"strings"
 	"time"
@@ -27,7 +28,10 @@ type BG struct {
 	cfg *config.BackgroundConfig
 }
 
-const backgroundCPUs = "0-6,8-14,16-1023"
+const (
+	backgroundCPUs        = "0-6,8-14,16-1023"
+	backgroundOOMScoreAdj = "1000"
+)
 
 func NewBG(cfg *config.BackgroundConfig) *BG {
 	return &BG{cfg: cfg}
@@ -98,6 +102,13 @@ func (b *BG) spawn() (string, error) {
 	cmd := exec.Command("taskset", "-c", backgroundCPUs, "mpvpaper", "-p", "-o", opts, display, fullPath)
 	if err := cmd.Start(); err != nil {
 		return "", fmt.Errorf("start mpvpaper: %w", err)
+	}
+	// Keep mpvpaper ahead of preferred development processes in OOM victim selection.
+	scorePath := fmt.Sprintf("/proc/%d/oom_score_adj", cmd.Process.Pid)
+	if err := os.WriteFile(scorePath, []byte(backgroundOOMScoreAdj), 0); err != nil {
+		_ = cmd.Process.Kill()
+		_ = cmd.Wait()
+		return "", fmt.Errorf("set mpvpaper OOM priority: %w", err)
 	}
 	if err := cmd.Process.Release(); err != nil {
 		return "", fmt.Errorf("release mpvpaper: %w", err)

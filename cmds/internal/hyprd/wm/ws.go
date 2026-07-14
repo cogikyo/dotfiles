@@ -14,7 +14,6 @@ import (
 	"strconv"
 
 	"dotfiles/cmds/internal/hyprd/hypr"
-	"dotfiles/cmds/internal/hyprd/session"
 	"dotfiles/cmds/internal/hyprd/state"
 )
 
@@ -68,9 +67,6 @@ func (w *WS) Execute(wsArg string) (string, error) {
 	if err := w.hypr.Dispatch(fmt.Sprintf("workspace %d", ws)); err != nil {
 		return "", err
 	}
-
-	cfg := w.state.GetConfig()
-	go session.EnsureBG(&cfg.Background)
 
 	w.hypr.Request("keyword animation workspaces, 1, 3, default, slide")
 
