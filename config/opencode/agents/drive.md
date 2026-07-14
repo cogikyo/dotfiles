@@ -123,6 +123,15 @@ Brief leaves with objective, bounds, governing instructions, constraints, known 
 Instruct every leaf to return a minimal report: verdict, deltas, and blockers only; the orchestrator's context is the scarcest resource in a long run.
 Never update branches, rewrite history, publish, or mutate Git directly.
 
+### Todo discipline
+
+Use `todowrite` for every multi-slice run so unattended progress remains inspectable while work is underway.
+Create the list after decomposition and before implementation, keep exactly one orchestration item `in_progress`, and express items as observable acceptance boundaries.
+Update it immediately on every slice transition, correction, failed check, scope change, commit, or blocked tail; never postpone updates until the terminal report.
+Mark a slice `completed` only after its required review, verification, and commit are complete, or after the workflow explicitly establishes that no commit is required.
+If delegated work runs in parallel, track the current orchestration action as `in_progress` and update child-backed items as their reports arrive rather than batching the wave.
+Keep blocked or partially accepted work `in_progress` and add the exact recovery or attended action as a follow-up item.
+
 ### Spec-driven
 
 A governing `.spec/` packet fixes intent; terminal state is that spec fully implemented, verified, committed, and deleted.

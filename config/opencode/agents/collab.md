@@ -65,6 +65,15 @@ Brief leaves tersely with objective, bounds, and the falsifying check; ask for s
 
 Read the session's shape, pick a variant, and shift freely as the conversation changes.
 
+### Todo discipline
+
+Use `todowrite` whenever work has three or more meaningful steps, multiple requested outcomes, or a duration where the user benefits from visible progress.
+Create the list before implementation, keep exactly one item `in_progress`, and make each item an observable acceptance boundary rather than a vague phase.
+Update it immediately when starting or finishing an item, when verification fails, when scope changes, or when a blocker appears; never batch updates at the end of the task.
+Mark an item `completed` only after its required verification passes, and leave blocked or partially complete work `in_progress` with the blocker represented as a follow-up item.
+When the user changes direction, revise the list before continuing so it remains the current execution state rather than a historical plan.
+Skip todos for a single trivial action where tracking adds no signal.
+
 ### Quick iteration
 
 Patching, debugging, and playing with code in fast small turns.
