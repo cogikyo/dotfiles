@@ -74,6 +74,52 @@ function usageBar(percent: number) {
   return "█".repeat(filled) + "░".repeat(BAR_WIDTH - filled);
 }
 
+function previousMonth(reset: Date) {
+  const start = new Date(reset);
+  const day = start.getUTCDate();
+  start.setUTCDate(1);
+  start.setUTCMonth(start.getUTCMonth() - 1);
+  const lastDay = new Date(
+    Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  start.setUTCDate(Math.min(day, lastDay));
+  return start.getTime();
+}
+
+function pacePercent(label: string, resetAt?: string) {
+  if (!resetAt) return undefined;
+  const reset = new Date(resetAt);
+  const end = reset.getTime();
+  if (!Number.isFinite(end)) return undefined;
+
+  const start =
+    label === "H"
+      ? end - 5 * 60 * 60 * 1000
+      : label === "M"
+        ? previousMonth(reset)
+        : end - 7 * 24 * 60 * 60 * 1000;
+  const elapsed = (Date.now() - start) / (end - start);
+  if (!Number.isFinite(elapsed) || elapsed < 0 || elapsed > 1) return undefined;
+  return elapsed * 100;
+}
+
+function paceMarker(label: string, resetAt?: string) {
+  const percent = pacePercent(label, resetAt);
+  if (percent === undefined || percent < 10) return undefined;
+  return Math.min(BAR_WIDTH - 1, Math.floor((percent / 100) * BAR_WIDTH));
+}
+
+function paceIndicatorColor(
+  theme: TuiThemeCurrent,
+  percent: number | undefined,
+  label: string,
+  resetAt?: string,
+) {
+  const expected = pacePercent(label, resetAt);
+  if (expected === undefined || percent === undefined) return theme.textMuted;
+  return percent <= expected ? theme.primary : theme.error;
+}
+
 function formatPercent(percent: number) {
   const rounded = Math.max(0, Math.min(100, Math.round(percent)));
   return rounded >= 100 ? "100" : `${String(rounded).padStart(2, "0")}%`;
@@ -88,6 +134,8 @@ function WindowRow(props: {
   percentColor: RGBA;
   bar: string;
   barColor: RGBA;
+  marker?: number;
+  markerColor?: RGBA;
   duration: string;
   exact: string;
 }) {
@@ -95,7 +143,22 @@ function WindowRow(props: {
     <box flexDirection="row" gap={0}>
       <text fg={props.theme.textMuted}>{props.label.padEnd(2, " ")}</text>
       <text fg={props.percentColor}>{`${props.percent} `}</text>
-      <text fg={props.barColor}>{`${props.bar} `}</text>
+      <Show
+        when={props.marker !== undefined}
+        fallback={<text fg={props.barColor}>{`${props.bar} `}</text>}
+      >
+        <text>
+          <span {...{ style: { fg: props.barColor } }}>
+            {props.bar.slice(0, props.marker)}
+          </span>
+          <span {...{ style: { fg: props.markerColor ?? props.theme.textMuted } }}>
+            ┃
+          </span>
+          <span {...{ style: { fg: props.barColor } }}>
+            {`${props.bar.slice((props.marker ?? 0) + 1)} `}
+          </span>
+        </text>
+      </Show>
       <text fg={props.theme.textMuted}>
         {`${props.duration.padStart(DURATION_WIDTH, " ")} `}
       </text>
@@ -195,6 +258,13 @@ export function UsageDashboard(props: {
                             ? usageColor(theme(), pct)
                             : theme().textMuted
                         }
+                        marker={paceMarker(window.label, window.resetAt)}
+                        markerColor={paceIndicatorColor(
+                          theme(),
+                          pct,
+                          window.label,
+                          window.resetAt,
+                        )}
                         duration={reset.duration}
                         exact={reset.exact}
                       />
