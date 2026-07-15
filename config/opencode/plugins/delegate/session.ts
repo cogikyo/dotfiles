@@ -41,6 +41,8 @@ type PreparedTask = {
 const CONTENT_FILTER_ADVICE = "child unrecoverable; re-brief a fresh child (reword the brief first, switch provider as last resort); never resume this session";
 const INTERRUPTED_ADVICE = "completion unknown; reconcile durable state before re-running because the child may have edited files";
 const KNOWN_EFFORTS = new Set(["default", "minimal", "low", "medium", "high", "xhigh"]);
+const MODE_AGENTS = new Set(["collab", "drive", "review", "scheme"]);
+const MAX_MODE_LINEAGE = 3;
 const STATUS_POLL_MS = 300;
 const STARTUP_TIMEOUT_MS = 120_000;
 
@@ -84,7 +86,14 @@ export async function runChildTask(input: {
   }
 
   const child = input.args.task_id
-    ? await readExistingChild(input.client, input.args.task_id, input.ctx.abort)
+    ? await readExistingChild(
+        input.client,
+        input.args.task_id,
+        input.ctx.sessionID,
+        input.prepared.agent.name,
+        input.prepared.permission,
+        input.ctx.abort,
+      )
     : await createChild(input.client, input.ctx, input.args, input.prepared);
 
   const metadata = { sessionId: child.id };
@@ -483,6 +492,8 @@ async function deriveChildPermission(
     unwrap<Record<string, unknown>>(client.config.get({} as never), "read config"),
   ]);
 
+  await validateModeDelegation(client, parent, agent.name);
+
   const parentRules = normalizeRules(parent.permission);
   const inherited = parentRules.filter(
     (rule) => rule.permission === "external_directory" || rule.action === "deny",
@@ -496,6 +507,7 @@ async function deriveChildPermission(
   const childDenies: Rule[] = [
     ...(hasPermissionRule(agentRules, "todowrite") ? [] : [deny("todowrite")]),
     ...(hasPermissionRule(agentRules, "task") ? [] : [deny("task")]),
+    deny("question"),
     ...primaryTools(config)
       .filter((tool) => !hasPermissionRule(agentRules, tool))
       .map(deny),
@@ -507,13 +519,29 @@ async function deriveChildPermission(
   };
 }
 
-async function readExistingChild(client: Client, sessionID: string, signal: AbortSignal) {
+async function readExistingChild(
+  client: Client,
+  sessionID: string,
+  parentSessionID: string,
+  agentName: string,
+  permission: Rule[],
+  signal: AbortSignal,
+) {
   const session = await unwrap<Record<string, unknown>>(
     client.session.get({ path: { id: sessionID } } as never),
     `read child session ${sessionID}`,
   );
   const id = string(session.id);
   if (!id) throw new Error(`delegate child session ${sessionID} did not return an id`);
+  if (sessionParentID(session) !== parentSessionID) {
+    throw new Error(`delegate can resume only a direct child of the current session; re-brief a fresh child instead`);
+  }
+  if (sessionAgent(session) !== agentName) {
+    throw new Error(`delegate resumed child agent does not match ${agentName}; re-brief a fresh child instead`);
+  }
+  if (!samePermissionRules(normalizeRules(session.permission), permission)) {
+    throw new Error(`delegate resumed child permission envelope no longer matches; re-brief a fresh child instead`);
+  }
 
   const statuses = await unwrap<Record<string, unknown>>(
     client.session.status({ signal } as never),
@@ -524,6 +552,50 @@ async function readExistingChild(client: Client, sessionID: string, signal: Abor
     throw new Error(`delegate cannot resume busy child session ${id}; task_id resumes require an idle child`);
   }
   return { id };
+}
+
+async function validateModeDelegation(client: Client, parent: Record<string, unknown>, target: string) {
+  if (!MODE_AGENTS.has(target)) return;
+
+  const lineage = await modeLineage(client, parent);
+  if (lineage.length >= MAX_MODE_LINEAGE) {
+    throw new Error(`delegate mode depth limit reached (${lineage.join(" → ")}); use a leaf or return the objective to the parent`);
+  }
+
+  const occurrences = lineage.filter((name) => name === target).length;
+  if (!occurrences) return;
+
+  const immediateSameRole = sessionAgent(parent) === target && occurrences === 1;
+  if (immediateSameRole) return;
+
+  throw new Error(`delegate refuses mode cycle ${[...lineage].reverse().join(" → ")} → ${target}; use a leaf or return the objective to the parent`);
+}
+
+async function modeLineage(client: Client, parent: Record<string, unknown>) {
+  const modes: string[] = [];
+  const seen = new Set<string>();
+  let session: Record<string, unknown> | undefined = parent;
+
+  for (let depth = 0; session && depth < 64; depth++) {
+    const id = string(session.id);
+    if (id) {
+      if (seen.has(id)) throw new Error(`delegate session ancestry contains a cycle at ${id}`);
+      seen.add(id);
+    }
+
+    const agent = sessionAgent(session);
+    if (agent && MODE_AGENTS.has(agent)) modes.push(agent);
+
+    const parentID = sessionParentID(session);
+    if (!parentID) return modes;
+    session = await unwrap<Record<string, unknown>>(
+      client.session.get({ path: { id: parentID } } as never),
+      `read ancestor session ${parentID}`,
+    );
+  }
+
+  if (session) throw new Error("delegate session ancestry exceeds 64 levels");
+  return modes;
 }
 
 async function createChild(client: Client, ctx: ToolContext, args: TaskArgs, prepared: PreparedTask) {
@@ -566,6 +638,13 @@ function normalizeRules(value: unknown): Rule[] {
   });
 }
 
+function samePermissionRules(left: Rule[], right: Rule[]) {
+  return left.length === right.length && left.every((rule, index) => {
+    const candidate = right[index];
+    return rule.permission === candidate.permission && rule.pattern === candidate.pattern && rule.action === candidate.action;
+  });
+}
+
 function parseRule(value: unknown): Rule[] {
   const root = object(value);
   const permission = string(root?.permission);
@@ -596,8 +675,15 @@ function defaultAgentRules(agentName: string, explicitRules: Rule[]) {
 }
 
 function isDriveSession(session: Record<string, unknown>) {
-  const agent = session.agent;
-  return string(agent) === "drive" || string(object(agent)?.name) === "drive";
+  return sessionAgent(session) === "drive";
+}
+
+function sessionAgent(session: Record<string, unknown>) {
+  return string(session.agent) ?? string(object(session.agent)?.name);
+}
+
+function sessionParentID(session: Record<string, unknown>) {
+  return string(session.parentID) ?? string(session.parentId) ?? string(object(session.parent)?.id);
 }
 
 function askRulesAsDenies(rules: Rule[]) {

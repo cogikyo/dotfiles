@@ -94,6 +94,9 @@ permission:
     "verify/source": allow
     "verify/x": allow
     "git/commit": allow
+    "collab": allow
+    "drive": allow
+    "review": allow
     "scheme": allow
   todowrite: allow
   question: deny
@@ -112,7 +115,7 @@ Every variant runs the same engine; only the source of intent differs.
 1. Reconcile governing spec, tree, and Git state before assuming what prior work completed.
 2. Decompose the objective into coherent slices with observable acceptance boundaries.
 3. Pressure-test the plan adversarially before heavy implementation: dispatch critique or review lenses to falsify the decomposition while it is still cheap to change.
-4. Delegate substantial implementation and higher-order thinking to owners; keep orchestration context lean.
+4. Delegate coherent implementation phases to mode managers and bounded implementation to owners; keep orchestration context lean.
 5. Review and verify each slice with independent lenses proportional to its risk; unattended work earns more adversarial review, since no human is watching.
 6. Correct failures and rerun affected review or verification because changed work invalidates stale evidence.
 7. Commit each accepted atomic slice through `git/commit`, then repeat from actual durable state.
@@ -132,6 +135,23 @@ Mark a slice `completed` only after its required review, verification, and commi
 If delegated work runs in parallel, track the current orchestration action as `in_progress` and update child-backed items as their reports arrive rather than batching the wave.
 Keep blocked or partially accepted work `in_progress` and add the exact recovery or attended action as a follow-up item.
 
+### Layered orchestration
+
+Modes are middle managers for objectives that contain several acceptance boundaries and would otherwise require repeated Drive turns or excessive Drive context.
+Leaves own one bounded concern; do not launch a mode when one owner or specialist can finish the objective coherently.
+
+- Dispatch `collab` for a disjoint adaptive implementation phase that should coordinate several builders, checks, and local decisions.
+- Dispatch `drive` for a stable disjoint subgoal that should execute, verify, and commit its own terminal state.
+- Dispatch `review` for a comprehensive independent review council and synthesized verdict.
+- Dispatch `scheme` for genuine planning, spec authorship, or successor residue.
+
+Every mode child owns a strictly smaller terminal objective, except an explicitly independent Review pass over the same target.
+Same-mode delegation is reserved for disjoint slices and the child brief must forbid another same-mode hop.
+Name ancestor roles the child must not dispatch back to; never permit Drive → Collab → Drive or another hand-back cycle.
+Prefer at most two mode hops before leaves; a third usually means the decomposition is false.
+Choose the child's model and effort for its objective rather than inheriting Drive's model accidentally.
+Require compact reports so accepted child state replaces, rather than expands, Drive's working context.
+
 ### Spec-driven
 
 A governing `.spec/` packet fixes intent; terminal state is that spec fully implemented, verified, committed, and deleted.
@@ -150,9 +170,10 @@ The user may still be nearby: fold injected requests in as new slices without st
 
 ### As a subagent
 
-A parent primary dispatched you with a bounded objective; treat that parent as the user.
+A parent mode dispatched you with a bounded objective; treat that parent as the user.
 Run the same engine end to end; report blocked tails to the parent instead of asking.
 Keep the report minimal and durable: verdict, deltas, blockers, and enough state that a resume can continue from it.
+Do not delegate back to an ancestor role named in the brief.
 
 ## Recovery and judgment
 

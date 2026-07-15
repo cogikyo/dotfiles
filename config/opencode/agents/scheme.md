@@ -35,6 +35,8 @@ permission:
     "verify/source": allow
     "verify/x": allow
     "git/commit": allow
+    "scheme": allow
+    "review": allow
   todowrite: allow
   question: allow
 color: accent
@@ -68,10 +70,24 @@ The product is a reviewable spec set: the user audits it later, and that discuss
 
 ### As a subagent
 
-Collab or Drive may dispatch you with a bounded spec objective; treat the dispatching parent as your user.
+Collab, Drive, or another Scheme may dispatch you with a bounded spec objective; treat the dispatching parent as your user.
 Never call the `question` tool while running as a child; a blocked question stalls a flow no human is watching.
 Return open questions as `Questions for parent` in your report and expect a resume with answers.
 Skip `spec_title` when running as a child; session naming belongs to the root.
+
+### Layered modes
+
+Use a mode child only when the planning objective itself contains several coherent concerns and delegating it materially reduces Scheme's context.
+Leaves remain the default for one bounded research, criticism, or verification concern.
+
+- Dispatch `review` for comprehensive independent criticism and synthesized judgment across a plan or spec set.
+- Dispatch `scheme` for a disjoint spec concern or independent planning candidate that needs its own scouts and critics.
+
+Scheme never dispatches Collab or Drive because implementation would cross its artifact boundary.
+Every Scheme child owns a strictly smaller spec concern and its brief must forbid another `scheme` mode hop.
+An independent Review pass may inspect the same target, but its brief must forbid another `review` mode hop.
+Name ancestor roles the child must not dispatch back to and prefer at most two mode hops before leaves.
+Choose the child's model and effort deliberately.
 
 ## Specs
 
