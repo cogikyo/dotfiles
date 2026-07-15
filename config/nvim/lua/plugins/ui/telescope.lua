@@ -39,6 +39,25 @@ return {
 		telescope.load_extension("zf-native")
 
 		local actions = require("telescope.actions")
+		local rg_excludes = {
+			"--glob=!**/.git/**",
+			"--glob=!**/node_modules/**",
+			"--glob=!**/vendor/**",
+			"--glob=!**/.venv/**",
+			"--glob=!**/venv/**",
+			"--glob=!**/__pycache__/**",
+			"--glob=!**/.pytest_cache/**",
+			"--glob=!**/.mypy_cache/**",
+			"--glob=!**/.ruff_cache/**",
+			"--glob=!**/.tox/**",
+			"--glob=!**/.direnv/**",
+			"--glob=!**/dist/**",
+			"--glob=!**/build/**",
+			"--glob=!**/target/**",
+			"--glob=!**/.next/**",
+			"--glob=!**/.turbo/**",
+			"--glob=!**/coverage/**",
+		}
 
 		-- ╭─────────────────────────────────────────────────────────────────────╮
 		-- │ layout: switch strategy based on terminal width                     │
@@ -126,7 +145,22 @@ return {
 					},
 				},
 			},
-			pickers = {},
+			pickers = {
+				find_files = {
+					find_command = vim.list_extend({
+						"rg",
+						"--files",
+						"--hidden",
+						"--no-ignore-vcs",
+						"--color",
+						"never",
+					}, rg_excludes),
+				},
+				live_grep = {
+					hidden = true,
+					additional_args = vim.list_extend({ "--no-ignore-vcs" }, rg_excludes),
+				},
+			},
 			extensions = {},
 		})
 	end,
