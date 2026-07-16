@@ -35,9 +35,7 @@ return {
 		-- │ components: mode, branch, diagnostics, diff, search, lsp           │
 		-- ╰─────────────────────────────────────────────────────────────────────╯
 
-		local hide_in_width = function()
-			return vim.fn.winwidth(0) > 80
-		end
+		local hide_in_width = function() return vim.fn.winwidth(0) > 80 end
 
 		local branch = {
 			"branch",
@@ -47,7 +45,7 @@ return {
 		local modes = {
 			["NORMAL"] = "",
 			["O-PENDING"] = "",
-			["INSERT"] = "",
+			["INSERT"] = "",
 			["VISUAL"] = "",
 			["SELECT"] = "",
 			["V-LINE"] = "",
@@ -154,9 +152,14 @@ return {
 		-- │ extensions: nvimtree, undotree sidebar labels                       │
 		-- ╰─────────────────────────────────────────────────────────────────────╯
 
-		local function icon()
-			return [[ ]]
+		local function cwd_label()
+			return vim.fs.basename(vim.uv.cwd() or "/")
 		end
+
+		local status = {
+			function() return cwd_label() .. " " end,
+			color = { fg = p.drk_0, bg = p.blu_2 },
+		}
 
 		local function make_extension(ft, label, ext_icon, opts)
 			opts = opts or {}
@@ -170,7 +173,9 @@ return {
 			local function make_sections(label_color)
 				return {
 					lualine_a = { { get_label, color = label_color, separator = "" } },
+					-- stylua: ignore
 					lualine_b = { { function() return "" end, color = { fg = label_color.bg, bg = p.bg }, padding = 0 } },
+					-- stylua: ignore
 					lualine_c = { { function() return string.rep(" ", vim.api.nvim_win_get_width(0)) end, color = { fg = p.bg, bg = p.bg }, padding = 0 } },
 					lualine_x = {},
 					lualine_y = {},
@@ -215,7 +220,7 @@ return {
 					search,
 				},
 				lualine_y = { filetype },
-				lualine_z = { icon },
+				lualine_z = { status },
 			},
 			inactive_sections = {
 				lualine_a = {},
@@ -243,9 +248,7 @@ return {
 				lualine_c = {},
 				lualine_x = {
 					{
-						function()
-							return vim.fn.line("$") .. "L"
-						end,
+						function() return vim.fn.line("$") .. "L" end,
 					},
 				},
 				lualine_y = {
@@ -255,16 +258,7 @@ return {
 						symbols = { added = " ", modified = " ", removed = " " },
 					},
 				},
-				lualine_z = {
-					{
-						function()
-							if vim.bo.modified then
-								return ""
-							end
-							return "󱣪 "
-						end,
-					},
-				},
+				lualine_z = { status },
 			},
 			tabline = {},
 			extensions = {

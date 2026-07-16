@@ -3,6 +3,7 @@ return {
 	dependencies = {
 		"nvim-lua/plenary.nvim",
 		"natecraddock/telescope-zf-native.nvim",
+		"jvgrootveld/telescope-zoxide",
 	},
 	-- stylua: ignore
 	keys = {
@@ -15,6 +16,7 @@ return {
 		{ "<leader>th",        "<cmd>Telescope help_tags<cr>",      desc = "Help tags" },
 		{ "<leader>tH",        "<cmd>Telescope highlights<cr>",     desc = "Highlight groups" },
 		{ "<leader>td",        "<cmd>Telescope diagnostics<cr>",    desc = "Diagnostics" },
+		{ "<leader>tz",        "<cmd>Telescope zoxide list<cr>",    desc = "Zoxide directories" },
 		{ "<leader>tp",        "<cmd>Telescope builtin<cr>",        desc = "Telescope builtins" },
 		{ "<leader>tc",        "<cmd>Telescope commands<cr>",       desc = "Commands" },
 		{ "<leader>tl",        "<cmd>Telescope loclist<cr>",        desc = "Location list" },
@@ -163,5 +165,7 @@ return {
 			},
 			extensions = {},
 		})
+
+		telescope.load_extension("zoxide")
 	end,
 }
