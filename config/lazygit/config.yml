@@ -7,3 +7,16 @@ git:
 os:
   edit: "nvim {{filename}}"
   editAtLine: "nvim +{{line}} {{filename}}"
+customCommands:
+  - key: "<ctrl+o>"
+    context: localBranches
+    description: Copy repository and branch
+    command: >-
+      printf '%s@%s' {{ runCommand "git rev-parse --show-toplevel" | quote }}
+      {{ .SelectedLocalBranch.Name | quote }} | wl-copy
+  - key: "<ctrl+o>"
+    context: commits,subCommits,reflogCommits
+    description: Copy repository, branch, and commit
+    command: >-
+      printf '%s@%s#%s' {{ runCommand "git rev-parse --show-toplevel" | quote }}
+      {{ .SelectedLocalBranch.Name | quote }} {{ .SelectedCommit.Hash | quote }} | wl-copy
