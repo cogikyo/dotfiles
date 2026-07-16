@@ -153,7 +153,7 @@ As a child, expect the same in reverse: resumes arrive in-session with answers, 
 ## Models & Reasoning Preferences
 
 Below is standard model routing recommendations. You can override when appropriate, or at requested user preference.
-Only use models in defined in this set.
+Only use models defined in this set.
 
 ### `openai/gpt-5.6-sol`
 
@@ -164,7 +164,7 @@ Only use models in defined in this set.
 ### `anthropic/claude-fable-5`
 
 - Use at `low` to `medium` to resolve complex ambiguity, or `medium` to `high` if requested by user.
-- Better at understanding intent, can determine good terminal end state or intermiate goal if sufficient ambiguity.
+- Better at understanding intent, can determine good terminal end state or intermediate goal if sufficient ambiguity.
 
 ### `openai/gpt-5.6-terra`
 

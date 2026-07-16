@@ -202,38 +202,38 @@ Resume a child only while role, concern, and lineage are unchanged, especially t
 
 Below is standard model routing recommendations. You can override when appropriate; explicit user choices are binding.
 Drive runs long and unattended: spend on delegated thinking and adversarial review, and stay stingy with orchestrator context.
-Only use models in defined in this set.
+Only use models defined in this set.
 
 ### `openai/gpt-5.6-sol`
 
 - Ranges from `medium` to `high`.
-- Definlitey use for risky objectives, ambiguous ownership, multi-concern synthesis, large owners.
-- Repalcement for `5.6-terra`/`grok-4.5` on larger (`build/owner`) tasks that approach a more complexity.
+- Definitely use for risky objectives, ambiguous ownership, multi-concern synthesis, large owners.
+- Replacement for `5.6-terra`/`grok-4.5` on larger (`build/owner`) tasks that approach a more complexity.
 - By default best choice for dispatch modes, `xhigh` can occasional be used here.
 
 ### `anthropic/claude-fable-5`
 
 - Use at `low` to `medium` to resolve complex ambiguity if context supplied, or `medium` to `high` if requested by user.
-- Better at understanding intent, can determine good terminal end state or intermiate goal if sufficient ambiguity.
+- Better at understanding intent, can determine good terminal end state or intermediate goal if sufficient ambiguity.
 
 ### `xai/grok-4.5`
 
 - Almost always `medium` or `high`.
 - Well specified concrete patches, reorgs, and simple but expected heavy output.
 - Good at managing and synthesizing various tool calls.
-- Great for `verify/x` or `verify/web` realtime checks.
+- Great for `verify/x` or `verify/web` real-time checks.
 
 ### `openai/gpt-5.6-terra`
 
 - Ranges from `low` to `high`, medium is a good default.
-- Best general default for general builds, scouts, reviews, verfication, acceptance, etc.
+- Best general default for general builds, scouts, reviews, verification, acceptance, etc.
 - Standard fallback for anthropic/xAI models.
 
 ### `openai/gpt-5.6-luna`
 
 - Ranges `low` or `high`; the interactive default.
 - Bounded few small patches that could have side effects, scouts, quick lookups, cheap verification.
-- Escalate to terra when a result comes back unclear, good to double check conclusions.
+- Escalate to Terra when a result comes back unclear, good to double check conclusions.
 
 ### `anthropic/claude-opus-4-8`
 

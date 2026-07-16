@@ -222,11 +222,14 @@ function mergeWindows(parts: UsageWindow[][]): UsageWindow[] {
   return ordered;
 }
 
-type FetchResult =
-  | { ok: true; payload: BillingPayload }
-  | { ok: false; status?: number; kind: "network" | "http" };
+type FetchFailure =
+  | { ok: false; kind: "network" }
+  | { ok: false; kind: "timeout" }
+  | { ok: false; kind: "http"; status: number };
 
-async function fetchBilling(url: string, token: string): Promise<FetchResult> {
+type FetchResult = { ok: true; payload: BillingPayload } | FetchFailure;
+
+async function fetchBillingOnce(url: string, token: string): Promise<FetchResult> {
   let response: Response;
   try {
     response = await fetch(url, {
@@ -241,19 +244,34 @@ async function fetchBilling(url: string, token: string): Promise<FetchResult> {
   } catch {
     return { ok: false, kind: "network" };
   }
-  if (!response.ok) return { ok: false, kind: "http", status: response.status };
+  if (!response.ok) {
+    if (response.status === 400) {
+      const body = (await response.json().catch(() => undefined)) as
+        | { code?: unknown; error?: unknown }
+        | undefined;
+      if (body?.code === "The operation was cancelled" && body.error === "Timeout expired") {
+        return { ok: false, kind: "timeout" };
+      }
+    }
+    return { ok: false, kind: "http", status: response.status };
+  }
   return { ok: true, payload: (await response.json()) as BillingPayload };
 }
 
+async function fetchBilling(url: string, token: string): Promise<FetchResult> {
+  const first = await fetchBillingOnce(url, token);
+  return !first.ok && first.kind === "timeout" ? fetchBillingOnce(url, token) : first;
+}
+
 function statusNote(results: FetchResult[]): ProviderUsage | undefined {
-  if (results.some((result) => result.ok)) return undefined;
-  if (results.some((result) => result.kind === "http" && result.status === 429)) {
+  const failures = results.filter((result): result is FetchFailure => !result.ok);
+  if (failures.length !== results.length) return undefined;
+  if (failures.some((result) => result.kind === "http" && result.status === 429)) {
     return usage([], "429", "error");
   }
-  const http = results.find((result) => result.kind === "http" && result.status !== undefined);
-  if (http && http.kind === "http" && http.status !== undefined) {
-    return usage([], `${http.status}`, "error");
-  }
+  const http = failures.find((result) => result.kind === "http");
+  if (http?.kind === "http") return usage([], `${http.status}`, "error");
+  if (failures.some((result) => result.kind === "timeout")) return usage([], "timeout", "error");
   return usage([], "unavailable", "error");
 }
 
@@ -271,10 +289,8 @@ async function load(): Promise<ProviderUsage> {
   if (isExpired(entry.expires_at)) return usage([], "expired", "warn");
 
   const token = entry.key;
-  const [usageResult, creditsResult] = await Promise.all([
-    fetchBilling(BILLING_USAGE_URL, token),
-    fetchBilling(BILLING_CREDITS_URL, token),
-  ]);
+  const creditsResult = await fetchBilling(BILLING_CREDITS_URL, token);
+  const usageResult = await fetchBilling(BILLING_USAGE_URL, token);
 
   const failed = statusNote([usageResult, creditsResult]);
   if (failed) return failed;

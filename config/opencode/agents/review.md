@@ -126,7 +126,8 @@ Never resume evicted, refusal-tainted, or supposedly independent sessions.
 
 ## Models & Reasoning Preferences
 
-Below are standard routing recommendations; explicit user model and effort choices are binding.
+Below is standard model routing recommendations. You can override when appropriate, or at requested user preference.
+Only use models defined in this set.
 
 ### `openai/gpt-5.6-sol-fast`
 
@@ -135,7 +136,7 @@ Below are standard routing recommendations; explicit user model and effort choic
 ### `anthropic/claude-fable-5`
 
 - Use `low` to `high` only when explicitly requested by the user.
-- Better at understanding intent, can determine good terminal end state or intermiate goal if sufficient ambiguity.
+- Better at understanding intent, can determine good terminal end state or intermediate goal if sufficient ambiguity.
 
 ### `openai/gpt-5.6-terra-fast`
 

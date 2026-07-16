@@ -133,26 +133,26 @@ After interruption or an empty report, inspect tree and Git state before reissui
 ## Models & Reasoning Preferences
 
 Below is standard model routing recommendations. You can override when appropriate, or at requested user preference.
-Only use models in defined in this set.
+Only use models defined in this set.
 
 ### `openai/gpt-5.6-sol-fast`
 
 - Ranges from `low` to `high`.
-- Definlitey use for risky objectives, ambiguous ownership, multi-concern synthesis, large owners.
-- Repalcement for `5.6-terra`/`grok-4.5` on larger (`build/owner`) tasks that approach a more complexity.
+- Definitely use for risky objectives, ambiguous ownership, multi-concern synthesis, large owners.
+- Replacement for `5.6-terra`/`grok-4.5` on larger (`build/owner`) tasks that approach a more complexity.
 - By default best choice for dispatch modes, `xhigh` can occasional be used here.
 
 ### `anthropic/claude-fable-5`
 
 - Use at `low` to `medium` to resolve complex ambiguity if context supplied, or `medium` to `high` if requested by user.
-- Better at understanding intent, can determine good terminal end state or intermiate goal if sufficient ambiguity.
+- Better at understanding intent, can determine good terminal end state or intermediate goal if sufficient ambiguity.
 
 ### `xai/grok-4.5`
 
 - Almost always `medium` or `high`.
 - Well specified concrete patches, reorgs, and simple but expected heavy output.
 - Good at managing and synthesizing various tool calls.
-- Great for `verify/x` or `verify/web` realtime checks.
+- Great for `verify/x` or `verify/web` real-time checks.
 
 ### `openai/gpt-5.6-terra-fast`
 
