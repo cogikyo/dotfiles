@@ -11,8 +11,11 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
@@ -48,6 +51,8 @@ type Daemon struct {
 	openMu      sync.Mutex
 	reconcileMu sync.Mutex
 	desiredOpen bool
+	openPending bool
+	ewwDone     chan error
 }
 
 func New(autoOpen bool) (*Daemon, error) {
@@ -213,6 +218,7 @@ func (d *Daemon) handleAction(providerName string, args []string) string {
 func (d *Daemon) openWindows(reload bool) string {
 	d.openMu.Lock()
 	d.desiredOpen = true
+	d.openPending = true
 	d.openMu.Unlock()
 
 	go d.reconcileLatest(reload)
@@ -222,6 +228,7 @@ func (d *Daemon) openWindows(reload bool) string {
 func (d *Daemon) closeWindows() string {
 	d.openMu.Lock()
 	d.desiredOpen = false
+	d.openPending = false
 	d.openMu.Unlock()
 
 	go d.reconcileLatest(false)
@@ -234,9 +241,35 @@ func (d *Daemon) desiredWidgetsOpen() bool {
 	return d.desiredOpen
 }
 
+func (d *Daemon) widgetsOpenPending() bool {
+	d.openMu.Lock()
+	defer d.openMu.Unlock()
+	return d.desiredOpen && d.openPending
+}
+
+func (d *Daemon) markWidgetsOpen() {
+	d.openMu.Lock()
+	defer d.openMu.Unlock()
+	if d.desiredOpen {
+		d.openPending = false
+	}
+}
+
 func (d *Daemon) reconcileLatest(reload bool) {
 	d.reconcileMu.Lock()
 	defer d.reconcileMu.Unlock()
+
+	healed, err := d.healDuplicateEww()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ewwd: duplicate eww recovery failed: %v\n", err)
+		return
+	}
+	if healed {
+		if err := d.ensureEwwDaemon(); err != nil {
+			fmt.Fprintf(os.Stderr, "ewwd: duplicate eww restart failed: %v\n", err)
+			return
+		}
+	}
 
 	if !d.desiredWidgetsOpen() {
 		d.closeEwwWindows()
@@ -250,6 +283,9 @@ func (d *Daemon) reconcileLatest(reload bool) {
 	if !d.desiredWidgetsOpen() {
 		d.closeEwwWindows()
 		return
+	}
+	if ok {
+		d.markWidgetsOpen()
 	}
 	if result != "" {
 		fmt.Printf("ewwd: %s\n", result)
@@ -274,41 +310,67 @@ func (d *Daemon) reconcileWindows(reload bool) (string, bool) {
 	}
 
 	ewwRunning := exec.Command("eww", "ping").Run() == nil
+	if err := d.ensureEwwDaemon(); err != nil {
+		return fmt.Sprintf("error: %v", err), false
+	}
 	if reload && ewwRunning {
 		if out, err := exec.Command("eww", "reload").CombinedOutput(); err != nil {
 			return fmt.Sprintf("error: eww reload: %v%s", err, commandOutput(out)), false
 		}
 	}
 
-	args := append([]string{"open-many"}, windows...)
-	if ewwRunning {
-		if out, err := exec.Command("eww", args...).CombinedOutput(); err != nil {
-			return fmt.Sprintf("error: eww open-many: %v%s", err, commandOutput(out)), false
-		}
-	} else if err := startEwwWindows(args); err != nil {
-		return fmt.Sprintf("error: %v", err), false
+	args := append([]string{"--no-daemonize", "open-many"}, windows...)
+	if out, err := exec.Command("eww", args...).CombinedOutput(); err != nil {
+		return fmt.Sprintf("error: eww open-many: %v%s", err, commandOutput(out)), false
 	}
 
 	return fmt.Sprintf("%s: %s", verb, strings.Join(windows, " ")), true
 }
 
-func startEwwWindows(args []string) error {
-	cmd := exec.Command("eww", args...)
+func (d *Daemon) ensureEwwDaemon() error {
+	if exec.Command("eww", "ping").Run() == nil {
+		if d.ewwDone != nil {
+			return nil
+		}
+		fmt.Fprintln(os.Stderr, "ewwd: replacing unmanaged eww daemon")
+		if err := d.stopEww(); err != nil {
+			return err
+		}
+	}
+
+	if d.ewwDone != nil {
+		select {
+		case err := <-d.ewwDone:
+			d.ewwDone = nil
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "ewwd: managed eww daemon exited: %v\n", err)
+			}
+		default:
+			fmt.Fprintln(os.Stderr, "ewwd: managed eww daemon is not responding; restarting eww")
+			if err := d.stopEww(); err != nil {
+				return err
+			}
+		}
+	}
+
+	cmd := exec.CommandContext(d.ctx, "eww", "--no-daemonize", "daemon")
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("eww open-many: %w", err)
+		return fmt.Errorf("eww daemon: %w", err)
 	}
-	waitErr := make(chan error, 1)
-	go func() { waitErr <- cmd.Wait() }()
+	done := make(chan error, 1)
+	d.ewwDone = done
+	go func() { done <- cmd.Wait() }()
 
-	for range 20 {
+	for range 40 {
 		select {
-		case err := <-waitErr:
+		case err := <-d.ewwDone:
+			d.ewwDone = nil
 			if err != nil {
-				return fmt.Errorf("eww open-many exited before ready: %w", err)
+				return fmt.Errorf("eww daemon exited before ready: %w", err)
 			}
-			return fmt.Errorf("eww open-many exited before ready")
+			return fmt.Errorf("eww daemon exited before ready")
 		default:
 		}
 		if exec.Command("eww", "ping").Run() == nil {
@@ -316,15 +378,191 @@ func startEwwWindows(args []string) error {
 		}
 		time.Sleep(50 * time.Millisecond)
 	}
-	return fmt.Errorf("eww open-many did not become ready")
+	return fmt.Errorf("eww daemon did not become ready")
+}
+
+func (d *Daemon) healDuplicateEww() (bool, error) {
+	duplicates, err := duplicateEwwListeners()
+	if err != nil || len(duplicates) == 0 {
+		return false, err
+	}
+
+	fmt.Fprintf(os.Stderr, "ewwd: duplicate eww listeners detected (%s); restarting eww\n", strings.Join(duplicates, ", "))
+	if err := d.stopEww(); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+func (d *Daemon) stopEww() error {
+	if err := killEwwTrees(); err != nil {
+		return err
+	}
+
+	if d.ewwDone != nil {
+		select {
+		case <-d.ewwDone:
+			d.ewwDone = nil
+		case <-time.After(time.Second):
+			return fmt.Errorf("managed eww daemon did not exit")
+		}
+	}
+
+	for range 40 {
+		counts, err := readEwwListenerCounts()
+		if err != nil {
+			return err
+		}
+		if len(counts) == 0 {
+			return nil
+		}
+		time.Sleep(25 * time.Millisecond)
+	}
+	return fmt.Errorf("eww listeners remained after kill")
+}
+
+type process struct {
+	parent int
+	name   string
+}
+
+func killEwwTrees() error {
+	before, err := processSnapshot()
+	if err != nil {
+		return err
+	}
+
+	var roots []int
+	for pid, proc := range before {
+		if proc.name == "eww" {
+			roots = append(roots, pid)
+		}
+	}
+	for _, pid := range roots {
+		_ = syscall.Kill(pid, syscall.SIGSTOP)
+	}
+
+	members := make(map[int]bool, len(roots))
+	for _, pid := range roots {
+		members[pid] = true
+	}
+	for {
+		beforeCount := len(members)
+		snapshot, err := processSnapshot()
+		if err != nil {
+			for pid := range members {
+				_ = syscall.Kill(pid, syscall.SIGKILL)
+			}
+			return err
+		}
+		for changed := true; changed; {
+			changed = false
+			for pid, proc := range snapshot {
+				if members[proc.parent] && !members[pid] {
+					members[pid] = true
+					changed = true
+				}
+			}
+		}
+		for pid := range members {
+			_ = syscall.Kill(pid, syscall.SIGSTOP)
+		}
+		if len(members) == beforeCount {
+			break
+		}
+	}
+
+	rootSet := make(map[int]bool, len(roots))
+	for _, pid := range roots {
+		rootSet[pid] = true
+	}
+	for pid := range members {
+		if !rootSet[pid] {
+			_ = syscall.Kill(pid, syscall.SIGKILL)
+		}
+	}
+	for _, pid := range roots {
+		_ = syscall.Kill(pid, syscall.SIGKILL)
+	}
+	return nil
+}
+
+func processSnapshot() (map[int]process, error) {
+	out, err := exec.Command("ps", "-e", "-o", "pid=", "-o", "ppid=", "-o", "comm=").Output()
+	if err != nil {
+		return nil, fmt.Errorf("list processes: %w", err)
+	}
+
+	processes := make(map[int]process)
+	for line := range strings.SplitSeq(string(out), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) != 3 {
+			continue
+		}
+		pid, pidErr := strconv.Atoi(fields[0])
+		parent, parentErr := strconv.Atoi(fields[1])
+		if pidErr == nil && parentErr == nil {
+			processes[pid] = process{parent: parent, name: fields[2]}
+		}
+	}
+	return processes, nil
+}
+
+func duplicateEwwListeners() ([]string, error) {
+	counts, err := readEwwListenerCounts()
+	if err != nil {
+		return nil, err
+	}
+
+	var duplicates []string
+	for path, count := range counts {
+		if count > 1 {
+			duplicates = append(duplicates, path)
+		}
+	}
+	return duplicates, nil
+}
+
+func readEwwListenerCounts() (map[string]int, error) {
+	data, err := os.ReadFile("/proc/net/unix")
+	if err != nil {
+		return nil, fmt.Errorf("read unix sockets: %w", err)
+	}
+	return parseEwwListenerCounts(data, os.Getenv("XDG_RUNTIME_DIR")), nil
+}
+
+func parseEwwListenerCounts(data []byte, runtimeDir string) map[string]int {
+	prefix := filepath.Join(runtimeDir, "eww-server_")
+	counts := make(map[string]int)
+	for line := range strings.SplitSeq(string(data), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) < 8 || fields[3] != "00010000" || fields[5] != "01" {
+			continue
+		}
+		path := fields[7]
+		if strings.HasPrefix(path, prefix) {
+			counts[path]++
+		}
+	}
+	return counts
 }
 
 func (d *Daemon) closeEwwWindows() {
 	if exec.Command("eww", "ping").Run() != nil {
+		fmt.Fprintln(os.Stderr, "ewwd: eww is not responding while closing; stopping any stale processes")
+		if err := d.stopEww(); err != nil {
+			fmt.Fprintf(os.Stderr, "ewwd: stop unresponsive eww: %v\n", err)
+		}
 		return
 	}
 	if out, err := exec.Command("eww", "close-all").CombinedOutput(); err != nil {
 		fmt.Fprintf(os.Stderr, "ewwd: eww close-all: %v%s\n", err, commandOutput(out))
+	}
+	if d.ewwDone == nil {
+		fmt.Fprintln(os.Stderr, "ewwd: stopping unmanaged eww daemon after close")
+		if err := d.stopEww(); err != nil {
+			fmt.Fprintf(os.Stderr, "ewwd: stop unmanaged eww: %v\n", err)
+		}
 	}
 }
 
@@ -339,6 +577,14 @@ func (d *Daemon) healthLoop() {
 		case <-ticker.C:
 		}
 
+		if duplicates, err := duplicateEwwListeners(); err == nil && len(duplicates) > 0 {
+			go d.reconcileLatest(false)
+			continue
+		}
+		if d.widgetsOpenPending() {
+			go d.reconcileLatest(false)
+			continue
+		}
 		if !d.desiredWidgetsOpen() {
 			continue
 		}

@@ -29,7 +29,7 @@
       "pins": [
         "partner/init.partner.go",
         "webhooks/init.tracking.go",
-        "statistics/init.stats.go",
+        "statistics/s.stats.reports.abtests.go",
         "compliance/init.compliance.go",
         "routing/init.routing.go",
         "aggregation/migrate.go"

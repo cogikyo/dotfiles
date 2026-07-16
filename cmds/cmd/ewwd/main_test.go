@@ -22,3 +22,24 @@ func TestDaemonResponseFailed(t *testing.T) {
 		})
 	}
 }
+
+func TestParseEwwListenerCounts(t *testing.T) {
+	data := []byte(`Num RefCount Protocol Flags Type St Inode Path
+one: 00000002 00000000 00010000 0001 01 10 /run/user/1000/eww-server_same
+two: 00000002 00000000 00010000 0001 01 11 /run/user/1000/eww-server_same
+three: 00000002 00000000 00010000 0001 01 12 /run/user/1000/eww-server_other
+connected: 00000002 00000000 00000000 0001 03 13 /run/user/1000/eww-server_same
+foreign: 00000002 00000000 00010000 0001 01 14 /run/user/2000/eww-server_same
+`)
+
+	got := parseEwwListenerCounts(data, "/run/user/1000")
+	if got["/run/user/1000/eww-server_same"] != 2 {
+		t.Fatalf("same listener count = %d, want 2", got["/run/user/1000/eww-server_same"])
+	}
+	if got["/run/user/1000/eww-server_other"] != 1 {
+		t.Fatalf("other listener count = %d, want 1", got["/run/user/1000/eww-server_other"])
+	}
+	if len(got) != 2 {
+		t.Fatalf("listener paths = %d, want 2", len(got))
+	}
+}
