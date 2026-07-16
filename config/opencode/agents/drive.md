@@ -206,39 +206,39 @@ Only use models in defined in this set.
 
 ### `openai/gpt-5.6-sol`
 
-- Ranges from `medium` to `xhigh`.
-- Risky objectives, ambiguous ownership, multi-concern synthesis, large owners.
-- Runner of well defined specs running on `xhigh`; having it cover implementation, self review, self verify in one run is often good.
+- Ranges from `medium` to `high`.
+- Definlitey use for risky objectives, ambiguous ownership, multi-concern synthesis, large owners.
+- Repalcement for `5.6-terra`/`grok-4.5` on larger (`build/owner`) tasks that approach a more complexity.
+- By default best choice for dispatch modes, `xhigh` can occasional be used here.
 
 ### `anthropic/claude-fable-5`
 
-- Use at `high` when explicitly requested by the user.
-- User-selected alternative to Sol for substantial implementation and synthesis.
+- Use at `low` to `medium` to resolve complex ambiguity if context supplied, or `medium` to `high` if requested by user.
+- Better at understanding intent, can determine good terminal end state or intermiate goal if sufficient ambiguity.
+
+### `xai/grok-4.5`
+
+- Almost always `medium` or `high`.
+- Well specified concrete patches, reorgs, and simple but expected heavy output.
+- Good at managing and synthesizing various tool calls.
+- Great for `verify/x` or `verify/web` realtime checks.
 
 ### `openai/gpt-5.6-terra`
 
 - Ranges from `low` to `high`, medium is a good default.
-- Reliable workhorse: normal ownership, general builds, scouts, reviews.
-- General verification and acceptance.
+- Best general default for general builds, scouts, reviews, verfication, acceptance, etc.
 - Standard fallback for anthropic/xAI models.
 
 ### `openai/gpt-5.6-luna`
 
-- Almost always `low` `medium`; cheap and fast.
-- Tightly bounded deterministic slices, parallel scouts, first-pass review.
-- Tools calls that likely result in excessive output or context pollution.
+- Ranges `low` or `high`; the interactive default.
+- Bounded few small patches that could have side effects, scouts, quick lookups, cheap verification.
+- Escalate to terra when a result comes back unclear, good to double check conclusions.
 
 ### `anthropic/claude-opus-4-8`
 
 - Range from `medium` to `xhigh`; fine to burn usage when available.
 - Adversarial plan critique and independent review with a different failure profile.
-- Frontend and UX-shaped slices when the spec fixes the intent.
-
-### `xai/grok-4.5`
-
-- Almost always `medium`.
-- Tightly specified concrete patches.
-- Read-only `verify/x` signal; never selection or synthesis.
 
 ### `opencode-go/glm-5.2`
 

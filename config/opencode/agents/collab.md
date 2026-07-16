@@ -137,37 +137,45 @@ Only use models in defined in this set.
 
 ### `openai/gpt-5.6-sol-fast`
 
-- Ranges from `medium` to `high`.
-- Risky objectives, ambiguous ownership, multi-concern synthesis, large owners.
-- Runner of well defined specs running on `xhigh`; having it cover implementation, self review, self verify in one run is often good.
+- Ranges from `low` to `high`.
+- Definlitey use for risky objectives, ambiguous ownership, multi-concern synthesis, large owners.
+- Repalcement for `5.6-terra`/`grok-4.5` on larger (`build/owner`) tasks that approach a more complexity.
+- By default best choice for dispatch modes, `xhigh` can occasional be used here.
 
 ### `anthropic/claude-fable-5`
 
-- Use at `high` when explicitly requested by the user.
-- User-selected alternative to Sol for substantial work.
-
-### `openai/gpt-5.6-terra-fast`
-
-- Ranges from `low` to `medium`; keep it snappy.
-- General builds, focused review, verification and acceptance.
-- The heaviest routine seat in this mode.
-
-### `openai/gpt-5.6-luna-fast`
-
-- Almost always `low` or `medium`; the interactive default.
-- Bounded patches, scouts, quick lookups, cheap verification.
-- Escalate to terra when a result comes back unclear.
+- Use at `low` to `medium` to resolve complex ambiguity if context supplied, or `medium` to `high` if requested by user.
+- Better at understanding intent, can determine good terminal end state or intermiate goal if sufficient ambiguity.
 
 ### `xai/grok-4.5`
 
 - Almost always `medium` or `high`.
-- Fast concrete patches once shape and bounds are explicit.
-- Quick `verify/x` or `verify/web` reality checks.
+- Well specified concrete patches, reorgs, and simple but expected heavy output.
+- Good at managing and synthesizing various tool calls.
+- Great for `verify/x` or `verify/web` realtime checks.
+
+### `openai/gpt-5.6-terra-fast`
+
+- Ranges from `medium` to `high`;
+- General mid complexity builds, focused review, verification and acceptance.
+- Standard fallback or alternative for `grok-4.5`.
+
+### `openai/gpt-5.6-luna-fast`
+
+- Ranges `low` or `high`; the interactive default.
+- Bounded few small patches that could have side effects, scouts, quick lookups, cheap verification.
+- Escalate to terra when a result comes back unclear, good to double check conclusions.
 
 ### `anthropic/claude-opus-4-8`
 
-- `medium` when speed matters, higher only on request.
-- Frontend, visual, and UX-shaped edits during interactive iteration.
+- Range from `medium` to `xhigh`; fine to burn usage when available.
+- Adversarial plan critique and independent review with a different failure profile.
+
+### `opencode-go/glm-5.2`
+
+- Almost always set to `high`; suits slow unattended runs.
+- Bounded independent disagreement on plans and larger reviews.
+- No fallback needed if at usage limits.
 
 ### Usage
 

@@ -134,7 +134,8 @@ Below are standard routing recommendations; explicit user model and effort choic
 
 ### `anthropic/claude-fable-5`
 
-- Use at `high` only when explicitly requested by the user.
+- Use `low` to `high` only when explicitly requested by the user.
+- Better at understanding intent, can determine good terminal end state or intermiate goal if sufficient ambiguity.
 
 ### `openai/gpt-5.6-terra-fast`
 
@@ -143,7 +144,7 @@ Below are standard routing recommendations; explicit user model and effort choic
 ### `openai/gpt-5.6-luna-fast`
 
 - Use `low` or `medium` for scouts, bounded evidence gathering, and cheap checks.
-- Escalate when a result is ambiguous or disputed.
+- Escalate when a result is ambiguous or disputed; question findings.
 
 ### `anthropic/claude-opus-4-8`
 

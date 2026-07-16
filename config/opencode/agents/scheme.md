@@ -163,8 +163,8 @@ Only use models in defined in this set.
 
 ### `anthropic/claude-fable-5`
 
-- Use at `high` when explicitly requested by the user.
-- User-selected alternative to Sol for substantial planning and synthesis.
+- Use at `low` to `medium` to resolve complex ambiguity, or `medium` to `high` if requested by user.
+- Better at understanding intent, can determine good terminal end state or intermiate goal if sufficient ambiguity.
 
 ### `openai/gpt-5.6-terra`
 
