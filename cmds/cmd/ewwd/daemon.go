@@ -8,7 +8,6 @@ import (
 	"dotfiles/cmds/internal/daemon"
 	"dotfiles/cmds/internal/ewwd/providers"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -225,7 +224,7 @@ func (d *Daemon) closeWindows() string {
 	d.desiredOpen = false
 	d.openMu.Unlock()
 
-	go d.killEww()
+	go d.reconcileLatest(false)
 	return "close: scheduled"
 }
 
@@ -240,7 +239,7 @@ func (d *Daemon) reconcileLatest(reload bool) {
 	defer d.reconcileMu.Unlock()
 
 	if !d.desiredWidgetsOpen() {
-		d.killEww()
+		d.closeEwwWindows()
 		return
 	}
 
@@ -249,7 +248,7 @@ func (d *Daemon) reconcileLatest(reload bool) {
 		fmt.Fprintf(os.Stderr, "ewwd: reconcile failed: %s\n", result)
 	}
 	if !d.desiredWidgetsOpen() {
-		d.killEww()
+		d.closeEwwWindows()
 		return
 	}
 	if result != "" {
@@ -274,33 +273,58 @@ func (d *Daemon) reconcileWindows(reload bool) (string, bool) {
 		}
 	}
 
-	d.killEww()
-	if err := ensureEwwDaemon(); err != nil {
-		return fmt.Sprintf("error: %v", err), false
-	}
-	if reload {
+	ewwRunning := exec.Command("eww", "ping").Run() == nil
+	if reload && ewwRunning {
 		if out, err := exec.Command("eww", "reload").CombinedOutput(); err != nil {
 			return fmt.Sprintf("error: eww reload: %v%s", err, commandOutput(out)), false
 		}
 	}
 
-	for _, window := range windows {
-		if out, err := exec.Command("eww", "close", window).CombinedOutput(); err != nil && len(out) > 0 {
-			fmt.Fprintf(os.Stderr, "ewwd: eww close %s ignored: %v%s\n", window, err, commandOutput(out))
-		}
-	}
-
 	args := append([]string{"open-many"}, windows...)
-	if out, err := exec.Command("eww", args...).CombinedOutput(); err != nil {
-		return fmt.Sprintf("error: eww open-many: %v%s", err, commandOutput(out)), false
+	if ewwRunning {
+		if out, err := exec.Command("eww", args...).CombinedOutput(); err != nil {
+			return fmt.Sprintf("error: eww open-many: %v%s", err, commandOutput(out)), false
+		}
+	} else if err := startEwwWindows(args); err != nil {
+		return fmt.Sprintf("error: %v", err), false
 	}
 
 	return fmt.Sprintf("%s: %s", verb, strings.Join(windows, " ")), true
 }
 
-func (d *Daemon) killEww() {
-	if out, err := exec.Command("pkill", "-x", "eww").CombinedOutput(); err != nil && !isExitCode(err, 1) {
-		fmt.Fprintf(os.Stderr, "ewwd: pkill eww: %v%s\n", err, commandOutput(out))
+func startEwwWindows(args []string) error {
+	cmd := exec.Command("eww", args...)
+	cmd.Stdout = os.Stderr
+	cmd.Stderr = os.Stderr
+	if err := cmd.Start(); err != nil {
+		return fmt.Errorf("eww open-many: %w", err)
+	}
+	waitErr := make(chan error, 1)
+	go func() { waitErr <- cmd.Wait() }()
+
+	for range 20 {
+		select {
+		case err := <-waitErr:
+			if err != nil {
+				return fmt.Errorf("eww open-many exited before ready: %w", err)
+			}
+			return fmt.Errorf("eww open-many exited before ready")
+		default:
+		}
+		if exec.Command("eww", "ping").Run() == nil {
+			return nil
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	return fmt.Errorf("eww open-many did not become ready")
+}
+
+func (d *Daemon) closeEwwWindows() {
+	if exec.Command("eww", "ping").Run() != nil {
+		return
+	}
+	if out, err := exec.Command("eww", "close-all").CombinedOutput(); err != nil {
+		fmt.Fprintf(os.Stderr, "ewwd: eww close-all: %v%s\n", err, commandOutput(out))
 	}
 }
 
@@ -322,51 +346,9 @@ func (d *Daemon) healthLoop() {
 			continue
 		}
 
-		fmt.Fprintln(os.Stderr, "ewwd: eww ping failed; restarting daemon and reconciling windows")
+		fmt.Fprintln(os.Stderr, "ewwd: eww ping failed; reopening windows")
 		go d.reconcileLatest(false)
 	}
-}
-
-func isExitCode(err error, code int) bool {
-	var exitErr *exec.ExitError
-	return errors.As(err, &exitErr) && exitErr.ExitCode() == code
-}
-
-func ensureEwwDaemon() error {
-	if out, err := exec.Command("eww", "ping").CombinedOutput(); err == nil {
-		return nil
-	} else if len(out) > 0 {
-		fmt.Fprintf(os.Stderr, "ewwd: initial eww ping failed: %v%s\n", err, commandOutput(out))
-	}
-
-	cmd := exec.Command("eww", "daemon")
-	cmd.Stdout = os.Stderr
-	cmd.Stderr = os.Stderr
-	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("eww daemon: %w", err)
-	}
-	waitErr := make(chan error, 1)
-	go func() { waitErr <- cmd.Wait() }()
-
-	var lastPing []byte
-	var lastPingErr error
-	for range 20 {
-		select {
-		case err := <-waitErr:
-			if err != nil {
-				return fmt.Errorf("eww daemon exited before ready: %w", err)
-			}
-			return fmt.Errorf("eww daemon exited before ready")
-		default:
-		}
-
-		lastPing, lastPingErr = exec.Command("eww", "ping").CombinedOutput()
-		if lastPingErr == nil {
-			return nil
-		}
-		time.Sleep(50 * time.Millisecond)
-	}
-	return fmt.Errorf("eww daemon did not become ready: last ping: %v%s", lastPingErr, commandOutput(lastPing))
 }
 
 func commandOutput(out []byte) string {

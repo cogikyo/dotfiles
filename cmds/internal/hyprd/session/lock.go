@@ -342,26 +342,17 @@ func (l *Lock) closeEwwWidgets(saved *lockState) {
 	if !l.active(saved) {
 		return
 	}
-	if err := exec.Command("systemctl", "--user", "--no-block", "stop", "ewwd.service").Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "hyprd lock: stop ewwd.service: %v\n", err)
+	if out, err := exec.Command("ewwd", "close").CombinedOutput(); err == nil {
+		return
+	} else {
+		fmt.Fprintf(os.Stderr, "hyprd lock: ewwd close unavailable: %v: %s\n", err, strings.TrimSpace(string(out)))
 	}
-	if !l.active(saved) {
+	if exec.Command("eww", "ping").Run() != nil {
 		return
 	}
-	if err := exec.Command("pkill", "-x", "ewwd").Run(); err != nil && !isExitCode(err, 1) {
-		fmt.Fprintf(os.Stderr, "hyprd lock: pkill ewwd: %v\n", err)
+	if out, err := exec.Command("eww", "close-all").CombinedOutput(); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd lock: eww close-all: %v: %s\n", err, strings.TrimSpace(string(out)))
 	}
-	if !l.active(saved) {
-		return
-	}
-	if err := exec.Command("pkill", "-x", "eww").Run(); err != nil && !isExitCode(err, 1) {
-		fmt.Fprintf(os.Stderr, "hyprd lock: pkill eww: %v\n", err)
-	}
-}
-
-func isExitCode(err error, code int) bool {
-	var exitErr *exec.ExitError
-	return errors.As(err, &exitErr) && exitErr.ExitCode() == code
 }
 
 // exitBlackout restores workspace, reopens eww/glava, reconnects bluetooth, and unpauses dunst.
