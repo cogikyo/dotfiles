@@ -42,27 +42,37 @@ export async function readAuth<T>() {
   return JSON.parse(await fs.readFile(authPath(), "utf8")) as T;
 }
 
-export function resolveClaudeConfigDir() {
+export function claudeCredentialsPaths() {
   const env = process.env.CLAUDE_CONFIG_DIR?.trim();
-  if (env) return path.resolve(env);
-  return path.join(os.homedir(), ".claude");
-}
+  if (env) return [path.join(path.resolve(env), ".credentials.json")];
 
-export function claudeCredentialsPath() {
-  return path.join(resolveClaudeConfigDir(), ".credentials.json");
+  const xdg = process.env.XDG_CONFIG_HOME?.trim();
+  const configDir = xdg ? path.resolve(xdg) : path.join(os.homedir(), ".config");
+  return [
+    path.join(configDir, "claude", ".credentials.json"),
+    path.join(os.homedir(), ".claude", ".credentials.json"),
+  ];
 }
 
 export type ClaudeCredentials = {
   accessToken?: string;
-  expiresAt?: string;
+  expiresAt?: string | number;
 };
 
 export async function readClaudeCredentials(): Promise<ClaudeCredentials | undefined> {
-  try {
-    const parsed = JSON.parse(await fs.readFile(claudeCredentialsPath(), "utf8")) as unknown;
-    if (!parsed || typeof parsed !== "object") return undefined;
-    return parsed as ClaudeCredentials;
-  } catch {
-    return undefined;
+  for (const credentialsPath of claudeCredentialsPaths()) {
+    try {
+      const parsed = JSON.parse(await fs.readFile(credentialsPath, "utf8")) as unknown;
+      if (!parsed || typeof parsed !== "object") continue;
+
+      const record = parsed as Record<string, unknown>;
+      const credentials = record.claudeAiOauth ?? record;
+      if (!credentials || typeof credentials !== "object") continue;
+      return credentials as ClaudeCredentials;
+    } catch {
+      continue;
+    }
   }
+
+  return undefined;
 }

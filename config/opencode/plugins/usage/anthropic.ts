@@ -103,9 +103,8 @@ function scopedWindows(limits?: AnthropicLimit[] | null) {
     .filter((window): window is UsageWindow => Boolean(window));
 }
 
-function isExpired(expiresAt: string | undefined) {
-  if (typeof expiresAt !== "string") return true;
-  const ms = Date.parse(expiresAt);
+function isExpired(expiresAt: string | number | undefined) {
+  const ms = typeof expiresAt === "number" ? expiresAt : Date.parse(expiresAt ?? "");
   if (!Number.isFinite(ms)) return true;
   return Date.now() >= ms;
 }

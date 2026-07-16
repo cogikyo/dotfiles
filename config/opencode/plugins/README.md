@@ -83,7 +83,7 @@ Practical failure diagnosis:
 - `sign in` (amber) → OpenCode Firefox session expired.
 - `429` → rate-limited; wait for the backoff or the reset window.
 - `stale` note → cached data is older than the provider's `staleAfterMS`; click the provider row for a manual refresh.
-- `auth recovery failed` (amber) → recovery only runs when `${CLAUDE_CONFIG_DIR:-~/.claude}/.credentials.json` exists; otherwise the 401 is unrecoverable from here.
+- `auth recovery failed` (amber) → recovery checks `$CLAUDE_CONFIG_DIR` when set, then the XDG Claude config and legacy `~/.claude`; otherwise the 401 is unrecoverable from here.
 - `usage_status` unavailable → delegate child permission derivation denies `experimental.primary_tools` tools unless the child agent's frontmatter explicitly allows them.
 
 ## Claude auth
@@ -91,7 +91,7 @@ Practical failure diagnosis:
 `opencode-claude-auth` is the server plugin that owns Claude subscription requests.
 
 - It talks directly to Anthropic, owns credential refresh, and wraps subscription requests so nothing else touches Anthropic's billing shape.
-- The usage adapter's `claude -p . --model haiku` fallback is bounded 401 recovery only: it reads `${CLAUDE_CONFIG_DIR:-~/.claude}/.credentials.json` and retries the usage fetch once after a successful refresh.
+- The usage adapter's `claude -p . --model haiku` fallback is bounded 401 recovery only: it reads `$CLAUDE_CONFIG_DIR` when set, otherwise `${XDG_CONFIG_HOME:-~/.config}/claude` and legacy `~/.claude`, then retries the usage fetch once after a successful refresh.
 
 ## Notifications and Kitty context
 
