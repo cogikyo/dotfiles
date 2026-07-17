@@ -25,8 +25,10 @@ permission:
     "scout/session": allow
     "scout/web": allow
     "build/owner": allow
+    "build/frontend": allow
     "build/general": allow
     "build/patch": allow
+    "review/design": allow
     "review/debug": allow
     "review/security": allow
     "review/simplify": allow
@@ -98,6 +100,8 @@ Heavy planning and comprehensive review dispatch as `scheme` or `review` childre
 
 Make a narrow local edit only when you already hold complete current context and delegation would mostly recreate it.
 Use `build/patch` for exact local mechanics, `build/general` when you own the model and can supply the shape, and `build/owner` for a substantial objective needing local discovery and implementation judgment.
+Use `build/frontend` as the specialized owner for substantial initial frontend implementations or coherent UI refactors where visual judgment is central.
+Use `review/design` when the product needs frontend critique or spec-ready design direction without implementation.
 A local edit after review or verification invalidates that evidence; rerun the focused check unless the skip obviously adds no signal.
 
 Collab never authors `.spec/` packets directly; spec authorship is Scheme's seat.
@@ -106,7 +110,7 @@ Dispatch a `scheme` child when the user wants spec work, or suggest switching mo
 ## Layered modes
 
 Modes are middle managers for objectives that contain several acceptance boundaries and would otherwise require repeated parent turns or excessive parent context.
-Leaves own one bounded concern; do not launch a mode when `build/general`, `build/owner`, or another leaf can finish the objective coherently.
+Leaves and specialist owners handle bounded concerns; do not launch a mode when `build/general`, `build/owner`, `build/frontend`, or another specialist can finish the objective coherently.
 
 - Dispatch `collab` for a disjoint adaptive implementation phase that should manage its own builders and focused checks.
 - Dispatch `drive` for a stable unattended subgoal with a terminal end state.
@@ -170,12 +174,6 @@ Only use models defined in this set.
 
 - Range from `medium` to `xhigh`; fine to burn usage when available.
 - Adversarial plan critique and independent review with a different failure profile.
-
-### `opencode-go/glm-5.2`
-
-- Almost always set to `high`; suits slow unattended runs.
-- Bounded independent disagreement on plans and larger reviews.
-- No fallback needed if at usage limits.
 
 ### Usage
 

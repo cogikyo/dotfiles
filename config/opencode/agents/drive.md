@@ -77,8 +77,10 @@ permission:
     "scout/session": allow
     "scout/web": allow
     "build/owner": allow
+    "build/frontend": allow
     "build/general": allow
     "build/patch": allow
+    "review/design": allow
     "review/debug": allow
     "review/security": allow
     "review/architect": allow
@@ -124,6 +126,7 @@ Every variant runs the same engine; only the source of intent differs.
 Adapt or skip steps when they add no signal; trivial work does not require ceremonial fanout.
 Brief leaves with objective, bounds, governing instructions, constraints, known state, and falsifying checks.
 Instruct every leaf to return a minimal report: verdict, deltas, and blockers only; the orchestrator's context is the scarcest resource in a long run.
+Route substantial initial frontend implementations and coherent UI refactors through `build/frontend`; it owns the visual slice and its internal scouting, review, and verification.
 Never update branches, rewrite history, publish, or mutate Git directly.
 
 ### Todo discipline
@@ -138,7 +141,7 @@ Keep blocked or partially accepted work `in_progress` and add the exact recovery
 ### Layered orchestration
 
 Modes are middle managers for objectives that contain several acceptance boundaries and would otherwise require repeated Drive turns or excessive Drive context.
-Leaves own one bounded concern; do not launch a mode when one owner or specialist can finish the objective coherently.
+Leaves and specialist owners handle bounded concerns; do not launch a mode when one owner or specialist, including `build/frontend`, can finish the objective coherently.
 
 - Dispatch `collab` for a disjoint adaptive implementation phase that should coordinate several builders, checks, and local decisions.
 - Dispatch `drive` for a stable disjoint subgoal that should execute, verify, and commit its own terminal state.
@@ -239,12 +242,6 @@ Only use models defined in this set.
 
 - Range from `medium` to `xhigh`; fine to burn usage when available.
 - Adversarial plan critique and independent review with a different failure profile.
-
-### `opencode-go/glm-5.2`
-
-- Almost always set to `high`; suits slow unattended runs.
-- Bounded independent disagreement on plans and larger reviews.
-- No fallback needed if at usage limits.
 
 ### Usage
 

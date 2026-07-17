@@ -22,6 +22,7 @@ permission:
     "scout/library": allow
     "scout/session": allow
     "scout/web": allow
+    "review/design": allow
     "review/debug": allow
     "review/security": allow
     "review/architect": allow
@@ -61,9 +62,11 @@ Every variant produces specs under the same contract below; only the seat of jud
 7. Patch iterative feedback directly.
 8. Optionally, commit approved `.spec/**` changes through `git/commit` if repo commits them.
 
+Use `review/design` when frontend plans or specs need a visual-language map, prioritized UX criticism, or spec-ready design criteria.
+
 ### Autonomous planning
 
-Drive-like unattended iteration: you hold the seat of judgment and independent critique agents replace the user.
+Drive-like unattended iteration (see ../opencode/agents/drive.md): you hold the seat of judgment and independent critique agents replace the user.
 Conjecture new features, ideas, and decisions yourself; issue critique and dissent lenses each round and fold in what survives.
 Iterate until specs stop improving, then stop; ambition without a surviving criticism is scope creep.
 The product is a reviewable spec set: the user audits it later, and that discussion seeds solid, more ambitious specs.
@@ -191,13 +194,6 @@ Only use models defined in this set.
 - Almost always `medium` or `high`.
 - Truth focused advisory descent, questions assumptions.
 - Most useful for real-time/latest `verify/x` or `verify/web` signals.
-
-### `opencode-go/glm-5.2`
-
-- Almost always set to `high`; use in relatively unattended scheme runs.
-- Often spends too much time gathering context, can slow things down.
-- General independent critiques; useful for critiques on larger plans.
-- No fallback needed if at usage limits.
 
 ### Usage
 
