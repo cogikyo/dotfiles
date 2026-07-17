@@ -80,10 +80,10 @@ def _rgb(hex_value: str) -> int:
 # Intentional manual coupling to vagari + OpenCode role semantics.
 # Keep this semantic: the OpenCode context stores the agent name, not theme colors.
 OPENCODE_AGENT_COLORS = {
+    "collab": _rgb("#4a6be3"),
     "drive": _rgb("#f8b486"),
-    "plan": _rgb("#b29ae8"),
-    "review": _rgb("#f08898"),
-    "build": _rgb("#4a6be3"),
+    "review": _rgb("#95cb79"),
+    "scheme": _rgb("#b29ae8"),
 }
 
 
@@ -205,7 +205,6 @@ def _fresh_opencode_contexts(data) -> tuple:
             continue
         contexts.append(ctx)
     return tuple(contexts)
-
 
 
 def _kitty_window_id(window) -> int:
