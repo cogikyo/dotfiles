@@ -97,9 +97,10 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 #### Abstraction
 
 - Check existing abstractions and utilities first.
+- Seriously do not recreate helpers that are likely to alrady exist, especailly if in modern standard library.
 - Discover the working shape before extracting; **discover, then exploit**.
 - A large function is fine until it works; then decompose for readability, testability, or reuse.
-- Avoid one-off local helpers unless they flatten deep nesting, improve readability, clarify ownership, or point toward likely reuse.
+- Almost always avoid one-off local helpers unless they flatten extremely complex nesting, or clarify ownership.
 - Good abstractions remove knowledge from callers; they do not just move code elsewhere.
 
 #### Coupling
