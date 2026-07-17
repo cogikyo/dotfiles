@@ -409,7 +409,7 @@ func withResolvedPWD(command, cwd string) string {
 }
 
 func persistentZshCommand() []string {
-	return []string{"zsh", "-lic", `command=$HYPRD_LAUNCH_COMMAND; unset HYPRD_LAUNCH_COMMAND; unsetopt err_exit; trap "" INT; ( trap - INT; eval "$command" ); exec zsh -l`}
+	return []string{"zsh", "-l"}
 }
 
 func (t *Tabs) resolvePaneCWD(pane config.TabPane, defaultCWD string) string {

@@ -161,3 +161,10 @@ bindkey '^[[1;5B'  history-incremental-search-forward  # C-Down
 eval "$(atuin init zsh --disable-up-arrow)"
 
 source $HOME/.config/zsh/vagari-highlights.zsh
+
+if [[ -n ${HYPRD_LAUNCH_COMMAND:-} ]]; then
+    hyprd_command=$HYPRD_LAUNCH_COMMAND
+    unset HYPRD_LAUNCH_COMMAND
+    eval "$hyprd_command"
+    unset hyprd_command
+fi
