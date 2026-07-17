@@ -10,7 +10,6 @@ permission:
   glob: allow
   grep: allow
   list: allow
-  lsp: allow
   task: deny
   question: deny
   doom_loop: deny

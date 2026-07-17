@@ -155,7 +155,7 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 
 - Run the smallest relevant check that can falsify the change.
 - Prefer targeted builds and checks over broad repo-wide cleanup unless asked.
-- Use LSP, formatters, and code actions when appropriate to fix mechanical issues before handing back.
+- Use targeted builds, typechecks, linters, formatters, and code actions to catch mechanical issues before handing back.
 - If verification is skipped or blocked, say exactly what remains unverified.
 - Do not fix unrelated failures or assume unexpected file changes are formatter churn; the user or other agents may be editing concurrently.
 - Let formatters own formatting, then re-read if tooling changed files.
