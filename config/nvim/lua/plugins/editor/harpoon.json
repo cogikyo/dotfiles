@@ -29,9 +29,9 @@
       "pins": [
         "partner/init.partner.go",
         "webhooks/init.tracking.go",
-        "statistics/s.stats.reports.abtests.go",
         "compliance/init.compliance.go",
         "routing/init.routing.go",
+        "billing/init.billing.go",
         "aggregation/migrate.go"
       ]
     },
