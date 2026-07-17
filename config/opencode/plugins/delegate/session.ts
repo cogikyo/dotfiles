@@ -42,7 +42,7 @@ const CONTENT_FILTER_ADVICE = "child unrecoverable; re-brief a fresh child (rewo
 const INTERRUPTED_ADVICE = "completion unknown; reconcile durable state before re-running because the child may have edited files";
 const KNOWN_EFFORTS = new Set(["default", "minimal", "low", "medium", "high", "xhigh"]);
 const MODE_AGENTS = new Set(["collab", "drive", "review", "scheme"]);
-const MAX_MODE_LINEAGE = 3;
+const MAX_MODE_LINEAGE = 2;
 const STATUS_POLL_MS = 300;
 const STARTUP_TIMEOUT_MS = 120_000;
 
