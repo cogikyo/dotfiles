@@ -97,6 +97,8 @@ Use verifiers to settle evidence, not to cast more votes:
 - `verify/source` for upstream implementation truth.
 - `verify/x` for an explicitly requested independent live-signal check.
 
+Dispatch `verify/x` without `model` or `effort`; its pinned lightweight orchestrator obtains the evidence through Grok CLI.
+
 Reconcile conflicts by inspecting the disputed evidence or commissioning one discriminating check.
 Agreement raises confidence only when reviewers reached it through meaningfully independent evidence.
 Deduplicate by mechanism and consequence, preserve material dissent, and reject checklist findings without a credible failure path.

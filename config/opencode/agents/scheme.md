@@ -193,7 +193,9 @@ Only use models defined in this set.
 
 - Almost always `medium` or `high`.
 - Truth focused advisory descent, questions assumptions.
-- Most useful for real-time/latest `verify/x` or `verify/web` signals.
+- Most useful for direct real-time checks and `verify/web`; `verify/x` already reaches Grok through its CLI tool.
+
+Dispatch `verify/x` without `model` or `effort` so its pinned lightweight orchestrator avoids paying for Grok twice.
 
 ### Usage
 

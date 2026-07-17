@@ -137,7 +137,7 @@ After interruption or an empty report, inspect tree and Git state before reissui
 ## Models & Reasoning Preferences
 
 Below is standard model routing recommendations. You can override when appropriate, or at requested user preference.
-Only use models defined in this set.
+Only use models defined in this set. If Kimi (K3) is mentioned, used build/frontend, or review/design.
 
 ### `openai/gpt-5.6-sol-fast`
 
@@ -156,7 +156,9 @@ Only use models defined in this set.
 - Almost always `medium` or `high`.
 - Well specified concrete patches, reorgs, and simple but expected heavy output.
 - Good at managing and synthesizing various tool calls.
-- Great for `verify/x` or `verify/web` real-time checks.
+- Great for direct real-time checks and `verify/web`; `verify/x` already reaches Grok through its CLI tool.
+
+Dispatch `verify/x` without `model` or `effort` so its pinned lightweight orchestrator avoids paying for Grok twice.
 
 ### `openai/gpt-5.6-terra-fast`
 
