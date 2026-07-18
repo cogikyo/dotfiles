@@ -230,7 +230,7 @@ export function UsageDashboard(props: {
               >
                 <For each={provider.windows}>
                   {(window) => {
-                    const reset = formatReset(window.resetAt);
+                    const reset = window.resetAt ? formatReset(window.resetAt) : undefined;
                     const pct = window.usedPercent;
                     // Unknown percent (e.g. xAI weekly): muted "--" cell and empty bar, but keep
                     // the real duration/exact reset columns so alignment matches healthy rows.
@@ -265,8 +265,8 @@ export function UsageDashboard(props: {
                           window.label,
                           window.resetAt,
                         )}
-                        duration={reset.duration}
-                        exact={reset.exact}
+                        duration={reset?.duration ?? ""}
+                        exact={reset?.exact ?? ""}
                       />
                     );
                   }}

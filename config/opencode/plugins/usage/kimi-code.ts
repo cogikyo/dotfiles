@@ -96,6 +96,7 @@ function interpret(payload: KimiUsagePayload) {
   const windows = [
     ...limitWindows(payload.limits),
     window("W", payload.usage),
+    window("M", payload.totalQuota),
   ].filter((item): item is UsageWindow => Boolean(item));
 
   if (windows.length === 0) return note("no windows", "warn");
@@ -126,7 +127,7 @@ async function load(): Promise<ProviderUsage> {
 export const kimiCodeUsage: ProviderAdapter = {
   id,
   label,
-  placeholders: ["H", "W"],
+  placeholders: ["H", "W", "M"],
   poll: {
     minFetchIntervalMS: 60_000,
     errorBackoffMS: 3 * 60_000,
