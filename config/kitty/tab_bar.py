@@ -10,6 +10,7 @@ Accent color follows the active agent, ssh pink, or normal blue.
 
 import json
 import os
+import socket
 import time
 from getpass import getuser
 from os import uname
@@ -68,6 +69,11 @@ KITTY_CONTEXT_PATH = (
 )
 KITTY_CONTEXT_READ_TTL_SECONDS = 0.5
 KITTY_CONTEXT_STALE_SECONDS = 24 * 60 * 60
+
+HYPRD_SOCKET_PATH = "/tmp/hyprd.sock"
+HYPRD_SOCKET_TIMEOUT_SECONDS = 0.02
+HYPRD_ACCENT_RETRY_SECONDS = 2.0
+HYPRD_ACCENT_HEARTBEAT_SECONDS = 5.0
 # ╭──────────────────────────────────────────────────────────────────────────────╮
 # │ Colors                                                                       │
 # ╰──────────────────────────────────────────────────────────────────────────────╯
@@ -79,11 +85,19 @@ def _rgb(hex_value: str) -> int:
 
 # Intentional manual coupling to vagari + OpenCode role semantics.
 # Keep this semantic: the OpenCode context stores the agent name, not theme colors.
+NORMAL_ACCENT_HEX = "8aa4f3"
+OPENCODE_ACCENT_HEX = "f2a170"
+SSH_ACCENT_HEX = "e887c3"
+
+OPENCODE_AGENT_HEX = {
+    "collab": "f2a170",
+    "drive": "4a6be3",
+    "review": "95cb79",
+    "scheme": "b29ae8",
+}
+
 OPENCODE_AGENT_COLORS = {
-    "collab": _rgb("#4a6be3"),
-    "drive": _rgb("#f8b486"),
-    "review": _rgb("#95cb79"),
-    "scheme": _rgb("#b29ae8"),
+    name: _rgb(hex_value) for name, hex_value in OPENCODE_AGENT_HEX.items()
 }
 
 
@@ -122,6 +136,20 @@ def get_accent() -> int:
     return colors.bg
 
 
+def get_accent_hex() -> str:
+    """Return the active accent as plain rrggbb for hyprd."""
+    boss = get_boss()
+    tm = boss.active_tab_manager if boss else None
+    if tm:
+        agent = _detect_active_agent(tm)
+        if agent == "opencode":
+            ctx_hex = _opencode_hex_for_active_window(tm)
+            return ctx_hex if ctx_hex is not None else OPENCODE_ACCENT_HEX
+        if _detect_ssh_active(tm)[1]:
+            return SSH_ACCENT_HEX
+    return NORMAL_ACCENT_HEX
+
+
 # shared between draw_tab (writes) and draw_tab_title (reads) to reserve space
 _right_status_length = 0
 _current_icon_width = 0
@@ -144,6 +172,10 @@ _kitty_context_cache: KittyContextCache = {
     "mtime_ns": None,
     "contexts": (),
 }
+
+_last_hyprd_accent: tuple[int, str] | None = None
+_last_hyprd_accent_sent_at = 0.0
+_last_hyprd_accent_failed_at = 0.0
 
 # ╭──────────────────────────────────────────────────────────────────────────────╮
 # │ Utilities                                                                    │
@@ -216,13 +248,50 @@ def _kitty_window_id(window) -> int:
     return 0
 
 
+def _push_hyprd_accent(accent_hex: str) -> None:
+    global _last_hyprd_accent, _last_hyprd_accent_sent_at, _last_hyprd_accent_failed_at
+
+    now = time.monotonic()
+    current = (os.getpid(), accent_hex.lower().removeprefix("#"))
+    if (
+        current == _last_hyprd_accent
+        and now - _last_hyprd_accent_sent_at < HYPRD_ACCENT_HEARTBEAT_SECONDS
+    ):
+        return
+    if (
+        current != _last_hyprd_accent
+        and now - _last_hyprd_accent_failed_at < HYPRD_ACCENT_RETRY_SECONDS
+    ):
+        return
+
+    try:
+        with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as sock:
+            sock.settimeout(HYPRD_SOCKET_TIMEOUT_SECONDS)
+            sock.connect(HYPRD_SOCKET_PATH)
+            sock.sendall(f"accent {current[1]}".encode())
+            sock.recv(64)
+    except OSError:
+        _last_hyprd_accent_failed_at = now
+        return
+
+    _last_hyprd_accent = current
+    _last_hyprd_accent_sent_at = now
+
+
 def _opencode_agent_color(agent) -> int | None:
     name = str(agent or "").lower()
     return OPENCODE_AGENT_COLORS.get(name.split(".", 1)[0])
 
 
+def _opencode_agent_hex(agent) -> str | None:
+    name = str(agent or "").lower()
+    return OPENCODE_AGENT_HEX.get(name.split(".", 1)[0])
+
+
 def _opencode_context_for_window_ids(window_ids: set[int]):
     for ctx in _read_opencode_contexts():
+        if _as_int(ctx.get("kitty_pid")) != os.getpid():
+            continue
         kitty_window_id = _as_int(ctx.get("kitty_window_id"))
         if kitty_window_id and kitty_window_id in window_ids:
             return ctx
@@ -238,6 +307,17 @@ def _opencode_color_for_active_window(tab_manager) -> int | None:
     ctx = _opencode_context_for_window_ids({window_id})
     agent = ctx.get("agent") if ctx else None
     return _opencode_agent_color(agent) if agent else None
+
+
+def _opencode_hex_for_active_window(tab_manager) -> str | None:
+    window = getattr(tab_manager, "active_window", None)
+    window_id = _kitty_window_id(window) if window else 0
+    if not window_id:
+        return None
+
+    ctx = _opencode_context_for_window_ids({window_id})
+    agent = ctx.get("agent") if ctx else None
+    return _opencode_agent_hex(agent) if agent else None
 
 
 def _is_git_repo(path: str) -> bool:
@@ -590,6 +670,7 @@ def draw_tab(
         _cwd_right_cache = None
         _active_agent_cache = None
         _active_ssh_cache = None
+        _kitty_context_cache["checked_at"] = 0.0
 
     # Build right status cells: separator | cwd | hostname
     cwd_text = " " + get_cwd_right() + " " + SEP_RIGHT
@@ -604,6 +685,8 @@ def draw_tab(
     else:
         host_text = HOST + ICON_HOST
     accent = get_accent()
+    if index == 1:
+        _push_hyprd_accent(get_accent_hex())
 
     cells = [
         (colors.active_bg, colors.bar_bg, SEP_RIGHT),

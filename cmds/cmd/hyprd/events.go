@@ -20,18 +20,20 @@ import (
 
 // EventLoop mirrors Hyprland's event stream into daemon state and notifies subscribers.
 type EventLoop struct {
-	hypr  *hypr.Client
-	state *state.State
-	subs  *daemon.SubscriptionManager
-	done  <-chan struct{}
+	hypr   *hypr.Client
+	state  *state.State
+	subs   *daemon.SubscriptionManager
+	accent *Accent
+	done   <-chan struct{}
 }
 
-func NewEventLoop(hypr *hypr.Client, state *state.State, subs *daemon.SubscriptionManager, done <-chan struct{}) *EventLoop {
+func NewEventLoop(hypr *hypr.Client, state *state.State, subs *daemon.SubscriptionManager, accent *Accent, done <-chan struct{}) *EventLoop {
 	return &EventLoop{
-		hypr:  hypr,
-		state: state,
-		subs:  subs,
-		done:  done,
+		hypr:   hypr,
+		state:  state,
+		subs:   subs,
+		accent: accent,
+		done:   done,
 	}
 }
 
@@ -90,6 +92,7 @@ func (e *EventLoop) syncState() error {
 	if err := e.updateOccupied(); err != nil {
 		return err
 	}
+	e.resetAccent()
 
 	return nil
 }
@@ -131,6 +134,7 @@ func (e *EventLoop) handleEvent(line string) {
 		if ws, err := strconv.Atoi(wsStr); err == nil {
 			e.state.SetWorkspace(ws)
 			e.notifyWorkspace()
+			e.resetAccent()
 		}
 
 	case "focusedmon":
@@ -138,8 +142,18 @@ func (e *EventLoop) handleEvent(line string) {
 			if ws, err := strconv.Atoi(data[idx+1:]); err == nil {
 				e.state.SetWorkspace(ws)
 				e.notifyWorkspace()
+				e.resetAccent()
 			}
 		}
+
+	case "activewindow", "activewindowv2":
+		e.applyAccent()
+
+	case "configreloaded":
+		if e.accent != nil {
+			e.accent.Invalidate()
+		}
+		e.applyAccent()
 
 	case "createworkspace", "destroyworkspace", "openwindow", "movewindow":
 		e.updateOccupied()
@@ -155,6 +169,25 @@ func (e *EventLoop) handleEvent(line string) {
 		e.state.ClearWindowState(addr)
 		e.updateOccupied()
 		e.notifyWorkspace()
+		e.applyAccent()
+	}
+}
+
+func (e *EventLoop) applyAccent() {
+	if e.accent == nil {
+		return
+	}
+	if err := e.accent.Apply(); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd accent: %v\n", err)
+	}
+}
+
+func (e *EventLoop) resetAccent() {
+	if e.accent == nil {
+		return
+	}
+	if err := e.accent.Reset(); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd accent: %v\n", err)
 	}
 }
 

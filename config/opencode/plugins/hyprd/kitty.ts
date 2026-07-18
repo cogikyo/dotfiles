@@ -17,6 +17,13 @@ const FOCUS_ACK_DEBOUNCE_MS = 1000
 const LOCK_RETRY_MS = 25
 const LOCK_TIMEOUT_MS = 1000
 
+const AGENT_ACCENTS = {
+  collab: "f2a170",
+  drive: "4a6be3",
+  review: "95cb79",
+  scheme: "b29ae8",
+}
+
 const KITTY_PID = Number(process.env.KITTY_PID) || 0
 const KITTY_WINDOW_ID = Number(process.env.KITTY_WINDOW_ID) || 0
 const execFileAsync = promisify(execFile)
@@ -79,11 +86,7 @@ function isThisPane(ctx) {
   return Number(ctx?.kitty_pid) === KITTY_PID && Number(ctx?.kitty_window_id) === KITTY_WINDOW_ID
 }
 
-function selected(value) {
-  return Boolean(value?.is_focused || value?.is_active)
-}
-
-async function currentPaneFocused() {
+async function currentPaneState() {
   if (!KITTY_PID || !KITTY_WINDOW_ID) return null
 
   try {
@@ -92,11 +95,12 @@ async function currentPaneFocused() {
     if (!Array.isArray(windows)) return null
 
     for (const win of windows) {
-      if (!selected(win)) continue
       for (const tab of win.tabs || []) {
-        if (!selected(tab)) continue
         for (const pane of tab.windows || []) {
-          if (Number(pane?.id) === KITTY_WINDOW_ID) return selected(pane)
+          if (Number(pane?.id) !== KITTY_WINDOW_ID) continue
+          return {
+            focused: Boolean(win?.is_focused && tab?.is_focused && pane?.is_focused),
+          }
         }
       }
     }
@@ -104,7 +108,21 @@ async function currentPaneFocused() {
     return null
   }
 
-  return false
+  return { focused: false }
+}
+
+async function redrawTabBar() {
+  try {
+    await execFileAsync("kitty", [
+      "@",
+      "--to",
+      `unix:/tmp/kitty-${KITTY_PID}`,
+      "set-window-title",
+      "--temporary",
+      "--match",
+      `id:${KITTY_WINDOW_ID}`,
+    ])
+  } catch {}
 }
 
 async function notifyViewed() {
@@ -116,6 +134,14 @@ async function notifyViewed() {
     kitty_pid: KITTY_PID,
     kitty_window_id: KITTY_WINDOW_ID,
   }))
+}
+
+async function sendAccent(agent) {
+  const base = String(agent || "").toLowerCase().split(".", 1)[0]
+  const color = AGENT_ACCENTS[base]
+  if (!color) return false
+
+  return send(`accent ${color}`)
 }
 
 async function clearPaneContext() {
@@ -142,7 +168,7 @@ function currentAgent(api, sessionID) {
   return undefined
 }
 
-async function writeContext(api, sessionID) {
+async function writeContext(sessionID, agent) {
   if (!sessionID || !KITTY_PID || !KITTY_WINDOW_ID) return
 
   await withLock(async () => {
@@ -153,7 +179,6 @@ async function writeContext(api, sessionID) {
       if (id !== sessionID && isThisPane(ctx)) delete contexts[id]
     }
 
-    const agent = currentAgent(api, sessionID)
     contexts[sessionID] = {
       kitty_pid: KITTY_PID,
       kitty_window_id: KITTY_WINDOW_ID,
@@ -168,24 +193,67 @@ async function writeContext(api, sessionID) {
 const tui = async (api) => {
   let lastFocused = null
   let lastFocusAckAt = 0
+  let lastContext = ""
+  let pendingSession = ""
+  let syncing = false
+  let disposed = false
+  let syncTask = Promise.resolve()
+
+  const syncSession = async (sessionID) => {
+    const agent = currentAgent(api, sessionID)
+    const context = `${sessionID}\0${agent || ""}`
+    await writeContext(sessionID, agent)
+    if (disposed || pendingSession) return
+    if (context === lastContext) return
+
+    lastContext = context
+    const pane = await currentPaneState()
+    if (pane?.focused) await redrawTabBar()
+  }
+
+  const scheduleSync = (sessionID) => {
+    if (disposed) return
+    pendingSession = sessionID
+    if (syncing) return
+
+    syncing = true
+    syncTask = (async () => {
+      while (!disposed && pendingSession) {
+        const next = pendingSession
+        pendingSession = ""
+        try {
+          await syncSession(next)
+        } catch {}
+      }
+      syncing = false
+    })()
+  }
 
   const sync = () => {
     const current = api.route.current
     if (current.name !== "session") return
 
     const sessionID = current.params?.sessionID
-    if (typeof sessionID !== "string" || sessionID === "") return
-
-    void writeContext(api, sessionID)
+    if (typeof sessionID === "string" && sessionID !== "") {
+      scheduleSync(sessionID)
+    }
   }
 
   const acknowledgeFocusedPane = async () => {
-    const focused = await currentPaneFocused()
-    if (focused === null) return
+    const pane = await currentPaneState()
+    if (pane === null) return
+
+    if (pane.focused) {
+      const current = api.route.current
+      const sessionID = current.name === "session" ? current.params?.sessionID : ""
+      if (typeof sessionID === "string" && sessionID !== "") {
+        void sendAccent(currentAgent(api, sessionID))
+      }
+    }
 
     const wasFocused = lastFocused
-    lastFocused = focused
-    if (wasFocused !== false || !focused) return
+    lastFocused = pane.focused
+    if (wasFocused !== false || !pane.focused) return
 
     const now = Date.now()
     if (now - lastFocusAckAt < FOCUS_ACK_DEBOUNCE_MS) return
@@ -206,7 +274,7 @@ const tui = async (api) => {
       const sessionID = event.properties?.sessionID
       if (typeof sessionID !== "string" || sessionID === "") return
 
-      void writeContext(api, sessionID)
+      scheduleSync(sessionID)
     }),
     api.event.on("tui.command.execute", (event) => {
       if (event.properties?.command !== "session.new") return
@@ -218,9 +286,11 @@ const tui = async (api) => {
   ]
 
   api.lifecycle.onDispose(() => {
+    disposed = true
+    pendingSession = ""
     clearInterval(timer)
     for (const dispose of disposers) dispose()
-    void clearPaneContext()
+    void syncTask.then(clearPaneContext).catch(() => {})
   })
 }
 

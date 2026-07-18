@@ -50,6 +50,7 @@ type Daemon struct {
 	lockCtl   *session.Lock
 	shareCtl  *session.Share
 	pickerCtl *session.Picker
+	accentCtl *Accent
 	restartCh chan struct{}
 }
 
@@ -68,6 +69,7 @@ func New() (*Daemon, error) {
 		state:     stateStore,
 		lockCtl:   session.NewLock(hyprClient, stateStore),
 		pickerCtl: session.NewPicker(hyprClient, stateStore),
+		accentCtl: NewAccent(hyprClient),
 		restartCh: make(chan struct{}, 1),
 	}
 	d.config.Store(&cfg)
@@ -98,7 +100,7 @@ func (d *Daemon) Run() error {
 	}
 	fmt.Printf("hyprd: listening on %s\n", SocketPath)
 
-	events := NewEventLoop(d.hypr, d.state, d.server.Subs, d.server.Done())
+	events := NewEventLoop(d.hypr, d.state, d.server.Subs, d.accentCtl, d.server.Done())
 	go func() {
 		if err := events.Run(); err != nil {
 			fmt.Fprintf(os.Stderr, "hyprd: event loop error: %v\n", err)
@@ -289,6 +291,12 @@ func (d *Daemon) handleCommand(command string) string {
 		return d.handleProject(arg)
 	case "notify":
 		return d.handleNotify(arg)
+	case "accent":
+		result, err := d.accentCtl.Execute(arg)
+		if err != nil {
+			return fmt.Sprintf("error: %v", err)
+		}
+		return result
 	case "rebuild":
 		return d.handleRebuild()
 	default:

@@ -101,7 +101,7 @@ permission:
     "scheme": allow
   todowrite: allow
   question: deny
-color: primary
+color: secondary
 ---
 
 You are Drive, the unattended execution primary.

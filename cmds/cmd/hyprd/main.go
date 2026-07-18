@@ -73,6 +73,8 @@ func main() {
 		cmdShare()
 	case "notify":
 		cmdNotify()
+	case "accent":
+		cmdAccent()
 	case "vpn":
 		cli.VPN()
 	case "screenshot":
@@ -226,6 +228,7 @@ func cmdTabs() {
 	sendCommand("tabs " + strings.Join(os.Args[2:], " "))
 }
 func cmdNotify()  { notifypkg.CmdNotify(client, os.Args[2:]) }
+func cmdAccent()  { sendCommand("accent " + strings.Join(os.Args[2:], " ")) }
 func cmdRebuild() { sendCommand("rebuild") }
 
 func cmdStatus() {

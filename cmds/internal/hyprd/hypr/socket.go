@@ -149,6 +149,18 @@ func (c *Client) Dispatch(args string) error {
 	return nil
 }
 
+// Keyword sets a Hyprland config keyword at runtime.
+func (c *Client) Keyword(name, value string) error {
+	resp, err := c.Request("keyword " + name + " " + value)
+	if err != nil {
+		return err
+	}
+	if string(resp) != "ok" {
+		return fmt.Errorf("keyword failed: %s", string(resp))
+	}
+	return nil
+}
+
 // ╭──────────────────────────────────────────────────────────────────────────────╮
 // │ monitors                                                                     │
 // ╰──────────────────────────────────────────────────────────────────────────────╯

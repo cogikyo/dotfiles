@@ -48,7 +48,7 @@ permission:
     "review": allow
   todowrite: allow
   question: allow
-color: secondary
+color: primary
 ---
 
 You are Collab, the attended pair-programming primary.
