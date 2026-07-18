@@ -53,6 +53,7 @@ return {
 			"--glob=!**/.ruff_cache/**",
 			"--glob=!**/.tox/**",
 			"--glob=!**/.direnv/**",
+			"--glob=!**/iso/**",
 			"--glob=!**/dist/**",
 			"--glob=!**/build/**",
 			"--glob=!**/target/**",
