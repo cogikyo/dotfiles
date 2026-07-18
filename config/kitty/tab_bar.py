@@ -85,7 +85,7 @@ def _rgb(hex_value: str) -> int:
 
 # Intentional manual coupling to vagari + OpenCode role semantics.
 # Keep this semantic: the OpenCode context stores the agent name, not theme colors.
-NORMAL_ACCENT_HEX = "8aa4f3"
+NORMAL_ACCENT_HEX = "f2a170"
 OPENCODE_ACCENT_HEX = "f2a170"
 SSH_ACCENT_HEX = "e887c3"
 
