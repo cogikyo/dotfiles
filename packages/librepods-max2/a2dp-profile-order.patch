@@ -1,0 +1,25 @@
+diff --git a/linux-rust/src/media_controller.rs b/linux-rust/src/media_controller.rs
+index 5bd68b1..2de09b9 100644
+--- a/linux-rust/src/media_controller.rs
++++ b/linux-rust/src/media_controller.rs
+@@ -564,7 +564,12 @@ impl MediaController {
+             return cached_profile;
+         }
+ 
+-        for profile in ["a2dp-sink-sbc_xq", "a2dp-sink-sbc", "a2dp-sink"] {
++        for profile in [
++            "a2dp-sink-aac",
++            "a2dp-sink",
++            "a2dp-sink-sbc",
++            "a2dp-sink-sbc_xq",
++        ] {
+             if self.is_profile_available(index, profile).await {
+                 info!("Selected best available A2DP profile: {}", profile);
+                 self.state.lock().await.cached_a2dp_profile = profile.to_string();
+@@ -1079,4 +1084,4 @@ async fn get_sink_name_by_mac(mac: &str) -> Option<String> {
+     })
+         .await
+         .unwrap_or(None)
+-}
+\ No newline at end of file
++}

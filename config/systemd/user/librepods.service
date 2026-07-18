@@ -1,0 +1,15 @@
+[Unit]
+Description=LibrePods tray application
+PartOf=hyprland-session.target
+StartLimitIntervalSec=30s
+StartLimitBurst=5
+
+[Service]
+ExecStart=/usr/bin/librepods --start-minimized
+Restart=on-failure
+RestartSec=5s
+UMask=0077
+UnsetEnvironment=RUST_LOG
+
+[Install]
+WantedBy=hyprland-session.target

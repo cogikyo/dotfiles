@@ -573,6 +573,8 @@ step_packages() {
 
     "$DOTFILES/bin/update" --install
 
+    install_librepods_package
+
     # Optional packages (only when --optional is passed)
     if [[ "$OPTIONAL" -eq 1 ]]; then
         local opt_list="$DOTFILES/etc/packages-optional.lst"
@@ -620,7 +622,7 @@ healthcheck_packages() {
         return 1
     fi
 
-    return 0
+    healthcheck_librepods_package
 }
 
 # }}}
@@ -1235,6 +1237,8 @@ step_system() {
     fi
 
     install_opencode_user_service
+    install_librepods_settings
+    install_librepods_service
 
     # Enable services
     echo
@@ -1356,7 +1360,7 @@ healthcheck_system() {
         fi
     done
 
-    return 0
+    healthcheck_librepods_system
 }
 
 # }}}
@@ -2030,6 +2034,185 @@ healthcheck_go() {
             fi
         fi
     done
+    return 0
+}
+
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  LibrePods Max 2 package and runtime helpers  {{{
+
+readonly LIBREPODS_PACKAGE="librepods-max2"
+readonly LIBREPODS_VERSION="0.1.0.pr655.99b0e58-1"
+
+install_librepods_settings() {
+    local package_dir="$DOTFILES/packages/librepods-max2"
+    local template="$package_dir/app_settings.json"
+    local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/librepods"
+    local data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/librepods"
+    local settings="$config_dir/app_settings.json"
+    local devices="$data_dir/devices.json"
+    local tmp
+
+    has jq || { err "jq not found. Install packages first."; return 1; }
+    jq -e 'type == "object"' "$template" >/dev/null || {
+        err "Invalid LibrePods settings template: $template"
+        return 1
+    }
+
+    for dir in "$config_dir" "$data_dir"; do
+        if [[ -L "$dir" || ( -e "$dir" && ! -d "$dir" ) ]]; then
+            err "LibrePods private state path must be a local directory: $dir"
+            return 1
+        fi
+        install -d -m 700 "$dir"
+    done
+
+    if [[ -L "$settings" ]]; then
+        err "LibrePods settings must be a local file, not a symlink: $settings"
+        return 1
+    fi
+    if [[ -e "$settings" ]] && ! jq -e 'type == "object"' "$settings" >/dev/null; then
+        err "Existing LibrePods settings are invalid; refusing to overwrite $settings"
+        return 1
+    fi
+
+    umask 077
+    tmp=$(mktemp "$config_dir/.app_settings.XXXXXX")
+    if [[ -e "$settings" ]]; then
+        if ! jq -S -s '.[0] * .[1]' "$settings" "$template" >"$tmp"; then
+            rm -f "$tmp"
+            return 1
+        fi
+    elif ! jq -S . "$template" >"$tmp"; then
+        rm -f "$tmp"
+        return 1
+    fi
+    chmod 600 "$tmp"
+    mv -f "$tmp" "$settings"
+
+    [[ ! -e "$devices" || ! -L "$devices" ]] || {
+        err "LibrePods device keys must remain in a local file: $devices"
+        return 1
+    }
+    [[ ! -e "$devices" ]] || chmod 600 "$devices"
+    ok "LibrePods safe settings merged without replacing unrelated keys"
+}
+
+install_librepods_service() {
+    local src="$DOTFILES/config/systemd/user/librepods.service"
+    local service_dir="$HOME/.config/systemd/user"
+    local dst="$service_dir/librepods.service"
+
+    mkdir -p "$service_dir"
+    if [[ ! -e "$dst" || ! "$dst" -ef "$src" ]]; then
+        ln -sfn "$src" "$dst"
+        ok "librepods.service linked"
+    fi
+
+    if ! has_user_bus; then
+        warn "No user session bus available; service will load at the next login"
+        return 0
+    fi
+
+    systemctl --user daemon-reload
+    if ! systemctl --user is-enabled librepods.service &>/dev/null; then
+        systemctl --user enable librepods.service
+        ok "librepods.service enabled for the Hyprland session"
+    fi
+
+    if [[ ! -x /usr/bin/librepods ]]; then
+        warn "LibrePods is not installed; run ./install.sh packages before starting its service"
+    elif systemctl --user is-active librepods.service &>/dev/null; then
+        systemctl --user try-restart librepods.service
+        ok "librepods.service restarted"
+    elif systemctl --user is-active hyprland-session.target &>/dev/null; then
+        systemctl --user start librepods.service
+        ok "librepods.service started"
+    else
+        ok "librepods.service installed (will start with the Hyprland session)"
+    fi
+}
+
+install_librepods_package() {
+    local package_dir="$DOTFILES/packages/librepods-max2"
+    local build_root="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/librepods-max2"
+    local installed_version
+    installed_version=$(pacman -Q "$LIBREPODS_PACKAGE" 2>/dev/null | cut -d' ' -f2 || true)
+
+    if [[ "$installed_version" == "$LIBREPODS_VERSION" ]]; then
+        ok "$LIBREPODS_PACKAGE $LIBREPODS_VERSION already installed"
+    else
+        has makepkg || { err "makepkg not found. Install base-devel first."; return 1; }
+        rm -rf "$build_root"
+        mkdir -p "$build_root"
+        cp "$package_dir"/{PKGBUILD,a2dp-profile-order.patch,redact-irk.patch} "$build_root/"
+        info "Building $LIBREPODS_PACKAGE from pinned PR #655 commit..."
+        (cd "$build_root" && makepkg --syncdeps --install --clean --needed --noconfirm)
+    fi
+}
+
+healthcheck_librepods_package() {
+    local installed_version
+
+    installed_version=$(pacman -Q "$LIBREPODS_PACKAGE" 2>/dev/null | cut -d' ' -f2 || true)
+    [[ "$installed_version" == "$LIBREPODS_VERSION" ]] || {
+        err "Healthcheck failed: expected $LIBREPODS_PACKAGE $LIBREPODS_VERSION, got ${installed_version:-missing}"
+        return 1
+    }
+    [[ -x /usr/bin/librepods ]] || { err "Healthcheck failed: /usr/bin/librepods is missing"; return 1; }
+    if ldd /usr/bin/librepods 2>/dev/null | grep -q 'not found'; then
+        err "Healthcheck failed: /usr/bin/librepods has unresolved runtime libraries"
+        return 1
+    fi
+}
+
+healthcheck_librepods_system() {
+    local package_dir="$DOTFILES/packages/librepods-max2"
+    local template="$package_dir/app_settings.json"
+    local config_dir="${XDG_CONFIG_HOME:-$HOME/.config}/librepods"
+    local data_dir="${XDG_DATA_HOME:-$HOME/.local/share}/librepods"
+    local settings="$config_dir/app_settings.json"
+    local service="$HOME/.config/systemd/user/librepods.service"
+
+    [[ -d "$config_dir" && ! -L "$config_dir" && "$(stat -c '%a' "$config_dir")" == "700" ]] || {
+        err "Healthcheck failed: $config_dir must be a private local directory (mode 700)"
+        return 1
+    }
+    [[ -d "$data_dir" && ! -L "$data_dir" && "$(stat -c '%a' "$data_dir")" == "700" ]] || {
+        err "Healthcheck failed: $data_dir must be a private local directory (mode 700)"
+        return 1
+    }
+    [[ -f "$settings" && ! -L "$settings" && "$(stat -c '%a' "$settings")" == "600" ]] || {
+        err "Healthcheck failed: $settings must be a private local file (mode 600)"
+        return 1
+    }
+    jq -e --slurpfile safe "$template" \
+        '. as $actual | $safe[0] | to_entries | all(. as $item | $actual[$item.key] == $item.value)' \
+        "$settings" >/dev/null || {
+        err "Healthcheck failed: LibrePods safety settings differ from the installer template"
+        return 1
+    }
+
+    [[ -e "$service" && "$service" -ef "$DOTFILES/config/systemd/user/librepods.service" ]] || {
+        err "Healthcheck failed: librepods.service is not linked from dotfiles"
+        return 1
+    }
+    grep -Fq 'ExecStart=/usr/bin/librepods --start-minimized' "$service" || {
+        err "Healthcheck failed: librepods.service does not start the minimized tray app"
+        return 1
+    }
+    if has_user_bus; then
+        systemctl --user is-enabled librepods.service &>/dev/null || {
+            err "Healthcheck failed: librepods.service is not enabled for the Hyprland session"
+            return 1
+        }
+        if systemctl --user is-failed librepods.service &>/dev/null; then
+            err "Healthcheck failed: librepods.service is in a failed state"
+            return 1
+        fi
+    fi
     return 0
 }
 

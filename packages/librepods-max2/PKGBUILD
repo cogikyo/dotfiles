@@ -1,0 +1,40 @@
+pkgname=librepods-max2
+pkgver=0.1.0.pr655.99b0e58
+pkgrel=1
+pkgdesc='Experimental LibrePods tray app with AirPods Max 2 hi-res microphone support'
+arch=('x86_64')
+url='https://github.com/librepods-org/librepods/pull/655'
+license=('AGPL-3.0-only')
+depends=('bluez' 'dbus' 'ffmpeg' 'gcc-libs' 'glibc' 'libpulse')
+makedepends=('clang' 'pkgconf' 'rust')
+provides=('librepods')
+conflicts=('librepods')
+options=('!debug')
+_commit=99b0e580a93f2a26647f89816895ca1e5f70a3ec
+source=("${pkgname}-${_commit}.tar.gz::https://github.com/LuanAdemi/librepods/archive/${_commit}.tar.gz"
+        'a2dp-profile-order.patch'
+        'redact-irk.patch')
+sha256sums=('5f764669d091d1a40086365ff636ca2a50ecd98674efa4e64e26db950fa57135'
+            '0982ee6df620fc704dec9e1e5e2e18a34dfa0d36216e7dc1c4d11cc3ff24bfb8'
+            'b7f5b8e3b1fda6246d205c81cc7ce50e7f91050d3385ba6de8ed22f2420c49aa')
+
+prepare() {
+    cd "librepods-${_commit}"
+    patch -Np1 -i "$srcdir/a2dp-profile-order.patch"
+    patch -Np1 -i "$srcdir/redact-irk.patch"
+}
+
+build() {
+    cd "librepods-${_commit}/linux-rust"
+    cargo build --release --locked
+}
+
+package() {
+    cd "librepods-${_commit}"
+    install -Dm755 linux-rust/target/release/librepods "$pkgdir/usr/bin/librepods"
+    install -Dm644 linux-rust/assets/me.kavishdevar.librepods.desktop \
+        "$pkgdir/usr/share/applications/me.kavishdevar.librepods.desktop"
+    install -Dm644 linux-rust/assets/icon.png \
+        "$pkgdir/usr/share/icons/hicolor/256x256/apps/me.kavishdevar.librepods.png"
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

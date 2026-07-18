@@ -17,6 +17,8 @@ btrfs-progs
 bun
 calc
 chromium
+clang
+dbus
 ddcutil
 devtools
 discord
@@ -26,6 +28,7 @@ earlyoom
 efibootmgr
 erdtree
 fd
+ffmpeg
 ffmpegthumbnailer
 firefox-developer-edition
 fuse-overlayfs
@@ -97,6 +100,7 @@ pipewire
 pipewire-alsa
 pipewire-jack
 pipewire-pulse
+pkgconf
 playerctl
 poppler
 postgresql
