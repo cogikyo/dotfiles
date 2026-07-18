@@ -25,7 +25,6 @@ permission:
     "scout/session": allow
     "scout/web": allow
     "build/owner": allow
-    "build/frontend": allow
     "build/general": allow
     "build/patch": allow
     "review/design": allow
@@ -100,8 +99,8 @@ Heavy planning and comprehensive review dispatch as `scheme` or `review` childre
 
 Make a narrow local edit only when you already hold complete current context and delegation would mostly recreate it.
 Use `build/patch` for exact local mechanics, `build/general` when you own the model and can supply the shape, and `build/owner` for a substantial objective needing local discovery and implementation judgment.
-Use `build/frontend` as the specialized owner for substantial initial frontend implementations or coherent UI refactors where visual judgment is central.
-Use `review/design` when the product needs frontend critique or spec-ready design direction without implementation.
+Use `build/general` or `build/owner` for frontend implementation, and pair it with `review/design` when visual language, product intent, interaction quality, or spec-ready acceptance criteria matter.
+Use `review/design` as the frontend design control loop for Scheme plans, implementation handoffs, and post-implementation critique; it guides the builder but does not own edits.
 A local edit after review or verification invalidates that evidence; rerun the focused check unless the skip obviously adds no signal.
 
 Collab never authors `.spec/` packets directly; spec authorship is Scheme's seat.
@@ -110,7 +109,7 @@ Dispatch a `scheme` child when the user wants spec work, or suggest switching mo
 ## Layered modes
 
 Modes are middle managers for objectives that contain several acceptance boundaries and would otherwise require repeated parent turns or excessive parent context.
-Leaves and specialist owners handle bounded concerns; do not launch a mode when `build/general`, `build/owner`, `build/frontend`, or another specialist can finish the objective coherently.
+Leaves and specialist owners handle bounded concerns; do not launch a mode when `build/general`, `build/owner`, `review/design`, or another specialist can finish the objective coherently.
 
 - Dispatch `collab` for a disjoint adaptive implementation phase that should manage its own builders and focused checks.
 - Dispatch `drive` for a stable unattended subgoal with a terminal end state.
@@ -137,7 +136,7 @@ After interruption or an empty report, inspect tree and Git state before reissui
 ## Models & Reasoning Preferences
 
 Below is standard model routing recommendations. You can override when appropriate, or at requested user preference.
-Only use models defined in this set. If Kimi (K3) is mentioned, used build/frontend, or review/design.
+Only use models defined in this set.
 
 ### `openai/gpt-5.6-sol-fast`
 
@@ -150,6 +149,16 @@ Only use models defined in this set. If Kimi (K3) is mentioned, used build/front
 
 - Use at `low` to `medium` to resolve complex ambiguity if context supplied, or `medium` to `high` if requested by user.
 - Better at understanding intent, can determine good terminal end state or intermediate goal if sufficient ambiguity.
+
+### `opencode-go/kimi-k3` and `kimi-code/k3`
+
+Kimi K3 is available through both `opencode-go/kimi-k3` and `kimi-code/k3`;
+Use it deliberately for frontend planning, design critique, bounded build slices, repair loops, and high-context implementation work.
+
+- Use `low`, `high`, or `max`.
+- Strong fit for frontend/design work, bounded implementation, large-context repository passes, and cheap parallel repair attempts.
+- Pair implementation owners with `review/design` when visual language or UX acceptance criteria are load-bearing.
+- Keep OpenAI or Anthropic as the safer orchestrator or final critic for high-risk architecture, security, and ambiguous synthesis.
 
 ### `xai/grok-4.5`
 

@@ -25,6 +25,11 @@ export const usageProviders = {
     label: "OpenCode",
     staleAfterMS: 2 * 60_000,
   },
+  kimiCode: {
+    id: "kimi-code",
+    label: "Kimi",
+    staleAfterMS: 2 * 60_000,
+  },
 } as const satisfies Record<string, UsageProviderSpec>;
 
 export const usageProviderList = Object.values(usageProviders);

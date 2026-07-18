@@ -13,6 +13,13 @@ export function normalizePercent(value: unknown): number | undefined {
   return Math.max(0, Math.min(100, expanded));
 }
 
+// Cached windows can predate adapter changes; keep only labels the adapter still
+// declares so removed window shapes (e.g. Kimi's old monthly row) never render.
+export function declaredWindows(usage: ProviderUsage, placeholders?: string[]) {
+  if (!placeholders) return usage.windows;
+  return usage.windows.filter((window) => placeholders.includes(window.label));
+}
+
 export type NoteKind = "info" | "warn" | "error";
 
 export type ProviderUsage = {

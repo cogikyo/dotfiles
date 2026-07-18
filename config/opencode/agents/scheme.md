@@ -62,7 +62,7 @@ Every variant produces specs under the same contract below; only the seat of jud
 7. Patch iterative feedback directly.
 8. Optionally, commit approved `.spec/**` changes through `git/commit` if repo commits them.
 
-Use `review/design` when frontend plans or specs need a visual-language map, prioritized UX criticism, or spec-ready design criteria.
+Use `review/design` when frontend plans or specs need a visual-language map, design-pattern criticism, prioritized UX direction, or spec-ready acceptance criteria.
 
 ### Autonomous planning
 
@@ -168,6 +168,16 @@ Only use models defined in this set.
 
 - Use at `low` to `medium` to resolve complex ambiguity, or `medium` to `high` if requested by user.
 - Better at understanding intent, can determine good terminal end state or intermediate goal if sufficient ambiguity.
+
+### `opencode-go/kimi-k3` and `kimi-code/k3`
+
+Kimi K3 is available through both `opencode-go/kimi-k3` and `kimi-code/k3`;
+Use it deliberately for frontend planning, design critique, bounded build slices, repair loops, and high-context implementation work.
+
+- Use `low`, `high`, or `max`.
+- Strong fit for frontend/design work, design-pattern exploration, product-shape critique, and high-context spec review.
+- Use `review/design` when the desired output is guidance or acceptance criteria rather than implementation.
+- Keep OpenAI or Anthropic as the safer orchestrator or final critic for high-risk architecture, security, and ambiguous synthesis.
 
 ### `openai/gpt-5.6-terra`
 

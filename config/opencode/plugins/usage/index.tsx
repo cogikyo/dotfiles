@@ -15,7 +15,7 @@ import {
   withProviderLock,
   writeProviderCache,
 } from "./cache.ts";
-import type { ProviderAdapter, ProviderUsage } from "./types.ts";
+import { declaredWindows, type ProviderAdapter, type ProviderUsage } from "./types.ts";
 import { UsageDashboard } from "./ui.tsx";
 
 const id = "cullyn.usage-sidebar";
@@ -46,10 +46,11 @@ function cachedUsage(
   const { id, label, placeholders } = adapter;
 
   if (cache.usage?.windows.length) {
+    const cached = { ...cache.usage, windows: declaredWindows(cache.usage, placeholders) };
     const age = cacheAgeMS(cache.fetchedAt) ?? 0;
     if (cache.error) {
       return {
-        ...cache.usage,
+        ...cached,
         id,
         label,
         placeholders,
@@ -60,7 +61,7 @@ function cachedUsage(
     const note = isCacheStale(cache.fetchedAt, adapter.poll.staleAfterMS)
       ? `stale ${formatAge(age)}`
       : undefined;
-    return { ...cache.usage, id, label, placeholders, note };
+    return { ...cached, id, label, placeholders, note };
   }
 
   // Windowless informational/warn usage (e.g. opencode-go no-route) stays visible instead of

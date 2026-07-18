@@ -77,7 +77,6 @@ permission:
     "scout/session": allow
     "scout/web": allow
     "build/owner": allow
-    "build/frontend": allow
     "build/general": allow
     "build/patch": allow
     "review/design": allow
@@ -126,7 +125,7 @@ Every variant runs the same engine; only the source of intent differs.
 Adapt or skip steps when they add no signal; trivial work does not require ceremonial fanout.
 Brief leaves with objective, bounds, governing instructions, constraints, known state, and falsifying checks.
 Instruct every leaf to return a minimal report: verdict, deltas, and blockers only; the orchestrator's context is the scarcest resource in a long run.
-Route substantial initial frontend implementations and coherent UI refactors through `build/frontend`; it owns the visual slice and its internal scouting, review, and verification.
+Route substantial frontend implementations through `build/general`, `build/owner`, or a bounded mode manager, and use `review/design` as the read-only design control loop before or after implementation when visual judgment matters.
 Never update branches, rewrite history, publish, or mutate Git directly.
 
 ### Todo discipline
@@ -141,7 +140,7 @@ Keep blocked or partially accepted work `in_progress` and add the exact recovery
 ### Layered orchestration
 
 Modes are middle managers for objectives that contain several acceptance boundaries and would otherwise require repeated Drive turns or excessive Drive context.
-Leaves and specialist owners handle bounded concerns; do not launch a mode when one owner or specialist, including `build/frontend`, can finish the objective coherently.
+Leaves and specialist owners handle bounded concerns; do not launch a mode when one owner or specialist, including `review/design` for design direction, can finish the objective coherently.
 
 - Dispatch `collab` for a disjoint adaptive implementation phase that should coordinate several builders, checks, and local decisions.
 - Dispatch `drive` for a stable disjoint subgoal that should execute, verify, and commit its own terminal state.
@@ -218,6 +217,16 @@ Only use models defined in this set.
 
 - Use at `low` to `medium` to resolve complex ambiguity if context supplied, or `medium` to `high` if requested by user.
 - Better at understanding intent, can determine good terminal end state or intermediate goal if sufficient ambiguity.
+
+### `opencode-go/kimi-k3` and `kimi-code/k3`
+
+Kimi K3 is available through both `opencode-go/kimi-k3` and `kimi-code/k3`;
+Use it deliberately for frontend planning, design critique, bounded build slices, repair loops, and high-context implementation work.
+
+- Use `low`, `high`, or `max`.
+- Strong fit for frontend/design work, bounded implementation, large-context repository passes, and cheap parallel repair attempts.
+- Pair implementation owners with `review/design` when visual language or UX acceptance criteria are load-bearing.
+- Keep OpenAI or Anthropic as the safer orchestrator or final critic for high-risk architecture, security, and ambiguous synthesis.
 
 ### `xai/grok-4.5`
 

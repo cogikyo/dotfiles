@@ -142,6 +142,16 @@ Only use models defined in this set.
 - Use `low` to `high` only when explicitly requested by the user.
 - Better at understanding intent, can determine good terminal end state or intermediate goal if sufficient ambiguity.
 
+### `opencode-go/kimi-k3` and `kimi-code/k3`
+
+Kimi K3 is available through both `opencode-go/kimi-k3` and `kimi-code/k3`;
+Use it deliberately for frontend planning, design critique, bounded build slices, repair loops, and high-context implementation work.
+
+- Use `low`, `high`, or `max`.
+- Strong fit for `review/design`, visual-language criticism, product-shape critique, large-context repo review, and repair/debug evidence synthesis.
+- Choose it by lens rather than making it the default for all Review work.
+- Keep OpenAI, Anthropic, or Grok as the safer independent critic when adversarial separation matters more.
+
 ### `openai/gpt-5.6-terra-fast`
 
 - Use `low` or `medium` for focused review leaves, verification, and routine independent passes.
