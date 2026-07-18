@@ -224,7 +224,3 @@ xplr.config.modes.custom.selection_mode = {
 		on_key = selection_keys,
 	},
 }
-
--- Start in preview mode.
-xplr.config.general.initial_mode = "preview_mode"
-xplr.config.general.initial_layout = "preview"

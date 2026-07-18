@@ -229,6 +229,7 @@ local general = {
 
 	initial_sorting = {
 		{ sorter = "ByCanonicalIsDir", reverse = true },
+		{ sorter = "ByLastModified", reverse = true },
 		{ sorter = "ByIRelativePath", reverse = false },
 	},
 
