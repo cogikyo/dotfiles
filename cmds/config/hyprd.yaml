@@ -22,9 +22,8 @@ sessions:
   # ├─ workspace 2 ──────────────────────────────────────────────────────────────┤
   2: # communication-focused sessions.
     slack:
-      init: true
       command: slack
-      browser: coms
+      monocle: true
 
     discord:
       command: discord
@@ -79,7 +78,7 @@ sessions:
         - agents
 
     leadpier:
-      init: true
+      init: false
       project: LeadPier
       body:
         - editor
