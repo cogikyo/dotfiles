@@ -18,7 +18,7 @@
   },
   "keybinds": {
     "leader": "ctrl+.",
-    "command_list": "<leader>.",
+    "command_list": "<leader>l",
     "tool_details": "<leader>d",
     "model_list": "<leader>m",
     "model_cycle_favorite": "ctrl+m",
