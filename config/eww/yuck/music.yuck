@@ -178,7 +178,7 @@
 )
 
 (deflisten bluetooth-info
-  :initial '{"status":"unknown","name":"","battery_present":false,"battery_percent":0}'
+  :initial '{"status":"unknown","name":"","battery_present":false,"battery_percent":0,"noise_control_present":false,"noise_pending":false,"metadata_diagnostics":""}'
   'ewwd subscribe bluetooth | jq --unbuffered -c ".data"'
 )
 
@@ -255,13 +255,14 @@
   (eventbox
     :onclick "ewwd action bluetooth toggle"
     :onmiddleclick "ewwd action bluetooth reconnect"
+    :onscroll {bluetooth-info.noise_control_present ? "ewwd action bluetooth noise_cycle {}" : ""}
     :cursor "pointer"
     :tooltip {
       bluetooth-info.status == "unknown" ? "  Bluetooth is unavailable  " :
       bluetooth-info.status == "disconnected" ? "  ${bluetooth-info.name != "" ? bluetooth-info.name : "AirPods Max"} is disconnected  " :
       bluetooth-info.status == "connecting" ? "  ${bluetooth-info.name != "" ? bluetooth-info.name : "AirPods Max"} is connecting  " :
-      bluetooth-info.battery_present ? "  ${bluetooth-info.name} connected, ${bluetooth-info.battery_percent}% battery  " :
-      "  ${bluetooth-info.name} connected; battery unavailable  "
+      bluetooth-info.battery_present ? "  ${bluetooth-info.name} connected, ${bluetooth-info.battery_percent}% battery${bluetooth-info.battery_charging == true ? ", charging" : ""}${bluetooth-info.metadata_diagnostics != "" ? "\n  ${bluetooth-info.metadata_diagnostics}" : ""}  " :
+      "  ${bluetooth-info.name} connected; battery unavailable${bluetooth-info.metadata_diagnostics != "" ? "\n  ${bluetooth-info.metadata_diagnostics}" : ""}  "
     }
     (box
       :space-evenly false :spacing 5
@@ -306,7 +307,24 @@
         :text "––"
       )
       (slide-n-fade :bool {hover == "audio" && bluetooth-info.status == "connected"} :direction "right"
-        (label :class "audio-headphones-name" :text {bluetooth-info.name})
+        (box :space-evenly false :spacing 6
+          (label :class "audio-headphones-name" :text {bluetooth-info.name})
+          (label
+            :visible {bluetooth-info.noise_control_present}
+            :class "audio-headphones-chip ${bluetooth-info.noise_pending ? "audio-headphones-chip-pending" : ""}"
+            :text {
+              (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "anc" ? "ANC" :
+              (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "transparency" ? "Trans" :
+              (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "adaptive" ? "Adapt" : "Off"
+            }
+          )
+          (label
+            :visible {bluetooth-info.wear_state == "not_worn"}
+            :class "audio-headphones-wear"
+            :tooltip "  Headphones are not worn  "
+            :text "󰋋"
+          )
+        )
       )
     )
   )

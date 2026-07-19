@@ -173,6 +173,32 @@
       color: inherit;
       margin-left: 2px;
     }
+
+    &-wear {
+      color: $glc-3;
+      font-size: 0.85em;
+    }
+
+    &-chip {
+      transition: all 0.25s $ease-out-snap;
+      color: $blu-2;
+      background: rgba($blu-0, 0.18);
+      border: 1px solid $blu-1;
+      border-radius: 7px;
+      padding: 0 5px;
+      font-family: $font-mono;
+      font-size: 0.72em;
+
+      .audio-hover & {
+        border-color: $orn-2;
+      }
+
+      &-pending {
+        color: $orn-3;
+        border-color: $orn-3;
+        background: rgba($orn-1, 0.18);
+      }
+    }
   }
 
   &-source {

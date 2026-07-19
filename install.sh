@@ -2044,7 +2044,34 @@ healthcheck_go() {
 #  LibrePods Max 2 package and runtime helpers  {{{
 
 readonly LIBREPODS_PACKAGE="librepods-max2"
-readonly LIBREPODS_VERSION="0.1.0.pr655.99b0e58-1"
+
+librepods_version() {
+    local package_dir="$DOTFILES/packages/librepods-max2"
+    (
+        source "$package_dir/PKGBUILD"
+        printf '%s-%s\n' "$pkgver" "$pkgrel"
+    )
+}
+
+copy_librepods_sources() {
+    local package_dir="$1"
+    local build_root="$2"
+    local source_name source_file
+
+    cp "$package_dir/PKGBUILD" "$build_root/"
+    while IFS= read -r source_name; do
+        source_file="${source_name##*::}"
+        [[ "$source_file" == *://* ]] && continue
+        [[ -f "$package_dir/$source_file" ]] || {
+            err "LibrePods package source is missing: $source_file"
+            return 1
+        }
+        cp "$package_dir/$source_file" "$build_root/"
+    done < <(
+        source "$package_dir/PKGBUILD"
+        printf '%s\n' "${source[@]}"
+    )
+}
 
 install_librepods_settings() {
     local package_dir="$DOTFILES/packages/librepods-max2"
@@ -2138,27 +2165,29 @@ install_librepods_service() {
 install_librepods_package() {
     local package_dir="$DOTFILES/packages/librepods-max2"
     local build_root="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/librepods-max2"
-    local installed_version
+    local installed_version expected_version
+    expected_version=$(librepods_version)
     installed_version=$(pacman -Q "$LIBREPODS_PACKAGE" 2>/dev/null | cut -d' ' -f2 || true)
 
-    if [[ "$installed_version" == "$LIBREPODS_VERSION" ]]; then
-        ok "$LIBREPODS_PACKAGE $LIBREPODS_VERSION already installed"
+    if [[ "$installed_version" == "$expected_version" ]]; then
+        ok "$LIBREPODS_PACKAGE $expected_version already installed"
     else
         has makepkg || { err "makepkg not found. Install base-devel first."; return 1; }
         rm -rf "$build_root"
         mkdir -p "$build_root"
-        cp "$package_dir"/{PKGBUILD,a2dp-profile-order.patch,redact-irk.patch} "$build_root/"
+        copy_librepods_sources "$package_dir" "$build_root"
         info "Building $LIBREPODS_PACKAGE from pinned PR #655 commit..."
         (cd "$build_root" && makepkg --syncdeps --install --clean --needed --noconfirm)
     fi
 }
 
 healthcheck_librepods_package() {
-    local installed_version
+    local installed_version expected_version
 
+    expected_version=$(librepods_version)
     installed_version=$(pacman -Q "$LIBREPODS_PACKAGE" 2>/dev/null | cut -d' ' -f2 || true)
-    [[ "$installed_version" == "$LIBREPODS_VERSION" ]] || {
-        err "Healthcheck failed: expected $LIBREPODS_PACKAGE $LIBREPODS_VERSION, got ${installed_version:-missing}"
+    [[ "$installed_version" == "$expected_version" ]] || {
+        err "Healthcheck failed: expected $LIBREPODS_PACKAGE $expected_version, got ${installed_version:-missing}"
         return 1
     }
     [[ -x /usr/bin/librepods ]] || { err "Healthcheck failed: /usr/bin/librepods is missing"; return 1; }

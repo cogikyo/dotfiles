@@ -220,6 +220,7 @@ Actions (for eww buttons/scrolls):
   ewwd action audio reset_volume both        Reset preset volumes
   ewwd action bluetooth toggle               Toggle tracked headphones
   ewwd action bluetooth reconnect            Reconnect tracked headphones
+  ewwd action bluetooth noise_cycle <up|down> Cycle supported noise-control modes
   ewwd action music play                    Start playback
   ewwd action music pause                   Pause playback
   ewwd action music toggle                  Toggle play/pause
@@ -242,7 +243,7 @@ Providers:
   network    - Network speed monitoring
   date       - Date/time, clockface icons, weeks alive
   audio      - WirePlumber default sink/source volume and mute
-  bluetooth  - BlueZ connection and battery state
+  bluetooth  - BlueZ connection controls with LibrePods metadata enrichment
   music      - Spotify playback (status, track info, album art)
   timer      - Timer/alarm countdown with notifications
   weather    - OpenWeatherMap data (temp, conditions, moon, wind)`)

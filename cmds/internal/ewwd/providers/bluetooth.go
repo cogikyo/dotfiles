@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"reflect"
+	"slices"
 	"strings"
 	"sync"
 	"time"
@@ -17,22 +19,34 @@ const (
 	bluezDeviceInterface  = "org.bluez.Device1"
 	bluezBatteryInterface = "org.bluez.Battery1"
 	bluezOperationTimeout = 12 * time.Second
+	noiseOperationTimeout = 4 * time.Second
 )
 
 type BluetoothState struct {
-	Status         string `json:"status"`
-	Name           string `json:"name"`
-	BatteryPresent bool   `json:"battery_present"`
-	BatteryPercent int    `json:"battery_percent"`
+	Status                string `json:"status"`
+	Name                  string `json:"name"`
+	BatteryPresent        bool   `json:"battery_present"`
+	BatteryPercent        int    `json:"battery_percent"`
+	BatteryCharging       *bool  `json:"battery_charging,omitempty"`
+	NoiseControlPresent   bool   `json:"noise_control_present"`
+	NoiseControl          string `json:"noise_control,omitempty"`
+	NoisePending          bool   `json:"noise_pending"`
+	NoiseDesired          string `json:"noise_desired,omitempty"`
+	WearState             string `json:"wear_state,omitempty"`
+	ConversationAwareness *bool  `json:"conversation_awareness,omitempty"`
+	PersonalizedVolume    *bool  `json:"personalized_volume,omitempty"`
+	HiResMic              *bool  `json:"hires_mic,omitempty"`
+	MetadataDiagnostics   string `json:"metadata_diagnostics"`
 }
 
 type bluetoothRequest struct {
-	action string
-	reply  chan error
+	args  []string
+	reply chan error
 }
 
 type bluetoothScan struct {
 	generation uint64
+	revision   uint64
 	path       dbus.ObjectPath
 	state      BluetoothState
 	err        error
@@ -48,6 +62,17 @@ type bluetoothOperation struct {
 	token     uint64
 	connect   bool
 	reconnect bool
+}
+
+type noiseOperation struct {
+	owner        string
+	generation   string
+	desired      string
+	target       string
+	token        uint64
+	sentRevision uint64
+	confirmed    bool
+	inFlight     bool
 }
 
 type Bluetooth struct {
@@ -79,7 +104,10 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 	defer cancel()
 	defer close(b.stopped)
 	b.notify = notify
-	b.publish(BluetoothState{Status: "unknown"})
+	bluez := BluetoothState{Status: "unknown"}
+	var metadata *librePodsState
+	var noise *noiseOperation
+	b.publish(mergeBluetoothState(bluez, b.address, metadata, noise))
 
 	conn, err := dbus.ConnectSystemBus()
 	if err != nil {
@@ -104,6 +132,7 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 
 	owner := bluezOwner(ctx, conn)
 	var generation uint64
+	var bluezRevision uint64
 	var path dbus.ObjectPath
 	var signalOwner string
 	var scanPending bool
@@ -114,6 +143,46 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 	var deadlineC <-chan time.Time
 	scans := make(chan bluetoothScan, 4)
 	results := make(chan bluetoothResult, 4)
+	librePodsUpdates := make(chan librePodsUpdate, 8)
+	librePodsCommands := make(chan librePodsCommand, 4)
+	librePodsResults := make(chan librePodsResult, 4)
+	go watchLibrePods(ctx, librePodsUpdates, librePodsCommands, librePodsResults)
+	var noiseToken uint64
+	var metadataRevision uint64
+	var noiseDeadline *time.Timer
+	var noiseDeadlineC <-chan time.Time
+
+	clearNoise := func() {
+		noise = nil
+		if noiseDeadline != nil {
+			noiseDeadline.Stop()
+		}
+		noiseDeadlineC = nil
+	}
+	resetNoiseDeadline := func() {
+		if noiseDeadline == nil {
+			noiseDeadline = time.NewTimer(noiseOperationTimeout)
+		} else {
+			if !noiseDeadline.Stop() {
+				select {
+				case <-noiseDeadline.C:
+				default:
+				}
+			}
+			noiseDeadline.Reset(noiseOperationTimeout)
+		}
+		noiseDeadlineC = noiseDeadline.C
+	}
+	launchNoise := func() {
+		if noise == nil || noise.inFlight {
+			return
+		}
+		noiseToken++
+		librePodsCommands <- noise.launch(noiseToken, metadataRevision)
+	}
+	publish := func() {
+		b.publish(mergeBluetoothState(bluez, b.address, metadata, noise))
+	}
 
 	removeOwnerMatches := func() {
 		if signalOwner == "" {
@@ -133,7 +202,7 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 		}
 		scanPending = true
 		scanWanted = false
-		go scanBluetooth(ctx, conn, owner, b.address, generation, scans)
+		go scanBluetooth(ctx, conn, owner, b.address, generation, bluezRevision, scans)
 	}
 
 	activateOwner := func(next string) {
@@ -142,11 +211,13 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 		owner = next
 		path = ""
 		pending = nil
+		bluez = BluetoothState{Status: "unknown"}
+		clearNoise()
 		if deadline != nil {
 			deadline.Stop()
 		}
 		deadlineC = nil
-		b.publish(BluetoothState{Status: "unknown"})
+		publish()
 		if owner == "" {
 			return
 		}
@@ -170,7 +241,9 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 			return nil
 		case signal, ok := <-signals:
 			if !ok {
-				b.publish(BluetoothState{Status: "unknown"})
+				bluez = BluetoothState{Status: "unknown"}
+				clearNoise()
+				publish()
 				return errors.New("system bus signal stream closed")
 			}
 			if signal.Name == "org.freedesktop.DBus.NameOwnerChanged" {
@@ -180,11 +253,25 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 				continue
 			}
 			if signal.Sender == owner && relevantBluezSignal(signal, path) {
+				bluezRevision++
+				if trackedBluezDisconnected(signal, path) {
+					snapshot := disconnectedBluetoothState(bluez)
+					if pending != nil && resolvedBluetoothOperation(*pending, snapshot) {
+						pending = nil
+						if deadline != nil {
+							deadline.Stop()
+						}
+						deadlineC = nil
+					}
+					bluez = snapshot
+					clearNoise()
+					publish()
+				}
 				startScan()
 			}
 		case scan := <-scans:
 			scanPending = false
-			if scan.generation == generation && scan.err == nil {
+			if currentBluetoothScan(scan, generation, bluezRevision) && scan.err == nil {
 				path = scan.path
 				snapshot := scan.state
 				if pending != nil {
@@ -208,9 +295,15 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 						snapshot.BatteryPercent = 0
 					}
 				}
-				b.publish(snapshot)
-			} else if scan.generation == generation {
-				b.publish(BluetoothState{Status: "unknown"})
+				bluez = snapshot
+				if bluez.Status != "connected" {
+					clearNoise()
+				}
+				publish()
+			} else if currentBluetoothScan(scan, generation, bluezRevision) {
+				bluez = BluetoothState{Status: "unknown"}
+				clearNoise()
+				publish()
 			}
 			if scanWanted {
 				startScan()
@@ -232,33 +325,90 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 			pending = nil
 			deadlineC = nil
 			startScan()
+		case update := <-librePodsUpdates:
+			metadata = update.state
+			metadataRevision++
+			if noise != nil && noise.observe(bluez, b.address, metadata, metadataRevision) {
+				clearNoise()
+			}
+			publish()
+		case result := <-librePodsResults:
+			if noise == nil || result.command.owner != noise.owner || result.command.generation != noise.generation || result.command.token != noise.token || result.command.target != noise.target {
+				continue
+			}
+			clear, relaunch := noise.completed(result.err)
+			if result.err != nil {
+				fmt.Fprintf(os.Stderr, "ewwd: LibrePods noise control: %v\n", result.err)
+			}
+			if clear {
+				clearNoise()
+				publish()
+				continue
+			}
+			if relaunch {
+				launchNoise()
+			}
+		case <-noiseDeadlineC:
+			clearNoise()
+			publish()
 		case req := <-b.requests:
+			if len(req.args) > 0 && req.args[0] == "noise_cycle" {
+				if len(req.args) != 2 || (req.args[1] != "up" && req.args[1] != "down") {
+					req.reply <- errors.New("noise_cycle requires: up or down")
+					continue
+				}
+				if !librePodsMatches(bluez, b.address, metadata) || metadata.NoiseControl == "" || len(metadata.NoiseControlModes) == 0 {
+					req.reply <- errors.New("LibrePods noise control is unavailable")
+					continue
+				}
+				current := metadata.NoiseControl
+				if noise != nil {
+					current = noise.desired
+				}
+				desired := nextNoiseMode(metadata.NoiseControlModes, current, req.args[1])
+				if desired == "" {
+					req.reply <- errors.New("LibrePods noise-control modes are invalid")
+					continue
+				}
+				if noise == nil {
+					noise = &noiseOperation{owner: metadata.Owner, generation: metadata.Generation}
+				}
+				noise.desired = desired
+				resetNoiseDeadline()
+				publish()
+				launchNoise()
+				req.reply <- nil
+				continue
+			}
 			if pending != nil {
 				req.reply <- errors.New("Bluetooth connection operation already active")
 				continue
 			}
-			if owner == "" || path == "" || b.last.Status == "unknown" {
+			if owner == "" || path == "" || bluez.Status == "unknown" {
 				req.reply <- errors.New("tracked Bluetooth device is unavailable")
 				continue
 			}
-			if req.action != "toggle" && req.action != "reconnect" {
-				req.reply <- fmt.Errorf("unknown Bluetooth action: %s", req.action)
+			if len(req.args) != 1 || (req.args[0] != "toggle" && req.args[0] != "reconnect") {
+				req.reply <- fmt.Errorf("unknown Bluetooth action: %s", strings.Join(req.args, " "))
 				continue
 			}
 
-			connect := b.last.Status != "connected" || req.action == "reconnect"
+			action := req.args[0]
+			connect := bluez.Status != "connected" || action == "reconnect"
 			token++
 			pending = &bluetoothOperation{
 				token:     token,
 				connect:   connect,
-				reconnect: req.action == "reconnect" && b.last.Status == "connected",
+				reconnect: action == "reconnect" && bluez.Status == "connected",
 			}
 			if connect {
-				snapshot := b.last
+				snapshot := bluez
 				snapshot.Status = "connecting"
 				snapshot.BatteryPresent = false
 				snapshot.BatteryPercent = 0
-				b.publish(snapshot)
+				bluez = snapshot
+				clearNoise()
+				publish()
 			}
 			if deadline == nil {
 				deadline = time.NewTimer(bluezOperationTimeout)
@@ -278,7 +428,7 @@ func (b *Bluetooth) Stop() error {
 }
 
 func (b *Bluetooth) publish(snapshot BluetoothState) {
-	if b.hasLast && snapshot == b.last {
+	if b.hasLast && reflect.DeepEqual(snapshot, b.last) {
 		return
 	}
 	b.last = snapshot
@@ -290,12 +440,12 @@ func (b *Bluetooth) publish(snapshot BluetoothState) {
 }
 
 func (b *Bluetooth) HandleAction(args []string) (string, error) {
-	if len(args) != 1 {
-		return "", errors.New("Bluetooth action required: toggle or reconnect")
+	if len(args) == 0 {
+		return "", errors.New("Bluetooth action required: toggle, reconnect, or noise_cycle")
 	}
 	reply := make(chan error, 1)
 	select {
-	case b.requests <- bluetoothRequest{action: args[0], reply: reply}:
+	case b.requests <- bluetoothRequest{args: slices.Clone(args), reply: reply}:
 	case <-b.stopped:
 		return "", errors.New("Bluetooth provider is stopped")
 	}
@@ -308,6 +458,127 @@ func (b *Bluetooth) HandleAction(args []string) (string, error) {
 	case <-b.stopped:
 		return "", errors.New("Bluetooth provider is stopped")
 	}
+}
+
+func mergeBluetoothState(bluez BluetoothState, address string, metadata *librePodsState, pending *noiseOperation) BluetoothState {
+	state := bluez
+	if state.Status != "connected" {
+		state.BatteryPresent = false
+		state.BatteryPercent = 0
+	}
+	state.BatteryCharging = nil
+	state.NoiseControlPresent = false
+	state.NoiseControl = ""
+	state.NoisePending = false
+	state.NoiseDesired = ""
+	state.WearState = ""
+	state.ConversationAwareness = nil
+	state.PersonalizedVolume = nil
+	state.HiResMic = nil
+	state.MetadataDiagnostics = ""
+	if !librePodsMatches(bluez, address, metadata) {
+		return state
+	}
+
+	if metadata.BatteryValid {
+		state.BatteryPresent = true
+		state.BatteryPercent = metadata.BatteryPercent
+		state.BatteryCharging = new(metadata.BatteryCharging)
+	}
+	state.NoiseControl = metadata.NoiseControl
+	state.NoiseControlPresent = metadata.NoiseControl != ""
+	if metadata.WearState != "unknown" {
+		state.WearState = metadata.WearState
+	}
+	if metadata.ConversationAwarenessSupported {
+		state.ConversationAwareness = new(metadata.ConversationAwarenessEnabled)
+	}
+	if metadata.PersonalizedVolumeSupported {
+		state.PersonalizedVolume = new(metadata.PersonalizedVolumeEnabled)
+	}
+	if metadata.HiResMicSupported {
+		state.HiResMic = new(metadata.HiResMicEnabled)
+	}
+	state.MetadataDiagnostics = librePodsDiagnostics(state)
+	if pending != nil && pending.owner == metadata.Owner && pending.generation == metadata.Generation && slices.Contains(metadata.NoiseControlModes, pending.desired) {
+		state.NoisePending = true
+		state.NoiseDesired = pending.desired
+	}
+	return state
+}
+
+func librePodsMatches(bluez BluetoothState, address string, metadata *librePodsState) bool {
+	return bluez.Status == "connected" && metadata != nil && metadata.Readiness == "ready" && strings.EqualFold(metadata.Address, address)
+}
+
+func librePodsDiagnostics(state BluetoothState) string {
+	var lines []string
+	if state.ConversationAwareness != nil {
+		lines = append(lines, "Conversation awareness: "+enabledText(*state.ConversationAwareness))
+	}
+	if state.PersonalizedVolume != nil {
+		lines = append(lines, "Personalized volume: "+enabledText(*state.PersonalizedVolume))
+	}
+	if state.HiResMic != nil {
+		lines = append(lines, "High-resolution microphone: "+enabledText(*state.HiResMic))
+	}
+	return strings.Join(lines, "\n")
+}
+
+func enabledText(enabled bool) string {
+	if enabled {
+		return "enabled"
+	}
+	return "disabled"
+}
+
+func nextNoiseMode(modes []string, current, direction string) string {
+	if len(modes) == 0 {
+		return ""
+	}
+	index := slices.Index(modes, current)
+	if index < 0 {
+		return modes[0]
+	}
+	if direction == "down" {
+		return modes[(index-1+len(modes))%len(modes)]
+	}
+	return modes[(index+1)%len(modes)]
+}
+
+func (n *noiseOperation) launch(token, revision uint64) librePodsCommand {
+	n.token = token
+	n.target = n.desired
+	n.sentRevision = revision
+	n.confirmed = false
+	n.inFlight = true
+	return librePodsCommand{
+		owner:      n.owner,
+		generation: n.generation,
+		target:     n.target,
+		token:      n.token,
+	}
+}
+
+func (n *noiseOperation) observe(bluez BluetoothState, address string, metadata *librePodsState, revision uint64) bool {
+	if metadata == nil || metadata.Owner != n.owner || metadata.Generation != n.generation || !librePodsMatches(bluez, address, metadata) || !slices.Contains(metadata.NoiseControlModes, n.desired) {
+		return true
+	}
+	if revision > n.sentRevision && metadata.NoiseControl == n.desired {
+		n.confirmed = true
+	}
+	return n.confirmed && !n.inFlight
+}
+
+func (n *noiseOperation) completed(err error) (clear, relaunch bool) {
+	n.inFlight = false
+	if err != nil {
+		return true, false
+	}
+	if n.desired != n.target {
+		return false, true
+	}
+	return n.confirmed, false
 }
 
 func bluezOwner(ctx context.Context, conn *dbus.Conn) string {
@@ -386,8 +657,33 @@ func relevantBluezSignal(signal *dbus.Signal, trackedPath dbus.ObjectPath) bool 
 	return false
 }
 
-func scanBluetooth(ctx context.Context, conn *dbus.Conn, owner, address string, generation uint64, results chan<- bluetoothScan) {
-	result := bluetoothScan{generation: generation}
+func trackedBluezDisconnected(signal *dbus.Signal, trackedPath dbus.ObjectPath) bool {
+	if trackedPath == "" || signal.Name != "org.freedesktop.DBus.Properties.PropertiesChanged" || signal.Path != trackedPath || len(signal.Body) != 3 {
+		return false
+	}
+	iface, ifaceOK := signal.Body[0].(string)
+	props, propsOK := signal.Body[1].(map[string]dbus.Variant)
+	if !ifaceOK || !propsOK || iface != bluezDeviceInterface {
+		return false
+	}
+	value, present := props["Connected"]
+	connected, connectedOK := value.Value().(bool)
+	return present && connectedOK && !connected
+}
+
+func disconnectedBluetoothState(state BluetoothState) BluetoothState {
+	state.Status = "disconnected"
+	state.BatteryPresent = false
+	state.BatteryPercent = 0
+	return state
+}
+
+func currentBluetoothScan(scan bluetoothScan, generation, revision uint64) bool {
+	return scan.generation == generation && scan.revision == revision
+}
+
+func scanBluetooth(ctx context.Context, conn *dbus.Conn, owner, address string, generation, revision uint64, results chan<- bluetoothScan) {
+	result := bluetoothScan{generation: generation, revision: revision}
 	callCtx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
