@@ -134,7 +134,8 @@
     box-shadow: -3px 2px 3px 1px rgba($rby-1, 0.42);
   }
 
-  &-unavailable {
+  &-unavailable,
+  &-muted {
     color: $glc-3;
   }
 
@@ -167,11 +168,6 @@
     &-unknown {
       font-family: $font-mono;
       font-size: 0.8em;
-    }
-
-    &-name {
-      color: inherit;
-      margin-left: 2px;
     }
 
     &-wear {
