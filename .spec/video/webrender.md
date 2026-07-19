@@ -26,9 +26,9 @@ Everything here renders frame-indexed and deterministic: real-time screen captur
 - VHS renders scripted terminal demos from checked-in tapes with explicit geometry, theme, font, and framerate; it owns the terminal-demo segment type.
 - VHS emits MP4/WebM/GIF/PNG frames with no documented alpha path, so terminal segments composite as opaque panels until a local test proves otherwise.
 - asciinema plus agg captures semantic session streams for replay-derived renders when a real session matters.
-- An owned cast-to-frames renderer through the channel theme is the compounding alternative: casts are structured text with timing, so a genome mutation restyles every past terminal segment for free; a candidate once the niche proves out.
+- An owned cast-to-frames renderer through the channel theme is the compounding alternative: casts are structured text with timing, so a genome mutation can render new candidates for past terminal segments; a candidate once the niche proves out.
 - Code walkthroughs (CodeAesthetic style) have no mature standalone tool, and the honest cost lives in the unowned layer: stable line identity across structural edits, token geometry under wrapping and ligatures, camera planning; this is a mini-engine, not a weekend script.
-- Gen 0 ships scripted real-editor capture with post zooms; the owned animator exists only after a timed spike beats capture on hours per output minute.
+- Stage 0 ships scripted real-editor capture with post zooms; the owned animator exists only after a timed spike beats capture on hours per output minute.
 
 ## Slides and typeset stills
 
@@ -38,7 +38,7 @@ Everything here renders frame-indexed and deterministic: real-time screen captur
 ## Compositing handoff
 
 - Segments export with alpha (ProRes 4444 or VP9 with alpha) so they layer over camera footage downstream.
-- A segment is described by data: identity, entry artifact, props, dimensions, fps, frame count, alpha mode, and target timeline slot; the renderer normalizes this into a cached clip artifact.
+- A segment renderer emits a candidate described by data: identity, entry artifact, props, dimensions, fps, frame count, alpha mode, and target timeline slot; conform admits it before assembly references it.
 - Audio is composed separately; browser segments render silent.
 
 ## Open questions

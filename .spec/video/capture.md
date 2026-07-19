@@ -27,7 +27,7 @@ Recording produces immutable, well-named, checksummed source media with clean au
 ## Encoding and intermediates
 
 - VAAPI h264/hevc for screen-capture acquisition; RDNA1 has no AV1 encode, so AV1 delivery is an offline SVT-AV1 job benchmarked before adoption.
-- Camera originals stay immutable; 1080p proxies (ProRes Proxy or DNxHR LB) generate at ingest for anything the edit touches.
+- Camera originals stay immutable; ingest creates proxies for review and composition later creates project-scoped conformed variants for edit/render use.
 - Mezzanine only where an editor demands it; screen masters usually stay h264/hevc.
 
 ## Session orchestration
@@ -37,14 +37,14 @@ Recording produces immutable, well-named, checksummed source media with clean au
 
 ## Ingest hygiene
 
-- One project layout: originals (camera, screen, audio), proxies, edit artifacts, exports, notes; originals never move or mutate.
+- One project layout distinguishes originals, proxies, conformed variants, edit artifacts, exports, and notes; originals never move or mutate.
 - Offload renames to date-slug-source-index, records checksums in the asset ledger, and verifies; the card is freed only after two verified copies exist on independent storage.
 - ffprobe validation at ingest catches codec/framerate/channel surprises when they are cheap.
 
 ## Machine verification shortlist
 
 - vainfo plus VAAPI encode benchmarks at target resolutions on this exact Mesa/FFmpeg stack.
-- M50 II on-device: clean-feed HDMI behavior, internal-recording duration and file-splitting limits, dummy-battery power, thermal soak; the 4K 23.98/25p limit and heavy crop are confirmed from official specs.
+- M50 II on-device: clean-feed HDMI behavior, internal-recording duration and file-splitting limits, dummy-battery power, thermal soak.
 - SM57 spoken-level measurement at normal distance before buying gain.
 
 ## Open questions

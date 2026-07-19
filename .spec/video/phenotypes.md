@@ -18,7 +18,20 @@ Whether to ship siblings at all is a mission-level decision; this maps the candi
 
 - No credible evidence establishes a universal order for a zero-audience technical channel; sequencing is a measurement plan, not folklore.
 - Essay and video pair when the topic deserves citations or source inspection; audio joins when narration survives without the visual layer; explorables join when a video's simulation earns interaction.
-- Each phenotype tracks the same funnel (impressions → canonical click → email signup → return visit) plus production time, so low-value phenotypes get killed by data.
+- Each phenotype enters with a timebox, expected extra production cost, and one success metric.
+- Each phenotype tracks the same funnel (impressions → canonical click → email signup → return visit) plus production time, so low-value phenotypes get killed by data instead of vibes.
+- Verticals re-render scenes at 9:16 from source when practical; center-cropping a 16:9 master is a fallback, not a phenotype strategy.
+
+## Genome inheritance
+
+| Phenotype | Inherited genome |
+| --- | --- |
+| Canonical essay | palette semantics for figures and callouts; generation counter in header; display face for titles |
+| Podcast audio | sonic motif, close foley, sparse music, silence discipline |
+| Explorable | palette semantics, motion grammar, token artifact, simulation parameters |
+| Newsletter | essay typography compressed for email; semantic accents used as section markers only |
+| Social clips | same captions, counter, semantic accents, and mutation-cut law; layout adapts to platform geometry |
+| Mirrors | exact release package metadata; no platform-specific style drift |
 
 ## Open questions
 

@@ -1,7 +1,7 @@
 # Simulation substrate
 
 Owned simulations are the channel's most honest generative source: Go programs computing the actual systems the videos discuss (cellular automata, memetic drift, selection, entropy, phase spaces) render as deterministic, zero-marginal-cost b-roll and explorables.
-The genome permits generative imagery only where artifacts are diegetic; owned simulation is that rule's native substrate, and cloud video generation competes only where computed pixels cannot go.
+Per the genome's diegetic-imagery rule, owned simulation is the native substrate; cloud video generation competes only where computed pixels cannot go.
 
 ## Properties
 
@@ -13,7 +13,7 @@ The genome permits generative imagery only where artifacts are diegetic; owned s
 ## Render paths
 
 - Simulations render through the browser frame-step contract (canvas or WebGL seeking on time) or by direct frame emission from Go; both terminate in the same alpha-capable clip artifact.
-- Ambient title-card fields (cellular automata, reaction-diffusion) come from this substrate, satisfying the genome's ambient-motion exception with content that is real, not decorative.
+- Ambient title-card fields (cellular automata, reaction-diffusion) come from this substrate and, per the genome, use per-card parameters from the video's own argument.
 
 ## Explorable siblings
 

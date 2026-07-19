@@ -6,7 +6,7 @@ No open standard joins essay scripts to shot manifests; a small owned schema ove
 ## Script artifacts
 
 - Authoring stays Markdown prose with per-segment structured records: identity, claim references, segment type (from the genome taxonomy), visual intent, and status.
-- Beat sheet carries the argument; script carries spoken language; shot manifest carries screen language; together these three artifacts are the editorial plan, joined by stable segment identities.
+- Beat sheet carries the argument; script carries spoken language; shot manifest carries screen language; together these three artifacts feed the editorial plan, joined by stable segment identities.
 - Two-column AV framing (narration beside visual intent) is the mental model even when the storage is records, not tables.
 - Fountain and screenplay formats stay available as interchange, never as the source of truth.
 
@@ -38,7 +38,8 @@ No open standard joins essay scripts to shot manifests; a small owned schema ove
 ## Take discipline
 
 - Every take opens with a spoken slate (video, segment, take, pickup) and one clap; this makes transcript search, sync, and later automated selection tractable.
-- A take log keyed by segment identity records take number, script revision, error type, and human keeper flags; take selection itself belongs to the edit stage.
+- Capture owns observed session and take facts; writing owns the intended slate and segment association that make those facts searchable.
+- A take log records segment cue, take number, script revision, error type, and human keeper flags; take selection itself belongs to the edit stage.
 
 ## Open questions
 

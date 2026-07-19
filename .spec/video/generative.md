@@ -13,7 +13,7 @@ The RX 5600 XT rules out serious local diffusion, so every generative avenue is 
 | Pika | fast meme mechanics, effects | ~$2–4 per usable clip | lower ceiling by design |
 | Open weights (Wan, LTX, Hunyuan) | hosted/rented-GPU control freedom | GPU rental per clip | CUDA-shaped locally; cloud-class VRAM needs |
 
-Sora is discontinued (API closes 2026-09) and is not built on.
+Sora is discontinued and is not built on.
 The working pattern: generate 5–10 second isolated shots, retain prompt/seed/reference assets in the ledger, select one, cut around it; never plan narrative as one generation.
 Accepted clips freeze as immutable sources per the orchestrator's acceptance membrane; re-renders never resample the provider.
 Cinematic b-roll of real-world subjects conflicts with the genome's diegetic rule; using it is an explicit genome mutation, never a default, and the owned simulation substrate covers most early needs for free.
@@ -42,8 +42,8 @@ Cinematic b-roll of real-world subjects conflicts with the genome's diegetic rul
 
 ## Music and SFX
 
-- Suno-class subscription covers bespoke beds with commercial terms while subscribed; no official API exists, so generation stays a manual web step whose invoices, prompts, and export dates land in the asset ledger.
-- Royalty-free libraries remain the boring safe default; attribution records live in the asset ledger either way.
+- Suno-class subscription covers bespoke beds with commercial terms while subscribed; no official API exists, so generation stays a manual web step.
+- Suno invoices/prompts/exports and royalty-free attribution records both land in the asset ledger; royalty-free libraries remain the boring safe default.
 - Foley stays real per the genome.
 
 ## Local AMD-viable ML

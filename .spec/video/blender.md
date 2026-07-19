@@ -20,10 +20,10 @@ The two roles are separable; either can survive without the other.
 
 | Integration | Signal | Caveat |
 | --- | --- | --- |
-| ahujasid blender-mcp | dominant adoption (~24k stars) | 3D-first, not VSE-first; arbitrary code execution; telemetry and security need inspection |
-| sandraschi blender-mcp | headless-by-default with live GUI bridge; VSE tools | ~22 stars; large surface; early-stage dependency |
+| ahujasid blender-mcp | dominant adoption | 3D-first, not VSE-first; arbitrary code execution; telemetry and security need inspection |
+| sandraschi blender-mcp | headless-by-default with live GUI bridge; VSE tools | large surface; early-stage dependency |
 | VSE-specific MCP forks | direct feature match (30+ VSE tools) | effectively zero community validation; reference implementations only |
-| Pallaidium | mature AI-in-VSE prior art (~1.5k stars) | CUDA/NVIDIA local path; poor fit for AMD hardware |
+| Pallaidium | mature AI-in-VSE prior art | CUDA/NVIDIA local path; poor fit for AMD hardware |
 
 Direct generated bpy scripts beat every MCP for durability; MCPs are convenience bridges at most.
 
@@ -31,7 +31,6 @@ Direct generated bpy scripts beat every MCP for durability; MCPs are convenience
 
 - Geometry nodes are the strongest procedural motion-graphics substrate, with recent text and audio-sampling primitives; complex node graphs are verbose to generate and want version-pinned templates.
 - Grease pencil suits stylized 2D explainers but its API churn makes generated low-level scripts fragile.
-- Eevee-next is the practical renderer on this GPU for stylized explainers.
 
 ## Hardware constraint
 

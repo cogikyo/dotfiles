@@ -2,7 +2,7 @@
 
 AI-orchestrated video production lives inside OpenCode: agents plan, edit, animate, and render while the human records, reviews, and decides taste.
 The channel communicates cullyn's ideas (systems, memetics, entropy, epistemology) in a self-owned style built from zeroth principles, with no conventional GUI editor at the center of gravity.
-This directory is an exploration field: sibling specs map avenues and trade-offs; decisions collapse through criticism with the human.
+The spec packet defines the artifact membranes and style laws that let implementation agents build one coherent pipeline instead of a pile of video scripts.
 
 ## Terminal state
 
@@ -15,7 +15,7 @@ This directory is an exploration field: sibling specs map avenues and trade-offs
 
 - Arch + Hyprland; capture must be Wayland-native.
 - AMD RX 5600 XT: VAAPI h264/hevc encode, no hardware AV1, no credible local diffusion; Blender HIP Cycles works on RDNA1 but without ray-tracing acceleration or GPU denoise.
-- Canon EOS M50 II (4K is 23.98/25p and heavily cropped; 1080p is the practical A-roll mode) + Sigma 16mm f/1.4; SM57 through Scarlett Solo.
+- Canon EOS M50 II + Sigma 16mm f/1.4; SM57 through Scarlett Solo; sensor limits and recording policy live in capture.
 - Go is the preferred language for owned tooling; pinned Python sidecars are acceptable at ML edges.
 - Personal channel: learning and expression outrank throughput; no commercialization requirement.
 
@@ -23,23 +23,20 @@ This directory is an exploration field: sibling specs map avenues and trade-offs
 
 | Axis | Poles | Current lean |
 | --- | --- | --- |
-| Composition engine | web/code renderer ↔ owned IR→FFmpeg ↔ Blender | hybrid; most reversible decision, spike both web paths |
-| Review surface | text timeline + preview renders ↔ Blender VSE ↔ NLE import | text + preview at gen 0 |
+| Composition engine | web/code renderer ↔ owned IR→FFmpeg ↔ Blender | hybrid; spike per composition |
+| Review surface | text timeline + preview renders ↔ Blender VSE ↔ NLE import | text + preview at stage 0 |
 | Pixel origin | captured ↔ programmatic/simulation ↔ generative cloud | simulation-first for non-camera pixels |
 | Autonomy | propose-and-approve ↔ unattended | propose-and-approve first |
-| Output phenotypes | single video ↔ multi-phenotype (video, essay, audio, explorable) | undecided; reframes publish as distribution |
-| Channel evolution | styled channel ↔ self-modifying system (analytics mutate the genome) | undecided; the thesis-defining decision |
-| Tooling home | dotfiles command workspace ↔ standalone repo | undecided |
 
-## Capability gates
+## Capability stages
 
-Each gate has an exit criterion; a gate without one is decoration.
+Each stage has an exit criterion; a stage without one is decoration.
 
-- gen −1 session conductor: scene arming, slates, take log via capture control. Exit: a recorded session lands ingested, verified, and named with zero manual file handling.
-- gen 0 assisted assembly: automated rough cut, sync, captions, loudness; the human edits the timeline artifact as text and re-renders previews in under a minute. Exit: one published video.
-- gen 1 proposed assembly: agent emits a full timeline proposal from script plus transcript; human review is note → proposal → re-render. Exit: human corrections per video fall below a threshold set from gen 0 experience.
-- gen 2 generated segments: motion-graphic and simulation segments from script beats in genome style; incremental render caching earns its keep here, not earlier. Exit: a generated segment ships unretouched.
-- gen 3 unattended draft: full draft with one review pass; entered only with correction data accumulated from gen 1–2.
+- stage −1 session conductor: scene arming, slates, take log via capture control. Exit: a recorded session lands ingested, verified, and named with zero manual file handling.
+- stage 0 assisted assembly: automated rough cut, sync, captions, loudness; the human edits the timeline artifact as text and re-renders previews in under a minute. Exit: one published video.
+- stage 1 proposed assembly: agent emits a full timeline proposal from script plus transcript; human review is note → proposal → re-render. Exit: human corrections per video fall below a threshold set from stage 0 experience.
+- stage 2 generated segments: motion-graphic and simulation segments from script beats in genome style; incremental render caching earns its keep here, not earlier. Exit: a generated segment ships unretouched.
+- stage 3 unattended draft: full draft with one review pass; entered only with correction data accumulated from stages 1–2.
 
 ## Walking skeleton conjecture
 

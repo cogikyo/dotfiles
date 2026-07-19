@@ -7,14 +7,16 @@ The platform boundary is sharp: uploads, metadata, captions, and thumbnails are 
 ## Upload automation
 
 - A small Go publisher over the official Data API owns upload, metadata, thumbnail, captions, and playlist from a publish manifest; resumable sessions persist and survive interruption.
-- Quota reality (verified 2026-07): uploads live in their own default 100-per-day bucket at one unit each; the old 1600-units-per-upload arithmetic is stale.
-- The often-repeated claim that unverified API projects force uploads private is absent from official documentation; a fresh-project upload test settles it before the publisher design assumes either answer, and the audit path exists for quota expansion regardless.
+- Quota reality (verified 2026-07): uploads live in their own default 100-per-day bucket at one unit each.
+- Privacy reality (verified 2026-07): uploads from unverified API projects created after 2020-07-28 are restricted to private viewing until the project passes a YouTube API audit.
+- The publish manifest records audit status, intended privacy, observed privacy after upload, and any private-to-public promotion; confirmed upload actions become publication records attached to the release.
+- Public or scheduled publication is always a human-confirmed external effect.
 - An existing Go uploader CLI covers the interim; owning the thin client is the durable end state.
 
 ## Packaging
 
 - Chapters render from timeline markers into the description (ascending timestamps, ≥3 chapters, ≥10s each); no API object exists and none is needed.
-- Captions upload as sidecar SRT/VTT derived from the corrected transcript; burned-in styling is reserved for stylized segments, sidecars carry accessibility.
+- Captions upload as sidecar SRT/VTT derived from the program caption projection; burned-in styling is reserved for stylized segments, sidecars carry accessibility.
 - Thumbnail candidates generate locally against the genome's locked spec; one uploads at publish, and real experiments run through Studio's native Test & Compare (three variants, watch-time share) which the API cannot reach.
 - Disclosure flags set at upload: synthetic-media when realistic generated content appears, made-for-kids (almost always false here), license.
 
