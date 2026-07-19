@@ -1,0 +1,30 @@
+diff --git a/linux-rust/src/devices/airpods.rs b/linux-rust/src/devices/airpods.rs
+index f102eaa..95f26da 100644
+--- a/linux-rust/src/devices/airpods.rs
++++ b/linux-rust/src/devices/airpods.rs
+@@ -149,13 +149,6 @@ impl AirPodsDevice {
+             }
+         });
+ 
+-        let mc_listener = media_controller.lock().await;
+-        let aacp_manager_clone_listener = aacp_manager.clone();
+-        mc_listener
+-            .start_playback_listener(aacp_manager_clone_listener, command_tx.clone())
+-            .await;
+-        drop(mc_listener);
+-
+         let (listening_mode_tx, mut listening_mode_rx) = tokio::sync::mpsc::unbounded_channel();
+         aacp_manager
+             .subscribe_to_control_command(
+diff --git a/linux-rust/src/media_controller.rs b/linux-rust/src/media_controller.rs
+index 2de09b9..0a013ad 100644
+--- a/linux-rust/src/media_controller.rs
++++ b/linux-rust/src/media_controller.rs
+@@ -239,6 +239,5 @@ impl MediaController {
+         if new_has_at_least_one_in && old_all_out {
+-            debug!("Condition met: buds inserted, activating A2DP and checking play state");
+-            self.activate_a2dp_profile().await;
++            debug!("Condition met: buds inserted, checking play state");
+             {
+                 let mut state = self.state.lock().await;
+                 if state.is_playing {

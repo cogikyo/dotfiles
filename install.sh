@@ -2165,6 +2165,7 @@ install_librepods_service() {
 install_librepods_package() {
     local package_dir="$DOTFILES/packages/librepods-max2"
     local build_root="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/librepods-max2"
+    local target_root="${XDG_CACHE_HOME:-$HOME/.cache}/dotfiles/librepods-max2-target"
     local installed_version expected_version
     expected_version=$(librepods_version)
     installed_version=$(pacman -Q "$LIBREPODS_PACKAGE" 2>/dev/null | cut -d' ' -f2 || true)
@@ -2174,10 +2175,10 @@ install_librepods_package() {
     else
         has makepkg || { err "makepkg not found. Install base-devel first."; return 1; }
         rm -rf "$build_root"
-        mkdir -p "$build_root"
+        mkdir -p "$build_root" "$target_root"
         copy_librepods_sources "$package_dir" "$build_root"
         info "Building $LIBREPODS_PACKAGE from pinned PR #655 commit..."
-        (cd "$build_root" && makepkg --syncdeps --install --clean --needed --noconfirm)
+        (cd "$build_root" && CARGO_TARGET_DIR="$target_root" makepkg --syncdeps --install --clean --needed --noconfirm)
     fi
 }
 
