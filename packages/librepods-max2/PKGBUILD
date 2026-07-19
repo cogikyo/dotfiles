@@ -1,6 +1,6 @@
 pkgname=librepods-max2
 pkgver=0.1.0.pr655.99b0e58
-pkgrel=3
+pkgrel=4
 pkgdesc='Experimental LibrePods tray app with AirPods Max 2 hi-res microphone support'
 arch=('x86_64')
 url='https://github.com/librepods-org/librepods/pull/655'
@@ -16,7 +16,7 @@ source=("${pkgname}-${_commit}.tar.gz::https://github.com/LuanAdemi/librepods/ar
         'metadata-service.patch')
 sha256sums=('5f764669d091d1a40086365ff636ca2a50ecd98674efa4e64e26db950fa57135'
             '0982ee6df620fc704dec9e1e5e2e18a34dfa0d36216e7dc1c4d11cc3ff24bfb8'
-            '58fa37460d3ebc775bc5385b3f72f9ee999b468836720f7d077b966c5c384a8b')
+            '783f20c4ceb0cb8a58d35f2d471bd34d012e0b816fcd86a2cca74bc6188607bf')
 
 prepare() {
     cd "librepods-${_commit}"

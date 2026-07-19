@@ -7,7 +7,7 @@ diff --git a/linux-rust/Cargo.lock b/linux-rust/Cargo.lock
   "uuid",
 + "zbus",
  ]
- 
+
  [[package]]
 diff --git a/linux-rust/Cargo.toml b/linux-rust/Cargo.toml
 --- a/linux-rust/Cargo.toml
@@ -32,7 +32,7 @@ diff --git a/linux-rust/src/bluetooth/aacp.rs b/linux-rust/src/bluetooth/aacp.rs
 +    HiResMic(bool),
 +    Disconnected,
  }
- 
+
  #[derive(Debug, Clone, Serialize, Deserialize)]
 @@ -486,6 +488,9 @@
      pub async fn set_hires_mic_enabled(&self, enabled: bool) {
@@ -46,7 +46,7 @@ diff --git a/linux-rust/src/bluetooth/aacp.rs b/linux-rust/src/bluetooth/aacp.rs
          }
 @@ -588,8 +593,8 @@
      }
- 
+
      async fn send_packet(&self, data: &[u8]) -> Result<()> {
 -        let state = self.state.lock().await;
 -        if let Some(sender) = &state.sender {
@@ -56,7 +56,7 @@ diff --git a/linux-rust/src/bluetooth/aacp.rs b/linux-rust/src/bluetooth/aacp.rs
                  error!("Failed to send packet to channel: {}", e);
                  Error::from(std::io::Error::new(
 @@ -645,14 +650,11 @@
- 
+
      pub async fn receive_packet(&self, packet: &[u8]) {
          if !packet.starts_with(&HEADER_BYTES) {
 -            debug!(
@@ -71,7 +71,7 @@ diff --git a/linux-rust/src/bluetooth/aacp.rs b/linux-rust/src/bluetooth/aacp.rs
 +            debug!("Received packet too short ({} bytes)", packet.len());
              return;
          }
- 
+
 @@ -662,15 +664,12 @@
          match opcode {
              opcodes::BATTERY_INFO => {
@@ -128,7 +128,7 @@ diff --git a/linux-rust/src/bluetooth/aacp.rs b/linux-rust/src/bluetooth/aacp.rs
 -                info!("Received Information: {:?}", info);
 +                info!("Received device information for model {}", info.model_number);
              }
- 
+
              opcodes::PROXIMITY_KEYS_RSP => {
                  if payload.len() < 4 {
 -                    error!(
@@ -225,7 +225,7 @@ diff --git a/linux-rust/src/bluetooth/aacp.rs b/linux-rust/src/bluetooth/aacp.rs
 @@ -1403,7 +1377,7 @@
                      continue;
                  }
- 
+
 -                debug!("Received {} bytes: {}", n, hex::encode(data));
 +                debug!("Received {} AACP bytes", n);
                  manager.receive_packet(data).await;
@@ -328,7 +328,7 @@ diff --git a/linux-rust/src/bluetooth/le.rs b/linux-rust/src/bluetooth/le.rs
 -                                            hex::encode(decrypted)
 -                                        );
 +                                        debug!("Processed encrypted AirPods proximity data");
- 
+
                                          let connection_state = apple_data[10] as usize;
                                          debug!("Connection state: {}", connection_state);
 diff --git a/linux-rust/src/devices/airpods.rs b/linux-rust/src/devices/airpods.rs
@@ -350,13 +350,13 @@ diff --git a/linux-rust/src/devices/airpods.rs b/linux-rust/src/devices/airpods.
 +        if aacp_manager.state.lock().await.sender.is_none() {
 +            metadata.disconnected(mac_address.to_string(), metadata_session);
 +        }
- 
+
          // let mut att_manager = ATTManager::new();
          // att_manager.connect(mac_address).await.expect("Failed to connect ATT");
 @@ -73,7 +81,6 @@
              error!("Failed to send some packet: {}", e);
          }
- 
+
 -        info!("Requesting Proximity Keys: IRK and ENC_KEY");
          if let Err(e) = aacp_manager
              .send_proximity_keys_request(vec![ProximityKeyType::Irk, ProximityKeyType::EncKey])
@@ -390,11 +390,11 @@ diff --git a/linux-rust/src/main.rs b/linux-rust/src/main.rs
 +mod metadata;
  mod ui;
  mod utils;
- 
+
 @@ -130,6 +131,8 @@
      let (shutdown_tx, shutdown_rx) = unbounded_channel::<()>();
      spawn_shutdown_handler(device_managers.clone(), shutdown_rx);
- 
+
 +    let metadata = metadata::spawn();
 +
      let tray_handle = if args.no_tray {
@@ -413,11 +413,11 @@ diff --git a/linux-rust/src/main.rs b/linux-rust/src/main.rs
 +                metadata.clone(),
 +            )
 +            .await;
- 
+
              let hires_aacp = airpods_device.aacp_manager.clone();
              let mut managers = device_managers.write().await;
 @@ -264,6 +272,7 @@
- 
+
      let conn = Connection::new_system()?;
      let rule = MatchRule::new_signal("org.freedesktop.DBus.Properties", "PropertiesChanged");
 +    let metadata_bus = metadata.clone();
@@ -1085,3 +1085,1517 @@ diff --git a/linux-rust/src/metadata.rs b/linux-rust/src/metadata.rs
 +        assert!(snap.noise_control_modes.is_empty());
 +    }
 +}
+diff --git a/linux-rust/src/bluetooth/aacp.rs b/linux-rust/src/bluetooth/aacp.rs
+--- a/linux-rust/src/bluetooth/aacp.rs
++++ b/linux-rust/src/bluetooth/aacp.rs
+@@ -5,20 +5,23 @@
+     Address, AddressType, Error, Result,
+     l2cap::{SeqPacket, Socket, SocketAddr},
+ };
++use futures::FutureExt;
+ use log::{debug, error, info, warn};
+ use serde::{Deserialize, Serialize};
+ use serde_json;
+ use std::collections::HashMap;
++use std::panic::AssertUnwindSafe;
+ use std::sync::Arc;
+ use std::sync::atomic::{AtomicBool, Ordering};
+ use std::time::Duration;
+-use tokio::sync::{Mutex, Notify, mpsc};
++use tokio::sync::{Mutex, Notify, mpsc, oneshot};
+ use tokio::task::JoinSet;
+ use tokio::time::{Instant, sleep};
+
+ const PSM: u16 = 0x1001;
+ const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+ const POLL_INTERVAL: Duration = Duration::from_millis(200);
++const SEND_TIMEOUT: Duration = Duration::from_secs(2);
+ const HEADER_BYTES: [u8; 4] = [0x04, 0x00, 0x04, 0x00];
+
+ /// L2CAP recv buffer. 0x58 hi-res audio SDUs can exceed 1 KB; SOCK_SEQPACKET
+@@ -281,6 +284,7 @@
+     OutOfEar = 0x01,
+     InCase = 0x02,
+     Disconnected = 0x03,
++    Unknown = 0xff,
+ }
+
+ impl AudioSourceType {
+@@ -326,6 +330,7 @@
+     ConnectedDevices(Vec<ConnectedDevice>, Vec<ConnectedDevice>),
+     OwnershipToFalseRequest,
+     StemPress(StemPressType, StemPressBudType),
++    Information,
+     HiResMic(bool),
+     Disconnected,
+ }
+@@ -336,8 +341,13 @@
+     pub enc_key: String,
+ }
+
++pub struct OutboundPacket {
++    data: Vec<u8>,
++    result: oneshot::Sender<std::io::Result<()>>,
++}
++
+ pub struct AACPManagerState {
+-    pub sender: Option<mpsc::Sender<Vec<u8>>>,
++    pub sender: Option<mpsc::Sender<OutboundPacket>>,
+     pub control_command_status_list: Vec<ControlCommandStatus>,
+     pub control_command_subscribers:
+         HashMap<ControlCommandIdentifiers, Vec<mpsc::UnboundedSender<Vec<u8>>>>,
+@@ -595,13 +605,36 @@
+     async fn send_packet(&self, data: &[u8]) -> Result<()> {
+         let sender = self.state.lock().await.sender.clone();
+         if let Some(sender) = sender {
+-            sender.send(data.to_vec()).await.map_err(|e| {
+-                error!("Failed to send packet to channel: {}", e);
+-                Error::from(std::io::Error::new(
+-                    std::io::ErrorKind::NotConnected,
+-                    "L2CAP send channel closed",
+-                ))
++            let (result_tx, result_rx) = oneshot::channel();
++            match tokio::time::timeout(SEND_TIMEOUT, async {
++                sender
++                    .send(OutboundPacket {
++                        data: data.to_vec(),
++                        result: result_tx,
++                    })
++                    .await
++                    .map_err(|_| {
++                        std::io::Error::new(
++                            std::io::ErrorKind::NotConnected,
++                            "L2CAP send channel closed",
++                        )
++                    })?;
++                result_rx.await.map_err(|_| {
++                    std::io::Error::new(
++                        std::io::ErrorKind::NotConnected,
++                        "L2CAP send worker stopped",
++                    )
++                })?
+             })
++            .await
++            {
++                Ok(Ok(())) => Ok(()),
++                Ok(Err(error)) => Err(Error::from(error)),
++                Err(_) => Err(Error::from(std::io::Error::new(
++                    std::io::ErrorKind::TimedOut,
++                    "L2CAP send timed out",
++                ))),
++            }
+         } else {
+             error!("Cannot send packet, sender is not available.");
+             Err(Error::from(std::io::Error::new(
+@@ -650,7 +683,10 @@
+
+     pub async fn receive_packet(&self, packet: &[u8]) {
+         if !packet.starts_with(&HEADER_BYTES) {
+-            debug!("Received packet without the expected header ({} bytes)", packet.len());
++            debug!(
++                "Received packet without the expected header ({} bytes)",
++                packet.len()
++            );
+             return;
+         }
+         if packet.len() < 5 {
+@@ -669,7 +705,10 @@
+                 }
+                 let count = payload[2] as usize;
+                 if payload.len() < 3 + count * 5 {
+-                    error!("Battery Info packet length mismatch ({} bytes)", payload.len());
++                    error!(
++                        "Battery Info packet length mismatch ({} bytes)",
++                        payload.len()
++                    );
+                     return;
+                 }
+                 let mut batteries = Vec::with_capacity(count);
+@@ -754,6 +793,10 @@
+                 }
+             }
+             opcodes::EAR_DETECTION => {
++                if payload.len() < 4 {
++                    error!("Ear Detection packet too short ({} bytes)", payload.len());
++                    return;
++                }
+                 let primary_status = packet[6];
+                 let secondary_status = packet[7];
+                 let mut statuses = Vec::new();
+@@ -764,7 +807,7 @@
+                     0x03 => EarDetectionStatus::Disconnected,
+                     _ => {
+                         error!("Unknown ear detection status: {:#04x}", primary_status);
+-                        EarDetectionStatus::OutOfEar
++                        EarDetectionStatus::Unknown
+                     }
+                 });
+                 statuses.push(match secondary_status {
+@@ -774,7 +817,7 @@
+                     0x03 => EarDetectionStatus::Disconnected,
+                     _ => {
+                         error!("Unknown ear detection status: {:#04x}", secondary_status);
+-                        EarDetectionStatus::OutOfEar
++                        EarDetectionStatus::Unknown
+                     }
+                 });
+                 let mut state = self.state.lock().await;
+@@ -838,6 +881,10 @@
+                     if let Ok(s) = std::str::from_utf8(str_bytes) {
+                         strings.push(s.to_string());
+                     }
++                }
++                if strings.is_empty() {
++                    error!("Information packet contains no fields");
++                    return;
+                 }
+                 strings.remove(0);
+                 let info = AirPodsInformation {
+@@ -874,7 +921,13 @@
+                 if let Err(e) = tokio::fs::write(&get_devices_path(), json).await {
+                     error!("Failed to save devices: {}", e);
+                 }
+-                info!("Received device information for model {}", info.model_number);
++                if let Some(ref tx) = state.event_tx {
++                    let _ = tx.send(AACPEvent::Information);
++                }
++                info!(
++                    "Received device information for model {}",
++                    info.model_number
++                );
+             }
+
+             opcodes::PROXIMITY_KEYS_RSP => {
+@@ -988,12 +1041,18 @@
+             }
+             opcodes::CONNECTED_DEVICES => {
+                 if payload.len() < 3 {
+-                    error!("Connected Devices packet too short ({} bytes)", payload.len());
++                    error!(
++                        "Connected Devices packet too short ({} bytes)",
++                        payload.len()
++                    );
+                     return;
+                 }
+                 let count = payload[2] as usize;
+-                if payload.len() < 3 + count * 8 {
+-                    error!("Connected Devices packet length mismatch ({} bytes)", payload.len());
++                if payload.len() < 5 + count * 8 {
++                    error!(
++                        "Connected Devices packet length mismatch ({} bytes)",
++                        payload.len()
++                    );
+                     return;
+                 }
+                 let mut devices = Vec::with_capacity(count);
+@@ -1029,6 +1088,10 @@
+                 info!("Received Connected Devices: {:?}", state.connected_devices);
+             }
+             opcodes::SMART_ROUTING_RESP => {
++                if payload.len() < 2 {
++                    error!("Smart Routing Response packet too short");
++                    return;
++                }
+                 let packet_string = String::from_utf8_lossy(&payload[2..]);
+                 if packet_string.contains("SetOwnershipToFalse") {
+                     info!("Received OwnershipToFalse request");
+@@ -1378,7 +1441,14 @@
+                 }
+
+                 debug!("Received {} AACP bytes", n);
+-                manager.receive_packet(data).await;
++                if AssertUnwindSafe(manager.receive_packet(data))
++                    .catch_unwind()
++                    .await
++                    .is_err()
++                {
++                    error!("AACP packet parser panicked; disconnecting the protocol session");
++                    break;
++                }
+             }
+             Err(e) => {
+                 debug!("Read error: {}", e);
+@@ -1403,14 +1473,14 @@
+     manager.disarm_hires_mic().await;
+ }
+
+-async fn send_thread(mut rx: mpsc::Receiver<Vec<u8>>, sp: Arc<SeqPacket>) {
+-    while let Some(data) = rx.recv().await {
++async fn send_thread(mut rx: mpsc::Receiver<OutboundPacket>, sp: Arc<SeqPacket>) {
++    while let Some(packet) = rx.recv().await {
+         let mut attempts = 0;
+-        loop {
+-            match sp.send(&data).await {
++        let outcome = loop {
++            match sp.send(&packet.data).await {
+                 Ok(_) => {
+-                    debug!("Sent {} AACP bytes", data.len());
+-                    break;
++                    debug!("Sent {} AACP bytes", packet.data.len());
++                    break Ok(());
+                 }
+                 Err(e) if e.raw_os_error() == Some(107) && attempts < 10 => {
+                     attempts += 1;
+@@ -1418,10 +1488,184 @@
+                 }
+                 Err(e) => {
+                     error!("Failed to send data: {}", e);
+-                    return;
+-                }
+-            }
++                    break Err(e);
++                }
++            }
++        };
++        let failed = outcome.is_err();
++        let _ = packet.result.send(outcome);
++        if failed {
++            return;
+         }
+     }
+     info!("Send thread finished.");
+ }
++
++#[cfg(test)]
++mod tests {
++    use super::*;
++
++    #[tokio::test]
++    async fn opcode_parsers_reject_every_truncated_prefix() {
++        let manager = AACPManager::new();
++        let frames = [
++            vec![
++                0x04,
++                0x00,
++                0x04,
++                0x00,
++                opcodes::BATTERY_INFO,
++                0,
++                1,
++                1,
++                0,
++                50,
++                2,
++                0,
++            ],
++            vec![
++                0x04,
++                0x00,
++                0x04,
++                0x00,
++                opcodes::CONTROL_COMMAND,
++                0,
++                0x0d,
++                2,
++                0,
++                0,
++                0,
++            ],
++            vec![0x04, 0x00, 0x04, 0x00, opcodes::EAR_DETECTION, 0, 0, 1],
++            vec![
++                0x04,
++                0x00,
++                0x04,
++                0x00,
++                opcodes::CONVERSATION_AWARENESS,
++                0,
++                0,
++                0,
++                0,
++                1,
++            ],
++            vec![
++                0x04,
++                0x00,
++                0x04,
++                0x00,
++                opcodes::INFORMATION,
++                0,
++                0,
++                0,
++                0,
++                b'x',
++                0,
++            ],
++            vec![
++                0x04,
++                0x00,
++                0x04,
++                0x00,
++                opcodes::PROXIMITY_KEYS_RSP,
++                0,
++                1,
++                1,
++                0,
++                1,
++                0,
++                42,
++            ],
++            vec![0x04, 0x00, 0x04, 0x00, opcodes::STEM_PRESS, 0, 5, 1],
++            vec![
++                0x04,
++                0x00,
++                0x04,
++                0x00,
++                opcodes::AUDIO_SOURCE,
++                0,
++                1,
++                2,
++                3,
++                4,
++                5,
++                6,
++                2,
++            ],
++            vec![
++                0x04,
++                0x00,
++                0x04,
++                0x00,
++                opcodes::CONNECTED_DEVICES,
++                0,
++                1,
++                0,
++                0,
++                1,
++                2,
++                3,
++                4,
++                5,
++                6,
++                7,
++                8,
++            ],
++            vec![0x04, 0x00, 0x04, 0x00, opcodes::SMART_ROUTING_RESP, 0],
++        ];
++
++        for frame in frames {
++            for end in 0..frame.len() {
++                manager.receive_packet(&frame[..end]).await;
++            }
++        }
++    }
++
++    #[tokio::test]
++    async fn malformed_information_and_connected_devices_do_not_panic() {
++        let manager = AACPManager::new();
++        manager
++            .receive_packet(&[0x04, 0x00, 0x04, 0x00, opcodes::INFORMATION, 0, 0, 0, 0, 0])
++            .await;
++        manager
++            .receive_packet(&[0x04, 0x00, 0x04, 0x00, opcodes::CONNECTED_DEVICES, 0, 1])
++            .await;
++    }
++
++    #[tokio::test]
++    async fn unknown_ear_status_stays_unknown() {
++        let manager = AACPManager::new();
++        manager
++            .receive_packet(&[
++                0x04,
++                0x00,
++                0x04,
++                0x00,
++                opcodes::EAR_DETECTION,
++                0,
++                0xfe,
++                0xff,
++            ])
++            .await;
++
++        assert_eq!(
++            manager.state.lock().await.ear_detection_status,
++            vec![EarDetectionStatus::Unknown, EarDetectionStatus::Unknown]
++        );
++    }
++
++    #[tokio::test]
++    async fn send_reports_closed_worker_without_waiting_for_timeout() {
++        let manager = AACPManager::new();
++        let (sender, receiver) = mpsc::channel(1);
++        drop(receiver);
++        manager.state.lock().await.sender = Some(sender);
++
++        let result = tokio::time::timeout(
++            Duration::from_millis(100),
++            manager.send_control_command(ControlCommandIdentifiers::ListeningMode, &[0x02]),
++        )
++        .await;
++        assert!(matches!(result, Ok(Err(_))));
++    }
++}
+diff --git a/linux-rust/src/devices/airpods.rs b/linux-rust/src/devices/airpods.rs
+--- a/linux-rust/src/devices/airpods.rs
++++ b/linux-rust/src/devices/airpods.rs
+@@ -31,11 +31,14 @@
+         let mut aacp_manager = AACPManager::new();
+         let (tx, mut rx) = tokio::sync::mpsc::unbounded_channel();
+         aacp_manager.set_event_channel(tx).await;
+-        let metadata_session =
+-            metadata.connected(mac_address.to_string(), aacp_manager.clone());
++        let metadata_session = metadata
++            .connected(mac_address.to_string(), aacp_manager.clone())
++            .await;
+         aacp_manager.connect(mac_address).await;
+         if aacp_manager.state.lock().await.sender.is_none() {
+-            metadata.disconnected(mac_address.to_string(), metadata_session);
++            metadata
++                .disconnected(mac_address.to_string(), metadata_session)
++                .await;
+         }
+
+         // let mut att_manager = ATTManager::new();
+@@ -238,7 +241,9 @@
+         tokio::spawn(async move {
+             while let Some(event) = rx.recv().await {
+                 let event_clone = event.clone();
+-                metadata.event(mac_address.to_string(), metadata_session, &event);
++                metadata
++                    .event(mac_address.to_string(), metadata_session, &event)
++                    .await;
+                 match event {
+                     AACPEvent::EarDetection(old_status, new_status) => {
+                         debug!(
+diff --git a/linux-rust/src/metadata.rs b/linux-rust/src/metadata.rs
+--- a/linux-rust/src/metadata.rs
++++ b/linux-rust/src/metadata.rs
+@@ -3,17 +3,25 @@
+ //! State is rebuilt from `AACPManagerState` after relevant events.
+ //! An internal session token prevents delayed updates from an old connection
+ //! to an address from changing the replacement connection's snapshot.
++//!
++//! The additive v1 wire fields are `NoiseControlKnown`, `NoiseControlModesKnown`,
++//! and `*SupportedKnown`/`*EnabledKnown` for conversation awareness,
++//! personalized volume, and the high-resolution microphone.
+
+ use std::borrow::Cow;
+ use std::collections::HashMap;
+ use std::sync::atomic::{AtomicU64, Ordering};
++use std::sync::{Arc, Mutex as StdMutex};
++use std::time::Duration;
+
+ use crate::bluetooth::aacp::{
+     AACPEvent, AACPManager, BatteryComponent, BatteryInfo, BatteryStatus,
+     ControlCommandIdentifiers, ControlCommandStatus, EarDetectionStatus,
+ };
++use crate::devices::enums::DeviceInformation;
+ use log::{info, warn};
+-use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender, unbounded_channel};
++use tokio::sync::{Mutex, Notify, mpsc, oneshot};
++use tokio::time::timeout;
+ use zbus::object_server::InterfaceRef;
+ use zbus::zvariant::Value;
+
+@@ -33,6 +41,9 @@
+ const WEAR_UNKNOWN: &str = "unknown";
+ const WEAR_WORN: &str = "worn";
+ const WEAR_NOT_WORN: &str = "not_worn";
++
++const UPDATE_CAPACITY: usize = 32;
++const COMMAND_TIMEOUT: Duration = Duration::from_secs(5);
+
+ fn mode_name(byte: u8) -> Option<&'static str> {
+     match byte {
+@@ -65,6 +76,71 @@
+
+     fn generation(self) -> String {
+         format!("{}-{}", std::process::id(), self.0)
++    }
++}
++
++#[derive(Clone, Copy, Default)]
++struct ModelFacts {
++    known: bool,
++    conversation_awareness: bool,
++    personalized_volume: bool,
++    hires_mic: bool,
++}
++
++fn model_facts(model: Option<&str>) -> ModelFacts {
++    let Some(model) = model else {
++        return ModelFacts::default();
++    };
++    let conversation_awareness = matches!(
++        model,
++        "A3056"
++            | "A3055"
++            | "A3057"
++            | "A2931"
++            | "A2699"
++            | "A2698"
++            | "A3047"
++            | "A3048"
++            | "A3049"
++            | "A3063"
++            | "A3064"
++            | "A3065"
++    );
++    let personalized_volume =
++        conversation_awareness || matches!(model, "A3053" | "A3050" | "A3054");
++    let known = matches!(
++        model,
++        "A1523"
++            | "A1722"
++            | "A2032"
++            | "A2031"
++            | "A2565"
++            | "A2564"
++            | "A3053"
++            | "A3050"
++            | "A3054"
++            | "A3056"
++            | "A3055"
++            | "A3057"
++            | "A2084"
++            | "A2083"
++            | "A2931"
++            | "A2699"
++            | "A2698"
++            | "A3047"
++            | "A3048"
++            | "A3049"
++            | "A3063"
++            | "A3064"
++            | "A3065"
++            | "A2096"
++            | "A3184"
++    );
++    ModelFacts {
++        known,
++        conversation_awareness,
++        personalized_volume,
++        hires_mic: model == "A3184",
+     }
+ }
+
+@@ -76,7 +152,9 @@
+     NoDevice(String),
+     StaleGeneration(String),
+     Unsupported(String),
+-    QueueUnavailable(String),
++    Superseded(String),
++    SendFailed(String),
++    TimedOut(String),
+ }
+
+ enum Update {
+@@ -96,34 +174,93 @@
+ }
+
+ struct Command {
++    session: Session,
++    generation: String,
++    target: String,
++    reply: oneshot::Sender<Result<(), CommandFailure>>,
++}
++
++enum CommandFailure {
++    StaleGeneration,
++    Superseded,
++    Unsupported,
++    NoDevice,
++    SendFailed(String),
++}
++
++#[derive(Clone)]
++struct CommandActive {
++    session: Session,
++    generation: String,
+     aacp: AACPManager,
+-    identifier: ControlCommandIdentifiers,
+-    value: Vec<u8>,
++}
++
++#[derive(Default)]
++struct CommandSession {
++    active: Option<CommandActive>,
++}
++
++#[derive(Default)]
++struct CommandQueue {
++    pending: StdMutex<Option<Command>>,
++    ready: Notify,
++}
++
++impl CommandQueue {
++    fn submit(&self, command: Command) {
++        let replaced = self
++            .pending
++            .lock()
++            .expect("command queue poisoned")
++            .replace(command);
++        if let Some(replaced) = replaced {
++            let _ = replaced.reply.send(Err(CommandFailure::Superseded));
++        }
++        self.ready.notify_one();
++    }
+ }
+
+ #[derive(Clone)]
+ pub struct Handle {
+-    tx: UnboundedSender<Update>,
++    tx: mpsc::Sender<Update>,
++    command_session: Arc<Mutex<CommandSession>>,
+ }
+
+ impl Handle {
+-    pub fn connected(&self, addr: String, aacp: AACPManager) -> Session {
++    pub async fn connected(&self, addr: String, aacp: AACPManager) -> Session {
+         let session = Session::new();
+-        let _ = self.tx.send(Update::Connected {
+-            addr,
++        self.command_session.lock().await.active = Some(CommandActive {
+             session,
+-            aacp,
++            generation: session.generation(),
++            aacp: aacp.clone(),
+         });
++        let _ = self
++            .tx
++            .send(Update::Connected {
++                addr,
++                session,
++                aacp,
++            })
++            .await;
+         session
+     }
+
+-    pub fn disconnected(&self, addr: String, session: Session) {
+-        let _ = self.tx.send(Update::Disconnected { addr, session });
+-    }
+-
+-    pub fn event(&self, addr: String, session: Session, event: &AACPEvent) {
++    pub async fn disconnected(&self, addr: String, session: Session) {
++        let mut commands = self.command_session.lock().await;
++        if commands
++            .active
++            .as_ref()
++            .is_some_and(|active| active.session == session)
++        {
++            commands.active = None;
++        }
++        drop(commands);
++        let _ = self.tx.send(Update::Disconnected { addr, session }).await;
++    }
++
++    pub async fn event(&self, addr: String, session: Session, event: &AACPEvent) {
+         if matches!(event, AACPEvent::Disconnected) {
+-            self.disconnected(addr, session);
++            self.disconnected(addr, session).await;
+             return;
+         }
+         if !matches!(
+@@ -131,11 +268,12 @@
+             AACPEvent::BatteryInfo(_)
+                 | AACPEvent::ControlCommand(_)
+                 | AACPEvent::EarDetection(_, _)
++                | AACPEvent::Information
+                 | AACPEvent::HiResMic(_)
+         ) {
+             return;
+         }
+-        let _ = self.tx.send(Update::Event { addr, session });
++        let _ = self.tx.send(Update::Event { addr, session }).await;
+     }
+ }
+
+@@ -148,13 +286,21 @@
+     battery_valid: bool,
+     battery_charging: bool,
+     noise_control: String,
++    noise_control_known: bool,
+     noise_control_modes: Vec<String>,
++    noise_control_modes_known: bool,
+     wear: String,
++    conversation_awareness_supported_known: bool,
+     conversation_awareness_supported: bool,
++    conversation_awareness_enabled_known: bool,
+     conversation_awareness_enabled: bool,
++    personalized_volume_supported_known: bool,
+     personalized_volume_supported: bool,
++    personalized_volume_enabled_known: bool,
+     personalized_volume_enabled: bool,
++    hires_mic_supported_known: bool,
+     hires_mic_supported: bool,
++    hires_mic_enabled_known: bool,
+     hires_mic_enabled: bool,
+ }
+
+@@ -168,13 +314,21 @@
+             battery_valid: false,
+             battery_charging: false,
+             noise_control: String::new(),
++            noise_control_known: false,
+             noise_control_modes: Vec::new(),
++            noise_control_modes_known: false,
+             wear: WEAR_UNKNOWN.to_owned(),
++            conversation_awareness_supported_known: false,
+             conversation_awareness_supported: false,
++            conversation_awareness_enabled_known: false,
+             conversation_awareness_enabled: false,
++            personalized_volume_supported_known: false,
+             personalized_volume_supported: false,
++            personalized_volume_enabled_known: false,
+             personalized_volume_enabled: false,
++            hires_mic_supported_known: false,
+             hires_mic_supported: false,
++            hires_mic_enabled_known: false,
+             hires_mic_enabled: false,
+         }
+     }
+@@ -190,6 +344,7 @@
+
+     fn property_values(&self) -> HashMap<&'static str, Value<'static>> {
+         HashMap::from([
++            ("InterfaceVersion", Value::from(INTERFACE_VERSION)),
+             ("SessionGeneration", Value::from(self.generation.clone())),
+             ("DeviceAddress", Value::from(self.address.clone())),
+             ("Readiness", Value::from(self.readiness.clone())),
+@@ -197,28 +352,57 @@
+             ("BatteryValid", Value::from(self.battery_valid)),
+             ("BatteryCharging", Value::from(self.battery_charging)),
+             ("NoiseControl", Value::from(self.noise_control.clone())),
++            ("NoiseControlKnown", Value::from(self.noise_control_known)),
+             (
+                 "NoiseControlModes",
+                 Value::from(self.noise_control_modes.clone()),
+             ),
++            (
++                "NoiseControlModesKnown",
++                Value::from(self.noise_control_modes_known),
++            ),
+             ("WearState", Value::from(self.wear.clone())),
++            (
++                "ConversationAwarenessSupportedKnown",
++                Value::from(self.conversation_awareness_supported_known),
++            ),
+             (
+                 "ConversationAwarenessSupported",
+                 Value::from(self.conversation_awareness_supported),
++            ),
++            (
++                "ConversationAwarenessEnabledKnown",
++                Value::from(self.conversation_awareness_enabled_known),
+             ),
+             (
+                 "ConversationAwarenessEnabled",
+                 Value::from(self.conversation_awareness_enabled),
+             ),
+             (
++                "PersonalizedVolumeSupportedKnown",
++                Value::from(self.personalized_volume_supported_known),
++            ),
++            (
+                 "PersonalizedVolumeSupported",
+                 Value::from(self.personalized_volume_supported),
++            ),
++            (
++                "PersonalizedVolumeEnabledKnown",
++                Value::from(self.personalized_volume_enabled_known),
+             ),
+             (
+                 "PersonalizedVolumeEnabled",
+                 Value::from(self.personalized_volume_enabled),
+             ),
++            (
++                "HiResMicSupportedKnown",
++                Value::from(self.hires_mic_supported_known),
++            ),
+             ("HiResMicSupported", Value::from(self.hires_mic_supported)),
++            (
++                "HiResMicEnabledKnown",
++                Value::from(self.hires_mic_enabled_known),
++            ),
+             ("HiResMicEnabled", Value::from(self.hires_mic_enabled)),
+         ])
+     }
+@@ -234,11 +418,11 @@
+ struct Metadata {
+     snap: Snapshot,
+     active: Option<Active>,
+-    commands: UnboundedSender<Command>,
++    commands: Arc<CommandQueue>,
+ }
+
+ impl Metadata {
+-    fn new(commands: UnboundedSender<Command>) -> Self {
++    fn new(commands: Arc<CommandQueue>) -> Self {
+         Self {
+             snap: Snapshot::idle(),
+             active: None,
+@@ -278,18 +462,28 @@
+         let statuses = state.control_command_status_list.clone();
+         let battery = state.battery_info.clone();
+         let ear = state.ear_detection_status.clone();
+-        let aacp_connected = state.sender.is_some();
++        let model = state.airpods_mac.and_then(|address| {
++            state.devices.get(&address.to_string()).and_then(|device| {
++                let Some(DeviceInformation::AirPods(info)) = &device.information else {
++                    return None;
++                };
++                Some(info.model_number.clone())
++            })
++        });
+         drop(state);
+
+         let mut snap = Snapshot::initializing(active.session, active.address);
+-        if !statuses.is_empty() || !battery.is_empty() || !ear.is_empty() {
++        if !statuses.is_empty() || !battery.is_empty() || !ear.is_empty() || model.is_some() {
+             snap.readiness = READINESS_READY.to_owned();
+         }
+         apply_battery(&mut snap, &battery);
+-        apply_controls(&mut snap, &statuses);
++        apply_controls(&mut snap, &statuses, model_facts(model.as_deref()));
+         apply_wear(&mut snap, &ear);
+-        snap.hires_mic_supported = aacp_connected;
+-        snap.hires_mic_enabled = aacp_connected && active.aacp.hires_mic_enabled();
++        let facts = model_facts(model.as_deref());
++        snap.hires_mic_supported_known = facts.known;
++        snap.hires_mic_supported = facts.hires_mic;
++        snap.hires_mic_enabled_known = facts.hires_mic;
++        snap.hires_mic_enabled = facts.hires_mic && active.aacp.hires_mic_enabled();
+         self.snap = snap;
+     }
+
+@@ -298,19 +492,36 @@
+         self.snap = Snapshot::idle();
+     }
+
+-    fn enqueue(
+-        &self,
+-        active: &Active,
+-        identifier: ControlCommandIdentifiers,
+-        value: Vec<u8>,
+-    ) -> Result<(), CommandError> {
+-        self.commands
+-            .send(Command {
+-                aacp: active.aacp.clone(),
+-                identifier,
+-                value,
+-            })
+-            .map_err(|_| CommandError::QueueUnavailable("command worker stopped".to_owned()))
++    async fn issue(&self, active: &Active, target: String) -> Result<(), CommandError> {
++        let (reply, result) = oneshot::channel();
++        self.commands.submit(Command {
++            session: active.session,
++            generation: active.session.generation(),
++            target,
++            reply,
++        });
++        match timeout(COMMAND_TIMEOUT, result).await {
++            Ok(Ok(Ok(()))) => Ok(()),
++            Ok(Ok(Err(CommandFailure::StaleGeneration))) => Err(CommandError::StaleGeneration(
++                "command session was superseded".to_owned(),
++            )),
++            Ok(Ok(Err(CommandFailure::Superseded))) => Err(CommandError::Superseded(
++                "command was replaced by a newer target".to_owned(),
++            )),
++            Ok(Ok(Err(CommandFailure::Unsupported))) => Err(CommandError::Unsupported(
++                "target is no longer supported by the device".to_owned(),
++            )),
++            Ok(Ok(Err(CommandFailure::NoDevice))) => Err(CommandError::NoDevice(
++                "protocol session is disconnected".to_owned(),
++            )),
++            Ok(Ok(Err(CommandFailure::SendFailed(error)))) => Err(CommandError::SendFailed(error)),
++            Ok(Err(_)) => Err(CommandError::SendFailed(
++                "command worker stopped".to_owned(),
++            )),
++            Err(_) => Err(CommandError::TimedOut(
++                "device command did not complete within 5 seconds".to_owned(),
++            )),
++        }
+     }
+ }
+
+@@ -342,18 +553,21 @@
+     }
+ }
+
+-fn apply_controls(snap: &mut Snapshot, statuses: &[ControlCommandStatus]) {
++fn apply_controls(snap: &mut Snapshot, statuses: &[ControlCommandStatus], facts: ModelFacts) {
+     let status = |identifier| statuses.iter().find(|s| s.identifier == identifier);
+-    snap.noise_control = status(ControlCommandIdentifiers::ListeningMode)
++    if let Some(mode) = status(ControlCommandIdentifiers::ListeningMode)
+         .and_then(|s| s.value.first())
+         .and_then(|value| mode_name(*value))
+-        .unwrap_or_default()
+-        .to_owned();
++    {
++        snap.noise_control = mode.to_owned();
++        snap.noise_control_known = true;
++    }
+
+     if let Some(mask) = status(ControlCommandIdentifiers::ListeningModeConfigs)
+         .and_then(|s| s.value.first())
+         .copied()
+     {
++        snap.noise_control_modes_known = true;
+         for (bit, mode) in [
+             (0x01, MODE_OFF),
+             (0x02, MODE_ANC),
+@@ -366,16 +580,24 @@
+         }
+     }
+
+-    if let Some(value) =
+-        status(ControlCommandIdentifiers::ConversationDetectConfig).and_then(|s| s.value.first())
++    snap.conversation_awareness_supported_known = facts.known;
++    snap.conversation_awareness_supported = facts.conversation_awareness;
++    if facts.conversation_awareness
++        && let Some(value) = status(ControlCommandIdentifiers::ConversationDetectConfig)
++            .and_then(|s| s.value.first())
++        && matches!(value, 0x01 | 0x02)
+     {
+-        snap.conversation_awareness_supported = true;
++        snap.conversation_awareness_enabled_known = true;
+         snap.conversation_awareness_enabled = *value == 0x01;
+     }
+-    if let Some(value) =
+-        status(ControlCommandIdentifiers::AdaptiveVolumeConfig).and_then(|s| s.value.first())
++    snap.personalized_volume_supported_known = facts.known;
++    snap.personalized_volume_supported = facts.personalized_volume;
++    if facts.personalized_volume
++        && let Some(value) =
++            status(ControlCommandIdentifiers::AdaptiveVolumeConfig).and_then(|s| s.value.first())
++        && matches!(value, 0x01 | 0x02)
+     {
+-        snap.personalized_volume_supported = true;
++        snap.personalized_volume_enabled_known = true;
+         snap.personalized_volume_enabled = *value == 0x01;
+     }
+ }
+@@ -383,7 +605,12 @@
+ fn apply_wear(snap: &mut Snapshot, statuses: &[EarDetectionStatus]) {
+     let known: Vec<_> = statuses
+         .iter()
+-        .filter(|status| **status != EarDetectionStatus::Disconnected)
++        .filter(|status| {
++            !matches!(
++                status,
++                EarDetectionStatus::Disconnected | EarDetectionStatus::Unknown
++            )
++        })
+         .collect();
+     snap.wear = if known.is_empty() {
+         WEAR_UNKNOWN
+@@ -441,11 +668,21 @@
+     }
+
+     #[zbus(property)]
++    fn noise_control_known(&self) -> bool {
++        self.snap.noise_control_known
++    }
++
++    #[zbus(property)]
+     fn noise_control_modes(&self) -> Vec<String> {
+         self.snap.noise_control_modes.clone()
+     }
+
+     #[zbus(property)]
++    fn noise_control_modes_known(&self) -> bool {
++        self.snap.noise_control_modes_known
++    }
++
++    #[zbus(property)]
+     fn wear_state(&self) -> String {
+         self.snap.wear.clone()
+     }
+@@ -456,33 +693,67 @@
+     }
+
+     #[zbus(property)]
++    fn conversation_awareness_supported_known(&self) -> bool {
++        self.snap.conversation_awareness_supported_known
++    }
++
++    #[zbus(property)]
+     fn conversation_awareness_enabled(&self) -> bool {
+         self.snap.conversation_awareness_enabled
+     }
+
+     #[zbus(property)]
++    fn conversation_awareness_enabled_known(&self) -> bool {
++        self.snap.conversation_awareness_enabled_known
++    }
++
++    #[zbus(property)]
+     fn personalized_volume_supported(&self) -> bool {
+         self.snap.personalized_volume_supported
+     }
+
+     #[zbus(property)]
++    fn personalized_volume_supported_known(&self) -> bool {
++        self.snap.personalized_volume_supported_known
++    }
++
++    #[zbus(property)]
+     fn personalized_volume_enabled(&self) -> bool {
+         self.snap.personalized_volume_enabled
+     }
+
+     #[zbus(property)]
++    fn personalized_volume_enabled_known(&self) -> bool {
++        self.snap.personalized_volume_enabled_known
++    }
++
++    #[zbus(property)]
+     fn hi_res_mic_supported(&self) -> bool {
+         self.snap.hires_mic_supported
+     }
+
+     #[zbus(property)]
++    fn hi_res_mic_supported_known(&self) -> bool {
++        self.snap.hires_mic_supported_known
++    }
++
++    #[zbus(property)]
+     fn hi_res_mic_enabled(&self) -> bool {
+         self.snap.hires_mic_enabled
+     }
+
+-    fn select_noise_control(&self, generation: String, mode: String) -> Result<(), CommandError> {
++    #[zbus(property)]
++    fn hi_res_mic_enabled_known(&self) -> bool {
++        self.snap.hires_mic_enabled_known
++    }
++
++    async fn select_noise_control(
++        &self,
++        generation: String,
++        mode: String,
++    ) -> Result<(), CommandError> {
+         let active = self.session(&generation)?;
+-        let Some(byte) = mode_byte(&mode) else {
++        if mode_byte(&mode).is_none() {
+             return Err(CommandError::Unsupported(format!(
+                 "unknown noise-control mode {mode:?}"
+             )));
+@@ -497,10 +768,10 @@
+                 "noise-control mode {mode:?} is not reported by the device"
+             )));
+         }
+-        self.enqueue(active, ControlCommandIdentifiers::ListeningMode, vec![byte])
+-    }
+-
+-    fn cycle_noise_control(&self, generation: String) -> Result<String, CommandError> {
++        self.issue(active, mode).await
++    }
++
++    async fn cycle_noise_control(&self, generation: String) -> Result<String, CommandError> {
+         let active = self.session(&generation)?;
+         let modes = &self.snap.noise_control_modes;
+         if modes.is_empty() {
+@@ -515,43 +786,98 @@
+             Some(index) => modes[(index + 1) % modes.len()].clone(),
+             None => modes[0].clone(),
+         };
+-        self.enqueue(
+-            active,
+-            ControlCommandIdentifiers::ListeningMode,
+-            vec![mode_byte(&target).expect("device modes are validated")],
+-        )?;
++        self.issue(active, target.clone()).await?;
+         Ok(target)
+     }
+ }
+
+ pub fn spawn() -> Handle {
+-    let (tx, rx) = unbounded_channel();
+-    let (command_tx, command_rx) = unbounded_channel();
+-    tokio::spawn(command_worker(command_rx));
++    let (tx, rx) = mpsc::channel(UPDATE_CAPACITY);
++    let commands = Arc::new(CommandQueue::default());
++    let command_session = Arc::new(Mutex::new(CommandSession::default()));
++    tokio::spawn(command_worker(commands.clone(), command_session.clone()));
++    let serve_commands = commands.clone();
+     tokio::spawn(async move {
+-        if let Err(error) = serve(rx, command_tx).await {
++        if let Err(error) = serve(rx, serve_commands).await {
+             warn!("metadata service unavailable: {error}");
+         }
+     });
+-    Handle { tx }
+-}
+-
+-async fn command_worker(mut rx: UnboundedReceiver<Command>) {
+-    while let Some(command) = rx.recv().await {
+-        if let Err(error) = command
+-            .aacp
+-            .send_control_command(command.identifier, &command.value)
+-            .await
+-        {
++    Handle {
++        tx,
++        command_session,
++    }
++}
++
++async fn command_worker(commands: Arc<CommandQueue>, session: Arc<Mutex<CommandSession>>) {
++    loop {
++        let notified = commands.ready.notified();
++        let command = commands
++            .pending
++            .lock()
++            .expect("command queue poisoned")
++            .take();
++        let Some(command) = command else {
++            notified.await;
++            continue;
++        };
++        if command.reply.is_closed() {
++            continue;
++        }
++        let result = execute_command(&session, &command).await;
++        let _ = command.reply.send(result);
++    }
++}
++
++async fn execute_command(
++    session: &Mutex<CommandSession>,
++    command: &Command,
++) -> Result<(), CommandFailure> {
++    let current = session.lock().await;
++    let Some(active) = &current.active else {
++        return Err(CommandFailure::NoDevice);
++    };
++    if active.session != command.session || active.generation != command.generation {
++        return Err(CommandFailure::StaleGeneration);
++    }
++    let Some(value) = mode_byte(&command.target) else {
++        return Err(CommandFailure::Unsupported);
++    };
++
++    let state = active.aacp.state.lock().await;
++    if state.sender.is_none() {
++        return Err(CommandFailure::NoDevice);
++    }
++    let supported = state
++        .control_command_status_list
++        .iter()
++        .find(|status| status.identifier == ControlCommandIdentifiers::ListeningModeConfigs)
++        .and_then(|status| status.value.first())
++        .is_some_and(|mask| {
++            let bit = match value {
++                0x01 => 0x01,
++                0x02 => 0x02,
++                0x03 => 0x04,
++                0x04 => 0x08,
++                _ => return false,
++            };
++            mask & bit != 0
++        });
++    drop(state);
++    if !supported {
++        return Err(CommandFailure::Unsupported);
++    }
++
++    active
++        .aacp
++        .send_control_command(ControlCommandIdentifiers::ListeningMode, &[value])
++        .await
++        .map_err(|error| {
+             warn!("metadata command failed: {error}");
+-        }
+-    }
+-}
+-
+-async fn serve(
+-    mut rx: UnboundedReceiver<Update>,
+-    commands: UnboundedSender<Command>,
+-) -> zbus::Result<()> {
++            CommandFailure::SendFailed(error.to_string())
++        })
++}
++
++async fn serve(mut rx: mpsc::Receiver<Update>, commands: Arc<CommandQueue>) -> zbus::Result<()> {
+     let conn = zbus::connection::Builder::session()?
+         .name(BUS_NAME)?
+         .serve_at(OBJECT_PATH, Metadata::new(commands))?
+@@ -620,26 +946,209 @@
+                 identifier: ControlCommandIdentifiers::ListeningModeConfigs,
+                 value: vec![0x06],
+             }],
++            ModelFacts::default(),
+         );
+
+         assert_eq!(
+             snap.noise_control_modes,
+             vec![MODE_ANC.to_owned(), MODE_TRANSPARENCY.to_owned()]
+         );
++        assert!(snap.noise_control_modes_known);
+     }
+
+     #[test]
+-    fn noise_modes_stay_unknown_without_device_config() {
++    fn values_do_not_imply_capability() {
+         let mut snap = Snapshot::idle();
+         apply_controls(
+             &mut snap,
++            &[
++                ControlCommandStatus {
++                    identifier: ControlCommandIdentifiers::ListeningMode,
++                    value: vec![0x04],
++                },
++                ControlCommandStatus {
++                    identifier: ControlCommandIdentifiers::ConversationDetectConfig,
++                    value: vec![0x01],
++                },
++                ControlCommandStatus {
++                    identifier: ControlCommandIdentifiers::AdaptiveVolumeConfig,
++                    value: vec![0x01],
++                },
++            ],
++            ModelFacts::default(),
++        );
++
++        assert_eq!(snap.noise_control, MODE_ADAPTIVE);
++        assert!(snap.noise_control_known);
++        assert!(snap.noise_control_modes.is_empty());
++        assert!(!snap.noise_control_modes_known);
++        assert!(!snap.conversation_awareness_supported_known);
++        assert!(!snap.conversation_awareness_supported);
++        assert!(!snap.conversation_awareness_enabled_known);
++        assert!(!snap.personalized_volume_supported_known);
++        assert!(!snap.personalized_volume_supported);
++        assert!(!snap.personalized_volume_enabled_known);
++    }
++
++    #[test]
++    fn model_facts_distinguish_unknown_unsupported_and_disabled() {
++        let mut unknown = Snapshot::idle();
++        apply_controls(&mut unknown, &[], model_facts(Some("future-model")));
++        assert!(!unknown.conversation_awareness_supported_known);
++
++        let mut unsupported = Snapshot::idle();
++        apply_controls(&mut unsupported, &[], model_facts(Some("A3184")));
++        assert!(unsupported.conversation_awareness_supported_known);
++        assert!(!unsupported.conversation_awareness_supported);
++        assert!(!unsupported.conversation_awareness_enabled_known);
++
++        let mut disabled = Snapshot::idle();
++        apply_controls(
++            &mut disabled,
+             &[ControlCommandStatus {
+-                identifier: ControlCommandIdentifiers::ListeningMode,
+-                value: vec![0x04],
++                identifier: ControlCommandIdentifiers::ConversationDetectConfig,
++                value: vec![0x02],
+             }],
++            model_facts(Some("A3047")),
+         );
+-
+-        assert_eq!(snap.noise_control, MODE_ADAPTIVE);
+-        assert!(snap.noise_control_modes.is_empty());
+-    }
+-}
++        assert!(disabled.conversation_awareness_supported_known);
++        assert!(disabled.conversation_awareness_supported);
++        assert!(disabled.conversation_awareness_enabled_known);
++        assert!(!disabled.conversation_awareness_enabled);
++    }
++
++    #[test]
++    fn change_map_contains_every_wire_property() {
++        let values = Snapshot::idle().property_values();
++        for property in [
++            "InterfaceVersion",
++            "SessionGeneration",
++            "DeviceAddress",
++            "Readiness",
++            "BatteryPercent",
++            "BatteryValid",
++            "BatteryCharging",
++            "NoiseControl",
++            "NoiseControlKnown",
++            "NoiseControlModes",
++            "NoiseControlModesKnown",
++            "WearState",
++            "ConversationAwarenessSupportedKnown",
++            "ConversationAwarenessSupported",
++            "ConversationAwarenessEnabledKnown",
++            "ConversationAwarenessEnabled",
++            "PersonalizedVolumeSupportedKnown",
++            "PersonalizedVolumeSupported",
++            "PersonalizedVolumeEnabledKnown",
++            "PersonalizedVolumeEnabled",
++            "HiResMicSupportedKnown",
++            "HiResMicSupported",
++            "HiResMicEnabledKnown",
++            "HiResMicEnabled",
++        ] {
++            assert!(values.contains_key(property), "missing {property}");
++        }
++        assert_eq!(values.len(), 24);
++    }
++
++    #[tokio::test]
++    async fn command_queue_coalesces_pending_target() {
++        let queue = CommandQueue::default();
++        let session = Session::new();
++        let (first_reply, first_result) = oneshot::channel();
++        queue.submit(Command {
++            session,
++            generation: session.generation(),
++            target: MODE_ANC.to_owned(),
++            reply: first_reply,
++        });
++        let (latest_reply, _latest_result) = oneshot::channel();
++        queue.submit(Command {
++            session,
++            generation: session.generation(),
++            target: MODE_TRANSPARENCY.to_owned(),
++            reply: latest_reply,
++        });
++
++        assert!(matches!(
++            first_result.await,
++            Ok(Err(CommandFailure::Superseded))
++        ));
++        assert_eq!(
++            queue
++                .pending
++                .lock()
++                .expect("command queue poisoned")
++                .as_ref()
++                .map(|command| command.target.as_str()),
++            Some(MODE_TRANSPARENCY)
++        );
++    }
++
++    #[tokio::test]
++    async fn replaced_session_cannot_execute_queued_command() {
++        let old = AACPManager::new();
++        let (old_sender, mut old_packets) = mpsc::channel(1);
++        old.state.lock().await.sender = Some(old_sender);
++        let current = AACPManager::new();
++        let old_session = Session::new();
++        let new_session = Session::new();
++        let sessions = Mutex::new(CommandSession {
++            active: Some(CommandActive {
++                session: new_session,
++                generation: new_session.generation(),
++                aacp: current,
++            }),
++        });
++        let (reply, _result) = oneshot::channel();
++        let command = Command {
++            session: old_session,
++            generation: old_session.generation(),
++            target: MODE_ANC.to_owned(),
++            reply,
++        };
++
++        assert!(matches!(
++            execute_command(&sessions, &command).await,
++            Err(CommandFailure::StaleGeneration)
++        ));
++        assert!(old_packets.try_recv().is_err());
++    }
++
++    #[tokio::test]
++    async fn command_revalidates_target_before_send() {
++        let aacp = AACPManager::new();
++        let (sender, mut packets) = mpsc::channel(1);
++        {
++            let mut state = aacp.state.lock().await;
++            state.sender = Some(sender);
++            state
++                .control_command_status_list
++                .push(ControlCommandStatus {
++                    identifier: ControlCommandIdentifiers::ListeningModeConfigs,
++                    value: vec![0x02],
++                });
++        }
++        let session = Session::new();
++        let sessions = Mutex::new(CommandSession {
++            active: Some(CommandActive {
++                session,
++                generation: session.generation(),
++                aacp,
++            }),
++        });
++        let (reply, _result) = oneshot::channel();
++        let command = Command {
++            session,
++            generation: session.generation(),
++            target: MODE_TRANSPARENCY.to_owned(),
++            reply,
++        };
++
++        assert!(matches!(
++            execute_command(&sessions, &command).await,
++            Err(CommandFailure::Unsupported)
++        ));
++        assert!(packets.try_recv().is_err());
++    }
++}
+diff --git a/linux-rust/src/bluetooth/aacp.rs b/linux-rust/src/bluetooth/aacp.rs
+--- a/linux-rust/src/bluetooth/aacp.rs
++++ b/linux-rust/src/bluetooth/aacp.rs
+@@ -22,6 +22,7 @@
+ const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
+ const POLL_INTERVAL: Duration = Duration::from_millis(200);
+ const SEND_TIMEOUT: Duration = Duration::from_secs(2);
++const SEND_RESULT_TIMEOUT: Duration = Duration::from_millis(2250);
+ const HEADER_BYTES: [u8; 4] = [0x04, 0x00, 0x04, 0x00];
+
+ /// L2CAP recv buffer. 0x58 hi-res audio SDUs can exceed 1 KB; SOCK_SEQPACKET
+@@ -606,7 +607,7 @@
+         let sender = self.state.lock().await.sender.clone();
+         if let Some(sender) = sender {
+             let (result_tx, result_rx) = oneshot::channel();
+-            match tokio::time::timeout(SEND_TIMEOUT, async {
++            match tokio::time::timeout(SEND_RESULT_TIMEOUT, async {
+                 sender
+                     .send(OutboundPacket {
+                         data: data.to_vec(),
+@@ -1475,22 +1476,32 @@
+
+ async fn send_thread(mut rx: mpsc::Receiver<OutboundPacket>, sp: Arc<SeqPacket>) {
+     while let Some(packet) = rx.recv().await {
+-        let mut attempts = 0;
+-        let outcome = loop {
+-            match sp.send(&packet.data).await {
+-                Ok(_) => {
+-                    debug!("Sent {} AACP bytes", packet.data.len());
+-                    break Ok(());
+-                }
+-                Err(e) if e.raw_os_error() == Some(107) && attempts < 10 => {
+-                    attempts += 1;
+-                    sleep(Duration::from_millis(100)).await;
+-                }
+-                Err(e) => {
+-                    error!("Failed to send data: {}", e);
+-                    break Err(e);
+-                }
+-            }
++        let outcome = match tokio::time::timeout(SEND_TIMEOUT, async {
++            let mut attempts = 0;
++            loop {
++                match sp.send(&packet.data).await {
++                    Ok(_) => {
++                        debug!("Sent {} AACP bytes", packet.data.len());
++                        break Ok(());
++                    }
++                    Err(e) if e.raw_os_error() == Some(107) && attempts < 10 => {
++                        attempts += 1;
++                        sleep(Duration::from_millis(100)).await;
++                    }
++                    Err(e) => {
++                        error!("Failed to send data: {}", e);
++                        break Err(e);
++                    }
++                }
++            }
++        })
++        .await
++        {
++            Ok(result) => result,
++            Err(_) => Err(std::io::Error::new(
++                std::io::ErrorKind::TimedOut,
++                "L2CAP socket send timed out",
++            )),
+         };
+         let failed = outcome.is_err();
+         let _ = packet.result.send(outcome);

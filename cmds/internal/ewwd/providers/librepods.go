@@ -22,22 +22,30 @@ const (
 var errLibrePodsVersion = errors.New("incompatible LibrePods metadata interface")
 
 type librePodsState struct {
-	Owner                          string
-	Generation                     string
-	Address                        string
-	Readiness                      string
-	BatteryPercent                 int
-	BatteryValid                   bool
-	BatteryCharging                bool
-	NoiseControl                   string
-	NoiseControlModes              []string
-	WearState                      string
-	ConversationAwarenessSupported bool
-	ConversationAwarenessEnabled   bool
-	PersonalizedVolumeSupported    bool
-	PersonalizedVolumeEnabled      bool
-	HiResMicSupported              bool
-	HiResMicEnabled                bool
+	Owner                               string
+	Generation                          string
+	Address                             string
+	Readiness                           string
+	BatteryPercent                      int
+	BatteryValid                        bool
+	BatteryCharging                     bool
+	NoiseControl                        string
+	NoiseControlKnown                   bool
+	NoiseControlModes                   []string
+	NoiseControlModesKnown              bool
+	WearState                           string
+	ConversationAwarenessSupportedKnown bool
+	ConversationAwarenessSupported      bool
+	ConversationAwarenessEnabledKnown   bool
+	ConversationAwarenessEnabled        bool
+	PersonalizedVolumeSupportedKnown    bool
+	PersonalizedVolumeSupported         bool
+	PersonalizedVolumeEnabledKnown      bool
+	PersonalizedVolumeEnabled           bool
+	HiResMicSupportedKnown              bool
+	HiResMicSupported                   bool
+	HiResMicEnabledKnown                bool
+	HiResMicEnabled                     bool
 }
 
 type librePodsUpdate struct {
@@ -333,11 +341,19 @@ func parseLibrePodsState(owner string, props map[string]dbus.Variant) (*librePod
 	}{
 		{"BatteryValid", &state.BatteryValid},
 		{"BatteryCharging", &state.BatteryCharging},
+		{"NoiseControlKnown", &state.NoiseControlKnown},
+		{"NoiseControlModesKnown", &state.NoiseControlModesKnown},
+		{"ConversationAwarenessSupportedKnown", &state.ConversationAwarenessSupportedKnown},
 		{"ConversationAwarenessSupported", &state.ConversationAwarenessSupported},
+		{"ConversationAwarenessEnabledKnown", &state.ConversationAwarenessEnabledKnown},
 		{"ConversationAwarenessEnabled", &state.ConversationAwarenessEnabled},
+		{"PersonalizedVolumeSupportedKnown", &state.PersonalizedVolumeSupportedKnown},
 		{"PersonalizedVolumeSupported", &state.PersonalizedVolumeSupported},
+		{"PersonalizedVolumeEnabledKnown", &state.PersonalizedVolumeEnabledKnown},
 		{"PersonalizedVolumeEnabled", &state.PersonalizedVolumeEnabled},
+		{"HiResMicSupportedKnown", &state.HiResMicSupportedKnown},
 		{"HiResMicSupported", &state.HiResMicSupported},
+		{"HiResMicEnabledKnown", &state.HiResMicEnabledKnown},
 		{"HiResMicEnabled", &state.HiResMicEnabled},
 	}
 	for _, field := range boolProperties {
@@ -354,18 +370,47 @@ func parseLibrePodsState(owner string, props map[string]dbus.Variant) (*librePod
 	if state.NoiseControlModes, valid = property[[]string](props, "NoiseControlModes"); !valid {
 		return nil, errors.New("LibrePods NoiseControlModes is missing or malformed")
 	}
-	for i, mode := range state.NoiseControlModes {
-		if !validNoiseMode(mode) || slices.Contains(state.NoiseControlModes[:i], mode) {
-			return nil, fmt.Errorf("invalid LibrePods noise-control modes %v", state.NoiseControlModes)
+	if state.NoiseControlModesKnown {
+		for i, mode := range state.NoiseControlModes {
+			if !validNoiseMode(mode) || slices.Contains(state.NoiseControlModes[:i], mode) {
+				return nil, fmt.Errorf("invalid LibrePods noise-control modes %v", state.NoiseControlModes)
+			}
 		}
+	} else if len(state.NoiseControlModes) != 0 {
+		return nil, errors.New("unknown LibrePods NoiseControlModes has values")
 	}
-	if state.NoiseControl != "" && (!validNoiseMode(state.NoiseControl) || !slices.Contains(state.NoiseControlModes, state.NoiseControl)) {
+	if !state.NoiseControlKnown && state.NoiseControl != "" {
+		return nil, errors.New("unknown LibrePods NoiseControl has a value")
+	}
+	if state.NoiseControlKnown && state.NoiseControl != "" && (!validNoiseMode(state.NoiseControl) || (state.NoiseControlModesKnown && !slices.Contains(state.NoiseControlModes, state.NoiseControl))) {
 		return nil, fmt.Errorf("invalid LibrePods NoiseControl %q", state.NoiseControl)
+	}
+	if err := validateLibrePodsCapability("ConversationAwareness", state.ConversationAwarenessSupportedKnown, state.ConversationAwarenessSupported, state.ConversationAwarenessEnabledKnown, state.ConversationAwarenessEnabled); err != nil {
+		return nil, err
+	}
+	if err := validateLibrePodsCapability("PersonalizedVolume", state.PersonalizedVolumeSupportedKnown, state.PersonalizedVolumeSupported, state.PersonalizedVolumeEnabledKnown, state.PersonalizedVolumeEnabled); err != nil {
+		return nil, err
+	}
+	if err := validateLibrePodsCapability("HiResMic", state.HiResMicSupportedKnown, state.HiResMicSupported, state.HiResMicEnabledKnown, state.HiResMicEnabled); err != nil {
+		return nil, err
 	}
 	if state.WearState, valid = property[string](props, "WearState"); !valid || !slices.Contains([]string{"unknown", "worn", "not_worn"}, state.WearState) {
 		return nil, fmt.Errorf("invalid LibrePods WearState %q", state.WearState)
 	}
 	return state, nil
+}
+
+func validateLibrePodsCapability(name string, supportedKnown, supported, enabledKnown, enabled bool) error {
+	if !supportedKnown && (supported || enabledKnown || enabled) {
+		return fmt.Errorf("unknown LibrePods %s capability has values", name)
+	}
+	if !supported && (enabledKnown || enabled) {
+		return fmt.Errorf("unsupported LibrePods %s capability has enabled state", name)
+	}
+	if !enabledKnown && enabled {
+		return fmt.Errorf("unknown LibrePods %s enabled state has a value", name)
+	}
+	return nil
 }
 
 func property[T any](props map[string]dbus.Variant, name string) (T, bool) {

@@ -357,7 +357,7 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 					req.reply <- errors.New("noise_cycle requires: up or down")
 					continue
 				}
-				if !librePodsMatches(bluez, b.address, metadata) || metadata.NoiseControl == "" || len(metadata.NoiseControlModes) == 0 {
+				if !librePodsMatches(bluez, b.address, metadata) || !metadata.NoiseControlKnown || metadata.NoiseControl == "" || !metadata.NoiseControlModesKnown || len(metadata.NoiseControlModes) == 0 {
 					req.reply <- errors.New("LibrePods noise control is unavailable")
 					continue
 				}
@@ -485,22 +485,24 @@ func mergeBluetoothState(bluez BluetoothState, address string, metadata *librePo
 		state.BatteryPercent = metadata.BatteryPercent
 		state.BatteryCharging = new(metadata.BatteryCharging)
 	}
-	state.NoiseControl = metadata.NoiseControl
-	state.NoiseControlPresent = metadata.NoiseControl != ""
+	if metadata.NoiseControlKnown {
+		state.NoiseControl = metadata.NoiseControl
+		state.NoiseControlPresent = metadata.NoiseControl != ""
+	}
 	if metadata.WearState != "unknown" {
 		state.WearState = metadata.WearState
 	}
-	if metadata.ConversationAwarenessSupported {
+	if metadata.ConversationAwarenessSupportedKnown && metadata.ConversationAwarenessSupported && metadata.ConversationAwarenessEnabledKnown {
 		state.ConversationAwareness = new(metadata.ConversationAwarenessEnabled)
 	}
-	if metadata.PersonalizedVolumeSupported {
+	if metadata.PersonalizedVolumeSupportedKnown && metadata.PersonalizedVolumeSupported && metadata.PersonalizedVolumeEnabledKnown {
 		state.PersonalizedVolume = new(metadata.PersonalizedVolumeEnabled)
 	}
-	if metadata.HiResMicSupported {
+	if metadata.HiResMicSupportedKnown && metadata.HiResMicSupported && metadata.HiResMicEnabledKnown {
 		state.HiResMic = new(metadata.HiResMicEnabled)
 	}
 	state.MetadataDiagnostics = librePodsDiagnostics(state)
-	if pending != nil && pending.owner == metadata.Owner && pending.generation == metadata.Generation && slices.Contains(metadata.NoiseControlModes, pending.desired) {
+	if pending != nil && pending.owner == metadata.Owner && pending.generation == metadata.Generation && metadata.NoiseControlModesKnown && slices.Contains(metadata.NoiseControlModes, pending.desired) {
 		state.NoisePending = true
 		state.NoiseDesired = pending.desired
 	}
@@ -561,7 +563,7 @@ func (n *noiseOperation) launch(token, revision uint64) librePodsCommand {
 }
 
 func (n *noiseOperation) observe(bluez BluetoothState, address string, metadata *librePodsState, revision uint64) bool {
-	if metadata == nil || metadata.Owner != n.owner || metadata.Generation != n.generation || !librePodsMatches(bluez, address, metadata) || !slices.Contains(metadata.NoiseControlModes, n.desired) {
+	if metadata == nil || metadata.Owner != n.owner || metadata.Generation != n.generation || !librePodsMatches(bluez, address, metadata) || !metadata.NoiseControlKnown || !metadata.NoiseControlModesKnown || !slices.Contains(metadata.NoiseControlModes, n.desired) {
 		return true
 	}
 	if revision > n.sentRevision && metadata.NoiseControl == n.desired {
