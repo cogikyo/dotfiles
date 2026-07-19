@@ -24,7 +24,7 @@
     "model_cycle_favorite": "ctrl+m",
     "theme_list": "<leader>_",
     "agent_list": "<leader>a",
-    "session_list": "ctrl+h",
+    "session_list": "<leader>r",
     "status_view": "<leader>s",
     "messages_first": "ctrl+g",
     "messages_last": "ctrl+alt+g",
