@@ -155,7 +155,7 @@ Only use models defined in this set.
 Kimi K3 is available through both `opencode-go/kimi-k3` and `kimi-code/k3`;
 Use it deliberately for frontend planning, design critique, bounded build slices, repair loops, and high-context implementation work.
 
-- Use `low`, `high`, or `max`.
+- Use `low` or `high`.
 - Strong fit for frontend/design work, bounded implementation, large-context repository passes, and cheap parallel repair attempts.
 - Pair implementation owners with `review/design` when visual language or UX acceptance criteria are load-bearing.
 - Keep OpenAI or Anthropic as the safer orchestrator or final critic for high-risk architecture, security, and ambiguous synthesis.
