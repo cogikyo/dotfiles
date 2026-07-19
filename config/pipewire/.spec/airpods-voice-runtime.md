@@ -14,6 +14,15 @@ Failure of that preflight requires repair in the LibrePods capture lifecycle rat
 The pinned LibrePods package recipe, patch source set, expected package release, and installer health check remain internally consistent before the voice processor enters the packages step.
 Every package input required by the recipe is copied into its isolated build directory.
 
+## Current transport evidence
+
+On 2026-07-19, the repository template and private runtime settings disabled `a2dp_reset`.
+Four one-second `AirPodsHiRes` captures produced valid non-silent 64 kHz mono PCM while the Bluetooth profile and codec remained A2DP/AAC before, during, and after capture.
+A separate user-observed two-second capture under continuous music produced no audible pause, dropout, or stutter at either capture edge.
+Disconnect and reconnect restored `AirPodsHiRes` under a new object identifier and a retry captured successfully without resetting A2DP.
+The first reconnect attempt exceeded the paging timeout, so the two-second recovery target and ten-cycle reliability requirement remain unqualified.
+The installed LibrePods package release still differs from the current recipe, so complete package health remains pending.
+
 ## Suppressor package
 
 The packages step owns an x86-64 package for the DeepFilterNet `v0.5.6` GNU/Linux LADSPA release artifact.

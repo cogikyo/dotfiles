@@ -24,8 +24,16 @@ The corpus contains:
 Short Dunst prompts disappear before each take starts, and each material class records independently so notification timing cannot corrupt labels.
 The user explicitly agrees before every recording session.
 
+Each capture proceeds independently through an attended protocol.
+Before a capture tool runs, the user receives its purpose, setup, exact prompt or action, and duration, then explicitly confirms readiness.
+One recording tool call captures one take, its result is reviewed, and another user turn occurs before any later capture.
+Batch recording and parallel capture calls are forbidden.
+
 Spoken takes split into a two-thirds tuning set and untouched one-third confirmation set before processing or listening.
 The confirmation set receives one evaluation pass and never feeds parameter changes.
+
+The earlier temporary baseline corpus was removed with temporary workspace state.
+Its recorded summary metrics remain historical evidence, but all qualification decisions require a new durable private corpus collected through the attended protocol.
 
 ## Measurement boundary
 

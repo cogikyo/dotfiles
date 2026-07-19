@@ -1,5 +1,5 @@
 {
-  "a2dp_reset": true,
+  "a2dp_reset": false,
   "hires_mic_agc": false,
   "hires_mic_enabled": true,
   "hires_mic_pause_convo": true,
