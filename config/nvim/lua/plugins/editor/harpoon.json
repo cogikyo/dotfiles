@@ -76,6 +76,11 @@
         ".specs/decisions.md"
       ]
     },
+    "/home/cullyn/content": {
+      "pins": [
+        "video/on-workflows/.spec/roadmap.md"
+      ]
+    },
     "/home/cullyn/dotfiles": {
       "pins": [
         "config/hypr/binds.conf",
