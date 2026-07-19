@@ -65,6 +65,12 @@ sessions:
 
   # ├─ workspace 4 ──────────────────────────────────────────────────────────────┤
   4: # primary project workspaces
+    content:
+      project: content
+      body:
+        - editor
+        - agents
+
     # cogikyo:
     #   project: cogikyo/cogikyo
     #   body:
