@@ -14,6 +14,7 @@
   (eventbox
     :onclick "hyprd picker ws ${num} & disown"
     :cursor "pointer"
+    :tooltip "  󰳽 select workspace  "
     (box
       :class "picker-ws ${picker-data.ws == num ? "picker-ws-selected" : ""}"
       :style "background-image: url('art/ws-icons/${icon}${
@@ -33,6 +34,7 @@
     (eventbox
       :onclick "hyprd picker confirm & disown"
       :cursor "pointer"
+      :tooltip "  󰳽 launch session  "
       (box
         :class "picker-session ${
           picker-data.count > idx && picker-data.sessions[idx].selected ? "picker-session-selected" : ""} ${

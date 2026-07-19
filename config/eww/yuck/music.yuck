@@ -13,6 +13,7 @@
   (eventbox
     :onmiddleclick "${browser} https://www.google.com/search?q='${pctl.artist}' & disown"
     :onrightclick "hyprctl dispatch workspace 1 & disown"
+    :tooltip "  ǂ search artist · 󰳾 music workspace  "
     (box
       :class "playerbox"
       :style "margin-left: -5px; background-image: url('${pctl.has_canvas ? pctl.canvas_frame : (pctl.playing ? pctl.art_path : playerctl-img)}'); ${pctl.has_canvas ? 'transition: none;' : ''}"
@@ -58,6 +59,7 @@
           :class "tr-a music-progress-circle-icon-${pctl.playing ? "playing" : "paused" }"
           :cursor "pointer"
           :onclick "ewwd action music previous"
+          :tooltip "  󰳽 previous track  "
           (label :text "󰒮")
         )
       )
@@ -67,6 +69,7 @@
           :class "tr-a music-progress-circle-icon-${pctl.playing ? "playing" : "paused" }"
           :cursor "pointer"
           :onclick "ewwd action music next"
+          :tooltip "  󰳽 next track  "
           (label :text "󰒭")
         )
       )
@@ -118,6 +121,7 @@
           :onclick "ewwd action music toggle"
           :onscroll "ewwd action music seek {}"
           :cursor "pointer"
+          :tooltip "  󰳽 play/pause · 󱕒 seek  "
           (label :text "${pctl.playing ? "󰏦" : "󰐍"}")
         )
       )
@@ -132,6 +136,7 @@
     :onrightclick "ewwd action music volume set 0"
     :onscroll "ewwd action music volume {} 0.1"
     :cursor "pointer"
+    :tooltip "  󰳽 full · ǂ minimum · 󰳾 mute · 󱕒 adjust  "
     (box :style "margin-right: 4px;" :class "tr-c ramp-${
             value < 1   ? "1" :
             value < 30  ? "2" :
@@ -150,7 +155,6 @@
         :thickness 2
         :clockwise false
         (label
-          :tooltip "  ${value}% "
           :text {
             value == 0  ? "󰖁" :
             value < 35  ? "󰕿" :
@@ -219,9 +223,9 @@
     :onrightclick {available ? "ewwd action audio toggle_mute ${content}" : ""}
     :onscroll {available ? "ewwd action audio change_volume ${content} {}" : ""}
     :cursor {available ? "pointer" : "default"}
+    :tooltip "  ${available ? "󰳽 reset · 󰳾 mute · 󱕒 adjust" : "${content} unavailable"}  "
     (box
       :space-evenly false :spacing 9
-      :tooltip {available ? "  ${icon-on} ${content}: ${value}%${muted ? " muted" : ""}\n  L-click reset · R-click mute · scroll adjust  " : "  ${content} unavailable  "}
       :class "tr-c audio-volume ${
         !available ? "audio-unavailable" :
         muted ? "audio-muted" :
@@ -257,19 +261,13 @@
 
 (defwidget headphones []
   (eventbox
-    :onclick "ewwd action bluetooth toggle"
-    :onmiddleclick "ewwd action bluetooth reconnect"
+    :onclick {bluetooth-info.noise_control_present ? "ewwd action bluetooth noise_cycle up" : ""}
+    :onmiddleclick "ewwd action bluetooth toggle"
     :onscroll {bluetooth-info.noise_control_present ? "ewwd action bluetooth noise_cycle {}" : ""}
     :cursor "pointer"
+    :tooltip "  ${bluetooth-info.noise_control_present ? "󰳽 cycle mode · 󱕒 cycle mode · " : ""}ǂ ${bluetooth-info.status == "connected" ? "disconnect" : "connect"}  "
     (box
       :space-evenly false :spacing 5
-      :tooltip {(
-        bluetooth-info.status == "unknown" ? "  Bluetooth is unavailable" :
-        bluetooth-info.status == "disconnected" ? "  ${bluetooth-info.name != "" ? bluetooth-info.name : "AirPods Max"} is disconnected" :
-        bluetooth-info.status == "connecting" ? "  ${bluetooth-info.name != "" ? bluetooth-info.name : "AirPods Max"} is connecting" :
-        bluetooth-info.battery_present ? "  ${bluetooth-info.name} connected, ${bluetooth-info.battery_percent}% battery${bluetooth-info.battery_charging == true ? ", charging" : ""}${bluetooth-info.metadata_diagnostics != "" ? "\n  ${bluetooth-info.metadata_diagnostics}" : ""}" :
-        "  ${bluetooth-info.name} connected; battery unavailable${bluetooth-info.metadata_diagnostics != "" ? "\n  ${bluetooth-info.metadata_diagnostics}" : ""}"
-      ) + "\n  L-click (dis)connect · M-click reconnect${bluetooth-info.noise_control_present ? " · scroll noise" : ""}  "}
       :class "audio-headphones audio-headphones-${
         bluetooth-info.status == "unknown" ? "unknown" :
         bluetooth-info.status == "disconnected" ? "disconnected" :
@@ -316,9 +314,9 @@
             :visible {bluetooth-info.noise_control_present}
             :class "audio-headphones-chip ${bluetooth-info.noise_pending ? "audio-headphones-chip-pending" : ""}"
             :text {
-              (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "anc" ? "ANC" :
-              (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "transparency" ? "Trans" :
-              (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "adaptive" ? "Adapt" : "Off"
+              (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "anc" ? "󰩅" :
+              (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "transparency" ? "󰟅" :
+              (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "adaptive" ? "󰕘" : "󰅖"
             }
           )
           (label

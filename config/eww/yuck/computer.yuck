@@ -28,6 +28,7 @@
     :onclick "${terminal} --title='terminalfloat' -e nmtui & disown"
     :onmiddleclick "hyprd vpn ${vpn-name}"
     :cursor "pointer"
+    :tooltip "  ${net-info.icon} ${net-info.name} · 󰳽 nmtui · ǂ VPN  "
     (box
       :class "computerbox ${hover == "network" ? "computerbox-hover" : "" }"
       :space-evenly false :spacing "${hover == "network" ? "6" : "2" }"
@@ -152,6 +153,7 @@
     :onhoverlost "eww update hover=''"
     :onclick "${terminal} --title='terminalfloat' -e btop & disown"
     :cursor "pointer"
+    :tooltip "   󰳽 btop  "
     (box
       :class "computerbox ${hover == "cpu" ? "computerbox-hover" : "" }"
       :space-evenly false :spacing "${hover == "cpu" ? "12" : "8" }"
@@ -190,6 +192,7 @@
     :onhoverlost "eww update hover=''"
     :onclick "${terminal} --title='terminalfloat' -e btop & disown"
     :cursor "pointer"
+    :tooltip "  󰍛 󰳽 btop  "
     (box
       :class "computerbox ${hover == "memory" ? "computerbox-hover" : "" }"
       :space-evenly false :spacing 8

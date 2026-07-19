@@ -34,6 +34,7 @@
     :onhoverlost "eww update hover=''"
     :onclick "${browser} https://www.windy.com/?hrrrConus,45.445,-122.764,9 & disown"
     :cursor "pointer"
+    :tooltip "  󰖟 󰳽 open windy  "
     (box
       :class "weather ${hover == "weather" ? "weather-hover" : "" }"
       :halign "end" :space-evenly false :spacing 8
@@ -150,6 +151,7 @@
     :onhover "eww update hover=time"
     :onhoverlost "eww update hover='' hour-active=false minute-active=false"
     :onmiddleclick "eww update fine-adjust=${fine-adjust ? "false" : "true"}"
+    :tooltip "  󰔟 ǂ fine adjust  "
     (box
       :class "time ${hover == "time" ? "time-hover" : ""}"
       :halign "center"
@@ -175,7 +177,7 @@
     :tooltip " ${child == "hour" ?
       "  ${timer-info.alarm_active ?  "set for ${timer-info.alarm_target}" : "no active alarm"}" :
       " 󰔟 ${timer-info.timer_active ?  "${timer-info.timer} remaining" : "no active timer"}"
-    } "
+    } · 󰳽 new event "
     (label :class "time-${child}-${bool ? "active" : "text"} time-text" :text text)
   )
 )
@@ -206,6 +208,7 @@
       :onrightclick "ewwd action timer ${app} reset"
       :onmiddleclick "ewwd action timer ${app} up ${fine-adjust ? 1 : 15}"
       :cursor "pointer"
+      :tooltip "  󰔟 󰳽 start · 󱕒 adjust · ǂ +step · 󰳾 reset  "
       (box
         :class "time-${app}" :space-evenly false :spacing 6
         {direction == "left" ? text : ""}
@@ -260,6 +263,7 @@
     :onhover "eww update hover=date"
     :onhoverlost "eww update hover=''"
     :onclick "${browser} https://calendar.google.com/calendar/u/0/r & disown"
+    :tooltip "  󰃭 󰳽 open calendar  "
     (box
       :class "date ${hover == "date" ? "date-hover" : ""}"
       :halign "start"

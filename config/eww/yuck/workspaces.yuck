@@ -22,7 +22,7 @@
     :onclick "hyprd ws ${num} & disown"
     :cursor "pointer"
     :onmiddleclick "hyprd ws ${num} & disown"
-    :tooltip "  ${desc}  "
+    :tooltip "  ${desc} · 󰳽/ǂ switch  "
     (box
       :style "background-image: url('art/ws-icons/${icon}${
                 hover ? "-primary" :
@@ -39,6 +39,7 @@
     :onhover "eww update hover=workspaces"
     :onhoverlost "eww update hover='' ws-h1=false ws-h2=false ws-h3=false ws-h4=false ws-h5=false"
     :onrightclick "hyprctl dispatch workspace previous"
+    :tooltip "  󰮫 󰳾 previous workspace  "
     (box
       :class "tr-a workspacesbox ${hover == "workspaces" ? "workspacesbox-hover" : ""}"
       :halign "center" :space-evenly false :spacing 10

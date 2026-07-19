@@ -178,21 +178,12 @@
     &-chip {
       transition: all 0.25s $ease-out-snap;
       color: $blu-2;
-      background: rgba($blu-0, 0.18);
-      border: 1px solid $blu-1;
-      border-radius: 7px;
-      padding: 0 5px;
       font-family: $font-mono;
-      font-size: 0.72em;
-
-      .audio-hover & {
-        border-color: $orn-2;
-      }
+      font-size: 0.95em;
+      margin-left: 0.35em;
 
       &-pending {
         color: $orn-3;
-        border-color: $orn-3;
-        background: rgba($orn-1, 0.18);
       }
     }
   }

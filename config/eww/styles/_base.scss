@@ -16,11 +16,15 @@ window {
 
 tooltip {
   background-color: rgba($bg, 0.9);
-  color: $orn-2;
-  font-family: $font-handwritten;
-  font-size: 1.25em;
   border: 1px solid $orn-3;
   border-radius: 10px 24px 12px 20px;
+
+  label {
+    color: $orn-2;
+    font-family: $font-mono;
+    font-size: 16px;
+    padding: 6px 10px;
+  }
 }
 
 $ease-out-snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
