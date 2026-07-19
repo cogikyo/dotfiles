@@ -45,6 +45,7 @@ type MusicState struct {
 	SingleTrack   bool   `json:"single_track"`
 	Progress      int    `json:"progress"`
 	ArtPath       string `json:"art_path"`
+	HasArt        bool   `json:"has_art"`
 	HasCanvas     bool   `json:"has_canvas"`
 	CanvasFrame   string `json:"canvas_frame"`
 }
@@ -239,6 +240,7 @@ func (owner *musicOwner) applyFollow(next followState) {
 	} else if artChanged {
 		owner.artURL = next.artURL
 		_ = os.Remove(albumArtPath)
+		owner.last.HasArt = false
 	}
 
 	progress := owner.last.Progress
@@ -247,6 +249,7 @@ func (owner *musicOwner) applyFollow(next followState) {
 	}
 	owner.duration = next.duration
 	state := musicState(next.status, next.volume, next.artist, next.album, next.title, progress)
+	state.HasArt = owner.last.HasArt
 	state.HasCanvas, state.CanvasFrame = owner.last.HasCanvas, owner.last.CanvasFrame
 	if trackChanged {
 		state.HasCanvas, state.CanvasFrame = false, ""
@@ -327,6 +330,7 @@ func (owner *musicOwner) clearVisuals() {
 		owner.music.player.Clear()
 	}
 	_ = os.Remove(albumArtPath)
+	owner.last.HasArt = false
 	owner.last.HasCanvas, owner.last.CanvasFrame = false, ""
 }
 
@@ -385,6 +389,7 @@ func (owner *musicOwner) downloadArt(url string) {
 			if err := os.Rename(tmp, albumArtPath); err != nil {
 				return
 			}
+			current.last.HasArt = true
 			current.publish(true)
 		})
 	})

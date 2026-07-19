@@ -357,11 +357,14 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 					req.reply <- errors.New("noise_cycle requires: up or down")
 					continue
 				}
-				if !librePodsMatches(bluez, b.address, metadata) || !metadata.NoiseControlKnown || metadata.NoiseControl == "" || !metadata.NoiseControlModesKnown || len(metadata.NoiseControlModes) == 0 {
+				if !librePodsMatches(bluez, b.address, metadata) || !metadata.NoiseControlModesKnown || len(metadata.NoiseControlModes) == 0 {
 					req.reply <- errors.New("LibrePods noise control is unavailable")
 					continue
 				}
-				current := metadata.NoiseControl
+				current := ""
+				if metadata.NoiseControlKnown {
+					current = metadata.NoiseControl
+				}
 				if noise != nil {
 					current = noise.desired
 				}
@@ -487,8 +490,8 @@ func mergeBluetoothState(bluez BluetoothState, address string, metadata *librePo
 	}
 	if metadata.NoiseControlKnown {
 		state.NoiseControl = metadata.NoiseControl
-		state.NoiseControlPresent = metadata.NoiseControl != ""
 	}
+	state.NoiseControlPresent = state.NoiseControl != "" || (metadata.NoiseControlModesKnown && len(metadata.NoiseControlModes) > 0)
 	if metadata.WearState != "unknown" {
 		state.WearState = metadata.WearState
 	}

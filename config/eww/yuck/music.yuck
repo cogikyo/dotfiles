@@ -16,7 +16,7 @@
     :tooltip "  ǂ search artist · 󰳾 music workspace  "
     (box
       :class "playerbox"
-      :style "margin-left: -5px; background-image: url('${pctl.has_canvas ? pctl.canvas_frame : (pctl.playing ? pctl.art_path : playerctl-img)}'); ${pctl.has_canvas ? 'transition: none;' : ''}"
+      :style "margin-left: -5px; background-image: url('${pctl.playing && pctl.has_canvas ? pctl.canvas_frame : (pctl.has_art ? pctl.art_path : playerctl-img)}'); ${pctl.playing && pctl.has_canvas ? 'transition: none;' : ''}"
     )
   )
 )
@@ -35,7 +35,7 @@
 )
 
 (deflisten pctl
-  :initial '{ "status":"Paused", "playing":false, "volume":"1.0", "volume_percent":100, "artist":"", "artist_short":"", "album":"", "album_short":"", "title":"", "title_short":"", "single_track":false, "progress":0, "art_path":"/tmp/eww/album_art.png", "has_canvas":false, "canvas_frame":"" }'
+  :initial '{ "status":"Paused", "playing":false, "volume":"1.0", "volume_percent":100, "artist":"", "artist_short":"", "album":"", "album_short":"", "title":"", "title_short":"", "single_track":false, "progress":0, "art_path":"/tmp/eww/album_art.png", "has_art":false, "has_canvas":false, "canvas_frame":"" }'
   'ewwd subscribe music | jq --unbuffered -c ".data"'
 )
 
@@ -220,10 +220,11 @@
   (eventbox
     :class "audio-${content}"
     :onclick {available ? "ewwd action audio reset_volume ${content}" : ""}
+    :onmiddleclick {available && content == "source" ? "${terminal} --title='terminalfloat' -e pulsemixer & disown" : ""}
     :onrightclick {available ? "ewwd action audio toggle_mute ${content}" : ""}
     :onscroll {available ? "ewwd action audio change_volume ${content} {}" : ""}
     :cursor {available ? "pointer" : "default"}
-    :tooltip "  ${available ? "󰳽 reset · 󰳾 mute · 󱕒 adjust" : "${content} unavailable"}  "
+    :tooltip "  ${available ? "󰳽 reset${content == "source" ? " · ǂ mixer" : ""} · 󰳾 mute · 󱕒 adjust" : "${content} unavailable"}  "
     (box
       :space-evenly false :spacing 9
       :class "tr-c audio-volume ${
@@ -312,8 +313,9 @@
         (box :space-evenly false :spacing 6
           (label
             :visible {bluetooth-info.noise_control_present}
-            :class "audio-headphones-chip ${bluetooth-info.noise_pending ? "audio-headphones-chip-pending" : ""}"
+            :class "audio-headphones-chip ${bluetooth-info.noise_pending ? "audio-headphones-chip-pending" : bluetooth-info.noise_control == "" ? "audio-headphones-chip-unknown" : ""}"
             :text {
+              (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "" ? "󰘚" :
               (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "anc" ? "󰩅" :
               (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "transparency" ? "󰟅" :
               (bluetooth-info.noise_pending ? bluetooth-info.noise_desired : bluetooth-info.noise_control) == "adaptive" ? "󰕘" : "󰅖"
