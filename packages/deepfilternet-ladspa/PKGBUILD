@@ -1,0 +1,27 @@
+pkgname=deepfilternet-ladspa
+pkgver=0.5.6
+pkgrel=1
+pkgdesc='DeepFilterNet noise suppression LADSPA plugin (official prebuilt artifact)'
+arch=('x86_64')
+url='https://github.com/Rikorose/DeepFilterNet'
+license=('MIT' 'Apache-2.0')
+depends=('gcc-libs' 'glibc' 'ladspa' 'ffmpeg')
+# Prebuilt checked artifact: stripping would only risk the recorded digest.
+options=('!strip' '!debug')
+_commit=978576aa8400552a4ce9730838c635aa30db5e61
+_artifact="libdeep_filter_ladspa-${pkgver}-x86_64-unknown-linux-gnu.so"
+source=("${_artifact}::${url}/releases/download/v${pkgver}/${_artifact}"
+        "LICENSE::https://raw.githubusercontent.com/Rikorose/DeepFilterNet/${_commit}/LICENSE"
+        "LICENSE-MIT::https://raw.githubusercontent.com/Rikorose/DeepFilterNet/${_commit}/LICENSE-MIT"
+        "LICENSE-APACHE::https://raw.githubusercontent.com/Rikorose/DeepFilterNet/${_commit}/LICENSE-APACHE")
+sha256sums=('2ca3205c2911d389604a826a240e745597d50252b5cab81c8248252b335e2236'
+            'f7ef673bf046d823dcd775bdd0768432bd8855f81d0e5e1290a0a48c42e2dca3'
+            '24e6bb09c928af8d8e56268082f87413247ce36b39dd5d33add2f9893968065e'
+            '1eaee808c5fb6b4e895ba30425285a5cdc5dd25bba2cd230f264c2200c331aec')
+
+package() {
+    install -Dm755 "$_artifact" "$pkgdir/usr/lib/ladspa/libdeep_filter_ladspa.so"
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    install -Dm644 LICENSE-MIT "$pkgdir/usr/share/licenses/$pkgname/LICENSE-MIT"
+    install -Dm644 LICENSE-APACHE "$pkgdir/usr/share/licenses/$pkgname/LICENSE-APACHE"
+}

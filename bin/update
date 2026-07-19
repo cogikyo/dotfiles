@@ -15,6 +15,9 @@ PKG_LIST="$DOTFILES/etc/packages.lst"
 AUR_LIST="$DOTFILES/etc/packages-aur.lst"
 OPT_LIST="$DOTFILES/etc/packages-optional.lst"
 
+# Foreign packages built and installed by install.sh rather than from the AUR.
+LOCAL_PACKAGES=(librepods-max2)
+
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -78,6 +81,7 @@ save_lists() {
   local all_pkg all_aur
   all_pkg=$(yay -Qenq | sort)
   all_aur=$(yay -Qemq | sort)
+  all_aur=$(comm -23 <(printf '%s\n' "$all_aur") <(printf '%s\n' "${LOCAL_PACKAGES[@]}" | sort))
 
   if [[ -n "$opt" ]]; then
     new_pkg=$(comm -23 <(echo "$all_pkg") <(echo "$opt"))
