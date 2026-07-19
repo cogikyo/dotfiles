@@ -3,7 +3,7 @@
   "autoupdate": false,
   "enabled_providers": ["anthropic", "openai", "xai", "opencode-go", "kimi-code"],
   "model": "openai/gpt-5.6-sol-fast",
-  "small_model": "openai/gpt-5.4-mini-fast",
+  "small_model": "openai/gpt-5.6-luna-fast",
   "default_agent": "collab",
   "agent": {
     "build": { "disable": true },
