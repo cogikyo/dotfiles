@@ -17,6 +17,7 @@ type KimiUsagePayload = {
 
 type KimiUsageRow = {
   limit?: unknown;
+  used?: unknown;
   remaining?: unknown;
   resetTime?: unknown;
 };
@@ -51,9 +52,13 @@ function numeric(value: unknown) {
 
 function usedPercent(row?: KimiUsageRow | null) {
   const limit = numeric(row?.limit);
-  const remaining = numeric(row?.remaining);
-  if (limit === undefined || limit <= 0 || remaining === undefined) return undefined;
+  if (limit === undefined || limit <= 0) return undefined;
 
+  const used = numeric(row?.used);
+  if (used !== undefined) return Math.max(0, Math.min(100, (used / limit) * 100));
+
+  const remaining = numeric(row?.remaining);
+  if (remaining === undefined) return undefined;
   return Math.max(0, Math.min(100, 100 - (remaining / limit) * 100));
 }
 
@@ -104,7 +109,7 @@ function interpret(payload: KimiUsagePayload) {
 }
 
 async function load(): Promise<ProviderUsage> {
-  const auth = await readAuth<AuthFile>().catch(() => ({}));
+  const auth: AuthFile = await readAuth<AuthFile>().catch(() => ({}));
   const key = auth["kimi-code"]?.key;
   if (!key) return note("no auth", "warn");
 
