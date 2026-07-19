@@ -107,10 +107,7 @@ func (m *LauncherModel) move(delta int) {
 	if len(children) == 0 {
 		return
 	}
-	i := m.cursor[len(m.cursor)-1] + delta
-	if i < 0 {
-		i = 0
-	}
+	i := max(m.cursor[len(m.cursor)-1]+delta, 0)
 	if i >= len(children) {
 		i = len(children) - 1
 	}

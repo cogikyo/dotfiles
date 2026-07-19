@@ -414,7 +414,7 @@ func installedPackages(ctx context.Context, runner execx.Runner, foreign bool) (
 		return nil, err
 	}
 	installed := map[string]bool{}
-	for _, line := range strings.Split(out, "\n") {
+	for line := range strings.SplitSeq(out, "\n") {
 		line = strings.TrimSpace(line)
 		if line != "" {
 			installed[line] = true
@@ -531,8 +531,8 @@ func expandHome(home, p string) string {
 	if p == "~" {
 		return home
 	}
-	if strings.HasPrefix(p, "~/") {
-		return filepath.Join(home, strings.TrimPrefix(p, "~/"))
+	if after, ok0 := strings.CutPrefix(p, "~/"); ok0 {
+		return filepath.Join(home, after)
 	}
 	return p
 }

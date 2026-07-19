@@ -430,7 +430,7 @@ func detectLocalRepo(ctx context.Context, runner execx.Runner, pacmanConf string
 }
 
 func hasLocalRepoConfig(data string) bool {
-	for _, line := range strings.Split(data, "\n") {
+	for line := range strings.SplitSeq(data, "\n") {
 		line, _, _ = strings.Cut(line, "#")
 		if strings.TrimSpace(line) == "[localrepo]" {
 			return true

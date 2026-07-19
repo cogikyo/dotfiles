@@ -667,7 +667,7 @@ func profileFromINI(root string) (string, error) {
 		}
 		return "", false
 	}
-	for _, line := range strings.Split(string(b), "\n") {
+	for line := range strings.SplitSeq(string(b), "\n") {
 		line = strings.TrimSpace(line)
 		if strings.HasPrefix(line, "[") {
 			if p, ok := flush(); ok {
@@ -1070,7 +1070,7 @@ func swapSize() string {
 	if err != nil {
 		return "32G"
 	}
-	for _, line := range strings.Split(string(b), "\n") {
+	for line := range strings.SplitSeq(string(b), "\n") {
 		fields := strings.Fields(line)
 		if len(fields) >= 2 && fields[0] == "MemTotal:" {
 			var kb int
@@ -1084,7 +1084,7 @@ func swapSize() string {
 }
 
 func parseFilefragOffset(out string) string {
-	for _, line := range strings.Split(out, "\n") {
+	for line := range strings.SplitSeq(out, "\n") {
 		fields := strings.Fields(line)
 		if len(fields) >= 4 && strings.HasSuffix(fields[0], ":") && fields[3] != "0" {
 			return strings.TrimSuffix(fields[3], "..")
@@ -1154,7 +1154,7 @@ func upsertSwapSubvolFstab(content, uuid, mount string) string {
 	return appendLine(content, fmt.Sprintf("UUID=%s %s btrfs subvol=/@swap,noatime 0 0", uuid, mount))
 }
 func upsertSwapFileFstab(content, swapfile string) string {
-	for _, line := range strings.Split(content, "\n") {
+	for line := range strings.SplitSeq(content, "\n") {
 		f := strings.Fields(line)
 		if len(f) >= 3 && !strings.HasPrefix(strings.TrimSpace(line), "#") && f[0] == swapfile && f[2] == "swap" {
 			return content

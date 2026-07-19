@@ -19,6 +19,7 @@ import (
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"time"
@@ -711,12 +712,7 @@ func hasMountpoints(dev blockDevice) bool {
 			return true
 		}
 	}
-	for _, child := range dev.Children {
-		if hasMountpoints(child) {
-			return true
-		}
-	}
-	return false
+	return slices.ContainsFunc(dev.Children, hasMountpoints)
 }
 
 func blockSize(dev blockDevice) int64 {

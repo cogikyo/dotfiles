@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -548,12 +549,7 @@ func notificationKey(ctx *kittyContext, group string) (paneNotificationKey, bool
 }
 
 func isPaneAckGroup(group string) bool {
-	for _, ackGroup := range opencodePaneAckGroups {
-		if group == ackGroup {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(opencodePaneAckGroups, group)
 }
 
 func closeDunstNotification(id int) {

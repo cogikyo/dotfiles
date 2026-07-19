@@ -248,7 +248,7 @@ func cleanRepoPath(raw string) (string, error) {
 	if path.IsAbs(raw) {
 		return "", errors.New("absolute path")
 	}
-	for _, segment := range strings.Split(raw, "/") {
+	for segment := range strings.SplitSeq(raw, "/") {
 		if segment == "" {
 			return "", errors.New("empty path segment")
 		}
