@@ -10,6 +10,7 @@ package providers
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"crypto/hmac"
 	"crypto/sha1"
 	"encoding/binary"
@@ -31,11 +32,12 @@ import (
 )
 
 const (
-	canvasURL   = "https://spclient.wg.spotify.com/canvaz-cache/v0/canvases"
-	totpVersion = 61
-	totpPeriod  = 30
-	totpDigits  = 6
-	totpRaw     = `,7/*F("rLJ2oxaKL^f+E1xvP@N`
+	canvasURL     = "https://spclient.wg.spotify.com/canvaz-cache/v0/canvases"
+	totpVersion   = 61
+	totpPeriod    = 30
+	totpDigits    = 6
+	totpRaw       = `,7/*F("rLJ2oxaKL^f+E1xvP@N`
+	cookieTimeout = 3 * time.Second
 )
 
 type spotifyToken struct {
@@ -53,7 +55,7 @@ type CanvasClient struct {
 // NewCanvasClient returns nil when no sp_dc cookie can be resolved.
 func NewCanvasClient(spDc string) *CanvasClient {
 	if spDc == "" {
-		spDc = resolveSpDc()
+		spDc = resolveSpDc(context.Background())
 	}
 	if spDc == "" {
 		fmt.Fprintln(os.Stderr, "ewwd: canvas disabled — no sp_dc cookie found (log into open.spotify.com in Firefox)")
@@ -62,7 +64,7 @@ func NewCanvasClient(spDc string) *CanvasClient {
 	return &CanvasClient{spDc: spDc}
 }
 
-func (c *CanvasClient) refreshToken() error {
+func (c *CanvasClient) refreshToken(ctx context.Context) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -70,15 +72,15 @@ func (c *CanvasClient) refreshToken() error {
 		return nil
 	}
 
-	tok, err := c.fetchToken(c.spDc)
+	tok, err := c.fetchToken(ctx, c.spDc)
 	if err != nil {
 		// Cookie may have rotated; re-read from Firefox and retry once.
-		fresh := resolveSpDc()
+		fresh := resolveSpDc(ctx)
 		if fresh == "" || fresh == c.spDc {
 			return err
 		}
 		c.spDc = fresh
-		tok, err = c.fetchToken(fresh)
+		tok, err = c.fetchToken(ctx, fresh)
 		if err != nil {
 			return err
 		}
@@ -88,7 +90,7 @@ func (c *CanvasClient) refreshToken() error {
 	return nil
 }
 
-func (c *CanvasClient) fetchToken(spDc string) (spotifyToken, error) {
+func (c *CanvasClient) fetchToken(ctx context.Context, spDc string) (spotifyToken, error) {
 	now := time.Now()
 	params := url.Values{
 		"reason":      {"transport"},
@@ -98,7 +100,7 @@ func (c *CanvasClient) fetchToken(spDc string) (spotifyToken, error) {
 	}
 	tokenURL := "https://open.spotify.com/api/token?" + params.Encode()
 
-	req, err := http.NewRequest("GET", tokenURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, tokenURL, nil)
 	if err != nil {
 		return spotifyToken{}, err
 	}
@@ -157,14 +159,16 @@ func deobfuscateTOTPSecret() []byte {
 }
 
 // resolveSpDc reads the Spotify session cookie from Firefox's cookies.sqlite database.
-func resolveSpDc() string {
+func resolveSpDc(ctx context.Context) string {
 	cookiesDB := findFirefoxCookiesDB()
 	if cookiesDB == "" {
 		return ""
 	}
 
+	queryCtx, cancel := context.WithTimeout(ctx, cookieTimeout)
+	defer cancel()
 	dsn := fmt.Sprintf("file:%s?mode=ro&immutable=1", cookiesDB)
-	out, err := exec.Command("sqlite3", dsn,
+	out, err := exec.CommandContext(queryCtx, "sqlite3", dsn,
 		"SELECT value FROM moz_cookies WHERE host = '.spotify.com' AND name = 'sp_dc' LIMIT 1",
 	).Output()
 	if err != nil {
@@ -238,8 +242,8 @@ func findFirefoxCookiesDB() string {
 }
 
 // FetchCanvasURL returns the CDN URL for a track's Canvas MP4, or "" when none exists.
-func (c *CanvasClient) FetchCanvasURL(trackURI string) (string, error) {
-	if err := c.refreshToken(); err != nil {
+func (c *CanvasClient) FetchCanvasURL(ctx context.Context, trackURI string) (string, error) {
+	if err := c.refreshToken(ctx); err != nil {
 		return "", err
 	}
 
@@ -254,7 +258,7 @@ func (c *CanvasClient) FetchCanvasURL(trackURI string) (string, error) {
 		return "", fmt.Errorf("proto marshal: %w", err)
 	}
 
-	req, err := http.NewRequest("POST", canvasURL, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, canvasURL, bytes.NewReader(body))
 	if err != nil {
 		return "", err
 	}
@@ -297,8 +301,12 @@ func (c *CanvasClient) FetchCanvasURL(trackURI string) (string, error) {
 }
 
 // DownloadCanvasData fetches the Canvas MP4 bytes from cdnURL.
-func DownloadCanvasData(cdnURL string) ([]byte, error) {
-	resp, err := http.Get(cdnURL)
+func DownloadCanvasData(ctx context.Context, cdnURL string) ([]byte, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, cdnURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
