@@ -32,19 +32,14 @@ type TimerConfig struct {
 	MinAlarmHours     int `yaml:"min_alarm_hours"`     // minimum allowed alarm offset, in hours
 }
 
-// AudioConfig controls PulseAudio volume with per-device aliases.
-//
-// SourceMax may exceed 100 (PulseAudio allows boost beyond unity gain).
+// AudioConfig controls WirePlumber volume with per-device aliases.
 type AudioConfig struct {
-	SourceOffset        int               `yaml:"source_offset"`         // % subtracted from source volume before display
 	SourceMax           int               `yaml:"source_max"`            // maximum source volume %, may exceed 100 (boost)
 	SinkMax             int               `yaml:"sink_max"`              // maximum sink volume %, typically <= 100
 	VolumeStep          int               `yaml:"volume_step"`           // % per up/down action
-	PollInterval        time.Duration     `yaml:"poll_interval"`         // how often to refresh volume state
-	DefaultSinkVolume   int               `yaml:"default_sink_volume"`   // sink volume % applied on startup
-	DefaultSourceVolume int               `yaml:"default_source_volume"` // source volume % applied on startup
-	NameMappings        map[string]string `yaml:"name_mappings"`         // raw device name -> display alias
-	BluetoothNames      []string          `yaml:"bluetooth_names"`       // substrings identifying bluetooth devices for icon selection
+	DefaultSinkVolume   int               `yaml:"default_sink_volume"`   // sink volume % applied by reset_volume
+	DefaultSourceVolume int               `yaml:"default_source_volume"` // source volume % applied by reset_volume
+	NameMappings        map[string]string `yaml:"name_mappings"`         // stable node.name -> display alias
 }
 
 // DateConfig provides reference dates for date-based widgets (age, countdowns).
@@ -71,15 +66,12 @@ func DefaultEww() EwwConfig {
 			MinAlarmHours:     3,
 		},
 		Audio: AudioConfig{
-			SourceOffset:        50,
 			SourceMax:           150,
 			SinkMax:             100,
 			VolumeStep:          10,
-			PollInterval:        2 * time.Second,
 			DefaultSinkVolume:   69,
 			DefaultSourceVolume: 150,
-			NameMappings:        map[string]string{"cullyn": "pixel buds"},
-			BluetoothNames:      []string{"WH-1000XM4", "OpenFit", "pixel buds"},
+			NameMappings:        map[string]string{},
 		},
 		Date: DateConfig{
 			BirthDate: "1996-02-26",

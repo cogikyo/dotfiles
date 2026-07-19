@@ -211,13 +211,15 @@ Usage:
   ewwd status --json    Return full state as JSON
 
 Query/Subscribe (for eww):
-  ewwd query [topic]    Get state (network|date|audio|music|timer|weather|...)
-  ewwd subscribe [...]  Stream events (network date audio music timer weather)
+  ewwd query [topic]    Get state (network|date|audio|bluetooth|music|timer|weather|...)
+  ewwd subscribe [...]  Stream events (network date audio bluetooth music timer weather)
 
 Actions (for eww buttons/scrolls):
-  ewwd action audio mute <sink|source>      Mute device
+  ewwd action audio toggle_mute <sink|source> Toggle device mute
   ewwd action audio change_volume sink up   Adjust ±10
-  ewwd action audio set_default both        Preset volumes
+  ewwd action audio reset_volume both        Reset preset volumes
+  ewwd action bluetooth toggle               Toggle tracked headphones
+  ewwd action bluetooth reconnect            Reconnect tracked headphones
   ewwd action music play                    Start playback
   ewwd action music pause                   Pause playback
   ewwd action music toggle                  Toggle play/pause
@@ -239,7 +241,8 @@ Actions (for eww buttons/scrolls):
 Providers:
   network    - Network speed monitoring
   date       - Date/time, clockface icons, weeks alive
-  audio      - PulseAudio volume (sink/source with offset)
+  audio      - WirePlumber default sink/source volume and mute
+  bluetooth  - BlueZ connection and battery state
   music      - Spotify playback (status, track info, album art)
   timer      - Timer/alarm countdown with notifications
   weather    - OpenWeatherMap data (temp, conditions, moon, wind)`)

@@ -33,9 +33,11 @@ Triggered by eww button clicks and scroll events.
 
 ```bash
 # Audio
-ewwd action audio mute <sink|source>      # mute device
+ewwd action audio toggle_mute <sink|source> # toggle mute
 ewwd action audio change_volume sink up   # adjust ±10
-ewwd action audio set_default both        # preset volumes
+ewwd action audio reset_volume both       # reset preset volumes
+ewwd action bluetooth toggle              # connect or disconnect headphones
+ewwd action bluetooth reconnect           # explicitly reconnect headphones
 
 # Music (Spotify)
 ewwd action music play                    # start playback
@@ -61,7 +63,8 @@ ewwd action timer alarm up <minutes>      # add minutes
 
 | Provider   | Source              | Data                                      |
 |------------|---------------------|-------------------------------------------|
-| audio      | PulseAudio          | sink/source volumes with offset           |
+| audio      | WirePlumber         | default sink/source volume, mute, identity |
+| bluetooth  | BlueZ D-Bus         | tracked headphone connection and battery  |
 | music      | D-Bus (Spotify)     | playback status, track info, album art    |
 | network    | /proc/net/dev       | upload/download speeds                    |
 | date       | time                | time, date, clockface icons, weeks alive  |
@@ -72,9 +75,9 @@ Each provider implements the `providers.Provider` interface and runs in its own 
 
 ## Configuration
 
-`../config/ewwd.yaml` — provider settings, API keys, poll intervals.
+`../config/ewwd.yaml` contains provider settings, API keys, and poll intervals.
 
-`ewwd` reads its config from `cmds/config/` and uses it to initialize providers, set polling cadence, and wire provider-specific options.
+`ewwd` also reads the canonical tracked Bluetooth address from `hyprd.yaml`.
 
 ## Structure
 

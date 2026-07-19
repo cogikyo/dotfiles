@@ -134,6 +134,47 @@
     box-shadow: -3px 2px 3px 1px rgba($rby-1, 0.42);
   }
 
+  &-unavailable {
+    color: $glc-3;
+  }
+
+  &-headphones {
+    transition: color 0.25s $ease-out-snap;
+
+    &-unknown,
+    &-disconnected {
+      color: $glc-3;
+    }
+
+    &-connecting,
+    &-warm {
+      color: $orn-3;
+    }
+
+    &-healthy {
+      color: $blu-2;
+    }
+
+    &-low {
+      color: $rby-3;
+    }
+
+    &-icon {
+      font-size: 1.15em;
+    }
+
+    &-percent,
+    &-unknown {
+      font-family: $font-mono;
+      font-size: 0.8em;
+    }
+
+    &-name {
+      color: inherit;
+      margin-left: 2px;
+    }
+  }
+
   &-source {
     &-icon {
       font-size: 17px;

@@ -173,8 +173,13 @@
 ;; audio
 
 (deflisten audio-info
-  :initial '{"source":80,"source_name":"Scarlett","sink":69,"sink_name":"WH-1000XM4","sink_bluetooth":true}'
+  :initial '{"sink_available":false,"sink":0,"sink_name":"","sink_muted":false,"source_available":false,"source":0,"source_name":"","source_muted":false}'
   'ewwd subscribe audio | jq --unbuffered -c ".data"'
+)
+
+(deflisten bluetooth-info
+  :initial '{"status":"unknown","name":"","battery_present":false,"battery_percent":0}'
+  'ewwd subscribe bluetooth | jq --unbuffered -c ".data"'
 )
 
 (defwidget audio []
@@ -187,36 +192,39 @@
       (audio-control
         :content "source"
         :value {audio-info.source}
-        :name "${audio-info.source_name}"
-        :icon-off ""
+        :name {audio-info.source_name}
+        :available {audio-info.source_available}
+        :muted {audio-info.source_muted}
+        :icon-muted ""
         :icon-on ""
       )
       (audio-control
         :content "sink"
         :value {audio-info.sink}
-        :name "${audio-info.sink_name}"
+        :name {audio-info.sink_name}
+        :available {audio-info.sink_available}
+        :muted {audio-info.sink_muted}
         :icon-on "󰓃"
-        :icon-off "󰓄"
+        :icon-muted "󰓄"
       )
-      (bluetooth-status)
+      (headphones)
     )
   )
 )
 
-(defwidget audio-control [content value name icon-off icon-on]
+(defwidget audio-control [content value name available muted icon-muted icon-on]
   (eventbox
     :class "audio-${content}"
-    :onclick "ewwd action audio set_default ${content}"
-    :onmiddleclick "${terminal} --title='terminalfloat' -e pulsemixer & disown"
-    :onrightclick "ewwd action audio mute ${content}"
-    :onscroll "ewwd action audio change_volume ${content} {}"
-    :cursor "pointer"
-    :tooltip "  ${icon-on} ${content}: ${value}% "
-    (box :space-evenly false :spacing 9
-      :class "tr-c audio-volume ramp-${
+    :onclick {available ? "ewwd action audio reset_volume ${content}" : ""}
+    :onrightclick {available ? "ewwd action audio toggle_mute ${content}" : ""}
+    :onscroll {available ? "ewwd action audio change_volume ${content} {}" : ""}
+    :cursor {available ? "pointer" : "default"}
+    :tooltip {available ? "  ${icon-on} ${content}: ${value}%${muted ? " muted" : ""}  " : "  ${content} unavailable  "}
+    (box
+      :space-evenly false :spacing 9
+      :class "tr-c audio-volume ${available ? "ramp-${
         value < 1   ? "1" :
         value <= 10 ? "2" :
-        value <= 20 ? "4" :
         value <= 30 ? "4" :
         value <= 40 ? "5" :
         value <= 50 ? "6" :
@@ -224,34 +232,82 @@
         value <= 70 ? "9" :
         value <= 80 ? "10" :
         value <= 90 ? "11" : "12"
-      }"
+      }" : "audio-unavailable"}"
       (circular-progress
         :class "music-progress-circle"
-        :value {value <= 100 ? value : 100}
+        :value {available ? (value <= 100 ? value : 100) : 0}
         :start-at 75
         :thickness 2
         :clockwise false
         (label
-          :class "audio-${content}-icon${value == 0 ? "-inactiveFix" : ""}"
-          :text {value == 0 ? "${icon-off}" : "${icon-on}"}
+          :class "audio-${content}-icon${muted ? "-inactiveFix" : ""}"
+          :text {muted ? icon-muted : icon-on}
         )
       )
-      (slide-n-fade :bool {hover == "audio"} :direction "right"
+      (slide-n-fade :bool {hover == "audio" && available} :direction "right"
         (label :class "audio-${content}-text" :text name)
       )
     )
   )
 )
 
-(defwidget bluetooth-status []
+(defwidget headphones []
   (eventbox
-    :onmiddleclick "bluetoothctl connect 14:3F:A6:10:A1:B5 & disown"
+    :onclick "ewwd action bluetooth toggle"
+    :onmiddleclick "ewwd action bluetooth reconnect"
     :cursor "pointer"
-    (label
-      :class "tr-c ${audio-info.sink_bluetooth ? "" : "music-inactive"}"
-      :text "${audio-info.sink_bluetooth ? "󰂯 " : "󰂲 "}"
-      :style "margin-left: -2px; margin-top: 2px;"
-      :tooltip " Bluetooth ${audio-info.sink_bluetooth ? "Connected" : "Disconnected"}  "
+    :tooltip {
+      bluetooth-info.status == "unknown" ? "  Bluetooth is unavailable  " :
+      bluetooth-info.status == "disconnected" ? "  ${bluetooth-info.name != "" ? bluetooth-info.name : "AirPods Max"} is disconnected  " :
+      bluetooth-info.status == "connecting" ? "  ${bluetooth-info.name != "" ? bluetooth-info.name : "AirPods Max"} is connecting  " :
+      bluetooth-info.battery_present ? "  ${bluetooth-info.name} connected, ${bluetooth-info.battery_percent}% battery  " :
+      "  ${bluetooth-info.name} connected; battery unavailable  "
+    }
+    (box
+      :space-evenly false :spacing 5
+      :class "audio-headphones audio-headphones-${
+        bluetooth-info.status == "unknown" ? "unknown" :
+        bluetooth-info.status == "disconnected" ? "disconnected" :
+        bluetooth-info.status == "connecting" ? "connecting" :
+        !bluetooth-info.battery_present ? "unknown" :
+        bluetooth-info.battery_percent < 20 ? "low" :
+        bluetooth-info.battery_percent < 40 ? "warm" : "healthy"
+      }"
+      (label
+        :class "audio-headphones-icon"
+        :text {
+          bluetooth-info.status == "unknown" ? "󰂳" :
+          bluetooth-info.status == "disconnected" ? "󰂲" :
+          bluetooth-info.status == "connecting" ? "󰂰" :
+          !bluetooth-info.battery_present ? "󰂑" :
+          bluetooth-info.battery_percent < 20 ? "󰂃" :
+          bluetooth-info.battery_percent < 30 ? "󰁻" :
+          bluetooth-info.battery_percent < 40 ? "󰁼" :
+          bluetooth-info.battery_percent < 50 ? "󰁽" :
+          bluetooth-info.battery_percent < 60 ? "󰁾" :
+          bluetooth-info.battery_percent < 70 ? "󰁿" :
+          bluetooth-info.battery_percent < 80 ? "󰂀" :
+          bluetooth-info.battery_percent < 90 ? "󰂁" :
+          bluetooth-info.battery_percent < 100 ? "󰂂" : "󰁹"
+        }
+      )
+      (label
+        :visible {bluetooth-info.status == "connected" && bluetooth-info.battery_present}
+        :class "audio-headphones-percent"
+        :text "${bluetooth-info.battery_percent}%"
+      )
+      (label
+        :visible {
+          bluetooth-info.status == "unknown" ||
+          bluetooth-info.status == "connecting" ||
+          (bluetooth-info.status == "connected" && !bluetooth-info.battery_present)
+        }
+        :class "audio-headphones-unknown"
+        :text "––"
+      )
+      (slide-n-fade :bool {hover == "audio" && bluetooth-info.status == "connected"} :direction "right"
+        (label :class "audio-headphones-name" :text {bluetooth-info.name})
+      )
     )
   )
 )

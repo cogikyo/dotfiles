@@ -46,7 +46,7 @@ type Daemon struct {
 	providers   []providers.Provider
 	ctx         context.Context
 	cancel      context.CancelFunc
-	config      config.EwwConfig
+	config      *config.Config
 	autoOpen    bool
 	openMu      sync.Mutex
 	reconcileMu sync.Mutex
@@ -56,7 +56,7 @@ type Daemon struct {
 }
 
 func New(autoOpen bool) (*Daemon, error) {
-	cfg := config.LoadEww()
+	cfg := config.Load()
 
 	ctx, cancel := context.WithCancel(context.Background())
 	state := NewState()
@@ -119,11 +119,12 @@ func (d *Daemon) Run() error {
 }
 
 func (d *Daemon) initProviders() {
-	cfg := d.config
+	cfg := d.config.Eww
 	d.providers = []providers.Provider{
 		providers.NewNetwork(d.state, cfg.Network),
 		providers.NewDate(d.state, cfg.Date),
 		providers.NewAudio(d.state, cfg.Audio),
+		providers.NewBluetooth(d.state, d.config.Hypr.Bluetooth.Device),
 		providers.NewMusic(d.state, cfg.Music.SpDc),
 		providers.NewTimer(d.state, cfg.Timer),
 		providers.NewWeather(d.state, cfg.Weather),
@@ -293,7 +294,7 @@ func (d *Daemon) reconcileLatest(reload bool) {
 }
 
 func (d *Daemon) reconcileWindows(reload bool) (string, bool) {
-	windows := d.config.Windows
+	windows := d.config.Eww.Windows
 	verb := "restore"
 	if reload {
 		verb = "open"

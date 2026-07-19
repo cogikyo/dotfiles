@@ -12,19 +12,12 @@ timer:
   default_alarm_hours: 6
   min_alarm_hours: 3
 audio:
-  source_offset: 50
   source_max: 150
   sink_max: 100
   volume_step: 10
-  poll_interval: 2s
   default_sink_volume: 69
   default_source_volume: 150
-  name_mappings:
-    cullyn: "pixel buds"
-  bluetooth_names:
-    - "WH-1000XM4"
-    - "OpenFit"
-    - "pixel buds"
+  name_mappings: {}
 date:
   birth_date: "1996-02-26"
 network:
