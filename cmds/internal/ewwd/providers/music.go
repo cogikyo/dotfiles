@@ -37,6 +37,7 @@ type MusicState struct {
 	Volume        string `json:"volume"`
 	VolumePercent int    `json:"volume_percent"`
 	Artist        string `json:"artist"`
+	ArtistShort   string `json:"artist_short"`
 	Album         string `json:"album"`
 	AlbumShort    string `json:"album_short"`
 	Title         string `json:"title"`
@@ -496,9 +497,53 @@ func (m *Music) actionContext() (context.Context, context.CancelFunc, error) {
 func musicState(status, volume, artist, album, title string, progress int) MusicState {
 	return MusicState{
 		Status: status, Playing: status == "Playing", Volume: volume, VolumePercent: musicVolumePercent(volume),
-		Artist: artist, Album: album, AlbumShort: truncateForWidget(album, 40), Title: title,
-		TitleShort: truncateForWidget(title, 40), SingleTrack: title == album, Progress: progress, ArtPath: albumArtPath,
+		Artist: artist, ArtistShort: compactLabel(artist, shortInfoLimit),
+		Album: album, AlbumShort: compactLabel(album, shortInfoLimit), Title: title,
+		TitleShort: compactLabel(title, shortTitleLimit), SingleTrack: title == album, Progress: progress, ArtPath: albumArtPath,
 	}
+}
+
+const (
+	shortInfoLimit  = 24
+	shortTitleLimit = 40
+)
+
+// compactLabel strips balanced parenthesized detail (e.g. "(feat. X)") before truncating;
+// full metadata stays in Artist/Album/Title for tooltips.
+func compactLabel(value string, limit int) string {
+	return truncateForWidget(stripParenGroups(value), limit)
+}
+
+// stripParenGroups removes complete balanced "(" ... ")" groups, including nested ones.
+// Unbalanced parens are left untouched so unrelated content survives.
+func stripParenGroups(value string) string {
+	runes := []rune(value)
+	removed := make([]bool, len(runes))
+	var open []int
+	for i, r := range runes {
+		switch r {
+		case '(':
+			open = append(open, i)
+		case ')':
+			if len(open) == 0 {
+				continue
+			}
+			start := open[len(open)-1]
+			open = open[:len(open)-1]
+			if len(open) == 0 {
+				for j := start; j <= i; j++ {
+					removed[j] = true
+				}
+			}
+		}
+	}
+	var kept []rune
+	for i, r := range runes {
+		if !removed[i] {
+			kept = append(kept, r)
+		}
+	}
+	return strings.Join(strings.Fields(string(kept)), " ")
 }
 
 func stoppedMusicState() MusicState {
@@ -517,7 +562,7 @@ func truncateForWidget(value string, limit int) string {
 	if limit <= 0 || len(runes) <= limit {
 		return value
 	}
-	return string(runes[:limit]) + "..."
+	return strings.TrimRight(string(runes[:limit]), " ") + "..."
 }
 
 func musicVolumePercent(volume string) int {

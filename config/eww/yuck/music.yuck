@@ -34,7 +34,7 @@
 )
 
 (deflisten pctl
-  :initial '{ "status":"Paused", "playing":false, "volume":"1.0", "volume_percent":100, "artist":"", "album":"", "album_short":"", "title":"", "title_short":"", "single_track":false, "progress":0, "art_path":"/tmp/eww/album_art.png", "has_canvas":false, "canvas_frame":"" }'
+  :initial '{ "status":"Paused", "playing":false, "volume":"1.0", "volume_percent":100, "artist":"", "artist_short":"", "album":"", "album_short":"", "title":"", "title_short":"", "single_track":false, "progress":0, "art_path":"/tmp/eww/album_art.png", "has_canvas":false, "canvas_frame":"" }'
   'ewwd subscribe music | jq --unbuffered -c ".data"'
 )
 
@@ -72,7 +72,7 @@
       )
       (label
         :class "tr-c music-${pctl.playing ? "artist" : "inactive" }"
-        :text "󰠃 ${pctl.artist}"
+        :text "󰠃 ${pctl.artist_short}"
         :tooltip " 󰠃 ${pctl.artist} "
         :style "margin-left: ${hover == "music" ? "-2" : "-12"}px;"
       )
@@ -90,7 +90,7 @@
       )
       (label
         :class "tr-c music-${pctl.playing ? "single" : "inactive" }"
-        :text "󰓏 ${pctl.album}"
+        :text "󰓏 ${pctl.album_short}"
         :tooltip " 󰓏 ${pctl.album} "
         :style "${pctl.single_track ? "margin-left: -38px; margin-right: -6px;" : "margin-top: -100px; margin-left: -1000px;"}"
       )
