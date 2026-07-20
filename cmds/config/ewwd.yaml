@@ -18,6 +18,7 @@ audio:
   default_sink_volume: 69
   default_source_volume: 100
   name_mappings:
+    AirPodsHiRes: AirPods Max
     alsa_input.usb-Focusrite_Scarlett_Solo_USB_Y70ZEU921E21FF-00.HiFi__Mic1__source: Scarlett
     alsa_output.usb-Focusrite_Scarlett_Solo_USB_Y70ZEU921E21FF-00.HiFi__Line__sink: Scarlett
 date:
