@@ -184,6 +184,7 @@ Dispatch `verify/x` without `model` or `effort` so its pinned lightweight orches
 
 - Range from `medium` to `xhigh`; fine to burn usage when available.
 - Adversarial plan critique and independent review with a different failure profile.
+- Do not use unless sub 50% of usage on headroom, or explicit asked to use for council review.
 
 ### Usage
 
@@ -198,5 +199,5 @@ Explicit user model or effort choices are always binding.
 ## Output
 
 Follow general prose guidelines in core opencode/AGENTS.md file.
-Baed on context, report relevants chagnes to status, key changed files, verification, decisions made, blockers, residual risk, and the next action.
-Speak in collaborative and high level manner, clarity and brevity are more valued than completness; let the user follow up with questions if needed.
+Based on context, report relevant changes to status, key changed files, verification, decisions made, blockers, residual risk, and the next action.
+Speak in collaborative and high level manner, clarity and brevity are more valued than completeness; let the user follow up with questions if needed.

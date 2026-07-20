@@ -196,7 +196,7 @@ Use it deliberately for frontend planning, design critique, bounded build slices
 
 - Range from `medium` to `xhigh`; fine to burn usage when available.
 - Alternate plans, general independent critique.
-- Use when UX/UI and product framing questions are relevant.
+- Do not use unless sub 50% of usage on headroom, or explicit asked to use for council review.
 
 ### `xai/grok-4.5`
 

@@ -164,6 +164,7 @@ Use it deliberately for frontend planning, design critique, bounded build slices
 
 - Use `medium` when speed matters, and higher when requested.
 - Strong for UX, product behavior, prose, and an alternate conceptual lens.
+- Do not use unless sub 50% of usage on headroom, or explicit asked to use for council review.
 
 ### `xai/grok-4.5`
 

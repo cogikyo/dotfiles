@@ -223,7 +223,7 @@ Only use models defined in this set.
 Kimi K3 is available through both `opencode-go/kimi-k3` and `kimi-code/k3`;
 Use it deliberately for frontend planning, design critique, bounded build slices, repair loops, and high-context implementation work.
 
-- Use `high` most often, in some cases `max` withs lots of headroom on usage.
+- Use `high` most often, in some cases `max` with lots of headroom on usage.
 - Strong fit for frontend/design work, bounded implementation, large-context repository passes, and cheap parallel repair attempts.
 - Generally best for `review/design` or `build/owner` of ambitious UI/UX work.
 
@@ -252,6 +252,7 @@ Dispatch `verify/x` without `model` or `effort` so its pinned lightweight orches
 
 - Range from `medium` to `xhigh`; fine to burn usage when available.
 - Adversarial plan critique and independent review with a different failure profile.
+- Do not use unless sub 50% of usage on headroom, or explicit asked to use for council review.
 
 ### Usage
 

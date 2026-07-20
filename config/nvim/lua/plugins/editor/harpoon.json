@@ -30,8 +30,8 @@
         "partner/init.partner.go",
         "webhooks/init.tracking.go",
         "compliance/init.compliance.go",
-        "routing/init.routing.go",
         "billing/init.billing.go",
+        "routing/init.routing.go",
         "aggregation/migrate.go"
       ]
     },
