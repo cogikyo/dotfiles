@@ -148,9 +148,8 @@ Kimi K3 is available through both `opencode-go/kimi-k3` and `kimi-code/k3`;
 Use it deliberately for frontend planning, design critique, bounded build slices, repair loops, and high-context implementation work.
 
 - Use `low` or `high`.
-- Strong fit for `review/design`, visual-language criticism, product-shape critique, large-context repo review, and repair/debug evidence synthesis.
-- Choose it by lens rather than making it the default for all Review work.
-- Keep OpenAI, Anthropic, or Grok as the safer independent critic when adversarial separation matters more.
+- Strong fit for frontend/design work, bounded implementation, large-context repository passes, and cheap parallel repair attempts.
+- Generally best for `review/design` or `build/owner` of ambitious UI/UX work.
 
 ### `openai/gpt-5.6-terra-fast`
 

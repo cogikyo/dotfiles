@@ -157,8 +157,7 @@ Use it deliberately for frontend planning, design critique, bounded build slices
 
 - Use `low` or `high`.
 - Strong fit for frontend/design work, bounded implementation, large-context repository passes, and cheap parallel repair attempts.
-- Pair implementation owners with `review/design` when visual language or UX acceptance criteria are load-bearing.
-- Keep OpenAI or Anthropic as the safer orchestrator or final critic for high-risk architecture, security, and ambiguous synthesis.
+- Generally best for `review/design` or `build/owner` of ambitious UI/UX work.
 
 ### `xai/grok-4.5`
 

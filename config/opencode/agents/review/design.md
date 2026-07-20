@@ -1,8 +1,6 @@
 ---
 description: "Read-only design critic: identifies visual language, product intent, frontend design patterns, and spec-ready direction."
 mode: subagent
-model: opencode-go/kimi-k3
-variant: max
 permission:
   edit: deny
   bash: deny
