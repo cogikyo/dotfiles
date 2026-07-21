@@ -20,7 +20,7 @@ diff --git a/linux-rust/src/media_controller.rs b/linux-rust/src/media_controlle
 index 2de09b9..0a013ad 100644
 --- a/linux-rust/src/media_controller.rs
 +++ b/linux-rust/src/media_controller.rs
-@@ -239,6 +239,5 @@ impl MediaController {
+@@ -239,22 +239,13 @@ impl MediaController {
          if new_has_at_least_one_in && old_all_out {
 -            debug!("Condition met: buds inserted, activating A2DP and checking play state");
 -            self.activate_a2dp_profile().await;
@@ -28,3 +28,19 @@ index 2de09b9..0a013ad 100644
              {
                  let mut state = self.state.lock().await;
                  if state.is_playing {
+                     state.user_played_the_media = true;
+                     debug!("Set user_played_the_media to true as media was playing");
+                 }
+             }
+         } else if new_all_out {
+             debug!("Condition met: buds removed, pausing media");
+             self.pause().await;
+-            {
+-                let state = self.state.lock().await;
+-                if state.disconnect_when_not_wearing {
+-                    debug!("Disconnect when not wearing enabled, deactivating A2DP");
+-                    drop(state);
+-                    self.deactivate_a2dp_profile().await;
+-                }
+-            }
+         }

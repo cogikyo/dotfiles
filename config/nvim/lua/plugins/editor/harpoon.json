@@ -58,7 +58,8 @@
       "pins": [
         "apps/admin/src/pages/partners/index.tsx",
         "apps/admin/src/pages/users/$userId/tracking/index.tsx",
-        "apps/admin/src/pages/statistics/index.tsx"
+        "apps/admin/src/pages/statistics/index.tsx",
+        "packages/shared/src/components/Table/index.tsx"
       ]
     },
     "/home/cullyn/cogikyo/alrodriguez.studio": {
