@@ -222,10 +222,13 @@ Only use models defined in this set.
 
 Kimi K3 is available through both `opencode-go/kimi-k3` and `kimi-code/k3`;
 Use it deliberately for frontend planning, design critique, bounded build slices, repair loops, and high-context implementation work.
+Recently upgraded usage limits on `kimi-code/k3` can use a lot more.
 
-- Use `high` most often, in some cases `max` with lots of headroom on usage.
+- Use `low` or `high`. (currently kimi-code/k3 locks it into `max`, if you get issue, roll with it)
 - Strong fit for frontend/design work, bounded implementation, large-context repository passes, and cheap parallel repair attempts.
 - Generally best for `review/design` or `build/owner` of ambitious UI/UX work.
+- Excellent at understanding 3D problems.
+- Shaping up to be best `build/owner` for large tasks. Have sol review work, or vice versa, depending who runs the owner.
 
 ### `xai/grok-4.5`
 

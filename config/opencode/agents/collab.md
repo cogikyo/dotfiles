@@ -145,19 +145,22 @@ Only use models defined in this set.
 - Replacement for `5.6-terra`/`grok-4.5` on larger (`build/owner`) tasks that approach a more complexity.
 - By default best choice for dispatch modes, `xhigh` can occasional be used here.
 
-### `anthropic/claude-fable-5`
-
-- Use at `low` to `medium` to resolve complex ambiguity if context supplied, or `medium` to `high` if requested by user.
-- Better at understanding intent, can determine good terminal end state or intermediate goal if sufficient ambiguity.
-
 ### `opencode-go/kimi-k3` and `kimi-code/k3`
 
 Kimi K3 is available through both `opencode-go/kimi-k3` and `kimi-code/k3`;
 Use it deliberately for frontend planning, design critique, bounded build slices, repair loops, and high-context implementation work.
+Recently upgraded usage limits on `kimi-code/k3` can use a lot more.
 
-- Use `low` or `high`.
+- Use `low` or `high`. (currently kimi-code/k3 locks it into `max`, if you get issue, roll with it)
 - Strong fit for frontend/design work, bounded implementation, large-context repository passes, and cheap parallel repair attempts.
 - Generally best for `review/design` or `build/owner` of ambitious UI/UX work.
+- Excellent at understanding 3D problems.
+- Shaping up to be best `build/owner` for large tasks. Have sol review work, or vice versa, depending who runs the owner.
+
+### `anthropic/claude-fable-5`
+
+- Use at `low` to `medium` to resolve complex ambiguity if context supplied, or `medium` to `high` if requested by user.
+- Better at understanding intent, can determine good terminal end state or intermediate goal if sufficient ambiguity.
 
 ### `xai/grok-4.5`
 
