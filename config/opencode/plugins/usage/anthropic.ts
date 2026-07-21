@@ -132,8 +132,8 @@ async function tryRecoverAuth(): Promise<string | undefined> {
 
   const recovery = (async () => {
     // Bail if no Claude credential file exists — nothing to refresh.
-    const creds = await readClaudeCredentials();
-    if (!creds) return false;
+    const credentials = await readClaudeCredentials();
+    if (credentials.length === 0) return false;
 
     const ok = await triggerClaudeRefresh();
     lastRecoverAt = Date.now();
@@ -149,10 +149,10 @@ async function tryRecoverAuth(): Promise<string | undefined> {
 }
 
 async function readTokenFromClaude(): Promise<string | undefined> {
-  const creds = await readClaudeCredentials();
-  if (!creds?.accessToken) return undefined;
-  if (isExpired(creds.expiresAt)) return undefined;
-  return creds.accessToken;
+  const credentials = await readClaudeCredentials();
+  return credentials.find(
+    (candidate) => candidate.accessToken && !isExpired(candidate.expiresAt),
+  )?.accessToken;
 }
 
 async function fetchUsage(token: string): Promise<ProviderUsage> {
@@ -204,7 +204,7 @@ export const anthropicUsage: ProviderAdapter = {
   id,
   label,
   poll: {
-    minFetchIntervalMS: 2 * 60_000,
+    minFetchIntervalMS: 5 * 60_000,
     errorBackoffMS: 5 * 60_000,
     warnBackoffMS: 0,
     rateLimitBackoffMS: 60 * 60_000,

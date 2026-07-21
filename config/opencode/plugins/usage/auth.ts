@@ -59,7 +59,9 @@ export type ClaudeCredentials = {
   expiresAt?: string | number;
 };
 
-export async function readClaudeCredentials(): Promise<ClaudeCredentials | undefined> {
+export async function readClaudeCredentials(): Promise<ClaudeCredentials[]> {
+  const candidates: ClaudeCredentials[] = [];
+
   for (const credentialsPath of claudeCredentialsPaths()) {
     try {
       const parsed = JSON.parse(await fs.readFile(credentialsPath, "utf8")) as unknown;
@@ -68,11 +70,11 @@ export async function readClaudeCredentials(): Promise<ClaudeCredentials | undef
       const record = parsed as Record<string, unknown>;
       const credentials = record.claudeAiOauth ?? record;
       if (!credentials || typeof credentials !== "object") continue;
-      return credentials as ClaudeCredentials;
+      candidates.push(credentials as ClaudeCredentials);
     } catch {
       continue;
     }
   }
 
-  return undefined;
+  return candidates;
 }

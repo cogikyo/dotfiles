@@ -13,7 +13,7 @@ export const usageProviders = {
   anthropic: {
     id: "anthropic",
     label: "Anthropic",
-    staleAfterMS: 5 * 60_000,
+    staleAfterMS: 10 * 60_000,
   },
   xai: {
     id: "xai",
