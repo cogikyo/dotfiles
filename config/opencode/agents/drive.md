@@ -218,13 +218,17 @@ Only use models defined in this set.
 - Use at `low` to `medium` to resolve complex ambiguity if context supplied, or `medium` to `high` if requested by user.
 - Better at understanding intent, can determine good terminal end state or intermediate goal if sufficient ambiguity.
 
-### `opencode-go/kimi-k3` and `kimi-code/k3`
+### `kimi-code/k3` and `opencode-go/kimi-k3`
 
-Kimi K3 is available through both `opencode-go/kimi-k3` and `kimi-code/k3`;
-Use it deliberately for frontend planning, design critique, bounded build slices, repair loops, and high-context implementation work.
-Recently upgraded usage limits on `kimi-code/k3` can use a lot more.
+Use `kimi-code/k3` as the primary Kimi route and `opencode-go/kimi-k3` only as its capacity fallback.
+Kimi is a strong fit for frontend planning, design critique, bounded build slices, repair loops, and high-context implementation work.
 
-- Use `low` or `high`. (currently kimi-code/k3 locks it into `max`, if you get issue, roll with it)
+- Immediately before any dispatch or fanout containing Kimi, call `usage_status`.
+- Dispatch `kimi-code/k3` only when the Kimi snapshot is fresh and every reported cap has positive headroom.
+- If direct Kimi is unavailable, dispatch `opencode-go/kimi-k3` only when the OpenCode snapshot is fresh and every reported cap has positive headroom.
+- Kimi may wait for a quota reset instead of failing fast; never dispatch either route on stale, unknown, errored, or exhausted capacity, and never probe capacity with a task call.
+- If neither route is safe, choose the next best non-Kimi model rather than waiting for reset.
+- Use the effort exposed by the selected route; when only `max` is advertised, pass `max` instead of guessing another variant.
 - Strong fit for frontend/design work, bounded implementation, large-context repository passes, and cheap parallel repair attempts.
 - Generally best for `review/design` or `build/owner` of ambitious UI/UX work.
 - Excellent at understanding 3D problems.
@@ -260,6 +264,7 @@ Dispatch `verify/x` without `model` or `effort` so its pinned lightweight orches
 ### Usage
 
 `usage_status` is a fast local cache read: call it on substantive turns and before delegation to see where to spend.
+The Kimi preflight above is mandatory even when ordinary routing would skip a refresh.
 Tokens are meant to be spent; unspent headroom at a weekly reset is waste, and unattended review is the best place to spend it.
 Abundance funds deeper owners, more adversarial review, and higher effort; never thin the council to protect capacity.
 Never pick a worse model or lower reasoning to save headroom; route on fit and let the user manage hitting 100%.
