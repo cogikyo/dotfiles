@@ -64,6 +64,7 @@ alias niol='clear && source ~/.zshrc'
 alias ls='echo; lsd'
 alias n='nvim'
 function c() {
+    local PATH="$HOME/.config/opencode/clipboard:$PATH"
     opencode attach http://127.0.0.1:4096 --dir "$PWD" "$@"
 }
 alias cr='systemctl --user restart opencode && echo "opencode server restarted"'

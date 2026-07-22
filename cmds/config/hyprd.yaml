@@ -128,15 +128,15 @@ tabs:
     prefix: "agents-"
     focus: build
     tabs:
-      - { name: scout, title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
-      - { name: build, title: "⊰ 󰯉  ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
-      - { name: drive, title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
+      - { name: scout, title: "⊰   ⊱", command: c }
+      - { name: build, title: "⊰ 󰯉  ⊱", command: c }
+      - { name: drive, title: "⊰   ⊱", command: c }
       - name: plan
         title: "⊰   ⊱"
-        command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\""
+        command: c
         actions:
           build: {}
-      - { name: learn, title: "⊰   ⊱", command: "opencode attach http://127.0.0.1:4096 --dir \"$PWD\"" }
+      - { name: learn, title: "⊰   ⊱", command: c }
 
   leadpier: # ├─ leadpier profile ─────────────────────────────────────────────────┤
     order: 2

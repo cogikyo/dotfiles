@@ -7,16 +7,18 @@ git:
 os:
   edit: "nvim {{filename}}"
   editAtLine: "nvim +{{line}} {{filename}}"
+  copyToClipboardCmd: "printf '%s' {{text}} | kitten clipboard"
+  readFromClipboardCmd: "kitten clipboard --get-clipboard"
 customCommands:
   - key: "<ctrl+o>"
     context: localBranches
     description: Copy repository and branch
     command: >-
       printf '%s@%s' {{ runCommand "git rev-parse --show-toplevel" | quote }}
-      {{ .SelectedLocalBranch.Name | quote }} | wl-copy
+      {{ .SelectedLocalBranch.Name | quote }} | kitten clipboard
   - key: "<ctrl+o>"
     context: commits,subCommits,reflogCommits
     description: Copy repository, branch, and commit
     command: >-
       printf '%s@%s#%s' {{ runCommand "git rev-parse --show-toplevel" | quote }}
-      {{ .SelectedLocalBranch.Name | quote }} {{ .SelectedCommit.Hash | quote }} | wl-copy
+      {{ .SelectedLocalBranch.Name | quote }} {{ .SelectedCommit.Hash | quote }} | kitten clipboard

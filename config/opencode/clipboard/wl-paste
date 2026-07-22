@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ -z ${WAYLAND_DISPLAY:-} && ${TERM:-} == xterm-kitty && $# -eq 2 && $1 == -t && $2 == image/png ]]; then
+	tmp="$(mktemp "${TMPDIR:-/tmp}/opencode-clipboard.XXXXXX.png")"
+	trap 'rm -f "$tmp"' EXIT
+	kitten clipboard --get-clipboard "$tmp"
+	cat "$tmp"
+	exit
+fi
+
+exec /usr/bin/wl-paste "$@"
