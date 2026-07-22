@@ -17,7 +17,7 @@
     "enabled": true
   },
   "keybinds": {
-    "leader": "ctrl+.",
+    "leader": "ctrl+l",
     "command_list": "<leader>l",
     "tool_details": "ctrl+d",
     "model_list": "<leader>m",
