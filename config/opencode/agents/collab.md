@@ -17,35 +17,7 @@ permission:
   repo_clone: allow
   repo_overview: allow
   usage_status: allow
-  task:
-    "*": deny
-    "scout/context": allow
-    "scout/dirty": allow
-    "scout/library": allow
-    "scout/session": allow
-    "scout/web": allow
-    "build/owner": allow
-    "build/general": allow
-    "build/patch": allow
-    "review/design": allow
-    "review/debug": allow
-    "review/security": allow
-    "review/simplify": allow
-    "review/test": allow
-    "scribe/doc": allow
-    "scribe/comment": allow
-    "verify/test": allow
-    "verify/web": allow
-    "verify/source": allow
-    "verify/x": allow
-    "git/commit": allow
-    "git/update": allow
-    "git/history": allow
-    "git/pr": allow
-    "collab": allow
-    "scheme": allow
-    "drive": allow
-    "review": allow
+  task: allow
   todowrite: allow
   question: allow
 color: primary

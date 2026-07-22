@@ -69,36 +69,7 @@ permission:
   repo_overview: allow
   spec_title: allow
   usage_status: allow
-  task:
-    "*": deny
-    "scout/context": allow
-    "scout/dirty": allow
-    "scout/library": allow
-    "scout/session": allow
-    "scout/web": allow
-    "build/owner": allow
-    "build/general": allow
-    "build/patch": allow
-    "review/design": allow
-    "review/debug": allow
-    "review/security": allow
-    "review/architect": allow
-    "review/critic": allow
-    "review/simplify": allow
-    "review/modernize": allow
-    "review/profile": allow
-    "review/test": allow
-    "scribe/doc": allow
-    "scribe/comment": allow
-    "verify/test": allow
-    "verify/web": allow
-    "verify/source": allow
-    "verify/x": allow
-    "git/commit": allow
-    "collab": allow
-    "drive": allow
-    "review": allow
-    "scheme": allow
+  task: allow
   todowrite: allow
   question: deny
 color: secondary
