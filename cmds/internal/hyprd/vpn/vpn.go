@@ -340,13 +340,40 @@ func vpnSecrets(name string) (map[string]string, error) {
 		return nil, err
 	}
 	secrets := map[string]string{}
-	for _, field := range strings.FieldsFunc(out, func(r rune) bool { return r == ',' || r == '\n' }) {
+	for _, field := range splitNMCLIDictionary(out) {
 		key, value, ok := strings.Cut(strings.TrimSpace(field), "=")
 		if ok {
-			secrets[strings.TrimSpace(key)] = strings.TrimSpace(value)
+			secrets[strings.TrimSpace(key)] = value
 		}
 	}
 	return secrets, nil
+}
+
+func splitNMCLIDictionary(value string) []string {
+	var fields []string
+	var field strings.Builder
+	escaped := false
+	for _, r := range strings.TrimSpace(value) {
+		switch {
+		case escaped:
+			field.WriteRune(r)
+			escaped = false
+		case r == '\\':
+			escaped = true
+		case r == ',' || r == '\n':
+			fields = append(fields, field.String())
+			field.Reset()
+		default:
+			field.WriteRune(r)
+		}
+	}
+	if escaped {
+		field.WriteRune('\\')
+	}
+	if field.Len() > 0 {
+		fields = append(fields, field.String())
+	}
+	return fields
 }
 
 func ensureVPNSecrets(name string, reset bool) error {
@@ -355,6 +382,7 @@ func ensureVPNSecrets(name string, reset bool) error {
 		return err
 	}
 	required := []string{"password", "ipsec-psk"}
+	changed := false
 	for _, key := range required {
 		if !reset && secrets[key] != "" {
 			continue
@@ -363,11 +391,38 @@ func ensureVPNSecrets(name string, reset bool) error {
 		if err != nil {
 			return err
 		}
-		if err := runSudoNMCLI("connection", "modify", name, "+vpn.secrets", key+"="+secret); err != nil {
+		secrets[key] = secret
+		changed = true
+	}
+	if changed {
+		keys := make([]string, 0, len(secrets))
+		for key := range secrets {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		entries := make([]string, 0, len(keys))
+		for _, key := range keys {
+			entries = append(entries, key+"="+escapeNMCLIDictionaryValue(secrets[key]))
+		}
+		if err := runSudoNMCLI("connection", "modify", name, "vpn.secrets", strings.Join(entries, ",")); err != nil {
 			return err
 		}
 	}
+	stored, err := vpnSecrets(name)
+	if err != nil {
+		return err
+	}
+	for _, key := range required {
+		if stored[key] == "" {
+			return fmt.Errorf("NetworkManager did not persist VPN %s for %s", key, name)
+		}
+	}
 	return nil
+}
+
+func escapeNMCLIDictionaryValue(value string) string {
+	value = strings.ReplaceAll(value, `\`, `\\`)
+	return strings.ReplaceAll(value, ",", `\,`)
 }
 
 func promptSecret(name, key string) (string, error) {
@@ -567,8 +622,11 @@ func commandString(args []string) string {
 	redacted := slices.Clone(args)
 	for i, arg := range redacted {
 		key, _, ok := strings.Cut(arg, "=")
-		if ok && strings.Contains(strings.ToLower(key), "password") {
-			redacted[i] = key + "=<redacted>"
+		if ok {
+			key = strings.ToLower(key)
+			if strings.Contains(key, "password") || strings.Contains(key, "psk") || strings.Contains(key, "secret") {
+				redacted[i] = "<secrets-redacted>"
+			}
 		}
 	}
 	return strings.Join(redacted, " ")
