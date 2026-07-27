@@ -56,10 +56,10 @@
     },
     "/home/cullyn/LeadPier/frontend": {
       "pins": [
+        "packages/shared/src/components/Table/index.tsx",
         "apps/admin/src/pages/partners/index.tsx",
         "apps/admin/src/pages/users/$userId/tracking/index.tsx",
-        "apps/admin/src/pages/statistics/index.tsx",
-        "packages/shared/src/components/Table/index.tsx"
+        "apps/admin/src/pages/statistics/index.tsx"
       ]
     },
     "/home/cullyn/cogikyo/alrodriguez.studio": {

@@ -85,19 +85,27 @@ User will likely be afk, but might be nearby to inject new request in running se
 Every variant runs the same engine; only the source of intent differs.
 
 1. Reconcile governing spec, tree, and Git state before assuming what prior work completed.
-2. Decompose the objective into coherent slices with observable acceptance boundaries.
+2. Decompose the objective at coordination depth into coherent slices with observable acceptance boundaries; delegate detailed planning when it requires broad evidence or design judgment.
 3. Pressure-test the plan adversarially before heavy implementation: dispatch critique or review lenses to falsify the decomposition while it is still cheap to change.
-4. Delegate coherent implementation phases to mode managers and bounded implementation to owners; keep orchestration context lean.
-5. Review and verify each slice with independent lenses proportional to its risk; unattended work earns more adversarial review, since no human is watching.
+4. Delegate every substantial implementation slice to an owner or bounded mode manager; Drive coordinates and does not become the builder by accumulation.
+5. Delegate review and verification with independent lenses proportional to risk; inspect only the compact evidence needed to accept, correct, or block the slice.
 6. Correct failures and rerun affected review or verification because changed work invalidates stale evidence.
 7. Commit each accepted atomic slice through `git/commit`, then repeat from actual durable state.
 8. Stop and report irreversible, publication, integration, approval-required, or ambiguous semantic tails with an exact attended next action.
 
 Adapt or skip steps when they add no signal; trivial work does not require ceremonial fanout.
-Brief leaves with objective, bounds, governing instructions, constraints, known state, and falsifying checks.
-Instruct every leaf to return a minimal report: verdict, deltas, and blockers only; the orchestrator's context is the scarcest resource in a long run.
 Route substantial frontend implementations through `build/general`, `build/owner`, or a bounded mode manager, and use `review/design` as the read-only design control loop before or after implementation when visual judgment matters.
 Never update branches, rewrite history, publish, or mutate Git directly.
+
+### Context budget and delegation size
+
+Drive coordinates; owners plan, build, review, and verify.
+Direct work is reserved for an obvious read, slight mechanical edit, focused check, or urgent small bug where delegation would recreate context already held.
+Keep each child task at or below 120k tokens, estimated as one concern, role, acceptance boundary, and bounded working set.
+Split unrelated subsystems, multiple boundaries, or briefs combining broad discovery, implementation, and independent review.
+Scout unknown paths first; brief children with paths, constraints, and checks instead of source dumps.
+Require verdict, deltas, checks, and blockers; expanding work stops at a durable boundary for a fresh task.
+A deliberately bounded mode manager may perform more direct interaction inside its own objective when another delegation hop would add ceremony, but Drive must not absorb that working set.
 
 ### Todo discipline
 
@@ -214,14 +222,14 @@ Only use models defined in this set.
 - Extremely fast; strong for concrete patches, reorgs, and wide mechanical edits.
 - Good at tool-heavy work and synthesis.
 - Strong for direct real-time checks and `verify/web`.
-- Default for `git/*` tasks; use Luna Fast at `high` when Grok is unavailable.
-- For rebases requiring semantic conflict resolution, use Opus at `medium` or Sol at `medium` or `high` instead.
 - `verify/x` already reaches Grok through its CLI tool.
 - Prefer Luna Fast at `high` for `verify/x`; otherwise use the next best available synthesizer.
 
 ### `openai/gpt-5.6-luna`
 
 - Ranges `low` or `high`; the interactive default.
+- Default for `git/*` tasks at `high`.
+- Use Sol at `medium` for complex rebases or semantic conflict resolution.
 - Use as gate for potentially high context polluting tasks, used to identify useful signals to investigate further.
 - Bounded few small patches that could have side effects, scouts, quick lookups, cheap verification.
 - Escalate to Sol or Opus `medium` when a result comes back unclear, good to double check conclusions.

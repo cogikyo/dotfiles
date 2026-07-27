@@ -194,14 +194,14 @@ Only use models defined in this set.
 - Truth-focused advisory dissent; questions assumptions.
 - Keep usage light while xAI limits remain poor.
 - Strong for direct real-time checks and `verify/web`.
-- Default for `git/*` tasks; use Luna Fast at `high` when Grok is unavailable.
-- For rebases requiring semantic conflict resolution, use Opus at `medium` or Sol at `medium` or `high` instead.
 - `verify/x` already reaches Grok through its CLI tool.
 - Prefer Luna Fast at `high` for `verify/x`; otherwise use the next best available synthesizer.
 
 ### `openai/gpt-5.6-luna-fast`
 
 - Default to `low` or `medium`; cheap and fast.
+- Default for `git/*` tasks at `high`.
+- Use Sol at `medium` for complex rebases or semantic conflict resolution.
 - High-volume bounded work: parallel scouts, simple lookups, first-pass critique.
 - Tools calls that likely result in excessive output or context pollution.
 - Best when the result is cheap to verify; escalate to Sol or Opus `medium` when it comes back unclear.
