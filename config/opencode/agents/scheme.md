@@ -158,60 +158,53 @@ As a child, expect the same in reverse: resumes arrive in-session with answers, 
 Below is standard model routing recommendations. You can override when appropriate, or at requested user preference.
 Only use models defined in this set.
 
-### `openai/gpt-5.6-sol`
+### `openai/gpt-5.6-sol-fast`
 
-- Almost always `medium` or `high`.
-- Contested architecture with ambiguous synthesis.
-- Multi file spec editing.
+- Use `high` or `xhigh` when the child orchestrates other models.
+- Use `medium` or `high` for contested architecture, ambiguous synthesis, or multi-file spec work.
+- Default reviewer for Anthropic- or Kimi-authored work.
 
 ### `anthropic/claude-fable-5`
 
-- Use at `low` to `medium` to resolve complex ambiguity, or `medium` to `high` if requested by user.
-- Better at understanding intent, can determine good terminal end state or intermediate goal if sufficient ambiguity.
+- Default to `high`.
+- Reserve for long, ambiguity-heavy objectives.
+- Best when the child manages a substantial multi-model pipeline, such as complicated planning, review, and verification.
+- Requires abundant fresh Anthropic headroom, or an explicit request.
+- Do not spend it on bounded ambiguity or ordinary planning work.
+- When Fable orchestrates, protect its context and delegate aggressively.
+- Push research, feasibility checks, and independent critique into subagents; keep Fable on intent, sequencing, and synthesis.
+
+### `anthropic/claude-opus-5`
+
+- `medium` is the default `build/owner` downstream and the best fit for most general tasks.
+- Plan slices with that pairing in mind.
+- Raise to `high` for deep critique.
+- Alternate plans, feasibility analysis, independent critique of Sol-authored specs.
 
 ### `kimi-code/k3` and `opencode-go/kimi-k3`
 
-Use `kimi-code/k3` as the primary Kimi route and `opencode-go/kimi-k3` only as its capacity fallback.
-Kimi is a strong fit for frontend planning, design critique, bounded build slices, repair loops, and high-context implementation work.
-
-- Immediately before any dispatch or fanout containing Kimi, call `usage_status`.
-- Dispatch `kimi-code/k3` only when the Kimi snapshot is fresh and every reported cap has positive headroom.
-- If direct Kimi is unavailable, dispatch `opencode-go/kimi-k3` only when the OpenCode snapshot is fresh and every reported cap has positive headroom.
-- Kimi may wait for a quota reset instead of failing fast; never dispatch either route on stale, unknown, errored, or exhausted capacity, and never probe capacity with a task call.
-- If neither route is safe, choose the next best non-Kimi model rather than waiting for reset.
-- Use the effort exposed by the selected route; when only `max` is advertised, pass `max` instead of guessing another variant.
-- Strong fit for frontend/design work, bounded implementation, large-context repository passes, and cheap parallel repair attempts.
-- Generally best for `review/design` or `build/owner` of ambitious UI/UX work.
-- Excellent at understanding 3D problems.
-- Shaping up to be best `build/owner` for large tasks. Have sol review work, or vice versa, depending who runs the owner.
-
-### `openai/gpt-5.6-terra`
-
-- Ranges from `low` to `high`, medium is a good default.
-- Best for general `scouts/*` and `review/*` agents.
-- General verification or general tool calling workhorse.
-- Standard fallback for anthropic/xAI models.
-
-### `openai/gpt-5.6-luna`
-
-- Almost always `low` or `medium`; cheap and fast.
-- High-volume bounded work: parallel scouts, simple lookups, first-pass critique.
-- Tools calls that likely result in excessive output or context pollution.
-- Best when the result is cheap to verify; escalate to terra when it comes back unclear.
-
-### `anthropic/claude-opus-4-8`
-
-- Range from `medium` to `xhigh`; fine to burn usage when available.
-- Alternate plans, general independent critique.
-- Do not use unless sub 50% of usage on headroom, or explicit asked to use for council review.
+- Default to `high`; use `max` for deep or complex cases.
+- Specialist for frontend, design, 3D, security review, and large high-context build ownership.
+- Prefer `kimi-code/k3`; use `opencode-go/kimi-k3` only as capacity fallback.
+- Call `usage_status` first; dispatch only on fresh positive headroom, otherwise take the next best non-Kimi model.
 
 ### `xai/grok-4.5`
 
-- Almost always `medium` or `high`.
-- Truth focused advisory descent, questions assumptions.
-- Most useful for direct real-time checks and `verify/web`; `verify/x` already reaches Grok through its CLI tool.
+- Use `medium` or `high`.
+- Truth-focused advisory dissent; questions assumptions.
+- Keep usage light while xAI limits remain poor.
+- Strong for direct real-time checks and `verify/web`.
+- Default for `git/*` tasks; use Luna Fast at `high` when Grok is unavailable.
+- For rebases requiring semantic conflict resolution, use Opus at `medium` or Sol at `medium` or `high` instead.
+- `verify/x` already reaches Grok through its CLI tool.
+- Prefer Luna Fast at `high` for `verify/x`; otherwise use the next best available synthesizer.
 
-Dispatch `verify/x` without `model` or `effort` so its pinned lightweight orchestrator avoids paying for Grok twice.
+### `openai/gpt-5.6-luna-fast`
+
+- Default to `low` or `medium`; cheap and fast.
+- High-volume bounded work: parallel scouts, simple lookups, first-pass critique.
+- Tools calls that likely result in excessive output or context pollution.
+- Best when the result is cheap to verify; escalate to Sol or Opus `medium` when it comes back unclear.
 
 ### Usage
 

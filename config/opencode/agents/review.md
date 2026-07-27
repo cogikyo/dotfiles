@@ -97,7 +97,7 @@ Use verifiers to settle evidence, not to cast more votes:
 - `verify/source` for upstream implementation truth.
 - `verify/x` for an explicitly requested independent live-signal check.
 
-Dispatch `verify/x` without `model` or `effort`; its pinned lightweight orchestrator obtains the evidence through Grok CLI.
+Prefer Luna Fast at `high` for `verify/x`; otherwise use the next best available synthesizer.
 
 Reconcile conflicts by inspecting the disputed evidence or commissioning one discriminating check.
 Agreement raises confidence only when reviewers reached it through meaningfully independent evidence.
@@ -135,47 +135,48 @@ Only use models defined in this set.
 
 ### `openai/gpt-5.6-sol-fast`
 
-- Use `medium` or `high` for general review, difficult synthesis, and cross-concern judgment.
+- Use `high` or `xhigh` when the child orchestrates other models.
+- Use `medium` or `high` for difficult review, synthesis, or cross-concern judgment.
+- Default reviewer for Anthropic- or Kimi-authored work.
 
 ### `anthropic/claude-fable-5`
 
-- Use `low` to `high` only when explicitly requested by the user.
-- Better at understanding intent, can determine good terminal end state or intermediate goal if sufficient ambiguity.
+- Default to `high`.
+- Reserve for long, ambiguity-heavy objectives.
+- Best when the child manages a substantial multi-model pipeline.
+- A complicated review-and-verification flow is the canonical case.
+- Requires abundant fresh Anthropic headroom, or an explicit request.
+- Do not spend it on bounded ambiguity or ordinary review work.
+- When Fable orchestrates, protect its context and delegate aggressively.
+- Push evidence gathering and specialist review into subagents; keep Fable on intent, sequencing, and synthesis.
+
+### `anthropic/claude-opus-5`
+
+- `medium` is the default `build/owner`.
+- It is also the best fit for most general review work.
+- Raise to `high` for deep or adversarial critique.
+- Default reviewer for OpenAI or xAI authored work.
+- Strong for UX, product behavior, prose, and an alternate conceptual lens.
 
 ### `kimi-code/k3` and `opencode-go/kimi-k3`
 
-Use `kimi-code/k3` as the primary Kimi route and `opencode-go/kimi-k3` only as its capacity fallback.
-Kimi is a strong fit for frontend planning, design critique, bounded build slices, repair loops, and high-context implementation work.
+- Default to `high`; use `max` for deep or complex cases.
+- Specialist for frontend, design, 3D, and security review.
+- Owns security and design review unless Kimi authored the target; then use Sol.
+- Prefer `kimi-code/k3`; use `opencode-go/kimi-k3` only as capacity fallback.
+- Call `usage_status` before dispatch.
+- Dispatch only on fresh positive headroom.
+- Otherwise take the next best non-Kimi model.
 
-- Immediately before any dispatch or fanout containing Kimi, call `usage_status`.
-- Dispatch `kimi-code/k3` only when the Kimi snapshot is fresh and every reported cap has positive headroom.
-- If direct Kimi is unavailable, dispatch `opencode-go/kimi-k3` only when the OpenCode snapshot is fresh and every reported cap has positive headroom.
-- Kimi may wait for a quota reset instead of failing fast; never dispatch either route on stale, unknown, errored, or exhausted capacity, and never probe capacity with a task call.
-- If neither route is safe, choose the next best non-Kimi model rather than waiting for reset.
-- Use the effort exposed by the selected route; when only `max` is advertised, pass `max` instead of guessing another variant.
-- Strong fit for frontend/design work, bounded implementation, large-context repository passes, and cheap parallel repair attempts.
-- Generally best for `review/design` or `build/owner` of ambitious UI/UX work.
-- Excellent at understanding 3D problems.
-- Shaping up to be best `build/owner` for large tasks. Have sol review work, or vice versa, depending who runs the owner.
+### `xai/grok-4.5`
 
-### `openai/gpt-5.6-terra-fast`
-
-- Use `low` or `medium` for focused review leaves, verification, and routine independent passes.
+- Use `medium` or `high` for independent adversarial judgment and current ecosystem signal.
+- Keep usage light while xAI limits remain poor.
 
 ### `openai/gpt-5.6-luna-fast`
 
 - Use `low` or `medium` for scouts, bounded evidence gathering, and cheap checks.
 - Escalate when a result is ambiguous or disputed; question findings.
-
-### `anthropic/claude-opus-4-8`
-
-- Use `medium` when speed matters, and higher when requested.
-- Strong for UX, product behavior, prose, and an alternate conceptual lens.
-- Do not use unless sub 50% of usage on headroom, or explicit asked to use for council review.
-
-### `xai/grok-4.5`
-
-- Use `medium` or `high` for independent adversarial judgment and current ecosystem signal.
 
 ### Usage
 

@@ -112,58 +112,50 @@ Only use models defined in this set.
 
 ### `openai/gpt-5.6-sol-fast`
 
-- Ranges from `low` to `high`.
-- Definitely use for risky objectives, ambiguous ownership, multi-concern synthesis, large owners.
-- Replacement for `5.6-terra`/`grok-4.5` on larger (`build/owner`) tasks that approach a more complexity.
-- By default best choice for dispatch modes, `xhigh` can occasional be used here.
-
-### `kimi-code/k3` and `opencode-go/kimi-k3`
-
-Use `kimi-code/k3` as the primary Kimi route and `opencode-go/kimi-k3` only as its capacity fallback.
-Kimi is a strong fit for frontend planning, design critique, bounded build slices, repair loops, and high-context implementation work.
-
-- Immediately before any dispatch or fanout containing Kimi, call `usage_status`.
-- Dispatch `kimi-code/k3` only when the Kimi snapshot is fresh and every reported cap has positive headroom.
-- If direct Kimi is unavailable, dispatch `opencode-go/kimi-k3` only when the OpenCode snapshot is fresh and every reported cap has positive headroom.
-- Kimi may wait for a quota reset instead of failing fast; never dispatch either route on stale, unknown, errored, or exhausted capacity, and never probe capacity with a task call.
-- If neither route is safe, choose the next best non-Kimi model rather than waiting for reset.
-- Use the effort exposed by the selected route; when only `max` is advertised, pass `max` instead of guessing another variant.
-- Strong fit for frontend/design work, bounded implementation, large-context repository passes, and cheap parallel repair attempts.
-- Generally best for `review/design` or `build/owner` of ambitious UI/UX work.
-- Excellent at understanding 3D problems.
-- Shaping up to be best `build/owner` for large tasks. Have sol review work, or vice versa, depending who runs the owner.
+- Use `high` or `xhigh` when the child orchestrates other models.
+- Use `medium` or `high` for substantial build, review, or synthesis work.
+- Default reviewer for Anthropic- or Kimi-authored work.
 
 ### `anthropic/claude-fable-5`
 
-- Use at `low` to `medium` to resolve complex ambiguity if context supplied, or `medium` to `high` if requested by user.
-- Better at understanding intent, can determine good terminal end state or intermediate goal if sufficient ambiguity.
+- Default to `high`.
+- Reserve for long, ambiguity-heavy objectives.
+- Best when the child manages a substantial multi-model pipeline, such as a long build or complicated review-and-verification flow.
+- Requires abundant fresh Anthropic headroom, or an explicit request.
+- Do not spend it on bounded ambiguity or ordinary work.
+- When Fable orchestrates, protect its context and delegate aggressively.
+- Push implementation, evidence gathering, and independent review into subagents; keep Fable on intent, sequencing, and synthesis.
+
+### `anthropic/claude-opus-5`
+
+- `medium` is the default `build/owner` and the best fit for most general tasks.
+- Raise to `high` for difficult implementation or deep independent review.
+- Strong architectural reasoning with a different failure profile.
+- Default reviewer for OpenAI or xAI authored work.
+
+### `kimi-code/k3` and `opencode-go/kimi-k3`
+
+- Default to `high`; use `max` for deep or complex cases.
+- Specialist for frontend, design, 3D, security review, and large high-context build ownership.
+- Prefer `kimi-code/k3`; use `opencode-go/kimi-k3` only as capacity fallback.
+- Call `usage_status` first; dispatch only on fresh positive headroom, otherwise take the next best non-Kimi model.
 
 ### `xai/grok-4.5`
 
-- Almost always `medium` or `high`.
-- Well specified concrete patches, reorgs, and simple but expected heavy output.
-- Good at managing and synthesizing various tool calls.
-- Great for direct real-time checks and `verify/web`; `verify/x` already reaches Grok through its CLI tool.
-
-Dispatch `verify/x` without `model` or `effort` so its pinned lightweight orchestrator avoids paying for Grok twice.
-
-### `openai/gpt-5.6-terra-fast`
-
-- Ranges from `medium` to `high`;
-- General mid complexity builds, focused review, verification and acceptance.
-- Standard fallback or alternative for `grok-4.5`.
+- Use `medium` or `high`.
+- Extremely fast; strong for concrete patches, reorgs, and wide mechanical edits.
+- Good at tool-heavy work and synthesis.
+- Strong for direct real-time checks and `verify/web`.
+- Default for `git/*` tasks; use Luna Fast at `high` when Grok is unavailable.
+- For rebases requiring semantic conflict resolution, use Opus at `medium` or Sol at `medium` or `high` instead.
+- `verify/x` already reaches Grok through its CLI tool.
+- Prefer Luna Fast at `high` for `verify/x`; otherwise use the next best available synthesizer.
 
 ### `openai/gpt-5.6-luna-fast`
 
 - Ranges `low` or `high`; the interactive default.
 - Bounded few small patches that could have side effects, scouts, quick lookups, cheap verification.
-- Escalate to terra when a result comes back unclear, good to double check conclusions.
-
-### `anthropic/claude-opus-4-8`
-
-- Range from `medium` to `xhigh`; fine to burn usage when available.
-- Adversarial plan critique and independent review with a different failure profile.
-- Do not use unless sub 50% of usage on headroom, or explicit asked to use for council review.
+- Escalate to Sol or Opus `medium` when a result comes back unclear, good to double check conclusions.
 
 ### Usage
 
