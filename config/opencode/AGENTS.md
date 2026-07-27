@@ -163,7 +163,7 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 #### Testing
 
 - Default to not adding tests. Seriously, don't.
-- Add tests only when the user specifically asks for unit or regression tests, or when parsing, edge cases.
+- Add tests only when the user specifically asks for unit or regression tests.
 - If tests seem valuable but were not requested, propose them as an option instead of writing them.
 
 ## Interaction
