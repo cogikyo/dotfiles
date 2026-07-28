@@ -21,6 +21,8 @@ const BILLING_CREDITS_URL = "https://cli-chat-proxy.grok.com/v1/billing?format=c
 // Bound each billing fetch so a hung endpoint cannot hold the shared usage provider lock indefinitely.
 const FETCH_TIMEOUT_MS = 15_000;
 const GROK_REFRESH_TIMEOUT_MS = 30_000;
+// `grok models` prints a short model list; anything larger means the CLI is misbehaving.
+const GROK_REFRESH_MAX_OUTPUT = 64 * 1024;
 const execFileAsync = promisify(execFile);
 
 type GrokAuthEntry = {
@@ -111,24 +113,46 @@ async function readGrokAuth(): Promise<GrokAuthFile | undefined> {
   }
 }
 
-async function refreshGrokAuth() {
+// Refresh notes are actionable: they name the CLI state the user has to repair.
+type AuthFailure = "no grok cli" | "refresh failed" | "refresh timeout" | "grok login";
+
+type AuthResult = { ok: true; token: string } | { ok: false; reason: AuthFailure };
+
+// `grok models` is the cheapest CLI command that drives the OIDC refresh, but it exits 0
+// even when the refresh fails (it just prints "You are not authenticated"), so exit status
+// proves nothing. Only a rewritten, unexpired entry in auth.json counts as a live token.
+async function runGrokRefresh(): Promise<AuthFailure | undefined> {
   try {
     await execFileAsync(process.env.GROK_CLI || "grok", ["models"], {
       timeout: GROK_REFRESH_TIMEOUT_MS,
-      maxBuffer: 16_384,
+      maxBuffer: GROK_REFRESH_MAX_OUTPUT,
     });
-    return true;
-  } catch {
-    return false;
+    return undefined;
+  } catch (error) {
+    const failure = error as { code?: unknown; killed?: unknown };
+    if (failure.code === "ENOENT") return "no grok cli";
+    if (failure.killed === true) return "refresh timeout";
+    return "refresh failed";
   }
 }
 
-async function rereadAfterRefresh() {
-  if (!(await refreshGrokAuth())) return undefined;
-  return readGrokAuth();
+async function liveAuth(): Promise<AuthResult> {
+  const stored = xaiEntry(await readGrokAuth());
+  if (stored?.key && !isExpired(stored.expires_at)) return { ok: true, token: stored.key };
+
+  const failure = await runGrokRefresh();
+  if (failure) return { ok: false, reason: failure };
+
+  const refreshed = xaiEntry(await readGrokAuth());
+  // CLI ran clean yet left no live token: the refresh token itself is gone or rejected.
+  if (!refreshed?.key || isExpired(refreshed.expires_at)) {
+    return { ok: false, reason: "grok login" };
+  }
+  return { ok: true, token: refreshed.key };
 }
 
-function xaiEntry(auth: GrokAuthFile) {
+function xaiEntry(auth: GrokAuthFile | undefined) {
+  if (!auth) return undefined;
   for (const [key, entry] of Object.entries(auth)) {
     if (!entry || typeof entry !== "object") continue;
     if (entry.oidc_issuer === ISSUER || key.startsWith(`${ISSUER}::`)) return entry;
@@ -276,19 +300,10 @@ function statusNote(results: FetchResult[]): ProviderUsage | undefined {
 }
 
 async function load(): Promise<ProviderUsage> {
-  let auth = await readGrokAuth();
-  if (!auth) auth = await rereadAfterRefresh();
-  if (!auth) return usage([], "no auth", "warn");
+  const auth = await liveAuth();
+  if (!auth.ok) return usage([], auth.reason, "warn");
 
-  let entry = xaiEntry(auth);
-  if (!entry?.key || isExpired(entry.expires_at)) {
-    auth = (await rereadAfterRefresh()) ?? auth;
-    entry = xaiEntry(auth);
-  }
-  if (!entry?.key) return usage([], "no auth", "warn");
-  if (isExpired(entry.expires_at)) return usage([], "expired", "warn");
-
-  const token = entry.key;
+  const token = auth.token;
   const creditsResult = await fetchBilling(BILLING_CREDITS_URL, token);
   const usageResult = await fetchBilling(BILLING_USAGE_URL, token);
 
