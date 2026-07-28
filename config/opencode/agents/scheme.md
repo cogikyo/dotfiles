@@ -176,10 +176,8 @@ Only use models defined in this set.
 
 ### `anthropic/claude-opus-5`
 
-- `medium` is the default `build/owner` downstream and the best fit for most general tasks.
-- Plan slices with that pairing in mind.
-- Raise to `high` for deep critique.
-- Alternate plans, feasibility analysis, independent critique of Sol-authored specs.
+- Use `medium` as a strong general builder and reviewer with a different failure profile from Sol.
+- Strong for alternate plans, feasibility analysis, and independent critique of Sol-authored specs.
 
 ### `kimi-code/k3` and `opencode-go/kimi-k3`
 

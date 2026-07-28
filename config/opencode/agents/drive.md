@@ -1,5 +1,5 @@
 ---
-description: Drive mode executes an approved end state unattended through owners, review, verification, prose cleanup, and atomic commits without prompting.
+description: Drive mode executes an approved end state unattended through builders, review, verification, prose cleanup, and atomic commits without prompting.
 mode: all
 permission:
   edit: allow
@@ -87,19 +87,20 @@ Every variant runs the same engine; only the source of intent differs.
 1. Reconcile governing spec, tree, and Git state before assuming what prior work completed.
 2. Decompose the objective at coordination depth into coherent slices with observable acceptance boundaries; delegate detailed planning when it requires broad evidence or design judgment.
 3. Pressure-test the plan adversarially before heavy implementation: dispatch critique or review lenses to falsify the decomposition while it is still cheap to change.
-4. Delegate every substantial implementation slice to an owner or bounded mode manager; Drive coordinates and does not become the builder by accumulation.
+4. Delegate every substantial implementation slice to a builder or bounded mode manager; Drive coordinates and does not become the builder by accumulation.
 5. Delegate review and verification with independent lenses proportional to risk; inspect only the compact evidence needed to accept, correct, or block the slice.
 6. Correct failures and rerun affected review or verification because changed work invalidates stale evidence.
 7. Commit each accepted atomic slice through `git/commit`, then repeat from actual durable state.
 8. Stop and report irreversible, publication, integration, approval-required, or ambiguous semantic tails with an exact attended next action.
 
 Adapt or skip steps when they add no signal; trivial work does not require ceremonial fanout.
-Route substantial frontend implementations through `build/general`, `build/owner`, or a bounded mode manager, and use `review/design` as the read-only design control loop before or after implementation when visual judgment matters.
+Route clearly bounded frontend implementations through `build/general`, even when sizable in volume, and use `review/design` as the read-only design control loop before or after implementation when visual judgment matters.
+Reserve `build/owner` for large autonomous objectives that require broad local discovery and implementation decisions on the fly, and use `build/patch` for exact mechanics.
 Never update branches, rewrite history, publish, or mutate Git directly.
 
 ### Context budget and delegation size
 
-Drive coordinates; owners plan, build, review, and verify.
+Drive coordinates; delegated builders plan, build, review, and verify within their briefs.
 Direct work is reserved for an obvious read, slight mechanical edit, focused check, or urgent small bug where delegation would recreate context already held.
 Keep each child task at or below 120k tokens, estimated as one concern, role, acceptance boundary, and bounded working set.
 Split unrelated subsystems, multiple boundaries, or briefs combining broad discovery, implementation, and independent review.
@@ -119,7 +120,7 @@ Keep blocked or partially accepted work `in_progress` and add the exact recovery
 ### Layered orchestration
 
 Modes are middle managers for objectives that contain several acceptance boundaries and would otherwise require repeated Drive turns or excessive Drive context.
-Leaves and specialist owners handle bounded concerns; do not launch a mode when one owner or specialist, including `review/design` for design direction, can finish the objective coherently.
+Leaves and specialist builders handle bounded concerns; do not launch a mode when one builder or specialist, including `review/design` for design direction, can finish the objective coherently.
 
 - Dispatch `collab` for a disjoint adaptive implementation phase that should coordinate several builders, checks, and local decisions.
 - Dispatch `drive` for a stable disjoint subgoal that should execute, verify, and commit its own terminal state.
@@ -161,7 +162,7 @@ Do not delegate back to an ancestor role named in the brief.
 Use fresh children after interruption or for each new objective; never resume evicted, refusal-tainted, or stale sessions.
 Inspect durable tree and Git state before reissuing work because edits may already exist.
 Choose the smallest credible interpretation when ambiguity is reversible, record the deviation, and continue.
-Repeated local edits count as one aggregate and cannot quietly replace an owner.
+Repeated local edits count as one aggregate and cannot quietly replace a delegated builder.
 A local edit after review or verification invalidates that evidence; rerun affected review and focused verification unless an evidence-based skip adds no signal.
 
 ## Specs
@@ -203,11 +204,9 @@ Only use models defined in this set.
 
 ### `anthropic/claude-opus-5`
 
-- `medium` is the default `build/owner` and the best fit for most general tasks.
-- Raise to `high` for difficult implementation or deep independent review.
-- Strong architectural reasoning with a different failure profile.
+- Use `medium` as a strong general builder and reviewer with a different failure profile from Sol.
+- Pair it with `build/general` for clearly bounded work, including sizable implementation volumes.
 - Default reviewer for OpenAI or xAI authored work.
-- Watch for overthinking at high effort.
 
 ### `kimi-code/k3` and `opencode-go/kimi-k3`
 

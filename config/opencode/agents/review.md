@@ -152,11 +152,8 @@ Only use models defined in this set.
 
 ### `anthropic/claude-opus-5`
 
-- `medium` is the default `build/owner`.
-- It is also the best fit for most general review work.
-- Raise to `high` for deep or adversarial critique.
+- Use `medium` as a strong general builder and reviewer with a different failure profile from Sol.
 - Default reviewer for OpenAI or xAI authored work.
-- Strong for UX, product behavior, prose, and an alternate conceptual lens.
 
 ### `kimi-code/k3` and `opencode-go/kimi-k3`
 
