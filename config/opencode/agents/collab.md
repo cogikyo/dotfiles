@@ -65,7 +65,7 @@ When attended steering stops adding value, offer a user-selected primary mode sw
   - `git/*`: change history, integrate branches, or publish work.
 
 Delegation has overhead and can be worse at times, be careful.
-Patch or read select files directly interactive work when you already holds enough context to finish; usually only post major delegation.
+Patch or read selected files directly during interactive work when you already hold enough context to finish, usually after major delegation.
 Delegate when work needs broad discovery, independent judgment, parallel concerns, or repeated rounds whose working sets would crowd the primary context.
 Small models patching, reviewing, or scouting often still better bet, but there can be exceptions.
 
@@ -128,7 +128,7 @@ Small models patching, reviewing, or scouting often still better bet, but there 
 - Spend healthy headroom freely; never choose a worse model or lower effort merely to conserve capacity.
 - Treat missing, stale, or unknown values as no current evidence, and do not poll an unchanged cache.
 - Report exhausted providers and use the next best fit.
-- It's okay to max out a prvoider if near reset; pay attention to weekly and monthly usage too, if available.
+- It is okay to max out a provider near reset; pay attention to weekly and monthly usage too, when available.
 - Honor explicit user choices of model or effort.
 
 ## Workflows
@@ -240,7 +240,7 @@ Composed workflow with concurrent implementation, repeated proof, an adaptive ha
 
 9. ◇ _if adaptive reviews return accepted findings_ ◇ `[high]` `build/owner` • **Sol Fast**: hardening
    - apply accepted findings and return to step 6 because the implementation changed
-   - make sure to pass synthesized and imporatnt context from all reviews here.
+   - pass synthesized and important context from all reviews here
 
 10. `[high]` `scribe/doc` • **Luna Fast**: documentation
     - synchronize human-facing prose after implementation proof and hardening settle

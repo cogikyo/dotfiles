@@ -35,7 +35,7 @@ type PreparedTask = {
   model: ModelRef;
   variant?: string;
   permission: Rule[];
-  driveParent: boolean;
+  unattended: boolean;
 };
 
 const CONTENT_FILTER_ADVICE = "child unrecoverable; re-brief a fresh child (reword the brief first, switch provider as last resort); never resume this session";
@@ -43,6 +43,10 @@ const INTERRUPTED_ADVICE = "completion unknown; reconcile durable state before r
 const KNOWN_EFFORTS = new Set(["default", "minimal", "low", "medium", "high", "xhigh"]);
 const MODE_AGENTS = new Set(["collab", "drive", "review", "scheme"]);
 const MAX_MODE_LINEAGE = 2;
+// Prepended to every unattended child envelope, after dedupe so an agent profile that ends with its own
+// catch-all deny keeps that rule in its authoritative tail position. It only bites when no rule matches at
+// all, where the runtime would otherwise fall through to its `ask` default.
+const UNATTENDED_FLOOR: Rule = { permission: "*", pattern: "*", action: "deny" };
 const STATUS_POLL_MS = 300;
 const STARTUP_TIMEOUT_MS = 120_000;
 
@@ -68,7 +72,7 @@ export async function prepareTask(client: Client, ctx: ToolContext, input: unkno
     model,
     variant,
     permission: childPermission.rules,
-    driveParent: childPermission.driveParent,
+    unattended: childPermission.unattended,
   };
 }
 
@@ -79,9 +83,9 @@ export async function runChildTask(input: {
   prepared: PreparedTask;
   notes: string[];
 }) {
-  if (input.args.task_id && input.prepared.driveParent) {
+  if (input.args.task_id && input.prepared.unattended) {
     throw new Error(
-      "delegate task_id resume is disabled from Drive; re-brief a fresh child so Drive can apply its current deny-only AFK envelope",
+      "delegate task_id resume is disabled under Drive lineage; re-brief a fresh child so the current deny-only AFK envelope applies",
     );
   }
 
@@ -486,24 +490,22 @@ async function deriveChildPermission(
   client: Client,
   parentSessionID: string,
   agent: AgentInfo,
-): Promise<{ rules: Rule[]; driveParent: boolean }> {
+): Promise<{ rules: Rule[]; unattended: boolean }> {
   const [parent, config] = await Promise.all([
     unwrap<Record<string, unknown>>(client.session.get({ path: { id: parentSessionID } } as never), `read parent session ${parentSessionID}`),
     unwrap<Record<string, unknown>>(client.config.get({} as never), "read config"),
   ]);
 
-  await validateModeDelegation(client, parent, agent.name);
+  const lineage = await modeLineage(client, parent);
+  validateModeDelegation(lineage, parent, agent.name);
+  const unattended = lineage.includes("drive");
 
-  const parentRules = normalizeRules(parent.permission);
+  const parentRules = inheritableParentRules(normalizeRules(parent.permission), unattended);
   const inherited = parentRules.filter(
     (rule) => rule.permission === "external_directory" || rule.action === "deny",
   );
   const agentRules = normalizeRules(agent.permission);
   const defaultRules = defaultAgentRules(agent.name, agentRules);
-  const driveParent = isDriveSession(parent);
-  const driveDenies = driveParent
-    ? askRulesAsDenies([...normalizeRules(config.permission), ...parentRules])
-    : [];
   const childDenies: Rule[] = [
     ...(hasPermissionRule(agentRules, "todowrite") ? [] : [deny("todowrite")]),
     ...(hasPermissionRule(agentRules, "task") ? [] : [deny("task")]),
@@ -513,10 +515,36 @@ async function deriveChildPermission(
       .map(deny),
   ];
 
-  return {
-    rules: dedupeRules([...defaultRules, ...agentRules, ...childDenies, ...driveDenies, ...inherited]),
-    driveParent,
-  };
+  const composed = [...defaultRules, ...agentRules, ...childDenies, ...inherited];
+  if (!unattended) return { rules: dedupeRules(composed), unattended };
+  return { rules: [UNATTENDED_FLOOR, ...dedupeRules(composed.map(asBlocker))], unattended };
+}
+
+// An unattended envelope always begins with the floor below, so index 0 of an unattended parent is this
+// plugin's own synthetic rule rather than a boundary the parent declared. A floor is positional: appending it
+// to the tail of a child envelope would outrank every allow the child needs. Only that leading rule is
+// dropped, so a catch-all the parent's profile declares anywhere else still crosses the boundary, and a
+// non-unattended parent inherits exactly as it did before.
+function inheritableParentRules(rules: Rule[], unattended: boolean) {
+  const synthetic = unattended && rules.length > 0 && isUnattendedFloor(rules[0]);
+  return synthetic ? rules.slice(1) : rules;
+}
+
+function isUnattendedFloor(rule: Rule) {
+  return rule.permission === UNATTENDED_FLOOR.permission
+    && rule.pattern === UNATTENDED_FLOOR.pattern
+    && rule.action === UNATTENDED_FLOOR.action;
+}
+
+// A child anywhere under Drive runs with nobody at the terminal, so every reachable `ask` has to become a
+// blocker instead of a prompt. The runtime evaluates `merge(agent.permission, session.permission)` and keeps
+// the last matching rule, and `composed` already replays the agent's whole effective ruleset in order, so
+// rewriting `ask` to `deny` in place preserves relative precedence while closing every prompt path, whatever
+// introduced it: global config, the parent envelope, built-in defaults, or the selected agent's own profile.
+// Rewriting before dedupe matters: otherwise a rewritten inherited rule survives as a tail duplicate and
+// outranks the child's own later refinement of the same permission.
+function asBlocker(rule: Rule): Rule {
+  return rule.action === "ask" ? { ...rule, action: "deny" } : rule;
 }
 
 async function readExistingChild(
@@ -554,10 +582,9 @@ async function readExistingChild(
   return { id };
 }
 
-async function validateModeDelegation(client: Client, parent: Record<string, unknown>, target: string) {
+function validateModeDelegation(lineage: string[], parent: Record<string, unknown>, target: string) {
   if (!MODE_AGENTS.has(target)) return;
 
-  const lineage = await modeLineage(client, parent);
   if (lineage.length >= MAX_MODE_LINEAGE) {
     throw new Error(`delegate mode depth limit reached (${lineage.join(" → ")}); use a leaf or return the objective to the parent`);
   }
@@ -674,22 +701,12 @@ function defaultAgentRules(agentName: string, explicitRules: Rule[]) {
   return rules;
 }
 
-function isDriveSession(session: Record<string, unknown>) {
-  return sessionAgent(session) === "drive";
-}
-
 function sessionAgent(session: Record<string, unknown>) {
   return string(session.agent) ?? string(object(session.agent)?.name);
 }
 
 function sessionParentID(session: Record<string, unknown>) {
   return string(session.parentID) ?? string(session.parentId) ?? string(object(session.parent)?.id);
-}
-
-function askRulesAsDenies(rules: Rule[]) {
-  return rules
-    .filter((rule) => rule.action === "ask")
-    .map((rule): Rule => ({ ...rule, action: "deny" }));
 }
 
 function primaryTools(config: Record<string, unknown>) {

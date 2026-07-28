@@ -38,18 +38,29 @@ Normal flow:
 
 - `model` is `provider/model-id`; when omitted the child inherits the agent's pinned model or the current assistant message's model and effort.
 - `effort` maps to the target model's reasoning variants.
-- `task_id` resumes an existing child session, but Drive parents reject resumes.
+- `task_id` resumes an existing child session, but any session with Drive in its ancestry rejects resumes.
 - The provider must be listed in `config/opencode/delegate.json`.
 - Before spawning, it waits abortably if any non-post-reset window is at >=100%, until the latest capped reset passes; stale, errored, or unknown usage proceeds un-gated.
 - Children inherit parent denies and `external_directory` rules; review agents get a read-only default profile.
-- Drive parents convert inherited `ask` rules into child denies so unattended review cannot surface a TUI approval prompt.
 - Content-filter-shaped errors return a normal result with `state="error"` instead of throwing.
+
+Unattended envelope, applied when Drive appears anywhere in the parent's session ancestry:
+
+- The child envelope is composed as review defaults, the agent's whole effective ruleset, the delegate denies, then inherited parent rules.
+- Every `ask` in that composition is rewritten to `deny` in place, so global config, parent, built-in defaults, and the selected agent's own profile are all covered by construction.
+- Rewriting keeps each rule's position, so a later, more specific `allow` still wins; `pacman -Q*` stays allowed even though `pacman *` asks.
+- Rewriting happens before dedupe, otherwise a rewritten inherited rule survives as a tail duplicate and outranks the child's own refinement of the same permission.
+- A leading `*` deny is prepended after dedupe as the floor for permissions no rule matches, since the runtime's own fallback is `ask`.
+- Inheritance skips only that synthetic leading floor, and only when the parent is itself under Drive lineage; a floor is positional, so appending one to a child's tail would outrank every allow the child needs.
+- Every other parent rule is inherited unchanged, including a catch-all the parent's own profile declares later, and a non-Drive parent is inherited exactly as before.
+- Net effect: a child anywhere under Drive can never surface a `question` or a permission prompt, and a denied operation returns to the child as an ordinary tool error for the parent to judge.
+- The same derivation runs for a mode child, so `Drive → Collab → leaf` carries the policy to every depth.
 
 Practical failure diagnosis:
 
 - `delegate provider policy missing for <provider>` → add the provider to `delegate.json`.
 - `Unknown effort` → pick a variant that the target model exposes in config.
-- `delegate task_id resume is disabled from Drive` → re-brief a fresh child.
+- `delegate task_id resume is disabled under Drive lineage` → re-brief a fresh child.
 - `child showed no activity within 120 seconds` → the model/provider failed to start producing output.
 - `blocked: content_filter` → reword the brief first; switch provider only as a last resort; never resume the tainted child.
 
@@ -155,6 +166,7 @@ Practical failure diagnosis:
 - Usage adapters must not log tokens, cookies, or local paths.
 - `usage_status` is read-only and must never refresh providers or mutate chat context.
 - Delegate children deny `todowrite`, `task`, and `experimental.primary_tools` tools unless the agent declares them.
+- Delegate children always deny `question`, and children under Drive lineage additionally carry no `ask` rule at all.
 - Kitty context directory is mode `0700` and the context JSON file is mode `0600`.
 - Media registry directories are mode `0700` and registry files are mode `0600`.
 - Named media images are copied into the runtime cache; original source files are never renamed.
