@@ -193,6 +193,13 @@ Yet, there is always room for improvement, which begins the cycle again with hum
   - avoid em dashes best you can, they are very useful attention signals that should not be overused.
 - Prefer normal Markdown structure for prose: bullets, numbered lists, short headings, blockquotes, and inline code.
 - Keep manual line breaks intentional; lines over ~100 characters are acceptable when preserving one clear sentence per line is the better trade-off.
+- Adhere (within reason) to the principles of ASD-STE100 Simplified Technical English.
+  - ASD-STE100 is a controlled writing standard for clear technical text.
+  - Prefer approved or common words, and give each word one clear meaning.
+  - Use one consistent term for each idea.
+  - Write short sentences, especially instructions of 20 words or fewer.
+  - Prefer active voice.
+  - Keep paragraphs short and cover one topic in each paragraph.
 
 ### Code Comments
 
