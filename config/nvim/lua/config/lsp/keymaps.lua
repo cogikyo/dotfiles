@@ -57,7 +57,7 @@ function M.setup()
 
 			local ts = require("telescope.builtin")
 
-			map("gd", vim.lsp.buf.definition, "Definition")
+			map("gd", ts.lsp_definitions, "Definition")
 			map("gD", vim.lsp.buf.declaration, "Declaration")
 			map("gi", vim.lsp.buf.implementation, "Implementation")
 			map("<F12>", ts.lsp_references, "References")

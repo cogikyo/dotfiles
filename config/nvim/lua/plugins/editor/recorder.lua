@@ -8,7 +8,7 @@ return {
 		mapping = {
 			startStopRecording = "Q",
 			playMacro = "@",
-			switchSlot = "<C-m>",
+			switchSlot = "sQ",
 			editMacro = "cQ",
 			deleteAllMacros = "dQ",
 		},
