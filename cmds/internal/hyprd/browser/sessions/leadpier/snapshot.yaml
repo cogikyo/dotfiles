@@ -1,14 +1,14 @@
 name: leadpier
 window:
     selected_tab: 1
-    tab_count: 5
+    tab_count: 6
     group_count: 3
-    selected_title: 'improve(tracking/parse): preserve duplicate pasted placeholders (5c824879) · Commits · LeadPier / LeadPier UI · GitLab'
-    selected_url: https://git.trendcapital.io/leadpier/leadpierui/-/commit/5c8248799a5f3642545c6ae6b0b564ed7c845d9e
+    selected_title: LeadPier / LeadPier UI · GitLab
+    selected_url: https://git.trendcapital.io/leadpier/leadpierui
     hypr_order_matches_tabs: true
 browser:
     pinned:
-        - https://git.trendcapital.io/leadpier/leadpierui/-/commit/5c8248799a5f3642545c6ae6b0b564ed7c845d9e
+        - https://git.trendcapital.io/leadpier/leadpierui
         - https://git.linecode.dev/
     groups:
         - name: local
@@ -21,14 +21,15 @@ browser:
           collapsed: true
           urls:
             - https://local.leadpier.com:4000/login
+            - https://lpadmin.cullyn.dev/
         - name: prod
           color: green
           urls:
-            - https://beta.leadpier.com/dashboard?limit=50&offset=0&orderDirection=ASC&compareWith=2026-06-01%2C2026-05-25&cumulative=true&excludedTagIdsRequireAll=false&groupBy=DAY&orderBy=period&periodFrom=today&periodTo=today&tagIdsRequireAll=false
+            - https://beta.leadpier.com/dashboard
 tabs:
     - position: 1
-      title: 'improve(tracking/parse): preserve duplicate pasted placeholders (5c824879) · Commits · LeadPier / LeadPier UI · GitLab'
-      url: https://git.trendcapital.io/leadpier/leadpierui/-/commit/5c8248799a5f3642545c6ae6b0b564ed7c845d9e
+      title: LeadPier / LeadPier UI · GitLab
+      url: https://git.trendcapital.io/leadpier/leadpierui
       pinned: true
     - position: 2
       title: cullyn - Dashboard - Linecode
@@ -49,8 +50,15 @@ tabs:
       group_color: orange
       collapsed: true
     - position: 5
-      title: LeadPier (35) | Dashboard
-      url: https://beta.leadpier.com/dashboard?limit=50&offset=0&orderDirection=ASC&compareWith=2026-06-01%2C2026-05-25&cumulative=true&excludedTagIdsRequireAll=false&groupBy=DAY&orderBy=period&periodFrom=today&periodTo=today&tagIdsRequireAll=false
+      title: https://lpadmin.cullyn.dev/
+      url: https://lpadmin.cullyn.dev/
+      group_id: 1776625621988-1
+      group: staging
+      group_color: orange
+      collapsed: true
+    - position: 6
+      title: LeadPier (6) | LeadPier
+      url: https://beta.leadpier.com/dashboard
       group_id: 1776625644331-95
       group: prod
       group_color: green
