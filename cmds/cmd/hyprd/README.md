@@ -25,7 +25,7 @@ hyprd/
 │   ├── firefox.go              #   profile discovery + sessionstore loading
 │   ├── mozlz4.go               #   Mozilla LZ4 decompression
 │   ├── profile.go              #   Firefox profile path resolution
-│   ├── restore.go              #   exact session replacement restore
+│   ├── restore.go              #   exact session merge and restore
 │   ├── session_store.go        #   sessionstore JSON parsing
 │   ├── snapshot.go             #   named snapshot creation from browser windows
 │   ├── browser_test.go         #   tests
@@ -195,7 +195,6 @@ hyprd browser snapshot <name> [active|largest|index]
 hyprd browser show <name>
 hyprd browser hypr <name>
 hyprd browser restore <name> [--force] [--dry-run]
-hyprd browser profile refresh <name> [--force] [--dry-run]
 hyprd browser launch
 ```
 
@@ -222,9 +221,16 @@ Command meanings:
 - `snapshot` writes a named snapshot under `browser/sessions/` from the selected Firefox window. Selectors are `active`, `largest`, or a 1-based window index.
 - `show` prints the saved snapshot YAML summary.
 - `hypr` prints a launch config generated from the snapshot; mostly useful for inspection now that session config can use `browser: <name>`.
-- `restore` manually restores a snapshot exactly by replacing Firefox session files. `coms` uses the main Firefox profile; other snapshots use persistent profiles under `~/.local/share/hyprd/firefox-profiles/` seeded from the main profile on first use.
-- `profile refresh` overwrites a persistent layout profile from the main Firefox profile and re-injects that layout's snapshot. It refuses for `coms` because `coms` is the main profile.
+- `restore` adds the snapshot as a window in the main Firefox profile. Use `--force` when Firefox is running.
 - `launch` clears the profile sessionstore and opens a clean new-tab window; this is used internally by the three-body browser command for non-snapshot launches.
+
+Snapshots taken from the active Firefox window record its home workspace.
+`browser restore` claims that window there; edit its `snapshot.yaml` `workspace` value to change the destination.
+
+All snapshots share the main Firefox profile, including cookies, logins, extensions, and shortcuts.
+Each snapshot remains isolated as a separate Firefox window with its own pinned tabs, groups, and tabs.
+Opening a layout while Firefox runs stops and relaunches Firefox, preserving existing windows and adding the requested snapshot window.
+Opening a layout reuses an existing Firefox window when its selected tab title already matches the snapshot.
 
 ### Screenshot
 

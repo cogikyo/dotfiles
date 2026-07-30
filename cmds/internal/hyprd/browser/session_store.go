@@ -32,10 +32,13 @@ type firefoxSessionStore struct {
 }
 
 type firefoxWindow struct {
-	Selected int            `json:"selected"`
-	Tabs     []firefoxTab   `json:"tabs"`
-	Groups   []firefoxGroup `json:"groups"`
+	Selected int                        `json:"selected"`
+	Tabs     []firefoxTab               `json:"tabs"`
+	Groups   []firefoxGroup             `json:"groups"`
+	ExtData  map[string]json.RawMessage `json:"extData"`
 }
+
+const layoutExtDataKey = "hyprd/layout"
 
 // firefoxTab mirrors one entry in window.tabs; Index is 1-based into Entries (history stack).
 type firefoxTab struct {
@@ -70,6 +73,44 @@ func (b *Browser) loadFirefoxSession(profile firefoxProfile) (*firefoxSessionSto
 		return nil, err
 	}
 	return parseFirefoxSession(payload, source)
+}
+
+func (b *Browser) currentLayoutWindowTitle(name string) (string, bool, error) {
+	profile, err := discoverFirefoxProfile("")
+	if err != nil {
+		return "", false, err
+	}
+	store, err := b.loadFirefoxSession(profile)
+	if err != nil {
+		return "", false, err
+	}
+	title, found := layoutWindowTitle(store.Windows, name)
+	return title, found, nil
+}
+
+func layoutWindowTitle(windows []firefoxWindow, name string) (string, bool) {
+	if name == "" {
+		return "", false
+	}
+	for _, window := range windows {
+		layout, stamped := firefoxWindowLayout(window)
+		if stamped && layout == name {
+			return summarizeFirefoxWindow(window).SelectedTitle, true
+		}
+	}
+	return "", false
+}
+
+func firefoxWindowLayout(window firefoxWindow) (string, bool) {
+	raw, stamped := window.ExtData[layoutExtDataKey]
+	if !stamped {
+		return "", false
+	}
+	var name string
+	if err := json.Unmarshal(raw, &name); err != nil {
+		return "", true
+	}
+	return name, true
 }
 
 func (b *Browser) loadSnapshotSession(name string) (string, *firefoxSessionStore, error) {
@@ -109,18 +150,24 @@ func parseFirefoxSession(payload []byte, source string) (*firefoxSessionStore, e
 
 // firefoxSessionSourceFile returns the first existing session file in Firefox's recovery priority order.
 func firefoxSessionSourceFile(profile firefoxProfile) (string, error) {
-	candidates := []string{
+	if source, ok := firstFirefoxSessionFile([]string{
 		filepath.Join(profile.Root, "sessionstore-backups", "recovery.jsonlz4"),
 		filepath.Join(profile.Root, "sessionstore-backups", "recovery.baklz4"),
 		filepath.Join(profile.Root, "sessionstore.jsonlz4"),
 		filepath.Join(profile.Root, "sessionstore-backups", "previous.jsonlz4"),
-	}
-	for _, candidate := range candidates {
-		if fileExists(candidate) {
-			return candidate, nil
-		}
+	}); ok {
+		return source, nil
 	}
 	return "", fmt.Errorf("no sessionstore file found in %s", profile.Root)
+}
+
+func firstFirefoxSessionFile(candidates []string) (string, bool) {
+	for _, candidate := range candidates {
+		if fileExists(candidate) {
+			return candidate, true
+		}
+	}
+	return "", false
 }
 
 // resolveWindowIndex picks a window by selector: "active" (Hypr title match), "largest", or 1-based index.

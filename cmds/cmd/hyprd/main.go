@@ -334,7 +334,6 @@ Browser:
   hyprd browser show <name>
   hyprd browser hypr <name>
   hyprd browser restore <name> [--force] [--dry-run]
-  hyprd browser profile refresh <name> [--force] [--dry-run]
 
 Query/Subscribe (for eww):
   hyprd query [topic]    Get state (workspace|hidden|split|three-body|all)

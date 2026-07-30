@@ -38,10 +38,11 @@ type browserTabSummary struct {
 }
 
 type browserSnapshotSummary struct {
-	Name    string                `yaml:"name"`
-	Window  browserSnapshotWindow `yaml:"window"`
-	Browser config.BrowserConfig  `yaml:"browser"`
-	Tabs    []browserTabSummary   `yaml:"tabs,omitempty"`
+	Name      string                `yaml:"name"`
+	Workspace int                   `yaml:"workspace,omitempty"`
+	Window    browserSnapshotWindow `yaml:"window"`
+	Browser   config.BrowserConfig  `yaml:"browser"`
+	Tabs      []browserTabSummary   `yaml:"tabs,omitempty"`
 }
 
 type browserSnapshotWindow struct {
@@ -53,7 +54,7 @@ type browserSnapshotWindow struct {
 	HyprOrderMatchesTabs bool   `yaml:"hypr_order_matches_tabs"`
 }
 
-func (b *Browser) writeSnapshot(name string, _ firefoxProfile, windowIndex int, store *firefoxSessionStore) (string, error) {
+func (b *Browser) writeSnapshot(name string, _ firefoxProfile, windowIndex, workspace int, store *firefoxSessionStore) (string, error) {
 	slug, err := slugifySnapshotName(name)
 	if err != nil {
 		return "", err
@@ -70,10 +71,11 @@ func (b *Browser) writeSnapshot(name string, _ firefoxProfile, windowIndex int, 
 
 	windowSummary := summarizeFirefoxWindow(store.Windows[windowIndex])
 	summary := browserSnapshotSummary{
-		Name:    slug,
-		Window:  windowSummary.browserSnapshotWindow,
-		Browser: windowSummary.Browser,
-		Tabs:    windowSummary.Tabs,
+		Name:      slug,
+		Workspace: workspace,
+		Window:    windowSummary.browserSnapshotWindow,
+		Browser:   windowSummary.Browser,
+		Tabs:      windowSummary.Tabs,
 	}
 
 	summaryData, err := yaml.Marshal(summary)
@@ -193,51 +195,105 @@ func SnapshotSelectedTitle(name string) (string, error) {
 	return summary.Window.SelectedTitle, nil
 }
 
-// SnapshotMatchesWindowTitle reports whether a live Firefox window title matches a snapshot's selected tab.
+// LayoutWindowTitles returns current and snapshot titles in live-match priority order.
+func (b *Browser) LayoutWindowTitles(name string) ([]string, error) {
+	dir, err := resolveSnapshotDir(name)
+	if err != nil {
+		return nil, err
+	}
+	summary, err := readSnapshotSummary(dir)
+	if err != nil {
+		return nil, err
+	}
+
+	current, found, liveErr := b.currentLayoutWindowTitle(summary.Name)
+	if liveErr != nil {
+		// A missing or mid-flush live session must retain the pre-stamp title behavior.
+		found = false
+	}
+	return layoutTitleCandidates(current, found, summary.Window.SelectedTitle), nil
+}
+
+func layoutTitleCandidates(current string, found bool, snapshot string) []string {
+	var titles []string
+	if found && strings.TrimSpace(current) != "" {
+		titles = append(titles, current)
+	}
+	if strings.TrimSpace(snapshot) != "" && (len(titles) == 0 || snapshot != titles[0]) {
+		titles = append(titles, snapshot)
+	}
+	return titles
+}
+
+func layoutTitleMatches(windowTitle string, titles []string) bool {
+	windowTitle = trimFirefoxTitle(windowTitle)
+	for _, title := range titles {
+		if titlesMatch(windowTitle, title) {
+			return true
+		}
+	}
+	return false
+}
+
+func layoutWindowForTitles(clients []hypr.Window, titles []string) (hypr.Window, bool) {
+	for _, title := range titles {
+		for _, client := range clients {
+			if isFirefoxWindow(client) && titlesMatch(trimFirefoxTitle(client.Title), title) {
+				return client, true
+			}
+		}
+	}
+	return hypr.Window{}, false
+}
+
+func (b *Browser) layoutWindow(snapshot string) (hypr.Window, bool, error) {
+	if b.hypr == nil {
+		return hypr.Window{}, false, fmt.Errorf("no hyprland client")
+	}
+	titles, err := b.LayoutWindowTitles(snapshot)
+	if err != nil {
+		return hypr.Window{}, false, err
+	}
+	clients, err := b.hypr.Clients()
+	if err != nil {
+		return hypr.Window{}, false, err
+	}
+	window, found := layoutWindowForTitles(clients, titles)
+	return window, found, nil
+}
+
+// LayoutWindowIsOpen reports whether Hyprland has the snapshot's current or fallback window title.
+func (b *Browser) LayoutWindowIsOpen(snapshot string) (bool, error) {
+	_, found, err := b.layoutWindow(snapshot)
+	return found, err
+}
+
+// SnapshotMatchesWindowTitle reports whether a Firefox title matches the live layout title or its snapshot fallback.
 func SnapshotMatchesWindowTitle(snapshot, windowTitle string) bool {
-	title, err := SnapshotSelectedTitle(snapshot)
+	titles, err := (&Browser{}).LayoutWindowTitles(snapshot)
 	if err != nil {
 		return false
 	}
-	return titlesMatch(trimFirefoxTitle(windowTitle), title)
+	return layoutTitleMatches(windowTitle, titles)
 }
 
 // ClaimWindow finds a Firefox window matching the snapshot's selected title and moves it to the target workspace.
 func (b *Browser) ClaimWindow(snapshot string, workspace int) error {
-	return b.claimWindow(snapshot, workspace, nil)
-}
-
-func (b *Browser) claimWindow(snapshot string, workspace int, allow func(hypr.Window) bool) error {
 	if b.hypr == nil {
 		return fmt.Errorf("no hyprland client")
 	}
 
-	title, err := SnapshotSelectedTitle(snapshot)
+	window, found, err := b.layoutWindow(snapshot)
 	if err != nil {
 		return err
 	}
-
-	clients, err := b.hypr.Clients()
-	if err != nil {
-		return err
+	if !found {
+		return fmt.Errorf("no Firefox window for snapshot %q", snapshot)
 	}
-
-	for _, c := range clients {
-		if !strings.Contains(strings.ToLower(c.Class), "firefox") {
-			continue
-		}
-		if allow != nil && !allow(c) {
-			continue
-		}
-		if titlesMatch(trimFirefoxTitle(c.Title), title) {
-			if c.Workspace.ID == workspace {
-				return nil
-			}
-			return b.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", workspace, c.Address))
-		}
+	if window.Workspace.ID == workspace {
+		return nil
 	}
-
-	return fmt.Errorf("no Firefox window matching %q for snapshot %q", title, snapshot)
+	return b.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", workspace, window.Address))
 }
 
 // buildSessionPayload constructs minimal Firefox session JSON from snapshot metadata.
@@ -285,6 +341,7 @@ func buildSessionPayload(dir string) ([]byte, error) {
 	window := map[string]any{
 		"tabs":     tabs,
 		"selected": meta.Window.SelectedTab,
+		"extData":  map[string]string{layoutExtDataKey: meta.Name},
 	}
 	if len(groups) > 0 {
 		window["groups"] = groups

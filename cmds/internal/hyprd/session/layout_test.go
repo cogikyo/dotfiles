@@ -100,12 +100,18 @@ func TestPreserveSessionBrowserWindowMatchesSnapshotTitle(t *testing.T) {
 	}
 
 	window.Title = "Other — Firefox Developer Edition"
-	if !preserveSessionBrowserWindow(s, window) {
-		t.Fatalf("all Firefox windows should be preserved during shared-profile cleanup")
+	if preserveSessionBrowserWindow(s, window) {
+		t.Fatalf("non-matching Firefox window should not be preserved")
 	}
 
-	window.Class = "kitty"
+	window.Class = ""
+	window.InitialClass = "firefox-developer-edition"
 	window.Title = "Slack — Firefox Developer Edition"
+	if !preserveSessionBrowserWindow(s, window) {
+		t.Fatalf("matching Firefox initial class should be preserved")
+	}
+
+	window.InitialClass = "kitty"
 	if preserveSessionBrowserWindow(s, window) {
 		t.Fatalf("non-Firefox window should not be preserved")
 	}

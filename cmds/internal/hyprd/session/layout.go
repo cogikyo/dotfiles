@@ -137,7 +137,7 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 	cfg := l.state.GetConfig()
 	for _, c := range clients {
 		if c.Workspace.ID == s.Workspace && !c.Pinned && !windows.IsIgnored(c.Class) {
-			if l.browserRestoredInBatch(s.Name) && preserveSessionBrowserWindow(s, c) {
+			if preserveSessionBrowserWindow(s, c) {
 				continue
 			}
 			l.hypr.Dispatch(fmt.Sprintf("closewindow address:%s", c.Address))
@@ -250,7 +250,17 @@ func (l *Layout) launchSessionBrowser(s config.Session) error {
 		if l.browserRestoredInBatch(s.Name) {
 			return l.claimBrowserWindow(b, s)
 		}
-		if _, err := b.RestoreConfiguredSnapshot(s.Browser, false); err != nil {
+		open, err := b.LayoutWindowIsOpen(s.Browser.Snapshot)
+		if err != nil {
+			return err
+		}
+		if open {
+			return l.claimBrowserWindow(b, s)
+		}
+
+		cfg := s.Browser
+		cfg.Force = true
+		if _, err := b.RestoreConfiguredSnapshot(cfg, false); err != nil {
 			return err
 		}
 		if err := l.claimBrowserWindow(b, s); err != nil {
@@ -299,10 +309,14 @@ func sessionBodyHasBrowser(s config.Session) bool {
 }
 
 func preserveSessionBrowserWindow(s config.Session, c hypr.Window) bool {
-	if s.Browser.Snapshot == "" || !strings.Contains(strings.ToLower(c.Class), "firefox") {
+	if s.Browser.Snapshot == "" || !sessionFirefoxWindow(c) {
 		return false
 	}
-	return true
+	return browser.SnapshotMatchesWindowTitle(s.Browser.Snapshot, c.Title)
+}
+
+func sessionFirefoxWindow(c hypr.Window) bool {
+	return strings.Contains(strings.ToLower(c.Class), "firefox") || strings.Contains(strings.ToLower(c.InitialClass), "firefox")
 }
 
 func (l *Layout) markBatchRestoredBrowsers(sessions []config.Session) {

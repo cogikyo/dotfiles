@@ -10,7 +10,7 @@
 // - Route external URLs to the Firefox instance owned by the current workspace.
 // - Discover Firefox profiles and load sessionstore payloads.
 // - Create named snapshots from selected browser windows.
-// - Restore snapshots by exact session-file replacement.
+// - Restore snapshots as windows in the main Firefox profile.
 package browser
 
 // browser.go defines the Browser command surface and shared subcommand dispatch helpers.
@@ -32,7 +32,7 @@ import (
 )
 
 const (
-	browserUsage         = "usage: browser {launch|open|windows|snapshot|show|hypr|restore|profile}"
+	browserUsage         = "usage: browser {launch|open|windows|snapshot|show|hypr|restore}"
 	browserLaunchUsage   = "usage: browser launch"
 	browserOpenUsage     = "usage: browser open <url>"
 	browserWindowsUsage  = "usage: browser windows [--all]"
@@ -40,7 +40,6 @@ const (
 	browserShowUsage     = "usage: browser show <name>"
 	browserHyprUsage     = "usage: browser hypr <name>"
 	browserRestoreUsage  = "usage: browser restore <name> [--force] [--dry-run]"
-	browserProfileUsage  = "usage: browser profile refresh <name> [--force] [--dry-run]"
 )
 
 // Browser exposes Firefox session commands backed by Hyprland and hyprd state.
@@ -76,8 +75,6 @@ func (b *Browser) Execute(args string) (string, error) {
 		return b.executeHypr(parts[1:])
 	case "restore":
 		return b.executeRestore(parts[1:])
-	case "profile":
-		return b.executeProfile(parts[1:])
 	default:
 		return "", fmt.Errorf(browserUsage)
 	}
@@ -116,9 +113,6 @@ func (b *Browser) openURLInFirefoxTarget(target firefoxOpenTarget, url string) e
 	time.Sleep(250 * time.Millisecond)
 
 	cmd := b.browserCommandParts()
-	if target.Profile.Root != "" {
-		cmd = append(cmd, "--profile", target.Profile.Root)
-	}
 	cmd = append(cmd, "--new-tab", url)
 	if err := exec.Command(cmd[0], cmd[1:]...).Start(); err != nil {
 		return err
@@ -155,12 +149,12 @@ func (b *Browser) SnapshotConfig(name string) (config.BrowserConfig, error) {
 	return summarizeFirefoxWindow(store.Windows[0]).Browser, nil
 }
 
-// UsesExactRestore reports whether cfg should restore by replacing Firefox session files.
+// UsesExactRestore reports whether cfg should restore through Firefox session files.
 func (b *Browser) UsesExactRestore(cfg config.BrowserConfig) bool {
 	return browserMode(cfg) == "exact"
 }
 
-// RestoreConfiguredSnapshot performs an exact session-file restore using cfg.Snapshot.
+// RestoreConfiguredSnapshot merges cfg.Snapshot as an exact window in the main Firefox profile.
 func (b *Browser) RestoreConfiguredSnapshot(cfg config.BrowserConfig, dryRun bool) (string, error) {
 	if !b.UsesExactRestore(cfg) {
 		return "", fmt.Errorf("browser restore mode %q is not exact", browserMode(cfg))
@@ -173,7 +167,7 @@ func (b *Browser) RestoreConfiguredSnapshot(cfg config.BrowserConfig, dryRun boo
 	if err != nil {
 		return "", err
 	}
-	profile, err := profileForSnapshot(cfg.Snapshot, true)
+	profile, err := discoverFirefoxProfile("")
 	if err != nil {
 		return "", err
 	}
@@ -214,17 +208,7 @@ func (b *Browser) RestoreConfiguredSnapshots(configs []config.BrowserConfig, dry
 
 // ClaimWindowForSnapshot finds the restored Firefox window for snapshot and moves it to workspace.
 func (b *Browser) ClaimWindowForSnapshot(snapshot string, workspace int) error {
-	profile, err := profileForSnapshot(snapshot, false)
-	if err != nil {
-		return err
-	}
-	if profile.Main {
-		return b.ClaimWindow(snapshot, workspace)
-	}
-	return b.claimWindow(snapshot, workspace, func(w hypr.Window) bool {
-		windowProfile, ok := firefoxProfileFromWindow(w)
-		return ok && filepath.Clean(windowProfile.Root) == filepath.Clean(profile.Root)
-	})
+	return b.ClaimWindow(snapshot, workspace)
 }
 
 func (b *Browser) executeWindows(args []string) (string, error) {
@@ -286,13 +270,6 @@ func (b *Browser) executeWindows(args []string) (string, error) {
 	return strings.Join(lines, "\n"), nil
 }
 
-func (b *Browser) executeProfile(args []string) (string, error) {
-	if len(args) == 0 || args[0] != "refresh" {
-		return "", fmt.Errorf(browserProfileUsage)
-	}
-	return b.executeProfileRefresh(args[1:])
-}
-
 func (b *Browser) executeSnapshot(args []string) (string, error) {
 	var positional []string
 	for _, arg := range args {
@@ -326,19 +303,17 @@ func (b *Browser) executeSnapshot(args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return b.writeSnapshot(name, profile, windowIndex, store)
+
+	workspace := 0
+	if selector == "active" {
+		if active := b.activeFirefoxWindow(); active != nil && active.Workspace.ID > 0 {
+			workspace = active.Workspace.ID
+		}
+	}
+	return b.writeSnapshot(name, profile, windowIndex, workspace, store)
 }
 
-func (b *Browser) snapshotProfile(selector string) (firefoxProfile, error) {
-	if selector != "active" {
-		return discoverFirefoxProfile("")
-	}
-	if profile, ok := b.activeFirefoxProfile(); ok {
-		return profile, nil
-	}
-	if profile, ok := b.focusedWorkspaceFirefoxProfile(); ok {
-		return profile, nil
-	}
+func (b *Browser) snapshotProfile(string) (firefoxProfile, error) {
 	return discoverFirefoxProfile("")
 }
 

@@ -1,6 +1,6 @@
 package browser
 
-// firefox.go handles Firefox process checks, profile detection, and workspace-local URL-open targeting.
+// firefox.go handles Firefox processes and workspace-local URL-open targeting.
 
 import (
 	"errors"
@@ -14,7 +14,6 @@ import (
 	"syscall"
 	"time"
 
-	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
 	"dotfiles/cmds/internal/hyprd/windows"
@@ -43,7 +42,6 @@ var (
 
 type firefoxOpenTarget struct {
 	Window             hypr.Window
-	Profile            firefoxProfile
 	WorkspaceID        int
 	NeedsThreeBodySwap bool
 }
@@ -71,98 +69,34 @@ func firefoxRunningPIDs() ([]int, error) {
 		if err != nil {
 			continue
 		}
+		args, err := firefoxProcessArgs(pid)
+		if err != nil || !isFirefoxMainProcess(args) {
+			continue
+		}
 		pids = append(pids, pid)
 	}
 	return pids, nil
+}
+
+func firefoxProcessArgs(pid int) ([]string, error) {
+	data, err := os.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "cmdline"))
+	if err != nil {
+		return nil, err
+	}
+	return strings.Split(strings.TrimRight(string(data), "\x00"), "\x00"), nil
+}
+
+func isFirefoxMainProcess(args []string) bool {
+	if len(args) == 0 || filepath.Base(args[0]) != "firefox" {
+		return false
+	}
+	return !slices.Contains(args, "-contentproc")
 }
 
 // FirefoxRunning reports whether Firefox Developer Edition appears to be running.
 func FirefoxRunning() bool {
 	pids, err := firefoxRunningPIDs()
 	return err == nil && len(pids) > 0
-}
-
-func firefoxProfilePIDs(profile firefoxProfile) ([]int, error) {
-	pids, err := firefoxRunningPIDs()
-	if err != nil {
-		return nil, err
-	}
-	var matched []int
-	for _, pid := range pids {
-		args, err := processArgs(pid)
-		if err != nil {
-			continue
-		}
-		if argsUseProfile(args, profile.Root) {
-			matched = append(matched, pid)
-		}
-	}
-	return matched, nil
-}
-
-func processArgs(pid int) ([]string, error) {
-	data, err := os.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "cmdline"))
-	if err != nil {
-		return nil, err
-	}
-	trimmed := strings.TrimRight(string(data), "\x00")
-	if trimmed == "" {
-		return nil, nil
-	}
-	return strings.Split(trimmed, "\x00"), nil
-}
-
-func argsUseProfile(args []string, profileRoot string) bool {
-	profileArg, ok := profileArgFromArgs(args)
-	return ok && profileArgMatches(profileArg, profileRoot)
-}
-
-func profileArgFromArgs(args []string) (string, bool) {
-	for i, arg := range args {
-		switch {
-		case arg == "--profile" || arg == "-profile" || arg == "-P":
-			if i+1 < len(args) {
-				return args[i+1], true
-			}
-		case strings.HasPrefix(arg, "--profile="):
-			return strings.TrimPrefix(arg, "--profile="), true
-		}
-	}
-	return "", false
-}
-
-func profileArgMatches(raw, profileRoot string) bool {
-	return filepath.Clean(config.ExpandPath(raw)) == profileRoot
-}
-
-func processTreeUsesProfile(pid int, profileRoot string) bool {
-	for range 32 {
-		args, err := processArgs(pid)
-		if err == nil && argsUseProfile(args, profileRoot) {
-			return true
-		}
-		parent, err := processParent(pid)
-		if err != nil || parent <= 1 || parent == pid {
-			return false
-		}
-		pid = parent
-	}
-	return false
-}
-
-func processParent(pid int) (int, error) {
-	data, err := os.ReadFile(filepath.Join("/proc", strconv.Itoa(pid), "status"))
-	if err != nil {
-		return 0, err
-	}
-	for line := range strings.SplitSeq(string(data), "\n") {
-		value, ok := strings.CutPrefix(line, "PPid:")
-		if !ok {
-			continue
-		}
-		return strconv.Atoi(strings.TrimSpace(value))
-	}
-	return 0, fmt.Errorf("no parent pid for %d", pid)
 }
 
 // stopFirefox ensures no Firefox is running; with force it SIGTERMs and polls up to 15s.
@@ -194,36 +128,6 @@ func stopFirefox(force bool) error {
 		time.Sleep(250 * time.Millisecond)
 	}
 	return fmt.Errorf("firefox did not exit cleanly after SIGTERM")
-}
-
-func stopFirefoxProfile(profile firefoxProfile, force bool) error {
-	pids, err := firefoxProfilePIDs(profile)
-	if err != nil {
-		return err
-	}
-	if len(pids) == 0 {
-		return nil
-	}
-	if !force {
-		return fmt.Errorf("firefox profile %s is running; rerun with --force for exact restore", profile.Root)
-	}
-
-	for _, pid := range pids {
-		_ = syscall.Kill(pid, syscall.SIGTERM)
-	}
-
-	deadline := time.Now().Add(15 * time.Second)
-	for time.Now().Before(deadline) {
-		pids, err = firefoxProfilePIDs(profile)
-		if err != nil {
-			return err
-		}
-		if len(pids) == 0 {
-			return nil
-		}
-		time.Sleep(250 * time.Millisecond)
-	}
-	return fmt.Errorf("firefox profile %s did not exit cleanly after SIGTERM", profile.Root)
 }
 
 func (b *Browser) launchFirefoxProfile(profile firefoxProfile) error {
@@ -291,22 +195,6 @@ func (b *Browser) activeFirefoxWindow() *hypr.Window {
 		return nil
 	}
 	return active
-}
-
-func (b *Browser) activeFirefoxProfile() (firefoxProfile, bool) {
-	active := b.activeFirefoxWindow()
-	if active == nil {
-		return firefoxProfile{}, false
-	}
-	return firefoxProfileFromWindow(*active)
-}
-
-func (b *Browser) focusedWorkspaceFirefoxProfile() (firefoxProfile, bool) {
-	target, ok := b.focusedWorkspaceFirefoxOpenTarget()
-	if !ok {
-		return firefoxProfile{}, false
-	}
-	return target.Profile, target.Profile.Root != ""
 }
 
 func (b *Browser) focusedWorkspaceFirefoxOpenTarget() (firefoxOpenTarget, bool) {
@@ -405,8 +293,7 @@ func visibleWorkspaceFirefoxWindow(clients []hypr.Window, workspaceID int) (hypr
 }
 
 func firefoxOpenTargetFromWindow(window hypr.Window, workspaceID int, needsThreeBodySwap bool) (firefoxOpenTarget, bool) {
-	profile, _ := firefoxProfileFromWindow(window)
-	return firefoxOpenTarget{Window: window, Profile: profile, WorkspaceID: workspaceID, NeedsThreeBodySwap: needsThreeBodySwap}, true
+	return firefoxOpenTarget{Window: window, WorkspaceID: workspaceID, NeedsThreeBodySwap: needsThreeBodySwap}, true
 }
 
 func isFirefoxWindow(window hypr.Window) bool {
@@ -445,28 +332,6 @@ func (b *Browser) swapThreeBodyShadowIntoView(workspaceID int, shadowAddress str
 		b.state.SetThreeBody(workspaceID, &state.ThreeBodyState{Master: tiled[0].Address, Active: shadowAddress, Shadow: activeAddress})
 	}
 	return nil
-}
-
-func firefoxProfileFromWindow(window hypr.Window) (firefoxProfile, bool) {
-	return firefoxProfileFromPID(window.Pid)
-}
-
-func firefoxProfileFromPID(pid int) (firefoxProfile, bool) {
-	for pid > 1 {
-		args, err := processArgs(pid)
-		if err == nil {
-			if raw, ok := profileArgFromArgs(args); ok {
-				profile, err := discoverFirefoxProfile(raw)
-				return profile, err == nil
-			}
-		}
-		parent, err := processParent(pid)
-		if err != nil || parent <= 1 || parent == pid {
-			return firefoxProfile{}, false
-		}
-		pid = parent
-	}
-	return firefoxProfile{}, false
 }
 
 func trimFirefoxTitle(title string) string {

@@ -178,7 +178,7 @@ func (l *Layout) restoreInitBrowsers(sessions []config.Session) error {
 	var browserSessions []config.Session
 	b := browser.NewBrowser(l.hypr, l.state)
 	for _, session := range sessions {
-		if session.Browser.Snapshot != "coms" || !b.UsesExactRestore(session.Browser) {
+		if session.Browser.Snapshot == "" || !b.UsesExactRestore(session.Browser) {
 			continue
 		}
 		browserSessions = append(browserSessions, session)
@@ -187,10 +187,12 @@ func (l *Layout) restoreInitBrowsers(sessions []config.Session) error {
 		return nil
 	}
 
+	configs := make([]config.BrowserConfig, 0, len(browserSessions))
 	for _, session := range browserSessions {
-		if _, err := b.RestoreConfiguredSnapshot(session.Browser, false); err != nil {
-			return err
-		}
+		configs = append(configs, session.Browser)
+	}
+	if _, err := b.RestoreConfiguredSnapshots(configs, false); err != nil {
+		return err
 	}
 	l.markBatchRestoredBrowsers(browserSessions)
 	for _, session := range browserSessions {
