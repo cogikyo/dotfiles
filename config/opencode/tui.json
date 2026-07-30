@@ -40,6 +40,7 @@
     "session_unshare": "none"
   },
   "plugin_enabled": {
-    "internal:sidebar-files": false
+    "internal:sidebar-files": false,
+    "internal:sidebar-lsp": false
   }
 }
