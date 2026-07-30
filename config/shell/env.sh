@@ -1,7 +1,7 @@
 #!/bin/sh
 # Shared env vars sourced by zshenv (and any POSIX shell).
 
-export PATH="$HOME/.cargo/bin:$HOME/.go/bin:$HOME/.local/bin:$PATH"
+export PATH="$HOME/.config/opencode/clipboard:$HOME/.cargo/bin:$HOME/.go/bin:$HOME/.local/bin:$PATH"
 export GOPATH="$HOME/.go"
 export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
 export GOPRIVATE="git.linecode.dev/*"

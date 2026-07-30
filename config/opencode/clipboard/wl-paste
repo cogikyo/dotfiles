@@ -2,11 +2,34 @@
 set -euo pipefail
 
 if [[ -z ${WAYLAND_DISPLAY:-} && ${TERM:-} == xterm-kitty && $# -eq 2 && $1 == -t && $2 == image/png ]]; then
-	tmp="$(mktemp "${TMPDIR:-/tmp}/opencode-clipboard.XXXXXX.png")"
-	trap 'rm -f "$tmp"' EXIT
-	kitten clipboard --get-clipboard "$tmp"
-	cat "$tmp"
-	exit
+	client_ip=${SSH_CLIENT:-}
+	client_ip=${client_ip%% *}
+	[[ -n $client_ip ]] || exit 1
+	read -r _ client _ < <(getent hosts "$client_ip")
+	client=${client%%.*}
+	[[ -n $client ]] || exit 1
+
+	exec ssh -o BatchMode=yes -o ConnectTimeout=5 "$client" '
+		if command -v wl-paste >/dev/null 2>&1; then
+			XDG_RUNTIME_DIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+			if [[ -z ${WAYLAND_DISPLAY:-} ]] && command -v systemctl >/dev/null 2>&1; then
+				environment=$(systemctl --user show-environment)
+				while IFS= read -r setting; do
+					case $setting in
+						WAYLAND_DISPLAY=*) WAYLAND_DISPLAY=${setting#*=}; break ;;
+					esac
+				done <<< "$environment"
+			fi
+			export XDG_RUNTIME_DIR WAYLAND_DISPLAY
+			exec wl-paste -t image/png
+		fi
+
+		if command -v pngpaste >/dev/null 2>&1; then
+			exec pngpaste -
+		fi
+
+		exit 1
+	'
 fi
 
 exec /usr/bin/wl-paste "$@"
