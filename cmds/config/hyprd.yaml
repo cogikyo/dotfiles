@@ -31,6 +31,11 @@ sessions:
 
   # ├─ workspace 3 ──────────────────────────────────────────────────────────────┤
   3: # alternate main workspace
+    type:
+      command: chromium --new-window https://vial.rocks/
+      class: chromium
+      browser: type
+
     tableplus:
       command: tableplus
     inkscape:

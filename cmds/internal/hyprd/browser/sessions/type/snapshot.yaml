@@ -1,0 +1,15 @@
+name: type
+window:
+    selected_tab: 1
+    tab_count: 1
+    group_count: 0
+    selected_title: Monkeytype | A minimalistic, customizable typing test
+    selected_url: https://monkeytype.com/
+    hypr_order_matches_tabs: true
+browser:
+    urls:
+        - https://monkeytype.com/
+tabs:
+    - position: 1
+      title: Monkeytype | A minimalistic, customizable typing test
+      url: https://monkeytype.com/
