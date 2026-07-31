@@ -2,7 +2,7 @@
 //
 // Responsibilities:
 // - Track workspace, layout, and window-placement runtime data.
-// - Persist per-workspace session selection and tab memory.
+// - Persist per-workspace session selection.
 // - Expose safe copy-on-read helpers for concurrent command handlers.
 package state
 
@@ -23,18 +23,17 @@ import (
 type State struct {
 	mu sync.RWMutex
 
-	Workspace          int                           `json:"workspace"`
-	OccupiedWorkspaces []int                         `json:"occupied_workspaces"`
-	Hidden             map[string]*HiddenState       `json:"hidden,omitempty"`
-	DisplacedMasters   map[int]string                `json:"displaced_masters,omitempty"`
-	ThreeBody          map[int]*ThreeBodyState       `json:"three_body,omitempty"`
-	ProjectPaths       map[int]string                `json:"project_paths,omitempty"`
-	Monocle            map[int]*MonocleState         `json:"monocle,omitempty"`
-	SplitRatio         string                        `json:"split_ratio"`
-	ActiveSessions     map[int]string                `json:"active_sessions,omitempty"`
-	TabMemory          map[int]map[string]*TabMemory `json:"tab_memory,omitempty"`
-	ScreenShare        bool                          `json:"screen_share"`
-	pendingLaunches    map[string]time.Time          `json:"-"`
+	Workspace          int                     `json:"workspace"`
+	OccupiedWorkspaces []int                   `json:"occupied_workspaces"`
+	Hidden             map[string]*HiddenState `json:"hidden,omitempty"`
+	DisplacedMasters   map[int]string          `json:"displaced_masters,omitempty"`
+	ThreeBody          map[int]*ThreeBodyState `json:"three_body,omitempty"`
+	ProjectPaths       map[int]string          `json:"project_paths,omitempty"`
+	Monocle            map[int]*MonocleState   `json:"monocle,omitempty"`
+	SplitRatio         string                  `json:"split_ratio"`
+	ActiveSessions     map[int]string          `json:"active_sessions,omitempty"`
+	ScreenShare        bool                    `json:"screen_share"`
+	pendingLaunches    map[string]time.Time    `json:"-"`
 	config             *config.HyprConfig
 }
 
@@ -48,7 +47,6 @@ func NewState(cfg *config.HyprConfig) *State {
 		ProjectPaths:       make(map[int]string),
 		Monocle:            make(map[int]*MonocleState),
 		ActiveSessions:     make(map[int]string),
-		TabMemory:          make(map[int]map[string]*TabMemory),
 		pendingLaunches:    make(map[string]time.Time),
 		SplitRatio:         "default",
 		config:             cfg,
@@ -148,9 +146,6 @@ func (s *State) Restore(data []byte) error {
 	}
 	if snap.ActiveSessions != nil {
 		s.ActiveSessions = snap.ActiveSessions
-	}
-	if snap.TabMemory != nil {
-		s.TabMemory = snap.TabMemory
 	}
 	if s.pendingLaunches == nil {
 		s.pendingLaunches = make(map[string]time.Time)

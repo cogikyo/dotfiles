@@ -65,32 +65,6 @@ func baseTabName(nameOrAlias string) string {
 	return name
 }
 
-func tabProfilePrefix(cfg *config.HyprConfig, profileName string) string {
-	if cfg == nil || cfg.Tabs == nil {
-		return ""
-	}
-	if profile, ok := cfg.Tabs[profileName]; ok {
-		return profile.Prefix
-	}
-	return ""
-}
-
-func profileTab(cfg *config.HyprConfig, profileName, tabName string) *config.TabDef {
-	if cfg == nil || cfg.Tabs == nil {
-		return nil
-	}
-	profile, ok := cfg.Tabs[profileName]
-	if !ok {
-		return nil
-	}
-	for i := range profile.Tabs {
-		if profile.Tabs[i].Name == tabName {
-			return &profile.Tabs[i]
-		}
-	}
-	return nil
-}
-
 func activeProfileTabName(cfg *config.HyprConfig, profileName string, win KittyOSWindow) string {
 	profile, ok := cfg.Tabs[profileName]
 	if !ok {
@@ -134,34 +108,6 @@ func normalizeProfileTabName(profile *config.TabProfile, tabName string) string 
 		return "nvim"
 	}
 	return tabName
-}
-
-func runtimeTabID(win KittyOSWindow, profile *config.TabProfile, targetTab string) string {
-	if profile == nil {
-		return ""
-	}
-	for _, tab := range win.Tabs {
-		for _, pane := range tab.Windows {
-			tabID := pane.Env["KITTY_TAB_ID"]
-			if tabID == "" {
-				continue
-			}
-			name := profileTabNameFromID(win.ID, profile.Prefix, tabID)
-			if normalizeProfileTabName(profile, name) == targetTab {
-				return tabID
-			}
-		}
-	}
-	return fmt.Sprintf("%d-%s%s", win.ID, profile.Prefix, targetTab)
-}
-
-func normalizeTabAction(nameOrAlias string) string {
-	switch baseTabName(nameOrAlias) {
-	case "nvimtree":
-		return "nvim"
-	default:
-		return baseTabName(nameOrAlias)
-	}
 }
 
 func semanticCandidates(profile *config.TabProfile, action string) []string {
@@ -246,51 +192,4 @@ func candidateWithContext(candidates []string, context string) string {
 		}
 	}
 	return ""
-}
-
-func actionKeysForTab(profile *config.TabProfile, tabName string) []string {
-	if tabName == "" {
-		return nil
-	}
-
-	var actions []string
-	if tab := findProfileTab(profile, tabName); tab != nil {
-		for action := range tab.Actions {
-			actions = append(actions, action)
-		}
-	}
-	switch {
-	case tabName == "nvim" || strings.HasSuffix(tabName, "-nvim"):
-		if !slices.Contains(actions, "nvim") {
-			actions = append(actions, "nvim")
-		}
-	case tabName == "git":
-		if !slices.Contains(actions, "git") {
-			actions = append(actions, "git")
-		}
-	case tabName == "build":
-		if !slices.Contains(actions, "build") {
-			actions = append(actions, "build")
-		}
-	case strings.HasSuffix(tabName, "-build"):
-		if hasProfileTab(profile, "git") {
-			if !slices.Contains(actions, "build") {
-				actions = append(actions, "build")
-			}
-		} else {
-			if !slices.Contains(actions, "git") {
-				actions = append(actions, "git")
-			}
-		}
-	}
-	return actions
-}
-
-func tabAction(profile *config.TabProfile, tabName, action string) (config.TabAction, bool) {
-	tab := findProfileTab(profile, tabName)
-	if tab == nil || tab.Actions == nil {
-		return config.TabAction{}, false
-	}
-	actionConfig, ok := tab.Actions[action]
-	return actionConfig, ok
 }

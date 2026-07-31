@@ -146,7 +146,7 @@ func (t *Tabs) refresh(args []string) (string, error) {
 	}
 	tabDef := t.findTab(profile, tabName)
 	if tabDef == nil {
-		if resolved := pickSemanticTab(profile, normalizeTabAction(nameOrAlias), "", "", ""); resolved != "" {
+		if resolved := pickSemanticTab(profile, baseTabName(nameOrAlias), "", "", ""); resolved != "" {
 			tabName = resolved
 			tabDef = t.findTab(profile, tabName)
 		}

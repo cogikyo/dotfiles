@@ -19,48 +19,56 @@ end
 -- │ hyprd focus control                                                           │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
-alt("A", "Focus tree", "hyprd tab nvimtree")
-alt("S", "Focus nvim", "hyprd tab nvim")
-alt("E", "Terminal",   "hyprd tab term")
-alt("T", "Build",      "hyprd tab build")
-alt("G", "Focus git",  "hyprd tab git")
+-- ├┤ move to workspace ├──────────────────────────────────────────────────────────┤
+alt("G", "Workspace 1 (music)",    "hyprd ws 1")
+alt("S", "Workspace 2 (chat)",     "hyprd ws 2")
+alt("E", "Workspace 3 (misc)",     "hyprd ws 3")
+alt("T", "Workspace 4 (primary)",  "hyprd ws 4")
+alt("D", "Workspace 5 (settings)", "hyprd ws 5")
 
-super("Y", "Focus scout", "hyprd tab agents:scout")
-super("N", "Focus build", "hyprd tab agents:build")
-super("I", "Focus drive", "hyprd tab agents:drive")
-super("O", "Focus plan",  "hyprd tab agents:plan")
-super("L", "Focus learn", "hyprd tab agents:learn")
-
-alt("R", "Editor",  "hyprd three-body editor")
-alt("D", "Browser", "hyprd three-body browser")
+-- ├┤ threebody layout ├───────────────────────────────────────────────────────────┤
+alt("A", "Editor",  "hyprd three-body editor")
+alt("R", "Browser", "hyprd three-body browser")
 alt("C", "Agents",  "hyprd three-body agents")
 alt("X", "Dismiss", "dunstctl close")
 
+alt("Backspace",    "Toggle shadow",  "hyprd three-body shadow")
+alt("Escape",       "Toggle shadow",  "hyprd three-body shadow")
+alt("apostrophe",   "Toggle monocle", "hyprd monocle")
+alt("Comma",        "Cycle split",    "hyprd split")
+super("Period",     "Cycle split",    "hyprd swap")
 super("Backspace",  "Toggle shadow",  "hyprd three-body shadow")
 super("Escape",     "Toggle shadow",  "hyprd three-body shadow")
 super("apostrophe", "Toggle monocle", "hyprd monocle")
 super("Comma",      "Cycle split",    "hyprd split")
-super("Period",     "Cycle split",    "hyprd swap")
+
+-- ├┤ editor tab focus ├───────────────────────────────────────────────────────────┤
+super("A", "Editor tab 0", "hyprd tab editor:0")
+super("S", "Editor tab 1", "hyprd tab editor:1")
+super("E", "Editor tab 2", "hyprd tab editor:2")
+super("T", "Editor tab 3", "hyprd tab editor:3")
+super("G", "Editor tab 4", "hyprd tab editor:4")
+
+-- ├┤ agents tab focus ├───────────────────────────────────────────────────────────┤
+super("Y", "Agents tab 0", "hyprd tab agents:0")
+super("N", "Agents tab 1", "hyprd tab agents:1")
+super("I", "Agents tab 2", "hyprd tab agents:2")
+super("O", "Agents tab 3", "hyprd tab agents:3")
+super("L", "Agents tab 4", "hyprd tab agents:4")
 
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │ window management                                                             │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
+-- ├┤ core conrols ├───────────────────────────────────────────────────────────────┤
 super("X", "Close active window", hl.dsp.window.close())
 super("K", "Force kill window",  "hyprctl kill")
 super("F", "Toggle floating",    "hyprd float")
-super("V",   "Screen share mode",   "hyprd share")
+super("V", "Screen share mode",   "hyprd share")
 super("F11", "Toggle full screen",  hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
 
 hl.bind("SUPER + mouse:273", hl.dsp.window.drag(),   { mouse = true })
 hl.bind("SUPER + mouse:274", hl.dsp.window.resize(), { mouse = true })
-
--- ├┤ move to workspace ├──────────────────────────────────────────────────────────┤
-super("g", "Workspace 1 (music)",    "hyprd ws 1")
-super("s", "Workspace 2 (chat)",     "hyprd ws 2")
-super("e", "Workspace 3 (misc)",     "hyprd ws 3")
-super("t", "Workspace 4 (primary)",  "hyprd ws 4")
-super("d", "Workspace 5 (settings)", "hyprd ws 5")
 
 -- ├┤ move window focus ├──────────────────────────────────────────────────────────┤
 super("R",         "Focus left",  hl.dsp.focus({ direction = "left" }))

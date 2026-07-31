@@ -40,8 +40,8 @@ hyprd/
 │   ├── lock.go                 #   Lock.{Pseudo,Unlock,Full}: visual blackout, audio/notify pause, restore
 │   ├── bg.go                   #   mpvpaper wallpaper lifecycle
 │   ├── picker.go               #   interactive eww session picker overlay
-│   ├── kitty.go                #   kitty remote-control client (list/focus/send-text)
-│   ├── tab.go                  #   `hyprd tab <name>` - switch tab in focused kitty
+│   ├── kitty.go                #   kitty remote-control client
+│   ├── tab.go                  #   `hyprd tab <profile>:<index>` - focus profile window + switch physical tab
 │   ├── tabs.go                 #   `hyprd tabs init/refresh` - hydrate from config + titles
 │   └── profile.go              #   detect which tab profile (editor/agents/leadpier) owns a kitty window
 │
@@ -52,7 +52,6 @@ hyprd/
 │   ├── hidden.go               #   type defs: HiddenState, ThreeBodyState, MonocleState
 │   ├── monocle.go              #   per-ws monocle state getters/setters
 │   ├── threebody.go            #   per-ws three-body state getters/setters
-│   └── tab_memory.go           #   per-ws per-profile tab history
 │
 ├── wm/                         # window/workspace actions (each file = one command)
 │   ├── ws.go                   #   `hyprd ws <n|up|down>` - switch + focus master
@@ -176,7 +175,7 @@ hyprd project <args>             # project path management
 ### Tabs (kitty)
 
 ```bash
-hyprd tab <name|alias>           # switch tab in focused kitty window
+hyprd tab <editor|agents>:<0..4> # focus profile window and switch physical tab
 hyprd tabs init <profile> <pid>  # hydrate tab titles on kitty spawn
 hyprd tabs refresh <name> <pid>  # re-apply titles
 ```

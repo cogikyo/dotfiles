@@ -215,7 +215,7 @@ func cmdQuery()   { sendCommand("query " + strings.Join(os.Args[2:], " ")) }
 func cmdBG()      { sendCommand("bg " + requireArg("usage: hyprd bg {ensure|kill}")) }
 func cmdWS()      { sendCommand("ws " + requireArg("usage: hyprd ws <number|up|down>")) }
 func cmdTab() {
-	_ = requireArg("usage: hyprd tab <name|alias> [-- <path>]")
+	_ = requireArg("usage: hyprd tab <editor|agents>:<index 0..4>")
 	sendCommand("tab " + strings.Join(os.Args[2:], " "))
 }
 func cmdThreeBody() {
@@ -305,7 +305,7 @@ Window commands:
   hyprd ws <n>           Switch to workspace n, focus master
   hyprd ws up|down       Move active window between workspaces 2..5
   hyprd focus <class> [title]  Focus window, unhide if hidden
-  hyprd tab <name|alias> [-- <path>]  Focus editor + switch kitty tab; nvim can open a path
+  hyprd tab <editor|agents>:<index>   Focus profile window + select physical Kitty tab 0..4
   hyprd tabs init <profile> <pid>    Create tabs from profile (editor|agents|leadpier)
   hyprd tabs refresh <name|current|all> [pid] Refresh tab(s) in focused kitty by default
   hyprd tabs host <alias>            Move focused Kitty OS window between configured hosts

@@ -19,14 +19,6 @@ func NewKittyClient(pid int) *KittyClient {
 	return &KittyClient{socketPath: fmt.Sprintf("unix:/tmp/kitty-%d", pid)}
 }
 
-// KittyState is a snapshot of the first OS window.
-//
-// ActiveTabID is empty when the focused pane lacks a KITTY_TAB_ID env (e.g. the launcher tab).
-type KittyState struct {
-	WindowID    int
-	ActiveTabID string
-}
-
 type KittyOSWindow struct {
 	ID        int        `json:"id"`
 	IsFocused bool       `json:"is_focused"`
@@ -79,33 +71,6 @@ func (k *KittyClient) FullState() ([]KittyOSWindow, error) {
 	return windows, nil
 }
 
-// State returns the KittyState of the first OS window.
-func (k *KittyClient) State() (*KittyState, error) {
-	windows, err := k.FullState()
-	if err != nil {
-		return nil, err
-	}
-	if len(windows) == 0 {
-		return nil, fmt.Errorf("no kitty windows")
-	}
-	return stateFromWindow(windows[0]), nil
-}
-
-func stateFromWindow(win KittyOSWindow) *KittyState {
-	state := &KittyState{WindowID: win.ID}
-	for _, tab := range win.Tabs {
-		if !tabSelected(tab) {
-			continue
-		}
-		for _, w := range tab.Windows {
-			if paneSelected(w) && w.Env != nil {
-				state.ActiveTabID = w.Env["KITTY_TAB_ID"]
-			}
-		}
-	}
-	return state
-}
-
 func (k *KittyClient) FocusTab(tabID string) error {
 	return exec.Command("kitty", "@", "--to", k.socketPath,
 		"focus-tab", "--match", "env:KITTY_TAB_ID="+tabID).Run()
@@ -119,40 +84,6 @@ func (k *KittyClient) GotoTab(index int) error {
 func (k *KittyClient) FocusWindow(id int) error {
 	return exec.Command("kitty", "@", "--to", k.socketPath,
 		"focus-window", "--match", fmt.Sprintf("id:%d", id)).Run()
-}
-
-func (k *KittyClient) FocusPane(tabID string, paneIndex int) error {
-	if paneIndex < 0 {
-		return nil
-	}
-	windows, err := k.FullState()
-	if err != nil {
-		return err
-	}
-	for _, osWindow := range windows {
-		for _, tab := range osWindow.Tabs {
-			if !tabHasID(tab, tabID) {
-				continue
-			}
-			pane, ok := paneByProfileIndex(tab.Windows, paneIndex)
-			if !ok {
-				return fmt.Errorf("pane %d not in tab %s", paneIndex, tabID)
-			}
-			return k.FocusWindow(pane.ID)
-		}
-	}
-	return nil
-}
-
-func (k *KittyClient) SendText(tabID, text string) error {
-	if paneID, err := k.activePaneID(tabID); err != nil {
-		return err
-	} else if paneID != 0 {
-		return exec.Command("kitty", "@", "--to", k.socketPath,
-			"send-text", "--match", fmt.Sprintf("id:%d", paneID), text).Run()
-	}
-	return exec.Command("kitty", "@", "--to", k.socketPath,
-		"send-text", "--match", "env:KITTY_TAB_ID="+tabID, text).Run()
 }
 
 func (k *KittyClient) Launch(args ...string) error {
@@ -265,46 +196,6 @@ func (k *KittyClient) TabIndex(tabID string) (int, error) {
 	return -1, nil
 }
 
-func activePaneIndex(win KittyOSWindow, tabID string) int {
-	for _, tab := range win.Tabs {
-		if !tabSelected(tab) || !tabHasID(tab, tabID) {
-			continue
-		}
-		for i, pane := range tab.Windows {
-			if paneSelected(pane) {
-				if index, err := profilePaneIndex(pane, len(tab.Windows)); err == nil {
-					return index
-				}
-				return i
-			}
-		}
-	}
-	return -1
-}
-
-func (k *KittyClient) activePaneID(tabID string) (int, error) {
-	windows, err := k.FullState()
-	if err != nil {
-		return 0, err
-	}
-	for _, win := range windows {
-		for _, tab := range win.Tabs {
-			if !tabHasID(tab, tabID) {
-				continue
-			}
-			for _, pane := range tab.Windows {
-				if paneSelected(pane) {
-					return pane.ID, nil
-				}
-			}
-			if len(tab.Windows) > 0 {
-				return tab.Windows[0].ID, nil
-			}
-		}
-	}
-	return 0, nil
-}
-
 func tabHasID(tab KittyTab, tabID string) bool {
 	for _, pane := range tab.Windows {
 		if pane.Env != nil && pane.Env["KITTY_TAB_ID"] == tabID {
@@ -320,22 +211,4 @@ func tabSelected(tab KittyTab) bool {
 
 func paneSelected(pane KittyPane) bool {
 	return pane.IsFocused || pane.IsActive
-}
-
-func paneByProfileIndex(panes []KittyPane, wanted int) (KittyPane, bool) {
-	indexed := true
-	for _, pane := range panes {
-		index, err := profilePaneIndex(pane, len(panes))
-		if err != nil {
-			indexed = false
-			break
-		}
-		if index == wanted {
-			return pane, true
-		}
-	}
-	if indexed || wanted < 0 || wanted >= len(panes) {
-		return KittyPane{}, false
-	}
-	return panes[wanted], true
 }
