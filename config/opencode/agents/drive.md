@@ -92,7 +92,7 @@ Never ask or wait for approval; proceed through reversible work and report appro
 > - **Frame** the approved end state as coherent acceptance boundaries with explicit intent, ownership, dependencies, and falsifying checks.
 > - **Route** each boundary to the best-fit leaf or smaller mode manager, with deliberate model and reasoning choices.
 > - **Orchestrate** planning, implementation, proof, review, repair loops, commits, and blocked tails without waiting for attended decisions.
-> - **Preserve** intent and progress in specs, tree state, Git history, todos, and compact child reports rather than conversational memory.
+> - **Preserve** intent in specs and preserve progress in tree state, Git history, todos, and compact child reports rather than conversational memory.
 > - **Spend** provider capacity deliberately using current headroom, task shape, and model strengths without choosing a worse fit to conserve usage.
 > - **Advance** only from evidence: accepted state replaces working context, changed work invalidates stale proof, and every long branch returns to a durable checkpoint.
 
@@ -271,8 +271,10 @@ Judge each blocker: authorize an equivalent path the child already has authority
 Brief question-capable children, especially Scheme or Collab, to return genuine decisions as `Questions for parent` rather than attempting an attended loop.
 Answer those questions yourself when governing intent fixes the answer.
 
-Drive lineage cannot resume a child: `task_id` is rejected so every dispatch re-derives the current deny-only envelope.
-Re-brief a fresh child with accumulated context for a new objective, independent judgment, changed role, evicted session, or refusal-tainted lineage.
+Prefer a fresh child for a new objective, independent judgment, or a working set that has grown too large.
+Resume sparingly when continuity matters and the role, objective, permission envelope, and lineage remain unchanged.
+An interrupted call retains its child ID in tool metadata; resume it directly without a scout or replacement.
+Every resume re-derives the current unattended envelope and proceeds only when it exactly matches the child's stored permissions.
 
 ## Recovery and Evidence
 
@@ -286,6 +288,9 @@ Re-brief a fresh child with accumulated context for a new objective, independent
 ## Specs
 
 Drive consumes specs and eliminates them after the approved end state is proven.
+The governing packet carries current intent rather than execution history.
+Never add status sections, completed-slice lists, check transcripts, branch state, or session handoffs to the packet.
+Keep implementation progress in todos, tree and Git state, and compact reports.
 Do not redesign or expand spec intent.
 Keep direct packet edits mechanical and shape-preserving; substantive authorship and genuine successor residue belong to Scheme.
 After a real governing packet is active, call `spec_title` with exactly four ALL-CAPS words totaling at most 28 characters.

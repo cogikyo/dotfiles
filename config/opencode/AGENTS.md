@@ -183,15 +183,20 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 
 ### Universal Prose
 
-- Use one sentence per line in comments and Markdown prose, unless they are very short sentences (two fit < 100 chars) designed for impact.
-  - this prevents having to deal with word wrap, and forces nice readble output.
+- Put one sentence on each source line in comments and Markdown prose, unless two very short sentences fit comfortably on one line.
+  - This avoids manual word wrapping and keeps prose easy to edit.
+  - In Markdown, keep related sentence lines adjacent so they render as one paragraph.
+  - Do not insert a blank line merely because a sentence ended.
 - Never wrap a single sentence across multiple lines; if it wants to wrap, rewrite it shorter or split it into separate sentences.
 - Prefer concise, complete sentences over dense paragraphs.
-- Use blank lines as structural punctuation in Markdown.
+- Use blank lines only between real Markdown blocks such as paragraphs, headings, lists, callouts, and fences.
+- Keep each paragraph about one topic, and use multiple adjacent sentence lines when the topic needs development.
 - Avoid general LLM slop:
   - "it's {this}, not {that}" linguistical patterns. seriously, frequent use of ", not" is a huge read flag.
   - avoid em dashes best you can, they are very useful attention signals that should not be overused.
 - Prefer normal Markdown structure for prose: bullets, numbered lists, short headings, blockquotes, and inline code.
+- Use GitHub-style callouts when a hazard, governing constraint, or surprising behavior deserves visual emphasis.
+- Keep callouts intentional, but do not bury important information in ordinary prose merely to avoid them.
 - Keep manual line breaks intentional; lines over ~100 characters are acceptable when preserving one clear sentence per line is the better trade-off.
 - Adhere (within reason) to the principles of ASD-STE100 Simplified Technical English.
   - ASD-STE100 is a controlled writing standard for clear technical text.

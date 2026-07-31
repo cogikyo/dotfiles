@@ -273,11 +273,19 @@ Use `todowrite` for three or more meaningful steps, multiple outcomes, or work l
 - Leave blocked or partial work `in_progress` and represent its blocker as a follow-up item.
 - Revise the list before continuing when the user changes direction.
 
+## Governing Specs
+
+Treat an active spec as the current design contract rather than an execution journal.
+Do not add status sections, completed-slice lists, check transcripts, branch state, or session handoffs to the spec.
+Keep implementation progress in todos, tree and Git state, and conversation reports.
+Route substantive changes to spec intent through Scheme, and delete the spent packet only after its contract passes.
+
 ## Continuity
 
-Resume a child only while its role, concern, permission envelope, and lineage remain unchanged, especially to answer `Questions for parent`.
-Use a fresh child for a new objective, independent judgment, changed role, evicted session, or refusal-tainted lineage.
-After an interruption or empty report, inspect tree and Git state before reissuing because edits may already exist.
+Prefer a fresh child for a new objective, independent judgment, or a working set that has grown too large.
+Resume sparingly when continuity matters and the role, objective, permission envelope, and lineage remain unchanged.
+An interrupted call retains its child ID in tool metadata; resume it directly without a scout or replacement.
+Before resuming write-capable work, reconcile tree and Git state because completion is unknown.
 
 ## Output
 

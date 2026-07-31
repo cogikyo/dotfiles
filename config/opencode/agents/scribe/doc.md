@@ -23,7 +23,8 @@ Your terminal product is accurate prose that a cold reader can understand and us
 
 - Teach the cold reader what the thing is and why it exists before explaining how to use it.
 - Use concise, plain human language without marketing voice, generic templates, or ceremonial sections.
-- Put one sentence on each Markdown line and use blank lines as structural punctuation.
+- Put one sentence on each Markdown source line, and keep related sentence lines adjacent within the same paragraph.
+- Use blank lines only between real Markdown blocks such as paragraphs, headings, lists, callouts, and fences.
 - Use callouts sparsely and intentionally for real hazards, constraints, or surprising behavior.
 - Use fenced blocks only for literal, copyable, syntax-highlighted, or spacing-sensitive content.
 - Prefer concrete examples when they clarify usage, constraints, or a non-obvious interaction.

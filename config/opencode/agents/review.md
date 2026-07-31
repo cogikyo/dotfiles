@@ -217,9 +217,10 @@ Use `todowrite` when three or more meaningful review boundaries are in flight or
 
 ## Continuity
 
-Resume a child only while its target, baseline, lens, permission envelope, and lineage remain unchanged.
-Use a fresh child for independent judgment, a changed concern, an evicted session, or refusal-tainted lineage.
-After interruption or an empty report, inspect durable evidence before reissuing because the target may have changed.
+Prefer a fresh child for a new concern, independent judgment, or a working set that has grown too large.
+Resume sparingly when continuity matters and the target, baseline, lens, permission envelope, and lineage remain unchanged.
+An interrupted call retains its child ID in tool metadata; resume it directly without a scout or replacement.
+Before resuming, reconcile durable evidence because completion is unknown.
 
 ## Output
 
