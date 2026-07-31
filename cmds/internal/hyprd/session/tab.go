@@ -244,18 +244,8 @@ func (t *Tab) findBodyWindow(wsID int, bodyName string) (*hypr.Window, int, erro
 	if win := findBodyOnWorkspace(clients, wsID, spec); win != nil {
 		return t.focusBody(bodyName, spec, wsID, win.Address)
 	}
-	if ownerWS, addr := findBodyInThreeBody(clients, t.state.AllThreeBody(), spec, wsID); addr != "" {
-		return t.focusBody(bodyName, spec, ownerWS, addr)
-	}
-	for i := range clients {
-		c := &clients[i]
-		if c.Workspace.Name == windows.ShadowWorkspace || !windows.MatchesTarget(c, spec.Class, spec.Title) {
-			continue
-		}
-		return t.focusBody(bodyName, spec, c.Workspace.ID, c.Address)
-	}
-	if ownerWS, addr := findBodyInThreeBody(clients, t.state.AllThreeBody(), spec, 0); addr != "" {
-		return t.focusBody(bodyName, spec, ownerWS, addr)
+	if addr := matchingThreeBodyAddress(clients, t.state.GetThreeBody(wsID), spec); addr != "" {
+		return t.focusBody(bodyName, spec, wsID, addr)
 	}
 
 	return nil, wsID, nil
@@ -325,23 +315,6 @@ func findBodyOnWorkspace(clients []hypr.Window, wsID int, spec config.ThreeBodyW
 		}
 	}
 	return nil
-}
-
-func findBodyInThreeBody(clients []hypr.Window, states map[int]*state.ThreeBodyState, spec config.ThreeBodyWindow, preferredWS int) (int, string) {
-	if preferredWS != 0 {
-		if addr := matchingThreeBodyAddress(clients, states[preferredWS], spec); addr != "" {
-			return preferredWS, addr
-		}
-	}
-	for wsID, st := range states {
-		if wsID == preferredWS {
-			continue
-		}
-		if addr := matchingThreeBodyAddress(clients, st, spec); addr != "" {
-			return wsID, addr
-		}
-	}
-	return 0, ""
 }
 
 func matchingThreeBodyAddress(clients []hypr.Window, st *state.ThreeBodyState, spec config.ThreeBodyWindow) string {
