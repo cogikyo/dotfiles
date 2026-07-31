@@ -230,7 +230,7 @@ func cmdFocus() {
 // cmdTabs forwards tab verbs verbatim. The interactive host chooser lives in the
 // config/kitty/host_switch.py kitten, because it needs a real terminal.
 func cmdTabs() {
-	_ = requireArg("usage: hyprd tabs init <profile> <pid> | tabs refresh <name|current|all> [pid] | tabs host <alias> [--kitty-pid <pid> --os-window <id>]")
+	_ = requireArg("usage: hyprd tabs init <profile> <pid> | tabs refresh <position|name|current|all> [pid] | tabs host <alias> [--kitty-pid <pid> --os-window <id>]")
 	sendCommand("tabs " + strings.Join(os.Args[2:], " "))
 }
 func cmdNotify()  { notifypkg.CmdNotify(client, os.Args[2:]) }
@@ -307,7 +307,7 @@ Window commands:
   hyprd focus <class> [title]  Focus window, unhide if hidden
   hyprd tab <editor|agents>:<index>   Focus profile window + select physical Kitty tab 0..4
   hyprd tabs init <profile> <pid>    Create tabs from profile (editor|agents|leadpier)
-  hyprd tabs refresh <name|current|all> [pid] Refresh tab(s) in focused kitty by default
+  hyprd tabs refresh <position|name|current|all> [pid] Refresh tab(s) in focused kitty by default
   hyprd tabs host <alias>            Move focused Kitty OS window between configured hosts
   hyprd tabs host <alias> --kitty-pid <pid> --os-window <id>  Target a captured Kitty OS window
                                      (used by the host_switch.py kitty kitten)

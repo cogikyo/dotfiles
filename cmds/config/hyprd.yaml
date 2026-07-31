@@ -31,6 +31,14 @@ sessions:
 
   # ├─ workspace 3 ──────────────────────────────────────────────────────────────┤
   3: # alternate main workspace
+    leadpier-alt:
+      project: LeadPier
+      body:
+        - editor
+        - agents
+      tabs:
+        editor: leadpier
+
     type:
       command: chromium --new-window https://vial.rocks/
       class: chromium
@@ -163,7 +171,7 @@ tabs:
         cwd: "~/LeadPier/backend/services"
         actions:
           nvim: {}
-      - name: pier
+      - name: leadpier
         title: "« 󰠳  »"
         command: nvim
         executables: [nvim]
@@ -176,27 +184,29 @@ tabs:
         layout: "fat:bias=80"
         panes:
           - cwd: "~/LeadPier/pier"
-      - name: fe-build
+      - name: pier
         title: "«   »"
-        command: lazygit
-        executables: [lazygit]
-        cwd: "~/LeadPier/frontend"
+        command: nvim
+        executables: [nvim]
+        cwd: "~/LeadPier/pier"
         actions:
-          git: {}
-          build:
+          nvim:
+            pane: 0
+          term:
             pane: 1
         layout: "fat:bias=80"
         panes:
           - command: ""
-            cwd: "~/LeadPier/frontend"
-      - name: be-build
+            cwd: "~/LeadPier/pier"
+      - name: runner
         title: "«   »"
-        command: "cd $(grep -m1 backend/services ~/.local/state/lazygit/state.yml | awk '{print $NF}') && lazygit"
-        executables: [grep, awk, lazygit]
-        cwd: "~/LeadPier/backend"
+        command: nvim
+        executables: [nvim]
+        cwd: "~/LeadPier/backend/core/runner"
         actions:
-          git: {}
-          build:
+          nvim:
+            pane: 0
+          term:
             pane: 1
         layout: "fat:bias=80"
         panes:

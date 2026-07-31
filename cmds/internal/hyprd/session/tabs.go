@@ -32,7 +32,7 @@ func NewTabs(h *hypr.Client, state *state.State) *Tabs {
 func (t *Tabs) Execute(args string) (string, error) {
 	parts := strings.Fields(args)
 	if len(parts) < 1 {
-		return "", fmt.Errorf("usage: tabs init <profile> <pid> | tabs refresh <name|current|all> [pid] | tabs host <alias> [--kitty-pid <pid> --os-window <id>]")
+		return "", fmt.Errorf("usage: tabs init <profile> <pid> | tabs refresh <position|name|current|all> [pid] | tabs host <alias> [--kitty-pid <pid> --os-window <id>]")
 	}
 
 	switch parts[0] {
@@ -99,7 +99,7 @@ func (t *Tabs) init(args []string) (string, error) {
 
 func (t *Tabs) refresh(args []string) (string, error) {
 	if len(args) < 1 {
-		return "", fmt.Errorf("usage: tabs refresh <name|current|all> [pid]")
+		return "", fmt.Errorf("usage: tabs refresh <position|name|current|all> [pid]")
 	}
 
 	nameOrAlias := args[0]
@@ -144,11 +144,25 @@ func (t *Tabs) refresh(args []string) (string, error) {
 	if nameOrAlias == "current" {
 		tabName = activeProfileTabName(t.state.GetConfig(), profileName, windows[0])
 	}
-	tabDef := t.findTab(profile, tabName)
-	if tabDef == nil {
-		if resolved := pickSemanticTab(profile, baseTabName(nameOrAlias), "", "", ""); resolved != "" {
-			tabName = resolved
-			tabDef = t.findTab(profile, tabName)
+
+	var tabDef *config.TabDef
+	position, positionErr := strconv.Atoi(nameOrAlias)
+	if positionErr == nil {
+		if position < 1 || position > len(profile.Tabs) {
+			return "", fmt.Errorf("tab position %d out of range for profile %s (1-%d)", position, profileName, len(profile.Tabs))
+		}
+		tabDef = &profile.Tabs[position-1]
+		tabName = tabDef.Name
+	} else {
+		if len(nameOrAlias) > 0 && ((nameOrAlias[0] >= '0' && nameOrAlias[0] <= '9') || nameOrAlias[0] == '+' || nameOrAlias[0] == '-') {
+			return "", fmt.Errorf("invalid tab position %q for profile %s (expected 1-%d)", nameOrAlias, profileName, len(profile.Tabs))
+		}
+		tabDef = t.findTab(profile, tabName)
+		if tabDef == nil {
+			if resolved := pickSemanticTab(profile, baseTabName(nameOrAlias), "", "", ""); resolved != "" {
+				tabName = resolved
+				tabDef = t.findTab(profile, tabName)
+			}
 		}
 	}
 	if tabDef == nil {
@@ -183,7 +197,7 @@ func (t *Tabs) activeKittyPID() (int, error) {
 		return 0, err
 	}
 	if win == nil || win.Pid == 0 || win.Class != "kitty" {
-		return 0, fmt.Errorf("usage: tabs refresh <name|current|all> [pid]")
+		return 0, fmt.Errorf("usage: tabs refresh <position|name|current|all> [pid]")
 	}
 	return win.Pid, nil
 }
