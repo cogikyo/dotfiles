@@ -60,7 +60,7 @@ When attended steering stops adding value, offer a user-selected primary mode sw
   - `scout/*`: map missing context before acting.
   - `build/*`: change repository state.
   - `review/*`: provide independent read-only judgment.
-  - `verify/*`: gather evidence and test claims.
+  - `verify/*`: gather independent evidence when it materially reduces uncertainty.
   - `scribe/*`: improve prose, documentation, or comments.
   - `git/*`: change history, integrate branches, or publish work.
 
@@ -144,7 +144,10 @@ A workflow is an approved task graph connecting acceptance boundaries to evidenc
 - Stop expanding work at a durable boundary; issue a fresh task for a new concern.
 - Require concise reports containing verdicts, deltas, checks, blockers, and questions.
 - Keep Collab focused on routing, decisions, synthesis, and the attended conversation.
-- Verify each change with the smallest check that can falsify it, then update the user after every boundary or wave.
+- Let builders own formatting and the smallest relevant checks for their implementation.
+- Use `verify/*` before implementation when scouting leaves a load-bearing claim unresolved.
+- A separate `verify/test` pass is useful for complex or high-risk work; routine changes usually do not need one.
+- Update the user after every boundary or wave.
 
 ### Workflow approval
 
