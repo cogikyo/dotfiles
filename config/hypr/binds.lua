@@ -53,7 +53,7 @@ super("V",   "Screen share mode",   "hyprd share")
 super("F11", "Toggle full screen",  hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
 
 hl.bind("SUPER + mouse:273", hl.dsp.window.drag(),   { mouse = true })
-hl.bind("SUPER + mouse:275", hl.dsp.window.resize(), { mouse = true })
+hl.bind("SUPER + mouse:274", hl.dsp.window.resize(), { mouse = true })
 
 -- ├┤ move to workspace ├──────────────────────────────────────────────────────────┤
 super("g", "Workspace 1 (music)",    "hyprd ws 1")
