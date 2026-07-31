@@ -84,8 +84,8 @@
     },
     "/home/cullyn/dotfiles": {
       "pins": [
-        "config/hypr/binds.conf",
-        "config/hypr/hyprland.conf",
+        "config/hypr/binds.lua",
+        "config/hypr/hyprland.lua",
         "config/nvim/init.lua",
         "cmds/config/hyprd.yaml",
         "config/nvim/lua/config/keymaps.lua",

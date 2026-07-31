@@ -101,7 +101,7 @@ hyprd/
 ## Startup flow
 
 ```
-hyprland.conf: exec-once = hyprd init
+hyprland.lua: hl.exec_cmd("hyprd init")
   └─ cmdInit (main.go)
       ├─ import Wayland env into systemd
       ├─ systemctl start hyprd.service

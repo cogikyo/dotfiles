@@ -224,7 +224,7 @@ func (n *Notifier) focusContext(ctx *kittyContext) {
 				if c.Pid == ctx.PID {
 					revealed, err := wm.NewThreeBody(n.hypr, n.state).RevealShadow(c.Address)
 					if err == nil && !revealed {
-						_ = n.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", c.Address))
+						_ = n.hypr.FocusWindow(c.Address)
 					}
 					break
 				}

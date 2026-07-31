@@ -19,22 +19,22 @@ end
 -- │ hyprd focus control                                                           │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
-alt("A",        "Focus tree",  "hyprd tab nvimtree")
-alt("S",        "Focus nvim",  "hyprd tab nvim")
-alt("E",        "Terminal",    "hyprd tab term")
-alt("T",        "Build",       "hyprd tab build")
-alt("G",        "Focus git",   "hyprd tab git")
+alt("A", "Focus tree", "hyprd tab nvimtree")
+alt("S", "Focus nvim", "hyprd tab nvim")
+alt("E", "Terminal",   "hyprd tab term")
+alt("T", "Build",      "hyprd tab build")
+alt("G", "Focus git",  "hyprd tab git")
 
-alt("CTRL + A", "Focus scout", "hyprd tab agents:scout")
-alt("CTRL + S", "Focus build", "hyprd tab agents:build")
-alt("CTRL + E", "Focus drive", "hyprd tab agents:drive")
-alt("CTRL + T", "Focus plan",  "hyprd tab agents:plan")
-alt("CTRL + G", "Focus learn", "hyprd tab agents:learn")
+super("Y", "Focus scout", "hyprd tab agents:scout")
+super("N", "Focus build", "hyprd tab agents:build")
+super("I", "Focus drive", "hyprd tab agents:drive")
+super("O", "Focus plan",  "hyprd tab agents:plan")
+super("L", "Focus learn", "hyprd tab agents:learn")
 
-alt("R",        "Editor",      "hyprd three-body editor")
-alt("D",        "Browser",     "hyprd three-body browser")
-alt("C",        "Agents",      "hyprd three-body agents")
-alt("X",        "Dismiss",     "dunstctl close")
+alt("R", "Editor",  "hyprd three-body editor")
+alt("D", "Browser", "hyprd three-body browser")
+alt("C", "Agents",  "hyprd three-body agents")
+alt("X", "Dismiss", "dunstctl close")
 
 super("Backspace",  "Toggle shadow",  "hyprd three-body shadow")
 super("Escape",     "Toggle shadow",  "hyprd three-body shadow")
@@ -82,8 +82,8 @@ super("End",   "Move workspace up",   "hyprd ws up")
 -- │ launchers                                                                     │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
-super("P", "Apps",          "hyprlauncher")
-super("I", "Layout picker", "hyprd picker open")
+super("P", "App Launcher",    "hyprlauncher")
+super("H", "Layout Launcher", "hyprd picker open")
 
 hl.define_submap("picker", function()
 	bind("Left",   "Picker layout previous",  "hyprd picker left")
@@ -142,8 +142,8 @@ super("Print", "Screenshot + annotate",   "hyprd screenshot annotate")
 -- │ lock                                                                          │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
-super("L",         "Lock screen",    "hyprd lock full")
-super("SHIFT + L", "Wake displays",  [[sh -c 'hyprctl dispatch dpms off; sleep 1; hyprctl dispatch dpms on']])
+super("Z",         "Lock screen",    "hyprd lock full")
+super("SHIFT + Z", "Wake displays",  [[sh -c 'hyprctl dispatch dpms off; sleep 1; hyprctl dispatch dpms on']])
 super("Q",         "pseudo-lock",    "hyprd lock")
 
 hl.define_submap("pseudolock", function()

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -293,7 +294,7 @@ func (b *Browser) ClaimWindow(snapshot string, workspace int) error {
 	if window.Workspace.ID == workspace {
 		return nil
 	}
-	return b.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", workspace, window.Address))
+	return b.hypr.MoveWindowToWorkspace(window.Address, strconv.Itoa(workspace), false)
 }
 
 // buildSessionPayload constructs minimal Firefox session JSON from snapshot metadata.

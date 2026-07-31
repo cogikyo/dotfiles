@@ -41,19 +41,23 @@ const (
 )
 
 // dispatchStartup runs hardcoded startup commands and optionally connects bluetooth.
-func dispatchStartup(h hyprDispatcher, bt config.BluetoothConfig) {
+func dispatchStartup(h hyprExecutor, bt config.BluetoothConfig) {
 	dispatchGLava(h)
 	for _, cmd := range startupExecs {
-		h.Dispatch(fmt.Sprintf("exec %s", cmd))
+		if err := h.Exec(cmd); err != nil {
+			fmt.Fprintf(os.Stderr, "hyprd startup: exec %q: %v\n", cmd, err)
+		}
 	}
 	if bt.Enabled && bt.Device != "" {
 		connectBluetooth(bt.Device)
 	}
 }
 
-func dispatchGLava(h hyprDispatcher) {
+func dispatchGLava(h hyprExecutor) {
 	for _, cmd := range glavaExecs {
-		h.Dispatch(fmt.Sprintf("exec %s", cmd))
+		if err := h.Exec(cmd); err != nil {
+			fmt.Fprintf(os.Stderr, "hyprd startup: exec %q: %v\n", cmd, err)
+		}
 	}
 }
 
@@ -167,7 +171,9 @@ func (i *Init) Execute() (string, error) {
 	}
 
 	if init.Workspace > 0 {
-		i.hypr.Dispatch(fmt.Sprintf("workspace %d", init.Workspace))
+		if err := i.hypr.FocusWorkspace(init.Workspace); err != nil {
+			return "", fmt.Errorf("focus initial workspace %d: %w", init.Workspace, err)
+		}
 	}
 
 	fmt.Println("hyprd init: complete")

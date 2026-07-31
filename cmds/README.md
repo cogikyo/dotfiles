@@ -94,8 +94,8 @@ Config-backed commands read their config at startup; see command-specific docs f
 
 ### Hyprland startup
 
-```conf
-# hyprland.conf
-exec-once = hyprd init   # imports env, starts daemons, runs boot sequence
-exec-once = ewwd
+```lua
+-- hyprland.lua
+hl.exec_cmd("hyprd init") -- imports env, starts daemons, runs boot sequence
+hl.exec_cmd("ewwd")
 ```

@@ -134,7 +134,7 @@ func (b *Browser) launchFirefoxProfile(profile firefoxProfile) error {
 	cmd := append(slices.Clone(b.browserCommandParts()), "--new-instance", "--profile", profile.Root)
 	// Dispatch through Hyprland so Firefox inherits Hyprland's env (Wayland, Qt, cursor vars).
 	if b.hypr != nil {
-		return b.hypr.Dispatch(fmt.Sprintf("exec %s", shellQuoteCommand(cmd)))
+		return b.hypr.Exec(shellQuoteCommand(cmd))
 	}
 	return exec.Command(cmd[0], cmd[1:]...).Start()
 }
@@ -307,7 +307,7 @@ func (b *Browser) focusFirefoxOpenTarget(target firefoxOpenTarget) error {
 	if target.NeedsThreeBodySwap {
 		return b.swapThreeBodyShadowIntoView(target.WorkspaceID, target.Window.Address)
 	}
-	return b.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", target.Window.Address))
+	return b.hypr.FocusWindow(target.Window.Address)
 }
 
 // swapThreeBodyShadowIntoView makes the workspace-owned shadow Firefox active before CLI remoting.
@@ -324,9 +324,14 @@ func (b *Browser) swapThreeBodyShadowIntoView(workspaceID int, shadowAddress str
 		return fmt.Errorf("no visible three-body slave on workspace %d", workspaceID)
 	}
 	activeAddress := slaves[0].Address
-	batch := fmt.Sprintf("dispatch movetoworkspacesilent %s,address:%s; dispatch movetoworkspacesilent %d,address:%s; dispatch focuswindow address:%s", windows.ShadowWorkspace, activeAddress, workspaceID, shadowAddress, shadowAddress)
-	if _, err := b.hypr.Request("[[BATCH]]" + batch); err != nil {
-		return err
+	if err := b.hypr.MoveWindowToWorkspace(activeAddress, windows.ShadowWorkspace, false); err != nil {
+		return fmt.Errorf("move active window to shadow workspace: %w", err)
+	}
+	if err := b.hypr.MoveWindowToWorkspace(shadowAddress, strconv.Itoa(workspaceID), false); err != nil {
+		return fmt.Errorf("move shadow window to workspace %d: %w", workspaceID, err)
+	}
+	if err := b.hypr.FocusWindow(shadowAddress); err != nil {
+		return fmt.Errorf("focus shadow window: %w", err)
 	}
 	if b.state != nil && len(tiled) > 0 {
 		b.state.SetThreeBody(workspaceID, &state.ThreeBodyState{Master: tiled[0].Address, Active: shadowAddress, Shadow: activeAddress})

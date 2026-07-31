@@ -26,13 +26,15 @@ const idleUnlockSuppress = 2 * time.Second
 // pamLoadFlag is the runtime handshake consumed by `hyprd ssh pam-load` from pam_exec.
 const pamLoadFlag = "hyprd-ssh-pam-load"
 
-type hyprDispatcher interface {
-	Dispatch(args string) error
+type hyprExecutor interface {
+	Exec(cmd string) error
 }
 
 type hyprIPC interface {
-	hyprDispatcher
+	hyprExecutor
 	Request(command string) ([]byte, error)
+	FocusWorkspace(id int) error
+	Submap(name string) error
 }
 
 // Lock owns pseudo-lock and full-lock lifecycles: visual blackout, audio/notification pause, and restore.
@@ -94,14 +96,14 @@ func (l *Lock) enterPseudo(kind string, idle bool) (string, error) {
 	}
 
 	saved := l.capture()
-	if err := l.hypr.Dispatch(fmt.Sprintf("workspace %d", pseudoLockWorkspace)); err != nil {
+	if err := l.hypr.FocusWorkspace(pseudoLockWorkspace); err != nil {
 		l.mu.Unlock()
 		return "", fmt.Errorf("lock: switch to workspace %d: %w", pseudoLockWorkspace, err)
 	}
-	if err := l.hypr.Dispatch("submap pseudolock"); err != nil {
+	if err := l.hypr.Submap("pseudolock"); err != nil {
 		rollbackErr := errors.Join(
-			l.hypr.Dispatch("submap reset"),
-			l.hypr.Dispatch(fmt.Sprintf("workspace %d", saved.workspace)),
+			l.hypr.Submap("reset"),
+			l.hypr.FocusWorkspace(saved.workspace),
 		)
 		l.mu.Unlock()
 		if rollbackErr != nil {
@@ -145,7 +147,7 @@ func (l *Lock) unlock() (string, error) {
 		l.mu.Unlock()
 		return "lock: hyprlock active", nil
 	}
-	if err := l.hypr.Dispatch("submap reset"); err != nil {
+	if err := l.hypr.Submap("reset"); err != nil {
 		l.mu.Unlock()
 		return "", fmt.Errorf("lock: reset submap: %w", err)
 	}
@@ -210,14 +212,14 @@ func (l *Lock) startFull(restoreWidgets bool) (*lockState, string, error) {
 
 	needsBlackout := false
 	if l.saved != nil {
-		if err := l.hypr.Dispatch("submap reset"); err != nil {
+		if err := l.hypr.Submap("reset"); err != nil {
 			l.mu.Unlock()
 			return nil, "", fmt.Errorf("lock: reset submap: %w", err)
 		}
 	} else {
 		saved := l.capture()
 		saved.restoreWidgets = restoreWidgets
-		if err := l.hypr.Dispatch(fmt.Sprintf("workspace %d", pseudoLockWorkspace)); err != nil {
+		if err := l.hypr.FocusWorkspace(pseudoLockWorkspace); err != nil {
 			l.mu.Unlock()
 			return nil, "", fmt.Errorf("lock: switch to workspace %d: %w", pseudoLockWorkspace, err)
 		}
@@ -358,7 +360,7 @@ func (l *Lock) closeEwwWidgets(saved *lockState) {
 // exitBlackout restores workspace, reopens eww/glava, reconnects bluetooth, and unpauses dunst.
 func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) error {
 	cfg := l.state.GetConfig()
-	if err := l.hypr.Dispatch(fmt.Sprintf("workspace %d", saved.workspace)); err != nil {
+	if err := l.hypr.FocusWorkspace(saved.workspace); err != nil {
 		return fmt.Errorf("lock: restore workspace %d: %w", saved.workspace, err)
 	}
 	if err := EnsureBG(&cfg.Background); err != nil {

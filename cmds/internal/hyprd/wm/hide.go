@@ -4,6 +4,7 @@ package wm
 
 import (
 	"fmt"
+	"strconv"
 
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
@@ -65,7 +66,7 @@ func (h *Hide) hide(win *hypr.Window, tiled []hypr.Window) (string, error) {
 		SlaveIndex: slaveIndex,
 	})
 
-	if err := h.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s", windows.HiddenWorkspace, win.Address)); err != nil {
+	if err := h.hypr.MoveWindowToWorkspace(win.Address, windows.HiddenWorkspace, false); err != nil {
 		return "", fmt.Errorf("hide window: %w", err)
 	}
 	return fmt.Sprintf("hidden: %s (slave %d) to %s", win.Address, slaveIndex, windows.HiddenWorkspace), nil
@@ -78,7 +79,7 @@ func (h *Hide) unhide(win *hypr.Window) (string, error) {
 		destWS = hidden.OriginWS
 	}
 
-	if err := h.hypr.Dispatch(fmt.Sprintf("movetoworkspace %d,address:%s", destWS, win.Address)); err != nil {
+	if err := h.hypr.MoveWindowToWorkspace(win.Address, strconv.Itoa(destWS), true); err != nil {
 		return "", fmt.Errorf("unhide window: %w", err)
 	}
 	if hidden != nil {
@@ -98,7 +99,7 @@ func (h *Hide) restoreSlavePosition(wsID int, targetIndex int) {
 	if slaveCount > 0 && targetIndex < slaveCount {
 		swaps := slaveCount - 1 - targetIndex
 		for range swaps {
-			h.hypr.Dispatch("layoutmsg swapprev")
+			_ = h.hypr.LayoutMsg("swapprev")
 		}
 	}
 }
@@ -113,7 +114,7 @@ func (h *Hide) UnhideByAddress(addr string, destWS int) (string, error) {
 		destWS = 1
 	}
 
-	if err := h.hypr.Dispatch(fmt.Sprintf("movetoworkspace %d,address:%s", destWS, addr)); err != nil {
+	if err := h.hypr.MoveWindowToWorkspace(addr, strconv.Itoa(destWS), true); err != nil {
 		return "", fmt.Errorf("unhide window: %w", err)
 	}
 	if hidden != nil {

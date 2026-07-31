@@ -226,7 +226,7 @@ func (b *Browser) restoreFirefoxPlacements(placements []firefoxPlacement, layout
 				restoredAddresses[client.Address] = struct{}{}
 				continue
 			}
-			if err := b.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s", placement.workspace, client.Address)); err != nil {
+			if err := b.hypr.MoveWindowToWorkspace(client.Address, placement.workspace, false); err != nil {
 				lastErr = err
 				remaining = append(remaining, placement)
 			} else {
@@ -244,7 +244,7 @@ func (b *Browser) restoreFirefoxPlacements(placements []firefoxPlacement, layout
 		if err != nil {
 			lastErr = err
 		} else if client, found := lastFirefoxPlacementWindow(clients, restoredAddresses, layoutTitles...); found {
-			if err := b.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s", placements[0].workspace, client.Address)); err != nil {
+			if err := b.hypr.MoveWindowToWorkspace(client.Address, placements[0].workspace, false); err != nil {
 				lastErr = err
 			} else {
 				return nil

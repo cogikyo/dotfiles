@@ -1826,8 +1826,8 @@ build_or_rebuild_hyprd() {
     return 0
 }
 
-# Daemons whose lifecycle is tied to Hyprland — started by hyprland.conf's
-# exec-once (so they inherit WAYLAND_DISPLAY), not by default.target.
+# Daemons whose lifecycle is tied to Hyprland — started by hyprland.lua's
+# startup exec (so they inherit WAYLAND_DISPLAY), not by default.target.
 HYPRLAND_LIFECYCLE_DAEMONS=(hyprd)
 
 is_hyprland_lifecycle_daemon() {
@@ -1876,11 +1876,11 @@ install_daemon_services() {
 
     for name in "${daemons[@]}"; do
         if is_hyprland_lifecycle_daemon "$name"; then
-            # Hyprland-lifecycle: started by hyprland.conf exec-once, not systemd.
+            # Hyprland-lifecycle: started by hyprland.lua startup exec, not systemd.
             # Disable any stale default.target enablement from older installs.
             if systemctl --user is-enabled "$name" &>/dev/null; then
                 systemctl --user disable "$name" &>/dev/null || true
-                ok "$name disabled (started by hyprland.conf instead)"
+                ok "$name disabled (started by hyprland.lua instead)"
             fi
             if systemctl --user is-active "$name" &>/dev/null; then
                 info "Restarting $name..."
@@ -2019,7 +2019,7 @@ healthcheck_go() {
                 err "Healthcheck failed: missing service file '$name.service'"
                 return 1
             fi
-            # Hyprland-lifecycle daemons are started by hyprland.conf, not systemd,
+            # Hyprland-lifecycle daemons are started by hyprland.lua, not systemd,
             # so they may not be enabled or active outside a live Hyprland session.
             if is_hyprland_lifecycle_daemon "$name"; then
                 continue

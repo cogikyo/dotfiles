@@ -58,15 +58,15 @@ func (s *Swap) restoreDisplaced(currentMaster *hypr.Window, wsID int) (string, e
 	}
 
 	s.state.SetDisplacedMaster(wsID, currentMaster.Address)
-	s.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", displaced))
-	s.hypr.Dispatch("movewindow l")
-	s.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", currentMaster.Address))
+	_ = s.hypr.FocusWindow(displaced)
+	_ = s.hypr.MoveWindowDirection("left")
+	_ = s.hypr.FocusWindow(currentMaster.Address)
 	return fmt.Sprintf("restored: %s to master, displaced %s", displaced, currentMaster.Address), nil
 }
 
 func (s *Swap) takeoverMaster(slave *hypr.Window, wsID int, masterAddr string) (string, error) {
 	s.state.SetDisplacedMaster(wsID, masterAddr)
-	s.hypr.Dispatch("movewindow l")
+	_ = s.hypr.MoveWindowDirection("left")
 	return fmt.Sprintf("takeover: %s to master, displaced %s", slave.Address, masterAddr), nil
 }
 

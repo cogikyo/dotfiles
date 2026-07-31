@@ -37,7 +37,7 @@ func TestShouldExcludeProfileRel(t *testing.T) {
 		"share/videos/clip.webm":               false,
 		"cmds/cmd/newtab/dna.webm":             true,
 		"etc/fonts.tar.gz":                     true,
-		"config/hypr/hyprland.conf":            false,
+		"config/hypr/hyprland.lua":            false,
 	}
 	for rel, want := range cases {
 		if got := shouldExcludeProfileRel(rel); got != want {

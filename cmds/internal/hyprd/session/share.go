@@ -102,12 +102,16 @@ func (s *Share) gaps() config.GapsOutConfig {
 }
 
 func (s *Share) setGaps(gaps config.OuterGaps) error {
-	resp, err := s.hypr.Request("keyword general:gaps_out " + gaps.KeywordValue())
+	var top, right, bottom, left int
+	n, err := fmt.Sscanf(gaps.OptionValue(), "%d %d %d %d", &top, &right, &bottom, &left)
 	if err != nil {
-		return fmt.Errorf("share: set gaps_out: %w", err)
+		return fmt.Errorf("share: parse gaps_out %q: %w", gaps.OptionValue(), err)
 	}
-	if string(resp) != "ok" {
-		return fmt.Errorf("share: set gaps_out: %s", string(resp))
+	if n != 4 {
+		return fmt.Errorf("share: parse gaps_out %q: got %d values", gaps.OptionValue(), n)
+	}
+	if err := s.hypr.SetOuterGaps(top, right, bottom, left); err != nil {
+		return fmt.Errorf("share: set gaps_out: %w", err)
 	}
 	return nil
 }

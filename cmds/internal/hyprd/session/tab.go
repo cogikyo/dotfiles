@@ -5,6 +5,7 @@ package session
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"dotfiles/cmds/internal/config"
@@ -70,7 +71,9 @@ func (t *Tab) Execute(tabName, filePath string) (string, error) {
 	kitty := NewKittyClient(editor.Pid)
 	windows, err := kitty.FullState()
 	if err != nil {
-		t.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", editor.Address))
+		if focusErr := t.hypr.FocusWindow(editor.Address); focusErr != nil {
+			return "", fmt.Errorf("focus editor after kitty socket failure: %w", focusErr)
+		}
 		return fmt.Sprintf("focused editor (no kitty socket): %s", editor.Address), nil
 	}
 	if len(windows) == 0 {
@@ -148,7 +151,7 @@ func (t *Tab) Execute(tabName, filePath string) (string, error) {
 		}
 		prevAddr, err := t.previousWindowAddress(wsID, editor.Address)
 		if err == nil && prevAddr != "" && prevAddr != editor.Address {
-			if err := t.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", prevAddr)); err != nil {
+			if err := t.hypr.FocusWindow(prevAddr); err != nil {
 				return "", err
 			}
 			return "toggled back", nil
@@ -156,7 +159,9 @@ func (t *Tab) Execute(tabName, filePath string) (string, error) {
 		return "already focused", nil
 	}
 
-	t.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", editor.Address))
+	if err := t.hypr.FocusWindow(editor.Address); err != nil {
+		return "", fmt.Errorf("focus editor: %w", err)
+	}
 	focusedByID, err := focusProfileTab(kitty, targetTabID, req.explicit, &profile, targetTab)
 	if err != nil {
 		return "", err
@@ -262,7 +267,7 @@ func (t *Tab) focusBody(_ string, spec config.ThreeBodyWindow, wsID int, addr st
 		return nil, wsID, err
 	}
 	if currentWS != wsID {
-		if err := t.hypr.Dispatch(fmt.Sprintf("workspace %d", wsID)); err != nil {
+		if err := t.hypr.FocusWorkspace(wsID); err != nil {
 			return nil, wsID, fmt.Errorf("focus workspace: %w", err)
 		}
 	}
@@ -270,7 +275,7 @@ func (t *Tab) focusBody(_ string, spec config.ThreeBodyWindow, wsID int, addr st
 		if err := t.swapBodyShadow(st, wsID); err != nil {
 			return nil, wsID, err
 		}
-	} else if err := t.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", addr)); err != nil {
+	} else if err := t.hypr.FocusWindow(addr); err != nil {
 		return nil, wsID, err
 	}
 
@@ -299,9 +304,14 @@ func (t *Tab) swapBodyShadow(st *state.ThreeBodyState, wsID int) error {
 
 	actualMaster := tiled[0].Address
 	actualSlave := slaves[0].Address
-	batch := fmt.Sprintf("dispatch movetoworkspacesilent %s,address:%s; dispatch movetoworkspacesilent %d,address:%s; dispatch focuswindow address:%s", windows.ShadowWorkspace, actualSlave, wsID, st.Shadow, st.Shadow)
-	if _, err := t.hypr.Request("[[BATCH]]" + batch); err != nil {
-		return fmt.Errorf("swap batch: %w", err)
+	if err := t.hypr.MoveWindowToWorkspace(actualSlave, windows.ShadowWorkspace, false); err != nil {
+		return fmt.Errorf("swap body shadow: move active slave: %w", err)
+	}
+	if err := t.hypr.MoveWindowToWorkspace(st.Shadow, strconv.Itoa(wsID), false); err != nil {
+		return fmt.Errorf("swap body shadow: move shadow: %w", err)
+	}
+	if err := t.hypr.FocusWindow(st.Shadow); err != nil {
+		return fmt.Errorf("swap body shadow: focus shadow: %w", err)
 	}
 	t.state.SetThreeBody(wsID, &state.ThreeBodyState{Master: actualMaster, Active: st.Shadow, Shadow: actualSlave})
 	return nil
@@ -412,7 +422,9 @@ func (t *Tab) findEditor(wsID int) (*hypr.Window, error) {
 	}
 
 	if shadow := shadowEditorForWorkspace(clients, t.state.GetThreeBody(wsID)); shadow != nil {
-		t.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", wsID, shadow.Address))
+		if err := t.hypr.MoveWindowToWorkspace(shadow.Address, strconv.Itoa(wsID), false); err != nil {
+			return nil, fmt.Errorf("move editor to workspace %d: %w", wsID, err)
+		}
 		return shadow, nil
 	}
 
@@ -473,7 +485,10 @@ func (t *Tab) spawnTerminal(wsID int) (string, error) {
 	if project == "" {
 		project = "$HOME"
 	}
-	t.hypr.Dispatch(fmt.Sprintf("exec kitty --title terminal --directory %s --session ~/.config/kitty/sessions/term.conf", project))
+	cmd := fmt.Sprintf("kitty --title terminal --directory %s --session ~/.config/kitty/sessions/term.conf", project)
+	if err := t.hypr.Exec(cmd); err != nil {
+		return "", fmt.Errorf("spawn terminal: %w", err)
+	}
 	return "spawned terminal", nil
 }
 

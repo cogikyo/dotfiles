@@ -329,7 +329,7 @@ func (d *Daemon) handleShadow(arg string) string {
 
 	switch strings.TrimSpace(arg) {
 	case "", "toggle":
-		if err := d.hypr.Dispatch("togglespecialworkspace " + special); err != nil {
+		if err := d.hypr.ToggleSpecialWorkspace(special); err != nil {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return "toggled " + shadowWS

@@ -109,7 +109,10 @@ func (p *Picker) open() (string, error) {
 	p.confirmed = false
 	p.active = true
 
-	p.hypr.Dispatch("submap picker")
+	if err := p.hypr.Submap("picker"); err != nil {
+		p.active = false
+		return "", fmt.Errorf("picker: set submap: %w", err)
+	}
 	p.pushState()
 	exec.Command("eww", "open", "picker").Run()
 	exec.Command("eww", "update", "picker-visible=true").Run()
@@ -120,21 +123,23 @@ func (p *Picker) open() (string, error) {
 func (p *Picker) close() (string, error) {
 	p.mu.Lock()
 	defer p.mu.Unlock()
-	return p.closeLocked(), nil
+	return p.closeLocked()
 }
 
-func (p *Picker) closeLocked() string {
+func (p *Picker) closeLocked() (string, error) {
 	if !p.active {
-		return "picker: not open"
+		return "picker: not open", nil
+	}
+	if err := p.hypr.Submap("reset"); err != nil {
+		return "", fmt.Errorf("picker: reset submap: %w", err)
 	}
 	p.active = false
-	p.hypr.Dispatch("submap reset")
 	exec.Command("eww", "update", "picker-visible=false").Run()
 	go func() {
 		time.Sleep(200 * time.Millisecond)
 		exec.Command("eww", "close", "picker").Run()
 	}()
-	return "picker: closed"
+	return "picker: closed", nil
 }
 
 func (p *Picker) move(dws, dsi int) (string, error) {
@@ -227,7 +232,9 @@ func (p *Picker) confirm() (string, error) {
 
 	go func() {
 		time.Sleep(350 * time.Millisecond)
-		p.hypr.Dispatch("submap reset")
+		if err := p.hypr.Submap("reset"); err != nil {
+			fmt.Printf("hyprd picker: reset submap: %v\n", err)
+		}
 		exec.Command("eww", "update", "picker-visible=false").Run()
 		time.Sleep(200 * time.Millisecond)
 		exec.Command("eww", "close", "picker").Run()

@@ -62,13 +62,17 @@ func (w *WS) Execute(wsArg string) (string, error) {
 	if ws == 1 || ws == 5 || currentWS == 1 || currentWS == 5 {
 		anim = "slidevert"
 	}
-	w.hypr.Request(fmt.Sprintf("keyword animation workspaces, 1, 3, default, %s", anim))
+	if err := w.hypr.SetWorkspaceAnim(anim); err != nil {
+		return "", fmt.Errorf("set workspace anim %s: %w", anim, err)
+	}
 
-	if err := w.hypr.Dispatch(fmt.Sprintf("workspace %d", ws)); err != nil {
+	if err := w.hypr.FocusWorkspace(ws); err != nil {
 		return "", err
 	}
 
-	w.hypr.Request("keyword animation workspaces, 1, 3, default, slide")
+	if err := w.hypr.SetWorkspaceAnim("slide"); err != nil {
+		return "", fmt.Errorf("reset workspace anim: %w", err)
+	}
 
 	return fmt.Sprintf("ws %d", ws), nil
 }
@@ -104,7 +108,7 @@ func (w *WS) moveActiveWindow(delta int) (string, error) {
 		}
 	}
 
-	if err := w.hypr.Dispatch(fmt.Sprintf("movetoworkspace %d", targetWS)); err != nil {
+	if err := w.hypr.MoveActiveToWorkspace(targetWS, true); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("moved %s: ws %d -> %d", win.Class, currentWS, targetWS), nil
@@ -113,7 +117,7 @@ func (w *WS) moveActiveWindow(delta int) (string, error) {
 // normalizeWorkspaceState unwinds three-body and displaced-master state before a cross-workspace move.
 func (w *WS) normalizeWorkspaceState(wsID int) error {
 	if tb := w.state.GetThreeBody(wsID); tb != nil {
-		if err := w.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", wsID, tb.Shadow)); err != nil {
+		if err := w.hypr.MoveWindowToWorkspace(tb.Shadow, strconv.Itoa(wsID), false); err != nil {
 			return fmt.Errorf("restore three-body shadow on ws %d: %w", wsID, err)
 		}
 		w.state.ClearThreeBody(wsID)

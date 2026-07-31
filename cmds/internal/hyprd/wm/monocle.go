@@ -5,6 +5,7 @@ package wm
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/hypr"
@@ -62,7 +63,7 @@ func (m *Monocle) activate() (string, error) {
 	cfg := m.state.GetConfig()
 	var savedTB *state.ThreeBodyState
 	if tb := m.state.GetThreeBody(wsID); tb != nil {
-		m.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", wsID, tb.Shadow))
+		_ = m.hypr.MoveWindowToWorkspace(tb.Shadow, strconv.Itoa(wsID), false)
 		m.state.ClearThreeBody(wsID)
 		savedTB = tb
 	}
@@ -89,7 +90,7 @@ func (m *Monocle) activate() (string, error) {
 		if w.Address == active.Address {
 			continue
 		}
-		if err := m.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s", monoWS, w.Address)); err != nil {
+		if err := m.hypr.MoveWindowToWorkspace(w.Address, monoWS, false); err != nil {
 			return "", fmt.Errorf("monocle hide %s: %w", w.Address, err)
 		}
 		displaced = append(displaced, state.MonocleWindow{Address: w.Address, OriginWS: wsID})
@@ -97,8 +98,18 @@ func (m *Monocle) activate() (string, error) {
 
 	w, h := cfg.MonocleSize()
 	ox, oy := cfg.MonocleOffset()
-	batch := fmt.Sprintf("dispatch togglefloating; dispatch resizeactive exact %d %d; dispatch centerwindow; dispatch moveactive %d %d", w, h, ox, oy)
-	m.hypr.Request("[[BATCH]]" + batch)
+	if err := m.hypr.ToggleFloatActive(); err != nil {
+		return "", fmt.Errorf("monocle float: %w", err)
+	}
+	if err := m.hypr.ResizeActiveExact(w, h); err != nil {
+		return "", fmt.Errorf("monocle resize: %w", err)
+	}
+	if err := m.hypr.CenterActive(); err != nil {
+		return "", fmt.Errorf("monocle center: %w", err)
+	}
+	if err := m.hypr.MoveActiveRelative(ox, oy); err != nil {
+		return "", fmt.Errorf("monocle offset: %w", err)
+	}
 	windows.CenterCursor(m.hypr)
 
 	m.state.SetMonocle(wsID, &state.MonocleState{
@@ -120,11 +131,11 @@ func (m *Monocle) deactivate(wsID int) (string, error) {
 	cfg := m.state.GetConfig()
 
 	if ms.Focused != "" {
-		m.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", ms.Focused))
-		m.hypr.Dispatch("togglefloating")
+		_ = m.hypr.FocusWindow(ms.Focused)
+		_ = m.hypr.ToggleFloatActive()
 	}
 	for _, mw := range ms.Windows {
-		m.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", mw.OriginWS, mw.Address))
+		_ = m.hypr.MoveWindowToWorkspace(mw.Address, strconv.Itoa(mw.OriginWS), false)
 	}
 	m.ensureMaster(wsID, ms.Master)
 	if ms.SavedThreeBody != nil {
@@ -132,7 +143,7 @@ func (m *Monocle) deactivate(wsID int) (string, error) {
 	}
 	m.restoreSplitRatio(ms.SavedSplitRatio, cfg)
 	if ms.Focused != "" {
-		m.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", ms.Focused))
+		_ = m.hypr.FocusWindow(ms.Focused)
 	}
 	m.state.ClearMonocle(wsID)
 
@@ -155,8 +166,8 @@ func (m *Monocle) ensureMaster(wsID int, masterAddr string) {
 	if tiled[0].Address == masterAddr {
 		return
 	}
-	m.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", masterAddr))
-	m.hypr.Dispatch("layoutmsg swapwithmaster master")
+	_ = m.hypr.FocusWindow(masterAddr)
+	_ = m.hypr.LayoutMsg("swapwithmaster master")
 }
 
 func (m *Monocle) restoreSplitRatio(ratio string, cfg *config.HyprConfig) {
@@ -173,13 +184,13 @@ func (m *Monocle) restoreSplitRatio(ratio string, cfg *config.HyprConfig) {
 		ratio = "default"
 		mfact = cfg.Windows.Split.Default
 	}
-	m.hypr.Dispatch(fmt.Sprintf("layoutmsg mfact exact %s", mfact))
+	_ = m.hypr.LayoutMsg(fmt.Sprintf("mfact exact %s", mfact))
 	m.state.SetSplitRatio(ratio)
 }
 
 func (m *Monocle) restoreThreeBody(wsID int, saved *state.ThreeBodyState) {
-	m.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s", windows.ShadowWorkspace, saved.Shadow))
-	m.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", saved.Active))
+	_ = m.hypr.MoveWindowToWorkspace(saved.Shadow, windows.ShadowWorkspace, false)
+	_ = m.hypr.FocusWindow(saved.Active)
 	m.state.SetThreeBody(wsID, saved)
 }
 

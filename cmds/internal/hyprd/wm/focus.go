@@ -76,6 +76,6 @@ func (f *Focus) Execute(class, title string) (string, error) {
 		}
 	}
 
-	f.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", target.Address))
+	_ = f.hypr.FocusWindow(target.Address)
 	return fmt.Sprintf("focused: %s (%s)", target.Title, target.Address), nil
 }

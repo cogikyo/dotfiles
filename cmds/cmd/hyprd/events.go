@@ -199,7 +199,7 @@ func (e *EventLoop) handleThreeBodyClose(addr string) {
 			return
 		}
 		if tb.Active == addr || tb.Master == addr {
-			e.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", ws, tb.Shadow))
+			e.hypr.MoveWindowToWorkspace(tb.Shadow, strconv.Itoa(ws), false)
 			e.state.ClearThreeBody(ws)
 			return
 		}
@@ -213,7 +213,7 @@ func (e *EventLoop) handleMonocleClose(addr string) {
 			continue
 		}
 		for _, mw := range ms.Windows {
-			e.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", mw.OriginWS, mw.Address))
+			e.hypr.MoveWindowToWorkspace(mw.Address, strconv.Itoa(mw.OriginWS), false)
 		}
 		e.state.ClearMonocle(ws)
 		return

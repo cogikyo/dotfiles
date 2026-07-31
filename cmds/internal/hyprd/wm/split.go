@@ -64,7 +64,7 @@ func (s *Split) setRatio(ratio string) (string, error) {
 		mfact = cfg.Windows.Split.Default
 	}
 
-	if err := s.hypr.Dispatch(fmt.Sprintf("layoutmsg mfact exact %s", mfact)); err != nil {
+	if err := s.hypr.LayoutMsg(fmt.Sprintf("mfact exact %s", mfact)); err != nil {
 		return "", fmt.Errorf("set mfact: %w", err)
 	}
 

@@ -170,14 +170,14 @@ func (r *dunstActionRouter) focus(target dunstActionTarget) error {
 			continue
 		}
 		if clients[i].Workspace.ID == notifyFocusWorkspace {
-			return r.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", clients[i].Address))
+			return r.hypr.FocusWindow(clients[i].Address)
 		}
 		if fallback == nil {
 			fallback = &clients[i]
 		}
 	}
 	if fallback != nil {
-		return r.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", fallback.Address))
+		return r.hypr.FocusWindow(fallback.Address)
 	}
 	return nil
 }

@@ -4,7 +4,7 @@
 //
 // Responsibilities:
 // - Resolve command and event socket paths from runtime environment variables.
-// - Send requests and dispatcher commands over Unix sockets.
+// - Send requests over Unix sockets (queries and eval mutations).
 // - Decode typed window and monitor payloads from Hyprland JSON endpoints.
 package hypr
 
@@ -135,30 +135,6 @@ func (c *Client) ActiveWindow() (*Window, error) {
 		return nil, nil
 	}
 	return &w, nil
-}
-
-// Dispatch executes a Hyprland dispatcher command.
-func (c *Client) Dispatch(args string) error {
-	resp, err := c.Request("dispatch " + args)
-	if err != nil {
-		return err
-	}
-	if string(resp) != "ok" {
-		return fmt.Errorf("dispatch failed: %s", string(resp))
-	}
-	return nil
-}
-
-// Keyword sets a Hyprland config keyword at runtime.
-func (c *Client) Keyword(name, value string) error {
-	resp, err := c.Request("keyword " + name + " " + value)
-	if err != nil {
-		return err
-	}
-	if string(resp) != "ok" {
-		return fmt.Errorf("keyword failed: %s", string(resp))
-	}
-	return nil
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮

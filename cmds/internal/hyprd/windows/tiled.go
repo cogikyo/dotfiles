@@ -9,7 +9,6 @@ package windows
 // tiled.go implements tiled-window ordering, master/slave extraction, and cursor-centering helpers.
 
 import (
-	"fmt"
 	"slices"
 	"sort"
 	"strings"
@@ -42,7 +41,7 @@ func CenterCursor(h *hypr.Client) {
 	}
 	x := win.At[0] + win.Size[0]/2
 	y := win.At[1] + win.Size[1]/2
-	h.Dispatch(fmt.Sprintf("movecursor %d %d", x, y))
+	_ = h.MoveCursor(x, y)
 }
 
 // GetTiledWindows returns non-floating windows on wsID sorted by X position.

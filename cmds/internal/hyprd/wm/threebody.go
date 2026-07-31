@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -111,7 +112,7 @@ func (tb *ThreeBody) RevealShadow(address string) (bool, error) {
 		if clients[i].Workspace.Name != windows.ShadowWorkspace {
 			return false, nil
 		}
-		if err := tb.hypr.Dispatch(fmt.Sprintf("workspace %d", ownerWS)); err != nil {
+		if err := tb.hypr.FocusWorkspace(ownerWS); err != nil {
 			return true, fmt.Errorf("focus three-body workspace: %w", err)
 		}
 		_, err := tb.swap(owner, ownerWS)
@@ -143,7 +144,9 @@ func (tb *ThreeBody) Swap(fallbacks []WindowSpec) (string, error) {
 			if err := tb.hideShadow(slaves[1].Address); err != nil {
 				return "", fmt.Errorf("hide shadow: %w", err)
 			}
-			tb.setFadeRules(tiled[0], slaves[0], slaves[1])
+			if err := tb.setFadeRules(tiled[0], slaves[0], slaves[1]); err != nil {
+				return "", err
+			}
 			tb.state.SetThreeBody(wsID, &state.ThreeBodyState{Master: tiled[0].Address, Active: slaves[0].Address, Shadow: slaves[1].Address})
 			return fmt.Sprintf("enrolled: master=%s active=%s shadow=%s", tiled[0].Address, slaves[0].Address, slaves[1].Address), nil
 		}
@@ -188,15 +191,15 @@ func (tb *ThreeBody) SwapMaster() (string, error) {
 		return "", nil
 	}
 
-	if err := tb.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %d,address:%s", wsID, tbState.Shadow)); err != nil {
+	if err := tb.hypr.MoveWindowToWorkspace(tbState.Shadow, strconv.Itoa(wsID), false); err != nil {
 		return "", fmt.Errorf("restore shadow: %w", err)
 	}
-	tb.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", tbState.Shadow))
-	tb.hypr.Dispatch("layoutmsg swapwithmaster master")
+	_ = tb.hypr.FocusWindow(tbState.Shadow)
+	_ = tb.hypr.LayoutMsg("swapwithmaster master")
 	if err := tb.hideShadow(tbState.Master); err != nil {
 		return "", fmt.Errorf("hide old master: %w", err)
 	}
-	tb.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", tbState.Active))
+	_ = tb.hypr.FocusWindow(tbState.Active)
 	tb.state.SetThreeBody(wsID, &state.ThreeBodyState{Master: tbState.Shadow, Active: tbState.Active, Shadow: tbState.Master})
 	return fmt.Sprintf("master swapped: master=%s shadow=%s", tbState.Shadow, tbState.Master), nil
 }
@@ -234,10 +237,10 @@ func (tb *ThreeBody) focusWithState(st *state.ThreeBodyState, wsID int, class, t
 	case target == nil:
 		return fmt.Sprintf("not found: %s %s", class, title), nil
 	case target.Address == st.Master:
-		tb.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", st.Master))
+		_ = tb.hypr.FocusWindow(st.Master)
 		return fmt.Sprintf("focused master: %s", st.Master), nil
 	case target.Address == st.Active:
-		tb.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", st.Active))
+		_ = tb.hypr.FocusWindow(st.Active)
 		return fmt.Sprintf("focused active: %s", st.Active), nil
 	case target.Address == st.Shadow:
 		return tb.swap(st, wsID)
@@ -257,7 +260,7 @@ func (tb *ThreeBody) findByAddress(clients []hypr.Window, master, active, shadow
 	return nil
 }
 
-// swap is the core rotation, batched so Hyprland applies all three dispatches atomically.
+// swap rotates the shadow into view via sequential silent moves and focus.
 func (tb *ThreeBody) swap(st *state.ThreeBodyState, wsID int) (string, error) {
 	tiled, err := windows.GetTiledWindows(tb.hypr, wsID)
 	if err != nil {
@@ -274,9 +277,14 @@ func (tb *ThreeBody) swap(st *state.ThreeBodyState, wsID int) (string, error) {
 	}
 	actualSlave := slaves[0].Address
 
-	batch := fmt.Sprintf("dispatch movetoworkspacesilent %s,address:%s; dispatch movetoworkspacesilent %d,address:%s; dispatch focuswindow address:%s", windows.ShadowWorkspace, actualSlave, wsID, st.Shadow, st.Shadow)
-	if _, err := tb.hypr.Request("[[BATCH]]" + batch); err != nil {
-		return "", fmt.Errorf("swap batch: %w", err)
+	if err := tb.hypr.MoveWindowToWorkspace(actualSlave, windows.ShadowWorkspace, false); err != nil {
+		return "", fmt.Errorf("swap hide slave: %w", err)
+	}
+	if err := tb.hypr.MoveWindowToWorkspace(st.Shadow, strconv.Itoa(wsID), false); err != nil {
+		return "", fmt.Errorf("swap restore shadow: %w", err)
+	}
+	if err := tb.hypr.FocusWindow(st.Shadow); err != nil {
+		return "", fmt.Errorf("swap focus: %w", err)
 	}
 
 	tb.state.SetThreeBody(wsID, &state.ThreeBodyState{Master: actualMaster, Active: st.Shadow, Shadow: actualSlave})
@@ -298,7 +306,7 @@ func (tb *ThreeBody) focusWithEnroll(wsID int, bodyName, class, title, launchCmd
 		c := &clients[i]
 		if c.Workspace.ID == wsID && windows.MatchesTarget(c, class, title) {
 			tb.clearLaunch(wsID, bodyName)
-			tb.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", c.Address))
+			_ = tb.hypr.FocusWindow(c.Address)
 			return fmt.Sprintf("focused (no three-body): %s", c.Address), nil
 		}
 	}
@@ -319,7 +327,7 @@ func (tb *ThreeBody) launch(wsID int, bodyName, launchCmd, msg string) (string, 
 	}
 
 	cmd := tb.withSessionLaunchEnv(launchCmd, wsID, bodyName)
-	if err := tb.hypr.Dispatch(fmt.Sprintf("exec %s", cmd)); err != nil {
+	if err := tb.hypr.Exec(cmd); err != nil {
 		tb.clearLaunch(wsID, bodyName)
 		return "", fmt.Errorf("launch: %w", err)
 	}
@@ -382,18 +390,17 @@ func (tb *ThreeBody) withSessionLaunchEnv(cmd string, wsID int, bodyName string)
 }
 
 func (tb *ThreeBody) hideShadow(addr string) error {
-	return tb.hypr.Dispatch(fmt.Sprintf("movetoworkspacesilent %s,address:%s", windows.ShadowWorkspace, addr))
+	return tb.hypr.MoveWindowToWorkspace(addr, windows.ShadowWorkspace, false)
 }
 
 // setFadeRules installs fade animation rules so slide transitions don't expose the shadow workspace.
-func (tb *ThreeBody) setFadeRules(windows ...hypr.Window) {
-	for _, w := range windows {
-		rule := fmt.Sprintf("match:class %s", w.Class)
-		if w.InitialTitle != "" {
-			rule += fmt.Sprintf(" match:initialTitle %s", w.InitialTitle)
+func (tb *ThreeBody) setFadeRules(wins ...hypr.Window) error {
+	for _, w := range wins {
+		if err := tb.hypr.AddFadeRule(w.Class, w.InitialTitle); err != nil {
+			return fmt.Errorf("fade rule %s: %w", w.Class, err)
 		}
-		tb.hypr.Request(fmt.Sprintf("keyword windowrule %s, animation fade", rule))
 	}
+	return nil
 }
 
 // enroll turns 3 tiled windows into a three-body: the matching slave becomes active, the other becomes shadow.
@@ -416,13 +423,15 @@ func (tb *ThreeBody) enroll(tiled []hypr.Window, wsID int, class, title string) 
 	}
 
 	if active == nil && windows.MatchesTarget(&master, class, title) {
-		tb.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", master.Address))
+		_ = tb.hypr.FocusWindow(master.Address)
 		active = &slaves[0]
 		shadow = &slaves[1]
 		if err := tb.hideShadow(shadow.Address); err != nil {
 			return "", fmt.Errorf("hide shadow: %w", err)
 		}
-		tb.setFadeRules(master, *active, *shadow)
+		if err := tb.setFadeRules(master, *active, *shadow); err != nil {
+			return "", err
+		}
 		tb.state.SetThreeBody(wsID, &state.ThreeBodyState{Master: master.Address, Active: active.Address, Shadow: shadow.Address})
 		return fmt.Sprintf("enrolled (master focused): master=%s active=%s shadow=%s", master.Address, active.Address, shadow.Address), nil
 	}
@@ -434,8 +443,10 @@ func (tb *ThreeBody) enroll(tiled []hypr.Window, wsID int, class, title string) 
 	if err := tb.hideShadow(shadow.Address); err != nil {
 		return "", fmt.Errorf("hide shadow: %w", err)
 	}
-	tb.hypr.Dispatch(fmt.Sprintf("focuswindow address:%s", active.Address))
-	tb.setFadeRules(master, *active, *shadow)
+	_ = tb.hypr.FocusWindow(active.Address)
+	if err := tb.setFadeRules(master, *active, *shadow); err != nil {
+		return "", err
+	}
 	tb.state.SetThreeBody(wsID, &state.ThreeBodyState{Master: master.Address, Active: active.Address, Shadow: shadow.Address})
 	return fmt.Sprintf("enrolled: master=%s active=%s shadow=%s", master.Address, active.Address, shadow.Address), nil
 }

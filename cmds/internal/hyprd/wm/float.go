@@ -32,20 +32,20 @@ func (f *Float) Execute() (string, error) {
 	}
 
 	if win.Floating {
-		if err := f.hypr.Dispatch("togglefloating"); err != nil {
+		if err := f.hypr.ToggleFloatActive(); err != nil {
 			return "", fmt.Errorf("tile window: %w", err)
 		}
 		return "float off: tiled", nil
 	}
 
 	w, h := f.state.GetConfig().MonocleSize()
-	if err := f.hypr.Dispatch("togglefloating"); err != nil {
+	if err := f.hypr.ToggleFloatActive(); err != nil {
 		return "", fmt.Errorf("float window: %w", err)
 	}
-	if err := f.hypr.Dispatch(fmt.Sprintf("resizeactive exact %d %d", w, h)); err != nil {
+	if err := f.hypr.ResizeActiveExact(w, h); err != nil {
 		return "", fmt.Errorf("resize floating window: %w", err)
 	}
-	if err := f.hypr.Dispatch("centerwindow"); err != nil {
+	if err := f.hypr.CenterActive(); err != nil {
 		return "", fmt.Errorf("center floating window: %w", err)
 	}
 	return fmt.Sprintf("float: %dx%d centered", w, h), nil

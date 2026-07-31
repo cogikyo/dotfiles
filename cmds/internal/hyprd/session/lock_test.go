@@ -2,6 +2,7 @@ package session
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -15,12 +16,24 @@ type fakeHypr struct {
 	fail       map[string]error
 }
 
-func (f *fakeHypr) Dispatch(args string) error {
+func (f *fakeHypr) record(args string) error {
 	f.dispatches = append(f.dispatches, args)
 	if err := f.fail[args]; err != nil {
 		return err
 	}
 	return nil
+}
+
+func (f *fakeHypr) Exec(cmd string) error {
+	return f.record("exec " + cmd)
+}
+
+func (f *fakeHypr) FocusWorkspace(id int) error {
+	return f.record(fmt.Sprintf("workspace %d", id))
+}
+
+func (f *fakeHypr) Submap(name string) error {
+	return f.record("submap " + name)
 }
 
 func (f *fakeHypr) Request(command string) ([]byte, error) {

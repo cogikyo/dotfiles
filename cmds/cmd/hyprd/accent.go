@@ -107,10 +107,7 @@ func (a *Accent) Apply() error {
 	}
 	a.mu.Unlock()
 
-	if err := a.hypr.Keyword("general:col.active_border", target.Border); err != nil {
-		return err
-	}
-	if err := a.hypr.Keyword("decoration:shadow:color", target.Shadow); err != nil {
+	if err := a.hypr.SetAccent(target.Border, target.Shadow); err != nil {
 		return err
 	}
 

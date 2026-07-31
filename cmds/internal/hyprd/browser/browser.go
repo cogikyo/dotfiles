@@ -389,7 +389,7 @@ func (b *Browser) executeLaunch(args []string) (string, error) {
 
 	cmd := append(b.browserCommandParts(), "--profile", profile.Root, "--new-window", firefoxNewtab)
 	if b.hypr != nil {
-		if err := b.hypr.Dispatch(fmt.Sprintf("exec %s", shellQuoteCommand(cmd))); err != nil {
+		if err := b.hypr.Exec(shellQuoteCommand(cmd)); err != nil {
 			return "", err
 		}
 	} else {
