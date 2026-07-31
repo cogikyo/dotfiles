@@ -94,7 +94,26 @@ hl.window_rule({
 	float = true,
 	center = true,
 })
-hl.window_rule({ name = "zoom-title", match = { title = "zoom" }, float = true })
+hl.window_rule({
+	name = "zoom-workspace",
+	match = {
+		class = [[^(zoom)$]],
+		title = [[^(Zoom Workplace|Meeting)$]],
+	},
+	workspace = "2 silent",
+})
+hl.window_rule({
+	name = "zoom-hidden-helper",
+	match = {
+		class = [[^(zoom)$]],
+		title = [[^(annotate_toolbar|as_preview|as_toolbar|zoom)$]],
+	},
+	float = true,
+	workspace = "special:zoom-hidden silent",
+	no_focus = true,
+	opacity = "0 override",
+	no_shadow = true,
+})
 
 hl.window_rule({
 	name = "thunar",
@@ -142,6 +161,12 @@ hl.window_rule({
 	match = { class = [[^(xdg-desktop-portal-gtk)$]] },
 	float = true,
 	size = dialogSize,
+	center = true,
+})
+hl.window_rule({
+	name = "share-picker",
+	match = { class = [[^(hyprland-share-picker)$]] },
+	float = true,
 	center = true,
 })
 hl.window_rule({

@@ -631,6 +631,52 @@ healthcheck_packages() {
 # =================================================================================================
 #  STEP {LINK}: Symlink dotfiles config, scripts, and shell profile  {{{
 
+merge_managed_ini_general() {
+    local managed="$1"
+    local target="$2"
+    local key value key_pattern
+
+    [[ -f "$managed" ]] || { err "Managed INI fragment missing: $managed"; return 1; }
+    if [[ -L "$target" || ( -e "$target" && ! -f "$target" ) ]]; then
+        err "Managed INI target must be a local file: $target"
+        return 1
+    fi
+
+    mkdir -p "$(dirname "$target")"
+    if [[ ! -e "$target" ]]; then
+        cp "$managed" "$target"
+        return
+    fi
+
+    grep -Fxq '[General]' "$target" || printf '\n[General]\n' >>"$target"
+    while IFS='=' read -r key value; do
+        [[ -n "$key" && "$key" != \[* && "$key" != \#* ]] || continue
+        [[ "$key" =~ ^[[:alnum:]_.-]+$ ]] || {
+            err "Invalid managed INI key: $key"
+            return 1
+        }
+
+        key_pattern=${key//./\\.}
+        if sed -n '/^\[General\]$/,/^\[/p' "$target" | grep -Eq "^${key_pattern}="; then
+            sed -i "/^\[General\]$/,/^\[/ s|^${key_pattern}=.*$|${key}=${value}|" "$target"
+        else
+            sed -i "/^\[General\]$/a ${key}=${value}" "$target"
+        fi
+    done <"$managed"
+}
+
+managed_ini_general_matches() {
+    local managed="$1"
+    local target="$2"
+    local key value
+
+    [[ -f "$managed" && -f "$target" && ! -L "$target" ]] || return 1
+    while IFS='=' read -r key value; do
+        [[ -n "$key" && "$key" != \[* && "$key" != \#* ]] || continue
+        sed -n '/^\[General\]$/,/^\[/p' "$target" | grep -Fxq "${key}=${value}" || return 1
+    done <"$managed"
+}
+
 step_link() {
     header "Linking configs and scripts"
 
@@ -735,6 +781,12 @@ EOF
     fi
     ok "obs-studio linked"
 
+    # Zoom owns one mutable INI file, so merge only the stable settings tracked here.
+    info "Merging managed Zoom settings..."
+    step "Merging config (zoom)"
+    merge_managed_ini_general "$DOTFILES/share/zoom/zoomus.conf" "$HOME/.config/zoomus.conf"
+    ok "zoom settings merged"
+
     # .zshrc symlink
     info "Linking .zshrc..."
     link_or_skip "$DOTFILES/config/zsh/zshrc" "$HOME/.zshrc"
@@ -819,6 +871,11 @@ healthcheck_link() {
     [[ -f "$HOME/.config/obs-studio/basic/scenes/Costello.json" \
         && ! -L "$HOME/.config/obs-studio/basic/scenes/Costello.json" ]] || {
         err "Healthcheck failed: ~/.config/obs-studio/basic/scenes/Costello.json is not a local seeded file"
+        return 1
+    }
+    ((checked_entries++))
+    managed_ini_general_matches "$DOTFILES/share/zoom/zoomus.conf" "$HOME/.config/zoomus.conf" || {
+        err "Healthcheck failed: ~/.config/zoomus.conf does not contain the managed Zoom settings"
         return 1
     }
     ((checked_entries++))
