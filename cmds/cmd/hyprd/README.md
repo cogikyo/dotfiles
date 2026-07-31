@@ -60,6 +60,7 @@ hyprd/
 │   ├── hide.go                 #   `hyprd hide` - toggle slave → special:hiddenSlaves
 │   ├── swap.go                 #   `hyprd swap` - exchange master/slave
 │   ├── monocle.go              #   `hyprd monocle` - float focused to dedicated ws
+│   ├── float.go                #   `hyprd float` - toggle float, centered at monocle size
 │   ├── focus.go                #   `hyprd focus <class> [title]` - focus + unhide
 │   └── threebody.go            #   three-window layout with shadow-ws swapping
 │
@@ -137,6 +138,7 @@ hyprd rebuild            # rebuild binary and hot-restart (preserves state)
 
 ```bash
 hyprd monocle                # float focused window to dedicated workspace
+hyprd float                  # toggle floating, centered at monocle size
 hyprd split                  # cycle split ratio: xs → default → lg
 hyprd split -x|-d|-l         # set specific ratio
 hyprd hide                   # move slave to special workspace

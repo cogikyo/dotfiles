@@ -178,6 +178,13 @@ func (d *Daemon) handleCommand(command string) string {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
+	case "float":
+		float := wm.NewFloat(d.hypr, d.state)
+		result, err := float.Execute()
+		if err != nil {
+			return fmt.Sprintf("error: %v", err)
+		}
+		return result
 	case "swap":
 		monocle := wm.NewMonocle(d.hypr, d.state)
 		if _, err := monocle.DeactivateIfActive(); err != nil {
