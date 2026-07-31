@@ -9,6 +9,7 @@ const DESCRIPTION = [
   "Use model as provider/model-id to choose a runtime model for this task call.",
   "Use effort for the target model's reasoning variant; invalid efforts fail explicitly.",
   "If model is omitted, the child uses the agent's pinned model when one exists, else the current assistant message's model and effort.",
+  "Resume sparingly with task_id only for the same unfinished child; interrupted calls retain the child ID in tool metadata.",
   "If the usage cache shows the provider is exhausted, waits for the reset with no maximum wait.",
   "Delegating to a provider missing from delegate.json errors explicitly.",
 ].join(" ");
@@ -28,7 +29,7 @@ const server: Plugin = async ({ client }) => {
           subagent_type: tool.schema.string().describe("The type of specialized agent to use for this task"),
           model: tool.schema.string().optional().describe("Optional runtime model as provider/model-id"),
           effort: tool.schema.string().optional().describe("Optional reasoning effort variant for the target model"),
-          task_id: tool.schema.string().optional().describe("Existing child session id to resume"),
+          task_id: tool.schema.string().optional().describe("Existing direct child session ID to resume sparingly"),
         },
         async execute(args, ctx) {
           const prepared = await prepareTask(client, ctx, args);

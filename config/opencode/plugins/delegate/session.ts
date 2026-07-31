@@ -35,7 +35,6 @@ type PreparedTask = {
   model: ModelRef;
   variant?: string;
   permission: Rule[];
-  unattended: boolean;
 };
 
 const CONTENT_FILTER_ADVICE = "child unrecoverable; re-brief a fresh child (reword the brief first, switch provider as last resort); never resume this session";
@@ -64,15 +63,14 @@ export async function prepareTask(client: Client, ctx: ToolContext, input: unkno
 
   await validateVariant(client, model, variant);
 
-  const childPermission = await deriveChildPermission(client, ctx.sessionID, agent);
+  const permission = await deriveChildPermission(client, ctx.sessionID, agent);
 
   return {
     args,
     agent,
     model,
     variant,
-    permission: childPermission.rules,
-    unattended: childPermission.unattended,
+    permission,
   };
 }
 
@@ -83,12 +81,6 @@ export async function runChildTask(input: {
   prepared: PreparedTask;
   notes: string[];
 }) {
-  if (input.args.task_id && input.prepared.unattended) {
-    throw new Error(
-      "delegate task_id resume is disabled under Drive lineage; re-brief a fresh child so the current deny-only AFK envelope applies",
-    );
-  }
-
   const child = input.args.task_id
     ? await readExistingChild(
         input.client,
@@ -490,7 +482,7 @@ async function deriveChildPermission(
   client: Client,
   parentSessionID: string,
   agent: AgentInfo,
-): Promise<{ rules: Rule[]; unattended: boolean }> {
+): Promise<Rule[]> {
   const [parent, config] = await Promise.all([
     unwrap<Record<string, unknown>>(client.session.get({ path: { id: parentSessionID } } as never), `read parent session ${parentSessionID}`),
     unwrap<Record<string, unknown>>(client.config.get({} as never), "read config"),
@@ -516,8 +508,8 @@ async function deriveChildPermission(
   ];
 
   const composed = [...defaultRules, ...agentRules, ...childDenies, ...inherited];
-  if (!unattended) return { rules: dedupeRules(composed), unattended };
-  return { rules: [UNATTENDED_FLOOR, ...dedupeRules(composed.map(asBlocker))], unattended };
+  if (!unattended) return dedupeRules(composed);
+  return [UNATTENDED_FLOOR, ...dedupeRules(composed.map(asBlocker))];
 }
 
 // An unattended envelope always begins with the floor below, so index 0 of an unattended parent is this

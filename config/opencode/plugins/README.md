@@ -38,7 +38,8 @@ Normal flow:
 
 - `model` is `provider/model-id`; when omitted the child inherits the agent's pinned model or the current assistant message's model and effort.
 - `effort` maps to the target model's reasoning variants.
-- `task_id` resumes an existing child session, but any session with Drive in its ancestry rejects resumes.
+- `task_id` resumes a direct idle child only when its agent and freshly derived permission envelope still match.
+- Resume sparingly for the same unfinished work; use a fresh child for new objectives or independent context.
 - The provider must be listed in `config/opencode/delegate.json`.
 - Before spawning, it waits abortably if any non-post-reset window is at >=100%, until the latest capped reset passes; stale, errored, or unknown usage proceeds un-gated.
 - Children inherit parent denies and `external_directory` rules; review agents get a read-only default profile.
@@ -60,7 +61,7 @@ Practical failure diagnosis:
 
 - `delegate provider policy missing for <provider>` → add the provider to `delegate.json`.
 - `Unknown effort` → pick a variant that the target model exposes in config.
-- `delegate task_id resume is disabled under Drive lineage` → re-brief a fresh child.
+- `delegate resumed child permission envelope no longer matches` → re-brief a fresh child under the current policy.
 - `child showed no activity within 120 seconds` → the model/provider failed to start producing output.
 - `blocked: content_filter` → reword the brief first; switch provider only as a last resort; never resume the tainted child.
 

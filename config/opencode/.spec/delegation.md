@@ -23,7 +23,7 @@ V2's native subagent mechanism owns child lifecycle end to end; model and effort
 - Unattended parents never let a child surface a native approval prompt, since a native ask waits for a human who is not there.
 - Child profiles carry mechanically enforced restrictive permissions because native parent-permission inheritance is incomplete; the dispatch guard rejects any profile that cannot satisfy the parent's denies and directory boundary.
 - The guard disappears only when native inheritance is proven to enforce the same boundary.
-- Every dispatch creates a fresh child; continuity comes from re-briefing with accumulated context, and no resume mechanism is carried over unless the runtime grows a native one.
+- Dispatches are fresh by default, while native resume continues interrupted or unfinished work only when the role, objective, and permission boundary remain unchanged.
 
 ## Enforcement boundary
 
