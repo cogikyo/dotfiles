@@ -327,6 +327,16 @@ notify:
     wf-end: reward
     Slack: knock
 
+  # ├─ activation targets ───────────────────────────────────────────────────────┤
+  # Keys match the dunst app name or desktop-entry; class is the live Hyprland class.
+  # Apps listed here are focused when their notification is activated (click or Alt+C),
+  # even when the sending app offers no action of its own.
+  action_focus_apps:
+    Slack: { workspace: 2, class: slack }
+    Firefox: { workspace: 2, class: firefox-developer-edition }
+    Firefox Developer Edition: { workspace: 2, class: firefox-developer-edition }
+    firefox-developer-edition: { workspace: 2, class: firefox-developer-edition }
+
   # ├─ silence filters ──────────────────────────────────────────────────────────┤
   silent_apps: # these suppress sounds without suppressing the notification itself.
     - Spotify

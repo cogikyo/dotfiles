@@ -366,11 +366,15 @@ func (d *Daemon) handleThreeBody(arg string) string {
 	if name == "" {
 		return "usage: three-body {editor|agents|browser|shadow}"
 	}
-	if name == "agents" && hasDisplayedNotifications() {
-		if !d.tryDunstAction() {
-			return "error: dunst action failed"
+	if name == "agents" {
+		notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load())
+		result, handled, err := notifier.ActivateDisplayed()
+		if err != nil {
+			return fmt.Sprintf("error: %v", err)
 		}
-		return "notification: action"
+		if handled {
+			return result
+		}
 	}
 	monocle := wm.NewMonocle(d.hypr, d.state)
 	if _, err := monocle.DeactivateIfActive(); err != nil {
@@ -535,27 +539,6 @@ func (d *Daemon) newInit() *session.Init {
 		})
 	})
 	return init
-}
-
-// hasDisplayedNotifications lets the agents keybind route a visible notification to Dunst.
-func hasDisplayedNotifications() bool {
-	return displayedNotifications() > 0
-}
-
-func (d *Daemon) tryDunstAction() bool {
-	return exec.Command("dunstctl", "action").Run() == nil
-}
-
-func displayedNotifications() int {
-	out, err := exec.Command("dunstctl", "count", "displayed").Output()
-	if err != nil {
-		return 0
-	}
-	n, err := strconv.Atoi(strings.TrimSpace(string(out)))
-	if err != nil {
-		return 0
-	}
-	return n
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮

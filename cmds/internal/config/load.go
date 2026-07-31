@@ -44,6 +44,7 @@ func LoadHypr() HyprConfig {
 	warnMissing(&cfg)
 	cfg.Notify.UrgencySounds = lowercaseKeys(cfg.Notify.UrgencySounds)
 	cfg.Notify.AppSounds = lowercaseKeys(cfg.Notify.AppSounds)
+	cfg.Notify.ActionFocusApps = lowercaseKeys(cfg.Notify.ActionFocusApps)
 	cfg.Notify.SilentApps = lowercaseSlice(cfg.Notify.SilentApps)
 	cfg.Notify.KittySilentPatterns = lowercaseSlice(cfg.Notify.KittySilentPatterns)
 	return cfg
@@ -94,8 +95,8 @@ func warnMissing(cfg *HyprConfig) {
 	}
 }
 
-func lowercaseKeys(m map[string]string) map[string]string {
-	out := make(map[string]string, len(m))
+func lowercaseKeys[V any](m map[string]V) map[string]V {
+	out := make(map[string]V, len(m))
 	for k, v := range m {
 		out[strings.ToLower(k)] = v
 	}

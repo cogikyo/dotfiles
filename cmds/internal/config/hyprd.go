@@ -94,8 +94,19 @@ type NotifyConfig struct {
 	AgentEvents         map[string]AgentEvent  `yaml:"agent_events"`          // event class -> style + sound + timing
 	UrgencySounds       map[string]string      `yaml:"urgency_sounds"`        // urgency -> sound name (or "none")
 	AppSounds           map[string]string      `yaml:"app_sounds"`            // app name -> sound name; takes precedence over urgency
+	ActionFocusApps     map[string]FocusTarget `yaml:"action_focus_apps"`     // dunst app name or desktop-entry -> window focused when its notification is activated
 	SilentApps          []string               `yaml:"silent_apps"`           // external app names that suppress sound entirely
 	KittySilentPatterns []string               `yaml:"kitty_silent_patterns"` // substrings in kitty notification content that suppress sound
+}
+
+// FocusTarget names the window a notification activation should focus.
+//
+// Class is the live Hyprland class, which often differs from the notification's app name.
+// Workspace is preferred when several windows match; Title narrows further when set.
+type FocusTarget struct {
+	Workspace int    `yaml:"workspace"`
+	Class     string `yaml:"class"`
+	Title     string `yaml:"title"`
 }
 
 // VisualStyle defines dunst color hints for a notification theme.

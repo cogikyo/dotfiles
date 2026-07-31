@@ -269,9 +269,7 @@ func (n *Notifier) handleKitty(req NotifyRequest) error {
 func (n *Notifier) handleDunst(req NotifyRequest) error {
 	switch req.Event {
 	case "script":
-		if target, ok := n.actionFocusTargetForDunst(req); ok {
-			n.rememberDunstAction(req, target)
-		}
+		n.rememberDunstNotification(req)
 		sound := n.soundForDunst(req)
 		if sound != "" {
 			if err := n.playSound(sound, n.cfg.Notify.DefaultVolume); err != nil {
