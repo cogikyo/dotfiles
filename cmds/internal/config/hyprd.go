@@ -256,15 +256,16 @@ type TabProfile struct {
 
 // TabDef defines a single kitty tab within a profile.
 type TabDef struct {
-	Name       string     `yaml:"name"`
-	Title      string     `yaml:"title"`
-	Command    string     `yaml:"command"`
-	CWD        string     `yaml:"cwd"`         // may contain "~/"
-	CWDResolve string     `yaml:"cwd_resolve"` // e.g. "git-root"
-	Requires   string     `yaml:"requires"`    // must exist in CWD or tab is skipped
-	Layout     string     `yaml:"layout"`      // e.g. "fat:bias=80"
-	Actions    TabActions `yaml:"actions"`     // semantic actions this tab can satisfy
-	Panes      []TabPane  `yaml:"panes"`
+	Name        string     `yaml:"name"`
+	Title       string     `yaml:"title"`
+	Command     string     `yaml:"command"`
+	CWD         string     `yaml:"cwd"`         // may contain "~/"
+	CWDResolve  string     `yaml:"cwd_resolve"` // e.g. "git-root"
+	Requires    string     `yaml:"requires"`    // must exist in CWD or tab is skipped
+	Executables []string   `yaml:"executables"` // commands required on a host before launching
+	Layout      string     `yaml:"layout"`      // e.g. "fat:bias=80"
+	Actions     TabActions `yaml:"actions"`     // semantic actions this tab can satisfy
+	Panes       []TabPane  `yaml:"panes"`
 }
 
 // TabActions maps semantic tab actions (nvim, git, term) to action-specific behavior.
@@ -277,11 +278,12 @@ type TabAction struct {
 
 // TabPane defines an extra pane created inside a kitty tab.
 type TabPane struct {
-	Command    string `yaml:"command"`
-	CWD        string `yaml:"cwd"`
-	CWDResolve string `yaml:"cwd_resolve"`
-	Location   string `yaml:"location"` // hsplit, vsplit, etc.
-	Bias       int    `yaml:"bias"`     // % of parent
+	Command     string   `yaml:"command"`
+	CWD         string   `yaml:"cwd"`
+	CWDResolve  string   `yaml:"cwd_resolve"`
+	Location    string   `yaml:"location"` // hsplit, vsplit, etc.
+	Bias        int      `yaml:"bias"`     // % of parent
+	Executables []string `yaml:"executables"`
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮

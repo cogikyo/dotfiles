@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/hypr"
@@ -17,19 +18,21 @@ import (
 
 // Tabs initializes and refreshes the tab layout of a kitty editor window per its config profile.
 type Tabs struct {
-	hypr  *hypr.Client
-	state *state.State
+	hypr         *hypr.Client
+	state        *state.State
+	hostMu       sync.Mutex
+	hostSwitches map[hostOrigin]bool
 }
 
 func NewTabs(h *hypr.Client, state *state.State) *Tabs {
-	return &Tabs{hypr: h, state: state}
+	return &Tabs{hypr: h, state: state, hostSwitches: make(map[hostOrigin]bool)}
 }
 
-// Execute dispatches "init <profile> <pid>" or "refresh <name|all> [pid]".
+// Execute dispatches tab initialization, refresh, and host-switch commands.
 func (t *Tabs) Execute(args string) (string, error) {
 	parts := strings.Fields(args)
-	if len(parts) < 2 {
-		return "", fmt.Errorf("usage: tabs init <profile> <pid> | tabs refresh <name|current|all> [pid]")
+	if len(parts) < 1 {
+		return "", fmt.Errorf("usage: tabs init <profile> <pid> | tabs refresh <name|current|all> [pid] | tabs host <alias> [--kitty-pid <pid> --os-window <id>]")
 	}
 
 	switch parts[0] {
@@ -37,6 +40,8 @@ func (t *Tabs) Execute(args string) (string, error) {
 		return t.init(parts[1:])
 	case "refresh":
 		return t.refresh(parts[1:])
+	case "host":
+		return t.host(parts[1:])
 	default:
 		return "", fmt.Errorf("unknown subcommand: %s", parts[0])
 	}
@@ -79,7 +84,7 @@ func (t *Tabs) init(args []string) (string, error) {
 		if !t.checkRequires(tab.Requires, cwd) {
 			continue
 		}
-		if err := t.launchTab(kitty, profile, tab, windowID, cwd); err != nil {
+		if err := t.launchLocalTab(kitty, profile, tab, windowID, cwd); err != nil {
 			return "", err
 		}
 		created++
@@ -118,9 +123,21 @@ func (t *Tabs) refresh(args []string) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	controller, err := controllerHost()
+	if err != nil {
+		return "", err
+	}
+	host, err := sourceHost(windows[0], controller)
+	if err != nil {
+		return "", err
+	}
 
 	if nameOrAlias == "all" {
-		return t.refreshAll(kitty, profile, windowID)
+		logical, err := t.refreshLogicalCWD(windows[0], profile, "", config.TabDef{}, controller, host)
+		if err != nil {
+			return "", err
+		}
+		return t.refreshAll(kitty, profile, windowID, host, logical)
 	}
 
 	tabName := resolveTabAlias(t.state.GetConfig(), nameOrAlias, profileName)
@@ -137,7 +154,12 @@ func (t *Tabs) refresh(args []string) (string, error) {
 	if tabDef == nil {
 		return "", fmt.Errorf("tab %q not in profile %s", tabName, profileName)
 	}
-	return t.refreshSingle(kitty, profile, *tabDef, windowID)
+	tabID := fmt.Sprintf("%d-%s%s", windowID, profile.Prefix, tabDef.Name)
+	logical, err := t.refreshLogicalCWD(windows[0], profile, tabID, *tabDef, controller, host)
+	if err != nil {
+		return "", err
+	}
+	return t.refreshSingle(kitty, profile, *tabDef, windowID, host, logical)
 }
 
 func (t *Tabs) refreshPID(args []string) (int, error) {
@@ -166,49 +188,69 @@ func (t *Tabs) activeKittyPID() (int, error) {
 	return win.Pid, nil
 }
 
-func (t *Tabs) refreshAll(kitty *KittyClient, profile *config.TabProfile, windowID int) (string, error) {
+func (t *Tabs) refreshAll(kitty *KittyClient, profile *config.TabProfile, windowID int, host, defaultLogical string) (string, error) {
+	type refreshTab struct {
+		definition config.TabDef
+		logical    string
+	}
+	var launch []refreshTab
+	for _, tab := range profile.Tabs {
+		logical, err := configuredLogicalCWD(tab.CWD, defaultLogical)
+		if err != nil {
+			return "", fmt.Errorf("tab %s: %w", tab.Name, err)
+		}
+		cwd, err := hostPath(host, logical)
+		if err != nil {
+			return "", err
+		}
+		satisfied, err := hostRequiresSatisfied(host, tab.Requires, cwd)
+		if err != nil {
+			return "", err
+		}
+		if satisfied {
+			launch = append(launch, refreshTab{definition: tab, logical: logical})
+		}
+	}
+
 	for _, tab := range profile.Tabs {
 		tabID := fmt.Sprintf("%d-%s%s", windowID, profile.Prefix, tab.Name)
 		kitty.CloseTab(tabID)
 	}
 
-	windows, err := kitty.FullState()
-	if err != nil {
-		return "", err
-	}
-	defaultCWD := t.resolveDefaultCWD(windows[0])
-
-	created := 0
-	for _, tab := range profile.Tabs {
-		cwd := t.resolveCWD(tab, defaultCWD)
-		if !t.checkRequires(tab.Requires, cwd) {
-			continue
-		}
-		if err := t.launchTab(kitty, profile, tab, windowID, cwd); err != nil {
+	for _, tab := range launch {
+		if err := t.launchManagedTab(kitty, profile, tab.definition, windowID, host, tab.logical); err != nil {
 			return "", err
 		}
-		created++
 	}
 
 	focusID := fmt.Sprintf("%d-%s%s", windowID, profile.Prefix, profile.Focus)
 	kitty.FocusTab(focusID)
-	return fmt.Sprintf("tabs refresh: all (%d tabs)", created), nil
+	return fmt.Sprintf("tabs refresh: all (%d tabs)", len(launch)), nil
 }
 
-func (t *Tabs) refreshSingle(kitty *KittyClient, profile *config.TabProfile, tab config.TabDef, windowID int) (string, error) {
+func (t *Tabs) refreshSingle(kitty *KittyClient, profile *config.TabProfile, tab config.TabDef, windowID int, host, defaultLogical string) (string, error) {
 	tabID := fmt.Sprintf("%d-%s%s", windowID, profile.Prefix, tab.Name)
 	origIdx, _ := kitty.TabIndex(tabID)
-	defaultCWD := t.resolveDefaultCWDForTab(kitty, tabID)
+	logical, err := configuredLogicalCWD(tab.CWD, defaultLogical)
+	if err != nil {
+		return "", err
+	}
+	cwd, err := hostPath(host, logical)
+	if err != nil {
+		return "", err
+	}
+
+	satisfied, err := hostRequiresSatisfied(host, tab.Requires, cwd)
+	if err != nil {
+		return "", err
+	}
+	if !satisfied {
+		return fmt.Sprintf("tabs refresh: %s (skipped, requires %s)", tab.Name, tab.Requires), nil
+	}
 	kitty.FocusTab(tabID)
 	kitty.CloseTab(tabID)
 
-	cwd := t.resolveCWD(tab, defaultCWD)
-
-	if !t.checkRequires(tab.Requires, cwd) {
-		return fmt.Sprintf("tabs refresh: %s (skipped, requires %s)", tab.Name, tab.Requires), nil
-	}
-
-	if err := t.launchTab(kitty, profile, tab, windowID, cwd); err != nil {
+	if err := t.launchManagedTab(kitty, profile, tab, windowID, host, logical); err != nil {
 		return "", err
 	}
 
@@ -224,30 +266,75 @@ func (t *Tabs) refreshSingle(kitty *KittyClient, profile *config.TabProfile, tab
 	return fmt.Sprintf("tabs refresh: %s", tab.Name), nil
 }
 
-func (t *Tabs) resolveDefaultCWDForTab(kitty *KittyClient, tabID string) string {
-	windows, err := kitty.FullState()
-	if err != nil || len(windows) == 0 {
-		home, _ := os.UserHomeDir()
-		return home
+func (t *Tabs) refreshLogicalCWD(win KittyOSWindow, profile *config.TabProfile, tabID string, definition config.TabDef, controller, source string) (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("controller HOME unavailable: %w", err)
 	}
-
-	for _, tab := range windows[0].Tabs {
-		if !tabHasID(tab, tabID) {
+	if home == "" {
+		return "", fmt.Errorf("controller HOME unavailable")
+	}
+	for _, tab := range win.Tabs {
+		if tabID != "" && !tabHasID(tab, tabID) {
 			continue
 		}
-		for _, pane := range tab.Windows {
-			if paneSelected(pane) && pane.CWD != "" {
-				return pane.CWD
+		if tabID == "" && !tabSelected(tab) {
+			continue
+		}
+		if definition.Name == "" && len(tab.Windows) > 0 {
+			name := profileTabNameFromID(win.ID, profile.Prefix, tab.Windows[0].Env["KITTY_TAB_ID"])
+			if found := findProfileTab(profile, name); found != nil {
+				definition = *found
 			}
 		}
-		for _, pane := range tab.Windows {
-			if pane.CWD != "" {
-				return pane.CWD
+		if definition.CWD != "" {
+			return configuredLogicalCWD(definition.CWD, ".")
+		}
+		panes, err := orderedProfilePanes(tab.Windows)
+		indexed := err == nil
+		if err != nil {
+			panes = tab.Windows
+		}
+		paneIndex := 0
+		for index, pane := range panes {
+			if paneSelected(pane) {
+				paneIndex = index
+				break
 			}
 		}
+		configured := ""
+		if indexed {
+			configured = configuredPaneCWD(definition, paneIndex)
+		}
+		return sourceLogicalCWD(panes[paneIndex], configured, home, source == controller)
 	}
+	return "", fmt.Errorf("managed tab CWD is unavailable; refresh the window on its source host")
+}
 
-	return t.resolveDefaultCWD(windows[0])
+func configuredLogicalCWD(configured, fallback string) (string, error) {
+	if configured == "" {
+		return normalizeLogicalCWD(fallback)
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", fmt.Errorf("controller HOME unavailable: %w", err)
+	}
+	if home == "" {
+		return "", fmt.Errorf("controller HOME unavailable")
+	}
+	return logicalCWDFromPath(config.ExpandPath(configured), home)
+}
+
+func hostPath(host, logical string) (string, error) {
+	logical, err := normalizeLogicalCWD(logical)
+	if err != nil {
+		return "", err
+	}
+	home, err := hostHome(host)
+	if err != nil {
+		return "", fmt.Errorf("host %s HOME: %w", host, err)
+	}
+	return filepath.Join(home, filepath.FromSlash(logical)), nil
 }
 
 func (t *Tabs) getProfile(name string) (*config.TabProfile, error) {
@@ -335,9 +422,36 @@ func (t *Tabs) checkRequires(requires, cwd string) bool {
 	}
 }
 
-func (t *Tabs) launchTab(kitty *KittyClient, profile *config.TabProfile, tab config.TabDef, windowID int, cwd string) error {
+func (t *Tabs) launchLocalTab(kitty *KittyClient, profile *config.TabProfile, tab config.TabDef, windowID int, cwd string) error {
+	controller, err := controllerHost()
+	if err != nil {
+		return err
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return err
+	}
+	if home == "" {
+		return fmt.Errorf("controller HOME unavailable")
+	}
+	logical, err := logicalCWDFromPath(cwd, home)
+	if err != nil {
+		return err
+	}
+	return t.launchManagedTab(kitty, profile, tab, windowID, controller, logical)
+}
+
+func (t *Tabs) launchManagedTab(kitty *KittyClient, profile *config.TabProfile, tab config.TabDef, windowID int, host, logical string) error {
+	controller, err := controllerHost()
+	if err != nil {
+		return err
+	}
 	tabID := fmt.Sprintf("%d-%s%s", windowID, profile.Prefix, tab.Name)
-	launchArgs := t.buildLaunchArgs(tab, tabID, cwd)
+	cwd, err := hostPath(host, logical)
+	if err != nil {
+		return err
+	}
+	launchArgs := t.buildLaunchArgs(tab, tabID, controller, host, logical, cwd)
 	if err := kitty.Launch(launchArgs...); err != nil {
 		return fmt.Errorf("launch tab %s: %w", tab.Name, err)
 	}
@@ -348,9 +462,17 @@ func (t *Tabs) launchTab(kitty *KittyClient, profile *config.TabProfile, tab con
 		}
 	}
 
-	for _, pane := range tab.Panes {
-		paneCWD := t.resolvePaneCWD(pane, cwd)
-		launchArgs = t.buildPaneLaunchArgs(tabID, pane, paneCWD)
+	for paneOffset, pane := range tab.Panes {
+		paneIndex := paneOffset + 1
+		paneLogical, err := configuredLogicalCWD(pane.CWD, logical)
+		if err != nil {
+			return fmt.Errorf("tab %s pane %d: %w", tab.Name, paneIndex, err)
+		}
+		paneCWD, err := hostPath(host, paneLogical)
+		if err != nil {
+			return err
+		}
+		launchArgs = t.buildPaneLaunchArgs(tabID, pane, controller, host, paneLogical, paneCWD, paneIndex)
 		if err := kitty.Launch(launchArgs...); err != nil {
 			return fmt.Errorf("launch pane for tab %s: %w", tab.Name, err)
 		}
@@ -365,42 +487,38 @@ func (t *Tabs) launchTab(kitty *KittyClient, profile *config.TabProfile, tab con
 	return nil
 }
 
-func (t *Tabs) buildLaunchArgs(tab config.TabDef, tabID, cwd string) []string {
+func (t *Tabs) buildLaunchArgs(tab config.TabDef, tabID, controller, host, logical, cwd string) []string {
 	args := []string{
 		"--type=tab",
 		"--copy-env",
 		"--env", "KITTY_TAB_ID=" + tabID,
+		"--env", "HYPRD_LAUNCH_COMMAND=",
+		"--env", "HYPRD_HOST_TXN=",
+		"--env", "HYPRD_TAB_HOST=",
 		"--tab-title=" + tab.Title,
-		"--cwd=" + cwd,
 	}
-	switch {
-	case tab.Command == "xplr":
-		args = append(args, "zsh", "-c", `cd "$(xplr --print-pwd-as-result)" 2>/dev/null; exec zsh -l`)
-	case tab.Command != "":
-		args = append(args, "--env", "HYPRD_LAUNCH_COMMAND="+withResolvedPWD(tab.Command, cwd))
-		args = append(args, persistentZshCommand()...)
-	}
+	args = append(args, paneMetadataArgs(host, logical, 0, "")...)
+	args = append(args, hostLaunchCommand(controller, host, tab.Command, cwd)...)
 	return args
 }
 
-func (t *Tabs) buildPaneLaunchArgs(tabID string, pane config.TabPane, cwd string) []string {
+func (t *Tabs) buildPaneLaunchArgs(tabID string, pane config.TabPane, controller, host, logical, cwd string, paneIndex int) []string {
 	args := []string{
 		"--copy-env",
 		"--match", "env:KITTY_TAB_ID=" + tabID,
 		"--env", "KITTY_TAB_ID=" + tabID,
-		"--cwd=" + cwd,
+		"--env", "HYPRD_LAUNCH_COMMAND=",
+		"--env", "HYPRD_HOST_TXN=",
+		"--env", "HYPRD_TAB_HOST=",
 	}
+	args = append(args, paneMetadataArgs(host, logical, paneIndex, "")...)
 	if pane.Location != "" {
 		args = append(args, "--location="+pane.Location)
 	}
 	if pane.Bias != 0 {
 		args = append(args, "--bias", strconv.Itoa(pane.Bias))
 	}
-	switch {
-	case pane.Command != "":
-		args = append(args, "--env", "HYPRD_LAUNCH_COMMAND="+withResolvedPWD(pane.Command, cwd))
-		args = append(args, persistentZshCommand()...)
-	}
+	args = append(args, hostLaunchCommand(controller, host, pane.Command, cwd)...)
 	return args
 }
 
@@ -410,10 +528,6 @@ func withResolvedPWD(command, cwd string) string {
 
 func persistentZshCommand() []string {
 	return []string{"zsh", "-l"}
-}
-
-func (t *Tabs) resolvePaneCWD(pane config.TabPane, defaultCWD string) string {
-	return t.resolveBaseCWD(pane.CWD, pane.CWDResolve, defaultCWD)
 }
 
 func (t *Tabs) resolveBaseCWD(cwd, cwdResolve, defaultCWD string) string {

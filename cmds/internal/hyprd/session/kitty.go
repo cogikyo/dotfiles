@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os/exec"
+	"strconv"
 	"strings"
 )
 
@@ -34,20 +35,28 @@ type KittyOSWindow struct {
 }
 
 type KittyTab struct {
-	ID        int         `json:"id"`
-	IsActive  bool        `json:"is_active"`
-	IsFocused bool        `json:"is_focused"`
-	Title     string      `json:"title"`
-	Windows   []KittyPane `json:"windows"`
+	ID             int            `json:"id"`
+	IsActive       bool           `json:"is_active"`
+	IsFocused      bool           `json:"is_focused"`
+	Title          string         `json:"title"`
+	Layout         string         `json:"layout"`
+	LayoutOpts     map[string]any `json:"layout_opts"`
+	EnabledLayouts []string       `json:"enabled_layouts"`
+	Windows        []KittyPane    `json:"windows"`
 }
 
 type KittyPane struct {
-	ID                  int               `json:"id"`
-	Title               string            `json:"title"`
-	IsActive            bool              `json:"is_active"`
-	IsFocused           bool              `json:"is_focused"`
-	CWD                 string            `json:"cwd"`
+	ID        int    `json:"id"`
+	Title     string `json:"title"`
+	IsActive  bool   `json:"is_active"`
+	IsFocused bool   `json:"is_focused"`
+	CWD       string `json:"cwd"`
+	// Cmdline is the window's direct child argv from Kitty ls (0.48.1 schema).
+	// For managed remote panes this is the stable local launch shape (kitten ssh …),
+	// not the tty foreground which often settles to plain ssh.
+	Cmdline             []string          `json:"cmdline"`
 	Env                 map[string]string `json:"env"`
+	UserVars            map[string]string `json:"user_vars"`
 	ForegroundProcesses []KittyProcess    `json:"foreground_processes"`
 }
 
@@ -125,10 +134,11 @@ func (k *KittyClient) FocusPane(tabID string, paneIndex int) error {
 			if !tabHasID(tab, tabID) {
 				continue
 			}
-			if paneIndex >= len(tab.Windows) {
+			pane, ok := paneByProfileIndex(tab.Windows, paneIndex)
+			if !ok {
 				return fmt.Errorf("pane %d not in tab %s", paneIndex, tabID)
 			}
-			return k.FocusWindow(tab.Windows[paneIndex].ID)
+			return k.FocusWindow(pane.ID)
 		}
 	}
 	return nil
@@ -146,13 +156,31 @@ func (k *KittyClient) SendText(tabID, text string) error {
 }
 
 func (k *KittyClient) Launch(args ...string) error {
+	_, err := k.LaunchID(args...)
+	return err
+}
+
+func (k *KittyClient) LaunchID(args ...string) (int, error) {
 	cmdArgs := append([]string{"@", "--to", k.socketPath, "launch"}, args...)
-	return exec.Command("kitty", cmdArgs...).Run()
+	out, err := exec.Command("kitty", cmdArgs...).CombinedOutput()
+	if err != nil {
+		return 0, fmt.Errorf("kitty launch: %w: %s", err, strings.TrimSpace(string(out)))
+	}
+	id, err := strconv.Atoi(strings.TrimSpace(string(out)))
+	if err != nil {
+		return 0, fmt.Errorf("parse launched kitty window id %q: %w", strings.TrimSpace(string(out)), err)
+	}
+	return id, nil
 }
 
 func (k *KittyClient) GotoLayout(tabID, layout string) error {
 	return exec.Command("kitty", "@", "--to", k.socketPath,
 		"goto-layout", "--match", "env:KITTY_TAB_ID="+tabID, layout).Run()
+}
+
+func (k *KittyClient) GotoLayoutByNumericID(id int, layout string) error {
+	return exec.Command("kitty", "@", "--to", k.socketPath,
+		"goto-layout", "--match", fmt.Sprintf("id:%d", id), layout).Run()
 }
 
 // CloseTab closes the tab with the given KITTY_TAB_ID; a missing tab is a no-op.
@@ -171,6 +199,46 @@ func (k *KittyClient) CloseTab(tabID string) error {
 func (k *KittyClient) CloseTabByNumericID(id int) error {
 	return exec.Command("kitty", "@", "--to", k.socketPath,
 		"close-tab", "--match", fmt.Sprintf("id:%d", id)).Run()
+}
+
+func (k *KittyClient) CloseTabsByNumericIDs(ids []int) error {
+	if len(ids) == 0 {
+		return nil
+	}
+	terms := make([]string, len(ids))
+	for i, id := range ids {
+		terms[i] = fmt.Sprintf("id:%d", id)
+	}
+	return exec.Command("kitty", "@", "--to", k.socketPath,
+		"close-tab", "--match", strings.Join(terms, " or ")).Run()
+}
+
+func (k *KittyClient) FocusTabByNumericID(id int) error {
+	return exec.Command("kitty", "@", "--to", k.socketPath,
+		"focus-tab", "--match", fmt.Sprintf("id:%d", id)).Run()
+}
+
+func (k *KittyClient) Notify(args ...string) error {
+	cmdArgs := []string{"@", "--to", k.socketPath, "kitten", "--match", "state:focused", "notify"}
+	cmdArgs = append(cmdArgs, args...)
+	return exec.Command("kitty", cmdArgs...).Run()
+}
+
+func focusedOSWindow(windows []KittyOSWindow) (KittyOSWindow, error) {
+	var focused *KittyOSWindow
+	for i := range windows {
+		if !windows[i].IsFocused {
+			continue
+		}
+		if focused != nil {
+			return KittyOSWindow{}, fmt.Errorf("multiple focused kitty OS windows")
+		}
+		focused = &windows[i]
+	}
+	if focused == nil {
+		return KittyOSWindow{}, fmt.Errorf("no focused kitty OS window")
+	}
+	return *focused, nil
 }
 
 func (k *KittyClient) MoveTabBackward() error {
@@ -204,6 +272,9 @@ func activePaneIndex(win KittyOSWindow, tabID string) int {
 		}
 		for i, pane := range tab.Windows {
 			if paneSelected(pane) {
+				if index, err := profilePaneIndex(pane, len(tab.Windows)); err == nil {
+					return index
+				}
 				return i
 			}
 		}
@@ -249,4 +320,22 @@ func tabSelected(tab KittyTab) bool {
 
 func paneSelected(pane KittyPane) bool {
 	return pane.IsFocused || pane.IsActive
+}
+
+func paneByProfileIndex(panes []KittyPane, wanted int) (KittyPane, bool) {
+	indexed := true
+	for _, pane := range panes {
+		index, err := profilePaneIndex(pane, len(panes))
+		if err != nil {
+			indexed = false
+			break
+		}
+		if index == wanted {
+			return pane, true
+		}
+	}
+	if indexed || wanted < 0 || wanted >= len(panes) {
+		return KittyPane{}, false
+	}
+	return panes[wanted], true
 }

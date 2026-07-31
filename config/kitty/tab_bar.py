@@ -10,6 +10,7 @@ Accent color follows the active agent, ssh pink, or normal blue.
 
 import json
 import os
+import posixpath
 import socket
 import time
 from getpass import getuser
@@ -33,7 +34,7 @@ from kitty.utils import color_as_int
 
 USER = getuser()
 HOST = uname()[1]
-LOCAL_HOST = HOST.split(".")[0]
+LOCAL_HOST = HOST.split(".")[0].lower()
 
 # ╭──────────────────────────────────────────────────────────────────────────────╮
 # │ Configuration                                                                │
@@ -352,7 +353,40 @@ def _compute_cwd_right() -> str:
     if not tab_manager:
         return ""
     window = tab_manager.active_window
-    if not window or not hasattr(window, "cwd_of_child"):
+    if not window:
+        return ""
+    user_vars = getattr(window, "user_vars", {}) or {}
+    declared_host = str(user_vars.get("hyprd_host") or "").split(".", 1)[0].lower()
+    observed_host = (
+        str(user_vars.get("hyprd_observed_host") or "").split(".", 1)[0].lower()
+    )
+    managed_host = observed_host or declared_host
+    logical = str(user_vars.get("hyprd_cwd") or "")
+    if declared_host:
+        if logical == ".":
+            dir_parts = []
+        elif (
+            not logical
+            or logical.startswith(("/", "../"))
+            or "\\" in logical
+            or posixpath.normpath(logical) != logical
+            or logical == ".."
+        ):
+            return ""
+        else:
+            dir_parts = logical.split("/")
+        local_cwd = getattr(window, "cwd_of_child", "")
+        git_path = (
+            local_cwd
+            if managed_host == LOCAL_HOST
+            else str(Path.home().joinpath(*dir_parts))
+        )
+        is_git = bool(git_path and _is_git_repo(git_path))
+        return _home_cwd_right(dir_parts, is_git)
+
+    if _ssh_from_window(window)[1]:
+        return ""
+    if not hasattr(window, "cwd_of_child"):
         return ""
     cwd = window.cwd_of_child
     if not cwd:
@@ -367,10 +401,7 @@ def _compute_cwd_right() -> str:
     # Determine root icon and extract directory parts
     if len(parts) > 1 and parts[1] in ("home", "Users"):
         dir_parts = parts[3:]  # skip /, home, username
-        if is_git:
-            root = ICON_GIT_DIR if len(dir_parts) <= 1 else ICON_GIT_OPENED
-        else:
-            root = ICON_HOME_DIR
+        return _home_cwd_right(dir_parts, is_git)
     else:
         dir_parts = parts[1:]
         if is_git:
@@ -386,6 +417,18 @@ def _compute_cwd_right() -> str:
         dir_parts = dir_parts[-MAX_CWD_DEPTH:]
         return "/".join(reversed(dir_parts)) + ICON_USER_TRUNCATED
 
+    return "/".join(reversed(dir_parts)) + root
+
+
+def _home_cwd_right(dir_parts: list[str], is_git: bool) -> str:
+    if is_git:
+        root = ICON_GIT_DIR if len(dir_parts) <= 1 else ICON_GIT_OPENED
+    else:
+        root = ICON_HOME_DIR
+    if not dir_parts:
+        return root
+    if len(dir_parts) > MAX_CWD_DEPTH:
+        return "/".join(reversed(dir_parts[-MAX_CWD_DEPTH:])) + ICON_USER_TRUNCATED
     return "/".join(reversed(dir_parts)) + root
 
 
@@ -462,9 +505,9 @@ SSH_VALUE_OPTS = {
 }
 
 
-def _parse_ssh_destination(cmdline: list) -> str:
+def _parse_ssh_destination(cmdline: list, start: int = 1) -> str:
     """Return the destination arg from an ssh cmdline, or empty string."""
-    i = 1
+    i = start
     while i < len(cmdline):
         arg = cmdline[i]
         if arg.startswith("-") and arg != "-":
@@ -483,15 +526,30 @@ def _parse_ssh_destination(cmdline: list) -> str:
 
 def _ssh_from_window(window) -> tuple:
     """Return (user, host) when the active window is SSH'd to a *different* machine."""
+    user_vars = getattr(window, "user_vars", {}) or {}
+    declared = str(user_vars.get("hyprd_host") or "").split(".", 1)[0].lower()
+    observed = str(user_vars.get("hyprd_observed_host") or "").split(".", 1)[0].lower()
+    if declared:
+        host = observed or declared
+        return ("", host) if host != LOCAL_HOST else ("", "")
     try:
         for proc in window.child.foreground_processes:
             cmdline = proc.get("cmdline") or []
             if not cmdline:
                 continue
             name = cmdline[0].rsplit("/", 1)[-1].lower()
-            if name != "ssh":
+            if name == "ssh":
+                start = 1
+            elif name == "kitten" and len(cmdline) > 1 and cmdline[1] == "ssh":
+                start = 2
+            elif name == "kitty" and "+kitten" in cmdline:
+                marker = cmdline.index("+kitten")
+                if marker + 1 >= len(cmdline) or cmdline[marker + 1] != "ssh":
+                    continue
+                start = marker + 2
+            else:
                 continue
-            dest = _parse_ssh_destination(cmdline)
+            dest = _parse_ssh_destination(cmdline, start)
             if not dest:
                 continue
             if "@" in dest:

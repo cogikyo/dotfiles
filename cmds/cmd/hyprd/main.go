@@ -41,6 +41,8 @@ func main() {
 		cmdHide()
 	case "monocle":
 		cmdMonocle()
+	case "float":
+		cmdFloat()
 	case "swap":
 		cmdSwap()
 	case "ws":
@@ -197,6 +199,7 @@ func waitHyprdReady(timeout time.Duration) bool {
 
 func cmdHide()    { sendCommand("hide") }
 func cmdMonocle() { sendCommand("monocle") }
+func cmdFloat()   { sendCommand("float") }
 func cmdSwap()    { sendCommand("swap") }
 func cmdSplit()   { sendCommand("split " + strings.Join(os.Args[2:], " ")) }
 func cmdPicker()  { sendCommand("picker " + strings.Join(os.Args[2:], " ")) }
@@ -223,8 +226,11 @@ func cmdFocus() {
 	_ = requireArg("usage: hyprd focus <class> [title]")
 	sendCommand("focus " + strings.Join(os.Args[2:], " "))
 }
+
+// cmdTabs forwards tab verbs verbatim. The interactive host chooser lives in the
+// config/kitty/host_switch.py kitten, because it needs a real terminal.
 func cmdTabs() {
-	_ = requireArg("usage: hyprd tabs {init|refresh} <profile|name> <pid>")
+	_ = requireArg("usage: hyprd tabs init <profile> <pid> | tabs refresh <name|current|all> [pid] | tabs host <alias> [--kitty-pid <pid> --os-window <id>]")
 	sendCommand("tabs " + strings.Join(os.Args[2:], " "))
 }
 func cmdNotify()  { notifypkg.CmdNotify(client, os.Args[2:]) }
@@ -292,6 +298,7 @@ Window commands:
   hyprd bg <mode>        Background: code, music, kill, lock, ensure
   hyprd hide             Toggle hide/show slave (special workspace)
   hyprd monocle          Toggle monocle (isolate focused window)
+  hyprd float            Toggle floating (centered at monocle size)
   hyprd swap             Toggle swap between master and slave
   hyprd split            Cycle split ratio (xs → default → lg)
   hyprd split -x|-l      Set specific split ratio
@@ -300,7 +307,10 @@ Window commands:
   hyprd focus <class> [title]  Focus window, unhide if hidden
   hyprd tab <name|alias> [-- <path>]  Focus editor + switch kitty tab; nvim can open a path
   hyprd tabs init <profile> <pid>    Create tabs from profile (editor|agents|leadpier)
-  hyprd tabs refresh <name|all> [pid] Refresh tab(s) in focused kitty by default
+  hyprd tabs refresh <name|current|all> [pid] Refresh tab(s) in focused kitty by default
+  hyprd tabs host <alias>            Move focused Kitty OS window between configured hosts
+  hyprd tabs host <alias> --kitty-pid <pid> --os-window <id>  Target a captured Kitty OS window
+                                     (used by the host_switch.py kitty kitten)
 
 Three-body (2-visible, 1-shadow window management):
   hyprd three-body editor    Focus/launch editor window

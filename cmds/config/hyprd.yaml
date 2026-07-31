@@ -117,26 +117,27 @@ tabs:
     prefix: "ed-"
     focus: nvim
     tabs:
-      - { name: xplr,  title: "⟜ 󰭎  ⊸", command: xplr }
-      - { name: nvim,  title: "⟜   ⊸", command: nvim }
-      - { name: term,  title: "⟜   ⊸", command: "etree 1" }
-      - { name: build, title: "⟜   ⊸", command: "etree 2" }
-      - { name: git,   title: "⟜   ⊸", command: lazygit, requires: git }
+      - { name: xplr,  title: "⟜ 󰭎  ⊸", command: xplr, executables: [xplr] }
+      - { name: nvim,  title: "⟜   ⊸", command: nvim, executables: [nvim] }
+      - { name: term,  title: "⟜   ⊸", command: "etree 1", executables: [erd, head] }
+      - { name: build, title: "⟜   ⊸", command: "etree 2", executables: [erd, head] }
+      - { name: git,   title: "⟜   ⊸", command: lazygit, requires: git, executables: [git, lazygit] }
 
   agents: # ├─ agents profile ─────────────────────────────────────────────────────┤
     order: 1
     prefix: "agents-"
     focus: build
     tabs:
-      - { name: scout, title: "⊰   ⊱", command: c }
-      - { name: build, title: "⊰ 󰯉  ⊱", command: c }
-      - { name: drive, title: "⊰   ⊱", command: c }
+      - { name: scout, title: "⊰   ⊱", command: c, executables: [opencode] }
+      - { name: build, title: "⊰ 󰯉  ⊱", command: c, executables: [opencode] }
+      - { name: drive, title: "⊰   ⊱", command: c, executables: [opencode] }
       - name: plan
         title: "⊰   ⊱"
         command: c
+        executables: [opencode]
         actions:
           build: {}
-      - { name: learn, title: "⊰   ⊱", command: c }
+      - { name: learn, title: "⊰   ⊱", command: c, executables: [opencode] }
 
   leadpier: # ├─ leadpier profile ─────────────────────────────────────────────────┤
     order: 2
@@ -146,18 +147,21 @@ tabs:
       - name: fe-nvim
         title: "«   »"
         command: nvim
+        executables: [nvim]
         cwd: "~/LeadPier/frontend"
         actions:
           nvim: {}
       - name: be-nvim
         title: "«   »"
         command: nvim
+        executables: [nvim]
         cwd: "~/LeadPier/backend/services"
         actions:
           nvim: {}
       - name: pier
         title: "« 󰠳  »"
         command: nvim
+        executables: [nvim]
         cwd: "~/LeadPier"
         actions:
           nvim:
@@ -170,6 +174,7 @@ tabs:
       - name: fe-build
         title: "«   »"
         command: lazygit
+        executables: [lazygit]
         cwd: "~/LeadPier/frontend"
         actions:
           git: {}
@@ -182,6 +187,7 @@ tabs:
       - name: be-build
         title: "«   »"
         command: "cd $(grep -m1 backend/services ~/.local/state/lazygit/state.yml | awk '{print $NF}') && lazygit"
+        executables: [grep, awk, lazygit]
         cwd: "~/LeadPier/backend"
         actions:
           git: {}

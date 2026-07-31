@@ -53,6 +53,31 @@ command_output_spacer() {
 }
 add-zsh-hook preexec command_output_spacer
 
+_hyprd_set_user_var() {
+    local name=$1 value=$2 encoded
+    encoded=$(print -rn -- "$value" | base64 | tr -d '\r\n') || return
+    print -rn -- $'\e]1337;SetUserVar='"${name}=${encoded}"$'\a'
+}
+
+_hyprd_report_pane() {
+    [[ $TERM == xterm-kitty ]] || return
+
+    local cwd=${PWD:A} home=${HOME:A} logical
+    if [[ $cwd == $home ]]; then
+        logical=.
+    elif [[ $cwd == $home/* ]]; then
+        logical=${cwd#$home/}
+    else
+        print -rn -- $'\e]1337;SetUserVar=hyprd_cwd\a'
+        _hyprd_set_user_var hyprd_observed_host ${(L)${HOST%%.*}}
+        return
+    fi
+
+    _hyprd_set_user_var hyprd_cwd "$logical"
+    _hyprd_set_user_var hyprd_observed_host ${(L)${HOST%%.*}}
+}
+add-zsh-hook precmd _hyprd_report_pane
+
 # ╭──────────────────────────────────────────────────────────────────────────╮
 # │ Aliases                                                                  │
 # ╰──────────────────────────────────────────────────────────────────────────╯
