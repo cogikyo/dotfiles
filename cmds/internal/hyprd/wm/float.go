@@ -1,7 +1,5 @@
 package wm
 
-// float.go toggles the active window between tiled and a centered floating window at monocle geometry.
-
 import (
 	"fmt"
 

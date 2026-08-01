@@ -360,10 +360,6 @@ func writePackageList(path string, pkgs []string) error {
 	return os.WriteFile(path, []byte(strings.Join(pkgs, "\n")+"\n"), 0o644)
 }
 
-func parsePackageList(data string) []string {
-	return pkglist.ParseString(data)
-}
-
 func cleanPackageNames(lines []string) []string {
 	return pkglist.Unique(lines)
 }

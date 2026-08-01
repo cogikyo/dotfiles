@@ -1,7 +1,5 @@
 package wm
 
-// hide.go hides slave windows on a special workspace and restores them to their recorded slave position.
-
 import (
 	"fmt"
 	"strconv"

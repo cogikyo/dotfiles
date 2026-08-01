@@ -1,13 +1,10 @@
 package wm
 
-// threebody.go manages three-body enrollment, focus rotation, and shadow swapping for configured body windows.
-
 import (
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
 	"dotfiles/cmds/internal/hyprd/windows"
-	"encoding/json"
 	"fmt"
 	"os/exec"
 	"strconv"
@@ -48,7 +45,7 @@ func (tb *ThreeBody) Execute(name string) (string, error) {
 }
 
 func (tb *ThreeBody) ignoreOnCurrentWorkspace(name string) bool {
-	wsID, err := tb.activeWorkspace()
+	wsID, err := tb.hypr.ActiveWorkspace()
 	return err == nil && ignoreBodyOnWorkspace(name, wsID)
 }
 
@@ -66,10 +63,6 @@ type WindowSpec struct {
 	Title     string
 	LaunchCmd string
 }
-
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ shadow + swap                                                                │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 // executeShadow builds fallbacks from threeBodyOrder and delegates to Swap.
 func (tb *ThreeBody) executeShadow() (string, error) {
@@ -124,7 +117,7 @@ func (tb *ThreeBody) RevealShadow(address string) (bool, error) {
 
 // Swap rotates the hidden shadow into view, enrolling or launching a missing fallback as needed.
 func (tb *ThreeBody) Swap(fallbacks []WindowSpec) (string, error) {
-	wsID, err := tb.activeWorkspace()
+	wsID, err := tb.hypr.ActiveWorkspace()
 	if err != nil {
 		return "", err
 	}
@@ -182,7 +175,7 @@ func (tb *ThreeBody) Swap(fallbacks []WindowSpec) (string, error) {
 
 // SwapMaster promotes the shadow into the master slot; the old master becomes the new shadow.
 func (tb *ThreeBody) SwapMaster() (string, error) {
-	wsID, err := tb.activeWorkspace()
+	wsID, err := tb.hypr.ActiveWorkspace()
 	if err != nil {
 		return "", err
 	}
@@ -204,17 +197,13 @@ func (tb *ThreeBody) SwapMaster() (string, error) {
 	return fmt.Sprintf("master swapped: master=%s shadow=%s", tbState.Shadow, tbState.Master), nil
 }
 
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ focus                                                                        │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
-
 // Focus focuses a named body by class/title, enrolling or launching as needed.
 func (tb *ThreeBody) Focus(bodyName, class, title, launchCmd string) (string, error) {
 	if class == "" {
 		return "", fmt.Errorf("class required")
 	}
 
-	wsID, err := tb.activeWorkspace()
+	wsID, err := tb.hypr.ActiveWorkspace()
 	if err != nil {
 		return "", err
 	}
@@ -345,10 +334,6 @@ func (tb *ThreeBody) launchKey(wsID int, bodyName string) string {
 	return fmt.Sprintf("%d:%s", wsID, bodyName)
 }
 
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ launch env + helpers                                                         │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
-
 // zoxideRecent returns the most-recent zoxide entry as a last-resort project path.
 func zoxideRecent() string {
 	out, err := exec.Command("zoxide", "query", "-l").Output()
@@ -449,18 +434,4 @@ func (tb *ThreeBody) enroll(tiled []hypr.Window, wsID int, class, title string) 
 	}
 	tb.state.SetThreeBody(wsID, &state.ThreeBodyState{Master: master.Address, Active: active.Address, Shadow: shadow.Address})
 	return fmt.Sprintf("enrolled: master=%s active=%s shadow=%s", master.Address, active.Address, shadow.Address), nil
-}
-
-func (tb *ThreeBody) activeWorkspace() (int, error) {
-	data, err := tb.hypr.Request("j/activeworkspace")
-	if err != nil {
-		return 0, err
-	}
-	var ws struct {
-		ID int `json:"id"`
-	}
-	if err := json.Unmarshal(data, &ws); err != nil {
-		return 0, fmt.Errorf("parse workspace: %w", err)
-	}
-	return ws.ID, nil
 }

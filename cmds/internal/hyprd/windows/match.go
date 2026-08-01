@@ -1,7 +1,5 @@
 package windows
 
-// match.go implements class/title matching used by focus, three-body, and session targeting flows.
-
 import (
 	"strings"
 

@@ -1,8 +1,6 @@
 // Package cli implements CLI-only commands that run directly without the daemon socket.
 package cli
 
-// screenshot.go implements screenshot commands (wayfreeze + grim + satty).
-
 import (
 	"fmt"
 	"os"

@@ -1,6 +1,5 @@
 package daemon
 
-// client.go implements a Unix socket client for request/response and event streaming.
 import (
 	"bufio"
 	"errors"
@@ -18,7 +17,6 @@ type Client struct {
 	SocketPath string
 }
 
-// NewClient returns a Client bound to socketPath.
 func NewClient(socketPath string) *Client {
 	return &Client{SocketPath: socketPath}
 }
@@ -45,11 +43,6 @@ func (c *Client) Send(command string) (string, error) {
 	}
 
 	return string(buf[:n]), nil
-}
-
-// Stream sends command and copies newline-delimited response lines to stdout until EOF.
-func (c *Client) Stream(command string) error {
-	return c.streamOnce(command)
 }
 
 // StreamReconnect streams a subscription command, reconnecting when the daemon restarts.

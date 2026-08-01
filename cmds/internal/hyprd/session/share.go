@@ -1,7 +1,5 @@
 package session
 
-// share.go toggles a presentation-safe desktop state for screen sharing.
-
 import (
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/hypr"

@@ -1,7 +1,5 @@
 package browser
 
-// session_store.go loads and parses Firefox sessionstore payloads and resolves target windows for snapshots.
-
 import (
 	"encoding/json"
 	"fmt"

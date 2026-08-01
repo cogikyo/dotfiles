@@ -73,8 +73,10 @@ Do not imitate the rigid voice of an aerospace maintenance manual.
 ### Document structure
 
 - Identify the intended reader and the task they came to complete before choosing sections.
-- Organize the document around the reader's questions instead of the source tree or implementation order.
+- Organize the document around reader questions by default.
+- Mirror the source layout only when that layout answers a reader question.
 - Introduce the purpose and operating model before detailed setup or reference material.
+- Add a topology or architecture section when readers must understand components, ownership, or integrations before procedures.
 - Put prerequisites before the procedure that requires them.
 - Put commands and steps in the order the reader must perform them.
 - Give one action to each numbered step unless two actions are inseparable.
@@ -87,6 +89,17 @@ Do not imitate the rigid voice of an aerospace maintenance manual.
 - Put examples close to the rule or task they explain.
 - Explain the important parts of an example instead of leaving the reader to infer its purpose.
 - Use links as supporting evidence or deeper reference, not as substitutes for essential instructions.
+
+#### Choosing a representation
+
+- Use a full or partial tree when containment or hierarchy is the load-bearing relationship, such as ownership or entry-point layout.
+- Use a fixed-width text diagram when direction or relationships are load-bearing, such as boundaries, dependencies, runtime flow, or data flow.
+- Use prose when a connected explanation carries the meaning.
+- Use lists, tables, or steps for independent facts, comparisons, and procedures.
+- Keep trees and diagrams optional and bounded to the scope the reader needs, with a short explanation of each.
+- Fence every tree or diagram so its alignment survives rendering, using the repository's convention for fence tags.
+- Derive every node, path, label, and edge from inspected source.
+- Treat examples from other projects as shape evidence only; do not copy their content.
 
 ### Clarity examples
 
@@ -108,6 +121,7 @@ Before returning the document, read it once as a cold reader and check each of t
 - Every list uses a consistent grammatical form and a meaningful order.
 - Every example is valid, relevant, and consistent with the surrounding claim.
 - Every warning appears before the action that creates the risk.
+- Every tree or diagram reduces cognitive load compared with equivalent prose or a list.
 - Every removable phrase, repeated claim, and ceremonial introduction is gone.
 - No simplification removed a prerequisite, constraint, exception, or causal explanation that the reader needs.
 

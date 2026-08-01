@@ -1,12 +1,9 @@
 package notify
 
-// context.go resolves kitty/Hyprland context, workspace icons, and focus actions for notifications.
-
 import (
 	"dotfiles/cmds/internal/config"
-	"dotfiles/cmds/internal/hyprd/session"
+	"dotfiles/cmds/internal/hyprd/kitty"
 	"dotfiles/cmds/internal/hyprd/wm"
-	"encoding/json"
 	"fmt"
 	"hash/fnv"
 	"os"
@@ -14,10 +11,6 @@ import (
 	"strconv"
 	"strings"
 )
-
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ context resolution                                                           │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 func (n *Notifier) resolveContext(req NotifyRequest, fallbackApp string) *kittyContext {
 	ctx := &kittyContext{
@@ -84,21 +77,15 @@ func (n *Notifier) workspaceForPID(pid int) int {
 }
 
 func (n *Notifier) activeWorkspaceID() int {
-	data, err := n.hypr.Request("j/activeworkspace")
+	wsID, err := n.hypr.ActiveWorkspace()
 	if err != nil {
 		return 0
 	}
-	var ws struct {
-		ID int `json:"id"`
-	}
-	if err := json.Unmarshal(data, &ws); err != nil {
-		return 0
-	}
-	return ws.ID
+	return wsID
 }
 
 func (n *Notifier) tabContext(pid, windowID int) (string, string) {
-	client := session.NewKittyClient(pid)
+	client := kitty.NewClient(pid)
 	windows, err := client.FullState()
 	if err != nil {
 		return "", ""
@@ -152,7 +139,7 @@ func (n *Notifier) findKittyContext(processes []string) *kittyContext {
 			continue
 		}
 
-		client := session.NewKittyClient(pid)
+		client := kitty.NewClient(pid)
 		windows, err := client.FullState()
 		if err != nil {
 			continue
@@ -193,10 +180,6 @@ func (n *Notifier) findKittyContext(processes []string) *kittyContext {
 	return best
 }
 
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ icons + focus actions                                                        │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
-
 func (n *Notifier) workspaceIconPath(ctx *kittyContext, suffix string) string {
 	if ctx == nil {
 		return ""
@@ -233,7 +216,7 @@ func (n *Notifier) focusContext(ctx *kittyContext) {
 	}
 
 	if ctx.PID > 0 {
-		kitty := session.NewKittyClient(ctx.PID)
+		kitty := kitty.NewClient(ctx.PID)
 		if ctx.TabID != "" {
 			_ = kitty.FocusTab(ctx.TabID)
 		}
@@ -263,10 +246,6 @@ func replacementNotificationID(ctx *kittyContext, group string) int {
 	_, _ = fmt.Fprintf(h, "%d:%d:%s", ctx.PID, ctx.WindowID, group)
 	return 100000 + int(h.Sum32()%2000000000)
 }
-
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ text shaping                                                                 │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 func preferredSummary(primary, fallback string, max int) string {
 	text := sanitizeLine(primary)

@@ -1,12 +1,5 @@
-// Package session orchestrates workspace sessions, lock flows, and kitty tab automation.
-//
-// Responsibilities:
-// - Run startup initialization for configured workspaces.
-// - Launch and arrange per-workspace session layouts.
-// - Provide lock, picker, and tab-control helpers used by daemon commands.
+// Package session manages desktop session startup, workspace layouts, lock flows, wallpaper, sharing, and selection.
 package session
-
-// init.go executes boot-time session initialization, including wallpaper, optional early lock, network wait, and layout open.
 
 import (
 	"context"

@@ -1,7 +1,5 @@
 package session
 
-// bg.go manages mpvpaper background process startup, health checks, and teardown.
-
 import (
 	"encoding/json"
 	"errors"

@@ -1,7 +1,5 @@
 package wm
 
-// swap.go toggles master ownership by promoting the active slave or restoring the displaced master.
-
 import (
 	"fmt"
 

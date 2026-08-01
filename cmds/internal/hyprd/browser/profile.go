@@ -1,7 +1,5 @@
 package browser
 
-// profile.go discovers Firefox profile roots from profiles.ini/installs.ini and resolves profile selectors.
-
 import (
 	"bufio"
 	"cmp"

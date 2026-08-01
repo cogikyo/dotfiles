@@ -1,12 +1,5 @@
 // Package main provides the hyprd daemon process and CLI front-end.
-//
-// Responsibilities:
-// - Boot and supervise the daemon runtime.
-// - Route CLI verbs over the Unix socket protocol.
-// - Run CLI-only helpers when they need prompts, stdin, or sudo outside the daemon.
 package main
-
-// main.go parses CLI verbs and forwards daemon commands over /tmp/hyprd.sock when possible.
 
 import (
 	"dotfiles/cmds/internal/daemon"

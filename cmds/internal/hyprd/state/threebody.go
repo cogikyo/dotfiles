@@ -2,8 +2,6 @@ package state
 
 import "time"
 
-// threebody.go provides copy-safe accessors for per-workspace three-body layout state.
-
 // GetThreeBody returns a deep copy of the workspace's three-body state, or nil if inactive.
 func (s *State) GetThreeBody(ws int) *ThreeBodyState {
 	s.mu.RLock()

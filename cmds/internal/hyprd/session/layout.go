@@ -1,7 +1,5 @@
 package session
 
-// layout.go opens configured workspace sessions, launches body windows, and applies initial layout state.
-
 import (
 	"fmt"
 	"os"

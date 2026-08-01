@@ -1,7 +1,5 @@
 package state
 
-// sessions.go tracks per-workspace project paths and active session/tab-profile resolution.
-
 import "dotfiles/cmds/internal/config"
 
 func (s *State) GetProjectPath(ws int) string {

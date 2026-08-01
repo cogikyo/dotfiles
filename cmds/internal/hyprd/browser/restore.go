@@ -1,7 +1,5 @@
 package browser
 
-// restore.go merges snapshot windows into Firefox sessions and injects exact session payloads.
-
 import (
 	"encoding/json"
 	"fmt"

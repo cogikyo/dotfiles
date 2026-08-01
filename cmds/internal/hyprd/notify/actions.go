@@ -1,20 +1,17 @@
 package notify
 
-// actions.go routes notification activation to the window of the app that sent the notification.
-//
 // Two paths converge here:
 //   - dunst emits ActionInvoked when a provider default action fires (mouse click or dunstctl action).
-//   - ActivateDisplayed runs from the hyprd keybind and must also serve apps whose notifications
-//     carry no provider action at all, by focusing the configured window itself.
+//   - ActivateDisplayed runs from the hyprd keybind and must also serve apps whose notifications carry no provider action at all, by focusing the configured window itself.
 //
-// A dunst toast lives for a few seconds, while the keybind is pressed whenever the user gets
-// around to it. So a configured app's notification arms a pending route that outlives the toast.
-// The route stays armed until something consumes it: the keybind, a provider action, or the user
-// dismissing the toast. Expiry alone does not consume it. Repeated notifications for one target
-// coalesce into a single route, so a busy chat app hijacks the keybind once, not once per message.
+// A dunst toast lives for a few seconds, while the keybind is pressed whenever the user gets around to it.
+// A configured app's notification arms a pending route that outlives the toast.
+// The route stays armed until something consumes it: the keybind, a provider action, or the user dismissing the toast.
+// Expiry alone does not consume it.
+// Repeated notifications for one target coalesce into a single route, so a busy chat app hijacks the keybind once, not once per message.
 //
-// Routes are learned from the dunst script hook, because `dunstctl history` only lists
-// notifications dunst has already closed. Pending routes live in memory and reset with hyprd.
+// Routes are learned from the dunst script hook, because `dunstctl history` only lists notifications dunst has already closed.
+// Pending routes live in memory and reset with hyprd.
 
 import (
 	"dotfiles/cmds/internal/hyprd/hypr"
@@ -82,14 +79,9 @@ var globalAppRouter = &appRouter{
 	acted:  make(map[uint32]time.Time),
 }
 
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ arrival                                                                      │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
-
 // actionFocusTarget resolves the configured window for a notification's app or desktop entry.
 //
-// Notification app names and desktop entries both appear as config keys because
-// providers supply one, the other, or neither.
+// Notification app names and desktop entries both appear as config keys because providers supply one, the other, or neither.
 func (n *Notifier) actionFocusTarget(app, desktopEntry string) focusTarget {
 	for _, key := range []string{app, desktopEntry} {
 		key = strings.ToLower(strings.TrimSpace(key))
@@ -105,10 +97,8 @@ func (n *Notifier) actionFocusTarget(app, desktopEntry string) focusTarget {
 
 // rememberDunstNotification arms a pending route when a configured app sends a notification.
 //
-// hyprd's own notifications come back through the script hook (always_run_script) and carry their
-// own action, so they must never arm a route. Notifications suppressed by a dunstrc skip_display
-// rule also reach the hook, but no suppressed rule matches a configured app, so the config gate
-// keeps invisible toasts out of routing.
+// hyprd's own notifications come back through the script hook (always_run_script) and carry their own action, so they must never arm a route.
+// Notifications suppressed by a dunstrc skip_display rule also reach the hook, but no suppressed rule matches a configured app, so the config gate keeps invisible toasts out of routing.
 func (n *Notifier) rememberDunstNotification(req NotifyRequest) {
 	if fromHyprd(req) {
 		return
@@ -122,15 +112,11 @@ func (n *Notifier) rememberDunstNotification(req NotifyRequest) {
 	globalAppRouter.Remember(uint32(max(req.NotificationID, 0)), target)
 }
 
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ activation                                                                   │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
-
 // ActivateDisplayed acts on a visible notification or a pending app route, reporting whether it handled the keypress.
 //
-// A provider default action always gets first chance, since it belongs to whatever dunst is
-// showing. When nothing acts on the keypress, the newest pending route is consumed and its window
-// focused. Reporting false leaves the keybind free to fall through to its normal behavior.
+// A provider default action always gets first chance, since it belongs to whatever dunst is showing.
+// When nothing acts on the keypress, the newest pending route is consumed and its window focused.
+// Reporting false leaves the keybind free to fall through to its normal behavior.
 func (n *Notifier) ActivateDisplayed() (string, bool, error) {
 	globalAppRouter.Start(n.hypr)
 
@@ -186,10 +172,6 @@ func dunstAction() error {
 	return exec.Command("dunstctl", "action").Run()
 }
 
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ router                                                                       │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
-
 func (r *appRouter) Start(h *hypr.Client) {
 	if h == nil {
 		return
@@ -236,8 +218,8 @@ func (r *appRouter) Consume() (focusTarget, []uint32, bool) {
 
 // AwaitAction reports the notification id dunst acted on after since, waiting up to grace.
 //
-// hyprd cannot know which notification dunst is showing, so any action within the window means a
-// provider consumed the keypress. The id is kept so route bookkeeping and logs stay per-notification.
+// hyprd cannot know which notification dunst is showing, so any action within the window means a provider consumed the keypress.
+// The id is kept so route bookkeeping and logs stay per-notification.
 func (r *appRouter) AwaitAction(since time.Time, grace time.Duration) (uint32, bool) {
 	deadline := time.Now().Add(grace)
 	for {

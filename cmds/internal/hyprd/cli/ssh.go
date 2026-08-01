@@ -1,7 +1,5 @@
 package cli
 
-// ssh.go implements PAM-driven secret loading for ssh-agent and gnome-keyring unlock.
-
 import (
 	"encoding/binary"
 	"fmt"

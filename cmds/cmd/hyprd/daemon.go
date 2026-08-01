@@ -1,12 +1,11 @@
 package main
 
-// daemon.go wires daemon lifecycle, command routing, config hot-reload, and self-restart behavior.
-
 import (
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/daemon"
 	"dotfiles/cmds/internal/hyprd/browser"
 	"dotfiles/cmds/internal/hyprd/hypr"
+	"dotfiles/cmds/internal/hyprd/kitty"
 	notifypkg "dotfiles/cmds/internal/hyprd/notify"
 	"dotfiles/cmds/internal/hyprd/session"
 	"dotfiles/cmds/internal/hyprd/state"
@@ -34,10 +33,6 @@ const SocketPath = "/tmp/hyprd.sock"
 const stateFile = "/tmp/hyprd-state.json"
 
 const computeCPUs = "0-6,8-14,16-1023"
-
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ Daemon                                                                       │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 // Daemon owns the Hyprland IPC client, shared state, command server, and hot-reloadable config.
 //
@@ -129,17 +124,13 @@ func (d *Daemon) Run() error {
 // sendInitialState seeds a new subscriber with current values so eww widgets don't flicker.
 func (d *Daemon) sendInitialState(sub *daemon.Subscriber, topics []string) {
 	if sub.WantsTopic("workspace") {
-		sub.SendEvent("workspace", d.workspacePayload())
+		sub.SendEvent("workspace", workspacePayload(d.state))
 	}
 
 	if sub.WantsTopic("split") {
 		sub.SendEvent("split", d.state.GetSplitRatio())
 	}
 }
-
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ Command dispatch                                                             │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 // handleCommand routes one line from the daemon socket: `<verb> [raw args]`.
 func (d *Daemon) handleCommand(command string) string {
@@ -224,14 +215,14 @@ func (d *Daemon) handleCommand(command string) string {
 		}
 		return result
 	case "tab":
-		tab := session.NewTab(d.hypr, d.state)
+		tab := kitty.NewSelector(d.hypr, d.state)
 		result, err := tab.Execute(strings.TrimSpace(arg))
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
 	case "tabs":
-		tabs := session.NewTabs(d.hypr, d.state)
+		tabs := kitty.NewManager(d.hypr, d.state)
 		result, err := tabs.Execute(strings.TrimSpace(arg))
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
@@ -309,10 +300,6 @@ func (d *Daemon) handleCommand(command string) string {
 		return fmt.Sprintf("unknown command: %s", cmd)
 	}
 }
-
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ Subcommand handlers                                                          │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 func (d *Daemon) handleShadow(arg string) string {
 	shadowWS := windows.ShadowWorkspace
@@ -409,10 +396,6 @@ func (d *Daemon) handleNotify(arg string) string {
 	return "ok"
 }
 
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ Hot rebuild                                                                  │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
-
 // handleRebuild builds ./cmd/hyprd from the dotfiles Go workspace, installs ~/.local/bin/hyprd, and restarts in place.
 //
 // Runtime state is written to stateFile before the binary swap and consumed once by restoreState after exec.
@@ -481,15 +464,9 @@ func (d *Daemon) execSelf() error {
 }
 
 func (d *Daemon) handleProject(arg string) string {
-	wsData, err := d.hypr.Request("j/activeworkspace")
+	wsID, err := d.hypr.ActiveWorkspace()
 	if err != nil {
 		return fmt.Sprintf("error: %v", err)
-	}
-	var ws struct {
-		ID int `json:"id"`
-	}
-	if err := json.Unmarshal(wsData, &ws); err != nil {
-		return fmt.Sprintf("error: parse workspace: %v", err)
 	}
 
 	sub, val, _ := strings.Cut(strings.TrimSpace(arg), " ")
@@ -497,20 +474,20 @@ func (d *Daemon) handleProject(arg string) string {
 
 	switch sub {
 	case "", "get":
-		p := d.state.GetProjectPath(ws.ID)
+		p := d.state.GetProjectPath(wsID)
 		if p == "" {
-			return fmt.Sprintf("ws%d: (none)", ws.ID)
+			return fmt.Sprintf("ws%d: (none)", wsID)
 		}
-		return fmt.Sprintf("ws%d: %s", ws.ID, p)
+		return fmt.Sprintf("ws%d: %s", wsID, p)
 	case "set":
 		if val == "" {
 			return "usage: project set <path>"
 		}
-		d.state.SetProjectPath(ws.ID, val)
-		return fmt.Sprintf("ws%d: %s", ws.ID, val)
+		d.state.SetProjectPath(wsID, val)
+		return fmt.Sprintf("ws%d: %s", wsID, val)
 	case "clear":
-		d.state.SetProjectPath(ws.ID, "")
-		return fmt.Sprintf("ws%d: cleared", ws.ID)
+		d.state.SetProjectPath(wsID, "")
+		return fmt.Sprintf("ws%d: cleared", wsID)
 	default:
 		return "usage: project [get|set <path>|clear]"
 	}
@@ -531,10 +508,6 @@ func (d *Daemon) newInit() *session.Init {
 	})
 	return init
 }
-
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ Config watcher                                                               │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 // watchConfig hot-reloads ~/dotfiles/cmds/config/hyprd.yaml on change.
 //
@@ -594,14 +567,10 @@ func (d *Daemon) watchConfig(done <-chan struct{}) {
 	}
 }
 
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ Query / subscribe                                                            │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
-
 func (d *Daemon) query(topic string) (string, error) {
 	switch topic {
 	case "workspace":
-		data := d.workspacePayload()
+		data := workspacePayload(d.state)
 		jsonData, err := json.Marshal(data)
 		return string(jsonData), err
 
@@ -633,9 +602,9 @@ func (d *Daemon) query(topic string) (string, error) {
 	}
 }
 
-func (d *Daemon) workspacePayload() map[string]any {
-	current := d.state.GetWorkspace()
-	occupied := d.state.GetOccupied()
+func workspacePayload(s *state.State) map[string]any {
+	current := s.GetWorkspace()
+	occupied := s.GetOccupied()
 
 	return map[string]any{
 		"current":      current,
@@ -657,5 +626,5 @@ func (d *Daemon) notifyWorkspace() {
 	if d.server == nil || d.server.Subs == nil {
 		return
 	}
-	d.server.Subs.Notify("workspace", d.workspacePayload())
+	d.server.Subs.Notify("workspace", workspacePayload(d.state))
 }

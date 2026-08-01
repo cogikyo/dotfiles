@@ -74,15 +74,6 @@ func isDir(path string) bool {
 	return err == nil && info.IsDir()
 }
 
-func isFile(path string) bool {
-	info, err := os.Stat(path)
-	return err == nil && !info.IsDir()
-}
-
-func trimCommandError(err error) string {
-	return strings.TrimSpace(strings.TrimPrefix(err.Error(), "exit status 1"))
-}
-
 func oneLine(s string) string {
 	return strings.Join(strings.Fields(s), " ")
 }

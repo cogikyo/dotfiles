@@ -1,15 +1,7 @@
 // Package wm implements hyprd window-management commands backed by Hyprland IPC and shared state.
-//
-// Responsibilities:
-// - Apply workspace and layout mutations (ws, split, swap, hide).
-// - Manage higher-order layouts (monocle and three-body).
-// - Resolve focus and recovery flows for hidden or shadowed windows.
 package wm
 
-// ws.go handles workspace switching and cross-workspace active-window moves.
-
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -49,13 +41,8 @@ func (w *WS) Execute(wsArg string) (string, error) {
 	}
 
 	currentWS := 0
-	if data, err := w.hypr.Request("j/activeworkspace"); err == nil {
-		var active struct {
-			ID int `json:"id"`
-		}
-		if json.Unmarshal(data, &active) == nil {
-			currentWS = active.ID
-		}
+	if activeWS, err := w.hypr.ActiveWorkspace(); err == nil {
+		currentWS = activeWS
 	}
 
 	anim := "slide"

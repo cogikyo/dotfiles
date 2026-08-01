@@ -5,15 +5,7 @@
 // The active window's workspace is used first; the focused monitor's workspace is the fallback.
 // Three-body state owns browser selection and can swap a shadow Firefox into view before CLI remoting.
 // No browser on another workspace is used as a fallback.
-//
-// Responsibilities:
-// - Route external URLs to the Firefox instance owned by the current workspace.
-// - Discover Firefox profiles and load sessionstore payloads.
-// - Create named snapshots from selected browser windows.
-// - Restore snapshots as windows in the main Firefox profile.
 package browser
-
-// browser.go defines the Browser command surface and shared subcommand dispatch helpers.
 
 import (
 	"dotfiles/cmds/internal/config"

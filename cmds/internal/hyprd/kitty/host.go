@@ -1,4 +1,4 @@
-package session
+package kitty
 
 import (
 	"crypto/rand"
@@ -35,7 +35,7 @@ const (
 )
 
 type hostTab struct {
-	source      KittyTab
+	source      Tab
 	definition  config.TabDef
 	name        string
 	logicalCWDs []string
@@ -49,21 +49,19 @@ type hostTab struct {
 }
 
 type hostPlan struct {
-	profileName string
-	profile     *config.TabProfile
-	controller  string
-	source      string
-	target      string
-	window      KittyOSWindow
-	tabs        []hostTab
-	focusedTab  int
-	txn         string
+	profile    *config.TabProfile
+	controller string
+	source     string
+	target     string
+	window     OSWindow
+	tabs       []hostTab
+	focusedTab int
+	txn        string
 }
 
 // hostOrigin names the exact Kitty OS window a host switch must mutate.
 //
-// The chooser kitten captures both values inside the Kitty process before dispatch,
-// so a focus change between the chooser and the switch cannot retarget another window.
+// The chooser kitten captures both values inside the Kitty process before dispatch, so a focus change between the chooser and the switch cannot retarget another window.
 // A zero origin means "resolve the currently focused Kitty OS window".
 type hostOrigin struct {
 	pid      int // Kitty process PID; also selects its remote-control socket
@@ -73,13 +71,13 @@ type hostOrigin struct {
 // hostTarget is the resolved and validated Kitty OS window a switch will mutate.
 type hostTarget struct {
 	origin hostOrigin
-	kitty  *KittyClient
-	window KittyOSWindow
+	kitty  *Client
+	window OSWindow
 }
 
 const hostUsage = "usage: tabs host <abbott|costello|neumann> [--kitty-pid <pid> --os-window <id>]"
 
-func (t *Tabs) host(args []string) (result string, err error) {
+func (t *Manager) host(args []string) (result string, err error) {
 	alias, origin, err := parseHostArgs(args)
 	if err != nil {
 		return "", err
@@ -139,7 +137,7 @@ func (t *Tabs) host(args []string) (result string, err error) {
 	}
 
 	focus := &plan.tabs[plan.focusedTab]
-	if err = kitty.FocusTabByNumericID(focus.stageID); err != nil {
+	if err = kitty.focusTabByNumericID(focus.stageID); err != nil {
 		return "", fmt.Errorf("focus replacement tab: %w", err)
 	}
 	if focus.focusedPane >= 0 && focus.focusedPane < len(focus.stagePanes) {
@@ -152,7 +150,7 @@ func (t *Tabs) host(args []string) (result string, err error) {
 	for i := range plan.tabs {
 		sourceIDs[i] = plan.tabs[i].source.ID
 	}
-	if err = kitty.CloseTabsByNumericIDs(sourceIDs); err != nil {
+	if err = kitty.closeTabsByNumericIDs(sourceIDs); err != nil {
 		return "", fmt.Errorf("close source tabs: %w", err)
 	}
 	staged = false
@@ -202,10 +200,9 @@ func parseHostArgs(args []string) (string, hostOrigin, error) {
 	return alias, origin, nil
 }
 
-// resolveHostTarget validates that the captured OS window still exists inside the
-// captured Kitty process. Without an explicit identity it falls back to the focused
-// Kitty window, which is what a manual `hyprd tabs host <alias>` expects.
-func (t *Tabs) resolveHostTarget(origin hostOrigin) (hostTarget, error) {
+// resolveHostTarget validates that the captured OS window still exists inside the captured Kitty process.
+// Without an explicit identity it falls back to the focused Kitty window, which is what a manual `hyprd tabs host <alias>` expects.
+func (t *Manager) resolveHostTarget(origin hostOrigin) (hostTarget, error) {
 	if origin.pid == 0 {
 		pid, err := t.activeKittyPID()
 		if err != nil {
@@ -215,7 +212,7 @@ func (t *Tabs) resolveHostTarget(origin hostOrigin) (hostTarget, error) {
 	}
 
 	// The socket is per Kitty process, so any window found here belongs to that process.
-	kitty := NewKittyClient(origin.pid)
+	kitty := NewClient(origin.pid)
 	windows, err := kitty.FullState()
 	if err != nil {
 		return hostTarget{}, fmt.Errorf("kitty state for pid %d: %w", origin.pid, err)
@@ -237,7 +234,7 @@ func (t *Tabs) resolveHostTarget(origin hostOrigin) (hostTarget, error) {
 	return hostTarget{origin: origin, kitty: kitty, window: window}, nil
 }
 
-func (t *Tabs) beginHostSwitch(origin hostOrigin) bool {
+func (t *Manager) beginHostSwitch(origin hostOrigin) bool {
 	t.hostMu.Lock()
 	defer t.hostMu.Unlock()
 	if t.hostSwitches[origin] {
@@ -247,13 +244,13 @@ func (t *Tabs) beginHostSwitch(origin hostOrigin) bool {
 	return true
 }
 
-func (t *Tabs) endHostSwitch(origin hostOrigin) {
+func (t *Manager) endHostSwitch(origin hostOrigin) {
 	t.hostMu.Lock()
 	delete(t.hostSwitches, origin)
 	t.hostMu.Unlock()
 }
 
-func (t *Tabs) prepareHostPlan(window KittyOSWindow, target string) (*hostPlan, error) {
+func (t *Manager) prepareHostPlan(window OSWindow, target string) (*hostPlan, error) {
 	controller, err := controllerHost()
 	if err != nil {
 		return nil, err
@@ -262,7 +259,7 @@ func (t *Tabs) prepareHostPlan(window KittyOSWindow, target string) (*hostPlan, 
 	if err != nil {
 		return nil, err
 	}
-	profileName, profile, tabs, focused, err := strictHostProfile(t.state.GetConfig(), window, controller, source)
+	_, profile, tabs, focused, err := strictHostProfile(t.state.GetConfig(), window, controller, source)
 	if err != nil {
 		return nil, err
 	}
@@ -273,10 +270,10 @@ func (t *Tabs) prepareHostPlan(window KittyOSWindow, target string) (*hostPlan, 
 	if err != nil {
 		return nil, err
 	}
-	return &hostPlan{profileName: profileName, profile: profile, controller: controller, source: source, target: target, window: window, tabs: tabs, focusedTab: focused, txn: txn}, nil
+	return &hostPlan{profile: profile, controller: controller, source: source, target: target, window: window, tabs: tabs, focusedTab: focused, txn: txn}, nil
 }
 
-func strictHostProfile(cfg *config.HyprConfig, window KittyOSWindow, controller, source string) (string, *config.TabProfile, []hostTab, int, error) {
+func strictHostProfile(cfg *config.HyprConfig, window OSWindow, controller, source string) (string, *config.TabProfile, []hostTab, int, error) {
 	if cfg == nil || len(cfg.Tabs) == 0 || len(window.Tabs) == 0 {
 		return "", nil, nil, -1, fmt.Errorf("focused window has no configured tab profile")
 	}
@@ -380,7 +377,7 @@ func strictHostProfile(cfg *config.HyprConfig, window KittyOSWindow, controller,
 	return matches[0].name, &matches[0].profile, matches[0].tabs, matches[0].focused, nil
 }
 
-func profilePaneIndex(pane KittyPane, count int) (int, error) {
+func profilePaneIndex(pane Pane, count int) (int, error) {
 	raw, ok := pane.UserVars[userVarPane]
 	if !ok || raw == "" {
 		return -1, fmt.Errorf("missing %s metadata; refresh the tab before switching hosts", userVarPane)
@@ -392,13 +389,13 @@ func profilePaneIndex(pane KittyPane, count int) (int, error) {
 	return index, nil
 }
 
-func orderedProfilePanes(panes []KittyPane) ([]KittyPane, error) {
+func orderedProfilePanes(panes []Pane) ([]Pane, error) {
 	if len(panes) == 1 {
 		if _, ok := panes[0].UserVars[userVarPane]; !ok {
 			return slices.Clone(panes), nil
 		}
 	}
-	ordered := make([]KittyPane, len(panes))
+	ordered := make([]Pane, len(panes))
 	seen := make([]bool, len(panes))
 	for _, pane := range panes {
 		index, err := profilePaneIndex(pane, len(panes))
@@ -426,7 +423,7 @@ func configuredPaneCWD(definition config.TabDef, paneIndex int) string {
 	return definition.Panes[paneIndex-1].CWD
 }
 
-func sourceLogicalCWD(pane KittyPane, configured, controllerHome string, local bool) (string, error) {
+func sourceLogicalCWD(pane Pane, configured, controllerHome string, local bool) (string, error) {
 	if logical, ok := pane.UserVars[userVarCWD]; ok {
 		return normalizeLogicalCWD(logical)
 	}
@@ -475,7 +472,7 @@ func logicalCWDFromPath(cwd, home string) (string, error) {
 
 // ensureCompleteHostProfile rejects profile fragments and unknown extras.
 // Tabs with requires may be absent only when source-side requires checks fail.
-func (t *Tabs) ensureCompleteHostProfile(profile *config.TabProfile, present []hostTab, source string) error {
+func (t *Manager) ensureCompleteHostProfile(profile *config.TabProfile, present []hostTab, source string) error {
 	if profile == nil {
 		return fmt.Errorf("focused window has no configured tab profile")
 	}
@@ -535,7 +532,7 @@ func hostRequiresSatisfied(source, requires, cwd string) (bool, error) {
 }
 
 // uniqueSelectedTab requires exactly one tab marked selected; does not fall back or overwrite.
-func uniqueSelectedTab(tabs []KittyTab) (int, error) {
+func uniqueSelectedTab(tabs []Tab) (int, error) {
 	selected := -1
 	for i, tab := range tabs {
 		if !tabSelected(tab) {
@@ -554,7 +551,7 @@ func uniqueSelectedTab(tabs []KittyTab) (int, error) {
 
 // uniqueSelectedPane requires a single selected pane when focus is required.
 // A lone pane with no selection markers still resolves to index 0.
-func uniqueSelectedPane(panes []KittyPane) (int, error) {
+func uniqueSelectedPane(panes []Pane) (int, error) {
 	selected := -1
 	for i, pane := range panes {
 		if !paneSelected(pane) {
@@ -576,7 +573,7 @@ func uniqueSelectedPane(panes []KittyPane) (int, error) {
 
 // sourceTabLayout prefers live Kitty layout + layout_opts so manual geometry survives.
 // Configured definition layout is only a fallback when the source tab has no layout name.
-func sourceTabLayout(tab KittyTab, definition config.TabDef) (string, map[string]string) {
+func sourceTabLayout(tab Tab, definition config.TabDef) (string, map[string]string) {
 	if tab.Layout != "" {
 		return tab.Layout, normalizeLayoutOpts(tab.LayoutOpts)
 	}
@@ -753,7 +750,6 @@ func selectGotoLayout(name string, opts map[string]string, enabled []string) str
 	return full
 }
 
-// layoutOptsContain reports whether live contains every key/value from want.
 func layoutOptsContain(live, want map[string]string) bool {
 	for key, value := range want {
 		if live[key] != value {
@@ -763,7 +759,7 @@ func layoutOptsContain(live, want map[string]string) bool {
 	return true
 }
 
-func layoutMatches(tab KittyTab, name string, opts map[string]string) bool {
+func layoutMatches(tab Tab, name string, opts map[string]string) bool {
 	if name == "" {
 		return true
 	}
@@ -785,7 +781,7 @@ func controllerHost() (string, error) {
 	return host, nil
 }
 
-func sourceHost(window KittyOSWindow, controller string) (string, error) {
+func sourceHost(window OSWindow, controller string) (string, error) {
 	hosts := make(map[string]bool)
 	for _, tab := range window.Tabs {
 		for _, pane := range tab.Windows {
@@ -842,13 +838,11 @@ func sourceHost(window KittyOSWindow, controller string) (string, error) {
 
 // managedFlatSSH recognizes a local Kitty-orchestrated flat SSH session to alias.
 //
-// Two signals:
-//  1. top-level pane.Cmdline must be kitten ssh … alias or legacy kitty +kitten ssh … alias
-//  2. every SSH-shaped foreground process, if any, targets that same alias (plain ssh is fine)
+// A managed pane must have a top-level pane.Cmdline of kitten ssh … alias or legacy kitty +kitten ssh … alias.
+// Every SSH-shaped foreground process, if any, must target that same alias; plain ssh is fine.
 //
-// A local zsh where the user typed `ssh alias` stays unmanaged: its stable top-level
-// cmdline is zsh, not kitten.
-func managedFlatSSH(pane KittyPane, alias string) bool {
+// A local zsh where the user typed `ssh alias` stays unmanaged because its stable top-level cmdline is zsh, not kitten.
+func managedFlatSSH(pane Pane, alias string) bool {
 	if !orchestratedKittenSSH(pane.Cmdline, alias) {
 		return false
 	}
@@ -864,8 +858,7 @@ func managedFlatSSH(pane KittyPane, alias string) bool {
 	return true
 }
 
-// orchestratedKittenSSH reports whether cmdline is a supported local launch shape
-// whose SSH destination token equals alias.
+// orchestratedKittenSSH reports whether cmdline is a supported local launch shape whose SSH destination token equals alias.
 func orchestratedKittenSSH(cmdline []string, alias string) bool {
 	_, binary, ok := sshCmdlinePrefix(cmdline)
 	if !ok || (binary != "kitten" && binary != "kitty") {
@@ -875,12 +868,11 @@ func orchestratedKittenSSH(cmdline []string, alias string) bool {
 	return ok && sshHostToken(destination) == alias
 }
 
-func sshAlias(pane KittyPane) (string, bool, error) {
+func sshAlias(pane Pane) (string, bool, error) {
 	aliases := make(map[string]bool)
 	sshManaged := false
 	unknownDest := false
-	// Include top-level cmdline (stable launch argv) plus foreground processes
-	// (often plain ssh after kitten settles).
+	// Include top-level cmdline (stable launch argv) plus foreground processes, which are often plain ssh after kitten settles.
 	cmdlines := make([][]string, 0, 1+len(pane.ForegroundProcesses))
 	if len(pane.Cmdline) > 0 {
 		cmdlines = append(cmdlines, pane.Cmdline)
@@ -925,8 +917,7 @@ func cmdlineIsSSH(cmdline []string) bool {
 	return ok
 }
 
-// sshCmdlinePrefix recognizes only real SSH invocation shapes:
-// argv0 basename ssh; kitten ssh; kitty +kitten ssh.
+// sshCmdlinePrefix recognizes only real SSH invocation shapes: argv0 basename ssh, kitten ssh, or kitty +kitten ssh.
 // It never scans unrelated later arguments for the token "ssh".
 func sshCmdlinePrefix(cmdline []string) (start int, binary string, ok bool) {
 	if len(cmdline) == 0 {
@@ -992,7 +983,7 @@ func newHostTransaction(windowID int) (string, error) {
 	return fmt.Sprintf("host-%d-%s", windowID, hex.EncodeToString(random[:])), nil
 }
 
-func (t *Tabs) preflightHostPlan(plan *hostPlan) error {
+func (t *Manager) preflightHostPlan(plan *hostPlan) error {
 	targetHome, err := hostHome(plan.target)
 	if err != nil {
 		return fmt.Errorf("connect to %s: %w", plan.target, err)
@@ -1168,7 +1159,7 @@ func sshCommand(host, command string) *exec.Cmd {
 	return exec.Command("ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=4", "--", host, command)
 }
 
-func stageHostTabs(kitty *KittyClient, plan *hostPlan) error {
+func stageHostTabs(kitty *Client, plan *hostPlan) error {
 	anchor := plan.window.Tabs[0].Windows[0].ID
 	for i := range plan.tabs {
 		tab := &plan.tabs[i]
@@ -1176,7 +1167,7 @@ func stageHostTabs(kitty *KittyClient, plan *hostPlan) error {
 		args := []string{"--type=tab", "--keep-focus", "--match", fmt.Sprintf("window_id:%d", anchor), "--source-window", fmt.Sprintf("id:%d", anchor), "--copy-env", "--env", "KITTY_TAB_ID=" + runtimeID, "--env", "HYPRD_LAUNCH_COMMAND=", "--env", "HYPRD_HOST_TXN=", "--env", "HYPRD_TAB_HOST=", "--tab-title=" + tab.source.Title}
 		args = append(args, paneMetadataArgs(plan.target, tab.logicalCWDs[0], 0, plan.txn)...)
 		args = append(args, hostLaunchCommand(plan.controller, plan.target, tab.definition.Command, tab.targetCWDs[0])...)
-		paneID, err := kitty.LaunchID(args...)
+		paneID, err := kitty.launchID(args...)
 		if err != nil {
 			return fmt.Errorf("stage tab %s: %w", tab.name, err)
 		}
@@ -1191,7 +1182,7 @@ func stageHostTabs(kitty *KittyClient, plan *hostPlan) error {
 		}
 		tab.stageID = stageTab.ID
 		if tab.layoutGoto != "" {
-			if err := kitty.GotoLayoutByNumericID(tab.stageID, tab.layoutGoto); err != nil {
+			if err := kitty.gotoLayoutByNumericID(tab.stageID, tab.layoutGoto); err != nil {
 				return fmt.Errorf("stage layout for %s: %w", tab.name, err)
 			}
 		}
@@ -1206,14 +1197,14 @@ func stageHostTabs(kitty *KittyClient, plan *hostPlan) error {
 				paneArgs = append(paneArgs, "--bias", fmt.Sprint(pane.Bias))
 			}
 			paneArgs = append(paneArgs, hostLaunchCommand(plan.controller, plan.target, pane.Command, tab.targetCWDs[profilePane])...)
-			paneID, err := kitty.LaunchID(paneArgs...)
+			paneID, err := kitty.launchID(paneArgs...)
 			if err != nil {
 				return fmt.Errorf("stage pane %d for %s: %w", paneIndex+1, tab.name, err)
 			}
 			tab.stagePanes = append(tab.stagePanes, paneID)
 		}
 		if tab.layoutGoto != "" && len(tab.definition.Panes) > 0 {
-			if err := kitty.GotoLayoutByNumericID(tab.stageID, tab.layoutGoto); err != nil {
+			if err := kitty.gotoLayoutByNumericID(tab.stageID, tab.layoutGoto); err != nil {
 				return fmt.Errorf("reapply layout for %s: %w", tab.name, err)
 			}
 		}
@@ -1231,8 +1222,7 @@ func paneMetadataArgs(host, logicalCWD string, paneIndex int, txn string) []stri
 }
 
 // hostLaunchCommand builds Kitty launch argv for a pane on host.
-// Construction is always flat from the controller: local target keeps zsh;
-// any remote target is `kitten ssh <target>` independent of the source host.
+// Construction is always flat from the controller: local target keeps zsh; any remote target is `kitten ssh <target>` independent of the source host.
 func hostLaunchCommand(controller, host, command, cwd string) []string {
 	resolved := withResolvedPWD(command, cwd)
 	if host == controller {
@@ -1258,7 +1248,7 @@ func hostLaunchCommand(controller, host, command, cwd string) []string {
 	return []string{"kitten", "ssh", "-t", "-o", "BatchMode=yes", "-o", "ConnectTimeout=4", "--", host, "zsh", "-lc", shellQuote(script)}
 }
 
-func verifyHostTabs(kitty *KittyClient, plan *hostPlan) error {
+func verifyHostTabs(kitty *Client, plan *hostPlan) error {
 	deadline := time.Now().Add(4 * time.Second)
 	for {
 		windows, err := kitty.FullState()
@@ -1313,7 +1303,7 @@ func verifyHostTabs(kitty *KittyClient, plan *hostPlan) error {
 	}
 }
 
-func paneRunsOnHost(pane KittyPane, host, controller string) bool {
+func paneRunsOnHost(pane Pane, host, controller string) bool {
 	alias, managed, err := sshAlias(pane)
 	if err != nil {
 		return false
@@ -1321,12 +1311,11 @@ func paneRunsOnHost(pane KittyPane, host, controller string) bool {
 	if host == controller {
 		return !managed
 	}
-	// Plain foreground ssh is fine once top-level cmdline proves kitten orchestration
-	// and every SSH-shaped destination matches the declared target.
+	// Plain foreground ssh is fine once top-level cmdline proves kitten orchestration and every SSH-shaped destination matches the declared target.
 	return managed && alias == host && managedFlatSSH(pane, host)
 }
 
-func rollbackHostTabs(kitty *KittyClient, plan *hostPlan) error {
+func rollbackHostTabs(kitty *Client, plan *hostPlan) error {
 	windows, err := kitty.FullState()
 	if err != nil {
 		return err
@@ -1344,13 +1333,13 @@ func rollbackHostTabs(kitty *KittyClient, plan *hostPlan) error {
 			}
 		}
 	}
-	return kitty.CloseTabsByNumericIDs(ids)
+	return kitty.closeTabsByNumericIDs(ids)
 }
 
-func tabForPane(windows []KittyOSWindow, windowID, paneID int) (KittyTab, bool) {
+func tabForPane(windows []OSWindow, windowID, paneID int) (Tab, bool) {
 	window, ok := windowByID(windows, windowID)
 	if !ok {
-		return KittyTab{}, false
+		return Tab{}, false
 	}
 	for _, tab := range window.Tabs {
 		for _, pane := range tab.Windows {
@@ -1359,32 +1348,32 @@ func tabForPane(windows []KittyOSWindow, windowID, paneID int) (KittyTab, bool) 
 			}
 		}
 	}
-	return KittyTab{}, false
+	return Tab{}, false
 }
 
-func windowByID(windows []KittyOSWindow, id int) (KittyOSWindow, bool) {
+func windowByID(windows []OSWindow, id int) (OSWindow, bool) {
 	for _, window := range windows {
 		if window.ID == id {
 			return window, true
 		}
 	}
-	return KittyOSWindow{}, false
+	return OSWindow{}, false
 }
 
-func numericTab(window KittyOSWindow, id int) (KittyTab, bool) {
+func numericTab(window OSWindow, id int) (Tab, bool) {
 	for _, tab := range window.Tabs {
 		if tab.ID == id {
 			return tab, true
 		}
 	}
-	return KittyTab{}, false
+	return Tab{}, false
 }
 
 func shellQuote(value string) string {
 	return "'" + strings.ReplaceAll(value, "'", `'"'"'`) + "'"
 }
 
-func (t *Tabs) notifyHost(kitty *KittyClient, title, body string, critical bool) {
+func (t *Manager) notifyHost(kitty *Client, title, body string, critical bool) {
 	icon := "system-monitor"
 	if critical {
 		icon = "error"
@@ -1394,5 +1383,5 @@ func (t *Tabs) notifyHost(kitty *KittyClient, title, body string, critical bool)
 		args = append(args, "--urgency=critical")
 	}
 	args = append(args, title, body)
-	_ = kitty.Notify(args...)
+	_ = kitty.notify(args...)
 }

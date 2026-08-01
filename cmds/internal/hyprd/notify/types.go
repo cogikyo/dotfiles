@@ -1,12 +1,4 @@
-// Package notify normalizes external notification hooks and routes them through hyprd.
-//
-// Responsibilities:
-// - Parse CLI, Dunst, OpenCode, and kitty notification payloads.
-// - Dispatch daemon-facing requests for visual, sound, and focus behavior.
-// - Keep source-specific payload quirks out of the daemon command router.
 package notify
-
-// types.go defines request/spec/context structs plus the Notifier type shared by notify handlers.
 
 import (
 	"dotfiles/cmds/internal/config"

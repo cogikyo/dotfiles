@@ -1,9 +1,6 @@
 package wm
 
-// focus.go targets a window by class/title and restores it from hidden workspaces before focusing.
-
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
@@ -28,16 +25,9 @@ func (f *Focus) Execute(class, title string) (string, error) {
 		return "", fmt.Errorf("class required")
 	}
 
-	wsData, err := f.hypr.Request("j/activeworkspace")
+	wsID, err := f.hypr.ActiveWorkspace()
 	if err != nil {
 		return "", err
-	}
-
-	var ws struct {
-		ID int `json:"id"`
-	}
-	if err := json.Unmarshal(wsData, &ws); err != nil {
-		return "", fmt.Errorf("parse workspace: %w", err)
 	}
 
 	clients, err := f.hypr.Clients()
@@ -53,7 +43,7 @@ func (f *Focus) Execute(class, title string) (string, error) {
 		if !windows.MatchesTarget(c, class, title) {
 			continue
 		}
-		if c.Workspace.ID == ws.ID {
+		if c.Workspace.ID == wsID {
 			target = c
 			break
 		}
@@ -71,7 +61,7 @@ func (f *Focus) Execute(class, title string) (string, error) {
 
 	if strings.HasPrefix(target.Workspace.Name, "special:") {
 		hide := NewHide(f.hypr, f.state)
-		if _, err := hide.UnhideByAddress(target.Address, ws.ID); err != nil {
+		if _, err := hide.UnhideByAddress(target.Address, wsID); err != nil {
 			return "", fmt.Errorf("unhide: %w", err)
 		}
 	}

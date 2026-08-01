@@ -1,7 +1,5 @@
 package wm
 
-// split.go applies and cycles configured mfact presets for the current tiling layout.
-
 import (
 	"fmt"
 

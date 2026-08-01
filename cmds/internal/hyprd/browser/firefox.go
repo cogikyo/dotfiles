@@ -1,7 +1,5 @@
 package browser
 
-// firefox.go handles Firefox processes and workspace-local URL-open targeting.
-
 import (
 	"errors"
 	"fmt"

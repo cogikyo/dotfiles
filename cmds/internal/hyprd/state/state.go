@@ -1,12 +1,5 @@
 // Package state stores hyprd runtime state behind a single mutex.
-//
-// Responsibilities:
-// - Track workspace, layout, and window-placement runtime data.
-// - Persist per-workspace session selection.
-// - Expose safe copy-on-read helpers for concurrent command handlers.
 package state
-
-// state.go defines the core State container plus config wiring and full-state serialization/restoration.
 
 import (
 	"encoding/json"

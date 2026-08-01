@@ -1,14 +1,7 @@
 // Package hypr wraps Hyprland IPC socket communication for hyprd commands.
 //
 // It exposes a thin typed client over Hyprland's command and event sockets.
-//
-// Responsibilities:
-// - Resolve command and event socket paths from runtime environment variables.
-// - Send requests over Unix sockets (queries and eval mutations).
-// - Decode typed window and monitor payloads from Hyprland JSON endpoints.
 package hypr
-
-// socket.go defines the IPC client transport plus typed helpers for clients, active window, and monitors.
 
 import (
 	"encoding/json"
@@ -17,10 +10,6 @@ import (
 	"os"
 	"path/filepath"
 )
-
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ client & transport                                                           │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 // Client communicates with Hyprland via its Unix sockets.
 type Client struct {
@@ -45,11 +34,6 @@ func NewClient() (*Client, error) {
 	}
 
 	return &Client{socketPath: socketPath}, nil
-}
-
-// SocketPath returns the path to the command socket.
-func (c *Client) SocketPath() string {
-	return c.socketPath
 }
 
 // EventSocketPath returns the path to the event-streaming socket.
@@ -78,10 +62,6 @@ func (c *Client) Request(command string) ([]byte, error) {
 	return buf[:n], nil
 }
 
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ windows                                                                      │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
-
 // Window mirrors the JSON from `hyprctl -j clients`.
 type Window struct {
 	Address        string `json:"address"`
@@ -103,6 +83,21 @@ type Window struct {
 type WsRef struct {
 	ID   int    `json:"id"`
 	Name string `json:"name"`
+}
+
+func (c *Client) ActiveWorkspace() (int, error) {
+	data, err := c.Request("j/activeworkspace")
+	if err != nil {
+		return 0, err
+	}
+
+	var ws struct {
+		ID int `json:"id"`
+	}
+	if err := json.Unmarshal(data, &ws); err != nil {
+		return 0, fmt.Errorf("parse workspace: %w", err)
+	}
+	return ws.ID, nil
 }
 
 // Clients returns all windows from `hyprctl -j clients`.
@@ -136,10 +131,6 @@ func (c *Client) ActiveWindow() (*Window, error) {
 	}
 	return &w, nil
 }
-
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ monitors                                                                     │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 // Monitor mirrors the JSON from `hyprctl -j monitors`.
 //

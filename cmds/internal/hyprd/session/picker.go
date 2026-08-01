@@ -1,7 +1,5 @@
 package session
 
-// picker.go drives the interactive eww session picker and applies selected workspace/session targets.
-
 import (
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"

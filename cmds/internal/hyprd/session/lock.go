@@ -1,9 +1,6 @@
 package session
 
-// lock.go implements pseudo-lock and full-lock lifecycles with restore of workspace, UI services, and audio.
-
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -32,7 +29,7 @@ type hyprExecutor interface {
 
 type hyprIPC interface {
 	hyprExecutor
-	Request(command string) ([]byte, error)
+	ActiveWorkspace() (int, error)
 	FocusWorkspace(id int) error
 	Submap(name string) error
 }
@@ -281,13 +278,8 @@ func runtimeDir() string {
 func (l *Lock) capture() *lockState {
 	ws := l.state.GetWorkspace()
 	if ws <= 0 {
-		if data, err := l.hypr.Request("j/activeworkspace"); err == nil {
-			var active struct {
-				ID int `json:"id"`
-			}
-			if json.Unmarshal(data, &active) == nil && active.ID > 0 {
-				ws = active.ID
-			}
+		if activeWS, err := l.hypr.ActiveWorkspace(); err == nil && activeWS > 0 {
+			ws = activeWS
 		}
 	}
 	if ws <= 0 {

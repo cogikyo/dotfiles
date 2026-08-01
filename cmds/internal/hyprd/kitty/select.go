@@ -1,9 +1,6 @@
-package session
-
-// tab.go focuses an editor or agents Kitty window and selects a physical tab by index.
+package kitty
 
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 	"strings"
@@ -16,23 +13,23 @@ import (
 
 const maxTabIndex = 4
 
-type Tab struct {
+// Selector handles commands with a zero-based physical tab index while Kitty uses one-based addressing internally.
+type Selector struct {
 	hypr  *hypr.Client
 	state *state.State
 }
 
-func NewTab(h *hypr.Client, s *state.State) *Tab {
-	return &Tab{hypr: h, state: s}
+func NewSelector(h *hypr.Client, s *state.State) *Selector {
+	return &Selector{hypr: h, state: s}
 }
 
-// Execute focuses the requested profile window and selects its zero-based physical tab index.
-func (t *Tab) Execute(target string) (string, error) {
+func (t *Selector) Execute(target string) (string, error) {
 	profile, index, err := parseTabTarget(target)
 	if err != nil {
 		return "", err
 	}
 
-	wsID, err := t.activeWorkspace()
+	wsID, err := t.hypr.ActiveWorkspace()
 	if err != nil {
 		return "", err
 	}
@@ -50,7 +47,7 @@ func (t *Tab) Execute(target string) (string, error) {
 	}
 
 	kittyIndex := index + 1
-	if err := NewKittyClient(win.Pid).GotoTab(kittyIndex); err != nil {
+	if err := NewClient(win.Pid).gotoTab(kittyIndex); err != nil {
 		return "", fmt.Errorf("select %s tab %d: %w", profile, index, err)
 	}
 	return fmt.Sprintf("tab: %s:%d", profile, index), nil
@@ -75,7 +72,7 @@ func parseTabTarget(target string) (string, int, error) {
 	return profile, index, nil
 }
 
-func (t *Tab) findTargetWindow(wsID int, profile string) (*hypr.Window, int, error) {
+func (t *Selector) findTargetWindow(wsID int, profile string) (*hypr.Window, int, error) {
 	if profile == "agents" {
 		return t.findBodyWindow(wsID, profile)
 	}
@@ -84,7 +81,7 @@ func (t *Tab) findTargetWindow(wsID int, profile string) (*hypr.Window, int, err
 	return win, wsID, err
 }
 
-func (t *Tab) findBodyWindow(wsID int, bodyName string) (*hypr.Window, int, error) {
+func (t *Selector) findBodyWindow(wsID int, bodyName string) (*hypr.Window, int, error) {
 	spec, ok := config.ThreeBody[bodyName]
 	if !ok {
 		return nil, wsID, fmt.Errorf("unknown three-body window: %s", bodyName)
@@ -104,8 +101,8 @@ func (t *Tab) findBodyWindow(wsID int, bodyName string) (*hypr.Window, int, erro
 	return nil, wsID, nil
 }
 
-func (t *Tab) focusBody(spec config.ThreeBodyWindow, wsID int, addr string) (*hypr.Window, int, error) {
-	currentWS, err := t.activeWorkspace()
+func (t *Selector) focusBody(spec config.ThreeBodyWindow, wsID int, addr string) (*hypr.Window, int, error) {
+	currentWS, err := t.hypr.ActiveWorkspace()
 	if err != nil {
 		return nil, wsID, err
 	}
@@ -132,7 +129,7 @@ func (t *Tab) focusBody(spec config.ThreeBodyWindow, wsID int, addr string) (*hy
 	return findBodyOnWorkspace(clients, wsID, spec), wsID, nil
 }
 
-func (t *Tab) swapBodyShadow(st *state.ThreeBodyState, wsID int) error {
+func (t *Selector) swapBodyShadow(st *state.ThreeBodyState, wsID int) error {
 	tiled, err := windows.GetTiledWindows(t.hypr, wsID)
 	if err != nil {
 		return fmt.Errorf("get tiled: %w", err)
@@ -191,21 +188,7 @@ func findWindowByAddress(clients []hypr.Window, addr string) *hypr.Window {
 	return nil
 }
 
-func (t *Tab) activeWorkspace() (int, error) {
-	data, err := t.hypr.Request("j/activeworkspace")
-	if err != nil {
-		return 0, err
-	}
-	var ws struct {
-		ID int `json:"id"`
-	}
-	if err := json.Unmarshal(data, &ws); err != nil {
-		return 0, fmt.Errorf("parse workspace: %w", err)
-	}
-	return ws.ID, nil
-}
-
-func (t *Tab) findEditor(wsID int) (*hypr.Window, error) {
+func (t *Selector) findEditor(wsID int) (*hypr.Window, error) {
 	clients, err := t.hypr.Clients()
 	if err != nil {
 		return nil, err

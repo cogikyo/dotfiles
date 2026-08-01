@@ -1,7 +1,5 @@
 package main
 
-// events.go consumes Hyprland event-socket lines and mirrors them into state plus subscriber updates.
-
 import (
 	"bufio"
 	"encoding/json"
@@ -114,10 +112,6 @@ func (e *EventLoop) updateOccupied() error {
 	return nil
 }
 
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ Event dispatch                                                               │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
-
 // handleEvent dispatches one Hyprland event-socket line: `event>>data`.
 func (e *EventLoop) handleEvent(line string) {
 	event, data, ok := strings.Cut(line, ">>")
@@ -224,14 +218,5 @@ func (e *EventLoop) notifyWorkspace() {
 	if e.subs == nil {
 		return
 	}
-	current := e.state.GetWorkspace()
-	occupied := e.state.GetOccupied()
-
-	data := map[string]any{
-		"current":      current,
-		"current_str":  strconv.Itoa(current),
-		"occupied":     occupied,
-		"occupied_str": joinWorkspaceIDs(occupied),
-	}
-	e.subs.Notify("workspace", data)
+	e.subs.Notify("workspace", workspacePayload(e.state))
 }

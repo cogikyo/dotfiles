@@ -1,6 +1,5 @@
-package session
-
-// kitty.go wraps kitty remote-control commands and typed state decoding for tab/session automation.
+// Package kitty owns Kitty transport, tab profiles, refresh, selection, and host switching for hyprd.
+package kitty
 
 import (
 	"encoding/json"
@@ -10,23 +9,23 @@ import (
 	"strings"
 )
 
-// KittyClient talks to a kitty instance over its per-PID unix remote-control socket.
-type KittyClient struct {
+// Client talks to one Kitty instance through its per-PID Unix remote-control socket.
+type Client struct {
 	socketPath string
 }
 
-func NewKittyClient(pid int) *KittyClient {
-	return &KittyClient{socketPath: fmt.Sprintf("unix:/tmp/kitty-%d", pid)}
+func NewClient(pid int) *Client {
+	return &Client{socketPath: fmt.Sprintf("unix:/tmp/kitty-%d", pid)}
 }
 
-type KittyOSWindow struct {
-	ID        int        `json:"id"`
-	IsFocused bool       `json:"is_focused"`
-	IsActive  bool       `json:"is_active"`
-	Tabs      []KittyTab `json:"tabs"`
+type OSWindow struct {
+	ID        int   `json:"id"`
+	IsFocused bool  `json:"is_focused"`
+	IsActive  bool  `json:"is_active"`
+	Tabs      []Tab `json:"tabs"`
 }
 
-type KittyTab struct {
+type Tab struct {
 	ID             int            `json:"id"`
 	IsActive       bool           `json:"is_active"`
 	IsFocused      bool           `json:"is_focused"`
@@ -34,64 +33,63 @@ type KittyTab struct {
 	Layout         string         `json:"layout"`
 	LayoutOpts     map[string]any `json:"layout_opts"`
 	EnabledLayouts []string       `json:"enabled_layouts"`
-	Windows        []KittyPane    `json:"windows"`
+	Windows        []Pane         `json:"windows"`
 }
 
-type KittyPane struct {
+type Pane struct {
 	ID        int    `json:"id"`
 	Title     string `json:"title"`
 	IsActive  bool   `json:"is_active"`
 	IsFocused bool   `json:"is_focused"`
 	CWD       string `json:"cwd"`
 	// Cmdline is the window's direct child argv from Kitty ls (0.48.1 schema).
-	// For managed remote panes this is the stable local launch shape (kitten ssh …),
-	// not the tty foreground which often settles to plain ssh.
+	// For managed remote panes this is the stable local launch shape (kitten ssh …), not the tty foreground which often settles to plain ssh.
 	Cmdline             []string          `json:"cmdline"`
 	Env                 map[string]string `json:"env"`
 	UserVars            map[string]string `json:"user_vars"`
-	ForegroundProcesses []KittyProcess    `json:"foreground_processes"`
+	ForegroundProcesses []Process         `json:"foreground_processes"`
 }
 
-type KittyProcess struct {
+type Process struct {
 	Cmdline []string `json:"cmdline"`
 	CWD     string   `json:"cwd"`
 	PID     int      `json:"pid"`
 }
 
-func (k *KittyClient) FullState() ([]KittyOSWindow, error) {
+func (k *Client) FullState() ([]OSWindow, error) {
 	out, err := exec.Command("kitty", "@", "--to", k.socketPath, "ls").CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("kitty ls: %w: %s", err, strings.TrimSpace(string(out)))
 	}
 
-	var windows []KittyOSWindow
+	var windows []OSWindow
 	if err := json.Unmarshal(out, &windows); err != nil {
 		return nil, fmt.Errorf("parse kitty state: %w", err)
 	}
 	return windows, nil
 }
 
-func (k *KittyClient) FocusTab(tabID string) error {
+func (k *Client) FocusTab(tabID string) error {
 	return exec.Command("kitty", "@", "--to", k.socketPath,
 		"focus-tab", "--match", "env:KITTY_TAB_ID="+tabID).Run()
 }
 
-func (k *KittyClient) GotoTab(index int) error {
+func (k *Client) gotoTab(index int) error {
 	return exec.Command("kitty", "@", "--to", k.socketPath,
 		"action", "goto_tab", fmt.Sprintf("%d", index)).Run()
 }
 
-func (k *KittyClient) FocusWindow(id int) error {
+func (k *Client) FocusWindow(id int) error {
 	return exec.Command("kitty", "@", "--to", k.socketPath,
 		"focus-window", "--match", fmt.Sprintf("id:%d", id)).Run()
 }
 
-func (k *KittyClient) Launch(args ...string) error {
-	_, err := k.LaunchID(args...)
+func (k *Client) launch(args ...string) error {
+	_, err := k.launchID(args...)
 	return err
 }
 
-func (k *KittyClient) LaunchID(args ...string) (int, error) {
+func (k *Client) launchID(args ...string) (int, error) {
 	cmdArgs := append([]string{"@", "--to", k.socketPath, "launch"}, args...)
 	out, err := exec.Command("kitty", cmdArgs...).CombinedOutput()
 	if err != nil {
@@ -104,18 +102,18 @@ func (k *KittyClient) LaunchID(args ...string) (int, error) {
 	return id, nil
 }
 
-func (k *KittyClient) GotoLayout(tabID, layout string) error {
+func (k *Client) gotoLayout(tabID, layout string) error {
 	return exec.Command("kitty", "@", "--to", k.socketPath,
 		"goto-layout", "--match", "env:KITTY_TAB_ID="+tabID, layout).Run()
 }
 
-func (k *KittyClient) GotoLayoutByNumericID(id int, layout string) error {
+func (k *Client) gotoLayoutByNumericID(id int, layout string) error {
 	return exec.Command("kitty", "@", "--to", k.socketPath,
 		"goto-layout", "--match", fmt.Sprintf("id:%d", id), layout).Run()
 }
 
-// CloseTab closes the tab with the given KITTY_TAB_ID; a missing tab is a no-op.
-func (k *KittyClient) CloseTab(tabID string) error {
+// closeTab closes the tab with the given KITTY_TAB_ID; a missing tab is a no-op.
+func (k *Client) closeTab(tabID string) error {
 	out, err := exec.Command("kitty", "@", "--to", k.socketPath,
 		"close-tab", "--match", "env:KITTY_TAB_ID="+tabID).CombinedOutput()
 	if err != nil {
@@ -127,12 +125,12 @@ func (k *KittyClient) CloseTab(tabID string) error {
 	return nil
 }
 
-func (k *KittyClient) CloseTabByNumericID(id int) error {
+func (k *Client) closeTabByNumericID(id int) error {
 	return exec.Command("kitty", "@", "--to", k.socketPath,
 		"close-tab", "--match", fmt.Sprintf("id:%d", id)).Run()
 }
 
-func (k *KittyClient) CloseTabsByNumericIDs(ids []int) error {
+func (k *Client) closeTabsByNumericIDs(ids []int) error {
 	if len(ids) == 0 {
 		return nil
 	}
@@ -144,41 +142,41 @@ func (k *KittyClient) CloseTabsByNumericIDs(ids []int) error {
 		"close-tab", "--match", strings.Join(terms, " or ")).Run()
 }
 
-func (k *KittyClient) FocusTabByNumericID(id int) error {
+func (k *Client) focusTabByNumericID(id int) error {
 	return exec.Command("kitty", "@", "--to", k.socketPath,
 		"focus-tab", "--match", fmt.Sprintf("id:%d", id)).Run()
 }
 
-func (k *KittyClient) Notify(args ...string) error {
+func (k *Client) notify(args ...string) error {
 	cmdArgs := []string{"@", "--to", k.socketPath, "kitten", "--match", "state:focused", "notify"}
 	cmdArgs = append(cmdArgs, args...)
 	return exec.Command("kitty", cmdArgs...).Run()
 }
 
-func focusedOSWindow(windows []KittyOSWindow) (KittyOSWindow, error) {
-	var focused *KittyOSWindow
+func focusedOSWindow(windows []OSWindow) (OSWindow, error) {
+	var focused *OSWindow
 	for i := range windows {
 		if !windows[i].IsFocused {
 			continue
 		}
 		if focused != nil {
-			return KittyOSWindow{}, fmt.Errorf("multiple focused kitty OS windows")
+			return OSWindow{}, fmt.Errorf("multiple focused kitty OS windows")
 		}
 		focused = &windows[i]
 	}
 	if focused == nil {
-		return KittyOSWindow{}, fmt.Errorf("no focused kitty OS window")
+		return OSWindow{}, fmt.Errorf("no focused kitty OS window")
 	}
 	return *focused, nil
 }
 
-func (k *KittyClient) MoveTabBackward() error {
+func (k *Client) moveTabBackward() error {
 	return exec.Command("kitty", "@", "--to", k.socketPath,
 		"action", "move_tab_backward").Run()
 }
 
-// TabIndex returns the position of tabID in the first OS window, or -1 if absent.
-func (k *KittyClient) TabIndex(tabID string) (int, error) {
+// tabIndex returns the position of tabID in the first OS window, or -1 if absent.
+func (k *Client) tabIndex(tabID string) (int, error) {
 	windows, err := k.FullState()
 	if err != nil {
 		return -1, err
@@ -196,7 +194,7 @@ func (k *KittyClient) TabIndex(tabID string) (int, error) {
 	return -1, nil
 }
 
-func tabHasID(tab KittyTab, tabID string) bool {
+func tabHasID(tab Tab, tabID string) bool {
 	for _, pane := range tab.Windows {
 		if pane.Env != nil && pane.Env["KITTY_TAB_ID"] == tabID {
 			return true
@@ -205,10 +203,10 @@ func tabHasID(tab KittyTab, tabID string) bool {
 	return false
 }
 
-func tabSelected(tab KittyTab) bool {
+func tabSelected(tab Tab) bool {
 	return tab.IsFocused || tab.IsActive
 }
 
-func paneSelected(pane KittyPane) bool {
+func paneSelected(pane Pane) bool {
 	return pane.IsFocused || pane.IsActive
 }

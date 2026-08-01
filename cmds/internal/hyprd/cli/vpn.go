@@ -1,7 +1,5 @@
 package cli
 
-// vpn.go bridges hyprd's CLI-only VPN verb to the NetworkManager-backed vpn package.
-
 import (
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/vpn"

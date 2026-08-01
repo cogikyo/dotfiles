@@ -1,7 +1,5 @@
 package browser
 
-// snapshot.go writes repo-backed snapshot artifacts and summarizes Firefox windows into launch-ready config.
-
 import (
 	"cmp"
 	"dotfiles/cmds/internal/config"

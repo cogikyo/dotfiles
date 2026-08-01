@@ -1,9 +1,6 @@
 package wm
 
-// monocle.go toggles monocle mode by floating the focused window and parking sibling windows per workspace.
-
 import (
-	"encoding/json"
 	"fmt"
 	"strconv"
 
@@ -27,7 +24,7 @@ func NewMonocle(h *hypr.Client, s *state.State) *Monocle {
 
 // Execute toggles monocle on the current workspace.
 func (m *Monocle) Execute() (string, error) {
-	wsID, err := m.activeWorkspace()
+	wsID, err := m.hypr.ActiveWorkspace()
 	if err != nil {
 		return "", err
 	}
@@ -39,7 +36,7 @@ func (m *Monocle) Execute() (string, error) {
 
 // DeactivateIfActive deactivates monocle on the current workspace without toggling it on.
 func (m *Monocle) DeactivateIfActive() (string, error) {
-	wsID, err := m.activeWorkspace()
+	wsID, err := m.hypr.ActiveWorkspace()
 	if err != nil {
 		return "", err
 	}
@@ -49,13 +46,9 @@ func (m *Monocle) DeactivateIfActive() (string, error) {
 	return m.deactivate(wsID)
 }
 
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ activate / deactivate                                                        │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
-
 // activate floats the active window at monocle geometry and parks siblings, saving any three-body state.
 func (m *Monocle) activate() (string, error) {
-	wsID, err := m.activeWorkspace()
+	wsID, err := m.hypr.ActiveWorkspace()
 	if err != nil {
 		return "", err
 	}
@@ -150,10 +143,6 @@ func (m *Monocle) deactivate(wsID int) (string, error) {
 	return fmt.Sprintf("monocle off: ws%d, %d windows restored", wsID, len(ms.Windows)), nil
 }
 
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ restore helpers                                                              │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
-
 // ensureMaster swaps the saved master back to position 0 if Hyprland re-tiled in a different order.
 func (m *Monocle) ensureMaster(wsID int, masterAddr string) {
 	if masterAddr == "" {
@@ -192,18 +181,4 @@ func (m *Monocle) restoreThreeBody(wsID int, saved *state.ThreeBodyState) {
 	_ = m.hypr.MoveWindowToWorkspace(saved.Shadow, windows.ShadowWorkspace, false)
 	_ = m.hypr.FocusWindow(saved.Active)
 	m.state.SetThreeBody(wsID, saved)
-}
-
-func (m *Monocle) activeWorkspace() (int, error) {
-	data, err := m.hypr.Request("j/activeworkspace")
-	if err != nil {
-		return 0, err
-	}
-	var ws struct {
-		ID int `json:"id"`
-	}
-	if err := json.Unmarshal(data, &ws); err != nil {
-		return 0, fmt.Errorf("parse workspace: %w", err)
-	}
-	return ws.ID, nil
 }

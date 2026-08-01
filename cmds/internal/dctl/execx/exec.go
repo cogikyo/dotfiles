@@ -1,16 +1,10 @@
 // Package execx wraps external command execution for production code and tests.
-//
-// Responsibilities:
-// - Capture stdout/stderr for planning and checks.
-// - Stream stdio for long-running interactive installs when requested.
-// - Expose a narrow runner interface for dry-run and unit-test seams.
 package execx
-
-// exec.go defines command runner contracts and the OS-backed implementation.
 
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -69,7 +63,8 @@ func (r OSRunner) Output(ctx context.Context, dir string, name string, args ...s
 }
 
 func commandErr(name string, args []string, err error, res *Result) error {
-	if exitErr, ok := err.(*exec.ExitError); ok {
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
 		res.ExitCode = exitErr.ExitCode()
 		return fmt.Errorf("%s %s failed with exit %d", name, strings.Join(args, " "), res.ExitCode)
 	}

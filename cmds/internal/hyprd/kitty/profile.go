@@ -1,6 +1,4 @@
-package session
-
-// profile.go contains tab-profile detection, alias expansion, and semantic candidate selection helpers.
+package kitty
 
 import (
 	"fmt"
@@ -11,7 +9,7 @@ import (
 )
 
 // detectTabProfile infers the tab profile by matching KITTY_TAB_ID prefixes; falls back to "editor".
-func detectTabProfile(cfg *config.HyprConfig, win KittyOSWindow) string {
+func detectTabProfile(cfg *config.HyprConfig, win OSWindow) string {
 	if cfg == nil || cfg.Tabs == nil {
 		return "editor"
 	}
@@ -65,7 +63,7 @@ func baseTabName(nameOrAlias string) string {
 	return name
 }
 
-func activeProfileTabName(cfg *config.HyprConfig, profileName string, win KittyOSWindow) string {
+func activeProfileTabName(cfg *config.HyprConfig, profileName string, win OSWindow) string {
 	profile, ok := cfg.Tabs[profileName]
 	if !ok {
 		return ""

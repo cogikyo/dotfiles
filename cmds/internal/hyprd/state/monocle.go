@@ -1,7 +1,5 @@
 package state
 
-// monocle.go provides monocle state accessors and shared window-close cleanup across layout maps.
-
 import "slices"
 
 // GetMonocle returns a deep copy of the workspace's monocle state, or nil if inactive.

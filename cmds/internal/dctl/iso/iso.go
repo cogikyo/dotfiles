@@ -459,10 +459,6 @@ func readPackageFile(path string) ([]string, error) {
 	return pkglist.Read(path)
 }
 
-func parsePackageList(r io.Reader) []string {
-	return pkglist.Parse(r)
-}
-
 func copyProfile(src string, dst string) error {
 	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {

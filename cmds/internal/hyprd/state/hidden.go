@@ -1,7 +1,5 @@
 package state
 
-// hidden.go defines hidden/three-body/monocle state types and hidden-window map accessors.
-
 // HiddenState records a window stashed on the special workspace, with enough context to restore its layout position.
 type HiddenState struct {
 	Address    string `json:"address"`

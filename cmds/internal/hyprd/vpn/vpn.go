@@ -1,12 +1,5 @@
 // Package vpn manages VPN connections via NetworkManager.
-//
-// Responsibilities:
-// - Resolve configured NetworkManager connection profiles.
-// - Load and export staged .nmconnection profiles.
-// - Run connect, disconnect, status, and toggle commands.
 package vpn
-
-// vpn.go defines the config-backed VPN command dispatcher and NetworkManager operations.
 
 import (
 	"dotfiles/cmds/internal/config"

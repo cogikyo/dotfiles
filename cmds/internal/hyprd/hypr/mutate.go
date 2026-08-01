@@ -1,6 +1,5 @@
 package hypr
 
-// mutate.go is the typed Hyprland 0.56+ mutation surface.
 // Mutations go through `eval` Lua (`hl.dispatch` / `hl.config` / …), not legacy dispatch/keyword.
 
 import (

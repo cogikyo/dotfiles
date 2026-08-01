@@ -1,7 +1,5 @@
 package browser
 
-// mozlz4.go encodes and decodes Firefox's mozLz40-wrapped jsonlz4 session files.
-
 import (
 	"encoding/binary"
 	"fmt"

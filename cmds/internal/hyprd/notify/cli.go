@@ -1,7 +1,5 @@
 package notify
 
-// cli.go parses `hyprd notify` subcommands and forwards normalized requests to the running daemon.
-
 import (
 	"dotfiles/cmds/internal/daemon"
 	"encoding/json"
@@ -11,10 +9,6 @@ import (
 	"strconv"
 	"strings"
 )
-
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ entry point                                                                  │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 // CmdNotify parses args, builds a NotifyRequest, and forwards it to the daemon.
 func CmdNotify(client *daemon.Client, args []string) {
@@ -43,10 +37,6 @@ func CmdNotify(client *daemon.Client, args []string) {
 		os.Exit(1)
 	}
 }
-
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ arg parsing                                                                  │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 func parseNotifyArgs(args []string) (NotifyRequest, error) {
 	if len(args) == 0 {
@@ -131,10 +121,6 @@ func dunstPayload(args []string) (app, summary, body, iconPath, urgency, desktop
 		os.Getenv("DUNST_DESKTOP_ENTRY"),
 		envInt("DUNST_ID")
 }
-
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ payload + env helpers                                                        │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 func readJSONPayload(raw string) map[string]any {
 	if strings.TrimSpace(raw) == "" {

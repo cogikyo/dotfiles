@@ -1,12 +1,6 @@
 // Package daemon provides Unix-socket request/response and pub/sub primitives for local daemons.
-//
-// Responsibilities:
-// - Serve command handlers over Unix domain sockets.
-// - Manage topic subscriptions and event fan-out.
-// - Expose client helpers for one-shot and streaming calls.
 package daemon
 
-// server.go defines the daemon socket server lifecycle and command dispatch loop.
 import (
 	"errors"
 	"fmt"
@@ -18,7 +12,6 @@ import (
 	"syscall"
 )
 
-// CommandHandler processes a command string and returns a response.
 type CommandHandler func(command string) string
 
 // SubscribeHandler is called on new subscriptions to push initial state.
@@ -35,7 +28,6 @@ type Server struct {
 	shutdownOnce sync.Once
 }
 
-// NewServer returns a Server bound to socketPath.
 func NewServer(socketPath string, handler CommandHandler) *Server {
 	return &Server{
 		SocketPath: socketPath,

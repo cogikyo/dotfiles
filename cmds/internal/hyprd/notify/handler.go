@@ -1,17 +1,10 @@
-// Package notify handles hyprd notification intake, styling, and delivery.
-//
-// It normalizes source-specific events into a single dispatch pipeline.
-//
-// Responsibilities:
-// - Normalize notification requests from CLI and hook sources.
-// - Resolve kitty and workspace context for icons and focus actions.
-// - Dispatch dunst notifications and optional sound effects.
+// Package notify handles hyprd notification intake, normalization, styling, delivery, routing, and activation.
+// It owns the source-specific event dispatch pipeline and notification activation behavior.
 package notify
-
-// handler.go routes notify events by source and executes the sound-plus-dunst dispatch pipeline.
 
 import (
 	"dotfiles/cmds/internal/config"
+	"errors"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -75,10 +68,6 @@ func init() {
 	go soundWorker()
 }
 
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ router                                                                       │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
-
 // CanDispatch reports whether a request has enough context for visible delivery.
 func (n *Notifier) CanDispatch(req NotifyRequest) bool {
 	if req.Source != "opencode" {
@@ -121,10 +110,6 @@ func (n *Notifier) Handle(req NotifyRequest) error {
 		return fmt.Errorf("unknown notify source: %s", req.Source)
 	}
 }
-
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ source handlers                                                              │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 func (n *Notifier) handleSend(req NotifyRequest) error {
 	urgency := req.Urgency
@@ -282,10 +267,6 @@ func (n *Notifier) handleDunst(req NotifyRequest) error {
 	}
 }
 
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ dispatch pipeline                                                            │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
-
 // dispatch resolves sound/volume from the agent style, queues the sound, and sends the dunst notification.
 func (n *Notifier) dispatch(spec notificationSpec, ctx *kittyContext) error {
 	if spec.Delay > 0 {
@@ -339,7 +320,8 @@ func (n *Notifier) sendDunst(spec notificationSpec, ctx *kittyContext) error {
 		cmd := exec.Command("dunstify", args...)
 		out, err := cmd.CombinedOutput()
 		if err != nil {
-			if _, ok := err.(*exec.ExitError); !ok {
+			var exitErr *exec.ExitError
+			if !errors.As(err, &exitErr) {
 				return fmt.Errorf("dunstify: %w", err)
 			}
 		}
@@ -441,10 +423,6 @@ func soundWorker() {
 		_ = exec.Command("paplay", "--volume="+strconv.Itoa(paVolume), req.path).Run()
 	}
 }
-
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ pane acknowledgement                                                         │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 func (n *Notifier) acknowledgePane(ctx *kittyContext) {
 	globalPaneNotifications.Cancel(ctx, opencodePaneAckGroups)
@@ -556,10 +534,6 @@ func closeDunstNotification(id int) {
 	}
 	_ = runDetached("dunstctl", "close", strconv.Itoa(id))
 }
-
-// ╭──────────────────────────────────────────────────────────────────────────────╮
-// │ config lookups                                                               │
-// ╰──────────────────────────────────────────────────────────────────────────────╯
 
 // fromHyprd reports whether hyprd sent this notification itself.
 //
