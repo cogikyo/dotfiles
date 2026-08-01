@@ -176,6 +176,20 @@ tabs:
         command: nvim
         executables: [nvim]
         cwd: "~/LeadPier"
+        focus_pane: 0
+        actions:
+          nvim:
+            pane: 0
+          term:
+            pane: 1
+        layout: "fat:bias=50"
+        panes:
+          - cwd: "~/LeadPier/pier"
+      - name: runner
+        title: "«   »"
+        command: nvim
+        executables: [nvim]
+        cwd: "~/LeadPier/backend"
         actions:
           nvim:
             pane: 0
@@ -183,7 +197,8 @@ tabs:
             pane: 1
         layout: "fat:bias=80"
         panes:
-          - cwd: "~/LeadPier/pier"
+          - command: ""
+            cwd: "~/LeadPier/backend"
       - name: pier
         title: "«   »"
         command: nvim
@@ -197,21 +212,7 @@ tabs:
         layout: "fat:bias=80"
         panes:
           - command: ""
-            cwd: "~/LeadPier/frontend"
-      - name: runner
-        title: "«   »"
-        command: nvim
-        executables: [nvim]
-        cwd: "~/LeadPier/backend/core/runner"
-        actions:
-          nvim:
-            pane: 0
-          term:
-            pane: 1
-        layout: "fat:bias=80"
-        panes:
-          - command: ""
-            cwd: "~/LeadPier/backend"
+            cwd: "~/LeadPier/pier"
 
 # ╭───────────────────────────────────────────────────────────────────────────────╮
 # │ background                                                                    │

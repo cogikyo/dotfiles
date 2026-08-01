@@ -464,7 +464,9 @@ func (t *Manager) launchManagedTab(kitty *Client, profile *config.TabProfile, ta
 		return err
 	}
 	launchArgs := t.buildLaunchArgs(tab, tabID, controller, host, logical, cwd)
-	if err := kitty.launch(launchArgs...); err != nil {
+	paneIDs := make([]int, 1, len(tab.Panes)+1)
+	paneIDs[0], err = kitty.launchID(launchArgs...)
+	if err != nil {
 		return fmt.Errorf("launch tab %s: %w", tab.Name, err)
 	}
 
@@ -485,14 +487,24 @@ func (t *Manager) launchManagedTab(kitty *Client, profile *config.TabProfile, ta
 			return err
 		}
 		launchArgs = t.buildPaneLaunchArgs(tabID, pane, controller, host, paneLogical, paneCWD, paneIndex)
-		if err := kitty.launch(launchArgs...); err != nil {
+		paneID, err := kitty.launchID(launchArgs...)
+		if err != nil {
 			return fmt.Errorf("launch pane for tab %s: %w", tab.Name, err)
 		}
+		paneIDs = append(paneIDs, paneID)
 	}
 
 	if tab.Layout != "" && len(tab.Panes) > 0 {
 		if err := kitty.gotoLayout(tabID, tab.Layout); err != nil {
 			return fmt.Errorf("reapply layout for tab %s: %w", tab.Name, err)
+		}
+	}
+	if tab.FocusPane != nil {
+		if *tab.FocusPane < 0 || *tab.FocusPane >= len(paneIDs) {
+			return fmt.Errorf("tab %s focus_pane %d out of range", tab.Name, *tab.FocusPane)
+		}
+		if err := kitty.FocusWindow(paneIDs[*tab.FocusPane]); err != nil {
+			return fmt.Errorf("focus pane for tab %s: %w", tab.Name, err)
 		}
 	}
 
