@@ -10,7 +10,7 @@ windows:
     normal: [85, 86, 30, 126]
     share: [20, 20, 16, 22]
   monocle:
-    width: 2882
+    width: 2880
     height: 1864
     offset_x: 0
     offset_y: 25
@@ -197,7 +197,7 @@ tabs:
         layout: "fat:bias=80"
         panes:
           - command: ""
-            cwd: "~/LeadPier/pier"
+            cwd: "~/LeadPier/frontend"
       - name: runner
         title: "«   »"
         command: nvim
@@ -211,7 +211,7 @@ tabs:
         layout: "fat:bias=80"
         panes:
           - command: ""
-            cwd: "~/LeadPier/backend/core/runner"
+            cwd: "~/LeadPier/backend"
 
 # ╭───────────────────────────────────────────────────────────────────────────────╮
 # │ background                                                                    │
