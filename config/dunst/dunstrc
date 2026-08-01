@@ -44,7 +44,6 @@
     dmenu = "/usr/bin/bmenu -p dunst:"
     browser = "/usr/bin/xdg-open"
     always_run_script = true
-    script = "/home/cullyn/.local/bin/hyprd notify dunst" # cmds/cmd/hyprd — plays sound + handles focus
     title = "Dunst"
     class = "Dunst"
     corner_radius = 8
@@ -54,6 +53,10 @@
     mouse_left_click = "do_action, close_current"
     mouse_middle_click = "do_action"
     mouse_right_click = "close_all"
+
+[hyprd-hook]
+    appname = ".*"
+    script = "/home/cullyn/.config/dunst/hyprd-hook"
 
 [urgency_low]
     background = "#25284180"

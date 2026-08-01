@@ -70,7 +70,7 @@ hyprd/
 └── notify/                     # notification formatting + delivery (dunst bridge)
     ├── handler.go              #   dispatch by source (opencode/kitty/dunst/send)
     ├── cli.go                  #   `hyprd notify ...` CLI parsing
-    ├── actions.go              #   D-Bus listener for dunst notification click-to-focus
+    ├── actions.go              #   pending app routes + D-Bus listener for notification activation
     ├── assets.go               #   sound/icon path constants
     ├── context.go              #   per-ws notification context
     ├── helpers.go              #   sound/icon resolution from config
@@ -92,7 +92,7 @@ hyprd/
 | Adding a new daemon command | add file in `wm/`, register in `daemon.go` |
 | Adding a new CLI-only tool | add file in `cli/`, register in `main.go` |
 | Notification styling and sounds | `config/hyprd.yaml` → `notify.*`, logic in `notify/handler.go` |
-| Notification click-to-focus | `notify/actions.go` — D-Bus ActionInvoked listener |
+| Notification activation (click or Alt+C) | `notify/actions.go` — pending app routes + D-Bus ActionInvoked listener |
 | Kitty tab profiles (editor/agents/leadpier) | `config/hyprd.yaml` → `tabs.*`, logic in `session/tab.go` + `tabs.go` |
 | Interactive session picker | `session/picker.go` → `Picker.Execute` |
 | Firefox session snapshots | `browser/` — snapshot, restore, profile discovery |

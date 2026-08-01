@@ -561,12 +561,18 @@ func closeDunstNotification(id int) {
 // │ config lookups                                                               │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
+// fromHyprd reports whether hyprd sent this notification itself.
+//
+// dunst reports every notification back through the script hook, hyprd's own included.
+func fromHyprd(req NotifyRequest) bool {
+	return req.Category == "hyprd" || req.DesktopEntry == "hyprd"
+}
+
 // soundForDunst picks a sound for a dunst script event.
 //
-// Notifications dispatched by hyprd itself carry category "hyprd" — skip those
-// to avoid double-sounding through the dunst script callback loop.
+// Skip hyprd's own notifications to avoid double-sounding through the dunst script callback loop.
 func (n *Notifier) soundForDunst(req NotifyRequest) string {
-	if req.Category == "hyprd" || req.DesktopEntry == "hyprd" {
+	if fromHyprd(req) {
 		return ""
 	}
 
