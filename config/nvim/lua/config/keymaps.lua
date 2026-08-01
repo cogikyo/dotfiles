@@ -52,6 +52,7 @@ local GROUPS = {
 map("n", "<C-s>", ":w<CR>", desc("Save"))
 map("i", "<C-s>", "<Esc>:w<CR>", desc("Save"))
 map("v", "<C-s>", "<Esc>:w<CR>", desc("Save"))
+map("n", "<leader><C-s>", ":noautocmd wq<CR>", desc("Save and quit without formatting"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ quit: exit, force quit, escape                                              │
