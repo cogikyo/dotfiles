@@ -181,7 +181,7 @@ STEP_DEFS=(
     "system|Install system configs and enable services|yes|link"
     "hibernate|Configure swapfile and suspend-then-hibernate|yes|"
     "fonts|Extract fonts and optionally build Iosevka|no|"
-    "go|Build Go binaries (dctl, hyprd, ewwd, newtab)|no|"
+    "go|Build Go binaries (dctl, hyprd, ewwd, newtab, src)|no|"
     "vpn|Load decrypted NetworkManager VPN profiles|yes|secrets,go"
     "eww|Install eww widget system|no|"
     "firefox|Configure Firefox profile, theme, and preferences|no|repos"
@@ -1827,6 +1827,7 @@ declare -A GO_BINARIES=(
     ["hyprd"]="cmds|./cmd/hyprd|Hyprland window management daemon|yes|"
     ["ewwd"]="cmds|./cmd/ewwd|System utilities daemon for eww|no|"
     ["newtab"]="cmds|./cmd/newtab|Firefox new tab HTTP server|yes|"
+    ["src"]="cmds|./cmd/src|Source inspection cache|no|"
 )
 
 build_go_binary() {
