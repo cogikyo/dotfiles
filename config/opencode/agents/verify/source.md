@@ -3,6 +3,9 @@ description: Verifies claims against upstream source via the src cache and regis
 mode: subagent
 permission:
   edit: deny
+  task: deny
+  todowrite: deny
+  question: deny
 color: success
 ---
 

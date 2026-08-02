@@ -1,6 +1,11 @@
 ---
 description: Maps governing instructions, `AGENTS.md` scopes, conventions, and task-relevant files so the parent loads the right context and none of the wrong context.
 mode: subagent
+permission:
+  edit: deny
+  task: deny
+  todowrite: deny
+  question: deny
 color: info
 ---
 

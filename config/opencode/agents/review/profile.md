@@ -1,6 +1,12 @@
 ---
 description: "Performance-shape review: algorithms, allocations, I/O batching, repeated work, hot paths, caching; findings require hotness or blast-radius evidence."
 mode: subagent
+permission:
+  edit: deny
+  bash: deny
+  task: deny
+  todowrite: deny
+  question: deny
 color: info
 ---
 

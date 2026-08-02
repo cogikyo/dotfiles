@@ -4,23 +4,8 @@ mode: subagent
 permission:
   edit: deny
   bash: deny
-  task:
-    "*": deny
-    "scout/context": allow
-    "scout/library": allow
-    "scout/session": allow
-    "scout/web": allow
-    "review/debug": allow
-    "review/security": allow
-    "review/architect": allow
-    "review/critic": allow
-    "review/simplify": allow
-    "review/modernize": allow
-    "review/profile": allow
-    "review/test": allow
-    "verify/web": allow
-    "verify/source": allow
-    "verify/x": allow
+  task: deny
+  todowrite: deny
   question: deny
 color: secondary
 ---

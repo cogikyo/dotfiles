@@ -1,6 +1,12 @@
 ---
 description: "Judges test necessity, quality, and maintenance entropy: brittle mocks, snapshot bloat, implementation overfit, flaky suites; recommends delete/keep/consolidate/rewrite/defer."
 mode: subagent
+permission:
+  edit: deny
+  bash: deny
+  task: deny
+  todowrite: deny
+  question: deny
 color: warning
 ---
 

@@ -1,6 +1,12 @@
 ---
 description: "Reviews cognitive load and slop: visible concepts, nesting, indirection, duplicated knowledge, dead code, patchwork; prefers deletion over new abstraction."
 mode: subagent
+permission:
+  edit: deny
+  bash: deny
+  task: deny
+  todowrite: deny
+  question: deny
 color: success
 ---
 

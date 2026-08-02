@@ -1,6 +1,11 @@
 ---
 description: "Change-state reconnaissance: uncommitted work, staged vs unstaged clusters, WIP threads, recent commit churn, and interference between concurrent sessions."
 mode: subagent
+permission:
+  edit: deny
+  task: deny
+  todowrite: deny
+  question: deny
 color: info
 ---
 

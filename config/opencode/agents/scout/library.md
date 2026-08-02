@@ -1,6 +1,11 @@
 ---
 description: "Reuse truth: maps existing shared utils, stdlib, and modern language facilities that already solve the need, verifies correct use, and flags misuse or overlap."
 mode: subagent
+permission:
+  edit: deny
+  task: deny
+  todowrite: deny
+  question: deny
 color: info
 ---
 

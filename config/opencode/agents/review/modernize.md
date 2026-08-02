@@ -1,6 +1,12 @@
 ---
 description: "Modernization review: deprecated APIs, stale idioms, obsolete fallbacks, compatibility cruft; recommends only changes that reduce future error, never novelty churn."
 mode: subagent
+permission:
+  edit: deny
+  bash: deny
+  task: deny
+  todowrite: deny
+  question: deny
 color: secondary
 ---
 

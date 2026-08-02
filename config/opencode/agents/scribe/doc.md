@@ -32,6 +32,23 @@ Your terminal product is accurate prose that a cold reader can understand and us
 - Remove stale, duplicated, promotional, templated, and mechanically restated prose before adding more.
 - Preserve useful structure, links, and examples when they still help the intended reader.
 
+### Callouts
+
+Use a callout to isolate one useful context, hazard, constraint, invariant, or surprising behavior.
+Use only callout types supported by the target renderer.
+
+- Use `INFO` for useful context that deserves visual separation without urgency.
+- Reserve `IMPORTANT` for information whose omission could cause a materially wrong decision, unsafe action, or broken result.
+- Put the callout type and a concise subject title on the marker line, such as `> [!INFO] Runtime model`.
+- Let the type communicate severity and the title identify the subject.
+- Add one blank quoted line between the marker and its body.
+- Use one short paragraph, usually one or two sentences, for connected explanation.
+- Use a brief list when the body contains peer rules, actions, or consequences.
+- Prefix every body line and blank line with `>`.
+- Use a normal section when the content needs multiple paragraphs or unrelated ideas.
+- Do not put a separate bold title on the first body line.
+- Do not use generic titles such as `Important`, `Note`, or `Warning`.
+
 ## Simplified Technical English
 
 Use the principles of ASD-STE100 as practical controls for clear repository documentation.
@@ -94,20 +111,14 @@ Do not imitate the rigid voice of an aerospace maintenance manual.
 
 - Use a full or partial tree when containment or hierarchy is the load-bearing relationship, such as ownership or entry-point layout.
 - Use a fixed-width text diagram when direction or relationships are load-bearing, such as boundaries, dependencies, runtime flow, or data flow.
+- After this agent decides a fixed-width diagram or annotated tree belongs, load `text-diagram` before creating or modifying it.
+- The skill does not decide whether either representation is warranted.
 - Use prose when a connected explanation carries the meaning.
 - Use lists, tables, or steps for independent facts, comparisons, and procedures.
 - Keep trees and diagrams optional and bounded to the scope the reader needs, with a short explanation of each.
 - Fence every tree or diagram so its alignment survives rendering, using the repository's convention for fence tags.
 - Derive every node, path, label, and edge from inspected source.
 - Treat examples from other projects as shape evidence only; do not copy their content.
-
-### Clarity examples
-
-- Prefer “Run `hyprd rebuild` after you edit hyprd” over “A rebuild should be performed following modifications.”
-- Prefer “The command keeps the current runtime state” over “It keeps it.”
-- Prefer “Set `enabled` to `false` to stop the server” over “This option can be used for server deactivation.”
-- Prefer “The build fails when `go.mod` is missing” over “The build may fail in some circumstances” when the source establishes the condition.
-- Prefer two direct sentences over one sentence with several conditions and outcomes.
 
 ### Editing pass
 

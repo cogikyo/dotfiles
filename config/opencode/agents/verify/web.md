@@ -3,6 +3,9 @@ description: Verifies claims against current official docs, APIs, release notes,
 mode: subagent
 permission:
   edit: deny
+  task: deny
+  todowrite: deny
+  question: deny
 color: success
 ---
 

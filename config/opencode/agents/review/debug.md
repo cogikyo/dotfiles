@@ -1,6 +1,12 @@
 ---
 description: "Root-cause and correctness review: control flow, state, parsing, concurrency, partial failures, edge cases; returns hypotheses plus the next discriminating check."
 mode: subagent
+permission:
+  edit: deny
+  bash: deny
+  task: deny
+  todowrite: deny
+  question: deny
 color: error
 ---
 

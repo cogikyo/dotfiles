@@ -1,6 +1,12 @@
 ---
 description: Adversarial detail critique of plans, specs, option sets, and acceptance criteria; every objection needs plausible blast radius, evidence, or named uncertainty.
 mode: subagent
+permission:
+  edit: deny
+  bash: deny
+  task: deny
+  todowrite: deny
+  question: deny
 color: warning
 ---
 

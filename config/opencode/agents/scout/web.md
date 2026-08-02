@@ -3,6 +3,9 @@ description: "Open-ended web reconnaissance: maps the option space, prior art, e
 mode: subagent
 permission:
   edit: deny
+  task: deny
+  todowrite: deny
+  question: deny
 color: info
 ---
 

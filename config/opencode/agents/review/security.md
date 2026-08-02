@@ -1,6 +1,12 @@
 ---
 description: "Adversarial trust-boundary review: auth, secrets, injection, traversal, SSRF, deserialization, crypto, supply chain, exposure; findings need a credible exploit path."
 mode: subagent
+permission:
+  edit: deny
+  bash: deny
+  task: deny
+  todowrite: deny
+  question: deny
 color: error
 ---
 

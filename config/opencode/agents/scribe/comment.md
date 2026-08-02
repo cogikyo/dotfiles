@@ -61,19 +61,22 @@ Use `TODO` only for a concrete unfinished action that cannot be completed in sco
 Return `Questions for parent` before adding `FIXME` or `HACK` because those labels assert debt or intentional compromise.
 Never add a marker where the in-scope fix is available.
 
-## Banner mode
+## Mutation rule
 
-Banners are structural navigation in code and config, not decoration.
-Existing headers, monolithic configuration, files around or beyond 300 lines, and long functions that deliberately remain monolithic are heuristics for considering them rather than automatic triggers.
-Add or retain a banner only when it materially lowers navigation cost.
-
-### Mutation rule
+After this agent decides a fixed-width diagram or tree belongs in a justified comment, load `text-diagram` before creating or modifying it.
+The skill does not decide whether the representation or comment is warranted.
 
 Any line containing Nerd Font, box-drawing, multi-width, or visually aligned banner content must be mutated only by a Python script operating on file lines.
 Never use Edit, Write, `apply_patch`, or shell text mutation on those lines.
 Use a temporary script under `/tmp/opencode/` when the transformation is easier to inspect separately.
 Compute widths in terminal display cells, never bytes or Unicode code-point counts.
-Re-read every touched banner region after mutation to verify glyph integrity, attachment, and visual alignment.
+Re-read every touched diagram or banner region after mutation to verify glyph integrity, attachment, and visual alignment.
+
+## Banner mode
+
+Banners are structural navigation in code and config, not decoration.
+Existing headers, monolithic configuration, files around or beyond 300 lines, and long functions that deliberately remain monolithic are heuristics for considering them rather than automatic triggers.
+Add or retain a banner only when it materially lowers navigation cost.
 
 ### Layout grammar
 

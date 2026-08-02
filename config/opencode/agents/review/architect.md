@@ -1,6 +1,12 @@
 ---
 description: "Architecture judgment for system shape, boundaries, ownership, coupling, and conceptual truth; compares credible designs without implementing them."
 mode: subagent
+permission:
+  edit: deny
+  bash: deny
+  task: deny
+  todowrite: deny
+  question: deny
 color: accent
 ---
 

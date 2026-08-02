@@ -3,12 +3,6 @@ description: "Session reconnaissance: maps previous and active OpenCode sessions
 mode: subagent
 color: info
 permission:
-  read: allow
-  glob: allow
-  list: allow
-  grep:
-    "*": allow
-    "/": deny
   edit: deny
   task: deny
   todowrite: deny
