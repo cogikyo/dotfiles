@@ -55,8 +55,9 @@ Collab has no default terminal state; larger implementation chunks return with c
 
 An orchestration mode is a middle manager for work that requires several rounds of delegation, evidence, and synthesis.
 Give it a strictly smaller objective, let it manage its own leaves, and avoid adding a mode layer that only forwards messages.
+Treat more than three concurrent leaves or a multi-round leaf sequence as a strong signal to use an orchestration mode, not a hard threshold.
 Dispatch Scheme or Review before several leaves fail when predictable context pressure makes one leaf insufficient.
-Scheme returns an ephemeral plan when dispatched as a child, while Review returns a verdict; neither owns implementation.
+Scheme returns a focused plan or spec-ready synthesis, while Review returns a focused answer or synthesized verdict; neither owns implementation.
 Drive is a user-selected primary mode, never a child orchestration layer.
 When another mode dispatches Collab, treat the parent as the user, skip attended workflow approval and questions, and return unresolved decisions as `Questions for parent`.
 When attended steering stops adding value, offer a user-selected primary mode switch.
@@ -70,7 +71,8 @@ When attended steering stops adding value, offer a user-selected primary mode sw
   - `git/*`: change history, integrate branches, or publish work.
 
 Delegation has overhead and can be worse at times, be careful.
-Patch or read selected files directly during interactive work when you already hold enough context to finish, usually after major delegation.
+Stay direct for bounded short-lived requests when the current session already has enough context to finish.
+Patch or read selected files directly during interactive work when you already hold enough context.
 Delegate when work needs broad discovery, independent judgment, parallel concerns, or repeated rounds whose working sets would crowd the primary context.
 Small models are often still the better bet for patching, reviewing, or scouting, but there are exceptions.
 
@@ -179,6 +181,10 @@ Every handoff names its mode, repository root, and approved boundary.
 - Treat these templates as topology primitives; copy, compose, and expand them instead of freehanding new shapes.
 - Do not compress a real workflow into four or five steps merely to resemble a template.
 - Keep graphs to structural glyphs and step numbers only.
+- Use `(N)` when the current mode performs step `N` itself without a task dispatch.
+- Use `{S1}`, `{R3}`, or `{C5}` when Scheme, Review, or Collab owns a substantial internal workflow at that step.
+- Use `<N>` after step `N` as a loop exit gate; success continues forward and failure follows the loop edge.
+- Start every new loop iteration with fresh child sessions rather than resuming children from the previous iteration.
 - Arrows mark hard dependencies, disconnected starts may dispatch concurrently, and a merge waits for every incoming branch.
 - State in the step bullet whether sibling branches dispatch together or only the selected branch runs.
 
@@ -205,15 +211,17 @@ Conditional decision and merge where only the branch whose numbered step conditi
         └─→ 3 ──┴─→ 4
 ```
 
-The diamond is a decision, and only the branch whose numbered step condition matches runs.
+The diamond is a branch decision, and only the branch whose numbered step condition matches runs.
 
 Iterative loop:
 
 ```text
-1 ──→ 2 ──→ 3 ──→ 4
-↑           │
-└───────────┘
+1 ──→ 2 ──→ 3 ──→ 4 ──→ <4> ──→ 5
+      ↑                  │
+      └──────────────────┘
 ```
+
+`<4>` is step 4's acceptance gate, not another task; failure starts a fresh iteration at step 2.
 
 #### Complex Example
 
@@ -225,8 +233,8 @@ Composed workflow with planned concurrency, repeated proof, orchestrated hardeni
    - orchestrate concurrent scouts, synthesize ownership and dependencies, and return one plan without artifacts
 2. `[high • Sol Fast]` `build/general`: first implementation slice
    - complete one bounded part of the objective
-3. `[high • Sol Fast]` `build/general`: second implementation slice
-   - complete an independent bounded part concurrently with step 2
+3. `[medium • Sol Fast]` `build/general`: second implementation slice
+   - complete an independent bounded part concurrently with step 2, maybe this one is easier.
 4. `[high • Sol Fast]` `build/general`: third implementation slice
    - complete another independent bounded part concurrently with steps 2 and 3
 5. `[xhigh • Sol Fast]` `build/owner`: integration
@@ -250,16 +258,82 @@ Composed workflow with planned concurrency, repeated proof, orchestrated hardeni
     - build a clear atomic history from approved paths after every required check passes
 
 ```text
-    ┌─→ 2 ─┐
-1 ──┼─→ 3 ─┼─→ 5 ──→ 6 ──→ ◇ ──→ 8 ──→ ◇ ──→ 10 ──→ 11
-    └─→ 4 ─┘         ↑     │           │
-                     │     7           9
-                     │     │           │
-                     └─────┴───────────┘
+       ┌─→ 2 ─┐
+{S1} ──┼─→ 3 ─┼─→ 5 ──→ 6 ──→ <6> ──→ {R8} ──→ <8> ──→ 10 ──→ 11
+       └─→ 4 ─┘         ↑      │                │
+                        │      7                9
+                        │      │                │
+                        └──────┴────────────────┘
 ```
 
 Scheme owns the initial multi-scout synthesis, and Review owns the hardening fan-out and verdict.
-Step 9 returns to proof because hardening edits invalidate earlier verification evidence.
+Their graph nodes use `{S1}` and `{R8}` to identify the internal workflow owner.
+The `<6>` and `<8>` gates require verification and Review acceptance before the workflow can advance.
+
+### Drive handoff example
+
+Use this shape for an approved multi-spec buildout that may run unattended for hours and consume substantial capacity.
+Collab freezes the outer graph before the user switches to Drive.
+Every route and fallback in a Drive handoff uses a non-fast model.
+
+1. `[xhigh • Sol]` `scheme`: cross-spec execution map
+   - reconcile governing specs into dependencies, stable boundaries, implementation packets, and unresolved decisions
+2. `[xhigh • Sol]` `collab`: foundation phase
+   - own the shared contracts, migrations, and base mechanisms needed by every implementation stream
+3. `[xhigh • Sol]` `collab`: domain stream
+   - implement the approved core behavior behind the stable foundation boundary
+4. `[xhigh • Sol]` `collab`: integration stream
+   - implement transports, external integrations, and compatibility boundaries independently of step 3
+5. `[xhigh • Sol]` `collab`: interface stream
+   - implement user-facing and operational surfaces independently of steps 3 and 4
+6. `[xhigh • Sol]` `collab`: system integration
+   - merge the streams, resolve only approved mechanical conflicts, and prepare the integrated proof target
+7. `[xhigh • Sol]` `verify/test`: integrated proof
+   - run the approved suites, builds, static checks, and behavioral checks across the complete system
+8. `[xhigh • Sol]` `review`: broad hardening
+   - inspect the integrated system through the approved specialist and verifier workflow
+
+9. ◇ _if integrated proof fails or Review returns accepted findings_ ◇ `[xhigh • Sol]` `collab`: hardening
+   - repair the failed evidence or accepted findings and return to step 7, with at most two approved passes before Collab continuation
+
+10. `[xhigh • Sol]` `scheme`: rollout and removal plan
+    - synthesize migration order, compatibility removal, documentation, and operator-facing acceptance boundaries
+11. `[xhigh • Sol]` `collab`: finalization phase
+    - implement the approved rollout, cleanup, documentation, and removal work
+12. `[xhigh • Sol]` `verify/test`: final proof
+    - rerun every check invalidated by finalization and prove the terminal acceptance boundary
+13. `[xhigh • Sol]` `review`: final system judgment
+    - perform the approved final review across the completed buildout
+
+14. ◇ _if final proof fails or Review returns accepted findings_ ◇ `[xhigh • Sol]` `collab`: final repair
+    - repair the failed evidence or accepted findings and return to step 12, with one approved pass before Collab continuation
+
+Build and hardening phase:
+
+```text
+               ┌─→ {C3} ─┐
+{S1} ─→ {C2} ──┼─→ {C4} ─┼─→ {C6} ─→ 7 ─→ <7> ─→ {R8} ─→ <8> ─→ {S10}
+               └─→ {C5} ─┘           ↑     │              │
+                                     └─────┴─ {C9} ───────┘
+```
+
+Finalization phase:
+
+```text
+{S10} ─→ {C11} ─→ 12 ─→ <12> ─→ {R13} ─→ <13>
+                  ↑      │                │
+                  └──────┴─ {C14} ────────┘
+```
+
+Successful `<13>` is terminal completion; failure starts a fresh `{C14}` repair session.
+
+The `S`, `R`, and `C` prefixes identify Scheme, Review, and Collab as the internal workflow owner.
+Drive dispatches each braced node whole and never expands or redesigns it.
+Every `{C<number>}` node includes its own proof and final atomic `git/commit` before returning to Drive.
+Every repair-loop pass uses fresh mode and leaf sessions while carrying forward durable state and accepted evidence.
+Before handoff, Collab records governing spec paths, exact routes, fallbacks, branch independence, loop limits, continuation events, and the terminal check.
+Cross-spec contradictions, newly coupled streams, genuine decisions, missing fallbacks, or exhausted loops return a continuation brief to Collab.
+Drive performs no direct product edits and advances only from the approved evidence edges.
 
 ### Council workflow
 
@@ -298,12 +372,10 @@ E.g., assume Sol, Kimi, and Opus are the available models approved for this `bui
    - select the strongest base, identify superior compatible parts from the others, or reject every candidate
 5. `[xhigh • Sol]` `build/owner`: integrate the council result
    - apply the approved synthesis through one owner without preserving accidental candidate differences
-6. `[max • Luna Fast]` `verify/test`: prove the final composition
-   - run fresh checks against the integrated result rather than trusting candidate-local proof
 
 ```text
 1 ─┐
-2 ─┼─→ 4 ─→ 5 ─→ 6
+2 ─┼─→ 4 ─→ 5
 3 ─┘
 ```
 
