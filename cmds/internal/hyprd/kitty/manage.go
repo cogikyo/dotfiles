@@ -499,13 +499,11 @@ func (t *Manager) launchManagedTab(kitty *Client, profile *config.TabProfile, ta
 			return fmt.Errorf("reapply layout for tab %s: %w", tab.Name, err)
 		}
 	}
-	if tab.FocusPane != nil {
-		if *tab.FocusPane < 0 || *tab.FocusPane >= len(paneIDs) {
-			return fmt.Errorf("tab %s focus_pane %d out of range", tab.Name, *tab.FocusPane)
-		}
-		if err := kitty.FocusWindow(paneIDs[*tab.FocusPane]); err != nil {
-			return fmt.Errorf("focus pane for tab %s: %w", tab.Name, err)
-		}
+	if tab.FocusPane < 0 || tab.FocusPane >= len(paneIDs) {
+		return fmt.Errorf("tab %s focus_pane %d out of range", tab.Name, tab.FocusPane)
+	}
+	if err := kitty.FocusWindow(paneIDs[tab.FocusPane]); err != nil {
+		return fmt.Errorf("focus pane for tab %s: %w", tab.Name, err)
 	}
 
 	return nil

@@ -155,37 +155,36 @@ tabs:
   leadpier: # ├─ leadpier profile ─────────────────────────────────────────────────┤
     order: 2
     prefix: "lp-"
-    focus: fe-nvim
+    focus: frontend
     tabs:
-      - name: fe-nvim
+      - name: frontend
         title: "«   »"
         command: nvim
         executables: [nvim]
         cwd: "~/LeadPier/frontend"
         actions:
           nvim: {}
-      - name: be-nvim
+      - name: services
         title: "«   »"
         command: nvim
         executables: [nvim]
         cwd: "~/LeadPier/backend/services"
         actions:
           nvim: {}
-      - name: leadpier
+      - name: term
         title: "« 󰠳  »"
-        command: nvim
-        executables: [nvim]
+        command: pier
+        executables: [pier]
         cwd: "~/LeadPier"
-        focus_pane: 0
         actions:
-          nvim:
+          pier:
             pane: 0
           term:
             pane: 1
-        layout: "fat:bias=50"
+        layout: "fat:bias=80"
         panes:
-          - cwd: "~/LeadPier/pier"
-      - name: runner
+          - cwd: "~/LeadPier"
+      - name: backend
         title: "«   »"
         command: nvim
         executables: [nvim]

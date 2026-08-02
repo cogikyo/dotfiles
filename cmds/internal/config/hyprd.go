@@ -274,7 +274,7 @@ type TabDef struct {
 	CWDResolve  string     `yaml:"cwd_resolve"` // e.g. "git-root"
 	Requires    string     `yaml:"requires"`    // must exist in CWD or tab is skipped
 	Executables []string   `yaml:"executables"` // commands required on a host before launching
-	FocusPane   *int       `yaml:"focus_pane"`  // zero-based pane to focus after spawn
+	FocusPane   int        `yaml:"focus_pane"`  // zero-based pane to focus after spawn; defaults to 0
 	Layout      string     `yaml:"layout"`      // e.g. "fat:bias=80"
 	Actions     TabActions `yaml:"actions"`     // semantic actions this tab can satisfy
 	Panes       []TabPane  `yaml:"panes"`
