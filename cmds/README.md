@@ -6,7 +6,8 @@ Go command workspace for Hyprland, eww, Firefox, and dotfiles management.
 
 **Event-driven.** State changes push to subscribers when they happen, without polling.
 
-**In-memory state.** One process holds the full picture. Commands that depend on each other (e.g. hide needs to know about monocle) share state directly.
+**In-memory state.** One process holds the full picture.
+Commands that depend on each other (e.g. hide needs to know about monocle) share state directly.
 
 **Single binary per domain.** Related features live in one process with shared context instead of scattered scripts that can't coordinate.
 
@@ -91,11 +92,3 @@ If `hyprd` is already running, `install.sh go` uses `hyprd rebuild` for hot-rest
 
 Config files live in `cmds/config/` in the source tree.
 Config-backed commands read their config at startup; see command-specific docs for details.
-
-### Hyprland startup
-
-```lua
--- hyprland.lua
-hl.exec_cmd("hyprd init") -- imports env, starts daemons, runs boot sequence
-hl.exec_cmd("ewwd")
-```
