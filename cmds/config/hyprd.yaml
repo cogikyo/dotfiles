@@ -24,6 +24,7 @@ sessions:
     slack:
       command: slack
       monocle: true
+      init: true
 
     discord:
       command: discord
@@ -97,7 +98,7 @@ sessions:
         - agents
 
     leadpier:
-      init: false
+      init: true
       project: LeadPier
       body:
         - editor

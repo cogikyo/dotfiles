@@ -20,11 +20,11 @@ end
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
 -- ├┤ move to workspace ├──────────────────────────────────────────────────────────┤
-alt("G", "Workspace 1 (music)",    "hyprd ws 1")
-alt("S", "Workspace 2 (chat)",     "hyprd ws 2")
-alt("E", "Workspace 3 (misc)",     "hyprd ws 3")
-alt("T", "Workspace 4 (primary)",  "hyprd ws 4")
-alt("D", "Workspace 5 (settings)", "hyprd ws 5")
+super("G", "Workspace 1 (music)",    "hyprd ws 1")
+super("S", "Workspace 2 (chat)",     "hyprd ws 2")
+super("E", "Workspace 3 (misc)",     "hyprd ws 3")
+super("T", "Workspace 4 (primary)",  "hyprd ws 4")
+super("D", "Workspace 5 (settings)", "hyprd ws 5")
 
 -- ├┤ threebody layout ├───────────────────────────────────────────────────────────┤
 alt("A", "Editor",  "hyprd three-body editor")
@@ -32,22 +32,16 @@ alt("R", "Browser", "hyprd three-body browser")
 alt("C", "Agents",  "hyprd three-body agents")
 alt("X", "Dismiss", "dunstctl close")
 
-alt("Backspace",    "Toggle shadow",  "hyprd three-body shadow")
-alt("Escape",       "Toggle shadow",  "hyprd three-body shadow")
-alt("apostrophe",   "Toggle monocle", "hyprd monocle")
-alt("Comma",        "Cycle split",    "hyprd split")
-super("Period",     "Cycle split",    "hyprd swap")
-super("Backspace",  "Toggle shadow",  "hyprd three-body shadow")
-super("Escape",     "Toggle shadow",  "hyprd three-body shadow")
-super("apostrophe", "Toggle monocle", "hyprd monocle")
-super("Comma",      "Cycle split",    "hyprd split")
+alt("Backspace", "Toggle shadow",    "hyprd three-body shadow")
+bind("CTRL + SHIFT + Escape", "Toggle shadow",    "hyprd monocle")
+alt("Z",           "Swap with master", "hyprd swap")
 
--- ├┤ editor tab focus ├───────────────────────────────────────────────────────────┤
-super("A", "Editor tab 0", "hyprd tab editor:0")
-super("S", "Editor tab 1", "hyprd tab editor:1")
-super("E", "Editor tab 2", "hyprd tab editor:2")
-super("T", "Editor tab 3", "hyprd tab editor:3")
-super("G", "Editor tab 4", "hyprd tab editor:4")
+-- -- ├┤ editor tab focus ├───────────────────────────────────────────────────────────┤
+-- super("A", "Editor tab 0", "hyprd tab editor:0")
+-- super("S", "Editor tab 1", "hyprd tab editor:1")
+-- super("E", "Editor tab 2", "hyprd tab editor:2")
+-- super("T", "Editor tab 3", "hyprd tab editor:3")
+-- super("G", "Editor tab 4", "hyprd tab editor:4")
 
 -- ├┤ agents tab focus ├───────────────────────────────────────────────────────────┤
 super("Y", "Agents tab 0", "hyprd tab agents:0")
@@ -71,12 +65,11 @@ hl.bind("SUPER + mouse:273", hl.dsp.window.drag(),   { mouse = true })
 hl.bind("SUPER + mouse:274", hl.dsp.window.resize(), { mouse = true })
 
 -- ├┤ move window focus ├──────────────────────────────────────────────────────────┤
-super("R",         "Focus left",  hl.dsp.focus({ direction = "left" }))
-super("minus",     "Focus left",  hl.dsp.focus({ direction = "left" }))
-super("equal",     "Focus right", hl.dsp.focus({ direction = "right" }))
-super("slash",     "Focus right", hl.dsp.focus({ direction = "right" }))
-super("backslash", "Focus up",    hl.dsp.focus({ direction = "up" }))
-super("C",         "Focus down",  hl.dsp.focus({ direction = "down" }))
+-- super("R",         "Focus left",  hl.dsp.focus({ direction = "left" }))
+alt("S",     "Focus left",  hl.dsp.focus({ direction = "left" }))
+alt("T",     "Focus right", hl.dsp.focus({ direction = "right" }))
+super("R", "Focus up",    hl.dsp.focus({ direction = "up" }))
+super("E",         "Focus down",  hl.dsp.focus({ direction = "down" }))
 
 -- ├┤ move windows ├───────────────────────────────────────────────────────────────┤
 super("Left",  "Move window left",    hl.dsp.window.move({ direction = "left" }))
@@ -120,6 +113,9 @@ local function locked(keys, command)
 	hl.bind(keys, hl.dsp.exec_cmd(command), { locked = true })
 end
 
+locked("SUPER + SHIFT + H",             player .. " play-pause")
+locked("SUPER + SHIFT + Period",        player .. " previous")
+locked("SUPER + SHIFT + Comma",         player .. " next")
 locked("XF86AudioPlay",                  player .. " play-pause")
 locked("XF86AudioPause",                 player .. " play-pause")
 locked("XF86AudioStop",                  player .. " stop")
@@ -143,8 +139,9 @@ bind("XF86Explorer",   nil, terminal .. [[ zsh -c 'cd "$(xplr --print-pwd-as-res
 -- │ screenshare                                                                   │
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
-bind("Print",  "Screenshot to clipboard", "hyprd screenshot")
-super("Print", "Screenshot + annotate",   "hyprd screenshot annotate")
+super("SHIFT + S", "Screenshot to clipboard", "hyprd screenshot")
+super("SHIFT + B", "Screenshot + annotate",   "hyprd screenshot annotate")
+super("SHIFT + P", "Screen share mode",       "hyprd share")
 
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │ lock                                                                          │
