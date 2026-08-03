@@ -61,6 +61,7 @@ Individual steps:
 - `go` builds configured Go binaries and user services.
 - `eww` builds the eww widget binary.
 - `firefox` links Firefox profile CSS and `user.js`.
+- `certs` trusts the mkcert CA and provisions a shared localhost certificate.
 - `shell` switches the login shell to zsh.
 - `dns` configures systemd-resolved and NetworkManager DNS.
 
@@ -68,9 +69,9 @@ Most install steps support `--dry-run`.
 Dry-run prints planned changes and must not write files or run package/install side effects.
 `secrets` and `repos` use their own commands for safe previews and do not advertise install-step dry-run support.
 
-`system`, `hibernate`, and `dns` are root-affecting operations.
+`system`, `hibernate`, `certs`, and `dns` are root-affecting operations.
 They require `--yes` or `--dry-run`.
-That prevents non-interactive invocations from silently mutating `/etc`, boot config, swap, or DNS.
+That prevents non-interactive invocations from silently mutating system config, boot state, swap, trust stores, or DNS.
 
 ## Output
 

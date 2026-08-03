@@ -32,7 +32,8 @@
         "compliance/init.compliance.go",
         "billing/init.billing.go",
         "routing/init.routing.go",
-        "aggregation/migrate.go"
+        "aggregation/migrate.go",
+        "/home/cullyn/LeadPier/backend/common/utility/json.go"
       ]
     },
     "/home/cullyn/LeadPier/backend/services/compliance": {

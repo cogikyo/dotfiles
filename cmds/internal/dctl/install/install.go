@@ -48,6 +48,7 @@ type Cmd struct {
 	Go        GoCmd        `cmd:"" name:"go" help:"Build Go binaries."`
 	Eww       EwwCmd       `cmd:"" help:"Build eww."`
 	Firefox   FirefoxCmd   `cmd:"" help:"Configure Firefox."`
+	Certs     CertsCmd     `cmd:"" help:"Provision development TLS certificates."`
 	Shell     ShellCmd     `cmd:"" help:"Set login shell."`
 	DNS       DNSCmd       `cmd:"" name:"dns" help:"Configure DNS-over-TLS."`
 	List      ListCmd      `cmd:"" help:"List install steps."`
@@ -70,6 +71,7 @@ type FontsCmd StepCmd
 type GoCmd StepCmd
 type EwwCmd StepCmd
 type FirefoxCmd StepCmd
+type CertsCmd StepCmd
 type ShellCmd StepCmd
 type DNSCmd StepCmd
 type ListCmd struct{}
@@ -104,6 +106,7 @@ var stepDefs = []StepDef{
 	{Name: "go", Description: "Build Go binaries", Risk: "writes built binaries and user services", FixCommand: "dctl install go --dry-run", SupportsDryRun: true},
 	{Name: "eww", Description: "Install eww widget system", Risk: "clones/builds eww and overwrites ~/.local/bin/eww", FixCommand: "dctl install eww --dry-run", SupportsDryRun: true},
 	{Name: "firefox", Description: "Configure Firefox profile, theme, and preferences", Risk: "writes Firefox profile links", FixCommand: "dctl install firefox --dry-run", SupportsDryRun: true, Depends: []string{"repos"}},
+	{Name: "certs", Description: "Provision the local development CA and localhost certificate", Risk: "modifies system and Firefox trust stores and writes a private key", FixCommand: "dctl install certs --dry-run", Sudo: true, SupportsDryRun: true},
 	{Name: "shell", Description: "Change default shell to zsh", Risk: "changes login shell", FixCommand: "dctl install shell --dry-run", Sudo: true, SupportsDryRun: true},
 	{Name: "dns", Description: "Set up systemd-resolved with Cloudflare DNS-over-TLS", Risk: "replaces resolver config and restarts networking", FixCommand: "dctl install dns --dry-run", Sudo: true, SupportsDryRun: true, Depends: []string{"system"}},
 }
@@ -181,6 +184,7 @@ func (c *FontsCmd) Run(ctx *app.Context) error     { return run(ctx, "fonts", St
 func (c *GoCmd) Run(ctx *app.Context) error        { return run(ctx, "go", StepCmd(*c)) }
 func (c *EwwCmd) Run(ctx *app.Context) error       { return run(ctx, "eww", StepCmd(*c)) }
 func (c *FirefoxCmd) Run(ctx *app.Context) error   { return run(ctx, "firefox", StepCmd(*c)) }
+func (c *CertsCmd) Run(ctx *app.Context) error     { return run(ctx, "certs", StepCmd(*c)) }
 func (c *ShellCmd) Run(ctx *app.Context) error     { return run(ctx, "shell", StepCmd(*c)) }
 func (c *DNSCmd) Run(ctx *app.Context) error       { return run(ctx, "dns", StepCmd(*c)) }
 func run(ctx *app.Context, name string, cmd StepCmd) error {
@@ -241,6 +245,8 @@ func RunStep(ctx context.Context, root paths.Root, out *output.Printer, name str
 		return installEww(ctx, root, out, opts, runner)
 	case "firefox":
 		return installFirefox(ctx, root, out, opts)
+	case "certs":
+		return installCerts(ctx, root, out, opts, runner)
 	case "shell":
 		return installShell(ctx, root, out, opts, runner)
 	case "dns":
@@ -661,7 +667,10 @@ func profileFromINI(root string) (string, error) {
 	name, path := "", ""
 	flush := func() (string, bool) {
 		if name == "dev-edition-default" && path != "" {
-			p := filepath.Join(root, path)
+			p := path
+			if !filepath.IsAbs(p) {
+				p = filepath.Join(root, p)
+			}
 			st, err := os.Stat(p)
 			return p, err == nil && st.IsDir()
 		}

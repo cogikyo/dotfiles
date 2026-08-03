@@ -185,6 +185,7 @@ STEP_DEFS=(
     "vpn|Load decrypted NetworkManager VPN profiles|yes|secrets,go"
     "eww|Install eww widget system|no|"
     "firefox|Configure Firefox profile, theme, and preferences|no|repos"
+    "certs|Provision the local development CA and localhost certificate|yes|"
     "shell|Change default shell to zsh|yes|"
     "dns|Set up systemd-resolved with Cloudflare DNS-over-TLS|yes|system"
 )
@@ -2389,53 +2390,50 @@ healthcheck_eww() {
 FIREFOX_PROFILE_DIR=""
 
 detect_firefox_profile() {
-    local ff_root=""
+    local candidate profile_path section_name section_path full_path
+    local found_profiles=0
 
     for candidate in "$HOME/.mozilla/firefox" "$HOME/.config/mozilla/firefox"; do
-        if [[ -f "$candidate/profiles.ini" ]]; then
-            ff_root="$candidate"
-            break
+        [[ -f "$candidate/profiles.ini" ]] || continue
+        found_profiles=1
+        profile_path=""
+        section_name=""
+        section_path=""
+
+        while IFS='=' read -r key value; do
+            key="${key%%[[:space:]]*}"
+            value="${value##[[:space:]]}"
+            case "$key" in
+                \[*) section_name=""; section_path="" ;;
+                Name) section_name="$value" ;;
+                Path) section_path="$value" ;;
+            esac
+            if [[ "$section_name" == "dev-edition-default" && -n "$section_path" ]]; then
+                profile_path="$section_path"
+                break
+            fi
+        done < "$candidate/profiles.ini"
+
+        [[ -n "$profile_path" ]] || continue
+        if [[ "$profile_path" == /* ]]; then
+            full_path="$profile_path"
+        else
+            full_path="$candidate/$profile_path"
         fi
+        [[ -d "$full_path" ]] || continue
+
+        FIREFOX_PROFILE_DIR="$full_path"
+        info "Detected Firefox profile: ${full_path#"$HOME"/}"
+        return 0
     done
 
-    if [[ -z "$ff_root" ]]; then
+    if [[ $found_profiles -eq 0 ]]; then
         err "No Firefox profiles.ini found"
-        err "Start Firefox at least once to generate a profile, then re-run"
-        return 1
+    else
+        err "Firefox Developer Edition profile not found in a configured profile root"
     fi
-
-    # Parse profiles.ini for dev-edition-default profile
-    local profile_path="" section_name="" section_path=""
-
-    while IFS='=' read -r key value; do
-        key="${key%%[[:space:]]*}"
-        value="${value##[[:space:]]}"
-        case "$key" in
-            \[*) section_name=""; section_path="" ;;
-            Name) section_name="$value" ;;
-            Path) section_path="$value" ;;
-        esac
-        if [[ "$section_name" == "dev-edition-default" && -n "$section_path" ]]; then
-            profile_path="$section_path"
-            break
-        fi
-    done < "$ff_root/profiles.ini"
-
-    if [[ -z "$profile_path" ]]; then
-        err "Firefox Developer Edition profile not found in $ff_root/profiles.ini"
-        err "Install Firefox Developer Edition and launch it once to create a profile"
-        return 1
-    fi
-
-    local full_path="$ff_root/$profile_path"
-    if [[ ! -d "$full_path" ]]; then
-        err "Profile directory does not exist: $full_path"
-        err "Start Firefox to initialize the profile, then re-run"
-        return 1
-    fi
-
-    FIREFOX_PROFILE_DIR="$full_path"
-    info "Detected Firefox profile: ${full_path#"$HOME"/}"
+    err "Start Firefox Developer Edition once to initialize its profile, then re-run"
+    return 1
 }
 
 step_firefox() {
@@ -2491,6 +2489,159 @@ healthcheck_firefox() {
     [[ -f "$FIREFOX_PROFILE_DIR/user.js" ]] || { err "Healthcheck failed: Firefox user.js missing"; return 1; }
     [[ -d "$FIREFOX_PROFILE_DIR/chrome" ]] || { err "Healthcheck failed: Firefox chrome/ directory missing"; return 1; }
     return 0
+}
+
+# }}}
+# =================================================================================================
+
+# =================================================================================================
+#  STEP {CERTS}: Trust mkcert CA and provision the shared localhost certificate  {{{
+
+readonly DEV_CERT_RENEWAL_SECONDS=$((30 * 24 * 60 * 60))
+
+dev_cert_is_valid() {
+    local cert="$1" key="$2" root="$3"
+    [[ -f "$cert" && ! -L "$cert" && -f "$key" && ! -L "$key" ]] &&
+        openssl x509 -in "$cert" -noout &>/dev/null &&
+        openssl pkey -in "$key" -noout &>/dev/null &&
+        cmp -s \
+            <(openssl x509 -in "$cert" -pubkey -noout 2>/dev/null) \
+            <(openssl pkey -in "$key" -pubout 2>/dev/null) &&
+        openssl verify -CAfile "$root" "$cert" &>/dev/null &&
+        openssl verify -CAfile "$root" -verify_hostname localhost "$cert" &>/dev/null &&
+        openssl verify -CAfile "$root" -verify_ip 127.0.0.1 "$cert" &>/dev/null &&
+        openssl verify -CAfile "$root" -verify_ip ::1 "$cert" &>/dev/null &&
+        openssl x509 -in "$cert" -checkend "$DEV_CERT_RENEWAL_SECONDS" -noout &>/dev/null
+}
+
+mkcert_nss_name() {
+    local root="$1" serial
+    serial=$(openssl x509 -in "$root" -noout -serial 2>/dev/null) || return 1
+    serial=${serial#serial=}
+    serial=$(bc <<< "ibase=16; ${serial^^}") || return 1
+    [[ "$serial" =~ ^[0-9]+$ ]] || return 1
+    printf 'mkcert development CA %s\n' "$serial"
+}
+
+firefox_mkcert_root_is_valid() {
+    local root="$1" profile="$2" nickname
+    nickname=$(mkcert_nss_name "$root") || return 1
+    [[ -f "$profile/cert9.db" ]] &&
+        cmp -s \
+            <(openssl x509 -in "$root" -outform DER 2>/dev/null) \
+            <(certutil -L -d "sql:$profile" -n "$nickname" -r 2>/dev/null) &&
+        certutil -V -d "sql:$profile" -n "$nickname" -u L &>/dev/null
+}
+
+install_firefox_mkcert_root() {
+    local root="$1" profile="$2" nickname
+    [[ -f "$profile/cert9.db" ]] || { err "Firefox NSS database is missing; start Firefox, then re-run"; return 1; }
+    firefox_mkcert_root_is_valid "$root" "$profile" && return 0
+    nickname=$(mkcert_nss_name "$root") || { err "Could not determine the mkcert NSS name"; return 1; }
+    certutil -D -d "sql:$profile" -n "$nickname" 2>/dev/null || true
+    certutil -A -d "sql:$profile" -n "$nickname" -t "C,," -i "$root" || return 1
+    firefox_mkcert_root_is_valid "$root" "$profile" || { err "Failed to install the mkcert root in Firefox"; return 1; }
+}
+
+generate_dev_cert() (
+    local cert_dir="$1" root="$2"
+    local cert="$cert_dir/localhost.pem"
+    local key="$cert_dir/localhost-key.pem"
+    local tmp_dir
+    umask 077
+    tmp_dir=$(mktemp -d "$cert_dir/.mkcert.XXXXXX") || exit 1
+    trap 'rm -rf -- "$tmp_dir"' EXIT
+    mkcert -cert-file "$tmp_dir/localhost.pem" -key-file "$tmp_dir/localhost-key.pem" \
+        localhost 127.0.0.1 ::1 || { err "Failed to generate the localhost certificate"; return 1; }
+    dev_cert_is_valid "$tmp_dir/localhost.pem" "$tmp_dir/localhost-key.pem" "$root" ||
+        { err "mkcert generated an invalid localhost certificate"; return 1; }
+    chmod 644 "$tmp_dir/localhost.pem" && chmod 600 "$tmp_dir/localhost-key.pem" || return 1
+    mv -f "$tmp_dir/localhost-key.pem" "$key" && mv -f "$tmp_dir/localhost.pem" "$cert"
+)
+
+step_certs() {
+    header "Provisioning development TLS certificates"
+
+    local command
+    for command in bc mkcert openssl certutil; do
+        has "$command" || { err "$command not found. Run the packages step first."; return 1; }
+    done
+
+    if ! detect_firefox_profile; then
+        if in_chroot; then
+            warn "Skipping certificate setup until first user login/Firefox profile creation"
+            return "$STEP_SKIPPED_RC"
+        fi
+        return 1
+    fi
+
+    needs_sudo || return 1
+    info "Installing the mkcert CA into system and browser trust stores..."
+    mkcert -install || { err "Failed to install the mkcert root CA"; return 1; }
+    local caroot root
+    caroot=$(mkcert -CAROOT)
+    root="$caroot/rootCA.pem"
+    [[ -f "$root" ]] || { err "mkcert root CA is missing: $root"; return 1; }
+    openssl x509 -in "$root" -noout &>/dev/null || { err "mkcert root CA is invalid: $root"; return 1; }
+
+    install_firefox_mkcert_root "$root" "$FIREFOX_PROFILE_DIR" || return 1
+
+    local cert_dir="${XDG_DATA_HOME:-$HOME/.local/share}/dev-certs" cert key
+    cert="$cert_dir/localhost.pem"
+    key="$cert_dir/localhost-key.pem"
+    [[ ! -L "$cert_dir" && ( ! -e "$cert_dir" || -d "$cert_dir" ) && ! -L "$cert" && ! -L "$key" ]] ||
+        { err "Development certificate paths must be local regular paths: $cert_dir"; return 1; }
+    install -d -m 700 "$cert_dir" || return 1
+
+    if dev_cert_is_valid "$cert" "$key" "$root"; then
+        ok "Localhost certificate is current"
+    else
+        info "Generating localhost certificate..."
+        generate_dev_cert "$cert_dir" "$root" || return 1
+        ok "Localhost certificate generated"
+    fi
+
+    chmod 700 "$cert_dir" || return 1
+    chmod 644 "$cert" || return 1
+    chmod 600 "$key" || return 1
+    ok "Development certificate: $cert"
+    warn "Restart Firefox if it was open during certificate installation"
+}
+
+healthcheck_certs() {
+    local command
+    for command in bc mkcert openssl certutil; do
+        has "$command" || { err "Healthcheck failed: $command is not installed"; return 1; }
+    done
+    if ! detect_firefox_profile; then
+        return "$STEP_SKIPPED_RC"
+    fi
+
+    local caroot root cert_dir cert key
+    caroot=$(mkcert -CAROOT)
+    root="$caroot/rootCA.pem"
+    cert_dir="${XDG_DATA_HOME:-$HOME/.local/share}/dev-certs"
+    cert="$cert_dir/localhost.pem"
+    key="$cert_dir/localhost-key.pem"
+
+    if [[ ! -f "$root" ]] || ! openssl x509 -in "$root" -noout &>/dev/null; then
+        err "Healthcheck failed: current mkcert root CA is missing or invalid"
+        return 1
+    fi
+    firefox_mkcert_root_is_valid "$root" "$FIREFOX_PROFILE_DIR" ||
+        { err "Healthcheck failed: Firefox does not trust the current mkcert root"; return 1; }
+    if ! {
+        [[ -d "$cert_dir" && ! -L "$cert_dir" ]] && [[ "$(stat -c '%a' "$cert_dir")" == "700" ]] &&
+            [[ -f "$cert" && ! -L "$cert" ]] && [[ "$(stat -c '%a' "$cert")" == "644" ]] &&
+            [[ -f "$key" && ! -L "$key" ]] && [[ "$(stat -c '%a' "$key")" == "600" ]]
+    }; then
+        err "Healthcheck failed: development certificate paths or modes are invalid"
+        return 1
+    fi
+    dev_cert_is_valid "$cert" "$key" "$root" ||
+        { err "Healthcheck failed: localhost certificate or key is invalid"; return 1; }
+    openssl verify "$cert" &>/dev/null ||
+        { err "Healthcheck failed: current mkcert root is absent from the system trust store"; return 1; }
 }
 
 # }}}

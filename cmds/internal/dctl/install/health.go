@@ -41,6 +41,8 @@ func healthFor(ctx context.Context, root paths.Root, step string) []health.Check
 		return ewwHealth(ctx, root, runner)
 	case "firefox":
 		return firefoxHealth(root)
+	case "certs":
+		return certsHealth(ctx, root, runner)
 	case "shell":
 		return shellHealth(ctx, runner)
 	case "dns":
