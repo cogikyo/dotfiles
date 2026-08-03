@@ -1,9 +1,12 @@
 gui:
   showCommandLog: false
+  skipSwitchWorktreeOnCheckoutWarning: true
 notARepository: skip
 promptToReturnFromSubprocess: false
 git:
   overrideGpg: true
+worktree:
+  defaultPath: .worktrees
 os:
   edit: "nvim {{filename}}"
   editAtLine: "nvim +{{line}} {{filename}}"

@@ -108,6 +108,43 @@ alias neu='ssh cullyn@neumann'
 alias abb='ssh cullyn@abbott'
 alias cst='ssh cullyn@costello'
 alias zp='cd ~/LeadPier/backend/services/partner'
+function lazygit() {
+    local invocation_cwd=$PWD
+    local handoff_file new_dir
+    local lazygit_status handoff_status
+
+    handoff_file=$(mktemp "${XDG_RUNTIME_DIR:-/tmp}/lazygit-dir.XXXXXXXXXX") || {
+        print -u2 -- 'lazygit: failed to create directory handoff'
+        return 1
+    }
+
+    LAZYGIT_NEW_DIR_FILE=$handoff_file command lazygit "$@"
+    lazygit_status=$?
+
+    if (( lazygit_status != 0 )); then
+        command rm -f -- "$handoff_file"
+        return $lazygit_status
+    fi
+
+    if [[ ! -s $handoff_file ]]; then
+        command rm -f -- "$handoff_file"
+        print -u2 -- 'lazygit: missing directory handoff'
+        return 1
+    fi
+
+    new_dir=$(<"$handoff_file")
+    handoff_status=$?
+    command rm -f -- "$handoff_file"
+
+    if (( handoff_status != 0 )) || [[ $new_dir != /* || ! -d $new_dir ]]; then
+        print -u2 -- 'lazygit: invalid directory handoff'
+        return 1
+    fi
+
+    if [[ $new_dir != $invocation_cwd ]]; then
+        builtin cd -- "$new_dir"
+    fi
+}
 alias lg='lazygit'
 alias ld='lazydocker'
 alias uvpn='hyprd vpn Trend up'
