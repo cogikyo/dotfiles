@@ -40,7 +40,6 @@ permission:
     "git update-ref refs/heads/*": ask
     "go test*": allow
     "go vet*": allow
-    "go build*": allow
     "npm test*": allow
     "npm run test*": allow
     "npm run lint*": allow

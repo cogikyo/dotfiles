@@ -20,7 +20,7 @@ If the handoff already names the files and the mechanics, the parent picked the 
 - Choose the implementation shape inside the approved objective, and prefer the simpler solution you discover over the one you assumed.
 - Edit production code plus only the tests, docs, or comments this objective needs to be correct and usable.
 - Follow local conventions, preserve unrelated and concurrent changes, and inspect unexpected dirty state before touching it.
-- Run the smallest checks that can falsify the result and report exact commands and outcomes.
+- Run the smallest non-build checks that can falsify the result and report exact commands and outcomes; direct `go build` belongs to `verify/test`.
 - Fresh child per objective; resume only to answer your own blocking question or to correct the same unfinished objective.
 
 ## Scope discipline

@@ -44,7 +44,7 @@ Go command workspace. One module, multiple binaries. Sockets at `/tmp/{hyprd,eww
 - `newtab` — Firefox new-tab backend
 
 After editing `hyprd`, run `hyprd rebuild` — it builds, preserves runtime state, and hot-restarts in place.
-For other commands, use targeted builds from `cmds/` (`go build -o ~/.local/bin/<name> ./cmd/<name>`).
+For other commands, delegate an exact targeted build to `verify/test`; direct `go build` is denied to every other agent.
 
 ## Conventions
 

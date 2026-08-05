@@ -21,7 +21,7 @@ What it must not require is broad discovery or a real design decision; those bel
 - Cover the whole boundary, including the tedious cases; partial coverage of a mechanical sweep is the main failure mode here.
 - Edit production code together with the tests, docs, or comments the brief directly requires.
 - Preserve unrelated and concurrent changes, and inspect surprising dirty files instead of overwriting them.
-- Run the smallest relevant checks and report exact commands and outcomes.
+- Run the smallest relevant non-build checks and report exact commands and outcomes; direct `go build` belongs to `verify/test`.
 - Resume while the task, role, and implementation lineage stay the same.
 
 ## Escalate instead of expanding

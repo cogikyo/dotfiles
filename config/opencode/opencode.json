@@ -23,6 +23,7 @@
     "file:///home/cullyn/dotfiles/config/opencode/plugins/usage/tool.ts",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/x/tool.ts",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/hyprd/notify.ts",
+    "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/tool-guard.ts",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/spec-title.ts",
     [
       "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/media-context/prompt.ts",
@@ -126,6 +127,7 @@
       "rm -fr *": "deny",
       "rm -rf *": "deny",
       "rm --recursive *": "deny",
+      "rm *": "deny",
       "sudo rm -r *": "deny",
       "sudo rm -R *": "deny",
       "sudo rm -f -r *": "deny",
@@ -134,6 +136,7 @@
       "sudo rm -fr *": "deny",
       "sudo rm -rf *": "deny",
       "sudo rm --recursive *": "deny",
+      "sudo rm *": "deny",
       "trash *": "allow",
       "trash-put *": "allow",
       "gio trash *": "allow",

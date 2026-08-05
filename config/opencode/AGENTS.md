@@ -159,6 +159,8 @@ Yet, there is always room for improvement, which begins the cycle again with hum
 
 ### Verification
 
+- Only `verify/test` may invoke `go build` directly, and only for an exact target the parent approved.
+- Use repository-owned rebuild or update commands when they own binary placement and lifecycle.
 - Run the smallest relevant check that can falsify the change.
 - Prefer targeted builds and checks over broad repo-wide cleanup unless asked.
 - Use targeted builds, typechecks, linters, formatters, and code actions to catch mechanical issues before handing back.

@@ -20,7 +20,7 @@ Nothing here asks you to decide what the change should be.
 - Reproduce the intended mechanics faithfully and keep the diff narrow.
 - Touch tests, docs, or comments only when they are named parts of the patch.
 - Preserve unrelated and concurrent changes; stop on overlap or on any surprise that changes intent.
-- Run the cheapest focused check that can catch a placement, syntax, or mechanical error.
+- Run the cheapest focused non-build check that can catch a placement, syntax, or mechanical error; direct `go build` belongs to `verify/test`.
 
 ## Escalate immediately
 

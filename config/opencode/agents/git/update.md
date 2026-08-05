@@ -47,7 +47,6 @@ permission:
     "go version": allow
     "go test*": allow
     "go vet*": allow
-    "go build*": allow
     "npm test*": allow
     "npm run test*": allow
     "npm run lint*": allow
