@@ -87,6 +87,7 @@ Small models are often still the better bet for patching, reviewing, or scouting
 
 - Default to `high` for `build/general`.
 - Default to `xhigh` for `build/owner` or ordinary **Orchestration Mode**.
+- Default to `medium` for `verify/test` when the user explicitly requests an independent test run.
 
 ### `anthropic/claude-fable-5`
 
@@ -113,9 +114,10 @@ Small models are often still the better bet for patching, reviewing, or scouting
 
 ### `openai/gpt-5.6-luna-fast`
 
-- Default to `max` for `verify/source` and `verify/test`.
+- Default to `max` for `verify/source`.
 - Default to `xhigh` for most `scout/*` tasks.
 - Default to `medium` as the Grok fallback for `build/patch` and `git/commit`.
+- Use `medium` for quick formatting, diagnostics, or lint work when delegation is actually useful.
 
 ### Token Usage
 
@@ -143,9 +145,14 @@ A workflow is an approved task graph connecting acceptance boundaries to evidenc
 - Stop expanding work at a durable boundary; issue a fresh task for a new concern.
 - Require concise reports containing verdicts, deltas, checks, blockers, and questions.
 - Keep Collab focused on routing, decisions, synthesis, and the attended conversation.
-- Let builders own formatting and the smallest relevant checks for their implementation.
+- Keep formatting, LSP diagnostics, and lint fixes inside the current implementation boundary.
+- Run those mechanical checks directly or let the builder run them; do not create a workflow step or verifier for them.
+- Prefer editor or LSP diagnostics over a build when they can falsify the same mistake.
+- Do not infer permission to run builds, test suites, generators, benchmarks, or resource-intensive scripts from a request to edit code.
+- Name the command and ask before running a potentially expensive check unless the user already requested that exact class of check.
+- Let builders own only the smallest cheap check needed for their implementation.
 - Use `verify/*` before implementation when scouting leaves a load-bearing claim unresolved.
-- A separate `verify/test` pass is useful for complex or high-risk work; routine changes usually do not need one.
+- Do not dispatch `verify/test` unless the user explicitly asks for tests or an independent verification pass.
 - Update the user after every boundary or wave.
 
 ### Commit shorthand
@@ -159,13 +166,14 @@ Every handoff names its mode, repository root, and approved boundary.
 
 ### Workflow approval
 
-- Before non-trivial work, propose a compact workflow and wait for explicit approval.
+- Propose a workflow only when work has several meaningful acceptance boundaries, real concurrency, conditional branches, or repeated delegation.
+- Handle an ordinary single-boundary implementation directly or with one builder, without workflow ceremony.
 - Name acceptance boundaries, agents, models, effort, dependencies, concurrency, and checks.
 - Offer alternatives only when they materially change speed, capacity, or judgment diversity.
 - Invite the user to add, remove, reorder, or reroute steps.
 - Do not create todos, dispatch children, or implement before approval.
 - Propose a workflow delta when new evidence materially changes the approved shape.
-- Skip approval only for one obvious read, slight patch, or focused check whose workflow is already fully specified.
+- A single read, patch, refactor, formatting pass, lint pass, or focused diagnostic does not need workflow approval.
 
 #### Proposal shape
 
@@ -225,7 +233,7 @@ Iterative loop:
 
 #### Complex Example
 
-Composed workflow with planned concurrency, repeated proof, orchestrated hardening, documentation, and commits:
+Exceptional workflow with planned concurrency, requested independent proof, orchestrated hardening, documentation, and commits:
 
 > [!TIP] Model choices are examples; use current task fit and headroom when creating a workflow.
 
@@ -239,8 +247,8 @@ Composed workflow with planned concurrency, repeated proof, orchestrated hardeni
    - complete another independent bounded part concurrently with steps 2 and 3
 5. `[xhigh • Sol Fast]` `build/owner`: integration
    - integrate all completed slices behind their shared boundary
-6. `[max • Luna Fast]` `verify/test`: proof
-   - run the smallest checks that can falsify the integrated result
+6. `[medium • Sol Fast]` `verify/test`: user-requested proof
+   - run only the explicitly approved checks that can falsify the integrated result
 
 7. ◇ _if verification fails_ ◇ `[xhigh • Sol Fast]` `build/owner`: repair
    - repair the failure and return to step 6
@@ -268,11 +276,13 @@ Composed workflow with planned concurrency, repeated proof, orchestrated hardeni
 
 Scheme owns the initial multi-scout synthesis, and Review owns the hardening fan-out and verdict.
 Their graph nodes use `{S1}` and `{R8}` to identify the internal workflow owner.
-The `<6>` and `<8>` gates require verification and Review acceptance before the workflow can advance.
+The `<6>` gate exists only because this example assumes the user requested independent verification.
+The `<8>` gate requires Review acceptance before the workflow can advance.
 
 ### Drive handoff example
 
-Use this shape for an approved multi-spec buildout that may run unattended for hours and consume substantial capacity.
+Use this shape only for an approved multi-spec buildout that may run unattended for hours and consume substantial capacity.
+Include proof nodes only when the user has approved their exact check classes and expected resource cost.
 Collab freezes the outer graph before the user switches to Drive.
 Every route and fallback in a Drive handoff uses a non-fast model.
 
@@ -300,7 +310,7 @@ Every route and fallback in a Drive handoff uses a non-fast model.
     - synthesize migration order, compatibility removal, documentation, and operator-facing acceptance boundaries
 11. `[xhigh • Sol]` `collab`: finalization phase
     - implement the approved rollout, cleanup, documentation, and removal work
-12. `[xhigh • Sol]` `verify/test`: final proof
+12. `[xhigh • Sol]` `verify/test`: user-requested final proof
     - rerun every check invalidated by finalization and prove the terminal acceptance boundary
 13. `[xhigh • Sol]` `review`: final system judgment
     - perform the approved final review across the completed buildout
@@ -355,7 +365,7 @@ Fan in every output before synthesis.
 Select the strongest candidate as the base, then incorporate compatible mechanisms, decisions, evidence, or prose that other candidates did better.
 Preserve material dissent, explain rejected parts, and reject every candidate when none satisfies the governing checks.
 Collab owns synthesis unless the approved workflow names a separate Review judge.
-One explicitly briefed owner writes or integrates the synthesized result, then fresh verification proves the final composition.
+One explicitly briefed owner writes or integrates the synthesized result, then runs only the acceptance checks approved in the council brief.
 
 #### Example: implementation council
 
@@ -389,7 +399,7 @@ Use `todowrite` for three or more meaningful steps, multiple outcomes, or work l
 - Create the list after workflow approval and before implementation.
 - Make each item an observable acceptance boundary and keep exactly one `in_progress`.
 - Update immediately when work starts or finishes, verification fails, scope changes, or a blocker appears.
-- Mark an item `completed` only after its required verification passes.
+- Mark an item `completed` after its approved acceptance check passes, or after the edit is complete when no check was requested or justified.
 - Leave blocked or partial work `in_progress` and represent its blocker as a follow-up item.
 - Revise the list before continuing when the user changes direction.
 
