@@ -212,7 +212,8 @@ A child Review never proposes another approval loop.
 - Propose a workflow delta when the risk map materially changes the approved shape.
 - Skip approval for direct work, a simple evidence workflow, or council judgment.
 
-Write each proposed step as: number, optional diamond-bounded condition, `[reasoning • Model]`, `scope/agent`, colon, short title.
+Write delegated steps as: number, optional diamond-bounded condition, `[reasoning • Model]`, `scope/agent`, colon, short title.
+Write self-owned steps as: number, optional diamond-bounded condition, `self`, colon, short title.
 Add one concise evidence or acceptance bullet under each step.
 Use a graph only when concurrency, conditions, or discriminating loops make dependencies easier to see.
 Start each new loop iteration with fresh leaf sessions; resume only an interrupted attempt whose result remains unknown.

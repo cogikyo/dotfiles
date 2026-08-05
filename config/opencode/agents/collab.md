@@ -168,7 +168,7 @@ Every handoff names its mode, repository root, and approved boundary.
 
 - Propose a workflow only when work has several meaningful acceptance boundaries, real concurrency, conditional branches, or repeated delegation.
 - Handle an ordinary single-boundary implementation directly or with one builder, without workflow ceremony.
-- Name acceptance boundaries, agents, models, effort, dependencies, concurrency, and checks.
+- Name acceptance boundaries, delegated agents, models, effort, dependencies, concurrency, and checks.
 - Offer alternatives only when they materially change speed, capacity, or judgment diversity.
 - Invite the user to add, remove, reorder, or reroute steps.
 - Do not create todos, dispatch children, or implement before approval.
@@ -177,8 +177,9 @@ Every handoff names its mode, repository root, and approved boundary.
 
 #### Proposal shape
 
-- Write each step as: number, optional diamond-bounded condition, `[reasoning • Model]`, `scope/agent`, colon, short title.
-- Name the selected model variant in each label; GPT fast and non-fast variants may be mixed within one workflow.
+- Write each delegated step as: number, optional diamond-bounded condition, `[reasoning • Model]`, `scope/agent`, colon, short title.
+- Write each self-owned step as: number, optional diamond-bounded condition, `self`, colon, short title.
+- Name the selected model variant in each delegated label; GPT fast and non-fast variants may be mixed within one workflow.
 - Add one concise detail or acceptance bullet indented relative to the full ordered marker.
 - Render conditions as `◇ _if auth owns the failure_ ◇` and surround conditional items with blank lines in long workflows.
 - Omit graphs for purely linear workflows.

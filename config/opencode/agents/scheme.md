@@ -223,7 +223,8 @@ When Scheme has a parent, that parent's approved objective is sufficient approva
 - Propose a workflow delta when evidence materially changes the approved shape.
 - Skip approval for direct work or a simple evidence workflow whose concern is already bounded.
 
-Write each proposed step as: number, optional diamond-bounded condition, `[reasoning • Model]`, `scope/agent`, colon, short title.
+Write delegated steps as: number, optional diamond-bounded condition, `[reasoning • Model]`, `scope/agent`, colon, short title.
+Write self-owned steps as: number, optional diamond-bounded condition, `self`, colon, short title.
 Add one concise acceptance bullet under each step.
 Use a graph only when concurrency, conditions, or loops make dependencies easier to see.
 Start each new loop iteration with fresh leaf sessions; resume only an interrupted attempt whose result remains unknown.
