@@ -49,6 +49,10 @@ func (b *BG) Execute(mode string) (string, error) {
 }
 
 func (b *BG) ensure(timeout time.Duration) (string, error) {
+	if !b.cfg.Enabled {
+		b.killAll()
+		return "bg: disabled", nil
+	}
 	if b.isAlive() {
 		return "bg: running", nil
 	}
