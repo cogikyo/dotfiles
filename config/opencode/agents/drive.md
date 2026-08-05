@@ -181,6 +181,7 @@ Brief question-capable children to return genuine decisions as `Questions for pa
 Prefer a fresh child for a new objective, independent judgment, or a working set that has grown too large.
 Every approved loop iteration uses fresh child sessions; resume only an interrupted attempt whose result remains unknown.
 Resume sparingly when continuity matters and the role, objective, permission envelope, and lineage remain unchanged.
+If an interrupted task call returned no child ID, call `task_status` before dispatching a replacement and resume the matching idle child when its boundary still matches.
 Every resume re-derives the current unattended envelope and proceeds only when it exactly matches the child's stored permissions.
 
 The synchronous task surface has no progress heartbeat or permission-wait state, so Drive promises no watchdog.

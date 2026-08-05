@@ -2,16 +2,21 @@ import type { Plugin, PluginModule } from "@opencode-ai/plugin";
 import { tool } from "@opencode-ai/plugin";
 import { loadDelegateConfig } from "./config.ts";
 import { enforceProviderPolicy } from "./policy.ts";
-import { prepareTask, runChildTask } from "./session.ts";
+import { prepareTask, readChildTaskStatus, runChildTask } from "./session.ts";
 
 const DESCRIPTION = [
   "Launch a specialized subagent task.",
   "Use model as provider/model-id to choose a runtime model for this task call.",
   "Use effort for the target model's reasoning variant; invalid efforts fail explicitly.",
   "If model is omitted, the child uses the agent's pinned model when one exists, else the current assistant message's model and effort.",
-  "Resume sparingly with task_id only for the same unfinished child; interrupted calls retain the child ID in tool metadata.",
+  "Resume sparingly with task_id only for the same unfinished child; if an interrupted call hides its result, use task_status to recover the child ID before restarting work.",
   "If the usage cache shows the provider is exhausted, waits for the reset with no maximum wait.",
   "Delegating to a provider missing from delegate.json errors explicitly.",
+].join(" ");
+
+const STATUS_DESCRIPTION = [
+  "List direct subagent sessions created by task for the current session, newest first, with task IDs and live statuses.",
+  "Use immediately after an interrupted task call before launching a replacement; match the title and agent, reconcile durable write state, then resume an idle child with task_id.",
 ].join(" ");
 
 const id = "delegate-task";
@@ -42,6 +47,19 @@ const server: Plugin = async ({ client }) => {
             prepared,
             notes,
           })) as never;
+        },
+      }),
+      task_status: tool({
+        description: STATUS_DESCRIPTION,
+        args: {},
+        async execute(_args, ctx) {
+          await ctx.ask({
+            permission: "task_status",
+            patterns: ["*"],
+            always: [],
+            metadata: {},
+          });
+          return readChildTaskStatus(client, ctx.sessionID, ctx.abort);
         },
       }),
     },

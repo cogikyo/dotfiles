@@ -153,6 +153,42 @@ export async function runChildTask(input: {
   }
 }
 
+export async function readChildTaskStatus(client: Client, parentSessionID: string, signal: AbortSignal) {
+  const [rawChildren, statuses] = await Promise.all([
+    unwrap<unknown[]>(
+      client.session.children({ path: { id: parentSessionID }, signal } as never),
+      `list children of session ${parentSessionID}`,
+    ),
+    unwrap<Record<string, unknown>>(
+      client.session.status({ signal } as never),
+      `read child statuses for session ${parentSessionID}`,
+    ),
+  ]);
+
+  const children = rawChildren
+    .map(object)
+    .filter((child): child is Record<string, unknown> => !!string(child?.id))
+    .sort((left, right) => sessionUpdated(right) - sessionUpdated(left));
+
+  if (!children.length) return `No direct task children found for session ${parentSessionID}.`;
+
+  const lines = [`Direct task children for session ${parentSessionID}, newest first:`];
+  for (const child of children) {
+    const id = string(child.id)!;
+    const status = childStatus(object(statuses[id]));
+    lines.push(
+      "",
+      `task_id: ${id}`,
+      `status: ${status}`,
+      `agent: ${sessionAgent(child) ?? "unknown"}`,
+      `title: ${singleLine(string(child.title) ?? "untitled")}`,
+      `updated: ${new Date(sessionUpdated(child)).toISOString()}`,
+    );
+  }
+  lines.push("", "Only idle children can be resumed. Match the interrupted call by title and agent before using task_id.");
+  return lines.join("\n");
+}
+
 async function waitForChild(
   client: Client,
   sessionID: string,
@@ -695,6 +731,25 @@ function defaultAgentRules(agentName: string, explicitRules: Rule[]) {
 
 function sessionAgent(session: Record<string, unknown>) {
   return string(session.agent) ?? string(object(session.agent)?.name);
+}
+
+function sessionUpdated(session: Record<string, unknown>) {
+  const updated = object(session.time)?.updated;
+  return typeof updated === "number" && Number.isFinite(updated) ? updated : 0;
+}
+
+function childStatus(status: Record<string, unknown> | undefined) {
+  const type = string(status?.type) ?? "idle";
+  if (type !== "retry") return type;
+
+  const attempt = typeof status?.attempt === "number" ? ` attempt=${status.attempt}` : "";
+  const next = typeof status?.next === "number" ? ` next=${new Date(status.next).toISOString()}` : "";
+  const message = string(status?.message);
+  return [`retry${attempt}${next}`, message].filter(Boolean).join(" ");
+}
+
+function singleLine(value: string) {
+  return value.replace(/\s+/gu, " ").trim();
 }
 
 function sessionParentID(session: Record<string, unknown>) {

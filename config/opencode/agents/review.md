@@ -304,6 +304,7 @@ Use `todowrite` when three or more meaningful review boundaries are in flight or
 
 Prefer a fresh child for a new concern, independent judgment, or a working set that has grown too large.
 Resume sparingly when continuity matters and the target, baseline, lens, permission envelope, and lineage remain unchanged.
+If an interrupted task call returned no child ID, call `task_status` before dispatching a replacement and resume the matching idle child when its boundary still matches.
 The synchronous task surface has no progress heartbeat or permission-wait state, so Review promises no watchdog.
 Use bounded slices and recover only after a returned failure, interruption, blocker, or empty output.
 Before resuming or replacing work, reconcile durable evidence because completion is unknown.

@@ -39,6 +39,7 @@ Normal flow:
 - `model` is `provider/model-id`; when omitted the child inherits the agent's pinned model or the current assistant message's model and effort.
 - `effort` maps to the target model's reasoning variants.
 - `task_id` resumes a direct idle child only when its agent and freshly derived permission envelope still match.
+- `task_status` lists the current session's direct children with their task IDs, agents, titles, and live statuses after an interrupted call hides its result.
 - Resume sparingly for the same unfinished work; use a fresh child for new objectives or independent context.
 - The provider must be listed in `config/opencode/delegate.json`.
 - Before spawning, it waits abortably if any non-post-reset window is at >=100%, until the latest capped reset passes; stale, errored, or unknown usage proceeds un-gated.

@@ -88,6 +88,7 @@
   "permission": {
     "spec_title": "deny",
     "grok_x": "deny",
+    "task_status": "allow",
     "external_directory": {
       "/": "deny",
       "/?": "deny",
@@ -211,7 +212,7 @@
     }
   },
   "experimental": {
-    "primary_tools": ["usage_status"]
+    "primary_tools": ["usage_status", "task_status"]
   },
   "compaction": {
     "auto": true,
