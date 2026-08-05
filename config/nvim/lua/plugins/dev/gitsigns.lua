@@ -138,6 +138,13 @@ return {
 			local start_win = api.nvim_get_current_win()
 			local start_buf = api.nvim_get_current_buf()
 			local start_line = api.nvim_win_get_cursor(start_win)[1]
+			local current_file = fn.fnamemodify(api.nvim_buf_get_name(start_buf), ":p")
+			local _, untracked = get_changed_files(current_file)
+
+			if untracked[current_file] then
+				switch_to_changed_file(direction)
+				return
+			end
 
 			gitsigns.nav_hunk(direction, { wrap = false, navigation_message = false }, function(err)
 				if err then
@@ -398,10 +405,11 @@ return {
 		-- ╰─────────────────────────────────────────────────────────────────────╯
 
 		gitsigns.setup({
+			attach_to_untracked = true,
 			signs = {
 				add = { text = "┃+" },
 				change = { text = "┃◦" },
-				untracked = { text = "┋?" },
+				untracked = { text = "" },
 				delete = { text = "╏-" },
 				topdelete = { text = "╏󰗩" },
 				changedelete = { text = "╋⊘" },
@@ -420,5 +428,7 @@ return {
 			current_line_blame = true,
 			on_attach = on_attach,
 		})
+
+		api.nvim_set_hl(0, "GitSignsUntracked", { link = "GitSignsAdd" })
 	end,
 }
