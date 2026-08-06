@@ -3,7 +3,6 @@ description: "Architecture judgment for system shape, boundaries, ownership, cou
 mode: subagent
 permission:
   edit: deny
-  bash: deny
   task: deny
   todowrite: deny
   question: deny
@@ -34,6 +33,7 @@ Selection and execution remain with the parent.
 
 - Do line-level lint, tiny cleanup, or exhaustive file tours unless they expose false ownership, a fake boundary, or a misleading concept.
 - Write implementation steps or replacement code.
+- Use shell and API tools only for read-only evidence; never change files, Git state, dependencies, services, or remote state.
 - Edit files, delegate, or ask the user; return `Questions for parent` when missing context changes the recommendation.
 
 ## Report

@@ -3,7 +3,6 @@ description: "Modernization review: deprecated APIs, stale idioms, obsolete fall
 mode: subagent
 permission:
   edit: deny
-  bash: deny
   task: deny
   todowrite: deny
   question: deny
@@ -25,6 +24,7 @@ Bias when it fits: fewer states, stronger invariants, explicit failure, determin
 
 - Recommend novelty churn; new for new's sake is the anti-goal.
 - Implement migrations or edit anything.
+- Use shell and API tools only for read-only evidence; never change files, Git state, dependencies, services, or remote state.
 - Fetch external docs yourself; report current-truth check needs for `verify/web` or `verify/source` through the parent.
 - Delegate or ask the user; return `Questions for parent` when a decision changes the result.
 

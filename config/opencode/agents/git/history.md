@@ -25,6 +25,7 @@ permission:
     "git merge-base*": allow
     "git range-diff*": allow
     "git cat-file*": allow
+    "git ls-files*": allow
     "git worktree list*": allow
     "git worktree add *": allow
     "git branch *": allow

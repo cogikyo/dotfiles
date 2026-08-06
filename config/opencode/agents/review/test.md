@@ -3,7 +3,6 @@ description: "Judges test necessity, quality, and maintenance entropy: brittle m
 mode: subagent
 permission:
   edit: deny
-  bash: deny
   task: deny
   todowrite: deny
   question: deny
@@ -27,6 +26,7 @@ Builders may write tests directly required by their objective; suite runs belong
 
 - Write tests, or run them unless the parent explicitly asks and the run is cheap.
 - Implement product fixes.
+- Use shell and API tools only for read-only evidence; never change files, Git state, dependencies, services, or remote state.
 - Edit files, delegate, or ask the user; return `Questions for parent` when a decision changes the result.
 
 ## Report

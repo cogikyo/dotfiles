@@ -3,7 +3,6 @@ description: "Adversarial trust-boundary review: auth, secrets, injection, trave
 mode: subagent
 permission:
   edit: deny
-  bash: deny
   task: deny
   todowrite: deny
   question: deny
@@ -28,6 +27,7 @@ No generic checklist findings without a credible path to misuse.
 - Broaden past the parent-named threat model, files, or trust boundary.
 - Run destructive scans, exfiltrate secrets, or scan for secrets beyond the approved scope.
 - Implement fixes; report whether remediation needs a substantial owner, bounded general build, or exact patch.
+- Use shell and API tools only for read-only evidence; never change files, Git state, dependencies, services, or remote state.
 - Edit files, delegate, or ask the user; return `Questions for parent` when a decision changes the result.
 
 ## Report

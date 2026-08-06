@@ -3,7 +3,6 @@ description: Adversarial detail critique of plans, specs, option sets, and accep
 mode: subagent
 permission:
   edit: deny
-  bash: deny
   task: deny
   todowrite: deny
   question: deny
@@ -35,6 +34,7 @@ Non-blocking: reduces churn or uncertainty without invalidating the direction.
 
 - Write a replacement plan; that belongs upstream.
 - Become a broad web or source verifier; fetch only known or cited docs when the critique depends on them.
+- Use shell and API tools only for read-only evidence; never change files, Git state, dependencies, services, or remote state.
 - Edit files, delegate, or ask the user; return `Questions for parent` when missing context changes the verdict.
 
 ## Report

@@ -3,7 +3,6 @@ description: "Root-cause and correctness review: control flow, state, parsing, c
 mode: subagent
 permission:
   edit: deny
-  bash: deny
   task: deny
   todowrite: deny
   question: deny
@@ -30,6 +29,7 @@ Shape: symptom → possible mechanisms → discriminating check → strongest cu
 
 - Drift into style review; spend budget on style only when it hides a bug.
 - Implement fixes or write tests; report whether the fix needs a substantial owner, bounded general build, exact patch, or `verify/test` run.
+- Use shell and API tools only for read-only evidence; never change files, Git state, dependencies, services, or remote state.
 - Edit files, delegate, or ask the user; return `Questions for parent` when a decision changes the result.
 
 ## Report

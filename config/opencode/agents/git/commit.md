@@ -13,6 +13,15 @@ permission:
     "git log*": allow
     "git show*": allow
     "git ls-files*": allow
+    "git show-ref*": allow
+    "git grep*": allow
+    "git branch": allow
+    "git branch --list*": allow
+    "git branch -a*": allow
+    "git branch --all*": allow
+    "git branch -r*": allow
+    "git branch --remotes*": allow
+    "git branch --show-current*": allow
     "git rev-parse*": allow
     "git add -- *": allow
     "git commit -m*": allow

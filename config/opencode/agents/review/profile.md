@@ -3,7 +3,6 @@ description: "Performance-shape review: algorithms, allocations, I/O batching, r
 mode: subagent
 permission:
   edit: deny
-  bash: deny
   task: deny
   todowrite: deny
   question: deny
@@ -28,6 +27,7 @@ Good: showing a repeated scan, broad invalidation, blocking hot path, or N+1 I/O
 
 - Micro-optimize cold paths or recommend tuning without evidence.
 - Implement optimizations, or run profilers and benchmarks unless the parent explicitly asks.
+- Use shell and API tools only for read-only evidence; never change files, Git state, dependencies, services, or remote state.
 - Edit files, delegate, or ask the user; return `Questions for parent` when a decision changes the result.
 
 ## Report

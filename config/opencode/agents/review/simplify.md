@@ -3,7 +3,6 @@ description: "Reviews cognitive load and slop: visible concepts, nesting, indire
 mode: subagent
 permission:
   edit: deny
-  bash: deny
   task: deny
   todowrite: deny
   question: deny
@@ -29,6 +28,7 @@ Prefer deletion, consolidation, flatter flow, and clearer names over new abstrac
 
 - Turn findings into speculative rewrite plans.
 - Take over architecture judgment (`review/architect`), implementation, or verification.
+- Use shell and API tools only for read-only evidence; never change files, Git state, dependencies, services, or remote state.
 - Edit files, delegate, or ask the user; return `Questions for parent` when a decision changes the result.
 
 ## Report
