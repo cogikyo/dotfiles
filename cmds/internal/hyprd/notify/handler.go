@@ -19,6 +19,8 @@ const (
 	idleBackoffInitial = 10 * time.Minute
 	idleBackoffStep    = 10 * time.Minute
 	idleBackoffMax     = 30 * time.Minute
+	dunstDeliveryTTL   = 30 * time.Minute
+	dunstDeliveryLimit = 1024
 )
 
 var opencodePaneAckGroups = []string{
@@ -43,6 +45,10 @@ var globalIdleGate = struct {
 	byKey map[string]idleBackoff
 }{byKey: make(map[string]idleBackoff)}
 
+var globalDunstDeliveries = &dunstDeliveryRegistry{
+	byID: make(map[int]dunstDelivery),
+}
+
 var soundQueue = make(chan soundRequest, 32)
 
 type soundRequest struct {
@@ -62,6 +68,26 @@ type paneNotificationRegistry struct {
 	active   map[paneNotificationKey]uint64
 	canceled map[paneNotificationKey]map[uint64]struct{}
 	ack      map[paneNotificationKey]uint64
+}
+
+type dunstDeliveryContent struct {
+	App          string
+	Category     string
+	DesktopEntry string
+	Summary      string
+	Body         string
+	Urgency      string
+	IconPath     string
+}
+
+type dunstDelivery struct {
+	Content dunstDeliveryContent
+	Seen    time.Time
+}
+
+type dunstDeliveryRegistry struct {
+	mu   sync.Mutex
+	byID map[int]dunstDelivery
 }
 
 func init() {
@@ -254,6 +280,9 @@ func (n *Notifier) handleKitty(req NotifyRequest) error {
 func (n *Notifier) handleDunst(req NotifyRequest) error {
 	switch req.Event {
 	case "script":
+		if !globalDunstDeliveries.Accept(req) {
+			return nil
+		}
 		n.rememberDunstNotification(req)
 		sound := n.soundForDunst(req)
 		if sound != "" {
@@ -265,6 +294,57 @@ func (n *Notifier) handleDunst(req NotifyRequest) error {
 	default:
 		return fmt.Errorf("unknown dunst event: %s", req.Event)
 	}
+}
+
+// Accept reports whether this positive notification ID carries new content.
+func (r *dunstDeliveryRegistry) Accept(req NotifyRequest) bool {
+	if req.NotificationID <= 0 {
+		return true
+	}
+
+	now := time.Now()
+	content := dunstDeliveryContent{
+		App:          req.App,
+		Category:     req.Category,
+		DesktopEntry: req.DesktopEntry,
+		Summary:      req.Summary,
+		Body:         req.Body,
+		Urgency:      req.Urgency,
+		IconPath:     req.IconPath,
+	}
+
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	cutoff := now.Add(-dunstDeliveryTTL)
+	for id, delivery := range r.byID {
+		if delivery.Seen.Before(cutoff) {
+			delete(r.byID, id)
+		}
+	}
+
+	if delivery, seen := r.byID[req.NotificationID]; seen && delivery.Content == content {
+		delivery.Seen = now
+		r.byID[req.NotificationID] = delivery
+		return false
+	}
+
+	r.byID[req.NotificationID] = dunstDelivery{Content: content, Seen: now}
+	if len(r.byID) > dunstDeliveryLimit {
+		oldestID := 0
+		var oldest time.Time
+		for id, delivery := range r.byID {
+			if id == req.NotificationID {
+				continue
+			}
+			if oldestID == 0 || delivery.Seen.Before(oldest) {
+				oldestID = id
+				oldest = delivery.Seen
+			}
+		}
+		delete(r.byID, oldestID)
+	}
+	return true
 }
 
 // dispatch resolves sound/volume from the agent style, queues the sound, and sends the dunst notification.
@@ -474,6 +554,29 @@ func (r *paneNotificationRegistry) Next() uint64 {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 	return r.nextLocked()
+}
+
+// NewestActive returns the pane context owned by the newest uncanceled dunstify call.
+func (r *paneNotificationRegistry) NewestActive() *kittyContext {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	var newest paneNotificationKey
+	var newestToken uint64
+	for key, token := range r.active {
+		_, canceled := r.canceled[key][token]
+		if token == 0 || token <= r.ack[key] || canceled {
+			continue
+		}
+		if token > newestToken {
+			newest = key
+			newestToken = token
+		}
+	}
+	if newestToken == 0 {
+		return nil
+	}
+	return &kittyContext{PID: newest.PID, WindowID: newest.WindowID}
 }
 
 func (r *paneNotificationRegistry) Canceled(key paneNotificationKey, token uint64) bool {

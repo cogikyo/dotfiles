@@ -337,14 +337,13 @@ notify:
     work: fruit
     wf-start: discovery
     wf-end: reward
-    Slack: knock
 
   # ├─ activation targets ───────────────────────────────────────────────────────┤
   # Keys match the dunst app name or desktop-entry; class is the live Hyprland class.
   # Apps listed here are focused when their notification is activated (click or Alt+C),
   # even when the sending app offers no action of its own.
-  # A notification stays pending after its toast expires, so Alt+C still routes to the app later.
-  # Repeated notifications for one target coalesce, so a single Alt+C consumes them all.
+  # Routes last only while the latest notification for that target remains active.
+  # Repeated notifications for one target coalesce into the newest route.
   action_focus_apps:
     Slack: { workspace: 2, class: slack }
     Firefox: { workspace: 2, class: firefox-developer-edition }
@@ -355,6 +354,7 @@ notify:
   silent_apps: # these suppress sounds without suppressing the notification itself.
     - Spotify
     - discord
+    - slack
   kitty_silent_patterns: # these silence agent based notications, favoring agent styles instead
     - opencode
     - approval

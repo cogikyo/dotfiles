@@ -4,11 +4,9 @@ package notify
 //   - dunst emits ActionInvoked when a provider default action fires (mouse click or dunstctl action).
 //   - ActivateDisplayed runs from the hyprd keybind and must also serve apps whose notifications carry no provider action at all, by focusing the configured window itself.
 //
-// A dunst toast lives for a few seconds, while the keybind is pressed whenever the user gets around to it.
-// A configured app's notification arms a pending route that outlives the toast.
-// The route stays armed until something consumes it: the keybind, a provider action, or the user dismissing the toast.
-// Expiry alone does not consume it.
-// Repeated notifications for one target coalesce into a single route, so a busy chat app hijacks the keybind once, not once per message.
+// A configured app's visible notification arms a route for its target.
+// The keybind or a provider action consumes the route, and closing its latest notification removes it.
+// Repeated notifications for one target coalesce, while an older notification's close cannot remove the newer route.
 //
 // Routes are learned from the dunst script hook, because `dunstctl history` only lists notifications dunst has already closed.
 // Pending routes live in memory and reset with hyprd.
@@ -29,17 +27,12 @@ import (
 )
 
 const (
-	appRouteTTL      = 30 * time.Minute       // drop pending routes nobody ever activated
+	appRouteTTL      = 30 * time.Minute       // bound routes whose close signal was missed
 	actionAckTTL     = 5 * time.Second        // how long an ActionInvoked record stays interesting
 	dunstActionGrace = 150 * time.Millisecond // wait for dunst to report a provider action; the signal precedes dunstctl's reply
 	dunstActionPoll  = 15 * time.Millisecond
-)
-
-// dunst NotificationClosed reasons; only expiry leaves a route pending.
-const (
-	closeExpired   uint32 = 1
-	closeDismissed uint32 = 2
-	closeCalled    uint32 = 3
+	dunstObjectPath  = dbus.ObjectPath("/org/freedesktop/Notifications")
+	dunstInterface   = "org.freedesktop.Notifications"
 )
 
 // focusTarget is the resolved window an activation should focus.
@@ -58,10 +51,11 @@ func (t focusTarget) key() string {
 	return fmt.Sprintf("%d|%s|%s", t.Workspace, t.Class, t.Title)
 }
 
-// appRoute is one configured app waiting to be activated.
+// appRoute is one configured app whose latest notification remains active.
 type appRoute struct {
-	Target   focusTarget
-	Notified time.Time // most recent notification for this target
+	Target         focusTarget
+	NotificationID uint32
+	Notified       time.Time
 }
 
 type appRouter struct {
@@ -112,10 +106,11 @@ func (n *Notifier) rememberDunstNotification(req NotifyRequest) {
 	globalAppRouter.Remember(uint32(max(req.NotificationID, 0)), target)
 }
 
-// ActivateDisplayed acts on a visible notification or a pending app route, reporting whether it handled the keypress.
+// ActivateDisplayed acts on a visible notification, reporting whether it handled the keypress.
 //
 // A provider default action always gets first chance, since it belongs to whatever dunst is showing.
-// When nothing acts on the keypress, the newest pending route is consumed and its window focused.
+// A live pane notification can bridge a momentary zero from dunst; a true zero falls through to the normal keybind.
+// When a visible notification has no provider action, the newest app route is consumed and focused.
 // Reporting false leaves the keybind free to fall through to its normal behavior.
 func (n *Notifier) ActivateDisplayed() (string, bool, error) {
 	globalAppRouter.Start(n.hypr)
@@ -130,6 +125,17 @@ func (n *Notifier) ActivateDisplayed() (string, bool, error) {
 			logf("activate: provider action id=%d", id)
 			return "notification: action", true, nil
 		}
+	}
+
+	if displayed == 0 {
+		if ctx := globalPaneNotifications.NewestActive(); ctx != nil {
+			n.acknowledgePane(ctx)
+			n.focusContext(ctx)
+			logf("activate: focused active pane pid=%d window=%d (displayed=0)", ctx.PID, ctx.WindowID)
+			return "notification: focus pane", true, nil
+		}
+		logf("activate: no displayed notification")
+		return "", false, nil
 	}
 
 	target, stale, ok := globalAppRouter.Consume()
@@ -190,7 +196,7 @@ func (r *appRouter) Remember(id uint32, target focusTarget) {
 	r.pruneLocked()
 	key := target.key()
 	_, pending := r.routes[key]
-	r.routes[key] = appRoute{Target: target, Notified: time.Now()}
+	r.routes[key] = appRoute{Target: target, NotificationID: id, Notified: time.Now()}
 	if id > 0 {
 		r.live[id] = key
 	}
@@ -281,44 +287,54 @@ func (r *appRouter) pruneLocked() {
 func (r *appRouter) run() {
 	conn, err := dbus.ConnectSessionBus()
 	if err != nil {
-		logf("dbus connect: %v", err)
+		logf("dbus monitor setup: connect: %v", err)
 		return
 	}
 	defer conn.Close()
 
-	for _, member := range []string{"ActionInvoked", "NotificationClosed"} {
-		if err := conn.AddMatchSignal(
-			dbus.WithMatchObjectPath(dbus.ObjectPath("/org/freedesktop/Notifications")),
-			dbus.WithMatchInterface("org.freedesktop.Notifications"),
-			dbus.WithMatchMember(member),
-		); err != nil {
-			logf("dbus add %s match: %v", member, err)
-			return
-		}
+	rules := []string{
+		"type='signal',path='/org/freedesktop/Notifications',interface='org.freedesktop.Notifications',member='ActionInvoked'",
+		"type='signal',path='/org/freedesktop/Notifications',interface='org.freedesktop.Notifications',member='NotificationClosed'",
+	}
+	if call := conn.BusObject().Call("org.freedesktop.DBus.Monitoring.BecomeMonitor", 0, rules, uint32(0)); call.Err != nil {
+		logf("dbus monitor setup: BecomeMonitor: %v", call.Err)
+		return
 	}
 
-	signals := make(chan *dbus.Signal, 32)
-	conn.Signal(signals)
-	for signal := range signals {
-		switch signal.Name {
-		case "org.freedesktop.Notifications.ActionInvoked":
-			r.handleAction(signal)
-		case "org.freedesktop.Notifications.NotificationClosed":
-			r.handleClose(signal)
+	messages := make(chan *dbus.Message, 32)
+	conn.Eavesdrop(messages)
+	for message := range messages {
+		if message.Type != dbus.TypeSignal {
+			continue
+		}
+		path, _ := message.Headers[dbus.FieldPath].Value().(dbus.ObjectPath)
+		if path != dunstObjectPath {
+			continue
+		}
+		iface, _ := message.Headers[dbus.FieldInterface].Value().(string)
+		if iface != dunstInterface {
+			continue
+		}
+		member, _ := message.Headers[dbus.FieldMember].Value().(string)
+		switch member {
+		case "ActionInvoked":
+			r.handleAction(message.Body)
+		case "NotificationClosed":
+			r.handleClose(message.Body)
 		}
 	}
 }
 
 // handleAction records the acknowledgement and focuses the window when the action belongs to a route.
-func (r *appRouter) handleAction(signal *dbus.Signal) {
-	if len(signal.Body) < 2 {
+func (r *appRouter) handleAction(body []any) {
+	if len(body) < 2 {
 		return
 	}
-	id, ok := signal.Body[0].(uint32)
+	id, ok := body[0].(uint32)
 	if !ok {
 		return
 	}
-	if _, ok := signal.Body[1].(string); !ok {
+	if _, ok := body[1].(string); !ok {
 		return
 	}
 
@@ -326,13 +342,17 @@ func (r *appRouter) handleAction(signal *dbus.Signal) {
 	r.acted[id] = time.Now()
 	key, routed := r.live[id]
 	route, pending := r.routes[key]
+	var stale []uint32
 	if routed && pending {
-		r.dropLocked(key)
+		stale = r.dropLocked(key)
 	}
 	r.mu.Unlock()
 
 	if !routed || !pending {
 		return
+	}
+	for _, staleID := range stale {
+		closeDunstNotification(int(staleID))
 	}
 	focused, err := r.focus(route.Target)
 	if err != nil {
@@ -342,16 +362,16 @@ func (r *appRouter) handleAction(signal *dbus.Signal) {
 	logf("action focus: id=%d target=%s focused=%q", id, route.Target.Class, focused)
 }
 
-// handleClose consumes a route when the user dealt with the toast; expiry leaves it pending.
-func (r *appRouter) handleClose(signal *dbus.Signal) {
-	if len(signal.Body) < 2 {
+// handleClose removes a route when its latest coalesced notification closes for any reason.
+func (r *appRouter) handleClose(body []any) {
+	if len(body) < 2 {
 		return
 	}
-	id, ok := signal.Body[0].(uint32)
+	id, ok := body[0].(uint32)
 	if !ok {
 		return
 	}
-	reason, ok := signal.Body[1].(uint32)
+	reason, ok := body[1].(uint32)
 	if !ok {
 		return
 	}
@@ -359,20 +379,17 @@ func (r *appRouter) handleClose(signal *dbus.Signal) {
 	r.mu.Lock()
 	key, routed := r.live[id]
 	delete(r.live, id)
-	consumed := false
-	if routed && (reason == closeDismissed || reason == closeCalled) {
-		if _, pending := r.routes[key]; pending {
-			r.dropLocked(key)
-			consumed = true
-		}
+	route, pending := r.routes[key]
+	closedLatest := routed && pending && route.NotificationID == id
+	if closedLatest {
+		r.dropLocked(key)
 	}
 	r.mu.Unlock()
 
-	if routed && reason == closeExpired {
-		logf("route kept: id=%d expired unseen", id)
-	}
-	if consumed {
-		logf("route consumed: id=%d reason=%d", id, reason)
+	if closedLatest {
+		logf("route closed: id=%d reason=%d", id, reason)
+	} else if routed && pending {
+		logf("route kept: closed id=%d newer=%d reason=%d", id, route.NotificationID, reason)
 	}
 }
 
