@@ -246,7 +246,7 @@ return {
 			map("yp",      api.fs.copy.relative_path,        "Copy Relative Path")
 			map("yP",      api.fs.copy.absolute_path,        "Copy Absolute Path")
 			map("<A-f>",   copy_absolute_path_with_spacing,  "Copy Absolute Path")
-			map("<A-F>",   copy_absolute_path_with_spacing,  "Copy Absolute Path")
+			map("<C-o>",   copy_absolute_path_with_spacing,  "Copy Absolute Path")
 
 			-- tree settings ───────────────────────────────────────────────
 			map("cd",      api.tree.change_root_to_node,     "CD")
