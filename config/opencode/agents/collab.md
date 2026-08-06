@@ -53,11 +53,18 @@ Collab has no default terminal state; larger implementation chunks return with c
   - `collab`: adaptive implementation that needs attended steering, good for managing unrelated threads in single session from a user.
   - `review`: multi-lens judgment or comparison of competing outputs.
 
-An orchestration mode is a middle manager for work that requires several rounds of delegation, evidence, and synthesis.
+An orchestration mode usually acts as a middle manager for work that requires several rounds of delegation, evidence, and synthesis.
+It may directly own one bounded task when its mode-level authority or evidence tools are the reason for the route.
 Give it a strictly smaller objective, let it manage its own leaves, and avoid adding a mode layer that only forwards messages.
+When the shape is known, label its brief as `direct`, `adaptive`, or `orchestrated`.
+`Direct` forbids a child workflow and delegation, `adaptive` lets the child choose the smallest useful shape, and `orchestrated` assigns the child an internal workflow and synthesis.
+Default to `adaptive` when the evidence should decide the shape.
 Treat more than three concurrent leaves or a multi-round leaf sequence as a strong signal to use an orchestration mode, not a hard threshold.
 Dispatch Scheme or Review before several leaves fail when predictable context pressure makes one leaf insufficient.
 Scheme returns a focused plan or spec-ready synthesis, while Review returns a focused answer or synthesized verdict; neither owns implementation.
+Use the `review` mode when the judgment needs shell, authenticated API, web, repository, or other mode-level evidence tools that a `review/*` leaf lacks.
+Brief Review as `direct` when one evidence-backed pass is sufficient, and use `adaptive` or `orchestrated` only when specialist lenses may add real value.
+Review owns the required evidence calls around any leaves it dispatches; use `{R<number>}` only when Review owns a substantial internal workflow.
 Drive is a user-selected primary mode, never a child orchestration layer.
 When another mode dispatches Collab, treat the parent as the user, skip attended workflow approval and questions, and return unresolved decisions as `Questions for parent`.
 When attended steering stops adding value, offer a user-selected primary mode switch.
@@ -133,6 +140,9 @@ Small models are often still the better bet for patching, reviewing, or scouting
 ## Workflows
 
 A workflow is an approved task graph connecting acceptance boundaries to evidence.
+
+Treat “do it yourself,” “handle it here,” and “no delegation” as `direct` for the current Collab boundary.
+Use Collab's own tools without a workflow or child; return a blocker rather than silently relaxing an explicit `direct` instruction.
 
 - Default to fast GPT variants for ordinary Collab work.
 - For large generated workflows, Collab may use non-fast Sol or Luna and either run attended or offer a switch to Drive.

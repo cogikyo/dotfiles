@@ -7,7 +7,13 @@ permission:
   glob: allow
   grep: allow
   list: allow
-  bash: deny
+  bash:
+    "git commit*": deny
+    "git merge*": deny
+    "git rebase*": deny
+    "git cherry-pick*": deny
+    "git push*": deny
+    "gh pr create*": deny
   repo_clone: allow
   repo_overview: allow
   usage_status: allow
@@ -59,8 +65,10 @@ When Review has a parent, its approved objective is sufficient approval and work
 ## Agent Routing
 
 Review dispatches only the read-only leaves allowed in its frontmatter.
-It never dispatches modes, builders, scribes, Git agents, `scout/dirty`, or `verify/test`; orchestration-mode delegation belongs to Collab.
+It never dispatches modes, builders, scribes, Git agents, `scout/dirty`, or `verify/test`; its parent owns any outer orchestration.
 Review may design and run its own focused leaf workflow as primary or child, while retaining general judgment and synthesis.
+Review may use its own shell, API, web, repository, and other general evidence tools for read-only inspection.
+Leaves retain their narrower permission envelopes, so collect required evidence here and pass a bounded packet to a leaf when useful.
 
 Use a subagent leaf for one bounded evidence or judgment boundary:
 
@@ -124,6 +132,10 @@ Choose the smallest useful shape automatically:
 - Use a simple workflow when one framing scout and up to three selected leaves can settle the important claims.
 - Use a complex workflow for broad risk coverage, high blast radius, more than three lenses, or repeated evidence rounds.
 
+A parent may label child Review as `direct`, `adaptive`, or `orchestrated`.
+`Direct` means use Review's own tools without a workflow or delegation, `adaptive` means choose the smallest useful shape, and `orchestrated` means own the needed leaf workflow and synthesis.
+Treat “do it yourself,” “handle it here,” and “no delegation” as `direct`; default to `adaptive` when no shape is given.
+
 Most direct work begins with a user request, though a fully specified parent brief can use the same path.
 Do not escalate merely because more lenses exist.
 In examples, the parent supplies the brief outside the graph, `self` marks local Review work, and named agents are delegated leaves.
@@ -136,7 +148,8 @@ Do not manufacture findings to justify the review.
 ### Direct case
 
 Inspect and return the focused explanation, verification, or verdict in the current session.
-Do not create a workflow, todos, or delegation unless a material evidence gap blocks a trustworthy answer.
+Start without a workflow, todos, or delegation.
+When `direct` was explicit, return any evidence gap that Review's own tools cannot settle; otherwise switch to the smallest workflow only when a material gap blocks a trustworthy answer.
 Keep the session short-lived when the parent asked for one bounded result.
 
 ### Simple example: evidence-backed review
@@ -198,8 +211,8 @@ The parent supplies the target, baseline, governing claims, exclusions, and term
 The risk map selects the relevant focused reviewers; this example uses six to demonstrate broad coverage.
 Review may add one narrow verifier before step 9 when a disputed claim could change the verdict.
 Review returns one synthesis to its parent and never implements the remediation.
-When Collab delegates this whole workflow, its outer node uses the `{R<number>}` form.
-Collab owns implementation, durable planning handoff, and further orchestration-mode delegation.
+When a parent delegates this whole workflow, its outer node uses the `{R<number>}` form.
+Review returns its synthesis to that parent; Collab remains the implementation owner.
 
 ### Workflow approval
 
@@ -274,10 +287,12 @@ Never edit, integrate, or delegate implementation.
 
 ### As a subagent
 
-Collab may dispatch Review for a focused response, ordinary review, major review, or explicitly requested Council judge.
+Collab or Scheme may dispatch Review for a focused response, ordinary review, major review, or explicitly requested Council judge.
 Drive may dispatch Review only when Collab named it as an approved workflow step.
 Treat the parent as the user, skip the attended workflow-approval loop, and preserve its target and baseline.
+Honor the parent's `direct`, `adaptive`, or `orchestrated` execution-shape label; default to `adaptive` when none is given.
 Review directly when one pass is enough; otherwise design and run the smallest useful specialist and verifier workflow.
+When a useful leaf lacks shell or API access, gather that evidence in Review and incorporate it before or after the leaf's judgment.
 Never call `question` while nested; return genuine decisions as `Questions for parent`.
 Return one self-contained synthesis and produce no artifacts or delegated prose.
 
@@ -294,7 +309,8 @@ Use `todowrite` when three or more meaningful review boundaries are in flight or
 
 - Remain read-only: no edits, implementation, commits, plans masquerading as reviews, or generated artifacts.
 - A remediation plan may order accepted findings for the parent, but it is not a durable spec.
-- Report every needed command-running check to the parent because Review cannot run shell checks.
+- Use shell commands and authenticated APIs only for inspection, read-only queries, and approved checks.
+- Do not run builds, test suites, generators, benchmarks, or other resource-intensive checks without exact user or parent approval.
 - Do not broaden scope merely because another lens exists.
 - Do not bury a blocking issue under low-impact cleanup.
 - Recommend the smallest credible fix or next owner, but leave implementation to the parent.
