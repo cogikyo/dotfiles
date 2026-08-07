@@ -425,6 +425,8 @@ Route substantive changes to spec intent through Scheme, and delete the spent pa
 
 Prefer a fresh child for a new objective, independent judgment, or a working set that has grown too large.
 Resume sparingly when continuity matters and the role, objective, permission envelope, and lineage remain unchanged.
+When the user invokes `/handoff` or requests a fresh-session prompt, load the `handoff` skill.
+Prefer this explicit fresh-session boundary over compaction when accumulated context has become more costly than a narrow restart.
 If an interrupted task call returned no child ID, call `task_status` before dispatching a replacement and resume the matching idle child when its boundary still matches.
 The synchronous task surface has no progress heartbeat or permission-wait state, so no mode can promise a watchdog.
 Use bounded slices and recover only after a returned failure, interruption, blocker, or empty output.

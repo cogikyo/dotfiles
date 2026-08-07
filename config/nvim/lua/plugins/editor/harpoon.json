@@ -6,12 +6,11 @@
     },
     "/home/cullyn/LeadPier": {
       "pins": [
-        "backend/core/runner/core.go",
-        "backend/core/staging-backend/docker-compose.yml",
         "pier/README.md",
-        "backend/common/microservices/orm_helpers.go",
+        "backend/core/runner/main.go",
+        ".pier/profiles/shared.yaml",
+        "backend/core/staging-backend/README.md",
         "pier/skills/microstructure/INSTRUCTIONS.md",
-        "pier/context/GO.md",
         "backend/common/utility/json.go"
       ]
     },
@@ -33,7 +32,7 @@
         "billing/init.billing.go",
         "routing/init.routing.go",
         "aggregation/migrate.go",
-        "/home/cullyn/LeadPier/backend/common/utility/json.go"
+        "backend/common/utility/json.go"
       ]
     },
     "/home/cullyn/LeadPier/backend/services/compliance": {
