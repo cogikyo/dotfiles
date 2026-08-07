@@ -174,15 +174,10 @@ tabs:
           nvim: {}
       - name: term
         title: "« 󰠳  »"
-        command: pier
-        executables: [pier]
         cwd: "~/LeadPier"
         actions:
-          pier:
-            pane: 0
-          term:
-            pane: 1
-        layout: "fat:bias=80"
+          term: {}
+        layout: "fat:bias=50"
         panes:
           - cwd: "~/LeadPier"
       - name: backend
@@ -198,7 +193,7 @@ tabs:
         layout: "fat:bias=80"
         panes:
           - command: ""
-            cwd: "~/LeadPier/backend"
+            cwd: "~/LeadPier/frontend"
       - name: pier
         title: "«   »"
         command: nvim
@@ -212,7 +207,7 @@ tabs:
         layout: "fat:bias=80"
         panes:
           - command: ""
-            cwd: "~/LeadPier/pier"
+            cwd: "~/LeadPier"
 
 # ╭───────────────────────────────────────────────────────────────────────────────╮
 # │ background                                                                    │
