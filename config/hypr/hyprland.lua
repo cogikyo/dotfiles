@@ -137,6 +137,31 @@ hl.window_rule({
 	float = true,
 })
 
+local function isBitwarden(window)
+	return window ~= nil
+		and window.class == "firefox-developer-edition"
+		and window.title:find("Extension: (Bitwarden Password Manager)", 1, true) == 1
+end
+
+local function floatBitwarden(window)
+	local target = "address:" .. window.address
+	hl.dispatch(hl.dsp.window.float({ action = "set", window = target }))
+	hl.dispatch(hl.dsp.window.resize({ x = 900, y = 1100, window = target }))
+	hl.dispatch(hl.dsp.window.center({ window = target }))
+end
+
+hl.on("window.title", function(window)
+	if isBitwarden(window) then
+		hl.dispatch(hl.dsp.window.float({ action = "set", window = window }))
+	end
+end)
+
+hl.on("window.fullscreen", function(window)
+	if isBitwarden(window) and window.fullscreen == 0 and window.fullscreen_client == 0 then
+		floatBitwarden(window)
+	end
+end)
+
 -- GLava — desktop audio visualizer, fully passthrough.
 hl.window_rule({
 	name = "glava",
