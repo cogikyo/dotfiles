@@ -106,7 +106,7 @@ var stepDefs = []StepDef{
 	{Name: "go", Description: "Build Go binaries", Risk: "writes built binaries and user services", FixCommand: "dctl install go --dry-run", SupportsDryRun: true},
 	{Name: "eww", Description: "Install eww widget system", Risk: "clones/builds eww and overwrites ~/.local/bin/eww", FixCommand: "dctl install eww --dry-run", SupportsDryRun: true},
 	{Name: "firefox", Description: "Configure Firefox profile, theme, and preferences", Risk: "writes Firefox profile links", FixCommand: "dctl install firefox --dry-run", SupportsDryRun: true, Depends: []string{"repos"}},
-	{Name: "certs", Description: "Provision the local development CA and localhost certificate", Risk: "modifies system and Firefox trust stores and writes a private key", FixCommand: "dctl install certs --dry-run", Sudo: true, SupportsDryRun: true},
+	{Name: "certs", Description: "Provision the local development CA and shared certificate", Risk: "modifies system and Firefox trust stores and writes a private key", FixCommand: "dctl install certs --dry-run", Sudo: true, SupportsDryRun: true},
 	{Name: "shell", Description: "Change default shell to zsh", Risk: "changes login shell", FixCommand: "dctl install shell --dry-run", Sudo: true, SupportsDryRun: true},
 	{Name: "dns", Description: "Set up systemd-resolved with Cloudflare DNS-over-TLS", Risk: "replaces resolver config and restarts networking", FixCommand: "dctl install dns --dry-run", Sudo: true, SupportsDryRun: true, Depends: []string{"system"}},
 }

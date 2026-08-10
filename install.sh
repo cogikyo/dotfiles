@@ -185,7 +185,7 @@ STEP_DEFS=(
     "vpn|Load decrypted NetworkManager VPN profiles|yes|secrets,go"
     "eww|Install eww widget system|no|"
     "firefox|Configure Firefox profile, theme, and preferences|no|repos"
-    "certs|Provision the local development CA and localhost certificate|yes|"
+    "certs|Provision the local development CA and shared certificate|yes|"
     "shell|Change default shell to zsh|yes|"
     "dns|Set up systemd-resolved with Cloudflare DNS-over-TLS|yes|system"
 )
@@ -2495,7 +2495,7 @@ healthcheck_firefox() {
 # =================================================================================================
 
 # =================================================================================================
-#  STEP {CERTS}: Trust mkcert CA and provision the shared localhost certificate  {{{
+#  STEP {CERTS}: Trust mkcert CA and provision the shared local development certificate  {{{
 
 readonly DEV_CERT_RENEWAL_SECONDS=$((30 * 24 * 60 * 60))
 
@@ -2509,6 +2509,7 @@ dev_cert_is_valid() {
             <(openssl pkey -in "$key" -pubout 2>/dev/null) &&
         openssl verify -CAfile "$root" "$cert" &>/dev/null &&
         openssl verify -CAfile "$root" -verify_hostname localhost "$cert" &>/dev/null &&
+        openssl verify -CAfile "$root" -verify_hostname local.leadpier.com "$cert" &>/dev/null &&
         openssl verify -CAfile "$root" -verify_ip 127.0.0.1 "$cert" &>/dev/null &&
         openssl verify -CAfile "$root" -verify_ip ::1 "$cert" &>/dev/null &&
         openssl x509 -in "$cert" -checkend "$DEV_CERT_RENEWAL_SECONDS" -noout &>/dev/null
@@ -2552,9 +2553,9 @@ generate_dev_cert() (
     tmp_dir=$(mktemp -d "$cert_dir/.mkcert.XXXXXX") || exit 1
     trap 'rm -rf -- "$tmp_dir"' EXIT
     mkcert -cert-file "$tmp_dir/localhost.pem" -key-file "$tmp_dir/localhost-key.pem" \
-        localhost 127.0.0.1 ::1 || { err "Failed to generate the localhost certificate"; return 1; }
+        localhost local.leadpier.com 127.0.0.1 ::1 || { err "Failed to generate the local development certificate"; return 1; }
     dev_cert_is_valid "$tmp_dir/localhost.pem" "$tmp_dir/localhost-key.pem" "$root" ||
-        { err "mkcert generated an invalid localhost certificate"; return 1; }
+        { err "mkcert generated an invalid local development certificate"; return 1; }
     chmod 644 "$tmp_dir/localhost.pem" && chmod 600 "$tmp_dir/localhost-key.pem" || return 1
     mv -f "$tmp_dir/localhost-key.pem" "$key" && mv -f "$tmp_dir/localhost.pem" "$cert"
 )
@@ -2594,11 +2595,11 @@ step_certs() {
     install -d -m 700 "$cert_dir" || return 1
 
     if dev_cert_is_valid "$cert" "$key" "$root"; then
-        ok "Localhost certificate is current"
+        ok "Local development certificate is current"
     else
-        info "Generating localhost certificate..."
+        info "Generating local development certificate..."
         generate_dev_cert "$cert_dir" "$root" || return 1
-        ok "Localhost certificate generated"
+        ok "Local development certificate generated"
     fi
 
     chmod 700 "$cert_dir" || return 1
@@ -2639,7 +2640,7 @@ healthcheck_certs() {
         return 1
     fi
     dev_cert_is_valid "$cert" "$key" "$root" ||
-        { err "Healthcheck failed: localhost certificate or key is invalid"; return 1; }
+        { err "Healthcheck failed: local development certificate or key is invalid"; return 1; }
     openssl verify "$cert" &>/dev/null ||
         { err "Healthcheck failed: current mkcert root is absent from the system trust store"; return 1; }
 }

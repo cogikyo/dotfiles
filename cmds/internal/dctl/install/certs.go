@@ -23,6 +23,8 @@ import (
 
 const devCertRenewal = 30 * 24 * time.Hour
 
+var developmentCertNames = [...]string{"localhost", "local.leadpier.com", "127.0.0.1", "::1"}
+
 type devCertFiles struct {
 	dir  string
 	cert string
@@ -51,9 +53,9 @@ func installCerts(ctx context.Context, root paths.Root, out *output.Printer, opt
 		out.Info("[dry-run] Would run mkcert -install for system trust")
 		out.Info("[dry-run] Would ensure the mkcert CA is trusted by Firefox at %s", profile)
 		if dryRunLeafIsCurrent(ctx, query, files) {
-			out.Info("[dry-run] Would not regenerate the current valid localhost certificate at %s", files.cert)
+			out.Info("[dry-run] Would not regenerate the current valid local development certificate at %s", files.cert)
 		} else {
-			out.Info("[dry-run] Would generate a localhost certificate and key in %s", files.dir)
+			out.Info("[dry-run] Would generate a local development certificate and key in %s", files.dir)
 		}
 		out.Info("[dry-run] Would enforce modes 0700 on %s, 0644 on the certificate, and 0600 on the key", files.dir)
 		return nil
@@ -77,9 +79,9 @@ func installCerts(ctx context.Context, root paths.Root, out *output.Printer, opt
 		return err
 	}
 	if err := validateDevelopmentCert(files.cert, files.key, rootCert, time.Now()); err == nil {
-		out.OK("Localhost certificate is current")
+		out.OK("Local development certificate is current")
 	} else {
-		out.Info("Generating localhost certificate")
+		out.Info("Generating local development certificate")
 		if err := generateDevelopmentCert(ctx, runner, files, rootCert); err != nil {
 			return err
 		}
@@ -137,9 +139,9 @@ func certsHealth(ctx context.Context, root paths.Root, runner execx.Runner) []he
 		checks = append(checks, ok("certs:paths", "development certificate paths", files.dir))
 	}
 	if err := validateDevelopmentCert(files.cert, files.key, rootCert, time.Now()); err != nil {
-		checks = append(checks, fail("certs:localhost", "localhost certificate", err.Error(), fix))
+		checks = append(checks, fail("certs:localhost", "local development certificate", err.Error(), fix))
 	} else {
-		checks = append(checks, ok("certs:localhost", "localhost certificate", files.cert))
+		checks = append(checks, ok("certs:localhost", "local development certificate", files.cert))
 	}
 	return checks
 }
@@ -278,11 +280,13 @@ func generateDevelopmentCert(ctx context.Context, runner execx.Runner, files dev
 	defer os.RemoveAll(tmp)
 	tmpCert := filepath.Join(tmp, "localhost.pem")
 	tmpKey := filepath.Join(tmp, "localhost-key.pem")
-	if _, err := runner.Run(ctx, "", "mkcert", "-cert-file", tmpCert, "-key-file", tmpKey, "localhost", "127.0.0.1", "::1"); err != nil {
-		return fmt.Errorf("generate localhost certificate: %w", err)
+	args := []string{"-cert-file", tmpCert, "-key-file", tmpKey}
+	args = append(args, developmentCertNames[:]...)
+	if _, err := runner.Run(ctx, "", "mkcert", args...); err != nil {
+		return fmt.Errorf("generate local development certificate: %w", err)
 	}
 	if err := validateDevelopmentCert(tmpCert, tmpKey, root, time.Now()); err != nil {
-		return fmt.Errorf("mkcert generated an invalid localhost certificate: %w", err)
+		return fmt.Errorf("mkcert generated an invalid local development certificate: %w", err)
 	}
 	if err := os.Chmod(tmpCert, 0o644); err != nil {
 		return err
@@ -327,7 +331,7 @@ func validateDevelopmentCert(certPath, keyPath string, root *x509.Certificate, n
 	if _, err := cert.Verify(x509.VerifyOptions{Roots: roots, DNSName: "localhost", CurrentTime: now}); err != nil {
 		return fmt.Errorf("verify certificate chain: %w", err)
 	}
-	for _, name := range []string{"localhost", "127.0.0.1", "::1"} {
+	for _, name := range developmentCertNames {
 		if err := cert.VerifyHostname(name); err != nil {
 			return fmt.Errorf("verify SAN %s: %w", name, err)
 		}
