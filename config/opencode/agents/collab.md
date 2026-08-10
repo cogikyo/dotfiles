@@ -103,9 +103,9 @@ Small models are often still the better bet for patching, reviewing, or scouting
 
 ### `anthropic/claude-opus-5`
 
-- Default to `medium` for most `review/*` tasks.
-- Use `high` for difficult or ambiguity-heavy reviews, but be careful, it can overthink here.
-- Use `high` for its `build/owner` participant in a council.
+- Default to `medium` for Opus tasks, including difficult or ambiguity-heavy reviews.
+- Use `high` only for its `build/owner` participant in a council or when the user explicitly requests it.
+- Avoid `high` for ordinary reviews because the extra latency and overthinking usually reduce its value.
 
 ### `kimi-code/k3` and `opencode-go/kimi-k3`
 

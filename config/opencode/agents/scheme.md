@@ -104,8 +104,9 @@ Brief Review as `direct` when one evidence-backed pass is enough, `adaptive` whe
 
 ### `anthropic/claude-opus-5`
 
-- Default to `medium` for `review/design`, `review/critic`, and `review/test`.
-- Use `high` for `review/security`, `review/architect`, or ambiguity-heavy criticism.
+- Default to `medium` for all Opus review tasks, including difficult or ambiguity-heavy criticism.
+- Use `high` only for a `build/owner` council participant or when the user explicitly requests it.
+- Avoid `high` for ordinary reviews because the extra latency and overthinking usually reduce its value.
 
 ### `kimi-code/k3` and `opencode-go/kimi-k3`
 
@@ -169,7 +170,7 @@ The parent supplies one bounded concern and required output.
    - inspect the target, sharpen the concern, and identify no more than three consequential evidence gaps
 2. `[high • Sol Fast]` `scout/library`: reuse evidence
    - find existing mechanisms that should constrain the design
-3. `[high • Opus]` `review/architect`: design evidence
+3. `[medium • Opus]` `review/architect`: design evidence
    - map the smallest truthful shape and materially credible alternatives
 4. `[max • Luna Fast]` `verify/source`: upstream evidence
    - settle the external implementation claim identified by the framing packet
@@ -199,9 +200,9 @@ The parent supplies the concern, fixed decisions, exclusions, and expected artif
    - settle upstream behavior that constrains several specs
 5. `self`: architecture spine
    - synthesize spec boundaries, shared invariants, ownership, sequencing, and cross-spec contracts
-6. `[high • Opus]` `review/architect`: boundary criticism
+6. `[medium • Opus]` `review/architect`: boundary criticism
    - challenge ownership, coupling, and materially credible alternative system shapes
-7. `[high • Opus]` `review/security`: trust criticism
+7. `[medium • Opus]` `review/security`: trust criticism
    - challenge authorization, data exposure, and adversarial assumptions where trust boundaries exist
 8. `self`: spec set
    - draft the coordinated documents from the architecture spine and specialist evidence

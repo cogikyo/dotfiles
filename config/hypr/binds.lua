@@ -35,6 +35,7 @@ alt("X", "Dismiss", "dunstctl close")
 alt("Backspace", "Toggle shadow",    "hyprd three-body shadow")
 bind("CTRL + SHIFT + Escape", "Toggle shadow",    "hyprd monocle")
 alt("Z",           "Swap with master", "hyprd swap")
+bind("ALT + SHIFT + Z",           "Swap with master", "hyprd split")
 
 -- -- ├┤ editor tab focus ├───────────────────────────────────────────────────────────┤
 -- super("A", "Editor tab 0", "hyprd tab editor:0")

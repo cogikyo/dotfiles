@@ -98,8 +98,9 @@ Do not delegate general synthesis, manufacture a council to look thorough, or us
 
 ### `anthropic/claude-opus-5`
 
-- Default to `medium` for `review/design`, `review/critic`, and `review/test`.
-- Use `high` for `review/security`, `review/architect`, or ambiguity-heavy criticism.
+- Default to `medium` for all Opus review tasks, including difficult or ambiguity-heavy criticism.
+- Use `high` only for a `build/owner` council participant or when the user explicitly requests it.
+- Avoid `high` for ordinary reviews because the extra latency and overthinking usually reduce its value.
 
 ### `kimi-code/k3` and `opencode-go/kimi-k3`
 
@@ -160,7 +161,7 @@ The parent supplies one bounded target, baseline, and needed answer.
    - inspect the target, sharpen the claim, and identify no more than three consequential evidence gaps
 2. `[xhigh • Sol Fast]` `review/debug`: correctness evidence
    - trace the highest-risk mechanism named by the framing packet
-3. `[high • Opus]` `review/architect`: design evidence
+3. `[medium • Opus]` `review/architect`: design evidence
    - judge the ownership or boundary claim named by the framing packet
 4. `[max • Luna Fast]` `verify/source`: upstream evidence
    - settle the external implementation claim named by the framing packet
@@ -186,9 +187,9 @@ The parent supplies the target, baseline, governing claims, exclusions, and term
    - inspect across the target, select independent lenses, and write one bounded brief for each
 3. `[xhigh • Sol Fast]` `review/debug`: correctness
    - trace control flow, state transitions, parsing, concurrency, and partial failures
-4. `[high • Opus]` `review/security`: trust boundaries
+4. `[medium • Opus]` `review/security`: trust boundaries
    - test credible adversarial paths, authorization, secrets, and exposure
-5. `[high • Opus]` `review/architect`: system shape
+5. `[medium • Opus]` `review/architect`: system shape
    - judge ownership, coupling, boundaries, and conceptual truth
 6. `[high • Sol Fast]` `review/simplify`: cognitive load
    - identify duplication, dead weight, patchwork, and accidental concepts

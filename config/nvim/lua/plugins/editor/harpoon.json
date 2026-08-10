@@ -62,6 +62,11 @@
         "apps/admin/src/pages/statistics/index.tsx"
       ]
     },
+    "/home/cullyn/LeadPier/frontend/.worktrees/route-blacklist": {
+      "pins": [
+        "apps/admin/src/pages/configuration/routes/index.tsx"
+      ]
+    },
     "/home/cullyn/cogikyo/alrodriguez.studio": {
       "pins": [
         ".spec/store.md",
