@@ -111,6 +111,17 @@ return {
 				end
 			end
 
+			local function toggle_git_dirty()
+				api.filter.git.clean.toggle()
+
+				local explorer = core.get_explorer()
+				if explorer and explorer.filters.state.git_clean then
+					api.tree.expand_all()
+				else
+					api.tree.collapse_all()
+				end
+			end
+
 			local function reveal_current_file()
 				for _, w in ipairs(vim.api.nvim_list_wins()) do
 					local name = vim.api.nvim_buf_get_name(vim.api.nvim_win_get_buf(w))
@@ -227,6 +238,7 @@ return {
 			map("zr",      expand_one_level,                  "Expand one level")
 			map("zR",      api.tree.expand_all,               "Expand all")
 			map("zf",      reveal_current_file,               "Reveal current file")
+			map("c",       toggle_git_dirty,                  "Toggle Git dirty tree")
 
 			-- search / jump ───────────────────────────────────────────────
 			map("f",       fuzzy_find_dir,                    "Fuzzy find directory")

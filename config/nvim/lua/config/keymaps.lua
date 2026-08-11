@@ -422,6 +422,22 @@ map("n", "<leader>et", function()
 		api.tree.open()
 	end
 end, desc("Toggle file tree"))
+map("n", "<leader>ec", function()
+	local api = require("nvim-tree.api")
+	local core = require("nvim-tree.core")
+	local view = require("nvim-tree.view")
+	if view.is_visible() then
+		api.tree.focus()
+	else
+		api.tree.open()
+	end
+
+	local explorer = core.get_explorer()
+	if explorer and not explorer.filters.state.git_clean then
+		api.filter.git.clean.toggle()
+	end
+	api.tree.expand_all()
+end, desc("Open Git dirty tree"))
 map("n", "<leader>f<leader>", function()
 	local api = require("nvim-tree.api")
 	local view = require("nvim-tree.view")
