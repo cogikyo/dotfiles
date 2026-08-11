@@ -6,6 +6,7 @@ permission:
   read: allow
   task: deny
   question: deny
+  git_batch: allow
   bash:
     "*": deny
     "git status*": allow
@@ -45,6 +46,7 @@ Create a PR only after the parent cites explicit user approval for the exact can
 History agents construct candidates, and the user publishes them outside the agent harness.
 
 Check governing repository instructions, contribution or migration requirements, remotes, base branch, candidate OID, ancestry, dirty state, existing PRs, and the exact diff.
+Use `git_batch` for supported multi-command read-only Git inspection; keep unsupported queries and PR mutation as individual Bash calls.
 Require the approved candidate OID to already exist at the exact remote branch; stop if the remote branch is absent or differs.
 Create a concise PR with a repository-style title, summary of intent, important constraints, and exact verification.
 Create separate option PRs only when explicitly requested, and identify their relationship clearly.

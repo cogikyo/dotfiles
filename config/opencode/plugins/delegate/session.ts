@@ -1,4 +1,5 @@
 import type { PluginInput, ToolContext } from "@opencode-ai/plugin";
+import type { DelegateConfig } from "./config.ts";
 
 export type TaskArgs = {
   description: string;
@@ -37,8 +38,24 @@ type PreparedTask = {
   permission: Rule[];
 };
 
+type ContextLimits = DelegateConfig["context"];
+type ContextLimit = {
+  level: "hard" | "compaction";
+  tokens?: number;
+};
+
+type ContextWarning = "soft" | "medium";
+
+type ChildWait = {
+  assistant?: Record<string, unknown>;
+  messages: unknown[];
+  limit?: ContextLimit;
+  interruption?: string;
+};
+
 const CONTENT_FILTER_ADVICE = "child unrecoverable; re-brief a fresh child (reword the brief first, switch provider as last resort); never resume this session";
 const INTERRUPTED_ADVICE = "completion unknown; reconcile durable state before re-running because the child may have edited files";
+const CONTEXT_ADVICE = "start a fresh narrower child for the remaining concern; never resume this context-limited session";
 const KNOWN_EFFORTS = new Set(["default", "minimal", "low", "medium", "high", "xhigh"]);
 const MODE_AGENTS = new Set(["collab", "drive", "review", "scheme"]);
 const MAX_MODE_LINEAGE = 2;
@@ -48,6 +65,9 @@ const MAX_MODE_LINEAGE = 2;
 const UNATTENDED_FLOOR: Rule = { permission: "*", pattern: "*", action: "deny" };
 const STATUS_POLL_MS = 300;
 const STARTUP_TIMEOUT_MS = 120_000;
+const SOFT_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: SOFT PRESSURE]";
+const MEDIUM_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: MEDIUM PRESSURE]";
+const contextLimitedSessions = new Set<string>();
 
 export async function prepareTask(client: Client, ctx: ToolContext, input: unknown): Promise<PreparedTask> {
   const args = taskArgs(input);
@@ -76,6 +96,7 @@ export async function prepareTask(client: Client, ctx: ToolContext, input: unkno
 
 export async function runChildTask(input: {
   client: Client;
+  context: ContextLimits;
   ctx: ToolContext;
   args: TaskArgs;
   prepared: PreparedTask;
@@ -102,7 +123,7 @@ export async function runChildTask(input: {
   }
 
   const childAbort = createChildAbort(input.client, child.id);
-  const abort = childAbort.start;
+  const abort = () => childAbort.start();
 
   input.ctx.abort.addEventListener("abort", abort);
   try {
@@ -124,20 +145,49 @@ export async function runChildTask(input: {
         } as never),
         `prompt child session ${child.id}`,
       );
-      completion = await waitForChild(input.client, child.id, initialMessageIDs, input.ctx.abort, childAbort.start);
+      completion = await waitForChild(
+        input.client,
+        child.id,
+        initialMessageIDs,
+        input.context,
+        input.prepared,
+        notes,
+        input.ctx.abort,
+        childAbort.start,
+      );
     } catch (error) {
-      if (isContentFilterBlock(error)) return blockedResult(input.args, metadata, child.id);
+      if (isContentFilterBlock(error)) return blockedResult(input.args, metadata, child.id, notes);
       throw error;
     }
 
     if (completion.interruption) {
       return interruptedResult(input.args, metadata, child.id, notes, completion.interruption);
     }
+    const completionError = object(completion.assistant?.info)?.error;
+    if (completionError && isContentFilterBlock(completionError)) {
+      return blockedResult(input.args, metadata, child.id, notes);
+    }
+    if (completion.limit) {
+      try {
+        await sealContextLimited(input.client, child.id, completion.limit, input.ctx.abort);
+      } catch (error) {
+        notes.push(`context-limit seal failed: ${errorMessage(error)}`);
+      }
+      return contextLimitedResult({
+        args: input.args,
+        metadata,
+        sessionID: child.id,
+        notes,
+        limit: completion.limit,
+        messages: completion.messages,
+        permission: input.prepared.permission,
+      });
+    }
     const response = completion.assistant;
     if (!response) return interruptedResult(input.args, metadata, child.id, notes);
     const info = object(response.info);
     if (info?.error) {
-      if (isContentFilterBlock(info.error)) return blockedResult(input.args, metadata, child.id);
+      if (isContentFilterBlock(info.error)) return blockedResult(input.args, metadata, child.id, notes);
       throw new Error(`delegate child failed: ${errorMessage(info.error)}`);
     }
 
@@ -176,16 +226,18 @@ export async function readChildTaskStatus(client: Client, parentSessionID: strin
   for (const child of children) {
     const id = string(child.id)!;
     const status = childStatus(object(statuses[id]));
+    const limit = sessionContextLimit(child);
     lines.push(
       "",
       `task_id: ${id}`,
       `status: ${status}`,
+      ...(limit ? [`context_limit: ${limit.limit}${limit.tokens === undefined ? "" : ` tokens=${limit.tokens}`}`] : []),
       `agent: ${sessionAgent(child) ?? "unknown"}`,
       `title: ${singleLine(string(child.title) ?? "untitled")}`,
       `updated: ${new Date(sessionUpdated(child)).toISOString()}`,
     );
   }
-  lines.push("", "Only idle children can be resumed. Match the interrupted call by title and agent before using task_id.");
+  lines.push("", "Only matching idle children without context_limit can be resumed. Never resume a context-limited child.");
   return lines.join("\n");
 }
 
@@ -193,10 +245,17 @@ async function waitForChild(
   client: Client,
   sessionID: string,
   initialMessageIDs: Set<string>,
+  limits: ContextLimits,
+  prepared: PreparedTask,
+  notes: string[],
   signal: AbortSignal,
   abortChild: () => void,
-) {
+): Promise<ChildWait> {
   let active = false;
+  let limit: ContextLimit | undefined;
+  const spent = new Set<ContextWarning>();
+  const requested = new Set<ContextWarning>();
+  const observed = new Set<ContextWarning>();
   const startup = new AbortController();
   const startupTimer = setTimeout(
     () => startup.abort(new Error("delegate child startup timed out")),
@@ -207,40 +266,229 @@ async function waitForChild(
   try {
     while (true) {
       await abortableDelay(STATUS_POLL_MS, waitSignal);
-      const statuses = await unwrap<Record<string, unknown>>(
-        client.session.status({ signal: waitSignal } as never),
-        `read child session ${sessionID} status`,
-      );
+      const [statuses, messages] = await Promise.all([
+        unwrap<Record<string, unknown>>(
+          client.session.status({ signal: waitSignal } as never),
+          `read child session ${sessionID} status`,
+        ),
+        readChildMessages(client, sessionID, waitSignal),
+      ]);
       const status = object(statuses[sessionID]);
-      if (status?.type === "busy" || status?.type === "retry") {
-        active = true;
-        clearTimeout(startupTimer);
-        continue;
-      }
-      if (status && status.type !== "idle") continue;
-
-      const messages = await readChildMessages(client, sessionID, waitSignal);
       const turnMessages = messages.filter((message) => {
         const id = messageID(message);
         return !!id && !initialMessageIDs.has(id);
       });
+      observeContextWarnings(messages, spent, observed);
+      if (status?.type === "busy" || status?.type === "retry") {
+        active = true;
+        clearTimeout(startupTimer);
+      }
       if (!active && turnMessages.length) {
         active = true;
         clearTimeout(startupTimer);
         continue;
       }
+
+      const limitObservation = observeContextLimit(turnMessages, limits);
+      if (!limit && limitObservation) {
+        const running = status?.type === "busy" || status?.type === "retry";
+        limit = limitObservation;
+        contextLimitedSessions.add(sessionID);
+        if (running) abortChild();
+      }
+
+      if (!limit && (status?.type === "busy" || status?.type === "retry")) {
+        const response = lastAssistantMessage(turnMessages);
+        if (!finalAssistant(response)) {
+          const tokens = maxContextTokens(turnMessages);
+          const warning = pendingContextWarning(tokens, limits, spent);
+          if (warning) {
+            spent.add(warning);
+            requested.add(warning);
+            if (warning === "medium") spent.add("soft");
+            try {
+              await sendContextWarning(client, sessionID, prepared, warning, tokens, limits, waitSignal);
+            } catch (error) {
+              requested.delete(warning);
+              notes.push(`context ${warning} warning was not delivered: ${errorMessage(error)}`);
+            }
+          }
+        }
+      }
+
+      if (status && status.type !== "idle" && status.type !== "busy" && status.type !== "retry") continue;
+      if (status?.type === "busy" || status?.type === "retry") continue;
       if (!active) continue;
-      return { assistant: lastAssistantMessage(turnMessages) };
+      return { assistant: lastAssistantMessage(turnMessages), messages: turnMessages, limit };
     }
   } catch (error) {
     if (startup.signal.aborted && !signal.aborted) {
       abortChild();
-      return { interruption: "child showed no activity within 120 seconds" };
+      return { interruption: "child showed no activity within 120 seconds", messages: [] };
     }
     throw error;
   } finally {
+    for (const warning of requested) {
+      if (!observed.has(warning)) {
+        notes.push(`context ${warning} warning delivery was not confirmed before monitoring ended`);
+      }
+    }
     clearTimeout(startupTimer);
   }
+}
+
+function observeContextLimit(messages: unknown[], limits: ContextLimits) {
+  const tokens = maxContextTokens(messages);
+  if (messages.some(isAutoCompactionMessage)) {
+    return { level: "compaction" as const, tokens };
+  }
+  if (tokens !== undefined && tokens >= limits.hard) {
+    return { level: "hard" as const, tokens };
+  }
+  return undefined;
+}
+
+function pendingContextWarning(
+  tokens: number | undefined,
+  limits: ContextLimits,
+  spent: Set<ContextWarning>,
+) {
+  if (tokens === undefined) return undefined;
+  if (tokens >= limits.medium && !spent.has("medium")) return "medium";
+  if (tokens >= limits.soft && !spent.has("soft")) return "soft";
+  return undefined;
+}
+
+function observeContextWarnings(
+  messages: unknown[],
+  spent: Set<ContextWarning>,
+  observed: Set<ContextWarning>,
+) {
+  for (const message of messages) {
+    const root = object(message);
+    if (object(root?.info)?.role !== "user" || !Array.isArray(root?.parts)) continue;
+    for (const value of root.parts) {
+      const part = object(value);
+      if (part?.type !== "text" || typeof part.text !== "string") continue;
+      if (part.text.startsWith(MEDIUM_WARNING_MARKER)) {
+        spent.add("soft");
+        spent.add("medium");
+        observed.add("medium");
+      } else if (part.text.startsWith(SOFT_WARNING_MARKER)) {
+        spent.add("soft");
+        observed.add("soft");
+      }
+    }
+  }
+}
+
+async function sendContextWarning(
+  client: Client,
+  sessionID: string,
+  prepared: PreparedTask,
+  level: ContextWarning,
+  tokens: number | undefined,
+  limits: ContextLimits,
+  signal: AbortSignal,
+) {
+  await unwrap(
+    client.session.promptAsync({
+      path: { id: sessionID },
+      body: {
+        model: prepared.model,
+        ...(prepared.variant ? { variant: prepared.variant } : {}),
+        agent: prepared.agent.name,
+        parts: [{ type: "text", text: contextWarningPrompt(level, tokens, limits) }],
+      },
+      signal,
+    } as never),
+    `send context ${level} warning to child session ${sessionID}`,
+  );
+}
+
+function maxContextTokens(messages: unknown[]) {
+  let result: number | undefined;
+  for (const message of messages) {
+    const info = object(object(message)?.info);
+    if (info?.role !== "assistant") continue;
+    const tokens = object(info.tokens);
+    if (!tokens) continue;
+    const total = finite(tokens.total);
+    const count = total && total > 0
+      ? total
+      : (finite(tokens.input) ?? 0)
+        + (finite(tokens.output) ?? 0)
+        + (finite(object(tokens.cache)?.read) ?? 0)
+        + (finite(object(tokens.cache)?.write) ?? 0);
+    if (count <= 0) continue;
+    result = Math.max(result ?? 0, count);
+  }
+  return result;
+}
+
+function isAutoCompactionMessage(message: unknown) {
+  const parts = object(message)?.parts;
+  return Array.isArray(parts) && parts.some((value) => {
+    const part = object(value);
+    return part?.type === "compaction" && part.auto === true;
+  });
+}
+
+function finalAssistant(message: Record<string, unknown> | undefined) {
+  const finish = string(object(message?.info)?.finish);
+  return !!finish && finish !== "tool-calls" && finish !== "unknown";
+}
+
+function contextWarningPrompt(level: ContextWarning, tokens: number | undefined, limits: ContextLimits) {
+  if (level === "medium") {
+    return [
+      MEDIUM_WARNING_MARKER,
+      `Observed context: ${tokens ?? "unknown"} tokens; medium threshold: ${limits.medium}; hard stop: ${limits.hard}.`,
+      "A forced context-limited stop is approaching. Finish immediately.",
+      "If you are patching, complete only the last edits already in progress. Otherwise, make only final evidence calls.",
+      "Return a concise final report now.",
+    ].join("\n");
+  }
+  return [
+    SOFT_WARNING_MARKER,
+    `Observed context: ${tokens ?? "unknown"} tokens; soft threshold: ${limits.soft}; medium threshold: ${limits.medium}.`,
+    "Converge on the assigned boundary and finish soon.",
+    "Do not expand scope or begin another concern.",
+  ].join("\n");
+}
+
+async function sealContextLimited(
+  client: Client,
+  sessionID: string,
+  limit: ContextLimit,
+  signal: AbortSignal,
+) {
+  const session = await unwrap<Record<string, unknown>>(
+    client.session.get({ path: { id: sessionID }, signal } as never),
+    `read context-limited child session ${sessionID}`,
+  );
+  const metadata = object(session.metadata) ?? {};
+  const delegate = object(metadata.delegate) ?? {};
+  await unwrap(
+    client.session.update({
+      path: { id: sessionID },
+      body: {
+        metadata: {
+          ...metadata,
+          delegate: {
+            ...delegate,
+            context: {
+              limit: limit.level,
+              ...(limit.tokens !== undefined ? { tokens: limit.tokens } : {}),
+            },
+          },
+        },
+        permission: [deny("*")],
+      },
+      signal,
+    } as never),
+    `seal context-limited child session ${sessionID}`,
+  );
 }
 
 function createChildAbort(client: Client, sessionID: string) {
@@ -589,6 +837,9 @@ async function readExistingChild(
   );
   const id = string(session.id);
   if (!id) throw new Error(`delegate child session ${sessionID} did not return an id`);
+  if (contextLimitedSessions.has(sessionID) || sessionContextLimit(session)) {
+    throw new Error(`delegate refuses context-limited child session ${sessionID}; re-brief a fresh narrower child instead`);
+  }
   if (sessionParentID(session) !== parentSessionID) {
     throw new Error(`delegate can resume only a direct child of the current session; re-brief a fresh child instead`);
   }
@@ -756,6 +1007,13 @@ function sessionParentID(session: Record<string, unknown>) {
   return string(session.parentID) ?? string(session.parentId) ?? string(object(session.parent)?.id);
 }
 
+function sessionContextLimit(session: Record<string, unknown>) {
+  const context = object(object(object(session.metadata)?.delegate)?.context);
+  const limit = string(context?.limit);
+  if (limit !== "hard" && limit !== "compaction") return undefined;
+  return { limit, tokens: finite(context?.tokens) };
+}
+
 function primaryTools(config: Record<string, unknown>) {
   const experimental = object(config.experimental);
   return Array.isArray(experimental?.primary_tools) ? experimental.primary_tools.filter((item): item is string => typeof item === "string") : [];
@@ -802,8 +1060,67 @@ function withNotes(text: string, notes: string[]) {
   return [`[${notes.join("; ")}]`, text].filter(Boolean).join("\n\n");
 }
 
-function blockedResult(args: TaskArgs, metadata: Record<string, unknown>, sessionID: string) {
-  const text = [`blocked: content_filter`, `child_session_id: ${sessionID}`, `advice: ${CONTENT_FILTER_ADVICE}`].join("\n");
+function contextLimitedResult(input: {
+  args: TaskArgs;
+  metadata: Record<string, unknown>;
+  sessionID: string;
+  notes: string[];
+  limit: ContextLimit;
+  messages: unknown[];
+  permission: Rule[];
+}) {
+  const text = recoverableText(input.messages);
+  const lines = [
+    `context_limit: ${input.limit.level}`,
+    `context_tokens: ${input.limit.tokens ?? "unknown"}`,
+    `child_session_id: ${input.sessionID}`,
+  ];
+  if (input.limit.level === "compaction") {
+    lines.push("warning: automatic child compaction was observed; it may have started before the next poll, so any compacted continuation is untrusted");
+  }
+  lines.push(
+    hasWriteAccess(input.permission)
+      ? "durable_state: uncertain; reconcile the tree and Git before continuing because this child had write-capable permissions"
+      : "durable_state: no writes expected from the child permission envelope",
+    `advice: ${CONTEXT_ADVICE}`,
+    "",
+    "partial_recovered_text:",
+    text || "(no recoverable assistant text)",
+  );
+  return {
+    title: input.args.description,
+    metadata: input.metadata,
+    output: renderOutput({
+      sessionID: input.sessionID,
+      state: "context_limited",
+      text: withNotes(lines.join("\n"), input.notes),
+    }),
+  };
+}
+
+function recoverableText(messages: unknown[]) {
+  return messages.flatMap((message) => {
+    const root = object(message);
+    if (object(root?.info)?.role !== "assistant") return [];
+    const parts = root?.parts;
+    if (!Array.isArray(parts)) return [];
+    return parts.flatMap((value) => {
+      const part = object(value);
+      return part?.type === "text" && typeof part.text === "string" && part.text.trim() ? [part.text.trim()] : [];
+    });
+  }).join("\n\n");
+}
+
+function hasWriteAccess(rules: Rule[]) {
+  const writePermissions = new Set(["*", "bash", "edit", "repo_clone", "spec_title", "task", "write"]);
+  return rules.some((rule) => rule.action === "allow" && writePermissions.has(rule.permission));
+}
+
+function blockedResult(args: TaskArgs, metadata: Record<string, unknown>, sessionID: string, notes: string[]) {
+  const text = withNotes(
+    [`blocked: content_filter`, `child_session_id: ${sessionID}`, `advice: ${CONTENT_FILTER_ADVICE}`].join("\n"),
+    notes,
+  );
   return {
     title: args.description,
     metadata,
@@ -829,7 +1146,7 @@ function interruptedResult(
   };
 }
 
-function renderOutput(input: { sessionID: string; state: "completed" | "error"; text: string }) {
+function renderOutput(input: { sessionID: string; state: "completed" | "context_limited" | "error"; text: string }) {
   const tag = input.state === "error" ? "task_error" : "task_result";
   return [`<task id="${input.sessionID}" state="${input.state}">`, `<${tag}>`, input.text, `</${tag}>`, "</task>"].join("\n");
 }
@@ -880,6 +1197,10 @@ async function effectRunPromise() {
 
 function string(value: unknown) {
   return typeof value === "string" && value ? value : undefined;
+}
+
+function finite(value: unknown) {
+  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
 function isAction(value: unknown): value is Rule["action"] {

@@ -185,6 +185,19 @@ Complexity added without need does not sit still; it compounds, and every change
 - Add tests only when the user specifically asks for unit or regression tests.
 - If tests seem valuable but were not requested, propose them as an option instead of writing them.
 
+### Delegated Sessions
+
+- Give each child one concern, one acceptance boundary, bounded paths or evidence, a concise report shape, and a falsifying check.
+- Start a fresh child for each new concern, independent judgment, follow-on slice, or loop pass.
+- Resume only the same unfinished, non-context-limited child when its role, objective, permission envelope, and lineage still match.
+- Soft and medium context warnings ask the child to converge without changing tools, trust, completion, or later resume eligibility.
+- Treat every hard or compaction `context_limit` result as partial and start a fresh narrower child for the remaining work.
+- Never resume a child stopped at the hard limit or after observed automatic compaction.
+- Reconcile the tree and Git before replacing or continuing context-limited write-capable work.
+- The governor observes authoritative token usage only at completed model-step boundaries.
+- Warnings enter as queued user turns and cannot affect the model response or tool call already in progress.
+- Keep durable conclusions and decisions in the parent while leaving exploratory detail in the bounded child.
+
 ## Repository and Worktree Targets
 
 Interpret a user-supplied `<repository-or-worktree-path>@<branch>` as a repository target by default.

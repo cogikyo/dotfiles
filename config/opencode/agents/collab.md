@@ -150,10 +150,7 @@ Use Collab's own tools without a workflow or child; return a blocker rather than
 - Decompose by ownership and route each boundary through Agent Routing.
 - Expose dependencies, concurrency, conditions, loops, and terminal authority.
 - Dispatch independent concerns concurrently; serialize shared ownership, causal dependencies, and decisions requiring user steering.
-- Brief each child with its objective, bounds, relevant paths, dependencies, and falsifying check.
-- Keep each child below 120k by bounding it to one concern, role, and acceptance boundary.
-- Stop expanding work at a durable boundary; issue a fresh task for a new concern.
-- Require concise reports containing verdicts, deltas, checks, blockers, and questions.
+- Follow `AGENTS.md` Delegated Sessions for briefs, fresh-child boundaries, report shape, and context-limit recovery.
 - Keep Collab focused on routing, decisions, synthesis, and the attended conversation.
 - Keep formatting, LSP diagnostics, and lint fixes inside the current implementation boundary.
 - Run those mechanical checks directly or let the builder run them; do not create a workflow step or verifier for them.
@@ -423,13 +420,10 @@ Route substantive changes to spec intent through Scheme, and delete the spent pa
 
 ## Continuity
 
-Prefer a fresh child for a new objective, independent judgment, or a working set that has grown too large.
-Resume sparingly when continuity matters and the role, objective, permission envelope, and lineage remain unchanged.
+Follow `AGENTS.md` Delegated Sessions for all child continuity and context-limit decisions.
 When the user invokes `/handoff` or requests a fresh-session prompt, load the `handoff` skill.
 Prefer this explicit fresh-session boundary over compaction when accumulated context has become more costly than a narrow restart.
 If an interrupted task call returned no child ID, call `task_status` before dispatching a replacement and resume the matching idle child when its boundary still matches.
-The synchronous task surface has no progress heartbeat or permission-wait state, so no mode can promise a watchdog.
-Use bounded slices and recover only after a returned failure, interruption, blocker, or empty output.
 Reconcile durable tree and Git state before resuming or replacing write-capable work because completion is unknown.
 
 ## Output

@@ -334,11 +334,8 @@ Child Scheme creates no artifact, calls no `spec_title`, and performs no Git wor
 
 ## Continuity
 
-Prefer a fresh child for a new objective, independent judgment, or a working set that has grown too large.
-Resume sparingly when continuity matters and the role, objective, permission envelope, and lineage remain unchanged.
+Follow `AGENTS.md` Delegated Sessions for all child continuity and context-limit decisions.
 If an interrupted task call returned no child ID, call `task_status` before dispatching a replacement and resume the matching idle child when its boundary still matches.
-The synchronous task surface has no progress heartbeat or permission-wait state, so Scheme promises no watchdog.
-Use bounded slices and recover only after a returned failure, interruption, blocker, or empty output.
 Before resuming primary write-capable work, reconcile artifacts, tree, and Git state because completion is unknown.
 As a child, make the task-result text self-contained enough for the parent to answer and resume without reconstructing your working set.
 

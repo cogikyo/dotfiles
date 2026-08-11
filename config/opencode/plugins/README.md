@@ -17,6 +17,7 @@ Running sessions keep the loaded plugin set.
 |---|---|---|---|
 | Claude auth | `opencode-claude-auth@1.5.4` | (package) | server |
 | Delegate task | `delegate/index.ts` | `delegate-task` | server |
+| Git batch | `git/tool.ts` | `git-batch` | server |
 | Usage status tool | `usage/tool.ts` | `usage-status` | server |
 | Hyprland notifications | `hyprd/notify.ts` | `hyprd-notify` | server |
 | Spec title | `opencode/spec-title.ts` | `opencode-spec-title` | server |
@@ -38,13 +39,33 @@ Normal flow:
 
 - `model` is `provider/model-id`; when omitted the child inherits the agent's pinned model or the current assistant message's model and effort.
 - `effort` maps to the target model's reasoning variants.
-- `task_id` resumes a direct idle child only when its agent and freshly derived permission envelope still match.
-- `task_status` lists the current session's direct children with their task IDs, agents, titles, and live statuses after an interrupted call hides its result.
-- Resume sparingly for the same unfinished work; use a fresh child for new objectives or independent context.
+- `task_id` resumes a direct idle child only when its agent and freshly derived permission envelope still match and it has no context-limit marker.
+- `task_status` lists direct children with task IDs, agents, titles, live statuses, and persisted context-limit markers.
+- Resume sparingly for the same unfinished work; never resume a context-limited child.
 - The provider must be listed in `config/opencode/delegate.json`.
+- `delegate.json.context` requires positive integer thresholds with `soft < medium < hard`; the explicit defaults are 120,000, 150,000, and 200,000 tokens.
 - Before spawning, it waits abortably if any non-post-reset window is at >=100%, until the latest capped reset passes; stale, errored, or unknown usage proceeds un-gated.
 - Children inherit parent denies and `external_directory` rules; review agents get a read-only default profile.
 - Content-filter-shaped errors return a normal result with `state="error"` instead of throwing.
+
+Context governor:
+
+- While a child is active, the delegate polls status and messages every 300 ms.
+- Token pressure comes from completed assistant-step telemetry and mirrors OpenCode's overflow count: `tokens.total`, or input + output + cache read + cache write when total is absent.
+- At the soft limit, the delegate appends one warning to converge and finish soon without aborting, sealing, changing tools, or limiting later resume.
+- At the medium limit, the delegate appends one warning to finish immediately, allowing only last edits already in progress or final evidence calls.
+- A normal child completion after either warning remains a trusted normal result.
+- At the hard limit, the delegate aborts active work, seals the session, and returns `state="context_limited"` with recoverable assistant text and durable-state advice.
+- Hard-stopped and compacted sessions persist `metadata.delegate.context`, receive a tail deny, appear marked in `task_status`, and are rejected by `task_id`.
+- The pinned runtime's `prompt_async` is the supported non-aborting path: it accepts an asynchronous warning user turn while the existing runner remains active.
+- A later message poll confirms that the warning was stored, but API acceptance alone cannot prove that the child consumed it.
+- The delegate never retries an accepted warning request because a delayed first request could otherwise create a duplicate prompt loop.
+- If the warning appears, the runner can consume it only after the model response or tool call already in progress, so the child can cross another threshold first.
+- If one completed step jumps across both warning levels, the delegate sends only the medium warning and treats the superseded soft warning as spent to avoid prompt loops.
+- A warning API failure is reported as undelivered, while a stopped child whose accepted warning never appears is reported as unconfirmed.
+- Telemetry is committed only at a completed model step, so the governor cannot stop an active response at an exact token or prevent the next step from starting before the poll.
+- `experimental.session.compacting` can change only the compaction prompt and context; it cannot cancel compaction selectively.
+- Global auto-compaction stays enabled; if an automatic child compaction part appears, the delegate aborts at the next poll and returns `context_limit: compaction` because compaction may already have started.
 
 Unattended envelope, applied when Drive appears anywhere in the parent's session ancestry:
 
@@ -63,8 +84,21 @@ Practical failure diagnosis:
 - `delegate provider policy missing for <provider>` → add the provider to `delegate.json`.
 - `Unknown effort` → pick a variant that the target model exposes in config.
 - `delegate resumed child permission envelope no longer matches` → re-brief a fresh child under the current policy.
+- `delegate refuses context-limited child session` → start a fresh narrower child; never reuse that task ID.
+- `context_limit: hard|compaction` → treat the recovered findings as partial, reconcile durable state when write-capable, and start a fresh narrower child.
 - `child showed no activity within 120 seconds` → the model/provider failed to start producing output.
 - `blocked: content_filter` → reword the brief first; switch provider only as a last resort; never resume the tainted child.
+
+## Git batch
+
+`git/tool.ts` exposes `git_batch` for bounded read-only Git inspection without shell composition.
+It accepts an ordered list of structured `merge-base`, `log`, and `diff` operations and runs `/usr/bin/git` directly in the session worktree.
+
+- The argv grammar allows only the comparison forms documented by the tool; callers cannot supply a cwd, global Git options, pathspecs, config, or executable paths.
+- Git runs sequentially with clean defensive environment variables, disabled pagers, hooks, fsmonitor, external diff, textconv, replacement objects, optional locks, and lazy fetches.
+- Each result preserves stdout, stderr, and exit code; ordinary diagnostic exits continue the batch, while abort, timeout, spawn failure, or output overflow stops it explicitly.
+- The tool allows at most eight operations, eight arguments per operation, 15 seconds per operation, 60 seconds per batch, 512 KiB per operation, and 2 MiB per batch.
+- Global permission denies `git_batch`; only Review and the four Git agents allow it.
 
 ## Usage
 
@@ -156,6 +190,7 @@ Practical failure diagnosis:
 - `usage/cache.ts` owns the cache file shape, lock semantics, and decoder.
 - `usage/auth.ts` owns path resolution for auth, cache, and runtime directories.
 - `opencode/media-context/registry.ts` owns media registry paths, handle/alias patterns, and file-part ID rules.
+- `git/tool.ts` owns the `git_batch` argv grammar, worktree binding, process hardening, and resource bounds.
 - `delegate/config.ts` hardcodes `DELEGATE_CONFIG_PATH` to `/home/cullyn/dotfiles/config/opencode/delegate.json`.
 - Changing `hyprd/context.ts` paths or schema requires updating both `hyprd/kitty.ts` and `hyprd/notify.ts`.
 - `shared/` owns session/provider metadata, colors/icons, git status parsing, and the sidebar-section wrapper; only put helpers there when more than one plugin owns the concept.
@@ -167,6 +202,7 @@ Practical failure diagnosis:
 - Video files stay local-only; only images are pushed as provider file parts.
 - Usage adapters must not log tokens, cookies, or local paths.
 - `usage_status` is read-only and must never refresh providers or mutate chat context.
+- `git_batch` remains read-only, shell-free, worktree-bound, and limited to its exact operation grammar.
 - Delegate children deny `todowrite`, `task`, and `experimental.primary_tools` tools unless the agent declares them.
 - Delegate children always deny `question`, and children under Drive lineage additionally carry no `ask` rule at all.
 - Kitty context directory is mode `0700` and the context JSON file is mode `0600`.

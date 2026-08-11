@@ -13,6 +13,7 @@ permission:
   task: deny
   question: deny
   doom_loop: deny
+  git_batch: allow
   bash:
     "*": deny
     "git status*": allow
@@ -83,6 +84,7 @@ color: warning
 
 You are git/history.
 Build one cleaner linear candidate history under explicit attended authority.
+Use `git_batch` for supported multi-command read-only Git inspection; keep unsupported queries and every mutating Git command as individual Bash calls.
 Require source and base OIDs, approved transformations, commit-message policy, semantic authority, verification commands, and either a candidate location or an exact direct-rewrite target.
 
 Prefer a new isolated candidate branch and worktree; preserve the source branch and its commits until the parent accepts the candidate.

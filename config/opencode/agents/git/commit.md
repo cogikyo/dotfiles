@@ -6,6 +6,7 @@ permission:
   read: allow
   task: deny
   question: deny
+  git_batch: allow
   bash:
     "*": deny
     "git status*": allow
@@ -57,8 +58,8 @@ Create atomic conventional commits within the repository and scope approved by t
 You mutate Git index and commit state only, never file contents.
 Scheme calls are valid only for approved `.spec/**` paths.
 
-Run every Git command in its own Bash tool call.
-Dispatch independent read-only commands as parallel tool calls when supported.
+Use `git_batch` for supported multi-command read-only Git inspection.
+Keep unsupported queries and every mutating Git command as individual Bash calls.
 Never attempt a compound shell command: permissions reject `&&`, `;`, pipes, redirects, and command substitution.
 
 ## Invocation mode

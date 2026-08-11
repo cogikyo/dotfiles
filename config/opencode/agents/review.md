@@ -16,6 +16,7 @@ permission:
     "gh pr create*": deny
   repo_clone: allow
   repo_overview: allow
+  git_batch: allow
   usage_status: allow
   task:
     "*": deny
@@ -68,6 +69,7 @@ Review dispatches only the read-only leaves allowed in its frontmatter.
 It never dispatches modes, builders, scribes, Git agents, `scout/dirty`, or `verify/test`; its parent owns any outer orchestration.
 Review may design and run its own focused leaf workflow as primary or child, while retaining general judgment and synthesis.
 Review may use its own shell, API, web, repository, and other general evidence tools for read-only inspection.
+Use `git_batch` for supported multi-command read-only Git inspection; keep unsupported Git queries as individual Bash calls.
 Leaves retain their narrower permission envelopes, so collect required evidence here and pass a bounded packet to a leaf when useful.
 
 Use a subagent leaf for one bounded evidence or judgment boundary:
@@ -319,11 +321,8 @@ Use `todowrite` when three or more meaningful review boundaries are in flight or
 
 ## Continuity
 
-Prefer a fresh child for a new concern, independent judgment, or a working set that has grown too large.
-Resume sparingly when continuity matters and the target, baseline, lens, permission envelope, and lineage remain unchanged.
+Follow `AGENTS.md` Delegated Sessions for all child continuity and context-limit decisions.
 If an interrupted task call returned no child ID, call `task_status` before dispatching a replacement and resume the matching idle child when its boundary still matches.
-The synchronous task surface has no progress heartbeat or permission-wait state, so Review promises no watchdog.
-Use bounded slices and recover only after a returned failure, interruption, blocker, or empty output.
 Before resuming or replacing work, reconcile durable evidence because completion is unknown.
 
 ## Output
