@@ -149,17 +149,18 @@ Use the smallest capable model for the task; small models often fit bounded patc
 - Use `high` only for its `build/owner` participant in a council or when the user explicitly requests it.
 - Avoid `high` for ordinary reviews because the extra latency and overthinking usually reduce its value.
 
-### `kimi-code/k3` and `opencode-go/kimi-k3`
+### `kimi-code/k3`
 
-- Default to `max`.
+- Default to `high`; use `max` only when explicitly requested.
 - Useful as divergent review or implementation direction when ample time is available.
 - Bound it tightly because it is slow and prone to overproducing or overimplementing.
-- Prefer `kimi-code/k3`; use `opencode-go/kimi-k3` only as capacity fallback.
+- `kimi-code` is the sole Kimi provider and a deprecation candidate; do not spend `opencode-go` capacity on Kimi.
 
-### `xai/grok-4.5`
+### `xai/grok-4.5` and `opencode-go/grok-4.5`
 
 - Default to `high` for `verify/web` and `verify/x`.
 - Default to `medium` for `build/patch` and `git/commit`.
+- The two routes are interchangeable; pick the provider with better current headroom.
 
 ### `openai/gpt-5.6-luna-fast`
 
@@ -457,7 +458,7 @@ E.g., assume Sol, Kimi, and Opus are the available models approved for this `bui
 
 1. `[xhigh • Sol]` `build/owner`: independent implementation
    - implement the frozen spec in an isolated worktree and return the candidate, checks, decisions, and dissent
-2. `[max • Kimi]` `build/owner`: independent implementation
+2. `[high • Kimi]` `build/owner`: independent implementation
    - implement the same spec from the same baseline without inspecting another candidate
 3. `[high • Opus]` `build/owner`: independent implementation
    - produce a third candidate under the same brief and acceptance checks

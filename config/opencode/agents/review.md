@@ -106,14 +106,15 @@ Keep synthesis here, and never manufacture a council or treat child count as evi
 - Use `high` only for a `build/owner` council participant or when the user explicitly requests it.
 - Avoid `high` for ordinary reviews because the extra latency and overthinking usually reduce its value.
 
-### `kimi-code/k3` and `opencode-go/kimi-k3`
+### `kimi-code/k3`
 
-- Default to `max` for a tightly bounded divergent review.
-- Prefer `kimi-code/k3`; use `opencode-go/kimi-k3` only as capacity fallback.
+- Default to `high` for a tightly bounded divergent review.
+- `kimi-code` is the sole Kimi provider and a deprecation candidate; do not spend `opencode-go` capacity on Kimi.
 
-### `xai/grok-4.5`
+### `xai/grok-4.5` and `opencode-go/grok-4.5`
 
 - Default to `high` for `scout/web`, `verify/web`, and `verify/x`.
+- The two routes are interchangeable; pick the provider with better current headroom.
 
 ### `openai/gpt-5.6-luna-fast`
 

@@ -43,7 +43,7 @@
           "name": "Kimi K3",
           "reasoning": true,
           "options": {
-            "reasoningEffort": "max"
+            "reasoningEffort": "high"
           },
           "variants": {
             "low": { "reasoningEffort": "low" },
@@ -75,6 +75,20 @@
       "models": {
         "grok-4.5": {
           "name": "Grok 4.5",
+          "options": {
+            "reasoningEffort": "high"
+          },
+          "variants": {
+            "low": { "reasoningEffort": "low" },
+            "medium": { "reasoningEffort": "medium" },
+            "high": { "reasoningEffort": "high" }
+          }
+        }
+      }
+    },
+    "opencode-go": {
+      "models": {
+        "grok-4.5": {
           "options": {
             "reasoningEffort": "high"
           },
