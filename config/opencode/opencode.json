@@ -199,6 +199,8 @@
       "npm install*": "ask",
       "pnpm install*": "ask",
       "yarn install*": "ask",
+      "ls \".yarn\"*": "allow",
+      "yarn install --immutable*": "allow",
       "bun install*": "ask",
       "go install*": "ask",
       "go get*": "ask",
