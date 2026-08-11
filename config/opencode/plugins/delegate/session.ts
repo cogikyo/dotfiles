@@ -782,12 +782,13 @@ async function deriveChildPermission(
   );
   const agentRules = normalizeRules(agent.permission);
   const defaultRules = defaultAgentRules(agent.name, agentRules);
+  const effectiveAgentRules = [...defaultRules, ...agentRules];
   const childDenies: Rule[] = [
     ...(hasPermissionRule(agentRules, "todowrite") ? [] : [deny("todowrite")]),
     ...(hasPermissionRule(agentRules, "task") ? [] : [deny("task")]),
     deny("question"),
     ...primaryTools(config)
-      .filter((tool) => !hasPermissionRule(agentRules, tool))
+      .filter((tool) => !hasPermissionRule(effectiveAgentRules, tool))
       .map(deny),
   ];
 
@@ -968,13 +969,13 @@ function defaultAgentRules(agentName: string, explicitRules: Rule[]) {
   if (!agentName.startsWith("review/")) return [];
 
   const rules: Rule[] = [];
-  for (const permission of ["read", "glob", "grep", "list", "webfetch", "websearch", "lsp"]) {
+  for (const permission of ["read", "glob", "grep", "list", "bash", "git_batch", "webfetch", "websearch", "lsp"]) {
     if (!hasPermissionRule(explicitRules, permission)) {
       rules.push(allow(permission));
       if (permission === "grep") rules.push({ permission: "grep", pattern: "/", action: "deny" });
     }
   }
-  for (const permission of ["edit", "bash", "task", "todowrite", "question"]) {
+  for (const permission of ["edit", "task", "todowrite", "question"]) {
     if (!hasPermissionRule(explicitRules, permission)) rules.push(deny(permission));
   }
   return rules;
