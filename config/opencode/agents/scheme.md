@@ -120,6 +120,8 @@ Use `adaptive` when evidence should determine the shape and `orchestrated` for a
 
 - Default to `high` for `scout/web`, `verify/web`, and `verify/x`.
 - Default to `medium` for `git/commit`.
+- Solid `high` `build/general` option; it builds fast.
+  - Best when the workflow has guards: a settled plan going in and review or simplify steps after.
 - The two routes are interchangeable; pick the provider with better current headroom.
 
 ### `openai/gpt-5.6-luna-fast`
