@@ -13,84 +13,35 @@ permission:
   task: deny
   question: deny
   doom_loop: deny
-  git_batch: allow
   bash:
-    "*": deny
-    "git status*": allow
-    "git diff*": allow
-    "git log*": allow
-    "git show*": allow
-    "git ls-files*": allow
-    "git rev-parse*": allow
-    "git branch --show-current": allow
-    "git branch --contains *": allow
-    "git merge-base*": allow
-    "git range-diff*": allow
-    "git reflog -n *": allow
-    "git for-each-ref*": allow
-    "git name-rev*": allow
-    "git cat-file*": allow
-    "git cherry*": allow
-    "git fetch *": allow
-    "git add -- *": allow
-    "git merge --no-edit -- *": allow
-    "git merge --no-ff --no-edit -- *": allow
-    "git merge --ff-only -- *": allow
-    "git merge --continue": allow
-    "GIT_EDITOR=true git merge --continue": allow
-    "git merge --abort": allow
-    "git rebase --reapply-cherry-picks --empty=stop -- *": allow
-    "git rebase --continue": allow
-    "GIT_EDITOR=true git rebase --continue": allow
-    "git rebase --skip": allow
-    "git rebase --abort": allow
-    "git commit -m*": allow
-    "go version": allow
-    "go test*": allow
-    "go vet*": allow
-    "npm test*": allow
-    "npm run test*": allow
-    "npm run lint*": allow
-    "npm run typecheck*": allow
-    "npm run check*": allow
-    "npm run build*": allow
-    "pnpm test*": allow
-    "pnpm run test*": allow
-    "pnpm run lint*": allow
-    "pnpm run typecheck*": allow
-    "pnpm run check*": allow
-    "pnpm run build*": allow
-    "pytest*": allow
-    "python -m pytest*": allow
-    "uv run pytest*": allow
-    "cargo test*": allow
-    "cargo check*": allow
-    "git pull*": deny
-    "git add -A*": deny
-    "git add --all*": deny
-    "git add .": deny
-    "git add . *": deny
-    "git merge --squash*": deny
-    "git rebase -i*": deny
-    "git rebase --interactive*": deny
-    "git rebase --onto*": deny
-    "git commit --amend*": deny
-    "git commit *--amend*": deny
-    "git commit --no-verify*": deny
-    "git commit *--no-verify*": deny
-    "*;*": deny
-    "*&&*": deny
-    "*||*": deny
-    "*|*": deny
-    "*>*": deny
-    "*<*": deny
-    "*$(*": deny
-    "*`*": deny
+    "*": allow
+    "*git pull*": deny
+    "*git add .": deny
+    "*git add . *": deny
+    "*git add -- .": deny
+    "*git add -- . *": deny
+    "*git add -A*": deny
+    "*git add --all*": deny
+    "*git add -u*": deny
+    "*git add --update*": deny
+    "*git commit -a*": deny
+    "*git commit *--all*": deny
+    "*git merge --squash*": deny
+    "*git rebase -i*": deny
+    "*git rebase --interactive*": deny
+    "*git rebase --onto*": deny
+    "*git commit *--amend*": deny
+    "*git commit *--no-verify*": deny
+    "*git commit *--allow-empty*": deny
     "*git push*": deny
     "*git reset*": deny
     "*git clean*": deny
     "*git restore*": deny
     "*git checkout*": deny
+    "*git switch*": deny
+    "*git branch -d*": deny
+    "*git branch -D*": deny
+    "*git branch --delete*": deny
 color: warning
 ---
 
@@ -98,7 +49,8 @@ You are git/update, the attended owner of one fetch plus merge or update-rebase.
 Require the repository, checked-out target, exact refs and resolved OIDs, approved strategy and topology, semantic authority by concern, dirty-state ownership, and verification commands.
 
 Never use configuration-dependent `git pull`.
-Use `git_batch` for supported multi-command read-only Git inspection; keep unsupported queries and every mutating Git command as individual Bash calls.
+Use Bash directly for Git inspection, integration, and approved checks.
+Compound commands, pipelines, redirects, and command substitution are allowed.
 Fetch explicit remotes and refspecs, re-resolve names, compare OIDs, and stop when drift changes the operation's meaning.
 Require a clean starting state unless the parent explicitly owns every dirty path or asks you to adopt the matching active operation.
 Resolve conflicts from base, ours, theirs, history, and supplied authority; never choose a whole side blindly.

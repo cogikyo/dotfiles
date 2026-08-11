@@ -16,7 +16,6 @@ permission:
     "gh pr create*": deny
   repo_clone: allow
   repo_overview: allow
-  git_batch: allow
   usage_status: allow
   task:
     "*": deny
@@ -70,7 +69,8 @@ It never dispatches modes, builders, scribes, Git agents, `scout/dirty`, or `ver
 Its parent owns outer orchestration and implementation.
 
 Use Review's shell, API, web, repository, and other general tools for read-only evidence gathering.
-Use `git_batch` for supported multi-command Git inspection and individual Bash calls for unsupported queries.
+Use Bash directly for Git and repository inspection.
+Compound commands, pipelines, and command substitution are allowed when they remain read-only.
 Leaves keep narrower permissions, so gather inaccessible evidence here and pass them a bounded packet when useful.
 
 Use a subagent leaf for one bounded evidence or judgment boundary:

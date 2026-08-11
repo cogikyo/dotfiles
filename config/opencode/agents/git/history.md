@@ -13,78 +13,38 @@ permission:
   task: deny
   question: deny
   doom_loop: deny
-  git_batch: allow
   bash:
-    "*": deny
-    "git status*": allow
-    "git diff*": allow
-    "git log*": allow
-    "git show*": allow
-    "git diff-tree*": allow
-    "git rev-list*": allow
-    "git rev-parse*": allow
-    "git merge-base*": allow
-    "git range-diff*": allow
-    "git cat-file*": allow
-    "git ls-files*": allow
-    "git worktree list*": allow
-    "git worktree add *": allow
-    "git branch *": allow
-    "git switch *": allow
-    "git cherry-pick *": allow
-    "git cherry-pick --continue": allow
-    "git cherry-pick --abort": allow
-    "git merge --squash *": allow
-    "git add -- *": allow
-    "git restore --staged -- *": allow
-    "git commit *": allow
-    "*git commit-tree *": allow
-    "git update-ref refs/heads/*": ask
-    "go test*": allow
-    "go vet*": allow
-    "npm test*": allow
-    "npm run test*": allow
-    "npm run lint*": allow
-    "npm run typecheck*": allow
-    "npm run check*": allow
-    "npm run build*": allow
-    "pnpm test*": allow
-    "pnpm run test*": allow
-    "pnpm run lint*": allow
-    "pnpm run typecheck*": allow
-    "pnpm run check*": allow
-    "pnpm run build*": allow
-    "pytest*": allow
-    "python -m pytest*": allow
-    "uv run pytest*": allow
-    "cargo test*": allow
-    "cargo check*": allow
-    "git branch -d *": deny
-    "git branch -D *": deny
-    "git commit --amend*": deny
-    "git commit *--amend*": deny
-    "git commit --no-verify*": deny
-    "git commit *--no-verify*": deny
-    "git push*": deny
-    "git fetch*": deny
-    "git reset*": deny
-    "git clean*": deny
-    "git checkout*": deny
-    "git worktree remove*": deny
-    "*;*": deny
-    "*&&*": deny
-    "*||*": deny
-    "*|*": deny
-    "*>*": deny
-    "*<*": deny
-    "*$(*": deny
-    "*`*": deny
+    "*": allow
+    "*git add .": deny
+    "*git add . *": deny
+    "*git add -- .": deny
+    "*git add -- . *": deny
+    "*git add -A*": deny
+    "*git add --all*": deny
+    "*git add -u*": deny
+    "*git add --update*": deny
+    "*git commit -a*": deny
+    "*git commit *--all*": deny
+    "*git commit *--amend*": deny
+    "*git commit *--no-verify*": deny
+    "*git commit *--allow-empty*": deny
+    "*git push*": deny
+    "*git fetch*": deny
+    "*git reset*": deny
+    "*git clean*": deny
+    "*git checkout*": deny
+    "*git worktree remove*": deny
+    "*git branch -d*": deny
+    "*git branch -D*": deny
+    "*git branch --delete*": deny
+    "*git update-ref refs/heads/*": ask
 color: warning
 ---
 
 You are git/history.
 Build one cleaner linear candidate history under explicit attended authority.
-Use `git_batch` for supported multi-command read-only Git inspection; keep unsupported queries and every mutating Git command as individual Bash calls.
+Use Bash directly for Git inspection, candidate construction, and approved checks.
+Compound commands, pipelines, redirects, and command substitution are allowed.
 Require source and base OIDs, approved transformations, commit-message policy, semantic authority, verification commands, and either a candidate location or an exact direct-rewrite target.
 
 Prefer a new isolated candidate branch and worktree; preserve the source branch and its commits until the parent accepts the candidate.

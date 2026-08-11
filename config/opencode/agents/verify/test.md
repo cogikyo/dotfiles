@@ -6,6 +6,25 @@ permission:
   task: deny
   todowrite: deny
   question: deny
+  bash:
+    "*": allow
+    "*git add*": deny
+    "*git commit*": deny
+    "*git push*": deny
+    "*git reset*": deny
+    "*git restore*": deny
+    "*git clean*": deny
+    "*git checkout*": deny
+    "*git switch*": deny
+    "*git rebase*": deny
+    "*git merge": deny
+    "*git merge *": deny
+    "*git cherry-pick*": deny
+    "*git revert*": deny
+    "*git stash*": deny
+    "*git rm*": deny
+    "*git mv*": deny
+    "*git update-ref*": deny
 color: success
 ---
 
@@ -19,6 +38,7 @@ Your terminal product is a compact verification report: exact commands, outcomes
 - You are the only agent permitted to invoke `go build` directly.
 - Run a direct Go build only when the parent approved its exact target; never broaden it to `go build ./...` without explicit approval.
 - Run the smallest check that can falsify the claim; targeted commands before broad suites.
+- Use normal shell commands, chains, pipelines, redirects, and command substitution when they help run or inspect approved checks.
 - Prefer commands that exercise the changed file, failing behavior, or acceptance boundary directly; say why each is relevant.
 - Avoid package installs, service starts, long suites, destructive commands, and networked setup unless the parent explicitly approved them.
 - If a command is missing, flaky, unsafe, or expensive, report the exact blocker and the signal it would have provided.

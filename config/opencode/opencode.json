@@ -20,7 +20,6 @@
   "plugin": [
     "opencode-claude-auth@1.5.4",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/delegate/index.ts",
-    "file:///home/cullyn/dotfiles/config/opencode/plugins/git/tool.ts",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/usage/tool.ts",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/x/tool.ts",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/hyprd/notify.ts",
@@ -104,7 +103,6 @@
   "permission": {
     "spec_title": "deny",
     "grok_x": "deny",
-    "git_batch": "deny",
     "task_status": "allow",
     "external_directory": {
       "/": "deny",
@@ -233,7 +231,7 @@
     }
   },
   "experimental": {
-    "primary_tools": ["usage_status", "task_status", "git_batch"]
+    "primary_tools": ["usage_status", "task_status"]
   },
   "compaction": {
     "auto": true,

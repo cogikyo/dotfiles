@@ -6,6 +6,25 @@ permission:
   task: deny
   todowrite: deny
   question: deny
+  bash:
+    "*": allow
+    "*git add*": deny
+    "*git commit*": deny
+    "*git push*": deny
+    "*git reset*": deny
+    "*git restore*": deny
+    "*git clean*": deny
+    "*git checkout*": deny
+    "*git switch*": deny
+    "*git rebase*": deny
+    "*git merge": deny
+    "*git merge *": deny
+    "*git cherry-pick*": deny
+    "*git revert*": deny
+    "*git stash*": deny
+    "*git rm*": deny
+    "*git mv*": deny
+    "*git update-ref*": deny
 color: success
 ---
 
@@ -23,6 +42,7 @@ Your terminal product is a compact evidence report citing exact upstream files, 
 5. `src get`, `repo_overview`, or `repo_clone` only when cheaper paths cannot satisfy the claim; prefer shallow, tagged, minimal fetches, and report the cache entry used.
 
 If the canonical source cannot be found confidently, report the uncertainty instead of guessing.
+Use normal shell commands, chains, pipelines, redirects, and command substitution for read-only source inspection.
 
 ## Focus
 

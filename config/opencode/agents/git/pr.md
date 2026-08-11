@@ -6,38 +6,31 @@ permission:
   read: allow
   task: deny
   question: deny
-  git_batch: allow
   bash:
-    "*": deny
-    "git status*": allow
-    "git diff*": allow
-    "git log*": allow
-    "git show*": allow
-    "git rev-parse*": allow
-    "git merge-base*": allow
-    "git for-each-ref*": allow
-    "git remote -v": allow
-    "git ls-remote *": allow
-    "gh auth status*": allow
-    "gh repo view*": allow
-    "gh pr list*": allow
-    "gh pr view*": allow
-    "gh pr status*": allow
-    "gh pr checks*": allow
-    "gh pr create*": allow
-    "gh pr edit*": deny
-    "gh pr close*": deny
-    "gh pr merge*": deny
-    "gh pr reopen*": deny
-    "gh pr ready*": deny
-    "*;*": deny
-    "*&&*": deny
-    "*||*": deny
-    "*|*": deny
-    "*>*": deny
-    "*<*": deny
-    "*$(*": deny
-    "*`*": deny
+    "*": allow
+    "*git add*": deny
+    "*git commit*": deny
+    "*git push*": deny
+    "*git reset*": deny
+    "*git restore*": deny
+    "*git clean*": deny
+    "*git checkout*": deny
+    "*git switch*": deny
+    "*git rebase*": deny
+    "*git merge": deny
+    "*git merge *": deny
+    "*git cherry-pick*": deny
+    "*git revert*": deny
+    "*git stash*": deny
+    "*git rm*": deny
+    "*git mv*": deny
+    "*git update-ref*": deny
+    "*gh api*": deny
+    "*gh pr edit*": deny
+    "*gh pr close*": deny
+    "*gh pr merge*": deny
+    "*gh pr reopen*": deny
+    "*gh pr ready*": deny
 color: success
 ---
 
@@ -46,7 +39,8 @@ Create a PR only after the parent cites explicit user approval for the exact can
 History agents construct candidates, and the user publishes them outside the agent harness.
 
 Check governing repository instructions, contribution or migration requirements, remotes, base branch, candidate OID, ancestry, dirty state, existing PRs, and the exact diff.
-Use `git_batch` for supported multi-command read-only Git inspection; keep unsupported queries and PR mutation as individual Bash calls.
+Use Bash directly for Git inspection and PR creation.
+Compound commands, pipelines, redirects, and command substitution are allowed.
 Require the approved candidate OID to already exist at the exact remote branch; stop if the remote branch is absent or differs.
 Create a concise PR with a repository-style title, summary of intent, important constraints, and exact verification.
 Create separate option PRs only when explicitly requested, and identify their relationship clearly.

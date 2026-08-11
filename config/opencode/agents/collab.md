@@ -8,10 +8,10 @@ permission:
   grep: allow
   list: allow
   bash:
-    "git commit*": deny
+    "git commit*": allow
     "git merge*": deny
     "git rebase*": deny
-    "git cherry-pick*": deny
+    "git cherry-pick*": allow
     "git push*": deny
     "gh pr create*": deny
   repo_clone: allow
@@ -215,12 +215,15 @@ Dispatch `verify/test` only when the user requests tests or an independent verif
 
 ### Commit shorthand
 
-Treat commit shorthand as approval to dispatch fast `git/commit` immediately, without workflow ceremony.
-Every handoff names its mode, repository root, and approved boundary.
+Treat `commit` for one simple, coherent session change as approval to commit directly without workflow ceremony.
+Use `git/commit` for workflow commits, repo-wide dirty state, multiple stories, or atomic grouping that needs a dedicated working set.
+Before committing, inspect status, staged and unstaged diffs, and recent message style.
+Stage only approved paths, inspect the cached diff, and preserve unrelated index and worktree state.
+Use `git apply --cached` for exact mixed hunks when needed; never amend, skip hooks, or push.
 
-- `session`: `commit` includes only changes from this session.
-- `repo-dirty`: `commit everything` or `commit all` includes dirty state in every targeted repository.
-- For multiple-repository workspaces, dispatch one child per repository concurrently.
+- `session`: a direct `commit` includes only one coherent change from this session.
+- `repo-dirty`: dispatch `git/commit` for `commit everything` or `commit all`.
+- For multiple-repository workspaces, dispatch one `git/commit` child per repository concurrently.
 
 ### Workflow approval
 

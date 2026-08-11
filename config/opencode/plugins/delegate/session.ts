@@ -778,7 +778,7 @@ async function deriveChildPermission(
 
   const parentRules = inheritableParentRules(normalizeRules(parent.permission), unattended);
   const inherited = parentRules.filter(
-    (rule) => rule.permission === "external_directory" || rule.action === "deny",
+    (rule) => rule.permission === "external_directory" || (unattended && rule.action === "deny"),
   );
   const agentRules = normalizeRules(agent.permission);
   const defaultRules = defaultAgentRules(agent.name, agentRules);
@@ -800,8 +800,8 @@ async function deriveChildPermission(
 // An unattended envelope always begins with the floor below, so index 0 of an unattended parent is this
 // plugin's own synthetic rule rather than a boundary the parent declared. A floor is positional: appending it
 // to the tail of a child envelope would outrank every allow the child needs. Only that leading rule is
-// dropped, so a catch-all the parent's profile declares anywhere else still crosses the boundary, and a
-// non-unattended parent inherits exactly as it did before.
+// dropped, so a catch-all the parent's profile declares anywhere else still crosses the unattended boundary.
+// Attended children inherit only external-directory boundaries and otherwise use their own agent profile.
 function inheritableParentRules(rules: Rule[], unattended: boolean) {
   const synthetic = unattended && rules.length > 0 && isUnattendedFloor(rules[0]);
   return synthetic ? rules.slice(1) : rules;
@@ -969,7 +969,7 @@ function defaultAgentRules(agentName: string, explicitRules: Rule[]) {
   if (!agentName.startsWith("review/")) return [];
 
   const rules: Rule[] = [];
-  for (const permission of ["read", "glob", "grep", "list", "bash", "git_batch", "webfetch", "websearch", "lsp"]) {
+  for (const permission of ["read", "glob", "grep", "list", "bash", "webfetch", "websearch", "lsp"]) {
     if (!hasPermissionRule(explicitRules, permission)) {
       rules.push(allow(permission));
       if (permission === "grep") rules.push({ permission: "grep", pattern: "/", action: "deny" });

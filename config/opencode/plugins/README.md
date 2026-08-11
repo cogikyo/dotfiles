@@ -17,7 +17,6 @@ Running sessions keep the loaded plugin set.
 |---|---|---|---|
 | Claude auth | `opencode-claude-auth@1.5.4` | (package) | server |
 | Delegate task | `delegate/index.ts` | `delegate-task` | server |
-| Git batch | `git/tool.ts` | `git-batch` | server |
 | Usage status tool | `usage/tool.ts` | `usage-status` | server |
 | Hyprland notifications | `hyprd/notify.ts` | `hyprd-notify` | server |
 | Spec title | `opencode/spec-title.ts` | `opencode-spec-title` | server |
@@ -45,7 +44,7 @@ Normal flow:
 - The provider must be listed in `config/opencode/delegate.json`.
 - `delegate.json.context` requires positive integer thresholds with `soft < medium < hard`; the explicit defaults are 120,000, 150,000, and 200,000 tokens.
 - Before spawning, it waits abortably if any non-post-reset window is at >=100%, until the latest capped reset passes; stale, errored, or unknown usage proceeds un-gated.
-- Children inherit parent denies and `external_directory` rules; review agents get a read-only default profile.
+- Attended children inherit `external_directory` rules and otherwise use their own agent profile; review leaves get read-only defaults.
 - Content-filter-shaped errors return a normal result with `state="error"` instead of throwing.
 
 Context governor:
@@ -69,13 +68,13 @@ Context governor:
 
 Unattended envelope, applied when Drive appears anywhere in the parent's session ancestry:
 
-- The child envelope is composed as review defaults, the agent's whole effective ruleset, the delegate denies, then inherited parent rules.
+- The child envelope is composed as review defaults, the agent's whole effective ruleset, delegate denies, external-directory boundaries, and inherited Drive blockers.
 - Every `ask` in that composition is rewritten to `deny` in place, so global config, parent, built-in defaults, and the selected agent's own profile are all covered by construction.
 - Rewriting keeps each rule's position, so a later, more specific `allow` still wins; `pacman -Q*` stays allowed even though `pacman *` asks.
 - Rewriting happens before dedupe, otherwise a rewritten inherited rule survives as a tail duplicate and outranks the child's own refinement of the same permission.
 - A leading `*` deny is prepended after dedupe as the floor for permissions no rule matches, since the runtime's own fallback is `ask`.
 - Inheritance skips only that synthetic leading floor, and only when the parent is itself under Drive lineage; a floor is positional, so appending one to a child's tail would outrank every allow the child needs.
-- Every other parent rule is inherited unchanged, including a catch-all the parent's own profile declares later, and a non-Drive parent is inherited exactly as before.
+- Only Drive blockers cross from a parent profile; attended parent denies do not disable a specialized child's own tools.
 - Net effect: a child anywhere under Drive can never surface a `question` or a permission prompt, and a denied operation returns to the child as an ordinary tool error for the parent to judge.
 - The same derivation runs for a mode child, so `Drive → Collab → leaf` carries the policy to every depth.
 
@@ -88,17 +87,6 @@ Practical failure diagnosis:
 - `context_limit: hard|compaction` → treat the recovered findings as partial, reconcile durable state when write-capable, and start a fresh narrower child.
 - `child showed no activity within 120 seconds` → the model/provider failed to start producing output.
 - `blocked: content_filter` → reword the brief first; switch provider only as a last resort; never resume the tainted child.
-
-## Git batch
-
-`git/tool.ts` exposes `git_batch` for bounded read-only Git inspection without shell composition.
-It accepts an ordered list of structured `merge-base`, `log`, and `diff` operations and runs `/usr/bin/git` directly in the session worktree.
-
-- The argv grammar allows only the comparison forms documented by the tool; callers cannot supply a cwd, global Git options, pathspecs, config, or executable paths.
-- Git runs sequentially with clean defensive environment variables, disabled pagers, hooks, fsmonitor, external diff, textconv, replacement objects, optional locks, and lazy fetches.
-- Each result preserves stdout, stderr, and exit code; ordinary diagnostic exits continue the batch, while abort, timeout, spawn failure, or output overflow stops it explicitly.
-- The tool allows at most eight operations, eight arguments per operation, 15 seconds per operation, 60 seconds per batch, 512 KiB per operation, and 2 MiB per batch.
-- Global permission denies `git_batch`; only Review and the four Git agents allow it.
 
 ## Usage
 
@@ -190,7 +178,6 @@ Practical failure diagnosis:
 - `usage/cache.ts` owns the cache file shape, lock semantics, and decoder.
 - `usage/auth.ts` owns path resolution for auth, cache, and runtime directories.
 - `opencode/media-context/registry.ts` owns media registry paths, handle/alias patterns, and file-part ID rules.
-- `git/tool.ts` owns the `git_batch` argv grammar, worktree binding, process hardening, and resource bounds.
 - `delegate/config.ts` hardcodes `DELEGATE_CONFIG_PATH` to `/home/cullyn/dotfiles/config/opencode/delegate.json`.
 - Changing `hyprd/context.ts` paths or schema requires updating both `hyprd/kitty.ts` and `hyprd/notify.ts`.
 - `shared/` owns session/provider metadata, colors/icons, git status parsing, and the sidebar-section wrapper; only put helpers there when more than one plugin owns the concept.
@@ -202,7 +189,6 @@ Practical failure diagnosis:
 - Video files stay local-only; only images are pushed as provider file parts.
 - Usage adapters must not log tokens, cookies, or local paths.
 - `usage_status` is read-only and must never refresh providers or mutate chat context.
-- `git_batch` remains read-only, shell-free, worktree-bound, and limited to its exact operation grammar.
 - Delegate children deny `todowrite`, `task`, and `experimental.primary_tools` tools unless the agent declares them.
 - Delegate children always deny `question`, and children under Drive lineage additionally carry no `ask` rule at all.
 - Kitty context directory is mode `0700` and the context JSON file is mode `0600`.

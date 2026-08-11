@@ -6,6 +6,7 @@ permission:
   task: deny
   todowrite: deny
   question: deny
+  bash: deny
 color: success
 ---
 
