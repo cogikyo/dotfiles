@@ -43,6 +43,7 @@ return {
 		local actions = require("telescope.actions")
 		local rg_excludes = {
 			"--glob=!**/.git/**",
+			"--glob=!**/.worktrees/**",
 			"--glob=!**/node_modules/**",
 			"--glob=!**/vendor/**",
 			"--glob=!**/.venv/**",
