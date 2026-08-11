@@ -24,6 +24,8 @@ type Date struct {
 	done      chan struct{}
 	active    bool
 	birthDate time.Time
+	last      DateState
+	published bool
 }
 
 // NewDate constructs a Date provider, falling back to 1996-02-26 if cfg.BirthDate is unparseable.
@@ -47,29 +49,24 @@ func (d *Date) Name() string {
 func (d *Date) Start(ctx context.Context, notify func(data any)) error {
 	d.active = true
 
-	state := d.read()
-	d.state.Set("date", state)
-	notify(state)
+	d.publish(notify, d.read())
 
 	for {
-		// Align to the top of each minute.
-		now := time.Now()
-		sleepDuration := time.Duration(60-now.Second())*time.Second - time.Duration(now.Nanosecond())
-		if sleepDuration <= 0 {
-			sleepDuration = time.Minute
-		}
-
-		select {
-		case <-ctx.Done():
+		if !waitForNextBoundary(ctx, d.done, time.Minute) {
 			return nil
-		case <-d.done:
-			return nil
-		case <-time.After(sleepDuration):
-			state := d.read()
-			d.state.Set("date", state)
-			notify(state)
 		}
+		d.publish(notify, d.read())
 	}
+}
+
+func (d *Date) publish(notify func(data any), state *DateState) {
+	if d.published && d.last == *state {
+		return
+	}
+	d.last = *state
+	d.published = true
+	d.state.Set("date", state)
+	notify(state)
 }
 
 func (d *Date) Stop() error {

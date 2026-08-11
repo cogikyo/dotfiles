@@ -111,8 +111,9 @@
   )
 )
 
-(defwidget temp-ramp [current percent max bool ?direction ?extra]
+(defwidget temp-ramp [current percent max bool available ?direction ?extra]
   (box
+    :visible available
     :space-evenly false
     :spacing 6
     :class "tr-c ramp-${
@@ -158,14 +159,11 @@
       :class "computerbox ${hover == "cpu" ? "computerbox-hover" : "" }"
       :space-evenly false :spacing "${hover == "cpu" ? "12" : "8" }"
       (temp-ramp
-        :current {round(sensors.nvme-pci-0100.Composite.temp1_input,0)}
-        :percent {round(
-          sensors.nvme-pci-0100.Composite.temp1_input /
-          (sensors.nvme-pci-0100.Composite.temp1_min -
-          sensors.nvme-pci-0100.Composite.temp1_max * - 1) * 100
-        ,0)}
-        :max {sensors.nvme-pci-0100.Composite.temp1_max}
+        :current {computer-info.temp_current}
+        :percent {computer-info.temp_percent}
+        :max {computer-info.temp_max}
         :bool {hover == "cpu"}
+        :available {computer-info.temp_available}
       )
       (label-ramp
         :icon ""
@@ -188,6 +186,7 @@
 
 (defwidget memory []
   (eventbox
+    :visible {computer-info.ram_available}
     :onhover "eww update hover=memory"
     :onhoverlost "eww update hover=''"
     :onclick "${terminal} --title='terminalfloat' -e btop & disown"
@@ -198,7 +197,7 @@
       :space-evenly false :spacing 8
       (label-ramp
         :icon "󰍛"
-        :percent {EWW_RAM.used_mem_perc}
+        :percent {computer-info.ram_used_percent}
         :bool {hover == "memory"}
       )
       (box :space-evenly false :spacing 3
@@ -207,8 +206,8 @@
             :text "󰇝"
             :style "font-size: 1.1em;"
             :class "ramp-${
-              EWW_RAM.used_mem_perc == 100 ? "12" : "${
-                EWW_RAM.used_mem_perc < n * 95 / 15 ? "1" : "${
+              computer-info.ram_used_percent == 100 ? "12" : "${
+                computer-info.ram_used_percent < n * 95 / 15 ? "1" : "${
                   round(n / 2.1, 0) + 4
                 }"
               }"
@@ -220,8 +219,7 @@
   )
 )
 
-(defpoll sensors
-  :interval "0.5s"
-  :initial `{ "nvme-pci-0100":{ "Adapter": "PCI adapter", "Composite":{ "temp1_input": 42.850, "temp1_max": 79.850, "temp1_min": -5.150, "temp1_crit": 84.850, "temp1_alarm": 0.000 } }, "k10temp-pci-00c3":{ "Adapter": "PCI adapter", "Tctl":{ "temp1_input": 64.000 }, "Tccd1":{ "temp3_input": 65.500 } } }`
-  `sensors -j`
+(deflisten computer-info
+  :initial '{"ram_available":false,"ram_used_percent":0,"temp_available":false,"temp_current":0,"temp_percent":0,"temp_max":0}'
+  'ewwd subscribe computer | jq --unbuffered -c ".data"'
 )

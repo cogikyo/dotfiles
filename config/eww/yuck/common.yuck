@@ -3,12 +3,12 @@
 
 (deflisten cycle-6
   :initial 0
-  'while true; do echo 0; sleep 6; echo 1; sleep 6; done'
+  'ewwd subscribe cycle-6 | jq --unbuffered -c ".data"'
 )
 
 (deflisten cycle-5
   :initial 0
-  'while true; do echo 0; sleep 5; echo 1; sleep 5; done'
+  'ewwd subscribe cycle-5 | jq --unbuffered -c ".data"'
 )
 
 (defvar browser "firefox-developer-edition")

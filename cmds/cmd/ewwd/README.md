@@ -68,6 +68,10 @@ ewwd action timer alarm up <minutes>      # add minutes
 | music      | D-Bus (Spotify)     | playback status, track info, album art    |
 | network    | /proc/net/dev       | upload/download speeds                    |
 | date       | time                | time, date, clockface icons, weeks alive  |
+| clock      | time                | wall-aligned hour, minute, second          |
+| computer   | procfs/sysfs        | RAM use, NVMe Composite temperature       |
+| cycle-5    | time                | wall-aligned scalar display cycle          |
+| cycle-6    | time                | wall-aligned scalar display cycle          |
 | weather    | OpenWeatherMap API  | temperature, conditions, moon phase, wind |
 | timer      | internal            | countdown timer and alarm                 |
 
@@ -85,6 +89,6 @@ Each provider implements the `providers.Provider` interface and runs in its own 
 ewwd/
 ├── daemon.go            # lifecycle, provider coordination, command handler
 ├── main.go              # CLI entry, command routing to daemon socket
-├── providers/           # audio, music, network, date, weather, timer
+├── providers/           # audio, clock, computer, cycles, music, and other state sources
 └── state.go             # generic thread-safe state store
 ```

@@ -2358,7 +2358,6 @@ step_eww() {
 
     local eww_bin="$HOME/.local/bin/eww"
     local eww_src="${XDG_CACHE_HOME:-$HOME/.cache}/eww"
-    local poll_ms="${EWW_POLL_INTERVAL_MS:-500}"
 
     if [[ -x "$eww_bin" ]]; then
         "$eww_bin" --version
@@ -2379,15 +2378,15 @@ step_eww() {
         git clone https://github.com/elkowar/eww.git "$eww_src"
     fi
 
-    info "Applying poll interval patch..."
+    info "Applying EWW_CPU 500ms poll patch..."
     git -C "$eww_src" apply "$DOTFILES/etc/eww-poll-interval.patch"
 
-    info "Building with EWW_POLL_INTERVAL_MS=${poll_ms}..."
-    (cd "$eww_src" && EWW_POLL_INTERVAL_MS="$poll_ms" cargo build --release --no-default-features --features=wayland)
+    info "Building eww..."
+    (cd "$eww_src" && cargo build --release --no-default-features --features=wayland)
     strip "$eww_src/target/release/eww"
     mkdir -p "$(dirname "$eww_bin")"
     install -Dm755 "$eww_src/target/release/eww" "$eww_bin"
-    ok "eww built (poll interval: ${poll_ms}ms) and installed to $eww_bin"
+    ok "eww built (EWW_CPU poll interval: 500ms) and installed to $eww_bin"
 }
 
 healthcheck_eww() {

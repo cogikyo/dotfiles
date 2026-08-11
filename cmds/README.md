@@ -38,7 +38,7 @@ Commands that depend on each other (e.g. hide needs to know about monocle) share
 ## Commands
 
 - **[dctl](cmd/dctl/)** — Dotfiles control plane
-- **[ewwd](cmd/ewwd/)** — System utilities: audio, music, network, date, weather, timer
+- **[ewwd](cmd/ewwd/)** — System utilities: audio, clock, computer, cycles, music, network, date, weather, timer
 - **[hyprd](cmd/hyprd/)** — Window management: monocle, split ratios, hide/show, swap, workspace nav, session layouts
 - **[newtab](cmd/newtab/)** — Firefox new tab page: local HTTP server with bookmarks, history, and suggestions
 - **[src](cmd/src/)** — Source inspection cache for upstream repos, Go modules, npm package repos, and Arch package sources

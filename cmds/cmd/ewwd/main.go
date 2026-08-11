@@ -211,8 +211,8 @@ Usage:
   ewwd status --json    Return full state as JSON
 
 Query/Subscribe (for eww):
-  ewwd query [topic]    Get state (network|date|audio|bluetooth|music|timer|weather|...)
-  ewwd subscribe [...]  Stream events (network date audio bluetooth music timer weather)
+  ewwd query [topic]    Get state for one provider topic, or all topics by default
+  ewwd subscribe [...]  Stream events for selected provider topics
 
 Actions (for eww buttons/scrolls):
   ewwd action audio toggle_mute <sink|source> Toggle device mute
@@ -242,6 +242,10 @@ Actions (for eww buttons/scrolls):
 Providers:
   network    - Network speed monitoring
   date       - Date/time, clockface icons, weeks alive
+  clock      - Wall-aligned hour, minute, and second
+  computer   - RAM use and NVMe Composite temperature
+  cycle-5    - Wall-aligned five-second display cycle
+  cycle-6    - Wall-aligned six-second display cycle
   audio      - WirePlumber default sink/source volume and mute
   bluetooth  - BlueZ connection controls with LibrePods metadata enrichment
   music      - Spotify playback (status, track info, album art)

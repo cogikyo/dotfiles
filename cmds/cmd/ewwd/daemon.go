@@ -123,6 +123,10 @@ func (d *Daemon) initProviders() {
 	d.providers = []providers.Provider{
 		providers.NewNetwork(d.state, cfg.Network),
 		providers.NewDate(d.state, cfg.Date),
+		providers.NewClock(d.state),
+		providers.NewComputer(d.state),
+		providers.NewCycle(d.state, "cycle-5", 5*time.Second),
+		providers.NewCycle(d.state, "cycle-6", 6*time.Second),
 		providers.NewAudio(d.state, cfg.Audio),
 		providers.NewBluetooth(d.state, d.config.Hypr.Bluetooth.Device),
 		providers.NewMusic(d.state, cfg.Music.SpDc),

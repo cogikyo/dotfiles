@@ -135,10 +135,9 @@
 (defvar hour-active false)
 (defvar minute-active false)
 (defvar fine-adjust false)
-(defpoll time
-  :interval "1s"
+(deflisten time
   :initial '{"hour":"04", "minute":"20", "second":"00"}'
-  `date +'{"hour":"%H", "minute":"%M", "second":"%S"}'`
+  'ewwd subscribe clock | jq --unbuffered -c ".data"'
 )
 
 (deflisten timer-info
