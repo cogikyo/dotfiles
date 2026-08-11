@@ -1,6 +1,6 @@
 pkgname=librepods-max2
 pkgver=0.1.0.pr655.99b0e58
-pkgrel=10
+pkgrel=11
 pkgdesc='Experimental LibrePods tray app with AirPods Max 2 hi-res microphone support'
 arch=('x86_64')
 url='https://github.com/librepods-org/librepods/pull/655'

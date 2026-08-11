@@ -2112,6 +2112,10 @@ librepods_version() {
     )
 }
 
+librepods_has_unresolved_libraries() {
+    [[ -x /usr/bin/librepods ]] && ldd /usr/bin/librepods 2>/dev/null | grep -q 'not found'
+}
+
 copy_librepods_sources() {
     local package_dir="$1"
     local build_root="$2"
@@ -2229,14 +2233,25 @@ install_librepods_package() {
     expected_version=$(librepods_version)
     installed_version=$(pacman -Q "$LIBREPODS_PACKAGE" 2>/dev/null | cut -d' ' -f2 || true)
 
-    if [[ "$installed_version" == "$expected_version" ]]; then
+    local force_rebuild=0
+    if [[ "$installed_version" == "$expected_version" ]] && ! librepods_has_unresolved_libraries; then
         ok "$LIBREPODS_PACKAGE $expected_version already installed"
+        return
+    fi
+
+    if [[ "$installed_version" == "$expected_version" ]]; then
+        force_rebuild=1
+        warn "$LIBREPODS_PACKAGE has unresolved runtime libraries; rebuilding"
+    fi
+
+    has makepkg || { err "makepkg not found. Install base-devel first."; return 1; }
+    rm -rf "$build_root"
+    mkdir -p "$build_root" "$target_root"
+    copy_librepods_sources "$package_dir" "$build_root"
+    info "Building $LIBREPODS_PACKAGE from pinned PR #655 commit..."
+    if (( force_rebuild )); then
+        (cd "$build_root" && CARGO_TARGET_DIR="$target_root" makepkg --syncdeps --install --clean --force --noconfirm)
     else
-        has makepkg || { err "makepkg not found. Install base-devel first."; return 1; }
-        rm -rf "$build_root"
-        mkdir -p "$build_root" "$target_root"
-        copy_librepods_sources "$package_dir" "$build_root"
-        info "Building $LIBREPODS_PACKAGE from pinned PR #655 commit..."
         (cd "$build_root" && CARGO_TARGET_DIR="$target_root" makepkg --syncdeps --install --clean --needed --noconfirm)
     fi
 }
@@ -2251,7 +2266,7 @@ healthcheck_librepods_package() {
         return 1
     }
     [[ -x /usr/bin/librepods ]] || { err "Healthcheck failed: /usr/bin/librepods is missing"; return 1; }
-    if ldd /usr/bin/librepods 2>/dev/null | grep -q 'not found'; then
+    if librepods_has_unresolved_libraries; then
         err "Healthcheck failed: /usr/bin/librepods has unresolved runtime libraries"
         return 1
     fi
