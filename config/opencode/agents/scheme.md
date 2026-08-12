@@ -116,13 +116,14 @@ Use `adaptive` when evidence should determine the shape and `orchestrated` for a
 - Default to `high` for a tightly bounded divergent planning direction.
 - `kimi-code` is the sole Kimi provider and a deprecation candidate; do not spend `opencode-go` capacity on Kimi.
 
-### `xai/grok-4.5` and `opencode-go/grok-4.5`
+### `xai/grok-4.6` and `opencode-go/grok-4.5`
 
 - Default to `high` for `scout/web`, `verify/web`, and `verify/x`.
 - Default to `medium` for `git/commit`.
 - Solid `high` `build/general` option; it builds fast.
   - Best when the workflow has guards: a settled plan going in and review or simplify steps after.
-- The two routes are interchangeable; pick the provider with better current headroom.
+- Prefer xAI for Grok 4.6; OpenCode Go remains on 4.5 until its gateway supports 4.6.
+- OpenCode supports `low`, `medium`, and `high` for xAI 4.6; native Grok CLI also supports `xhigh`.
 
 ### `openai/gpt-5.6-luna-fast`
 

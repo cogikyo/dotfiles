@@ -72,8 +72,8 @@
     },
     "xai": {
       "models": {
-        "grok-4.5": {
-          "name": "Grok 4.5",
+        "grok-4.6": {
+          "name": "Grok 4.6",
           "options": {
             "reasoningEffort": "high"
           },

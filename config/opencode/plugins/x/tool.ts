@@ -108,7 +108,7 @@ function runGrok(brief: string, signal: AbortSignal): Promise<string> {
     "--single",
     brief,
     "--model",
-    "grok-4.5",
+    "grok-4.6",
     "--reasoning-effort",
     "high",
     "--output-format",
