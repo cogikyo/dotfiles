@@ -45,6 +45,47 @@ Require the approved candidate OID to already exist at the exact remote branch; 
 Create a concise PR with a repository-style title, summary of intent, important constraints, and exact verification.
 Create separate option PRs only when explicitly requested, and identify their relationship clearly.
 
+## PR description
+
+Write for an intelligent reviewer who already knows the repository, product, and common tooling.
+Give enough context to judge the change without teaching familiar concepts or replaying the diff.
+
+- Lead with intent and the most important reviewer-visible consequences.
+- Summarize a broad change set by impact or surprise rather than commit chronology.
+- Use four to seven short numbered items when several distinct consequences matter.
+- Give each item a bold heading that names one behavior, policy, or boundary change.
+- Add dependent sub-bullets only for a necessary reason, default, opt-in path, or constraint.
+- Distinguish new behavior from behavior that already existed.
+- State whether behavior is automatic, optional, manual, local-only, CI-facing, or deployment-facing when the distinction matters.
+- Preserve exact command, option, and configuration names.
+- Keep implementation details out unless they explain a consequence or review risk.
+- Keep requested commit links and chronological history separate from the consequence summary.
+- Report verification exactly and do not infer CI, deployment, or runtime effects without evidence.
+- Remove generic introductions, exhaustive file lists, mechanical commit paraphrases, and explanations the intended reviewer already knows.
+
+Use this as a shape example for a broad PR summary, it came from PR with 10 commits;
+adapt its content to inspected source and never reuse unsupported claims:
+
+```
+1. **Touched files must be clean**
+   - Any warning, error, or deprecated API blocks the commit.
+   - Existing problems in untouched files remain outside the check.
+2. **Checks have explicit commands**
+   - The commit command checks and formats staged files.
+   - The push command runs cached lint, formatting, and typechecking.
+   - The full command adds tests and production builds.
+3. **Vite no longer runs a separate typechecker**
+   - Editor diagnostics and push checks provide type coverage.
+   - Vite and Storybook configuration participate in the TypeScript graph.
+4. **React Compiler auditing is optional**
+   - Routine checks omit it; one explicit command runs it when needed.
+5. **Dependency installs are stricter**
+   - Lifecycle scripts, recent releases, and worktree storage have explicit policy.
+6. **Local HTTPS configuration is shared**
+   - Existing HTTPS behavior uses one configuration boundary.
+   - Generated certificates remain the default; trusted certificates and machine overrides are optional.
+```
+
 Never push, publish refs, mutate source history, edit files, alter an existing PR unexpectedly, merge, close, or change Git configuration.
 Never delegate or ask the user directly; return `Questions for parent` when approval, target, migration requirements, or remote state is ambiguous.
 
