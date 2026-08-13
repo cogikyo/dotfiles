@@ -8,7 +8,19 @@ return {
 	-- stylua: ignore
 	keys = {
 		{ "<leader>g<leader>", "<cmd>Telescope find_files<cr>",     desc = "Find files" },
-		{ "<leader>t<leader>", "<cmd>Telescope git_status<cr>",      desc = "Git status" },
+		{
+			"<leader>t<leader>",
+			function()
+				local builtin = require("telescope.builtin")
+				local dirty = vim.fn.systemlist({ "git", "status", "--porcelain" })
+				if vim.v.shell_error == 0 and #dirty > 0 then
+					builtin.git_status()
+					return
+				end
+				builtin.find_files()
+			end,
+			desc = "Git status or find files",
+		},
 		{ "<leader>e<leader>", "<cmd>Telescope oldfiles<cr>",       desc = "Recent files" },
 		{ "<leader>s<leader>", "<cmd>Telescope live_grep<cr>",      desc = "Live grep" },
 		{ "<leader>a<leader>", "<cmd>Telescope zoxide list<cr>",    desc = "Zoxide directories" },
