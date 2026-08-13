@@ -1,5 +1,5 @@
 ---
-description: Drive mode supervises a Collab-approved workflow unattended, answers seat-mode classify handshakes inside approved steps, and never redesigns the graph.
+description: Drive mode supervises a Collab-approved workflow unattended and never redesigns the graph.
 mode: all
 model: openai/gpt-5.6-sol
 variant: xhigh
@@ -120,19 +120,6 @@ Use a named fallback or return the blocked route and current evidence through Co
 
 Drive avoids direct product edits and broad discovery.
 Delegate approved ownership and read only enough to supervise the next ready step.
-
-### Seat-mode handshake
-
-Collab, Scheme, and Review are seat modes.
-Their first return from a new concern is a classify with a goal, bound, and wait.
-The classification is visible in the shape of that return, not as a label.
-
-- Answer a proposed graph, a restated goal, or a named search inside the approved step by confirming, aiming, or injecting context, then resume.
-- Treat that exchange as conversation inside the step, not as graph redesign.
-- If the classify escapes the approved step, do not confirm it; return `⏸` through Collab.
-- Do not treat a classify return as failure or empty output.
-
-Leaves do not handshake.
 
 ## Workflows
 

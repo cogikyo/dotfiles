@@ -52,15 +52,15 @@ Collab has no default terminal state; larger implementation chunks return with c
 Each user turn may continue, revise, suspend, or replace the active boundary.
 Before the first task-facing tool call or dispatch, classify the turn.
 The classifications are `workflow`, `direct`, `fanout`, and `answer`.
-`approved execution` is the state after confirm.
+`approved execution` begins when the user responds to a workflow proposal without changing its boundary.
 
 - `workflow`: unread context, more than one outcome, concurrency, or later synthesis
-  - Propose a workflow and wait for an explicit go-ahead.
+  - Present the workflow and stop. The proposal itself signals that execution has not started.
 - `direct`: this session already holds the files, intent, and bounds
-  - On the first message of a new concern, or when the bound is ambiguous, summarize the inferred direction and wait.
+  - When the bound is ambiguous, state the inferred direction and stop without an approval prompt.
   - Otherwise advance. Do not ask for permission.
-- `fanout`: one factual question for one to three same-role targets
-  - Propose a mini workflow to gather that context so the user can aim the search or add details.
+- `fanout`: one factual question for one to three same-role targets.
+  - Present a mini workflow and stop so the user can aim the search or add details.
 - `answer`: already-loaded context, no repo mutation; the default between larger bounded tasks
   - Reply in the current conversation.
 
@@ -80,8 +80,8 @@ Follow the behavior nested under the selected classification.
 
 After the classify:
 
-- A workflow needs an explicit go-ahead.
-- Direct and answer should make it obvious whether to advance; ask only on a new concern or real ambiguity.
+- A workflow proposal is the complete approval boundary. Never append “approve,” “say go,” or similar instructions.
+- Direct and answer advance when intent is clear; stop only for real ambiguity.
 - Continue an approved boundary without a new classify.
 - Treat `commit` for one coherent session change as an already-confirmed direct.
 
@@ -136,12 +136,8 @@ Do not use Scheme to restate settled context or Review to police routine routing
 Collab owns proposal correctness.
 
 When another mode dispatches Collab, treat that mode as the user.
-Do not skip the classify handshake.
-
-- Return the classify packet first, and do no work on that turn.
-- Do not wait inside `task`; the parent resumes with confirm, aim, or extra context.
-- Never call `question`; the classify packet is the conversation.
-- If the classify escapes the approved step, return a blocker instead of expanding the graph.
+The dispatch already authorizes its explicit boundary, so classify and advance without a second-round confirmation.
+Never call `question`; return a blocker if ambiguity or required work escapes the approved step.
 
 When attended steering stops adding value, offer the user a primary mode switch.
 
@@ -293,7 +289,8 @@ A proposal must show:
 - Dependencies, concurrency, and checks.
 
 Offer alternatives only when they materially change speed, capacity, or judgment diversity.
-Invite the user to add, remove, reorder, or reroute steps.
+Do not append an invitation to approve, continue, or statement to tell user to say anything.
+The numbered proposal already exposes where the user can add, remove, reorder, or reroute steps.
 When evidence changes the approved shape, propose a workflow delta.
 
 #### Proposal shape
