@@ -32,7 +32,7 @@ func NewLayout(h *hypr.Client, s *state.State) *Layout {
 	return &Layout{hypr: h, state: s}
 }
 
-// Execute dispatches: "list", "set <ws> <name>", a workspace number, or a session name.
+// Execute dispatches: "list", "set <ws> <name>", a workspace number, or a session name with an optional "all" mode.
 func (l *Layout) Execute(arg string) (string, error) {
 	cfg := l.state.GetConfig()
 	sessions := cfg.Sessions
@@ -51,7 +51,26 @@ func (l *Layout) Execute(arg string) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("unknown session: %s (use 'layout list')", parts[0])
 	}
+	if len(parts) > 2 {
+		return "", fmt.Errorf("unexpected layout arguments: %s (usage: layout <session> [all])", strings.Join(parts[2:], " "))
+	}
+	if len(parts) == 2 {
+		if parts[1] != "all" {
+			return "", fmt.Errorf("unknown layout option %q (usage: layout <session> [all])", parts[1])
+		}
+		session = withAllAgents(session)
+	}
 	return l.openSession(session)
+}
+
+func withAllAgents(session config.Session) config.Session {
+	sessionCopy := session
+	sessionCopy.Tabs = make(map[string]string, len(session.Tabs)+1)
+	for body, profile := range session.Tabs {
+		sessionCopy.Tabs[body] = profile
+	}
+	sessionCopy.Tabs["agents"] = "agents-all"
+	return sessionCopy
 }
 
 func (l *Layout) setActive(args []string, sessions config.SessionsConfig) (string, error) {

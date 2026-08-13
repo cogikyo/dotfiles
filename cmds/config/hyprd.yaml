@@ -39,6 +39,7 @@ sessions:
         - agents
       tabs:
         editor: leadpier
+        agents: agents-all
 
     type:
       command: chromium --new-window https://vial.rocks/
@@ -111,6 +112,7 @@ sessions:
       browser: leadpier
       tabs:
         editor: leadpier
+        agents: agents-all
 
   # ├─ workspace 5 ──────────────────────────────────────────────────────────────┤
   5: # personal infrastructure and dotfiles work.
@@ -138,6 +140,21 @@ tabs:
       - { name: git,   title: "⟜   ⊸", command: lazygit, requires: git, executables: [git, lazygit] }
 
   agents: # ├─ agents profile ─────────────────────────────────────────────────────┤
+    order: 1
+    prefix: "agents-"
+    focus: build
+    tabs:
+      - { name: scout, title: "⊰   ⊱", executables: [opencode] }
+      - { name: build, title: "⊰ 󰯉  ⊱", command: c, executables: [opencode] }
+      - { name: drive, title: "⊰   ⊱", executables: [opencode] }
+      - name: plan
+        title: "⊰   ⊱"
+        executables: [opencode]
+        actions:
+          build: {}
+      - { name: learn, title: "⊰   ⊱", executables: [opencode] }
+
+  agents-all: # ├─ all-agents profile ────────────────────────────────────────────────┤
     order: 1
     prefix: "agents-"
     focus: build
