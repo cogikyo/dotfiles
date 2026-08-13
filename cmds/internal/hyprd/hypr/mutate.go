@@ -63,6 +63,13 @@ func (c *Client) FocusWorkspace(id int) error {
 	))
 }
 
+// FocusNamedWorkspace switches to a named workspace.
+func (c *Client) FocusNamedWorkspace(name string) error {
+	return c.eval("FocusNamedWorkspace", fmt.Sprintf(
+		"hl.dispatch(hl.dsp.focus({ workspace = %s }))", luaQuote("name:"+name),
+	))
+}
+
 // FocusWindow focuses the window at the raw hex address.
 func (c *Client) FocusWindow(address string) error {
 	return c.eval("FocusWindow", fmt.Sprintf(
@@ -86,6 +93,30 @@ func (c *Client) MoveWindowToWorkspace(address string, workspace string, follow 
 	return c.eval("MoveWindowToWorkspace", fmt.Sprintf(
 		"hl.dispatch(hl.dsp.window.move({ workspace = %s, follow = %s, window = %s }))",
 		luaQuote(workspace), luaBool(follow), luaQuote(windowAddress(address)),
+	))
+}
+
+// SetWindowFloating makes the addressed window floating without toggling its current state.
+func (c *Client) SetWindowFloating(address string) error {
+	return c.eval("SetWindowFloating", fmt.Sprintf(
+		`hl.dispatch(hl.dsp.window.float({ action = "set", window = %s }))`,
+		luaQuote(windowAddress(address)),
+	))
+}
+
+// ResizeWindowExact resizes the addressed window to exact pixel size w×h.
+func (c *Client) ResizeWindowExact(address string, w, h int) error {
+	return c.eval("ResizeWindowExact", fmt.Sprintf(
+		"hl.dispatch(hl.dsp.window.resize({ x = %d, y = %d, window = %s }))",
+		w, h, luaQuote(windowAddress(address)),
+	))
+}
+
+// CenterWindow centers the addressed window.
+func (c *Client) CenterWindow(address string) error {
+	return c.eval("CenterWindow", fmt.Sprintf(
+		"hl.dispatch(hl.dsp.window.center({ window = %s }))",
+		luaQuote(windowAddress(address)),
 	))
 }
 

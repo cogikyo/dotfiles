@@ -26,6 +26,7 @@ type State struct {
 	SplitRatio         string                  `json:"split_ratio"`
 	ActiveSessions     map[int]string          `json:"active_sessions,omitempty"`
 	ScreenShare        bool                    `json:"screen_share"`
+	BrowserQA          []BrowserQAWindow       `json:"browser_qa"`
 	pendingLaunches    map[string]time.Time    `json:"-"`
 	config             *config.HyprConfig
 }
@@ -40,6 +41,7 @@ func NewState(cfg *config.HyprConfig) *State {
 		ProjectPaths:       make(map[int]string),
 		Monocle:            make(map[int]*MonocleState),
 		ActiveSessions:     make(map[int]string),
+		BrowserQA:          []BrowserQAWindow{},
 		pendingLaunches:    make(map[string]time.Time),
 		SplitRatio:         "default",
 		config:             cfg,
@@ -101,6 +103,26 @@ func (s *State) GetScreenShare() bool {
 	return s.ScreenShare
 }
 
+// BrowserQAWindow identifies one marked browser window and its dedicated workspace.
+type BrowserQAWindow struct {
+	Address   string `json:"address"`
+	Title     string `json:"title"`
+	Slot      int    `json:"slot"`
+	Workspace string `json:"workspace"`
+}
+
+func (s *State) SetBrowserQA(windows []BrowserQAWindow) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.BrowserQA = append([]BrowserQAWindow{}, windows...)
+}
+
+func (s *State) GetBrowserQA() []BrowserQAWindow {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return append([]BrowserQAWindow{}, s.BrowserQA...)
+}
+
 func (s *State) GetConfig() *config.HyprConfig {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -121,6 +143,7 @@ func (s *State) Restore(data []byte) error {
 	s.OccupiedWorkspaces = snap.OccupiedWorkspaces
 	s.SplitRatio = snap.SplitRatio
 	s.ScreenShare = snap.ScreenShare
+	s.BrowserQA = append([]BrowserQAWindow{}, snap.BrowserQA...)
 
 	if snap.Hidden != nil {
 		s.Hidden = snap.Hidden

@@ -250,6 +250,8 @@ func (d *Daemon) handleCommand(command string) string {
 		return d.handleThreeBody(arg)
 	case "shadow":
 		return d.handleShadow(arg)
+	case "browser-qa":
+		return d.handleBrowserQA(arg)
 	case "init":
 		init := d.newInit()
 		result, err := init.Execute()
@@ -337,6 +339,19 @@ func (d *Daemon) handleShadow(arg string) string {
 	default:
 		return "usage: shadow [toggle|list]"
 	}
+}
+
+func (d *Daemon) handleBrowserQA(arg string) string {
+	slot, err := strconv.Atoi(arg)
+	if err != nil || slot < 1 {
+		return "error: usage: browser-qa <positive-slot>"
+	}
+
+	workspace := browserQAWorkspace(slot)
+	if err := d.hypr.FocusNamedWorkspace(workspace); err != nil {
+		return fmt.Sprintf("error: %v", err)
+	}
+	return "focused name:" + workspace
 }
 
 func (d *Daemon) handleThreeBody(arg string) string {
@@ -611,6 +626,7 @@ func workspacePayload(s *state.State) map[string]any {
 		"current_str":  strconv.Itoa(current),
 		"occupied":     occupied,
 		"occupied_str": joinWorkspaceIDs(occupied),
+		"browser_qa":   s.GetBrowserQA(),
 	}
 }
 

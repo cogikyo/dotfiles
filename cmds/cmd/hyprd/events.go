@@ -18,20 +18,22 @@ import (
 
 // EventLoop mirrors Hyprland's event stream into daemon state and notifies subscribers.
 type EventLoop struct {
-	hypr   *hypr.Client
-	state  *state.State
-	subs   *daemon.SubscriptionManager
-	accent *Accent
-	done   <-chan struct{}
+	hypr            *hypr.Client
+	state           *state.State
+	subs            *daemon.SubscriptionManager
+	accent          *Accent
+	done            <-chan struct{}
+	browserQAPlaced map[string]bool
 }
 
 func NewEventLoop(hypr *hypr.Client, state *state.State, subs *daemon.SubscriptionManager, accent *Accent, done <-chan struct{}) *EventLoop {
 	return &EventLoop{
-		hypr:   hypr,
-		state:  state,
-		subs:   subs,
-		accent: accent,
-		done:   done,
+		hypr:            hypr,
+		state:           state,
+		subs:            subs,
+		accent:          accent,
+		done:            done,
+		browserQAPlaced: make(map[string]bool),
 	}
 }
 
@@ -87,15 +89,16 @@ func (e *EventLoop) syncState() error {
 		e.state.SetWorkspace(ws.ID)
 	}
 
-	if err := e.updateOccupied(); err != nil {
+	if err := e.refreshClients(); err != nil {
 		return err
 	}
+	e.notifyWorkspace()
 	e.resetAccent()
 
 	return nil
 }
 
-func (e *EventLoop) updateOccupied() error {
+func (e *EventLoop) refreshClients() error {
 	clients, err := e.hypr.Clients()
 	if err != nil {
 		return err
@@ -109,6 +112,7 @@ func (e *EventLoop) updateOccupied() error {
 	}
 
 	e.state.SetOccupied(slices.Sorted(maps.Keys(wsSet)))
+	e.syncBrowserQA(clients)
 	return nil
 }
 
@@ -149,8 +153,16 @@ func (e *EventLoop) handleEvent(line string) {
 		}
 		e.applyAccent()
 
-	case "createworkspace", "destroyworkspace", "openwindow", "movewindow":
-		e.updateOccupied()
+	case "createworkspace", "destroyworkspace":
+		e.refreshClients()
+		e.notifyWorkspace()
+
+	case "openwindow":
+		e.refreshClients()
+		e.notifyWorkspace()
+
+	case "movewindow", "movewindowv2", "windowtitle", "windowtitlev2":
+		e.refreshClients()
 		e.notifyWorkspace()
 
 	case "closewindow":
@@ -161,7 +173,7 @@ func (e *EventLoop) handleEvent(line string) {
 		e.handleThreeBodyClose(addr) // must run before ClearWindowState wipes the entries
 		e.handleMonocleClose(addr)
 		e.state.ClearWindowState(addr)
-		e.updateOccupied()
+		e.refreshClients()
 		e.notifyWorkspace()
 		e.applyAccent()
 	}

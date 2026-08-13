@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -60,6 +61,8 @@ func main() {
 		cmdThreeBody()
 	case "shadow":
 		cmdShadow()
+	case "browser-qa":
+		cmdBrowserQA()
 	case "project":
 		cmdProject()
 	case "lock":
@@ -215,6 +218,18 @@ func cmdThreeBody() {
 	sendCommand("three-body " + requireArg("usage: hyprd three-body {editor|agents|browser|shadow}"))
 }
 func cmdShadow() { sendCommand("shadow " + strings.Join(os.Args[2:], " ")) }
+func cmdBrowserQA() {
+	if len(os.Args) != 3 {
+		fmt.Fprintln(os.Stderr, "usage: hyprd browser-qa <positive-slot>")
+		os.Exit(1)
+	}
+	slot, err := strconv.Atoi(os.Args[2])
+	if err != nil || slot < 1 {
+		fmt.Fprintln(os.Stderr, "usage: hyprd browser-qa <positive-slot>")
+		os.Exit(1)
+	}
+	sendCommand("browser-qa " + strconv.Itoa(slot))
+}
 func cmdFocus() {
 	_ = requireArg("usage: hyprd focus <class> [title]")
 	sendCommand("focus " + strings.Join(os.Args[2:], " "))
@@ -315,12 +330,15 @@ Shadow workspace (special:shadow):
   hyprd shadow               Toggle visibility of shadow workspace
   hyprd shadow list          List windows parked on shadow workspace
 
+Browser QA workspaces (browser-qa-<slot>):
+  hyprd browser-qa <slot>    Focus one marked Chromium workspace
+
 Sessions:
   hyprd picker open      Open interactive layout picker overlay
   hyprd picker close     Close picker without action
   hyprd picker confirm   Confirm selection (open session on workspace)
   hyprd layout --list    List available sessions
-  hyprd layout <name>    Open session (loads from ~/dotfiles/cmds/config/hyprd.yaml)
+  hyprd layout <name> [all] Open session; "all" starts every agent TUI for this launch
 
 Lock:
   hyprd lock             Pseudo-lock (visual blackout + submap)
