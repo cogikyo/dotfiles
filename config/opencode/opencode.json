@@ -1,13 +1,17 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "autoupdate": false,
-  "enabled_providers": ["anthropic", "openai", "xai", "opencode-go", "kimi-code"],
+  "enabled_providers": ["anthropic", "openai", "xai", "opencode-go"],
   "model": "xai/grok-4.6",
   "small_model": "openai/gpt-5.6-luna-fast",
   "default_agent": "collab",
   "agent": {
     "build": { "disable": true },
-    "plan": { "disable": true }
+    "plan": { "disable": true },
+    "collab": {
+      "model": "xai/grok-4.6",
+      "variant": "medium"
+    }
   },
   "share": "manual",
   "snapshot": true,
@@ -32,31 +36,6 @@
     ]
   ],
   "provider": {
-    "kimi-code": {
-      "npm": "@ai-sdk/openai-compatible",
-      "name": "Kimi Code",
-      "options": {
-        "baseURL": "https://api.kimi.com/coding/v1"
-      },
-      "models": {
-        "k3": {
-          "name": "Kimi K3",
-          "reasoning": true,
-          "options": {
-            "reasoningEffort": "high"
-          },
-          "variants": {
-            "low": { "reasoningEffort": "low" },
-            "high": { "reasoningEffort": "high" },
-            "max": { "reasoningEffort": "max" }
-          },
-          "limit": {
-            "context": 262144,
-            "output": 131072
-          }
-        }
-      }
-    },
     "openai": {
       "models": {
         "gpt-5.6-sol": {
@@ -87,8 +66,20 @@
         }
       }
     },
-      "opencode-go": {
+    "opencode-go": {
       "models": {
+        "k3": {
+          "name": "Kimi K3",
+          "reasoning": true,
+          "options": {
+            "reasoningEffort": "high"
+          },
+          "variants": {
+            "low": { "reasoningEffort": "low" },
+            "high": { "reasoningEffort": "high" },
+            "max": { "reasoningEffort": "max" }
+          }
+        },
         "grok-4.5": {
           "options": {
             "reasoningEffort": "high"

@@ -1,6 +1,8 @@
 ---
 description: Steers attended implementation, pivots, Git work, and mixed tasks. Classifies every new concern and waits before work.
 mode: all
+model: xai/grok-4.6
+variant: medium
 permission:
   edit: allow
   read: allow
@@ -186,12 +188,11 @@ Use the smallest capable model for the task; small models often fit bounded patc
 - Use `high` only for its `build/owner` participant in a council or when the user explicitly requests it.
 - Avoid `high` for ordinary reviews because the extra latency and overthinking usually reduce its value.
 
-### `kimi-code/k3`
+### `opencode-go/k3`
 
 - Default to `high`; use `max` only when explicitly requested.
 - Useful as divergent review or implementation direction when ample time is available.
 - Bound it tightly because it is slow and prone to overproducing or overimplementing.
-- `kimi-code` is the sole Kimi provider and a deprecation candidate; do not spend `opencode-go` capacity on Kimi.
 
 ### `xai/grok-4.6` and `opencode-go/grok-4.5`
 
@@ -199,7 +200,7 @@ Use the smallest capable model for the task; small models often fit bounded patc
 - Default to `medium` for `build/patch` and `git/commit`.
 - Solid `high` `build/general` option; it builds fast.
   - Best when the workflow has guards: a settled plan going in and review or simplify steps after.
-- Prefer xAI for Grok 4.6; OpenCode Go remains on 4.5 until its gateway supports 4.6.
+- Prefer xAI for Grok 4.6; OpenCode Go stays on 4.5 and Kimi until its gateway supports 4.6.
 - OpenCode supports `low`, `medium`, and `high` for xAI 4.6; native Grok CLI also supports `xhigh`.
 
 ### `openai/gpt-5.6-luna-fast`

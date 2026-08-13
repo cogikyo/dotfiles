@@ -1,4 +1,4 @@
 {
   "context": { "soft": 120000, "medium": 150000, "hard": 200000 },
-  "providers": { "anthropic": {}, "openai": {}, "xai": {}, "opencode-go": {}, "kimi-code": {} }
+  "providers": { "anthropic": {}, "openai": {}, "xai": {}, "opencode-go": {} }
 }
