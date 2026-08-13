@@ -2567,7 +2567,7 @@ generate_dev_cert() (
     tmp_dir=$(mktemp -d "$cert_dir/.mkcert.XXXXXX") || exit 1
     trap 'rm -rf -- "$tmp_dir"' EXIT
     mkcert -cert-file "$tmp_dir/localhost.pem" -key-file "$tmp_dir/localhost-key.pem" \
-        localhost local.leadpier.com 127.0.0.1 ::1 || { err "Failed to generate the local development certificate"; return 1; }
+        localhost local.leadpier.com local.cullyn.dev 127.0.0.1 ::1 || { err "Failed to generate the local development certificate"; return 1; }
     dev_cert_is_valid "$tmp_dir/localhost.pem" "$tmp_dir/localhost-key.pem" "$root" ||
         { err "mkcert generated an invalid local development certificate"; return 1; }
     chmod 644 "$tmp_dir/localhost.pem" && chmod 600 "$tmp_dir/localhost-key.pem" || return 1

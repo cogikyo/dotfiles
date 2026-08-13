@@ -23,7 +23,7 @@ import (
 
 const devCertRenewal = 30 * 24 * time.Hour
 
-var developmentCertNames = [...]string{"localhost", "local.leadpier.com", "127.0.0.1", "::1"}
+var developmentCertNames = [...]string{"localhost", "local.leadpier.com", "local.cullyn.dev", "127.0.0.1", "::1"}
 
 type devCertFiles struct {
 	dir  string

@@ -61,7 +61,7 @@ Individual steps:
 - `go` builds configured Go binaries and user services.
 - `eww` builds the eww widget binary.
 - `firefox` links Firefox profile CSS and `user.js`.
-- `certs` trusts the mkcert CA and provisions a shared certificate for localhost and `local.leadpier.com`.
+- `certs` trusts the mkcert CA and provisions a shared certificate for localhost, `local.leadpier.com`, and `local.cullyn.dev`.
 - `shell` switches the login shell to zsh.
 - `dns` configures systemd-resolved and NetworkManager DNS.
 
