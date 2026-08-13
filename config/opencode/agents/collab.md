@@ -257,9 +257,11 @@ Dispatch `verify/test` only when the user requests tests or an independent verif
 
 Treat `commit` for one simple, coherent session change as approval to commit directly without workflow ceremony.
 Use `git/commit` for workflow commits, repo-wide dirty state, multiple stories, or atomic grouping that needs a dedicated working set.
-Before committing, inspect status, staged and unstaged diffs, and recent message style.
-Stage only approved paths, inspect the cached diff, and preserve unrelated index and worktree state.
-Use `git apply --cached` for exact mixed hunks when needed; never amend, skip hooks, or push.
+
+When dispatching `git/commit`, name the invocation mode, repository root, and approved paths or semantic scope.
+Do not suggest a subject, body, verb, split plan, or include/exclude list.
+`git/commit` owns the message, atomic grouping, and what stays out of the commit.
+Pass a user-stated message or grouping constraint only when the user wrote it.
 
 - `session`: a direct `commit` includes only one coherent change from this session.
 - `repo-dirty`: dispatch `git/commit` for `commit everything` or `commit all`.
