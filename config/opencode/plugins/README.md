@@ -19,10 +19,12 @@ Running sessions keep the loaded plugin set.
 | Delegate task | `delegate/index.ts` | `delegate-task` | server |
 | Usage status tool | `usage/tool.ts` | `usage-status` | server |
 | Hyprland notifications | `hyprd/notify.ts` | `hyprd-notify` | server |
+| Isolated browser QA | `hyprd/browser-isolation.ts` | `hyprd-browser-isolation` | server |
 | Spec title | `opencode/spec-title.ts` | `opencode-spec-title` | server |
 | Media context prompt | `opencode/media-context/prompt.ts` | `opencode-media-context-prompt` | server |
 | Code blocks | `opencode/code-blocks.ts` | `opencode-code-blocks` | TUI |
 | Kitty context | `hyprd/kitty.ts` | `hyprd-kitty-context` | TUI |
+| Browser QA workspaces | `hyprd/browser-qa.tsx` | `hyprd-browser-qa` | TUI |
 | Usage sidebar | `usage/index.tsx` | `cullyn.usage-sidebar` | TUI |
 | Modified files | `opencode/modified-files.tsx` | `opencode-modified-files` | TUI |
 | Markdown context | `opencode/markdown-context.tsx` | `opencode-markdown-context` | TUI |
@@ -150,12 +152,20 @@ Practical failure diagnosis:
 - Stale context → the writer removes entries older than `STALE_CONTEXT_MS` or whose Kitty socket is gone.
 - Duplicate permission/question toasts → the notify path dedupes within ~1s windows.
 
+## Browser QA
+
+`hyprd/browser-isolation.ts` exposes Chrome DevTools tools from one MCP subprocess per OpenCode session.
+Each subprocess launches an isolated Chromium profile, so concurrent browser agents cannot list or change each other's pages.
+Marked Chromium windows are assigned stable `browser-qa-<slot>` workspaces by hyprd and shown in the `Browsers` sidebar section.
+When an agent session becomes idle or is deleted, the plugin closes its MCP subprocess and isolated browser.
+
 ## TUI presentation
 
 `usage/index.tsx` owns the `sidebar_title` and `sidebar_content` slots; it deactivates `internal:sidebar-context` on load and restores it on dispose.
 The other sidebar sections register `sidebar_content` with distinct orders.
 
 - `opencode/code-blocks.ts` patches OpenTUI code-block rendering and registers a SQL tree-sitter parser.
+- `hyprd/browser-qa.tsx` keeps one workspace subscription per plugin instance and lists marked browser workspaces before MCP.
 - `opencode/statusline.tsx` wraps `session_prompt` with cwd, git status, and a context-pressure bar.
 - `opencode/modified-files.tsx` lists files touched in the current session.
 - `opencode/markdown-context.tsx` lists Markdown files backed by completed `read` tool calls.
@@ -164,6 +174,7 @@ The other sidebar sections register `sidebar_content` with distinct orders.
 Practical failure diagnosis:
 
 - Usage sidebar missing → verify `tui.json` includes `usage/index.tsx` and `plugin_enabled.internal:sidebar-files` is `false`.
+- Browser QA missing → verify `hyprd` is running and `tui.json` includes `hyprd/browser-qa.tsx`.
 - Code blocks not styled → the plugin warns via toast when OpenTUI internals change.
 - Media preview fails → needs `python3`, `config/xplr/bin/kitty-preview.py`, and a Kitty terminal.
 - Statusline shows no context pressure → the model's context limit is not exposed or there is no assistant output yet.
