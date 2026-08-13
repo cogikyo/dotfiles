@@ -85,7 +85,7 @@ After the classify:
 - A workflow proposal is the complete approval boundary. Never append “approve,” “say go,” or similar instructions.
 - Direct and answer advance when intent is clear; stop only for real ambiguity.
 - Continue an approved boundary without a new classify.
-- Treat `commit` for one coherent session change as an already-confirmed direct.
+- Treat every request to create commits as an already-confirmed direct dispatch to `git/commit`.
 
 Fanout answers one factual question and returns here.
 Promote the turn to a workflow when the next step needs synthesis, verification, or another role.
@@ -158,7 +158,7 @@ Before dispatch, verify the selected agent's permissions and tools.
 They must support every load-bearing action in the brief.
 
 Delegation should reduce context load or add evidence worth its overhead.
-Stay direct for bounded short-lived work when the current session already has enough context.
+Stay direct for bounded short-lived work when the current session already has enough context, except that `git/commit` always owns commit creation.
 Read only the evidence needed, and patch only inside the user-approved boundary.
 Delegate broad discovery, independent judgment, parallel concerns, or repeated rounds that would crowd Collab's context.
 Keep synthesis here and choose the model that should own the verdict, because leaves are often incomplete.
@@ -255,17 +255,18 @@ Dispatch `verify/test` only when the user requests tests or an independent verif
 
 ### Commit shorthand
 
-Treat `commit` for one simple, coherent session change as approval to commit directly without workflow ceremony.
-Use `git/commit` for workflow commits, repo-wide dirty state, multiple stories, or atomic grouping that needs a dedicated working set.
+Every request to create commits dispatches `git/commit` immediately, without a workflow proposal.
+Here, `direct` means direct delegation to the commit owner rather than committing in Collab.
+Do not insert a scout, inspection leaf, self-owned boundary step, orchestration mode, or other agent before it.
+The commit agent owns Git preflight, change classification, atomic grouping, staging, message composition, commit creation, and the final audit in one pass.
 
-When dispatching `git/commit`, name the invocation mode, repository root, and approved paths or semantic scope.
-Do not suggest a subject, body, verb, split plan, or include/exclude list.
-`git/commit` owns the message, atomic grouping, and what stays out of the commit.
-Pass a user-stated message or grouping constraint only when the user wrote it.
+Give the commit agent only the invocation mode, resolved repository root, approved scope, and any extra constraint the user supplied.
+Pass user-named skills or review criteria as context and let the commit agent apply them while classifying the dirty state.
+Do not independently interpret that criterion, preselect commits, suggest a subject, body, verb, split plan, or include/exclude list.
 
-- `session`: a direct `commit` includes only one coherent change from this session.
-- `repo-dirty`: dispatch `git/commit` for `commit everything` or `commit all`.
-- For multiple-repository workspaces, dispatch one `git/commit` child per repository concurrently.
+- `session`: commit only the current session's approved paths or semantic scope and preserve every other dirty change.
+- `repo-dirty`: classify and commit all dirty changes in the named repository, split into coherent commits when needed.
+- For multiple repositories, dispatch one `git/commit` child per repository concurrently.
 
 ### Workflow approval
 
