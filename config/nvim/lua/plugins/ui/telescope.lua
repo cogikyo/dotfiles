@@ -70,6 +70,7 @@ return {
 			"--glob=!**/dist/**",
 			"--glob=!**/build/**",
 			"--glob=!**/target/**",
+			"--glob=!**/.react-router/**",
 			"--glob=!**/.next/**",
 			"--glob=!**/.turbo/**",
 			"--glob=!**/coverage/**",
