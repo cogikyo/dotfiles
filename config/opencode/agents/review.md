@@ -22,7 +22,7 @@ permission:
     "verify/web": allow
     "verify/source": allow
     "verify/x": allow
-  color: success
+color: success
 ---
 
 # Review
