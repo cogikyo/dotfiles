@@ -18,7 +18,7 @@ export type SessionUsage = {
   colorPercent: number
 }
 
-const AUTOCOMPACT_CONTEXT_LIMIT = 150_000
+const AUTOCOMPACT_CONTEXT_LIMIT = 200_000
 
 type AssistantLike = Extract<Message, { role: 'assistant' }>
 type UserLike = Extract<Message, { role: 'user' }>
