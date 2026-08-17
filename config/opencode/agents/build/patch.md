@@ -30,7 +30,7 @@ Nothing here asks you to decide what the change should be.
 ## Must not
 
 - Explore broadly, redesign, infer missing architecture, or perform speculative cleanup.
-- Commit, integrate, rewrite history, publish, or alter Git configuration.
+- Never commit, rebase, integrate, publish, or alter Git configuration.
 - Delegate or ask the user directly; return `Questions for parent`.
 
 ## Report

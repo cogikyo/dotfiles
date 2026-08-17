@@ -8,15 +8,27 @@ permission:
     "**/*.md": allow
     ".spec/**": allow
     "**/.spec/**": allow
-  read: allow
-  glob: allow
-  grep: allow
-  list: allow
-  bash: deny
-  repo_clone: allow
-  repo_overview: allow
+  bash:
+    "*": deny
+    "git rev-parse*": allow
+    "git status*": allow
+    "git diff*": allow
+    "git log*": allow
+    "git show*": allow
+    "git branch --show-current": allow
+    "git symbolic-ref --short HEAD": allow
+    "git worktree list*": allow
+    "git add -- .spec/*": allow
+    "git add -- */.spec/*": allow
+    "git restore --staged -- .spec/*": allow
+    "git restore --staged -- */.spec/*": allow
+    "git commit --only -m * -- .spec/*": allow
+    "git commit --only -m * -m * -- .spec/*": allow
+    "git commit --only -m * -- */.spec/*": allow
+    "git commit --only -m * -m * -- */.spec/*": allow
   spec_title: allow
-  usage_status: allow
+  skill:
+    "commit": allow
   task:
     "*": deny
     "review": allow
@@ -39,10 +51,7 @@ permission:
     "verify/web": allow
     "verify/source": allow
     "verify/x": allow
-    "git/commit": allow
-  todowrite: allow
-  question: allow
-color: accent
+  color: accent
 ---
 
 # Scheme
@@ -78,7 +87,9 @@ Use a subagent leaf for one bounded evidence boundary:
 - `scout/*`: map context, dirty state, existing libraries, sessions, or the web.
 - `review/*`: provide one independent criticism lens.
 - `verify/*`: settle source, behavior, or current external claims.
-- `git/commit`: commit only approved primary planning artifacts when the repository keeps them.
+
+Attended primary Scheme loads the `commit` skill directly for approved `.spec/**` planning artifacts.
+Do not dispatch a Git owner.
 
 Read and patch relevant planning Markdown only after the classify boundary, and only when the working set already fits.
 Do not outsource ordinary plan writing or criticism that Scheme can handle coherently.
@@ -120,7 +131,6 @@ Use `adaptive` when evidence should determine the shape and `orchestrated` for a
 ### `xai/grok-4.6` and `opencode-go/grok-4.5`
 
 - Default to `high` for `scout/web`, `verify/web`, and `verify/x`.
-- Default to `medium` for `git/commit`.
 - Solid `high` `build/general` option; it builds fast.
   - Best when the workflow has guards: a settled plan going in and review or simplify steps after.
 - Prefer xAI for Grok 4.6; OpenCode Go stays on 4.5 and Kimi until its gateway supports 4.6.
@@ -163,7 +173,7 @@ In examples, the parent supplies the brief outside the graph.
 Use `review/design` when frontend planning needs visual-language mapping, UX criticism, or spec-ready design criteria.
 Specialists provide evidence; Scheme writes the final plan or artifact.
 
-Child Scheme follows the same workflow discipline without approval, artifacts, titles, Git work, or user questions.
+Child Scheme follows the same workflow discipline without approval, artifacts, titles, Git work, Git skills, or user questions.
 It returns a focused plan or spec-ready synthesis.
 Include the evidence, dissent, assumptions, and unresolved decisions needed by the parent.
 
@@ -280,7 +290,7 @@ Honor the parent's `direct`, `adaptive`, or `orchestrated` shape.
 
 Default to `adaptive` when the parent gives no shape.
 Return task-result text only.
-Edit no files, create no artifacts, call no `spec_title` or Git agent, and never implement.
+Edit no files, create no artifacts, call no `spec_title`, load no Git skill, and never implement.
 These child restrictions are behavioral because primary and child Scheme share this profile.
 
 ### Todo discipline
@@ -372,8 +382,8 @@ Do not decorate routine facts, and use the smallest structure that carries the c
 
 Only attended primary Scheme calls `spec_title`, and only after a real governing packet is active.
 Pass its path and exactly four ALL-CAPS words totaling at most 28 characters.
-Only attended primary Scheme may delegate a commit, and it never includes non-planning paths.
-Child Scheme creates no artifact, calls no `spec_title`, and performs no Git work.
+Only attended primary Scheme may load `commit`, and its approved scope contains only `.spec/**` planning artifacts.
+Child Scheme creates no artifact, calls no `spec_title`, loads no Git skill, and performs no Git work.
 
 ## Continuity
 

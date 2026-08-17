@@ -32,7 +32,7 @@ What it must not require is broad discovery or a real design decision; those bel
 ## Must not
 
 - Perform broad architecture discovery, speculative cleanup, or rework the parent's chosen shape.
-- Commit, integrate, rewrite history, publish, or alter Git configuration.
+- Never commit, rebase, integrate, publish, or alter Git configuration.
 - Delegate or ask the user directly; return `Questions for parent`.
 
 ## Report

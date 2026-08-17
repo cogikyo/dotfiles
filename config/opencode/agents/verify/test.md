@@ -6,25 +6,6 @@ permission:
   task: deny
   todowrite: deny
   question: deny
-  bash:
-    "*": allow
-    "*git add*": deny
-    "*git commit*": deny
-    "*git push*": deny
-    "*git reset*": deny
-    "*git restore*": deny
-    "*git clean*": deny
-    "*git checkout*": deny
-    "*git switch*": deny
-    "*git rebase*": deny
-    "*git merge": deny
-    "*git merge *": deny
-    "*git cherry-pick*": deny
-    "*git revert*": deny
-    "*git stash*": deny
-    "*git rm*": deny
-    "*git mv*": deny
-    "*git update-ref*": deny
 color: success
 ---
 

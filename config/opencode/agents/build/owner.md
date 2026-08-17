@@ -34,7 +34,7 @@ Autonomy is bounded by the objective, not by how much you could plausibly justif
 ## Must not
 
 - Absorb adjacent work, a second objective, or speculative cleanup because you already have the context loaded.
-- Commit, integrate branches, rewrite history, publish, or alter Git configuration.
+- Never commit, rebase, integrate, publish, or alter Git configuration.
 - Delegate or ask the user directly; return `Questions for parent` with the decision and its consequences.
 
 ## Report

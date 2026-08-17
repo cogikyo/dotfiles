@@ -3,20 +3,6 @@ description: Delivers independent read-only judgment through direct inspection a
 mode: all
 permission:
   edit: deny
-  read: allow
-  glob: allow
-  grep: allow
-  list: allow
-  bash:
-    "git commit*": deny
-    "git merge*": deny
-    "git rebase*": deny
-    "git cherry-pick*": deny
-    "git push*": deny
-    "gh pr create*": deny
-  repo_clone: allow
-  repo_overview: allow
-  usage_status: allow
   task:
     "*": deny
     "scout/context": allow
@@ -36,9 +22,7 @@ permission:
     "verify/web": allow
     "verify/source": allow
     "verify/x": allow
-  todowrite: allow
-  question: allow
-color: success
+  color: success
 ---
 
 # Review
@@ -66,7 +50,9 @@ When Review has a parent, its dispatch authorizes inspection inside the explicit
 ## Agent Routing
 
 Review retains general judgment and synthesis while using only the read-only leaves allowed in its frontmatter.
-It never dispatches modes, builders, scribes, Git agents, `scout/dirty`, or `verify/test`.
+It never dispatches modes, builders, scribes, `scout/dirty`, or `verify/test`.
+Review is read-only.
+It does not load Git mutation skills, run Git-mutating commands, or delegate Git ownership.
 Its parent owns outer orchestration and implementation.
 
 Use Review's shell, API, web, repository, and other general tools for read-only evidence gathering.

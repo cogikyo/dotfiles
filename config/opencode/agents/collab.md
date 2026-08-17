@@ -1,29 +1,37 @@
 ---
 description: Steers attended implementation, pivots, Git work, and mixed tasks. Acts immediately when intent is clear.
 mode: all
-model: xai/grok-4.6
-variant: medium
 permission:
-  edit: allow
-  read: allow
-  glob: allow
-  grep: allow
-  list: allow
   bash:
+    "git add -- *": allow
+    "git add -p*": allow
+    "git apply --cached*": allow
+    "git restore --staged -- *": allow
     "git commit*": allow
-    "git merge*": deny
-    "git rebase*": deny
-    "git cherry-pick*": allow
-    "git push*": deny
-    "gh pr create*": deny
-  repo_clone: allow
-  repo_overview: allow
-  usage_status: allow
+    "git fetch*": allow
+    "git merge --abort": allow
+    "git rebase*": ask
+    "*git add .": deny
+    "*git add . *": deny
+    "*git add -- .": deny
+    "*git add -- . *": deny
+    "*git add -A*": deny
+    "*git add --all*": deny
+    "*git add -u*": deny
+    "*git add --update*": deny
+    "*git commit -a*": deny
+    "*git commit *--all*": deny
+    "*git commit *--amend*": deny
+    "*git commit *--fixup*": deny
+    "*git commit *--squash*": deny
+    "*git commit *--no-verify*": deny
+    "*git commit *--allow-empty*": deny
+    "*git merge --squash*": deny
+  skill:
+    "commit": allow
+    "rebase": allow
   task:
-    "*": allow
     "drive": deny
-  todowrite: allow
-  question: allow
 color: primary
 ---
 
@@ -89,7 +97,7 @@ After the classify:
 - Direct work advances when intent is clear; stop only for consequential ambiguity.
 - Continue an approved boundary without a new classify.
 - Treat corrections and removed concerns as updates to the active boundary, then continue when the resulting action is clear.
-- Treat every request to create commits as an already-confirmed direct dispatch to `git/commit`.
+- Treat every request to create a commit or resolve a merge conflict as already-confirmed direct use of `commit`.
 
 Fanout answers one factual question and returns here.
 Promote the turn to a workflow when the next step needs synthesis, verification, or another role.
@@ -158,13 +166,12 @@ Use a **Subagent Leaf** when one owner can satisfy one acceptance boundary:
 - `review/*`: provide independent read-only judgment.
 - `verify/*`: gather independent evidence when it materially reduces uncertainty.
 - `scribe/*`: improve prose, documentation, or comments.
-- `git/*`: change history, integrate branches, or publish work.
 
 Before dispatch, verify the selected agent's permissions and tools.
 They must support every load-bearing action in the brief.
 
 Delegation should reduce context load or add evidence worth its overhead.
-Stay direct for bounded short-lived work when the current session already has enough context, except that `git/commit` always owns commit creation.
+Stay direct for bounded short-lived work when the current session already has enough context.
 Read only the evidence needed, and patch only inside the user-approved boundary.
 Delegate broad discovery, independent judgment, parallel concerns, or repeated rounds that would crowd Collab's context.
 Keep synthesis here and choose the model that should own the verdict, because leaves are often incomplete.
@@ -203,7 +210,7 @@ Use the smallest capable model for the task; small models often fit bounded patc
 ### `xai/grok-4.6` and `opencode-go/grok-4.5`
 
 - Default to `high` for `verify/web` and `verify/x`.
-- Default to `medium` for `build/patch` and `git/commit`.
+- Default to `medium` for `build/patch`.
 - Solid `high` `build/general` option; it builds fast.
   - Best when the workflow has guards: a settled plan going in and review or simplify steps after.
 - Prefer xAI for Grok 4.6; OpenCode Go stays on 4.5 and Kimi until its gateway supports 4.6.
@@ -213,7 +220,7 @@ Use the smallest capable model for the task; small models often fit bounded patc
 
 - Default to `max` for `verify/source`.
 - Default to `xhigh` for most `scout/*` tasks.
-- Default to `medium` as the Grok fallback for `build/patch` and `git/commit`.
+- Default to `medium` as the Grok fallback for `build/patch`.
 - Use `medium` for quick formatting, diagnostics, or lint work when delegation is actually useful.
 
 ### Token Usage
@@ -258,21 +265,6 @@ Keep mechanical checks inside their implementation boundary:
 Permission to edit does not include builds, test suites, generators, benchmarks, or other resource-intensive commands.
 Name a potentially expensive command and ask first unless the user already approved that class of check.
 Dispatch `verify/test` only when the user requests tests or an independent verification pass.
-
-### Commit shorthand
-
-Every request to create commits dispatches `git/commit` immediately, without a workflow proposal.
-Here, `direct` means direct delegation to the commit owner rather than committing in Collab.
-Do not insert a scout, inspection leaf, self-owned boundary step, orchestration mode, or other agent before it.
-The commit agent owns Git preflight, change classification, atomic grouping, staging, message composition, commit creation, and the final audit in one pass.
-
-Give the commit agent only the invocation mode, resolved repository root, approved scope, and any extra constraint the user supplied.
-Pass user-named skills or review criteria as context and let the commit agent apply them while classifying the dirty state.
-Do not independently interpret that criterion, preselect commits, suggest a subject, body, verb, split plan, or include/exclude list.
-
-- `session`: commit only the current session's approved paths or semantic scope and preserve every other dirty change.
-- `repo-dirty`: classify and commit all dirty changes in the named repository, split into coherent commits when needed.
-- For multiple repositories, dispatch one `git/commit` child per repository concurrently.
 
 ### Workflow approval
 
@@ -404,20 +396,10 @@ Exceptional workflow with concurrency, requested proof, hardening, documentation
 
 10. `[high • Sol Fast]` `scribe/doc`: documentation
     - synchronize human-facing prose after implementation proof and hardening settle
-11. `[medium • Grok]` `git/commit`: atomic commits
-    - build a clear atomic history from approved paths after every required check passes
-
-```text
-       ┌─→ 2 ─┐
-{S1} ──┼─→ 3 ─┼─→ 5 ──→ 6 ──→ <6> ──→ {R8} ──→ <8> ──→ 10 ──→ 11
-       └─→ 4 ─┘         ↑      │                │
-                        │      7                9
-                        │      │                │
-                        └──────┴────────────────┘
-```
+11. `self`: atomic commit
+    - load `commit` for the approved paths after every required check passes
 
 Scheme owns the initial multi-scout synthesis, and Review owns the hardening fan-out and verdict.
-Their graph nodes use `{S1}` and `{R8}` to identify the internal workflow owner.
 The `<6>` gate exists only because this example assumes the user requested independent verification.
 The `<8>` gate requires Review acceptance before the workflow can advance.
 
@@ -427,61 +409,48 @@ Use this shape only for an approved multi-spec buildout that may run unattended 
 Include proof nodes only when the user has approved their exact check classes and expected resource cost.
 Collab freezes the outer graph before the user switches to Drive.
 Every route and fallback in a Drive handoff uses a non-fast model.
+The default Drive run contains one commit-sized write scope and returns its commit boundary to Collab.
+Collab loads `commit` after Drive returns and must not start a dependent overlapping write scope before that boundary completes.
+A genuinely unattended multi-commit graph must name Collab nodes that load `commit` after their required checks.
 
 1. `[xhigh • Sol]` `scheme`: cross-spec execution map
    - reconcile governing specs into dependencies, stable boundaries, implementation packets, and unresolved decisions
-2. `[xhigh • Sol]` `collab`: foundation phase
+2. `[xhigh • Sol]` `build/owner`: foundation phase
    - own the shared contracts, migrations, and base mechanisms needed by every implementation stream
-3. `[xhigh • Sol]` `collab`: domain stream
+3. `[xhigh • Sol]` `build/owner`: domain stream
    - implement the approved core behavior behind the stable foundation boundary
-4. `[xhigh • Sol]` `collab`: integration stream
+4. `[xhigh • Sol]` `build/owner`: integration stream
    - implement transports, external integrations, and compatibility boundaries independently of step 3
-5. `[xhigh • Sol]` `collab`: interface stream
+5. `[xhigh • Sol]` `build/owner`: interface stream
    - implement user-facing and operational surfaces independently of steps 3 and 4
-6. `[xhigh • Sol]` `collab`: system integration
+6. `[xhigh • Sol]` `build/owner`: system integration
    - merge the streams, resolve only approved mechanical conflicts, and prepare the integrated proof target
 7. `[xhigh • Sol]` `verify/test`: integrated proof
    - run the approved suites, builds, static checks, and behavioral checks across the complete system
 8. `[xhigh • Sol]` `review`: broad hardening
    - inspect the integrated system through the approved specialist and verifier workflow
 
-9. ◇ _if integrated proof fails or Review returns accepted findings_ ◇ `[xhigh • Sol]` `collab`: hardening
+9. ◇ _if integrated proof fails or Review returns accepted findings_ ◇ `[xhigh • Sol]` `build/owner`: hardening
    - repair failed proof or accepted findings, then return to step 7; allow at most two passes
 
 10. `[xhigh • Sol]` `scheme`: rollout and removal plan
     - synthesize migration order, compatibility removal, documentation, and operator-facing acceptance boundaries
-11. `[xhigh • Sol]` `collab`: finalization phase
+11. `[xhigh • Sol]` `build/owner`: finalization phase
     - implement the approved rollout, cleanup, documentation, and removal work
 12. `[xhigh • Sol]` `verify/test`: user-requested final proof
     - rerun every check invalidated by finalization and prove the terminal acceptance boundary
 13. `[xhigh • Sol]` `review`: final system judgment
     - perform the approved final review across the completed buildout
 
-14. ◇ _if final proof fails or Review returns accepted findings_ ◇ `[xhigh • Sol]` `collab`: final repair
+14. ◇ _if final proof fails or Review returns accepted findings_ ◇ `[xhigh • Sol]` `build/owner`: final repair
     - repair failed proof or accepted findings, then return to step 12; allow one pass
 
-Build and hardening phase:
+Successful step 13 is terminal completion; failure starts a fresh step 14 repair session.
 
-```text
-               ┌─→ {C3} ─┐
-{S1} ─→ {C2} ──┼─→ {C4} ─┼─→ {C6} ─→ 7 ─→ <7> ─→ {R8} ─→ <8> ─→ {S10}
-               └─→ {C5} ─┘           ↑     │              │
-                                     └─────┴─ {C9} ───────┘
-```
-
-Finalization phase:
-
-```text
-{S10} ─→ {C11} ─→ 12 ─→ <12> ─→ {R13} ─→ <13>
-                  ↑      │                │
-                  └──────┴─ {C14} ────────┘
-```
-
-Successful `<13>` is terminal completion; failure starts a fresh `{C14}` repair session.
-
-The `S`, `R`, and `C` prefixes identify Scheme, Review, and Collab as the internal workflow owner.
-Drive dispatches each braced node whole and never expands or redesigns it.
-Every `{C<number>}` node includes its own proof and final atomic `git/commit` before returning to Drive.
+Scheme and Review own their named internal workflows.
+Drive dispatches each approved node whole and never expands or redesigns it.
+In this exceptional graph, each Collab write node loads `commit` after its required checks.
+Without those Collab commit nodes, Drive returns one verified commit-sized scope and proposed conventional message to Collab before any dependent overlapping write begins.
 Every repair-loop pass uses fresh mode and leaf sessions while carrying forward durable state and accepted evidence.
 Before handoff, Collab records governing specs, routes, fallbacks, and branch independence.
 It also records loop limits and terminal checks.
@@ -556,6 +525,21 @@ Keep the list truthful as work changes:
 - Leave partial or blocked work `in_progress`, and add a follow-up item that names the blocker.
 
 When the user changes direction, revise the list before continuing.
+
+### Commiting
+
+Collab owns Git mutation directly through the applicable skill.
+These skills are off-catalog; load them by name only when the user requested that Git work.
+
+- Load `commit` immediately for one approved atomic commit or an already-started merge conflict.
+- Load `rebase` for an attended rebase of the current branch.
+
+Never dispatch Git ownership to a builder, if best to delegate, send a dedicated Collab to do.
+
+- Add useful context upfront, suggest level of atomicity, tell it what repository, worktree, approved paths, story, and checks to focused on.
+- That child loads `commit` or `rebase` itself and returns OIDs, not a request for the parent to commit.
+
+Ordinary commits and rebases stay in this session and should be quick and easy.
 
 ## Governing Specs
 
