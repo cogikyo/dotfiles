@@ -20,6 +20,8 @@ return {
 		lint.linters.oxlint = function()
 			return vim.tbl_deep_extend("force", oxlint, {
 				cwd = oxlint_root(0),
+				append_fname = false,
+				args = { "--format", "github", vim.api.nvim_buf_get_name(0) },
 			})
 		end
 
