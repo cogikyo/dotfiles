@@ -214,6 +214,16 @@ func (d *Daemon) handleCommand(command string) string {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
+	case "edit":
+		if strings.TrimSpace(arg) == "" {
+			return "error: file path required"
+		}
+		tab := kitty.NewSelector(d.hypr, d.state)
+		result, err := tab.Edit(strings.TrimSpace(arg))
+		if err != nil {
+			return fmt.Sprintf("error: %v", err)
+		}
+		return result
 	case "tab":
 		tab := kitty.NewSelector(d.hypr, d.state)
 		result, err := tab.Execute(strings.TrimSpace(arg))

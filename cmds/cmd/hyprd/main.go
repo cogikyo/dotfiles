@@ -43,6 +43,8 @@ func main() {
 		cmdWS()
 	case "focus":
 		cmdFocus()
+	case "edit":
+		cmdEdit()
 	case "tab":
 		cmdTab()
 	case "tabs":
@@ -210,6 +212,10 @@ func cmdShare()   { sendCommand("share " + strings.Join(os.Args[2:], " ")) }
 func cmdQuery()   { sendCommand("query " + strings.Join(os.Args[2:], " ")) }
 func cmdBG()      { sendCommand("bg " + requireArg("usage: hyprd bg {ensure|kill}")) }
 func cmdWS()      { sendCommand("ws " + requireArg("usage: hyprd ws <number|up|down>")) }
+func cmdEdit() {
+	_ = requireArg("usage: hyprd edit <file>")
+	sendCommand("edit " + strings.Join(os.Args[2:], " "))
+}
 func cmdTab() {
 	_ = requireArg("usage: hyprd tab <editor|agents>:<index 0..4>")
 	sendCommand("tab " + strings.Join(os.Args[2:], " "))
@@ -313,6 +319,7 @@ Window commands:
   hyprd ws <n>           Switch to workspace n, focus master
   hyprd ws up|down       Move active window between workspaces 2..5
   hyprd focus <class> [title]  Focus window, unhide if hidden
+  hyprd edit <file>      Focus workspace nvim and open file
   hyprd tab <editor|agents>:<index>   Focus profile window + select physical Kitty tab 0..4
   hyprd tabs init <profile> <pid>    Create tabs from profile (editor|agents|leadpier)
   hyprd tabs refresh <position|name|current|all> [pid] Refresh tab(s) in focused kitty by default

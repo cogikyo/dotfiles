@@ -175,6 +175,7 @@ hyprd project <args>             # project path management
 ### Tabs (kitty)
 
 ```bash
+hyprd edit <file>                # focus workspace nvim and open file
 hyprd tab <editor|agents>:<0..4> # focus profile window and switch physical tab
 hyprd tabs init <profile> <pid>  # hydrate tab titles on kitty spawn
 hyprd tabs refresh <name> <pid>  # re-apply titles

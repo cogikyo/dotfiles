@@ -1,13 +1,13 @@
 /** @jsxImportSource @opentui/solid */
 import type { Message, ToolPart } from '@opencode-ai/sdk/v2'
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from '@opencode-ai/plugin/tui'
-import { spawn, type ChildProcess } from 'node:child_process'
-import { realpathSync } from 'node:fs'
+import { existsSync, realpathSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { For, Show, createSignal, onCleanup } from 'solid-js'
 import { colors } from '../shared/colors.ts'
 import { icons } from '../shared/icons.ts'
+import { openInNvim } from '../shared/open-nvim.ts'
 import { SidebarSection } from '../shared/sidebar-section.tsx'
 
 const id = 'opencode-markdown-context'
@@ -16,11 +16,9 @@ const MAX_ROOT_LENGTH = 8
 const MAX_PARENT_LENGTH = 12
 const MIN_LEAF_LENGTH = 6
 
-type MarkdownSourceKind = 'readme' | 'agents' | 'partial' | 'spec' | 'markdown'
+type MarkdownSourceKind = 'readme' | 'agents' | 'agent' | 'skill' | 'partial' | 'spec' | 'markdown'
 
 const configRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
-const xdgConfigHome = process.env.XDG_CONFIG_HOME || path.join(process.env.HOME || '', '.config')
-const configRoots = [configRoot, path.join(xdgConfigHome, 'opencode')].map((root) => path.normalize(root))
 
 type MarkdownContextItem = {
   key: string
@@ -66,9 +64,9 @@ function MarkdownContext(props: { api: TuiPluginApi; sessionID: string }) {
       <SidebarSection api={props.api} title="Markdown Context" detail={`${items().length} read`}>
         <For each={items()}>
           {(item) => (
-            <box flexDirection="row" gap={0} onMouseDown={() => openMarkdown(props.api, item.path)}>
+            <box flexDirection="row" gap={0} onMouseDown={() => openInNvim(props.api, item.path, 'Markdown open failed')}>
               <text fg={sourceColor(props.api, item)} wrapMode="none">
-                {sourceIcon(item)}
+                {sourceIcon(props.api, item)}
               </text>
               <text fg={props.api.theme.current.textMuted} wrapMode="none">
                 {item.label}
@@ -81,52 +79,61 @@ function MarkdownContext(props: { api: TuiPluginApi; sessionID: string }) {
   )
 }
 
-function openMarkdown(api: TuiPluginApi, filePath: string) {
-  let child: ChildProcess
-  try {
-    child = spawn('hyprd', ['tab', 'nvim', '--', filePath], { detached: true, stdio: 'ignore' })
-  } catch {
-    api.ui.toast({
-      variant: 'warning',
-      title: 'Markdown open failed',
-      message: filePath,
-    })
-    return
-  }
-
-  child.once('error', () => {
-    api.ui.toast({
-      variant: 'warning',
-      title: 'Markdown open failed',
-      message: filePath,
-    })
-  })
-  child.once('close', (code) => {
-    if (code === 0) return
-    api.ui.toast({
-      variant: 'warning',
-      title: 'Markdown open failed',
-      message: `hyprd exited ${code ?? 'without a status'}: ${filePath}`,
-    })
-  })
-  child.unref()
-}
-
 function markdownContextItems(api: TuiPluginApi, sessionID: string) {
+  const pinned = pinnedContextItems(api, sessionID)
+  const seen = new Set(pinned.map((item) => item.key))
   const reads = new Map<string, MarkdownContextItem>()
   const messages = api.state.session.messages(sessionID) as ReadonlyArray<Message>
 
   for (const message of messages) {
     for (const part of api.state.part(message.id)) {
-      const item = markdownReadItem(api, part)
+      const item = skillToolItem(api, part) ?? markdownReadItem(api, part)
       if (!item) continue
+
+      const pin = pinned.find((entry) => entry.key === item.key)
+      if (pin) {
+        if (isConfigAgents(item.path)) pin.compacted = item.compacted
+        continue
+      }
+      if (seen.has(item.key)) continue
 
       const existing = reads.get(item.key)
       if (!existing || item.time >= existing.time) reads.set(item.key, item)
     }
   }
 
-  return Array.from(reads.values()).sort((left, right) => right.time - left.time)
+  return [...pinned, ...Array.from(reads.values()).sort((left, right) => right.time - left.time)]
+}
+
+function pinnedContextItems(api: TuiPluginApi, sessionID: string) {
+  const items: MarkdownContextItem[] = []
+  const seen = new Set<string>()
+
+  const push = (filePath: string) => {
+    if (!existsSync(filePath)) return
+    const item = markdownFileItem(api, filePath, 0, false)
+    if (seen.has(item.key)) return
+    seen.add(item.key)
+    items.push(item)
+  }
+
+  push(path.join(configRoot, 'AGENTS.md'))
+  const projectRoot = api.state.path.worktree || api.state.path.directory
+  if (projectRoot) push(path.join(projectRoot, 'AGENTS.md'))
+
+  const agent = currentAgent(api, sessionID)
+  if (agent) push(path.join(configRoot, 'agents', `${agent}.md`))
+
+  return items
+}
+
+function currentAgent(api: TuiPluginApi, sessionID: string) {
+  const messages = api.state.session.messages(sessionID) as ReadonlyArray<Message>
+  for (let index = messages.length - 1; index >= 0; index -= 1) {
+    const message = messages[index]
+    if ('agent' in message && typeof message.agent === 'string' && message.agent) return message.agent
+  }
+  return undefined
 }
 
 function markdownReadItem(api: TuiPluginApi, part: ReturnType<TuiPluginApi['state']['part']>[number]): MarkdownContextItem | undefined {
@@ -136,16 +143,42 @@ function markdownReadItem(api: TuiPluginApi, part: ReturnType<TuiPluginApi['stat
 
   const filePath = markdownPathFromInput(tool.state.input)
   if (!filePath) return undefined
-  if (isGlobalAgentsFile(filePath)) return undefined
-  const kind = markdownSourceKind(filePath)
+  return markdownFileItem(api, filePath, tool.state.time.end, tool.state.time.compacted !== undefined)
+}
 
+function skillToolItem(api: TuiPluginApi, part: ReturnType<TuiPluginApi['state']['part']>[number]): MarkdownContextItem | undefined {
+  if (part.type !== 'tool' || !isSkillTool(part.tool)) return undefined
+  const tool = part as ToolPart
+  if (tool.state.status !== 'completed') return undefined
+
+  const filePath = skillPathFromTool(tool)
+  if (!filePath) return undefined
+  return markdownFileItem(api, filePath, tool.state.time.end, tool.state.time.compacted !== undefined)
+}
+
+function skillPathFromTool(tool: ToolPart) {
+  if (tool.state.status !== 'completed') return undefined
+  const dir = tool.state.metadata.dir
+  if (typeof dir === 'string' && dir) {
+    const filePath = path.join(dir, 'SKILL.md')
+    if (existsSync(filePath)) return filePath
+  }
+
+  const name = tool.state.input.name
+  if (typeof name !== 'string' || !name) return undefined
+  const filePath = path.join(configRoot, 'skills', name, 'SKILL.md')
+  return existsSync(filePath) ? filePath : undefined
+}
+
+function markdownFileItem(api: TuiPluginApi, filePath: string, time: number, compacted: boolean): MarkdownContextItem {
+  const kind = markdownSourceKind(filePath)
   return {
     key: markdownIdentity(filePath),
     path: filePath,
     label: displayPath(api, filePath, kind),
     kind,
-    compacted: tool.state.time.compacted !== undefined,
-    time: tool.state.time.end,
+    compacted,
+    time,
   }
 }
 
@@ -166,6 +199,10 @@ function isReadTool(tool: string) {
   return tool === 'read' || tool === 'Read' || tool === 'file.read' || tool === 'file_read'
 }
 
+function isSkillTool(tool: string) {
+  return tool === 'skill' || tool === 'Skill'
+}
+
 function isMarkdownPath(value: string) {
   return /\.(md|mdx|markdown)$/i.test(value.split(/[?#]/, 1)[0])
 }
@@ -177,16 +214,66 @@ function markdownSourceKind(filePath: string): MarkdownSourceKind {
   if (normalizedPath.split(/[\\/]/u).includes('.spec')) return 'spec'
   if (leaf === 'readme.md') return 'readme'
   if (leaf === 'agents.md') return 'agents'
+  if (leaf === 'skill.md') return 'skill'
+  if (agentSegments(normalizedPath)) return 'agent'
   if (/^[A-Z][A-Z0-9_-]*\.md$/.test(path.basename(normalizedPath))) return 'partial'
   return 'markdown'
 }
 
-function isGlobalAgentsFile(filePath: string) {
-  return path.basename(filePath).toLowerCase() === 'agents.md' && isConfigRootFile(filePath)
+function agentSegments(filePath: string) {
+  const parts = path.normalize(filePath).split(/[\\/]/u).filter(Boolean)
+  const index = parts.findIndex((part) => part === 'agents' || part === 'agent')
+  if (index === -1) return undefined
+  const rest = parts.slice(index + 1)
+  if (rest.length === 0 || !isMarkdownPath(rest.at(-1) ?? '')) return undefined
+  return rest
 }
 
-function isConfigRootFile(filePath: string) {
-  return configRoots.includes(path.dirname(path.normalize(filePath)))
+function agentLabel(filePath: string) {
+  const rest = agentSegments(filePath)
+  if (!rest) return stripMarkdownExtension(path.basename(filePath))
+  return stripMarkdownExtension(rest.join('/'))
+    .split('/')
+    .map(titleSegment)
+    .join('/')
+}
+
+function isSubagent(filePath: string) {
+  return (agentSegments(filePath)?.length ?? 0) > 1
+}
+
+function titleSegment(value: string) {
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : value
+}
+
+function isGlobalOpencodePath(filePath: string) {
+  const file = markdownIdentity(filePath)
+  const root = markdownIdentity(configRoot)
+  return file === root || file.startsWith(root + path.sep)
+}
+
+function skillName(filePath: string) {
+  const parent = path.basename(path.dirname(filePath))
+  if (!parent || parent === '.' || parent === 'skills' || parent === 'skill') return 'Skill'
+  return parent.split('-').map(titleSegment).join('-')
+}
+
+function skillProjectOwner(api: TuiPluginApi, filePath: string) {
+  const parts = path.normalize(filePath).split(/[\\/]/u).filter(Boolean)
+  const skillsIndex = parts.reduce((found, part, index) => (part === 'skills' || part === 'skill' ? index : found), -1)
+  if (skillsIndex > 0) {
+    let ownerIndex = skillsIndex - 1
+    if (parts[ownerIndex] === '.opencode' || parts[ownerIndex] === 'opencode') ownerIndex -= 1
+    const owner = parts[ownerIndex]
+    if (owner) return owner.replace(/^\./, '')
+  }
+  return contextRootName(api, filePath)
+}
+
+function skillLabel(api: TuiPluginApi, filePath: string) {
+  const name = skillName(filePath)
+  if (isGlobalOpencodePath(filePath)) return name
+  return `${skillProjectOwner(api, filePath)}/${name}`
 }
 
 function normalizeFilePath(value: string) {
@@ -221,8 +308,11 @@ function contextLabel(api: TuiPluginApi, filePath: string, kind: MarkdownSourceK
   const label = relativePath(api, filePath)
 
   if (kind === 'spec') return specLabel(filePath)
+  if (kind === 'agent') return agentLabel(filePath)
+  if (kind === 'skill') return skillLabel(api, filePath)
 
   if (kind === 'readme' || kind === 'agents') {
+    if (kind === 'agents' && isConfigAgents(filePath)) return 'OpenCode'
     const dir = path.dirname(label)
     return dir === '.' ? contextRootName(api, filePath) : dir
   }
@@ -327,7 +417,11 @@ function sourceColor(api: TuiPluginApi, item: MarkdownContextItem) {
     case 'readme':
       return c.green
     case 'agents':
-      return c.blue
+      return isConfigAgents(item.path) ? c.cyan : c.blue
+    case 'agent':
+      return isSubagent(item.path) ? c.magenta : c.blue
+    case 'skill':
+      return isGlobalOpencodePath(item.path) ? c.orange : c.pink
     case 'partial':
       return c.yellow
     case 'spec':
@@ -337,20 +431,35 @@ function sourceColor(api: TuiPluginApi, item: MarkdownContextItem) {
   }
 }
 
-function sourceIcon(item: MarkdownContextItem) {
-  if (item.compacted) return 'C '
+function isConfigAgents(filePath: string) {
+  return path.basename(filePath).toLowerCase() === 'agents.md' && isGlobalOpencodePath(filePath)
+}
+
+function isRootAgents(api: TuiPluginApi, filePath: string) {
+  const root = api.state.path.worktree || api.state.path.directory
+  if (!root) return false
+  return path.normalize(path.dirname(filePath)) === path.normalize(root)
+}
+
+function sourceIcon(api: TuiPluginApi, item: MarkdownContextItem) {
+  if (item.compacted) return `${icons.compacted} `
 
   switch (item.kind) {
     case 'readme':
       return `${icons.readme} `
     case 'agents':
-      return `${icons.agents} `
+      if (isConfigAgents(item.path)) return `${icons.agentsCore} `
+      return `${isRootAgents(api, item.path) ? icons.folderLibrary : icons.folder} `
+    case 'agent':
+      return `${isSubagent(item.path) ? icons.subagent : icons.agents} `
+    case 'skill':
+      return `${isGlobalOpencodePath(item.path) ? icons.skill : icons.skillProject} `
     case 'partial':
-      return 'I '
+      return `${icons.partial} `
     case 'spec':
       return `${icons.spec} `
     case 'markdown':
-      return 'M '
+      return `${icons.markdown} `
   }
 }
 

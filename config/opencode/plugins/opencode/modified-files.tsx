@@ -1,8 +1,8 @@
 /** @jsxImportSource @opentui/solid */
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule, TuiSidebarFileItem } from '@opencode-ai/plugin/tui'
-import { spawn, type ChildProcess } from 'node:child_process'
 import path from 'node:path'
 import { For, Show, createSignal, onCleanup } from 'solid-js'
+import { openInNvim } from '../shared/open-nvim.ts'
 import { SidebarSection } from '../shared/sidebar-section.tsx'
 
 const id = 'opencode-modified-files'
@@ -32,7 +32,7 @@ function ModifiedFiles(props: { api: TuiPluginApi; sessionID: string }) {
       <SidebarSection api={props.api} title="Modified Files" detail={fileCount(items().length)}>
         <For each={items()}>
           {(item) => (
-            <box flexDirection="row" gap={0} onMouseDown={() => openFile(props.api, item.path)}>
+            <box flexDirection="row" gap={0} onMouseDown={() => openInNvim(props.api, item.path, 'Modified file open failed')}>
               <text fg={props.api.theme.current.textMuted} wrapMode="none">
                 {item.label}
               </text>
@@ -67,37 +67,6 @@ function modifiedFiles(api: TuiPluginApi, sessionID: string): FileItem[] {
 
 function fileCount(count: number) {
   return `${count} ${count === 1 ? 'file' : 'files'}`
-}
-
-function openFile(api: TuiPluginApi, filePath: string) {
-  let child: ChildProcess
-  try {
-    child = spawn('hyprd', ['tab', 'nvim', '--', filePath], { detached: true, stdio: 'ignore' })
-  } catch {
-    api.ui.toast({
-      variant: 'warning',
-      title: 'Modified file open failed',
-      message: filePath,
-    })
-    return
-  }
-
-  child.once('error', () => {
-    api.ui.toast({
-      variant: 'warning',
-      title: 'Modified file open failed',
-      message: filePath,
-    })
-  })
-  child.once('close', (code) => {
-    if (code === 0) return
-    api.ui.toast({
-      variant: 'warning',
-      title: 'Modified file open failed',
-      message: `hyprd exited ${code ?? 'without a status'}: ${filePath}`,
-    })
-  })
-  child.unref()
 }
 
 function rootedPath(api: TuiPluginApi, filePath: string) {
