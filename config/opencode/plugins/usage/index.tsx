@@ -309,6 +309,7 @@ const tui: TuiPlugin = async (api) => {
         return null;
       },
       sidebar_content(_ctx, props: { session_id: string }) {
+        if (api.state.session.get(props.session_id)?.parentID) return null;
         return <UsagePanel api={api} sessionID={props.session_id} />;
       },
     },

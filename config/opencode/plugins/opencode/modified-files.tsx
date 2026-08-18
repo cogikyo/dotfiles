@@ -1,4 +1,5 @@
 /** @jsxImportSource @opentui/solid */
+import type { ToolPart } from '@opencode-ai/sdk/v2'
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule, TuiSidebarFileItem } from '@opencode-ai/plugin/tui'
 import path from 'node:path'
 import { For, Show, createSignal, onCleanup } from 'solid-js'
@@ -17,10 +18,26 @@ function ModifiedFiles(props: { api: TuiPluginApi; sessionID: string }) {
   const [revision, setRevision] = createSignal(0)
   const refresh = () => setRevision((value) => value + 1)
 
-  const dispose = props.api.event.on('session.diff', (event) => {
-    if (event.properties.sessionID === props.sessionID) refresh()
+  const disposers = [
+    props.api.event.on('session.diff', (event) => {
+      if (event.properties.sessionID === props.sessionID) refresh()
+    }),
+    props.api.event.on('message.updated', (event) => {
+      if (event.properties.sessionID === props.sessionID) refresh()
+    }),
+    props.api.event.on('message.removed', (event) => {
+      if (event.properties.sessionID === props.sessionID) refresh()
+    }),
+    props.api.event.on('message.part.updated', (event) => {
+      if (event.properties.sessionID === props.sessionID) refresh()
+    }),
+    props.api.event.on('message.part.removed', (event) => {
+      if (event.properties.sessionID === props.sessionID) refresh()
+    }),
+  ]
+  onCleanup(() => {
+    for (const dispose of disposers) dispose()
   })
-  onCleanup(dispose)
 
   const items = () => {
     revision()
@@ -55,14 +72,64 @@ function ModifiedFiles(props: { api: TuiPluginApi; sessionID: string }) {
 }
 
 function modifiedFiles(api: TuiPluginApi, sessionID: string): FileItem[] {
-  return api.state.session.diff(sessionID).map((item) => {
-    const filePath = rootedPath(api, item.file)
-    return {
-      ...item,
-      path: filePath,
-      label: compactPath(relativePath(api, filePath)),
+  const diffs = api.state.session.diff(sessionID)
+  if (diffs.length > 0) return diffs.map((item) => fileItem(api, item.file, item.additions, item.deletions))
+  return editedFiles(api, sessionID)
+}
+
+function editedFiles(api: TuiPluginApi, sessionID: string): FileItem[] {
+  const seen = new Map<string, FileItem>()
+
+  for (const message of api.state.session.messages(sessionID)) {
+    for (const part of api.state.part(message.id)) {
+      if (part.type !== 'tool' || !isEditTool(part.tool)) continue
+      const tool = part as ToolPart
+      if (tool.state.status !== 'completed') continue
+
+      for (const filePath of editPaths(tool)) {
+        const item = fileItem(api, filePath, 0, 0)
+        seen.set(item.path, item)
+      }
     }
-  })
+  }
+
+  return Array.from(seen.values())
+}
+
+function fileItem(api: TuiPluginApi, file: string, additions: number, deletions: number): FileItem {
+  const filePath = rootedPath(api, file)
+  return {
+    file,
+    additions,
+    deletions,
+    path: filePath,
+    label: compactPath(relativePath(api, filePath)),
+  }
+}
+
+function isEditTool(tool: string) {
+  return tool === 'edit' || tool === 'write' || tool === 'apply_patch' || tool === 'Edit' || tool === 'Write' || tool === 'ApplyPatch'
+}
+
+function editPaths(tool: ToolPart) {
+  if (tool.state.status !== 'completed') return []
+
+  const paths: string[] = []
+  const input = tool.state.input
+  for (const key of ['filePath', 'path', 'filepath', 'file']) {
+    const value = input[key]
+    if (typeof value === 'string' && value) paths.push(value)
+  }
+
+  const patch = input.patch ?? input.patchText
+  if (typeof patch === 'string') {
+    for (const match of patch.matchAll(/^\*\*\* (?:Add|Update|Delete) File: (.+)$/gm)) {
+      const filePath = match[1]?.trim()
+      if (filePath) paths.push(filePath)
+    }
+  }
+
+  return paths
 }
 
 function fileCount(count: number) {
