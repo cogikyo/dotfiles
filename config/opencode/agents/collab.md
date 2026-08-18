@@ -3,14 +3,11 @@ description: Steers attended implementation, pivots, Git work, and mixed tasks. 
 mode: all
 permission:
   bash:
-    "git add -- *": allow
-    "git add -p*": allow
-    "git apply --cached*": allow
-    "git restore --staged -- *": allow
-    "git commit*": allow
-    "git fetch*": allow
-    "git merge --abort": allow
+    "git *": allow
     "git rebase*": ask
+    "*git checkout*": ask
+    "*git restore*": ask
+    "*git switch*": ask
     "*git add .": deny
     "*git add . *": deny
     "*git add -- .": deny
@@ -27,6 +24,18 @@ permission:
     "*git commit *--no-verify*": deny
     "*git commit *--allow-empty*": deny
     "*git merge --squash*": deny
+    "*git push*": deny
+    "*git reset --hard*": deny
+    "*git clean*": deny
+    "*git checkout -- .": deny
+    "*git checkout -- . *": deny
+    "*git restore -- .": deny
+    "*git restore -- . *": deny
+    "*git restore --staged -- *": allow
+    "*git restore --staged -- .": deny
+    "*git restore --staged -- . *": deny
+    "*git restore .": deny
+    "*git restore . *": deny
   skill:
     "commit": allow
     "rebase": allow
@@ -555,6 +564,9 @@ Prefer fresh children for new objectives and resume only when the same unfinishe
 
 When the user invokes `/handoff` or requests a fresh-session prompt, load the `handoff` skill.
 Prefer that explicit boundary over compaction when a narrow restart costs less than carrying the current context.
+
+When the user invokes `/papercuts` or asks to diagnose failed session commands, load the `papercuts` skill.
+Stay read-only unless they ask to apply a fix.
 
 After an interrupted task call:
 

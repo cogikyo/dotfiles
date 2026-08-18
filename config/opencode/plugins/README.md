@@ -168,7 +168,7 @@ The other sidebar sections register `sidebar_content` with distinct orders.
 - `hyprd/browser-qa.tsx` keeps one workspace subscription per plugin instance and lists marked browser workspaces before MCP.
 - `opencode/statusline.tsx` wraps `session_prompt` with cwd, git status, and a context-pressure bar.
 - `opencode/modified-files.tsx` lists files touched in the current session.
-- `opencode/markdown-context.tsx` lists Markdown reads plus pinned `AGENTS.md` files and the current agent file.
+- `opencode/markdown-context.tsx` lists Markdown reads plus pinned `AGENTS.md` files, the current agent, skills, and slash commands.
 - `opencode/media-context/index.tsx` lists registered images and videos and opens images in a Kitty overlay.
 
 Practical failure diagnosis:

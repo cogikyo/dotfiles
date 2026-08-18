@@ -10,24 +10,19 @@ permission:
     "**/.spec/**": allow
   bash:
     "*": deny
-    "git rev-parse*": allow
-    "git -C * rev-parse*": allow
-    "git status*": allow
-    "git -C * status*": allow
-    "git diff*": allow
-    "git -C * diff*": allow
-    "git log*": allow
-    "git -C * log*": allow
-    "git show*": allow
-    "git -C * show*": allow
-    "git branch --show-current": allow
-    "git -C * branch --show-current": allow
-    "git symbolic-ref --short HEAD": allow
-    "git -C * symbolic-ref --short HEAD": allow
-    "git worktree list*": allow
-    "git -C * worktree list*": allow
-    "git check-ignore*": allow
-    "git -C * check-ignore*": allow
+    "git *": allow
+    "*git add*": deny
+    "*git apply*": deny
+    "*git commit*": deny
+    "*git push*": deny
+    "*git restore*": deny
+    "*git checkout*": deny
+    "*git reset*": deny
+    "*git rebase*": deny
+    "*git merge*": deny
+    "*git stash*": deny
+    "*git worktree*": deny
+    "*git worktree list*": allow
     "git add -- .spec/*": allow
     "git add -- */.spec/*": allow
     "git restore --staged -- .spec/*": allow

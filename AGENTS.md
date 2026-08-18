@@ -11,6 +11,7 @@ Arch + Hyprland (Wayland) dotfiles. Single-user. Root of repo = `~/dotfiles`.
 - `config/opencode/agents/{scheme,collab,drive,review}.md` → primary OpenCode modes; scheme plans, collab steers, drive executes unattended, review judges and synthesizes
 - `config/opencode/agents/{scout,build,review,scribe,verify}/` → leaf fleet; scouts map, builders edit code, reviewers judge, scribes write prose, verifiers collect evidence
 - `config/opencode/skills/git/{commit,rebase}/SKILL.md` → attended Git skills; Collab owns mutation through them, while Scheme has a narrow planning-commit exception
+- `config/opencode/skills/papercuts/SKILL.md` → Collab diagnoses failed session commands; invoke with `/papercuts`
 - `.spec/` → directory-scoped plan, spec, and logbook docs, committed by default; e.g. `config/opencode/.spec/orchestrate.md`
 - `iso/` → archiso profile; `iso/work/` and `iso/out/` are gitignored build artifacts
 - `share/` → static assets

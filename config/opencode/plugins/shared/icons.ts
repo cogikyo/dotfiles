@@ -29,6 +29,8 @@ export const icons = {
   folderLibrary: '',
   skill: '',
   skillProject: '󰏗',
+  command: '󰘳',
+  commandProject: '󰡛',
   partial: '󰈙',
   markdown: '󰍔',
   compacted: '',

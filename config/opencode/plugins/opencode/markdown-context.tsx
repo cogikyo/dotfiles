@@ -16,7 +16,7 @@ const MAX_ROOT_LENGTH = 8
 const MAX_PARENT_LENGTH = 12
 const MIN_LEAF_LENGTH = 6
 
-type MarkdownSourceKind = 'readme' | 'agents' | 'agent' | 'skill' | 'partial' | 'spec' | 'markdown'
+type MarkdownSourceKind = 'readme' | 'agents' | 'agent' | 'skill' | 'command' | 'partial' | 'spec' | 'markdown'
 
 const configRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 
@@ -216,6 +216,7 @@ function markdownSourceKind(filePath: string): MarkdownSourceKind {
   if (leaf === 'agents.md') return 'agents'
   if (leaf === 'skill.md') return 'skill'
   if (agentSegments(normalizedPath)) return 'agent'
+  if (commandSegments(normalizedPath)) return 'command'
   if (/^[A-Z][A-Z0-9_-]*\.md$/.test(path.basename(normalizedPath))) return 'partial'
   return 'markdown'
 }
@@ -240,6 +241,45 @@ function agentLabel(filePath: string) {
 
 function isSubagent(filePath: string) {
   return (agentSegments(filePath)?.length ?? 0) > 1
+}
+
+function commandSegments(filePath: string) {
+  const parts = path.normalize(filePath).split(/[\\/]/u).filter(Boolean)
+  const index = parts.findIndex((part) => part === 'commands' || part === 'command')
+  if (index === -1) return undefined
+  const rest = parts.slice(index + 1)
+  if (rest.length === 0 || !isMarkdownPath(rest.at(-1) ?? '')) return undefined
+  return rest
+}
+
+function commandName(filePath: string) {
+  const rest = commandSegments(filePath)
+  if (!rest) return 'Command'
+  return stripMarkdownExtension(rest.join('/'))
+    .split('/')
+    .map((segment) => segment.split('-').map(titleSegment).join('-'))
+    .join('/')
+}
+
+function commandProjectOwner(api: TuiPluginApi, filePath: string) {
+  const parts = path.normalize(filePath).split(/[\\/]/u).filter(Boolean)
+  const commandsIndex = parts.reduce(
+    (found, part, index) => (part === 'commands' || part === 'command' ? index : found),
+    -1,
+  )
+  if (commandsIndex > 0) {
+    let ownerIndex = commandsIndex - 1
+    if (parts[ownerIndex] === '.opencode' || parts[ownerIndex] === 'opencode') ownerIndex -= 1
+    const owner = parts[ownerIndex]
+    if (owner) return owner.replace(/^\./, '')
+  }
+  return contextRootName(api, filePath)
+}
+
+function commandLabel(api: TuiPluginApi, filePath: string) {
+  const name = commandName(filePath)
+  if (isGlobalOpencodePath(filePath)) return name
+  return `${commandProjectOwner(api, filePath)}/${name}`
 }
 
 function titleSegment(value: string) {
@@ -310,6 +350,7 @@ function contextLabel(api: TuiPluginApi, filePath: string, kind: MarkdownSourceK
   if (kind === 'spec') return specLabel(filePath)
   if (kind === 'agent') return agentLabel(filePath)
   if (kind === 'skill') return skillLabel(api, filePath)
+  if (kind === 'command') return commandLabel(api, filePath)
 
   if (kind === 'readme' || kind === 'agents') {
     if (kind === 'agents' && isConfigAgents(filePath)) return 'OpenCode'
@@ -422,6 +463,8 @@ function sourceColor(api: TuiPluginApi, item: MarkdownContextItem) {
       return isSubagent(item.path) ? c.magenta : c.blue
     case 'skill':
       return isGlobalOpencodePath(item.path) ? c.orange : c.pink
+    case 'command':
+      return isGlobalOpencodePath(item.path) ? c.sky : c.cyan
     case 'partial':
       return c.yellow
     case 'spec':
@@ -454,6 +497,8 @@ function sourceIcon(api: TuiPluginApi, item: MarkdownContextItem) {
       return `${isSubagent(item.path) ? icons.subagent : icons.agents} `
     case 'skill':
       return `${isGlobalOpencodePath(item.path) ? icons.skill : icons.skillProject} `
+    case 'command':
+      return `${isGlobalOpencodePath(item.path) ? icons.command : icons.commandProject} `
     case 'partial':
       return `${icons.partial} `
     case 'spec':
