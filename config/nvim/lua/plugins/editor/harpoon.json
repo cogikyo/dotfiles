@@ -95,7 +95,8 @@
         "cmds/config/hyprd.yaml",
         "config/nvim/lua/config/keymaps.lua",
         "config/kitty/kitty.conf",
-        "config/opencode/agents/collab.md"
+        "config/opencode/agents/collab.md",
+        "config/opencode/agents/drive.md"
       ]
     },
     "/home/cullyn/vagari.firefox": {

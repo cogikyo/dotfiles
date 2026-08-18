@@ -230,7 +230,7 @@ tabs:
 # │ background                                                                    │
 # ╰───────────────────────────────────────────────────────────────────────────────╯
 background:
-  enabled: false
+  enabled: true
   display: "auto"
   video_path: "~/dotfiles/share/videos"
   socket: "/tmp/mpvpaper.sock"
