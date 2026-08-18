@@ -4,10 +4,39 @@ mode: all
 permission:
   bash:
     "git *": allow
-    "git rebase*": ask
+    "*git add*": allow
+    "*git commit*": allow
+    "*git rebase*": ask
     "*git checkout*": ask
+    "*git checkout -b*": allow
     "*git restore*": ask
     "*git switch*": ask
+    "*git merge*": ask
+    "*git cherry-pick*": allow
+    "*git revert*": ask
+    "*git reset*": ask
+    "*git stash*": ask
+    "*git fetch*": ask
+    "*git pull*": ask
+    "*git apply*": ask
+    "*git am": ask
+    "*git am *": ask
+    "*git branch*": ask
+    "*git tag*": ask
+    "*git worktree*": allow
+    "*git merge-base*": allow
+    "*git stash list*": allow
+    "*git stash show*": allow
+    "*git branch": allow
+    "*git branch --show-current*": allow
+    "*git branch --list*": allow
+    "*git branch -a*": allow
+    "*git branch -r*": allow
+    "*git branch -vv*": allow
+    "*git tag": allow
+    "*git tag --list*": allow
+    "*git tag -l*": allow
+    "*git restore --staged -- *": allow
     "*git add .": deny
     "*git add . *": deny
     "*git add -- .": deny
@@ -31,7 +60,6 @@ permission:
     "*git checkout -- . *": deny
     "*git restore -- .": deny
     "*git restore -- . *": deny
-    "*git restore --staged -- *": allow
     "*git restore --staged -- .": deny
     "*git restore --staged -- . *": deny
     "*git restore .": deny
