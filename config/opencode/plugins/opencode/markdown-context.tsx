@@ -118,8 +118,9 @@ function pinnedContextItems(api: TuiPluginApi, sessionID: string) {
   }
 
   push(path.join(configRoot, 'AGENTS.md'))
-  const projectRoot = api.state.path.worktree || api.state.path.directory
-  if (projectRoot) push(path.join(projectRoot, 'AGENTS.md'))
+  for (const root of projectRoots(api)) {
+    push(path.join(root, 'AGENTS.md'))
+  }
 
   const agent = currentAgent(api, sessionID)
   if (agent) push(path.join(configRoot, 'agents', `${agent}.md`))
@@ -370,8 +371,30 @@ function specLabel(filePath: string) {
   return stripMarkdownExtension([owner, ...nestedPath].filter(Boolean).join(path.sep))
 }
 
+function isFilesystemRoot(value: string) {
+  const normalized = path.normalize(value)
+  return normalized === path.parse(normalized).root
+}
+
+function projectRoots(api: TuiPluginApi) {
+  const roots: string[] = []
+  const seen = new Set<string>()
+  for (const value of [api.state.path.directory, api.state.path.worktree]) {
+    if (!value || isFilesystemRoot(value)) continue
+    const normalized = path.normalize(value)
+    if (seen.has(normalized)) continue
+    seen.add(normalized)
+    roots.push(normalized)
+  }
+  return roots
+}
+
+function primaryProjectRoot(api: TuiPluginApi) {
+  return projectRoots(api)[0] || ''
+}
+
 function contextRootName(api: TuiPluginApi, filePath: string) {
-  const root = api.state.path.worktree || api.state.path.directory || path.dirname(filePath)
+  const root = primaryProjectRoot(api) || path.dirname(filePath)
   return path.basename(root) || path.basename(path.dirname(filePath)) || path.basename(filePath)
 }
 
@@ -479,9 +502,8 @@ function isConfigAgents(filePath: string) {
 }
 
 function isRootAgents(api: TuiPluginApi, filePath: string) {
-  const root = api.state.path.worktree || api.state.path.directory
-  if (!root) return false
-  return path.normalize(path.dirname(filePath)) === path.normalize(root)
+  const dir = path.normalize(path.dirname(filePath))
+  return projectRoots(api).some((root) => path.normalize(root) === dir)
 }
 
 function sourceIcon(api: TuiPluginApi, item: MarkdownContextItem) {
