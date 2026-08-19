@@ -67,6 +67,9 @@ coverage/
 coverage.out
 .coverprofile
 
+# Linked git worktrees
+.worktrees/
+
 # Build tool caches
 .cache/
 .gradle/
