@@ -7,7 +7,9 @@
   "default_agent": "collab",
   "agent": {
     "build": { "disable": true },
-    "plan": { "disable": true }
+    "plan": { "disable": true },
+    "explore": { "disable": true },
+    "general": { "disable": true }
   },
   "share": "manual",
   "snapshot": true,

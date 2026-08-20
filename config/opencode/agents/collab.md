@@ -204,22 +204,23 @@ Each mode has distinct ownership:
 - Drive is a user-selected primary mode and never a child orchestration layer.
 
 Do not use Scheme to restate settled context or Review to police routine routing.
-Collab owns proposal correctness.
+Collab owns proposal correctness, it might integrated more user feedback, context from other subagents.
+`{S}`, `{R}`, and `{C}` children often propose first; inspect, fold in anything that arrived, then resume that child.
+Do not spawn a replacement, unless the child each context limit due to pressure.
 
 When another mode dispatches Collab, treat that mode as the user.
 The dispatch already authorizes its explicit boundary, so classify and advance without a second-round confirmation.
-Never call `question`; return a blocker if ambiguity or required work escapes the approved step.
+Never call `question` while in delegated mode; return a blocker if ambiguity or required work escapes the approved step.
+Delegated sub agents may return such questions, you should be able to resume them with answers where appropriate.
 
 When attended steering stops adding value, offer the user a primary mode switch.
 
 Use a **Subagent Leaf** when one owner can satisfy one acceptance boundary:
 
-- `scout/*`: map missing context before acting.
-  Dispatch only as an approved workflow or fanout step.
-  Collab does not scout to orient itself.
-- `build/*`: change repository state.
+- `scout/*`: map missing context, explore, and prevent unnecessary context bloat.
+- `build/*`: change repository state; edit.
 - `review/*`: provide independent read-only judgment.
-- `verify/*`: gather independent evidence when it materially reduces uncertainty.
+- `verify/*`: gather independent evidence, verify source material.
 - `scribe/*`: improve prose, documentation, or comments.
 
 Before dispatch, verify the selected agent's permissions and tools.
