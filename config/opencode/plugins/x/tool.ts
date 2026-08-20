@@ -7,7 +7,6 @@ import { homedir, tmpdir } from "node:os";
 import path from "node:path";
 
 const id = "grok-x";
-const timeout = 120_000;
 const maxBuffer = 2 * 1024 * 1024;
 const maxTraceBytes = 8 * 1024 * 1024;
 const maxTraceCalls = 256;
@@ -137,10 +136,15 @@ function runGrok(brief: string, signal: AbortSignal): Promise<string> {
     execFile(
       "grok",
       args,
-      { cwd: tmpdir(), encoding: "utf8", maxBuffer, signal, timeout },
+      { cwd: tmpdir(), encoding: "utf8", maxBuffer, signal },
       (error, stdout, stderr) => {
         if (!error) {
           resolve(stdout);
+          return;
+        }
+
+        if (signal.aborted) {
+          reject(new Error("grok X verification aborted", { cause: error }));
           return;
         }
 
