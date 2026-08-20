@@ -28,8 +28,9 @@ Image naming is configured on the server plugin tuple in `opencode.json`:
 
 The naming job is sidecar-only.
 It queues only images registered by the `chat.message` send path and starts naming asynchronously after registration.
-It reuses the current OpenCode prompt model and auth by creating a temporary OpenCode session, prompting it with the image, then deleting that session in a best-effort `finally`.
-If the current prompt model is unavailable, the plugin falls back to the configured default OpenCode model when OpenCode exposes it to the config hook.
+It always uses the configured OpenCode `small_model`, never the current prompt model or default agent.
+It creates a temporary hidden `title` session, prompts it with the image, then deletes that session in a best-effort `finally`.
+If `small_model` is unavailable, naming is skipped and timestamp handles stay.
 It does not read `OPENAI_API_KEY`, parse OpenCode auth files, or call provider APIs directly.
 If the provider/model lacks image support or the temporary prompt fails, naming warns once for that image and leaves timestamp handles intact.
 OpenCode docs do not currently expose a true non-persistent completion API, so temp session rows and stats are deleted best-effort but true non-persistence depends on OpenCode API support.

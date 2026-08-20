@@ -9,6 +9,7 @@ const DEFAULT_OPTIONS: ImageNameOptions = {
   maxBytes: 8 * 1024 * 1024,
   concurrency: 1,
 };
+const NAMING_AGENT = "title";
 const PROMPT = `Name this image for a developer sidebar and file alias.
 Return only 1-3 short concrete words.
 Do not include a file extension, quotes, markdown, or a sentence.
@@ -38,13 +39,20 @@ type Job = {
 
 type OpenCodeClient = {
   session: {
-    create(input: { body: { title: string } }): unknown;
+    create(input: {
+      body: {
+        title: string;
+        agent: string;
+        model: { id: string; providerID: string };
+      };
+    }): unknown;
     prompt(input: { path: { id: string }; body: SessionPromptBody }): unknown;
     delete(input: { path: { id: string } }): unknown;
   };
 };
 
 type SessionPromptBody = {
+  agent: string;
   model: NamingModel;
   system: string;
   tools: Record<string, never>;
@@ -88,22 +96,31 @@ export function createImageNamer(input: CreateImageNamerInput) {
     setDefaultModel(model: NamingModel | undefined) {
       defaultModel = model;
     },
-    enqueue(entry: MediaRegistryEntry, model: NamingModel | undefined) {
+    enqueue(entry: MediaRegistryEntry) {
       if (!config.enabled || entry.kind !== "image" || entry.name) return;
-      const job = {
-        sessionID: entry.sessionID,
-        handle: entry.handle,
-        path: entry.path,
-        mime: entry.mime,
-        model: model ?? defaultModel,
-      };
-      if (!job.model) {
-        logNameFailure({ ...job, model: { providerID: "unknown", modelID: "unknown" } }, "model", new Error("OpenCode model unavailable for image naming"));
+      if (!defaultModel) {
+        logNameFailure(
+          {
+            sessionID: entry.sessionID,
+            handle: entry.handle,
+            path: entry.path,
+            mime: entry.mime,
+            model: { providerID: "unknown", modelID: "unknown" },
+          },
+          "model",
+          new Error("OpenCode small_model unavailable for image naming"),
+        );
         return;
       }
       const key = jobKey(entry.sessionID, entry.handle);
       if (pending.has(key) || running.has(key)) return;
-      pending.set(key, { ...job, model: job.model });
+      pending.set(key, {
+        sessionID: entry.sessionID,
+        handle: entry.handle,
+        path: entry.path,
+        mime: entry.mime,
+        model: defaultModel,
+      });
       startNext();
     },
     drain(sessionID: string) {
@@ -128,29 +145,6 @@ export function modelFromValue(value: unknown): NamingModel | undefined {
     return cleanModel(candidate.provider, candidate.model);
   }
   return undefined;
-}
-
-export function modelFromChatPayload(input: unknown, output: unknown) {
-  return firstModel(
-    modelAt(output, ["message", "model"]),
-    modelAt(output, ["model"]),
-    modelAt(input, ["model"]),
-    modelAt(input, ["message", "model"]),
-    modelAt(input, ["session", "model"]),
-  );
-}
-
-function modelAt(value: unknown, path: string[]) {
-  let current = value;
-  for (const key of path) {
-    if (!current || typeof current !== "object") return undefined;
-    current = (current as Record<string, unknown>)[key];
-  }
-  return modelFromValue(current);
-}
-
-function firstModel(...models: Array<NamingModel | undefined>) {
-  return models.find(Boolean);
 }
 
 function modelFromString(value: string) {
@@ -204,7 +198,13 @@ async function nameImage(job: Job, options: ImageNameOptions, client: OpenCodeCl
 
 async function requestImageName(job: Job, options: ImageNameOptions, client: OpenCodeClient, ignoredSessions: Set<string>) {
   const imageURL = await dataURL(job.path, job.mime, options.maxBytes);
-  const session = await client.session.create({ body: { title: "media-context image naming" } });
+  const session = await client.session.create({
+    body: {
+      title: "media-context image naming",
+      agent: NAMING_AGENT,
+      model: { id: job.model.modelID, providerID: job.model.providerID },
+    },
+  });
   const sessionID = sessionIDFromCreateResponse(session);
   if (!sessionID) throw new Error("temporary OpenCode session id unavailable");
 
@@ -215,6 +215,7 @@ async function requestImageName(job: Job, options: ImageNameOptions, client: Ope
     prompt = Promise.resolve(client.session.prompt({
       path: { id: sessionID },
       body: {
+        agent: NAMING_AGENT,
         model: job.model,
         system: SYSTEM,
         tools: {},
