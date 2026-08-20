@@ -26,6 +26,7 @@ Running sessions keep the loaded plugin set.
 | Kitty context | `hyprd/kitty.ts` | `hyprd-kitty-context` | TUI |
 | Browser QA workspaces | `hyprd/browser-qa.tsx` | `hyprd-browser-qa` | TUI |
 | Usage sidebar | `usage/index.tsx` | `cullyn.usage-sidebar` | TUI |
+| Child sidebar | `opencode/child-sidebar.tsx` | `opencode-child-sidebar` | TUI |
 | Modified files | `opencode/modified-files.tsx` | `opencode-modified-files` | TUI |
 | Markdown context | `opencode/markdown-context.tsx` | `opencode-markdown-context` | TUI |
 | Media context sidebar | `opencode/media-context/index.tsx` | `opencode-media-context` | TUI |
@@ -163,6 +164,8 @@ When an agent session becomes idle or is deleted, the plugin closes its MCP subp
 
 `usage/index.tsx` owns the `sidebar_title` and `sidebar_content` slots; it deactivates `internal:sidebar-context` on load and restores it on dispose.
 The other sidebar sections register `sidebar_content` with distinct orders.
+`opencode/child-sidebar.tsx` hosts that content for child sessions.
+`<leader>a` flips the built-in session row with `row-reverse` so the real sidebar takes a left column instead of overlaying the chat.
 
 - `opencode/code-blocks.ts` patches OpenTUI code-block rendering and registers a SQL tree-sitter parser.
 - `hyprd/browser-qa.tsx` keeps one workspace subscription per plugin instance and lists marked browser workspaces before MCP.
