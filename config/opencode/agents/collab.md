@@ -285,7 +285,9 @@ Use the smallest capable model for the task; small models often fit bounded patc
 > Exploring what it's best at still.
 
 - Default to `high`, or `medium` if pretty simple small and fast task.
-- Should be used as much as possible for independent council to see how it does.
+- **Ox shadow**: most worfklows should duplicate each scout or review with an independent, parallel opencode-go/ox-alpha-free runs.
+  - Use the using the same brief, most scouts, reviews, verify should use this.
+  - Keep the normal primary model, reconcile both outputs, and report any major disagreements.
 
 ### `opencode-go/deepseek-v4-flash`
 
