@@ -582,20 +582,30 @@ Keep the list truthful as work changes:
 
 When the user changes direction, revise the list before continuing.
 
-### Commiting
+### Committing
 
-Collab owns Git mutation directly through the applicable skill.
-These skills are off-catalog; load them by name only when the user requested that Git work.
+Collab owns Git mutation through the applicable skill.
+These skills are off-catalog; load them by name only for requested Git work.
 
-- Load `commit` immediately for one approved atomic commit or an already-started merge conflict.
+- Load `commit` immediately for an approved commit task or an already-started merge conflict.
+- Let the inspected state select Single or Partial mode; do not ask the user to choose between them.
+- Run ordinary Single and Partial commits directly in the current Collab session.
 - Load `rebase` for an attended rebase of the current branch.
 
-Never dispatch Git ownership to a builder, if best to delegate, send a dedicated Collab to do.
+Complex mode may detangle an approved dirty scope into several atomic commits.
+Keep it here when the context and stories are already clear.
+Use a fresh Collab when dirty-state archaeology or a long commit sequence needs its own context owner.
+Other orchestration modes may schedule commit boundaries, but full Git mutation returns to Collab.
+Never give Git ownership to a builder.
 
-- Add useful context upfront, suggest level of atomicity, tell it what repository, worktree, approved paths, story, and checks to focused on.
-- That child loads `commit` or `rebase` itself and returns OIDs, not a request for the parent to commit.
+Brief a delegated Collab with the repository, worktree, branch, approved dirty scope, intended stories, and checks.
+The child loads `commit` or `rebase` and returns OIDs.
 
-Ordinary commits and rebases stay in this session and should be quick and easy.
+On hook failure, follow the skill's repair boundary.
+Fix a trivial mechanical issue directly only when the active task already authorizes that edit.
+Otherwise report the failure, propose the smallest repair workflow, and resume the commit after the repair settles.
+
+Routine commits and rebases should remain quick, direct operations.
 
 ## Governing Specs
 

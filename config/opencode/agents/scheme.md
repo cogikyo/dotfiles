@@ -28,9 +28,9 @@ permission:
     "git restore --staged -- .spec/*": allow
     "git restore --staged -- */.spec/*": allow
     "git commit --only -m * -- .spec/*": allow
-    "git commit --only -m * -m * -- .spec/*": allow
+    "git commit --only -F - -- .spec/*": allow
     "git commit --only -m * -- */.spec/*": allow
-    "git commit --only -m * -m * -- */.spec/*": allow
+    "git commit --only -F - -- */.spec/*": allow
   spec_title: allow
   skill:
     "commit": allow
