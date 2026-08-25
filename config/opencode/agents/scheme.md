@@ -136,19 +136,38 @@ Use `adaptive` when evidence should determine the shape and `orchestrated` for a
 
 - Default to `high` for a tightly bounded divergent planning direction.
 
-### `xai/grok-4.6` and `opencode-go/grok-4.5`
+### `xai/grok-4.6`
 
 - Default to `high` for `scout/web` and `verify/web`.
 - Native X search is the `x` skill via Grok CLI, not a dispatched leaf.
 - Solid `high` `build/general` option; it builds fast.
   - Best when the workflow has guards: a settled plan going in and review or simplify steps after.
-- Prefer xAI for Grok 4.6; OpenCode Go stays on 4.5 and Kimi until its gateway supports 4.6.
-- OpenCode supports `low`, `medium`, and `high` for xAI 4.6; native Grok CLI also supports `xhigh`.
+- Prefer xAI. OpenCode supports `low`, `medium`, and `high`; native Grok CLI also supports `xhigh`.
 
 ### `openai/gpt-5.6-luna-fast`
 
 - Default to `xhigh` for `scout/context`, `scout/dirty`, and `scout/session`.
 - Default to `max` for `verify/source` and `verify/test`.
+
+### `opencode-go/deepseek-v4-flash`
+
+- Default to `high` when a workflow names a cheap `build/patch` or ordinary implementation slice.
+- Keep it off owner work, Drive write, and tiny patches; those stay on the orchestrator or a paid default.
+
+### `opencode-go/ox-alpha-free`
+
+> [!IMPORTANT]
+> Treat this as explore mode while it is unlimited.
+> Default to `high` and attach it as a parallel scout, review, or comparison-patch sibling in almost every workflow.
+
+- Paid defaults still own synthesis and ordinary writes.
+- Propose it as a write owner only occasionally, and only when the user approves that attempt.
+- Remove it from routing when the free unlimited window ends.
+
+### `opencode-go/glm-5.3`
+
+- Default to `high` as an extra `review/debug` or long-horizon reasoning lens.
+- Do not use it as the default reviewer; Sol, Opus, or Fable still own ordinary review.
 
 ### Token Usage
 

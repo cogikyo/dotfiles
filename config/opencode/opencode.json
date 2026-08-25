@@ -77,16 +77,6 @@
             "max": { "reasoningEffort": "max" }
           }
         },
-        "grok-4.5": {
-          "options": {
-            "reasoningEffort": "high"
-          },
-          "variants": {
-            "low": { "reasoningEffort": "low" },
-            "medium": { "reasoningEffort": "medium" },
-            "high": { "reasoningEffort": "high" }
-          }
-        },
         "grok-4.6": {
           "name": "Grok 4.6",
           "options": {

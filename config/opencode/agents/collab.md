@@ -241,16 +241,22 @@ Use the smallest capable model for the task; small models often fit bounded patc
 > These are the default model-routing recommendations.
 > Override them when task fit, usage limits, or an explicit user preference warrants it.
 
-### `openai/gpt-5.6-sol-fast`
-
-- Default to `high` for `build/general`.
-- Default to `xhigh` for `build/owner` or ordinary **Orchestration Mode**.
-- Default to `medium` for `verify/test` when the user explicitly requests an independent test run.
-
 ### `anthropic/claude-fable-5`
 
-- Use `high` only when explicitly requested by the user.
-- Use `xhigh` for Review orchestration only when explicitly requested to judge a council.
+- Default `high` to run a Collab, Scheme, or Review leaf.
+- Use only when user requests; suggest to use if tasks are ambiguous with clear rational.
+- Often yields verbose or complex output that needs concise synthesis.
+
+### `openai/gpt-5.6-sol-fast`
+
+- Default to `xhigh` for `build/owner`
+- Best used for initial large build outs.
+- Often builds correct, but yields complex and verbose implementations.
+
+### `xai/grok-4.6`
+
+- Default to `high` for `build/general`.
+- Usually produces simpler, cleaner code. G
 
 ### `anthropic/claude-opus-5`
 
@@ -258,28 +264,36 @@ Use the smallest capable model for the task; small models often fit bounded patc
 - Use `high` only for its `build/owner` participant in a council or when the user explicitly requests it.
 - Avoid `high` for ordinary reviews because the extra latency and overthinking usually reduce its value.
 
-### `opencode-go/k3`
-
-- Default to `high`; use `max` only when explicitly requested.
-- Useful as divergent review or implementation direction when ample time is available.
-- Bound it tightly because it is slow and prone to overproducing or overimplementing.
-
-### `xai/grok-4.6` and `opencode-go/grok-4.5`
-
-- Default to `high` for `verify/web`.
-- Native X search is the `x` skill via Grok CLI, not a dispatched leaf.
-- Default to `medium` for `build/patch`.
-- Solid `high` `build/general` option; it builds fast.
-  - Best when the workflow has guards: a settled plan going in and review or simplify steps after.
-- Prefer xAI for Grok 4.6; OpenCode Go stays on 4.5 and Kimi until its gateway supports 4.6.
-- OpenCode supports `low`, `medium`, and `high` for xAI 4.6; native Grok CLI also supports `xhigh`.
-
 ### `openai/gpt-5.6-luna-fast`
 
 - Default to `max` for `verify/source`.
 - Default to `xhigh` for most `scout/*` tasks.
-- Default to `medium` as the Grok fallback for `build/patch`.
 - Use `medium` for quick formatting, diagnostics, or lint work when delegation is actually useful.
+
+### `opencode-go/ox-alpha-free`
+
+> [!IMPORTANT]
+> Usage is current unlimited, use council scouts, reviews.
+> Exploring what it's best at still.
+
+- Default to `high`, or `medium` if pretty simple small and fast task.
+- Should be used as much as possible for independent council to see how it does.
+
+### `opencode-go/deepseek-v4-flash`
+
+- Default to `high`.
+- Great to often use as independent version of `gpt-5.6-luna-fast`.
+- Best to add on to tasks where scouting is less certain and stronger confidence is needed.
+
+### `opencode-go/glm-5.3`
+
+- Default to `high` as an extra agent for council reviews/verifies.
+
+### `opencode-go/k3`
+
+- Default to `high`. Note: provider may change to `max` even if another level is requested.
+- Useful as divergent review or implementation direction when ample time is available.
+- Bound it tightly because it is slow and prone to overproducing or over implementing.
 
 ### Token Usage
 
