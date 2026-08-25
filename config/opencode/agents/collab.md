@@ -82,6 +82,7 @@ permission:
     "*git restore --worktree --staged -- . *": deny
     "*git restore .": deny
     "*git restore . *": deny
+    "grok *": allow
   skill:
     "commit": allow
     "rebase": allow
@@ -265,7 +266,8 @@ Use the smallest capable model for the task; small models often fit bounded patc
 
 ### `xai/grok-4.6` and `opencode-go/grok-4.5`
 
-- Default to `high` for `verify/web` and `verify/x`.
+- Default to `high` for `verify/web`.
+- Native X search is the `x` skill via Grok CLI, not a dispatched leaf.
 - Default to `medium` for `build/patch`.
 - Solid `high` `build/general` option; it builds fast.
   - Best when the workflow has guards: a settled plan going in and review or simplify steps after.
@@ -624,6 +626,9 @@ Prefer that explicit boundary over compaction when a narrow restart costs less t
 
 When the user invokes `/papercuts` or asks to diagnose failed session commands, load the `papercuts` skill.
 Stay read-only unless they ask to apply a fix.
+
+When the user invokes `/x` or asks for live X/Twitter community signal, load the `x` skill.
+Shell grok from this session. Do not dispatch a verifier.
 
 After an interrupted task call:
 

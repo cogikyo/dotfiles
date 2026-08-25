@@ -3,6 +3,10 @@ description: Delivers independent read-only judgment through direct inspection a
 mode: all
 permission:
   edit: deny
+  bash:
+    "grok *": allow
+  skill:
+    "x": allow
   task:
     "*": deny
     "scout/context": allow
@@ -21,8 +25,7 @@ permission:
     "verify/browser": allow
     "verify/web": allow
     "verify/source": allow
-    "verify/x": allow
-color: success
+  color: success
 ---
 
 # Review
@@ -66,7 +69,8 @@ Use a subagent leaf for one bounded evidence or judgment boundary:
 - `review/design`, `review/debug`, `review/security`, `review/architect`, and `review/critic` apply one lens.
 - `review/simplify`, `review/modernize`, `review/profile`, and `review/test` apply one lens.
 - `verify/browser` performs explicit browser QA against a running site.
-- `verify/web`, `verify/source`, and `verify/x` settle published, upstream, or live external claims.
+- `verify/web` and `verify/source` settle published or upstream claims.
+- Load the `x` skill and shell grok for live X/Twitter community signal.
 
 Handle ordinary review directly when one coherent pass can falsify the important claims.
 Delegate orthogonal risks, useful independent judgment, or evidence gathering that would crowd synthesis.
@@ -100,7 +104,8 @@ Keep synthesis here, and never manufacture a council or treat child count as evi
 
 ### `xai/grok-4.6` and `opencode-go/grok-4.5`
 
-- Default to `high` for `scout/web`, `verify/web`, and `verify/x`.
+- Default to `high` for `scout/web` and `verify/web`.
+- Native X search is the `x` skill via Grok CLI, not a dispatched leaf.
 - Prefer xAI for Grok 4.6; OpenCode Go stays on 4.5 and Kimi until its gateway supports 4.6.
 - OpenCode supports `low`, `medium`, and `high` for xAI 4.6; native Grok CLI also supports `xhigh`.
 
@@ -290,7 +295,7 @@ Use verifiers to settle evidence rather than cast more votes:
 - `verify/web` for current official documentation and published constraints.
 - `verify/browser` for explicit visual, interaction, console, network, or performance QA in a browser.
 - `verify/source` for upstream implementation truth.
-- `verify/x` for explicitly requested independent live community signal.
+- The `x` skill for explicitly requested independent live community signal. Shell grok here. Do not dispatch a verifier.
 
 Reconcile conflicts by inspecting disputed evidence or commissioning one discriminating check.
 Agreement raises confidence only when reviewers reached it through meaningfully independent evidence.

@@ -31,9 +31,11 @@ permission:
     "git commit --only -F - -- .spec/*": allow
     "git commit --only -m * -- */.spec/*": allow
     "git commit --only -F - -- */.spec/*": allow
+    "grok *": allow
   spec_title: allow
   skill:
     "commit": allow
+    "x": allow
   task:
     "*": deny
     "review": allow
@@ -55,8 +57,7 @@ permission:
     "verify/test": allow
     "verify/web": allow
     "verify/source": allow
-    "verify/x": allow
-color: accent
+  color: accent
 ---
 
 # Scheme
@@ -95,6 +96,8 @@ Use a subagent leaf for one bounded evidence boundary:
 
 Attended primary Scheme loads the `commit` skill directly for approved `.spec/**` planning artifacts.
 Do not dispatch a Git owner.
+Load the `x` skill for live X/Twitter community signal and shell grok from this session.
+Do not dispatch a verifier for that.
 
 Read and patch relevant planning Markdown only after the classify boundary, and only when the working set already fits.
 Do not outsource ordinary plan writing or criticism that Scheme can handle coherently.
@@ -135,7 +138,8 @@ Use `adaptive` when evidence should determine the shape and `orchestrated` for a
 
 ### `xai/grok-4.6` and `opencode-go/grok-4.5`
 
-- Default to `high` for `scout/web`, `verify/web`, and `verify/x`.
+- Default to `high` for `scout/web` and `verify/web`.
+- Native X search is the `x` skill via Grok CLI, not a dispatched leaf.
 - Solid `high` `build/general` option; it builds fast.
   - Best when the workflow has guards: a settled plan going in and review or simplify steps after.
 - Prefer xAI for Grok 4.6; OpenCode Go stays on 4.5 and Kimi until its gateway supports 4.6.

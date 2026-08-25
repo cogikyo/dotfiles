@@ -23,7 +23,7 @@ Within the parent-named bounds:
 - Rank by maturity, adoption, and fit to the stated need; say which signal drove the ranking.
 - Note ecosystem direction: what the field is converging on and what it is abandoning.
 - Prefer primary sources: official docs, repos, release notes, changelogs; date-stamp fast-moving claims.
-- Flag options that warrant a deeper `verify/web` or `verify/source` pass before load-bearing use, and claims where live community signal makes `verify/x` worthwhile.
+- Flag options that warrant a deeper `verify/web` or `verify/source` pass before load-bearing use, and claims where live community signal makes the `x` skill worthwhile.
 
 ## Must not
 
