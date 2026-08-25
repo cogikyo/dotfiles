@@ -57,7 +57,7 @@ permission:
     "verify/test": allow
     "verify/web": allow
     "verify/source": allow
-  color: accent
+color: accent
 ---
 
 # Scheme
@@ -115,59 +115,69 @@ Use `adaptive` when evidence should determine the shape and `orchestrated` for a
 > [!INFO] Models & Reasoning Guidelines
 >
 > These are the default model-routing recommendations.
-> Override them when task fit or an explicit user preference warrants it, and use only models defined here.
-
-### `openai/gpt-5.6-sol-fast`
-
-- Default to `xhigh` for Scheme synthesis, Review mode, `review/debug`, and `review/profile`.
-- Default to `high` for `scout/library`, `review/simplify`, and `review/modernize`.
+> Override them when task fit, usage limits, or an explicit user preference warrants it.
+> Order in which they appear in list below roughly ranks them in overall performance.
 
 ### `anthropic/claude-fable-5`
 
-- Use `high` only when explicitly requested for long synthesis.
+- Default `high` to run a `Review` **Orchestration** sub agent.
+- Use only when user requests; suggest to use if planning is ambiguous with clear rationale.
+- Often yields verbose or complex output that needs concise synthesis.
+- Is most likely to provide correct answers and correct decisions.
 
-### `anthropic/claude-opus-5`
+### `openai/gpt-5.6-sol-fast`
 
-- Default to `medium` for all Opus review tasks, including difficult or ambiguity-heavy criticism.
-- Use `high` only for a `build/owner` council participant or when the user explicitly requests it.
-- Avoid `high` for ordinary reviews because the extra latency and overthinking usually reduce its value.
-
-### `opencode-go/k3`
-
-- Default to `high` for a tightly bounded divergent planning direction.
+- Default to `xhigh` for a complex `Review` orchestration sub agent.
+- Best used for large multi-lens planning criticism.
+- Often correct, but yields complex and verbose output.
+- Can be overly defensive, and can fail to understand proper conventions.
 
 ### `xai/grok-4.6`
 
-- Default to `high` for `scout/web` and `verify/web`.
-- Native X search is the `x` skill via Grok CLI, not a dispatched leaf.
-- Solid `high` `build/general` option; it builds fast.
-  - Best when the workflow has guards: a settled plan going in and review or simplify steps after.
-- Prefer xAI. OpenCode supports `low`, `medium`, and `high`; native Grok CLI also supports `xhigh`.
+- Default to `high` for `scout/web` and `verify/web`; best simple general-purpose leaf.
+- Usually produces simpler, cleaner analysis.
+- Often assumes things too early, can be too simple or concise on things.
+- Best general agent when factoring in speed+cost+correctness into one metric.
+- Best at handling corrections after reviews.
+- Native X search is the `x` skill via Grok CLI, not a dispatched leaf; instruct `verify/web` to use the skill.
+
+### `anthropic/claude-opus-5`
+
+- Default to `medium`; avoid `high` or above, as it takes too long and often produces noise.
+- Best general sub agent for `review/*` tasks.
+- Great for council reviews when headroom requires it.
 
 ### `openai/gpt-5.6-luna-fast`
 
-- Default to `xhigh` for `scout/context`, `scout/dirty`, and `scout/session`.
-- Default to `max` for `verify/source` and `verify/test`.
-
-### `opencode-go/deepseek-v4-flash`
-
-- Default to `high` when a workflow names a cheap `build/patch` or ordinary implementation slice.
-- Keep it off owner work, Drive write, and tiny patches; those stay on the orchestrator or a paid default.
+- Default to `xhigh`; best for `scout/*` and `verify/*` tasks.
+- Don't fully trust its conclusions, often close to correct, but can fail to find appropriate context.
+- Can go overboard with verification, make sure it's properly scoped to its verification context.
 
 ### `opencode-go/ox-alpha-free`
 
 > [!IMPORTANT]
-> Treat this as explore mode while it is unlimited.
-> Default to `high` and attach it as a parallel scout, review, or comparison-patch sibling in almost every workflow.
+> Usage is current unlimited, use council scouts, reviews.
+> Exploring what it's best at still.
 
-- Paid defaults still own synthesis and ordinary writes.
-- Propose it as a write owner only occasionally, and only when the user approves that attempt.
-- Remove it from routing when the free unlimited window ends.
+- Default to `high`, or `medium` if pretty simple small and fast task.
+- Should be used as much as possible for independent council to see how it does.
+
+### `opencode-go/deepseek-v4-flash`
+
+- Default to `high`; treat as independent version of `gpt-5.6-luna-fast`.
+- Best to add on to tasks where scouting is less certain and stronger confidence is needed.
 
 ### `opencode-go/glm-5.3`
 
-- Default to `high` as an extra `review/debug` or long-horizon reasoning lens.
-- Do not use it as the default reviewer; Sol, Opus, or Fable still own ordinary review.
+- Default to `high` as an extra agent for council reviews/verifies.
+- Treat as independent version of `claude-opus-5`.
+
+### `opencode-go/k3`
+
+- Default to `high`. Note: provider may change to `max` even if another level is requested.
+- Useful as divergent review or planning direction when ample time is available.
+- Bound it tightly because it is slow and prone to overproducing or over implementing.
+- Best at security reviews, but can go overboard if it doesn't know omitted assumptions.
 
 ### Token Usage
 
@@ -176,6 +186,8 @@ Use `adaptive` when evidence should determine the shape and `orchestrated` for a
 - Spend healthy headroom freely; never choose a worse model or lower effort merely to conserve capacity.
 - Treat missing, stale, or unknown values as no current evidence, and do not poll an unchanged cache.
 - Report exhausted providers and use the next best fit.
+- It is okay to max out a provider near reset; pay attention to weekly and monthly usage too, when available.
+  - OpenAI often resets usage, so it can generally be used even when well above headroom.
 - Honor explicit user choices of model or effort.
 
 ## Workflows

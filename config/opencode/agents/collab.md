@@ -240,35 +240,43 @@ Use the smallest capable model for the task; small models often fit bounded patc
 >
 > These are the default model-routing recommendations.
 > Override them when task fit, usage limits, or an explicit user preference warrants it.
+> Order in which they appear in list below roughly ranks them in overall performance.
 
 ### `anthropic/claude-fable-5`
 
-- Default `high` to run a Collab, Scheme, or Review leaf.
+- Default `high` to run a `Collab`, `Scheme`, or `Review` **Orchestration** sub agent.
 - Use only when user requests; suggest to use if tasks are ambiguous with clear rational.
 - Often yields verbose or complex output that needs concise synthesis.
+- Is most likely to provide correct answers and correct decisions.
 
 ### `openai/gpt-5.6-sol-fast`
 
-- Default to `xhigh` for `build/owner`
+- Default to `xhigh` for `build/owner`; best default for complex orchestration sub agent.
 - Best used for initial large build outs.
 - Often builds correct, but yields complex and verbose implementations.
+- Can be overly defensive in implementations, and can fail to understand proper conventions.
 
 ### `xai/grok-4.6`
 
-- Default to `high` for `build/general`.
-- Usually produces simpler, cleaner code. G
+- Default to `high` for `build/general`; best simple general purpose orchestration sub agent.
+- Usually produces simpler, cleaner code.
+- Often assumes things too early, can be be too simple or concise on things.
+- Best general agent when factoring in speed+cost+correctness into one metric.
+- Best at handling corrections after reviews.
+- Native X search is the `x` skill via Grok CLI, not a dispatched leaf; instruct `verify/web` to use the skill.
 
 ### `anthropic/claude-opus-5`
 
-- Default to `medium` for Opus tasks, including difficult or ambiguity-heavy reviews.
-- Use `high` only for its `build/owner` participant in a council or when the user explicitly requests it.
-- Avoid `high` for ordinary reviews because the extra latency and overthinking usually reduce its value.
+- Default to `medium`; avoid `high` or above, as it takes too long and often produces noise.
+- Best general sub agent for `review/*` tasks.
+- Great for council reviews when headroom requires it.
+- Occasionally good `build/general` when addressing UX/UI concerns.
 
 ### `openai/gpt-5.6-luna-fast`
 
-- Default to `max` for `verify/source`.
-- Default to `xhigh` for most `scout/*` tasks.
-- Use `medium` for quick formatting, diagnostics, or lint work when delegation is actually useful.
+- Default to `xhigh`; best for `scout/*` and `verify/*` tasks.
+- Don't fully trust it's conclusions, often close to correct, but can fail to find appropriate context.
+- Can go overboard with verification, make sure it's properly scoped to it's verification context.
 
 ### `opencode-go/ox-alpha-free`
 
@@ -281,19 +289,20 @@ Use the smallest capable model for the task; small models often fit bounded patc
 
 ### `opencode-go/deepseek-v4-flash`
 
-- Default to `high`.
-- Great to often use as independent version of `gpt-5.6-luna-fast`.
+- Default to `high`; treat as independent version of `gpt-5.6-luna-fast`.
 - Best to add on to tasks where scouting is less certain and stronger confidence is needed.
 
 ### `opencode-go/glm-5.3`
 
 - Default to `high` as an extra agent for council reviews/verifies.
+- Treat as independent version of `claude-opus-5`.
 
 ### `opencode-go/k3`
 
 - Default to `high`. Note: provider may change to `max` even if another level is requested.
 - Useful as divergent review or implementation direction when ample time is available.
 - Bound it tightly because it is slow and prone to overproducing or over implementing.
+- Best at security reviews, but can go overboard if doesn't know omitted assumptions.
 
 ### Token Usage
 

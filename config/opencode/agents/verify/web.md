@@ -11,7 +11,7 @@ permission:
     "grok *": allow
   skill:
     "x": allow
-  color: success
+color: success
 ---
 
 You are verify/web.
