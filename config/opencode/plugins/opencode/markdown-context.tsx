@@ -11,10 +11,7 @@ import { openInNvim } from '../shared/open-nvim.ts'
 import { SidebarSection } from '../shared/sidebar-section.tsx'
 
 const id = 'opencode-markdown-context'
-const MAX_LABEL_LENGTH = 30
-const MAX_ROOT_LENGTH = 8
-const MAX_PARENT_LENGTH = 12
-const MIN_LEAF_LENGTH = 6
+const MAX_LABEL_LENGTH = 36
 
 type MarkdownSourceKind = 'readme' | 'agents' | 'agent' | 'skill' | 'command' | 'partial' | 'spec' | 'markdown'
 
@@ -333,16 +330,46 @@ function markdownIdentity(filePath: string) {
 }
 
 function displayPath(api: TuiPluginApi, filePath: string, kind: MarkdownSourceKind) {
-  return compactPath(contextLabel(api, filePath, kind), kind)
+  return compactPath(contextLabel(api, filePath, kind))
+}
+
+function relativeInside(candidate: string) {
+  return candidate !== '..' && !candidate.startsWith(`..${path.sep}`) && !path.isAbsolute(candidate)
 }
 
 function relativePath(api: TuiPluginApi, filePath: string) {
-  const cwd = api.state.path.directory || api.state.path.worktree || ''
-  const home = process.env.HOME || ''
+  const directory = api.state.path.directory ? path.normalize(api.state.path.directory) : ''
+  const worktree = api.state.path.worktree ? path.normalize(api.state.path.worktree) : ''
+  const normalized = path.normalize(filePath)
+  const base = directory || worktree
+  const resolved = path.isAbsolute(normalized) ? normalized : base ? path.normalize(path.join(base, normalized)) : normalized
 
-  if (cwd && filePath.startsWith(cwd + path.sep)) return filePath.slice(cwd.length + 1)
-  if (home && filePath.startsWith(home + path.sep)) return filePath.slice(home.length + 1)
-  return filePath
+  let relative: string | undefined
+  let matchLength = -1
+  for (const root of [directory, worktree]) {
+    if (!root || isFilesystemRoot(root)) continue
+    const candidate = path.relative(root, resolved)
+    if (!relativeInside(candidate)) continue
+    if (root.length < matchLength) continue
+    matchLength = root.length
+    relative = candidate
+  }
+
+  if (relative === undefined) {
+    const home = process.env.HOME ? path.normalize(process.env.HOME) : ''
+    if (home && !isFilesystemRoot(home)) {
+      const candidate = path.relative(home, resolved)
+      if (relativeInside(candidate)) relative = candidate
+    }
+    relative ??= resolved
+  }
+
+  const parts = relative.split(path.sep).filter(Boolean)
+  const worktreeIndex = parts.lastIndexOf('.worktrees')
+  if (worktreeIndex !== -1 && parts.length > worktreeIndex + 1) parts.splice(worktreeIndex, 2)
+  const leaked = [worktree, directory].filter(Boolean).map((root) => path.basename(root))
+  if (parts[0] && leaked.includes(parts[0])) parts.shift()
+  return parts.join(path.sep) || relative
 }
 
 function contextLabel(api: TuiPluginApi, filePath: string, kind: MarkdownSourceKind) {
@@ -402,53 +429,31 @@ function stripMarkdownExtension(label: string) {
   return label.replace(/\.(md|mdx|markdown)$/i, '')
 }
 
-function compactPath(label: string, kind: MarkdownSourceKind) {
+function compactPath(label: string) {
   const parts = label.split(path.sep).filter(Boolean)
   if (parts.length <= 2) return label.length <= MAX_LABEL_LENGTH ? label : truncateLabel(label)
 
   const leaf = parts.at(-1) ?? label
   const parent = parts.at(-2) ?? ''
-  const root = parts[0]
+  if (leaf.length >= MAX_LABEL_LENGTH) return truncateFileName(leaf, MAX_LABEL_LENGTH)
 
-  if (kind === 'readme' || kind === 'agents') return compactRootLeaf(root, leaf)
-  return compactRootParentLeaf(root, parent, leaf)
+  const joined = `${parent}/${leaf}`
+  if (joined.length <= MAX_LABEL_LENGTH) {
+    const marked = `.../${joined}`
+    return marked.length <= MAX_LABEL_LENGTH ? marked : joined
+  }
+
+  const reserved = leaf.length + 1
+  const markedBudget = MAX_LABEL_LENGTH - reserved - 4
+  if (markedBudget > 0) return `.../${truncateMiddle(parent, markedBudget)}/${leaf}`
+  const parentBudget = MAX_LABEL_LENGTH - reserved
+  if (parentBudget > 0) return `${truncateMiddle(parent, parentBudget)}/${leaf}`
+  return leaf
 }
 
 function truncateLabel(label: string) {
   if (label.length <= MAX_LABEL_LENGTH) return label
   return `${label.slice(0, Math.max(0, MAX_LABEL_LENGTH - 3))}...`
-}
-
-function compactRootLeaf(root: string, leaf: string) {
-  const full = `${root}/.../${leaf}`
-  if (full.length <= MAX_LABEL_LENGTH) return full
-
-  const segmentBudget = MAX_LABEL_LENGTH - '/.../'.length
-  if (segmentBudget < 2) return truncateLabel(full)
-
-  const rootLength = Math.min(root.length, Math.max(1, Math.min(MAX_ROOT_LENGTH, segmentBudget - MIN_LEAF_LENGTH)))
-  const leafLength = segmentBudget - rootLength
-  const candidate = `${truncateMiddle(root, rootLength)}/.../${truncateFileName(leaf, leafLength)}`
-
-  if (candidate.length <= MAX_LABEL_LENGTH) return candidate
-  return truncateLabel(full)
-}
-
-function compactRootParentLeaf(root: string, parent: string, leaf: string) {
-  const full = `${root}/.../${parent}/${leaf}`
-  if (full.length <= MAX_LABEL_LENGTH) return full
-
-  const segmentBudget = MAX_LABEL_LENGTH - '/...//'.length
-  if (segmentBudget < 3) return truncateLabel(full)
-
-  const rootLength = Math.min(root.length, Math.max(1, Math.min(MAX_ROOT_LENGTH, segmentBudget - MIN_LEAF_LENGTH)))
-  const remaining = segmentBudget - rootLength
-  const parentLength = Math.min(parent.length, Math.max(1, Math.min(MAX_PARENT_LENGTH, remaining - MIN_LEAF_LENGTH)))
-  const leafLength = remaining - parentLength
-  const candidate = `${truncateMiddle(root, rootLength)}/.../${truncateMiddle(parent, parentLength)}/${truncateFileName(leaf, leafLength)}`
-
-  if (candidate.length <= MAX_LABEL_LENGTH) return candidate
-  return truncateLabel(full)
 }
 
 function truncateMiddle(value: string, maxLength: number) {
