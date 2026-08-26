@@ -119,18 +119,6 @@ Keep synthesis here, and never manufacture a council or treat child count as evi
 - Don't fully trust its conclusions, often close to correct, but can fail to find appropriate context.
 - Can go overboard with verification, make sure it's properly scoped to its verification context.
 
-### `opencode-go/ox-alpha-free`
-
-> [!IMPORTANT]
-> Usage is current unlimited, use council scouts, reviews.
-> Exploring what it's best at still.
-
-- Default to `high`, or `medium` if pretty simple small and fast task.
-- Should be used as much as possible for independent council to see how it does.
-- For most tasks, if context is clear, it can run a very wide set of `review/*` agents.
-- Important for review orchestrator to synthesize these results.
-- Use to identify what it's good at, and to improve leaf review node instructions.
-
 ### `opencode-go/deepseek-v4-flash`
 
 - Default to `high`; treat as independent version of `gpt-5.6-luna-fast`.

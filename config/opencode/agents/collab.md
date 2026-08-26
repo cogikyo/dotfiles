@@ -278,17 +278,6 @@ Use the smallest capable model for the task; small models often fit bounded patc
 - Don't fully trust it's conclusions, often close to correct, but can fail to find appropriate context.
 - Can go overboard with verification, make sure it's properly scoped to it's verification context.
 
-### `opencode-go/ox-alpha-free`
-
-> [!IMPORTANT]
-> Usage is current unlimited, use council scouts, reviews.
-> Exploring what it's best at still.
-
-- Default to `high`, or `medium` if pretty simple small and fast task.
-- **Ox shadow**: most worfklows should duplicate each scout or review with an independent, parallel opencode-go/ox-alpha-free runs.
-  - Use the using the same brief, most scouts, reviews, verify should use this.
-  - Keep the normal primary model, reconcile both outputs, and report any major disagreements.
-
 ### `opencode-go/deepseek-v4-flash`
 
 - Default to `high`; treat as independent version of `gpt-5.6-luna-fast`.

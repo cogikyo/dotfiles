@@ -153,15 +153,6 @@ Use `adaptive` when evidence should determine the shape and `orchestrated` for a
 - Don't fully trust its conclusions, often close to correct, but can fail to find appropriate context.
 - Can go overboard with verification, make sure it's properly scoped to its verification context.
 
-### `opencode-go/ox-alpha-free`
-
-> [!IMPORTANT]
-> Usage is current unlimited, use council scouts, reviews.
-> Exploring what it's best at still.
-
-- Default to `high`, or `medium` if pretty simple small and fast task.
-- Should be used as much as possible for independent council to see how it does.
-
 ### `opencode-go/deepseek-v4-flash`
 
 - Default to `high`; treat as independent version of `gpt-5.6-luna-fast`.
