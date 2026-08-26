@@ -119,11 +119,6 @@ Keep synthesis here, and never manufacture a council or treat child count as evi
 - Don't fully trust its conclusions, often close to correct, but can fail to find appropriate context.
 - Can go overboard with verification, make sure it's properly scoped to its verification context.
 
-### `opencode-go/deepseek-v4-flash`
-
-- Default to `high`; treat as independent version of `gpt-5.6-luna-fast`.
-- Best to add on to tasks where scouting is less certain and stronger confidence is needed.
-
 ### `opencode-go/glm-5.3`
 
 - Default to `high` as an extra agent for council reviews/verifies.

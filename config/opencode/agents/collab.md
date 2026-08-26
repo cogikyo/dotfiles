@@ -278,11 +278,6 @@ Use the smallest capable model for the task; small models often fit bounded patc
 - Don't fully trust it's conclusions, often close to correct, but can fail to find appropriate context.
 - Can go overboard with verification, make sure it's properly scoped to it's verification context.
 
-### `opencode-go/deepseek-v4-flash`
-
-- Default to `high`; treat as independent version of `gpt-5.6-luna-fast`.
-- Best to add on to tasks where scouting is less certain and stronger confidence is needed.
-
 ### `opencode-go/glm-5.3`
 
 - Default to `high` as an extra agent for council reviews/verifies.
