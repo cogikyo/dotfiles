@@ -1113,7 +1113,7 @@ function recoverableText(messages: unknown[]) {
 }
 
 function hasWriteAccess(rules: Rule[]) {
-  const writePermissions = new Set(["*", "bash", "edit", "repo_clone", "spec_title", "task", "write"]);
+  const writePermissions = new Set(["*", "bash", "edit", "spec_title", "task", "write"]);
   return rules.some((rule) => rule.action === "allow" && writePermissions.has(rule.permission));
 }
 

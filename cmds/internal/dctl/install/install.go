@@ -496,7 +496,7 @@ type goBinary struct {
 	daemon                                bool
 }
 
-var goBinaries = []goBinary{{"dctl", "cmds", "./cmd/dctl", "", false}, {"hyprd", "cmds", "./cmd/hyprd", "", true}, {"ewwd", "cmds", "./cmd/ewwd", "", false}, {"newtab", "cmds", "./cmd/newtab", "", true}}
+var goBinaries = []goBinary{{"dctl", "cmds", "./cmd/dctl", "", false}, {"hyprd", "cmds", "./cmd/hyprd", "", true}, {"ewwd", "cmds", "./cmd/ewwd", "", false}, {"newtab", "cmds", "./cmd/newtab", "", true}, {"src", "cmds", "./cmd/src", "", false}}
 
 func installGo(ctx context.Context, root paths.Root, out *output.Printer, opts Options, runner execx.Runner) error {
 	out.Header("Building Go binaries")

@@ -100,8 +100,6 @@
     "todowrite": "allow",
     "question": "allow",
     "task": "allow",
-    "repo_clone": "allow",
-    "repo_overview": "allow",
     "chrome-devtools_*": "deny",
     "spec_title": "deny",
     "task_status": "allow",
