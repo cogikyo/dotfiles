@@ -158,7 +158,7 @@ Use `adaptive` when evidence should determine the shape and `orchestrated` for a
 - Default to `high` as an extra agent for council reviews/verifies.
 - Treat as independent version of `claude-opus-5`.
 
-### `opencode-go/k3`
+### `opencode-go/kimi-k3`
 
 - Default to `high`. Note: provider may change to `max` even if another level is requested.
 - Useful as divergent review or planning direction when ample time is available.

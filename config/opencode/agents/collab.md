@@ -283,7 +283,7 @@ Use the smallest capable model for the task; small models often fit bounded patc
 - Default to `high` as an extra agent for council reviews/verifies.
 - Treat as independent version of `claude-opus-5`.
 
-### `opencode-go/k3`
+### `opencode-go/kimi-k3`
 
 - Default to `high`. Note: provider may change to `max` even if another level is requested.
 - Useful as divergent review or implementation direction when ample time is available.

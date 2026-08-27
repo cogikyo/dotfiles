@@ -65,7 +65,7 @@
     },
     "opencode-go": {
       "models": {
-        "k3": {
+        "kimi-k3": {
           "name": "Kimi K3",
           "reasoning": true,
           "options": {
