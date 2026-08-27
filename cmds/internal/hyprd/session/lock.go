@@ -1,8 +1,6 @@
 package session
 
 import (
-	"bufio"
-	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -21,7 +19,6 @@ const pseudoLockWorkspace = 6         // workspace reserved for the visual black
 const fullLockGrace = 2 * time.Second // hyprlock cancel window
 const fullLockDelay = time.Second     // let killall settle before manual hyprlock takes the display
 const idleUnlockSuppress = 2 * time.Second
-const mediaInhibitRetry = 250 * time.Millisecond
 
 // pamLoadFlag is the runtime handshake consumed by `hyprd ssh pam-load` from pam_exec.
 const pamLoadFlag = "hyprd-ssh-pam-load"
@@ -50,11 +47,9 @@ type Lock struct {
 }
 
 type lockState struct {
-	workspace          int
-	musicPlaying       bool
-	restoreWidgets     bool
-	mediaInhibitCancel context.CancelFunc
-	mediaInhibitDone   chan struct{}
+	workspace      int
+	musicPlaying   bool
+	restoreWidgets bool
 }
 
 func NewLock(h *hypr.Client, s *state.State) *Lock {
@@ -163,7 +158,6 @@ func (l *Lock) unlock() (string, error) {
 	l.idleUnlockAfter = time.Time{}
 	l.mu.Unlock()
 
-	stopMediaInhibit(saved)
 	if err := l.exitBlackout(saved, saved.musicPlaying); err != nil {
 		return "lock: unlocked", err
 	}
@@ -268,7 +262,6 @@ func (l *Lock) runHyprlock(saved *lockState, delay, grace time.Duration, loadSSH
 	resumeMusic := saved.musicPlaying
 	l.mu.Unlock()
 
-	stopMediaInhibit(saved)
 	if err := l.exitBlackout(saved, resumeMusic); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd lock: unlock after hyprlock: %v\n", err)
 	}
@@ -326,11 +319,7 @@ func (l *Lock) enterBlackout(saved *lockState) {
 	if !l.active(saved) {
 		return
 	}
-	exec.Command("playerctl", "-a", "pause").Run()
-	if !l.active(saved) {
-		return
-	}
-	l.startMediaInhibit(saved)
+	exec.Command("playerctl", "--player=spotify", "pause").Run()
 	if !l.active(saved) {
 		return
 	}
@@ -341,83 +330,6 @@ func (l *Lock) active(saved *lockState) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return l.saved == saved
-}
-
-func (l *Lock) startMediaInhibit(saved *lockState) {
-	ctx, cancel := context.WithCancel(context.Background())
-	done := make(chan struct{})
-
-	l.mu.Lock()
-	if l.saved != saved {
-		l.mu.Unlock()
-		cancel()
-		return
-	}
-	saved.mediaInhibitCancel = cancel
-	saved.mediaInhibitDone = done
-	l.mu.Unlock()
-
-	go func() {
-		defer close(done)
-		l.inhibitMedia(ctx, saved)
-	}()
-}
-
-func (l *Lock) inhibitMedia(ctx context.Context, saved *lockState) {
-	for ctx.Err() == nil && l.active(saved) {
-		cmd := exec.CommandContext(ctx, "playerctl", "-a", "--follow", "status")
-		stdout, err := cmd.StdoutPipe()
-		if err == nil {
-			err = cmd.Start()
-		}
-		if err == nil {
-			scanner := bufio.NewScanner(stdout)
-			for scanner.Scan() {
-				if strings.TrimSpace(scanner.Text()) != "Playing" {
-					continue
-				}
-				if ctx.Err() != nil || !l.active(saved) {
-					break
-				}
-				if err := exec.CommandContext(ctx, "playerctl", "-a", "pause").Run(); err != nil && ctx.Err() == nil && l.active(saved) {
-					fmt.Fprintf(os.Stderr, "hyprd lock: inhibit media: %v\n", err)
-				}
-			}
-			if scanErr := scanner.Err(); scanErr != nil && ctx.Err() == nil && l.active(saved) {
-				fmt.Fprintf(os.Stderr, "hyprd lock: follow media status: %v\n", scanErr)
-			}
-			err = cmd.Wait()
-		}
-		if ctx.Err() != nil || !l.active(saved) {
-			return
-		}
-		var exitErr *exec.ExitError
-		if err != nil && !errors.As(err, &exitErr) {
-			fmt.Fprintf(os.Stderr, "hyprd lock: follow media status: %v\n", err)
-		}
-		if !waitMediaInhibit(ctx) {
-			return
-		}
-	}
-}
-
-func waitMediaInhibit(ctx context.Context) bool {
-	timer := time.NewTimer(mediaInhibitRetry)
-	defer timer.Stop()
-	select {
-	case <-ctx.Done():
-		return false
-	case <-timer.C:
-		return true
-	}
-}
-
-func stopMediaInhibit(saved *lockState) {
-	if saved.mediaInhibitCancel == nil {
-		return
-	}
-	saved.mediaInhibitCancel()
-	<-saved.mediaInhibitDone
 }
 
 func (l *Lock) closeEwwWidgets(saved *lockState) {
