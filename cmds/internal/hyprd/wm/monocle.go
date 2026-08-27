@@ -1,6 +1,7 @@
 package wm
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -23,12 +24,21 @@ func NewMonocle(h *hypr.Client, s *state.State) *Monocle {
 }
 
 // Execute toggles monocle on the current workspace.
+//
+// Restore wins when a receipt exists or special:mono{n} still holds windows.
 func (m *Monocle) Execute() (string, error) {
 	wsID, err := m.hypr.ActiveWorkspace()
 	if err != nil {
 		return "", err
 	}
 	if m.state.GetMonocle(wsID) != nil {
+		return m.deactivate(wsID)
+	}
+	parked, err := m.parked(wsID)
+	if err != nil {
+		return "", err
+	}
+	if len(parked) > 0 {
 		return m.deactivate(wsID)
 	}
 	return m.activate()
@@ -77,7 +87,7 @@ func (m *Monocle) activate() (string, error) {
 	}
 
 	master := tiled[0].Address
-	monoWS := fmt.Sprintf("special:mono%d", wsID)
+	monoWS := monoWorkspace(wsID)
 	var displaced []state.MonocleWindow
 	for _, w := range tiled {
 		if w.Address == active.Address {
@@ -116,31 +126,108 @@ func (m *Monocle) activate() (string, error) {
 }
 
 // deactivate restores parked windows, master position, three-body state, and split ratio.
+//
+// Restore set is recorded Windows union clients on special:mono{n}.
+// Orphan-only heal (nil receipt) yanks those clients back and skips unfloat/extras.
 func (m *Monocle) deactivate(wsID int) (string, error) {
 	ms := m.state.GetMonocle(wsID)
-	if ms == nil {
+	parked, err := m.parked(wsID)
+	if err != nil {
+		return "", err
+	}
+	restore := restoreSet(ms, parked)
+	if ms == nil && len(restore) == 0 {
 		return "", nil
 	}
-	cfg := m.state.GetConfig()
 
-	if ms.Focused != "" {
+	if ms != nil && ms.Focused != "" {
 		_ = m.hypr.FocusWindow(ms.Focused)
 		_ = m.hypr.ToggleFloatActive()
 	}
-	for _, mw := range ms.Windows {
-		_ = m.hypr.MoveWindowToWorkspace(mw.Address, strconv.Itoa(mw.OriginWS), false)
-	}
-	m.ensureMaster(wsID, ms.Master)
-	if ms.SavedThreeBody != nil {
-		m.restoreThreeBody(wsID, ms.SavedThreeBody)
-	}
-	m.restoreSplitRatio(ms.SavedSplitRatio, cfg)
-	if ms.Focused != "" {
-		_ = m.hypr.FocusWindow(ms.Focused)
-	}
-	m.state.ClearMonocle(wsID)
 
-	return fmt.Sprintf("monocle off: ws%d, %d windows restored", wsID, len(ms.Windows)), nil
+	var errs []error
+	moved := 0
+	for _, mw := range restore {
+		dest := mw.OriginWS
+		if dest == 0 {
+			dest = wsID
+		}
+		if err := m.hypr.MoveWindowToWorkspace(mw.Address, strconv.Itoa(dest), false); err != nil {
+			errs = append(errs, fmt.Errorf("%s: %w", mw.Address, err))
+			continue
+		}
+		moved++
+	}
+	if len(restore) > 0 && moved == 0 {
+		return "", fmt.Errorf("monocle restore ws%d: %w", wsID, errors.Join(errs...))
+	}
+
+	if ms != nil {
+		m.ensureMaster(wsID, ms.Master)
+		if ms.SavedThreeBody != nil {
+			m.restoreThreeBody(wsID, ms.SavedThreeBody)
+		}
+		m.restoreSplitRatio(ms.SavedSplitRatio, m.state.GetConfig())
+		if ms.Focused != "" {
+			_ = m.hypr.FocusWindow(ms.Focused)
+		}
+		m.state.ClearMonocle(wsID)
+	}
+
+	if len(errs) > 0 {
+		return "", fmt.Errorf("monocle restore ws%d: %d/%d moved: %w", wsID, moved, len(restore), errors.Join(errs...))
+	}
+	return fmt.Sprintf("monocle off: ws%d, %d windows restored", wsID, moved), nil
+}
+
+func monoWorkspace(wsID int) string {
+	return fmt.Sprintf("special:mono%d", wsID)
+}
+
+// parked returns every client whose workspace name is special:mono{n}.
+func (m *Monocle) parked(wsID int) ([]state.MonocleWindow, error) {
+	clients, err := m.hypr.Clients()
+	if err != nil {
+		return nil, err
+	}
+	name := monoWorkspace(wsID)
+	var out []state.MonocleWindow
+	for _, c := range clients {
+		if c.Workspace.Name != name || c.Address == "" {
+			continue
+		}
+		out = append(out, state.MonocleWindow{Address: c.Address, OriginWS: wsID})
+	}
+	return out, nil
+}
+
+// restoreSet unions receipt windows with clients found on special:mono{n}.
+func restoreSet(ms *state.MonocleState, parked []state.MonocleWindow) []state.MonocleWindow {
+	seen := make(map[string]struct{})
+	var out []state.MonocleWindow
+	if ms != nil {
+		for _, mw := range ms.Windows {
+			if mw.Address == "" {
+				continue
+			}
+			if _, ok := seen[mw.Address]; ok {
+				continue
+			}
+			seen[mw.Address] = struct{}{}
+			out = append(out, mw)
+		}
+	}
+	for _, mw := range parked {
+		if mw.Address == "" {
+			continue
+		}
+		if _, ok := seen[mw.Address]; ok {
+			continue
+		}
+		seen[mw.Address] = struct{}{}
+		out = append(out, mw)
+	}
+	return out
 }
 
 // ensureMaster swaps the saved master back to position 0 if Hyprland re-tiled in a different order.
