@@ -189,42 +189,23 @@ tabs:
         cwd: "~/LeadPier/backend/services"
         actions:
           nvim: {}
-      - name: term
+      - name: leadpier
         title: "« 󰠳  »"
+        cwd: "~/LeadPier"
+        command: nvim
+        executables: [nvim]
+        actions:
+          nvim: {}
+      - name: frontend-term
+        title: "«   »"
+        cwd: "~/LeadPier/frontend"
+        actions:
+          term: {}
+      - name: backend-term
+        title: "«   »"
         cwd: "~/LeadPier"
         actions:
           term: {}
-        layout: "fat:bias=50"
-        panes:
-          - cwd: "~/LeadPier"
-      - name: backend
-        title: "«   »"
-        command: nvim
-        executables: [nvim]
-        cwd: "~/LeadPier/backend"
-        actions:
-          nvim:
-            pane: 0
-          term:
-            pane: 1
-        layout: "fat:bias=80"
-        panes:
-          - command: ""
-            cwd: "~/LeadPier/frontend"
-      - name: pier
-        title: "«   »"
-        command: nvim
-        executables: [nvim]
-        cwd: "~/LeadPier/pier"
-        actions:
-          nvim:
-            pane: 0
-          term:
-            pane: 1
-        layout: "fat:bias=80"
-        panes:
-          - command: ""
-            cwd: "~/LeadPier"
 
 # ╭───────────────────────────────────────────────────────────────────────────────╮
 # │ background                                                                    │
