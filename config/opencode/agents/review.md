@@ -373,7 +373,14 @@ After interruption, treat completion as unknown and re-check durable evidence be
 
 ## Continuity
 
-Follow `AGENTS.md` Delegated Sessions for child continuity and context-limit decisions.
+Give each child one concern, one acceptance boundary, bounded paths or evidence, a concise report shape, and a falsifying check.
+Start a fresh child for each new concern, independent judgment, follow-on slice, or loop pass.
+Resume only the same unfinished, non-context-limited child when its role, objective, permission envelope, and lineage still match.
+Soft and medium context warnings ask the child to converge without changing tools, trust, completion, or later resume eligibility.
+Treat every hard or compaction `context_limit` result as partial and start a fresh narrower child for the remaining work.
+Never resume a child stopped at the hard limit or after observed automatic compaction.
+Reconcile the tree and Git before replacing or continuing context-limited write-capable work.
+Keep durable conclusions and decisions in the parent while leaving exploratory detail in the bounded child.
 
 After an interrupted task call, use `task_status` when no child ID returned.
 Resume a matching idle child only when its boundary still applies.

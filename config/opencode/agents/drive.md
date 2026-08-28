@@ -190,6 +190,10 @@ Prefer a fresh child for a new objective, independent judgment, or a working set
 Every approved loop iteration uses fresh children.
 Resume only an interrupted attempt whose result remains unknown.
 Its role, objective, permissions, and lineage must remain unchanged.
+Soft and medium context warnings ask the child to converge without changing tools, trust, completion, or later resume eligibility.
+Treat every hard or compaction `context_limit` result as partial and start a fresh narrower child for the remaining work.
+Never resume a child stopped at the hard limit or after observed automatic compaction.
+Keep durable conclusions and decisions in the parent while leaving exploratory detail in the bounded child.
 
 If an interrupted task call returned no child ID, call `task_status` before dispatching a replacement.
 Resume a matching idle child only when its boundary still applies.
