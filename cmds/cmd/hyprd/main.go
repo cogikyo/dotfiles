@@ -5,6 +5,8 @@ import (
 	"dotfiles/cmds/internal/daemon"
 	"dotfiles/cmds/internal/hyprd/cli"
 	notifypkg "dotfiles/cmds/internal/hyprd/notify"
+	opencodepkg "dotfiles/cmds/internal/hyprd/opencode"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -73,6 +75,8 @@ func main() {
 		cmdShare()
 	case "notify":
 		cmdNotify()
+	case "opencode":
+		cmdOpenCode()
 	case "accent":
 		cmdAccent()
 	case "vpn":
@@ -251,6 +255,76 @@ func cmdNotify()  { notifypkg.CmdNotify(client, os.Args[2:]) }
 func cmdAccent()  { sendCommand("accent " + strings.Join(os.Args[2:], " ")) }
 func cmdRebuild() { sendCommand("rebuild") }
 
+func cmdOpenCode() {
+	if len(os.Args) < 3 {
+		fmt.Fprintln(os.Stderr, "usage: hyprd opencode {queue|now|recycle|status|cancel}")
+		os.Exit(1)
+	}
+	command := "opencode " + strings.Join(os.Args[2:], " ")
+	response, err := request(command)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Println(response)
+	if daemonResponseFailed(response) {
+		os.Exit(1)
+	}
+	if os.Args[2] != "now" && os.Args[2] != "recycle" {
+		return
+	}
+
+	fields := strings.Fields(response)
+	if len(fields) != 2 || fields[0] != "job" && fields[0] != "already" {
+		fmt.Fprintln(os.Stderr, "error: malformed opencode job response")
+		os.Exit(1)
+	}
+	watchOpenCode(fields[1])
+}
+
+func request(command string) (string, error) {
+	if !client.IsRunning() {
+		return "", fmt.Errorf("hyprd daemon not running")
+	}
+	return client.Send(command)
+}
+
+func watchOpenCode(id string) {
+	last := ""
+	for {
+		response, err := request("opencode status " + id)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		if daemonResponseFailed(response) {
+			fmt.Fprintln(os.Stderr, response)
+			os.Exit(1)
+		}
+
+		var status opencodepkg.Status
+		if err := json.Unmarshal([]byte(response), &status); err != nil {
+			fmt.Fprintf(os.Stderr, "error: parse opencode status: %v\n", err)
+			os.Exit(1)
+		}
+		line := status.State + "\x00" + status.Phase + "\x00" + status.Message
+		if line != last {
+			fmt.Printf("%s [%s] %s\n", id, status.Phase, status.Message)
+			last = line
+		}
+		if status.Terminal() {
+			for _, detail := range status.Details {
+				fmt.Println("  " + detail)
+			}
+			if status.State != "done" {
+				os.Exit(1)
+			}
+			return
+		}
+		time.Sleep(500 * time.Millisecond)
+	}
+}
+
 func cmdStatus() {
 	jsonOutput := false
 	for _, arg := range os.Args[2:] {
@@ -353,6 +427,13 @@ Lock:
   hyprd lock full        Full lock (wraps hyprlock with pre/post hooks)
   hyprd share            Toggle screen-share mode
   hyprd share on|off     Enter/exit screen-share mode explicitly
+
+OpenCode:
+  hyprd opencode queue          Refresh after three quiet polls; notify on completion
+  hyprd opencode now            Refresh immediately and watch progress
+  hyprd opencode recycle        Recycle safe attach panes and watch progress
+  hyprd opencode status [job]   Poll the active or named refresh job
+  hyprd opencode cancel [job]   Cancel a waiting or queued refresh job
 
 Browser:
   hyprd browser launch

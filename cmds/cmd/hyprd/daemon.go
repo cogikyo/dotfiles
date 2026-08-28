@@ -7,6 +7,7 @@ import (
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/kitty"
 	notifypkg "dotfiles/cmds/internal/hyprd/notify"
+	opencodepkg "dotfiles/cmds/internal/hyprd/opencode"
 	"dotfiles/cmds/internal/hyprd/session"
 	"dotfiles/cmds/internal/hyprd/state"
 	"dotfiles/cmds/internal/hyprd/windows"
@@ -46,6 +47,7 @@ type Daemon struct {
 	shareCtl  *session.Share
 	pickerCtl *session.Picker
 	accentCtl *Accent
+	opencode  *opencodepkg.Controller
 	restartCh chan struct{}
 }
 
@@ -68,6 +70,17 @@ func New() (*Daemon, error) {
 		restartCh: make(chan struct{}, 1),
 	}
 	d.config.Store(&cfg)
+	d.opencode = opencodepkg.New(func(title, body string) {
+		notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load())
+		if err := notifier.Handle(notifypkg.NotifyRequest{
+			Source:  "send",
+			App:     "hyprd",
+			Summary: title,
+			Body:    body,
+		}); err != nil {
+			fmt.Fprintf(os.Stderr, "hyprd opencode notify: %v\n", err)
+		}
+	})
 	d.shareCtl = session.NewShare(hyprClient, stateStore, func() config.GapsOutConfig {
 		cfg := d.config.Load()
 		if cfg == nil {
@@ -306,6 +319,8 @@ func (d *Daemon) handleCommand(command string) string {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
+	case "opencode":
+		return d.opencode.Handle(arg)
 	case "rebuild":
 		return d.handleRebuild()
 	default:
@@ -425,6 +440,9 @@ func (d *Daemon) handleNotify(arg string) string {
 //
 // Runtime state is written to stateFile before the binary swap and consumed once by restoreState after exec.
 func (d *Daemon) handleRebuild() string {
+	if msg := d.opencode.RebuildBlocked(); msg != "" {
+		return "error: " + msg
+	}
 	home, err := os.UserHomeDir()
 	if err != nil {
 		return fmt.Sprintf("error: %v", err)
@@ -444,6 +462,10 @@ func (d *Daemon) handleRebuild() string {
 	if out, err := cmd.CombinedOutput(); err != nil {
 		os.Remove(tmpBin)
 		return fmt.Sprintf("error: build failed: %v\n%s", err, out)
+	}
+	if msg := d.opencode.RebuildBlocked(); msg != "" {
+		os.Remove(tmpBin)
+		return "error: " + msg
 	}
 
 	stateData, err := d.state.JSON()

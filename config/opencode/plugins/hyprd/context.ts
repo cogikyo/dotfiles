@@ -16,6 +16,8 @@ export type KittyContext = {
   kitty_window_id: number
   updated_at: number
   agent?: string
+  directory?: string
+  generation?: number
 }
 
 export type KittyContexts = Record<string, KittyContext>

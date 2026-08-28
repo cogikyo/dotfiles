@@ -140,6 +140,7 @@ Normal flow:
 
 - The context file is `${XDG_RUNTIME_DIR}/opencode/kitty-context.json`, falling back to `/tmp/opencode-${uid}/kitty-context.json`.
 - The directory is mode `0700` and the file is mode `0600`.
+- Each session record includes its project directory and TUI generation with the existing Kitty pane identity.
 - The writer prunes stale entries and dead Kitty sockets.
 - The reader follows parent session IDs so subagent notifications target the pane that owns the parent session.
 - Idle reminders only fire when the context is fresh.

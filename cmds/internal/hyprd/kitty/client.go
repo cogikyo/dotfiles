@@ -38,6 +38,7 @@ type Tab struct {
 
 type Pane struct {
 	ID        int    `json:"id"`
+	PID       int    `json:"pid"`
 	Title     string `json:"title"`
 	IsActive  bool   `json:"is_active"`
 	IsFocused bool   `json:"is_focused"`
@@ -82,6 +83,48 @@ func (k *Client) gotoTab(index int) error {
 func (k *Client) FocusWindow(id int) error {
 	return exec.Command("kitty", "@", "--to", k.socketPath,
 		"focus-window", "--match", fmt.Sprintf("id:%d", id)).Run()
+}
+
+// SendText writes to one pane without changing focus.
+func (k *Client) SendText(id int, text string) error {
+	cmd := exec.Command("kitty", "@", "--to", k.socketPath,
+		"send-text", "--match", fmt.Sprintf("id:%d", id), "--stdin")
+	cmd.Stdin = strings.NewReader(text)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("kitty send-text: %w: %s", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+// Pane returns the current state of one pane.
+func (k *Client) Pane(id int) (Pane, bool, error) {
+	windows, err := k.FullState()
+	if err != nil {
+		return Pane{}, false, err
+	}
+	for _, window := range windows {
+		for _, tab := range window.Tabs {
+			for _, pane := range tab.Windows {
+				if pane.ID == id {
+					return pane, true, nil
+				}
+			}
+		}
+	}
+	return Pane{}, false, nil
+}
+
+// ForegroundProcesses inspects one pane's foreground process group.
+func (k *Client) ForegroundProcesses(id int) ([]Process, error) {
+	pane, found, err := k.Pane(id)
+	if err != nil {
+		return nil, err
+	}
+	if !found {
+		return nil, fmt.Errorf("kitty pane %d not found", id)
+	}
+	return pane.ForegroundProcesses, nil
 }
 
 func (k *Client) launch(args ...string) error {

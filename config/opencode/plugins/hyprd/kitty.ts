@@ -26,6 +26,8 @@ const AGENT_ACCENTS = {
 
 const KITTY_PID = Number(process.env.KITTY_PID) || 0
 const KITTY_WINDOW_ID = Number(process.env.KITTY_WINDOW_ID) || 0
+const DIRECTORY = process.cwd()
+const GENERATION = Date.now()
 const execFileAsync = promisify(execFile)
 
 function sleep(ms) {
@@ -183,6 +185,8 @@ async function writeContext(sessionID, agent) {
       kitty_pid: KITTY_PID,
       kitty_window_id: KITTY_WINDOW_ID,
       updated_at: Date.now(),
+      directory: DIRECTORY,
+      generation: GENERATION,
       ...(agent ? { agent } : {}),
     }
 
