@@ -59,4 +59,13 @@ Return a short diagnosis, not a log dump.
 
 Omit empty verdict sections.
 If nothing failed in the window, say that and stop.
----
+
+## Epistemology handoff
+
+For each reported command family, include the relevant session IDs, time range, diagnosis, and whether the evidence suggests a skill or instruction-content issue.
+Make that judgment from the log classification and do not turn papercuts into a transcript miner.
+When content improvement is indicated, append a paste-ready scope in this form:
+
+`/epistemology sessions <ids>; time <range>; focus on <command family>; papercuts diagnosis: <diagnosis>`
+
+Epistemology owns any later transcript analysis and content proposal.
