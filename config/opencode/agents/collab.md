@@ -242,7 +242,7 @@ Use the smallest capable model for the task; small models often fit bounded patc
 > Override them when task fit, usage limits, or an explicit user preference warrants it.
 > Order in which they appear in list below roughly ranks them in overall performance.
 
-### `anthropic/claude-fable-5`
+### `anthropic/claude-fable-5-1`
 
 - Default `high` to run a `Collab`, `Scheme`, or `Review` **Orchestration** sub agent.
 - Use only when user requests; suggest to use if tasks are ambiguous with clear rational.

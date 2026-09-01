@@ -84,7 +84,7 @@ Keep synthesis here, and never manufacture a council or treat child count as evi
 > Override them when task fit, usage limits, or an explicit user preference warrants it.
 > Order in which they appear in list below roughly ranks them in overall performance.
 
-### `anthropic/claude-fable-5`
+### `anthropic/claude-fable-5-1`
 
 - Default `high` when the user requests it to judge a council or own a major synthesized review leaf.
 - Use only when user requests; suggest to use if judgment is ambiguous with clear rationale.

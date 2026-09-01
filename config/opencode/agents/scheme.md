@@ -118,7 +118,7 @@ Use `adaptive` when evidence should determine the shape and `orchestrated` for a
 > Override them when task fit, usage limits, or an explicit user preference warrants it.
 > Order in which they appear in list below roughly ranks them in overall performance.
 
-### `anthropic/claude-fable-5`
+### `anthropic/claude-fable-5-1`
 
 - Default `high` to run a `Review` **Orchestration** sub agent.
 - Use only when user requests; suggest to use if planning is ambiguous with clear rationale.
