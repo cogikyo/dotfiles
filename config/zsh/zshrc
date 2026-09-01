@@ -111,6 +111,8 @@ alias pu='pier update'
 alias neu='ssh cullyn@neumann'
 alias abb='ssh cullyn@abbott'
 alias cst='ssh cullyn@costello'
+alias zf='cd ~/LeadPier/frontend'
+alias zb='cd ~/LeadPier/backend'
 alias zp='cd ~/LeadPier/backend/services/partner'
 function lazygit() {
     local invocation_cwd=$PWD

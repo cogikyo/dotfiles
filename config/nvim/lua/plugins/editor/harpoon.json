@@ -26,9 +26,9 @@
     },
     "/home/cullyn/LeadPier/backend/services": {
       "pins": [
+        "compliance/init.compliance.go",
         "partner/init.partner.go",
         "webhooks/init.tracking.go",
-        "compliance/init.compliance.go",
         "billing/init.billing.go",
         "routing/init.routing.go",
         "aggregation/migrate.go",
