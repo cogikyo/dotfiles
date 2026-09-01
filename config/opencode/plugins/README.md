@@ -15,7 +15,7 @@ Running sessions keep the loaded plugin set.
 
 | Feature | Entrypoint | ID | Runtime |
 |---|---|---|---|
-| Claude auth | `opencode-claude-auth@1.5.4` | (package) | server |
+| Claude auth | `opencode-claude-auth@2.2.0` | (package) | server |
 | Delegate task | `delegate/index.ts` | `delegate-task` | server |
 | Usage status tool | `usage/tool.ts` | `usage-status` | server |
 | Hyprland notifications | `hyprd/notify.ts` | `hyprd-notify` | server |

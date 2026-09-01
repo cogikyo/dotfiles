@@ -1,0 +1,5 @@
+{
+  "plugin": [
+    "opencode-claude-auth@2.2.0"
+  ]
+}
