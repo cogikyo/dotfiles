@@ -61,16 +61,29 @@ return {
 			},
 		})
 
+		local function open_recent(root)
+			for _, file in ipairs(vim.v.oldfiles) do
+				if vim.fn.filereadable(file) == 1 and (not root or vim.fs.relpath(root, file)) then
+					vim.cmd("edit " .. vim.fn.fnameescape(file))
+					return
+				end
+			end
+		end
+
 		vim.api.nvim_create_autocmd("User", {
 			pattern = "AlphaReady",
 			callback = function(ev)
 				vim.keymap.set("n", "<CR>", function()
-					for _, file in ipairs(vim.v.oldfiles) do
-						if vim.fn.filereadable(file) == 1 then
-							vim.cmd("edit " .. vim.fn.fnameescape(file))
-							return
-						end
+					local dirty = vim.fn.systemlist({ "git", "status", "--porcelain" })
+					if vim.v.shell_error ~= 0 then
+						open_recent()
+						return
 					end
+					if #dirty > 0 then
+						vim.cmd("Telescope git_status")
+						return
+					end
+					open_recent(vim.fn.systemlist({ "git", "rev-parse", "--show-toplevel" })[1])
 				end, { buffer = ev.buf })
 			end,
 		})
