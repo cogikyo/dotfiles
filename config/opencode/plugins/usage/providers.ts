@@ -20,6 +20,11 @@ export const usageProviders = {
     label: "xAI",
     staleAfterMS: 10 * 60_000,
   },
+  cursor: {
+    id: "cursor",
+    label: "Cursor",
+    staleAfterMS: 10 * 60_000,
+  },
   opencodeGo: {
     id: "opencode-go",
     label: "OpenCode",
