@@ -90,6 +90,8 @@ Keep synthesis here, and never manufacture a council or treat child count as evi
 - Use only when user requests; suggest to use if judgment is ambiguous with clear rationale.
 - Often yields verbose or complex output that needs concise synthesis.
 - Is most likely to provide correct answers and correct decisions.
+- Burns the Anthropic hourly window fast; always takes the Anthropic slot over opus. Do not dispatch opus in a fable workflow.
+- Never `scribe/*` or durable docs. Transient schemes only if ever, and they're weak at that too.
 
 ### `openai/gpt-5.6-sol-fast`
 
@@ -107,11 +109,18 @@ Keep synthesis here, and never manufacture a council or treat child count as evi
 - Best at handling corrections after reviews.
 - Native X search is the `x` skill via Grok CLI, not a dispatched leaf; instruct `verify/web` to use the skill.
 
+### `cursor/any`
+
+- Fallback provider. Can run any user-requested Cursor catalog model.
+- Default `cursor/grok-4.6` at `high`. Cursor Models quota goes further than Claude/GPT (Other Models).
+- Keep `xai/grok-4.6` as the default Grok route unless spending Cursor credits.
+
 ### `anthropic/claude-opus-5`
 
+- Do not use when fable is already in the workflow; fable always has priority.
+- Never `scribe/*` or durable docs.
 - Default to `medium`; avoid `high` or above, as it takes too long and often produces noise.
-- Best general sub agent for `review/*` tasks.
-- Great for council reviews when headroom requires it.
+- Best general sub agent for `review/*` tasks when fable is not in play.
 
 ### `openai/gpt-5.6-luna-fast`
 
@@ -119,17 +128,10 @@ Keep synthesis here, and never manufacture a council or treat child count as evi
 - Don't fully trust its conclusions, often close to correct, but can fail to find appropriate context.
 - Can go overboard with verification, make sure it's properly scoped to its verification context.
 
-### `opencode-go/glm-5.3`
+### `opencode-go/any`
 
-- Default to `high` as an extra agent for council reviews/verifies.
-- Treat as independent version of `claude-opus-5`.
-
-### `opencode-go/kimi-k3`
-
-- Default to `high`. Note: provider may change to `max` even if another level is requested.
-- Useful as divergent review direction when ample time is available.
-- Bound it tightly because it is slow and prone to overproducing or over implementing.
-- Best at security reviews, but can go overboard if it doesn't know omitted assumptions.
+- Fallback provider. Can run any user-requested OpenCode Go catalog model.
+- Default `opencode-go/glm-5.3` at `high`.
 
 ### Token Usage
 

@@ -222,7 +222,7 @@ Use a **Subagent Leaf** when one owner can satisfy one acceptance boundary:
 - `build/*`: change repository state; edit.
 - `review/*`: provide independent read-only judgment.
 - `verify/*`: gather independent evidence, verify source material.
-- `scribe/*`: improve prose, documentation, or comments.
+- `scribe/*`: improve prose, documentation, or comments. Never fable or opus.
 
 Before dispatch, verify the selected agent's permissions and tools.
 They must support every load-bearing action in the brief.
@@ -248,6 +248,8 @@ Use the smallest capable model for the task; small models often fit bounded patc
 - Use only when user requests; suggest to use if tasks are ambiguous with clear rational.
 - Often yields verbose or complex output that needs concise synthesis.
 - Is most likely to provide correct answers and correct decisions.
+- Burns the Anthropic hourly window fast; always takes the Anthropic slot over opus. Do not dispatch opus in a fable workflow.
+- Never `scribe/*` or durable docs. Transient schemes are allowed.
 
 ### `openai/gpt-5.6-sol-fast`
 
@@ -265,11 +267,18 @@ Use the smallest capable model for the task; small models often fit bounded patc
 - Best at handling corrections after reviews.
 - Native X search is the `x` skill via Grok CLI, not a dispatched leaf; instruct `verify/web` to use the skill.
 
+### `cursor/{any}`
+
+- Fallback provider. Can run any user-requested Cursor catalog model.
+- Default `cursor/grok-4.6` at `high`. Cursor Models quota goes further than Claude/GPT (Other Models).
+- Keep `xai/grok-4.6` as the default Grok route unless spending Cursor credits.
+
 ### `anthropic/claude-opus-5`
 
+- Do not use when fable is already in the workflow; fable always has priority.
+- Never `scribe/*` or durable docs.
 - Default to `medium`; avoid `high` or above, as it takes too long and often produces noise.
-- Best general sub agent for `review/*` tasks.
-- Great for council reviews when headroom requires it.
+- Best general sub agent for `review/*` tasks when fable is not in play.
 - Occasionally good `build/general` when addressing UX/UI concerns.
 
 ### `openai/gpt-5.6-luna-fast`
@@ -278,17 +287,10 @@ Use the smallest capable model for the task; small models often fit bounded patc
 - Don't fully trust it's conclusions, often close to correct, but can fail to find appropriate context.
 - Can go overboard with verification, make sure it's properly scoped to it's verification context.
 
-### `opencode-go/glm-5.3`
+### `opencode-go/{any}`
 
-- Default to `high` as an extra agent for council reviews/verifies.
-- Treat as independent version of `claude-opus-5`.
-
-### `opencode-go/kimi-k3`
-
-- Default to `high`. Note: provider may change to `max` even if another level is requested.
-- Useful as divergent review or implementation direction when ample time is available.
-- Bound it tightly because it is slow and prone to overproducing or over implementing.
-- Best at security reviews, but can go overboard if doesn't know omitted assumptions.
+- Default `opencode-go/glm-5.3` at `high`.
+- Fallback provider. Can run any user-requested OpenCode Go catalog model.
 
 ### Token Usage
 
@@ -552,11 +554,11 @@ That owner runs only the checks approved in the council brief.
 #### Example: implementation council
 
 A user requests competing implementations of one approved spec.
-E.g., assume Sol, Kimi, and Opus are the available models approved for this `build/owner` council.
+E.g., assume Sol, GLM, and Opus are the available models approved for this `build/owner` council.
 
 1. `[xhigh • Sol]` `build/owner`: independent implementation
    - implement the frozen spec in an isolated worktree and return the candidate, checks, decisions, and dissent
-2. `[high • Kimi]` `build/owner`: independent implementation
+2. `[high • GLM]` `build/owner`: independent implementation
    - implement the same spec from the same baseline without inspecting another candidate
 3. `[high • Opus]` `build/owner`: independent implementation
    - produce a third candidate under the same brief and acceptance checks
