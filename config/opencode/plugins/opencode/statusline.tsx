@@ -228,15 +228,15 @@ function GitCount(props: {
 
 function ContextSegment(props: { api: TuiPluginApi; usage?: SessionUsage }) {
   return (
-    <Show when={props.usage} keyed>
+    <Show when={props.usage}>
       {(usage) => (
         <box flexDirection="row" gap={0}>
           <text
-            fg={pressureColor(props.api.theme.current, usage.colorPercent)}
+            fg={pressureColor(props.api.theme.current, usage().colorPercent)}
             wrapMode="none"
           >
             {icons.context}
-            {contextBar(usage.colorPercent)}
+            {contextBar(usage().colorPercent)}
           </text>
         </box>
       )}
