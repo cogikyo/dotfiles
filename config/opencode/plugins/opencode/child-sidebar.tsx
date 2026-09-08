@@ -1,5 +1,6 @@
 /** @jsxImportSource @opentui/solid */
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from '@opencode-ai/plugin/tui'
+import { ScrollBoxRenderable } from '@opentui/core'
 import { Show, createMemo, createSignal, type Accessor } from 'solid-js'
 
 const id = 'opencode-child-sidebar'
@@ -46,7 +47,7 @@ function walk(node: Node, visit: (node: Node, kids: Node[]) => void) {
 }
 
 function isSidebar(node: Node) {
-  return Math.round(node.width) === SIDEBAR_WIDTH
+  return Math.round(node.width) === SIDEBAR_WIDTH && childrenOf(node).some((child) => child instanceof ScrollBoxRenderable)
 }
 
 function patchRow(node: Node, getSide: () => Side) {
