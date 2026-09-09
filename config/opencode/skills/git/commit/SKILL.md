@@ -1,5 +1,6 @@
 ---
 name: commit
+description: Use ONLY in attended Collab for an approved commit task or resolution of already-started merge conflicts; inspect the dirty scope, select atomic commits, stage approved changes, and finish the commit or active merge.
 ---
 
 # Commit
@@ -9,8 +10,12 @@ Use this procedure to create atomic conventional commits or finish an already-st
 ## Scope
 
 - Use it only when the active brief approves a commit task or an active merge resolution.
-- Collab may follow the full procedure.
-- Attended primary Scheme may use Single mode only for approved `.spec/**` artifacts and must refuse merge conflicts.
+- Only attended Collab may follow this procedure, including for approved `.spec/**` artifacts.
+
+Approved commit tasks and already-started merge resolutions normally proceed as direct work.
+Keep routine commits and merge resolutions in this session; never delegate Git mutation.
+For context-heavy Git archaeology, use a bounded read-only scout.
+If the remaining work needs a fresh attended session, provide a handoff rather than spawning Collab.
 
 This procedure does not authorize content edits during an ordinary commit.
 Only edit already-conflicted files while resolving a merge.
@@ -42,7 +47,7 @@ Do not ask for a choice between Single and Partial when the diff makes the answe
 
 Single and Partial create exactly one commit.
 Complex repeats Single or Partial for one story at a time.
-Use Complex only when the active brief approves multiple commits or the full dirty scope.
+Use Complex only when the approved dirty scope contains several atomic stories and the active brief approves multiple commits or the full dirty scope.
 
 A clean worktree is not the success condition.
 Single and Partial preserve unrelated or later work as dirty state.
@@ -80,8 +85,6 @@ Applying it with `git apply --cached` changes the index without changing the wor
 
 Stop when mixed hunks or pre-existing staged state cannot be isolated with index-only operations.
 After a Partial commit and after every Complex commit, inspect all remaining staged and unstaged changes again.
-
-Scheme uses its permitted explicit `.spec/**` path form only after proving that every selected file is wholly approved.
 
 ## Write the message
 
@@ -160,6 +163,7 @@ A hook failure does not expand edit authority.
 
 Treat hook-created worktree changes as real changes and inspect them before staging.
 Never assume they are harmless formatter churn or discard them.
+Never amend the failed attempt; retry an uncreated commit or report an unexpected existing commit before continuing.
 
 For substantive, unrelated, or ambiguous failures, stop and report the failing hook, affected paths, and smallest likely repair.
 Suggest a repair workflow with an owner and falsifying check when the correction exceeds the active task.

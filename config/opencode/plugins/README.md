@@ -41,14 +41,32 @@ Normal flow:
 
 - `model` is `provider/model-id`; when omitted the child inherits the agent's pinned model or the current assistant message's model and effort.
 - `effort` maps to the target model's reasoning variants.
-- `task_id` resumes a direct idle child only when its agent and freshly derived permission envelope still match and it has no context-limit marker.
-- `task_status` lists direct children with task IDs, agents, titles, live statuses, and persisted context-limit markers.
+- `authority` is `read-only` or `write`, and `unattended` is a boolean; both are required when the caller or target is `orchestrator`.
+- `task_id` resumes a direct idle child only when its agent, execution contract, and freshly derived permission envelope match and it has no context-limit marker.
+- `task_status` lists direct children with task IDs, agents, execution authority, titles, live statuses, and persisted context-limit markers.
 - Resume sparingly for the same unfinished work; never resume a context-limited child.
 - The provider must be listed in `config/opencode/delegate.json`.
 - `delegate.json.context` requires positive integer thresholds with `soft < medium < hard`; the explicit defaults are 120,000, 150,000, and 200,000 tokens.
 - Before spawning, it waits abortably if any non-post-reset window is at >=100%, until the latest capped reset passes; stale, errored, or unknown usage proceeds un-gated.
 - Attended children inherit `external_directory` rules and otherwise use their own agent profile; review leaves get read-only defaults.
 - Content-filter-shaped errors return a normal result with `state="error"` instead of throwing.
+
+Collab is the only attended primary and cannot be a child.
+Only Collab can launch `orchestrator`; an Orchestrator can delegate leaves but cannot create another Orchestrator.
+Separate instances can own independent council reviews, broad investigations, or approved autonomous workflows.
+Scheme, Review, and Drive are skills loaded by the current owner, not agent names.
+
+Execution authority is stored in `metadata.delegate.authority` and `metadata.delegate.unattended`.
+Read-only authority adds trailing file-edit and write denials to the child envelope.
+The tool guard also rejects file-write tools and recognized shell mutations for read-only sessions and review leaves.
+These command checks are guardrails, not a shell sandbox.
+A child cannot request write authority under a read-only parent or attended execution under an unattended parent.
+Direct leaf calls outside Orchestrator may omit these fields to use the existing leaf-profile behavior.
+Orchestrator calls must name both fields explicitly; they are never inferred from skills or brief text.
+
+General review uses Orchestrator with read-only authority.
+Planning artifact writes require write authority and explicit paths in the brief; the Scheme skill constrains planning behavior, not runtime permissions.
+Write authority does not grant Git mutation or override an agent's own permission denials.
 
 Context governor:
 
@@ -69,23 +87,27 @@ Context governor:
 - `experimental.session.compacting` can change only the compaction prompt and context; it cannot cancel compaction selectively.
 - Global auto-compaction stays enabled; if an automatic child compaction part appears, the delegate aborts at the next poll and returns `context_limit: compaction` because compaction may already have started.
 
-Unattended envelope, applied when Drive appears anywhere in the parent's session ancestry:
+Unattended envelope, applied when `unattended: true` is selected and carried to descendants:
 
-- The child envelope is composed as review defaults, the agent's whole effective ruleset, delegate denies, external-directory boundaries, and inherited Drive blockers.
+- The child envelope is composed as review defaults, the agent's whole effective ruleset, delegate and authority denies, external-directory boundaries, and inherited unattended blockers.
 - Every `ask` in that composition is rewritten to `deny` in place, so global config, parent, built-in defaults, and the selected agent's own profile are all covered by construction.
 - Rewriting keeps each rule's position, so a later, more specific `allow` still wins; `pacman -Q*` stays allowed even though `pacman *` asks.
 - Rewriting happens before dedupe, otherwise a rewritten inherited rule survives as a tail duplicate and outranks the child's own refinement of the same permission.
 - A leading `*` deny is prepended after dedupe as the floor for permissions no rule matches, since the runtime's own fallback is `ask`.
-- Inheritance skips only that synthetic leading floor, and only when the parent is itself under Drive lineage; a floor is positional, so appending one to a child's tail would outrank every allow the child needs.
-- Only Drive blockers cross from a parent profile; attended parent denies do not disable a specialized child's own tools.
-- Net effect: a child anywhere under Drive can never surface a `question` or a permission prompt, and a denied operation returns to the child as an ordinary tool error for the parent to judge.
-- The same derivation runs for a mode child, so `Drive → Collab → leaf` carries the policy to every depth.
+- Inheritance skips only the synthetic leading floor; appending that floor to a child's tail would outrank every allow the child needs.
+- Unattended children inherit parent denials as blockers; attended children otherwise use their own effective profile and inherited authority.
+- Children always deny `question`; an unattended child also has no permission prompts, and denied operations return as tool errors.
+- The envelope applies on Orchestrator entry and again for each leaf, with matching execution authority required on resume.
 
 Practical failure diagnosis:
 
 - `delegate provider policy missing for <provider>` → add the provider to `delegate.json`.
 - `Unknown effort` → pick a variant that the target model exposes in config.
 - `delegate resumed child permission envelope no longer matches` → re-brief a fresh child under the current policy.
+- `delegate resumed child execution contract no longer matches` → preserve the original authority and unattended values or start a fresh task.
+- `delegate task argument authority is required` → pass both execution fields when calling or launching Orchestrator.
+- `delegate refuses authority escalation` → return the missing write decision to Collab rather than routing around the denial.
+- `delegate refuses orchestrator parent without stored execution contract` → re-brief a fresh Orchestrator from Collab.
 - `delegate refuses context-limited child session` → start a fresh narrower child; never reuse that task ID.
 - `context_limit: hard|compaction` → treat the recovered findings as partial, reconcile durable state when write-capable, and start a fresh narrower child.
 - `child showed no activity within 120 seconds` → the model/provider failed to start producing output.
@@ -205,7 +227,7 @@ Practical failure diagnosis:
 - Usage adapters must not log tokens, cookies, or local paths.
 - `usage_status` is read-only and must never refresh providers or mutate chat context.
 - Delegate children deny `todowrite`, `task`, and `experimental.primary_tools` tools unless the agent declares them.
-- Delegate children always deny `question`, and children under Drive lineage additionally carry no `ask` rule at all.
+- Delegate children always deny `question`, and unattended children additionally carry no `ask` rule at all.
 - Kitty context directory is mode `0700` and the context JSON file is mode `0600`.
 - Media registry directories are mode `0700` and registry files are mode `0600`.
 - Named media images are copied into the runtime cache; original source files are never renamed.

@@ -5,10 +5,9 @@
 """Custom kitty tab bar via the draw_tab callback.
 
 Layout: Icon → Tab titles (left) | CWD (child→root) → hostname (right).
-Accent color follows the active agent, ssh pink, or normal blue.
+Accent color follows OpenCode, ssh pink, or normal blue.
 """
 
-import json
 import os
 import posixpath
 import socket
@@ -16,7 +15,6 @@ import time
 from getpass import getuser
 from os import uname
 from pathlib import Path
-from typing import TypedDict
 from unicodedata import east_asian_width
 
 from kitty.boss import get_boss
@@ -62,15 +60,6 @@ ICON_HOST = " ⾥"  # host indicator
 # Layout
 MAX_CWD_DEPTH = 6  # max directory levels to show in right status
 
-# OpenCode writes this file from config/opencode/plugins/hyprd/kitty.ts.
-KITTY_CONTEXT_PATH = (
-    Path(os.environ["XDG_RUNTIME_DIR"]) / "opencode" / "kitty-context.json"
-    if os.environ.get("XDG_RUNTIME_DIR")
-    else Path("/tmp") / f"opencode-{os.getuid()}" / "kitty-context.json"
-)
-KITTY_CONTEXT_READ_TTL_SECONDS = 0.5
-KITTY_CONTEXT_STALE_SECONDS = 24 * 60 * 60
-
 HYPRD_SOCKET_PATH = "/tmp/hyprd.sock"
 HYPRD_SOCKET_TIMEOUT_SECONDS = 0.02
 HYPRD_ACCENT_RETRY_SECONDS = 2.0
@@ -79,27 +68,9 @@ HYPRD_ACCENT_HEARTBEAT_SECONDS = 5.0
 # │ Colors                                                                       │
 # ╰──────────────────────────────────────────────────────────────────────────────╯
 
-
-def _rgb(hex_value: str) -> int:
-    return as_rgb(int(hex_value.removeprefix("#"), 16))
-
-
-# Intentional manual coupling to vagari + OpenCode role semantics.
-# Keep this semantic: the OpenCode context stores the agent name, not theme colors.
 NORMAL_ACCENT_HEX = "f2a170"
 OPENCODE_ACCENT_HEX = "f2a170"
 SSH_ACCENT_HEX = "e887c3"
-
-OPENCODE_AGENT_HEX = {
-    "collab": "f2a170",
-    "drive": "4a6be3",
-    "review": "95cb79",
-    "scheme": "b29ae8",
-}
-
-OPENCODE_AGENT_COLORS = {
-    name: _rgb(hex_value) for name, hex_value in OPENCODE_AGENT_HEX.items()
-}
 
 
 class Colors:
@@ -124,14 +95,12 @@ colors = Colors()
 
 
 def get_accent() -> int:
-    """Return accent color — OpenCode mode, pink for ssh, blue otherwise."""
+    """Return accent color — OpenCode, pink for ssh, blue otherwise."""
     boss = get_boss()
     tm = boss.active_tab_manager if boss else None
     if tm:
-        agent = _detect_active_agent(tm)
-        if agent == "opencode":
-            ctx_color = _opencode_color_for_active_window(tm)
-            return ctx_color if ctx_color is not None else colors.yellow
+        if _detect_active_agent(tm) == "opencode":
+            return colors.yellow
         if _detect_ssh_active(tm)[1]:
             return colors.pink
     return colors.bg
@@ -142,10 +111,8 @@ def get_accent_hex() -> str:
     boss = get_boss()
     tm = boss.active_tab_manager if boss else None
     if tm:
-        agent = _detect_active_agent(tm)
-        if agent == "opencode":
-            ctx_hex = _opencode_hex_for_active_window(tm)
-            return ctx_hex if ctx_hex is not None else OPENCODE_ACCENT_HEX
+        if _detect_active_agent(tm) == "opencode":
+            return OPENCODE_ACCENT_HEX
         if _detect_ssh_active(tm)[1]:
             return SSH_ACCENT_HEX
     return NORMAL_ACCENT_HEX
@@ -161,19 +128,6 @@ _cwd_right_cache: str | None = None
 _active_agent_cache: str | None = None
 _active_ssh_cache: tuple[str, str] | None = None
 
-
-class KittyContextCache(TypedDict):
-    checked_at: float
-    mtime_ns: int | None
-    contexts: tuple
-
-
-_kitty_context_cache: KittyContextCache = {
-    "checked_at": 0.0,
-    "mtime_ns": None,
-    "contexts": (),
-}
-
 _last_hyprd_accent: tuple[int, str] | None = None
 _last_hyprd_accent_sent_at = 0.0
 _last_hyprd_accent_failed_at = 0.0
@@ -186,67 +140,6 @@ _last_hyprd_accent_failed_at = 0.0
 def _display_width(text: str) -> int:
     """Return terminal display width accounting for wide (CJK) characters."""
     return sum(2 if east_asian_width(c) in ("W", "F") else 1 for c in text)
-
-
-def _as_int(value) -> int:
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return 0
-
-
-def _read_opencode_contexts() -> tuple:
-    now = time.monotonic()
-    if now - float(_kitty_context_cache["checked_at"]) < KITTY_CONTEXT_READ_TTL_SECONDS:
-        return _kitty_context_cache["contexts"]
-
-    _kitty_context_cache["checked_at"] = now
-    try:
-        stat = KITTY_CONTEXT_PATH.stat()
-    except OSError:
-        _kitty_context_cache["mtime_ns"] = None
-        _kitty_context_cache["contexts"] = ()
-        return ()
-
-    if stat.st_mtime_ns == _kitty_context_cache["mtime_ns"]:
-        return _kitty_context_cache["contexts"]
-
-    try:
-        data = json.loads(KITTY_CONTEXT_PATH.read_text())
-    except (OSError, TypeError, ValueError, UnicodeDecodeError):
-        contexts = ()
-    else:
-        contexts = _fresh_opencode_contexts(data)
-
-    _kitty_context_cache["mtime_ns"] = stat.st_mtime_ns
-    _kitty_context_cache["contexts"] = contexts
-    return contexts
-
-
-def _fresh_opencode_contexts(data) -> tuple:
-    if not isinstance(data, dict):
-        return ()
-
-    now_ms = time.time() * 1000
-    stale_ms = KITTY_CONTEXT_STALE_SECONDS * 1000
-    contexts = []
-    for ctx in data.values():
-        if not isinstance(ctx, dict):
-            continue
-        updated_at = _as_int(ctx.get("updated_at"))
-        if not updated_at or now_ms - updated_at > stale_ms:
-            continue
-        contexts.append(ctx)
-    return tuple(contexts)
-
-
-def _kitty_window_id(window) -> int:
-    # KITTY_WINDOW_ID is kitty's per-pty window id; window.id is the usual Python API surface.
-    for attr in ("id", "window_id", "kitty_window_id"):
-        value = _as_int(getattr(window, attr, 0))
-        if value:
-            return value
-    return 0
 
 
 def _push_hyprd_accent(accent_hex: str) -> None:
@@ -277,48 +170,6 @@ def _push_hyprd_accent(accent_hex: str) -> None:
 
     _last_hyprd_accent = current
     _last_hyprd_accent_sent_at = now
-
-
-def _opencode_agent_color(agent) -> int | None:
-    name = str(agent or "").lower()
-    return OPENCODE_AGENT_COLORS.get(name.split(".", 1)[0])
-
-
-def _opencode_agent_hex(agent) -> str | None:
-    name = str(agent or "").lower()
-    return OPENCODE_AGENT_HEX.get(name.split(".", 1)[0])
-
-
-def _opencode_context_for_window_ids(window_ids: set[int]):
-    for ctx in _read_opencode_contexts():
-        if _as_int(ctx.get("kitty_pid")) != os.getpid():
-            continue
-        kitty_window_id = _as_int(ctx.get("kitty_window_id"))
-        if kitty_window_id and kitty_window_id in window_ids:
-            return ctx
-    return None
-
-
-def _opencode_color_for_active_window(tab_manager) -> int | None:
-    window = getattr(tab_manager, "active_window", None)
-    window_id = _kitty_window_id(window) if window else 0
-    if not window_id:
-        return None
-
-    ctx = _opencode_context_for_window_ids({window_id})
-    agent = ctx.get("agent") if ctx else None
-    return _opencode_agent_color(agent) if agent else None
-
-
-def _opencode_hex_for_active_window(tab_manager) -> str | None:
-    window = getattr(tab_manager, "active_window", None)
-    window_id = _kitty_window_id(window) if window else 0
-    if not window_id:
-        return None
-
-    ctx = _opencode_context_for_window_ids({window_id})
-    agent = ctx.get("agent") if ctx else None
-    return _opencode_agent_hex(agent) if agent else None
 
 
 def _is_git_repo(path: str) -> bool:
@@ -728,7 +579,6 @@ def draw_tab(
         _cwd_right_cache = None
         _active_agent_cache = None
         _active_ssh_cache = None
-        _kitty_context_cache["checked_at"] = 0.0
 
     # Build right status cells: separator | cwd | hostname
     cwd_text = " " + get_cwd_right() + " " + SEP_RIGHT

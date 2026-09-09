@@ -1,26 +1,22 @@
 ---
-name: text-diagram
-description: Use ONLY when the calling agent has decided that a fixed-width diagram or annotated directory tree belongs in repository documentation or a justified code comment; constructs and validates source-derived Unicode layouts with display-width-safe geometry.
+name: docs
+description: Use ONLY for an already-chosen source-derived architecture diagram, boxed relationship, or annotated directory tree in documentation or a justified comment; covers display-cell geometry, wall attachments, connectivity, and renderer checks, not numbered execution workflows.
 ---
 
-# Text diagram
+# Documentation diagram
 
 ## Authority
 
-The calling agent retains authority over whether a diagram, annotated tree, or comment belongs.
-Use this skill only after that agent decides to create or modify a fixed-width diagram or annotated directory tree.
-This skill owns construction and validation mechanics and must never encourage either representation or a comment.
-The caller also owns source-specific comment prefixes, Markdown fences, host conventions, and governing width limits.
-Simple non-diagram prose and lists remain outside this skill.
+The caller decides whether a diagram, annotated tree, or comment belongs; this skill supplies construction and validation only, never encouragement to add one.
+The caller owns source-specific prefixes, fences, host conventions, and width limits.
+Ordinary prose and lists remain outside this skill.
+Numbered execution graphs for proposals, approval gates, delegation, and repair loops belong to `workflow`, even when embedded in an activity skill.
 
 ## Construct
 
-1. Derive the layout from inspected source.
-2. For a relationship diagram, list every node, group or boundary, edge, direction, and label before drawing.
-3. For an annotated tree, list exact parent-child paths and every source-derived annotation before layout.
-4. Preserve exact source spelling in paths, titles, and labels.
-5. Simplify the topology before layout by removing decorative nodes, redundant routes, and detail outside the caller's scope.
-6. Place the remaining topology on a fixed display-cell grid with generous horizontal and vertical spacing.
+1. Inventory inspected source: nodes, boundaries, directed edges, and labels for relationships, or exact parent-child paths and annotations for trees.
+2. Preserve source spelling and remove decorative nodes, redundant routes, and out-of-scope detail before layout.
+3. Place the topology on a fixed display-cell grid with enough horizontal and vertical space to distinguish routes.
 
 Use consistent outer widths for peer boxes and consistent interior padding.
 Leave at least one display cell between content and each side wall.
@@ -32,7 +28,7 @@ Center the title by display cells; if one spare cell remains, put it on the righ
 
 Aside from spaces and source-derived paths or labels, geometry is limited to the eleven light single-line box glyphs in the mask table and the four arrowheads `▶`, `◀`, `▲`, and `▼`.
 Do not substitute improvised ASCII geometry or another box-drawing family.
-Decorative banner frames remain outside this skill and retain `scribe/comment`'s established glyph-family rules.
+Decorative banner frames remain outside this skill and use the `banners` skill's established glyph-family rules.
 Use the light diagram set inside a banner-bearing file and do not rewrite surrounding banners.
 
 ## Renderer precondition
@@ -66,13 +62,13 @@ Never use Edit, Write, `apply_patch`, or shell text mutation on governed lines c
 Create a unique script path and retain the path returned by:
 
 ```bash
-mktemp /tmp/opencode/text-diagram.XXXXXX.py
+mktemp /tmp/opencode/doc-diagram.XXXXXX.py
 ```
 
 Run that exact script with:
 
 ```bash
-uv run --with wcwidth python /tmp/opencode/text-diagram.<id>.py
+uv run --with wcwidth python /tmp/opencode/doc-diagram.<id>.py
 ```
 
 Remove the returned script path after validation, including after a failed generation or host mutation.
@@ -83,19 +79,19 @@ Do not add a renderer or generic canvas script to the repository.
 Represent each stroke cell by the exact set of directions it connects: north (`N`), east (`E`), south (`S`), and west (`W`).
 Render line geometry with these masks:
 
-| Mask | Glyph |
-| --- | --- |
-| `E+W` | `─` |
-| `N+S` | `│` |
-| `E+S` | `┌` |
-| `S+W` | `┐` |
-| `N+E` | `└` |
-| `N+W` | `┘` |
-| `N+E+S` | `├` |
-| `N+S+W` | `┤` |
-| `E+S+W` | `┬` |
-| `N+E+W` | `┴` |
-| `N+E+S+W` | `┼` |
+| Mask      | Glyph |
+| --------- | ----- |
+| `E+W`     | `─`   |
+| `N+S`     | `│`   |
+| `E+S`     | `┌`   |
+| `S+W`     | `┐`   |
+| `N+E`     | `└`   |
+| `N+W`     | `┘`   |
+| `N+E+S`   | `├`   |
+| `N+S+W`   | `┤`   |
+| `E+S+W`   | `┬`   |
+| `N+E+W`   | `┴`   |
+| `N+E+S+W` | `┼`   |
 
 Every occupied mask direction must reciprocate unless the opaque-span rule below terminates that one direction.
 
@@ -120,7 +116,6 @@ Inline `▶` and `◀` use `E+W`; inline `▲` and `▼` use `N+S`.
 Otherwise the arrow is terminal and uses only its tail direction: `▶=W`, `◀=E`, `▲=S`, and `▼=N`.
 A terminal tip is intentionally unconnected and does not require reciprocation.
 Permit a terminal tip to face only its target wall, an opaque label, or the diagram boundary; reject other incompatible route geometry.
-Every occupied mask direction, including a terminal arrow tail, must reciprocate except one stroke direction intentionally terminated by an opaque span.
 
 ### Wall attachments
 
@@ -141,11 +136,10 @@ Reroute unrelated crossing paths instead of drawing a false `┼` connection.
 Generate and validate the bare layout before adding a fence, indentation, or comment prefix.
 When a governing host width limit exists, the caller supplies it.
 Otherwise derive a budget from neighboring hosted material and favor enough room for clear geometry.
-Do not inherit `scribe/comment`'s banner column target unless the layout is actually governed by that banner layout.
+Do not inherit the `banners` skill's column target unless the layout is actually governed by that banner layout.
 Do not impose a globally small README width.
 Never silently exceed a code-comment width constraint; fit the topology within it or report the conflict to the caller.
 
-Use Python to add the bare layout to the host file.
 Apply one byte-identical indentation and comment prefix to every nonblank hosted row; the prefix may be empty for an unindented fenced layout.
 A blank comment separator may contain the right-trimmed prefix; normalize it to an empty bare row and exclude it from connectivity checks.
 An empty row inside a Markdown fence is valid and normalizes the same way.
@@ -154,9 +148,16 @@ Strip or normalize prefixes before hosted display-width and connectivity checks.
 Reject negative display widths in source labels and stripped bare content.
 Do not reject a raw hosted row only because a tab in its prefix has negative display width.
 
-## Examples
+## Example series
 
-The title is centered in display cells, the incoming arrow terminates at the left wall, and the outgoing edge passes through the right-wall tee:
+These labels and paths are illustrative shape fixtures, not claims about this repository.
+For a real diagram, substitute inspected source facts before choosing box widths and routes.
+Each fixture exercises a different invariant; do not copy its topology unless the source supports it.
+
+### Titled box and horizontal ports
+
+The incoming arrow stops outside an unchanged wall; the outgoing route opens a wall tee.
+The 18-cell box leaves four rail cells on each side of the six-cell title and its two spaces.
 
 ```text
               ┌──── Worker ────┐
@@ -164,48 +165,94 @@ request ─────▶│                ├────▶ result
               └────────────────┘
 ```
 
-The input splits through titled nodes and their outgoing edges form one connected merge:
+### Three branches and one merge
+
+All three outputs share the merge trunk; the middle branch joins it through a four-way junction instead of ending beside it.
+The two `┼` cells below connect all four directions, rather than disguising unrelated crossings.
 
 ```text
-                       ┌───── Fast ─────┐
-                  ┌───▶│                ├────┐
-                  │    └────────────────┘    │
-input ─────▶──────┤                          ├──────▶ output
-                  │    ┌───── Safe ─────┐    │
-                  └───▶│                ├────┘
-                       └────────────────┘
+                  ┌───── Fast ─────┐
+             ┌───▶│                ├────┐
+             │    └────────────────┘    │
+             │    ┌───── Main ─────┐    │
+input ───────┼───▶│                ├────┼────▶ output
+             │    └────────────────┘    │
+             │    ┌───── Safe ─────┐    │
+             └───▶│                ├────┘
+                  └────────────────┘
 ```
 
-The entry names and source-style comments are opaque spans; the limbs and parent-child continuation remain connected:
+### Nested boundary and vertical arrival
+
+Containment means ownership, while the arrow means flow; a nested box alone must not imply an edge.
+The bottom-rail `┬` opens the producer port, and terminal `▼` sits immediately above the consumer's unchanged top rail.
+The outer title has an odd spare rail cell, which goes on the right.
+
+```text
+┌─────── System ────────┐
+│                       │
+│   ┌─── Producer ───┐  │
+│   │                │  │
+│   └───────┬────────┘  │
+│           │           │
+│           ▼           │
+│   ┌────────────────┐  │
+│   │ Consumer       │  │
+│   └────────────────┘  │
+│                       │
+└───────────────────────┘
+```
+
+Consumer is an interior label because a centered title would occupy the arrival column.
+Do not route through a title to preserve a preferred box style.
+
+### Recovery travels back to its source
+
+The lower route starts at Result's bottom port and returns upward into Worker's bottom wall.
+Its arrow establishes recovery direction without making the forward edge bidirectional.
+
+```text
+┌──── Worker ────┐     ┌──── Result ────┐
+│                ├────▶│                │
+└────────────────┘     └───────┬────────┘
+        ▲                      │
+        │                      │
+        └──────────────────────┘
+```
+
+For a real recovery diagram, the caller must supply the triggering condition and supported destination from source.
+An execution retry limit belongs in `workflow`, not in this geometry fixture.
+
+### Annotated tree with continuing siblings
+
+Entry names and annotations are opaque spans, while the left trunk preserves the later root sibling across the nested subtree.
+The subtree's final `└` closes only that subtree; it does not close the root trunk.
 
 ```text
 root/
-├── cmd/          # command group
-│   └── serve/    # leaf command
-└── config/       # settings
+├── cmd/              # command group
+│   ├── serve/        # request entry
+│   │   └── main.go   # startup
+│   └── inspect/      # read-only entry
+└── config/           # settings
 ```
+
+Use exact inspected paths in real trees and align annotations by display cells, not string length.
+Wide source names reserve continuation cells; a later annotation or limb cannot occupy them.
 
 ## Validate
 
 The temporary Python validator must:
 
-- Reject negative display widths in source text and stripped bare rows.
-- Confirm that `wcwidth` measures every geometry glyph as one cell under its narrow-width assumption.
-- Detect wide-path or label continuation-cell overlap.
-- Register every opaque text span and its one route-facing separator cell before mask validation.
-- Check each box's row width, interior padding, title spacing, minimum rails, and display-cell centering.
-- Exercise the odd-spare title case and require the extra rail cell on the right.
-- Derive every line, corner, tee, and junction mask from neighboring cells.
-- Classify each arrow from geometry in its tip direction and apply its inline or terminal mask.
-- Require reciprocity for every occupied mask direction, including terminal tails.
-- Exempt only a terminal tip and one registered opaque-span direction on a stroke cell.
-- Reject a stroke facing unregistered empty space as dangling.
-- Reject corner or title attachments and check horizontal and vertical wall semantics.
-- Check annotated-tree parent-child continuation, row widths, limb junctions, entry spans, and annotation spans.
-- Enforce the caller-supplied limit or derived host budget on the bare layout.
-- Require byte-identical prefixes on nonblank hosted rows.
-- Normalize permitted blank separators and exclude them from connectivity checks.
-- Strip or normalize prefixes before repeating display-width and connectivity checks.
+- Check the narrow-width alphabet assumption, reject negative label or bare-row widths, and detect wide-text continuation-cell overlap.
+- Register opaque spans and their route-facing separator cells before checking geometry.
+- Check box widths, padding, title spacing, minimum rails, and display-cell centering, including an odd spare cell on the right.
+- Derive stroke masks from neighbors, classify inline versus terminal arrows, and require occupied-direction reciprocity including arrow tails.
+- Permit only terminal tips and the single opaque termination defined above; reject unregistered gaps, corner/title attachments, and invalid horizontal or vertical ports.
+- Check nested containment and trace the intended edge inventory separately so a geometrically valid false join still fails.
+- Check tree ancestry, continuing siblings, limb junctions, entry and annotation spans, and row widths.
+- Enforce the caller's width limit or derived budget, require identical nonblank prefixes, and normalize permitted blank separators out of connectivity checks.
+- Strip host prefixes and repeat width and connectivity checks on the final hosted region.
 
 Read the bare layout back visually before host mutation.
 Read the complete hosted region back after mutation and inspect it in the target renderer.

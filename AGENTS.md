@@ -8,9 +8,14 @@ Arch + Hyprland (Wayland) dotfiles. Single-user. Root of repo = `~/dotfiles`.
 - `bin/` → symlinked into `~/.local/bin/` (legacy; being replaced by `cmds/`)
 - `cmds/` → Go command workspace; built into `~/.local/bin/` by `install.sh go`. See `cmds/README.md`.
 - `etc/` → system configs **copied** to `/etc/` by `install.sh system` (not symlinked)
-- `config/opencode/agents/{scheme,collab,drive,review}.md` → primary OpenCode modes; scheme plans, collab steers, drive executes unattended, review judges and synthesizes
-- `config/opencode/agents/{scout,build,review,scribe,verify}/` → leaf fleet; scouts map, builders edit code, reviewers judge, scribes write prose, verifiers collect evidence
-- `config/opencode/skills/git/{commit,rebase}/SKILL.md` → attended Git skills; Collab owns mutation through them, while Scheme has a narrow planning-commit exception
+- `config/opencode/agents/collab.md` → the only human-facing OpenCode primary; owns planning, implementation, review, approval, and Git work
+- `config/opencode/agents/orchestrator.md` → subagent-only coordination and synthesis; delegates leaves within one approved objective
+- `config/opencode/skills/orchestration/{scheme,review,drive}/SKILL.md` → planning, review, and approved execution procedures for Collab and Orchestrator
+- `config/opencode/agents/{collab,orchestrator}.md` → self-contained model routing, delegation contracts, checks, councils, and child continuity for each owner
+- `config/opencode/agents/{scout,build,review,verify}/` → leaf fleet; scouts map, builders implement, reviewers judge, verifiers collect evidence
+- `config/opencode/agents/build/scribe.md` → bounded documentation, comment, and banner writing owner
+- `config/opencode/skills/{comments,prose}/SKILL.md` → composable writing procedures with specialized subskills for relevant owners
+- `config/opencode/skills/git/{commit,rebase,worktrees}/SKILL.md` → Collab-only Git skills; only attended Collab owns Git mutation
 - `config/opencode/skills/papercuts/SKILL.md` → Collab diagnoses failed session commands; invoke with `/papercuts`
 - `.spec/` → directory-scoped plan, spec, and logbook docs, committed by default; e.g. `config/opencode/.spec/orchestrate.md`
 - `iso/` → archiso profile; `iso/work/` and `iso/out/` are gitignored build artifacts
@@ -25,7 +30,7 @@ Operationally, `opencodde` is the primary agent harness used.
 
 `config/opencode/AGENTS.md` is global context file that is always in use.
 `config/opencode/opencode.json` wires config, providers, permissions, and plugins.
-`config/opencode/agents/*.md` define primary modes, while subdirectories hold one-hop leaves.
+`config/opencode/agents/` defines Collab, the subagent-only Orchestrator, and specialist leaves in subdirectories.
 
 Plugin paths live under `config/opencode/`.
 Edits under `config/opencode/` affect the live system through symlinks.

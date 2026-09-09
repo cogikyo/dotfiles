@@ -8,6 +8,13 @@ export type TaskArgs = {
   model?: string;
   effort?: string;
   task_id?: string;
+  authority?: "read-only" | "write";
+  unattended?: boolean;
+};
+
+type Execution = {
+  authority?: "read-only" | "write";
+  unattended?: boolean;
 };
 
 export type ModelRef = {
@@ -36,6 +43,7 @@ type PreparedTask = {
   model: ModelRef;
   variant?: string;
   permission: Rule[];
+  execution: Execution;
 };
 
 type ContextLimits = DelegateConfig["context"];
@@ -57,8 +65,8 @@ const CONTENT_FILTER_ADVICE = "child unrecoverable; re-brief a fresh child (rewo
 const INTERRUPTED_ADVICE = "completion unknown; reconcile durable state before re-running because the child may have edited files";
 const CONTEXT_ADVICE = "start a fresh narrower child for the remaining concern; never resume this context-limited session";
 const KNOWN_EFFORTS = new Set(["default", "minimal", "low", "medium", "high", "xhigh"]);
-const MODE_AGENTS = new Set(["collab", "drive", "review", "scheme"]);
-const MAX_MODE_LINEAGE = 2;
+const COLLAB = "collab";
+const ORCHESTRATOR = "orchestrator";
 // Prepended to every unattended child envelope, after dedupe so an agent profile that ends with its own
 // catch-all deny keeps that rule in its authoritative tail position. It only bites when no rule matches at
 // all, where the runtime would otherwise fall through to its `ask` default.
@@ -74,8 +82,23 @@ export async function prepareTask(client: Client, ctx: ToolContext, input: unkno
   const effort = parseEffort(args);
   applyDisplayArgs(input, args, effort);
   const agent = await readAgent(client, args.subagent_type);
+  const parent = await unwrap<Record<string, unknown>>(
+    client.session.get({ path: { id: ctx.sessionID } } as never),
+    `read parent session ${ctx.sessionID}`,
+  );
+  const parentAgent = sessionAgent(parent) ?? "";
+  validateTaskTarget(parentAgent, agent.name);
+  const parentExecution = sessionExecution(parent);
+  if (parentAgent === ORCHESTRATOR && (parentExecution.authority === undefined || parentExecution.unattended === undefined)) {
+    throw new Error("delegate refuses orchestrator parent without stored execution contract; re-brief from collab");
+  }
+  const execution = resolveExecution(
+    parentExecution,
+    args,
+    requiresExecution(parentAgent, agent.name),
+  );
 
-  await askTaskPermission(ctx, { ...args, effort });
+  await askTaskPermission(ctx, { ...args, effort }, execution);
 
   const parentMessage = await readCurrentAssistantMessage(client, ctx);
   const model = args.model ? parseModel(args.model) : (agent.model ?? parentMessage.model);
@@ -83,7 +106,7 @@ export async function prepareTask(client: Client, ctx: ToolContext, input: unkno
 
   await validateVariant(client, model, variant);
 
-  const permission = await deriveChildPermission(client, ctx.sessionID, agent);
+  const permission = await deriveChildPermission(client, parent, agent, execution);
 
   return {
     args,
@@ -91,6 +114,7 @@ export async function prepareTask(client: Client, ctx: ToolContext, input: unkno
     model,
     variant,
     permission,
+    execution,
   };
 }
 
@@ -109,6 +133,7 @@ export async function runChildTask(input: {
         input.ctx.sessionID,
         input.prepared.agent.name,
         input.prepared.permission,
+        input.prepared.execution,
         input.ctx.abort,
       )
     : await createChild(input.client, input.ctx, input.args, input.prepared);
@@ -181,6 +206,7 @@ export async function runChildTask(input: {
         limit: completion.limit,
         messages: completion.messages,
         permission: input.prepared.permission,
+        execution: input.prepared.execution,
       });
     }
     const response = completion.assistant;
@@ -227,17 +253,20 @@ export async function readChildTaskStatus(client: Client, parentSessionID: strin
     const id = string(child.id)!;
     const status = childStatus(object(statuses[id]));
     const limit = sessionContextLimit(child);
+    const execution = sessionExecution(child);
     lines.push(
       "",
       `task_id: ${id}`,
       `status: ${status}`,
       ...(limit ? [`context_limit: ${limit.limit}${limit.tokens === undefined ? "" : ` tokens=${limit.tokens}`}`] : []),
       `agent: ${sessionAgent(child) ?? "unknown"}`,
+      ...(execution.authority ? [`authority: ${execution.authority}`] : []),
+      ...(execution.unattended !== undefined ? [`unattended: ${execution.unattended}`] : []),
       `title: ${singleLine(string(child.title) ?? "untitled")}`,
       `updated: ${new Date(sessionUpdated(child)).toISOString()}`,
     );
   }
-  lines.push("", "Only matching idle children without context_limit can be resumed. Never resume a context-limited child.");
+  lines.push("", "Only matching idle children without context_limit can be resumed. Resume must reuse the same authority and unattended values. Never resume a context-limited child.");
   return lines.join("\n");
 }
 
@@ -630,9 +659,13 @@ function taskArgs(value: unknown): TaskArgs {
   const model = optionalString(root, "model");
   const effort = optionalString(root, "effort");
   const taskID = optionalString(root, "task_id");
+  const authority = optionalAuthority(root);
+  const unattended = optionalUnattended(root);
   if (model !== undefined) args.model = model;
   if (effort !== undefined) args.effort = effort;
   if (taskID !== undefined) args.task_id = taskID;
+  if (authority !== undefined) args.authority = authority;
+  if (unattended !== undefined) args.unattended = unattended;
   return args;
 }
 
@@ -647,6 +680,8 @@ function applyDisplayArgs(input: unknown, args: TaskArgs, effort: string | undef
   root.description = description;
   root.subagent_type = args.subagent_type;
   if (effort) root.effort = effort;
+  if (args.authority) root.authority = args.authority;
+  if (args.unattended !== undefined) root.unattended = args.unattended;
 }
 
 function stripEffortSuffix(description: string, effort: string | undefined) {
@@ -684,7 +719,21 @@ function optionalString(root: Record<string, unknown>, name: keyof TaskArgs) {
   return root[name];
 }
 
-async function askTaskPermission(ctx: ToolContext, args: TaskArgs) {
+function optionalAuthority(root: Record<string, unknown>): Execution["authority"] {
+  if (!Object.hasOwn(root, "authority") || root.authority === undefined) return undefined;
+  if (root.authority !== "read-only" && root.authority !== "write") {
+    throw new Error(`delegate task argument authority must be "read-only" or "write"`);
+  }
+  return root.authority;
+}
+
+function optionalUnattended(root: Record<string, unknown>): boolean | undefined {
+  if (!Object.hasOwn(root, "unattended") || root.unattended === undefined) return undefined;
+  if (typeof root.unattended !== "boolean") throw new Error("delegate task argument unattended must be a boolean");
+  return root.unattended;
+}
+
+async function askTaskPermission(ctx: ToolContext, args: TaskArgs, execution: Execution) {
   await (ctx.ask({
     permission: "task",
     patterns: [args.subagent_type],
@@ -694,6 +743,8 @@ async function askTaskPermission(ctx: ToolContext, args: TaskArgs) {
       subagent_type: args.subagent_type,
       model: args.model?.trim(),
       effort: args.effort,
+      authority: execution.authority,
+      unattended: execution.unattended,
     },
   }) as unknown as Promise<void>);
 }
@@ -764,17 +815,12 @@ async function readProviderModel(client: Client, model: ModelRef): Promise<Recor
 
 async function deriveChildPermission(
   client: Client,
-  parentSessionID: string,
+  parent: Record<string, unknown>,
   agent: AgentInfo,
+  execution: Execution,
 ): Promise<Rule[]> {
-  const [parent, config] = await Promise.all([
-    unwrap<Record<string, unknown>>(client.session.get({ path: { id: parentSessionID } } as never), `read parent session ${parentSessionID}`),
-    unwrap<Record<string, unknown>>(client.config.get({} as never), "read config"),
-  ]);
-
-  const lineage = await modeLineage(client, parent);
-  validateModeDelegation(lineage, parent, agent.name);
-  const unattended = lineage.includes("drive");
+  const config = await unwrap<Record<string, unknown>>(client.config.get({} as never), "read config");
+  const unattended = execution.unattended === true;
 
   const parentRules = inheritableParentRules(normalizeRules(parent.permission), unattended);
   const inherited = parentRules.filter(
@@ -791,8 +837,9 @@ async function deriveChildPermission(
       .filter((tool) => !hasPermissionRule(effectiveAgentRules, tool))
       .map(deny),
   ];
+  const readOnly = execution.authority === "read-only" ? [deny("edit"), deny("write")] : [];
 
-  const composed = [...defaultRules, ...agentRules, ...childDenies, ...inherited];
+  const composed = [...defaultRules, ...agentRules, ...childDenies, ...readOnly, ...inherited];
   if (!unattended) return dedupeRules(composed);
   return [UNATTENDED_FLOOR, ...dedupeRules(composed.map(asBlocker))];
 }
@@ -813,7 +860,7 @@ function isUnattendedFloor(rule: Rule) {
     && rule.action === UNATTENDED_FLOOR.action;
 }
 
-// A child anywhere under Drive runs with nobody at the terminal, so every reachable `ask` has to become a
+// An unattended child runs with nobody at the terminal, so every reachable `ask` has to become a
 // blocker instead of a prompt. The runtime evaluates `merge(agent.permission, session.permission)` and keeps
 // the last matching rule, and `composed` already replays the agent's whole effective ruleset in order, so
 // rewriting `ask` to `deny` in place preserves relative precedence while closing every prompt path, whatever
@@ -830,6 +877,7 @@ async function readExistingChild(
   parentSessionID: string,
   agentName: string,
   permission: Rule[],
+  execution: Execution,
   signal: AbortSignal,
 ) {
   const session = await unwrap<Record<string, unknown>>(
@@ -850,6 +898,9 @@ async function readExistingChild(
   if (!samePermissionRules(normalizeRules(session.permission), permission)) {
     throw new Error(`delegate resumed child permission envelope no longer matches; re-brief a fresh child instead`);
   }
+  if (!sameExecution(sessionExecution(session), execution)) {
+    throw new Error(`delegate resumed child execution contract no longer matches; re-brief a fresh child instead`);
+  }
 
   const statuses = await unwrap<Record<string, unknown>>(
     client.session.status({ signal } as never),
@@ -862,50 +913,76 @@ async function readExistingChild(
   return { id };
 }
 
-function validateModeDelegation(lineage: string[], parent: Record<string, unknown>, target: string) {
-  if (!MODE_AGENTS.has(target)) return;
-
-  if (lineage.length >= MAX_MODE_LINEAGE) {
-    throw new Error(`delegate mode depth limit reached (${lineage.join(" → ")}); use a leaf or return the objective to the parent`);
+function validateTaskTarget(parentAgent: string, target: string) {
+  if (target === COLLAB) {
+    throw new Error("delegate refuses collab as a child; collab is attended-primary only");
   }
-
-  const occurrences = lineage.filter((name) => name === target).length;
-  if (!occurrences) return;
-
-  const immediateSameRole = sessionAgent(parent) === target && occurrences === 1;
-  if (immediateSameRole) return;
-
-  throw new Error(`delegate refuses mode cycle ${[...lineage].reverse().join(" → ")} → ${target}; use a leaf or return the objective to the parent`);
+  if (target !== ORCHESTRATOR) return;
+  if (parentAgent === COLLAB) return;
+  throw new Error(`delegate refuses orchestrator from ${parentAgent || "unknown"}; only collab may launch orchestrator`);
 }
 
-async function modeLineage(client: Client, parent: Record<string, unknown>) {
-  const modes: string[] = [];
-  const seen = new Set<string>();
-  let session: Record<string, unknown> | undefined = parent;
+function requiresExecution(parentAgent: string, target: string) {
+  return parentAgent === ORCHESTRATOR || target === ORCHESTRATOR;
+}
 
-  for (let depth = 0; session && depth < 64; depth++) {
-    const id = string(session.id);
-    if (id) {
-      if (seen.has(id)) throw new Error(`delegate session ancestry contains a cycle at ${id}`);
-      seen.add(id);
+function resolveExecution(parent: Execution, requested: TaskArgs, required: boolean): Execution {
+  if (required) {
+    if (requested.authority === undefined) {
+      throw new Error("delegate task argument authority is required when the caller or target is orchestrator");
     }
-
-    const agent = sessionAgent(session);
-    if (agent && MODE_AGENTS.has(agent)) modes.push(agent);
-
-    const parentID = sessionParentID(session);
-    if (!parentID) return modes;
-    session = await unwrap<Record<string, unknown>>(
-      client.session.get({ path: { id: parentID } } as never),
-      `read ancestor session ${parentID}`,
-    );
+    if (requested.unattended === undefined) {
+      throw new Error("delegate task argument unattended is required when the caller or target is orchestrator");
+    }
+  }
+  if (parent.authority === "read-only" && requested.authority === "write") {
+    throw new Error("delegate refuses authority escalation from read-only to write");
+  }
+  if (parent.unattended === true && requested.unattended === false) {
+    throw new Error("delegate refuses attended child under unattended parent");
   }
 
-  if (session) throw new Error("delegate session ancestry exceeds 64 levels");
-  return modes;
+  const authority = parent.authority === "read-only" ? "read-only" : (requested.authority ?? parent.authority);
+  const unattended = parent.unattended === true ? true : (requested.unattended ?? parent.unattended);
+  const execution: Execution = {};
+  if (authority !== undefined) execution.authority = authority;
+  if (unattended !== undefined) execution.unattended = unattended;
+  return execution;
+}
+
+function sessionExecution(session: Record<string, unknown>): Execution {
+  const delegate = object(object(session.metadata)?.delegate);
+  if (!delegate) return {};
+
+  const execution: Execution = {};
+  if (Object.hasOwn(delegate, "authority")) {
+    if (delegate.authority !== "read-only" && delegate.authority !== "write") {
+      throw new Error("delegate session metadata.delegate.authority must be \"read-only\" or \"write\"");
+    }
+    execution.authority = delegate.authority;
+  }
+  if (Object.hasOwn(delegate, "unattended")) {
+    if (typeof delegate.unattended !== "boolean") {
+      throw new Error("delegate session metadata.delegate.unattended must be a boolean");
+    }
+    execution.unattended = delegate.unattended;
+  }
+  return execution;
+}
+
+function sameExecution(left: Execution, right: Execution) {
+  return left.authority === right.authority && left.unattended === right.unattended;
+}
+
+function executionMetadata(execution: Execution) {
+  const delegate: Record<string, unknown> = {};
+  if (execution.authority !== undefined) delegate.authority = execution.authority;
+  if (execution.unattended !== undefined) delegate.unattended = execution.unattended;
+  return Object.keys(delegate).length ? { delegate } : undefined;
 }
 
 async function createChild(client: Client, ctx: ToolContext, args: TaskArgs, prepared: PreparedTask) {
+  const metadata = executionMetadata(prepared.execution);
   const session = await unwrap<Record<string, unknown>>(
     client.session.create({
       body: {
@@ -913,12 +990,16 @@ async function createChild(client: Client, ctx: ToolContext, args: TaskArgs, pre
         title: `${args.description} (@${prepared.agent.name} subagent)`,
         agent: prepared.agent.name,
         permission: prepared.permission,
+        ...(metadata ? { metadata } : {}),
       },
     } as never),
     `create child session for ${prepared.agent.name}`,
   );
   const id = string(session.id);
   if (!id) throw new Error("delegate child session create response did not include an id");
+  if (!sameExecution(sessionExecution(session), prepared.execution)) {
+    throw new Error("delegate child session create lost or mismatched execution metadata");
+  }
   return { id };
 }
 
@@ -1069,6 +1150,7 @@ function contextLimitedResult(input: {
   limit: ContextLimit;
   messages: unknown[];
   permission: Rule[];
+  execution: Execution;
 }) {
   const text = recoverableText(input.messages);
   const lines = [
@@ -1080,9 +1162,9 @@ function contextLimitedResult(input: {
     lines.push("warning: automatic child compaction was observed; it may have started before the next poll, so any compacted continuation is untrusted");
   }
   lines.push(
-    hasWriteAccess(input.permission)
-      ? "durable_state: uncertain; reconcile the tree and Git before continuing because this child had write-capable permissions"
-      : "durable_state: no writes expected from the child permission envelope",
+    input.execution.authority === "read-only" || !hasWriteAccess(input.permission)
+      ? "durable_state: no writes expected from the child permission envelope"
+      : "durable_state: uncertain; reconcile the tree and Git before continuing because this child had write-capable permissions",
     `advice: ${CONTEXT_ADVICE}`,
     "",
     "partial_recovered_text:",

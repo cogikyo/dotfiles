@@ -17,13 +17,6 @@ const FOCUS_ACK_DEBOUNCE_MS = 1000
 const LOCK_RETRY_MS = 25
 const LOCK_TIMEOUT_MS = 1000
 
-const AGENT_ACCENTS = {
-  collab: "f2a170",
-  drive: "4a6be3",
-  review: "95cb79",
-  scheme: "b29ae8",
-}
-
 const KITTY_PID = Number(process.env.KITTY_PID) || 0
 const KITTY_WINDOW_ID = Number(process.env.KITTY_WINDOW_ID) || 0
 const DIRECTORY = process.cwd()
@@ -113,20 +106,6 @@ async function currentPaneState() {
   return { focused: false }
 }
 
-async function redrawTabBar() {
-  try {
-    await execFileAsync("kitty", [
-      "@",
-      "--to",
-      `unix:/tmp/kitty-${KITTY_PID}`,
-      "set-window-title",
-      "--temporary",
-      "--match",
-      `id:${KITTY_WINDOW_ID}`,
-    ])
-  } catch {}
-}
-
 async function notifyViewed() {
   if (!KITTY_PID || !KITTY_WINDOW_ID) return false
 
@@ -136,14 +115,6 @@ async function notifyViewed() {
     kitty_pid: KITTY_PID,
     kitty_window_id: KITTY_WINDOW_ID,
   }))
-}
-
-async function sendAccent(agent) {
-  const base = String(agent || "").toLowerCase().split(".", 1)[0]
-  const color = AGENT_ACCENTS[base]
-  if (!color) return false
-
-  return send(`accent ${color}`)
 }
 
 async function clearPaneContext() {
@@ -161,16 +132,7 @@ async function clearPaneContext() {
   })
 }
 
-function currentAgent(api, sessionID) {
-  const messages = api.state.session.messages(sessionID)
-  for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index]
-    if ("agent" in message && message.agent) return message.agent
-  }
-  return undefined
-}
-
-async function writeContext(sessionID, agent) {
+async function writeContext(sessionID) {
   if (!sessionID || !KITTY_PID || !KITTY_WINDOW_ID) return
 
   await withLock(async () => {
@@ -187,7 +149,6 @@ async function writeContext(sessionID, agent) {
       updated_at: Date.now(),
       directory: DIRECTORY,
       generation: GENERATION,
-      ...(agent ? { agent } : {}),
     }
 
     await fs.writeFile(KITTY_CONTEXT_PATH, JSON.stringify(contexts), { mode: 0o600 })
@@ -197,22 +158,13 @@ async function writeContext(sessionID, agent) {
 const tui = async (api) => {
   let lastFocused = null
   let lastFocusAckAt = 0
-  let lastContext = ""
   let pendingSession = ""
   let syncing = false
   let disposed = false
   let syncTask = Promise.resolve()
 
   const syncSession = async (sessionID) => {
-    const agent = currentAgent(api, sessionID)
-    const context = `${sessionID}\0${agent || ""}`
-    await writeContext(sessionID, agent)
-    if (disposed || pendingSession) return
-    if (context === lastContext) return
-
-    lastContext = context
-    const pane = await currentPaneState()
-    if (pane?.focused) await redrawTabBar()
+    await writeContext(sessionID)
   }
 
   const scheduleSync = (sessionID) => {
@@ -246,14 +198,6 @@ const tui = async (api) => {
   const acknowledgeFocusedPane = async () => {
     const pane = await currentPaneState()
     if (pane === null) return
-
-    if (pane.focused) {
-      const current = api.route.current
-      const sessionID = current.name === "session" ? current.params?.sessionID : ""
-      if (typeof sessionID === "string" && sessionID !== "") {
-        void sendAccent(currentAgent(api, sessionID))
-      }
-    }
 
     const wasFocused = lastFocused
     lastFocused = pane.focused

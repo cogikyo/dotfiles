@@ -1,10 +1,15 @@
 ---
 name: rebase
+description: Use ONLY in attended Collab for an approved rebase of the already-resolved current branch onto an explicit upstream or onto commit, including continuation of that workflow's in-progress rebase and conflict resolution.
 ---
 
 # Rebase
 
 ## Authority
+
+Only attended Collab follows this procedure and performs its Git mutation; never delegate it.
+Keep routine rebases in this session; use a bounded read-only scout for context-heavy Git archaeology.
+If the remaining work needs a fresh attended session, provide a handoff rather than spawning Collab.
 
 Rebase the already-resolved current branch onto an explicit approved upstream or onto commit.
 Require the repository, selected worktree, current branch, upstream or onto OID, expected local tip, and verification commands.
@@ -37,7 +42,16 @@ Stage only the explicit resolved paths.
 Continue only after inspecting the staged resolution and remaining conflicts.
 
 Abort only when that preserves all pre-existing work and the caller asked to abort.
-If safe continuation or abort is uncertain, stop with exact OIDs, operation state, conflicted paths, and `Questions for parent`.
+If safe continuation or abort is uncertain, stop with exact OIDs, operation state, conflicted paths, and the decision needed from the user.
+
+### Hook failures
+
+Preserve hook output and inspect status, staged and unstaged diffs, and rebase state before continuing.
+Never amend a failed attempt, bypass hooks, or assume hook-created changes are harmless.
+Repair only within the active task's approved edit authority and without a new semantic decision.
+Run the smallest approved relevant check and stage exact repaired hunks before continuing the still-active rebase.
+For substantive, unrelated, or ambiguous failures, stop with the failing hook, affected paths, and a proposed repair owner and check.
+Resume only after the repair settles; do not retry continuation if the rebase has already completed.
 
 ## Audit and boundaries
 
@@ -52,4 +66,4 @@ Do not reset, clean, disable hooks, change Git configuration, or edit unrelated 
 Never load or dispatch another Git workflow.
 
 Report preflight and final OIDs, onto ref, conflicts and resolutions, ancestry audit, checks, final status, and residual risk.
-Return `Questions for parent` when onto choice, published-history risk, or conflict intent remains ambiguous.
+Ask the user when onto choice, published-history risk, or conflict intent remains ambiguous.

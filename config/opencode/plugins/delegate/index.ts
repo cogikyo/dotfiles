@@ -9,6 +9,13 @@ const DESCRIPTION = [
   "Use model as provider/model-id to choose a runtime model for this task call.",
   "Use effort for the target model's reasoning variant; invalid efforts fail explicitly.",
   "If model is omitted, the child uses the agent's pinned model when one exists, else the current assistant message's model and effort.",
+  "authority is read-only or write; unattended is a boolean.",
+  "Both are required when the caller or target is orchestrator; omitting them keeps existing leaf behavior.",
+  "read-only blocks writes throughout the subtree; write does not parse skills or restrict planning artifacts.",
+  "unattended converts ask to deny for that child and every descendant; children never get the question tool.",
+  "Never launch collab.",
+  "Orchestrator may launch leaves, never another orchestrator or collab.",
+  "Do not escalate authority or attended status through descendant profiles or resume.",
   "Resume sparingly with task_id only for the same unfinished child; never resume a context-limited child.",
   "If an interrupted call hides its result, use task_status to recover the child ID before restarting work.",
   "If the usage cache shows the provider is exhausted, waits for the reset with no maximum wait.",
@@ -17,7 +24,7 @@ const DESCRIPTION = [
 
 const STATUS_DESCRIPTION = [
   "List direct subagent sessions created by task for the current session, newest first, with task IDs and live statuses.",
-  "Use immediately after an interrupted task call before launching a replacement; match the title and agent and reconcile durable write state.",
+  "Use immediately after an interrupted task call before launching a replacement; match the title, agent, and execution contract and reconcile durable write state.",
   "Resume only a matching idle child that is not context-limited.",
 ].join(" ");
 
@@ -36,6 +43,8 @@ const server: Plugin = async ({ client }) => {
           subagent_type: tool.schema.string().describe("The type of specialized agent to use for this task"),
           model: tool.schema.string().optional().describe("Optional runtime model as provider/model-id"),
           effort: tool.schema.string().optional().describe("Optional reasoning effort variant for the target model"),
+          authority: tool.schema.enum(["read-only", "write"]).optional().describe("Required when caller or target is orchestrator. read-only blocks writes throughout the subtree; write permits the child profile including planning artifacts"),
+          unattended: tool.schema.boolean().optional().describe("Required when caller or target is orchestrator. true converts ask to deny for this child and all descendants"),
           task_id: tool.schema.string().optional().describe("Existing direct idle, non-context-limited child session ID to resume sparingly"),
         },
         async execute(args, ctx) {

@@ -61,8 +61,8 @@ const server: Plugin = async ({ client, directory, worktree }) => {
         const reviewBlock = reviewMutation(command);
         if (reviewBlock) {
           const session = await readSession(client, input.sessionID);
-          if (isReviewAgent(sessionAgent(session))) {
-            throw new Error(`review agents are read-only; ${reviewBlock}`);
+          if (isReadOnlySession(session)) {
+            throw new Error(`read-only sessions cannot mutate; ${reviewBlock}`);
           }
         }
         if (invokesGoBuild(command)) {
@@ -74,6 +74,12 @@ const server: Plugin = async ({ client, directory, worktree }) => {
         return;
       }
 
+      if (input.tool !== "apply_patch" && input.tool !== "edit" && input.tool !== "write") return;
+
+      const session = await readSession(client, input.sessionID);
+      if (isReadOnlySession(session)) {
+        throw new Error("read-only sessions cannot write files");
+      }
       if (input.tool !== "apply_patch") return;
 
       const patchText = string(object(output.args)?.patchText);
@@ -85,7 +91,6 @@ const server: Plugin = async ({ client, directory, worktree }) => {
       const targets = patchTargets(patchText);
       if (targets.length === 0) return;
 
-      const session = await readSession(client, input.sessionID);
       const cwd = string(session.directory) || fallbackDirectory;
       for (const target of targets) await guardPatchTarget(cwd, target);
     },
@@ -184,8 +189,12 @@ function invokesInPlaceEdit(words: string[]) {
   });
 }
 
-function isReviewAgent(agent: string | undefined) {
-  return agent === "review" || agent?.startsWith("review/") === true;
+function isReadOnlySession(session: Session) {
+  const agent = sessionAgent(session);
+  if (agent === "review" || agent?.startsWith("review/") === true) return true;
+  const delegate = object(object(session.metadata)?.delegate);
+  if (!delegate || !Object.hasOwn(delegate, "authority")) return false;
+  return delegate.authority !== "write";
 }
 
 function hasOutputRedirection(command: string) {
