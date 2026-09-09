@@ -26,6 +26,7 @@ permission:
     "*git tag*": ask
     "*git worktree*": allow
     "*git merge-base*": allow
+    "*git merge-tree*": allow
     "*git stash list*": allow
     "*git stash show*": allow
     "*git branch": allow
@@ -42,6 +43,7 @@ permission:
     "*git tag": allow
     "*git tag --list*": allow
     "*git tag -l*": allow
+    "*git tag --contains*": allow
     "*git restore --staged*": allow
     "*git restore *--worktree*": ask
     "*git add .": deny
