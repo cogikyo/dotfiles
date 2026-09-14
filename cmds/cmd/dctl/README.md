@@ -31,6 +31,7 @@ Non-TTY invocations, `--json`, `--plain`, `--defaults`, and explicit commands ke
 Actions:
 
 - `dctl check` runs install healthchecks.
+- `dctl porkbun ...` checks and manages personal Porkbun DNS records on Linux.
 
 Lifecycle:
 
@@ -106,6 +107,94 @@ Contracts:
 
 New or changed manifest entries must be trusted per machine before sync or decrypt.
 Use `dctl secrets trust` to approve the current manifest without decrypting.
+
+## Porkbun DNS
+
+`dctl porkbun` manages one explicit domain at a time through the [Porkbun v3 API](https://porkbun.com/llms/dns).
+It is Linux-only and separate from `dctl install dns`, which configures the machine's resolver.
+
+### Provision credentials first
+
+The Linux credential file is not provisioned by this implementation; the secrets manifest contains metadata only.
+Create API keys in the [Porkbun account dashboard](https://porkbun.com/account/api), enable API access for the intended domain, and apply appropriate key restrictions.
+
+Use a local editor to create `~/.local/share/dotfiles/porkbun.env` as a regular, non-symlink file owned by your normal Linux user with mode `0600`.
+Its only contents must be two unquoted `KEY=value` lines, one for `PORKBUN_API_KEY` and one for `PORKBUN_API_SECRET_KEY`.
+Use the values issued by Porkbun, with no spaces, comments, blank lines, `export`, or shell expressions.
+An ending newline is allowed.
+Set restrictive permissions before entering the keys and avoid editor backups or swap files that expose them.
+Do not put key values in shell commands, command-line arguments, or shell history.
+
+The command reads this already-provisioned file without evaluating shell code or prompting for decryption.
+It refuses root/sudo use, unsafe files, and malformed credentials; it has no environment, Caddy, root-file, or other credential fallback.
+This personal file does not replace Caddy's credential copy used for certificate renewal.
+
+Optional encrypted synchronization uses the existing age workflow:
+
+```sh
+dctl secrets trust
+dctl secrets sync
+```
+
+Sync encrypts the provisioned file using the configured age recipient.
+On another Linux machine with the encrypted file and configured age identity, run `dctl secrets trust` and then `dctl secrets decrypt`.
+These commands operate on the whole manifest, not only Porkbun; manifest approval and decryption passphrases belong to the secrets workflow.
+No encrypted Porkbun file, identity, or recipient is created by adding the manifest entry.
+
+### Commands and names
+
+```sh
+dctl porkbun check <domain>
+dctl porkbun list <domain>
+dctl porkbun create <domain> <name> <type> <content> [--ttl N] [--prio N] [--dry-run]
+dctl porkbun edit <domain> <id> --content VALUE [--ttl N] [--prio N] [--dry-run]
+dctl porkbun delete <domain> <id> [--dry-run]
+```
+
+Domains must be lowercase ASCII, without a URL scheme, path, or trailing dot; use punycode for internationalized domains.
+For create, `@` or an empty name means the domain root.
+Other names are relative lowercase subdomains such as `www`, `_acme-challenge`, or `_sip._tcp`; do not append the domain.
+Quote wildcard names such as `'*'` so the shell does not expand them.
+List returns fully qualified names, numeric record IDs, types, content, TTLs, and MX/SRV priorities.
+Always take edit/delete IDs from the list for the explicit domain.
+IDs must be positive decimal numbers without signs, leading zeros, or path characters.
+
+Writes support A, AAAA, CNAME, TXT, MX, and SRV only.
+Porkbun validates content and account limits; SRV content uses the provider's weight/port/target format, with priority in `--prio`.
+Omitted create TTL, or `--ttl 0`, uses Porkbun's account minimum rather than a CLI-defined TTL.
+MX/SRV priority defaults to zero on create.
+Edit preserves the name, type, notes, and omitted TTL/priority fields.
+There is no rename, upsert, bulk operation, delete-by-name, administrative DNS, or registration command.
+
+Create allows multiple records with the same name/type when their content or priority differs.
+The same name/type/content/priority is rejected as a duplicate even if TTL differs; no existing record is silently overwritten.
+Edit also refuses to duplicate another record's content/priority, and an already-matching state produces an explicit unchanged result without a mutation.
+
+### Consent, authority, and verification
+
+Every write shows current and proposed state and requires a default-no TTY confirmation, unless global `--yes` is supplied.
+`--json`, non-TTY, and `--defaults` writes require `--yes`; `--defaults` never grants consent.
+`--plain` changes display formatting and still permits confirmation on a TTY.
+JSON output contains one result with the preview, evidence, and warnings, without prompt or progress chatter; command errors also use dctl's stderr error output.
+
+`--dry-run` needs no consent.
+Create dry-run sends the documented `dryRun=true` request and requires `wouldSucceed=true` without a record ID.
+Edit/delete dry-runs read current API state and preview locally; they never call the mutation endpoint or prove mutation permission.
+`check` separately reports authentication, DNS readability, authority evidence, and a DNS-create dry-run for a probe TXT record named `_dctl-check`.
+It does not claim that live create, edit, or delete has been tested.
+
+Preflight requires matching `/domain/get/<domain>` metadata with documented `notLocal=0`, plus DNS responses without warnings.
+Missing or unexpected authority evidence blocks writes.
+Any provider warning blocks writes, including warnings that Porkbun holds an inactive copy after a move to the customer's own Cloudflare account.
+The API's `cloudflare` proxy field and the dashboard's “DNS Powered by Cloudflare” label are not used as migration evidence.
+No provider switch or independent DNS-resolution reconciliation is attempted.
+
+After consent, the command refreshes API authority and records and refuses a changed target or a new duplicate before sending one mutation.
+It then fetches records to verify the intended state or absence by ID, including preserved fields on edit.
+Porkbun offers no atomic compare-and-swap here, so a concurrent change can still occur between requests.
+Readback compares returned content exactly; provider normalization can produce an uncertain result that needs inspection.
+A failed mutation response or failed/mismatched readback returns nonzero with identifying information and an uncertain outcome; inspect `list` before any manual retry.
+The command never retries a mutation or rolls it back automatically, and API readback does not prove public DNS propagation.
 
 ## Repos
 

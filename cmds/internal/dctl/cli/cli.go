@@ -11,6 +11,7 @@ import (
 	"dotfiles/cmds/internal/dctl/app"
 	"dotfiles/cmds/internal/dctl/install"
 	"dotfiles/cmds/internal/dctl/iso"
+	"dotfiles/cmds/internal/dctl/porkbun"
 	"dotfiles/cmds/internal/dctl/repos"
 	"dotfiles/cmds/internal/dctl/secrets"
 	"dotfiles/cmds/internal/dctl/update"
@@ -22,7 +23,8 @@ type CLI struct {
 	Yes      bool `short:"y" help:"Assume yes for safe confirmations."`
 	Defaults bool `help:"Use defaults and avoid interactive prompts."`
 
-	Check CheckCmd `cmd:"" group:"actions" help:"Run install healthchecks."`
+	Check   CheckCmd    `cmd:"" group:"actions" help:"Run install healthchecks."`
+	Porkbun porkbun.Cmd `cmd:"" group:"actions" help:"Manage personal Porkbun DNS records (Linux)."`
 
 	Update  update.Cmd  `cmd:"" group:"lifecycle" help:"Update system and package lists."`
 	Secrets secrets.Cmd `cmd:"" group:"lifecycle" help:"Manage age-encrypted secrets."`
