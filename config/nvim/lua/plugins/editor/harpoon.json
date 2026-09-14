@@ -49,7 +49,9 @@
       ]
     },
     "/home/cullyn/LeadPier/backend/services/statistics": {
-      "pins": []
+      "pins": [
+        "analytics/init.analytics.go"
+      ]
     },
     "/home/cullyn/LeadPier/backend/services/webhooks": {
       "pins": []
