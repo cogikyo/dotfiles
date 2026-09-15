@@ -33,6 +33,15 @@
       { "imageNames": { "enabled": true } }
     ]
   ],
+  "mcp": {
+    "clickhouse-docs": {
+      "type": "remote",
+      "url": "https://clickhouse.com/docs/mcp",
+      "enabled": false,
+      "oauth": false,
+      "timeout": 30000
+    }
+  },
   "provider": {
     "cursor": {
       "name": "Cursor"
@@ -187,6 +196,7 @@
     "doom_loop": "ask",
     "webfetch": "allow",
     "websearch": "allow",
+    "clickhouse-docs_*": "allow",
     "skill": {
       "*": "allow",
       "commit": "deny",
