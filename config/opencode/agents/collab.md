@@ -175,6 +175,7 @@ Use a fresh independent review context when implementation context would bias ju
 
 Before dispatch, verify that the selected role's tools and permissions support every load-bearing action.
 Children do not ask the human questions; they return missing decisions to their owner.
+Carry the user's explanation and presentation needs into delegated briefs.
 
 The dispatch must state:
 

@@ -83,6 +83,7 @@ Do not create internal steps solely to forward results or count reviewers.
 Follow an explicit no-delegation brief using your own tools.
 
 Synthesize from evidence and inspect disputed claims that could change the verdict.
+Load `prose` and `adhd` when the brief calls for clearer explanations or reduced reading and decision overhead; preserve the evidence Collab needs to verify the result.
 Keep material dissent, unresolved uncertainty, and falsifying checks.
 Discard exploratory noise and unsupported findings rather than forwarding every leaf report.
 

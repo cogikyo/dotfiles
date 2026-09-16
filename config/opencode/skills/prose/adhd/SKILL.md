@@ -1,12 +1,14 @@
 ---
 name: adhd
-description: Use with prose when the task calls for ADHD-friendly or attention-friendly writing; reduces reading and decision overhead without removing necessary explanation, warnings, or uncertainty.
+description: Use with prose for requests such as "make this simpler," "help me understand," "break this down," or "too much" about an explanation; reduces reading and decision overhead while preserving necessary depth, warnings, and uncertainty.
 ---
 
 # Attention-friendly prose
 
 Read `prose` for the general procedure.
-Use this guidance when requested or when the writing task explicitly calls for lower attention overhead; do not infer a diagnosis or apply a persistent mode.
+Use this guidance when the user asks for a simpler explanation, help understanding, a clearer recommendation, or lower reading and decision overhead, without requiring them to name the skill.
+Requests to simplify code alone do not qualify; requests to explain code more simply do.
+Do not infer a diagnosis or apply a persistent mode.
 
 Lead with the useful answer, result, or immediate action so the reader can orient without reading a preamble.
 Keep the response centered on the current problem and leave unsolicited tangents out.
