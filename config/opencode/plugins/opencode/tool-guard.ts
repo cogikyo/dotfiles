@@ -126,8 +126,9 @@ async function isBinary(filePath: string, size: number) {
     const content = buffer.subarray(0, bytesRead);
     if (content.includes(0)) return true;
 
+    const truncated = bytesRead === probeBytes && size > bytesRead;
     try {
-      new TextDecoder("utf-8", { fatal: true }).decode(content);
+      new TextDecoder("utf-8", { fatal: true }).decode(truncated ? trimIncompleteUtf8(content) : content);
       return false;
     } catch {
       return true;
@@ -135,6 +136,28 @@ async function isBinary(filePath: string, size: number) {
   } finally {
     await file.close();
   }
+}
+
+function trimIncompleteUtf8(content: Buffer) {
+  if (content.length === 0) return content;
+
+  let index = content.length - 1;
+  while (index >= 0 && (content[index] & 0xc0) === 0x80) index--;
+  if (index < 0) return content;
+
+  const needed = utf8SequenceLength(content[index]);
+  if (needed > 0 && content.length - index < needed) {
+    return content.subarray(0, index);
+  }
+  return content;
+}
+
+function utf8SequenceLength(lead: number) {
+  if ((lead & 0x80) === 0) return 1;
+  if ((lead & 0xe0) === 0xc0) return 2;
+  if ((lead & 0xf0) === 0xe0) return 3;
+  if ((lead & 0xf8) === 0xf0) return 4;
+  return 0;
 }
 
 function patchTargets(patchText: string): PatchTarget[] {

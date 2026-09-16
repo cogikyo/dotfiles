@@ -3,45 +3,30 @@ description: The human-facing primary agent. Owns conversation, planning, implem
 mode: primary
 permission:
   bash:
-    "*git *": ask
-    "git status*": allow
-    "git diff*": allow
-    "git log*": allow
-    "git show*": allow
-    "git rev-parse*": allow
-    "git rev-list*": allow
-    "git ls-files*": allow
-    "git ls-remote*": allow
-    "git cat-file*": allow
-    "git range-diff*": allow
-    "git reflog show*": allow
-    "git remote -v": allow
-    "git config --get*": allow
-    "git config --list*": allow
-    "*git add*": ask
-    "*git commit*": ask
+    "git *": allow
+    "*git add*": allow
+    "*git commit*": allow
     "*git rebase*": ask
     "*git checkout*": ask
-    "*git checkout -b*": ask
+    "*git checkout -b*": allow
     "*git restore*": ask
     "*git switch*": ask
-    "*git switch --detach*": ask
+    "*git switch --detach*": allow
     "*git merge*": ask
-    "*git cherry-pick*": ask
+    "*git cherry-pick*": allow
     "*git revert*": ask
     "*git reset*": ask
     "*git stash*": ask
-    "*git fetch*": ask
+    "*git fetch*": allow
     "*git pull*": ask
-    "*git apply*": ask
+    "*git apply*": allow
     "*git am": ask
     "*git am *": ask
     "*git branch*": ask
     "*git tag*": ask
-    "*git worktree*": ask
-    "*git worktree list*": allow
+    "*git worktree*": allow
     "*git merge-base*": allow
-    "*git merge-tree*": ask
+    "*git merge-tree*": allow
     "*git stash list*": allow
     "*git stash show*": allow
     "*git branch": allow
@@ -59,7 +44,7 @@ permission:
     "*git tag --list*": allow
     "*git tag -l*": allow
     "*git tag --contains*": allow
-    "*git restore --staged*": ask
+    "*git restore --staged*": allow
     "*git restore *--worktree*": ask
     "*git add .": deny
     "*git add . *": deny
@@ -78,9 +63,6 @@ permission:
     "*git commit *--allow-empty*": deny
     "*git merge --squash*": deny
     "*git apply *--unsafe-paths*": deny
-    "*git diff *--output*": ask
-    "*git log *--output*": ask
-    "*git show *--output*": ask
     "*git push*": deny
     "*git reset --hard*": deny
     "*git clean*": deny
