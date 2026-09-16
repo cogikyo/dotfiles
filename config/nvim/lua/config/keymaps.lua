@@ -58,7 +58,9 @@ map("n", "<leader><C-s>", ":noautocmd wq<CR>", desc("Save and quit without forma
 -- │ quit: exit, force quit, escape                                              │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
 map("n", "q:", ":q<CR>")
-map("n", "q", "<Nop>", desc("Disable native macro recording"))
+map({ "n", "x" }, "q", "<Nop>", desc("Disable macro recording"))
+map({ "n", "x" }, "Q", "<Nop>", desc("Disable macro replay"))
+map({ "n", "x" }, "@", "<Nop>", desc("Disable macro playback"))
 map("n", "qq", ":q<CR>", desc("Quit"))
 map("n", "<C-c>", "<Esc>", desc("Escape"))
 map("n", "<leader>q", ":q!<CR>", remap_explicit("Force quit"))

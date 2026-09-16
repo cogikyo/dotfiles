@@ -214,9 +214,6 @@ return {
 					lazy,
 					lsp_diagnostics,
 					lsp_status,
-
-					{ require("recorder").recordingStatus },
-					{ require("recorder").displaySlots },
 					search,
 				},
 				lualine_y = { filetype },
