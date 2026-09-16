@@ -193,8 +193,11 @@ Use Astra and explicitly requested Fable for high-level council judgment when th
 ### `cursor/{any}`
 
 - Fallback provider. Can run any user-requested Cursor catalog model.
-- Default `cursor/grok-4.6` at `high`. Cursor Models quota goes further than Claude/GPT (Other Models).
-- Keep `xai/grok-4.6` as the default Grok route unless spending Cursor credits.
+- Cursor Models (C) and Other Models (O) are separate pools; O spend does not consume C.
+- Cannot use fable or astra at this time.
+- Default `cursor/grok-4.6` at `high` when spending C. C quota goes further than Claude/GPT on O.
+- Keep `xai/grok-4.6` as the default Grok route unless spending Cursor C.
+- `cursor/gpt-5.6-sol` at `high` is available on O and is the preferred heavier `scout/*` and `verify/*` route over `openai/gpt-5.6-luna-fast`, unless Luna headroom is substantially larger.
 
 ### `anthropic/claude-opus-5`
 
@@ -206,7 +209,8 @@ Use Astra and explicitly requested Fable for high-level council judgment when th
 
 ### `openai/gpt-5.6-luna-fast`
 
-- Default to `xhigh`; best for `scout/*` tasks.
+- Default to `xhigh` for light, bounded `scout/*` tasks.
+- Prefer `cursor/gpt-5.6-sol` for heavier scout or verify work unless current Luna headroom is substantially higher.
 - Don't fully trust its conclusions; often close to correct, but can fail to find appropriate context.
 - Can go overboard with verification; keep it scoped to its verification context.
 
