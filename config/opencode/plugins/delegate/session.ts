@@ -67,6 +67,7 @@ const CONTEXT_ADVICE = "start a fresh narrower child for the remaining concern; 
 const KNOWN_EFFORTS = new Set(["default", "minimal", "low", "medium", "high", "xhigh"]);
 const COLLAB = "collab";
 const ORCHESTRATOR = "orchestrator";
+const GIT = "build/git";
 // Prepended to every unattended child envelope, after dedupe so an agent profile that ends with its own
 // catch-all deny keeps that rule in its authoritative tail position. It only bites when no rule matches at
 // all, where the runtime would otherwise fall through to its `ask` default.
@@ -89,6 +90,14 @@ export async function prepareTask(client: Client, ctx: ToolContext, input: unkno
   const parentAgent = sessionAgent(parent) ?? "";
   validateTaskTarget(parentAgent, agent.name);
   const parentExecution = sessionExecution(parent);
+  if (agent.name === GIT) {
+    if (ctx.agent !== COLLAB || sessionParentID(parent) || parentExecution.unattended === true) {
+      throw new Error("delegate refuses build/git without an attended primary collab parent");
+    }
+    if (args.authority !== "write" || args.unattended !== true) {
+      throw new Error("delegate build/git requires explicit authority write and unattended true");
+    }
+  }
   if (parentAgent === ORCHESTRATOR && (parentExecution.authority === undefined || parentExecution.unattended === undefined)) {
     throw new Error("delegate refuses orchestrator parent without stored execution contract; re-brief from collab");
   }
@@ -737,8 +746,9 @@ async function askTaskPermission(ctx: ToolContext, args: TaskArgs, execution: Ex
   await (ctx.ask({
     permission: "task",
     patterns: [args.subagent_type],
-    always: ["*"],
+    always: args.subagent_type === GIT ? [] : ["*"],
     metadata: {
+      ...(args.subagent_type === GIT ? { prompt: args.prompt } : {}),
       description: args.description,
       subagent_type: args.subagent_type,
       model: args.model?.trim(),
@@ -917,13 +927,16 @@ function validateTaskTarget(parentAgent: string, target: string) {
   if (target === COLLAB) {
     throw new Error("delegate refuses collab as a child; collab is attended-primary only");
   }
+  if (target === GIT && parentAgent !== COLLAB) {
+    throw new Error("delegate refuses build/git; only attended collab may launch it, orchestrator must return the Git plan");
+  }
   if (target !== ORCHESTRATOR) return;
   if (parentAgent === COLLAB) return;
   throw new Error(`delegate refuses orchestrator from ${parentAgent || "unknown"}; only collab may launch orchestrator`);
 }
 
 function requiresExecution(parentAgent: string, target: string) {
-  return parentAgent === ORCHESTRATOR || target === ORCHESTRATOR;
+  return parentAgent === ORCHESTRATOR || target === ORCHESTRATOR || target === GIT;
 }
 
 function resolveExecution(parent: Execution, requested: TaskArgs, required: boolean): Execution {

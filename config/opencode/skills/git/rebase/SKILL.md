@@ -1,14 +1,18 @@
 ---
 name: rebase
-description: Use ONLY in attended Collab for an approved rebase of the already-resolved current branch onto an explicit upstream or onto commit, including continuation of that workflow's in-progress rebase and conflict resolution.
+description: Shared rebase procedure for Collab approval, Orchestrator planning, and authorized build/git execution on the resolved current branch, including owned continuation and conflict resolution.
 ---
 
 # Rebase
 
 ## Authority
 
-Only attended Collab follows this procedure and performs its Git mutation; never delegate it.
-Keep routine rebases in this session; use a bounded read-only scout for context-heavy Git archaeology.
+Collab may plan and execute approved work; Orchestrator may load this procedure to plan and supervise dependencies only.
+Only attended Collab may launch `build/git`, after presenting repository/worktree, branch and refs, intended mutations, destructive effects, checks, and stop conditions.
+The task uses normal ASK semantics, including remembered approvals, with explicit `authority: "write"` and `unattended: true`.
+Orchestrator returns the Git plan to Collab without mutating Git or launching the worker.
+Skill loading grants no execution authority; the worker follows only its approved named workflow and returns missing decisions to Collab.
+Use a bounded read-only scout for context-heavy Git archaeology before worker dispatch.
 If the remaining work needs a fresh attended session, provide a handoff rather than spawning Collab.
 
 Rebase the already-resolved current branch onto an explicit approved upstream or onto commit.
@@ -17,7 +21,7 @@ Stop if branch or worktree selection would be required.
 Stop if the in-progress operation is a merge; tell the caller to load `commit` instead.
 
 Do not rewrite published history unless the caller explicitly accepted that risk.
-Do not squash, drop, reorder, or edit commit messages unless the caller named those transforms.
+Do not squash, drop, skip, reorder, or edit commit messages in this workflow.
 Ordinary history editing stays with the user.
 
 ## Preflight
@@ -32,6 +36,9 @@ Never use `git pull`.
 ## Rebase
 
 Run an explicit non-interactive rebase onto the approved upstream or onto commit.
+Resolve both onto and upstream to OIDs; use `git rebase --onto <onto-OID> <upstream-OID>` on the verified current branch.
+Inspect effective rebase configuration before starting; stop if it would autostash, update other refs, execute commands, or enable unapproved transforms.
+Inspect patch-equivalent and empty commits before starting; stop if replay could silently drop an approved commit.
 Do not start a merge.
 Keep the operation in this workflow until it completes, safely aborts, or pauses on a semantic decision.
 
@@ -40,6 +47,7 @@ Resolve from those sides plus the caller's semantic authority.
 Never choose a whole side blindly.
 Stage only the explicit resolved paths.
 Continue only after inspecting the staged resolution and remaining conflicts.
+Use `GIT_EDITOR=true git rebase --continue` to retain the replayed message without an interactive editor; this does not bypass hooks.
 
 Abort only when that preserves all pre-existing work and the caller asked to abort.
 If safe continuation or abort is uncertain, stop with exact OIDs, operation state, conflicted paths, and the decision needed from the user.
@@ -66,4 +74,4 @@ Do not reset, clean, disable hooks, change Git configuration, or edit unrelated 
 Never load or dispatch another Git workflow.
 
 Report preflight and final OIDs, onto ref, conflicts and resolutions, ancestry audit, checks, final status, and residual risk.
-Ask the user when onto choice, published-history risk, or conflict intent remains ambiguous.
+Return ambiguous onto choice, published-history risk, or conflict intent to Collab; only attended Collab asks the user.

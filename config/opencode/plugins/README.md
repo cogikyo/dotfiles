@@ -41,7 +41,7 @@ Normal flow:
 
 - `model` is `provider/model-id`; when omitted the child inherits the agent's pinned model or the current assistant message's model and effort.
 - `effort` maps to the target model's reasoning variants.
-- `authority` is `read-only` or `write`, and `unattended` is a boolean; both are required when the caller or target is `orchestrator`.
+- `authority` is `read-only` or `write`, and `unattended` is a boolean; both are required when the caller or target is `orchestrator`, or the target is `build/git`.
 - `task_id` resumes a direct idle child only when its agent, execution contract, and freshly derived permission envelope match and it has no context-limit marker.
 - `task_status` lists direct children with task IDs, agents, execution authority, titles, live statuses, and persisted context-limit markers.
 - Resume sparingly for the same unfinished work; never resume a context-limited child.
@@ -56,12 +56,20 @@ Only Collab can launch `orchestrator`; an Orchestrator can delegate leaves but c
 Separate instances can own independent council reviews, broad investigations, or approved autonomous workflows.
 Scheme, Review, and Drive are skills loaded by the current owner, not agent names.
 
+`build/git` is an exception to leaf routing: only an attended primary Collab may launch or resume it, with explicit `authority: "write"` and `unattended: true`.
+The delegate checks the current caller, stored parent agent and execution contract, and primary-session ancestry before asking permission.
+Collab presents the repository/worktree, branch and refs, mutations, destructive effects, checks, and stop conditions before invocation; the full brief is included in permission metadata.
+Its exact task permission is `ask`, and the request offers no reusable grant (`always: []`); existing remembered approvals can still satisfy the normal runtime gate.
+The runtime does not parse or validate the human plan's intent.
+Orchestrator may load the shared Git skills to coordinate and return that plan, but cannot launch `build/git` or mutate Git.
+The worker's named command permissions support the approved workflow without routine asks; inherited denials remain blockers, and permission patterns are guardrails rather than a shell sandbox.
+
 Execution authority is stored in `metadata.delegate.authority` and `metadata.delegate.unattended`.
 Read-only authority adds trailing file-edit and write denials to the child envelope.
 The tool guard also rejects file-write tools and recognized shell mutations for read-only sessions and review leaves.
 These command checks are guardrails, not a shell sandbox.
 A child cannot request write authority under a read-only parent or attended execution under an unattended parent.
-Direct leaf calls outside Orchestrator may omit these fields to use the existing leaf-profile behavior.
+Direct leaf calls outside Orchestrator, except `build/git`, may omit these fields to use the existing leaf-profile behavior.
 Orchestrator calls must name both fields explicitly; they are never inferred from skills or brief text.
 
 General review uses Orchestrator with read-only authority.

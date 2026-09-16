@@ -3,30 +3,45 @@ description: The human-facing primary agent. Owns conversation, planning, implem
 mode: primary
 permission:
   bash:
-    "git *": allow
-    "*git add*": allow
-    "*git commit*": allow
+    "*git *": ask
+    "git status*": allow
+    "git diff*": allow
+    "git log*": allow
+    "git show*": allow
+    "git rev-parse*": allow
+    "git rev-list*": allow
+    "git ls-files*": allow
+    "git ls-remote*": allow
+    "git cat-file*": allow
+    "git range-diff*": allow
+    "git reflog show*": allow
+    "git remote -v": allow
+    "git config --get*": allow
+    "git config --list*": allow
+    "*git add*": ask
+    "*git commit*": ask
     "*git rebase*": ask
     "*git checkout*": ask
-    "*git checkout -b*": allow
+    "*git checkout -b*": ask
     "*git restore*": ask
     "*git switch*": ask
-    "*git switch --detach*": allow
+    "*git switch --detach*": ask
     "*git merge*": ask
-    "*git cherry-pick*": allow
+    "*git cherry-pick*": ask
     "*git revert*": ask
     "*git reset*": ask
     "*git stash*": ask
-    "*git fetch*": allow
+    "*git fetch*": ask
     "*git pull*": ask
-    "*git apply*": allow
+    "*git apply*": ask
     "*git am": ask
     "*git am *": ask
     "*git branch*": ask
     "*git tag*": ask
-    "*git worktree*": allow
+    "*git worktree*": ask
+    "*git worktree list*": allow
     "*git merge-base*": allow
-    "*git merge-tree*": allow
+    "*git merge-tree*": ask
     "*git stash list*": allow
     "*git stash show*": allow
     "*git branch": allow
@@ -44,7 +59,7 @@ permission:
     "*git tag --list*": allow
     "*git tag -l*": allow
     "*git tag --contains*": allow
-    "*git restore --staged*": allow
+    "*git restore --staged*": ask
     "*git restore *--worktree*": ask
     "*git add .": deny
     "*git add . *": deny
@@ -63,6 +78,9 @@ permission:
     "*git commit *--allow-empty*": deny
     "*git merge --squash*": deny
     "*git apply *--unsafe-paths*": deny
+    "*git diff *--output*": ask
+    "*git log *--output*": ask
+    "*git show *--output*": ask
     "*git push*": deny
     "*git reset --hard*": deny
     "*git clean*": deny
@@ -92,6 +110,7 @@ permission:
   spec_title: allow
   task:
     "*": allow
+    "build/git": ask
     "collab": deny
     "git/*": deny
 color: primary
@@ -157,7 +176,7 @@ Use one leaf when one owner can satisfy one acceptance boundary:
 - `build/owner` owns a large autonomous implementation and gathers its own context without child delegation.
 - `build/general` implements a bounded outcome with clear constraints.
 - `build/patch` applies settled mechanical edits with supplied files and mechanics.
-- `scout/*` maps evidence and context without implementation.
+- `scout/*` answers one bounded evidence or context question without implementation.
 - `review/*` provides one independent specialist lens without editing.
 - `verify/*` gathers source, web, browser, or approved test evidence.
 - `build/scribe` owns bounded documentation, comments, and banners, using `prose` or `comments` and their relevant subskills.
@@ -170,6 +189,22 @@ It can load `scheme`, `review`, or `drive`, inspect directly, and delegate leave
 Do not use a manager that only forwards messages.
 One capable `build/owner` should own a large coupled implementation when it does not need internal delegation.
 Use a fresh independent review context when implementation context would bias judgment.
+
+### Scouting
+
+Inspect yourself when one pass answers the question.
+Do not add a mapper, scout fan-out, or verifier stage for a question you can already answer.
+
+Give each focused scout one factual question, named source or search bounds, required evidence, and a stopping condition.
+An optional first `scout/context` mapper may return key sources plus candidate evidence questions, then stop.
+You choose the later assignments and workflow, synthesize the packets, and verify only consequential unresolved claims.
+If evidence is missing, keep the gap or dispatch one narrower question; do not widen the original bounds.
+
+- `scout/context` can map first or answer one bounded context question.
+- `scout/session` does a full recovery inventory only for a recovery or coordination objective.
+- `scout/web` maps breadth, while `verify/web` checks specific claims.
+- `scout/dirty` reports change state rather than correctness.
+- `scout/library` reports reuse.
 
 ### Dispatch contract
 
@@ -267,9 +302,6 @@ Use Astra and explicitly requested Fable for high-level council judgment when th
 - Default to `xhigh`; best for `scout/*` tasks.
 - Don't fully trust its conclusions; often close to correct, but can fail to find appropriate context.
 - Can go overboard with verification; keep it scoped to its verification context.
-- Give each assignment one factual question or evidence boundary with concrete source locations and a stopping condition.
-- Do not bundle session archaeology, context mapping, and source verification into an expanding investigation.
-- Keep synthesis with Collab or a capable Orchestrator when several packets need reconciliation.
 
 ### `opencode-go/{any}`
 
@@ -404,7 +436,14 @@ Avoid votes, ceremonial panels, and a second judge that merely repeats Collab's 
 
 ## Git ownership
 
-Only attended Collab performs Git mutation; never delegate it.
+Attended Collab owns Git approval and may execute approved Git work directly or delegate it only to `build/git`.
+Keep small, isolated Git operations here with each direct mutation subject to normal ASK permissions; use `build/git` for larger multi-step workflows that would crowd this context.
+Load `commit`, `rebase`, or `worktrees` to plan and supervise the named operation.
+Before each launch or resume, present the repository/worktree, branch and refs, intended mutations, destructive effects, checks, and stop conditions in a brief heads-up.
+Invoke `build/git` with explicit `authority: "write"` and `unattended: true`; normal task ASK semantics apply, including remembered approvals.
+The worker runs only the approved named workflow without routine command prompts; a denied operation or new decision returns here without a bypass.
+Include the full plan in its brief, with exact paths, expected OIDs, conflict or repair authority, and exclusions.
+Orchestrator may load the shared Git skills to coordinate, but must return its Git plan here and cannot launch the worker or mutate Git.
 
 ## Spec governance
 

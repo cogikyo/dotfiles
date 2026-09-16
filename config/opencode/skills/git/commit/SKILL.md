@@ -1,6 +1,6 @@
 ---
 name: commit
-description: Use ONLY in attended Collab for an approved commit task or resolution of already-started merge conflicts; inspect the dirty scope, select atomic commits, stage approved changes, and finish the commit or active merge.
+description: Shared commit and active-merge procedure for Collab approval, Orchestrator planning, and authorized build/git execution; inspect dirty scope, select atomic commits, and stage only approved changes.
 ---
 
 # Commit
@@ -10,10 +10,12 @@ Use this procedure to create atomic conventional commits or finish an already-st
 ## Scope
 
 - Use it only when the active brief approves a commit task or an active merge resolution.
-- Only attended Collab may follow this procedure, including for approved `.spec/**` artifacts.
+- Collab may plan and execute approved work, Orchestrator may plan and supervise dependencies only, and `build/git` may execute its approved dispatch, including approved `.spec/**` artifacts.
 
-Approved commit tasks and already-started merge resolutions normally proceed as direct work.
-Keep routine commits and merge resolutions in this session; never delegate Git mutation.
+Skill loading does not authorize mutation or delegation.
+Only attended Collab may launch `build/git`, after presenting repository/worktree, branch and refs, intended mutations, destructive effects, checks, and stop conditions.
+The task uses normal ASK semantics, including remembered approvals, with explicit `authority: "write"` and `unattended: true`.
+Orchestrator returns that plan to Collab without mutating Git or launching the worker.
 For context-heavy Git archaeology, use a bounded read-only scout.
 If the remaining work needs a fresh attended session, provide a handoff rather than spawning Collab.
 
@@ -71,7 +73,7 @@ Keep one coherent cross-file behavior together even when it touches many files.
 ### Stage one story
 
 1. Stage a whole file only when every changed hunk belongs to the story.
-2. For mixed files, select hunks with `git add -p` or apply a reviewed patch with `git apply --cached`.
+2. For mixed files, apply a reviewed patch with `git apply --cached`; attended Collab may also use `git add -p` when explicitly authorized.
 3. Inspect `git diff --cached` and confirm that the index contains exactly one complete story.
 4. Commit the reviewed index without pathspecs so partial staging remains authoritative.
 
@@ -172,7 +174,7 @@ Resume committing only after that repair settles.
 ## Active merge
 
 This skill may finish an active merge, but it must not start any integration operation.
-Stop an active rebase and use the `rebase` skill in a separate action.
+If a rebase is active, stop this workflow without aborting it and return for a separately approved `rebase` action.
 
 1. Inspect each conflict from the merge base, ours, and theirs.
 2. Resolve from those versions plus the approved intent without choosing a whole side blindly.

@@ -13,15 +13,16 @@ permission:
     "grok *": allow
   skill:
     "*": allow
-    "commit": deny
-    "rebase": deny
-    "worktrees": deny
+    "commit": allow
+    "rebase": allow
+    "worktrees": allow
   task:
     "*": deny
     "scout/*": allow
     "review/*": allow
     "verify/*": allow
     "build/*": allow
+    "build/git": deny
 color: accent
 ---
 
@@ -56,8 +57,10 @@ The brief must name the objective, inputs, exclusions, acceptance evidence, and 
 > Skill loading does not change these runtime controls; a write-capable planning assignment still needs explicit artifact bounds.
 
 You never commit, rebase, mutate Git, or delegate Git mutation.
-Only attended Collab performs approved Git mutation through its Git skills.
-Return the changed scope and any required Git boundary to Collab.
+You may load `commit`, `rebase`, and `worktrees` to plan and supervise dependencies; skill loading grants no execution authority.
+Return the named Git plan to Collab with repository/worktree, branch and refs, intended mutations, destructive effects, checks, and stop conditions.
+Only attended Collab may launch `build/git` through normal task ASK permissions or perform approved Git work directly.
+Never dispatch `build/git`, including through another agent, provider, or tool.
 Do not publish, install, restart services, run expensive checks, or perform destructive actions without explicit authority.
 
 ## Procedure
@@ -94,10 +97,26 @@ Use one leaf when one owner can satisfy one acceptance boundary:
 - `build/owner` owns a large autonomous implementation and gathers its own context without child delegation.
 - `build/general` implements a bounded outcome with clear constraints.
 - `build/patch` applies settled mechanical edits with supplied files and mechanics.
-- `scout/*` maps evidence and context without implementation.
+- `scout/*` answers one bounded evidence or context question without implementation.
 - `review/*` provides one independent specialist lens without editing.
 - `verify/*` gathers source, web, browser, or approved test evidence.
 - `build/scribe` owns bounded documentation, comments, and banners, using `prose` or `comments` and their relevant subskills.
+
+### Scouting
+
+Inspect yourself when one pass answers the question.
+Do not add a mapper, scout fan-out, or verifier stage for a question you can already answer.
+
+Give each focused scout one factual question, named source or search bounds, required evidence, and a stopping condition.
+An optional first `scout/context` mapper may return key sources plus candidate evidence questions, then stop.
+You choose the later assignments allowed by the brief, synthesize the packets, and verify only consequential unresolved claims.
+If evidence is missing, keep the gap or dispatch one narrower question; do not widen the original bounds.
+
+- `scout/context` can map first or answer one bounded context question.
+- `scout/session` does a full recovery inventory only for a recovery or coordination objective.
+- `scout/web` maps breadth, while `verify/web` checks specific claims.
+- `scout/dirty` reports change state rather than correctness.
+- `scout/library` reports reuse.
 
 ### Dispatch contract
 
@@ -190,9 +209,6 @@ Use Astra and explicitly requested Fable for high-level council judgment when th
 - Default to `xhigh`; best for `scout/*` tasks.
 - Don't fully trust its conclusions; often close to correct, but can fail to find appropriate context.
 - Can go overboard with verification; keep it scoped to its verification context.
-- Give each assignment one factual question or evidence boundary with concrete source locations and a stopping condition.
-- Do not bundle session archaeology, context mapping, and source verification into an expanding investigation.
-- Keep synthesis with Collab or a capable Orchestrator when several packets need reconciliation.
 
 ### `opencode-go/{any}`
 

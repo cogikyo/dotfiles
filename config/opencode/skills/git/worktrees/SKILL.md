@@ -1,15 +1,17 @@
 ---
 name: worktrees
-description: Use in Collab to interpret path@branch (repository or worktree path plus Git branch/ref), resolve a named target branch or worktree, or handle multi-repository work; verify the checkout before repository edits, delegation, or branch-sensitive Git commands, and manage approved worktree creation, reuse, recovery, or removal.
+description: Shared branch/worktree procedure for Collab approval, Orchestrator planning, and authorized build/git execution; resolve path@branch, verify checkouts, and manage named safe lifecycle operations.
 ---
 
 # Worktrees
 
 ## Ownership
 
-This skill belongs to Collab only.
-Only attended Collab performs approved Git mutation; never delegate worktree lifecycle operations.
-Children may inspect Git read-only and work within an explicitly assigned checkout without loading this skill.
+Collab may plan and execute approved work; Orchestrator may load this procedure to resolve targets and supervise dependencies without Git mutation.
+Only attended Collab may launch `build/git`, after presenting repository/worktree, branch and refs, intended mutations, destructive effects, checks, and stop conditions.
+The task uses normal ASK semantics, including remembered approvals, with explicit `authority: "write"` and `unattended: true`.
+Orchestrator returns that plan to Collab and cannot launch the worker.
+Skill loading grants no execution authority; other children inspect Git read-only and work within their assigned checkout without loading this skill.
 Do not repurpose another work thread's checkout.
 
 ## Resolve the target
@@ -29,7 +31,7 @@ For each target:
 1. Verify the repository root, current branch, worktree list, and staged, unstaged, and untracked changes immediately before editing, delegating, or running branch-sensitive commands.
 2. Reuse the worktree holding the requested branch, even when the user supplied the main repository path.
 3. If the supplied worktree is on another branch, locate the matching worktree instead of switching that checkout.
-4. If no matching worktree exists, ask before creating one or changing a checkout unless the user explicitly requested that operation.
+4. If no matching worktree exists, return the creation plan to Collab unless the current worker dispatch already approves that exact operation; only attended Collab asks the user.
 5. Pass children the resolved repository root, exact worktree path, and verified branch or detached ref, never unresolved `path@branch` notation.
 6. Recheck Git state after interruptions, child returns, or signs of concurrent checkout changes.
 
@@ -51,18 +53,19 @@ An empty branch name means detached HEAD; verify its commit against the requeste
 3. Check that the branch is not already attached and the destination is unused, and verify the parent directory before creating any missing directories.
 4. Run only the approved creation form below, then verify the result in the new checkout.
 
-The examples use resolved absolute `$repo` and `$path`, a local `$branch`, and an explicit `$base` for a new branch.
+Run these commands with the shell tool's working directory set to the resolved repository.
+The examples use an absolute `$path`, a local `$branch`, and an explicit approved `$base` OID for a new branch.
 
 Attach an existing local branch:
 
 ```bash
-git -C "$repo" worktree add "$path" "$branch"
+git worktree add -- "$path" "$branch"
 ```
 
 Create a new branch from the approved base:
 
 ```bash
-git -C "$repo" worktree add -b "$branch" "$path" "$base"
+git worktree add -b "$branch" -- "$path" "$base"
 ```
 
 A remote-tracking ref or detached checkout needs an explicit branch/tracking or detached-HEAD choice; do not rely on Git guessing the intended form.
@@ -88,6 +91,16 @@ For creation, include the starting ref; distinguish a Git checkout that exists f
 - After an interrupted creation, reconcile the destination and Git metadata before issuing another add command.
 - Do not clear index flags, stash, reset, clean, commit, or delete files to make an operation pass without approval for that action.
 
-Removal requires explicit scope and inspection of tracked, untracked, and ignored files that would be lost.
-Preserve dirty work through an approved action before using `git worktree remove`; deleting the branch is a separate decision.
+Removal requires a named approved path and inspection of tracked, untracked, and ignored files that would be lost.
+Require a clean worktree with no files to preserve, no active Git operation, and no other owner using it before `git worktree remove -- <path>`.
+Never force removal; preservation work needs a separately approved action.
+Deleting the branch is a separate decision.
 Use Git's worktree operations rather than deleting a live worktree directory by hand.
+
+## Named branch lifecycle
+
+Create a branch only with its approved name and starting OID, using `git branch -- <name> <base-OID>`; this does not switch the current checkout.
+For deletion, verify the named branch's tip, confirm it is not attached to any worktree or owned by another task, and prove its tip is reachable from the approved retained ref.
+Use only `git branch -d -- <name>`; if Git refuses, return to Collab without `-D`, force, ref deletion, or configuration changes.
+Do not rename branches, switch existing checkouts, or prune or repair worktree metadata under this workflow.
+After each mutation, inspect branch refs, worktree list, and status and report what changed and what remains preserved.
