@@ -21,6 +21,7 @@ Running sessions keep the loaded plugin set.
 | Hyprland notifications | `hyprd/notify.ts` | `hyprd-notify` | server |
 | Isolated browser QA | `hyprd/browser-isolation.ts` | `hyprd-browser-isolation` | server |
 | Spec title | `opencode/spec-title.ts` | `opencode-spec-title` | server |
+| Skill compact | `opencode/skill-compact.ts` | `opencode-skill-compact` | server |
 | Media context prompt | `opencode/media-context/prompt.ts` | `opencode-media-context-prompt` | server |
 | Code blocks | `opencode/code-blocks.ts` | `opencode-code-blocks` | TUI |
 | Kitty context | `hyprd/kitty.ts` | `hyprd-kitty-context` | TUI |
@@ -202,7 +203,8 @@ The other sidebar sections register `sidebar_content` with distinct orders.
 - `hyprd/browser-qa.tsx` keeps one workspace subscription per plugin instance and lists marked browser workspaces before MCP.
 - `opencode/statusline.tsx` wraps `session_prompt` with cwd, git status, and a context-pressure bar.
 - `opencode/modified-files.tsx` lists files touched in the current session.
-- `opencode/markdown-context.tsx` lists Markdown reads plus pinned `AGENTS.md` files, the current agent, skills, and slash commands.
+- `opencode/markdown-context.tsx` lists Markdown reads plus pinned `AGENTS.md` files, the current agent, skills, and slash commands. Click the close mark to stub an unpinned skill or Markdown read. Click restore on a compacted row to reload the file from disk. Click the label to open the file.
+- `opencode/skill-compact.ts` stubs loaded skill bodies when a session compacts. It also uncompacts protected `AGENTS.md` / Collab / Orchestrator reads so native prune cannot keep them stubbed.
 - `opencode/media-context/index.tsx` lists registered images and videos and opens images in a Kitty overlay.
 
 Practical failure diagnosis:
@@ -223,6 +225,7 @@ Practical failure diagnosis:
 - `usage/cache.ts` owns the cache file shape, lock semantics, and decoder.
 - `usage/auth.ts` owns path resolution for auth, cache, and runtime directories.
 - `opencode/media-context/registry.ts` owns media registry paths, handle/alias patterns, and file-part ID rules.
+- `opencode/skill-parts.ts` owns skill/read tool-part compacting and persist via TUI `part.update` or server HTTP PATCH.
 - `delegate/config.ts` hardcodes `DELEGATE_CONFIG_PATH` to `/home/cullyn/dotfiles/config/opencode/delegate.json`.
 - Changing `hyprd/context.ts` paths or schema requires updating both `hyprd/kitty.ts` and `hyprd/notify.ts`.
 - `shared/` owns session/provider metadata, colors/icons, git status parsing, and the sidebar-section wrapper; only put helpers there when more than one plugin owns the concept.

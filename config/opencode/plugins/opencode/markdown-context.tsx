@@ -1,13 +1,21 @@
 /** @jsxImportSource @opentui/solid */
 import type { Message, ToolPart } from '@opencode-ai/sdk/v2'
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from '@opencode-ai/plugin/tui'
-import { existsSync, realpathSync } from 'node:fs'
+import { existsSync, readFileSync, realpathSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { For, Show, createSignal, onCleanup } from 'solid-js'
 import { colors } from '../shared/colors.ts'
 import { icons } from '../shared/icons.ts'
 import { openInNvim } from '../shared/open-nvim.ts'
+import {
+  isProtectedMarkdownPath,
+  persistCompactedToolParts,
+  persistUpdatedPart,
+  withReloadedOutput,
+  type ProtectRoots,
+  type SkillToolPart,
+} from './skill-parts.ts'
 import { SidebarSection } from '../shared/sidebar-section.tsx'
 
 const id = 'opencode-markdown-context'
@@ -17,13 +25,20 @@ type MarkdownSourceKind = 'readme' | 'agents' | 'agent' | 'skill' | 'command' | 
 
 const configRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 
+type PartRef = {
+  messageID: string
+  partID: string
+}
+
 type MarkdownContextItem = {
   key: string
   path: string
   label: string
   kind: MarkdownSourceKind
   compacted: boolean
+  pinned: boolean
   time: number
+  refs: PartRef[]
 }
 
 function MarkdownContext(props: { api: TuiPluginApi; sessionID: string }) {
@@ -61,13 +76,33 @@ function MarkdownContext(props: { api: TuiPluginApi; sessionID: string }) {
       <SidebarSection api={props.api} title="Markdown Context" detail={`${items().length} read`}>
         <For each={items()}>
           {(item) => (
-            <box flexDirection="row" gap={0} onMouseDown={() => openInNvim(props.api, item.path, 'Markdown open failed')}>
-              <text fg={sourceColor(props.api, item)} wrapMode="none">
-                {sourceIcon(props.api, item)}
-              </text>
-              <text fg={props.api.theme.current.textMuted} wrapMode="none">
-                {item.label}
-              </text>
+            <box flexDirection="row" gap={0}>
+              <Show when={canUnload(props.api, props.sessionID, item)}>
+                <text
+                  fg={props.api.theme.current.textMuted}
+                  wrapMode="none"
+                  onMouseDown={() => void unloadItem(props.api, props.sessionID, item)}
+                >
+                  {`${icons.error} `}
+                </text>
+              </Show>
+              <Show when={canReload(item)}>
+                <text
+                  fg={props.api.theme.current.textMuted}
+                  wrapMode="none"
+                  onMouseDown={() => void reloadItem(props.api, props.sessionID, item)}
+                >
+                  {`${icons.restore} `}
+                </text>
+              </Show>
+              <box flexDirection="row" gap={0} onMouseDown={() => openInNvim(props.api, item.path, 'Markdown open failed')}>
+                <text fg={sourceColor(props.api, item)} wrapMode="none">
+                  {sourceIcon(props.api, item)}
+                </text>
+                <text fg={props.api.theme.current.textMuted} wrapMode="none">
+                  {item.label}
+                </text>
+              </box>
             </box>
           )}
         </For>
@@ -78,7 +113,6 @@ function MarkdownContext(props: { api: TuiPluginApi; sessionID: string }) {
 
 function markdownContextItems(api: TuiPluginApi, sessionID: string) {
   const pinned = pinnedContextItems(api, sessionID)
-  const seen = new Set(pinned.map((item) => item.key))
   const reads = new Map<string, MarkdownContextItem>()
   const messages = api.state.session.messages(sessionID) as ReadonlyArray<Message>
 
@@ -89,17 +123,30 @@ function markdownContextItems(api: TuiPluginApi, sessionID: string) {
 
       const pin = pinned.find((entry) => entry.key === item.key)
       if (pin) {
-        if (isConfigAgents(item.path)) pin.compacted = item.compacted
+        pin.refs.push(...item.refs)
+        pin.compacted = pin.compacted || item.compacted
         continue
       }
-      if (seen.has(item.key)) continue
 
       const existing = reads.get(item.key)
-      if (!existing || item.time >= existing.time) reads.set(item.key, item)
+      if (existing) {
+        existing.refs.push(...item.refs)
+        if (item.time >= existing.time) {
+          existing.time = item.time
+          existing.path = item.path
+          existing.label = item.label
+        }
+        existing.compacted = existing.compacted && item.compacted
+        continue
+      }
+      reads.set(item.key, item)
     }
   }
 
-  return [...pinned, ...Array.from(reads.values()).sort((left, right) => right.time - left.time)]
+  return [
+    ...pinned,
+    ...Array.from(reads.values()).sort((left, right) => right.time - left.time),
+  ]
 }
 
 function pinnedContextItems(api: TuiPluginApi, sessionID: string) {
@@ -108,7 +155,7 @@ function pinnedContextItems(api: TuiPluginApi, sessionID: string) {
 
   const push = (filePath: string) => {
     if (!existsSync(filePath)) return
-    const item = markdownFileItem(api, filePath, 0, false)
+    const item = markdownFileItem(api, filePath, 0, false, [], true)
     if (seen.has(item.key)) return
     seen.add(item.key)
     items.push(item)
@@ -141,7 +188,9 @@ function markdownReadItem(api: TuiPluginApi, part: ReturnType<TuiPluginApi['stat
 
   const filePath = markdownPathFromInput(tool.state.input)
   if (!filePath) return undefined
-  return markdownFileItem(api, filePath, tool.state.time.end, tool.state.time.compacted !== undefined)
+  return markdownFileItem(api, filePath, tool.state.time.end, tool.state.time.compacted !== undefined, [
+    { messageID: tool.messageID, partID: tool.id },
+  ])
 }
 
 function skillToolItem(api: TuiPluginApi, part: ReturnType<TuiPluginApi['state']['part']>[number]): MarkdownContextItem | undefined {
@@ -151,7 +200,9 @@ function skillToolItem(api: TuiPluginApi, part: ReturnType<TuiPluginApi['state']
 
   const filePath = skillPathFromTool(tool)
   if (!filePath) return undefined
-  return markdownFileItem(api, filePath, tool.state.time.end, tool.state.time.compacted !== undefined)
+  return markdownFileItem(api, filePath, tool.state.time.end, tool.state.time.compacted !== undefined, [
+    { messageID: tool.messageID, partID: tool.id },
+  ])
 }
 
 function skillPathFromTool(tool: ToolPart) {
@@ -168,7 +219,14 @@ function skillPathFromTool(tool: ToolPart) {
   return existsSync(filePath) ? filePath : undefined
 }
 
-function markdownFileItem(api: TuiPluginApi, filePath: string, time: number, compacted: boolean): MarkdownContextItem {
+function markdownFileItem(
+  api: TuiPluginApi,
+  filePath: string,
+  time: number,
+  compacted: boolean,
+  refs: PartRef[] = [],
+  pinned = false,
+): MarkdownContextItem {
   const kind = markdownSourceKind(filePath)
   return {
     key: markdownIdentity(filePath),
@@ -176,8 +234,94 @@ function markdownFileItem(api: TuiPluginApi, filePath: string, time: number, com
     label: displayPath(api, filePath, kind),
     kind,
     compacted,
+    pinned,
     time,
+    refs,
   }
+}
+
+function protectRoots(api: TuiPluginApi, sessionID: string): ProtectRoots {
+  const agent = currentAgent(api, sessionID)
+  return {
+    configRoot,
+    projectRoots: projectRoots(api),
+    agentNames: ['collab', 'orchestrator', agent].filter((name): name is string => Boolean(name)),
+  }
+}
+
+function canUnload(api: TuiPluginApi, sessionID: string, item: MarkdownContextItem) {
+  if (item.pinned || item.compacted || item.refs.length === 0) return false
+  return !isProtectedMarkdownPath(item.path, protectRoots(api, sessionID))
+}
+
+function canReload(item: MarkdownContextItem) {
+  return item.compacted && item.refs.length > 0
+}
+
+async function unloadItem(api: TuiPluginApi, sessionID: string, item: MarkdownContextItem) {
+  const ids = new Set(item.refs.map((ref) => `${ref.messageID}:${ref.partID}`))
+  const parts: SkillToolPart[] = []
+  const messages = api.state.session.messages(sessionID) as ReadonlyArray<Message>
+
+  for (const message of messages) {
+    for (const part of api.state.part(message.id)) {
+      if (part.type !== 'tool' || part.state.status !== 'completed' || part.state.time.compacted !== undefined) continue
+      if (!ids.has(`${part.messageID}:${part.id}`)) continue
+      parts.push(part as SkillToolPart)
+    }
+  }
+
+  try {
+    await persistCompactedToolParts(api.client, parts)
+  } catch (error) {
+    api.ui.toast({
+      variant: 'warning',
+      title: 'Context unload failed',
+      message: error instanceof Error ? error.message : item.label,
+    })
+  }
+}
+
+async function reloadItem(api: TuiPluginApi, sessionID: string, item: MarkdownContextItem) {
+  let output: string
+  try {
+    output = numberedRead(readFileSync(item.path, 'utf8'))
+  } catch (error) {
+    api.ui.toast({
+      variant: 'warning',
+      title: 'Context reload failed',
+      message: error instanceof Error ? error.message : item.label,
+    })
+    return
+  }
+
+  const ids = new Set(item.refs.map((ref) => `${ref.messageID}:${ref.partID}`))
+  const parts: SkillToolPart[] = []
+  const messages = api.state.session.messages(sessionID) as ReadonlyArray<Message>
+
+  for (const message of messages) {
+    for (const part of api.state.part(message.id)) {
+      if (part.type !== 'tool' || part.state.status !== 'completed') continue
+      if (!ids.has(`${part.messageID}:${part.id}`)) continue
+      parts.push(withReloadedOutput(part as SkillToolPart, output))
+    }
+  }
+
+  try {
+    for (const part of parts) await persistUpdatedPart(api.client, part)
+  } catch (error) {
+    api.ui.toast({
+      variant: 'warning',
+      title: 'Context reload failed',
+      message: error instanceof Error ? error.message : item.label,
+    })
+  }
+}
+
+function numberedRead(content: string) {
+  const lines = content.split('\n')
+  const width = Math.max(6, String(lines.length).length)
+  return lines.map((line, index) => `${String(index + 1).padStart(width)}| ${line}`).join('\n')
 }
 
 function markdownPathFromInput(input: Record<string, unknown>) {

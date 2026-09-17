@@ -34,6 +34,7 @@ export const icons = {
   partial: '󰈙',
   markdown: '󰍔',
   compacted: '',
+  restore: '󰁯',
   readme: '',
   spec: '󱍅',
   spinner: {
