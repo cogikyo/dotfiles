@@ -108,15 +108,20 @@ Inspect yourself when one pass answers the question.
 Do not add a mapper, scout fan-out, or verifier stage for a question you can already answer.
 
 Give each focused scout one factual question, named source or search bounds, required evidence, and a stopping condition.
-An optional first `scout/context` mapper may return key sources plus candidate evidence questions, then stop.
+Reserve `scout/context` for a first map when ownership, governing instructions or skills, relevant files, and next evidence questions are not yet understood.
+It returns a route map and classified follow-up questions, then stops.
+A known-file, known-command, or already-bounded factual question goes to the specialized role, or you inspect it directly.
 You choose the later assignments allowed by the brief, synthesize the packets, and verify only consequential unresolved claims.
 If evidence is missing, keep the gap or dispatch one narrower question; do not widen the original bounds.
 
-- `scout/context` can map first or answer one bounded context question.
-- `scout/session` does a full recovery inventory only for a recovery or coordination objective.
-- `scout/web` maps breadth, while `verify/web` checks specific claims.
-- `scout/dirty` reports change state rather than correctness.
+- `scout/context` maps the big picture; it does not answer downstream facts.
 - `scout/library` reports reuse.
+- `scout/dirty` reports WIP and change state rather than correctness.
+- `scout/session` reports session state, with a full recovery inventory only for a recovery or coordination objective.
+- `scout/web` maps external option breadth, while `verify/web` checks current docs, published APIs, and parent-authorized live read-only API evidence.
+- `verify/source` checks a specific claim against local target source or upstream source.
+- `verify/test` runs approved commands and tests.
+- `verify/browser` observes browser behavior.
 
 ### Dispatch contract
 
