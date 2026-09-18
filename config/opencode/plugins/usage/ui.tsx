@@ -95,7 +95,7 @@ function pacePercent(label: string, resetAt?: string) {
   const start =
     label === "H"
       ? end - 5 * 60 * 60 * 1000
-      : label === "M"
+      : label === "M" || label === "C" || label === "O"
         ? previousMonth(reset)
         : end - 7 * 24 * 60 * 60 * 1000;
   const elapsed = (Date.now() - start) / (end - start);
