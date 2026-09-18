@@ -32,6 +32,7 @@ Running sessions keep the loaded plugin set.
 | Markdown context | `opencode/markdown-context.tsx` | `opencode-markdown-context` | TUI |
 | Media context sidebar | `opencode/media-context/index.tsx` | `opencode-media-context` | TUI |
 | Statusline | `opencode/statusline.tsx` | `opencode-statusline` | TUI |
+| Pin model | `opencode/pin-model.tsx` | `opencode-pin-model` | TUI |
 
 ## Delegate
 
@@ -206,6 +207,7 @@ The other sidebar sections register `sidebar_content` with distinct orders.
 - `opencode/markdown-context.tsx` lists Markdown reads plus pinned `AGENTS.md` files, the current agent, skills, and slash commands. Click the close mark to stub an unpinned skill or Markdown read. Click restore on a compacted row to reload the file from disk. Click the label to open the file.
 - `opencode/skill-compact.ts` stubs loaded skill bodies when a session compacts. It also uncompacts protected `AGENTS.md` / Collab / Orchestrator reads so native prune cannot keep them stubbed.
 - `opencode/media-context/index.tsx` lists registered images and videos and opens images in a Kitty overlay.
+- `opencode/pin-model.tsx` pins the current model to `opencode.json` with `<leader>f` / `/pin`, and switches to that pin with `<leader>shift+t` / `/pinned`. Reasoning is stored in `~/.local/state/opencode/pin.json` plus the TUI variant map. New OpenCode windows read the pinned `model` from `opencode.json`.
 
 Practical failure diagnosis:
 
@@ -214,6 +216,8 @@ Practical failure diagnosis:
 - Code blocks not styled → the plugin warns via toast when OpenTUI internals change.
 - Media preview fails → needs `python3`, `config/xplr/bin/kitty-preview.py`, and a Kitty terminal.
 - Statusline shows no context pressure → the model's context limit is not exposed or there is no assistant output yet.
+- Pin model missing → restart OpenCode after `tui.json` includes `opencode/pin-model.tsx`.
+- `Model picker unavailable` → OpenCode's Local context shape changed and the Solid owner walk failed.
 
 ## For agents changing plugins
 
