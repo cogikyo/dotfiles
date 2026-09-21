@@ -3,6 +3,12 @@ import type { TuiPluginApi } from '@opencode-ai/plugin/tui'
 
 export const COMPACTION_LIMIT = 250_000
 export const COMPACTION_RESERVED = 25_000
+export const CONTEXT_PRESSURE = {
+  soft: 100_000,
+  medium: 150_000,
+  final: 200_000,
+  hard: COMPACTION_LIMIT,
+} as const
 
 export type SessionMeta = {
   agent: string

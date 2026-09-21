@@ -3,11 +3,6 @@ import fs from "node:fs/promises";
 export const DELEGATE_CONFIG_PATH = "/home/cullyn/dotfiles/config/opencode/delegate.json";
 
 export type DelegateConfig = {
-  context: {
-    soft: number;
-    medium: number;
-    hard: number;
-  };
   providers: Record<string, Record<string, unknown>>;
 };
 
@@ -31,32 +26,17 @@ export async function loadDelegateConfig(path = DELEGATE_CONFIG_PATH): Promise<D
 
 function validateDelegateConfig(value: unknown, source: string): DelegateConfig {
   const root = object(value, source);
-  exactKeys(root, ["context", "providers"], source);
-  const context = object(root.context, `${source}.context`);
-  exactKeys(context, ["soft", "medium", "hard"], `${source}.context`);
-  const soft = positiveInteger(context.soft, `${source}.context.soft`);
-  const medium = positiveInteger(context.medium, `${source}.context.medium`);
-  const hard = positiveInteger(context.hard, `${source}.context.hard`);
+  exactKeys(root, ["providers"], source);
   const providers = objectRecord(root.providers, `${source}.providers`);
 
-  if (soft >= medium || medium >= hard) {
-    throw new Error(`delegate config ${source}.context thresholds must satisfy soft < medium < hard`);
-  }
   if (!Object.keys(providers).length) throw new Error(`delegate config ${source}.providers must not be empty`);
 
-  return { context: { soft, medium, hard }, providers };
+  return { providers };
 }
 
 function exactKeys(value: Record<string, unknown>, allowed: string[], label: string) {
   const extra = Object.keys(value).filter((key) => !allowed.includes(key));
   if (extra.length) throw new Error(`delegate config ${label} has unknown field: ${extra.join(", ")}`);
-}
-
-function positiveInteger(value: unknown, label: string) {
-  if (typeof value !== "number" || !Number.isSafeInteger(value) || value <= 0) {
-    throw new Error(`delegate config ${label} must be a positive integer`);
-  }
-  return value;
 }
 
 function object(value: unknown, label: string): Record<string, unknown> {

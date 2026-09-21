@@ -1,5 +1,5 @@
 import type { PluginInput, ToolContext } from "@opencode-ai/plugin";
-import type { DelegateConfig } from "./config.ts";
+import { CONTEXT_PRESSURE } from "../shared/session.ts";
 
 export type TaskArgs = {
   description: string;
@@ -46,13 +46,13 @@ type PreparedTask = {
   execution: Execution;
 };
 
-type ContextLimits = DelegateConfig["context"];
+type ContextLimits = typeof CONTEXT_PRESSURE;
 type ContextLimit = {
   level: "hard" | "compaction";
   tokens?: number;
 };
 
-type ContextWarning = "soft" | "medium";
+type ContextWarning = "soft" | "medium" | "final";
 
 type ChildWait = {
   assistant?: Record<string, unknown>;
@@ -76,6 +76,7 @@ const STATUS_POLL_MS = 300;
 const STARTUP_TIMEOUT_MS = 120_000;
 const SOFT_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: SOFT PRESSURE]";
 const MEDIUM_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: MEDIUM PRESSURE]";
+const FINAL_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: FINAL WARNING]";
 const contextLimitedSessions = new Set<string>();
 
 export async function prepareTask(client: Client, ctx: ToolContext, input: unknown): Promise<PreparedTask> {
@@ -129,7 +130,6 @@ export async function prepareTask(client: Client, ctx: ToolContext, input: unkno
 
 export async function runChildTask(input: {
   client: Client;
-  context: ContextLimits;
   ctx: ToolContext;
   args: TaskArgs;
   prepared: PreparedTask;
@@ -183,7 +183,7 @@ export async function runChildTask(input: {
         input.client,
         child.id,
         initialMessageIDs,
-        input.context,
+        CONTEXT_PRESSURE,
         input.prepared,
         notes,
         input.ctx.abort,
@@ -343,7 +343,8 @@ async function waitForChild(
           if (warning) {
             spent.add(warning);
             requested.add(warning);
-            if (warning === "medium") spent.add("soft");
+            if (warning === "final") spent.add("medium");
+            if (warning !== "soft") spent.add("soft");
             try {
               await sendContextWarning(client, sessionID, prepared, warning, tokens, limits, waitSignal);
             } catch (error) {
@@ -392,6 +393,7 @@ function pendingContextWarning(
   spent: Set<ContextWarning>,
 ) {
   if (tokens === undefined) return undefined;
+  if (tokens >= limits.final && !spent.has("final")) return "final";
   if (tokens >= limits.medium && !spent.has("medium")) return "medium";
   if (tokens >= limits.soft && !spent.has("soft")) return "soft";
   return undefined;
@@ -408,7 +410,12 @@ function observeContextWarnings(
     for (const value of root.parts) {
       const part = object(value);
       if (part?.type !== "text" || typeof part.text !== "string") continue;
-      if (part.text.startsWith(MEDIUM_WARNING_MARKER)) {
+      if (part.text.startsWith(FINAL_WARNING_MARKER)) {
+        spent.add("soft");
+        spent.add("medium");
+        spent.add("final");
+        observed.add("final");
+      } else if (part.text.startsWith(MEDIUM_WARNING_MARKER)) {
         spent.add("soft");
         spent.add("medium");
         observed.add("medium");
@@ -478,19 +485,29 @@ function finalAssistant(message: Record<string, unknown> | undefined) {
 }
 
 function contextWarningPrompt(level: ContextWarning, tokens: number | undefined, limits: ContextLimits) {
-  if (level === "medium") {
+  if (level === "final") {
     return [
-      MEDIUM_WARNING_MARKER,
-      `Observed context: ${tokens ?? "unknown"} tokens; medium threshold: ${limits.medium}; hard stop: ${limits.hard}.`,
+      FINAL_WARNING_MARKER,
+      `Observed context: ${tokens ?? "unknown"} tokens; final threshold: ${limits.final}; hard stop: ${limits.hard}.`,
+      `Remaining context budget before forced shutdown: ${tokens === undefined ? "unknown" : Math.max(0, limits.hard - tokens)} tokens at this observation.`,
       "A forced context-limited stop is approaching. Finish immediately.",
       "If you are patching, complete only the last edits already in progress. Otherwise, make only final evidence calls.",
       "Return a concise final report now.",
     ].join("\n");
   }
+  if (level === "medium") {
+    return [
+      MEDIUM_WARNING_MARKER,
+      `Observed context: ${tokens ?? "unknown"} tokens; medium threshold: ${limits.medium}; final warning: ${limits.final}; hard stop: ${limits.hard}.`,
+      "Long-context performance may degrade. Be wary of missed constraints, stale assumptions, and repeated work.",
+      "Converge on the assigned boundary and finish soon; verify critical conclusions against source evidence.",
+      "Do not expand scope or begin another concern.",
+    ].join("\n");
+  }
   return [
     SOFT_WARNING_MARKER,
     `Observed context: ${tokens ?? "unknown"} tokens; soft threshold: ${limits.soft}; medium threshold: ${limits.medium}.`,
-    "Converge on the assigned boundary and finish soon.",
+    `Try to finish before ${limits.medium} tokens if you can, while preserving the assigned acceptance checks.`,
     "Do not expand scope or begin another concern.",
   ].join("\n");
 }

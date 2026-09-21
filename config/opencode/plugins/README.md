@@ -49,7 +49,6 @@ Normal flow:
 - `task_status` lists direct children with task IDs, agents, execution authority, titles, live statuses, and persisted context-limit markers.
 - Resume sparingly for the same unfinished work; never resume a context-limited child.
 - The provider must be listed in `config/opencode/delegate.json`.
-- `delegate.json.context` requires positive integer thresholds with `soft < medium < hard`; the explicit defaults are 120,000, 150,000, and 200,000 tokens.
 - Before spawning, it waits abortably if any non-post-reset window is at >=100%, until the latest capped reset passes; stale, errored, or unknown usage proceeds un-gated.
 - Attended children inherit `external_directory` rules and otherwise use their own agent profile; review leaves get read-only defaults.
 - Content-filter-shaped errors return a normal result with `state="error"` instead of throwing.
@@ -83,16 +82,18 @@ Context governor:
 
 - While a child is active, the delegate polls status and messages every 300 ms.
 - Token pressure comes from completed assistant-step telemetry and mirrors OpenCode's overflow count: `tokens.total`, or input + output + cache read + cache write when total is absent.
-- At the soft limit, the delegate appends one warning to converge and finish soon without aborting, sealing, changing tools, or limiting later resume.
-- At the medium limit, the delegate appends one warning to finish immediately, allowing only last edits already in progress or final evidence calls.
-- A normal child completion after either warning remains a trusted normal result.
-- At the hard limit, the delegate aborts active work, seals the session, and returns `state="context_limited"` with recoverable assistant text and durable-state advice.
+- `shared/session.ts` owns `CONTEXT_PRESSURE`; its hard stop references `COMPACTION_LIMIT` directly, with no separate limits in `delegate.json`.
+- At 100k (soft), the delegate appends one warning to try to finish before 150k while preserving assigned acceptance checks.
+- At 150k (medium), it warns about possible degraded long-context performance and asks the child to finish soon and verify critical conclusions.
+- At 200k (final), it reports the remaining context budget before the hard stop and asks for a final report, allowing only last edits already in progress or final evidence calls.
+- Warnings do not abort, seal, change tools, or limit later resume; a normal child completion after any warning remains a trusted normal result.
+- At 250k (hard), the delegate aborts active work, seals the session, and returns `state="context_limited"` with recoverable assistant text and durable-state advice.
 - Hard-stopped and compacted sessions persist `metadata.delegate.context`, receive a tail deny, appear marked in `task_status`, and are rejected by `task_id`.
 - The pinned runtime's `prompt_async` is the supported non-aborting path: it accepts an asynchronous warning user turn while the existing runner remains active.
 - A later message poll confirms that the warning was stored, but API acceptance alone cannot prove that the child consumed it.
 - The delegate never retries an accepted warning request because a delayed first request could otherwise create a duplicate prompt loop.
 - If the warning appears, the runner can consume it only after the model response or tool call already in progress, so the child can cross another threshold first.
-- If one completed step jumps across both warning levels, the delegate sends only the medium warning and treats the superseded soft warning as spent to avoid prompt loops.
+- If one completed step jumps across multiple warning levels, the delegate sends only the highest reached warning and treats lower warnings as spent to avoid prompt loops.
 - A warning API failure is reported as undelivered, while a stopped child whose accepted warning never appears is reported as unconfirmed.
 - Telemetry is committed only at a completed model step, so the governor cannot stop an active response at an exact token or prevent the next step from starting before the poll.
 - `experimental.session.compacting` can change only the compaction prompt and context; it cannot cancel compaction selectively.

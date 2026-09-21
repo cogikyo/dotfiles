@@ -55,7 +55,6 @@ const server: Plugin = async ({ client }) => {
 
           return (await runChildTask({
             client,
-            context: config.context,
             ctx,
             args: prepared.args,
             prepared,
