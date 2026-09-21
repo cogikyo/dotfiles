@@ -23,6 +23,7 @@ Running sessions keep the loaded plugin set.
 | Spec title | `opencode/spec-title.ts` | `opencode-spec-title` | server |
 | Skill compact | `opencode/skill-compact.ts` | `opencode-skill-compact` | server |
 | Media context prompt | `opencode/media-context/prompt.ts` | `opencode-media-context-prompt` | server |
+| Input cap | `opencode/input-cap.ts` | `opencode-input-cap` | server |
 | Code blocks | `opencode/code-blocks.ts` | `opencode-code-blocks` | TUI |
 | Kitty context | `hyprd/kitty.ts` | `hyprd-kitty-context` | TUI |
 | Browser QA workspaces | `hyprd/browser-qa.tsx` | `hyprd-browser-qa` | TUI |
@@ -202,7 +203,11 @@ The other sidebar sections register `sidebar_content` with distinct orders.
 
 - `opencode/code-blocks.ts` patches OpenTUI code-block rendering and registers a SQL tree-sitter parser.
 - `hyprd/browser-qa.tsx` keeps one workspace subscription per plugin instance and lists marked browser workspaces before MCP.
-- `opencode/statusline.tsx` wraps `session_prompt` with cwd, git status, and a context-pressure bar.
+- `opencode/input-cap.ts` caps enabled-provider `limit.input` at `COMPACTION_LIMIT + reserved` (250k + 25k), preserving `context` and `output`, so auto-compaction triggers at 250k.
+  Models that already compact at or below 250k stay unchanged.
+  Load it after provider plugins that seed models, including Cursor.
+- `opencode/statusline.tsx` wraps `session_prompt` with cwd, git status, and a context-pressure bar that uses OpenCode's overflow token count and effective compaction threshold.
+  Pink is the last pressure tier before that threshold.
 - `opencode/modified-files.tsx` lists files touched in the current session.
 - `opencode/markdown-context.tsx` lists Markdown reads plus pinned `AGENTS.md` files, the current agent, skills, and slash commands. Click the close mark to stub an unpinned skill or Markdown read. Click restore on a compacted row to reload the file from disk. Click the label to open the file.
 - `opencode/skill-compact.ts` stubs loaded skill bodies when a session compacts. It also uncompacts protected `AGENTS.md` / Collab / Orchestrator reads so native prune cannot keep them stubbed.
@@ -232,6 +237,7 @@ Practical failure diagnosis:
 - `opencode/skill-parts.ts` owns skill/read tool-part compacting and persist via TUI `part.update` or server HTTP PATCH.
 - `delegate/config.ts` hardcodes `DELEGATE_CONFIG_PATH` to `/home/cullyn/dotfiles/config/opencode/delegate.json`.
 - Changing `hyprd/context.ts` paths or schema requires updating both `hyprd/kitty.ts` and `hyprd/notify.ts`.
+- `shared/session.ts` owns `COMPACTION_LIMIT` (250k) and `COMPACTION_RESERVED` (25k). The input-cap plugin writes `limit.input` as their sum.
 - `shared/` owns session/provider metadata, colors/icons, git status parsing, and the sidebar-section wrapper; only put helpers there when more than one plugin owns the concept.
 
 ### Invariants

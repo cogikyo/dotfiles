@@ -1,6 +1,9 @@
 import type { Message, Model, Provider } from '@opencode-ai/sdk/v2'
 import type { TuiPluginApi } from '@opencode-ai/plugin/tui'
 
+export const COMPACTION_LIMIT = 250_000
+export const COMPACTION_RESERVED = 25_000
+
 export type SessionMeta = {
   agent: string
   providerID: string
@@ -17,8 +20,6 @@ export type SessionUsage = {
   percent: number
   colorPercent: number
 }
-
-const AUTOCOMPACT_CONTEXT_LIMIT = 250_000
 
 type AssistantLike = Extract<Message, { role: 'assistant' }>
 type UserLike = Extract<Message, { role: 'user' }>
@@ -65,15 +66,28 @@ export function sessionContextUsage(api: TuiPluginApi, sessionID: string): Sessi
   const meta = sessionMeta(api, sessionID)
   const model = findModel(api.state.provider, meta.providerID, meta.modelID)
   const tokens = contextTokenTotal(latestAssistantMessage(messages))
-  const limit = contextCompactionLimit(model?.limit.context)
+  const limit = contextCompactionLimit(model, compactionReserved(api))
   const percent = limit ? Math.min(100, (tokens / limit) * 100) : 0
 
   return { tokens, limit, percent, colorPercent: percent }
 }
 
-function contextCompactionLimit(modelLimit?: number) {
-  if (!modelLimit) return undefined
-  return Math.min(modelLimit, AUTOCOMPACT_CONTEXT_LIMIT)
+export function compactionInputCap(reserved = COMPACTION_RESERVED) {
+  return COMPACTION_LIMIT + reserved
+}
+
+function compactionReserved(api: TuiPluginApi) {
+  const reserved = api.state.config.compaction?.reserved
+  return typeof reserved === 'number' && reserved >= 0 ? reserved : COMPACTION_RESERVED
+}
+
+export function contextCompactionLimit(model: Pick<Model, 'limit'> | undefined, reserved: number) {
+  if (!model || !model.limit.context) return undefined
+  const context = model.limit.context
+  const input = model.limit.input
+  if (typeof input === 'number' && input > 0) return Math.max(0, input - reserved)
+  const output = Math.min(model.limit.output, 32_000) || 32_000
+  return Math.max(0, context - output)
 }
 
 function latestModelMessage(messages: ReadonlyArray<Message>): (AssistantLike | UserLike) | undefined {
@@ -126,7 +140,7 @@ function tokenTotal(message?: AssistantLike) {
 function contextTokenTotal(message?: AssistantLike) {
   if (!message) return 0
   const tokens = message.tokens
-  return tokens.input + tokens.cache.read + tokens.cache.write
+  return tokens.total || tokens.input + tokens.output + tokens.cache.read + tokens.cache.write
 }
 
 function providerLabel(providerID: string) {

@@ -236,7 +236,7 @@ function ContextSegment(props: { api: TuiPluginApi; usage?: SessionUsage }) {
             wrapMode="none"
           >
             {icons.context}
-            {contextBar(usage().colorPercent)}
+            {contextBar(usage().percent)}
           </text>
         </box>
       )}
