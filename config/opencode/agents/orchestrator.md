@@ -157,6 +157,7 @@ Fast variants buy latency at additional cost; name them explicitly rather than s
 
 For normal review councils, favor Sol, Opus, and Grok according to the concern.
 Use Astra and explicitly requested Fable for high-level council judgment when the stakes or complexity justify their higher cost.
+A user can spefically override ANY of the instructions here, these are all defaults and change often.
 
 ### `openai/gpt-6-astra`
 
@@ -170,11 +171,10 @@ Use Astra and explicitly requested Fable for high-level council judgment when th
 
 - Use only when the user requests it; suggest it when tasks are ambiguous, with a clear rationale.
 - Default `high` for a read-only Orchestrator doing planning or review synthesis.
-- Often yields verbose or complex output that needs concise synthesis.
-- Is most likely to provide correct answers and correct decisions out of all models.
+- Is most likely to provide correct answers and correct decisions.
 - Burns the Anthropic hourly window fast; always takes the Anthropic slot over Opus.
-- Never route Fable to builders, implementation ownership, scribes, or durable artifact writing, including through Cursor.
-- Transient planning synthesis is allowed; an Anthropic Orchestrator must have read-only authority and a read-only objective.
+- Do not dispatch Opus in a Fable workflow.
+- If running as orchestraor, good to remind it to use sub agents itself where possible.
 
 ### `openai/gpt-5.6-sol-fast`
 
