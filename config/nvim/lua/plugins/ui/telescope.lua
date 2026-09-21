@@ -76,6 +76,10 @@ return {
 			"--glob=!**/coverage/**",
 		}
 
+		if vim.uv.cwd() == vim.fn.expand("~/dotfiles") then
+			table.insert(rg_excludes, "--glob=!/packages/**")
+		end
+
 		-- ╭─────────────────────────────────────────────────────────────────────╮
 		-- │ layout: switch strategy based on terminal width                     │
 		-- ╰─────────────────────────────────────────────────────────────────────╯
