@@ -44,7 +44,6 @@ Collab authors approved specs in the attended session.
 >
 > Orchestrator returns spec-ready text by default and writes planning artifacts only when its brief grants write authority for their exact paths.
 > Neither owner uses planning permission to edit production code or unrelated documentation.
-> Anthropic assignments return transient synthesis only, never durable artifacts.
 
 ### Artifact shape
 
@@ -100,7 +99,6 @@ Proposed experiments require separate execution approval.
 The only artifact variation is explicit upfront write authority for `.spec/queue.md` on this Sol Fast owner and step 11's scribe.
 All evidence and criticism leaves stay read-only.
 Without that path-specific authority, step 11 is skipped and the owner returns spec-ready text.
-An Anthropic participant could return transient planning synthesis only; it cannot replace the artifact-writing route.
 
 ### Deep scouting and candidate contracts
 
@@ -120,7 +118,7 @@ Owner: Orchestrator, using `scheme` for synthesis and `review` when assessing cr
    - Establish where cancellation, shutdown, lost renewal, or crash can leave work alive after ownership expires.
 4. `[xhigh • openai/gpt-5.6-luna-fast] scout/context`: Trace public and tenant constraints.
    - Identify source-backed retry, identity, and error behavior without treating undocumented behavior as fixed intent.
-5. `[high • xai/grok-4.6] verify/source`: Verify the available primitive.
+5. `[high • xai/grok-4.7] verify/source`: Verify the available primitive.
    - Establish pinned atomicity and fencing guarantees from cached source, with exact refs and version limits.
 6. `self`: Form and compare candidate contracts.
    - Use all evidence to compare an in-place queue owner, a separate coordinator, and minimal correction by invariants, failure behavior, migration cost, and falsifiers.
@@ -142,7 +140,7 @@ Each branch bypasses its optional leaf when that need is absent; step 9 waits fo
         └──────┘
 ```
 
-7. If a disputed primitive controls the choice, `[high • xai/grok-4.6] verify/source`: Settle that guarantee.
+7. If a disputed primitive controls the choice, `[high • xai/grok-4.7] verify/source`: Settle that guarantee.
    - Answer one discriminating source question without acquiring source or changing dependency versions.
 8. If recovery ownership has a material unresolved risk, `[medium • anthropic/claude-opus-5] review/architect`: Challenge the candidates.
    - Assess authoritative state, coupling, tenant-boundary assumptions, and concrete expiry/shutdown counterexamples against the frozen candidate packet, without writing a replacement plan.
@@ -181,7 +179,7 @@ Blocked or rejected designs return directly from that gate without an artifact w
 
 10. `self`: State the settled contract in spec-ready form.
     - Explain authoritative ownership, fencing invariants, cancellation, and the recovery trade-off, keeping execution commands and check matrices in a separate proposal.
-11. Only with approved artifact authority, `[high • xai/grok-4.6] build/scribe`: Write `.spec/queue.md` with `prose` and `prose-docs`.
+11. Only with approved artifact authority, `[high • xai/grok-4.7] build/scribe`: Write `.spec/queue.md` with `prose` and `prose-docs`.
     - Preserve the settled design and dissent, using source comparison, Markdown inspection, and `git diff --check` without production edits or an execution journal.
 12. `self`: Validate fidelity and return the planning result.
     - Return the recommendation, evidence, rejected alternatives, falsifiers, unresolved decisions, and authorized artifact delta without starting implementation.

@@ -54,8 +54,8 @@ An attended Git boundary ends the child run; a later run needs a new Collab disp
 ## Example series
 
 These are shape fixtures, not approved work in this repository.
-For these examples, Orchestrator uses `[high • openai/gpt-5.6-sol-fast]`, `scout/context` uses `[xhigh • openai/gpt-5.6-luna-fast]`, and `verify/source` and `verify/test` use `[high • xai/grok-4.6]`.
-Settled `build/general` implementation and `build/patch` repair use `[high • xai/grok-4.6]`.
+For these examples, Orchestrator uses `[high • openai/gpt-5.6-sol-fast]`, `scout/context` uses `[xhigh • openai/gpt-5.6-luna-fast]`, and `verify/source` and `verify/test` use `[high • xai/grok-4.7]`.
+Settled `build/general` implementation and `build/patch` repair use `[high • xai/grok-4.7]`.
 Owners pass `unattended: true` and exact authority in task fields and briefs, tightening evidence leaves to read-only.
 These route labels are example contracts; they neither grant check approval nor override an explicit task route.
 

@@ -201,6 +201,8 @@ Never and always are usually the agent's failure mode; humans live in default-an
 
 ## Interaction
 
+- User requests override configurable defaults in `AGENTS.md`, agents, and skills, even rules phrased as "never".
+  - Carry overrides into child briefs; tool permissions, runtime limits, and higher-priority instructions still apply.
 - Push back when the objection would change the outcome. Attach evidence or a mechanism.
   One objection, then comply and record dissent if the user holds.
   Taste-level disagreement is a passing note. Courage.

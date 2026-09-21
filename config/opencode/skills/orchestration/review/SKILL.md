@@ -85,7 +85,7 @@ Only supplied local artifacts, the available pinned source cache, and read-only 
 No tests, builds, benchmarks, generators, acquisition, service access, or artifact writes are included.
 Return a desired reproduction command as a proposed check rather than running it.
 
-The example uses focused `[xhigh • openai/gpt-5.6-luna-fast]` scouts, `[high • xai/grok-4.6]` verifiers and `scout/context` for the bounded chronology, `[medium • anthropic/claude-opus-5] review/debug`, and `[high • xai/grok-4.6] review/security`.
+The example uses focused `[xhigh • openai/gpt-5.6-luna-fast]` scouts, `[high • xai/grok-4.7]` verifiers and `scout/context` for the bounded chronology, `[medium • anthropic/claude-opus-5] review/debug`, and `[high • xai/grok-4.7] review/security`.
 These routes follow the owner's model contract rather than defining a second routing policy.
 No premium substitution is included; the high-level council variation below requires a separate explicit request.
 
@@ -150,7 +150,7 @@ Denied permissions and out-of-scope evidence needs return immediately; a blocked
 ### Council variation
 
 For explicitly requested whole-review comparisons, Collab may dispatch sibling read-only Orchestrators from one frozen brief.
-An ordinary approved council uses `[high • openai/gpt-5.6-sol-fast]`, `[medium • anthropic/claude-opus-5]`, and `[high • xai/grok-4.6]`, each with the same permitted Luna evidence routes and no further judgment leaves.
+An ordinary approved council uses `[high • openai/gpt-5.6-sol-fast]`, `[medium • anthropic/claude-opus-5]`, and `[high • xai/grok-4.7]`, each with the same permitted Luna evidence routes and no further judgment leaves.
 They are Collab's children, never children of the investigation owner, and return before seeing sibling output.
 
 Owner: Collab; all three participants have `authority: "read-only"` and `unattended: true`.
@@ -175,7 +175,7 @@ The council adds neither implementation authority nor an automatic extra judge, 
 
 For a user-requested high-level comparison of recovery architectures, replace the ordinary council with this pair.
 Owner: Collab; both Orchestrators and their permitted Luna evidence leaves remain read-only and unattended, with the same frozen brief, evidence limits, and no writes or expensive checks.
-No Opus participates anywhere in this workflow, and Fable never owns durable writing.
+No Opus participates in this example.
 
 ```text
         ┌─→ {2} ─┐

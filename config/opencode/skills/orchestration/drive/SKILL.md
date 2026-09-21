@@ -135,7 +135,7 @@ Each stream owns its own documentation; shared API composition and `docs/rollout
 The single supplied worktree needs no branch integration, and children do not stage or commit its changes.
 Separate candidate implementations would instead need Collab-prepared worktrees and an approved attended integration strategy.
 
-For nodes 2, 5, and 6, permitted leaves are `[high • xai/grok-4.6] build/general`, `build/patch`, `build/scribe`, and `verify/test`, plus `[xhigh • openai/gpt-5.6-luna-fast] scout/context` for bounded facts.
+For nodes 2, 5, and 6, permitted leaves are `[high • xai/grok-4.7] build/general`, `build/patch`, `build/scribe`, and `verify/test`, plus `[xhigh • openai/gpt-5.6-luna-fast] scout/context` for bounded facts.
 No independent critic is required for these settled interfaces.
 At most two leaves run within each of these scopes; Run A allows three, so the domain wave permits at most seven active leaves across three owners.
 Serialize each stream's writes before its evidence collection, and scope source comparison to that stream while siblings write elsewhere.
@@ -151,9 +151,9 @@ The next phase consumes gate 7's confirmed committed baseline, not merely three 
 8. `orchestrator`, write authority: Integrate the committed domains through the API as Run B below.
    - Own only `internal/api/**` and `docs/queue.md`, composing lease, admission, and telemetry contracts with requested API regressions and current API and cross-boundary evidence.
 9. `orchestrator`, read-only authority: Establish migration compatibility on the frozen integrated tree.
-   - Use `[xhigh • openai/gpt-5.6-luna-fast] scout/context` for old/new caller reachability and `[high • xai/grok-4.6] verify/test` for the approved migration command, then reconcile both against the fixed compatibility conditions.
+   - Use `[xhigh • openai/gpt-5.6-luna-fast] scout/context` for old/new caller reachability and `[high • xai/grok-4.7] verify/test` for the approved migration command, then reconcile both against the fixed compatibility conditions.
 10. `orchestrator`, write authority: Prepare rollout and rollback guidance from passing compatibility evidence.
-    - Reconcile compatibility evidence with the supplied operational constraints, then own only `docs/rollout.md` through `[high • xai/grok-4.6] build/scribe` and judge activation order and observable rollback triggers against the implemented behavior.
+    - Reconcile compatibility evidence with the supplied operational constraints, then own only `docs/rollout.md` through `[high • xai/grok-4.7] build/scribe` and judge activation order and observable rollback triggers against the implemented behavior.
 11. `self`: Accept the integrated result and perform the second attended commit.
     - Gate 11 requires current evidence and faithful rollout guidance; Collab commits the approved integration and documentation scope, then returns the result without deploying or publishing it.
 
@@ -203,10 +203,10 @@ Dependency-source inspection uses the exact pinned version already in a sanction
 Routes below are fixed for this example, with effort chosen per concern:
 
 - Scouts: `[xhigh • openai/gpt-5.6-luna-fast]` on their named roles.
-- Source/test verifiers: `[high • xai/grok-4.6]` on their named roles.
+- Source/test verifiers: `[high • xai/grok-4.7]` on their named roles.
 - Coupled implementation: `[medium • openai/gpt-6-astra] build/owner`.
-- Settled API mapping and named core repairs: `[high • xai/grok-4.6] build/general`.
-- Documentation: `[high • xai/grok-4.6] build/scribe`.
+- Settled API mapping and named core repairs: `[high • xai/grok-4.7] build/general`.
+- Documentation: `[high • xai/grok-4.7] build/scribe`.
 - Independent concurrency judgment: `[medium • anthropic/claude-opus-5] review/debug`.
 
 These are the only permitted inner routes, with `scout/context`, `verify/source`, and `verify/test` as the named factual roles.

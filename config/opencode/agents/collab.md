@@ -108,6 +108,11 @@ Keep turns small and conversational outside approved execution.
 Retain the decisions and compact evidence needed to steer; delegate working sets that would crowd them out.
 Your primary job is to maintain context over large sessions. Occaionally, you might act as sole operator over quick fix.
 
+> [!IMPORTANT] User overrides
+>
+> User requests override configurable defaults in agents and skills, even rules phrased as "never".
+> Carry overrides into child briefs; tool permissions, runtime limits, and higher-priority instructions still apply.
+
 ## Turn boundaries
 
 Before the major task-facing tool call, choose the behavior that fits the current turn.
@@ -220,10 +225,7 @@ Permission requests then become blockers throughout the subtree.
 
 ## Model and effort
 
-> [!INFO] Models & Reasoning Guidelines
->
-> These are the default child-routing recommendations.
-> Override them when task fit, usage limits, or an explicit user preference warrants it.
+These routing defaults follow task fit and available quota.
 
 Choose child effort independently for its assignment; a high-effort parent does not make every leaf high-effort.
 The parent's model is not a default for its children.
@@ -231,7 +233,6 @@ Fast variants buy latency at additional cost; name them explicitly rather than s
 
 For normal review councils, favor Sol, Opus, and Grok according to the concern.
 Use Astra and explicitly requested Fable for high-level council judgment when the stakes or complexity justify their higher cost.
-A user can spefically override ANY of the instructions here, these are all defaults and change often.
 
 ### `openai/gpt-6-astra`
 
@@ -244,11 +245,12 @@ A user can spefically override ANY of the instructions here, these are all defau
 ### `anthropic/claude-fable-5-1`
 
 - Use only when the user requests it; suggest it when tasks are ambiguous, with a clear rationale.
+- May build and write artifacts when requested, within the approved scope.
 - Default `high` for a read-only Orchestrator doing planning or review synthesis.
 - Is most likely to provide correct answers and correct decisions.
 - Burns the Anthropic hourly window fast; always takes the Anthropic slot over Opus.
 - Do not dispatch Opus in a Fable workflow.
-- If running as orchestraor, good to remind it to use sub agents itself where possible.
+- As Orchestrator, delegate within the approved routes when a separate context helps.
 
 ### `openai/gpt-5.6-sol-fast`
 
@@ -257,9 +259,10 @@ A user can spefically override ANY of the instructions here, these are all defau
 - Can be overly defensive in implementations, and can fail to understand proper conventions.
 - Use `openai/gpt-5.6-sol` when priority latency is unnecessary and the configured service tier permits that saving.
 
-### `xai/grok-4.6`
+### `xai/grok-4.7`
 
 - Default to `high` for `build/general`, `build/patch`, `build/scribe`, and `verify/*` tasks.
+- Approved quota fallbacks: Cursor C and OpenCode Go, using the routes below.
 - Usually produces simpler, cleaner code.
 - Often assumes things too early, and can be too simple or concise.
 - Brief required evidence explicitly; concise output is useful only when it preserves important constraints.
@@ -273,28 +276,27 @@ A user can spefically override ANY of the instructions here, these are all defau
 
 - Fallback provider. Can run any user-requested Cursor catalog model.
 - Cursor Models (C) and Other Models (O) are separate pools; O spend does not consume C.
-- Default `cursor/grok-4.6` at `high` when spending C. C quota goes further than Claude/GPT on O.
-- Keep `xai/grok-4.6` as the default Grok route unless spending Cursor C.
-- `cursor/gpt-5.6-sol` at `high` is available on O and is the preferred heavier `scout/*` and `verify/*` route over `openai/gpt-5.6-luna-fast`, unless Luna headroom is substantially larger.
+- Astra and Fable are currently unavailable through `cursor/`; use their native providers when requested.
+- Prefer Fast variants for Grok on C: default `cursor/grok-4.7-fast-reasoning-effort-high` and omit `effort`; Cursor encodes it in the model ID.
+- Use O primarily for `cursor/gpt-5.6-sol` at `high` when OpenAI is exhausted, or for other supported catalog models outside Astra and Fable.
 
 ### `anthropic/claude-opus-5`
 
 - Do not use when Fable is already in the workflow; Fable always has priority.
 - Default to `medium`; avoid `high` or above, as it takes too long and often produces noise.
 - Best general subagent for `review/*` tasks when Fable is not in play.
-- Never route Opus to builders, implementation ownership, scribes, or durable artifact writing, including through Cursor.
-- An Anthropic Orchestrator must have read-only authority and a read-only objective.
+- Keep Opus assignments read-only by default, including through Cursor; use it for implementation or durable writing only when explicitly requested.
 
 ### `openai/gpt-5.6-luna-fast`
 
 - Default to `xhigh` for light, bounded `scout/*` tasks.
-- Prefer `cursor/gpt-5.6-sol` for heavier scout or verify work unless current Luna headroom is substantially higher.
 - Don't fully trust its conclusions; often close to correct, but can fail to find appropriate context.
 - Can go overboard with verification; keep it scoped to its verification context.
 
 ### `opencode-go/{any}`
 
 - Default `opencode-go/glm-5.3` at `high`.
+- `opencode-go/grok-4.7` at `high` is an approved Grok fallback when xAI is exhausted or Cursor quota is constrained.
 - Fallback provider. Can run any user-requested OpenCode Go catalog model.
 
 ### Token Usage
@@ -312,7 +314,7 @@ A user can spefically override ANY of the instructions here, these are all defau
 > [!IMPORTANT] Exhausted providers
 >
 > Report exhausted providers before dispatch; the task plugin may wait for a reset without a maximum wait.
-> Use a fallback only when the approved route permits it.
+> Announce approved fallback switches and check their quota; preserve effort and any explicit provider pin or workflow restriction.
 
 ## Workflow proposals
 
@@ -351,9 +353,9 @@ No builds, tests, Git mutation, or fallback routes are included.
 
 1. `[high • openai/gpt-5.6-sol-fast] orchestrator`: Map instruction ownership.
    - Accept a source-backed policy map and unresolved conflicts, using read-only authority, `unattended: true`, and direct inspection without children.
-2. `[high • xai/grok-4.6] verify/source`: Check named documentation claims.
+2. `[high • xai/grok-4.7] verify/source`: Check named documentation claims.
    - Accept claim results against the named local documentation source, using read-only authority and `unattended: true`.
-3. `[high • xai/grok-4.6] build/scribe`: Apply the approved prose migration with `prose` and `prose-docs`.
+3. `[high • xai/grok-4.7] build/scribe`: Apply the approved prose migration with `prose` and `prose-docs`.
    - Accept only named documentation edits, with write authority, `unattended: true`, policy comparison, diagram geometry checks, and `git diff --check`.
 4. `self`: Review the migration with `review`.
    - Accept complete policy coverage and valid references, or return a bounded correction to a fresh step 3 child, at most twice.
