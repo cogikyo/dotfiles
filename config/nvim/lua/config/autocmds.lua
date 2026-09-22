@@ -92,6 +92,7 @@ au("VimResized", {
 
 au({ "FocusGained", "BufEnter", "CursorHold", "TermClose", "TermLeave" }, {
 	group = "CheckExternalChanges",
+	nested = true,
 	callback = function()
 		if vim.o.buftype ~= "nofile" then
 			vim.cmd("checktime")
@@ -99,21 +100,9 @@ au({ "FocusGained", "BufEnter", "CursorHold", "TermClose", "TermLeave" }, {
 	end,
 })
 
--- Replays external edits as buffer changes so they appear in undo history
 au("FileChangedShell", {
 	group = "ForceReloadExternal",
-	callback = function(args)
-		local bufnr = args.buf
-		local filename = vim.api.nvim_buf_get_name(bufnr)
-		local ok, new_lines = pcall(vim.fn.readfile, filename)
-		if not ok then
-			vim.v.fcs_choice = "reload"
-			return
-		end
-		vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, new_lines)
-		vim.bo[bufnr].modified = false
-		vim.v.fcs_choice = ""
-	end,
+	callback = function() vim.v.fcs_choice = "reload" end,
 })
 
 au("BufWritePre", {
@@ -161,7 +150,6 @@ au("BufReadPre", {
 			vim.opt_local.swapfile = false
 			vim.opt_local.foldmethod = "manual"
 			vim.opt_local.undolevels = -1
-			vim.opt_local.undoreload = 0
 			vim.opt_local.list = false
 			vim.b[args.buf].large_file = true
 		end

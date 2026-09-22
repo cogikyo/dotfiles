@@ -49,9 +49,8 @@ local GROUPS = {
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ save: write files, format, source                                           │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
-map("n", "<C-s>", ":w<CR>", desc("Save"))
-map("i", "<C-s>", "<Esc>:w<CR>", desc("Save"))
-map("v", "<C-s>", "<Esc>:w<CR>", desc("Save"))
+map("n", "<C-s>", function() require("config.save").write() end, desc("Save"))
+map({ "i", "v" }, "<C-s>", "<Esc><Cmd>lua require('config.save').write()<CR>", desc("Save"))
 map("n", "<leader><C-s>", ":noautocmd wq<CR>", desc("Save and quit without formatting"))
 
 -- ╭─────────────────────────────────────────────────────────────────────────────╮

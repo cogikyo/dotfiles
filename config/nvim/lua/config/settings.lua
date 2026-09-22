@@ -37,6 +37,7 @@ local options = {
 	swapfile = false,
 	autoread = true,
 	undofile = true,
+	undoreload = -1,
 	wildignore = ".back,~,.o,.h,.info,.swp,.obj,.pyc",
 }
 

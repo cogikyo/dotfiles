@@ -1,17 +1,7 @@
-local oxc_root_markers = { ".oxlintrc.json", ".oxlintrc.jsonc", "oxlint.json", "oxlint.jsonc" }
-local ts_source_kinds = {
-	"source.addMissingImports.ts",
-	"source.removeUnused.ts",
-	"source.organizeImports.ts",
-	"source.fixAll.ts",
-}
-local ts_source_budget_ms = 800
+local save = require("config.save")
+local oxc_root_markers = save.markers
 local fast_oxlint_cache = {}
-
-local function oxc_root(bufnr)
-	local filename = vim.api.nvim_buf_get_name(bufnr)
-	return filename ~= "" and vim.fs.root(filename, oxc_root_markers) or nil
-end
+local oxc_root = save.root
 
 local function oxc_cwd(_, ctx) return vim.fs.root(ctx.dirname, oxc_root_markers) end
 
@@ -66,74 +56,23 @@ local function oxlint_save_config(root)
 	return dest
 end
 
-local function apply_workspace_edit(client, bufnr, action, timeout_ms)
-	if action.disabled then
-		return
-	end
-
-	local resolved = action
-	if not resolved.edit and not resolved.command then
-		local supports = client.supports_method and client:supports_method("codeAction/resolve", { bufnr = bufnr })
-		if supports then
-			local reply = client:request_sync("codeAction/resolve", resolved, timeout_ms, bufnr)
-			if reply and reply.result then
-				resolved = reply.result
-			end
-		end
-	end
-
-	if resolved.edit then
-		vim.lsp.util.apply_workspace_edit(resolved.edit, client.offset_encoding)
-	end
-	if resolved.command then
-		client:request_sync("workspace/executeCommand", resolved.command, timeout_ms, bufnr)
-	end
-end
-
--- Run before oxfmt so import sort stays with the formatter.
-local function apply_ts_sources(bufnr)
-	local client = vim.lsp.get_clients({ bufnr = bufnr, name = "ts_ls" })[1]
-	if not client then
-		return
-	end
-
-	local start = vim.uv.hrtime()
-	for _, kind in ipairs(ts_source_kinds) do
-		local remaining = ts_source_budget_ms - (vim.uv.hrtime() - start) / 1e6
-		if remaining < 50 then
-			return
-		end
-
-		local reply = client:request_sync("textDocument/codeAction", {
-			textDocument = vim.lsp.util.make_text_document_params(bufnr),
-			range = {
-				start = { line = 0, character = 0 },
-				["end"] = { line = vim.api.nvim_buf_line_count(bufnr), character = 0 },
-			},
-			context = { only = { kind }, diagnostics = {} },
-		}, remaining, bufnr)
-		if reply and reply.result then
-			for _, action in ipairs(reply.result) do
-				apply_workspace_edit(client, bufnr, action, remaining)
-			end
-		end
-	end
-end
-
 local function format_on_save(bufnr)
+	if save.committing(bufnr) then
+		return nil
+	end
 	-- JS/TS opts into save formatting through oxlint config; do not fall back to Prettier.
 	if is_js_filetype(vim.bo[bufnr].filetype) then
 		if not oxc_root(bufnr) then
 			return nil
 		end
-		apply_ts_sources(bufnr)
+		save.sources(bufnr)
 	end
 	return { timeout_ms = 2000 }
 end
 
 local function js_formatters(bufnr)
 	if oxc_root(bufnr) then
-		return { "oxfmt", "oxlint" }
+		return { "oxlint", "oxfmt" }
 	end
 	return {}
 end
