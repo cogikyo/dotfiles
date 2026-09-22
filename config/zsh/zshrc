@@ -114,6 +114,9 @@ alias cst='ssh cullyn@costello'
 alias zf='cd ~/LeadPier/frontend'
 alias zb='cd ~/LeadPier/backend'
 alias zp='cd ~/LeadPier/backend/services/partner'
+alias zms='cd ~/LeadPier/backend/common/microservices'
+alias zs='cd ~/LeadPier/backend/common/shared'
+alias zu='cd ~/LeadPier/backend/common/utility'
 function lazygit() {
     local invocation_cwd=$PWD
     local handoff_file new_dir
