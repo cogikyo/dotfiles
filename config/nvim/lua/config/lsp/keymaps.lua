@@ -29,6 +29,23 @@ local function diag_jump(count)
 	end
 end
 
+-- Code action kinds are server-specific: ts_ls suffixes them with .ts, and the native tsc
+-- server has no addMissingImports at all.
+local ts_actions = {
+	ts_ls = {
+		{ "<leader>oi", "source.organizeImports.ts", "Organize Imports" },
+		{ "<leader>ru", "source.removeUnused.ts", "Remove Unused" },
+		{ "<leader>am", "source.addMissingImports.ts", "Add Missing Imports" },
+		{ "<leader>fa", "source.fixAll.ts", "Fix All" },
+	},
+	tsc = {
+		{ "<leader>oi", "source.organizeImports", "Organize Imports" },
+		{ "<leader>ru", "source.removeUnusedImports", "Remove Unused Imports" },
+		{ "<leader>si", "source.sortImports", "Sort Imports" },
+		{ "<leader>fa", "source.fixAll", "Fix All" },
+	},
+}
+
 local function disable_semantic_tokens(client, bufnr)
 	client.server_capabilities.semanticTokensProvider = nil
 
@@ -94,23 +111,15 @@ function M.setup()
 				vim.lsp.codelens.enable(not enabled, { bufnr = event.buf })
 			end, "Toggle Code Lens")
 
-			if client.name == "ts_ls" then
-				local tsmap = function(keys, func, d)
-					vim.keymap.set("n", keys, func, { buffer = event.buf, desc = "TS: " .. d })
-				end
-				local action = function(name)
-					return function()
-						vim.lsp.buf.code_action({ apply = true, context = { only = { name }, diagnostics = {} } })
-					end
+			local actions = ts_actions[client.name]
+			if actions then
+				for _, entry in ipairs(actions) do
+					local keys, kind, d = entry[1], entry[2], entry[3]
+					vim.keymap.set("n", keys, function()
+						vim.lsp.buf.code_action({ apply = true, context = { only = { kind }, diagnostics = {} } })
+					end, { buffer = event.buf, desc = "TS: " .. d })
 				end
 
-				tsmap("<leader>oi", action("source.organizeImports.ts"), "Organize Imports")
-				tsmap("<leader>ru", action("source.removeUnused.ts"), "Remove Unused")
-				tsmap("<leader>am", action("source.addMissingImports.ts"), "Add Missing Imports")
-				tsmap("<leader>fa", action("source.fixAll.ts"), "Fix All")
-			end
-
-			if client.name == "ts_ls" then
 				vim.lsp.inlay_hint.enable(false, { bufnr = event.buf })
 			end
 

@@ -1,5 +1,12 @@
 local servers = require("config.lsp.servers")
 
+-- tsc ships with the project's TypeScript 7 install; mason has no package for it.
+local project_provided = { tsc = true }
+
+local mason_servers = vim.tbl_filter(function(name)
+	return not project_provided[name]
+end, servers)
+
 local tools = {
 	-- Formatters
 	"shellharden",
@@ -23,7 +30,7 @@ return {
 	{
 		"williamboman/mason-lspconfig.nvim",
 		opts = {
-			ensure_installed = servers,
+			ensure_installed = mason_servers,
 			automatic_enable = false,
 		},
 	},

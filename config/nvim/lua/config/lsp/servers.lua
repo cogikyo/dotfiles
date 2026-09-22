@@ -2,6 +2,7 @@ return {
 	"bashls",
 	"gopls",
 	"ts_ls",
+	"tsc",
 	"eslint",
 	"tailwindcss",
 	"cssls",
