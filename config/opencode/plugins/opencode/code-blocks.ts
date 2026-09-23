@@ -71,7 +71,7 @@ const tui: TuiPlugin = async (api) => {
 
   // OpenTUI marks these methods private, but code blocks expose _treeSitterClient as treeSitterClient.
   // applyCodeBlockRenderable resets block styles on every update, so both methods need the patch.
-  const proto = MarkdownRenderable?.prototype as any;
+  const proto = MarkdownRenderable?.prototype;
   if (!proto || proto[PATCHED]) return;
 
   const originalCreateCodeRenderable = proto.createCodeRenderable;

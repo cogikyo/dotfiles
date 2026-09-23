@@ -17,6 +17,7 @@ import {
 import { tmpdir } from "node:os";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { record } from "../record.ts";
 
 const HANDLE_PATTERN =
   /(?:^|[^A-Za-z0-9_.\\/-])(@(?:[01]\d|2[0-3])_[0-5]\d_[0-5]\d(?:_(?:[2-9]|[1-9]\d+))?)(?![A-Za-z0-9_\\/-]|\.[A-Za-z0-9])/g;
@@ -94,10 +95,36 @@ type RegistryFile = {
 // ├─ Registration and lookup ─────────────────────────────────────────────────────────────────────┤
 /** Narrows an unknown message part to supported image or video media. */
 export function mediaPart(part: unknown): MediaFilePart | undefined {
-  const candidate = part as Partial<MediaFilePart> | undefined;
-  return candidate?.type === "file" && mediaKindForMime(candidate.mime) && typeof candidate.url === "string"
-    ? ({ ...candidate, kind: candidate.kind ?? mediaKindForMime(candidate.mime) } as MediaFilePart)
-    : undefined;
+  const candidate = record(part);
+  const mime = string(candidate?.mime);
+  const url = string(candidate?.url);
+  const kind = mediaKindForMime(mime);
+  if (candidate?.type !== "file" || !mime || url === undefined || !kind) return undefined;
+  return {
+    type: "file",
+    mime,
+    url,
+    kind: candidate.kind === "image" || candidate.kind === "video" ? candidate.kind : kind,
+    id: string(candidate.id),
+    sessionID: string(candidate.sessionID),
+    messageID: string(candidate.messageID),
+    filename: string(candidate.filename),
+    source: mediaSource(candidate.source),
+  };
+}
+
+function mediaSource(value: unknown): MediaFilePart["source"] {
+  const source = record(value);
+  if (!source || typeof source.type !== "string") return undefined;
+  const text = record(source.text);
+  return {
+    type: source.type,
+    path: string(source.path),
+    text:
+      text && typeof text.value === "string" && typeof text.start === "number" && typeof text.end === "number"
+        ? { value: text.value, start: text.start, end: text.end }
+        : undefined,
+  };
 }
 
 /** Adds or updates local media in the session registry. */
@@ -117,7 +144,7 @@ export function registerSessionMedia(sessionID: string, messageID: string | unde
       const entries = readWritableRegistry(sessionID);
       if (!entries) return undefined;
 
-      const existing = entries.find((entry) => sameMedia(entry, messageID, part, hash, path));
+      const existing = entries.find((entry) => sameMedia(entry, messageID, part, { hash, path }));
       if (existing) {
         if (!existing.name || existing.kind !== "image" || !isExistingFile(existing.path)) existing.path = path;
         existing.mime = part.mime || existing.mime;
@@ -379,9 +406,10 @@ function readWritableRegistry(sessionID: string): MediaRegistryEntry[] | undefin
     if (!canReadRegistryPath(path)) return undefined;
 
     if (!existsSync(path)) return [];
-    const parsed = JSON.parse(readFileSync(path, "utf8")) as Partial<RegistryFile>;
-    if (!Array.isArray(parsed.entries) || parsed.entries.length > MAX_REGISTRY_ENTRIES) return undefined;
-    return parsed.entries.map(normalizeEntry).filter(isDefined);
+    const parsed = record(JSON.parse(readFileSync(path, "utf8")));
+    const entries = parsed?.entries;
+    if (!Array.isArray(entries) || entries.length > MAX_REGISTRY_ENTRIES) return undefined;
+    return entries.map(normalizeEntry).filter(isDefined);
   } catch {
     return undefined;
   }
@@ -450,35 +478,50 @@ function sameMedia(
   entry: MediaRegistryEntry,
   messageID: string | undefined,
   part: MediaFilePart,
-  hash: string,
-  path: string,
+  target: { hash: string; path: string },
 ) {
   if (part.id && entry.partID === part.id && (!messageID || entry.messageID === messageID)) return true;
-  if (entry.path === path) return true;
-  return entry.hash === hash;
+  if (entry.path === target.path) return true;
+  return entry.hash === target.hash;
 }
 
 // ├─ Registry formats ────────────────────────────────────────────────────────────────────────────┤
-function normalizeEntry(value: Partial<MediaRegistryEntry>): MediaRegistryEntry | undefined {
-  if (typeof value.handle !== "string" || !HANDLE_EXACT_PATTERN.test(value.handle) || typeof value.path !== "string")
+function normalizeEntry(raw: unknown): MediaRegistryEntry | undefined {
+  const value = record(raw);
+  if (
+    !value ||
+    typeof value.handle !== "string" ||
+    !HANDLE_EXACT_PATTERN.test(value.handle) ||
+    typeof value.path !== "string"
+  )
     return undefined;
+  const kind = value.kind === "image" || value.kind === "video" ? value.kind : undefined;
+  const mime = string(value.mime);
   return {
     handle: value.handle,
-    sessionID: value.sessionID || "",
-    messageID: value.messageID,
-    partID: value.partID,
+    sessionID: string(value.sessionID) || "",
+    messageID: string(value.messageID),
+    partID: string(value.partID),
     path: value.path,
-    mime: normalizeMime(value.mime, value.kind),
-    kind: normalizeKind(value.kind, value.mime),
-    hash: value.hash || sha256(`${value.path}:${value.handle}`),
-    source: value.source || "unknown source",
+    mime: normalizeMime(mime, kind),
+    kind: normalizeKind(kind, mime),
+    hash: string(value.hash) || sha256(`${value.path}:${value.handle}`),
+    source: string(value.source) || "unknown source",
     name: normalizeStoredName(value.name),
     alias: normalizeStoredAlias(value.alias, value.name),
-    nameSource: typeof value.nameSource === "string" ? value.nameSource.slice(0, 80) : undefined,
-    nameUpdatedAt: typeof value.nameUpdatedAt === "number" ? value.nameUpdatedAt : undefined,
-    createdAt: value.createdAt || Date.now(),
-    updatedAt: value.updatedAt || Date.now(),
+    nameSource: string(value.nameSource)?.slice(0, 80),
+    nameUpdatedAt: number(value.nameUpdatedAt),
+    createdAt: number(value.createdAt) || Date.now(),
+    updatedAt: number(value.updatedAt) || Date.now(),
   };
+}
+
+function string(value: unknown) {
+  return typeof value === "string" ? value : undefined;
+}
+
+function number(value: unknown) {
+  return typeof value === "number" ? value : undefined;
 }
 
 function requestedMediaReferences(text: string) {

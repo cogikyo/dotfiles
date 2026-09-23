@@ -1,21 +1,19 @@
 import { readAuth } from "./auth.ts";
 import { usageProviders } from "./providers.ts";
+import { record } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
 
 const { id, label, staleAfterMS } = usageProviders.opencodeGo;
-
-type AuthFile = {
-  "opencode-go"?: { type?: string; key?: string };
-};
 
 function note(text: string, noteKind: ProviderUsage["noteKind"] = "error"): ProviderUsage {
   return { id, label, windows: [], note: text, noteKind };
 }
 
 async function load(): Promise<ProviderUsage> {
-  const auth = await readAuth<AuthFile>();
-  const credential = auth["opencode-go"];
-  if (credential?.type !== "api" || !credential.key) return note("no auth", "warn");
+  const auth = await readAuth();
+  const credential = record(auth?.["opencode-go"]);
+  if (credential?.type !== "api" || typeof credential.key !== "string" || !credential.key)
+    return note("no auth", "warn");
 
   let response: Response;
   try {
@@ -36,10 +34,9 @@ async function load(): Promise<ProviderUsage> {
   if (!response.ok) return note(`HTTP ${response.status}`);
 
   // The endpoint returns rolling, weekly, and monthly windows with resetsAt timestamps.
-  const body = (await response.json().catch(() => undefined)) as
-    | { usage?: Record<string, { percent?: unknown; resetsAt?: unknown } | undefined> }
-    | undefined;
-  if (!body || typeof body !== "object" || !body.usage || typeof body.usage !== "object") {
+  const body = record(await response.json().catch(() => undefined));
+  const rawUsage = record(body?.usage);
+  if (!rawUsage) {
     return note("invalid usage");
   }
 
@@ -49,7 +46,7 @@ async function load(): Promise<ProviderUsage> {
     ["weekly", "W"],
     ["monthly", "M"],
   ] as const) {
-    const value = body.usage[name];
+    const value = record(rawUsage[name]);
     if (
       !value ||
       typeof value.percent !== "number" ||

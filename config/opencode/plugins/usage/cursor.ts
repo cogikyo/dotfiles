@@ -1,23 +1,7 @@
 import { readAuth } from "./auth.ts";
 import { usageProviders } from "./providers.ts";
+import { record } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
-
-type AuthFile = {
-  cursor?: {
-    type?: string;
-    access?: string;
-  };
-};
-
-type CursorPlanUsage = {
-  autoPercentUsed?: unknown;
-  apiPercentUsed?: unknown;
-};
-
-type CursorUsagePayload = {
-  billingCycleEnd?: unknown;
-  planUsage?: CursorPlanUsage | null;
-};
 
 // These fields are already percentages; values between 0 and 1 mean less than 1%, not fractions.
 const { id, label, staleAfterMS } = usageProviders.cursor;
@@ -52,10 +36,10 @@ function usageWindow(windowLabel: string, percent: unknown, cycleEnd: string | u
 }
 
 async function load(): Promise<ProviderUsage> {
-  const auth = await readAuth<AuthFile>();
-  const cursor = auth.cursor;
+  const auth = await readAuth();
+  const cursor = record(auth?.cursor);
 
-  if (!cursor || cursor.type !== "oauth" || !cursor.access) {
+  if (cursor?.type !== "oauth" || typeof cursor.access !== "string" || !cursor.access) {
     return usage([], "no auth");
   }
 
@@ -72,11 +56,12 @@ async function load(): Promise<ProviderUsage> {
   });
   if (!response.ok) return usage([], `${response.status}`);
 
-  const payload = (await response.json()) as CursorUsagePayload;
-  const cycleEnd = resetAt(payload.billingCycleEnd);
+  const payload = record(await response.json());
+  const planUsage = record(payload?.planUsage);
+  const cycleEnd = resetAt(payload?.billingCycleEnd);
   const windows = [
-    usageWindow("C", payload.planUsage?.autoPercentUsed, cycleEnd),
-    usageWindow("O", payload.planUsage?.apiPercentUsed, cycleEnd),
+    usageWindow("C", planUsage?.autoPercentUsed, cycleEnd),
+    usageWindow("O", planUsage?.apiPercentUsed, cycleEnd),
   ].filter((window): window is UsageWindow => Boolean(window));
 
   if (windows.length === 0) return usage([], "no windows");

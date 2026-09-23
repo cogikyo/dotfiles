@@ -1,7 +1,17 @@
 /** @jsxImportSource @opentui/solid */
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule, TuiPromptRef } from "@opencode-ai/plugin/tui";
 import { writeFile } from "node:fs/promises";
-import { Show, createComputed, createMemo, createSignal, on, onCleanup, type Accessor } from "solid-js";
+import {
+  Show,
+  createComputed,
+  createMemo,
+  createRenderEffect,
+  createSignal,
+  on,
+  onCleanup,
+  untrack,
+  type Accessor,
+} from "solid-js";
 import { colors, pressureColor, pressureTier } from "../shared/colors.ts";
 import { gitDirtyCount, gitStatus, type GitStatus } from "../shared/git.ts";
 import { icons } from "../shared/icons.ts";
@@ -26,9 +36,8 @@ type SessionPromptProps = {
 // ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
 function SessionPrompt(props: SessionPromptProps) {
-  const Prompt = props.api.ui.Prompt;
   return (
-    <Prompt
+    <props.api.ui.Prompt
       sessionID={props.sessionID}
       visible={props.visible}
       disabled={props.disabled}
@@ -62,24 +71,28 @@ function StatusLeft(props: { api: TuiPluginApi; sessionID: string }) {
 
   createComputed(on(() => props.sessionID, refresh));
   const timer = setInterval(refresh, REFRESH_MS);
-  const disposers = [
-    props.api.event.on("message.updated", (event) => {
-      if (event.properties.sessionID === props.sessionID) refresh();
-    }),
-    props.api.event.on("message.removed", (event) => {
-      if (event.properties.sessionID === props.sessionID) refresh();
-    }),
-    props.api.event.on("session.status", (event) => {
-      if (event.properties.sessionID === props.sessionID) refresh();
-    }),
-    props.api.event.on("session.updated", (event) => {
-      if (event.properties.sessionID === props.sessionID) refresh();
-    }),
-    props.api.event.on("vcs.branch.updated", refresh),
-  ];
+  createRenderEffect(() => {
+    const disposers = [
+      props.api.event.on("message.updated", (event) => {
+        if (event.properties.sessionID === untrack(() => props.sessionID)) untrack(refresh);
+      }),
+      props.api.event.on("message.removed", (event) => {
+        if (event.properties.sessionID === untrack(() => props.sessionID)) untrack(refresh);
+      }),
+      props.api.event.on("session.status", (event) => {
+        if (event.properties.sessionID === untrack(() => props.sessionID)) untrack(refresh);
+      }),
+      props.api.event.on("session.updated", (event) => {
+        if (event.properties.sessionID === untrack(() => props.sessionID)) untrack(refresh);
+      }),
+      props.api.event.on("vcs.branch.updated", () => untrack(refresh)),
+    ];
+    onCleanup(() => {
+      for (const dispose of disposers) dispose();
+    });
+  });
   onCleanup(() => {
     clearInterval(timer);
-    for (const dispose of disposers) dispose();
   });
 
   const meta = () => {
@@ -119,26 +132,30 @@ function StatusRight(props: { api: TuiPluginApi; sessionID: string }) {
     ),
   );
   const timer = setInterval(refresh, REFRESH_MS);
-  const disposers = [
-    props.api.event.on("message.updated", (event) => {
-      if (event.properties.sessionID === props.sessionID) refresh();
-    }),
-    props.api.event.on("message.removed", (event) => {
-      if (event.properties.sessionID === props.sessionID) refresh();
-    }),
-    props.api.event.on("message.part.updated", (event) => {
-      if (event.properties.sessionID === props.sessionID) refresh();
-    }),
-    props.api.event.on("session.status", (event) => {
-      if (event.properties.sessionID === props.sessionID) refresh();
-    }),
-    props.api.event.on("session.updated", (event) => {
-      if (event.properties.sessionID === props.sessionID) refresh();
-    }),
-  ];
+  createRenderEffect(() => {
+    const disposers = [
+      props.api.event.on("message.updated", (event) => {
+        if (event.properties.sessionID === untrack(() => props.sessionID)) untrack(refresh);
+      }),
+      props.api.event.on("message.removed", (event) => {
+        if (event.properties.sessionID === untrack(() => props.sessionID)) untrack(refresh);
+      }),
+      props.api.event.on("message.part.updated", (event) => {
+        if (event.properties.sessionID === untrack(() => props.sessionID)) untrack(refresh);
+      }),
+      props.api.event.on("session.status", (event) => {
+        if (event.properties.sessionID === untrack(() => props.sessionID)) untrack(refresh);
+      }),
+      props.api.event.on("session.updated", (event) => {
+        if (event.properties.sessionID === untrack(() => props.sessionID)) untrack(refresh);
+      }),
+    ];
+    onCleanup(() => {
+      for (const dispose of disposers) dispose();
+    });
+  });
   onCleanup(() => {
     clearInterval(timer);
-    for (const dispose of disposers) dispose();
   });
 
   return <ContextSegment api={props.api} usage={usage()} />;
@@ -229,7 +246,7 @@ function agentColor(api: TuiPluginApi, sessionID: string) {
   const agent = currentAgent(api, sessionID);
   const colorName = agent ? api.state.config.agent?.[agent]?.color : undefined;
   if (typeof colorName === "string" && !colorName.startsWith("#")) {
-    const color = theme[colorName as keyof typeof theme];
+    const color = Object.entries(theme).find(([name]) => name === colorName)?.[1];
     if (typeof color === "object" && color) return color;
   }
   return colors(theme).brightBlue;

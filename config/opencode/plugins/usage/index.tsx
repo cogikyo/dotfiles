@@ -1,6 +1,6 @@
 /** @jsxImportSource @opentui/solid */
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui";
-import { Show, createComputed, createSignal, on, onCleanup } from "solid-js";
+import { Show, createComputed, createRenderEffect, createSignal, on, onCleanup, untrack } from "solid-js";
 import { sessionProviderID } from "../shared/session.ts";
 import { usageAdapters } from "./adapters.ts";
 import {
@@ -216,27 +216,34 @@ function UsagePanel(props: { api: TuiPluginApi; sessionID: string }) {
       .finally(() => markRefreshing(adapter.id, false));
   };
 
-  refresh(true);
+  createComputed(
+    on(
+      () => props.sessionID,
+      () => refresh(true),
+    ),
+  );
   const timer = setInterval(() => refresh(true), UI_REFRESH_MS);
-  const disposeMessageUpdated = props.api.event.on("message.updated", (event) => {
-    if (event.properties.sessionID !== props.sessionID) return;
-    scheduleRefresh();
-  });
-  const disposeMessageRemoved = props.api.event.on("message.removed", (event) => {
-    if (event.properties.sessionID !== props.sessionID) return;
-    scheduleRefresh();
-  });
-  const disposeSessionUpdated = props.api.event.on("session.updated", (event) => {
-    if (event.properties.sessionID !== props.sessionID) return;
-    scheduleRefresh();
+  createRenderEffect(() => {
+    const disposeMessageUpdated = props.api.event.on("message.updated", (event) => {
+      if (event.properties.sessionID !== untrack(() => props.sessionID)) return;
+      untrack(scheduleRefresh);
+    });
+    const disposeMessageRemoved = props.api.event.on("message.removed", (event) => {
+      if (event.properties.sessionID !== untrack(() => props.sessionID)) return;
+      untrack(scheduleRefresh);
+    });
+    const disposeSessionUpdated = props.api.event.on("session.updated", (event) => {
+      if (event.properties.sessionID !== untrack(() => props.sessionID)) return;
+      untrack(scheduleRefresh);
+    });
+    onCleanup(disposeMessageUpdated);
+    onCleanup(disposeMessageRemoved);
+    onCleanup(disposeSessionUpdated);
   });
   onCleanup(() => clearInterval(timer));
   onCleanup(() => {
     if (eventRefreshTimer) clearTimeout(eventRefreshTimer);
   });
-  onCleanup(disposeMessageUpdated);
-  onCleanup(disposeMessageRemoved);
-  onCleanup(disposeSessionUpdated);
 
   return (
     <UsageDashboard

@@ -15,11 +15,6 @@ type BrowserQA = {
   workspace: string;
 };
 
-type WorkspaceEvent = {
-  event?: unknown;
-  data?: unknown;
-};
-
 function BrowserQASection(props: { api: TuiPluginApi; entries: BrowserQA[]; onToggle: (slot: number) => void }) {
   return (
     <Show when={props.entries.length > 0}>
@@ -112,8 +107,8 @@ function browserQA(input: unknown): BrowserQA[] {
 
   return input
     .filter((entry): entry is BrowserQA => {
-      if (!entry || typeof entry !== "object") return false;
-      const candidate = entry as Record<string, unknown>;
+      const candidate = record(entry);
+      if (!candidate) return false;
       return (
         typeof candidate.address === "string" &&
         typeof candidate.title === "string" &&
@@ -128,14 +123,18 @@ function browserQA(input: unknown): BrowserQA[] {
 
 function workspaceEvent(line: string) {
   try {
-    const event = JSON.parse(line) as WorkspaceEvent;
-    if (event.event !== "workspace" || !event.data || typeof event.data !== "object") {
-      return undefined;
-    }
-    return browserQA((event.data as Record<string, unknown>).browser_qa);
+    const event = record(JSON.parse(line));
+    if (event?.event !== "workspace") return undefined;
+    return browserQA(record(event.data)?.browser_qa);
   } catch {
     return undefined;
   }
+}
+
+function record(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? Object.fromEntries(Object.entries(value))
+    : undefined;
 }
 
 const tui: TuiPlugin = async (api) => {

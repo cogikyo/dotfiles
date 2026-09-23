@@ -91,12 +91,9 @@ async function currentPaneState() {
 
     for (const win of windows) {
       for (const tab of win.tabs || []) {
-        for (const pane of tab.windows || []) {
-          if (Number(pane?.id) !== KITTY_WINDOW_ID) continue;
-          return {
-            focused: Boolean(win?.is_focused && tab?.is_focused && pane?.is_focused),
-          };
-        }
+        const pane = (tab.windows || []).find((entry) => Number(entry?.id) === KITTY_WINDOW_ID);
+        if (!pane) continue;
+        return { focused: Boolean(win?.is_focused && tab?.is_focused && pane?.is_focused) };
       }
     }
   } catch {
@@ -173,7 +170,8 @@ const tui = async (api) => {
 
     syncing = true;
     syncTask = (async () => {
-      while (!disposed && pendingSession) {
+      while (pendingSession) {
+        if (disposed) break;
         const next = pendingSession;
         pendingSession = "";
         try {

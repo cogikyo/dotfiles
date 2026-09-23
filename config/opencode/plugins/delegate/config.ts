@@ -45,7 +45,7 @@ function object(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
     throw new Error(`delegate config ${label} must be an object`);
   }
-  return value as Record<string, unknown>;
+  return Object.fromEntries(Object.entries(value));
 }
 
 function objectRecord(value: unknown, label: string): Record<string, Record<string, unknown>> {

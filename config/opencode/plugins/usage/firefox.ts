@@ -179,18 +179,20 @@ async function firefoxCookieDatabases() {
     path.join(os.homedir(), ".config", "mozilla", "firefox"),
   ];
 
-  const paths = new Set<string>();
-  for (const root of roots) {
-    for (const profile of await profilesFromIni(root)) paths.add(profile);
-    for (const profile of await scannedProfiles(root)) paths.add(profile);
-  }
-
-  const databases: string[] = [];
-  for (const profile of paths) {
-    const database = path.join(profile, "cookies.sqlite");
-    if (await exists(database)) databases.push(database);
-  }
-  return databases;
+  const discovered = await Promise.all(
+    roots.map(async (root) => {
+      const [configured, scanned] = await Promise.all([profilesFromIni(root), scannedProfiles(root)]);
+      return configured.concat(scanned);
+    }),
+  );
+  const paths = new Set(discovered.flat());
+  const databases = await Promise.all(
+    Array.from(paths, async (profile) => {
+      const database = path.join(profile, "cookies.sqlite");
+      return (await exists(database)) ? database : undefined;
+    }),
+  );
+  return databases.filter((database): database is string => database !== undefined);
 }
 
 async function profilesFromIni(root: string) {

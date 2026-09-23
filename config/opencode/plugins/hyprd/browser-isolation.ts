@@ -1,4 +1,4 @@
-import type { Plugin, PluginModule, ToolContext } from "@opencode-ai/plugin";
+import { tool, type Plugin, type PluginModule } from "@opencode-ai/plugin";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createInterface } from "node:readline";
 import { z } from "zod";
@@ -25,13 +25,6 @@ type JSONSchema = {
   properties?: Record<string, JSONSchema>;
   required?: string[];
 };
-
-type Content =
-  | { type: "text"; text: string }
-  | { type: "image"; data: string; mimeType: string }
-  | Record<string, unknown>;
-
-type CallResult = { content: Content[]; isError?: boolean };
 
 class MCPClient {
   private child: ChildProcessWithoutNullStreams;
@@ -69,12 +62,18 @@ class MCPClient {
   }
 
   async tools() {
-    const result = (await this.request("tools/list", {})) as { tools: Tool[] };
-    return result.tools;
+    const result = record(await this.request("tools/list", {}));
+    if (!result || !Array.isArray(result.tools)) throw new Error("Invalid MCP tool list");
+    return result.tools.map(parseTool);
   }
 
   async call(name: string, args: Record<string, unknown>) {
-    return (await this.request("tools/call", { name, arguments: args })) as CallResult;
+    const result = record(await this.request("tools/call", { name, arguments: args }));
+    if (!result || !Array.isArray(result.content)) throw new Error("Invalid MCP tool result");
+    return {
+      content: result.content.map(record).filter((item) => item !== undefined),
+      isError: result.isError === true,
+    };
   }
 
   close() {
@@ -89,13 +88,13 @@ class MCPClient {
   }
 
   private receive(line: string) {
-    let message: Record<string, unknown>;
+    let message: Record<string, unknown> | undefined;
     try {
-      message = JSON.parse(line) as Record<string, unknown>;
+      message = record(JSON.parse(line));
     } catch {
       return;
     }
-    if (typeof message.id !== "number") return;
+    if (!message || typeof message.id !== "number") return;
 
     if (typeof message.method === "string") {
       const result = message.method === "roots/list" ? { roots: [] } : {};
@@ -129,48 +128,122 @@ function browser(sessionID: string) {
   return opening;
 }
 
-function definition(tool: Tool) {
-  const required = new Set(tool.inputSchema.required ?? []);
+function definition(item: Tool) {
+  const required = new Set(item.inputSchema.required ?? []);
   const shape = Object.fromEntries(
-    Object.entries(tool.inputSchema.properties ?? {}).map(([name, schema]) => {
+    Object.entries(item.inputSchema.properties ?? {}).map(([name, schema]) => {
       const value = argument(schema);
       return [name, required.has(name) ? value : value.optional()];
     }),
   );
-  return {
-    description: tool.description ?? tool.name,
+  return tool({
+    description: item.description ?? item.name,
     args: shape,
-    async execute(args: Record<string, unknown>, ctx: ToolContext) {
+    async execute(args, ctx) {
       await ctx.ask({
-        permission: `chrome-devtools_${tool.name}`,
+        permission: `chrome-devtools_${item.name}`,
         patterns: ["*"],
         always: ["*"],
         metadata: {},
       });
-      const result = await (await browser(ctx.sessionID)).call(tool.name, args);
+      const result = await (await browser(ctx.sessionID)).call(item.name, args);
       const output = result.content
-        .filter((item): item is { type: "text"; text: string } => item.type === "text")
-        .map((item) => item.text)
+        .filter(textContent)
+        .map((part) => part.text)
         .join("\n\n");
-      if (result.isError) throw new Error(output || `${tool.name} failed`);
+      if (result.isError) throw new Error(output || `${item.name} failed`);
       return {
         output,
-        attachments: result.content
-          .filter((item): item is { type: "image"; data: string; mimeType: string } => item.type === "image")
-          .map((item) => ({
-            type: "file",
-            mime: item.mimeType,
-            url: `data:${item.mimeType};base64,${item.data}`,
-          })),
-      } as never;
+        attachments: result.content.filter(imageContent).map((part) => ({
+          type: "file",
+          mime: part.mimeType,
+          url: `data:${part.mimeType};base64,${part.data}`,
+        })),
+      };
     },
-  } as never;
+  });
+}
+
+function record(value: unknown): Record<string, unknown> | undefined {
+  return value !== null && typeof value === "object" && !Array.isArray(value)
+    ? Object.fromEntries(Object.entries(value))
+    : undefined;
+}
+
+function parseTool(value: unknown): Tool {
+  const entry = record(value);
+  const input = record(entry?.inputSchema);
+  if (typeof entry?.name !== "string" || !input) throw new Error("Invalid MCP tool definition");
+  const properties = parseProperties(input.properties);
+  const required = input.required;
+  if (required !== undefined && !stringList(required)) {
+    throw new Error("Invalid MCP required properties");
+  }
+  return {
+    name: entry.name,
+    ...(typeof entry.description === "string" ? { description: entry.description } : {}),
+    inputSchema: {
+      ...(properties ? { properties } : {}),
+      ...(required ? { required } : {}),
+    },
+  };
+}
+
+function parseSchema(value: unknown): JSONSchema {
+  const entry = record(value);
+  if (!entry) throw new Error("Invalid MCP input schema");
+  const properties = parseProperties(entry.properties);
+  const values = entry.enum;
+  if (values !== undefined && !literalList(values)) {
+    throw new Error("Invalid MCP schema enum");
+  }
+  const required = entry.required;
+  if (required !== undefined && !stringList(required)) {
+    throw new Error("Invalid MCP schema required properties");
+  }
+  return {
+    ...(typeof entry.type === "string" ? { type: entry.type } : {}),
+    ...(typeof entry.description === "string" ? { description: entry.description } : {}),
+    ...(values ? { enum: values } : {}),
+    ...(entry.items !== undefined ? { items: parseSchema(entry.items) } : {}),
+    ...(properties ? { properties } : {}),
+    ...(required ? { required } : {}),
+  };
+}
+
+function parseProperties(value: unknown): Record<string, JSONSchema> | undefined {
+  if (value === undefined) return undefined;
+  const entries = record(value);
+  if (!entries) throw new Error("Invalid MCP schema properties");
+  return Object.fromEntries(Object.entries(entries).map(([key, item]) => [key, parseSchema(item)]));
+}
+
+function stringList(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === "string");
+}
+
+function literalList(value: unknown): value is Literal[] {
+  return Array.isArray(value) && value.every(isLiteral);
+}
+
+function isLiteral(value: unknown): value is Literal {
+  return value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean";
+}
+
+function textContent(value: Record<string, unknown>): value is Record<string, unknown> & { text: string } {
+  return value.type === "text" && typeof value.text === "string";
+}
+
+function imageContent(
+  value: Record<string, unknown>,
+): value is Record<string, unknown> & { data: string; mimeType: string } {
+  return value.type === "image" && typeof value.data === "string" && typeof value.mimeType === "string";
 }
 
 function argument(schema: JSONSchema): z.ZodType {
   let value: z.ZodType;
   if (schema.enum?.length) {
-    value = z.union(schema.enum.map((item) => z.literal(item)) as [z.ZodLiteral<Literal>, ...z.ZodLiteral<Literal>[]]);
+    value = z.literal(schema.enum);
   } else {
     switch (schema.type) {
       case "string":

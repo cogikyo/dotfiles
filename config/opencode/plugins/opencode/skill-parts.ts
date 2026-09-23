@@ -1,5 +1,6 @@
 import { realpathSync } from "node:fs";
 import path from "node:path";
+import { record } from "./record.ts";
 
 /** OpenCode tool-part fields used to mark, restore, and persist completed tool output. */
 export type SkillToolPart = {
@@ -131,10 +132,10 @@ export async function persistCompactedPartsHttp(serverUrl: URL, directory: strin
 /** Reads the first Markdown path in filePath, path, filepath, or file input fields. */
 export function toolMarkdownPath(part: SkillToolPart) {
   const input = part.state?.input;
-  if (!input || typeof input !== "object") return undefined;
-  const record = input as Record<string, unknown>;
+  const fields = record(input);
+  if (!fields) return undefined;
   for (const key of ["filePath", "path", "filepath", "file"]) {
-    const value = record[key];
+    const value = fields[key];
     if (typeof value === "string" && isMarkdownPath(value)) return normalizeFilePath(value);
   }
   return undefined;
@@ -245,5 +246,5 @@ function normalizeFilePath(value: string) {
 }
 
 function asObject(value: unknown) {
-  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : undefined;
+  return record(value);
 }

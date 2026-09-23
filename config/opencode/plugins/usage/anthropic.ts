@@ -2,25 +2,12 @@ import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { readAuth, readClaudeCredentials } from "./auth.ts";
 import { usageProviders } from "./providers.ts";
-import { normalizePercent } from "./types.ts";
+import { normalizePercent, record } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
-
-type AuthFile = {
-  anthropic?: {
-    type?: string;
-    access?: string;
-  };
-};
 
 type AnthropicWindow = {
   utilization?: unknown;
   resets_at?: unknown;
-};
-
-type AnthropicUsagePayload = {
-  five_hour?: AnthropicWindow | null;
-  seven_day?: AnthropicWindow | null;
-  limits?: AnthropicLimit[] | null;
 };
 
 type AnthropicLimit = {
@@ -28,13 +15,7 @@ type AnthropicLimit = {
   group?: unknown;
   percent?: unknown;
   resets_at?: unknown;
-  scope?: AnthropicLimitScope | null;
-};
-
-type AnthropicLimitScope = {
-  model?: {
-    display_name?: unknown;
-  } | null;
+  scope?: unknown;
 };
 
 const { id, label, staleAfterMS } = usageProviders.anthropic;
@@ -77,7 +58,7 @@ function scopedWindow(limit: AnthropicLimit): UsageWindow | undefined {
     return undefined;
   }
 
-  const displayName = limit.scope?.model?.display_name;
+  const displayName = record(record(limit.scope)?.model)?.display_name;
   if (typeof displayName !== "string") return undefined;
 
   const tag = scopedLabel(displayName);
@@ -158,11 +139,14 @@ async function fetchUsage(token: string): Promise<ProviderUsage> {
   });
   if (!response.ok) return usage([], `${response.status}`);
 
-  const payload = (await response.json()) as AnthropicUsagePayload;
+  const payload = record(await response.json());
+  const limits = Array.isArray(payload?.limits)
+    ? payload.limits.map(record).filter((limit) => limit !== undefined)
+    : [];
   const windows = [
-    usageWindow("H", payload.five_hour),
-    usageWindow("W", payload.seven_day),
-    ...scopedWindows(payload.limits),
+    usageWindow("H", record(payload?.five_hour)),
+    usageWindow("W", record(payload?.seven_day)),
+    ...scopedWindows(limits),
   ].filter((window): window is UsageWindow => Boolean(window));
 
   if (windows.length === 0) return usage([], "no windows");
@@ -170,10 +154,10 @@ async function fetchUsage(token: string): Promise<ProviderUsage> {
 }
 
 async function load(): Promise<ProviderUsage> {
-  const auth = await readAuth<AuthFile>();
-  const anthropic = auth.anthropic;
+  const auth = await readAuth();
+  const anthropic = record(auth?.anthropic);
 
-  if (!anthropic || anthropic.type !== "oauth" || !anthropic.access) {
+  if (anthropic?.type !== "oauth" || typeof anthropic.access !== "string" || !anthropic.access) {
     return usage([], "no auth");
   }
 

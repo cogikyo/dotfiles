@@ -3,6 +3,7 @@ import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plug
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { getOwner, onCleanup, onMount } from "solid-js";
+import { record } from "./record.ts";
 
 const id = "opencode-pin-model";
 const CONFIG_PATH = "/home/cullyn/dotfiles/config/opencode/opencode.json";
@@ -39,19 +40,18 @@ type Pin = {
 let local: Local | undefined;
 
 function isLocal(value: unknown): value is Local {
-  if (!value || typeof value !== "object") return false;
-  const model = (value as { model?: Partial<LocalModel> }).model;
+  const model = record(record(value)?.model);
+  const variant = record(model?.variant);
   return (
     typeof model?.current === "function" &&
     typeof model?.set === "function" &&
-    typeof model.variant?.current === "function" &&
-    typeof model.variant?.set === "function"
+    typeof variant?.current === "function" &&
+    typeof variant?.set === "function"
   );
 }
 
 function contextValues(ctx: object) {
-  const record = ctx as Record<PropertyKey, unknown>;
-  return [...Object.values(record), ...Object.getOwnPropertySymbols(record).map((key) => record[key])];
+  return [...Object.values(ctx), ...Object.getOwnPropertySymbols(ctx).map((key) => Reflect.get(ctx, key))];
 }
 
 // The model picker is stored in Solid owner context; the TUI plugin API has no model setter.
@@ -105,7 +105,7 @@ async function readText(path: string) {
   try {
     return await readFile(path, "utf8");
   } catch (error) {
-    if ((error as { code?: string }).code === "ENOENT") return undefined;
+    if (error !== null && typeof error === "object" && "code" in error && error.code === "ENOENT") return undefined;
     throw error;
   }
 }
@@ -146,7 +146,7 @@ async function writeConfigModel(model: string) {
 async function readPin(api: TuiPluginApi): Promise<Pin | undefined> {
   const text = await readText(pinPath(api));
   if (text !== undefined) {
-    const value = JSON.parse(text) as Pin;
+    const value = record(JSON.parse(text));
     if (typeof value?.model === "string" && parseModel(value.model)) {
       return {
         model: value.model,

@@ -67,7 +67,7 @@ const server: Plugin = async ({ client }) => {
           try {
             const prepared = await prepareTask(client, ctx, args);
             const notes = await enforceProviderPolicy(prepared.model.providerID, config, ctx.abort);
-            return (await runChildTask({ client, ctx, args: prepared.args, prepared, notes })) as never;
+            return runChildTask({ client, ctx, args: prepared.args, prepared, notes });
           } finally {
             if (key) activeLanes.delete(key);
           }

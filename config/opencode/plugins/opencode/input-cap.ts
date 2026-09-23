@@ -1,6 +1,7 @@
 import type { Config, Plugin, PluginModule } from "@opencode-ai/plugin";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { record } from "./record.ts";
 import {
   COMPACTION_LIMIT,
   COMPACTION_RESERVED,
@@ -49,14 +50,14 @@ function capProviderModels(cfg: Config, catalog: Catalog, inputCap: number) {
 function capCatalogModels(cfg: Config, catalog: Catalog, inputCap: number) {
   const enabled = cfg.enabled_providers;
   const providerIDs = enabled ?? Object.keys(catalog);
-  const providers = (cfg.provider ??= {}) as Record<string, Record<string, unknown>>;
+  const providers = (cfg.provider ??= {});
 
   for (const providerID of providerIDs) {
     if (cfg.disabled_providers?.includes(providerID)) continue;
     const catalogModels = catalog[providerID];
     if (!catalogModels) continue;
     const provider = (providers[providerID] ??= {});
-    const models = (provider.models ??= {}) as Record<string, Record<string, unknown>>;
+    const models = (provider.models ??= {});
     for (const [modelID, catalogLimit] of Object.entries(catalogModels)) {
       if (models[modelID]) continue;
       const model = (models[modelID] ??= {});
@@ -65,7 +66,11 @@ function capCatalogModels(cfg: Config, catalog: Catalog, inputCap: number) {
   }
 }
 
-function applyCap(model: Record<string, unknown>, catalogLimit: Limit | undefined, inputCap: number) {
+function applyCap(
+  model: { limit?: { context: number; input?: number; output: number } },
+  catalogLimit: Limit | undefined,
+  inputCap: number,
+) {
   const configured = object(model.limit);
   const context = number(configured?.context) ?? number(catalogLimit?.context);
   const output = number(configured?.output) ?? number(catalogLimit?.output);
@@ -108,9 +113,7 @@ async function readCatalog(): Promise<Catalog> {
 }
 
 function object(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined;
+  return record(value);
 }
 
 function number(value: unknown) {

@@ -1,4 +1,10 @@
 import type { PluginInput, ToolContext } from "@opencode-ai/plugin";
+import type {
+  SessionCreateData,
+  SessionPromptAsyncData,
+  SessionSummarizeData,
+  SessionUpdateData,
+} from "@opencode-ai/sdk/v2";
 import { CONTEXT_PRESSURE } from "../shared/session.ts";
 
 /** Arguments accepted by the delegate `task` tool. */
@@ -145,13 +151,13 @@ export async function runChildTask(input: {
   }
   const child =
     current && !limited
-      ? await readExistingChild(
-          input.client,
-          current,
-          input.prepared.permission,
-          input.prepared.execution,
-          input.ctx.abort,
-        )
+      ? await readExistingChild({
+          client: input.client,
+          session: current,
+          permission: input.prepared.permission,
+          execution: input.prepared.execution,
+          signal: input.ctx.abort,
+        })
       : await createChild(input.client, input.ctx, input.args, input.prepared);
 
   const metadata = { sessionId: child.id };
@@ -170,12 +176,9 @@ export async function runChildTask(input: {
   try {
     if (input.ctx.abort.aborted) throw new Error("delegate task aborted before child prompt");
     if (input.args.compact) {
+      const body: NonNullable<SessionSummarizeData["body"]> = { ...input.prepared.model, auto: false };
       const summarized = await unwrap<boolean>(
-        input.client.session.summarize({
-          path: { id: child.id },
-          body: { ...input.prepared.model, auto: false },
-          signal: input.ctx.abort,
-        } as never),
+        input.client.session.summarize({ path: { id: child.id }, body, signal: input.ctx.abort }),
         `compact lane ${input.args.lane}`,
       );
       if (!summarized) throw new Error(`delegate compaction failed for lane ${input.args.lane}`);
@@ -184,36 +187,39 @@ export async function runChildTask(input: {
     try {
       const initialMessages = await readChildMessages(input.client, child.id, input.ctx.abort);
       const initialMessageIDs = new Set(initialMessages.map(messageID).filter((id): id is string => !!id));
+      const body = {
+        model: input.prepared.model,
+        ...(input.prepared.variant ? { variant: input.prepared.variant } : {}),
+        agent: input.prepared.agent.name,
+        parts: [{ type: "text", text: input.args.prompt }],
+      } satisfies NonNullable<SessionPromptAsyncData["body"]>;
       await unwrap(
-        input.client.session.promptAsync({
-          path: { id: child.id },
-          body: {
-            model: input.prepared.model,
-            ...(input.prepared.variant ? { variant: input.prepared.variant } : {}),
-            agent: input.prepared.agent.name,
-            parts: [{ type: "text", text: input.args.prompt }],
-          },
-          signal: input.ctx.abort,
-        } as never),
+        input.client.session.promptAsync({ path: { id: child.id }, body, signal: input.ctx.abort }),
         `prompt child session ${child.id}`,
       );
-      completion = await waitForChild(
-        input.client,
-        child.id,
+      completion = await waitForChild({
+        client: input.client,
+        sessionID: child.id,
         initialMessageIDs,
-        CONTEXT_PRESSURE,
-        input.prepared,
+        limits: CONTEXT_PRESSURE,
+        prepared: input.prepared,
         notes,
-        input.ctx.abort,
-        childAbort.start,
-      );
+        signal: input.ctx.abort,
+        abortChild: childAbort.start,
+      });
     } catch (error) {
       if (isContentFilterBlock(error)) return blockedResult(input.args, metadata, child.id, notes);
       throw error;
     }
 
     if (completion.interruption) {
-      return interruptedResult(input.args, metadata, child.id, notes, completion.interruption);
+      return interruptedResult({
+        args: input.args,
+        metadata,
+        sessionID: child.id,
+        notes,
+        reason: completion.interruption,
+      });
     }
     const completionError = object(completion.assistant?.info)?.error;
     if (completionError && isContentFilterBlock(completionError)) {
@@ -236,7 +242,7 @@ export async function runChildTask(input: {
       });
     }
     const response = completion.assistant;
-    if (!response) return interruptedResult(input.args, metadata, child.id, notes);
+    if (!response) return interruptedResult({ args: input.args, metadata, sessionID: child.id, notes });
     const info = object(response.info);
     if (info?.error) {
       if (isContentFilterBlock(info.error)) return blockedResult(input.args, metadata, child.id, notes);
@@ -295,16 +301,17 @@ export async function readChildTaskStatus(client: Client, parentSessionID: strin
 }
 
 // ├─ Child completion and context limits ─────────────────────────────────────────────────────────┤
-async function waitForChild(
-  client: Client,
-  sessionID: string,
-  initialMessageIDs: Set<string>,
-  limits: ContextLimits,
-  prepared: PreparedTask,
-  notes: string[],
-  signal: AbortSignal,
-  abortChild: () => void,
-): Promise<ChildWait> {
+async function waitForChild(input: {
+  client: Client;
+  sessionID: string;
+  initialMessageIDs: Set<string>;
+  limits: ContextLimits;
+  prepared: PreparedTask;
+  notes: string[];
+  signal: AbortSignal;
+  abortChild: () => void;
+}): Promise<ChildWait> {
+  const { client, sessionID, initialMessageIDs, limits, prepared, notes, signal, abortChild } = input;
   let active = false;
   let limit: ContextLimit | undefined;
   const spent = new Set<ContextWarning>();
@@ -351,23 +358,22 @@ async function waitForChild(
         if (running) abortChild();
       }
 
-      if (!limit && (status?.type === "busy" || status?.type === "retry")) {
-        const response = lastAssistantMessage(turnMessages);
-        if (!finalAssistant(response)) {
-          const tokens = maxContextTokens(turnMessages);
-          const warning = pendingContextWarning(tokens, limits, spent);
-          if (warning) {
-            spent.add(warning);
-            requested.add(warning);
-            if (warning === "final") spent.add("medium");
-            if (warning !== "soft") spent.add("soft");
-            try {
-              await sendContextWarning(client, sessionID, prepared, warning, tokens, limits, waitSignal);
-            } catch (error) {
-              requested.delete(warning);
-              notes.push(`context ${warning} warning was not delivered: ${errorMessage(error)}`);
-            }
-          }
+      const shouldWarn =
+        !limit &&
+        (status?.type === "busy" || status?.type === "retry") &&
+        !finalAssistant(lastAssistantMessage(turnMessages));
+      const tokens = shouldWarn ? maxContextTokens(turnMessages) : undefined;
+      const warning = shouldWarn ? pendingContextWarning(tokens, limits, spent) : undefined;
+      if (warning) {
+        spent.add(warning);
+        requested.add(warning);
+        if (warning === "final") spent.add("medium");
+        if (warning !== "soft") spent.add("soft");
+        try {
+          await sendContextWarning({ client, sessionID, prepared, level: warning, tokens, limits, signal: waitSignal });
+        } catch (error) {
+          requested.delete(warning);
+          notes.push(`context ${warning} warning was not delivered: ${errorMessage(error)}`);
         }
       }
 
@@ -435,26 +441,24 @@ function observeContextWarnings(messages: unknown[], spent: Set<ContextWarning>,
   }
 }
 
-async function sendContextWarning(
-  client: Client,
-  sessionID: string,
-  prepared: PreparedTask,
-  level: ContextWarning,
-  tokens: number | undefined,
-  limits: ContextLimits,
-  signal: AbortSignal,
-) {
+async function sendContextWarning(input: {
+  client: Client;
+  sessionID: string;
+  prepared: PreparedTask;
+  level: ContextWarning;
+  tokens: number | undefined;
+  limits: ContextLimits;
+  signal: AbortSignal;
+}) {
+  const { client, sessionID, prepared, level, tokens, limits, signal } = input;
+  const body = {
+    model: prepared.model,
+    ...(prepared.variant ? { variant: prepared.variant } : {}),
+    agent: prepared.agent.name,
+    parts: [{ type: "text", text: contextWarningPrompt(level, tokens, limits) }],
+  } satisfies NonNullable<SessionPromptAsyncData["body"]>;
   await unwrap(
-    client.session.promptAsync({
-      path: { id: sessionID },
-      body: {
-        model: prepared.model,
-        ...(prepared.variant ? { variant: prepared.variant } : {}),
-        agent: prepared.agent.name,
-        parts: [{ type: "text", text: contextWarningPrompt(level, tokens, limits) }],
-      },
-      signal,
-    } as never),
+    client.session.promptAsync({ path: { id: sessionID }, body, signal }),
     `send context ${level} warning to child session ${sessionID}`,
   );
 }
@@ -531,24 +535,21 @@ async function sealContextLimited(client: Client, sessionID: string, limit: Cont
   );
   const metadata = object(session.metadata) ?? {};
   const delegate = object(metadata.delegate) ?? {};
-  await unwrap(
-    client.session.update({
-      path: { id: sessionID },
-      body: {
-        metadata: {
-          ...metadata,
-          delegate: {
-            ...delegate,
-            context: {
-              limit: limit.level,
-              ...(limit.tokens !== undefined ? { tokens: limit.tokens } : {}),
-            },
-          },
+  const body: NonNullable<SessionUpdateData["body"]> = {
+    metadata: {
+      ...metadata,
+      delegate: {
+        ...delegate,
+        context: {
+          limit: limit.level,
+          ...(limit.tokens !== undefined ? { tokens: limit.tokens } : {}),
         },
-        permission: [deny("*")],
       },
-      signal,
-    } as never),
+    },
+    permission: [deny("*")],
+  };
+  await unwrap(
+    client.session.update({ path: { id: sessionID }, body, signal }),
     `seal context-limited child session ${sessionID}`,
   );
 }
@@ -916,13 +917,14 @@ async function laneChild(client: Client, parentSessionID: string, lane: string, 
     .toSorted((left, right) => sessionCreated(right) - sessionCreated(left))[0];
 }
 
-async function readExistingChild(
-  client: Client,
-  session: Record<string, unknown>,
-  permission: Rule[],
-  execution: Execution,
-  signal: AbortSignal,
-) {
+async function readExistingChild(input: {
+  client: Client;
+  session: Record<string, unknown>;
+  permission: Rule[];
+  execution: Execution;
+  signal: AbortSignal;
+}) {
+  const { client, session, permission, execution, signal } = input;
   const id = string(session.id);
   if (!id) throw new Error("delegate lane child did not return an id");
   const statuses = await unwrap<Record<string, unknown>>(
@@ -985,16 +987,15 @@ async function createChild(client: Client, ctx: ToolContext, args: TaskArgs, pre
   const metadata = {
     delegate: { unattended: prepared.execution.unattended, ...(args.lane ? { lane: args.lane } : {}) },
   };
+  const body: NonNullable<SessionCreateData["body"]> = {
+    parentID: ctx.sessionID,
+    title: `${args.lane ? `[${args.lane}] ` : ""}${args.description} (@${prepared.agent.name} subagent)`,
+    agent: prepared.agent.name,
+    permission: prepared.permission,
+    metadata,
+  };
   const session = await unwrap<Record<string, unknown>>(
-    client.session.create({
-      body: {
-        parentID: ctx.sessionID,
-        title: `${args.lane ? `[${args.lane}] ` : ""}${args.description} (@${prepared.agent.name} subagent)`,
-        agent: prepared.agent.name,
-        permission: prepared.permission,
-        metadata,
-      },
-    } as never),
+    client.session.create({ body }),
     `create child session for ${prepared.agent.name}`,
   );
   const id = string(session.id);
@@ -1007,14 +1008,12 @@ async function createChild(client: Client, ctx: ToolContext, args: TaskArgs, pre
   return { id };
 }
 
-async function unwrap<T>(promise: Promise<unknown>, label: string): Promise<T> {
+async function unwrap<T>(promise: Promise<{ data: T | undefined; error?: unknown }>, label: string): Promise<T> {
   const response = await promise;
-  const envelope = object(response);
-  if (envelope && "error" in envelope && envelope.error !== undefined) {
-    throw new Error(`delegate ${label} failed: ${errorMessage(envelope.error)}`);
+  if (response.error !== undefined) {
+    throw new Error(`delegate ${label} failed: ${errorMessage(response.error)}`);
   }
-  if (envelope && "data" in envelope) return envelope.data as T;
-  return response as T;
+  return response.data!;
 }
 
 function normalizeRules(value: unknown): Rule[] {
@@ -1235,13 +1234,14 @@ function blockedResult(args: TaskArgs, metadata: Record<string, unknown>, sessio
   };
 }
 
-function interruptedResult(
-  args: TaskArgs,
-  metadata: Record<string, unknown>,
-  sessionID: string,
-  notes: string[],
-  reason = "child became idle without assistant output",
-) {
+function interruptedResult(input: {
+  args: TaskArgs;
+  metadata: Record<string, unknown>;
+  sessionID: string;
+  notes: string[];
+  reason?: string;
+}) {
+  const { args, metadata, sessionID, notes, reason = "child became idle without assistant output" } = input;
   const text = withNotes(
     [`interrupted: ${reason}`, `child_session_id: ${sessionID}`, `advice: ${INTERRUPTED_ADVICE}`].join("\n"),
     notes,
@@ -1280,7 +1280,11 @@ function isContentFilterText(value: string | undefined) {
 }
 
 function object(value: unknown): Record<string, unknown> | undefined {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
+  return isRecord(value) ? value : undefined;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
 }
 
 function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
@@ -1295,10 +1299,8 @@ function isEffectLike(value: unknown) {
 async function effectRunPromise() {
   let mod: Record<string, unknown> | undefined;
   try {
-    const dynamicImport = new Function("specifier", "return import(specifier)") as (
-      specifier: string,
-    ) => Promise<unknown>;
-    mod = object(await dynamicImport("effect"));
+    const dynamicImport = new Function("specifier", "return import(specifier)");
+    mod = object(await Reflect.apply(dynamicImport, undefined, ["effect"]));
   } catch (error) {
     throw new Error(`delegate failed to import effect for metadata update: ${errorMessage(error)}`, { cause: error });
   }
@@ -1306,7 +1308,7 @@ async function effectRunPromise() {
   if (typeof runPromise !== "function") {
     throw new Error("delegate effect module is missing Effect.runPromise for metadata update");
   }
-  return (effect: unknown) => Promise.resolve((runPromise as (effect: unknown) => unknown)(effect));
+  return (effect: unknown) => Promise.resolve(Reflect.apply(runPromise, undefined, [effect]));
 }
 
 function string(value: unknown) {

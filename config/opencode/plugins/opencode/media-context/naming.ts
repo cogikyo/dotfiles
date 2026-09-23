@@ -1,6 +1,7 @@
 import type { PluginOptions } from "@opencode-ai/plugin";
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { record } from "../record.ts";
 import { updateImageName, type MediaRegistryEntry } from "./registry";
 
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
@@ -148,9 +149,7 @@ export function createImageNamer(input: CreateImageNamerInput) {
 /** Reads a model ID from OpenCode config string or object forms. */
 export function modelFromValue(value: unknown): NamingModel | undefined {
   if (typeof value === "string") return modelFromString(value);
-  const candidate = value as
-    | { providerID?: unknown; modelID?: unknown; provider?: unknown; model?: unknown }
-    | undefined;
+  const candidate = record(value);
   if (typeof candidate?.providerID === "string" && typeof candidate.modelID === "string") {
     return cleanModel(candidate.providerID, candidate.modelID);
   }
@@ -276,10 +275,9 @@ function clearIgnoredSession(ignoredSessions: Set<string>, sessionID: string, pr
 }
 
 function sessionIDFromCreateResponse(value: unknown): string | undefined {
-  const candidate = value as
-    | { id?: unknown; session?: { id?: unknown }; data?: { id?: unknown; session?: { id?: unknown } } }
-    | undefined;
-  const id = candidate?.id ?? candidate?.session?.id ?? candidate?.data?.id ?? candidate?.data?.session?.id;
+  const candidate = record(value);
+  const data = record(candidate?.data);
+  const id = candidate?.id ?? record(candidate?.session)?.id ?? data?.id ?? record(data?.session)?.id;
   return typeof id === "string" && id ? id : undefined;
 }
 
@@ -374,7 +372,8 @@ function assistantTextParts(value: unknown): string[] {
   if (Array.isArray(value)) return value.flatMap(assistantTextParts);
   if (!value || typeof value !== "object") return [];
 
-  const candidate = value as Record<string, unknown>;
+  const candidate = record(value);
+  if (!candidate) return [];
   const text = candidate.type === "text" && typeof candidate.text === "string" ? [candidate.text] : [];
   if (typeof candidate.output_text === "string") text.push(candidate.output_text);
   for (const key of ["parts", "content", "output"]) {
@@ -402,7 +401,7 @@ function slugFromModelText(value: string) {
 }
 
 function objectOption(value: unknown) {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
+  return record(value);
 }
 
 function booleanOption(value: unknown, fallback: boolean) {

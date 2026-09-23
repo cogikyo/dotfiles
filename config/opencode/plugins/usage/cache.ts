@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { usageCachePath, usageLockPath } from "./auth.ts";
-import type { ProviderUsage, UsageWindow } from "./types.ts";
+import { record, type ProviderUsage, type UsageWindow } from "./types.ts";
 
 /** Usage data and retry state stored for one provider. */
 export type CachedProviderUsage = {
@@ -33,12 +33,81 @@ export type ProviderCacheView = {
 };
 
 /** Reads the provider cache, returning an empty value when it cannot be parsed or read. */
-export async function readProviderCache(providerID: string) {
+export async function readProviderCache(providerID: string): Promise<CachedProviderUsage> {
   try {
-    return JSON.parse(await fs.readFile(usageCachePath(providerID), "utf8")) as CachedProviderUsage;
+    return parseRuntimeCache(JSON.parse(await fs.readFile(usageCachePath(providerID), "utf8")));
   } catch {
     return {};
   }
+}
+
+function parseRuntimeCache(value: unknown): CachedProviderUsage {
+  const root = record(value);
+  if (!root || !validCacheMetadata(root)) return {};
+  const usage = root.usage === undefined ? undefined : cachedUsage(root.usage);
+  if (root.usage !== undefined && !usage) return {};
+  const windows = root.windows === undefined ? undefined : cachedWindows(root.windows);
+  if (root.windows !== undefined && !windows) return {};
+  return {
+    fetchedAt: optionalNumber(root.fetchedAt),
+    backoffUntil: optionalNumber(root.backoffUntil),
+    error: typeof root.error === "string" ? root.error : undefined,
+    windows,
+    usage,
+  };
+}
+
+function validCacheMetadata(root: Record<string, unknown>) {
+  return (
+    (root.fetchedAt === undefined || optionalNumber(root.fetchedAt) !== undefined) &&
+    (root.backoffUntil === undefined || optionalNumber(root.backoffUntil) !== undefined) &&
+    (root.error === undefined || typeof root.error === "string")
+  );
+}
+
+function cachedUsage(value: unknown): ProviderUsage | undefined {
+  const root = record(value);
+  if (!root || typeof root.id !== "string" || typeof root.label !== "string") return undefined;
+  const windows = cachedWindows(root.windows);
+  if (!windows) return undefined;
+  const placeholders = root.placeholders;
+  if (
+    placeholders !== undefined &&
+    (!Array.isArray(placeholders) || !placeholders.every((item) => typeof item === "string"))
+  )
+    return undefined;
+  return {
+    id: root.id,
+    label: root.label,
+    windows,
+    note: typeof root.note === "string" ? root.note : undefined,
+    noteKind:
+      root.noteKind === "info" || root.noteKind === "warn" || root.noteKind === "error" ? root.noteKind : undefined,
+    placeholders: Array.isArray(placeholders) ? placeholders : undefined,
+  };
+}
+
+function cachedWindows(value: unknown): UsageWindow[] | undefined {
+  if (!Array.isArray(value)) return undefined;
+  const windows = value.map(cacheWindow);
+  if (windows.some((window) => !window)) return undefined;
+  return windows.filter((window) => window !== undefined);
+}
+
+function cacheWindow(value: unknown): UsageWindow | undefined {
+  const window = record(value);
+  if (!window || typeof window.label !== "string") return undefined;
+  if (
+    window.usedPercent !== undefined &&
+    (typeof window.usedPercent !== "number" || !Number.isFinite(window.usedPercent))
+  )
+    return undefined;
+  if (window.resetAt !== undefined && typeof window.resetAt !== "string") return undefined;
+  return {
+    label: window.label,
+    usedPercent: window.usedPercent,
+    resetAt: window.resetAt,
+  };
 }
 
 /** Validates a provider cache and classifies its freshness and reset windows. */
@@ -93,7 +162,7 @@ export function decodeProviderCache(raw: string, staleAfterMS: number, now = Dat
     const view = {
       fetchedAt,
       ageMS,
-      windows: windows as CachedUsageWindow[],
+      windows: windows.filter((window) => window !== undefined),
     } satisfies ProviderCacheView;
     if (error) return { ...view, issue: "error" };
     if (!fetchedAt || !view.windows.length) return { ...view, issue: "unknown" };
@@ -177,8 +246,8 @@ async function createLock(lockPath: string) {
 async function isStaleLock(lockPath: string) {
   try {
     const raw = await fs.readFile(lockPath, "utf8");
-    const parsed = JSON.parse(raw) as { createdAt?: unknown };
-    return typeof parsed.createdAt === "number" && Date.now() - parsed.createdAt > LOCK_STALE_MS;
+    const parsed = record(JSON.parse(raw));
+    return typeof parsed?.createdAt === "number" && Date.now() - parsed.createdAt > LOCK_STALE_MS;
   } catch {
     return false;
   }
@@ -215,7 +284,7 @@ function unknownCache(issue: ProviderCacheIssue): ProviderCacheView {
 }
 
 function object(value: unknown): Record<string, unknown> | undefined {
-  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
+  return record(value);
 }
 
 function optionalNumber(value: unknown) {

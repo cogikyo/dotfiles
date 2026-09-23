@@ -4,7 +4,7 @@ import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plug
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { For, Show, createSignal, onCleanup } from "solid-js";
+import { For, Show, createRenderEffect, createSignal, onCleanup, untrack } from "solid-js";
 import { colors } from "../shared/colors.ts";
 import { icons } from "../shared/icons.ts";
 import { openInNvim } from "../shared/open-nvim.ts";
@@ -49,25 +49,27 @@ function MarkdownContext(props: { api: TuiPluginApi; sessionID: string }) {
   const [revision, setRevision] = createSignal(0);
   const refresh = () => setRevision((value) => value + 1);
 
-  const disposers = [
-    props.api.event.on("message.updated", (event) => {
-      if (event.properties.sessionID === props.sessionID) refresh();
-    }),
-    props.api.event.on("message.removed", (event) => {
-      if (event.properties.sessionID === props.sessionID) refresh();
-    }),
-    props.api.event.on("message.part.updated", (event) => {
-      if (event.properties.sessionID === props.sessionID) refresh();
-    }),
-    props.api.event.on("message.part.removed", (event) => {
-      if (event.properties.sessionID === props.sessionID) refresh();
-    }),
-    props.api.event.on("session.compacted", (event) => {
-      if (event.properties.sessionID === props.sessionID) refresh();
-    }),
-  ];
-  onCleanup(() => {
-    for (const dispose of disposers) dispose();
+  createRenderEffect(() => {
+    const disposers = [
+      props.api.event.on("message.updated", (event) => {
+        if (event.properties.sessionID === untrack(() => props.sessionID)) refresh();
+      }),
+      props.api.event.on("message.removed", (event) => {
+        if (event.properties.sessionID === untrack(() => props.sessionID)) refresh();
+      }),
+      props.api.event.on("message.part.updated", (event) => {
+        if (event.properties.sessionID === untrack(() => props.sessionID)) refresh();
+      }),
+      props.api.event.on("message.part.removed", (event) => {
+        if (event.properties.sessionID === untrack(() => props.sessionID)) refresh();
+      }),
+      props.api.event.on("session.compacted", (event) => {
+        if (event.properties.sessionID === untrack(() => props.sessionID)) refresh();
+      }),
+    ];
+    onCleanup(() => {
+      for (const dispose of disposers) dispose();
+    });
   });
 
   const items = () => {
@@ -164,7 +166,7 @@ function pinnedContextItems(api: TuiPluginApi, sessionID: string) {
 
   const push = (filePath: string) => {
     if (!existsSync(filePath)) return;
-    const item = markdownFileItem(api, filePath, 0, false, [], true);
+    const item = markdownFileItem(api, filePath, { time: 0, compacted: false, refs: [], pinned: true });
     if (seen.has(item.key)) return;
     seen.add(item.key);
     items.push(item);
@@ -199,9 +201,11 @@ function markdownReadItem(
 
   const filePath = markdownPathFromInput(part.state.input);
   if (!filePath) return undefined;
-  return markdownFileItem(api, filePath, part.state.time.end, part.state.time.compacted !== undefined, [
-    { messageID: part.messageID, partID: part.id },
-  ]);
+  return markdownFileItem(api, filePath, {
+    time: part.state.time.end,
+    compacted: part.state.time.compacted !== undefined,
+    refs: [{ messageID: part.messageID, partID: part.id }],
+  });
 }
 
 function skillToolItem(
@@ -213,9 +217,11 @@ function skillToolItem(
 
   const filePath = skillPathFromTool(part);
   if (!filePath) return undefined;
-  return markdownFileItem(api, filePath, part.state.time.end, part.state.time.compacted !== undefined, [
-    { messageID: part.messageID, partID: part.id },
-  ]);
+  return markdownFileItem(api, filePath, {
+    time: part.state.time.end,
+    compacted: part.state.time.compacted !== undefined,
+    refs: [{ messageID: part.messageID, partID: part.id }],
+  });
 }
 
 function skillPathFromTool(tool: ToolPart) {
@@ -235,10 +241,12 @@ function skillPathFromTool(tool: ToolPart) {
 function markdownFileItem(
   api: TuiPluginApi,
   filePath: string,
-  time: number,
-  compacted: boolean,
-  refs: PartRef[] = [],
-  pinned = false,
+  options: {
+    time: number;
+    compacted: boolean;
+    refs: PartRef[];
+    pinned?: boolean;
+  },
 ): MarkdownContextItem {
   const kind = markdownSourceKind(filePath);
   return {
@@ -246,10 +254,10 @@ function markdownFileItem(
     path: filePath,
     label: displayPath(api, filePath, kind),
     kind,
-    compacted,
-    pinned,
-    time,
-    refs,
+    compacted: options.compacted,
+    pinned: options.pinned ?? false,
+    time: options.time,
+    refs: options.refs,
   };
 }
 

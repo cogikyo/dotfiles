@@ -1,6 +1,7 @@
 import type { Plugin, PluginModule } from "@opencode-ai/plugin";
 import { open, stat } from "node:fs/promises";
 import path from "node:path";
+import { record } from "./record.ts";
 
 const id = "opencode-tool-guard";
 const maxPatchBytes = 1024 * 1024;
@@ -172,7 +173,9 @@ function utf8SequenceLength(lead: number) {
 function patchTargets(patchText: string): PatchTarget[] {
   const targets: PatchTarget[] = [];
   for (const match of patchText.matchAll(/^\*\*\* (Delete|Update) File: (.+)$/gmu)) {
-    targets.push({ operation: match[1] as PatchOperation, path: match[2].trim() });
+    const operation = match[1];
+    if (operation !== "Delete" && operation !== "Update") continue;
+    targets.push({ operation, path: match[2].trim() });
   }
   return targets;
 }
@@ -439,7 +442,7 @@ function formatBytes(bytes: number) {
 }
 
 function object(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : undefined;
+  return record(value);
 }
 
 function string(value: unknown) {

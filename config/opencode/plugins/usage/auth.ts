@@ -1,6 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { record } from "./types.ts";
 
 /** Resolves OpenCode's data directory from XDG_DATA_HOME or the home directory. */
 export function resolveOpencodeDataDir() {
@@ -46,8 +47,8 @@ export function usageLockPath(providerID: string) {
 }
 
 /** Reads and parses OpenCode's auth.json file. */
-export async function readAuth<T>() {
-  return JSON.parse(await fs.readFile(authPath(), "utf8")) as T;
+export async function readAuth(): Promise<Record<string, unknown> | undefined> {
+  return record(JSON.parse(await fs.readFile(authPath(), "utf8")));
 }
 
 /** Returns Claude credential file paths in lookup order. */
@@ -68,21 +69,26 @@ export type ClaudeCredentials = {
 
 /** Reads valid credential objects from the configured Claude credential paths. */
 export async function readClaudeCredentials(): Promise<ClaudeCredentials[]> {
-  const candidates: ClaudeCredentials[] = [];
+  const candidates = await Promise.all(
+    claudeCredentialsPaths().map(async (credentialsPath) => {
+      try {
+        const parsed = record(JSON.parse(await fs.readFile(credentialsPath, "utf8")));
+        if (!parsed) return undefined;
+        const credentials = record(parsed.claudeAiOauth ?? parsed);
+        if (!credentials) return undefined;
+        const candidate: ClaudeCredentials = {
+          accessToken: typeof credentials.accessToken === "string" ? credentials.accessToken : undefined,
+          expiresAt:
+            typeof credentials.expiresAt === "string" || typeof credentials.expiresAt === "number"
+              ? credentials.expiresAt
+              : undefined,
+        };
+        return candidate;
+      } catch {
+        return undefined;
+      }
+    }),
+  );
 
-  for (const credentialsPath of claudeCredentialsPaths()) {
-    try {
-      const parsed = JSON.parse(await fs.readFile(credentialsPath, "utf8")) as unknown;
-      if (!parsed || typeof parsed !== "object") continue;
-
-      const record = parsed as Record<string, unknown>;
-      const credentials = record.claudeAiOauth ?? record;
-      if (!credentials || typeof credentials !== "object") continue;
-      candidates.push(credentials);
-    } catch {
-      continue;
-    }
-  }
-
-  return candidates;
+  return candidates.filter((candidate) => candidate !== undefined);
 }

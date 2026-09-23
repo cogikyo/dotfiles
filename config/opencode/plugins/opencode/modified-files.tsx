@@ -2,7 +2,7 @@
 import type { ToolPart } from "@opencode-ai/sdk/v2";
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule, TuiSidebarFileItem } from "@opencode-ai/plugin/tui";
 import path from "node:path";
-import { For, Show, createSignal, onCleanup } from "solid-js";
+import { For, Show, createRenderEffect, createSignal, onCleanup, untrack } from "solid-js";
 import { openInNvim } from "../shared/open-nvim.ts";
 import { SidebarSection } from "../shared/sidebar-section.tsx";
 
@@ -18,25 +18,27 @@ function ModifiedFiles(props: { api: TuiPluginApi; sessionID: string }) {
   const [revision, setRevision] = createSignal(0);
   const refresh = () => setRevision((value) => value + 1);
 
-  const disposers = [
-    props.api.event.on("session.diff", (event) => {
-      if (event.properties.sessionID === props.sessionID) refresh();
-    }),
-    props.api.event.on("message.updated", (event) => {
-      if (event.properties.sessionID === props.sessionID) refresh();
-    }),
-    props.api.event.on("message.removed", (event) => {
-      if (event.properties.sessionID === props.sessionID) refresh();
-    }),
-    props.api.event.on("message.part.updated", (event) => {
-      if (event.properties.sessionID === props.sessionID) refresh();
-    }),
-    props.api.event.on("message.part.removed", (event) => {
-      if (event.properties.sessionID === props.sessionID) refresh();
-    }),
-  ];
-  onCleanup(() => {
-    for (const dispose of disposers) dispose();
+  createRenderEffect(() => {
+    const disposers = [
+      props.api.event.on("session.diff", (event) => {
+        if (event.properties.sessionID === untrack(() => props.sessionID)) refresh();
+      }),
+      props.api.event.on("message.updated", (event) => {
+        if (event.properties.sessionID === untrack(() => props.sessionID)) refresh();
+      }),
+      props.api.event.on("message.removed", (event) => {
+        if (event.properties.sessionID === untrack(() => props.sessionID)) refresh();
+      }),
+      props.api.event.on("message.part.updated", (event) => {
+        if (event.properties.sessionID === untrack(() => props.sessionID)) refresh();
+      }),
+      props.api.event.on("message.part.removed", (event) => {
+        if (event.properties.sessionID === untrack(() => props.sessionID)) refresh();
+      }),
+    ];
+    onCleanup(() => {
+      for (const dispose of disposers) dispose();
+    });
   });
 
   const items = () => {

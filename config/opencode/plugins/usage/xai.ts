@@ -4,7 +4,7 @@ import path from "node:path";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 import { usageProviders } from "./providers.ts";
-import { normalizePercent } from "./types.ts";
+import { normalizePercent, record } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
 
 // Loads credentials from the Grok CLI auth file for xAI billing requests.
@@ -68,7 +68,8 @@ function usage(windows: UsageWindow[], note?: string, noteKind?: ProviderUsage["
 function num(value: unknown): number | undefined {
   if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
   if (value && typeof value === "object") {
-    const wrapped = value as { val?: unknown; value?: unknown };
+    const wrapped = record(value);
+    if (!wrapped) return undefined;
     if ("val" in wrapped) return num(wrapped.val);
     if ("value" in wrapped) return num(wrapped.value);
   }
@@ -99,9 +100,25 @@ function isExpired(expiresAt: string | undefined) {
 async function readGrokAuth(): Promise<GrokAuthFile | undefined> {
   const file = path.join(os.homedir(), ".grok", "auth.json");
   try {
-    const parsed = JSON.parse(await fs.readFile(file, "utf8")) as unknown;
-    if (!parsed || typeof parsed !== "object") return undefined;
-    return parsed as GrokAuthFile;
+    const parsed = record(JSON.parse(await fs.readFile(file, "utf8")));
+    if (!parsed) return undefined;
+    return Object.fromEntries(
+      Object.entries(parsed)
+        .map(([key, value]) => {
+          const entry = record(value);
+          if (!entry) return undefined;
+          return [
+            key,
+            {
+              key: str(entry.key),
+              auth_mode: str(entry.auth_mode),
+              expires_at: str(entry.expires_at),
+              oidc_issuer: str(entry.oidc_issuer),
+            },
+          ] as const;
+        })
+        .filter((entry) => entry !== undefined),
+    );
   } catch {
     return undefined;
   }
@@ -120,9 +137,9 @@ async function runGrokRefresh(): Promise<AuthFailure | undefined> {
     });
     return undefined;
   } catch (error) {
-    const failure = error as { code?: unknown; killed?: unknown };
-    if (failure.code === "ENOENT") return "no grok cli";
-    if (failure.killed === true) return "refresh timeout";
+    const failure = record(error);
+    if (failure?.code === "ENOENT") return "no grok cli";
+    if (failure?.killed === true) return "refresh timeout";
     return "refresh failed";
   }
 }
@@ -155,7 +172,7 @@ function unifiedBilling(payload: BillingPayload) {
   if (pick(payload, "isUnifiedBillingUser") === true) return true;
   const sub = payload.subscription;
   if (!sub || typeof sub !== "object") return false;
-  return (sub as { isUnifiedBillingUser?: unknown }).isUnifiedBillingUser === true;
+  return record(sub)?.isUnifiedBillingUser === true;
 }
 
 function weeklyReset(payload: BillingPayload) {
@@ -261,14 +278,25 @@ async function fetchBillingOnce(url: string, token: string): Promise<FetchResult
   }
   if (!response.ok) {
     if (response.status === 400) {
-      const body = (await response.json().catch(() => undefined)) as { code?: unknown; error?: unknown } | undefined;
+      const body = record(await response.json().catch(() => undefined));
       if (body?.code === "The operation was cancelled" && body.error === "Timeout expired") {
         return { ok: false, kind: "timeout" };
       }
     }
     return { ok: false, kind: "http", status: response.status };
   }
-  return { ok: true, payload: (await response.json()) as BillingPayload };
+  const raw = record(await response.json());
+  const config = record(raw?.config);
+  const period = record(config?.currentPeriod);
+  const currentPeriod = record(raw?.currentPeriod);
+  return {
+    ok: true,
+    payload: {
+      ...raw,
+      currentPeriod: currentPeriod && { ...currentPeriod },
+      config: config && { ...config, currentPeriod: period && { ...period } },
+    },
+  };
 }
 
 async function fetchBilling(url: string, token: string): Promise<FetchResult> {

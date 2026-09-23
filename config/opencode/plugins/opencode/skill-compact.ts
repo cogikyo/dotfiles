@@ -1,6 +1,7 @@
-import type { Plugin, PluginModule } from "@opencode-ai/plugin";
+import type { Plugin, PluginInput, PluginModule } from "@opencode-ai/plugin";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { record } from "./record.ts";
 import {
   isCompactedPart,
   isCompletedSkillPart,
@@ -22,25 +23,9 @@ import {
 const id = "opencode-skill-compact";
 const configRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
-type SessionClient = {
-  session: {
-    messages: (args: unknown) => Promise<unknown>;
-  };
-};
-
-type SessionMessage = {
-  info?: {
-    id?: string;
-    sessionID?: string;
-    agent?: string;
-  };
-  parts?: SkillToolPart[];
-};
-
 const server: Plugin = async ({ client, directory, worktree, serverUrl }) => {
   const compacting = new Set<string>();
-  const partClient = client as PartClient;
-  const sessionClient = client as SessionClient;
+  const partClient = partAPI(client);
 
   const protectRoots = (agent?: string): ProtectRoots => ({
     configRoot,
@@ -56,8 +41,8 @@ const server: Plugin = async ({ client, directory, worktree, serverUrl }) => {
         "Loaded skill bodies were dropped from context. Do not copy skill instructions into the summary. Reload a skill later if its procedure is needed again.",
       );
       try {
-        const parts = await sessionSkillParts(sessionClient, input.sessionID);
-        if (partClient.part?.update) await persistCompactedSkillParts(partClient, parts);
+        const parts = await sessionSkillParts(client, input.sessionID);
+        if (partClient) await persistCompactedSkillParts(partClient, parts);
         else await persistCompactedPartsHttp(serverUrl, directory, parts);
       } catch {
         return;
@@ -83,7 +68,7 @@ const server: Plugin = async ({ client, directory, worktree, serverUrl }) => {
       if (!filePath || !isProtectedMarkdownPath(filePath, protectRoots())) return;
       const next = withoutCompactedTime(part);
       try {
-        if (partClient.part?.update) await persistUpdatedPart(partClient, next);
+        if (partClient) await persistUpdatedPart(partClient, next);
         else await persistUpdatedPartsHttp(serverUrl, directory, [next]);
       } catch {
         return;
@@ -92,14 +77,17 @@ const server: Plugin = async ({ client, directory, worktree, serverUrl }) => {
   };
 };
 
-async function sessionSkillParts(client: SessionClient, sessionID: string) {
-  const messages = await unwrap<SessionMessage[]>(
-    client.session.messages({
-      path: { id: sessionID },
-    }),
-    `read session ${sessionID} messages`,
-  );
-  return messages.flatMap((message) => (message.parts ?? []).filter(isCompletedSkillPart));
+function partAPI(client: unknown): PartClient | undefined {
+  const part = record(record(client)?.part);
+  const update = part?.update;
+  if (typeof update !== "function") return undefined;
+  return { part: { update: (args) => Promise.resolve(update.call(part, args)) } };
+}
+
+async function sessionSkillParts(client: PluginInput["client"], sessionID: string) {
+  const response = await client.session.messages({ path: { id: sessionID } });
+  if (response.error || !response.data) throw new Error(`read session ${sessionID} messages failed`);
+  return response.data.flatMap((message) => message.parts.filter(isCompletedSkillPart));
 }
 
 function currentAgentFromMessages(messages: ReadonlyArray<{ info?: object }>) {
@@ -121,15 +109,6 @@ function sessionIDFromMessages(
     }
   }
   return undefined;
-}
-
-async function unwrap<T>(promise: Promise<unknown>, label: string): Promise<T> {
-  const response = await promise;
-  const envelope =
-    typeof response === "object" && response !== null ? (response as Record<string, unknown>) : undefined;
-  if (envelope && "error" in envelope && envelope.error !== undefined) throw new Error(`${label} failed`);
-  if (envelope && "data" in envelope) return envelope.data as T;
-  return response as T;
 }
 
 /** Uses server compaction, message-transform, and message.part.updated hooks to preserve tool parts. */

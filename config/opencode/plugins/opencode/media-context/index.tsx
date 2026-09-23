@@ -4,7 +4,7 @@ import type { Message } from "@opencode-ai/sdk/v2";
 import { createTextAttributes } from "@opentui/core";
 import { spawn, type ChildProcess } from "node:child_process";
 import { basename } from "node:path";
-import { For, Show, createEffect, createSignal, onCleanup, onMount, untrack } from "solid-js";
+import { For, Show, createRenderEffect, createSignal, onCleanup, onMount, untrack } from "solid-js";
 import { SidebarSection } from "../../shared/sidebar-section.tsx";
 import {
   isExistingFile,
@@ -49,11 +49,11 @@ type TerminalRect = {
 // ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
 function MediaContext(props: { api: TuiPluginApi; sessionID: string; onOpenImage: (preview: PreviewState) => void }) {
-  const [items, setItems] = createSignal<MediaItem[]>(mediaItems(props.api, props.sessionID));
+  const [items, setItems] = createSignal<MediaItem[]>([]);
   let refreshTimer: ReturnType<typeof setTimeout> | undefined;
   let renamePollTimer: ReturnType<typeof setTimeout> | undefined;
   let renamePolls = 0;
-  let unnamedSignature = unnamedImageSignature(items());
+  let unnamedSignature = "";
   const resetRenamePoll = () => {
     if (renamePollTimer) clearTimeout(renamePollTimer);
     renamePollTimer = undefined;
@@ -93,30 +93,35 @@ function MediaContext(props: { api: TuiPluginApi; sessionID: string; onOpenImage
     }, RENAME_POLL_INTERVAL_MS);
   };
 
-  const disposers = [
-    props.api.event.on(
-      "message.updated",
-      (event) => event.properties.sessionID === props.sessionID && scheduleRefresh(),
-    ),
-    props.api.event.on(
-      "message.removed",
-      (event) => event.properties.sessionID === props.sessionID && scheduleRefresh(),
-    ),
-    props.api.event.on(
-      "message.part.updated",
-      (event) => event.properties.sessionID === props.sessionID && scheduleRefresh(),
-    ),
-    props.api.event.on(
-      "message.part.removed",
-      (event) => event.properties.sessionID === props.sessionID && scheduleRefresh(),
-    ),
-    props.api.event.on(
-      "session.compacted",
-      (event) => event.properties.sessionID === props.sessionID && scheduleRefresh(),
-    ),
-  ];
+  createRenderEffect(() => {
+    const disposers = [
+      props.api.event.on(
+        "message.updated",
+        (event) => event.properties.sessionID === untrack(() => props.sessionID) && untrack(scheduleRefresh),
+      ),
+      props.api.event.on(
+        "message.removed",
+        (event) => event.properties.sessionID === untrack(() => props.sessionID) && untrack(scheduleRefresh),
+      ),
+      props.api.event.on(
+        "message.part.updated",
+        (event) => event.properties.sessionID === untrack(() => props.sessionID) && untrack(scheduleRefresh),
+      ),
+      props.api.event.on(
+        "message.part.removed",
+        (event) => event.properties.sessionID === untrack(() => props.sessionID) && untrack(scheduleRefresh),
+      ),
+      props.api.event.on(
+        "session.compacted",
+        (event) => event.properties.sessionID === untrack(() => props.sessionID) && untrack(scheduleRefresh),
+      ),
+    ];
+    onCleanup(() => {
+      for (const dispose of disposers) dispose();
+    });
+  });
 
-  createEffect(() => {
+  createRenderEffect(() => {
     const sessionID = props.sessionID;
     untrack(() => {
       resetRenamePoll();
@@ -130,7 +135,6 @@ function MediaContext(props: { api: TuiPluginApi; sessionID: string; onOpenImage
   onCleanup(() => {
     if (refreshTimer) clearTimeout(refreshTimer);
     if (renamePollTimer) clearTimeout(renamePollTimer);
-    for (const dispose of disposers) dispose();
   });
 
   const openItem = (item: MediaItem, index: number) => {
@@ -187,7 +191,7 @@ function ImageOverlay(props: { api: TuiPluginApi; preview: PreviewState; onClose
       opacity={0.7}
       focusable
       focused
-      onMouseDown={props.onClose}
+      onMouseDown={() => props.onClose()}
       onKeyDown={(event) => {
         if (event.name === "escape") props.onClose();
       }}
@@ -216,8 +220,8 @@ function KittyImageLayer(props: { api: TuiPluginApi; preview: PreviewState }) {
 
       const child = runKitty([
         "display",
-        props.preview.item.entry.path,
-        String(props.preview.imageID),
+        untrack(() => props.preview.item.entry.path),
+        String(untrack(() => props.preview.imageID)),
         String(target.screenX),
         String(target.screenY),
         String(target.width),
@@ -231,11 +235,13 @@ function KittyImageLayer(props: { api: TuiPluginApi; preview: PreviewState }) {
         activeDisplays.delete(child);
         if (code === 0 || disposed || failed || token !== activePreviewToken) return;
         failed = true;
-        props.api.ui.toast({
-          variant: "warning",
-          title: "Image preview failed",
-          message: "Kitty graphics helper could not render this image.",
-        });
+        untrack(() =>
+          props.api.ui.toast({
+            variant: "warning",
+            title: "Image preview failed",
+            message: "Kitty graphics helper could not render this image.",
+          }),
+        );
       });
     });
   };
@@ -294,29 +300,24 @@ function mediaItems(api: TuiPluginApi, sessionID: string): MediaItem[] {
 }
 
 function discoverCurrentSessionMedia(api: TuiPluginApi, sessionID: string, messages: ReadonlyArray<Message>) {
-  try {
-    let registrations = 0;
+  let registrations = 0;
 
-    const start = Math.max(0, messages.length - MAX_DISCOVERY_MESSAGES);
-    for (let index = messages.length - 1; index >= start; index--) {
-      const message = messages[index];
-      if (!message) continue;
+  const start = Math.max(0, messages.length - MAX_DISCOVERY_MESSAGES);
+  for (let index = messages.length - 1; index >= start; index--) {
+    const message = messages[index];
+    if (!message) continue;
 
-      try {
-        for (const part of api.state.part(message.id)) {
-          const media = mediaPart(part);
-          if (media) {
-            registerSessionMedia(sessionID, message.id, media);
-            registrations++;
-            if (registrations >= MAX_DISCOVERY_REGISTRATIONS) return;
-          }
-        }
-      } catch {
-        continue;
+    try {
+      for (const part of api.state.part(message.id)) {
+        const media = mediaPart(part);
+        if (!media) continue;
+        registerSessionMedia(sessionID, message.id, media);
+        registrations++;
+        if (registrations >= MAX_DISCOVERY_REGISTRATIONS) return;
       }
+    } catch {
+      continue;
     }
-  } catch {
-    return;
   }
 }
 
@@ -460,11 +461,11 @@ const tui: TuiPlugin = async (api) => {
     api.event.on("tui.command.execute", (event) => {
       if (event.properties.command.startsWith("session.")) closePreview();
     }),
-    api.event.on("message.updated", (event) => closeMissingPreview(event.properties.sessionID)),
-    api.event.on("message.removed", (event) => closeMissingPreview(event.properties.sessionID)),
-    api.event.on("message.part.updated", (event) => closeMissingPreview(event.properties.sessionID)),
-    api.event.on("message.part.removed", (event) => closeMissingPreview(event.properties.sessionID)),
-    api.event.on("session.compacted", (event) => closeMissingPreview(event.properties.sessionID)),
+    api.event.on("message.updated", (event) => untrack(() => closeMissingPreview(event.properties.sessionID))),
+    api.event.on("message.removed", (event) => untrack(() => closeMissingPreview(event.properties.sessionID))),
+    api.event.on("message.part.updated", (event) => untrack(() => closeMissingPreview(event.properties.sessionID))),
+    api.event.on("message.part.removed", (event) => untrack(() => closeMissingPreview(event.properties.sessionID))),
+    api.event.on("session.compacted", (event) => untrack(() => closeMissingPreview(event.properties.sessionID))),
   ];
 
   api.lifecycle.onDispose(() => {

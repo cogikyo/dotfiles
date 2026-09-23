@@ -11,6 +11,7 @@ import {
   type MediaRegistryEntry,
 } from "./registry";
 import { createImageNamer, modelFromValue } from "./naming";
+import { record } from "../record.ts";
 
 const id = "opencode-media-context-prompt";
 let partIDCounter = 0;
@@ -25,7 +26,7 @@ const server: Plugin = async (ctx, options) => {
 
   return {
     config: async (cfg) => {
-      namer.setDefaultModel(modelFromValue((cfg as { small_model?: unknown }).small_model));
+      namer.setDefaultModel(modelFromValue(cfg.small_model));
     },
     "chat.message": async (input, output) => {
       const sessionID = input.sessionID;
@@ -86,14 +87,12 @@ const server: Plugin = async (ctx, options) => {
       output.context.push(`Media references available after compaction: ${formatHandles(entries)}.`);
     },
     event: async ({ event }) => {
-      const { type, properties } = event as {
-        type?: string;
-        properties?: { sessionID?: string; status?: { type?: string }; info?: { id?: string } };
-      };
-      const sessionID = properties?.sessionID || properties?.info?.id;
-      if (!sessionID) return;
+      const { type, properties } = event;
+      const fields = record(properties);
+      const sessionID = fields?.sessionID || record(fields?.info)?.id;
+      if (typeof sessionID !== "string" || !sessionID) return;
 
-      if (type === "session.idle" || (type === "session.status" && properties?.status?.type === "idle")) {
+      if (type === "session.idle" || (type === "session.status" && record(fields?.status)?.type === "idle")) {
         namer.drain(sessionID);
       }
       if (type === "session.deleted") namer.clear(sessionID);
@@ -120,7 +119,7 @@ function formatHandles(entries: MediaRegistryEntry[]) {
 }
 
 function isTextPart(part: unknown): part is { type: "text"; text: string } {
-  const candidate = part as { type?: unknown; text?: unknown } | undefined;
+  const candidate = record(part);
   return candidate?.type === "text" && typeof candidate.text === "string";
 }
 

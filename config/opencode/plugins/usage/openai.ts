@@ -1,15 +1,7 @@
 import { readAuth } from "./auth.ts";
 import { usageProviders } from "./providers.ts";
-import { normalizePercent } from "./types.ts";
+import { normalizePercent, record } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
-
-type AuthFile = {
-  openai?: {
-    type?: string;
-    access?: string;
-    accountId?: string;
-  };
-};
 
 type OpenAIWindow = {
   limit_window_seconds?: unknown;
@@ -22,10 +14,6 @@ type OpenAIWindow = {
 type OpenAIRateLimit = OpenAIWindow & {
   primary_window?: OpenAIWindow | null;
   secondary_window?: OpenAIWindow | null;
-};
-
-type OpenAIUsagePayload = {
-  rate_limit?: OpenAIRateLimit;
 };
 
 const { id, label, staleAfterMS } = usageProviders.openai;
@@ -42,18 +30,15 @@ function decodeJwtPayload(token: string) {
   if (parts.length !== 3) return undefined;
 
   try {
-    return JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8")) as {
-      "https://api.openai.com/auth"?: {
-        chatgpt_account_id?: string;
-      };
-    };
+    return record(JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8")));
   } catch {
     return undefined;
   }
 }
 
 function accountIDFromToken(token: string) {
-  return decodeJwtPayload(token)?.["https://api.openai.com/auth"]?.chatgpt_account_id;
+  const claims = record(decodeJwtPayload(token)?.["https://api.openai.com/auth"]);
+  return typeof claims?.chatgpt_account_id === "string" ? claims.chatgpt_account_id : undefined;
 }
 
 function resetAtFromWindow(window: OpenAIWindow, fallback?: OpenAIWindow) {
@@ -123,14 +108,14 @@ export function parseOpenAIWindows(rateLimit?: OpenAIRateLimit): UsageWindow[] {
 }
 
 async function load(): Promise<ProviderUsage> {
-  const auth = await readAuth<AuthFile>();
-  const openai = auth.openai;
+  const auth = await readAuth();
+  const openai = record(auth?.openai);
 
-  if (!openai || openai.type !== "oauth" || !openai.access) {
+  if (openai?.type !== "oauth" || typeof openai.access !== "string" || !openai.access) {
     return usage([], "no auth");
   }
 
-  const accountID = openai.accountId || accountIDFromToken(openai.access);
+  const accountID = (typeof openai.accountId === "string" && openai.accountId) || accountIDFromToken(openai.access);
   const headers = new Headers({
     Authorization: `Bearer ${openai.access}`,
     Accept: "application/json",
@@ -144,8 +129,15 @@ async function load(): Promise<ProviderUsage> {
   });
   if (!response.ok) return usage([], `${response.status}`);
 
-  const payload = (await response.json()) as OpenAIUsagePayload;
-  const windows = parseOpenAIWindows(payload.rate_limit);
+  const payload = record(await response.json());
+  const rateLimit = record(payload?.rate_limit);
+  const windows = parseOpenAIWindows(
+    rateLimit && {
+      ...rateLimit,
+      primary_window: record(rateLimit.primary_window),
+      secondary_window: record(rateLimit.secondary_window),
+    },
+  );
 
   if (windows.length === 0) return usage([], "no windows");
   return usage(windows);
