@@ -1,0 +1,35 @@
+[Unit]
+Description=Cursor SDK bridge for OpenCode
+
+[Service]
+# Requires a Cursor user API key at ~/.local/share/dotfiles/cursor-api-key (Team Admin keys are rejected).
+# Restore it with `secrets decrypt` (etc/secrets/cursor-api-key.age).
+# Requires the u-u-z/cursor-sdk-bridge checkout, with its `-fast` model-suffix patch, at ~/.local/share/cursor-sdk-bridge.
+# OpenCode's `cursor` provider sends a placeholder apiKey; this service handles Cursor auth.
+ExecStart=/usr/bin/bwrap \
+  --unshare-all --share-net --die-with-parent --new-session \
+  --clearenv \
+  --setenv PATH /usr/bin \
+  --setenv HOME /home/bridge \
+  --setenv PORT 3000 \
+  --setenv CURSOR_API_KEY_FILE /run/cursor-api-key \
+  --ro-bind /usr /usr \
+  --symlink usr/lib /lib \
+  --symlink usr/lib64 /lib64 \
+  --symlink usr/bin /bin \
+  --ro-bind /etc /etc \
+  --ro-bind /run/systemd/resolve /run/systemd/resolve \
+  --ro-bind %h/.local/share/dotfiles/cursor-api-key /run/cursor-api-key \
+  --proc /proc \
+  --dev /dev \
+  --tmpfs /tmp \
+  --tmpfs /home \
+  --dir /home/bridge \
+  --ro-bind %h/.local/share/cursor-sdk-bridge /app \
+  --chdir /app \
+  /usr/bin/node src/index.ts
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target
