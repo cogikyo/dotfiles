@@ -7,7 +7,7 @@ Environment=SSH_AUTH_SOCK=%t/ssh-agent.socket
 Environment=GOPRIVATE=git.linecode.dev/*
 Environment=GONOPROXY=git.linecode.dev/*
 Environment=GONOSUMDB=git.linecode.dev/*
-ExecStart=/usr/bin/opencode serve --hostname 127.0.0.1 --port 4096
+ExecStart=/usr/bin/bash -c 'version=$$(claude --version) || exit; export ANTHROPIC_CLI_VERSION=$${version%%%% *}; exec /usr/bin/opencode serve --hostname 127.0.0.1 --port 4096'
 Restart=on-failure
 RestartSec=2
 RestartForceExitStatus=SIGTERM
