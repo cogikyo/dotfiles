@@ -1,89 +1,44 @@
-import type { PluginInput, ToolContext } from "@opencode-ai/plugin";
-import type {
-  SessionCreateData,
-  SessionPromptAsyncData,
-  SessionSummarizeData,
-  SessionUpdateData,
-} from "@opencode-ai/sdk/v2";
+import type { ToolContext } from "@opencode-ai/plugin";
+import type { SessionCreateData, SessionPromptAsyncData, SessionSummarizeData } from "@opencode-ai/sdk/v2";
+import { record } from "../shared/record.ts";
 import { CONTEXT_PRESSURE } from "../shared/session.ts";
+import {
+  applyDisplayArgs,
+  parseEffort,
+  parseModel,
+  type PreparedTask,
+  readAgent,
+  readCurrentAssistantMessage,
+  type TaskArgs,
+  taskArgs,
+  validateVariant,
+} from "./args.ts";
+import { contextLimitedSessions, sealContextLimited } from "./context.ts";
+import {
+  laneChild,
+  readExistingChild,
+  sameExecution,
+  sessionAgent,
+  sessionContextLimit,
+  sessionExecution,
+  sessionLane,
+  sessionParentID,
+} from "./lane.ts";
+import { deriveChildPermission, type Execution } from "./permission.ts";
+import {
+  blockedResult,
+  contextLimitedResult,
+  interruptedResult,
+  isContentFilterBlock,
+  lastTextPart,
+  renderOutput,
+  withNotes,
+} from "./result.ts";
+import { type Client, errorMessage, string, unwrap } from "./sdk.ts";
+import { type ChildWait, messageID, readChildMessages, waitForChild } from "./wait.ts";
 
-/** Arguments accepted by the delegate `task` tool. */
-export type TaskArgs = {
-  description: string;
-  prompt: string;
-  subagent_type: string;
-  model?: string;
-  effort?: string;
-  lane?: string;
-  compact?: boolean;
-  unattended?: boolean;
-};
-
-type Execution = {
-  unattended: boolean;
-};
-
-/** OpenCode provider and model identifiers used to select a child model. */
-export type ModelRef = {
-  providerID: string;
-  modelID: string;
-};
-
-type Client = PluginInput["client"];
-
-type Rule = {
-  permission: string;
-  pattern: string;
-  action: "allow" | "ask" | "deny";
-};
-
-type AgentInfo = {
-  name: string;
-  permission?: unknown;
-  model?: ModelRef;
-  variant?: string;
-};
-
-type PreparedTask = {
-  args: TaskArgs;
-  agent: AgentInfo;
-  model: ModelRef;
-  variant?: string;
-  permission: Rule[];
-  execution: Execution;
-};
-
-type ContextLimits = typeof CONTEXT_PRESSURE;
-type ContextLimit = {
-  level: "hard" | "compaction";
-  tokens?: number;
-};
-
-type ContextWarning = "soft" | "medium" | "final";
-
-type ChildWait = {
-  assistant?: Record<string, unknown>;
-  messages: unknown[];
-  limit?: ContextLimit;
-  interruption?: string;
-};
-
-const CONTENT_FILTER_ADVICE =
-  "child unrecoverable; re-brief a fresh child (reword the brief first, switch provider as last resort); never resume this session";
-const INTERRUPTED_ADVICE =
-  "completion unknown; reconcile durable state before re-running because the child may have edited files";
-const CONTEXT_ADVICE =
-  "re-brief narrower work; the next call to this lane creates a fresh child, never resume this context-limited session";
-const KNOWN_EFFORTS = new Set(["default", "minimal", "low", "medium", "high", "xhigh"]);
 const COLLAB = "collab";
 const GIT = "build/git";
-const UNATTENDED_FLOOR: Rule = { permission: "*", pattern: "*", action: "deny" }; // This catch-all denial is prepended to each unattended child permission envelope.
-const STATUS_POLL_MS = 300;
-const STARTUP_TIMEOUT_MS = 120_000;
-const SOFT_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: SOFT PRESSURE]";
-const MEDIUM_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: MEDIUM PRESSURE]";
-const FINAL_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: FINAL WARNING]";
-const contextLimitedSessions = new Set<string>();
 
 // ├─ Child task setup ────────────────────────────────────────────────────────────────────────────┤
 export async function prepareTask(client: Client, ctx: ToolContext, input: unknown): Promise<PreparedTask> {
@@ -136,28 +91,7 @@ export async function runChildTask(input: {
   prepared: PreparedTask;
   notes: string[];
 }) {
-  const current = input.args.lane
-    ? await laneChild(input.client, input.ctx.sessionID, input.args.lane, input.ctx.abort)
-    : undefined;
-  if (current && sessionAgent(current) !== input.prepared.agent.name) {
-    throw new Error(
-      `delegate lane ${input.args.lane} is pinned to ${sessionAgent(current)}; requested ${input.prepared.agent.name}`,
-    );
-  }
-  const limited = current && (contextLimitedSessions.has(String(current.id)) || sessionContextLimit(current));
-  if (input.args.compact && (!current || limited)) {
-    throw new Error(`delegate cannot compact lane ${input.args.lane}: no resumable child`);
-  }
-  const child =
-    current && !limited
-      ? await readExistingChild({
-          client: input.client,
-          session: current,
-          permission: input.prepared.permission,
-          execution: input.prepared.execution,
-          signal: input.ctx.abort,
-        })
-      : await createChild(input.client, input.ctx, input.args, input.prepared);
+  const child = await openChild(input.client, input.ctx, input.args, input.prepared);
 
   const metadata = { sessionId: child.id };
   const notes = [...input.notes];
@@ -182,25 +116,12 @@ export async function runChildTask(input: {
       );
       if (!summarized) throw new Error(`delegate compaction failed for lane ${input.args.lane}`);
     }
-    let completion: Awaited<ReturnType<typeof waitForChild>>;
+    let completion: ChildWait;
     try {
-      const initialMessages = await readChildMessages(input.client, child.id, input.ctx.abort);
-      const initialMessageIDs = new Set(initialMessages.map(messageID).filter((id): id is string => !!id));
-      const body = {
-        model: input.prepared.model,
-        ...(input.prepared.variant ? { variant: input.prepared.variant } : {}),
-        agent: input.prepared.agent.name,
-        parts: [{ type: "text", text: input.args.prompt }],
-      } satisfies NonNullable<SessionPromptAsyncData["body"]>;
-      await unwrap(
-        input.client.session.promptAsync({ path: { id: child.id }, body, signal: input.ctx.abort }),
-        `prompt child session ${child.id}`,
-      );
-      completion = await waitForChild({
+      completion = await promptChild({
         client: input.client,
         sessionID: child.id,
-        initialMessageIDs,
-        limits: CONTEXT_PRESSURE,
+        prompt: input.args.prompt,
         prepared: input.prepared,
         notes,
         signal: input.ctx.abort,
@@ -211,348 +132,185 @@ export async function runChildTask(input: {
       throw error;
     }
 
-    if (completion.interruption) {
-      return interruptedResult({
-        args: input.args,
-        metadata,
-        sessionID: child.id,
-        notes,
-        reason: completion.interruption,
-      });
-    }
-    const completionError = object(completion.assistant?.info)?.error;
-    if (completionError && isContentFilterBlock(completionError)) {
-      return blockedResult(input.args, metadata, child.id, notes);
-    }
-    if (completion.limit) {
-      try {
-        await sealContextLimited(input.client, child.id, completion.limit, input.ctx.abort);
-      } catch (error) {
-        notes.push(`context-limit seal failed: ${errorMessage(error)}`);
-      }
-      return contextLimitedResult({
-        args: input.args,
-        metadata,
-        sessionID: child.id,
-        notes,
-        limit: completion.limit,
-        messages: completion.messages,
-        permission: input.prepared.permission,
-      });
-    }
-    const response = completion.assistant;
-    if (!response) return interruptedResult({ args: input.args, metadata, sessionID: child.id, notes });
-    const info = object(response.info);
-    if (info?.error) {
-      if (isContentFilterBlock(info.error)) return blockedResult(input.args, metadata, child.id, notes);
-      throw new Error(`delegate child failed: ${errorMessage(info.error)}`);
-    }
-
-    const text = withNotes(lastTextPart(response), notes);
-    return {
-      title: input.args.description,
+    return await completionResult({
+      client: input.client,
+      args: input.args,
+      prepared: input.prepared,
       metadata,
-      output: renderOutput({ sessionID: child.id, state: "completed", text }),
-    };
+      sessionID: child.id,
+      notes,
+      completion,
+      signal: input.ctx.abort,
+    });
   } finally {
     input.ctx.abort.removeEventListener("abort", abort);
     childAbort.stop();
   }
 }
 
-export async function readChildTaskStatus(client: Client, parentSessionID: string, signal: AbortSignal) {
-  const [rawChildren, statuses] = await Promise.all([
-    unwrap<unknown[]>(
-      client.session.children({ path: { id: parentSessionID }, signal }),
-      `list children of session ${parentSessionID}`,
-    ),
-    unwrap<Record<string, unknown>>(
-      client.session.status({ signal }),
-      `read child statuses for session ${parentSessionID}`,
-    ),
-  ]);
-
-  const children = rawChildren
-    .map(object)
-    .filter((child): child is Record<string, unknown> => !!string(child?.id))
-    .toSorted((left, right) => sessionUpdated(right) - sessionUpdated(left));
-
-  if (!children.length) return `No direct task children found for session ${parentSessionID}.`;
-
-  const lines = [`Direct task children for session ${parentSessionID}, newest first:`];
-  for (const child of children) {
-    const id = string(child.id)!;
-    const status = childStatus(object(statuses[id]));
-    const limit = sessionContextLimit(child);
-    lines.push(
-      "",
-      `child_session_id: ${id}`,
-      ...(sessionLane(child) ? [`lane: ${sessionLane(child)}`] : []),
-      `status: ${status}`,
-      ...(limit ? [`context_limit: ${limit.limit}${limit.tokens === undefined ? "" : ` tokens=${limit.tokens}`}`] : []),
-      `agent: ${sessionAgent(child) ?? "unknown"}`,
-      `title: ${singleLine(string(child.title) ?? "untitled")}`,
-      `updated: ${new Date(sessionUpdated(child)).toISOString()}`,
+async function openChild(client: Client, ctx: ToolContext, args: TaskArgs, prepared: PreparedTask) {
+  const current = args.lane ? await laneChild(client, ctx.sessionID, args.lane, ctx.abort) : undefined;
+  if (current && sessionAgent(current) !== prepared.agent.name) {
+    throw new Error(
+      `delegate lane ${args.lane} is pinned to ${sessionAgent(current)}; requested ${prepared.agent.name}`,
     );
   }
-  lines.push("", "Only named lanes resume; context-limited lanes create a fresh child on the next call.");
-  return lines.join("\n");
+  const limited = current && (contextLimitedSessions.has(String(current.id)) || sessionContextLimit(current));
+  if (args.compact && (!current || limited)) {
+    throw new Error(`delegate cannot compact lane ${args.lane}: no resumable child`);
+  }
+  return current && !limited
+    ? await readExistingChild({
+        client,
+        session: current,
+        permission: prepared.permission,
+        execution: prepared.execution,
+        signal: ctx.abort,
+      })
+    : await createChild(client, ctx, args, prepared);
 }
 
-// ├─ Child completion and context limits ─────────────────────────────────────────────────────────┤
-async function waitForChild(input: {
+async function promptChild(input: {
   client: Client;
   sessionID: string;
-  initialMessageIDs: Set<string>;
-  limits: ContextLimits;
+  prompt: string;
   prepared: PreparedTask;
   notes: string[];
   signal: AbortSignal;
   abortChild: () => void;
-}): Promise<ChildWait> {
-  const { client, sessionID, initialMessageIDs, limits, prepared, notes, signal, abortChild } = input;
-  let active = false;
-  let limit: ContextLimit | undefined;
-  const spent = new Set<ContextWarning>();
-  const requested = new Set<ContextWarning>();
-  const observed = new Set<ContextWarning>();
-  const startup = new AbortController();
-  const startupTimer = setTimeout(
-    () => startup.abort(new Error("delegate child startup timed out")),
-    STARTUP_TIMEOUT_MS,
-  );
-  const waitSignal = AbortSignal.any([signal, startup.signal]);
-
-  const poll = async (): Promise<ChildWait> => {
-    await abortableDelay(STATUS_POLL_MS, waitSignal);
-    const [statuses, messages] = await Promise.all([
-      unwrap<Record<string, unknown>>(
-        client.session.status({ signal: waitSignal }),
-        `read child session ${sessionID} status`,
-      ),
-      readChildMessages(client, sessionID, waitSignal),
-    ]);
-    const status = object(statuses[sessionID]);
-    const turnMessages = messages.filter((message) => {
-      const id = messageID(message);
-      return !!id && !initialMessageIDs.has(id);
-    });
-    observeContextWarnings(turnMessages, spent, observed);
-    if (status?.type === "busy" || status?.type === "retry") {
-      active = true;
-      clearTimeout(startupTimer);
-    }
-    if (!active && turnMessages.length) {
-      active = true;
-      clearTimeout(startupTimer);
-      return poll();
-    }
-
-    const limitObservation = observeContextLimit(turnMessages, limits);
-    if (!limit && limitObservation) {
-      const running = status?.type === "busy" || status?.type === "retry";
-      limit = limitObservation;
-      contextLimitedSessions.add(sessionID);
-      if (running) abortChild();
-    }
-
-    const shouldWarn =
-      !limit &&
-      (status?.type === "busy" || status?.type === "retry") &&
-      !finalAssistant(lastAssistantMessage(turnMessages));
-    const tokens = shouldWarn ? maxContextTokens(turnMessages) : undefined;
-    const warning = shouldWarn ? pendingContextWarning(tokens, limits, spent) : undefined;
-    if (warning) {
-      spent.add(warning);
-      requested.add(warning);
-      if (warning === "final") spent.add("medium");
-      if (warning !== "soft") spent.add("soft");
-      try {
-        await sendContextWarning({ client, sessionID, prepared, level: warning, tokens, limits, signal: waitSignal });
-      } catch (error) {
-        requested.delete(warning);
-        notes.push(`context ${warning} warning was not delivered: ${errorMessage(error)}`);
-      }
-    }
-
-    if (status && status.type !== "idle" && status.type !== "busy" && status.type !== "retry") return poll();
-    if (status?.type === "busy" || status?.type === "retry") return poll();
-    if (!active) return poll();
-    return { assistant: lastAssistantMessage(turnMessages), messages: turnMessages, limit };
-  };
-
-  try {
-    return await poll();
-  } catch (error) {
-    if (startup.signal.aborted && !signal.aborted) {
-      abortChild();
-      return { interruption: "child showed no activity within 120 seconds", messages: [] };
-    }
-    throw error;
-  } finally {
-    for (const warning of requested) {
-      if (!observed.has(warning)) {
-        notes.push(`context ${warning} warning delivery was not confirmed before monitoring ended`);
-      }
-    }
-    clearTimeout(startupTimer);
-  }
-}
-
-function observeContextLimit(messages: unknown[], limits: ContextLimits) {
-  const tokens = maxContextTokens(messages);
-  if (messages.some(isAutoCompactionMessage)) {
-    return { level: "compaction" as const, tokens };
-  }
-  if (tokens !== undefined && tokens >= limits.hard) {
-    return { level: "hard" as const, tokens };
-  }
-  return undefined;
-}
-
-function pendingContextWarning(tokens: number | undefined, limits: ContextLimits, spent: Set<ContextWarning>) {
-  if (tokens === undefined) return undefined;
-  if (tokens >= limits.final && !spent.has("final")) return "final";
-  if (tokens >= limits.medium && !spent.has("medium")) return "medium";
-  if (tokens >= limits.soft && !spent.has("soft")) return "soft";
-  return undefined;
-}
-
-function observeContextWarnings(messages: unknown[], spent: Set<ContextWarning>, observed: Set<ContextWarning>) {
-  for (const message of messages) {
-    const root = object(message);
-    if (object(root?.info)?.role !== "user" || !Array.isArray(root?.parts)) continue;
-    for (const value of root.parts) {
-      const part = object(value);
-      if (part?.type !== "text" || typeof part.text !== "string") continue;
-      if (part.text.startsWith(FINAL_WARNING_MARKER)) {
-        spent.add("soft");
-        spent.add("medium");
-        spent.add("final");
-        observed.add("final");
-      } else if (part.text.startsWith(MEDIUM_WARNING_MARKER)) {
-        spent.add("soft");
-        spent.add("medium");
-        observed.add("medium");
-      } else if (part.text.startsWith(SOFT_WARNING_MARKER)) {
-        spent.add("soft");
-        observed.add("soft");
-      }
-    }
-  }
-}
-
-async function sendContextWarning(input: {
-  client: Client;
-  sessionID: string;
-  prepared: PreparedTask;
-  level: ContextWarning;
-  tokens: number | undefined;
-  limits: ContextLimits;
-  signal: AbortSignal;
 }) {
-  const { client, sessionID, prepared, level, tokens, limits, signal } = input;
+  const { client, sessionID, prepared, signal } = input;
+  const initialMessages = await readChildMessages(client, sessionID, signal);
+  const initialMessageIDs = new Set(initialMessages.map(messageID).filter((id): id is string => !!id));
   const body = {
     model: prepared.model,
     ...(prepared.variant ? { variant: prepared.variant } : {}),
     agent: prepared.agent.name,
-    parts: [{ type: "text", text: contextWarningPrompt(level, tokens, limits) }],
+    parts: [{ type: "text", text: input.prompt }],
   } satisfies NonNullable<SessionPromptAsyncData["body"]>;
   await unwrap(
     client.session.promptAsync({ path: { id: sessionID }, body, signal }),
-    `send context ${level} warning to child session ${sessionID}`,
+    `prompt child session ${sessionID}`,
   );
+  return waitForChild({
+    client,
+    sessionID,
+    initialMessageIDs,
+    limits: CONTEXT_PRESSURE,
+    prepared,
+    notes: input.notes,
+    signal,
+    abortChild: input.abortChild,
+  });
 }
 
-function maxContextTokens(messages: unknown[]) {
-  let result: number | undefined;
-  for (const message of messages) {
-    const info = object(object(message)?.info);
-    if (info?.role !== "assistant") continue;
-    const tokens = object(info.tokens);
-    if (!tokens) continue;
-    const total = finite(tokens.total);
-    const count =
-      total && total > 0
-        ? total
-        : (finite(tokens.input) ?? 0) +
-          (finite(tokens.output) ?? 0) +
-          (finite(object(tokens.cache)?.read) ?? 0) +
-          (finite(object(tokens.cache)?.write) ?? 0);
-    if (count <= 0) continue;
-    result = Math.max(result ?? 0, count);
+async function completionResult(input: {
+  client: Client;
+  args: TaskArgs;
+  prepared: PreparedTask;
+  metadata: Record<string, unknown>;
+  sessionID: string;
+  notes: string[];
+  completion: ChildWait;
+  signal: AbortSignal;
+}) {
+  const { client, args, prepared, metadata, sessionID, notes, completion, signal } = input;
+  if (completion.interruption) {
+    return interruptedResult({ args, metadata, sessionID, notes, reason: completion.interruption });
   }
-  return result;
-}
-
-function isAutoCompactionMessage(message: unknown) {
-  const parts = object(message)?.parts;
-  return (
-    Array.isArray(parts) &&
-    parts.some((value) => {
-      const part = object(value);
-      return part?.type === "compaction" && part.auto === true;
-    })
-  );
-}
-
-function finalAssistant(message: Record<string, unknown> | undefined) {
-  const finish = string(object(message?.info)?.finish);
-  return !!finish && finish !== "tool-calls" && finish !== "unknown";
-}
-
-function contextWarningPrompt(level: ContextWarning, tokens: number | undefined, limits: ContextLimits) {
-  if (level === "final") {
-    return [
-      FINAL_WARNING_MARKER,
-      `Observed context: ${tokens ?? "unknown"} tokens; final threshold: ${limits.final}; hard stop: ${limits.hard}.`,
-      `Remaining context budget before forced shutdown: ${tokens === undefined ? "unknown" : Math.max(0, limits.hard - tokens)} tokens at this observation.`,
-      "A forced context-limited stop is approaching. Finish immediately.",
-      "If you are patching, complete only the last edits already in progress. Otherwise, make only final evidence calls.",
-      "Return a concise final report now.",
-    ].join("\n");
+  const completionError = record(completion.assistant?.info)?.error;
+  if (completionError && isContentFilterBlock(completionError)) {
+    return blockedResult(args, metadata, sessionID, notes);
   }
-  if (level === "medium") {
-    return [
-      MEDIUM_WARNING_MARKER,
-      `Observed context: ${tokens ?? "unknown"} tokens; medium threshold: ${limits.medium}; final warning: ${limits.final}; hard stop: ${limits.hard}.`,
-      "Long-context performance may degrade. Be wary of missed constraints, stale assumptions, and repeated work.",
-      "Converge on the assigned boundary and finish soon; verify critical conclusions against source evidence.",
-      "Do not expand scope or begin another concern.",
-    ].join("\n");
+  if (completion.limit) {
+    try {
+      await sealContextLimited(client, sessionID, completion.limit, signal);
+    } catch (error) {
+      notes.push(`context-limit seal failed: ${errorMessage(error)}`);
+    }
+    return contextLimitedResult({
+      args,
+      metadata,
+      sessionID,
+      notes,
+      limit: completion.limit,
+      messages: completion.messages,
+      permission: prepared.permission,
+    });
   }
-  return [
-    SOFT_WARNING_MARKER,
-    `Observed context: ${tokens ?? "unknown"} tokens; soft threshold: ${limits.soft}; medium threshold: ${limits.medium}.`,
-    `Try to finish before ${limits.medium} tokens if you can, while preserving the assigned acceptance checks.`,
-    "Do not expand scope or begin another concern.",
-  ].join("\n");
-}
+  const response = completion.assistant;
+  if (!response) return interruptedResult({ args, metadata, sessionID, notes });
+  const info = record(response.info);
+  if (info?.error) {
+    if (isContentFilterBlock(info.error)) return blockedResult(args, metadata, sessionID, notes);
+    throw new Error(`delegate child failed: ${errorMessage(info.error)}`);
+  }
 
-async function sealContextLimited(client: Client, sessionID: string, limit: ContextLimit, signal: AbortSignal) {
-  const session = await unwrap<Record<string, unknown>>(
-    client.session.get({ path: { id: sessionID }, signal }),
-    `read context-limited child session ${sessionID}`,
-  );
-  const metadata = object(session.metadata) ?? {};
-  const delegate = object(metadata.delegate) ?? {};
-  const body: NonNullable<SessionUpdateData["body"]> = {
-    metadata: {
-      ...metadata,
-      delegate: {
-        ...delegate,
-        context: {
-          limit: limit.level,
-          ...(limit.tokens !== undefined ? { tokens: limit.tokens } : {}),
-        },
-      },
-    },
-    permission: [deny("*")],
+  const text = withNotes(lastTextPart(response), notes);
+  return {
+    title: args.description,
+    metadata,
+    output: renderOutput({ sessionID, state: "completed", text }),
   };
-  await unwrap(
-    client.session.update({ path: { id: sessionID }, body, signal }),
-    `seal context-limited child session ${sessionID}`,
+}
+
+async function askTaskPermission(ctx: ToolContext, args: TaskArgs, execution: Execution) {
+  await ctx.ask({
+    permission: "task",
+    patterns: [args.subagent_type],
+    always: args.subagent_type === GIT ? [] : ["*"],
+    metadata: {
+      ...(args.subagent_type === GIT ? { prompt: args.prompt } : {}),
+      description: args.description,
+      subagent_type: args.subagent_type,
+      model: args.model?.trim(),
+      effort: args.effort,
+      unattended: execution.unattended,
+      lane: args.lane,
+    },
+  });
+}
+
+function validateTaskTarget(parentAgent: string, target: string) {
+  if (target === COLLAB) {
+    throw new Error("delegate refuses collab as a child; collab is attended-primary only");
+  }
+  if (target === GIT && parentAgent !== COLLAB) {
+    throw new Error("delegate refuses build/git; only attended primary collab may launch it");
+  }
+}
+
+function resolveExecution(parent: Execution, requested: TaskArgs): Execution {
+  if (parent.unattended && requested.unattended === false) {
+    throw new Error("delegate refuses attended child under unattended parent");
+  }
+
+  return { unattended: parent.unattended || requested.unattended !== false };
+}
+
+async function createChild(client: Client, ctx: ToolContext, args: TaskArgs, prepared: PreparedTask) {
+  const metadata = {
+    delegate: { unattended: prepared.execution.unattended, ...(args.lane ? { lane: args.lane } : {}) },
+  };
+  const body: NonNullable<SessionCreateData["body"]> = {
+    parentID: ctx.sessionID,
+    title: `${args.lane ? `[${args.lane}] ` : ""}${args.description} (@${prepared.agent.name} subagent)`,
+    agent: prepared.agent.name,
+    permission: prepared.permission,
+    metadata,
+  };
+  const session = await unwrap<Record<string, unknown>>(
+    client.session.create({ body }),
+    `create child session for ${prepared.agent.name}`,
   );
+  const id = string(session.id);
+  if (!id) throw new Error("delegate child session create response did not include an id");
+  if (!sameExecution(sessionExecution(session), prepared.execution)) {
+    throw new Error("delegate child session create lost or mismatched execution metadata");
+  }
+  if (sessionLane(session) !== args.lane)
+    throw new Error("delegate child session create lost or mismatched lane metadata");
+  return { id };
 }
 
 // ├─ Child cancellation ──────────────────────────────────────────────────────────────────────────┤
@@ -588,7 +346,7 @@ function createChildAbort(client: Client, sessionID: string) {
         `read child session ${sessionID} status after abort`,
       );
       if (stopped) return;
-      const status = object(statuses[sessionID]);
+      const status = record(statuses[sessionID]);
       if (!status || status.type === "idle") {
         stop();
         return;
@@ -618,47 +376,6 @@ function createChildAbort(client: Client, sessionID: string) {
   return { start, stop };
 }
 
-async function readChildMessages(client: Client, sessionID: string, signal: AbortSignal) {
-  return unwrap<unknown[]>(
-    client.session.messages({ path: { id: sessionID }, signal }),
-    `read child session ${sessionID} messages`,
-  );
-}
-
-function lastAssistantMessage(messages: unknown[]) {
-  for (let index = messages.length - 1; index >= 0; index--) {
-    const message = object(messages[index]);
-    if (object(message?.info)?.role === "assistant") return message;
-  }
-  return undefined;
-}
-
-function messageID(message: unknown) {
-  return string(object(object(message)?.info)?.id);
-}
-
-function abortableDelay(milliseconds: number, signal: AbortSignal) {
-  return new Promise<void>((resolve, reject) => {
-    if (signal.aborted) {
-      reject(signal.reason ?? new Error("delegate task aborted"));
-      return;
-    }
-
-    const timer = setTimeout(done, milliseconds);
-    signal.addEventListener("abort", aborted, { once: true });
-
-    function done() {
-      signal.removeEventListener("abort", aborted);
-      resolve();
-    }
-
-    function aborted() {
-      clearTimeout(timer);
-      reject(signal.reason ?? new Error("delegate task aborted"));
-    }
-  });
-}
-
 async function updateToolMetadata(ctx: ToolContext, input: { title?: string; metadata?: Record<string, unknown> }) {
   const result = ctx.metadata(input);
   if (isPromiseLike(result)) {
@@ -671,664 +388,25 @@ async function updateToolMetadata(ctx: ToolContext, input: { title?: string; met
   await runPromise(result);
 }
 
-// ├─ Task input and model validation ─────────────────────────────────────────────────────────────┤
-function parseModel(value: string): ModelRef {
-  const clean = value.trim();
-  const slash = clean.indexOf("/");
-  if (slash <= 0 || slash === clean.length - 1) {
-    throw new Error(`delegate model must be provider/model-id, got ${JSON.stringify(value)}`);
-  }
-  return { providerID: clean.slice(0, slash), modelID: clean.slice(slash + 1) };
-}
-
-function taskArgs(value: unknown): TaskArgs {
-  const root = object(value);
-  if (!root) throw new Error("delegate task arguments must be an object");
-
-  const args: TaskArgs = {
-    description: requiredString(root, "description").trim(),
-    prompt: requiredString(root, "prompt"),
-    subagent_type: requiredString(root, "subagent_type").trim(),
-  };
-  const model = optionalString(root, "model");
-  const effort = optionalString(root, "effort");
-  const lane = optionalString(root, "lane");
-  if (lane && /[\r\n]/u.test(lane)) throw new Error("delegate lane name must be one line");
-  const compact = optionalBoolean(root, "compact");
-  const unattended = optionalBoolean(root, "unattended");
-  if (model !== undefined) args.model = model;
-  if (effort !== undefined) args.effort = effort;
-  if (lane !== undefined) args.lane = lane.trim();
-  if (compact !== undefined) args.compact = compact;
-  if (unattended !== undefined) args.unattended = unattended;
-  return args;
-}
-
-function applyDisplayArgs(input: unknown, args: TaskArgs, effort: string | undefined) {
-  const base = stripEffortSuffix(args.description, effort);
-  const description = effort ? `${base} · ${effort}` : base;
-  args.description = description;
-  if (effort) args.effort = effort;
-
-  const root = object(input);
-  if (!root) return;
-  root.description = description;
-  root.subagent_type = args.subagent_type;
-  if (effort) root.effort = effort;
-  if (args.unattended !== undefined) root.unattended = args.unattended;
-}
-
-function stripEffortSuffix(description: string, effort: string | undefined) {
-  const efforts = new Set(effort ? [...KNOWN_EFFORTS, effort] : KNOWN_EFFORTS);
-  let clean = description;
-
-  while (true) {
-    const match = clean.match(/^(.*) · ([^·\n]+)$/u);
-    if (!match) return clean;
-    if (!efforts.has(match[2].trim())) return clean;
-    clean = match[1].trimEnd();
-  }
-}
-
-function parseEffort(args: TaskArgs) {
-  if (args.effort === undefined) return undefined;
-  const clean = args.effort?.trim();
-  if (!clean) throw new Error("delegate effort must not be empty when provided");
-  return clean;
-}
-
-function requiredString(root: Record<string, unknown>, name: keyof TaskArgs) {
-  if (!Object.hasOwn(root, name) || root[name] === undefined) {
-    throw new Error(`delegate task missing required argument: ${name}`);
-  }
-  if (typeof root[name] !== "string") throw new Error(`delegate task argument ${name} must be a string`);
-  if (!root[name].trim()) throw new Error(`delegate task argument ${name} must not be empty`);
-  return root[name];
-}
-
-function optionalString(root: Record<string, unknown>, name: keyof TaskArgs) {
-  if (!Object.hasOwn(root, name) || root[name] === undefined) return undefined;
-  if (typeof root[name] !== "string") throw new Error(`delegate task argument ${name} must be a string`);
-  if (!root[name].trim()) throw new Error(`delegate task argument ${name} must not be empty when provided`);
-  return root[name];
-}
-
-function optionalBoolean(root: Record<string, unknown>, name: "compact" | "unattended") {
-  if (!Object.hasOwn(root, name) || root[name] === undefined) return undefined;
-  if (typeof root[name] !== "boolean") throw new Error(`delegate task argument ${name} must be a boolean`);
-  return root[name];
-}
-
-async function askTaskPermission(ctx: ToolContext, args: TaskArgs, execution: Execution) {
-  await ctx.ask({
-    permission: "task",
-    patterns: [args.subagent_type],
-    always: args.subagent_type === GIT ? [] : ["*"],
-    metadata: {
-      ...(args.subagent_type === GIT ? { prompt: args.prompt } : {}),
-      description: args.description,
-      subagent_type: args.subagent_type,
-      model: args.model?.trim(),
-      effort: args.effort,
-      unattended: execution.unattended,
-      lane: args.lane,
-    },
-  });
-}
-
-async function readCurrentAssistantMessage(client: Client, ctx: ToolContext) {
-  const message = await unwrap<Record<string, unknown>>(
-    client.session.message({ path: { id: ctx.sessionID, messageID: ctx.messageID } }),
-    `read parent message ${ctx.messageID}`,
-  );
-  const info = object(message.info);
-  if (!info || info.role !== "assistant") {
-    throw new Error("delegate cannot inherit model because the current message is not an assistant message");
-  }
-
-  const providerID = string(info.providerID) ?? string(object(info.model)?.providerID);
-  const modelID = string(info.modelID) ?? string(object(info.model)?.modelID);
-  if (!providerID || !modelID) throw new Error("delegate cannot inherit model because parent message lacks model IDs");
-
-  const variant = string(info.variant) ?? string(object(info.model)?.variant);
-  return { model: { providerID, modelID }, variant: variant === "default" ? undefined : variant };
-}
-
-async function readAgent(client: Client, name: string): Promise<AgentInfo> {
-  const agents = await unwrap<unknown[]>(client.app.agents({}), "list agents");
-  const agent = agents.map(object).find((item) => item?.name === name);
-  if (!agent) {
-    const names = agents
-      .map(object)
-      .map((item) => string(item?.name))
-      .filter(Boolean)
-      .join(", ");
-    throw new Error(
-      `delegate task argument subagent_type must be a known agent, got ${JSON.stringify(name)}. Known agents: ${names || "none"}`,
-    );
-  }
-
-  return {
-    name,
-    permission: agent.permission,
-    model: modelRef(agent.model),
-    variant: string(agent.variant),
-  };
-}
-
-async function validateVariant(client: Client, model: ModelRef, variant: string | undefined) {
-  if (!variant) return;
-  const modelInfo = await readProviderModel(client, model);
-  const variants = object(modelInfo.variants) ?? {};
-  const valid = Object.keys(variants);
-  if (Object.hasOwn(variants, variant)) return;
-  const suffix = valid.length ? valid.join(", ") : "none";
-  throw new Error(
-    `Unknown effort ${JSON.stringify(variant)} for ${model.providerID}/${model.modelID}. Valid efforts: ${suffix}`,
-  );
-}
-
-async function readProviderModel(client: Client, model: ModelRef): Promise<Record<string, unknown>> {
-  const response = await unwrap<Record<string, unknown>>(client.config.providers({}), "list providers");
-  const providers = Array.isArray(response.providers) ? response.providers : [];
-  const provider = providers.map(object).find((item) => item?.id === model.providerID);
-  if (!provider) {
-    const names = providers
-      .map(object)
-      .map((item) => string(item?.id))
-      .filter(Boolean)
-      .join(", ");
-    throw new Error(`Unknown provider ${model.providerID}. Available providers: ${names}`);
-  }
-
-  const models = object(provider.models) ?? {};
-  const direct = object(models[model.modelID]);
-  if (direct) return direct;
-
-  const byID = Object.values(models)
-    .map(object)
-    .find((item) => item?.id === model.modelID || object(item?.api)?.id === model.modelID);
-  if (byID) return byID;
-
-  const names = Object.keys(models).slice(0, 20).join(", ");
-  throw new Error(`Unknown model ${model.providerID}/${model.modelID}. Known model keys include: ${names}`);
-}
-
-// ├─ Permission inheritance ──────────────────────────────────────────────────────────────────────┤
-async function deriveChildPermission(
-  client: Client,
-  parent: Record<string, unknown>,
-  agent: AgentInfo,
-  execution: Execution,
-): Promise<Rule[]> {
-  const config = await unwrap<Record<string, unknown>>(client.config.get({}), "read config");
-  const unattended = execution.unattended;
-  const agentConfig = object(object(config.agent)?.[agent.name]);
-  if (!agentConfig)
-    throw new Error(`delegate agent ${agent.name} is missing from config.agent; cannot determine declared permissions`);
-
-  const parentRules = inheritableParentRules(normalizeRules(parent.permission), unattended);
-  const inherited = parentRules.filter(
-    (rule) => rule.permission === "external_directory" || (unattended && rule.action === "deny"),
-  );
-  const agentRules = normalizeRules(agent.permission);
-  const declaredRules = normalizeRules(agentConfig.permission);
-  const defaultRules = defaultAgentRules(agent.name, declaredRules);
-  const childDenies: Rule[] = [
-    ...(hasPermissionRule(declaredRules, "todowrite") ? [] : [deny("todowrite")]),
-    ...(hasPermissionRule(declaredRules, "task") ? [] : [deny("task")]),
-    deny("question"),
-    ...primaryTools(config)
-      .filter((tool) => !hasPermissionRule(declaredRules, tool))
-      .map(deny),
-  ];
-  const composed = [...defaultRules, ...agentRules, ...childDenies, ...inherited];
-  if (!unattended) return dedupeRules(composed);
-  return [UNATTENDED_FLOOR, ...dedupeRules(composed.map(asBlocker))];
-}
-
-// Only the leading synthetic floor is removed; later parent rules remain eligible for inheritance.
-function inheritableParentRules(rules: Rule[], unattended: boolean) {
-  const synthetic = unattended && rules.length > 0 && isUnattendedFloor(rules[0]);
-  return synthetic ? rules.slice(1) : rules;
-}
-
-function isUnattendedFloor(rule: Rule) {
-  return (
-    rule.permission === UNATTENDED_FLOOR.permission &&
-    rule.pattern === UNATTENDED_FLOOR.pattern &&
-    rule.action === UNATTENDED_FLOOR.action
-  );
-}
-
-// Preserve rule order while converting `ask` rules to `deny`.
-function asBlocker(rule: Rule): Rule {
-  return rule.action === "ask" ? { ...rule, action: "deny" } : rule;
-}
-
-// ├─ Lane session metadata ───────────────────────────────────────────────────────────────────────┤
-async function laneChild(client: Client, parentSessionID: string, lane: string, signal: AbortSignal) {
-  const children = await unwrap<unknown[]>(
-    client.session.children({ path: { id: parentSessionID }, signal }),
-    `list lanes for ${parentSessionID}`,
-  );
-  return children
-    .map(object)
-    .filter((child): child is Record<string, unknown> => !!child && sessionLane(child) === lane)
-    .toSorted((left, right) => sessionCreated(right) - sessionCreated(left))[0];
-}
-
-async function readExistingChild(input: {
-  client: Client;
-  session: Record<string, unknown>;
-  permission: Rule[];
-  execution: Execution;
-  signal: AbortSignal;
-}) {
-  const { client, session, permission, execution, signal } = input;
-  const id = string(session.id);
-  if (!id) throw new Error("delegate lane child did not return an id");
-  const statuses = await unwrap<Record<string, unknown>>(
-    client.session.status({ signal }),
-    `read child session ${id} status before resume`,
-  );
-  const status = object(statuses[id]);
-  if (status && status.type !== "idle") {
-    throw new Error(`delegate lane ${sessionLane(session)} is ${String(status.type)}; wait until it is idle`);
-  }
-  if (!samePermissionRules(normalizeRules(session.permission), permission)) {
-    throw new Error(`delegate resumed child permission envelope no longer matches; re-brief a fresh child instead`);
-  }
-  if (!sameExecution(sessionExecution(session), execution)) {
-    throw new Error(`delegate resumed child execution contract no longer matches; re-brief a fresh child instead`);
-  }
-  return { id };
-}
-
-function validateTaskTarget(parentAgent: string, target: string) {
-  if (target === COLLAB) {
-    throw new Error("delegate refuses collab as a child; collab is attended-primary only");
-  }
-  if (target === GIT && parentAgent !== COLLAB) {
-    throw new Error("delegate refuses build/git; only attended primary collab may launch it");
-  }
-}
-
-function resolveExecution(parent: Execution, requested: TaskArgs): Execution {
-  if (parent.unattended && requested.unattended === false) {
-    throw new Error("delegate refuses attended child under unattended parent");
-  }
-
-  return { unattended: parent.unattended || requested.unattended !== false };
-}
-
-function sessionExecution(session: Record<string, unknown>): Execution {
-  const delegate = object(object(session.metadata)?.delegate);
-  if (!delegate) return { unattended: false };
-
-  const execution: Execution = { unattended: false };
-  if (Object.hasOwn(delegate, "unattended")) {
-    if (typeof delegate.unattended !== "boolean") {
-      throw new Error("delegate session metadata.delegate.unattended must be a boolean");
-    }
-    execution.unattended = delegate.unattended;
-  }
-  return execution;
-}
-
-function sameExecution(left: Execution, right: Execution) {
-  return left.unattended === right.unattended;
-}
-
-function sessionLane(session: Record<string, unknown>) {
-  return string(object(object(session.metadata)?.delegate)?.lane);
-}
-
-async function createChild(client: Client, ctx: ToolContext, args: TaskArgs, prepared: PreparedTask) {
-  const metadata = {
-    delegate: { unattended: prepared.execution.unattended, ...(args.lane ? { lane: args.lane } : {}) },
-  };
-  const body: NonNullable<SessionCreateData["body"]> = {
-    parentID: ctx.sessionID,
-    title: `${args.lane ? `[${args.lane}] ` : ""}${args.description} (@${prepared.agent.name} subagent)`,
-    agent: prepared.agent.name,
-    permission: prepared.permission,
-    metadata,
-  };
-  const session = await unwrap<Record<string, unknown>>(
-    client.session.create({ body }),
-    `create child session for ${prepared.agent.name}`,
-  );
-  const id = string(session.id);
-  if (!id) throw new Error("delegate child session create response did not include an id");
-  if (!sameExecution(sessionExecution(session), prepared.execution)) {
-    throw new Error("delegate child session create lost or mismatched execution metadata");
-  }
-  if (sessionLane(session) !== args.lane)
-    throw new Error("delegate child session create lost or mismatched lane metadata");
-  return { id };
-}
-
-async function unwrap<T>(promise: Promise<{ data: T | undefined; error?: unknown }>, label: string): Promise<T> {
-  const response = await promise;
-  if (response.error !== undefined) {
-    throw new Error(`delegate ${label} failed: ${errorMessage(response.error)}`);
-  }
-  return response.data!;
-}
-
-function normalizeRules(value: unknown): Rule[] {
-  if (Array.isArray(value)) return value.flatMap(parseRule);
-  const root = object(value);
-  if (!root) return [];
-
-  return Object.entries(root).flatMap(([permission, entry]) => {
-    if (isAction(entry)) return [{ permission, pattern: "*", action: entry }];
-    const patterns = object(entry);
-    if (!patterns) return [];
-    return Object.entries(patterns).flatMap(([pattern, action]) =>
-      isAction(action) ? [{ permission, pattern, action }] : [],
-    );
-  });
-}
-
-function samePermissionRules(left: Rule[], right: Rule[]) {
-  return (
-    left.length === right.length &&
-    left.every((rule, index) => {
-      const candidate = right[index];
-      return (
-        rule.permission === candidate.permission &&
-        rule.pattern === candidate.pattern &&
-        rule.action === candidate.action
-      );
-    })
-  );
-}
-
-function parseRule(value: unknown): Rule[] {
-  const root = object(value);
-  const permission = string(root?.permission);
-  const pattern = string(root?.pattern);
-  const action = root?.action;
-  if (!permission || !pattern || !isAction(action)) return [];
-  return [{ permission, pattern, action }];
-}
-
-function hasPermissionRule(rules: Rule[], permission: string) {
-  return rules.some((rule) => rule.permission === permission);
-}
-
-function defaultAgentRules(agentName: string, explicitRules: Rule[]) {
-  if (!agentName.startsWith("review/")) return [];
-
-  const rules: Rule[] = [];
-  for (const permission of ["read", "glob", "grep", "list", "bash", "webfetch", "websearch", "lsp"]) {
-    if (!hasPermissionRule(explicitRules, permission)) {
-      rules.push(allow(permission));
-      if (permission === "grep") rules.push({ permission: "grep", pattern: "/", action: "deny" });
-    }
-  }
-  for (const permission of ["edit", "task", "todowrite", "question"]) {
-    if (!hasPermissionRule(explicitRules, permission)) rules.push(deny(permission));
-  }
-  return rules;
-}
-
-function sessionAgent(session: Record<string, unknown>) {
-  return string(session.agent) ?? string(object(session.agent)?.name);
-}
-
-function sessionUpdated(session: Record<string, unknown>) {
-  const updated = object(session.time)?.updated;
-  return typeof updated === "number" && Number.isFinite(updated) ? updated : 0;
-}
-
-function sessionCreated(session: Record<string, unknown>) {
-  const created = object(session.time)?.created;
-  return typeof created === "number" && Number.isFinite(created) ? created : 0;
-}
-
-function childStatus(status: Record<string, unknown> | undefined) {
-  const type = string(status?.type) ?? "idle";
-  if (type !== "retry") return type;
-
-  const attempt = typeof status?.attempt === "number" ? ` attempt=${status.attempt}` : "";
-  const next = typeof status?.next === "number" ? ` next=${new Date(status.next).toISOString()}` : "";
-  const message = string(status?.message);
-  return [`retry${attempt}${next}`, message].filter(Boolean).join(" ");
-}
-
-function singleLine(value: string) {
-  return value.replace(/\s+/gu, " ").trim();
-}
-
-function sessionParentID(session: Record<string, unknown>) {
-  return string(session.parentID) ?? string(session.parentId) ?? string(object(session.parent)?.id);
-}
-
-function sessionContextLimit(session: Record<string, unknown>) {
-  const context = object(object(object(session.metadata)?.delegate)?.context);
-  const limit = string(context?.limit);
-  if (limit !== "hard" && limit !== "compaction") return undefined;
-  return { limit, tokens: finite(context?.tokens) };
-}
-
-function primaryTools(config: Record<string, unknown>) {
-  const experimental = object(config.experimental);
-  return Array.isArray(experimental?.primary_tools)
-    ? experimental.primary_tools.filter((item): item is string => typeof item === "string")
-    : [];
-}
-
-function deny(permission: string): Rule {
-  return { permission, pattern: "*", action: "deny" };
-}
-
-function allow(permission: string): Rule {
-  return { permission, pattern: "*", action: "allow" };
-}
-
-function dedupeRules(rules: Rule[]) {
-  const seen = new Set<string>();
-  return rules.filter((rule) => {
-    const key = `${rule.permission}\0${rule.pattern}\0${rule.action}`;
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
-}
-
-function modelRef(value: unknown): ModelRef | undefined {
-  if (typeof value === "string" && value.trim()) return parseModel(value);
-  const root = object(value);
-  const providerID = string(root?.providerID);
-  const modelID = string(root?.modelID);
-  return providerID && modelID ? { providerID, modelID } : undefined;
-}
-
-function lastTextPart(value: unknown) {
-  const parts = object(value)?.parts;
-  if (!Array.isArray(parts)) return "";
-  for (let index = parts.length - 1; index >= 0; index--) {
-    const part = object(parts[index]);
-    if (part?.type === "text" && typeof part.text === "string") return part.text;
-  }
-  return "";
-}
-
-function withNotes(text: string, notes: string[]) {
-  if (!notes.length) return text;
-  return [`[${notes.join("; ")}]`, text].filter(Boolean).join("\n\n");
-}
-
-// ├─ Task result rendering ───────────────────────────────────────────────────────────────────────┤
-function contextLimitedResult(input: {
-  args: TaskArgs;
-  metadata: Record<string, unknown>;
-  sessionID: string;
-  notes: string[];
-  limit: ContextLimit;
-  messages: unknown[];
-  permission: Rule[];
-}) {
-  const text = recoverableText(input.messages);
-  const lines = [
-    `context_limit: ${input.limit.level}`,
-    `context_tokens: ${input.limit.tokens ?? "unknown"}`,
-    `child_session_id: ${input.sessionID}`,
-  ];
-  if (input.limit.level === "compaction") {
-    lines.push(
-      "warning: automatic child compaction was observed; it may have started before the next poll, so any compacted continuation is untrusted",
-    );
-  }
-  lines.push(
-    !hasWriteAccess(input.permission)
-      ? "durable_state: no writes expected from the child permission envelope"
-      : "durable_state: uncertain; reconcile the tree and Git before continuing because this child had write-capable permissions",
-    `advice: ${CONTEXT_ADVICE}`,
-    "",
-    "partial_recovered_text:",
-    text || "(no recoverable assistant text)",
-  );
-  return {
-    title: input.args.description,
-    metadata: input.metadata,
-    output: renderOutput({
-      sessionID: input.sessionID,
-      state: "context_limited",
-      text: withNotes(lines.join("\n"), input.notes),
-    }),
-  };
-}
-
-function recoverableText(messages: unknown[]) {
-  return messages
-    .flatMap((message) => {
-      const root = object(message);
-      if (object(root?.info)?.role !== "assistant") return [];
-      const parts = root?.parts;
-      if (!Array.isArray(parts)) return [];
-      return parts.flatMap((value) => {
-        const part = object(value);
-        return part?.type === "text" && typeof part.text === "string" && part.text.trim() ? [part.text.trim()] : [];
-      });
-    })
-    .join("\n\n");
-}
-
-function hasWriteAccess(rules: Rule[]) {
-  const writePermissions = new Set(["*", "bash", "edit", "task", "write"]);
-  return rules.some((rule) => rule.action === "allow" && writePermissions.has(rule.permission));
-}
-
-function blockedResult(args: TaskArgs, metadata: Record<string, unknown>, sessionID: string, notes: string[]) {
-  const text = withNotes(
-    [`blocked: content_filter`, `child_session_id: ${sessionID}`, `advice: ${CONTENT_FILTER_ADVICE}`].join("\n"),
-    notes,
-  );
-  return {
-    title: args.description,
-    metadata,
-    output: renderOutput({ sessionID, state: "error", text }),
-  };
-}
-
-function interruptedResult(input: {
-  args: TaskArgs;
-  metadata: Record<string, unknown>;
-  sessionID: string;
-  notes: string[];
-  reason?: string;
-}) {
-  const { args, metadata, sessionID, notes, reason = "child became idle without assistant output" } = input;
-  const text = withNotes(
-    [`interrupted: ${reason}`, `child_session_id: ${sessionID}`, `advice: ${INTERRUPTED_ADVICE}`].join("\n"),
-    notes,
-  );
-  return {
-    title: args.description,
-    metadata,
-    output: renderOutput({ sessionID, state: "error", text }),
-  };
-}
-
-function renderOutput(input: { sessionID: string; state: "completed" | "context_limited" | "error"; text: string }) {
-  const tag = input.state === "error" ? "task_error" : "task_result";
-  return [`<task id="${input.sessionID}" state="${input.state}">`, `<${tag}>`, input.text, `</${tag}>`, "</task>"].join(
-    "\n",
-  );
-}
-
-function isContentFilterBlock(error: unknown) {
-  const root = object(error);
-  const name = string(root?.name) ?? (error instanceof Error ? error.name : undefined);
-  if (isContentFilterText(name)) return true;
-
-  const data = object(root?.data);
-  const message =
-    string(root?.message) ??
-    string(data?.message) ??
-    (error instanceof Error || typeof error === "string" ? String(error) : undefined);
-  return isContentFilterText(message);
-}
-
-function isContentFilterText(value: string | undefined) {
-  if (!value) return false;
-  const compact = value.toLowerCase().replace(/[^a-z]/gu, "");
-  return compact.includes("contentfilter") || compact.includes("refusal");
-}
-
-function object(value: unknown): Record<string, unknown> | undefined {
-  return isRecord(value) ? value : undefined;
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return value !== null && typeof value === "object" && !Array.isArray(value);
-}
-
 function isPromiseLike(value: unknown): value is PromiseLike<unknown> {
-  return typeof object(value)?.then === "function";
+  return typeof record(value)?.then === "function";
 }
 
 function isEffectLike(value: unknown) {
-  const root = object(value);
+  const root = record(value);
   return !!root && (typeof root.pipe === "function" || typeof root._op === "string");
 }
 
 async function effectRunPromise() {
   let mod: Record<string, unknown> | undefined;
   try {
-    mod = object(await import("effect"));
+    mod = record(await import("effect"));
   } catch (error) {
     throw new Error(`delegate failed to import effect for metadata update: ${errorMessage(error)}`, { cause: error });
   }
-  const runPromise = object(mod?.Effect)?.runPromise;
+  const runPromise = record(mod?.Effect)?.runPromise;
   if (typeof runPromise !== "function") {
     throw new Error("delegate effect module is missing Effect.runPromise for metadata update");
   }
   return (effect: unknown) => Promise.resolve(Reflect.apply(runPromise, undefined, [effect]));
-}
-
-function string(value: unknown) {
-  return typeof value === "string" && value ? value : undefined;
-}
-
-function finite(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-function isAction(value: unknown): value is Rule["action"] {
-  return value === "allow" || value === "ask" || value === "deny";
-}
-
-function errorMessage(error: unknown): string {
-  if (error instanceof Error) return error.message;
-  if (typeof error === "string") return error;
-  try {
-    return JSON.stringify(error);
-  } catch {
-    return String(error);
-  }
 }

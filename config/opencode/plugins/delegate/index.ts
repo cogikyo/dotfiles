@@ -2,7 +2,8 @@ import type { Plugin, PluginModule } from "@opencode-ai/plugin";
 import { tool } from "@opencode-ai/plugin";
 import { loadDelegateConfig } from "./config.ts";
 import { enforceProviderPolicy } from "./policy.ts";
-import { prepareTask, readChildTaskStatus, runChildTask } from "./session.ts";
+import { readChildTaskStatus } from "./lane.ts";
+import { prepareTask, runChildTask } from "./session.ts";
 
 const DESCRIPTION = [
   "Launch a specialized subagent task.",
