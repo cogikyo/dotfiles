@@ -23,6 +23,12 @@ const FAMILIES: [RegExp, string][] = [
 ];
 const roles: Partial<Record<string, string>> = icons.role;
 const scopes: Partial<Record<string, string>> = icons.scope;
+const tones: Partial<Record<string, "secondary" | "error" | "success" | "syntaxOperator">> = {
+  build: "secondary",
+  review: "error",
+  verify: "success",
+  scout: "syntaxOperator",
+};
 
 type Usage = { model: string; tokens: number };
 type Status = SessionStatus["type"] | "limited";
@@ -228,9 +234,15 @@ function Row(props: { api: TuiPluginApi; lanes: Lanes; name: string; child: Sess
   };
   const spent = () =>
     props.columns.spent ? ` ${labels(props.lanes, props.child).spent.padStart(props.columns.spent)}` : "";
-  const bracket = () =>
-    ` [${agentLabel(props.child.agent ?? "unknown")} ∙ ${labels(props.lanes, props.child).model.padStart(props.columns.model)}]`;
+  const agent = () => props.child.agent ?? "unknown";
+  const mode = () => {
+    const key = tones[agent().split("/")[0]];
+    return key ? theme()[key] : theme().textMuted;
+  };
+  const model = () => ` ${labels(props.lanes, props.child).model.padStart(props.columns.model)}]`;
+  const bracket = () => ` [${agentLabel(agent())}${model()}`;
   const [width, setWidth] = createSignal<number>();
+  const [hovered, setHovered] = createSignal(false);
   const name = () => {
     const room = width();
     if (room === undefined) return props.name;
@@ -244,16 +256,20 @@ function Row(props: { api: TuiPluginApi; lanes: Lanes; name: string; child: Sess
       flexDirection="row"
       gap={0}
       onMouseDown={() => props.api.route.navigate("session", { sessionID: props.child.id })}
+      onMouseOver={() => setHovered(true)}
+      onMouseOut={() => setHovered(false)}
       onSizeChange={function () {
         setWidth(this.width);
       }}
     >
       <ActionIcon api={props.api} icon={icon()} fg={tone()} action={running(status()) ? undefined : close} />
-      <text fg={theme().text} wrapMode="none" flexShrink={0} flexGrow={1}>
+      <text fg={hovered() ? theme().secondary : theme().text} wrapMode="none" flexShrink={0} flexGrow={1}>
         {name()}
       </text>
       <text fg={theme().textMuted} wrapMode="none" flexShrink={0}>
-        {bracket()}
+        {" ["}
+        <span style={{ fg: mode() }}>{agentLabel(agent())}</span>
+        {model()}
       </text>
       <text
         fg={pressureColor(theme(), ((measured()?.tokens ?? 0) / COMPACTION_LIMIT) * 100)}
