@@ -46,7 +46,7 @@ function ModifiedFiles(props: { api: TuiPluginApi; sessionID: string }) {
 
   return (
     <Show when={items().length > 0}>
-      <SidebarSection api={props.api} title="Modified Files" detail={fileCount(items().length)}>
+      <SidebarSection api={props.api} title="Modified Files" detail={fileCount(items().length)} initiallyExpanded={false}>
         <For each={items()}>
           {(item) => (
             <box flexDirection="row" gap={0} onMouseDown={() => openInNvim(props.api, item.path, 'Modified file open failed')}>
