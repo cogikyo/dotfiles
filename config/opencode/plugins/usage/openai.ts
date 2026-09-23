@@ -53,8 +53,7 @@ function decodeJwtPayload(token: string) {
 }
 
 function accountIDFromToken(token: string) {
-  return decodeJwtPayload(token)?.["https://api.openai.com/auth"]
-    ?.chatgpt_account_id;
+  return decodeJwtPayload(token)?.["https://api.openai.com/auth"]?.chatgpt_account_id;
 }
 
 function resetAtFromWindow(window: OpenAIWindow, fallback?: OpenAIWindow) {
@@ -67,11 +66,7 @@ function resetAtFromWindow(window: OpenAIWindow, fallback?: OpenAIWindow) {
       : typeof fallback?.reset_after_seconds === "number"
         ? fallback.reset_after_seconds
         : undefined;
-  if (
-    resetAfterSeconds === undefined ||
-    !Number.isFinite(resetAfterSeconds) ||
-    resetAfterSeconds < 0
-  ) {
+  if (resetAfterSeconds === undefined || !Number.isFinite(resetAfterSeconds) || resetAfterSeconds < 0) {
     return undefined;
   }
   return new Date(Date.now() + resetAfterSeconds * 1000).toISOString();
@@ -101,16 +96,11 @@ function labelFromDuration(value: unknown) {
   if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
     return undefined;
   }
-  const isWeekly =
-    value >= WEEK_SECONDS - DAY_SECONDS / 2 &&
-    value <= WEEK_SECONDS + DAY_SECONDS / 2;
+  const isWeekly = value >= WEEK_SECONDS - DAY_SECONDS / 2 && value <= WEEK_SECONDS + DAY_SECONDS / 2;
   return isWeekly ? "W" : "H";
 }
 
-function usageWindow(
-  window: OpenAIWindow | null | undefined,
-  fallback: OpenAIRateLimit,
-): UsageWindow | undefined {
+function usageWindow(window: OpenAIWindow | null | undefined, fallback: OpenAIRateLimit): UsageWindow | undefined {
   if (!window) return undefined;
 
   const label = labelFromDuration(window.limit_window_seconds);
@@ -126,10 +116,9 @@ function usageWindow(
 export function parseOpenAIWindows(rateLimit?: OpenAIRateLimit): UsageWindow[] {
   if (!rateLimit) return [];
 
-  return [
-    usageWindow(rateLimit.primary_window, rateLimit),
-    usageWindow(rateLimit.secondary_window, rateLimit),
-  ].filter((window): window is UsageWindow => Boolean(window));
+  return [usageWindow(rateLimit.primary_window, rateLimit), usageWindow(rateLimit.secondary_window, rateLimit)].filter(
+    (window): window is UsageWindow => Boolean(window),
+  );
 }
 
 async function load(): Promise<ProviderUsage> {

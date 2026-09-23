@@ -1,8 +1,47 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "unicorn", "oxc"],
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "promise", "node"],
+  "jsPlugins": ["eslint-plugin-solid"],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn",
+    "perf": "warn"
+  },
+  "options": {
+    "typeAware": true
+  },
+  "settings": {
+    "solid": {
+      "moduleSources": ["solid-js", "@opentui/solid"]
+    }
+  },
   "ignorePatterns": ["node_modules/**"],
   "rules": {
-    "no-unused-vars": ["warn", { "ignoreRestSiblings": true, "argsIgnorePattern": "^_" }]
-  }
+    "no-unused-vars": ["warn", { "ignoreRestSiblings": true, "argsIgnorePattern": "^_" }],
+    "no-underscore-dangle": ["warn", { "allow": ["_op", "_treeSitterClient"] }],
+    "typescript/consistent-return": "off",
+    "typescript/no-floating-promises": "error",
+    "typescript/no-misused-promises": "error",
+    "solid/reactivity": "warn",
+    "solid/no-destructure": "error",
+    "solid/components-return-once": "warn",
+    "solid/prefer-for": "warn",
+    "solid/jsx-no-duplicate-props": "error",
+    "complexity": ["warn", { "max": 15, "variant": "modified" }],
+    "max-depth": ["warn", 4],
+    "max-nested-callbacks": ["warn", 4],
+    "max-params": ["warn", 4],
+    "max-lines-per-function": ["warn", { "max": 80, "skipBlankLines": true, "skipComments": true }],
+    "max-lines": ["warn", { "max": 400, "skipBlankLines": true, "skipComments": true }]
+  },
+  "overrides": [
+    {
+      "files": ["**/*.ts"],
+      "rules": {
+        "solid/reactivity": "off",
+        "solid/components-return-once": "off",
+        "solid/prefer-for": "off"
+      }
+    }
+  ]
 }

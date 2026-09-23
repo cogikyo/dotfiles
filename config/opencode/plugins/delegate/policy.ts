@@ -16,7 +16,8 @@ export async function enforceProviderPolicy(providerID: string, config: Delegate
   if (cache.issue) {
     return [`delegate provider policy: ${providerID} usage cache is ${cache.issue}; proceeding un-gated`];
   }
-  if (!cache.windows.length) return [`delegate provider policy: ${providerID} usage cache has no windows; proceeding un-gated`];
+  if (!cache.windows.length)
+    return [`delegate provider policy: ${providerID} usage cache has no windows; proceeding un-gated`];
 
   const notes: string[] = [];
   if (cache.windows.some((window) => window.postReset)) {
@@ -36,13 +37,18 @@ export async function enforceProviderPolicy(providerID: string, config: Delegate
   });
   if (waits.length !== capped.length) {
     const missing = capped.find((window) => resetAtMs(window.resetAt) === undefined);
-    throw new Error(`delegate provider ${providerID} is capped on ${missing?.label ?? "unknown window"} with no reset time`);
+    throw new Error(
+      `delegate provider ${providerID} is capped on ${missing?.label ?? "unknown window"} with no reset time`,
+    );
   }
 
   const latest = waits.reduce((current, item) => (item.ms > current.ms ? item : current));
   const waitMs = latest.ms - Date.now();
   if (waitMs <= 0) {
-    return [...notes, `delegate provider policy: ${providerID} capped window reset time has passed; proceeding with stale usage data`];
+    return [
+      ...notes,
+      `delegate provider policy: ${providerID} capped window reset time has passed; proceeding with stale usage data`,
+    ];
   }
 
   await sleepAbortably(waitMs, signal);

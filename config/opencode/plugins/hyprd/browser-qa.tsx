@@ -20,11 +20,7 @@ type WorkspaceEvent = {
   data?: unknown;
 };
 
-function BrowserQASection(props: {
-  api: TuiPluginApi;
-  entries: BrowserQA[];
-  onToggle: (slot: number) => void;
-}) {
+function BrowserQASection(props: { api: TuiPluginApi; entries: BrowserQA[]; onToggle: (slot: number) => void }) {
   return (
     <Show when={props.entries.length > 0}>
       <SidebarSection
@@ -34,11 +30,7 @@ function BrowserQASection(props: {
       >
         <For each={props.entries}>
           {(entry) => (
-            <box
-              flexDirection="row"
-              gap={0}
-              onMouseDown={() => props.onToggle(entry.slot)}
-            >
+            <box flexDirection="row" gap={0} onMouseDown={() => props.onToggle(entry.slot)}>
               <text fg={props.api.theme.current.primary} wrapMode="none">
                 {`#${entry.slot} `}
               </text>
@@ -53,11 +45,7 @@ function BrowserQASection(props: {
   );
 }
 
-function toggleWorkspace(
-  api: TuiPluginApi,
-  slot: number,
-  active: () => boolean,
-) {
+function toggleWorkspace(api: TuiPluginApi, slot: number, active: () => boolean) {
   let child: ReturnType<typeof spawn>;
   try {
     child = spawn("hyprd", ["browser-qa", String(slot)], {
@@ -218,9 +206,7 @@ const tui: TuiPlugin = async (api) => {
     order: 150,
     slots: {
       sidebar_content() {
-        return (
-          <BrowserQASection api={api} entries={entries()} onToggle={toggle} />
-        );
+        return <BrowserQASection api={api} entries={entries()} onToggle={toggle} />;
       },
     },
   });

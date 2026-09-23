@@ -44,11 +44,7 @@ type TerminalRect = {
   height: number;
 };
 
-function MediaContext(props: {
-  api: TuiPluginApi;
-  sessionID: string;
-  onOpenImage: (preview: PreviewState) => void;
-}) {
+function MediaContext(props: { api: TuiPluginApi; sessionID: string; onOpenImage: (preview: PreviewState) => void }) {
   const [items, setItems] = createSignal<MediaItem[]>(mediaItems(props.api, props.sessionID));
   let refreshTimer: ReturnType<typeof setTimeout> | undefined;
   let renamePollTimer: ReturnType<typeof setTimeout> | undefined;
@@ -94,11 +90,26 @@ function MediaContext(props: {
   };
 
   const disposers = [
-    props.api.event.on("message.updated", (event) => event.properties.sessionID === props.sessionID && scheduleRefresh()),
-    props.api.event.on("message.removed", (event) => event.properties.sessionID === props.sessionID && scheduleRefresh()),
-    props.api.event.on("message.part.updated", (event) => event.properties.sessionID === props.sessionID && scheduleRefresh()),
-    props.api.event.on("message.part.removed", (event) => event.properties.sessionID === props.sessionID && scheduleRefresh()),
-    props.api.event.on("session.compacted", (event) => event.properties.sessionID === props.sessionID && scheduleRefresh()),
+    props.api.event.on(
+      "message.updated",
+      (event) => event.properties.sessionID === props.sessionID && scheduleRefresh(),
+    ),
+    props.api.event.on(
+      "message.removed",
+      (event) => event.properties.sessionID === props.sessionID && scheduleRefresh(),
+    ),
+    props.api.event.on(
+      "message.part.updated",
+      (event) => event.properties.sessionID === props.sessionID && scheduleRefresh(),
+    ),
+    props.api.event.on(
+      "message.part.removed",
+      (event) => event.properties.sessionID === props.sessionID && scheduleRefresh(),
+    ),
+    props.api.event.on(
+      "session.compacted",
+      (event) => event.properties.sessionID === props.sessionID && scheduleRefresh(),
+    ),
   ];
 
   createEffect(() => {
@@ -240,9 +251,7 @@ function KittyImageLayer(props: { api: TuiPluginApi; preview: PreviewState }) {
 
   onMount(scheduleDraw);
 
-  return (
-    <box width="100%" height="100%" onSizeChange={scheduleDraw} />
-  );
+  return <box width="100%" height="100%" onSizeChange={scheduleDraw} />;
 }
 
 function unnamedImageSignature(items: MediaItem[]) {
@@ -307,7 +316,8 @@ function discoverCurrentSessionMedia(api: TuiPluginApi, sessionID: string, messa
 
 function previewStillExists(api: TuiPluginApi, current: PreviewState) {
   return mediaItems(api, current.sessionID).some(
-    (item) => item.entry.kind === "image" && item.entry.handle === current.item.entry.handle && isExistingFile(item.entry.path),
+    (item) =>
+      item.entry.kind === "image" && item.entry.handle === current.item.entry.handle && isExistingFile(item.entry.path),
   );
 }
 

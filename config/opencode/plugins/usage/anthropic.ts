@@ -56,10 +56,7 @@ function resetAt(window: AnthropicWindow) {
   return typeof window.resets_at === "string" ? window.resets_at : undefined;
 }
 
-function usageWindow(
-  label: string,
-  window?: AnthropicWindow | null,
-): UsageWindow | undefined {
+function usageWindow(label: string, window?: AnthropicWindow | null): UsageWindow | undefined {
   if (!window) return undefined;
   const usedPercent = normalizePercent(window.utilization);
   if (usedPercent === undefined) return undefined;
@@ -98,9 +95,7 @@ function scopedWindow(limit: AnthropicLimit): UsageWindow | undefined {
 
 function scopedWindows(limits?: AnthropicLimit[] | null) {
   if (!limits) return [];
-  return limits
-    .map(scopedWindow)
-    .filter((window): window is UsageWindow => Boolean(window));
+  return limits.map(scopedWindow).filter((window): window is UsageWindow => Boolean(window));
 }
 
 function isExpired(expiresAt: string | number | undefined) {
@@ -150,9 +145,7 @@ async function tryRecoverAuth(): Promise<string | undefined> {
 
 async function readTokenFromClaude(): Promise<string | undefined> {
   const credentials = await readClaudeCredentials();
-  return credentials.find(
-    (candidate) => candidate.accessToken && !isExpired(candidate.expiresAt),
-  )?.accessToken;
+  return credentials.find((candidate) => candidate.accessToken && !isExpired(candidate.expiresAt))?.accessToken;
 }
 
 async function fetchUsage(token: string): Promise<ProviderUsage> {

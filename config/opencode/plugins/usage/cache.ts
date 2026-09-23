@@ -15,13 +15,7 @@ const LOCK_STALE_MS = 30_000;
 const MAX_CACHE_WINDOWS = 12;
 const MAX_FUTURE_SKEW_MS = 5_000;
 
-export type ProviderCacheIssue =
-  | "missing"
-  | "unreadable"
-  | "malformed"
-  | "error"
-  | "stale"
-  | "unknown";
+export type ProviderCacheIssue = "missing" | "unreadable" | "malformed" | "error" | "stale" | "unknown";
 
 export type CachedUsageWindow = UsageWindow & {
   postReset: boolean;
@@ -36,9 +30,7 @@ export type ProviderCacheView = {
 
 export async function readProviderCache(providerID: string) {
   try {
-    return JSON.parse(
-      await fs.readFile(usageCachePath(providerID), "utf8"),
-    ) as CachedProviderUsage;
+    return JSON.parse(await fs.readFile(usageCachePath(providerID), "utf8")) as CachedProviderUsage;
   } catch {
     return {};
   }
@@ -50,11 +42,7 @@ export async function inspectProviderCache(
   now = Date.now(),
 ): Promise<ProviderCacheView> {
   try {
-    return decodeProviderCache(
-      await fs.readFile(usageCachePath(providerID), "utf8"),
-      staleAfterMS,
-      now,
-    );
+    return decodeProviderCache(await fs.readFile(usageCachePath(providerID), "utf8"), staleAfterMS, now);
   } catch (error) {
     return {
       windows: [],
@@ -63,11 +51,7 @@ export async function inspectProviderCache(
   }
 }
 
-export function decodeProviderCache(
-  raw: string,
-  staleAfterMS: number,
-  now = Date.now(),
-): ProviderCacheView {
+export function decodeProviderCache(raw: string, staleAfterMS: number, now = Date.now()): ProviderCacheView {
   try {
     const root = object(JSON.parse(raw));
     if (!root) return unknownCache("malformed");
@@ -76,10 +60,7 @@ export function decodeProviderCache(
     if (root.fetchedAt !== undefined && fetchedAt === undefined) {
       return unknownCache("malformed");
     }
-    if (
-      fetchedAt !== undefined &&
-      (fetchedAt < 0 || fetchedAt > now + MAX_FUTURE_SKEW_MS)
-    ) {
+    if (fetchedAt !== undefined && (fetchedAt < 0 || fetchedAt > now + MAX_FUTURE_SKEW_MS)) {
       return unknownCache("malformed");
     }
 
@@ -123,19 +104,12 @@ export function cacheAgeMS(fetchedAt: number | undefined, now = Date.now()) {
   return Math.max(0, now - fetchedAt);
 }
 
-export function isCacheStale(
-  fetchedAt: number | undefined,
-  staleAfterMS: number,
-  now = Date.now(),
-) {
+export function isCacheStale(fetchedAt: number | undefined, staleAfterMS: number, now = Date.now()) {
   const age = cacheAgeMS(fetchedAt, now);
   return age !== undefined && age > staleAfterMS;
 }
 
-export async function writeProviderCache(
-  providerID: string,
-  cache: CachedProviderUsage,
-) {
+export async function writeProviderCache(providerID: string, cache: CachedProviderUsage) {
   const cachePath = usageCachePath(providerID);
   const tempPath = `${cachePath}.${process.pid}.tmp`;
 
@@ -144,10 +118,7 @@ export async function writeProviderCache(
   await fs.rename(tempPath, cachePath);
 }
 
-export async function withProviderLock<T>(
-  providerID: string,
-  run: () => Promise<T>,
-) {
+export async function withProviderLock<T>(providerID: string, run: () => Promise<T>) {
   const release = await acquireLock(providerID);
   if (!release) return undefined;
 
@@ -177,10 +148,7 @@ async function createLock(lockPath: string) {
   let handle: fs.FileHandle | undefined;
   try {
     handle = await fs.open(lockPath, "wx");
-    await handle.writeFile(
-      JSON.stringify({ pid: process.pid, createdAt: Date.now() }),
-      "utf8",
-    );
+    await handle.writeFile(JSON.stringify({ pid: process.pid, createdAt: Date.now() }), "utf8");
     await handle.close();
 
     let released = false;
@@ -199,20 +167,13 @@ async function isStaleLock(lockPath: string) {
   try {
     const raw = await fs.readFile(lockPath, "utf8");
     const parsed = JSON.parse(raw) as { createdAt?: unknown };
-    return (
-      typeof parsed.createdAt === "number" &&
-      Date.now() - parsed.createdAt > LOCK_STALE_MS
-    );
+    return typeof parsed.createdAt === "number" && Date.now() - parsed.createdAt > LOCK_STALE_MS;
   } catch {
     return false;
   }
 }
 
-function parseCachedWindow(
-  value: unknown,
-  fetchedAt: number | undefined,
-  now: number,
-): CachedUsageWindow | undefined {
+function parseCachedWindow(value: unknown, fetchedAt: number | undefined, now: number): CachedUsageWindow | undefined {
   const root = object(value);
   if (!root) return undefined;
   if (typeof root.label !== "string" || !/^[A-Za-z0-9_-]{1,8}$/.test(root.label)) {
@@ -220,10 +181,7 @@ function parseCachedWindow(
   }
 
   const usedPercent = optionalNumber(root.usedPercent);
-  if (
-    root.usedPercent !== undefined &&
-    (usedPercent === undefined || usedPercent < 0 || usedPercent > 100)
-  ) {
+  if (root.usedPercent !== undefined && (usedPercent === undefined || usedPercent < 0 || usedPercent > 100)) {
     return undefined;
   }
 
@@ -237,10 +195,7 @@ function parseCachedWindow(
     label: root.label,
     usedPercent,
     resetAt,
-    postReset:
-      resetMS !== undefined &&
-      resetMS <= now &&
-      (fetchedAt === undefined || fetchedAt <= resetMS),
+    postReset: resetMS !== undefined && resetMS <= now && (fetchedAt === undefined || fetchedAt <= resetMS),
   };
 }
 
@@ -249,9 +204,7 @@ function unknownCache(issue: ProviderCacheIssue): ProviderCacheView {
 }
 
 function object(value: unknown): Record<string, unknown> | undefined {
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined;
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : undefined;
 }
 
 function optionalNumber(value: unknown) {
@@ -264,9 +217,6 @@ function optionalString(value: unknown) {
 
 function isMissing(error: unknown) {
   return (
-    typeof error === "object" &&
-    error !== null &&
-    "code" in error &&
-    (error as { code?: unknown }).code === "ENOENT"
+    typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === "ENOENT"
   );
 }

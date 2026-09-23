@@ -62,11 +62,7 @@ type BillingPayload = BillingConfig & {
   subscription?: unknown;
 };
 
-function usage(
-  windows: UsageWindow[],
-  note?: string,
-  noteKind?: ProviderUsage["noteKind"],
-): ProviderUsage {
+function usage(windows: UsageWindow[], note?: string, noteKind?: ProviderUsage["noteKind"]): ProviderUsage {
   return { id, label, windows, note, noteKind };
 }
 
@@ -202,8 +198,7 @@ function windowsFromCredits(payload: BillingPayload): UsageWindow[] {
 function windowsFromUsage(payload: BillingPayload): UsageWindow[] {
   const end = monthlyReset(payload);
   const monthlyLimit = num(pick(payload, "monthlyLimit"));
-  const used =
-    num(pick(payload, "used")) ?? num(pick(payload, "totalUsed")) ?? num(pick(payload, "includedUsed"));
+  const used = num(pick(payload, "used")) ?? num(pick(payload, "totalUsed")) ?? num(pick(payload, "includedUsed"));
   const monthlyPercent = ratioPercent(used, monthlyLimit);
   if (monthlyPercent !== undefined) {
     return [{ label: "M", usedPercent: monthlyPercent, resetAt: end }];
@@ -270,9 +265,7 @@ async function fetchBillingOnce(url: string, token: string): Promise<FetchResult
   }
   if (!response.ok) {
     if (response.status === 400) {
-      const body = (await response.json().catch(() => undefined)) as
-        | { code?: unknown; error?: unknown }
-        | undefined;
+      const body = (await response.json().catch(() => undefined)) as { code?: unknown; error?: unknown } | undefined;
       if (body?.code === "The operation was cancelled" && body.error === "Timeout expired") {
         return { ok: false, kind: "timeout" };
       }

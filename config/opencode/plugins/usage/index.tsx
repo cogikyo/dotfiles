@@ -1,9 +1,5 @@
 /** @jsxImportSource @opentui/solid */
-import type {
-  TuiPlugin,
-  TuiPluginApi,
-  TuiPluginModule,
-} from "@opencode-ai/plugin/tui";
+import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui";
 import { createSignal, onCleanup } from "solid-js";
 import { sessionProviderID } from "../shared/session.ts";
 import { usageAdapters } from "./adapters.ts";
@@ -37,10 +33,7 @@ function pendingUsage(adapter: ProviderAdapter): ProviderUsage {
   };
 }
 
-function cachedUsage(
-  adapter: ProviderAdapter,
-  cache: CachedProviderUsage,
-): ProviderUsage {
+function cachedUsage(adapter: ProviderAdapter, cache: CachedProviderUsage): ProviderUsage {
   // Always stamp identity from the adapter so renamed labels and per-provider placeholders
   // take effect immediately, even while a stale cache still holds the old id/label/note.
   const { id, label, placeholders } = adapter;
@@ -58,9 +51,7 @@ function cachedUsage(
         noteKind: "error",
       };
     }
-    const note = isCacheStale(cache.fetchedAt, adapter.poll.staleAfterMS)
-      ? `stale ${formatAge(age)}`
-      : undefined;
+    const note = isCacheStale(cache.fetchedAt, adapter.poll.staleAfterMS) ? `stale ${formatAge(age)}` : undefined;
     return { ...cached, id, label, placeholders, note };
   }
 
@@ -102,18 +93,12 @@ function cleanUsage(usage: ProviderUsage): ProviderUsage {
   };
 }
 
-async function recordError(
-  adapter: ProviderAdapter,
-  previous: CachedProviderUsage,
-  error: string,
-) {
+async function recordError(adapter: ProviderAdapter, previous: CachedProviderUsage, error: string) {
   const cache = {
     fetchedAt: previous.fetchedAt,
     usage: previous.usage,
     error,
-    backoffUntil:
-      Date.now() +
-      (error === "429" ? adapter.poll.rateLimitBackoffMS : adapter.poll.errorBackoffMS),
+    backoffUntil: Date.now() + (error === "429" ? adapter.poll.rateLimitBackoffMS : adapter.poll.errorBackoffMS),
   } satisfies CachedProviderUsage;
 
   await writeProviderCache(adapter.id, cache).catch(() => undefined);
@@ -152,9 +137,7 @@ async function fetchAndCache(adapter: ProviderAdapter, force = false) {
     fetchedAt: Date.now(),
     usage: cleanUsage(usage),
     backoffUntil:
-      usage.windows.length === 0 && isInformationalNote(usage)
-        ? Date.now() + adapter.poll.warnBackoffMS
-        : undefined,
+      usage.windows.length === 0 && isInformationalNote(usage) ? Date.now() + adapter.poll.warnBackoffMS : undefined,
   } satisfies CachedProviderUsage;
   await writeProviderCache(adapter.id, cache).catch(() => undefined);
   return cachedUsage(adapter, cache);
@@ -173,24 +156,16 @@ async function loadCached(adapter: ProviderAdapter, allowNetwork: boolean) {
 }
 
 async function manualRefresh(adapter: ProviderAdapter) {
-  const result = await withProviderLock(adapter.id, () =>
-    fetchAndCache(adapter, true),
-  );
+  const result = await withProviderLock(adapter.id, () => fetchAndCache(adapter, true));
   if (result) return result;
 
   return cachedUsage(adapter, await readProviderCache(adapter.id));
 }
 
 function UsagePanel(props: { api: TuiPluginApi; sessionID: string }) {
-  const [providers, setProviders] = createSignal<ProviderUsage[]>(
-    adapters.map(pendingUsage),
-  );
-  const [activeProviderID, setActiveProviderID] = createSignal(
-    sessionProviderID(props.api, props.sessionID),
-  );
-  const [refreshingProviderIDs, setRefreshingProviderIDs] = createSignal(
-    new Set<string>(),
-  );
+  const [providers, setProviders] = createSignal<ProviderUsage[]>(adapters.map(pendingUsage));
+  const [activeProviderID, setActiveProviderID] = createSignal(sessionProviderID(props.api, props.sessionID));
+  const [refreshingProviderIDs, setRefreshingProviderIDs] = createSignal(new Set<string>());
 
   const refresh = (allowNetwork: boolean) => {
     setActiveProviderID(sessionProviderID(props.api, props.sessionID));
@@ -233,38 +208,25 @@ function UsagePanel(props: { api: TuiPluginApi; sessionID: string }) {
         noteKind: "error" as const,
       }))
       .then((next) => {
-        setProviders((current) =>
-          current.map((provider) =>
-            provider.id === adapter.id ? next : provider,
-          ),
-        );
+        setProviders((current) => current.map((provider) => (provider.id === adapter.id ? next : provider)));
       })
       .finally(() => markRefreshing(adapter.id, false));
   };
 
   refresh(true);
   const timer = setInterval(() => refresh(true), UI_REFRESH_MS);
-  const disposeMessageUpdated = props.api.event.on(
-    "message.updated",
-    (event) => {
-      if (event.properties.sessionID !== props.sessionID) return;
-      scheduleRefresh();
-    },
-  );
-  const disposeMessageRemoved = props.api.event.on(
-    "message.removed",
-    (event) => {
-      if (event.properties.sessionID !== props.sessionID) return;
-      scheduleRefresh();
-    },
-  );
-  const disposeSessionUpdated = props.api.event.on(
-    "session.updated",
-    (event) => {
-      if (event.properties.sessionID !== props.sessionID) return;
-      scheduleRefresh();
-    },
-  );
+  const disposeMessageUpdated = props.api.event.on("message.updated", (event) => {
+    if (event.properties.sessionID !== props.sessionID) return;
+    scheduleRefresh();
+  });
+  const disposeMessageRemoved = props.api.event.on("message.removed", (event) => {
+    if (event.properties.sessionID !== props.sessionID) return;
+    scheduleRefresh();
+  });
+  const disposeSessionUpdated = props.api.event.on("session.updated", (event) => {
+    if (event.properties.sessionID !== props.sessionID) return;
+    scheduleRefresh();
+  });
   onCleanup(() => clearInterval(timer));
   onCleanup(() => {
     if (eventRefreshTimer) clearTimeout(eventRefreshTimer);
@@ -286,20 +248,14 @@ function UsagePanel(props: { api: TuiPluginApi; sessionID: string }) {
 
 const tui: TuiPlugin = async (api) => {
   let didDeactivateContext = false;
-  const contextPlugin = api.plugins
-    .list()
-    .find((item) => item.id === INTERNAL_CONTEXT_PLUGIN_ID);
+  const contextPlugin = api.plugins.list().find((item) => item.id === INTERNAL_CONTEXT_PLUGIN_ID);
   if (contextPlugin?.active) {
-    didDeactivateContext = await api.plugins
-      .deactivate(INTERNAL_CONTEXT_PLUGIN_ID)
-      .catch(() => false);
+    didDeactivateContext = await api.plugins.deactivate(INTERNAL_CONTEXT_PLUGIN_ID).catch(() => false);
   }
 
   api.lifecycle.onDispose(() => {
     if (!didDeactivateContext) return;
-    return api.plugins
-      .activate(INTERNAL_CONTEXT_PLUGIN_ID)
-      .then(() => undefined);
+    return api.plugins.activate(INTERNAL_CONTEXT_PLUGIN_ID).then(() => undefined);
   });
 
   api.slots.register({

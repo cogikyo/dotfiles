@@ -37,11 +37,7 @@ function usage(windows: UsageWindow[], note?: string): ProviderUsage {
 
 function resetAt(value: unknown) {
   const ms =
-    typeof value === "number"
-      ? value
-      : typeof value === "string" && value.length > 0
-        ? Number(value)
-        : undefined;
+    typeof value === "number" ? value : typeof value === "string" && value.length > 0 ? Number(value) : undefined;
   if (ms === undefined || !Number.isFinite(ms)) return undefined;
   const date = new Date(ms);
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
@@ -56,11 +52,7 @@ function cursorPercent(value: unknown) {
   return pct;
 }
 
-function usageWindow(
-  windowLabel: string,
-  percent: unknown,
-  cycleEnd: string | undefined,
-): UsageWindow | undefined {
+function usageWindow(windowLabel: string, percent: unknown, cycleEnd: string | undefined): UsageWindow | undefined {
   const usedPercent = cursorPercent(percent);
   if (usedPercent === undefined) return undefined;
   return { label: windowLabel, usedPercent, resetAt: cycleEnd };

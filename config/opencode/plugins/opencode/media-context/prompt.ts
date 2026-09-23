@@ -61,11 +61,19 @@ const server: Plugin = async (input, options) => {
         for (const [index, entry] of injectable.entries()) {
           output.parts.push(mediaFilePartForEntry(entry, sessionID, messageID, index));
         }
-        output.parts.push(textPart(sessionID, messageID, `Resolved media handles for provider context: ${formatHandles(injectable)}.`));
+        output.parts.push(
+          textPart(sessionID, messageID, `Resolved media handles for provider context: ${formatHandles(injectable)}.`),
+        );
       }
 
       if (localOnly.length > 0) {
-        output.parts.push(textPart(sessionID, messageID, `Video handles are local-only and were not sent to the provider: ${formatHandles(localOnly)}.`));
+        output.parts.push(
+          textPart(
+            sessionID,
+            messageID,
+            `Video handles are local-only and were not sent to the provider: ${formatHandles(localOnly)}.`,
+          ),
+        );
       }
     },
     "experimental.session.compacting": async (input, output) => {
@@ -74,7 +82,10 @@ const server: Plugin = async (input, options) => {
       output.context.push(`Media references available after compaction: ${formatHandles(entries)}.`);
     },
     event: async ({ event }) => {
-      const { type, properties } = event as { type?: string; properties?: { sessionID?: string; status?: { type?: string }; info?: { id?: string } } };
+      const { type, properties } = event as {
+        type?: string;
+        properties?: { sessionID?: string; status?: { type?: string }; info?: { id?: string } };
+      };
       const sessionID = properties?.sessionID || properties?.info?.id;
       if (!sessionID) return;
 

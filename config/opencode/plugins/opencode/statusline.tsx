@@ -1,21 +1,11 @@
 /** @jsxImportSource @opentui/solid */
-import type {
-  TuiPlugin,
-  TuiPluginApi,
-  TuiPluginModule,
-  TuiPromptRef,
-} from "@opencode-ai/plugin/tui";
+import type { TuiPlugin, TuiPluginApi, TuiPluginModule, TuiPromptRef } from "@opencode-ai/plugin/tui";
 import { writeFile } from "node:fs/promises";
 import { Show, createSignal, onCleanup, type Accessor } from "solid-js";
 import { colors, pressureColor, pressureTier } from "../shared/colors.ts";
 import { gitDirtyCount, gitStatus, type GitStatus } from "../shared/git.ts";
 import { icons } from "../shared/icons.ts";
-import {
-  sessionContextUsage,
-  sessionMeta,
-  shortDir,
-  type SessionUsage,
-} from "../shared/session.ts";
+import { sessionContextUsage, sessionMeta, shortDir, type SessionUsage } from "../shared/session.ts";
 
 const id = "opencode-statusline";
 const REFRESH_MS = 2_000;
@@ -54,13 +44,11 @@ function StatusLeft(props: { api: TuiPluginApi; sessionID: string }) {
     const id = ++refreshID;
     setRevision((value) => value + 1);
     const meta = sessionMeta(props.api, props.sessionID);
-    void resolveGitStatus(props.api, props.sessionID, meta.cwd).then(
-      (status) => {
-        if (id !== refreshID) return;
-        if (status) setGit(status);
-        else setGit((current) => current ?? fallbackGitStatus(props.api));
-      },
-    );
+    void resolveGitStatus(props.api, props.sessionID, meta.cwd).then((status) => {
+      if (id !== refreshID) return;
+      if (status) setGit(status);
+      else setGit((current) => current ?? fallbackGitStatus(props.api));
+    });
   };
 
   refresh();
@@ -99,10 +87,7 @@ function StatusLeft(props: { api: TuiPluginApi; sessionID: string }) {
       <text fg={repoColor()} wrapMode="none">
         <b>{shortDir(meta().cwd)}</b>
       </text>
-      <GitSegment
-        status={git() ?? fallbackGitStatus(props.api)}
-        api={props.api}
-      />
+      <GitSegment status={git() ?? fallbackGitStatus(props.api)} api={props.api} />
     </box>
   );
 }
@@ -163,51 +148,15 @@ function GitStats(props: { api: TuiPluginApi; status: GitStatus }) {
   const c = colors(props.api.theme.current);
   return (
     <>
-      <GitCount
-        value={props.status.ahead}
-        icon={icons.git.ahead}
-        fg={c.green}
-      />
-      <GitCount
-        value={props.status.behind}
-        icon={icons.git.behind}
-        fg={c.brightRed}
-      />
-      <GitCount
-        value={props.status.modified}
-        icon={icons.git.modified}
-        fg={c.sky}
-      />
-      <GitCount
-        value={props.status.staged}
-        icon={icons.git.staged}
-        fg={c.yellow}
-      />
-      <GitCount
-        value={props.status.deleted}
-        icon={icons.git.deleted}
-        fg={c.red}
-      />
-      <GitCount
-        value={props.status.untracked}
-        icon={icons.git.untracked}
-        fg={c.yellow}
-      />
-      <GitCount
-        value={props.status.stashed}
-        icon={icons.git.stashed}
-        fg={c.muted}
-      />
-      <GitCount
-        value={props.status.conflicted}
-        icon={icons.git.conflict}
-        fg={c.pink}
-      />
-      <GitCount
-        value={props.status.renamed}
-        icon={icons.git.renamed}
-        fg={c.magenta}
-      />
+      <GitCount value={props.status.ahead} icon={icons.git.ahead} fg={c.green} />
+      <GitCount value={props.status.behind} icon={icons.git.behind} fg={c.brightRed} />
+      <GitCount value={props.status.modified} icon={icons.git.modified} fg={c.sky} />
+      <GitCount value={props.status.staged} icon={icons.git.staged} fg={c.yellow} />
+      <GitCount value={props.status.deleted} icon={icons.git.deleted} fg={c.red} />
+      <GitCount value={props.status.untracked} icon={icons.git.untracked} fg={c.yellow} />
+      <GitCount value={props.status.stashed} icon={icons.git.stashed} fg={c.muted} />
+      <GitCount value={props.status.conflicted} icon={icons.git.conflict} fg={c.pink} />
+      <GitCount value={props.status.renamed} icon={icons.git.renamed} fg={c.magenta} />
     </>
   );
 }
@@ -231,10 +180,7 @@ function ContextSegment(props: { api: TuiPluginApi; usage?: SessionUsage }) {
     <Show when={props.usage}>
       {(usage: Accessor<SessionUsage>) => (
         <box flexDirection="row" gap={0}>
-          <text
-            fg={pressureColor(props.api.theme.current, usage().colorPercent)}
-            wrapMode="none"
-          >
+          <text fg={pressureColor(props.api.theme.current, usage().colorPercent)} wrapMode="none">
             {icons.context}
             {contextBar(usage().percent)}
           </text>
@@ -300,11 +246,7 @@ function fallbackGitStatus(api: TuiPluginApi): GitStatus | undefined {
   };
 }
 
-async function resolveGitStatus(
-  api: TuiPluginApi,
-  sessionID: string,
-  dir: string,
-): Promise<GitStatus | undefined> {
+async function resolveGitStatus(api: TuiPluginApi, sessionID: string, dir: string): Promise<GitStatus | undefined> {
   const sessionStatus = gitStatusFromSessionDiff(api, sessionID);
   const directStatus = await gitStatus(dir);
   if (directStatus) {
@@ -340,16 +282,11 @@ async function resolveGitStatus(
   return status;
 }
 
-async function gitStatusFromOpenCode(
-  api: TuiPluginApi,
-  dir?: string,
-): Promise<GitStatus | undefined> {
+async function gitStatusFromOpenCode(api: TuiPluginApi, dir?: string): Promise<GitStatus | undefined> {
   const branch = api.state.vcs?.branch;
   if (!branch) return undefined;
 
-  const result = await api.client.file
-    .status(dir ? { directory: dir } : undefined)
-    .catch(() => undefined);
+  const result = await api.client.file.status(dir ? { directory: dir } : undefined).catch(() => undefined);
   if (!result || result.error || !Array.isArray(result.data)) return undefined;
 
   const status: GitStatus = {
@@ -376,10 +313,7 @@ async function gitStatusFromOpenCode(
   return status;
 }
 
-function gitStatusFromSessionDiff(
-  api: TuiPluginApi,
-  sessionID: string,
-): GitStatus | undefined {
+function gitStatusFromSessionDiff(api: TuiPluginApi, sessionID: string): GitStatus | undefined {
   const branch = api.state.vcs?.branch;
   if (!branch) return undefined;
 
@@ -407,10 +341,7 @@ function hasGitCounters(status?: GitStatus) {
 
 async function traceGitStatus(details: unknown) {
   if (!TRACE_GIT_STATUS) return;
-  await writeFile(
-    "/tmp/opencode-statusline-git.json",
-    `${JSON.stringify(details, null, 2)}\n`,
-  ).catch(() => undefined);
+  await writeFile("/tmp/opencode-statusline-git.json", `${JSON.stringify(details, null, 2)}\n`).catch(() => undefined);
 }
 
 const tui: TuiPlugin = async (api) => {

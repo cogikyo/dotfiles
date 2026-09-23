@@ -14,8 +14,10 @@ type PatchTarget = {
   path: string;
 };
 
-const reviewFileMutation = /(?:^|[\n;&|()])\s*(?:(?:sudo|command)\s+)*(?:\S*\/)?(?:cp|dd|ed|emacs|ex|install|ln|mkdir|mv|nano|patch|rmdir|rsync|tee|touch|trash|trash-put|truncate|unlink|vi|vim|wget)(?:\s|$)/u;
-const reviewCurlOutput = /(?:^|[\n;&|()])\s*(?:(?:sudo|command)\s+)*(?:\S*\/)?curl(?:\s+[^\n;&|()]*)?\s(?:-o|-O|--output|--output-dir|--remote-name)(?:[=\s]|$)/u;
+const reviewFileMutation =
+  /(?:^|[\n;&|()])\s*(?:(?:sudo|command)\s+)*(?:\S*\/)?(?:cp|dd|ed|emacs|ex|install|ln|mkdir|mv|nano|patch|rmdir|rsync|tee|touch|trash|trash-put|truncate|unlink|vi|vim|wget)(?:\s|$)/u;
+const reviewCurlOutput =
+  /(?:^|[\n;&|()])\s*(?:(?:sudo|command)\s+)*(?:\S*\/)?curl(?:\s+[^\n;&|()]*)?\s(?:-o|-O|--output|--output-dir|--remote-name)(?:[=\s]|$)/u;
 
 const reviewGitMutators = new Set([
   "add",
@@ -79,7 +81,9 @@ const server: Plugin = async ({ client, directory, worktree }) => {
       const patchText = string(object(output.args)?.patchText);
       if (!patchText) return;
       if (Buffer.byteLength(patchText) > maxPatchBytes) {
-        throw new Error(`apply_patch input exceeds ${formatBytes(maxPatchBytes)}; split the text patch or use the owning generator`);
+        throw new Error(
+          `apply_patch input exceeds ${formatBytes(maxPatchBytes)}; split the text patch or use the owning generator`,
+        );
       }
 
       const targets = patchTargets(patchText);
@@ -103,7 +107,13 @@ async function guardPatchTarget(cwd: string, target: PatchTarget) {
   if (!info.isFile()) return;
 
   if (info.size > maxPatchBytes) {
-    throw new Error(patchRejection(target, filePath, `is ${formatBytes(info.size)}, above the ${formatBytes(maxPatchBytes)} text-patch limit`));
+    throw new Error(
+      patchRejection(
+        target,
+        filePath,
+        `is ${formatBytes(info.size)}, above the ${formatBytes(maxPatchBytes)} text-patch limit`,
+      ),
+    );
   }
   if (await isBinary(filePath, info.size)) {
     throw new Error(patchRejection(target, filePath, "contains binary data"));
@@ -163,15 +173,18 @@ function patchTargets(patchText: string): PatchTarget[] {
 }
 
 function patchRejection(target: PatchTarget, filePath: string, reason: string) {
-  const action = target.operation === "Delete"
-    ? `move it to trash with \`trash -- ${JSON.stringify(filePath)}\``
-    : "use a purpose-built binary or generated-file tool";
+  const action =
+    target.operation === "Delete"
+      ? `move it to trash with \`trash -- ${JSON.stringify(filePath)}\``
+      : "use a purpose-built binary or generated-file tool";
   return `apply_patch refused to ${target.operation.toLowerCase()} ${filePath}: file ${reason}; ${action}`;
 }
 
 function invokesRm(command: string) {
-  return /(?:^|[\n;&|()])\s*(?:(?:sudo|command)\s+)*(?:\/usr\/bin\/)?rm(?:\s|$)/u.test(command)
-    || nestedShellCommands(shellWords(command)).some(invokesRm);
+  return (
+    /(?:^|[\n;&|()])\s*(?:(?:sudo|command)\s+)*(?:\/usr\/bin\/)?rm(?:\s|$)/u.test(command) ||
+    nestedShellCommands(shellWords(command)).some(invokesRm)
+  );
 }
 
 function reviewMutation(command: string): string | undefined {
@@ -195,16 +208,30 @@ function invokesInPlaceEdit(words: string[]) {
   return words.some((word, index) => {
     const name = executable(word);
     if (name !== "perl" && name !== "sed") return false;
-    return words.slice(index + 1).some((arg) => arg === "-i" || arg.startsWith("-i.") || arg === "-pi"
-      || arg.startsWith("-pi.") || arg === "--in-place" || arg.startsWith("--in-place="));
+    return words
+      .slice(index + 1)
+      .some(
+        (arg) =>
+          arg === "-i" ||
+          arg.startsWith("-i.") ||
+          arg === "-pi" ||
+          arg.startsWith("-pi.") ||
+          arg === "--in-place" ||
+          arg.startsWith("--in-place="),
+      );
   });
 }
 
 function isReadOnlySession(session: Session) {
   const agent = sessionAgent(session);
-  return agent === "review" || agent?.startsWith("review/") === true
-    || agent === "scout" || agent?.startsWith("scout/") === true
-    || agent === "verify/source" || agent === "verify/web";
+  return (
+    agent === "review" ||
+    agent?.startsWith("review/") === true ||
+    agent === "scout" ||
+    agent?.startsWith("scout/") === true ||
+    agent === "verify/source" ||
+    agent === "verify/web"
+  );
 }
 
 function hasOutputRedirection(command: string) {
@@ -223,7 +250,7 @@ function hasOutputRedirection(command: string) {
       if (char === quote) quote = "";
       continue;
     }
-    if (char === "'" || char === "\"") {
+    if (char === "'" || char === '"') {
       quote = char;
       continue;
     }
@@ -258,12 +285,35 @@ function gitCommand(args: string[]) {
 }
 
 function mutatesGitBranch(args: string[]) {
-  const mutating = new Set(["-c", "-C", "-d", "-D", "-f", "-m", "-M", "--copy", "--delete", "--edit-description", "--force", "--move", "--set-upstream-to", "--unset-upstream"]);
+  const mutating = new Set([
+    "-c",
+    "-C",
+    "-d",
+    "-D",
+    "-f",
+    "-m",
+    "-M",
+    "--copy",
+    "--delete",
+    "--edit-description",
+    "--force",
+    "--move",
+    "--set-upstream-to",
+    "--unset-upstream",
+  ]);
   if (args.some((arg) => mutating.has(arg))) return true;
   if (args.length === 0) return false;
 
   let listing = false;
-  const valueOptions = new Set(["--contains", "--format", "--merged", "--no-contains", "--no-merged", "--points-at", "--sort"]);
+  const valueOptions = new Set([
+    "--contains",
+    "--format",
+    "--merged",
+    "--no-contains",
+    "--no-merged",
+    "--points-at",
+    "--sort",
+  ]);
   for (let index = 0; index < args.length; index++) {
     const arg = args[index];
     if (["-a", "--all", "-l", "--list", "-r", "--remotes", "--show-current"].includes(arg)) {
@@ -282,7 +332,15 @@ function mutatesGitBranch(args: string[]) {
 }
 
 function mutatesGitConfig(args: string[]) {
-  const mutating = new Set(["--add", "--edit", "--remove-section", "--rename-section", "--replace-all", "--unset", "--unset-all"]);
+  const mutating = new Set([
+    "--add",
+    "--edit",
+    "--remove-section",
+    "--rename-section",
+    "--replace-all",
+    "--unset",
+    "--unset-all",
+  ]);
   if (args.some((arg) => mutating.has(arg))) return true;
   const reading = new Set(["--get", "--get-all", "--get-regexp", "--get-urlmatch", "-l", "--list"]);
   if (args.some((arg) => reading.has(arg))) return false;
@@ -293,7 +351,10 @@ function mutatesGitConfig(args: string[]) {
 function mutatesGitTag(args: string[]) {
   if (args.length === 0) return false;
   const listing = new Set(["-l", "--list", "--contains", "--no-contains", "--merged", "--no-merged", "--points-at"]);
-  if (args.some((arg) => listing.has(arg) || ["--column", "--format", "--sort"].some((option) => arg.startsWith(option)))) return false;
+  if (
+    args.some((arg) => listing.has(arg) || ["--column", "--format", "--sort"].some((option) => arg.startsWith(option)))
+  )
+    return false;
   return true;
 }
 
@@ -330,7 +391,7 @@ function shellWords(command: string) {
       else word += char;
       continue;
     }
-    if (char === "'" || char === "\"") {
+    if (char === "'" || char === '"') {
       quote = char;
       continue;
     }
@@ -366,7 +427,7 @@ function formatBytes(bytes: number) {
 }
 
 function object(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === "object" && value !== null ? value as Record<string, unknown> : undefined;
+  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : undefined;
 }
 
 function string(value: unknown) {

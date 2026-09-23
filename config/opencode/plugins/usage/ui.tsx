@@ -67,10 +67,7 @@ function formatReset(resetAt?: string): ResetParts {
 }
 
 function usageBar(percent: number) {
-  const filled = Math.max(
-    0,
-    Math.min(BAR_WIDTH, Math.round((percent / 100) * BAR_WIDTH)),
-  );
+  const filled = Math.max(0, Math.min(BAR_WIDTH, Math.round((percent / 100) * BAR_WIDTH)));
   return "█".repeat(filled) + "░".repeat(BAR_WIDTH - filled);
 }
 
@@ -79,9 +76,7 @@ function previousMonth(reset: Date) {
   const day = start.getUTCDate();
   start.setUTCDate(1);
   start.setUTCMonth(start.getUTCMonth() - 1);
-  const lastDay = new Date(
-    Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0),
-  ).getUTCDate();
+  const lastDay = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth() + 1, 0)).getUTCDate();
   start.setUTCDate(Math.min(day, lastDay));
   return start.getTime();
 }
@@ -109,12 +104,7 @@ function paceMarker(label: string, resetAt?: string) {
   return Math.min(BAR_WIDTH - 1, Math.floor((percent / 100) * BAR_WIDTH));
 }
 
-function paceIndicatorColor(
-  theme: TuiThemeCurrent,
-  percent: number | undefined,
-  label: string,
-  resetAt?: string,
-) {
+function paceIndicatorColor(theme: TuiThemeCurrent, percent: number | undefined, label: string, resetAt?: string) {
   const expected = pacePercent(label, resetAt);
   if (expected === undefined || percent === undefined) return theme.textMuted;
   return percent <= expected ? theme.primary : theme.error;
@@ -143,29 +133,16 @@ function WindowRow(props: {
     <box flexDirection="row" gap={0}>
       <text fg={props.theme.textMuted}>{props.label.padEnd(2, " ")}</text>
       <text fg={props.percentColor}>{`${props.percent} `}</text>
-      <Show
-        when={props.marker !== undefined}
-        fallback={<text fg={props.barColor}>{`${props.bar} `}</text>}
-      >
+      <Show when={props.marker !== undefined} fallback={<text fg={props.barColor}>{`${props.bar} `}</text>}>
         <text>
-          <span {...{ style: { fg: props.barColor } }}>
-            {props.bar.slice(0, props.marker)}
-          </span>
-          <span {...{ style: { fg: props.markerColor ?? props.theme.textMuted } }}>
-            ┃
-          </span>
-          <span {...{ style: { fg: props.barColor } }}>
-            {`${props.bar.slice((props.marker ?? 0) + 1)} `}
-          </span>
+          <span {...{ style: { fg: props.barColor } }}>{props.bar.slice(0, props.marker)}</span>
+          <span {...{ style: { fg: props.markerColor ?? props.theme.textMuted } }}>┃</span>
+          <span {...{ style: { fg: props.barColor } }}>{`${props.bar.slice((props.marker ?? 0) + 1)} `}</span>
         </text>
       </Show>
-      <text fg={props.theme.textMuted}>
-        {`${props.duration.padStart(DURATION_WIDTH, " ")} `}
-      </text>
+      <text fg={props.theme.textMuted}>{`${props.duration.padStart(DURATION_WIDTH, " ")} `}</text>
       <box flexGrow={1} />
-      <text fg={props.theme.textMuted}>
-        {props.exact.padStart(EXACT_WIDTH, " ")}
-      </text>
+      <text fg={props.theme.textMuted}>{props.exact.padStart(EXACT_WIDTH, " ")}</text>
     </box>
   );
 }
@@ -182,28 +159,19 @@ export function UsageDashboard(props: {
     <box flexDirection="column" gap={0} paddingLeft={1}>
       <For each={props.providers}>
         {(provider) => {
-          const refreshing = () =>
-            props.refreshingProviderIDs?.has(provider.id) ?? false;
+          const refreshing = () => props.refreshingProviderIDs?.has(provider.id) ?? false;
           // In-flight manual refresh: primary label, and "refreshing" only when no real note
           // so 429/error/stale text stays visible once the fetch returns (or was already there).
           const labelColor = () =>
-            refreshing() || provider.id === props.activeProviderID
-              ? theme().primary
-              : theme().text;
+            refreshing() || provider.id === props.activeProviderID ? theme().primary : theme().text;
           return (
             <box flexDirection="column" gap={0}>
-              <box
-                flexDirection="row"
-                gap={0}
-                onMouseDown={() => props.onRefresh?.(provider.id)}
-              >
+              <box flexDirection="row" gap={0} onMouseDown={() => props.onRefresh?.(provider.id)}>
                 <text fg={labelColor()} attributes={BOLD}>
                   {provider.label}
                 </text>
                 <Show when={provider.note}>
-                  <text fg={noteColor(theme(), provider)}>
-                    {` ${provider.note}`}
-                  </text>
+                  <text fg={noteColor(theme(), provider)}>{` ${provider.note}`}</text>
                 </Show>
                 <Show when={refreshing() && !provider.note}>
                   <text fg={theme().primary}>{` refreshing`}</text>
@@ -238,33 +206,12 @@ export function UsageDashboard(props: {
                       <WindowRow
                         theme={theme()}
                         label={window.label}
-                        percent={
-                          pct !== undefined
-                            ? formatPercent(pct)
-                            : DASH.padEnd(PERCENT_WIDTH, " ")
-                        }
-                        percentColor={
-                          pct !== undefined
-                            ? usageColor(theme(), pct)
-                            : theme().textMuted
-                        }
-                        bar={
-                          pct !== undefined
-                            ? usageBar(pct)
-                            : "░".repeat(BAR_WIDTH)
-                        }
-                        barColor={
-                          pct !== undefined
-                            ? usageColor(theme(), pct)
-                            : theme().textMuted
-                        }
+                        percent={pct !== undefined ? formatPercent(pct) : DASH.padEnd(PERCENT_WIDTH, " ")}
+                        percentColor={pct !== undefined ? usageColor(theme(), pct) : theme().textMuted}
+                        bar={pct !== undefined ? usageBar(pct) : "░".repeat(BAR_WIDTH)}
+                        barColor={pct !== undefined ? usageColor(theme(), pct) : theme().textMuted}
                         marker={paceMarker(window.label, window.resetAt)}
-                        markerColor={paceIndicatorColor(
-                          theme(),
-                          pct,
-                          window.label,
-                          window.resetAt,
-                        )}
+                        markerColor={paceIndicatorColor(theme(), pct, window.label, window.resetAt)}
                         duration={reset?.duration ?? ""}
                         exact={reset?.exact ?? ""}
                       />

@@ -43,9 +43,20 @@ const server: Plugin = async ({ client }) => {
           subagent_type: tool.schema.string().describe("The type of specialized agent to use for this task"),
           model: tool.schema.string().optional().describe("Optional runtime model as provider/model-id"),
           effort: tool.schema.string().optional().describe("Optional reasoning effort variant for the target model"),
-          lane: tool.schema.string().optional().describe("Named reusable child within this parent session; omit for a one-shot child"),
-          compact: tool.schema.boolean().optional().describe("Summarize an existing idle lane before sending this prompt"),
-          unattended: tool.schema.boolean().optional().describe("Defaults to true; ask becomes deny for the child and descendants. build/git requires explicit true"),
+          lane: tool.schema
+            .string()
+            .optional()
+            .describe("Named reusable child within this parent session; omit for a one-shot child"),
+          compact: tool.schema
+            .boolean()
+            .optional()
+            .describe("Summarize an existing idle lane before sending this prompt"),
+          unattended: tool.schema
+            .boolean()
+            .optional()
+            .describe(
+              "Defaults to true; ask becomes deny for the child and descendants. build/git requires explicit true",
+            ),
         },
         async execute(args, ctx) {
           const key = args.lane?.trim() ? `${ctx.sessionID}\0${args.lane.trim()}` : undefined;

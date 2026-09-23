@@ -32,10 +32,7 @@ type SQLiteDatabase = {
 };
 
 type SQLiteModule = {
-  Database: new (
-    file: string,
-    options?: { readonly?: boolean; strict?: boolean },
-  ) => SQLiteDatabase;
+  Database: new (file: string, options?: { readonly?: boolean; strict?: boolean }) => SQLiteDatabase;
 };
 
 const COOKIE_SQL = `
@@ -237,9 +234,7 @@ async function profilesFromIni(root: string) {
 
 async function scannedProfiles(root: string) {
   const entries = await fs.readdir(root, { withFileTypes: true }).catch(() => []);
-  return entries
-    .filter((entry) => entry.isDirectory())
-    .map((entry) => path.join(root, entry.name));
+  return entries.filter((entry) => entry.isDirectory()).map((entry) => path.join(root, entry.name));
 }
 
 function splitIni(line: string) {

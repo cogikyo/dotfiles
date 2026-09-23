@@ -60,9 +60,12 @@ type ChildWait = {
   interruption?: string;
 };
 
-const CONTENT_FILTER_ADVICE = "child unrecoverable; re-brief a fresh child (reword the brief first, switch provider as last resort); never resume this session";
-const INTERRUPTED_ADVICE = "completion unknown; reconcile durable state before re-running because the child may have edited files";
-const CONTEXT_ADVICE = "re-brief narrower work; the next call to this lane creates a fresh child, never resume this context-limited session";
+const CONTENT_FILTER_ADVICE =
+  "child unrecoverable; re-brief a fresh child (reword the brief first, switch provider as last resort); never resume this session";
+const INTERRUPTED_ADVICE =
+  "completion unknown; reconcile durable state before re-running because the child may have edited files";
+const CONTEXT_ADVICE =
+  "re-brief narrower work; the next call to this lane creates a fresh child, never resume this context-limited session";
 const KNOWN_EFFORTS = new Set(["default", "minimal", "low", "medium", "high", "xhigh"]);
 const COLLAB = "collab";
 const GIT = "build/git";
@@ -131,15 +134,24 @@ export async function runChildTask(input: {
     ? await laneChild(input.client, input.ctx.sessionID, input.args.lane, input.ctx.abort)
     : undefined;
   if (current && sessionAgent(current) !== input.prepared.agent.name) {
-    throw new Error(`delegate lane ${input.args.lane} is pinned to ${sessionAgent(current)}; requested ${input.prepared.agent.name}`);
+    throw new Error(
+      `delegate lane ${input.args.lane} is pinned to ${sessionAgent(current)}; requested ${input.prepared.agent.name}`,
+    );
   }
   const limited = current && (contextLimitedSessions.has(String(current.id)) || sessionContextLimit(current));
   if (input.args.compact && (!current || limited)) {
     throw new Error(`delegate cannot compact lane ${input.args.lane}: no resumable child`);
   }
-  const child = current && !limited
-    ? await readExistingChild(input.client, current, input.prepared.permission, input.prepared.execution, input.ctx.abort)
-    : await createChild(input.client, input.ctx, input.args, input.prepared);
+  const child =
+    current && !limited
+      ? await readExistingChild(
+          input.client,
+          current,
+          input.prepared.permission,
+          input.prepared.execution,
+          input.ctx.abort,
+        )
+      : await createChild(input.client, input.ctx, input.args, input.prepared);
 
   const metadata = { sessionId: child.id };
   const notes = [...input.notes];
@@ -389,11 +401,7 @@ function observeContextLimit(messages: unknown[], limits: ContextLimits) {
   return undefined;
 }
 
-function pendingContextWarning(
-  tokens: number | undefined,
-  limits: ContextLimits,
-  spent: Set<ContextWarning>,
-) {
+function pendingContextWarning(tokens: number | undefined, limits: ContextLimits, spent: Set<ContextWarning>) {
   if (tokens === undefined) return undefined;
   if (tokens >= limits.final && !spent.has("final")) return "final";
   if (tokens >= limits.medium && !spent.has("medium")) return "medium";
@@ -401,11 +409,7 @@ function pendingContextWarning(
   return undefined;
 }
 
-function observeContextWarnings(
-  messages: unknown[],
-  spent: Set<ContextWarning>,
-  observed: Set<ContextWarning>,
-) {
+function observeContextWarnings(messages: unknown[], spent: Set<ContextWarning>, observed: Set<ContextWarning>) {
   for (const message of messages) {
     const root = object(message);
     if (object(root?.info)?.role !== "user" || !Array.isArray(root?.parts)) continue;
@@ -461,12 +465,13 @@ function maxContextTokens(messages: unknown[]) {
     const tokens = object(info.tokens);
     if (!tokens) continue;
     const total = finite(tokens.total);
-    const count = total && total > 0
-      ? total
-      : (finite(tokens.input) ?? 0)
-        + (finite(tokens.output) ?? 0)
-        + (finite(object(tokens.cache)?.read) ?? 0)
-        + (finite(object(tokens.cache)?.write) ?? 0);
+    const count =
+      total && total > 0
+        ? total
+        : (finite(tokens.input) ?? 0) +
+          (finite(tokens.output) ?? 0) +
+          (finite(object(tokens.cache)?.read) ?? 0) +
+          (finite(object(tokens.cache)?.write) ?? 0);
     if (count <= 0) continue;
     result = Math.max(result ?? 0, count);
   }
@@ -475,10 +480,13 @@ function maxContextTokens(messages: unknown[]) {
 
 function isAutoCompactionMessage(message: unknown) {
   const parts = object(message)?.parts;
-  return Array.isArray(parts) && parts.some((value) => {
-    const part = object(value);
-    return part?.type === "compaction" && part.auto === true;
-  });
+  return (
+    Array.isArray(parts) &&
+    parts.some((value) => {
+      const part = object(value);
+      return part?.type === "compaction" && part.auto === true;
+    })
+  );
 }
 
 function finalAssistant(message: Record<string, unknown> | undefined) {
@@ -514,12 +522,7 @@ function contextWarningPrompt(level: ContextWarning, tokens: number | undefined,
   ].join("\n");
 }
 
-async function sealContextLimited(
-  client: Client,
-  sessionID: string,
-  limit: ContextLimit,
-  signal: AbortSignal,
-) {
+async function sealContextLimited(client: Client, sessionID: string, limit: ContextLimit, signal: AbortSignal) {
   const session = await unwrap<Record<string, unknown>>(
     client.session.get({ path: { id: sessionID }, signal } as never),
     `read context-limited child session ${sessionID}`,
@@ -651,10 +654,7 @@ function abortableDelay(milliseconds: number, signal: AbortSignal) {
   });
 }
 
-async function updateToolMetadata(
-  ctx: ToolContext,
-  input: { title?: string; metadata?: Record<string, unknown> },
-) {
+async function updateToolMetadata(ctx: ToolContext, input: { title?: string; metadata?: Record<string, unknown> }) {
   const result = (ctx.metadata as (input: { title?: string; metadata?: Record<string, unknown> }) => unknown)(input);
   if (isPromiseLike(result)) {
     await result;
@@ -792,8 +792,14 @@ async function readAgent(client: Client, name: string): Promise<AgentInfo> {
   const agents = await unwrap<unknown[]>(client.app.agents({} as never), "list agents");
   const agent = agents.map(object).find((item) => item?.name === name);
   if (!agent) {
-    const names = agents.map(object).map((item) => string(item?.name)).filter(Boolean).join(", ");
-    throw new Error(`delegate task argument subagent_type must be a known agent, got ${JSON.stringify(name)}. Known agents: ${names || "none"}`);
+    const names = agents
+      .map(object)
+      .map((item) => string(item?.name))
+      .filter(Boolean)
+      .join(", ");
+    throw new Error(
+      `delegate task argument subagent_type must be a known agent, got ${JSON.stringify(name)}. Known agents: ${names || "none"}`,
+    );
   }
 
   return {
@@ -811,7 +817,9 @@ async function validateVariant(client: Client, model: ModelRef, variant: string 
   const valid = Object.keys(variants);
   if (Object.hasOwn(variants, variant)) return;
   const suffix = valid.length ? valid.join(", ") : "none";
-  throw new Error(`Unknown effort ${JSON.stringify(variant)} for ${model.providerID}/${model.modelID}. Valid efforts: ${suffix}`);
+  throw new Error(
+    `Unknown effort ${JSON.stringify(variant)} for ${model.providerID}/${model.modelID}. Valid efforts: ${suffix}`,
+  );
 }
 
 async function readProviderModel(client: Client, model: ModelRef): Promise<Record<string, unknown>> {
@@ -819,7 +827,11 @@ async function readProviderModel(client: Client, model: ModelRef): Promise<Recor
   const providers = Array.isArray(response.providers) ? response.providers : [];
   const provider = providers.map(object).find((item) => item?.id === model.providerID);
   if (!provider) {
-    const names = providers.map(object).map((item) => string(item?.id)).filter(Boolean).join(", ");
+    const names = providers
+      .map(object)
+      .map((item) => string(item?.id))
+      .filter(Boolean)
+      .join(", ");
     throw new Error(`Unknown provider ${model.providerID}. Available providers: ${names}`);
   }
 
@@ -827,7 +839,9 @@ async function readProviderModel(client: Client, model: ModelRef): Promise<Recor
   const direct = object(models[model.modelID]);
   if (direct) return direct;
 
-  const byID = Object.values(models).map(object).find((item) => item?.id === model.modelID || object(item?.api)?.id === model.modelID);
+  const byID = Object.values(models)
+    .map(object)
+    .find((item) => item?.id === model.modelID || object(item?.api)?.id === model.modelID);
   if (byID) return byID;
 
   const names = Object.keys(models).slice(0, 20).join(", ");
@@ -843,7 +857,8 @@ async function deriveChildPermission(
   const config = await unwrap<Record<string, unknown>>(client.config.get({} as never), "read config");
   const unattended = execution.unattended === true;
   const agentConfig = object(object(config.agent)?.[agent.name]);
-  if (!agentConfig) throw new Error(`delegate agent ${agent.name} is missing from config.agent; cannot determine declared permissions`);
+  if (!agentConfig)
+    throw new Error(`delegate agent ${agent.name} is missing from config.agent; cannot determine declared permissions`);
 
   const parentRules = inheritableParentRules(normalizeRules(parent.permission), unattended);
   const inherited = parentRules.filter(
@@ -876,9 +891,11 @@ function inheritableParentRules(rules: Rule[], unattended: boolean) {
 }
 
 function isUnattendedFloor(rule: Rule) {
-  return rule.permission === UNATTENDED_FLOOR.permission
-    && rule.pattern === UNATTENDED_FLOOR.pattern
-    && rule.action === UNATTENDED_FLOOR.action;
+  return (
+    rule.permission === UNATTENDED_FLOOR.permission &&
+    rule.pattern === UNATTENDED_FLOOR.pattern &&
+    rule.action === UNATTENDED_FLOOR.action
+  );
 }
 
 // An unattended child runs with nobody at the terminal, so every reachable `ask` has to become a
@@ -897,7 +914,9 @@ async function laneChild(client: Client, parentSessionID: string, lane: string, 
     client.session.children({ path: { id: parentSessionID }, signal } as never),
     `list lanes for ${parentSessionID}`,
   );
-  return children.map(object).filter((child): child is Record<string, unknown> => !!child && sessionLane(child) === lane)
+  return children
+    .map(object)
+    .filter((child): child is Record<string, unknown> => !!child && sessionLane(child) === lane)
     .sort((left, right) => sessionCreated(right) - sessionCreated(left))[0];
 }
 
@@ -968,7 +987,9 @@ function sessionLane(session: Record<string, unknown>) {
 }
 
 async function createChild(client: Client, ctx: ToolContext, args: TaskArgs, prepared: PreparedTask) {
-  const metadata = { delegate: { unattended: prepared.execution.unattended, ...(args.lane ? { lane: args.lane } : {}) } };
+  const metadata = {
+    delegate: { unattended: prepared.execution.unattended, ...(args.lane ? { lane: args.lane } : {}) },
+  };
   const session = await unwrap<Record<string, unknown>>(
     client.session.create({
       body: {
@@ -986,7 +1007,8 @@ async function createChild(client: Client, ctx: ToolContext, args: TaskArgs, pre
   if (!sameExecution(sessionExecution(session), prepared.execution)) {
     throw new Error("delegate child session create lost or mismatched execution metadata");
   }
-  if (sessionLane(session) !== args.lane) throw new Error("delegate child session create lost or mismatched lane metadata");
+  if (sessionLane(session) !== args.lane)
+    throw new Error("delegate child session create lost or mismatched lane metadata");
   return { id };
 }
 
@@ -1009,15 +1031,24 @@ function normalizeRules(value: unknown): Rule[] {
     if (isAction(entry)) return [{ permission, pattern: "*", action: entry }];
     const patterns = object(entry);
     if (!patterns) return [];
-    return Object.entries(patterns).flatMap(([pattern, action]) => (isAction(action) ? [{ permission, pattern, action }] : []));
+    return Object.entries(patterns).flatMap(([pattern, action]) =>
+      isAction(action) ? [{ permission, pattern, action }] : [],
+    );
   });
 }
 
 function samePermissionRules(left: Rule[], right: Rule[]) {
-  return left.length === right.length && left.every((rule, index) => {
-    const candidate = right[index];
-    return rule.permission === candidate.permission && rule.pattern === candidate.pattern && rule.action === candidate.action;
-  });
+  return (
+    left.length === right.length &&
+    left.every((rule, index) => {
+      const candidate = right[index];
+      return (
+        rule.permission === candidate.permission &&
+        rule.pattern === candidate.pattern &&
+        rule.action === candidate.action
+      );
+    })
+  );
 }
 
 function parseRule(value: unknown): Rule[] {
@@ -1090,7 +1121,9 @@ function sessionContextLimit(session: Record<string, unknown>) {
 
 function primaryTools(config: Record<string, unknown>) {
   const experimental = object(config.experimental);
-  return Array.isArray(experimental?.primary_tools) ? experimental.primary_tools.filter((item): item is string => typeof item === "string") : [];
+  return Array.isArray(experimental?.primary_tools)
+    ? experimental.primary_tools.filter((item): item is string => typeof item === "string")
+    : [];
 }
 
 function deny(permission: string): Rule {
@@ -1150,7 +1183,9 @@ function contextLimitedResult(input: {
     `child_session_id: ${input.sessionID}`,
   ];
   if (input.limit.level === "compaction") {
-    lines.push("warning: automatic child compaction was observed; it may have started before the next poll, so any compacted continuation is untrusted");
+    lines.push(
+      "warning: automatic child compaction was observed; it may have started before the next poll, so any compacted continuation is untrusted",
+    );
   }
   lines.push(
     !hasWriteAccess(input.permission)
@@ -1173,16 +1208,18 @@ function contextLimitedResult(input: {
 }
 
 function recoverableText(messages: unknown[]) {
-  return messages.flatMap((message) => {
-    const root = object(message);
-    if (object(root?.info)?.role !== "assistant") return [];
-    const parts = root?.parts;
-    if (!Array.isArray(parts)) return [];
-    return parts.flatMap((value) => {
-      const part = object(value);
-      return part?.type === "text" && typeof part.text === "string" && part.text.trim() ? [part.text.trim()] : [];
-    });
-  }).join("\n\n");
+  return messages
+    .flatMap((message) => {
+      const root = object(message);
+      if (object(root?.info)?.role !== "assistant") return [];
+      const parts = root?.parts;
+      if (!Array.isArray(parts)) return [];
+      return parts.flatMap((value) => {
+        const part = object(value);
+        return part?.type === "text" && typeof part.text === "string" && part.text.trim() ? [part.text.trim()] : [];
+      });
+    })
+    .join("\n\n");
 }
 
 function hasWriteAccess(rules: Rule[]) {
@@ -1222,7 +1259,9 @@ function interruptedResult(
 
 function renderOutput(input: { sessionID: string; state: "completed" | "context_limited" | "error"; text: string }) {
   const tag = input.state === "error" ? "task_error" : "task_result";
-  return [`<task id="${input.sessionID}" state="${input.state}">`, `<${tag}>`, input.text, `</${tag}>`, "</task>"].join("\n");
+  return [`<task id="${input.sessionID}" state="${input.state}">`, `<${tag}>`, input.text, `</${tag}>`, "</task>"].join(
+    "\n",
+  );
 }
 
 function isContentFilterBlock(error: unknown) {
@@ -1231,7 +1270,10 @@ function isContentFilterBlock(error: unknown) {
   if (isContentFilterText(name)) return true;
 
   const data = object(root?.data);
-  const message = string(root?.message) ?? string(data?.message) ?? (error instanceof Error || typeof error === "string" ? String(error) : undefined);
+  const message =
+    string(root?.message) ??
+    string(data?.message) ??
+    (error instanceof Error || typeof error === "string" ? String(error) : undefined);
   return isContentFilterText(message);
 }
 
@@ -1257,7 +1299,9 @@ function isEffectLike(value: unknown) {
 async function effectRunPromise() {
   let mod: Record<string, unknown> | undefined;
   try {
-    const dynamicImport = new Function("specifier", "return import(specifier)") as (specifier: string) => Promise<unknown>;
+    const dynamicImport = new Function("specifier", "return import(specifier)") as (
+      specifier: string,
+    ) => Promise<unknown>;
     mod = object(await dynamicImport("effect"));
   } catch (error) {
     throw new Error(`delegate failed to import effect for metadata update: ${errorMessage(error)}`);

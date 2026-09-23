@@ -43,7 +43,12 @@ export function isSkillTool(tool: string) {
 }
 
 export function isCompletedSkillPart(part: SkillToolPart) {
-  return part.type === "tool" && typeof part.tool === "string" && isSkillTool(part.tool) && part.state?.status === "completed";
+  return (
+    part.type === "tool" &&
+    typeof part.tool === "string" &&
+    isSkillTool(part.tool) &&
+    part.state?.status === "completed"
+  );
 }
 
 export function isCompletedToolPart(part: SkillToolPart) {
@@ -228,5 +233,5 @@ function normalizeFilePath(value: string) {
 }
 
 function asObject(value: unknown) {
-  return typeof value === "object" && value !== null ? value as Record<string, unknown> : undefined;
+  return typeof value === "object" && value !== null ? (value as Record<string, unknown>) : undefined;
 }

@@ -82,13 +82,15 @@ export function createImageNamer(input: CreateImageNamerInput) {
       pending.delete(key);
       running.add(key);
       active++;
-      void nameImage(job, config, input.client, input.ignoredSessions).catch((error) => {
-        logNameFailure(job, "name", error);
-      }).finally(() => {
-        running.delete(key);
-        active--;
-        startNext();
-      });
+      void nameImage(job, config, input.client, input.ignoredSessions)
+        .catch((error) => {
+          logNameFailure(job, "name", error);
+        })
+        .finally(() => {
+          running.delete(key);
+          active--;
+          startNext();
+        });
     }
   };
 
@@ -137,7 +139,9 @@ export function createImageNamer(input: CreateImageNamerInput) {
 
 export function modelFromValue(value: unknown): NamingModel | undefined {
   if (typeof value === "string") return modelFromString(value);
-  const candidate = value as { providerID?: unknown; modelID?: unknown; provider?: unknown; model?: unknown } | undefined;
+  const candidate = value as
+    | { providerID?: unknown; modelID?: unknown; provider?: unknown; model?: unknown }
+    | undefined;
   if (typeof candidate?.providerID === "string" && typeof candidate.modelID === "string") {
     return cleanModel(candidate.providerID, candidate.modelID);
   }
@@ -196,7 +200,12 @@ async function nameImage(job: Job, options: ImageNameOptions, client: OpenCodeCl
   if (!entry) throw stageError("registry", new Error("registry rename failed"));
 }
 
-async function requestImageName(job: Job, options: ImageNameOptions, client: OpenCodeClient, ignoredSessions: Set<string>) {
+async function requestImageName(
+  job: Job,
+  options: ImageNameOptions,
+  client: OpenCodeClient,
+  ignoredSessions: Set<string>,
+) {
   const imageURL = await dataURL(job.path, job.mime, options.maxBytes);
   const session = await client.session.create({
     body: {
@@ -212,19 +221,21 @@ async function requestImageName(job: Job, options: ImageNameOptions, client: Ope
   let prompt: Promise<unknown> | undefined;
 
   try {
-    prompt = Promise.resolve(client.session.prompt({
-      path: { id: sessionID },
-      body: {
-        agent: NAMING_AGENT,
-        model: job.model,
-        system: SYSTEM,
-        tools: {},
-        parts: [
-          { type: "text", text: PROMPT },
-          { type: "file", mime: imageMime(job.mime, job.path), url: imageURL },
-        ],
-      },
-    }));
+    prompt = Promise.resolve(
+      client.session.prompt({
+        path: { id: sessionID },
+        body: {
+          agent: NAMING_AGENT,
+          model: job.model,
+          system: SYSTEM,
+          tools: {},
+          parts: [
+            { type: "text", text: PROMPT },
+            { type: "file", mime: imageMime(job.mime, job.path), url: imageURL },
+          ],
+        },
+      }),
+    );
 
     const response = await withTimeout(prompt, options.timeoutMs);
     return assistantText(response);
@@ -244,14 +255,18 @@ function clearIgnoredSession(ignoredSessions: Set<string>, sessionID: string, pr
   }
 
   const timeout = setTimeout(() => ignoredSessions.delete(sessionID), 5_000);
-  void prompt.finally(() => {
-    clearTimeout(timeout);
-    ignoredSessions.delete(sessionID);
-  }).catch(() => undefined);
+  void prompt
+    .finally(() => {
+      clearTimeout(timeout);
+      ignoredSessions.delete(sessionID);
+    })
+    .catch(() => undefined);
 }
 
 function sessionIDFromCreateResponse(value: unknown): string | undefined {
-  const candidate = value as { id?: unknown; session?: { id?: unknown }; data?: { id?: unknown; session?: { id?: unknown } } } | undefined;
+  const candidate = value as
+    | { id?: unknown; session?: { id?: unknown }; data?: { id?: unknown; session?: { id?: unknown } } }
+    | undefined;
   const id = candidate?.id ?? candidate?.session?.id ?? candidate?.data?.id ?? candidate?.data?.session?.id;
   return typeof id === "string" && id ? id : undefined;
 }
@@ -262,7 +277,10 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
     return await Promise.race([
       promise,
       new Promise<never>((_, reject) => {
-        timeout = setTimeout(() => reject(new Error(`OpenCode image naming timed out after ${timeoutMs}ms`)), timeoutMs);
+        timeout = setTimeout(
+          () => reject(new Error(`OpenCode image naming timed out after ${timeoutMs}ms`)),
+          timeoutMs,
+        );
       }),
     ]);
   } finally {
@@ -276,11 +294,16 @@ function modelSource(model: NamingModel) {
 
 function logNameFailure(job: Job, stage: string, error: unknown) {
   const label = error instanceof NameStageError ? error.stage : stage;
-  console.warn(`[media-context] image naming failed session=${safeID(job.sessionID)} handle=${job.handle} model=${safeModel(job.model)} stage=${label} error=${errorMessage(error)}`);
+  console.warn(
+    `[media-context] image naming failed session=${safeID(job.sessionID)} handle=${job.handle} model=${safeModel(job.model)} stage=${label} error=${errorMessage(error)}`,
+  );
 }
 
 class NameStageError extends Error {
-  constructor(readonly stage: string, cause: unknown) {
+  constructor(
+    readonly stage: string,
+    cause: unknown,
+  ) {
     super(errorMessage(cause));
   }
 }
@@ -357,7 +380,10 @@ function slugFromModelText(value: string) {
     .match(/[a-z0-9]+/g)
     ?.filter((word) => !STOP_WORDS.has(word))
     .slice(0, 3);
-  const slug = words?.join("-").slice(0, 48).replace(/^-+|-+$/g, "");
+  const slug = words
+    ?.join("-")
+    .slice(0, 48)
+    .replace(/^-+|-+$/g, "");
   return slug || undefined;
 }
 

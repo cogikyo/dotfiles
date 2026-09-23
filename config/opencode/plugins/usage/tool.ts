@@ -7,7 +7,8 @@ const id = "usage-status";
 const server: Plugin = async () => ({
   tool: {
     usage_status: tool({
-      description: "Read the local usage-sidebar cache and report per-provider remaining headroom, freshness, and reset timing. Fast cache read; stale or unknown values are never presented as current capacity.",
+      description:
+        "Read the local usage-sidebar cache and report per-provider remaining headroom, freshness, and reset timing. Fast cache read; stale or unknown values are never presented as current capacity.",
       args: {},
       async execute(_args, context) {
         await context.ask({

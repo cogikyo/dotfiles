@@ -13,26 +13,26 @@ Running sessions keep the loaded plugin set.
 
 ## Plugin map
 
-| Feature | Entrypoint | ID | Runtime |
-|---|---|---|---|
-| Claude auth | `opencode-claude-auth@2.2.0` | (package) | server |
-| Delegate task | `delegate/index.ts` | `delegate-task` | server |
-| Usage status tool | `usage/tool.ts` | `usage-status` | server |
-| Hyprland notifications | `hyprd/notify.ts` | `hyprd-notify` | server |
-| Isolated browser QA | `hyprd/browser-isolation.ts` | `hyprd-browser-isolation` | server |
-| Skill compact | `opencode/skill-compact.ts` | `opencode-skill-compact` | server |
-| Media context prompt | `opencode/media-context/prompt.ts` | `opencode-media-context-prompt` | server |
-| Input cap | `opencode/input-cap.ts` | `opencode-input-cap` | server |
-| Code blocks | `opencode/code-blocks.ts` | `opencode-code-blocks` | TUI |
-| Kitty context | `hyprd/kitty.ts` | `hyprd-kitty-context` | TUI |
-| Browser QA workspaces | `hyprd/browser-qa.tsx` | `hyprd-browser-qa` | TUI |
-| Usage sidebar | `usage/index.tsx` | `cullyn.usage-sidebar` | TUI |
-| Lanes sidebar | `delegate/sidebar.tsx` | `delegate-lanes` | TUI |
-| Modified files | `opencode/modified-files.tsx` | `opencode-modified-files` | TUI |
-| Markdown context | `opencode/markdown-context.tsx` | `opencode-markdown-context` | TUI |
-| Media context sidebar | `opencode/media-context/index.tsx` | `opencode-media-context` | TUI |
-| Statusline | `opencode/statusline.tsx` | `opencode-statusline` | TUI |
-| Pin model | `opencode/pin-model.tsx` | `opencode-pin-model` | TUI |
+| Feature                | Entrypoint                         | ID                              | Runtime |
+| ---------------------- | ---------------------------------- | ------------------------------- | ------- |
+| Claude auth            | `opencode-claude-auth@2.2.0`       | (package)                       | server  |
+| Delegate task          | `delegate/index.ts`                | `delegate-task`                 | server  |
+| Usage status tool      | `usage/tool.ts`                    | `usage-status`                  | server  |
+| Hyprland notifications | `hyprd/notify.ts`                  | `hyprd-notify`                  | server  |
+| Isolated browser QA    | `hyprd/browser-isolation.ts`       | `hyprd-browser-isolation`       | server  |
+| Skill compact          | `opencode/skill-compact.ts`        | `opencode-skill-compact`        | server  |
+| Media context prompt   | `opencode/media-context/prompt.ts` | `opencode-media-context-prompt` | server  |
+| Input cap              | `opencode/input-cap.ts`            | `opencode-input-cap`            | server  |
+| Code blocks            | `opencode/code-blocks.ts`          | `opencode-code-blocks`          | TUI     |
+| Kitty context          | `hyprd/kitty.ts`                   | `hyprd-kitty-context`           | TUI     |
+| Browser QA workspaces  | `hyprd/browser-qa.tsx`             | `hyprd-browser-qa`              | TUI     |
+| Usage sidebar          | `usage/index.tsx`                  | `cullyn.usage-sidebar`          | TUI     |
+| Lanes sidebar          | `delegate/sidebar.tsx`             | `delegate-lanes`                | TUI     |
+| Modified files         | `opencode/modified-files.tsx`      | `opencode-modified-files`       | TUI     |
+| Markdown context       | `opencode/markdown-context.tsx`    | `opencode-markdown-context`     | TUI     |
+| Media context sidebar  | `opencode/media-context/index.tsx` | `opencode-media-context`        | TUI     |
+| Statusline             | `opencode/statusline.tsx`          | `opencode-statusline`           | TUI     |
+| Pin model              | `opencode/pin-model.tsx`           | `opencode-pin-model`            | TUI     |
 
 ## Delegate
 

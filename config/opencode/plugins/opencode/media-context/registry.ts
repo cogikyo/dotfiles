@@ -1,12 +1,28 @@
 import { createHash } from "node:crypto";
-import { chmodSync, closeSync, copyFileSync, existsSync, lstatSync, mkdirSync, openSync, readFileSync, realpathSync, renameSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import {
+  chmodSync,
+  closeSync,
+  copyFileSync,
+  existsSync,
+  lstatSync,
+  mkdirSync,
+  openSync,
+  readFileSync,
+  realpathSync,
+  renameSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const HANDLE_PATTERN = /(?:^|[^A-Za-z0-9_.\\/-])(@(?:[01]\d|2[0-3])_[0-5]\d_[0-5]\d(?:_(?:[2-9]|[1-9]\d+))?)(?![A-Za-z0-9_\\/-]|\.[A-Za-z0-9])/g;
+const HANDLE_PATTERN =
+  /(?:^|[^A-Za-z0-9_.\\/-])(@(?:[01]\d|2[0-3])_[0-5]\d_[0-5]\d(?:_(?:[2-9]|[1-9]\d+))?)(?![A-Za-z0-9_\\/-]|\.[A-Za-z0-9])/g;
 const HANDLE_EXACT_PATTERN = /^@(?:[01]\d|2[0-3])_[0-5]\d_[0-5]\d(?:_(?:[2-9]|[1-9]\d+))?$/;
-const ALIAS_PATTERN = /(?:^|[^A-Za-z0-9_.\\/-])(@[a-z0-9](?:[a-z0-9-]{0,46}[a-z0-9])?)(?![A-Za-z0-9_\\/-]|\.[A-Za-z0-9])/g;
+const ALIAS_PATTERN =
+  /(?:^|[^A-Za-z0-9_.\\/-])(@[a-z0-9](?:[a-z0-9-]{0,46}[a-z0-9])?)(?![A-Za-z0-9_\\/-]|\.[A-Za-z0-9])/g;
 const ALIAS_EXACT_PATTERN = /^@[a-z0-9](?:[a-z0-9-]{0,46}[a-z0-9])?$/;
 const NAME_EXACT_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,46}[a-z0-9])?$/;
 const MAX_REGISTRY_BYTES = 256 * 1024;
@@ -185,7 +201,12 @@ export function resolveMediaReferences(sessionID: string, text: string) {
   return resolved;
 }
 
-export function mediaFilePartForEntry(entry: MediaRegistryEntry, sessionID: string, messageID: string, index: number): PersistedMediaFilePart {
+export function mediaFilePartForEntry(
+  entry: MediaRegistryEntry,
+  sessionID: string,
+  messageID: string,
+  index: number,
+): PersistedMediaFilePart {
   const reference = mediaReference(entry);
   return {
     id: filePartID(messageID, index),
@@ -212,7 +233,8 @@ export function localMediaPath(part: MediaFilePart) {
   if (path) return kind === "video" ? allowedExistingVideoFile(path) : path;
 
   const fileURLPath = filePathFromURL(part.url);
-  if (fileURLPath && isExistingFile(fileURLPath)) return kind === "video" ? allowedExistingVideoFile(fileURLPath) : fileURLPath;
+  if (fileURLPath && isExistingFile(fileURLPath))
+    return kind === "video" ? allowedExistingVideoFile(fileURLPath) : fileURLPath;
 
   return kind === "image" ? materializeDataImage(part) : undefined;
 }
@@ -247,7 +269,11 @@ export function videoPathParts(text: string): MediaFilePart[] {
       kind: "video",
       mime,
       url: pathToFileURL(candidate.path).href,
-      source: { type: "file", path: candidate.path, text: { value: candidate.path, start: candidate.start, end: candidate.end } },
+      source: {
+        type: "file",
+        path: candidate.path,
+        text: { value: candidate.path, start: candidate.start, end: candidate.end },
+      },
     });
   }
 
@@ -281,7 +307,8 @@ function videoPathCandidates(text: string): VideoPathCandidate[] {
     const root = roots.find((value) => text.startsWith(value, index));
     if (!root) continue;
 
-    const segment = text.slice(index, Math.min(text.length, index + MAX_VIDEO_CANDIDATE_LENGTH)).split(/[\n"'`]/, 1)[0] ?? "";
+    const segment =
+      text.slice(index, Math.min(text.length, index + MAX_VIDEO_CANDIDATE_LENGTH)).split(/[\n"'`]/, 1)[0] ?? "";
     for (const match of segment.matchAll(/\.(?:mp4|mov|mkv|webm|avi|m4v)(?=$|[^A-Za-z0-9])/gi)) {
       add(segment.slice(0, (match.index ?? 0) + match[0].length), index, index + (match.index ?? 0) + match[0].length);
       break;
@@ -396,14 +423,21 @@ function isFileExistsError(error: unknown) {
   return typeof error === "object" && error !== null && "code" in error && error.code === "EEXIST";
 }
 
-function sameMedia(entry: MediaRegistryEntry, messageID: string | undefined, part: MediaFilePart, hash: string, path: string) {
+function sameMedia(
+  entry: MediaRegistryEntry,
+  messageID: string | undefined,
+  part: MediaFilePart,
+  hash: string,
+  path: string,
+) {
   if (part.id && entry.partID === part.id && (!messageID || entry.messageID === messageID)) return true;
   if (entry.path === path) return true;
   return entry.hash === hash;
 }
 
 function normalizeEntry(value: Partial<MediaRegistryEntry>): MediaRegistryEntry | undefined {
-  if (typeof value.handle !== "string" || !HANDLE_EXACT_PATTERN.test(value.handle) || typeof value.path !== "string") return undefined;
+  if (typeof value.handle !== "string" || !HANDLE_EXACT_PATTERN.test(value.handle) || typeof value.path !== "string")
+    return undefined;
   return {
     handle: value.handle,
     sessionID: value.sessionID || "",
@@ -444,7 +478,12 @@ function entryReferences(entry: MediaRegistryEntry) {
 
 function normalizeStoredName(value: unknown) {
   if (typeof value !== "string") return undefined;
-  const clean = value.toLowerCase().replace(/[^a-z0-9-]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 48).replace(/-+$/g, "");
+  const clean = value
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48)
+    .replace(/-+$/g, "");
   return NAME_EXACT_PATTERN.test(clean) ? clean : undefined;
 }
 
@@ -487,7 +526,10 @@ function isDefined<T>(value: T | undefined): value is T {
 }
 
 function filePartID(messageID: string, index: number) {
-  const cleanMessageID = messageID.replace(/[^a-zA-Z0-9_-]+/g, "_").replace(/^_+|_+$/g, "").slice(0, 64);
+  const cleanMessageID = messageID
+    .replace(/[^a-zA-Z0-9_-]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 64);
   const suffix = sha256(`${messageID}:${index}:${Date.now()}`).slice(0, 12);
   return `prt_${cleanMessageID || "media_ref"}_${index}_${suffix}`;
 }

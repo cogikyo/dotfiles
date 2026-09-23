@@ -48,10 +48,7 @@ export function claudeCredentialsPaths() {
 
   const xdg = process.env.XDG_CONFIG_HOME?.trim();
   const configDir = xdg ? path.resolve(xdg) : path.join(os.homedir(), ".config");
-  return [
-    path.join(configDir, "claude", ".credentials.json"),
-    path.join(os.homedir(), ".claude", ".credentials.json"),
-  ];
+  return [path.join(configDir, "claude", ".credentials.json"), path.join(os.homedir(), ".claude", ".credentials.json")];
 }
 
 export type ClaudeCredentials = {

@@ -1,7 +1,12 @@
 import type { Config, Plugin, PluginModule } from "@opencode-ai/plugin";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { COMPACTION_LIMIT, COMPACTION_RESERVED, compactionInputCap, contextCompactionLimit } from "../shared/session.ts";
+import {
+  COMPACTION_LIMIT,
+  COMPACTION_RESERVED,
+  compactionInputCap,
+  contextCompactionLimit,
+} from "../shared/session.ts";
 
 const id = "opencode-input-cap";
 
@@ -102,7 +107,9 @@ async function readCatalog(): Promise<Catalog> {
 }
 
 function object(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === "object" && value !== null && !Array.isArray(value) ? value as Record<string, unknown> : undefined;
+  return typeof value === "object" && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : undefined;
 }
 
 function number(value: unknown) {

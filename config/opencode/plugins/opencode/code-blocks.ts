@@ -192,7 +192,11 @@ const tui: TuiPlugin = async (api) => {
     return renderable;
   };
 
-  proto.applyCodeBlockRenderable = function patchedApplyCodeBlockRenderable(renderable: unknown, token: unknown, marginBottom = 0) {
+  proto.applyCodeBlockRenderable = function patchedApplyCodeBlockRenderable(
+    renderable: unknown,
+    token: unknown,
+    marginBottom = 0,
+  ) {
     originalApplyCodeBlockRenderable.call(this, renderable, token, Math.max(Number(marginBottom ?? 0), 1));
     styleCodeBlock(renderable);
   };

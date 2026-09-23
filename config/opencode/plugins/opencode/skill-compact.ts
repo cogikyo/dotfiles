@@ -109,7 +109,9 @@ function currentAgentFromMessages(messages: ReadonlyArray<{ info?: object }>) {
   return undefined;
 }
 
-function sessionIDFromMessages(messages: ReadonlyArray<{ info?: { sessionID?: string }; parts?: Array<{ sessionID?: string }> }>) {
+function sessionIDFromMessages(
+  messages: ReadonlyArray<{ info?: { sessionID?: string }; parts?: Array<{ sessionID?: string }> }>,
+) {
   for (const message of messages) {
     if (typeof message.info?.sessionID === "string" && message.info.sessionID) return message.info.sessionID;
     for (const part of message.parts ?? []) {
@@ -121,7 +123,8 @@ function sessionIDFromMessages(messages: ReadonlyArray<{ info?: { sessionID?: st
 
 async function unwrap<T>(promise: Promise<unknown>, label: string): Promise<T> {
   const response = await promise;
-  const envelope = typeof response === "object" && response !== null ? response as Record<string, unknown> : undefined;
+  const envelope =
+    typeof response === "object" && response !== null ? (response as Record<string, unknown>) : undefined;
   if (envelope && "error" in envelope && envelope.error !== undefined) throw new Error(`${label} failed`);
   if (envelope && "data" in envelope) return envelope.data as T;
   return response as T;

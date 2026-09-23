@@ -1,7 +1,4 @@
-import {
-  inspectProviderCache,
-  type ProviderCacheView,
-} from "./cache.ts";
+import { inspectProviderCache, type ProviderCacheView } from "./cache.ts";
 import { usageProviderList } from "./providers.ts";
 
 export async function renderUsageStatus(now = Date.now()) {
@@ -14,36 +11,21 @@ export async function renderUsageStatus(now = Date.now()) {
 
   return [
     "Cached provider headroom (read-only; stale/error/unknown values are not current):",
-    ...providers.map(({ provider, view }) =>
-      renderProviderStatus(provider.label, view, now),
-    ),
+    ...providers.map(({ provider, view }) => renderProviderStatus(provider.label, view, now)),
   ].join("\n");
 }
 
-export function renderProviderStatus(
-  label: string,
-  view: ProviderCacheView,
-  now = Date.now(),
-) {
-  const fetched = view.fetchedAt
-    ? new Date(view.fetchedAt).toISOString()
-    : "?";
+export function renderProviderStatus(label: string, view: ProviderCacheView, now = Date.now()) {
+  const fetched = view.fetchedAt ? new Date(view.fetchedAt).toISOString() : "?";
   const windows = view.windows.length
     ? view.windows.map((window) => renderWindow(view, window, now)).join("; ")
     : "windows=?";
   return `${label} [${providerState(view)}] fetched=${fetched} age=${formatAge(view.ageMS)} | ${windows}`;
 }
 
-function renderWindow(
-  view: ProviderCacheView,
-  window: ProviderCacheView["windows"][number],
-  now: number,
-) {
+function renderWindow(view: ProviderCacheView, window: ProviderCacheView["windows"][number], now: number) {
   const current = !view.issue && !window.postReset;
-  const remaining =
-    current && window.usedPercent !== undefined
-      ? `${Math.round(100 - window.usedPercent)}%`
-      : "?";
+  const remaining = current && window.usedPercent !== undefined ? `${Math.round(100 - window.usedPercent)}%` : "?";
   const reset = window.resetAt ?? "?";
   const proximity = window.resetAt ? formatProximity(Date.parse(window.resetAt) - now) : "?";
   return `${window.label} remaining=${remaining} reset=${reset} (${proximity})`;
