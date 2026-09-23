@@ -9,31 +9,29 @@ const DESCRIPTION = [
   "Use model as provider/model-id to choose a runtime model for this task call.",
   "Use effort for the target model's reasoning variant; invalid efforts fail explicitly.",
   "If model is omitted, the child uses the agent's pinned model when one exists, else the current assistant message's model and effort.",
-  "authority is read-only or write; unattended is a boolean.",
-  "Both are required when the caller or target is orchestrator, or the target is build/git; other leaves retain existing defaults.",
-  "build/git requires authority write and unattended true, and only an attended primary Collab may launch or resume it.",
+  "Optional lane names a reusable child within this parent session; without a lane, each call creates a one-shot child.",
+  "A lane pins its agent, but model and effort can change between calls; context-limited lanes roll over to a fresh child.",
+  "compact: true requires an existing idle lane and summarizes it before sending the prompt.",
+  "unattended defaults to true; it converts ask to deny for the child and descendants, and children cannot use question.",
+  "build/git requires explicit unattended true and an attended primary Collab parent.",
   "Collab presents the named Git plan before invoking build/git through normal task ask permissions, including remembered approvals.",
-  "read-only blocks writes throughout the subtree; write does not parse skills or restrict planning artifacts.",
-  "unattended converts ask to deny for that child and every descendant; children never get the question tool.",
   "Never launch collab.",
-  "Orchestrator may launch leaves except build/git, never another orchestrator or collab; return Git plans to Collab.",
-  "Do not escalate authority or attended status through descendant profiles or resume.",
-  "Resume sparingly with task_id only for the same unfinished child; never resume a context-limited child.",
-  "If an interrupted call hides its result, use task_status to recover the child ID before restarting work.",
+  "Do not make attended children under an unattended parent.",
+  "If an interrupted call hides its result, use task_status to reconcile its durable state before calling that lane again.",
   "If the usage cache shows the provider is exhausted, waits for the reset with no maximum wait.",
   "Delegating to a provider missing from delegate.json errors explicitly.",
 ].join(" ");
 
 const STATUS_DESCRIPTION = [
-  "List direct subagent sessions created by task for the current session, newest first, with task IDs and live statuses.",
-  "Use immediately after an interrupted task call before launching a replacement; match the title, agent, and execution contract and reconcile durable write state.",
-  "Resume only a matching idle child that is not context-limited.",
+  "List direct task children with lane names, agents, live statuses, and context-limit markers.",
+  "Use after an interrupted call to reconcile durable write state before calling the lane again.",
 ].join(" ");
 
 const id = "delegate-task";
 
 const server: Plugin = async ({ client }) => {
   const config = await loadDelegateConfig();
+  const activeLanes = new Set<string>();
 
   return {
     tool: {
@@ -45,21 +43,24 @@ const server: Plugin = async ({ client }) => {
           subagent_type: tool.schema.string().describe("The type of specialized agent to use for this task"),
           model: tool.schema.string().optional().describe("Optional runtime model as provider/model-id"),
           effort: tool.schema.string().optional().describe("Optional reasoning effort variant for the target model"),
-          authority: tool.schema.enum(["read-only", "write"]).optional().describe("Required when caller or target is orchestrator, or target is build/git (write only). read-only blocks writes throughout the subtree; write permits the child profile including planning artifacts"),
-          unattended: tool.schema.boolean().optional().describe("Required when caller or target is orchestrator, or target is build/git (true only). true converts ask to deny for this child and all descendants"),
-          task_id: tool.schema.string().optional().describe("Existing direct idle, non-context-limited child session ID to resume sparingly"),
+          lane: tool.schema.string().optional().describe("Named reusable child within this parent session; omit for a one-shot child"),
+          compact: tool.schema.boolean().optional().describe("Summarize an existing idle lane before sending this prompt"),
+          unattended: tool.schema.boolean().optional().describe("Defaults to true; ask becomes deny for the child and descendants. build/git requires explicit true"),
         },
         async execute(args, ctx) {
-          const prepared = await prepareTask(client, ctx, args);
-          const notes = await enforceProviderPolicy(prepared.model.providerID, config, ctx.abort);
-
-          return (await runChildTask({
-            client,
-            ctx,
-            args: prepared.args,
-            prepared,
-            notes,
-          })) as never;
+          const key = args.lane?.trim() ? `${ctx.sessionID}\0${args.lane.trim()}` : undefined;
+          if (key && activeLanes.has(key)) {
+            // TODO: Queue busy lanes when OpenCode 2 background tasks are available.
+            throw new Error(`delegate lane ${args.lane} is busy; wait until it is idle`);
+          }
+          if (key) activeLanes.add(key);
+          try {
+            const prepared = await prepareTask(client, ctx, args);
+            const notes = await enforceProviderPolicy(prepared.model.providerID, config, ctx.abort);
+            return (await runChildTask({ client, ctx, args: prepared.args, prepared, notes })) as never;
+          } finally {
+            if (key) activeLanes.delete(key);
+          }
         },
       }),
       task_status: tool({

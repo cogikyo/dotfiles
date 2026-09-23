@@ -7,14 +7,13 @@ export type TaskArgs = {
   subagent_type: string;
   model?: string;
   effort?: string;
-  task_id?: string;
-  authority?: "read-only" | "write";
+  lane?: string;
+  compact?: boolean;
   unattended?: boolean;
 };
 
 type Execution = {
-  authority?: "read-only" | "write";
-  unattended?: boolean;
+  unattended: boolean;
 };
 
 export type ModelRef = {
@@ -63,10 +62,9 @@ type ChildWait = {
 
 const CONTENT_FILTER_ADVICE = "child unrecoverable; re-brief a fresh child (reword the brief first, switch provider as last resort); never resume this session";
 const INTERRUPTED_ADVICE = "completion unknown; reconcile durable state before re-running because the child may have edited files";
-const CONTEXT_ADVICE = "start a fresh narrower child for the remaining concern; never resume this context-limited session";
+const CONTEXT_ADVICE = "re-brief narrower work; the next call to this lane creates a fresh child, never resume this context-limited session";
 const KNOWN_EFFORTS = new Set(["default", "minimal", "low", "medium", "high", "xhigh"]);
 const COLLAB = "collab";
-const ORCHESTRATOR = "orchestrator";
 const GIT = "build/git";
 // Prepended to every unattended child envelope, after dedupe so an agent profile that ends with its own
 // catch-all deny keeps that rule in its authoritative tail position. It only bites when no rule matches at
@@ -95,18 +93,12 @@ export async function prepareTask(client: Client, ctx: ToolContext, input: unkno
     if (ctx.agent !== COLLAB || sessionParentID(parent) || parentExecution.unattended === true) {
       throw new Error("delegate refuses build/git without an attended primary collab parent");
     }
-    if (args.authority !== "write" || args.unattended !== true) {
-      throw new Error("delegate build/git requires explicit authority write and unattended true");
+    if (args.unattended !== true) {
+      throw new Error("delegate build/git requires explicit unattended true");
     }
   }
-  if (parentAgent === ORCHESTRATOR && (parentExecution.authority === undefined || parentExecution.unattended === undefined)) {
-    throw new Error("delegate refuses orchestrator parent without stored execution contract; re-brief from collab");
-  }
-  const execution = resolveExecution(
-    parentExecution,
-    args,
-    requiresExecution(parentAgent, agent.name),
-  );
+  const execution = resolveExecution(parentExecution, args);
+  if (args.compact && !args.lane) throw new Error("delegate compact requires a lane");
 
   await askTaskPermission(ctx, { ...args, effort }, execution);
 
@@ -135,16 +127,18 @@ export async function runChildTask(input: {
   prepared: PreparedTask;
   notes: string[];
 }) {
-  const child = input.args.task_id
-    ? await readExistingChild(
-        input.client,
-        input.args.task_id,
-        input.ctx.sessionID,
-        input.prepared.agent.name,
-        input.prepared.permission,
-        input.prepared.execution,
-        input.ctx.abort,
-      )
+  const current = input.args.lane
+    ? await laneChild(input.client, input.ctx.sessionID, input.args.lane, input.ctx.abort)
+    : undefined;
+  if (current && sessionAgent(current) !== input.prepared.agent.name) {
+    throw new Error(`delegate lane ${input.args.lane} is pinned to ${sessionAgent(current)}; requested ${input.prepared.agent.name}`);
+  }
+  const limited = current && (contextLimitedSessions.has(String(current.id)) || sessionContextLimit(current));
+  if (input.args.compact && (!current || limited)) {
+    throw new Error(`delegate cannot compact lane ${input.args.lane}: no resumable child`);
+  }
+  const child = current && !limited
+    ? await readExistingChild(input.client, current, input.prepared.permission, input.prepared.execution, input.ctx.abort)
     : await createChild(input.client, input.ctx, input.args, input.prepared);
 
   const metadata = { sessionId: child.id };
@@ -162,6 +156,17 @@ export async function runChildTask(input: {
   input.ctx.abort.addEventListener("abort", abort);
   try {
     if (input.ctx.abort.aborted) throw new Error("delegate task aborted before child prompt");
+    if (input.args.compact) {
+      const summarized = await unwrap<boolean>(
+        input.client.session.summarize({
+          path: { id: child.id },
+          body: { ...input.prepared.model, auto: false },
+          signal: input.ctx.abort,
+        } as never),
+        `compact lane ${input.args.lane}`,
+      );
+      if (!summarized) throw new Error(`delegate compaction failed for lane ${input.args.lane}`);
+    }
     let completion: Awaited<ReturnType<typeof waitForChild>>;
     try {
       const initialMessages = await readChildMessages(input.client, child.id, input.ctx.abort);
@@ -215,7 +220,6 @@ export async function runChildTask(input: {
         limit: completion.limit,
         messages: completion.messages,
         permission: input.prepared.permission,
-        execution: input.prepared.execution,
       });
     }
     const response = completion.assistant;
@@ -262,20 +266,18 @@ export async function readChildTaskStatus(client: Client, parentSessionID: strin
     const id = string(child.id)!;
     const status = childStatus(object(statuses[id]));
     const limit = sessionContextLimit(child);
-    const execution = sessionExecution(child);
     lines.push(
       "",
-      `task_id: ${id}`,
+      `child_session_id: ${id}`,
+      ...(sessionLane(child) ? [`lane: ${sessionLane(child)}`] : []),
       `status: ${status}`,
       ...(limit ? [`context_limit: ${limit.limit}${limit.tokens === undefined ? "" : ` tokens=${limit.tokens}`}`] : []),
       `agent: ${sessionAgent(child) ?? "unknown"}`,
-      ...(execution.authority ? [`authority: ${execution.authority}`] : []),
-      ...(execution.unattended !== undefined ? [`unattended: ${execution.unattended}`] : []),
       `title: ${singleLine(string(child.title) ?? "untitled")}`,
       `updated: ${new Date(sessionUpdated(child)).toISOString()}`,
     );
   }
-  lines.push("", "Only matching idle children without context_limit can be resumed. Resume must reuse the same authority and unattended values. Never resume a context-limited child.");
+  lines.push("", "Only named lanes resume; context-limited lanes create a fresh child on the next call.");
   return lines.join("\n");
 }
 
@@ -316,7 +318,7 @@ async function waitForChild(
         const id = messageID(message);
         return !!id && !initialMessageIDs.has(id);
       });
-      observeContextWarnings(messages, spent, observed);
+      observeContextWarnings(turnMessages, spent, observed);
       if (status?.type === "busy" || status?.type === "retry") {
         active = true;
         clearTimeout(startupTimer);
@@ -684,13 +686,14 @@ function taskArgs(value: unknown): TaskArgs {
   };
   const model = optionalString(root, "model");
   const effort = optionalString(root, "effort");
-  const taskID = optionalString(root, "task_id");
-  const authority = optionalAuthority(root);
-  const unattended = optionalUnattended(root);
+  const lane = optionalString(root, "lane");
+  if (lane && /[\r\n]/u.test(lane)) throw new Error("delegate lane name must be one line");
+  const compact = optionalBoolean(root, "compact");
+  const unattended = optionalBoolean(root, "unattended");
   if (model !== undefined) args.model = model;
   if (effort !== undefined) args.effort = effort;
-  if (taskID !== undefined) args.task_id = taskID;
-  if (authority !== undefined) args.authority = authority;
+  if (lane !== undefined) args.lane = lane.trim();
+  if (compact !== undefined) args.compact = compact;
   if (unattended !== undefined) args.unattended = unattended;
   return args;
 }
@@ -706,7 +709,6 @@ function applyDisplayArgs(input: unknown, args: TaskArgs, effort: string | undef
   root.description = description;
   root.subagent_type = args.subagent_type;
   if (effort) root.effort = effort;
-  if (args.authority) root.authority = args.authority;
   if (args.unattended !== undefined) root.unattended = args.unattended;
 }
 
@@ -745,18 +747,10 @@ function optionalString(root: Record<string, unknown>, name: keyof TaskArgs) {
   return root[name];
 }
 
-function optionalAuthority(root: Record<string, unknown>): Execution["authority"] {
-  if (!Object.hasOwn(root, "authority") || root.authority === undefined) return undefined;
-  if (root.authority !== "read-only" && root.authority !== "write") {
-    throw new Error(`delegate task argument authority must be "read-only" or "write"`);
-  }
-  return root.authority;
-}
-
-function optionalUnattended(root: Record<string, unknown>): boolean | undefined {
-  if (!Object.hasOwn(root, "unattended") || root.unattended === undefined) return undefined;
-  if (typeof root.unattended !== "boolean") throw new Error("delegate task argument unattended must be a boolean");
-  return root.unattended;
+function optionalBoolean(root: Record<string, unknown>, name: "compact" | "unattended") {
+  if (!Object.hasOwn(root, name) || root[name] === undefined) return undefined;
+  if (typeof root[name] !== "boolean") throw new Error(`delegate task argument ${name} must be a boolean`);
+  return root[name];
 }
 
 async function askTaskPermission(ctx: ToolContext, args: TaskArgs, execution: Execution) {
@@ -770,8 +764,8 @@ async function askTaskPermission(ctx: ToolContext, args: TaskArgs, execution: Ex
       subagent_type: args.subagent_type,
       model: args.model?.trim(),
       effort: args.effort,
-      authority: execution.authority,
       unattended: execution.unattended,
+      lane: args.lane,
     },
   }) as unknown as Promise<void>);
 }
@@ -848,25 +842,25 @@ async function deriveChildPermission(
 ): Promise<Rule[]> {
   const config = await unwrap<Record<string, unknown>>(client.config.get({} as never), "read config");
   const unattended = execution.unattended === true;
+  const agentConfig = object(object(config.agent)?.[agent.name]);
+  if (!agentConfig) throw new Error(`delegate agent ${agent.name} is missing from config.agent; cannot determine declared permissions`);
 
   const parentRules = inheritableParentRules(normalizeRules(parent.permission), unattended);
   const inherited = parentRules.filter(
     (rule) => rule.permission === "external_directory" || (unattended && rule.action === "deny"),
   );
   const agentRules = normalizeRules(agent.permission);
-  const defaultRules = defaultAgentRules(agent.name, agentRules);
-  const effectiveAgentRules = [...defaultRules, ...agentRules];
+  const declaredRules = normalizeRules(agentConfig.permission);
+  const defaultRules = defaultAgentRules(agent.name, declaredRules);
   const childDenies: Rule[] = [
-    ...(hasPermissionRule(agentRules, "todowrite") ? [] : [deny("todowrite")]),
-    ...(hasPermissionRule(agentRules, "task") ? [] : [deny("task")]),
+    ...(hasPermissionRule(declaredRules, "todowrite") ? [] : [deny("todowrite")]),
+    ...(hasPermissionRule(declaredRules, "task") ? [] : [deny("task")]),
     deny("question"),
     ...primaryTools(config)
-      .filter((tool) => !hasPermissionRule(effectiveAgentRules, tool))
+      .filter((tool) => !hasPermissionRule(declaredRules, tool))
       .map(deny),
   ];
-  const readOnly = execution.authority === "read-only" ? [deny("edit"), deny("write")] : [];
-
-  const composed = [...defaultRules, ...agentRules, ...childDenies, ...readOnly, ...inherited];
+  const composed = [...defaultRules, ...agentRules, ...childDenies, ...inherited];
   if (!unattended) return dedupeRules(composed);
   return [UNATTENDED_FLOOR, ...dedupeRules(composed.map(asBlocker))];
 }
@@ -898,44 +892,38 @@ function asBlocker(rule: Rule): Rule {
   return rule.action === "ask" ? { ...rule, action: "deny" } : rule;
 }
 
+async function laneChild(client: Client, parentSessionID: string, lane: string, signal: AbortSignal) {
+  const children = await unwrap<unknown[]>(
+    client.session.children({ path: { id: parentSessionID }, signal } as never),
+    `list lanes for ${parentSessionID}`,
+  );
+  return children.map(object).filter((child): child is Record<string, unknown> => !!child && sessionLane(child) === lane)
+    .sort((left, right) => sessionCreated(right) - sessionCreated(left))[0];
+}
+
 async function readExistingChild(
   client: Client,
-  sessionID: string,
-  parentSessionID: string,
-  agentName: string,
+  session: Record<string, unknown>,
   permission: Rule[],
   execution: Execution,
   signal: AbortSignal,
 ) {
-  const session = await unwrap<Record<string, unknown>>(
-    client.session.get({ path: { id: sessionID } } as never),
-    `read child session ${sessionID}`,
-  );
   const id = string(session.id);
-  if (!id) throw new Error(`delegate child session ${sessionID} did not return an id`);
-  if (contextLimitedSessions.has(sessionID) || sessionContextLimit(session)) {
-    throw new Error(`delegate refuses context-limited child session ${sessionID}; re-brief a fresh narrower child instead`);
-  }
-  if (sessionParentID(session) !== parentSessionID) {
-    throw new Error(`delegate can resume only a direct child of the current session; re-brief a fresh child instead`);
-  }
-  if (sessionAgent(session) !== agentName) {
-    throw new Error(`delegate resumed child agent does not match ${agentName}; re-brief a fresh child instead`);
+  if (!id) throw new Error("delegate lane child did not return an id");
+  const statuses = await unwrap<Record<string, unknown>>(
+    client.session.status({ signal } as never),
+    `read child session ${id} status before resume`,
+  );
+  const status = object(statuses[id]);
+  if (status && status.type !== "idle") {
+    // TODO: Queue busy lanes when OpenCode 2 background tasks are available.
+    throw new Error(`delegate lane ${sessionLane(session)} is ${status.type}; wait until it is idle`);
   }
   if (!samePermissionRules(normalizeRules(session.permission), permission)) {
     throw new Error(`delegate resumed child permission envelope no longer matches; re-brief a fresh child instead`);
   }
   if (!sameExecution(sessionExecution(session), execution)) {
     throw new Error(`delegate resumed child execution contract no longer matches; re-brief a fresh child instead`);
-  }
-
-  const statuses = await unwrap<Record<string, unknown>>(
-    client.session.status({ signal } as never),
-    `read child session ${sessionID} status before resume`,
-  );
-  const status = object(statuses[id]);
-  if (status && status.type !== "idle") {
-    throw new Error(`delegate cannot resume busy child session ${id}; task_id resumes require an idle child`);
   }
   return { id };
 }
@@ -945,52 +933,23 @@ function validateTaskTarget(parentAgent: string, target: string) {
     throw new Error("delegate refuses collab as a child; collab is attended-primary only");
   }
   if (target === GIT && parentAgent !== COLLAB) {
-    throw new Error("delegate refuses build/git; only attended collab may launch it, orchestrator must return the Git plan");
+    throw new Error("delegate refuses build/git; only attended primary collab may launch it");
   }
-  if (target !== ORCHESTRATOR) return;
-  if (parentAgent === COLLAB) return;
-  throw new Error(`delegate refuses orchestrator from ${parentAgent || "unknown"}; only collab may launch orchestrator`);
 }
 
-function requiresExecution(parentAgent: string, target: string) {
-  return parentAgent === ORCHESTRATOR || target === ORCHESTRATOR || target === GIT;
-}
-
-function resolveExecution(parent: Execution, requested: TaskArgs, required: boolean): Execution {
-  if (required) {
-    if (requested.authority === undefined) {
-      throw new Error("delegate task argument authority is required when the caller or target is orchestrator");
-    }
-    if (requested.unattended === undefined) {
-      throw new Error("delegate task argument unattended is required when the caller or target is orchestrator");
-    }
-  }
-  if (parent.authority === "read-only" && requested.authority === "write") {
-    throw new Error("delegate refuses authority escalation from read-only to write");
-  }
+function resolveExecution(parent: Execution, requested: TaskArgs): Execution {
   if (parent.unattended === true && requested.unattended === false) {
     throw new Error("delegate refuses attended child under unattended parent");
   }
 
-  const authority = parent.authority === "read-only" ? "read-only" : (requested.authority ?? parent.authority);
-  const unattended = parent.unattended === true ? true : (requested.unattended ?? parent.unattended);
-  const execution: Execution = {};
-  if (authority !== undefined) execution.authority = authority;
-  if (unattended !== undefined) execution.unattended = unattended;
-  return execution;
+  return { unattended: parent.unattended || requested.unattended !== false };
 }
 
 function sessionExecution(session: Record<string, unknown>): Execution {
   const delegate = object(object(session.metadata)?.delegate);
-  if (!delegate) return {};
+  if (!delegate) return { unattended: false };
 
-  const execution: Execution = {};
-  if (Object.hasOwn(delegate, "authority")) {
-    if (delegate.authority !== "read-only" && delegate.authority !== "write") {
-      throw new Error("delegate session metadata.delegate.authority must be \"read-only\" or \"write\"");
-    }
-    execution.authority = delegate.authority;
-  }
+  const execution: Execution = { unattended: false };
   if (Object.hasOwn(delegate, "unattended")) {
     if (typeof delegate.unattended !== "boolean") {
       throw new Error("delegate session metadata.delegate.unattended must be a boolean");
@@ -1001,26 +960,23 @@ function sessionExecution(session: Record<string, unknown>): Execution {
 }
 
 function sameExecution(left: Execution, right: Execution) {
-  return left.authority === right.authority && left.unattended === right.unattended;
+  return left.unattended === right.unattended;
 }
 
-function executionMetadata(execution: Execution) {
-  const delegate: Record<string, unknown> = {};
-  if (execution.authority !== undefined) delegate.authority = execution.authority;
-  if (execution.unattended !== undefined) delegate.unattended = execution.unattended;
-  return Object.keys(delegate).length ? { delegate } : undefined;
+function sessionLane(session: Record<string, unknown>) {
+  return string(object(object(session.metadata)?.delegate)?.lane);
 }
 
 async function createChild(client: Client, ctx: ToolContext, args: TaskArgs, prepared: PreparedTask) {
-  const metadata = executionMetadata(prepared.execution);
+  const metadata = { delegate: { unattended: prepared.execution.unattended, ...(args.lane ? { lane: args.lane } : {}) } };
   const session = await unwrap<Record<string, unknown>>(
     client.session.create({
       body: {
         parentID: ctx.sessionID,
-        title: `${args.description} (@${prepared.agent.name} subagent)`,
+        title: `${args.lane ? `[${args.lane}] ` : ""}${args.description} (@${prepared.agent.name} subagent)`,
         agent: prepared.agent.name,
         permission: prepared.permission,
-        ...(metadata ? { metadata } : {}),
+        metadata,
       },
     } as never),
     `create child session for ${prepared.agent.name}`,
@@ -1030,6 +986,7 @@ async function createChild(client: Client, ctx: ToolContext, args: TaskArgs, pre
   if (!sameExecution(sessionExecution(session), prepared.execution)) {
     throw new Error("delegate child session create lost or mismatched execution metadata");
   }
+  if (sessionLane(session) !== args.lane) throw new Error("delegate child session create lost or mismatched lane metadata");
   return { id };
 }
 
@@ -1099,6 +1056,11 @@ function sessionAgent(session: Record<string, unknown>) {
 function sessionUpdated(session: Record<string, unknown>) {
   const updated = object(session.time)?.updated;
   return typeof updated === "number" && Number.isFinite(updated) ? updated : 0;
+}
+
+function sessionCreated(session: Record<string, unknown>) {
+  const created = object(session.time)?.created;
+  return typeof created === "number" && Number.isFinite(created) ? created : 0;
 }
 
 function childStatus(status: Record<string, unknown> | undefined) {
@@ -1180,7 +1142,6 @@ function contextLimitedResult(input: {
   limit: ContextLimit;
   messages: unknown[];
   permission: Rule[];
-  execution: Execution;
 }) {
   const text = recoverableText(input.messages);
   const lines = [
@@ -1192,7 +1153,7 @@ function contextLimitedResult(input: {
     lines.push("warning: automatic child compaction was observed; it may have started before the next poll, so any compacted continuation is untrusted");
   }
   lines.push(
-    input.execution.authority === "read-only" || !hasWriteAccess(input.permission)
+    !hasWriteAccess(input.permission)
       ? "durable_state: no writes expected from the child permission envelope"
       : "durable_state: uncertain; reconcile the tree and Git before continuing because this child had write-capable permissions",
     `advice: ${CONTEXT_ADVICE}`,
@@ -1225,7 +1186,7 @@ function recoverableText(messages: unknown[]) {
 }
 
 function hasWriteAccess(rules: Rule[]) {
-  const writePermissions = new Set(["*", "bash", "edit", "spec_title", "task", "write"]);
+  const writePermissions = new Set(["*", "bash", "edit", "task", "write"]);
   return rules.some((rule) => rule.action === "allow" && writePermissions.has(rule.permission));
 }
 

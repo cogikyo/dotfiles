@@ -20,7 +20,6 @@ Running sessions keep the loaded plugin set.
 | Usage status tool | `usage/tool.ts` | `usage-status` | server |
 | Hyprland notifications | `hyprd/notify.ts` | `hyprd-notify` | server |
 | Isolated browser QA | `hyprd/browser-isolation.ts` | `hyprd-browser-isolation` | server |
-| Spec title | `opencode/spec-title.ts` | `opencode-spec-title` | server |
 | Skill compact | `opencode/skill-compact.ts` | `opencode-skill-compact` | server |
 | Media context prompt | `opencode/media-context/prompt.ts` | `opencode-media-context-prompt` | server |
 | Input cap | `opencode/input-cap.ts` | `opencode-input-cap` | server |
@@ -28,7 +27,7 @@ Running sessions keep the loaded plugin set.
 | Kitty context | `hyprd/kitty.ts` | `hyprd-kitty-context` | TUI |
 | Browser QA workspaces | `hyprd/browser-qa.tsx` | `hyprd-browser-qa` | TUI |
 | Usage sidebar | `usage/index.tsx` | `cullyn.usage-sidebar` | TUI |
-| Child sidebar | `opencode/child-sidebar.tsx` | `opencode-child-sidebar` | TUI |
+| Lanes sidebar | `delegate/sidebar.tsx` | `delegate-lanes` | TUI |
 | Modified files | `opencode/modified-files.tsx` | `opencode-modified-files` | TUI |
 | Markdown context | `opencode/markdown-context.tsx` | `opencode-markdown-context` | TUI |
 | Media context sidebar | `opencode/media-context/index.tsx` | `opencode-media-context` | TUI |
@@ -38,45 +37,39 @@ Running sessions keep the loaded plugin set.
 ## Delegate
 
 `delegate/index.ts` replaces the built-in `task` tool.
-It spawns a child session for each call, optionally with a per-call `model` and `effort`.
+Calls without `lane` create one-shot children; a named lane resumes its direct child under the same parent session.
+Each lane pins its agent but accepts a new `model` and `effort` on later calls.
+Lane names live in child session metadata and appear in the root session's sidebar with status and context usage.
+Context-limited lanes roll over to a fresh child on the next call with the same name.
+`compact: true` requires an existing idle lane; it calls `session.summarize` with `auto: false` before sending that call's prompt.
+Automatic compaction alone marks a child context-limited; manual compaction does not seal the lane.
+Busy lanes reject new calls rather than queueing them.
+`task_status` lists direct children and their lane names to recover from interrupted calls.
 
 Normal flow:
 
 - `model` is `provider/model-id`; when omitted the child inherits the agent's pinned model or the current assistant message's model and effort.
 - `effort` maps to the target model's reasoning variants.
-- `authority` is `read-only` or `write`, and `unattended` is a boolean; both are required when the caller or target is `orchestrator`, or the target is `build/git`.
-- `task_id` resumes a direct idle child only when its agent, execution contract, and freshly derived permission envelope match and it has no context-limit marker.
-- `task_status` lists direct children with task IDs, agents, execution authority, titles, live statuses, and persisted context-limit markers.
-- Resume sparingly for the same unfinished work; never resume a context-limited child.
+- `unattended` defaults to true for children and rewrites permission asks to denies; descendants cannot become attended under an unattended parent.
+- A lane resumes only when its permission envelope and execution mode still match the current policy.
 - The provider must be listed in `config/opencode/delegate.json`.
 - Before spawning, it waits abortably if any non-post-reset window is at >=100%, until the latest capped reset passes; stale, errored, or unknown usage proceeds un-gated.
-- Attended children inherit `external_directory` rules and otherwise use their own agent profile; review leaves get read-only defaults.
+- Children inherit external-directory rules; review leaves get their own read-only defaults.
 - Content-filter-shaped errors return a normal result with `state="error"` instead of throwing.
 
 Collab is the only attended primary and cannot be a child.
-Only Collab can launch `orchestrator`; an Orchestrator can delegate leaves but cannot create another Orchestrator.
-Separate instances can own independent council reviews, broad investigations, or approved autonomous workflows.
 Scheme, Review, and Drive are skills loaded by the current owner, not agent names.
 
-`build/git` is an exception to leaf routing: only an attended primary Collab may launch or resume it, with explicit `authority: "write"` and `unattended: true`.
-The delegate checks the current caller, stored parent agent and execution contract, and primary-session ancestry before asking permission.
+Only an attended primary Collab may launch or resume `build/git`, with explicit `unattended: true`.
+The delegate checks the current caller, stored parent agent, and primary-session ancestry before asking permission.
 Collab presents the repository/worktree, branch and refs, mutations, destructive effects, checks, and stop conditions before invocation; the full brief is included in permission metadata.
 Its exact task permission is `ask`, and the request offers no reusable grant (`always: []`); existing remembered approvals can still satisfy the normal runtime gate.
 The runtime does not parse or validate the human plan's intent.
-Orchestrator may load the shared Git skills to coordinate and return that plan, but cannot launch `build/git` or mutate Git.
 The worker's named command permissions support the approved workflow without routine asks; inherited denials remain blockers, and permission patterns are guardrails rather than a shell sandbox.
 
-Execution authority is stored in `metadata.delegate.authority` and `metadata.delegate.unattended`.
-Read-only authority adds trailing file-edit and write denials to the child envelope.
-The tool guard also rejects file-write tools and recognized shell mutations for read-only sessions and review leaves.
+Execution mode is stored in `metadata.delegate.unattended`.
+The tool guard rejects file-write tools and recognized shell mutations for review, scout, source-verification, and web-verification agents.
 These command checks are guardrails, not a shell sandbox.
-A child cannot request write authority under a read-only parent or attended execution under an unattended parent.
-Direct leaf calls outside Orchestrator, except `build/git`, may omit these fields to use the existing leaf-profile behavior.
-Orchestrator calls must name both fields explicitly; they are never inferred from skills or brief text.
-
-General review uses Orchestrator with read-only authority.
-Planning artifact writes require write authority and explicit paths in the brief; the Scheme skill constrains planning behavior, not runtime permissions.
-Write authority does not grant Git mutation or override an agent's own permission denials.
 
 Context governor:
 
@@ -88,7 +81,7 @@ Context governor:
 - At 200k (final), it reports the remaining context budget before the hard stop and asks for a final report, allowing only last edits already in progress or final evidence calls.
 - Warnings do not abort, seal, change tools, or limit later resume; a normal child completion after any warning remains a trusted normal result.
 - At 250k (hard), the delegate aborts active work, seals the session, and returns `state="context_limited"` with recoverable assistant text and durable-state advice.
-- Hard-stopped and compacted sessions persist `metadata.delegate.context`, receive a tail deny, appear marked in `task_status`, and are rejected by `task_id`.
+- Hard-stopped and automatically compacted sessions persist `metadata.delegate.context`, receive a tail deny, appear marked in `task_status`, and trigger lane rollover.
 - The pinned runtime's `prompt_async` is the supported non-aborting path: it accepts an asynchronous warning user turn while the existing runner remains active.
 - A later message poll confirms that the warning was stored, but API acceptance alone cannot prove that the child consumed it.
 - The delegate never retries an accepted warning request because a delayed first request could otherwise create a duplicate prompt loop.
@@ -101,26 +94,24 @@ Context governor:
 
 Unattended envelope, applied when `unattended: true` is selected and carried to descendants:
 
-- The child envelope is composed as review defaults, the agent's whole effective ruleset, delegate and authority denies, external-directory boundaries, and inherited unattended blockers.
+- The child envelope is composed as review defaults, the agent's whole effective ruleset, delegate denies, external-directory boundaries, and inherited unattended blockers.
 - Every `ask` in that composition is rewritten to `deny` in place, so global config, parent, built-in defaults, and the selected agent's own profile are all covered by construction.
 - Rewriting keeps each rule's position, so a later, more specific `allow` still wins; `pacman -Q*` stays allowed even though `pacman *` asks.
 - Rewriting happens before dedupe, otherwise a rewritten inherited rule survives as a tail duplicate and outranks the child's own refinement of the same permission.
 - A leading `*` deny is prepended after dedupe as the floor for permissions no rule matches, since the runtime's own fallback is `ask`.
 - Inheritance skips only the synthetic leading floor; appending that floor to a child's tail would outrank every allow the child needs.
-- Unattended children inherit parent denials as blockers; attended children otherwise use their own effective profile and inherited authority.
+- Unattended children inherit parent denials as blockers; attended children otherwise use their own effective profile.
 - Children always deny `question`; an unattended child also has no permission prompts, and denied operations return as tool errors.
-- The envelope applies on Orchestrator entry and again for each leaf, with matching execution authority required on resume.
+- The envelope applies on each child creation, with matching execution mode required on lane resume.
 
 Practical failure diagnosis:
 
 - `delegate provider policy missing for <provider>` → add the provider to `delegate.json`.
 - `Unknown effort` → pick a variant that the target model exposes in config.
 - `delegate resumed child permission envelope no longer matches` → re-brief a fresh child under the current policy.
-- `delegate resumed child execution contract no longer matches` → preserve the original authority and unattended values or start a fresh task.
-- `delegate task argument authority is required` → pass both execution fields when calling or launching Orchestrator.
-- `delegate refuses authority escalation` → return the missing write decision to Collab rather than routing around the denial.
-- `delegate refuses orchestrator parent without stored execution contract` → re-brief a fresh Orchestrator from Collab.
-- `delegate refuses context-limited child session` → start a fresh narrower child; never reuse that task ID.
+- `delegate resumed child execution contract no longer matches` → preserve its unattended mode or use a new lane.
+- `delegate lane ... is busy` → wait for the current call to finish before reusing its name.
+- `delegate cannot compact lane ...` → first create an idle lane before requesting compaction.
 - `context_limit: hard|compaction` → treat the recovered findings as partial, reconcile durable state when write-capable, and start a fresh narrower child.
 - `child showed no activity within 120 seconds` → the model/provider failed to start producing output.
 - `blocked: content_filter` → reword the brief first; switch provider only as a last resort; never resume the tainted child.
@@ -199,8 +190,7 @@ When an agent session becomes idle or is deleted, the plugin closes its MCP subp
 
 `usage/index.tsx` owns the `sidebar_title` and `sidebar_content` slots; it deactivates `internal:sidebar-context` on load and restores it on dispose.
 The other sidebar sections register `sidebar_content` with distinct orders.
-`opencode/child-sidebar.tsx` hosts that content for child sessions.
-`<leader>a` flips the built-in session row with `row-reverse` so the real sidebar takes a left column instead of overlaying the chat.
+`delegate/sidebar.tsx` lists active lanes in the root session sidebar.
 
 - `opencode/code-blocks.ts` patches OpenTUI code-block rendering and registers a SQL tree-sitter parser.
 - `hyprd/browser-qa.tsx` keeps one workspace subscription per plugin instance and lists marked browser workspaces before MCP.
@@ -211,7 +201,7 @@ The other sidebar sections register `sidebar_content` with distinct orders.
   Pink is the last pressure tier before that threshold.
 - `opencode/modified-files.tsx` lists files touched in the current session.
 - `opencode/markdown-context.tsx` lists Markdown reads plus pinned `AGENTS.md` files, the current agent, skills, and slash commands. Click the close mark to stub an unpinned skill or Markdown read. Click restore on a compacted row to reload the file from disk. Click the label to open the file.
-- `opencode/skill-compact.ts` stubs loaded skill bodies when a session compacts. It also uncompacts protected `AGENTS.md` / Collab / Orchestrator reads so native prune cannot keep them stubbed.
+- `opencode/skill-compact.ts` stubs loaded skill bodies when a session compacts. It also uncompacts protected `AGENTS.md` / Collab reads so native prune cannot keep them stubbed.
 - `opencode/media-context/index.tsx` lists registered images and videos and opens images in a Kitty overlay.
 - `opencode/pin-model.tsx` pins the current model to `opencode.json` with `<leader>f` / `/pin`, and switches to that pin with `<leader>shift+t` / `/pinned`. Reasoning is stored in `~/.local/state/opencode/pin.json` plus the TUI variant map. New OpenCode windows read the pinned `model` from `opencode.json`.
 
