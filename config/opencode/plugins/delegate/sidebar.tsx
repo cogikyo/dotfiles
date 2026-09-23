@@ -12,6 +12,7 @@ import { SidebarSection } from "../shared/sidebar-section.tsx";
 const id = "delegate-lanes";
 const DISMISSED = "delegate-lanes.dismissed";
 const DISMISSED_TTL = 30 * 24 * 60 * 60 * 1000;
+const SPIN_MS = 100;
 const FAMILIES: [RegExp, string][] = [
   [/^opus/, "opus"],
   [/sol/, "sol"],
@@ -87,11 +88,31 @@ function createDismissed(api: TuiPluginApi) {
   return { dismiss, restore, has: (sessionID: string) => current()[sessionID] !== undefined };
 }
 
+function createSpinner(api: TuiPluginApi, busy: () => boolean) {
+  const [frame, setFrame] = createSignal(0);
+  let timer: ReturnType<typeof setInterval> | undefined;
+
+  function stop() {
+    clearInterval(timer);
+    timer = undefined;
+  }
+
+  function sync() {
+    const active = untrack(busy);
+    if (active && !timer) timer = setInterval(() => setFrame((value) => value + 1), SPIN_MS);
+    if (!active) stop();
+  }
+
+  api.lifecycle.onDispose(stop);
+  return { frame, sync };
+}
+
 function createLanes(api: TuiPluginApi) {
   const [sessions, setSessions] = createSignal<Record<string, Session>>({});
   const [usages, setUsages] = createSignal<Record<string, Usage>>({});
   const [statuses, setStatuses] = createSignal<Record<string, SessionStatus["type"]>>({});
   const dismissed = createDismissed(api);
+  const spinner = createSpinner(api, () => Object.values(sessions()).some((session) => running(status(session))));
   const loaded = new Set<string>();
 
   const known = (sessionID: string) => untrack(() => sessionID in sessions());
@@ -114,6 +135,7 @@ function createLanes(api: TuiPluginApi) {
     }
     const children = response.data.filter((child) => lane(child));
     setSessions((current) => ({ ...current, ...Object.fromEntries(children.map((child) => [child.id, child])) }));
+    spinner.sync();
     await Promise.all(children.map((child) => loadUsage(child.id)));
   }
 
@@ -129,6 +151,7 @@ function createLanes(api: TuiPluginApi) {
       if (!known(sessionID)) return;
       setSessions(({ [sessionID]: _, ...rest }) => rest);
       dismissed.restore([sessionID]);
+      spinner.sync();
     }),
     api.event.on("message.updated", (event) => {
       if (!known(event.properties.sessionID)) return;
@@ -141,6 +164,7 @@ function createLanes(api: TuiPluginApi) {
       if (!known(sessionID)) return;
       setStatuses((current) => ({ ...current, [sessionID]: type }));
       if (type === "busy") dismissed.restore([sessionID]);
+      spinner.sync();
     }),
   ];
   api.lifecycle.onDispose(() => disposers.forEach((dispose) => dispose()));
@@ -161,7 +185,7 @@ function createLanes(api: TuiPluginApi) {
     return statuses()[session.id] ?? api.state.session.status(session.id)?.type ?? "idle";
   }
 
-  return { load, forParent, status, dismissed, usage: (sessionID: string) => usages()[sessionID] };
+  return { load, forParent, status, frame: spinner.frame, dismissed, usage: (child: string) => usages()[child] };
 }
 
 type Lanes = ReturnType<typeof createLanes>;
@@ -174,7 +198,9 @@ function Row(props: { api: TuiPluginApi; lanes: Lanes; name: string; child: Sess
   const icon = () => {
     const current = status();
     if (current === "limited") return icons.lane.limited;
-    return running(current) ? icons.lane.busy : icons.lane.idle;
+    if (!running(current)) return icons.lane.idle;
+    const frames = icons.spinner.braille;
+    return frames[props.lanes.frame() % frames.length];
   };
   const tone = () => {
     const c = colors(theme());
@@ -192,7 +218,7 @@ function Row(props: { api: TuiPluginApi; lanes: Lanes; name: string; child: Sess
   const name = () => {
     const room = width();
     if (room === undefined) return props.name;
-    const budget = room - stringWidth(`${icon()} ${bracket()}${spent()}`);
+    const budget = room - stringWidth(`${icons.lane.idle} ${bracket()}${spent()}`);
     return stringWidth(props.name) <= budget ? props.name : `${props.name.slice(0, Math.max(0, budget - 1))}…`;
   };
   const close = { icon: icons.error, run: () => props.lanes.dismissed.dismiss([props.child.id]) };

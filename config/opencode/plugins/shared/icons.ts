@@ -40,7 +40,6 @@ export const icons = {
   spec: "󱍅",
   lane: {
     idle: "󰏦",
-    busy: "󰐌",
     limited: "󰡴",
   },
   role: {
