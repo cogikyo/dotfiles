@@ -95,9 +95,8 @@ async function queryCopiedCookies(Database: SQLiteModule["Database"], databasePa
     const copy = path.join(tmp, "cookies.sqlite");
     await fs.copyFile(databasePath, copy);
     // SQLite may keep committed cookie updates in the write-ahead log.
-    for (const suffix of ["-wal", "-shm"]) {
-      await fs.copyFile(`${databasePath}${suffix}`, `${copy}${suffix}`).catch(() => undefined);
-    }
+    await fs.copyFile(`${databasePath}-wal`, `${copy}-wal`).catch(() => undefined);
+    await fs.copyFile(`${databasePath}-shm`, `${copy}-shm`).catch(() => undefined);
     return queryCookies(Database, copy);
   } catch {
     return undefined;

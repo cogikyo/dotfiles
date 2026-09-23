@@ -330,7 +330,7 @@ async function reloadItem(api: TuiPluginApi, sessionID: string, item: MarkdownCo
   }
 
   try {
-    for (const part of parts) await persistUpdatedPart(api.client, part);
+    await Promise.all(parts.map((part) => persistUpdatedPart(api.client, part)));
   } catch (error) {
     api.ui.toast({
       variant: "warning",

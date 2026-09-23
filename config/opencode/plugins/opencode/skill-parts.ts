@@ -110,10 +110,8 @@ export async function persistCompactedPart(client: PartClient, part: SkillToolPa
 }
 
 export async function persistCompactedToolParts(client: PartClient, parts: readonly SkillToolPart[]) {
-  for (const part of parts) {
-    if (!isCompletedToolPart(part) || isCompactedPart(part)) continue;
-    await persistCompactedPart(client, part);
-  }
+  const pending = parts.filter((part) => isCompletedToolPart(part) && !isCompactedPart(part));
+  await Promise.all(pending.map((part) => persistCompactedPart(client, part)));
 }
 
 export async function persistCompactedSkillParts(client: PartClient, parts: readonly SkillToolPart[]) {
@@ -225,16 +223,18 @@ export async function persistUpdatedPart(client: PartClient, part: SkillToolPart
 
 /** PATCHes each part at OpenCode's /session/{session}/message/{message}/part/{part} endpoint. */
 export async function persistUpdatedPartsHttp(serverUrl: URL, directory: string, parts: readonly SkillToolPart[]) {
-  for (const part of parts) {
-    const url = new URL(`/session/${part.sessionID}/message/${part.messageID}/part/${part.id}`, serverUrl);
-    if (directory) url.searchParams.set("directory", directory);
-    const response = await fetch(url, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(part),
-    });
-    if (!response.ok) throw new Error(`part.update failed: ${response.status}`);
-  }
+  await Promise.all(
+    parts.map(async (part) => {
+      const url = new URL(`/session/${part.sessionID}/message/${part.messageID}/part/${part.id}`, serverUrl);
+      if (directory) url.searchParams.set("directory", directory);
+      const response = await fetch(url, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(part),
+      });
+      if (!response.ok) throw new Error(`part.update failed: ${response.status}`);
+    }),
+  );
 }
 
 function isMarkdownPath(value: string) {

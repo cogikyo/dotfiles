@@ -92,7 +92,9 @@ const server: Plugin = async ({ client, directory, worktree }) => {
       if (targets.length === 0) return;
 
       const cwd = string(session.directory) || fallbackDirectory;
-      for (const target of targets) await guardPatchTarget(cwd, target);
+      const results = await Promise.allSettled(targets.map((target) => guardPatchTarget(cwd, target)));
+      const failure = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
+      if (failure) throw failure.reason;
     },
   };
 };

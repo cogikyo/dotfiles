@@ -27,18 +27,20 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+async function acquireLock(start) {
+  try {
+    await fs.mkdir(KITTY_CONTEXT_LOCK_PATH, { mode: 0o700 });
+    return true;
+  } catch (error) {
+    if (error?.code !== "EEXIST" || Date.now() - start > LOCK_TIMEOUT_MS) return false;
+    await sleep(LOCK_RETRY_MS);
+    return acquireLock(start);
+  }
+}
+
 async function withLock(fn) {
   await ensureKittyContextDir();
-  const start = Date.now();
-  while (true) {
-    try {
-      await fs.mkdir(KITTY_CONTEXT_LOCK_PATH, { mode: 0o700 });
-      break;
-    } catch (error) {
-      if (error?.code !== "EEXIST" || Date.now() - start > LOCK_TIMEOUT_MS) return fn();
-      await sleep(LOCK_RETRY_MS);
-    }
-  }
+  if (!(await acquireLock(Date.now()))) return fn();
 
   try {
     return await fn();
@@ -58,7 +60,7 @@ async function readContexts() {
 
 async function pruneContexts(contexts) {
   const now = Date.now();
-  const sockets = new Map();
+  const live = new Map();
 
   for (const [sessionID, ctx] of Object.entries(contexts)) {
     const pid = Number(ctx?.kitty_pid) || 0;
@@ -67,13 +69,15 @@ async function pruneContexts(contexts) {
       delete contexts[sessionID];
       continue;
     }
+    live.set(sessionID, pid);
+  }
 
-    let exists = sockets.get(pid);
-    if (exists === undefined) {
-      exists = await isSocket(kittySocketPath(pid));
-      sockets.set(pid, exists);
-    }
-    if (!exists) delete contexts[sessionID];
+  const pids = new Set(live.values());
+  const sockets = new Map(
+    await Promise.all(Array.from(pids, async (pid) => [pid, await isSocket(kittySocketPath(pid))])),
+  );
+  for (const [sessionID, pid] of live) {
+    if (!sockets.get(pid)) delete contexts[sessionID];
   }
 }
 
@@ -163,23 +167,27 @@ const tui = async (api) => {
   let disposed = false;
   let syncTask = Promise.resolve();
 
+  const drainSync = async () => {
+    if (disposed || !pendingSession) {
+      syncing = false;
+      return;
+    }
+
+    const next = pendingSession;
+    pendingSession = "";
+    try {
+      await writeContext(next);
+    } catch {}
+    return drainSync();
+  };
+
   const scheduleSync = (sessionID) => {
     if (disposed) return;
     pendingSession = sessionID;
     if (syncing) return;
 
     syncing = true;
-    syncTask = (async () => {
-      while (pendingSession) {
-        if (disposed) break;
-        const next = pendingSession;
-        pendingSession = "";
-        try {
-          await writeContext(next);
-        } catch {}
-      }
-      syncing = false;
-    })();
+    syncTask = drainSync();
   };
 
   const sync = () => {

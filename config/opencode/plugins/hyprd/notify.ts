@@ -128,6 +128,7 @@ async function kittyContext(sessionID, parentFor) {
   if (!sessionID) return EMPTY_KITTY_CONTEXT;
   try {
     const contexts = await Bun.file(KITTY_CONTEXT_PATH).json();
+    const candidates = [];
 
     for (let id = sessionID, seen = new Set(); id && !seen.has(id); id = parentFor?.(id)) {
       seen.add(id);
@@ -136,9 +137,12 @@ async function kittyContext(sessionID, parentFor) {
       const kitty_window_id = Number(ctx?.kitty_window_id) || 0;
       const updated_at = Number(ctx?.updated_at) || 0;
       if (!kitty_pid || !kitty_window_id) continue;
-      if (!(await isSocket(kittySocketPath(kitty_pid)))) continue;
-      return { kitty_pid, kitty_window_id, updated_at };
+      candidates.push({ kitty_pid, kitty_window_id, updated_at });
     }
+
+    const live = await Promise.all(candidates.map((ctx) => isSocket(kittySocketPath(ctx.kitty_pid))));
+    const ctx = candidates.find((_, index) => live[index]);
+    if (ctx) return ctx;
   } catch {}
 
   return EMPTY_KITTY_CONTEXT;

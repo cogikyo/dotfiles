@@ -77,8 +77,7 @@ const CONTEXT_ADVICE =
 const KNOWN_EFFORTS = new Set(["default", "minimal", "low", "medium", "high", "xhigh"]);
 const COLLAB = "collab";
 const GIT = "build/git";
-// This catch-all denial is prepended to each unattended child permission envelope.
-const UNATTENDED_FLOOR: Rule = { permission: "*", pattern: "*", action: "deny" };
+const UNATTENDED_FLOOR: Rule = { permission: "*", pattern: "*", action: "deny" }; // This catch-all denial is prepended to each unattended child permission envelope.
 const STATUS_POLL_MS = 300;
 const STARTUP_TIMEOUT_MS = 120_000;
 const SOFT_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: SOFT PRESSURE]";
@@ -324,64 +323,66 @@ async function waitForChild(input: {
   );
   const waitSignal = AbortSignal.any([signal, startup.signal]);
 
-  try {
-    while (true) {
-      await abortableDelay(STATUS_POLL_MS, waitSignal);
-      const [statuses, messages] = await Promise.all([
-        unwrap<Record<string, unknown>>(
-          client.session.status({ signal: waitSignal }),
-          `read child session ${sessionID} status`,
-        ),
-        readChildMessages(client, sessionID, waitSignal),
-      ]);
-      const status = object(statuses[sessionID]);
-      const turnMessages = messages.filter((message) => {
-        const id = messageID(message);
-        return !!id && !initialMessageIDs.has(id);
-      });
-      observeContextWarnings(turnMessages, spent, observed);
-      if (status?.type === "busy" || status?.type === "retry") {
-        active = true;
-        clearTimeout(startupTimer);
-      }
-      if (!active && turnMessages.length) {
-        active = true;
-        clearTimeout(startupTimer);
-        continue;
-      }
-
-      const limitObservation = observeContextLimit(turnMessages, limits);
-      if (!limit && limitObservation) {
-        const running = status?.type === "busy" || status?.type === "retry";
-        limit = limitObservation;
-        contextLimitedSessions.add(sessionID);
-        if (running) abortChild();
-      }
-
-      const shouldWarn =
-        !limit &&
-        (status?.type === "busy" || status?.type === "retry") &&
-        !finalAssistant(lastAssistantMessage(turnMessages));
-      const tokens = shouldWarn ? maxContextTokens(turnMessages) : undefined;
-      const warning = shouldWarn ? pendingContextWarning(tokens, limits, spent) : undefined;
-      if (warning) {
-        spent.add(warning);
-        requested.add(warning);
-        if (warning === "final") spent.add("medium");
-        if (warning !== "soft") spent.add("soft");
-        try {
-          await sendContextWarning({ client, sessionID, prepared, level: warning, tokens, limits, signal: waitSignal });
-        } catch (error) {
-          requested.delete(warning);
-          notes.push(`context ${warning} warning was not delivered: ${errorMessage(error)}`);
-        }
-      }
-
-      if (status && status.type !== "idle" && status.type !== "busy" && status.type !== "retry") continue;
-      if (status?.type === "busy" || status?.type === "retry") continue;
-      if (!active) continue;
-      return { assistant: lastAssistantMessage(turnMessages), messages: turnMessages, limit };
+  const poll = async (): Promise<ChildWait> => {
+    await abortableDelay(STATUS_POLL_MS, waitSignal);
+    const [statuses, messages] = await Promise.all([
+      unwrap<Record<string, unknown>>(
+        client.session.status({ signal: waitSignal }),
+        `read child session ${sessionID} status`,
+      ),
+      readChildMessages(client, sessionID, waitSignal),
+    ]);
+    const status = object(statuses[sessionID]);
+    const turnMessages = messages.filter((message) => {
+      const id = messageID(message);
+      return !!id && !initialMessageIDs.has(id);
+    });
+    observeContextWarnings(turnMessages, spent, observed);
+    if (status?.type === "busy" || status?.type === "retry") {
+      active = true;
+      clearTimeout(startupTimer);
     }
+    if (!active && turnMessages.length) {
+      active = true;
+      clearTimeout(startupTimer);
+      return poll();
+    }
+
+    const limitObservation = observeContextLimit(turnMessages, limits);
+    if (!limit && limitObservation) {
+      const running = status?.type === "busy" || status?.type === "retry";
+      limit = limitObservation;
+      contextLimitedSessions.add(sessionID);
+      if (running) abortChild();
+    }
+
+    const shouldWarn =
+      !limit &&
+      (status?.type === "busy" || status?.type === "retry") &&
+      !finalAssistant(lastAssistantMessage(turnMessages));
+    const tokens = shouldWarn ? maxContextTokens(turnMessages) : undefined;
+    const warning = shouldWarn ? pendingContextWarning(tokens, limits, spent) : undefined;
+    if (warning) {
+      spent.add(warning);
+      requested.add(warning);
+      if (warning === "final") spent.add("medium");
+      if (warning !== "soft") spent.add("soft");
+      try {
+        await sendContextWarning({ client, sessionID, prepared, level: warning, tokens, limits, signal: waitSignal });
+      } catch (error) {
+        requested.delete(warning);
+        notes.push(`context ${warning} warning was not delivered: ${errorMessage(error)}`);
+      }
+    }
+
+    if (status && status.type !== "idle" && status.type !== "busy" && status.type !== "retry") return poll();
+    if (status?.type === "busy" || status?.type === "retry") return poll();
+    if (!active) return poll();
+    return { assistant: lastAssistantMessage(turnMessages), messages: turnMessages, limit };
+  };
+
+  try {
+    return await poll();
   } catch (error) {
     if (startup.signal.aborted && !signal.aborted) {
       abortChild();
@@ -1299,8 +1300,7 @@ function isEffectLike(value: unknown) {
 async function effectRunPromise() {
   let mod: Record<string, unknown> | undefined;
   try {
-    const dynamicImport = new Function("specifier", "return import(specifier)");
-    mod = object(await Reflect.apply(dynamicImport, undefined, ["effect"]));
+    mod = object(await import("effect"));
   } catch (error) {
     throw new Error(`delegate failed to import effect for metadata update: ${errorMessage(error)}`, { cause: error });
   }
