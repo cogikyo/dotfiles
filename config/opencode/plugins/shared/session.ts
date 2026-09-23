@@ -1,8 +1,8 @@
-import type { Message, Model, Provider } from "@opencode-ai/sdk/v2";
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui";
+import type { Message, Model, Provider } from "@opencode-ai/sdk/v2";
 
 /** Maximum context tokens allowed before a delegate child is stopped. */
-export const COMPACTION_LIMIT = 250_000;
+export const COMPACTION_LIMIT = 225_000;
 /** Default reserve subtracted from the model input limit when calculating the compaction threshold. */
 export const COMPACTION_RESERVED = 25_000;
 /** Context thresholds used to warn delegate children before the hard limit. */
