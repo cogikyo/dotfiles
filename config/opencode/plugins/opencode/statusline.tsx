@@ -8,6 +8,7 @@ import { icons } from "../shared/icons.ts";
 import { sessionContextUsage, sessionMeta, shortDir, type SessionUsage } from "../shared/session.ts";
 
 const id = "opencode-statusline";
+// Polling also refreshes the status when no subscribed session event fires.
 const REFRESH_MS = 2_000;
 const TRACE_GIT_STATUS = process.env.OPENCODE_STATUSLINE_TRACE_GIT === "1";
 
@@ -19,6 +20,10 @@ type SessionPromptProps = {
   onSubmit?: () => void;
   promptRef?: (ref: TuiPromptRef | undefined) => void;
 };
+
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ PROMPT DISPLAY                                                                                │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
 function SessionPrompt(props: SessionPromptProps) {
   const Prompt = props.api.ui.Prompt;
@@ -49,6 +54,7 @@ function StatusLeft(props: { api: TuiPluginApi; sessionID: string }) {
   };
 
   const refresh = () => {
+    // Ignore older git requests when a later timer or session event has started another refresh.
     const seq = ++refreshID;
     setRevision((value) => value + 1);
     void syncGit(seq);
@@ -257,6 +263,10 @@ function fallbackGitStatus(api: TuiPluginApi): GitStatus | undefined {
   };
 }
 
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ GIT STATUS SOURCES                                                                            │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
 async function resolveGitStatus(api: TuiPluginApi, sessionID: string, dir: string): Promise<GitStatus | undefined> {
   const sessionStatus = gitStatusFromSessionDiff(api, sessionID);
   const directStatus = await gitStatus(dir);
@@ -355,11 +365,15 @@ async function traceGitStatus(details: unknown) {
   await writeFile("/tmp/opencode-statusline-git.json", `${JSON.stringify(details, null, 2)}\n`).catch(() => undefined);
 }
 
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ TUI SLOT REGISTRATION                                                                         │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
 const tui: TuiPlugin = async (api) => {
   api.slots.register({
     order: 100,
     slots: {
-      // This wraps the core prompt; lifecycle props/ref must pass through unchanged or input focus/submission breaks.
+      // The core prompt needs these lifecycle props and ref for input focus and submission.
       session_prompt(
         _ctx,
         props: {
@@ -390,4 +404,7 @@ const plugin: TuiPluginModule & { id: string } = {
   tui,
 };
 
+/** Adds repository and context usage to the TUI session_prompt slot.
+ * Tracks message, part, session, and branch events and polls every two seconds.
+ */
 export default plugin;

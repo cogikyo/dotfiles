@@ -43,9 +43,9 @@ const CLAUDE_REFRESH_TIMEOUT_MS = 60_000;
 const RECOVER_COOLDOWN_MS = 5 * 60_000;
 const execFileAsync = promisify(execFile);
 
-// Single-flight: only one refresh in progress at a time.
+// Share one credential refresh across concurrent provider loads.
 let refreshing: Promise<boolean> | null = null;
-// Cooldown: suppress repeated recovery attempts within a window.
+// Avoid repeating a failed refresh on every poll.
 let lastRecoverAt = 0;
 
 function usage(windows: UsageWindow[], note?: string, noteKind?: ProviderUsage["noteKind"]): ProviderUsage {
@@ -119,14 +119,11 @@ async function triggerClaudeRefresh(): Promise<boolean> {
 }
 
 async function tryRecoverAuth(): Promise<string | undefined> {
-  // Single-flight: deduplicate concurrent calls.
   if (refreshing) return (await refreshing) ? readTokenFromClaude() : undefined;
 
-  // Cooldown: skip if we already tried recently.
   if (Date.now() - lastRecoverAt < RECOVER_COOLDOWN_MS) return undefined;
 
   const recovery = (async () => {
-    // Bail if no Claude credential file exists — nothing to refresh.
     const credentials = await readClaudeCredentials();
     if (credentials.length === 0) return false;
 
@@ -181,18 +178,18 @@ async function load(): Promise<ProviderUsage> {
   }
 
   const result = await fetchUsage(anthropic.access);
-  // Healthy path: got data or a non-401 error. No recovery needed.
+  // Only a 401 triggers credential recovery.
   if (result.note === undefined || result.note !== "401") return result;
 
-  // 401: attempt bounded recovery with Claude CLI, then retry once.
+  // Refresh once through the Claude CLI, then retry the usage request once.
   const recoveredToken = await tryRecoverAuth();
   if (!recoveredToken) return usage([], "auth recovery failed", "warn");
 
   const retried = await fetchUsage(recoveredToken);
-  // Post-recovery 401 stays hard; no further retries.
   return retried;
 }
 
+/** Usage adapter for Anthropic OAuth account limits. */
 export const anthropicUsage: ProviderAdapter = {
   id,
   label,

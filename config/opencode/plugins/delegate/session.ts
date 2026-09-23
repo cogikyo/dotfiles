@@ -1,6 +1,7 @@
 import type { PluginInput, ToolContext } from "@opencode-ai/plugin";
 import { CONTEXT_PRESSURE } from "../shared/session.ts";
 
+/** Arguments accepted by the delegate `task` tool. */
 export type TaskArgs = {
   description: string;
   prompt: string;
@@ -16,6 +17,7 @@ type Execution = {
   unattended: boolean;
 };
 
+/** OpenCode provider and model identifiers used to select a child model. */
 export type ModelRef = {
   providerID: string;
   modelID: string;
@@ -69,9 +71,7 @@ const CONTEXT_ADVICE =
 const KNOWN_EFFORTS = new Set(["default", "minimal", "low", "medium", "high", "xhigh"]);
 const COLLAB = "collab";
 const GIT = "build/git";
-// Prepended to every unattended child envelope, after dedupe so an agent profile that ends with its own
-// catch-all deny keeps that rule in its authoritative tail position. It only bites when no rule matches at
-// all, where the runtime would otherwise fall through to its `ask` default.
+// This catch-all denial is prepended to each unattended child permission envelope.
 const UNATTENDED_FLOOR: Rule = { permission: "*", pattern: "*", action: "deny" };
 const STATUS_POLL_MS = 300;
 const STARTUP_TIMEOUT_MS = 120_000;
@@ -80,6 +80,7 @@ const MEDIUM_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: MEDIUM PRESSURE]";
 const FINAL_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: FINAL WARNING]";
 const contextLimitedSessions = new Set<string>();
 
+// ├─ Child task setup ────────────────────────────────────────────────────────────────────────────┤
 export async function prepareTask(client: Client, ctx: ToolContext, input: unknown): Promise<PreparedTask> {
   const args = taskArgs(input);
   const effort = parseEffort(args);
@@ -293,6 +294,7 @@ export async function readChildTaskStatus(client: Client, parentSessionID: strin
   return lines.join("\n");
 }
 
+// ├─ Child completion and context limits ─────────────────────────────────────────────────────────┤
 async function waitForChild(
   client: Client,
   sessionID: string,
@@ -551,6 +553,7 @@ async function sealContextLimited(client: Client, sessionID: string, limit: Cont
   );
 }
 
+// ├─ Child cancellation ──────────────────────────────────────────────────────────────────────────┤
 function createChildAbort(client: Client, sessionID: string) {
   const timers = new Set<ReturnType<typeof setTimeout>>();
   let stopped = false;
@@ -571,7 +574,7 @@ function createChildAbort(client: Client, sessionID: string) {
       );
       if (aborted) stop();
     } catch {
-      // A later status-correlated attempt can still confirm and abort the runner.
+      // The scheduled status check can retry if this abort request fails.
     }
   };
 
@@ -590,7 +593,7 @@ function createChildAbort(client: Client, sessionID: string) {
       }
       if (status.type === "busy" || status.type === "retry") await attempt();
     } catch {
-      // The next scheduled status check remains an independent chance to confirm liveness.
+      // Keep the next scheduled status check after a transient status error.
     }
   };
 
@@ -666,6 +669,7 @@ async function updateToolMetadata(ctx: ToolContext, input: { title?: string; met
   await runPromise(result);
 }
 
+// ├─ Task input and model validation ─────────────────────────────────────────────────────────────┤
 function parseModel(value: string): ModelRef {
   const clean = value.trim();
   const slash = clean.indexOf("/");
@@ -848,6 +852,7 @@ async function readProviderModel(client: Client, model: ModelRef): Promise<Recor
   throw new Error(`Unknown model ${model.providerID}/${model.modelID}. Known model keys include: ${names}`);
 }
 
+// ├─ Permission inheritance ──────────────────────────────────────────────────────────────────────┤
 async function deriveChildPermission(
   client: Client,
   parent: Record<string, unknown>,
@@ -880,11 +885,7 @@ async function deriveChildPermission(
   return [UNATTENDED_FLOOR, ...dedupeRules(composed.map(asBlocker))];
 }
 
-// An unattended envelope always begins with the floor below, so index 0 of an unattended parent is this
-// plugin's own synthetic rule rather than a boundary the parent declared. A floor is positional: appending it
-// to the tail of a child envelope would outrank every allow the child needs. Only that leading rule is
-// dropped, so a catch-all the parent's profile declares anywhere else still crosses the unattended boundary.
-// Attended children inherit only external-directory boundaries and otherwise use their own agent profile.
+// Only the leading synthetic floor is removed; later parent rules remain eligible for inheritance.
 function inheritableParentRules(rules: Rule[], unattended: boolean) {
   const synthetic = unattended && rules.length > 0 && isUnattendedFloor(rules[0]);
   return synthetic ? rules.slice(1) : rules;
@@ -898,17 +899,12 @@ function isUnattendedFloor(rule: Rule) {
   );
 }
 
-// An unattended child runs with nobody at the terminal, so every reachable `ask` has to become a
-// blocker instead of a prompt. The runtime evaluates `merge(agent.permission, session.permission)` and keeps
-// the last matching rule, and `composed` already replays the agent's whole effective ruleset in order, so
-// rewriting `ask` to `deny` in place preserves relative precedence while closing every prompt path, whatever
-// introduced it: global config, the parent envelope, built-in defaults, or the selected agent's own profile.
-// Rewriting before dedupe matters: otherwise a rewritten inherited rule survives as a tail duplicate and
-// outranks the child's own later refinement of the same permission.
+// Preserve rule order while converting `ask` rules to `deny`.
 function asBlocker(rule: Rule): Rule {
   return rule.action === "ask" ? { ...rule, action: "deny" } : rule;
 }
 
+// ├─ Lane session metadata ───────────────────────────────────────────────────────────────────────┤
 async function laneChild(client: Client, parentSessionID: string, lane: string, signal: AbortSignal) {
   const children = await unwrap<unknown[]>(
     client.session.children({ path: { id: parentSessionID }, signal }),
@@ -935,7 +931,6 @@ async function readExistingChild(
   );
   const status = object(statuses[id]);
   if (status && status.type !== "idle") {
-    // TODO: Queue busy lanes when OpenCode 2 background tasks are available.
     throw new Error(`delegate lane ${sessionLane(session)} is ${String(status.type)}; wait until it is idle`);
   }
   if (!samePermissionRules(normalizeRules(session.permission), permission)) {
@@ -1167,6 +1162,7 @@ function withNotes(text: string, notes: string[]) {
   return [`[${notes.join("; ")}]`, text].filter(Boolean).join("\n\n");
 }
 
+// ├─ Task result rendering ───────────────────────────────────────────────────────────────────────┤
 function contextLimitedResult(input: {
   args: TaskArgs;
   metadata: Record<string, unknown>;

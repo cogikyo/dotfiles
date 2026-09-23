@@ -1,6 +1,7 @@
 // @ts-nocheck -- Bun socket types are not available in this Node-typed opencode tsconfig.
 const SOCKET_PATH = "/tmp/hyprd.sock";
 
+/** Sends one hyprd command and succeeds only when the socket replies `ok`. */
 export async function send(command) {
   let resolveDone;
   let response = "";

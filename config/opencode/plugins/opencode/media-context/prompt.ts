@@ -15,6 +15,10 @@ import { createImageNamer, modelFromValue } from "./naming";
 const id = "opencode-media-context-prompt";
 let partIDCounter = 0;
 
+/**
+ * Uses the `config`, `chat.message`, and `experimental.session.compacting` server hooks.
+ * The `event` hook drains naming on `session.idle` or idle `session.status` and clears work on `session.deleted`.
+ */
 const server: Plugin = async (ctx, options) => {
   const internalSessions = new Set<string>();
   const namer = createImageNamer({ client: ctx.client, options, ignoredSessions: internalSessions });
@@ -124,4 +128,5 @@ function isDefined<T>(value: T | undefined): value is T {
   return value !== undefined;
 }
 
+/** Server plugin entrypoint for media registration and prompt context. */
 export default { id, server } satisfies PluginModule;

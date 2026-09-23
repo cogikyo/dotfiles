@@ -1,6 +1,7 @@
 import { realpathSync } from "node:fs";
 import path from "node:path";
 
+/** OpenCode tool-part fields used to mark, restore, and persist completed tool output. */
 export type SkillToolPart = {
   id: string;
   sessionID: string;
@@ -19,6 +20,7 @@ export type SkillToolPart = {
   [key: string]: unknown;
 };
 
+/** Subset of the OpenCode client used to update a session part. */
 export type PartClient = {
   part?: {
     update(args: {
@@ -32,6 +34,7 @@ export type PartClient = {
   };
 };
 
+/** Markdown files whose completed tool output must remain available after compaction. */
 export type ProtectRoots = {
   configRoot: string;
   projectRoots: readonly string[];
@@ -59,6 +62,7 @@ export function isCompactedPart(part: SkillToolPart) {
   return part.state?.time?.compacted !== undefined;
 }
 
+/** Returns the original part unless it is completed, has timing data, and is not already compacted. */
 export function withCompactedTime<T extends SkillToolPart>(part: T, time = Date.now()): T {
   const state = part.state;
   if (!state || state.status !== "completed" || !state.time || state.time.compacted !== undefined) return part;
@@ -74,6 +78,7 @@ export function withCompactedTime<T extends SkillToolPart>(part: T, time = Date.
   };
 }
 
+/** Marks eligible parts in place because transformed message parts are returned by reference. */
 export function stubSkillParts(parts: SkillToolPart[], time = Date.now()) {
   for (const part of parts) {
     if (!isCompletedSkillPart(part) || isCompactedPart(part)) continue;
@@ -83,6 +88,7 @@ export function stubSkillParts(parts: SkillToolPart[], time = Date.now()) {
   }
 }
 
+/** Throws when part.update is missing or returns an error envelope. */
 export async function persistCompactedPart(client: PartClient, part: SkillToolPart) {
   const next = withCompactedTime(part);
   if (next === part) return;
@@ -122,6 +128,7 @@ export async function persistCompactedPartsHttp(serverUrl: URL, directory: strin
   await persistUpdatedPartsHttp(serverUrl, directory, nextParts);
 }
 
+/** Reads the first Markdown path in filePath, path, filepath, or file input fields. */
 export function toolMarkdownPath(part: SkillToolPart) {
   const input = part.state?.input;
   if (!input || typeof input !== "object") return undefined;
@@ -142,6 +149,7 @@ export function fileIdentity(filePath: string) {
   }
 }
 
+/** Protects the configured AGENTS.md files and named agent files under configRoot. */
 export function isProtectedMarkdownPath(filePath: string, roots: ProtectRoots) {
   const id = fileIdentity(filePath);
   if (id === fileIdentity(path.join(roots.configRoot, "AGENTS.md"))) return true;
@@ -170,6 +178,7 @@ export function withoutCompactedTime<T extends SkillToolPart>(part: T): T {
   };
 }
 
+/** Returns the original part unless it is completed and has timing data. */
 export function withReloadedOutput<T extends SkillToolPart>(part: T, output: string): T {
   const state = part.state;
   if (!state || state.status !== "completed" || !state.time) return part;
@@ -184,6 +193,7 @@ export function withReloadedOutput<T extends SkillToolPart>(part: T, output: str
   };
 }
 
+/** Clears timestamps in place on protected completed tool parts in transformed messages. */
 export function uncompactProtectedParts(parts: SkillToolPart[], roots: ProtectRoots) {
   for (const part of parts) {
     if (!isCompletedToolPart(part) || !isCompactedPart(part)) continue;
@@ -195,6 +205,7 @@ export function uncompactProtectedParts(parts: SkillToolPart[], roots: ProtectRo
   }
 }
 
+/** Throws when part.update is missing or returns an error envelope. */
 export async function persistUpdatedPart(client: PartClient, part: SkillToolPart) {
   const parts = client.part;
   if (!parts?.update) throw new Error("part.update is unavailable");
@@ -211,6 +222,7 @@ export async function persistUpdatedPart(client: PartClient, part: SkillToolPart
   }
 }
 
+/** PATCHes each part at OpenCode's /session/{session}/message/{message}/part/{part} endpoint. */
 export async function persistUpdatedPartsHttp(serverUrl: URL, directory: string, parts: readonly SkillToolPart[]) {
   for (const part of parts) {
     const url = new URL(`/session/${part.sessionID}/message/${part.messageID}/part/${part.id}`, serverUrl);

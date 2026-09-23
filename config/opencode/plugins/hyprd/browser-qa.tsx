@@ -212,4 +212,5 @@ const tui: TuiPlugin = async (api) => {
   });
 };
 
+/** TUI plugin that subscribes to hyprd workspace events and registers browser controls in `sidebar_content`. */
 export default { id, tui } satisfies TuiPluginModule & { id: string };

@@ -202,4 +202,7 @@ const plugin: TuiPluginModule & { id: string } = {
   tui,
 };
 
+/** Adds the TUI sidebar_content slot for session diffs and completed edit-tool paths.
+ * Tracks session.diff and message/part updates and removals.
+ */
 export default plugin;

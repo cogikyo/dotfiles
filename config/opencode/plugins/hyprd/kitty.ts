@@ -241,4 +241,8 @@ const tui = async (api) => {
   });
 };
 
+/**
+ * TUI plugin that syncs Kitty context on `session.created`, `tui.session.select`, and `tui.command.execute`.
+ * It sends hyprd `viewed` when the pane gains focus.
+ */
 export default { id: "hyprd-kitty-context", tui };

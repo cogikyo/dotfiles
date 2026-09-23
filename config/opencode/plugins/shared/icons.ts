@@ -1,3 +1,4 @@
+/** Nerd Font glyphs used by the TUI plugin sidebars. */
 export const icons = {
   model: "󰯉 ",
   effort: {
@@ -46,11 +47,13 @@ export const icons = {
   error: "󰅜",
 } as const;
 
+/** Selects one of ten progress glyphs from a percentage. */
 export function progressIcon(percent: number) {
   const index = Math.max(0, Math.min(9, Math.trunc(percent / 10)));
   return icons.progress[index];
 }
 
+/** Returns the glyph for a reasoning effort or the unknown-effort glyph. */
 export function effortIcon(value: string) {
   if (value === "low") return icons.effort.low;
   if (value === "medium") return icons.effort.medium;

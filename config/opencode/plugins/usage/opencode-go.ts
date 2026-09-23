@@ -35,6 +35,7 @@ async function load(): Promise<ProviderUsage> {
   if (response.status === 429) return note("429");
   if (!response.ok) return note(`HTTP ${response.status}`);
 
+  // The endpoint returns rolling, weekly, and monthly windows with resetsAt timestamps.
   const body = (await response.json().catch(() => undefined)) as
     | { usage?: Record<string, { percent?: unknown; resetsAt?: unknown } | undefined> }
     | undefined;
@@ -69,6 +70,7 @@ async function load(): Promise<ProviderUsage> {
   return { id, label, windows };
 }
 
+/** Usage adapter for OpenCode Go rolling, weekly, and monthly limits. */
 export const opencodeGoUsage: ProviderAdapter = {
   id,
   label,

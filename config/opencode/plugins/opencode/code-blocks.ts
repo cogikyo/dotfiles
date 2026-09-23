@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 import { addDefaultParsers, MarkdownRenderable, RGBA, SyntaxStyle } from "@opentui/core";
 
 const id = "opencode-code-blocks";
+// Global symbols keep the patches idempotent when OpenCode reloads this module in the same process.
 const PATCHED = Symbol.for("cullyn.opencode.code-blocks.patched");
 const RENDER_PATCHED = Symbol.for("cullyn.opencode.code-blocks.render-patched");
 const pluginDir = dirname(fileURLToPath(import.meta.url));
@@ -65,9 +66,11 @@ const tui: TuiPlugin = async (api) => {
   try {
     addDefaultParsers([sqlParser]);
   } catch {
-    // Some OpenCode builds expose a bundled parser registry that cannot be mutated from plugins.
+    // Keep the styling patch active if SQL parser registration fails.
   }
 
+  // OpenTUI marks these methods private, but code blocks expose _treeSitterClient as treeSitterClient.
+  // applyCodeBlockRenderable resets block styles on every update, so both methods need the patch.
   const proto = MarkdownRenderable?.prototype as any;
   if (!proto || proto[PATCHED]) return;
 
@@ -209,4 +212,5 @@ const plugin: TuiPluginModule & { id: string } = {
   tui,
 };
 
+/** Styles TUI Markdown code blocks by patching OpenTUI renderable methods. */
 export default plugin;

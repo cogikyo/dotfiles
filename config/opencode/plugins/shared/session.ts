@@ -1,8 +1,11 @@
 import type { Message, Model, Provider } from "@opencode-ai/sdk/v2";
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui";
 
+/** Maximum context tokens allowed before a delegate child is stopped. */
 export const COMPACTION_LIMIT = 250_000;
+/** Default reserve subtracted from the model input limit when calculating the compaction threshold. */
 export const COMPACTION_RESERVED = 25_000;
+/** Context thresholds used to warn delegate children before the hard limit. */
 export const CONTEXT_PRESSURE = {
   soft: 100_000,
   medium: 150_000,
@@ -10,6 +13,7 @@ export const CONTEXT_PRESSURE = {
   hard: COMPACTION_LIMIT,
 } as const;
 
+/** Model and workspace details for TUI display, derived from session messages and provider state. */
 export type SessionMeta = {
   agent: string;
   providerID: string;
@@ -20,6 +24,7 @@ export type SessionMeta = {
   cwd: string;
 };
 
+/** Token usage and percentage for a session display. */
 export type SessionUsage = {
   tokens: number;
   limit?: number;
@@ -30,14 +35,17 @@ export type SessionUsage = {
 type AssistantLike = Extract<Message, { role: "assistant" }>;
 type UserLike = Extract<Message, { role: "user" }>;
 
+/** Returns the TUI session messages in OpenCode's current order. */
 export function sessionMessages(api: TuiPluginApi, sessionID: string) {
   return api.state.session.messages(sessionID);
 }
 
+/** Returns the provider id from the latest user or assistant model message. */
 export function sessionProviderID(api: TuiPluginApi, sessionID: string) {
   return providerIDFor(latestModelMessage(sessionMessages(api, sessionID)));
 }
 
+/** Resolves display metadata from the latest model message and TUI state. */
 export function sessionMeta(api: TuiPluginApi, sessionID: string): SessionMeta {
   const messages = sessionMessages(api, sessionID);
   const latest = latestModelMessage(messages);
@@ -56,6 +64,7 @@ export function sessionMeta(api: TuiPluginApi, sessionID: string): SessionMeta {
   };
 }
 
+/** Returns token usage, including reasoning and cache tokens, against the model context limit. */
 export function sessionUsage(api: TuiPluginApi, sessionID: string): SessionUsage {
   const messages = sessionMessages(api, sessionID);
   const meta = sessionMeta(api, sessionID);
@@ -67,6 +76,7 @@ export function sessionUsage(api: TuiPluginApi, sessionID: string): SessionUsage
   return { tokens, limit, percent, colorPercent: percent };
 }
 
+/** Returns context usage against the effective compaction limit. */
 export function sessionContextUsage(api: TuiPluginApi, sessionID: string): SessionUsage {
   const messages = sessionMessages(api, sessionID);
   const meta = sessionMeta(api, sessionID);
@@ -78,6 +88,7 @@ export function sessionContextUsage(api: TuiPluginApi, sessionID: string): Sessi
   return { tokens, limit, percent, colorPercent: percent };
 }
 
+/** Returns the model input cap from the hard context limit and reserved budget. */
 export function compactionInputCap(reserved = COMPACTION_RESERVED) {
   return COMPACTION_LIMIT + reserved;
 }
@@ -87,6 +98,7 @@ function compactionReserved(api: TuiPluginApi) {
   return typeof reserved === "number" && reserved >= 0 ? reserved : COMPACTION_RESERVED;
 }
 
+/** Computes the context threshold before compaction, when model limits are available. */
 export function contextCompactionLimit(model: Pick<Model, "limit"> | undefined, reserved: number) {
   if (!model || !model.limit.context) return undefined;
   const context = model.limit.context;
@@ -170,6 +182,7 @@ function title(value: string) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+/** Replaces a home-directory prefix with `~` for display. */
 export function shortDir(dir: string) {
   if (!dir) return "";
   const home = process.env.HOME;
@@ -178,6 +191,7 @@ export function shortDir(dir: string) {
   return dir;
 }
 
+/** Formats a token count with a compact K or M suffix. */
 export function formatTokens(tokens: number) {
   if (tokens >= 1_000_000) return `${trim(tokens / 1_000_000)}M`;
   if (tokens >= 1_000) return `${trim(tokens / 1_000)}K`;

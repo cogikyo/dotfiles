@@ -54,7 +54,7 @@ function contextValues(ctx: object) {
   return [...Object.values(record), ...Object.getOwnPropertySymbols(record).map((key) => record[key])];
 }
 
-// TUI plugins cannot call local.model.set; Local is on the Solid owner under the app slot.
+// The model picker is stored in Solid owner context; the TUI plugin API has no model setter.
 function findLocal(owner: OwnerNode | null | undefined) {
   const seen = new Set<object>();
   while (owner) {
@@ -288,4 +288,5 @@ const tui: TuiPlugin = async (api) => {
   });
 };
 
+/** Registers a TUI app slot and keymap commands for pinning or switching models. */
 export default { id, tui } satisfies TuiPluginModule & { id: string };

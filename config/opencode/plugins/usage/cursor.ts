@@ -19,14 +19,7 @@ type CursorUsagePayload = {
   planUsage?: CursorPlanUsage | null;
 };
 
-// Cursor usage uses OpenCode's cursor OAuth access token against the unofficial
-// DashboardService GetCurrentPeriodUsage endpoint. Ignore GET /auth/usage (stale
-// gpt-4 request counter) and cursor.com/api/usage (website cookie; 401 with OAuth).
-//
-// autoPercentUsed / apiPercentUsed are already 0-100 percents, including fractions
-// under 1. Do not run them through normalizePercent: that treats (0, 1) as a
-// fraction and turns 0.43 into 43. The dashboard ceils sub-1% usage to 1%.
-// billingCycleEnd is epoch-ms; spendLimitUsage/displayMessage/autoBucketModels are ignored.
+// These fields are already percentages; values between 0 and 1 mean less than 1%, not fractions.
 const { id, label, staleAfterMS } = usageProviders.cursor;
 const USAGE_URL = "https://api2.cursor.sh/aiserver.v1.DashboardService/GetCurrentPeriodUsage";
 const FETCH_TIMEOUT_MS = 15_000;
@@ -47,7 +40,7 @@ function cursorPercent(value: unknown) {
   if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
   const pct = Math.max(0, Math.min(100, value));
   if (pct === 0) return 0;
-  // Live payload: autoPercentUsed 0.428… with dashboard "1% used".
+  // The dashboard rounds nonzero usage below 1% up to 1%.
   if (pct < 1) return 1;
   return pct;
 }
@@ -90,6 +83,7 @@ async function load(): Promise<ProviderUsage> {
   return usage(windows);
 }
 
+/** Usage adapter for Cursor plan limits. */
 export const cursorUsage: ProviderAdapter = {
   id,
   label,

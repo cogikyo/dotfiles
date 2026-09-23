@@ -3,6 +3,7 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
+/** Counts and branch state parsed from Git porcelain v2 output. */
 export type GitStatus = {
   branch: string;
   ahead: number;
@@ -17,6 +18,7 @@ export type GitStatus = {
   complete: boolean;
 };
 
+/** Reads repository status, or returns undefined when the path or Git command is unavailable. */
 export async function gitStatus(dir?: string): Promise<GitStatus | undefined> {
   if (!dir) return undefined;
 
@@ -97,6 +99,7 @@ function parseGitStatus(output: string): GitStatus {
   return status;
 }
 
+/** Counts tracked and untracked changes in a parsed status. */
 export function gitDirtyCount(status: GitStatus) {
   return status.staged + status.modified + status.untracked + status.deleted + status.renamed + status.conflicted;
 }

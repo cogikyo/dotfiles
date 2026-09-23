@@ -1,11 +1,12 @@
+/** A provider usage window, with an optional percentage and reset time. */
 export type UsageWindow = {
   label: string;
-  // Undefined when the provider exposes a window/reset period but no burn percent
-  // (e.g. xAI's weekly subscription). The UI renders it as a muted "--" cell.
+  // Some providers report a reset period without a usage percentage.
   usedPercent?: number;
   resetAt?: string;
 };
 
+/** Converts a provider percentage or fraction to a value from 0 through 100. */
 export function normalizePercent(value: unknown): number | undefined {
   if (value == null || typeof value !== "number") return undefined;
   if (!Number.isFinite(value)) return undefined;
@@ -13,13 +14,13 @@ export function normalizePercent(value: unknown): number | undefined {
   return Math.max(0, Math.min(100, expanded));
 }
 
-// Cached windows can predate adapter changes; keep only labels the adapter still
-// declares so removed window shapes (e.g. Kimi's old monthly row) never render.
+/** Removes cached windows whose labels are no longer declared by the adapter. */
 export function declaredWindows(usage: ProviderUsage, placeholders?: string[]) {
   if (!placeholders) return usage.windows;
   return usage.windows.filter((window) => placeholders.includes(window.label));
 }
 
+/** Severity used to color a provider status note in the dashboard. */
 export type NoteKind = "info" | "warn" | "error";
 
 export type ProviderUsage = {
@@ -27,19 +28,17 @@ export type ProviderUsage = {
   label: string;
   windows: UsageWindow[];
   note?: string;
-  // noteKind colors the inline note: "info" muted, "warn" amber, "error" red.
-  // Undefined keeps the legacy split — muted when windows exist (stale), red when windowless.
+  // Missing severity keeps the UI's legacy stale-versus-error coloring.
   noteKind?: NoteKind;
-  // Expected window labels for placeholder rows when this provider has no windows;
-  // stamped from the adapter so the UI shows the right shape per provider.
+  // Window labels used for placeholder rows when no windows are available.
   placeholders?: string[];
 };
 
+/** Loads one provider's usage and defines its polling and display policy. */
 export type ProviderAdapter = {
   id: string;
   label: string;
-  // Window labels rendered as placeholder rows when a fetch yields no windows.
-  // Defaults to ["H", "W"]; xAI overrides to ["W", "M"] since it has no hourly window.
+  // Window labels rendered as placeholders when a fetch returns no windows.
   placeholders?: string[];
   poll: {
     minFetchIntervalMS: number;

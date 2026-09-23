@@ -113,6 +113,7 @@ function usageWindow(window: OpenAIWindow | null | undefined, fallback: OpenAIRa
   return { label: tag, usedPercent: used, resetAt: reset };
 }
 
+/** Converts the API rate-limit windows into sidebar windows. */
 export function parseOpenAIWindows(rateLimit?: OpenAIRateLimit): UsageWindow[] {
   if (!rateLimit) return [];
 
@@ -150,6 +151,7 @@ async function load(): Promise<ProviderUsage> {
   return usage(windows);
 }
 
+/** Usage adapter for ChatGPT account rate limits. */
 export const openaiUsage: ProviderAdapter = {
   id,
   label,

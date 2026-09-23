@@ -3,6 +3,10 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { updateImageName, type MediaRegistryEntry } from "./registry";
 
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Image naming                                                                                  │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
 const DEFAULT_OPTIONS: ImageNameOptions = {
   enabled: true,
   timeoutMs: 30_000,
@@ -24,6 +28,7 @@ type ImageNameOptions = {
   concurrency: number;
 };
 
+/** Provider and model IDs used for temporary image-naming sessions. */
 export type NamingModel = {
   providerID: string;
   modelID: string;
@@ -65,6 +70,8 @@ type CreateImageNamerInput = {
   ignoredSessions: Set<string>;
 };
 
+// ├─ Queue and concurrency ───────────────────────────────────────────────────────────────────────┤
+/** Queues bounded image-naming requests and updates the media registry. */
 export function createImageNamer(input: CreateImageNamerInput) {
   const config = parseImageNameOptions(input.options);
   const pending = new Map<string, Job>();
@@ -137,6 +144,8 @@ export function createImageNamer(input: CreateImageNamerInput) {
   };
 }
 
+// ├─ Model selection ─────────────────────────────────────────────────────────────────────────────┤
+/** Reads a model ID from OpenCode config string or object forms. */
 export function modelFromValue(value: unknown): NamingModel | undefined {
   if (typeof value === "string") return modelFromString(value);
   const candidate = value as
@@ -185,6 +194,7 @@ function firstPendingJob(pending: Map<string, Job>, running: Set<string>) {
   return undefined;
 }
 
+// ├─ Naming request ──────────────────────────────────────────────────────────────────────────────┤
 async function nameImage(job: Job, options: ImageNameOptions, client: OpenCodeClient, ignoredSessions: Set<string>) {
   let raw: string;
   try {
@@ -237,6 +247,7 @@ async function requestImageName(
       }),
     );
 
+    // Keep the temporary session ignored until a timed-out prompt has settled.
     const response = await withTimeout(prompt, options.timeoutMs);
     return assistantText(response);
   } finally {
@@ -248,6 +259,7 @@ async function requestImageName(
   }
 }
 
+// ├─ Temporary session lifecycle ─────────────────────────────────────────────────────────────────┤
 function clearIgnoredSession(ignoredSessions: Set<string>, sessionID: string, prompt: Promise<unknown> | undefined) {
   if (!prompt) {
     ignoredSessions.delete(sessionID);
@@ -292,6 +304,7 @@ function modelSource(model: NamingModel) {
   return `opencode:${model.providerID}/${model.modelID}`.slice(0, 80);
 }
 
+// ├─ Failure reporting ───────────────────────────────────────────────────────────────────────────┤
 function logNameFailure(job: Job, stage: string, error: unknown) {
   const label = error instanceof NameStageError ? error.stage : stage;
   console.warn(
@@ -330,6 +343,7 @@ function sanitizeErrorMessage(message: string) {
     .replace(/\b(?:sk|sess)-[a-zA-Z0-9_-]+/g, "[token]");
 }
 
+// ├─ Image and response formats ──────────────────────────────────────────────────────────────────┤
 async function dataURL(filePath: string, mime: string, maxBytes: number) {
   const handle = await fs.open(filePath, "r");
   try {

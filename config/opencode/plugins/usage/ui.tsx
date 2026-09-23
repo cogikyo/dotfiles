@@ -6,9 +6,7 @@ import { usageColor } from "../shared/colors.ts";
 import type { ProviderUsage } from "./types.ts";
 import type { TuiThemeCurrent } from "@opencode-ai/plugin/tui";
 
-// Note color follows noteKind: info muted, warn amber, error red.
-// Undefined noteKind is the legacy hard-error path (e.g. recordError "429") and stays red.
-// Stale age overlays on live windows are the one exception that stays muted.
+// Missing noteKind is red unless the note marks cached windows as stale.
 function noteColor(theme: TuiThemeCurrent, provider: ProviderUsage) {
   if (provider.noteKind === "info") return theme.textMuted;
   if (provider.noteKind === "warn") return theme.warning;
@@ -115,8 +113,7 @@ function formatPercent(percent: number) {
   return rounded >= 100 ? "100" : `${String(rounded).padStart(2, "0")}%`;
 }
 
-// One usage row with fixed column widths. Real windows pass colored percent/bar; placeholder
-// rows for windowless providers pass muted dashes and an empty bar so alignment never shifts.
+// Keep placeholder and live rows aligned with the same fixed columns.
 function WindowRow(props: {
   theme: TuiThemeCurrent;
   label: string;
@@ -147,6 +144,7 @@ function WindowRow(props: {
   );
 }
 
+/** Renders provider usage rows and sends clicks to the manual-refresh handler. */
 export function UsageDashboard(props: {
   api: TuiPluginApi;
   providers: ProviderUsage[];
@@ -160,8 +158,7 @@ export function UsageDashboard(props: {
       <For each={props.providers}>
         {(provider) => {
           const refreshing = () => props.refreshingProviderIDs?.has(provider.id) ?? false;
-          // In-flight manual refresh: primary label, and "refreshing" only when no real note
-          // so 429/error/stale text stays visible once the fetch returns (or was already there).
+          // Keep an existing status note visible while a manual refresh runs.
           const labelColor = () =>
             refreshing() || provider.id === props.activeProviderID ? theme().primary : theme().text;
           return (
@@ -200,8 +197,7 @@ export function UsageDashboard(props: {
                   {(window) => {
                     const reset = window.resetAt ? formatReset(window.resetAt) : undefined;
                     const pct = window.usedPercent;
-                    // Unknown percent (e.g. xAI weekly): muted "--" cell and empty bar, but keep
-                    // the real duration/exact reset columns so alignment matches healthy rows.
+                    // Keep reset columns visible when a window has no usage percentage.
                     return (
                       <WindowRow
                         theme={theme()}

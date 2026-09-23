@@ -5,6 +5,7 @@ import { openaiUsage } from "./openai.ts";
 import type { ProviderAdapter } from "./types.ts";
 import { xaiUsage } from "./xai.ts";
 
+/** Provider adapters displayed by the usage sidebar. */
 export const usageAdapters = [
   openaiUsage,
   anthropicUsage,

@@ -47,6 +47,7 @@ const COOKIE_SQL = `
 const EMPTY_RESULT: CookieReadResult = { cookies: [], rowCount: 0 };
 const COOKIE_PATH_PROBES = ["/auth/status", "/workspace/wrk_probe/usage"];
 
+/** Reads the newest eligible OpenCode auth cookie from discovered Firefox profiles. */
 export async function readOpencodeFirefoxAuthCookie() {
   const databases = await firefoxCookieDatabases();
   const results = await Promise.all(databases.map(readAuthCookies));
@@ -55,7 +56,7 @@ export async function readOpencodeFirefoxAuthCookie() {
 
 async function readAuthCookies(databasePath: string): Promise<CookieReadResult> {
   try {
-    // @ts-ignore bun:sqlite exists in the Bun plugin runtime; this tsconfig intentionally uses Node types only.
+    // Bun provides this module at plugin runtime.
     const { Database } = (await import("bun:sqlite")) as SQLiteModule;
     const direct = queryCookies(Database, databasePath);
     if (direct && hasRows(direct)) return direct;
@@ -93,6 +94,7 @@ async function queryCopiedCookies(Database: SQLiteModule["Database"], databasePa
   try {
     const copy = path.join(tmp, "cookies.sqlite");
     await fs.copyFile(databasePath, copy);
+    // SQLite may keep committed cookie updates in the write-ahead log.
     for (const suffix of ["-wal", "-shm"]) {
       await fs.copyFile(`${databasePath}${suffix}`, `${copy}${suffix}`).catch(() => undefined);
     }

@@ -2,6 +2,7 @@ import { inspectProviderCache } from "../usage/cache.ts";
 import { usageProvider } from "../usage/providers.ts";
 import type { DelegateConfig } from "./config.ts";
 
+/** Blocks until capped provider usage resets and returns notes for unknown or stale usage data. */
 export async function enforceProviderPolicy(providerID: string, config: DelegateConfig, signal: AbortSignal) {
   if (!Object.hasOwn(config.providers, providerID)) {
     throw new Error(`delegate provider policy missing for ${providerID}; add it to delegate.json.providers`);

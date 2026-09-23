@@ -7,23 +7,21 @@ import { usageProviders } from "./providers.ts";
 import { normalizePercent } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
 
-// xAI usage reads only the Grok CLI auth at ~/.grok/auth.json, never OpenCode's xai OAuth.
-// OpenCode's refreshed xai token got 401 on this billing endpoint; the Grok CLI token works.
-//
-// Two billing shapes share one host path and split by query:
-// - `?format=usage` (and bare `/v1/billing`): monthly credit pool `used` / `monthlyLimit` + month end.
-// - `?format=credits`: unified weekly period reset, optional `creditUsagePercent`, no stable burn basis.
-// Both are polled so the sidebar can show monthly % and weekly reset without inventing a weekly %.
+// Loads credentials from the Grok CLI auth file for xAI billing requests.
 const { id, label, staleAfterMS } = usageProviders.xai;
 const ISSUER = "https://auth.x.ai";
 const BILLING_USAGE_URL = "https://cli-chat-proxy.grok.com/v1/billing?format=usage";
 const BILLING_CREDITS_URL = "https://cli-chat-proxy.grok.com/v1/billing?format=credits";
-// Bound each billing fetch so a hung endpoint cannot hold the shared usage provider lock indefinitely.
+// Bound requests so an unresponsive endpoint cannot hold the provider lock indefinitely.
 const FETCH_TIMEOUT_MS = 15_000;
 const GROK_REFRESH_TIMEOUT_MS = 30_000;
-// `grok models` prints a short model list; anything larger means the CLI is misbehaving.
+// Limit command output because only the refreshed auth entry is used.
 const GROK_REFRESH_MAX_OUTPUT = 64 * 1024;
 const execFileAsync = promisify(execFile);
+
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ xAI usage                                                                                     │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
 type GrokAuthEntry = {
   key?: string;
@@ -32,12 +30,11 @@ type GrokAuthEntry = {
   oidc_issuer?: string;
 };
 
-// ~/.grok/auth.json is an object keyed by `<issuer>::<client_id>`.
+// The auth file maps `<issuer>::<client_id>` keys to credentials.
 type GrokAuthFile = Record<string, GrokAuthEntry>;
 
-// Observed live shape nests these under `config`, and money fields arrive wrapped
-// as `{ val: number }`; older shapes put the same fields top-level as bare numbers.
-// BillingConfig captures the overlapping keys so `pick` can read either location.
+// ├─ Billing payload formats ─────────────────────────────────────────────────────────────────────┤
+// Billing fields may be nested under config and wrapped as `{ val }` or `{ value }`.
 type BillingConfig = {
   currentPeriod?: {
     type?: unknown;
@@ -49,7 +46,7 @@ type BillingConfig = {
   isUnifiedBillingUser?: unknown;
   creditUsagePercent?: unknown;
   monthlyLimit?: unknown;
-  // Live usage format uses bare `used`; older/history rows use included/total.
+  // Older billing responses use these usage field names.
   used?: unknown;
   includedUsed?: unknown;
   totalUsed?: unknown;
@@ -62,11 +59,12 @@ type BillingPayload = BillingConfig & {
   subscription?: unknown;
 };
 
+// ├─ Usage windows ───────────────────────────────────────────────────────────────────────────────┤
 function usage(windows: UsageWindow[], note?: string, noteKind?: ProviderUsage["noteKind"]): ProviderUsage {
   return { id, label, windows, note, noteKind };
 }
 
-// Money fields arrive either as a bare number or wrapped as `{ val }` (seen live) or `{ value }`.
+// Billing amounts may be numbers or wrapped in val/value objects.
 function num(value: unknown): number | undefined {
   if (typeof value === "number") return Number.isFinite(value) ? value : undefined;
   if (value && typeof value === "object") {
@@ -81,7 +79,7 @@ function str(value: unknown) {
   return typeof value === "string" && value.length > 0 ? value : undefined;
 }
 
-// Fields may sit top-level or under `config`; prefer top-level, fall back to config.
+// Prefer top-level fields and use config fields when they are absent.
 function pick<K extends keyof BillingConfig>(payload: BillingPayload, key: K) {
   return payload[key] ?? payload.config?.[key];
 }
@@ -109,14 +107,11 @@ async function readGrokAuth(): Promise<GrokAuthFile | undefined> {
   }
 }
 
-// Refresh notes are actionable: they name the CLI state the user has to repair.
 type AuthFailure = "no grok cli" | "refresh failed" | "refresh timeout" | "grok login";
 
 type AuthResult = { ok: true; token: string } | { ok: false; reason: AuthFailure };
 
-// `grok models` is the cheapest CLI command that drives the OIDC refresh, but it exits 0
-// even when the refresh fails (it just prints "You are not authenticated"), so exit status
-// proves nothing. Only a rewritten, unexpired entry in auth.json counts as a live token.
+// Check auth.json after the command because `grok models` can exit successfully without refreshing.
 async function runGrokRefresh(): Promise<AuthFailure | undefined> {
   try {
     await execFileAsync(process.env.GROK_CLI || "grok", ["models"], {
@@ -140,7 +135,7 @@ async function liveAuth(): Promise<AuthResult> {
   if (failure) return { ok: false, reason: failure };
 
   const refreshed = xaiEntry(await readGrokAuth());
-  // CLI ran clean yet left no live token: the refresh token itself is gone or rejected.
+  // A successful command without a live token still requires the user to log in.
   if (!refreshed?.key || isExpired(refreshed.expires_at)) {
     return { ok: false, reason: "grok login" };
   }
@@ -172,7 +167,8 @@ function monthlyReset(payload: BillingPayload) {
   return str(pick(payload, "billingPeriodEnd"));
 }
 
-// Credits shape: weekly period, optional creditUsagePercent. Never invent a weekly % from monthly used.
+// ├─ Weekly and monthly calculations ─────────────────────────────────────────────────────────────┤
+// Credits responses provide a weekly reset and may provide a weekly percentage.
 function windowsFromCredits(payload: BillingPayload): UsageWindow[] {
   const end = weeklyReset(payload);
   const monthlyLimit = num(pick(payload, "monthlyLimit"));
@@ -180,8 +176,7 @@ function windowsFromCredits(payload: BillingPayload): UsageWindow[] {
   const hasPositiveLimit = (monthlyLimit ?? 0) > 0 || (cap ?? 0) > 0;
 
   let creditPercent = normalizePercent(num(pick(payload, "creditUsagePercent")));
-  // Unified subscriptions with no positive cap or limit carry no percent basis; a constant
-  // `creditUsagePercent: 0` in that shape is meaningless, so treat it as unknown, never 0%.
+  // A zero percent without a positive unified-billing limit has no measurable basis.
   if (creditPercent === 0 && !hasPositiveLimit && unifiedBilling(payload)) {
     creditPercent = undefined;
   }
@@ -189,12 +184,12 @@ function windowsFromCredits(payload: BillingPayload): UsageWindow[] {
     return [{ label: "W", usedPercent: creditPercent, resetAt: end }];
   }
 
-  // Weekly reset alone is still useful; percent stays unknown rather than faking 0%.
+  // Preserve the weekly reset even when the response has no usable percentage.
   if (end) return [{ label: "W", resetAt: end }];
   return [];
 }
 
-// Usage shape: monthly credit pool. Prefer live `used`, then total/included history aliases.
+// Usage responses describe the monthly credit pool.
 function windowsFromUsage(payload: BillingPayload): UsageWindow[] {
   const end = monthlyReset(payload);
   const monthlyLimit = num(pick(payload, "monthlyLimit"));
@@ -214,7 +209,7 @@ function windowsFromUsage(payload: BillingPayload): UsageWindow[] {
 
 function mergeWindows(parts: UsageWindow[][]): UsageWindow[] {
   const byLabel = new Map<string, UsageWindow>();
-  // Prefer first non-empty percent per label; later rows only fill missing reset/percent.
+  // Keep the first known percentage and fill missing fields from later responses.
   for (const windows of parts) {
     for (const window of windows) {
       const prev = byLabel.get(window.label);
@@ -228,7 +223,7 @@ function mergeWindows(parts: UsageWindow[][]): UsageWindow[] {
       if (!prev.resetAt && window.resetAt) prev.resetAt = window.resetAt;
     }
   }
-  // Stable sidebar order: weekly before monthly.
+  // Keep weekly and monthly windows in sidebar order.
   const order = ["W", "M"];
   const ordered: UsageWindow[] = [];
   for (const key of order) {
@@ -241,6 +236,7 @@ function mergeWindows(parts: UsageWindow[][]): UsageWindow[] {
   return ordered;
 }
 
+// ├─ Billing requests ────────────────────────────────────────────────────────────────────────────┤
 type FetchFailure =
   | { ok: false; kind: "network" }
   | { ok: false; kind: "timeout" }
@@ -311,6 +307,8 @@ async function load(): Promise<ProviderUsage> {
   return usage(windows);
 }
 
+// ├─ Provider adapter ────────────────────────────────────────────────────────────────────────────┤
+/** Usage adapter for xAI monthly credits and weekly reset data. */
 export const xaiUsage: ProviderAdapter = {
   id,
   label,

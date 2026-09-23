@@ -224,4 +224,5 @@ const server: Plugin = async () => {
   };
 };
 
+/** Server plugin that registers isolated Chrome DevTools MCP tools and handles `session.idle` and `session.deleted`. */
 export default { id, server } satisfies PluginModule;

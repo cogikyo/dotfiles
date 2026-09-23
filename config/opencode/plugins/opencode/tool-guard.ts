@@ -52,6 +52,7 @@ const server: Plugin = async ({ client, directory, worktree }) => {
   const fallbackDirectory = worktree || directory;
 
   return {
+    // Throwing here rejects tool execution before OpenCode runs the requested tool.
     "tool.execute.before": async (input, output) => {
       if (input.tool === "bash") {
         const command = string(object(output.args)?.command);
@@ -94,6 +95,10 @@ const server: Plugin = async ({ client, directory, worktree }) => {
     },
   };
 };
+
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ PATCH TARGET VALIDATION                                                                       │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
 async function guardPatchTarget(cwd: string, target: PatchTarget) {
   const filePath = path.isAbsolute(target.path) ? path.normalize(target.path) : path.resolve(cwd, target.path);
@@ -180,6 +185,10 @@ function patchRejection(target: PatchTarget, filePath: string, reason: string) {
   return `apply_patch refused to ${target.operation.toLowerCase()} ${filePath}: file ${reason}; ${action}`;
 }
 
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ SHELL MUTATION POLICY                                                                         │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
 function invokesRm(command: string) {
   return (
     /(?:^|[\n;&|()])\s*(?:(?:sudo|command)\s+)*(?:\/usr\/bin\/)?rm(?:\s|$)/u.test(command) ||
@@ -223,6 +232,7 @@ function invokesInPlaceEdit(words: string[]) {
   });
 }
 
+// File tools and detected Bash mutations use these read-only agents; rm is blocked for every session.
 function isReadOnlySession(session: Session) {
   const agent = sessionAgent(session);
   return (
@@ -436,4 +446,5 @@ function string(value: unknown) {
   return typeof value === "string" && value !== "" ? value : undefined;
 }
 
+/** Uses the server tool.execute.before hook to reject rm and selected mutations for read-only agents. */
 export default { id, server } satisfies PluginModule;

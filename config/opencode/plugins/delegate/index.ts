@@ -61,7 +61,6 @@ const server: Plugin = async ({ client }) => {
         async execute(args, ctx) {
           const key = args.lane?.trim() ? `${ctx.sessionID}\0${args.lane.trim()}` : undefined;
           if (key && activeLanes.has(key)) {
-            // TODO: Queue busy lanes when OpenCode 2 background tasks are available.
             throw new Error(`delegate lane ${args.lane} is busy; wait until it is idle`);
           }
           if (key) activeLanes.add(key);
@@ -91,4 +90,5 @@ const server: Plugin = async ({ client }) => {
   };
 };
 
+/** Server plugin that registers child-session `task` and `task_status` tools. */
 export default { id, server } satisfies PluginModule;

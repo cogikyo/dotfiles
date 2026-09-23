@@ -41,6 +41,10 @@ type MarkdownContextItem = {
   refs: PartRef[];
 };
 
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ SIDEBAR AND EVENTS                                                                            │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
 function MarkdownContext(props: { api: TuiPluginApi; sessionID: string }) {
   const [revision, setRevision] = createSignal(0);
   const refresh = () => setRevision((value) => value + 1);
@@ -114,6 +118,10 @@ function MarkdownContext(props: { api: TuiPluginApi; sessionID: string }) {
     </Show>
   );
 }
+
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ CONTEXT ITEMS                                                                                 │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
 function markdownContextItems(api: TuiPluginApi, sessionID: string) {
   const pinned = pinnedContextItems(api, sessionID);
@@ -354,6 +362,10 @@ function isSkillTool(tool: string) {
 function isMarkdownPath(value: string) {
   return /\.(md|mdx|markdown)$/i.test(value.split(/[?#]/, 1)[0]);
 }
+
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ PATH CLASSIFICATION                                                                           │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
 function markdownSourceKind(filePath: string): MarkdownSourceKind {
   const normalizedPath = path.normalize(filePath);
@@ -702,4 +714,7 @@ const plugin: TuiPluginModule & { id: string } = {
   tui,
 };
 
+/** Adds the TUI sidebar_content slot for loaded Markdown context.
+ * Tracks message and part updates/removals and session.compacted.
+ */
 export default plugin;

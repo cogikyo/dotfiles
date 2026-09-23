@@ -2,10 +2,12 @@ import fs from "node:fs/promises";
 
 export const DELEGATE_CONFIG_PATH = "/home/cullyn/dotfiles/config/opencode/delegate.json";
 
+/** Provider ids allowed for delegation; this plugin does not interpret provider policy values. */
 export type DelegateConfig = {
   providers: Record<string, Record<string, unknown>>;
 };
 
+/** Reads the local provider allowlist and rejects malformed or empty policy data. */
 export async function loadDelegateConfig(path = DELEGATE_CONFIG_PATH): Promise<DelegateConfig> {
   let raw: string;
   try {

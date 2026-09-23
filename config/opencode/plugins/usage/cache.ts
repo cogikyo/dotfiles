@@ -3,6 +3,7 @@ import path from "node:path";
 import { usageCachePath, usageLockPath } from "./auth.ts";
 import type { ProviderUsage, UsageWindow } from "./types.ts";
 
+/** Usage data and retry state stored for one provider. */
 export type CachedProviderUsage = {
   fetchedAt?: number;
   backoffUntil?: number;
@@ -15,12 +16,15 @@ const LOCK_STALE_MS = 30_000;
 const MAX_CACHE_WINDOWS = 12;
 const MAX_FUTURE_SKEW_MS = 5_000;
 
+/** Reason a cached provider view cannot be treated as current usage. */
 export type ProviderCacheIssue = "missing" | "unreadable" | "malformed" | "error" | "stale" | "unknown";
 
+/** Cached usage window with reset status evaluated at inspection time. */
 export type CachedUsageWindow = UsageWindow & {
   postReset: boolean;
 };
 
+/** Validated cache data prepared for status output. */
 export type ProviderCacheView = {
   fetchedAt?: number;
   ageMS?: number;
@@ -28,6 +32,7 @@ export type ProviderCacheView = {
   issue?: ProviderCacheIssue;
 };
 
+/** Reads the provider cache, returning an empty value when it cannot be parsed or read. */
 export async function readProviderCache(providerID: string) {
   try {
     return JSON.parse(await fs.readFile(usageCachePath(providerID), "utf8")) as CachedProviderUsage;
@@ -36,6 +41,7 @@ export async function readProviderCache(providerID: string) {
   }
 }
 
+/** Validates a provider cache and classifies its freshness and reset windows. */
 export async function inspectProviderCache(
   providerID: string,
   staleAfterMS: number,
@@ -51,6 +57,7 @@ export async function inspectProviderCache(
   }
 }
 
+/** Decodes and validates cached JSON against the provider freshness limit. */
 export function decodeProviderCache(raw: string, staleAfterMS: number, now = Date.now()): ProviderCacheView {
   try {
     const root = object(JSON.parse(raw));
@@ -99,16 +106,19 @@ export function decodeProviderCache(raw: string, staleAfterMS: number, now = Dat
   }
 }
 
+/** Returns a non-negative cache age, or undefined when no fetch time is stored. */
 export function cacheAgeMS(fetchedAt: number | undefined, now = Date.now()) {
   if (fetchedAt === undefined) return undefined;
   return Math.max(0, now - fetchedAt);
 }
 
+/** Reports whether a stored fetch time exceeds the provider's stale threshold. */
 export function isCacheStale(fetchedAt: number | undefined, staleAfterMS: number, now = Date.now()) {
   const age = cacheAgeMS(fetchedAt, now);
   return age !== undefined && age > staleAfterMS;
 }
 
+/** Writes provider usage through a temporary file before replacing the cache. */
 export async function writeProviderCache(providerID: string, cache: CachedProviderUsage) {
   const cachePath = usageCachePath(providerID);
   const tempPath = `${cachePath}.${process.pid}.tmp`;
@@ -118,6 +128,7 @@ export async function writeProviderCache(providerID: string, cache: CachedProvid
   await fs.rename(tempPath, cachePath);
 }
 
+/** Runs one provider operation under its lock, or returns undefined if it is busy. */
 export async function withProviderLock<T>(providerID: string, run: () => Promise<T>) {
   const release = await acquireLock(providerID);
   if (!release) return undefined;

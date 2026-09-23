@@ -33,8 +33,7 @@ function pendingUsage(adapter: ProviderAdapter): ProviderUsage {
 }
 
 function cachedUsage(adapter: ProviderAdapter, cache: CachedProviderUsage): ProviderUsage {
-  // Always stamp identity from the adapter so renamed labels and per-provider placeholders
-  // take effect immediately, even while a stale cache still holds the old id/label/note.
+  // Adapter identity wins so cached names and window labels cannot outlive configuration changes.
   const { id, label, placeholders } = adapter;
 
   if (cache.usage?.windows.length) {
@@ -54,8 +53,7 @@ function cachedUsage(adapter: ProviderAdapter, cache: CachedProviderUsage): Prov
     return { ...cached, id, label, placeholders, note };
   }
 
-  // Windowless informational/warn usage (e.g. opencode-go no-route) stays visible instead of
-  // collapsing to pending, unless a later fetch recorded a hard error.
+  // Keep windowless info and warnings visible unless a fetch recorded an error.
   if (cache.usage && !cache.error && isInformationalNote(cache.usage)) {
     return { ...cache.usage, id, label, placeholders };
   }
@@ -113,7 +111,7 @@ function shouldFetch(adapter: ProviderAdapter, cache: CachedProviderUsage) {
 
 async function fetchAndCache(adapter: ProviderAdapter, force = false) {
   const latest = await readProviderCache(adapter.id);
-  // Force (manual click) bypasses minFetchIntervalMS and backoffUntil; user intent is explicit.
+  // A manual refresh bypasses polling intervals and backoff.
   if (!force && !shouldFetch(adapter, latest)) return cachedUsage(adapter, latest);
 
   let usage: ProviderUsage;
@@ -127,7 +125,7 @@ async function fetchAndCache(adapter: ProviderAdapter, force = false) {
     return recordError(adapter, latest, "429");
   }
 
-  // Windowless usage is an error only when it is not a benign info/warn state.
+  // Empty windows are errors unless the adapter returned an informational state.
   if (usage.windows.length === 0 && !isInformationalNote(usage)) {
     return recordError(adapter, latest, usage.note || "unavailable");
   }
@@ -251,6 +249,10 @@ function UsagePanel(props: { api: TuiPluginApi; sessionID: string }) {
   );
 }
 
+/**
+ * Registers the usage dashboard in the TUI `sidebar_title` and `sidebar_content` slots.
+ * It listens for `message.updated`, `message.removed`, and `session.updated` and restores state on dispose.
+ */
 const tui: TuiPlugin = async (api) => {
   let didDeactivateContext = false;
   const contextPlugin = api.plugins.list().find((item) => item.id === INTERNAL_CONTEXT_PLUGIN_ID);
@@ -279,6 +281,7 @@ const tui: TuiPlugin = async (api) => {
   });
 };
 
+/** TUI plugin entrypoint for the cached provider usage dashboard. */
 const plugin: TuiPluginModule & { id: string } = {
   id: "cullyn.usage-sidebar",
   tui,

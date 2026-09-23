@@ -21,6 +21,7 @@ const IDLE_CONTEXT_MAX_AGE_MS = 30 * 1000;
 
 const recentNotifies = new Map();
 
+// ├─ Payload normalization ───────────────────────────────────────────────────────────────────────┤
 function cleanText(value, max = LIMITS.message) {
   if (typeof value !== "string") return "";
   return value.replace(/\s+/g, " ").trim().slice(0, max);
@@ -122,6 +123,7 @@ function isUntimedUserTextPart(part) {
   return part?.type === "text" && !part.synthetic && !part.ignored && !part.time && textFromMessage(part);
 }
 
+// ├─ Kitty session routing ───────────────────────────────────────────────────────────────────────┤
 async function kittyContext(sessionID, parentFor) {
   if (!sessionID) return EMPTY_KITTY_CONTEXT;
   try {
@@ -193,6 +195,7 @@ async function notify(payload, parentFor) {
   return sent;
 }
 
+// ├─ Session event state ─────────────────────────────────────────────────────────────────────────┤
 function newSessionState() {
   return {
     active: false,
@@ -388,6 +391,7 @@ const server = async () => {
     await updateUserMessage(id, msg);
   }
 
+  // ├─ OpenCode event handlers ───────────────────────────────────────────────────────────────────┤
   const handlers = {
     "message.created": handleMessageUpdated,
 
@@ -601,4 +605,8 @@ const server = async () => {
   };
 };
 
+/**
+ * Server plugin that maps OpenCode chat and lifecycle events to hyprd notifications.
+ * It uses the `chat.message` and `event` hooks for messages, sessions, permissions, questions, and todos.
+ */
 export default { id: "hyprd-notify", server };

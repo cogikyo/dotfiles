@@ -71,6 +71,7 @@ function applyCap(model: Record<string, unknown>, catalogLimit: Limit | undefine
   const output = number(configured?.output) ?? number(catalogLimit?.output);
   const input = number(configured?.input) ?? number(catalogLimit?.input);
   if (context === undefined || output === undefined) return;
+  // The cap is the compaction threshold plus the reserved input budget.
   if ((input || context) <= inputCap) return;
   const limit = { context, output, input };
   const threshold = contextCompactionLimit({ limit }, inputCap - COMPACTION_LIMIT);
@@ -116,4 +117,5 @@ function number(value: unknown) {
   return typeof value === "number" && Number.isFinite(value) ? value : undefined;
 }
 
+/** Runs the server config hook to cap model input limits and preserve the compaction reserve. */
 export default { id, server } satisfies PluginModule;

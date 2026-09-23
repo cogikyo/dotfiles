@@ -42,6 +42,11 @@ const VIDEO_MIME_BY_EXTENSION = new Map([
 type MediaKind = "image" | "video";
 type FileSource = { type: "file"; path: string; text: { value: string; start: number; end: number } };
 
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Session media registry                                                                        │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
+/** A provider or persisted message part that refers to local image or video media. */
 export type MediaFilePart = {
   id?: string;
   sessionID?: string;
@@ -54,6 +59,7 @@ export type MediaFilePart = {
   source?: { type: string; path?: string; text?: { value: string; start: number; end: number } };
 };
 
+/** A media part with the message identity and source fields required for persistence. */
 export type PersistedMediaFilePart = Omit<MediaFilePart, "id" | "sessionID" | "messageID" | "source"> & {
   id: string;
   sessionID: string;
@@ -61,6 +67,7 @@ export type PersistedMediaFilePart = Omit<MediaFilePart, "id" | "sessionID" | "m
   source: FileSource;
 };
 
+/** A session media record stored in the local registry. */
 export type MediaRegistryEntry = {
   handle: string;
   sessionID: string;
@@ -84,6 +91,8 @@ type RegistryFile = {
   entries: MediaRegistryEntry[];
 };
 
+// ├─ Registration and lookup ─────────────────────────────────────────────────────────────────────┤
+/** Narrows an unknown message part to supported image or video media. */
 export function mediaPart(part: unknown): MediaFilePart | undefined {
   const candidate = part as Partial<MediaFilePart> | undefined;
   return candidate?.type === "file" && mediaKindForMime(candidate.mime) && typeof candidate.url === "string"
@@ -91,6 +100,7 @@ export function mediaPart(part: unknown): MediaFilePart | undefined {
     : undefined;
 }
 
+/** Adds or updates local media in the session registry. */
 export function registerSessionMedia(sessionID: string, messageID: string | undefined, part: MediaFilePart) {
   try {
     const kind = part.kind ?? mediaKindForMime(part.mime);
@@ -142,6 +152,7 @@ export function registerSessionMedia(sessionID: string, messageID: string | unde
   }
 }
 
+/** Reads registered media for a session, returning an empty list on read failure. */
 export function listSessionMedia(sessionID: string) {
   try {
     return readRegistry(sessionID);
@@ -150,10 +161,13 @@ export function listSessionMedia(sessionID: string) {
   }
 }
 
+// ├─ Names and references ────────────────────────────────────────────────────────────────────────┤
+/** Returns a named alias when available, otherwise the generated handle. */
 export function mediaReference(entry: MediaRegistryEntry) {
   return entry.alias || entry.handle;
 }
 
+/** Saves a normalized image name, unique alias, and named cache copy. */
 export function updateImageName(sessionID: string, handle: string, name: string, source: string) {
   const cleanName = normalizeStoredName(name);
   if (!cleanName) return undefined;
@@ -187,6 +201,7 @@ export function updateImageName(sessionID: string, handle: string, name: string,
   }
 }
 
+/** Resolves handles and aliases in text to existing local media files. */
 export function resolveMediaReferences(sessionID: string, text: string) {
   const requested = requestedMediaReferences(text);
   if (requested.size === 0) return [];
@@ -201,6 +216,7 @@ export function resolveMediaReferences(sessionID: string, text: string) {
   return resolved;
 }
 
+/** Builds the persisted file part used to add a registered image to provider context. */
 export function mediaFilePartForEntry(
   entry: MediaRegistryEntry,
   sessionID: string,
@@ -225,6 +241,8 @@ export function mediaFilePartForEntry(
   };
 }
 
+// ├─ Local media paths ───────────────────────────────────────────────────────────────────────────┤
+/** Resolves supported media parts to a local file path. */
 export function localMediaPath(part: MediaFilePart) {
   const kind = part.kind ?? mediaKindForMime(part.mime);
   if (!kind) return undefined;
@@ -239,6 +257,7 @@ export function localMediaPath(part: MediaFilePart) {
   return kind === "image" ? materializeDataImage(part) : undefined;
 }
 
+/** Returns a video path only when it is an existing file under an allowed root. */
 export function allowedExistingVideoFile(path: string) {
   try {
     if (!isUnderAllowedVideoRoot(path) || !isExistingFile(path)) return undefined;
@@ -249,6 +268,7 @@ export function allowedExistingVideoFile(path: string) {
   }
 }
 
+/** Returns the roots from which video paths may be resolved. */
 export function allowedVideoRoots() {
   const roots = ["/home/cullyn/", "/tmp/"];
   const runtime = process.env.XDG_RUNTIME_DIR;
@@ -256,6 +276,7 @@ export function allowedVideoRoots() {
   return roots;
 }
 
+/** Extracts supported local video paths from a bounded text scan. */
 export function videoPathParts(text: string): MediaFilePart[] {
   const candidates = videoPathCandidates(text.slice(0, MAX_VIDEO_SCAN_CHARS));
   const parts: MediaFilePart[] = [];
@@ -320,6 +341,7 @@ function videoPathCandidates(text: string): VideoPathCandidate[] {
   return candidates;
 }
 
+/** Reports whether a path names an existing regular file. */
 export function isExistingFile(value: string) {
   try {
     return existsSync(value) && lstatSync(value).isFile();
@@ -346,6 +368,7 @@ function withTrailingSlash(value: string) {
   return value.endsWith("/") ? value : `${value}/`;
 }
 
+// ├─ Registry storage ────────────────────────────────────────────────────────────────────────────┤
 function readRegistry(sessionID: string): MediaRegistryEntry[] {
   return readWritableRegistry(sessionID) ?? [];
 }
@@ -435,6 +458,7 @@ function sameMedia(
   return entry.hash === hash;
 }
 
+// ├─ Registry formats ────────────────────────────────────────────────────────────────────────────┤
 function normalizeEntry(value: Partial<MediaRegistryEntry>): MediaRegistryEntry | undefined {
   if (typeof value.handle !== "string" || !HANDLE_EXACT_PATTERN.test(value.handle) || typeof value.path !== "string")
     return undefined;
@@ -476,6 +500,7 @@ function entryReferences(entry: MediaRegistryEntry) {
   return entry.alias ? [entry.handle, entry.alias] : [entry.handle];
 }
 
+// ├─ Aliases and file names ──────────────────────────────────────────────────────────────────────┤
 function normalizeStoredName(value: unknown) {
   if (typeof value !== "string") return undefined;
   const clean = value
@@ -619,6 +644,7 @@ function registryPath(sessionID: string) {
   return join(runtimeDir(), `${clean}-${sha256(sessionID).slice(0, 12)}.json`);
 }
 
+// ├─ Media formats ───────────────────────────────────────────────────────────────────────────────┤
 function mediaSourceLabel(part: MediaFilePart) {
   if (sourcePath(part)) return part.source?.type === "clipboard" ? "clipboard" : "local source";
   if (filePathFromURL(part.url)) return "file URL";

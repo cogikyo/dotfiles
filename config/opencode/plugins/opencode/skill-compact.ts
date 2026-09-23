@@ -49,6 +49,7 @@ const server: Plugin = async ({ client, directory, worktree, serverUrl }) => {
   });
 
   return {
+    // This hook supplies extra context strings to the default compaction prompt.
     "experimental.session.compacting": async (input, output) => {
       compacting.add(input.sessionID);
       output.context.push(
@@ -62,6 +63,7 @@ const server: Plugin = async ({ client, directory, worktree, serverUrl }) => {
         return;
       }
     },
+    // OpenCode exposes transformed messages as { info, parts } entries.
     "experimental.chat.messages.transform": async (_input, output) => {
       const agent = currentAgentFromMessages(output.messages);
       uncompactProtectedParts(
@@ -130,4 +132,5 @@ async function unwrap<T>(promise: Promise<unknown>, label: string): Promise<T> {
   return response as T;
 }
 
+/** Uses server compaction, message-transform, and message.part.updated hooks to preserve tool parts. */
 export default { id, server } satisfies PluginModule;

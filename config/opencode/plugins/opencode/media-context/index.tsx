@@ -44,6 +44,10 @@ type TerminalRect = {
   height: number;
 };
 
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ TUI media context                                                                             │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
 function MediaContext(props: { api: TuiPluginApi; sessionID: string; onOpenImage: (preview: PreviewState) => void }) {
   const [items, setItems] = createSignal<MediaItem[]>(mediaItems(props.api, props.sessionID));
   let refreshTimer: ReturnType<typeof setTimeout> | undefined;
@@ -167,6 +171,7 @@ function MediaContext(props: { api: TuiPluginApi; sessionID: string; onOpenImage
   );
 }
 
+// ├─ Image preview ───────────────────────────────────────────────────────────────────────────────┤
 function ImageOverlay(props: { api: TuiPluginApi; preview: PreviewState; onClose: () => void }) {
   return (
     <box
@@ -254,6 +259,7 @@ function KittyImageLayer(props: { api: TuiPluginApi; preview: PreviewState }) {
   return <box width="100%" height="100%" onSizeChange={scheduleDraw} />;
 }
 
+// ├─ Media discovery ─────────────────────────────────────────────────────────────────────────────┤
 function unnamedImageSignature(items: MediaItem[]) {
   return items
     .filter((item) => item.entry.kind === "image" && !item.entry.name)
@@ -321,6 +327,7 @@ function previewStillExists(api: TuiPluginApi, current: PreviewState) {
   );
 }
 
+// ├─ External media viewers ──────────────────────────────────────────────────────────────────────┤
 function openVideo(api: TuiPluginApi, path: string) {
   let child: ChildProcess;
   try {
@@ -352,6 +359,7 @@ function openVideo(api: TuiPluginApi, path: string) {
   child.unref();
 }
 
+// ├─ Kitty preview process ───────────────────────────────────────────────────────────────────────┤
 function terminalPreviewFrame(api: TuiPluginApi): TerminalRect | undefined {
   const columns = Math.floor(api.renderer.terminalWidth || api.renderer.width || 0);
   const rows = Math.floor(api.renderer.terminalHeight || api.renderer.height || 0);
@@ -427,6 +435,11 @@ function runKittyAndWait(args: string[]) {
   });
 }
 
+// ├─ TUI hooks and slots ─────────────────────────────────────────────────────────────────────────┤
+/**
+ * Registers the TUI `sidebar_content` and `app` slots.
+ * Listens for `message.updated`, `message.removed`, `message.part.updated`, `message.part.removed`, `session.compacted`, `tui.session.select`, and `tui.command.execute`.
+ */
 const tui: TuiPlugin = async (api) => {
   const [preview, setPreview] = createSignal<PreviewState>();
   const closePreview = () => {
@@ -476,4 +489,5 @@ const tui: TuiPlugin = async (api) => {
   });
 };
 
+/** TUI plugin entrypoint for session media discovery and preview. */
 export default { id, tui } satisfies TuiPluginModule & { id: string };

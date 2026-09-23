@@ -1,6 +1,7 @@
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui";
 import { spawn } from "node:child_process";
 
+/** Opens a file through hyprd and reports process errors in a TUI toast. */
 export function openInNvim(api: TuiPluginApi, filePath: string, title: string) {
   const child = spawn("hyprd", ["edit", filePath], {
     detached: true,
