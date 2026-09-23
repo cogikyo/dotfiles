@@ -43,6 +43,12 @@ export const icons = {
     busy: "󰐌",
     limited: "󰡴",
   },
+  role: {
+    build: "󰣪",
+    verify: "󰕥",
+    review: "󰈈",
+    scout: "󰆋",
+  },
   spinner: {
     braille: ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
   },

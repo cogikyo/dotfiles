@@ -1,6 +1,7 @@
 /** @jsxImportSource @opentui/solid */
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui";
 import type { Message, Session, SessionStatus } from "@opencode-ai/sdk/v2";
+import { stringWidth } from "bun";
 import { For, Show, createEffect, createMemo, createSignal, untrack, type Accessor } from "solid-js";
 import { colors, pressureColor } from "../shared/colors.ts";
 import { icons } from "../shared/icons.ts";
@@ -11,6 +12,15 @@ import { SidebarSection } from "../shared/sidebar-section.tsx";
 const id = "delegate-lanes";
 const DISMISSED = "delegate-lanes.dismissed";
 const DISMISSED_TTL = 30 * 24 * 60 * 60 * 1000;
+const FAMILIES: [RegExp, string][] = [
+  [/^opus/, "opus"],
+  [/sol/, "sol"],
+  [/luna/, "luna"],
+  [/astra/, "astra"],
+  [/fable/, "fable"],
+  [/grok/, "grok"],
+];
+const roles: Partial<Record<string, string>> = icons.role;
 
 type Usage = { model: string; tokens: number };
 type Status = SessionStatus["type"] | "limited";
@@ -37,6 +47,17 @@ function usage(message: Message): Usage | undefined {
   const measured = tokens(message);
   if (!measured) return undefined;
   return { model: message.modelID, tokens: measured };
+}
+
+function family(model: string) {
+  const bare = model.replace(/^.*\//, "").replace(/^claude-/, "");
+  return FAMILIES.find(([pattern]) => pattern.test(bare))?.[1] ?? bare;
+}
+
+function agentLabel(agent: string) {
+  const [role, ...scope] = agent.split("/");
+  const glyph = roles[role];
+  return glyph && scope.length ? `${glyph}/${scope.join("/")}` : agent;
 }
 
 function running(status: Status) {
@@ -149,7 +170,7 @@ function Row(props: { api: TuiPluginApi; lanes: Lanes; name: string; child: Sess
   const theme = () => props.api.theme.current;
   const status = () => props.lanes.status(props.child);
   const measured = () => props.lanes.usage(props.child.id);
-  const model = () => (measured()?.model ?? props.child.model?.id ?? "unknown").replace(/^claude-/, "");
+  const model = () => family(measured()?.model ?? props.child.model?.id ?? "unknown");
   const icon = () => {
     const current = status();
     if (current === "limited") return icons.lane.limited;
@@ -166,6 +187,14 @@ function Row(props: { api: TuiPluginApi; lanes: Lanes; name: string; child: Sess
     const value = measured()?.tokens;
     return value ? formatTokens(value) : "";
   };
+  const bracket = () => ` [${agentLabel(props.child.agent ?? "unknown")} • ${model()}] `;
+  const [width, setWidth] = createSignal<number>();
+  const name = () => {
+    const room = width();
+    if (room === undefined) return props.name;
+    const budget = room - stringWidth(`${icon()} ${bracket()}${spent()}`);
+    return stringWidth(props.name) <= budget ? props.name : `${props.name.slice(0, Math.max(0, budget - 1))}…`;
+  };
   const close = { icon: icons.error, run: () => props.lanes.dismissed.dismiss([props.child.id]) };
 
   return (
@@ -173,23 +202,31 @@ function Row(props: { api: TuiPluginApi; lanes: Lanes; name: string; child: Sess
       api={props.api}
       action={running(status()) ? undefined : close}
       onPress={() => props.api.route.navigate("session", { sessionID: props.child.id })}
-      below={
-        <text fg={theme().textMuted} wrapMode="none">
-          {`  [${props.child.agent ?? "unknown"} • ${model()}]`}
-        </text>
-      }
     >
-      <text fg={tone()} wrapMode="none" flexShrink={0}>{`${icon()} `}</text>
-      <text fg={theme().text} wrapMode="none" flexGrow={1} flexShrink={1}>
-        {props.name}
-      </text>
-      <text
-        fg={pressureColor(theme(), ((measured()?.tokens ?? 0) / COMPACTION_LIMIT) * 100)}
-        wrapMode="none"
-        flexShrink={0}
+      <box
+        flexDirection="row"
+        gap={0}
+        flexGrow={1}
+        flexShrink={1}
+        onSizeChange={function () {
+          setWidth(this.width);
+        }}
       >
-        {spent()}
-      </text>
+        <text fg={tone()} wrapMode="none" flexShrink={0}>{`${icon()} `}</text>
+        <text fg={theme().text} wrapMode="none" flexShrink={0}>
+          {name()}
+        </text>
+        <text fg={theme().textMuted} wrapMode="none" flexShrink={0} flexGrow={1}>
+          {bracket()}
+        </text>
+        <text
+          fg={pressureColor(theme(), ((measured()?.tokens ?? 0) / COMPACTION_LIMIT) * 100)}
+          wrapMode="none"
+          flexShrink={0}
+        >
+          {spent()}
+        </text>
+      </box>
     </ActionRow>
   );
 }
