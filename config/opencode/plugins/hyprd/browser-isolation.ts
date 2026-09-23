@@ -2,6 +2,7 @@ import { tool, type Plugin, type PluginModule } from "@opencode-ai/plugin";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createInterface } from "node:readline";
 import { z } from "zod";
+import { record } from "../shared/record.ts";
 
 const id = "hyprd-browser-isolation";
 const clients = new Map<string, Promise<MCPClient>>();
@@ -162,12 +163,6 @@ function definition(item: Tool) {
       };
     },
   });
-}
-
-function record(value: unknown): Record<string, unknown> | undefined {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? Object.fromEntries(Object.entries(value))
-    : undefined;
 }
 
 function parseTool(value: unknown): Tool {

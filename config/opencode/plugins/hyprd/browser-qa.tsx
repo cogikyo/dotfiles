@@ -2,6 +2,7 @@
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui";
 import { spawn, type ChildProcess } from "node:child_process";
 import { For, Show, createSignal } from "solid-js";
+import { record } from "../shared/record.ts";
 import { SidebarSection } from "../shared/sidebar-section.tsx";
 
 const id = "hyprd-browser-qa";
@@ -129,12 +130,6 @@ function workspaceEvent(line: string) {
   } catch {
     return undefined;
   }
-}
-
-function record(value: unknown): Record<string, unknown> | undefined {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? Object.fromEntries(Object.entries(value))
-    : undefined;
 }
 
 const tui: TuiPlugin = async (api) => {
