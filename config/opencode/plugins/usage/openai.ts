@@ -1,6 +1,7 @@
+import { record } from "../shared/record.ts";
 import { readAuth } from "./auth.ts";
 import { usageProviders } from "./providers.ts";
-import { normalizePercent, record } from "./types.ts";
+import { normalizePercent } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
 
 type OpenAIWindow = {

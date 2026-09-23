@@ -1,8 +1,9 @@
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { record } from "../shared/record.ts";
 import { readAuth, readClaudeCredentials } from "./auth.ts";
 import { usageProviders } from "./providers.ts";
-import { normalizePercent, record } from "./types.ts";
+import { normalizePercent } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
 
 type AnthropicWindow = {

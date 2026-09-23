@@ -1,7 +1,7 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { record } from "./types.ts";
+import { record } from "../shared/record.ts";
 
 /** Resolves OpenCode's data directory from XDG_DATA_HOME or the home directory. */
 export function resolveOpencodeDataDir() {

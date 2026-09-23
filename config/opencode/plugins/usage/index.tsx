@@ -162,12 +162,6 @@ async function manualRefresh(adapter: ProviderAdapter) {
 function UsagePanel(props: { api: TuiPluginApi; sessionID: string }) {
   const [providers, setProviders] = createSignal<ProviderUsage[]>(adapters.map(pendingUsage));
   const [activeProviderID, setActiveProviderID] = createSignal("");
-  createComputed(
-    on(
-      () => props.sessionID,
-      (sessionID) => setActiveProviderID(sessionProviderID(props.api, sessionID)),
-    ),
-  );
   const [refreshingProviderIDs, setRefreshingProviderIDs] = createSignal(new Set<string>());
 
   const refresh = (allowNetwork: boolean) => {
@@ -224,21 +218,13 @@ function UsagePanel(props: { api: TuiPluginApi; sessionID: string }) {
   );
   const timer = setInterval(() => refresh(true), UI_REFRESH_MS);
   createRenderEffect(() => {
-    const disposeMessageUpdated = props.api.event.on("message.updated", (event) => {
-      if (event.properties.sessionID !== untrack(() => props.sessionID)) return;
-      untrack(scheduleRefresh);
-    });
-    const disposeMessageRemoved = props.api.event.on("message.removed", (event) => {
-      if (event.properties.sessionID !== untrack(() => props.sessionID)) return;
-      untrack(scheduleRefresh);
-    });
-    const disposeSessionUpdated = props.api.event.on("session.updated", (event) => {
-      if (event.properties.sessionID !== untrack(() => props.sessionID)) return;
-      untrack(scheduleRefresh);
-    });
-    onCleanup(disposeMessageUpdated);
-    onCleanup(disposeMessageRemoved);
-    onCleanup(disposeSessionUpdated);
+    for (const type of ["message.updated", "message.removed", "session.updated"] as const) {
+      const dispose = props.api.event.on(type, (event) => {
+        if (event.properties.sessionID !== untrack(() => props.sessionID)) return;
+        untrack(scheduleRefresh);
+      });
+      onCleanup(dispose);
+    }
   });
   onCleanup(() => clearInterval(timer));
   onCleanup(() => {

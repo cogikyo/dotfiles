@@ -72,9 +72,7 @@ function applyCap(
   inputCap: number,
 ) {
   const configured = object(model.limit);
-  const context = number(configured?.context) ?? number(catalogLimit?.context);
-  const output = number(configured?.output) ?? number(catalogLimit?.output);
-  const input = number(configured?.input) ?? number(catalogLimit?.input);
+  const { context, output, input } = effectiveLimit(configured, catalogLimit);
   if (context === undefined || output === undefined) return;
   // The cap is the compaction threshold plus the reserved input budget.
   if ((input || context) <= inputCap) return;
@@ -82,6 +80,14 @@ function applyCap(
   const threshold = contextCompactionLimit({ limit }, inputCap - COMPACTION_LIMIT);
   if (threshold === undefined || threshold <= COMPACTION_LIMIT) return;
   model.limit = { ...configured, context, output, input: inputCap };
+}
+
+function effectiveLimit(configured: Record<string, unknown> | undefined, catalogLimit: Limit | undefined): Limit {
+  return {
+    context: number(configured?.context) ?? number(catalogLimit?.context),
+    output: number(configured?.output) ?? number(catalogLimit?.output),
+    input: number(configured?.input) ?? number(catalogLimit?.input),
+  };
 }
 
 async function readCatalog(): Promise<Catalog> {

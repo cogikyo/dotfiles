@@ -51,52 +51,50 @@ function parseGitStatus(output: string): GitStatus {
   };
 
   for (const line of output.split("\n")) {
-    if (!line) continue;
-
-    if (line.startsWith("# branch.head ")) {
-      status.branch = line.slice("# branch.head ".length);
-      continue;
-    }
-
-    if (line.startsWith("# branch.ab ")) {
-      const parts = line.split(/\s+/);
-      status.ahead = Number.parseInt(parts[2]?.slice(1) ?? "0", 10) || 0;
-      status.behind = Number.parseInt(parts[3]?.slice(1) ?? "0", 10) || 0;
-      continue;
-    }
-
-    if (line.startsWith("# stash ")) {
-      status.stashed = Number.parseInt(line.slice("# stash ".length), 10) || 0;
-      continue;
-    }
-
-    if (line.startsWith("#") || line.length < 4) continue;
-
-    const entryType = line[0];
-    const x = line[2];
-    const y = line[3];
-
-    if (entryType === "?") {
-      status.untracked++;
-      continue;
-    }
-
-    if (entryType === "u") {
-      status.conflicted++;
-      continue;
-    }
-
-    if (entryType === "1") {
-      if (x !== "." && x !== " ") status.staged++;
-      if (y === "M" || y === "T") status.modified++;
-      if (y === "D") status.deleted++;
-      continue;
-    }
-
-    if (entryType === "2") status.renamed++;
+    if (line.startsWith("#")) readHeader(status, line);
+    else if (line.length >= 4) countEntry(status, line);
   }
 
   return status;
+}
+
+function readHeader(status: GitStatus, line: string) {
+  if (line.startsWith("# branch.head ")) {
+    status.branch = line.slice("# branch.head ".length);
+    return;
+  }
+
+  if (line.startsWith("# branch.ab ")) {
+    const parts = line.split(/\s+/);
+    status.ahead = Number.parseInt(parts[2]?.slice(1) ?? "0", 10) || 0;
+    status.behind = Number.parseInt(parts[3]?.slice(1) ?? "0", 10) || 0;
+    return;
+  }
+
+  if (line.startsWith("# stash ")) {
+    status.stashed = Number.parseInt(line.slice("# stash ".length), 10) || 0;
+  }
+}
+
+function countEntry(status: GitStatus, line: string) {
+  const x = line[2];
+  const y = line[3];
+
+  switch (line[0]) {
+    case "?":
+      status.untracked++;
+      return;
+    case "u":
+      status.conflicted++;
+      return;
+    case "1":
+      if (x !== "." && x !== " ") status.staged++;
+      if (y === "M" || y === "T") status.modified++;
+      if (y === "D") status.deleted++;
+      return;
+    case "2":
+      status.renamed++;
+  }
 }
 
 /** Counts tracked and untracked changes in a parsed status. */

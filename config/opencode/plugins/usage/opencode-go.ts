@@ -1,12 +1,31 @@
+import { record } from "../shared/record.ts";
 import { readAuth } from "./auth.ts";
 import { usageProviders } from "./providers.ts";
-import { record } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
 
 const { id, label, staleAfterMS } = usageProviders.opencodeGo;
 
 function note(text: string, noteKind: ProviderUsage["noteKind"] = "error"): ProviderUsage {
   return { id, label, windows: [], note: text, noteKind };
+}
+
+function usageWindow(tag: string, raw: unknown): UsageWindow | undefined {
+  const value = record(raw);
+  if (
+    !value ||
+    typeof value.percent !== "number" ||
+    !Number.isFinite(value.percent) ||
+    value.percent < 0 ||
+    typeof value.resetsAt !== "string" ||
+    !Number.isFinite(Date.parse(value.resetsAt))
+  ) {
+    return undefined;
+  }
+  return {
+    label: tag,
+    usedPercent: Math.min(100, value.percent),
+    resetAt: value.resetsAt,
+  };
 }
 
 async function load(): Promise<ProviderUsage> {
@@ -46,22 +65,9 @@ async function load(): Promise<ProviderUsage> {
     ["weekly", "W"],
     ["monthly", "M"],
   ] as const) {
-    const value = record(rawUsage[name]);
-    if (
-      !value ||
-      typeof value.percent !== "number" ||
-      !Number.isFinite(value.percent) ||
-      value.percent < 0 ||
-      typeof value.resetsAt !== "string" ||
-      !Number.isFinite(Date.parse(value.resetsAt))
-    ) {
-      return note("invalid usage");
-    }
-    windows.push({
-      label: tag,
-      usedPercent: Math.min(100, value.percent),
-      resetAt: value.resetsAt,
-    });
+    const window = usageWindow(tag, rawUsage[name]);
+    if (!window) return note("invalid usage");
+    windows.push(window);
   }
 
   return { id, label, windows };

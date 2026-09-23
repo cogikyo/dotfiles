@@ -1,7 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { record } from "../shared/record.ts";
 import { usageCachePath, usageLockPath } from "./auth.ts";
-import { record, type ProviderUsage, type UsageWindow } from "./types.ts";
+import type { ProviderUsage, UsageWindow } from "./types.ts";
 
 /** Usage data and retry state stored for one provider. */
 export type CachedProviderUsage = {
@@ -129,7 +130,7 @@ export async function inspectProviderCache(
 /** Decodes and validates cached JSON against the provider freshness limit. */
 export function decodeProviderCache(raw: string, staleAfterMS: number, now = Date.now()): ProviderCacheView {
   try {
-    const root = object(JSON.parse(raw));
+    const root = record(JSON.parse(raw));
     if (!root) return unknownCache("malformed");
 
     const fetchedAt = optionalNumber(root.fetchedAt);
@@ -145,34 +146,28 @@ export function decodeProviderCache(raw: string, staleAfterMS: number, now = Dat
       return unknownCache("malformed");
     }
 
-    const usage = root.usage === undefined ? undefined : object(root.usage);
-    if (root.usage !== undefined && !usage) return unknownCache("malformed");
-    const rawWindows = usage ? usage.windows : root.windows;
-    if (rawWindows !== undefined && !Array.isArray(rawWindows)) {
-      return unknownCache("malformed");
-    }
-    if (Array.isArray(rawWindows) && rawWindows.length > MAX_CACHE_WINDOWS) {
-      return unknownCache("malformed");
-    }
-
-    const windows = (rawWindows ?? []).map((value) => parseCachedWindow(value, fetchedAt, now));
-    if (windows.some((window) => !window)) return unknownCache("malformed");
+    const windows = decodeWindows(root, fetchedAt, now);
+    if (!windows) return unknownCache("malformed");
 
     const ageMS = cacheAgeMS(fetchedAt, now);
-    const view = {
-      fetchedAt,
-      ageMS,
-      windows: windows.filter((window) => window !== undefined),
-    } satisfies ProviderCacheView;
-    if (error) return { ...view, issue: "error" };
-    if (!fetchedAt || !view.windows.length) return { ...view, issue: "unknown" };
-    if (isCacheStale(fetchedAt, staleAfterMS, now)) {
-      return { ...view, issue: "stale" };
-    }
-    return view;
+    const view = { fetchedAt, ageMS, windows } satisfies ProviderCacheView;
+    const issue = cacheIssue(view, error, staleAfterMS, now);
+    return issue ? { ...view, issue } : view;
   } catch {
     return unknownCache("malformed");
   }
+}
+
+function cacheIssue(
+  view: ProviderCacheView,
+  error: string | undefined,
+  staleAfterMS: number,
+  now: number,
+): ProviderCacheIssue | undefined {
+  if (error) return "error";
+  if (!view.fetchedAt || !view.windows.length) return "unknown";
+  if (isCacheStale(view.fetchedAt, staleAfterMS, now)) return "stale";
+  return undefined;
 }
 
 /** Returns a non-negative cache age, or undefined when no fetch time is stored. */
@@ -253,8 +248,24 @@ async function isStaleLock(lockPath: string) {
   }
 }
 
+function decodeWindows(
+  root: Record<string, unknown>,
+  fetchedAt: number | undefined,
+  now: number,
+): CachedUsageWindow[] | undefined {
+  const usage = root.usage === undefined ? undefined : record(root.usage);
+  if (root.usage !== undefined && !usage) return undefined;
+  const rawWindows = usage ? usage.windows : root.windows;
+  if (rawWindows !== undefined && !Array.isArray(rawWindows)) return undefined;
+  if (Array.isArray(rawWindows) && rawWindows.length > MAX_CACHE_WINDOWS) return undefined;
+
+  const windows = (rawWindows ?? []).map((value) => parseCachedWindow(value, fetchedAt, now));
+  if (windows.some((window) => !window)) return undefined;
+  return windows.filter((window) => window !== undefined);
+}
+
 function parseCachedWindow(value: unknown, fetchedAt: number | undefined, now: number): CachedUsageWindow | undefined {
-  const root = object(value);
+  const root = record(value);
   if (!root) return undefined;
   if (typeof root.label !== "string" || !/^[A-Za-z0-9_-]{1,8}$/.test(root.label)) {
     return undefined;
@@ -275,16 +286,16 @@ function parseCachedWindow(value: unknown, fetchedAt: number | undefined, now: n
     label: root.label,
     usedPercent,
     resetAt,
-    postReset: resetMS !== undefined && resetMS <= now && (fetchedAt === undefined || fetchedAt <= resetMS),
+    postReset: isPostReset(resetMS, fetchedAt, now),
   };
+}
+
+function isPostReset(resetMS: number | undefined, fetchedAt: number | undefined, now: number) {
+  return resetMS !== undefined && resetMS <= now && (fetchedAt === undefined || fetchedAt <= resetMS);
 }
 
 function unknownCache(issue: ProviderCacheIssue): ProviderCacheView {
   return { windows: [], issue };
-}
-
-function object(value: unknown): Record<string, unknown> | undefined {
-  return record(value);
 }
 
 function optionalNumber(value: unknown) {

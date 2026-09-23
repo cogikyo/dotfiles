@@ -1,6 +1,6 @@
+import { record } from "../shared/record.ts";
 import { readAuth } from "./auth.ts";
 import { usageProviders } from "./providers.ts";
-import { record } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
 
 // These fields are already percentages; values between 0 and 1 mean less than 1%, not fractions.

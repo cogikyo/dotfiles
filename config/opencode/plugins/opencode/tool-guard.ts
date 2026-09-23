@@ -7,6 +7,7 @@ const id = "opencode-tool-guard";
 const maxPatchBytes = 1024 * 1024;
 const probeBytes = 8192;
 
+type Client = Parameters<Plugin>[0]["client"];
 type Session = Record<string, unknown>;
 type PatchOperation = "Delete" | "Update";
 
@@ -56,19 +57,7 @@ const server: Plugin = async ({ client, directory, worktree }) => {
     // Throwing here rejects tool execution before OpenCode runs the requested tool.
     "tool.execute.before": async (input, output) => {
       if (input.tool === "bash") {
-        const command = string(object(output.args)?.command);
-        if (!command) return;
-
-        if (invokesRm(command)) {
-          throw new Error("rm is disabled; move files to trash with `trash -- <path>`");
-        }
-        const reviewBlock = reviewMutation(command);
-        if (reviewBlock) {
-          const session = await readSession(client, input.sessionID);
-          if (isReadOnlySession(session)) {
-            throw new Error(`read-only sessions cannot mutate; ${reviewBlock}`);
-          }
-        }
+        await guardBash(client, input.sessionID, string(object(output.args)?.command));
         return;
       }
 
@@ -80,21 +69,7 @@ const server: Plugin = async ({ client, directory, worktree }) => {
       }
       if (input.tool !== "apply_patch") return;
 
-      const patchText = string(object(output.args)?.patchText);
-      if (!patchText) return;
-      if (Buffer.byteLength(patchText) > maxPatchBytes) {
-        throw new Error(
-          `apply_patch input exceeds ${formatBytes(maxPatchBytes)}; split the text patch or use the owning generator`,
-        );
-      }
-
-      const targets = patchTargets(patchText);
-      if (targets.length === 0) return;
-
-      const cwd = string(session.directory) || fallbackDirectory;
-      const results = await Promise.allSettled(targets.map((target) => guardPatchTarget(cwd, target)));
-      const failure = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
-      if (failure) throw failure.reason;
+      await guardPatch(string(session.directory) || fallbackDirectory, string(object(output.args)?.patchText));
     },
   };
 };
@@ -102,6 +77,22 @@ const server: Plugin = async ({ client, directory, worktree }) => {
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
 // │ PATCH TARGET VALIDATION                                                                       │
 // ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
+async function guardPatch(cwd: string, patchText: string | undefined) {
+  if (!patchText) return;
+  if (Buffer.byteLength(patchText) > maxPatchBytes) {
+    throw new Error(
+      `apply_patch input exceeds ${formatBytes(maxPatchBytes)}; split the text patch or use the owning generator`,
+    );
+  }
+
+  const targets = patchTargets(patchText);
+  if (targets.length === 0) return;
+
+  const results = await Promise.allSettled(targets.map((target) => guardPatchTarget(cwd, target)));
+  const failure = results.find((result): result is PromiseRejectedResult => result.status === "rejected");
+  if (failure) throw failure.reason;
+}
 
 async function guardPatchTarget(cwd: string, target: PatchTarget) {
   const filePath = path.isAbsolute(target.path) ? path.normalize(target.path) : path.resolve(cwd, target.path);
@@ -193,6 +184,20 @@ function patchRejection(target: PatchTarget, filePath: string, reason: string) {
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
 // │ SHELL MUTATION POLICY                                                                         │
 // ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
+async function guardBash(client: Client, sessionID: string, command: string | undefined) {
+  if (!command) return;
+
+  if (invokesRm(command)) {
+    throw new Error("rm is disabled; move files to trash with `trash -- <path>`");
+  }
+  const reviewBlock = reviewMutation(command);
+  if (!reviewBlock) return;
+  const session = await readSession(client, sessionID);
+  if (isReadOnlySession(session)) {
+    throw new Error(`read-only sessions cannot mutate; ${reviewBlock}`);
+  }
+}
 
 function invokesRm(command: string) {
   return (
@@ -426,7 +431,7 @@ function executable(word: string) {
   return path.basename(word);
 }
 
-async function readSession(client: Parameters<Plugin>[0]["client"], sessionID: string): Promise<Session> {
+async function readSession(client: Client, sessionID: string): Promise<Session> {
   const response = await client.session.get({ path: { id: sessionID } });
   const envelope = object(response);
   if (envelope && "error" in envelope && envelope.error !== undefined) {

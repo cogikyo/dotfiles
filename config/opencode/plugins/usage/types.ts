@@ -6,12 +6,6 @@ export type UsageWindow = {
   resetAt?: string;
 };
 
-export function record(value: unknown): Record<string, unknown> | undefined {
-  return value !== null && typeof value === "object" && !Array.isArray(value)
-    ? Object.fromEntries(Object.entries(value))
-    : undefined;
-}
-
 /** Converts a provider percentage or fraction to a value from 0 through 100. */
 export function normalizePercent(value: unknown): number | undefined {
   if (value == null || typeof value !== "number") return undefined;
