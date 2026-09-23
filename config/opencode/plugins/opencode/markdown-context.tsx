@@ -16,6 +16,7 @@ import {
   type ProtectRoots,
   type SkillToolPart,
 } from "./skill-parts.ts";
+import { ActionRow, type RowAction } from "../shared/action-row.tsx";
 import { SidebarSection } from "../shared/sidebar-section.tsx";
 
 const id = "opencode-markdown-context";
@@ -82,38 +83,18 @@ function MarkdownContext(props: { api: TuiPluginApi; sessionID: string }) {
       <SidebarSection api={props.api} title="Markdown Context" detail={`${items().length} read`}>
         <For each={items()}>
           {(item) => (
-            <box flexDirection="row" gap={0}>
-              <Show when={canUnload(props.api, props.sessionID, item)}>
-                <text
-                  fg={props.api.theme.current.textMuted}
-                  wrapMode="none"
-                  onMouseDown={() => void unloadItem(props.api, props.sessionID, item)}
-                >
-                  {`${icons.error} `}
-                </text>
-              </Show>
-              <Show when={canReload(item)}>
-                <text
-                  fg={props.api.theme.current.textMuted}
-                  wrapMode="none"
-                  onMouseDown={() => void reloadItem(props.api, props.sessionID, item)}
-                >
-                  {`${icons.restore} `}
-                </text>
-              </Show>
-              <box
-                flexDirection="row"
-                gap={0}
-                onMouseDown={() => openInNvim(props.api, item.path, "Markdown open failed")}
-              >
-                <text fg={sourceColor(props.api, item)} wrapMode="none">
-                  {sourceIcon(props.api, item)}
-                </text>
-                <text fg={props.api.theme.current.textMuted} wrapMode="none">
-                  {item.label}
-                </text>
-              </box>
-            </box>
+            <ActionRow
+              api={props.api}
+              action={rowAction(props.api, props.sessionID, item)}
+              onPress={() => openInNvim(props.api, item.path, "Markdown open failed")}
+            >
+              <text fg={sourceColor(props.api, item)} wrapMode="none" flexShrink={0}>
+                {sourceIcon(props.api, item)}
+              </text>
+              <text fg={props.api.theme.current.textMuted} wrapMode="none" flexShrink={1}>
+                {item.label}
+              </text>
+            </ActionRow>
           )}
         </For>
       </SidebarSection>
@@ -277,6 +258,12 @@ function canUnload(api: TuiPluginApi, sessionID: string, item: MarkdownContextIt
 
 function canReload(item: MarkdownContextItem) {
   return item.compacted && item.refs.length > 0;
+}
+
+function rowAction(api: TuiPluginApi, sessionID: string, item: MarkdownContextItem): RowAction | undefined {
+  if (canUnload(api, sessionID, item)) return { icon: icons.error, run: () => void unloadItem(api, sessionID, item) };
+  if (canReload(item)) return { icon: icons.restore, run: () => void reloadItem(api, sessionID, item) };
+  return undefined;
 }
 
 async function unloadItem(api: TuiPluginApi, sessionID: string, item: MarkdownContextItem) {

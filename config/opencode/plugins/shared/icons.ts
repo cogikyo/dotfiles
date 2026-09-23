@@ -38,6 +38,11 @@ export const icons = {
   restore: "󰁯",
   readme: "",
   spec: "󱍅",
+  lane: {
+    idle: "󰏦",
+    busy: "󰐌",
+    limited: "󰡴",
+  },
   spinner: {
     braille: ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"],
   },
