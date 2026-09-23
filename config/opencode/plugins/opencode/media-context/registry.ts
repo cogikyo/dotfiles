@@ -17,7 +17,7 @@ import {
 import { tmpdir } from "node:os";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { record } from "../record.ts";
+import { record } from "../../shared/record.ts";
 
 const HANDLE_PATTERN =
   /(?:^|[^A-Za-z0-9_.\\/-])(@(?:[01]\d|2[0-3])_[0-5]\d_[0-5]\d(?:_(?:[2-9]|[1-9]\d+))?)(?![A-Za-z0-9_\\/-]|\.[A-Za-z0-9])/g;

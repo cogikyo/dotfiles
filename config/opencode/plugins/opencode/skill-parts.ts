@@ -1,6 +1,6 @@
 import { realpathSync } from "node:fs";
 import path from "node:path";
-import { record } from "./record.ts";
+import { record } from "../shared/record.ts";
 
 /** OpenCode tool-part fields used to mark, restore, and persist completed tool output. */
 export type SkillToolPart = {

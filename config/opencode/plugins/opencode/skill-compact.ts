@@ -1,7 +1,7 @@
 import type { Plugin, PluginInput, PluginModule } from "@opencode-ai/plugin";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { record } from "./record.ts";
+import { record } from "../shared/record.ts";
 import {
   isCompactedPart,
   isCompletedSkillPart,

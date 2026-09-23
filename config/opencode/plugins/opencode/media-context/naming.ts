@@ -1,7 +1,7 @@
 import type { PluginOptions } from "@opencode-ai/plugin";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { record } from "../record.ts";
+import { record } from "../../shared/record.ts";
 import { updateImageName, type MediaRegistryEntry } from "./registry";
 
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮

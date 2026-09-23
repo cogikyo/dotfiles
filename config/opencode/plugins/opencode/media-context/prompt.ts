@@ -11,7 +11,7 @@ import {
   type MediaRegistryEntry,
 } from "./registry";
 import { createImageNamer, modelFromValue } from "./naming";
-import { record } from "../record.ts";
+import { record } from "../../shared/record.ts";
 
 const id = "opencode-media-context-prompt";
 let partIDCounter = 0;

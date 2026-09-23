@@ -1,7 +1,7 @@
 import type { Plugin, PluginModule } from "@opencode-ai/plugin";
 import { open, stat } from "node:fs/promises";
 import path from "node:path";
-import { record } from "./record.ts";
+import { record } from "../shared/record.ts";
 
 const id = "opencode-tool-guard";
 const maxPatchBytes = 1024 * 1024;

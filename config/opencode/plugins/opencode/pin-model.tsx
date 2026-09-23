@@ -3,7 +3,7 @@ import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plug
 import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { getOwner, onCleanup, onMount } from "solid-js";
-import { record } from "./record.ts";
+import { record } from "../shared/record.ts";
 
 const id = "opencode-pin-model";
 const CONFIG_PATH = "/home/cullyn/dotfiles/config/opencode/opencode.json";

@@ -1,7 +1,7 @@
 import type { Config, Plugin, PluginModule } from "@opencode-ai/plugin";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { record } from "./record.ts";
+import { record } from "../shared/record.ts";
 import {
   COMPACTION_LIMIT,
   COMPACTION_RESERVED,
