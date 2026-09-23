@@ -123,7 +123,7 @@ function browserQA(input: unknown): BrowserQA[] {
         candidate.workspace === `browser-qa-${candidate.slot}`
       );
     })
-    .sort((left, right) => left.slot - right.slot);
+    .toSorted((left, right) => left.slot - right.slot);
 }
 
 function workspaceEvent(line: string) {

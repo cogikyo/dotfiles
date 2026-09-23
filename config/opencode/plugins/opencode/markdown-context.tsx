@@ -1,5 +1,5 @@
 /** @jsxImportSource @opentui/solid */
-import type { Message, ToolPart } from "@opencode-ai/sdk/v2";
+import type { ToolPart } from "@opencode-ai/sdk/v2";
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import path from "node:path";
@@ -118,7 +118,7 @@ function MarkdownContext(props: { api: TuiPluginApi; sessionID: string }) {
 function markdownContextItems(api: TuiPluginApi, sessionID: string) {
   const pinned = pinnedContextItems(api, sessionID);
   const reads = new Map<string, MarkdownContextItem>();
-  const messages = api.state.session.messages(sessionID) as ReadonlyArray<Message>;
+  const messages = api.state.session.messages(sessionID);
 
   for (const message of messages) {
     for (const part of api.state.part(message.id)) {
@@ -147,7 +147,7 @@ function markdownContextItems(api: TuiPluginApi, sessionID: string) {
     }
   }
 
-  return [...pinned, ...Array.from(reads.values()).sort((left, right) => right.time - left.time)];
+  return [...pinned, ...Array.from(reads.values()).toSorted((left, right) => right.time - left.time)];
 }
 
 function pinnedContextItems(api: TuiPluginApi, sessionID: string) {
@@ -174,7 +174,7 @@ function pinnedContextItems(api: TuiPluginApi, sessionID: string) {
 }
 
 function currentAgent(api: TuiPluginApi, sessionID: string) {
-  const messages = api.state.session.messages(sessionID) as ReadonlyArray<Message>;
+  const messages = api.state.session.messages(sessionID);
   for (let index = messages.length - 1; index >= 0; index -= 1) {
     const message = messages[index];
     if ("agent" in message && typeof message.agent === "string" && message.agent) return message.agent;
@@ -187,13 +187,12 @@ function markdownReadItem(
   part: ReturnType<TuiPluginApi["state"]["part"]>[number],
 ): MarkdownContextItem | undefined {
   if (part.type !== "tool" || !isReadTool(part.tool)) return undefined;
-  const tool = part as ToolPart;
-  if (tool.state.status !== "completed") return undefined;
+  if (part.state.status !== "completed") return undefined;
 
-  const filePath = markdownPathFromInput(tool.state.input);
+  const filePath = markdownPathFromInput(part.state.input);
   if (!filePath) return undefined;
-  return markdownFileItem(api, filePath, tool.state.time.end, tool.state.time.compacted !== undefined, [
-    { messageID: tool.messageID, partID: tool.id },
+  return markdownFileItem(api, filePath, part.state.time.end, part.state.time.compacted !== undefined, [
+    { messageID: part.messageID, partID: part.id },
   ]);
 }
 
@@ -202,13 +201,12 @@ function skillToolItem(
   part: ReturnType<TuiPluginApi["state"]["part"]>[number],
 ): MarkdownContextItem | undefined {
   if (part.type !== "tool" || !isSkillTool(part.tool)) return undefined;
-  const tool = part as ToolPart;
-  if (tool.state.status !== "completed") return undefined;
+  if (part.state.status !== "completed") return undefined;
 
-  const filePath = skillPathFromTool(tool);
+  const filePath = skillPathFromTool(part);
   if (!filePath) return undefined;
-  return markdownFileItem(api, filePath, tool.state.time.end, tool.state.time.compacted !== undefined, [
-    { messageID: tool.messageID, partID: tool.id },
+  return markdownFileItem(api, filePath, part.state.time.end, part.state.time.compacted !== undefined, [
+    { messageID: part.messageID, partID: part.id },
   ]);
 }
 
@@ -268,14 +266,14 @@ function canReload(item: MarkdownContextItem) {
 async function unloadItem(api: TuiPluginApi, sessionID: string, item: MarkdownContextItem) {
   const ids = new Set(item.refs.map((ref) => `${ref.messageID}:${ref.partID}`));
   const parts: SkillToolPart[] = [];
-  const messages = api.state.session.messages(sessionID) as ReadonlyArray<Message>;
+  const messages = api.state.session.messages(sessionID);
 
   for (const message of messages) {
     for (const part of api.state.part(message.id)) {
       if (part.type !== "tool" || part.state.status !== "completed" || part.state.time.compacted !== undefined)
         continue;
       if (!ids.has(`${part.messageID}:${part.id}`)) continue;
-      parts.push(part as SkillToolPart);
+      parts.push(part);
     }
   }
 
@@ -305,7 +303,7 @@ async function reloadItem(api: TuiPluginApi, sessionID: string, item: MarkdownCo
 
   const ids = new Set(item.refs.map((ref) => `${ref.messageID}:${ref.partID}`));
   const parts: SkillToolPart[] = [];
-  const messages = api.state.session.messages(sessionID) as ReadonlyArray<Message>;
+  const messages = api.state.session.messages(sessionID);
 
   for (const message of messages) {
     for (const part of api.state.part(message.id)) {

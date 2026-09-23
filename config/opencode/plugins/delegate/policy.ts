@@ -75,9 +75,8 @@ function sleepAbortably(ms: number, signal: AbortSignal) {
       reject(new Error("delegate provider policy wait aborted"));
     };
     signal.addEventListener("abort", abort, { once: true });
-    void Promise.resolve().then(() => {
-      if (!signal.aborted) return;
-      abort();
+    queueMicrotask(() => {
+      if (signal.aborted) abort();
     });
   });
 }

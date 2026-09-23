@@ -67,10 +67,11 @@ function findLocal(owner: OwnerNode | null | undefined) {
     }
     owner = owner.owner ?? undefined;
   }
+  return undefined;
 }
 
 function captureLocal() {
-  const next = findLocal(getOwner() as OwnerNode | null);
+  const next = findLocal(getOwner());
   if (next) local = next;
   return local;
 }

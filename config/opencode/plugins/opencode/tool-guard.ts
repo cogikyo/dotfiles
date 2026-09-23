@@ -202,6 +202,7 @@ function reviewMutation(command: string): string | undefined {
     const reason = reviewMutation(nested);
     if (reason) return reason;
   }
+  return undefined;
 }
 
 function invokesInPlaceEdit(words: string[]) {
@@ -282,6 +283,7 @@ function gitCommand(args: string[]) {
     if (arg.startsWith("-")) continue;
     return { name: arg, args: args.slice(index + 1) };
   }
+  return undefined;
 }
 
 function mutatesGitBranch(args: string[]) {
@@ -410,7 +412,7 @@ function executable(word: string) {
 }
 
 async function readSession(client: Parameters<Plugin>[0]["client"], sessionID: string): Promise<Session> {
-  const response = await client.session.get({ path: { id: sessionID } } as never);
+  const response = await client.session.get({ path: { id: sessionID } });
   const envelope = object(response);
   if (envelope && "error" in envelope && envelope.error !== undefined) {
     throw new Error(`tool guard could not read session ${sessionID}`);

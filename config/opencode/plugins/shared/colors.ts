@@ -3,24 +3,24 @@ import { RGBA } from "@opentui/core";
 
 export type Theme = TuiThemeCurrent;
 
-const c = (hex: string) => RGBA.fromHex(hex);
+const hex = (value: string) => RGBA.fromHex(value);
 const defs = {
-  blu_2: c("#7492ef"),
-  blu_4: c("#9db2f4"),
-  grn_3: c("#95cb79"),
-  grn_4: c("#9fd883"),
-  sun_4: c("#f5d599"),
-  sun_2: c("#f5c069"),
-  orn_4: c("#f8b486"),
-  rby_3: c("#f08898"),
-  rby_4: c("#f29ca9"),
-  prp_3: c("#b29ae8"),
-  pnk_2: c("#ea76c0"),
-  cyn_3: c("#50dec8"),
-  sky_3: c("#7cc5ef"),
-  fg: c("#aeb9f8"),
-  slt_5: c("#7b7fb0"),
-  prp_2: c("#a188df"),
+  blu_2: hex("#7492ef"),
+  blu_4: hex("#9db2f4"),
+  grn_3: hex("#95cb79"),
+  grn_4: hex("#9fd883"),
+  sun_4: hex("#f5d599"),
+  sun_2: hex("#f5c069"),
+  orn_4: hex("#f8b486"),
+  rby_3: hex("#f08898"),
+  rby_4: hex("#f29ca9"),
+  prp_3: hex("#b29ae8"),
+  pnk_2: hex("#ea76c0"),
+  cyn_3: hex("#50dec8"),
+  sky_3: hex("#7cc5ef"),
+  fg: hex("#aeb9f8"),
+  slt_5: hex("#7b7fb0"),
+  prp_2: hex("#a188df"),
 } as const;
 
 const palette = {

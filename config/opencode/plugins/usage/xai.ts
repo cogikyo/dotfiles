@@ -231,12 +231,12 @@ function mergeWindows(parts: UsageWindow[][]): UsageWindow[] {
   // Stable sidebar order: weekly before monthly.
   const order = ["W", "M"];
   const ordered: UsageWindow[] = [];
-  for (const label of order) {
-    const window = byLabel.get(label);
+  for (const key of order) {
+    const window = byLabel.get(key);
     if (window) ordered.push(window);
   }
-  for (const [label, window] of byLabel) {
-    if (!order.includes(label)) ordered.push(window);
+  for (const [key, window] of byLabel) {
+    if (!order.includes(key)) ordered.push(window);
   }
   return ordered;
 }

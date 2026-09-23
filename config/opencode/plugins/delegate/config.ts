@@ -11,14 +11,14 @@ export async function loadDelegateConfig(path = DELEGATE_CONFIG_PATH): Promise<D
   try {
     raw = await fs.readFile(path, "utf8");
   } catch (error) {
-    throw new Error(`delegate config not readable at ${path}: ${errorMessage(error)}`);
+    throw new Error(`delegate config not readable at ${path}: ${errorMessage(error)}`, { cause: error });
   }
 
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw) as unknown;
   } catch (error) {
-    throw new Error(`delegate config is not valid JSON at ${path}: ${errorMessage(error)}`);
+    throw new Error(`delegate config is not valid JSON at ${path}: ${errorMessage(error)}`, { cause: error });
   }
 
   return validateDelegateConfig(parsed, path);

@@ -135,7 +135,7 @@ function cookieFromRow(row: CookieRow): CandidateCookie | undefined {
 }
 
 function freshest(cookies: CandidateCookie[]) {
-  return [...cookies].sort((a, b) => {
+  return cookies.toSorted((a, b) => {
     const byAccess = b.lastAccessed - a.lastAccessed;
     if (byAccess !== 0) return byAccess;
     const byCreation = b.creationTime - a.creationTime;

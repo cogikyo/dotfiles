@@ -1,7 +1,7 @@
 /** @jsxImportSource @opentui/solid */
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule, TuiPromptRef } from "@opencode-ai/plugin/tui";
 import { writeFile } from "node:fs/promises";
-import { Show, createSignal, onCleanup, type Accessor } from "solid-js";
+import { Show, createComputed, createMemo, createSignal, on, onCleanup, type Accessor } from "solid-js";
 import { colors, pressureColor, pressureTier } from "../shared/colors.ts";
 import { gitDirtyCount, gitStatus, type GitStatus } from "../shared/git.ts";
 import { icons } from "../shared/icons.ts";
@@ -40,18 +40,21 @@ function StatusLeft(props: { api: TuiPluginApi; sessionID: string }) {
   const [git, setGit] = createSignal<GitStatus | undefined>();
   let refreshID = 0;
 
-  const refresh = () => {
-    const id = ++refreshID;
-    setRevision((value) => value + 1);
+  const syncGit = async (seq: number) => {
     const meta = sessionMeta(props.api, props.sessionID);
-    void resolveGitStatus(props.api, props.sessionID, meta.cwd).then((status) => {
-      if (id !== refreshID) return;
-      if (status) setGit(status);
-      else setGit((current) => current ?? fallbackGitStatus(props.api));
-    });
+    const status = await resolveGitStatus(props.api, props.sessionID, meta.cwd);
+    if (seq !== refreshID) return;
+    if (status) setGit(status);
+    else setGit((current) => current ?? fallbackGitStatus(props.api));
   };
 
-  refresh();
+  const refresh = () => {
+    const seq = ++refreshID;
+    setRevision((value) => value + 1);
+    void syncGit(seq);
+  };
+
+  createComputed(on(() => props.sessionID, refresh));
   const timer = setInterval(refresh, REFRESH_MS);
   const disposers = [
     props.api.event.on("message.updated", (event) => {
@@ -100,7 +103,15 @@ function StatusRight(props: { api: TuiPluginApi; sessionID: string }) {
     if (next.limit && next.tokens > 0) setUsage(next);
   };
 
-  refresh();
+  createComputed(
+    on(
+      () => props.sessionID,
+      () => {
+        setUsage(undefined);
+        refresh();
+      },
+    ),
+  );
   const timer = setInterval(refresh, REFRESH_MS);
   const disposers = [
     props.api.event.on("message.updated", (event) => {
@@ -145,18 +156,18 @@ function GitSegment(props: { api: TuiPluginApi; status?: GitStatus }) {
 }
 
 function GitStats(props: { api: TuiPluginApi; status: GitStatus }) {
-  const c = colors(props.api.theme.current);
+  const c = createMemo(() => colors(props.api.theme.current));
   return (
     <>
-      <GitCount value={props.status.ahead} icon={icons.git.ahead} fg={c.green} />
-      <GitCount value={props.status.behind} icon={icons.git.behind} fg={c.brightRed} />
-      <GitCount value={props.status.modified} icon={icons.git.modified} fg={c.sky} />
-      <GitCount value={props.status.staged} icon={icons.git.staged} fg={c.yellow} />
-      <GitCount value={props.status.deleted} icon={icons.git.deleted} fg={c.red} />
-      <GitCount value={props.status.untracked} icon={icons.git.untracked} fg={c.yellow} />
-      <GitCount value={props.status.stashed} icon={icons.git.stashed} fg={c.muted} />
-      <GitCount value={props.status.conflicted} icon={icons.git.conflict} fg={c.pink} />
-      <GitCount value={props.status.renamed} icon={icons.git.renamed} fg={c.magenta} />
+      <GitCount value={props.status.ahead} icon={icons.git.ahead} fg={c().green} />
+      <GitCount value={props.status.behind} icon={icons.git.behind} fg={c().brightRed} />
+      <GitCount value={props.status.modified} icon={icons.git.modified} fg={c().sky} />
+      <GitCount value={props.status.staged} icon={icons.git.staged} fg={c().yellow} />
+      <GitCount value={props.status.deleted} icon={icons.git.deleted} fg={c().red} />
+      <GitCount value={props.status.untracked} icon={icons.git.untracked} fg={c().yellow} />
+      <GitCount value={props.status.stashed} icon={icons.git.stashed} fg={c().muted} />
+      <GitCount value={props.status.conflicted} icon={icons.git.conflict} fg={c().pink} />
+      <GitCount value={props.status.renamed} icon={icons.git.renamed} fg={c().magenta} />
     </>
   );
 }
@@ -213,7 +224,7 @@ function agentColor(api: TuiPluginApi, sessionID: string) {
   const colorName = agent ? api.state.config.agent?.[agent]?.color : undefined;
   if (typeof colorName === "string" && !colorName.startsWith("#")) {
     const color = theme[colorName as keyof typeof theme];
-    if (typeof color === "object" && color) return color as typeof theme.text;
+    if (typeof color === "object" && color) return color;
   }
   return colors(theme).brightBlue;
 }

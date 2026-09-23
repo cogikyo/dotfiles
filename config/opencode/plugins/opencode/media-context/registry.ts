@@ -399,7 +399,7 @@ function withRegistryLock<T>(sessionID: string, operation: () => T) {
       fd = openSync(lockPath, "wx", 0o600);
     } catch (retryError) {
       if (!isFileExistsError(retryError)) throw retryError;
-      throw new Error(`media registry is busy for ${sessionID}`);
+      throw new Error(`media registry is busy for ${sessionID}`, { cause: retryError });
     }
   }
 

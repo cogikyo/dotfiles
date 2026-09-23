@@ -103,14 +103,14 @@ function labelFromDuration(value: unknown) {
 function usageWindow(window: OpenAIWindow | null | undefined, fallback: OpenAIRateLimit): UsageWindow | undefined {
   if (!window) return undefined;
 
-  const label = labelFromDuration(window.limit_window_seconds);
-  if (!label) return undefined;
+  const tag = labelFromDuration(window.limit_window_seconds);
+  if (!tag) return undefined;
 
   const used = usedPercent(window);
-  const resetAt = resetAtFromWindow(window, fallback);
-  if (used === undefined && !resetAt) return undefined;
+  const reset = resetAtFromWindow(window, fallback);
+  if (used === undefined && !reset) return undefined;
 
-  return { label, usedPercent: used, resetAt };
+  return { label: tag, usedPercent: used, resetAt: reset };
 }
 
 export function parseOpenAIWindows(rateLimit?: OpenAIRateLimit): UsageWindow[] {

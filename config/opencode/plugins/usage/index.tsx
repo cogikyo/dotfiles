@@ -1,6 +1,6 @@
 /** @jsxImportSource @opentui/solid */
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui";
-import { createSignal, onCleanup } from "solid-js";
+import { Show, createComputed, createSignal, on, onCleanup } from "solid-js";
 import { sessionProviderID } from "../shared/session.ts";
 import { usageAdapters } from "./adapters.ts";
 import {
@@ -14,7 +14,6 @@ import {
 import { declaredWindows, type ProviderAdapter, type ProviderUsage } from "./types.ts";
 import { UsageDashboard } from "./ui.tsx";
 
-const id = "cullyn.usage-sidebar";
 const INTERNAL_CONTEXT_PLUGIN_ID = "internal:sidebar-context";
 const UI_REFRESH_MS = 60_000;
 const EVENT_REFRESH_DELAY_MS = 5_000;
@@ -164,7 +163,13 @@ async function manualRefresh(adapter: ProviderAdapter) {
 
 function UsagePanel(props: { api: TuiPluginApi; sessionID: string }) {
   const [providers, setProviders] = createSignal<ProviderUsage[]>(adapters.map(pendingUsage));
-  const [activeProviderID, setActiveProviderID] = createSignal(sessionProviderID(props.api, props.sessionID));
+  const [activeProviderID, setActiveProviderID] = createSignal("");
+  createComputed(
+    on(
+      () => props.sessionID,
+      (sessionID) => setActiveProviderID(sessionProviderID(props.api, sessionID)),
+    ),
+  );
   const [refreshingProviderIDs, setRefreshingProviderIDs] = createSignal(new Set<string>());
 
   const refresh = (allowNetwork: boolean) => {
@@ -177,7 +182,7 @@ function UsagePanel(props: { api: TuiPluginApi; sessionID: string }) {
           noteKind: "error" as const,
         })),
       ),
-    ).then((next) => setProviders(next));
+    ).then((loaded) => setProviders(loaded));
   };
 
   let eventRefreshTimer: ReturnType<typeof setTimeout> | undefined;
@@ -207,9 +212,9 @@ function UsagePanel(props: { api: TuiPluginApi; sessionID: string }) {
         note: "unavailable",
         noteKind: "error" as const,
       }))
-      .then((next) => {
-        setProviders((current) => current.map((provider) => (provider.id === adapter.id ? next : provider)));
-      })
+      .then((usage) =>
+        setProviders((current) => current.map((provider) => (provider.id === adapter.id ? usage : provider))),
+      )
       .finally(() => markRefreshing(adapter.id, false));
   };
 
@@ -253,9 +258,8 @@ const tui: TuiPlugin = async (api) => {
     didDeactivateContext = await api.plugins.deactivate(INTERNAL_CONTEXT_PLUGIN_ID).catch(() => false);
   }
 
-  api.lifecycle.onDispose(() => {
-    if (!didDeactivateContext) return;
-    return api.plugins.activate(INTERNAL_CONTEXT_PLUGIN_ID).then(() => undefined);
+  api.lifecycle.onDispose(async () => {
+    if (didDeactivateContext) await api.plugins.activate(INTERNAL_CONTEXT_PLUGIN_ID);
   });
 
   api.slots.register({
@@ -265,15 +269,18 @@ const tui: TuiPlugin = async (api) => {
         return null;
       },
       sidebar_content(_ctx, props: { session_id: string }) {
-        if (api.state.session.get(props.session_id)?.parentID) return null;
-        return <UsagePanel api={api} sessionID={props.session_id} />;
+        return (
+          <Show when={!api.state.session.get(props.session_id)?.parentID}>
+            <UsagePanel api={api} sessionID={props.session_id} />
+          </Show>
+        );
       },
     },
   });
 };
 
 const plugin: TuiPluginModule & { id: string } = {
-  id,
+  id: "cullyn.usage-sidebar",
   tui,
 };
 

@@ -216,6 +216,26 @@ function newSessionState() {
   };
 }
 
+function clearIdleReminder(state) {
+  clearTimeout(state.idleTimer);
+  state.idleTimer = null;
+}
+
+function clearStartNotify(state) {
+  clearTimeout(state.startTimer);
+  state.startTimer = null;
+}
+
+function updateAssistantPartText(state, partID, text) {
+  if (!partID) return;
+
+  const message = cleanText(text);
+  if (!message) return;
+
+  state.assistantPartText.set(partID, message);
+  state.lastAssistantMessage = message;
+}
+
 const server = async () => {
   const sessions = new Map();
   const messageRoles = new Map();
@@ -251,16 +271,6 @@ const server = async () => {
     return await notify(payload, parentFor);
   }
 
-  function clearIdleReminder(state) {
-    clearTimeout(state.idleTimer);
-    state.idleTimer = null;
-  }
-
-  function clearStartNotify(state) {
-    clearTimeout(state.startTimer);
-    state.startTimer = null;
-  }
-
   async function trySendStartNotify(sessionID, message) {
     const state = sessions.get(sessionID);
     if (!state?.active || state.startNotified) return false;
@@ -283,9 +293,9 @@ const server = async () => {
     const state = sessions.get(sessionID);
     if (!state?.active || state.startNotified || state.startTimer) return;
 
-    state.startTimer = setTimeout(async () => {
+    state.startTimer = setTimeout(() => {
       state.startTimer = null;
-      await trySendStartNotify(sessionID, message);
+      void trySendStartNotify(sessionID, message);
     }, delay);
   }
 
@@ -293,18 +303,22 @@ const server = async () => {
     const state = sessions.get(sessionID);
     if (!state || state.parentID || state.active || state.idleTimer || hasActiveDescendant(sessionID)) return;
 
-    state.idleTimer = setTimeout(async () => {
+    state.idleTimer = setTimeout(() => {
       state.idleTimer = null;
-      if (state.parentID || state.active || hasActiveDescendant(sessionID)) return;
-
-      const message = state.lastUserMessage || state.title || state.lastAssistantMessage || "Still idle";
-      await sendNotify({
-        sessionID,
-        type: "idle",
-        message,
-      });
-      scheduleIdleReminder(sessionID);
+      void remindIdle(sessionID, state);
     }, IDLE_REMINDER_MS);
+  }
+
+  async function remindIdle(sessionID, state) {
+    if (state.parentID || state.active || hasActiveDescendant(sessionID)) return;
+
+    const message = state.lastUserMessage || state.title || state.lastAssistantMessage || "Still idle";
+    await sendNotify({
+      sessionID,
+      type: "idle",
+      message,
+    });
+    scheduleIdleReminder(sessionID);
   }
 
   function scheduleComplete(sessionID) {
@@ -312,50 +326,44 @@ const server = async () => {
     if (!state?.active || state.completeTimer) return;
 
     const inactiveAt = Date.now();
-    state.completeTimer = setTimeout(async () => {
+    state.completeTimer = setTimeout(() => {
       state.completeTimer = null;
-      if (!state.active) return;
+      void complete(sessionID, state, inactiveAt);
+    }, COMPLETE_DEBOUNCE_MS);
+  }
 
-      if (state.hasOpenTodos || hasActiveDescendant(sessionID)) return;
+  async function complete(sessionID, state, inactiveAt) {
+    if (!state.active) return;
 
-      state.active = false;
-      state.inactiveAt = inactiveAt;
-      clearStartNotify(state);
+    if (state.hasOpenTodos || hasActiveDescendant(sessionID)) return;
 
-      if (Date.now() - state.lastTodoCompletedAt < TODO_COMPLETE_DEBOUNCE_MS) {
-        scheduleIdleReminder(sessionID);
-        if (state.parentID) {
-          scheduleComplete(state.parentID);
-          scheduleIdleReminder(state.parentID);
-        }
-        return;
-      }
+    state.active = false;
+    state.inactiveAt = inactiveAt;
+    clearStartNotify(state);
 
-      const isSubagent = state.parentID !== "";
-      const message = state.lastAssistantMessage || state.title;
-      await sendNotify({
-        sessionID,
-        type: isSubagent ? "subagent" : "complete",
-        agent_type: isSubagent ? state.title : "",
-        message: message || (isSubagent ? "Done" : "Jobs done"),
-        last_assistant_message: message,
-      });
+    if (Date.now() - state.lastTodoCompletedAt < TODO_COMPLETE_DEBOUNCE_MS) {
       scheduleIdleReminder(sessionID);
       if (state.parentID) {
         scheduleComplete(state.parentID);
         scheduleIdleReminder(state.parentID);
       }
-    }, COMPLETE_DEBOUNCE_MS);
-  }
+      return;
+    }
 
-  function updateAssistantPartText(state, partID, text) {
-    if (!partID) return;
-
-    const message = cleanText(text);
-    if (!message) return;
-
-    state.assistantPartText.set(partID, message);
-    state.lastAssistantMessage = message;
+    const isSubagent = state.parentID !== "";
+    const message = state.lastAssistantMessage || state.title;
+    await sendNotify({
+      sessionID,
+      type: isSubagent ? "subagent" : "complete",
+      agent_type: isSubagent ? state.title : "",
+      message: message || (isSubagent ? "Done" : "Jobs done"),
+      last_assistant_message: message,
+    });
+    scheduleIdleReminder(sessionID);
+    if (state.parentID) {
+      scheduleComplete(state.parentID);
+      scheduleIdleReminder(state.parentID);
+    }
   }
 
   async function updateUserMessage(sessionID, message) {

@@ -8,8 +8,8 @@ type AuthFile = {
   "opencode-go"?: { type?: string; key?: string };
 };
 
-function note(note: string, noteKind: ProviderUsage["noteKind"] = "error"): ProviderUsage {
-  return { id, label, windows: [], note, noteKind };
+function note(text: string, noteKind: ProviderUsage["noteKind"] = "error"): ProviderUsage {
+  return { id, label, windows: [], note: text, noteKind };
 }
 
 async function load(): Promise<ProviderUsage> {
@@ -43,7 +43,7 @@ async function load(): Promise<ProviderUsage> {
   }
 
   const windows: UsageWindow[] = [];
-  for (const [name, label] of [
+  for (const [name, tag] of [
     ["rolling", "H"],
     ["weekly", "W"],
     ["monthly", "M"],
@@ -60,7 +60,7 @@ async function load(): Promise<ProviderUsage> {
       return note("invalid usage");
     }
     windows.push({
-      label,
+      label: tag,
       usedPercent: Math.min(100, value.percent),
       resetAt: value.resetsAt,
     });

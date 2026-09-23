@@ -67,7 +67,7 @@ export async function readClaudeCredentials(): Promise<ClaudeCredentials[]> {
       const record = parsed as Record<string, unknown>;
       const credentials = record.claudeAiOauth ?? record;
       if (!credentials || typeof credentials !== "object") continue;
-      candidates.push(credentials as ClaudeCredentials);
+      candidates.push(credentials);
     } catch {
       continue;
     }

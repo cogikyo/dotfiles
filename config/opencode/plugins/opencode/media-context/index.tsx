@@ -258,7 +258,7 @@ function unnamedImageSignature(items: MediaItem[]) {
   return items
     .filter((item) => item.entry.kind === "image" && !item.entry.name)
     .map((item) => item.entry.handle)
-    .sort()
+    .toSorted()
     .join("\0");
 }
 
@@ -273,7 +273,7 @@ function mediaItemLabel(item: MediaItem) {
 
 function mediaItems(api: TuiPluginApi, sessionID: string): MediaItem[] {
   try {
-    const messages = api.state.session.messages(sessionID) as ReadonlyArray<Message>;
+    const messages = api.state.session.messages(sessionID);
     if (messages.length === 0) return [];
 
     discoverCurrentSessionMedia(api, sessionID, messages);

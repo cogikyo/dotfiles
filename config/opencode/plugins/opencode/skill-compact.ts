@@ -71,7 +71,7 @@ const server: Plugin = async ({ client, directory, worktree, serverUrl }) => {
       const sessionID = sessionIDFromMessages(output.messages);
       if (!sessionID || !compacting.has(sessionID)) return;
       compacting.delete(sessionID);
-      for (const message of output.messages) stubSkillParts(message.parts as SkillToolPart[]);
+      for (const message of output.messages) stubSkillParts(message.parts);
     },
     event: async ({ event }) => {
       if (event.type !== "message.part.updated") return;
@@ -94,7 +94,7 @@ async function sessionSkillParts(client: SessionClient, sessionID: string) {
   const messages = await unwrap<SessionMessage[]>(
     client.session.messages({
       path: { id: sessionID },
-    } as never),
+    }),
     `read session ${sessionID} messages`,
   );
   return messages.flatMap((message) => (message.parts ?? []).filter(isCompletedSkillPart));

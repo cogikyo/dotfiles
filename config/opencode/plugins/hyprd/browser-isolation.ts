@@ -82,9 +82,9 @@ class MCPClient {
   }
 
   private request(method: string, params: unknown) {
-    const id = this.nextID++;
-    const result = new Promise((resolve, reject) => this.pending.set(id, { resolve, reject }));
-    this.send({ jsonrpc: "2.0", id, method, params });
+    const seq = this.nextID++;
+    const result = new Promise((resolve, reject) => this.pending.set(seq, { resolve, reject }));
+    this.send({ jsonrpc: "2.0", id: seq, method, params });
     return result;
   }
 
@@ -131,7 +131,7 @@ function browser(sessionID: string) {
 
 function definition(tool: Tool) {
   const required = new Set(tool.inputSchema.required ?? []);
-  const args = Object.fromEntries(
+  const shape = Object.fromEntries(
     Object.entries(tool.inputSchema.properties ?? {}).map(([name, schema]) => {
       const value = argument(schema);
       return [name, required.has(name) ? value : value.optional()];
@@ -139,7 +139,7 @@ function definition(tool: Tool) {
   );
   return {
     description: tool.description ?? tool.name,
-    args,
+    args: shape,
     async execute(args: Record<string, unknown>, ctx: ToolContext) {
       await ctx.ask({
         permission: `chrome-devtools_${tool.name}`,

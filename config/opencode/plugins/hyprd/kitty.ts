@@ -166,10 +166,6 @@ const tui = async (api) => {
   let disposed = false;
   let syncTask = Promise.resolve();
 
-  const syncSession = async (sessionID) => {
-    await writeContext(sessionID);
-  };
-
   const scheduleSync = (sessionID) => {
     if (disposed) return;
     pendingSession = sessionID;
@@ -181,7 +177,7 @@ const tui = async (api) => {
         const next = pendingSession;
         pendingSession = "";
         try {
-          await syncSession(next);
+          await writeContext(next);
         } catch {}
       }
       syncing = false;

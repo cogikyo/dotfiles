@@ -15,9 +15,9 @@ import { createImageNamer, modelFromValue } from "./naming";
 const id = "opencode-media-context-prompt";
 let partIDCounter = 0;
 
-const server: Plugin = async (input, options) => {
+const server: Plugin = async (ctx, options) => {
   const internalSessions = new Set<string>();
-  const namer = createImageNamer({ client: input.client, options, ignoredSessions: internalSessions });
+  const namer = createImageNamer({ client: ctx.client, options, ignoredSessions: internalSessions });
 
   return {
     config: async (cfg) => {

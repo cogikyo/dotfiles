@@ -31,7 +31,7 @@ type AssistantLike = Extract<Message, { role: "assistant" }>;
 type UserLike = Extract<Message, { role: "user" }>;
 
 export function sessionMessages(api: TuiPluginApi, sessionID: string) {
-  return api.state.session.messages(sessionID) as ReadonlyArray<Message>;
+  return api.state.session.messages(sessionID);
 }
 
 export function sessionProviderID(api: TuiPluginApi, sessionID: string) {

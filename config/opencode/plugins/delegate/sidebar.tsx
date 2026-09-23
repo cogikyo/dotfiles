@@ -1,7 +1,7 @@
 /** @jsxImportSource @opentui/solid */
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui";
 import type { Message, Session } from "@opencode-ai/sdk/v2";
-import { For, Show, createMemo, createSignal } from "solid-js";
+import { For, Show, createEffect, createMemo, createSignal } from "solid-js";
 import { COMPACTION_LIMIT, formatTokens } from "../shared/session.ts";
 import { SidebarSection } from "../shared/sidebar-section.tsx";
 
@@ -106,9 +106,9 @@ function createLanes(api: TuiPluginApi) {
 type Lanes = ReturnType<typeof createLanes>;
 
 function Panel(props: { api: TuiPluginApi; lanes: Lanes; sessionID: string }) {
-  void props.lanes.load(props.sessionID);
+  createEffect(() => void props.lanes.load(props.sessionID));
   const active = createMemo(() => props.lanes.forParent(props.sessionID));
-  const names = createMemo(() => [...active().keys()].sort());
+  const names = createMemo(() => [...active().keys()].toSorted());
 
   return (
     <Show when={names().length}>

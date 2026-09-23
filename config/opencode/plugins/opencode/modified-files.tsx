@@ -92,10 +92,9 @@ function editedFiles(api: TuiPluginApi, sessionID: string): FileItem[] {
   for (const message of api.state.session.messages(sessionID)) {
     for (const part of api.state.part(message.id)) {
       if (part.type !== "tool" || !isEditTool(part.tool)) continue;
-      const tool = part as ToolPart;
-      if (tool.state.status !== "completed") continue;
+      if (part.state.status !== "completed") continue;
 
-      for (const filePath of editPaths(tool)) {
+      for (const filePath of editPaths(part)) {
         const item = fileItem(api, filePath, 0, 0);
         seen.set(item.path, item);
       }

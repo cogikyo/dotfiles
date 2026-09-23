@@ -187,7 +187,7 @@ const tui: TuiPlugin = async (api) => {
   };
 
   proto.createCodeRenderable = function patchedCreateCodeRenderable(token: unknown, blockID: string, marginBottom = 0) {
-    const renderable = originalCreateCodeRenderable.call(this, token, blockID, Math.max(Number(marginBottom ?? 0), 1));
+    const renderable = originalCreateCodeRenderable.call(this, token, blockID, Math.max(marginBottom, 1));
     styleCodeBlock(renderable);
     return renderable;
   };
@@ -197,7 +197,7 @@ const tui: TuiPlugin = async (api) => {
     token: unknown,
     marginBottom = 0,
   ) {
-    originalApplyCodeBlockRenderable.call(this, renderable, token, Math.max(Number(marginBottom ?? 0), 1));
+    originalApplyCodeBlockRenderable.call(this, renderable, token, Math.max(marginBottom, 1));
     styleCodeBlock(renderable);
   };
 

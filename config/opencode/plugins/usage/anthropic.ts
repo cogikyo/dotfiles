@@ -56,19 +56,19 @@ function resetAt(window: AnthropicWindow) {
   return typeof window.resets_at === "string" ? window.resets_at : undefined;
 }
 
-function usageWindow(label: string, window?: AnthropicWindow | null): UsageWindow | undefined {
+function usageWindow(tag: string, window?: AnthropicWindow | null): UsageWindow | undefined {
   if (!window) return undefined;
   const usedPercent = normalizePercent(window.utilization);
   if (usedPercent === undefined) return undefined;
-  return { label, usedPercent, resetAt: resetAt(window) };
+  return { label: tag, usedPercent, resetAt: resetAt(window) };
 }
 
 function scopedLabel(displayName: string) {
-  const words = displayName
+  const word = displayName
     .trim()
     .split(/\s+/)
-    .filter((word) => word.toLowerCase() !== "claude");
-  const first = Array.from(words[0] ?? "")[0];
+    .find((part) => part.toLowerCase() !== "claude");
+  const first = Array.from(word ?? "")[0];
   return first?.toUpperCase();
 }
 
@@ -80,14 +80,14 @@ function scopedWindow(limit: AnthropicLimit): UsageWindow | undefined {
   const displayName = limit.scope?.model?.display_name;
   if (typeof displayName !== "string") return undefined;
 
-  const label = scopedLabel(displayName);
-  if (!label) return undefined;
+  const tag = scopedLabel(displayName);
+  if (!tag) return undefined;
 
   const usedPercent = normalizePercent(limit.percent);
   if (usedPercent === undefined) return undefined;
 
   return {
-    label,
+    label: tag,
     usedPercent,
     resetAt: typeof limit.resets_at === "string" ? limit.resets_at : undefined,
   };

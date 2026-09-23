@@ -86,14 +86,14 @@ export async function prepareTask(client: Client, ctx: ToolContext, input: unkno
   applyDisplayArgs(input, args, effort);
   const agent = await readAgent(client, args.subagent_type);
   const parent = await unwrap<Record<string, unknown>>(
-    client.session.get({ path: { id: ctx.sessionID } } as never),
+    client.session.get({ path: { id: ctx.sessionID } }),
     `read parent session ${ctx.sessionID}`,
   );
   const parentAgent = sessionAgent(parent) ?? "";
   validateTaskTarget(parentAgent, agent.name);
   const parentExecution = sessionExecution(parent);
   if (agent.name === GIT) {
-    if (ctx.agent !== COLLAB || sessionParentID(parent) || parentExecution.unattended === true) {
+    if (ctx.agent !== COLLAB || sessionParentID(parent) || parentExecution.unattended) {
       throw new Error("delegate refuses build/git without an attended primary collab parent");
     }
     if (args.unattended !== true) {
@@ -257,11 +257,11 @@ export async function runChildTask(input: {
 export async function readChildTaskStatus(client: Client, parentSessionID: string, signal: AbortSignal) {
   const [rawChildren, statuses] = await Promise.all([
     unwrap<unknown[]>(
-      client.session.children({ path: { id: parentSessionID }, signal } as never),
+      client.session.children({ path: { id: parentSessionID }, signal }),
       `list children of session ${parentSessionID}`,
     ),
     unwrap<Record<string, unknown>>(
-      client.session.status({ signal } as never),
+      client.session.status({ signal }),
       `read child statuses for session ${parentSessionID}`,
     ),
   ]);
@@ -269,7 +269,7 @@ export async function readChildTaskStatus(client: Client, parentSessionID: strin
   const children = rawChildren
     .map(object)
     .filter((child): child is Record<string, unknown> => !!string(child?.id))
-    .sort((left, right) => sessionUpdated(right) - sessionUpdated(left));
+    .toSorted((left, right) => sessionUpdated(right) - sessionUpdated(left));
 
   if (!children.length) return `No direct task children found for session ${parentSessionID}.`;
 
@@ -320,7 +320,7 @@ async function waitForChild(
       await abortableDelay(STATUS_POLL_MS, waitSignal);
       const [statuses, messages] = await Promise.all([
         unwrap<Record<string, unknown>>(
-          client.session.status({ signal: waitSignal } as never),
+          client.session.status({ signal: waitSignal }),
           `read child session ${sessionID} status`,
         ),
         readChildMessages(client, sessionID, waitSignal),
@@ -524,7 +524,7 @@ function contextWarningPrompt(level: ContextWarning, tokens: number | undefined,
 
 async function sealContextLimited(client: Client, sessionID: string, limit: ContextLimit, signal: AbortSignal) {
   const session = await unwrap<Record<string, unknown>>(
-    client.session.get({ path: { id: sessionID }, signal } as never),
+    client.session.get({ path: { id: sessionID }, signal }),
     `read context-limited child session ${sessionID}`,
   );
   const metadata = object(session.metadata) ?? {};
@@ -566,7 +566,7 @@ function createChildAbort(client: Client, sessionID: string) {
     if (stopped) return;
     try {
       const aborted = await unwrap<boolean>(
-        client.session.abort({ path: { id: sessionID } } as never),
+        client.session.abort({ path: { id: sessionID } }),
         `abort child session ${sessionID}`,
       );
       if (aborted) stop();
@@ -579,7 +579,7 @@ function createChildAbort(client: Client, sessionID: string) {
     if (stopped) return;
     try {
       const statuses = await unwrap<Record<string, unknown>>(
-        client.session.status({} as never),
+        client.session.status({}),
         `read child session ${sessionID} status after abort`,
       );
       if (stopped) return;
@@ -615,7 +615,7 @@ function createChildAbort(client: Client, sessionID: string) {
 
 async function readChildMessages(client: Client, sessionID: string, signal: AbortSignal) {
   return unwrap<unknown[]>(
-    client.session.messages({ path: { id: sessionID }, signal } as never),
+    client.session.messages({ path: { id: sessionID }, signal }),
     `read child session ${sessionID} messages`,
   );
 }
@@ -655,7 +655,7 @@ function abortableDelay(milliseconds: number, signal: AbortSignal) {
 }
 
 async function updateToolMetadata(ctx: ToolContext, input: { title?: string; metadata?: Record<string, unknown> }) {
-  const result = (ctx.metadata as (input: { title?: string; metadata?: Record<string, unknown> }) => unknown)(input);
+  const result = ctx.metadata(input);
   if (isPromiseLike(result)) {
     await result;
     return;
@@ -754,7 +754,7 @@ function optionalBoolean(root: Record<string, unknown>, name: "compact" | "unatt
 }
 
 async function askTaskPermission(ctx: ToolContext, args: TaskArgs, execution: Execution) {
-  await (ctx.ask({
+  await ctx.ask({
     permission: "task",
     patterns: [args.subagent_type],
     always: args.subagent_type === GIT ? [] : ["*"],
@@ -767,12 +767,12 @@ async function askTaskPermission(ctx: ToolContext, args: TaskArgs, execution: Ex
       unattended: execution.unattended,
       lane: args.lane,
     },
-  }) as unknown as Promise<void>);
+  });
 }
 
 async function readCurrentAssistantMessage(client: Client, ctx: ToolContext) {
   const message = await unwrap<Record<string, unknown>>(
-    client.session.message({ path: { id: ctx.sessionID, messageID: ctx.messageID } } as never),
+    client.session.message({ path: { id: ctx.sessionID, messageID: ctx.messageID } }),
     `read parent message ${ctx.messageID}`,
   );
   const info = object(message.info);
@@ -789,7 +789,7 @@ async function readCurrentAssistantMessage(client: Client, ctx: ToolContext) {
 }
 
 async function readAgent(client: Client, name: string): Promise<AgentInfo> {
-  const agents = await unwrap<unknown[]>(client.app.agents({} as never), "list agents");
+  const agents = await unwrap<unknown[]>(client.app.agents({}), "list agents");
   const agent = agents.map(object).find((item) => item?.name === name);
   if (!agent) {
     const names = agents
@@ -823,7 +823,7 @@ async function validateVariant(client: Client, model: ModelRef, variant: string 
 }
 
 async function readProviderModel(client: Client, model: ModelRef): Promise<Record<string, unknown>> {
-  const response = await unwrap<Record<string, unknown>>(client.config.providers({} as never), "list providers");
+  const response = await unwrap<Record<string, unknown>>(client.config.providers({}), "list providers");
   const providers = Array.isArray(response.providers) ? response.providers : [];
   const provider = providers.map(object).find((item) => item?.id === model.providerID);
   if (!provider) {
@@ -854,8 +854,8 @@ async function deriveChildPermission(
   agent: AgentInfo,
   execution: Execution,
 ): Promise<Rule[]> {
-  const config = await unwrap<Record<string, unknown>>(client.config.get({} as never), "read config");
-  const unattended = execution.unattended === true;
+  const config = await unwrap<Record<string, unknown>>(client.config.get({}), "read config");
+  const unattended = execution.unattended;
   const agentConfig = object(object(config.agent)?.[agent.name]);
   if (!agentConfig)
     throw new Error(`delegate agent ${agent.name} is missing from config.agent; cannot determine declared permissions`);
@@ -911,13 +911,13 @@ function asBlocker(rule: Rule): Rule {
 
 async function laneChild(client: Client, parentSessionID: string, lane: string, signal: AbortSignal) {
   const children = await unwrap<unknown[]>(
-    client.session.children({ path: { id: parentSessionID }, signal } as never),
+    client.session.children({ path: { id: parentSessionID }, signal }),
     `list lanes for ${parentSessionID}`,
   );
   return children
     .map(object)
     .filter((child): child is Record<string, unknown> => !!child && sessionLane(child) === lane)
-    .sort((left, right) => sessionCreated(right) - sessionCreated(left))[0];
+    .toSorted((left, right) => sessionCreated(right) - sessionCreated(left))[0];
 }
 
 async function readExistingChild(
@@ -930,13 +930,13 @@ async function readExistingChild(
   const id = string(session.id);
   if (!id) throw new Error("delegate lane child did not return an id");
   const statuses = await unwrap<Record<string, unknown>>(
-    client.session.status({ signal } as never),
+    client.session.status({ signal }),
     `read child session ${id} status before resume`,
   );
   const status = object(statuses[id]);
   if (status && status.type !== "idle") {
     // TODO: Queue busy lanes when OpenCode 2 background tasks are available.
-    throw new Error(`delegate lane ${sessionLane(session)} is ${status.type}; wait until it is idle`);
+    throw new Error(`delegate lane ${sessionLane(session)} is ${String(status.type)}; wait until it is idle`);
   }
   if (!samePermissionRules(normalizeRules(session.permission), permission)) {
     throw new Error(`delegate resumed child permission envelope no longer matches; re-brief a fresh child instead`);
@@ -957,7 +957,7 @@ function validateTaskTarget(parentAgent: string, target: string) {
 }
 
 function resolveExecution(parent: Execution, requested: TaskArgs): Execution {
-  if (parent.unattended === true && requested.unattended === false) {
+  if (parent.unattended && requested.unattended === false) {
     throw new Error("delegate refuses attended child under unattended parent");
   }
 
@@ -1304,7 +1304,7 @@ async function effectRunPromise() {
     ) => Promise<unknown>;
     mod = object(await dynamicImport("effect"));
   } catch (error) {
-    throw new Error(`delegate failed to import effect for metadata update: ${errorMessage(error)}`);
+    throw new Error(`delegate failed to import effect for metadata update: ${errorMessage(error)}`, { cause: error });
   }
   const runPromise = object(mod?.Effect)?.runPromise;
   if (typeof runPromise !== "function") {
