@@ -1,15 +1,14 @@
 import type { Plugin, PluginModule } from "@opencode-ai/plugin";
+import { isExistingFile, videoPathParts } from "./files";
 import {
-  isExistingFile,
   listSessionMedia,
   mediaFilePartForEntry,
   mediaPart,
   mediaReference,
   registerSessionMedia,
   resolveMediaReferences,
-  videoPathParts,
-  type MediaRegistryEntry,
 } from "./registry";
+import type { MediaRegistryEntry } from "./store";
 import { createImageNamer, modelFromValue } from "./naming";
 import { record } from "../../shared/record.ts";
 
