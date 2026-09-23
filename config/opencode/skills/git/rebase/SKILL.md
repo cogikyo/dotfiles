@@ -1,16 +1,15 @@
 ---
 name: rebase
-description: Shared rebase procedure for Collab approval, Orchestrator planning, and authorized build/git execution on the resolved current branch, including owned continuation and conflict resolution.
+description: Load before ANY rebase or rebase-conflict work, however small; shared rebase procedure for Collab approval and authorized build/git execution on the resolved current branch, including owned continuation and conflict resolution.
 ---
 
 # Rebase
 
 ## Authority
 
-Collab may plan and execute approved work; Orchestrator may load this procedure to plan and supervise dependencies only.
+Collab may plan and execute approved work.
 Only attended Collab may launch `build/git`, after presenting repository/worktree, branch and refs, intended mutations, destructive effects, checks, and stop conditions.
-The task uses normal ASK semantics, including remembered approvals, with explicit `authority: "write"` and `unattended: true`.
-Orchestrator returns the Git plan to Collab without mutating Git or launching the worker.
+The task uses normal ASK semantics, including remembered approvals, with `unattended: true`.
 Skill loading grants no execution authority; the worker follows only its approved named workflow and returns missing decisions to Collab.
 Use a bounded read-only scout for context-heavy Git archaeology before worker dispatch.
 If the remaining work needs a fresh attended session, provide a handoff rather than spawning Collab.

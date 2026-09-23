@@ -3,9 +3,6 @@ description: "Adversarial trust-boundary review: auth, secrets, injection, trave
 mode: subagent
 permission:
   edit: deny
-  task: deny
-  todowrite: deny
-  question: deny
 color: error
 ---
 

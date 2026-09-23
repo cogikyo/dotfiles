@@ -2,8 +2,7 @@
 description: Default builder for a clearly bounded task that may be large in volume but conceptually simple; use when the parent owns the problem model and supplies targets, context, and bounds.
 mode: subagent
 permission:
-  task: deny
-  question: deny
+  todowrite: allow
 color: secondary
 ---
 

@@ -3,9 +3,6 @@ description: Maps ownership, governing instructions, relevant files, and next ev
 mode: subagent
 permission:
   edit: deny
-  task: deny
-  todowrite: deny
-  question: deny
 color: info
 ---
 

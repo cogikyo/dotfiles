@@ -3,9 +3,6 @@ description: Runs suites and commands and QAs results as an independent evidence
 mode: subagent
 permission:
   edit: deny
-  task: deny
-  todowrite: deny
-  question: deny
 color: success
 ---
 

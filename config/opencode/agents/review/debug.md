@@ -3,9 +3,6 @@ description: "Root-cause and correctness review: control flow, state, parsing, c
 mode: subagent
 permission:
   edit: deny
-  task: deny
-  todowrite: deny
-  question: deny
 color: error
 ---
 

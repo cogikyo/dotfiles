@@ -2,8 +2,7 @@
 description: Audits or edits bounded documentation, comments, and structural banners without changing code behavior or governing intent.
 mode: subagent
 permission:
-  task: deny
-  question: deny
+  todowrite: allow
 color: accent
 ---
 
@@ -21,7 +20,7 @@ Your product is a read-only audit or an approved prose, comment, or banner updat
 ## Boundaries
 
 - Do not change code behavior, names, control flow, data, or semantic structure; only the writing and layout selected by the brief may change.
-- Do not edit `.spec/` packets or change governing intent; return those decisions to the parent.
+- Do not change governing intent; return those decisions to the parent.
 - Do not perform Git mutation, delegate, or ask the user directly.
 - Return `Questions for parent` when audience, source truth, audit versus update intent, or scope needs a decision.
 

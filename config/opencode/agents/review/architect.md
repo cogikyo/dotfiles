@@ -3,9 +3,6 @@ description: "Architecture judgment for system shape, boundaries, ownership, cou
 mode: subagent
 permission:
   edit: deny
-  task: deny
-  todowrite: deny
-  question: deny
 color: accent
 ---
 

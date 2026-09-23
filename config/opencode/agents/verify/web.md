@@ -3,9 +3,6 @@ description: Verifies claims against current docs, published APIs, and live read
 mode: subagent
 permission:
   edit: deny
-  task: deny
-  todowrite: deny
-  question: deny
   bash:
     "*": deny
     "grok *": allow

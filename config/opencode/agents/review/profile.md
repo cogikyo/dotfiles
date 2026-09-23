@@ -3,9 +3,6 @@ description: "Performance-shape review: algorithms, allocations, I/O batching, r
 mode: subagent
 permission:
   edit: deny
-  task: deny
-  todowrite: deny
-  question: deny
 color: info
 ---
 

@@ -3,9 +3,6 @@ description: Maps the option space, prior art, and current direction for one bou
 mode: subagent
 permission:
   edit: deny
-  task: deny
-  todowrite: deny
-  question: deny
 color: info
 ---
 

@@ -45,7 +45,7 @@ const server: Plugin = async ({ client, directory, worktree, serverUrl }) => {
   const protectRoots = (agent?: string): ProtectRoots => ({
     configRoot,
     projectRoots: [directory, worktree].filter(Boolean),
-    agentNames: ["collab", "orchestrator", agent].filter((name): name is string => Boolean(name)),
+    agentNames: ["collab", agent].filter((name): name is string => Boolean(name)),
   });
 
   return {

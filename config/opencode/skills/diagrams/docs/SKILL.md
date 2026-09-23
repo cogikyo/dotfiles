@@ -10,7 +10,7 @@ description: Use ONLY for an already-chosen source-derived architecture diagram,
 The caller decides whether a diagram, annotated tree, or comment belongs; this skill supplies construction and validation only, never encouragement to add one.
 The caller owns source-specific prefixes, fences, host conventions, and width limits.
 Ordinary prose and lists remain outside this skill.
-Numbered execution graphs for proposals, approval gates, delegation, and repair loops belong to `workflow`, even when embedded in an activity skill.
+Execution graphs for proposals, approval gates, delegation, and repair loops are outside this skill.
 
 ## Construct
 
@@ -221,7 +221,6 @@ Its arrow establishes recovery direction without making the forward edge bidirec
 ```
 
 For a real recovery diagram, the caller must supply the triggering condition and supported destination from source.
-An execution retry limit belongs in `workflow`, not in this geometry fixture.
 
 ### Annotated tree with continuing siblings
 

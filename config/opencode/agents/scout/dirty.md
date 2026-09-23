@@ -3,9 +3,6 @@ description: Answers one bounded question about uncommitted work, WIP threads, r
 mode: subagent
 permission:
   edit: deny
-  task: deny
-  todowrite: deny
-  question: deny
 color: info
 ---
 

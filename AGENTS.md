@@ -8,17 +8,15 @@ Arch + Hyprland (Wayland) dotfiles. Single-user. Root of repo = `~/dotfiles`.
 - `bin/` → symlinked into `~/.local/bin/` (legacy; being replaced by `cmds/`)
 - `cmds/` → Go command workspace; built into `~/.local/bin/` by `install.sh go`. See `cmds/README.md`.
 - `etc/` → system configs **copied** to `/etc/` by `install.sh system` (not symlinked)
-- `config/opencode/agents/collab.md` → the only human-facing OpenCode primary; owns planning, implementation, review, approval, and Git work
-- `config/opencode/agents/orchestrator.md` → subagent-only coordination and synthesis; delegates leaves within one approved objective
-- `config/opencode/skills/orchestration/{scheme,review,drive}/SKILL.md` → planning, review, and approved execution procedures for Collab and Orchestrator
-- `config/opencode/agents/{collab,orchestrator}.md` → self-contained model routing, delegation contracts, checks, councils, and child continuity for each owner
+- `config/opencode/agents/collab.md` → the only human-facing OpenCode primary; owns planning, implementation, review, approval, Git work, model routing, and lanes
+- `config/opencode/skills/orchestration/{scheme,review,drive}/SKILL.md` → planning, review, and approved execution procedures that Collab runs in-session
 - `config/opencode/agents/{scout,build,review,verify}/` → leaf fleet; scouts map, builders implement, reviewers judge, verifiers collect evidence
+  - Collab runs leaves one-shot or as named lanes that it resumes across turns with deltas
 - `config/opencode/agents/build/scribe.md` → bounded documentation, comment, and banner writing owner
 - `config/opencode/skills/{comments,prose}/SKILL.md` → composable writing procedures with specialized subskills for relevant owners
-- `config/opencode/agents/build/git.md` → Git specialist launched only by attended Collab through task ASK; Orchestrator returns Git plans to Collab
-- `config/opencode/skills/git/{commit,rebase,worktrees}/SKILL.md` → shared Git procedures for Collab approval, Orchestrator coordination, and authorized `build/git` execution
+- `config/opencode/agents/build/git.md` → Git specialist launched only by attended Collab through task ASK
+- `config/opencode/skills/git/{commit,rebase,worktrees}/SKILL.md` → shared Git procedures for Collab approval and authorized `build/git` execution
 - `config/opencode/skills/papercuts/SKILL.md` → Collab diagnoses failed session commands; invoke with `/papercuts`
-- `.spec/` → directory-scoped plan, spec, and logbook docs, committed by default; e.g. `config/opencode/.spec/orchestrate.md`
 - `iso/` → archiso profile; `iso/work/` and `iso/out/` are gitignored build artifacts
 - `share/` → static assets
 
@@ -31,7 +29,7 @@ Operationally, `opencodde` is the primary agent harness used.
 
 `config/opencode/AGENTS.md` is global context file that is always in use.
 `config/opencode/opencode.json` wires config, providers, permissions, and plugins.
-`config/opencode/agents/` defines Collab, the subagent-only Orchestrator, and specialist leaves in subdirectories.
+`config/opencode/agents/` defines Collab and specialist leaves in subdirectories.
 
 Plugin paths live under `config/opencode/`.
 Edits under `config/opencode/` affect the live system through symlinks.
@@ -61,7 +59,6 @@ For other commands, a targeted build of the affected binaries is fine.
 - Bash: `#!/usr/bin/env bash` + `set -euo pipefail`.
 - Interactive zsh enables `EXTENDED_GLOB`; use extended glob features when useful, but quote literal `#`, `^`, and `~` values in sourced zsh files, especially hex colors like `'fg=#824141'`.
 - Logging: `info()` (blue), `success()`/`ok()` (green), `warn()` (yellow), `error()`/`err()` (red).
-- Nerd Font / multi-width UTF glyphs: use Python (`Write`/`Edit` corrupts them).
 - Python one-offs: use `uv run --with <package>... python <script>` or `uv run --with <package>... python - <<'PY'`; do not install packages into system Python or leave activated venvs behind.
 - Commit note: always include `config/nvim/lua/plugins/editor/harpoon.json` when it appears changed; it often changes incidentally and can be included in any commit without mention.
 

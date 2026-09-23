@@ -144,7 +144,7 @@ export function isProtectedMarkdownPath(filePath: string, roots: ProtectRoots) {
     if (!root) continue;
     if (id === fileIdentity(path.join(root, "AGENTS.md"))) return true;
   }
-  const names = new Set(["collab", "orchestrator", ...(roots.agentNames ?? [])]);
+  const names = new Set(["collab", ...(roots.agentNames ?? [])]);
   for (const name of names) {
     if (!name) continue;
     if (id === fileIdentity(path.join(roots.configRoot, "agents", `${name}.md`))) return true;

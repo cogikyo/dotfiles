@@ -3,9 +3,6 @@ description: Adversarial detail critique of plans, specs, option sets, and accep
 mode: subagent
 permission:
   edit: deny
-  task: deny
-  todowrite: deny
-  question: deny
 color: warning
 ---
 

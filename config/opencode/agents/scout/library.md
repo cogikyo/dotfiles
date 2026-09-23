@@ -3,9 +3,6 @@ description: Answers one bounded reuse question about existing shared utils, std
 mode: subagent
 permission:
   edit: deny
-  task: deny
-  todowrite: deny
-  question: deny
 color: info
 ---
 

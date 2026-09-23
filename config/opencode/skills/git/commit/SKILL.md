@@ -1,6 +1,6 @@
 ---
 name: commit
-description: Shared commit and active-merge procedure for Collab approval, Orchestrator planning, and authorized build/git execution; inspect dirty scope, select atomic commits, and stage only approved changes.
+description: Load before ANY commit, however small, including "commit all" or "commit this"; shared commit and active-merge procedure for Collab and authorized build/git execution that inspects dirty scope, selects atomic commits, and stages only approved changes.
 ---
 
 # Commit
@@ -10,12 +10,12 @@ Use this procedure to create atomic conventional commits or finish an already-st
 ## Scope
 
 - Use it only when the active brief approves a commit task or an active merge resolution.
-- Collab may plan and execute approved work, Orchestrator may plan and supervise dependencies only, and `build/git` may execute its approved dispatch, including approved `.spec/**` artifacts.
+- Collab may plan and execute approved work, and `build/git` may execute its approved dispatch.
 
 Skill loading does not authorize mutation or delegation.
 Only attended Collab may launch `build/git`, after presenting repository/worktree, branch and refs, intended mutations, destructive effects, checks, and stop conditions.
-The task uses normal ASK semantics, including remembered approvals, with explicit `authority: "write"` and `unattended: true`.
-Orchestrator returns that plan to Collab without mutating Git or launching the worker.
+The task uses normal ASK semantics, including remembered approvals, with `unattended: true`.
+Other children return Git plans to Collab without mutating Git.
 For context-heavy Git archaeology, use a bounded read-only scout.
 If the remaining work needs a fresh attended session, provide a handoff rather than spawning Collab.
 

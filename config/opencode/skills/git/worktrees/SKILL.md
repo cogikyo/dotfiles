@@ -1,16 +1,15 @@
 ---
 name: worktrees
-description: Shared branch/worktree procedure for Collab approval, Orchestrator planning, and authorized build/git execution; resolve path@branch, verify checkouts, and manage named safe lifecycle operations.
+description: Load before ANY branch or worktree creation, switch, or removal, however small; shared branch/worktree procedure for Collab approval and authorized build/git execution; resolve path@branch, verify checkouts, and manage named safe lifecycle operations.
 ---
 
 # Worktrees
 
 ## Ownership
 
-Collab may plan and execute approved work; Orchestrator may load this procedure to resolve targets and supervise dependencies without Git mutation.
+Collab may plan and execute approved work.
 Only attended Collab may launch `build/git`, after presenting repository/worktree, branch and refs, intended mutations, destructive effects, checks, and stop conditions.
-The task uses normal ASK semantics, including remembered approvals, with explicit `authority: "write"` and `unattended: true`.
-Orchestrator returns that plan to Collab and cannot launch the worker.
+The task uses normal ASK semantics, including remembered approvals, with `unattended: true`.
 Skill loading grants no execution authority; other children inspect Git read-only and work within their assigned checkout without loading this skill.
 Do not repurpose another work thread's checkout.
 

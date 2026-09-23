@@ -2,8 +2,7 @@
 description: Applies exact fast edits when the parent already supplies the files, targets, and intended mechanics; use when no discovery or solution choice remains.
 mode: subagent
 permission:
-  task: deny
-  question: deny
+  todowrite: allow
 color: secondary
 ---
 

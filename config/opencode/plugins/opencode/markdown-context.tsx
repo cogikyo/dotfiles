@@ -245,7 +245,7 @@ function protectRoots(api: TuiPluginApi, sessionID: string): ProtectRoots {
   return {
     configRoot,
     projectRoots: projectRoots(api),
-    agentNames: ['collab', 'orchestrator', agent].filter((name): name is string => Boolean(name)),
+    agentNames: ['collab', agent].filter((name): name is string => Boolean(name)),
   }
 }
 

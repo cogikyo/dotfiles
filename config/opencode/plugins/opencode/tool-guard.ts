@@ -202,10 +202,9 @@ function invokesInPlaceEdit(words: string[]) {
 
 function isReadOnlySession(session: Session) {
   const agent = sessionAgent(session);
-  if (agent === "review" || agent?.startsWith("review/") === true) return true;
-  const delegate = object(object(session.metadata)?.delegate);
-  if (!delegate || !Object.hasOwn(delegate, "authority")) return false;
-  return delegate.authority !== "write";
+  return agent === "review" || agent?.startsWith("review/") === true
+    || agent === "scout" || agent?.startsWith("scout/") === true
+    || agent === "verify/source" || agent === "verify/web";
 }
 
 function hasOutputRedirection(command: string) {
