@@ -25,6 +25,7 @@
     "leader": "ctrl+.",
     "command_list": "<leader>l",
     "tool_details": "ctrl+d",
+    "session_parent": "up,ctrl+alt+up",
     "model_list": "<leader>m",
     "model_cycle_favorite": "ctrl+m",
     "theme_list": "<leader>_",
