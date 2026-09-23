@@ -15,7 +15,7 @@ import {
   type ProtectRoots,
   type SkillToolPart,
 } from "./skill-parts.ts";
-import { ActionRow, type RowAction } from "../shared/action-row.tsx";
+import { ActionIcon, type IconAction } from "../shared/action-icon.tsx";
 import { SidebarSection } from "../shared/sidebar-section.tsx";
 import {
   configRoot,
@@ -89,18 +89,21 @@ function MarkdownContext(props: { api: TuiPluginApi; sessionID: string }) {
       <SidebarSection api={props.api} title="Markdown Context" detail={`${items().length} read`}>
         <For each={items()}>
           {(item) => (
-            <ActionRow
-              api={props.api}
-              action={rowAction(props.api, props.sessionID, item)}
-              onPress={() => openInNvim(props.api, item.path, "Markdown open failed")}
+            <box
+              flexDirection="row"
+              gap={0}
+              onMouseDown={() => openInNvim(props.api, item.path, "Markdown open failed")}
             >
-              <text fg={sourceColor(props.api, item)} wrapMode="none" flexShrink={0}>
-                {sourceIcon(props.api, item)}
-              </text>
+              <ActionIcon
+                api={props.api}
+                icon={sourceIcon(props.api, item)}
+                fg={sourceColor(props.api, item)}
+                action={rowAction(props.api, props.sessionID, item)}
+              />
               <text fg={props.api.theme.current.textMuted} wrapMode="none" flexShrink={1}>
                 {item.label}
               </text>
-            </ActionRow>
+            </box>
           )}
         </For>
       </SidebarSection>
@@ -266,7 +269,7 @@ function canReload(item: MarkdownContextItem) {
   return item.compacted && item.refs.length > 0;
 }
 
-function rowAction(api: TuiPluginApi, sessionID: string, item: MarkdownContextItem): RowAction | undefined {
+function rowAction(api: TuiPluginApi, sessionID: string, item: MarkdownContextItem): IconAction | undefined {
   if (canUnload(api, sessionID, item)) return { icon: icons.error, run: () => void unloadItem(api, sessionID, item) };
   if (canReload(item)) return { icon: icons.restore, run: () => void reloadItem(api, sessionID, item) };
   return undefined;
@@ -396,26 +399,26 @@ function isRootAgents(api: TuiPluginApi, filePath: string) {
 }
 
 function sourceIcon(api: TuiPluginApi, item: MarkdownContextItem) {
-  if (item.compacted) return `${icons.compacted} `;
+  if (item.compacted) return icons.compacted;
 
   switch (item.kind) {
     case "readme":
-      return `${icons.readme} `;
+      return icons.readme;
     case "agents":
-      if (isConfigAgents(item.path)) return `${icons.agentsCore} `;
-      return `${isRootAgents(api, item.path) ? icons.folderLibrary : icons.folder} `;
+      if (isConfigAgents(item.path)) return icons.agentsCore;
+      return isRootAgents(api, item.path) ? icons.folderLibrary : icons.folder;
     case "agent":
-      return `${isSubagent(item.path) ? icons.subagent : icons.agents} `;
+      return isSubagent(item.path) ? icons.subagent : icons.agents;
     case "skill":
-      return `${isGlobalOpencodePath(item.path) ? icons.skill : icons.skillProject} `;
+      return isGlobalOpencodePath(item.path) ? icons.skill : icons.skillProject;
     case "command":
-      return `${isGlobalOpencodePath(item.path) ? icons.command : icons.commandProject} `;
+      return isGlobalOpencodePath(item.path) ? icons.command : icons.commandProject;
     case "partial":
-      return `${icons.partial} `;
+      return icons.partial;
     case "spec":
-      return `${icons.spec} `;
+      return icons.spec;
     case "markdown":
-      return `${icons.markdown} `;
+      return icons.markdown;
   }
 }
 

@@ -5,8 +5,8 @@ import { stringWidth } from "bun";
 import { For, Show, createEffect, createMemo, createSignal, untrack, type Accessor } from "solid-js";
 import { colors, pressureColor } from "../shared/colors.ts";
 import { icons } from "../shared/icons.ts";
-import { COMPACTION_LIMIT, formatTokens } from "../shared/session.ts";
-import { ActionRow } from "../shared/action-row.tsx";
+import { COMPACTION_LIMIT } from "../shared/session.ts";
+import { ActionIcon } from "../shared/action-icon.tsx";
 import { SidebarSection } from "../shared/sidebar-section.tsx";
 
 const id = "delegate-lanes";
@@ -22,6 +22,7 @@ const FAMILIES: [RegExp, string][] = [
   [/grok/, "grok"],
 ];
 const roles: Partial<Record<string, string>> = icons.role;
+const scopes: Partial<Record<string, string>> = icons.scope;
 
 type Usage = { model: string; tokens: number };
 type Status = SessionStatus["type"] | "limited";
@@ -56,9 +57,17 @@ function family(model: string) {
 }
 
 function agentLabel(agent: string) {
-  const [role, ...scope] = agent.split("/");
+  const [role, ...rest] = agent.split("/");
   const glyph = roles[role];
-  return glyph && scope.length ? `${glyph}/${scope.join("/")}` : agent;
+  if (!glyph || !rest.length) return agent;
+  const scope = rest.join("/");
+  return `${glyph}/${scopes[scope] ?? scope}`;
+}
+
+function spentLabel(count: number) {
+  const thousands = Math.round(count / 1_000);
+  if (thousands >= 1_000) return `${(count / 1_000_000).toFixed(1)}M`;
+  return count < 1_000 ? String(count) : `${thousands}K`;
 }
 
 function running(status: Status) {
@@ -211,9 +220,9 @@ function Row(props: { api: TuiPluginApi; lanes: Lanes; name: string; child: Sess
   };
   const spent = () => {
     const value = measured()?.tokens;
-    return value ? formatTokens(value) : "";
+    return value ? ` ${spentLabel(value)}` : "";
   };
-  const bracket = () => ` [${agentLabel(props.child.agent ?? "unknown")} • ${model()}] `;
+  const bracket = () => ` [${agentLabel(props.child.agent ?? "unknown")} ∙ ${model()}]`;
   const [width, setWidth] = createSignal<number>();
   const name = () => {
     const room = width();
@@ -224,36 +233,29 @@ function Row(props: { api: TuiPluginApi; lanes: Lanes; name: string; child: Sess
   const close = { icon: icons.error, run: () => props.lanes.dismissed.dismiss([props.child.id]) };
 
   return (
-    <ActionRow
-      api={props.api}
-      action={running(status()) ? undefined : close}
-      onPress={() => props.api.route.navigate("session", { sessionID: props.child.id })}
+    <box
+      flexDirection="row"
+      gap={0}
+      onMouseDown={() => props.api.route.navigate("session", { sessionID: props.child.id })}
+      onSizeChange={function () {
+        setWidth(this.width);
+      }}
     >
-      <box
-        flexDirection="row"
-        gap={0}
-        flexGrow={1}
-        flexShrink={1}
-        onSizeChange={function () {
-          setWidth(this.width);
-        }}
+      <ActionIcon api={props.api} icon={icon()} fg={tone()} action={running(status()) ? undefined : close} />
+      <text fg={theme().text} wrapMode="none" flexShrink={0} flexGrow={1}>
+        {name()}
+      </text>
+      <text fg={theme().textMuted} wrapMode="none" flexShrink={0}>
+        {bracket()}
+      </text>
+      <text
+        fg={pressureColor(theme(), ((measured()?.tokens ?? 0) / COMPACTION_LIMIT) * 100)}
+        wrapMode="none"
+        flexShrink={0}
       >
-        <text fg={tone()} wrapMode="none" flexShrink={0}>{`${icon()} `}</text>
-        <text fg={theme().text} wrapMode="none" flexShrink={0}>
-          {name()}
-        </text>
-        <text fg={theme().textMuted} wrapMode="none" flexShrink={0} flexGrow={1}>
-          {bracket()}
-        </text>
-        <text
-          fg={pressureColor(theme(), ((measured()?.tokens ?? 0) / COMPACTION_LIMIT) * 100)}
-          wrapMode="none"
-          flexShrink={0}
-        >
-          {spent()}
-        </text>
-      </box>
-    </ActionRow>
+        {spent()}
+      </text>
+    </box>
   );
 }
 
