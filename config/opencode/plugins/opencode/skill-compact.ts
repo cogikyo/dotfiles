@@ -100,9 +100,10 @@ async function sessionSkillParts(client: SessionClient, sessionID: string) {
   return messages.flatMap((message) => (message.parts ?? []).filter(isCompletedSkillPart));
 }
 
-function currentAgentFromMessages(messages: ReadonlyArray<{ info?: { agent?: string } }>) {
+function currentAgentFromMessages(messages: ReadonlyArray<{ info?: object }>) {
   for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const agent = messages[index]?.info?.agent;
+    const info = messages[index]?.info;
+    const agent = info && "agent" in info ? info.agent : undefined;
     if (typeof agent === "string" && agent) return agent;
   }
   return undefined;

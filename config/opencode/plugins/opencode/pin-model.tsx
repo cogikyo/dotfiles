@@ -208,7 +208,7 @@ async function applyPin(api: TuiPluginApi) {
   }
 
   const model = pin ? parseModel(pin.model) : undefined;
-  if (!model) {
+  if (!pin || !model) {
     toast(api, "No pinned model", "warning");
     return;
   }

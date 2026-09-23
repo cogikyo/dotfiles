@@ -1,0 +1,25 @@
+{
+  "name": "opencode-config",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p .",
+    "lint": "oxlint plugins",
+    "fmt": "oxfmt plugins",
+    "check": "tsc -p . && oxlint plugins"
+  },
+  "dependencies": {
+    "@opencode-ai/plugin": "1.18.32"
+  },
+  "devDependencies": {
+    "@opencode-ai/sdk": "1.18.32",
+    "@opentui/core": "0.4.5",
+    "@opentui/keymap": "0.4.5",
+    "@opentui/solid": "0.4.5",
+    "@types/bun": "1.3.13",
+    "oxfmt": "0.70.0",
+    "oxlint": "1.85.0",
+    "solid-js": "1.9.12",
+    "typescript": "7.0.2"
+  }
+}

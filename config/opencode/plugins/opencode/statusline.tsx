@@ -6,7 +6,7 @@ import type {
   TuiPromptRef,
 } from "@opencode-ai/plugin/tui";
 import { writeFile } from "node:fs/promises";
-import { Show, createSignal, onCleanup } from "solid-js";
+import { Show, createSignal, onCleanup, type Accessor } from "solid-js";
 import { colors, pressureColor, pressureTier } from "../shared/colors.ts";
 import { gitDirtyCount, gitStatus, type GitStatus } from "../shared/git.ts";
 import { icons } from "../shared/icons.ts";
@@ -145,7 +145,7 @@ function StatusRight(props: { api: TuiPluginApi; sessionID: string }) {
 function GitSegment(props: { api: TuiPluginApi; status?: GitStatus }) {
   return (
     <Show when={props.status} keyed>
-      {(status) =>
+      {(status: GitStatus) =>
         status.branch ? (
           <box flexDirection="row" gap={0}>
             <text fg={gitStateColor(props.api, status)} wrapMode="none">
@@ -229,7 +229,7 @@ function GitCount(props: {
 function ContextSegment(props: { api: TuiPluginApi; usage?: SessionUsage }) {
   return (
     <Show when={props.usage}>
-      {(usage) => (
+      {(usage: Accessor<SessionUsage>) => (
         <box flexDirection="row" gap={0}>
           <text
             fg={pressureColor(props.api.theme.current, usage().colorPercent)}

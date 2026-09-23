@@ -123,7 +123,7 @@ export function createImageNamer(input: CreateImageNamerInput) {
       });
       startNext();
     },
-    drain(sessionID: string) {
+    drain(_sessionID: string) {
       if (!config.enabled) return;
       startNext();
     },

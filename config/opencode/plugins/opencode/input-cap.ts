@@ -16,7 +16,7 @@ type Catalog = Record<string, Record<string, Limit>>;
 const server: Plugin = async () => ({
   config: async (cfg) => {
     const catalog = await readCatalog();
-    const reserved = number(cfg.compaction?.reserved) ?? COMPACTION_RESERVED;
+    const reserved = number(object(object(cfg)?.compaction)?.reserved) ?? COMPACTION_RESERVED;
     const inputCap = compactionInputCap(reserved);
     capProviderModels(cfg, catalog, inputCap);
     capCatalogModels(cfg, catalog, inputCap);

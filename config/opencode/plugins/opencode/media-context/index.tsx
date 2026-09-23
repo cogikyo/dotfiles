@@ -455,7 +455,7 @@ const tui: TuiPlugin = async (api) => {
       app() {
         return (
           <Show when={preview()} keyed>
-            {(current) => <ImageOverlay api={api} preview={current} onClose={closePreview} />}
+            {(current: PreviewState) => <ImageOverlay api={api} preview={current} onClose={closePreview} />}
           </Show>
         );
       },

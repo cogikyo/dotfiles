@@ -35,7 +35,9 @@ async function load(): Promise<ProviderUsage> {
   if (response.status === 429) return note("429");
   if (!response.ok) return note(`HTTP ${response.status}`);
 
-  const body = await response.json().catch(() => undefined);
+  const body = (await response.json().catch(() => undefined)) as
+    | { usage?: Record<string, { percent?: unknown; resetsAt?: unknown } | undefined> }
+    | undefined;
   if (!body || typeof body !== "object" || !body.usage || typeof body.usage !== "object") {
     return note("invalid usage");
   }

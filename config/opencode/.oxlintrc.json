@@ -1,0 +1,8 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["typescript", "unicorn", "oxc"],
+  "ignorePatterns": ["node_modules/**"],
+  "rules": {
+    "no-unused-vars": ["warn", { "ignoreRestSiblings": true, "argsIgnorePattern": "^_" }]
+  }
+}
