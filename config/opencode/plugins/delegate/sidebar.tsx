@@ -198,12 +198,20 @@ function createLanes(api: TuiPluginApi) {
 }
 
 type Lanes = ReturnType<typeof createLanes>;
+type Columns = { model: number; spent: number };
 
-function Row(props: { api: TuiPluginApi; lanes: Lanes; name: string; child: Session }) {
+function labels(lanes: Lanes, child: Session) {
+  const measured = lanes.usage(child.id);
+  return {
+    model: family(measured?.model ?? child.model?.id ?? "unknown"),
+    spent: measured ? spentLabel(measured.tokens) : "",
+  };
+}
+
+function Row(props: { api: TuiPluginApi; lanes: Lanes; name: string; child: Session; columns: Columns }) {
   const theme = () => props.api.theme.current;
   const status = () => props.lanes.status(props.child);
   const measured = () => props.lanes.usage(props.child.id);
-  const model = () => family(measured()?.model ?? props.child.model?.id ?? "unknown");
   const icon = () => {
     const current = status();
     if (current === "limited") return icons.lane.limited;
@@ -218,11 +226,10 @@ function Row(props: { api: TuiPluginApi; lanes: Lanes; name: string; child: Sess
     if (current === "retry") return c.yellow;
     return current === "busy" ? c.green : theme().textMuted;
   };
-  const spent = () => {
-    const value = measured()?.tokens;
-    return value ? ` ${spentLabel(value)}` : "";
-  };
-  const bracket = () => ` [${agentLabel(props.child.agent ?? "unknown")} ∙ ${model()}]`;
+  const spent = () =>
+    props.columns.spent ? ` ${labels(props.lanes, props.child).spent.padStart(props.columns.spent)}` : "";
+  const bracket = () =>
+    ` [${agentLabel(props.child.agent ?? "unknown")} ∙ ${labels(props.lanes, props.child).model.padStart(props.columns.model)}]`;
   const [width, setWidth] = createSignal<number>();
   const name = () => {
     const room = width();
@@ -268,6 +275,15 @@ function Panel(props: { api: TuiPluginApi; lanes: Lanes; sessionID: string }) {
       .map(([name]) => name)
       .toSorted(),
   );
+  const columns = createMemo(() => {
+    const shown = names()
+      .flatMap((name) => active().get(name) ?? [])
+      .map((child) => labels(props.lanes, child));
+    return {
+      model: Math.max(0, ...shown.map((label) => label.model.length)),
+      spent: Math.max(0, ...shown.map((label) => label.spent.length)),
+    };
+  });
 
   return (
     <Show when={names().length}>
@@ -276,7 +292,9 @@ function Panel(props: { api: TuiPluginApi; lanes: Lanes; sessionID: string }) {
           <For each={names()}>
             {(name) => (
               <Show when={active().get(name)}>
-                {(child: Accessor<Session>) => <Row api={props.api} lanes={props.lanes} name={name} child={child()} />}
+                {(child: Accessor<Session>) => (
+                  <Row api={props.api} lanes={props.lanes} name={name} child={child()} columns={columns()} />
+                )}
               </Show>
             )}
           </For>

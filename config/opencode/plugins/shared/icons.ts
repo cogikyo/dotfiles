@@ -43,14 +43,14 @@ export const icons = {
     limited: "󰡴",
   },
   role: {
-    build: "󰣪",
+    build: "󰖷",
     verify: "󰕥",
     review: "󰈈",
     scout: "󰆋",
   },
   scope: {
-    general: "󰦬",
-    owner: "󰆥",
+    general: "♞",
+    owner: "󰡚",
     patch: "󰶯",
     scribe: "󰴓",
     git: "󰘬",
