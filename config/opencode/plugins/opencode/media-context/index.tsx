@@ -292,7 +292,7 @@ const tui: TuiPlugin = async (api) => {
   });
 
   api.slots.register({
-    order: 125,
+    order: 450,
     slots: {
       app() {
         return (
