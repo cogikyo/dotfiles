@@ -53,7 +53,7 @@ Go command workspace. One module, multiple binaries. Sockets at `/tmp/{hyprd,eww
 - [`dctl`](cmds/cmd/dctl/README.md) — dotfiles control plane; `dctl porkbun` manages personal Porkbun DNS records on Linux
 
 After editing `hyprd`, run `hyprd rebuild` — it builds, preserves runtime state, and hot-restarts in place.
-For other commands, delegate an exact targeted build to `verify/test`; direct `go build` is denied to every other agent.
+For other commands, a targeted build of the affected binaries is fine.
 
 ## Conventions
 

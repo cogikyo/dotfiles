@@ -65,12 +65,6 @@ const server: Plugin = async ({ client, directory, worktree }) => {
             throw new Error(`read-only sessions cannot mutate; ${reviewBlock}`);
           }
         }
-        if (invokesGoBuild(command)) {
-          const session = await readSession(client, input.sessionID);
-          if (sessionAgent(session) !== "verify/test") {
-            throw new Error("direct `go build` is reserved for verify/test; use the repository-owned rebuild or update command when one exists");
-          }
-        }
         return;
       }
 
@@ -173,12 +167,6 @@ function patchRejection(target: PatchTarget, filePath: string, reason: string) {
     ? `move it to trash with \`trash -- ${JSON.stringify(filePath)}\``
     : "use a purpose-built binary or generated-file tool";
   return `apply_patch refused to ${target.operation.toLowerCase()} ${filePath}: file ${reason}; ${action}`;
-}
-
-function invokesGoBuild(command: string) {
-  const words = shellWords(command);
-  return words.some((word, index) => executable(word) === "go" && words[index + 1] === "build")
-    || nestedShellCommands(words).some(invokesGoBuild);
 }
 
 function invokesRm(command: string) {

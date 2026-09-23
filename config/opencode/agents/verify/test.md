@@ -16,8 +16,7 @@ Your terminal product is a compact verification report: exact commands, outcomes
 
 ## Command discipline
 
-- You are the only agent permitted to invoke `go build` directly.
-- Run a direct Go build only when the parent approved its exact target; never broaden it to `go build ./...` without explicit approval.
+- Build only the targets the parent approved; do not broaden a targeted build to the whole module without approval.
 - Run the smallest check that can falsify the claim; targeted commands before broad suites.
 - Use normal shell commands, chains, pipelines, redirects, and command substitution when they help run or inspect approved checks.
 - Prefer commands that exercise the changed file, failing behavior, or acceptance boundary directly; say why each is relevant.
