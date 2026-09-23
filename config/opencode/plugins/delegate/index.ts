@@ -2,7 +2,8 @@ import type { Plugin, PluginModule } from "@opencode-ai/plugin";
 import { tool } from "@opencode-ai/plugin";
 import { loadDelegateConfig } from "./config.ts";
 import { enforceProviderPolicy } from "./policy.ts";
-import { readChildTaskStatus } from "./lane.ts";
+import { closeLane, readChildTaskStatus } from "./lane.ts";
+import { type Client, errorMessage } from "./sdk.ts";
 import { prepareTask, runChildTask } from "./session.ts";
 
 const DESCRIPTION = [
@@ -11,7 +12,8 @@ const DESCRIPTION = [
   "Use effort for the target model's reasoning variant; invalid efforts fail explicitly.",
   "If model is omitted, the child uses the agent's pinned model when one exists, else the current assistant message's model and effort.",
   "Optional lane names a reusable child within this parent session; without a lane, each call creates a one-shot child.",
-  "A lane pins its agent, but model and effort can change between calls; context-limited lanes roll over to a fresh child.",
+  "A lane pins its agent, but model and effort can change between calls; context-limited and closed lanes roll over to a fresh child.",
+  "A closed lane name can come back as a different agent.",
   "compact: true requires an existing idle lane and summarizes it before sending the prompt.",
   "unattended defaults to true; it converts ask to deny for the child and descendants, and children cannot use question.",
   "build/git requires explicit unattended true and an attended primary Collab parent.",
@@ -24,11 +26,47 @@ const DESCRIPTION = [
 ].join(" ");
 
 const STATUS_DESCRIPTION = [
-  "List direct task children with lane names, agents, live statuses, and context-limit markers.",
+  "List direct task children with lane names, agents, live statuses, and context-limit and closed markers.",
   "Use after an interrupted call to reconcile durable write state before calling the lane again.",
 ].join(" ");
 
+const CLOSE_DESCRIPTION = [
+  "Close idle named lanes under this session so the sidebar hides them and the names can be reused.",
+  "Busy, missing, and already closed lanes are skipped with a reason.",
+  "The next task call with a closed lane name starts a fresh child.",
+].join(" ");
+
 const id = "delegate-task";
+
+function laneKey(sessionID: string, lane: string) {
+  return `${sessionID}\0${lane}`;
+}
+
+async function closeLanes(input: {
+  client: Client;
+  active: Set<string>;
+  sessionID: string;
+  lanes: string[];
+  signal: AbortSignal;
+}) {
+  const { client, active, sessionID, signal } = input;
+  const lines = await Promise.all(
+    input.lanes.map(async (lane) => {
+      const key = laneKey(sessionID, lane);
+      if (active.has(key)) return `${lane}: skipped (task call in flight)`;
+      active.add(key);
+      try {
+        return `${lane}: ${await closeLane(client, sessionID, lane, signal)}`;
+      } catch (error) {
+        if (signal.aborted) throw error;
+        return `${lane}: failed (${errorMessage(error)})`;
+      } finally {
+        active.delete(key);
+      }
+    }),
+  );
+  return lines.join("\n");
+}
 
 const server: Plugin = async ({ client }) => {
   const config = await loadDelegateConfig();
@@ -60,7 +98,7 @@ const server: Plugin = async ({ client }) => {
             ),
         },
         async execute(args, ctx) {
-          const key = args.lane?.trim() ? `${ctx.sessionID}\0${args.lane.trim()}` : undefined;
+          const key = args.lane?.trim() ? laneKey(ctx.sessionID, args.lane.trim()) : undefined;
           if (key && activeLanes.has(key)) {
             throw new Error(`delegate lane ${args.lane} is busy; wait until it is idle`);
           }
@@ -87,9 +125,26 @@ const server: Plugin = async ({ client }) => {
           return readChildTaskStatus(client, ctx.sessionID, ctx.abort);
         },
       }),
+      task_close: tool({
+        description: CLOSE_DESCRIPTION,
+        args: {
+          lanes: tool.schema.array(tool.schema.string()).describe("Lane names under this session to close"),
+        },
+        async execute(args, ctx) {
+          const lanes = [...new Set(args.lanes.map((lane) => lane.trim()).filter(Boolean))];
+          if (!lanes.length) throw new Error("task_close requires at least one lane name");
+          await ctx.ask({
+            permission: "task_close",
+            patterns: lanes,
+            always: [],
+            metadata: { lanes },
+          });
+          return closeLanes({ client, active: activeLanes, sessionID: ctx.sessionID, lanes, signal: ctx.abort });
+        },
+      }),
     },
   };
 };
 
-/** Server plugin that registers child-session `task` and `task_status` tools. */
+/** Server plugin that registers child-session `task`, `task_status`, and `task_close` tools. */
 export default { id, server } satisfies PluginModule;

@@ -230,6 +230,7 @@ Several lanes can share one worktree; a failed patch means re-read and adjust, b
   - Re-brief that fresh child with the objective, accepted work, and open deltas.
 - You can compact an idle lane with `compact: true` and `lane`; it summarizes, then sends your prompt, and the lane stays trusted.
 - After an interrupted task call, use `task_status` to list children and lane names, and reconcile the tree before you reissue write work.
+- Close finished lanes with `task_close`, or run `clear-lanes` to sweep them; a closed name starts a fresh child on its next call.
 
 ## Dispatch
 

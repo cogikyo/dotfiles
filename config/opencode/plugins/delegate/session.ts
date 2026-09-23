@@ -13,8 +13,10 @@ import {
   taskArgs,
   validateVariant,
 } from "./args.ts";
+import { sessionClosed } from "./closed.ts";
 import { contextLimitedSessions, sealContextLimited } from "./context.ts";
 import {
+  assertLaneOpen,
   laneChild,
   readExistingChild,
   sameExecution,
@@ -122,6 +124,7 @@ export async function runChildTask(input: {
         client: input.client,
         sessionID: child.id,
         prompt: input.args.prompt,
+        resumedLane: child.resumed ? input.args.lane : undefined,
         prepared: input.prepared,
         notes,
         signal: input.ctx.abort,
@@ -150,30 +153,33 @@ export async function runChildTask(input: {
 
 async function openChild(client: Client, ctx: ToolContext, args: TaskArgs, prepared: PreparedTask) {
   const current = args.lane ? await laneChild(client, ctx.sessionID, args.lane, ctx.abort) : undefined;
-  if (current && sessionAgent(current) !== prepared.agent.name) {
+  const closed = !!current && !!sessionClosed(current);
+  if (current && !closed && sessionAgent(current) !== prepared.agent.name) {
     throw new Error(
       `delegate lane ${args.lane} is pinned to ${sessionAgent(current)}; requested ${prepared.agent.name}`,
     );
   }
   const limited = current && (contextLimitedSessions.has(String(current.id)) || sessionContextLimit(current));
-  if (args.compact && (!current || limited)) {
+  const resumable = current && !closed && !limited;
+  if (args.compact && !resumable) {
     throw new Error(`delegate cannot compact lane ${args.lane}: no resumable child`);
   }
-  return current && !limited
-    ? await readExistingChild({
-        client,
-        session: current,
-        permission: prepared.permission,
-        execution: prepared.execution,
-        signal: ctx.abort,
-      })
-    : await createChild(client, ctx, args, prepared);
+  if (!resumable) return { ...(await createChild(client, ctx, args, prepared)), resumed: false };
+  const child = await readExistingChild({
+    client,
+    session: current,
+    permission: prepared.permission,
+    execution: prepared.execution,
+    signal: ctx.abort,
+  });
+  return { ...child, resumed: true };
 }
 
 async function promptChild(input: {
   client: Client;
   sessionID: string;
   prompt: string;
+  resumedLane?: string;
   prepared: PreparedTask;
   notes: string[];
   signal: AbortSignal;
@@ -182,6 +188,7 @@ async function promptChild(input: {
   const { client, sessionID, prepared, signal } = input;
   const initialMessages = await readChildMessages(client, sessionID, signal);
   const initialMessageIDs = new Set(initialMessages.map(messageID).filter((id): id is string => !!id));
+  if (input.resumedLane) await assertLaneOpen(client, sessionID, input.resumedLane, signal);
   const body = {
     model: prepared.model,
     ...(prepared.variant ? { variant: prepared.variant } : {}),

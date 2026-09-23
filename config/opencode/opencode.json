@@ -176,6 +176,7 @@
     "task": "allow",
     "chrome-devtools_*": "deny",
     "task_status": "allow",
+    "task_close": "allow",
     "external_directory": {
       "/": "deny",
       "/?": "deny",
@@ -341,7 +342,7 @@
     }
   },
   "experimental": {
-    "primary_tools": ["usage_status", "task_status"]
+    "primary_tools": ["usage_status", "task_status", "task_close"]
   },
   "compaction": {
     "auto": true,

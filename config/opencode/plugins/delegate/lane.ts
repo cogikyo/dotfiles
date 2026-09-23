@@ -1,4 +1,6 @@
+import type { SessionUpdateData } from "@opencode-ai/sdk/v2";
 import { record } from "../shared/record.ts";
+import { closeBody, sessionClosed } from "./closed.ts";
 import { type Execution, normalizeRules, type Rule, samePermissionRules } from "./permission.ts";
 import { type Client, finite, string, unwrap } from "./sdk.ts";
 
@@ -24,20 +26,25 @@ export async function readChildTaskStatus(client: Client, parentSessionID: strin
   const lines = [`Direct task children for session ${parentSessionID}, newest first:`];
   for (const child of children) {
     const id = string(child.id)!;
-    const status = childStatus(record(statuses[id]));
+    const closed = sessionClosed(child);
+    const status = closed ? "closed" : childStatus(record(statuses[id]));
     const limit = sessionContextLimit(child);
     lines.push(
       "",
       `child_session_id: ${id}`,
       ...(sessionLane(child) ? [`lane: ${sessionLane(child)}`] : []),
       `status: ${status}`,
+      ...(closed ? [`closed_by: ${closed.by}`] : []),
       ...(limit ? [`context_limit: ${limit.limit}${limit.tokens === undefined ? "" : ` tokens=${limit.tokens}`}`] : []),
       `agent: ${sessionAgent(child) ?? "unknown"}`,
       `title: ${singleLine(string(child.title) ?? "untitled")}`,
       `updated: ${new Date(sessionUpdated(child)).toISOString()}`,
     );
   }
-  lines.push("", "Only named lanes resume; context-limited lanes create a fresh child on the next call.");
+  lines.push(
+    "",
+    "Only named lanes resume; context-limited and closed lanes create a fresh child on the next call, and a closed lane name may take a different agent.",
+  );
   return lines.join("\n");
 }
 
@@ -50,6 +57,33 @@ export async function laneChild(client: Client, parentSessionID: string, lane: s
     .map(record)
     .filter((child): child is Record<string, unknown> => !!child && sessionLane(child) === lane)
     .toSorted((left, right) => sessionCreated(right) - sessionCreated(left))[0];
+}
+
+export async function closeLane(client: Client, parentSessionID: string, lane: string, signal: AbortSignal) {
+  const child = await laneChild(client, parentSessionID, lane, signal);
+  if (!child) return "skipped (no such lane)";
+  if (sessionClosed(child)) return "skipped (already closed)";
+  const id = string(child.id);
+  if (!id) throw new Error(`delegate lane ${lane} child has no id`);
+  const statuses = await unwrap<Record<string, unknown>>(
+    client.session.status({ signal }),
+    `read lane ${lane} status before close`,
+  );
+  const status = childStatus(record(statuses[id]));
+  if (status !== "idle") return `skipped (${status})`;
+  const body: NonNullable<SessionUpdateData["body"]> = closeBody(child, "collab");
+  await unwrap(client.session.update({ path: { id }, body, signal }), `close lane ${lane} child ${id}`);
+  return "closed";
+}
+
+export async function assertLaneOpen(client: Client, sessionID: string, lane: string, signal: AbortSignal) {
+  const session = await unwrap<Record<string, unknown>>(
+    client.session.get({ path: { id: sessionID }, signal }),
+    `re-read lane ${lane} child ${sessionID} before prompt`,
+  );
+  if (sessionClosed(session)) {
+    throw new Error(`delegate lane ${lane} was closed; call task again to start a fresh child`);
+  }
 }
 
 export async function readExistingChild(input: {

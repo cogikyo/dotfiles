@@ -8,10 +8,10 @@ import { icons } from "../shared/icons.ts";
 import { COMPACTION_LIMIT } from "../shared/session.ts";
 import { ActionIcon } from "../shared/action-icon.tsx";
 import { SidebarSection } from "../shared/sidebar-section.tsx";
+import { closeBody, sessionClosed } from "./closed.ts";
+import { errorMessage } from "./sdk.ts";
 
 const id = "delegate-lanes";
-const DISMISSED = "delegate-lanes.dismissed";
-const DISMISSED_TTL = 30 * 24 * 60 * 60 * 1000;
 const SPIN_MS = 100;
 const FAMILIES: [RegExp, string][] = [
   [/^opus/, "opus"],
@@ -32,7 +32,6 @@ const tones: Partial<Record<string, "secondary" | "error" | "success" | "syntaxO
 
 type Usage = { model: string; tokens: number };
 type Status = SessionStatus["type"] | "limited";
-type Dismissed = Record<string, number>;
 
 function delegate(session: Session): Record<string, unknown> | undefined {
   const value = session.metadata?.delegate;
@@ -80,29 +79,6 @@ function running(status: Status) {
   return status === "busy" || status === "retry";
 }
 
-function createDismissed(api: TuiPluginApi) {
-  const current = () => api.kv.get<Dismissed>(DISMISSED, {});
-
-  function save(next: Dismissed) {
-    const cutoff = Date.now() - DISMISSED_TTL;
-    api.kv.set(DISMISSED, Object.fromEntries(Object.entries(next).filter(([, time]) => time > cutoff)));
-  }
-
-  function dismiss(sessionIDs: string[]) {
-    if (!sessionIDs.length) return;
-    const now = Date.now();
-    save({ ...current(), ...Object.fromEntries(sessionIDs.map((sessionID) => [sessionID, now])) });
-  }
-
-  function restore(sessionIDs: string[]) {
-    const value = current();
-    if (!sessionIDs.some((sessionID) => value[sessionID])) return;
-    save(Object.fromEntries(Object.entries(value).filter(([sessionID]) => !sessionIDs.includes(sessionID))));
-  }
-
-  return { dismiss, restore, has: (sessionID: string) => current()[sessionID] !== undefined };
-}
-
 function createSpinner(api: TuiPluginApi, busy: () => boolean) {
   const [frame, setFrame] = createSignal(0);
   let timer: ReturnType<typeof setInterval> | undefined;
@@ -122,11 +98,30 @@ function createSpinner(api: TuiPluginApi, busy: () => boolean) {
   return { frame, sync };
 }
 
+async function closeLane(api: TuiPluginApi, sessionID: string) {
+  const current = await api.client.session.get({ sessionID });
+  if (!current.data) throw new Error(`read ${sessionID}: ${errorMessage(current.error)}`);
+  const updated = await api.client.session.update({ sessionID, ...closeBody(current.data, "operator") });
+  if (updated.error) throw new Error(`close ${sessionID}: ${errorMessage(updated.error)}`);
+}
+
+async function closeLanes(api: TuiPluginApi, sessionIDs: string[]) {
+  const results = await Promise.allSettled(sessionIDs.map((sessionID) => closeLane(api, sessionID)));
+  const failures = results.flatMap((result) => (result.status === "rejected" ? [errorMessage(result.reason)] : []));
+  if (failures.length) {
+    api.ui.toast({
+      variant: "error",
+      title: `Failed to close ${failures.length} lane${failures.length === 1 ? "" : "s"}`,
+      message: failures.join("\n"),
+    });
+  }
+  return sessionIDs.length - failures.length;
+}
+
 function createLanes(api: TuiPluginApi) {
   const [sessions, setSessions] = createSignal<Record<string, Session>>({});
   const [usages, setUsages] = createSignal<Record<string, Usage>>({});
   const [statuses, setStatuses] = createSignal<Record<string, SessionStatus["type"]>>({});
-  const dismissed = createDismissed(api);
   const spinner = createSpinner(api, () => Object.values(sessions()).some((session) => running(status(session))));
   const loaded = new Set<string>();
 
@@ -149,7 +144,7 @@ function createLanes(api: TuiPluginApi) {
       return;
     }
     const children = response.data.filter((child) => lane(child));
-    setSessions((current) => ({ ...current, ...Object.fromEntries(children.map((child) => [child.id, child])) }));
+    setSessions((current) => ({ ...Object.fromEntries(children.map((child) => [child.id, child])), ...current }));
     spinner.sync();
     await Promise.all(children.map((child) => loadUsage(child.id)));
   }
@@ -165,7 +160,6 @@ function createLanes(api: TuiPluginApi) {
       const sessionID = event.properties.sessionID;
       if (!known(sessionID)) return;
       setSessions(({ [sessionID]: _, ...rest }) => rest);
-      dismissed.restore([sessionID]);
       spinner.sync();
     }),
     api.event.on("message.updated", (event) => {
@@ -178,7 +172,6 @@ function createLanes(api: TuiPluginApi) {
       const type = event.properties.status.type;
       if (!known(sessionID)) return;
       setStatuses((current) => ({ ...current, [sessionID]: type }));
-      if (type === "busy") dismissed.restore([sessionID]);
       spinner.sync();
     }),
   ];
@@ -192,6 +185,7 @@ function createLanes(api: TuiPluginApi) {
       const seen = newest.get(name);
       if (!seen || child.time.created > seen.time.created) newest.set(name, child);
     }
+    for (const [name, child] of newest) if (sessionClosed(child)) newest.delete(name);
     return newest;
   }
 
@@ -200,7 +194,7 @@ function createLanes(api: TuiPluginApi) {
     return statuses()[session.id] ?? api.state.session.status(session.id)?.type ?? "idle";
   }
 
-  return { load, forParent, status, frame: spinner.frame, dismissed, usage: (child: string) => usages()[child] };
+  return { load, forParent, status, frame: spinner.frame, usage: (child: string) => usages()[child] };
 }
 
 type Lanes = ReturnType<typeof createLanes>;
@@ -249,7 +243,7 @@ function Row(props: { api: TuiPluginApi; lanes: Lanes; name: string; child: Sess
     const budget = room - stringWidth(`${icons.lane.idle} ${bracket()}${spent()}`);
     return stringWidth(props.name) <= budget ? props.name : `${props.name.slice(0, Math.max(0, budget - 1))}…`;
   };
-  const close = { icon: icons.error, run: () => props.lanes.dismissed.dismiss([props.child.id]) };
+  const close = { icon: icons.error, run: () => void closeLanes(props.api, [props.child.id]) };
 
   return (
     <box
@@ -285,12 +279,7 @@ function Row(props: { api: TuiPluginApi; lanes: Lanes; name: string; child: Sess
 function Panel(props: { api: TuiPluginApi; lanes: Lanes; sessionID: string }) {
   createEffect(() => void props.lanes.load(props.sessionID));
   const active = createMemo(() => props.lanes.forParent(props.sessionID));
-  const names = createMemo(() =>
-    [...active()]
-      .filter(([, child]) => !props.lanes.dismissed.has(child.id))
-      .map(([name]) => name)
-      .toSorted(),
-  );
+  const names = createMemo(() => [...active().keys()].toSorted());
   const columns = createMemo(() => {
     const shown = names()
       .flatMap((name) => active().get(name) ?? [])
@@ -339,18 +328,14 @@ function registerCommands(api: TuiPluginApi, lanes: Lanes) {
         title: "Clear idle lanes",
         category: "Session",
         namespace: "palette",
-        run: () => {
-          const idle = children().filter((child) => !running(lanes.status(child)) && !lanes.dismissed.has(child.id));
-          lanes.dismissed.dismiss(idle.map((child) => child.id));
-          api.ui.toast({ message: `Cleared ${idle.length} lane${idle.length === 1 ? "" : "s"}` });
+        run: async () => {
+          const idle = children().filter((child) => !running(lanes.status(child)));
+          const cleared = await closeLanes(
+            api,
+            idle.map((child) => child.id),
+          );
+          api.ui.toast({ message: `Cleared ${cleared} lane${cleared === 1 ? "" : "s"}` });
         },
-      },
-      {
-        name: "delegate.lanes.restore",
-        title: "Restore cleared lanes",
-        category: "Session",
-        namespace: "palette",
-        run: () => lanes.dismissed.restore(children().map((child) => child.id)),
       },
     ],
   });
