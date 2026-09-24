@@ -364,6 +364,29 @@ map("n", "{", ':<C-u>execute "keepjumps norm! " . v:count1 . "{"<CR>zvzt', desc(
 -- ╭─────────────────────────────────────────────────────────────────────────────╮
 -- │ undo: insert mode break points at punctuation                               │
 -- ╰─────────────────────────────────────────────────────────────────────────────╯
+local undo_cursor = vim.api.nvim_create_namespace("UndoCursor")
+
+local function undo_in_place(key)
+	return function()
+		local buf = vim.api.nvim_get_current_buf()
+		local view = vim.fn.winsaveview()
+		local mark = vim.api.nvim_buf_set_extmark(buf, undo_cursor, view.lnum - 1, view.col, { right_gravity = false })
+		local ok, err = pcall(vim.cmd.normal, { vim.v.count1 .. key, bang = true })
+		local pos = vim.api.nvim_buf_get_extmark_by_id(buf, undo_cursor, mark, {})
+		vim.api.nvim_buf_del_extmark(buf, undo_cursor, mark)
+		if pos[1] then
+			view.lnum = pos[1] + 1
+			view.col = pos[2]
+			vim.fn.winrestview(view)
+		end
+		if not ok then
+			error(err, 0)
+		end
+	end
+end
+
+map("n", "u", undo_in_place("u"), desc("Undo in place"))
+map("n", "<C-r>", undo_in_place(vim.keycode("<C-r>")), desc("Redo in place"))
 map("i", ",", ",<C-g>u")
 map("i", ".", ".<C-g>u")
 map("i", "!", "!<C-g>u")
