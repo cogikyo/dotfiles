@@ -1,5 +1,6 @@
 import type { SessionPromptAsyncData } from "@opencode-ai/sdk/v2";
-import { record } from "../shared/record.ts";
+import { errorMessage } from "../shared/error.ts";
+import { type Client, type Message, messages, type Reply, statuses, unwrap } from "../shared/opencode.ts";
 import type { PreparedTask } from "./args.ts";
 import {
   type ContextLimit,
@@ -13,29 +14,24 @@ import {
   observeContextWarnings,
   pendingContextWarning,
 } from "./context.ts";
-import { type Client, errorMessage, string, unwrap } from "./sdk.ts";
 
-export type ChildWait = {
-  assistant?: Record<string, unknown>;
-  messages: unknown[];
-  limit?: ContextLimit;
-  interruption?: string;
-};
-
-type Delivery = {
-  client: Client;
-  sessionID: string;
-  prepared: PreparedTask;
-  limits: ContextLimits;
-  spent: Set<ContextWarning>;
-  requested: Set<ContextWarning>;
-  notes: string[];
-  signal: AbortSignal;
-};
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Child wait                                                                                    │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
 const STATUS_POLL_MS = 300;
 const STARTUP_TIMEOUT_MS = 120_000;
 
+/** Child turn outcome, including any startup interruption or context limit. */
+export type ChildWait = {
+  assistant?: Reply;
+  messages: Message[];
+  limit?: ContextLimit;
+  interruption?: string;
+};
+
+/** Waits for child activity and completion, warning as context fills and aborting on a context limit. */
+// A child with no startup activity is aborted after 120 seconds; caller aborts still throw.
 export async function waitForChild(input: {
   client: Client;
   sessionID: string;
@@ -62,7 +58,7 @@ export async function waitForChild(input: {
 
   const poll = async (): Promise<ChildWait> => {
     await abortableDelay(STATUS_POLL_MS, waitSignal);
-    const { status, running, turnMessages } = await readTurn(client, sessionID, initialMessageIDs, waitSignal);
+    const { running, turnMessages } = await readTurn(client, sessionID, initialMessageIDs, waitSignal);
     observeContextWarnings(turnMessages, spent, observed);
     if (running) {
       active = true;
@@ -81,14 +77,12 @@ export async function waitForChild(input: {
       if (running) abortChild();
     }
 
-    if (!limit && running && !finalAssistant(lastAssistantMessage(turnMessages))) {
+    if (!limit && running && !finalAssistant(lastReply(turnMessages))) {
       await deliverWarning(delivery, turnMessages);
     }
 
-    if (status && status.type !== "idle" && !running) return poll();
-    if (running) return poll();
-    if (!active) return poll();
-    return { assistant: lastAssistantMessage(turnMessages), messages: turnMessages, limit };
+    if (running || !active) return poll();
+    return { assistant: lastReply(turnMessages), messages: turnMessages, limit };
   };
 
   try {
@@ -109,23 +103,65 @@ export async function waitForChild(input: {
   }
 }
 
-async function readTurn(client: Client, sessionID: string, initialMessageIDs: Set<string>, signal: AbortSignal) {
-  const [statuses, messages] = await Promise.all([
-    unwrap<Record<string, unknown>>(client.session.status({ signal }), `read child session ${sessionID} status`),
-    readChildMessages(client, sessionID, signal),
-  ]);
-  const status = record(statuses[sessionID]);
-  const running = status?.type === "busy" || status?.type === "retry";
-  const turnMessages = messages.filter((message) => {
-    const id = messageID(message);
-    return !!id && !initialMessageIDs.has(id);
-  });
-  return { status, running, turnMessages };
+export function readChildMessages(client: Client, sessionID: string, signal: AbortSignal) {
+  return messages(client, sessionID, { label: `delegate read child session ${sessionID} messages`, signal });
 }
 
-async function deliverWarning(input: Delivery, messages: unknown[]) {
+// ├─ Poll ────────────────────────────────────────────────────────────────────────────────────────┤
+
+async function readTurn(client: Client, sessionID: string, initialMessageIDs: Set<string>, signal: AbortSignal) {
+  const [live, all] = await Promise.all([
+    statuses(client, { label: `delegate read child session ${sessionID} status`, signal }),
+    readChildMessages(client, sessionID, signal),
+  ]);
+  const type = live[sessionID]?.type;
+  const running = type === "busy" || type === "retry";
+  const turnMessages = all.filter((message) => !initialMessageIDs.has(message.info.id));
+  return { running, turnMessages };
+}
+
+function lastReply(turn: Message[]): Reply | undefined {
+  for (const { info, parts } of turn.toReversed()) if (info.role === "assistant") return { info, parts };
+}
+
+function abortableDelay(milliseconds: number, signal: AbortSignal) {
+  return new Promise<void>((resolve, reject) => {
+    if (signal.aborted) {
+      reject(signal.reason ?? new Error("delegate task aborted"));
+      return;
+    }
+
+    const timer = setTimeout(done, milliseconds);
+    signal.addEventListener("abort", aborted, { once: true });
+
+    function done() {
+      signal.removeEventListener("abort", aborted);
+      resolve();
+    }
+
+    function aborted() {
+      clearTimeout(timer);
+      reject(signal.reason ?? new Error("delegate task aborted"));
+    }
+  });
+}
+
+// ├─ Warning delivery ────────────────────────────────────────────────────────────────────────────┤
+
+type Delivery = {
+  client: Client;
+  sessionID: string;
+  prepared: PreparedTask;
+  limits: ContextLimits;
+  spent: Set<ContextWarning>;
+  requested: Set<ContextWarning>;
+  notes: string[];
+  signal: AbortSignal;
+};
+
+async function deliverWarning(input: Delivery, turn: Message[]) {
   const { client, sessionID, prepared, limits, spent, requested, notes, signal } = input;
-  const tokens = maxContextTokens(messages);
+  const tokens = maxContextTokens(turn);
   const warning = pendingContextWarning(tokens, limits, spent);
   if (!warning) return;
   spent.add(warning);
@@ -158,47 +194,6 @@ async function sendContextWarning(input: {
   } satisfies NonNullable<SessionPromptAsyncData["body"]>;
   await unwrap(
     client.session.promptAsync({ path: { id: sessionID }, body, signal }),
-    `send context ${level} warning to child session ${sessionID}`,
+    `delegate send context ${level} warning to child session ${sessionID}`,
   );
-}
-
-export async function readChildMessages(client: Client, sessionID: string, signal: AbortSignal) {
-  return unwrap<unknown[]>(
-    client.session.messages({ path: { id: sessionID }, signal }),
-    `read child session ${sessionID} messages`,
-  );
-}
-
-function lastAssistantMessage(messages: unknown[]) {
-  for (let index = messages.length - 1; index >= 0; index--) {
-    const message = record(messages[index]);
-    if (record(message?.info)?.role === "assistant") return message;
-  }
-  return undefined;
-}
-
-export function messageID(message: unknown) {
-  return string(record(record(message)?.info)?.id);
-}
-
-function abortableDelay(milliseconds: number, signal: AbortSignal) {
-  return new Promise<void>((resolve, reject) => {
-    if (signal.aborted) {
-      reject(signal.reason ?? new Error("delegate task aborted"));
-      return;
-    }
-
-    const timer = setTimeout(done, milliseconds);
-    signal.addEventListener("abort", aborted, { once: true });
-
-    function done() {
-      signal.removeEventListener("abort", aborted);
-      resolve();
-    }
-
-    function aborted() {
-      clearTimeout(timer);
-      reject(signal.reason ?? new Error("delegate task aborted"));
-    }
-  });
 }

@@ -5,7 +5,7 @@ Registers local image file parts and local video paths for reuse in an opencode 
 - Handles are per-session timestamps: `@HH_MM_SS`, with `_2`, `_3`, and so on when multiple media files register in the same second.
 - Newly attached images can also receive async model-generated aliases such as `@whiteboard-sketch`.
 - Image aliases are limited to 3 words, slugged to lowercase safe characters, and collision-suffixed when needed.
-- The sidebar lists named images as `I <generated-name>` and unnamed images as `I <timestamp-handle>`.
+- The sidebar lists named images as `I @alias` and unnamed images as `I @HH_MM_SS`.
 - Videos display `V <local-basename>` with handle fallback and are never model-named or pasted into provider context.
 - Clicking an image row opens the local image in the Kitty overlay and clears it on close, session changes, and plugin disposal.
 - Clicking a video row opens the local path with `xdg-open`.
@@ -29,17 +29,21 @@ Image naming is configured on the server plugin tuple in `opencode.json`:
 The naming job is sidecar-only.
 It queues only images registered by the `chat.message` send path and starts naming asynchronously after registration.
 It always uses the configured OpenCode `small_model`, never the current prompt model or default agent.
-It creates a temporary hidden `title` session, prompts it with the image, then deletes that session in a best-effort `finally`.
+It creates a temporary `title` session, adds that session id to the ignore set, prompts it with the image, and deletes the session in a `finally` block.
+A delete failure fails the naming job.
 If `small_model` is unavailable, naming is skipped and timestamp handles stay.
 It does not read `OPENAI_API_KEY`, parse OpenCode auth files, or call provider APIs directly.
-If the provider/model lacks image support or the temporary prompt fails, naming warns once for that image and leaves timestamp handles intact.
-OpenCode docs do not currently expose a true non-persistent completion API, so temp session rows and stats are deleted best-effort but true non-persistence depends on OpenCode API support.
+If the provider or model lacks image support, or the temporary prompt fails, that attempt logs one warning and leaves the timestamp handle intact.
+A later send can enqueue the same still-unnamed image again.
+OpenCode docs do not currently expose a true non-persistent completion API, so the temporary session is deleted in that `finally` block, but true non-persistence depends on OpenCode API support.
 
 Named image files are copied into the media-context runtime cache under the generated filename.
 Original source files are not renamed.
 Timestamp handles remain stable fallback references.
 
-Registry reads are capped at 256 KiB and 200 entries.
+Registry reads are refused above 256 KiB.
+A file with more than 200 entries fails validation and reads as empty.
+Invalid rows inside a valid file are dropped.
 Registry directories are mode `0700`; registry JSON files are mode `0600`.
 Registry writes use a per-session lock and atomic replace.
 

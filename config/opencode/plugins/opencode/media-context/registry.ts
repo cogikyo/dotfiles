@@ -1,7 +1,8 @@
 import { chmodSync, copyFileSync, existsSync } from "node:fs";
 import { extname, join } from "node:path";
 import { pathToFileURL } from "node:url";
-import { record } from "../../shared/record.ts";
+import type { Part as V1Part } from "@opencode-ai/sdk";
+import type { Part } from "@opencode-ai/sdk/v2";
 import {
   cacheDir,
   extensionForMime,
@@ -19,23 +20,18 @@ import {
   normalizeStoredName,
   readRegistry,
   readWritableRegistry,
-  string,
   withRegistryLock,
   writeRegistry,
   type MediaRegistryEntry,
 } from "./store";
 
-const HANDLE_PATTERN =
-  /(?:^|[^A-Za-z0-9_.\\/-])(@(?:[01]\d|2[0-3])_[0-5]\d_[0-5]\d(?:_(?:[2-9]|[1-9]\d+))?)(?![A-Za-z0-9_\\/-]|\.[A-Za-z0-9])/g;
-const ALIAS_PATTERN =
-  /(?:^|[^A-Za-z0-9_.\\/-])(@[a-z0-9](?:[a-z0-9-]{0,46}[a-z0-9])?)(?![A-Za-z0-9_\\/-]|\.[A-Za-z0-9])/g;
-type FileSource = { type: "file"; path: string; text: { value: string; start: number; end: number } };
-
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
 // │ Session media registry                                                                        │
 // ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
-/** A media part with the message identity and source fields required for persistence. */
+type FileSource = { type: "file"; path: string; text: { value: string; start: number; end: number } };
+
+/** Media file part with the IDs and source text required for persistence. */
 export type PersistedMediaFilePart = Omit<MediaFilePart, "id" | "sessionID" | "messageID" | "source"> & {
   id: string;
   sessionID: string;
@@ -44,41 +40,26 @@ export type PersistedMediaFilePart = Omit<MediaFilePart, "id" | "sessionID" | "m
 };
 
 // ├─ Registration and lookup ─────────────────────────────────────────────────────────────────────┤
-/** Narrows an unknown message part to supported image or video media. */
-export function mediaPart(part: unknown): MediaFilePart | undefined {
-  const candidate = record(part);
-  const mime = string(candidate?.mime);
-  const url = string(candidate?.url);
-  const kind = mediaKindForMime(mime);
-  if (candidate?.type !== "file" || !mime || url === undefined || !kind) return undefined;
+
+/** Extracts an image or video file part from an SDK part without reading its file. */
+export function mediaPart(part: Part | V1Part): MediaFilePart | undefined {
+  if (part.type !== "file") return undefined;
+  const kind = mediaKindForMime(part.mime);
+  if (!kind) return undefined;
   return {
     type: "file",
-    mime,
-    url,
-    kind: candidate.kind === "image" || candidate.kind === "video" ? candidate.kind : kind,
-    id: string(candidate.id),
-    sessionID: string(candidate.sessionID),
-    messageID: string(candidate.messageID),
-    filename: string(candidate.filename),
-    source: mediaSource(candidate.source),
+    mime: part.mime,
+    url: part.url,
+    kind,
+    id: part.id,
+    sessionID: part.sessionID,
+    messageID: part.messageID,
+    filename: part.filename,
+    source: part.source,
   };
 }
 
-function mediaSource(value: unknown): MediaFilePart["source"] {
-  const source = record(value);
-  if (!source || typeof source.type !== "string") return undefined;
-  const text = record(source.text);
-  return {
-    type: source.type,
-    path: string(source.path),
-    text:
-      text && typeof text.value === "string" && typeof text.start === "number" && typeof text.end === "number"
-        ? { value: text.value, start: text.start, end: text.end }
-        : undefined,
-  };
-}
-
-/** Adds or updates local media in the session registry. */
+/** Registers local media under a timestamp handle, reusing matching rows and returning undefined when storage fails or is full. */
 export function registerSessionMedia(sessionID: string, messageID: string | undefined, part: MediaFilePart) {
   try {
     const kind = part.kind ?? mediaKindForMime(part.mime);
@@ -130,7 +111,7 @@ export function registerSessionMedia(sessionID: string, messageID: string | unde
   }
 }
 
-/** Reads registered media for a session, returning an empty list on read failure. */
+/** Lists session media without locking, returning an empty list on read failure. */
 export function listSessionMedia(sessionID: string) {
   try {
     return readRegistry(sessionID);
@@ -150,13 +131,34 @@ function sameMedia(
   return entry.hash === target.hash;
 }
 
+function nextMediaHandle(entries: MediaRegistryEntry[], timestamp: number) {
+  const base = timestampHandleBase(timestamp);
+  let max = entries.some((entry) => entry.handle === base) ? 1 : 0;
+
+  for (const entry of entries) {
+    const match = new RegExp(`^${base}_(\\d+)$`).exec(entry.handle);
+    if (!match) continue;
+    max = Math.max(max, Number(match[1]));
+  }
+
+  return max === 0 ? base : `${base}_${max + 1}`;
+}
+
+function timestampHandleBase(timestamp: number) {
+  const date = new Date(timestamp);
+  const hours = String(date.getHours()).padStart(2, "0");
+  const minutes = String(date.getMinutes()).padStart(2, "0");
+  const seconds = String(date.getSeconds()).padStart(2, "0");
+  return `@${hours}_${minutes}_${seconds}`;
+}
+
 // ├─ Names and references ────────────────────────────────────────────────────────────────────────┤
-/** Returns a named alias when available, otherwise the generated handle. */
+
 export function mediaReference(entry: MediaRegistryEntry) {
   return entry.alias || entry.handle;
 }
 
-/** Saves a normalized image name, unique alias, and named cache copy. */
+/** Names an image by copying it into the cache and storing an alias, leaving its original file and handle unchanged. */
 export function updateImageName(sessionID: string, handle: string, name: string, source: string) {
   const cleanName = normalizeStoredName(name);
   if (!cleanName) return undefined;
@@ -190,7 +192,7 @@ export function updateImageName(sessionID: string, handle: string, name: string,
   }
 }
 
-/** Resolves handles and aliases in text to existing local media files. */
+/** Resolves standalone handles or aliases in text to registry rows whose files still exist. */
 export function resolveMediaReferences(sessionID: string, text: string) {
   const requested = requestedMediaReferences(text);
   if (requested.size === 0) return [];
@@ -205,7 +207,7 @@ export function resolveMediaReferences(sessionID: string, text: string) {
   return resolved;
 }
 
-/** Builds the persisted file part used to add a registered image to provider context. */
+/** Builds a file part for a registry row without checking the file; its source text is a reference, not a message span. */
 export function mediaFilePartForEntry(
   entry: MediaRegistryEntry,
   sessionID: string,
@@ -230,6 +232,11 @@ export function mediaFilePartForEntry(
   };
 }
 
+const HANDLE_PATTERN =
+  /(?:^|[^A-Za-z0-9_.\\/-])(@(?:[01]\d|2[0-3])_[0-5]\d_[0-5]\d(?:_(?:[2-9]|[1-9]\d+))?)(?![A-Za-z0-9_\\/-]|\.[A-Za-z0-9])/g;
+const ALIAS_PATTERN =
+  /(?:^|[^A-Za-z0-9_.\\/-])(@[a-z0-9](?:[a-z0-9-]{0,46}[a-z0-9])?)(?![A-Za-z0-9_\\/-]|\.[A-Za-z0-9])/g;
+
 function requestedMediaReferences(text: string) {
   const requested = new Set<string>();
   HANDLE_PATTERN.lastIndex = 0;
@@ -250,6 +257,8 @@ function entryReferences(entry: MediaRegistryEntry) {
 }
 
 // ├─ Aliases and file names ──────────────────────────────────────────────────────────────────────┤
+
+// The time-based fallback after 200 attempts may collide with an existing alias.
 function uniqueAlias(entries: MediaRegistryEntry[], current: MediaRegistryEntry, name: string) {
   const used = new Set(entries.filter((entry) => entry.handle !== current.handle).flatMap(entryReferences));
   for (let index = 1; index <= 200; index++) {
@@ -285,25 +294,4 @@ function filePartID(messageID: string, index: number) {
     .slice(0, 64);
   const suffix = sha256(`${messageID}:${index}:${Date.now()}`).slice(0, 12);
   return `prt_${cleanMessageID || "media_ref"}_${index}_${suffix}`;
-}
-
-function nextMediaHandle(entries: MediaRegistryEntry[], timestamp: number) {
-  const base = timestampHandleBase(timestamp);
-  let max = entries.some((entry) => entry.handle === base) ? 1 : 0;
-
-  for (const entry of entries) {
-    const match = new RegExp(`^${base}_(\\d+)$`).exec(entry.handle);
-    if (!match) continue;
-    max = Math.max(max, Number(match[1]));
-  }
-
-  return max === 0 ? base : `${base}_${max + 1}`;
-}
-
-function timestampHandleBase(timestamp: number) {
-  const date = new Date(timestamp);
-  const hours = String(date.getHours()).padStart(2, "0");
-  const minutes = String(date.getMinutes()).padStart(2, "0");
-  const seconds = String(date.getSeconds()).padStart(2, "0");
-  return `@${hours}_${minutes}_${seconds}`;
 }

@@ -1,84 +1,55 @@
-import { record } from "../shared/record.ts";
-import { type Client, string, unwrap } from "./sdk.ts";
+import {
+  type Agent,
+  type Client,
+  config as readConfig,
+  type Permission,
+  type Rule,
+  type Session,
+} from "../shared/opencode.ts";
 
-export type Rule = {
-  permission: string;
-  pattern: string;
-  action: "allow" | "ask" | "deny";
-};
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Child permissions                                                                             │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
+/** Child execution mode stored in delegate session metadata. */
 export type Execution = {
   unattended: boolean;
 };
 
-const UNATTENDED_FLOOR: Rule = { permission: "*", pattern: "*", action: "deny" }; // This catch-all denial is prepended to each unattended child permission envelope.
+const UNATTENDED_FLOOR: Rule = { permission: "*", pattern: "*", action: "deny" };
 
+/** Builds ordered child permissions from agent rules, delegate denies, and inherited parent restrictions. */
+// Unattended children turn asks into denies and start with a deny-all floor; `question` is always denied.
 export async function deriveChildPermission(
   client: Client,
-  parent: Record<string, unknown>,
-  agent: { name: string; permission?: unknown },
+  parent: Session,
+  agent: Agent,
   execution: Execution,
 ): Promise<Rule[]> {
-  const config = await unwrap<Record<string, unknown>>(client.config.get({}), "read config");
+  const config = await readConfig(client, { label: "delegate read config" });
   const unattended = execution.unattended;
-  const agentConfig = record(record(config.agent)?.[agent.name]);
+  const agentConfig = config.agent?.[agent.name];
   if (!agentConfig)
     throw new Error(`delegate agent ${agent.name} is missing from config.agent; cannot determine declared permissions`);
 
-  const parentRules = inheritableParentRules(normalizeRules(parent.permission), unattended);
+  const parentRules = inheritableParentRules(parent.permission ?? [], unattended);
   const inherited = parentRules.filter(
     (rule) => rule.permission === "external_directory" || (unattended && rule.action === "deny"),
   );
-  const agentRules = normalizeRules(agent.permission);
-  const declaredRules = normalizeRules(agentConfig.permission);
+  const declaredRules = configRules(agentConfig.permission);
   const defaultRules = defaultAgentRules(agent.name, declaredRules);
   const childDenies: Rule[] = [
     ...(hasPermissionRule(declaredRules, "todowrite") ? [] : [deny("todowrite")]),
     ...(hasPermissionRule(declaredRules, "task") ? [] : [deny("task")]),
     deny("question"),
-    ...primaryTools(config)
-      .filter((tool) => !hasPermissionRule(declaredRules, tool))
-      .map(deny),
+    ...(config.experimental?.primary_tools ?? []).filter((tool) => !hasPermissionRule(declaredRules, tool)).map(deny),
   ];
-  const composed = [...defaultRules, ...agentRules, ...childDenies, ...inherited];
+  const composed = [...defaultRules, ...agent.permission, ...childDenies, ...inherited];
   if (!unattended) return dedupeRules(composed);
   return [UNATTENDED_FLOOR, ...dedupeRules(composed.map(asBlocker))];
 }
 
-// Only the leading synthetic floor is removed; later parent rules remain eligible for inheritance.
-function inheritableParentRules(rules: Rule[], unattended: boolean) {
-  const synthetic = unattended && rules.length > 0 && isUnattendedFloor(rules[0]);
-  return synthetic ? rules.slice(1) : rules;
-}
-
-function isUnattendedFloor(rule: Rule) {
-  return (
-    rule.permission === UNATTENDED_FLOOR.permission &&
-    rule.pattern === UNATTENDED_FLOOR.pattern &&
-    rule.action === UNATTENDED_FLOOR.action
-  );
-}
-
-// Preserve rule order while converting `ask` rules to `deny`.
-function asBlocker(rule: Rule): Rule {
-  return rule.action === "ask" ? { ...rule, action: "deny" } : rule;
-}
-
-export function normalizeRules(value: unknown): Rule[] {
-  if (Array.isArray(value)) return value.flatMap(parseRule);
-  const root = record(value);
-  if (!root) return [];
-
-  return Object.entries(root).flatMap(([permission, entry]) => {
-    if (isAction(entry)) return [{ permission, pattern: "*", action: entry }];
-    const patterns = record(entry);
-    if (!patterns) return [];
-    return Object.entries(patterns).flatMap(([pattern, action]) =>
-      isAction(action) ? [{ permission, pattern, action }] : [],
-    );
-  });
-}
-
+/** Requires the same ordered permission envelope before a child can resume. */
 export function samePermissionRules(left: Rule[], right: Rule[]) {
   return (
     left.length === right.length &&
@@ -93,13 +64,38 @@ export function samePermissionRules(left: Rule[], right: Rule[]) {
   );
 }
 
-function parseRule(value: unknown): Rule[] {
-  const root = record(value);
-  const permission = string(root?.permission);
-  const pattern = string(root?.pattern);
-  const action = root?.action;
-  if (!permission || !pattern || !isAction(action)) return [];
-  return [{ permission, pattern, action }];
+/** Denies all patterns for a permission; `"*"` seals a child. */
+export function deny(permission: string): Rule {
+  return { permission, pattern: "*", action: "deny" };
+}
+
+// ├─ Rule assembly ───────────────────────────────────────────────────────────────────────────────┤
+
+// Exclude the parent's synthetic deny-all floor so child-specific rules can still apply.
+function inheritableParentRules(rules: Rule[], unattended: boolean) {
+  const synthetic = unattended && rules.length > 0 && isUnattendedFloor(rules[0]);
+  return synthetic ? rules.slice(1) : rules;
+}
+
+function isUnattendedFloor(rule: Rule) {
+  return (
+    rule.permission === UNATTENDED_FLOOR.permission &&
+    rule.pattern === UNATTENDED_FLOOR.pattern &&
+    rule.action === UNATTENDED_FLOOR.action
+  );
+}
+
+function asBlocker(rule: Rule): Rule {
+  return rule.action === "ask" ? { ...rule, action: "deny" } : rule;
+}
+
+function configRules(permission: Permission | undefined): Rule[] {
+  if (!permission || typeof permission === "string") return [];
+  return Object.entries(permission).flatMap(([name, entry]) =>
+    typeof entry === "string"
+      ? [{ permission: name, pattern: "*", action: entry }]
+      : Object.entries(entry).map(([pattern, action]) => ({ permission: name, pattern, action })),
+  );
 }
 
 function hasPermissionRule(rules: Rule[], permission: string) {
@@ -122,17 +118,6 @@ function defaultAgentRules(agentName: string, explicitRules: Rule[]) {
   return rules;
 }
 
-function primaryTools(config: Record<string, unknown>) {
-  const experimental = record(config.experimental);
-  return Array.isArray(experimental?.primary_tools)
-    ? experimental.primary_tools.filter((item): item is string => typeof item === "string")
-    : [];
-}
-
-export function deny(permission: string): Rule {
-  return { permission, pattern: "*", action: "deny" };
-}
-
 function allow(permission: string): Rule {
   return { permission, pattern: "*", action: "allow" };
 }
@@ -145,8 +130,4 @@ function dedupeRules(rules: Rule[]) {
     seen.add(key);
     return true;
   });
-}
-
-function isAction(value: unknown): value is Rule["action"] {
-  return value === "allow" || value === "ask" || value === "deny";
 }

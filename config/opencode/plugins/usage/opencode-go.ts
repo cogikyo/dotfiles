@@ -1,79 +1,11 @@
-import { record } from "../shared/record.ts";
+import { z } from "zod";
 import { readAuth } from "./auth.ts";
 import { usageProviders } from "./providers.ts";
-import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
+import type { ProviderAdapter, ProviderUsage } from "./types.ts";
 
 const { id, label, staleAfterMS } = usageProviders.opencodeGo;
 
-function note(text: string, noteKind: ProviderUsage["noteKind"] = "error"): ProviderUsage {
-  return { id, label, windows: [], note: text, noteKind };
-}
-
-function usageWindow(tag: string, raw: unknown): UsageWindow | undefined {
-  const value = record(raw);
-  if (
-    !value ||
-    typeof value.percent !== "number" ||
-    !Number.isFinite(value.percent) ||
-    value.percent < 0 ||
-    typeof value.resetsAt !== "string" ||
-    !Number.isFinite(Date.parse(value.resetsAt))
-  ) {
-    return undefined;
-  }
-  return {
-    label: tag,
-    usedPercent: Math.min(100, value.percent),
-    resetAt: value.resetsAt,
-  };
-}
-
-async function load(): Promise<ProviderUsage> {
-  const auth = await readAuth();
-  const credential = record(auth?.["opencode-go"]);
-  if (credential?.type !== "api" || typeof credential.key !== "string" || !credential.key)
-    return note("no auth", "warn");
-
-  let response: Response;
-  try {
-    response = await fetch("https://opencode.ai/zen/go/v1/usage", {
-      headers: {
-        Authorization: `Bearer ${credential.key}`,
-        Accept: "application/json",
-      },
-      redirect: "error",
-      signal: AbortSignal.timeout(15_000),
-    });
-  } catch {
-    return note("request failed");
-  }
-
-  if (response.status === 401) return note("invalid key");
-  if (response.status === 429) return note("429");
-  if (!response.ok) return note(`HTTP ${response.status}`);
-
-  // The endpoint returns rolling, weekly, and monthly windows with resetsAt timestamps.
-  const body = record(await response.json().catch(() => undefined));
-  const rawUsage = record(body?.usage);
-  if (!rawUsage) {
-    return note("invalid usage");
-  }
-
-  const windows: UsageWindow[] = [];
-  for (const [name, tag] of [
-    ["rolling", "H"],
-    ["weekly", "W"],
-    ["monthly", "M"],
-  ] as const) {
-    const window = usageWindow(tag, rawUsage[name]);
-    if (!window) return note("invalid usage");
-    windows.push(window);
-  }
-
-  return { id, label, windows };
-}
-
-/** Usage adapter for OpenCode Go rolling, weekly, and monthly limits. */
+/** Loads OpenCode Go rolling, weekly, and monthly limits; invalid usage returns an error note. */
 export const opencodeGoUsage: ProviderAdapter = {
   id,
   label,
@@ -87,3 +19,51 @@ export const opencodeGoUsage: ProviderAdapter = {
   },
   load,
 };
+
+const Window = z.object({
+  percent: z.number().min(0),
+  resetsAt: z.string().refine((value) => Number.isFinite(Date.parse(value))),
+});
+
+const Body = z.object({
+  usage: z.object({ rolling: Window, weekly: Window, monthly: Window }),
+});
+
+async function load(): Promise<ProviderUsage> {
+  const key = (await readAuth())?.["opencode-go"]?.key;
+  if (!key) return note("no auth", "warn");
+
+  let response: Response;
+  try {
+    response = await fetch("https://opencode.ai/zen/go/v1/usage", {
+      headers: {
+        Authorization: `Bearer ${key}`,
+        Accept: "application/json",
+      },
+      redirect: "error",
+      signal: AbortSignal.timeout(15_000),
+    });
+  } catch {
+    return note("request failed");
+  }
+
+  if (response.status === 401) return note("invalid key");
+  if (response.status === 429) return note("429");
+  if (!response.ok) return note(`HTTP ${response.status}`);
+
+  const body = Body.safeParse(await response.json().catch(() => undefined));
+  if (!body.success) return note("invalid usage");
+
+  const { rolling, weekly, monthly } = body.data.usage;
+  const windows = [
+    { tag: "H", window: rolling },
+    { tag: "W", window: weekly },
+    { tag: "M", window: monthly },
+  ].map(({ tag, window }) => ({ label: tag, usedPercent: Math.min(100, window.percent), resetAt: window.resetsAt }));
+
+  return { id, label, windows };
+}
+
+function note(text: string, noteKind: ProviderUsage["noteKind"] = "error"): ProviderUsage {
+  return { id, label, windows: [], note: text, noteKind };
+}

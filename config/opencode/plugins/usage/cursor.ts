@@ -1,74 +1,20 @@
-import { record } from "../shared/record.ts";
+import { z } from "zod";
 import { readAuth } from "./auth.ts";
 import { usageProviders } from "./providers.ts";
+import { lenient } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
 
-// These fields are already percentages; values between 0 and 1 mean less than 1%, not fractions.
 const { id, label, staleAfterMS } = usageProviders.cursor;
 const USAGE_URL = "https://api2.cursor.sh/aiserver.v1.DashboardService/GetCurrentPeriodUsage";
 const FETCH_TIMEOUT_MS = 15_000;
 
-function usage(windows: UsageWindow[], note?: string): ProviderUsage {
-  return { id, label, windows, note };
-}
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Cursor usage                                                                                  │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
-function resetAt(value: unknown) {
-  const ms =
-    typeof value === "number" ? value : typeof value === "string" && value.length > 0 ? Number(value) : undefined;
-  if (ms === undefined || !Number.isFinite(ms)) return undefined;
-  const date = new Date(ms);
-  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
-}
+// ├─ Provider adapter ────────────────────────────────────────────────────────────────────────────┤
 
-function cursorPercent(value: unknown) {
-  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
-  const pct = Math.max(0, Math.min(100, value));
-  if (pct === 0) return 0;
-  // The dashboard rounds nonzero usage below 1% up to 1%.
-  if (pct < 1) return 1;
-  return pct;
-}
-
-function usageWindow(windowLabel: string, percent: unknown, cycleEnd: string | undefined): UsageWindow | undefined {
-  const usedPercent = cursorPercent(percent);
-  if (usedPercent === undefined) return undefined;
-  return { label: windowLabel, usedPercent, resetAt: cycleEnd };
-}
-
-async function load(): Promise<ProviderUsage> {
-  const auth = await readAuth();
-  const cursor = record(auth?.cursor);
-
-  if (cursor?.type !== "oauth" || typeof cursor.access !== "string" || !cursor.access) {
-    return usage([], "no auth");
-  }
-
-  const response = await fetch(USAGE_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${cursor.access}`,
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      "User-Agent": "opencode-usage",
-    },
-    body: "{}",
-    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-  });
-  if (!response.ok) return usage([], `${response.status}`);
-
-  const payload = record(await response.json());
-  const planUsage = record(payload?.planUsage);
-  const cycleEnd = resetAt(payload?.billingCycleEnd);
-  const windows = [
-    usageWindow("C", planUsage?.autoPercentUsed, cycleEnd),
-    usageWindow("O", planUsage?.apiPercentUsed, cycleEnd),
-  ].filter((window): window is UsageWindow => Boolean(window));
-
-  if (windows.length === 0) return usage([], "no windows");
-  return usage(windows);
-}
-
-/** Usage adapter for Cursor plan limits. */
+/** Loads Cursor plan usage; sub-1% values are percentages, not fractions, and reset times are epoch milliseconds. */
 export const cursorUsage: ProviderAdapter = {
   id,
   label,
@@ -82,3 +28,70 @@ export const cursorUsage: ProviderAdapter = {
   },
   load,
 };
+
+async function load(): Promise<ProviderUsage> {
+  const access = (await readAuth())?.cursor?.access;
+  if (!access) return usage([], "no auth");
+
+  const response = await fetch(USAGE_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${access}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      "User-Agent": "opencode-usage",
+    },
+    body: "{}",
+    signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+  });
+  if (!response.ok) return usage([], `${response.status}`);
+
+  const payload = Payload.parse(await response.json());
+  const cycleEnd = resetAt(payload.billingCycleEnd);
+  const windows = [
+    usageWindow("C", payload.planUsage?.autoPercentUsed, cycleEnd),
+    usageWindow("O", payload.planUsage?.apiPercentUsed, cycleEnd),
+  ].filter((window) => window !== undefined);
+
+  if (windows.length === 0) return usage([], "no windows");
+  return usage(windows);
+}
+
+function usage(windows: UsageWindow[], note?: string): ProviderUsage {
+  return { id, label, windows, note };
+}
+
+// ├─ Percent and reset ───────────────────────────────────────────────────────────────────────────┤
+
+function cursorPercent(value: number | undefined) {
+  if (value === undefined) return undefined;
+  const pct = Math.max(0, Math.min(100, value));
+  if (pct === 0) return 0;
+  if (pct < 1) return 1;
+  return pct;
+}
+
+function usageWindow(windowLabel: string, percent: number | undefined, cycleEnd: string | undefined) {
+  const usedPercent = cursorPercent(percent);
+  if (usedPercent === undefined) return undefined;
+  return { label: windowLabel, usedPercent, resetAt: cycleEnd };
+}
+
+function resetAt(value: number | string | undefined) {
+  const ms = value === "" ? undefined : Number(value);
+  if (ms === undefined || !Number.isFinite(ms)) return undefined;
+  const date = new Date(ms);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
+// ├─ Usage payload ───────────────────────────────────────────────────────────────────────────────┤
+
+const Payload = z.object({
+  planUsage: lenient(
+    z.object({
+      autoPercentUsed: lenient(z.number()),
+      apiPercentUsed: lenient(z.number()),
+    }),
+  ),
+  billingCycleEnd: lenient(z.union([z.number(), z.string()])),
+});

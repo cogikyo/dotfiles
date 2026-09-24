@@ -1,29 +1,50 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { z } from "zod";
 
 const uid = typeof process.getuid === "function" ? process.getuid() : "user";
 
-/** Private runtime directory shared by the TUI and server Kitty context readers. */
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Kitty context                                                                                 │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
+// ├─ Paths ───────────────────────────────────────────────────────────────────────────────────────┤
+
+/** Private runtime directory shared by kitty context writers and notice routing. */
 export const KITTY_CONTEXT_DIR = process.env.XDG_RUNTIME_DIR
   ? path.join(process.env.XDG_RUNTIME_DIR, "opencode")
   : path.join("/tmp", `opencode-${uid}`);
 
-/** JSON file mapping session ids to Kitty process and window ids. */
 export const KITTY_CONTEXT_PATH = path.join(KITTY_CONTEXT_DIR, "kitty-context.json");
+
+/** Directory lock for kitty context writes; readers use the atomically replaced file. */
 export const KITTY_CONTEXT_LOCK_PATH = path.join(KITTY_CONTEXT_DIR, "kitty-context.lock");
+
+/** Maximum age for entries kept by the kitty writer, independent of routing freshness. */
 export const STALE_CONTEXT_MS = 24 * 60 * 60 * 1000;
 
-/** Entry shape stored in the shared kitty-context JSON file. */
-export type KittyContext = {
-  kitty_pid: number;
-  kitty_window_id: number;
-  updated_at: number;
-  directory?: string;
-  generation?: number;
-};
+// ├─ Schema ──────────────────────────────────────────────────────────────────────────────────────┤
 
-/** Maps OpenCode session ids to their most recent Kitty pane. */
-export type KittyContexts = Record<string, KittyContext>;
+const id = z.coerce.number().catch(0);
+
+export type KittyContext = z.infer<typeof KittyContext>;
+
+/** Parses pane context, treating invalid values as an absent pane or field. */
+export const KittyContext = z
+  .object({
+    kitty_pid: id,
+    kitty_window_id: id,
+    updated_at: id,
+    directory: z.string().optional().catch(undefined),
+    // Generation is the plugin load time, not a per-write counter.
+    generation: z.number().optional().catch(undefined),
+  })
+  .catch({ kitty_pid: 0, kitty_window_id: 0, updated_at: 0 });
+
+export type KittyContexts = z.infer<typeof KittyContexts>;
+
+/** Parses session-to-pane context, treating an invalid file as empty. */
+export const KittyContexts = z.record(z.string(), KittyContext).catch({});
 
 export const EMPTY_KITTY_CONTEXT: KittyContext = {
   kitty_pid: 0,
@@ -31,7 +52,9 @@ export const EMPTY_KITTY_CONTEXT: KittyContext = {
   updated_at: 0,
 };
 
-/** Creates and validates the private runtime directory used for Kitty context. */
+// ├─ Directory checks ────────────────────────────────────────────────────────────────────────────┤
+
+/** Requires a private runtime directory and checks ownership when the user ID is available. */
 export async function ensureKittyContextDir() {
   await fs.mkdir(KITTY_CONTEXT_DIR, { recursive: true, mode: 0o700 });
   const stat = await fs.lstat(KITTY_CONTEXT_DIR);
@@ -50,12 +73,10 @@ export async function ensureKittyContextDir() {
   }
 }
 
-/** Returns the Kitty remote-control socket path for a process id. */
 export function kittySocketPath(pid: number) {
   return `/tmp/kitty-${pid}`;
 }
 
-/** Checks whether a filesystem path is a Unix socket. */
 export async function isSocket(socketPath: string) {
   try {
     return (await fs.stat(socketPath)).isSocket();

@@ -28,6 +28,7 @@
     "session_parent": "up,ctrl+alt+up",
     "model_list": "<leader>m",
     "model_cycle_favorite": "ctrl+m",
+    "variant_cycle": "ctrl+i",
     "theme_list": "<leader>_",
     "agent_list": "<leader>a",
     "session_list": "<leader>r",

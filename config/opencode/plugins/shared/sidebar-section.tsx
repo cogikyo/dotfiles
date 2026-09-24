@@ -4,7 +4,7 @@ import { Show, createSignal, type JSXElement } from "solid-js";
 
 const TITLE_ATTRIBUTES = createTextAttributes({ bold: true });
 
-/** Renders a themed, clickable section that can hide or show its contents. */
+/** Renders a collapsible sidebar section; its initial expanded state is captured once. */
 export function SidebarSection(props: {
   api: TuiPluginApi;
   title: string;

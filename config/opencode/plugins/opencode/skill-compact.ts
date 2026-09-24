@@ -1,23 +1,19 @@
-import type { Plugin, PluginInput, PluginModule } from "@opencode-ai/plugin";
+import type { Plugin, PluginModule } from "@opencode-ai/plugin";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { record } from "../shared/record.ts";
+import { unwrap, type Client } from "../shared/opencode.ts";
 import {
   isCompactedPart,
   isCompletedSkillPart,
   isCompletedToolPart,
   isProtectedMarkdownPath,
   persistCompactedPartsHttp,
-  persistCompactedSkillParts,
-  persistUpdatedPart,
   persistUpdatedPartsHttp,
   stubSkillParts,
   toolMarkdownPath,
   uncompactProtectedParts,
   withoutCompactedTime,
-  type PartClient,
   type ProtectRoots,
-  type SkillToolPart,
 } from "./skill-parts.ts";
 
 const id = "opencode-skill-compact";
@@ -25,7 +21,6 @@ const configRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".
 
 const server: Plugin = async ({ client, directory, worktree, serverUrl }) => {
   const compacting = new Set<string>();
-  const partClient = partAPI(client);
 
   const protectRoots = (agent?: string): ProtectRoots => ({
     configRoot,
@@ -34,7 +29,6 @@ const server: Plugin = async ({ client, directory, worktree, serverUrl }) => {
   });
 
   return {
-    // This hook supplies extra context strings to the default compaction prompt.
     "experimental.session.compacting": async (input, output) => {
       compacting.add(input.sessionID);
       output.context.push(
@@ -42,17 +36,15 @@ const server: Plugin = async ({ client, directory, worktree, serverUrl }) => {
       );
       try {
         const parts = await sessionSkillParts(client, input.sessionID);
-        if (partClient) await persistCompactedSkillParts(partClient, parts);
-        else await persistCompactedPartsHttp(serverUrl, directory, parts);
+        await persistCompactedPartsHttp(serverUrl, directory, parts);
       } catch {
         return;
       }
     },
-    // OpenCode exposes transformed messages as { info, parts } entries.
     "experimental.chat.messages.transform": async (_input, output) => {
       const agent = currentAgentFromMessages(output.messages);
       uncompactProtectedParts(
-        output.messages.flatMap((message) => (message.parts ?? []) as SkillToolPart[]),
+        output.messages.flatMap((message) => message.parts),
         protectRoots(agent),
       );
       const sessionID = sessionIDFromMessages(output.messages);
@@ -62,14 +54,13 @@ const server: Plugin = async ({ client, directory, worktree, serverUrl }) => {
     },
     event: async ({ event }) => {
       if (event.type !== "message.part.updated") return;
-      const part = event.properties.part as SkillToolPart;
+      const part = event.properties.part;
       if (!isCompletedToolPart(part) || !isCompactedPart(part)) return;
       const filePath = toolMarkdownPath(part);
       if (!filePath || !isProtectedMarkdownPath(filePath, protectRoots())) return;
       const next = withoutCompactedTime(part);
       try {
-        if (partClient) await persistUpdatedPart(partClient, next);
-        else await persistUpdatedPartsHttp(serverUrl, directory, [next]);
+        await persistUpdatedPartsHttp(serverUrl, directory, [next]);
       } catch {
         return;
       }
@@ -77,17 +68,15 @@ const server: Plugin = async ({ client, directory, worktree, serverUrl }) => {
   };
 };
 
-function partAPI(client: unknown): PartClient | undefined {
-  const part = record(record(client)?.part);
-  const update = part?.update;
-  if (typeof update !== "function") return undefined;
-  return { part: { update: (args) => Promise.resolve(update.call(part, args)) } };
-}
+/** Server plugin that compacts completed skill output while keeping project instructions and agent Markdown available. */
+export default { id, server } satisfies PluginModule;
 
-async function sessionSkillParts(client: PluginInput["client"], sessionID: string) {
-  const response = await client.session.messages({ path: { id: sessionID } });
-  if (response.error || !response.data) throw new Error(`read session ${sessionID} messages failed`);
-  return response.data.flatMap((message) => message.parts.filter(isCompletedSkillPart));
+async function sessionSkillParts(client: Client, sessionID: string) {
+  const messages = await unwrap(
+    client.session.messages({ path: { id: sessionID } }),
+    `read session ${sessionID} messages`,
+  );
+  return messages.flatMap((message) => message.parts.filter(isCompletedSkillPart));
 }
 
 function currentAgentFromMessages(messages: ReadonlyArray<{ info?: object }>) {
@@ -110,6 +99,3 @@ function sessionIDFromMessages(
   }
   return undefined;
 }
-
-/** Uses server compaction, message-transform, and message.part.updated hooks to preserve tool parts. */
-export default { id, server } satisfies PluginModule;

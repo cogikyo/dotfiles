@@ -5,6 +5,20 @@ import { onMount } from "solid-js";
 
 const id = "opencode-sidebar-scrollbar";
 
+/** TUI plugin that hides the sidebar's vertical scrollbar. */
+const tui: TuiPlugin = async (api) => {
+  api.slots.register({
+    order: 0,
+    slots: {
+      sidebar_content() {
+        return <Anchor />;
+      },
+    },
+  });
+};
+
+export default { id, tui } satisfies TuiPluginModule & { id: string };
+
 function scrollbox(node: Renderable | null | undefined) {
   while (node && !(node instanceof ScrollBoxRenderable)) node = node.parent;
   return node ?? undefined;
@@ -18,16 +32,3 @@ function Anchor() {
   });
   return <box ref={(node) => (anchor = node)} visible={false} />;
 }
-
-const tui: TuiPlugin = async (api) => {
-  api.slots.register({
-    order: 0,
-    slots: {
-      sidebar_content() {
-        return <Anchor />;
-      },
-    },
-  });
-};
-
-export default { id, tui } satisfies TuiPluginModule & { id: string };

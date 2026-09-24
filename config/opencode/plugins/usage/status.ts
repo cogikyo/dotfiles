@@ -1,7 +1,7 @@
 import { inspectProviderCache, type ProviderCacheView } from "./cache.ts";
 import { usageProviderList } from "./providers.ts";
 
-/** Renders cache-only provider headroom and freshness for the status tool. */
+/** Reports cached headroom, showing `?` for stale, failed, post-reset, or unknown usage. */
 export async function renderUsageStatus(now = Date.now()) {
   const providers = await Promise.all(
     usageProviderList.map(async (provider) => ({
@@ -16,7 +16,6 @@ export async function renderUsageStatus(now = Date.now()) {
   ].join("\n");
 }
 
-/** Renders one provider's cache state and reset windows. */
 export function renderProviderStatus(label: string, view: ProviderCacheView, now = Date.now()) {
   const fetched = view.fetchedAt ? new Date(view.fetchedAt).toISOString() : "?";
   const windows = view.windows.length

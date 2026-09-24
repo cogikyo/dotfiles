@@ -4,6 +4,7 @@ import { createSignal } from "solid-js";
 
 export type IconAction = { icon: string; run: () => void };
 
+/** Shows a muted action icon on hover and runs it on click without triggering the row. */
 export function ActionIcon(props: { api: TuiPluginApi; icon: string; fg: RGBA; action?: IconAction }) {
   const [hovered, setHovered] = createSignal(false);
   const shown = () => (hovered() ? props.action : undefined);

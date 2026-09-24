@@ -1,13 +1,9 @@
-// @ts-nocheck -- Bun socket types are not available in this Node-typed opencode tsconfig.
 const SOCKET_PATH = "/tmp/hyprd.sock";
 
-/** Sends one hyprd command and succeeds only when the socket replies `ok`. */
-export async function send(command) {
-  let resolveDone;
+/** Sends one hyprd socket command; only an `ok` reply succeeds, and a missing close has no timeout. */
+export async function send(command: string) {
   let response = "";
-  const done = new Promise((r) => {
-    resolveDone = r;
-  });
+  const done = Promise.withResolvers<void>();
   try {
     await Bun.connect({
       unix: SOCKET_PATH,
@@ -19,17 +15,16 @@ export async function send(command) {
           response += new TextDecoder().decode(data);
         },
         close() {
-          resolveDone();
+          done.resolve();
         },
         error() {
-          resolveDone();
+          done.resolve();
         },
       },
     });
   } catch {
-    resolveDone();
     return false;
   }
-  await done;
+  await done.promise;
   return response.trim() === "ok";
 }

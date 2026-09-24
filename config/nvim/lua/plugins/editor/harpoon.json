@@ -51,6 +51,7 @@
     },
     "/home/cullyn/LeadPier/backend/services/statistics": {
       "pins": [
+        "analytics/s.analytics.go",
         "analytics/init.analytics.go"
       ]
     },

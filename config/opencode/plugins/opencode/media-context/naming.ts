@@ -1,7 +1,9 @@
 import type { PluginOptions } from "@opencode-ai/plugin";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { record } from "../../shared/record.ts";
+import { z } from "zod";
+import { errorMessage as describe } from "../../shared/error.ts";
+import { create, prompt as ask, type Client, type Reply } from "../../shared/opencode.ts";
 import { updateImageName } from "./registry";
 import type { MediaRegistryEntry } from "./store";
 
@@ -9,19 +11,13 @@ import type { MediaRegistryEntry } from "./store";
 // │ Image naming                                                                                  │
 // ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
-const DEFAULT_OPTIONS: ImageNameOptions = {
-  enabled: true,
-  timeoutMs: 30_000,
-  maxBytes: 8 * 1024 * 1024,
-  concurrency: 1,
+/** Model selected for temporary image naming. */
+export type NamingModel = {
+  providerID: string;
+  modelID: string;
 };
-const NAMING_AGENT = "title";
-const PROMPT = `Name this image for a developer sidebar and file alias.
-Return only 1-3 short concrete words.
-Do not include a file extension, quotes, markdown, or a sentence.
-Prefer visible subject and role over generic words like image or screenshot.`;
-const SYSTEM = "You generate terse lowercase-ish image aliases. Return only the alias words and never call tools.";
-const STOP_WORDS = new Set(["a", "an", "the", "image", "photo", "picture", "screenshot"]);
+
+// ├─ Naming options ──────────────────────────────────────────────────────────────────────────────┤
 
 type ImageNameOptions = {
   enabled: boolean;
@@ -30,11 +26,35 @@ type ImageNameOptions = {
   concurrency: number;
 };
 
-/** Provider and model IDs used for temporary image-naming sessions. */
-export type NamingModel = {
-  providerID: string;
-  modelID: string;
+const DEFAULT_OPTIONS: ImageNameOptions = {
+  enabled: true,
+  timeoutMs: 30_000,
+  maxBytes: 8 * 1024 * 1024,
+  concurrency: 1,
 };
+
+function bounded(fallback: number, min: number, max: number) {
+  return z
+    .number()
+    .catch(fallback)
+    .transform((value) => Math.max(min, Math.min(max, Math.trunc(value))));
+}
+
+const Options = z
+  .object({
+    imageNames: z
+      .object({
+        enabled: z.boolean().catch(DEFAULT_OPTIONS.enabled),
+        timeoutMs: bounded(DEFAULT_OPTIONS.timeoutMs, 1_000, 120_000),
+        maxBytes: bounded(DEFAULT_OPTIONS.maxBytes, 64 * 1024, 20 * 1024 * 1024),
+        concurrency: bounded(DEFAULT_OPTIONS.concurrency, 1, 3),
+      })
+      .catch(DEFAULT_OPTIONS),
+  })
+  .catch({ imageNames: DEFAULT_OPTIONS })
+  .transform((options): ImageNameOptions => options.imageNames);
+
+// ├─ Queue and concurrency ───────────────────────────────────────────────────────────────────────┤
 
 type Job = {
   sessionID: string;
@@ -44,38 +64,15 @@ type Job = {
   model: NamingModel;
 };
 
-type OpenCodeClient = {
-  session: {
-    create(input: {
-      body: {
-        title: string;
-        agent: string;
-        model: { id: string; providerID: string };
-      };
-    }): unknown;
-    prompt(input: { path: { id: string }; body: SessionPromptBody }): unknown;
-    delete(input: { path: { id: string } }): unknown;
-  };
-};
-
-type SessionPromptBody = {
-  agent: string;
-  model: NamingModel;
-  system: string;
-  tools: Record<string, never>;
-  parts: Array<{ type: "text"; text: string } | { type: "file"; mime: string; url: string }>;
-};
-
 type CreateImageNamerInput = {
-  client: OpenCodeClient;
+  client: Client;
   options?: PluginOptions;
   ignoredSessions: Set<string>;
 };
 
-// ├─ Queue and concurrency ───────────────────────────────────────────────────────────────────────┤
-/** Queues bounded image-naming requests and updates the media registry. */
+/** Queues unnamed images for temporary naming sessions and saves accepted aliases; pending jobs can be cleared per session. */
 export function createImageNamer(input: CreateImageNamerInput) {
-  const config = parseImageNameOptions(input.options);
+  const config = Options.parse(input.options ?? {});
   const pending = new Map<string, Job>();
   const running = new Set<string>();
   let active = 0;
@@ -84,7 +81,7 @@ export function createImageNamer(input: CreateImageNamerInput) {
   const startNext = () => {
     if (!config.enabled) return;
     while (active < config.concurrency) {
-      const next = firstPendingJob(pending, running);
+      const next = pending.entries().next().value;
       if (!next) return;
 
       const [key, job] = next;
@@ -134,10 +131,6 @@ export function createImageNamer(input: CreateImageNamerInput) {
       });
       startNext();
     },
-    drain(_sessionID: string) {
-      if (!config.enabled) return;
-      startNext();
-    },
     clear(sessionID: string) {
       for (const [key, job] of pending) {
         if (job.sessionID === sessionID) pending.delete(key);
@@ -146,21 +139,14 @@ export function createImageNamer(input: CreateImageNamerInput) {
   };
 }
 
-// ├─ Model selection ─────────────────────────────────────────────────────────────────────────────┤
-/** Reads a model ID from OpenCode config string or object forms. */
-export function modelFromValue(value: unknown): NamingModel | undefined {
-  if (typeof value === "string") return modelFromString(value);
-  const candidate = record(value);
-  if (typeof candidate?.providerID === "string" && typeof candidate.modelID === "string") {
-    return cleanModel(candidate.providerID, candidate.modelID);
-  }
-  if (typeof candidate?.provider === "string" && typeof candidate.model === "string") {
-    return cleanModel(candidate.provider, candidate.model);
-  }
-  return undefined;
+function jobKey(sessionID: string, handle: string) {
+  return `${sessionID}:${handle}`;
 }
 
-function modelFromString(value: string) {
+// ├─ Model selection ─────────────────────────────────────────────────────────────────────────────┤
+
+/** Splits a `provider/model` id at its first slash, or returns undefined for an invalid id. */
+export function modelFromString(value: string) {
   const clean = value.trim();
   const slash = clean.indexOf("/");
   if (slash <= 0 || slash === clean.length - 1) return undefined;
@@ -173,29 +159,16 @@ function cleanModel(providerID: string, modelID: string) {
   return provider && model ? { providerID: provider, modelID: model } : undefined;
 }
 
-function parseImageNameOptions(options: PluginOptions | undefined): ImageNameOptions {
-  const root = objectOption(options?.imageNames);
-  return {
-    enabled: booleanOption(root?.enabled, DEFAULT_OPTIONS.enabled),
-    timeoutMs: integerOption(root?.timeoutMs, DEFAULT_OPTIONS.timeoutMs, 1_000, 120_000),
-    maxBytes: integerOption(root?.maxBytes, DEFAULT_OPTIONS.maxBytes, 64 * 1024, 20 * 1024 * 1024),
-    concurrency: integerOption(root?.concurrency, DEFAULT_OPTIONS.concurrency, 1, 3),
-  };
-}
-
-function jobKey(sessionID: string, handle: string) {
-  return `${sessionID}:${handle}`;
-}
-
-function firstPendingJob(pending: Map<string, Job>, running: Set<string>) {
-  for (const item of pending) {
-    if (!running.has(item[0])) return item;
-  }
-  return undefined;
-}
-
 // ├─ Naming request ──────────────────────────────────────────────────────────────────────────────┤
-async function nameImage(job: Job, options: ImageNameOptions, client: OpenCodeClient, ignoredSessions: Set<string>) {
+
+const NAMING_AGENT = "title";
+const PROMPT = `Name this image for a developer sidebar and file alias.
+Return only 1-3 short concrete words.
+Do not include a file extension, quotes, markdown, or a sentence.
+Prefer visible subject and role over generic words like image or screenshot.`;
+const SYSTEM = "You generate terse lowercase-ish image aliases. Return only the alias words and never call tools.";
+
+async function nameImage(job: Job, options: ImageNameOptions, client: Client, ignoredSessions: Set<string>) {
   let raw: string;
   try {
     raw = await requestImageName(job, options, client, ignoredSessions);
@@ -210,56 +183,57 @@ async function nameImage(job: Job, options: ImageNameOptions, client: OpenCodeCl
   if (!entry) throw stageError("registry", new Error("registry rename failed"));
 }
 
-async function requestImageName(
-  job: Job,
-  options: ImageNameOptions,
-  client: OpenCodeClient,
-  ignoredSessions: Set<string>,
-) {
+async function requestImageName(job: Job, options: ImageNameOptions, client: Client, ignoredSessions: Set<string>) {
   const imageURL = await dataURL(job.path, job.mime, options.maxBytes);
-  const session = await client.session.create({
-    body: {
+  const session = await create(
+    client,
+    {
       title: "media-context image naming",
       agent: NAMING_AGENT,
       model: { id: job.model.modelID, providerID: job.model.providerID },
     },
-  });
-  const sessionID = sessionIDFromCreateResponse(session);
-  if (!sessionID) throw new Error("temporary OpenCode session id unavailable");
+    { label: "temporary OpenCode session" },
+  );
+  const sessionID = session.id;
 
   ignoredSessions.add(sessionID);
-  let prompt: Promise<unknown> | undefined;
+  let prompt: Promise<Reply> | undefined;
 
   try {
-    prompt = Promise.resolve(
-      client.session.prompt({
-        path: { id: sessionID },
-        body: {
-          agent: NAMING_AGENT,
-          model: job.model,
-          system: SYSTEM,
-          tools: {},
-          parts: [
-            { type: "text", text: PROMPT },
-            { type: "file", mime: imageMime(job.mime, job.path), url: imageURL },
-          ],
-        },
-      }),
+    prompt = ask(
+      client,
+      sessionID,
+      {
+        agent: NAMING_AGENT,
+        model: job.model,
+        system: SYSTEM,
+        tools: {},
+        parts: [
+          { type: "text", text: PROMPT },
+          { type: "file", mime: imageMime(job.mime, job.path), url: imageURL },
+        ],
+      },
+      { label: "OpenCode image naming" },
     );
 
-    // Keep the temporary session ignored until a timed-out prompt has settled.
+    // Keep naming sessions out of media discovery until the prompt settles or the grace period ends.
     const response = await withTimeout(prompt, options.timeoutMs);
-    return assistantText(response);
+    return response.parts.flatMap((part) => (part.type === "text" ? [part.text] : [])).join(" ");
   } finally {
     try {
-      await Promise.resolve(client.session.delete({ path: { id: sessionID } }));
+      await client.session.delete({ path: { id: sessionID } });
     } finally {
       clearIgnoredSession(ignoredSessions, sessionID, prompt);
     }
   }
 }
 
+function modelSource(model: NamingModel) {
+  return `opencode:${model.providerID}/${model.modelID}`.slice(0, 80);
+}
+
 // ├─ Temporary session lifecycle ─────────────────────────────────────────────────────────────────┤
+
 function clearIgnoredSession(ignoredSessions: Set<string>, sessionID: string, prompt: Promise<unknown> | undefined) {
   if (!prompt) {
     ignoredSessions.delete(sessionID);
@@ -273,13 +247,6 @@ function clearIgnoredSession(ignoredSessions: Set<string>, sessionID: string, pr
       ignoredSessions.delete(sessionID);
     })
     .catch(() => undefined);
-}
-
-function sessionIDFromCreateResponse(value: unknown): string | undefined {
-  const candidate = record(value);
-  const data = record(candidate?.data);
-  const id = candidate?.id ?? record(candidate?.session)?.id ?? data?.id ?? record(data?.session)?.id;
-  return typeof id === "string" && id ? id : undefined;
 }
 
 async function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
@@ -299,11 +266,8 @@ async function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
   }
 }
 
-function modelSource(model: NamingModel) {
-  return `opencode:${model.providerID}/${model.modelID}`.slice(0, 80);
-}
-
 // ├─ Failure reporting ───────────────────────────────────────────────────────────────────────────┤
+
 function logNameFailure(job: Job, stage: string, error: unknown) {
   const label = error instanceof NameStageError ? error.stage : stage;
   console.warn(
@@ -333,7 +297,7 @@ function safeModel(model: NamingModel) {
 }
 
 function errorMessage(error: unknown) {
-  return sanitizeErrorMessage(error instanceof Error ? error.message : String(error));
+  return sanitizeErrorMessage(describe(error));
 }
 
 function sanitizeErrorMessage(message: string) {
@@ -342,7 +306,8 @@ function sanitizeErrorMessage(message: string) {
     .replace(/\b(?:sk|sess)-[a-zA-Z0-9_-]+/g, "[token]");
 }
 
-// ├─ Image and response formats ──────────────────────────────────────────────────────────────────┤
+// ├─ Image payload and alias text ────────────────────────────────────────────────────────────────┤
+
 async function dataURL(filePath: string, mime: string, maxBytes: number) {
   const handle = await fs.open(filePath, "r");
   try {
@@ -365,27 +330,7 @@ function imageMime(mime: string, filePath: string) {
   return "image/png";
 }
 
-function assistantText(payload: unknown) {
-  return assistantTextParts(payload).join(" ");
-}
-
-function assistantTextParts(value: unknown): string[] {
-  if (Array.isArray(value)) return value.flatMap(assistantTextParts);
-  if (!value || typeof value !== "object") return [];
-
-  const candidate = record(value);
-  if (!candidate) return [];
-  const text = candidate.type === "text" && typeof candidate.text === "string" ? [candidate.text] : [];
-  if (typeof candidate.output_text === "string") text.push(candidate.output_text);
-  for (const key of ["parts", "content", "output"]) {
-    const items = candidate[key];
-    if (Array.isArray(items)) text.push(...items.flatMap(assistantTextParts));
-  }
-  for (const key of ["message", "assistant", "data"]) {
-    text.push(...assistantTextParts(candidate[key]));
-  }
-  return text;
-}
+const STOP_WORDS = new Set(["a", "an", "the", "image", "photo", "picture", "screenshot"]);
 
 function slugFromModelText(value: string) {
   const words = value
@@ -399,17 +344,4 @@ function slugFromModelText(value: string) {
     .slice(0, 48)
     .replace(/^-+|-+$/g, "");
   return slug || undefined;
-}
-
-function objectOption(value: unknown) {
-  return record(value);
-}
-
-function booleanOption(value: unknown, fallback: boolean) {
-  return typeof value === "boolean" ? value : fallback;
-}
-
-function integerOption(value: unknown, fallback: number, min: number, max: number) {
-  if (typeof value !== "number" || !Number.isFinite(value)) return fallback;
-  return Math.max(min, Math.min(max, Math.trunc(value)));
 }

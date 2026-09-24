@@ -1,122 +1,39 @@
-import { record } from "../shared/record.ts";
+import { z } from "zod";
 import { readAuth } from "./auth.ts";
 import { usageProviders } from "./providers.ts";
-import { normalizePercent } from "./types.ts";
+import { lenient, normalizePercent } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
-
-type OpenAIWindow = {
-  limit_window_seconds?: unknown;
-  remaining_percent?: unknown;
-  reset_after_seconds?: unknown;
-  reset_at?: unknown;
-  used_percent?: unknown;
-};
-
-type OpenAIRateLimit = OpenAIWindow & {
-  primary_window?: OpenAIWindow | null;
-  secondary_window?: OpenAIWindow | null;
-};
 
 const { id, label, staleAfterMS } = usageProviders.openai;
 const FETCH_TIMEOUT_MS = 15_000;
 const DAY_SECONDS = 24 * 60 * 60;
 const WEEK_SECONDS = 7 * DAY_SECONDS;
 
-function usage(windows: UsageWindow[], note?: string): ProviderUsage {
-  return { id, label, windows, note };
-}
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ OpenAI usage                                                                                  │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
-function decodeJwtPayload(token: string) {
-  const parts = token.split(".");
-  if (parts.length !== 3) return undefined;
+// ├─ Provider adapter ────────────────────────────────────────────────────────────────────────────┤
 
-  try {
-    return record(JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8")));
-  } catch {
-    return undefined;
-  }
-}
-
-function accountIDFromToken(token: string) {
-  const claims = record(decodeJwtPayload(token)?.["https://api.openai.com/auth"]);
-  return typeof claims?.chatgpt_account_id === "string" ? claims.chatgpt_account_id : undefined;
-}
-
-function resetAtFromWindow(window: OpenAIWindow, fallback?: OpenAIWindow) {
-  const absolute = resetAt(window.reset_at) ?? resetAt(fallback?.reset_at);
-  if (absolute) return absolute;
-
-  const resetAfterSeconds =
-    typeof window.reset_after_seconds === "number"
-      ? window.reset_after_seconds
-      : typeof fallback?.reset_after_seconds === "number"
-        ? fallback.reset_after_seconds
-        : undefined;
-  if (resetAfterSeconds === undefined || !Number.isFinite(resetAfterSeconds) || resetAfterSeconds < 0) {
-    return undefined;
-  }
-  return new Date(Date.now() + resetAfterSeconds * 1000).toISOString();
-}
-
-function resetAt(value: unknown) {
-  if (typeof value === "string") {
-    return Number.isNaN(new Date(value).getTime()) ? undefined : value;
-  }
-  if (typeof value !== "number" || !Number.isFinite(value)) return undefined;
-
-  const date = new Date(value * 1000);
-  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
-}
-
-function usedPercent(window: OpenAIWindow) {
-  return (
-    normalizePercent(window.used_percent) ??
-    (() => {
-      const remaining = normalizePercent(window.remaining_percent);
-      return remaining === undefined ? undefined : 100 - remaining;
-    })()
-  );
-}
-
-function labelFromDuration(value: unknown) {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
-    return undefined;
-  }
-  const isWeekly = value >= WEEK_SECONDS - DAY_SECONDS / 2 && value <= WEEK_SECONDS + DAY_SECONDS / 2;
-  return isWeekly ? "W" : "H";
-}
-
-function usageWindow(window: OpenAIWindow | null | undefined, fallback: OpenAIRateLimit): UsageWindow | undefined {
-  if (!window) return undefined;
-
-  const tag = labelFromDuration(window.limit_window_seconds);
-  if (!tag) return undefined;
-
-  const used = usedPercent(window);
-  const reset = resetAtFromWindow(window, fallback);
-  if (used === undefined && !reset) return undefined;
-
-  return { label: tag, usedPercent: used, resetAt: reset };
-}
-
-/** Converts the API rate-limit windows into sidebar windows. */
-export function parseOpenAIWindows(rateLimit?: OpenAIRateLimit): UsageWindow[] {
-  if (!rateLimit) return [];
-
-  return [usageWindow(rateLimit.primary_window, rateLimit), usageWindow(rateLimit.secondary_window, rateLimit)].filter(
-    (window): window is UsageWindow => Boolean(window),
-  );
-}
+/** Loads ChatGPT rate-limit windows; the parent limit supplies fallback reset times, not a separate row. */
+export const openaiUsage: ProviderAdapter = {
+  id,
+  label,
+  poll: {
+    minFetchIntervalMS: 60_000,
+    errorBackoffMS: 60_000,
+    warnBackoffMS: 0,
+    rateLimitBackoffMS: 10 * 60_000,
+    staleAfterMS,
+  },
+  load,
+};
 
 async function load(): Promise<ProviderUsage> {
-  const auth = await readAuth();
-  const openai = record(auth?.openai);
+  const openai = (await readAuth())?.openai;
+  if (!openai) return usage([], "no auth");
 
-  if (openai?.type !== "oauth" || typeof openai.access !== "string" || !openai.access) {
-    return usage([], "no auth");
-  }
-
-  const accountID = (typeof openai.accountId === "string" && openai.accountId) || accountIDFromToken(openai.access);
+  const accountID = openai.accountId || accountIDFromToken(openai.access);
   const headers = new Headers({
     Authorization: `Bearer ${openai.access}`,
     Accept: "application/json",
@@ -130,30 +47,100 @@ async function load(): Promise<ProviderUsage> {
   });
   if (!response.ok) return usage([], `${response.status}`);
 
-  const payload = record(await response.json());
-  const rateLimit = record(payload?.rate_limit);
-  const windows = parseOpenAIWindows(
-    rateLimit && {
-      ...rateLimit,
-      primary_window: record(rateLimit.primary_window),
-      secondary_window: record(rateLimit.secondary_window),
-    },
-  );
+  const rateLimit = Payload.parse(await response.json()).rate_limit;
+  const windows = rateLimit
+    ? [usageWindow(rateLimit.primary_window, rateLimit), usageWindow(rateLimit.secondary_window, rateLimit)].filter(
+        (window) => window !== undefined,
+      )
+    : [];
 
   if (windows.length === 0) return usage([], "no windows");
   return usage(windows);
 }
 
-/** Usage adapter for ChatGPT account rate limits. */
-export const openaiUsage: ProviderAdapter = {
-  id,
-  label,
-  poll: {
-    minFetchIntervalMS: 60_000,
-    errorBackoffMS: 60_000,
-    warnBackoffMS: 0,
-    rateLimitBackoffMS: 10 * 60_000,
-    staleAfterMS,
-  },
-  load,
-};
+function usage(windows: UsageWindow[], note?: string): ProviderUsage {
+  return { id, label, windows, note };
+}
+
+// ├─ Rate-limit windows ──────────────────────────────────────────────────────────────────────────┤
+
+// The account ID comes from an unverified JWT claim when auth.json has none.
+function accountIDFromToken(token: string) {
+  const parts = token.split(".");
+  if (parts.length !== 3) return undefined;
+
+  try {
+    const claims = Claims.parse(JSON.parse(Buffer.from(parts[1], "base64url").toString("utf8")));
+    return claims["https://api.openai.com/auth"]?.chatgpt_account_id;
+  } catch {
+    return undefined;
+  }
+}
+
+const Claims = z.object({
+  "https://api.openai.com/auth": lenient(z.object({ chatgpt_account_id: lenient(z.string()) })),
+});
+
+function usageWindow(window: Window | undefined, fallback: Window): UsageWindow | undefined {
+  if (!window) return undefined;
+
+  const tag = labelFromDuration(window.limit_window_seconds);
+  if (!tag) return undefined;
+
+  const used = usedPercent(window);
+  const reset = resetAtFromWindow(window, fallback);
+  if (used === undefined && !reset) return undefined;
+
+  return { label: tag, usedPercent: used, resetAt: reset };
+}
+
+function labelFromDuration(seconds: number | undefined) {
+  if (seconds === undefined || seconds <= 0) return undefined;
+  const isWeekly = seconds >= WEEK_SECONDS - DAY_SECONDS / 2 && seconds <= WEEK_SECONDS + DAY_SECONDS / 2;
+  return isWeekly ? "W" : "H";
+}
+
+function usedPercent(window: Window) {
+  const used = normalizePercent(window.used_percent);
+  if (used !== undefined) return used;
+  const remaining = normalizePercent(window.remaining_percent);
+  return remaining === undefined ? undefined : 100 - remaining;
+}
+
+function resetAtFromWindow(window: Window, fallback: Window) {
+  const absolute = resetAt(window.reset_at) ?? resetAt(fallback.reset_at);
+  if (absolute) return absolute;
+
+  const resetAfterSeconds = window.reset_after_seconds ?? fallback.reset_after_seconds;
+  if (resetAfterSeconds === undefined || resetAfterSeconds < 0) return undefined;
+  return new Date(Date.now() + resetAfterSeconds * 1000).toISOString();
+}
+
+function resetAt(value: string | number | undefined) {
+  if (typeof value === "string") {
+    return Number.isNaN(new Date(value).getTime()) ? undefined : value;
+  }
+  if (value === undefined) return undefined;
+
+  const date = new Date(value * 1000);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
+// ├─ Usage payload ───────────────────────────────────────────────────────────────────────────────┤
+
+type Window = z.infer<typeof Window>;
+
+const Window = z.object({
+  limit_window_seconds: lenient(z.number()),
+  remaining_percent: lenient(z.number()),
+  reset_after_seconds: lenient(z.number()),
+  reset_at: lenient(z.union([z.string(), z.number()])),
+  used_percent: lenient(z.number()),
+});
+
+const RateLimit = Window.extend({
+  primary_window: lenient(Window),
+  secondary_window: lenient(Window),
+});
+
+const Payload = z.object({ rate_limit: lenient(RateLimit) });

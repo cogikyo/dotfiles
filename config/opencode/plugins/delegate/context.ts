@@ -1,10 +1,17 @@
 import type { SessionUpdateData } from "@opencode-ai/sdk/v2";
-import { record } from "../shared/record.ts";
+import { type Client, type Message, type Reply, session, unwrap } from "../shared/opencode.ts";
 import type { CONTEXT_PRESSURE } from "../shared/session.ts";
+import { delegate } from "./metadata.ts";
 import { deny } from "./permission.ts";
-import { type Client, finite, string, unwrap } from "./sdk.ts";
 
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Context governor                                                                              │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
+/** Delegate context thresholds, with a hard stop fixed in `shared/session.ts`. */
 export type ContextLimits = typeof CONTEXT_PRESSURE;
+
+/** Recorded child limit; tokens may be absent when no count is available. */
 export type ContextLimit = {
   level: "hard" | "compaction";
   tokens?: number;
@@ -12,14 +19,15 @@ export type ContextLimit = {
 
 export type ContextWarning = "soft" | "medium" | "final";
 
-const SOFT_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: SOFT PRESSURE]";
-const MEDIUM_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: MEDIUM PRESSURE]";
-const FINAL_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: FINAL WARNING]";
+/** Process-local child IDs that cannot resume, even if saving their context limit fails. */
 export const contextLimitedSessions = new Set<string>();
 
-export function observeContextLimit(messages: unknown[], limits: ContextLimits) {
+// ├─ Limit observation ───────────────────────────────────────────────────────────────────────────┤
+
+/** Detects automatic compaction or a hard token stop, preferring compaction when both occur. */
+export function observeContextLimit(messages: Message[], limits: ContextLimits) {
   const tokens = maxContextTokens(messages);
-  if (messages.some(isAutoCompactionMessage)) {
+  if (messages.some((message) => message.parts.some((part) => part.type === "compaction" && part.auto))) {
     return { level: "compaction" as const, tokens };
   }
   if (tokens !== undefined && tokens >= limits.hard) {
@@ -28,6 +36,32 @@ export function observeContextLimit(messages: unknown[], limits: ContextLimits) 
   return undefined;
 }
 
+/** Finds the highest positive assistant context count, if any. */
+export function maxContextTokens(messages: Message[]) {
+  let result: number | undefined;
+  for (const { info } of messages) {
+    if (info.role !== "assistant") continue;
+    const { total, input, output, cache } = info.tokens;
+    const count = total && total > 0 ? total : input + output + cache.read + cache.write;
+    if (count <= 0) continue;
+    result = Math.max(result ?? 0, count);
+  }
+  return result;
+}
+
+/** Detects a completed assistant reply so the wait stops sending warnings. */
+export function finalAssistant(reply: Reply | undefined) {
+  const finish = reply?.info.finish;
+  return !!finish && finish !== "tool-calls" && finish !== "unknown";
+}
+
+// ├─ Warnings ────────────────────────────────────────────────────────────────────────────────────┤
+
+const SOFT_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: SOFT PRESSURE]";
+const MEDIUM_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: MEDIUM PRESSURE]";
+const FINAL_WARNING_MARKER = "[DELEGATE CONTEXT GOVERNOR: FINAL WARNING]";
+
+/** Picks the highest unspent warning reached by the observed token count. */
 export function pendingContextWarning(tokens: number | undefined, limits: ContextLimits, spent: Set<ContextWarning>) {
   if (tokens === undefined) return undefined;
   if (tokens >= limits.final && !spent.has("final")) return "final";
@@ -36,13 +70,12 @@ export function pendingContextWarning(tokens: number | undefined, limits: Contex
   return undefined;
 }
 
-export function observeContextWarnings(messages: unknown[], spent: Set<ContextWarning>, observed: Set<ContextWarning>) {
+/** Confirms delivered warning markers and marks their lower levels spent. */
+export function observeContextWarnings(messages: Message[], spent: Set<ContextWarning>, observed: Set<ContextWarning>) {
   for (const message of messages) {
-    const root = record(message);
-    if (record(root?.info)?.role !== "user" || !Array.isArray(root?.parts)) continue;
-    for (const value of root.parts) {
-      const part = record(value);
-      if (part?.type !== "text" || typeof part.text !== "string") continue;
+    if (message.info.role !== "user") continue;
+    for (const part of message.parts) {
+      if (part.type !== "text") continue;
       if (part.text.startsWith(FINAL_WARNING_MARKER)) {
         spent.add("soft");
         spent.add("medium");
@@ -60,46 +93,7 @@ export function observeContextWarnings(messages: unknown[], spent: Set<ContextWa
   }
 }
 
-export function maxContextTokens(messages: unknown[]) {
-  let result: number | undefined;
-  for (const message of messages) {
-    const info = record(record(message)?.info);
-    if (info?.role !== "assistant") continue;
-    const tokens = record(info.tokens);
-    if (!tokens) continue;
-    const count = tokenCount(tokens);
-    if (count <= 0) continue;
-    result = Math.max(result ?? 0, count);
-  }
-  return result;
-}
-
-function tokenCount(tokens: Record<string, unknown>) {
-  const total = finite(tokens.total);
-  return total && total > 0
-    ? total
-    : (finite(tokens.input) ?? 0) +
-        (finite(tokens.output) ?? 0) +
-        (finite(record(tokens.cache)?.read) ?? 0) +
-        (finite(record(tokens.cache)?.write) ?? 0);
-}
-
-function isAutoCompactionMessage(message: unknown) {
-  const parts = record(message)?.parts;
-  return (
-    Array.isArray(parts) &&
-    parts.some((value) => {
-      const part = record(value);
-      return part?.type === "compaction" && part.auto === true;
-    })
-  );
-}
-
-export function finalAssistant(message: Record<string, unknown> | undefined) {
-  const finish = string(record(message?.info)?.finish);
-  return !!finish && finish !== "tool-calls" && finish !== "unknown";
-}
-
+/** Builds a marked warning prompt whose appearance in history confirms delivery. */
 export function contextWarningPrompt(level: ContextWarning, tokens: number | undefined, limits: ContextLimits) {
   if (level === "final") {
     return [
@@ -128,28 +122,23 @@ export function contextWarningPrompt(level: ContextWarning, tokens: number | und
   ].join("\n");
 }
 
+// ├─ Seal ────────────────────────────────────────────────────────────────────────────────────────┤
+
+/** Seals a context-limited child with a persistent limit marker and deny-all permissions. */
 export async function sealContextLimited(client: Client, sessionID: string, limit: ContextLimit, signal: AbortSignal) {
-  const session = await unwrap<Record<string, unknown>>(
-    client.session.get({ path: { id: sessionID }, signal }),
-    `read context-limited child session ${sessionID}`,
-  );
-  const metadata = record(session.metadata) ?? {};
-  const delegate = record(metadata.delegate) ?? {};
+  const current = await session(client, sessionID, {
+    label: `delegate read context-limited child session ${sessionID}`,
+    signal,
+  });
   const body: NonNullable<SessionUpdateData["body"]> = {
     metadata: {
-      ...metadata,
-      delegate: {
-        ...delegate,
-        context: {
-          limit: limit.level,
-          ...(limit.tokens !== undefined ? { tokens: limit.tokens } : {}),
-        },
-      },
+      ...current.metadata,
+      delegate: { ...delegate(current), context: { limit: limit.level, tokens: limit.tokens } },
     },
     permission: [deny("*")],
   };
   await unwrap(
     client.session.update({ path: { id: sessionID }, body, signal }),
-    `seal context-limited child session ${sessionID}`,
+    `delegate seal context-limited child session ${sessionID}`,
   );
 }

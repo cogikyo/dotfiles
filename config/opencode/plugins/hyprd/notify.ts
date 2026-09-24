@@ -1,18 +1,24 @@
-// @ts-nocheck -- OpenCode plugin event types are incomplete; keep runtime behavior stable until local event types exist.
+import type { Plugin } from "@opencode-ai/plugin";
+import type { Part as V1Part } from "@opencode-ai/sdk";
+import type { z } from "zod";
 import {
   agentNotice,
   cleanSessionTitle,
   cleanText,
-  isAgentPart,
   isAssistantText,
   isUserText,
   LIMITS,
-  lookup,
-  messageID,
-  messageRole,
-  messageSessionID,
-  partMessageID,
-  partRole,
+  MessageUpdated,
+  PartDelta,
+  PartUpdated,
+  PermissionAsked,
+  QuestionAsked,
+  type Role,
+  SessionError,
+  SessionIdle,
+  SessionInfo,
+  SessionStatus,
+  TodoUpdated,
 } from "./payload.ts";
 import {
   applyTodos,
@@ -23,178 +29,179 @@ import {
   scheduleIdleReminder,
   scheduleStartNotify,
   sendNotify,
+  type Sessions,
   trySendStartNotify,
   updateAssistantPartText,
   updateUserMessage,
 } from "./state.ts";
 
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Hyprland notifications                                                                        │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
 const PERMISSION_DEBOUNCE_MS = 1500;
 
-async function handleMessageUpdated({ sessions, messageRoles, messageSessions }, props) {
-  const msg = props?.message || props?.info || props;
-  const msgID = messageID(msg) || messageID(props);
-  const role = messageRole(msg) || partRole(props);
-  const id = lookup(props, ["sessionID", "sessionId"]) || messageSessionID(msg) || messageSessionID(props);
-  if (msgID && role) messageRoles.set(msgID, role);
-  if (msgID && id) messageSessions.set(msgID, id);
-  if (!id || role !== "user") return;
+type Context = { sessions: Sessions; roles: Map<string, Role> };
 
-  await updateUserMessage(sessions, id, msg);
-}
+const server: Plugin = async () => {
+  const ctx: Context = { sessions: new Map(), roles: new Map() };
+
+  return {
+    "chat.message": async (input, output) => {
+      updateUserMessage(ctx.sessions, input.sessionID, output.parts.map(partText).join(" "));
+    },
+
+    event: async ({ event }) => {
+      await handlers.get(event.type)?.(ctx, event.properties);
+    },
+  };
+};
+
+/** Turns valid OpenCode chat and session events into notices for live kitty panes. */
+export default { id: "hyprd-notify", server };
 
 // ├─ OpenCode event handlers ─────────────────────────────────────────────────────────────────────┤
-const handlers = {
-  "message.created": handleMessageUpdated,
 
-  "message.updated": handleMessageUpdated,
+const sessionInfo = on(SessionInfo, ({ sessions }, { info }) => {
+  const state = getSession(sessions, info.id);
+  state.parentID = info.parentID ?? "";
+  if (state.parentID) clearIdleReminder(state);
+  const title = cleanSessionTitle(info.title);
+  if (title) state.title = title;
+  if (state.active && state.title && !state.startNotified) scheduleStartNotify(sessions, info.id);
+});
 
-  "message.part.delta": async ({ sessions }, { sessionID, partID, field, delta }) => {
-    if (!sessionID || !partID || field !== "text" || typeof delta !== "string") return;
+const handlers = new Map([
+  [
+    "message.updated",
+    // Message roles remain cached after session deletion.
+    on(MessageUpdated, ({ roles }, { info }) => {
+      roles.set(info.id, info.role);
+    }),
+  ],
 
-    const state = getSession(sessions, sessionID);
-    const text = (state.assistantPartText.get(partID) || "") + delta;
-    updateAssistantPartText(state, partID, text);
-  },
+  [
+    "message.part.delta",
+    on(PartDelta, ({ sessions }, { sessionID, partID, field, delta }) => {
+      if (field !== "text") return;
 
-  "message.part.updated": async ({ sessions, messageRoles, messageSessions }, props) => {
-    const { sessionID, part } = props;
-    const msgID = partMessageID(part, props);
-    const id = sessionID || part?.sessionID || messageSessions.get(msgID);
-    if (!id || !part) return;
+      const state = getSession(sessions, sessionID);
+      const text = (state.assistantPartText.get(partID) || "") + delta;
+      updateAssistantPartText(state, partID, text);
+    }),
+  ],
 
-    const state = getSession(sessions, id);
-    const role = partRole(part) || messageRole(props?.message) || partRole(props) || messageRoles.get(msgID);
+  [
+    "message.part.updated",
+    on(PartUpdated, async ({ sessions, roles }, { sessionID, part }) => {
+      const state = getSession(sessions, sessionID);
+      const role = roles.get(part.messageID);
 
-    if (isUserText(part, role)) {
-      await updateUserMessage(sessions, id, part);
-      return;
-    }
-
-    if (isAssistantText(part, role)) {
-      updateAssistantPartText(state, part.id, part.text);
-      return;
-    }
-
-    if (isAgentPart(part) && !state.seenAgentParts.has(part.id)) {
-      state.seenAgentParts.add(part.id);
-      await sendNotify(sessions, {
-        sessionID: id,
-        type: "subagent",
-        ...agentNotice(part),
-      });
-    }
-  },
-
-  "session.status": async ({ sessions }, { sessionID, status }) => {
-    if (!sessionID || typeof status?.type !== "string") return;
-
-    const state = getSession(sessions, sessionID);
-    const type = status.type;
-
-    if (type === "busy" || type === "retry") {
-      clearTimeout(state.completeTimer);
-      state.completeTimer = null;
-      clearIdleReminder(state);
-
-      if (!state.active) {
-        state.active = true;
-        state.startNotified = false;
-        if (type !== "retry" && state.lastUserMessageAt <= state.inactiveAt) state.lastUserMessage = "";
-        if (type === "retry") await trySendStartNotify(sessions, sessionID, "Retrying");
-        else if (state.lastUserMessage) scheduleStartNotify(sessions, sessionID);
-        else scheduleStartNotify(sessions, sessionID);
+      if (part.type === "text") {
+        if (isUserText(part, role)) updateUserMessage(sessions, sessionID, part.text);
+        else if (isAssistantText(part, role)) updateAssistantPartText(state, part.id, part.text);
+        return;
       }
-      return;
-    }
 
-    if (type === "idle") {
+      // Each agent or subtask part generates at most one notice per session state.
+      if (part.id && !state.seenAgentParts.has(part.id)) {
+        state.seenAgentParts.add(part.id);
+        await sendNotify(sessions, { sessionID, type: "subagent", ...agentNotice(part) });
+      }
+    }),
+  ],
+
+  [
+    "session.status",
+    on(SessionStatus, async ({ sessions }, { sessionID, status }) => {
+      const state = getSession(sessions, sessionID);
+      const type = status.type;
+
+      // Idle status waits for the completion debounce before ending the run.
+      if (type === "idle") {
+        scheduleComplete(sessions, sessionID);
+        return;
+      }
+
+      clearTimeout(state.completeTimer);
+      state.completeTimer = undefined;
+      clearIdleReminder(state);
+      if (state.active) return;
+
+      state.active = true;
+      state.startNotified = false;
+      // A retry or a message that arrived during completion remains the start subject.
+      if (type !== "retry" && state.lastUserMessageAt <= state.inactiveAt) state.lastUserMessage = "";
+      if (type === "retry") await trySendStartNotify(sessions, sessionID, "Retrying");
+      else scheduleStartNotify(sessions, sessionID);
+    }),
+  ],
+
+  [
+    "session.idle",
+    on(SessionIdle, ({ sessions }, { sessionID }) => {
       scheduleComplete(sessions, sessionID);
-    }
-  },
+    }),
+  ],
 
-  "session.idle": async ({ sessions }, { sessionID }) => {
-    if (!sessionID) return;
-    scheduleComplete(sessions, sessionID);
-  },
+  [
+    "permission.asked",
+    on(PermissionAsked, async ({ sessions }, { sessionID, permission, patterns }) => {
+      const perm = cleanText(permission, LIMITS.id);
+      const pats = cleanText(patterns.join(", "), LIMITS.patterns);
+      const message = perm ? (pats ? `${perm}: ${pats}` : perm) : "Permission needed";
 
-  "permission.asked": async ({ sessions }, { sessionID, permission, patterns, title, pattern }) => {
-    const perm = cleanText(permission || title, LIMITS.id);
-    const rawPatterns = patterns ?? pattern;
-    const pats = Array.isArray(rawPatterns)
-      ? cleanText(rawPatterns.join(", "), LIMITS.patterns)
-      : typeof rawPatterns === "string"
-        ? cleanText(rawPatterns, LIMITS.patterns)
-        : "";
-    const message = perm ? (pats ? `${perm}: ${pats}` : perm) : "Permission needed";
-
-    if (sessionID) {
       const state = getSession(sessions, sessionID);
       const now = Date.now();
+      // Permission duplicates are suppressed by text across panes for 1500ms.
       if (state.lastPermissionMessage === message && now - state.lastPermissionAt < PERMISSION_DEBOUNCE_MS) return;
       state.lastPermissionMessage = message;
       state.lastPermissionAt = now;
-    }
 
-    await sendNotify(sessions, { sessionID, type: "permission", message });
-  },
+      await sendNotify(sessions, { sessionID, type: "permission", message });
+    }),
+  ],
 
-  "permission.updated": async (ctx, props) => {
-    await handlers["permission.asked"](ctx, props);
-  },
+  [
+    "question.asked",
+    on(QuestionAsked, async ({ sessions }, { sessionID, questions }) => {
+      const first = questions[0];
+      const header = cleanText(first?.header, LIMITS.id);
+      const question = cleanText(first?.question);
+      const message = header ? (question ? `${header}: ${question}` : header) : question || "Question asked";
+      await sendNotify(sessions, { sessionID, type: "question", message });
+    }),
+  ],
 
-  "question.asked": async ({ sessions }, { sessionID, questions }) => {
-    const first = Array.isArray(questions) ? questions[0] : null;
-    const header = cleanText(first?.header, LIMITS.id);
-    const question = cleanText(first?.question);
-    const message = header ? (question ? `${header}: ${question}` : header) : question || "Question asked";
-    await sendNotify(sessions, { sessionID, type: "question", message });
-  },
+  [
+    "todo.updated",
+    on(TodoUpdated, async ({ sessions }, { sessionID, todos }) => {
+      const state = getSession(sessions, sessionID);
+      const completed = applyTodos(state, todos);
 
-  "todo.updated": async ({ sessions }, { sessionID, todos }) => {
-    if (!sessionID || !Array.isArray(todos)) return;
+      if (!state.hasOpenTodos && state.active) scheduleComplete(sessions, sessionID);
 
-    const state = getSession(sessions, sessionID);
-    const completed = applyTodos(state, todos);
+      if (completed.length > 0) {
+        state.lastTodoCompletedAt = Date.now();
+        await Promise.all(
+          completed.map((message) => sendNotify(sessions, { sessionID, type: "todo-complete", message })),
+        );
+      }
+    }),
+  ],
 
-    if (!state.hasOpenTodos && state.active) scheduleComplete(sessions, sessionID);
+  ["session.created", sessionInfo],
 
-    if (completed.length > 0) {
-      state.lastTodoCompletedAt = Date.now();
-      await Promise.all(
-        completed.map((message) => sendNotify(sessions, { sessionID, type: "todo-complete", message })),
-      );
-    }
-  },
+  ["session.updated", sessionInfo],
 
-  "session.created": async ({ sessions }, { sessionID, info }) => {
-    const id = sessionID || info?.id;
-    if (!id) return;
-    const state = getSession(sessions, id);
-    state.parentID = typeof info?.parentID === "string" ? info.parentID : "";
-    if (state.parentID) clearIdleReminder(state);
-    const title = cleanSessionTitle(info?.title);
-    if (title) state.title = title;
-    if (state.active && state.title && !state.startNotified) scheduleStartNotify(sessions, id);
-  },
-
-  "session.updated": async ({ sessions }, { sessionID, info }) => {
-    const id = sessionID || info?.id;
-    if (!id) return;
-    const state = getSession(sessions, id);
-    state.parentID = typeof info?.parentID === "string" ? info.parentID : "";
-    if (state.parentID) clearIdleReminder(state);
-    const title = cleanSessionTitle(info?.title);
-    if (title) state.title = title;
-    if (state.active && state.title && !state.startNotified) scheduleStartNotify(sessions, id);
-  },
-
-  "session.error": async ({ sessions }, { sessionID, error }) => {
-    const message = cleanText(error?.data?.message || error?.name || "Session error");
-    if (sessionID) {
-      const state = sessions.get(sessionID);
+  [
+    "session.error",
+    on(SessionError, async ({ sessions }, { sessionID, error }) => {
+      const message = cleanText(error?.data?.message || error?.name || "Session error");
+      const state = sessionID ? sessions.get(sessionID) : undefined;
       if (state) {
         clearTimeout(state.completeTimer);
-        state.completeTimer = null;
+        state.completeTimer = undefined;
         clearStartNotify(state);
         clearIdleReminder(state);
         state.active = false;
@@ -203,47 +210,37 @@ const handlers = {
           scheduleIdleReminder(sessions, state.parentID);
         }
       }
-    }
-    await sendNotify(sessions, { sessionID, type: "error", message });
-  },
+      await sendNotify(sessions, { sessionID, type: "error", message });
+    }),
+  ],
 
-  "session.deleted": ({ sessions }, { info }) => {
-    if (!info?.id) return;
-    const state = sessions.get(info.id);
-    if (state) {
-      clearTimeout(state.completeTimer);
-      clearStartNotify(state);
-      clearIdleReminder(state);
-      if (state.parentID) {
-        scheduleComplete(sessions, state.parentID);
-        scheduleIdleReminder(sessions, state.parentID);
+  [
+    "session.deleted",
+    on(SessionInfo, ({ sessions }, { info }) => {
+      const state = sessions.get(info.id);
+      if (state) {
+        clearTimeout(state.completeTimer);
+        clearStartNotify(state);
+        clearIdleReminder(state);
+        if (state.parentID) {
+          scheduleComplete(sessions, state.parentID);
+          scheduleIdleReminder(sessions, state.parentID);
+        }
       }
-    }
-    sessions.delete(info.id);
-  },
-};
+      sessions.delete(info.id);
+    }),
+  ],
+]);
 
-const server = async () => {
-  const ctx = { sessions: new Map(), messageRoles: new Map(), messageSessions: new Map() };
-
-  return {
-    "chat.message": async (input, output) => {
-      const sessionID = input?.sessionID || output?.message?.sessionID;
-      if (!sessionID) return;
-
-      await updateUserMessage(ctx.sessions, sessionID, output?.parts || output?.message);
-    },
-
-    event: async ({ event }) => {
-      if (!event || typeof event.type !== "string") return;
-      const handler = handlers[event.type];
-      if (handler) await handler(ctx, event.properties ?? {});
-    },
+function on<T>(schema: z.ZodType<T>, handle: (ctx: Context, props: T) => Promise<void> | void) {
+  return async (ctx: Context, properties: unknown) => {
+    const result = schema.safeParse(properties);
+    if (result.success) await handle(ctx, result.data);
   };
-};
+}
 
-/**
- * Server plugin that maps OpenCode chat and lifecycle events to hyprd notifications.
- * It uses the `chat.message` and `event` hooks for messages, sessions, permissions, questions, and todos.
- */
-export default { id: "hyprd-notify", server };
+function partText(part: V1Part) {
+  if (part.type === "text") return part.text;
+  if (part.type === "subtask") return part.prompt;
+  return "";
+}

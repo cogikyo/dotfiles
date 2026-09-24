@@ -11,16 +11,78 @@ import { ImageOverlay, type MediaItem, type PreviewState } from "./preview";
 import { listSessionMedia, mediaPart, mediaReference, registerSessionMedia } from "./registry";
 
 const id = "opencode-media-context";
-const IMAGE_ID_BASE = 874_000;
-const BOLD = createTextAttributes({ bold: true });
-const MAX_DISCOVERY_MESSAGES = 100;
-const MAX_DISCOVERY_REGISTRATIONS = 20;
-const RENAME_POLL_INTERVAL_MS = 1_000;
-const RENAME_POLL_LIMIT = 30;
 
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
-// │ TUI media context                                                                             │
+// │ TUI plugin: session media sidebar and previews                                                │
 // ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
+const IMAGE_ID_BASE = 874_000;
+
+const BOLD = createTextAttributes({ bold: true });
+
+const MAX_DISCOVERY_MESSAGES = 100;
+
+const MAX_DISCOVERY_REGISTRATIONS = 20;
+
+const RENAME_POLL_INTERVAL_MS = 1_000;
+
+const RENAME_POLL_LIMIT = 30;
+
+// ├─ Hooks and slots ─────────────────────────────────────────────────────────────────────────────┤
+
+const tui: TuiPlugin = async (api) => {
+  const [preview, setPreview] = createSignal<PreviewState>();
+  const closePreview = () => {
+    setPreview(undefined);
+    api.renderer.requestRender();
+  };
+  const openPreview = (next: PreviewState) => {
+    setPreview(next);
+    api.renderer.requestRender();
+  };
+  const closeMissingPreview = (sessionID: string) => {
+    const current = preview();
+    if (current?.sessionID === sessionID && !previewStillExists(api, current)) closePreview();
+  };
+
+  const disposers = [
+    api.event.on("tui.session.select", closePreview),
+    api.event.on("tui.command.execute", (event) => {
+      if (event.properties.command.startsWith("session.")) closePreview();
+    }),
+    api.event.on("message.updated", (event) => untrack(() => closeMissingPreview(event.properties.sessionID))),
+    api.event.on("message.removed", (event) => untrack(() => closeMissingPreview(event.properties.sessionID))),
+    api.event.on("message.part.updated", (event) => untrack(() => closeMissingPreview(event.properties.sessionID))),
+    api.event.on("message.part.removed", (event) => untrack(() => closeMissingPreview(event.properties.sessionID))),
+    api.event.on("session.compacted", (event) => untrack(() => closeMissingPreview(event.properties.sessionID))),
+  ];
+
+  api.lifecycle.onDispose(() => {
+    for (const dispose of disposers) dispose();
+    closePreview();
+  });
+
+  api.slots.register({
+    order: 450,
+    slots: {
+      app() {
+        return (
+          <Show when={preview()} keyed>
+            {(current: PreviewState) => <ImageOverlay api={api} preview={current} onClose={closePreview} />}
+          </Show>
+        );
+      },
+      sidebar_content(_ctx, props: { session_id: string }) {
+        return <MediaContext api={api} sessionID={props.session_id} onOpenImage={openPreview} />;
+      },
+    },
+  });
+};
+
+/** TUI plugin that lists session images and videos in the sidebar, with Kitty image previews and external video playback. */
+export default { id, tui } satisfies TuiPluginModule & { id: string };
+
+// ├─ Sidebar list ────────────────────────────────────────────────────────────────────────────────┤
 
 function MediaContext(props: { api: TuiPluginApi; sessionID: string; onOpenImage: (preview: PreviewState) => void }) {
   const items = createMediaItems(props);
@@ -160,6 +222,7 @@ function onSessionMessages(props: { api: TuiPluginApi; sessionID: string }, sche
 }
 
 // ├─ Media discovery ─────────────────────────────────────────────────────────────────────────────┤
+
 function unnamedImageSignature(items: MediaItem[]) {
   return items
     .filter((item) => item.entry.kind === "image" && !item.entry.name)
@@ -222,7 +285,8 @@ function previewStillExists(api: TuiPluginApi, current: PreviewState) {
   );
 }
 
-// ├─ External media viewers ──────────────────────────────────────────────────────────────────────┤
+// ├─ External viewers ────────────────────────────────────────────────────────────────────────────┤
+
 function openVideo(api: TuiPluginApi, path: string) {
   let child: ChildProcess;
   try {
@@ -253,60 +317,3 @@ function openVideo(api: TuiPluginApi, path: string) {
   });
   child.unref();
 }
-
-// ├─ TUI hooks and slots ─────────────────────────────────────────────────────────────────────────┤
-/**
- * Registers the TUI `sidebar_content` and `app` slots.
- * Listens for `message.updated`, `message.removed`, `message.part.updated`, `message.part.removed`, `session.compacted`, `tui.session.select`, and `tui.command.execute`.
- */
-const tui: TuiPlugin = async (api) => {
-  const [preview, setPreview] = createSignal<PreviewState>();
-  const closePreview = () => {
-    setPreview(undefined);
-    api.renderer.requestRender();
-  };
-  const openPreview = (next: PreviewState) => {
-    setPreview(next);
-    api.renderer.requestRender();
-  };
-  const closeMissingPreview = (sessionID: string) => {
-    const current = preview();
-    if (current?.sessionID === sessionID && !previewStillExists(api, current)) closePreview();
-  };
-
-  const disposers = [
-    api.event.on("tui.session.select", closePreview),
-    api.event.on("tui.command.execute", (event) => {
-      if (event.properties.command.startsWith("session.")) closePreview();
-    }),
-    api.event.on("message.updated", (event) => untrack(() => closeMissingPreview(event.properties.sessionID))),
-    api.event.on("message.removed", (event) => untrack(() => closeMissingPreview(event.properties.sessionID))),
-    api.event.on("message.part.updated", (event) => untrack(() => closeMissingPreview(event.properties.sessionID))),
-    api.event.on("message.part.removed", (event) => untrack(() => closeMissingPreview(event.properties.sessionID))),
-    api.event.on("session.compacted", (event) => untrack(() => closeMissingPreview(event.properties.sessionID))),
-  ];
-
-  api.lifecycle.onDispose(() => {
-    for (const dispose of disposers) dispose();
-    closePreview();
-  });
-
-  api.slots.register({
-    order: 450,
-    slots: {
-      app() {
-        return (
-          <Show when={preview()} keyed>
-            {(current: PreviewState) => <ImageOverlay api={api} preview={current} onClose={closePreview} />}
-          </Show>
-        );
-      },
-      sidebar_content(_ctx, props: { session_id: string }) {
-        return <MediaContext api={api} sessionID={props.session_id} onOpenImage={openPreview} />;
-      },
-    },
-  });
-};
-
-/** TUI plugin entrypoint for session media discovery and preview. */
-export default { id, tui } satisfies TuiPluginModule & { id: string };

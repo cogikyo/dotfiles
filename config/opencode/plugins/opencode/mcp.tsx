@@ -5,6 +5,20 @@ import { SidebarSection } from "../shared/sidebar-section.tsx";
 
 const id = "opencode-mcp";
 
+/** TUI plugin that lists MCP server status and failures in the sidebar when any server is enabled. */
+const tui: TuiPlugin = async (api) => {
+  api.slots.register({
+    order: 190,
+    slots: {
+      sidebar_content() {
+        return <Mcp api={api} />;
+      },
+    },
+  });
+};
+
+export default { id, tui } satisfies TuiPluginModule & { id: string };
+
 const LABELS: Record<TuiSidebarMcpItem["status"], string> = {
   connected: "Connected",
   disabled: "Disabled",
@@ -54,16 +68,3 @@ function Mcp(props: { api: TuiPluginApi }) {
     </Show>
   );
 }
-
-const tui: TuiPlugin = async (api) => {
-  api.slots.register({
-    order: 190,
-    slots: {
-      sidebar_content() {
-        return <Mcp api={api} />;
-      },
-    },
-  });
-};
-
-export default { id, tui } satisfies TuiPluginModule & { id: string };

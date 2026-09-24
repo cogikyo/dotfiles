@@ -3,7 +3,13 @@ import { promisify } from "node:util";
 
 const execFileAsync = promisify(execFile);
 
-/** Counts and branch state parsed from Git porcelain v2 output. */
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Git status                                                                                    │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
+// ├─ Read ────────────────────────────────────────────────────────────────────────────────────────┤
+
+/** Parsed Git status; `complete` is always true because failed or truncated reads return no status. */
 export type GitStatus = {
   branch: string;
   ahead: number;
@@ -18,7 +24,7 @@ export type GitStatus = {
   complete: boolean;
 };
 
-/** Reads repository status, or returns undefined when the path or Git command is unavailable. */
+/** Reads Git status without optional locks, returning undefined when the repository cannot be read. */
 export async function gitStatus(dir?: string): Promise<GitStatus | undefined> {
   if (!dir) return undefined;
 
@@ -35,6 +41,16 @@ export async function gitStatus(dir?: string): Promise<GitStatus | undefined> {
   }
 }
 
+// ├─ Counts ──────────────────────────────────────────────────────────────────────────────────────┤
+
+/** Counts dirty paths, excluding ahead, behind, and stashed counts. */
+export function gitDirtyCount(status: GitStatus) {
+  return status.staged + status.modified + status.untracked + status.deleted + status.renamed + status.conflicted;
+}
+
+// ├─ Porcelain ───────────────────────────────────────────────────────────────────────────────────┤
+
+// Parses `git status --porcelain=v2` output into counts.
 function parseGitStatus(output: string): GitStatus {
   const status: GitStatus = {
     branch: "",
@@ -95,9 +111,4 @@ function countEntry(status: GitStatus, line: string) {
     case "2":
       status.renamed++;
   }
-}
-
-/** Counts tracked and untracked changes in a parsed status. */
-export function gitDirtyCount(status: GitStatus) {
-  return status.staged + status.modified + status.untracked + status.deleted + status.renamed + status.conflicted;
 }

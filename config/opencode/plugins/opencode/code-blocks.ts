@@ -4,10 +4,101 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { addDefaultParsers, MarkdownRenderable, RGBA, SyntaxStyle } from "@opentui/core";
 
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ TUI plugin: patch OpenTUI Markdown code blocks                                                │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
 const id = "opencode-code-blocks";
 // Global symbols keep the patches idempotent when OpenCode reloads this module in the same process.
 const PATCHED = Symbol.for("cullyn.opencode.code-blocks.patched");
 const RENDER_PATCHED = Symbol.for("cullyn.opencode.code-blocks.render-patched");
+
+const tui: TuiPlugin = async (api) => {
+  try {
+    addDefaultParsers([sqlParser]);
+  } catch {
+    // Keep the styling patch active if SQL parser registration fails.
+  }
+
+  // OpenTUI resets styles on update, so both private renderable methods need patching.
+  const proto = MarkdownRenderable?.prototype;
+  if (!proto || proto[PATCHED]) return;
+
+  const originalCreateCodeRenderable = proto.createCodeRenderable;
+  const originalApplyCodeBlockRenderable = proto.applyCodeBlockRenderable;
+  if (typeof originalCreateCodeRenderable !== "function" || typeof originalApplyCodeBlockRenderable !== "function") {
+    api.ui.toast({
+      variant: "warning",
+      title: "Code block styling disabled",
+      message: "OpenTUI Markdown internals changed; opencode-code-blocks could not patch them.",
+    });
+    return;
+  }
+
+  const codeBlockBackground = () => api.theme.current.backgroundPanel;
+  const syntaxStyle = SyntaxStyle.fromStyles(styles);
+
+  const styleCodeBlock = (renderable: any) => {
+    registerSqlParser(renderable.treeSitterClient ?? renderable._treeSitterClient);
+    renderable.bg = codeBlockBackground();
+    renderable.marginTop = 1;
+    renderable.marginBottom = Math.max(Number(renderable.marginBottom ?? 0), 1);
+    renderable.paddingTop = 1;
+    renderable.paddingBottom = 0;
+    renderable.paddingLeft = 2;
+    renderable.paddingRight = 2;
+    renderable.syntaxStyle = syntaxStyle;
+    renderable.content = String(renderable.content ?? "").replace(/\n+$/g, "");
+
+    if (!renderable[RENDER_PATCHED] && typeof renderable.renderSelf === "function") {
+      const originalRenderSelf = renderable.renderSelf;
+      renderable.renderSelf = function patchedRenderSelf(buffer: any, deltaTime: number) {
+        buffer.fillRect(this.screenX, this.screenY, this.width, this.height, codeBlockBackground());
+        const result = originalRenderSelf.call(this, buffer, deltaTime);
+        drawFiletypeBadge(buffer, this);
+        return result;
+      };
+      renderable[RENDER_PATCHED] = true;
+    }
+  };
+
+  const drawFiletypeBadge = (buffer: any, renderable: any) => {
+    const label = String(renderable.filetype ?? "").trim();
+    if (!label || renderable.width < label.length + 4 || renderable.height < 1) return;
+
+    const x = renderable.screenX + renderable.width - label.length - 2;
+    const y = renderable.screenY + renderable.height - 1;
+    buffer.drawText(label, x, y, api.theme.current.textMuted, codeBlockBackground());
+  };
+
+  proto.createCodeRenderable = function patchedCreateCodeRenderable(token: unknown, blockID: string, marginBottom = 0) {
+    const renderable = originalCreateCodeRenderable.call(this, token, blockID, Math.max(marginBottom, 1));
+    styleCodeBlock(renderable);
+    return renderable;
+  };
+
+  proto.applyCodeBlockRenderable = function patchedApplyCodeBlockRenderable(
+    renderable: unknown,
+    token: unknown,
+    marginBottom = 0,
+  ) {
+    originalApplyCodeBlockRenderable.call(this, renderable, token, Math.max(marginBottom, 1));
+    styleCodeBlock(renderable);
+  };
+
+  proto[PATCHED] = true;
+};
+
+const plugin: TuiPluginModule & { id: string } = {
+  id,
+  tui,
+};
+
+/** TUI plugin that styles Markdown code blocks with a syntax palette, SQL highlighting, and a filetype badge. */
+export default plugin;
+
+// ├─ SQL parser ──────────────────────────────────────────────────────────────────────────────────┤
+
 const pluginDir = dirname(fileURLToPath(import.meta.url));
 const sqlParserDir = resolve(pluginDir, "../../tree-sitter/sql");
 const sqlRegisteredClients = new WeakSet<object>();
@@ -26,6 +117,8 @@ const registerSqlParser = (client: any) => {
   client.addFiletypeParser(sqlParser);
   sqlRegisteredClients.add(client);
 };
+
+// ├─ Syntax palette ──────────────────────────────────────────────────────────────────────────────┤
 
 const c = (hex: string) => RGBA.fromHex(hex);
 const p = {
@@ -131,88 +224,3 @@ const styles = {
   "tag.attribute": { fg: p.orn_4, italic: true },
   "tag.delimiter": { fg: p.glu_2 },
 };
-
-const tui: TuiPlugin = async (api) => {
-  try {
-    addDefaultParsers([sqlParser]);
-  } catch {
-    // Keep the styling patch active if SQL parser registration fails.
-  }
-
-  // OpenTUI marks these methods private, but code blocks expose _treeSitterClient as treeSitterClient.
-  // applyCodeBlockRenderable resets block styles on every update, so both methods need the patch.
-  const proto = MarkdownRenderable?.prototype;
-  if (!proto || proto[PATCHED]) return;
-
-  const originalCreateCodeRenderable = proto.createCodeRenderable;
-  const originalApplyCodeBlockRenderable = proto.applyCodeBlockRenderable;
-  if (typeof originalCreateCodeRenderable !== "function" || typeof originalApplyCodeBlockRenderable !== "function") {
-    api.ui.toast({
-      variant: "warning",
-      title: "Code block styling disabled",
-      message: "OpenTUI Markdown internals changed; opencode-code-blocks could not patch them.",
-    });
-    return;
-  }
-
-  const codeBlockBackground = () => api.theme.current.backgroundPanel;
-  const syntaxStyle = SyntaxStyle.fromStyles(styles);
-
-  const styleCodeBlock = (renderable: any) => {
-    registerSqlParser(renderable.treeSitterClient ?? renderable._treeSitterClient);
-    renderable.bg = codeBlockBackground();
-    renderable.marginTop = 1;
-    renderable.marginBottom = Math.max(Number(renderable.marginBottom ?? 0), 1);
-    renderable.paddingTop = 1;
-    renderable.paddingBottom = 0;
-    renderable.paddingLeft = 2;
-    renderable.paddingRight = 2;
-    renderable.syntaxStyle = syntaxStyle;
-    renderable.content = String(renderable.content ?? "").replace(/\n+$/g, "");
-
-    if (!renderable[RENDER_PATCHED] && typeof renderable.renderSelf === "function") {
-      const originalRenderSelf = renderable.renderSelf;
-      renderable.renderSelf = function patchedRenderSelf(buffer: any, deltaTime: number) {
-        buffer.fillRect(this.screenX, this.screenY, this.width, this.height, codeBlockBackground());
-        const result = originalRenderSelf.call(this, buffer, deltaTime);
-        drawFiletypeBadge(buffer, this);
-        return result;
-      };
-      renderable[RENDER_PATCHED] = true;
-    }
-  };
-
-  const drawFiletypeBadge = (buffer: any, renderable: any) => {
-    const label = String(renderable.filetype ?? "").trim();
-    if (!label || renderable.width < label.length + 4 || renderable.height < 1) return;
-
-    const x = renderable.screenX + renderable.width - label.length - 2;
-    const y = renderable.screenY + renderable.height - 1;
-    buffer.drawText(label, x, y, api.theme.current.textMuted, codeBlockBackground());
-  };
-
-  proto.createCodeRenderable = function patchedCreateCodeRenderable(token: unknown, blockID: string, marginBottom = 0) {
-    const renderable = originalCreateCodeRenderable.call(this, token, blockID, Math.max(marginBottom, 1));
-    styleCodeBlock(renderable);
-    return renderable;
-  };
-
-  proto.applyCodeBlockRenderable = function patchedApplyCodeBlockRenderable(
-    renderable: unknown,
-    token: unknown,
-    marginBottom = 0,
-  ) {
-    originalApplyCodeBlockRenderable.call(this, renderable, token, Math.max(marginBottom, 1));
-    styleCodeBlock(renderable);
-  };
-
-  proto[PATCHED] = true;
-};
-
-const plugin: TuiPluginModule & { id: string } = {
-  id,
-  tui,
-};
-
-/** Styles TUI Markdown code blocks by patching OpenTUI renderable methods. */
-export default plugin;

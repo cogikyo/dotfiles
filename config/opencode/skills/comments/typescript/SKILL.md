@@ -6,7 +6,8 @@ description: Use with comments when auditing or editing TypeScript doc comments 
 # TypeScript comments
 
 Read `comments` for the general procedure.
-Use TSDoc `/** */` comments for exported surfaces that need documentation.
+Use TSDoc `/** */` comments for exported functions, types, classes, and object or array values that need documentation.
+Exported scalar constants take a right-side `//` comment instead, per `comments`.
 Add tags only when names and types do not convey the needed contract, and do not restate a type signature in prose.
 
 Keep documentation attached to the declaration and verify claims against its implementation and callers.

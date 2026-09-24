@@ -1,7 +1,7 @@
 import type { Config, Plugin, PluginModule } from "@opencode-ai/plugin";
-import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { record } from "../shared/record.ts";
+import { z } from "zod";
+import { readJson } from "../shared/file.ts";
 import {
   COMPACTION_LIMIT,
   COMPACTION_RESERVED,
@@ -11,38 +11,56 @@ import {
 
 const id = "opencode-input-cap";
 
-type Limit = {
-  context?: number;
-  input?: number;
-  output?: number;
-};
-
+type Model = NonNullable<NonNullable<Config["provider"]>[string]["models"]>[string];
+type Limit = z.infer<typeof Limit>;
 type Catalog = Record<string, Record<string, Limit>>;
+
+const number = z.number().optional().catch(undefined);
+const Limit = z.object({ context: number, input: number, output: number });
+const Configured = Limit.catch({});
+const Reserved = z.object({ compaction: z.object({ reserved: number }).optional().catch(undefined) }).catch({});
+
+const Catalog = z
+  .record(
+    z.string(),
+    z
+      .object({ models: z.record(z.string(), z.object({ limit: Limit }).optional().catch(undefined)) })
+      .optional()
+      .catch(undefined),
+  )
+  .transform((providers) => {
+    const catalog: Catalog = {};
+    for (const [providerID, provider] of Object.entries(providers)) {
+      if (!provider) continue;
+      const limits: Record<string, Limit> = {};
+      for (const [modelID, model] of Object.entries(provider.models)) {
+        if (model) limits[modelID] = model.limit;
+      }
+      catalog[providerID] = limits;
+    }
+    return catalog;
+  });
 
 const server: Plugin = async () => ({
   config: async (cfg) => {
     const catalog = await readCatalog();
-    const reserved = number(object(object(cfg)?.compaction)?.reserved) ?? COMPACTION_RESERVED;
+    const reserved = Reserved.parse(cfg).compaction?.reserved ?? COMPACTION_RESERVED;
     const inputCap = compactionInputCap(reserved);
     capProviderModels(cfg, catalog, inputCap);
     capCatalogModels(cfg, catalog, inputCap);
   },
 });
 
-function capProviderModels(cfg: Config, catalog: Catalog, inputCap: number) {
-  const providers = object(cfg.provider);
-  if (!providers) return;
+/** Server plugin that caps enabled models' input limits to leave room for compaction, using cached model limits when needed. */
+export default { id, server } satisfies PluginModule;
 
-  for (const [providerID, providerValue] of Object.entries(providers)) {
+function capProviderModels(cfg: Config, catalog: Catalog, inputCap: number) {
+  for (const [providerID, provider] of Object.entries(cfg.provider ?? {})) {
     if (cfg.enabled_providers && !cfg.enabled_providers.includes(providerID)) continue;
     if (cfg.disabled_providers?.includes(providerID)) continue;
-    const models = object(object(providerValue)?.models);
-    if (!models) continue;
     const catalogModels = catalog[providerID] ?? {};
-    for (const [modelID, modelValue] of Object.entries(models)) {
-      const model = object(modelValue);
-      if (!model) continue;
-      applyCap(model, catalogModels[typeof model.id === "string" ? model.id : modelID], inputCap);
+    for (const [modelID, model] of Object.entries(provider.models ?? {})) {
+      applyCap(model, catalogModels[model.id ?? modelID], inputCap);
     }
   }
 }
@@ -66,65 +84,31 @@ function capCatalogModels(cfg: Config, catalog: Catalog, inputCap: number) {
   }
 }
 
-function applyCap(
-  model: { limit?: { context: number; input?: number; output: number } },
-  catalogLimit: Limit | undefined,
-  inputCap: number,
-) {
-  const configured = object(model.limit);
+function applyCap(model: Model, catalogLimit: Limit | undefined, inputCap: number) {
+  const configured = Configured.parse(model.limit);
   const { context, output, input } = effectiveLimit(configured, catalogLimit);
   if (context === undefined || output === undefined) return;
-  // The cap is the compaction threshold plus the reserved input budget.
   if ((input || context) <= inputCap) return;
   const limit = { context, output, input };
   const threshold = contextCompactionLimit({ limit }, inputCap - COMPACTION_LIMIT);
   if (threshold === undefined || threshold <= COMPACTION_LIMIT) return;
-  model.limit = { ...configured, context, output, input: inputCap };
+  const capped = { ...model.limit, context, output, input: inputCap };
+  model.limit = capped;
 }
 
-function effectiveLimit(configured: Record<string, unknown> | undefined, catalogLimit: Limit | undefined): Limit {
+function effectiveLimit(configured: Limit, catalogLimit: Limit | undefined): Limit {
   return {
-    context: number(configured?.context) ?? number(catalogLimit?.context),
-    output: number(configured?.output) ?? number(catalogLimit?.output),
-    input: number(configured?.input) ?? number(catalogLimit?.input),
+    context: configured.context ?? catalogLimit?.context,
+    output: configured.output ?? catalogLimit?.output,
+    input: configured.input ?? catalogLimit?.input,
   };
 }
 
 async function readCatalog(): Promise<Catalog> {
   const cacheHome = process.env.XDG_CACHE_HOME || path.join(process.env.HOME ?? "", ".cache");
-  const file = path.join(cacheHome, "opencode", "models.json");
   try {
-    const parsed = object(JSON.parse(await readFile(file, "utf8")));
-    if (!parsed) return {};
-    const catalog: Catalog = {};
-    for (const [providerID, providerValue] of Object.entries(parsed)) {
-      const models = object(object(providerValue)?.models);
-      if (!models) continue;
-      const limits: Record<string, Limit> = {};
-      for (const [modelID, modelValue] of Object.entries(models)) {
-        const limit = object(object(modelValue)?.limit);
-        if (!limit) continue;
-        limits[modelID] = {
-          context: number(limit.context),
-          input: number(limit.input),
-          output: number(limit.output),
-        };
-      }
-      catalog[providerID] = limits;
-    }
-    return catalog;
+    return (await readJson(path.join(cacheHome, "opencode", "models.json"), Catalog)) ?? {};
   } catch {
     return {};
   }
 }
-
-function object(value: unknown): Record<string, unknown> | undefined {
-  return record(value);
-}
-
-function number(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-/** Runs the server config hook to cap model input limits and preserve the compaction reserve. */
-export default { id, server } satisfies PluginModule;

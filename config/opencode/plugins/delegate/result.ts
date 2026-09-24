@@ -1,38 +1,37 @@
-import { record } from "../shared/record.ts";
+import { z } from "zod";
+import type { Message, Reply, Rule } from "../shared/opencode.ts";
 import type { TaskArgs } from "./args.ts";
 import type { ContextLimit } from "./context.ts";
-import type { Rule } from "./permission.ts";
-import { string } from "./sdk.ts";
 
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Task results                                                                                  │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
+const CONTEXT_ADVICE =
+  "re-brief narrower work; the next call to this lane creates a fresh child, never resume this context-limited session";
 const CONTENT_FILTER_ADVICE =
   "child unrecoverable; re-brief a fresh child (reword the brief first, switch provider as last resort); never resume this session";
 const INTERRUPTED_ADVICE =
   "completion unknown; reconcile durable state before re-running because the child may have edited files";
-const CONTEXT_ADVICE =
-  "re-brief narrower work; the next call to this lane creates a fresh child, never resume this context-limited session";
 
-export function lastTextPart(value: unknown) {
-  const parts = record(value)?.parts;
-  if (!Array.isArray(parts)) return "";
-  for (let index = parts.length - 1; index >= 0; index--) {
-    const part = record(parts[index]);
-    if (part?.type === "text" && typeof part.text === "string") return part.text;
-  }
-  return "";
+export function lastTextPart(reply: Reply) {
+  return reply.parts.findLast((part) => part.type === "text")?.text ?? "";
 }
 
+/** Adds task notes ahead of the result text when present. */
 export function withNotes(text: string, notes: string[]) {
   if (!notes.length) return text;
   return [`[${notes.join("; ")}]`, text].filter(Boolean).join("\n\n");
 }
 
+/** Reports a context-limited turn with recovered text and a warning when writes may have occurred. */
 export function contextLimitedResult(input: {
   args: TaskArgs;
   metadata: Record<string, unknown>;
   sessionID: string;
   notes: string[];
   limit: ContextLimit;
-  messages: unknown[];
+  messages: Message[];
   permission: Rule[];
 }) {
   const text = recoverableText(input.messages);
@@ -66,26 +65,7 @@ export function contextLimitedResult(input: {
   };
 }
 
-function recoverableText(messages: unknown[]) {
-  return messages
-    .flatMap((message) => {
-      const root = record(message);
-      if (record(root?.info)?.role !== "assistant") return [];
-      const parts = root?.parts;
-      if (!Array.isArray(parts)) return [];
-      return parts.flatMap((value) => {
-        const part = record(value);
-        return part?.type === "text" && typeof part.text === "string" && part.text.trim() ? [part.text.trim()] : [];
-      });
-    })
-    .join("\n\n");
-}
-
-function hasWriteAccess(rules: Rule[]) {
-  const writePermissions = new Set(["*", "bash", "edit", "task", "write"]);
-  return rules.some((rule) => rule.action === "allow" && writePermissions.has(rule.permission));
-}
-
+/** Reports a content-filter block as an error; this result does not seal the lane. */
 export function blockedResult(args: TaskArgs, metadata: Record<string, unknown>, sessionID: string, notes: string[]) {
   const text = withNotes(
     [`blocked: content_filter`, `child_session_id: ${sessionID}`, `advice: ${CONTENT_FILTER_ADVICE}`].join("\n"),
@@ -98,6 +78,7 @@ export function blockedResult(args: TaskArgs, metadata: Record<string, unknown>,
   };
 }
 
+/** Reports an unfinished child as an error without sealing its lane. */
 export function interruptedResult(input: {
   args: TaskArgs;
   metadata: Record<string, unknown>;
@@ -117,6 +98,7 @@ export function interruptedResult(input: {
   };
 }
 
+/** Wraps task text in a state-labeled task element, using `task_error` for errors. */
 export function renderOutput(input: {
   sessionID: string;
   state: "completed" | "context_limited" | "error";
@@ -128,17 +110,36 @@ export function renderOutput(input: {
   );
 }
 
-export function isContentFilterBlock(error: unknown) {
-  const root = record(error);
-  const name = string(root?.name) ?? (error instanceof Error ? error.name : undefined);
-  if (isContentFilterText(name)) return true;
+const Failure = z.object({
+  name: z.string().optional().catch(undefined),
+  message: z.string().optional().catch(undefined),
+  data: z
+    .object({ message: z.string().optional().catch(undefined) })
+    .optional()
+    .catch(undefined),
+});
 
-  const data = record(root?.data);
-  const message =
-    string(root?.message) ??
-    string(data?.message) ??
-    (error instanceof Error || typeof error === "string" ? String(error) : undefined);
-  return isContentFilterText(message);
+/** Recognizes content-filter or refusal errors in strings and SDK error objects. */
+export function isContentFilterBlock(error: unknown) {
+  if (typeof error === "string") return isContentFilterText(error);
+  const { data } = Failure.safeParse(error);
+  const message = data?.message || data?.data?.message || (error instanceof Error ? String(error) : undefined);
+  return isContentFilterText(data?.name) || isContentFilterText(message);
+}
+
+// ├─ Recovered text ──────────────────────────────────────────────────────────────────────────────┤
+
+function recoverableText(messages: Message[]) {
+  return messages
+    .filter((message) => message.info.role === "assistant")
+    .flatMap((message) => message.parts)
+    .flatMap((part) => (part.type === "text" && part.text.trim() ? [part.text.trim()] : []))
+    .join("\n\n");
+}
+
+function hasWriteAccess(rules: Rule[]) {
+  const writePermissions = new Set(["*", "bash", "edit", "task", "write"]);
+  return rules.some((rule) => rule.action === "allow" && writePermissions.has(rule.permission));
 }
 
 function isContentFilterText(value: string | undefined) {

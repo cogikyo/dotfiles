@@ -13,13 +13,14 @@ Do not box every helper or add visual weight to a small, obvious file.
 
 ## Layout
 
-- Reserve three-row major-section boxes for top-level file structure: top border, labeled body, bottom border.
-- Use one-row subsection labels with exactly one blank line above and none below, attached to the code they introduce.
+- Reserve three-row major-section boxes for top-level file structure: top border, labeled body, bottom border, followed by one blank line.
+- Use one-row subsection labels with exactly one blank line above and one below.
+- A banner stands alone: it never directly touches a comment, doc comment, or code line.
 - Label phases inside a long function only when it remains monolithic for a real reason.
 - Use an external-document block when a URL needs durable context: opening marker, URL row, indented reason for consulting it, closing marker.
 
 Adapt the comment prefix to the language and target visual column 100 unless a deliberate local design provides a better boundary.
-Preserve a coherent local glyph family; repair broken width, hierarchy, attachment, or glyph integrity rather than copying the defect.
+Preserve a coherent local glyph family; repair broken width, hierarchy, spacing, or glyph integrity rather than copying the defect.
 Without a coherent local family, use the following canonical construction, expressed as Unicode code points to keep the grammar unambiguous:
 
 - Major boxes use U+256D and U+256E at the top corners, U+2570 and U+256F at the bottom corners, U+2500 rails, and U+2502 body walls.
@@ -36,5 +37,5 @@ Mutate lines containing Nerd Font, box-drawing, multi-width, or visually aligned
 Do not use Edit, Write, `apply_patch`, or shell text mutation on those lines.
 Use `/tmp/opencode/` for a temporary script when that makes the transformation easier to inspect.
 Measure terminal display cells, not bytes or Unicode code-point counts.
-Re-read every touched region and verify glyph integrity, attachment, and alignment.
+Re-read every touched region and verify glyph integrity, spacing, and alignment.
 Banner-only work must leave surrounding prose, ordinary comments, names, and code unchanged.

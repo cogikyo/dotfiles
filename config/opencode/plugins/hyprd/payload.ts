@@ -1,4 +1,11 @@
-// @ts-nocheck -- OpenCode plugin event types are incomplete; keep runtime behavior stable until local event types exist.
+import type * as v2 from "@opencode-ai/sdk/v2";
+import { z } from "zod";
+
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Notify payloads                                                                               │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
+/** Text limits for hyprd notices. */
 export const LIMITS = {
   id: 128,
   status: 32,
@@ -6,119 +13,181 @@ export const LIMITS = {
   patterns: 256,
 };
 
-const NEW_SESSION_START_MESSAGE = "New Session started";
-const MESSAGE_ID_PATHS = [
-  "messageID",
-  "messageId",
-  "metadata.messageID",
-  "metadata.messageId",
-  "message.id",
-  "metadata.id",
-  "id",
-];
-const PART_MESSAGE_ID_PATHS = ["messageID", "messageId", "message.id"];
-const SESSION_ID_PATHS = ["sessionID", "sessionId", "metadata.sessionID", "metadata.sessionId", "session.id"];
+// ├─ Event views ─────────────────────────────────────────────────────────────────────────────────┤
 
-export function cleanText(value, max = LIMITS.message) {
-  if (typeof value !== "string") return "";
+// Invalid event payloads are ignored by notify.ts.
+
+type Text = Pick<v2.TextPart, "id" | "messageID" | "type" | "text" | "synthetic" | "ignored"> & {
+  time?: Pick<NonNullable<v2.TextPart["time"]>, "end">;
+};
+type Subtask = Pick<v2.SubtaskPart, "id" | "messageID" | "type" | "agent" | "description" | "prompt">;
+type Agent = Pick<v2.AgentPart, "id" | "messageID" | "type" | "name">;
+type Part = Text | Subtask | Agent;
+
+const Part: z.ZodType<Part> = z.discriminatedUnion("type", [
+  z.object({
+    id: z.string(),
+    messageID: z.string(),
+    type: z.literal("text"),
+    text: z.string(),
+    synthetic: z.boolean().optional(),
+    ignored: z.boolean().optional(),
+    time: z.object({ end: z.number().optional() }).optional(),
+  }),
+  z.object({
+    id: z.string(),
+    messageID: z.string(),
+    type: z.literal("subtask"),
+    agent: z.string(),
+    description: z.string(),
+    prompt: z.string(),
+  }),
+  z.object({ id: z.string(), messageID: z.string(), type: z.literal("agent"), name: z.string() }),
+]);
+
+type MessageUpdated = Pick<v2.EventMessageUpdated["properties"], "sessionID"> & {
+  info: Pick<v2.Message, "id" | "role">;
+};
+
+export const MessageUpdated: z.ZodType<MessageUpdated> = z.object({
+  sessionID: z.string(),
+  info: z.object({ id: z.string(), role: z.enum(["user", "assistant"]) }),
+});
+
+type PartUpdated = Pick<v2.EventMessagePartUpdated["properties"], "sessionID"> & { part: Part };
+
+/** Accepts only text, subtask, and agent parts from `message.part.updated`. */
+export const PartUpdated: z.ZodType<PartUpdated> = z.object({ sessionID: z.string(), part: Part });
+
+type PartDelta = Pick<v2.EventMessagePartDelta["properties"], "sessionID" | "partID" | "field" | "delta">;
+
+export const PartDelta: z.ZodType<PartDelta> = z.object({
+  sessionID: z.string(),
+  partID: z.string(),
+  field: z.string(),
+  delta: z.string(),
+});
+
+type SessionStatus = Pick<v2.EventSessionStatus["properties"], "sessionID"> & {
+  status: Pick<v2.SessionStatus, "type">;
+};
+
+export const SessionStatus: z.ZodType<SessionStatus> = z.object({
+  sessionID: z.string(),
+  status: z.object({ type: z.enum(["idle", "busy", "retry"]) }),
+});
+
+type SessionIdle = Pick<v2.EventSessionIdle["properties"], "sessionID">;
+
+export const SessionIdle: z.ZodType<SessionIdle> = z.object({ sessionID: z.string() });
+
+type Session = Pick<v2.Session, "id" | "parentID" | "title">;
+type SessionInfo = { info: Session };
+
+/** Validates session info shared by creation, update, and deletion events. */
+export const SessionInfo: z.ZodType<SessionInfo> = z.object({
+  info: z.object({ id: z.string(), parentID: z.string().optional(), title: z.string() }),
+});
+
+type Failure = { name: string; data?: { message?: string } };
+type SessionError = Pick<v2.EventSessionError["properties"], "sessionID"> & { error?: Failure };
+
+/** Accepts session errors without an ID or a usable error message. */
+export const SessionError: z.ZodType<SessionError> = z.object({
+  sessionID: z.string().optional(),
+  error: z
+    .object({
+      name: z.string(),
+      data: z.object({ message: z.string().optional().catch(undefined) }).optional(),
+    })
+    .optional(),
+});
+
+type PermissionAsked = Pick<v2.EventPermissionAsked["properties"], "sessionID" | "permission" | "patterns">;
+
+export const PermissionAsked: z.ZodType<PermissionAsked> = z.object({
+  sessionID: z.string(),
+  permission: z.string(),
+  patterns: z.array(z.string()),
+});
+
+type QuestionAsked = Pick<v2.EventQuestionAsked["properties"], "sessionID"> & {
+  questions: Pick<v2.QuestionInfo, "header" | "question">[];
+};
+
+export const QuestionAsked: z.ZodType<QuestionAsked> = z.object({
+  sessionID: z.string(),
+  questions: z.array(z.object({ header: z.string(), question: z.string() })),
+});
+
+type TodoUpdated = Pick<v2.EventTodoUpdated["properties"], "sessionID"> & {
+  todos: Pick<v2.Todo, "content" | "status">[];
+};
+
+export const TodoUpdated: z.ZodType<TodoUpdated> = z.object({
+  sessionID: z.string(),
+  todos: z.array(z.object({ content: z.string(), status: z.string() })),
+});
+
+// ├─ Notice text ─────────────────────────────────────────────────────────────────────────────────┤
+
+export type Role = v2.Message["role"];
+
+/** Cleans and truncates notice text. */
+export function cleanText(value: string | undefined, max = LIMITS.message) {
+  if (value === undefined) return "";
   return value.replace(/\s+/g, " ").trim().slice(0, max);
 }
 
-export function cleanSessionTitle(value) {
+/** Removes generic or timestamp-based session titles so they do not become notice text. */
+export function cleanSessionTitle(value: string) {
   const title = cleanText(value);
   const normalized = cleanText(title.replace(/^New Session\s+-\s*/i, ""), LIMITS.id);
   return isPlaceholderSessionTitle(normalized) ? "" : normalized;
 }
 
-function isPlaceholderSessionTitle(value) {
+function isPlaceholderSessionTitle(value: string) {
   const title = cleanText(value, LIMITS.id).toLowerCase();
   return !title || title === "new session" || title === "session start info here" || isTimestampTitle(title);
 }
 
-function isTimestampTitle(value) {
+function isTimestampTitle(value: string) {
   return /^\d{4}-\d{2}-\d{2}t\d{2}:\d{2}:\d{2}(?:\.\d+)?z$/i.test(cleanText(value, LIMITS.id));
 }
 
-export function startMessage(state) {
-  const subject = state.lastUserMessage || state.title;
+const NEW_SESSION_START_MESSAGE = "New Session started";
+
+/** Uses the last user message or title for a start notice, with a generic fallback. */
+export function startMessage({ lastUserMessage, title }: { lastUserMessage: string; title: string }) {
+  const subject = lastUserMessage || title;
   return subject ? `Working on "${subject}"` : NEW_SESSION_START_MESSAGE;
 }
 
-function cleanPromptText(value) {
-  return cleanText(String(value || "").replace(/\[Image\s+\d+\]/gi, " "));
+/** Omits image placeholders from user-facing prompt text. */
+export function promptText(value: string) {
+  return cleanText(value.replace(/\[Image\s+\d+\]/gi, " "));
 }
 
-export function messageRole(value) {
-  return cleanText(
-    value?.role || value?.metadata?.role || value?.author?.role || value?.type,
-    LIMITS.status,
-  ).toLowerCase();
+/** Recognizes user text by message role, or by part metadata when the role is unavailable. */
+export function isUserText(part: Text, role: Role | undefined) {
+  if (role) return role === "user";
+  return !part.synthetic && !part.ignored && !part.time && promptText(part.text) !== "";
 }
 
-export function partRole(value) {
-  return cleanText(value?.role || value?.author?.role, LIMITS.status).toLowerCase();
+/** Recognizes assistant text by message role, or by its end time when the role is unavailable. */
+export function isAssistantText(part: Text, role: Role | undefined) {
+  if (!part.id) return false;
+  if (role) return role === "assistant";
+  return Boolean(part.time?.end);
 }
 
-export function lookup(value, paths) {
-  for (const path of paths) {
-    const found = path.split(".").reduce((node, key) => node?.[key], value);
-    if (found) return found;
+/** Builds a subagent notice from an agent name or subtask description. */
+export function agentNotice(part: Subtask | Agent) {
+  if (part.type === "agent") {
+    return { agent_type: cleanText(part.name || "Agent", LIMITS.id), message: cleanText(part.name || "Done") };
   }
-  return "";
-}
-
-export function messageID(value) {
-  return lookup(value, MESSAGE_ID_PATHS);
-}
-
-export function partMessageID(part, props) {
-  return lookup(props, PART_MESSAGE_ID_PATHS) || lookup(part, PART_MESSAGE_ID_PATHS);
-}
-
-export function messageSessionID(value) {
-  return lookup(value, SESSION_ID_PATHS);
-}
-
-export function textFromMessage(value) {
-  if (!value) return "";
-  if (typeof value === "string") return cleanPromptText(value);
-  if (Array.isArray(value)) return cleanPromptText(value.map(textFromMessage).filter(Boolean).join(" "));
-  if (typeof value !== "object") return "";
-
-  for (const key of ["text", "message", "prompt", "input"]) {
-    if (typeof value[key] === "string") {
-      const text = cleanPromptText(value[key]);
-      if (text) return text;
-    }
-  }
-
-  for (const key of ["parts", "content", "messages"]) {
-    const text = textFromMessage(value[key]);
-    if (text) return text;
-  }
-
-  return "";
-}
-
-function isUntimedUserTextPart(part) {
-  return part?.type === "text" && !part.synthetic && !part.ignored && !part.time && textFromMessage(part);
-}
-
-export function isUserText(part, role) {
-  return part.type === "text" && (role === "user" || (!role && isUntimedUserTextPart(part)));
-}
-
-export function isAssistantText(part, role) {
-  return part.id && part.type === "text" && (role === "assistant" || (!role && part?.time?.end));
-}
-
-export function isAgentPart(part) {
-  return part.id && (part.type === "subtask" || part.type === "agent");
-}
-
-export function agentNotice(part) {
   return {
-    agent_type: cleanText(part.agent || part.name || "Agent", LIMITS.id),
-    message: cleanText(part.description || part.prompt || part.name || "Done"),
+    agent_type: cleanText(part.agent || "Agent", LIMITS.id),
+    message: cleanText(part.description || part.prompt || "Done"),
   };
 }

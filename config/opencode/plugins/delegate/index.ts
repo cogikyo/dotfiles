@@ -3,8 +3,13 @@ import { tool } from "@opencode-ai/plugin";
 import { loadDelegateConfig } from "./config.ts";
 import { enforceProviderPolicy } from "./policy.ts";
 import { closeLane, readChildTaskStatus } from "./lane.ts";
-import { type Client, errorMessage } from "./sdk.ts";
+import { errorMessage } from "../shared/error.ts";
+import type { Client } from "../shared/opencode.ts";
 import { prepareTask, runChildTask } from "./session.ts";
+
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Delegate tools                                                                                │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
 const DESCRIPTION = [
   "Launch a specialized subagent task.",
@@ -38,38 +43,9 @@ const CLOSE_DESCRIPTION = [
 
 const id = "delegate-task";
 
-function laneKey(sessionID: string, lane: string) {
-  return `${sessionID}\0${lane}`;
-}
-
-async function closeLanes(input: {
-  client: Client;
-  active: Set<string>;
-  sessionID: string;
-  lanes: string[];
-  signal: AbortSignal;
-}) {
-  const { client, active, sessionID, signal } = input;
-  const lines = await Promise.all(
-    input.lanes.map(async (lane) => {
-      const key = laneKey(sessionID, lane);
-      if (active.has(key)) return `${lane}: skipped (task call in flight)`;
-      active.add(key);
-      try {
-        return `${lane}: ${await closeLane(client, sessionID, lane, signal)}`;
-      } catch (error) {
-        if (signal.aborted) throw error;
-        return `${lane}: failed (${errorMessage(error)})`;
-      } finally {
-        active.delete(key);
-      }
-    }),
-  );
-  return lines.join("\n");
-}
-
 const server: Plugin = async ({ client }) => {
   const config = await loadDelegateConfig();
+  // Serialize calls to the same named lane within this plugin instance.
   const activeLanes = new Set<string>();
 
   return {
@@ -106,7 +82,7 @@ const server: Plugin = async ({ client }) => {
           try {
             const prepared = await prepareTask(client, ctx, args);
             const notes = await enforceProviderPolicy(prepared.model.providerID, config, ctx.abort);
-            return runChildTask({ client, ctx, args: prepared.args, prepared, notes });
+            return runChildTask({ client, ctx, prepared, notes });
           } finally {
             if (key) activeLanes.delete(key);
           }
@@ -146,5 +122,39 @@ const server: Plugin = async ({ client }) => {
   };
 };
 
-/** Server plugin that registers child-session `task`, `task_status`, and `task_close` tools. */
+/** Registers task tools after validating the provider allowlist. */
 export default { id, server } satisfies PluginModule;
+
+// ├─ Lane close lock ─────────────────────────────────────────────────────────────────────────────┤
+
+// Closes named lanes in parallel, reporting per-lane failures unless the call is aborted.
+async function closeLanes(input: {
+  client: Client;
+  active: Set<string>;
+  sessionID: string;
+  lanes: string[];
+  signal: AbortSignal;
+}) {
+  const { client, active, sessionID, signal } = input;
+  const lines = await Promise.all(
+    input.lanes.map(async (lane) => {
+      const key = laneKey(sessionID, lane);
+      if (active.has(key)) return `${lane}: skipped (task call in flight)`;
+      active.add(key);
+      try {
+        return `${lane}: ${await closeLane(client, sessionID, lane, signal)}`;
+      } catch (error) {
+        if (signal.aborted) throw error;
+        return `${lane}: failed (${errorMessage(error)})`;
+      } finally {
+        active.delete(key);
+      }
+    }),
+  );
+  return lines.join("\n");
+}
+
+// NUL separates parent and lane names without key collisions.
+function laneKey(sessionID: string, lane: string) {
+  return `${sessionID}\0${lane}`;
+}

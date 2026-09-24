@@ -9,7 +9,8 @@
     "check": "tsc -p . && oxlint plugins && oxfmt --check plugins"
   },
   "dependencies": {
-    "@opencode-ai/plugin": "1.18.32"
+    "@opencode-ai/plugin": "1.18.32",
+    "zod": "^4.1.8"
   },
   "devDependencies": {
     "@opencode-ai/sdk": "1.18.32",

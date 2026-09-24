@@ -4,21 +4,15 @@ import { tmpdir } from "node:os";
 import { extname, join, normalize } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const MAX_DATA_IMAGE_BYTES = 2 * 1024 * 1024;
-const MAX_VIDEO_SCAN_CHARS = 20_000;
-const MAX_VIDEO_CANDIDATES = 20;
-const MAX_VIDEO_CANDIDATE_LENGTH = 1_024;
-const VIDEO_MIME_BY_EXTENSION = new Map([
-  [".mp4", "video/mp4"],
-  [".mov", "video/quicktime"],
-  [".mkv", "video/x-matroska"],
-  [".webm", "video/webm"],
-  [".avi", "video/x-msvideo"],
-  [".m4v", "video/x-m4v"],
-]);
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Local media files                                                                             │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
+// ├─ Path resolution ─────────────────────────────────────────────────────────────────────────────┤
+
 export type MediaKind = "image" | "video";
 
-/** A provider or persisted message part that refers to local image or video media. */
+/** Image or video file part with a local source path or file/data URL. */
 export type MediaFilePart = {
   id?: string;
   sessionID?: string;
@@ -31,7 +25,7 @@ export type MediaFilePart = {
   source?: { type: string; path?: string; text?: { value: string; start: number; end: number } };
 };
 
-/** Resolves supported media parts to a local file path. */
+/** Resolves local image or allowed video files, caching data images when needed; cache writes can throw. */
 export function localMediaPath(part: MediaFilePart) {
   const kind = part.kind ?? mediaKindForMime(part.mime);
   if (!kind) return undefined;
@@ -46,7 +40,7 @@ export function localMediaPath(part: MediaFilePart) {
   return kind === "image" ? materializeDataImage(part) : undefined;
 }
 
-/** Returns a video path only when it is an existing file under an allowed root. */
+/** Accepts regular video files whose path and realpath remain under an allowed root. */
 export function allowedExistingVideoFile(path: string) {
   try {
     if (!isUnderAllowedVideoRoot(path) || !isExistingFile(path)) return undefined;
@@ -57,7 +51,7 @@ export function allowedExistingVideoFile(path: string) {
   }
 }
 
-/** Returns the roots from which video paths may be resolved. */
+/** Lists allowed video roots: `/home/cullyn/`, `/tmp/`, and an absolute `$XDG_RUNTIME_DIR`. */
 export function allowedVideoRoots() {
   const roots = ["/home/cullyn/", "/tmp/"];
   const runtime = process.env.XDG_RUNTIME_DIR;
@@ -65,7 +59,18 @@ export function allowedVideoRoots() {
   return roots;
 }
 
-/** Extracts supported local video paths from a bounded text scan. */
+/** Checks for a regular file without following symlinks. */
+export function isExistingFile(value: string) {
+  try {
+    return existsSync(value) && lstatSync(value).isFile();
+  } catch {
+    return false;
+  }
+}
+
+// ├─ Video text scan ─────────────────────────────────────────────────────────────────────────────┤
+
+/** Finds allowed existing video paths in user text and returns file parts without session or message IDs. */
 export function videoPathParts(text: string): MediaFilePart[] {
   const candidates = videoPathCandidates(text.slice(0, MAX_VIDEO_SCAN_CHARS));
   const parts: MediaFilePart[] = [];
@@ -89,6 +94,124 @@ export function videoPathParts(text: string): MediaFilePart[] {
 
   return parts;
 }
+
+// ├─ Identity and cache ──────────────────────────────────────────────────────────────────────────┤
+
+/** Hashes a media file's identity and URL, excluding data-URL payloads from the digest input. */
+export function mediaHash(part: MediaFilePart, path: string) {
+  const urlHashInput = isDataURL(part.url) ? "data-image" : part.url;
+  try {
+    const stat = lstatSync(path);
+    const real = stat.isFile() ? realpathSync(path) : path;
+    return sha256(`${real}:${stat.size}:${stat.mtimeMs}:${urlHashInput}`);
+  } catch {
+    return sha256(`${path}:${urlHashInput}`);
+  }
+}
+
+/** Creates and returns the private media cache directory; filesystem errors throw. */
+export function cacheDir() {
+  const dir = join(runtimeDir(), "cache");
+  mkdirSync(dir, { recursive: true, mode: 0o700 });
+  return dir;
+}
+
+/** Locates the media runtime directory under `$XDG_RUNTIME_DIR` or the system temp directory. */
+export function runtimeDir() {
+  const base = process.env.XDG_RUNTIME_DIR || join(tmpdir(), `opencode-${process.getuid?.() ?? "user"}`);
+  return join(base, "opencode", "media-context");
+}
+
+/** Labels a media part's source for its registry row. */
+export function mediaSourceLabel(part: MediaFilePart) {
+  if (sourcePath(part)) return part.source?.type === "clipboard" ? "clipboard" : "local source";
+  if (filePathFromURL(part.url)) return "file URL";
+  if (parseDataImage(part.url)) return "clipboard data image";
+  return "unsupported media source";
+}
+
+// ├─ MIME classification ─────────────────────────────────────────────────────────────────────────┤
+
+export function mediaKindForMime(mime: string | undefined): MediaKind | undefined {
+  if (isImageMime(mime)) return "image";
+  if (isVideoMime(mime)) return "video";
+  return undefined;
+}
+
+export function isImageMime(mime: string | undefined) {
+  return Boolean(mime?.startsWith("image/"));
+}
+
+export function isVideoMime(mime: string | undefined) {
+  return Boolean(mime?.startsWith("video/"));
+}
+
+/** Maps media MIME types to extensions, defaulting unknown videos to `.mp4`. */
+export function extensionForMime(mime: string, kind: MediaKind) {
+  if (mime === "image/jpeg") return ".jpg";
+  if (mime === "image/png") return ".png";
+  if (mime === "image/gif") return ".gif";
+  if (mime === "image/webp") return ".webp";
+  if (mime === "video/mp4") return ".mp4";
+  if (mime === "video/quicktime") return ".mov";
+  if (mime === "video/x-matroska") return ".mkv";
+  if (mime === "video/webm") return ".webm";
+  if (mime === "video/x-msvideo") return ".avi";
+  if (mime === "video/x-m4v") return ".m4v";
+  return kind === "video" ? ".mp4" : "";
+}
+
+export function sha256(value: string | Buffer) {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+// ├─ Resolution helpers ──────────────────────────────────────────────────────────────────────────┤
+
+function sourcePath(part: MediaFilePart) {
+  const path = part.source?.path;
+  return path && isExistingFile(path) ? path : undefined;
+}
+
+function filePathFromURL(value: string) {
+  if (!value.startsWith("file:")) return undefined;
+  try {
+    return fileURLToPath(value);
+  } catch {
+    return undefined;
+  }
+}
+
+function isDataURL(value: string) {
+  return value.slice(0, "data:".length).toLowerCase() === "data:";
+}
+
+function isUnderAllowedVideoRoot(path: string) {
+  if (!path.startsWith("/")) return false;
+  const normalized = normalize(path);
+  return allowedVideoRoots().some((root) => normalized.startsWith(root));
+}
+
+function withTrailingSlash(value: string) {
+  return value.endsWith("/") ? value : `${value}/`;
+}
+
+function hasGlob(path: string) {
+  return /[*?[\]]/.test(path);
+}
+
+// ├─ Video candidates ────────────────────────────────────────────────────────────────────────────┤
+
+const MAX_VIDEO_SCAN_CHARS = 20_000;
+const MAX_VIDEO_CANDIDATES = 20;
+const MAX_VIDEO_CANDIDATE_LENGTH = 1_024;
+const VIDEO_MIME_BY_EXTENSION = new Map([
+  [".mp4", "video/mp4"],
+  [".mov", "video/quicktime"],
+  [".mkv", "video/x-matroska"],
+  [".webm", "video/webm"],
+  [".avi", "video/x-msvideo"],
+  [".m4v", "video/x-m4v"],
+]);
 
 type VideoPathCandidate = { path: string; start: number; end: number };
 
@@ -130,43 +253,13 @@ function videoPathCandidates(text: string): VideoPathCandidate[] {
   return candidates;
 }
 
-/** Reports whether a path names an existing regular file. */
-export function isExistingFile(value: string) {
-  try {
-    return existsSync(value) && lstatSync(value).isFile();
-  } catch {
-    return false;
-  }
-}
-
 function videoMime(path: string) {
   return VIDEO_MIME_BY_EXTENSION.get(extname(path).toLowerCase());
 }
 
-function hasGlob(path: string) {
-  return /[*?[\]]/.test(path);
-}
+// ├─ Data images ─────────────────────────────────────────────────────────────────────────────────┤
 
-function isUnderAllowedVideoRoot(path: string) {
-  if (!path.startsWith("/")) return false;
-  const normalized = normalize(path);
-  return allowedVideoRoots().some((root) => normalized.startsWith(root));
-}
-
-function withTrailingSlash(value: string) {
-  return value.endsWith("/") ? value : `${value}/`;
-}
-
-export function mediaHash(part: MediaFilePart, path: string) {
-  const urlHashInput = isDataURL(part.url) ? "data-image" : part.url;
-  try {
-    const stat = lstatSync(path);
-    const real = stat.isFile() ? realpathSync(path) : path;
-    return sha256(`${real}:${stat.size}:${stat.mtimeMs}:${urlHashInput}`);
-  } catch {
-    return sha256(`${path}:${urlHashInput}`);
-  }
-}
+const MAX_DATA_IMAGE_BYTES = 2 * 1024 * 1024;
 
 function materializeDataImage(part: MediaFilePart) {
   const parsed = parseDataImage(part.url);
@@ -203,72 +296,4 @@ function parseDataImage(value: string) {
 
   const mime = metadata.slice(0, -";base64".length);
   return isImageMime(mime) ? { mime, payload: value.slice(payloadStart) } : undefined;
-}
-
-export function cacheDir() {
-  const dir = join(runtimeDir(), "cache");
-  mkdirSync(dir, { recursive: true, mode: 0o700 });
-  return dir;
-}
-
-export function runtimeDir() {
-  const base = process.env.XDG_RUNTIME_DIR || join(tmpdir(), `opencode-${process.getuid?.() ?? "user"}`);
-  return join(base, "opencode", "media-context");
-}
-
-export function mediaSourceLabel(part: MediaFilePart) {
-  if (sourcePath(part)) return part.source?.type === "clipboard" ? "clipboard" : "local source";
-  if (filePathFromURL(part.url)) return "file URL";
-  if (parseDataImage(part.url)) return "clipboard data image";
-  return "unsupported media source";
-}
-
-function sourcePath(part: MediaFilePart) {
-  const path = part.source?.path;
-  return path && isExistingFile(path) ? path : undefined;
-}
-
-function filePathFromURL(value: string) {
-  if (!value.startsWith("file:")) return undefined;
-  try {
-    return fileURLToPath(value);
-  } catch {
-    return undefined;
-  }
-}
-
-function isDataURL(value: string) {
-  return value.slice(0, "data:".length).toLowerCase() === "data:";
-}
-
-export function mediaKindForMime(mime: string | undefined): MediaKind | undefined {
-  if (isImageMime(mime)) return "image";
-  if (isVideoMime(mime)) return "video";
-  return undefined;
-}
-
-export function isImageMime(mime: string | undefined) {
-  return Boolean(mime?.startsWith("image/"));
-}
-
-export function isVideoMime(mime: string | undefined) {
-  return Boolean(mime?.startsWith("video/"));
-}
-
-export function extensionForMime(mime: string, kind: MediaKind) {
-  if (mime === "image/jpeg") return ".jpg";
-  if (mime === "image/png") return ".png";
-  if (mime === "image/gif") return ".gif";
-  if (mime === "image/webp") return ".webp";
-  if (mime === "video/mp4") return ".mp4";
-  if (mime === "video/quicktime") return ".mov";
-  if (mime === "video/x-matroska") return ".mkv";
-  if (mime === "video/webm") return ".webm";
-  if (mime === "video/x-msvideo") return ".avi";
-  if (mime === "video/x-m4v") return ".m4v";
-  return kind === "video" ? ".mp4" : "";
-}
-
-export function sha256(value: string | Buffer) {
-  return createHash("sha256").update(value).digest("hex");
 }

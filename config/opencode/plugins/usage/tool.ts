@@ -4,7 +4,6 @@ import { renderUsageStatus } from "./status.ts";
 
 const id = "usage-status";
 
-/** Registers the cache-only usage_status server tool. */
 const server: Plugin = async () => ({
   tool: {
     usage_status: tool({
@@ -24,5 +23,5 @@ const server: Plugin = async () => ({
   },
 });
 
-/** Server plugin entrypoint for read-only usage cache status. */
+/** Exposes a permission-gated, cache-only usage report without refreshing providers. */
 export default { id, server } satisfies PluginModule;

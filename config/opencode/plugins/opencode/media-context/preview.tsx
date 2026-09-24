@@ -4,28 +4,22 @@ import { spawn, type ChildProcess } from "node:child_process";
 import { onCleanup, onMount, untrack } from "solid-js";
 import type { MediaRegistryEntry } from "./store";
 
-const KITTY_PREVIEW = "/home/cullyn/dotfiles/config/xplr/bin/kitty-preview.py";
-const KITTY_WAIT_TIMEOUT_MS = 2_000;
-let activePreviewToken = 0;
-let kittyQueue = Promise.resolve();
-const activeDisplays = new Set<ChildProcess>();
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Kitty image overlay                                                                           │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
 export type MediaItem = {
   entry: MediaRegistryEntry;
 };
 
+/** Session image selected for a Kitty overlay. */
 export type PreviewState = {
   sessionID: string;
   item: MediaItem;
   imageID: number;
 };
 
-type TerminalRect = {
-  screenX: number;
-  screenY: number;
-  width: number;
-  height: number;
-};
-
+/** Shows a dismissible image overlay in Kitty, clearing the graphic when it unmounts. */
 export function ImageOverlay(props: { api: TuiPluginApi; preview: PreviewState; onClose: () => void }) {
   return (
     <box
@@ -51,6 +45,16 @@ export function ImageOverlay(props: { api: TuiPluginApi; preview: PreviewState; 
     </box>
   );
 }
+
+// ├─ Overlay draw ────────────────────────────────────────────────────────────────────────────────┤
+
+const KITTY_PREVIEW = "/home/cullyn/dotfiles/config/xplr/bin/kitty-preview.py";
+const KITTY_WAIT_TIMEOUT_MS = 2_000;
+
+// A new preview cancels unfinished draws and clears the previous Kitty image.
+let activePreviewToken = 0;
+let kittyQueue = Promise.resolve();
+const activeDisplays = new Set<ChildProcess>();
 
 function KittyImageLayer(props: { api: TuiPluginApi; preview: PreviewState }) {
   let drawTimer: ReturnType<typeof setTimeout> | undefined;
@@ -114,6 +118,15 @@ function KittyImageLayer(props: { api: TuiPluginApi; preview: PreviewState }) {
 
   return <box width="100%" height="100%" onSizeChange={scheduleDraw} />;
 }
+
+// ├─ Frame and process ───────────────────────────────────────────────────────────────────────────┤
+
+type TerminalRect = {
+  screenX: number;
+  screenY: number;
+  width: number;
+  height: number;
+};
 
 function terminalPreviewFrame(api: TuiPluginApi): TerminalRect | undefined {
   const columns = Math.floor(api.renderer.terminalWidth || api.renderer.width || 0);

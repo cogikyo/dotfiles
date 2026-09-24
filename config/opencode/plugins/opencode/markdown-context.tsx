@@ -32,6 +32,10 @@ import {
 
 const id = "opencode-markdown-context";
 
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ TUI plugin: Markdown reads in the sidebar                                                     │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
 type PartRef = {
   messageID: string;
   partID: string;
@@ -48,9 +52,26 @@ type MarkdownContextItem = {
   refs: PartRef[];
 };
 
-// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
-// │ SIDEBAR AND EVENTS                                                                            │
-// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+const tui: TuiPlugin = async (api) => {
+  api.slots.register({
+    order: 120,
+    slots: {
+      sidebar_content(_ctx, props: { session_id: string }) {
+        return <MarkdownContext api={api} sessionID={props.session_id} />;
+      },
+    },
+  });
+};
+
+const plugin: TuiPluginModule & { id: string } = {
+  id,
+  tui,
+};
+
+/** TUI plugin that lists read Markdown and pinned instructions in the sidebar, with unload and reload actions for eligible context. */
+export default plugin;
+
+// ├─ Sidebar ─────────────────────────────────────────────────────────────────────────────────────┤
 
 function MarkdownContext(props: { api: TuiPluginApi; sessionID: string }) {
   const [revision, setRevision] = createSignal(0);
@@ -111,9 +132,7 @@ function MarkdownContext(props: { api: TuiPluginApi; sessionID: string }) {
   );
 }
 
-// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
-// │ CONTEXT ITEMS                                                                                 │
-// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+// ├─ Context items ───────────────────────────────────────────────────────────────────────────────┤
 
 function markdownContextItems(api: TuiPluginApi, sessionID: string) {
   const pinned = pinnedContextItems(api, sessionID);
@@ -275,6 +294,8 @@ function rowAction(api: TuiPluginApi, sessionID: string, item: MarkdownContextIt
   return undefined;
 }
 
+// ├─ Unload and reload ───────────────────────────────────────────────────────────────────────────┤
+
 async function unloadItem(api: TuiPluginApi, sessionID: string, item: MarkdownContextItem) {
   const ids = new Set(item.refs.map((ref) => `${ref.messageID}:${ref.partID}`));
   const parts: SkillToolPart[] = [];
@@ -321,7 +342,7 @@ async function reloadItem(api: TuiPluginApi, sessionID: string, item: MarkdownCo
     for (const part of api.state.part(message.id)) {
       if (part.type !== "tool" || part.state.status !== "completed") continue;
       if (!ids.has(`${part.messageID}:${part.id}`)) continue;
-      parts.push(withReloadedOutput(part as SkillToolPart, output));
+      parts.push(withReloadedOutput(part, output));
     }
   }
 
@@ -368,6 +389,8 @@ function normalizeFilePath(value: string) {
   if (clean.startsWith("~/")) return path.join(process.env.HOME || "~", clean.slice(2));
   return clean;
 }
+
+// ├─ Row appearance ──────────────────────────────────────────────────────────────────────────────┤
 
 function sourceColor(api: TuiPluginApi, item: MarkdownContextItem) {
   const c = colors(api.theme.current);
@@ -421,24 +444,3 @@ function sourceIcon(api: TuiPluginApi, item: MarkdownContextItem) {
       return icons.markdown;
   }
 }
-
-const tui: TuiPlugin = async (api) => {
-  api.slots.register({
-    order: 120,
-    slots: {
-      sidebar_content(_ctx, props: { session_id: string }) {
-        return <MarkdownContext api={api} sessionID={props.session_id} />;
-      },
-    },
-  });
-};
-
-const plugin: TuiPluginModule & { id: string } = {
-  id,
-  tui,
-};
-
-/** Adds the TUI sidebar_content slot for loaded Markdown context.
- * Tracks message and part updates/removals and session.compacted.
- */
-export default plugin;

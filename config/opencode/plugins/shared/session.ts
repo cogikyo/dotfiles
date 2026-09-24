@@ -1,11 +1,16 @@
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui";
 import type { Message, Model, Provider } from "@opencode-ai/sdk/v2";
 
-/** Maximum context tokens allowed before a delegate child is stopped. */
-export const COMPACTION_LIMIT = 225_000;
-/** Default reserve subtracted from the model input limit when calculating the compaction threshold. */
-export const COMPACTION_RESERVED = 25_000;
-/** Context thresholds used to warn delegate children before the hard limit. */
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Session display                                                                               │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
+// ├─ Limits ──────────────────────────────────────────────────────────────────────────────────────┤
+
+export const COMPACTION_LIMIT = 225_000; //  Hard token stop for delegate children.
+export const COMPACTION_RESERVED = 25_000; // Default token budget reserved below the model input limit.
+
+/** Token thresholds for delegate context warnings and the hard stop. */
 export const CONTEXT_PRESSURE = {
   soft: 100_000,
   medium: 150_000,
@@ -13,7 +18,8 @@ export const CONTEXT_PRESSURE = {
   hard: COMPACTION_LIMIT,
 } as const;
 
-/** Model and workspace details for TUI display, derived from session messages and provider state. */
+// ├─ Readers ─────────────────────────────────────────────────────────────────────────────────────┤
+
 export type SessionMeta = {
   agent: string;
   providerID: string;
@@ -24,7 +30,6 @@ export type SessionMeta = {
   cwd: string;
 };
 
-/** Token usage and percentage for a session display. */
 export type SessionUsage = {
   tokens: number;
   limit?: number;
@@ -35,17 +40,16 @@ export type SessionUsage = {
 type AssistantLike = Extract<Message, { role: "assistant" }>;
 type UserLike = Extract<Message, { role: "user" }>;
 
-/** Returns the TUI session messages in OpenCode's current order. */
 export function sessionMessages(api: TuiPluginApi, sessionID: string) {
   return api.state.session.messages(sessionID);
 }
 
-/** Returns the provider id from the latest user or assistant model message. */
+/** Uses the latest user or assistant message to identify the session's provider. */
 export function sessionProviderID(api: TuiPluginApi, sessionID: string) {
   return providerIDFor(latestModelMessage(sessionMessages(api, sessionID)));
 }
 
-/** Resolves display metadata from the latest model message and TUI state. */
+/** Resolves session labels and cwd from the latest message and TUI state, defaulting the agent to Build. */
 export function sessionMeta(api: TuiPluginApi, sessionID: string): SessionMeta {
   const messages = sessionMessages(api, sessionID);
   const latest = latestModelMessage(messages);
@@ -64,7 +68,7 @@ export function sessionMeta(api: TuiPluginApi, sessionID: string): SessionMeta {
   };
 }
 
-/** Returns token usage, including reasoning and cache tokens, against the model context limit. */
+/** Measures the latest assistant message with output tokens against the model context limit. */
 export function sessionUsage(api: TuiPluginApi, sessionID: string): SessionUsage {
   const messages = sessionMessages(api, sessionID);
   const meta = sessionMeta(api, sessionID);
@@ -76,7 +80,7 @@ export function sessionUsage(api: TuiPluginApi, sessionID: string): SessionUsage
   return { tokens, limit, percent, colorPercent: percent };
 }
 
-/** Returns context usage against the effective compaction limit. */
+/** Measures the latest assistant message with output tokens against the compaction limit. */
 export function sessionContextUsage(api: TuiPluginApi, sessionID: string): SessionUsage {
   const messages = sessionMessages(api, sessionID);
   const meta = sessionMeta(api, sessionID);
@@ -88,17 +92,14 @@ export function sessionContextUsage(api: TuiPluginApi, sessionID: string): Sessi
   return { tokens, limit, percent, colorPercent: percent };
 }
 
-/** Returns the model input cap from the hard context limit and reserved budget. */
+// ├─ Threshold ───────────────────────────────────────────────────────────────────────────────────┤
+
+/** Adds the reserved token budget to the delegate hard stop. */
 export function compactionInputCap(reserved = COMPACTION_RESERVED) {
   return COMPACTION_LIMIT + reserved;
 }
 
-function compactionReserved(api: TuiPluginApi) {
-  const reserved = api.state.config.compaction?.reserved;
-  return typeof reserved === "number" && reserved >= 0 ? reserved : COMPACTION_RESERVED;
-}
-
-/** Computes the context threshold before compaction, when model limits are available. */
+/** Finds the pre-compaction input threshold from the model limits, if available. */
 export function contextCompactionLimit(model: Pick<Model, "limit"> | undefined, reserved: number) {
   if (!model || !model.limit.context) return undefined;
   const context = model.limit.context;
@@ -106,6 +107,31 @@ export function contextCompactionLimit(model: Pick<Model, "limit"> | undefined, 
   if (typeof input === "number" && input > 0) return Math.max(0, input - reserved);
   const output = Math.min(model.limit.output, 32_000) || 32_000;
   return Math.max(0, context - output);
+}
+
+// ├─ Formatting ──────────────────────────────────────────────────────────────────────────────────┤
+
+/** Abbreviates paths inside HOME with `~`. */
+export function shortDir(dir: string) {
+  if (!dir) return "";
+  const home = process.env.HOME;
+  if (home && dir === home) return "~";
+  if (home && dir.startsWith(home + "/")) return "~/" + dir.slice(home.length + 1);
+  return dir;
+}
+
+/** Formats token counts with K or M suffixes. */
+export function formatTokens(tokens: number) {
+  if (tokens >= 1_000_000) return `${trim(tokens / 1_000_000)}M`;
+  if (tokens >= 1_000) return `${trim(tokens / 1_000)}K`;
+  return String(tokens);
+}
+
+// ├─ Lookup ──────────────────────────────────────────────────────────────────────────────────────┤
+
+function compactionReserved(api: TuiPluginApi) {
+  const reserved = api.state.config.compaction?.reserved;
+  return typeof reserved === "number" && reserved >= 0 ? reserved : COMPACTION_RESERVED;
 }
 
 function latestModelMessage(messages: ReadonlyArray<Message>): (AssistantLike | UserLike) | undefined {
@@ -180,22 +206,6 @@ function modelLabel(modelID: string) {
 function title(value: string) {
   if (!value) return "";
   return value.charAt(0).toUpperCase() + value.slice(1);
-}
-
-/** Replaces a home-directory prefix with `~` for display. */
-export function shortDir(dir: string) {
-  if (!dir) return "";
-  const home = process.env.HOME;
-  if (home && dir === home) return "~";
-  if (home && dir.startsWith(home + "/")) return "~/" + dir.slice(home.length + 1);
-  return dir;
-}
-
-/** Formats a token count with a compact K or M suffix. */
-export function formatTokens(tokens: number) {
-  if (tokens >= 1_000_000) return `${trim(tokens / 1_000_000)}M`;
-  if (tokens >= 1_000) return `${trim(tokens / 1_000)}K`;
-  return String(tokens);
 }
 
 function trim(value: number) {

@@ -1,14 +1,17 @@
 import type { Plugin, PluginModule } from "@opencode-ai/plugin";
 import { open, stat } from "node:fs/promises";
 import path from "node:path";
-import { record } from "../shared/record.ts";
+import { z } from "zod";
+import { session as readSession, type Client, type Session } from "../shared/opencode.ts";
+
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Server plugin: reject rm and read-only writes                                                 │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
 const id = "opencode-tool-guard";
 const maxPatchBytes = 1024 * 1024;
 const probeBytes = 8192;
 
-type Client = Parameters<Plugin>[0]["client"];
-type Session = Record<string, unknown>;
 type PatchOperation = "Delete" | "Update";
 
 type PatchTarget = {
@@ -16,67 +19,49 @@ type PatchTarget = {
   path: string;
 };
 
-const reviewFileMutation =
-  /(?:^|[\n;&|()])\s*(?:(?:sudo|command)\s+)*(?:\S*\/)?(?:cp|dd|ed|emacs|ex|install|ln|mkdir|mv|nano|patch|rmdir|rsync|tee|touch|trash|trash-put|truncate|unlink|vi|vim|wget)(?:\s|$)/u;
-const reviewCurlOutput =
-  /(?:^|[\n;&|()])\s*(?:(?:sudo|command)\s+)*(?:\S*\/)?curl(?:\s+[^\n;&|()]*)?\s(?:-o|-O|--output|--output-dir|--remote-name)(?:[=\s]|$)/u;
-
-const reviewGitMutators = new Set([
-  "add",
-  "am",
-  "apply",
-  "bisect",
-  "checkout",
-  "cherry-pick",
-  "clean",
-  "clone",
-  "commit",
-  "fetch",
-  "gc",
-  "init",
-  "merge",
-  "mv",
-  "notes",
-  "pull",
-  "push",
-  "rebase",
-  "reset",
-  "restore",
-  "revert",
-  "rm",
-  "stash",
-  "switch",
-  "update-index",
-  "update-ref",
-]);
+const text = z.string().optional().catch(undefined);
+const Args = z.object({ command: text, patchText: text }).catch({});
 
 const server: Plugin = async ({ client, directory, worktree }) => {
   const fallbackDirectory = worktree || directory;
 
   return {
-    // Throwing here rejects tool execution before OpenCode runs the requested tool.
     "tool.execute.before": async (input, output) => {
       if (input.tool === "bash") {
-        await guardBash(client, input.sessionID, string(object(output.args)?.command));
+        await guardBash(client, input.sessionID, Args.parse(output.args).command);
         return;
       }
 
       if (input.tool !== "apply_patch" && input.tool !== "edit" && input.tool !== "write") return;
 
-      const session = await readSession(client, input.sessionID);
+      const session = await readSession(client, input.sessionID, {
+        label: `tool guard read session ${input.sessionID}`,
+      });
       if (isReadOnlySession(session)) {
         throw new Error("read-only sessions cannot write files");
       }
       if (input.tool !== "apply_patch") return;
 
-      await guardPatch(string(session.directory) || fallbackDirectory, string(object(output.args)?.patchText));
+      await guardPatch(session.directory || fallbackDirectory, Args.parse(output.args).patchText);
     },
   };
 };
 
-// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
-// │ PATCH TARGET VALIDATION                                                                       │
-// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+/** Server plugin that blocks `rm` in all sessions and rejects writes by read-only agents, including oversized or binary text patches. */
+export default { id, server } satisfies PluginModule;
+
+function isReadOnlySession({ agent }: Session) {
+  return (
+    agent === "review" ||
+    agent?.startsWith("review/") === true ||
+    agent === "scout" ||
+    agent?.startsWith("scout/") === true ||
+    agent === "verify/source" ||
+    agent === "verify/web"
+  );
+}
+
+// ├─ Patch targets ───────────────────────────────────────────────────────────────────────────────┤
 
 async function guardPatch(cwd: string, patchText: string | undefined) {
   if (!patchText) return;
@@ -119,6 +104,7 @@ async function guardPatchTarget(cwd: string, target: PatchTarget) {
   }
 }
 
+// Ignore a partial trailing UTF-8 character when probing a larger file.
 async function isBinary(filePath: string, size: number) {
   if (size === 0) return false;
 
@@ -181,9 +167,45 @@ function patchRejection(target: PatchTarget, filePath: string, reason: string) {
   return `apply_patch refused to ${target.operation.toLowerCase()} ${filePath}: file ${reason}; ${action}`;
 }
 
-// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
-// │ SHELL MUTATION POLICY                                                                         │
-// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+function formatBytes(bytes: number) {
+  return `${Math.ceil(bytes / 1024)} KiB`;
+}
+
+// ├─ Shell policy ────────────────────────────────────────────────────────────────────────────────┤
+
+const reviewFileMutation =
+  /(?:^|[\n;&|()])\s*(?:(?:sudo|command)\s+)*(?:\S*\/)?(?:cp|dd|ed|emacs|ex|install|ln|mkdir|mv|nano|patch|rmdir|rsync|tee|touch|trash|trash-put|truncate|unlink|vi|vim|wget)(?:\s|$)/u;
+const reviewCurlOutput =
+  /(?:^|[\n;&|()])\s*(?:(?:sudo|command)\s+)*(?:\S*\/)?curl(?:\s+[^\n;&|()]*)?\s(?:-o|-O|--output|--output-dir|--remote-name)(?:[=\s]|$)/u;
+
+const reviewGitMutators = new Set([
+  "add",
+  "am",
+  "apply",
+  "bisect",
+  "checkout",
+  "cherry-pick",
+  "clean",
+  "clone",
+  "commit",
+  "fetch",
+  "gc",
+  "init",
+  "merge",
+  "mv",
+  "notes",
+  "pull",
+  "push",
+  "rebase",
+  "reset",
+  "restore",
+  "revert",
+  "rm",
+  "stash",
+  "switch",
+  "update-index",
+  "update-ref",
+]);
 
 async function guardBash(client: Client, sessionID: string, command: string | undefined) {
   if (!command) return;
@@ -193,7 +215,7 @@ async function guardBash(client: Client, sessionID: string, command: string | un
   }
   const reviewBlock = reviewMutation(command);
   if (!reviewBlock) return;
-  const session = await readSession(client, sessionID);
+  const session = await readSession(client, sessionID, { label: `tool guard read session ${sessionID}` });
   if (isReadOnlySession(session)) {
     throw new Error(`read-only sessions cannot mutate; ${reviewBlock}`);
   }
@@ -242,19 +264,6 @@ function invokesInPlaceEdit(words: string[]) {
   });
 }
 
-// File tools and detected Bash mutations use these read-only agents; rm is blocked for every session.
-function isReadOnlySession(session: Session) {
-  const agent = sessionAgent(session);
-  return (
-    agent === "review" ||
-    agent?.startsWith("review/") === true ||
-    agent === "scout" ||
-    agent?.startsWith("scout/") === true ||
-    agent === "verify/source" ||
-    agent === "verify/web"
-  );
-}
-
 function hasOutputRedirection(command: string) {
   let quote = "";
   let escaped = false;
@@ -279,6 +288,8 @@ function hasOutputRedirection(command: string) {
   }
   return false;
 }
+
+// ├─ Git commands ────────────────────────────────────────────────────────────────────────────────┤
 
 function invokesReviewGitMutation(words: string[]) {
   return words.some((word, index) => {
@@ -380,6 +391,8 @@ function mutatesGitTag(args: string[]) {
   return true;
 }
 
+// ├─ Shell words ─────────────────────────────────────────────────────────────────────────────────┤
+
 function nestedShellCommands(words: string[]) {
   return words.filter((_, index) => {
     if (index < 2 || !/^-\w*c\w*$/u.test(words[index - 1])) return false;
@@ -430,31 +443,3 @@ function shellWords(command: string) {
 function executable(word: string) {
   return path.basename(word);
 }
-
-async function readSession(client: Client, sessionID: string): Promise<Session> {
-  const response = await client.session.get({ path: { id: sessionID } });
-  const envelope = object(response);
-  if (envelope && "error" in envelope && envelope.error !== undefined) {
-    throw new Error(`tool guard could not read session ${sessionID}`);
-  }
-  return object(envelope?.data) || envelope || {};
-}
-
-function sessionAgent(session: Session) {
-  return string(session.agent) || string(object(session.agent)?.name);
-}
-
-function formatBytes(bytes: number) {
-  return `${Math.ceil(bytes / 1024)} KiB`;
-}
-
-function object(value: unknown): Record<string, unknown> | undefined {
-  return record(value);
-}
-
-function string(value: unknown) {
-  return typeof value === "string" && value !== "" ? value : undefined;
-}
-
-/** Uses the server tool.execute.before hook to reject rm and selected mutations for read-only agents. */
-export default { id, server } satisfies PluginModule;

@@ -1,11 +1,10 @@
-/** Display name and cache freshness limit for a usage provider. */
 export type UsageProviderSpec = {
   id: string;
   label: string;
   staleAfterMS: number;
 };
 
-/** Provider IDs, labels, and stale thresholds used by adapters and status output. */
+/** Shared provider identities and cache freshness limits. */
 export const usageProviders = {
   openai: {
     id: "openai",
@@ -34,10 +33,9 @@ export const usageProviders = {
   },
 } as const satisfies Record<string, UsageProviderSpec>;
 
-/** Provider specifications in declaration order. */
+/** Providers in status-output order; sidebar order comes from `usageAdapters`. */
 export const usageProviderList = Object.values(usageProviders);
 
-/** Looks up a provider specification by its ID. */
 export function usageProvider(providerID: string) {
   return usageProviderList.find((provider) => provider.id === providerID);
 }

@@ -47,7 +47,7 @@ An attended Git boundary is a gate owned by Collab, with its own approval.
 ## Examples
 
 These are shape examples, not approved work.
-Routes: `scout/*` uses `[xhigh • openai/gpt-6-luna-fast]`, builders and `verify/*` use `[high • xai/grok-4.7]`, and `review/*` uses `[high • openai/gpt-6-sol]`.
+Routes: `scout/*` uses `[xhigh • openai/gpt-6-luna-fast]`, builders and `verify/*` use `[high • xai/grok-4.6]`, and `review/*` uses `[high • openai/gpt-6-sol]`.
 
 ### Parallel fan-out and required join
 

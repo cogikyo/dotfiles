@@ -1,89 +1,76 @@
 import type { ToolContext } from "@opencode-ai/plugin";
-import { record } from "../shared/record.ts";
-import type { Execution, Rule } from "./permission.ts";
-import { type Client, string, unwrap } from "./sdk.ts";
+import { type Agent, agents, type Client, message, providers, type Rule } from "../shared/opencode.ts";
+import type { Execution } from "./permission.ts";
 
-/** Arguments accepted by the delegate `task` tool. */
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Task arguments                                                                                │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
+/** Inputs to the delegate `task` tool before defaults and inheritance are resolved. */
 export type TaskArgs = {
   description: string;
   prompt: string;
   subagent_type: string;
+  /** `provider/model-id`; omitted means use the agent pin or parent model. */
   model?: string;
+  /** Omitted means inherit effort unless the model is explicit. */
   effort?: string;
+  /** Named reusable child; omitted means one-shot. */
   lane?: string;
+  /** Summarizes an idle lane before its next prompt. */
   compact?: boolean;
+  /** Defaults to true; an unattended parent cannot have an attended child. */
   unattended?: boolean;
 };
 
-/** OpenCode provider and model identifiers used to select a child model. */
 export type ModelRef = {
   providerID: string;
   modelID: string;
 };
 
-export type AgentInfo = {
-  name: string;
-  permission?: unknown;
-  model?: ModelRef;
-  variant?: string;
-};
-
+/** Resolved agent, model, permissions, and execution mode for one task call. */
 export type PreparedTask = {
   args: TaskArgs;
-  agent: AgentInfo;
+  agent: Agent;
   model: ModelRef;
   variant?: string;
   permission: Rule[];
   execution: Execution;
 };
 
-const KNOWN_EFFORTS = new Set(["default", "minimal", "low", "medium", "high", "xhigh"]);
+// ├─ Normalization ───────────────────────────────────────────────────────────────────────────────┤
 
-export function parseModel(value: string): ModelRef {
-  const clean = value.trim();
-  const slash = clean.indexOf("/");
-  if (slash <= 0 || slash === clean.length - 1) {
-    throw new Error(`delegate model must be provider/model-id, got ${JSON.stringify(value)}`);
+/** Trims display and selector fields and rejects blank values or multiline lane names. */
+export function taskArgs(input: TaskArgs): TaskArgs {
+  const { description, prompt, subagent_type, model, effort, lane } = input;
+  for (const [name, value] of Object.entries({ description, prompt, subagent_type })) {
+    if (!value.trim()) throw new Error(`delegate task argument ${name} must not be empty`);
   }
-  return { providerID: clean.slice(0, slash), modelID: clean.slice(slash + 1) };
-}
-
-export function taskArgs(value: unknown): TaskArgs {
-  const root = record(value);
-  if (!root) throw new Error("delegate task arguments must be an object");
-
-  const args: TaskArgs = {
-    description: requiredString(root, "description").trim(),
-    prompt: requiredString(root, "prompt"),
-    subagent_type: requiredString(root, "subagent_type").trim(),
-  };
-  const model = optionalString(root, "model");
-  const effort = optionalString(root, "effort");
-  const lane = optionalString(root, "lane");
+  for (const [name, value] of Object.entries({ model, effort, lane })) {
+    if (value !== undefined && !value.trim()) {
+      throw new Error(`delegate task argument ${name} must not be empty when provided`);
+    }
+  }
   if (lane && /[\r\n]/u.test(lane)) throw new Error("delegate lane name must be one line");
-  const compact = optionalBoolean(root, "compact");
-  const unattended = optionalBoolean(root, "unattended");
-  if (model !== undefined) args.model = model;
-  if (effort !== undefined) args.effort = effort;
-  if (lane !== undefined) args.lane = lane.trim();
-  if (compact !== undefined) args.compact = compact;
-  if (unattended !== undefined) args.unattended = unattended;
-  return args;
+  return {
+    ...input,
+    description: description.trim(),
+    subagent_type: subagent_type.trim(),
+    effort: effort?.trim(),
+    lane: lane?.trim(),
+  };
 }
 
-export function applyDisplayArgs(input: unknown, args: TaskArgs, effort: string | undefined) {
-  const base = stripEffortSuffix(args.description, effort);
-  const description = effort ? `${base} · ${effort}` : base;
-  args.description = description;
-  if (effort) args.effort = effort;
-
-  const root = record(input);
-  if (!root) return;
-  root.description = description;
-  root.subagent_type = args.subagent_type;
-  if (effort) root.effort = effort;
-  if (args.unattended !== undefined) root.unattended = args.unattended;
+/** Keeps the tool input and prepared display label in sync without stacking effort suffixes. */
+export function applyDisplayArgs(input: TaskArgs, args: TaskArgs) {
+  const base = stripEffortSuffix(args.description, args.effort);
+  args.description = args.effort ? `${base} · ${args.effort}` : base;
+  input.description = args.description;
+  input.subagent_type = args.subagent_type;
+  if (args.effort) input.effort = args.effort;
 }
+
+const KNOWN_EFFORTS = new Set(["default", "minimal", "low", "medium", "high", "xhigh"]);
 
 function stripEffortSuffix(description: string, effort: string | undefined) {
   const efforts = new Set(effort ? [...KNOWN_EFFORTS, effort] : KNOWN_EFFORTS);
@@ -97,117 +84,68 @@ function stripEffortSuffix(description: string, effort: string | undefined) {
   }
 }
 
-export function parseEffort(args: TaskArgs) {
-  if (args.effort === undefined) return undefined;
-  const clean = args.effort?.trim();
-  if (!clean) throw new Error("delegate effort must not be empty when provided");
-  return clean;
-}
+// ├─ Model and agent resolution ──────────────────────────────────────────────────────────────────┤
 
-function requiredString(root: Record<string, unknown>, name: keyof TaskArgs) {
-  if (!Object.hasOwn(root, name) || root[name] === undefined) {
-    throw new Error(`delegate task missing required argument: ${name}`);
+/** Parses `provider/model-id`, allowing slashes inside the model ID. */
+export function parseModel(value: string): ModelRef {
+  const clean = value.trim();
+  const slash = clean.indexOf("/");
+  if (slash <= 0 || slash === clean.length - 1) {
+    throw new Error(`delegate model must be provider/model-id, got ${JSON.stringify(value)}`);
   }
-  if (typeof root[name] !== "string") throw new Error(`delegate task argument ${name} must be a string`);
-  if (!root[name].trim()) throw new Error(`delegate task argument ${name} must not be empty`);
-  return root[name];
+  return { providerID: clean.slice(0, slash), modelID: clean.slice(slash + 1) };
 }
 
-function optionalString(root: Record<string, unknown>, name: keyof TaskArgs) {
-  if (!Object.hasOwn(root, name) || root[name] === undefined) return undefined;
-  if (typeof root[name] !== "string") throw new Error(`delegate task argument ${name} must be a string`);
-  if (!root[name].trim()) throw new Error(`delegate task argument ${name} must not be empty when provided`);
-  return root[name];
-}
-
-function optionalBoolean(root: Record<string, unknown>, name: "compact" | "unattended") {
-  if (!Object.hasOwn(root, name) || root[name] === undefined) return undefined;
-  if (typeof root[name] !== "boolean") throw new Error(`delegate task argument ${name} must be a boolean`);
-  return root[name];
-}
-
+/** Reads the parent assistant's model and effort for inheritance, omitting the `default` variant. */
 export async function readCurrentAssistantMessage(client: Client, ctx: ToolContext) {
-  const message = await unwrap<Record<string, unknown>>(
-    client.session.message({ path: { id: ctx.sessionID, messageID: ctx.messageID } }),
-    `read parent message ${ctx.messageID}`,
-  );
-  const info = record(message.info);
-  if (!info || info.role !== "assistant") {
+  const { info } = await message(client, ctx.sessionID, ctx.messageID, {
+    label: `delegate read parent message ${ctx.messageID}`,
+  });
+  if (info.role !== "assistant") {
     throw new Error("delegate cannot inherit model because the current message is not an assistant message");
   }
-
-  const providerID = string(info.providerID) ?? string(record(info.model)?.providerID);
-  const modelID = string(info.modelID) ?? string(record(info.model)?.modelID);
+  const { providerID, modelID, variant } = info;
   if (!providerID || !modelID) throw new Error("delegate cannot inherit model because parent message lacks model IDs");
-
-  const variant = string(info.variant) ?? string(record(info.model)?.variant);
   return { model: { providerID, modelID }, variant: variant === "default" ? undefined : variant };
 }
 
-export async function readAgent(client: Client, name: string): Promise<AgentInfo> {
-  const agents = await unwrap<unknown[]>(client.app.agents({}), "list agents");
-  const agent = agents.map(record).find((item) => item?.name === name);
-  if (!agent) {
-    const names = agents
-      .map(record)
-      .map((item) => string(item?.name))
-      .filter(Boolean)
-      .join(", ");
-    throw new Error(
-      `delegate task argument subagent_type must be a known agent, got ${JSON.stringify(name)}. Known agents: ${names || "none"}`,
-    );
-  }
-
-  return {
-    name,
-    permission: agent.permission,
-    model: modelRef(agent.model),
-    variant: string(agent.variant),
-  };
+/** Resolves an agent by name and lists available names when it is unknown. */
+export async function readAgent(client: Client, name: string): Promise<Agent> {
+  const known = await agents(client, { label: "delegate list agents" });
+  const agent = known.find((item) => item.name === name);
+  if (agent) return agent;
+  const names = known.map((item) => item.name).join(", ");
+  throw new Error(
+    `delegate task argument subagent_type must be a known agent, got ${JSON.stringify(name)}. Known agents: ${names || "none"}`,
+  );
 }
 
+/** Checks a requested effort against the target model's variants; an omitted effort needs no check. */
 export async function validateVariant(client: Client, model: ModelRef, variant: string | undefined) {
   if (!variant) return;
-  const modelInfo = await readProviderModel(client, model);
-  const variants = record(modelInfo.variants) ?? {};
-  const valid = Object.keys(variants);
+  const variants = (await readProviderModel(client, model)).variants ?? {};
   if (Object.hasOwn(variants, variant)) return;
+  const valid = Object.keys(variants);
   const suffix = valid.length ? valid.join(", ") : "none";
   throw new Error(
     `Unknown effort ${JSON.stringify(variant)} for ${model.providerID}/${model.modelID}. Valid efforts: ${suffix}`,
   );
 }
 
-async function readProviderModel(client: Client, model: ModelRef): Promise<Record<string, unknown>> {
-  const response = await unwrap<Record<string, unknown>>(client.config.providers({}), "list providers");
-  const providers = Array.isArray(response.providers) ? response.providers : [];
-  const provider = providers.map(record).find((item) => item?.id === model.providerID);
+async function readProviderModel(client: Client, model: ModelRef) {
+  const known = await providers(client, { label: "delegate list providers" });
+  const provider = known.find((item) => item.id === model.providerID);
   if (!provider) {
-    const names = providers
-      .map(record)
-      .map((item) => string(item?.id))
-      .filter(Boolean)
-      .join(", ");
+    const names = known.map((item) => item.id).join(", ");
     throw new Error(`Unknown provider ${model.providerID}. Available providers: ${names}`);
   }
 
-  const models = record(provider.models) ?? {};
-  const direct = record(models[model.modelID]);
-  if (direct) return direct;
-
-  const byID = Object.values(models)
-    .map(record)
-    .find((item) => item?.id === model.modelID || record(item?.api)?.id === model.modelID);
-  if (byID) return byID;
+  const models = provider.models;
+  const match = Object.hasOwn(models, model.modelID)
+    ? models[model.modelID]
+    : Object.values(models).find((item) => item.id === model.modelID || item.api.id === model.modelID);
+  if (match) return match;
 
   const names = Object.keys(models).slice(0, 20).join(", ");
   throw new Error(`Unknown model ${model.providerID}/${model.modelID}. Known model keys include: ${names}`);
-}
-
-function modelRef(value: unknown): ModelRef | undefined {
-  if (typeof value === "string" && value.trim()) return parseModel(value);
-  const root = record(value);
-  const providerID = string(root?.providerID);
-  const modelID = string(root?.modelID);
-  return providerID && modelID ? { providerID, modelID } : undefined;
 }

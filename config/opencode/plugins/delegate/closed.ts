@@ -1,26 +1,15 @@
-import { record } from "../shared/record.ts";
-import { deny, type Rule } from "./permission.ts";
+import type { Rule } from "../shared/opencode.ts";
+import type { Delegate } from "./metadata.ts";
+import { deny } from "./permission.ts";
 
-export type Closer = "operator" | "collab";
-export type Closed = { by: Closer; at: number };
+export type Closer = NonNullable<Delegate["closed"]>["by"];
 
-type Marked = { metadata?: unknown };
+type Closable = { metadata?: Record<string, unknown>; delegate: Delegate };
 
-export function sessionClosed(session: Marked): Closed | undefined {
-  const closed = record(record(record(session.metadata)?.delegate)?.closed);
-  const by = closed?.by;
-  const at = closed?.at;
-  if (by !== "operator" && by !== "collab") return undefined;
-  if (typeof at !== "number" || !Number.isFinite(at)) return undefined;
-  return { by, at };
-}
-
-export function closeBody(session: Marked, by: Closer): { metadata: Record<string, unknown>; permission: Rule[] } {
-  const metadata = record(session.metadata) ?? {};
-  const delegate = record(metadata.delegate) ?? {};
-  const closed: Closed = { by, at: Date.now() };
+/** Builds a closed-lane update that preserves metadata and denies all child permissions. */
+export function closeBody(session: Closable, by: Closer): { metadata: Record<string, unknown>; permission: Rule[] } {
   return {
-    metadata: { ...metadata, delegate: { ...delegate, closed } },
+    metadata: { ...session.metadata, delegate: { ...session.delegate, closed: { by, at: Date.now() } } },
     permission: [deny("*")],
   };
 }

@@ -357,13 +357,13 @@ Most models start at `high` for every role until evidence says otherwise.
 - Weakness:
 - Special notes:
 
-### `xai/grok-4.7`
+### `xai/grok-4.6`
 
 - Default reasoning: `high`
   - low for:
   - medium for:
   - xhigh for:
-- Fallback: `cursor/grok-4.7-fast` (omit effort), then `opencode-go/grok-4.7`
+- Fallback: `cursor/grok-4.6-fast` (omit effort), then `opencode-go/grok-4.6`
 - Roles: `build/general`, `build/patch`, `build/scribe`, `verify/*`
 - Weakness: assumes too early and can be too terse.
 - Special notes:
@@ -383,7 +383,7 @@ Most models start at `high` for every role until evidence says otherwise.
 
 ### Fallback providers
 
-- `cursor/*`: C and O are separate pools; only `grok-4.7-fast` and `claude-opus-5-5-fast` are routed, and Fable is admin-blocked.
+- `cursor/*`: C and O are separate pools; only `grok-4.6-fast` and `claude-opus-5-5-fast` are routed, and Fable is admin-blocked.
   - Use Cursor as overflow when direct headroom runs low, or when the user wants speed and is willing to spend Cursor usage.
 - `opencode-go/*`: `glm-5.3` at `high`.
 

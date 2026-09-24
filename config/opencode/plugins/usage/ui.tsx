@@ -6,17 +6,6 @@ import { usageColor } from "../shared/colors.ts";
 import type { ProviderUsage } from "./types.ts";
 import type { TuiThemeCurrent } from "@opencode-ai/plugin/tui";
 
-// Missing noteKind is red unless the note marks cached windows as stale.
-function noteColor(theme: TuiThemeCurrent, provider: ProviderUsage) {
-  if (provider.noteKind === "info") return theme.textMuted;
-  if (provider.noteKind === "warn") return theme.warning;
-  if (provider.noteKind === "error") return theme.error;
-  if (provider.windows.length > 0 && provider.note?.startsWith("stale ")) {
-    return theme.textMuted;
-  }
-  return theme.error;
-}
-
 const BAR_WIDTH = 10;
 const DURATION_WIDTH = 7;
 const EXACT_WIDTH = 10;
@@ -24,6 +13,123 @@ const PERCENT_WIDTH = 3;
 const DASH = "--";
 const PLACEHOLDER_LABELS = ["H", "W"];
 const BOLD = createTextAttributes({ bold: true });
+
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Usage dashboard                                                                               │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
+// ├─ Dashboard ───────────────────────────────────────────────────────────────────────────────────┤
+
+/** Displays provider headroom and reset times; clicking a provider requests a refresh. */
+export function UsageDashboard(props: {
+  api: TuiPluginApi;
+  providers: ProviderUsage[];
+  activeProviderID: string;
+  refreshingProviderIDs?: Set<string>;
+  onRefresh?: (providerID: string) => void;
+}) {
+  const theme = () => props.api.theme.current;
+  return (
+    <box flexDirection="column" gap={0} paddingLeft={1}>
+      <For each={props.providers}>
+        {(provider) => {
+          const refreshing = () => props.refreshingProviderIDs?.has(provider.id) ?? false;
+          const labelColor = () =>
+            refreshing() || provider.id === props.activeProviderID ? theme().primary : theme().text;
+          return (
+            <box flexDirection="column" gap={0}>
+              <box flexDirection="row" gap={0} onMouseDown={() => props.onRefresh?.(provider.id)}>
+                <text fg={labelColor()} attributes={BOLD}>
+                  {provider.label}
+                </text>
+                <Show when={provider.note}>
+                  <text fg={noteColor(theme(), provider)}>{` ${provider.note}`}</text>
+                </Show>
+                <Show when={refreshing() && !provider.note}>
+                  <text fg={theme().primary}>{` refreshing`}</text>
+                </Show>
+              </box>
+              <Show
+                when={provider.windows.length > 0}
+                fallback={
+                  <For each={provider.placeholders ?? PLACEHOLDER_LABELS}>
+                    {(label) => (
+                      <WindowRow
+                        theme={theme()}
+                        label={label}
+                        percent={DASH.padEnd(PERCENT_WIDTH, " ")}
+                        percentColor={theme().textMuted}
+                        bar={"░".repeat(BAR_WIDTH)}
+                        barColor={theme().textMuted}
+                        duration={DASH}
+                        exact={DASH}
+                      />
+                    )}
+                  </For>
+                }
+              >
+                <For each={provider.windows}>
+                  {(window) => {
+                    const reset = window.resetAt ? formatReset(window.resetAt) : undefined;
+                    const pct = window.usedPercent;
+                    return (
+                      <WindowRow
+                        theme={theme()}
+                        label={window.label}
+                        percent={pct !== undefined ? formatPercent(pct) : DASH.padEnd(PERCENT_WIDTH, " ")}
+                        percentColor={pct !== undefined ? usageColor(theme(), pct) : theme().textMuted}
+                        bar={pct !== undefined ? usageBar(pct) : "░".repeat(BAR_WIDTH)}
+                        barColor={pct !== undefined ? usageColor(theme(), pct) : theme().textMuted}
+                        marker={paceMarker(window.label, window.resetAt)}
+                        markerColor={paceIndicatorColor(theme(), pct, window.label, window.resetAt)}
+                        duration={reset?.duration ?? ""}
+                        exact={reset?.exact ?? ""}
+                      />
+                    );
+                  }}
+                </For>
+              </Show>
+            </box>
+          );
+        }}
+      </For>
+    </box>
+  );
+}
+
+// ├─ Window row ──────────────────────────────────────────────────────────────────────────────────┤
+
+function WindowRow(props: {
+  theme: TuiThemeCurrent;
+  label: string;
+  percent: string;
+  percentColor: RGBA;
+  bar: string;
+  barColor: RGBA;
+  marker?: number;
+  markerColor?: RGBA;
+  duration: string;
+  exact: string;
+}) {
+  return (
+    <box flexDirection="row" gap={0}>
+      <text fg={props.theme.textMuted}>{props.label.padEnd(2, " ")}</text>
+      <text fg={props.percentColor}>{`${props.percent} `}</text>
+      <Show when={props.marker !== undefined} fallback={<text fg={props.barColor}>{`${props.bar} `}</text>}>
+        <text>
+          <span {...{ style: { fg: props.barColor } }}>{props.bar.slice(0, props.marker)}</span>
+          <span {...{ style: { fg: props.markerColor ?? props.theme.textMuted } }}>┃</span>
+          <span {...{ style: { fg: props.barColor } }}>{`${props.bar.slice((props.marker ?? 0) + 1)} `}</span>
+        </text>
+      </Show>
+      <text fg={props.theme.textMuted}>{`${props.duration.padStart(DURATION_WIDTH, " ")} `}</text>
+      <box flexGrow={1} />
+      <text fg={props.theme.textMuted}>{props.exact.padStart(EXACT_WIDTH, " ")}</text>
+    </box>
+  );
+}
+
+// ├─ Reset and pace ──────────────────────────────────────────────────────────────────────────────┤
 
 type ResetParts = {
   duration: string;
@@ -69,6 +175,7 @@ function usageBar(percent: number) {
   return "█".repeat(filled) + "░".repeat(BAR_WIDTH - filled);
 }
 
+// Monthly pace clamps the reset day to the previous month's length.
 function previousMonth(reset: Date) {
   const start = new Date(reset);
   const day = start.getUTCDate();
@@ -79,6 +186,7 @@ function previousMonth(reset: Date) {
   return start.getTime();
 }
 
+// Pace assumes H is five hours, M/C/O are monthly, and other windows are weekly.
 function pacePercent(label: string, resetAt?: string) {
   if (!resetAt) return undefined;
   const reset = new Date(resetAt);
@@ -108,117 +216,21 @@ function paceIndicatorColor(theme: TuiThemeCurrent, percent: number | undefined,
   return percent <= expected ? theme.primary : theme.error;
 }
 
+// The 3-cell column displays 100 without a percent sign.
 function formatPercent(percent: number) {
   const rounded = Math.max(0, Math.min(100, Math.round(percent)));
   return rounded >= 100 ? "100" : `${String(rounded).padStart(2, "0")}%`;
 }
 
-// Keep placeholder and live rows aligned with the same fixed columns.
-function WindowRow(props: {
-  theme: TuiThemeCurrent;
-  label: string;
-  percent: string;
-  percentColor: RGBA;
-  bar: string;
-  barColor: RGBA;
-  marker?: number;
-  markerColor?: RGBA;
-  duration: string;
-  exact: string;
-}) {
-  return (
-    <box flexDirection="row" gap={0}>
-      <text fg={props.theme.textMuted}>{props.label.padEnd(2, " ")}</text>
-      <text fg={props.percentColor}>{`${props.percent} `}</text>
-      <Show when={props.marker !== undefined} fallback={<text fg={props.barColor}>{`${props.bar} `}</text>}>
-        <text>
-          <span {...{ style: { fg: props.barColor } }}>{props.bar.slice(0, props.marker)}</span>
-          <span {...{ style: { fg: props.markerColor ?? props.theme.textMuted } }}>┃</span>
-          <span {...{ style: { fg: props.barColor } }}>{`${props.bar.slice((props.marker ?? 0) + 1)} `}</span>
-        </text>
-      </Show>
-      <text fg={props.theme.textMuted}>{`${props.duration.padStart(DURATION_WIDTH, " ")} `}</text>
-      <box flexGrow={1} />
-      <text fg={props.theme.textMuted}>{props.exact.padStart(EXACT_WIDTH, " ")}</text>
-    </box>
-  );
-}
+// ├─ Note color ──────────────────────────────────────────────────────────────────────────────────┤
 
-/** Renders provider usage rows and sends clicks to the manual-refresh handler. */
-export function UsageDashboard(props: {
-  api: TuiPluginApi;
-  providers: ProviderUsage[];
-  activeProviderID: string;
-  refreshingProviderIDs?: Set<string>;
-  onRefresh?: (providerID: string) => void;
-}) {
-  const theme = () => props.api.theme.current;
-  return (
-    <box flexDirection="column" gap={0} paddingLeft={1}>
-      <For each={props.providers}>
-        {(provider) => {
-          const refreshing = () => props.refreshingProviderIDs?.has(provider.id) ?? false;
-          // Keep an existing status note visible while a manual refresh runs.
-          const labelColor = () =>
-            refreshing() || provider.id === props.activeProviderID ? theme().primary : theme().text;
-          return (
-            <box flexDirection="column" gap={0}>
-              <box flexDirection="row" gap={0} onMouseDown={() => props.onRefresh?.(provider.id)}>
-                <text fg={labelColor()} attributes={BOLD}>
-                  {provider.label}
-                </text>
-                <Show when={provider.note}>
-                  <text fg={noteColor(theme(), provider)}>{` ${provider.note}`}</text>
-                </Show>
-                <Show when={refreshing() && !provider.note}>
-                  <text fg={theme().primary}>{` refreshing`}</text>
-                </Show>
-              </box>
-              <Show
-                when={provider.windows.length > 0}
-                fallback={
-                  <For each={provider.placeholders ?? PLACEHOLDER_LABELS}>
-                    {(label) => (
-                      <WindowRow
-                        theme={theme()}
-                        label={label}
-                        percent={DASH.padEnd(PERCENT_WIDTH, " ")}
-                        percentColor={theme().textMuted}
-                        bar={"░".repeat(BAR_WIDTH)}
-                        barColor={theme().textMuted}
-                        duration={DASH}
-                        exact={DASH}
-                      />
-                    )}
-                  </For>
-                }
-              >
-                <For each={provider.windows}>
-                  {(window) => {
-                    const reset = window.resetAt ? formatReset(window.resetAt) : undefined;
-                    const pct = window.usedPercent;
-                    // Keep reset columns visible when a window has no usage percentage.
-                    return (
-                      <WindowRow
-                        theme={theme()}
-                        label={window.label}
-                        percent={pct !== undefined ? formatPercent(pct) : DASH.padEnd(PERCENT_WIDTH, " ")}
-                        percentColor={pct !== undefined ? usageColor(theme(), pct) : theme().textMuted}
-                        bar={pct !== undefined ? usageBar(pct) : "░".repeat(BAR_WIDTH)}
-                        barColor={pct !== undefined ? usageColor(theme(), pct) : theme().textMuted}
-                        marker={paceMarker(window.label, window.resetAt)}
-                        markerColor={paceIndicatorColor(theme(), pct, window.label, window.resetAt)}
-                        duration={reset?.duration ?? ""}
-                        exact={reset?.exact ?? ""}
-                      />
-                    );
-                  }}
-                </For>
-              </Show>
-            </box>
-          );
-        }}
-      </For>
-    </box>
-  );
+// Cached stale windows without a note kind are muted; other untyped notes are errors.
+function noteColor(theme: TuiThemeCurrent, provider: ProviderUsage) {
+  if (provider.noteKind === "info") return theme.textMuted;
+  if (provider.noteKind === "warn") return theme.warning;
+  if (provider.noteKind === "error") return theme.error;
+  if (provider.windows.length > 0 && provider.note?.startsWith("stale ")) {
+    return theme.textMuted;
+  }
+  return theme.error;
 }

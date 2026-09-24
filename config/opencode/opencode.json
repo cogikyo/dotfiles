@@ -51,7 +51,7 @@
         "apiKey": "not-needed"
       },
       "models": {
-        "grok-4.7-fast": { "name": "Grok 4.7 Fast" },
+        "grok-4.6-fast": { "name": "Grok 4.6 Fast" },
         "claude-opus-5-5-fast": { "name": "Claude Opus 5.5 Fast" }
       }
     },
@@ -79,8 +79,8 @@
     },
     "xai": {
       "models": {
-        "grok-4.7": {
-          "name": "Grok 4.7",
+        "grok-4.6": {
+          "name": "Grok 4.6",
           "options": {
             "reasoningEffort": "high"
           },
@@ -95,8 +95,8 @@
     },
     "opencode-go": {
       "models": {
-        "grok-4.7": {
-          "name": "Grok 4.7",
+        "grok-4.6": {
+          "name": "Grok 4.6",
           "options": {
             "reasoningEffort": "high"
           },

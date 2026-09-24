@@ -10,16 +10,21 @@ import {
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
-import { record } from "../../shared/record.ts";
+import { z } from "zod";
 import { isImageMime, isVideoMime, mediaKindForMime, runtimeDir, sha256, type MediaKind } from "./files";
 
-const HANDLE_EXACT_PATTERN = /^@(?:[01]\d|2[0-3])_[0-5]\d_[0-5]\d(?:_(?:[2-9]|[1-9]\d+))?$/;
-const ALIAS_EXACT_PATTERN = /^@[a-z0-9](?:[a-z0-9-]{0,46}[a-z0-9])?$/;
-const NAME_EXACT_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,46}[a-z0-9])?$/;
-const MAX_REGISTRY_BYTES = 256 * 1024;
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ On-disk registry                                                                              │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
+// ├─ Entry schema ────────────────────────────────────────────────────────────────────────────────┤
+
+/** Maximum session rows accepted for registration and file validation. */
 export const MAX_REGISTRY_ENTRIES = 200;
 
-/** A session media record stored in the local registry. */
+const MAX_REGISTRY_BYTES = 256 * 1024;
+
+/** Session media row with a timestamp handle and an optional named alias pointing to its local file. */
 export type MediaRegistryEntry = {
   handle: string;
   sessionID: string;
@@ -43,25 +48,114 @@ type RegistryFile = {
   entries: MediaRegistryEntry[];
 };
 
+const HANDLE_EXACT_PATTERN = /^@(?:[01]\d|2[0-3])_[0-5]\d_[0-5]\d(?:_(?:[2-9]|[1-9]\d+))?$/;
+const ALIAS_EXACT_PATTERN = /^@[a-z0-9](?:[a-z0-9-]{0,46}[a-z0-9])?$/;
+const NAME_EXACT_PATTERN = /^[a-z0-9](?:[a-z0-9-]{0,46}[a-z0-9])?$/;
+
+const text = z.string().optional().catch(undefined);
+const count = z.number().optional().catch(undefined);
+
+const Entry = z
+  .object({
+    handle: z.string().regex(HANDLE_EXACT_PATTERN),
+    path: z.string(),
+    kind: z.enum(["image", "video"]).optional().catch(undefined),
+    mime: text,
+    sessionID: text,
+    messageID: text,
+    partID: text,
+    hash: text,
+    source: text,
+    name: text,
+    alias: text,
+    nameSource: text,
+    nameUpdatedAt: count,
+    createdAt: count,
+    updatedAt: count,
+  })
+  .transform((value): MediaRegistryEntry => ({
+    handle: value.handle,
+    sessionID: value.sessionID || "",
+    messageID: value.messageID,
+    partID: value.partID,
+    path: value.path,
+    mime: normalizeMime(value.mime, value.kind),
+    kind: normalizeKind(value.kind, value.mime),
+    hash: value.hash || sha256(`${value.path}:${value.handle}`),
+    source: value.source || "unknown source",
+    name: normalizeStoredName(value.name),
+    alias: normalizeStoredAlias(value.alias, value.name),
+    nameSource: value.nameSource?.slice(0, 80),
+    nameUpdatedAt: value.nameUpdatedAt,
+    createdAt: value.createdAt || Date.now(),
+    updatedAt: value.updatedAt || Date.now(),
+  }));
+
+// Bad rows are dropped, but exceeding the row cap invalidates the whole file.
+const Registry = z
+  .object({
+    entries: z
+      .array(z.unknown())
+      .max(MAX_REGISTRY_ENTRIES)
+      .transform((entries) =>
+        entries.flatMap((entry) => {
+          const parsed = Entry.safeParse(entry);
+          return parsed.success ? [parsed.data] : [];
+        }),
+      ),
+  })
+  .transform((registry) => registry.entries);
+
+/** Turns a name into a lowercase slug of at most 48 characters, or undefined when none can be formed. */
+export function normalizeStoredName(value: string | undefined) {
+  if (value === undefined) return undefined;
+  const clean = value
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48)
+    .replace(/-+$/g, "");
+  return NAME_EXACT_PATTERN.test(clean) ? clean : undefined;
+}
+
+function normalizeStoredAlias(alias: string | undefined, name: string | undefined) {
+  if (alias !== undefined && ALIAS_EXACT_PATTERN.test(alias)) return alias;
+  const cleanName = normalizeStoredName(name);
+  return cleanName ? `@${cleanName}` : undefined;
+}
+
+function normalizeKind(kind: MediaKind | undefined, mime: string | undefined): MediaKind {
+  return kind ?? mediaKindForMime(mime) ?? "image";
+}
+
+function normalizeMime(mime: string | undefined, kind: MediaKind | undefined) {
+  const normalizedKind = normalizeKind(kind, mime);
+  if (normalizedKind === "image") return isImageMime(mime) ? (mime ?? "image/png") : "image/png";
+  return isVideoMime(mime) ? (mime ?? "video/mp4") : "video/mp4";
+}
+
+// ├─ Reads ───────────────────────────────────────────────────────────────────────────────────────┤
+
+/** Reads session rows without locking, returning an empty list when the registry cannot be read. */
 export function readRegistry(sessionID: string): MediaRegistryEntry[] {
   return readWritableRegistry(sessionID) ?? [];
 }
 
+/** Reads rows without locking; undefined means the existing registry is invalid and must not be overwritten. */
 export function readWritableRegistry(sessionID: string): MediaRegistryEntry[] | undefined {
   try {
     const path = registryPath(sessionID);
     if (!canReadRegistryPath(path)) return undefined;
 
     if (!existsSync(path)) return [];
-    const parsed = record(JSON.parse(readFileSync(path, "utf8")));
-    const entries = parsed?.entries;
-    if (!Array.isArray(entries) || entries.length > MAX_REGISTRY_ENTRIES) return undefined;
-    return entries.map(normalizeEntry).filter(isDefined);
+    const parsed = Registry.safeParse(JSON.parse(readFileSync(path, "utf8")));
+    return parsed.success ? parsed.data : undefined;
   } catch {
     return undefined;
   }
 }
 
+/** Checks whether the registry file is missing or within the 256 KiB read cap. */
 export function canReadRegistry(sessionID: string) {
   return canReadRegistryPath(registryPath(sessionID));
 }
@@ -74,6 +168,9 @@ function canReadRegistryPath(path: string) {
   }
 }
 
+// ├─ Writes and lock ─────────────────────────────────────────────────────────────────────────────┤
+
+/** Replaces the session registry atomically without locking or validating its rows; filesystem errors throw. */
 export function writeRegistry(sessionID: string, entries: MediaRegistryEntry[]) {
   const path = registryPath(sessionID);
   mkdirSync(runtimeDir(), { recursive: true, mode: 0o700 });
@@ -82,6 +179,7 @@ export function writeRegistry(sessionID: string, entries: MediaRegistryEntry[]) 
   renameSync(tmp, path);
 }
 
+/** Runs a synchronous registry operation under a per-session lock, releasing it on return or error. */
 export function withRegistryLock<T>(sessionID: string, operation: () => T) {
   const path = registryPath(sessionID);
   mkdirSync(runtimeDir(), { recursive: true, mode: 0o700 });
@@ -124,73 +222,4 @@ function isFileExistsError(error: unknown) {
 function registryPath(sessionID: string) {
   const clean = sessionID.replace(/[^a-zA-Z0-9_.-]+/g, "_").slice(0, 80) || "session";
   return join(runtimeDir(), `${clean}-${sha256(sessionID).slice(0, 12)}.json`);
-}
-
-function normalizeEntry(raw: unknown): MediaRegistryEntry | undefined {
-  const value = record(raw);
-  if (
-    !value ||
-    typeof value.handle !== "string" ||
-    !HANDLE_EXACT_PATTERN.test(value.handle) ||
-    typeof value.path !== "string"
-  )
-    return undefined;
-  const kind = value.kind === "image" || value.kind === "video" ? value.kind : undefined;
-  const mime = string(value.mime);
-  return {
-    handle: value.handle,
-    sessionID: string(value.sessionID) || "",
-    messageID: string(value.messageID),
-    partID: string(value.partID),
-    path: value.path,
-    mime: normalizeMime(mime, kind),
-    kind: normalizeKind(kind, mime),
-    hash: string(value.hash) || sha256(`${value.path}:${value.handle}`),
-    source: string(value.source) || "unknown source",
-    name: normalizeStoredName(value.name),
-    alias: normalizeStoredAlias(value.alias, value.name),
-    nameSource: string(value.nameSource)?.slice(0, 80),
-    nameUpdatedAt: number(value.nameUpdatedAt),
-    createdAt: number(value.createdAt) || Date.now(),
-    updatedAt: number(value.updatedAt) || Date.now(),
-  };
-}
-
-export function string(value: unknown) {
-  return typeof value === "string" ? value : undefined;
-}
-
-function number(value: unknown) {
-  return typeof value === "number" ? value : undefined;
-}
-
-function isDefined<T>(value: T | undefined): value is T {
-  return value !== undefined;
-}
-
-export function normalizeStoredName(value: unknown) {
-  if (typeof value !== "string") return undefined;
-  const clean = value
-    .toLowerCase()
-    .replace(/[^a-z0-9-]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 48)
-    .replace(/-+$/g, "");
-  return NAME_EXACT_PATTERN.test(clean) ? clean : undefined;
-}
-
-function normalizeStoredAlias(alias: unknown, name: unknown) {
-  if (typeof alias === "string" && ALIAS_EXACT_PATTERN.test(alias)) return alias;
-  const cleanName = normalizeStoredName(name);
-  return cleanName ? `@${cleanName}` : undefined;
-}
-
-function normalizeKind(kind: MediaKind | undefined, mime: string | undefined): MediaKind {
-  return kind ?? mediaKindForMime(mime) ?? "image";
-}
-
-function normalizeMime(mime: string | undefined, kind: MediaKind | undefined) {
-  const normalizedKind = normalizeKind(kind, mime);
-  if (normalizedKind === "image") return isImageMime(mime) ? (mime ?? "image/png") : "image/png";
-  return isVideoMime(mime) ? (mime ?? "video/mp4") : "video/mp4";
 }

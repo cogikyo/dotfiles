@@ -21,7 +21,7 @@ Give the bash call a long timeout; native X search is slow.
 
 ```bash
 grok --single "$BRIEF" \
-  --model grok-4.7 \
+  --model grok-4.6 \
   --reasoning-effort high \
   --no-plan \
   --no-subagents \

@@ -1,8 +1,18 @@
 import type { TuiThemeCurrent } from "@opencode-ai/plugin/tui";
 import { RGBA } from "@opentui/core";
 
-/** Current OpenCode TUI theme shape. */
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Sidebar colors                                                                                │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
+// ├─ Palette ─────────────────────────────────────────────────────────────────────────────────────┤
+
 export type Theme = TuiThemeCurrent;
+
+/** Returns the fixed sidebar palette, independent of the active theme. */
+export function colors(_theme: Theme) {
+  return palette;
+}
 
 const hex = (value: string) => RGBA.fromHex(value);
 const defs = {
@@ -43,18 +53,15 @@ const palette = {
   branch: defs.prp_2,
 } as const;
 
-/** Returns the plugin's fixed palette; the current theme is accepted for shared call sites. */
-export function colors(_theme: Theme) {
-  return palette;
-}
+// ├─ Pressure ────────────────────────────────────────────────────────────────────────────────────┤
 
-/** Clamps a percentage to the inclusive range from 0 to 100. */
+/** Clamps a percentage to 0–100, treating non-finite values as zero. */
 export function clampPercent(percent: number) {
   if (!Number.isFinite(percent)) return 0;
   return Math.max(0, Math.min(100, percent));
 }
 
-/** Maps context usage to one of nine pressure tiers. */
+/** Maps a used percentage to one of nine sidebar pressure tiers. */
 export function pressureTier(usedPercent: number) {
   const percent = clampPercent(usedPercent);
   if (percent < 15) return 0;
@@ -68,7 +75,7 @@ export function pressureTier(usedPercent: number) {
   return 8;
 }
 
-/** Selects a palette color for the given context pressure. */
+/** Colors context pressure from blue to pink as usage increases. */
 export function pressureColor(theme: Theme, usedPercent: number) {
   const c = colors(theme);
   const pressureColors = [
@@ -86,7 +93,7 @@ export function pressureColor(theme: Theme, usedPercent: number) {
   return pressureColors[pressureTier(usedPercent)];
 }
 
-/** Returns the color used for provider usage percentages. */
+/** Uses the context-pressure palette for provider usage. */
 export function usageColor(theme: Theme, usedPercent: number) {
   return pressureColor(theme, usedPercent);
 }

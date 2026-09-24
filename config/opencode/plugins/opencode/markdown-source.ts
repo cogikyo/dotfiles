@@ -3,16 +3,24 @@ import { realpathSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Markdown path labels for the TUI context sidebar                                              │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
 const MAX_LABEL_LENGTH = 36;
 
 export type MarkdownSourceKind = "readme" | "agents" | "agent" | "skill" | "command" | "partial" | "spec" | "markdown";
 
 export const configRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
+// ├─ Kinds ───────────────────────────────────────────────────────────────────────────────────────┤
+
+/** Matches Markdown extensions regardless of case, query, or hash. */
 export function isMarkdownPath(value: string) {
   return /\.(md|mdx|markdown)$/i.test(value.split(/[?#]/, 1)[0]);
 }
 
+/** Classifies a Markdown path for sidebar display, giving `.spec` paths priority. */
 export function markdownSourceKind(filePath: string): MarkdownSourceKind {
   const normalizedPath = path.normalize(filePath);
   const leaf = path.basename(normalizedPath).toLowerCase();
@@ -27,6 +35,11 @@ export function markdownSourceKind(filePath: string): MarkdownSourceKind {
   return "markdown";
 }
 
+/** Identifies nested agent Markdown files. */
+export function isSubagent(filePath: string) {
+  return (agentSegments(filePath)?.length ?? 0) > 1;
+}
+
 function agentSegments(filePath: string) {
   const parts = path.normalize(filePath).split(/[\\/]/u).filter(Boolean);
   const index = parts.findIndex((part) => part === "agents" || part === "agent");
@@ -36,16 +49,6 @@ function agentSegments(filePath: string) {
   return rest;
 }
 
-function agentLabel(filePath: string) {
-  const rest = agentSegments(filePath);
-  if (!rest) return stripMarkdownExtension(path.basename(filePath));
-  return stripMarkdownExtension(rest.join("/")).split("/").map(titleSegment).join("/");
-}
-
-export function isSubagent(filePath: string) {
-  return (agentSegments(filePath)?.length ?? 0) > 1;
-}
-
 function commandSegments(filePath: string) {
   const parts = path.normalize(filePath).split(/[\\/]/u).filter(Boolean);
   const index = parts.findIndex((part) => part === "commands" || part === "command");
@@ -53,6 +56,46 @@ function commandSegments(filePath: string) {
   const rest = parts.slice(index + 1);
   if (rest.length === 0 || !isMarkdownPath(rest.at(-1) ?? "")) return undefined;
   return rest;
+}
+
+// ├─ Labels ──────────────────────────────────────────────────────────────────────────────────────┤
+
+/** Formats a Markdown path as a sidebar label of at most 36 characters. */
+export function displayPath(api: TuiPluginApi, filePath: string, kind: MarkdownSourceKind) {
+  return compactPath(contextLabel(api, filePath, kind));
+}
+
+function contextLabel(api: TuiPluginApi, filePath: string, kind: MarkdownSourceKind) {
+  const label = relativePath(api, filePath);
+
+  if (kind === "spec") return specLabel(filePath);
+  if (kind === "agent") return agentLabel(filePath);
+  if (kind === "skill") return skillLabel(api, filePath);
+  if (kind === "command") return commandLabel(api, filePath);
+
+  if (kind === "readme" || kind === "agents") {
+    if (kind === "agents" && isConfigAgents(filePath)) return "OpenCode";
+    const dir = path.dirname(label);
+    return dir === "." ? contextRootName(api, filePath) : dir;
+  }
+
+  return stripMarkdownExtension(label);
+}
+
+function agentLabel(filePath: string) {
+  const rest = agentSegments(filePath);
+  if (!rest) return stripMarkdownExtension(path.basename(filePath));
+  return stripMarkdownExtension(rest.join("/")).split("/").map(titleSegment).join("/");
+}
+
+function commandLabel(api: TuiPluginApi, filePath: string) {
+  const name = commandName(filePath);
+  if (isGlobalOpencodePath(filePath)) return name;
+  return `${commandProjectOwner(api, filePath)}/${name}`;
+}
+
+function titleSegment(value: string) {
+  return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
 }
 
 function commandName(filePath: string) {
@@ -79,22 +122,6 @@ function commandProjectOwner(api: TuiPluginApi, filePath: string) {
   return contextRootName(api, filePath);
 }
 
-function commandLabel(api: TuiPluginApi, filePath: string) {
-  const name = commandName(filePath);
-  if (isGlobalOpencodePath(filePath)) return name;
-  return `${commandProjectOwner(api, filePath)}/${name}`;
-}
-
-function titleSegment(value: string) {
-  return value ? value.charAt(0).toUpperCase() + value.slice(1) : value;
-}
-
-export function isGlobalOpencodePath(filePath: string) {
-  const file = markdownIdentity(filePath);
-  const root = markdownIdentity(configRoot);
-  return file === root || file.startsWith(root + path.sep);
-}
-
 function skillName(filePath: string) {
   const parent = path.basename(path.dirname(filePath));
   if (!parent || parent === "." || parent === "skills" || parent === "skill") return "Skill";
@@ -119,6 +146,31 @@ function skillLabel(api: TuiPluginApi, filePath: string) {
   return `${skillProjectOwner(api, filePath)}/${name}`;
 }
 
+function specLabel(filePath: string) {
+  const parts = path.normalize(filePath).split(/[\\/]/u).filter(Boolean);
+  const specIndex = parts.lastIndexOf(".spec");
+  const owner = parts[specIndex - 1];
+  const nestedPath = parts.slice(specIndex + 1);
+
+  return stripMarkdownExtension([owner, ...nestedPath].filter(Boolean).join(path.sep));
+}
+
+function primaryProjectRoot(api: TuiPluginApi) {
+  return projectRoots(api)[0] || "";
+}
+
+function contextRootName(api: TuiPluginApi, filePath: string) {
+  const root = primaryProjectRoot(api) || path.dirname(filePath);
+  return path.basename(root) || path.basename(path.dirname(filePath)) || path.basename(filePath);
+}
+
+function stripMarkdownExtension(label: string) {
+  return label.replace(/\.(md|mdx|markdown)$/i, "");
+}
+
+// ├─ Paths ───────────────────────────────────────────────────────────────────────────────────────┤
+
+/** Resolves an existing file's identity, falling back to its normalized path. */
 export function markdownIdentity(filePath: string) {
   const normalizedPath = path.normalize(filePath);
   try {
@@ -128,8 +180,39 @@ export function markdownIdentity(filePath: string) {
   }
 }
 
-export function displayPath(api: TuiPluginApi, filePath: string, kind: MarkdownSourceKind) {
-  return compactPath(contextLabel(api, filePath, kind));
+export function isGlobalOpencodePath(filePath: string) {
+  const file = markdownIdentity(filePath);
+  const root = markdownIdentity(configRoot);
+  return file === root || file.startsWith(root + path.sep);
+}
+
+/** Returns distinct usable project roots, with the session directory first. */
+export function projectRoots(api: TuiPluginApi) {
+  const roots: string[] = [];
+  const seen = new Set<string>();
+  for (const value of [api.state.path.directory, api.state.path.worktree]) {
+    if (!value || isFilesystemRoot(value)) continue;
+    const normalized = path.normalize(value);
+    if (seen.has(normalized)) continue;
+    seen.add(normalized);
+    roots.push(normalized);
+  }
+  return roots;
+}
+
+/** Shortens a long label around `...` while preserving both ends. */
+export function truncateMiddle(value: string, maxLength: number) {
+  if (maxLength <= 0) return "";
+  if (value.length <= maxLength) return value;
+  if (maxLength <= 3) return ".".repeat(maxLength);
+
+  const headLength = Math.ceil((maxLength - 3) / 2);
+  const tailLength = Math.floor((maxLength - 3) / 2);
+  return `${value.slice(0, headLength)}...${value.slice(value.length - tailLength)}`;
+}
+
+export function isConfigAgents(filePath: string) {
+  return path.basename(filePath).toLowerCase() === "agents.md" && isGlobalOpencodePath(filePath);
 }
 
 function relativeInside(candidate: string) {
@@ -167,61 +250,9 @@ function rootRelative(roots: string[], resolved: string) {
   return relative;
 }
 
-function contextLabel(api: TuiPluginApi, filePath: string, kind: MarkdownSourceKind) {
-  const label = relativePath(api, filePath);
-
-  if (kind === "spec") return specLabel(filePath);
-  if (kind === "agent") return agentLabel(filePath);
-  if (kind === "skill") return skillLabel(api, filePath);
-  if (kind === "command") return commandLabel(api, filePath);
-
-  if (kind === "readme" || kind === "agents") {
-    if (kind === "agents" && isConfigAgents(filePath)) return "OpenCode";
-    const dir = path.dirname(label);
-    return dir === "." ? contextRootName(api, filePath) : dir;
-  }
-
-  return stripMarkdownExtension(label);
-}
-
-function specLabel(filePath: string) {
-  const parts = path.normalize(filePath).split(/[\\/]/u).filter(Boolean);
-  const specIndex = parts.lastIndexOf(".spec");
-  const owner = parts[specIndex - 1];
-  const nestedPath = parts.slice(specIndex + 1);
-
-  return stripMarkdownExtension([owner, ...nestedPath].filter(Boolean).join(path.sep));
-}
-
 function isFilesystemRoot(value: string) {
   const normalized = path.normalize(value);
   return normalized === path.parse(normalized).root;
-}
-
-export function projectRoots(api: TuiPluginApi) {
-  const roots: string[] = [];
-  const seen = new Set<string>();
-  for (const value of [api.state.path.directory, api.state.path.worktree]) {
-    if (!value || isFilesystemRoot(value)) continue;
-    const normalized = path.normalize(value);
-    if (seen.has(normalized)) continue;
-    seen.add(normalized);
-    roots.push(normalized);
-  }
-  return roots;
-}
-
-function primaryProjectRoot(api: TuiPluginApi) {
-  return projectRoots(api)[0] || "";
-}
-
-function contextRootName(api: TuiPluginApi, filePath: string) {
-  const root = primaryProjectRoot(api) || path.dirname(filePath);
-  return path.basename(root) || path.basename(path.dirname(filePath)) || path.basename(filePath);
-}
-
-function stripMarkdownExtension(label: string) {
-  return label.replace(/\.(md|mdx|markdown)$/i, "");
 }
 
 function compactPath(label: string) {
@@ -251,16 +282,6 @@ function truncateLabel(label: string) {
   return `${label.slice(0, Math.max(0, MAX_LABEL_LENGTH - 3))}...`;
 }
 
-function truncateMiddle(value: string, maxLength: number) {
-  if (maxLength <= 0) return "";
-  if (value.length <= maxLength) return value;
-  if (maxLength <= 3) return ".".repeat(maxLength);
-
-  const headLength = Math.ceil((maxLength - 3) / 2);
-  const tailLength = Math.floor((maxLength - 3) / 2);
-  return `${value.slice(0, headLength)}...${value.slice(value.length - tailLength)}`;
-}
-
 function truncateFileName(value: string, maxLength: number) {
   if (value.length <= maxLength) return value;
 
@@ -271,8 +292,4 @@ function truncateFileName(value: string, maxLength: number) {
   }
 
   return truncateMiddle(value, maxLength);
-}
-
-export function isConfigAgents(filePath: string) {
-  return path.basename(filePath).toLowerCase() === "agents.md" && isGlobalOpencodePath(filePath);
 }

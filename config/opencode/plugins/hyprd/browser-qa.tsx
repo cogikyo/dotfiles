@@ -2,135 +2,16 @@
 import type { TuiPlugin, TuiPluginApi, TuiPluginModule } from "@opencode-ai/plugin/tui";
 import { spawn, type ChildProcess } from "node:child_process";
 import { For, Show, createSignal } from "solid-js";
-import { record } from "../shared/record.ts";
+import { z } from "zod";
 import { SidebarSection } from "../shared/sidebar-section.tsx";
 
 const id = "hyprd-browser-qa";
 const MAX_TITLE_LENGTH = 30;
 const RESTART_DELAY_MS = 5_000;
 
-type BrowserQA = {
-  address: string;
-  title: string;
-  slot: number;
-  workspace: string;
-};
-
-function BrowserQASection(props: { api: TuiPluginApi; entries: BrowserQA[]; onToggle: (slot: number) => void }) {
-  return (
-    <Show when={props.entries.length > 0}>
-      <SidebarSection
-        api={props.api}
-        title="Browsers"
-        detail={`${props.entries.length} ${props.entries.length === 1 ? "window" : "windows"}`}
-      >
-        <For each={props.entries}>
-          {(entry) => (
-            <box flexDirection="row" gap={0} onMouseDown={() => props.onToggle(entry.slot)}>
-              <text fg={props.api.theme.current.primary} wrapMode="none">
-                {`#${entry.slot} `}
-              </text>
-              <text fg={props.api.theme.current.textMuted} wrapMode="none">
-                {truncateTitle(entry.title)}
-              </text>
-            </box>
-          )}
-        </For>
-      </SidebarSection>
-    </Show>
-  );
-}
-
-function toggleWorkspace(api: TuiPluginApi, slot: number, active: () => boolean) {
-  let child: ReturnType<typeof spawn>;
-  try {
-    child = spawn("hyprd", ["browser-qa", String(slot)], {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-  } catch (cause) {
-    if (active()) {
-      api.ui.toast({
-        variant: "error",
-        title: "Browser QA toggle failed",
-        message: cause instanceof Error ? cause.message : "hyprd could not start",
-      });
-    }
-    return undefined;
-  }
-  let error = "";
-  let spawned = false;
-  let reported = false;
-  const stdout = child.stdout;
-  const stderr = child.stderr;
-  if (!stdout || !stderr) {
-    child.kill();
-    return undefined;
-  }
-
-  child.once("spawn", () => {
-    spawned = true;
-  });
-  stdout.setEncoding("utf8");
-  stderr.setEncoding("utf8");
-  const collect = (chunk: string) => {
-    error = `${error}${chunk}`.slice(-1_024);
-  };
-  stdout.on("data", collect);
-  stderr.on("data", collect);
-  child.once("error", (cause) => {
-    if (!active()) return;
-    reported = true;
-    api.ui.toast({
-      variant: "error",
-      title: "Browser QA toggle failed",
-      message: cause.message,
-    });
-  });
-  child.once("close", (code) => {
-    if (!active() || reported || !spawned || code === 0) return;
-    api.ui.toast({
-      variant: "error",
-      title: "Browser QA toggle failed",
-      message: error.trim() || `hyprd exited ${code ?? "without a status"}`,
-    });
-  });
-  return child;
-}
-
-function truncateTitle(title: string) {
-  const value = title.trim().replace(/\s+/g, " ") || "Untitled";
-  if (value.length <= MAX_TITLE_LENGTH) return value;
-  return `${value.slice(0, MAX_TITLE_LENGTH - 3)}...`;
-}
-
-function browserQA(input: unknown): BrowserQA[] {
-  if (!Array.isArray(input)) return [];
-
-  return input
-    .filter((entry): entry is BrowserQA => {
-      const candidate = record(entry);
-      if (!candidate) return false;
-      return (
-        typeof candidate.address === "string" &&
-        typeof candidate.title === "string" &&
-        typeof candidate.slot === "number" &&
-        Number.isSafeInteger(candidate.slot) &&
-        candidate.slot > 0 &&
-        candidate.workspace === `browser-qa-${candidate.slot}`
-      );
-    })
-    .toSorted((left, right) => left.slot - right.slot);
-}
-
-function workspaceEvent(line: string) {
-  try {
-    const event = record(JSON.parse(line));
-    if (event?.event !== "workspace") return undefined;
-    return browserQA(record(event.data)?.browser_qa);
-  } catch {
-    return undefined;
-  }
-}
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Browser QA sidebar                                                                            │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
 const tui: TuiPlugin = async (api) => {
   const [entries, setEntries] = createSignal<BrowserQA[]>([]);
@@ -206,5 +87,131 @@ const tui: TuiPlugin = async (api) => {
   });
 };
 
-/** TUI plugin that subscribes to hyprd workspace events and registers browser controls in `sidebar_content`. */
+/** Lists hyprd browser-QA windows in the sidebar and toggles a workspace when clicked. */
 export default { id, tui } satisfies TuiPluginModule & { id: string };
+
+// ├─ Sidebar ─────────────────────────────────────────────────────────────────────────────────────┤
+
+function BrowserQASection(props: { api: TuiPluginApi; entries: BrowserQA[]; onToggle: (slot: number) => void }) {
+  return (
+    <Show when={props.entries.length > 0}>
+      <SidebarSection
+        api={props.api}
+        title="Browsers"
+        detail={`${props.entries.length} ${props.entries.length === 1 ? "window" : "windows"}`}
+      >
+        <For each={props.entries}>
+          {(entry) => (
+            <box flexDirection="row" gap={0} onMouseDown={() => props.onToggle(entry.slot)}>
+              <text fg={props.api.theme.current.primary} wrapMode="none">
+                {`#${entry.slot} `}
+              </text>
+              <text fg={props.api.theme.current.textMuted} wrapMode="none">
+                {truncateTitle(entry.title)}
+              </text>
+            </box>
+          )}
+        </For>
+      </SidebarSection>
+    </Show>
+  );
+}
+
+function truncateTitle(title: string) {
+  const value = title.trim().replace(/\s+/g, " ") || "Untitled";
+  if (value.length <= MAX_TITLE_LENGTH) return value;
+  return `${value.slice(0, MAX_TITLE_LENGTH - 3)}...`;
+}
+
+// ├─ Workspace stream ────────────────────────────────────────────────────────────────────────────┤
+
+type BrowserQA = z.infer<typeof BrowserQA>;
+
+// Workspace names must match each browser-QA slot.
+const BrowserQA = z
+  .object({ address: z.string(), title: z.string(), slot: z.int().positive(), workspace: z.string() })
+  .refine((entry) => entry.workspace === `browser-qa-${entry.slot}`);
+
+// Hyprd streams newline-delimited workspace JSON; invalid browser entries are skipped.
+const WorkspaceEvent = z.object({
+  event: z.literal("workspace"),
+  data: z
+    .object({ browser_qa: z.array(z.unknown()).catch([]) })
+    .catch({ browser_qa: [] })
+    .transform(({ browser_qa }) =>
+      browser_qa
+        .flatMap((entry) => {
+          const parsed = BrowserQA.safeParse(entry);
+          return parsed.success ? [parsed.data] : [];
+        })
+        .toSorted((left, right) => left.slot - right.slot),
+    ),
+});
+
+function workspaceEvent(line: string) {
+  try {
+    const parsed = WorkspaceEvent.safeParse(JSON.parse(line));
+    return parsed.success ? parsed.data.data : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// ├─ Toggle ──────────────────────────────────────────────────────────────────────────────────────┤
+
+// Toggling a browser workspace reports spawn and exit failures while the sidebar is active.
+function toggleWorkspace(api: TuiPluginApi, slot: number, active: () => boolean) {
+  let child: ReturnType<typeof spawn>;
+  try {
+    child = spawn("hyprd", ["browser-qa", String(slot)], {
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+  } catch (cause) {
+    if (active()) {
+      api.ui.toast({
+        variant: "error",
+        title: "Browser QA toggle failed",
+        message: cause instanceof Error ? cause.message : "hyprd could not start",
+      });
+    }
+    return undefined;
+  }
+  let error = "";
+  let spawned = false;
+  let reported = false;
+  const stdout = child.stdout;
+  const stderr = child.stderr;
+  if (!stdout || !stderr) {
+    child.kill();
+    return undefined;
+  }
+
+  child.once("spawn", () => {
+    spawned = true;
+  });
+  stdout.setEncoding("utf8");
+  stderr.setEncoding("utf8");
+  const collect = (chunk: string) => {
+    error = `${error}${chunk}`.slice(-1_024);
+  };
+  stdout.on("data", collect);
+  stderr.on("data", collect);
+  child.once("error", (cause) => {
+    if (!active()) return;
+    reported = true;
+    api.ui.toast({
+      variant: "error",
+      title: "Browser QA toggle failed",
+      message: cause.message,
+    });
+  });
+  child.once("close", (code) => {
+    if (!active() || reported || !spawned || code === 0) return;
+    api.ui.toast({
+      variant: "error",
+      title: "Browser QA toggle failed",
+      message: error.trim() || `hyprd exited ${code ?? "without a status"}`,
+    });
+  });
+  return child;
+}

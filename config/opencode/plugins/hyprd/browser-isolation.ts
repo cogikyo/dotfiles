@@ -2,30 +2,89 @@ import { tool, type Plugin, type PluginModule } from "@opencode-ai/plugin";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createInterface } from "node:readline";
 import { z } from "zod";
-import { record } from "../shared/record.ts";
 
 const id = "hyprd-browser-isolation";
 const clients = new Map<string, Promise<MCPClient>>();
 
-type Tool = {
-  name: string;
-  description?: string;
-  inputSchema: {
-    properties?: Record<string, JSONSchema>;
-    required?: string[];
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Isolated browser tools                                                                        │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
+const server: Plugin = async () => {
+  const catalog = await MCPClient.connect();
+  const tools = await catalog.tools();
+  catalog.close();
+
+  return {
+    tool: Object.fromEntries(tools.map((item) => [`chrome-devtools_${item.name}`, definition(item)])),
+    event: async ({ event }) => {
+      if (event.type !== "session.deleted" && event.type !== "session.idle") return;
+      const sessionID = event.type === "session.deleted" ? event.properties.info.id : event.properties.sessionID;
+      const client = clients.get(sessionID);
+      clients.delete(sessionID);
+      (await client)?.close();
+    },
   };
 };
 
-type Literal = string | number | boolean | null;
+/** Exposes permission-gated Chrome DevTools tools through session-isolated MCP processes. */
+export default { id, server } satisfies PluginModule;
+
+// ├─ MCP messages ────────────────────────────────────────────────────────────────────────────────┤
 
 type JSONSchema = {
   type?: string;
   description?: string;
-  enum?: Literal[];
+  enum?: Array<string | number | boolean | null>;
   items?: JSONSchema;
   properties?: Record<string, JSONSchema>;
   required?: string[];
 };
+
+const label = z.string().optional().catch(undefined);
+
+// Only this JSON Schema subset is translated to OpenCode tool arguments.
+const JSONSchema: z.ZodType<JSONSchema> = z.lazy(() =>
+  z.object({
+    type: label,
+    description: label,
+    enum: z.array(z.union([z.string(), z.number(), z.boolean(), z.null()])).optional(),
+    items: JSONSchema.optional(),
+    properties: z.record(z.string(), JSONSchema).optional(),
+    required: z.array(z.string()).optional(),
+  }),
+);
+
+const Tool = z.object({
+  name: z.string(),
+  description: label,
+  inputSchema: z.object({
+    properties: z.record(z.string(), JSONSchema).optional(),
+    required: z.array(z.string()).optional(),
+  }),
+});
+type Tool = z.infer<typeof Tool>;
+
+const Tools = z.object({ tools: z.array(Tool) });
+
+const Content = z.union([
+  z.object({ type: z.literal("text"), text: z.string() }),
+  z.object({ type: z.literal("image"), data: z.string(), mimeType: z.string() }),
+]);
+const Result = z.object({
+  content: z.array(z.unknown()).transform((items) =>
+    items.flatMap((item) => {
+      const parsed = Content.safeParse(item);
+      return parsed.success ? [parsed.data] : [];
+    }),
+  ),
+  isError: z.unknown().transform((value) => value === true),
+});
+
+// MCP messages are newline-delimited JSON-RPC; replies need a numeric ID.
+const Message = z.object({ id: z.number(), method: z.string().optional(), error: z.unknown(), result: z.unknown() });
+
+// ├─ MCP client ──────────────────────────────────────────────────────────────────────────────────┤
 
 class MCPClient {
   private child: ChildProcessWithoutNullStreams;
@@ -63,18 +122,15 @@ class MCPClient {
   }
 
   async tools() {
-    const result = record(await this.request("tools/list", {}));
-    if (!result || !Array.isArray(result.tools)) throw new Error("Invalid MCP tool list");
-    return result.tools.map(parseTool);
+    const result = Tools.safeParse(await this.request("tools/list", {}));
+    if (!result.success) throw new Error(`Invalid MCP tool list: ${z.prettifyError(result.error)}`);
+    return result.data.tools;
   }
 
   async call(name: string, args: Record<string, unknown>) {
-    const result = record(await this.request("tools/call", { name, arguments: args }));
-    if (!result || !Array.isArray(result.content)) throw new Error("Invalid MCP tool result");
-    return {
-      content: result.content.map(record).filter((item) => item !== undefined),
-      isError: result.isError === true,
-    };
+    const result = Result.safeParse(await this.request("tools/call", { name, arguments: args }));
+    if (!result.success) throw new Error("Invalid MCP tool result");
+    return result.data;
   }
 
   close() {
@@ -88,16 +144,18 @@ class MCPClient {
     return result;
   }
 
+  // MCP server requests get empty responses except `roots/list`, which gets an empty root list.
   private receive(line: string) {
-    let message: Record<string, unknown> | undefined;
+    let parsed;
     try {
-      message = record(JSON.parse(line));
+      parsed = Message.safeParse(JSON.parse(line));
     } catch {
       return;
     }
-    if (!message || typeof message.id !== "number") return;
+    if (!parsed.success) return;
+    const message = parsed.data;
 
-    if (typeof message.method === "string") {
+    if (message.method !== undefined) {
       const result = message.method === "roots/list" ? { roots: [] } : {};
       this.send({ jsonrpc: "2.0", id: message.id, result });
       return;
@@ -119,6 +177,9 @@ class MCPClient {
   }
 }
 
+// ├─ Session tools ───────────────────────────────────────────────────────────────────────────────┤
+
+// Failed session connections are discarded so a later call can retry.
 function browser(sessionID: string) {
   const existing = clients.get(sessionID);
   if (existing) return existing;
@@ -148,93 +209,21 @@ function definition(item: Tool) {
         metadata: {},
       });
       const result = await (await browser(ctx.sessionID)).call(item.name, args);
-      const output = result.content
-        .filter(textContent)
-        .map((part) => part.text)
-        .join("\n\n");
+      const output = result.content.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n\n");
       if (result.isError) throw new Error(output || `${item.name} failed`);
       return {
         output,
-        attachments: result.content.filter(imageContent).map((part) => ({
-          type: "file",
-          mime: part.mimeType,
-          url: `data:${part.mimeType};base64,${part.data}`,
-        })),
+        attachments: result.content.flatMap((part) =>
+          part.type === "image"
+            ? [{ type: "file", mime: part.mimeType, url: `data:${part.mimeType};base64,${part.data}` }]
+            : [],
+        ),
       };
     },
   });
 }
 
-function parseTool(value: unknown): Tool {
-  const entry = record(value);
-  const input = record(entry?.inputSchema);
-  if (typeof entry?.name !== "string" || !input) throw new Error("Invalid MCP tool definition");
-  const properties = parseProperties(input.properties);
-  const required = input.required;
-  if (required !== undefined && !stringList(required)) {
-    throw new Error("Invalid MCP required properties");
-  }
-  return {
-    name: entry.name,
-    ...(typeof entry.description === "string" ? { description: entry.description } : {}),
-    inputSchema: {
-      ...(properties ? { properties } : {}),
-      ...(required ? { required } : {}),
-    },
-  };
-}
-
-function parseSchema(value: unknown): JSONSchema {
-  const entry = record(value);
-  if (!entry) throw new Error("Invalid MCP input schema");
-  const properties = parseProperties(entry.properties);
-  const values = entry.enum;
-  if (values !== undefined && !literalList(values)) {
-    throw new Error("Invalid MCP schema enum");
-  }
-  const required = entry.required;
-  if (required !== undefined && !stringList(required)) {
-    throw new Error("Invalid MCP schema required properties");
-  }
-  return {
-    ...(typeof entry.type === "string" ? { type: entry.type } : {}),
-    ...(typeof entry.description === "string" ? { description: entry.description } : {}),
-    ...(values ? { enum: values } : {}),
-    ...(entry.items !== undefined ? { items: parseSchema(entry.items) } : {}),
-    ...(properties ? { properties } : {}),
-    ...(required ? { required } : {}),
-  };
-}
-
-function parseProperties(value: unknown): Record<string, JSONSchema> | undefined {
-  if (value === undefined) return undefined;
-  const entries = record(value);
-  if (!entries) throw new Error("Invalid MCP schema properties");
-  return Object.fromEntries(Object.entries(entries).map(([key, item]) => [key, parseSchema(item)]));
-}
-
-function stringList(value: unknown): value is string[] {
-  return Array.isArray(value) && value.every((item) => typeof item === "string");
-}
-
-function literalList(value: unknown): value is Literal[] {
-  return Array.isArray(value) && value.every(isLiteral);
-}
-
-function isLiteral(value: unknown): value is Literal {
-  return value === null || typeof value === "string" || typeof value === "number" || typeof value === "boolean";
-}
-
-function textContent(value: Record<string, unknown>): value is Record<string, unknown> & { text: string } {
-  return value.type === "text" && typeof value.text === "string";
-}
-
-function imageContent(
-  value: Record<string, unknown>,
-): value is Record<string, unknown> & { data: string; mimeType: string } {
-  return value.type === "image" && typeof value.data === "string" && typeof value.mimeType === "string";
-}
-
+// MCP tool arguments ignore JSON Schema unions and numeric bounds.
 function argument(schema: JSONSchema): z.ZodType {
   let value: z.ZodType;
   if (schema.enum?.length) {
@@ -274,23 +263,3 @@ function argument(schema: JSONSchema): z.ZodType {
   }
   return schema.description ? value.describe(schema.description) : value;
 }
-
-const server: Plugin = async () => {
-  const catalog = await MCPClient.connect();
-  const tools = await catalog.tools();
-  catalog.close();
-
-  return {
-    tool: Object.fromEntries(tools.map((item) => [`chrome-devtools_${item.name}`, definition(item)])),
-    event: async ({ event }) => {
-      if (event.type !== "session.deleted" && event.type !== "session.idle") return;
-      const sessionID = event.type === "session.deleted" ? event.properties.info.id : event.properties.sessionID;
-      const client = clients.get(sessionID);
-      clients.delete(sessionID);
-      (await client)?.close();
-    },
-  };
-};
-
-/** Server plugin that registers isolated Chrome DevTools MCP tools and handles `session.idle` and `session.deleted`. */
-export default { id, server } satisfies PluginModule;

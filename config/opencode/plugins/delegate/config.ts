@@ -1,58 +1,28 @@
-import fs from "node:fs/promises";
+import { z } from "zod";
+import { errorMessage } from "../shared/error.ts";
+import { readJson } from "../shared/file.ts";
 
+/** Provider allowlist path; policy checks only its provider IDs. */
 export const DELEGATE_CONFIG_PATH = "/home/cullyn/dotfiles/config/opencode/delegate.json";
 
-/** Provider ids allowed for delegation; this plugin does not interpret provider policy values. */
-export type DelegateConfig = {
-  providers: Record<string, Record<string, unknown>>;
-};
+const DelegateConfig = z.strictObject({
+  providers: z
+    .record(z.string(), z.record(z.string(), z.unknown()))
+    .refine((providers) => Object.keys(providers).length > 0, "must not be empty"),
+});
 
-/** Reads the local provider allowlist and rejects malformed or empty policy data. */
+/** Provider allowlist; nested provider policy values are not interpreted here. */
+export type DelegateConfig = z.infer<typeof DelegateConfig>;
+
+/** Loads the provider allowlist, failing explicitly for a missing or invalid file. */
 export async function loadDelegateConfig(path = DELEGATE_CONFIG_PATH): Promise<DelegateConfig> {
-  let raw: string;
+  let config: DelegateConfig | undefined;
   try {
-    raw = await fs.readFile(path, "utf8");
+    config = await readJson(path, DelegateConfig);
   } catch (error) {
-    throw new Error(`delegate config not readable at ${path}: ${errorMessage(error)}`, { cause: error });
+    const detail = error instanceof z.ZodError ? z.prettifyError(error) : errorMessage(error);
+    throw new Error(`delegate config is invalid at ${path}: ${detail}`, { cause: error });
   }
-
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw) as unknown;
-  } catch (error) {
-    throw new Error(`delegate config is not valid JSON at ${path}: ${errorMessage(error)}`, { cause: error });
-  }
-
-  return validateDelegateConfig(parsed, path);
-}
-
-function validateDelegateConfig(value: unknown, source: string): DelegateConfig {
-  const root = object(value, source);
-  exactKeys(root, ["providers"], source);
-  const providers = objectRecord(root.providers, `${source}.providers`);
-
-  if (!Object.keys(providers).length) throw new Error(`delegate config ${source}.providers must not be empty`);
-
-  return { providers };
-}
-
-function exactKeys(value: Record<string, unknown>, allowed: string[], label: string) {
-  const extra = Object.keys(value).filter((key) => !allowed.includes(key));
-  if (extra.length) throw new Error(`delegate config ${label} has unknown field: ${extra.join(", ")}`);
-}
-
-function object(value: unknown, label: string): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    throw new Error(`delegate config ${label} must be an object`);
-  }
-  return Object.fromEntries(Object.entries(value));
-}
-
-function objectRecord(value: unknown, label: string): Record<string, Record<string, unknown>> {
-  const root = object(value, label);
-  return Object.fromEntries(Object.entries(root).map(([key, item]) => [key, object(item, `${label}.${key}`)]));
-}
-
-function errorMessage(error: unknown) {
-  return error instanceof Error ? error.message : String(error);
+  if (!config) throw new Error(`delegate config not readable at ${path}: file does not exist`);
+  return config;
 }

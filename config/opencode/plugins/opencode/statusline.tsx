@@ -17,8 +17,11 @@ import { gitDirtyCount, gitStatus, type GitStatus } from "../shared/git.ts";
 import { icons } from "../shared/icons.ts";
 import { sessionContextUsage, sessionMeta, shortDir, type SessionUsage } from "../shared/session.ts";
 
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ TUI plugin: cwd, git, and context on the prompt                                               │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+
 const id = "opencode-statusline";
-// Polling also refreshes the status when no subscribed session event fires.
 const REFRESH_MS = 2_000;
 const TRACE_GIT_STATUS = process.env.OPENCODE_STATUSLINE_TRACE_GIT === "1";
 
@@ -31,9 +34,45 @@ type SessionPromptProps = {
   promptRef?: (ref: TuiPromptRef | undefined) => void;
 };
 
-// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
-// │ PROMPT DISPLAY                                                                                │
-// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+const tui: TuiPlugin = async (api) => {
+  api.slots.register({
+    order: 100,
+    slots: {
+      // The core prompt needs these lifecycle props and ref for input focus and submission.
+      session_prompt(
+        _ctx,
+        props: {
+          session_id: string;
+          visible?: boolean;
+          disabled?: boolean;
+          on_submit?: () => void;
+          ref?: (ref: TuiPromptRef | undefined) => void;
+        },
+      ) {
+        return (
+          <SessionPrompt
+            api={api}
+            sessionID={props.session_id}
+            visible={props.visible}
+            disabled={props.disabled}
+            onSubmit={props.on_submit}
+            promptRef={props.ref}
+          />
+        );
+      },
+    },
+  });
+};
+
+const plugin: TuiPluginModule & { id: string } = {
+  id,
+  tui,
+};
+
+/** TUI plugin that shows the session directory, Git status, and context pressure beside the prompt. */
+export default plugin;
+
+// ├─ Prompt display ──────────────────────────────────────────────────────────────────────────────┤
 
 function SessionPrompt(props: SessionPromptProps) {
   return (
@@ -280,9 +319,7 @@ function fallbackGitStatus(api: TuiPluginApi): GitStatus | undefined {
   };
 }
 
-// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
-// │ GIT STATUS SOURCES                                                                            │
-// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
+// ├─ Git status ──────────────────────────────────────────────────────────────────────────────────┤
 
 async function resolveGitStatus(api: TuiPluginApi, sessionID: string, dir: string): Promise<GitStatus | undefined> {
   const sessionStatus = gitStatusFromSessionDiff(api, sessionID);
@@ -381,47 +418,3 @@ async function traceGitStatus(details: unknown) {
   if (!TRACE_GIT_STATUS) return;
   await writeFile("/tmp/opencode-statusline-git.json", `${JSON.stringify(details, null, 2)}\n`).catch(() => undefined);
 }
-
-// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
-// │ TUI SLOT REGISTRATION                                                                         │
-// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
-
-const tui: TuiPlugin = async (api) => {
-  api.slots.register({
-    order: 100,
-    slots: {
-      // The core prompt needs these lifecycle props and ref for input focus and submission.
-      session_prompt(
-        _ctx,
-        props: {
-          session_id: string;
-          visible?: boolean;
-          disabled?: boolean;
-          on_submit?: () => void;
-          ref?: (ref: TuiPromptRef | undefined) => void;
-        },
-      ) {
-        return (
-          <SessionPrompt
-            api={api}
-            sessionID={props.session_id}
-            visible={props.visible}
-            disabled={props.disabled}
-            onSubmit={props.on_submit}
-            promptRef={props.ref}
-          />
-        );
-      },
-    },
-  });
-};
-
-const plugin: TuiPluginModule & { id: string } = {
-  id,
-  tui,
-};
-
-/** Adds repository and context usage to the TUI session_prompt slot.
- * Tracks message, part, session, and branch events and polls every two seconds.
- */
-export default plugin;

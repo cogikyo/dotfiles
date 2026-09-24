@@ -5,6 +5,11 @@ import path from "node:path";
 import { For, Show, createRenderEffect, createSignal, onCleanup, untrack } from "solid-js";
 import { openInNvim } from "../shared/open-nvim.ts";
 import { SidebarSection } from "../shared/sidebar-section.tsx";
+import { truncateMiddle } from "./markdown-source.ts";
+
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ TUI plugin: session files in the sidebar                                                      │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
 const id = "opencode-modified-files";
 const MAX_PATH_LENGTH = 34;
@@ -13,6 +18,25 @@ type FileItem = TuiSidebarFileItem & {
   path: string;
   label: string;
 };
+
+const tui: TuiPlugin = async (api) => {
+  api.slots.register({
+    order: 1000,
+    slots: {
+      sidebar_content(_ctx, props: { session_id: string }) {
+        return <ModifiedFiles api={api} sessionID={props.session_id} />;
+      },
+    },
+  });
+};
+
+const plugin: TuiPluginModule & { id: string } = {
+  id,
+  tui,
+};
+
+/** TUI plugin that lists changed session files in the sidebar, using completed file edits when no session diff is available. */
+export default plugin;
 
 function ModifiedFiles(props: { api: TuiPluginApi; sessionID: string }) {
   const [revision, setRevision] = createSignal(0);
@@ -81,6 +105,8 @@ function ModifiedFiles(props: { api: TuiPluginApi; sessionID: string }) {
     </Show>
   );
 }
+
+// ├─ Session files ───────────────────────────────────────────────────────────────────────────────┤
 
 function modifiedFiles(api: TuiPluginApi, sessionID: string): FileItem[] {
   const diffs = api.state.session.diff(sessionID);
@@ -178,33 +204,3 @@ function compactPath(filePath: string) {
 
   return truncateMiddle(label, MAX_PATH_LENGTH);
 }
-
-function truncateMiddle(value: string, maxLength: number) {
-  if (value.length <= maxLength) return value;
-  if (maxLength <= 3) return ".".repeat(maxLength);
-
-  const headLength = Math.ceil((maxLength - 3) / 2);
-  const tailLength = Math.floor((maxLength - 3) / 2);
-  return `${value.slice(0, headLength)}...${value.slice(value.length - tailLength)}`;
-}
-
-const tui: TuiPlugin = async (api) => {
-  api.slots.register({
-    order: 1000,
-    slots: {
-      sidebar_content(_ctx, props: { session_id: string }) {
-        return <ModifiedFiles api={api} sessionID={props.session_id} />;
-      },
-    },
-  });
-};
-
-const plugin: TuiPluginModule & { id: string } = {
-  id,
-  tui,
-};
-
-/** Adds the TUI sidebar_content slot for session diffs and completed edit-tool paths.
- * Tracks session.diff and message/part updates and removals.
- */
-export default plugin;

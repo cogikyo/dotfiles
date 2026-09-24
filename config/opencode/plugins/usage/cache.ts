@@ -1,31 +1,52 @@
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
-import { record } from "../shared/record.ts";
-import { usageCachePath, usageLockPath } from "./auth.ts";
-import type { ProviderUsage, UsageWindow } from "./types.ts";
+import { z } from "zod";
+import { readJson, writeJson } from "../shared/file.ts";
+import { lenient, type ProviderUsage, type UsageWindow } from "./types.ts";
 
-/** Usage data and retry state stored for one provider. */
-export type CachedProviderUsage = {
-  fetchedAt?: number;
-  backoffUntil?: number;
-  usage?: ProviderUsage;
-  windows?: UsageWindow[];
-  error?: string;
-};
+// ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
+// │ Provider cache                                                                                │
+// ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
-const LOCK_STALE_MS = 30_000;
-const MAX_CACHE_WINDOWS = 12;
-const MAX_FUTURE_SKEW_MS = 5_000;
+// ├─ Cache record ────────────────────────────────────────────────────────────────────────────────┤
 
-/** Reason a cached provider view cannot be treated as current usage. */
+// Cache reads tolerate invalid notes; inspection checks window values more strictly.
+const Window = z.object({
+  label: z.string(),
+  usedPercent: z.number().optional(),
+  resetAt: z.string().optional(),
+}) satisfies z.ZodType<UsageWindow>;
+
+const Usage = z.object({
+  id: z.string(),
+  label: z.string(),
+  windows: z.array(Window),
+  note: lenient(z.string()),
+  noteKind: lenient(z.enum(["info", "warn", "error"])),
+  placeholders: z.array(z.string()).optional(),
+}) satisfies z.ZodType<ProviderUsage>;
+
+const Cache = z.object({
+  fetchedAt: z.number().optional(),
+  backoffUntil: z.number().optional(),
+  usage: Usage.optional(),
+  error: z.string().optional(),
+});
+
+export type CachedProviderUsage = z.infer<typeof Cache>;
+
+// ├─ Inspection ──────────────────────────────────────────────────────────────────────────────────┤
+
+/** Reason cached usage cannot be treated as current. */
 export type ProviderCacheIssue = "missing" | "unreadable" | "malformed" | "error" | "stale" | "unknown";
 
-/** Cached usage window with reset status evaluated at inspection time. */
+/** A cached window whose `postReset` flag means its usage predates a passed reset. */
 export type CachedUsageWindow = UsageWindow & {
   postReset: boolean;
 };
 
-/** Validated cache data prepared for status output. */
+/** Validated cache data; even a fresh view can have post-reset or unknown windows. */
 export type ProviderCacheView = {
   fetchedAt?: number;
   ageMS?: number;
@@ -33,129 +54,46 @@ export type ProviderCacheView = {
   issue?: ProviderCacheIssue;
 };
 
-/** Reads the provider cache, returning an empty value when it cannot be parsed or read. */
-export async function readProviderCache(providerID: string): Promise<CachedProviderUsage> {
-  try {
-    return parseRuntimeCache(JSON.parse(await fs.readFile(usageCachePath(providerID), "utf8")));
-  } catch {
-    return {};
-  }
-}
+const MAX_CACHE_WINDOWS = 12;
+const MAX_FUTURE_SKEW_MS = 5_000;
+const WINDOW_LABEL = /^[A-Za-z0-9_-]{1,8}$/;
 
-function parseRuntimeCache(value: unknown): CachedProviderUsage {
-  const root = record(value);
-  if (!root || !validCacheMetadata(root)) return {};
-  const usage = root.usage === undefined ? undefined : cachedUsage(root.usage);
-  if (root.usage !== undefined && !usage) return {};
-  const windows = root.windows === undefined ? undefined : cachedWindows(root.windows);
-  if (root.windows !== undefined && !windows) return {};
-  return {
-    fetchedAt: optionalNumber(root.fetchedAt),
-    backoffUntil: optionalNumber(root.backoffUntil),
-    error: typeof root.error === "string" ? root.error : undefined,
-    windows,
-    usage,
-  };
-}
-
-function validCacheMetadata(root: Record<string, unknown>) {
-  return (
-    (root.fetchedAt === undefined || optionalNumber(root.fetchedAt) !== undefined) &&
-    (root.backoffUntil === undefined || optionalNumber(root.backoffUntil) !== undefined) &&
-    (root.error === undefined || typeof root.error === "string")
-  );
-}
-
-function cachedUsage(value: unknown): ProviderUsage | undefined {
-  const root = record(value);
-  if (!root || typeof root.id !== "string" || typeof root.label !== "string") return undefined;
-  const windows = cachedWindows(root.windows);
-  if (!windows) return undefined;
-  const placeholders = root.placeholders;
-  if (
-    placeholders !== undefined &&
-    (!Array.isArray(placeholders) || !placeholders.every((item) => typeof item === "string"))
-  )
-    return undefined;
-  return {
-    id: root.id,
-    label: root.label,
-    windows,
-    note: typeof root.note === "string" ? root.note : undefined,
-    noteKind:
-      root.noteKind === "info" || root.noteKind === "warn" || root.noteKind === "error" ? root.noteKind : undefined,
-    placeholders: Array.isArray(placeholders) ? placeholders : undefined,
-  };
-}
-
-function cachedWindows(value: unknown): UsageWindow[] | undefined {
-  if (!Array.isArray(value)) return undefined;
-  const windows = value.map(cacheWindow);
-  if (windows.some((window) => !window)) return undefined;
-  return windows.filter((window) => window !== undefined);
-}
-
-function cacheWindow(value: unknown): UsageWindow | undefined {
-  const window = record(value);
-  if (!window || typeof window.label !== "string") return undefined;
-  if (
-    window.usedPercent !== undefined &&
-    (typeof window.usedPercent !== "number" || !Number.isFinite(window.usedPercent))
-  )
-    return undefined;
-  if (window.resetAt !== undefined && typeof window.resetAt !== "string") return undefined;
-  return {
-    label: window.label,
-    usedPercent: window.usedPercent,
-    resetAt: window.resetAt,
-  };
-}
-
-/** Validates a provider cache and classifies its freshness and reset windows. */
+/** Validates cached usage and reports its freshness; unreadable or malformed files return an issue without windows. */
 export async function inspectProviderCache(
   providerID: string,
   staleAfterMS: number,
   now = Date.now(),
 ): Promise<ProviderCacheView> {
+  let cache: CachedProviderUsage | undefined;
   try {
-    return decodeProviderCache(await fs.readFile(usageCachePath(providerID), "utf8"), staleAfterMS, now);
+    cache = await readJson(cachePath(providerID), Cache);
   } catch (error) {
-    return {
-      windows: [],
-      issue: isMissing(error) ? "missing" : "unreadable",
-    };
+    return unknownCache(error instanceof SyntaxError || error instanceof z.ZodError ? "malformed" : "unreadable");
   }
-}
+  if (!cache) return unknownCache("missing");
 
-/** Decodes and validates cached JSON against the provider freshness limit. */
-export function decodeProviderCache(raw: string, staleAfterMS: number, now = Date.now()): ProviderCacheView {
-  try {
-    const root = record(JSON.parse(raw));
-    if (!root) return unknownCache("malformed");
-
-    const fetchedAt = optionalNumber(root.fetchedAt);
-    if (root.fetchedAt !== undefined && fetchedAt === undefined) {
-      return unknownCache("malformed");
-    }
-    if (fetchedAt !== undefined && (fetchedAt < 0 || fetchedAt > now + MAX_FUTURE_SKEW_MS)) {
-      return unknownCache("malformed");
-    }
-
-    const error = optionalString(root.error);
-    if (root.error !== undefined && error === undefined) {
-      return unknownCache("malformed");
-    }
-
-    const windows = decodeWindows(root, fetchedAt, now);
-    if (!windows) return unknownCache("malformed");
-
-    const ageMS = cacheAgeMS(fetchedAt, now);
-    const view = { fetchedAt, ageMS, windows } satisfies ProviderCacheView;
-    const issue = cacheIssue(view, error, staleAfterMS, now);
-    return issue ? { ...view, issue } : view;
-  } catch {
+  const { fetchedAt, error } = cache;
+  if (fetchedAt !== undefined && (fetchedAt < 0 || fetchedAt > now + MAX_FUTURE_SKEW_MS)) {
     return unknownCache("malformed");
   }
+  if (error === "") return unknownCache("malformed");
+
+  const windows = inspectWindows(cache.usage?.windows ?? [], fetchedAt, now);
+  if (!windows) return unknownCache("malformed");
+
+  const view = { fetchedAt, ageMS: cacheAgeMS(fetchedAt, now), windows } satisfies ProviderCacheView;
+  const issue = cacheIssue(view, error, staleAfterMS, now);
+  return issue ? { ...view, issue } : view;
+}
+
+export function cacheAgeMS(fetchedAt: number | undefined, now = Date.now()) {
+  if (fetchedAt === undefined) return undefined;
+  return Math.max(0, now - fetchedAt);
+}
+
+export function isCacheStale(fetchedAt: number | undefined, staleAfterMS: number, now = Date.now()) {
+  const age = cacheAgeMS(fetchedAt, now);
+  return age !== undefined && age > staleAfterMS;
 }
 
 function cacheIssue(
@@ -170,29 +108,54 @@ function cacheIssue(
   return undefined;
 }
 
-/** Returns a non-negative cache age, or undefined when no fetch time is stored. */
-export function cacheAgeMS(fetchedAt: number | undefined, now = Date.now()) {
-  if (fetchedAt === undefined) return undefined;
-  return Math.max(0, now - fetchedAt);
+function inspectWindows(windows: UsageWindow[], fetchedAt: number | undefined, now: number) {
+  if (windows.length > MAX_CACHE_WINDOWS) return undefined;
+  const inspected = windows.map((window) => inspectWindow(window, fetchedAt, now));
+  if (inspected.includes(undefined)) return undefined;
+  return inspected.filter((window) => window !== undefined);
 }
 
-/** Reports whether a stored fetch time exceeds the provider's stale threshold. */
-export function isCacheStale(fetchedAt: number | undefined, staleAfterMS: number, now = Date.now()) {
-  const age = cacheAgeMS(fetchedAt, now);
-  return age !== undefined && age > staleAfterMS;
+function inspectWindow(window: UsageWindow, fetchedAt: number | undefined, now: number): CachedUsageWindow | undefined {
+  const { label, usedPercent } = window;
+  if (!WINDOW_LABEL.test(label)) return undefined;
+  if (usedPercent !== undefined && (usedPercent < 0 || usedPercent > 100)) return undefined;
+
+  if (window.resetAt === undefined) return { label, usedPercent, postReset: false };
+  const resetMS = Date.parse(window.resetAt);
+  if (!Number.isFinite(resetMS)) return undefined;
+  const postReset = resetMS <= now && (fetchedAt === undefined || fetchedAt <= resetMS);
+  return { label, usedPercent, resetAt: new Date(resetMS).toISOString(), postReset };
 }
 
-/** Writes provider usage through a temporary file before replacing the cache. */
+function unknownCache(issue: ProviderCacheIssue): ProviderCacheView {
+  return { windows: [], issue };
+}
+
+// ├─ Read and write ──────────────────────────────────────────────────────────────────────────────┤
+
+/** Reads cached usage, returning an empty record on any read or parse failure. */
+export async function readProviderCache(providerID: string): Promise<CachedProviderUsage> {
+  return (await readJson(cachePath(providerID), Cache).catch(() => undefined)) ?? {};
+}
+
+/** Atomically writes provider usage; write errors propagate. */
 export async function writeProviderCache(providerID: string, cache: CachedProviderUsage) {
-  const cachePath = usageCachePath(providerID);
-  const tempPath = `${cachePath}.${process.pid}.tmp`;
-
-  await fs.mkdir(path.dirname(cachePath), { recursive: true, mode: 0o700 });
-  await fs.writeFile(tempPath, JSON.stringify(cache), "utf8");
-  await fs.rename(tempPath, cachePath);
+  await writeJson(cachePath(providerID), cache);
 }
 
-/** Runs one provider operation under its lock, or returns undefined if it is busy. */
+function cacheDir() {
+  const xdg = process.env.XDG_CACHE_HOME?.trim();
+  const root = xdg ? path.resolve(xdg) : path.join(os.homedir(), ".cache");
+  return path.join(root, "opencode", "usage-sidebar");
+}
+
+function cachePath(providerID: string) {
+  return path.join(cacheDir(), `${providerID}.json`);
+}
+
+// ├─ Provider lock ───────────────────────────────────────────────────────────────────────────────┤
+
+/** Runs one provider operation under a lock; busy locks return undefined, and locks older than 30 seconds are replaced. */
 export async function withProviderLock<T>(providerID: string, run: () => Promise<T>) {
   const release = await acquireLock(providerID);
   if (!release) return undefined;
@@ -205,24 +168,24 @@ export async function withProviderLock<T>(providerID: string, run: () => Promise
 }
 
 async function acquireLock(providerID: string) {
-  const lockPath = usageLockPath(providerID);
-  await fs.mkdir(path.dirname(lockPath), { recursive: true, mode: 0o700 });
+  const file = lockPath(providerID);
+  await fs.mkdir(path.dirname(file), { recursive: true, mode: 0o700 });
 
-  const release = await createLock(lockPath);
+  const release = await createLock(file);
   if (release) return release;
 
-  if (await isStaleLock(lockPath)) {
-    await fs.rm(lockPath, { force: true }).catch(() => undefined);
-    return createLock(lockPath);
+  if (await isStaleLock(file)) {
+    await fs.rm(file, { force: true }).catch(() => undefined);
+    return createLock(file);
   }
 
   return undefined;
 }
 
-async function createLock(lockPath: string) {
+async function createLock(file: string) {
   let handle: fs.FileHandle | undefined;
   try {
-    handle = await fs.open(lockPath, "wx");
+    handle = await fs.open(file, "wx");
     await handle.writeFile(JSON.stringify({ pid: process.pid, createdAt: Date.now() }), "utf8");
     await handle.close();
 
@@ -230,7 +193,7 @@ async function createLock(lockPath: string) {
     return async () => {
       if (released) return;
       released = true;
-      await fs.rm(lockPath, { force: true }).catch(() => undefined);
+      await fs.rm(file, { force: true }).catch(() => undefined);
     };
   } catch {
     await handle?.close().catch(() => undefined);
@@ -238,76 +201,18 @@ async function createLock(lockPath: string) {
   }
 }
 
-async function isStaleLock(lockPath: string) {
-  try {
-    const raw = await fs.readFile(lockPath, "utf8");
-    const parsed = record(JSON.parse(raw));
-    return typeof parsed?.createdAt === "number" && Date.now() - parsed.createdAt > LOCK_STALE_MS;
-  } catch {
-    return false;
-  }
+const Lock = z.object({ createdAt: z.number() });
+const LOCK_STALE_MS = 30_000;
+
+async function isStaleLock(file: string) {
+  const lock = await readJson(file, Lock).catch(() => undefined);
+  return lock !== undefined && Date.now() - lock.createdAt > LOCK_STALE_MS;
 }
 
-function decodeWindows(
-  root: Record<string, unknown>,
-  fetchedAt: number | undefined,
-  now: number,
-): CachedUsageWindow[] | undefined {
-  const usage = root.usage === undefined ? undefined : record(root.usage);
-  if (root.usage !== undefined && !usage) return undefined;
-  const rawWindows = usage ? usage.windows : root.windows;
-  if (rawWindows !== undefined && !Array.isArray(rawWindows)) return undefined;
-  if (Array.isArray(rawWindows) && rawWindows.length > MAX_CACHE_WINDOWS) return undefined;
-
-  const windows = (rawWindows ?? []).map((value) => parseCachedWindow(value, fetchedAt, now));
-  if (windows.some((window) => !window)) return undefined;
-  return windows.filter((window) => window !== undefined);
-}
-
-function parseCachedWindow(value: unknown, fetchedAt: number | undefined, now: number): CachedUsageWindow | undefined {
-  const root = record(value);
-  if (!root) return undefined;
-  if (typeof root.label !== "string" || !/^[A-Za-z0-9_-]{1,8}$/.test(root.label)) {
-    return undefined;
-  }
-
-  const usedPercent = optionalNumber(root.usedPercent);
-  if (root.usedPercent !== undefined && (usedPercent === undefined || usedPercent < 0 || usedPercent > 100)) {
-    return undefined;
-  }
-
-  const resetValue = optionalString(root.resetAt);
-  if (root.resetAt !== undefined && resetValue === undefined) return undefined;
-  const resetMS = resetValue === undefined ? undefined : Date.parse(resetValue);
-  if (resetMS !== undefined && !Number.isFinite(resetMS)) return undefined;
-  const resetAt = resetMS === undefined ? undefined : new Date(resetMS).toISOString();
-
-  return {
-    label: root.label,
-    usedPercent,
-    resetAt,
-    postReset: isPostReset(resetMS, fetchedAt, now),
-  };
-}
-
-function isPostReset(resetMS: number | undefined, fetchedAt: number | undefined, now: number) {
-  return resetMS !== undefined && resetMS <= now && (fetchedAt === undefined || fetchedAt <= resetMS);
-}
-
-function unknownCache(issue: ProviderCacheIssue): ProviderCacheView {
-  return { windows: [], issue };
-}
-
-function optionalNumber(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) ? value : undefined;
-}
-
-function optionalString(value: unknown) {
-  return typeof value === "string" && value.length > 0 ? value : undefined;
-}
-
-function isMissing(error: unknown) {
-  return (
-    typeof error === "object" && error !== null && "code" in error && (error as { code?: unknown }).code === "ENOENT"
-  );
+function lockPath(providerID: string) {
+  const xdg = process.env.XDG_RUNTIME_DIR?.trim();
+  const dir = xdg
+    ? path.join(path.resolve(xdg), "opencode")
+    : path.join("/tmp", `opencode-${process.getuid?.() ?? os.userInfo().uid}`);
+  return path.join(dir, `usage-sidebar-${providerID}.lock`);
 }
