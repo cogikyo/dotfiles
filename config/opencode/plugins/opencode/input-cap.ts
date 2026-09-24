@@ -20,11 +20,19 @@ const Limit = z.object({ context: number, input: number, output: number });
 const Configured = Limit.catch({});
 const Reserved = z.object({ compaction: z.object({ reserved: number }).optional().catch(undefined) }).catch({});
 
+const CatalogModel = z.object({
+  limit: Limit,
+  experimental: z
+    .object({ modes: z.record(z.string(), z.unknown()).optional().catch(undefined) })
+    .optional()
+    .catch(undefined),
+});
+
 const Catalog = z
   .record(
     z.string(),
     z
-      .object({ models: z.record(z.string(), z.object({ limit: Limit }).optional().catch(undefined)) })
+      .object({ models: z.record(z.string(), CatalogModel.optional().catch(undefined)) })
       .optional()
       .catch(undefined),
   )
@@ -34,7 +42,9 @@ const Catalog = z
       if (!provider) continue;
       const limits: Record<string, Limit> = {};
       for (const [modelID, model] of Object.entries(provider.models)) {
-        if (model) limits[modelID] = model.limit;
+        if (!model) continue;
+        limits[modelID] = model.limit;
+        for (const mode of Object.keys(model.experimental?.modes ?? {})) limits[`${modelID}-${mode}`] = model.limit;
       }
       catalog[providerID] = limits;
     }
@@ -51,7 +61,7 @@ const server: Plugin = async () => ({
   },
 });
 
-/** Server plugin that caps enabled models' input limits to leave room for compaction, using cached model limits when needed. */
+/** Caps enabled models and OpenCode-generated mode models using cached catalog limits to leave room for compaction. */
 export default { id, server } satisfies PluginModule;
 
 function capProviderModels(cfg: Config, catalog: Catalog, inputCap: number) {
