@@ -113,7 +113,10 @@ const Agent: z.ZodType<Agent> = z.object({
   name: z.string(),
   permission: z.array(Rule),
   model: z.object({ providerID: z.string(), modelID: z.string() }).optional(),
-  variant: z.string().optional(),
+  variant: z
+    .string()
+    .nullish()
+    .transform((value) => value ?? undefined),
 });
 
 export type Model = Pick<v2.Model, "id" | "variants"> & { api: Pick<v2.Model["api"], "id"> };
