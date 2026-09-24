@@ -20,6 +20,7 @@ Running sessions keep the loaded plugin set.
 | Usage status tool      | `usage/tool.ts`                    | `usage-status`                  | server  |
 | Hyprland notifications | `hyprd/notify.ts`                  | `hyprd-notify`                  | server  |
 | Isolated browser QA    | `hyprd/browser-isolation.ts`       | `hyprd-browser-isolation`       | server  |
+| Tool guard             | `opencode/tool-guard.ts`           | `opencode-tool-guard`           | server  |
 | Skill compact          | `opencode/skill-compact.ts`        | `opencode-skill-compact`        | server  |
 | Media context prompt   | `opencode/media-context/prompt.ts` | `opencode-media-context-prompt` | server  |
 | Input cap              | `opencode/input-cap.ts`            | `opencode-input-cap`            | server  |
@@ -28,9 +29,11 @@ Running sessions keep the loaded plugin set.
 | Browser QA workspaces  | `hyprd/browser-qa.tsx`             | `hyprd-browser-qa`              | TUI     |
 | Usage sidebar          | `usage/index.tsx`                  | `cullyn.usage-sidebar`          | TUI     |
 | Lanes sidebar          | `delegate/sidebar.tsx`             | `delegate-lanes`                | TUI     |
+| Sidebar scrollbar      | `opencode/sidebar-scrollbar.tsx`   | `opencode-sidebar-scrollbar`    | TUI     |
 | Modified files         | `opencode/modified-files.tsx`      | `opencode-modified-files`       | TUI     |
 | Markdown context       | `opencode/markdown-context.tsx`    | `opencode-markdown-context`     | TUI     |
 | Media context sidebar  | `opencode/media-context/index.tsx` | `opencode-media-context`        | TUI     |
+| MCP sidebar            | `opencode/mcp.tsx`                 | `opencode-mcp`                  | TUI     |
 | Statusline             | `opencode/statusline.tsx`          | `opencode-statusline`           | TUI     |
 | Pin model              | `opencode/pin-model.tsx`           | `opencode-pin-model`            | TUI     |
 
@@ -45,6 +48,7 @@ Context-limited lanes roll over to a fresh child on the next call with the same 
 Automatic compaction alone marks a child context-limited; manual compaction does not seal the lane.
 Busy lanes reject new calls rather than queueing them.
 `task_status` lists direct children and their lane names to recover from interrupted calls.
+`task_close` closes idle named lanes; the next call with a closed name creates a fresh child.
 
 Normal flow:
 
@@ -80,7 +84,7 @@ Context governor:
 - At 150k (medium), it warns about possible degraded long-context performance and asks the child to finish soon and verify critical conclusions.
 - At 200k (final), it reports the remaining context budget before the hard stop and asks for a final report, allowing only last edits already in progress or final evidence calls.
 - Warnings do not abort, seal, change tools, or limit later resume; a normal child completion after any warning remains a trusted normal result.
-- At 250k (hard), the delegate aborts active work, seals the session, and returns `state="context_limited"` with recoverable assistant text and durable-state advice.
+- At 225k (hard), the delegate aborts active work, seals the session, and returns `state="context_limited"` with recoverable assistant text and durable-state advice.
 - Hard-stopped and automatically compacted sessions persist `metadata.delegate.context`, receive a tail deny, appear marked in `task_status`, and trigger lane rollover.
 - The pinned runtime's `prompt_async` is the supported non-aborting path: it accepts an asynchronous warning user turn while the existing runner remains active.
 - A later message poll confirms that the warning was stored, but API acceptance alone cannot prove that the child consumed it.
@@ -119,7 +123,7 @@ Practical failure diagnosis:
 ## Usage
 
 Usage has a TUI view and a read-only server tool.
-`usage/index.tsx` shows OpenAI, Claude, xAI, and OpenCode headroom in the sidebar.
+`usage/index.tsx` shows OpenAI, Anthropic, xAI, Cursor, and OpenCode headroom in the sidebar.
 `usage/tool.ts` exposes `usage_status`, a primary tool that reads the same local cache without refreshing providers.
 
 Normal flow:
@@ -133,17 +137,19 @@ Normal flow:
 Auth sources:
 
 - OpenAI: OpenCode `auth.json` OAuth entry.
-- Claude: OpenCode `auth.json` OAuth entry.
+- Anthropic: OpenCode `auth.json` OAuth entry.
 - xAI: Grok CLI auth at `~/.grok/auth.json`; refresh via `grok models`.
-- OpenCode: Firefox `auth` cookie for `opencode.ai` from `cookies.sqlite`.
+- Cursor: OpenCode `auth.json` OAuth entry.
+- OpenCode Go: OpenCode `auth.json` API key under `opencode-go`.
 
 Claude subscription requests are handled by `opencode-claude-auth` directly to Anthropic.
 The usage adapter's `claude -p . --model haiku` invocation is only bounded 401 recovery; it does not route subscription requests.
 
 Practical failure diagnosis:
 
-- `no auth` (red) → missing or non-OAuth provider credentials; xAI uses Grok CLI auth, not OpenCode's xai OAuth.
-- `sign in` (amber) → OpenCode Firefox session expired.
+- `no auth` → missing OpenCode credentials; the note is warning-colored for OpenCode Go and error-colored for OpenAI, Anthropic, and Cursor.
+- xAI auth failures use Grok CLI credentials and show warning-colored notes.
+- `invalid key` → the OpenCode Go API key was rejected.
 - `429` → rate-limited; wait for the backoff or the reset window.
 - `stale` note → cached data is older than the provider's `staleAfterMS`; click the provider row for a manual refresh.
 - `auth recovery failed` (amber) → recovery checks `$CLAUDE_CONFIG_DIR` when set, then the XDG Claude config and legacy `~/.claude`; otherwise the 401 is unrecoverable from here.
@@ -194,8 +200,8 @@ The other sidebar sections register `sidebar_content` with distinct orders.
 
 - `opencode/code-blocks.ts` patches OpenTUI code-block rendering and registers a SQL tree-sitter parser.
 - `hyprd/browser-qa.tsx` keeps one workspace subscription per plugin instance and lists marked browser workspaces before MCP.
-- `opencode/input-cap.ts` caps enabled-provider `limit.input` at `COMPACTION_LIMIT + reserved` (250k + 25k), preserving `context` and `output`, so auto-compaction triggers at 250k.
-  Models that already compact at or below 250k stay unchanged.
+- `opencode/input-cap.ts` caps eligible enabled-provider model input limits at `COMPACTION_LIMIT + reserved` (225k + 25k by default), using cached catalog limits when needed.
+  Models that already compact at or below 225k stay unchanged.
   Load it after provider plugins that seed models, including Cursor.
 - `opencode/statusline.tsx` wraps `session_prompt` with cwd, git status, and a context-pressure bar that uses OpenCode's overflow token count and effective compaction threshold.
   Pink is the last pressure tier before that threshold.
@@ -203,7 +209,10 @@ The other sidebar sections register `sidebar_content` with distinct orders.
 - `opencode/markdown-context.tsx` lists Markdown reads plus pinned `AGENTS.md` files, the current agent, skills, and slash commands. Click the close mark to stub an unpinned skill or Markdown read. Click restore on a compacted row to reload the file from disk. Click the label to open the file.
 - `opencode/skill-compact.ts` stubs loaded skill bodies when a session compacts. It also uncompacts protected `AGENTS.md` / Collab reads so native prune cannot keep them stubbed.
 - `opencode/media-context/index.tsx` lists registered images and videos and opens images in a Kitty overlay.
-- `opencode/pin-model.tsx` pins the current model to `opencode.json` with `<leader>f` / `/pin`, and switches to that pin with `<leader>shift+t` / `/pinned`. Reasoning is stored in `~/.local/state/opencode/pin.json` plus the TUI variant map. New OpenCode windows read the pinned `model` from `opencode.json`.
+- `opencode/pin-model.tsx` pins the current model to `opencode.json` with `<leader>f` / `/pin`, and switches to that pin with `<leader>shift+t` / `/pinned`.
+  The variant is stored at `join(api.state.path.state, "pin.json")`; new OpenCode windows read the pinned `model` from `opencode.json`.
+- `opencode/sidebar-scrollbar.tsx` hides the sidebar scrollbar.
+- `opencode/mcp.tsx` lists MCP status when a server is enabled.
 
 Practical failure diagnosis:
 
@@ -222,13 +231,16 @@ Practical failure diagnosis:
 - `config/opencode/opencode.json` and `config/opencode/tui.json` are the only load surfaces.
 - `hyprd/context.ts` owns the Kitty context path, schema, stale window, and Kitty socket probe.
 - `usage/providers.ts` owns provider IDs, labels, and `staleAfterMS`.
-- `usage/cache.ts` owns the cache file shape, lock semantics, and decoder.
-- `usage/auth.ts` owns path resolution for auth, cache, and runtime directories.
-- `opencode/media-context/registry.ts` owns media registry paths, handle/alias patterns, and file-part ID rules.
+- `usage/cache.ts` owns the cache file shape, cache and lock paths, lock semantics, and decoder.
+- `usage/auth.ts` owns OpenCode and Claude credential paths and schemas.
+- `opencode/media-context/store.ts` owns `registryPath`, registry entry validation, and disk operations; `registry.ts` owns media references and file-part IDs.
+- `shared/opencode.ts` owns server-only typed readers over the v1 client, with Zod views checked against v2 SDK types.
+- `shared/file.ts` owns `readJson` and atomic `writeText` / `writeJson`; `shared/error.ts` formats thrown values.
+- `delegate/metadata.ts` owns the `metadata.delegate` schema.
 - `opencode/skill-parts.ts` owns skill/read tool-part compacting and persist via TUI `part.update` or server HTTP PATCH.
 - `delegate/config.ts` hardcodes `DELEGATE_CONFIG_PATH` to `/home/cullyn/dotfiles/config/opencode/delegate.json`.
 - Changing `hyprd/context.ts` paths or schema requires updating both `hyprd/kitty.ts` and `hyprd/notify.ts`.
-- `shared/session.ts` owns `COMPACTION_LIMIT` (250k) and `COMPACTION_RESERVED` (25k). The input-cap plugin writes `limit.input` as their sum.
+- `shared/session.ts` owns `COMPACTION_LIMIT` (225k) and `COMPACTION_RESERVED` (25k); input-cap uses their sum as its default cap (250k).
 - `shared/` owns session/provider metadata, colors/icons, git status parsing, and the sidebar-section wrapper; only put helpers there when more than one plugin owns the concept.
 
 ### Invariants
