@@ -20,12 +20,12 @@ const WRITE_INTERVAL_MS = 1000;
 const FOCUS_ACK_DEBOUNCE_MS = 1000;
 const LOCK_RETRY_MS = 25;
 const LOCK_TIMEOUT_MS = 1000;
+const LOCK_STALE_MS = 10_000;
 
-// Directory and generation identify this plugin instance across writes.
 const KITTY_PID = Number(process.env.KITTY_PID) || 0;
 const KITTY_WINDOW_ID = Number(process.env.KITTY_WINDOW_ID) || 0;
 const DIRECTORY = process.cwd();
-const GENERATION = Date.now();
+const GENERATION = Date.now(); // Distinguishes plugin loads in the same directory.
 const execFileAsync = promisify(execFile);
 
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
@@ -105,7 +105,7 @@ const tui: TuiPlugin = async (api) => {
     api.event.on("tui.command.execute", (event) => {
       if (event.properties?.command !== "session.new") return;
 
-      void clearPaneContext();
+      void clearPaneContext().catch(() => {});
       setTimeout(sync, 50);
       setTimeout(sync, 250);
     }),
@@ -261,10 +261,10 @@ async function notifyViewed() {
 
 // ├─ Lock ────────────────────────────────────────────────────────────────────────────────────────┤
 
-// Context writes proceed unlocked if the directory lock times out after one second.
+// After a second of contention, retries a stale or missing lock once; otherwise skips the write.
 async function withLock(fn: () => Promise<void>) {
   await ensureKittyContextDir();
-  if (!(await acquireLock(Date.now()))) return fn();
+  if (!(await acquireLock(Date.now())) && !(await breakStaleLock())) return;
 
   try {
     return await fn();
@@ -274,13 +274,33 @@ async function withLock(fn: () => Promise<void>) {
 }
 
 async function acquireLock(start: number): Promise<boolean> {
+  if (await tryLock()) return true;
+  if (Date.now() - start > LOCK_TIMEOUT_MS) return false;
+  await Bun.sleep(LOCK_RETRY_MS);
+  return acquireLock(start);
+}
+
+async function breakStaleLock() {
+  try {
+    const stat = await fs.stat(KITTY_CONTEXT_LOCK_PATH);
+    if (Date.now() - stat.mtimeMs < LOCK_STALE_MS) return false;
+    await fs.rm(KITTY_CONTEXT_LOCK_PATH, { recursive: true, force: true });
+  } catch (error) {
+    if (!hasCode(error, "ENOENT")) throw error;
+  }
+  return tryLock();
+}
+
+async function tryLock() {
   try {
     await fs.mkdir(KITTY_CONTEXT_LOCK_PATH, { mode: 0o700 });
     return true;
   } catch (error) {
-    if (!(error instanceof Error && "code" in error && error.code === "EEXIST")) return false;
-    if (Date.now() - start > LOCK_TIMEOUT_MS) return false;
-    await Bun.sleep(LOCK_RETRY_MS);
-    return acquireLock(start);
+    if (hasCode(error, "EEXIST")) return false;
+    throw error;
   }
+}
+
+function hasCode(error: unknown, code: string) {
+  return error instanceof Error && "code" in error && error.code === code;
 }
