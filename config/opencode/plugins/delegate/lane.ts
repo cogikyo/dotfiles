@@ -72,12 +72,23 @@ export async function closeLane(client: Client, parentSessionID: string, lane: s
   const live = await statuses(client, { label: `delegate read lane ${lane} status before close`, signal });
   const status = childStatus(live[child.id]);
   if (status !== "idle") return `skipped (${status})`;
-  const body: NonNullable<SessionUpdateData["body"]> = closeBody(child, "collab");
-  await unwrap(
-    client.session.update({ path: { id: child.id }, body, signal }),
-    `delegate close lane ${lane} child ${child.id}`,
-  );
+  await closeChild(client, child, `delegate close lane ${lane} child ${child.id}`, signal);
   return "closed";
+}
+
+/** Marks a content-filter-blocked child closed and denies its permissions. */
+export async function closeBlocked(client: Client, sessionID: string, signal: AbortSignal) {
+  const current = await session(client, sessionID, {
+    label: `delegate read content-filter blocked child session ${sessionID}`,
+    signal,
+  });
+  const child: Child = Object.assign(current, { delegate: delegate(current) });
+  await closeChild(client, child, `delegate close content-filter blocked child session ${sessionID}`, signal);
+}
+
+async function closeChild(client: Client, child: Child, label: string, signal: AbortSignal) {
+  const body: NonNullable<SessionUpdateData["body"]> = closeBody(child, "collab");
+  await unwrap(client.session.update({ path: { id: child.id }, body, signal }), label);
 }
 
 /** Rejects a lane closed between resume selection and the next prompt. */

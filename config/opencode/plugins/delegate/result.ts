@@ -65,7 +65,7 @@ export function contextLimitedResult(input: {
   };
 }
 
-/** Reports a content-filter block as an error; this result does not seal the lane. */
+/** Reports a content-filter block with recovery advice as a task error. */
 export function blockedResult(args: TaskArgs, metadata: Record<string, unknown>, sessionID: string, notes: string[]) {
   const text = withNotes(
     [`blocked: content_filter`, `child_session_id: ${sessionID}`, `advice: ${CONTENT_FILTER_ADVICE}`].join("\n"),

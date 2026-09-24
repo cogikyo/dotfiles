@@ -14,7 +14,7 @@ import {
   validateVariant,
 } from "./args.ts";
 import { contextLimitedSessions, sealContextLimited } from "./context.ts";
-import { assertLaneOpen, laneChild, readExistingChild, sameExecution, sessionExecution } from "./lane.ts";
+import { assertLaneOpen, closeBlocked, laneChild, readExistingChild, sameExecution, sessionExecution } from "./lane.ts";
 import { delegate } from "./metadata.ts";
 import { deriveChildPermission, type Execution } from "./permission.ts";
 import {
@@ -35,8 +35,8 @@ const GIT = "build/git";
 // │ Child sessions                                                                                │
 // ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
-/** Validates a task call and resolves child model, permissions, and execution mode around task approval. */
-// `build/git` requires an attended primary Collab parent and explicit unattended execution.
+/** Validates a task call and resolves the child's model, permissions, and execution mode after approval.
+ * `build/git` requires an attended primary Collab parent and explicit unattended execution. */
 export async function prepareTask(client: Client, ctx: ToolContext, input: TaskArgs): Promise<PreparedTask> {
   const args = taskArgs(input);
   const effort = args.effort;
@@ -76,8 +76,8 @@ export async function prepareTask(client: Client, ctx: ToolContext, input: TaskA
   };
 }
 
-/** Runs a child turn, resuming eligible named lanes or creating fresh children when closed or context-limited. */
-// Context limits seal permissions; failed seals remain blocked from resume in this process.
+/** Runs a child turn, resuming eligible lanes or creating new children for closed or context-limited lanes.
+ * Context-limited children cannot resume in this process even if sealing their permissions fails. */
 export async function runChildTask(input: {
   client: Client;
   ctx: ToolContext;
@@ -123,7 +123,16 @@ export async function runChildTask(input: {
         abortChild: childAbort.start,
       });
     } catch (error) {
-      if (isContentFilterBlock(error)) return blockedResult(args, metadata, child.id, notes);
+      if (isContentFilterBlock(error)) {
+        return blockedChild({
+          client: input.client,
+          args,
+          metadata,
+          sessionID: child.id,
+          notes,
+          signal: input.ctx.abort,
+        });
+      }
       throw error;
     }
 
@@ -278,7 +287,7 @@ async function completionResult(input: {
   }
   const completionError = completion.assistant?.info.error;
   if (completionError && isContentFilterBlock(completionError)) {
-    return blockedResult(args, metadata, sessionID, notes);
+    return blockedChild({ client, args, metadata, sessionID, notes, signal });
   }
   if (completion.limit) {
     try {
@@ -306,6 +315,24 @@ async function completionResult(input: {
     metadata,
     output: renderOutput({ sessionID, state: "completed", text }),
   };
+}
+
+/** Attempts to close a blocked child before reporting it, retaining close failures as notes. */
+async function blockedChild(input: {
+  client: Client;
+  args: TaskArgs;
+  metadata: Record<string, unknown>;
+  sessionID: string;
+  notes: string[];
+  signal: AbortSignal;
+}) {
+  const { client, args, metadata, sessionID, notes, signal } = input;
+  try {
+    await closeBlocked(client, sessionID, signal);
+  } catch (error) {
+    notes.push(`content-filter close failed: ${errorMessage(error)}`);
+  }
+  return blockedResult(args, metadata, sessionID, notes);
 }
 
 async function updateToolMetadata(ctx: ToolContext, metadata: Record<string, unknown>) {
