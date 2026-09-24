@@ -209,7 +209,7 @@ The other sidebar sections register `sidebar_content` with distinct orders.
 - `opencode/markdown-context.tsx` lists Markdown reads plus pinned `AGENTS.md` files, the current agent, skills, and slash commands. Click the close mark to stub an unpinned skill or Markdown read. Click restore on a compacted row to reload the file from disk. Click the label to open the file.
 - `opencode/skill-compact.ts` stubs loaded skill bodies when a session compacts. It also uncompacts protected `AGENTS.md` / Collab reads so native prune cannot keep them stubbed.
 - `opencode/media-context/index.tsx` lists registered images and videos and opens images in a Kitty overlay.
-- `opencode/pin-model.tsx` pins the current model to `opencode.json` with `<leader>f` / `/pin`, and switches to that pin with `<leader>shift+t` / `/pinned`.
+- `opencode/pin-model.tsx` pins the current model to `opencode.json` with `<leader>f` / `/pin`, and switches to that pin with `<leader>shift+t` / `/pinned`, and toggles reasoning between `medium` and `high` with `<leader>i`.
   The variant is stored at `join(api.state.path.state, "pin.json")`; new OpenCode windows read the pinned `model` from `opencode.json`.
 - `opencode/sidebar-scrollbar.tsx` hides the sidebar scrollbar.
 - `opencode/mcp.tsx` lists MCP status when a server is enabled.

@@ -33,6 +33,13 @@ const tui: TuiPlugin = async (api) => {
         slashName: "pinned",
         run: () => applyPin(api),
       },
+      {
+        name: "variant.toggle",
+        title: "Toggle medium/high reasoning",
+        category: "Agent",
+        namespace: "palette",
+        run: () => toggleVariant(api),
+      },
     ],
     bindings: [
       {
@@ -44,6 +51,11 @@ const tui: TuiPlugin = async (api) => {
         key: "<leader>shift+t",
         cmd: "model.pinned",
         desc: "Switch to pinned model",
+      },
+      {
+        key: "<leader>i",
+        cmd: "variant.toggle",
+        desc: "Toggle medium/high reasoning",
       },
     ],
   });
@@ -146,6 +158,18 @@ async function applyPin(api: TuiPluginApi) {
   if (!next || modelKey(next) !== pin.model) return;
   picker.model.variant.set(pin.variant);
   toast(api, formatPin(model, pin.variant));
+}
+
+function toggleVariant(api: TuiPluginApi) {
+  const picker = captureLocal();
+  if (!picker) {
+    toast(api, "Model picker unavailable", "warning");
+    return;
+  }
+
+  const next = picker.model.variant.current() === "high" ? "medium" : "high";
+  picker.model.variant.set(next);
+  toast(api, `Reasoning ${next}`);
 }
 
 // ├─ Pin files ───────────────────────────────────────────────────────────────────────────────────┤
