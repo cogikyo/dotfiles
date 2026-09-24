@@ -144,11 +144,10 @@ function Row(props: { api: TuiPluginApi; lanes: Lanes; name: string; child: Lane
     return frames[props.lanes.frame() % frames.length];
   };
   const tone = () => {
-    const c = colors(theme());
     const current = status();
-    if (current === "limited") return c.red;
-    if (current === "retry") return c.yellow;
-    return current === "busy" ? c.green : theme().textMuted;
+    if (current === "limited") return colors.red;
+    if (current === "retry") return colors.yellow;
+    return current === "busy" ? colors.green : theme().textMuted;
   };
   const spent = () =>
     props.columns.spent ? ` ${labels(props.lanes, props.child).spent.padStart(props.columns.spent)}` : "";
@@ -191,11 +190,7 @@ function Row(props: { api: TuiPluginApi; lanes: Lanes; name: string; child: Lane
         {model()}
       </text>
       {/* Color tracks the delegate hard stop, not the model context cap. */}
-      <text
-        fg={pressureColor(theme(), ((measured()?.tokens ?? 0) / COMPACTION_LIMIT) * 100)}
-        wrapMode="none"
-        flexShrink={0}
-      >
+      <text fg={pressureColor(((measured()?.tokens ?? 0) / COMPACTION_LIMIT) * 100)} wrapMode="none" flexShrink={0}>
         {spent()}
       </text>
     </box>

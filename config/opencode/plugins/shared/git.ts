@@ -9,7 +9,6 @@ const execFileAsync = promisify(execFile);
 
 // ├─ Read ────────────────────────────────────────────────────────────────────────────────────────┤
 
-/** Parsed Git status; `complete` is always true because failed or truncated reads return no status. */
 export type GitStatus = {
   branch: string;
   ahead: number;
@@ -21,10 +20,9 @@ export type GitStatus = {
   stashed: number;
   renamed: number;
   conflicted: number;
-  complete: boolean;
 };
 
-/** Reads Git status without optional locks, returning undefined when the repository cannot be read. */
+/** Reads Git status without optional locks, returning undefined for missing directories or failed or truncated reads. */
 export async function gitStatus(dir?: string): Promise<GitStatus | undefined> {
   if (!dir) return undefined;
 
@@ -50,7 +48,6 @@ export function gitDirtyCount(status: GitStatus) {
 
 // ├─ Porcelain ───────────────────────────────────────────────────────────────────────────────────┤
 
-// Parses `git status --porcelain=v2` output into counts.
 function parseGitStatus(output: string): GitStatus {
   const status: GitStatus = {
     branch: "",
@@ -63,7 +60,6 @@ function parseGitStatus(output: string): GitStatus {
     stashed: 0,
     renamed: 0,
     conflicted: 0,
-    complete: true,
   };
 
   for (const line of output.split("\n")) {

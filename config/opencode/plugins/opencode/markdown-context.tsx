@@ -118,7 +118,7 @@ function MarkdownContext(props: { api: TuiPluginApi; sessionID: string }) {
               <ActionIcon
                 api={props.api}
                 icon={sourceIcon(props.api, item)}
-                fg={sourceColor(props.api, item)}
+                fg={sourceColor(item)}
                 action={rowAction(props.api, props.sessionID, item)}
               />
               <text fg={props.api.theme.current.textMuted} wrapMode="none" flexShrink={1}>
@@ -392,27 +392,26 @@ function normalizeFilePath(value: string) {
 
 // ├─ Row appearance ──────────────────────────────────────────────────────────────────────────────┤
 
-function sourceColor(api: TuiPluginApi, item: MarkdownContextItem) {
-  const c = colors(api.theme.current);
-  if (item.compacted) return c.red;
+function sourceColor(item: MarkdownContextItem) {
+  if (item.compacted) return colors.red;
 
   switch (item.kind) {
     case "readme":
-      return c.green;
+      return colors.green;
     case "agents":
-      return isConfigAgents(item.path) ? c.cyan : c.blue;
+      return isConfigAgents(item.path) ? colors.cyan : colors.blue;
     case "agent":
-      return isSubagent(item.path) ? c.magenta : c.blue;
+      return isSubagent(item.path) ? colors.magenta : colors.blue;
     case "skill":
-      return isGlobalOpencodePath(item.path) ? c.orange : c.pink;
+      return isGlobalOpencodePath(item.path) ? colors.orange : colors.pink;
     case "command":
-      return isGlobalOpencodePath(item.path) ? c.sky : c.cyan;
+      return isGlobalOpencodePath(item.path) ? colors.sky : colors.cyan;
     case "partial":
-      return c.yellow;
+      return colors.yellow;
     case "spec":
-      return c.cyan;
+      return colors.cyan;
     case "markdown":
-      return c.muted;
+      return colors.muted;
   }
 }
 

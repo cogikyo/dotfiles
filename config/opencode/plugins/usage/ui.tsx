@@ -77,9 +77,9 @@ export function UsageDashboard(props: {
                         theme={theme()}
                         label={window.label}
                         percent={pct !== undefined ? formatPercent(pct) : DASH.padEnd(PERCENT_WIDTH, " ")}
-                        percentColor={pct !== undefined ? usageColor(theme(), pct) : theme().textMuted}
+                        percentColor={pct !== undefined ? usageColor(pct) : theme().textMuted}
                         bar={pct !== undefined ? usageBar(pct) : "░".repeat(BAR_WIDTH)}
-                        barColor={pct !== undefined ? usageColor(theme(), pct) : theme().textMuted}
+                        barColor={pct !== undefined ? usageColor(pct) : theme().textMuted}
                         marker={paceMarker(window.label, window.resetAt)}
                         markerColor={paceIndicatorColor(theme(), pct, window.label, window.resetAt)}
                         duration={reset?.duration ?? ""}

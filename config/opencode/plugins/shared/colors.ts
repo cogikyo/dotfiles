@@ -1,4 +1,3 @@
-import type { TuiThemeCurrent } from "@opencode-ai/plugin/tui";
 import { RGBA } from "@opentui/core";
 
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
@@ -6,13 +5,6 @@ import { RGBA } from "@opentui/core";
 // ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
 // ├─ Palette ─────────────────────────────────────────────────────────────────────────────────────┤
-
-export type Theme = TuiThemeCurrent;
-
-/** Returns the fixed sidebar palette, independent of the active theme. */
-export function colors(_theme: Theme) {
-  return palette;
-}
 
 const hex = (value: string) => RGBA.fromHex(value);
 const defs = {
@@ -34,7 +26,8 @@ const defs = {
   prp_2: hex("#a188df"),
 } as const;
 
-const palette = {
+/** Fixed sidebar palette, independent of the active theme. */
+export const colors = {
   blue: defs.blu_2,
   brightBlue: defs.blu_4,
   green: defs.grn_3,
@@ -76,24 +69,23 @@ export function pressureTier(usedPercent: number) {
 }
 
 /** Colors context pressure from blue to pink as usage increases. */
-export function pressureColor(theme: Theme, usedPercent: number) {
-  const c = colors(theme);
+export function pressureColor(usedPercent: number) {
   const pressureColors = [
-    c.blue,
-    c.brightBlue,
-    c.green,
-    c.brightGreen,
-    c.brightYellow,
-    c.yellow,
-    c.red,
-    c.brightRed,
-    c.pink,
+    colors.blue,
+    colors.brightBlue,
+    colors.green,
+    colors.brightGreen,
+    colors.brightYellow,
+    colors.yellow,
+    colors.red,
+    colors.brightRed,
+    colors.pink,
   ] as const;
 
   return pressureColors[pressureTier(usedPercent)];
 }
 
 /** Uses the context-pressure palette for provider usage. */
-export function usageColor(theme: Theme, usedPercent: number) {
-  return pressureColor(theme, usedPercent);
+export function usageColor(usedPercent: number) {
+  return pressureColor(usedPercent);
 }

@@ -4,7 +4,6 @@ import { writeFile } from "node:fs/promises";
 import {
   Show,
   createComputed,
-  createMemo,
   createRenderEffect,
   createSignal,
   on,
@@ -148,7 +147,7 @@ function StatusLeft(props: { api: TuiPluginApi; sessionID: string }) {
       <text fg={repoColor()} wrapMode="none">
         <b>{shortDir(meta().cwd)}</b>
       </text>
-      <GitSegment status={git() ?? fallbackGitStatus(props.api)} api={props.api} />
+      <GitSegment status={git() ?? fallbackGitStatus(props.api)} />
     </box>
   );
 }
@@ -197,19 +196,19 @@ function StatusRight(props: { api: TuiPluginApi; sessionID: string }) {
     clearInterval(timer);
   });
 
-  return <ContextSegment api={props.api} usage={usage()} />;
+  return <ContextSegment usage={usage()} />;
 }
 
-function GitSegment(props: { api: TuiPluginApi; status?: GitStatus }) {
+function GitSegment(props: { status?: GitStatus }) {
   return (
     <Show when={props.status} keyed>
       {(status: GitStatus) =>
         status.branch ? (
           <box flexDirection="row" gap={0}>
-            <text fg={gitStateColor(props.api, status)} wrapMode="none">
+            <text fg={gitStateColor(status)} wrapMode="none">
               {` ${icons.git.branch}${status.branch}`}
             </text>
-            <GitStats api={props.api} status={status} />
+            <GitStats status={status} />
           </box>
         ) : null
       }
@@ -217,28 +216,23 @@ function GitSegment(props: { api: TuiPluginApi; status?: GitStatus }) {
   );
 }
 
-function GitStats(props: { api: TuiPluginApi; status: GitStatus }) {
-  const c = createMemo(() => colors(props.api.theme.current));
+function GitStats(props: { status: GitStatus }) {
   return (
     <>
-      <GitCount value={props.status.ahead} icon={icons.git.ahead} fg={c().green} />
-      <GitCount value={props.status.behind} icon={icons.git.behind} fg={c().brightRed} />
-      <GitCount value={props.status.modified} icon={icons.git.modified} fg={c().sky} />
-      <GitCount value={props.status.staged} icon={icons.git.staged} fg={c().yellow} />
-      <GitCount value={props.status.deleted} icon={icons.git.deleted} fg={c().red} />
-      <GitCount value={props.status.untracked} icon={icons.git.untracked} fg={c().yellow} />
-      <GitCount value={props.status.stashed} icon={icons.git.stashed} fg={c().muted} />
-      <GitCount value={props.status.conflicted} icon={icons.git.conflict} fg={c().pink} />
-      <GitCount value={props.status.renamed} icon={icons.git.renamed} fg={c().magenta} />
+      <GitCount value={props.status.ahead} icon={icons.git.ahead} fg={colors.green} />
+      <GitCount value={props.status.behind} icon={icons.git.behind} fg={colors.brightRed} />
+      <GitCount value={props.status.modified} icon={icons.git.modified} fg={colors.sky} />
+      <GitCount value={props.status.staged} icon={icons.git.staged} fg={colors.yellow} />
+      <GitCount value={props.status.deleted} icon={icons.git.deleted} fg={colors.red} />
+      <GitCount value={props.status.untracked} icon={icons.git.untracked} fg={colors.yellow} />
+      <GitCount value={props.status.stashed} icon={icons.git.stashed} fg={colors.muted} />
+      <GitCount value={props.status.conflicted} icon={icons.git.conflict} fg={colors.pink} />
+      <GitCount value={props.status.renamed} icon={icons.git.renamed} fg={colors.magenta} />
     </>
   );
 }
 
-function GitCount(props: {
-  value: number;
-  icon: string;
-  fg: ReturnType<typeof colors>[keyof ReturnType<typeof colors>];
-}) {
+function GitCount(props: { value: number; icon: string; fg: (typeof colors)[keyof typeof colors] }) {
   return (
     <Show when={props.value > 0}>
       <text fg={props.fg} wrapMode="none">
@@ -248,12 +242,12 @@ function GitCount(props: {
   );
 }
 
-function ContextSegment(props: { api: TuiPluginApi; usage?: SessionUsage }) {
+function ContextSegment(props: { usage?: SessionUsage }) {
   return (
     <Show when={props.usage}>
       {(usage: Accessor<SessionUsage>) => (
         <box flexDirection="row" gap={0}>
-          <text fg={pressureColor(props.api.theme.current, usage().colorPercent)} wrapMode="none">
+          <text fg={pressureColor(usage().colorPercent)} wrapMode="none">
             {icons.context}
             {contextBar(usage().percent)}
           </text>
@@ -268,16 +262,15 @@ function contextBar(percent: number) {
   return icons.barFilled.repeat(filled) + icons.barEmpty.repeat(9 - filled);
 }
 
-function gitStateColor(api: TuiPluginApi, status: GitStatus) {
-  const c = colors(api.theme.current);
-  if (status.behind > 0 || status.conflicted > 0) return c.brightRed;
-  if (status.modified > 0) return c.sky;
-  if (status.staged > 0) return c.yellow;
-  if (status.deleted > 0) return c.red;
-  if (status.untracked > 0) return c.yellow;
-  if (status.ahead > 0) return c.green;
-  if (status.renamed > 0) return c.magenta;
-  return c.blue;
+function gitStateColor(status: GitStatus) {
+  if (status.behind > 0 || status.conflicted > 0) return colors.brightRed;
+  if (status.modified > 0) return colors.sky;
+  if (status.staged > 0) return colors.yellow;
+  if (status.deleted > 0) return colors.red;
+  if (status.untracked > 0) return colors.yellow;
+  if (status.ahead > 0) return colors.green;
+  if (status.renamed > 0) return colors.magenta;
+  return colors.blue;
 }
 
 function agentColor(api: TuiPluginApi, sessionID: string) {
@@ -288,7 +281,7 @@ function agentColor(api: TuiPluginApi, sessionID: string) {
     const color = Object.entries(theme).find(([name]) => name === colorName)?.[1];
     if (typeof color === "object" && color) return color;
   }
-  return colors(theme).brightBlue;
+  return colors.brightBlue;
 }
 
 function currentAgent(api: TuiPluginApi, sessionID: string) {
@@ -315,7 +308,6 @@ function fallbackGitStatus(api: TuiPluginApi): GitStatus | undefined {
     stashed: 0,
     renamed: 0,
     conflicted: 0,
-    complete: false,
   };
 }
 
@@ -375,7 +367,6 @@ async function gitStatusFromOpenCode(api: TuiPluginApi, dir?: string): Promise<G
     stashed: 0,
     renamed: 0,
     conflicted: 0,
-    complete: false,
   };
 
   for (const file of result.data) {
@@ -406,7 +397,6 @@ function gitStatusFromSessionDiff(api: TuiPluginApi, sessionID: string): GitStat
     stashed: 0,
     renamed: 0,
     conflicted: 0,
-    complete: false,
   };
 }
 
