@@ -181,7 +181,9 @@ function tokenTotal(message?: AssistantLike) {
   return tokens.input + tokens.output + tokens.reasoning + tokens.cache.read + tokens.cache.write;
 }
 
-function contextTokenTotal(message?: AssistantLike) {
+export function contextTokenTotal(message?: {
+  tokens: Pick<AssistantLike["tokens"], "total" | "input" | "output" | "cache">;
+}) {
   if (!message) return 0;
   const tokens = message.tokens;
   return tokens.total || tokens.input + tokens.output + tokens.cache.read + tokens.cache.write;

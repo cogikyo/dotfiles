@@ -22,6 +22,7 @@ Running sessions keep the loaded plugin set.
 | Isolated browser QA    | `hyprd/browser-isolation.ts`       | `hyprd-browser-isolation`       | server  |
 | Tool guard             | `opencode/tool-guard.ts`           | `opencode-tool-guard`           | server  |
 | Skill compact          | `opencode/skill-compact.ts`        | `opencode-skill-compact`        | server  |
+| Primary compact        | `opencode/compact.ts`              | `opencode-compact`              | server  |
 | Media context prompt   | `opencode/media-context/prompt.ts` | `opencode-media-context-prompt` | server  |
 | Input cap              | `opencode/input-cap.ts`            | `opencode-input-cap`            | server  |
 | Code blocks            | `opencode/code-blocks.ts`          | `opencode-code-blocks`          | TUI     |
@@ -208,6 +209,9 @@ The other sidebar sections register `sidebar_content` with distinct orders.
 - `opencode/modified-files.tsx` lists files touched in the current session.
 - `opencode/markdown-context.tsx` lists Markdown reads plus pinned `AGENTS.md` files, the current agent, skills, and slash commands. Click the close mark to stub an unpinned skill or Markdown read. Click restore on a compacted row to reload the file from disk. Click the label to open the file.
 - `opencode/skill-compact.ts` stubs loaded skill bodies when a session compacts. It also uncompacts protected `AGENTS.md` / Collab reads so native prune cannot keep them stubbed.
+- `opencode/compact.ts` adds the primary-only `compact` tool and appends a system nudge to primary sessions once context passes 120k and again at 200k.
+  An approved call runs `session.summarize` with `auto: false` when the turn goes idle, passes the agent's brief into the compaction context, and leaves the session waiting for the user.
+  A denial silences nudges until the next tier; any compaction resets the tiers. Calls are logged to `${XDG_STATE_HOME:-~/.local/state}/opencode/compact.jsonl`.
 - `opencode/media-context/index.tsx` lists registered images and videos and opens images in a Kitty overlay.
 - `opencode/pin-model.tsx` pins the current model to `opencode.json` with `<leader>f` / `/pin`, and switches to that pin with `<leader>shift+t` / `/pinned`, and toggles reasoning between `medium` and `high` with `<leader>i`.
   The variant is stored at `join(api.state.path.state, "pin.json")`; new OpenCode windows read the pinned `model` from `opencode.json`.
