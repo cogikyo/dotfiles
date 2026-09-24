@@ -165,9 +165,9 @@ type AuthFailure = "no grok cli" | "refresh failed" | "refresh timeout" | "grok 
 
 type AuthResult = { ok: true; token: string } | { ok: false; reason: AuthFailure };
 
-// Grok auth keys include the issuer and client ID.
 const Text = lenient(z.string().min(1));
 
+// Grok auth keys include the issuer and client ID.
 const GrokAuth = z.record(z.string(), lenient(z.object({ key: Text, expires_at: Text, oidc_issuer: Text })));
 
 // ├─ Usage windows ───────────────────────────────────────────────────────────────────────────────┤

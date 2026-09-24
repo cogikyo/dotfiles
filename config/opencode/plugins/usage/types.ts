@@ -2,8 +2,7 @@ import { z } from "zod";
 
 export type UsageWindow = {
   label: string;
-  // A provider can report a reset without a percentage.
-  usedPercent?: number;
+  usedPercent?: number; // A reset can arrive without usage.
   resetAt?: string;
 };
 

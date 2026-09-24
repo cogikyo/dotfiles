@@ -5,7 +5,6 @@ import { z } from "zod";
 // │ Notify payloads                                                                               │
 // ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
-/** Text limits for hyprd notices. */
 export const LIMITS = {
   id: 128,
   status: 32,

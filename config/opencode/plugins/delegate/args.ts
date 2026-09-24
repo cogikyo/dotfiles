@@ -11,16 +11,11 @@ export type TaskArgs = {
   description: string;
   prompt: string;
   subagent_type: string;
-  /** `provider/model-id`; omitted means use the agent pin or parent model. */
-  model?: string;
-  /** Omitted means inherit effort unless the model is explicit. */
-  effort?: string;
-  /** Named reusable child; omitted means one-shot. */
-  lane?: string;
-  /** Summarizes an idle lane before its next prompt. */
-  compact?: boolean;
-  /** Defaults to true; an unattended parent cannot have an attended child. */
-  unattended?: boolean;
+  model?: string; // `provider/model-id`; falls back to the agent pin or parent model.
+  effort?: string; // Inherits effort unless the model is explicit.
+  lane?: string; // Reusable named child; omitted creates a one-shot child.
+  compact?: boolean; // Summarizes an idle lane before its next prompt.
+  unattended?: boolean; // Defaults to true; unattended parents cannot have attended children.
 };
 
 export type ModelRef = {

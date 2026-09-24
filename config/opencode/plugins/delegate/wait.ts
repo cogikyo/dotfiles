@@ -30,8 +30,8 @@ export type ChildWait = {
   interruption?: string;
 };
 
-/** Waits for child activity and completion, warning as context fills and aborting on a context limit. */
-// A child with no startup activity is aborted after 120 seconds; caller aborts still throw.
+/** Waits for child activity and completion, warning as context fills and aborting on a context limit.
+ * A child with no startup activity is aborted after 120 seconds; caller aborts still throw. */
 export async function waitForChild(input: {
   client: Client;
   sessionID: string;

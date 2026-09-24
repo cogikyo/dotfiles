@@ -7,7 +7,7 @@ import type { Message, Model, Provider } from "@opencode-ai/sdk/v2";
 
 // ├─ Limits ──────────────────────────────────────────────────────────────────────────────────────┤
 
-export const COMPACTION_LIMIT = 225_000; //  Hard token stop for delegate children.
+export const COMPACTION_LIMIT = 225_000; // Hard token stop for delegate children.
 export const COMPACTION_RESERVED = 25_000; // Default token budget reserved below the model input limit.
 
 /** Token thresholds for delegate context warnings and the hard stop. */

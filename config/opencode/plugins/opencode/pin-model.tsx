@@ -112,7 +112,7 @@ async function pinCurrent(api: TuiPluginApi) {
   toast(api, `Pinned ${formatPin(selection.model, selection.variant)}`);
 }
 
-// Keep the current variant if the picker cannot switch to the pin.
+/** Keeps the current variant if the picker cannot switch to the pinned model. */
 async function applyPin(api: TuiPluginApi) {
   const picker = captureLocal();
   if (!picker) {
@@ -196,7 +196,7 @@ function readConfigModel(text: string) {
   }
 }
 
-// Updates the first `"model"` string in opencode.json; this matches text, not the parsed JSON object.
+/** Updates the first `"model"` string in opencode.json by text match rather than parsed JSON. */
 async function writeConfigModel(model: string) {
   const text = await readText(CONFIG_PATH);
   if (text === undefined) throw new Error(`missing ${CONFIG_PATH}`);
@@ -245,7 +245,7 @@ function contextValues(ctx: object) {
   return [...Object.values(ctx), ...Object.getOwnPropertySymbols(ctx).map((key) => Reflect.get(ctx, key))];
 }
 
-// The model picker is stored in Solid owner context; the TUI plugin API has no model setter.
+/** Finds the model picker in Solid owner context because the TUI plugin API has no model setter. */
 function findLocal(owner: OwnerNode | null | undefined) {
   const seen = new Set<object>();
   while (owner) {

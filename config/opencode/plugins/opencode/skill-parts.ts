@@ -197,9 +197,10 @@ export type ProtectRoots = {
   agentNames?: readonly string[];
 };
 
-/** Finds the first Markdown path in a tool's file input fields, without expanding `~`. */
 const text = z.string().optional().catch(undefined);
 const Input = z.object({ filePath: text, path: text, filepath: text, file: text }).catch({});
+
+/** Finds the first Markdown path in a tool's file input fields, without expanding `~`. */
 export function toolMarkdownPath(part: SkillToolPart) {
   const input = Input.parse(part.state?.input);
   const value = [input.filePath, input.path, input.filepath, input.file].find(

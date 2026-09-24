@@ -17,11 +17,8 @@ export const KITTY_CONTEXT_DIR = process.env.XDG_RUNTIME_DIR
 
 export const KITTY_CONTEXT_PATH = path.join(KITTY_CONTEXT_DIR, "kitty-context.json");
 
-/** Directory lock for kitty context writes; readers use the atomically replaced file. */
-export const KITTY_CONTEXT_LOCK_PATH = path.join(KITTY_CONTEXT_DIR, "kitty-context.lock");
-
-/** Maximum age for entries kept by the kitty writer, independent of routing freshness. */
-export const STALE_CONTEXT_MS = 24 * 60 * 60 * 1000;
+export const KITTY_CONTEXT_LOCK_PATH = path.join(KITTY_CONTEXT_DIR, "kitty-context.lock"); // Readers see atomic swaps.
+export const STALE_CONTEXT_MS = 24 * 60 * 60 * 1000; // Prunes old entries; routing uses a shorter freshness limit.
 
 // ├─ Schema ──────────────────────────────────────────────────────────────────────────────────────┤
 
@@ -36,8 +33,7 @@ export const KittyContext = z
     kitty_window_id: id,
     updated_at: id,
     directory: z.string().optional().catch(undefined),
-    // Generation is the plugin load time, not a per-write counter.
-    generation: z.number().optional().catch(undefined),
+    generation: z.number().optional().catch(undefined), // Plugin load time, not a per-write counter.
   })
   .catch({ kitty_pid: 0, kitty_window_id: 0, updated_at: 0 });
 

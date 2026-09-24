@@ -104,7 +104,7 @@ async function guardPatchTarget(cwd: string, target: PatchTarget) {
   }
 }
 
-// Ignore a partial trailing UTF-8 character when probing a larger file.
+/** Treats a truncated trailing UTF-8 character as incomplete when probing a larger file. */
 async function isBinary(filePath: string, size: number) {
   if (size === 0) return false;
 

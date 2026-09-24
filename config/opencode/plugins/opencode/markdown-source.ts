@@ -35,7 +35,6 @@ export function markdownSourceKind(filePath: string): MarkdownSourceKind {
   return "markdown";
 }
 
-/** Identifies nested agent Markdown files. */
 export function isSubagent(filePath: string) {
   return (agentSegments(filePath)?.length ?? 0) > 1;
 }

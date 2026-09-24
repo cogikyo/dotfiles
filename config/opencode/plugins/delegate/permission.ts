@@ -18,8 +18,8 @@ export type Execution = {
 
 const UNATTENDED_FLOOR: Rule = { permission: "*", pattern: "*", action: "deny" };
 
-/** Builds ordered child permissions from agent rules, delegate denies, and inherited parent restrictions. */
-// Unattended children turn asks into denies and start with a deny-all floor; `question` is always denied.
+/** Builds ordered child permissions from agent rules, delegate denies, and inherited parent restrictions.
+ * Unattended children turn asks into denies and start with a deny-all floor; `question` is always denied. */
 export async function deriveChildPermission(
   client: Client,
   parent: Session,

@@ -19,8 +19,7 @@ import { isImageMime, isVideoMime, mediaKindForMime, runtimeDir, sha256, type Me
 
 // ├─ Entry schema ────────────────────────────────────────────────────────────────────────────────┤
 
-/** Maximum session rows accepted for registration and file validation. */
-export const MAX_REGISTRY_ENTRIES = 200;
+export const MAX_REGISTRY_ENTRIES = 200; // Row cap for registration and file validation.
 
 const MAX_REGISTRY_BYTES = 256 * 1024;
 
@@ -91,7 +90,7 @@ const Entry = z
     updatedAt: value.updatedAt || Date.now(),
   }));
 
-// Bad rows are dropped, but exceeding the row cap invalidates the whole file.
+/** Drops invalid rows but rejects a registry that exceeds the row cap. */
 const Registry = z
   .object({
     entries: z

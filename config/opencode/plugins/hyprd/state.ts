@@ -9,24 +9,19 @@ import { notify, type Notice } from "./route.ts";
 export type State = {
   active: boolean;
   seenAgentParts: Set<string>;
-  /** Assistant text by part ID, including incoming deltas. */
-  assistantPartText: Map<string, string>;
-  /** Missing until the first todo update, which does not emit completions. */
-  todoStatuses?: Map<string, string>;
+  assistantPartText: Map<string, string>; // Includes incoming deltas by part ID.
+  todoStatuses?: Map<string, string>; // First update sets a baseline without completions.
   hasOpenTodos: boolean;
   lastAssistantMessage: string;
   lastUserMessage: string;
-  /** Preserves user text that arrives after the previous run was scheduled to end. */
-  lastUserMessageAt: number;
+  lastUserMessageAt: number; // Keeps text received after the prior run was scheduled to end.
   inactiveAt: number;
-  /** Recent todo completion suppresses a redundant complete notice. */
-  lastTodoCompletedAt: number;
+  lastTodoCompletedAt: number; // Suppresses a redundant complete notice after a todo completes.
   completeTimer?: Timer;
   startTimer?: Timer;
   startNotified: boolean;
   idleTimer?: Timer;
-  /** Together with the message, suppresses duplicate permission notices. */
-  lastPermissionAt: number;
+  lastPermissionAt: number; // With the message, suppresses duplicate permission notices.
   lastPermissionMessage: string;
   parentID: string;
   title: string;

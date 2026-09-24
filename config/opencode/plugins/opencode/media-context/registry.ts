@@ -258,7 +258,7 @@ function entryReferences(entry: MediaRegistryEntry) {
 
 // ├─ Aliases and file names ──────────────────────────────────────────────────────────────────────┤
 
-// The time-based fallback after 200 attempts may collide with an existing alias.
+/** May return a colliding time-based alias after 200 attempts. */
 function uniqueAlias(entries: MediaRegistryEntry[], current: MediaRegistryEntry, name: string) {
   const used = new Set(entries.filter((entry) => entry.handle !== current.handle).flatMap(entryReferences));
   for (let index = 1; index <= 200; index++) {

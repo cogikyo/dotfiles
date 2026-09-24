@@ -51,8 +51,7 @@ export function ImageOverlay(props: { api: TuiPluginApi; preview: PreviewState; 
 const KITTY_PREVIEW = "/home/cullyn/dotfiles/config/xplr/bin/kitty-preview.py";
 const KITTY_WAIT_TIMEOUT_MS = 2_000;
 
-// A new preview cancels unfinished draws and clears the previous Kitty image.
-let activePreviewToken = 0;
+let activePreviewToken = 0; // Invalidates unfinished draws when the preview changes.
 let kittyQueue = Promise.resolve();
 const activeDisplays = new Set<ChildProcess>();
 

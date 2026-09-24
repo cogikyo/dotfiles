@@ -11,7 +11,6 @@ import type { MediaRegistryEntry } from "./store";
 // │ Image naming                                                                                  │
 // ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
-/** Model selected for temporary image naming. */
 export type NamingModel = {
   providerID: string;
   modelID: string;

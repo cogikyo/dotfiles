@@ -78,8 +78,7 @@ async function fetchUsage(token: string): Promise<ProviderUsage> {
 // ├─ Auth recovery ───────────────────────────────────────────────────────────────────────────────┤
 
 let refreshing: Promise<boolean> | null = null;
-// Limit repeated Claude CLI recovery attempts after a credential file was found.
-let lastRecoverAt = 0;
+let lastRecoverAt = 0; // Limit CLI recovery after a credential file was found.
 
 async function tryRecoverAuth(): Promise<string | undefined> {
   if (refreshing) return (await refreshing) ? readTokenFromClaude() : undefined;

@@ -9,9 +9,8 @@ import { addDefaultParsers, MarkdownRenderable, RGBA, SyntaxStyle } from "@opent
 // ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
 const id = "opencode-code-blocks";
-// Global symbols keep the patches idempotent when OpenCode reloads this module in the same process.
-const PATCHED = Symbol.for("cullyn.opencode.code-blocks.patched");
-const RENDER_PATCHED = Symbol.for("cullyn.opencode.code-blocks.render-patched");
+const PATCHED = Symbol.for("cullyn.opencode.code-blocks.patched"); // Avoid repeat prototype patching.
+const RENDER_PATCHED = Symbol.for("cullyn.opencode.code-blocks.render-patched"); // Avoid repeat render wrapping.
 
 const tui: TuiPlugin = async (api) => {
   try {
