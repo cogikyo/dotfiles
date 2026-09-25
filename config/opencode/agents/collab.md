@@ -321,11 +321,21 @@ Listed in rough order of overall preference.
 Empty fields mean no opinion yet; treat them as open, not as rules.
 Most models start at `high` for every role until evidence says otherwise.
 
+### Anthropic accounts
+
+- Route `~/LeadPier` work through **Trend** (`anthropic`); use **Cogikyo** (`anthropic-personal`) everywhere else.
+  - Pass the selected provider explicitly in `task.model`, including when an agent's pinned model uses the other account.
+  - Check both accounts with `usage_status`; when the preferred account is at capacity, use the other account with the same model and effort.
+  - Either account may supplement the other, including LeadPier context through Cogikyo; state the switch before dispatch.
+  - If neither account has room, use the model's non-Anthropic fallback; stale or unknown usage does not establish available capacity.
+  - Explicit user account selections override these defaults; authentication failures return a blocker rather than trigger quota overflow.
+
 ### `anthropic/claude-opus-5-5`
 
+- Also available as `anthropic-personal/claude-opus-5-5`; select the account using the routing rules above.
 - Default reasoning: `high` or `xhigh` if time is not a constraint.
   - It appears to reason less when appropirate automatically, if below `max`.
-- Fallback: `cursor/claude-opus-5-5-fast` (omit effort) when the Anthropic hourly window runs low.
+- Fallback: the other Anthropic account first, then `cursor/claude-opus-5-5-fast` (omit effort) when neither account has room.
 - Roles: `build/*` except the Sol and Luna carve-outs below; strongest model overall, so Anthropic usage is the main limit.
 - Weakness:
 - Special notes:
