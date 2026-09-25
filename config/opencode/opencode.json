@@ -83,30 +83,20 @@
     "anthropic-personal": {
       "npm": "@ai-sdk/anthropic",
       "name": "Anthropic [Cogikyo]",
-      "api": "https://api.anthropic.com/v1",
-      "env": [],
       "options": { "apiKey": "oauth-required" },
       "models": {
         "claude-opus-5-5": {
           "name": "Claude Opus 5.5",
-          "family": "claude-opus",
-          "release_date": "2026-09-22",
           "attachment": true,
           "reasoning": true,
-          "temperature": false,
-          "tool_call": true,
-          "modalities": { "input": ["text", "image", "pdf"], "output": ["text"] },
+          "modalities": { "input": ["text", "image", "pdf"] },
           "limit": { "context": 1000000, "output": 128000 }
         },
         "claude-fable-5-1": {
           "name": "Claude Fable 5.1",
-          "family": "claude-fable",
-          "release_date": "2026-09-01",
           "attachment": true,
           "reasoning": true,
-          "temperature": false,
-          "tool_call": true,
-          "modalities": { "input": ["text", "image", "pdf"], "output": ["text"] },
+          "modalities": { "input": ["text", "image", "pdf"] },
           "limit": { "context": 1000000, "output": 128000 },
           "options": {
             "thinking": { "type": "adaptive", "display": "summarized" },
