@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "@opencode-ai/plugin": "1.18.32",
-    "opencode-claude-auth": "2.2.1",
     "zod": "^4.1.8"
   },
   "devDependencies": {
@@ -25,8 +24,5 @@
     "oxlint-tsgolint": "7.0.2002",
     "solid-js": "1.9.12",
     "typescript": "7.0.2"
-  },
-  "patchedDependencies": {
-    "opencode-claude-auth@2.2.1": "patches/opencode-claude-auth@2.2.1.patch"
   }
 }

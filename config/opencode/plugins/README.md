@@ -15,7 +15,7 @@ Running sessions keep the loaded plugin set.
 
 | Feature                | Entrypoint                         | ID                              | Runtime |
 | ---------------------- | ---------------------------------- | ------------------------------- | ------- |
-| Claude auth            | `anthropic/index.ts`              | (two provider hooks)            | server  |
+| Claude auth            | `anthropic/index.ts`               | (two provider hooks)            | server  |
 | Delegate task          | `delegate/index.ts`                | `delegate-task`                 | server  |
 | Usage status tool      | `usage/tool.ts`                    | `usage-status`                  | server  |
 | Hyprland notifications | `hyprd/notify.ts`                  | `hyprd-notify`                  | server  |
@@ -158,7 +158,7 @@ Practical failure diagnosis:
 
 ## Claude auth
 
-[`anthropic/index.ts`](anthropic/README.md) loads two account-bound instances of the patched `opencode-claude-auth` dependency.
+[`anthropic/index.ts`](anthropic/README.md) loads two account-bound instances of a vendored, patched `opencode-claude-auth@2.2.1`.
 It talks directly to Anthropic and retains upstream request formatting, with separate auth state for `anthropic` (Trend) and `anthropic-personal` (Cogikyo).
 Use the linked guide for login, patch updates, verification, and rollback.
 

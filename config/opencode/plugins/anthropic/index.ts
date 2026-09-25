@@ -1,5 +1,5 @@
 import type { Plugin } from "@opencode-ai/plugin";
-import { ClaudeAuthPlugin } from "opencode-claude-auth";
+import { ClaudeAuthPlugin } from "./claude-auth/index.js";
 import { claudeAccounts } from "./accounts.ts";
 
 export const Trend: Plugin = (input) => {

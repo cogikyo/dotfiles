@@ -15,7 +15,7 @@
       "moduleSources": ["solid-js", "@opentui/solid"]
     }
   },
-  "ignorePatterns": ["node_modules/**"],
+  "ignorePatterns": ["node_modules/**", "plugins/anthropic/claude-auth/**"],
   "rules": {
     "no-unused-vars": ["warn", { "ignoreRestSiblings": true, "argsIgnorePattern": "^_" }],
     "no-underscore-dangle": ["warn", { "allow": ["_op", "_treeSitterClient"] }],

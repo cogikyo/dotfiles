@@ -4,5 +4,6 @@
   "jsxSingleQuote": false,
   "semi": true,
   "printWidth": 120,
-  "trailingComma": "all"
+  "trailingComma": "all",
+  "ignorePatterns": ["plugins/anthropic/claude-auth/**"]
 }

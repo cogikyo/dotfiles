@@ -1,12 +1,12 @@
 # Claude accounts
 
 The local entrypoint creates two instances of `opencode-claude-auth@2.2.1` with fixed credential directories.
-The dependency, Bun lockfile, and versioned patch live in `config/opencode/`.
-The patch changes the published JavaScript directly; there is no upstream build step.
+`claude-auth/` holds that release's published JavaScript and type declarations with the account changes applied, plus its MIT license.
+It is vendored because OpenCode reinstalls `config/opencode/node_modules` with npm at startup, which silently drops package patches.
 
-| Account | Provider | Claude directory |
-| --- | --- | --- |
-| Trend | `anthropic` | `~/.claude` |
+| Account | Provider             | Claude directory    |
+| ------- | -------------------- | ------------------- |
+| Trend   | `anthropic`          | `~/.claude`         |
 | Cogikyo | `anthropic-personal` | `~/.claude-cogikyo` |
 
 Credentials stay outside the repository.
@@ -41,7 +41,7 @@ There is no automatic quota rollover; selecting personal for work sends that tas
 Each plugin instance owns its credential cache, active account, and excluded beta flags.
 File-backed refresh identities include the credential directory, so account cooldowns and refresh locks stay separate.
 Auth-store updates go through OpenCode's auth API using the selected provider ID and are serialized within this plugin's process.
-Upstream request formatting and response transformations remain in the dependency.
+Upstream request formatting and response transformations remain unchanged in the vendored copy.
 
 Fixed profiles never borrow another account's credentials or invoke the auth plugin's Claude CLI fallback.
 Missing credentials still register an OAuth placeholder so requests fail with the account's login command instead of using an environment API key.
@@ -52,36 +52,28 @@ That recovery can make a small Haiku request.
 Its cooldown is independent for each account.
 Do not run manual login concurrently with active requests for that account: the plugin's refresh lock does not establish coordination with Claude Code's own login or refresh.
 
-## Install and update
+## Update
 
-Use Bun: other package managers do not apply `patchedDependencies`.
-From `config/opencode/`, install the recorded version and patch with:
+The account changes touch `index.js`, `credentials.js`, `keychain.js`, and `betas.js`; the other files match upstream.
+To see them, diff `claude-auth/` against the published package's `dist/`.
 
-```bash
-bun install --frozen-lockfile --ignore-scripts
-```
-
-For an upstream update, work in a temporary copy of this package first, outside the live symlinked config.
-Install the new exact version with scripts disabled, use `bun patch` to port only the account changes, then record it with `bun patch --commit`.
-Keep request compatibility code close to upstream, and inspect changes even when the old patch applies cleanly.
-Move the reviewed dependency, lockfile, and patch changes back together only after checks pass.
+For an upstream update, download the new release outside the live config, for example with `npm pack opencode-claude-auth@<version>`.
+Port the account changes onto its `dist/*.js`, keeping request compatibility code close to upstream.
+Inspect upstream changes to those four files even when the old changes apply cleanly.
+Replace `claude-auth/` only after checks pass, and keep the previous copy until live verification succeeds.
 
 Cheap checks from `config/opencode/`:
 
 ```bash
 ./node_modules/.bin/tsc --noEmit --project tsconfig.json
-./node_modules/.bin/oxlint plugins/anthropic plugins/usage/anthropic.ts plugins/usage/auth.ts plugins/usage/providers.ts plugins/usage/adapters.ts
-node --check node_modules/opencode-claude-auth/dist/index.js
-node --check node_modules/opencode-claude-auth/dist/credentials.js
-node --check node_modules/opencode-claude-auth/dist/keychain.js
-node --check node_modules/opencode-claude-auth/dist/betas.js
+./node_modules/.bin/oxlint plugins/anthropic/index.ts plugins/anthropic/accounts.ts plugins/usage
+for f in plugins/anthropic/claude-auth/*.js; do node --check "$f"; done
 zsh -n ../zsh/zshrc
 git diff --check
 ```
 
-After installation and restart, live verification needs one approved request through each provider and confirmation that the two usage meters report the intended accounts.
+After a restart, live verification needs one approved request through each provider and confirmation that the two usage meters report the intended accounts.
 Syntax checks do not establish OAuth or concurrent-refresh correctness.
 
-To roll back an update, restore the previous dependency version, lockfile, and patch together, reinstall with Bun, and restart OpenCode.
-Keep the previous working files until live verification succeeds.
+To roll back, restore the previous `claude-auth/` directory and restart OpenCode.
 Credential directories do not need to be removed or copied during rollback.
