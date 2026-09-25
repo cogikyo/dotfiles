@@ -33,6 +33,7 @@ export function UsageDashboard(props: {
     <box flexDirection="column" gap={0} paddingLeft={1}>
       <For each={props.providers}>
         {(provider) => {
+          const heading = () => provider.label.match(/^(.*?) (\[[^\]]+\])$/);
           const refreshing = () => props.refreshingProviderIDs?.has(provider.id) ?? false;
           const labelColor = () =>
             refreshing() || provider.id === props.activeProviderID ? theme().primary : theme().text;
@@ -40,13 +41,19 @@ export function UsageDashboard(props: {
             <box flexDirection="column" gap={0}>
               <box flexDirection="row" gap={0} onMouseDown={() => props.onRefresh?.(provider.id)}>
                 <text fg={labelColor()} attributes={BOLD}>
-                  {provider.label}
+                  {heading()?.[1] ?? provider.label}
                 </text>
                 <Show when={provider.note}>
                   <text fg={noteColor(theme(), provider)}>{` ${provider.note}`}</text>
                 </Show>
                 <Show when={refreshing() && !provider.note}>
                   <text fg={theme().primary}>{` refreshing`}</text>
+                </Show>
+                <Show when={heading()?.[2]}>
+                  <box flexGrow={1} minWidth={1} />
+                  <text fg={labelColor()} attributes={BOLD} flexShrink={0}>
+                    {heading()?.[2]}
+                  </text>
                 </Show>
               </box>
               <Show
