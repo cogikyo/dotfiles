@@ -323,75 +323,51 @@ Most models start at `high` for every role until evidence says otherwise.
 
 ### `anthropic/claude-opus-5-5`
 
-- Default reasoning: `high`
-  - low for:
-  - medium for:
-  - xhigh for:
+- Default reasoning: `high` or `xhigh` if time is not a constraint.
+  - It appears to reason less when appropirate automatically, if below `max`.
 - Fallback: `cursor/claude-opus-5-5-fast` (omit effort) when the Anthropic hourly window runs low.
-- Roles:
+- Roles: `build/*` except the Sol and Luna carve-outs below; strongest model overall, so Anthropic usage is the main limit.
 - Weakness:
 - Special notes:
   - When building, leave no comments, no exceptions.
   - Do not edit existing comments except mechanical reference updates, such as renamed functions or files.
-
-### `anthropic/claude-fable-5-1`
-
-- Default reasoning: `high`
-  - low for:
-  - medium for:
-  - xhigh for:
-- Fallback:
-- Roles:
-- Weakness: burns the Anthropic hourly window fast.
-- Special notes:
-  - When building, leave no comments, no exceptions.
-  - Do not edit existing comments except mechanical reference updates, such as renamed functions or files.
-
-### `openai/gpt-6-astra`
-
-- Default reasoning: `high`
-  - low for:
-  - medium for:
-  - xhigh for:
-- Fallback:
-- Roles:
-- Weakness:
-- Special notes:
 
 ### `openai/gpt-6-sol`
 
 - Default reasoning: `high`
-  - low for:
-  - medium for:
-  - xhigh for:
-- Fallback:
-- Roles:
-- Weakness:
+- Fallback: `opus-5-5`
+- Roles: most `review/*`, and `build/scribe`, where it is the best scribe available.
+- Weakness: Not sure where it fails, still learning. It COULD be wrong about things.
 - Special notes:
-
-### `xai/grok-4.6`
-
-- Default reasoning: `high`
-  - low for:
-  - medium for:
-  - xhigh for:
-- Fallback: `cursor/grok-4.6-fast` (omit effort), then `opencode-go/grok-4.6`
-- Roles: `build/general`, `build/patch`, `build/scribe`, `verify/*`
-- Weakness: assumes too early and can be too terse.
-- Special notes:
-  - Brief required evidence explicitly.
+  - `openai/gpt-6-astra` is an upgrade option for `reviews/*` when OpenAI usage allows; Sol stays the default for cost and speed.
 
 ### `openai/gpt-6-luna-fast`
 
 - Default reasoning: `high`
-  - low for:
-  - medium for:
   - xhigh for: `scout/*`
-- Default fallback:
-- Roles: `scout/*`
-- Weakness:
+- Default fallback: `grok-4.6`
+- Roles: `scout/*`, `verify/*`, and other token-heavy rote work where speed matters.
+  - Builds wide, simple changes with lots of reading and editing, such as route changes or downstream fallout from a change.
+  - Brief it to run lint and other cheap checks, so the checks confirm every touched site is right.
+- Weakness: Can do more than it's supposed to, quickly reach dumb zone.
 - Special notes:
   - Always use the fast variant.
+
+### `xai/grok-4.6`
+
+- Default reasoning: `xhigh`
+- Fallback: `cursor/grok-4.6-fast`, then `opencode-go/grok-4.6`
+- Roles: no default role; worse than the models above on every axis tried so far.
+  - Candidate: an extra council voice beside Luna scouts or Sol reviewers; weigh its findings lightly.
+  - Candidate: search-heavy `scout/web` lanes.
+- Weakness: assumes too early and can be too terse.
+- Special notes:
+  - Lots of usage here, can go crazy on web scouting/x scouting to find options. Should return a list of sol or opus to true reasoning.
+  - X/Twitter search already runs through Grok via the `x` skill; use `x` often when search web! Realitme user insgihts are clutch.
+
+### Retired
+
+- `anthropic/claude-fable-5-1`: use Opus 5.5, which is better, faster, and cheaper; revisit at the next Fable upgrade.
 
 ### Fallback providers
 
