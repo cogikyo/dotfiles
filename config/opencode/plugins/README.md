@@ -15,7 +15,7 @@ Running sessions keep the loaded plugin set.
 
 | Feature                | Entrypoint                         | ID                              | Runtime |
 | ---------------------- | ---------------------------------- | ------------------------------- | ------- |
-| Claude auth            | `opencode-claude-auth@2.2.0`       | (package)                       | server  |
+| Claude auth            | `anthropic/index.ts`              | (two provider hooks)            | server  |
 | Delegate task          | `delegate/index.ts`                | `delegate-task`                 | server  |
 | Usage status tool      | `usage/tool.ts`                    | `usage-status`                  | server  |
 | Hyprland notifications | `hyprd/notify.ts`                  | `hyprd-notify`                  | server  |
@@ -138,7 +138,7 @@ Normal flow:
 Auth sources:
 
 - OpenAI: OpenCode `auth.json` OAuth entry.
-- Anthropic: OpenCode `auth.json` OAuth entry.
+- Anthropic: fixed Claude credential directories, one for Trend and one for Cogikyo.
 - xAI: Grok CLI auth at `~/.grok/auth.json`; refresh via `grok models`.
 - Cursor: OpenCode `auth.json` OAuth entry.
 - OpenCode Go: OpenCode `auth.json` API key under `opencode-go`.
@@ -148,20 +148,19 @@ The usage adapter's `claude -p . --model haiku` invocation is only bounded 401 r
 
 Practical failure diagnosis:
 
-- `no auth` → missing OpenCode credentials; the note is warning-colored for OpenCode Go and error-colored for OpenAI, Anthropic, and Cursor.
+- `no auth` → missing provider credentials; the note is warning-colored for OpenCode Go and error-colored for OpenAI, Anthropic, and Cursor.
 - xAI auth failures use Grok CLI credentials and show warning-colored notes.
 - `invalid key` → the OpenCode Go API key was rejected.
 - `429` → rate-limited; wait for the backoff or the reset window.
 - `stale` note → cached data is older than the provider's `staleAfterMS`; click the provider row for a manual refresh.
-- `auth recovery failed` (amber) → recovery checks `$CLAUDE_CONFIG_DIR` when set, then the XDG Claude config and legacy `~/.claude`; otherwise the 401 is unrecoverable from here.
+- `auth recovery failed` (amber) → recovery failed in the selected account's Claude directory; run `claude-auth trend` or `claude-auth cogikyo`.
 - `usage_status` unavailable → delegate child permission derivation denies `experimental.primary_tools` tools unless the child agent's frontmatter explicitly allows them.
 
 ## Claude auth
 
-`opencode-claude-auth` is the server plugin that owns Claude subscription requests.
-
-- It talks directly to Anthropic, owns credential refresh, and wraps subscription requests so nothing else touches Anthropic's billing shape.
-- The usage adapter's `claude -p . --model haiku` fallback is bounded 401 recovery only: it reads `$CLAUDE_CONFIG_DIR` when set, otherwise `${XDG_CONFIG_HOME:-~/.config}/claude` and legacy `~/.claude`, then retries the usage fetch once after a successful refresh.
+[`anthropic/index.ts`](anthropic/README.md) loads two account-bound instances of the patched `opencode-claude-auth` dependency.
+It talks directly to Anthropic and retains upstream request formatting, with separate auth state for `anthropic` (Trend) and `anthropic-personal` (Cogikyo).
+Use the linked guide for login, patch updates, verification, and rollback.
 
 ## Notifications and Kitty context
 

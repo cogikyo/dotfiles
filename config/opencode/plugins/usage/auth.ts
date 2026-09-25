@@ -37,15 +37,16 @@ const Auth = z.object({
 
 // ├─ Claude credentials ──────────────────────────────────────────────────────────────────────────┤
 
-/** Reads valid Claude credentials in path order, skipping unreadable files; `CLAUDE_CONFIG_DIR` overrides the default paths. */
-export async function readClaudeCredentials() {
+/** Reads valid Claude credentials; an explicit directory takes precedence over environment and default paths. */
+export async function readClaudeCredentials(configDir?: string) {
   const candidates = await Promise.all(
-    claudeCredentialsPaths().map((file) => readJson(file, CredentialsFile).catch(() => undefined)),
+    claudeCredentialsPaths(configDir).map((file) => readJson(file, CredentialsFile).catch(() => undefined)),
   );
   return candidates.filter((candidate) => candidate !== undefined);
 }
 
-function claudeCredentialsPaths() {
+function claudeCredentialsPaths(directory?: string) {
+  if (directory) return [path.join(directory, ".credentials.json")];
   const env = process.env.CLAUDE_CONFIG_DIR?.trim();
   if (env) return [path.join(path.resolve(env), ".credentials.json")];
 

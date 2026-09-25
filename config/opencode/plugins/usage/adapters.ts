@@ -1,4 +1,4 @@
-import { anthropicUsage } from "./anthropic.ts";
+import { anthropicPersonalUsage, anthropicUsage } from "./anthropic.ts";
 import { cursorUsage } from "./cursor.ts";
 import { opencodeGoUsage } from "./opencode-go.ts";
 import { openaiUsage } from "./openai.ts";
@@ -8,6 +8,7 @@ import { xaiUsage } from "./xai.ts";
 export const usageAdapters = [
   openaiUsage,
   anthropicUsage,
+  anthropicPersonalUsage,
   xaiUsage,
   cursorUsage,
   opencodeGoUsage,

@@ -1,3 +1,5 @@
+import { claudeAccounts } from "../anthropic/accounts.ts";
+
 export type UsageProviderSpec = {
   id: string;
   label: string;
@@ -12,8 +14,13 @@ export const usageProviders = {
     staleAfterMS: 2 * 60_000,
   },
   anthropic: {
-    id: "anthropic",
-    label: "Anthropic",
+    id: claudeAccounts.trend.id,
+    label: claudeAccounts.trend.label,
+    staleAfterMS: 10 * 60_000,
+  },
+  anthropicPersonal: {
+    id: claudeAccounts.cogikyo.id,
+    label: claudeAccounts.cogikyo.label,
     staleAfterMS: 10 * 60_000,
   },
   xai: {
