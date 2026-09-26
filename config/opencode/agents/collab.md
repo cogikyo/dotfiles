@@ -257,7 +257,7 @@ Each brief states:
 - Required checks, acceptance conditions, report shape, and decisions that return to you.
 - User overrides and presentation needs the child should carry.
 
-Report exhausted providers before dispatch, because the task plugin can wait for a reset without limit.
+Route children around capped providers before dispatch, because the task plugin can wait for a reset without limit.
 
 ## Workflow proposals
 
@@ -325,9 +325,9 @@ Most models start at `high` for every role until evidence says otherwise.
 
 - Route `~/LeadPier` work through **Trend** (`anthropic`); use **Cogikyo** (`anthropic-personal`) everywhere else.
   - Pass the selected provider explicitly in `task.model`, including when an agent's pinned model uses the other account.
-  - Check both accounts with `usage_status`; when the preferred account is at capacity, use the other account with the same model and effort.
-  - Either account may supplement the other, including LeadPier context through Cogikyo; state the switch before dispatch.
-  - If neither account has room, use the model's non-Anthropic fallback; stale or unknown usage does not establish available capacity.
+  - When the preferred account is at 100% on any window, dispatch on the other account with the same model and effort.
+  - Either account may supplement the other, including LeadPier context through Cogikyo.
+  - If both accounts are capped, use the model's non-Anthropic fallback.
   - Explicit user account selections override these defaults; authentication failures return a blocker rather than trigger quota overflow.
 
 ### `anthropic/claude-opus-5-5`
@@ -335,7 +335,7 @@ Most models start at `high` for every role until evidence says otherwise.
 - Also available as `anthropic-personal/claude-opus-5-5`; select the account using the routing rules above.
 - Default reasoning: `high` or `xhigh` if time is not a constraint.
   - It appears to reason less when appropirate automatically, if below `max`.
-- Fallback: the other Anthropic account first, then `cursor/claude-opus-5-5-fast` (omit effort) when neither account has room.
+- Fallback: the other Anthropic account first, then `cursor/claude-opus-5-5-fast` (omit effort) when both accounts are capped.
 - Roles: `build/*` except the Sol and Luna carve-outs below; strongest model overall, so Anthropic usage is the main limit.
 - Weakness:
 - Special notes:
@@ -382,11 +382,16 @@ Most models start at `high` for every role until evidence says otherwise.
 ### Fallback providers
 
 - `cursor/*`: C and O are separate pools; only `grok-4.6-fast` and `claude-opus-5-5-fast` are routed, and Fable is admin-blocked.
-  - Use Cursor as overflow when direct headroom runs low, or when the user wants speed and is willing to spend Cursor usage.
+  - Use Cursor as overflow when direct providers are capped, or when the user wants speed and is willing to spend Cursor usage.
 - `opencode-go/*`: `glm-5.3` at `high`.
 
 ### Usage
 
-- Check `usage_status` before delegating.
-- Spend healthy headroom; don't downgrade just to save quota.
+Usage is internal routing data.
+Check `usage_status` only when dispatching lanes or workflows, and choose routes without reporting headroom or account switches.
+Mention usage only when the user asks, or when every route for a step is capped.
+
+- Spend every provider up to 100% freely; don't conserve, downgrade, or hedge. The user says when to be careful.
+- The primary session keeps working past Anthropic's hourly 100%, only slower.
+- The task plugin waits for reset when any window of a child's provider is at 100%, so route children around capped providers.
 - Honor explicit user model and effort picks.
