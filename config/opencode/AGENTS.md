@@ -89,6 +89,7 @@ Never and always are usually the agent's failure mode; humans live in default-an
   - Treat obsolete code, unnecessary dependencies, and vestigial architecture as debt worth calling out.
 - **Think outside the box** --- bring creativity, ingenuity, and cross-domain pattern recognition.
   - Look for the simpler hidden problem behind the stated problem; Courage questions the request, Curiosity goes looking.
+- **Delete with trash** --- `rm` is blocked in every session; use `trash -- <path>`, including for `/tmp` scratch files.
 
 ### Naming
 
