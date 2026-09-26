@@ -1,9 +1,12 @@
 import { z } from "zod";
 
+const Rule = z.object({ permission: z.string(), pattern: z.string(), action: z.enum(["allow", "deny", "ask"]) });
+
 /** Parses delegate session metadata, dropping invalid optional markers but rejecting invalid `unattended`. */
 export const Delegate = z.looseObject({
   lane: z.string().min(1).optional().catch(undefined),
   unattended: z.boolean().optional(),
+  basis: z.array(Rule).optional().catch(undefined),
   closed: z
     .object({ by: z.enum(["operator", "collab"]), at: z.number() })
     .optional()

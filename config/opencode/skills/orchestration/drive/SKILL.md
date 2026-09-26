@@ -5,7 +5,7 @@ description: Use to prepare or execute an approved multi-step workflow; Collab r
 
 # Drive
 
-Design an execution workflow, get approval, then carry it through its dependencies, evidence, and bounded repairs.
+Design an execution workflow, get approval unless the run is armed, then carry it through its dependencies, evidence, and bounded repairs.
 Collab runs this procedure in-session and keeps the user conversation, integration, and Git.
 Return to `scheme` when execution uncovers unresolved product design.
 
@@ -16,7 +16,7 @@ Start from the terminal outcome and work backward through real contract, impleme
 1. Split the work into coherent scopes that deserve their own lane or leaf.
 2. Freeze the interfaces that let scopes run in parallel, and put shared changes in an earlier foundation step or a later integration step.
 3. Name each step's agent, lane, model, effort, write scope, checks, and repair limit.
-4. Present the workflow as plain numbered steps for approval.
+4. Present the workflow as plain numbered steps for approval; in an armed run, write it as your record and start at once.
 
 Scopes can run in parallel lanes in one worktree when their writes are mostly disjoint.
 Shared files such as schemas, registries, lockfiles, and generated outputs usually want one owner or a serial order.
@@ -33,11 +33,12 @@ Stop and report when two scopes turn out to need the same design change.
 The approval covers the internal steps, so continue between them without asking again.
 Keep owners, checks, models, and repair passes within the approval.
 Return to the user when a condition has no approved next step, a repair limit runs out, or evidence breaks a design assumption.
+In an armed run, these conditions are your decisions; record each one and continue, as `Armed runs` describes.
 
 ## Evidence and repair
 
 Builders own formatting, lint, and other cheap checks inside their scope.
-Expensive checks run only when the user approved the command class and cost.
+Expensive checks run only when the user approved the command class and cost; in an armed run, you choose the class and record the decision.
 Later edits invalidate affected review and verification evidence; repeat only the affected checks.
 Send repairs to the lane that built the change, with the finding as the delta.
 Use a fresh review leaf when the verdict needs independence from earlier rounds.
@@ -45,11 +46,28 @@ After an interruption, reconcile the tree before you reissue write work, because
 
 ## Return boundaries
 
-Commits, rebases, merges, publication, and other external effects are attended boundaries.
+Commits, rebases, merges, publication, and other external effects are attended boundaries in an unarmed run.
 Hold dependent work until the Git boundary it needs is finished.
 Update the user after each finished boundary or wave with the verdict, the material change, and the next action.
 At the end, report accepted work, changed paths, checks and outcomes, dissent, repair counts, blockers, and residual risk.
 At a commit boundary, include the exact scope and a proposed message.
+
+## Armed runs
+
+The user arms drive mode when they invoke `/drive` or `/drive <task>` in a top-level session.
+The plugin replaces that message with a "Drive mode armed" note and the task text, if any.
+That invocation is the user's grant of authority for this session and its children until the user runs `/drive off` or OpenCode restarts.
+Loading this skill yourself does not arm drive mode.
+When a drive note arrives with no task, acknowledge it in one line and do nothing else.
+
+- Write the workflow plan in the conversation as your record, then execute it at once without waiting for approval.
+- Attended boundaries become your decisions: check classes, repairs, compaction, commits through `build/git`, and rebases.
+- The plugin approves each permission ask once, and `question` returns to you with an instruction to decide.
+- Deny rules still apply; route around a denial, or return when no route exists.
+- Do not end your turn to ask for approval, and do not use `question`.
+- Record each decision and any dissent in todos and in the final report.
+- Return only at the terminal outcome, or on a hard deny that you cannot route around.
+- After compaction, the plugin sends a prompt to continue; resume from the summary.
 
 ## Examples
 
@@ -114,8 +132,9 @@ With OpenCode 2 background tasks, the same lanes can run while the conversation 
 6. `self`: Relay findings; gate 6 repairs or returns at the commit boundary.
 
 Repairs re-enter at the fork but resume only the lanes that have findings.
-Children run unattended, so any permission ask becomes a blocker for gate 6.
-The run ends at gate 6 because a commit needs attended approval.
+In an unarmed run, children run unattended, so any permission ask becomes a blocker for gate 6.
+An unarmed run ends at gate 6 because a commit needs attended approval.
+In an armed run, the plugin approves child asks, and Collab approves step 7 itself and continues.
 
 ```text
 you: 7 ─→ (8) ─→ 9 ─→ 10 ─→ (11) ─→ RETURN user

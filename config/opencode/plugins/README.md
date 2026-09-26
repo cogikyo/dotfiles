@@ -23,6 +23,7 @@ Running sessions keep the loaded plugin set.
 | Tool guard             | `opencode/tool-guard.ts`           | `opencode-tool-guard`           | server  |
 | Skill compact          | `opencode/skill-compact.ts`        | `opencode-skill-compact`        | server  |
 | Primary compact        | `opencode/compact.ts`              | `opencode-compact`              | server  |
+| Drive mode             | `opencode/drive.ts`                | `opencode-drive`                | server  |
 | Media context prompt   | `opencode/media-context/prompt.ts` | `opencode-media-context-prompt` | server  |
 | Input cap              | `opencode/input-cap.ts`            | `opencode-input-cap`            | server  |
 | Code blocks            | `opencode/code-blocks.ts`          | `opencode-code-blocks`          | TUI     |
@@ -55,7 +56,7 @@ Normal flow:
 
 - `model` is `provider/model-id`; when omitted the child inherits the agent's pinned model or the current assistant message's model and effort.
 - `effort` maps to the target model's reasoning variants.
-- `unattended` defaults to true for children and rewrites permission asks to denies; descendants cannot become attended under an unattended parent.
+- `unattended` defaults to true for children and rewrites permission asks to denies outside drive mode; descendants cannot become attended under an unattended parent.
 - A lane resumes only when its permission envelope and execution mode still match the current policy.
 - The provider must be listed in `config/opencode/delegate.json`.
 - Before spawning, it waits abortably if any non-post-reset window is at >=100%, until the latest capped reset passes; stale, errored, or unknown usage proceeds un-gated.
@@ -101,6 +102,11 @@ Unattended envelope, applied when `unattended: true` is selected and carried to 
 
 - The child envelope is composed as review defaults, the agent's whole effective ruleset, delegate denies, external-directory boundaries, and inherited unattended blockers.
 - Every `ask` in that composition is rewritten to `deny` in place, so global config, parent, built-in defaults, and the selected agent's own profile are all covered by construction.
+- In a drive-armed tree, the delegate skips that rewrite, and `opencode/drive.ts` approves each ask once.
+- A lane stores its unrewritten envelope in `metadata.delegate.basis` and resumes when that basis still matches, so a drive toggle does not block a resume.
+- Before the prompt, the delegate appends the current mode's envelope when the stored one differs, because a session update appends rules and the leading floor shadows the older ones.
+- A lane without a stored basis resumes when its permissions end with either current envelope, and the delegate then stores the basis.
+- The match ignores order inside a run of rules that share a permission and action and have no `*` pattern, because OpenCode lists skill directories in a different order after each restart.
 - Rewriting keeps each rule's position, so a later, more specific `allow` still wins; `pacman -Q*` stays allowed even though `pacman *` asks.
 - Rewriting happens before dedupe, otherwise a rewritten inherited rule survives as a tail duplicate and outranks the child's own refinement of the same permission.
 - A leading `*` deny is prepended after dedupe as the floor for permissions no rule matches, since the runtime's own fallback is `ask`.
@@ -211,6 +217,10 @@ The other sidebar sections register `sidebar_content` with distinct orders.
 - `opencode/compact.ts` adds the primary-only `compact` tool and appends a system nudge to primary sessions once context passes 120k and again at 200k.
   An approved call runs `session.summarize` with `auto: false` when the turn goes idle, passes the agent's brief into the compaction context, and leaves the session waiting for the user.
   A denial silences nudges until the next tier; any compaction resets the tiers. Calls are logged to `${XDG_STATE_HOME:-~/.local/state}/opencode/compact.jsonl`.
+- `opencode/drive.ts` arms drive mode when the user runs `/drive` or `/drive <task>` in a top-level session, and `/drive off` disarms it; the state is in memory and clears on restart.
+  The `commands/drive.md` command owns the name; the plugin replaces its text with a one-line note plus the task, and the model still takes a turn.
+  In an armed tree, it approves each permission ask once, returns `question` calls to the agent, and prompts the armed session to continue after a compaction that did not continue by itself.
+  It retries an approval after a network error, 5xx, or 429, and stops after any other 4xx; a non-404 stop shows an error toast because the ask then waits for the user.
 - `opencode/media-context/index.tsx` lists registered images and videos and opens images in a Kitty overlay.
 - `opencode/pin-model.tsx` pins the current model to `opencode.json` with `<leader>f` / `/pin`, and switches to that pin with `<leader>shift+t` / `/pinned`, and toggles reasoning between `medium` and `high` with `<leader>i`.
   The variant is stored at `join(api.state.path.state, "pin.json")`; new OpenCode windows read the pinned `model` from `opencode.json`.
@@ -240,6 +250,7 @@ Practical failure diagnosis:
 - `shared/opencode.ts` owns server-only typed readers over the v1 client, with Zod views checked against v2 SDK types.
 - `shared/file.ts` owns `readJson` and atomic `writeText` / `writeJson`; `shared/error.ts` formats thrown values.
 - `delegate/metadata.ts` owns the `metadata.delegate` schema.
+- `shared/drive.ts` owns the in-memory armed sessions and the parent walk that `opencode/drive.ts` and the delegate read.
 - `opencode/skill-parts.ts` owns skill/read tool-part compacting and persist via TUI `part.update` or server HTTP PATCH.
 - `delegate/config.ts` hardcodes `DELEGATE_CONFIG_PATH` to `/home/cullyn/dotfiles/config/opencode/delegate.json`.
 - Changing `hyprd/context.ts` paths or schema requires updating both `hyprd/kitty.ts` and `hyprd/notify.ts`.
@@ -254,7 +265,7 @@ Practical failure diagnosis:
 - Usage adapters must not log tokens, cookies, or local paths.
 - `usage_status` is read-only and must never refresh providers or mutate chat context.
 - Delegate children deny `todowrite`, `task`, and `experimental.primary_tools` tools unless the agent declares them.
-- Delegate children always deny `question`, and unattended children additionally carry no `ask` rule at all.
+- Delegate children always deny `question`, and unattended children outside drive mode carry no `ask` rule at all.
 - Kitty context directory is mode `0700` and the context JSON file is mode `0600`.
 - Media registry directories are mode `0700` and registry files are mode `0600`.
 - Named media images are copied into the runtime cache; original source files are never renamed.

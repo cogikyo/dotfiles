@@ -6,6 +6,7 @@ import {
   type Rule,
   type Session,
 } from "../shared/opencode.ts";
+import { armed } from "../shared/drive.ts";
 
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
 // │ Child permissions                                                                             │
@@ -16,16 +17,18 @@ export type Execution = {
   unattended: boolean;
 };
 
+export type Envelope = { basis: Rule[]; blocked: Rule[] };
+
 const UNATTENDED_FLOOR: Rule = { permission: "*", pattern: "*", action: "deny" };
 
 /** Builds ordered child permissions from agent rules, delegate denies, and inherited parent restrictions.
- * Unattended children turn asks into denies and start with a deny-all floor; `question` is always denied. */
+ * Unattended children start with a deny-all floor and, outside drive mode, turn asks into denies; `question` is always denied. */
 export async function deriveChildPermission(
   client: Client,
   parent: Session,
   agent: Agent,
   execution: Execution,
-): Promise<Rule[]> {
+): Promise<{ permission: Rule[]; envelope: Envelope }> {
   const config = await readConfig(client, { label: "delegate read config" });
   const unattended = execution.unattended;
   const agentConfig = config.agent?.[agent.name];
@@ -45,12 +48,41 @@ export async function deriveChildPermission(
     ...(config.experimental?.primary_tools ?? []).filter((tool) => !hasPermissionRule(declaredRules, tool)).map(deny),
   ];
   const composed = [...defaultRules, ...agent.permission, ...childDenies, ...inherited];
-  if (!unattended) return dedupeRules(composed);
-  return [UNATTENDED_FLOOR, ...dedupeRules(composed.map(asBlocker))];
+  const basis = dedupeRules(composed);
+  if (!unattended) return { permission: basis, envelope: { basis, blocked: basis } };
+  const envelope = {
+    basis: [UNATTENDED_FLOOR, ...basis],
+    blocked: [UNATTENDED_FLOOR, ...dedupeRules(composed.map(asBlocker))],
+  };
+  const permission = (await armed(client, parent.id)) ? envelope.basis : envelope.blocked;
+  return { permission, envelope };
+}
+
+export function sameEnvelope(left: Rule[], right: Rule[]) {
+  return samePermissionRules(canonical(left), canonical(right));
+}
+
+function canonical(rules: Rule[]) {
+  const runs: Rule[][] = [];
+  for (const rule of rules) {
+    const run = runs.at(-1);
+    if (run && reorderable(run[0], rule)) run.push(rule);
+    else runs.push([rule]);
+  }
+  return runs.flatMap((run) => run.toSorted((left, right) => left.pattern.localeCompare(right.pattern)));
+}
+
+function reorderable(left: Rule, right: Rule) {
+  return (
+    left.pattern !== "*" &&
+    right.pattern !== "*" &&
+    left.permission === right.permission &&
+    left.action === right.action
+  );
 }
 
 /** Requires the same ordered permission envelope before a child can resume. */
-export function samePermissionRules(left: Rule[], right: Rule[]) {
+function samePermissionRules(left: Rule[], right: Rule[]) {
   return (
     left.length === right.length &&
     left.every((rule, index) => {

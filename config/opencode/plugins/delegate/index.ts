@@ -20,7 +20,7 @@ const DESCRIPTION = [
   "A lane pins its agent, but model and effort can change between calls; context-limited and closed lanes roll over to a fresh child.",
   "A closed lane name can come back as a different agent.",
   "compact: true requires an existing idle lane and summarizes it before sending the prompt.",
-  "unattended defaults to true; it converts ask to deny for the child and descendants, and children cannot use question.",
+  "unattended defaults to true; it converts ask to deny for the child and descendants unless the user armed drive mode, and children cannot use question.",
   "build/git requires explicit unattended true and an attended primary Collab parent.",
   "Collab presents the named Git plan before invoking build/git through normal task ask permissions, including remembered approvals.",
   "Never launch collab.",

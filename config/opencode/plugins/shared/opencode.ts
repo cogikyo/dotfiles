@@ -59,10 +59,11 @@ const Status: z.ZodType<Status> = z.discriminatedUnion("type", [
   z.object({ type: z.literal("retry"), attempt: z.number(), message: z.string(), next: z.number() }),
 ]);
 
-export type User = Pick<v2.UserMessage, "id" | "role" | "model">;
+export type User = Pick<v2.UserMessage, "id" | "role" | "agent" | "model">;
 const User = z.object({
   id: z.string(),
   role: z.literal("user"),
+  agent: z.string(),
   model: z.object({ providerID: z.string(), modelID: z.string(), variant: z.string().optional() }),
 });
 

@@ -1,6 +1,6 @@
 import type { ToolContext } from "@opencode-ai/plugin";
 import { type Agent, agents, type Client, message, providers, type Rule } from "../shared/opencode.ts";
-import type { Execution } from "./permission.ts";
+import type { Envelope, Execution } from "./permission.ts";
 
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
 // │ Task arguments                                                                                │
@@ -30,6 +30,7 @@ export type PreparedTask = {
   model: ModelRef;
   variant?: string;
   permission: Rule[];
+  envelope: Envelope;
   execution: Execution;
 };
 

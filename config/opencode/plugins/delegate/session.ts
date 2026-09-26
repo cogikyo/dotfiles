@@ -64,7 +64,7 @@ export async function prepareTask(client: Client, ctx: ToolContext, input: TaskA
 
   await validateVariant(client, model, variant);
 
-  const permission = await deriveChildPermission(client, parent, agent, execution);
+  const { permission, envelope } = await deriveChildPermission(client, parent, agent, execution);
 
   return {
     args,
@@ -72,6 +72,7 @@ export async function prepareTask(client: Client, ctx: ToolContext, input: TaskA
     model,
     variant,
     permission,
+    envelope,
     execution,
   };
 }
@@ -206,6 +207,7 @@ async function openChild(client: Client, ctx: ToolContext, args: TaskArgs, prepa
     client,
     child: current,
     permission: prepared.permission,
+    envelope: prepared.envelope,
     execution: prepared.execution,
     signal: ctx.abort,
   });
@@ -214,7 +216,10 @@ async function openChild(client: Client, ctx: ToolContext, args: TaskArgs, prepa
 
 async function createChild(client: Client, ctx: ToolContext, args: TaskArgs, prepared: PreparedTask) {
   const metadata = {
-    delegate: { unattended: prepared.execution.unattended, ...(args.lane ? { lane: args.lane } : {}) },
+    delegate: {
+      unattended: prepared.execution.unattended,
+      ...(args.lane ? { lane: args.lane, basis: prepared.envelope.basis } : {}),
+    },
   };
   const created = await create(
     client,

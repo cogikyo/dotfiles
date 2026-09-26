@@ -28,6 +28,7 @@
     "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/tool-guard.ts",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/skill-compact.ts",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/compact.ts",
+    "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/drive.ts",
     [
       "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/media-context/prompt.ts",
       { "imageNames": { "enabled": true } }

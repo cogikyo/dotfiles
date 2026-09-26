@@ -11,7 +11,7 @@ import {
 } from "../shared/opencode.ts";
 import { closeBody } from "./closed.ts";
 import { type Delegate, delegate } from "./metadata.ts";
-import { type Execution, samePermissionRules } from "./permission.ts";
+import { type Envelope, type Execution, sameEnvelope } from "./permission.ts";
 
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
 // │ Lanes                                                                                         │
@@ -109,10 +109,11 @@ export async function readExistingChild(input: {
   client: Client;
   child: Child;
   permission: Rule[];
+  envelope: Envelope;
   execution: Execution;
   signal: AbortSignal;
 }) {
-  const { client, child, permission, execution, signal } = input;
+  const { client, child, permission, envelope, execution, signal } = input;
   const live = await statuses(client, {
     label: `delegate read child session ${child.id} status before resume`,
     signal,
@@ -121,13 +122,32 @@ export async function readExistingChild(input: {
   if (status && status.type !== "idle") {
     throw new Error(`delegate lane ${child.delegate.lane} is ${status.type}; wait until it is idle`);
   }
-  if (!samePermissionRules(child.permission ?? [], permission)) {
-    throw new Error(`delegate resumed child permission envelope no longer matches; re-brief a fresh child instead`);
-  }
   if (!sameExecution(sessionExecution(child.delegate), execution)) {
     throw new Error(`delegate resumed child execution contract no longer matches; re-brief a fresh child instead`);
   }
+  const stored = child.permission ?? [];
+  const { basis } = child.delegate;
+  const current = basis
+    ? sameEnvelope(basis, envelope.basis)
+    : [envelope.basis, envelope.blocked].some((rules) => endsWith(stored, rules));
+  if (!current) {
+    throw new Error(`delegate resumed child permission envelope no longer matches; re-brief a fresh child instead`);
+  }
+  const effective = endsWith(stored, permission);
+  if (basis && effective) return { id: child.id };
+  const body: NonNullable<SessionUpdateData["body"]> = {
+    metadata: { ...child.metadata, delegate: { ...child.delegate, basis: envelope.basis } },
+    ...(effective ? {} : { permission }),
+  };
+  await unwrap(
+    client.session.update({ path: { id: child.id }, body, signal }),
+    `delegate update lane ${child.delegate.lane} permissions`,
+  );
   return { id: child.id };
+}
+
+function endsWith(stored: Rule[], rules: Rule[]) {
+  return stored.length >= rules.length && sameEnvelope(stored.slice(stored.length - rules.length), rules);
 }
 
 /** Treats a missing stored unattended flag as false. */
