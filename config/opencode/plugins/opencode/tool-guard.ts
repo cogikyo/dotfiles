@@ -250,24 +250,28 @@ function invokesInPlaceEdit(words: string[]) {
   return words.some((word, index) => {
     const name = executable(word);
     if (name !== "perl" && name !== "sed") return false;
-    return words
-      .slice(index + 1)
-      .some(
-        (arg) =>
-          arg === "-i" ||
-          arg.startsWith("-i.") ||
-          arg === "-pi" ||
-          arg.startsWith("-pi.") ||
-          arg === "--in-place" ||
-          arg.startsWith("--in-place="),
-      );
+    return commandArgs(words, index).some(
+      (arg) =>
+        arg === "-i" ||
+        arg.startsWith("-i.") ||
+        arg === "-pi" ||
+        arg.startsWith("-pi.") ||
+        arg === "--in-place" ||
+        arg.startsWith("--in-place="),
+    );
   });
 }
 
-function hasOutputRedirection(command: string) {
+const harmlessRedirect = /^(?:\d?>>?|&>>?)\s*\/dev\/null\b|^\d?>&\d/u;
+
+const heredoc = /<<-?\s*(['"]?)(\w+)\1[^\n]*\n[\s\S]*?\n\s*\2[ \t]*(?=\n|$)/gu;
+
+function hasOutputRedirection(source: string) {
+  const command = source.replace(heredoc, (body) => body.slice(0, body.indexOf("\n")));
   let quote = "";
   let escaped = false;
-  for (const char of command) {
+  for (let index = 0; index < command.length; index++) {
+    const char = command[index];
     if (escaped) {
       escaped = false;
       continue;
@@ -284,7 +288,10 @@ function hasOutputRedirection(command: string) {
       quote = char;
       continue;
     }
-    if (char === ">") return true;
+    if (char !== ">") continue;
+    const start = /[\d&]/u.test(command[index - 1] ?? "") ? index - 1 : index;
+    if (!harmlessRedirect.test(command.slice(start))) return true;
+    index = start + (command.slice(start).match(harmlessRedirect)?.[0].length ?? 1) - 1;
   }
   return false;
 }
@@ -294,8 +301,9 @@ function hasOutputRedirection(command: string) {
 function invokesReviewGitMutation(words: string[]) {
   return words.some((word, index) => {
     if (executable(word) !== "git") return false;
-    const command = gitCommand(words.slice(index + 1));
+    const command = gitCommand(commandArgs(words, index));
     if (!command) return false;
+    if (command.name === "stash") return !["list", "show"].includes(command.args[0] ?? "");
     if (reviewGitMutators.has(command.name)) return true;
     if (command.name === "branch") return mutatesGitBranch(command.args);
     if (command.name === "config") return mutatesGitConfig(command.args);
@@ -393,6 +401,13 @@ function mutatesGitTag(args: string[]) {
 
 // ├─ Shell words ─────────────────────────────────────────────────────────────────────────────────┤
 
+const separator = "\u0000";
+
+function commandArgs(words: string[], index: number) {
+  const end = words.indexOf(separator, index + 1);
+  return words.slice(index + 1, end === -1 ? undefined : end);
+}
+
 function nestedShellCommands(words: string[]) {
   return words.filter((_, index) => {
     if (index < 2 || !/^-\w*c\w*$/u.test(words[index - 1])) return false;
@@ -430,7 +445,12 @@ function shellWords(command: string) {
       quote = char;
       continue;
     }
-    if (/\s|[;&|()]/u.test(char)) {
+    if (/[\n;&|()]/u.test(char)) {
+      flush();
+      if (words.at(-1) !== separator) words.push(separator);
+      continue;
+    }
+    if (/\s/u.test(char)) {
       flush();
       continue;
     }
