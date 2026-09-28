@@ -81,12 +81,12 @@ Context governor:
 
 - While a child is active, the delegate polls status and messages every 300 ms.
 - Token pressure comes from completed assistant-step telemetry and mirrors OpenCode's overflow count: `tokens.total`, or input + output + cache read + cache write when total is absent.
-- `shared/session.ts` owns `CONTEXT_PRESSURE`; its hard stop references `COMPACTION_LIMIT` directly, with no separate limits in `delegate.json`.
-- At 100k (soft), the delegate appends one warning to try to finish before 150k while preserving assigned acceptance checks.
-- At 150k (medium), it warns about possible degraded long-context performance and asks the child to finish soon and verify critical conclusions.
-- At 200k (final), it reports the remaining context budget before the hard stop and asks for a final report, allowing only last edits already in progress or final evidence calls.
+- `shared/session.ts` owns the `CONTEXT_PRESSURE` tiers, with no separate limits in `delegate.json`.
+- At soft, the delegate appends one warning to try to finish before medium while preserving assigned acceptance checks.
+- At medium, it warns about possible degraded long-context performance and asks the child to finish soon and verify critical conclusions.
+- At final, it reports the remaining context budget before the hard stop and asks for a final report, allowing only last edits already in progress or final evidence calls.
 - Warnings do not abort, seal, change tools, or limit later resume; a normal child completion after any warning remains a trusted normal result.
-- At 225k (hard), the delegate aborts active work, seals the session, and returns `state="context_limited"` with recoverable assistant text and durable-state advice.
+- At hard, the delegate aborts active work, seals the session, and returns `state="context_limited"` with recoverable assistant text and durable-state advice.
 - Hard-stopped and automatically compacted sessions persist `metadata.delegate.context`, receive a tail deny, appear marked in `task_status`, and trigger lane rollover.
 - The pinned runtime's `prompt_async` is the supported non-aborting path: it accepts an asynchronous warning user turn while the existing runner remains active.
 - A later message poll confirms that the warning was stored, but API acceptance alone cannot prove that the child consumed it.
@@ -206,15 +206,15 @@ The other sidebar sections register `sidebar_content` with distinct orders.
 
 - `opencode/code-blocks.ts` patches OpenTUI code-block rendering and registers a SQL tree-sitter parser.
 - `hyprd/browser-qa.tsx` keeps one workspace subscription per plugin instance and lists marked browser workspaces before MCP.
-- `opencode/input-cap.ts` caps eligible enabled-provider model input limits at `COMPACTION_LIMIT + reserved` (225k + 25k by default), using cached catalog limits when needed.
-  Models that already compact at or below 225k stay unchanged.
+- `opencode/input-cap.ts` caps eligible enabled-provider model input limits at `COMPACTION_LIMIT + reserved`, using cached catalog limits when needed.
+  Models that already compact at or below `COMPACTION_LIMIT` stay unchanged.
   Load it after provider plugins that seed models, including Cursor.
 - `opencode/statusline.tsx` wraps `session_prompt` with cwd, git status, and a context-pressure bar that uses OpenCode's overflow token count and effective compaction threshold.
   Pink is the last pressure tier before that threshold.
 - `opencode/modified-files.tsx` lists files touched in the current session.
 - `opencode/markdown-context.tsx` lists Markdown reads plus pinned `AGENTS.md` files, the current agent, skills, and slash commands. Click the close mark to stub an unpinned skill or Markdown read. Click restore on a compacted row to reload the file from disk. Click the label to open the file.
 - `opencode/skill-compact.ts` stubs loaded skill bodies when a session compacts. It also uncompacts protected `AGENTS.md` / Collab reads so native prune cannot keep them stubbed.
-- `opencode/compact.ts` adds the primary-only `compact` tool and appends a system nudge to primary sessions once context passes 120k and again at 200k.
+- `opencode/compact.ts` adds the primary-only `compact` tool and appends a system nudge to primary sessions at each `COMPACTION_NUDGES` tier.
   An approved call runs `session.summarize` with `auto: false` when the turn goes idle, passes the agent's brief into the compaction context, and leaves the session waiting for the user.
   A denial silences nudges until the next tier; any compaction resets the tiers. Calls are logged to `${XDG_STATE_HOME:-~/.local/state}/opencode/compact.jsonl`.
 - `opencode/drive.ts` arms drive mode when the user runs `/drive` or `/drive <task>` in a top-level session, and `/drive off` disarms it; the state is in memory and clears on restart.
@@ -254,7 +254,7 @@ Practical failure diagnosis:
 - `opencode/skill-parts.ts` owns skill/read tool-part compacting and persist via TUI `part.update` or server HTTP PATCH.
 - `delegate/config.ts` hardcodes `DELEGATE_CONFIG_PATH` to `/home/cullyn/dotfiles/config/opencode/delegate.json`.
 - Changing `hyprd/context.ts` paths or schema requires updating both `hyprd/kitty.ts` and `hyprd/notify.ts`.
-- `shared/session.ts` owns `COMPACTION_LIMIT` (225k) and `COMPACTION_RESERVED` (25k); input-cap uses their sum as its default cap (250k).
+- `shared/session.ts` owns every context limit: `CONTEXT_PRESSURE`, `COMPACTION_LIMIT` (its hard tier), `COMPACTION_RESERVED`, and `COMPACTION_NUDGES`; input-cap uses limit plus reserved as its default cap.
 - `shared/` owns session/provider metadata, colors/icons, git status parsing, and the sidebar-section wrapper; only put helpers there when more than one plugin owns the concept.
 
 ### Invariants

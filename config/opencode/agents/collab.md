@@ -231,13 +231,13 @@ Several lanes can share one worktree; a failed patch means re-read and adjust, b
 - **Enforced**: after a hard context limit or auto-compaction, a new call with the same name creates a fresh child and rebinds the name.
   - Re-brief that fresh child with the objective, accepted work, and open deltas.
 - You can compact an idle lane with `compact: true` and `lane`; it summarizes, then sends your prompt, and the lane stays trusted.
-  - Compact before resuming a lane whose old context is large (roughly 120k+) or no longer serves the next ask.
+  - Compact before resuming a lane whose old context is large (past the soft pressure tier) or no longer serves the next ask.
 - After an interrupted task call, use `task_status` to list children and lane names, and reconcile the tree before you reissue write work.
 - Close finished lanes with `task_close`, or run `clear-lanes` to sweep them; a closed name starts a fresh child on its next call.
 
 ## Self-compaction
 
-The compact plugin adds a system line when this session passes a context tier (120k, then 200k); native auto-compaction fires near 225k and loses your brief.
+The compact plugin adds a system line when this session passes a context tier; the last line names where native auto-compaction fires, and that compaction loses your brief.
 Act on that line only as the last step of a turn, and call `compact` only when the timing is good; in an unarmed run, the user's approve or deny on its permission prompt is the decision.
 In an armed drive run, the timing is your decision, the drive plugin approves the prompt, and the session continues after compaction.
 

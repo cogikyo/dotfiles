@@ -7,16 +7,17 @@ import type { Message, Model, Provider } from "@opencode-ai/sdk/v2";
 
 // ├─ Limits ──────────────────────────────────────────────────────────────────────────────────────┤
 
-export const COMPACTION_LIMIT = 225_000; // Hard token stop for delegate children.
-export const COMPACTION_RESERVED = 25_000; // Default token budget reserved below the model input limit.
-
 /** Token thresholds for delegate context warnings and the hard stop. */
 export const CONTEXT_PRESSURE = {
-  soft: 100_000,
-  medium: 150_000,
-  final: 200_000,
-  hard: COMPACTION_LIMIT,
+  soft: 200_000,
+  medium: 300_000,
+  final: 375_000,
+  hard: 400_000,
 } as const;
+
+export const COMPACTION_LIMIT = CONTEXT_PRESSURE.hard; // Hard token stop for delegate children.
+export const COMPACTION_RESERVED = 25_000; // Default token budget reserved below the model input limit.
+export const COMPACTION_NUDGES = [CONTEXT_PRESSURE.soft, CONTEXT_PRESSURE.final] as const;
 
 // ├─ Readers ─────────────────────────────────────────────────────────────────────────────────────┤
 

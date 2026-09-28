@@ -5,11 +5,9 @@ import path from "node:path";
 import { z } from "zod";
 import { errorMessage } from "../shared/error.ts";
 import { type Client, session, unwrap } from "../shared/opencode.ts";
-import { COMPACTION_LIMIT, contextTokenTotal, formatTokens } from "../shared/session.ts";
+import { COMPACTION_LIMIT, COMPACTION_NUDGES as TIERS, contextTokenTotal, formatTokens } from "../shared/session.ts";
 
 const id = "opencode-compact";
-
-const TIERS = [120_000, 200_000] as const;
 
 type Model = { providerID: string; modelID: string };
 
