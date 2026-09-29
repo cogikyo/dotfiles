@@ -28,7 +28,7 @@ function ChildSidebar(props: { api: TuiPluginApi }) {
 
   return (
     <Show when={sessionID()} keyed>
-      {(current) => (
+      {(current: string) => (
         <box
           backgroundColor={props.api.theme.current.backgroundPanel}
           width={42}

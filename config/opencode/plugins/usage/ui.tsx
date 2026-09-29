@@ -32,74 +32,88 @@ export function UsageDashboard(props: {
   return (
     <box flexDirection="column" gap={0} paddingLeft={1}>
       <For each={props.providers}>
-        {(provider) => {
-          const heading = () => provider.label.match(/^(.*?) (\[[^\]]+\])$/);
-          const refreshing = () => props.refreshingProviderIDs?.has(provider.id) ?? false;
-          const labelColor = () =>
-            refreshing() || provider.id === props.activeProviderID ? theme().primary : theme().text;
-          return (
-            <box flexDirection="column" gap={0}>
-              <box flexDirection="row" gap={0} onMouseDown={() => props.onRefresh?.(provider.id)}>
-                <text fg={labelColor()} attributes={BOLD}>
-                  {heading()?.[1] ?? provider.label}
-                </text>
-                <Show when={provider.note}>
-                  <text fg={noteColor(theme(), provider)}>{` ${provider.note}`}</text>
-                </Show>
-                <Show when={refreshing() && !provider.note}>
-                  <text fg={theme().primary}>{` refreshing`}</text>
-                </Show>
-                <Show when={heading()?.[2]}>
-                  <box flexGrow={1} minWidth={1} />
-                  <text fg={labelColor()} attributes={BOLD} flexShrink={0}>
-                    {heading()?.[2]}
-                  </text>
-                </Show>
-              </box>
-              <Show
-                when={provider.windows.length > 0}
-                fallback={
-                  <For each={provider.placeholders ?? PLACEHOLDER_LABELS}>
-                    {(label) => (
-                      <WindowRow
-                        theme={theme()}
-                        label={label}
-                        percent={DASH.padEnd(PERCENT_WIDTH, " ")}
-                        percentColor={theme().textMuted}
-                        bar={"░".repeat(BAR_WIDTH)}
-                        barColor={theme().textMuted}
-                        duration={DASH}
-                        exact={DASH}
-                      />
-                    )}
-                  </For>
-                }
-              >
-                <For each={provider.windows}>
-                  {(window) => {
-                    const reset = window.resetAt ? formatReset(window.resetAt) : undefined;
-                    const pct = window.usedPercent;
-                    return (
-                      <WindowRow
-                        theme={theme()}
-                        label={window.label}
-                        percent={pct !== undefined ? formatPercent(pct) : DASH.padEnd(PERCENT_WIDTH, " ")}
-                        percentColor={pct !== undefined ? usageColor(pct) : theme().textMuted}
-                        bar={pct !== undefined ? usageBar(pct) : "░".repeat(BAR_WIDTH)}
-                        barColor={pct !== undefined ? usageColor(pct) : theme().textMuted}
-                        marker={paceMarker(window.label, window.resetAt)}
-                        markerColor={paceIndicatorColor(theme(), pct, window.label, window.resetAt)}
-                        duration={reset?.duration ?? ""}
-                        exact={reset?.exact ?? ""}
-                      />
-                    );
-                  }}
+        {(provider) => (
+          <box flexDirection="column" gap={0}>
+            <ProviderHeader
+              theme={theme()}
+              provider={provider}
+              active={provider.id === props.activeProviderID}
+              refreshing={props.refreshingProviderIDs?.has(provider.id) ?? false}
+              onRefresh={() => props.onRefresh?.(provider.id)}
+            />
+            <Show
+              when={provider.windows.length > 0}
+              fallback={
+                <For each={provider.placeholders ?? PLACEHOLDER_LABELS}>
+                  {(label) => (
+                    <WindowRow
+                      theme={theme()}
+                      label={label}
+                      percent={DASH.padEnd(PERCENT_WIDTH, " ")}
+                      percentColor={theme().textMuted}
+                      bar={"░".repeat(BAR_WIDTH)}
+                      barColor={theme().textMuted}
+                      duration={DASH}
+                      exact={DASH}
+                    />
+                  )}
                 </For>
-              </Show>
-            </box>
-          );
-        }}
+              }
+            >
+              <For each={provider.windows}>
+                {(window) => {
+                  const reset = window.resetAt ? formatReset(window.resetAt) : undefined;
+                  const pct = window.usedPercent;
+                  return (
+                    <WindowRow
+                      theme={theme()}
+                      label={window.label}
+                      percent={pct !== undefined ? formatPercent(pct) : DASH.padEnd(PERCENT_WIDTH, " ")}
+                      percentColor={pct !== undefined ? usageColor(pct) : theme().textMuted}
+                      bar={pct !== undefined ? usageBar(pct) : "░".repeat(BAR_WIDTH)}
+                      barColor={pct !== undefined ? usageColor(pct) : theme().textMuted}
+                      marker={paceMarker(window.label, window.resetAt)}
+                      markerColor={paceIndicatorColor(theme(), pct, window.label, window.resetAt)}
+                      duration={reset?.duration ?? ""}
+                      exact={reset?.exact ?? ""}
+                    />
+                  );
+                }}
+              </For>
+            </Show>
+          </box>
+        )}
       </For>
+    </box>
+  );
+}
+
+function ProviderHeader(props: {
+  theme: TuiThemeCurrent;
+  provider: ProviderUsage;
+  active: boolean;
+  refreshing: boolean;
+  onRefresh: () => void;
+}) {
+  const heading = () => props.provider.label.match(/^(.*?) (\[[^\]]+\])$/);
+  const labelColor = () => (props.refreshing || props.active ? props.theme.primary : props.theme.text);
+  return (
+    <box flexDirection="row" gap={0} onMouseDown={() => props.onRefresh()}>
+      <text fg={labelColor()} attributes={BOLD}>
+        {heading()?.[1] ?? props.provider.label}
+      </text>
+      <Show when={props.provider.note}>
+        <text fg={noteColor(props.theme, props.provider)}>{` ${props.provider.note}`}</text>
+      </Show>
+      <Show when={props.refreshing && !props.provider.note}>
+        <text fg={props.theme.primary}>{` refreshing`}</text>
+      </Show>
+      <Show when={heading()?.[2]}>
+        <box flexGrow={1} minWidth={1} />
+        <text fg={labelColor()} attributes={BOLD} flexShrink={0}>
+          {heading()?.[2]}
+        </text>
+      </Show>
     </box>
   );
 }
