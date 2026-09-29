@@ -2,6 +2,8 @@ import { tool, type Plugin, type PluginModule } from "@opencode-ai/plugin";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { createInterface } from "node:readline";
 import { z } from "zod";
+import { armed } from "../shared/drive.ts";
+import type { Client } from "../shared/opencode.ts";
 
 const id = "hyprd-browser-isolation";
 const clients = new Map<string, Promise<MCPClient>>();
@@ -10,19 +12,19 @@ const clients = new Map<string, Promise<MCPClient>>();
 // │ Isolated browser tools                                                                        │
 // ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
-const server: Plugin = async () => {
-  const catalog = await MCPClient.connect();
+const server: Plugin = async ({ client }) => {
+  const catalog = await MCPClient.connect(false);
   const tools = await catalog.tools();
   catalog.close();
 
   return {
-    tool: Object.fromEntries(tools.map((item) => [`chrome-devtools_${item.name}`, definition(item)])),
+    tool: Object.fromEntries(tools.map((item) => [`chrome-devtools_${item.name}`, definition(client, item)])),
     event: async ({ event }) => {
       if (event.type !== "session.deleted" && event.type !== "session.idle") return;
       const sessionID = event.type === "session.deleted" ? event.properties.info.id : event.properties.sessionID;
-      const client = clients.get(sessionID);
+      const open = clients.get(sessionID);
       clients.delete(sessionID);
-      (await client)?.close();
+      (await open)?.close();
     },
   };
 };
@@ -91,7 +93,7 @@ class MCPClient {
   private nextID = 1;
   private pending = new Map<number, { resolve: (value: unknown) => void; reject: (cause: Error) => void }>();
 
-  private constructor() {
+  private constructor(headless: boolean) {
     this.child = spawn(
       "npx",
       [
@@ -101,6 +103,7 @@ class MCPClient {
         "--executablePath=/usr/bin/chromium",
         "--chromeArg=--opencode-browser-qa",
         "--no-usage-statistics",
+        ...(headless ? ["--headless", "--viewport=1920x1080"] : []),
       ],
       { stdio: ["pipe", "pipe", "pipe"] },
     );
@@ -110,8 +113,8 @@ class MCPClient {
     this.child.once("close", () => this.fail(new Error("Chrome DevTools MCP exited")));
   }
 
-  static async connect() {
-    const client = new MCPClient();
+  static async connect(headless: boolean) {
+    const client = new MCPClient(headless);
     await client.request("initialize", {
       protocolVersion: "2025-06-18",
       capabilities: { roots: {} },
@@ -180,17 +183,17 @@ class MCPClient {
 // ├─ Session tools ───────────────────────────────────────────────────────────────────────────────┤
 
 // Failed session connections are discarded so a later call can retry.
-function browser(sessionID: string) {
+function browser(client: Client, sessionID: string) {
   const existing = clients.get(sessionID);
   if (existing) return existing;
 
-  const opening = MCPClient.connect();
+  const opening = armed(client, sessionID).then((headless) => MCPClient.connect(headless));
   clients.set(sessionID, opening);
   opening.catch(() => clients.delete(sessionID));
   return opening;
 }
 
-function definition(item: Tool) {
+function definition(client: Client, item: Tool) {
   const required = new Set(item.inputSchema.required ?? []);
   const shape = Object.fromEntries(
     Object.entries(item.inputSchema.properties ?? {}).map(([name, schema]) => {
@@ -208,7 +211,7 @@ function definition(item: Tool) {
         always: ["*"],
         metadata: {},
       });
-      const result = await (await browser(ctx.sessionID)).call(item.name, args);
+      const result = await (await browser(client, ctx.sessionID)).call(item.name, args);
       const output = result.content.flatMap((part) => (part.type === "text" ? [part.text] : [])).join("\n\n");
       if (result.isError) throw new Error(output || `${item.name} failed`);
       return {

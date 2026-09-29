@@ -196,6 +196,7 @@ Practical failure diagnosis:
 `hyprd/browser-isolation.ts` exposes Chrome DevTools tools from one MCP subprocess per OpenCode session.
 Each subprocess launches an isolated Chromium profile, so concurrent browser agents cannot list or change each other's pages.
 Marked Chromium windows are assigned stable `browser-qa-<slot>` workspaces by hyprd and shown in the `Browsers` sidebar section.
+Sessions under an armed `/drive` root launch headless Chromium with a 1920x1080 viewport instead, because headed screenshots stall while the screen is locked or off; those browsers get no workspace.
 When an agent session becomes idle or is deleted, the plugin closes its MCP subprocess and isolated browser.
 
 ## TUI presentation
