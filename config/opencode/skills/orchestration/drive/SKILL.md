@@ -83,7 +83,7 @@ Drive runs longer by chaining phases with frozen interfaces, lanes, and gates.
                             └──────────┘ repair ≤2
 ```
 
-1. `[high • openai/gpt-6-astra] build/owner`, lane `core`: Freeze the shared types and interfaces.
+1. `[high • anthropic/claude-opus-5-5] build/owner`, lane `core`: Freeze the shared types and interfaces.
 2. `self`: Inspect the foundation; gate 2 releases the parallel lanes only on a stable interface.
 3. `build/general`, lane `list`: Build the list view against the frozen interface.
 4. `build/general`, lane `detail`: Build the detail view.
@@ -109,7 +109,7 @@ Lanes 3 to 5 write disjoint files; shared registries stay with lane `core`.
 3. `scout/library`: Check whether the stdlib already covers the cache helper.
 4. `build/general`, lane `cache`: Implement the cache change using step 3's answer.
 5. `self`: Make the one-line config fix directly.
-6. `[high • anthropic/claude-fable-5-1] build/owner`, lane `sync`: Own the hard sync rewrite.
+6. `[xhigh • anthropic/claude-opus-5-5] build/owner`, lane `sync`: Own the hard sync rewrite.
 7. `self`: Review each result and report per request.
 
 Collab dispatches the ready steps in one message and waits for them today.
@@ -127,8 +127,8 @@ With OpenCode 2 background tasks, the same lanes can run while the conversation 
 1. `self`: Freeze the baseline, write scopes, and approved checks.
 2. `build/owner`, lane `store`: Migrate the storage layer.
 3. `build/general`, lane `cli`: Update the CLI commands.
-4. `[medium • anthropic/claude-opus-5-5] review/debug`: Review lane `store`.
-5. `[high • openai/gpt-6-sol] review/simplify`: Review lane `cli`.
+4. `[high • openai/gpt-6-astra] review/debug`: Review lane `store`.
+5. `[high • openai/gpt-6-astra] review/simplify`: Review lane `cli`.
 6. `self`: Relay findings; gate 6 repairs or returns at the commit boundary.
 
 Repairs re-enter at the fork but resume only the lanes that have findings.

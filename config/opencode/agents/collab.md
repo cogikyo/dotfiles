@@ -329,67 +329,66 @@ Most models start at `high` for every role until evidence says otherwise.
 
 ### Anthropic accounts
 
-- Route `~/LeadPier` work through **Trend** (`anthropic`); use **Cogikyo** (`anthropic-personal`) everywhere else.
-  - Pass the selected provider explicitly in `task.model`, including when an agent's pinned model uses the other account.
-  - When the preferred account is at 100% on any window, dispatch on the other account with the same model and effort.
-  - Either account may supplement the other, including LeadPier context through Cogikyo.
-  - If both accounts are capped, use the model's non-Anthropic fallback.
-  - Explicit user account selections override these defaults; authentication failures return a blocker rather than trigger quota overflow.
+**Trend** (`anthropic`) and **Cogikyo** (`anthropic-personal`) both serve every repository.
+Route between them to spend each weekly window before it resets.
+
+- Prefer the account whose weekly window resets first while it still has weekly headroom.
+  - Keep dispatching there until its hourly window, or any other window, reaches 100%.
+- Then dispatch on the other account with the same model and effort.
+- When both accounts are capped, use the model's Cursor fallback.
+- Pass the chosen provider explicitly in `task.model`, including when an agent's pinned model uses the other account.
+- **Enforced**: Opus and Sonnet run only at `high` or `xhigh`; `opencode.json` disables their other variants.
+- Explicit user account selections override these defaults.
+- Authentication failures return a blocker rather than trigger quota overflow.
+  - The user refreshes auth through the Claude CLI with the zsh helper `claude-auth trend` or `claude-auth cogikyo`.
 
 ### `anthropic/claude-opus-5-5`
 
 - Also available as `anthropic-personal/claude-opus-5-5`; select the account using the routing rules above.
 - Default reasoning: `high` or `xhigh` if time is not a constraint.
-  - It appears to reason less when appropirate automatically, if below `max`.
-- Fallback: the other Anthropic account first, then `cursor/claude-opus-5-5-fast` (omit effort) when both accounts are capped.
-- Roles: `build/*` except the Sol and Luna carve-outs below; strongest model overall, so Anthropic usage is the main limit.
-- Weakness:
+  - It appears to reason less when appropriate automatically, if below `max`.
+- Fallback: `cursor/claude-opus-5-5-fast` (omit effort) when both Anthropic accounts are capped.
+- Roles: `build/owner`, `build/general`, and `build/git`; all important building runs here.
+  - `review/critic`: brief it with Astra's findings so it filters the ones that don't hold up.
 - Special notes:
   - When building, leave no comments, no exceptions.
   - Do not edit existing comments except mechanical reference updates, such as renamed functions or files.
 
-### `openai/gpt-6-sol`
+### `openai/gpt-6-astra`
 
 - Default reasoning: `high`
 - Fallback: `opus-5-5`
-- Roles: most `review/*`, and `build/scribe`, where it is the best scribe available.
-- Weakness: Not sure where it fails, still learning. It COULD be wrong about things.
-- Special notes:
-  - `openai/gpt-6-astra` is an upgrade option for `reviews/*` when OpenAI usage allows; Sol stays the default for cost and speed.
+- Roles: every `review/*` lens except `review/critic`, `build/scribe`, and `verify/browser`.
+  - Plenty of usage, so route all review here.
+  - Better than Claude for comments and docs.
+  - Best at browser QA and computer use.
+- Weakness: can be overly thorough; send findings through an Opus `review/critic` when they need filtering.
 
-### `openai/gpt-6-luna-fast`
+### `anthropic/claude-sonnet-5-5`
 
+- Also available as `anthropic-personal/claude-sonnet-5-5`; select the account using the routing rules above.
 - Default reasoning: `high`
-  - xhigh for: `scout/*`
-- Default fallback: `grok-4.6`
-- Roles: `scout/*`, `verify/*`, and other token-heavy rote work where speed matters.
-  - Builds wide, simple changes with lots of reading and editing, such as route changes or downstream fallout from a change.
-  - Brief it to run lint and other cheap checks, so the checks confirm every touched site is right.
-- Weakness: Can do more than it's supposed to, quickly reach dumb zone.
+  - `xhigh` for `scout/*` and `verify/web`.
+- Fallback: `cursor/claude-opus-5-5-fast` (omit effort) when both Anthropic accounts are capped; Cursor has no working Sonnet fast variant.
+- Roles: `scout/*`, `verify/web`, `verify/source`, `verify/test`, and other high-token filtering, summarizing, and high-level scoping.
+  - Best scout available; orchestrates web search and `x` calls in `scout/web` and `verify/web`.
+  - `build/patch` at `high` when the edits are trivial; slightly faster than Opus.
+  - Good to keep open as a `{scope}-patch` lane for repeated patches using the same agent.
+- Weakness: uses more tokens, so context limit may fill up before compaction warning faster; this is fine.
 - Special notes:
-  - Always use the fast variant.
+  - When building, follow the Opus comment rules.
+  - Use to orchestrate many `x` skill usages (grok cli) often when searching the web; realtime user insights are clutch.
 
 ### `xai/grok-4.6`
 
-- Default reasoning: `xhigh`
-- Fallback: `cursor/grok-4.6-fast`, then `opencode-go/grok-4.6`
-- Roles: no default role; worse than the models above on every axis tried so far.
-  - Candidate: an extra council voice beside Luna scouts or Sol reviewers; weigh its findings lightly.
-  - Candidate: search-heavy `scout/web` lanes.
-- Weakness: assumes too early and can be too terse.
-- Special notes:
-  - Lots of usage here, can go crazy on web scouting/x scouting to find options. Should return a list of sol or opus to true reasoning.
-  - X/Twitter search already runs through Grok via the `x` skill; use `x` often when search web! Realitme user insgihts are clutch.
-
-### Retired
-
-- `anthropic/claude-fable-5-1`: use Opus 5.5, which is better, faster, and cheaper; revisit at the next Fable upgrade.
+- not worth using as a task model; the `x` skill still shells the Grok CLI for native X search.
+- could be used as council member in web/verify searches.
 
 ### Fallback providers
 
-- `cursor/*`: C and O are separate pools; only `grok-4.6-fast` and `claude-opus-5-5-fast` are routed, and Fable is admin-blocked.
+- `cursor/*`: C and O are separate pools; only `claude-opus-5-5-fast` is routed, always as the fast variant, and Fable is admin-blocked.
   - Use Cursor as overflow when direct providers are capped, or when the user wants speed and is willing to spend Cursor usage.
-- `opencode-go/*`: `glm-5.3` at `high`.
+- `opencode-go/*`: `glm-5.3` at `high`. Used to test new open source models (e.g., deepseek v5) when released.
 
 ### Usage
 

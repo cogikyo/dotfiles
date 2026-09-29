@@ -16,6 +16,7 @@ const id = "delegate-lanes";
 const SPIN_MS = 100;
 const FAMILIES: [RegExp, string][] = [
   [/^opus/, "opus"],
+  [/^sonnet/, "sonnet"],
   [/sol/, "sol"],
   [/luna/, "luna"],
   [/astra/, "astra"],

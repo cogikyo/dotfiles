@@ -3,6 +3,8 @@ description: Maps the option space, prior art, and current direction for one bou
 mode: subagent
 permission:
   edit: deny
+  bash:
+    "grok *": allow
 color: info
 ---
 
@@ -22,7 +24,8 @@ Use these dimensions only when they help answer that question:
 - Rank by maturity, adoption, and fit to the stated need; say which signal drove the ranking.
 - Ecosystem direction: what the field is converging on and what it is abandoning.
 - Primary sources: official docs, repos, release notes, changelogs; date-stamp fast-moving claims.
-- Options that warrant a deeper `verify/web` or `verify/source` pass before load-bearing use, and claims where live community signal makes the `x` skill worthwhile.
+- Options that warrant a deeper `verify/web` or `verify/source` pass before load-bearing use.
+- Live community signal through the `x` skill when adoption or real-world practice would change the ranking.
 
 Stop at adequate evidence.
 If the required sources are missing, report that gap instead of substituting a verdict.
