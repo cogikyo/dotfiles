@@ -38,6 +38,25 @@ When searching session metadata, bound by project key, session id, current workt
 Stop at adequate evidence.
 If the required evidence is missing, name the gap instead of widening the search.
 
+## Store
+
+OpenCode keeps sessions in SQLite at `/home/cullyn/.local/share/opencode/opencode.db`.
+The old `storage/` directory holds only `migration` and `session_diff`, so do not glob it for transcripts.
+Open the database read-only through the live-WAL-safe URI, with one short query per call:
+
+```bash
+sqlite3 'file:/home/cullyn/.local/share/opencode/opencode.db?mode=ro' "PRAGMA query_only=ON; PRAGMA busy_timeout=200; <sql>"
+```
+
+- `session` has `id`, `parent_id`, `directory`, `agent`, `title`, `time_created`, and `time_updated` in epoch milliseconds.
+- `message` has one row per turn, and `$.role` in its `data` is `user` or `assistant`.
+- `part` has `session_id`, `message_id`, and JSON `data`, where `$.type` is `text`, `tool`, `reasoning`, `file`, `compaction`, or a step marker.
+  - Text parts carry `$.text`, and `$.synthetic = 1` marks harness-injected text.
+  - Tool parts carry `$.tool`, `$.state.status`, `$.state.input`, `$.state.output`, and `$.state.error`.
+- `part` is indexed only by `session_id` and `message_id`, so select sessions first and read one session's parts at a time.
+  - A time-window scan across all parts takes about 10 seconds.
+- Cap excerpts with `substr` and `LIMIT`, and read tool outputs only after a specific part matters.
+
 ## Must not
 
 - Edit files, mutate git state, run builds, resume sessions, or delegate.
