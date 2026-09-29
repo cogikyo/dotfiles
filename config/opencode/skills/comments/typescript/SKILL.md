@@ -5,11 +5,11 @@ description: Use with comments when auditing or editing TypeScript doc comments 
 
 # TypeScript comments
 
-Read `comments` for the general procedure.
-Use TSDoc `/** */` comments for exported functions, types, classes, and object or array values that need documentation.
-Exported scalar constants take a right-side `//` comment instead, per `comments`.
-Add tags only when names and types do not convey the needed contract, and do not restate a type signature in prose.
+This skill adds TypeScript conventions to `comments`, which owns the general procedure.
 
-Keep documentation attached to the declaration and verify claims against its implementation and callers.
-Explain non-obvious effects, errors, ownership, or ordering only where source supports them and the reader needs them.
-Follow the project's supported TSDoc conventions rather than introducing a new tag inventory.
+- Use TSDoc `/** */` blocks for exported functions, types, classes, and object or array values that need documentation.
+- Give exported scalar constants a right-side `//` comment instead, per `comments`.
+- Add `@param`, `@returns`, `@throws`, or `@example` only when names and types leave the contract unclear, and do not restate the type signature in prose.
+- Mark deprecation with `@deprecated` and name the replacement.
+- Link related symbols with `{@link Name}` when the reference helps the reader.
+- Prefer the project's existing TSDoc or JSDoc conventions and lint rules over new tags.

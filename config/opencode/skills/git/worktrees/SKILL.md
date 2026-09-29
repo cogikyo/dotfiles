@@ -1,19 +1,14 @@
 ---
 name: worktrees
-description: Load before ANY branch or worktree creation, switch, or removal, however small; shared branch/worktree procedure for Collab approval and authorized build/git execution; resolve path@branch, verify checkouts, and manage named safe lifecycle operations.
+description: Use for any branch or worktree creation, switch, or removal, and for resolving `path@branch` targets; verifies checkouts and manages named safe lifecycle operations.
 ---
 
 # Worktrees
 
-## Ownership
-
-Collab may plan and execute approved work.
-Only attended Collab may launch `build/git`, after presenting repository/worktree, branch and refs, intended mutations, destructive effects, checks, and stop conditions.
-The task uses normal ASK semantics, including remembered approvals, with `unattended: true`.
-Skill loading grants no execution authority; other children inspect Git read-only and work within their assigned checkout without loading this skill.
+Resolve checkouts, then create, verify, or remove branches and worktrees through named safe operations.
 Do not repurpose another work thread's checkout.
 
-## Resolve the target
+## Preflight
 
 Interpret `<repository-or-worktree-path>@<branch>` as a repository target by default.
 Split at the final `@`, resolve the filesystem prefix, then check the suffix as a branch or ref in that repository.
@@ -30,8 +25,8 @@ For each target:
 1. Verify the repository root, current branch, worktree list, and staged, unstaged, and untracked changes immediately before editing, delegating, or running branch-sensitive commands.
 2. Reuse the worktree holding the requested branch, even when the user supplied the main repository path.
 3. If the supplied worktree is on another branch, locate the matching worktree instead of switching that checkout.
-4. If no matching worktree exists, return the creation plan to Collab unless the current worker dispatch already approves that exact operation; only attended Collab asks the user.
-5. Pass children the resolved repository root, exact worktree path, and verified branch or detached ref, never unresolved `path@branch` notation.
+4. If no matching worktree exists, return a creation plan for approval unless the current brief already approves that exact operation.
+5. Pass children the resolved repository root, exact worktree path, and verified branch or detached ref instead of unresolved `path@branch` notation.
 6. Recheck Git state after interruptions, child returns, or signs of concurrent checkout changes.
 
 Use these read-only checks in the resolved checkout:
@@ -92,7 +87,7 @@ For creation, include the starting ref; distinguish a Git checkout that exists f
 
 Removal requires a named approved path and inspection of tracked, untracked, and ignored files that would be lost.
 Require a clean worktree with no files to preserve, no active Git operation, and no other owner using it before `git worktree remove -- <path>`.
-Never force removal; preservation work needs a separately approved action.
+Do not force removal; preservation work needs a separately approved action.
 Deleting the branch is a separate decision.
 Use Git's worktree operations rather than deleting a live worktree directory by hand.
 
@@ -100,6 +95,6 @@ Use Git's worktree operations rather than deleting a live worktree directory by 
 
 Create a branch only with its approved name and starting OID, using `git branch -- <name> <base-OID>`; this does not switch the current checkout.
 For deletion, verify the named branch's tip, confirm it is not attached to any worktree or owned by another task, and prove its tip is reachable from the approved retained ref.
-Use only `git branch -d -- <name>`; if Git refuses, return to Collab without `-D`, force, ref deletion, or configuration changes.
+Use only `git branch -d -- <name>`; if Git refuses, stop and report without `-D`, force, ref deletion, or configuration changes.
 Do not rename branches, switch existing checkouts, or prune or repair worktree metadata under this workflow.
 After each mutation, inspect branch refs, worktree list, and status and report what changed and what remains preserved.

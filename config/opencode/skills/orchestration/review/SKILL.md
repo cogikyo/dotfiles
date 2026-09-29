@@ -41,7 +41,7 @@ A lane that built the change is a poor judge of it; use a fresh leaf for a final
 
 ## Synthesize
 
-Reconcile disagreement by inspecting the disputed mechanism or running an approved discriminating check.
+Reconcile disagreement by inspecting the disputed mechanism or running a discriminating check.
 Deduplicate findings by cause and consequence, reject unsupported failure paths, and keep material dissent that evidence cannot settle.
 Agreement counts only as far as its evidence is independent.
 Criticize your own provisional verdict when a causal leap, missing alternative, or weak acceptance argument could change confidence.
@@ -61,7 +61,7 @@ If no actionable finding survives, say so and name what remains unverified.
 
 ## Examples
 
-These are shapes, not approved work; `workflow` defines the notation and default routes.
+These are shapes, not approved work; `workflow` defines the notation.
 Review widens by adding independent lenses, not by adding stages.
 
 ### Change review with parallel lenses
@@ -73,9 +73,9 @@ Review widens by adding independent lenses, not by adding stages.
 ```
 
 1. `self`: Frame the diff, baseline, and the claims the change makes.
-2. `[high • openai/gpt-6.1-sol] review/debug`: Check state transitions and partial failures.
-3. `[high • openai/gpt-6.1-sol] review/security`: Check the new input boundary for a credible exploit path.
-4. `[high • openai/gpt-6.1-sol] review/simplify`: Check for accidental complexity and dead paths.
+2. `review/debug`: Check state transitions and partial failures.
+3. `review/security`: Check the new input boundary for a credible exploit path.
+4. `review/simplify`: Check for accidental complexity and dead paths.
 5. `self`: Deduplicate by cause, inspect any disputed mechanism, and return the verdict.
 
 Pick lenses from the risk map; a small diff often needs only one.
@@ -92,8 +92,8 @@ Pick lenses from the risk map; a small diff often needs only one.
 2. `scout/context`: Map ownership, entry points, and governing instructions.
 3. `scout/dirty`: Report recent churn and WIP that touch the subsystem.
 4. `self`: Build the risk map and choose lenses from it.
-5. `[high • openai/gpt-6.1-sol] review/architect`: Judge ownership and hidden coupling.
-6. `[high • openai/gpt-6.1-sol] review/debug`: Trace the highest-risk failure path end to end.
+5. `review/architect`: Judge ownership and hidden coupling.
+6. `review/debug`: Trace the highest-risk failure path end to end.
 7. `self`: Synthesize and order remediation by dependency and consequence.
 
 The scouts keep bulk reading out of the session, so step 4 reasons over short reports.
@@ -108,12 +108,12 @@ The scouts keep bulk reading out of the session, so step 4 reasons over short re
 ```
 
 1. `self`: Freeze one brief, baseline, and acceptance question.
-2. `[high • anthropic/claude-opus-5-5] review/critic`: Critique the plan.
-3. `[high • openai/gpt-6.1-sol] review/critic`: Critique the same plan.
-4. `[high • anthropic/claude-sonnet-5-5] review/critic`: Critique the same plan.
+2. `review/critic`: Critique the plan.
+3. `review/critic`: Critique the same plan.
+4. `review/critic`: Critique the same plan.
 5. `self`: Compare candidates; gate 5 selects step 6 only when a disputed claim decides the verdict.
 6. `verify/source`: Settle that one claim against source.
 7. `self`: Keep the strongest critique, merge compatible points, and preserve material dissent.
 
 The merge is exclusive: step 7 never waits for a skipped step 6.
-Different models make this a comparison of teams, and agreement counts only as far as the evidence is independent.
+Routing may seat the critics on different models; agreement counts only as far as their evidence is independent.

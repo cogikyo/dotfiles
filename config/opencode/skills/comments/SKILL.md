@@ -17,7 +17,7 @@ Read the relevant subskills before editing:
 - `typescript` (`comments/typescript/SKILL.md`) for TypeScript doc comments and TSDoc.
 
 Combine language and banner guidance when both apply.
-Load `adhd` (`prose/adhd/SKILL.md`) for wording: lead with the point and keep only what the reader needs.
+For wording, lead with the point and keep only what the reader needs.
 Keep comment-only, banner-only, and combined scopes distinct; unclear audit versus update intent needs a decision before mutation.
 
 ## Audit and edit
@@ -35,10 +35,10 @@ Private helpers and idiomatic glue rarely need more than a surprising constraint
 ## Length
 
 A comment says what the code does and why it matters, not how it does it; the code already shows how.
-Default to one sentence and stop at two.
+Default to one sentence, and rarely go past two.
 Merge related short facts into one sentence instead of stacking a line per fact.
 Leave branch-by-branch behavior and edge cases to the code unless a caller would get them wrong without the comment.
-Longer doc comments are fine only for tags that carry separate facts, such as `@example`, `@throws`, or `@param`.
+Longer doc comments suit tags that carry separate facts, such as `@example`, `@throws`, or `@param`.
 
 Keep doc comments attached to their declarations.
 Prefer a right-side comment for scalar constants, variables, fields, and individual entries when it fits the line width.

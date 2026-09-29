@@ -1,6 +1,6 @@
 ---
 name: drive
-description: Use to prepare or execute an approved multi-step workflow; Collab runs parallel lanes and leaves with explicit check approval, bounded repair, and attended commit or decision boundaries.
+description: Use to prepare or execute an approved multi-step workflow; Collab runs parallel lanes with bounded repair and attended commit or decision boundaries.
 ---
 
 # Drive
@@ -15,8 +15,9 @@ Start from the terminal outcome and work backward through real contract, impleme
 
 1. Split the work into coherent scopes that deserve their own lane or leaf.
 2. Freeze the interfaces that let scopes run in parallel, and put shared changes in an earlier foundation step or a later integration step.
-3. Name each step's agent, lane, model, effort, write scope, checks, and repair limit.
-4. Present the workflow as plain numbered steps for approval; in an armed run, write it as your record and start at once.
+3. Name the agent and lane for each delegated step, and a model or effort only where it departs from the route.
+4. Name each step's write scope, checks, and repair limit.
+5. Present the workflow as plain numbered steps.
 
 Scopes can run in parallel lanes in one worktree when their writes are mostly disjoint.
 Shared files such as schemas, registries, lockfiles, and generated outputs usually want one owner or a serial order.
@@ -38,7 +39,6 @@ In an armed run, these conditions are your decisions; record each one and contin
 ## Evidence and repair
 
 Builders own formatting, lint, and other cheap checks inside their scope.
-Expensive checks run only when the user approved the command class and cost; in an armed run, you choose the class and record the decision.
 Later edits invalidate affected review and verification evidence; repeat only the affected checks.
 Send repairs to the lane that built the change, with the finding as the delta.
 Use a fresh review leaf when the verdict needs independence from earlier rounds.
@@ -46,7 +46,6 @@ After an interruption, reconcile the tree before you reissue write work, because
 
 ## Return boundaries
 
-Commits, rebases, merges, publication, and other external effects are attended boundaries in an unarmed run.
 Hold dependent work until the Git boundary it needs is finished.
 Update the user after each finished boundary or wave with the verdict, the material change, and the next action.
 At the end, report accepted work, changed paths, checks and outcomes, dissent, repair counts, blockers, and residual risk.
@@ -54,23 +53,20 @@ At a commit boundary, include the exact scope and a proposed message.
 
 ## Armed runs
 
-The user arms drive mode with a toggle in the input bar of a top-level session.
-While it is on, a system line says so on every turn; that switch is the user's grant of authority for this session and its children until they switch it off.
+The user arms drive mode with a toggle in the input bar of a top-level session, and a system line says so on every turn while it is on.
 Only the user can change it, and loading this skill yourself does not arm drive mode.
 When the line disappears, attended boundaries apply again from the next step.
 
-- Write the workflow plan in the conversation as your record, then execute it at once without waiting for approval.
 - Attended boundaries become your decisions: check classes, repairs, compaction, commits through `build/git`, and rebases.
-- The plugin approves each permission ask once, and `question` returns to you with an instruction to decide.
-- Deny rules still apply; route around a denial, or return when no route exists.
-- Do not end your turn to ask for approval, and do not use `question`.
+- Deny rules still apply.
+- Do not end your turn to ask for approval or call `question`; the plugin returns `question` to you with an instruction to decide.
 - Record each decision and any dissent in todos and in the final report.
-- Return only at the terminal outcome, or on a hard deny that you cannot route around.
+- Return only at the terminal outcome, or on a denial that has no permitted equivalent.
 - After compaction, the plugin sends a prompt to continue; resume from the summary.
 
 ## Examples
 
-These are shapes, not approved work; `workflow` defines the notation and default routes.
+These are shapes, not approved work; `workflow` defines the notation.
 Drive runs longer by chaining phases with frozen interfaces, lanes, and gates.
 
 ### Foundation, parallel lanes, integration
@@ -82,7 +78,7 @@ Drive runs longer by chaining phases with frozen interfaces, lanes, and gates.
                             └──────────┘ repair ≤2
 ```
 
-1. `[high • anthropic/claude-opus-5-5] build/owner`, lane `core`: Freeze the shared types and interfaces.
+1. `build/owner`, lane `core`: Freeze the shared types and interfaces.
 2. `self`: Inspect the foundation; gate 2 releases the parallel lanes only on a stable interface.
 3. `build/general`, lane `list`: Build the list view against the frozen interface.
 4. `build/general`, lane `detail`: Build the detail view.
@@ -108,7 +104,7 @@ Lanes 3 to 5 write disjoint files; shared registries stay with lane `core`.
 3. `scout/library`: Check whether the stdlib already covers the cache helper.
 4. `build/general`, lane `cache`: Implement the cache change using step 3's answer.
 5. `self`: Make the one-line config fix directly.
-6. `[xhigh • anthropic/claude-opus-5-5] build/owner`, lane `sync`: Own the hard sync rewrite.
+6. `build/owner`, lane `sync`: Own the hard sync rewrite.
 7. `self`: Review each result and report per request.
 
 Collab dispatches the ready steps in one message and waits for them today.
@@ -126,14 +122,12 @@ With OpenCode 2 background tasks, the same lanes can run while the conversation 
 1. `self`: Freeze the baseline, write scopes, and approved checks.
 2. `build/owner`, lane `store`: Migrate the storage layer.
 3. `build/general`, lane `cli`: Update the CLI commands.
-4. `[high • openai/gpt-6.1-sol] review/debug`: Review lane `store`.
-5. `[high • openai/gpt-6.1-sol] review/simplify`: Review lane `cli`.
+4. `review/debug`: Review lane `store`.
+5. `review/simplify`: Review lane `cli`.
 6. `self`: Relay findings; gate 6 repairs or returns at the commit boundary.
 
 Repairs re-enter at the fork but resume only the lanes that have findings.
-In an unarmed run, children run unattended, so any permission ask becomes a blocker for gate 6.
-An unarmed run ends at gate 6 because a commit needs attended approval.
-In an armed run, the plugin approves child asks, and Collab approves step 7 itself and continues.
+An unarmed run ends at gate 6 because the commit is an attended boundary; in an armed run, Collab takes step 7 itself and continues.
 
 ```text
 you: 7 ─→ (8) ─→ 9 ─→ 10 ─→ (11) ─→ RETURN user

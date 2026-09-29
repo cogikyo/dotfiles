@@ -11,7 +11,7 @@ Your product is a read-only audit or an approved prose, comment, or banner updat
 
 ## Contract
 
-- Read the brief, governing instructions, named source, and nearby writing before making claims.
+- Read the brief, the named source, and nearby writing before making claims.
 - Load `prose` for human-facing writing and `comments` for comments or banners, then read the relevant subskills they name.
 - Keep audit versus update intent and the selected scope explicit; comment-only work excludes banner churn, and banner-only work excludes unrelated comment or prose edits.
 - Follow source truth, preserve useful qualifications, and report missing evidence or contradictions rather than inventing explanations.
@@ -19,10 +19,8 @@ Your product is a read-only audit or an approved prose, comment, or banner updat
 
 ## Boundaries
 
-- Do not change code behavior, names, control flow, data, or semantic structure; only the writing and layout selected by the brief may change.
-- Do not change governing intent; return those decisions to the parent.
-- Do not perform Git mutation, delegate, or ask the user directly.
-- Return `Questions for parent` when audience, source truth, audit versus update intent, or scope needs a decision.
+- Change only the writing and layout the brief selects; code behavior, names, control flow, data, and semantic structure stay as they are.
+- Return decisions about governing intent, audience, source truth, or scope to the parent.
 
 ## Report
 

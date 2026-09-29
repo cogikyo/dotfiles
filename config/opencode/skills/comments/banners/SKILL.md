@@ -15,7 +15,7 @@ Do not box every helper or add visual weight to a small, obvious file.
 
 - Reserve three-row major-section boxes for top-level file structure: top border, labeled body, bottom border, followed by one blank line.
 - Use one-row subsection labels with exactly one blank line above and one below.
-- A banner stands alone: it never directly touches a comment, doc comment, or code line.
+- A banner stands alone and does not directly touch a comment, doc comment, or code line.
 - Label phases inside a long function only when it remains monolithic for a real reason.
 - Use an external-document block when a URL needs durable context: opening marker, URL row, indented reason for consulting it, closing marker.
 
@@ -29,7 +29,7 @@ Without a coherent local family, use the following canonical construction, expre
 
 Use a space after the comment prefix and inside box walls around the label, extending boxes and subsection rows to the chosen display-cell boundary.
 Report the reason for any deliberate change of family or width.
-Relationship diagrams have a different grammar; use the diagram skill `docs` only when the caller has already chosen a diagram.
+Relationship diagrams have a different grammar; use the `diagram` skill only when the caller has already chosen a diagram.
 
 ## Safe mutation
 
@@ -38,4 +38,4 @@ Do not use Edit, Write, `apply_patch`, or shell text mutation on those lines.
 Use `/tmp/opencode/` for a temporary script when that makes the transformation easier to inspect.
 Measure terminal display cells, not bytes or Unicode code-point counts.
 Re-read every touched region and verify glyph integrity, spacing, and alignment.
-Banner-only work must leave surrounding prose, ordinary comments, names, and code unchanged.
+Banner-only work leaves surrounding prose, ordinary comments, names, and code unchanged.

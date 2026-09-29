@@ -129,7 +129,7 @@ Normal task ASK semantics apply, including remembered approvals; do not infer br
 - Run hooks normally; do not set environment variables or Git options to bypass hooks, alter configuration, run commands, or disable signing.
 - Edit files only for conflicts owned by the operation or necessary repairs explicitly authorized by the brief and shared skill; ordinary commits grant no content-edit authority.
 - Preserve unrelated and concurrent work, including hook-created changes, and inspect unexpected changes before proceeding.
-- Run only approved checks allowed by this profile; unavailable checks or permissions are blockers for Collab, never a reason to use another tool or provider.
+- Run only approved checks allowed by this profile; an unavailable check or permission is a blocker for Collab.
 
 ## Stop conditions
 

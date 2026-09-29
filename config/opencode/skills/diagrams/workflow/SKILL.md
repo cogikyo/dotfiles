@@ -8,12 +8,12 @@ description: Use when a proposal or run needs a compact numbered graph for paral
 Draw a graph when numbered prose would hide a dependency, branch, parallel lane, or loop.
 The user reads these graphs to approve and follow work, so prefer drawing one whenever the shape is more than a straight chain.
 The approved contract sets authority and routing; this skill supplies notation and checks.
-Use `docs` for source-derived architecture diagrams and annotated trees, not execution graphs.
+Use `diagram` for source-derived architecture diagrams and annotated trees, not execution graphs.
 
 ## Number the work
 
 Give each step a unique number, short title, owner, and concise acceptance condition.
-For delegated work, name the agent, lane, model variant, and effort once per route or beside the step.
+Name the agent and lane for each delegated step, and a model or effort only where it departs from the route.
 Keep write scope, permitted checks, and parallelism in the numbered prose.
 Avoid splitting one coherent assignment by file, and keep cheap checks inside the step that owns them.
 
@@ -47,7 +47,6 @@ An attended Git boundary is a gate owned by Collab, with its own approval.
 ## Examples
 
 These are shape examples, not approved work.
-Routes: `scout/*` uses `[xhigh • anthropic/claude-sonnet-5-5]`, builders use `[high • anthropic/claude-opus-5-5]`, and `review/*` and `verify/*` use `[high • openai/gpt-6.1-sol]`.
 
 ### Parallel fan-out and required join
 
@@ -109,27 +108,6 @@ The merge is exclusive: step 3 never waits for the skipped branch.
 Each repair resumes lane `parser` with the findings, then repeats step 2 on the changed code.
 Old review evidence never satisfies gate 3 after a repair.
 
-### Parallel lanes and an attended commit
-
-```text
-         ┌─→ 2 ─→ 4 ─┐
-(1) ─┬───┤           ├─→ (6) ─→ <6> ─→ you: 7 ─→ (8) ─→ RETURN user
-     ↑   └─→ 3 ─→ 5 ─┘           │
-     └───────────────────────────┘ repair ≤2
-```
-
-1. `self`: Freeze the baseline and the two write scopes.
-2. `build/owner`, lane `plugins`: Implement the plugin side and run its cheap checks.
-3. `build/owner`, lane `prose`: Rewrite the instructions and run `git diff --check`.
-4. `review/debug`: Review lane `plugins`.
-5. `review/simplify`: Review lane `prose`.
-6. `self`: Relay findings; gate 6 repairs or moves on after a final stale-reference sweep.
-7. You restart OpenCode and smoke-test.
-8. `self`: Commit with `commit` after separate Git approval.
-
-Lanes 2 and 3 run in parallel and write disjoint files.
-Repairs re-enter at the fork but resume only the lanes with findings, at most twice each.
-
 ## Check the drawing
 
 Before presenting or executing it:
@@ -141,5 +119,5 @@ Before presenting or executing it:
 5. Trace each repair loop through its invalidated evidence, bound, and blocked return.
 6. Read each vertical column through corners and tees; reject gaps, false crossings, tabs, and detached arrow tails.
 
-Workflow graphs need no boxes, titles, or the `docs` canvas procedure.
+Workflow graphs need no boxes, titles, or the `diagram` canvas procedure.
 Keep rows within the host width, and verify the rendered fence after editing.

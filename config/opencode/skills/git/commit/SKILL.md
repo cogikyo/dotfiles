@@ -1,28 +1,11 @@
 ---
 name: commit
-description: Load before ANY commit, however small, including "commit all" or "commit this"; shared commit and active-merge procedure for Collab and authorized build/git execution that inspects dirty scope, selects atomic commits, and stages only approved changes.
+description: Use for any commit, including "commit all" or "commit this", and for finishing an active merge; inspects dirty scope, selects atomic commits, and stages only approved changes.
 ---
 
 # Commit
 
 Use this procedure to create atomic conventional commits or finish an already-started merge.
-
-## Scope
-
-- Use it only when the active brief approves a commit task or an active merge resolution.
-- Collab may plan and execute approved work, and `build/git` may execute its approved dispatch.
-
-Skill loading does not authorize mutation or delegation.
-Only attended Collab may launch `build/git`, after presenting repository/worktree, branch and refs, intended mutations, destructive effects, checks, and stop conditions.
-The task uses normal ASK semantics, including remembered approvals, with `unattended: true`.
-Other children return Git plans to Collab without mutating Git.
-For context-heavy Git archaeology, use a bounded read-only scout.
-If the remaining work needs a fresh attended session, provide a handoff rather than spawning Collab.
-
-This procedure does not authorize content edits during an ordinary commit.
-Only edit already-conflicted files while resolving a merge.
-
-Stop rather than infer authorization when scope, repository, branch, worktree, or ownership is ambiguous.
 
 ## Preflight
 
@@ -36,7 +19,10 @@ Before any Git mutation:
 
 Identify the exact approved paths and their semantic story or story sequence.
 Treat pre-existing staged content as separately owned unless the approved scope includes it or an active merge owns it.
-Never silently combine that content with an ordinary commit.
+Do not silently combine that content with an ordinary commit.
+Stop when scope, repository, branch, worktree, or ownership is ambiguous.
+
+An ordinary commit edits no content; only an active merge's conflicted files may change.
 
 ## Choose a mode
 
@@ -77,13 +63,13 @@ Keep one coherent cross-file behavior together even when it touches many files.
 3. Inspect `git diff --cached` and confirm that the index contains exactly one complete story.
 4. Commit the reviewed index without pathspecs so partial staging remains authoritative.
 
-An index patch must come from the inspected worktree diff and contain only the selected story.
+An index patch comes from the inspected worktree diff and contains only the selected story.
 Applying it with `git apply --cached` changes the index without changing the worktree.
 
-- Never use `git add .`, `git add -A`, `git add --all`, `git add -u`, `git commit -a`, or broad directory pathspecs.
-- Never use backup files, custom index machinery, stash, reset, or worktree edits to isolate a story.
+- Permission denies `git add .`, `git add -A`, `git add --all`, `git add -u`, and `git commit -a`; also avoid broad directory pathspecs.
+- Do not use backup files, custom index machinery, stash, reset, or worktree edits to isolate a story.
 - Unstage only with explicit path-scoped `git restore --staged` operations.
-- Never discard worktree content.
+- Do not discard worktree content.
 
 Stop when mixed hunks or pre-existing staged state cannot be isolated with index-only operations.
 After a Partial commit and after every Complex commit, inspect all remaining staged and unstaged changes again.
@@ -98,7 +84,7 @@ Use `verb(scope/context): short summary`.
 - Derive the scope from the owned path and concern.
 - Prefer a concrete two-level scope over a broad top-level label.
 - Use `!` only for a real breaking change.
-- Never use vague `update`.
+- Avoid vague `update`.
 - Use `improve` or `adjust` only when a more precise verb does not fit.
 
 | Verb       | Use                                                           |
@@ -129,10 +115,10 @@ These are guidelines rather than hard limits:
 - Aim for two short bullets about behavior, intent, constraints, or important decisions.
 - A normal commit may use up to about six bullets.
 - A genuinely large atomic commit may use more.
-- Never inventory files or mechanically repeat the subject.
+- Do not inventory files or mechanically repeat the subject.
 
 Write the subject and body as one message.
-Never pass multiple `-m` arguments because each one creates a separate paragraph.
+Pass it through `-F -` rather than several `-m` arguments, because each `-m` creates a separate paragraph.
 
 ```bash
 git commit -F - <<'EOF'
@@ -151,7 +137,7 @@ Create the approved commit and run hooks normally.
 Only stage and return a command when the active brief explicitly requests manual execution.
 If an explicit instruction says to skip hooks, return a command with `--no-verify` and do not run it.
 
-Never execute `--no-verify`, weaken hooks, change Git configuration, or create an empty commit.
+Permission denies `--no-verify` and `--allow-empty`; also leave hooks and Git configuration as they are.
 
 ### Hook failures
 
@@ -164,8 +150,8 @@ A hook failure does not expand edit authority.
 5. Run the smallest relevant check, stage the exact repaired hunks, and retry.
 
 Treat hook-created worktree changes as real changes and inspect them before staging.
-Never assume they are harmless formatter churn or discard them.
-Never amend the failed attempt; retry an uncreated commit or report an unexpected existing commit before continuing.
+Do not assume they are harmless formatter churn or discard them.
+Do not amend the failed attempt; retry an uncreated commit or report an unexpected existing commit before continuing.
 
 For substantive, unrelated, or ambiguous failures, stop and report the failing hook, affected paths, and smallest likely repair.
 Suggest a repair workflow with an owner and falsifying check when the correction exceeds the active task.
@@ -173,7 +159,7 @@ Resume committing only after that repair settles.
 
 ## Active merge
 
-This skill may finish an active merge, but it must not start any integration operation.
+This skill may finish an active merge, but it does not start any integration operation.
 If a rebase is active, stop this workflow without aborting it and return for a separately approved `rebase` action.
 
 1. Inspect each conflict from the merge base, ours, and theirs.
@@ -199,7 +185,7 @@ Completing an already-started merge is the only integration exception.
 
 ## Finish
 
-Always inspect final status plus staged and unstaged diffs.
+Inspect final status plus staged and unstaged diffs.
 
 - After a commit, verify it with `git show` and record its OID with `git rev-parse`.
 - After a handoff, report the staged paths, exact command, and that no OID exists yet.

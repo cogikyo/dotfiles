@@ -6,8 +6,7 @@ description: Use for substantive design questions, competing ownership models, o
 # Scheme
 
 Turn provisional intent into a bounded design that can survive criticism and guide implementation.
-Collab runs this procedure in the conversation and keeps planning judgment and synthesis.
-Keep the working plan in the conversation.
+Collab runs this procedure in the conversation and keeps the working plan, planning judgment, and synthesis there.
 
 ## Establish the design question
 
@@ -33,11 +32,10 @@ Lead with the recommendation and the trade-offs that survive.
 State the evidence, material dissent, open decisions, and what could falsify the design.
 Give the next owner enough intent, constraints, and dependencies to act without repeating the investigation.
 Keep the execution steps separate from the design, and propose them as a workflow when the user wants to proceed.
-Planning alone does not start implementation.
 
 ## Examples
 
-These are shapes, not approved work; `workflow` defines the notation and default routes.
+These are shapes, not approved work; `workflow` defines the notation.
 Scheme goes deeper by letting evidence and criticism change the candidates before anything is built.
 
 ### Evidence before candidates
@@ -65,7 +63,7 @@ Step 3 needs step 2's locations; step 4 runs in parallel with both.
 ```
 
 1. `self`: Draft the candidates from evidence already in the conversation.
-2. `[high • openai/gpt-6.1-sol] review/architect`, lane `critic`: Challenge ownership, coupling, and failure cases.
+2. `review/architect`, lane `critic`: Challenge ownership, coupling, and failure cases.
 3. `self`: Revise; gate 3 accepts, sends one revision back to lane `critic`, or returns an open decision to the user.
 
 Resuming lane `critic` lets it check whether its own objections were answered.
