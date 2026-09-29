@@ -350,29 +350,33 @@ Route between them to spend each weekly window before it resets.
   - It appears to reason less when appropriate automatically, if below `max`.
 - Fallback: `cursor/claude-opus-5-5-fast` (omit effort) when both Anthropic accounts are capped.
 - Roles: `build/owner`, `build/general`, and `build/git`; all important building runs here.
-  - `review/critic`: brief it with Astra's findings so it filters the ones that don't hold up.
+  - `review/critic`: brief it with Sol's findings so it filters the ones that don't hold up.
+  - `review/architect`: pair with Sol as a council on architecture reviews.
 - Special notes:
   - When building, leave no comments, no exceptions.
   - Do not edit existing comments except mechanical reference updates, such as renamed functions or files.
 
-### `openai/gpt-6-astra`
+### `openai/gpt-6.1-sol`
 
 - Default reasoning: `high`
 - Fallback: `opus-5-5`
-- Roles: every `review/*` lens except `review/critic`, `build/scribe`, and `verify/browser`.
-  - Plenty of usage, so route all review here.
-  - Better than Claude for comments and docs.
+- Roles: default for every `review/*` lens except `review/critic`, every `verify/*` leaf, and `build/scribe`.
+  - Fast and cheap with plenty of usage, so route all review and verification here.
+  - Best `build/scribe`; run a scribe pass on touched docs and comments before most commits.
   - Best at browser QA and computer use.
-- Weakness: can be overly thorough; send findings through an Opus `review/critic` when they need filtering.
+  - Gathers wide context well and makes sound architecture calls.
+  - Architecture reviews run as a council: Sol `review/architect` beside Opus `review/architect`.
+- Strength looks close to Opus 5.5 but is untested; expect an occasional dumb miss.
+  - Send findings through an Opus `review/critic` when they need filtering.
 
 ### `anthropic/claude-sonnet-5-5`
 
 - Also available as `anthropic-personal/claude-sonnet-5-5`; select the account using the routing rules above.
 - Default reasoning: `high`
-  - `xhigh` for `scout/*` and `verify/web`.
+  - `xhigh` for `scout/*`.
 - Fallback: `cursor/claude-opus-5-5-fast` (omit effort) when both Anthropic accounts are capped; Cursor has no working Sonnet fast variant.
-- Roles: `scout/*`, `verify/web`, `verify/source`, `verify/test`, and other high-token filtering, summarizing, and high-level scoping.
-  - Best scout available; orchestrates web search and `x` calls in `scout/web` and `verify/web`.
+- Roles: `scout/*` and other high-token filtering, summarizing, and high-level scoping.
+  - Best scout available; orchestrates web search and `x` calls in `scout/web`.
   - `build/patch` at `high` when the edits are trivial; slightly faster than Opus.
   - Good to keep open as a `{scope}-patch` lane for repeated patches using the same agent.
 - Weakness: uses more tokens, so context limit may fill up before compaction warning faster; this is fine.

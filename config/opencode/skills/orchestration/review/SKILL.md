@@ -71,9 +71,9 @@ Review widens by adding independent lenses, not by adding stages.
 ```
 
 1. `self`: Frame the diff, baseline, and the claims the change makes.
-2. `[high • openai/gpt-6-astra] review/debug`: Check state transitions and partial failures.
-3. `[high • openai/gpt-6-astra] review/security`: Check the new input boundary for a credible exploit path.
-4. `[high • openai/gpt-6-astra] review/simplify`: Check for accidental complexity and dead paths.
+2. `[high • openai/gpt-6.1-sol] review/debug`: Check state transitions and partial failures.
+3. `[high • openai/gpt-6.1-sol] review/security`: Check the new input boundary for a credible exploit path.
+4. `[high • openai/gpt-6.1-sol] review/simplify`: Check for accidental complexity and dead paths.
 5. `self`: Deduplicate by cause, inspect any disputed mechanism, and return the verdict.
 
 Pick lenses from the risk map; a small diff often needs only one.
@@ -90,8 +90,8 @@ Pick lenses from the risk map; a small diff often needs only one.
 2. `scout/context`: Map ownership, entry points, and governing instructions.
 3. `scout/dirty`: Report recent churn and WIP that touch the subsystem.
 4. `self`: Build the risk map and choose lenses from it.
-5. `[high • openai/gpt-6-astra] review/architect`: Judge ownership and hidden coupling.
-6. `[high • openai/gpt-6-astra] review/debug`: Trace the highest-risk failure path end to end.
+5. `[high • openai/gpt-6.1-sol] review/architect`: Judge ownership and hidden coupling.
+6. `[high • openai/gpt-6.1-sol] review/debug`: Trace the highest-risk failure path end to end.
 7. `self`: Synthesize and order remediation by dependency and consequence.
 
 The scouts keep bulk reading out of the session, so step 4 reasons over short reports.
@@ -107,7 +107,7 @@ The scouts keep bulk reading out of the session, so step 4 reasons over short re
 
 1. `self`: Freeze one brief, baseline, and acceptance question.
 2. `[high • anthropic/claude-opus-5-5] review/critic`: Critique the plan.
-3. `[high • openai/gpt-6-astra] review/critic`: Critique the same plan.
+3. `[high • openai/gpt-6.1-sol] review/critic`: Critique the same plan.
 4. `[high • anthropic/claude-sonnet-5-5] review/critic`: Critique the same plan.
 5. `self`: Compare candidates; gate 5 selects step 6 only when a disputed claim decides the verdict.
 6. `verify/source`: Settle that one claim against source.

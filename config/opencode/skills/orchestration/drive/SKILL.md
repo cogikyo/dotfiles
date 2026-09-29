@@ -127,8 +127,8 @@ With OpenCode 2 background tasks, the same lanes can run while the conversation 
 1. `self`: Freeze the baseline, write scopes, and approved checks.
 2. `build/owner`, lane `store`: Migrate the storage layer.
 3. `build/general`, lane `cli`: Update the CLI commands.
-4. `[high • openai/gpt-6-astra] review/debug`: Review lane `store`.
-5. `[high • openai/gpt-6-astra] review/simplify`: Review lane `cli`.
+4. `[high • openai/gpt-6.1-sol] review/debug`: Review lane `store`.
+5. `[high • openai/gpt-6.1-sol] review/simplify`: Review lane `cli`.
 6. `self`: Relay findings; gate 6 repairs or returns at the commit boundary.
 
 Repairs re-enter at the fork but resume only the lanes that have findings.

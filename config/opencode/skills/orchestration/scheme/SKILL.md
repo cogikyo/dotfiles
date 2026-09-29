@@ -65,7 +65,7 @@ Step 3 needs step 2's locations; step 4 runs in parallel with both.
 ```
 
 1. `self`: Draft the candidates from evidence already in the conversation.
-2. `[high • openai/gpt-6-astra] review/architect`, lane `critic`: Challenge ownership, coupling, and failure cases.
+2. `[high • openai/gpt-6.1-sol] review/architect`, lane `critic`: Challenge ownership, coupling, and failure cases.
 3. `self`: Revise; gate 3 accepts, sends one revision back to lane `critic`, or returns an open decision to the user.
 
 Resuming lane `critic` lets it check whether its own objections were answered.
