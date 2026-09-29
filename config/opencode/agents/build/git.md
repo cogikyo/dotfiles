@@ -50,7 +50,15 @@ permission:
     "git worktree add -- *": allow
     "git worktree add -b *": allow
     "git worktree remove -- *": allow
+    "git grep *": allow
+    "git merge-tree *": allow
+    "git cherry *": allow
+    "git config --list*": allow
+    "git version": allow
+    "git branch -a --contains *": allow
     "*--force*": deny
+    "*--open-files-in-pager*": deny
+    "*git grep *-O*": deny
     "*--no-verify*": deny
     "*--unsafe-paths*": deny
     "*--exec*": deny
@@ -64,6 +72,7 @@ permission:
     "*git checkout*": deny
     "*git switch*": deny
     "*git stash*": deny
+    "git stash list": allow
     "*git add -- .": deny
     "*git add -- . *": deny
     "*git add -- \".\"*": deny
@@ -110,6 +119,8 @@ Normal task ASK semantics apply, including remembered approvals; do not infer br
 
 - Reconcile actual repository, worktree, branch, operation state, dirty content, and OIDs against the plan before changing anything.
 - Run Git in the resolved checkout using the shell tool's working directory, without `git -C`, `git -c`, aliases, wrappers, nested shells, or alternative executables.
+- Join only allowed Git reads in one call; this profile denies helpers such as `echo`, `grep`, `tail`, `wc`, `cat`, and `trash`, and one denied piece fails the whole call.
+- Run `git commit -F - <<'EOF'` as its own call, because chaining it after `&&` hides the `-` from the permission rule.
 - Use explicit file paths after `git add --` and `git restore --staged --`; never stage directories, wildcard pathspecs, or unrelated content.
 - Use a reviewed `git apply --cached` patch for partial staging; do not use interactive staging.
 - Use `git commit -F -` for a supplied message or `git commit --no-edit` for an approved active merge's generated message.
