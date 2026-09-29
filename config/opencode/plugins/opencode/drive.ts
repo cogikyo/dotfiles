@@ -7,11 +7,14 @@ import { type Client, messages, session, unwrap } from "../shared/opencode.ts";
 
 const id = "opencode-drive";
 
-const ARMED = "Drive mode armed; /drive off disarms.";
+const ARMED = "Drive mode armed; load the drive skill before acting. /drive off disarms.";
 const DISARMED = "Drive mode disarmed; attended boundaries apply again.";
 const QUESTION =
   "Drive mode is armed and the user is away. Decide this yourself, record the decision and your reasons, and continue.";
 const CONTINUE = "Drive mode is armed; continue the approved workflow from the compaction summary.";
+
+const ON = new Set(["on", "auto", "arm"]);
+const OFF = new Set(["off", "disarm", "manual"]);
 
 const RETRY_MS = 2_000;
 const RETRY_MAX_MS = 60_000;
@@ -25,9 +28,10 @@ const server: Plugin = async ({ client }) => ({
     const info = await session(client, input.sessionID, { label: `${id} read session ${input.sessionID}` });
     if (info.parentID) return;
     const text = input.arguments.trim();
-    const mode = /^(on|off)(?:\s|$)/iu.exec(text)?.[1].toLowerCase();
-    const task = mode ? text.slice(mode.length).trim() : text;
-    const off = mode === "off";
+    const [, word = "", rest = ""] = /^(\S*)\s*([\s\S]*)$/u.exec(text) ?? [];
+    const mode = word.toLowerCase();
+    const off = OFF.has(mode);
+    const task = off || ON.has(mode) ? rest : text;
     if (off) disarm(input.sessionID);
     else arm(input.sessionID);
     const files = output.parts.filter((part) => part.type !== "text");

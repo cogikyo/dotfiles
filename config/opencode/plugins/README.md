@@ -217,8 +217,9 @@ The other sidebar sections register `sidebar_content` with distinct orders.
 - `opencode/compact.ts` adds the primary-only `compact` tool and appends a system nudge to primary sessions at each `COMPACTION_NUDGES` tier.
   An approved call runs `session.summarize` with `auto: false` when the turn goes idle, passes the agent's brief into the compaction context, and leaves the session waiting for the user.
   A denial silences nudges until the next tier; any compaction resets the tiers. Calls are logged to `${XDG_STATE_HOME:-~/.local/state}/opencode/compact.jsonl`.
-- `opencode/drive.ts` arms drive mode when the user runs `/drive` or `/drive <task>` in a top-level session, and `/drive off` disarms it; the state is in memory and clears on restart.
-  The `commands/drive.md` command owns the name; the plugin replaces its text with a one-line note plus the task, and the model still takes a turn.
+- `opencode/drive.ts` arms drive mode when the user runs `/drive` or `/drive <task>` in a top-level session; the state is in memory and clears on restart.
+  A leading `on`, `auto`, or `arm` also arms, `off`, `disarm`, or `manual` disarms, and the plugin strips that word from the task.
+  The `commands/drive.md` command owns the name; the plugin replaces its text with a one-line note that tells the model to load the `drive` skill, plus the task, and the model still takes a turn.
   In an armed tree, it approves each permission ask once, returns `question` calls to the agent, and prompts the armed session to continue after a compaction that did not continue by itself.
   It retries an approval after a network error, 5xx, or 429, and stops after any other 4xx; a non-404 stop shows an error toast because the ask then waits for the user.
 - `opencode/media-context/index.tsx` lists registered images and videos and opens images in a Kitty overlay.
