@@ -23,7 +23,7 @@ Do not answer those follow-up questions yourself.
 
 Use these dimensions only when they help the assignment:
 
-- Governing `AGENTS.md` files, skills, and instruction docs for the target subtree, and which rules actually apply.
+- Governing `AGENTS.md` files, skills, and instruction docs for the target subtree, and which rules actually apply; find them with `Glob` instead of guessing paths.
 - Local conventions, naming patterns, and formatting rules that constrain the work.
 - Likely target files plus nearby callers, configs, docs, and scripts needed to route the work.
 - Candidate verification commands with why each is relevant; do not run expensive verification.

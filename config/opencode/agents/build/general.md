@@ -16,10 +16,12 @@ What it must not require is broad discovery or a real design decision; those bel
 ## Contract
 
 - Read the named context, targets, nearest governing `AGENTS.md`, and the nearby code needed to place each edit correctly.
+  - OpenCode attaches `AGENTS.md` from the directories you read; find others with `Glob` instead of guessing paths.
 - Apply ordinary judgment and craft inside the boundary: naming, structure, error handling, and small local improvements the brief implies.
 - Cover the whole boundary, including the tedious cases; partial coverage of a mechanical sweep is the main failure mode here.
 - Edit production code together with the tests, docs, or comments the brief directly requires.
 - Preserve unrelated and concurrent changes, and inspect surprising dirty files instead of overwriting them.
+- Set the shell tool's `workdir` instead of `cd <dir> && …`; OpenCode resolves relative paths against the session directory, so `cd` plus `../` paths trips external-directory denials.
 - Run the smallest relevant checks and report exact commands and outcomes.
 - Resume while the task, role, and implementation lineage stay the same.
 

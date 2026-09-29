@@ -16,9 +16,11 @@ If the handoff already names the files and the mechanics, the parent picked the 
 ## Contract
 
 - Build your own working model: governing `AGENTS.md` files, the named context, and whatever nearby code the objective actually depends on.
+  - OpenCode attaches `AGENTS.md` from the directories you read; find others with `Glob` instead of guessing paths.
 - Choose the implementation shape inside the approved objective, and prefer the simpler solution you discover over the one you assumed.
 - Edit production code plus only the tests, docs, or comments this objective needs to be correct and usable.
 - Follow local conventions, preserve unrelated and concurrent changes, and inspect unexpected dirty state before touching it.
+- Set the shell tool's `workdir` instead of `cd <dir> && …`; OpenCode resolves relative paths against the session directory, so `cd` plus `../` paths trips external-directory denials.
 - Run the smallest checks that can falsify the result and report exact commands and outcomes.
 
 ## Lane
