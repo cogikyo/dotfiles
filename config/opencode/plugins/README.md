@@ -18,6 +18,7 @@ Running sessions keep the loaded plugin set.
 | Claude auth            | `anthropic/index.ts`               | (two provider hooks)            | server  |
 | Delegate task          | `delegate/index.ts`                | `delegate-task`                 | server  |
 | Usage status tool      | `usage/tool.ts`                    | `usage-status`                  | server  |
+| Agent tools            | `tools/index.ts`                   | `tools`                         | server  |
 | Hyprland notifications | `hyprd/notify.ts`                  | `hyprd-notify`                  | server  |
 | Isolated browser QA    | `hyprd/browser-isolation.ts`       | `hyprd-browser-isolation`       | server  |
 | Tool guard             | `opencode/tool-guard.ts`           | `opencode-tool-guard`           | server  |
@@ -178,6 +179,23 @@ Practical failure diagnosis:
 - `stale` note → cached data is older than the provider's `staleAfterMS`; click the provider row for a manual refresh.
 - `auth recovery failed` (amber) → recovery failed in the selected account's Claude directory; run `claude-auth trend` or `claude-auth cogikyo`.
 - `usage_status` unavailable → delegate child permission derivation denies `experimental.primary_tools` tools unless the child agent's frontmatter explicitly allows them.
+
+## Agent tools
+
+`tools/index.ts` registers three tools that replace recipes agents used to rebuild by hand.
+Each tool asks the permission named after it; `diagram` and `sessions` are allowed globally, and `x` is denied unless an agent's frontmatter allows it.
+
+- `x` runs `grok --single` from `/tmp` with fixed native-X-search flags, `--deny Bash`, and a 10-minute timeout; the caller supplies only the brief, which cannot start with `-`.
+  The tool guard rejects shell calls that launch `grok`, including absolute paths, common launchers and their options, `$(…)` and backtick substitutions, and `sh -c` strings; it is a guardrail, not a sandbox.
+- `diagram` checks a diagram or tree for the `diagram` skill's display-cell and connectivity rules, from `text` or a hosted file region with its prefix and width limit.
+- `sessions` queries `~/.local/share/opencode/opencode.db` read-only in a subprocess that is killed after 30 seconds or on abort, at most 20 rows, and 800-character excerpts.
+  Its `sql` mode accepts one bound `SELECT` and rejects reads outside `session`, `message`, `part`, `project`, and `todo`, including virtual tables and table-valued functions, by inspecting `EXPLAIN` output.
+
+Practical failure diagnosis:
+
+- `x` denied or missing for an agent → the agent needs `x: allow` in its frontmatter permissions.
+- `grok exited …` → run `grok models` to refresh Grok CLI auth, then retry.
+- `sessions query killed after 30s` → the query scanned `part` without a `session_id` filter; select sessions first.
 
 ## Claude auth
 

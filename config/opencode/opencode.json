@@ -23,6 +23,7 @@
     "file:///home/cullyn/dotfiles/config/opencode/plugins/anthropic/index.ts",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/delegate/index.ts",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/usage/tool.ts",
+    "file:///home/cullyn/dotfiles/config/opencode/plugins/tools/index.ts",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/hyprd/notify.ts",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/hyprd/browser-isolation.ts",
     "file:///home/cullyn/dotfiles/config/opencode/plugins/opencode/tool-guard.ts",
@@ -213,6 +214,9 @@
     "task_status": "allow",
     "task_close": "allow",
     "compact": "ask",
+    "diagram": "allow",
+    "sessions": "allow",
+    "x": "deny",
     "external_directory": {
       "/": "deny",
       "/?": "deny",

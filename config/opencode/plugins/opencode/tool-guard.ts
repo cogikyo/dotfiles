@@ -3,6 +3,8 @@ import { open, stat } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { session as readSession, type Client, type Session } from "../shared/opencode.ts";
+import { invokesGrok } from "./grok-shell.ts";
+import { commandArgs, executable, nestedShellCommands, shellWords } from "./shell-words.ts";
 
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
 // │ Server plugin: reject rm and read-only writes                                                 │
@@ -213,6 +215,9 @@ async function guardBash(client: Client, sessionID: string, command: string | un
   if (invokesRm(command)) {
     throw new Error("rm is disabled; move files to trash with `trash -- <path>`");
   }
+  if (invokesGrok(command)) {
+    throw new Error("grok is disabled in the shell; use the `x` tool for X search");
+  }
   const reviewBlock = reviewMutation(command);
   if (!reviewBlock) return;
   const session = await readSession(client, sessionID, { label: `tool guard read session ${sessionID}` });
@@ -397,69 +402,4 @@ function mutatesGitTag(args: string[]) {
   )
     return false;
   return true;
-}
-
-// ├─ Shell words ─────────────────────────────────────────────────────────────────────────────────┤
-
-const separator = "\u0000";
-
-function commandArgs(words: string[], index: number) {
-  const end = words.indexOf(separator, index + 1);
-  return words.slice(index + 1, end === -1 ? undefined : end);
-}
-
-function nestedShellCommands(words: string[]) {
-  return words.filter((_, index) => {
-    if (index < 2 || !/^-\w*c\w*$/u.test(words[index - 1])) return false;
-    return ["bash", "dash", "sh", "zsh"].includes(executable(words[index - 2]));
-  });
-}
-
-function shellWords(command: string) {
-  const words: string[] = [];
-  let word = "";
-  let quote = "";
-  let escaped = false;
-
-  const flush = () => {
-    if (word) words.push(word);
-    word = "";
-  };
-
-  for (const char of command) {
-    if (escaped) {
-      word += char;
-      escaped = false;
-      continue;
-    }
-    if (char === "\\" && quote !== "'") {
-      escaped = true;
-      continue;
-    }
-    if (quote) {
-      if (char === quote) quote = "";
-      else word += char;
-      continue;
-    }
-    if (char === "'" || char === '"') {
-      quote = char;
-      continue;
-    }
-    if (/[\n;&|()]/u.test(char)) {
-      flush();
-      if (words.at(-1) !== separator) words.push(separator);
-      continue;
-    }
-    if (/\s/u.test(char)) {
-      flush();
-      continue;
-    }
-    word += char;
-  }
-  flush();
-  return words;
-}
-
-function executable(word: string) {
-  return path.basename(word);
 }
