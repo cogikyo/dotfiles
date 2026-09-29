@@ -179,8 +179,12 @@ Start with `scout/context` only when ownership and relevant files are unknown.
 - `review/design`: product intent, visual language, and interaction design.
 - `review/security`: trust boundaries and credible exploit paths.
 - `review/profile`: evidenced performance risk.
+- `review/copy`: user-visible UI text in frontend work; deletes by default.
+- `review/entropy`: the target state that stops drift, including missing shared primitives, misused libraries, dependencies, and large refactors.
 
 Pick lenses from the risk, not the file list; a small diff often needs one.
+Send frontend changes that add or change UI text through `review/copy` before commit.
+Run `review/entropy` on request, on package or app sweeps, or as a retro after a feature lands; on a small diff it produces rewrite noise.
 A lane that built the change is a poor judge of it; use a fresh reviewer for the final verdict.
 Synthesis runs in-session with `review`.
 
@@ -338,7 +342,8 @@ Route between them to spend each weekly window before it resets.
 - Then dispatch on the other account with the same model and effort.
 - When both accounts are capped, use the model's Cursor fallback.
 - Pass the chosen provider explicitly in `task.model`, including when an agent's pinned model uses the other account.
-- **Enforced**: Opus and Sonnet run only at `high` or `xhigh`; `opencode.json` disables their other variants.
+- **Enforced**: Opus runs only at `high`, `xhigh`, or `max`, and Sonnet only at `high` or `xhigh`; `opencode.json` disables their other variants.
+  - Use Opus `max` for `review/entropy` and when the user asks for it.
 - Explicit user account selections override these defaults.
 - Authentication failures return a blocker rather than trigger quota overflow.
   - The user refreshes auth through the Claude CLI with the zsh helper `claude-auth trend` or `claude-auth cogikyo`.
@@ -352,6 +357,7 @@ Route between them to spend each weekly window before it resets.
 - Roles: `build/owner`, `build/general`, and `build/git`; all important building runs here.
   - `review/critic`: brief it with Sol's findings so it filters the ones that don't hold up.
   - `review/architect`: pair with Sol as a council on architecture reviews.
+  - `review/entropy` at `max`; for repo-wide sweeps, pair with Sol at `xhigh` as a council.
 - Special notes:
   - When building, leave no comments, no exceptions.
   - Do not edit existing comments except mechanical reference updates, such as renamed functions or files.
@@ -360,7 +366,7 @@ Route between them to spend each weekly window before it resets.
 
 - Default reasoning: `high`
 - Fallback: `opus-5-5`
-- Roles: default for every `review/*` lens except `review/critic`, every `verify/*` leaf, and `build/scribe`.
+- Roles: default for every `review/*` lens except `review/critic` and `review/entropy`, every `verify/*` leaf, and `build/scribe`.
   - Fast and cheap with plenty of usage, so route all review and verification here.
   - Best `build/scribe`; run a scribe pass on touched docs and comments before most commits.
   - Best at browser QA and computer use.

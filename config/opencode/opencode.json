@@ -71,7 +71,7 @@
       "options": { "apiKey": "oauth-required" },
       "models": {
         "claude-opus-5-5": {
-          "variants": { "low": { "disabled": true }, "medium": { "disabled": true }, "max": { "disabled": true } }
+          "variants": { "low": { "disabled": true }, "medium": { "disabled": true } }
         },
         "claude-sonnet-5-5": {
           "variants": { "low": { "disabled": true }, "medium": { "disabled": true }, "max": { "disabled": true } }
@@ -89,7 +89,7 @@
           "reasoning": true,
           "modalities": { "input": ["text", "image", "pdf"] },
           "limit": { "context": 1000000, "output": 128000 },
-          "variants": { "low": { "disabled": true }, "medium": { "disabled": true }, "max": { "disabled": true } }
+          "variants": { "low": { "disabled": true }, "medium": { "disabled": true } }
         },
         "claude-sonnet-5-5": {
           "name": "Claude Sonnet 5.5",

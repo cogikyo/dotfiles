@@ -32,6 +32,8 @@ Choose lenses from the risk map, not the file list:
 - `review/simplify`: accidental complexity, dead code, and obsolete mechanisms.
 - `review/profile`: evidenced performance risk.
 - `review/design`: product intent, visual language, UX, and interaction design.
+- `review/copy`: user-visible UI text; deletes by default.
+- `review/entropy`: the target state that stops drift across a package or app, for sweeps and retros rather than small diffs.
 
 Give each leaf the same baseline and constraints, one bounded concern, and a falsifying check.
 Verifiers settle source, published, or browser evidence; they do not vote.

@@ -6,7 +6,7 @@ description: Use when the user invokes /x or asks for live X/Twitter community s
 # X
 
 Live community signal through Grok CLI native X search.
-Collab, `scout/web`, and `verify/web` load this skill and run grok themselves.
+Collab, `scout/web`, `verify/web`, and `review/entropy` load this skill and run grok themselves.
 Do not dispatch a child to search X.
 
 ## Invoke

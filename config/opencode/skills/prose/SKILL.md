@@ -1,6 +1,6 @@
 ---
 name: prose
-description: Use when writing or revising human-facing prose; extends global style with audience, evidence, and editing procedure and points to documentation and attention-friendly subskills.
+description: Use when writing or revising human-facing prose; extends global style with audience, evidence, and editing procedure and points to documentation, attention-friendly, and UI microcopy subskills.
 ---
 
 # Prose
@@ -14,6 +14,7 @@ Read the relevant subskills:
 
 - `prose-docs` (`prose/docs/SKILL.md`) for READMEs, guides, usage notes, and durable repository documentation.
 - `adhd` (`prose/adhd/SKILL.md`) when the task calls for attention-friendly prose or lower reading and decision overhead.
+- `microcopy` (`prose/microcopy/SKILL.md`) for user-visible UI text in frontend work.
 
 These can be combined; attention-friendly presentation must preserve a document's necessary explanation and safety context.
 The existing catalog name `docs` belongs to `diagrams/docs/SKILL.md`; load it only for an already-chosen diagram or annotated tree.
