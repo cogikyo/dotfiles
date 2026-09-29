@@ -75,15 +75,6 @@
         },
         "claude-sonnet-5-5": {
           "variants": { "low": { "disabled": true }, "medium": { "disabled": true }, "max": { "disabled": true } }
-        },
-        "claude-fable-5-1": {
-          "options": {
-            "thinking": {
-              "type": "adaptive",
-              "display": "summarized"
-            },
-            "effort": "medium"
-          }
         }
       }
     },
