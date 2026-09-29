@@ -29,10 +29,16 @@ grok --single "$BRIEF" \
   --no-auto-update \
   --verbatim \
   --disable-web-search \
-  --disallowed-tools "run_terminal_cmd,read_file,list_dir,grep,search_replace,write,web_search,web_fetch,todo_write,Agent" \
-  --sandbox read-only \
+  --disallowed-tools "run_terminal_command,read_file,search_replace,write,list_dir,grep,kill_command_or_subagent,get_command_or_subagent_output,spawn_subagent,scheduler_create,scheduler_delete,scheduler_list,monitor,search_tool,use_tool,workflow,enter_plan_mode,exit_plan_mode,ask_user_question,send_feedback,web_search,web_fetch,image_gen,image_edit,image_to_video,reference_to_video,todo_write,Agent" \
+  --deny Bash \
+  --sandbox off \
   --system-prompt-override "Use only native X search tools. Never use generic web search, local files, or prior knowledge as evidence. Cite canonical x.com status URLs with handle and date. Separate official or maintainer statements from first-hand reports and from hype. If native X search cannot settle the claim, say so."
 ```
+
+X search runs server-side, so every client tool can go.
+`--disallowed-tools` cannot remove `run_terminal_command`; `--deny Bash` is what blocks the shell.
+Any `--tools` allowlist also drops backend X search.
+Every `--sandbox` profile fails on this host because bwrap cannot mask `/run/containerd`.
 
 Do not pass `--json-schema`.
 Do not parse `~/.grok` traces.
