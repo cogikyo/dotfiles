@@ -5,7 +5,6 @@ import { type Client, create, session, type Status, statuses, unwrap } from "../
 import { CONTEXT_PRESSURE } from "../shared/session.ts";
 import {
   applyDisplayArgs,
-  parseModel,
   type PreparedTask,
   readAgent,
   readCurrentAssistantMessage,
@@ -26,9 +25,10 @@ import {
   renderOutput,
   withNotes,
 } from "./result.ts";
+import { resolveRoute } from "./routing.ts";
 import { type ChildWait, readChildMessages, waitForChild } from "./wait.ts";
 
-const COLLAB = "collab";
+export const COLLAB = "collab";
 const GIT = "build/git";
 
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
@@ -58,22 +58,27 @@ export async function prepareTask(client: Client, ctx: ToolContext, input: TaskA
 
   await askTaskPermission(ctx, args, execution);
 
-  const parentMessage = await readCurrentAssistantMessage(client, ctx);
-  const model = args.model ? parseModel(args.model) : (agent.model ?? parentMessage.model);
-  const variant = effort ?? (args.model ? undefined : agent.model ? agent.variant : parentMessage.variant);
+  let route = await resolveRoute(agent.name, args);
+  if (!route && agent.model) route = { model: agent.model, effort: effort ?? agent.variant, notes: [] };
+  if (!route) {
+    const inherited = await readCurrentAssistantMessage(client, ctx);
+    const note = `delegate routing: routing.md has no route for ${agent.name}; inherited the parent model`;
+    route = { model: inherited.model, effort: effort ?? inherited.variant, notes: [note] };
+  }
 
-  await validateVariant(client, model, variant);
+  await validateVariant(client, route.model, route.effort);
 
   const { permission, envelope } = await deriveChildPermission(client, parent, agent, execution);
 
   return {
     args,
     agent,
-    model,
-    variant,
+    model: route.model,
+    variant: route.effort,
     permission,
     envelope,
     execution,
+    notes: route.notes,
   };
 }
 

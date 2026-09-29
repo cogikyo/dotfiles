@@ -13,6 +13,13 @@ const CLAUDE_REFRESH_TIMEOUT_MS = 60_000;
 const RECOVER_COOLDOWN_MS = 5 * 60_000;
 const execFileAsync = promisify(execFile);
 
+export const HOURLY = "H";
+export const WEEKLY = "W";
+
+export function limitsModel(label: string, modelID: string) {
+  return label === HOURLY || label === WEEKLY || label === scopedLabel(modelID.replaceAll("-", " "));
+}
+
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
 // │ Anthropic usage                                                                               │
 // ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
@@ -73,8 +80,8 @@ function createUsage({ id, label, staleAfterMS }: UsageProviderSpec, configDir: 
 
     const payload = Payload.parse(await response.json());
     const windows = [
-      usageWindow("H", payload.five_hour),
-      usageWindow("W", payload.seven_day),
+      usageWindow(HOURLY, payload.five_hour),
+      usageWindow(WEEKLY, payload.seven_day),
       ...(payload.limits ?? []).map(scopedWindow),
     ].filter((window) => window !== undefined);
 

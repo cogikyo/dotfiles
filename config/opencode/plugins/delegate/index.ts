@@ -4,8 +4,9 @@ import { loadDelegateConfig } from "./config.ts";
 import { enforceProviderPolicy } from "./policy.ts";
 import { closeLane, readChildTaskStatus } from "./lane.ts";
 import { errorMessage } from "../shared/error.ts";
-import type { Client } from "../shared/opencode.ts";
-import { prepareTask, runChildTask } from "./session.ts";
+import { type Client, session } from "../shared/opencode.ts";
+import { routingPrompt } from "./routing.ts";
+import { COLLAB, prepareTask, runChildTask } from "./session.ts";
 
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
 // │ Delegate tools                                                                                │
@@ -15,7 +16,8 @@ const DESCRIPTION = [
   "Launch a specialized subagent task.",
   "Use model as provider/model-id to choose a runtime model for this task call.",
   "Use effort for the target model's reasoning variant; invalid efforts fail explicitly.",
-  "If model is omitted, the child uses the agent's pinned model when one exists, else the current assistant message's model and effort.",
+  "If model is omitted, the child uses the agent's route from routing.md, else the agent's pinned model, else the current assistant message's model and effort; explicit model and effort always win.",
+  "Model claude/<model-id> picks the Anthropic account by usage, falling back as routing.md says when both are capped.",
   "Optional lane names a reusable child within this parent session; without a lane, each call creates a one-shot child.",
   "A lane pins its agent, but model and effort can change between calls; context-limited and closed lanes roll over to a fresh child.",
   "A closed lane name can come back as a different agent.",
@@ -56,7 +58,7 @@ const server: Plugin = async ({ client }) => {
           description: tool.schema.string().describe("A short (3-5 words) description of the task"),
           prompt: tool.schema.string().describe("The task for the agent to perform"),
           subagent_type: tool.schema.string().describe("The type of specialized agent to use for this task"),
-          model: tool.schema.string().optional().describe("Optional runtime model as provider/model-id"),
+          model: tool.schema.string().optional().describe("Optional provider/model-id; omit for the routing.md route"),
           effort: tool.schema.string().optional().describe("Optional reasoning effort variant for the target model"),
           lane: tool.schema
             .string()
@@ -81,8 +83,8 @@ const server: Plugin = async ({ client }) => {
           if (key) activeLanes.add(key);
           try {
             const prepared = await prepareTask(client, ctx, args);
-            const notes = await enforceProviderPolicy(prepared.model.providerID, config, ctx.abort);
-            return runChildTask({ client, ctx, prepared, notes });
+            const notes = await enforceProviderPolicy(prepared.model, config, ctx.abort);
+            return runChildTask({ client, ctx, prepared, notes: [...prepared.notes, ...notes] });
           } finally {
             if (key) activeLanes.delete(key);
           }
@@ -119,11 +121,23 @@ const server: Plugin = async ({ client }) => {
         },
       }),
     },
+    "experimental.chat.system.transform": (input, output) => injectRouting(client, input.sessionID, output.system),
   };
 };
 
 /** Registers task tools after validating the provider allowlist. */
 export default { id, server } satisfies PluginModule;
+
+async function injectRouting(client: Client, sessionID: string | undefined, system: string[]) {
+  if (!sessionID) return;
+  try {
+    const info = await session(client, sessionID, { label: `${id} read session ${sessionID}` });
+    if (info.parentID || info.agent !== COLLAB) return;
+    system.push(await routingPrompt());
+  } catch (error) {
+    console.error(`${id}: ${errorMessage(error)}`);
+  }
+}
 
 // ├─ Lane close lock ─────────────────────────────────────────────────────────────────────────────┤
 
