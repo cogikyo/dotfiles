@@ -54,11 +54,10 @@ At a commit boundary, include the exact scope and a proposed message.
 
 ## Armed runs
 
-The user arms drive mode when they invoke `/drive` or `/drive <task>` in a top-level session.
-The plugin replaces that message with a "Drive mode armed" note and the task text, if any.
-That invocation is the user's grant of authority for this session and its children until the user runs `/drive off` or OpenCode restarts.
-Loading this skill yourself does not arm drive mode.
-When a drive note arrives with no task, acknowledge it in one line and do nothing else.
+The user arms drive mode with a toggle in the input bar of a top-level session.
+While it is on, a system line says so on every turn; that switch is the user's grant of authority for this session and its children until they switch it off.
+Only the user can change it, and loading this skill yourself does not arm drive mode.
+When the line disappears, attended boundaries apply again from the next step.
 
 - Write the workflow plan in the conversation as your record, then execute it at once without waiting for approval.
 - Attended boundaries become your decisions: check classes, repairs, compaction, commits through `build/git`, and rebases.

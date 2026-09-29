@@ -1,20 +1,18 @@
 import type { Plugin, PluginModule } from "@opencode-ai/plugin";
 import type { SessionPromptAsyncData } from "@opencode-ai/sdk/v2";
 import { z } from "zod";
-import { arm, armed, disarm, isRoot } from "../shared/drive.ts";
+import { armed } from "../shared/drive.ts";
+import { roots } from "../shared/drive-state.ts";
 import { errorMessage } from "../shared/error.ts";
-import { type Client, messages, session, unwrap } from "../shared/opencode.ts";
+import { type Client, messages, unwrap } from "../shared/opencode.ts";
 
 const id = "opencode-drive";
 
-const ARMED = "Drive mode armed; load the drive skill before acting. /drive off disarms.";
-const DISARMED = "Drive mode disarmed; attended boundaries apply again.";
+const ARMED =
+  "Drive mode is on: the user switched it on in the input bar, which grants authority for this session and its children until they switch it off. Only the user can change it. Load the drive skill before running a workflow.";
 const QUESTION =
   "Drive mode is armed and the user is away. Decide this yourself, record the decision and your reasons, and continue.";
 const CONTINUE = "Drive mode is armed; continue the approved workflow from the compaction summary.";
-
-const ON = new Set(["on", "auto", "arm"]);
-const OFF = new Set(["off", "disarm", "manual"]);
 
 const RETRY_MS = 2_000;
 const RETRY_MAX_MS = 60_000;
@@ -23,27 +21,8 @@ const Asked = z.object({ id: z.string(), sessionID: z.string() });
 const Compacted = z.object({ sessionID: z.string() });
 
 const server: Plugin = async ({ client }) => ({
-  "command.execute.before": async (input, output) => {
-    if (input.command !== "drive") return;
-    const info = await session(client, input.sessionID, { label: `${id} read session ${input.sessionID}` });
-    if (info.parentID) return;
-    const text = input.arguments.trim();
-    const [, word = "", rest = ""] = /^(\S*)\s*([\s\S]*)$/u.exec(text) ?? [];
-    const mode = word.toLowerCase();
-    const off = OFF.has(mode);
-    const task = off || ON.has(mode) ? rest : text;
-    if (off) disarm(input.sessionID);
-    else arm(input.sessionID);
-    const files = output.parts.filter((part) => part.type !== "text");
-    const parts: unknown[] = output.parts;
-    parts.splice(
-      0,
-      parts.length,
-      note(off ? DISARMED : ARMED),
-      ...(task ? [{ type: "text", text: task }] : []),
-      ...files,
-    );
-    await toast(client, off ? "Drive mode disarmed" : "Drive mode armed");
+  "experimental.chat.system.transform": async (input, output) => {
+    if (input.sessionID && (await roots()).has(input.sessionID)) output.system.push(ARMED);
   },
   "tool.execute.before": async (input) => {
     if (input.tool !== "question") return;
@@ -61,10 +40,6 @@ const server: Plugin = async ({ client }) => ({
 });
 
 export default { id, server } satisfies PluginModule;
-
-function note(text: string) {
-  return { type: "text", text, synthetic: true };
-}
 
 async function toast(client: Client, message: string, variant: "info" | "error" = "info") {
   try {
@@ -98,7 +73,7 @@ async function approve(client: Client, ask: z.infer<typeof Asked>, delay = RETRY
 }
 
 async function resume(client: Client, sessionID: string) {
-  if (!isRoot(sessionID)) return;
+  if (!(await roots()).has(sessionID)) return;
   const history = await messages(client, sessionID, { label: `${id} read messages ${sessionID}` });
   if (history.at(-1)?.info.role !== "assistant") return;
   const user = history.findLast((message) => message.info.role === "user")?.info;

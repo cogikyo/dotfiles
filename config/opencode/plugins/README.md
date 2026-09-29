@@ -196,7 +196,7 @@ Practical failure diagnosis:
 `hyprd/browser-isolation.ts` exposes Chrome DevTools tools from one MCP subprocess per OpenCode session.
 Each subprocess launches an isolated Chromium profile, so concurrent browser agents cannot list or change each other's pages.
 Marked Chromium windows are assigned stable `browser-qa-<slot>` workspaces by hyprd and shown in the `Browsers` sidebar section.
-Sessions under an armed `/drive` root launch headless Chromium with a 1920x1080 viewport instead, because headed screenshots stall while the screen is locked or off; those browsers get no workspace.
+Sessions under an armed drive root launch headless Chromium with a 1920x1080 viewport instead, because headed screenshots stall while the screen is locked or off; those browsers get no workspace.
 When an agent session becomes idle or is deleted, the plugin closes its MCP subprocess and isolated browser.
 
 ## TUI presentation
@@ -212,15 +212,14 @@ The other sidebar sections register `sidebar_content` with distinct orders.
   Load it after provider plugins that seed models, including Cursor.
 - `opencode/statusline.tsx` wraps `session_prompt` with cwd, git status, and a context-pressure bar that uses OpenCode's overflow token count and effective compaction threshold.
   Pink is the last pressure tier before that threshold.
+  It also owns the drive toggle: `<leader>d` or the TUI-only `/drive` flips drive mode for the current root session, and an orange `DRIVE` badge shows while it is on.
 - `opencode/modified-files.tsx` lists files touched in the current session.
 - `opencode/markdown-context.tsx` lists Markdown reads plus pinned `AGENTS.md` files, the current agent, skills, and slash commands. Click the close mark to stub an unpinned skill or Markdown read. Click restore on a compacted row to reload the file from disk. Click the label to open the file.
 - `opencode/skill-compact.ts` stubs loaded skill bodies when a session compacts. It also uncompacts protected `AGENTS.md` / Collab reads so native prune cannot keep them stubbed.
 - `opencode/compact.ts` adds the primary-only `compact` tool and appends a system nudge to primary sessions at each `COMPACTION_NUDGES` tier.
   An approved call runs `session.summarize` with `auto: false` when the turn goes idle, passes the agent's brief into the compaction context, and leaves the session waiting for the user.
   A denial silences nudges until the next tier; any compaction resets the tiers. Calls are logged to `${XDG_STATE_HOME:-~/.local/state}/opencode/compact.jsonl`.
-- `opencode/drive.ts` arms drive mode when the user runs `/drive` or `/drive <task>` in a top-level session; the state is in memory and clears on restart.
-  A leading `on`, `auto`, or `arm` also arms, `off`, `disarm`, or `manual` disarms, and the plugin strips that word from the task.
-  The `commands/drive.md` command owns the name; the plugin replaces its text with a one-line note that tells the model to load the `drive` skill, plus the task, and the model still takes a turn.
+- `opencode/drive.ts` reads the drive state that `opencode/statusline.tsx` toggles and appends a system line to each turn of an armed root session; the line tells the model to load the `drive` skill.
   In an armed tree, it approves each permission ask once, returns `question` calls to the agent, and prompts the armed session to continue after a compaction that did not continue by itself.
   It retries an approval after a network error, 5xx, or 429, and stops after any other 4xx; a non-404 stop shows an error toast because the ask then waits for the user.
 - `opencode/media-context/index.tsx` lists registered images and videos and opens images in a Kitty overlay.
@@ -252,7 +251,8 @@ Practical failure diagnosis:
 - `shared/opencode.ts` owns server-only typed readers over the v1 client, with Zod views checked against v2 SDK types.
 - `shared/file.ts` owns `readJson` and atomic `writeText` / `writeJson`; `shared/error.ts` formats thrown values.
 - `delegate/metadata.ts` owns the `metadata.delegate` schema.
-- `shared/drive.ts` owns the in-memory armed sessions and the parent walk that `opencode/drive.ts` and the delegate read.
+- `shared/drive-state.ts` owns the armed root sessions in `${XDG_STATE_HOME:-~/.local/state}/opencode/drive.json`; only the TUI toggle writes it, and the state survives restarts.
+- `shared/drive.ts` owns the parent walk that `opencode/drive.ts`, the delegate, and browser isolation use to decide whether a session is under an armed root.
 - `opencode/skill-parts.ts` owns skill/read tool-part compacting and persist via TUI `part.update` or server HTTP PATCH.
 - `delegate/config.ts` hardcodes `DELEGATE_CONFIG_PATH` to `/home/cullyn/dotfiles/config/opencode/delegate.json`.
 - Changing `hyprd/context.ts` paths or schema requires updating both `hyprd/kitty.ts` and `hyprd/notify.ts`.

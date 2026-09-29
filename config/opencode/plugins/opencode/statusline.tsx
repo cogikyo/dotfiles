@@ -12,6 +12,7 @@ import {
   type Accessor,
 } from "solid-js";
 import { colors, pressureColor, pressureTier } from "../shared/colors.ts";
+import { roots, toggle } from "../shared/drive-state.ts";
 import { gitDirtyCount, gitStatus, type GitStatus } from "../shared/git.ts";
 import { icons } from "../shared/icons.ts";
 import { sessionContextUsage, sessionMeta, shortDir, type SessionUsage } from "../shared/session.ts";
@@ -33,7 +34,25 @@ type SessionPromptProps = {
   promptRef?: (ref: TuiPromptRef | undefined) => void;
 };
 
+const [driving, setDriving] = createSignal(new Set<string>());
+
 const tui: TuiPlugin = async (api) => {
+  setDriving(await roots());
+  api.keymap.registerLayer({
+    priority: 10_000,
+    commands: [
+      {
+        name: "drive.toggle",
+        title: "Toggle drive mode",
+        category: "Agent",
+        namespace: "palette",
+        slashName: "drive",
+        run: () => toggleDrive(api),
+      },
+    ],
+    bindings: [{ key: "<leader>d", cmd: "drive.toggle", desc: "Toggle drive mode" }],
+  });
+
   api.slots.register({
     order: 100,
     slots: {
@@ -68,8 +87,27 @@ const plugin: TuiPluginModule & { id: string } = {
   tui,
 };
 
-/** TUI plugin that shows the session directory, Git status, and context pressure beside the prompt. */
+/** TUI plugin that shows the session directory, Git status, drive mode, and context pressure beside the prompt. */
 export default plugin;
+
+// ├─ Drive mode ──────────────────────────────────────────────────────────────────────────────────┤
+
+async function toggleDrive(api: TuiPluginApi) {
+  const route = api.route.current;
+  const sessionID = route.name === "session" ? route.params?.sessionID : undefined;
+  if (typeof sessionID !== "string") {
+    api.ui.toast({ message: "Open a session to toggle drive mode", variant: "warning" });
+    return;
+  }
+  const armed = await toggle(rootOf(api, sessionID));
+  setDriving(await roots());
+  api.ui.toast({ message: armed ? "Drive mode on" : "Drive mode off", variant: armed ? "warning" : "info" });
+}
+
+function rootOf(api: TuiPluginApi, sessionID: string): string {
+  const parent = api.state.session.get(sessionID)?.parentID;
+  return parent ? rootOf(api, parent) : sessionID;
+}
 
 // ├─ Prompt display ──────────────────────────────────────────────────────────────────────────────┤
 
@@ -158,6 +196,7 @@ function StatusRight(props: { api: TuiPluginApi; sessionID: string }) {
   const refresh = () => {
     const next = sessionContextUsage(props.api, props.sessionID);
     if (next.limit && next.tokens > 0) setUsage(next);
+    void roots().then(setDriving, (error: unknown) => console.error(`${id}: read drive state`, error));
   };
 
   createComputed(
@@ -196,7 +235,16 @@ function StatusRight(props: { api: TuiPluginApi; sessionID: string }) {
     clearInterval(timer);
   });
 
-  return <ContextSegment usage={usage()} />;
+  return (
+    <box flexDirection="row" gap={0}>
+      <Show when={driving().has(rootOf(props.api, props.sessionID))}>
+        <text fg={colors.orange} wrapMode="none">
+          <b>DRIVE </b>
+        </text>
+      </Show>
+      <ContextSegment usage={usage()} />
+    </box>
+  );
 }
 
 function GitSegment(props: { status?: GitStatus }) {
