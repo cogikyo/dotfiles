@@ -243,6 +243,7 @@ In an armed drive run, the timing is your decision, the drive plugin approves th
 
 - Good timing: an approved workflow just finished, a commit landed, or the conversation is about to switch topics.
 - Bad timing: mid-edit, a lane is running, a repair loop is open, or the user is waiting on an answer this turn owes.
+- Also bad: the turn just delivered findings, a proposal, or open choices, because the user's next reply needs that detail.
 - Write `brief` as a handoff: objective, accepted decisions, in-flight work, open lanes to keep, and the next action.
 - Write `reason` as one line naming the boundary you judged; the log feeds later `/epistemology` tuning.
 - A denial silences the nudge until the next tier, so do not re-ask in the same tier.
