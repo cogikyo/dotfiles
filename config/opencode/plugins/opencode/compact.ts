@@ -169,7 +169,7 @@ function nudge(tier: number) {
   if (tier + 1 < TIERS.length) {
     return `${label} At the end of this turn, judge whether now is a good time to compact; if so call compact.`;
   }
-  return `${label} Native auto-compaction fires near ${formatTokens(COMPACTION_LIMIT)} and drops your handoff brief. Call compact at the end of this turn unless compacting now would lose in-flight work.`;
+  return `${label} Native auto-compaction fires near ${formatTokens(COMPACTION_LIMIT)} and drops your handoff brief. Call compact at the end of this turn at a completed-work boundary; hold it while edits, lanes, or repairs are in flight, or when this turn delivers findings, a proposal, or open choices.`;
 }
 
 async function summarize(client: Client, sessionID: string, current: Track) {

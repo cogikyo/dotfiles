@@ -27,7 +27,7 @@ export function markdownSourceKind(filePath: string): MarkdownSourceKind {
 
   if (normalizedPath.split(/[\\/]/u).includes(".spec")) return "spec";
   if (leaf === "readme.md") return "readme";
-  if (leaf === "agents.md") return "agents";
+  if (leaf === "agents.md" || isConfigAgents(normalizedPath)) return "agents";
   if (leaf === "skill.md") return "skill";
   if (agentSegments(normalizedPath)) return "agent";
   if (commandSegments(normalizedPath)) return "command";
@@ -211,6 +211,7 @@ export function truncateMiddle(value: string, maxLength: number) {
 }
 
 export function isConfigAgents(filePath: string) {
+  if (markdownIdentity(filePath) === markdownIdentity(path.join(configRoot, "instructions.md"))) return true;
   return path.basename(filePath).toLowerCase() === "agents.md" && isGlobalOpencodePath(filePath);
 }
 

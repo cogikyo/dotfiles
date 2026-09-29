@@ -249,8 +249,8 @@ The other sidebar sections register `sidebar_content` with distinct orders.
   Pink is the last pressure tier before that threshold.
   It also owns the drive toggle: `<leader>d` or the TUI-only `/drive` flips drive mode for the current root session, and an orange `DRIVE` badge shows while it is on.
 - `opencode/modified-files.tsx` lists files touched in the current session.
-- `opencode/markdown-context.tsx` lists Markdown reads plus pinned `AGENTS.md` files, the current agent, skills, and slash commands. Click the close mark to stub an unpinned skill or Markdown read. Click restore on a compacted row to reload the file from disk. Click the label to open the file.
-- `opencode/skill-compact.ts` stubs loaded skill bodies when a session compacts. It also uncompacts protected `AGENTS.md` / Collab reads so native prune cannot keep them stubbed.
+- `opencode/markdown-context.tsx` lists Markdown reads plus the pinned global `instructions.md`, project `AGENTS.md` files, the current agent, skills, and slash commands. Click the close mark to stub an unpinned skill or Markdown read. Click restore on a compacted row to reload the file from disk. Click the label to open the file.
+- `opencode/skill-compact.ts` stubs loaded skill bodies when a session compacts. It also uncompacts protected `instructions.md`, project `AGENTS.md`, and Collab reads so native prune cannot keep them stubbed.
 - `opencode/compact.ts` adds the primary-only `compact` tool and appends a system nudge to primary sessions at each `COMPACTION_NUDGES` tier.
   An approved call runs `session.summarize` with `auto: false` when the turn goes idle, passes the agent's brief into the compaction context, and leaves the session waiting for the user.
   A denial silences nudges until the next tier; any compaction resets the tiers. Calls are logged to `${XDG_STATE_HOME:-~/.local/state}/opencode/compact.jsonl`.

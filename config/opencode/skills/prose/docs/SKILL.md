@@ -30,7 +30,7 @@ Preserve exceptions and operational limits that affect the task.
 Let examples, commands, tables, and diagrams carry meaning without narrating everything they already show.
 Add explanation only for useful interpretation, a non-obvious consequence, or a necessary constraint.
 Choose a tree for load-bearing hierarchy and a diagram for load-bearing relationships; inspect source for every path, node, label, and edge.
-Load the diagram skill `docs` for construction only after deciding the representation earns its place.
+Load `diagram` for construction only after deciding the representation earns its place.
 
 Use callouts sparingly for a real hazard, constraint, or surprising fact, and only with types supported by the renderer.
 Use `INFO` for useful separated context and reserve `IMPORTANT` for omissions that could cause a wrong decision, unsafe action, or broken result.

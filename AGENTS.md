@@ -8,15 +8,7 @@ Arch + Hyprland (Wayland) dotfiles. Single-user. Root of repo = `~/dotfiles`.
 - `bin/` → symlinked into `~/.local/bin/` (legacy; being replaced by `cmds/`)
 - `cmds/` → Go command workspace; built into `~/.local/bin/` by `install.sh go`. See `cmds/README.md`.
 - `etc/` → system configs **copied** to `/etc/` by `install.sh system` (not symlinked)
-- `config/opencode/agents/collab.md` → the only human-facing OpenCode primary; owns planning, implementation, review, approval, Git work, model routing, and lanes
-- `config/opencode/skills/orchestration/{scheme,review,drive}/SKILL.md` → planning, review, and approved execution procedures that Collab runs in-session
-- `config/opencode/agents/{scout,build,review,verify}/` → leaf fleet; scouts map, builders implement, reviewers judge, verifiers collect evidence
-  - Collab runs leaves one-shot or as named lanes that it resumes across turns with deltas
-- `config/opencode/agents/build/scribe.md` → bounded documentation, comment, and banner writing owner
-- `config/opencode/skills/{comments,prose}/SKILL.md` → composable writing procedures with specialized subskills for relevant owners
-- `config/opencode/agents/build/git.md` → Git specialist launched only by attended Collab through task ASK
-- `config/opencode/skills/git/{commit,rebase,worktrees}/SKILL.md` → shared Git procedures for Collab approval and authorized `build/git` execution
-- `config/opencode/skills/papercuts/SKILL.md` → Collab diagnoses failed session commands; invoke with `/papercuts`
+- `config/opencode/` → OpenCode harness: `opencode.json`, global `instructions.md`, agents, skills, and plugins (see `config/opencode/plugins/README.md`)
 - `iso/` → archiso profile; `iso/work/` and `iso/out/` are gitignored build artifacts
 - `share/` → static assets
 
@@ -25,15 +17,8 @@ Editing the repo IS editing the live system.
 
 ## Harness
 
-Operationally, `opencodde` is the primary agent harness used.
-
-`config/opencode/AGENTS.md` is global context file that is always in use.
-`config/opencode/opencode.json` wires config, providers, permissions, and plugins.
-`config/opencode/agents/` defines Collab and specialist leaves in subdirectories.
-
-Plugin paths live under `config/opencode/`.
-Edits under `config/opencode/` affect the live system through symlinks.
-Restart OpenCode for those edits to affect running sessions.
+OpenCode is the primary agent harness.
+Edits under `config/opencode/` reach running sessions after an OpenCode restart, except instruction files, which OpenCode re-reads on every model step.
 
 ## Install
 

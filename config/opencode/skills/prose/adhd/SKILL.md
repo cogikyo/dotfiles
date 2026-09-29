@@ -5,22 +5,18 @@ description: Use with prose for requests such as "make this simpler," "help me u
 
 # Attention-friendly prose
 
+This is the reference for attention-friendly writing; Collab carries a short form of it as its default output style.
 Read `prose` for the general procedure.
-Use this guidance when the user asks for a simpler explanation, help understanding, a clearer recommendation, or lower reading and decision overhead, without requiring them to name the skill.
-Requests to simplify code alone do not qualify; requests to explain code more simply do.
-Do not infer a diagnosis or apply a persistent mode.
+Use it when the reader asks for a simpler explanation, help understanding, a clearer recommendation, or less to read; explaining code more simply qualifies, simplifying the code itself does not.
 
-Lead with the useful answer, result, or immediate action so the reader can orient without reading a preamble.
-Keep the response centered on the current problem and leave unsolicited tangents out.
-For an actual procedure, use a few bounded numbered steps with clear targets; explanatory prose need not become a task list.
-
-When choices matter, recommend one and explain the condition that would favor an alternative instead of presenting an unranked inventory.
-For an error, connect the cause to the specific fix and retain uncertainty about the cause when evidence is incomplete.
-Use short, coherent sections that let the reader resume without reconstructing distant context.
-
-Keep requested depth, necessary causal explanation, and warnings before destructive actions.
-Do not invent time estimates, force every ending into a next action, or treat brevity as permission to hide unresolved risk.
-This is presentation guidance, not clinical advice or a change to tools, session state, or execution authority.
+- Lead with the useful answer, result, or immediate action, so the reader can orient without a preamble.
+- Stay on the current problem and leave unsolicited tangents out.
+- Use short, coherent sections that let the reader resume without reconstructing distant context.
+- When choices matter, recommend one and name the condition that would favor an alternative, instead of an unranked inventory.
+- For an error, connect the cause to the specific fix, and keep uncertainty about the cause when evidence is incomplete.
+- For an actual procedure, use a few bounded numbered steps with clear targets; explanation need not become a task list.
+- Keep requested depth, necessary causal explanation, and warnings before destructive actions.
+- Skip invented time estimates and next actions forced onto every ending; brevity does not hide unresolved risk.
 
 Inspired by [Ayoub Ghriss's i-have-adhd skill](https://github.com/ayghri/i-have-adhd/blob/main/skills/i-have-adhd/SKILL.md), published under MIT (Copyright 2026 Ayoub Ghriss).
 This adaptation uses original wording and selects readability ideas without adopting upstream hooks or mode controls.

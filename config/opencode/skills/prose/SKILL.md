@@ -5,19 +5,19 @@ description: Use when writing or revising human-facing prose; extends global sty
 
 # Prose
 
-The global `AGENTS.md` owns universal prose style.
-This procedure is available to any relevant owner and does not change that owner's write scope or authority.
+The global instructions own universal prose style; this skill adds the writing procedure.
+It does not change the owner's write scope or authority.
 
 ## Compose
 
-Read the relevant subskills:
+Read the subskills the task needs; they combine freely:
 
 - `prose-docs` (`prose/docs/SKILL.md`) for READMEs, guides, usage notes, and durable repository documentation.
-- `adhd` (`prose/adhd/SKILL.md`) when the task calls for attention-friendly prose or lower reading and decision overhead.
+- `adhd` (`prose/adhd/SKILL.md`) for attention-friendly prose with lower reading and decision overhead.
 - `microcopy` (`prose/microcopy/SKILL.md`) for user-visible UI text in frontend work.
 
-These can be combined; attention-friendly presentation must preserve a document's necessary explanation and safety context.
-The existing catalog name `docs` belongs to `diagrams/docs/SKILL.md`; load it only for an already-chosen diagram or annotated tree.
+Attention-friendly presentation keeps a document's necessary explanation and safety context.
+Load `diagram` when an architecture diagram or annotated tree has already earned its place.
 
 ## Procedure
 

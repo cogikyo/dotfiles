@@ -181,7 +181,7 @@ function pinnedContextItems(api: TuiPluginApi, sessionID: string) {
     items.push(item);
   };
 
-  push(path.join(configRoot, "AGENTS.md"));
+  push(path.join(configRoot, "instructions.md"));
   for (const root of projectRoots(api)) {
     push(path.join(root, "AGENTS.md"));
   }

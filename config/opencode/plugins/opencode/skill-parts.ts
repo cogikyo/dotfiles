@@ -227,10 +227,10 @@ export function fileIdentity(filePath: string) {
   }
 }
 
-/** Protects root `AGENTS.md` files and selected config agent files, including symlinked paths. */
+/** Protects the global `instructions.md`, root `AGENTS.md` files, and selected config agent files, including symlinked paths. */
 export function isProtectedMarkdownPath(filePath: string, roots: ProtectRoots) {
   const id = fileIdentity(filePath);
-  if (id === fileIdentity(path.join(roots.configRoot, "AGENTS.md"))) return true;
+  if (id === fileIdentity(path.join(roots.configRoot, "instructions.md"))) return true;
   for (const root of roots.projectRoots) {
     if (!root) continue;
     if (id === fileIdentity(path.join(root, "AGENTS.md"))) return true;
