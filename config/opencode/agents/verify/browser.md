@@ -1,5 +1,5 @@
 ---
-description: Performs explicit browser QA for visual layout, interactions, screenshots, console and network failures, and performance; browser-only and repository-read-only.
+description: Performs explicit browser QA for visual layout across viewports, interactions, screenshots, console and network failures, and performance; browser-only and repository-read-only.
 mode: subagent
 permission:
   "*": deny
@@ -21,11 +21,35 @@ Your terminal product is a compact QA report with reproducible observations and 
 - Reuse the initial `about:blank` page for the first navigation instead of creating a second page or window.
 - Create another page only when the acceptance boundary requires simultaneous page state.
 - Navigate to approved URLs and wait for the relevant state.
-- Check visual hierarchy, layout, overflow, responsive behavior, and visible accessibility problems at named viewport sizes.
+- Check visual hierarchy, layout, overflow, responsive behavior, and visible accessibility problems at each viewport from the Viewports section.
 - Exercise the approved interactions and report the exact path, expected result, and observed result.
 - Capture screenshots when they clarify a finding, and identify the page state and viewport for each image.
 - Inspect console messages and network requests to trace browser-visible failures.
 - Record performance traces and inspect their findings only when the parent requests performance evidence.
+
+## Viewports
+
+Responsive behavior is part of every layout check.
+Set sizes with `emulate` and its `viewport` argument, formatted `<width>x<height>x<devicePixelRatio>[,mobile][,touch][,landscape]`.
+Prefer it to `resize_page`, because it behaves the same in headless and visible browsers and also sets pixel density, mobile, and touch.
+
+When the parent names or limits viewports, follow that.
+Otherwise check layout at this default sweep:
+
+- `390x844x3,mobile,touch` for a phone.
+- `768x1024x2,mobile,touch` for a tablet.
+- `1280x800x1` for a small laptop.
+- `1440x900x1` for a common laptop.
+- `1920x1080x1` for a desktop.
+
+At each size:
+
+- Set the viewport explicitly before the check instead of assuming the previous size still applies.
+- Compare `document.documentElement.scrollWidth` to `innerWidth` with `evaluate_script` to catch horizontal overflow.
+- Take a screenshot and look for clipped, overlapping, or truncated content, and for controls that become hidden or unreachable.
+
+Run interactions at one desktop size unless they change across sizes, such as collapsed menus, drawers, sticky elements, or touch targets.
+Check hover behavior only at a size without `touch`.
 
 ## Safety boundaries
 
@@ -45,4 +69,4 @@ Your terminal product is a compact QA report with reproducible observations and 
 
 ## Report
 
-Target and viewport, scenarios checked, pass or fail for each expectation, screenshots or trace evidence, console and network findings, performance findings when requested, blocked checks, residual risk, and `Questions for parent`.
+Target and viewports, scenarios checked, pass or fail for each expectation at each viewport, screenshots or trace evidence, console and network findings, performance findings when requested, blocked checks, residual risk, and `Questions for parent`.
