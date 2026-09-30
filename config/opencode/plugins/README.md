@@ -92,6 +92,7 @@ The worker's named command permissions support the approved workflow without rou
 Execution mode is stored in `metadata.delegate.unattended`.
 The tool guard rejects file-write tools and recognized shell mutations for review, scout, source-verification, and web-verification agents.
 These command checks are guardrails, not a shell sandbox.
+In every session, it rejects a shell call that starts with `cd <dir>`, because the directory persists into later calls; the error names `workdir=<dir>` as the replacement.
 
 Context governor:
 

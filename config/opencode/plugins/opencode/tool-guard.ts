@@ -7,7 +7,7 @@ import { invokesGrok } from "./grok-shell.ts";
 import { commandArgs, executable, nestedShellCommands, shellWords } from "./shell-words.ts";
 
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
-// │ Server plugin: reject rm and read-only writes                                                 │
+// │ Server plugin: reject rm, leading cd, and read-only writes                                    │
 // ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
 const id = "opencode-tool-guard";
@@ -49,7 +49,7 @@ const server: Plugin = async ({ client, directory, worktree }) => {
   };
 };
 
-/** Server plugin that blocks `rm` in all sessions and rejects writes by read-only agents, including oversized or binary text patches. */
+/** Server plugin that blocks `rm` and leading `cd` in all sessions and rejects writes by read-only agents, including oversized or binary text patches. */
 export default { id, server } satisfies PluginModule;
 
 function isReadOnlySession({ agent }: Session) {
@@ -209,6 +209,8 @@ const reviewGitMutators = new Set([
   "update-ref",
 ]);
 
+const leadingCd = /^\s*cd(?:\s+("[^"]*"|'[^']*'|[^\s;&|]+))?\s*(?:$|&&|;|\n)/u;
+
 async function guardBash(client: Client, sessionID: string, command: string | undefined) {
   if (!command) return;
 
@@ -217,6 +219,10 @@ async function guardBash(client: Client, sessionID: string, command: string | un
   }
   if (invokesGrok(command)) {
     throw new Error("grok is disabled in the shell; use the `x` tool for X search");
+  }
+  const cd = leadingCd.exec(command);
+  if (cd) {
+    throw new Error(`leading cd is disabled; pass workdir=${cd[1] ?? "<dir>"} to the bash tool instead`);
   }
   const reviewBlock = reviewMutation(command);
   if (!reviewBlock) return;
