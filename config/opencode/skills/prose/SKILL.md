@@ -1,6 +1,6 @@
 ---
 name: prose
-description: Use when writing or revising human-facing prose; extends global style with audience, evidence, and editing procedure and points to documentation and attention-friendly subskills and the standalone copy skill.
+description: Use when writing or revising human-facing prose; extends global style with audience, evidence, and editing procedure and points to documentation, attention-friendly, and diagram subskills.
 ---
 
 # Prose
@@ -14,10 +14,11 @@ Read the subskills the task needs; they combine freely:
 
 - `prose-docs` (`prose/docs/SKILL.md`) for READMEs, guides, usage notes, and durable repository documentation.
 - `adhd` (`prose/adhd/SKILL.md`) for attention-friendly prose with lower reading and decision overhead.
-- `copy` (`copy/SKILL.md`) is a standalone skill for writing, reviewing, or trimming user-facing text in any product surface.
+- `diagram` (`prose/diagrams/diagram/SKILL.md`) for an architecture diagram or annotated tree that has already earned its place.
+- `workflow` (`prose/diagrams/workflow/SKILL.md`) for numbered workflow graphs in proposals and runs.
 
 Attention-friendly presentation keeps a document's necessary explanation and safety context.
-Load `diagram` when an architecture diagram or annotated tree has already earned its place.
+User-facing product text belongs to `copy` (`design/copy/SKILL.md`), under the `design` skills.
 
 ## Procedure
 
