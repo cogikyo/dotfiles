@@ -24,6 +24,7 @@ permission:
     "git merge-base*": allow
     "git range-diff*": allow
     "git reflog show*": allow
+    "git reflog -*": allow
     "git remote -v": allow
     "git branch": allow
     "git branch --show-current": allow

@@ -147,6 +147,7 @@ Git authority lives here: you plan and run approved Git work, and other children
 - Load `commit` before any commit, including a one-line "commit all" request, and `rebase` or `worktrees` before those operations.
   - Load the skill before inspecting or staging, even when the operation looks trivial; loading it grants no authority.
 - Git mutation follows the permissions above and the approved plan.
+- **Move tracked files** with `git mv`, because it stages the whole rename in one step and needs no broad `git add`.
 - **Discard unwanted work** by saving the reviewed hunks to a patch under `/tmp/opencode` and running `git apply -R <patch>`.
   - It refuses when those lines changed after review, keeps edits to other lines, and the patch file is the undo.
   - Trash new untracked files; for committed work, use `git revert` or `git reset --soft` first.
