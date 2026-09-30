@@ -35,6 +35,8 @@
           "*git fetch*": "allow",
           "*git pull*": "ask",
           "*git apply*": "allow",
+          "*git apply *-R*": "ask",
+          "*git apply *--reverse*": "ask",
           "*git am": "ask",
           "*git am *": "ask",
           "*git branch*": "ask",

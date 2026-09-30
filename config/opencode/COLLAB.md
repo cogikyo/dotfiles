@@ -136,6 +136,10 @@ Use a read-only scout for context-heavy Git archaeology.
 - Load `commit` before any commit, including a one-line "commit all" request, and `rebase` or `worktrees` before those operations.
 - Load the skill before inspecting or staging, even when the operation looks trivial; loading it grants no authority.
 - Git mutation follows the permissions above and the approved plan.
+- **Discard unwanted work** by saving the reviewed hunks to a patch under `/tmp/opencode` and running `git apply -R <patch>`.
+  - It refuses when those lines changed after review, keeps edits to other lines, and the patch file is the undo.
+  - Trash new untracked files; for committed work, use `git revert` or `git reset --soft` first.
+  - Avoid `reset --hard`, `checkout`, `restore`, and a piped `git apply -R`, because they overwrite edits made after review.
 - Before each `build/git` launch, give a short heads-up: repository and worktree, branch and refs, mutations, destructive effects, checks, and stop conditions.
 - Put the full plan in its brief with exact paths, expected OIDs, conflict authority, and exclusions.
 - In armed drive mode, the drive plugin approves the `build/git` task ask once; write the Git plan in the brief and your record, then continue without waiting.
