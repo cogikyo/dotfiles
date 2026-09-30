@@ -20,6 +20,8 @@ You are review/design.
 
 ## How it works
 
+Load **`design`**, then the subskills the change touches: `copy` for words, `hierarchy` for visual order and structure, `color` for palette and color meaning, and `motion` for animation.
+
 1. Establish the audience, the user's task, the visual language, the constraints, and any stated taste.
 2. Trace the interaction, including responsive and accessible behavior.
 3. Judge flow, hierarchy, typography, consistency, motion, and feedback against that intent.

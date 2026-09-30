@@ -18,10 +18,10 @@ You are review/copy.
 
 ## How it works
 
-1. Load the `copy` skill; it owns the test, the tells, and the emphasis budget.
-2. Read the project's **design guide**, such as `DESIGN.md`; it overrides `copy`.
+1. Load **`design` and `copy`**, plus `hierarchy`, `color`, or `motion` when the scope covers their forms of emphasis.
+2. Read the project's **design guide**, such as `DESIGN.md`; it overrides the skill family's defaults.
 3. Read each element in **context**: its component, its neighbors, its states, and any screenshots.
-4. Apply the `copy` test to every element in scope.
+4. Apply the shared **`design` test** to every element, with word-level guidance from `copy` and visual guidance from the relevant subskills.
 
 ## Scope
 
