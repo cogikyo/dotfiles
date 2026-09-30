@@ -1,100 +1,3 @@
----
-description: The human-facing primary agent. Owns conversation, planning, implementation, review, workflow approval, and Git work.
-mode: primary
-permission:
-  x: allow
-  bash:
-    "git *": allow
-    "*git add*": allow
-    "*git commit*": allow
-    "*git rebase*": ask
-    "*git checkout*": ask
-    "*git checkout -b*": allow
-    "*git restore*": ask
-    "*git switch*": ask
-    "*git switch --detach*": allow
-    "*git merge*": ask
-    "*git cherry-pick*": allow
-    "*git revert*": ask
-    "*git reset*": ask
-    "*git stash*": ask
-    "*git fetch*": allow
-    "*git pull*": ask
-    "*git apply*": allow
-    "*git am": ask
-    "*git am *": ask
-    "*git branch*": ask
-    "*git tag*": ask
-    "*git worktree*": allow
-    "*git merge-base*": allow
-    "*git merge-tree*": allow
-    "*git stash list*": allow
-    "*git stash show*": allow
-    "*git branch": allow
-    "*git branch --show-current*": allow
-    "*git branch --list*": allow
-    "*git branch *--list*": allow
-    "*git branch *--contains*": allow
-    "*git branch *--no-contains*": allow
-    "*git branch *--merged*": allow
-    "*git branch *--no-merged*": allow
-    "*git branch -a*": allow
-    "*git branch -r*": allow
-    "*git branch -vv*": allow
-    "*git tag": allow
-    "*git tag --list*": allow
-    "*git tag -l*": allow
-    "*git tag --contains*": allow
-    "*git restore --staged*": allow
-    "*git restore *--worktree*": ask
-    "*git add .": deny
-    "*git add . *": deny
-    "*git add -- .": deny
-    "*git add -- . *": deny
-    "*git add -A*": deny
-    "*git add --all*": deny
-    "*git add -u*": deny
-    "*git add --update*": deny
-    "*git commit -a*": deny
-    "*git commit *--all*": deny
-    "*git commit *--amend*": deny
-    "*git commit *--fixup*": deny
-    "*git commit *--squash*": deny
-    "*git commit *--no-verify*": deny
-    "*git commit *--allow-empty*": deny
-    "*git merge --squash*": deny
-    "*git apply *--unsafe-paths*": deny
-    "*git push*": deny
-    "*git reset --hard*": deny
-    "*git clean*": deny
-    "*git checkout -- .": deny
-    "*git checkout -- . *": deny
-    "*git restore -- .": deny
-    "*git restore -- . *": deny
-    "*git restore --worktree .": deny
-    "*git restore --worktree . *": deny
-    "*git restore --worktree -- .": deny
-    "*git restore --worktree -- . *": deny
-    "*git restore --staged --worktree .": deny
-    "*git restore --staged --worktree . *": deny
-    "*git restore --staged --worktree -- .": deny
-    "*git restore --staged --worktree -- . *": deny
-    "*git restore --worktree --staged .": deny
-    "*git restore --worktree --staged . *": deny
-    "*git restore --worktree --staged -- .": deny
-    "*git restore --worktree --staged -- . *": deny
-    "*git restore .": deny
-    "*git restore . *": deny
-  skill:
-    "commit": allow
-    "rebase": allow
-    "worktrees": allow
-  task:
-    "*": allow
-    "build/git": ask
-color: primary
----
-
 # Collab
 
 You are the human-facing primary agent.
@@ -146,7 +49,8 @@ When planning or review turns into implementation, keep the approved boundary or
 
 Keep design, decisions, synthesis, review via `review`, running `drive`, small and medium edits, and integration here.
 Use a child when a separate context earns its cost.
-Routing guidance for agents, models, effort, and accounts arrives injected from `routing.md`; the user's model, effort, and account picks override it.
+
+Routing guidance for agents, models, effort, and accounts arrives injected from `ROUTING.md`; the user's model, effort, and account picks override it.
 Omit `model` and `effort` on `task` to take the route; pass them only to deviate, and use `claude/<model-id>` to keep the account pick.
 
 - Do the work in-session when it is small, needs your context, or is a decision; inspect directly when one pass answers the question.

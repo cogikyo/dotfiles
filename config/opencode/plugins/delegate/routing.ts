@@ -1,13 +1,15 @@
 import { YAML } from "bun";
+import { join } from "node:path";
 import { z } from "zod";
 import { claudeAccounts } from "../anthropic/accounts.ts";
 import { errorMessage } from "../shared/error.ts";
 import { readText } from "../shared/file.ts";
+import { configRoot } from "../shared/root.ts";
 import { WEEKLY } from "../usage/anthropic.ts";
 import { type ModelRef, parseModel } from "./args.ts";
 import { readUsage, type Usage } from "./policy.ts";
 
-export const ROUTING_PATH = "/home/cullyn/dotfiles/config/opencode/routing.md";
+export const ROUTING_PATH = join(configRoot, "ROUTING.md");
 
 const POOL = "claude";
 const FRONTMATTER = /^---\r?\n([\s\S]*?)\r?\n---(?:\r?\n|$)/u;
@@ -43,23 +45,23 @@ type Routing = z.infer<typeof Routing>;
 
 function parseRouting(text: string): Routing {
   const match = FRONTMATTER.exec(text);
-  if (!match) throw new Error("routing.md has no YAML frontmatter");
+  if (!match) throw new Error("ROUTING.md has no YAML frontmatter");
   let data: unknown;
   try {
     data = YAML.parse(match[1]);
   } catch (error) {
-    throw new Error(`routing.md frontmatter is not valid YAML: ${errorMessage(error)}`, { cause: error });
+    throw new Error(`ROUTING.md frontmatter is not valid YAML: ${errorMessage(error)}`, { cause: error });
   }
   const result = Routing.safeParse(data);
   if (!result.success) {
-    throw new Error(`routing.md frontmatter is invalid:\n${z.prettifyError(result.error)}`, { cause: result.error });
+    throw new Error(`ROUTING.md frontmatter is invalid:\n${z.prettifyError(result.error)}`, { cause: result.error });
   }
   return result.data;
 }
 
 async function readRouting(path: string) {
   const text = await readText(path);
-  if (text === undefined) throw new Error(`routing.md not found at ${path}`);
+  if (text === undefined) throw new Error(`ROUTING.md not found at ${path}`);
   return text;
 }
 
@@ -71,7 +73,7 @@ export async function routingPrompt(path = ROUTING_PATH) {
     parseRouting(text);
     return `${header}\n${text}`;
   } catch (error) {
-    const failure = `ROUTING ERROR: ${errorMessage(error)}\nTask calls without model fail until the user fixes routing.md; pass model explicitly meanwhile.`;
+    const failure = `ROUTING ERROR: ${errorMessage(error)}\nTask calls without model fail until the user fixes ROUTING.md; pass model explicitly meanwhile.`;
     return [header, failure, text].filter(Boolean).join("\n");
   }
 }

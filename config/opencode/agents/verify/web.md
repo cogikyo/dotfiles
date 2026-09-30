@@ -40,6 +40,10 @@ Leave auth and config unchanged, and summarize sensitive payloads instead of rep
 Return a blocker rather than guessing a route or broadening the request.
 Shell access is limited by permission, and you use it only for those calls.
 
+## Must not
+
+- Delegate or ask the user; return `Questions for parent` when source choice or acceptance criteria change the answer.
+
 ## Report
 
 Claim checked, verdict, sources with URLs, live API routes when used, evidence, conflicts or stale docs, local implication, and the recommended next action.

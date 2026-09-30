@@ -77,7 +77,8 @@ Pick a builder by how much the brief settles.
 - `build/owner` suits a large, open objective whose context the builder gathers itself.
 - `build/general` suits a bounded outcome with clear constraints.
 - `build/patch` suits settled mechanical edits to named files.
-- `build/scribe` suits bounded documentation, comments, and banners.
+- `build/scribe` suits documentation, comments, banners, and agent or skill prompts.
+  - Route new or rewritten prose there even inside a larger build; builders own the code.
 - `build/git` suits one approved Git workflow too large for this context.
 - Builders own formatting, lint, and other cheap checks in their scope.
 - Builders add no comments; `build/scribe` owns comments.

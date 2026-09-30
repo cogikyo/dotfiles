@@ -1,7 +1,7 @@
 import type { TuiPluginApi } from "@opencode-ai/plugin/tui";
 import { realpathSync } from "node:fs";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { configRoot, ROOT_FILES } from "../shared/root.ts";
 
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
 // │ Markdown path labels for the TUI context sidebar                                              │
@@ -10,8 +10,6 @@ import { fileURLToPath } from "node:url";
 const MAX_LABEL_LENGTH = 36;
 
 export type MarkdownSourceKind = "readme" | "agents" | "agent" | "skill" | "command" | "partial" | "spec" | "markdown";
-
-export const configRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 // ├─ Kinds ───────────────────────────────────────────────────────────────────────────────────────┤
 
@@ -27,7 +25,7 @@ export function markdownSourceKind(filePath: string): MarkdownSourceKind {
 
   if (normalizedPath.split(/[\\/]/u).includes(".spec")) return "spec";
   if (leaf === "readme.md") return "readme";
-  if (leaf === "agents.md" || isConfigAgents(normalizedPath)) return "agents";
+  if (leaf === "agents.md" || isRootFile(normalizedPath)) return "agents";
   if (leaf === "skill.md") return "skill";
   if (agentSegments(normalizedPath)) return "agent";
   if (commandSegments(normalizedPath)) return "command";
@@ -73,12 +71,18 @@ function contextLabel(api: TuiPluginApi, filePath: string, kind: MarkdownSourceK
   if (kind === "command") return commandLabel(api, filePath);
 
   if (kind === "readme" || kind === "agents") {
-    if (kind === "agents" && isConfigAgents(filePath)) return "OpenCode";
+    if (kind === "agents" && isConfigAgents(filePath)) return configLabel(filePath);
     const dir = path.dirname(label);
     return dir === "." ? contextRootName(api, filePath) : dir;
   }
 
   return stripMarkdownExtension(label);
+}
+
+function configLabel(filePath: string) {
+  const leaf = path.basename(filePath);
+  if (leaf.toLowerCase() === "agents.md") return "OpenCode";
+  return titleSegment(stripMarkdownExtension(leaf).toLowerCase());
 }
 
 function agentLabel(filePath: string) {
@@ -211,8 +215,13 @@ export function truncateMiddle(value: string, maxLength: number) {
 }
 
 export function isConfigAgents(filePath: string) {
-  if (markdownIdentity(filePath) === markdownIdentity(path.join(configRoot, "instructions.md"))) return true;
+  if (isRootFile(filePath)) return true;
   return path.basename(filePath).toLowerCase() === "agents.md" && isGlobalOpencodePath(filePath);
+}
+
+function isRootFile(filePath: string) {
+  const id = markdownIdentity(filePath);
+  return ROOT_FILES.some((file) => id === markdownIdentity(path.join(configRoot, file)));
 }
 
 function relativeInside(candidate: string) {

@@ -2,6 +2,7 @@ import type { ToolContext } from "@opencode-ai/plugin";
 import type { SessionPromptAsyncData, SessionSummarizeData } from "@opencode-ai/sdk/v2";
 import { errorMessage } from "../shared/error.ts";
 import { type Client, create, session, type Status, statuses, unwrap } from "../shared/opencode.ts";
+import { COLLAB } from "../shared/root.ts";
 import { CONTEXT_PRESSURE } from "../shared/session.ts";
 import {
   applyDisplayArgs,
@@ -28,7 +29,6 @@ import {
 import { resolveRoute } from "./routing.ts";
 import { type ChildWait, readChildMessages, waitForChild } from "./wait.ts";
 
-export const COLLAB = "collab";
 const GIT = "build/git";
 
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
@@ -62,7 +62,7 @@ export async function prepareTask(client: Client, ctx: ToolContext, input: TaskA
   if (!route && agent.model) route = { model: agent.model, effort: effort ?? agent.variant, notes: [] };
   if (!route) {
     const inherited = await readCurrentAssistantMessage(client, ctx);
-    const note = `delegate routing: routing.md has no route for ${agent.name}; inherited the parent model`;
+    const note = `delegate routing: ROUTING.md has no route for ${agent.name}; inherited the parent model`;
     route = { model: inherited.model, effort: effort ?? inherited.variant, notes: [note] };
   }
 

@@ -97,9 +97,10 @@
         "config/hypr/hyprland.lua",
         "config/nvim/init.lua",
         "cmds/config/hyprd.yaml",
+        "config/opencode/routing.md",
         "config/nvim/lua/config/keymaps.lua",
-        "config/kitty/kitty.conf",
         "config/opencode/agents/collab.md",
+        "config/kitty/kitty.conf",
         "config/opencode/agents/drive.md"
       ]
     },

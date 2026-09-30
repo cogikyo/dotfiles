@@ -1,6 +1,6 @@
 ---
 name: epistemology
-description: Use when the user invokes /epistemology or asks to mine OpenCode sessions for evidence-backed improvements to skills, agent instructions, command wrappers, the global instructions.md, routing.md, or a project AGENTS.md. Collab owns it. Returns proposals without applying them.
+description: Use when the user invokes /epistemology or asks to mine OpenCode sessions for evidence-backed improvements to skills, agent instructions, command wrappers, the global AGENTS.md, ROUTING.md, or a project AGENTS.md. Collab owns it. Returns proposals without applying them.
 ---
 
 # Epistemology
@@ -14,7 +14,7 @@ Stay read-only and return proposals only unless the user separately asks to appl
 ## Scope
 
 Mine live OpenCode session traces for reusable workflows and missing or unclear knowledge.
-Targets are skills, agent instructions, command wrappers, the global `instructions.md`, `routing.md`, or a project `AGENTS.md`.
+Targets are skills, agent instructions, command wrappers, the global `AGENTS.md`, `ROUTING.md`, or a project `AGENTS.md`.
 Papercuts owns command, permission, and agent-use failures; do not re-diagnose those here.
 
 Treat `$ARGUMENTS` as optional focus: a topic, session ID, directory, time range, or a papercuts handoff.
@@ -62,9 +62,9 @@ Prefer the smallest owner that can prevent rediscovery:
 - A focused `SKILL.md` for a reusable attended workflow.
 - An existing skill or agent instruction for a local clarification.
 - A command wrapper for invocation or argument guidance.
-- The global `instructions.md`, `routing.md`, or a project `AGENTS.md` only for genuinely broad, stable guidance.
+- The global `AGENTS.md`, `ROUTING.md`, or a project `AGENTS.md` only for genuinely broad, stable guidance.
 
-Mark primary agent prompts, the global `instructions.md`, `routing.md`, and project `AGENTS.md` files as higher-blast-radius targets.
+Mark primary agent prompts, the global `AGENTS.md`, `ROUTING.md`, and project `AGENTS.md` files as higher-blast-radius targets.
 
 ## Report
 

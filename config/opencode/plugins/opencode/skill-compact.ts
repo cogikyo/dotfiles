@@ -1,7 +1,7 @@
 import type { Plugin, PluginModule } from "@opencode-ai/plugin";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { unwrap, type Client } from "../shared/opencode.ts";
+import { errorMessage } from "../shared/error.ts";
+import { session, unwrap, type Client } from "../shared/opencode.ts";
+import { configRoot, type Loader } from "../shared/root.ts";
 import {
   isCompactedPart,
   isCompletedSkillPart,
@@ -17,16 +17,20 @@ import {
 } from "./skill-parts.ts";
 
 const id = "opencode-skill-compact";
-const configRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 
 const server: Plugin = async ({ client, directory, worktree, serverUrl }) => {
   const compacting = new Set<string>();
 
-  const protectRoots = (agent?: string): ProtectRoots => ({
+  const protectRoots = (loader: Loader): ProtectRoots => ({
     configRoot,
     projectRoots: [directory, worktree].filter(Boolean),
-    agentNames: ["collab", agent].filter((name): name is string => Boolean(name)),
+    session: loader,
   });
+
+  const loaderOf = async (sessionID: string, agent?: string): Promise<Loader> => {
+    const info = await session(client, sessionID, { label: `${id} read session ${sessionID}` });
+    return { agent: agent ?? info.agent, parentID: info.parentID };
+  };
 
   return {
     "experimental.session.compacting": async (input, output) => {
@@ -42,13 +46,18 @@ const server: Plugin = async ({ client, directory, worktree, serverUrl }) => {
       }
     },
     "experimental.chat.messages.transform": async (_input, output) => {
-      const agent = currentAgentFromMessages(output.messages);
-      uncompactProtectedParts(
-        output.messages.flatMap((message) => message.parts),
-        protectRoots(agent),
-      );
       const sessionID = sessionIDFromMessages(output.messages);
-      if (!sessionID || !compacting.has(sessionID)) return;
+      if (!sessionID) return;
+      try {
+        const loader = await loaderOf(sessionID, currentAgentFromMessages(output.messages));
+        uncompactProtectedParts(
+          output.messages.flatMap((message) => message.parts),
+          protectRoots(loader),
+        );
+      } catch (error) {
+        console.error(`${id}: ${errorMessage(error)}`);
+      }
+      if (!compacting.has(sessionID)) return;
       compacting.delete(sessionID);
       for (const message of output.messages) stubSkillParts(message.parts);
     },
@@ -57,10 +66,10 @@ const server: Plugin = async ({ client, directory, worktree, serverUrl }) => {
       const part = event.properties.part;
       if (!isCompletedToolPart(part) || !isCompactedPart(part)) return;
       const filePath = toolMarkdownPath(part);
-      if (!filePath || !isProtectedMarkdownPath(filePath, protectRoots())) return;
-      const next = withoutCompactedTime(part);
+      if (!filePath) return;
       try {
-        await persistUpdatedPartsHttp(serverUrl, directory, [next]);
+        if (!isProtectedMarkdownPath(filePath, protectRoots(await loaderOf(part.sessionID)))) return;
+        await persistUpdatedPartsHttp(serverUrl, directory, [withoutCompactedTime(part)]);
       } catch {
         return;
       }

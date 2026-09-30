@@ -55,7 +55,7 @@ Busy lanes reject new calls rather than queueing them.
 
 Normal flow:
 
-- `model` is `provider/model-id`; when omitted, the child takes the agent's route from `config/opencode/routing.md`, else the agent's pinned model, else the current assistant message's model and effort.
+- `model` is `provider/model-id`; when omitted, the child takes the agent's route from `config/opencode/ROUTING.md`, else the agent's pinned model, else the current assistant message's model and effort.
 - An explicit `model` or `effort` beats the route; an explicit `model` does not take the route's effort.
 - `effort` maps to the target model's reasoning variants.
 - `unattended` defaults to true for children and rewrites permission asks to denies outside drive mode; descendants cannot become attended under an unattended parent.
@@ -68,14 +68,14 @@ Normal flow:
 
 Model routing:
 
-- `config/opencode/routing.md` frontmatter maps agent names or `*` globs to `provider/model-id [effort]`; its Markdown body is Collab's routing judgment.
+- `config/opencode/ROUTING.md` frontmatter maps agent names or `*` globs to `provider/model-id [effort]`; its Markdown body is Collab's routing judgment.
 - An exact agent name beats a glob, and a longer glob beats a shorter one; an agent with no route falls through to the pin or parent with a note in the task result.
 - The `claude` provider is the Anthropic account pool, resolved per call from the same usage cache the provider wait reads.
 - The pool skips an account when a window that limits the model is at 100%, then prefers accounts whose limiting windows are all known and current, then the earliest weekly `W` reset.
 - Unknown, stale, or post-reset usage still counts as open but ranks after fully known accounts.
 - When both accounts are capped, the pool uses the model's `fallbacks` entry without effort; without an entry, it picks the account whose caps reset first and the provider wait applies.
 - An explicit `claude/<model-id>` gets the same pick, while `anthropic/…` or `anthropic-personal/…` pins an account.
-- The delegate reads `routing.md` on every task call that needs it; missing or invalid frontmatter fails the call instead of falling back to the parent model.
+- The delegate reads `ROUTING.md` on every task call that needs it; missing or invalid frontmatter fails the call instead of falling back to the parent model.
 - `experimental.chat.system.transform` appends the whole file, frontmatter included, to every model step of a top-level Collab session, so compaction cannot drop it; child sessions do not get it.
 - When the frontmatter is invalid, the injected block puts the parse error ahead of the raw file.
 
@@ -134,8 +134,8 @@ Unattended envelope, applied when `unattended: true` is selected and carried to 
 Practical failure diagnosis:
 
 - `delegate provider policy missing for <provider>` → add the provider to `delegate.json`.
-- `routing.md frontmatter is invalid` or `is not valid YAML` → fix the frontmatter; calls with an explicit non-pool `model` still work meanwhile.
-- `routing.md has no route for <agent>` note → add a route or glob for that agent.
+- `ROUTING.md frontmatter is invalid` or `is not valid YAML` → fix the frontmatter; calls with an explicit non-pool `model` still work meanwhile.
+- `ROUTING.md has no route for <agent>` note → add a route or glob for that agent.
 - `Unknown effort` → pick a variant that the target model exposes in config.
 - `delegate resumed child permission envelope no longer matches` → re-brief a fresh child under the current policy.
 - `delegate resumed child execution contract no longer matches` → preserve its unattended mode or use a new lane.
@@ -249,8 +249,8 @@ The other sidebar sections register `sidebar_content` with distinct orders.
   Pink is the last pressure tier before that threshold.
   It also owns the drive toggle: `<leader>d` or the TUI-only `/drive` flips drive mode for the current root session, and an orange `DRIVE` badge shows while it is on.
 - `opencode/modified-files.tsx` lists files touched in the current session.
-- `opencode/markdown-context.tsx` lists Markdown reads plus the pinned global `instructions.md`, project `AGENTS.md` files, the current agent, skills, and slash commands. Click the close mark to stub an unpinned skill or Markdown read. Click restore on a compacted row to reload the file from disk. Click the label to open the file.
-- `opencode/skill-compact.ts` stubs loaded skill bodies when a session compacts. It also uncompacts protected `instructions.md`, project `AGENTS.md`, and Collab reads so native prune cannot keep them stubbed.
+- `opencode/markdown-context.tsx` lists Markdown reads plus the pinned root files the session loads, project `AGENTS.md` files, the current agent, skills, and slash commands. Click the close mark to stub an unpinned skill or Markdown read. Click restore on a compacted row to reload the file from disk. Click the label to open the file.
+- `opencode/skill-compact.ts` stubs loaded skill bodies when a session compacts. It also uncompacts reads of the root files the session loads, project `AGENTS.md` files, and the session's agent file so native prune cannot keep them stubbed.
 - `opencode/compact.ts` adds the primary-only `compact` tool and appends a system nudge to primary sessions at each `COMPACTION_NUDGES` tier.
   An approved call runs `session.summarize` with `auto: false` when the turn goes idle, passes the agent's brief into the compaction context, and leaves the session waiting for the user.
   A denial silences nudges until the next tier; any compaction resets the tiers. Calls are logged to `${XDG_STATE_HOME:-~/.local/state}/opencode/compact.jsonl`.
@@ -290,7 +290,8 @@ Practical failure diagnosis:
 - `shared/drive.ts` owns the parent walk that `opencode/drive.ts`, the delegate, and browser isolation use to decide whether a session is under an armed root.
 - `opencode/skill-parts.ts` owns skill/read tool-part compacting and persist via TUI `part.update` or server HTTP PATCH.
 - `delegate/config.ts` hardcodes `DELEGATE_CONFIG_PATH` to `/home/cullyn/dotfiles/config/opencode/delegate.json`, which holds only the provider allowlist.
-- `config/opencode/routing.md` owns routes and pool fallbacks; `delegate/routing.ts` owns its schema, the `claude` pool, and `ROUTING_PATH`.
+- `shared/root.ts` owns the ALL-CAPS Markdown at the config root that sessions always load: `AGENTS.md` for every session, and `COLLAB.md` and `ROUTING.md` for top-level Collab; the sidebar pins them and compaction protects them. `README.md` and `SKILL.md` follow their own conventions instead.
+- `config/opencode/ROUTING.md` owns routes and pool fallbacks; `delegate/routing.ts` owns its schema, the `claude` pool, and `ROUTING_PATH`.
 - `anthropic/accounts.ts` owns the Anthropic account IDs the pool picks between, and `usage/anthropic.ts` owns the window labels and `limitsModel`, which maps a model ID to its scoped window.
 - Changing `hyprd/context.ts` paths or schema requires updating both `hyprd/kitty.ts` and `hyprd/notify.ts`.
 - `shared/session.ts` owns every context limit: `CONTEXT_PRESSURE`, `COMPACTION_LIMIT` (its hard tier), `COMPACTION_RESERVED`, and `COMPACTION_NUDGES`; input-cap uses limit plus reserved as its default cap.

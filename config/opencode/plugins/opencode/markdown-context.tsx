@@ -17,8 +17,8 @@ import {
 } from "./skill-parts.ts";
 import { ActionIcon, type IconAction } from "../shared/action-icon.tsx";
 import { SidebarSection } from "../shared/sidebar-section.tsx";
+import { configRoot, rootFiles, type Loader } from "../shared/root.ts";
 import {
-  configRoot,
   displayPath,
   isConfigAgents,
   isGlobalOpencodePath,
@@ -181,15 +181,18 @@ function pinnedContextItems(api: TuiPluginApi, sessionID: string) {
     items.push(item);
   };
 
-  push(path.join(configRoot, "instructions.md"));
+  const session = loader(api, sessionID);
+  for (const file of rootFiles(session)) push(path.join(configRoot, file));
   for (const root of projectRoots(api)) {
     push(path.join(root, "AGENTS.md"));
   }
-
-  const agent = currentAgent(api, sessionID);
-  if (agent) push(path.join(configRoot, "agents", `${agent}.md`));
+  if (session.agent) push(path.join(configRoot, "agents", `${session.agent}.md`));
 
   return items;
+}
+
+function loader(api: TuiPluginApi, sessionID: string): Loader {
+  return { agent: currentAgent(api, sessionID), parentID: api.state.session.get(sessionID)?.parentID };
 }
 
 function currentAgent(api: TuiPluginApi, sessionID: string) {
@@ -271,12 +274,7 @@ function markdownFileItem(
 }
 
 function protectRoots(api: TuiPluginApi, sessionID: string): ProtectRoots {
-  const agent = currentAgent(api, sessionID);
-  return {
-    configRoot,
-    projectRoots: projectRoots(api),
-    agentNames: ["collab", agent].filter((name): name is string => Boolean(name)),
-  };
+  return { configRoot, projectRoots: projectRoots(api), session: loader(api, sessionID) };
 }
 
 function canUnload(api: TuiPluginApi, sessionID: string, item: MarkdownContextItem) {

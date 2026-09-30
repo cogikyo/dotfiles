@@ -8,7 +8,7 @@ Arch + Hyprland (Wayland) dotfiles. Single-user. Root of repo = `~/dotfiles`.
 - `bin/` → symlinked into `~/.local/bin/` (legacy; being replaced by `cmds/`)
 - `cmds/` → Go command workspace; built into `~/.local/bin/` by `install.sh go`. See `cmds/README.md`.
 - `etc/` → system configs **copied** to `/etc/` by `install.sh system` (not symlinked)
-- `config/opencode/` → OpenCode harness: `opencode.json`, global `instructions.md`, agents, skills, and plugins (see `config/opencode/plugins/README.md`)
+- `config/opencode/` → OpenCode harness: `opencode.json`, always-loaded caps files (`AGENTS.md`, `COLLAB.md`, `ROUTING.md`), agents, skills, and plugins (see `config/opencode/plugins/README.md`)
 - `iso/` → archiso profile; `iso/work/` and `iso/out/` are gitignored build artifacts
 - `share/` → static assets
 

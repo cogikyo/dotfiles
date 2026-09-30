@@ -1,6 +1,7 @@
 import { realpathSync } from "node:fs";
 import path from "node:path";
 import { z } from "zod";
+import { type Loader, rootFiles } from "../shared/root.ts";
 
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
 // │ Tool-part compaction shared by server and TUI plugins                                         │
@@ -190,11 +191,11 @@ export async function persistUpdatedPartsHttp(serverUrl: URL, directory: string,
 
 // ├─ Protected paths ─────────────────────────────────────────────────────────────────────────────┤
 
-/** Roots for Markdown that must survive compaction; `collab` is protected even when omitted from `agentNames`. */
+/** Roots and the loading session for Markdown that must survive compaction. */
 export type ProtectRoots = {
   configRoot: string;
   projectRoots: readonly string[];
-  agentNames?: readonly string[];
+  session: Loader;
 };
 
 const text = z.string().optional().catch(undefined);
@@ -227,18 +228,14 @@ export function fileIdentity(filePath: string) {
   }
 }
 
-/** Protects the global `instructions.md`, root `AGENTS.md` files, and selected config agent files, including symlinked paths. */
+/** Protects the config root files the session loads, project `AGENTS.md` files, and the session's agent file, including symlinked paths. */
 export function isProtectedMarkdownPath(filePath: string, roots: ProtectRoots) {
+  const { configRoot, session } = roots;
+  const paths = [
+    ...rootFiles(session).map((file) => path.join(configRoot, file)),
+    ...roots.projectRoots.filter(Boolean).map((root) => path.join(root, "AGENTS.md")),
+  ];
+  if (session.agent) paths.push(path.join(configRoot, "agents", `${session.agent}.md`));
   const id = fileIdentity(filePath);
-  if (id === fileIdentity(path.join(roots.configRoot, "instructions.md"))) return true;
-  for (const root of roots.projectRoots) {
-    if (!root) continue;
-    if (id === fileIdentity(path.join(root, "AGENTS.md"))) return true;
-  }
-  const names = new Set(["collab", ...(roots.agentNames ?? [])]);
-  for (const name of names) {
-    if (!name) continue;
-    if (id === fileIdentity(path.join(roots.configRoot, "agents", `${name}.md`))) return true;
-  }
-  return false;
+  return paths.some((candidate) => id === fileIdentity(candidate));
 }

@@ -11,7 +11,7 @@ export type TaskArgs = {
   description: string;
   prompt: string;
   subagent_type: string;
-  model?: string; // `provider/model-id`; falls back to the routing.md route, agent pin, or parent model.
+  model?: string; // `provider/model-id`; falls back to the ROUTING.md route, agent pin, or parent model.
   effort?: string; // Inherits effort unless the model is explicit.
   lane?: string; // Reusable named child; omitted creates a one-shot child.
   compact?: boolean; // Summarizes an idle lane before its next prompt.

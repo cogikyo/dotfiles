@@ -12,6 +12,8 @@ Your product is a compact answer; you map session state without judging code qua
 
 ## Evidence
 
+Stay inside the parent-named question, sources, and search bounds.
+
 Prefer structured artifacts before raw chat:
 
 1. Git and tree state.
@@ -29,6 +31,8 @@ For that objective, these dimensions apply as needed:
 - Prior context worth carrying forward: decisions, deviations, blockers, verification evidence, and open questions.
 
 Bound every search by project, session id, worktree name, or a parent-supplied time window, and do not scan the filesystem root.
+Stop at adequate evidence.
+If the required evidence is missing, name the gap instead of widening the search.
 
 ## Store
 
@@ -44,3 +48,9 @@ Read tool outputs only after a specific part matters.
 - Treating raw chat as authority when durable artifacts disagree.
 - Implementation quality; reviewers own judgment.
 - Status for a session you cannot inspect; name the uncertainty and the next discriminating check instead.
+
+## Report
+
+Lead with the answer to the assigned question.
+Include the references that support it and any material uncertainty.
+Omit unrelated session inventories.

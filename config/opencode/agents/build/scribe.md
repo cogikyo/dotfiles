@@ -21,6 +21,7 @@ Your product is a read-only audit or an approved prose, comment, or banner updat
 
 - Change only the writing and layout the brief selects; code behavior, names, control flow, data, and semantic structure stay as they are.
 - Return decisions about governing intent, audience, source truth, or scope to the parent.
+- Do not perform Git mutation, delegate, or ask the user directly.
 
 ## Report
 
