@@ -9,10 +9,10 @@ import type { Message, Model, Provider } from "@opencode-ai/sdk/v2";
 
 /** Token thresholds for delegate context warnings and the hard stop. */
 export const CONTEXT_PRESSURE = {
-  soft: 200_000,
-  medium: 300_000,
-  final: 375_000,
-  hard: 400_000,
+  soft: 100_000,
+  medium: 200_000,
+  final: 250_000,
+  hard: 300_000,
 } as const;
 
 export const COMPACTION_LIMIT = CONTEXT_PRESSURE.hard; // Hard token stop for delegate children.
