@@ -1,11 +1,12 @@
 ---
 name: prose-docs
-description: Use with prose to write or shorten READMEs, guides, usage notes, and repository documentation; admits task-relevant information and removes cross-section duplication before sentence polishing.
+description: Use with prose to write or shorten READMEs, guides, usage notes, repository documentation, agent prompts, and skills; admits task-relevant information and removes cross-section duplication before sentence polishing.
 ---
 
 # Repository documentation
 
 Read `prose` for audience and source-fidelity procedure.
+This skill covers repository documentation, agent prompts, and skills read by agents and humans.
 Let the intended reader's task determine the document's scope and sections; there is no mandatory README outline.
 
 ## Admit information
@@ -32,10 +33,33 @@ Add explanation only for useful interpretation, a non-obvious consequence, or a 
 Choose a tree for load-bearing hierarchy and a diagram for load-bearing relationships; inspect source for every path, node, label, and edge.
 Load `diagram` for construction only after deciding the representation earns its place.
 
-Use callouts sparingly for a real hazard, constraint, or surprising fact, and only with types supported by the renderer.
-Use `INFO` for useful separated context and reserve `IMPORTANT` for omissions that could cause a wrong decision, unsafe action, or broken result.
-Put a concise subject on the marker line, such as `> [!IMPORTANT] Data removal`, followed by a blank quoted line and a short paragraph or brief list.
-Quote every body and blank line; use a normal section when several paragraphs or unrelated ideas are needed.
+## Structure and emphasis
+
+Apply `AGENTS.md`'s paragraphs-and-lists rule: paragraphs explain connected reasoning, flat lists enumerate peers, and nesting shows dependence.
+
+- Use **paragraphs** for connected explanation, causal reasoning, framing, or synthesis; do not turn connected prose into bullets only to make it look scannable.
+- Use **flat lists** for peer items that answer the same question and can be scanned independently.
+- Use **nested bullets** when a child explains, qualifies, exemplifies, or operationalizes its parent.
+  - The parent states the main idea, and the child depends on it for useful context.
+- Use **numbered lists** only when sequence, priority, or dependency matters.
+- Keep each **list item** to one sentence and preferably one rendered line.
+  - Move sustained reasoning into a nearby paragraph instead of expanding the bullet.
+- Give a **conceptual section** a paragraph when readers need to understand why its ideas connect.
+- Let a self-explanatory **catalog, checklist, or rule family** remain list-only.
+- Use **bold** for a rule's key term so a reader scanning the file lands on it; never bold whole sentences.
+- Use *italics* for the short human reason so agents and humans can see why the rule matters to the reader.
+
+Use `INFO` callouts for principles or a file's defining rule that the reader must internalize.
+Use `IMPORTANT` for a rule whose omission could cause a wrong decision, unsafe action, or broken result.
+Use only types supported by the renderer.
+
+Put a concise title on the marker line, such as `> [!INFO] Humility`, followed by a blank quoted line, a one-line thesis, and at most a few short lines or bullets.
+Quote every body and blank line in the callout.
+Put the reasoning in a short plain paragraph immediately after the callout, outside it.
+Use `---` to separate a series of peer callouts when useful, as in `AGENTS.md`'s Core Principles.
+
+Keep one callout per concept; do not wrap ordinary content or whole sections.
+Do not flatten or remove existing callouts unless the brief asks you to.
 
 ## Deletion judgment
 
