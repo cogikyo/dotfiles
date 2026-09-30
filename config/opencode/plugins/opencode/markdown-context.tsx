@@ -418,6 +418,17 @@ function isRootAgents(api: TuiPluginApi, filePath: string) {
   return projectRoots(api).some((root) => path.normalize(root) === dir);
 }
 
+function coreIcon(filePath: string) {
+  switch (path.basename(filePath)) {
+    case "COLLAB.md":
+      return icons.collab;
+    case "ROUTING.md":
+      return icons.routing;
+    default:
+      return icons.agentsCore;
+  }
+}
+
 function sourceIcon(api: TuiPluginApi, item: MarkdownContextItem) {
   if (item.compacted) return icons.compacted;
 
@@ -425,7 +436,7 @@ function sourceIcon(api: TuiPluginApi, item: MarkdownContextItem) {
     case "readme":
       return icons.readme;
     case "agents":
-      if (isConfigAgents(item.path)) return icons.agentsCore;
+      if (isConfigAgents(item.path)) return coreIcon(item.path);
       return isRootAgents(api, item.path) ? icons.folderLibrary : icons.folder;
     case "agent":
       return isSubagent(item.path) ? icons.subagent : icons.agents;

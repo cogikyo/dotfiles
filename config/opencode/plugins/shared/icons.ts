@@ -29,6 +29,8 @@ export const icons = {
   context: "㊋",
   agents: "󰯉",
   agentsCore: "",
+  collab: "󱈘",
+  routing: "󰞁",
   subagent: "",
   folder: "",
   folderLibrary: "",
