@@ -40,7 +40,9 @@ permission:
     "git commit -F -": allow
     "git commit -F - *": allow
     "git commit --no-edit": allow
+    "git commit --fixup=*": allow
     "git rebase --onto *": allow
+    "git rebase --autosquash --onto *": allow
     "git rebase --continue": allow
     "GIT_EDITOR=true git rebase --continue": allow
     "git rebase --abort": allow
@@ -81,7 +83,7 @@ permission:
     "*git add --all*": deny
     "*git add -u*": deny
     "*git commit *--amend*": deny
-    "*git commit *--fixup*": deny
+    "*git commit *--fixup=*:*": deny
     "*git commit *--squash*": deny
     "*git commit *--all*": deny
     "*git commit *--allow-empty*": deny
@@ -90,7 +92,6 @@ permission:
     "*git rebase *--interactive*": deny
     "*git rebase * -i*": deny
     "*git rebase * -f*": deny
-    "*git rebase *--autosquash*": deny
     "*git rebase *--skip*": deny
     "*git rebase *--autostash*": deny
     "*git rebase *--update-refs*": deny
@@ -123,8 +124,9 @@ Normal task ASK semantics apply, including remembered approvals; do not infer br
 - Run `git commit -F - <<'EOF'` as its own call, because chaining it after `&&` hides the `-` from the permission rule.
 - Use explicit file paths after `git add --` and `git restore --staged --`; never stage directories, wildcard pathspecs, or unrelated content.
 - Use a reviewed `git apply --cached` patch for partial staging; do not use interactive staging.
-- Use `git commit -F -` for a supplied message or `git commit --no-edit` for an approved active merge's generated message.
+- Use `git commit -F -` for a supplied message, `git commit --no-edit` for an approved active merge's generated message, or `git commit --fixup=<OID>` for an approved fixup.
 - Start rebases with explicit `git rebase --onto <onto-OID> <upstream-OID>` on the verified current branch; continue only the approved active rebase.
+- Fold approved fixups with `git rebase --autosquash --onto <parent-OID> <parent-OID>`, where the parent is the fixup target's parent.
 - Use `GIT_EDITOR=true git rebase --continue` to retain the replayed message without opening an interactive editor.
 - Run hooks normally; do not set environment variables or Git options to bypass hooks, alter configuration, run commands, or disable signing.
 - Edit files only for conflicts owned by the operation or necessary repairs explicitly authorized by the brief and shared skill; ordinary commits grant no content-edit authority.
@@ -134,7 +136,7 @@ Normal task ASK semantics apply, including remembered approvals; do not infer br
 ## Stop conditions
 
 Return to Collab on mismatched state, unclear ownership, semantic conflict decisions, failed or unavailable checks, denied operations, or repairs outside the brief.
-Never delegate, ask the user, switch workflows silently, publish, push, force, amend, squash, drop or skip commits, discard work, disable hooks, change Git configuration, or perform unrelated implementation.
+Never delegate, ask the user, switch workflows silently, publish, push, force, amend, squash beyond approved fixups, drop or skip commits, discard work, disable hooks, change Git configuration, or perform unrelated implementation.
 Abort only when explicitly approved and proven to preserve pre-existing work; otherwise preserve the active operation and report its state.
 Branch deletion must use safe `git branch -d -- <name>` after the shared lifecycle checks; worktree removal must be named, clean, and unforced.
 An interruption is not permission to retry: reconcile durable Git state first.

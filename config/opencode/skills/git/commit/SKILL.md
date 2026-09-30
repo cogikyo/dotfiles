@@ -175,7 +175,8 @@ If safe continuation or abort is uncertain, stop and report the exact OIDs and c
 
 ## Boundaries
 
-- Do not amend, push, stash, checkout, switch, reset history, clean, or mutate worktrees.
+- Amend or create fixup and squash commits only when the user asks or approves.
+- Do not push, stash, checkout, switch, reset history, clean, or mutate worktrees.
 - Do not alter branches, refs, remotes, Git configuration, or unrelated repository content.
 - Do not start a merge, rebase, cherry-pick, or other integration operation.
 - Do not commit during a rebase or cherry-pick.

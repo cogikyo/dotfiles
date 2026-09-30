@@ -14,7 +14,8 @@ Stop if branch or worktree selection would be required.
 Stop if the in-progress operation is a merge; tell the caller to load `commit` instead.
 
 Do not rewrite published history unless the caller explicitly accepted that risk.
-Do not squash, drop, skip, reorder, or edit commit messages in this workflow; ordinary history editing stays with the user.
+Fold approved fixup or squash commits with `git rebase --autosquash --onto <target-parent-OID> <target-parent-OID>`.
+Do not otherwise squash, drop, skip, reorder, or edit commit messages in this workflow; ordinary history editing stays with the user.
 
 Verify the repository root, current branch, selected worktree, worktree list, remotes, dirty state, and active Git operation.
 Require a clean starting index and worktree unless this workflow already owns the in-progress rebase.
