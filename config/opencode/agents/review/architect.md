@@ -57,16 +57,16 @@ Judge whether the structure tells the truth about the domain.
 Visible coupling is often fine; **hidden coupling** is the finding.
 Name the coupling, then make it explicit or move the behavior to its owner.
 
-| Type       | Smell                                               | Repair                                       |
-| ---------- | --------------------------------------------------- | -------------------------------------------- |
-| Ownership  | Behavior or invariants live away from their owner   | Move behavior to the owner                   |
-| Temporal   | Hidden call-order rituals                           | Encode sequence in API, type, or state       |
-| State      | Globals, shared mutation, or duplicated state       | One owner and one sync path                  |
-| Semantic   | Strings, config, or names carry hidden meaning      | Domain types or enums, validated at the edge |
-| Boundary   | Transport, DB, UI, shell, or prompt shapes leak in  | Translate at the edge                        |
-| Structural | Callers depend on broad objects or private fields   | Pass narrow data or ask the owner            |
-| Control    | Flags and modes steer callee internals              | Split operations or use clearer types        |
-| Utility    | Generic helpers collect unrelated domain knowledge  | Return behavior to its domain owner          |
+| Type       | Smell                                                                            | Repair move                                                                        |
+| ---------- | -------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| Ownership  | Behavior or invariants live away from the concept that owns them.                | Move behavior near the owner or make the boundary explicit.                        |
+| Temporal   | Hidden call-order rituals.                                                       | Encode sequence in the API, type, constructor, state machine, or boundary.         |
+| State      | Globals, shared mutation, or duplicated state make distant behavior interact.    | Choose an owner and one sync path.                                                 |
+| Semantic   | Strings, config, or names carry hidden meaning.                                  | Use typed/domain concepts, meaningful constants or enums, and boundary validation. |
+| Boundary   | Transport, framework, API, DB, UI, shell, or prompt shapes leak into core logic. | Translate at the edge.                                                             |
+| Structural | Callers depend on broad objects, private fields, or stamp data.                  | Pass narrow data or ask the owner through a method or function.                    |
+| Control    | Flags and modes make callers steer callee internals.                             | Split operations or use clearer types.                                             |
+| Utility    | Generic helpers collect unrelated domain knowledge.                              | Return behavior to the domain or split by owner.                                   |
 
 ## Boundaries
 
