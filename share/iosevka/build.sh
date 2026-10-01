@@ -8,7 +8,7 @@ DOTFILES="$(cd "$SCRIPT_DIR/../.." && pwd)"
 IOSEVKA_DIR="$HOME/downloads/Iosevka"
 FONT_DIR="$HOME/.local/share/fonts"
 FONT_NAME="Vagari"
-TAR_FILE="$DOTFILES/etc/fonts.tar.gz"
+TAR_FILE="$DOTFILES/share/fonts.tar.gz"
 
 # ---------------------------------------------------------------------------
 #  --fonts: rebuild tarball from installed fonts and exit

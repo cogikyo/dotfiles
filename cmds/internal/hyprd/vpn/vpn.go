@@ -524,7 +524,7 @@ func (v *VPN) export(conn connection) (string, error) {
 	if err := os.WriteFile(conn.Profile, []byte(data), 0o600); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("vpn exported: %s\nprofile: %s\nwarning: NetworkManager exports can omit keyring secrets; verify the profile before syncing it\nnext: add '%s:%s:600' to etc/secrets/manifest, then run secrets sync", conn.Name, conn.Profile, secretName(conn), manifestTarget(conn.Profile)), nil
+	return fmt.Sprintf("vpn exported: %s\nprofile: %s\nwarning: NetworkManager exports can omit keyring secrets; verify the profile before syncing it\nnext: add '%s:%s:600' to secrets/manifest, then run secrets sync", conn.Name, conn.Profile, secretName(conn), manifestTarget(conn.Profile)), nil
 }
 
 func (v *VPN) active(name string) (bool, error) {

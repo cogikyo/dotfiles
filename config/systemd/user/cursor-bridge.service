@@ -3,7 +3,7 @@ Description=Cursor SDK bridge for OpenCode
 
 [Service]
 # Requires a Cursor user API key at ~/.local/share/dotfiles/cursor-api-key (Team Admin keys are rejected).
-# Restore it with `secrets decrypt` (etc/secrets/cursor-api-key.age).
+# Restore it with `secrets decrypt` (secrets/cursor-api-key.age).
 # Requires the u-u-z/cursor-sdk-bridge checkout, with its `-fast` model-suffix patch, at ~/.local/share/cursor-sdk-bridge.
 # OpenCode's `cursor` provider sends a placeholder apiKey; this service handles Cursor auth.
 ExecStart=/usr/bin/bwrap \

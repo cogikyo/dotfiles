@@ -2,7 +2,7 @@
 //
 // Responsibilities:
 // - Plan and apply user-level symlinks without clobbering unknown directories.
-// - Run package, service, Firefox, DNS, hibernate, and build steps behind explicit commands.
+// - Run package, service, Firefox, DNS, and build steps behind explicit commands.
 // - Provide dry-run paths for install steps with file or system side effects.
 package install
 
@@ -17,7 +17,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -36,23 +35,22 @@ import (
 )
 
 type Cmd struct {
-	Choose    ChooseCmd    `cmd:"" default:"1" hidden:"" help:"Choose an install command."`
-	All       AllCmd       `cmd:"" help:"Run all install steps."`
-	Packages  PackagesCmd  `cmd:"" help:"Install packages from saved lists."`
-	Link      LinkCmd      `cmd:"" help:"Symlink configs and scripts."`
-	Secrets   SecretsCmd   `cmd:"" help:"Decrypt secrets."`
-	Repos     ReposCmd     `cmd:"" help:"Clone repositories."`
-	System    SystemCmd    `cmd:"" help:"Install system configs."`
-	Hibernate HibernateCmd `cmd:"" help:"Configure hibernate."`
-	Fonts     FontsCmd     `cmd:"" help:"Install fonts."`
-	Go        GoCmd        `cmd:"" name:"go" help:"Build Go binaries."`
-	Eww       EwwCmd       `cmd:"" help:"Build eww."`
-	Firefox   FirefoxCmd   `cmd:"" help:"Configure Firefox."`
-	Certs     CertsCmd     `cmd:"" help:"Provision development TLS certificates."`
-	Shell     ShellCmd     `cmd:"" help:"Set login shell."`
-	DNS       DNSCmd       `cmd:"" name:"dns" help:"Configure DNS-over-TLS."`
-	List      ListCmd      `cmd:"" help:"List install steps."`
-	Check     CheckCmd     `cmd:"" help:"Run healthchecks."`
+	Choose   ChooseCmd   `cmd:"" default:"1" hidden:"" help:"Choose an install command."`
+	All      AllCmd      `cmd:"" help:"Run all install steps."`
+	Packages PackagesCmd `cmd:"" help:"Install packages from saved lists."`
+	Link     LinkCmd     `cmd:"" help:"Symlink configs and scripts."`
+	Secrets  SecretsCmd  `cmd:"" help:"Decrypt secrets."`
+	Repos    ReposCmd    `cmd:"" help:"Clone repositories."`
+	System   SystemCmd   `cmd:"" help:"Install system configs."`
+	Fonts    FontsCmd    `cmd:"" help:"Install fonts."`
+	Go       GoCmd       `cmd:"" name:"go" help:"Build Go binaries."`
+	Eww      EwwCmd      `cmd:"" help:"Build eww."`
+	Firefox  FirefoxCmd  `cmd:"" help:"Configure Firefox."`
+	Certs    CertsCmd    `cmd:"" help:"Provision development TLS certificates."`
+	Shell    ShellCmd    `cmd:"" help:"Set login shell."`
+	DNS      DNSCmd      `cmd:"" name:"dns" help:"Configure DNS-over-TLS."`
+	List     ListCmd     `cmd:"" help:"List install steps."`
+	Check    CheckCmd    `cmd:"" help:"Run healthchecks."`
 }
 
 type Options struct{ Yes, Defaults, Optional, DryRun bool }
@@ -66,7 +64,6 @@ type LinkCmd StepCmd
 type SecretsCmd StepCmd
 type ReposCmd StepCmd
 type SystemCmd StepCmd
-type HibernateCmd StepCmd
 type FontsCmd StepCmd
 type GoCmd StepCmd
 type EwwCmd StepCmd
@@ -101,7 +98,6 @@ var stepDefs = []StepDef{
 	{Name: "secrets", Description: "Decrypt age-encrypted secrets", Risk: "writes secret targets", FixCommand: "dctl secrets decrypt --dry-run"},
 	{Name: "repos", Description: "Clone repositories and create directories", Risk: "network and filesystem changes", FixCommand: "dctl repos sync", Depends: []string{"secrets"}},
 	{Name: "system", Description: "Install system configs and enable services", Risk: "writes /etc, /boot, and service state", FixCommand: "dctl install system --dry-run", Sudo: true, SupportsDryRun: true, Depends: []string{"link"}},
-	{Name: "hibernate", Description: "Configure swapfile and suspend-then-hibernate", Risk: "modifies swap, fstab, boot loader, and initramfs", FixCommand: "dctl install hibernate --dry-run", Sudo: true, SupportsDryRun: true},
 	{Name: "fonts", Description: "Extract fonts and optionally build Iosevka", Risk: "writes user font cache", FixCommand: "dctl install fonts --dry-run", SupportsDryRun: true},
 	{Name: "go", Description: "Build Go binaries", Risk: "writes built binaries and user services", FixCommand: "dctl install go --dry-run", SupportsDryRun: true},
 	{Name: "eww", Description: "Install eww widget system", Risk: "clones/builds eww and overwrites ~/.local/bin/eww", FixCommand: "dctl install eww --dry-run", SupportsDryRun: true},
@@ -174,19 +170,18 @@ func (c *AllCmd) Run(ctx *app.Context) error {
 	}
 	return nil
 }
-func (c *PackagesCmd) Run(ctx *app.Context) error  { return run(ctx, "packages", StepCmd(*c)) }
-func (c *LinkCmd) Run(ctx *app.Context) error      { return run(ctx, "link", StepCmd(*c)) }
-func (c *SecretsCmd) Run(ctx *app.Context) error   { return run(ctx, "secrets", StepCmd(*c)) }
-func (c *ReposCmd) Run(ctx *app.Context) error     { return run(ctx, "repos", StepCmd(*c)) }
-func (c *SystemCmd) Run(ctx *app.Context) error    { return run(ctx, "system", StepCmd(*c)) }
-func (c *HibernateCmd) Run(ctx *app.Context) error { return run(ctx, "hibernate", StepCmd(*c)) }
-func (c *FontsCmd) Run(ctx *app.Context) error     { return run(ctx, "fonts", StepCmd(*c)) }
-func (c *GoCmd) Run(ctx *app.Context) error        { return run(ctx, "go", StepCmd(*c)) }
-func (c *EwwCmd) Run(ctx *app.Context) error       { return run(ctx, "eww", StepCmd(*c)) }
-func (c *FirefoxCmd) Run(ctx *app.Context) error   { return run(ctx, "firefox", StepCmd(*c)) }
-func (c *CertsCmd) Run(ctx *app.Context) error     { return run(ctx, "certs", StepCmd(*c)) }
-func (c *ShellCmd) Run(ctx *app.Context) error     { return run(ctx, "shell", StepCmd(*c)) }
-func (c *DNSCmd) Run(ctx *app.Context) error       { return run(ctx, "dns", StepCmd(*c)) }
+func (c *PackagesCmd) Run(ctx *app.Context) error { return run(ctx, "packages", StepCmd(*c)) }
+func (c *LinkCmd) Run(ctx *app.Context) error     { return run(ctx, "link", StepCmd(*c)) }
+func (c *SecretsCmd) Run(ctx *app.Context) error  { return run(ctx, "secrets", StepCmd(*c)) }
+func (c *ReposCmd) Run(ctx *app.Context) error    { return run(ctx, "repos", StepCmd(*c)) }
+func (c *SystemCmd) Run(ctx *app.Context) error   { return run(ctx, "system", StepCmd(*c)) }
+func (c *FontsCmd) Run(ctx *app.Context) error    { return run(ctx, "fonts", StepCmd(*c)) }
+func (c *GoCmd) Run(ctx *app.Context) error       { return run(ctx, "go", StepCmd(*c)) }
+func (c *EwwCmd) Run(ctx *app.Context) error      { return run(ctx, "eww", StepCmd(*c)) }
+func (c *FirefoxCmd) Run(ctx *app.Context) error  { return run(ctx, "firefox", StepCmd(*c)) }
+func (c *CertsCmd) Run(ctx *app.Context) error    { return run(ctx, "certs", StepCmd(*c)) }
+func (c *ShellCmd) Run(ctx *app.Context) error    { return run(ctx, "shell", StepCmd(*c)) }
+func (c *DNSCmd) Run(ctx *app.Context) error      { return run(ctx, "dns", StepCmd(*c)) }
 func run(ctx *app.Context, name string, cmd StepCmd) error {
 	return RunStep(ctx.Context, ctx.Root, ctx.Output, name, Options{Yes: ctx.Yes, Defaults: ctx.Defaults, Optional: cmd.Optional, DryRun: cmd.DryRun})
 }
@@ -235,8 +230,6 @@ func RunStep(ctx context.Context, root paths.Root, out *output.Printer, name str
 		return repos.Sync(ctx, root, out, runner)
 	case "system":
 		return installSystem(ctx, root, out, opts, runner)
-	case "hibernate":
-		return installHibernate(ctx, root, out, opts, runner)
 	case "go":
 		return installGo(ctx, root, out, opts, runner)
 	case "fonts":
@@ -579,7 +572,7 @@ func installGoServices(ctx context.Context, root paths.Root, out *output.Printer
 
 func installFonts(ctx context.Context, root paths.Root, out *output.Printer, opts Options, runner execx.Runner) error {
 	out.Header("Installing fonts")
-	archive := root.Etc("fonts.tar.gz")
+	archive := root.Share("fonts.tar.gz")
 	if _, err := os.Stat(archive); err != nil {
 		return fmt.Errorf("font archive not found: %s", archive)
 	}
@@ -709,7 +702,7 @@ func installPackages(ctx context.Context, root paths.Root, out *output.Printer, 
 	if !opts.Optional {
 		return nil
 	}
-	optional, err := readSimpleList(root.Etc("packages-optional.lst"))
+	optional, err := readSimpleList(root.Packages("extra.lst"))
 	if errors.Is(err, os.ErrNotExist) || len(optional) == 0 {
 		out.Warn("Optional package list not found or empty")
 		return nil
@@ -729,34 +722,30 @@ func installSecrets(ctx context.Context, root paths.Root, out *output.Printer) e
 	return cmd.Run(&app.Context{Context: ctx, Root: root, Output: out})
 }
 
-var systemFiles = map[string]string{
-	"bluetooth/main.conf":                                     "/etc/bluetooth/main.conf",
-	"udev/81-bluetooth-hci.rules":                             "/etc/udev/rules.d/81-bluetooth-hci.rules",
-	"udev/91-logid-restart.rules":                             "/etc/udev/rules.d/91-logid-restart.rules",
-	"udev/92-viia.rules":                                      "/etc/udev/rules.d/92-viia.rules",
-	"sddm.conf.d/autologin.conf":                              "/etc/sddm.conf.d/autologin.conf",
-	"pam.d/hyprlock":                                          "/etc/pam.d/hyprlock",
-	"systemd/resolved.conf":                                   "/etc/systemd/resolved.conf",
-	"systemd/zram-generator.conf":                             "/etc/systemd/zram-generator.conf",
-	"systemd/sleep.conf.d/hibernate.conf":                     "/etc/systemd/sleep.conf.d/hibernate.conf",
-	"systemd/hibernate-zram.conf":                             "/etc/systemd/system/systemd-hibernate.service.d/zram.conf",
-	"systemd/earlyoom.service.d/memory-pressure.conf":         "/etc/systemd/system/earlyoom.service.d/memory-pressure.conf",
-	"systemd/system.conf.d/cpu-lanes.conf":                    "/etc/systemd/system.conf.d/cpu-lanes.conf",
-	"sysctl.d/99-memory-pressure.conf":                        "/etc/sysctl.d/99-memory-pressure.conf",
-	"modules-load.d/i2c-dev.conf":                             "/etc/modules-load.d/i2c-dev.conf",
-	"systemd/bluetooth.service.d/cpu-lane.conf":               "/etc/systemd/system/bluetooth.service.d/cpu-lane.conf",
-	"systemd/rtkit-daemon.service.d/cpu-lane.conf":            "/etc/systemd/system/rtkit-daemon.service.d/cpu-lane.conf",
-	"security/faillock.conf":                                  "/etc/security/faillock.conf",
-	"loader.conf":                                             "/boot/loader/loader.conf",
-	"logid.cfg":                                               "/etc/logid.cfg",
-	"systemd/logid.service.d/restart.conf":                    "/etc/systemd/system/logid.service.d/restart.conf",
-	"systemd/logid-restart.service":                           "/etc/systemd/system/logid-restart.service",
-	"libinput/local-overrides.quirks":                         "/etc/libinput/local-overrides.quirks",
-	"nftables.conf":                                           "/etc/nftables.conf",
-	"firefox-developer-edition/autoconfig.js":                 "/usr/lib/firefox-developer-edition/defaults/pref/autoconfig.js",
-	"firefox-developer-edition/firefox.cfg":                   "/usr/lib/firefox-developer-edition/firefox.cfg",
-	"pacman.d/hooks/firefox-autoconfig.hook":                  "/etc/pacman.d/hooks/firefox-autoconfig.hook",
-	"systemd/hibernate-zram.conf#suspend-then-hibernate-zram": "/etc/systemd/system/systemd-suspend-then-hibernate.service.d/zram.conf",
+var systemFiles = []string{
+	"/etc/bluetooth/main.conf",
+	"/etc/libinput/local-overrides.quirks",
+	"/etc/logid.cfg",
+	"/etc/modules-load.d/i2c-dev.conf",
+	"/etc/nftables.conf",
+	"/etc/pacman.d/hooks/firefox-autoconfig.hook",
+	"/etc/pam.d/hyprlock",
+	"/etc/sddm.conf.d/autologin.conf",
+	"/etc/security/faillock.conf",
+	"/etc/sysctl.d/99-memory-pressure.conf",
+	"/etc/systemd/resolved.conf",
+	"/etc/systemd/system.conf.d/cpu-lanes.conf",
+	"/etc/systemd/system/bluetooth.service.d/cpu-lane.conf",
+	"/etc/systemd/system/earlyoom.service.d/memory-pressure.conf",
+	"/etc/systemd/system/logid-restart.service",
+	"/etc/systemd/system/logid.service.d/restart.conf",
+	"/etc/systemd/system/rtkit-daemon.service.d/cpu-lane.conf",
+	"/etc/systemd/zram-generator.conf",
+	"/etc/udev/rules.d/81-bluetooth-hci.rules",
+	"/etc/udev/rules.d/91-logid-restart.rules",
+	"/etc/udev/rules.d/92-viia.rules",
+	"/usr/lib/firefox-developer-edition/defaults/pref/autoconfig.js",
+	"/usr/lib/firefox-developer-edition/firefox.cfg",
 }
 
 func installSystem(ctx context.Context, root paths.Root, out *output.Printer, opts Options, runner execx.Runner) error {
@@ -765,15 +754,8 @@ func installSystem(ctx context.Context, root paths.Root, out *output.Printer, op
 		return err
 	}
 	installed, skipped := 0, 0
-	keys := make([]string, 0, len(systemFiles))
-	for k := range systemFiles {
-		keys = append(keys, k)
-	}
-	slices.Sort(keys)
-	for _, key := range keys {
-		srcRel, _, _ := strings.Cut(key, "#")
-		src := root.Etc(srcRel)
-		dst := systemFiles[key]
+	for _, dst := range systemFiles {
+		src := root.System(dst)
 		if _, err := os.Stat(src); err != nil {
 			out.Warn("Source missing: %s", src)
 			continue
@@ -782,7 +764,7 @@ func installSystem(ctx context.Context, root paths.Root, out *output.Printer, op
 			skipped++
 			continue
 		}
-		out.SubStep("info", "%s -> %s", srcRel, dst)
+		out.SubStep("info", "%s -> %s", src, dst)
 		if !opts.DryRun {
 			if _, err := runner.Run(ctx, "", "sudo", "mkdir", "-p", filepath.Dir(dst)); err != nil {
 				return err
@@ -842,57 +824,6 @@ func installSystem(ctx context.Context, root paths.Root, out *output.Printer, op
 	return nil
 }
 
-func installHibernate(ctx context.Context, root paths.Root, out *output.Printer, opts Options, runner execx.Runner) error {
-	out.Header("Configuring hibernation")
-	if err := confirmRisk("modify swap, fstab, boot loader, and initramfs", opts); err != nil {
-		return err
-	}
-	fsType, _ := runner.Output(ctx, "", "findmnt", "-no", "FSTYPE", "/")
-	if strings.TrimSpace(fsType) != "btrfs" {
-		return fmt.Errorf("root filesystem is %s, not btrfs", strings.TrimSpace(fsType))
-	}
-	if opts.DryRun {
-		out.Info("[dry-run] Would create /swap btrfs subvolume, swapfile, fstab entries, resume boot params, and rebuild initramfs")
-		return nil
-	}
-	rootUUID, err := runner.Output(ctx, "", "findmnt", "-no", "UUID", "/")
-	if err != nil {
-		return err
-	}
-	rootDev, err := runner.Output(ctx, "", "findmnt", "-no", "SOURCE", "/")
-	if err != nil {
-		return err
-	}
-	rootDev, _, _ = strings.Cut(strings.TrimSpace(rootDev), "[")
-	if err := ensureSwapSubvolume(ctx, runner, strings.TrimSpace(rootDev), strings.TrimSpace(rootUUID)); err != nil {
-		return err
-	}
-	if err := ensureSwapfile(ctx, runner); err != nil {
-		return err
-	}
-	resumeOffset, err := runner.Output(ctx, "", "sudo", "filefrag", "-v", "/swap/swapfile")
-	if err != nil {
-		return err
-	}
-	offset := parseFilefragOffset(resumeOffset)
-	if offset == "" {
-		return errors.New("could not determine resume_offset from filefrag")
-	}
-	if err := patchRootFile(ctx, runner, "/boot/loader/entries/arch.conf", func(s string) (string, error) {
-		return updateLoaderResume(s, strings.TrimSpace(rootUUID), offset)
-	}); err != nil {
-		return err
-	}
-	if err := patchRootFile(ctx, runner, "/etc/mkinitcpio.conf", func(s string) (string, error) {
-		out, _ := ensureResumeHook(s)
-		return out, nil
-	}); err != nil {
-		return err
-	}
-	_, err = runner.Run(ctx, "", "sudo", "mkinitcpio", "-P")
-	return err
-}
-
 func installEww(ctx context.Context, root paths.Root, out *output.Printer, opts Options, runner execx.Runner) error {
 	out.Header("Installing eww")
 	cache := filepath.Join(root.Home, ".cache", "eww")
@@ -921,7 +852,7 @@ func installEww(ctx context.Context, root paths.Root, out *output.Printer, opts 
 			return err
 		}
 	}
-	if _, err := runner.Run(ctx, cache, "git", "apply", root.Etc("eww-poll-interval.patch")); err != nil {
+	if _, err := runner.Run(ctx, cache, "git", "apply", root.Packages("eww", "poll-interval.patch")); err != nil {
 		return err
 	}
 	if _, err := runner.Run(ctx, cache, "cargo", "build", "--release", "--locked"); err != nil {
@@ -969,7 +900,7 @@ func installDNS(ctx context.Context, root paths.Root, out *output.Printer, opts 
 	if _, err := runner.Run(ctx, "", "sudo", "mkdir", "-p", "/etc/NetworkManager/conf.d"); err != nil {
 		return err
 	}
-	if _, err := runner.Run(ctx, "", "sudo", "cp", root.Etc("systemd", "resolved.conf"), "/etc/systemd/resolved.conf"); err != nil {
+	if _, err := runner.Run(ctx, "", "sudo", "cp", root.System("etc", "systemd", "resolved.conf"), "/etc/systemd/resolved.conf"); err != nil {
 		return err
 	}
 	if err := writeRootFile(ctx, runner, "/etc/NetworkManager/conf.d/10-dotfiles-dns.conf", networkManagerDNSDropin()); err != nil {
@@ -1009,109 +940,6 @@ func sameSystemFileBytes(ctx context.Context, runner execx.Runner, a, b string) 
 	}
 	_, err := runner.Run(ctx, "", "sudo", "cmp", "-s", a, b)
 	return err == nil
-}
-
-func ensureSwapSubvolume(ctx context.Context, runner execx.Runner, rootDev, rootUUID string) error {
-	tmp, err := os.MkdirTemp("", "dctl-btrfs-*")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(tmp)
-	if _, err := runner.Run(ctx, "", "sudo", "mount", "-o", "subvolid=5", rootDev, tmp); err != nil {
-		return err
-	}
-	defer runner.Run(ctx, "", "sudo", "umount", tmp)
-	if _, err := os.Stat(filepath.Join(tmp, "@swap")); errors.Is(err, os.ErrNotExist) {
-		if _, err := runner.Run(ctx, "", "sudo", "btrfs", "subvolume", "create", filepath.Join(tmp, "@swap")); err != nil {
-			return err
-		}
-	}
-	if err := patchRootFile(ctx, runner, "/etc/fstab", func(s string) (string, error) {
-		return upsertSwapSubvolFstab(s, rootUUID, "/swap"), nil
-	}); err != nil {
-		return err
-	}
-	if _, err := runner.Run(ctx, "", "sudo", "mkdir", "-p", "/swap"); err != nil {
-		return err
-	}
-	if _, err := runner.Run(ctx, "", "sudo", "systemctl", "daemon-reload"); err != nil {
-		return err
-	}
-	_, err = runner.Run(ctx, "", "sudo", "mount", "/swap")
-	return err
-}
-
-func ensureSwapfile(ctx context.Context, runner execx.Runner) error {
-	if _, err := runner.Run(ctx, "", "sudo", "chattr", "+C", "/swap"); err != nil {
-		return err
-	}
-	if _, err := os.Stat("/swap/swapfile"); errors.Is(err, os.ErrNotExist) {
-		size := swapSize()
-		if _, err := runner.Run(ctx, "", "sudo", "btrfs", "filesystem", "mkswapfile", "--size", size, "/swap/swapfile"); err != nil {
-			if _, err := runner.Run(ctx, "", "sudo", "truncate", "-s", "0", "/swap/swapfile"); err != nil {
-				return err
-			}
-			if _, err := runner.Run(ctx, "", "sudo", "chattr", "+C", "/swap/swapfile"); err != nil {
-				return err
-			}
-			if _, err := runner.Run(ctx, "", "sudo", "dd", "if=/dev/zero", "of=/swap/swapfile", "bs=1G", "count="+strings.TrimSuffix(size, "G"), "status=progress"); err != nil {
-				return err
-			}
-			if _, err := runner.Run(ctx, "", "sudo", "chmod", "600", "/swap/swapfile"); err != nil {
-				return err
-			}
-			if _, err := runner.Run(ctx, "", "sudo", "mkswap", "/swap/swapfile"); err != nil {
-				return err
-			}
-		}
-	}
-	if err := patchRootFile(ctx, runner, "/etc/fstab", func(s string) (string, error) {
-		return upsertSwapFileFstab(s, "/swap/swapfile"), nil
-	}); err != nil {
-		return err
-	}
-	_, _ = runner.Run(ctx, "", "sudo", "swapon", "/swap/swapfile")
-	return nil
-}
-
-func swapSize() string {
-	b, err := os.ReadFile("/proc/meminfo")
-	if err != nil {
-		return "32G"
-	}
-	for line := range strings.SplitSeq(string(b), "\n") {
-		fields := strings.Fields(line)
-		if len(fields) >= 2 && fields[0] == "MemTotal:" {
-			var kb int
-			if _, err := fmt.Sscanf(fields[1], "%d", &kb); err == nil && kb > 0 {
-				gb := kb/1048576 + 1
-				return fmt.Sprintf("%dG", gb)
-			}
-		}
-	}
-	return "32G"
-}
-
-func parseFilefragOffset(out string) string {
-	for line := range strings.SplitSeq(out, "\n") {
-		fields := strings.Fields(line)
-		if len(fields) >= 4 && strings.HasSuffix(fields[0], ":") && fields[3] != "0" {
-			return strings.TrimSuffix(fields[3], "..")
-		}
-	}
-	return ""
-}
-
-func patchRootFile(ctx context.Context, runner execx.Runner, path string, fn func(string) (string, error)) error {
-	b, err := runner.Output(ctx, "", "sudo", "cat", path)
-	if err != nil {
-		return err
-	}
-	next, err := fn(b)
-	if err != nil || next == b {
-		return err
-	}
-	return writeRootFile(ctx, runner, path, next)
 }
 
 func writeRootFile(ctx context.Context, runner execx.Runner, path string, content string) error {
@@ -1156,78 +984,4 @@ func copyFile(src, dst string, mode fs.FileMode) error {
 	return err
 }
 
-func upsertSwapSubvolFstab(content, uuid, mount string) string {
-	if strings.Contains(content, "subvol=/@swap") {
-		return content
-	}
-	return appendLine(content, fmt.Sprintf("UUID=%s %s btrfs subvol=/@swap,noatime 0 0", uuid, mount))
-}
-func upsertSwapFileFstab(content, swapfile string) string {
-	for line := range strings.SplitSeq(content, "\n") {
-		f := strings.Fields(line)
-		if len(f) >= 3 && !strings.HasPrefix(strings.TrimSpace(line), "#") && f[0] == swapfile && f[2] == "swap" {
-			return content
-		}
-	}
-	return appendLine(content, fmt.Sprintf("%s none swap defaults,pri=10 0 0", swapfile))
-}
-func appendLine(content, line string) string {
-	if content == "" {
-		return line + "\n"
-	}
-	if strings.HasSuffix(content, "\n") {
-		return content + line + "\n"
-	}
-	return content + "\n" + line + "\n"
-}
-func updateLoaderResume(content, uuid, offset string) (string, error) {
-	if uuid == "" || offset == "" {
-		return "", errors.New("resume UUID and offset are required")
-	}
-	lines := strings.Split(content, "\n")
-	found := false
-	for n, line := range lines {
-		if !strings.HasPrefix(line, "options") {
-			continue
-		}
-		found = true
-		fields := strings.Fields(line)
-		kept := fields[:1]
-		for _, f := range fields[1:] {
-			if strings.HasPrefix(f, "resume=UUID=") || strings.HasPrefix(f, "resume_offset=") {
-				continue
-			}
-			kept = append(kept, f)
-		}
-		lines[n] = strings.Join(append(kept, "resume=UUID="+uuid, "resume_offset="+offset), " ")
-	}
-	if !found {
-		return "", errors.New("loader entry has no options line")
-	}
-	return strings.Join(lines, "\n"), nil
-}
-func ensureResumeHook(content string) (string, bool) {
-	re := regexp.MustCompile(`HOOKS=\(([^)]*)\)`)
-	loc := re.FindStringSubmatchIndex(content)
-	if loc == nil {
-		return content, false
-	}
-	fields := strings.Fields(content[loc[2]:loc[3]])
-	if slices.Contains(fields, "resume") {
-		return content, false
-	}
-	out := make([]string, 0, len(fields)+1)
-	inserted := false
-	for _, f := range fields {
-		out = append(out, f)
-		if f == "filesystems" {
-			out = append(out, "resume")
-			inserted = true
-		}
-	}
-	if !inserted {
-		out = append(out, "resume")
-	}
-	return content[:loc[2]] + strings.Join(out, " ") + content[loc[3]:], true
-}
 func networkManagerDNSDropin() string { return "[main]\ndns=systemd-resolved\n" }

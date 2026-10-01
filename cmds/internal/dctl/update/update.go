@@ -85,7 +85,7 @@ func Run(ctx context.Context, root paths.Root, out *output.Printer, runner execx
 	if err := requireYay(ctx, runner); err != nil {
 		return err
 	}
-	optional, err := readPackageList(root.Etc("packages-optional.lst"))
+	optional, err := readPackageList(root.Packages("extra.lst"))
 	if err != nil {
 		return err
 	}
@@ -107,7 +107,7 @@ func Run(ctx context.Context, root paths.Root, out *output.Printer, runner execx
 	}
 	orphans, kept := filterOptional(orphanPackageNames(orphans), optional)
 	for _, pkg := range kept {
-		out.Warn("Keeping orphan %s (in packages-optional.lst)", pkg)
+		out.Warn("Keeping orphan %s (in packages/extra.lst)", pkg)
 	}
 	if opts.DryRun {
 		if len(orphans) == 0 {
@@ -144,7 +144,7 @@ func Install(ctx context.Context, root paths.Root, out *output.Printer, runner e
 		}
 	}
 
-	repoList := root.Etc("packages.lst")
+	repoList := root.Packages("base.lst")
 	if _, err := os.Stat(repoList); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			return fmt.Errorf("package list not found: %s", repoList)
@@ -155,7 +155,7 @@ func Install(ctx context.Context, root paths.Root, out *output.Printer, runner e
 	if err != nil {
 		return err
 	}
-	aurPkgs, err := readPackageList(root.Etc("packages-aur.lst"))
+	aurPkgs, err := readPackageList(root.Packages("aur.lst"))
 	if err != nil {
 		return err
 	}
@@ -224,8 +224,8 @@ func Check(ctx context.Context, root paths.Root, out *output.Printer, runner exe
 }
 
 func saveLists(ctx context.Context, root paths.Root, out *output.Printer, runner execx.Runner, optional []string) error {
-	oldRepo, _ := readPackageList(root.Etc("packages.lst"))
-	oldAUR, _ := readPackageList(root.Etc("packages-aur.lst"))
+	oldRepo, _ := readPackageList(root.Packages("base.lst"))
+	oldAUR, _ := readPackageList(root.Packages("aur.lst"))
 	repo, err := commandLines(ctx, runner, "yay", "-Qenq")
 	if err != nil {
 		return err
@@ -236,14 +236,14 @@ func saveLists(ctx context.Context, root paths.Root, out *output.Printer, runner
 	}
 	repo, _ = filterOptional(cleanPackageNames(repo), optional)
 	aur, _ = filterOptional(cleanPackageNames(aur), optional)
-	if err := writePackageList(root.Etc("packages.lst"), repo); err != nil {
+	if err := writePackageList(root.Packages("base.lst"), repo); err != nil {
 		return err
 	}
-	if err := writePackageList(root.Etc("packages-aur.lst"), aur); err != nil {
+	if err := writePackageList(root.Packages("aur.lst"), aur); err != nil {
 		return err
 	}
-	out.OK("Saved %d repo packages -> etc/packages.lst", len(repo))
-	out.OK("Saved %d AUR packages  -> etc/packages-aur.lst", len(aur))
+	out.OK("Saved %d repo packages -> packages/base.lst", len(repo))
+	out.OK("Saved %d AUR packages  -> packages/aur.lst", len(aur))
 	printDiff(out, "repo", oldRepo, repo)
 	printDiff(out, "AUR", oldAUR, aur)
 	return nil
@@ -261,8 +261,8 @@ func drySaveLists(ctx context.Context, root paths.Root, out *output.Printer, run
 	repo, _ = filterOptional(cleanPackageNames(repo), optional)
 	aur, _ = filterOptional(cleanPackageNames(aur), optional)
 	out.Info("[dry-run] Would save package lists:")
-	out.Dim("Repo (explicit): %d packages -> etc/packages.lst", len(repo))
-	out.Dim("AUR  (explicit): %d packages -> etc/packages-aur.lst", len(aur))
+	out.Dim("Repo (explicit): %d packages -> packages/base.lst", len(repo))
+	out.Dim("AUR  (explicit): %d packages -> packages/aur.lst", len(aur))
 	_ = root
 	return nil
 }

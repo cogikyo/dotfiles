@@ -1,4 +1,4 @@
-// Package repos manages repositories declared in etc/repos.toml.
+// Package repos manages repositories declared in repos.json.
 //
 // Responsibilities:
 // - Clone missing repositories into configured paths.
@@ -9,8 +9,8 @@ package repos
 // repos.go defines repo manifest loading, sync, update, and checkout safety helpers.
 
 import (
-	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -31,18 +31,18 @@ type SyncCmd struct{}
 type UpdateCmd struct{}
 
 type Repo struct {
-	Name string
-	Repo string
-	Path string
+	Name string `json:"name"`
+	Repo string `json:"repo"`
+	Path string `json:"path"`
 }
 
 func ManifestPath(root paths.Root) string {
-	return root.Etc("repos.toml")
+	return filepath.Join(root.Dotfiles, "repos.json")
 }
 
-// LoadManifest reads etc/repos.toml and returns repos sorted by name.
+// LoadManifest reads repos.json and returns repos sorted by name.
 //
-// Each entry must define repo and path.
+// Each entry must define name, repo, and path.
 func LoadManifest(path string) ([]Repo, error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -51,48 +51,11 @@ func LoadManifest(path string) ([]Repo, error) {
 	defer f.Close()
 
 	var repos []Repo
-	cur := Repo{}
-	flush := func() {
-		if cur.Name != "" || cur.Repo != "" || cur.Path != "" {
-			repos = append(repos, cur)
-		}
-		cur = Repo{}
+	dec := json.NewDecoder(f)
+	dec.DisallowUnknownFields()
+	if err := dec.Decode(&repos); err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
 	}
-
-	s := bufio.NewScanner(f)
-	for lineNo := 1; s.Scan(); lineNo++ {
-		line := strings.TrimSpace(stripComment(s.Text()))
-		if line == "" {
-			continue
-		}
-		if strings.HasPrefix(line, "[") && strings.HasSuffix(line, "]") {
-			flush()
-			name := strings.TrimSpace(strings.TrimSuffix(strings.TrimPrefix(line, "["), "]"))
-			if name == "" {
-				return nil, fmt.Errorf("%s:%d: empty repo section", path, lineNo)
-			}
-			cur.Name = name
-			continue
-		}
-		key, val, ok := strings.Cut(line, "=")
-		if !ok {
-			return nil, fmt.Errorf("%s:%d: expected key = value", path, lineNo)
-		}
-		key = strings.TrimSpace(key)
-		val = strings.Trim(strings.TrimSpace(val), `"`)
-		switch key {
-		case "repo":
-			cur.Repo = val
-		case "path":
-			cur.Path = val
-		default:
-			return nil, fmt.Errorf("%s:%d: unknown key %q", path, lineNo, key)
-		}
-	}
-	if err := s.Err(); err != nil {
-		return nil, err
-	}
-	flush()
 
 	slices.SortFunc(repos, func(a, b Repo) int { return strings.Compare(a.Name, b.Name) })
 	for _, repo := range repos {
@@ -101,21 +64,6 @@ func LoadManifest(path string) ([]Repo, error) {
 		}
 	}
 	return repos, nil
-}
-
-func stripComment(s string) string {
-	inQuote := false
-	for i, r := range s {
-		switch r {
-		case '"':
-			inQuote = !inQuote
-		case '#':
-			if !inQuote {
-				return s[:i]
-			}
-		}
-	}
-	return s
 }
 
 func Sync(ctx context.Context, root paths.Root, out *output.Printer, runner execx.Runner) error {

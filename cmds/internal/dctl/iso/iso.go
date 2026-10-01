@@ -449,8 +449,8 @@ func newPaths(root paths.Root) isoPaths {
 		profile:     profile,
 		work:        filepath.Join(profile, "work"),
 		out:         filepath.Join(profile, "out"),
-		packages:    filepath.Join(root.Dotfiles, "etc", "packages.lst"),
-		aurPackages: filepath.Join(root.Dotfiles, "etc", "packages-aur.lst"),
+		packages:    root.Packages("base.lst"),
+		aurPackages: root.Packages("aur.lst"),
 		localRepo:   filepath.Join(profile, "airootfs", "var", "cache", "localrepo"),
 	}
 }
@@ -511,7 +511,7 @@ func shouldExcludeProfileRel(rel string) bool {
 		"iso/airootfs/var":           true,
 		"iso/airootfs/root/dotfiles": true,
 		"cmds/cmd/newtab/dna.webm":   true,
-		"etc/fonts.tar.gz":           true,
+		"share/fonts.tar.gz":         true,
 	}
 	if exact[rel] {
 		return true

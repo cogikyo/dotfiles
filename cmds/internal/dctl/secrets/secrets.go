@@ -1,4 +1,4 @@
-// Package secrets manages age-encrypted files declared by etc/secrets/manifest.
+// Package secrets manages age-encrypted files declared by secrets/manifest.
 //
 // Responsibilities:
 // - Create and unlock the local age identity.
@@ -286,7 +286,7 @@ type pathSet struct {
 }
 
 func newPaths(ctx *app.Context) pathSet {
-	dir := ctx.Root.Etc("secrets")
+	dir := ctx.Root.Secrets()
 	return pathSet{
 		dir:       dir,
 		manifest:  filepath.Join(dir, manifestName),

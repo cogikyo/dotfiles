@@ -1,0 +1,7 @@
+enable bluetooth.service
+enable earlyoom.service
+enable logid.service
+enable nftables.service
+enable sddm.service
+enable systemd-resolved.service
+enable tailscaled.service

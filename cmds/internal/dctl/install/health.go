@@ -31,8 +31,6 @@ func healthFor(ctx context.Context, root paths.Root, step string) []health.Check
 		return reposHealth(ctx, root, runner)
 	case "system":
 		return systemHealth(ctx, root, runner)
-	case "hibernate":
-		return hibernateHealth(ctx, runner)
 	case "go":
 		return goHealth(ctx, root, runner)
 	case "fonts":
@@ -55,11 +53,11 @@ func healthFor(ctx context.Context, root paths.Root, step string) []health.Check
 func packageHealth(ctx context.Context, root paths.Root, runner execx.Runner) []health.Check {
 	checks := []health.Check{commandCheck("packages:yay", "yay helper", "yay", health.Fail, "run dctl install packages")}
 
-	for _, rel := range []string{"packages.lst", "packages-aur.lst"} {
-		items, err := readSimpleList(root.Etc(rel))
+	for _, rel := range []string{"base.lst", "aur.lst"} {
+		items, err := readSimpleList(root.Packages(rel))
 		name := strings.TrimSuffix(rel, ".lst") + " list"
 		if err != nil {
-			checks = append(checks, fail("packages:"+rel, name, err.Error(), "restore "+root.Etc(rel)))
+			checks = append(checks, fail("packages:"+rel, name, err.Error(), "restore "+root.Packages(rel)))
 			continue
 		}
 		checks = append(checks, ok("packages:"+rel, name, fmt.Sprintf("%d packages declared", len(items))))
@@ -70,7 +68,7 @@ func packageHealth(ctx context.Context, root paths.Root, runner execx.Runner) []
 		checks = append(checks, health.Check{ID: "packages:pacman-query", Name: "pacman package query", Status: health.Skip, Observed: err.Error()})
 		return checks
 	}
-	missing := missingDeclared(root.Etc("packages.lst"), installed)
+	missing := missingDeclared(root.Packages("base.lst"), installed)
 	checks = append(checks, packageListCheck("packages:pacman-installed", "repo packages installed", missing, "run dctl install packages"))
 
 	aur, err := installedPackages(ctx, runner, true)
@@ -78,7 +76,7 @@ func packageHealth(ctx context.Context, root paths.Root, runner execx.Runner) []
 		checks = append(checks, health.Check{ID: "packages:aur-query", Name: "AUR package query", Status: health.Skip, Observed: err.Error()})
 		return checks
 	}
-	missing = missingDeclared(root.Etc("packages-aur.lst"), aur)
+	missing = missingDeclared(root.Packages("aur.lst"), aur)
 	checks = append(checks, packageListCheck("packages:aur-installed", "AUR packages installed", missing, "run dctl install packages"))
 	return checks
 }
@@ -111,7 +109,7 @@ func linkHealth(root paths.Root) []health.Check {
 }
 
 func secretsHealth(root paths.Root) []health.Check {
-	manifest := root.Etc("secrets", "manifest")
+	manifest := root.Secrets("manifest")
 	entries, err := readSecretManifest(manifest, root.Home)
 	if errors.Is(err, os.ErrNotExist) {
 		return []health.Check{{ID: "secrets:manifest", Name: "secrets manifest", Status: health.Skip, Observed: "no secrets manifest"}}
@@ -121,7 +119,7 @@ func secretsHealth(root paths.Root) []health.Check {
 	}
 	checks := []health.Check{ok("secrets:manifest", "secrets manifest", fmt.Sprintf("%d entries", len(entries)))}
 	for _, p := range []string{"identity.age", "recipient.txt"} {
-		path := root.Etc("secrets", p)
+		path := root.Secrets(p)
 		if _, err := os.Stat(path); err != nil {
 			checks = append(checks, warn("secrets:"+p, p, err.Error(), "run dctl secrets init or restore "+path))
 		} else {
@@ -129,7 +127,7 @@ func secretsHealth(root paths.Root) []health.Check {
 		}
 	}
 	for _, e := range entries {
-		ciphertext := root.Etc("secrets", e.name+".age")
+		ciphertext := root.Secrets(e.name + ".age")
 		if _, err := os.Stat(ciphertext); err != nil {
 			checks = append(checks, fail("secrets:"+e.name, e.name, "ciphertext missing: "+ciphertext, "run dctl secrets sync"))
 			continue
@@ -183,16 +181,10 @@ func reposHealth(ctx context.Context, root paths.Root, runner execx.Runner) []he
 }
 
 func systemHealth(ctx context.Context, root paths.Root, runner execx.Runner) []health.Check {
-	keys := make([]string, 0, len(systemFiles))
-	for key := range systemFiles {
-		keys = append(keys, key)
-	}
-	slices.Sort(keys)
-	checks := make([]health.Check, 0, len(keys))
-	for _, key := range keys {
-		srcRel, _, _ := strings.Cut(key, "#")
-		src := root.Etc(srcRel)
-		dst := systemFiles[key]
+	checks := make([]health.Check, 0, len(systemFiles)+2)
+	for _, dst := range systemFiles {
+		src := root.System(dst)
+		srcRel := filepath.Join("system", dst)
 		id := "system:" + dst
 		if _, err := os.Stat(src); err != nil {
 			checks = append(checks, fail(id, srcRel, "source missing: "+src, "restore "+src))
@@ -210,31 +202,6 @@ func systemHealth(ctx context.Context, root paths.Root, runner execx.Runner) []h
 	}
 	checks = append(checks, serviceActiveCheck(ctx, runner, "system:earlyoom-active", "earlyoom service", "earlyoom", health.Warn, "run dctl install system"))
 	checks = append(checks, sysctlCheck(ctx, runner, "system:swappiness", "vm.swappiness", "100"))
-	return checks
-}
-
-func hibernateHealth(ctx context.Context, runner execx.Runner) []health.Check {
-	checks := []health.Check{}
-	fsType, err := runner.Output(ctx, "", "findmnt", "-no", "FSTYPE", "/")
-	if err != nil {
-		checks = append(checks, warn("hibernate:root-fs", "root filesystem", err.Error(), "install findmnt from util-linux"))
-	} else if strings.TrimSpace(fsType) != "btrfs" {
-		checks = append(checks, health.Check{ID: "hibernate:root-fs", Name: "root filesystem", Status: health.Skip, Expected: "btrfs", Observed: strings.TrimSpace(fsType)})
-		return checks
-	} else {
-		checks = append(checks, ok("hibernate:root-fs", "root filesystem", "btrfs"))
-	}
-	if st, err := os.Stat("/swap/swapfile"); err != nil {
-		checks = append(checks, fail("hibernate:swapfile", "swapfile", "/swap/swapfile missing", "run dctl install hibernate"))
-	} else if st.Mode().Perm()&0o077 != 0 {
-		checks = append(checks, warn("hibernate:swapfile", "swapfile permissions", st.Mode().Perm().String(), "chmod 600 /swap/swapfile"))
-	} else {
-		checks = append(checks, ok("hibernate:swapfile", "swapfile", "/swap/swapfile"))
-	}
-	checks = append(checks, fileContainsCheck("hibernate:fstab", "fstab swap entry", "/etc/fstab", "/swap/swapfile", health.Fail, "run dctl install hibernate"))
-	checks = append(checks, fileContainsCheck("hibernate:loader", "boot resume params", "/boot/loader/entries/arch.conf", "resume=", health.Warn, "run dctl install hibernate"))
-	checks = append(checks, fileContainsCheck("hibernate:mkinitcpio", "mkinitcpio resume hook", "/etc/mkinitcpio.conf", "resume", health.Warn, "run dctl install hibernate"))
-	checks = append(checks, swapActiveCheck())
 	return checks
 }
 
@@ -257,7 +224,7 @@ func goHealth(ctx context.Context, root paths.Root, runner execx.Runner) []healt
 
 func fontsHealth(root paths.Root) []health.Check {
 	fontDir := filepath.Join(root.Home, ".local", "share", "fonts")
-	archive := root.Etc("fonts.tar.gz")
+	archive := root.Share("fonts.tar.gz")
 	checks := []health.Check{}
 	if _, err := os.Stat(archive); err != nil {
 		checks = append(checks, warn("fonts:archive", "font archive", err.Error(), "restore "+archive))
@@ -280,7 +247,7 @@ func ewwHealth(ctx context.Context, root paths.Root, runner execx.Runner) []heal
 	} else {
 		checks = append(checks, ok("eww:binary", "eww binary", path))
 	}
-	patch := root.Etc("eww-poll-interval.patch")
+	patch := root.Packages("eww", "poll-interval.patch")
 	if _, err := os.Stat(patch); err != nil {
 		checks = append(checks, fail("eww:patch", "eww patch", err.Error(), "restore "+patch))
 	} else {
@@ -377,7 +344,7 @@ func dnsHealth(ctx context.Context, root paths.Root, runner execx.Runner) []heal
 	} else {
 		checks = append(checks, ok("dns:resolv-conf", "resolv.conf stub", target))
 	}
-	checks = append(checks, systemFileMatchCheck("dns:resolved-conf", "systemd-resolved config", root.Etc("systemd", "resolved.conf"), "/etc/systemd/resolved.conf", health.Fail, "run dctl install dns"))
+	checks = append(checks, systemFileMatchCheck("dns:resolved-conf", "systemd-resolved config", root.System("etc", "systemd", "resolved.conf"), "/etc/systemd/resolved.conf", health.Fail, "run dctl install dns"))
 	checks = append(checks, fileContainsCheck("dns:nm-dropin", "NetworkManager DNS drop-in", "/etc/NetworkManager/conf.d/10-dotfiles-dns.conf", "dns=systemd-resolved", health.Warn, "run dctl install dns"))
 	checks = append(checks, serviceActiveCheck(ctx, runner, "dns:resolved-service", "systemd-resolved service", "systemd-resolved", health.Warn, "systemctl start systemd-resolved"))
 	return checks
@@ -508,17 +475,6 @@ func userServiceCheck(ctx context.Context, root paths.Root, runner execx.Runner,
 		return warn("go:"+name+":service", name+" user service", strings.TrimSpace(out), "systemctl --user enable --now "+name)
 	}
 	return ok("go:"+name+":service", name+" user service", strings.TrimSpace(out))
-}
-
-func swapActiveCheck() health.Check {
-	b, err := os.ReadFile("/proc/swaps")
-	if err != nil {
-		return warn("hibernate:active-swap", "active swap", err.Error(), "inspect /proc/swaps")
-	}
-	if !strings.Contains(string(b), "/swap/swapfile") {
-		return warn("hibernate:active-swap", "active swap", "/swap/swapfile not active", "swapon /swap/swapfile")
-	}
-	return ok("hibernate:active-swap", "active swap", "/swap/swapfile")
 }
 
 func goBinaryPath(root paths.Root, b goBinary) string {

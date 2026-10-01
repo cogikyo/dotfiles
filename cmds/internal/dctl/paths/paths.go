@@ -42,8 +42,23 @@ func DiscoverRoot() (Root, error) {
 	return Root{Dotfiles: dotfiles, Home: home, State: filepath.Join(state, "dotfiles")}, nil
 }
 
-func (r Root) Etc(parts ...string) string {
-	items := append([]string{r.Dotfiles, "etc"}, parts...)
+func (r Root) Packages(parts ...string) string {
+	items := append([]string{r.Dotfiles, "packages"}, parts...)
+	return filepath.Join(items...)
+}
+
+func (r Root) Secrets(parts ...string) string {
+	items := append([]string{r.Dotfiles, "secrets"}, parts...)
+	return filepath.Join(items...)
+}
+
+func (r Root) Share(parts ...string) string {
+	items := append([]string{r.Dotfiles, "share"}, parts...)
+	return filepath.Join(items...)
+}
+
+func (r Root) System(parts ...string) string {
+	items := append([]string{r.Dotfiles, "system"}, parts...)
 	return filepath.Join(items...)
 }
 
