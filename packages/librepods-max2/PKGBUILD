@@ -1,6 +1,6 @@
 pkgname=librepods-max2
 pkgver=0.1.0.pr655.99b0e58
-pkgrel=11
+pkgrel=12
 pkgdesc='Experimental LibrePods tray app with AirPods Max 2 hi-res microphone support'
 arch=('x86_64')
 url='https://github.com/librepods-org/librepods/pull/655'
@@ -25,16 +25,19 @@ prepare() {
     patch -Np1 -i "$srcdir/a2dp-profile-order.patch"
     patch -Np1 -i "$srcdir/metadata-service.patch"
     patch -Np1 -i "$srcdir/stable-a2dp.patch"
+    cd linux-rust
+    cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
 }
 
 build() {
     cd "librepods-${_commit}/linux-rust"
-    cargo build --release --locked
+    export CARGO_TARGET_DIR=target
+    cargo build --frozen --release
 }
 
 package() {
     cd "librepods-${_commit}"
-    install -Dm755 "${CARGO_TARGET_DIR:-linux-rust/target}/release/librepods" "$pkgdir/usr/bin/librepods"
+    install -Dm755 linux-rust/target/release/librepods "$pkgdir/usr/bin/librepods"
     install -Dm644 linux-rust/assets/me.kavishdevar.librepods.desktop \
         "$pkgdir/usr/share/applications/me.kavishdevar.librepods.desktop"
     install -Dm644 linux-rust/assets/icon.png \

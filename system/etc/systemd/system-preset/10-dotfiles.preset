@@ -1,7 +1,16 @@
+enable NetworkManager.service
 enable bluetooth.service
 enable earlyoom.service
+enable fstrim.timer
+enable fwupd-refresh.timer
+enable limine-snapper-sync.service
 enable logid.service
 enable nftables.service
+enable pcscd.socket
 enable sddm.service
+enable snapper-cleanup.timer
+enable snapper-timeline.timer
 enable systemd-resolved.service
+enable systemd-timesyncd.service
 enable tailscaled.service
+enable tuned.service

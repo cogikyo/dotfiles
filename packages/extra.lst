@@ -1,5 +1,50 @@
-# Optional packages — not cached in the ISO, install post-boot with:
-#   ./install.sh packages --optional
+# official
+archiso
+base-devel
+bun
+chromium
+clang
+devtools
+discord
+docker
+docker-compose
+fuse-overlayfs
+github-cli
+go
+imagemagick
+inkscape
+lazydocker
+libreoffice-still
+linux-headers
+mediainfo
+noto-fonts-cjk
+noto-fonts-extra
+npm
+obs-studio
+postgresql
+qbittorrent
+qemu-img
+qemu-system-x86
+qemu-ui-gtk
+rustup
+spotify-launcher
+sqlc
+tailwindcss-language-server
+tea
+ueberzugpp
+uv
+yarn
+zathura
+zathura-pdf-mupdf
+
+# aur
 brave-bin
+claude-code
+clickhouse-client-bin
+opencode-bin
+pandoc-bin
+slack-desktop
 tableplus
+tailwindcss-bin
 vial-appimage
+zoom
