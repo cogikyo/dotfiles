@@ -17,11 +17,10 @@ import (
 	"slices"
 	"strings"
 
-	"dotfiles/cmds/internal/dctl/app"
 	"dotfiles/cmds/internal/dctl/execx"
-	"dotfiles/cmds/internal/dctl/output"
 	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/dctl/pkglist"
+	"dotfiles/cmds/internal/dctl/ui"
 )
 
 type Cmd struct {
@@ -64,24 +63,24 @@ var replacements = []replacement{
 	{"mpvpaper-git", "mpvpaper", "stable AUR release, no build needed"},
 }
 
-func (c *RunCmd) Run(ctx *app.Context) error {
-	return Run(ctx.Context, ctx.Root, ctx.Output, execx.OSRunner{}, Options{DryRun: c.DryRun || parentDryRun})
+func (c *RunCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	return Run(ctx, root, u, execx.OSRunner{}, Options{DryRun: c.DryRun || parentDryRun})
 }
 
-func (c *InstallCmd) Run(ctx *app.Context) error {
+func (c *InstallCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	dryRun := c.DryRun || parentDryRun
 	noninteractive := dryRun || os.Getenv("DOTFILES_INSTALL_NONINTERACTIVE") == "1" || !isTerminal(os.Stdin)
-	return Install(ctx.Context, ctx.Root, ctx.Output, execx.OSRunner{}, Options{DryRun: dryRun, NonInteractive: noninteractive})
+	return Install(ctx, root, u, execx.OSRunner{}, Options{DryRun: dryRun, NonInteractive: noninteractive})
 }
 
-func (c *CheckCmd) Run(ctx *app.Context) error {
-	return Check(ctx.Context, ctx.Root, ctx.Output, execx.OSRunner{})
+func (c *CheckCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	return Check(ctx, root, u, execx.OSRunner{})
 }
 
 // Run updates the current system, removes non-optional orphans, and saves package lists.
 //
 // Dry-run prints the package manager actions and list writes without mutating the system or repo files.
-func Run(ctx context.Context, root paths.Root, out *output.Printer, runner execx.Runner, opts Options) error {
+func Run(ctx context.Context, root paths.Root, out *ui.UI, runner execx.Runner, opts Options) error {
 	if err := requireYay(ctx, runner); err != nil {
 		return err
 	}
@@ -134,7 +133,7 @@ func Run(ctx context.Context, root paths.Root, out *output.Printer, runner execx
 // Install installs packages from saved lists.
 //
 // Dry-run reports missing packages only and skips sudo validation and package manager writes.
-func Install(ctx context.Context, root paths.Root, out *output.Printer, runner execx.Runner, opts Options) error {
+func Install(ctx context.Context, root paths.Root, out *ui.UI, runner execx.Runner, opts Options) error {
 	if opts.PacmanConf == "" {
 		opts.PacmanConf = "/etc/pacman.conf"
 	}
@@ -201,7 +200,7 @@ func Install(ctx context.Context, root paths.Root, out *output.Printer, runner e
 	return nil
 }
 
-func Check(ctx context.Context, root paths.Root, out *output.Printer, runner execx.Runner) error {
+func Check(ctx context.Context, root paths.Root, out *ui.UI, runner execx.Runner) error {
 	_ = root
 	if err := requireYay(ctx, runner); err != nil {
 		return err
@@ -223,7 +222,7 @@ func Check(ctx context.Context, root paths.Root, out *output.Printer, runner exe
 	return nil
 }
 
-func saveLists(ctx context.Context, root paths.Root, out *output.Printer, runner execx.Runner, optional []string) error {
+func saveLists(ctx context.Context, root paths.Root, out *ui.UI, runner execx.Runner, optional []string) error {
 	oldRepo, _ := readPackageList(root.Packages("base.lst"))
 	oldAUR, _ := readPackageList(root.Packages("aur.lst"))
 	repo, err := commandLines(ctx, runner, "yay", "-Qenq")
@@ -249,7 +248,7 @@ func saveLists(ctx context.Context, root paths.Root, out *output.Printer, runner
 	return nil
 }
 
-func drySaveLists(ctx context.Context, root paths.Root, out *output.Printer, runner execx.Runner, optional []string) error {
+func drySaveLists(ctx context.Context, root paths.Root, out *ui.UI, runner execx.Runner, optional []string) error {
 	repo, err := commandLines(ctx, runner, "yay", "-Qenq")
 	if err != nil {
 		return err
@@ -267,7 +266,7 @@ func drySaveLists(ctx context.Context, root paths.Root, out *output.Printer, run
 	return nil
 }
 
-func dryInstall(out *output.Printer, repoPkgs, aurPkgs []string, installed map[string]bool) error {
+func dryInstall(out *ui.UI, repoPkgs, aurPkgs []string, installed map[string]bool) error {
 	out.Info("[dry-run] Would install from saved lists:")
 	repoMissing := filterMissing(repoPkgs, installed)
 	if len(repoMissing) == 0 {
@@ -286,7 +285,7 @@ func dryInstall(out *output.Printer, repoPkgs, aurPkgs []string, installed map[s
 	return nil
 }
 
-func installAUR(ctx context.Context, out *output.Printer, runner execx.Runner, pkgs []string, localRepo bool, noninteractive bool) error {
+func installAUR(ctx context.Context, out *ui.UI, runner execx.Runner, pkgs []string, localRepo bool, noninteractive bool) error {
 	base := []string{}
 	name := "yay"
 	if localRepo {
@@ -443,7 +442,7 @@ func rustupNeedsInit(ctx context.Context, runner execx.Runner) bool {
 	return err != nil
 }
 
-func printDiff(out *output.Printer, kind string, oldPkgs, newPkgs []string) {
+func printDiff(out *ui.UI, kind string, oldPkgs, newPkgs []string) {
 	oldSet := packageSet(oldPkgs)
 	newSet := packageSet(newPkgs)
 	added := []string{}
@@ -468,7 +467,7 @@ func printDiff(out *output.Printer, kind string, oldPkgs, newPkgs []string) {
 	}
 }
 
-func printPackages(out *output.Printer, prefix string, pkgs []string) {
+func printPackages(out *ui.UI, prefix string, pkgs []string) {
 	for _, pkg := range pkgs {
 		out.Dim("%s %s", prefix, pkg)
 	}

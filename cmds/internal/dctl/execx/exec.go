@@ -12,9 +12,8 @@ import (
 )
 
 type Result struct {
-	Stdout   string
-	Stderr   string
-	ExitCode int
+	Stdout string
+	Stderr string
 }
 
 type Runner interface {
@@ -23,17 +22,13 @@ type Runner interface {
 }
 
 type OSRunner struct {
-	Env map[string]string
-	IO  bool
+	IO bool
 }
 
 func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...string) (*Result, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
 	if dir != "" {
 		cmd.Dir = dir
-	}
-	if len(r.Env) > 0 {
-		cmd.Env = mergeEnv(r.Env)
 	}
 	if r.IO {
 		cmd.Stdin = os.Stdin
@@ -42,7 +37,7 @@ func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...stri
 		err := cmd.Run()
 		res := &Result{}
 		if err != nil {
-			return res, commandErr(name, args, err, res)
+			return res, commandErr(name, args, err)
 		}
 		return res, nil
 	}
@@ -52,7 +47,7 @@ func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...stri
 	err := cmd.Run()
 	res := &Result{Stdout: strings.TrimSpace(stdout.String()), Stderr: strings.TrimSpace(stderr.String())}
 	if err != nil {
-		return res, commandErr(name, args, err, res)
+		return res, commandErr(name, args, err)
 	}
 	return res, nil
 }
@@ -62,55 +57,9 @@ func (r OSRunner) Output(ctx context.Context, dir string, name string, args ...s
 	return res.Stdout, err
 }
 
-func commandErr(name string, args []string, err error, res *Result) error {
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
-		res.ExitCode = exitErr.ExitCode()
-		return fmt.Errorf("%s %s failed with exit %d", name, strings.Join(args, " "), res.ExitCode)
+func commandErr(name string, args []string, err error) error {
+	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
+		return fmt.Errorf("%s %s failed with exit %d", name, strings.Join(args, " "), exitErr.ExitCode())
 	}
 	return fmt.Errorf("run %s: %w", name, err)
-}
-
-func mergeEnv(overrides map[string]string) []string {
-	base := map[string]string{}
-	for _, item := range os.Environ() {
-		if k, v, ok := strings.Cut(item, "="); ok {
-			base[k] = v
-		}
-	}
-	for k, v := range overrides {
-		if strings.TrimSpace(k) != "" {
-			base[k] = v
-		}
-	}
-	out := make([]string, 0, len(base))
-	for k, v := range base {
-		out = append(out, k+"="+v)
-	}
-	return out
-}
-
-func ResolveDctlBinary() (string, error) {
-	bin, err := os.Executable()
-	if err == nil && bin != "" {
-		return bin, nil
-	}
-	bin, err = exec.LookPath("dctl")
-	if err != nil {
-		return "", fmt.Errorf("resolve dctl binary: %w", err)
-	}
-	return bin, nil
-}
-
-func ExecDctl(argv []string) error {
-	bin, err := ResolveDctlBinary()
-	if err != nil {
-		return err
-	}
-	cmd := exec.Command(bin, argv...)
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Env = os.Environ()
-	return cmd.Run()
 }

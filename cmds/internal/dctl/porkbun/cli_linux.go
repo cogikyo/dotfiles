@@ -1,11 +1,13 @@
 package porkbun
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"strings"
 
-	"dotfiles/cmds/internal/dctl/app"
+	"dotfiles/cmds/internal/dctl/paths"
+	"dotfiles/cmds/internal/dctl/ui"
 )
 
 type Cmd struct {
@@ -49,8 +51,8 @@ type DeleteCmd struct {
 	DryRun bool   `help:"Read current state and preview locally; do not call delete."`
 }
 
-func (cmd *ListCmd) Run(ctx *app.Context) error {
-	c, err := open(ctx, cmd.Domain)
+func (cmd *ListCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	c, err := open(root.Home, cmd.Domain)
 	if err != nil {
 		return err
 	}
@@ -58,11 +60,11 @@ func (cmd *ListCmd) Run(ctx *app.Context) error {
 	r := result{Action: "list", Domain: cmd.Domain, Outcome: "read"}
 	r.Records, r.Warnings, err = c.records(ctx, cmd.Domain)
 	r.Evidence = append(r.Evidence, "Porkbun editable DNS copy only; authority and public DNS propagation are not verified by list")
-	return report(ctx, r, err)
+	return report(u, r, err)
 }
 
-func (cmd *CheckCmd) Run(ctx *app.Context) error {
-	c, err := open(ctx, cmd.Domain)
+func (cmd *CheckCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	c, err := open(root.Home, cmd.Domain)
 	if err != nil {
 		return err
 	}
@@ -71,33 +73,33 @@ func (cmd *CheckCmd) Run(ctx *app.Context) error {
 	ping, err := c.request(ctx, http.MethodPost, "/ping", struct{}{})
 	r.Warnings = append(r.Warnings, ping.warnings()...)
 	if err != nil {
-		return report(ctx, r, err)
+		return report(u, r, err)
 	}
 	r.Evidence = append(r.Evidence, "Authentication: POST /ping succeeded")
 
 	if _, err := preflight(ctx, c, &r); err != nil {
-		return report(ctx, r, err)
+		return report(u, r, err)
 	}
 
 	probe := change{Name: "_dctl-check", Type: "TXT", Content: "dctl Porkbun permission check", DryRun: true}
 	preview, err := c.request(ctx, http.MethodPost, "/dns/create/"+cmd.Domain, probe)
 	r.Warnings = append(r.Warnings, preview.warnings()...)
 	if err != nil {
-		return report(ctx, r, err)
+		return report(u, r, err)
 	}
 	if !preview.WouldSucceed || preview.ID != "" {
-		return report(ctx, r, fmt.Errorf("DNS-create dry-run returned unexpected evidence; require wouldSucceed=true and no record ID"))
+		return report(u, r, fmt.Errorf("DNS-create dry-run returned unexpected evidence; require wouldSucceed=true and no record ID"))
 	}
 
 	r.Evidence = append(r.Evidence, "DNS-create dry-run: wouldSucceed=true; requested dryRun=true, no record created under the documented API contract")
 	r.Evidence = append(r.Evidence, "Live create, edit, delete, and public DNS propagation remain untested")
 	if len(r.Warnings) != 0 {
-		return report(ctx, r, fmt.Errorf("check received provider warnings; writes are not cleared"))
+		return report(u, r, fmt.Errorf("check received provider warnings; writes are not cleared"))
 	}
-	return report(ctx, r, nil)
+	return report(u, r, nil)
 }
 
-func (cmd *CreateCmd) Run(ctx *app.Context) error {
+func (cmd *CreateCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if err := validDomain(cmd.Domain); err != nil {
 		return err
 	}
@@ -113,7 +115,7 @@ func (cmd *CreateCmd) Run(ctx *app.Context) error {
 		return err
 	}
 
-	c, err := open(ctx, cmd.Domain)
+	c, err := open(root.Home, cmd.Domain)
 	if err != nil {
 		return err
 	}
@@ -132,27 +134,27 @@ func (cmd *CreateCmd) Run(ctx *app.Context) error {
 	r := result{Action: "create", Domain: cmd.Domain, Proposed: &proposed, DryRun: cmd.DryRun}
 	records, err := preflight(ctx, c, &r)
 	if err != nil {
-		return report(ctx, r, err)
+		return report(u, r, err)
 	}
 	if match := duplicate(records, proposed); match != nil {
 		r.Before = match
-		return report(ctx, r, fmt.Errorf("duplicate content and priority already exist at ID %s; no record created (TTL differences do not create a distinct DNS value)", match.ID))
+		return report(u, r, fmt.Errorf("duplicate content and priority already exist at ID %s; no record created (TTL differences do not create a distinct DNS value)", match.ID))
 	}
 
 	relative, err := relativeName(cmd.Domain, name)
 	if err != nil {
-		return report(ctx, r, err)
+		return report(u, r, err)
 	}
 	payload := change{Name: relative, Type: kind, Content: cmd.Content, TTL: cmd.TTL, Prio: proposed.Priority}
-	return mutate(ctx, c, r, payload)
+	return mutate(ctx, u, c, r, payload)
 }
 
-func (cmd *EditCmd) Run(ctx *app.Context) error {
+func (cmd *EditCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if err := validID(cmd.ID); err != nil {
 		return err
 	}
 
-	c, err := open(ctx, cmd.Domain)
+	c, err := open(root.Home, cmd.Domain)
 	if err != nil {
 		return err
 	}
@@ -160,10 +162,10 @@ func (cmd *EditCmd) Run(ctx *app.Context) error {
 	r := result{Action: "edit", Domain: cmd.Domain, DryRun: cmd.DryRun}
 	current, err := target(ctx, c, &r, cmd.ID)
 	if err != nil {
-		return report(ctx, r, err)
+		return report(u, r, err)
 	}
 	if err := options(current.Type, cmd.TTL, cmd.Prio); err != nil {
-		return report(ctx, r, err)
+		return report(u, r, err)
 	}
 
 	proposed := *current
@@ -178,25 +180,25 @@ func (cmd *EditCmd) Run(ctx *app.Context) error {
 
 	name, err := relativeName(cmd.Domain, current.Name)
 	if err != nil {
-		return report(ctx, r, err)
+		return report(u, r, err)
 	}
 	payload := change{Name: name, Type: current.Type, Content: proposed.Content, TTL: &proposed.TTL, Prio: proposed.Priority}
-	return mutate(ctx, c, r, payload)
+	return mutate(ctx, u, c, r, payload)
 }
 
-func (cmd *DeleteCmd) Run(ctx *app.Context) error {
+func (cmd *DeleteCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if err := validID(cmd.ID); err != nil {
 		return err
 	}
 
-	c, err := open(ctx, cmd.Domain)
+	c, err := open(root.Home, cmd.Domain)
 	if err != nil {
 		return err
 	}
 
 	r := result{Action: "delete", Domain: cmd.Domain, DryRun: cmd.DryRun}
 	if _, err := target(ctx, c, &r, cmd.ID); err != nil {
-		return report(ctx, r, err)
+		return report(u, r, err)
 	}
-	return mutate(ctx, c, r, struct{}{})
+	return mutate(ctx, u, c, r, struct{}{})
 }

@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"strings"
 
-	"dotfiles/cmds/internal/dctl/output"
+	"dotfiles/cmds/internal/dctl/ui"
 )
 
 type Status string
@@ -34,8 +34,8 @@ type Check struct {
 	Details  []string `json:"details,omitempty"`
 }
 
-func Print(out *output.Printer, checks []Check) error {
-	if out.JSONMode() {
+func Print(out *ui.UI, checks []Check) error {
+	if out.JSON() {
 		return out.Emit(checks)
 	}
 	counts := map[Status]int{}

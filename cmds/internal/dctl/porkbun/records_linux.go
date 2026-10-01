@@ -39,7 +39,7 @@ func validDomain(domain string) error {
 	if len(domain) > 253 || !domainPattern.MatchString(domain) {
 		return fmt.Errorf("domain must be an explicit lowercase ASCII domain without a scheme, path, or trailing dot; use punycode for IDNs")
 	}
-	for _, label := range strings.Split(domain, ".") {
+	for label := range strings.SplitSeq(domain, ".") {
 		if len(label) > 63 {
 			return fmt.Errorf("domain label exceeds 63 bytes")
 		}
@@ -72,7 +72,7 @@ func fullName(domain, name string) (string, error) {
 	if len(full) > 253 {
 		return "", fmt.Errorf("full record name exceeds 253 bytes")
 	}
-	for _, label := range strings.Split(name, ".") {
+	for label := range strings.SplitSeq(name, ".") {
 		if len(label) > 63 {
 			return "", fmt.Errorf("record name label exceeds 63 bytes")
 		}

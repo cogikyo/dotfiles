@@ -17,8 +17,8 @@ import (
 
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/health"
-	"dotfiles/cmds/internal/dctl/output"
 	"dotfiles/cmds/internal/dctl/paths"
+	"dotfiles/cmds/internal/dctl/ui"
 )
 
 const devCertRenewal = 30 * 24 * time.Hour
@@ -31,7 +31,7 @@ type devCertFiles struct {
 	key  string
 }
 
-func installCerts(ctx context.Context, root paths.Root, out *output.Printer, opts Options, runner execx.Runner) error {
+func installCerts(ctx context.Context, root paths.Root, out *ui.UI, opts Options, runner execx.Runner) error {
 	out.Header("Provisioning development TLS certificates")
 	if err := requireCommands("mkcert", "certutil"); err != nil {
 		return err

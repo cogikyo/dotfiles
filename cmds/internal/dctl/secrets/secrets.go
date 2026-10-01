@@ -22,8 +22,8 @@ import (
 	"strings"
 	"time"
 
-	"dotfiles/cmds/internal/dctl/app"
-	"dotfiles/cmds/internal/dctl/prompt"
+	"dotfiles/cmds/internal/dctl/paths"
+	"dotfiles/cmds/internal/dctl/ui"
 
 	"filippo.io/age"
 )
@@ -61,9 +61,9 @@ type entry struct {
 	Raw    string
 }
 
-func (c *InitCmd) Run(ctx *app.Context) error {
-	paths := newPaths(ctx)
-	if !prompt.Interactive() {
+func (c *InitCmd) Run(u *ui.UI, root paths.Root) error {
+	paths := newPaths(root)
+	if !u.Can() {
 		return fmt.Errorf("secrets init requires an interactive terminal")
 	}
 	if err := os.MkdirAll(paths.dir, 0o700); err != nil {
@@ -73,13 +73,13 @@ func (c *InitCmd) Run(ctx *app.Context) error {
 		return err
 	}
 	if _, err := os.Stat(paths.identity); err == nil {
-		if !ctx.Yes {
-			ok, err := prompt.Confirm("Regenerate secrets identity? This requires re-syncing all secrets", false)
+		if !u.Yes() {
+			ok, err := u.Confirm("Regenerate secrets identity? This requires re-syncing all secrets")
 			if err != nil {
 				return err
 			}
 			if !ok {
-				ctx.Output.Warn("Identity unchanged")
+				u.Warn("Identity unchanged")
 				return nil
 			}
 		}
@@ -91,7 +91,7 @@ func (c *InitCmd) Run(ctx *app.Context) error {
 	if err != nil {
 		return err
 	}
-	passphrase, err := readNewPassphrase()
+	passphrase, err := readNewPassphrase(u)
 	if err != nil {
 		return err
 	}
@@ -119,22 +119,22 @@ func (c *InitCmd) Run(ctx *app.Context) error {
 		_ = os.Remove(paths.identity)
 		return err
 	}
-	ctx.Output.OK("Identity created")
-	ctx.Output.KV("recipient", identity.Recipient().String())
+	u.OK("Identity created")
+	u.KV("recipient", identity.Recipient().String())
 	return nil
 }
 
-func (c *SyncCmd) Run(ctx *app.Context) error {
-	paths := newPaths(ctx)
-	entries, err := readManifest(paths.manifest, ctx.Root.Home)
+func (c *SyncCmd) Run(u *ui.UI, root paths.Root) error {
+	paths := newPaths(root)
+	entries, err := readManifest(paths.manifest, root.Home)
 	if err != nil {
 		return err
 	}
 	if len(entries) == 0 {
-		ctx.Output.Warn("Manifest is empty")
+		u.Warn("Manifest is empty")
 		return nil
 	}
-	if err := reviewTrust(ctx, paths.trust, entries, "sync"); err != nil {
+	if err := reviewTrust(u, paths.trust, entries, "sync"); err != nil {
 		return err
 	}
 	recipient, err := readRecipient(paths.recipient)
@@ -144,13 +144,13 @@ func (c *SyncCmd) Run(ctx *app.Context) error {
 
 	synced, skipped, missing := 0, 0, 0
 	for _, e := range entries {
-		target, err := safeTarget(ctx.Root.Home, e.Target)
+		target, err := safeTarget(root.Home, e.Target)
 		if err != nil {
 			return err
 		}
 		ciphertext := filepath.Join(paths.dir, e.Name+".age")
 		if _, err := os.Stat(target); errors.Is(err, os.ErrNotExist) {
-			ctx.Output.Warn("Not found: %s (skipping %s)", e.Target, e.Name)
+			u.Warn("Not found: %s (skipping %s)", e.Target, e.Name)
 			missing++
 			continue
 		} else if err != nil {
@@ -163,45 +163,45 @@ func (c *SyncCmd) Run(ctx *app.Context) error {
 		if err := encryptFile(ciphertext, target, recipient); err != nil {
 			return err
 		}
-		ctx.Output.Step("Encrypted %s <- %s", e.Name, e.Target)
+		u.Step("Encrypted %s <- %s", e.Name, e.Target)
 		synced++
 	}
 	if missing > 0 {
-		ctx.Output.Warn("Synced %d, unchanged %d, missing %d", synced, skipped, missing)
+		u.Warn("Synced %d, unchanged %d, missing %d", synced, skipped, missing)
 		return nil
 	}
-	ctx.Output.OK("Synced %d, unchanged %d", synced, skipped)
+	u.OK("Synced %d, unchanged %d", synced, skipped)
 	return nil
 }
 
-func (c *DecryptCmd) Run(ctx *app.Context) error {
-	paths := newPaths(ctx)
-	entries, err := readManifest(paths.manifest, ctx.Root.Home)
+func (c *DecryptCmd) Run(u *ui.UI, root paths.Root) error {
+	paths := newPaths(root)
+	entries, err := readManifest(paths.manifest, root.Home)
 	if err != nil {
 		return err
 	}
 	if len(entries) == 0 {
-		ctx.Output.Warn("Manifest is empty")
+		u.Warn("Manifest is empty")
 		return nil
 	}
-	if err := reviewTrust(ctx, paths.trust, entries, "decrypt"); err != nil {
+	if err := reviewTrust(u, paths.trust, entries, "decrypt"); err != nil {
 		return err
 	}
-	identity, err := unlockIdentity(paths.identity)
+	identity, err := unlockIdentity(u, paths.identity)
 	if err != nil {
 		return err
 	}
 
 	count, failed := 0, 0
 	for _, e := range entries {
-		target, err := safeTarget(ctx.Root.Home, e.Target)
+		target, err := safeTarget(root.Home, e.Target)
 		if err != nil {
 			return err
 		}
 		ciphertext := filepath.Join(paths.dir, e.Name+".age")
 		if _, err := os.Stat(ciphertext); err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				ctx.Output.Error("Missing: secrets/%s.age", e.Name)
+				u.Error("Missing: secrets/%s.age", e.Name)
 				failed++
 				continue
 			}
@@ -209,7 +209,7 @@ func (c *DecryptCmd) Run(ctx *app.Context) error {
 		}
 		if c.DryRun {
 			if err := decryptTo(ciphertext, io.Discard, identity); err != nil {
-				ctx.Output.Error("Failed to decrypt %s", e.Name)
+				u.Error("Failed to decrypt %s", e.Name)
 				failed++
 				continue
 			}
@@ -217,62 +217,62 @@ func (c *DecryptCmd) Run(ctx *app.Context) error {
 			continue
 		}
 		if err := decryptFileAtomic(ciphertext, target, e.Mode, identity); err != nil {
-			ctx.Output.Error("Failed to decrypt %s: %v", e.Name, err)
+			u.Error("Failed to decrypt %s: %v", e.Name, err)
 			failed++
 			continue
 		}
-		ctx.Output.Step("Decrypted %s -> %s", e.Name, e.Target)
+		u.Step("Decrypted %s -> %s", e.Name, e.Target)
 		count++
 	}
 	if failed > 0 {
 		return fmt.Errorf("decrypted %d, failed %d", count, failed)
 	}
 	if c.DryRun {
-		ctx.Output.OK("Dry-run verified %d secrets", count)
+		u.OK("Dry-run verified %d secrets", count)
 	} else {
-		ctx.Output.OK("Decrypted %d secrets", count)
+		u.OK("Decrypted %d secrets", count)
 	}
 	return nil
 }
 
-func (c *TrustCmd) Run(ctx *app.Context) error {
-	paths := newPaths(ctx)
-	entries, err := readManifest(paths.manifest, ctx.Root.Home)
+func (c *TrustCmd) Run(u *ui.UI, root paths.Root) error {
+	paths := newPaths(root)
+	entries, err := readManifest(paths.manifest, root.Home)
 	if err != nil {
 		return err
 	}
 	if len(entries) == 0 {
-		ctx.Output.Warn("Manifest is empty")
+		u.Warn("Manifest is empty")
 		return nil
 	}
 	if err := trustEntries(paths.trust, entries); err != nil {
 		return err
 	}
-	ctx.Output.OK("Trusted %d manifest entries for this machine", len(entries))
+	u.OK("Trusted %d manifest entries for this machine", len(entries))
 	return nil
 }
 
-func (c *ListCmd) Run(ctx *app.Context) error {
-	paths := newPaths(ctx)
-	entries, err := readManifest(paths.manifest, ctx.Root.Home)
+func (c *ListCmd) Run(u *ui.UI, root paths.Root) error {
+	paths := newPaths(root)
+	entries, err := readManifest(paths.manifest, root.Home)
 	if err != nil {
 		return err
 	}
 	if len(entries) == 0 {
-		ctx.Output.Warn("Manifest is empty")
+		u.Warn("Manifest is empty")
 		return nil
 	}
-	if ctx.Output.JSONMode() {
-		return ctx.Output.Emit(entries)
+	if u.JSON() {
+		return u.Emit(entries)
 	}
-	fmt.Fprintf(ctx.Output.Writer(), "%-20s %-40s %s\n", "NAME", "TARGET", "MODE")
-	fmt.Fprintf(ctx.Output.Writer(), "%-20s %-40s %s\n", "----", "------", "----")
+	fmt.Fprintf(u.Writer(), "%-20s %-40s %s\n", "NAME", "TARGET", "MODE")
+	fmt.Fprintf(u.Writer(), "%-20s %-40s %s\n", "----", "------", "----")
 	for _, e := range entries {
 		marker := "  "
 		if _, err := os.Stat(filepath.Join(paths.dir, e.Name+".age")); errors.Is(err, os.ErrNotExist) {
 			marker = "!!"
 		}
-		fmt.Fprintf(ctx.Output.Writer(), "%s %-18s %-40s %04o\n", marker, e.Name, e.Target, e.Mode.Perm())
+		fmt.Fprintf(u.Writer(), "%s %-18s %-40s %04o\n", marker, e.Name, e.Target, e.Mode.Perm())
 	}
 	return nil
 }
@@ -285,14 +285,14 @@ type pathSet struct {
 	trust     string
 }
 
-func newPaths(ctx *app.Context) pathSet {
-	dir := ctx.Root.Secrets()
+func newPaths(root paths.Root) pathSet {
+	dir := root.Secrets()
 	return pathSet{
 		dir:       dir,
 		manifest:  filepath.Join(dir, manifestName),
 		identity:  filepath.Join(dir, identityName),
 		recipient: filepath.Join(dir, recipientName),
-		trust:     filepath.Join(ctx.Root.State, trustName),
+		trust:     filepath.Join(root.State, trustName),
 	}
 }
 
@@ -430,15 +430,15 @@ func readRecipient(path string) (age.Recipient, error) {
 	return age.ParseX25519Recipient(strings.TrimSpace(string(data)))
 }
 
-func readNewPassphrase() (string, error) {
-	passphrase, err := prompt.Hidden("Passphrase: ")
+func readNewPassphrase(u *ui.UI) (string, error) {
+	passphrase, err := u.Secret("Passphrase:")
 	if err != nil {
 		return "", err
 	}
 	if passphrase == "" {
 		return "", fmt.Errorf("passphrase cannot be empty")
 	}
-	confirm, err := prompt.Hidden("Confirm passphrase: ")
+	confirm, err := u.Secret("Confirm passphrase:")
 	if err != nil {
 		return "", err
 	}
@@ -448,12 +448,12 @@ func readNewPassphrase() (string, error) {
 	return passphrase, nil
 }
 
-func unlockIdentity(path string) (*age.X25519Identity, error) {
-	if !prompt.Interactive() {
+func unlockIdentity(u *ui.UI, path string) (*age.X25519Identity, error) {
+	if !u.Can() {
 		return nil, fmt.Errorf("unlocking identity requires an interactive terminal")
 	}
 	for {
-		passphrase, err := prompt.Hidden("Identity passphrase: ")
+		passphrase, err := u.Secret("Identity passphrase:")
 		if err != nil {
 			return nil, err
 		}
@@ -461,7 +461,7 @@ func unlockIdentity(path string) (*age.X25519Identity, error) {
 		if err == nil {
 			return identity, nil
 		}
-		if !prompt.Interactive() {
+		if !u.Can() {
 			return nil, fmt.Errorf("failed to unlock identity in non-interactive mode")
 		}
 		fmt.Fprintln(os.Stderr, "Incorrect passphrase, try again")
@@ -625,7 +625,7 @@ func newerThan(a string, b string) bool {
 }
 
 // reviewTrust blocks sync and decrypt until new manifest entries are approved on this machine.
-func reviewTrust(ctx *app.Context, trustPath string, entries []entry, action string) error {
+func reviewTrust(u *ui.UI, trustPath string, entries []entry, action string) error {
 	untrusted, err := untrustedEntries(trustPath, entries)
 	if err != nil {
 		return err
@@ -633,15 +633,15 @@ func reviewTrust(ctx *app.Context, trustPath string, entries []entry, action str
 	if len(untrusted) == 0 {
 		return nil
 	}
-	ctx.Output.Warn("Found %d new or changed manifest entries", len(untrusted))
+	u.Warn("Found %d new or changed manifest entries", len(untrusted))
 	for _, e := range untrusted {
-		ctx.Output.KV(e.Name, e.Target+" "+fmt.Sprintf("%04o", e.Mode.Perm()))
+		u.KV(e.Name, e.Target+" "+fmt.Sprintf("%04o", e.Mode.Perm()))
 	}
-	if !prompt.Interactive() {
+	if !u.Can() {
 		return fmt.Errorf("non-interactive session cannot approve new manifest entries; run dctl secrets trust")
 	}
-	if !ctx.Yes {
-		ok, err := prompt.Confirm("Trust these entries on this machine and continue "+action+"?", false)
+	if !u.Yes() {
+		ok, err := u.Confirm("Trust these entries on this machine and continue " + action + "?")
 		if err != nil {
 			return err
 		}

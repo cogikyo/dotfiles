@@ -1,29 +1,23 @@
-// Package main provides the dctl executable entry point.
-//
-// Responsibilities:
-// - Build the Kong parser from the internal dctl command tree.
-// - Discover the dotfiles root and global output mode.
-// - Dispatch either the interactive navigator or the requested subcommand.
 package main
-
-// main.go wires Kong parsing, root discovery, output mode selection, and command dispatch.
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
+	"os/signal"
+	"syscall"
 
-	"dotfiles/cmds/internal/dctl/app"
 	"dotfiles/cmds/internal/dctl/cli"
-	"dotfiles/cmds/internal/dctl/output"
 	"dotfiles/cmds/internal/dctl/paths"
+	"dotfiles/cmds/internal/dctl/ui"
 
 	"github.com/alecthomas/kong"
 )
 
 func main() {
-	var rootCmd cli.CLI
-	parser, err := kong.New(&rootCmd,
+	var root cli.CLI
+	parser, err := kong.New(&root,
 		kong.Name("dctl"),
 		kong.Description("dotfiles control plane"),
 		kong.UsageOnError(),
@@ -33,42 +27,34 @@ func main() {
 		os.Exit(1)
 	}
 
-	args := cli.NormalizeArgs(os.Args[1:])
-	if cli.ShouldLaunchNavigator(args) {
-		argv, ok, err := cli.RunNavigator(os.Stdout, cli.BuildCommandCatalog(parser))
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "dctl: %v\n", err)
-			os.Exit(1)
-		}
-		if !ok {
-			return
-		}
-		if err := cli.ExecSubcommand(argv); err != nil {
-			fmt.Fprintf(os.Stderr, "dctl: %v\n", err)
-			os.Exit(1)
-		}
-		return
+	args := os.Args[1:]
+	if len(args) == 0 {
+		args = []string{"--help"}
 	}
-
 	kctx, err := parser.Parse(args)
-	if err != nil {
-		parser.FatalIfErrorf(err)
-	}
+	parser.FatalIfErrorf(err)
 
-	root, err := paths.DiscoverRoot()
+	u := ui.New(ui.Options{JSON: root.JSON, Plain: root.Plain, Yes: root.Yes})
+	dotfiles, err := paths.DiscoverRoot()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "dctl: %v\n", err)
+		u.Error("%v", err)
 		os.Exit(1)
 	}
 
-	out := output.New(os.Stdout, os.Stderr, output.Options{
-		JSON:  rootCmd.JSON,
-		Plain: rootCmd.Plain,
-	})
-	ctx := app.NewContext(context.Background(), root, out, rootCmd.Yes, rootCmd.Defaults)
-
-	if err := kctx.Run(ctx); err != nil {
-		out.Error("%v", err)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-ctx.Done()
+		stop()
+	}()
+	kctx.BindTo(ctx, (*context.Context)(nil))
+	err = kctx.Run(u, dotfiles)
+	stop()
+	switch {
+	case errors.Is(err, context.Canceled):
+		u.Error("interrupted")
+		os.Exit(130)
+	case err != nil:
+		u.Error("%v", err)
 		os.Exit(1)
 	}
 }

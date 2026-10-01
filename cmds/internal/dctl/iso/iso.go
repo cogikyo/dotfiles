@@ -24,12 +24,10 @@ import (
 	"strings"
 	"time"
 
-	"dotfiles/cmds/internal/dctl/app"
 	"dotfiles/cmds/internal/dctl/execx"
-	"dotfiles/cmds/internal/dctl/output"
 	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/dctl/pkglist"
-	"dotfiles/cmds/internal/dctl/prompt"
+	"dotfiles/cmds/internal/dctl/ui"
 )
 
 const version = "0.1.0"
@@ -83,27 +81,27 @@ type blockDevice struct {
 	Children    []blockDevice `json:"children"`
 }
 
-func (c *BuildCmd) Run(ctx *app.Context) error {
+func (c *BuildCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	runner := execx.OSRunner{IO: true}
-	return build(ctx.Context, ctx.Root, ctx.Output, runner, c.Clean, c.SkipAUR)
+	return build(ctx, root, u, runner, c.Clean, c.SkipAUR)
 }
 
-func (c *VerifyCmd) Run(ctx *app.Context) error {
+func (c *VerifyCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	runner := execx.OSRunner{}
-	return verify(ctx.Context, ctx.Root, ctx.Output, runner)
+	return verify(ctx, root, u, runner)
 }
 
-func (c *USBCmd) Run(ctx *app.Context) error {
+func (c *USBCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	runner := execx.OSRunner{IO: true}
-	return writeUSB(ctx.Context, ctx.Root, ctx.Output, runner, c.Device, ctx.Yes)
+	return writeUSB(ctx, root, u, runner, c.Device)
 }
 
-func (c *ReleaseCmd) Run(ctx *app.Context) error {
+func (c *ReleaseCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	runner := execx.OSRunner{IO: true}
-	return release(ctx.Context, ctx.Root, ctx.Output, runner, c.Tag, ctx.Yes)
+	return release(ctx, root, u, runner, c.Tag)
 }
 
-func build(ctx context.Context, root paths.Root, out *output.Printer, runner execx.Runner, clean bool, skipAUR bool) error {
+func build(ctx context.Context, root paths.Root, out *ui.UI, runner execx.Runner, clean bool, skipAUR bool) error {
 	p := newPaths(root)
 	if err := requireRoot(); err != nil {
 		return err
@@ -146,7 +144,7 @@ func build(ctx context.Context, root paths.Root, out *output.Printer, runner exe
 	return nil
 }
 
-func verify(ctx context.Context, root paths.Root, out *output.Printer, runner execx.Runner) error {
+func verify(ctx context.Context, root paths.Root, out *ui.UI, runner execx.Runner) error {
 	p := newPaths(root)
 	out.Header("ISO Verify")
 	if err := preflight(ctx, p, out, runner, true); err != nil {
@@ -176,7 +174,7 @@ func verify(ctx context.Context, root paths.Root, out *output.Printer, runner ex
 }
 
 // writeUSB writes the newest ISO to a whole USB disk after root, size, mount, and transport checks.
-func writeUSB(ctx context.Context, root paths.Root, out *output.Printer, runner execx.Runner, device string, yes bool) error {
+func writeUSB(ctx context.Context, root paths.Root, out *ui.UI, runner execx.Runner, device string) error {
 	p := newPaths(root)
 	if err := requireRoot(); err != nil {
 		return err
@@ -202,21 +200,19 @@ func writeUSB(ctx context.Context, root paths.Root, out *output.Printer, runner 
 	out.Warn("This will erase all data on %s", device)
 	out.KV("iso", iso)
 	out.KV("device", fmt.Sprintf("%s (%d bytes)", info.Path, blockSize(info)))
-	if !yes {
-		ok, err := prompt.Confirm("Write ISO to this whole USB disk?", false)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			out.Info("Aborted")
-			return nil
-		}
+	ok, err := out.Confirm("Write ISO to this whole USB disk?")
+	if err != nil {
+		return err
+	}
+	if !ok {
+		out.Info("Aborted")
+		return nil
 	}
 	return run(ctx, runner, "", "dd", "bs=4M", "if="+iso, "of="+device, "status=progress", "oflag=sync")
 }
 
 // release publishes the newest ISO by tagging and pushing master, then creating a GitHub release.
-func release(ctx context.Context, root paths.Root, out *output.Printer, runner execx.Runner, tag string, yes bool) error {
+func release(ctx context.Context, root paths.Root, out *ui.UI, runner execx.Runner, tag string) error {
 	p := newPaths(root)
 	iso, err := newestISO(p.out)
 	if err != nil {
@@ -250,15 +246,13 @@ func release(ctx context.Context, root paths.Root, out *output.Printer, runner e
 		return errors.New("release requires a clean git worktree; commit intentional changes first")
 	}
 	out.Warn("Release will tag, push master, push %s, and upload %s", tag, filepath.Base(iso))
-	if !yes {
-		ok, err := prompt.Confirm("Publish this ISO release?", false)
-		if err != nil {
-			return err
-		}
-		if !ok {
-			out.Info("Aborted")
-			return nil
-		}
+	ok, err := out.Confirm("Publish this ISO release?")
+	if err != nil {
+		return err
+	}
+	if !ok {
+		out.Info("Aborted")
+		return nil
 	}
 	if err := run(ctx, runner, p.dotfiles, "git", "tag", "-a", tag, "-m", tag); err != nil {
 		return err
@@ -277,7 +271,7 @@ func release(ctx context.Context, root paths.Root, out *output.Printer, runner e
 	return nil
 }
 
-func preflight(ctx context.Context, p isoPaths, out *output.Printer, runner execx.Runner, verifyOnly bool) error {
+func preflight(ctx context.Context, p isoPaths, out *ui.UI, runner execx.Runner, verifyOnly bool) error {
 	commands := []string{"mkarchiso", "pacman", "makepkg", "repo-add", "git"}
 	if verifyOnly {
 		commands = []string{"mkarchiso", "pacman", "repo-add", "git"}
@@ -301,7 +295,7 @@ func preflight(ctx context.Context, p isoPaths, out *output.Printer, runner exec
 	return nil
 }
 
-func prepareProfile(p isoPaths, out *output.Printer) error {
+func prepareProfile(p isoPaths, out *ui.UI) error {
 	out.Step("Preparing ISO profile")
 	if err := os.MkdirAll(p.work, 0o755); err != nil {
 		return err
@@ -323,7 +317,7 @@ func prepareProfile(p isoPaths, out *output.Printer) error {
 	return nil
 }
 
-func cacheRepoPackages(ctx context.Context, p isoPaths, out *output.Printer, runner execx.Runner) error {
+func cacheRepoPackages(ctx context.Context, p isoPaths, out *ui.UI, runner execx.Runner) error {
 	packages, err := readPackageFile(p.packages)
 	if err != nil {
 		return err
@@ -352,7 +346,7 @@ func cacheRepoPackages(ctx context.Context, p isoPaths, out *output.Printer, run
 	return nil
 }
 
-func buildAURPackages(ctx context.Context, p isoPaths, out *output.Printer, runner execx.Runner, skip bool) error {
+func buildAURPackages(ctx context.Context, p isoPaths, out *ui.UI, runner execx.Runner, skip bool) error {
 	if skip {
 		out.Warn("Skipping AUR builds")
 		return nil
@@ -427,7 +421,7 @@ func buildAURPackages(ctx context.Context, p isoPaths, out *output.Printer, runn
 	return nil
 }
 
-func createRepoDB(ctx context.Context, p isoPaths, out *output.Printer, runner execx.Runner) error {
+func createRepoDB(ctx context.Context, p isoPaths, out *ui.UI, runner execx.Runner) error {
 	packages, err := packageFiles(p.localRepo)
 	if err != nil {
 		return err

@@ -10,6 +10,7 @@ package paths
 import (
 	"fmt"
 	"os"
+	"os/user"
 	"path/filepath"
 )
 
@@ -26,7 +27,15 @@ func DiscoverRoot() (Root, error) {
 	}
 	dotfiles := os.Getenv("DOTFILES")
 	if dotfiles == "" {
-		dotfiles = filepath.Join(home, "dotfiles")
+		base := home
+		if name := os.Getenv("SUDO_USER"); name != "" && os.Geteuid() == 0 {
+			invoker, err := user.Lookup(name)
+			if err != nil {
+				return Root{}, err
+			}
+			base = invoker.HomeDir
+		}
+		dotfiles = filepath.Join(base, "dotfiles")
 	}
 	dotfiles, err = filepath.Abs(dotfiles)
 	if err != nil {

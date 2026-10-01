@@ -17,10 +17,9 @@ import (
 	"slices"
 	"strings"
 
-	"dotfiles/cmds/internal/dctl/app"
 	"dotfiles/cmds/internal/dctl/execx"
-	"dotfiles/cmds/internal/dctl/output"
 	"dotfiles/cmds/internal/dctl/paths"
+	"dotfiles/cmds/internal/dctl/ui"
 )
 
 type Cmd struct {
@@ -66,7 +65,7 @@ func LoadManifest(path string) ([]Repo, error) {
 	return repos, nil
 }
 
-func Sync(ctx context.Context, root paths.Root, out *output.Printer, runner execx.Runner) error {
+func Sync(ctx context.Context, root paths.Root, out *ui.UI, runner execx.Runner) error {
 	repos, err := LoadManifest(ManifestPath(root))
 	if err != nil {
 		return fmt.Errorf("load repos manifest: %w", err)
@@ -123,7 +122,7 @@ func Sync(ctx context.Context, root paths.Root, out *output.Printer, runner exec
 }
 
 // Update fast-forwards configured repos without repairing divergent or dirty states.
-func Update(ctx context.Context, root paths.Root, out *output.Printer, runner execx.Runner) error {
+func Update(ctx context.Context, root paths.Root, out *ui.UI, runner execx.Runner) error {
 	repos, err := LoadManifest(ManifestPath(root))
 	if err != nil {
 		return fmt.Errorf("load repos manifest: %w", err)
@@ -217,7 +216,7 @@ func standardDirs(home string) []string {
 	}
 }
 
-func switchDotfilesRemote(ctx context.Context, root paths.Root, runner execx.Runner, out *output.Printer) error {
+func switchDotfilesRemote(ctx context.Context, root paths.Root, runner execx.Runner, out *ui.UI) error {
 	remote, err := runner.Output(ctx, root.Dotfiles, "git", "remote", "get-url", "origin")
 	if err != nil || !strings.HasPrefix(remote, "https://") {
 		return nil
@@ -230,7 +229,7 @@ func switchDotfilesRemote(ctx context.Context, root paths.Root, runner execx.Run
 	return nil
 }
 
-func ensureGithubKnownHost(ctx context.Context, root paths.Root, runner execx.Runner, out *output.Printer) {
+func ensureGithubKnownHost(ctx context.Context, root paths.Root, runner execx.Runner, out *ui.UI) {
 	sshDir := filepath.Join(root.Home, ".ssh")
 	knownHosts := filepath.Join(sshDir, "known_hosts")
 	if _, err := runner.Run(ctx, "", "ssh-keygen", "-F", "github.com", "-f", knownHosts); err == nil {
@@ -266,9 +265,9 @@ func linkVagariNvim(root paths.Root) error {
 	return os.Symlink(src, dst)
 }
 
-func (c *SyncCmd) Run(ctx *app.Context) error {
-	return Sync(ctx.Context, ctx.Root, ctx.Output, nil)
+func (c *SyncCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	return Sync(ctx, root, u, nil)
 }
-func (c *UpdateCmd) Run(ctx *app.Context) error {
-	return Update(ctx.Context, ctx.Root, ctx.Output, nil)
+func (c *UpdateCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	return Update(ctx, root, u, nil)
 }

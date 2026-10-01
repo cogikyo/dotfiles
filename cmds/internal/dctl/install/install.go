@@ -21,21 +21,17 @@ import (
 	"strings"
 	"time"
 
-	"dotfiles/cmds/internal/dctl/app"
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/health"
-	"dotfiles/cmds/internal/dctl/output"
 	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/dctl/pkglist"
-	"dotfiles/cmds/internal/dctl/prompt"
 	"dotfiles/cmds/internal/dctl/repos"
 	"dotfiles/cmds/internal/dctl/secrets"
-	"dotfiles/cmds/internal/dctl/tui"
+	"dotfiles/cmds/internal/dctl/ui"
 	"dotfiles/cmds/internal/dctl/update"
 )
 
 type Cmd struct {
-	Choose   ChooseCmd   `cmd:"" default:"1" hidden:"" help:"Choose an install command."`
 	All      AllCmd      `cmd:"" help:"Run all install steps."`
 	Packages PackagesCmd `cmd:"" help:"Install packages from saved lists."`
 	Link     LinkCmd     `cmd:"" help:"Symlink configs and scripts."`
@@ -53,7 +49,7 @@ type Cmd struct {
 	Check    CheckCmd    `cmd:"" help:"Run healthchecks."`
 }
 
-type Options struct{ Yes, Defaults, Optional, DryRun bool }
+type Options struct{ Yes, Optional, DryRun bool }
 type AllCmd struct{ Optional, DryRun bool }
 type StepCmd struct {
 	Optional bool `help:"Install optional packages too."`
@@ -72,7 +68,6 @@ type CertsCmd StepCmd
 type ShellCmd StepCmd
 type DNSCmd StepCmd
 type ListCmd struct{}
-type ChooseCmd struct{}
 type CheckCmd struct {
 	Steps []string `arg:"" optional:"" help:"Specific steps to check."`
 }
@@ -125,37 +120,11 @@ func FindStep(name string) (StepDef, bool) {
 	return StepDef{}, false
 }
 
-func (c *ChooseCmd) Run(ctx *app.Context) error {
-	if !prompt.Interactive() || ctx.Defaults {
-		return errors.New("install command required; use `dctl install list`, `dctl install all`, or a specific step")
-	}
-	argv, ok, err := tui.RunLauncher(os.Stdout, installCatalog())
-	if err != nil {
-		return err
-	}
-	if !ok {
-		return nil
-	}
-	return execx.ExecDctl(append([]string{"install"}, argv...))
-}
-
-func installCatalog() tui.CommandCatalog {
-	children := []tui.CommandNode{{Name: "all", Help: "Run all install steps."}}
-	for _, def := range stepDefs {
-		children = append(children, tui.CommandNode{Name: def.Name, Help: def.Description})
-	}
-	children = append(children,
-		tui.CommandNode{Name: "list", Help: "List install steps."},
-		tui.CommandNode{Name: "check", Help: "Run healthchecks."},
-	)
-	return tui.CommandNode{Name: "install", Children: children}
-}
-
-func (c *AllCmd) Run(ctx *app.Context) error {
+func (c *AllCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if c.DryRun {
 		for _, def := range stepDefs {
 			if !def.SupportsDryRun {
-				ctx.Output.Warn("[dry-run] Skipping install %s: dry-run is not supported", def.Name)
+				u.Warn("[dry-run] Skipping install %s: dry-run is not supported", def.Name)
 			}
 		}
 	}
@@ -164,52 +133,76 @@ func (c *AllCmd) Run(ctx *app.Context) error {
 			continue
 		}
 		step := def.Name
-		if err := RunStep(ctx.Context, ctx.Root, ctx.Output, step, Options{Yes: ctx.Yes, Defaults: ctx.Defaults, Optional: c.Optional, DryRun: c.DryRun}); err != nil {
+		if err := RunStep(ctx, root, u, step, Options{Yes: u.Yes(), Optional: c.Optional, DryRun: c.DryRun}); err != nil {
 			return err
 		}
 	}
 	return nil
 }
-func (c *PackagesCmd) Run(ctx *app.Context) error { return run(ctx, "packages", StepCmd(*c)) }
-func (c *LinkCmd) Run(ctx *app.Context) error     { return run(ctx, "link", StepCmd(*c)) }
-func (c *SecretsCmd) Run(ctx *app.Context) error  { return run(ctx, "secrets", StepCmd(*c)) }
-func (c *ReposCmd) Run(ctx *app.Context) error    { return run(ctx, "repos", StepCmd(*c)) }
-func (c *SystemCmd) Run(ctx *app.Context) error   { return run(ctx, "system", StepCmd(*c)) }
-func (c *FontsCmd) Run(ctx *app.Context) error    { return run(ctx, "fonts", StepCmd(*c)) }
-func (c *GoCmd) Run(ctx *app.Context) error       { return run(ctx, "go", StepCmd(*c)) }
-func (c *EwwCmd) Run(ctx *app.Context) error      { return run(ctx, "eww", StepCmd(*c)) }
-func (c *FirefoxCmd) Run(ctx *app.Context) error  { return run(ctx, "firefox", StepCmd(*c)) }
-func (c *CertsCmd) Run(ctx *app.Context) error    { return run(ctx, "certs", StepCmd(*c)) }
-func (c *ShellCmd) Run(ctx *app.Context) error    { return run(ctx, "shell", StepCmd(*c)) }
-func (c *DNSCmd) Run(ctx *app.Context) error      { return run(ctx, "dns", StepCmd(*c)) }
-func run(ctx *app.Context, name string, cmd StepCmd) error {
-	return RunStep(ctx.Context, ctx.Root, ctx.Output, name, Options{Yes: ctx.Yes, Defaults: ctx.Defaults, Optional: cmd.Optional, DryRun: cmd.DryRun})
+func (c *PackagesCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	return run(ctx, u, root, "packages", StepCmd(*c))
 }
-func (c *ListCmd) Run(ctx *app.Context) error {
-	if ctx.Output.JSONMode() {
-		return ctx.Output.Emit(stepDefs)
+func (c *LinkCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	return run(ctx, u, root, "link", StepCmd(*c))
+}
+func (c *SecretsCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	return run(ctx, u, root, "secrets", StepCmd(*c))
+}
+func (c *ReposCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	return run(ctx, u, root, "repos", StepCmd(*c))
+}
+func (c *SystemCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	return run(ctx, u, root, "system", StepCmd(*c))
+}
+func (c *FontsCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	return run(ctx, u, root, "fonts", StepCmd(*c))
+}
+func (c *GoCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	return run(ctx, u, root, "go", StepCmd(*c))
+}
+func (c *EwwCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	return run(ctx, u, root, "eww", StepCmd(*c))
+}
+func (c *FirefoxCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	return run(ctx, u, root, "firefox", StepCmd(*c))
+}
+func (c *CertsCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	return run(ctx, u, root, "certs", StepCmd(*c))
+}
+func (c *ShellCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	return run(ctx, u, root, "shell", StepCmd(*c))
+}
+func (c *DNSCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	return run(ctx, u, root, "dns", StepCmd(*c))
+}
+func run(ctx context.Context, u *ui.UI, root paths.Root, name string, cmd StepCmd) error {
+	return RunStep(ctx, root, u, name, Options{Yes: u.Yes(), Optional: cmd.Optional, DryRun: cmd.DryRun})
+}
+func (c *ListCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	if u.JSON() {
+		return u.Emit(stepDefs)
 	}
 	for _, def := range stepDefs {
-		ctx.Output.Info("%-10s %s", def.Name, def.Description)
-		ctx.Output.KV("risk", def.Risk)
-		ctx.Output.KV("dry-run", def.SupportsDryRun)
+		u.Info("%-10s %s", def.Name, def.Description)
+		u.KV("risk", def.Risk)
+		u.KV("dry-run", def.SupportsDryRun)
 		if def.Sudo {
-			ctx.Output.KV("sudo", true)
+			u.KV("sudo", true)
 		}
 		if len(def.Depends) > 0 {
-			ctx.Output.KV("depends", strings.Join(def.Depends, ", "))
+			u.KV("depends", strings.Join(def.Depends, ", "))
 		}
 		if def.FixCommand != "" {
-			ctx.Output.KV("check", def.FixCommand)
+			u.KV("check", def.FixCommand)
 		}
 	}
 	return nil
 }
-func (c *CheckCmd) Run(ctx *app.Context) error {
-	return Check(ctx.Context, ctx.Root, ctx.Output, c.Steps)
+func (c *CheckCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	return Check(ctx, root, u, c.Steps)
 }
 
-func RunStep(ctx context.Context, root paths.Root, out *output.Printer, name string, opts Options) error {
+func RunStep(ctx context.Context, root paths.Root, out *ui.UI, name string, opts Options) error {
 	def, ok := FindStep(name)
 	if !ok {
 		return fmt.Errorf("unknown install step %s", name)
@@ -248,7 +241,7 @@ func RunStep(ctx context.Context, root paths.Root, out *output.Printer, name str
 	return fmt.Errorf("unknown install step %s", name)
 }
 
-func Check(ctx context.Context, root paths.Root, out *output.Printer, selected []string) error {
+func Check(ctx context.Context, root paths.Root, out *ui.UI, selected []string) error {
 	if len(selected) == 0 {
 		selected = steps
 	}
@@ -359,7 +352,7 @@ func repoManagedDir(dir, repoRoot string) (bool, error) {
 	return true, nil
 }
 
-func installLink(ctx context.Context, root paths.Root, out *output.Printer, opts Options) error {
+func installLink(ctx context.Context, root paths.Root, out *ui.UI, opts Options) error {
 	out.Header("Linking configs and scripts")
 	mappings, err := linkMappings(root)
 	if err != nil {
@@ -429,7 +422,7 @@ func linkMappings(root paths.Root) ([]fileMapping, error) {
 // applyLink refuses real directories unless PlanSymlink proved they only contain repo-managed links.
 //
 // Dry-run prints the planned action and does not create, rename, remove, or symlink anything.
-func applyLink(plan LinkPlan, out *output.Printer, opts Options) error {
+func applyLink(plan LinkPlan, out *ui.UI, opts Options) error {
 	if plan.Action == LinkUnchanged {
 		return nil
 	}
@@ -491,7 +484,7 @@ type goBinary struct {
 
 var goBinaries = []goBinary{{"dctl", "cmds", "./cmd/dctl", "", false}, {"hyprd", "cmds", "./cmd/hyprd", "", true}, {"ewwd", "cmds", "./cmd/ewwd", "", false}, {"newtab", "cmds", "./cmd/newtab", "", true}, {"src", "cmds", "./cmd/src", "", false}}
 
-func installGo(ctx context.Context, root paths.Root, out *output.Printer, opts Options, runner execx.Runner) error {
+func installGo(ctx context.Context, root paths.Root, out *ui.UI, opts Options, runner execx.Runner) error {
 	out.Header("Building Go binaries")
 	if _, err := exec.LookPath("go"); err != nil {
 		return errors.New("go not found; install packages first")
@@ -508,7 +501,7 @@ func installGo(ctx context.Context, root paths.Root, out *output.Printer, opts O
 	}
 	return installGoServices(ctx, root, out, opts)
 }
-func buildGo(ctx context.Context, root paths.Root, out *output.Printer, opts Options, runner execx.Runner, b goBinary) error {
+func buildGo(ctx context.Context, root paths.Root, out *ui.UI, opts Options, runner execx.Runner, b goBinary) error {
 	dir := filepath.Join(root.Dotfiles, b.moduleDir)
 	if _, err := os.Stat(filepath.Join(dir, "go.mod")); err != nil {
 		return fmt.Errorf("module not found: %s", dir)
@@ -527,7 +520,7 @@ func buildGo(ctx context.Context, root paths.Root, out *output.Printer, opts Opt
 	_, err := runner.Run(ctx, dir, "go", "build", "-o", filepath.Join(installDir, b.name), b.buildPath)
 	return err
 }
-func installGoServices(ctx context.Context, root paths.Root, out *output.Printer, opts Options) error {
+func installGoServices(ctx context.Context, root paths.Root, out *ui.UI, opts Options) error {
 	dir := filepath.Join(root.Home, ".config", "systemd", "user")
 	if opts.DryRun {
 		out.Info("[dry-run] Would install user service files into %s", dir)
@@ -570,7 +563,7 @@ func installGoServices(ctx context.Context, root paths.Root, out *output.Printer
 	return nil
 }
 
-func installFonts(ctx context.Context, root paths.Root, out *output.Printer, opts Options, runner execx.Runner) error {
+func installFonts(ctx context.Context, root paths.Root, out *ui.UI, opts Options, runner execx.Runner) error {
 	out.Header("Installing fonts")
 	archive := root.Share("fonts.tar.gz")
 	if _, err := os.Stat(archive); err != nil {
@@ -604,7 +597,7 @@ func dirPopulated(dir string) bool {
 	return err == nil && len(entries) > 0
 }
 
-func installFirefox(ctx context.Context, root paths.Root, out *output.Printer, opts Options) error {
+func installFirefox(ctx context.Context, root paths.Root, out *ui.UI, opts Options) error {
 	out.Header("Configuring Firefox")
 	profile, err := detectFirefoxProfile(root.Home)
 	if err != nil {
@@ -694,9 +687,9 @@ func profileFromINI(root string) (string, error) {
 	return "", errors.New("dev-edition-default profile missing")
 }
 
-func installPackages(ctx context.Context, root paths.Root, out *output.Printer, opts Options, runner execx.Runner) error {
+func installPackages(ctx context.Context, root paths.Root, out *ui.UI, opts Options, runner execx.Runner) error {
 	out.Header("Installing packages")
-	if err := update.Install(ctx, root, out, runner, update.Options{NonInteractive: opts.Defaults || opts.Yes, DryRun: opts.DryRun}); err != nil {
+	if err := update.Install(ctx, root, out, runner, update.Options{NonInteractive: opts.Yes, DryRun: opts.DryRun}); err != nil {
 		return err
 	}
 	if !opts.Optional {
@@ -716,10 +709,10 @@ func installPackages(ctx context.Context, root paths.Root, out *output.Printer, 
 	return err
 }
 
-func installSecrets(ctx context.Context, root paths.Root, out *output.Printer) error {
+func installSecrets(ctx context.Context, root paths.Root, out *ui.UI) error {
 	out.Header("Decrypting secrets")
 	cmd := secrets.DecryptCmd{}
-	return cmd.Run(&app.Context{Context: ctx, Root: root, Output: out})
+	return cmd.Run(out, root)
 }
 
 var systemFiles = []string{
@@ -748,7 +741,7 @@ var systemFiles = []string{
 	"/usr/lib/firefox-developer-edition/firefox.cfg",
 }
 
-func installSystem(ctx context.Context, root paths.Root, out *output.Printer, opts Options, runner execx.Runner) error {
+func installSystem(ctx context.Context, root paths.Root, out *ui.UI, opts Options, runner execx.Runner) error {
 	out.Header("Installing system configs")
 	if err := confirmRisk("install system files and enable services", opts); err != nil {
 		return err
@@ -764,7 +757,7 @@ func installSystem(ctx context.Context, root paths.Root, out *output.Printer, op
 			skipped++
 			continue
 		}
-		out.SubStep("info", "%s -> %s", src, dst)
+		out.Info("%s -> %s", src, dst)
 		if !opts.DryRun {
 			if _, err := runner.Run(ctx, "", "sudo", "mkdir", "-p", filepath.Dir(dst)); err != nil {
 				return err
@@ -803,7 +796,7 @@ func installSystem(ctx context.Context, root paths.Root, out *output.Printer, op
 		failures = append(failures, "restart earlyoom")
 	}
 	if _, err := runner.Run(ctx, "", "tailscale", "version"); err == nil {
-		out.SubStep("info", "Enabling Tailscale SSH")
+		out.Info("Enabling Tailscale SSH")
 		if _, err := runner.Run(ctx, "", "sudo", "tailscale", "set", "--ssh=true"); err != nil {
 			out.Warn("Tailscale SSH not enabled; run 'sudo tailscale set --ssh=true' after logging in: %v", err)
 		} else {
@@ -824,7 +817,7 @@ func installSystem(ctx context.Context, root paths.Root, out *output.Printer, op
 	return nil
 }
 
-func installEww(ctx context.Context, root paths.Root, out *output.Printer, opts Options, runner execx.Runner) error {
+func installEww(ctx context.Context, root paths.Root, out *ui.UI, opts Options, runner execx.Runner) error {
 	out.Header("Installing eww")
 	cache := filepath.Join(root.Home, ".cache", "eww")
 	if opts.DryRun {
@@ -868,7 +861,7 @@ func installEww(ctx context.Context, root paths.Root, out *output.Printer, opts 
 	return copyFile(filepath.Join(cache, "target", "release", "eww"), outPath, 0o755)
 }
 
-func installShell(ctx context.Context, root paths.Root, out *output.Printer, opts Options, runner execx.Runner) error {
+func installShell(ctx context.Context, root paths.Root, out *ui.UI, opts Options, runner execx.Runner) error {
 	out.Header("Changing shell")
 	zsh, err := exec.LookPath("zsh")
 	if err != nil {
@@ -888,7 +881,7 @@ func installShell(ctx context.Context, root paths.Root, out *output.Printer, opt
 	return err
 }
 
-func installDNS(ctx context.Context, root paths.Root, out *output.Printer, opts Options, runner execx.Runner) error {
+func installDNS(ctx context.Context, root paths.Root, out *ui.UI, opts Options, runner execx.Runner) error {
 	out.Header("Configuring DNS")
 	if err := confirmRisk("replace /etc/resolv.conf and restart resolved/NetworkManager", opts); err != nil {
 		return err
@@ -915,7 +908,7 @@ func installDNS(ctx context.Context, root paths.Root, out *output.Printer, opts 
 }
 
 func confirmRisk(action string, opts Options) error {
-	if opts.Yes || opts.Defaults || opts.DryRun {
+	if opts.Yes || opts.DryRun {
 		return nil
 	}
 	return errors.New(action + " requires --yes or --dry-run")

@@ -46,7 +46,7 @@ func loadCredentials(home string) (credentials, error) {
 	}
 
 	var creds credentials
-	for _, line := range strings.Split(strings.TrimSuffix(string(data), "\n"), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSuffix(string(data), "\n"), "\n") {
 		name, value, ok := strings.Cut(line, "=")
 		if !ok || value == "" || strings.ContainsFunc(value, func(r rune) bool {
 			return !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || r == '_' || r == '-')
