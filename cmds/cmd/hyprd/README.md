@@ -113,15 +113,20 @@ Save work before running it.
 ### Lock
 
 ```bash
-hyprd lock privacy     # unauthenticated privacy screen: blackout, audio/notification pause, submap
+hyprd lock pseudo      # unauthenticated privacy screen: blackout, audio/notification pause, submap
 hyprd lock idle        # enter the same privacy screen for idle use
 hyprd lock unlock      # exit the privacy screen (alias: hyprd lock -u)
 hyprd lock full        # supervise hyprlock --grace 0
 ```
 
 The privacy screen does not authenticate the user or secure the session.
+Super+Q enters it with `hyprd lock pseudo` and exits it with `hyprd lock unlock` through the `pseudolock` submap.
 Full lock restores the workspace only after hyprlock exits successfully and refuses manual unlock or `hyprd rebuild` while active.
+Before each hyprlock launch, it enters `pseudolock` and polls Hyprland's `j/locked` state every 50 ms before resetting the submap.
+If the compositor has not reported locked after 10 seconds, it logs the delay and keeps the submap until hyprlock exits successfully.
 It relaunches hyprlock after failure and attempts to end the session after three consecutive failures lasting less than three seconds each.
+At daemon startup, it waits for an existing hyprlock to exit before relaunching it, or relaunches immediately if the compositor is locked without hyprlock.
+When no hyprlock is running, failure to read the compositor's lock state prevents daemon startup.
 Unlock restores the saved workspace and calls `dispatchStartup` to restore glava, Spotify, and Bluetooth.
 
 ### Browser

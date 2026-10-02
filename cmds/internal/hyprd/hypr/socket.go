@@ -45,6 +45,7 @@ func (c *Client) EventSocketPath() string {
 }
 
 // Request sends a command and returns the raw response.
+// Dialing has a three-second timeout, followed by a separate three-second deadline for writing and reading.
 func (c *Client) Request(command string) ([]byte, error) {
 	conn, err := net.DialTimeout("unix", c.socketPath, requestTimeout)
 	if err != nil {
@@ -106,6 +107,7 @@ func (c *Client) ActiveWorkspace() (int, error) {
 	return ws.ID, nil
 }
 
+// Locked reports the compositor's session-lock state and rejects a response without the locked field.
 func (c *Client) Locked() (bool, error) {
 	data, err := c.Request("j/locked")
 	if err != nil {

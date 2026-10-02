@@ -51,7 +51,6 @@ func NewLock(h *hypr.Client, s *state.State) *Lock {
 	return &Lock{hypr: h, state: s, hyprlock: execHyprlock, running: hyprlockRunning, endSession: endSession}
 }
 
-// Execute routes privacy, idle privacy, unlock, and full lock.
 func (l *Lock) Execute(arg string) (string, error) {
 	switch strings.TrimSpace(arg) {
 	case "pseudo":
@@ -135,7 +134,8 @@ func (l *Lock) Full() (string, error) {
 	return "lock: full", nil
 }
 
-// Adopt takes over a hyprlock left by a previous daemon: the full lock stays active until it exits, then hyprlock is relaunched.
+// Adopt resumes full-lock supervision, waiting for an existing hyprlock to exit or relaunching an abandoned compositor lock immediately.
+// It returns an error if no hyprlock is running and the compositor's lock state cannot be read.
 func (l *Lock) Adopt() error {
 	foreign := l.running()
 	if !foreign {
@@ -211,6 +211,7 @@ func (l *Lock) hold() {
 	}
 }
 
+// awaitLock keeps the input barrier until the compositor reports locked; a polling timeout leaves the barrier in place.
 func (l *Lock) awaitLock(exited <-chan error) error {
 	poll := time.NewTicker(lockPoll)
 	defer poll.Stop()
@@ -326,7 +327,7 @@ func terminateSession() error {
 	return nil
 }
 
-// capture snapshots workspace for later restore. Called with l.mu held.
+// capture requires l.mu to be held.
 func (l *Lock) capture() *lockState {
 	ws := l.state.GetWorkspace()
 	if ws <= 0 {
@@ -363,7 +364,7 @@ func closeEwwWidgets() {
 	}
 }
 
-// exitBlackout restores workspace, reopens eww/glava, reconnects bluetooth, and unpauses dunst. Called with l.mu held.
+// exitBlackout requires l.mu to be held.
 func (l *Lock) exitBlackout(saved *lockState) error {
 	cfg := l.state.GetConfig()
 	if err := l.hypr.FocusWorkspace(saved.workspace); err != nil {
