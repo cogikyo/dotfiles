@@ -146,6 +146,7 @@ func (s *session) main(ctx context.Context) (err error) {
 	}
 	s.report(test != nil, nil)
 	if test == nil {
+		s.u.Info("after first login as %s, run `dctl doctor`, then `dctl doctor --fix`", a.User)
 		if ok, err := s.u.Confirm("Reboot now?"); err != nil || !ok {
 			s.u.Info("installed; reboot when ready")
 			return nil
