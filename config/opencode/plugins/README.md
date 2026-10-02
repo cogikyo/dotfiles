@@ -93,6 +93,8 @@ Execution mode is stored in `metadata.delegate.unattended`.
 The tool guard rejects file-write tools and recognized shell mutations for review, scout, source-verification, and web-verification agents.
 These command checks are guardrails, not a shell sandbox.
 In every session, it rejects a shell call that starts with `cd <dir>`, because the directory persists into later calls; the error names `workdir=<dir>` as the replacement.
+In every session, `opencode/commit-message.ts` also rejects a `git commit` whose message breaks the commit skill's shape: a subject or line over 72 characters, a non-bullet body line, or a wrapped bullet.
+It reads messages from `-m`, `-F <file>`, and `-F -` fed by a heredoc or `<` redirect; piped or variable messages it cannot see pass unchecked.
 
 Context governor:
 

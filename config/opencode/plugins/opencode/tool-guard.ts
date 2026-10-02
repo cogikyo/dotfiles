@@ -3,11 +3,12 @@ import { open, stat } from "node:fs/promises";
 import path from "node:path";
 import { z } from "zod";
 import { session as readSession, type Client, type Session } from "../shared/opencode.ts";
+import { commitMessageRejection } from "./commit-message.ts";
 import { invokesGrok } from "./grok-shell.ts";
 import { commandArgs, executable, nestedShellCommands, shellWords } from "./shell-words.ts";
 
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
-// │ Server plugin: reject rm, leading cd, and read-only writes                                    │
+// │ Server plugin: reject rm, leading cd, wrapped commit messages, and read-only writes           │
 // ╰───────────────────────────────────────────────────────────────────────────────────────────────╯
 
 const id = "opencode-tool-guard";
@@ -22,7 +23,7 @@ type PatchTarget = {
 };
 
 const text = z.string().optional().catch(undefined);
-const Args = z.object({ command: text, patchText: text }).catch({});
+const Args = z.object({ command: text, patchText: text, workdir: text }).catch({});
 
 const server: Plugin = async ({ client, directory, worktree }) => {
   const fallbackDirectory = worktree || directory;
@@ -30,7 +31,8 @@ const server: Plugin = async ({ client, directory, worktree }) => {
   return {
     "tool.execute.before": async (input, output) => {
       if (input.tool === "bash") {
-        await guardBash(client, input.sessionID, Args.parse(output.args).command);
+        const args = Args.parse(output.args);
+        await guardBash(client, input.sessionID, args.command, path.resolve(fallbackDirectory, args.workdir ?? ""));
         return;
       }
 
@@ -49,7 +51,7 @@ const server: Plugin = async ({ client, directory, worktree }) => {
   };
 };
 
-/** Server plugin that blocks `rm` and leading `cd` in all sessions and rejects writes by read-only agents, including oversized or binary text patches. */
+/** Server plugin that blocks `rm`, leading `cd`, and wrapped commit messages in all sessions and rejects writes by read-only agents, including oversized or binary text patches. */
 export default { id, server } satisfies PluginModule;
 
 function isReadOnlySession({ agent }: Session) {
@@ -211,7 +213,7 @@ const reviewGitMutators = new Set([
 
 const leadingCd = /^\s*cd(?:\s+("[^"]*"|'[^']*'|[^\s;&|]+))?\s*(?:$|&&|;|\n)/u;
 
-async function guardBash(client: Client, sessionID: string, command: string | undefined) {
+async function guardBash(client: Client, sessionID: string, command: string | undefined, cwd: string) {
   if (!command) return;
 
   if (invokesRm(command)) {
@@ -225,11 +227,14 @@ async function guardBash(client: Client, sessionID: string, command: string | un
     throw new Error(`leading cd is disabled; pass workdir=${cd[1] ?? "<dir>"} to the bash tool instead`);
   }
   const reviewBlock = reviewMutation(command);
-  if (!reviewBlock) return;
-  const session = await readSession(client, sessionID, { label: `tool guard read session ${sessionID}` });
-  if (isReadOnlySession(session)) {
-    throw new Error(`read-only sessions cannot mutate; ${reviewBlock}`);
+  if (reviewBlock) {
+    const session = await readSession(client, sessionID, { label: `tool guard read session ${sessionID}` });
+    if (isReadOnlySession(session)) {
+      throw new Error(`read-only sessions cannot mutate; ${reviewBlock}`);
+    }
   }
+  const commit = await commitMessageRejection(command, cwd);
+  if (commit) throw new Error(commit);
 }
 
 function invokesRm(command: string) {

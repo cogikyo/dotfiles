@@ -107,14 +107,28 @@ Use `verb(scope/context): short summary`.
 | `chore`    | Build, dependency, or configuration maintenance changes.      |
 | `ci`       | CI or deployment automation changes.                          |
 
+### Shape
+
+These rules are absolute.
+The tool guard rejects a `git commit` that breaks them, before the commit runs.
+
+- The subject is one line of at most 72 characters.
+- A blank line separates the subject from the body.
+- The body is one bullet list with no blank lines and no prose paragraphs.
+- Every body line is a bullet: `- ` for a point, or ` -` for detail under the bullet above it.
+- Every line is at most 72 characters, including its indent.
+- A bullet never wraps onto a second line.
+  - When a point needs more words, cut it to one line.
+  - Move supporting detail into nested ` -` bullets under it.
+  - Split the commit when the points do not share one story.
+
 ### Body
 
-These are guidelines rather than hard limits:
-
 - A tiny atomic commit may use only the subject.
-- Aim for two short bullets about behavior, intent, constraints, or important decisions.
-- A normal commit may use up to about six bullets.
-- A genuinely large atomic commit may use more.
+- Aim for two to four short bullets about behavior, intent, constraints, or decisions.
+- More than six top-level bullets usually means several stories; split the commit.
+- Bullets state facts about the change.
+  - Keep questions, guesses, and investigation notes out of the message.
 - Do not inventory files or mechanically repeat the subject.
 
 Write the subject and body as one message.
@@ -122,10 +136,11 @@ Pass it through `-F -` rather than several `-m` arguments, because each `-m` cre
 
 ```bash
 git commit -F - <<'EOF'
-edit(nvim/editor): tune completion diagnostics
+fix(complete/trust): skip the trust row for an empty TrustedForm cert
 
-- disable completion ghost text
-- guard the diagnostic handler
+- check the cert length before copying the session pointer
+  - the struct literal stored an empty cert as ""
+- keep isJornaya partners from seeing an untrusted row as trusted
 EOF
 ```
 
