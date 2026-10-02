@@ -19,8 +19,6 @@ import (
 	"dotfiles/cmds/internal/dctl/ui"
 )
 
-type BuildCmd struct{}
-
 type build struct {
 	u       *ui.UI
 	run     execx.Runner
@@ -33,7 +31,7 @@ type build struct {
 	out     string
 }
 
-func (BuildCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+func Build(ctx context.Context, u *ui.UI, root paths.Root) error {
 	name := os.Getenv("SUDO_USER")
 	if os.Geteuid() != 0 || name == "" || name == "root" {
 		return errors.New("run as `sudo dctl iso build` from your user account")
@@ -319,7 +317,7 @@ Include = /etc/pacman.d/mirrorlist
 	if err := b.run.Run(ctx, payload, "repo-add", append([]string{"--quiet", Repo + ".db.tar.zst"}, names...)...); err != nil {
 		return nil, nil, err
 	}
-	return sizes, targets, writeSums(payload)
+	return sizes, targets, writeSums(ctx, payload)
 }
 
 func (b build) user(ctx context.Context, args ...string) error {

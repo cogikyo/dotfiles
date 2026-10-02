@@ -3,11 +3,8 @@ package iso
 import (
 	"cmp"
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -17,16 +14,7 @@ import (
 	"dotfiles/cmds/internal/dctl/execx"
 )
 
-const (
-	Payload = "/opt/dctl/payload"
-	Targets = "/opt/dctl/targets"
-	Bundle  = "/opt/dctl/dotfiles.bundle"
-	Bin     = "/usr/local/bin"
-	Repo    = "dctl"
-	Sums    = "SHA256SUMS"
-
-	MaxSize int64 = 2 << 30
-)
+const MaxSize int64 = 2 << 30
 
 func revision(ctx context.Context, run execx.Runner, dir string, as []string) (string, error) {
 	git := func(args ...string) (string, error) {
@@ -104,19 +92,6 @@ func oversize(total int64, pkgs []sized) error {
 
 func mib(n int64) string { return fmt.Sprintf("%.1f MiB", float64(n)/(1<<20)) }
 
-func digest(file string) (string, error) {
-	f, err := os.Open(file)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-	h := sha256.New()
-	if _, err := io.Copy(h, f); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(h.Sum(nil)), nil
-}
-
 func signedSum(ctx context.Context, allowed, iso string) (string, error) {
 	sums := iso + ".sha256"
 	sig := sums + ".sig"
@@ -126,37 +101,22 @@ func signedSum(ctx context.Context, allowed, iso string) (string, error) {
 	}
 	out, err := execx.OSRunner{}.Output(ctx, "", "ssh-keygen", "-Y", "find-principals", "-f", allowed, "-s", sig)
 	if _, ok := errors.AsType[*exec.ExitError](err); ok {
-		return "", fmt.Errorf("%s is not signed by a key in %s: %w", sums, allowed, err)
+		return "", fmt.Errorf("%s is not signed by a key in %s", sums, allowed)
 	}
 	if err != nil {
 		return "", err
 	}
 	principal, _, _ := strings.Cut(out, "\n")
-	if _, err := (execx.OSRunner{Stdin: data}).Output(ctx, "", "ssh-keygen", "-Y", "verify", "-f", allowed, "-I", principal, "-n", "file", "-s", sig); err != nil {
-		return "", fmt.Errorf("signature check failed: %w", err)
+	_, err = execx.OSRunner{Stdin: data}.Output(ctx, "", "ssh-keygen", "-Y", "verify", "-f", allowed, "-I", principal, "-n", "file", "-s", sig)
+	if _, ok := errors.AsType[*exec.ExitError](err); ok {
+		return "", fmt.Errorf("%s is not a valid signature of %s by %s", sig, sums, principal)
 	}
-	sum, name, ok := strings.Cut(strings.TrimSpace(string(data)), "  ")
-	if !ok || name != filepath.Base(iso) {
+	if err != nil {
+		return "", err
+	}
+	parsed, err := parseSums(data)
+	if err != nil || len(parsed) != 1 || parsed[0].name != filepath.Base(iso) {
 		return "", fmt.Errorf("%s does not describe %s", sums, filepath.Base(iso))
 	}
-	return sum, nil
-}
-
-func writeSums(dir string) error {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return err
-	}
-	var b strings.Builder
-	for _, e := range entries {
-		if !e.Type().IsRegular() {
-			continue
-		}
-		sum, err := digest(filepath.Join(dir, e.Name()))
-		if err != nil {
-			return err
-		}
-		fmt.Fprintf(&b, "%s  %s\n", sum, e.Name())
-	}
-	return os.WriteFile(filepath.Join(dir, Sums), []byte(b.String()), 0o644)
+	return parsed[0].hex, nil
 }

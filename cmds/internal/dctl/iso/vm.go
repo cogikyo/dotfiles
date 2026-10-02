@@ -19,11 +19,9 @@ import (
 	"dotfiles/cmds/internal/dctl/ui"
 )
 
-type TestCmd struct {
-	ISO    string `arg:"" type:"existingfile" help:"ISO from dctl iso build."`
-	Dctl   string `type:"existingfile" help:"dctl binary that replaces the ISO's."`
-	Bundle string `type:"existingfile" help:"git bundle that replaces the ISO's."`
-	Keep   bool   `help:"Keep the VM disk and firmware variables."`
+type TestOptions struct {
+	ISO, Dctl, Bundle string
+	Keep              bool
 }
 
 const (
@@ -32,36 +30,12 @@ const (
 
 	luks   = "dctlunlock"
 	serial = "DCTLTEST0"
-	Label  = "DCTLTEST"
 
 	installPrefix = `{"dctltest":`
 	doctorPrefix  = `[{"group":`
-	Greeter       = "dctltest-greeter:"
 )
 
 var required = slices.Concat([]string{"system", "packages", "home"}, secureboot.Checks)
-
-type Answers struct {
-	User     string `json:"user"`
-	Password string `json:"password"`
-	Host     string `json:"host"`
-	Zone     string `json:"zone"`
-	LUKS     string `json:"luks"`
-	Serial   string `json:"disk_serial"`
-}
-
-type Phase struct {
-	Name    string  `json:"name"`
-	Seconds float64 `json:"seconds"`
-}
-
-type Report struct {
-	Event  string  `json:"dctltest"`
-	OK     bool    `json:"ok"`
-	Error  string  `json:"error,omitempty"`
-	Total  float64 `json:"total"`
-	Phases []Phase `json:"phases"`
-}
 
 type test struct {
 	u       *ui.UI
@@ -75,14 +49,14 @@ type test struct {
 
 func (t *test) file(name string) string { return filepath.Join(t.dir, name) }
 
-func (c TestCmd) Run(ctx context.Context, u *ui.UI) error {
+func Test(ctx context.Context, u *ui.UI, o TestOptions) error {
 	dir, err := os.MkdirTemp("/var/tmp", "dctl-iso-test-")
 	if err != nil {
 		return err
 	}
 	u.KV("run", dir)
-	t := &test{u: u, dir: dir, iso: c.ISO, doctor: map[string][]doctor.Result{}}
-	err = t.run(ctx, c)
+	t := &test{u: u, dir: dir, iso: o.ISO, doctor: map[string][]doctor.Result{}}
+	err = t.run(ctx, o)
 	if t.install != nil {
 		u.Header("Install phases")
 		for _, p := range t.install.Phases {
@@ -94,23 +68,23 @@ func (c TestCmd) Run(ctx context.Context, u *ui.UI) error {
 		u.KV(p.Name, fmt.Sprintf("%.1fs", p.Seconds))
 	}
 	errs := []error{err, t.save(), os.Remove(t.file("dctltest.img")), os.Remove(t.file("qmp.sock"))}
-	if !c.Keep {
+	if !o.Keep {
 		errs = append(errs, os.Remove(t.file("disk.qcow2")), os.Remove(t.file("vars.fd")))
 	}
 	return errors.Join(slices.DeleteFunc(errs, func(e error) bool { return errors.Is(e, os.ErrNotExist) })...)
 }
 
-func (t *test) run(ctx context.Context, c TestCmd) error {
+func (t *test) run(ctx context.Context, o TestOptions) error {
 	answers, _ := json.Marshal(Answers{User: "cullyn", Password: "dctltest", Host: "dctltest", Zone: "America/Los_Angeles", LUKS: luks, Serial: serial})
 	if err := os.WriteFile(t.file("answers.json"), answers, 0o600); err != nil {
 		return err
 	}
 	files := map[string]string{"answers.json": t.file("answers.json")}
-	if c.Dctl != "" {
-		files["dctl"] = c.Dctl
+	if o.Dctl != "" {
+		files["dctl"] = o.Dctl
 	}
-	if c.Bundle != "" {
-		files["dotfiles.bundle"] = c.Bundle
+	if o.Bundle != "" {
+		files["dotfiles.bundle"] = o.Bundle
 	}
 	if err := drive(ctx, t.file("dctltest.img"), files); err != nil {
 		return err
@@ -504,80 +478,4 @@ func (v *vm) quiet(ctx context.Context) (int64, error) {
 		return 0, fmt.Errorf("disk reads never settled at a passphrase prompt (%d bytes read): %w", last, err)
 	}
 	return last, nil
-}
-
-type qmp struct {
-	conn net.Conn
-	dec  *json.Decoder
-	dead error
-}
-
-type reply struct {
-	Return json.RawMessage `json:"return"`
-	Event  string          `json:"event"`
-	Error  *struct {
-		Class string `json:"class"`
-		Desc  string `json:"desc"`
-	} `json:"error"`
-}
-
-func dial(ctx context.Context, conn net.Conn) (*qmp, error) {
-	q := &qmp{conn: conn, dec: json.NewDecoder(conn)}
-	deadline, _ := ctx.Deadline()
-	conn.SetDeadline(deadline)
-	stop := context.AfterFunc(ctx, func() { conn.SetDeadline(time.Now()) })
-	var greeting struct {
-		QMP json.RawMessage `json:"QMP"`
-	}
-	err := q.dec.Decode(&greeting)
-	stop()
-	if err == nil && greeting.QMP == nil {
-		err = errors.New("no greeting")
-	}
-	if err == nil {
-		_, err = q.execute(ctx, "qmp_capabilities", nil)
-	}
-	if err != nil {
-		conn.Close()
-		return nil, fmt.Errorf("qmp: %w", err)
-	}
-	return q, nil
-}
-
-func (q *qmp) execute(ctx context.Context, command string, args any) (json.RawMessage, error) {
-	if q.dead != nil {
-		return nil, q.dead
-	}
-	deadline, _ := ctx.Deadline()
-	q.conn.SetDeadline(deadline)
-	stop := context.AfterFunc(ctx, func() { q.conn.SetDeadline(time.Now()) })
-	msg, err := q.roundtrip(command, args)
-	if !stop() && err == nil {
-		err = ctx.Err()
-	}
-	if err != nil {
-		q.dead = fmt.Errorf("qmp %s: %w", command, err)
-		return nil, q.dead
-	}
-	q.conn.SetDeadline(time.Time{})
-	if msg.Error != nil {
-		return nil, fmt.Errorf("qmp %s: %s: %s", command, msg.Error.Class, msg.Error.Desc)
-	}
-	return msg.Return, nil
-}
-
-func (q *qmp) roundtrip(command string, args any) (reply, error) {
-	req := map[string]any{"execute": command}
-	if args != nil {
-		req["arguments"] = args
-	}
-	if err := json.NewEncoder(q.conn).Encode(req); err != nil {
-		return reply{}, err
-	}
-	for {
-		var msg reply
-		if err := q.dec.Decode(&msg); err != nil || msg.Event == "" {
-			return msg, err
-		}
-	}
 }

@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -73,20 +74,43 @@ func TestSigningKey(t *testing.T) {
 func TestCopySigned(t *testing.T) {
 	var dev bytes.Buffer
 	sum := sha256.Sum256([]byte("iso"))
-	if err := copySigned(&dev, strings.NewReader("iso"), hex.EncodeToString(sum[:])); err != nil || dev.String() != "iso" {
+	want := hex.EncodeToString(sum[:])
+	if err := copySigned(&dev, strings.NewReader("iso"), "a.iso", want); err != nil || dev.String() != "iso" {
 		t.Fatalf("good copy: %v %q", err, dev.String())
 	}
-	dev.Reset()
-	evil := strings.NewReader("evil")
-	if err := check(evil, hex.EncodeToString(sum[:])); err == nil || dev.Len() != 0 {
-		t.Fatalf("mismatch passed the pre-write check: %v", err)
+	if err := copySigned(io.Discard, strings.NewReader("evil"), "a.iso", want); err == nil || !strings.Contains(err.Error(), "a.iso does not match") {
+		t.Fatalf("mismatch passed: %v", err)
 	}
-	good := strings.NewReader("iso")
-	if err := check(good, hex.EncodeToString(sum[:])); err != nil || good.Len() != 3 {
-		t.Fatalf("good ISO not rewound: %v, %d bytes left", err, good.Len())
+}
+
+func TestPayloadSums(t *testing.T) {
+	dir := t.TempDir()
+	for name, data := range map[string]string{"a-1-any.pkg.tar.zst": "a", "b-1-any.pkg.tar.zst": "b", "dctl.db.tar.zst": "db"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(data), 0o644); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if err := copySigned(&dev, strings.NewReader("evil"), hex.EncodeToString(sum[:])); err == nil || !strings.Contains(err.Error(), "untrusted") {
-		t.Fatalf("changed during copy: %v", err)
+	if err := writeSums(t.Context(), dir); err != nil {
+		t.Fatal(err)
+	}
+	if err := VerifyPayload(t.Context(), dir); err != nil {
+		t.Fatalf("fresh payload: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "b-1-any.pkg.tar.zst"), []byte("B"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := VerifyPayload(t.Context(), dir); err == nil || !strings.Contains(err.Error(), "b-1-any.pkg.tar.zst does not match") || strings.Contains(err.Error(), "a-1") {
+		t.Fatalf("corrupt payload: %v", err)
+	}
+	h := strings.Repeat("ab", sha256.Size)
+	got, err := parseSums([]byte(h + "  a b.pkg\n" + h + " *c.pkg\n"))
+	if err != nil || !slices.Equal(got, []sum{{h, "a b.pkg"}, {h, "c.pkg"}}) {
+		t.Fatalf("text and binary lines: %v, %v", got, err)
+	}
+	for _, bad := range []string{"abc  a\n", h + "  \n", h + " -a\n", h + "a  b\n"} {
+		if _, err := parseSums([]byte(bad)); err == nil {
+			t.Errorf("accepted %q", bad)
+		}
 	}
 }
 

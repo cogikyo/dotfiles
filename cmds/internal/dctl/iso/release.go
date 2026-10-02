@@ -15,18 +15,6 @@ import (
 	"dotfiles/cmds/internal/dctl/ui"
 )
 
-type Cmd struct {
-	Build   BuildCmd   `cmd:"" help:"Build the offline installer ISO (sudo)."`
-	Test    TestCmd    `cmd:"" help:"Install an ISO into a QEMU VM and check the installed system."`
-	USB     USBCmd     `cmd:"" name:"usb" help:"Verify a signed ISO and write it to a removable disk."`
-	Release ReleaseCmd `cmd:"" help:"Sign an ISO and publish it as a GitHub release."`
-}
-
-type ReleaseCmd struct {
-	ISO string `arg:"" type:"existingfile" help:"ISO from dctl iso build (dotfiles-<rev>.iso)."`
-	Key string `help:"Hardware SSH key that signs the checksum (default: the only ~/.ssh/id_ed25519_sk_* key); its public key must be in share/allowed_signers."`
-}
-
 func signingKey(home, flag string) (string, error) {
 	if flag != "" {
 		return paths.ExpandHome(home, flag), nil
@@ -45,11 +33,16 @@ func signingKey(home, flag string) (string, error) {
 	return "", fmt.Errorf("several signing keys (%s); pick one with --key", strings.Join(found, ", "))
 }
 
-func (c ReleaseCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+func Release(ctx context.Context, u *ui.UI, root paths.Root, iso, key string) error {
 	if os.Geteuid() == 0 {
 		return errors.New("run release as your user; gh and the security key need your session")
 	}
-	st, err := os.Stat(c.ISO)
+	f, err := os.Open(iso)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	st, err := f.Stat()
 	if err != nil {
 		return err
 	}
@@ -61,8 +54,8 @@ func (c ReleaseCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if err != nil {
 		return err
 	}
-	if want := "dotfiles-" + rev[:12] + ".iso"; filepath.Base(c.ISO) != want {
-		return fmt.Errorf("%s was not built from HEAD %s (expected %s)", c.ISO, rev[:12], want)
+	if want := "dotfiles-" + rev[:12] + ".iso"; filepath.Base(iso) != want {
+		return fmt.Errorf("%s was not built from HEAD %s (expected %s)", iso, rev[:12], want)
 	}
 	pushed, err := run.Output(ctx, root.Dotfiles, "git", "rev-parse", "origin/master")
 	if err != nil {
@@ -71,7 +64,7 @@ func (c ReleaseCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if pushed != rev {
 		return fmt.Errorf("HEAD %s is not origin/master; push master first", rev[:12])
 	}
-	key, err := signingKey(root.Home, c.Key)
+	key, err = signingKey(root.Home, key)
 	if err != nil {
 		return err
 	}
@@ -83,12 +76,12 @@ func (c ReleaseCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 		return fmt.Errorf("%s is not a hardware (sk-) key", key)
 	}
 
-	sum, err := digest(c.ISO)
+	hash, err := digest(f)
 	if err != nil {
 		return err
 	}
-	sums := c.ISO + ".sha256"
-	if err := os.WriteFile(sums, []byte(sum+"  "+filepath.Base(c.ISO)+"\n"), 0o644); err != nil {
+	sums := iso + ".sha256"
+	if err := os.WriteFile(sums, formatSums([]sum{{hash, filepath.Base(iso)}}), 0o644); err != nil {
 		return err
 	}
 	if err := os.Remove(sums + ".sig"); err != nil && !errors.Is(err, os.ErrNotExist) {
@@ -98,19 +91,15 @@ func (c ReleaseCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if err := run.Run(ctx, "", "ssh-keygen", "-Y", "sign", "-f", key, "-n", "file", sums); err != nil {
 		return err
 	}
-	signed, err := signedSum(ctx, root.Share("allowed_signers"), c.ISO)
-	if err != nil {
-		return fmt.Errorf("signed checksum does not verify against share/allowed_signers: %w", err)
-	}
-	if signed != sum {
-		return fmt.Errorf("signed checksum %s does not match %s", signed, sum)
+	if _, err := signedSum(ctx, root.Share("allowed_signers"), iso); err != nil {
+		return err
 	}
 	u.OK("signature verifies against share/allowed_signers")
 
 	tag := "iso-" + time.Now().Format("2006.01.02") + "-" + rev[:12]
 	argv := []string{"release", "create", tag, "--target", rev, "--title", tag,
-		"--notes", fmt.Sprintf("Offline installer ISO built from %s. Write it with `dctl iso usb %s /dev/sdX`.", rev[:12], filepath.Base(c.ISO)),
-		c.ISO, sums, sums + ".sig"}
+		"--notes", fmt.Sprintf("Offline installer ISO built from %s. Write it with `dctl iso usb %s /dev/sdX`.", rev[:12], filepath.Base(iso)),
+		iso, sums, sums + ".sig"}
 	u.Info("gh %s", strings.Join(argv, " "))
 	typed, err := u.Text("Type "+tag+" to publish this public release", "")
 	if err != nil {

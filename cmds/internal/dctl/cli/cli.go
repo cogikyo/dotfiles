@@ -1,9 +1,6 @@
 package cli
 
-import (
-	"dotfiles/cmds/internal/dctl/iso"
-	"dotfiles/cmds/internal/dctl/porkbun"
-)
+import "dotfiles/cmds/internal/dctl/porkbun"
 
 type CLI struct {
 	JSON  bool `help:"Emit JSON results where supported."`
@@ -17,5 +14,5 @@ type CLI struct {
 	Secrets SecretsCmd  `cmd:"" help:"Manage age-encrypted secrets."`
 	Keys    KeysCmd     `cmd:"" help:"Enroll, remove, and inspect YubiKeys."`
 	Repos   ReposCmd    `cmd:"" help:"Manage configured repositories."`
-	ISO     iso.Cmd     `cmd:"" name:"iso" help:"Build, write, and release the offline installer ISO."`
+	ISO     ISOCmd      `cmd:"" name:"iso" help:"Build, test, write, and release the offline installer ISO."`
 }

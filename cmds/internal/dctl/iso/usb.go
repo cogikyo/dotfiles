@@ -2,8 +2,6 @@ package iso
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,11 +14,6 @@ import (
 	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/dctl/ui"
 )
-
-type USBCmd struct {
-	ISO    string `arg:"" type:"existingfile" help:"ISO with .sha256 and .sha256.sig beside it."`
-	Device string `arg:"" help:"Whole removable disk, e.g. /dev/sdX."`
-}
 
 type stick struct {
 	Path        string   `json:"path"`
@@ -104,36 +97,24 @@ func identify(ctx context.Context, device string, st os.FileInfo) (identity, err
 	return identity{sys.Rdev, strings.TrimSpace(dev.Serial), dev.WWN, dev.Size}, nil
 }
 
-func check(src io.ReadSeeker, want string) error {
-	h := sha256.New()
-	if _, err := io.Copy(h, src); err != nil {
+func copySigned(dst io.Writer, src io.Reader, name, want string) error {
+	got, err := digest(io.TeeReader(src, dst))
+	if err != nil {
 		return err
 	}
-	if got := hex.EncodeToString(h.Sum(nil)); got != want {
-		return fmt.Errorf("ISO sha256 %s does not match the signed %s; nothing written", got, want)
-	}
-	_, err := src.Seek(0, io.SeekStart)
-	return err
-}
-
-func copySigned(dst io.Writer, src io.Reader, want string) error {
-	h := sha256.New()
-	if _, err := io.Copy(dst, io.TeeReader(src, h)); err != nil {
-		return err
-	}
-	if got := hex.EncodeToString(h.Sum(nil)); got != want {
-		return fmt.Errorf("the ISO changed while writing (sha256 %s, signed %s); the device is untrusted, do not boot it", got, want)
+	if got != want {
+		return fmt.Errorf("%s does not match its signed checksum", name)
 	}
 	return nil
 }
 
-func (c USBCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
-	want, err := signedSum(ctx, root.Share("allowed_signers"), c.ISO)
+func USB(ctx context.Context, u *ui.UI, root paths.Root, iso, device string) error {
+	want, err := signedSum(ctx, root.Share("allowed_signers"), iso)
 	if err != nil {
 		return err
 	}
 	u.OK("checksum file signature verified")
-	src, err := os.Open(c.ISO)
+	src, err := os.Open(iso)
 	if err != nil {
 		return err
 	}
@@ -142,12 +123,12 @@ func (c USBCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if err != nil {
 		return err
 	}
-	dev, err := inspect(ctx, c.Device)
+	dev, err := inspect(ctx, device)
 	if err != nil {
 		return err
 	}
 	if reason := dev.refusal(st.Size()); reason != "" {
-		return fmt.Errorf("refusing %s: %s", c.Device, reason)
+		return fmt.Errorf("refusing %s: %s", device, reason)
 	}
 	node, err := os.Stat(dev.Path)
 	if err != nil {
@@ -157,7 +138,7 @@ func (c USBCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if err != nil {
 		return err
 	}
-	u.Warn("Writing %s erases %s %q serial=%s wwn=%s (%s, %s)", c.ISO, dev.Path, strings.TrimSpace(dev.Model), before.Serial, before.WWN, mib(dev.Size), dev.Tran)
+	u.Warn("Writing %s erases %s %q serial=%s wwn=%s (%s, %s)", iso, dev.Path, strings.TrimSpace(dev.Model), before.Serial, before.WWN, mib(dev.Size), dev.Tran)
 	typed, err := u.Text("Type "+dev.Path+" to erase it", "")
 	if err != nil {
 		return err
@@ -165,7 +146,10 @@ func (c USBCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if typed != dev.Path {
 		return errors.New("confirmation did not match; nothing written")
 	}
-	if err := check(src, want); err != nil {
+	if err := copySigned(io.Discard, src, iso, want); err != nil {
+		return fmt.Errorf("%w; nothing written", err)
+	}
+	if _, err := src.Seek(0, io.SeekStart); err != nil {
 		return err
 	}
 	out, err := os.OpenFile(dev.Path, os.O_WRONLY|os.O_EXCL, 0)
@@ -185,14 +169,14 @@ func (c USBCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 		return fmt.Errorf("%s changed after confirmation (%+v, now %+v); nothing written", dev.Path, before, after)
 	}
 	err = u.Spin(ctx, "Writing "+mib(st.Size())+" to "+dev.Path, func(context.Context) error {
-		if err := copySigned(out, src, want); err != nil {
-			return err
+		if err := copySigned(out, src, iso, want); err != nil {
+			return fmt.Errorf("writing %s: %w; do not boot it", dev.Path, err)
 		}
 		return out.Sync()
 	})
 	if err != nil {
 		return err
 	}
-	u.OK("wrote and verified %s on %s", c.ISO, dev.Path)
+	u.OK("wrote and verified %s on %s", iso, dev.Path)
 	return nil
 }
