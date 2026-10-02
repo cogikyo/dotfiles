@@ -7,6 +7,7 @@ cmds/cmd/newtab/newtab-server
 
 # Plaintext secrets (safety net)
 secrets/identity
+/.secrets.dctl-*/
 
 # External plugins (managed separately)
 config/xplr/plugins/preview/

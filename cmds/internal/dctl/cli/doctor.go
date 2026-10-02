@@ -15,6 +15,7 @@ import (
 	"dotfiles/cmds/internal/dctl/home"
 	"dotfiles/cmds/internal/dctl/packages"
 	"dotfiles/cmds/internal/dctl/paths"
+	"dotfiles/cmds/internal/dctl/secrets"
 	"dotfiles/cmds/internal/dctl/system"
 	"dotfiles/cmds/internal/dctl/tailscale"
 	"dotfiles/cmds/internal/dctl/ui"
@@ -33,6 +34,7 @@ func (c *DoctorCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 		system.Group("/", root.System()),
 		packages.Group(root.Packages(), c.Offline, run),
 		home.Group(root, run),
+		secrets.Group(u, root),
 		vpn.Group(root, run),
 		home.Firefox(root),
 		binaries.Group(root, c.Offline, run),

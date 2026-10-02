@@ -1,0 +1,6 @@
+[Unit]
+Description=Remind the user to rehearse the age phrase
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/notify-send --app-name=dctl "Rehearse the age phrase" "Run: dctl secrets verify-phrase"

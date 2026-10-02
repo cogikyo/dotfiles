@@ -12,6 +12,7 @@ require (
 	github.com/fsnotify/fsnotify v1.9.0
 	github.com/godbus/dbus/v5 v5.1.0
 	github.com/pierrec/lz4/v4 v4.1.22
+	golang.org/x/sys v0.46.0
 	golang.org/x/term v0.38.0
 	google.golang.org/protobuf v1.36.11
 	gopkg.in/yaml.v3 v3.0.1
@@ -40,7 +41,6 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 	golang.org/x/crypto v0.45.0 // indirect
 	golang.org/x/sync v0.21.0 // indirect
-	golang.org/x/sys v0.46.0 // indirect
 	modernc.org/libc v1.55.3 // indirect
 	modernc.org/mathutil v1.6.0 // indirect
 	modernc.org/memory v1.8.0 // indirect

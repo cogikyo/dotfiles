@@ -1,0 +1,10 @@
+[Unit]
+Description=Monthly age phrase rehearsal reminder
+
+[Timer]
+OnCalendar=monthly
+RandomizedDelaySec=2w
+Persistent=true
+
+[Install]
+WantedBy=timers.target

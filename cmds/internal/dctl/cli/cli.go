@@ -4,7 +4,6 @@ import (
 	"dotfiles/cmds/internal/dctl/iso"
 	"dotfiles/cmds/internal/dctl/porkbun"
 	"dotfiles/cmds/internal/dctl/repos"
-	"dotfiles/cmds/internal/dctl/secrets"
 	"dotfiles/cmds/internal/dctl/update"
 )
 
@@ -16,8 +15,8 @@ type CLI struct {
 	Doctor  DoctorCmd   `cmd:"" group:"actions" help:"Check the machine and optionally fix it."`
 	Porkbun porkbun.Cmd `cmd:"" group:"actions" help:"Manage personal Porkbun DNS records (Linux)."`
 
-	Update  update.Cmd  `cmd:"" group:"lifecycle" help:"Update system and package lists."`
-	Secrets secrets.Cmd `cmd:"" group:"lifecycle" help:"Manage age-encrypted secrets."`
-	Repos   repos.Cmd   `cmd:"" group:"lifecycle" help:"Manage configured repositories."`
-	ISO     iso.Cmd     `cmd:"" name:"iso" group:"lifecycle" help:"Build and release custom Arch ISOs."`
+	Update  update.Cmd `cmd:"" group:"lifecycle" help:"Update system and package lists."`
+	Secrets SecretsCmd `cmd:"" group:"lifecycle" help:"Manage age-encrypted secrets."`
+	Repos   repos.Cmd  `cmd:"" group:"lifecycle" help:"Manage configured repositories."`
+	ISO     iso.Cmd    `cmd:"" name:"iso" group:"lifecycle" help:"Build and release custom Arch ISOs."`
 }
