@@ -4,7 +4,7 @@ Go command workspace for Hyprland, eww, Firefox, and dotfiles management.
 
 ## Why
 
-**Event-driven.** State changes push to subscribers when they happen, without polling.
+**Event-driven.** State changes push to subscribers when they happen.
 
 **In-memory state.** One process holds the full picture.
 Commands that depend on each other (e.g. hide needs to know about monocle) share state directly.
@@ -83,12 +83,23 @@ internal/daemon/
 
 ## Installation
 
-```bash
-./install.sh go          # build all
+The dctl ISO installs prebuilt commands into `~/.local/bin/`.
+`dctl doctor --fix binaries` builds only missing or non-executable commands; it does not rebuild changed source or restart daemons.
+
+To build dctl on an existing machine, run from `cmds/` with Go 1.26.2 or later and an existing `~/.local/bin/` directory:
+
+```sh
+go build -o "$HOME/.local/bin/dctl" ./cmd/dctl
 ```
 
-Binaries go to `~/.local/bin/`.
-If `hyprd` is already running, `install.sh go` uses `hyprd rebuild` for hot-restart.
+For build-only checks, use an existing scratch directory instead of the live binary path:
+
+```sh
+go build -o /tmp/opencode/bin/ ./cmd/dctl
+```
+
+See the [hyprd guide](cmd/hyprd/README.md#rebuild) for attended live rebuilds.
+The [`dctl` guide](cmd/dctl/README.md) covers ISO builds, installation, doctor groups, and maintenance.
 
 Config files live in `cmds/config/` in the source tree.
 Config-backed commands read their config at startup; see command-specific docs for details.

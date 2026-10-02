@@ -1,12 +1,12 @@
 # Dotfiles
 
-Arch + Hyprland (Wayland) dotfiles. Single-user. Root of repo = `~/dotfiles`.
+Arch + Hyprland (Wayland) dotfiles for a single-user Framework Desktop (AMD Strix Halo, Ethernet only).
+Root of repo = `~/dotfiles`.
 
 ## Layout
 
-- `config/` → symlinked into `~/.config/` by `install.sh link`
-- `bin/` → symlinked into `~/.local/bin/` (legacy; being replaced by `cmds/`)
-- `cmds/` → Go command workspace; built into `~/.local/bin/` by `install.sh go`. See `cmds/README.md`.
+- `config/` → linked into `~/.config/` by `dctl doctor --fix home`, with separate Firefox and OBS handling
+- `cmds/` → Go command workspace; the ISO installs prebuilt commands into `~/.local/bin/`; see `cmds/README.md`
 - `system/` → rootfs overlay mirroring `/`; **copied** into place (not symlinked)
 - `packages/` → package lists (`base.lst`, `aur.lst`, `extra.lst`) and local PKGBUILDs
 - `secrets/` → age-encrypted secrets and their manifest; `repos.json` → repos cloned under `~/`
@@ -14,8 +14,9 @@ Arch + Hyprland (Wayland) dotfiles. Single-user. Root of repo = `~/dotfiles`.
 - `iso/` → archiso profile; `iso/work/` and `iso/out/` are gitignored build artifacts
 - `share/` → static assets
 
-Everything in `config/` and `bin/` is symlinked wholesale except: `config/firefox/` is handled specially.
-Editing the repo IS editing the live system.
+Editing linked config changes the live system.
+User units and their `.wants` links live only in `config/systemd/user/`.
+The system group enables only units named in `system/etc/systemd/system-preset/10-dotfiles.preset`, without starting them.
 
 ## Harness
 
@@ -24,21 +25,22 @@ Edits under `config/opencode/` reach running sessions after an OpenCode restart,
 
 ## Install
 
-`./install.sh all` | `./install.sh <name>` | `--list` | `--check`
-
-Steps: `packages`, `link`, `secrets`, `repos`, `system`, `hibernate`, `fonts`, `go`, `eww`, `firefox`, `shell`, `dns`.
+ISO builds require a clean, committed `master` and root for makechrootpkg/mkarchiso.
+`dctl install` runs only as root on the dctl UEFI ISO and erases the selected whole disk after typed confirmation.
+Run user doctor fixes as the user and use sudo only for root groups.
+See the [`dctl` guide](cmds/cmd/dctl/README.md) for procedures and the required [SSH cutover](cmds/cmd/dctl/README.md#build).
 
 ## Commands
 
-Go command workspace. One module, multiple binaries. Sockets at `/tmp/{hyprd,ewwd}.sock`.
+One Go module contains multiple binaries, with daemon sockets at `/tmp/{hyprd,ewwd}.sock`.
 
 - `hyprd` — Hyprland window management
 - `ewwd` — system signals for eww widgets
 - `newtab` — Firefox new-tab backend
-- [`dctl`](cmds/cmd/dctl/README.md) — dotfiles control plane; `dctl porkbun` manages personal Porkbun DNS records on Linux
+- [`dctl`](cmds/cmd/dctl/README.md) — ISO builder, installer, doctor, and maintenance commands
 
-After editing `hyprd`, run `hyprd rebuild` — it builds, preserves runtime state, and hot-restarts in place.
-For other commands, a targeted build of the affected binaries is fine.
+Use `hyprd rebuild` only for an attended live update and never during a full lock; see the [hyprd guide](cmds/cmd/hyprd/README.md#rebuild).
+For build-only work, use targeted builds into `/tmp/opencode/bin/` and do not restart daemons or install binaries into the live user path.
 
 ## Conventions
 

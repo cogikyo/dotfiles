@@ -108,8 +108,7 @@
 
 - Monitor: [SAMSUNG UR59 Series 32-Inch 4K UHD (3840x2160)](https://a.co/d/bZtUse0)
 - Mouse: [MX Master 3S](https://www.logitech.com/en-us/products/mice/mx-master-3s.910-006556.html)
-- CPU: [AMD Ryzen 7 3700X (16) @ 3.600GHz](https://www.amd.com/en/products/cpu/amd-ryzen-7-3700x)
-  - GPU: [AMD ATI Radeon RX 5600 OEM/5600 XT / 5700/5700 XT](https://www.amd.com/en/products/graphics/amd-radeon-rx-5600-xt)
+- Computer: Framework Desktop, AMD Strix Halo, Ethernet only
 - Microphone: [Shure SM57](https://www.amazon.com/gp/product/B0000AQRST)
   - Audio Interface: [Scaarlett Solo 3rd Gen](https://www.amazon.com/gp/product/B07QR6Z1JB)
 - Camera: [Canon EOS M50 Mark II](https://www.amazon.com/gp/product/B08KSLW8N3)
@@ -119,67 +118,121 @@
 
 ## 🛠️ Installation
 
-### **1. Get the installation image**
+The dctl UEFI ISO installs Arch and these dotfiles offline onto a whole disk.
+It uses LUKS2, btrfs, Snapper, Limine, and an SDDM video greeter before the Hyprland session.
+There is no stock-ISO installer, dual-boot flow, or hibernation setup.
 
-<details open>
-<summary>🚀 <b>Custom ISO</b> (recommended)</summary>
+### Get the ISO
 
-```sh
-sudo ./build.sh --clean
-```
-
-Write to USB:
-
-```sh
-sudo ./build.sh --usb /dev/sdX
-```
-
-Tag, push, and create a GitHub release with the ISO:
+Download the ISO, its `.sha256` file, and its `.sha256.sig` file from [GitHub Releases](https://github.com/cogikyo/dotfiles/releases/latest).
+Keep all three files together and use a checkout with the trusted release keys in `share/allowed_signers`.
+On an existing Arch host, use an installed dctl or build it as described in [`cmds/README.md`](cmds/README.md).
+The build needs a clean, committed `master`, network access, Go, `archiso`, `devtools`, Git, and pacman tooling on an Arch host.
+Root is required for makechrootpkg and mkarchiso.
+Complete the [SSH cutover](cmds/cmd/dctl/README.md#build) before building.
 
 ```sh
-sudo ./build.sh --clean --release
+sudo dctl iso build
 ```
 
-> Download the latest pre-built ISO from [GitHub Releases](https://github.com/cogikyo/dotfiles/releases/latest), or build one locally with `archiso`:
-
-</details>
-
-<details>
-<summary>📦 <b>Stock Arch ISO</b></summary>
-
-Download the official image: **[archlinux-version-x86_64.iso](https://archlinux.org/download/)**
-
-Write to USB using [dd](https://wiki.archlinux.org/title/Dd) — use the **disk** (e.g. `/dev/sdx`), not a partition:
-
-    lsblk -f
-    dd bs=4M if=path/to/archlinux-version-x86_64.iso of=/dev/sdx conv=fsync oflag=direct status=progress
-
-</details>
-
-### **2. Boot USB and install**
-
-**Custom ISO** — dotfiles and packages are already on disk:
+The result is `iso/out/dotfiles-<12-character-revision>.iso`, built from a Git bundle of the committed revision rather than the working tree.
+If sudo cannot find dctl, use its absolute path, such as `sudo "$HOME/.local/bin/dctl" iso build`.
+Set `ISO` to the downloaded or built image path:
 
 ```sh
-bootstrap
+ISO=/path/to/dotfiles-REV.iso
+dctl iso test "$ISO"
 ```
 
-**Stock Arch ISO** — downloads dotfiles and packages from the network:
+The test runs without sudo and needs QEMU, KVM access, OVMF Secure Boot firmware, dosfstools, and mtools.
+It installs without network access, unlocks and boots twice, checks doctor results, and saves timings and serial logs under `/var/tmp/dctl-iso-test-*`.
+After a 20-second wait, it saves `greeter.png` for manual inspection; it does not verify the greeter.
+See the [dctl guide](cmds/cmd/dctl/README.md#iso) for test overrides and release signing.
+A local build needs signed checksum files before the USB command accepts it.
+`dctl iso release "$ISO"` creates those files and publishes a public release; there is no signing-only dctl command.
+
+### Write the USB
+
+**This erases the whole USB disk.**
+Replace `/dev/sdX` with an unmounted removable disk, not a partition.
 
 ```sh
-bash <(curl -fsSL https://raw.githubusercontent.com/cogikyo/dotfiles/master/install.sh)
+sudo dctl iso usb "$ISO" /dev/sdX
 ```
 
-1. Set partition configuration via the archinstall UI
-2. Set authentication and user via the archinstall UI
-3. Reboot into the new system
+The command verifies the signed checksum against `share/allowed_signers` and requires you to type the device path.
+It rejects mounted disks, internal non-removable disks, and disks without a serial or WWN.
 
-### 3. Post Install
+### Boot and install
 
-Dotfiles are copied (custom ISO) or cloned (stock ISO) automatically during arch install. After reboot:
+Back up the target disk before installation.
+For manual hardware preparation, set the Framework BIOS to version 3.06 with Pluton enabled and Secure Boot in Setup Mode.
+The installer checks UEFI and Secure Boot state, but does not check the BIOS version or Pluton setting.
+Boot the USB in UEFI mode.
+The live environment starts this command as root on tty1:
 
 ```sh
-~/dotfiles/install.sh all
+dctl install
 ```
 
-> With the custom ISO, packages resolve from the local cache — no downloads or AUR rebuilds needed. The local cache is cleaned up automatically after the packages step.
+Enter the username, login password, hostname, timezone, and LUKS passphrase, then select the target disk if prompted.
+**Typing the hostname at the final confirmation erases the selected disk.**
+The installer refuses the boot disk, mounted disks, USB/removable targets, and targets without a serial or WWN.
+It installs the offline package payload, clones the bundled history into `~/dotfiles`, and installs the prebuilt commands.
+If firmware is not in Setup Mode, installation continues without Secure Boot and reports the required follow-up.
+
+### First login
+
+Reboot, unlock LUKS with the passphrase, and log in through SDDM.
+Connect Ethernet for the online setup work.
+Run doctor as the normal user; it reports root-only fixes separately.
+
+```sh
+dctl doctor
+dctl doctor --fix
+```
+
+To fix one group, use `dctl doctor --fix home` or another group from the [dctl guide](cmds/cmd/dctl/README.md#doctor).
+Do not run all fixes with sudo, because user groups refuse root execution.
+Enroll each YubiKey separately with only that key inserted:
+
+```sh
+dctl keys enroll
+sudo dctl keys luks
+```
+
+Record the LUKS recovery key when it is shown; the original passphrase slot remains available.
+If Secure Boot enrollment was skipped, clear the firmware keys into Setup Mode, boot, and run `sudo dctl doctor --fix secureboot`.
+Enable Secure Boot in the BIOS after enrollment and reboot before checking `sudo dctl doctor secureboot`.
+
+## Maintenance
+
+Run these as the normal user:
+
+```sh
+dctl secrets list
+dctl secrets decrypt
+dctl secrets sync
+dctl secrets verify-phrase
+dctl repos sync
+dctl repos update
+dctl update
+```
+
+`dctl update` upgrades through yay and reports package-list drift without rewriting lists or removing orphans.
+See the [dctl guide](cmds/cmd/dctl/README.md) for secret recovery, recipient changes, and release publishing.
+
+## Manual hardware acceptance
+
+These checks require the Framework Desktop and real YubiKeys; the VM test does not prove them.
+
+- [ ] Manually confirm BIOS 3.06, Pluton enabled, and Setup Mode before installation.
+- [ ] Enable Secure Boot in the BIOS after key enrollment, reboot, and pass `sudo dctl doctor secureboot`.
+- [ ] Boot and unlock LUKS with each of the two YubiKeys separately, with PIN and touch.
+- [ ] Decrypt secrets with each YubiKey separately, without the other key or the age phrase.
+- [ ] Reject a wrong FIDO2 PIN and a wrong PIV PIN; cancel any age-phrase fallback and avoid repeated failures that can block the key.
+- [ ] Unlock LUKS with the recorded recovery key while both YubiKeys are removed.
+- [ ] Pass `dctl secrets verify-phrase` and rehearse secret recovery without a YubiKey.
+- [ ] Boot a Limine snapshot entry, restore it, and confirm the restored system boots.
+- [ ] Pair and use a Bluetooth device, then pass `sudo dctl doctor hardware` with no WLAN interface.
+- [ ] Check the kernel log for firmware load failures and confirm the `linux-firmware-{amd,amdgpu,mediatek,realtek}` split supports the hardware without errors.

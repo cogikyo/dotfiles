@@ -2,15 +2,8 @@
 
 Custom Firefox new tab page.
 
-`newtab` is a local HTTP server that reads Firefox `places.sqlite` for bookmarks and history.
+`newtab` is a local HTTP server that reads Firefox's SQLite database `places.sqlite` directly for bookmarks and history.
 It also proxies Google suggestions for the search box.
-
-## Why
-
-Firefox's built-in new tab is slow and cluttered.
-Replacement extensions usually need sync or broad browser APIs to reach bookmarks and history.
-
-This keeps the page local and reads Firefox's SQLite database directly.
 
 ## API
 
@@ -23,8 +16,9 @@ This keeps the page local and reads Firefox's SQLite database directly.
 
 No config file.
 
-At startup, the server scans `~/.mozilla/firefox` and `~/.config/mozilla/firefox` for `places.sqlite`.
-It prefers `dev-edition-default`, then falls back to the first readable profile.
+At startup, the server reads `profiles.ini` under `~/.mozilla/firefox` and `~/.config/mozilla/firefox` to find `places.sqlite`.
+It prefers a profile named `dev-edition-default`, then uses the first profile with an existing database.
+Run Firefox once before starting newtab so that the database exists.
 
 Port, static directory, and history limit are constants in `main.go`.
 
@@ -36,11 +30,16 @@ Set Firefox to use it:
 
 ## Install
 
+The dctl ISO installs the binary into `~/.local/bin/`.
+`dctl doctor --fix binaries` can build it if it is missing.
+For an attended source update, run from `cmds/`:
+
 ```sh
-go build -o ~/.local/bin/newtab ./cmd/newtab
+go build -o "$HOME/.local/bin/newtab" ./cmd/newtab
 ```
 
-Run from `cmds/`, or use `./install.sh go` from the repo root to build all commands.
+The tracked user unit is `config/systemd/user/newtab.service` at the repo root.
+The home doctor group links the user unit directory and its `.wants` links without starting or restarting the service.
 
-`newtab` listens on `:42069`.
-It can run as a user service with `cmds/cmd/newtab/newtab.service`.
+`newtab` listens on all interfaces at `:42069` and serves static files from `~/dotfiles/cmds/cmd/newtab/`.
+Treat the bookmarks and history API as private; the server has no authentication.
