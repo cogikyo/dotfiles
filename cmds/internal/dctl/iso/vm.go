@@ -15,6 +15,7 @@ import (
 
 	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/execx"
+	"dotfiles/cmds/internal/dctl/secureboot"
 	"dotfiles/cmds/internal/dctl/ui"
 )
 
@@ -35,9 +36,10 @@ const (
 
 	installPrefix = `{"dctltest":`
 	doctorPrefix  = `[{"group":`
+	Greeter       = "dctltest-greeter:"
 )
 
-var required = []string{"system", "packages", "home", "secureboot-keys"}
+var required = slices.Concat([]string{"system", "packages", "home"}, secureboot.Checks)
 
 type Answers struct {
 	User     string `json:"user"`
@@ -185,14 +187,21 @@ func (t *test) boot(ctx context.Context, v *vm, n string) error {
 		return err
 	}
 	err = t.phase(ctx, v, "doctor "+n, 5*time.Minute, func(ctx context.Context) error {
-		line, err := t.await(ctx, v, doctorPrefix)
+		line, err := t.await(ctx, v, Greeter)
 		if err != nil {
 			return err
 		}
-		var rs []doctor.Result
-		err = json.Unmarshal([]byte(line), &rs)
-		t.doctor[n] = rs
-		return err
+		for _, l := range find(t.serial(), doctorPrefix) {
+			var rs []doctor.Result
+			if err := json.Unmarshal([]byte(l), &rs); err != nil {
+				return err
+			}
+			t.doctor[n] = append(t.doctor[n], rs...)
+		}
+		if state := strings.TrimPrefix(line, Greeter); state != "active" {
+			return fmt.Errorf("display-manager is %q", state)
+		}
+		return nil
 	})
 	if err != nil {
 		return err
@@ -317,14 +326,15 @@ func cmd(ctx context.Context, name string, args ...string) error {
 	return err
 }
 
-func find(data []byte, prefix string) (string, bool) {
+func find(data []byte, prefix string) []string {
+	var found []string
 	end := bytes.LastIndexByte(data, '\n')
 	for l := range strings.Lines(string(data[:end+1])) {
 		if i := strings.Index(l, prefix); i >= 0 {
-			return strings.TrimSpace(l[i:]), true
+			found = append(found, strings.TrimSpace(l[i:]))
 		}
 	}
-	return "", false
+	return found
 }
 
 func parseInstall(line string) (*Report, error) {
@@ -347,9 +357,12 @@ func (t *test) tail() string {
 }
 
 func (t *test) await(ctx context.Context, v *vm, prefix string) (line string, err error) {
-	err = v.poll(ctx, 500*time.Millisecond, func() (ok bool, _ error) {
-		line, ok = find(t.serial(), prefix)
-		return ok, nil
+	err = v.poll(ctx, 500*time.Millisecond, func() (bool, error) {
+		found := find(t.serial(), prefix)
+		if len(found) > 0 {
+			line = found[0]
+		}
+		return len(found) > 0, nil
 	})
 	return line, err
 }

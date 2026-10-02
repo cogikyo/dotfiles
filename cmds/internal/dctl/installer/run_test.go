@@ -21,10 +21,9 @@ import (
 	"time"
 
 	"dotfiles/cmds/internal/dctl/binaries"
+	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/iso"
 	"dotfiles/cmds/internal/dctl/ui"
-
-	"golang.org/x/sys/unix"
 )
 
 type fake struct {
@@ -34,6 +33,7 @@ type fake struct {
 	vm    bool
 	block bool
 	fail  string
+	sb    []doctor.Result
 
 	mu        sync.Mutex
 	calls     [][]string
@@ -78,25 +78,29 @@ func (f *fake) run(_ context.Context, _ []byte, args ...string) error {
 		return errors.New("injected failure: " + line)
 	}
 	last := args[len(args)-1]
-	mapper := filepath.Join(f.root, "dev", "mapper", Mapper)
+	dev := filepath.Join(f.root, "dev", "mapper", mapper)
 	switch {
 	case strings.HasPrefix(line, "cryptsetup open"):
-		put(f.t, mapper, nil, 0o600)
-	case line == "cryptsetup close "+Mapper:
-		os.Remove(mapper)
-	case line == "umount -R "+Target:
-		f.mount("", func(m string) bool { return m == Target || strings.HasPrefix(m, Target+"/") })
+		put(f.t, dev, nil, 0o600)
+	case line == "cryptsetup close "+mapper:
+		os.Remove(dev)
+	case line == "umount -R "+target:
+		f.mount("", func(m string) bool { return m == target || strings.HasPrefix(m, target+"/") })
 	case args[0] == "umount":
 		f.mount("", func(m string) bool { return m == last })
-	case args[0] == "mount" && strings.HasPrefix(last, Target):
+	case args[0] == "mount" && strings.HasPrefix(last, target):
 		f.mount(last, func(m string) bool { return m == last })
 	case line == "arch-chroot /mnt limine-update":
-		esp := filepath.Join(f.root, "mnt", "boot")
-		writeUKI(f.t, filepath.Join(esp, "EFI", "Linux", "0123_linux.efi"))
-		conf := "path: boot():/EFI/Linux/0123_linux.efi\ncmdline: rd.luks.name=" + f.luksID() + "=root root=/dev/mapper/root\n"
-		put(f.t, filepath.Join(esp, "limine.conf"), []byte(conf), 0o644)
+		f.kernel()
 	}
 	return nil
+}
+
+func (f *fake) kernel() {
+	esp := filepath.Join(f.root, "mnt", "boot")
+	writeUKI(f.t, filepath.Join(esp, "EFI", "Linux", "0123_linux.efi"))
+	conf := "path: boot():/EFI/Linux/0123_linux.efi\ncmdline: rd.luks.name=" + f.luksID() + "=root root=/dev/mapper/root\n"
+	put(f.t, filepath.Join(esp, "limine.conf"), []byte(conf), 0o644)
 }
 
 func (f *fake) output(ctx context.Context, args ...string) ([]byte, error) {
@@ -120,11 +124,11 @@ func (f *fake) output(ctx context.Context, args ...string) ([]byte, error) {
 	case "blkid":
 		return []byte(f.luksID() + "\n"), nil
 	case "arch-chroot":
-		var verified []map[string]any
-		for _, file := range args[slices.Index(args, "--json")+1:] {
-			verified = append(verified, map[string]any{"file_name": file, "is_signed": 1})
+		if args[len(args)-1] == "secureboot" {
+			f.kernel()
+			out, _ := json.Marshal(f.sb)
+			return out, errors.New("exit status 1")
 		}
-		return json.Marshal(verified)
 	}
 	return nil, errors.New("unexpected output command " + args[0])
 }
@@ -200,13 +204,17 @@ func setup(t *testing.T) (*session, *fake) {
 		t.Fatal(err)
 	}
 
-	f := &fake{t: t, root: root, lsblk: fixture(t, "nvme")}
+	f := &fake{t: t, root: root, lsblk: fixture(t, "nvme"), sb: []doctor.Result{
+		{Group: "secureboot", Check: "secureboot-keys", Status: doctor.Fixed},
+		{Group: "secureboot", Check: "secureboot-signed", Status: doctor.Passed},
+		{Group: "secureboot", Check: "secureboot-enforced", Status: doctor.Blocked},
+	}}
 	f.mount("", func(string) bool { return false })
 	s := &session{u: ui.New(ui.Options{JSON: true, Yes: true}), sh: f, root: root, exe: filepath.Join(root, "usr", "local", "bin", "dctl")}
 	s.ask = func(context.Context) (iso.Answers, error) {
 		return iso.Answers{User: "ada", Password: "pw", Host: "lovelace", Zone: "America/Denver", LUKS: "luks"}, nil
 	}
-	s.confirm = func(Plan) error {
+	s.confirm = func(disk) error {
 		f.confirmed = len(f.calls)
 		return nil
 	}
@@ -225,7 +233,7 @@ func (f *fake) mutated(t *testing.T) {
 func TestDeclinedConsentMutatesNothing(t *testing.T) {
 	s, f := setup(t)
 	declined := errors.New("declined")
-	s.confirm = func(Plan) error { return declined }
+	s.confirm = func(disk) error { return declined }
 	if err := s.main(t.Context()); !errors.Is(err, declined) {
 		t.Fatalf("main: %v, want %v", err, declined)
 	}
@@ -245,8 +253,13 @@ func TestEdges(t *testing.T) {
 	f.before(t, "pacstrap", "umount /mnt/var/cache/pacman/pkg")
 	f.before(t, "arch-chroot /mnt useradd", "arch-chroot /mnt env DOTFILES=")
 	f.before(t, "arch-chroot /mnt runuser -u ada -- git clone", "arch-chroot /mnt env DOTFILES=")
-	f.before(t, "arch-chroot /mnt sbctl verify", "arch-chroot /mnt sbctl enroll-keys")
-	f.before(t, "arch-chroot /mnt sbctl enroll-keys", "umount -R /mnt")
+	secureboot := "arch-chroot /mnt env DOTFILES=/home/ada/dotfiles /home/ada/.local/bin/dctl --json doctor --fix --offline secureboot"
+	f.before(t, "arch-chroot /mnt limine-install", secureboot)
+	f.before(t, secureboot, "blkid")
+	f.before(t, "blkid", "umount -R /mnt")
+	if f.index("arch-chroot /mnt limine-update") >= 0 || f.index("arch-chroot /mnt sbctl") >= 0 {
+		t.Error("installer signed or built UKIs itself instead of through the secureboot group")
+	}
 	f.before(t, "umount -R /mnt", "cryptsetup close root")
 	f.before(t, "cryptsetup close root", "systemctl reboot")
 	if i := slices.IndexFunc(s.times, func(tm iso.Phase) bool { return tm.Name == "keyring" }); i < 0 {
@@ -255,7 +268,7 @@ func TestEdges(t *testing.T) {
 }
 
 func TestFailureReleasesTarget(t *testing.T) {
-	for _, fail := range []string{"mount --bind", "pacstrap", "arch-chroot /mnt limine-update"} {
+	for _, fail := range []string{"mount --bind", "pacstrap", "arch-chroot /mnt limine-install"} {
 		t.Run(fail, func(t *testing.T) {
 			s, f := setup(t)
 			f.fail = fail
@@ -271,7 +284,7 @@ func TestFailureReleasesTarget(t *testing.T) {
 			if busy, err := s.busy(); busy || err != nil {
 				t.Errorf("target still mounted: %v %v", f.mounts, err)
 			}
-			if exists(filepath.Join(s.root, "dev", "mapper", Mapper)) {
+			if exists(filepath.Join(s.root, "dev", "mapper", mapper)) {
 				t.Error("LUKS mapping left open")
 			}
 			if f.index("systemctl reboot") >= 0 {
@@ -284,13 +297,13 @@ func TestFailureReleasesTarget(t *testing.T) {
 func TestPreexistingTargetRefused(t *testing.T) {
 	t.Run("mapper", func(t *testing.T) {
 		s, f := setup(t)
-		mapper := filepath.Join(s.root, "dev", "mapper", Mapper)
-		put(t, mapper, nil, 0o600)
+		dev := filepath.Join(s.root, "dev", "mapper", mapper)
+		put(t, dev, nil, 0o600)
 		if err := s.main(t.Context()); err == nil || !strings.Contains(err.Error(), "already open") {
 			t.Fatalf("main: %v, want a mapper refusal", err)
 		}
 		f.mutated(t)
-		if !exists(mapper) {
+		if !exists(dev) {
 			t.Error("closed a mapping the installer did not open")
 		}
 	})
@@ -390,7 +403,7 @@ func TestDCTLTEST(t *testing.T) {
 
 func TestSecondSessionRefused(t *testing.T) {
 	s, f := setup(t)
-	if err := s.acquire(t.Context()); err != nil {
+	if err := s.acquire(); err != nil {
 		t.Fatal(err)
 	}
 	defer s.lock.Close()
@@ -404,8 +417,8 @@ func TestSecondSessionRefused(t *testing.T) {
 
 func TestReleaseSkipsUnacquired(t *testing.T) {
 	s, f := setup(t)
-	put(t, filepath.Join(s.root, "dev", "mapper", Mapper), nil, 0o600)
-	f.mount(Target, func(string) bool { return false })
+	put(t, filepath.Join(s.root, "dev", "mapper", mapper), nil, 0o600)
+	f.mount(target, func(string) bool { return false })
 	if err := s.release(t.Context()); err != nil {
 		t.Fatal(err)
 	}
@@ -437,41 +450,34 @@ func TestOverrideExecsTmpfsCopy(t *testing.T) {
 	f.before(t, "mount -o ro", "umount "+testMount)
 }
 
-func TestLockAdoption(t *testing.T) {
-	s, f := setup(t)
-	f.vm = true
-	other, err := os.CreateTemp(t.TempDir(), "other")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer other.Close()
-	t.Setenv(testEnv, strconv.Itoa(int(other.Fd())))
-	if err := s.acquire(t.Context()); err != nil {
-		t.Fatal(err)
-	}
-	if s.lock.Fd() == other.Fd() {
-		t.Error("adopted an fd that is not the install lock")
-	}
-	s.lock.Close()
-
-	fd, err := unix.Open(filepath.Join(s.root, lockFile), unix.O_RDWR, 0)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := unix.FcntlInt(uintptr(fd), unix.F_SETFD, 0); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv(testEnv, strconv.Itoa(fd))
-	if err := s.acquire(t.Context()); err != nil {
-		t.Fatal(err)
-	}
-	defer s.lock.Close()
-	if int(s.lock.Fd()) != fd {
-		t.Fatalf("lock fd %d, want adopted %d", s.lock.Fd(), fd)
-	}
-	flags, err := unix.FcntlInt(uintptr(fd), unix.F_GETFD, 0)
-	if err != nil || flags&unix.FD_CLOEXEC == 0 {
-		t.Errorf("adopted fd flags %#x (%v), want FD_CLOEXEC", flags, err)
+func TestSecureBootFailureFailsInstall(t *testing.T) {
+	for name, tt := range map[string]struct {
+		mutate func([]doctor.Result) []doctor.Result
+		want   string
+	}{
+		"unsigned": {func(rs []doctor.Result) []doctor.Result {
+			rs[1].Status, rs[1].Detail = doctor.Failed, "not signed by the sbctl db key"
+			return rs
+		}, "secureboot-signed: not signed"},
+		"enforcement failed": {func(rs []doctor.Result) []doctor.Result {
+			rs[2].Status, rs[2].Detail = doctor.Failed, "efivar SecureBoot: 3 bytes"
+			return rs
+		}, "secureboot-enforced: efivar"},
+		"keys missing":     {func(rs []doctor.Result) []doctor.Result { return rs[1:] }, "no secureboot-keys check"},
+		"signed missing":   {func(rs []doctor.Result) []doctor.Result { return slices.Delete(rs, 1, 2) }, "no secureboot-signed check"},
+		"enforced missing": {func(rs []doctor.Result) []doctor.Result { return rs[:2] }, "no secureboot-enforced check"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			s, f := setup(t)
+			f.sb = tt.mutate(f.sb)
+			err := s.main(t.Context())
+			if err == nil || !strings.Contains(err.Error(), tt.want) || !errors.Is(err, errModified) {
+				t.Fatalf("main: %v, want %q and the modified-disk notice", err, tt.want)
+			}
+			if f.index("systemctl reboot") >= 0 {
+				t.Error("rebooted after a failed Secure Boot step")
+			}
+		})
 	}
 }
 
@@ -479,13 +485,13 @@ func TestDoctorUnitOnlyInTestMode(t *testing.T) {
 	for _, test := range []bool{false, true} {
 		s, f := setup(t)
 		s.testMounted = test
-		if err := os.MkdirAll(filepath.Join(s.root, Target, "etc/systemd/system"), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Join(s.root, target, "etc/systemd/system"), 0o755); err != nil {
 			t.Fatal(err)
 		}
 		if err := s.main(t.Context()); err != nil {
 			t.Fatal(err)
 		}
-		unit := filepath.Join(s.root, Target, "etc/systemd/system", testUnit)
+		unit := filepath.Join(s.root, target, "etc/systemd/system", testUnit)
 		data, err := os.ReadFile(unit)
 		enabled := f.index("arch-chroot /mnt systemctl enable "+testUnit) >= 0
 		if !test {
@@ -497,7 +503,12 @@ func TestDoctorUnitOnlyInTestMode(t *testing.T) {
 		if err != nil || !enabled {
 			t.Fatalf("test install: unit %v, enabled %v", err, enabled)
 		}
-		for _, want := range []string{"User=ada\n", "ExecStart=/home/ada/.local/bin/dctl --json doctor --offline\n", "TTYPath=/dev/ttyS0\n", "StandardError=journal\n"} {
+		for _, want := range []string{
+			"ExecStart=-/home/ada/.local/bin/dctl --json doctor --offline system packages secureboot\n",
+			"ExecStart=-/usr/bin/runuser -u ada -- /home/ada/.local/bin/dctl --json doctor --offline home binaries\n",
+			`echo "` + iso.Greeter + `$$(systemctl is-active display-manager)"`,
+			"TTYPath=/dev/ttyS0\n",
+		} {
 			if !strings.Contains(string(data), want) {
 				t.Errorf("unit lacks %q", want)
 			}

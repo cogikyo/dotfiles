@@ -1,6 +1,7 @@
 package installer
 
 import (
+	"dotfiles/cmds/internal/dctl/iso"
 	"fmt"
 	"maps"
 	"path/filepath"
@@ -10,8 +11,8 @@ import (
 	"testing"
 )
 
-var testPlan = Plan{
-	Disk:       Disk{Path: "/dev/nvme0n1", Model: "WD_BLACK SN850X 2000GB", Serial: "24123A800123", Tran: "nvme", Size: 2000398934016, Sector: 512},
+var testPlan = plan{
+	Disk:       disk{Path: "/dev/nvme0n1", Model: "WD_BLACK SN850X 2000GB", Serial: "24123A800123", Tran: "nvme", Size: 2000398934016, Sector: 512},
 	User:       "ada",
 	Host:       "lovelace",
 	Zone:       "America/Denver",
@@ -21,20 +22,20 @@ var testPlan = Plan{
 	SecureBoot: true,
 }
 
-func phases(p Plan) []struct {
+func phases(p plan) []struct {
 	name string
-	cmds []Cmd
+	cmds []cmd
 } {
 	return []struct {
 		name string
-		cmds []Cmd
+		cmds []cmd
 	}{
-		{"partition", p.Partition()},
-		{"format", p.Format()},
-		{"subvolumes", p.Subvolumes()},
-		{"mount", p.Mount()},
-		{"firstboot", p.Firstboot()},
-		{"snapshots", p.Snapshots()},
+		{"partition", p.partition()},
+		{"format", p.format()},
+		{"subvolumes", p.subvolumes()},
+		{"mount", p.mount()},
+		{"firstboot", p.firstboot()},
+		{"snapshots", p.snapshots()},
 	}
 }
 
@@ -52,7 +53,7 @@ func TestGolden(t *testing.T) {
 		}
 	}
 	fmt.Fprintln(&b, "# files")
-	for _, f := range p.Files() {
+	for _, f := range p.files() {
 		fmt.Fprintf(&b, "%04o %s\n", f.Mode, f.Path)
 		golden(t, filepath.Join("testdata", "plan", "root", f.Path), []byte(f.Data))
 	}
@@ -62,7 +63,7 @@ func TestGolden(t *testing.T) {
 func TestAgreement(t *testing.T) {
 	p := testPlan
 	files := map[string]string{}
-	for _, f := range p.Files() {
+	for _, f := range p.files() {
 		files[f.Path] = f.Data
 	}
 
@@ -121,7 +122,7 @@ func TestAgreement(t *testing.T) {
 				created = append(created, "/"+filepath.Base(a[3]))
 			case a[0] == "mount" && slices.Contains(a, "-o"):
 				o := a[slices.Index(a, "-o")+1]
-				path := strings.TrimPrefix(a[len(a)-1], Target)
+				path := strings.TrimPrefix(a[len(a)-1], target)
 				if path == "" {
 					path = "/"
 				}
@@ -136,7 +137,7 @@ func TestAgreement(t *testing.T) {
 			}
 		}
 	}
-	if luksDev != p.Disk.Part(2) || espDev != p.Disk.Part(1) {
+	if luksDev != p.Disk.part(2) || espDev != p.Disk.part(1) {
 		t.Errorf("partitions: luks %s esp %s, disk %s", luksDev, espDev, p.Disk.Path)
 	}
 	if !maps.Equal(mounted, opts) {
@@ -181,13 +182,6 @@ func TestAgreement(t *testing.T) {
 	if !(at("block") < at("sd-encrypt") && at("sd-encrypt") < at("filesystems") && at("filesystems") < at("sd-btrfs-overlayfs")) {
 		t.Errorf("HOOKS %v: want block < sd-encrypt < filesystems < sd-btrfs-overlayfs", hooks)
 	}
-
-	for _, sb := range []bool{true, false} {
-		p.SecureBoot = sb
-		if got := strings.Contains(p.limine(), "\nENABLE_ENROLL_LIMINE_CONFIG=yes\n"); got != sb {
-			t.Errorf("SecureBoot %v: config hash enrollment %v", sb, got)
-		}
-	}
 }
 
 func option(opts, key string) string {
@@ -209,10 +203,7 @@ func value(args []string, name string) string {
 }
 
 func TestNew(t *testing.T) {
-	p, err := New(Disk{Path: "/dev/vda"}, "ada", "lovelace", "UTC")
-	if err != nil {
-		t.Fatal(err)
-	}
+	p := newPlan(disk{Path: "/dev/vda"}, "ada", "lovelace", "UTC")
 	uuid := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
 	if !uuid.MatchString(p.LUKSID) || !uuid.MatchString(p.RootID) || p.LUKSID == p.RootID {
 		t.Errorf("LUKS %s, root %s: want two distinct v4 UUIDs", p.LUKSID, p.RootID)
@@ -220,17 +211,29 @@ func TestNew(t *testing.T) {
 	if !regexp.MustCompile(`^[0-9A-F]{4}-[0-9A-F]{4}$`).MatchString(p.ESPID) {
 		t.Errorf("ESP %s: want a FAT volume ID", p.ESPID)
 	}
-	for _, in := range [][3]string{
-		{"root", "lovelace", "UTC"},
-		{"Ada", "lovelace", "UTC"},
-		{"ada", "love lace", "UTC"},
-		{"ada", "-lovelace", "UTC"},
-		{"ada", "lovelace", "Mars/Olympus"},
-		{"ada", "lovelace", "../../etc/passwd"},
-		{"ada", "lovelace", ""},
+}
+
+func TestValid(t *testing.T) {
+	s, _ := setup(t)
+	ok := iso.Answers{User: "ada", Password: "pw", Host: "lovelace", Zone: "America/Denver", LUKS: "luks", Serial: "24123A800123"}
+	if err := s.valid(ok); err != nil {
+		t.Fatal(err)
+	}
+	for _, bad := range []func(*iso.Answers){
+		func(a *iso.Answers) { a.User = "root" },
+		func(a *iso.Answers) { a.User = "Ada" },
+		func(a *iso.Answers) { a.Host = "love lace" },
+		func(a *iso.Answers) { a.Host = "-lovelace" },
+		func(a *iso.Answers) { a.Zone = "Mars/Olympus" },
+		func(a *iso.Answers) { a.Zone = "../../etc/passwd" },
+		func(a *iso.Answers) { a.Zone = "Local" },
+		func(a *iso.Answers) { a.Zone = "" },
+		func(a *iso.Answers) { a.LUKS = "" },
 	} {
-		if _, err := New(Disk{}, in[0], in[1], in[2]); err == nil {
-			t.Errorf("New(%q) accepted invalid input", in)
+		a := ok
+		bad(&a)
+		if err := s.valid(a); err == nil {
+			t.Errorf("valid(%+v) accepted invalid answers", a)
 		}
 	}
 }

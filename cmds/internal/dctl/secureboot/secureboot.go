@@ -2,6 +2,7 @@ package secureboot
 
 import (
 	"context"
+	"debug/pe"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,9 +17,18 @@ import (
 )
 
 const (
-	global = "8be4df61-93ca-11d2-aa0d-00e098032b8c"
-	bios   = "Secure Boot is off and the firmware is not in Setup Mode: in the BIOS, erase the Secure Boot keys (Setup Mode), boot, then run sudo dctl doctor --fix secureboot"
+	global   = "8be4df61-93ca-11d2-aa0d-00e098032b8c"
+	fallback = "EFI/BOOT/BOOTX64.EFI"
+	bios     = "Secure Boot is off and the firmware is not in Setup Mode: in the BIOS, erase the Secure Boot keys (Setup Mode), boot, then run sudo dctl doctor --fix secureboot"
+
+	Keys     = "secureboot-keys"
+	Signed   = "secureboot-signed"
+	Enforced = "secureboot-enforced"
 )
+
+var Checks = []string{Keys, Signed, Enforced}
+
+var settings = []string{"ENABLE_ENROLL_LIMINE_CONFIG=yes", "ENABLE_LIMINE_FALLBACK=no"}
 
 type Firmware struct {
 	UEFI    bool
@@ -57,95 +67,35 @@ func variable(efi, name string) (bool, error) {
 	return data[4] == 1, nil
 }
 
-const Fallback = "EFI/BOOT/BOOTX64.EFI"
-
-func Files(esp string) ([]string, error) {
-	ukis, err := filepath.Glob(filepath.Join(esp, "EFI", "Linux", "*.efi"))
-	if err != nil {
-		return nil, err
-	}
-	if len(ukis) == 0 {
-		return nil, fmt.Errorf("no UKI in %s", filepath.Join(esp, "EFI", "Linux"))
-	}
-	return append([]string{filepath.Join(esp, "EFI", "limine", "limine_x64.efi")}, ukis...), nil
-}
-
-func Verify(files []string) []string {
-	return append([]string{"sbctl", "verify", "--json"}, files...)
-}
-
-func Unsigned(out []byte, files []string) ([]string, error) {
-	var verified []struct {
-		File   string `json:"file_name"`
-		Signed int8   `json:"is_signed"`
-	}
-	if err := json.Unmarshal(out, &verified); err != nil {
-		return nil, fmt.Errorf("sbctl verify --json: %w", err)
-	}
-	signed := map[string]bool{}
-	for _, v := range verified {
-		signed[v.File] = v.Signed == 1
-	}
-	var bad []string
-	for _, f := range files {
-		if !signed[f] {
-			bad = append(bad, f)
-		}
-	}
-	return bad, nil
-}
-
-func unsigned(ctx context.Context, run execx.Runner, esp string) error {
-	files, err := Files(esp)
-	if err != nil {
-		return err
-	}
-	if _, err := os.Stat(filepath.Join(esp, Fallback)); err == nil {
-		files = append(files, filepath.Join(esp, Fallback))
-	}
-	args := Verify(files)
-	out, err := run.Output(ctx, "", args[0], args[1:]...)
-	if err != nil {
-		return err
-	}
-	bad, err := Unsigned([]byte(out), files)
-	if err != nil {
-		return err
-	}
-	if len(bad) > 0 {
-		return fmt.Errorf("not signed by the sbctl db key: %s", strings.Join(bad, ", "))
-	}
-	return nil
-}
-
 func Group(run execx.Runner, root string) doctor.Group {
 	efi := filepath.Join(root, "sys", "firmware", "efi")
 	esp := filepath.Join(root, "boot")
 	limine := filepath.Join(root, "etc", "default", "limine")
+	enrolled := func(ctx context.Context) error {
+		fw, err := Read(efi)
+		switch {
+		case err != nil:
+			return err
+		case !fw.UEFI:
+			return doctor.Block("not booted with UEFI")
+		case fw.Setup:
+			return errors.New("firmware is in Setup Mode: no Secure Boot keys enrolled")
+		case fw.Enabled:
+			return nil
+		}
+		keys, err := installed(ctx, run)
+		switch {
+		case err != nil:
+			return doctor.Block("%v", err)
+		case !keys:
+			return doctor.Block("%s", bios)
+		}
+		return nil
+	}
 	return doctor.Group{Name: "secureboot", Root: true, Checks: []doctor.Check{
 		{
-			Name: "secureboot-keys",
-			Check: func(ctx context.Context) error {
-				fw, err := Read(efi)
-				switch {
-				case err != nil:
-					return err
-				case !fw.UEFI:
-					return doctor.Block("not booted with UEFI")
-				case fw.Setup:
-					return errors.New("firmware is in Setup Mode: no Secure Boot keys enrolled")
-				case fw.Enabled:
-					return nil
-				}
-				keys, err := installed(ctx, run)
-				switch {
-				case err != nil:
-					return doctor.Block("%v", err)
-				case keys:
-					return doctor.Block("sbctl keys exist but Secure Boot is off: enable Secure Boot in the BIOS")
-				}
-				return doctor.Block("%s", bios)
-			},
+			Name:  Keys,
+			Check: enrolled,
 			Fix: func(ctx context.Context) error {
 				fw, err := Read(efi)
 				if err != nil {
@@ -166,20 +116,20 @@ func Group(run execx.Runner, root string) doctor.Group {
 				if err := configure(limine); err != nil {
 					return err
 				}
-				if err := os.Remove(filepath.Join(esp, Fallback)); err != nil && !errors.Is(err, fs.ErrNotExist) {
+				if err := os.Remove(filepath.Join(esp, fallback)); err != nil && !errors.Is(err, fs.ErrNotExist) {
 					return err
 				}
 				if err := run.Run(ctx, "", "limine-update"); err != nil {
 					return err
 				}
-				if err := unsigned(ctx, run, esp); err != nil {
+				if err := verify(ctx, run, root); err != nil {
 					return fmt.Errorf("%w; keys not enrolled", err)
 				}
 				return run.Run(ctx, "", "sbctl", "enroll-keys", "-m")
 			},
 		},
 		{
-			Name: "secureboot-signed",
+			Name: Signed,
 			Check: func(ctx context.Context) error {
 				keys, err := installed(ctx, run)
 				switch {
@@ -188,22 +138,155 @@ func Group(run execx.Runner, root string) doctor.Group {
 				case !keys:
 					return doctor.Block("no sbctl keys yet; see secureboot-keys")
 				}
-				if err := unsigned(ctx, run, esp); err != nil {
-					return err
-				}
-				data, err := os.ReadFile(limine)
+				return verify(ctx, run, root)
+			},
+		},
+		{
+			Name: Enforced,
+			Check: func(ctx context.Context) error {
+				fw, err := Read(efi)
 				if err != nil {
 					return err
 				}
-				for _, want := range settings {
-					if !strings.Contains("\n"+string(data), "\n"+want+"\n") {
-						return fmt.Errorf("%s lacks %s", limine, want)
-					}
+				if fw.Enabled {
+					return nil
 				}
-				return nil
+				if enrolled(ctx) != nil {
+					return doctor.Block("no Secure Boot keys enrolled; see secureboot-keys")
+				}
+				return doctor.Block("keys are enrolled but Secure Boot is not enforced yet: reboot; if Secure Boot is still off, enable it in the BIOS")
 			},
 		},
 	}}
+}
+
+func verify(ctx context.Context, run execx.Runner, root string) error {
+	esp := filepath.Join(root, "boot")
+	limine := filepath.Join(root, "etc", "default", "limine")
+	if _, err := os.Stat(filepath.Join(esp, fallback)); err == nil {
+		return fmt.Errorf("fallback %s exists; it is neither signed nor config-enrolled", fallback)
+	}
+	data, err := os.ReadFile(limine)
+	if err != nil {
+		return err
+	}
+	for _, want := range settings {
+		if !strings.Contains("\n"+string(data), "\n"+want+"\n") {
+			return fmt.Errorf("%s lacks %s", limine, want)
+		}
+	}
+	ukis, err := filepath.Glob(filepath.Join(esp, "EFI", "Linux", "*.efi"))
+	if err != nil {
+		return err
+	}
+	if len(ukis) == 0 {
+		return fmt.Errorf("no UKI in %s", filepath.Join(esp, "EFI", "Linux"))
+	}
+	errs := []error{entries(root, esp, ukis)}
+	for _, uki := range ukis {
+		_, embedded, err := Cmdline(uki)
+		switch {
+		case err != nil:
+			errs = append(errs, err)
+		case embedded:
+			errs = append(errs, fmt.Errorf("%s embeds a cmdline; snapshot entries could not boot under Secure Boot", filepath.Base(uki)))
+		}
+	}
+	files := append([]string{filepath.Join(esp, "EFI", "limine", "limine_x64.efi")}, ukis...)
+	out, err := run.Output(ctx, "", "sbctl", append([]string{"verify", "--json"}, files...)...)
+	if err != nil {
+		return errors.Join(append(errs, err)...)
+	}
+	var verified []struct {
+		File   string `json:"file_name"`
+		Signed int8   `json:"is_signed"`
+	}
+	if err := json.Unmarshal([]byte(out), &verified); err != nil {
+		return errors.Join(append(errs, fmt.Errorf("sbctl verify --json: %w", err))...)
+	}
+	signed := map[string]bool{}
+	for _, v := range verified {
+		signed[v.File] = v.Signed == 1
+	}
+	if bad := slices.DeleteFunc(files, func(f string) bool { return signed[f] }); len(bad) > 0 {
+		errs = append(errs, fmt.Errorf("not signed by the sbctl db key: %s", strings.Join(bad, ", ")))
+	}
+	return errors.Join(errs...)
+}
+
+func entries(root, esp string, ukis []string) error {
+	conf, err := os.ReadFile(filepath.Join(esp, "limine.conf"))
+	if err != nil {
+		return err
+	}
+	var errs []error
+	for _, uki := range ukis {
+		if !strings.Contains(string(conf), "/EFI/Linux/"+filepath.Base(uki)) {
+			errs = append(errs, fmt.Errorf("limine.conf has no entry for %s", filepath.Base(uki)))
+		}
+	}
+	cmdlines := 0
+	for line := range strings.Lines(string(conf)) {
+		if v, ok := strings.CutPrefix(strings.TrimSpace(line), "cmdline:"); ok {
+			cmdlines++
+			errs = append(errs, opened(root, strings.Fields(v)))
+		}
+	}
+	if cmdlines == 0 {
+		errs = append(errs, errors.New("limine.conf has no cmdline"))
+	}
+	return errors.Join(errs...)
+}
+
+func opened(root string, cmdline []string) error {
+	var id, name, dev string
+	for _, f := range cmdline {
+		if v, ok := strings.CutPrefix(f, "rd.luks.name="); ok {
+			id, name, _ = strings.Cut(v, "=")
+		}
+		if v, ok := strings.CutPrefix(f, "root="); ok {
+			dev = v
+		}
+	}
+	switch {
+	case dev == "":
+		return fmt.Errorf("limine.conf cmdline %q has no root=", strings.Join(cmdline, " "))
+	case id == "":
+		return nil
+	case name == "" || dev != "/dev/mapper/"+name:
+		return fmt.Errorf("limine.conf cmdline %q: want rd.luks.name=<uuid>=<name> and root=/dev/mapper/<name>", strings.Join(cmdline, " "))
+	}
+	part, err := filepath.EvalSymlinks(filepath.Join(root, "dev", "disk", "by-uuid", id))
+	if err != nil {
+		return fmt.Errorf("limine.conf cmdline names LUKS UUID %s: %w", id, err)
+	}
+	holders, err := filepath.Glob(filepath.Join(root, "sys", "class", "block", filepath.Base(part), "holders", "*", "dm", "name"))
+	if err != nil {
+		return err
+	}
+	for _, h := range holders {
+		if data, err := os.ReadFile(h); err == nil && strings.TrimSpace(string(data)) == name {
+			return nil
+		}
+	}
+	return fmt.Errorf("limine.conf cmdline names LUKS UUID %s, but %s is not open as %s", id, filepath.Base(part), name)
+}
+
+func Cmdline(uki string) (string, bool, error) {
+	f, err := pe.Open(uki)
+	if err != nil {
+		return "", false, err
+	}
+	defer f.Close()
+	sec := f.Section(".cmdline")
+	if sec == nil {
+		return "", false, nil
+	}
+	data, err := sec.Data()
+	if err != nil {
+		return "", false, err
+	}
+	return strings.TrimRight(string(data), "\x00\n "), true, nil
 }
 
 func installed(ctx context.Context, run execx.Runner) (bool, error) {
@@ -219,8 +302,6 @@ func installed(ctx context.Context, run execx.Runner) (bool, error) {
 	}
 	return state.Installed, nil
 }
-
-var settings = []string{"ENABLE_ENROLL_LIMINE_CONFIG=yes", "ENABLE_LIMINE_FALLBACK=no"}
 
 func configure(path string) error {
 	data, err := os.ReadFile(path)

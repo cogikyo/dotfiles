@@ -19,7 +19,7 @@ import (
 
 type prep struct {
 	wg       sync.WaitGroup
-	disks    Survey
+	disks    survey
 	firmware secureboot.Firmware
 	targets  []string
 	errs     [4]error
@@ -30,7 +30,7 @@ func (s *session) prepare(ctx context.Context) *prep {
 	p.wg.Go(func() {
 		boot, out, err := s.lsblk(ctx)
 		if err == nil {
-			p.disks, err = Scan(out, boot)
+			p.disks, err = scan(out, boot)
 		}
 		p.errs[0] = err
 	})
@@ -70,7 +70,7 @@ func (s *session) lsblk(ctx context.Context) (boot string, out []byte, err error
 	if boot == "" {
 		return "", nil, errors.New("boot medium not identified: no archisosearchuuid= in /proc/cmdline")
 	}
-	out, err = s.sh.output(ctx, Lsblk...)
+	out, err = s.sh.output(ctx, "lsblk", "-J", "-b", "-o", "NAME,PATH,TYPE,SIZE,RO,RM,TRAN,MODEL,SERIAL,WWN,LOG-SEC,UUID,PARTUUID,LABEL,MOUNTPOINTS")
 	return boot, out, err
 }
 

@@ -10,13 +10,11 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strconv"
+	"regexp"
 	"syscall"
 	"time"
 
 	"dotfiles/cmds/internal/dctl/iso"
-
-	"golang.org/x/sys/unix"
 )
 
 const (
@@ -34,23 +32,13 @@ const (
 func (s *session) form(context.Context) (iso.Answers, error) {
 	var a iso.Answers
 	var err error
-	if a.User, err = s.text("Username", defaultUser, func(v string) error {
-		if !userPattern.MatchString(v) || v == "root" {
-			return errors.New("want a lowercase POSIX name other than root")
-		}
-		return nil
-	}); err != nil {
+	if a.User, err = s.text("Username", defaultUser, username); err != nil {
 		return a, err
 	}
 	if a.Password, err = s.secret("Password"); err != nil {
 		return a, err
 	}
-	if a.Host, err = s.text("Hostname", "", func(v string) error {
-		if !hostPattern.MatchString(v) {
-			return errors.New("want one lowercase DNS label")
-		}
-		return nil
-	}); err != nil {
+	if a.Host, err = s.text("Hostname", "", hostname); err != nil {
 		return a, err
 	}
 	if a.Zone, err = s.text("Timezone", defaultZone, s.zone); err != nil {
@@ -58,6 +46,39 @@ func (s *session) form(context.Context) (iso.Answers, error) {
 	}
 	a.LUKS, err = s.secret("Disk passphrase")
 	return a, err
+}
+
+var (
+	userPattern = regexp.MustCompile(`^[a-z_][a-z0-9_-]{0,31}$`)
+	hostPattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
+)
+
+func username(v string) error {
+	if !userPattern.MatchString(v) || v == "root" {
+		return errors.New("want a lowercase POSIX name other than root")
+	}
+	return nil
+}
+
+func hostname(v string) error {
+	if !hostPattern.MatchString(v) {
+		return errors.New("want one lowercase DNS label")
+	}
+	return nil
+}
+
+func (s *session) valid(a iso.Answers) error {
+	var errs []error
+	if a.Password == "" || a.LUKS == "" || a.Serial == "" {
+		errs = append(errs, errors.New("password, luks, and disk_serial are required"))
+	}
+	if err := username(a.User); err != nil {
+		errs = append(errs, fmt.Errorf("user %q: %w", a.User, err))
+	}
+	if err := hostname(a.Host); err != nil {
+		errs = append(errs, fmt.Errorf("host %q: %w", a.Host, err))
+	}
+	return errors.Join(append(errs, s.zone(a.Zone))...)
 }
 
 func (s *session) zone(v string) error {
@@ -143,10 +164,7 @@ func (s *session) dctltest(ctx context.Context) (*iso.Answers, error) {
 	if err := dec.Decode(&a); err != nil {
 		return nil, fmt.Errorf("DCTLTEST answers.json: %w", err)
 	}
-	if a.User == "" || a.Password == "" || a.Host == "" || a.Zone == "" || a.LUKS == "" || a.Serial == "" {
-		return nil, errors.New("DCTLTEST answers.json: user, password, host, zone, luks, and disk_serial are all required")
-	}
-	if err := s.zone(a.Zone); err != nil {
+	if err := s.valid(a); err != nil {
 		return nil, fmt.Errorf("DCTLTEST answers.json: %w", err)
 	}
 	if b := s.path(testMount, "dotfiles.bundle"); exists(b) {
@@ -186,14 +204,7 @@ func (s *session) reexec(override string) error {
 	if err := os.Rename(tmp.Name(), dst); err != nil {
 		return err
 	}
-	fd := int(s.lock.Fd())
-	if _, err := unix.FcntlInt(uintptr(fd), unix.F_SETFD, 0); err != nil {
-		return fmt.Errorf("keep install lock across exec: %w", err)
-	}
-	env := append(os.Environ(), testEnv+"="+strconv.Itoa(fd))
-	err = execve(dst, os.Args, env)
-	unix.CloseOnExec(fd)
-	return fmt.Errorf("exec %s: %w", dst, err)
+	return fmt.Errorf("exec %s: %w", dst, execve(dst, os.Args, append(os.Environ(), testEnv+"=1")))
 }
 
 func exists(path string) bool {

@@ -80,13 +80,15 @@ func TestSerial(t *testing.T) {
 	log := []byte("noise\r\nBoot in 1s.\x1b[2J\x1b[001;001H" +
 		`{"dctltest":"install","ok":true,"total":61.5,"phases":[{"name":"pacstrap","seconds":40.1}]}` + "\r\n" +
 		`[{"group":"system","check":"system-files","status":"ok"},{"group":"keys","check":"keys-luks","status":"failed","detail":"no token"}]` + "\r\n" +
+		`[{"group":"home","check":"home-dirs","status":"ok"}]` + "\r\n" +
+		Greeter + "active\r\n" +
 		`[{"group":"partial`)
 
-	line, ok := find(log, installPrefix)
-	if !ok {
-		t.Fatal("no install line")
+	lines := find(log, installPrefix)
+	if len(lines) != 1 {
+		t.Fatalf("install lines %q", lines)
 	}
-	r, err := parseInstall(line)
+	r, err := parseInstall(lines[0])
 	if err != nil || !r.OK || r.Total != 61.5 || r.Phases[0] != (Phase{"pacstrap", 40.1}) {
 		t.Fatalf("install = %+v, %v", r, err)
 	}
@@ -94,16 +96,16 @@ func TestSerial(t *testing.T) {
 		t.Fatal("accepted a non-install event")
 	}
 
-	line, ok = find(log, doctorPrefix)
-	if !ok {
-		t.Fatal("no doctor line")
+	lines = find(log, doctorPrefix)
+	if len(lines) != 2 {
+		t.Fatalf("doctor lines %q, want the root and the user report", lines)
 	}
 	var rs []doctor.Result
-	if err := json.Unmarshal([]byte(line), &rs); err != nil || len(rs) != 2 || rs[1] != (doctor.Result{Group: "keys", Check: "keys-luks", Status: doctor.Failed, Detail: "no token"}) {
+	if err := json.Unmarshal([]byte(lines[0]), &rs); err != nil || len(rs) != 2 || rs[1] != (doctor.Result{Group: "keys", Check: "keys-luks", Status: doctor.Failed, Detail: "no token"}) {
 		t.Fatalf("doctor = %+v, %v", rs, err)
 	}
-	if _, ok := find([]byte(`[{"group":"partial`), doctorPrefix); ok {
-		t.Fatal("matched an unterminated line")
+	if got := find(log, Greeter); len(got) != 1 || got[0] != Greeter+"active" {
+		t.Fatalf("greeter lines %q", got)
 	}
 
 	if err := accept("1", rs); err == nil || !strings.Contains(err.Error(), "no packages checks") || strings.Contains(err.Error(), "keys-luks") {
@@ -114,17 +116,24 @@ func TestSerial(t *testing.T) {
 		{Group: "packages", Check: "packages-installed", Status: doctor.Fixed},
 		{Group: "home", Check: "home-links", Status: doctor.Passed},
 		{Group: "secureboot", Check: "secureboot-keys", Status: doctor.Passed},
-		{Group: "secureboot", Check: "secureboot-signed", Status: doctor.Blocked},
+		{Group: "secureboot", Check: "secureboot-signed", Status: doctor.Passed},
+		{Group: "secureboot", Check: "secureboot-enforced", Status: doctor.Passed},
 	}
 	if err := accept("1", append(healthy, rs[1])); err != nil {
 		t.Fatalf("expected failures outside the required checks: %v", err)
 	}
-	if err := accept("2", slices.Delete(slices.Clone(healthy), 3, 4)); err == nil || !strings.Contains(err.Error(), "no secureboot-keys checks") {
-		t.Fatalf("missing secureboot-keys = %v", err)
+	for i := 3; i < 6; i++ {
+		missing := slices.Delete(slices.Clone(healthy), i, i+1)
+		if err := accept("2", missing); err == nil || !strings.Contains(err.Error(), "no "+healthy[i].Check+" checks") {
+			t.Fatalf("missing %s = %v", healthy[i].Check, err)
+		}
 	}
-	healthy[3].Status = doctor.Blocked
-	if err := accept("2", healthy); err == nil || !strings.Contains(err.Error(), "secureboot-keys blocked") {
-		t.Fatalf("blocked secureboot-keys = %v", err)
+	for _, i := range []int{3, 4, 5} {
+		bad := slices.Clone(healthy)
+		bad[i].Status = doctor.Blocked
+		if err := accept("2", bad); err == nil || !strings.Contains(err.Error(), bad[i].Check+" blocked") {
+			t.Fatalf("blocked %s = %v", bad[i].Check, err)
+		}
 	}
 }
 

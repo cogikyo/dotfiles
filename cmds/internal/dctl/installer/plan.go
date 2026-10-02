@@ -2,17 +2,14 @@ package installer
 
 import (
 	"crypto/rand"
-	"errors"
 	"fmt"
 	"path/filepath"
-	"regexp"
 	"strings"
-	"time"
 )
 
 const (
-	Target = "/mnt"
-	Mapper = "root"
+	target = "/mnt"
+	mapper = "root"
 
 	espSize    = "+4G"
 	options    = "noatime,compress=zstd"
@@ -30,8 +27,8 @@ var (
 
 func (s subvolume) options() string { return options + ",subvol=/" + s.name }
 
-type Plan struct {
-	Disk       Disk
+type plan struct {
+	Disk       disk
 	User       string
 	Host       string
 	Zone       string
@@ -41,26 +38,8 @@ type Plan struct {
 	SecureBoot bool
 }
 
-var (
-	userPattern = regexp.MustCompile(`^[a-z_][a-z0-9_-]{0,31}$`)
-	hostPattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
-)
-
-func New(d Disk, user, host, zone string) (Plan, error) {
-	var errs []error
-	if !userPattern.MatchString(user) || user == "root" {
-		errs = append(errs, fmt.Errorf("username %q: want a lowercase POSIX name other than root", user))
-	}
-	if !hostPattern.MatchString(host) {
-		errs = append(errs, fmt.Errorf("hostname %q: want one lowercase DNS label", host))
-	}
-	if _, err := time.LoadLocation(zone); err != nil || zone == "" || zone == "Local" {
-		errs = append(errs, fmt.Errorf("timezone %q: not a known zone", zone))
-	}
-	if err := errors.Join(errs...); err != nil {
-		return Plan{}, err
-	}
-	return Plan{Disk: d, User: user, Host: host, Zone: zone, LUKSID: uuid(), RootID: uuid(), ESPID: fatID()}, nil
+func newPlan(d disk, user, host, zone string) plan {
+	return plan{Disk: d, User: user, Host: host, Zone: zone, LUKSID: uuid(), RootID: uuid(), ESPID: fatID()}
 }
 
 func uuid() string {
@@ -77,64 +56,64 @@ func fatID() string {
 	return fmt.Sprintf("%X-%X", b[0:2], b[2:4])
 }
 
-type Cmd struct {
+type cmd struct {
 	Args []string
 	Key  bool
 }
 
-func run(args ...string) Cmd { return Cmd{Args: args} }
+func run(args ...string) cmd { return cmd{Args: args} }
 
-func (p Plan) Partition() []Cmd {
-	return []Cmd{
+func (p plan) partition() []cmd {
+	return []cmd{
 		run("wipefs", "--all", "--force", p.Disk.Path),
 		run("sgdisk", "--new=1:0:"+espSize, "--typecode=1:ef00", "--new=2:0:0", "--typecode=2:8309", p.Disk.Path),
 		run("udevadm", "settle"),
 	}
 }
 
-func (p Plan) Format() []Cmd {
-	luks := p.Disk.Part(2)
-	return []Cmd{
+func (p plan) format() []cmd {
+	luks := p.Disk.part(2)
+	return []cmd{
 		{Args: []string{"cryptsetup", "luksFormat", "--type=luks2", "--batch-mode", "--uuid=" + p.LUKSID, "--key-file=-", luks}, Key: true},
-		{Args: []string{"cryptsetup", "open", "--allow-discards", "--persistent", "--key-file=-", luks, Mapper}, Key: true},
-		run("mkfs.fat", "-F", "32", "-i", strings.ReplaceAll(p.ESPID, "-", ""), p.Disk.Part(1)),
-		run("mkfs.btrfs", "--uuid="+p.RootID, "/dev/mapper/"+Mapper),
+		{Args: []string{"cryptsetup", "open", "--allow-discards", "--persistent", "--key-file=-", luks, mapper}, Key: true},
+		run("mkfs.fat", "-F", "32", "-i", strings.ReplaceAll(p.ESPID, "-", ""), p.Disk.part(1)),
+		run("mkfs.btrfs", "--uuid="+p.RootID, "/dev/mapper/"+mapper),
 	}
 }
 
-func (p Plan) Subvolumes() []Cmd {
-	cmds := []Cmd{run("mount", "/dev/mapper/"+Mapper, Target)}
+func (p plan) subvolumes() []cmd {
+	cmds := []cmd{run("mount", "/dev/mapper/"+mapper, target)}
 	for _, s := range append(mounts, snapshots) {
-		cmds = append(cmds, run("btrfs", "subvolume", "create", filepath.Join(Target, s.name)))
+		cmds = append(cmds, run("btrfs", "subvolume", "create", filepath.Join(target, s.name)))
 	}
-	return append(cmds, run("umount", Target))
+	return append(cmds, run("umount", target))
 }
 
-func (p Plan) Mount() []Cmd {
-	var cmds []Cmd
+func (p plan) mount() []cmd {
+	var cmds []cmd
 	for _, s := range mounts {
-		cmds = append(cmds, run("mount", "--mkdir", "-o", s.options(), "/dev/mapper/"+Mapper, filepath.Join(Target, s.path)))
+		cmds = append(cmds, run("mount", "--mkdir", "-o", s.options(), "/dev/mapper/"+mapper, filepath.Join(target, s.path)))
 	}
-	return append(cmds, run("mount", "--mkdir", "-o", espOptions, p.Disk.Part(1), filepath.Join(Target, esp)))
+	return append(cmds, run("mount", "--mkdir", "-o", espOptions, p.Disk.part(1), filepath.Join(target, esp)))
 }
 
-func (p Plan) Firstboot() []Cmd {
-	return []Cmd{run(
-		"systemd-firstboot", "--root="+Target, "--force",
+func (p plan) firstboot() []cmd {
+	return []cmd{run(
+		"systemd-firstboot", "--root="+target, "--force",
 		"--locale=en_US.UTF-8", "--keymap=us", "--timezone="+p.Zone, "--hostname="+p.Host,
 		"--setup-machine-id",
 	)}
 }
 
-func (p Plan) Snapshots() []Cmd {
-	dir := filepath.Join(Target, snapshots.path)
-	return []Cmd{
-		run("arch-chroot", Target, "snapper", "--no-dbus", "-c", "root", "create-config", "/"),
-		run("arch-chroot", Target, "snapper", "--no-dbus", "-c", "root", "set-config",
+func (p plan) snapshots() []cmd {
+	dir := filepath.Join(target, snapshots.path)
+	return []cmd{
+		run("arch-chroot", target, "snapper", "--no-dbus", "-c", "root", "create-config", "/"),
+		run("arch-chroot", target, "snapper", "--no-dbus", "-c", "root", "set-config",
 			"TIMELINE_LIMIT_HOURLY=5", "TIMELINE_LIMIT_DAILY=7", "TIMELINE_LIMIT_WEEKLY=0",
 			"TIMELINE_LIMIT_MONTHLY=0", "TIMELINE_LIMIT_YEARLY=0"),
 		run("btrfs", "subvolume", "delete", dir),
-		run("mount", "--mkdir", "-o", snapshots.options(), "/dev/mapper/"+Mapper, dir),
+		run("mount", "--mkdir", "-o", snapshots.options(), "/dev/mapper/"+mapper, dir),
 		run("chmod", "750", dir),
 	}
 }

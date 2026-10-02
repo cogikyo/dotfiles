@@ -6,14 +6,14 @@ import (
 	"strings"
 )
 
-type File struct {
+type file struct {
 	Path string
 	Mode fs.FileMode
 	Data string
 }
 
-func (p Plan) Files() []File {
-	return []File{
+func (p plan) files() []file {
+	return []file{
 		{"etc/fstab", 0o644, p.fstab()},
 		{"etc/default/limine", 0o644, p.limine()},
 		{"etc/mkinitcpio.conf.d/dotfiles.conf", 0o644, "HOOKS=(base systemd autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt filesystems sd-btrfs-overlayfs fsck)\n"},
@@ -22,11 +22,11 @@ func (p Plan) Files() []File {
 	}
 }
 
-func (p Plan) Cmdline() string {
-	return fmt.Sprintf("rd.luks.name=%[1]s=%[2]s rd.luks.options=%[1]s=fido2-device=auto root=/dev/mapper/%[2]s rootflags=subvol=/%[3]s rw", p.LUKSID, Mapper, rootfs.name)
+func (p plan) cmdline() string {
+	return fmt.Sprintf("rd.luks.name=%[1]s=%[2]s rd.luks.options=%[1]s=fido2-device=auto root=/dev/mapper/%[2]s rootflags=subvol=/%[3]s rw", p.LUKSID, mapper, rootfs.name)
 }
 
-func (p Plan) fstab() string {
+func (p plan) fstab() string {
 	var b strings.Builder
 	for _, s := range append(mounts, snapshots) {
 		fmt.Fprintf(&b, "UUID=%s\t%s\tbtrfs\t%s\t0 0\n", p.RootID, s.path, s.options())
@@ -35,16 +35,12 @@ func (p Plan) fstab() string {
 	return b.String()
 }
 
-func (p Plan) limine() string {
-	lines := []string{
+func (p plan) limine() string {
+	return strings.Join([]string{
 		"ESP_PATH=" + esp,
-		"KERNEL_CMDLINE[default]=" + p.Cmdline(),
+		"KERNEL_CMDLINE[default]=" + p.cmdline(),
 		"ENABLE_UKI=yes",
 		"SNAPPER_CONFIG_NAME=root",
 		"RESTORE_METHOD=replace",
-	}
-	if p.SecureBoot {
-		lines = append(lines, "ENABLE_ENROLL_LIMINE_CONFIG=yes", "ENABLE_LIMINE_FALLBACK=no")
-	}
-	return strings.Join(lines, "\n") + "\n"
+	}, "\n") + "\n"
 }

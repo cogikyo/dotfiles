@@ -64,20 +64,20 @@ func TestScan(t *testing.T) {
 			var b strings.Builder
 			fmt.Fprintf(&b, "boot %q\n", tt.boot)
 			path := filepath.Join("testdata", "lsblk", tt.name+".golden")
-			s, err := Scan(fixture(t, tt.fixture), tt.boot)
+			s, err := scan(fixture(t, tt.fixture), tt.boot)
 			if err != nil {
 				fmt.Fprintf(&b, "scan error: %v\n", err)
 				golden(t, path, []byte(b.String()))
 				return
 			}
 			for _, d := range s.Candidates {
-				fmt.Fprintf(&b, "candidate %s parts=%s,%s\n", d, d.Part(1), d.Part(2))
+				fmt.Fprintf(&b, "candidate %s parts=%s,%s\n", d, d.part(1), d.part(2))
 			}
 			for _, r := range s.Refused {
 				fmt.Fprintf(&b, "refused %s: %s\n", r.Disk, r.Reason)
 			}
 			for _, p := range tt.picks {
-				d, err := s.Pick(p)
+				d, err := s.pick(p)
 				if err != nil {
 					fmt.Fprintf(&b, "pick %q: error: %v\n", p, err)
 					continue
@@ -91,15 +91,15 @@ func TestScan(t *testing.T) {
 
 func TestRecheck(t *testing.T) {
 	lsblk := fixture(t, "nvme")
-	s, err := Scan(lsblk, "/dev/sda1")
+	s, err := scan(lsblk, "/dev/sda1")
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := s.Pick("")
+	d, err := s.pick("")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := d.Recheck(lsblk, "/dev/sda1"); err != nil {
+	if err := d.recheck(lsblk, "/dev/sda1"); err != nil {
 		t.Errorf("unchanged disk: %v", err)
 	}
 	tests := []struct {
@@ -114,7 +114,7 @@ func TestRecheck(t *testing.T) {
 		{"ambiguous boot", fixture(t, "duplicate"), "/dev/disk/by-uuid/2026-10-01-12-00-00-00"},
 	}
 	for _, tt := range tests {
-		if err := d.Recheck(tt.lsblk, tt.boot); err == nil {
+		if err := d.recheck(tt.lsblk, tt.boot); err == nil {
 			t.Errorf("%s: recheck passed", tt.name)
 		}
 	}
