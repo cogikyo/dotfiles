@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -90,8 +91,20 @@ func warnMissing(cfg *HyprConfig) {
 	if cfg.Notify.Styles == nil {
 		warn("notify.styles")
 	}
-	if cfg.Windows.Split.Default == "" {
-		warn("windows")
+	split := cfg.Windows.Split
+	for _, mode := range []struct {
+		name    string
+		presets SplitPresets
+	}{{"normal", split.Normal}, {"share", split.Share}} {
+		for _, preset := range []struct{ name, ratio string }{
+			{"xs", mode.presets.XS},
+			{"default", mode.presets.Default},
+			{"lg", mode.presets.LG},
+		} {
+			if f, err := strconv.ParseFloat(preset.ratio, 64); err != nil || f <= 0 || f >= 1 {
+				fmt.Fprintf(os.Stderr, "hyprd: warning: windows.split.%s.%s %q is not a ratio in (0, 1)\n", mode.name, preset.name, preset.ratio)
+			}
+		}
 	}
 }
 

@@ -4,6 +4,7 @@ import (
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
+	"dotfiles/cmds/internal/hyprd/wm"
 	"fmt"
 	"os/exec"
 	"strings"
@@ -56,19 +57,22 @@ func (s *Share) enter() (string, error) {
 		return "", err
 	}
 	s.state.SetScreenShare(true)
+	splitErr := s.retuneSplit()
 
 	runCommand("dunstctl", "close-all")
 	runCommand("dunstctl", "set-paused", "true")
 	startDetached("ewwd", "close")
 	runCommand("killall", "glava")
 
-	return "share: on", nil
+	return withSplitErr("share: on", splitErr), nil
 }
 
 func (s *Share) exit() (string, error) {
 	if err := s.setGaps(s.gaps().Normal); err != nil {
 		return "", err
 	}
+	s.state.SetScreenShare(false)
+	splitErr := s.retuneSplit()
 
 	startDetached("ewwd", "restore")
 	dispatchGLava(s.hypr)
@@ -76,8 +80,23 @@ func (s *Share) exit() (string, error) {
 		runCommand("dunstctl", "set-paused", "false")
 	})
 
-	s.state.SetScreenShare(false)
-	return "share: off", nil
+	return withSplitErr("share: off", splitErr), nil
+}
+
+// retuneSplit applies the global split preset for the new share mode.
+func (s *Share) retuneSplit() error {
+	split := wm.NewSplit(s.hypr, s.state)
+	if err := split.Reseed(); err != nil {
+		return err
+	}
+	return split.Refresh()
+}
+
+func withSplitErr(result string, err error) string {
+	if err == nil {
+		return result
+	}
+	return fmt.Sprintf("%s (split: %v)", result, err)
 }
 
 func (s *Share) active() bool {

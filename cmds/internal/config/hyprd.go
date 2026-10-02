@@ -76,11 +76,32 @@ type Wallpaper struct {
 // │ windows / layout                                                             │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// SplitConfig defines named master-slave split ratios (stringified floats 0-1).
+// SplitConfig holds master split presets for normal and screen-share outer gaps.
 type SplitConfig struct {
+	Normal SplitPresets `yaml:"normal"`
+	Share  SplitPresets `yaml:"share"`
+}
+
+// SplitPresets defines named master-slave split ratios (stringified floats 0-1).
+type SplitPresets struct {
 	XS      string `yaml:"xs"`
 	Default string `yaml:"default"`
 	LG      string `yaml:"lg"`
+}
+
+// Ratio resolves preset for the share mode; unknown presets resolve to "default".
+func (c SplitConfig) Ratio(preset string, share bool) (name, mfact string) {
+	p := c.Normal
+	if share {
+		p = c.Share
+	}
+	switch preset {
+	case "xs":
+		return preset, p.XS
+	case "lg":
+		return preset, p.LG
+	}
+	return "default", p.Default
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮

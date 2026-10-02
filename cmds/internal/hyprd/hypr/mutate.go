@@ -228,6 +228,13 @@ func (c *Client) SetOuterGaps(top, right, bottom, left int) error {
 	))
 }
 
+// SetMasterFactor sets master.mfact, the ratio new master nodes start with.
+func (c *Client) SetMasterFactor(mfact float64) error {
+	return c.eval("SetMasterFactor", fmt.Sprintf(
+		"hl.config({ master = { mfact = %g } })", mfact,
+	))
+}
+
 // SetWorkspaceAnim sets the workspaces animation style ("slide"|"slidevert").
 func (c *Client) SetWorkspaceAnim(style string) error {
 	return c.eval("SetWorkspaceAnim", fmt.Sprintf(

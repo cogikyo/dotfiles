@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
 	"dotfiles/cmds/internal/hyprd/windows"
@@ -167,7 +166,7 @@ func (m *Monocle) deactivate(wsID int) (string, error) {
 		if ms.SavedThreeBody != nil {
 			m.restoreThreeBody(wsID, ms.SavedThreeBody)
 		}
-		m.restoreSplitRatio(ms.SavedSplitRatio, m.state.GetConfig())
+		_, _ = NewSplit(m.hypr, m.state).Apply(ms.SavedSplitRatio)
 		if ms.Focused != "" {
 			_ = m.hypr.FocusWindow(ms.Focused)
 		}
@@ -244,24 +243,6 @@ func (m *Monocle) ensureMaster(wsID int, masterAddr string) {
 	}
 	_ = m.hypr.FocusWindow(masterAddr)
 	_ = m.hypr.LayoutMsg("swapwithmaster master")
-}
-
-func (m *Monocle) restoreSplitRatio(ratio string, cfg *config.HyprConfig) {
-	if ratio == "" {
-		ratio = "default"
-	}
-	var mfact string
-	switch ratio {
-	case "xs":
-		mfact = cfg.Windows.Split.XS
-	case "lg":
-		mfact = cfg.Windows.Split.LG
-	default:
-		ratio = "default"
-		mfact = cfg.Windows.Split.Default
-	}
-	_ = m.hypr.LayoutMsg(fmt.Sprintf("mfact exact %s", mfact))
-	m.state.SetSplitRatio(ratio)
 }
 
 func (m *Monocle) restoreThreeBody(wsID int, saved *state.ThreeBodyState) {

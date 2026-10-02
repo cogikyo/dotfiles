@@ -24,6 +24,7 @@ type State struct {
 	ProjectPaths       map[int]string          `json:"project_paths,omitempty"`
 	Monocle            map[int]*MonocleState   `json:"monocle,omitempty"`
 	SplitRatio         string                  `json:"split_ratio"`
+	SplitMarks         map[int]SplitMark       `json:"split_marks,omitempty"`
 	ActiveSessions     map[int]string          `json:"active_sessions,omitempty"`
 	ScreenShare        bool                    `json:"screen_share"`
 	BrowserQA          []BrowserQAWindow       `json:"browser_qa"`
@@ -40,6 +41,7 @@ func NewState(cfg *config.HyprConfig) *State {
 		ThreeBody:          make(map[int]*ThreeBodyState),
 		ProjectPaths:       make(map[int]string),
 		Monocle:            make(map[int]*MonocleState),
+		SplitMarks:         make(map[int]SplitMark),
 		ActiveSessions:     make(map[int]string),
 		BrowserQA:          []BrowserQAWindow{},
 		pendingLaunches:    make(map[string]time.Time),
@@ -89,6 +91,24 @@ func (s *State) GetSplitRatio() string {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return s.SplitRatio
+}
+
+// SplitMark records the split preset and share mode last applied to a workspace.
+type SplitMark struct {
+	Preset string `json:"preset"`
+	Share  bool   `json:"share"`
+}
+
+func (s *State) SetSplitMark(ws int, mark SplitMark) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.SplitMarks[ws] = mark
+}
+
+func (s *State) GetSplitMark(ws int) SplitMark {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return s.SplitMarks[ws]
 }
 
 func (s *State) SetScreenShare(active bool) {
@@ -159,6 +179,9 @@ func (s *State) Restore(data []byte) error {
 	}
 	if snap.Monocle != nil {
 		s.Monocle = snap.Monocle
+	}
+	if snap.SplitMarks != nil {
+		s.SplitMarks = snap.SplitMarks
 	}
 	if snap.ActiveSessions != nil {
 		s.ActiveSessions = snap.ActiveSessions

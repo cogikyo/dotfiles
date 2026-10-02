@@ -14,6 +14,7 @@ import (
 	"dotfiles/cmds/internal/daemon"
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
+	"dotfiles/cmds/internal/hyprd/wm"
 )
 
 // EventLoop mirrors Hyprland's event stream into daemon state and notifies subscribers.
@@ -94,6 +95,7 @@ func (e *EventLoop) syncState() error {
 	}
 	e.notifyWorkspace()
 	e.resetAccent()
+	e.reseedSplit()
 
 	return nil
 }
@@ -133,6 +135,7 @@ func (e *EventLoop) handleEvent(line string) {
 			e.state.SetWorkspace(ws)
 			e.notifyWorkspace()
 			e.resetAccent()
+			e.refreshSplit()
 		}
 
 	case "focusedmon":
@@ -141,17 +144,20 @@ func (e *EventLoop) handleEvent(line string) {
 				e.state.SetWorkspace(ws)
 				e.notifyWorkspace()
 				e.resetAccent()
+				e.refreshSplit()
 			}
 		}
 
 	case "activewindow", "activewindowv2":
 		e.applyAccent()
+		e.refreshSplit()
 
 	case "configreloaded":
 		if e.accent != nil {
 			e.accent.Invalidate()
 		}
 		e.applyAccent()
+		e.reseedSplit()
 
 	case "createworkspace", "destroyworkspace":
 		e.refreshClients()
@@ -185,6 +191,20 @@ func (e *EventLoop) applyAccent() {
 	}
 	if err := e.accent.Apply(); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd accent: %v\n", err)
+	}
+}
+
+// refreshSplit reapplies the global split preset when the active workspace's mark is stale.
+func (e *EventLoop) refreshSplit() {
+	if err := wm.NewSplit(e.hypr, e.state).Refresh(); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd split: %v\n", err)
+	}
+}
+
+// reseedSplit restores master.mfact after startup or a Hyprland config reload resets it.
+func (e *EventLoop) reseedSplit() {
+	if err := wm.NewSplit(e.hypr, e.state).Reseed(); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd split: %v\n", err)
 	}
 }
 

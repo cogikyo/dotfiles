@@ -14,6 +14,7 @@ import (
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/state"
 	"dotfiles/cmds/internal/hyprd/windows"
+	"dotfiles/cmds/internal/hyprd/wm"
 )
 
 const (
@@ -153,7 +154,6 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 		return "", err
 	}
 
-	cfg := l.state.GetConfig()
 	for _, c := range clients {
 		if c.Workspace.ID == s.Workspace && !c.Pinned && !windows.IsIgnored(c.Class) {
 			if preserveSessionBrowserWindow(s, c) {
@@ -221,7 +221,7 @@ func (l *Layout) openSession(s config.Session) (string, error) {
 	}
 	windowsByRole := l.waitForSessionRoles(s, s.Body, sessionWindowTimeout)
 
-	if err := l.hypr.LayoutMsg(fmt.Sprintf("mfact exact %s", cfg.Windows.Split.Default)); err != nil {
+	if _, err := wm.NewSplit(l.hypr, l.state).Apply("default"); err != nil {
 		return "", fmt.Errorf("set layout split: %w", err)
 	}
 	if err := l.arrangeThreeBody(s, windowsByRole); err != nil {
