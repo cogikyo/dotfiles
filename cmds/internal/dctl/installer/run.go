@@ -24,7 +24,6 @@ import (
 )
 
 const (
-	tools  = "/usr/local/bin"
 	hooks  = "/etc/pacman.d/hooks"
 	staged = "/var/tmp/dotfiles.bundle"
 	origin = "git@github.com:cogikyo/dotfiles.git"
@@ -460,7 +459,7 @@ func (s *session) dotfiles(ctx context.Context, user string) error {
 		return err
 	}
 	for _, name := range binaries.Names {
-		src := s.path(tools, name)
+		src := s.path(iso.Bin, name)
 		if name == "dctl" {
 			src = s.exe
 		}

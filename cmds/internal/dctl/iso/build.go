@@ -143,7 +143,10 @@ func (b build) build(ctx context.Context) error {
 	if err := os.Rename(built[0], iso); err != nil {
 		return err
 	}
-	uid, gid := ids(b.owner)
+	uid, gid, err := ids(b.owner)
+	if err != nil {
+		return err
+	}
 	if err := errors.Join(os.Chown(b.out, uid, gid), os.Chown(iso, uid, gid)); err != nil {
 		return err
 	}
@@ -301,16 +304,19 @@ func (b build) user(ctx context.Context, args ...string) error {
 	return b.cmd(ctx, "", argv[0], argv[1:]...)
 }
 
-func ids(u *user.User) (int, int) {
-	uid, _ := strconv.Atoi(u.Uid)
-	gid, _ := strconv.Atoi(u.Gid)
-	return uid, gid
+func ids(u *user.User) (int, int, error) {
+	uid, uerr := strconv.Atoi(u.Uid)
+	gid, gerr := strconv.Atoi(u.Gid)
+	return uid, gid, errors.Join(uerr, gerr)
 }
 
 func mkdir(dir string, owner *user.User) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
-	uid, gid := ids(owner)
+	uid, gid, err := ids(owner)
+	if err != nil {
+		return err
+	}
 	return os.Chown(dir, uid, gid)
 }

@@ -172,3 +172,15 @@ func TestStickRefusal(t *testing.T) {
 		}
 	}
 }
+
+func TestPacmanConf(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "iso", "airootfs", "etc", "pacman.conf"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, section, ok := strings.Cut(string(data), "\n["+Repo+"]\n")
+	section, _, _ = strings.Cut(section, "\n[")
+	if !ok || !strings.Contains(section, "\nServer = file://"+Payload+"\n") {
+		t.Fatalf("pacman.conf has no [%s] section with Server = file://%s", Repo, Payload)
+	}
+}
