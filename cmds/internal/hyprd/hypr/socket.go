@@ -9,7 +9,10 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"time"
 )
+
+const requestTimeout = 3 * time.Second
 
 // Client communicates with Hyprland via its Unix sockets.
 type Client struct {
@@ -43,11 +46,14 @@ func (c *Client) EventSocketPath() string {
 
 // Request sends a command and returns the raw response.
 func (c *Client) Request(command string) ([]byte, error) {
-	conn, err := net.Dial("unix", c.socketPath)
+	conn, err := net.DialTimeout("unix", c.socketPath, requestTimeout)
 	if err != nil {
 		return nil, fmt.Errorf("dial hyprland: %w", err)
 	}
 	defer conn.Close()
+	if err := conn.SetDeadline(time.Now().Add(requestTimeout)); err != nil {
+		return nil, fmt.Errorf("set request deadline: %w", err)
+	}
 
 	if _, err := conn.Write([]byte(command)); err != nil {
 		return nil, fmt.Errorf("write command: %w", err)
