@@ -1,0 +1,8 @@
+boot "/dev/sda1"
+candidate /dev/nvme0n1 "Samsung SSD 990 PRO 1TB" serial=S73VNJ0W100001A wwn=eui.002538b131a0b1c2 tran=nvme size=1000204886016 sector=512 parts=/dev/nvme0n1p1,/dev/nvme0n1p2
+candidate /dev/nvme1n1 "Samsung SSD 990 PRO 4TB" serial=S7DSNJ0X200002B wwn=eui.002538b241b0c2d3 tran=nvme size=4000787030016 sector=4096 parts=/dev/nvme1n1p1,/dev/nvme1n1p2
+refused /dev/sda "Extreme Pro" serial=AA010203040506070809 wwn= tran=usb size=64023257088 sector=512: boot medium
+refused /dev/zram0 "" serial= wwn= tran= size=68719476736 sector=4096: compressed RAM device
+pick "": error: more than one installable disk: /dev/nvme0n1, /dev/nvme1n1
+pick "/dev/nvme1n1": /dev/nvme1n1
+pick "/dev/zram0": error: refusing /dev/zram0: compressed RAM device

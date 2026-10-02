@@ -1,0 +1,166 @@
+{
+   "blockdevices": [
+      {
+         "name": "sda",
+         "path": "/dev/sda",
+         "type": "disk",
+         "size": 64023257088,
+         "ro": false,
+         "tran": "usb",
+         "model": "Extreme Pro",
+         "serial": "AA010203040506070809",
+         "wwn": null,
+         "log-sec": 512,
+         "mountpoints": [
+            null
+         ],
+         "children": [
+            {
+               "name": "sda1",
+               "path": "/dev/sda1",
+               "type": "part",
+               "size": 1610612736,
+               "ro": false,
+               "tran": "usb",
+               "model": null,
+               "serial": null,
+               "wwn": null,
+               "log-sec": 512,
+               "mountpoints": [
+                  null
+               ],
+               "rm": false,
+               "uuid": null,
+               "partuuid": null,
+               "label": null
+            }
+         ],
+         "rm": true,
+         "uuid": null,
+         "partuuid": null,
+         "label": null
+      },
+      {
+         "name": "sdb",
+         "path": "/dev/sdb",
+         "type": "disk",
+         "size": 2000398934016,
+         "ro": false,
+         "tran": "usb",
+         "model": "Portable SSD T7",
+         "serial": "S5SVNG0R700003C",
+         "wwn": "0x5002538e00000003",
+         "log-sec": 512,
+         "mountpoints": [
+            null
+         ],
+         "children": [
+            {
+               "name": "sdb1",
+               "path": "/dev/sdb1",
+               "type": "part",
+               "size": 2000397795328,
+               "ro": false,
+               "tran": "usb",
+               "model": null,
+               "serial": null,
+               "wwn": "0x5002538e00000003",
+               "log-sec": 512,
+               "mountpoints": [
+                  "/media/backup"
+               ],
+               "rm": false,
+               "uuid": null,
+               "partuuid": null,
+               "label": null
+            }
+         ],
+         "rm": false,
+         "uuid": null,
+         "partuuid": null,
+         "label": null
+      },
+      {
+         "name": "nvme0n1",
+         "path": "/dev/nvme0n1",
+         "type": "disk",
+         "size": 2000398934016,
+         "ro": false,
+         "tran": "nvme",
+         "model": "WD_BLACK SN850X 2000GB",
+         "serial": "24123A800123",
+         "wwn": "eui.e8238fa6bf530001001b448b4e0c1a2f",
+         "log-sec": 512,
+         "mountpoints": [
+            null
+         ],
+         "children": [
+            {
+               "name": "nvme0n1p1",
+               "path": "/dev/nvme0n1p1",
+               "type": "part",
+               "size": 4294967296,
+               "ro": false,
+               "tran": "nvme",
+               "model": null,
+               "serial": null,
+               "wwn": "eui.e8238fa6bf530001001b448b4e0c1a2f",
+               "log-sec": 512,
+               "mountpoints": [
+                  null
+               ],
+               "rm": false,
+               "uuid": null,
+               "partuuid": null,
+               "label": null
+            },
+            {
+               "name": "nvme0n1p2",
+               "path": "/dev/nvme0n1p2",
+               "type": "part",
+               "size": 1996102918144,
+               "ro": false,
+               "tran": "nvme",
+               "model": null,
+               "serial": null,
+               "wwn": "eui.e8238fa6bf530001001b448b4e0c1a2f",
+               "log-sec": 512,
+               "mountpoints": [
+                  null
+               ],
+               "children": [
+                  {
+                     "name": "root",
+                     "path": "/dev/mapper/root",
+                     "type": "crypt",
+                     "size": 1996086140928,
+                     "ro": false,
+                     "tran": null,
+                     "model": null,
+                     "serial": null,
+                     "wwn": null,
+                     "log-sec": 512,
+                     "mountpoints": [
+                        "/mnt/var/log",
+                        "/mnt/home",
+                        "/mnt"
+                     ],
+                     "rm": false,
+                     "uuid": null,
+                     "partuuid": null,
+                     "label": null
+                  }
+               ],
+               "rm": false,
+               "uuid": null,
+               "partuuid": null,
+               "label": null
+            }
+         ],
+         "rm": false,
+         "uuid": null,
+         "partuuid": null,
+         "label": null
+      }
+   ]
+}

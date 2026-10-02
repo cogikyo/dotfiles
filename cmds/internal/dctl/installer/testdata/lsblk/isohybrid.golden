@@ -1,0 +1,6 @@
+boot "/dev/disk/by-uuid/2026-10-01-12-00-00-00"
+candidate /dev/nvme0n1 "WD_BLACK SN850X 2000GB" serial=24123A800123 wwn=eui.e8238fa6bf530001001b448b4e0c1a2f tran=nvme size=2000398934016 sector=512 parts=/dev/nvme0n1p1,/dev/nvme0n1p2
+refused /dev/loop0 "" serial= wwn= tran= size=1048576000 sector=512: not a whole disk (loop)
+refused /dev/sda "Extreme Pro" serial=AA010203040506070809 wwn= tran=usb size=64023257088 sector=512: boot medium
+pick "": /dev/nvme0n1
+pick "/dev/sda": error: refusing /dev/sda: boot medium

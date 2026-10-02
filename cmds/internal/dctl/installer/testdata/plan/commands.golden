@@ -1,0 +1,37 @@
+# partition
+wipefs --all --force /dev/nvme0n1
+sgdisk --new=1:0:+4G --typecode=1:ef00 --new=2:0:0 --typecode=2:8309 /dev/nvme0n1
+udevadm settle
+# format
+cryptsetup luksFormat --type=luks2 --batch-mode --uuid=6f1c2a7e-3b4d-4e5f-8a9b-0c1d2e3f4a5b --key-file=- /dev/nvme0n1p2 <passphrase
+cryptsetup open --allow-discards --persistent --key-file=- /dev/nvme0n1p2 root <passphrase
+mkfs.fat -F 32 -i 5A3C91E7 /dev/nvme0n1p1
+mkfs.btrfs --uuid=0d9e8f7a-6b5c-4d3e-9f2a-1b0c9d8e7f6a /dev/mapper/root
+# subvolumes
+mount /dev/mapper/root /mnt
+btrfs subvolume create /mnt/@
+btrfs subvolume create /mnt/@home
+btrfs subvolume create /mnt/@log
+btrfs subvolume create /mnt/@pkg
+btrfs subvolume create /mnt/@snapshots
+umount /mnt
+# mount
+mount --mkdir -o noatime,compress=zstd,subvol=/@ /dev/mapper/root /mnt
+mount --mkdir -o noatime,compress=zstd,subvol=/@home /dev/mapper/root /mnt/home
+mount --mkdir -o noatime,compress=zstd,subvol=/@log /dev/mapper/root /mnt/var/log
+mount --mkdir -o noatime,compress=zstd,subvol=/@pkg /dev/mapper/root /mnt/var/cache/pacman/pkg
+mount --mkdir -o noatime,fmask=0077,dmask=0077 /dev/nvme0n1p1 /mnt/boot
+# firstboot
+systemd-firstboot --root=/mnt --force --locale=en_US.UTF-8 --keymap=us --timezone=America/Denver --hostname=lovelace --setup-machine-id
+# snapshots
+arch-chroot /mnt snapper --no-dbus -c root create-config /
+arch-chroot /mnt snapper --no-dbus -c root set-config TIMELINE_LIMIT_HOURLY=5 TIMELINE_LIMIT_DAILY=7 TIMELINE_LIMIT_WEEKLY=0 TIMELINE_LIMIT_MONTHLY=0 TIMELINE_LIMIT_YEARLY=0
+btrfs subvolume delete /mnt/.snapshots
+mount --mkdir -o noatime,compress=zstd,subvol=/@snapshots /dev/mapper/root /mnt/.snapshots
+chmod 750 /mnt/.snapshots
+# files
+0644 etc/fstab
+0644 etc/default/limine
+0644 etc/mkinitcpio.conf.d/dotfiles.conf
+0644 etc/locale.gen
+0440 etc/sudoers.d/wheel

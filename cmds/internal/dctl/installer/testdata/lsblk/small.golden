@@ -1,0 +1,10 @@
+boot "/dev/disk/by-label/ARCH_202610"
+candidate /dev/nvme0n1 "CT500P3PSSD8" serial=2251E6958A97 wwn=nvme.c0a9-323235314536393538413937-435435303050335053534438-00000001 tran=nvme size=512110190592 sector=512 parts=/dev/nvme0n1p1,/dev/nvme0n1p2
+refused /dev/sda "Extreme Pro" serial=AA010203040506070809 wwn= tran=usb size=64023257088 sector=512: boot medium
+refused /dev/mmcblk0 "" serial=0x1234abcd wwn= tran= size=15931539456 sector=512: smaller than 32 GiB
+refused /dev/sdc "Write Blocker" serial=WB0001 wwn= tran=usb size=128035676160 sector=512: read-only
+refused /dev/sdd "Generic SATA SSD" serial= wwn= tran=sata size=1000204886016 sector=512: no serial or WWN to verify identity
+pick "": /dev/nvme0n1
+pick "/dev/mmcblk0": error: refusing /dev/mmcblk0: smaller than 32 GiB
+pick "/dev/sdc": error: refusing /dev/sdc: read-only
+pick "/dev/sdd": error: refusing /dev/sdd: no serial or WWN to verify identity

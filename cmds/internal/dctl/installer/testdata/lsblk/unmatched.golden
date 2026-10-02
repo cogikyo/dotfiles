@@ -1,0 +1,2 @@
+boot "/dev/disk/by-id/usb-SanDisk_Extreme_Pro-0:0-part1"
+scan error: boot medium not identified: /dev/disk/by-id/usb-SanDisk_Extreme_Pro-0:0-part1 matches no block device

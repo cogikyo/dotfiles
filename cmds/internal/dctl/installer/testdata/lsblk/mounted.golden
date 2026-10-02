@@ -1,0 +1,8 @@
+boot "/dev/sda1"
+refused /dev/sda "Extreme Pro" serial=AA010203040506070809 wwn= tran=usb size=64023257088 sector=512: boot medium
+refused /dev/sdb "Portable SSD T7" serial=S5SVNG0R700003C wwn=0x5002538e00000003 tran=usb size=2000398934016 sector=512: removable or USB
+refused /dev/nvme0n1 "WD_BLACK SN850X 2000GB" serial=24123A800123 wwn=eui.e8238fa6bf530001001b448b4e0c1a2f tran=nvme size=2000398934016 sector=512: mounted at /mnt/var/log, /mnt/home, /mnt
+pick "": error: no installable disk
+pick "/dev/nvme0n1": error: refusing /dev/nvme0n1: mounted at /mnt/var/log, /mnt/home, /mnt
+pick "/dev/sdb": error: refusing /dev/sdb: removable or USB
+pick "/dev/sdz": error: no disk /dev/sdz

@@ -1,0 +1,141 @@
+{
+   "blockdevices": [
+      {
+         "name": "loop0",
+         "path": "/dev/loop0",
+         "type": "loop",
+         "size": 1048576000,
+         "ro": true,
+         "tran": null,
+         "model": null,
+         "serial": null,
+         "wwn": null,
+         "log-sec": 512,
+         "mountpoints": [
+            "/run/archiso/airootfs"
+         ],
+         "rm": false,
+         "uuid": null,
+         "partuuid": null,
+         "label": null
+      },
+      {
+         "name": "sda",
+         "path": "/dev/sda",
+         "type": "disk",
+         "size": 64023257088,
+         "ro": false,
+         "tran": "usb",
+         "model": "Extreme Pro     ",
+         "serial": "AA010203040506070809",
+         "wwn": null,
+         "log-sec": 512,
+         "mountpoints": [
+            null
+         ],
+         "children": [
+            {
+               "name": "sda1",
+               "path": "/dev/sda1",
+               "type": "part",
+               "size": 1610612736,
+               "ro": false,
+               "tran": "usb",
+               "model": null,
+               "serial": null,
+               "wwn": null,
+               "log-sec": 512,
+               "mountpoints": [
+                  "/run/archiso/bootmnt"
+               ],
+               "rm": true,
+               "uuid": "2026-10-01-12-00-00-00",
+               "label": "ARCH_202610",
+               "partuuid": "4b1d0c2a-01"
+            },
+            {
+               "name": "sda2",
+               "path": "/dev/sda2",
+               "type": "part",
+               "size": 15728640,
+               "ro": false,
+               "tran": "usb",
+               "model": null,
+               "serial": null,
+               "wwn": null,
+               "log-sec": 512,
+               "mountpoints": [
+                  null
+               ],
+               "rm": true,
+               "uuid": "ABCD-0001",
+               "label": "ARCHISO_EFI",
+               "partuuid": "4b1d0c2a-02"
+            }
+         ],
+         "rm": true,
+         "uuid": null,
+         "partuuid": null,
+         "label": null
+      },
+      {
+         "name": "nvme0n1",
+         "path": "/dev/nvme0n1",
+         "type": "disk",
+         "size": 2000398934016,
+         "ro": false,
+         "tran": "nvme",
+         "model": "WD_BLACK SN850X 2000GB",
+         "serial": "24123A800123",
+         "wwn": "eui.e8238fa6bf530001001b448b4e0c1a2f",
+         "log-sec": 512,
+         "mountpoints": [
+            null
+         ],
+         "children": [
+            {
+               "name": "nvme0n1p1",
+               "path": "/dev/nvme0n1p1",
+               "type": "part",
+               "size": 1073741824,
+               "ro": false,
+               "tran": "nvme",
+               "model": null,
+               "serial": null,
+               "wwn": "eui.e8238fa6bf530001001b448b4e0c1a2f",
+               "log-sec": 512,
+               "mountpoints": [
+                  null
+               ],
+               "rm": false,
+               "uuid": null,
+               "partuuid": null,
+               "label": null
+            },
+            {
+               "name": "nvme0n1p2",
+               "path": "/dev/nvme0n1p2",
+               "type": "part",
+               "size": 1999324127232,
+               "ro": false,
+               "tran": "nvme",
+               "model": null,
+               "serial": null,
+               "wwn": "eui.e8238fa6bf530001001b448b4e0c1a2f",
+               "log-sec": 512,
+               "mountpoints": [
+                  null
+               ],
+               "rm": false,
+               "uuid": null,
+               "partuuid": null,
+               "label": null
+            }
+         ],
+         "rm": false,
+         "uuid": null,
+         "partuuid": null,
+         "label": null
+      }
+   ]
+}

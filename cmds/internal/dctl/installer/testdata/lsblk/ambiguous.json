@@ -1,0 +1,99 @@
+{
+   "blockdevices": [
+      {
+         "name": "sda",
+         "path": "/dev/sda",
+         "type": "disk",
+         "size": 64023257088,
+         "ro": false,
+         "rm": true,
+         "tran": "usb",
+         "model": "Extreme Pro",
+         "serial": "AA010203040506070809",
+         "wwn": null,
+         "log-sec": 512,
+         "mountpoints": [
+            null
+         ],
+         "children": [
+            {
+               "name": "sda1",
+               "path": "/dev/sda1",
+               "type": "part",
+               "size": 1610612736,
+               "ro": false,
+               "rm": true,
+               "tran": "usb",
+               "model": null,
+               "serial": null,
+               "wwn": null,
+               "log-sec": 512,
+               "uuid": "2026-10-01-12-00-00-00",
+               "label": "ARCH_202610",
+               "partuuid": "4b1d0c2a-01",
+               "mountpoints": [
+                  "/run/archiso/bootmnt"
+               ]
+            }
+         ],
+         "uuid": null,
+         "partuuid": null,
+         "label": null
+      },
+      {
+         "name": "zram0",
+         "path": "/dev/zram0",
+         "type": "disk",
+         "size": 68719476736,
+         "ro": false,
+         "tran": null,
+         "model": null,
+         "serial": null,
+         "wwn": null,
+         "log-sec": 4096,
+         "mountpoints": [],
+         "rm": false,
+         "uuid": null,
+         "partuuid": null,
+         "label": null
+      },
+      {
+         "name": "nvme0n1",
+         "path": "/dev/nvme0n1",
+         "type": "disk",
+         "size": 1000204886016,
+         "ro": false,
+         "tran": "nvme",
+         "model": "Samsung SSD 990 PRO 1TB",
+         "serial": "S73VNJ0W100001A",
+         "wwn": "eui.002538b131a0b1c2",
+         "log-sec": 512,
+         "mountpoints": [
+            null
+         ],
+         "rm": false,
+         "uuid": null,
+         "partuuid": null,
+         "label": null
+      },
+      {
+         "name": "nvme1n1",
+         "path": "/dev/nvme1n1",
+         "type": "disk",
+         "size": 4000787030016,
+         "ro": false,
+         "tran": "nvme",
+         "model": "Samsung SSD 990 PRO 4TB",
+         "serial": "S7DSNJ0X200002B",
+         "wwn": "eui.002538b241b0c2d3",
+         "log-sec": 4096,
+         "mountpoints": [
+            null
+         ],
+         "rm": false,
+         "uuid": null,
+         "partuuid": null,
+         "label": null
+      }
+   ]
+}

@@ -35,11 +35,6 @@ func main() {
 	parser.FatalIfErrorf(err)
 
 	u := ui.New(ui.Options{JSON: root.JSON, Plain: root.Plain, Yes: root.Yes})
-	dotfiles, err := paths.DiscoverRoot()
-	if err != nil {
-		u.Error("%v", err)
-		os.Exit(1)
-	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	go func() {
@@ -47,7 +42,8 @@ func main() {
 		stop()
 	}()
 	kctx.BindTo(ctx, (*context.Context)(nil))
-	err = kctx.Run(u, dotfiles)
+	parser.FatalIfErrorf(kctx.BindSingletonProvider(paths.DiscoverRoot))
+	err = kctx.Run(u)
 	stop()
 	switch {
 	case errors.Is(err, context.Canceled):

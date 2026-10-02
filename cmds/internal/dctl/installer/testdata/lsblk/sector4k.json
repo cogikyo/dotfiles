@@ -1,0 +1,101 @@
+{
+   "blockdevices": [
+      {
+         "name": "loop0",
+         "path": "/dev/loop0",
+         "type": "loop",
+         "size": 1048576000,
+         "ro": true,
+         "tran": null,
+         "model": null,
+         "serial": null,
+         "wwn": null,
+         "log-sec": 512,
+         "mountpoints": [
+            "/run/archiso/airootfs"
+         ],
+         "rm": false,
+         "uuid": null,
+         "partuuid": null,
+         "label": null
+      },
+      {
+         "name": "sr0",
+         "path": "/dev/sr0",
+         "type": "rom",
+         "size": 1634729984,
+         "ro": false,
+         "tran": "sata",
+         "model": "QEMU DVD-ROM",
+         "serial": "QM00003",
+         "wwn": null,
+         "log-sec": 2048,
+         "mountpoints": [
+            "/run/archiso/bootmnt"
+         ],
+         "uuid": "2026-10-01-12-00-00-00",
+         "label": "ARCH_202610",
+         "rm": false,
+         "partuuid": null
+      },
+      {
+         "name": "vda",
+         "path": "/dev/vda",
+         "type": "disk",
+         "size": 68719476736,
+         "ro": false,
+         "tran": "virtio",
+         "model": null,
+         "serial": "DCTLTEST0",
+         "wwn": null,
+         "log-sec": 4096,
+         "mountpoints": [
+            null
+         ],
+         "rm": false,
+         "uuid": null,
+         "partuuid": null,
+         "label": null
+      },
+      {
+         "name": "vdb",
+         "path": "/dev/vdb",
+         "type": "disk",
+         "size": 67108864,
+         "ro": false,
+         "tran": "virtio",
+         "model": null,
+         "serial": "dctltest-answers",
+         "wwn": null,
+         "log-sec": 512,
+         "mountpoints": [
+            null
+         ],
+         "children": [
+            {
+               "name": "vdb1",
+               "path": "/dev/vdb1",
+               "type": "part",
+               "size": 66060288,
+               "ro": false,
+               "tran": "virtio",
+               "model": null,
+               "serial": null,
+               "wwn": null,
+               "log-sec": 512,
+               "mountpoints": [
+                  null
+               ],
+               "rm": false,
+               "uuid": null,
+               "partuuid": null,
+               "label": null
+            }
+         ],
+         "rm": false,
+         "uuid": null,
+         "partuuid": null,
+         "label": null
+      }
+   ]
+}

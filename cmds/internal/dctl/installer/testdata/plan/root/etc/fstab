@@ -1,0 +1,6 @@
+UUID=0d9e8f7a-6b5c-4d3e-9f2a-1b0c9d8e7f6a	/	btrfs	noatime,compress=zstd,subvol=/@	0 0
+UUID=0d9e8f7a-6b5c-4d3e-9f2a-1b0c9d8e7f6a	/home	btrfs	noatime,compress=zstd,subvol=/@home	0 0
+UUID=0d9e8f7a-6b5c-4d3e-9f2a-1b0c9d8e7f6a	/var/log	btrfs	noatime,compress=zstd,subvol=/@log	0 0
+UUID=0d9e8f7a-6b5c-4d3e-9f2a-1b0c9d8e7f6a	/var/cache/pacman/pkg	btrfs	noatime,compress=zstd,subvol=/@pkg	0 0
+UUID=0d9e8f7a-6b5c-4d3e-9f2a-1b0c9d8e7f6a	/.snapshots	btrfs	noatime,compress=zstd,subvol=/@snapshots	0 0
+UUID=5A3C-91E7	/boot	vfat	noatime,fmask=0077,dmask=0077	0 2

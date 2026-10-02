@@ -1,0 +1,7 @@
+boot "/dev/sr0"
+candidate /dev/vda "" serial=DCTLTEST0 wwn= tran=virtio size=68719476736 sector=4096 parts=/dev/vda1,/dev/vda2
+refused /dev/loop0 "" serial= wwn= tran= size=1048576000 sector=512: not a whole disk (loop)
+refused /dev/sr0 "QEMU DVD-ROM" serial=QM00003 wwn= tran=sata size=1634729984 sector=2048: boot medium
+refused /dev/vdb "" serial=dctltest-answers wwn= tran=virtio size=67108864 sector=512: smaller than 32 GiB
+pick "": /dev/vda
+pick "/dev/vdb": error: refusing /dev/vdb: smaller than 32 GiB

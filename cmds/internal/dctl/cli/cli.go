@@ -10,6 +10,7 @@ type CLI struct {
 	Plain bool `help:"Disable colors and animation."`
 	Yes   bool `short:"y" help:"Assume yes for confirmations."`
 
+	Install InstallCmd  `cmd:"" group:"actions" help:"Install this machine from the dctl ISO (live environment only)."`
 	Doctor  DoctorCmd   `cmd:"" group:"actions" help:"Check the machine and optionally fix it."`
 	Porkbun porkbun.Cmd `cmd:"" group:"actions" help:"Manage personal Porkbun DNS records (Linux)."`
 

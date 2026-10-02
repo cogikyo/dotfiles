@@ -1,0 +1,2 @@
+boot "/dev/disk/by-uuid/2026-10-01-12-00-00-00"
+scan error: boot medium ambiguous: /dev/disk/by-uuid/2026-10-01-12-00-00-00 matches /dev/sda, /dev/sdb

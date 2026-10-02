@@ -1,0 +1,118 @@
+{
+   "blockdevices": [
+      {
+         "name": "sda",
+         "path": "/dev/sda",
+         "type": "disk",
+         "size": 64023257088,
+         "ro": false,
+         "rm": true,
+         "tran": "usb",
+         "model": "Extreme Pro",
+         "serial": "AA010203040506070809",
+         "wwn": null,
+         "log-sec": 512,
+         "mountpoints": [
+            null
+         ],
+         "children": [
+            {
+               "name": "sda1",
+               "path": "/dev/sda1",
+               "type": "part",
+               "size": 1610612736,
+               "ro": false,
+               "rm": true,
+               "tran": "usb",
+               "model": null,
+               "serial": null,
+               "wwn": null,
+               "log-sec": 512,
+               "uuid": "2026-10-01-12-00-00-00",
+               "label": "ARCH_202610",
+               "partuuid": "4b1d0c2a-01",
+               "mountpoints": [
+                  null
+               ]
+            }
+         ],
+         "uuid": null,
+         "partuuid": null,
+         "label": null
+      },
+      {
+         "name": "mmcblk0",
+         "path": "/dev/mmcblk0",
+         "type": "disk",
+         "size": 15931539456,
+         "ro": false,
+         "tran": null,
+         "model": null,
+         "serial": "0x1234abcd",
+         "wwn": null,
+         "log-sec": 512,
+         "mountpoints": [
+            null
+         ],
+         "rm": false,
+         "uuid": null,
+         "partuuid": null,
+         "label": null
+      },
+      {
+         "name": "sdc",
+         "path": "/dev/sdc",
+         "type": "disk",
+         "size": 128035676160,
+         "ro": true,
+         "tran": "usb",
+         "model": "Write Blocker",
+         "serial": "WB0001",
+         "wwn": null,
+         "log-sec": 512,
+         "mountpoints": [
+            null
+         ],
+         "rm": false,
+         "uuid": null,
+         "partuuid": null,
+         "label": null
+      },
+      {
+         "name": "sdd",
+         "path": "/dev/sdd",
+         "type": "disk",
+         "size": 1000204886016,
+         "ro": false,
+         "rm": false,
+         "tran": "sata",
+         "model": "Generic SATA SSD",
+         "serial": null,
+         "wwn": null,
+         "log-sec": 512,
+         "mountpoints": [
+            null
+         ],
+         "uuid": null,
+         "partuuid": null,
+         "label": null
+      },
+      {
+         "name": "nvme0n1",
+         "path": "/dev/nvme0n1",
+         "type": "disk",
+         "size": 512110190592,
+         "ro": false,
+         "tran": "nvme",
+         "model": "CT500P3PSSD8",
+         "serial": "2251E6958A97",
+         "wwn": "nvme.c0a9-323235314536393538413937-435435303050335053534438-00000001",
+         "log-sec": 512,
+         "mountpoints": [],
+         "rm": false,
+         "uuid": null,
+         "partuuid": null,
+         "label": null
+      }
+   ]
+}
