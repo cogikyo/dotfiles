@@ -7,11 +7,18 @@ import (
 	"path/filepath"
 	"strings"
 
+	"dotfiles/cmds/internal/dctl/binaries"
+	"dotfiles/cmds/internal/dctl/certs"
 	"dotfiles/cmds/internal/dctl/doctor"
+	"dotfiles/cmds/internal/dctl/execx"
+	"dotfiles/cmds/internal/dctl/hardware"
 	"dotfiles/cmds/internal/dctl/home"
+	"dotfiles/cmds/internal/dctl/packages"
 	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/dctl/system"
+	"dotfiles/cmds/internal/dctl/tailscale"
 	"dotfiles/cmds/internal/dctl/ui"
+	"dotfiles/cmds/internal/dctl/vpn"
 )
 
 type DoctorCmd struct {
@@ -21,10 +28,20 @@ type DoctorCmd struct {
 }
 
 func (c *DoctorCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+	run := execx.OSRunner{IO: true}
 	groups, err := doctor.Select([]doctor.Group{
 		system.Group("/", root.System()),
-		home.Group(root),
-	}, c.Groups)
+		packages.Group(root.Packages(), c.Offline, run),
+		home.Group(root, run),
+		vpn.Group(root, run),
+		home.Firefox(root),
+		binaries.Group(root, c.Offline, run),
+		certs.Group(root, run),
+		hardware.Group("/sys", execx.OSRunner{}),
+		packages.Extra(root.Packages(), run),
+		tailscale.Group(run),
+		hardware.Firmware(run),
+	}, c.Groups, c.Offline)
 	if err != nil {
 		return err
 	}

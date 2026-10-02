@@ -31,6 +31,11 @@ func Group(root, overlay string) doctor.Group {
 			Check: func(ctx context.Context) error { return checkUnits(ctx, root, overlay) },
 			Fix:   func(ctx context.Context) error { return enable(ctx, root, overlay) },
 		},
+		{
+			Name:  "system-resolv-conf",
+			Check: func(context.Context) error { return checkResolv(root) },
+			Fix:   func(context.Context) error { return linkResolv(root) },
+		},
 	}}
 }
 

@@ -53,7 +53,7 @@ func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...stri
 }
 
 func (r OSRunner) Output(ctx context.Context, dir string, name string, args ...string) (string, error) {
-	res, err := r.Run(ctx, dir, name, args...)
+	res, err := OSRunner{}.Run(ctx, dir, name, args...)
 	return res.Stdout, err
 }
 

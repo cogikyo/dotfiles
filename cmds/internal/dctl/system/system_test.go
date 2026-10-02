@@ -173,3 +173,34 @@ func TestUnreadableTargetIsBlocked(t *testing.T) {
 		t.Errorf("unreadable plus drift: status %s, want failed", got)
 	}
 }
+
+func TestResolv(t *testing.T) {
+	root := t.TempDir()
+	if err := checkResolv(root); err == nil {
+		t.Fatal("missing resolv.conf passed")
+	}
+	if err := os.MkdirAll(filepath.Join(root, "etc"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(root, "etc", "resolv.conf"), []byte("nameserver 1.1.1.1\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := checkResolv(root); err == nil || !strings.Contains(err.Error(), "restart NetworkManager") {
+		t.Fatalf("regular file: %v", err)
+	}
+	if err := linkResolv(root); err != nil {
+		t.Fatal(err)
+	}
+	if err := checkResolv(root); err != nil {
+		t.Fatalf("after link: %v", err)
+	}
+	if err := os.Remove(filepath.Join(root, "etc", "resolv.conf")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("/run/NetworkManager/resolv.conf", filepath.Join(root, "etc", "resolv.conf")); err != nil {
+		t.Fatal(err)
+	}
+	if err := checkResolv(root); err == nil {
+		t.Fatal("wrong symlink target passed")
+	}
+}

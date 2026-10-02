@@ -19,6 +19,7 @@ type Check struct {
 type Group struct {
 	Name   string
 	Root   bool
+	Online bool
 	Checks []Check
 }
 
@@ -46,7 +47,7 @@ type Options struct {
 	Rerun    string
 }
 
-func Select(all []Group, names []string) ([]Group, error) {
+func Select(all []Group, names []string, offline bool) ([]Group, error) {
 	seen := map[string]bool{}
 	for _, g := range all {
 		if seen[g.Name] {
@@ -61,15 +62,19 @@ func Select(all []Group, names []string) ([]Group, error) {
 		}
 	}
 	if len(names) == 0 {
-		return all, nil
+		return slices.DeleteFunc(slices.Clone(all), func(g Group) bool { return offline && g.Online }), nil
 	}
 	for _, name := range names {
-		if !slices.ContainsFunc(all, func(g Group) bool { return g.Name == name }) {
+		i := slices.IndexFunc(all, func(g Group) bool { return g.Name == name })
+		if i < 0 {
 			known := make([]string, 0, len(all))
 			for _, g := range all {
 				known = append(known, g.Name)
 			}
 			return nil, fmt.Errorf("unknown doctor group %q (known: %s)", name, strings.Join(known, ", "))
+		}
+		if offline && all[i].Online {
+			return nil, fmt.Errorf("doctor group %q needs the network; drop --offline", name)
 		}
 	}
 	return slices.DeleteFunc(slices.Clone(all), func(g Group) bool { return !slices.Contains(names, g.Name) }), nil
@@ -128,7 +133,7 @@ func evaluate(ctx context.Context, g Group, c Check, opts Options) Result {
 		r.Status, r.Detail = judge(err), "recheck: "+err.Error()
 		return r
 	}
-	r.Status, r.Detail = Fixed, ""
+	r.Status = Fixed
 	return r
 }
 
@@ -145,6 +150,7 @@ func show(u *ui.UI, r Result) {
 		u.Row(ui.OK, r.Check)
 	case Fixed:
 		u.Row(ui.OK, r.Check+" (fixed)")
+		u.Dim("was: %s", r.Detail)
 	case Blocked:
 		u.Row(ui.Warn, r.Check+" (blocked)")
 		u.Dim("%s", r.Detail)

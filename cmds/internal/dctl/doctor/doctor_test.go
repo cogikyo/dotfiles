@@ -137,18 +137,18 @@ func TestSelect(t *testing.T) {
 		{Name: "a", Checks: []Check{p.check("x")}},
 		{Name: "b", Checks: []Check{p.check("y")}},
 	}
-	got, err := Select(all, []string{"b", "a"})
+	got, err := Select(all, []string{"b", "a"}, false)
 	if err != nil || len(got) != 2 || got[0].Name != "a" {
 		t.Fatalf("select keeps declared order: %v %v", got, err)
 	}
-	if _, err := Select(all, []string{"zz"}); err == nil {
+	if _, err := Select(all, []string{"zz"}, false); err == nil {
 		t.Error("unknown group accepted")
 	}
 	dup := append(all, Group{Name: "c", Checks: []Check{p.check("x")}})
-	if _, err := Select(dup, nil); err == nil {
+	if _, err := Select(dup, nil, false); err == nil {
 		t.Error("duplicate check name accepted")
 	}
-	if _, err := Select(append(all, Group{Name: "a"}), nil); err == nil {
+	if _, err := Select(append(all, Group{Name: "a"}), nil, false); err == nil {
 		t.Error("duplicate group name accepted")
 	}
 }

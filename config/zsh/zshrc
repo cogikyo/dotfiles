@@ -82,9 +82,6 @@ add-zsh-hook precmd _hyprd_report_pane
 # │ Aliases                                                                  │
 # ╰──────────────────────────────────────────────────────────────────────────╯
 
-alias install='~/dotfiles/install.sh'
-alias build='~/dotfiles/build.sh'
-
 alias niol='clear && source ~/.zshrc'
 alias ls='echo; lsd'
 alias n='nvim'

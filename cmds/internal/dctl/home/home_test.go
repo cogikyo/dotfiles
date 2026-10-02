@@ -3,10 +3,12 @@ package home
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
 
+	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/paths"
 )
 
@@ -37,6 +39,16 @@ func write(t *testing.T, path, content string) {
 	}
 }
 
+func check(t *testing.T, r paths.Root, name string) doctor.Check {
+	t.Helper()
+	checks := Group(r, nil).Checks
+	i := slices.IndexFunc(checks, func(c doctor.Check) bool { return c.Name == name })
+	if i < 0 {
+		t.Fatalf("no check %s", name)
+	}
+	return checks[i]
+}
+
 func TestLinks(t *testing.T) {
 	r := setup(t)
 	write(t, filepath.Join(r.Home, ".zshrc"), "old")
@@ -46,18 +58,15 @@ func TestLinks(t *testing.T) {
 	if err := os.Symlink(r.Config("zsh", "zshrc"), filepath.Join(r.Home, ".config", "zsh", "zshrc")); err != nil {
 		t.Fatal(err)
 	}
-	if err := checkLinks(r); err == nil {
+	c := check(t, r, "home-links")
+	if err := c.Check(t.Context()); err == nil {
 		t.Fatal("unlinked home reported clean")
 	}
-	now := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
-	if err := fixLinks(r, now); err != nil {
+	if err := c.Fix(t.Context()); err != nil {
 		t.Fatal(err)
 	}
-	if err := checkLinks(r); err != nil {
+	if err := c.Check(t.Context()); err != nil {
 		t.Fatalf("after fix: %v", err)
-	}
-	if data, _ := os.ReadFile(filepath.Join(r.Home, ".zshrc.backup.20260102-030405")); string(data) != "old" {
-		t.Errorf("existing file not backed up: %q", data)
 	}
 	if _, err := os.Lstat(filepath.Join(r.Home, ".config", "firefox")); err == nil {
 		t.Error("firefox linked wholesale")
@@ -69,45 +78,66 @@ func TestLinks(t *testing.T) {
 	}
 }
 
+func TestApplyBackup(t *testing.T) {
+	dir := t.TempDir()
+	src, dst := filepath.Join(dir, "src"), filepath.Join(dir, "dst")
+	write(t, src, "new")
+	write(t, dst, "old")
+	if err := (link{src, dst}).apply(dir, time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)); err != nil {
+		t.Fatal(err)
+	}
+	if data, _ := os.ReadFile(dst + ".backup.20260102-030405"); string(data) != "old" {
+		t.Errorf("existing file not backed up: %q", data)
+	}
+	if data, _ := os.ReadFile(dst); string(data) != "new" {
+		t.Errorf("dst reads %q after apply", data)
+	}
+}
+
 func TestLinksRefuseUserData(t *testing.T) {
 	r := setup(t)
 	write(t, filepath.Join(r.Home, ".config", "kitty", "mine.conf"), "user data")
-	err := fixLinks(r, time.Now())
+	c := check(t, r, "home-links")
+	err := c.Fix(t.Context())
 	if err == nil || !strings.Contains(err.Error(), "refusing") {
 		t.Fatalf("err %v, want refusal", err)
 	}
 	if data, _ := os.ReadFile(filepath.Join(r.Home, ".config", "kitty", "mine.conf")); string(data) != "user data" {
 		t.Error("user data touched")
 	}
-	if checkLinks(r) == nil {
+	if c.Check(t.Context()) == nil {
 		t.Error("refused link reported clean")
 	}
 }
 
-func TestSceneSeed(t *testing.T) {
+func TestSeed(t *testing.T) {
 	r := setup(t)
 	src := r.Config("obs-studio", "basic", "scenes", "Costello.json")
-	dst := filepath.Join(r.Home, ".config", "obs-studio", "basic", "scenes", "Costello.json")
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		t.Fatal(err)
-	}
+	dst := filepath.Join(r.Home, "scene.json")
 	if err := os.Symlink(src, dst); err != nil {
 		t.Fatal(err)
 	}
-	if checkScene(dst) == nil {
-		t.Fatal("symlinked scene reported clean")
+	if localFile(dst) == nil {
+		t.Fatal("symlinked seed reported clean")
 	}
-	if err := seedScene(src, dst); err != nil {
+	if err := seed(src, dst); err != nil {
 		t.Fatal(err)
 	}
-	if err := checkScene(dst); err != nil {
+	if err := localFile(dst); err != nil {
 		t.Fatal(err)
 	}
 	write(t, dst, "edited")
-	if err := seedScene(src, dst); err != nil {
+	if err := seed(src, dst); err != nil {
 		t.Fatal(err)
 	}
 	if data, _ := os.ReadFile(dst); string(data) != "edited" {
-		t.Error("existing scene overwritten")
+		t.Error("existing file overwritten")
+	}
+	other := filepath.Join(r.Home, "zoomus.conf")
+	if err := os.Symlink(filepath.Join(r.Home, "elsewhere"), other); err != nil {
+		t.Fatal(err)
+	}
+	if seed(src, other) == nil {
+		t.Error("foreign symlink replaced")
 	}
 }

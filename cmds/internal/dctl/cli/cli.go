@@ -1,7 +1,6 @@
 package cli
 
 import (
-	"dotfiles/cmds/internal/dctl/install"
 	"dotfiles/cmds/internal/dctl/iso"
 	"dotfiles/cmds/internal/dctl/porkbun"
 	"dotfiles/cmds/internal/dctl/repos"
@@ -19,7 +18,6 @@ type CLI struct {
 
 	Update  update.Cmd  `cmd:"" group:"lifecycle" help:"Update system and package lists."`
 	Secrets secrets.Cmd `cmd:"" group:"lifecycle" help:"Manage age-encrypted secrets."`
-	Install install.Cmd `cmd:"" group:"lifecycle" help:"Run dotfiles install steps."`
 	Repos   repos.Cmd   `cmd:"" group:"lifecycle" help:"Manage configured repositories."`
 	ISO     iso.Cmd     `cmd:"" name:"iso" group:"lifecycle" help:"Build and release custom Arch ISOs."`
 }
