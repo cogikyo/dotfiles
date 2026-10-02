@@ -1,482 +1,140 @@
-// Package update manages Arch package updates and saved package lists.
-//
-// Responsibilities:
-// - Update via yay.
-// - Remove non-optional orphan packages.
-// - Save explicit repo and AUR package lists back into the dotfiles repo.
 package update
-
-// update.go defines update commands, package-list parsing, dry-run planning, and install flows.
 
 import (
 	"context"
 	"errors"
-	"fmt"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 
 	"dotfiles/cmds/internal/dctl/execx"
-	"dotfiles/cmds/internal/dctl/paths"
-	"dotfiles/cmds/internal/dctl/pkglist"
+	"dotfiles/cmds/internal/dctl/packages"
 	"dotfiles/cmds/internal/dctl/ui"
 )
 
-type Cmd struct {
-	RunCmd  RunCmd     `cmd:"" default:"1" name:"run" help:"Update system, remove orphans, and save package lists."`
-	Install InstallCmd `cmd:"" help:"Install packages from saved lists."`
-	Check   CheckCmd   `cmd:"" help:"Check replaceable -git packages."`
-	DryRun  bool       `help:"Show what would change."`
+type Drift struct {
+	Repo    []string `json:"repo"`
+	AUR     []string `json:"aur"`
+	Missing []string `json:"missing"`
+	Orphans []string `json:"orphans"`
 }
 
-type RunCmd struct {
-	DryRun bool `help:"Show what would change."`
-}
-type InstallCmd struct {
-	DryRun bool `help:"Show what would be installed."`
-}
-type CheckCmd struct{}
-
-var parentDryRun bool
-
-func (c *Cmd) AfterApply() error {
-	parentDryRun = c.DryRun
+func Run(ctx context.Context, u *ui.UI, dir string, run execx.Runner) error {
+	if os.Geteuid() == 0 {
+		return errors.New("run dctl update as your user; yay elevates only the pacman transaction")
+	}
+	u.Step("yay -Syu")
+	if _, err := run.Run(ctx, "", "yay", "-Syu"); err != nil {
+		return err
+	}
+	listed, err := lists(dir)
+	if err != nil {
+		return err
+	}
+	d, err := drift(ctx, run, listed)
+	if err != nil {
+		return err
+	}
+	if u.JSON() {
+		return u.Emit(d)
+	}
+	report(u, d)
 	return nil
 }
 
-type Options struct {
-	DryRun         bool
-	NonInteractive bool
-	PacmanConf     string
-}
-
-type replacement struct {
-	GitPackage  string
-	Alternative string
-	Reason      string
-}
-
-var replacements = []replacement{
-	{"dunst-git", "dunst", "repo version is newer (extra repo)"},
-	{"logiops-git", "logiops", "stable AUR release, no build needed"},
-	{"mpvpaper-git", "mpvpaper", "stable AUR release, no build needed"},
-}
-
-func (c *RunCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
-	return Run(ctx, root, u, execx.OSRunner{}, Options{DryRun: c.DryRun || parentDryRun})
-}
-
-func (c *InstallCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
-	dryRun := c.DryRun || parentDryRun
-	noninteractive := dryRun || os.Getenv("DOTFILES_INSTALL_NONINTERACTIVE") == "1" || !isTerminal(os.Stdin)
-	return Install(ctx, root, u, execx.OSRunner{}, Options{DryRun: dryRun, NonInteractive: noninteractive})
-}
-
-func (c *CheckCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
-	return Check(ctx, root, u, execx.OSRunner{})
-}
-
-// Run updates the current system, removes non-optional orphans, and saves package lists.
-//
-// Dry-run prints the package manager actions and list writes without mutating the system or repo files.
-func Run(ctx context.Context, root paths.Root, out *ui.UI, runner execx.Runner, opts Options) error {
-	if err := requireYay(ctx, runner); err != nil {
-		return err
+func report(u *ui.UI, d Drift) {
+	if len(d.Repo)+len(d.AUR)+len(d.Missing)+len(d.Orphans) == 0 {
+		u.OK("package lists match the system")
+		return
 	}
-	optional, err := readPackageList(root.Packages("extra.lst"))
-	if err != nil {
-		return err
-	}
-
-	updateCmd := []string{"-Syu"}
-
-	if opts.DryRun {
-		out.Info("[dry-run] Would update system with: yay %s", strings.Join(updateCmd, " "))
-	} else {
-		out.Step("Updating system...")
-		if _, err := runner.Run(ctx, "", "yay", updateCmd...); err != nil {
-			return err
+	for _, row := range []struct {
+		what  string
+		names []string
+	}{
+		{"explicit repo packages in no list (base.lst, extra.lst)", d.Repo},
+		{"explicit foreign packages in no list (aur.lst, packages/*/PKGBUILD)", d.AUR},
+		{"listed packages not installed", d.Missing},
+		{"unlisted orphans", d.Orphans},
+	} {
+		if len(row.names) > 0 {
+			u.Warn("%d %s", len(row.names), row.what)
+			u.Dim("%s", strings.Join(row.names, " "))
 		}
 	}
-
-	orphans, err := commandLines(ctx, runner, "yay", "-Qdtq")
-	if err != nil {
-		orphans = nil
+	if len(d.Orphans) > 0 {
+		u.Dim("remove with: yay -Rns %s", strings.Join(d.Orphans, " "))
 	}
-	orphans, kept := filterOptional(orphanPackageNames(orphans), optional)
-	for _, pkg := range kept {
-		out.Warn("Keeping orphan %s (in packages/extra.lst)", pkg)
-	}
-	if opts.DryRun {
-		if len(orphans) == 0 {
-			out.Info("[dry-run] No orphans to remove")
-		} else {
-			out.Info("[dry-run] Would remove orphans:")
-			printPackages(out, "-", orphans)
-		}
-		return drySaveLists(ctx, root, out, runner, optional)
-	}
-
-	out.Step("Removing orphaned packages...")
-	if len(orphans) > 0 {
-		args := append([]string{"-Rns"}, orphans...)
-		if _, err := runner.Run(ctx, "", "yay", args...); err != nil {
-			return err
-		}
-	} else {
-		out.OK("No orphans found")
-	}
-	return saveLists(ctx, root, out, runner, optional)
 }
 
-// Install installs packages from saved lists.
-//
-// Dry-run reports missing packages only and skips sudo validation and package manager writes.
-func Install(ctx context.Context, root paths.Root, out *ui.UI, runner execx.Runner, opts Options) error {
-	if opts.PacmanConf == "" {
-		opts.PacmanConf = "/etc/pacman.conf"
-	}
-	if !opts.DryRun {
-		if _, err := runner.Run(ctx, "", "sudo", "-v"); err != nil {
-			return fmt.Errorf("sudo access required for package installation: %w", err)
+func lists(dir string) (map[string]bool, error) {
+	listed := map[string]bool{}
+	for _, name := range []string{"base.lst", "aur.lst", "extra.lst"} {
+		names, err := packages.Read(filepath.Join(dir, name))
+		if err != nil {
+			return nil, err
+		}
+		for _, n := range names {
+			listed[n] = true
 		}
 	}
-
-	repoList := root.Packages("base.lst")
-	if _, err := os.Stat(repoList); err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("package list not found: %s", repoList)
-		}
-		return err
-	}
-	repoPkgs, err := readPackageList(repoList)
-	if err != nil {
-		return err
-	}
-	aurPkgs, err := readPackageList(root.Packages("aur.lst"))
-	if err != nil {
-		return err
-	}
-	installed, err := installedPackages(ctx, runner)
-	if err != nil {
-		return err
-	}
-
-	if opts.DryRun {
-		return dryInstall(out, repoPkgs, aurPkgs, installed)
-	}
-
-	hasLocalRepo, cached := detectLocalRepo(ctx, runner, opts.PacmanConf)
-	if hasLocalRepo {
-		out.OK("Local package cache detected (%d packages) - installing from cache", cached)
-	}
-	if len(repoPkgs) > 0 {
-		out.Step("Installing and upgrading %d repo packages...", len(repoPkgs))
-		args := []string{"pacman", "-Syu", "--needed", "--noconfirm"}
-		args = append(args, repoPkgs...)
-		if _, err := runner.Run(ctx, "", "sudo", args...); err != nil {
-			return err
-		}
-		out.OK("Repo packages done")
-	}
-
-	if rustupNeedsInit(ctx, runner) {
-		out.Step("Initializing Rust toolchain via rustup...")
-		if _, err := runner.Run(ctx, "", "rustup", "default", "stable"); err != nil {
-			return err
-		}
-		out.OK("Rust stable toolchain installed")
-	}
-	if len(aurPkgs) > 0 {
-		if err := installAUR(ctx, out, runner, aurPkgs, hasLocalRepo, opts.NonInteractive); err != nil {
-			return err
-		}
-	}
-	out.OK("Package installation complete!")
-	out.Info("Remaining post-install steps:")
-	out.Dim("Run: ./install.sh")
-	out.Dim("Or:  ./install.sh all")
-	return nil
-}
-
-func Check(ctx context.Context, root paths.Root, out *ui.UI, runner execx.Runner) error {
-	_ = root
-	if err := requireYay(ctx, runner); err != nil {
-		return err
-	}
-	out.Step("Checking for -git packages with better alternatives...")
-	found := false
-	for _, repl := range replacements {
-		if isInstalled(ctx, runner, repl.GitPackage) {
-			out.Warn("%s -> %s (%s)", repl.GitPackage, repl.Alternative, repl.Reason)
-			found = true
-		}
-	}
-	if !found {
-		out.OK("No replaceable -git packages found")
-		return nil
-	}
-	out.Info("To replace, run:")
-	out.Dim("yay -S <alternative>  # will prompt to remove the -git version")
-	return nil
-}
-
-func saveLists(ctx context.Context, root paths.Root, out *ui.UI, runner execx.Runner, optional []string) error {
-	oldRepo, _ := readPackageList(root.Packages("base.lst"))
-	oldAUR, _ := readPackageList(root.Packages("aur.lst"))
-	repo, err := commandLines(ctx, runner, "yay", "-Qenq")
-	if err != nil {
-		return err
-	}
-	aur, err := commandLines(ctx, runner, "yay", "-Qemq")
-	if err != nil {
-		return err
-	}
-	repo, _ = filterOptional(cleanPackageNames(repo), optional)
-	aur, _ = filterOptional(cleanPackageNames(aur), optional)
-	if err := writePackageList(root.Packages("base.lst"), repo); err != nil {
-		return err
-	}
-	if err := writePackageList(root.Packages("aur.lst"), aur); err != nil {
-		return err
-	}
-	out.OK("Saved %d repo packages -> packages/base.lst", len(repo))
-	out.OK("Saved %d AUR packages  -> packages/aur.lst", len(aur))
-	printDiff(out, "repo", oldRepo, repo)
-	printDiff(out, "AUR", oldAUR, aur)
-	return nil
-}
-
-func drySaveLists(ctx context.Context, root paths.Root, out *ui.UI, runner execx.Runner, optional []string) error {
-	repo, err := commandLines(ctx, runner, "yay", "-Qenq")
-	if err != nil {
-		return err
-	}
-	aur, err := commandLines(ctx, runner, "yay", "-Qemq")
-	if err != nil {
-		return err
-	}
-	repo, _ = filterOptional(cleanPackageNames(repo), optional)
-	aur, _ = filterOptional(cleanPackageNames(aur), optional)
-	out.Info("[dry-run] Would save package lists:")
-	out.Dim("Repo (explicit): %d packages -> packages/base.lst", len(repo))
-	out.Dim("AUR  (explicit): %d packages -> packages/aur.lst", len(aur))
-	_ = root
-	return nil
-}
-
-func dryInstall(out *ui.UI, repoPkgs, aurPkgs []string, installed map[string]bool) error {
-	out.Info("[dry-run] Would install from saved lists:")
-	repoMissing := filterMissing(repoPkgs, installed)
-	if len(repoMissing) == 0 {
-		out.OK("All repo packages already installed")
-	} else {
-		out.Info("Repo packages to install (%d):", len(repoMissing))
-		printPackages(out, "+", repoMissing)
-	}
-	aurMissing := filterMissing(aurPkgs, installed)
-	if len(aurMissing) == 0 {
-		out.OK("All AUR packages already installed")
-	} else {
-		out.Info("AUR packages to install (%d):", len(aurMissing))
-		printPackages(out, "+", aurMissing)
-	}
-	return nil
-}
-
-func installAUR(ctx context.Context, out *ui.UI, runner execx.Runner, pkgs []string, localRepo bool, noninteractive bool) error {
-	base := []string{}
-	name := "yay"
-	if localRepo {
-		name = "sudo"
-		base = []string{"pacman", "-S", "--needed", "--noconfirm"}
-	} else {
-		if err := requireYay(ctx, runner); err != nil {
-			return err
-		}
-		base = []string{"-S", "--needed"}
-		if noninteractive {
-			base = append(base, "--noconfirm")
-		}
-	}
-	installed := 0
-	skipped := 0
-	failed := []string{}
-	for i, pkg := range pkgs {
-		if isInstalled(ctx, runner, pkg) {
-			skipped++
-			continue
-		}
-		out.Step("[%d/%d] Installing %s...", i+1, len(pkgs), pkg)
-		args := append(slices.Clone(base), pkg)
-		if _, err := runner.Run(ctx, "", name, args...); err != nil {
-			out.Error("Failed to install AUR package: %s", pkg)
-			failed = append(failed, pkg)
-			continue
-		}
-		installed++
-	}
-	out.OK("AUR packages: %d installed, %d already present", installed, skipped)
-	if len(failed) > 0 {
-		out.Warn("Failed AUR packages (%d):", len(failed))
-		printPackages(out, "-", failed)
-		return fmt.Errorf("failed AUR packages: %s", strings.Join(failed, ", "))
-	}
-	return nil
-}
-
-func requireYay(ctx context.Context, runner execx.Runner) error {
-	if _, err := runner.Run(ctx, "", "yay", "--version"); err != nil {
-		return fmt.Errorf("yay not found. Run install.sh packages first")
-	}
-	return nil
-}
-
-func commandLines(ctx context.Context, runner execx.Runner, name string, args ...string) ([]string, error) {
-	out, err := runner.Output(ctx, "", name, args...)
+	local, err := packages.Locals(dir)
 	if err != nil {
 		return nil, err
 	}
-	return pkglist.ParseString(out), nil
+	for _, name := range local {
+		listed[name] = true
+	}
+	return listed, nil
 }
 
-func readPackageList(path string) ([]string, error) {
-	data, err := os.ReadFile(path)
+func drift(ctx context.Context, run execx.Runner, listed map[string]bool) (Drift, error) {
+	query := func(flags string) ([]string, error) {
+		out, err := run.Output(ctx, "", "pacman", flags)
+		if err != nil && (flags == "-Qq" || out != "") {
+			return nil, err
+		}
+		return packages.Unique(strings.Fields(out)), nil
+	}
+	all, err := query("-Qq")
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) {
-			return nil, nil
-		}
-		return nil, err
+		return Drift{}, err
 	}
-	return pkglist.ParseString(string(data)), nil
-}
-
-func writePackageList(path string, pkgs []string) error {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		return err
+	native, err := query("-Qqen")
+	if err != nil {
+		return Drift{}, err
 	}
-	return os.WriteFile(path, []byte(strings.Join(pkgs, "\n")+"\n"), 0o644)
-}
-
-func cleanPackageNames(lines []string) []string {
-	return pkglist.Unique(lines)
-}
-
-func orphanPackageNames(lines []string) []string {
-	return cleanPackageNames(lines)
-}
-
-func filterOptional(pkgs, optional []string) ([]string, []string) {
-	opt := packageSet(optional)
-	out := []string{}
-	kept := []string{}
-	for _, pkg := range pkgs {
-		if opt[pkg] {
-			kept = append(kept, pkg)
-			continue
-		}
-		out = append(out, pkg)
+	foreign, err := query("-Qqem")
+	if err != nil {
+		return Drift{}, err
 	}
-	return out, kept
+	orphans, err := query("-Qqdt")
+	if err != nil {
+		return Drift{}, err
+	}
+	installed := map[string]bool{}
+	for _, name := range all {
+		installed[name] = true
+	}
+	return classify(listed, installed, native, foreign, orphans), nil
 }
 
-func filterMissing(pkgs []string, installed map[string]bool) []string {
-	out := []string{}
-	for _, pkg := range pkgs {
-		if !installed[pkg] {
-			out = append(out, pkg)
+func classify(listed, installed map[string]bool, native, foreign, orphans []string) Drift {
+	return Drift{
+		Repo:    absent(native, listed),
+		AUR:     absent(foreign, listed),
+		Missing: absent(slices.Sorted(maps.Keys(listed)), installed),
+		Orphans: absent(orphans, listed),
+	}
+}
+
+func absent(names []string, set map[string]bool) []string {
+	var out []string
+	for _, name := range names {
+		if !set[name] {
+			out = append(out, name)
 		}
 	}
 	return out
-}
-
-func installedPackages(ctx context.Context, runner execx.Runner) (map[string]bool, error) {
-	out, err := commandLines(ctx, runner, "pacman", "-Qq")
-	if err != nil {
-		return map[string]bool{}, err
-	}
-	return packageSet(out), nil
-}
-
-func packageSet(pkgs []string) map[string]bool {
-	set := map[string]bool{}
-	for _, pkg := range pkgs {
-		set[pkg] = true
-	}
-	return set
-}
-
-func isInstalled(ctx context.Context, runner execx.Runner, pkg string) bool {
-	_, err := runner.Run(ctx, "", "pacman", "-Qq", pkg)
-	return err == nil
-}
-
-func detectLocalRepo(ctx context.Context, runner execx.Runner, pacmanConf string) (bool, int) {
-	data, err := os.ReadFile(pacmanConf)
-	if err != nil || !hasLocalRepoConfig(string(data)) {
-		return false, 0
-	}
-	lines, err := commandLines(ctx, runner, "pacman", "-Sl", "localrepo")
-	if err != nil {
-		return true, 0
-	}
-	return true, len(lines)
-}
-
-func hasLocalRepoConfig(data string) bool {
-	for line := range strings.SplitSeq(data, "\n") {
-		line, _, _ = strings.Cut(line, "#")
-		if strings.TrimSpace(line) == "[localrepo]" {
-			return true
-		}
-	}
-	return false
-}
-
-func rustupNeedsInit(ctx context.Context, runner execx.Runner) bool {
-	if _, err := runner.Run(ctx, "", "rustup", "--version"); err != nil {
-		return false
-	}
-	_, err := runner.Run(ctx, "", "rustup", "show", "active-toolchain")
-	return err != nil
-}
-
-func printDiff(out *ui.UI, kind string, oldPkgs, newPkgs []string) {
-	oldSet := packageSet(oldPkgs)
-	newSet := packageSet(newPkgs)
-	added := []string{}
-	removed := []string{}
-	for _, pkg := range newPkgs {
-		if !oldSet[pkg] {
-			added = append(added, pkg)
-		}
-	}
-	for _, pkg := range oldPkgs {
-		if !newSet[pkg] {
-			removed = append(removed, pkg)
-		}
-	}
-	if len(added) > 0 {
-		out.Info("New %s packages:", kind)
-		printPackages(out, "+", added)
-	}
-	if len(removed) > 0 {
-		out.Info("Removed %s packages:", kind)
-		printPackages(out, "-", removed)
-	}
-}
-
-func printPackages(out *ui.UI, prefix string, pkgs []string) {
-	for _, pkg := range pkgs {
-		out.Dim("%s %s", prefix, pkg)
-	}
-}
-
-func isTerminal(file *os.File) bool {
-	info, err := file.Stat()
-	if err != nil {
-		return false
-	}
-	return info.Mode()&os.ModeCharDevice != 0
 }

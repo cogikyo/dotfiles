@@ -16,6 +16,7 @@ import (
 	"dotfiles/cmds/internal/dctl/keys"
 	"dotfiles/cmds/internal/dctl/packages"
 	"dotfiles/cmds/internal/dctl/paths"
+	"dotfiles/cmds/internal/dctl/repos"
 	"dotfiles/cmds/internal/dctl/secrets"
 	"dotfiles/cmds/internal/dctl/system"
 	"dotfiles/cmds/internal/dctl/tailscale"
@@ -38,6 +39,7 @@ func (c *DoctorCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 		secrets.Group(u, root),
 		keys.Group(execx.OSRunner{}, "/sys"),
 		vpn.Group(root, run),
+		repos.Group(root, run),
 		home.Firefox(root),
 		binaries.Group(root, c.Offline, run),
 		certs.Group(root, run),
