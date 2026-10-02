@@ -48,6 +48,7 @@ type Lists struct {
 	Base, AUR, Extra, Local []string
 }
 
+// Load requires base.lst, aur.lst, and extra.lst and uses local PKGBUILD directory names as package names.
 func Load(dir string) (Lists, error) {
 	base, berr := Read(filepath.Join(dir, "base.lst"))
 	aur, aerr := Read(filepath.Join(dir, "aur.lst"))
@@ -60,6 +61,7 @@ func Load(dir string) (Lists, error) {
 	return l, errors.Join(berr, aerr, eerr, gerr)
 }
 
+// Payload returns sorted, unique base, AUR, and local package names, excluding Extra.
 func (l Lists) Payload() []string {
 	return unique(slices.Concat(l.Base, l.AUR, l.Local))
 }

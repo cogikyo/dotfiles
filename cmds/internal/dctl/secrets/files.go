@@ -230,6 +230,7 @@ func OpenCheckout(root paths.Root) (*Tree, error) {
 
 var errBusy = errors.New("another dctl secrets operation is running")
 
+// Locked runs fn under an exclusive checkout flock, returning immediately without calling fn if the lock is unavailable.
 func Locked(root paths.Root, fn func() error) error {
 	checkout, err := OpenCheckout(root)
 	if err != nil {

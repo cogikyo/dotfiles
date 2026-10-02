@@ -243,6 +243,7 @@ type Ledger struct {
 
 type Edit func(*Ledger) error
 
+// ReadLedger reads raw recipients and identities; a missing identities file is allowed, but recipients must exist.
 func ReadLedger(root paths.Root) (Ledger, error) {
 	var l Ledger
 	var err error

@@ -146,7 +146,8 @@ dctl iso test "$ISO"
 
 The test runs without sudo and needs QEMU, KVM access, OVMF Secure Boot firmware, dosfstools, and mtools.
 It installs without network access, unlocks and boots twice, checks doctor results, and saves timings and serial logs under `/var/tmp/dctl-iso-test-*`.
-After a 20-second wait, it saves `greeter.png` for manual inspection; it does not verify the greeter.
+It requires all three Secure Boot checks and an active display manager.
+After a 20-second wait, it saves `greeter.png` for manual inspection; it does not verify the greeter's appearance or sign-in behavior.
 See the [dctl guide](cmds/cmd/dctl/README.md#iso) for test overrides and release signing.
 A local build needs signed checksum files before the USB command accepts it.
 `dctl iso release "$ISO"` creates those files and publishes a public release; there is no signing-only dctl command.
@@ -176,7 +177,7 @@ dctl install
 ```
 
 Enter the username, login password, hostname, timezone, and LUKS passphrase, then select the target disk if prompted.
-**Typing the hostname at the final confirmation erases the selected disk.**
+**Typing the disk path at the final confirmation erases the selected disk.**
 The installer refuses the boot disk, mounted disks, USB/removable targets, and targets without a serial or WWN.
 It installs the offline package payload, clones the bundled history into `~/dotfiles`, and installs the prebuilt commands.
 If firmware is not in Setup Mode, installation continues without Secure Boot and reports the required follow-up.
@@ -203,7 +204,7 @@ sudo dctl keys luks
 
 Record the LUKS recovery key when it is shown; the original passphrase slot remains available.
 If Secure Boot enrollment was skipped, clear the firmware keys into Setup Mode, boot, and run `sudo dctl doctor --fix secureboot`.
-Enable Secure Boot in the BIOS after enrollment and reboot before checking `sudo dctl doctor secureboot`.
+Reboot after enrollment; if Secure Boot is still off, enable it in the BIOS before checking `sudo dctl doctor secureboot`.
 
 ## Maintenance
 

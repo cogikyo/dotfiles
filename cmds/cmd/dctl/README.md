@@ -16,7 +16,8 @@ Global flags:
 - `--yes` accepts boolean confirmations; it does not bypass typed disk or release confirmations.
 
 Bare `dctl` prints help.
-Use `dctl --help` or `dctl <command> --help` for the full Kong-generated command tree.
+`dctl --help` lists top-level commands; use `dctl <command> --help` for its subcommands and flags.
+Child commands stream output to stderr so structured `--json` results keep stdout clean.
 
 ## Install
 
@@ -26,16 +27,19 @@ The live environment starts it on tty1.
 See the [root README](../../../README.md#boot-and-install) for BIOS preparation and the hardware checklist.
 
 The form asks for a username, login password, hostname, timezone, and LUKS passphrase while background preparation verifies the payload and surveys disks.
-The installer shows the target model, size, and serial, then requires you to type the hostname before wiping it.
+The installer shows the target model, size, and serial, then requires you to type the disk path before wiping it.
 It refuses the boot disk, mounted disks, USB/removable targets, and disks without a serial or WWN.
 
 Installation uses the bundled packages without network access and creates a 4 GiB ESP, LUKS2, and btrfs subvolumes.
 It configures Snapper and Limine, applies offline doctor groups inside the target, clones the Git bundle into `~/dotfiles`, and installs prebuilt commands into `~/.local/bin/`.
-Secure Boot keys are enrolled only when firmware is in Setup Mode.
+When firmware is in Setup Mode, the installer runs the `secureboot` doctor group with root fixes in the chroot to create keys if needed, configure Limine, rebuild and verify the signed boot files, and enroll the keys.
 Otherwise, installation continues without Secure Boot and asks for a later `sudo dctl doctor --fix secureboot` after the BIOS keys are cleared.
-Enable Secure Boot in the BIOS after enrollment and reboot before checking it.
+Only a blocked `secureboot-enforced` result is accepted during that enrollment; missing checks or unhealthy key and signature results stop installation.
+Reboot after enrollment; if Secure Boot is still off, enable it in the BIOS before checking `sudo dctl doctor secureboot`.
 Secure Boot disables fallback `BOOTX64.EFI` because upstream `update_limine_fallback` only copies the binary and never signs it.
 The `post.d` hooks run in lexical order, so `89-dotfiles-limine-pristine` re-copies packaged Limine before upstream `90-limine-enroll-config` signs it.
+After installation succeeds, it reports the hostname, disk path, and elapsed time and offers to reboot.
+An installation failure after disk writes warns that the target disk has already been modified and installation is incomplete.
 
 ## Doctor
 
@@ -51,6 +55,11 @@ With `--fix`, it fixes failed checks that have a repair function, then checks ea
 Any failed or blocked result makes the command return nonzero.
 `dctl --json doctor` returns the result array with `group`, `check`, `status`, and optional `detail` fields.
 
+Text output collapses passing checks into `==> group  N passed` and shows failed, blocked, and fixed checks without the group prefix.
+JSON check IDs keep their full names.
+Without `--fix`, a failed group with a supported repair ends with `Fix: [sudo ]<dctl> doctor --fix <group>`, using the executable's path and sudo when the fixes require root.
+The summary counts failed, blocked, fixed, and passed checks in that order, omitting zero counts, for example `doctor: 2 failed, 1 blocked, 5 passed`.
+
 Run as your normal user first.
 Root-only fixes report a command to rerun with sudo; do not run all fixes as root because user groups refuse root fixes.
 Groups run in the order below, even when named in another order:
@@ -60,7 +69,7 @@ Groups run in the order below, even when named in another order:
 - `home` links config, public SSH keys, desktop entries, and user units, creates user directories, and seeds fonts and app settings.
 - `secrets` checks encrypted files and decrypts missing non-staged targets.
 - `keys` checks LUKS FIDO2 and recovery-key enrollment; inspecting the header requires root and enrollment is a separate command.
-- `secureboot` checks firmware state and signatures, with root fixes for Setup Mode enrollment.
+- `secureboot` checks key enrollment, signed boot files, and firmware enforcement, with root fixes for Setup Mode enrollment.
 - `vpn` checks imported NetworkManager connections and reports a manual `hyprd vpn install` step; it is an online group.
 - `repos` clones missing repositories over SSH; it is an online group.
 - `firefox` links the Firefox customization to the profile.
@@ -73,10 +82,18 @@ Groups run in the order below, even when named in another order:
 
 The mkcert CA private key is `rootCA-key.pem` in the CAROOT directory reported by `mkcert -CAROOT` and stays on disk after `mkcert -install`.
 
-`--offline` skips online groups when no groups are named and rejects an explicitly named online group.
+`--offline` skips online groups when no groups are named, prints `Skipped (--offline): …` in text output, and rejects an explicitly named online group.
 Network-dependent repairs within other groups are blocked while offline.
 The system group enables only units listed in `system/etc/systemd/system-preset/10-dotfiles.preset`, without starting or restarting them.
 User units and relative `.wants` links come from `config/systemd/user/`.
+
+The `packages` group checks base, AUR, and local packages; `extra` checks `extra.lst`, while `dctl update` reports drift across all lists.
+Repairs that install official packages, and extra-package installs, block when `/var/lib/pacman/sync/core.db` is missing and ask you to run `dctl update` as your user first.
+
+The Secure Boot check IDs are `secureboot-keys`, `secureboot-signed`, and `secureboot-enforced`.
+The signed check verifies Limine and UKI signatures, rejects an embedded UKI command line, requires a `limine.conf` entry for each UKI, and checks that `rd.luks.name` and `root` refer to the opened LUKS mapping.
+It also checks the Limine settings and rejects a fallback `BOOTX64.EFI`.
+Key enrollment and firmware enforcement are separate: enrolled keys can pass while enforcement is blocked with `reboot; if Secure Boot is still off, enable it in the BIOS`.
 
 Doctor does not enroll or reset YubiKeys, regenerate identities, or flash firmware.
 For a missing VPN connection, decrypt its staged entry explicitly, then run `hyprd vpn install`; the importer deletes the staging file.
@@ -108,7 +125,8 @@ Writes use atomic replacement with the exact manifest mode, stay inside `$HOME` 
 
 `sync` encrypts changed plaintext targets; unchanged ciphertext keeps its previous recipients.
 Use `rekey` after recipient changes to re-encrypt every manifest secret, including staged ones, to the current recipient list.
-Age decryption tries the enrolled plugin identities first, then offers the recovery phrase if those fail.
+Age decryption tries the enrolled plugin identities first, then offers the recovery phrase if those fail; cancelling a plugin prompt stops the operation without offering the phrase.
+`sync`, `rekey`, `keys enroll`, and `keys remove` hold an exclusive checkout lock and refuse to run while another operation holds it.
 `decrypt`, `sync`, `rekey`, and `verify-phrase` refuse `AGEDEBUG` because plugin debug output can expose PINs and file keys; `list` does not.
 
 ### Recovery
@@ -137,13 +155,14 @@ sudo dctl keys status
 
 Repeat enrollment for each key; there is no fixed A/B key count.
 `enroll` configures FIDO2 PIN/always-UV and PIV PIN/PUK, adds an age identity, rekeys all secrets, and creates a hardware release-signing key at `~/.ssh/id_ed25519_sk_<serial>`.
+If `ykman fido info` reports a forced PIN change, enrollment changes the FIDO2 PIN before enabling Always Require UV.
 It updates `share/allowed_signers` and the age metadata in the checkout.
 `keys luks` adds a FIDO2 token with PIN and touch, adds a recovery key if absent, and keeps the existing passphrase slot.
 Write down the recovery key when shown.
 Unprivileged `status` can report enrollment, but reading LUKS header details requires sudo.
 
 `dctl keys remove <serial>` removes the age recipient and release signer and rekeys the secrets, but leaves LUKS tokens intact.
-`sudo dctl keys remove <serial>` only reports the tokens because the header does not record which YubiKey created each one.
+`keys remove` refuses root execution; use `sudo dctl keys status` to inspect LUKS tokens, whose header does not record which YubiKey created each one.
 Identify the lost key's LUKS slot manually before revoking it with `systemd-cryptenroll --wipe-slot`; keep a tested passphrase or recovery key.
 
 ## Porkbun DNS
@@ -259,6 +278,7 @@ dctl update
 Run as your normal user; yay elevates the package transaction when needed.
 The command runs `yay -Syu`, then reports explicit installed packages missing from the lists, listed packages not installed, and unlisted orphans.
 It reads `packages/base.lst`, `aur.lst`, `extra.lst`, and local PKGBUILD names without rewriting them or removing packages.
+Run it before online package repairs on a fresh offline install to synchronize the official repository databases.
 Package lists remain hand-curated; there is no save flag.
 
 ## ISO
@@ -276,7 +296,11 @@ sudo dctl iso build
 
 It builds the Go commands, resolves `packages/base.lst`, `aur.lst`, and local PKGBUILDs into an offline package repository, and fails on missing packages.
 `packages/extra.lst` is installed online by doctor and is excluded from the payload.
+The build still reads all three lists, so `extra.lst` must exist.
+AUR and local builds import recipe-shipped `keys/pgp/*.asc` into a per-build keyring and fail before building if a `validpgpkeys` fingerprint in `.SRCINFO` is absent from that keyring.
+Package archives are fetched with `ParallelDownloads = 5`.
 The ISO contains `/opt/dctl/payload`, `/opt/dctl/targets`, `/opt/dctl/dotfiles.bundle`, and prebuilt commands under `/usr/local/bin`.
+The payload contains `SHA256SUMS`; the installer verifies its listed files with at most four files read at once.
 
 Output is `iso/out/dotfiles-<12-character-revision>.iso`.
 The build rejects images above the 2 GiB release limit; an oversized completed ISO is kept for local use but returns an error.
@@ -294,13 +318,15 @@ dctl iso test /path/to/dotfiles-REV.iso
 ```
 
 The VM has no network interface and uses a 32 GiB virtual disk, Setup Mode firmware variables, and a `DCTLTEST` answers drive.
-The harness installs, unlocks LUKS, boots twice, and checks required offline doctor results.
-After a 20-second wait, it saves `greeter.png` for manual inspection; it does not verify the greeter.
+The harness installs, unlocks LUKS, boots twice, and requires healthy system, packages, home, and all three Secure Boot checks, plus an active display manager.
+It runs root doctor groups as root and user groups as the installed user.
+After a 20-second wait, it saves `greeter.png` for manual inspection; it does not verify the greeter's appearance or sign-in behavior.
 It writes `serial.log`, `timings.json`, `doctor.json`, and `greeter.png` under the printed `/var/tmp/dctl-iso-test-*` run directory.
 It removes the disk and firmware variables by default; `--keep` retains them.
 
 Use `--dctl /path/to/dctl` and `--bundle /path/to/dotfiles.bundle` to test replacements without rebuilding the ISO.
 The installer honors that answers drive only inside a detected VM and selects the wipe target by its serial.
+The `--dctl` override replaces the running installer before it acquires the install lock.
 Run the [manual hardware checklist](../../../README.md#manual-hardware-acceptance) separately.
 
 ### Release

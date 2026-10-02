@@ -272,6 +272,7 @@ func opened(root string, cmdline []string) error {
 	return fmt.Errorf("limine.conf cmdline names LUKS UUID %s, but %s is not open as %s", id, filepath.Base(part), name)
 }
 
+// Cmdline reads the UKI's .cmdline section; the boolean reports section presence, even when its contents are empty.
 func Cmdline(uki string) (string, bool, error) {
 	f, err := pe.Open(uki)
 	if err != nil {

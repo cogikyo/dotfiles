@@ -38,6 +38,7 @@ func Reap(ctx context.Context, cmd *exec.Cmd) error {
 	return err
 }
 
+// Run streams both child output streams to stderr so JSON results can use stdout.
 func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...string) error {
 	cmd := r.command(ctx, dir, name, args)
 	if cmd.Stdin == nil && !r.Group {
@@ -48,6 +49,7 @@ func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...stri
 	return failed(Reap(ctx, cmd), name, args, "")
 }
 
+// Output returns trimmed stdout even on failure; errors wrap the cause and include up to 20 trailing stderr lines.
 func (r OSRunner) Output(ctx context.Context, dir string, name string, args ...string) (string, error) {
 	var stdout, stderr bytes.Buffer
 	cmd := r.command(ctx, dir, name, args)

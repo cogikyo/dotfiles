@@ -126,6 +126,8 @@ func writeSums(ctx context.Context, dir string) error {
 	return root.WriteFile(Sums, formatSums(sums), 0o644)
 }
 
+// VerifyPayload checks the files listed in dir's SHA256SUMS, reading at most four files at once.
+// Checksum lines use a 64-character hash, either two spaces or a space and '*', and a relative filename.
 func VerifyPayload(ctx context.Context, dir string) error {
 	root, err := os.OpenRoot(dir)
 	if err != nil {
