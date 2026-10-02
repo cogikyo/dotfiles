@@ -17,6 +17,7 @@ type CLI struct {
 
 	Update  update.Cmd `cmd:"" group:"lifecycle" help:"Update system and package lists."`
 	Secrets SecretsCmd `cmd:"" group:"lifecycle" help:"Manage age-encrypted secrets."`
+	Keys    KeysCmd    `cmd:"" group:"lifecycle" help:"Enroll, remove, and inspect YubiKeys."`
 	Repos   repos.Cmd  `cmd:"" group:"lifecycle" help:"Manage configured repositories."`
 	ISO     iso.Cmd    `cmd:"" name:"iso" group:"lifecycle" help:"Build and release custom Arch ISOs."`
 }

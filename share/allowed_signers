@@ -1,0 +1,1 @@
+# ssh-keygen ALLOWED SIGNERS for ISO releases: `<principal> namespaces="file" <sk-key-type> <base64>`; `dctl keys enroll` appends each hardware key.
