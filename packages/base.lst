@@ -146,6 +146,7 @@ lua51
 luarocks
 neovim
 pkgconf
+python-pillow
 python-pip
 python-pynvim
 shellharden
