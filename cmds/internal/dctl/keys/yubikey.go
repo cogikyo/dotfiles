@@ -130,26 +130,16 @@ func onKey(ctx context.Context, run execx.Runner, serial string) ([]Key, error) 
 	return pair(stubs, recipients), nil
 }
 
-func lines(data []byte) []string {
-	var out []string
-	for line := range strings.Lines(string(data)) {
-		if line = strings.TrimSpace(line); line != "" && line[0] != '#' {
-			out = append(out, line)
-		}
-	}
-	return out
-}
-
 func read(path string) ([]string, error) {
 	data, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		return nil, nil
 	}
-	return lines(data), err
+	return secrets.Lines(data), err
 }
 
 func appended(data []byte, line string) []byte {
-	if slices.Contains(lines(data), line) {
+	if slices.Contains(secrets.Lines(data), line) {
 		return data
 	}
 	if len(data) > 0 && !bytes.HasSuffix(data, []byte("\n")) {

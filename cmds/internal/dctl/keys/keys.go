@@ -15,7 +15,15 @@ import (
 	"dotfiles/cmds/internal/dctl/ui"
 )
 
-const application = "ssh:dctl-release"
+const (
+	application = "ssh:dctl-release"
+	forced      = "The FIDO PIN is disabled and must be changed before it can be used!"
+)
+
+type step struct {
+	label string
+	args  []string
+}
 
 func Enroll(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, rekey func(secrets.Edit) error) error {
 	if err := secrets.Preflight(root); err != nil {
@@ -30,38 +38,44 @@ func Enroll(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, re
 	if err != nil {
 		return err
 	}
-	for _, args := range pins {
-		if _, err := run.Run(ctx, "", "ykman", args...); err != nil {
+	for _, s := range pins {
+		u.Step("%s", s.label)
+		if _, err := run.Run(ctx, "", "ykman", s.args...); err != nil {
 			return err
 		}
 	}
 	if err := enrollAge(ctx, u, run, serial, rekey); err != nil {
 		return err
 	}
-	if err := enrollSigner(ctx, root, run, serial); err != nil {
+	if err := enrollSigner(ctx, u, root, run, serial); err != nil {
 		return err
 	}
 	u.OK("yubikey %s enrolled; for disk unlock run: sudo dctl keys luks", serial)
 	return nil
 }
 
-func pinSteps(ctx context.Context, run execx.Runner, serial string) ([][]string, error) {
+func pinSteps(ctx context.Context, run execx.Runner, serial string) ([]step, error) {
 	out, err := run.Output(ctx, "", "ykman", ykman(serial, "fido", "info")...)
 	if err != nil {
 		return nil, err
 	}
 	fido := fields(out)
-	var steps [][]string
-	switch fido["PIN"] {
-	case "Not set":
-		steps = append(steps, ykman(serial, "fido", "access", "change-pin"))
-	case "Blocked":
+	var steps []step
+	switch {
+	case fido["PIN"] == "Blocked":
 		return nil, fmt.Errorf("yubikey %s: the FIDO2 PIN is blocked", serial)
+	case fido["PIN"] == "Not set":
+		steps = append(steps, step{"Set FIDO2 PIN", ykman(serial, "fido", "access", "change-pin")})
+	case fido["NOTE"] == forced:
+		steps = append(steps, step{"Change FIDO2 PIN", ykman(serial, "fido", "access", "change-pin")})
 	}
 	if fido["Always Require UV"] == "Off" {
-		steps = append(steps, ykman(serial, "fido", "config", "toggle-always-uv"))
+		steps = append(steps, step{"Turn on FIDO2 Always Require UV", ykman(serial, "fido", "config", "toggle-always-uv")})
 	}
-	return append(steps, ykman(serial, "piv", "access", "change-pin"), ykman(serial, "piv", "access", "change-puk")), nil
+	return append(steps,
+		step{"Change PIV PIN", ykman(serial, "piv", "access", "change-pin")},
+		step{"Change PIV PUK", ykman(serial, "piv", "access", "change-puk")},
+	), nil
 }
 
 func enrollAge(ctx context.Context, u *ui.UI, run execx.Runner, serial string, rekey func(secrets.Edit) error) error {
@@ -70,6 +84,7 @@ func enrollAge(ctx context.Context, u *ui.UI, run execx.Runner, serial string, r
 		return err
 	}
 	if len(keys) == 0 {
+		u.Step("Create age identity")
 		if _, err := run.Run(ctx, "", "age-plugin-yubikey", "--generate", "--serial", serial, "--pin-policy", "once", "--touch-policy", "cached"); err != nil {
 			return err
 		}
@@ -77,9 +92,9 @@ func enrollAge(ctx context.Context, u *ui.UI, run execx.Runner, serial string, r
 			return err
 		}
 	}
-	u.Step("rekeying with yubikey %s", serial)
+	u.Step("Re-encrypt secrets for YubiKey %s", serial)
 	return rekey(func(l *secrets.Ledger) error {
-		have := lines(l.Recipients)
+		have := secrets.Lines(l.Recipients)
 		i := slices.IndexFunc(keys, func(k Key) bool { return slices.Contains(have, k.Recipient) })
 		if i < 0 {
 			i = slices.IndexFunc(keys, func(k Key) bool { return k.Recipient != "" })
@@ -93,7 +108,7 @@ func enrollAge(ctx context.Context, u *ui.UI, run execx.Runner, serial string, r
 	})
 }
 
-func enrollSigner(ctx context.Context, root paths.Root, run execx.Runner, serial string) error {
+func enrollSigner(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, serial string) error {
 	signed, err := read(root.Share("allowed_signers"))
 	if err != nil {
 		return err
@@ -119,6 +134,7 @@ func enrollSigner(ctx context.Context, root paths.Root, run execx.Runner, serial
 		return err
 	}
 	defer os.RemoveAll(tmp)
+	u.Step("Configure release-signing key")
 	if _, err := run.Run(ctx, tmp, "ssh-keygen", args...); err != nil {
 		return err
 	}
@@ -155,7 +171,7 @@ func skKey(line string) string {
 }
 
 func Remove(u *ui.UI, root paths.Root, serial string, rekey func(secrets.Edit) error) error {
-	stubs, err := read(root.Secrets("identities"))
+	ledger, err := secrets.ReadLedger(root)
 	if err != nil {
 		return err
 	}
@@ -163,7 +179,7 @@ func Remove(u *ui.UI, root paths.Root, serial string, rekey func(secrets.Edit) e
 	if err != nil {
 		return err
 	}
-	stubbed := slices.ContainsFunc(pair(stubs, nil), func(k Key) bool { return k.Serial == serial })
+	stubbed := slices.ContainsFunc(pair(secrets.Lines(ledger.Identities), nil), func(k Key) bool { return k.Serial == serial })
 	signed := slices.Contains(have, principal(serial))
 	if !stubbed && !signed {
 		return fmt.Errorf("yubikey %s is not enrolled", serial)
@@ -179,7 +195,7 @@ func Remove(u *ui.UI, root paths.Root, serial string, rekey func(secrets.Edit) e
 	if stubbed {
 		err := rekey(func(l *secrets.Ledger) error {
 			var gone []string
-			for _, k := range pair(lines(l.Identities), lines(l.Recipients)) {
+			for _, k := range pair(secrets.Lines(l.Identities), secrets.Lines(l.Recipients)) {
 				if k.Serial == serial {
 					gone = append(gone, k.Stub, k.Recipient)
 				}
@@ -216,11 +232,7 @@ type Report struct {
 
 func Status(ctx context.Context, root paths.Root, run execx.Runner, sys string) (Report, error) {
 	var r Report
-	recipients, err := read(root.Secrets("recipients"))
-	if err != nil {
-		return r, err
-	}
-	stubs, err := read(root.Secrets("identities"))
+	ledger, err := secrets.ReadLedger(root)
 	if err != nil {
 		return r, err
 	}
@@ -228,7 +240,7 @@ func Status(ctx context.Context, root paths.Root, run execx.Runner, sys string) 
 	if err != nil {
 		return r, err
 	}
-	for _, k := range pair(stubs, recipients) {
+	for _, k := range pair(secrets.Lines(ledger.Identities), secrets.Lines(ledger.Recipients)) {
 		r.Enrolled = append(r.Enrolled, Enrolled{Key: k, Signer: slices.Contains(have, k.principal())})
 	}
 	for _, p := range have {

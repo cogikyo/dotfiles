@@ -125,18 +125,6 @@ func Luks(ctx context.Context, u *ui.UI, run execx.Runner, sys string, confirm f
 	return nil
 }
 
-func RemoveLuks(ctx context.Context, u *ui.UI, run execx.Runner, sys, serial string) error {
-	dev, err := rootDevice(ctx, run, sys)
-	if err != nil {
-		return err
-	}
-	h, err := header(ctx, run, dev)
-	if err != nil {
-		return err
-	}
-	return fmt.Errorf("%s has FIDO2 tokens %v, and none records which key made it, so yubikey %s cannot be matched to one; nothing wiped", dev, h.Fido2, serial)
-}
-
 func Group(run execx.Runner, sys string) doctor.Group {
 	return doctor.Group{Name: "keys", Root: true, Checks: []doctor.Check{{
 		Name:  "keys-luks",

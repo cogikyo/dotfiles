@@ -369,7 +369,7 @@ func TestSignerHandleRecovered(t *testing.T) {
 			write(t, filepath.Join(dir, "id_ed25519_sk_rk_dctl-release"), "handle")
 			write(t, filepath.Join(dir, "id_ed25519_sk_rk_dctl-release.pub"), tc.keyed+" comment\n")
 		}}}
-		err := enrollSigner(t.Context(), root, f, "1234")
+		err := enrollSigner(t.Context(), quiet(), root, f, "1234")
 		if !slices.Equal(f.log, []string{"ssh-keygen -K"}) {
 			t.Errorf("%s: ran %v", name, f.log)
 		}
@@ -391,6 +391,36 @@ func TestSignerHandleRecovered(t *testing.T) {
 		if data, _ := os.ReadFile(file); string(data) != "handle" {
 			t.Errorf("%s: handle %q", name, data)
 		}
+	}
+}
+
+func TestForcedPinChange(t *testing.T) {
+	info := strings.Join([]string{
+		"AAGUID:                       a25342c0-3cdc-4414-8e46-f4807fca511c",
+		"PIN:                          8 attempt(s) remaining",
+		"Minimum PIN length:           4",
+		"Always Require UV:            Off",
+		"Credential storage remaining: 100",
+		"Enterprise Attestation:       Disabled",
+		"NOTE: The FIDO PIN is disabled and must be changed before it can be used!",
+	}, "\n") + "\n"
+	f := &fake{t: t, out: map[string][]string{"ykman --device 1234 fido info": {info}}}
+	steps, err := pinSteps(t.Context(), f, "1234")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, s := range steps {
+		got = append(got, strings.Join(s.args, " "))
+	}
+	want := []string{
+		"--device 1234 fido access change-pin",
+		"--device 1234 fido config toggle-always-uv",
+		"--device 1234 piv access change-pin",
+		"--device 1234 piv access change-puk",
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("steps %v, want %v", got, want)
 	}
 }
 

@@ -3,6 +3,7 @@ package cli
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 
 	"dotfiles/cmds/internal/dctl/execx"
@@ -15,7 +16,7 @@ import (
 type KeysCmd struct {
 	Enroll keysEnroll `cmd:"" help:"Enroll the inserted YubiKey: PINs, age identity, rekey, release-signing key."`
 	Luks   keysLuks   `cmd:"" help:"Add the inserted YubiKey and a recovery key to the root LUKS2 header (root)."`
-	Remove keysRemove `cmd:"" help:"Remove a lost YubiKey from recipients and allowed_signers, then rekey."`
+	Remove keysRemove `cmd:"" help:"Remove the age recipient and release signer, then rekey; LUKS tokens remain."`
 	Status keysStatus `cmd:"" help:"Show enrolled and inserted YubiKeys and LUKS tokens."`
 }
 
@@ -45,9 +46,9 @@ type keysRemove struct {
 	Serial string `arg:"" help:"Serial of the lost YubiKey."`
 }
 
-func (c keysRemove) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+func (c keysRemove) Run(u *ui.UI, root paths.Root) error {
 	if os.Geteuid() == 0 {
-		return keys.RemoveLuks(ctx, u, execx.OSRunner{}, "/sys", c.Serial)
+		return fmt.Errorf("%w; for LUKS tokens, see sudo dctl keys status and systemd-cryptenroll --wipe-slot", errUser)
 	}
 	return secrets.Locked(root, func() error {
 		return keys.Remove(u, root, c.Serial, func(e secrets.Edit) error { return secrets.Rekey(u, root, e) })
