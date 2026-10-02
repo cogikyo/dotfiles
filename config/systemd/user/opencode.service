@@ -2,7 +2,7 @@
 Description=OpenCode shared backend
 
 [Service]
-Environment=PATH=/home/cullyn/.local/share/nvim/mason/bin:/home/cullyn/.local/bin:/home/cullyn/.cargo/bin:/home/cullyn/.go/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl:/usr/lib/rustup/bin
+Environment=PATH=%h/.local/share/nvim/mason/bin:%h/.local/bin:%h/.cargo/bin:%h/.go/bin:/usr/local/sbin:/usr/local/bin:/usr/bin:/usr/bin/site_perl:/usr/bin/vendor_perl:/usr/bin/core_perl:/usr/lib/rustup/bin
 Environment=SSH_AUTH_SOCK=%t/ssh-agent.socket
 Environment=GOPRIVATE=git.linecode.dev/*
 Environment=GONOPROXY=git.linecode.dev/*

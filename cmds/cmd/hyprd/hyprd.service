@@ -1,7 +1,0 @@
-[Unit]
-Description=Hyprland window management daemon
-
-[Service]
-ExecStart=%h/.local/bin/hyprd
-Restart=on-failure
-RestartSec=2

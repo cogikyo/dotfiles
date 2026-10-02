@@ -83,8 +83,6 @@ func main() {
 		cli.VPN()
 	case "screenshot":
 		cli.Screenshot()
-	case "ssh":
-		cli.SSH()
 	case "rebuild":
 		cmdRebuild()
 	case "help", "-h", "--help":
@@ -422,8 +420,8 @@ Sessions:
   hyprd layout <name> [all] Open session; "all" starts every agent TUI for this launch
 
 Lock:
-  hyprd lock             Pseudo-lock (visual blackout + submap)
-  hyprd lock unlock      Exit pseudo-lock (alias: -u)
+  hyprd lock privacy     Privacy screen (visual blackout + submap, no authentication)
+  hyprd lock unlock      Exit privacy screen (alias: -u)
   hyprd lock full        Full lock (wraps hyprlock with pre/post hooks)
   hyprd share            Toggle screen-share mode
   hyprd share on|off     Enter/exit screen-share mode explicitly

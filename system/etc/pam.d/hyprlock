@@ -1,3 +1,0 @@
-# PAM configuration for hyprlock
-auth        include     login
-auth        optional    pam_exec.so expose_authtok /home/cullyn/.local/bin/hyprd ssh pam-load

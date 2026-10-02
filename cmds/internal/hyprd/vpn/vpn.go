@@ -7,13 +7,20 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"os/user"
 	"path/filepath"
-	"slices"
 	"sort"
 	"strings"
 
+	"github.com/godbus/dbus/v5"
 	"golang.org/x/term"
+)
+
+const (
+	nmService      = "org.freedesktop.NetworkManager"
+	nmSettings     = "org.freedesktop.NetworkManager.Settings"
+	nmSettingsPath = "/org/freedesktop/NetworkManager/Settings"
+	nmConnection   = "org.freedesktop.NetworkManager.Settings.Connection"
+	nmUpdateToDisk = 0x1
 )
 
 // VPN dispatches VPN subcommands against NetworkManager.
@@ -188,14 +195,20 @@ func (v *VPN) toggle(conn connection) (string, error) {
 }
 
 func (v *VPN) up(conn connection) (string, error) {
-	if err := runNMCLI("connection", "up", conn.Name); err != nil {
+	if _, err := connectionExists(conn.Name); err != nil {
+		return "", err
+	}
+	if err := runNMCLI("connection", "up", "id", conn.Name); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("vpn connected: %s", conn.Name), nil
 }
 
 func (v *VPN) down(conn connection) (string, error) {
-	if err := runNMCLI("connection", "down", conn.Name); err != nil {
+	if _, err := connectionExists(conn.Name); err != nil {
+		return "", err
+	}
+	if err := runNMCLI("connection", "down", "id", conn.Name); err != nil {
 		return "", err
 	}
 	return fmt.Sprintf("vpn disconnected: %s", conn.Name), nil
@@ -258,13 +271,16 @@ func (v *VPN) install(conn connection, options installOptions) (string, error) {
 	}
 	if _, err := os.Stat(conn.Profile); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return "", fmt.Errorf("profile not found: %s (run ./install.sh secrets first)", conn.Profile)
+			return "", fmt.Errorf("profile not found: %s (run dctl secrets decrypt %s first)", conn.Profile, secretName(conn))
 		}
 		return "", err
 	}
-	completeProfile, err := isNetworkManagerKeyfile(conn.Profile)
+	uuid, completeProfile, err := readKeyfile(conn.Profile)
 	if err != nil {
 		return "", err
+	}
+	if completeProfile && uuid == "" {
+		return "", fmt.Errorf("profile has no [connection] uuid: %s", conn.Profile)
 	}
 	exists, err := connectionExists(conn.Name)
 	if err != nil {
@@ -278,14 +294,16 @@ func (v *VPN) install(conn connection, options installOptions) (string, error) {
 	}
 
 	if completeProfile {
-		if err := runSudoNMCLI("connection", "load", conn.Profile); err != nil {
+		if err := sudoNMCLI("connection", "load", conn.Profile); err != nil {
 			return "", err
 		}
 	}
-	if exists, err = connectionExists(conn.Name); err != nil {
-		return "", err
-	} else if !exists {
-		return "", fmt.Errorf("profile loaded but NetworkManager connection %q is missing", conn.Name)
+	if uuid == "" {
+		out, err := nmcliOutput("-g", "connection.uuid", "connection", "show", "id", conn.Name)
+		if err != nil {
+			return "", err
+		}
+		uuid = strings.TrimSpace(out)
 	}
 
 	var lines []string
@@ -296,21 +314,22 @@ func (v *VPN) install(conn connection, options installOptions) (string, error) {
 		lines = append(lines, "profile incomplete; using installed NetworkManager connection as base")
 	}
 
-	if err := ensureVPNSecrets(conn.Name, options.ResetSecrets); err != nil {
+	if err := ensureVPNSecrets(conn.Name, uuid, options.ResetSecrets); err != nil {
 		return "", err
 	}
 	lines = append(lines, "VPN secrets stored in NetworkManager")
-	if err := copyConnectionKeyfile(conn); err != nil {
-		return "", err
+	if err := os.Remove(conn.Profile); err != nil {
+		return "", fmt.Errorf("remove staged profile: %w", err)
 	}
-	lines = append(lines, "profile updated; run secrets sync --force to encrypt it")
+	lines = append(lines, "staged profile removed")
 	return strings.Join(lines, "\n"), nil
 }
 
-func isNetworkManagerKeyfile(path string) (bool, error) {
+// readKeyfile reports the [connection] uuid and whether the section declares a type, which marks a complete keyfile.
+func readKeyfile(path string) (uuid string, complete bool, err error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return false, err
+		return "", false, err
 	}
 	inConnection := false
 	for line := range strings.Lines(string(data)) {
@@ -321,56 +340,26 @@ func isNetworkManagerKeyfile(path string) (bool, error) {
 		case strings.HasPrefix(line, "["):
 			inConnection = false
 		case inConnection && strings.HasPrefix(line, "type="):
-			return true, nil
+			complete = true
+		case inConnection && strings.HasPrefix(line, "uuid="):
+			uuid = strings.TrimSpace(strings.TrimPrefix(line, "uuid="))
 		}
 	}
-	return false, nil
+	return uuid, complete, nil
 }
 
-func vpnSecrets(name string) (map[string]string, error) {
-	out, err := nmcliOutput("--show-secrets", "-g", "vpn.secrets", "connection", "show", name)
+func ensureVPNSecrets(name, uuid string, reset bool) error {
+	bus, err := dbus.ConnectSystemBus()
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("connect system bus: %w", err)
 	}
-	secrets := map[string]string{}
-	for _, field := range splitNMCLIDictionary(out) {
-		key, value, ok := strings.Cut(strings.TrimSpace(field), "=")
-		if ok {
-			secrets[strings.TrimSpace(key)] = value
-		}
+	defer bus.Close()
+	path, err := connectionPath(bus.Object(nmService, nmSettingsPath), uuid)
+	if err != nil {
+		return err
 	}
-	return secrets, nil
-}
-
-func splitNMCLIDictionary(value string) []string {
-	var fields []string
-	var field strings.Builder
-	escaped := false
-	for _, r := range strings.TrimSpace(value) {
-		switch {
-		case escaped:
-			field.WriteRune(r)
-			escaped = false
-		case r == '\\':
-			escaped = true
-		case r == ',' || r == '\n':
-			fields = append(fields, field.String())
-			field.Reset()
-		default:
-			field.WriteRune(r)
-		}
-	}
-	if escaped {
-		field.WriteRune('\\')
-	}
-	if field.Len() > 0 {
-		fields = append(fields, field.String())
-	}
-	return fields
-}
-
-func ensureVPNSecrets(name string, reset bool) error {
-	secrets, err := vpnSecrets(name)
+	obj := bus.Object(nmService, path)
+	secrets, err := vpnSecrets(obj)
 	if err != nil {
 		return err
 	}
@@ -388,34 +377,58 @@ func ensureVPNSecrets(name string, reset bool) error {
 		changed = true
 	}
 	if changed {
-		keys := make([]string, 0, len(secrets))
-		for key := range secrets {
-			keys = append(keys, key)
-		}
-		sort.Strings(keys)
-		entries := make([]string, 0, len(keys))
-		for _, key := range keys {
-			entries = append(entries, key+"="+escapeNMCLIDictionaryValue(secrets[key]))
-		}
-		if err := runSudoNMCLI("connection", "modify", name, "vpn.secrets", strings.Join(entries, ",")); err != nil {
+		if err := storeVPNSecrets(obj, secrets); err != nil {
 			return err
 		}
 	}
-	stored, err := vpnSecrets(name)
+	stored, err := vpnSecrets(obj)
 	if err != nil {
 		return err
 	}
 	for _, key := range required {
-		if stored[key] == "" {
+		if stored[key] != secrets[key] {
 			return fmt.Errorf("NetworkManager did not persist VPN %s for %s", key, name)
 		}
 	}
 	return nil
 }
 
-func escapeNMCLIDictionaryValue(value string) string {
-	value = strings.ReplaceAll(value, `\`, `\\`)
-	return strings.ReplaceAll(value, ",", `\,`)
+func connectionPath(settings dbus.BusObject, uuid string) (dbus.ObjectPath, error) {
+	var path dbus.ObjectPath
+	if err := settings.Call(nmSettings+".GetConnectionByUuid", 0, uuid).Store(&path); err != nil {
+		return "", fmt.Errorf("find NetworkManager connection %s: %w", uuid, err)
+	}
+	return path, nil
+}
+
+func vpnSecrets(obj dbus.BusObject) (map[string]string, error) {
+	var settings map[string]map[string]dbus.Variant
+	if err := obj.Call(nmConnection+".GetSecrets", 0, "vpn").Store(&settings); err != nil {
+		return nil, fmt.Errorf("read VPN secrets: %w", err)
+	}
+	secrets := map[string]string{}
+	if value, ok := settings["vpn"]["secrets"]; ok {
+		if err := value.Store(&secrets); err != nil {
+			return nil, fmt.Errorf("decode VPN secrets: %w", err)
+		}
+	}
+	return secrets, nil
+}
+
+func storeVPNSecrets(obj dbus.BusObject, secrets map[string]string) error {
+	var settings map[string]map[string]dbus.Variant
+	if err := obj.Call(nmConnection+".GetSettings", 0).Store(&settings); err != nil {
+		return fmt.Errorf("read VPN settings: %w", err)
+	}
+	vpn, ok := settings["vpn"]
+	if !ok {
+		return errors.New("connection has no vpn setting")
+	}
+	vpn["secrets"] = dbus.MakeVariant(secrets)
+	if err := obj.Call(nmConnection+".Update2", 0, settings, uint32(nmUpdateToDisk), map[string]dbus.Variant{}).Err; err != nil {
+		return fmt.Errorf("store VPN secrets: %w", err)
+	}
+	return nil
 }
 
 func promptSecret(name, key string) (string, error) {
@@ -433,38 +446,6 @@ func promptSecret(name, key string) (string, error) {
 		return "", fmt.Errorf("vpn secret %s for %s is empty", key, name)
 	}
 	return string(secret), nil
-}
-
-func copyConnectionKeyfile(conn connection) error {
-	source, err := connectionKeyfile(conn.Name)
-	if err != nil {
-		return err
-	}
-	if source == "" {
-		return fmt.Errorf("NetworkManager did not report a keyfile for %s", conn.Name)
-	}
-	if err := os.MkdirAll(filepath.Dir(conn.Profile), 0o700); err != nil {
-		return err
-	}
-	current, err := user.Current()
-	if err != nil {
-		return err
-	}
-	return runSudo("install", "-m", "600", "-o", current.Uid, "-g", current.Gid, source, conn.Profile)
-}
-
-func connectionKeyfile(name string) (string, error) {
-	out, err := nmcliOutput("-t", "-f", "NAME,FILENAME", "connection", "show")
-	if err != nil {
-		return "", err
-	}
-	for line := range strings.Lines(out) {
-		connName, filename, ok := strings.Cut(strings.TrimSpace(line), ":")
-		if ok && connName == name {
-			return filename, nil
-		}
-	}
-	return "", nil
 }
 
 func (v *VPN) installAll(options installOptions) (string, error) {
@@ -524,7 +505,7 @@ func (v *VPN) export(conn connection) (string, error) {
 	if err := os.WriteFile(conn.Profile, []byte(data), 0o600); err != nil {
 		return "", err
 	}
-	return fmt.Sprintf("vpn exported: %s\nprofile: %s\nwarning: NetworkManager exports can omit keyring secrets; verify the profile before syncing it\nnext: add '%s:%s:600' to secrets/manifest, then run secrets sync", conn.Name, conn.Profile, secretName(conn), manifestTarget(conn.Profile)), nil
+	return fmt.Sprintf("vpn exported: %s\nprofile: %s\nwarning: NetworkManager exports can omit keyring secrets; verify the profile before syncing it\nnext: add '%s:%s:600:staged' to secrets/manifest, then run dctl secrets sync", conn.Name, conn.Profile, secretName(conn), manifestTarget(conn.Profile)), nil
 }
 
 func (v *VPN) active(name string) (bool, error) {
@@ -541,16 +522,23 @@ func (v *VPN) active(name string) (bool, error) {
 	return false, nil
 }
 
+// connectionExists rejects a name shared by several NetworkManager connections, since nmcli would act on an arbitrary one.
 func connectionExists(name string) (bool, error) {
-	err := exec.Command("nmcli", "-t", "connection", "show", name).Run()
-	if err == nil {
-		return true, nil
+	out, err := nmcliOutput("-t", "-f", "NAME", "connection", "show")
+	if err != nil {
+		return false, err
 	}
-	var exitErr *exec.ExitError
-	if errors.As(err, &exitErr) {
-		return false, nil
+	unescape := strings.NewReplacer(`\\`, `\`, `\:`, ":")
+	matches := 0
+	for line := range strings.Lines(out) {
+		if unescape.Replace(strings.TrimSuffix(line, "\n")) == name {
+			matches++
+		}
 	}
-	return false, err
+	if matches > 1 {
+		return false, fmt.Errorf("vpn connection name %q matches %d NetworkManager connections; rename or delete the duplicates", name, matches)
+	}
+	return matches == 1, nil
 }
 
 func secretName(conn connection) string {
@@ -576,24 +564,20 @@ func runNMCLI(args ...string) error {
 		if msg == "" {
 			msg = err.Error()
 		}
-		return fmt.Errorf("nmcli %s: %s", commandString(args), msg)
+		return fmt.Errorf("nmcli %s: %s", strings.Join(args, " "), msg)
 	}
 	return nil
 }
 
-func runSudoNMCLI(args ...string) error {
-	return runSudo(append([]string{"nmcli"}, args...)...)
-}
-
-func runSudo(args ...string) error {
-	cmd := exec.Command("sudo", args...)
+func sudoNMCLI(args ...string) error {
+	cmd := exec.Command("sudo", append([]string{"nmcli"}, args...)...)
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		msg := strings.TrimSpace(string(out))
 		if msg == "" {
 			msg = err.Error()
 		}
-		return fmt.Errorf("sudo %s: %s", commandString(args), msg)
+		return fmt.Errorf("sudo nmcli %s: %s", strings.Join(args, " "), msg)
 	}
 	return nil
 }
@@ -606,21 +590,7 @@ func nmcliOutput(args ...string) (string, error) {
 		if msg == "" {
 			msg = err.Error()
 		}
-		return "", fmt.Errorf("nmcli %s: %s", commandString(args), msg)
+		return "", fmt.Errorf("nmcli %s: %s", strings.Join(args, " "), msg)
 	}
 	return string(out), nil
-}
-
-func commandString(args []string) string {
-	redacted := slices.Clone(args)
-	for i, arg := range redacted {
-		key, _, ok := strings.Cut(arg, "=")
-		if ok {
-			key = strings.ToLower(key)
-			if strings.Contains(key, "password") || strings.Contains(key, "psk") || strings.Contains(key, "secret") {
-				redacted[i] = "<secrets-redacted>"
-			}
-		}
-	}
-	return strings.Join(redacted, " ")
 }

@@ -34,7 +34,7 @@ const (
 )
 
 // dispatchStartup runs hardcoded startup commands and optionally connects bluetooth.
-func dispatchStartup(h hyprExecutor, bt config.BluetoothConfig) {
+func dispatchStartup(h *hypr.Client, bt config.BluetoothConfig) {
 	dispatchGLava(h)
 	for _, cmd := range startupExecs {
 		if err := h.Exec(cmd); err != nil {
@@ -46,7 +46,7 @@ func dispatchStartup(h hyprExecutor, bt config.BluetoothConfig) {
 	}
 }
 
-func dispatchGLava(h hyprExecutor) {
+func dispatchGLava(h *hypr.Client) {
 	for _, cmd := range glavaExecs {
 		if err := h.Exec(cmd); err != nil {
 			fmt.Fprintf(os.Stderr, "hyprd startup: exec %q: %v\n", cmd, err)
@@ -86,46 +86,32 @@ func connectBluetooth(device string) {
 // NotifyFunc delivers a notification to the user, injected to break a cycle with the notify package.
 type NotifyFunc func(app, urgency, title, body string)
 
-// Init drives first-boot session setup: background, optional early lock, network wait, and per-workspace layouts.
+// Init drives first-boot session setup: background, network wait, and per-workspace layouts.
 type Init struct {
 	hypr   *hypr.Client
 	state  *state.State
 	notify NotifyFunc
-	lock   *Lock
 }
 
 func NewInit(h *hypr.Client, s *state.State) *Init {
 	return &Init{hypr: h, state: s}
 }
 
-func (i *Init) SetLock(l *Lock) {
-	i.lock = l
-}
-
 func (i *Init) SetNotify(fn NotifyFunc) {
 	i.notify = fn
 }
 
-// Execute runs the full init sequence: background, optional early lock, network, workspace layouts, and startup execs.
+// Execute runs the full init sequence: background, network, workspace layouts, and startup execs.
 //
 // Inter-dispatch sleeps are tuned for Hyprland to settle; shortening them races layout application.
 func (i *Init) Execute() (string, error) {
 	cfg := i.state.GetConfig()
 	init := cfg.Init
 
-	if err := EnsureBGBoot(&cfg.Background); err != nil {
-		return "", fmt.Errorf("background ready before lock: %w", err)
+	if err := EnsureBG(&cfg.Background); err != nil {
+		return "", fmt.Errorf("background: %w", err)
 	}
 	fmt.Println("hyprd init: background ready")
-
-	fullLocked := init.Lock && i.lock != nil
-	if fullLocked {
-		fmt.Println("hyprd init: full-locking")
-		if _, err := i.lock.FullImmediateWait(); err != nil {
-			fmt.Fprintf(os.Stderr, "hyprd init: full-lock: %v\n", err)
-		}
-		fmt.Println("hyprd init: unlocked")
-	}
 
 	if init.NetworkTimeout > 0 {
 		if ok := i.waitNetwork(init.NetworkTimeout); ok {
@@ -159,9 +145,7 @@ func (i *Init) Execute() (string, error) {
 		}
 	}
 
-	if !fullLocked {
-		dispatchStartup(i.hypr, cfg.Bluetooth)
-	}
+	dispatchStartup(i.hypr, cfg.Bluetooth)
 
 	if init.Workspace > 0 {
 		if err := i.hypr.FocusWorkspace(init.Workspace); err != nil {

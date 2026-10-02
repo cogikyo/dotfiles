@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -15,263 +14,251 @@ import (
 	"dotfiles/cmds/internal/hyprd/state"
 )
 
-const pseudoLockWorkspace = 6         // workspace reserved for the visual blackout
-const fullLockGrace = 2 * time.Second // hyprlock cancel window
-const fullLockDelay = time.Second     // let killall settle before manual hyprlock takes the display
-const idleUnlockSuppress = 2 * time.Second
+const privacyWorkspace = 6
 
-// pamLoadFlag is the runtime handshake consumed by `hyprd ssh pam-load` from pam_exec.
-const pamLoadFlag = "hyprd-ssh-pam-load"
+const (
+	quickExit     = 3 * time.Second
+	quickExits    = 3
+	relaunchDelay = 2 * time.Second
+)
 
-type hyprExecutor interface {
-	Exec(cmd string) error
-}
-
-type hyprIPC interface {
-	hyprExecutor
-	ActiveWorkspace() (int, error)
-	FocusWorkspace(id int) error
-	Submap(name string) error
-}
-
-// Lock owns pseudo-lock and full-lock lifecycles: visual blackout, audio/notification pause, and restore.
+// Lock owns privacy-screen and full-lock lifecycles: visual blackout, audio/notification pause, and restore.
 //
-// Serialized by mu; saved != nil means a lock is active, inFull means hyprlock is blocking.
+// mu is held for each whole transition, restore included.
+// saved != nil means the privacy screen or a full lock is active; inFull means hyprlock is supervised and is cleared only when hyprlock exits 0.
 type Lock struct {
-	hypr            hyprIPC
-	state           *state.State
-	mu              sync.Mutex
-	saved           *lockState
-	inFull          bool
-	idleUnlockAfter time.Time
+	hypr       *hypr.Client
+	state      *state.State
+	hyprlock   func() error
+	running    func() bool
+	endSession func() error
+	mu         sync.Mutex
+	saved      *lockState
+	inFull     bool
 }
 
 type lockState struct {
-	workspace      int
-	musicPlaying   bool
-	restoreWidgets bool
+	workspace    int
+	musicPlaying bool
 }
 
 func NewLock(h *hypr.Client, s *state.State) *Lock {
-	return &Lock{hypr: h, state: s}
+	return &Lock{hypr: h, state: s, hyprlock: execHyprlock, running: hyprlockRunning, endSession: endSession}
 }
 
-// Execute routes pseudo, idle pseudo-lock, unlock, idle unlock, and full lock.
+// Execute routes privacy, idle privacy, unlock, and full lock.
 func (l *Lock) Execute(arg string) (string, error) {
 	switch strings.TrimSpace(arg) {
-	case "", "pseudo":
-		return l.Pseudo()
+	case "privacy":
+		return l.enterPrivacy("privacy")
 	case "idle":
-		return l.Idle()
+		return l.enterPrivacy("idle")
 	case "-u", "unlock":
 		return l.Unlock()
-	case "idle-unlock":
-		return l.IdleUnlock()
 	case "full":
 		return l.Full()
 	default:
-		return "", fmt.Errorf("usage: lock [pseudo|idle|unlock|idle-unlock|full]")
+		return "", fmt.Errorf("usage: lock [privacy|idle|unlock|full]")
 	}
 }
 
-// Pseudo enters pseudo-lock (blackout + submap); no-op if any lock is already active.
-func (l *Lock) Pseudo() (string, error) {
-	return l.enterPseudo("pseudo", false)
-}
-
-// Idle enters pseudo-lock from hypridle. Entering blackout/submap can itself
-// create a synthetic resume event, so idle resume briefly ignores unlocks.
-func (l *Lock) Idle() (string, error) {
-	return l.enterPseudo("idle", true)
-}
-
-func (l *Lock) enterPseudo(kind string, idle bool) (string, error) {
+func (l *Lock) enterPrivacy(kind string) (string, error) {
 	l.mu.Lock()
-	if l.saved != nil {
-		l.mu.Unlock()
+	defer l.mu.Unlock()
+	if l.saved != nil || l.inFull {
 		return "lock: already active", nil
 	}
 
 	saved := l.capture()
-	if err := l.hypr.FocusWorkspace(pseudoLockWorkspace); err != nil {
-		l.mu.Unlock()
-		return "", fmt.Errorf("lock: switch to workspace %d: %w", pseudoLockWorkspace, err)
+	if err := l.hypr.FocusWorkspace(privacyWorkspace); err != nil {
+		return "", fmt.Errorf("lock: switch to workspace %d: %w", privacyWorkspace, err)
 	}
-	if err := l.hypr.Submap("pseudolock"); err != nil {
+	if err := l.hypr.Submap("privacy"); err != nil {
 		rollbackErr := errors.Join(
 			l.hypr.Submap("reset"),
 			l.hypr.FocusWorkspace(saved.workspace),
 		)
-		l.mu.Unlock()
 		if rollbackErr != nil {
-			return "", fmt.Errorf("lock: enter pseudolock: %w; rollback: %w", err, rollbackErr)
+			return "", fmt.Errorf("lock: enter privacy submap: %w; rollback: %w", err, rollbackErr)
 		}
-		return "", fmt.Errorf("lock: enter pseudolock: %w", err)
+		return "", fmt.Errorf("lock: enter privacy submap: %w", err)
 	}
 
-	if idle {
-		l.idleUnlockAfter = time.Now().Add(idleUnlockSuppress)
-	} else {
-		l.idleUnlockAfter = time.Time{}
-	}
 	l.saved = saved
-	l.mu.Unlock()
-
-	l.enterBlackout(saved)
+	enterBlackout(saved)
 	return "lock: " + kind, nil
 }
 
-// Unlock exits pseudo-lock; refuses while hyprlock is active.
+// Unlock exits the privacy screen; refuses while hyprlock is active.
 func (l *Lock) Unlock() (string, error) {
-	return l.unlock()
-}
-
-// IdleUnlock exits an idle pseudo-lock unless this is hypridle's synthetic
-// resume caused by entering the pseudo-lock itself.
-func (l *Lock) IdleUnlock() (string, error) {
 	l.mu.Lock()
-	if !l.idleUnlockAfter.IsZero() && time.Now().Before(l.idleUnlockAfter) {
-		l.mu.Unlock()
-		return "lock: idle unlock suppressed", nil
-	}
-	l.mu.Unlock()
-	return l.unlock()
-}
-
-func (l *Lock) unlock() (string, error) {
-	l.mu.Lock()
+	defer l.mu.Unlock()
 	if l.inFull {
-		l.mu.Unlock()
 		return "lock: hyprlock active", nil
 	}
 	if err := l.hypr.Submap("reset"); err != nil {
-		l.mu.Unlock()
 		return "", fmt.Errorf("lock: reset submap: %w", err)
 	}
 	if l.saved == nil {
-		l.idleUnlockAfter = time.Time{}
-		l.mu.Unlock()
 		return "lock: not active", nil
 	}
 	saved := l.saved
 	l.saved = nil
-	l.idleUnlockAfter = time.Time{}
-	l.mu.Unlock()
 
-	if err := l.exitBlackout(saved, saved.musicPlaying); err != nil {
+	if err := l.exitBlackout(saved); err != nil {
 		return "lock: unlocked", err
 	}
 	return "lock: unlocked", nil
 }
 
-// Full runs hyprlock asynchronously with pre/post blackout hooks.
-func (l *Lock) Full() (string, error) {
-	return l.full(fullLockDelay, fullLockGrace, true, true)
-}
-
-// FullImmediate runs hyprlock without startup delay or grace, for boot-time authentication.
-func (l *Lock) FullImmediate() (string, error) {
-	return l.full(0, 0, true, true)
-}
-
-// FullImmediateWait runs the boot-time full lock synchronously so startup work
-// does not open private workspace layouts behind the lock screen.
-func (l *Lock) FullImmediateWait() (string, error) {
-	return l.fullBlocking(0, 0, true, false)
-}
-
-func (l *Lock) full(delay, grace time.Duration, loadSSH, restoreWidgets bool) (string, error) {
-	saved, result, err := l.startFull(restoreWidgets)
-	if saved == nil || err != nil {
-		return result, err
-	}
-
-	go l.runHyprlock(saved, delay, grace, loadSSH)
-	return "lock: full", nil
-}
-
-func (l *Lock) fullBlocking(delay, grace time.Duration, loadSSH, restoreWidgets bool) (string, error) {
-	saved, result, err := l.startFull(restoreWidgets)
-	if saved == nil || err != nil {
-		return result, err
-	}
-
-	l.runHyprlock(saved, delay, grace, loadSSH)
-	return "lock: full", nil
-}
-
-func (l *Lock) startFull(restoreWidgets bool) (*lockState, string, error) {
+// Locked reports whether a full lock is active.
+func (l *Lock) Locked() bool {
 	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.inFull
+}
+
+// Full starts supervising hyprlock in the background.
+func (l *Lock) Full() (string, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	if l.inFull {
-		l.mu.Unlock()
-		return nil, "lock: hyprlock already running", nil
+		return "lock: hyprlock already running", nil
 	}
+	l.inFull = true
+	go l.hold()
+	return "lock: full", nil
+}
 
-	needsBlackout := false
-	if l.saved != nil {
-		if err := l.hypr.Submap("reset"); err != nil {
-			l.mu.Unlock()
-			return nil, "", fmt.Errorf("lock: reset submap: %w", err)
-		}
-	} else {
-		saved := l.capture()
-		saved.restoreWidgets = restoreWidgets
-		if err := l.hypr.FocusWorkspace(pseudoLockWorkspace); err != nil {
-			l.mu.Unlock()
-			return nil, "", fmt.Errorf("lock: switch to workspace %d: %w", pseudoLockWorkspace, err)
-		}
-		l.saved = saved
-		needsBlackout = true
+// Adopt takes over a hyprlock left by a previous daemon: the full lock stays active until it exits, then hyprlock is relaunched.
+func (l *Lock) Adopt() {
+	if !l.running() {
+		return
 	}
-
-	saved := l.saved
+	l.mu.Lock()
 	l.inFull = true
 	l.mu.Unlock()
 
-	if needsBlackout {
-		l.enterBlackout(saved)
-	}
-	return saved, "lock: full", nil
+	go func() {
+		l.awaitForeign()
+		l.hold()
+	}()
 }
 
-func (l *Lock) runHyprlock(saved *lockState, delay, grace time.Duration, loadSSH bool) {
-	if delay > 0 {
-		time.Sleep(delay)
+func (l *Lock) awaitForeign() {
+	for l.running() {
+		time.Sleep(relaunchDelay)
 	}
-	if loadSSH {
-		flag := filepath.Join(runtimeDir(), pamLoadFlag)
-		if f, err := os.Create(flag); err == nil {
-			f.Close()
-			defer os.Remove(flag)
+}
+
+func (l *Lock) hold() {
+	quick := 0
+	for launch := 0; ; launch++ {
+		if launch > 1 {
+			time.Sleep(relaunchDelay)
 		}
-	}
+		started := time.Now()
+		exited := make(chan error, 1)
+		go func() { exited <- l.hyprlock() }()
+		if launch == 0 {
+			l.cover()
+		}
 
-	cmd := exec.Command("hyprlock", "--grace", strconv.Itoa(int(grace/time.Second)))
-	if err := cmd.Start(); err == nil {
-		cmd.Wait()
-	}
-
-	l.mu.Lock()
-	l.inFull = false
-	if l.saved == nil {
-		l.mu.Unlock()
+		err := <-exited
+		if err == nil {
+			l.release()
+			return
+		}
+		if l.running() {
+			fmt.Fprintf(os.Stderr, "hyprd lock: hyprlock exited: %v; another hyprlock holds the lock, waiting for it\n", err)
+			l.awaitForeign()
+			quick = 0
+			continue
+		}
+		fmt.Fprintf(os.Stderr, "hyprd lock: hyprlock exited: %v; relaunching\n", err)
+		if time.Since(started) >= quickExit {
+			quick = 0
+			continue
+		}
+		quick++
+		if quick < quickExits {
+			continue
+		}
+		quick = 0
+		if err := l.endSession(); err != nil {
+			fmt.Fprintf(os.Stderr, "hyprd lock: hyprlock cannot hold the lock and the session did not end: %v\n", err)
+			continue
+		}
+		fmt.Fprintln(os.Stderr, "hyprd lock: hyprlock cannot hold the lock; ending the session")
 		return
 	}
-	l.saved = nil
-	l.idleUnlockAfter = time.Time{}
-	resumeMusic := saved.musicPlaying
-	l.mu.Unlock()
+}
 
-	if err := l.exitBlackout(saved, resumeMusic); err != nil {
+func (l *Lock) cover() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.saved != nil {
+		if err := l.hypr.Submap("reset"); err != nil {
+			fmt.Fprintf(os.Stderr, "hyprd lock: reset submap: %v\n", err)
+		}
+		return
+	}
+	l.saved = l.capture()
+	if err := l.hypr.FocusWorkspace(privacyWorkspace); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd lock: switch to workspace %d: %v\n", privacyWorkspace, err)
+	}
+	enterBlackout(l.saved)
+}
+
+func (l *Lock) release() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	saved := l.saved
+	l.saved = nil
+	l.inFull = false
+	if err := l.exitBlackout(saved); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd lock: unlock after hyprlock: %v\n", err)
 	}
 }
 
-func runtimeDir() string {
-	if dir := os.Getenv("XDG_RUNTIME_DIR"); dir != "" {
-		return dir
+func hyprlockCommand() *exec.Cmd {
+	cmd := exec.Command("hyprlock", "--grace", "0")
+	cmd.Stderr = os.Stderr
+	return cmd
+}
+
+func execHyprlock() error {
+	return hyprlockCommand().Run()
+}
+
+func hyprlockRunning() bool {
+	return exec.Command("pidof", "-q", "hyprlock").Run() == nil
+}
+
+func endSession() error {
+	err := terminateSession()
+	if err == nil {
+		return nil
 	}
-	return fmt.Sprintf("/run/user/%d", os.Getuid())
+	if exitErr := exec.Command("hyprctl", "dispatch", "hl.dsp.exit()").Run(); exitErr != nil {
+		return errors.Join(err, fmt.Errorf("hyprctl exit: %w", exitErr))
+	}
+	return nil
+}
+
+func terminateSession() error {
+	out, err := exec.Command("loginctl", "show-user", strconv.Itoa(os.Getuid()), "-p", "Display", "--value").Output()
+	if err != nil {
+		return fmt.Errorf("find graphical session: %w", err)
+	}
+	session := strings.TrimSpace(string(out))
+	if session == "" {
+		return errors.New("no graphical session")
+	}
+	if err := exec.Command("loginctl", "terminate-session", session).Run(); err != nil {
+		return fmt.Errorf("terminate session %s: %w", session, err)
+	}
+	return nil
 }
 
 // capture snapshots workspace for later restore. Called with l.mu held.
@@ -285,62 +272,24 @@ func (l *Lock) capture() *lockState {
 	if ws <= 0 {
 		ws = 1
 	}
-	return &lockState{
-		workspace:      ws,
-		restoreWidgets: true,
-	}
+	return &lockState{workspace: ws}
 }
 
-func (l *Lock) enterBlackout(saved *lockState) {
-	if !l.active(saved) {
-		return
-	}
-
-	musicPlaying := playerctlStatus() == "Playing"
-	l.mu.Lock()
-	active := l.saved == saved
-	if active {
-		saved.musicPlaying = musicPlaying
-	}
-	l.mu.Unlock()
-	if !active {
-		return
-	}
-
+func enterBlackout(saved *lockState) {
+	saved.musicPlaying = playerctlStatus() == "Playing"
 	exec.Command("killall", "glava").Run()
-	if !l.active(saved) {
-		return
-	}
 	exec.Command("dunstctl", "close-all").Run()
-	if !l.active(saved) {
-		return
-	}
 	exec.Command("dunstctl", "set-paused", "true").Run()
-	if !l.active(saved) {
-		return
-	}
 	exec.Command("playerctl", "--player=spotify", "pause").Run()
-	if !l.active(saved) {
-		return
-	}
-	l.closeEwwWidgets(saved)
+	closeEwwWidgets()
 }
 
-func (l *Lock) active(saved *lockState) bool {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	return l.saved == saved
-}
-
-func (l *Lock) closeEwwWidgets(saved *lockState) {
-	if !l.active(saved) {
+func closeEwwWidgets() {
+	out, err := exec.Command("ewwd", "close").CombinedOutput()
+	if err == nil {
 		return
 	}
-	if out, err := exec.Command("ewwd", "close").CombinedOutput(); err == nil {
-		return
-	} else {
-		fmt.Fprintf(os.Stderr, "hyprd lock: ewwd close unavailable: %v: %s\n", err, strings.TrimSpace(string(out)))
-	}
+	fmt.Fprintf(os.Stderr, "hyprd lock: ewwd close unavailable: %v: %s\n", err, strings.TrimSpace(string(out)))
 	if exec.Command("eww", "ping").Run() != nil {
 		return
 	}
@@ -349,8 +298,8 @@ func (l *Lock) closeEwwWidgets(saved *lockState) {
 	}
 }
 
-// exitBlackout restores workspace, reopens eww/glava, reconnects bluetooth, and unpauses dunst.
-func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) error {
+// exitBlackout restores workspace, reopens eww/glava, reconnects bluetooth, and unpauses dunst. Called with l.mu held.
+func (l *Lock) exitBlackout(saved *lockState) error {
 	cfg := l.state.GetConfig()
 	if err := l.hypr.FocusWorkspace(saved.workspace); err != nil {
 		return fmt.Errorf("lock: restore workspace %d: %w", saved.workspace, err)
@@ -360,41 +309,32 @@ func (l *Lock) exitBlackout(saved *lockState, resumeMusic bool) error {
 	}
 
 	dispatchStartup(l.hypr, cfg.Bluetooth)
-	if saved.restoreWidgets {
-		restoreEwwWidgets(false)
-	}
+	restoreEwwWidgets(false)
 
-	if resumeMusic {
+	if saved.musicPlaying {
 		exec.Command("playerctl", "play").Run()
 	}
-	// Delay dunst unpause so queued notifications don't clobber eww startup.
-	time.AfterFunc(time.Second, func() {
-		exec.Command("dunstctl", "set-paused", "false").Run()
-	})
+	exec.Command("dunstctl", "set-paused", "false").Run()
 	return nil
 }
 
-// restoreEwwWidgets reopens widgets through ewwd once the daemon socket is ready.
+// restoreEwwWidgets reopens widgets through ewwd, starting ewwd.service and waiting up to a second when the daemon is down.
 func restoreEwwWidgets(reload bool) {
 	action := "restore"
 	if reload {
 		action = "open"
 	}
 
-	if waitEwwdReady(0) {
-		startDetached("ewwd", action)
-		return
-	}
-	if err := exec.Command("systemctl", "--user", "--no-block", "start", "ewwd.service").Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "hyprd lock: start ewwd.service: %v\n", err)
-	}
-	go func() {
+	if !waitEwwdReady(0) {
+		if err := exec.Command("systemctl", "--user", "--no-block", "start", "ewwd.service").Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "hyprd lock: start ewwd.service: %v\n", err)
+		}
 		if !waitEwwdReady(time.Second) {
 			fmt.Fprintln(os.Stderr, "hyprd lock: ewwd unavailable after service start")
 			return
 		}
-		startDetached("ewwd", action)
-	}()
+	}
+	startDetached("ewwd", action)
 }
 
 func waitEwwdReady(timeout time.Duration) bool {

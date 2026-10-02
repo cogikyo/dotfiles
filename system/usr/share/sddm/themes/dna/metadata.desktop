@@ -1,0 +1,9 @@
+[SddmGreeterTheme]
+Name=dna
+Description=Looping video greeter
+Type=sddm-theme
+Version=1
+MainScript=Main.qml
+Theme-Id=dna
+Theme-API=2.0
+QtVersion=6

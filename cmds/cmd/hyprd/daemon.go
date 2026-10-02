@@ -69,6 +69,7 @@ func New() (*Daemon, error) {
 		accentCtl: NewAccent(hyprClient),
 		restartCh: make(chan struct{}, 1),
 	}
+	d.lockCtl.Adopt()
 	d.config.Store(&cfg)
 	d.opencode = opencodepkg.New(func(title, body string) {
 		notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load())
@@ -440,7 +441,7 @@ func (d *Daemon) handleNotify(arg string) string {
 //
 // Runtime state is written to stateFile before the binary swap and consumed once by restoreState after exec.
 func (d *Daemon) handleRebuild() string {
-	if msg := d.opencode.RebuildBlocked(); msg != "" {
+	if msg := d.rebuildBlocked(); msg != "" {
 		return "error: " + msg
 	}
 	home, err := os.UserHomeDir()
@@ -463,7 +464,7 @@ func (d *Daemon) handleRebuild() string {
 		os.Remove(tmpBin)
 		return fmt.Sprintf("error: build failed: %v\n%s", err, out)
 	}
-	if msg := d.opencode.RebuildBlocked(); msg != "" {
+	if msg := d.rebuildBlocked(); msg != "" {
 		os.Remove(tmpBin)
 		return "error: " + msg
 	}
@@ -489,6 +490,13 @@ func (d *Daemon) handleRebuild() string {
 	default:
 	}
 	return "rebuilt: restarting..."
+}
+
+func (d *Daemon) rebuildBlocked() string {
+	if d.lockCtl.Locked() {
+		return "full lock active; unlock before rebuilding"
+	}
+	return d.opencode.RebuildBlocked()
 }
 
 func (d *Daemon) restoreState() {
@@ -542,7 +550,6 @@ func (d *Daemon) handleProject(arg string) string {
 
 func (d *Daemon) newInit() *session.Init {
 	init := session.NewInit(d.hypr, d.state)
-	init.SetLock(d.lockCtl)
 	init.SetNotify(func(app, urgency, title, body string) {
 		notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load())
 		notifier.Handle(notifypkg.NotifyRequest{

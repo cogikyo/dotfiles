@@ -14,9 +14,8 @@ import (
 )
 
 const (
-	bgStartTimeout     = 2 * time.Second
-	bgBootStartTimeout = 2 * time.Second
-	bgFrameSettle      = 250 * time.Millisecond
+	bgStartTimeout = 2 * time.Second
+	bgFrameSettle  = 250 * time.Millisecond
 )
 
 var errNoActiveMonitors = errors.New("no active hyprland monitors")
@@ -39,7 +38,7 @@ func NewBG(cfg *config.BackgroundConfig) *BG {
 func (b *BG) Execute(mode string) (string, error) {
 	switch mode {
 	case "ensure":
-		return b.ensure(bgStartTimeout)
+		return b.ensure()
 	case "kill":
 		b.killAll()
 		return "bg: killed", nil
@@ -48,7 +47,7 @@ func (b *BG) Execute(mode string) (string, error) {
 	}
 }
 
-func (b *BG) ensure(timeout time.Duration) (string, error) {
+func (b *BG) ensure() (string, error) {
 	if !b.cfg.Enabled {
 		b.killAll()
 		return "bg: disabled", nil
@@ -64,7 +63,7 @@ func (b *BG) ensure(timeout time.Duration) (string, error) {
 		}
 		return "", err
 	}
-	if !b.waitAlive(timeout) {
+	if !b.waitAlive() {
 		return "", fmt.Errorf("bg: spawned on %s but IPC did not become ready", display)
 	}
 	time.Sleep(bgFrameSettle)
@@ -80,8 +79,8 @@ func (b *BG) isAlive() bool {
 	return true
 }
 
-func (b *BG) waitAlive(timeout time.Duration) bool {
-	deadline := time.Now().Add(timeout)
+func (b *BG) waitAlive() bool {
+	deadline := time.Now().Add(bgStartTimeout)
 	for time.Now().Before(deadline) {
 		if b.isAlive() {
 			return true
@@ -161,12 +160,5 @@ func (b *BG) killAll() {
 func EnsureBG(cfg *config.BackgroundConfig) error {
 	bg := NewBG(cfg)
 	_, err := bg.Execute("ensure")
-	return err
-}
-
-// EnsureBGBoot waits long enough for cold-boot display and media startup before locking.
-func EnsureBGBoot(cfg *config.BackgroundConfig) error {
-	bg := NewBG(cfg)
-	_, err := bg.ensure(bgBootStartTimeout)
 	return err
 }

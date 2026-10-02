@@ -44,9 +44,8 @@ type VPNConnection struct {
 //
 // Sessions opened on boot are those with init: true in the session catalog.
 type InitConfig struct {
-	Workspace      int  `yaml:"workspace"`       // workspace to focus after boot
-	Lock           bool `yaml:"lock"`            // lock the session after boot completes
-	NetworkTimeout int  `yaml:"network_timeout"` // seconds to wait for network before proceeding
+	Workspace      int `yaml:"workspace"`       // workspace to focus after boot
+	NetworkTimeout int `yaml:"network_timeout"` // seconds to wait for network before proceeding
 }
 
 // BluetoothConfig controls automatic device connection at startup and unlock.

@@ -213,7 +213,7 @@ tabs:
 background:
   enabled: true
   display: "auto"
-  video_path: "~/dotfiles/share/videos"
+  video_path: "/usr/share/backgrounds/dotfiles"
   socket: "/tmp/mpvpaper.sock"
   wallpaper:
     file: "dna.mp4"
