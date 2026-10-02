@@ -17,7 +17,7 @@ Find consequential wasted work and the simplest adequate way to remove it.
 >
 > A finding needs **hotness or blast-radius evidence**: frequency, data volume, fan-out, or blocking impact.
 >
-> *This keeps you from paying optimization costs without an evidenced performance problem.*
+> _This keeps you from paying optimization costs without an evidenced performance problem._
 
 ## How it works
 

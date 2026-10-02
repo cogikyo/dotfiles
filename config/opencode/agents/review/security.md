@@ -33,7 +33,7 @@ Think as an attacker who uses every capability the threat model grants, and no c
 > - Impacted asset.
 > - The code or configuration that enables misuse.
 >
-> *This keeps generic hardening from becoming required work.*
+> _This keeps generic hardening from becoming required work._
 
 - Generic hardening advice without a supported misuse path is not a finding.
 - Credit security code for the protection it provides.

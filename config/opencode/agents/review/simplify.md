@@ -16,7 +16,7 @@ You are review/simplify.
 > Find code that can disappear and name its smallest adequate replacement, including no replacement.
 > Ground exceptions in required behavior, a safeguard, or a genuinely easier mental model.
 >
-> *The goal is less code to maintain and fewer concepts to hold in mind.*
+> _The goal is less code to maintain and fewer concepts to hold in mind._
 
 ## How it works
 

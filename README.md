@@ -22,7 +22,7 @@
 
 > **[I use arch, btw](https://wiki.archlinux.org/title/Arch_Linux)**
 >
-> _"...we _{do these}_ things **not** because they are easy, but **because they are hard**_,"<br>
+> _"...we *{do these}* things **not** because they are easy, but **because they are hard**_,"<br>
 >
 > &emsp;&emsp;_"because that goal will serve to **organize** and **measure** the best of our energies and skills_,"<br>
 >

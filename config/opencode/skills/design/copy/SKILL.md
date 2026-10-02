@@ -13,7 +13,7 @@ Work on **words**; load `hierarchy`, `color`, or `motion` when the approved scop
 - Apply the parent's **would the reader miss it?** test to each string.
   - Shorten surviving text as far as clarity allows, keeping the parent's floor.
 - Give each string **one job** and say each idea once.
-  - *Readers should not have to separate new information from repetition.*
+  - _Readers should not have to separate new information from repetition._
 
 ## Truth
 
@@ -27,7 +27,7 @@ Work on **words**; load `hierarchy`, `color`, or `motion` when the approved scop
 >
 > Words need a **reader need**, even when there is room for them.
 
-*Repeated context makes readers spend time separating new information from what they already know.*
+_Repeated context makes readers spend time separating new information from what they already know._
 Apply the parent's test to these word-level tells:
 
 - **Repeated context:** text that says what the screen already shows.

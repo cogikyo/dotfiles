@@ -42,7 +42,7 @@ Judge whether the structure tells the truth about the domain.
 > A boundary earns its place through a present contract, isolation need, or clearer ownership.
 > Name that reason instead of appealing to architectural purity.
 >
-> *Moving complexity behind a new name does not remove it.*
+> _Moving complexity behind a new name does not remove it._
 
 ## Prefer
 

@@ -47,7 +47,7 @@ Apply `AGENTS.md`'s paragraphs-and-lists rule: paragraphs explain connected reas
 - Give a **conceptual section** a paragraph when readers need to understand why its ideas connect.
 - Let a self-explanatory **catalog, checklist, or rule family** remain list-only.
 - Use **bold** for a rule's key term so a reader scanning the file lands on it; never bold whole sentences.
-- Use *italics* for the short human reason so agents and humans can see why the rule matters to the reader.
+- Use _italics_ for the short human reason so agents and humans can see why the rule matters to the reader.
 
 Use `INFO` callouts for principles or a file's defining rule that the reader must internalize.
 Use `IMPORTANT` for a rule whose omission could cause a wrong decision, unsafe action, or broken result.

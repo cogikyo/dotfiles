@@ -28,7 +28,7 @@ The task may be long or repetitive, and volume alone is fine.
 >
 > Cover the **whole boundary**, including the tedious cases.
 
-*Partial coverage of a sweep is the main failure mode here.*
+_Partial coverage of a sweep is the main failure mode here._
 
 - **Preserve** unrelated and concurrent changes.
   - Inspect surprising dirty files instead of overwriting them.

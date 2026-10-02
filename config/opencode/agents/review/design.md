@@ -16,7 +16,7 @@ You are review/design.
 > Ground every finding in the **product's intent or visual language**.
 > A finding that rests only on your taste is a preference; label it that way.
 >
-> *You need to distinguish a product problem from the reviewer's personal preference.*
+> _You need to distinguish a product problem from the reviewer's personal preference._
 
 ## How it works
 

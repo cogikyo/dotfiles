@@ -28,7 +28,7 @@ You are scout/context.
 Use these dimensions **when they help the route**:
 
 - **Governing instructions:** `AGENTS.md` files, skills, and instruction docs for the target subtree, and which rules actually apply.
-  - Find them with `Glob` *instead of guessing paths*.
+  - Find them with `Glob` _instead of guessing paths_.
 - **Local conventions**, naming patterns, and formatting rules that constrain the work.
 - **Likely target files** plus nearby callers, configs, docs, and scripts.
 - **Candidate verification commands** and why each is relevant.

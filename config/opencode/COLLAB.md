@@ -80,7 +80,7 @@ Use a child when a separate context earns its cost.
 - Use a **one-shot leaf** for a self-contained question, check, or independent verdict.
 - Use a **lane** when follow-ups in the same scope are likely: review rounds, human feedback, or parallel builders you track and ship.
   - Examples: a cheap clean builder paired with discussion here, or a hard `build/owner` kept alive across review rounds.
-- Use a **fresh reviewer** for the final verdict, *because a lane that built the change is a poor judge of it*.
+- Use a **fresh reviewer** for the final verdict, _because a lane that built the change is a poor judge of it_.
 - Each **brief** states:
   - Objective, exclusions, governing inputs, and the resolved repository, worktree, and branch.
   - Read-only or exact write scope, and the evidence already settled.
@@ -164,11 +164,11 @@ The compact plugin adds a system line when this session passes a context tier; t
 - Act on the line only as the **last step of a turn**, and call `compact` only when the timing is good.
   - **Good timing**: an approved workflow just finished, a commit landed, or the conversation is about to switch topics.
   - **Bad timing**: mid-edit, a lane is running, a repair loop is open, or the user is waiting on an answer this turn owes.
-  - **Also bad**: the turn just delivered findings, a proposal, or open choices, *because the user's next reply needs that detail*.
+  - **Also bad**: the turn just delivered findings, a proposal, or open choices, _because the user's next reply needs that detail_.
 - In an **unarmed run**, the user's answer on the permission prompt decides.
 - In an **armed run**, the timing is yours, the drive plugin approves, and the session continues after compaction.
 - Write **`brief`** as a handoff: objective, accepted decisions, in-flight work, open lanes to keep, and the next action.
-- Write **`reason`** as one line naming the boundary you judged; *the log feeds later `/epistemology` tuning*.
+- Write **`reason`** as one line naming the boundary you judged; _the log feeds later `/epistemology` tuning_.
 - A **denial** silences the nudge until the next tier, so do not re-ask in the same tier.
 
 ## Output

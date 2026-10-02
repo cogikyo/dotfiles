@@ -59,7 +59,7 @@ Other lenses judge what the code is; you propose what it should be.
 > State what should change and why, without **hedging words** such as "consider" or "might".
 > Name the condition that would prove you wrong.
 >
-> *A stated target and a condition that would prove it wrong let you challenge the recommendation.*
+> _A stated target and a condition that would prove it wrong let you challenge the recommendation._
 
 ## Flags for other lenses
 

@@ -61,19 +61,19 @@ ewwd action timer alarm up <minutes>      # add minutes
 
 ## Providers
 
-| Provider   | Source              | Data                                      |
-|------------|---------------------|-------------------------------------------|
-| audio      | WirePlumber         | default sink/source volume, mute, identity |
-| bluetooth  | BlueZ D-Bus         | tracked headphone connection and battery  |
-| music      | D-Bus (Spotify)     | playback status, track info, album art    |
-| network    | /proc/net/dev       | upload/download speeds                    |
-| date       | time                | time, date, clockface icons, weeks alive  |
-| clock      | time                | wall-aligned hour, minute, second          |
-| computer   | procfs/sysfs        | RAM use, NVMe Composite temperature       |
-| cycle-5    | time                | wall-aligned scalar display cycle          |
-| cycle-6    | time                | wall-aligned scalar display cycle          |
-| weather    | OpenWeatherMap API  | temperature, conditions, moon phase, wind |
-| timer      | internal            | countdown timer and alarm                 |
+| Provider  | Source             | Data                                       |
+| --------- | ------------------ | ------------------------------------------ |
+| audio     | WirePlumber        | default sink/source volume, mute, identity |
+| bluetooth | BlueZ D-Bus        | tracked headphone connection and battery   |
+| music     | D-Bus (Spotify)    | playback status, track info, album art     |
+| network   | /proc/net/dev      | upload/download speeds                     |
+| date      | time               | time, date, clockface icons, weeks alive   |
+| clock     | time               | wall-aligned hour, minute, second          |
+| computer  | procfs/sysfs       | RAM use, NVMe Composite temperature        |
+| cycle-5   | time               | wall-aligned scalar display cycle          |
+| cycle-6   | time               | wall-aligned scalar display cycle          |
+| weather   | OpenWeatherMap API | temperature, conditions, moon phase, wind  |
+| timer     | internal           | countdown timer and alarm                  |
 
 Each provider implements the `providers.Provider` interface and runs in its own goroutine. Providers that support user interaction also implement `providers.ActionProvider`.
 

@@ -11,7 +11,7 @@ Use `hierarchy` for visual ordering; this skill owns palette and color meaning.
 ## Reserve the accent
 
 Let **neutrals dominate** and use color as an accent.
-*A quiet base makes meaningful color easier to recognize.*
+_A quiet base makes meaningful color easier to recognize._
 
 - Use **one accent per view** for primary action, current selection, or state.
   - Avoid assigning new accents to ordinary content for decoration.
@@ -28,7 +28,7 @@ Let **neutrals dominate** and use color as an accent.
   - Pair it with a label, shape, icon, or other perceivable cue appropriate to the state.
 - Keep text, controls, and focus indicators at the **required contrast** against their actual backgrounds.
   - Check relevant themes and states, including colored surfaces.
-  - *A subdued palette must still be legible to the people using it.*
+  - _A subdued palette must still be legible to the people using it._
 - Never use **glow as the primary affordance**.
   - The control must remain recognizable without the glow.
 

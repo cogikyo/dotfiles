@@ -16,7 +16,7 @@ Apply a project copy guide to words as well.
 > - Every element and every unit of emphasis spends it.
 > - Spend it on what the user needs to understand or do.
 
-*More things to read or notice make the important things harder to find.*
+_More things to read or notice make the important things harder to find._
 Presence itself signals importance; adding emphasis increases that claim.
 
 ## The test
@@ -27,7 +27,7 @@ Presence itself signals importance; adding emphasis increases that claim.
   - If so, keep the meaning and remove treatment that does no useful work.
 - Judge the **move**, not a catalog of forbidden shapes.
   - The subskills' clutter tells are prompts to inspect purpose, not automatic defects.
-  - *Bans only relocate clutter when the same habit survives in another form.*
+  - _Bans only relocate clutter when the same habit survives in another form._
 
 ## Floor
 
@@ -36,7 +36,7 @@ Presence itself signals importance; adding emphasis increases that claim.
   - Do not hide task-essential meaning in tooltips.
 - Keep **hierarchy** and deliberate character.
   - Giving everything the same size and weight makes importance harder to see.
-  - *Restraint must leave the product understandable and usable.*
+  - _Restraint must leave the product understandable and usable._
 
 ## Load the relevant subskills
 

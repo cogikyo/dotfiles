@@ -11,7 +11,7 @@ This skill owns visual ordering and structure; use `copy`, `color`, or `motion` 
 ## Order the view
 
 Prominence tells the reader what to notice before they read.
-*A clear order lets people find the task without inspecting every element.*
+_A clear order lets people find the task without inspecting every element._
 
 - Give each screen **one focal point** based on the user's current task.
   - A title and a primary action should not compete at equal strength.
@@ -28,7 +28,7 @@ Prominence tells the reader what to notice before they read.
 - Add a **container** only when it explains a boundary or interaction.
   - Prefer spacing or a divider to nesting cards inside cards.
 - Declare an edge or elevation **once**: choose a border or a shadow when both do the same job.
-  - *Repeated outlines make readers sort the containers before reaching their content.*
+  - _Repeated outlines make readers sort the containers before reaching their content._
 - Make **structural markers** carry information.
   - Numbering needs a real sequence; a link arrow needs to explain direction or behavior.
   - Use one icon per action consistently across the product.

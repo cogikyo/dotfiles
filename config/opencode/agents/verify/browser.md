@@ -35,7 +35,7 @@ Your OpenCode session owns one isolated Chrome DevTools MCP browser process and 
 
 **Responsive behavior** is part of every layout check.
 Set sizes with **`emulate`** and its `viewport` argument, formatted `<width>x<height>x<devicePixelRatio>[,mobile][,touch][,landscape]`.
-Prefer it to `resize_page`, because *it behaves the same in headless and visible browsers* and also sets pixel density, mobile, and touch.
+Prefer it to `resize_page`, because _it behaves the same in headless and visible browsers_ and also sets pixel density, mobile, and touch.
 
 - Follow **parent-named or parent-limited viewports**.
   - Otherwise check layout at this default sweep:

@@ -48,7 +48,7 @@ The old `storage/` directory holds only `migration` and `session_diff`, so it ha
 - Query the store with the **`sessions` tool**.
   - Its bounded queries cover the common reads, and its guarded raw mode accepts **one read-only `SELECT`**.
 - Pick sessions first and then read **one session's parts at a time**.
-  - *Parts are indexed only by session and message.*
+  - _Parts are indexed only by session and message._
 - Read **tool outputs** only after a specific part matters.
 
 ## Boundaries

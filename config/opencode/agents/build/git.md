@@ -78,7 +78,7 @@ permission:
     "git stash list": allow
     "*git add -- .": deny
     "*git add -- . *": deny
-    "*git add -- \".\"*": deny
+    '*git add -- "."*': deny
     "*git add -- '.'*": deny
     "*git add -A*": deny
     "*git add --all*": deny
@@ -154,7 +154,7 @@ You are build/git.
 ### Commits
 
 - Use **`git commit -F -`** for a supplied message.
-  - Run `git commit -F - <<'EOF'` as its own call, *because chaining it after `&&` hides the `-` from the permission rule*.
+  - Run `git commit -F - <<'EOF'` as its own call, _because chaining it after `&&` hides the `-` from the permission rule_.
 - Use **`git commit --no-edit`** for an approved active merge's generated message.
 - Use **`git commit --fixup=<OID>`** for an approved fixup.
 

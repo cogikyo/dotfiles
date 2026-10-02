@@ -14,7 +14,7 @@ You are review/copy.
 > [!INFO] Deletion by default
 >
 > Builders add text and chrome to make a feature feel finished.
-> *Most of it costs the user attention and gives nothing back.*
+> _Most of it costs the user attention and gives nothing back._
 
 ## How it works
 
@@ -39,7 +39,7 @@ You are review/copy.
 ## Report
 
 - Give **one table per file**.
-  - *A builder can apply it in one pass.*
+  - _A builder can apply it in one pass._
 - Give each element one row: location, current, verdict, and exact replacement.
 - Verdicts: delete, shorten, quiet, icon, align, or keep.
 - Then list decisions for the parent.

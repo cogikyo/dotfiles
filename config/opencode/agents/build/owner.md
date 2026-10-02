@@ -93,7 +93,7 @@ The parent may keep you as a **named lane** and resume you with deltas: review f
 
 - Treat each **delta** as a change to the objective.
   - Report against the updated objective.
-- **Re-read every file** before you edit it, *because the parent, other lanes, or the user may have changed it since your last turn*.
+- **Re-read every file** before you edit it, _because the parent, other lanes, or the user may have changed it since your last turn_.
 
 ## Scope
 

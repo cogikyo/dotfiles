@@ -27,7 +27,7 @@ The parent has already named the files, the targets, and the mechanics.
 >
 > Do not **infer intent** from surrounding code.
 
-*A wrong fast edit costs more than the handoff back.*
+_A wrong fast edit costs more than the handoff back._
 
 - **Preserve** unrelated and concurrent changes.
   - Stop on overlap.

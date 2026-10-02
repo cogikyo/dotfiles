@@ -11,7 +11,7 @@ This skill owns change over time; use `hierarchy` and `color` for static emphasi
 ## Give movement a purpose
 
 Motion should convey **state, cause and effect**, or a relationship that is hard to understand while still.
-*People should see what changed and why without waiting for decoration.*
+_People should see what changed and why without waiting for decoration._
 
 - Name what each animation **explains** before adding it.
   - An opening panel can show where it came from; progress can show ongoing work.
@@ -29,7 +29,7 @@ Motion should convey **state, cause and effect**, or a relationship that is hard
   - Remove non-essential movement and provide a still or reduced-motion version of needed feedback.
 - Keep the resulting **state understandable** without its animation.
   - Do not make content or status depend on a reveal completing.
-  - *Users who avoid movement still need to know what happened.*
+  - _Users who avoid movement still need to know what happened._
 
 ## Clutter tells
 

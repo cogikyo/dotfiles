@@ -26,18 +26,18 @@ Interface version describes wire compatibility, while session generation describ
 The snapshot represents capability separately from current value so unsupported, unknown, false, and off remain distinct.
 It exposes these concepts when the connected model supports them:
 
-| Concept | Values |
-|---|---|
-| Interface version | A monotonic compatibility version |
-| Session generation | An opaque identity for the current service owner and AAP device session |
-| Device identity | The normalized public address of the managed device |
-| Device readiness | Initializing, ready, disconnected, or failed |
-| Device-native battery | Aggregate percentage, validity, and charging status when available |
-| Noise control | Off, noise cancellation, transparency, or adaptive |
-| Wear state | Unknown, worn, or not worn |
-| Conversation awareness | Supported and enabled state |
-| Personalized volume | Supported and enabled state |
-| High-resolution microphone | Supported and enabled state |
+| Concept                    | Values                                                                  |
+| -------------------------- | ----------------------------------------------------------------------- |
+| Interface version          | A monotonic compatibility version                                       |
+| Session generation         | An opaque identity for the current service owner and AAP device session |
+| Device identity            | The normalized public address of the managed device                     |
+| Device readiness           | Initializing, ready, disconnected, or failed                            |
+| Device-native battery      | Aggregate percentage, validity, and charging status when available      |
+| Noise control              | Off, noise cancellation, transparency, or adaptive                      |
+| Wear state                 | Unknown, worn, or not worn                                              |
+| Conversation awareness     | Supported and enabled state                                             |
+| Personalized volume        | Supported and enabled state                                             |
+| High-resolution microphone | Supported and enabled state                                             |
 
 State changes emit only after the shared LibrePods snapshot changes.
 A new client can obtain complete current truth without waiting for a future signal.

@@ -29,7 +29,7 @@ Critique the named plan, spec, options, or acceptance criteria for consequential
 > - A plausible **failure mechanism** with its blast radius.
 > - A named uncertainty that could change the decision.
 >
-> *This lets you separate established flaws from evidence still needed to decide.*
+> _This lets you separate established flaws from evidence still needed to decide._
 
 - Challenge stages, features, and obligations the objective does not need when they add:
   - Failure surface.

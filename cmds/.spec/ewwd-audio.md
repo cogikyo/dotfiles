@@ -46,12 +46,12 @@ The existing hyprd Bluetooth device setting is the canonical address, and the sh
 
 The `bluetooth` topic has this contract:
 
-| Field | Meaning |
-|---|---|
-| `status` | One of `unknown`, `disconnected`, `connecting`, or `connected` |
-| `name` | BlueZ device name when known |
-| `battery_present` | Whether the percentage is authoritative |
-| `battery_percent` | Aggregate headphone percentage, meaningful only when present |
+| Field             | Meaning                                                        |
+| ----------------- | -------------------------------------------------------------- |
+| `status`          | One of `unknown`, `disconnected`, `connecting`, or `connected` |
+| `name`            | BlueZ device name when known                                   |
+| `battery_present` | Whether the percentage is authoritative                        |
+| `battery_percent` | Aggregate headphone percentage, meaningful only when present   |
 
 `unknown` means BlueZ truth is temporarily unavailable.
 `disconnected` means BlueZ authoritatively reports the tracked device disconnected.
@@ -86,13 +86,13 @@ The transient is never allowed to persist indefinitely.
 
 The headphone unit follows the existing compact-at-rest and detail-on-hover grammar.
 
-| State | Resting presentation | Detail |
-|---|---|---|
-| Unknown | Dim unknown glyph and `––` | Tooltip says Bluetooth is unavailable |
-| Disconnected | Dim disconnected Bluetooth glyph | Tooltip says AirPods Max is disconnected |
-| Connecting | Orange connecting Bluetooth glyph and `––` | Tooltip says AirPods Max is connecting |
-| Connected without battery | Unknown-battery glyph and `––` | Hover reveals the device name |
-| Connected with battery | Battery-level glyph and permanent `NN%` | Hover reveals the device name; tooltip repeats exact state |
+| State                     | Resting presentation                       | Detail                                                     |
+| ------------------------- | ------------------------------------------ | ---------------------------------------------------------- |
+| Unknown                   | Dim unknown glyph and `––`                 | Tooltip says Bluetooth is unavailable                      |
+| Disconnected              | Dim disconnected Bluetooth glyph           | Tooltip says AirPods Max is disconnected                   |
+| Connecting                | Orange connecting Bluetooth glyph and `––` | Tooltip says AirPods Max is connecting                     |
+| Connected without battery | Unknown-battery glyph and `––`             | Hover reveals the device name                              |
+| Connected with battery    | Battery-level glyph and permanent `NN%`    | Hover reveals the device name; tooltip repeats exact state |
 
 Known battery uses the installed Material Design Nerd Font battery ladder in ten-percent steps, including the `󰁽` family rather than a new progress ring.
 The glyph and percentage share a battery-specific color ramp: healthy charge remains quiet blue, 20–39% becomes warm, and charge below 20% becomes ruby and uses the alert glyph.

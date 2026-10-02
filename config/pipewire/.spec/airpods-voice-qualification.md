@@ -12,14 +12,14 @@ Every take records source identity, sample format, gain state, processing state,
 
 The corpus contains:
 
-| Material | Contract |
-|---|---|
-| Room tone | At least 60 seconds with no speech or deliberate movement |
-| Hum | At least 30 seconds under the condition where the user hears the steady tone |
-| Keyboard | At least 30 seconds of representative typing and mouse use without speech |
-| Speech over keyboard | At least 30 seconds of soft and normal speech during representative typing |
-| Whisper, soft, normal, projected | Three independent takes per register from a fixed sentence set |
-| Duplex | Familiar A2DP playback during whisper, normal speech, and silence |
+| Material                         | Contract                                                                     |
+| -------------------------------- | ---------------------------------------------------------------------------- |
+| Room tone                        | At least 60 seconds with no speech or deliberate movement                    |
+| Hum                              | At least 30 seconds under the condition where the user hears the steady tone |
+| Keyboard                         | At least 30 seconds of representative typing and mouse use without speech    |
+| Speech over keyboard             | At least 30 seconds of soft and normal speech during representative typing   |
+| Whisper, soft, normal, projected | Three independent takes per register from a fixed sentence set               |
+| Duplex                           | Familiar A2DP playback during whisper, normal speech, and silence            |
 
 Short Dunst prompts disappear before each take starts, and each material class records independently so notification timing cannot corrupt labels.
 The user explicitly agrees before every recording session.
@@ -60,16 +60,16 @@ The lowest attenuation passing every requirement on the tuning set wins.
 That winner receives one evaluation on the confirmation set.
 Failure on confirmation leaves the processor unqualified rather than reopening tuning against the holdout.
 
-| Property | Acceptance |
-|---|---|
-| Whisper energy | No more than `2 dB` loss against bypass |
-| Whisper recognition | Average word confidence drops by at most `0.03`, and word error rises by at most five percentage points |
-| Normal-speech transparency | RMS differs by at most `1 dB` against bypass |
-| Room-noise reduction | Mean energy falls by at least `10 dB` |
-| Keyboard-only reduction | Mean energy falls by at least `10 dB`, and peak energy falls by at least `8 dB` |
-| Speech over keyboard | Recognition stays within the whisper limits while blind comparison clearly favors the processed noise balance |
-| Clean speech | Processed speech is not judged less natural in more than three of twelve blind comparisons |
-| Noisy speech | Processed speech is preferred in at least eight of twelve blind comparisons |
+| Property                   | Acceptance                                                                                                    |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| Whisper energy             | No more than `2 dB` loss against bypass                                                                       |
+| Whisper recognition        | Average word confidence drops by at most `0.03`, and word error rises by at most five percentage points       |
+| Normal-speech transparency | RMS differs by at most `1 dB` against bypass                                                                  |
+| Room-noise reduction       | Mean energy falls by at least `10 dB`                                                                         |
+| Keyboard-only reduction    | Mean energy falls by at least `10 dB`, and peak energy falls by at least `8 dB`                               |
+| Speech over keyboard       | Recognition stays within the whisper limits while blind comparison clearly favors the processed noise balance |
+| Clean speech               | Processed speech is not judged less natural in more than three of twelve blind comparisons                    |
+| Noisy speech               | Processed speech is preferred in at least eight of twelve blind comparisons                                   |
 
 If no DeepFilterNet attenuation passes, no candidate becomes qualified.
 The stable source remains available for diagnosis but does not become the default.

@@ -38,7 +38,7 @@ Use these dimensions **when they help answer the question**:
 ## Boundaries
 
 - Do not **deep-dive into one option** when the ask is breadth.
-  - *Three shallow candidates beat one polished favorite.*
+  - _Three shallow candidates beat one polished favorite._
 - Do not make the **final selection**; recommend a shortlist.
 - Leave **reuse inside the codebase** to `scout/library`.
 - Do not **delegate or ask the user**.

@@ -28,7 +28,7 @@ Find reachable correctness bugs and the root-cause repair.
 >
 > A finding needs a **reachable trigger**.
 >
-> *Defensive code against states that cannot occur is noise.*
+> _Defensive code against states that cannot occur is noise._
 
 - A default, retry, or fallback that hides a broken contract is a defect unless it is the documented contract.
 

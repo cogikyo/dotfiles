@@ -13,23 +13,23 @@ In the table below, domain paths are relative to `cmds/internal/hyprd/`, entrypo
 
 ## Where to find things
 
-| Task | Start here |
-|---|---|
-| Startup sequence / "what happens when hyprd boots" | `session/init.go` → `Init.Execute` |
-| Session definitions (dotfiles, leadpier, cogikyo) | `config/hyprd.yaml` → `sessions.*` |
-| How a session maps to windows | `session/layout.go` → `Layout.openSession` |
-| Window types that make up a session | `cmds/internal/config/hyprd.go` → compiled `ThreeBody` map |
-| Which session opens on which workspace at boot | `config/hyprd.yaml` → `sessions` entries with `init: true` |
-| Command routing (CLI → daemon) | `main.go` → `daemon.go` dispatch table |
-| CLI-only tools (no daemon needed) | `cli/` — screenshot, VPN |
-| Hyprland event → state update | `events.go` |
-| Adding a new daemon command | add file in `wm/`, register in `daemon.go` |
-| Adding a new CLI-only tool | add file in `cli/`, register in `main.go` |
-| Notification styling and sounds | `config/hyprd.yaml` → `notify.*`, logic in `notify/handler.go` |
-| Notification activation (click or Alt+C) | `notify/actions.go` — pending app routes + D-Bus ActionInvoked listener |
-| Kitty tab profiles (editor/agents/leadpier) | `config/hyprd.yaml` → `tabs.*`, logic in `kitty/select.go` + `kitty/manage.go` |
-| Interactive session picker | `session/picker.go` → `Picker.Execute` |
-| Firefox session snapshots | `browser/` — snapshot, restore, profile discovery |
+| Task                                               | Start here                                                                     |
+| -------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Startup sequence / "what happens when hyprd boots" | `session/init.go` → `Init.Execute`                                             |
+| Session definitions (dotfiles, leadpier, cogikyo)  | `config/hyprd.yaml` → `sessions.*`                                             |
+| How a session maps to windows                      | `session/layout.go` → `Layout.openSession`                                     |
+| Window types that make up a session                | `cmds/internal/config/hyprd.go` → compiled `ThreeBody` map                     |
+| Which session opens on which workspace at boot     | `config/hyprd.yaml` → `sessions` entries with `init: true`                     |
+| Command routing (CLI → daemon)                     | `main.go` → `daemon.go` dispatch table                                         |
+| CLI-only tools (no daemon needed)                  | `cli/` — screenshot, VPN                                                       |
+| Hyprland event → state update                      | `events.go`                                                                    |
+| Adding a new daemon command                        | add file in `wm/`, register in `daemon.go`                                     |
+| Adding a new CLI-only tool                         | add file in `cli/`, register in `main.go`                                      |
+| Notification styling and sounds                    | `config/hyprd.yaml` → `notify.*`, logic in `notify/handler.go`                 |
+| Notification activation (click or Alt+C)           | `notify/actions.go` — pending app routes + D-Bus ActionInvoked listener        |
+| Kitty tab profiles (editor/agents/leadpier)        | `config/hyprd.yaml` → `tabs.*`, logic in `kitty/select.go` + `kitty/manage.go` |
+| Interactive session picker                         | `session/picker.go` → `Picker.Execute`                                         |
+| Firefox session snapshots                          | `browser/` — snapshot, restore, profile discovery                              |
 
 ## Startup flow
 

@@ -20,12 +20,12 @@ WirePlumber may choose another available default during that interval, so servic
 
 Each microphone application receives one explicit disposition:
 
-| Disposition | Meaning |
-|---|---|
-| Processed | The application uses `AirPods Voice` with its own suppression, automatic gain, and echo cancellation disabled or minimized |
-| Compatible | Unavoidable application processing remains enabled and passes the double-processing checks |
-| Raw-owned | The application uses `AirPodsHiRes` because its unavoidable processor performs better as the sole suppressor |
-| Unsupported | Neither source meets intelligibility and artifact requirements, so the application is excluded from the quality guarantee |
+| Disposition | Meaning                                                                                                                    |
+| ----------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Processed   | The application uses `AirPods Voice` with its own suppression, automatic gain, and echo cancellation disabled or minimized |
+| Compatible  | Unavoidable application processing remains enabled and passes the double-processing checks                                 |
+| Raw-owned   | The application uses `AirPodsHiRes` because its unavoidable processor performs better as the sole suppressor               |
+| Unsupported | Neither source meets intelligibility and artifact requirements, so the application is excluded from the quality guarantee  |
 
 Zoom, Slack, the primary browser call path, and the user's ordinary recording path each receive a disposition before rollout completes.
 No per-application daemon or automatic source-switching rule implements these choices.
