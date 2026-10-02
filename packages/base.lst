@@ -57,7 +57,6 @@ networkmanager
 networkmanager-l2tp
 openbsd-netcat
 socat
-strongswan
 tailscale
 wget
 whois
