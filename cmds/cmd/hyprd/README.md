@@ -2,80 +2,14 @@
 
 Hyprland daemon and CLI.
 Connects to Hyprland's IPC sockets to manage windows, workspaces, and sessions, then exposes commands over a Unix socket.
-CLI-only tools (screenshot, SSH) run directly without the daemon.
+CLI-only tools (screenshot and VPN) run directly without the daemon.
 
 ## Structure
 
-```
-hyprd/
-├── main.go                     # CLI entry, command routing to daemon socket
-├── daemon.go                   # lifecycle, server setup, command dispatch table
-├── events.go                   # Hyprland event subscription loop → state updates
-├── hyprd.service               # systemd user unit
-│
-├── cli/                        # CLI-only commands (no daemon socket, run directly)
-│   ├── screenshot.go           #   region screenshot: wayfreeze + grim + satty
-│   └── ssh.go                  #   PAM-driven SSH key loading via ssh-agent
-│
-├── vpn/                        # VPN connection management via NetworkManager
-│   └── vpn.go                  #   list, status, toggle, up, down (nmcli)
-│
-├── browser/                    # Firefox session snapshot and restore
-│   ├── browser.go              #   subcommand dispatch (windows/snapshot/show/hypr/restore)
-│   ├── firefox.go              #   profile discovery + sessionstore loading
-│   ├── mozlz4.go               #   Mozilla LZ4 decompression
-│   ├── profile.go              #   Firefox profile path resolution
-│   ├── restore.go              #   exact session merge and restore
-│   ├── session_store.go        #   sessionstore JSON parsing
-│   ├── snapshot.go             #   named snapshot creation from browser windows
-│   ├── browser_test.go         #   tests
-│   └── sessions/               #   saved session snapshots (json + yaml)
-│
-├── hypr/                       # Hyprland IPC socket client
-│   └── socket.go               #   command socket + event socket primitives
-│
-├── session/                    # startup, layout spawning, kitty tabs
-│   ├── init.go                 #   Init.Execute: startup orchestration (bg → net → layouts → execs → pseudo-lock)
-│   ├── layout.go               #   Layout.openSession: spawns windows from sessions.<name>.body
-│   ├── lock.go                 #   Lock.{Pseudo,Unlock,Full}: visual blackout, audio/notify pause, restore
-│   ├── bg.go                   #   mpvpaper wallpaper lifecycle
-│   ├── picker.go               #   interactive eww session picker overlay
-│   ├── kitty.go                #   kitty remote-control client
-│   ├── tab.go                  #   `hyprd tab <profile>:<index>` - focus profile window + switch physical tab
-│   ├── tabs.go                 #   `hyprd tabs init/refresh` - hydrate from config + titles
-│   └── profile.go              #   detect which tab profile (editor/agents/leadpier) owns a kitty window
-│
-├── state/                      # thread-safe daemon state + derived views
-│   ├── state.go                #   State struct, JSON dump, config accessor
-│   ├── workspace.go            #   current ws + displaced-master tracking
-│   ├── sessions.go             #   active session per workspace, project paths
-│   ├── hidden.go               #   type defs: HiddenState, ThreeBodyState, MonocleState
-│   ├── monocle.go              #   per-ws monocle state getters/setters
-│   ├── threebody.go            #   per-ws three-body state getters/setters
-│
-├── wm/                         # window/workspace actions (each file = one command)
-│   ├── ws.go                   #   `hyprd ws <n|up|down>` - switch + focus master
-│   ├── split.go                #   `hyprd split [-x|-d|-l]` - cycle/set master ratio
-│   ├── hide.go                 #   `hyprd hide` - toggle slave → special:hiddenSlaves
-│   ├── swap.go                 #   `hyprd swap` - exchange master/slave
-│   ├── monocle.go              #   `hyprd monocle` - float focused to dedicated ws
-│   ├── float.go                #   `hyprd float` - toggle float, centered at monocle size
-│   ├── focus.go                #   `hyprd focus <class> [title]` - focus + unhide
-│   └── threebody.go            #   three-window layout with shadow-ws swapping
-│
-├── windows/                    # window-level helpers used across wm/
-│   ├── match.go                #   class/title matching
-│   └── tiled.go                #   sorted tiled window list, cursor centering
-│
-└── notify/                     # notification formatting + delivery (dunst bridge)
-    ├── handler.go              #   dispatch by source (opencode/kitty/dunst/send)
-    ├── cli.go                  #   `hyprd notify ...` CLI parsing
-    ├── actions.go              #   pending app routes + D-Bus listener for notification activation
-    ├── assets.go               #   sound/icon path constants
-    ├── context.go              #   per-ws notification context
-    ├── helpers.go              #   sound/icon resolution from config
-    └── types.go                #   NotifyRequest, Notifier
-```
+The entrypoint, daemon, and event dispatch live in `cmds/cmd/hyprd/`.
+Domain packages live in `cmds/internal/hyprd/`, with direct screenshot and VPN commands under `cli/`.
+The user unit is `config/systemd/user/hyprd.service` at the repo root.
+In the table below, domain paths are relative to `cmds/internal/hyprd/`, entrypoint files to `cmds/cmd/hyprd/`, and config paths to `cmds/`.
 
 ## Where to find things
 
@@ -84,44 +18,25 @@ hyprd/
 | Startup sequence / "what happens when hyprd boots" | `session/init.go` → `Init.Execute` |
 | Session definitions (dotfiles, leadpier, cogikyo) | `config/hyprd.yaml` → `sessions.*` |
 | How a session maps to windows | `session/layout.go` → `Layout.openSession` |
-| Window types that make up a session | `config/hyprd.yaml` → `three_body.*` |
+| Window types that make up a session | `cmds/internal/config/hyprd.go` → compiled `ThreeBody` map |
 | Which session opens on which workspace at boot | `config/hyprd.yaml` → `sessions` entries with `init: true` |
 | Command routing (CLI → daemon) | `main.go` → `daemon.go` dispatch table |
-| CLI-only tools (no daemon needed) | `cli/` — screenshot, SSH |
+| CLI-only tools (no daemon needed) | `cli/` — screenshot, VPN |
 | Hyprland event → state update | `events.go` |
 | Adding a new daemon command | add file in `wm/`, register in `daemon.go` |
 | Adding a new CLI-only tool | add file in `cli/`, register in `main.go` |
 | Notification styling and sounds | `config/hyprd.yaml` → `notify.*`, logic in `notify/handler.go` |
 | Notification activation (click or Alt+C) | `notify/actions.go` — pending app routes + D-Bus ActionInvoked listener |
-| Kitty tab profiles (editor/agents/leadpier) | `config/hyprd.yaml` → `tabs.*`, logic in `session/tab.go` + `tabs.go` |
+| Kitty tab profiles (editor/agents/leadpier) | `config/hyprd.yaml` → `tabs.*`, logic in `kitty/select.go` + `kitty/manage.go` |
 | Interactive session picker | `session/picker.go` → `Picker.Execute` |
 | Firefox session snapshots | `browser/` — snapshot, restore, profile discovery |
 
 ## Startup flow
 
-```
-hyprland.lua: hl.exec_cmd("hyprd init")
-  └─ cmdInit (main.go)
-      ├─ import Wayland env into systemd
-      ├─ systemctl start hyprd.service
-      ├─ wait for daemon socket
-      └─ sendCommand("init")
-          └─ Daemon.handleCommand("init") (daemon.go)
-              └─ Init.Execute (session/init.go)
-                  ├─ EnsureBG                        # mpvpaper wallpaper
-                  ├─ waitNetwork
-                  ├─ Layout.Execute(name) per session in init.sessions
-                  │   └─ openSession (session/layout.go)
-                  │       ├─ workspace <n>
-                  │       ├─ for each body entry → exec three_body.<name>.command
-                  │       ├─ layoutmsg mfact exact <split.default>
-                  │       └─ focuswindow <master>
-                  ├─ dispatchStartup                 # glava, spotify, bluetooth
-                  ├─ workspace init.workspace
-                  └─ Lock.Pseudo (if init.lock)      # blackout + submap
-```
-
-Unlock restores the saved workspace and calls `dispatchStartup` so the glava/spotify/bluetooth restore surface lives in one place.
+`hyprd init` imports the Wayland environment into systemd and D-Bus, starts the session target and user services, waits for the daemon socket, and sends `init`.
+The daemon ensures the wallpaper, optionally waits for the network, restores eww and the initial browser layouts, opens configured sessions, and selects the initial workspace.
+It also starts glava and Spotify and connects the configured Bluetooth device.
+SDDM handles login authentication; hyprd does not lock the session at startup.
 
 ## Commands
 
@@ -133,20 +48,31 @@ hyprd status --json      # full state dump
 hyprd rebuild            # rebuild binary and hot-restart (preserves state)
 ```
 
+### Rebuild
+
+`hyprd rebuild` builds from `~/dotfiles/cmds` or `$DOTFILES/cmds`, installs `~/.local/bin/hyprd`, saves runtime state, and restarts in place.
+It refuses during a full lock.
+Use a scratch build for build-only checks; `hyprd rebuild` changes the running daemon.
+
 ### Window management
 
 ```bash
-hyprd monocle                # float focused window to dedicated workspace
+hyprd monocle                # float focused window in place and park tiled siblings
 hyprd float                  # toggle floating, centered at monocle size
 hyprd split                  # cycle split ratio: xs → default → lg
-hyprd split -x|-d|-l         # set specific ratio
+hyprd split -d               # cycle split ratio like bare hyprd split
+hyprd split -x|-l            # set xs or lg ratio
+hyprd split default          # select the default ratio
 hyprd hide                   # move slave to special workspace
 hyprd swap                   # exchange master/slave positions
-hyprd ws <n>                 # switch workspace, focus master
+hyprd ws <n>                 # switch workspace with its transition animation
 hyprd ws up|down             # move active window between workspaces 2..5
 hyprd focus <class> [title]  # focus window by class, unhide if needed
-hyprd bg <mode>              # background: code, music, kill, lock, ensure
+hyprd bg ensure|kill         # ensure the wallpaper process or stop it
 ```
+
+Monocle keeps the focused window on its workspace and parks the other tiled windows on `special:mono<n>`.
+Run it again to restore the parked windows.
 
 ### Three-body & shadow
 
@@ -177,17 +103,26 @@ hyprd project <args>             # project path management
 ```bash
 hyprd edit <file>                # focus workspace nvim and open file
 hyprd tab <editor|agents>:<0..4> # focus profile window and switch physical tab
-hyprd tabs init <profile> <pid>  # hydrate tab titles on kitty spawn
-hyprd tabs refresh <name> <pid>  # re-apply titles
+hyprd tabs init <profile> <pid>  # launch configured tabs and close the launcher tab
+hyprd tabs refresh <name> <pid>  # close and recreate the selected tab
 ```
+
+**Tab refresh closes the tab and its running processes before creating the replacement.**
+Save work before running it.
 
 ### Lock
 
 ```bash
-hyprd lock             # pseudo-lock: workspace blackout + dunst pause + music pause + submap
-hyprd lock unlock      # exit pseudo-lock (alias: hyprd lock -u)
-hyprd lock full        # wraps hyprlock --grace 2 with the pseudo-lock pre/post hooks
+hyprd lock privacy     # unauthenticated privacy screen: blackout, audio/notification pause, submap
+hyprd lock idle        # enter the same privacy screen for idle use
+hyprd lock unlock      # exit the privacy screen (alias: hyprd lock -u)
+hyprd lock full        # supervise hyprlock --grace 0
 ```
+
+The privacy screen does not authenticate the user or secure the session.
+Full lock restores the workspace only after hyprlock exits successfully and refuses manual unlock or `hyprd rebuild` while active.
+It relaunches hyprlock after failure and attempts to end the session after three consecutive failures lasting less than three seconds each.
+Unlock restores the saved workspace and calls `dispatchStartup` to restore glava, Spotify, and Bluetooth.
 
 ### Browser
 
@@ -207,15 +142,8 @@ Browser snapshots are the Firefox layout primitive for sessions. The normal flow
 3. Reference it in `cmds/config/hyprd.yaml` as `browser: <name>`.
 4. Open the session with `hyprd layout <session>` or let `hyprd init` restore init sessions at boot.
 
-`browser: <name>` is shorthand for an exact restore of that snapshot. Use the expanded map only for non-snapshot URL launches:
-
-```yaml
-browser: leadpier
-
-browser:
-  urls:
-    - https://example.com
-```
+`browser: <name>` is shorthand for an exact restore of that snapshot.
+Session layouts require an explicit snapshot and exact restore; a URL-only browser map is invalid.
 
 Command meanings:
 
@@ -241,12 +169,6 @@ hyprd screenshot              # region screenshot to clipboard (wayfreeze + grim
 hyprd screenshot annotate     # region screenshot → satty annotation → clipboard
 ```
 
-### SSH
-
-```bash
-hyprd ssh pam-load            # load SSH keys via PAM auth token (called from hyprlock)
-```
-
 ### Notifications
 
 ```bash
@@ -270,7 +192,9 @@ hyprd vpn status           # active VPN summary
 hyprd vpn list             # list NetworkManager VPN connections
 ```
 
-Configured VPN profile paths live in `config/hyprd.yaml` under `vpn.connections`. Profiles are staged under `~/.local/share/dotfiles/vpn/` and should be encrypted through `etc/secrets`; `hyprd vpn install` prompts for a missing VPN password, updates the staged profile from NetworkManager, and then expects `secrets sync --force` to encrypt it.
+Configured VPN profile paths live in `cmds/config/hyprd.yaml` under `vpn.connections`.
+`hyprd vpn install` loads a complete staged profile into NetworkManager; an incomplete profile requires an existing connection.
+It prompts for a missing VPN password or IPsec PSK, stores and verifies the secrets in NetworkManager, then deletes the staged copy after success.
 
 ### Query and subscribe
 
@@ -293,9 +217,10 @@ eww integration:
 `cmds/config/hyprd.yaml` — overrides compiled defaults for:
 
 - `background` — mpvpaper wallpaper
-- `init` — boot sequence (sessions, execs, lock)
+- `init` — network wait and initial workspace
 - `notify` — sounds, icons, per-style appearance
 - `windows` — ignored classes, hidden/shadow workspace names, split presets, monocle sizing
 - `tabs` — kitty tab profiles (editor, agents, leadpier)
-- `three_body` — window building blocks (class, title, command) referenced by sessions
 - `sessions` — layouts grouped by workspace, then keyed by session name; `init: true` launches on boot (at most one per workspace)
+
+The window roles referenced by session bodies come from the compiled `ThreeBody` map in `cmds/internal/config/hyprd.go`.
