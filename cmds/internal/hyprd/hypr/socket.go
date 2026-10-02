@@ -106,6 +106,24 @@ func (c *Client) ActiveWorkspace() (int, error) {
 	return ws.ID, nil
 }
 
+func (c *Client) Locked() (bool, error) {
+	data, err := c.Request("j/locked")
+	if err != nil {
+		return false, err
+	}
+
+	var s struct {
+		Locked *bool `json:"locked"`
+	}
+	if err := json.Unmarshal(data, &s); err != nil {
+		return false, fmt.Errorf("parse locked: %w", err)
+	}
+	if s.Locked == nil {
+		return false, fmt.Errorf("parse locked: missing locked field in %q", data)
+	}
+	return *s.Locked, nil
+}
+
 // Clients returns all windows from `hyprctl -j clients`.
 func (c *Client) Clients() ([]Window, error) {
 	data, err := c.Request("j/clients")

@@ -14,12 +14,17 @@ import (
 	"dotfiles/cmds/internal/hyprd/state"
 )
 
-const privacyWorkspace = 6
+const (
+	privacyWorkspace = 6
+	pseudoSubmap     = "pseudolock"
+)
 
 const (
 	quickExit     = 3 * time.Second
 	quickExits    = 3
 	relaunchDelay = 2 * time.Second
+	lockPoll      = 50 * time.Millisecond
+	lockWait      = 10 * time.Second
 )
 
 // Lock owns privacy-screen and full-lock lifecycles: visual blackout, audio/notification pause, and restore.
@@ -49,8 +54,8 @@ func NewLock(h *hypr.Client, s *state.State) *Lock {
 // Execute routes privacy, idle privacy, unlock, and full lock.
 func (l *Lock) Execute(arg string) (string, error) {
 	switch strings.TrimSpace(arg) {
-	case "privacy":
-		return l.enterPrivacy("privacy")
+	case "pseudo":
+		return l.enterPrivacy("pseudo")
 	case "idle":
 		return l.enterPrivacy("idle")
 	case "-u", "unlock":
@@ -58,7 +63,7 @@ func (l *Lock) Execute(arg string) (string, error) {
 	case "full":
 		return l.Full()
 	default:
-		return "", fmt.Errorf("usage: lock [privacy|idle|unlock|full]")
+		return "", fmt.Errorf("usage: lock [pseudo|idle|unlock|full]")
 	}
 }
 
@@ -73,15 +78,15 @@ func (l *Lock) enterPrivacy(kind string) (string, error) {
 	if err := l.hypr.FocusWorkspace(privacyWorkspace); err != nil {
 		return "", fmt.Errorf("lock: switch to workspace %d: %w", privacyWorkspace, err)
 	}
-	if err := l.hypr.Submap("privacy"); err != nil {
+	if err := l.hypr.Submap(pseudoSubmap); err != nil {
 		rollbackErr := errors.Join(
 			l.hypr.Submap("reset"),
 			l.hypr.FocusWorkspace(saved.workspace),
 		)
 		if rollbackErr != nil {
-			return "", fmt.Errorf("lock: enter privacy submap: %w; rollback: %w", err, rollbackErr)
+			return "", fmt.Errorf("lock: enter %s submap: %w; rollback: %w", pseudoSubmap, err, rollbackErr)
 		}
-		return "", fmt.Errorf("lock: enter privacy submap: %w", err)
+		return "", fmt.Errorf("lock: enter %s submap: %w", pseudoSubmap, err)
 	}
 
 	l.saved = saved
@@ -131,18 +136,29 @@ func (l *Lock) Full() (string, error) {
 }
 
 // Adopt takes over a hyprlock left by a previous daemon: the full lock stays active until it exits, then hyprlock is relaunched.
-func (l *Lock) Adopt() {
-	if !l.running() {
-		return
+func (l *Lock) Adopt() error {
+	foreign := l.running()
+	if !foreign {
+		locked, err := l.hypr.Locked()
+		if err != nil {
+			return fmt.Errorf("lock: query session lock: %w", err)
+		}
+		if !locked {
+			return nil
+		}
+		fmt.Fprintln(os.Stderr, "hyprd lock: compositor locked without hyprlock; relaunching hyprlock")
 	}
 	l.mu.Lock()
 	l.inFull = true
 	l.mu.Unlock()
 
 	go func() {
-		l.awaitForeign()
+		if foreign {
+			l.awaitForeign()
+		}
 		l.hold()
 	}()
+	return nil
 }
 
 func (l *Lock) awaitForeign() {
@@ -157,6 +173,7 @@ func (l *Lock) hold() {
 		if launch > 1 {
 			time.Sleep(relaunchDelay)
 		}
+		l.submap(pseudoSubmap)
 		started := time.Now()
 		exited := make(chan error, 1)
 		go func() { exited <- l.hyprlock() }()
@@ -164,7 +181,7 @@ func (l *Lock) hold() {
 			l.cover()
 		}
 
-		err := <-exited
+		err := l.awaitLock(exited)
 		if err == nil {
 			l.release()
 			return
@@ -194,13 +211,60 @@ func (l *Lock) hold() {
 	}
 }
 
+func (l *Lock) awaitLock(exited <-chan error) error {
+	poll := time.NewTicker(lockPoll)
+	defer poll.Stop()
+	timeout := time.After(lockWait)
+	for {
+		select {
+		case err := <-exited:
+			return err
+		case <-timeout:
+			fmt.Fprintf(os.Stderr, "hyprd lock: compositor not locked after %v; keeping the %s submap\n", lockWait, pseudoSubmap)
+			return <-exited
+		case <-poll.C:
+			if l.compositorLocked() {
+				l.submap("reset")
+				return <-exited
+			}
+		}
+	}
+}
+
+func (l *Lock) compositorLocked() bool {
+	locked, err := l.hypr.Locked()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd lock: query session lock: %v\n", err)
+		return false
+	}
+	return locked
+}
+
+func (l *Lock) active() bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.saved != nil || l.inFull
+}
+
+func (l *Lock) resetSubmap() error {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.saved != nil || l.inFull {
+		return nil
+	}
+	return l.hypr.Submap("reset")
+}
+
+func (l *Lock) submap(name string) {
+	if err := l.hypr.Submap(name); err != nil {
+		fmt.Fprintf(os.Stderr, "hyprd lock: submap %s: %v\n", name, err)
+	}
+}
+
 func (l *Lock) cover() {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.saved != nil {
-		if err := l.hypr.Submap("reset"); err != nil {
-			fmt.Fprintf(os.Stderr, "hyprd lock: reset submap: %v\n", err)
-		}
 		return
 	}
 	l.saved = l.capture()
@@ -216,6 +280,7 @@ func (l *Lock) release() {
 	saved := l.saved
 	l.saved = nil
 	l.inFull = false
+	l.submap("reset")
 	if err := l.exitBlackout(saved); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd lock: unlock after hyprlock: %v\n", err)
 	}

@@ -18,6 +18,7 @@ import (
 type Picker struct {
 	hypr  *hypr.Client
 	state *state.State
+	lock  *Lock
 
 	mu        sync.Mutex
 	active    bool
@@ -42,8 +43,8 @@ type pickerSession struct {
 	Active   bool   `json:"active"`
 }
 
-func NewPicker(h *hypr.Client, s *state.State) *Picker {
-	return &Picker{hypr: h, state: s}
+func NewPicker(h *hypr.Client, s *state.State, l *Lock) *Picker {
+	return &Picker{hypr: h, state: s, lock: l}
 }
 
 func (p *Picker) Execute(arg string) (string, error) {
@@ -128,7 +129,7 @@ func (p *Picker) closeLocked() (string, error) {
 	if !p.active {
 		return "picker: not open", nil
 	}
-	if err := p.hypr.Submap("reset"); err != nil {
+	if err := p.lock.resetSubmap(); err != nil {
 		return "", fmt.Errorf("picker: reset submap: %w", err)
 	}
 	p.active = false
@@ -230,13 +231,17 @@ func (p *Picker) confirm() (string, error) {
 
 	go func() {
 		time.Sleep(350 * time.Millisecond)
-		if err := p.hypr.Submap("reset"); err != nil {
+		if err := p.lock.resetSubmap(); err != nil {
 			fmt.Printf("hyprd picker: reset submap: %v\n", err)
 		}
 		exec.Command("eww", "update", "picker-visible=false").Run()
 		time.Sleep(200 * time.Millisecond)
 		exec.Command("eww", "close", "picker").Run()
 
+		if p.lock.active() {
+			fmt.Printf("hyprd picker: lock active; skipping %s on ws%d\n", name, ws)
+			return
+		}
 		layout := NewLayout(p.hypr, p.state)
 		layout.Execute(fmt.Sprintf("set %d %s", ws, name))
 		layout.Execute(strconv.Itoa(ws))

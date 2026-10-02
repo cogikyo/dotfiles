@@ -2,6 +2,7 @@ package session
 
 import (
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"path/filepath"
@@ -17,11 +18,29 @@ import (
 	"dotfiles/cmds/internal/hyprd/state"
 )
 
-const restoreRequest = "workspace = 1 }"
+const (
+	restoreRequest = "workspace = 1 }"
+	barrierRequest = `hl.dsp.submap("pseudolock")`
+	resetRequest   = `hl.dsp.submap("reset")`
+)
 
 type fakeHypr struct {
 	mu       sync.Mutex
 	requests []string
+	locked   bool
+	fail     string
+}
+
+func (f *fakeHypr) failing(substr string) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.fail = substr
+}
+
+func (f *fakeHypr) setLocked(locked bool) {
+	f.mu.Lock()
+	defer f.mu.Unlock()
+	f.locked = locked
 }
 
 func (f *fakeHypr) count(substr string) int {
@@ -43,9 +62,19 @@ func (f *fakeHypr) serve(conn net.Conn) {
 	if err != nil {
 		return
 	}
+	req := string(buf[:n])
 	f.mu.Lock()
-	f.requests = append(f.requests, string(buf[:n]))
+	f.requests = append(f.requests, req)
+	locked, fail := f.locked, f.fail
 	f.mu.Unlock()
+	if fail != "" && strings.Contains(req, fail) {
+		conn.Write([]byte("error: request failed"))
+		return
+	}
+	if req == "j/locked" {
+		fmt.Fprintf(conn, `{"locked": %t}`, locked)
+		return
+	}
 	conn.Write([]byte("ok"))
 }
 
@@ -290,6 +319,199 @@ func TestConcurrentFullLockStartsOneHyprlock(t *testing.T) {
 
 		if launches != 1 || started != 1 {
 			t.Errorf("launches = %d, started = %d; want one hyprlock", launches, started)
+		}
+	})
+}
+
+func TestPrivacyToFullKeepsBarrierUntilLocked(t *testing.T) {
+	l, fake := newTestLock(t)
+	synctest.Test(t, func(t *testing.T) {
+		if _, err := l.Execute("pseudo"); err != nil {
+			t.Fatal(err)
+		}
+		var beforeLock, whileLocked int
+		l.hyprlock = func() error {
+			time.Sleep(time.Second)
+			beforeLock = fake.count(resetRequest)
+			fake.setLocked(true)
+			time.Sleep(time.Minute)
+			whileLocked = fake.count(resetRequest)
+			fake.setLocked(false)
+			return nil
+		}
+
+		if _, err := l.Full(); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(time.Hour)
+		synctest.Wait()
+
+		if beforeLock != 0 {
+			t.Errorf("submap reset %d times before the compositor locked, want 0", beforeLock)
+		}
+		if whileLocked != 1 {
+			t.Errorf("submap reset %d times while locked, want 1 after the lock was acquired", whileLocked)
+		}
+		if fake.count(barrierRequest) != 2 || l.Locked() || fake.count(restoreRequest) != 1 {
+			t.Errorf("barriers = %d, locked = %v, restores = %d; want pseudo and full barriers, then one restore",
+				fake.count(barrierRequest), l.Locked(), fake.count(restoreRequest))
+		}
+	})
+}
+
+func TestHyprlockDyingBeforeLockKeepsBarrier(t *testing.T) {
+	l, fake := newTestLock(t)
+	synctest.Test(t, func(t *testing.T) {
+		launches, ends := 0, 0
+		l.hyprlock = func() error {
+			launches++
+			if got := fake.count(barrierRequest); got != launches {
+				t.Errorf("launch %d started after %d barriers, want one per launch", launches, got)
+			}
+			time.Sleep(time.Second)
+			return errors.New("hyprlock crashed before acquiring the lock")
+		}
+		l.endSession = func() error {
+			ends++
+			return nil
+		}
+
+		if _, err := l.Full(); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(time.Hour)
+		synctest.Wait()
+
+		if launches != quickExits || ends != 1 {
+			t.Errorf("launches = %d, ends = %d; want %d launches and one session end", launches, ends, quickExits)
+		}
+		if fake.count(resetRequest) != 0 || !l.Locked() {
+			t.Errorf("resets = %d, locked = %v; want the barrier kept and the lock held", fake.count(resetRequest), l.Locked())
+		}
+	})
+}
+
+func TestAdoptRelaunchesOnAbandonedLock(t *testing.T) {
+	l, fake := newTestLock(t)
+	fake.setLocked(true)
+	synctest.Test(t, func(t *testing.T) {
+		launches := 0
+		l.hyprlock = func() error {
+			launches++
+			if fake.count(barrierRequest) != 1 {
+				t.Error("hyprlock relaunched without the barrier")
+			}
+			time.Sleep(time.Minute)
+			fake.setLocked(false)
+			return nil
+		}
+
+		if err := l.Adopt(); err != nil {
+			t.Fatal(err)
+		}
+		if !l.Locked() {
+			t.Fatal("Adopt left the abandoned lock unsupervised")
+		}
+		time.Sleep(time.Hour)
+		synctest.Wait()
+
+		if launches != 1 || l.Locked() || fake.count(restoreRequest) != 1 {
+			t.Errorf("launches = %d, locked = %v, restores = %d; want one relaunch, then one restore",
+				launches, l.Locked(), fake.count(restoreRequest))
+		}
+	})
+}
+
+func TestBarrierFailureStillLaunchesHyprlock(t *testing.T) {
+	l, fake := newTestLock(t)
+	fake.failing(barrierRequest)
+	synctest.Test(t, func(t *testing.T) {
+		launches, beforeLock := 0, -1
+		l.hyprlock = func() error {
+			launches++
+			beforeLock = fake.count(resetRequest)
+			fake.setLocked(true)
+			time.Sleep(time.Minute)
+			fake.setLocked(false)
+			return nil
+		}
+
+		if _, err := l.Full(); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(time.Hour)
+		synctest.Wait()
+
+		if launches != 1 || beforeLock != 0 || fake.count(barrierRequest) != 1 {
+			t.Errorf("launches = %d, resets before lock = %d, barriers = %d; want one launch after one failed barrier and no early reset",
+				launches, beforeLock, fake.count(barrierRequest))
+		}
+		if l.Locked() || fake.count(restoreRequest) != 1 {
+			t.Errorf("locked = %v, restores = %d; want one restore after the clean exit", l.Locked(), fake.count(restoreRequest))
+		}
+	})
+}
+
+func TestAdoptFailsWhenLockQueryFails(t *testing.T) {
+	l, fake := newTestLock(t)
+	fake.failing("j/locked")
+	l.hyprlock = func() error {
+		t.Error("hyprlock launched without a lock state")
+		return nil
+	}
+	if err := l.Adopt(); err == nil {
+		t.Fatal("Adopt succeeded without a session lock state")
+	}
+	if l.Locked() {
+		t.Error("Adopt started supervision after a failed query")
+	}
+}
+
+func TestPickerKeepsLockBarrierAndWorkspace(t *testing.T) {
+	const focusSelected = "workspace = 2 }"
+	l, fake := newTestLock(t)
+	st := state.NewState(&config.HyprConfig{Sessions: config.SessionsConfig{
+		"work": {Name: "work", Workspace: 2, Command: "true"},
+	}})
+	p := NewPicker(l.hypr, st, l)
+	synctest.Test(t, func(t *testing.T) {
+		reopen := func() {
+			p.mu.Lock()
+			p.active, p.ws, p.cache = true, 2, map[int][]string{2: {"work"}}
+			p.mu.Unlock()
+		}
+		confirm := func() {
+			reopen()
+			if _, err := p.Execute("confirm"); err != nil {
+				t.Fatal(err)
+			}
+		}
+
+		confirm()
+		time.Sleep(time.Second)
+		synctest.Wait()
+		if resets, focuses := fake.count(resetRequest), fake.count(focusSelected); resets != 1 || focuses != 1 {
+			t.Fatalf("unlocked confirm: resets = %d, focuses = %d; want 1 and 1", resets, focuses)
+		}
+
+		confirm()
+		if _, err := l.Execute("pseudo"); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(time.Second)
+		synctest.Wait()
+		if resets, focuses := fake.count(resetRequest), fake.count(focusSelected); resets != 1 || focuses != 1 {
+			t.Errorf("confirm during pseudo lock: resets = %d, focuses = %d; want the barrier and blackout kept", resets, focuses)
+		}
+
+		reopen()
+		if _, err := p.Execute("close"); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(time.Second)
+		synctest.Wait()
+		if got := fake.count(resetRequest); got != 1 {
+			t.Errorf("close during pseudo lock: resets = %d, want the barrier kept", got)
 		}
 	})
 }

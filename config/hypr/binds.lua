@@ -152,9 +152,9 @@ super("Print", "Screenshot + annotate",   "hyprd screenshot annotate")
 
 super("Z",         "Lock screen",    "hyprd lock full")
 super("SHIFT + Z", "Wake displays",  [[sh -c 'hyprctl dispatch dpms off; sleep 1; hyprctl dispatch dpms on']])
-super("Q",         "Privacy screen", "hyprd lock privacy")
+super("Q",         "Privacy screen", "hyprd lock pseudo")
 
-hl.define_submap("privacy", function()
+hl.define_submap("pseudolock", function()
 	super("Q", nil, "hyprd lock unlock")
 	hl.bind("catchall", hl.dsp.no_op())
 end)

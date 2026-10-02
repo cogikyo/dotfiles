@@ -61,15 +61,18 @@ func New() (*Daemon, error) {
 	}
 
 	stateStore := state.NewState(&cfg)
+	lockCtl := session.NewLock(hyprClient, stateStore)
 	d := &Daemon{
 		hypr:      hyprClient,
 		state:     stateStore,
-		lockCtl:   session.NewLock(hyprClient, stateStore),
-		pickerCtl: session.NewPicker(hyprClient, stateStore),
+		lockCtl:   lockCtl,
+		pickerCtl: session.NewPicker(hyprClient, stateStore, lockCtl),
 		accentCtl: NewAccent(hyprClient),
 		restartCh: make(chan struct{}, 1),
 	}
-	d.lockCtl.Adopt()
+	if err := d.lockCtl.Adopt(); err != nil {
+		return nil, fmt.Errorf("adopt lock: %w", err)
+	}
 	d.config.Store(&cfg)
 	d.opencode = opencodepkg.New(func(title, body string) {
 		notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load())
