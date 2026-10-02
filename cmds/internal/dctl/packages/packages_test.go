@@ -43,9 +43,12 @@ func lists(t *testing.T, files map[string]string) string {
 }
 
 func TestParse(t *testing.T) {
-	got, err := Parse(strings.NewReader("# section\nzsh\n  git  # vcs\n\nzsh\nbase-devel extra words\n"))
-	if err != nil || !slices.Equal(got, []string{"base-devel", "git", "zsh"}) {
+	got, err := Parse(strings.NewReader("# section\nzsh\n  git  # vcs\n\nzsh\n"))
+	if err != nil || !slices.Equal(got, []string{"git", "zsh"}) {
 		t.Fatalf("got %v, %v", got, err)
+	}
+	if _, err := Parse(strings.NewReader("zsh\nbase-devel extra words\n")); err == nil || !strings.Contains(err.Error(), "line 2") {
+		t.Fatalf("err %v, want line 2 rejected", err)
 	}
 }
 

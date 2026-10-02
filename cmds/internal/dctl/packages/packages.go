@@ -20,17 +20,23 @@ func Read(path string) ([]string, error) {
 		return nil, err
 	}
 	defer f.Close()
-	return Parse(f)
+	names, err := Parse(f)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", path, err)
+	}
+	return names, nil
 }
 
 func Parse(r io.Reader) ([]string, error) {
 	var names []string
 	s := bufio.NewScanner(r)
-	for s.Scan() {
+	for n := 1; s.Scan(); n++ {
 		line, _, _ := strings.Cut(s.Text(), "#")
-		if fields := strings.Fields(line); len(fields) > 0 {
-			names = append(names, fields[0])
+		fields := strings.Fields(line)
+		if len(fields) > 1 {
+			return nil, fmt.Errorf("line %d: %q: one package per line", n, strings.TrimSpace(line))
 		}
+		names = append(names, fields...)
 	}
 	return Unique(names), s.Err()
 }
