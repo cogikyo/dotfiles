@@ -1,62 +1,63 @@
 # Dotfiles
 
-Arch + Hyprland (Wayland) dotfiles for a single-user Framework Desktop (AMD Strix Halo, Ethernet only).
-Root of repo = `~/dotfiles`.
+Arch Linux + Hyprland environment, Go commands, and an offline UEFI installer targeting the Framework Desktop (AMD Strix Halo, Ethernet only).
+Edits to linked `config/` files change what applications read; see [setup](./README.md) for how changes reach the system.
+
+> [!WARNING]
+> Keep this file at the repo root: dctl requires `$DOTFILES/AGENTS.md` to find the checkout.
 
 ## Layout
 
-- `config/` → linked into `~/.config/` by `dctl doctor --fix home`, with separate Firefox and OBS handling
-- `cmds/` → Go command workspace; the ISO installs prebuilt commands into `~/.local/bin/`; see `cmds/README.md`
-- `system/` → rootfs overlay mirroring `/`; **copied** into place (not symlinked)
-- `packages/` → package lists (`base.lst`, `aur.lst`, `extra.lst`) and local PKGBUILDs
-- `secrets/` → age-encrypted secrets and their manifest; `repos.json` → repos cloned under `~/`
-- `config/opencode/` → OpenCode harness: `opencode.json`, always-loaded caps files (`AGENTS.md`, `COLLAB.md`, `ROUTING.md`), agents, skills, and plugins (see `config/opencode/plugins/README.md`)
-- `iso/` → archiso profile; `iso/work/` and `iso/out/` are gitignored build artifacts
-- `share/` → static assets
+| Path               | Holds                                                        | Reaches the system by                  |
+| ------------------ | ------------------------------------------------------------ | -------------------------------------- |
+| `config/`          | Application settings                                         | Home/Firefox doctor links              |
+| `cmds/`            | [Go commands](cmds/README.md)                                | Installer or targeted builds           |
+| `system/`          | Rootfs overlay                                               | `sudo dctl doctor --fix system` copies |
+| `packages/`        | Curated lists, PKGBUILDs, repo catalog                       | ISO and dctl setup                     |
+| `secrets/`         | Age ciphertext and manifest                                  | `dctl secrets decrypt`                 |
+| `iso/`             | Archiso profile                                              | `sudo dctl iso build`                  |
+| `share/`           | Fonts and assets                                             | Doctor or application references       |
+| `config/opencode/` | [Agents, skills, plugins](config/opencode/plugins/README.md) | Linked config; plugin restart          |
 
-Editing linked config changes the live system.
 User units and their `.wants` links live only in `config/systemd/user/`.
-The system group enables only units named in `system/etc/systemd/system-preset/10-dotfiles.preset`, without starting them.
-
-## Harness
-
-OpenCode is the primary agent harness.
-Edits under `config/opencode/` reach running sessions after an OpenCode restart, except instruction files, which OpenCode re-reads on every model step.
-
-## Install
-
-ISO builds require a clean, committed `master` and root for makechrootpkg/mkarchiso.
-`dctl install` runs only as root on the dctl UEFI ISO and erases the selected whole disk after typed confirmation.
-Run user doctor fixes as the user and use sudo only for root groups.
-See the [`dctl` guide](cmds/cmd/dctl/README.md) for procedures and the required [SSH cutover](cmds/cmd/dctl/README.md#build).
+Local `AGENTS.md` files cover `cmds/`, `config/hypr/`, `config/eww/`, and `packages/`.
 
 ## Commands
 
-One Go module contains multiple binaries, with daemon sockets at `/tmp/{hyprd,ewwd}.sock`.
+| Command  | Role                              | Docs                               |
+| -------- | --------------------------------- | ---------------------------------- |
+| `dctl`   | Install, doctor, maintenance, ISO | [Guide](cmds/cmd/dctl/README.md)   |
+| `hyprd`  | Hyprland daemon and CLI           | [Guide](cmds/cmd/hyprd/README.md)  |
+| `ewwd`   | Widget signals and actions        | [Guide](cmds/cmd/ewwd/README.md)   |
+| `newtab` | Firefox new-tab server            | [Guide](cmds/cmd/newtab/README.md) |
+| `src`    | Upstream source cache             | [Source](cmds/internal/src/)       |
 
-- `hyprd` — Hyprland window management
-- `ewwd` — system signals for eww widgets
-- `newtab` — Firefox new-tab backend
-- [`dctl`](cmds/cmd/dctl/README.md) — ISO builder, installer, doctor, and maintenance commands
+Hyprd and ewwd talk over `/tmp/<name>.sock`.
 
-Use `hyprd rebuild` only for an attended live update and never during a full lock; see the [hyprd guide](cmds/cmd/hyprd/README.md#rebuild).
-For build-only work, use targeted builds into `/tmp/opencode/bin/` and do not restart daemons or install binaries into the live user path.
+## Where to look
 
-## Conventions
+| Task                              | Path                                               |
+| --------------------------------- | -------------------------------------------------- |
+| Keybinds / monitor / window rules | `config/hypr/{binds,hyprland}.lua`                 |
+| Widgets / data                    | `config/eww/`, `cmds/internal/ewwd/providers/`     |
+| Session catalog / tab profiles    | `cmds/config/hyprd.yaml`, `config/kitty/sessions/` |
 
-- Prefer Go for new work. Bash only for genuinely shell-shaped helpers. If bash logic grows, move to `cmds/`.
-- Bash: `#!/usr/bin/env bash` + `set -euo pipefail`.
-- Interactive zsh enables `EXTENDED_GLOB`; use extended glob features when useful, but quote literal `#`, `^`, and `~` values in sourced zsh files, especially hex colors like `'fg=#824141'`.
-- Logging: `info()` (blue), `success()`/`ok()` (green), `warn()` (yellow), `error()`/`err()` (red).
-- Python one-offs: use `uv run --with <package>... python <script>` or `uv run --with <package>... python - <<'PY'`; do not install packages into system Python or leave activated venvs behind.
-- Commit note: always include `config/nvim/lua/plugins/editor/harpoon.json` when it appears changed; it often changes incidentally and can be included in any commit without mention.
+## Terms
 
-## Go (`go 1.26.2`)
+- Three-body uses editor/agents/browser roles with a master, active slave, and shadow on `special:shadow`.
+- Monocle floats the focused window and parks tiled siblings on `special:mono<n>` until restored.
+- Split selects master-ratio presets; share mode changes gaps/ratios and suppresses notifications and widgets.
+- Pseudolock is an unauthenticated privacy screen; full lock supervises hyprlock and refuses manual unlock.
 
-Bias toward modern Go. Stdlib-first — prefer `log/slog`, `errors.Is`/`As`/`Join`, `slices`, `maps`, `iter`, `cmp`, `sync.WaitGroup.Go`, `testing/synctest`, `os.Root`/`os.OpenInRoot` before reaching for custom helpers or deps.
+## Hazards
 
-Modern idioms: `for range n`, iterator helpers via `iter`/`maps`/`slices`, `new(expr)` for optional pointer fields.
+> [!CAUTION]
+> `dctl install` and `dctl iso usb` erase whole disks; `dctl iso release` publishes publicly.
+> Use `hyprd rebuild` only for an attended update and never during a full lock.
 
-Workflow after non-trivial edits: `gofmt`/`goimports`, `go fix`, `go vet`, targeted `go test`. Build only affected binaries.
+## Working here
 
-Concrete types and package-level functions by default. Interfaces only at consumer boundaries when actually needed.
+- Run doctor as the user and use sudo only for named root groups.
+- Use Bash only for shell-shaped helpers with `#!/usr/bin/env bash` and `set -euo pipefail`; quote literal `#`, `^`, and `~` in sourced zsh files with `EXTENDED_GLOB`.
+- Run Python one-offs with `uv run --with <package> python <script>`.
+- Always include `config/nvim/lua/plugins/editor/harpoon.json` in a commit when it changed, without mention.
