@@ -1,8 +1,6 @@
-package update
+package packages
 
 import (
-	"os"
-	"path/filepath"
 	"slices"
 	"testing"
 )
@@ -30,18 +28,18 @@ func TestClassify(t *testing.T) {
 	}
 }
 
-func TestListsIncludeExtra(t *testing.T) {
-	dir := t.TempDir()
-	for name, data := range map[string]string{"base.lst": "base\n", "aur.lst": "", "extra.lst": "docker # online\n"} {
-		if err := os.WriteFile(filepath.Join(dir, name), []byte(data), 0o644); err != nil {
-			t.Fatal(err)
-		}
-	}
-	listed, err := lists(dir)
+func TestDriftListsExtra(t *testing.T) {
+	dir := lists(t, map[string]string{"base.lst": "base\n", "aur.lst": "", "extra.lst": "docker # online\n"})
+	l, err := Load(dir)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !listed["docker"] {
-		t.Errorf("extra.lst names missing from listed set: %v", listed)
+	run := &fake{out: map[string]string{"pacman -Qq": "base\n", "pacman -Qqen": "base\ndocker\n"}}
+	d, err := drift(t.Context(), run, l)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(d.Repo) != 0 || !slices.Equal(d.Missing, []string{"docker"}) {
+		t.Errorf("extra.lst names missing from the listed set: %+v", d)
 	}
 }

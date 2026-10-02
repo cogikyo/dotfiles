@@ -14,7 +14,7 @@ import (
 
 	bins "dotfiles/cmds/internal/dctl/binaries"
 	"dotfiles/cmds/internal/dctl/execx"
-	pkgs "dotfiles/cmds/internal/dctl/packages"
+	"dotfiles/cmds/internal/dctl/packages"
 	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/dctl/ui"
 )
@@ -167,15 +167,7 @@ func (b build) build(ctx context.Context) error {
 }
 
 func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []string, error) {
-	base, err := pkgs.Read(filepath.Join(lists, "base.lst"))
-	if err != nil {
-		return nil, nil, err
-	}
-	aur, err := pkgs.Read(filepath.Join(lists, "aur.lst"))
-	if err != nil {
-		return nil, nil, err
-	}
-	local, err := pkgs.Locals(lists)
+	l, err := packages.Load(lists)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -193,7 +185,7 @@ func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []s
 		filepath.Join(chroot, "root"), "base-devel"); err != nil {
 		return nil, nil, err
 	}
-	for _, name := range aur {
+	for _, name := range l.AUR {
 		dir := filepath.Join(b.recipes, name)
 		if err := b.run.Run(ctx, "", "git", "clone", "--quiet", "--depth", "1", "https://aur.archlinux.org/"+name+".git", dir); err != nil {
 			return nil, nil, err
@@ -202,12 +194,12 @@ func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []s
 			return nil, nil, fmt.Errorf("AUR package %s does not exist (no PKGBUILD)", name)
 		}
 	}
-	for _, name := range local {
+	for _, name := range l.Local {
 		if err := b.run.Run(ctx, "", "cp", "-rT", filepath.Join(lists, name), filepath.Join(b.recipes, name)); err != nil {
 			return nil, nil, err
 		}
 	}
-	recipes := slices.Concat(aur, local)
+	recipes := slices.Concat(l.AUR, l.Local)
 	gnupg := filepath.Join(b.recipes, "gnupg")
 	if err := errors.Join(os.Mkdir(gnupg, 0o700), mkdir(gnupg, b.nobody)); err != nil {
 		return nil, nil, err
@@ -282,7 +274,7 @@ Include = /etc/pacman.d/mirrorlist
 	if err := b.run.Run(ctx, "", "pacman", append(slices.Clone(pacman), "-Sy")...); err != nil {
 		return nil, nil, err
 	}
-	targets := pkgs.Unique(slices.Concat(base, aur, local))
+	targets := l.Payload()
 	out, err := b.run.Output(ctx, "", "pacman", slices.Concat(pacman, []string{"-Sp", "--print-format", "%n %f"}, targets)...)
 	if err != nil {
 		return nil, nil, err

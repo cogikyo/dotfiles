@@ -3,7 +3,6 @@ package packages
 import (
 	"context"
 	"fmt"
-	"path/filepath"
 	"strings"
 
 	"dotfiles/cmds/internal/dctl/doctor"
@@ -12,7 +11,7 @@ import (
 
 func Extra(dir string, run execx.Runner) doctor.Group {
 	pending := func(ctx context.Context) ([]string, error) {
-		names, err := Read(filepath.Join(dir, "extra.lst"))
+		l, err := Load(dir)
 		if err != nil {
 			return nil, err
 		}
@@ -20,7 +19,7 @@ func Extra(dir string, run execx.Runner) doctor.Group {
 		if err != nil {
 			return nil, err
 		}
-		return absent(names, have), nil
+		return absent(l.Extra, have), nil
 	}
 	return doctor.Group{Name: "extra", Online: true, Checks: []doctor.Check{
 		{
@@ -69,10 +68,7 @@ func install(ctx context.Context, run execx.Runner, names []string) error {
 	if err != nil {
 		return doctor.Block("pacman -Slq: %v", err)
 	}
-	official := map[string]bool{}
-	for name := range strings.FieldsSeq(repo) {
-		official[name] = true
-	}
+	official := set(strings.FieldsSeq(repo))
 	var fromRepo, fromAUR []string
 	for _, name := range names {
 		if official[name] {

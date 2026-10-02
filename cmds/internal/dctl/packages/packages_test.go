@@ -67,9 +67,14 @@ func TestMissing(t *testing.T) {
 	dir := lists(t, map[string]string{
 		"base.lst":         "git\nzsh\nmesa\n",
 		"aur.lst":          "yay\nlimine-snapper-sync\n",
+		"extra.lst":        "docker\n",
 		"eww/PKGBUILD":     "pkgname=eww\npkgver=1\n",
 		"notes/README.txt": "not a package",
 	})
+	l, err := Load(dir)
+	if want := []string{"eww", "git", "limine-snapper-sync", "mesa", "yay", "zsh"}; err != nil || !slices.Equal(l.Payload(), want) {
+		t.Fatalf("payload %v, %v; want %v", l.Payload(), err, want)
+	}
 	run := &fake{out: map[string]string{"pacman -Qq": "git\nyay\neww\nunrelated\n"}}
 	official, other, err := missing(context.Background(), dir, run)
 	if err != nil {
@@ -88,7 +93,7 @@ func TestMissing(t *testing.T) {
 
 func TestExtraInstallsOfficialBeforeAUR(t *testing.T) {
 	useSync(t, true)
-	dir := lists(t, map[string]string{"extra.lst": "docker\nlazydocker\nbase-devel\nspotify\nhtop\n"})
+	dir := lists(t, map[string]string{"base.lst": "", "aur.lst": "", "extra.lst": "docker\nlazydocker\nbase-devel\nspotify\nhtop\n"})
 	run := &fake{out: map[string]string{
 		"pacman -Qq":  "htop\n",
 		"pacman -Slq": "base-devel\ndocker\nhtop\n",

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"iter"
 	"os"
 	"path/filepath"
 	"slices"
@@ -40,10 +41,30 @@ func Parse(r io.Reader) ([]string, error) {
 		}
 		names = append(names, fields...)
 	}
-	return Unique(names), s.Err()
+	return unique(names), s.Err()
 }
 
-func Unique(names []string) []string {
+type Lists struct {
+	Base, AUR, Extra, Local []string
+}
+
+func Load(dir string) (Lists, error) {
+	base, berr := Read(filepath.Join(dir, "base.lst"))
+	aur, aerr := Read(filepath.Join(dir, "aur.lst"))
+	extra, eerr := Read(filepath.Join(dir, "extra.lst"))
+	builds, gerr := filepath.Glob(filepath.Join(dir, "*", "PKGBUILD"))
+	l := Lists{Base: base, AUR: aur, Extra: extra}
+	for _, path := range builds {
+		l.Local = append(l.Local, filepath.Base(filepath.Dir(path)))
+	}
+	return l, errors.Join(berr, aerr, eerr, gerr)
+}
+
+func (l Lists) Payload() []string {
+	return unique(slices.Concat(l.Base, l.AUR, l.Local))
+}
+
+func unique(names []string) []string {
 	out := slices.Clone(names)
 	slices.Sort(out)
 	return slices.Compact(out)
@@ -88,15 +109,7 @@ func Group(dir string, offline bool, run execx.Runner) doctor.Group {
 }
 
 func missing(ctx context.Context, dir string, run execx.Runner) (official, other []string, err error) {
-	base, err := Read(filepath.Join(dir, "base.lst"))
-	if err != nil {
-		return nil, nil, err
-	}
-	aur, err := Read(filepath.Join(dir, "aur.lst"))
-	if err != nil {
-		return nil, nil, err
-	}
-	local, err := Locals(dir)
+	l, err := Load(dir)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -104,19 +117,7 @@ func missing(ctx context.Context, dir string, run execx.Runner) (official, other
 	if err != nil {
 		return nil, nil, err
 	}
-	return absent(base, have), absent(Unique(append(aur, local...)), have), nil
-}
-
-func Locals(dir string) ([]string, error) {
-	builds, err := filepath.Glob(filepath.Join(dir, "*", "PKGBUILD"))
-	if err != nil {
-		return nil, err
-	}
-	var names []string
-	for _, path := range builds {
-		names = append(names, filepath.Base(filepath.Dir(path)))
-	}
-	return names, nil
+	return absent(l.Base, have), absent(unique(slices.Concat(l.AUR, l.Local)), have), nil
 }
 
 var coreDB = "/var/lib/pacman/sync/core.db"
@@ -134,11 +135,15 @@ func installed(ctx context.Context, run execx.Runner) (map[string]bool, error) {
 	if err != nil {
 		return nil, doctor.Block("pacman -Qq: %v", err)
 	}
-	have := map[string]bool{}
-	for name := range strings.FieldsSeq(out) {
-		have[name] = true
+	return set(strings.FieldsSeq(out)), nil
+}
+
+func set(names iter.Seq[string]) map[string]bool {
+	out := map[string]bool{}
+	for name := range names {
+		out[name] = true
 	}
-	return have, nil
+	return out
 }
 
 func absent(names []string, have map[string]bool) []string {
