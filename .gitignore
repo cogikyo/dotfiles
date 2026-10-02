@@ -19,7 +19,6 @@ cmds/config/*.local.yaml
 iso/work/
 iso/out/
 iso/airootfs/var/
-iso/airootfs/root/dotfiles/
 
 .agents/skills
 .opencode/skills
