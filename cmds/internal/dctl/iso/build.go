@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/user"
 	"path/filepath"
@@ -204,11 +205,43 @@ func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []s
 			return nil, nil, err
 		}
 	}
-	for _, name := range slices.Concat(aur, local) {
+	recipes := slices.Concat(aur, local)
+	gnupg := filepath.Join(b.recipes, "gnupg")
+	if err := errors.Join(os.Mkdir(gnupg, 0o700), mkdir(gnupg, b.nobody)); err != nil {
+		return nil, nil, err
+	}
+	gpg := []string{"-u", b.nobody.Username, "--", "gpg", "--batch", "--homedir", gnupg}
+	for _, name := range recipes {
+		dir := filepath.Join(b.recipes, name)
+		keys, err := filepath.Glob(filepath.Join(dir, "keys", "pgp", "*.asc"))
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(keys) > 0 {
+			if err := b.cmd(ctx, "", "runuser", slices.Concat(gpg, []string{"--import"}, keys)...); err != nil {
+				return nil, nil, err
+			}
+		}
+		fprs, err := validpgpkeys(dir)
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, fpr := range fprs {
+			if _, err := b.quiet.Run(ctx, "", "runuser", slices.Concat(gpg, []string{"--with-colons", "--list-keys", fpr})...); err != nil {
+				return nil, nil, fmt.Errorf("%s: validpgpkeys %s is not in the recipe's keys/pgp: %w", name, fpr, err)
+			}
+		}
+	}
+	for _, name := range recipes {
 		b.u.Step("Building %s in the chroot as nobody", name)
-		if _, err := b.run.Run(ctx, filepath.Join(b.recipes, name), "env", "-i",
-			"PATH=/usr/local/sbin:/usr/local/bin:/usr/bin", "HOME=/root", "USER=root", "LANG=C.UTF-8", "TERM="+os.Getenv("TERM"), "PKGDEST="+built, "SRCDEST="+srcdest,
-			"makechrootpkg", "-c", "-U", b.nobody.Username, "-r", chroot); err != nil {
+		dir := filepath.Join(b.recipes, name)
+		err := b.cmd(ctx, "", "chown", "-R", b.nobody.Username+":", dir)
+		if err == nil {
+			_, err = b.run.Run(ctx, dir, "env", "-i",
+				"PATH=/usr/local/sbin:/usr/local/bin:/usr/bin", "HOME=/root", "USER=root", "LANG=C.UTF-8", "TERM="+os.Getenv("TERM"), "PKGDEST="+built, "SRCDEST="+srcdest, "GNUPGHOME="+gnupg,
+				"makechrootpkg", "-c", "-U", b.nobody.Username, "-r", chroot)
+		}
+		if err := errors.Join(err, b.cmd(ctx, "", "chown", "-R", "root:", dir)); err != nil {
 			return nil, nil, fmt.Errorf("build %s: %w", name, err)
 		}
 	}
@@ -319,4 +352,21 @@ func mkdir(dir string, owner *user.User) error {
 		return err
 	}
 	return os.Chown(dir, uid, gid)
+}
+
+func validpgpkeys(recipe string) ([]string, error) {
+	info, err := os.ReadFile(filepath.Join(recipe, ".SRCINFO"))
+	if errors.Is(err, fs.ErrNotExist) {
+		return nil, nil
+	}
+	if err != nil {
+		return nil, err
+	}
+	var fprs []string
+	for line := range strings.Lines(string(info)) {
+		if fpr, ok := strings.CutPrefix(strings.TrimSpace(line), "validpgpkeys = "); ok {
+			fprs = append(fprs, fpr)
+		}
+	}
+	return fprs, nil
 }

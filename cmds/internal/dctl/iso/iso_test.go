@@ -173,6 +173,21 @@ func TestStickRefusal(t *testing.T) {
 	}
 }
 
+func TestValidPGPKeys(t *testing.T) {
+	recipe := t.TempDir()
+	if fprs, err := validpgpkeys(recipe); err != nil || fprs != nil {
+		t.Fatalf("no .SRCINFO: %v, %v", fprs, err)
+	}
+	srcinfo := "pkgbase = s\n\tvalidpgpkeys = 948F158A4E76A27BF3D07532DF42C170B34DBA77\n\tvalidpgpkeys = 2B4A53F4F4C6B3E5BBA2C1E1E1F8C1A1B1C1D1E1\n\tbackup = etc/pgp.conf\n"
+	if err := os.WriteFile(filepath.Join(recipe, ".SRCINFO"), []byte(srcinfo), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	want := []string{"948F158A4E76A27BF3D07532DF42C170B34DBA77", "2B4A53F4F4C6B3E5BBA2C1E1E1F8C1A1B1C1D1E1"}
+	if fprs, err := validpgpkeys(recipe); err != nil || !slices.Equal(fprs, want) {
+		t.Fatalf("got %v, %v", fprs, err)
+	}
+}
+
 func TestPacmanConf(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "iso", "airootfs", "etc", "pacman.conf"))
 	if err != nil {
