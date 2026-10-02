@@ -54,7 +54,7 @@ func Group(r paths.Root, run execx.Runner) doctor.Group {
 					}
 				}
 				if len(gone) > 0 {
-					return fmt.Errorf("missing: %s", strings.Join(gone, ", "))
+					return errors.New(doctor.List("missing", gone))
 				}
 				return nil
 			},
@@ -161,11 +161,11 @@ func linkCheck(name, dotfiles, note string, links func() ([]link, error)) doctor
 			if len(bad) == 0 {
 				return nil
 			}
-			err = fmt.Errorf("%d of %d links missing or wrong: %s", len(bad), len(list), strings.Join(bad, ", "))
+			msg := doctor.List(fmt.Sprintf("%d of %d links missing or wrong", len(bad), len(list)), bad)
 			if note != "" {
-				err = fmt.Errorf("%w; %s", err, note)
+				msg += "\n" + note
 			}
-			return err
+			return errors.New(msg)
 		},
 		Fix: func(context.Context) error {
 			list, err := links()

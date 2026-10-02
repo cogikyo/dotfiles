@@ -53,7 +53,7 @@ func (u *UI) run(m tea.Model, canceled *bool) error {
 	if !u.Can() {
 		return ErrNoTTY
 	}
-	opts := []tea.ProgramOption{tea.WithInput(u.in), tea.WithOutput(u.stdout)}
+	opts := []tea.ProgramOption{tea.WithContext(u.opts.Context), tea.WithInput(u.in), tea.WithOutput(u.stdout)}
 	if u.opts.Plain {
 		opts = append(opts, tea.WithColorProfile(colorprofile.NoTTY))
 	}
@@ -113,11 +113,11 @@ func (m *confirm) View() tea.View {
 		}
 		return tea.NewView(fmt.Sprintf("%s %s\n", question, answer))
 	}
-	yes, no := styleDim.Render("yes"), styleAccent.Render("no")
+	no, yes := styleAccent.Render("> no"), styleDim.Render("  yes")
 	if m.yes {
-		yes, no = styleAccent.Render("yes"), styleDim.Render("no")
+		no, yes = styleDim.Render("  no"), styleAccent.Render("> yes")
 	}
-	return tea.NewView(fmt.Sprintf("%s  %s / %s ", question, yes, no))
+	return tea.NewView(fmt.Sprintf("%s  %s  %s ", question, no, yes))
 }
 
 type choose struct {

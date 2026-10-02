@@ -6,17 +6,16 @@ import (
 )
 
 type CLI struct {
-	JSON  bool `help:"Emit one JSON document."`
+	JSON  bool `help:"Emit JSON results where supported."`
 	Plain bool `help:"Disable colors and animation."`
-	Yes   bool `short:"y" help:"Assume yes for confirmations."`
+	Yes   bool `short:"y" help:"Accept yes/no confirmations; typed disk and release confirmations remain required."`
 
-	Install InstallCmd  `cmd:"" group:"actions" help:"Install this machine from the dctl ISO (live environment only)."`
-	Doctor  DoctorCmd   `cmd:"" group:"actions" help:"Check the machine and optionally fix it."`
-	Porkbun porkbun.Cmd `cmd:"" group:"actions" help:"Manage personal Porkbun DNS records (Linux)."`
-
-	Update  UpdateCmd  `cmd:"" group:"lifecycle" help:"Upgrade the system and report package-list drift."`
-	Secrets SecretsCmd `cmd:"" group:"lifecycle" help:"Manage age-encrypted secrets."`
-	Keys    KeysCmd    `cmd:"" group:"lifecycle" help:"Enroll, remove, and inspect YubiKeys."`
-	Repos   ReposCmd   `cmd:"" group:"lifecycle" help:"Manage configured repositories."`
-	ISO     iso.Cmd    `cmd:"" name:"iso" group:"lifecycle" help:"Build, write, and release the offline installer ISO."`
+	Install InstallCmd  `cmd:"" help:"Erase a whole disk and install this machine from the dctl ISO (root, live environment only)."`
+	Doctor  DoctorCmd   `cmd:"" help:"Check the machine and optionally fix it."`
+	Porkbun porkbun.Cmd `cmd:"" help:"Manage personal Porkbun DNS records (Linux)."`
+	Update  UpdateCmd   `cmd:"" help:"Upgrade the system and report package-list drift."`
+	Secrets SecretsCmd  `cmd:"" help:"Manage age-encrypted secrets."`
+	Keys    KeysCmd     `cmd:"" help:"Enroll, remove, and inspect YubiKeys."`
+	Repos   ReposCmd    `cmd:"" help:"Manage configured repositories."`
+	ISO     iso.Cmd     `cmd:"" name:"iso" help:"Build, write, and release the offline installer ISO."`
 }

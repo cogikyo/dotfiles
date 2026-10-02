@@ -19,7 +19,8 @@ func main() {
 	var root cli.CLI
 	parser, err := kong.New(&root,
 		kong.Name("dctl"),
-		kong.Description("dotfiles control plane"),
+		kong.Description("Install and maintain this machine."),
+		kong.ConfigureHelp(kong.HelpOptions{NoExpandSubcommands: true}),
 		kong.UsageOnError(),
 	)
 	if err != nil {
@@ -34,13 +35,12 @@ func main() {
 	kctx, err := parser.Parse(args)
 	parser.FatalIfErrorf(err)
 
-	u := ui.New(ui.Options{JSON: root.JSON, Plain: root.Plain, Yes: root.Yes})
-
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	go func() {
 		<-ctx.Done()
 		stop()
 	}()
+	u := ui.New(ui.Options{Context: ctx, JSON: root.JSON, Plain: root.Plain, Yes: root.Yes})
 	kctx.BindTo(ctx, (*context.Context)(nil))
 	parser.FatalIfErrorf(kctx.BindSingletonProvider(paths.DiscoverRoot))
 	err = kctx.Run(u)

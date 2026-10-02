@@ -3,6 +3,7 @@ package doctor
 import (
 	"context"
 	"errors"
+	"os"
 	"strings"
 	"testing"
 
@@ -115,19 +116,92 @@ func TestCancelStopsRun(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	later := &probe{cures: true}
+	broken := Check{Name: "a-broken", Check: func(context.Context) error { return errors.New("by hand") }}
 	interrupted := Check{Name: "interrupted", Check: func(ctx context.Context) error {
 		cancel()
 		return ctx.Err()
 	}}
-	results, err := Run(ctx, ui.New(ui.Options{JSON: true}), []Group{
-		{Name: "a", Checks: []Check{(&probe{healthy: true}).check("first"), interrupted}},
+	u, out := human(t, true)
+	results, err := Run(ctx, u, []Group{
+		{Name: "a", Checks: []Check{(&probe{healthy: true}).check("first"), broken, interrupted}},
 		{Name: "b", Checks: []Check{later.check("later")}},
 	}, Options{Fix: true})
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("err %v, want context.Canceled", err)
 	}
-	if len(results) != 1 || results[0].Check != "first" || later.fixes != 0 {
+	if len(results) != 2 || results[0].Check != "first" || later.fixes != 0 {
 		t.Fatalf("results %v, later fixes %d", results, later.fixes)
+	}
+	if got := out(); got != "  ==> a  1 passed\n   ERR    broken\n        by hand\n" {
+		t.Errorf("output %q", got)
+	}
+}
+
+func human(t *testing.T, plain bool) (*ui.UI, func() string) {
+	t.Helper()
+	t.Setenv("CLICOLOR_FORCE", "1")
+	t.Setenv("TERM", "xterm-256color")
+	t.Setenv("NO_COLOR", "")
+	os.Unsetenv("NO_COLOR")
+	f, err := os.CreateTemp(t.TempDir(), "out")
+	if err != nil {
+		t.Fatal(err)
+	}
+	stdout := os.Stdout
+	os.Stdout = f
+	u := ui.New(ui.Options{Plain: plain})
+	os.Stdout = stdout
+	return u, func() string {
+		data, err := os.ReadFile(f.Name())
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(data)
+	}
+}
+
+func TestShowCollapsesPassingChecks(t *testing.T) {
+	healthy := &probe{healthy: true}
+	manual := Check{Name: "b-manual", Check: func(context.Context) error { return errors.New("by hand") }}
+	run := func(plain bool) (string, []Result) {
+		u, out := human(t, plain)
+		results, err := Run(context.Background(), u, []Group{
+			{Name: "a", Checks: []Check{healthy.check("a-one"), healthy.check("a-two")}},
+			{Name: "b", Root: true, Checks: []Check{healthy.check("b-ok"), (&probe{}).check("b-broken"), manual}},
+			{Name: "c", Checks: []Check{manual}},
+		}, Options{Rerun: "dctl doctor --fix"})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return out(), results
+	}
+	if colored, _ := run(false); !strings.Contains(colored, "\x1b[") {
+		t.Fatalf("color not forced: %q", colored)
+	}
+	got, results := run(true)
+	want := `  ==> a  2 passed
+  ==> b  1 passed
+   ERR    broken
+        broken
+   ERR    manual
+        by hand
+  Fix: sudo dctl doctor --fix b
+  ==> c
+   ERR    b-manual
+        by hand
+`
+	if got != want {
+		t.Errorf("output:\n%s\nwant:\n%s", got, want)
+	}
+	if got := Summary(results); got != "3 failed, 3 passed" {
+		t.Errorf("summary %q", got)
+	}
+}
+
+func TestSummary(t *testing.T) {
+	got := Summary([]Result{{Status: Blocked}, {Status: Fixed}, {Status: Passed}, {Status: Failed}, {Status: Failed}})
+	if got != "2 failed, 1 blocked, 1 fixed, 1 passed" {
+		t.Errorf("summary %q", got)
 	}
 }
 

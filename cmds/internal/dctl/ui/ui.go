@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -14,9 +15,10 @@ import (
 )
 
 type Options struct {
-	JSON  bool
-	Plain bool
-	Yes   bool
+	Context context.Context
+	JSON    bool
+	Plain   bool
+	Yes     bool
 }
 
 type Level int
@@ -109,6 +111,29 @@ func (u *UI) Dim(format string, args ...any) {
 		return
 	}
 	fmt.Fprintf(u.out, "        %s\n", styleDim.Render(line(format, args)))
+}
+
+func (u *UI) Detail(text string) {
+	if u.opts.JSON {
+		return
+	}
+	for l := range strings.Lines(strings.TrimSpace(text)) {
+		fmt.Fprintf(u.out, "        %s\n", strings.TrimSuffix(l, "\n"))
+	}
+}
+
+func (u *UI) Hint(format string, args ...any) {
+	if u.opts.JSON {
+		return
+	}
+	fmt.Fprintf(u.out, "  %s\n", line(format, args))
+}
+
+func (u *UI) Note(format string, args ...any) {
+	if u.opts.JSON {
+		return
+	}
+	fmt.Fprintf(u.out, "  %s\n", styleDim.Render(line(format, args)))
 }
 
 func (u *UI) KV(key string, value any) {

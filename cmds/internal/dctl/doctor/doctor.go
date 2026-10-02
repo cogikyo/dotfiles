@@ -88,26 +88,40 @@ func Block(format string, args ...any) error {
 	return blocked{fmt.Sprintf(format, args...)}
 }
 
+func List(head string, items []string) string {
+	return head + ":\n  " + strings.Join(items, "\n  ")
+}
+
 func Run(ctx context.Context, u *ui.UI, groups []Group, opts Options) ([]Result, error) {
 	var results []Result
 	for _, g := range groups {
-		u.Step("%s", g.Name)
+		if err := ctx.Err(); err != nil {
+			return results, err
+		}
+		shown := false
+		head := func() {
+			if !shown {
+				u.Step("%s", g.Name)
+				shown = true
+			}
+		}
+		start := len(results)
 		for _, c := range g.Checks {
-			if err := ctx.Err(); err != nil {
-				return results, err
+			r := evaluate(ctx, g, c, opts, head)
+			if ctx.Err() != nil {
+				break
 			}
-			r := evaluate(ctx, g, c, opts)
-			if err := ctx.Err(); err != nil {
-				return results, err
-			}
-			show(u, r)
 			results = append(results, r)
+		}
+		show(u, g, results[start:], opts, shown)
+		if err := ctx.Err(); err != nil {
+			return results, err
 		}
 	}
 	return results, nil
 }
 
-func evaluate(ctx context.Context, g Group, c Check, opts Options) Result {
+func evaluate(ctx context.Context, g Group, c Check, opts Options, head func()) Result {
 	r := Result{Group: g.Name, Check: c.Name, Status: Passed}
 	err := c.Check(ctx)
 	if err == nil {
@@ -119,12 +133,13 @@ func evaluate(ctx context.Context, g Group, c Check, opts Options) Result {
 	}
 	switch {
 	case g.Root && !opts.Elevated:
-		r.Status, r.Detail = Blocked, fmt.Sprintf("%s; needs root: sudo %s %s", r.Detail, opts.Rerun, g.Name)
+		r.Status, r.Detail = Blocked, fmt.Sprintf("%s\nneeds root: sudo %s %s", r.Detail, opts.Rerun, g.Name)
 		return r
 	case !g.Root && opts.Elevated:
-		r.Status, r.Detail = Blocked, fmt.Sprintf("%s; refusing to fix as root: run %s %s as the owning user", r.Detail, opts.Rerun, g.Name)
+		r.Status, r.Detail = Blocked, fmt.Sprintf("%s\nrefusing to fix as root: run %s %s as the owning user", r.Detail, opts.Rerun, g.Name)
 		return r
 	}
+	head()
 	if err := c.Fix(ctx); err != nil {
 		r.Status, r.Detail = judge(err), "fix: "+err.Error()
 		return r
@@ -144,18 +159,63 @@ func judge(err error) Status {
 	return Failed
 }
 
-func show(u *ui.UI, r Result) {
-	switch r.Status {
-	case Passed:
-		u.Row(ui.OK, r.Check)
-	case Fixed:
-		u.Row(ui.OK, r.Check+" (fixed)")
-		u.Dim("was: %s", r.Detail)
-	case Blocked:
-		u.Row(ui.Warn, r.Check+" (blocked)")
-		u.Dim("%s", r.Detail)
-	default:
-		u.Row(ui.Err, r.Check)
-		u.Dim("%s", r.Detail)
+func show(u *ui.UI, g Group, results []Result, opts Options, shown bool) {
+	passed, fixable := 0, false
+	for i, r := range results {
+		switch {
+		case r.Status == Passed:
+			passed++
+		case r.Status == Failed && g.Checks[i].Fix != nil:
+			fixable = true
+		}
 	}
+	if !shown {
+		label := g.Name
+		if passed > 0 {
+			label = fmt.Sprintf("%s  %d passed", g.Name, passed)
+		}
+		u.Step("%s", label)
+	}
+	for _, r := range results {
+		name := strings.TrimPrefix(r.Check, g.Name+"-")
+		switch r.Status {
+		case Fixed:
+			u.Row(ui.OK, name+" (fixed)")
+			u.Detail("was: " + r.Detail)
+		case Blocked:
+			u.Row(ui.Warn, name+" (blocked)")
+			u.Detail(r.Detail)
+		case Failed:
+			u.Row(ui.Err, name)
+			u.Detail(r.Detail)
+		}
+	}
+	if shown && passed > 0 {
+		u.Dim("%d passed", passed)
+	}
+	if !fixable || opts.Fix {
+		return
+	}
+	sudo := ""
+	if g.Root {
+		sudo = "sudo "
+	}
+	u.Hint("Fix: %s%s %s", sudo, opts.Rerun, g.Name)
+}
+
+func Summary(results []Result) string {
+	counts := map[Status]int{}
+	for _, r := range results {
+		counts[r.Status]++
+	}
+	var parts []string
+	for _, s := range []struct {
+		status Status
+		label  string
+	}{{Failed, "failed"}, {Blocked, "blocked"}, {Fixed, "fixed"}, {Passed, "passed"}} {
+		if n := counts[s.status]; n > 0 {
+			parts = append(parts, fmt.Sprintf("%d %s", n, s.label))
+		}
+	}
+	return strings.Join(parts, ", ")
 }

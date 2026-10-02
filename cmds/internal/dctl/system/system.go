@@ -115,12 +115,13 @@ func check(rootDir, overlay string) error {
 			drift = append(drift, f.rel+" ("+reason+")")
 		}
 	}
-	blind := fmt.Sprintf("cannot inspect %d of %d files: %s", len(unknown), len(list), strings.Join(unknown, ", "))
+	differ := doctor.List(fmt.Sprintf("%d of %d files differ", len(drift), len(list)), drift)
+	blind := doctor.List(fmt.Sprintf("cannot inspect %d of %d files", len(unknown), len(list)), unknown)
 	switch {
 	case len(drift) > 0 && len(unknown) > 0:
-		return fmt.Errorf("%d of %d files differ: %s; %s", len(drift), len(list), strings.Join(drift, ", "), blind)
+		return errors.New(differ + "\n" + blind)
 	case len(drift) > 0:
-		return fmt.Errorf("%d of %d files differ: %s", len(drift), len(list), strings.Join(drift, ", "))
+		return errors.New(differ)
 	case len(unknown) > 0:
 		return doctor.Block("%s", blind)
 	}
@@ -226,7 +227,7 @@ func checkUnits(ctx context.Context, root, overlay string) error {
 		}
 	}
 	if len(off) > 0 {
-		return fmt.Errorf("not enabled: %s", strings.Join(off, ", "))
+		return errors.New(doctor.List("not enabled", off))
 	}
 	return nil
 }
