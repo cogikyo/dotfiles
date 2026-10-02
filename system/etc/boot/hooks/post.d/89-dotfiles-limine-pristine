@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# The hook runner only warns below exit 100, and 90-limine-enroll-config then signs whatever is on the ESP.
+
+source /usr/lib/limine/limine-common-functions || exit 100
+initialize_header || exit 100
+[[ -d $LIMINE_DIR_PATH ]] || exit 0
+cp -- "$BINARY_SOURCE_PATH" "$BINARY_TARGET_PATH" || exit 100
+tar -cf "$BINARY_BACKUP_PATH" --directory="$LIMINE_DIR_PATH" "$LIMINE_EFI_FILE" || exit 100
