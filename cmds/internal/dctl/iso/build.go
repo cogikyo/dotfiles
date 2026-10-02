@@ -244,11 +244,11 @@ Include = /etc/pacman.d/mirrorlist
 		return nil, nil, err
 	}
 	targets := pkgs.Unique(slices.Concat(base, aur, local))
-	res, err := b.quiet.Run(ctx, "", "pacman", slices.Concat(pacman, []string{"-Sp", "--print-format", "%n %f"}, targets)...)
+	out, err := b.quiet.Output(ctx, "", "pacman", slices.Concat(pacman, []string{"-Sp", "--print-format", "%n %f"}, targets)...)
 	if err != nil {
-		return nil, nil, fmt.Errorf("%w\n%s", err, res.Stderr)
+		return nil, nil, err
 	}
-	closure, err := parseResolved(res.Stdout)
+	closure, err := parseResolved(out)
 	if err != nil {
 		return nil, nil, err
 	}

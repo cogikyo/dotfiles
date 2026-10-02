@@ -313,11 +313,8 @@ func drive(ctx context.Context, img string, files map[string]string) error {
 }
 
 func cmd(ctx context.Context, name string, args ...string) error {
-	res, err := execx.OSRunner{}.Run(ctx, "", name, args...)
-	if err != nil {
-		return fmt.Errorf("%w: %s", err, res.Stderr)
-	}
-	return nil
+	_, err := execx.OSRunner{}.Output(ctx, "", name, args...)
+	return err
 }
 
 func find(data []byte, prefix string) (string, bool) {

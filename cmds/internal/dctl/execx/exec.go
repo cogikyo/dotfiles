@@ -56,7 +56,7 @@ func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...stri
 		if !r.Group {
 			cmd.Stdin = os.Stdin
 		}
-		cmd.Stdout = os.Stdout
+		cmd.Stdout = os.Stderr
 		cmd.Stderr = os.Stderr
 		err := Reap(ctx, cmd)
 		res := &Result{}
@@ -78,6 +78,10 @@ func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...stri
 
 func (r OSRunner) Output(ctx context.Context, dir string, name string, args ...string) (string, error) {
 	res, err := OSRunner{}.Run(ctx, dir, name, args...)
+	if err != nil && res.Stderr != "" {
+		lines := strings.Split(res.Stderr, "\n")
+		err = fmt.Errorf("%w: %s", err, strings.Join(lines[max(0, len(lines)-20):], "\n"))
+	}
 	return res.Stdout, err
 }
 

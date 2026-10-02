@@ -214,10 +214,10 @@ func checkUnits(ctx context.Context, root, overlay string) error {
 	if err != nil || len(list) == 0 {
 		return err
 	}
-	res, err := execx.OSRunner{}.Run(ctx, "", "systemctl", append([]string{"--root=" + root, "is-enabled"}, list...)...)
-	states := strings.Split(res.Stdout, "\n")
+	out, err := execx.OSRunner{}.Output(ctx, "", "systemctl", append([]string{"--root=" + root, "is-enabled"}, list...)...)
+	states := strings.Split(out, "\n")
 	if len(states) != len(list) {
-		return doctor.Block("systemctl is-enabled: %v: %s", err, res.Stderr)
+		return doctor.Block("systemctl is-enabled: %v", err)
 	}
 	var off []string
 	for i, unit := range list {
@@ -236,9 +236,6 @@ func enable(ctx context.Context, root, overlay string) error {
 	if err != nil || len(list) == 0 {
 		return err
 	}
-	res, err := execx.OSRunner{}.Run(ctx, "", "systemctl", append([]string{"--root=" + root, "enable"}, list...)...)
-	if err != nil {
-		return fmt.Errorf("%w: %s", err, res.Stderr)
-	}
-	return nil
+	_, err = execx.OSRunner{}.Output(ctx, "", "systemctl", append([]string{"--root=" + root, "enable"}, list...)...)
+	return err
 }
