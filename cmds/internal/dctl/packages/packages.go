@@ -75,7 +75,7 @@ func Group(dir string, offline bool, run execx.Runner) doctor.Group {
 				if err := synced(); err != nil {
 					return err
 				}
-				if _, err := run.Run(ctx, "", "pacman", append([]string{"-S", "--needed", "--noconfirm"}, official...)...); err != nil {
+				if err := run.Run(ctx, "", "pacman", append([]string{"-S", "--needed", "--noconfirm"}, official...)...); err != nil {
 					return err
 				}
 			}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"maps"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -26,7 +27,7 @@ func Run(ctx context.Context, u *ui.UI, dir string, run execx.Runner) error {
 		return errors.New("run dctl update as your user; yay elevates only the pacman transaction")
 	}
 	u.Step("yay -Syu")
-	if _, err := run.Run(ctx, "", "yay", "-Syu"); err != nil {
+	if err := run.Run(ctx, "", "yay", "-Syu"); err != nil {
 		return err
 	}
 	listed, err := lists(dir)
@@ -92,7 +93,7 @@ func lists(dir string) (map[string]bool, error) {
 func drift(ctx context.Context, run execx.Runner, listed map[string]bool) (Drift, error) {
 	query := func(flags string) ([]string, error) {
 		out, err := run.Output(ctx, "", "pacman", flags)
-		if err != nil && (flags == "-Qq" || out != "") {
+		if exit, ok := errors.AsType[*exec.ExitError](err); err != nil && (flags == "-Qq" || !ok || exit.ExitCode() != 1) {
 			return nil, err
 		}
 		return packages.Unique(strings.Fields(out)), nil

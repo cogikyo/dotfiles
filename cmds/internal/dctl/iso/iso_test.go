@@ -11,7 +11,6 @@ import (
 	"strings"
 	"testing"
 
-	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/packages"
 )
 
@@ -114,9 +113,9 @@ func TestOversize(t *testing.T) {
 
 type git map[string]string
 
-func (g git) Run(ctx context.Context, dir, name string, args ...string) (*execx.Result, error) {
-	out, err := g.Output(ctx, dir, name, args...)
-	return &execx.Result{Stdout: out}, err
+func (g git) Run(ctx context.Context, dir, name string, args ...string) error {
+	_, err := g.Output(ctx, dir, name, args...)
+	return err
 }
 
 func (g git) Output(_ context.Context, _, _ string, args ...string) (string, error) {

@@ -24,7 +24,6 @@ type BuildCmd struct{}
 type build struct {
 	u       *ui.UI
 	run     execx.Runner
-	quiet   execx.Runner
 	owner   *user.User
 	nobody  *user.User
 	as      []string
@@ -49,8 +48,7 @@ func (BuildCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	}
 	b := build{
 		u:      u,
-		run:    execx.OSRunner{IO: true, Group: true},
-		quiet:  execx.OSRunner{},
+		run:    execx.OSRunner{Group: true},
 		owner:  owner,
 		nobody: nobody,
 		as:     []string{"runuser", "-u", owner.Username, "--", "env", "HOME=" + owner.HomeDir},
@@ -72,7 +70,7 @@ func (BuildCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 }
 
 func (b build) build(ctx context.Context) error {
-	rev, err := revision(ctx, b.quiet, b.repo, b.as)
+	rev, err := revision(ctx, b.run, b.repo, b.as)
 	if err != nil {
 		return err
 	}
@@ -90,8 +88,12 @@ func (b build) build(ctx context.Context) error {
 	if err := b.user(ctx, "git", "clone", "--quiet", bundle, src); err != nil {
 		return err
 	}
-	if head, err := b.quiet.Output(ctx, "", b.as[0], append(b.as[1:], "git", "-C", src, "rev-parse", "HEAD")...); err != nil || head != rev {
-		return fmt.Errorf("bundle clone HEAD %q is not %s: %v", head, rev, err)
+	head, err := b.run.Output(ctx, "", b.as[0], append(b.as[1:], "git", "-C", src, "rev-parse", "HEAD")...)
+	if err != nil {
+		return err
+	}
+	if head != rev {
+		return fmt.Errorf("bundle clone HEAD %q is not %s", head, rev)
 	}
 	air := filepath.Join(src, "iso", "airootfs")
 	payload := filepath.Join(air, Payload)
@@ -130,7 +132,7 @@ func (b build) build(ctx context.Context) error {
 
 	b.u.Step("Running mkarchiso")
 	staged := filepath.Join(b.work, "out")
-	if err := b.cmd(ctx, "", "mkarchiso", "-v", "-w", filepath.Join(b.work, "mkarchiso"), "-o", staged, filepath.Join(src, "iso")); err != nil {
+	if err := b.run.Run(ctx, "", "mkarchiso", "-v", "-w", filepath.Join(b.work, "mkarchiso"), "-o", staged, filepath.Join(src, "iso")); err != nil {
 		return err
 	}
 	built, err := filepath.Glob(filepath.Join(staged, "*.iso"))
@@ -185,7 +187,7 @@ func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []s
 		return nil, nil, err
 	}
 	b.u.Step("Creating clean build chroot")
-	if err := b.cmd(ctx, "", "mkarchroot",
+	if err := b.run.Run(ctx, "", "mkarchroot",
 		"-C", "/usr/share/devtools/pacman.conf.d/extra.conf",
 		"-M", "/usr/share/devtools/makepkg.conf.d/x86_64.conf",
 		filepath.Join(chroot, "root"), "base-devel"); err != nil {
@@ -193,7 +195,7 @@ func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []s
 	}
 	for _, name := range aur {
 		dir := filepath.Join(b.recipes, name)
-		if err := b.cmd(ctx, "", "git", "clone", "--quiet", "--depth", "1", "https://aur.archlinux.org/"+name+".git", dir); err != nil {
+		if err := b.run.Run(ctx, "", "git", "clone", "--quiet", "--depth", "1", "https://aur.archlinux.org/"+name+".git", dir); err != nil {
 			return nil, nil, err
 		}
 		if _, err := os.Stat(filepath.Join(dir, "PKGBUILD")); err != nil {
@@ -201,7 +203,7 @@ func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []s
 		}
 	}
 	for _, name := range local {
-		if err := b.cmd(ctx, "", "cp", "-rT", filepath.Join(lists, name), filepath.Join(b.recipes, name)); err != nil {
+		if err := b.run.Run(ctx, "", "cp", "-rT", filepath.Join(lists, name), filepath.Join(b.recipes, name)); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -218,7 +220,7 @@ func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []s
 			return nil, nil, err
 		}
 		if len(keys) > 0 {
-			if err := b.cmd(ctx, "", "runuser", slices.Concat(gpg, []string{"--import"}, keys)...); err != nil {
+			if err := b.run.Run(ctx, "", "runuser", slices.Concat(gpg, []string{"--import"}, keys)...); err != nil {
 				return nil, nil, err
 			}
 		}
@@ -227,7 +229,7 @@ func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []s
 			return nil, nil, err
 		}
 		for _, fpr := range fprs {
-			if _, err := b.quiet.Run(ctx, "", "runuser", slices.Concat(gpg, []string{"--with-colons", "--list-keys", fpr})...); err != nil {
+			if _, err := b.run.Output(ctx, "", "runuser", slices.Concat(gpg, []string{"--with-colons", "--list-keys", fpr})...); err != nil {
 				return nil, nil, fmt.Errorf("%s: validpgpkeys %s is not in the recipe's keys/pgp: %w", name, fpr, err)
 			}
 		}
@@ -235,13 +237,13 @@ func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []s
 	for _, name := range recipes {
 		b.u.Step("Building %s in the chroot as nobody", name)
 		dir := filepath.Join(b.recipes, name)
-		err := b.cmd(ctx, "", "chown", "-R", b.nobody.Username+":", dir)
+		err := b.run.Run(ctx, "", "chown", "-R", b.nobody.Username+":", dir)
 		if err == nil {
-			_, err = b.run.Run(ctx, dir, "env", "-i",
+			err = b.run.Run(ctx, dir, "env", "-i",
 				"PATH=/usr/local/sbin:/usr/local/bin:/usr/bin", "HOME=/root", "USER=root", "LANG=C.UTF-8", "TERM="+os.Getenv("TERM"), "PKGDEST="+built, "SRCDEST="+srcdest, "GNUPGHOME="+gnupg,
 				"makechrootpkg", "-c", "-U", b.nobody.Username, "-r", chroot)
 		}
-		if err := errors.Join(err, b.cmd(ctx, "", "chown", "-R", "root:", dir)); err != nil {
+		if err := errors.Join(err, b.run.Run(ctx, "", "chown", "-R", "root:", dir)); err != nil {
 			return nil, nil, fmt.Errorf("build %s: %w", name, err)
 		}
 	}
@@ -249,7 +251,7 @@ func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []s
 	if err != nil {
 		return nil, nil, err
 	}
-	if err := b.cmd(ctx, built, "repo-add", append([]string{"--quiet", Repo + ".db.tar.zst"}, files...)...); err != nil {
+	if err := b.run.Run(ctx, built, "repo-add", append([]string{"--quiet", Repo + ".db.tar.zst"}, files...)...); err != nil {
 		return nil, nil, err
 	}
 
@@ -277,11 +279,11 @@ Include = /etc/pacman.d/mirrorlist
 		return nil, nil, err
 	}
 	pacman := []string{"--config", conf, "--dbpath", filepath.Join(resolve, "db"), "--logfile", "/dev/null"}
-	if err := b.cmd(ctx, "", "pacman", append(slices.Clone(pacman), "-Sy")...); err != nil {
+	if err := b.run.Run(ctx, "", "pacman", append(slices.Clone(pacman), "-Sy")...); err != nil {
 		return nil, nil, err
 	}
 	targets := pkgs.Unique(slices.Concat(base, aur, local))
-	out, err := b.quiet.Output(ctx, "", "pacman", slices.Concat(pacman, []string{"-Sp", "--print-format", "%n %f"}, targets)...)
+	out, err := b.run.Output(ctx, "", "pacman", slices.Concat(pacman, []string{"-Sp", "--print-format", "%n %f"}, targets)...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -293,7 +295,7 @@ Include = /etc/pacman.d/mirrorlist
 		return nil, nil, fmt.Errorf("not package names in the closure (group or provider?): %s", strings.Join(missing, " "))
 	}
 	b.u.Step("Fetching %d packages", len(closure))
-	if err := b.cmd(ctx, "", "pacman", slices.Concat(pacman, []string{"--cachedir", payload, "-Sw", "--noconfirm"}, targets)...); err != nil {
+	if err := b.run.Run(ctx, "", "pacman", slices.Concat(pacman, []string{"--cachedir", payload, "-Sw", "--noconfirm"}, targets)...); err != nil {
 		return nil, nil, err
 	}
 
@@ -322,20 +324,15 @@ Include = /etc/pacman.d/mirrorlist
 		sizes = append(sizes, sized{p.Name, st.Size()})
 		names = append(names, p.File)
 	}
-	if err := b.cmd(ctx, payload, "repo-add", append([]string{"--quiet", Repo + ".db.tar.zst"}, names...)...); err != nil {
+	if err := b.run.Run(ctx, payload, "repo-add", append([]string{"--quiet", Repo + ".db.tar.zst"}, names...)...); err != nil {
 		return nil, nil, err
 	}
 	return sizes, targets, writeSums(payload)
 }
 
-func (b build) cmd(ctx context.Context, dir, name string, args ...string) error {
-	_, err := b.run.Run(ctx, dir, name, args...)
-	return err
-}
-
 func (b build) user(ctx context.Context, args ...string) error {
 	argv := append(slices.Clone(b.as), args...)
-	return b.cmd(ctx, "", argv[0], argv[1:]...)
+	return b.run.Run(ctx, "", argv[0], argv[1:]...)
 }
 
 func ids(u *user.User) (int, int, error) {

@@ -40,7 +40,7 @@ func Enroll(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, re
 	}
 	for _, s := range pins {
 		u.Step("%s", s.label)
-		if _, err := run.Run(ctx, "", "ykman", s.args...); err != nil {
+		if err := run.Run(ctx, "", "ykman", s.args...); err != nil {
 			return err
 		}
 	}
@@ -85,7 +85,7 @@ func enrollAge(ctx context.Context, u *ui.UI, run execx.Runner, serial string, r
 	}
 	if len(keys) == 0 {
 		u.Step("Create age identity")
-		if _, err := run.Run(ctx, "", "age-plugin-yubikey", "--generate", "--serial", serial, "--pin-policy", "once", "--touch-policy", "cached"); err != nil {
+		if err := run.Run(ctx, "", "age-plugin-yubikey", "--generate", "--serial", serial, "--pin-policy", "once", "--touch-policy", "cached"); err != nil {
 			return err
 		}
 		if keys, err = onKey(ctx, run, serial); err != nil {
@@ -135,7 +135,7 @@ func enrollSigner(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runn
 	}
 	defer os.RemoveAll(tmp)
 	u.Step("Configure release-signing key")
-	if _, err := run.Run(ctx, tmp, "ssh-keygen", args...); err != nil {
+	if err := run.Run(ctx, tmp, "ssh-keygen", args...); err != nil {
 		return err
 	}
 	pub, err := os.ReadFile(filepath.Join(tmp, name+".pub"))

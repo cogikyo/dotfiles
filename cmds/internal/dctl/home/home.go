@@ -88,11 +88,10 @@ func Group(r paths.Root, run execx.Runner) doctor.Group {
 				if err := os.MkdirAll(filepath.Dir(fonts), 0o755); err != nil {
 					return err
 				}
-				if _, err := run.Run(ctx, "", "tar", "-xzf", archive, "-C", filepath.Dir(fonts)); err != nil {
+				if err := run.Run(ctx, "", "tar", "-xzf", archive, "-C", filepath.Dir(fonts)); err != nil {
 					return err
 				}
-				_, err := run.Run(ctx, "", "fc-cache", "-f")
-				return err
+				return run.Run(ctx, "", "fc-cache", "-f")
 			},
 		},
 		{

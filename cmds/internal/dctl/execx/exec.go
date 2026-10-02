@@ -4,7 +4,6 @@ package execx
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -13,19 +12,14 @@ import (
 	"time"
 )
 
-type Result struct {
-	Stdout string
-	Stderr string
-}
-
 type Runner interface {
-	Run(ctx context.Context, dir string, name string, args ...string) (*Result, error)
+	Run(ctx context.Context, dir string, name string, args ...string) error
 	Output(ctx context.Context, dir string, name string, args ...string) (string, error)
 }
 
 type OSRunner struct {
-	IO    bool
 	Group bool
+	Stdin []byte
 }
 
 func Grouped(ctx context.Context, args []string) *exec.Cmd {
@@ -44,50 +38,48 @@ func Reap(ctx context.Context, cmd *exec.Cmd) error {
 	return err
 }
 
-func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...string) (*Result, error) {
+func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...string) error {
+	cmd := r.command(ctx, dir, name, args)
+	if cmd.Stdin == nil && !r.Group {
+		cmd.Stdin = os.Stdin
+	}
+	cmd.Stdout = os.Stderr
+	cmd.Stderr = os.Stderr
+	return failed(Reap(ctx, cmd), name, args, "")
+}
+
+func (r OSRunner) Output(ctx context.Context, dir string, name string, args ...string) (string, error) {
+	var stdout, stderr bytes.Buffer
+	cmd := r.command(ctx, dir, name, args)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	err := failed(Reap(ctx, cmd), name, args, stderr.String())
+	return strings.TrimSpace(stdout.String()), err
+}
+
+func (r OSRunner) command(ctx context.Context, dir string, name string, args []string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, name, args...)
 	if r.Group {
 		cmd = Grouped(ctx, append([]string{name}, args...))
 	}
-	if dir != "" {
-		cmd.Dir = dir
+	cmd.Dir = dir
+	if r.Stdin != nil {
+		cmd.Stdin = bytes.NewReader(r.Stdin)
 	}
-	if r.IO {
-		if !r.Group {
-			cmd.Stdin = os.Stdin
-		}
-		cmd.Stdout = os.Stderr
-		cmd.Stderr = os.Stderr
-		err := Reap(ctx, cmd)
-		res := &Result{}
-		if err != nil {
-			return res, commandErr(name, args, err)
-		}
-		return res, nil
-	}
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	err := Reap(ctx, cmd)
-	res := &Result{Stdout: strings.TrimSpace(stdout.String()), Stderr: strings.TrimSpace(stderr.String())}
-	if err != nil {
-		return res, commandErr(name, args, err)
-	}
-	return res, nil
+	return cmd
 }
 
-func (r OSRunner) Output(ctx context.Context, dir string, name string, args ...string) (string, error) {
-	res, err := OSRunner{}.Run(ctx, dir, name, args...)
-	if err != nil && res.Stderr != "" {
-		lines := strings.Split(res.Stderr, "\n")
-		err = fmt.Errorf("%w: %s", err, strings.Join(lines[max(0, len(lines)-20):], "\n"))
+func failed(err error, name string, args []string, stderr string) error {
+	if err == nil {
+		return nil
 	}
-	return res.Stdout, err
-}
-
-func commandErr(name string, args []string, err error) error {
-	if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
-		return fmt.Errorf("%s %s failed with exit %d", name, strings.Join(args, " "), exitErr.ExitCode())
+	if len(args) > 8 {
+		args = append(args[:8:8], "…")
 	}
-	return fmt.Errorf("run %s: %w", name, err)
+	err = fmt.Errorf("%s: %w", strings.Join(append([]string{name}, args...), " "), err)
+	lines := strings.Split(strings.TrimSpace(stderr), "\n")
+	if tail := strings.Join(lines[max(0, len(lines)-20):], "\n"); tail != "" {
+		err = fmt.Errorf("%w: %s", err, tail)
+	}
+	return err
 }

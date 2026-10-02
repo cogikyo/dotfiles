@@ -37,8 +37,7 @@ func Group(run execx.Runner) doctor.Group {
 			if err == nil && s.backend == "Running" {
 				args = []string{"set", "--ssh=true"}
 			}
-			_, err = run.Run(ctx, "", "tailscale", args...)
-			return err
+			return run.Run(ctx, "", "tailscale", args...)
 		},
 	}}}
 }

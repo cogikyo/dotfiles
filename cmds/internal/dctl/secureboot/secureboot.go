@@ -159,7 +159,7 @@ func Group(run execx.Runner, root string) doctor.Group {
 					return err
 				}
 				if !keys {
-					if _, err := run.Run(ctx, "", "sbctl", "create-keys"); err != nil {
+					if err := run.Run(ctx, "", "sbctl", "create-keys"); err != nil {
 						return err
 					}
 				}
@@ -169,14 +169,13 @@ func Group(run execx.Runner, root string) doctor.Group {
 				if err := os.Remove(filepath.Join(esp, Fallback)); err != nil && !errors.Is(err, fs.ErrNotExist) {
 					return err
 				}
-				if _, err := run.Run(ctx, "", "limine-update"); err != nil {
+				if err := run.Run(ctx, "", "limine-update"); err != nil {
 					return err
 				}
 				if err := unsigned(ctx, run, esp); err != nil {
 					return fmt.Errorf("%w; keys not enrolled", err)
 				}
-				_, err = run.Run(ctx, "", "sbctl", "enroll-keys", "-m")
-				return err
+				return run.Run(ctx, "", "sbctl", "enroll-keys", "-m")
 			},
 		},
 		{

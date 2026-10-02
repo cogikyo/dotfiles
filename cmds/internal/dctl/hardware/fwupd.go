@@ -51,8 +51,7 @@ func Firmware(run execx.Runner) doctor.Group {
 				return fresh([]byte(out), time.Now())
 			},
 			Fix: func(ctx context.Context) error {
-				_, err := run.Run(ctx, "", "fwupdmgr", "refresh")
-				return err
+				return run.Run(ctx, "", "fwupdmgr", "refresh")
 			},
 		},
 		{

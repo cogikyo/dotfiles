@@ -55,7 +55,7 @@ func Group(r paths.Root, run execx.Runner) doctor.Group {
 				if err != nil {
 					return err
 				}
-				if _, err := run.Run(ctx, "", "mkcert", "-install"); err != nil {
+				if err := run.Run(ctx, "", "mkcert", "-install"); err != nil {
 					return fmt.Errorf("mkcert -install: %w", err)
 				}
 				root, path, err := ca(ctx, run)
@@ -176,8 +176,7 @@ func trustInFirefox(ctx context.Context, run execx.Runner, root *x509.Certificat
 	}
 	db, name := "sql:"+profile, nickname(root)
 	_, _ = run.Output(ctx, "", "certutil", "-D", "-d", db, "-n", name)
-	_, err := run.Run(ctx, "", "certutil", "-A", "-d", db, "-n", name, "-t", "C,,", "-i", path)
-	return err
+	return run.Run(ctx, "", "certutil", "-A", "-d", db, "-n", name, "-t", "C,,", "-i", path)
 }
 
 func (l leaf) modes() error {
@@ -238,7 +237,7 @@ func (l leaf) generate(ctx context.Context, run execx.Runner, root *x509.Certifi
 	}
 	defer os.RemoveAll(tmp)
 	cert, key := filepath.Join(tmp, "cert.pem"), filepath.Join(tmp, "key.pem")
-	if _, err := run.Run(ctx, "", "mkcert", append([]string{"-cert-file", cert, "-key-file", key}, hosts...)...); err != nil {
+	if err := run.Run(ctx, "", "mkcert", append([]string{"-cert-file", cert, "-key-file", key}, hosts...)...); err != nil {
 		return fmt.Errorf("mkcert: %w", err)
 	}
 	if err := verify(cert, key, root, time.Now()); err != nil {

@@ -124,15 +124,16 @@ func signedSum(ctx context.Context, allowed, iso string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	out, err := exec.CommandContext(ctx, "ssh-keygen", "-Y", "find-principals", "-f", allowed, "-s", sig).Output()
-	if err != nil {
-		return "", fmt.Errorf("%s is not signed by a key in %s", sums, allowed)
+	out, err := execx.OSRunner{}.Output(ctx, "", "ssh-keygen", "-Y", "find-principals", "-f", allowed, "-s", sig)
+	if _, ok := errors.AsType[*exec.ExitError](err); ok {
+		return "", fmt.Errorf("%s is not signed by a key in %s: %w", sums, allowed, err)
 	}
-	principal, _, _ := strings.Cut(strings.TrimSpace(string(out)), "\n")
-	cmd := exec.CommandContext(ctx, "ssh-keygen", "-Y", "verify", "-f", allowed, "-I", principal, "-n", "file", "-s", sig)
-	cmd.Stdin = strings.NewReader(string(data))
-	if msg, err := cmd.CombinedOutput(); err != nil {
-		return "", fmt.Errorf("signature check failed: %s", strings.TrimSpace(string(msg)))
+	if err != nil {
+		return "", err
+	}
+	principal, _, _ := strings.Cut(out, "\n")
+	if _, err := (execx.OSRunner{Stdin: data}).Output(ctx, "", "ssh-keygen", "-Y", "verify", "-f", allowed, "-I", principal, "-n", "file", "-s", sig); err != nil {
+		return "", fmt.Errorf("signature check failed: %w", err)
 	}
 	sum, name, ok := strings.Cut(strings.TrimSpace(string(data)), "  ")
 	if !ok || name != filepath.Base(iso) {

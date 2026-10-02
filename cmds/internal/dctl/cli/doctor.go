@@ -32,20 +32,20 @@ type DoctorCmd struct {
 }
 
 func (c *DoctorCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
-	run := execx.OSRunner{IO: true}
+	run := execx.OSRunner{}
 	groups, err := doctor.Select([]doctor.Group{
 		system.Group("/", root.System()),
 		packages.Group(root.Packages(), c.Offline, run),
 		home.Group(root, run),
 		secrets.Group(u, root),
-		keys.Group(execx.OSRunner{}, "/sys"),
+		keys.Group(run, "/sys"),
 		secureboot.Group(run, "/"),
 		vpn.Group(root, run),
 		repos.Group(root, run),
 		home.Firefox(root),
 		binaries.Group(root, c.Offline, run),
 		certs.Group(root, run),
-		hardware.Group("/sys", execx.OSRunner{}),
+		hardware.Group("/sys", run),
 		packages.Extra(root.Packages(), run),
 		tailscale.Group(run),
 		hardware.Firmware(run),

@@ -13,7 +13,6 @@ import (
 	"strings"
 	"testing"
 
-	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/dctl/secrets"
 	"dotfiles/cmds/internal/dctl/ui"
@@ -29,13 +28,13 @@ type fake struct {
 	fail    map[string]error
 }
 
-func (f *fake) Run(_ context.Context, dir string, name string, args ...string) (*execx.Result, error) {
+func (f *fake) Run(_ context.Context, dir string, name string, args ...string) error {
 	line := strings.Join(append([]string{name}, args...), " ")
 	f.log = append(f.log, line)
 	if fn := f.effects[line]; fn != nil {
 		fn(dir)
 	}
-	return &execx.Result{}, f.fail[line]
+	return f.fail[line]
 }
 
 func (f *fake) Output(_ context.Context, _ string, name string, args ...string) (string, error) {

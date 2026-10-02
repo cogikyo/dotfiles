@@ -64,7 +64,11 @@ func (c ReleaseCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if want := "dotfiles-" + rev[:12] + ".iso"; filepath.Base(c.ISO) != want {
 		return fmt.Errorf("%s was not built from HEAD %s (expected %s)", c.ISO, rev[:12], want)
 	}
-	if pushed, err := run.Output(ctx, root.Dotfiles, "git", "rev-parse", "origin/master"); err != nil || pushed != rev {
+	pushed, err := run.Output(ctx, root.Dotfiles, "git", "rev-parse", "origin/master")
+	if err != nil {
+		return err
+	}
+	if pushed != rev {
 		return fmt.Errorf("HEAD %s is not origin/master; push master first", rev[:12])
 	}
 	key, err := signingKey(root.Home, c.Key)
@@ -91,11 +95,15 @@ func (c ReleaseCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 		return err
 	}
 	u.Step("Signing %s; touch the security key", filepath.Base(sums))
-	if _, err := (execx.OSRunner{IO: true}).Run(ctx, "", "ssh-keygen", "-Y", "sign", "-f", key, "-n", "file", sums); err != nil {
+	if err := run.Run(ctx, "", "ssh-keygen", "-Y", "sign", "-f", key, "-n", "file", sums); err != nil {
 		return err
 	}
-	if signed, err := signedSum(ctx, root.Share("allowed_signers"), c.ISO); err != nil || signed != sum {
-		return fmt.Errorf("signed checksum does not verify against share/allowed_signers: %v", err)
+	signed, err := signedSum(ctx, root.Share("allowed_signers"), c.ISO)
+	if err != nil {
+		return fmt.Errorf("signed checksum does not verify against share/allowed_signers: %w", err)
+	}
+	if signed != sum {
+		return fmt.Errorf("signed checksum %s does not match %s", signed, sum)
 	}
 	u.OK("signature verifies against share/allowed_signers")
 
@@ -111,7 +119,7 @@ func (c ReleaseCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if typed != tag {
 		return errors.New("confirmation did not match; nothing published")
 	}
-	if _, err := (execx.OSRunner{IO: true}).Run(ctx, root.Dotfiles, "gh", argv...); err != nil {
+	if err := run.Run(ctx, root.Dotfiles, "gh", argv...); err != nil {
 		return err
 	}
 	u.OK("published %s", tag)

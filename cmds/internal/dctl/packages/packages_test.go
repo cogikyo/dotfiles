@@ -7,8 +7,6 @@ import (
 	"slices"
 	"strings"
 	"testing"
-
-	"dotfiles/cmds/internal/dctl/execx"
 )
 
 type fake struct {
@@ -16,15 +14,15 @@ type fake struct {
 	calls []string
 }
 
-func (f *fake) Run(ctx context.Context, dir, name string, args ...string) (*execx.Result, error) {
-	cmd := strings.Join(append([]string{name}, args...), " ")
-	f.calls = append(f.calls, cmd)
-	return &execx.Result{Stdout: f.out[cmd]}, nil
+func (f *fake) Run(ctx context.Context, dir, name string, args ...string) error {
+	_, err := f.Output(ctx, dir, name, args...)
+	return err
 }
 
 func (f *fake) Output(ctx context.Context, dir, name string, args ...string) (string, error) {
-	res, err := f.Run(ctx, dir, name, args...)
-	return res.Stdout, err
+	cmd := strings.Join(append([]string{name}, args...), " ")
+	f.calls = append(f.calls, cmd)
+	return f.out[cmd], nil
 }
 
 func lists(t *testing.T, files map[string]string) string {

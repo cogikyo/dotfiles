@@ -16,11 +16,14 @@ func Group(sys string, run execx.Runner) doctor.Group {
 		{Name: "hardware-no-wlan", Check: func(context.Context) error { return noWLAN(sys) }},
 		{Name: "hardware-bluetooth", Check: func(context.Context) error { return bluetooth(sys) }},
 		{Name: "hardware-firmware", Check: func(ctx context.Context) error {
-			res, err := run.Run(ctx, "", "journalctl", "-k", "-b", "--no-pager", "-o", "cat")
-			if err != nil || strings.Contains(res.Stderr, "insufficient permissions") {
-				return doctor.Block("cannot read the kernel log: %v %s", err, res.Stderr)
+			log, err := run.Output(ctx, "", "journalctl", "-k", "-b", "--no-pager", "-o", "cat")
+			if err != nil {
+				return doctor.Block("cannot read the kernel log: %v", err)
 			}
-			if failed := firmwareFailures(res.Stdout); len(failed) > 0 {
+			if log == "" {
+				return doctor.Block("cannot read the kernel log; run as root")
+			}
+			if failed := firmwareFailures(log); len(failed) > 0 {
 				return fmt.Errorf("%d firmware load failures: %s", len(failed), strings.Join(failed, "; "))
 			}
 			return nil

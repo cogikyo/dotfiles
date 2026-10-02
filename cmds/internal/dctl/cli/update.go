@@ -12,5 +12,5 @@ import (
 type UpdateCmd struct{}
 
 func (UpdateCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
-	return update.Run(ctx, u, root.Packages(), execx.OSRunner{IO: true})
+	return update.Run(ctx, u, root.Packages(), execx.OSRunner{})
 }

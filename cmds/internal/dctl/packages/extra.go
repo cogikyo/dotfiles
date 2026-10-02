@@ -55,8 +55,7 @@ func Extra(dir string, run execx.Runner) doctor.Group {
 				return fmt.Errorf("docker.socket is %s", state)
 			},
 			Fix: func(ctx context.Context) error {
-				_, err := run.Run(ctx, "", "sudo", "systemctl", "enable", "docker.socket")
-				return err
+				return run.Run(ctx, "", "sudo", "systemctl", "enable", "docker.socket")
 			},
 		},
 	}}
@@ -90,7 +89,7 @@ func install(ctx context.Context, run execx.Runner, names []string) error {
 			continue
 		}
 		args := append([]string{"-S", "--needed", "--noconfirm", step.flag}, step.names...)
-		if _, err := run.Run(ctx, "", "yay", args...); err != nil {
+		if err := run.Run(ctx, "", "yay", args...); err != nil {
 			return err
 		}
 	}

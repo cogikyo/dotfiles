@@ -17,7 +17,7 @@ type ReposCmd struct {
 type reposSync struct{}
 
 func (reposSync) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
-	return repos.Sync(ctx, u, root, execx.OSRunner{IO: true})
+	return repos.Sync(ctx, u, root, execx.OSRunner{})
 }
 
 type reposUpdate struct{}

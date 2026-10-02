@@ -8,6 +8,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -103,8 +104,7 @@ func clone(ctx context.Context, run execx.Runner, r Repo, dir string) error {
 	if err := os.MkdirAll(filepath.Dir(dir), 0o755); err != nil {
 		return err
 	}
-	_, err := run.Run(ctx, "", "git", "clone", r.URL(), dir)
-	return err
+	return run.Run(ctx, "", "git", "clone", r.URL(), dir)
 }
 
 type State string
@@ -146,8 +146,14 @@ func update(ctx context.Context, run execx.Runner, dir string) (State, error) {
 		return Absent, nil
 	}
 	git := func(args ...string) (string, error) { return run.Output(ctx, dir, "git", args...) }
+	exited := func(err error, s State) (State, error) {
+		if exit, ok := errors.AsType[*exec.ExitError](err); ok && exit.ExitCode() == 1 {
+			return s, nil
+		}
+		return "", err
+	}
 	if _, err := git("symbolic-ref", "-q", "HEAD"); err != nil {
-		return Detached, nil
+		return exited(err, Detached)
 	}
 	status, err := git("status", "--porcelain", "--untracked-files=no")
 	if err != nil {
@@ -157,7 +163,7 @@ func update(ctx context.Context, run execx.Runner, dir string) (State, error) {
 		return Dirty, nil
 	}
 	if _, err := git("rev-parse", "--verify", "-q", "@{upstream}"); err != nil {
-		return Untracked, nil
+		return exited(err, Untracked)
 	}
 	if _, err := git("fetch", "--quiet"); err != nil {
 		return "", err

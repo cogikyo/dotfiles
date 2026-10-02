@@ -41,8 +41,7 @@ func Group(r paths.Root, offline bool, run execx.Runner) doctor.Group {
 				}
 				var errs []error
 				for _, name := range absent(bin) {
-					_, err := run.Run(ctx, filepath.Join(r.Dotfiles, "cmds"), "go", "build", "-o", filepath.Join(bin, name), "./cmd/"+name)
-					errs = append(errs, err)
+					errs = append(errs, run.Run(ctx, filepath.Join(r.Dotfiles, "cmds"), "go", "build", "-o", filepath.Join(bin, name), "./cmd/"+name))
 				}
 				return errors.Join(errs...)
 			},
