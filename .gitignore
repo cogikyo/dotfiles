@@ -3,7 +3,6 @@ cmds/cmd/dctl/dctl
 cmds/cmd/ewwd/ewwd
 cmds/cmd/hyprd/hyprd
 cmds/cmd/newtab/newtab
-cmds/cmd/newtab/newtab-server
 
 # Plaintext secrets (safety net)
 secrets/identity
