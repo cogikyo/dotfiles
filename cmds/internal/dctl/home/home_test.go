@@ -22,7 +22,6 @@ func setup(t *testing.T) paths.Root {
 		"config/obs-studio/basic/scenes/Costello.json",
 		"config/zsh/zshrc",
 		"config/zsh/zshenv",
-		"bin/tool",
 	} {
 		write(t, filepath.Join(r.Dotfiles, rel), rel)
 	}
@@ -71,7 +70,7 @@ func TestLinks(t *testing.T) {
 	if _, err := os.Lstat(filepath.Join(r.Home, ".config", "firefox")); err == nil {
 		t.Error("firefox linked wholesale")
 	}
-	for _, dst := range []string{".config/kitty", ".config/obs-studio/basic/profiles/Costello/basic.ini", ".zshenv", ".local/bin/tool"} {
+	for _, dst := range []string{".config/kitty", ".config/obs-studio/basic/profiles/Costello/basic.ini", ".zshenv"} {
 		if st, err := os.Lstat(filepath.Join(r.Home, dst)); err != nil || st.Mode()&os.ModeSymlink == 0 {
 			t.Errorf("%s not a symlink: %v", dst, err)
 		}

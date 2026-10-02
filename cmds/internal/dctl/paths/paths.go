@@ -1,7 +1,7 @@
 // Package paths discovers the dotfiles root and derives repo-relative paths.
 //
 // Responsibilities:
-// - Honor DOTFILES and XDG_STATE_HOME overrides.
+// - Honor the DOTFILES override.
 // - Keep command packages independent of hard-coded repo locations.
 package paths
 
@@ -17,7 +17,6 @@ import (
 type Root struct {
 	Dotfiles string
 	Home     string
-	State    string
 }
 
 func DiscoverRoot() (Root, error) {
@@ -44,11 +43,7 @@ func DiscoverRoot() (Root, error) {
 	if _, err := os.Stat(filepath.Join(dotfiles, "AGENTS.md")); err != nil {
 		return Root{}, fmt.Errorf("dotfiles root not found at %s", dotfiles)
 	}
-	state := os.Getenv("XDG_STATE_HOME")
-	if state == "" {
-		state = filepath.Join(home, ".local", "state")
-	}
-	return Root{Dotfiles: dotfiles, Home: home, State: filepath.Join(state, "dotfiles")}, nil
+	return Root{Dotfiles: dotfiles, Home: home}, nil
 }
 
 func (r Root) Packages(parts ...string) string {
@@ -73,11 +68,6 @@ func (r Root) System(parts ...string) string {
 
 func (r Root) Config(parts ...string) string {
 	items := append([]string{r.Dotfiles, "config"}, parts...)
-	return filepath.Join(items...)
-}
-
-func (r Root) Bin(parts ...string) string {
-	items := append([]string{r.Dotfiles, "bin"}, parts...)
 	return filepath.Join(items...)
 }
 

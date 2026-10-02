@@ -142,15 +142,6 @@ func links(r paths.Root) ([]link, error) {
 	for _, src := range apps {
 		out = append(out, link{src, filepath.Join(r.Home, ".local", "share", "applications", filepath.Base(src))})
 	}
-	bin, err := os.ReadDir(r.Bin())
-	if err != nil && !errors.Is(err, fs.ErrNotExist) {
-		return nil, err
-	}
-	for _, e := range bin {
-		if e.Type().IsRegular() {
-			out = append(out, link{r.Bin(e.Name()), filepath.Join(r.Home, ".local", "bin", e.Name())})
-		}
-	}
 	return out, nil
 }
 
