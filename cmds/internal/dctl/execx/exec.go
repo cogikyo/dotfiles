@@ -9,6 +9,8 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+	"syscall"
+	"time"
 )
 
 type Result struct {
@@ -22,19 +24,41 @@ type Runner interface {
 }
 
 type OSRunner struct {
-	IO bool
+	IO    bool
+	Group bool
+}
+
+func Grouped(ctx context.Context, args []string) *exec.Cmd {
+	cmd := exec.CommandContext(ctx, args[0], args[1:]...)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM) }
+	cmd.WaitDelay = 30 * time.Second
+	return cmd
+}
+
+func Reap(ctx context.Context, cmd *exec.Cmd) error {
+	err := cmd.Run()
+	if ctx.Err() != nil && cmd.Process != nil {
+		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+	}
+	return err
 }
 
 func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...string) (*Result, error) {
 	cmd := exec.CommandContext(ctx, name, args...)
+	if r.Group {
+		cmd = Grouped(ctx, append([]string{name}, args...))
+	}
 	if dir != "" {
 		cmd.Dir = dir
 	}
 	if r.IO {
-		cmd.Stdin = os.Stdin
+		if !r.Group {
+			cmd.Stdin = os.Stdin
+		}
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
-		err := cmd.Run()
+		err := Reap(ctx, cmd)
 		res := &Result{}
 		if err != nil {
 			return res, commandErr(name, args, err)
@@ -44,7 +68,7 @@ func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...stri
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	err := cmd.Run()
+	err := Reap(ctx, cmd)
 	res := &Result{Stdout: strings.TrimSpace(stdout.String()), Stderr: strings.TrimSpace(stderr.String())}
 	if err != nil {
 		return res, commandErr(name, args, err)

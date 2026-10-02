@@ -17,5 +17,5 @@ type CLI struct {
 	Secrets SecretsCmd `cmd:"" group:"lifecycle" help:"Manage age-encrypted secrets."`
 	Keys    KeysCmd    `cmd:"" group:"lifecycle" help:"Enroll, remove, and inspect YubiKeys."`
 	Repos   ReposCmd   `cmd:"" group:"lifecycle" help:"Manage configured repositories."`
-	ISO     iso.Cmd    `cmd:"" name:"iso" group:"lifecycle" help:"Build and release custom Arch ISOs."`
+	ISO     iso.Cmd    `cmd:"" name:"iso" group:"lifecycle" help:"Build, write, and release the offline installer ISO."`
 }
