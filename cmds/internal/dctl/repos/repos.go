@@ -1,8 +1,8 @@
 package repos
 
 import (
+	"bufio"
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -21,57 +21,65 @@ import (
 )
 
 type Repo struct {
-	Name string `json:"name"`
-	Repo string `json:"repo"`
-	Path string `json:"path"`
+	Repo string
+	Path string
 }
 
 func (r Repo) URL() string { return "git@github.com:" + r.Repo + ".git" }
 
 func (r Repo) Dir(home string) string { return paths.ExpandHome(home, r.Path) }
 
-func Load(path string) ([]Repo, error) {
+func Read(path string) ([]Repo, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
 	defer f.Close()
-
-	var repos []Repo
-	dec := json.NewDecoder(f)
-	dec.DisallowUnknownFields()
-	if err := dec.Decode(&repos); err != nil {
+	repos, err := Parse(f)
+	if err != nil {
 		return nil, fmt.Errorf("%s: %w", path, err)
-	}
-	if _, err := dec.Token(); err != io.EOF {
-		return nil, fmt.Errorf("%s: trailing data after the repo list", path)
-	}
-	names, dirs := map[string]bool{}, map[string]bool{}
-	for i, r := range repos {
-		switch {
-		case r.Name == "" || r.Repo == "" || r.Path == "":
-			return nil, fmt.Errorf("%s: entry %d needs name, repo, and path", path, i)
-		case !github.MatchString(r.Repo) || strings.HasSuffix(r.Repo, "/.") || strings.HasSuffix(r.Repo, "/.."):
-			return nil, fmt.Errorf("%s: %s: repo %q must be a GitHub owner/name", path, r.Name, r.Repo)
-		case !strings.HasPrefix(r.Path, "~/") && !filepath.IsAbs(r.Path):
-			return nil, fmt.Errorf("%s: %s: path %q must start with ~/ or /", path, r.Name, r.Path)
-		case names[r.Name]:
-			return nil, fmt.Errorf("%s: duplicate name %q", path, r.Name)
-		case dirs[filepath.Clean(r.Path)]:
-			return nil, fmt.Errorf("%s: duplicate path %q", path, r.Path)
-		}
-		names[r.Name], dirs[filepath.Clean(r.Path)] = true, true
 	}
 	return repos, nil
 }
 
+// Parse reads one "owner/name path" pair per line; "#" starts a comment.
+func Parse(r io.Reader) ([]Repo, error) {
+	var repos []Repo
+	seen := map[string]bool{}
+	s := bufio.NewScanner(r)
+	for n := 1; s.Scan(); n++ {
+		line, _, _ := strings.Cut(s.Text(), "#")
+		fields := strings.Fields(line)
+		if len(fields) == 0 {
+			continue
+		}
+		if len(fields) != 2 {
+			return nil, fmt.Errorf("line %d: %q: want owner/name and path", n, strings.TrimSpace(line))
+		}
+		repo, path := fields[0], fields[1]
+		switch {
+		case !github.MatchString(repo) || strings.HasSuffix(repo, "/.") || strings.HasSuffix(repo, "/.."):
+			return nil, fmt.Errorf("line %d: repo %q must be a GitHub owner/name", n, repo)
+		case !strings.HasPrefix(path, "~/") && !filepath.IsAbs(path):
+			return nil, fmt.Errorf("line %d: path %q must start with ~/ or /", n, path)
+		case seen[filepath.Clean(path)]:
+			return nil, fmt.Errorf("line %d: duplicate path %q", n, path)
+		}
+		seen[filepath.Clean(path)] = true
+		repos = append(repos, Repo{Repo: repo, Path: path})
+	}
+	return repos, s.Err()
+}
+
 var github = regexp.MustCompile(`^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$`)
+
+func list(root paths.Root) string { return filepath.Join(root.Dotfiles, "packages", "repos.lst") }
 
 func load(root paths.Root) ([]Repo, error) {
 	if os.Geteuid() == 0 {
 		return nil, errors.New("run as your user: git as root would run hooks and config from user-owned repos")
 	}
-	return Load(filepath.Join(root.Dotfiles, "repos.json"))
+	return Read(list(root))
 }
 
 func Sync(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner) error {
@@ -91,7 +99,7 @@ func Sync(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner) erro
 		}
 		u.Step("clone %s -> %s", r.Repo, r.Path)
 		if err := clone(ctx, run, r, dir); err != nil {
-			errs = append(errs, fmt.Errorf("%s: %w", r.Name, err))
+			errs = append(errs, fmt.Errorf("%s: %w", r.Repo, err))
 			continue
 		}
 		cloned++
@@ -130,12 +138,12 @@ func Update(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner) er
 		state, err := update(ctx, run, r.Dir(root.Home))
 		switch {
 		case err != nil:
-			u.Row(ui.Err, r.Name+": "+err.Error())
-			errs = append(errs, fmt.Errorf("%s: %w", r.Name, err))
+			u.Row(ui.Err, r.Repo+": "+err.Error())
+			errs = append(errs, fmt.Errorf("%s: %w", r.Repo, err))
 		case state == Current || state == Forwarded:
-			u.OK("%s: %s", r.Name, state)
+			u.OK("%s: %s", r.Repo, state)
 		default:
-			u.Warn("%s: %s", r.Name, state)
+			u.Warn("%s: %s", r.Repo, state)
 		}
 	}
 	return errors.Join(errs...)
@@ -199,7 +207,7 @@ func Group(root paths.Root, run execx.Runner) doctor.Group {
 	return doctor.Group{Name: "repos", Online: true, Checks: []doctor.Check{{
 		Name: "repos-cloned",
 		Check: func(ctx context.Context) error {
-			repos, err := Load(filepath.Join(root.Dotfiles, "repos.json"))
+			repos, err := Read(list(root))
 			if err != nil {
 				return err
 			}
@@ -207,19 +215,19 @@ func Group(root paths.Root, run execx.Runner) doctor.Group {
 			for _, r := range repos {
 				dir := r.Dir(root.Home)
 				if _, err := os.Lstat(dir); errors.Is(err, fs.ErrNotExist) {
-					problems = append(problems, fmt.Sprintf("%s: not cloned at %s", r.Name, r.Path))
+					problems = append(problems, fmt.Sprintf("%s: not cloned at %s", r.Repo, r.Path))
 					continue
 				}
 				if _, err := os.Stat(filepath.Join(dir, ".git")); err != nil {
-					problems = append(problems, fmt.Sprintf("%s: %s is not a git checkout", r.Name, r.Path))
+					problems = append(problems, fmt.Sprintf("%s: %s is not a git checkout", r.Repo, r.Path))
 					continue
 				}
 				origin, err := run.Output(ctx, dir, "git", "remote", "get-url", "origin")
 				switch {
 				case err != nil:
-					problems = append(problems, fmt.Sprintf("%s: no origin remote", r.Name))
+					problems = append(problems, fmt.Sprintf("%s: no origin remote", r.Repo))
 				case origin != r.URL():
-					problems = append(problems, fmt.Sprintf("%s: origin is %s, want %s", r.Name, origin, r.URL()))
+					problems = append(problems, fmt.Sprintf("%s: origin is %s, want %s", r.Repo, origin, r.URL()))
 				}
 			}
 			if len(problems) == 0 {
@@ -228,7 +236,7 @@ func Group(root paths.Root, run execx.Runner) doctor.Group {
 			return errors.New(strings.Join(problems, "; "))
 		},
 		Fix: func(ctx context.Context) error {
-			repos, err := Load(filepath.Join(root.Dotfiles, "repos.json"))
+			repos, err := Read(list(root))
 			if err != nil {
 				return err
 			}
@@ -239,7 +247,7 @@ func Group(root paths.Root, run execx.Runner) doctor.Group {
 					continue
 				}
 				if err := clone(ctx, run, r, dir); err != nil {
-					errs = append(errs, fmt.Errorf("%s: %w", r.Name, err))
+					errs = append(errs, fmt.Errorf("%s: %w", r.Repo, err))
 				}
 			}
 			return errors.Join(errs...)

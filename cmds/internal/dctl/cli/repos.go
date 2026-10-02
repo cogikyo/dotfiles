@@ -10,7 +10,7 @@ import (
 )
 
 type ReposCmd struct {
-	Sync   reposSync   `cmd:"" help:"Clone repos from repos.json that are missing."`
+	Sync   reposSync   `cmd:"" help:"Clone repos from packages/repos.lst that are missing."`
 	Update reposUpdate `cmd:"" help:"Fast-forward clean checkouts; report the rest untouched."`
 }
 

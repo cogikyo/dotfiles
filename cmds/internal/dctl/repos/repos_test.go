@@ -11,33 +11,26 @@ import (
 	"dotfiles/cmds/internal/dctl/execx"
 )
 
-func TestLoad(t *testing.T) {
+func TestParse(t *testing.T) {
 	for _, tc := range []struct {
-		name, json, err string
+		name, list, err string
 	}{
-		{"valid", `[{"name":"a","repo":"o/a","path":"~/a"},{"name":"b","repo":"o/b","path":"/srv/b"}]`, ""},
-		{"unknown field", `[{"name":"a","repo":"o/a","path":"~/a","branch":"main"}]`, "unknown field"},
-		{"missing value", `[{"name":"a","repo":"","path":"~/a"}]`, "needs name, repo, and path"},
-		{"relative path", `[{"name":"a","repo":"o/a","path":"a"}]`, "must start with"},
-		{"repo host injection", `[{"name":"a","repo":"@[evil.example]:owner/repo","path":"~/a"}]`, "GitHub owner/name"},
-		{"repo extra slash", `[{"name":"a","repo":"o/a/b","path":"~/a"}]`, "GitHub owner/name"},
-		{"repo whitespace", `[{"name":"a","repo":"o/a b","path":"~/a"}]`, "GitHub owner/name"},
-		{"repo dot name", `[{"name":"a","repo":"o/..","path":"~/a"}]`, "GitHub owner/name"},
-		{"duplicate name", `[{"name":"a","repo":"o/a","path":"~/a"},{"name":"a","repo":"o/b","path":"~/b"}]`, "duplicate name"},
-		{"duplicate path", `[{"name":"a","repo":"o/a","path":"~/a"},{"name":"b","repo":"o/b","path":"~/a/"}]`, "duplicate path"},
-		{"trailing data", `[] []`, "trailing data"},
+		{"valid", "# owner/repo path\no/a ~/a\n\no/b /srv/b # comment\n", ""},
+		{"missing path", "o/a\n", "want owner/name and path"},
+		{"extra field", "o/a ~/a main\n", "want owner/name and path"},
+		{"relative path", "o/a a\n", "must start with"},
+		{"repo host injection", "@[evil.example]:owner/repo ~/a\n", "GitHub owner/name"},
+		{"repo extra slash", "o/a/b ~/a\n", "GitHub owner/name"},
+		{"repo dot name", "o/.. ~/a\n", "GitHub owner/name"},
+		{"duplicate path", "o/a ~/a\no/b ~/a/\n", "duplicate path"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			path := filepath.Join(t.TempDir(), "repos.json")
-			if err := os.WriteFile(path, []byte(tc.json), 0o644); err != nil {
-				t.Fatal(err)
-			}
-			_, err := Load(path)
+			_, err := Parse(strings.NewReader(tc.list))
 			switch {
 			case tc.err == "" && err != nil:
-				t.Fatalf("Load: %v", err)
+				t.Fatalf("Parse: %v", err)
 			case tc.err != "" && (err == nil || !strings.Contains(err.Error(), tc.err)):
-				t.Fatalf("Load error = %v, want %q", err, tc.err)
+				t.Fatalf("Parse error = %v, want %q", err, tc.err)
 			}
 		})
 	}

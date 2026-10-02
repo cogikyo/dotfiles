@@ -262,7 +262,7 @@ dctl repos sync
 dctl repos update
 ```
 
-`sync` reads the ordered `{name, repo, path}` array in `repos.json` and clones missing repositories over GitHub SSH.
+`sync` reads `packages/repos.lst`, one `owner/name path` pair per line in clone order, and clones missing repositories over GitHub SSH.
 `repo` must be a GitHub `owner/name`, and `path` must start with `~/` or `/`.
 The system overlay supplies pinned GitHub host keys in `system/etc/ssh/ssh_known_hosts`; sync does not scan or add host keys.
 
