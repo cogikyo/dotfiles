@@ -120,6 +120,10 @@
   "formatter": {
     "prettier": {
       "disabled": true
+    },
+    "markdown": {
+      "command": ["sh", "-c", "out=$(prettierd \"$1\" < \"$1\") && printf '%s\\n' \"$out\" > \"$1\"", "_", "$FILE"],
+      "extensions": [".md"]
     }
   },
   "plugin": [
