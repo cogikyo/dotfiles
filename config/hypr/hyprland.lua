@@ -35,7 +35,6 @@ hl.on("hyprland.start", function()
 	for _, command in ipairs({
 		"taskset -c 7,15 dunst",
 		"hyprpolkitagent",
-		"hypridle",
 		"hyprpaper",
 	}) do
 		hl.exec_cmd(command)
