@@ -27,7 +27,9 @@ func (keysEnroll) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if os.Geteuid() == 0 {
 		return errUser
 	}
-	return keys.Enroll(ctx, u, root, execx.OSRunner{IO: true}, func(e secrets.Edit) error { return secrets.Rekey(u, root, e) })
+	return secrets.Locked(root, func() error {
+		return keys.Enroll(ctx, u, root, execx.OSRunner{IO: true}, func(e secrets.Edit) error { return secrets.Rekey(u, root, e) })
+	})
 }
 
 type keysLuks struct{}
@@ -47,7 +49,9 @@ func (c keysRemove) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if os.Geteuid() == 0 {
 		return keys.RemoveLuks(ctx, u, execx.OSRunner{}, "/sys", c.Serial)
 	}
-	return keys.Remove(u, root, c.Serial, func(e secrets.Edit) error { return secrets.Rekey(u, root, e) })
+	return secrets.Locked(root, func() error {
+		return keys.Remove(u, root, c.Serial, func(e secrets.Edit) error { return secrets.Rekey(u, root, e) })
+	})
 }
 
 type keysStatus struct{}

@@ -15,7 +15,7 @@ import (
 	"filippo.io/age/plugin"
 )
 
-func lines(data []byte) []string {
+func Lines(data []byte) []string {
 	var out []string
 	for line := range strings.Lines(string(data)) {
 		if line = strings.TrimSpace(line); line != "" && line[0] != '#' {
@@ -26,7 +26,7 @@ func lines(data []byte) []string {
 }
 
 func recipientLines(data []byte) ([]string, error) {
-	out := lines(data)
+	out := Lines(data)
 	if len(out) == 0 {
 		return nil, errors.New("secrets/recipients: no recipients")
 	}
@@ -71,7 +71,7 @@ func parseRecipient(line string, u *ui.UI) (age.Recipient, error) {
 	if r, err := age.ParseX25519Recipient(line); err == nil {
 		return r, nil
 	}
-	return plugin.NewRecipient(line, clientUI(u))
+	return plugin.NewRecipient(line, clientUI(u, new(error)))
 }
 
 func Seal(plaintext []byte, recipients []age.Recipient) ([]byte, error) {
@@ -102,7 +102,7 @@ func open(ciphertext []byte, ids ...age.Identity) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-var errPhrase = errors.New("wrong phrase")
+var errPhrase = errors.New("the phrase does not unlock identity.age")
 
 func Unwrap(wrapped []byte, phrase string) (*age.X25519Identity, error) {
 	scrypt, err := age.NewScryptIdentity(phrase)
@@ -129,6 +129,7 @@ type Keys struct {
 	wrapped string
 	plugins []age.Identity
 	ids     []age.Identity
+	stop    error
 }
 
 func LoadKeys(u *ui.UI, root paths.Root) (*Keys, error) {
@@ -143,11 +144,11 @@ func LoadKeys(u *ui.UI, root paths.Root) (*Keys, error) {
 	if err != nil {
 		return nil, err
 	}
-	for _, stub := range lines(data) {
+	for _, stub := range Lines(data) {
 		if !strings.HasPrefix(stub, "AGE-PLUGIN-") {
 			return nil, errors.New("secrets/identities: only plugin identity stubs belong here")
 		}
-		id, err := plugin.NewIdentity(stub, clientUI(u))
+		id, err := plugin.NewIdentity(stub, clientUI(u, &k.stop))
 		if err != nil {
 			return nil, fmt.Errorf("secrets/identities: %w", err)
 		}
@@ -161,6 +162,9 @@ func (k *Keys) Open(ciphertext []byte) ([]byte, error) {
 		data, err := open(ciphertext, k.plugins...)
 		if err == nil {
 			return data, nil
+		}
+		if k.stop != nil {
+			return nil, fmt.Errorf("%w: %w", k.stop, err)
 		}
 		k.u.Warn("%v", err)
 		k.u.Info("falling back to the age phrase")
@@ -194,7 +198,13 @@ func (k *Keys) phrase() (*age.X25519Identity, error) {
 	}
 }
 
-func clientUI(u *ui.UI) *plugin.ClientUI {
+func clientUI(u *ui.UI, stop *error) *plugin.ClientUI {
+	note := func(err error) error {
+		if aborted(err) {
+			*stop = err
+		}
+		return err
+	}
 	return &plugin.ClientUI{
 		DisplayMessage: func(name, message string) error {
 			u.Info("%s: %s", name, message)
@@ -202,9 +212,11 @@ func clientUI(u *ui.UI) *plugin.ClientUI {
 		},
 		RequestValue: func(name, prompt string, secret bool) (string, error) {
 			if secret {
-				return u.Secret(prompt)
+				value, err := u.Secret(prompt)
+				return value, note(err)
 			}
-			return u.Text(prompt, "")
+			value, err := u.Text(prompt, "")
+			return value, note(err)
 		},
 		Confirm: func(name, prompt, yes, no string) (bool, error) {
 			options := []string{yes}
@@ -212,7 +224,7 @@ func clientUI(u *ui.UI) *plugin.ClientUI {
 				options = append(options, no)
 			}
 			i, err := u.Select(prompt, options, 0)
-			return i == 0, err
+			return i == 0, note(err)
 		},
 		WaitTimer: func(name string) {
 			u.Info("waiting on age-plugin-%s; touch the key if it blinks", name)

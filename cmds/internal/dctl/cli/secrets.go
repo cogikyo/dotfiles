@@ -18,11 +18,15 @@ type SecretsCmd struct {
 
 type secretsSync struct{}
 
-func (secretsSync) Run(u *ui.UI, root paths.Root) error { return secrets.Sync(u, root) }
+func (secretsSync) Run(u *ui.UI, root paths.Root) error {
+	return secrets.Locked(root, func() error { return secrets.Sync(u, root) })
+}
 
 type secretsRekey struct{}
 
-func (secretsRekey) Run(u *ui.UI, root paths.Root) error { return secrets.Rekey(u, root, nil) }
+func (secretsRekey) Run(u *ui.UI, root paths.Root) error {
+	return secrets.Locked(root, func() error { return secrets.Rekey(u, root, nil) })
+}
 
 type secretsDecrypt struct {
 	Names []string `arg:"" optional:"" help:"Secrets to write (default: every entry not marked staged)."`

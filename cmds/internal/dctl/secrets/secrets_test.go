@@ -14,6 +14,7 @@ import (
 	"dotfiles/cmds/internal/dctl/ui"
 
 	"filippo.io/age"
+	"filippo.io/age/plugin"
 )
 
 const phrase = "throwaway test phrase"
@@ -277,15 +278,35 @@ func TestCheckPhrase(t *testing.T) {
 	if err := checkPhrase(f.root, phrase); err != nil {
 		t.Fatalf("right phrase: %v", err)
 	}
-	if err := checkPhrase(f.root, "wrong phrase"); !errors.Is(err, errFail) {
+	if err := checkPhrase(f.root, "wrong phrase"); !errors.Is(err, errPhrase) {
 		t.Fatalf("wrong phrase: got %v", err)
 	}
 	must(t, os.WriteFile(f.root.Secrets("recipients"), []byte(f.other.Recipient().String()+"\n"), 0o644))
-	if err := checkPhrase(f.root, phrase); !errors.Is(err, errFail) {
+	if err := checkPhrase(f.root, phrase); !errors.Is(err, errUnlisted) {
 		t.Fatalf("unlisted identity: got %v", err)
 	}
 	if got := names(t, f.root.Home); len(got) != 0 {
 		t.Fatalf("verify wrote %v", got)
+	}
+}
+
+type prompting struct{ ui *plugin.ClientUI }
+
+func (p prompting) Unwrap([]*age.Stanza) ([]byte, error) {
+	if _, err := p.ui.RequestValue("yubikey", "PIN:", true); err == nil {
+		return nil, errors.New("prompt answered")
+	}
+	return nil, errors.New("yubikey plugin: PIN request failed")
+}
+
+func TestPluginPromptAbortSkipsPhrase(t *testing.T) {
+	f := newFixture(t, "key:~/key:600\n")
+	sealed, err := Seal([]byte("key"), f.recipients(t))
+	must(t, err)
+	k := &Keys{u: f.u, wrapped: f.root.Secrets("missing.age")}
+	k.plugins = []age.Identity{prompting{clientUI(f.u, &k.stop)}}
+	if _, err := k.Open(sealed); !aborted(err) {
+		t.Fatalf("got %v, want an aborted prompt", err)
 	}
 }
 

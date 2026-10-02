@@ -135,7 +135,8 @@ func writeTargets(u *ui.UI, root paths.Root, keys *Keys, entries []Entry) error 
 		for _, p := range changed {
 			u.Dim("%s", p.e.Path())
 		}
-		ok, err := u.Confirm("Overwrite them?")
+		u.Warn("No plaintext backup is kept.")
+		ok, err := u.Confirm(fmt.Sprintf("Overwrite these %d files?", len(changed)))
 		if err != nil {
 			return fmt.Errorf("confirm overwrite: %w", err)
 		}
@@ -242,16 +243,24 @@ type Ledger struct {
 
 type Edit func(*Ledger) error
 
+func ReadLedger(root paths.Root) (Ledger, error) {
+	var l Ledger
+	var err error
+	if l.Recipients, err = os.ReadFile(root.Secrets("recipients")); err != nil {
+		return l, err
+	}
+	if l.Identities, err = os.ReadFile(root.Secrets("identities")); errors.Is(err, fs.ErrNotExist) {
+		err = nil
+	}
+	return l, err
+}
+
 func Rekey(u *ui.UI, root paths.Root, edit Edit) error {
 	if err := Preflight(root); err != nil {
 		return err
 	}
-	var l Ledger
-	var err error
-	if l.Recipients, err = os.ReadFile(root.Secrets("recipients")); err != nil {
-		return err
-	}
-	if l.Identities, err = os.ReadFile(root.Secrets("identities")); err != nil && !errors.Is(err, fs.ErrNotExist) {
+	l, err := ReadLedger(root)
+	if err != nil {
 		return err
 	}
 	if edit != nil {
@@ -328,7 +337,7 @@ func seal(repo *Tree, e Entry, data []byte, recipients []age.Recipient) error {
 	return repo.write(e.Name+".age", ciphertext, 0o644)
 }
 
-var errFail = errors.New("fail")
+var errUnlisted = errors.New("the phrase unlocked identity.age, but its recipient is not in secrets/recipients")
 
 func VerifyPhrase(u *ui.UI, root paths.Root) error {
 	phrase, err := u.Secret("Age phrase:")
@@ -338,7 +347,7 @@ func VerifyPhrase(u *ui.UI, root paths.Root) error {
 	if err := checkPhrase(root, phrase); err != nil {
 		return err
 	}
-	u.OK("pass")
+	u.OK("recovery phrase verified")
 	return nil
 }
 
@@ -359,8 +368,11 @@ func checkPhrase(root paths.Root, phrase string) error {
 		return err
 	}
 	id, err := Unwrap(wrapped, phrase)
-	if err != nil || !slices.Contains(recipients, id.Recipient().String()) {
-		return errFail
+	if err != nil {
+		return err
+	}
+	if !slices.Contains(recipients, id.Recipient().String()) {
+		return errUnlisted
 	}
 	return nil
 }

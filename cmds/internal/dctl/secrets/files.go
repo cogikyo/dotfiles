@@ -228,6 +228,24 @@ func OpenCheckout(root paths.Root) (*Tree, error) {
 	return &Tree{File: f}, nil
 }
 
+var errBusy = errors.New("another dctl secrets operation is running")
+
+func Locked(root paths.Root, fn func() error) error {
+	checkout, err := OpenCheckout(root)
+	if err != nil {
+		return err
+	}
+	defer checkout.Close()
+	err = unix.Flock(int(checkout.Fd()), unix.LOCK_EX|unix.LOCK_NB)
+	if errors.Is(err, unix.EWOULDBLOCK) {
+		return errBusy
+	}
+	if err != nil {
+		return &fs.PathError{Op: "flock", Path: root.Dotfiles, Err: err}
+	}
+	return fn()
+}
+
 func (t *Tree) ReadFile(rel string) ([]byte, error) {
 	data, _, err := t.read(rel)
 	return data, err
