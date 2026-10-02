@@ -79,7 +79,7 @@ func TestBlockedCheckIsNotFixed(t *testing.T) {
 	p := &probe{cures: true}
 	c := p.check("x")
 	c.Check = func(context.Context) error { return errors.Join(errors.New("context"), Block("needs %s", "y")) }
-	results := runAll(t, Options{Fix: true, Elevated: true}, Group{Name: "a", Root: true, Checks: []Check{c}})
+	results := runAll(t, Options{Fix: true, Elevated: true}, Group{Name: "a", Sudo: true, Checks: []Check{c}})
 	if results["x"].Status != Blocked || p.fixes != 0 {
 		t.Fatalf("status %s, fixes %d", results["x"].Status, p.fixes)
 	}
@@ -101,7 +101,7 @@ func TestPrivilege(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			p := &probe{cures: true}
 			opts := Options{Fix: true, Elevated: tc.elevated, Rerun: "dctl doctor --fix"}
-			r := runAll(t, opts, Group{Name: "a", Root: tc.root, Checks: []Check{p.check("x")}})["x"]
+			r := runAll(t, opts, Group{Name: "a", Sudo: tc.root, Checks: []Check{p.check("x")}})["x"]
 			if r.Status != tc.want || !strings.Contains(r.Detail, tc.hint) {
 				t.Fatalf("status %s detail %q", r.Status, r.Detail)
 			}
@@ -167,7 +167,7 @@ func TestShowCollapsesPassingChecks(t *testing.T) {
 		u, out := human(t, plain)
 		results, err := Run(context.Background(), u, []Group{
 			{Name: "a", Checks: []Check{healthy.check("a-one"), healthy.check("a-two")}},
-			{Name: "b", Root: true, Checks: []Check{healthy.check("b-ok"), (&probe{}).check("b-broken"), manual}},
+			{Name: "b", Sudo: true, Checks: []Check{healthy.check("b-ok"), (&probe{}).check("b-broken"), manual}},
 			{Name: "c", Checks: []Check{manual}},
 		}, Options{Rerun: "dctl doctor --fix"})
 		if err != nil {

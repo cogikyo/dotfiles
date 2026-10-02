@@ -18,7 +18,7 @@ type Check struct {
 
 type Group struct {
 	Name   string
-	Root   bool
+	Sudo   bool
 	Online bool
 	Checks []Check
 }
@@ -132,10 +132,10 @@ func evaluate(ctx context.Context, g Group, c Check, opts Options, head func()) 
 		return r
 	}
 	switch {
-	case g.Root && !opts.Elevated:
+	case g.Sudo && !opts.Elevated:
 		r.Status, r.Detail = Blocked, fmt.Sprintf("%s\nneeds root: sudo %s %s", r.Detail, opts.Rerun, g.Name)
 		return r
-	case !g.Root && opts.Elevated:
+	case !g.Sudo && opts.Elevated:
 		r.Status, r.Detail = Blocked, fmt.Sprintf("%s\nrefusing to fix as root: run %s %s as the owning user", r.Detail, opts.Rerun, g.Name)
 		return r
 	}
@@ -197,7 +197,7 @@ func show(u *ui.UI, g Group, results []Result, opts Options, shown bool) {
 		return
 	}
 	sudo := ""
-	if g.Root {
+	if g.Sudo {
 		sudo = "sudo "
 	}
 	u.Hint("Fix: %s%s %s", sudo, opts.Rerun, g.Name)

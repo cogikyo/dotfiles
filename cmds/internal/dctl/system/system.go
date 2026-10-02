@@ -20,7 +20,7 @@ import (
 const preset = "etc/systemd/system-preset/10-dotfiles.preset"
 
 func Group(root, overlay string) doctor.Group {
-	return doctor.Group{Name: "system", Root: true, Checks: []doctor.Check{
+	return doctor.Group{Name: "system", Sudo: true, Checks: []doctor.Check{
 		{
 			Name:  "system-files",
 			Check: func(context.Context) error { return check(root, overlay) },

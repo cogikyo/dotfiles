@@ -92,7 +92,7 @@ func Group(run execx.Runner, root string) doctor.Group {
 		}
 		return nil
 	}
-	return doctor.Group{Name: "secureboot", Root: true, Checks: []doctor.Check{
+	return doctor.Group{Name: "secureboot", Sudo: true, Checks: []doctor.Check{
 		{
 			Name:  Keys,
 			Check: enrolled,

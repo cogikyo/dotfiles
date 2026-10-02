@@ -126,7 +126,7 @@ func Luks(ctx context.Context, u *ui.UI, run execx.Runner, sys string, confirm f
 }
 
 func Group(run execx.Runner, sys string) doctor.Group {
-	return doctor.Group{Name: "keys", Root: true, Checks: []doctor.Check{{
+	return doctor.Group{Name: "keys", Sudo: true, Checks: []doctor.Check{{
 		Name:  "keys-luks",
 		Check: func(ctx context.Context) error { return checkLuks(ctx, run, sys) },
 	}}}

@@ -71,7 +71,7 @@ func unique(names []string) []string {
 }
 
 func Group(dir string, offline bool, run execx.Runner) doctor.Group {
-	return doctor.Group{Name: "packages", Root: true, Checks: []doctor.Check{{
+	return doctor.Group{Name: "packages", Sudo: true, Checks: []doctor.Check{{
 		Name: "packages-installed",
 		Check: func(ctx context.Context) error {
 			official, other, err := missing(ctx, dir, run)

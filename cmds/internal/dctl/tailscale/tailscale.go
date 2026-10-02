@@ -17,7 +17,7 @@ type state struct {
 }
 
 func Group(run execx.Runner) doctor.Group {
-	return doctor.Group{Name: "tailscale", Root: true, Online: true, Checks: []doctor.Check{{
+	return doctor.Group{Name: "tailscale", Sudo: true, Online: true, Checks: []doctor.Check{{
 		Name: "tailscale-ssh",
 		Check: func(ctx context.Context) error {
 			s, err := read(ctx, run)
