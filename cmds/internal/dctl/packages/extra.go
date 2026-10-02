@@ -63,6 +63,9 @@ func Extra(dir string, run execx.Runner) doctor.Group {
 }
 
 func install(ctx context.Context, run execx.Runner, names []string) error {
+	if err := synced(); err != nil {
+		return err
+	}
 	repo, err := run.Output(ctx, "", "pacman", "-Slq")
 	if err != nil {
 		return doctor.Block("pacman -Slq: %v", err)

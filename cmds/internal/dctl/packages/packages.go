@@ -3,8 +3,10 @@ package packages
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -70,6 +72,9 @@ func Group(dir string, offline bool, run execx.Runner) doctor.Group {
 				return err
 			}
 			if len(official) > 0 {
+				if err := synced(); err != nil {
+					return err
+				}
 				if _, err := run.Run(ctx, "", "pacman", append([]string{"-S", "--needed", "--noconfirm"}, official...)...); err != nil {
 					return err
 				}
@@ -112,6 +117,16 @@ func Locals(dir string) ([]string, error) {
 		names = append(names, filepath.Base(filepath.Dir(path)))
 	}
 	return names, nil
+}
+
+var coreDB = "/var/lib/pacman/sync/core.db"
+
+func synced() error {
+	_, err := os.Stat(coreDB)
+	if errors.Is(err, fs.ErrNotExist) {
+		return doctor.Block("no official sync databases (%s missing); run `dctl update` as your user first", coreDB)
+	}
+	return err
 }
 
 func installed(ctx context.Context, run execx.Runner) (map[string]bool, error) {

@@ -42,6 +42,18 @@ func lists(t *testing.T, files map[string]string) string {
 	return dir
 }
 
+func useSync(t *testing.T, present bool) {
+	t.Helper()
+	old := coreDB
+	coreDB = filepath.Join(t.TempDir(), "core.db")
+	t.Cleanup(func() { coreDB = old })
+	if present {
+		if err := os.WriteFile(coreDB, nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+}
+
 func TestParse(t *testing.T) {
 	got, err := Parse(strings.NewReader("# section\nzsh\n  git  # vcs\n\nzsh\n"))
 	if err != nil || !slices.Equal(got, []string{"git", "zsh"}) {
@@ -53,6 +65,7 @@ func TestParse(t *testing.T) {
 }
 
 func TestMissing(t *testing.T) {
+	useSync(t, true)
 	dir := lists(t, map[string]string{
 		"base.lst":         "git\nzsh\nmesa\n",
 		"aur.lst":          "yay\nlimine-snapper-sync\n",
@@ -76,6 +89,7 @@ func TestMissing(t *testing.T) {
 }
 
 func TestExtraInstallsOfficialBeforeAUR(t *testing.T) {
+	useSync(t, true)
 	dir := lists(t, map[string]string{"extra.lst": "docker\nlazydocker\nbase-devel\nspotify\nhtop\n"})
 	run := &fake{out: map[string]string{
 		"pacman -Qq":  "htop\n",
@@ -103,5 +117,19 @@ func TestOfflineFix(t *testing.T) {
 	run := &fake{}
 	if err := Group(t.TempDir(), true, run).Checks[0].Fix(context.Background()); err == nil || len(run.calls) != 0 {
 		t.Fatalf("offline fix err %v, calls %v", err, run.calls)
+	}
+}
+
+func TestUnsynced(t *testing.T) {
+	useSync(t, false)
+	dir := lists(t, map[string]string{"base.lst": "zsh\n", "aur.lst": "", "extra.lst": "htop\n"})
+	run := &fake{}
+	for _, fix := range []func(context.Context) error{Group(dir, false, run).Checks[0].Fix, Extra(dir, run).Checks[0].Fix} {
+		if err := fix(context.Background()); err == nil || !strings.Contains(err.Error(), "dctl update") {
+			t.Fatalf("fix err %v, want blocked on dctl update", err)
+		}
+	}
+	if !slices.Equal(run.calls, []string{"pacman -Qq", "pacman -Qq"}) {
+		t.Fatalf("calls %q, want only pacman -Qq", run.calls)
 	}
 }
