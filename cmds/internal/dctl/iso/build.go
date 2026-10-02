@@ -262,6 +262,7 @@ func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []s
 	if err := os.WriteFile(conf, fmt.Appendf(nil, `[options]
 Architecture = auto
 SigLevel = Required DatabaseOptional
+ParallelDownloads = 5
 
 [%s]
 SigLevel = Never
