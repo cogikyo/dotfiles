@@ -26,7 +26,7 @@ It requires root, UEFI, and the dctl ISO payload; it refuses an ordinary install
 The live environment starts it on tty1.
 See the [root README](../../../README.md#boot-and-install) for BIOS preparation and the hardware checklist.
 
-The form asks for a login password, hostname, timezone, and LUKS passphrase while background preparation verifies the payload and surveys disks.
+The form asks for a login password, timezone, and LUKS passphrase while background preparation verifies the payload and surveys disks.
 The installer shows the target model, size, and serial, then requires you to type the disk path before wiping it.
 It refuses the boot disk, mounted disks, USB/removable targets, and disks without a serial or WWN.
 

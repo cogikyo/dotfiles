@@ -212,7 +212,7 @@ func setup(t *testing.T) (*session, *fake) {
 	f.mount("", func(string) bool { return false })
 	s := &session{u: ui.New(ui.Options{JSON: true, Yes: true}), sh: f, root: root, exe: filepath.Join(root, "usr", "local", "bin", "dctl")}
 	s.ask = func(context.Context) (iso.Answers, error) {
-		return iso.Answers{Password: "pw", Host: "lovelace", Zone: "America/Denver", LUKS: "luks"}, nil
+		return iso.Answers{Password: "pw", Zone: "America/Denver", LUKS: "luks"}, nil
 	}
 	s.confirm = func(disk) error {
 		f.confirmed = len(f.calls)
@@ -371,7 +371,7 @@ func TestDCTLTEST(t *testing.T) {
 		put(t, filepath.Join(s.root, testMount, "answers.json"), []byte(body), 0o644)
 	}
 	valid := func(serial string) string {
-		return `{"password":"pw","host":"lovelace","zone":"America/Denver","luks":"luks","disk_serial":"` + serial + `"}`
+		return `{"password":"pw","zone":"America/Denver","luks":"luks","disk_serial":"` + serial + `"}`
 	}
 	t.Run("outside a VM", func(t *testing.T) {
 		s, f := setup(t)

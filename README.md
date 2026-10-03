@@ -176,7 +176,7 @@ The live environment starts this command as root on tty1:
 dctl install
 ```
 
-Enter the login password, hostname, timezone, and LUKS passphrase, then select the target disk if prompted.
+Enter the login password, timezone, and LUKS passphrase, then select the target disk if prompted.
 **Typing the disk path at the final confirmation erases the selected disk.**
 The installer refuses the boot disk, mounted disks, USB/removable targets, and targets without a serial or WWN.
 It installs the offline package payload, clones the bundled history into `~/dotfiles`, and installs the prebuilt commands.

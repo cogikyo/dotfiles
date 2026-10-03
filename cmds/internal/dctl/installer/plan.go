@@ -8,9 +8,10 @@ import (
 )
 
 const (
-	target = "/mnt"
-	mapper = "root"
-	login  = "cullyn"
+	target  = "/mnt"
+	mapper  = "root"
+	login   = "cullyn"
+	machine = "costello"
 
 	espSize    = "+4G"
 	options    = "noatime,compress=zstd"
@@ -30,7 +31,6 @@ func (s subvolume) options() string { return options + ",subvol=/" + s.name }
 
 type plan struct {
 	Disk       disk
-	Host       string
 	Zone       string
 	LUKSID     string
 	RootID     string
@@ -38,8 +38,8 @@ type plan struct {
 	SecureBoot bool
 }
 
-func newPlan(d disk, host, zone string) plan {
-	return plan{Disk: d, Host: host, Zone: zone, LUKSID: uuid(), RootID: uuid(), ESPID: fatID()}
+func newPlan(d disk, zone string) plan {
+	return plan{Disk: d, Zone: zone, LUKSID: uuid(), RootID: uuid(), ESPID: fatID()}
 }
 
 func uuid() string {
@@ -100,7 +100,7 @@ func (p plan) mount() []cmd {
 func (p plan) firstboot() []cmd {
 	return []cmd{run(
 		"systemd-firstboot", "--root="+target, "--force",
-		"--locale=en_US.UTF-8", "--keymap=us", "--timezone="+p.Zone, "--hostname="+p.Host,
+		"--locale=en_US.UTF-8", "--keymap=us", "--timezone="+p.Zone, "--hostname="+machine,
 		"--setup-machine-id",
 	)}
 }

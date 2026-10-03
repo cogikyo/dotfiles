@@ -10,7 +10,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"regexp"
 	"syscall"
 	"time"
 
@@ -34,9 +33,6 @@ func (s *session) form(context.Context) (iso.Answers, error) {
 	if a.Password, err = s.secret("Password"); err != nil {
 		return a, err
 	}
-	if a.Host, err = s.text("Hostname", "", hostname); err != nil {
-		return a, err
-	}
 	if a.Zone, err = s.text("Timezone", defaultZone, s.zone); err != nil {
 		return a, err
 	}
@@ -44,22 +40,10 @@ func (s *session) form(context.Context) (iso.Answers, error) {
 	return a, err
 }
 
-var hostPattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
-
-func hostname(v string) error {
-	if !hostPattern.MatchString(v) {
-		return errors.New("want one lowercase DNS label")
-	}
-	return nil
-}
-
 func (s *session) valid(a iso.Answers) error {
 	var errs []error
 	if a.Password == "" || a.LUKS == "" || a.Serial == "" {
 		errs = append(errs, errors.New("password, luks, and disk_serial are required"))
-	}
-	if err := hostname(a.Host); err != nil {
-		errs = append(errs, fmt.Errorf("host %q: %w", a.Host, err))
 	}
 	return errors.Join(append(errs, s.zone(a.Zone))...)
 }

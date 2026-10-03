@@ -116,7 +116,7 @@ func (s *session) main(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	p := newPlan(d, a.Host, a.Zone)
+	p := newPlan(d, a.Zone)
 	p.SecureBoot = prep.firmware.Setup
 	if !p.SecureBoot {
 		s.u.Warn("firmware is not in Secure Boot Setup Mode; installing without Secure Boot (later: dctl doctor --fix secureboot)")
@@ -144,7 +144,7 @@ func (s *session) main(ctx context.Context) (err error) {
 	if test != nil {
 		s.report(nil)
 	}
-	s.u.OK("Installed %s on %s in %s.", p.Host, p.Disk.Path, time.Since(start).Round(time.Second))
+	s.u.OK("Installed %s on %s in %s.", machine, p.Disk.Path, time.Since(start).Round(time.Second))
 	s.u.Info("After first login, run dctl doctor and follow its repair commands.")
 	if test == nil {
 		if ok, err := s.u.Confirm("Reboot now?"); err != nil || !ok {

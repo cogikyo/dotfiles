@@ -27,7 +27,6 @@ const (
 
 type Answers struct {
 	Password string `json:"password"`
-	Host     string `json:"host"`
 	Zone     string `json:"zone"`
 	LUKS     string `json:"luks"`
 	Serial   string `json:"disk_serial"`
