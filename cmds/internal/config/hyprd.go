@@ -36,6 +36,13 @@ type VPNConnection struct {
 	Profile string `yaml:"profile"` // staged NetworkManager keyfile under $HOME
 }
 
+func (c VPNConnection) Path(name string) string {
+	if c.Profile == "" {
+		return ExpandPath(fmt.Sprintf("~/.local/share/dotfiles/vpn/%s.nmconnection", name))
+	}
+	return ExpandPath(c.Profile)
+}
+
 // ╭──────────────────────────────────────────────────────────────────────────────╮
 // │ boot / environment                                                           │
 // ╰──────────────────────────────────────────────────────────────────────────────╯

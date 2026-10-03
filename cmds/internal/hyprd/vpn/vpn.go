@@ -173,13 +173,9 @@ func (v *VPN) resolveConfigured(name string) (connection, error) {
 }
 
 func normalizeConnection(key string, cfg config.VPNConnection) (connection, error) {
-	profile := cfg.Profile
-	if profile == "" {
-		profile = fmt.Sprintf("~/.local/share/dotfiles/vpn/%s.nmconnection", key)
-	}
 	return connection{
 		Name:    key,
-		Profile: config.ExpandPath(profile),
+		Profile: cfg.Path(key),
 	}, nil
 }
 
@@ -293,6 +289,12 @@ func (v *VPN) install(conn connection, options installOptions) (string, error) {
 		return "", fmt.Errorf("connection already exists: %s", conn.Name)
 	}
 
+	undo := func(err error) error {
+		if completeProfile && !exists {
+			return errors.Join(err, sudoNMCLI("connection", "delete", "id", conn.Name))
+		}
+		return err
+	}
 	if completeProfile {
 		if err := sudoNMCLI("connection", "load", conn.Profile); err != nil {
 			return "", err
@@ -301,7 +303,7 @@ func (v *VPN) install(conn connection, options installOptions) (string, error) {
 	if uuid == "" {
 		out, err := nmcliOutput("-g", "connection.uuid", "connection", "show", "id", conn.Name)
 		if err != nil {
-			return "", err
+			return "", undo(err)
 		}
 		uuid = strings.TrimSpace(out)
 	}
@@ -315,7 +317,7 @@ func (v *VPN) install(conn connection, options installOptions) (string, error) {
 	}
 
 	if err := ensureVPNSecrets(conn.Name, uuid, options.ResetSecrets); err != nil {
-		return "", err
+		return "", undo(err)
 	}
 	lines = append(lines, "VPN secrets stored in NetworkManager")
 	if err := os.Remove(conn.Profile); err != nil {
