@@ -4,7 +4,7 @@ user_pref("browser.sessionstore.resume_from_crash", false);
 
 // Browser chrome and repo-managed userChrome.css.
 user_pref("toolkit.legacyUserProfileCustomizations.stylesheets", true);
-user_pref("layout.css.devPixelsPerPx", "1.1");
+user_pref("layout.css.devPixelsPerPx", "1.0");
 user_pref("browser.toolbars.bookmarks.visibility", "never");
 
 // Desktop entries route external URLs through `hyprd browser open`.
