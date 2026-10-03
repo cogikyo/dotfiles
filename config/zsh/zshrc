@@ -85,6 +85,7 @@ add-zsh-hook precmd _hyprd_report_pane
 alias niol='clear && source ~/.zshrc'
 alias ls='echo; lsd'
 alias n='nvim'
+alias update='dctl update'
 function c() {
     opencode attach http://127.0.0.1:4096 --dir "$PWD" "$@"
 }

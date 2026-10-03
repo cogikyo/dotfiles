@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"maps"
-	"os"
 	"os/exec"
 	"slices"
 	"strings"
@@ -20,14 +19,7 @@ type Drift struct {
 	Orphans []string `json:"orphans"`
 }
 
-func Update(ctx context.Context, u *ui.UI, dir string, run execx.Runner) error {
-	if os.Geteuid() == 0 {
-		return errors.New("run dctl update as your user; yay elevates only the pacman transaction")
-	}
-	u.Step("yay -Syu")
-	if err := run.Run(ctx, "", "yay", "-Syu"); err != nil {
-		return err
-	}
+func Report(ctx context.Context, u *ui.UI, dir string, run execx.Runner) error {
 	l, err := Load(dir)
 	if err != nil {
 		return err

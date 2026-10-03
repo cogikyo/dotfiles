@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -75,13 +76,6 @@ var github = regexp.MustCompile(`^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$`)
 
 func list(root paths.Root) string { return filepath.Join(root.Dotfiles, "packages", "repos.lst") }
 
-func load(root paths.Root) ([]Repo, error) {
-	if os.Geteuid() == 0 {
-		return nil, errors.New("run as your user: git as root would run hooks and config from user-owned repos")
-	}
-	return Read(list(root))
-}
-
 func clone(ctx context.Context, run execx.Runner, r Repo, dir string) error {
 	if err := os.MkdirAll(filepath.Dir(dir), 0o755); err != nil {
 		return err
@@ -103,12 +97,23 @@ const (
 )
 
 func Update(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner) error {
-	repos, err := load(root)
+	repos, err := Read(list(root))
 	if err != nil {
 		return err
 	}
+	var checkouts []os.FileInfo
+	for _, dir := range []string{filepath.Join(root.Home, "dotfiles"), root.Dotfiles} {
+		if st, err := os.Stat(dir); err == nil {
+			checkouts = append(checkouts, st)
+		}
+	}
 	var errs []error
 	for _, r := range repos {
+		st, err := os.Stat(r.Dir(root.Home))
+		if err == nil && slices.ContainsFunc(checkouts, func(c os.FileInfo) bool { return os.SameFile(c, st) }) {
+			u.Dim("%s: skipped; update never pulls the dotfiles checkout", r.Repo)
+			continue
+		}
 		state, err := update(ctx, run, r.Dir(root.Home))
 		switch {
 		case err != nil:
