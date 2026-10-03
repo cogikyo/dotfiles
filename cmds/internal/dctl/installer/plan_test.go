@@ -212,7 +212,7 @@ func TestNew(t *testing.T) {
 }
 
 func TestValid(t *testing.T) {
-	s, _ := setup(t)
+	s, _ := rig(t)
 	ok := iso.Answers{Password: "pw", Zone: "America/Denver", LUKS: "luks", Serial: "24123A800123"}
 	if err := s.valid(ok); err != nil {
 		t.Fatal(err)

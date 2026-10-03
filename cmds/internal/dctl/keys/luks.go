@@ -9,8 +9,8 @@ import (
 	"slices"
 	"strings"
 
-	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/execx"
+	"dotfiles/cmds/internal/dctl/setup"
 	"dotfiles/cmds/internal/dctl/ui"
 )
 
@@ -125,20 +125,23 @@ func Luks(ctx context.Context, u *ui.UI, run execx.Runner, sys string, confirm f
 	return nil
 }
 
-func Group(run execx.Runner, sys string) doctor.Group {
-	return doctor.Group{Name: "keys", Sudo: true, Checks: []doctor.Check{{
+func Stage(u *ui.UI, run execx.Runner, sys string) setup.Stage {
+	return setup.Stage{Name: "keys", Root: true, Items: []setup.Item{{
 		Name:  "keys-luks",
 		Check: func(ctx context.Context) error { return checkLuks(ctx, run, sys) },
+		Fix: func(ctx context.Context) error {
+			if checkLuks(ctx, run, sys) == nil {
+				return nil
+			}
+			return Luks(ctx, u, run, sys, func(string) (bool, error) { return false, nil })
+		},
 	}}}
 }
 
 func checkLuks(ctx context.Context, run execx.Runner, sys string) error {
 	dev, err := rootDevice(ctx, run, sys)
 	if err != nil {
-		return doctor.Block("%v", err)
-	}
-	if os.Geteuid() != 0 {
-		return doctor.Block("reading the LUKS header of %s needs root: sudo dctl doctor keys", dev)
+		return setup.Manual("%v", err)
 	}
 	h, err := header(ctx, run, dev)
 	if err != nil {
@@ -152,7 +155,7 @@ func checkLuks(ctx context.Context, run execx.Runner, sys string) error {
 		missing = append(missing, "recovery key")
 	}
 	if len(missing) > 0 {
-		return fmt.Errorf("%s has no %s: sudo dctl keys luks", dev, strings.Join(missing, " or "))
+		return fmt.Errorf("%s has no %s", dev, strings.Join(missing, " or "))
 	}
 	return nil
 }

@@ -12,14 +12,14 @@ import (
 	"slices"
 	"strings"
 
-	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/execx"
+	"dotfiles/cmds/internal/dctl/setup"
 )
 
 const (
 	global   = "8be4df61-93ca-11d2-aa0d-00e098032b8c"
 	fallback = "EFI/BOOT/BOOTX64.EFI"
-	bios     = "Secure Boot is off and the firmware is not in Setup Mode: in the BIOS, erase the Secure Boot keys (Setup Mode), boot, then run sudo dctl doctor --fix secureboot"
+	bios     = "Secure Boot is off and the firmware is not in Setup Mode: in the BIOS, erase the Secure Boot keys (Setup Mode), boot, then run dctl setup secureboot"
 
 	Keys     = "secureboot-keys"
 	Signed   = "secureboot-signed"
@@ -67,7 +67,7 @@ func variable(efi, name string) (bool, error) {
 	return data[4] == 1, nil
 }
 
-func Group(run execx.Runner, root string) doctor.Group {
+func Stage(run execx.Runner, root string) setup.Stage {
 	efi := filepath.Join(root, "sys", "firmware", "efi")
 	esp := filepath.Join(root, "boot")
 	limine := filepath.Join(root, "etc", "default", "limine")
@@ -77,7 +77,7 @@ func Group(run execx.Runner, root string) doctor.Group {
 		case err != nil:
 			return err
 		case !fw.UEFI:
-			return doctor.Block("not booted with UEFI")
+			return setup.Manual("not booted with UEFI")
 		case fw.Setup:
 			return errors.New("firmware is in Setup Mode: no Secure Boot keys enrolled")
 		case fw.Enabled:
@@ -86,23 +86,45 @@ func Group(run execx.Runner, root string) doctor.Group {
 		keys, err := installed(ctx, run)
 		switch {
 		case err != nil:
-			return doctor.Block("%v", err)
+			return err
 		case !keys:
-			return doctor.Block("%s", bios)
+			return setup.Manual("%s", bios)
 		}
 		return nil
 	}
-	return doctor.Group{Name: "secureboot", Sudo: true, Checks: []doctor.Check{
+	sign := func(ctx context.Context) error {
+		if err := configure(limine); err != nil {
+			return err
+		}
+		if err := os.Remove(filepath.Join(esp, fallback)); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+		return run.Run(ctx, "", "limine-update")
+	}
+	signed := func(ctx context.Context) error {
+		keys, err := installed(ctx, run)
+		switch {
+		case err != nil:
+			return err
+		case !keys:
+			return setup.Manual("no sbctl keys yet; see secureboot-keys")
+		}
+		return verify(ctx, run, root)
+	}
+	return setup.Stage{Name: "secureboot", Root: true, Items: []setup.Item{
 		{
 			Name:  Keys,
 			Check: enrolled,
 			Fix: func(ctx context.Context) error {
+				if enrolled(ctx) == nil {
+					return nil
+				}
 				fw, err := Read(efi)
 				if err != nil {
 					return err
 				}
 				if !fw.Setup {
-					return doctor.Block("%s", bios)
+					return setup.Manual("%s", bios)
 				}
 				keys, err := installed(ctx, run)
 				if err != nil {
@@ -113,13 +135,7 @@ func Group(run execx.Runner, root string) doctor.Group {
 						return err
 					}
 				}
-				if err := configure(limine); err != nil {
-					return err
-				}
-				if err := os.Remove(filepath.Join(esp, fallback)); err != nil && !errors.Is(err, fs.ErrNotExist) {
-					return err
-				}
-				if err := run.Run(ctx, "", "limine-update"); err != nil {
+				if err := sign(ctx); err != nil {
 					return err
 				}
 				if err := verify(ctx, run, root); err != nil {
@@ -129,16 +145,20 @@ func Group(run execx.Runner, root string) doctor.Group {
 			},
 		},
 		{
-			Name: Signed,
-			Check: func(ctx context.Context) error {
-				keys, err := installed(ctx, run)
-				switch {
-				case err != nil:
-					return doctor.Block("%v", err)
-				case !keys:
-					return doctor.Block("no sbctl keys yet; see secureboot-keys")
+			Name:  Signed,
+			Check: signed,
+			Fix: func(ctx context.Context) error {
+				err := signed(ctx)
+				if err == nil {
+					return nil
 				}
-				return verify(ctx, run, root)
+				if keys, ierr := installed(ctx, run); ierr != nil || !keys {
+					return err
+				}
+				if enrolled(ctx) != nil {
+					return setup.Manual("Secure Boot keys are not enrolled; see secureboot-keys before re-signing")
+				}
+				return sign(ctx)
 			},
 		},
 		{
@@ -152,9 +172,9 @@ func Group(run execx.Runner, root string) doctor.Group {
 					return nil
 				}
 				if enrolled(ctx) != nil {
-					return doctor.Block("no Secure Boot keys enrolled; see secureboot-keys")
+					return setup.Manual("no Secure Boot keys enrolled; see secureboot-keys")
 				}
-				return doctor.Block("keys are enrolled but Secure Boot is not enforced yet: reboot; if Secure Boot is still off, enable it in the BIOS")
+				return setup.Manual("keys are enrolled but Secure Boot is not enforced yet: reboot; if Secure Boot is still off, enable it in the BIOS")
 			},
 		},
 	}}

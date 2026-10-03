@@ -8,11 +8,11 @@ import (
 	"testing"
 	"time"
 
-	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/paths"
+	"dotfiles/cmds/internal/dctl/setup"
 )
 
-func setup(t *testing.T) paths.Root {
+func sandbox(t *testing.T) paths.Root {
 	t.Helper()
 	r := paths.Root{Dotfiles: t.TempDir(), Home: t.TempDir()}
 	for _, rel := range []string{
@@ -38,10 +38,10 @@ func write(t *testing.T, path, content string) {
 	}
 }
 
-func check(t *testing.T, r paths.Root, name string) doctor.Check {
+func check(t *testing.T, r paths.Root, name string) setup.Item {
 	t.Helper()
-	checks := Group(r, nil).Checks
-	i := slices.IndexFunc(checks, func(c doctor.Check) bool { return c.Name == name })
+	checks := Stage(r, nil).Items
+	i := slices.IndexFunc(checks, func(c setup.Item) bool { return c.Name == name })
 	if i < 0 {
 		t.Fatalf("no check %s", name)
 	}
@@ -49,7 +49,7 @@ func check(t *testing.T, r paths.Root, name string) doctor.Check {
 }
 
 func TestLinks(t *testing.T) {
-	r := setup(t)
+	r := sandbox(t)
 	write(t, filepath.Join(r.Home, ".zshrc"), "old")
 	if err := os.MkdirAll(filepath.Join(r.Home, ".config", "zsh"), 0o755); err != nil {
 		t.Fatal(err)
@@ -94,7 +94,7 @@ func TestApplyBackup(t *testing.T) {
 }
 
 func TestLinksRefuseUserData(t *testing.T) {
-	r := setup(t)
+	r := sandbox(t)
 	write(t, filepath.Join(r.Home, ".config", "kitty", "mine.conf"), "user data")
 	c := check(t, r, "home-links")
 	err := c.Fix(t.Context())
@@ -110,7 +110,7 @@ func TestLinksRefuseUserData(t *testing.T) {
 }
 
 func TestSeed(t *testing.T) {
-	r := setup(t)
+	r := sandbox(t)
 	src := r.Config("obs-studio", "basic", "scenes", "Costello.json")
 	dst := filepath.Join(r.Home, "scene.json")
 	if err := os.Symlink(src, dst); err != nil {

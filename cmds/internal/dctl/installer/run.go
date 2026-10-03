@@ -14,9 +14,9 @@ import (
 	"time"
 
 	"dotfiles/cmds/internal/dctl/binaries"
-	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/iso"
 	"dotfiles/cmds/internal/dctl/secureboot"
+	"dotfiles/cmds/internal/dctl/setup"
 	"dotfiles/cmds/internal/dctl/ui"
 )
 
@@ -30,8 +30,8 @@ const (
 
 var (
 	masked     = []string{"60-mkinitcpio-remove.hook", "90-mkinitcpio-install.hook", "60-limine-mkinitcpio-remove-pre.hook", "80-limine-efi-deploy.hook", "90-limine-mkinitcpio-remove-post.hook"}
-	rootGroups = []string{"system", "packages"}
-	homeGroups = []string{"home", "binaries"}
+	rootStages = []string{"system", "packages"}
+	userStages = []string{"home"}
 )
 
 type session struct {
@@ -119,7 +119,7 @@ func (s *session) main(ctx context.Context) (err error) {
 	p := newPlan(d, a.Zone)
 	p.SecureBoot = prep.firmware.Setup
 	if !p.SecureBoot {
-		s.u.Warn("firmware is not in Secure Boot Setup Mode; installing without Secure Boot (later: dctl doctor --fix secureboot)")
+		s.u.Warn("firmware is not in Secure Boot Setup Mode; installing without Secure Boot (later: dctl setup secureboot)")
 	}
 	if test == nil {
 		if err := s.confirm(p.Disk); err != nil {
@@ -145,7 +145,7 @@ func (s *session) main(ctx context.Context) (err error) {
 		s.report(nil)
 	}
 	s.u.OK("Installed %s on %s in %s.", machine, p.Disk.Path, time.Since(start).Round(time.Second))
-	s.u.Info("After first login, run dctl doctor and follow its repair commands.")
+	s.u.Info("After first login, run dctl setup.")
 	if test == nil {
 		if ok, err := s.u.Confirm("Reboot now?"); err != nil || !ok {
 			return nil
@@ -295,7 +295,7 @@ func (s *session) install(ctx context.Context, p plan, a iso.Answers, pkgs []str
 		{"accounts", func(ctx context.Context) error { return s.accounts(ctx, a) }},
 		{"keyring", cmds([]cmd{{Args: chroot("pacman-key", "--init")}, {Args: chroot("pacman-key", "--populate", "archlinux")}})},
 		{"dotfiles", func(ctx context.Context) error { return s.dotfiles(ctx) }},
-		{"doctor", func(ctx context.Context) error { return s.doctor(ctx) }},
+		{"setup", func(ctx context.Context) error { return s.setup(ctx) }},
 		{"snapshots", cmds(p.snapshots())},
 		{"boot", cmds([]cmd{{Args: chroot("limine-install")}})},
 	}
@@ -306,7 +306,7 @@ func (s *session) install(ctx context.Context, p plan, a iso.Answers, pkgs []str
 	}
 	steps = append(steps, step{"validate", func(ctx context.Context) error { return s.validate(ctx, p) }})
 	if s.testMounted {
-		steps = append(steps, step{"dctltest", func(ctx context.Context) error { return s.testDoctor(ctx) }})
+		steps = append(steps, step{"dctltest", func(ctx context.Context) error { return s.testSetup(ctx) }})
 	}
 	for _, st := range steps {
 		s.u.Step("%s", st.name)
@@ -320,19 +320,19 @@ func (s *session) install(ctx context.Context, p plan, a iso.Answers, pkgs []str
 	return nil
 }
 
-const testUnit = "dctltest-doctor.service"
+const testUnit = "dctltest-setup.service"
 
-func (s *session) testDoctor(ctx context.Context) error {
+func (s *session) testSetup(ctx context.Context) error {
 	home := filepath.Join("/home", login)
 	unit := fmt.Sprintf(`[Unit]
-Description=DCTLTEST post-boot doctor
+Description=DCTLTEST post-boot setup status
 After=multi-user.target display-manager.service
 
 [Service]
 Type=oneshot
 Environment=HOME=/root DOTFILES=%[1]s/dotfiles
-ExecStart=-%[2]s --json doctor --offline %[3]s secureboot
-ExecStart=-/usr/bin/runuser -u %[4]s -- %[2]s --json doctor --offline %[5]s
+ExecStart=-%[2]s --json setup --status %[3]s secureboot
+ExecStart=-/usr/bin/runuser -u %[4]s -- %[2]s --json setup --status %[5]s
 ExecStart=/bin/sh -c 'echo "%[6]s$$(systemctl is-active display-manager)"'
 StandardOutput=tty
 TTYPath=%[7]s
@@ -340,7 +340,7 @@ StandardError=journal
 
 [Install]
 WantedBy=graphical.target
-`, home, filepath.Join(home, ".local", "bin", "dctl"), strings.Join(rootGroups, " "), login, strings.Join(homeGroups, " "), iso.Greeter, console)
+`, home, filepath.Join(home, ".local", "bin", "dctl"), strings.Join(rootStages, " "), login, strings.Join(userStages, " "), iso.Greeter, console)
 	if err := os.WriteFile(s.path(target, "/etc/systemd/system", testUnit), []byte(unit), 0o644); err != nil {
 		return err
 	}
@@ -485,30 +485,33 @@ func dctl(args ...string) []string {
 	return append([]string{"env", "DOTFILES=" + filepath.Join(home, "dotfiles"), filepath.Join(home, ".local", "bin", "dctl")}, args...)
 }
 
-func (s *session) doctor(ctx context.Context) error {
-	fix := []string{"doctor", "--fix", "--offline"}
-	s.u.Info("doctor groups: root %s; %s %s", strings.Join(rootGroups, ", "), login, strings.Join(homeGroups, ", "))
-	if err := s.sh.run(ctx, nil, chroot(dctl(slices.Concat(fix, rootGroups)...)...)...); err != nil {
+func (s *session) setup(ctx context.Context) error {
+	s.u.Info("setup stages: root %s; %s %s", strings.Join(rootStages, ", "), login, strings.Join(userStages, ", "))
+	if err := s.sh.run(ctx, nil, chroot(dctl(slices.Concat([]string{"setup"}, rootStages)...)...)...); err != nil {
 		return err
 	}
-	return s.sh.run(ctx, nil, as(dctl(slices.Concat(fix, homeGroups)...)...)...)
+	return s.sh.run(ctx, nil, as(dctl(slices.Concat([]string{"setup"}, userStages)...)...)...)
 }
 
 func (s *session) secureboot(ctx context.Context) error {
-	out, err := s.sh.output(ctx, chroot(dctl("--json", "doctor", "--fix", "--offline", "secureboot")...)...)
-	var results []doctor.Result
-	if jerr := json.Unmarshal(out, &results); jerr != nil {
+	out, err := s.sh.output(ctx, chroot(dctl("--json", "setup", "secureboot")...)...)
+	var reports []setup.Report
+	if jerr := json.Unmarshal(out, &reports); jerr != nil {
 		return errors.Join(err, jerr)
+	}
+	var items []setup.Result
+	for _, r := range reports {
+		items = append(items, r.Items...)
 	}
 	var errs []error
 	for _, name := range secureboot.Checks {
-		i := slices.IndexFunc(results, func(r doctor.Result) bool { return r.Check == name })
+		i := slices.IndexFunc(items, func(r setup.Result) bool { return r.Item == name })
 		switch {
 		case i < 0:
-			errs = append(errs, fmt.Errorf("doctor reported no %s check", name))
-		case results[i].Healthy(), name == secureboot.Enforced && results[i].Status == doctor.Blocked:
+			errs = append(errs, fmt.Errorf("setup reported no %s item", name))
+		case items[i].State == setup.Done, name == secureboot.Enforced && items[i].State == setup.ManualState:
 		default:
-			errs = append(errs, fmt.Errorf("%s: %s", name, results[i].Detail))
+			errs = append(errs, fmt.Errorf("%s: %s", name, items[i].Detail))
 		}
 	}
 	return errors.Join(errs...)

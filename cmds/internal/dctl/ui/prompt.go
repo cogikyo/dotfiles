@@ -11,10 +11,18 @@ import (
 )
 
 func (u *UI) Confirm(question string) (bool, error) {
+	return u.confirm(question, false)
+}
+
+func (u *UI) Proceed(question string) (bool, error) {
+	return u.confirm(question, true)
+}
+
+func (u *UI) confirm(question string, yes bool) (bool, error) {
 	if u.opts.Yes {
 		return true, nil
 	}
-	m := &confirm{question: question}
+	m := &confirm{question: question, yes: yes}
 	if err := u.run(m, &m.canceled); err != nil {
 		return false, err
 	}

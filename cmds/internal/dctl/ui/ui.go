@@ -55,6 +55,7 @@ func New(opts Options) *UI {
 
 func (u *UI) JSON() bool        { return u.opts.JSON }
 func (u *UI) Yes() bool         { return u.opts.Yes }
+func (u *UI) Plain() bool       { return u.opts.Plain }
 func (u *UI) Writer() io.Writer { return u.out }
 
 func (u *UI) Can() bool {

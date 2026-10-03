@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/secureboot"
+	"dotfiles/cmds/internal/dctl/setup"
 	"dotfiles/cmds/internal/dctl/ui"
 )
 
@@ -32,7 +32,7 @@ const (
 	serial = "DCTLTEST0"
 
 	installPrefix = `{"dctltest":`
-	doctorPrefix  = `[{"group":`
+	setupPrefix   = `[{"stage":`
 )
 
 var required = slices.Concat([]string{"system", "packages", "home"}, secureboot.Checks)
@@ -44,7 +44,7 @@ type test struct {
 	mark    int64
 	install *Report
 	times   []Phase
-	doctor  map[string][]doctor.Result
+	setup   map[string][]setup.Report
 }
 
 func (t *test) file(name string) string { return filepath.Join(t.dir, name) }
@@ -55,7 +55,7 @@ func Test(ctx context.Context, u *ui.UI, o TestOptions) error {
 		return err
 	}
 	u.KV("run", dir)
-	t := &test{u: u, dir: dir, iso: o.ISO, doctor: map[string][]doctor.Result{}}
+	t := &test{u: u, dir: dir, iso: o.ISO, setup: map[string][]setup.Report{}}
 	err = t.run(ctx, o)
 	if t.install != nil {
 		u.Header("Install phases")
@@ -132,7 +132,7 @@ func (t *test) run(ctx context.Context, o TestOptions) error {
 			return err
 		}
 	}
-	if err := errors.Join(accept("1", t.doctor["1"]), accept("2", t.doctor["2"])); err != nil {
+	if err := errors.Join(accept("1", t.setup["1"]), accept("2", t.setup["2"])); err != nil {
 		return err
 	}
 	t.u.OK("installed, unlocked, booted twice; greeter at %s", t.file("greeter.png"))
@@ -160,17 +160,17 @@ func (t *test) boot(ctx context.Context, v *vm, n string) error {
 	if err != nil {
 		return err
 	}
-	err = t.phase(ctx, v, "doctor "+n, 5*time.Minute, func(ctx context.Context) error {
+	err = t.phase(ctx, v, "setup "+n, 5*time.Minute, func(ctx context.Context) error {
 		line, err := t.await(ctx, v, Greeter)
 		if err != nil {
 			return err
 		}
-		for _, l := range find(t.serial(), doctorPrefix) {
-			var rs []doctor.Result
+		for _, l := range find(t.serial(), setupPrefix) {
+			var rs []setup.Report
 			if err := json.Unmarshal([]byte(l), &rs); err != nil {
 				return err
 			}
-			t.doctor[n] = append(t.doctor[n], rs...)
+			t.setup[n] = append(t.setup[n], rs...)
 		}
 		if state := strings.TrimPrefix(line, Greeter); state != "active" {
 			return fmt.Errorf("display-manager is %q", state)
@@ -216,16 +216,21 @@ func (t *test) phase(ctx context.Context, v *vm, name string, limit time.Duratio
 	return fmt.Errorf("%s: %w\nlast serial lines:\n%s", name, err, t.tail())
 }
 
-func accept(boot string, results []doctor.Result) error {
+func accept(boot string, reports []setup.Report) error {
 	var errs []error
-	for _, g := range required {
-		if !slices.ContainsFunc(results, func(r doctor.Result) bool { return r.Group == g || r.Check == g }) {
-			errs = append(errs, fmt.Errorf("boot %s: doctor reported no %s checks", boot, g))
+	seen := map[string]bool{}
+	for _, r := range reports {
+		seen[r.Stage] = true
+		for _, it := range r.Items {
+			seen[it.Item] = true
+			if it.State != setup.Done && (slices.Contains(required, r.Stage) || slices.Contains(required, it.Item)) {
+				errs = append(errs, fmt.Errorf("boot %s: %s %s: %s", boot, it.Item, it.State, it.Detail))
+			}
 		}
 	}
-	for _, r := range results {
-		if !r.Healthy() && (slices.Contains(required, r.Group) || slices.Contains(required, r.Check)) {
-			errs = append(errs, fmt.Errorf("boot %s: %s %s: %s", boot, r.Check, r.Status, r.Detail))
+	for _, name := range required {
+		if !seen[name] {
+			errs = append(errs, fmt.Errorf("boot %s: setup reported no %s", boot, name))
 		}
 	}
 	return errors.Join(errs...)
@@ -239,11 +244,11 @@ func (t *test) save() error {
 	if err != nil {
 		return err
 	}
-	doc, err := json.MarshalIndent(t.doctor, "", "  ")
+	doc, err := json.MarshalIndent(t.setup, "", "  ")
 	if err != nil {
 		return err
 	}
-	return errors.Join(os.WriteFile(t.file("timings.json"), timings, 0o644), os.WriteFile(t.file("doctor.json"), doc, 0o644))
+	return errors.Join(os.WriteFile(t.file("timings.json"), timings, 0o644), os.WriteFile(t.file("setup.json"), doc, 0o644))
 }
 
 func (t *test) argv(install bool) []string {

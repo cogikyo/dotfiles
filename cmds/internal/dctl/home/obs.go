@@ -11,8 +11,8 @@ import (
 	"slices"
 	"strings"
 
-	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/paths"
+	"dotfiles/cmds/internal/dctl/setup"
 )
 
 var obsKeys = map[string]string{
@@ -22,11 +22,11 @@ var obsKeys = map[string]string{
 	"SceneCollectionFile": "Costello.json",
 }
 
-func obs(r paths.Root) []doctor.Check {
+func obs(r paths.Root) []setup.Item {
 	dir := filepath.Join(r.Home, ".config", "obs-studio")
 	scene := filepath.Join(dir, "basic", "scenes", "Costello.json")
 	user := filepath.Join(dir, "user.ini")
-	return []doctor.Check{
+	return []setup.Item{
 		{
 			Name: "home-obs-dir",
 			Check: func(context.Context) error {

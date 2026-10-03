@@ -14,9 +14,9 @@ import (
 	"strconv"
 	"strings"
 
-	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/paths"
+	"dotfiles/cmds/internal/dctl/setup"
 	"dotfiles/cmds/internal/dctl/ui"
 )
 
@@ -82,32 +82,6 @@ func load(root paths.Root) ([]Repo, error) {
 	return Read(list(root))
 }
 
-func Sync(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner) error {
-	repos, err := load(root)
-	if err != nil {
-		return err
-	}
-	var errs []error
-	cloned := 0
-	for _, r := range repos {
-		dir := r.Dir(root.Home)
-		if _, err := os.Lstat(dir); err == nil {
-			continue
-		} else if !errors.Is(err, fs.ErrNotExist) {
-			errs = append(errs, err)
-			continue
-		}
-		u.Step("clone %s -> %s", r.Repo, r.Path)
-		if err := clone(ctx, run, r, dir); err != nil {
-			errs = append(errs, fmt.Errorf("%s: %w", r.Repo, err))
-			continue
-		}
-		cloned++
-	}
-	u.OK("cloned %d of %d repos", cloned, len(repos))
-	return errors.Join(errs...)
-}
-
 func clone(ctx context.Context, run execx.Runner, r Repo, dir string) error {
 	if err := os.MkdirAll(filepath.Dir(dir), 0o755); err != nil {
 		return err
@@ -125,7 +99,7 @@ const (
 	Dirty     State = "uncommitted changes, not touched"
 	Detached  State = "detached HEAD, not touched"
 	Untracked State = "no upstream branch"
-	Absent    State = "not cloned; run dctl repos sync"
+	Absent    State = "not cloned; run dctl setup repos"
 )
 
 func Update(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner) error {
@@ -203,8 +177,8 @@ func update(ctx context.Context, run execx.Runner, dir string) (State, error) {
 	return Forwarded, nil
 }
 
-func Group(root paths.Root, run execx.Runner) doctor.Group {
-	return doctor.Group{Name: "repos", Online: true, Checks: []doctor.Check{{
+func Stage(root paths.Root, run execx.Runner) setup.Stage {
+	return setup.Stage{Name: "repos", Items: []setup.Item{{
 		Name: "repos-cloned",
 		Check: func(ctx context.Context) error {
 			repos, err := Read(list(root))

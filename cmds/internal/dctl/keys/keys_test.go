@@ -71,7 +71,7 @@ func newKey(serial uint32) yubikey {
 
 const paper = "age1paperpaperpaperpaperpaperpaperpaperpaperpaperpaperpaperp"
 
-func setup(t *testing.T) paths.Root {
+func sandbox(t *testing.T) paths.Root {
 	t.Helper()
 	dir := t.TempDir()
 	root := paths.Root{Home: filepath.Join(dir, "home"), Dotfiles: filepath.Join(dir, "dotfiles")}
@@ -138,7 +138,7 @@ func swapper(t *testing.T, root paths.Root, log *[]string, fail *error) func(sec
 const unset = "PIN: Not set\nAlways Require UV: Off\n"
 
 func TestEnrollOrder(t *testing.T) {
-	root := setup(t)
+	root := sandbox(t)
 	k := newKey(1234)
 	ssh := filepath.Join(root.Home, ".ssh", "id_ed25519_sk_1234")
 	keygen := "ssh-keygen -t ed25519-sk -O resident -O application=ssh:dctl-release -C yubikey-1234 -f id"
@@ -178,7 +178,7 @@ func TestEnrollOrder(t *testing.T) {
 }
 
 func TestEnrollRetry(t *testing.T) {
-	root := setup(t)
+	root := sandbox(t)
 	k := newKey(1234)
 	write(t, root.Share("allowed_signers"), `yubikey-1234 namespaces="file" sk-ssh-ed25519@openssh.com AAAAsk`+"\n")
 	if err := os.MkdirAll(filepath.Join(root.Home, ".ssh"), 0o700); err != nil {
@@ -214,7 +214,7 @@ func TestEnrollRetry(t *testing.T) {
 }
 
 func TestRemoveRetry(t *testing.T) {
-	root := setup(t)
+	root := sandbox(t)
 	a, b := newKey(1111), newKey(2222)
 	write(t, root.Secrets("recipients"), fmt.Sprintf("# paper\n%s\n%s\n%s\n", paper, a.recipient, b.recipient))
 	write(t, root.Secrets("identities"), a.stub+"\n"+b.stub+"\n")
@@ -326,7 +326,7 @@ func TestLuksRetryRecovery(t *testing.T) {
 }
 
 func TestSignerRewriteFailureKeepsFile(t *testing.T) {
-	root := setup(t)
+	root := sandbox(t)
 	old := "# header\nyubikey-1 namespaces=\"file\" sk a\nyubikey-2 namespaces=\"file\" sk b\n"
 	write(t, root.Share("allowed_signers"), old)
 	if err := os.Chmod(root.Share(), 0o555); err != nil {
@@ -352,7 +352,7 @@ func TestSignerHandleRecovered(t *testing.T) {
 		"wrong pub": {"sk-ssh-ed25519@openssh.com AAAAold", pub},
 		"mismatch":  {"", "sk-ssh-ed25519@openssh.com AAAAother"},
 	} {
-		root := setup(t)
+		root := sandbox(t)
 		write(t, root.Share("allowed_signers"), "yubikey-1234 namespaces=\"file\" "+pub+"\n")
 		file := filepath.Join(root.Home, ".ssh", "id_ed25519_sk_1234")
 		if tc.local != "" {
@@ -424,7 +424,7 @@ func TestForcedPinChange(t *testing.T) {
 }
 
 func TestEnrollPreflight(t *testing.T) {
-	root := setup(t)
+	root := sandbox(t)
 	write(t, root.Secrets("identity"), "plaintext")
 	f := &fake{t: t, out: map[string][]string{}}
 	var fail error

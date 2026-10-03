@@ -50,7 +50,7 @@ func TestMergeOBS(t *testing.T) {
 }
 
 func TestOBSLegacyDir(t *testing.T) {
-	r := setup(t)
+	r := sandbox(t)
 	dir := filepath.Join(r.Home, ".config", "obs-studio")
 	if err := os.MkdirAll(filepath.Dir(dir), 0o755); err != nil {
 		t.Fatal(err)
@@ -69,7 +69,7 @@ func TestOBSLegacyDir(t *testing.T) {
 	if _, err := os.Stat(r.Config("obs-studio", "user.ini")); err == nil {
 		t.Error("user.ini written into the checkout")
 	}
-	foreign := setup(t)
+	foreign := sandbox(t)
 	if err := os.MkdirAll(filepath.Join(foreign.Home, ".config"), 0o755); err != nil {
 		t.Fatal(err)
 	}
@@ -82,7 +82,7 @@ func TestOBSLegacyDir(t *testing.T) {
 }
 
 func TestLibrepods(t *testing.T) {
-	r := setup(t)
+	r := sandbox(t)
 	write(t, r.Packages("librepods-max2", "app_settings.json"), `{"theme":"Dark","stem_control":false}`)
 	write(t, r.Config("systemd", "user", "librepods.service"), "[Unit]")
 	if err := os.MkdirAll(filepath.Join(r.Home, ".config"), 0o755); err != nil {

@@ -5,11 +5,11 @@ import (
 	"path/filepath"
 	"strings"
 
-	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/paths"
+	"dotfiles/cmds/internal/dctl/setup"
 )
 
-func Firefox(r paths.Root) doctor.Group {
+func Firefox(r paths.Root) setup.Stage {
 	userJS := func() ([]link, error) {
 		profile, err := FirefoxProfile(r.Home)
 		if err != nil {
@@ -24,7 +24,7 @@ func Firefox(r paths.Root) doctor.Group {
 		}
 		css, err := filepath.Glob(filepath.Join(r.Home, "vagari", "firefox", "css", "*"))
 		if err != nil || len(css) == 0 {
-			return nil, doctor.Block("vagari Firefox CSS missing; run dctl repos sync")
+			return nil, setup.Manual("vagari Firefox CSS missing; run dctl setup repos")
 		}
 		var out []link
 		for _, src := range css {
@@ -32,7 +32,7 @@ func Firefox(r paths.Root) doctor.Group {
 		}
 		return out, nil
 	}
-	return doctor.Group{Name: "firefox", Checks: []doctor.Check{
+	return setup.Stage{Name: "firefox", Items: []setup.Item{
 		linkCheck("firefox-user-js", r.Dotfiles, "restart Firefox after fixing", userJS),
 		linkCheck("firefox-chrome", r.Dotfiles, "restart Firefox after fixing", chrome),
 	}}
@@ -53,7 +53,7 @@ func FirefoxProfile(home string) (string, error) {
 			}
 		}
 	}
-	return "", doctor.Block("Firefox Developer Edition profile not found; launch it once first")
+	return "", setup.Manual("Firefox Developer Edition profile not found; launch it once first")
 }
 
 func devProfile(ini string) string {

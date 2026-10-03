@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"dotfiles/cmds/internal/dctl/doctor"
+	"dotfiles/cmds/internal/dctl/setup"
 	"dotfiles/cmds/internal/dctl/ui"
 )
 
@@ -98,7 +98,7 @@ func writeUKI(t *testing.T, path string) {
 	put(t, path, b.Bytes())
 }
 
-func setup(t *testing.T) *fake {
+func machine(t *testing.T) *fake {
 	f := &fake{t: t, root: t.TempDir(), conf: "/Arch Linux\n    protocol: efi\n    path: boot():/EFI/Linux/linux.efi\n    cmdline: rd.luks.name=" + luks + "=root root=/dev/mapper/root rootflags=subvol=/@ rw\n"}
 	efivar(t, f.root, "SetupMode", 1)
 	efivar(t, f.root, "SecureBoot", 0)
@@ -115,27 +115,31 @@ func setup(t *testing.T) *fake {
 	return f
 }
 
-func run(t *testing.T, f *fake, fix bool) map[string]doctor.Result {
+func run(t *testing.T, f *fake, fix bool) map[string]setup.Result {
 	t.Helper()
-	results, err := doctor.Run(t.Context(), ui.New(ui.Options{JSON: true}), []doctor.Group{Group(f, f.root)}, doctor.Options{Fix: fix, Elevated: true})
+	mode := setup.Status
+	if fix {
+		mode = setup.Force
+	}
+	reports, err := setup.Run(t.Context(), ui.New(ui.Options{JSON: true}), []setup.Stage{Stage(f, f.root)}, mode)
 	if err != nil {
 		t.Fatal(err)
 	}
-	byName := map[string]doctor.Result{}
-	for _, r := range results {
-		byName[r.Check] = r
+	byName := map[string]setup.Result{}
+	for _, r := range reports[0].Items {
+		byName[r.Item] = r
 	}
 	return byName
 }
 
 func TestFixEnrolls(t *testing.T) {
-	f := setup(t)
+	f := machine(t)
 	rs := run(t, f, true)
-	if rs[Keys].Status != doctor.Fixed || rs[Signed].Status != doctor.Passed {
+	if rs[Keys].State != setup.Done || rs[Signed].State != setup.Done {
 		t.Fatalf("after enrollment: %+v", rs)
 	}
-	if r := rs[Enforced]; r.Status != doctor.Blocked || !strings.Contains(r.Detail, "reboot") {
-		t.Errorf("before reboot %s = %+v, want blocked on a reboot", Enforced, r)
+	if r := rs[Enforced]; r.State != setup.ManualState || !strings.Contains(r.Detail, "reboot") {
+		t.Errorf("before reboot %s = %+v, want manual on a reboot", Enforced, r)
 	}
 	order := []string{"sbctl create-keys", "limine-update", "sbctl verify", "sbctl enroll-keys -m"}
 	at := -1
@@ -156,9 +160,20 @@ func TestFixEnrolls(t *testing.T) {
 
 	efivar(t, f.root, "SecureBoot", 1)
 	for name, r := range run(t, f, false) {
-		if r.Status != doctor.Passed {
+		if r.State != setup.Done {
 			t.Errorf("after reboot %s = %+v", name, r)
 		}
+	}
+	f.calls = nil
+	for name, r := range run(t, f, true) {
+		if r.State != setup.Done {
+			t.Errorf("forced on an enforced machine %s = %+v", name, r)
+		}
+	}
+	if slices.ContainsFunc(f.calls, func(c string) bool {
+		return strings.HasPrefix(c, "sbctl create-keys") || strings.HasPrefix(c, "sbctl enroll-keys") || c == "limine-update"
+	}) {
+		t.Errorf("forced apply on an enforced machine ran %q", f.calls)
 	}
 }
 
@@ -177,10 +192,10 @@ func TestFixRefusesUnbootable(t *testing.T) {
 		"missing conf": {func(f *fake) { f.conf = "" }, "limine.conf: no such file"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			f := setup(t)
+			f := machine(t)
 			tt.mutate(f)
 			rs := run(t, f, true)
-			if r := rs[Keys]; r.Status != doctor.Failed || !strings.Contains(r.Detail, tt.want) || !strings.Contains(r.Detail, "keys not enrolled") {
+			if r := rs[Keys]; r.State != setup.Failed || !strings.Contains(r.Detail, tt.want) || !strings.Contains(r.Detail, "keys not enrolled") {
 				t.Errorf("%s = %+v, want a refused enrollment naming %q", Keys, r, tt.want)
 			}
 			if slices.Contains(f.calls, "sbctl enroll-keys -m") {
@@ -191,14 +206,33 @@ func TestFixRefusesUnbootable(t *testing.T) {
 }
 
 func TestUnencryptedRootVerifies(t *testing.T) {
-	f := setup(t)
+	f := machine(t)
 	f.conf = "/Arch Linux\n    path: boot():/EFI/Linux/linux.efi\n    cmdline: root=UUID=" + luks + " rw\n"
-	if r := run(t, f, true)[Keys]; r.Status != doctor.Fixed {
+	if r := run(t, f, true)[Keys]; r.State != setup.Done {
 		t.Errorf("%s = %+v, want enrollment over an unencrypted root", Keys, r)
 	}
 	f.conf = "/Arch Linux\n    path: boot():/EFI/Linux/linux.efi\n    cmdline: rw quiet\n"
 	f.Run(t.Context(), "", "limine-update")
 	if err := verify(t.Context(), f, f.root); err == nil || !strings.Contains(err.Error(), "has no root=") {
 		t.Errorf("verify without root= = %v", err)
+	}
+}
+
+func TestSignedRepairs(t *testing.T) {
+	f := machine(t)
+	run(t, f, true)
+	efivar(t, f.root, "SecureBoot", 1)
+	put(t, filepath.Join(f.root, "boot", fallback), []byte("fallback"))
+	if r := run(t, f, false)[Signed]; r.State != setup.Pending || !strings.Contains(r.Detail, "fallback") {
+		t.Fatalf("drifted %s = %+v, want pending", Signed, r)
+	}
+	f.calls = nil
+	for name, r := range run(t, f, true) {
+		if r.State != setup.Done {
+			t.Errorf("after repair %s = %+v", name, r)
+		}
+	}
+	if !slices.Contains(f.calls, "limine-update") || slices.ContainsFunc(f.calls, func(c string) bool { return strings.HasPrefix(c, "sbctl enroll-keys") }) {
+		t.Errorf("repair calls %q, want limine-update without enrollment", f.calls)
 	}
 }

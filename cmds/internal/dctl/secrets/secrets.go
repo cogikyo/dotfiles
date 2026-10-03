@@ -11,8 +11,8 @@ import (
 	"slices"
 	"strings"
 
-	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/paths"
+	"dotfiles/cmds/internal/dctl/setup"
 	"dotfiles/cmds/internal/dctl/ui"
 
 	"filippo.io/age"
@@ -378,8 +378,8 @@ func checkPhrase(root paths.Root, phrase string) error {
 	return nil
 }
 
-func Group(u *ui.UI, root paths.Root) doctor.Group {
-	return doctor.Group{Name: "secrets", Checks: []doctor.Check{
+func Stage(u *ui.UI, root paths.Root) setup.Stage {
+	return setup.Stage{Name: "secrets", Items: []setup.Item{
 		{
 			Name:  "secrets-repo",
 			Check: func(context.Context) error { return checkRepo(u, root) },

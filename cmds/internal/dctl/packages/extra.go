@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"strings"
 
-	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/execx"
+	"dotfiles/cmds/internal/dctl/setup"
 )
 
-func Extra(dir string, run execx.Runner) doctor.Group {
+func Extra(dir string, run execx.Runner) setup.Stage {
 	pending := func(ctx context.Context) ([]string, error) {
 		l, err := Load(dir)
 		if err != nil {
@@ -21,7 +21,7 @@ func Extra(dir string, run execx.Runner) doctor.Group {
 		}
 		return absent(l.Extra, have), nil
 	}
-	return doctor.Group{Name: "extra", Online: true, Checks: []doctor.Check{
+	return setup.Stage{Name: "extra", Items: []setup.Item{
 		{
 			Name: "extra-installed",
 			Check: func(ctx context.Context) error {
@@ -47,9 +47,9 @@ func Extra(dir string, run execx.Runner) doctor.Group {
 				case "enabled":
 					return nil
 				case "not-found":
-					return doctor.Block("docker.socket not found; install extra.lst first")
+					return setup.Manual("docker.socket not found; install extra.lst first")
 				case "":
-					return doctor.Block("systemctl is-enabled docker.socket: %v", err)
+					return fmt.Errorf("systemctl is-enabled docker.socket: %w", err)
 				}
 				return fmt.Errorf("docker.socket is %s", state)
 			},
@@ -66,7 +66,7 @@ func install(ctx context.Context, run execx.Runner, names []string) error {
 	}
 	repo, err := run.Output(ctx, "", "pacman", "-Slq")
 	if err != nil {
-		return doctor.Block("pacman -Slq: %v", err)
+		return fmt.Errorf("pacman -Slq: %w", err)
 	}
 	official := set(strings.FieldsSeq(repo))
 	var fromRepo, fromAUR []string

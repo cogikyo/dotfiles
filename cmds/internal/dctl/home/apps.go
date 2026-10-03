@@ -13,11 +13,11 @@ import (
 	"reflect"
 	"syscall"
 
-	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/paths"
+	"dotfiles/cmds/internal/dctl/setup"
 )
 
-func librepods(r paths.Root) doctor.Check {
+func librepods(r paths.Root) setup.Item {
 	dirs := []string{filepath.Join(r.Home, ".config", "librepods"), filepath.Join(r.Home, ".local", "share", "librepods")}
 	settings := filepath.Join(dirs[0], "app_settings.json")
 	devices := filepath.Join(dirs[1], "devices.json")
@@ -27,7 +27,7 @@ func librepods(r paths.Root) doctor.Check {
 	template := func() (map[string]any, error) {
 		return readObject(r.Packages("librepods-max2", "app_settings.json"))
 	}
-	return doctor.Check{
+	return setup.Item{
 		Name: "home-librepods",
 		Check: func(context.Context) error {
 			want, err := template()

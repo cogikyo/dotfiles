@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"os/exec"
 
-	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/execx"
+	"dotfiles/cmds/internal/dctl/setup"
 )
 
 type state struct {
@@ -16,8 +16,8 @@ type state struct {
 	ssh     bool
 }
 
-func Group(run execx.Runner) doctor.Group {
-	return doctor.Group{Name: "tailscale", Sudo: true, Online: true, Checks: []doctor.Check{{
+func Stage(run execx.Runner) setup.Stage {
+	return setup.Stage{Name: "tailscale", Root: true, Items: []setup.Item{{
 		Name: "tailscale-ssh",
 		Check: func(ctx context.Context) error {
 			s, err := read(ctx, run)
@@ -44,7 +44,7 @@ func Group(run execx.Runner) doctor.Group {
 
 func read(ctx context.Context, run execx.Runner) (state, error) {
 	if _, err := exec.LookPath("tailscale"); err != nil {
-		return state{}, doctor.Block("tailscale not found; install it from base.lst")
+		return state{}, setup.Manual("tailscale not found; install it from base.lst")
 	}
 	var status struct{ BackendState string }
 	var prefs struct{ RunSSH bool }

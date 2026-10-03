@@ -13,8 +13,8 @@ import (
 	"slices"
 	"strings"
 
-	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/execx"
+	"dotfiles/cmds/internal/dctl/setup"
 )
 
 func Read(path string) ([]string, error) {
@@ -72,8 +72,8 @@ func unique(names []string) []string {
 	return slices.Compact(out)
 }
 
-func Group(dir string, offline bool, run execx.Runner) doctor.Group {
-	return doctor.Group{Name: "packages", Sudo: true, Checks: []doctor.Check{{
+func Stage(dir string, run execx.Runner) setup.Stage {
+	return setup.Stage{Name: "packages", Root: true, Items: []setup.Item{{
 		Name: "packages-installed",
 		Check: func(ctx context.Context) error {
 			official, other, err := missing(ctx, dir, run)
@@ -87,9 +87,6 @@ func Group(dir string, offline bool, run execx.Runner) doctor.Group {
 				len(official), strings.Join(official, " "), len(other), strings.Join(other, " "))
 		},
 		Fix: func(ctx context.Context) error {
-			if offline {
-				return doctor.Block("pacman -S needs the network; rerun without --offline")
-			}
 			official, other, err := missing(ctx, dir, run)
 			if err != nil {
 				return err
@@ -103,7 +100,7 @@ func Group(dir string, offline bool, run execx.Runner) doctor.Group {
 				}
 			}
 			if len(other) > 0 {
-				return doctor.Block("pacman cannot install AUR or local packages: %s; build them with yay -S or makepkg -si in packages/<name>", strings.Join(other, " "))
+				return setup.Manual("pacman cannot install AUR or local packages: %s; build them with yay -S or makepkg -si in packages/<name>", strings.Join(other, " "))
 			}
 			return nil
 		},
@@ -127,7 +124,7 @@ var coreDB = "/var/lib/pacman/sync/core.db"
 func synced() error {
 	_, err := os.Stat(coreDB)
 	if errors.Is(err, fs.ErrNotExist) {
-		return doctor.Block("no official sync databases (%s missing); run `dctl update` as your user first", coreDB)
+		return setup.Manual("no official sync databases (%s missing); run `dctl update` as your user first", coreDB)
 	}
 	return err
 }
@@ -135,7 +132,7 @@ func synced() error {
 func installed(ctx context.Context, run execx.Runner) (map[string]bool, error) {
 	out, err := run.Output(ctx, "", "pacman", "-Qq")
 	if err != nil {
-		return nil, doctor.Block("pacman -Qq: %v", err)
+		return nil, fmt.Errorf("pacman -Qq: %w", err)
 	}
 	return set(strings.FieldsSeq(out)), nil
 }

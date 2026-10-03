@@ -21,8 +21,8 @@ import (
 	"time"
 
 	"dotfiles/cmds/internal/dctl/binaries"
-	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/iso"
+	"dotfiles/cmds/internal/dctl/setup"
 	"dotfiles/cmds/internal/dctl/ui"
 )
 
@@ -33,7 +33,7 @@ type fake struct {
 	vm    bool
 	block bool
 	fail  string
-	sb    []doctor.Result
+	sb    []setup.Result
 
 	mu        sync.Mutex
 	calls     [][]string
@@ -126,7 +126,7 @@ func (f *fake) output(ctx context.Context, args ...string) ([]byte, error) {
 	case "arch-chroot":
 		if args[len(args)-1] == "secureboot" {
 			f.kernel()
-			out, _ := json.Marshal(f.sb)
+			out, _ := json.Marshal([]setup.Report{{Stage: "secureboot", State: setup.ManualState, Items: f.sb}})
 			return out, errors.New("exit status 1")
 		}
 	}
@@ -182,7 +182,7 @@ func writeUKI(t *testing.T, path string) {
 	put(t, path, b.Bytes(), 0o644)
 }
 
-func setup(t *testing.T) (*session, *fake) {
+func rig(t *testing.T) (*session, *fake) {
 	t.Helper()
 	root := t.TempDir()
 	pkg := []byte("package bytes")
@@ -204,10 +204,10 @@ func setup(t *testing.T) (*session, *fake) {
 		t.Fatal(err)
 	}
 
-	f := &fake{t: t, root: root, lsblk: fixture(t, "nvme"), sb: []doctor.Result{
-		{Group: "secureboot", Check: "secureboot-keys", Status: doctor.Fixed},
-		{Group: "secureboot", Check: "secureboot-signed", Status: doctor.Passed},
-		{Group: "secureboot", Check: "secureboot-enforced", Status: doctor.Blocked},
+	f := &fake{t: t, root: root, lsblk: fixture(t, "nvme"), sb: []setup.Result{
+		{Item: "secureboot-keys", State: setup.Done},
+		{Item: "secureboot-signed", State: setup.Done},
+		{Item: "secureboot-enforced", State: setup.ManualState},
 	}}
 	f.mount("", func(string) bool { return false })
 	s := &session{u: ui.New(ui.Options{JSON: true, Yes: true}), sh: f, root: root, exe: filepath.Join(root, "usr", "local", "bin", "dctl")}
@@ -231,7 +231,7 @@ func (f *fake) mutated(t *testing.T) {
 }
 
 func TestDeclinedConsentMutatesNothing(t *testing.T) {
-	s, f := setup(t)
+	s, f := rig(t)
 	declined := errors.New("declined")
 	s.confirm = func(disk) error { return declined }
 	if err := s.main(t.Context()); !errors.Is(err, declined) {
@@ -241,7 +241,7 @@ func TestDeclinedConsentMutatesNothing(t *testing.T) {
 }
 
 func TestEdges(t *testing.T) {
-	s, f := setup(t)
+	s, f := rig(t)
 	if err := s.main(t.Context()); err != nil {
 		t.Fatal(err)
 	}
@@ -253,12 +253,12 @@ func TestEdges(t *testing.T) {
 	f.before(t, "pacstrap", "umount /mnt/var/cache/pacman/pkg")
 	f.before(t, "arch-chroot /mnt useradd", "arch-chroot /mnt env DOTFILES=")
 	f.before(t, "arch-chroot /mnt runuser -u cullyn -- git clone", "arch-chroot /mnt env DOTFILES=")
-	secureboot := "arch-chroot /mnt env DOTFILES=/home/cullyn/dotfiles /home/cullyn/.local/bin/dctl --json doctor --fix --offline secureboot"
+	secureboot := "arch-chroot /mnt env DOTFILES=/home/cullyn/dotfiles /home/cullyn/.local/bin/dctl --json setup secureboot"
 	f.before(t, "arch-chroot /mnt limine-install", secureboot)
 	f.before(t, secureboot, "blkid")
 	f.before(t, "blkid", "umount -R /mnt")
 	if f.index("arch-chroot /mnt limine-update") >= 0 || f.index("arch-chroot /mnt sbctl") >= 0 {
-		t.Error("installer signed or built UKIs itself instead of through the secureboot group")
+		t.Error("installer signed or built UKIs itself instead of through the secureboot stage")
 	}
 	f.before(t, "umount -R /mnt", "cryptsetup close root")
 	f.before(t, "cryptsetup close root", "systemctl reboot")
@@ -270,7 +270,7 @@ func TestEdges(t *testing.T) {
 func TestFailureReleasesTarget(t *testing.T) {
 	for _, fail := range []string{"mount --bind", "pacstrap", "arch-chroot /mnt limine-install"} {
 		t.Run(fail, func(t *testing.T) {
-			s, f := setup(t)
+			s, f := rig(t)
 			f.fail = fail
 			if err := s.main(t.Context()); err == nil {
 				t.Fatal("install succeeded")
@@ -296,7 +296,7 @@ func TestFailureReleasesTarget(t *testing.T) {
 
 func TestPreexistingTargetRefused(t *testing.T) {
 	t.Run("mapper", func(t *testing.T) {
-		s, f := setup(t)
+		s, f := rig(t)
 		dev := filepath.Join(s.root, "dev", "mapper", mapper)
 		put(t, dev, nil, 0o600)
 		if err := s.main(t.Context()); err == nil || !strings.Contains(err.Error(), "already open") {
@@ -308,7 +308,7 @@ func TestPreexistingTargetRefused(t *testing.T) {
 		}
 	})
 	t.Run("mount", func(t *testing.T) {
-		s, f := setup(t)
+		s, f := rig(t)
 		f.mount("/mnt/boot", func(string) bool { return false })
 		if err := s.main(t.Context()); err == nil || !strings.Contains(err.Error(), "mounted under") {
 			t.Fatalf("main: %v, want a mount refusal", err)
@@ -319,7 +319,7 @@ func TestPreexistingTargetRefused(t *testing.T) {
 
 func TestCancelJoinsPrep(t *testing.T) {
 	synctest.Test(t, func(t *testing.T) {
-		s, f := setup(t)
+		s, f := rig(t)
 		f.block = true
 		s.ask = func(context.Context) (iso.Answers, error) {
 			synctest.Wait()
@@ -374,7 +374,7 @@ func TestDCTLTEST(t *testing.T) {
 		return `{"password":"pw","zone":"America/Denver","luks":"luks","disk_serial":"` + serial + `"}`
 	}
 	t.Run("outside a VM", func(t *testing.T) {
-		s, f := setup(t)
+		s, f := rig(t)
 		answer(t, s, valid("24123A800123"))
 		if err := s.main(t.Context()); err == nil || !strings.Contains(err.Error(), "not a VM") {
 			t.Fatalf("main: %v, want a VM refusal", err)
@@ -385,7 +385,7 @@ func TestDCTLTEST(t *testing.T) {
 	})
 	for name, body := range map[string]string{"serial mismatch": valid("NOT-THIS-DISK"), "malformed answers": `{"extra":1}`} {
 		t.Run(name, func(t *testing.T) {
-			s, f := setup(t)
+			s, f := rig(t)
 			f.vm = true
 			answer(t, s, body)
 			if err := s.main(t.Context()); err == nil {
@@ -402,7 +402,7 @@ func TestDCTLTEST(t *testing.T) {
 }
 
 func TestSecondSessionRefused(t *testing.T) {
-	s, f := setup(t)
+	s, f := rig(t)
 	if err := s.acquire(); err != nil {
 		t.Fatal(err)
 	}
@@ -416,7 +416,7 @@ func TestSecondSessionRefused(t *testing.T) {
 }
 
 func TestReleaseSkipsUnacquired(t *testing.T) {
-	s, f := setup(t)
+	s, f := rig(t)
 	put(t, filepath.Join(s.root, "dev", "mapper", mapper), nil, 0o600)
 	f.mount(target, func(string) bool { return false })
 	if err := s.release(t.Context()); err != nil {
@@ -428,7 +428,7 @@ func TestReleaseSkipsUnacquired(t *testing.T) {
 }
 
 func TestOverrideExecsTmpfsCopy(t *testing.T) {
-	s, f := setup(t)
+	s, f := rig(t)
 	f.vm = true
 	put(t, filepath.Join(s.root, testLabel), nil, 0o644)
 	put(t, filepath.Join(s.root, testMount, "dctl"), []byte("override"), 0o755)
@@ -452,23 +452,23 @@ func TestOverrideExecsTmpfsCopy(t *testing.T) {
 
 func TestSecureBootFailureFailsInstall(t *testing.T) {
 	for name, tt := range map[string]struct {
-		mutate func([]doctor.Result) []doctor.Result
+		mutate func([]setup.Result) []setup.Result
 		want   string
 	}{
-		"unsigned": {func(rs []doctor.Result) []doctor.Result {
-			rs[1].Status, rs[1].Detail = doctor.Failed, "not signed by the sbctl db key"
+		"unsigned": {func(rs []setup.Result) []setup.Result {
+			rs[1].State, rs[1].Detail = setup.Failed, "not signed by the sbctl db key"
 			return rs
 		}, "secureboot-signed: not signed"},
-		"enforcement failed": {func(rs []doctor.Result) []doctor.Result {
-			rs[2].Status, rs[2].Detail = doctor.Failed, "efivar SecureBoot: 3 bytes"
+		"enforcement failed": {func(rs []setup.Result) []setup.Result {
+			rs[2].State, rs[2].Detail = setup.Failed, "efivar SecureBoot: 3 bytes"
 			return rs
 		}, "secureboot-enforced: efivar"},
-		"keys missing":     {func(rs []doctor.Result) []doctor.Result { return rs[1:] }, "no secureboot-keys check"},
-		"signed missing":   {func(rs []doctor.Result) []doctor.Result { return slices.Delete(rs, 1, 2) }, "no secureboot-signed check"},
-		"enforced missing": {func(rs []doctor.Result) []doctor.Result { return rs[:2] }, "no secureboot-enforced check"},
+		"keys missing":     {func(rs []setup.Result) []setup.Result { return rs[1:] }, "no secureboot-keys item"},
+		"signed missing":   {func(rs []setup.Result) []setup.Result { return slices.Delete(rs, 1, 2) }, "no secureboot-signed item"},
+		"enforced missing": {func(rs []setup.Result) []setup.Result { return rs[:2] }, "no secureboot-enforced item"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			s, f := setup(t)
+			s, f := rig(t)
 			f.sb = tt.mutate(f.sb)
 			err := s.main(t.Context())
 			if err == nil || !strings.Contains(err.Error(), tt.want) || !errors.Is(err, errModified) {
@@ -483,7 +483,7 @@ func TestSecureBootFailureFailsInstall(t *testing.T) {
 
 func TestDoctorUnitOnlyInTestMode(t *testing.T) {
 	for _, test := range []bool{false, true} {
-		s, f := setup(t)
+		s, f := rig(t)
 		s.testMounted = test
 		if err := os.MkdirAll(filepath.Join(s.root, target, "etc/systemd/system"), 0o755); err != nil {
 			t.Fatal(err)
@@ -504,8 +504,8 @@ func TestDoctorUnitOnlyInTestMode(t *testing.T) {
 			t.Fatalf("test install: unit %v, enabled %v", err, enabled)
 		}
 		for _, want := range []string{
-			"ExecStart=-/home/cullyn/.local/bin/dctl --json doctor --offline system packages secureboot\n",
-			"ExecStart=-/usr/bin/runuser -u cullyn -- /home/cullyn/.local/bin/dctl --json doctor --offline home binaries\n",
+			"ExecStart=-/home/cullyn/.local/bin/dctl --json setup --status system packages secureboot\n",
+			"ExecStart=-/usr/bin/runuser -u cullyn -- /home/cullyn/.local/bin/dctl --json setup --status home\n",
 			`echo "` + iso.Greeter + `$$(systemctl is-active display-manager)"`,
 			"TTYPath=/dev/ttyS0\n",
 		} {

@@ -13,14 +13,14 @@ import (
 	"path/filepath"
 	"strings"
 
-	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/execx"
+	"dotfiles/cmds/internal/dctl/setup"
 )
 
 const preset = "etc/systemd/system-preset/10-dotfiles.preset"
 
-func Group(root, overlay string) doctor.Group {
-	return doctor.Group{Name: "system", Sudo: true, Checks: []doctor.Check{
+func Stage(root, overlay string) setup.Stage {
+	return setup.Stage{Name: "system", Root: true, Items: []setup.Item{
 		{
 			Name:  "system-files",
 			Check: func(context.Context) error { return check(root, overlay) },
@@ -96,7 +96,7 @@ func check(rootDir, overlay string) error {
 	}
 	root, err := os.OpenRoot(rootDir)
 	if err != nil {
-		return doctor.Block("cannot inspect %s: %v", rootDir, err)
+		return err
 	}
 	defer root.Close()
 	var drift, unknown []string
@@ -107,23 +107,21 @@ func check(rootDir, overlay string) error {
 		}
 		reason, err := f.drift(want, root)
 		switch {
-		case errors.Is(err, fs.ErrPermission):
-			unknown = append(unknown, f.rel+" (needs root to verify)")
 		case err != nil:
 			unknown = append(unknown, f.rel+" ("+err.Error()+")")
 		case reason != "":
 			drift = append(drift, f.rel+" ("+reason+")")
 		}
 	}
-	differ := doctor.List(fmt.Sprintf("%d of %d files differ", len(drift), len(list)), drift)
-	blind := doctor.List(fmt.Sprintf("cannot inspect %d of %d files", len(unknown), len(list)), unknown)
-	switch {
-	case len(drift) > 0 && len(unknown) > 0:
-		return errors.New(differ + "\n" + blind)
-	case len(drift) > 0:
-		return errors.New(differ)
-	case len(unknown) > 0:
-		return doctor.Block("%s", blind)
+	var problems []string
+	if len(drift) > 0 {
+		problems = append(problems, setup.List(fmt.Sprintf("%d of %d files differ", len(drift), len(list)), drift))
+	}
+	if len(unknown) > 0 {
+		problems = append(problems, setup.List(fmt.Sprintf("cannot inspect %d of %d files", len(unknown), len(list)), unknown))
+	}
+	if len(problems) > 0 {
+		return errors.New(strings.Join(problems, "\n"))
 	}
 	return nil
 }
@@ -218,7 +216,7 @@ func checkUnits(ctx context.Context, root, overlay string) error {
 	out, err := execx.OSRunner{}.Output(ctx, "", "systemctl", append([]string{"--root=" + root, "is-enabled"}, list...)...)
 	states := strings.Split(out, "\n")
 	if len(states) != len(list) {
-		return doctor.Block("systemctl is-enabled: %v", err)
+		return fmt.Errorf("systemctl is-enabled: %w", err)
 	}
 	var off []string
 	for i, unit := range list {
@@ -227,7 +225,7 @@ func checkUnits(ctx context.Context, root, overlay string) error {
 		}
 	}
 	if len(off) > 0 {
-		return errors.New(doctor.List("not enabled", off))
+		return errors.New(setup.List("not enabled", off))
 	}
 	return nil
 }

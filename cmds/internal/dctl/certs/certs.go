@@ -15,10 +15,10 @@ import (
 	"strings"
 	"time"
 
-	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/home"
 	"dotfiles/cmds/internal/dctl/paths"
+	"dotfiles/cmds/internal/dctl/setup"
 )
 
 const (
@@ -30,10 +30,10 @@ var hosts = []string{"localhost", "local.leadpier.com", "local.cullyn.dev", "127
 
 type leaf struct{ dir, cert, key string }
 
-func Group(r paths.Root, run execx.Runner) doctor.Group {
+func Stage(r paths.Root, run execx.Runner) setup.Stage {
 	dir := filepath.Join(r.Home, ".local", "share", "dev-certs")
 	l := leaf{dir, filepath.Join(dir, "localhost.pem"), filepath.Join(dir, "localhost-key.pem")}
-	return doctor.Group{Name: "certs", Online: true, Checks: []doctor.Check{
+	return setup.Stage{Name: "certs", Items: []setup.Item{
 		{
 			Name: "certs-ca",
 			Check: func(ctx context.Context) error {
@@ -70,7 +70,7 @@ func Group(r paths.Root, run execx.Runner) doctor.Group {
 			Check: func(ctx context.Context) error {
 				root, _, err := ca(ctx, run)
 				if err != nil {
-					return doctor.Block("needs a valid mkcert CA (certs-ca): %v", err)
+					return setup.Manual("needs a valid mkcert CA (certs-ca): %v", err)
 				}
 				if err := l.modes(); err != nil {
 					return err
@@ -80,7 +80,7 @@ func Group(r paths.Root, run execx.Runner) doctor.Group {
 			Fix: func(ctx context.Context) error {
 				root, _, err := ca(ctx, run)
 				if err != nil {
-					return doctor.Block("needs a valid mkcert CA (certs-ca): %v", err)
+					return setup.Manual("needs a valid mkcert CA (certs-ca): %v", err)
 				}
 				return l.generate(ctx, run, root)
 			},
@@ -91,7 +91,7 @@ func Group(r paths.Root, run execx.Runner) doctor.Group {
 func prerequisites(homeDir string) (string, error) {
 	for _, tool := range []string{"mkcert", "certutil"} {
 		if _, err := exec.LookPath(tool); err != nil {
-			return "", doctor.Block("%s not found; install it from base.lst", tool)
+			return "", setup.Manual("%s not found; install it from base.lst", tool)
 		}
 	}
 	return home.FirefoxProfile(homeDir)
@@ -150,7 +150,7 @@ func nickname(root *x509.Certificate) string {
 
 func firefoxTrusts(ctx context.Context, run execx.Runner, root *x509.Certificate, profile string) error {
 	if _, err := os.Stat(filepath.Join(profile, "cert9.db")); err != nil {
-		return doctor.Block("Firefox NSS database missing; start Firefox once")
+		return setup.Manual("Firefox NSS database missing; start Firefox once")
 	}
 	db, name := "sql:"+profile, nickname(root)
 	installed, err := run.Output(ctx, "", "certutil", "-L", "-d", db, "-n", name, "-a")
@@ -172,7 +172,7 @@ func trustInFirefox(ctx context.Context, run execx.Runner, root *x509.Certificat
 		return nil
 	}
 	if _, err := os.Stat(filepath.Join(profile, "cert9.db")); err != nil {
-		return doctor.Block("Firefox NSS database missing; start Firefox once")
+		return setup.Manual("Firefox NSS database missing; start Firefox once")
 	}
 	db, name := "sql:"+profile, nickname(root)
 	_, _ = run.Output(ctx, "", "certutil", "-D", "-d", db, "-n", name)

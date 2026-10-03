@@ -12,14 +12,14 @@ import (
 	"strings"
 	"time"
 
-	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/paths"
+	"dotfiles/cmds/internal/dctl/setup"
 )
 
 var dirs = []string{"downloads", "documents", "media/screenshots", "media/recordings", "media/images", "media/gifs", "agents"}
 
-func Group(r paths.Root, run execx.Runner) doctor.Group {
+func Stage(r paths.Root, run execx.Runner) setup.Stage {
 	fonts := filepath.Join(r.Home, ".local", "share", "fonts")
 	sshDir := filepath.Join(r.Home, ".ssh")
 	keys := linkCheck("home-ssh-keys", r.Dotfiles, "", func() ([]link, error) {
@@ -41,7 +41,7 @@ func Group(r paths.Root, run execx.Runner) doctor.Group {
 		return linkKeys(ctx)
 	}
 	zoom := filepath.Join(r.Home, ".config", "zoomus.conf")
-	return doctor.Group{Name: "home", Checks: slices.Concat(obs(r), []doctor.Check{
+	return setup.Stage{Name: "home", Items: slices.Concat(obs(r), []setup.Item{
 		linkCheck("home-links", r.Dotfiles, "", func() ([]link, error) { return links(r) }),
 		keys,
 		{
@@ -54,7 +54,7 @@ func Group(r paths.Root, run execx.Runner) doctor.Group {
 					}
 				}
 				if len(gone) > 0 {
-					return errors.New(doctor.List("missing", gone))
+					return errors.New(setup.List("missing", gone))
 				}
 				return nil
 			},
@@ -83,7 +83,7 @@ func Group(r paths.Root, run execx.Runner) doctor.Group {
 			Fix: func(ctx context.Context) error {
 				archive := r.Share("fonts.tar.gz")
 				if _, err := os.Stat(archive); errors.Is(err, fs.ErrNotExist) {
-					return doctor.Block("font archive missing: %s", archive)
+					return setup.Manual("font archive missing: %s", archive)
 				}
 				if err := os.MkdirAll(filepath.Dir(fonts), 0o755); err != nil {
 					return err
@@ -99,14 +99,14 @@ func Group(r paths.Root, run execx.Runner) doctor.Group {
 			Check: func(ctx context.Context) error {
 				entry, err := run.Output(ctx, "", "getent", "passwd", strconv.Itoa(os.Getuid()))
 				if err != nil {
-					return doctor.Block("getent passwd: %v", err)
+					return fmt.Errorf("getent passwd: %w", err)
 				}
 				fields := strings.Split(entry, ":")
 				if len(fields) < 7 {
-					return doctor.Block("unexpected passwd entry for uid %d", os.Getuid())
+					return fmt.Errorf("unexpected passwd entry for uid %d", os.Getuid())
 				}
 				if filepath.Base(fields[6]) != "zsh" {
-					return fmt.Errorf("login shell is %s, want zsh (run chsh -s /usr/bin/zsh)", fields[6])
+					return setup.Manual("login shell is %s, want zsh: run chsh -s /usr/bin/zsh", fields[6])
 				}
 				return nil
 			},
@@ -144,8 +144,8 @@ func links(r paths.Root) ([]link, error) {
 	return out, nil
 }
 
-func linkCheck(name, dotfiles, note string, links func() ([]link, error)) doctor.Check {
-	return doctor.Check{
+func linkCheck(name, dotfiles, note string, links func() ([]link, error)) setup.Item {
+	return setup.Item{
 		Name: name,
 		Check: func(context.Context) error {
 			list, err := links()
@@ -161,7 +161,7 @@ func linkCheck(name, dotfiles, note string, links func() ([]link, error)) doctor
 			if len(bad) == 0 {
 				return nil
 			}
-			msg := doctor.List(fmt.Sprintf("%d of %d links missing or wrong", len(bad), len(list)), bad)
+			msg := setup.List(fmt.Sprintf("%d of %d links missing or wrong", len(bad), len(list)), bad)
 			if note != "" {
 				msg += "\n" + note
 			}

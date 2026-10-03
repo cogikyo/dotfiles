@@ -1,15 +1,11 @@
 package system
 
 import (
-	"context"
 	"os"
 	"path/filepath"
 	"slices"
 	"strings"
 	"testing"
-
-	"dotfiles/cmds/internal/dctl/doctor"
-	"dotfiles/cmds/internal/dctl/ui"
 )
 
 func overlay(t *testing.T) string {
@@ -136,7 +132,7 @@ func TestParsePreset(t *testing.T) {
 	}
 }
 
-func TestUnreadableTargetIsBlocked(t *testing.T) {
+func TestUnreadableTarget(t *testing.T) {
 	if os.Geteuid() == 0 {
 		t.Skip("root reads through permissions")
 	}
@@ -149,28 +145,14 @@ func TestUnreadableTargetIsBlocked(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { os.Chmod(usr, 0o755) })
-	statuses := func() doctor.Status {
-		t.Helper()
-		results, err := doctor.Run(context.Background(), ui.New(ui.Options{JSON: true}), []doctor.Group{{
-			Name:   "t",
-			Checks: []doctor.Check{{Name: "files", Check: func(context.Context) error { return check(root, src) }}},
-		}}, doctor.Options{})
-		if err != nil || len(results) != 1 {
-			t.Fatalf("results %v, err %v", results, err)
-		}
-		if !strings.Contains(results[0].Detail, "usr/bin/tool (needs root to verify)") {
-			t.Errorf("detail %q", results[0].Detail)
-		}
-		return results[0].Status
-	}
-	if got := statuses(); got != doctor.Blocked {
-		t.Errorf("unreadable only: status %s, want blocked", got)
+	if err := check(root, src); err == nil || !strings.Contains(err.Error(), "cannot inspect 1 of 2 files") {
+		t.Errorf("unreadable only: %v", err)
 	}
 	if err := os.WriteFile(filepath.Join(root, "etc", "a.conf"), []byte("drift"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if got := statuses(); got != doctor.Failed {
-		t.Errorf("unreadable plus drift: status %s, want failed", got)
+	if err := check(root, src); err == nil || !strings.Contains(err.Error(), "1 of 2 files differ") {
+		t.Errorf("unreadable plus drift: %v", err)
 	}
 }
 

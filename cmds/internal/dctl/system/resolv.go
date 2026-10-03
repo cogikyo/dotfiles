@@ -6,8 +6,6 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
-
-	"dotfiles/cmds/internal/dctl/doctor"
 )
 
 const (
@@ -18,7 +16,7 @@ const (
 func checkResolv(rootDir string) error {
 	root, err := os.OpenRoot(rootDir)
 	if err != nil {
-		return doctor.Block("cannot inspect %s: %v", rootDir, err)
+		return err
 	}
 	defer root.Close()
 	target, err := root.Readlink(resolv)

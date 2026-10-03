@@ -12,7 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"dotfiles/cmds/internal/dctl/doctor"
+	"dotfiles/cmds/internal/dctl/secureboot"
+	"dotfiles/cmds/internal/dctl/setup"
 )
 
 func TestQMP(t *testing.T) {
@@ -79,10 +80,10 @@ func TestWait(t *testing.T) {
 func TestSerial(t *testing.T) {
 	log := []byte("noise\r\nBoot in 1s.\x1b[2J\x1b[001;001H" +
 		`{"dctltest":"install","ok":true,"total":61.5,"phases":[{"name":"pacstrap","seconds":40.1}]}` + "\r\n" +
-		`[{"group":"system","check":"system-files","status":"ok"},{"group":"keys","check":"keys-luks","status":"failed","detail":"no token"}]` + "\r\n" +
-		`[{"group":"home","check":"home-dirs","status":"ok"}]` + "\r\n" +
+		`[{"stage":"system","state":"done","items":[{"item":"system-files","state":"done"}]},{"stage":"keys","state":"failed","items":[{"item":"keys-luks","state":"failed","detail":"no token"}]}]` + "\r\n" +
+		`[{"stage":"home","state":"done","items":[{"item":"home-dirs","state":"done"}]}]` + "\r\n" +
 		Greeter + "active\r\n" +
-		`[{"group":"partial`)
+		`[{"stage":"partial`)
 
 	lines := find(log, installPrefix)
 	if len(lines) != 1 {
@@ -96,43 +97,49 @@ func TestSerial(t *testing.T) {
 		t.Fatal("accepted a non-install event")
 	}
 
-	lines = find(log, doctorPrefix)
+	lines = find(log, setupPrefix)
 	if len(lines) != 2 {
-		t.Fatalf("doctor lines %q, want the root and the user report", lines)
+		t.Fatalf("setup lines %q, want the root and the user report", lines)
 	}
-	var rs []doctor.Result
-	if err := json.Unmarshal([]byte(lines[0]), &rs); err != nil || len(rs) != 2 || rs[1] != (doctor.Result{Group: "keys", Check: "keys-luks", Status: doctor.Failed, Detail: "no token"}) {
-		t.Fatalf("doctor = %+v, %v", rs, err)
+	var rs []setup.Report
+	if err := json.Unmarshal([]byte(lines[0]), &rs); err != nil || len(rs) != 2 || rs[1].Items[0] != (setup.Result{Item: "keys-luks", State: setup.Failed, Detail: "no token"}) {
+		t.Fatalf("setup = %+v, %v", rs, err)
 	}
 	if got := find(log, Greeter); len(got) != 1 || got[0] != Greeter+"active" {
 		t.Fatalf("greeter lines %q", got)
 	}
 
-	if err := accept("1", rs); err == nil || !strings.Contains(err.Error(), "no packages checks") || strings.Contains(err.Error(), "keys-luks") {
+	if err := accept("1", rs); err == nil || !strings.Contains(err.Error(), "no packages") || strings.Contains(err.Error(), "keys-luks") {
 		t.Fatalf("accept = %v", err)
 	}
-	healthy := []doctor.Result{
-		{Group: "system", Check: "system-files", Status: doctor.Passed},
-		{Group: "packages", Check: "packages-installed", Status: doctor.Fixed},
-		{Group: "home", Check: "home-links", Status: doctor.Passed},
-		{Group: "secureboot", Check: "secureboot-keys", Status: doctor.Passed},
-		{Group: "secureboot", Check: "secureboot-signed", Status: doctor.Passed},
-		{Group: "secureboot", Check: "secureboot-enforced", Status: doctor.Passed},
+	stage := func(name string, items ...string) setup.Report {
+		r := setup.Report{Stage: name, State: setup.Done}
+		for _, it := range items {
+			r.Items = append(r.Items, setup.Result{Item: it, State: setup.Done})
+		}
+		return r
 	}
-	if err := accept("1", append(healthy, rs[1])); err != nil {
-		t.Fatalf("expected failures outside the required checks: %v", err)
-	}
-	for i := 3; i < 6; i++ {
-		missing := slices.Delete(slices.Clone(healthy), i, i+1)
-		if err := accept("2", missing); err == nil || !strings.Contains(err.Error(), "no "+healthy[i].Check+" checks") {
-			t.Fatalf("missing %s = %v", healthy[i].Check, err)
+	healthy := func() []setup.Report {
+		return []setup.Report{
+			stage("system", "system-files"),
+			stage("packages", "packages-installed"),
+			stage("home", "home-links"),
+			stage("secureboot", secureboot.Checks...),
 		}
 	}
-	for _, i := range []int{3, 4, 5} {
-		bad := slices.Clone(healthy)
-		bad[i].Status = doctor.Blocked
-		if err := accept("2", bad); err == nil || !strings.Contains(err.Error(), bad[i].Check+" blocked") {
-			t.Fatalf("blocked %s = %v", bad[i].Check, err)
+	if err := accept("1", append(healthy(), rs[1])); err != nil {
+		t.Fatalf("expected failures outside the required stages: %v", err)
+	}
+	for i, name := range secureboot.Checks {
+		missing := healthy()
+		missing[3].Items = slices.Delete(missing[3].Items, i, i+1)
+		if err := accept("2", missing); err == nil || !strings.Contains(err.Error(), "no "+name) {
+			t.Fatalf("missing %s = %v", name, err)
+		}
+		bad := healthy()
+		bad[3].Items[i].State = setup.ManualState
+		if err := accept("2", bad); err == nil || !strings.Contains(err.Error(), name+" manual") {
+			t.Fatalf("manual %s = %v", name, err)
 		}
 	}
 }

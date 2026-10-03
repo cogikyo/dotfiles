@@ -83,7 +83,7 @@ func TestMissing(t *testing.T) {
 	if !slices.Equal(official, []string{"mesa", "zsh"}) || !slices.Equal(other, []string{"limine-snapper-sync"}) {
 		t.Fatalf("official %v, other %v", official, other)
 	}
-	if err := Group(dir, false, run).Checks[0].Fix(context.Background()); err == nil || !strings.Contains(err.Error(), "limine-snapper-sync") {
+	if err := Stage(dir, run).Items[0].Fix(context.Background()); err == nil || !strings.Contains(err.Error(), "limine-snapper-sync") {
 		t.Fatalf("fix err %v, want blocked on limine-snapper-sync", err)
 	}
 	if last := run.calls[len(run.calls)-1]; last != "pacman -S --needed --noconfirm mesa zsh" {
@@ -98,7 +98,7 @@ func TestExtraInstallsOfficialBeforeAUR(t *testing.T) {
 		"pacman -Qq":  "htop\n",
 		"pacman -Slq": "base-devel\ndocker\nhtop\n",
 	}}
-	if err := Extra(dir, run).Checks[0].Fix(context.Background()); err != nil {
+	if err := Extra(dir, run).Items[0].Fix(context.Background()); err != nil {
 		t.Fatal(err)
 	}
 	var installs []string
@@ -116,18 +116,11 @@ func TestExtraInstallsOfficialBeforeAUR(t *testing.T) {
 	}
 }
 
-func TestOfflineFix(t *testing.T) {
-	run := &fake{}
-	if err := Group(t.TempDir(), true, run).Checks[0].Fix(context.Background()); err == nil || len(run.calls) != 0 {
-		t.Fatalf("offline fix err %v, calls %v", err, run.calls)
-	}
-}
-
 func TestUnsynced(t *testing.T) {
 	useSync(t, false)
 	dir := lists(t, map[string]string{"base.lst": "zsh\n", "aur.lst": "", "extra.lst": "htop\n"})
 	run := &fake{}
-	for _, fix := range []func(context.Context) error{Group(dir, false, run).Checks[0].Fix, Extra(dir, run).Checks[0].Fix} {
+	for _, fix := range []func(context.Context) error{Stage(dir, run).Items[0].Fix, Extra(dir, run).Items[0].Fix} {
 		if err := fix(context.Background()); err == nil || !strings.Contains(err.Error(), "dctl update") {
 			t.Fatalf("fix err %v, want blocked on dctl update", err)
 		}

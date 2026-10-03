@@ -6,23 +6,12 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
-	"slices"
 	"strings"
-	"time"
 
-	"dotfiles/cmds/internal/dctl/doctor"
 	"dotfiles/cmds/internal/dctl/execx"
 )
 
-const (
-	nothingToDo = 9
-	maxAge      = 30 * 24 * time.Hour
-)
-
-type remote struct {
-	Id    string
-	Mtime int64
-}
+const nothingToDo = 9
 
 type fwupdError struct {
 	Domain  string
@@ -30,73 +19,19 @@ type fwupdError struct {
 	Message string
 }
 
-func Firmware(run execx.Runner) doctor.Group {
-	ready := func() error {
-		if _, err := exec.LookPath("fwupdmgr"); err != nil {
-			return doctor.Block("fwupdmgr not found; install fwupd from base.lst")
-		}
-		return nil
-	}
-	return doctor.Group{Name: "fwupd", Online: true, Checks: []doctor.Check{
-		{
-			Name: "fwupd-metadata",
-			Check: func(ctx context.Context) error {
-				if err := ready(); err != nil {
-					return err
-				}
-				out, err := run.Output(ctx, "", "fwupdmgr", "get-remotes", "--json")
-				if err != nil {
-					return fmt.Errorf("fwupdmgr get-remotes: %w", err)
-				}
-				return fresh([]byte(out), time.Now())
-			},
-			Fix: func(ctx context.Context) error {
-				return run.Run(ctx, "", "fwupdmgr", "refresh")
-			},
-		},
-		{
-			Name: "fwupd-updates",
-			Check: func(ctx context.Context) error {
-				if err := ready(); err != nil {
-					return err
-				}
-				out, err := run.Output(ctx, "", "fwupdmgr", "get-updates", "--json")
-				updates, perr := pending([]byte(out), err)
-				if perr != nil {
-					return perr
-				}
-				if len(updates) > 0 {
-					return fmt.Errorf("firmware updates available: %s; flash manually with fwupdmgr update", strings.Join(updates, ", "))
-				}
-				return nil
-			},
-		},
-	}}
-}
-
-func fresh(data []byte, now time.Time) error {
-	var report struct {
-		Remotes []remote
-		Error   *fwupdError
-	}
-	if err := json.Unmarshal(data, &report); err != nil {
-		return fmt.Errorf("parse fwupdmgr get-remotes: %w", err)
-	}
-	if report.Error != nil {
-		return fmt.Errorf("fwupdmgr get-remotes: %s", report.Error.Message)
-	}
-	i := slices.IndexFunc(report.Remotes, func(r remote) bool { return r.Id == "lvfs" })
-	if i < 0 {
-		return errors.New("LVFS remote not configured")
-	}
-	mtime := report.Remotes[i].Mtime
-	if mtime <= 0 {
-		return errors.New("LVFS metadata was never downloaded")
-	}
-	if now.Sub(time.Unix(mtime, 0)) > maxAge {
-		return fmt.Errorf("LVFS metadata is older than %s", maxAge)
+func ready() error {
+	if _, err := exec.LookPath("fwupdmgr"); err != nil {
+		return errors.New("fwupdmgr not found; install fwupd from base.lst")
 	}
 	return nil
+}
+
+func Updates(ctx context.Context, run execx.Runner) ([]string, error) {
+	if err := ready(); err != nil {
+		return nil, err
+	}
+	out, err := run.Output(ctx, "", "fwupdmgr", "get-updates", "--json")
+	return pending([]byte(out), err)
 }
 
 func pending(data []byte, runErr error) ([]string, error) {
