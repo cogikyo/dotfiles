@@ -31,15 +31,15 @@ Set Firefox to use it:
 ## Install
 
 The dctl ISO installs the binary into `~/.local/bin/`.
-`dctl doctor --fix binaries` can build it if it is missing.
-For an attended source update, run from `cmds/`:
+For an attended source update, run as your normal user:
 
 ```sh
-go build -o "$HOME/.local/bin/newtab" ./cmd/newtab
+dctl update cli
 ```
 
+This rebuilds the dotfiles commands and restarts newtab only if its binary changed.
 The tracked user unit is `config/systemd/user/newtab.service` at the repo root.
-The home doctor group links the user unit directory and its `.wants` links without starting or restarting the service.
+`dctl setup home` links the user unit directory and its `.wants` links without starting or restarting the service.
 
 `newtab` listens on all interfaces at `:42069` and serves static files from `~/dotfiles/cmds/cmd/newtab/`.
 Treat the bookmarks and history API as private; the server has no authentication.

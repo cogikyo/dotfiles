@@ -1,3 +1,4 @@
+// Package gobuild shares settings across CLI updates, hyprd rebuilds, and ISO builds so byte comparisons exclude paths and VCS state.
 package gobuild
 
 var (

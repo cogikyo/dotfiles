@@ -145,7 +145,7 @@ dctl iso test "$ISO"
 ```
 
 The test runs without sudo and needs QEMU, KVM access, OVMF Secure Boot firmware, dosfstools, and mtools.
-It installs without network access, unlocks and boots twice, checks doctor results, and saves timings and serial logs under `/var/tmp/dctl-iso-test-*`.
+It installs without network access, unlocks and boots twice, checks setup status, and saves results and logs under `/var/tmp/dctl-iso-test-*`.
 It requires all three Secure Boot checks and an active display manager.
 After a 20-second wait, it saves `greeter.png` for manual inspection; it does not verify the greeter's appearance or sign-in behavior.
 See the [dctl guide](cmds/cmd/dctl/README.md#iso) for test overrides and release signing.
@@ -176,7 +176,8 @@ The live environment starts this command as root on tty1:
 dctl install
 ```
 
-Enter the login password, timezone, and LUKS passphrase, then select the target disk if prompted.
+The user is `cullyn` and the hostname is `costello`.
+Enter the login password, accept or change the prefilled timezone, and enter the LUKS passphrase, then select the target disk if prompted.
 **Typing the disk path at the final confirmation erases the selected disk.**
 The installer refuses the boot disk, mounted disks, USB/removable targets, and targets without a serial or WWN.
 It installs the offline package payload, clones the bundled history into `~/dotfiles`, and installs the prebuilt commands.
@@ -186,15 +187,14 @@ If firmware is not in Setup Mode, installation continues without Secure Boot and
 
 Reboot, unlock LUKS with the passphrase, and log in through SDDM.
 Connect Ethernet for the online setup work.
-Run doctor as the normal user; it reports root-only fixes separately.
+Run setup as the normal user; it asks default-yes for each pending stage and runs root stages in one sudo child.
 
 ```sh
-dctl doctor
-dctl doctor --fix
+dctl setup
 ```
 
-To fix one group, use `dctl doctor --fix home` or another group from the [dctl guide](cmds/cmd/dctl/README.md#doctor).
-Do not run all fixes with sudo, because user groups refuse root execution.
+To reapply one stage, use `dctl setup home` or another stage from the [dctl guide](cmds/cmd/dctl/README.md#setup).
+Launch Firefox once if setup reports a missing profile, then rerun `dctl setup firefox certs`.
 Enroll each YubiKey separately with only that key inserted:
 
 ```sh
@@ -203,24 +203,23 @@ sudo dctl keys luks
 ```
 
 Record the LUKS recovery key when it is shown; the original passphrase slot remains available.
-If Secure Boot enrollment was skipped, clear the firmware keys into Setup Mode, boot, and run `sudo dctl doctor --fix secureboot`.
-Reboot after enrollment; if Secure Boot is still off, enable it in the BIOS before checking `sudo dctl doctor secureboot`.
+If Secure Boot enrollment was skipped, clear the firmware keys into Setup Mode, boot, and run `dctl setup secureboot`.
+Reboot after enrollment; if Secure Boot is still off, enable it in the BIOS before checking `dctl setup --status secureboot`.
 
 ## Maintenance
 
-Run these as the normal user:
+Run `update` as the normal user for daily upgrades; the zsh alias runs `dctl update`.
+It asks default-yes for each step: pacman, AUR, repos, CLI tools, then firmware.
 
 ```sh
-dctl secrets list
-dctl secrets decrypt
-dctl secrets sync
-dctl secrets verify-phrase
-dctl repos sync
-dctl repos update
-dctl update
+update
+dctl update repos cli
+dctl setup repos
 ```
 
-`dctl update` upgrades through yay and reports package-list drift without rewriting lists or removing orphans.
+Named update steps skip the per-step prompt; `--all` skips prompts, passes `--noconfirm` to pacman/yay, and never flashes firmware.
+Update never pulls `~/dotfiles`; manage that checkout by hand.
+It reports package-list drift without rewriting lists or removing packages; use `dctl setup packages extra` to install newly listed packages.
 See the [dctl guide](cmds/cmd/dctl/README.md) for secret recovery, recipient changes, and release publishing.
 
 ## Manual hardware acceptance
@@ -228,12 +227,13 @@ See the [dctl guide](cmds/cmd/dctl/README.md) for secret recovery, recipient cha
 These checks require the Framework Desktop and real YubiKeys; the VM test does not prove them.
 
 - [ ] Manually confirm BIOS 3.06, Pluton enabled, and Setup Mode before installation.
-- [ ] Enable Secure Boot in the BIOS after key enrollment, reboot, and pass `sudo dctl doctor secureboot`.
+- [ ] Enable Secure Boot in the BIOS after key enrollment, reboot, and confirm all items are done with `dctl setup --status secureboot`.
 - [ ] Boot and unlock LUKS with each of the two YubiKeys separately, with PIN and touch.
 - [ ] Decrypt secrets with each YubiKey separately, without the other key or the age phrase.
 - [ ] Reject a wrong FIDO2 PIN and a wrong PIV PIN; cancel any age-phrase fallback and avoid repeated failures that can block the key.
 - [ ] Unlock LUKS with the recorded recovery key while both YubiKeys are removed.
 - [ ] Pass `dctl secrets verify-phrase` and rehearse secret recovery without a YubiKey.
 - [ ] Boot a Limine snapshot entry, restore it, and confirm the restored system boots.
-- [ ] Pair and use a Bluetooth device, then pass `sudo dctl doctor hardware` with no WLAN interface.
-- [ ] Check the kernel log for firmware load failures and confirm the `linux-firmware-{amd,amdgpu,mediatek,realtek}` split supports the hardware without errors.
+- [ ] Confirm `nmcli device status` shows no Wi-Fi interface.
+- [ ] Confirm `bluetoothctl list` shows a Bluetooth controller, then pair and use a device.
+- [ ] Confirm `journalctl -k -b` has no firmware load errors with `linux-firmware-{amd,amdgpu,mediatek,realtek}` installed.

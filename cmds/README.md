@@ -84,7 +84,8 @@ internal/daemon/
 ## Installation
 
 The dctl ISO installs prebuilt commands into `~/.local/bin/`.
-`dctl doctor --fix binaries` builds only missing or non-executable commands; it does not rebuild changed source or restart daemons.
+`dctl update cli` builds from the working tree, replaces only changed commands, and restarts ewwd/newtab only when replaced.
+It uses `hyprd rebuild` for hyprd so the daemon owns its state-preserving restart and lock refusal.
 
 To build dctl on an existing machine, run from `cmds/` with Go 1.26.2 or later and an existing `~/.local/bin/` directory:
 
@@ -99,7 +100,7 @@ go build -o /tmp/opencode/bin/ ./cmd/dctl
 ```
 
 See the [hyprd guide](cmd/hyprd/README.md#rebuild) for attended live rebuilds.
-The [`dctl` guide](cmd/dctl/README.md) covers ISO builds, installation, doctor groups, and maintenance.
+The [`dctl` guide](cmd/dctl/README.md) covers ISO builds, installation, setup stages, and updates.
 
 Config files live in `cmds/config/` in the source tree.
 Config-backed commands read their config at startup; see command-specific docs for details.

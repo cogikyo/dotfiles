@@ -23,6 +23,7 @@ import (
 
 var (
 	services = []string{"ewwd", "newtab"}
+	// refusals matches the text protocol returned by hyprd's rebuildBlocked.
 	refusals = []string{"error: full lock active", "error: opencode refresh job "}
 )
 
@@ -75,6 +76,7 @@ func commands(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, 
 		}
 		changed++
 		if name == "hyprd" {
+			// The daemon owns state preservation and lock checks around its binary swap.
 			errs = append(errs, rebuild(ctx, u, run))
 			continue
 		}
@@ -141,6 +143,7 @@ func tools(ctx context.Context, u *ui.UI, run execx.Runner) error {
 			continue
 		}
 		info, err := buildinfo.ReadFile(filepath.Join(dir, e.Name()))
+		// A module-proxy checksum distinguishes installed releases from local checkout builds.
 		if err != nil || !strings.HasPrefix(info.Main.Sum, "h1:") {
 			local = append(local, e.Name())
 			continue

@@ -53,6 +53,7 @@ Examples:
   dctl setup home firefox`
 }
 
+// catalog orders stages within each privilege batch; root stages must not depend on user stages.
 func catalog(u *ui.UI, root paths.Root) []setup.Stage {
 	run := execx.OSRunner{}
 	return []setup.Stage{

@@ -441,7 +441,7 @@ func (d *Daemon) handleNotify(arg string) string {
 	return "ok"
 }
 
-// handleRebuild builds ./cmd/hyprd from the dotfiles Go workspace, installs ~/.local/bin/hyprd, and restarts in place.
+// handleRebuild uses shared gobuild settings and schedules an in-place restart after the binary swap.
 //
 // Runtime state is written to stateFile before the binary swap and consumed once by restoreState after exec.
 func (d *Daemon) handleRebuild() string {

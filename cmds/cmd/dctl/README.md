@@ -1,6 +1,6 @@
 # dctl
 
-`dctl` builds the offline UEFI ISO, installs the machine, checks its setup, and runs maintenance commands.
+`dctl` builds the offline UEFI ISO, installs the machine, applies setup stages, and runs stepped updates.
 The target is a single-user Framework Desktop with AMD Strix Halo and Ethernet.
 
 ## Usage
@@ -26,77 +26,74 @@ It requires root, UEFI, and the dctl ISO payload; it refuses an ordinary install
 The live environment starts it on tty1.
 See the [root README](../../../README.md#boot-and-install) for BIOS preparation and the hardware checklist.
 
-The form asks for a login password, timezone, and LUKS passphrase while background preparation verifies the payload and surveys disks.
+The user is fixed to `cullyn` and the hostname to `costello`.
+The form asks for a login password, prefilled timezone, and LUKS passphrase while background preparation verifies the payload and surveys disks.
 The installer shows the target model, size, and serial, then requires you to type the disk path before wiping it.
 It refuses the boot disk, mounted disks, USB/removable targets, and disks without a serial or WWN.
 
 Installation uses the bundled packages without network access and creates a 4 GiB ESP, LUKS2, and btrfs subvolumes.
-It configures Snapper and Limine, applies offline doctor groups inside the target, clones the Git bundle into `~/dotfiles`, and installs prebuilt commands into `~/.local/bin/`.
-When firmware is in Setup Mode, the installer runs the `secureboot` doctor group with root fixes in the chroot to create keys if needed, configure Limine, rebuild and verify the signed boot files, and enroll the keys.
-Otherwise, installation continues without Secure Boot and asks for a later `sudo dctl doctor --fix secureboot` after the BIOS keys are cleared.
-Only a blocked `secureboot-enforced` result is accepted during that enrollment; missing checks or unhealthy key and signature results stop installation.
-Reboot after enrollment; if Secure Boot is still off, enable it in the BIOS before checking `sudo dctl doctor secureboot`.
+It configures Snapper and Limine, clones the Git bundle into `~/dotfiles`, and installs prebuilt commands into `~/.local/bin/`.
+It runs `setup system packages` as root in the chroot, then `setup home` as `cullyn`.
+When firmware is in Setup Mode, the installer runs `setup secureboot` to create keys if needed, configure Limine, rebuild and verify signed boot files, and enroll the keys.
+Otherwise, installation continues without Secure Boot and asks for a later `dctl setup secureboot` after the BIOS keys are cleared.
+During enrollment, `secureboot-enforced` may be `manual`; missing items or key/signature items that are not `done` stop installation.
+Reboot after enrollment; if Secure Boot is still off, enable it in the BIOS before checking `dctl setup --status secureboot`.
 Secure Boot disables fallback `BOOTX64.EFI` because upstream `update_limine_fallback` only copies the binary and never signs it.
 The `post.d` hooks run in lexical order, so `89-dotfiles-limine-pristine` re-copies packaged Limine before upstream `90-limine-enroll-config` signs it.
 After installation succeeds, it reports the hostname, disk path, and elapsed time and offers to reboot.
 An installation failure after disk writes warns that the target disk has already been modified and installation is incomplete.
 
-## Doctor
+## Setup
 
 ```sh
-dctl doctor
-dctl doctor --fix
-dctl doctor --fix home firefox
-dctl doctor --offline
+dctl setup
+dctl setup home firefox
+dctl setup --all
+dctl --json setup --status
 ```
 
-Without `--fix`, doctor checks and reports the machine state.
-With `--fix`, it fixes failed checks that have a repair function, then checks each repaired item again.
-Any failed or blocked result makes the command return nonzero.
-`dctl --json doctor` returns the result array with `group`, `check`, `status`, and optional `detail` fields.
+Run as your normal user; setup runs selected root stages first in one sudo child, then user stages.
+Within each batch, stages keep catalog order even when named in another order.
+User stages refuse root execution.
+With no stage names, setup shows each stage and asks `[Y/n]` for each pending stage; Enter applies it.
+Naming stages reapplies their items, including ones that look done; `--all` or global `--yes` applies pending stages without asking.
+Setup checks each applied item again.
 
-Text output collapses passing checks into `==> group  N passed` and shows failed, blocked, and fixed checks without the group prefix.
-JSON check IDs keep their full names.
-Without `--fix`, a failed group with a supported repair ends with `Fix: [sudo ]<dctl> doctor --fix <group>`, using the executable's path and sudo when the fixes require root.
-The summary counts failed, blocked, fixed, and passed checks in that order, omitting zero counts, for example `doctor: 2 failed, 1 blocked, 5 passed`.
+`--status` changes nothing and returns nonzero for pending or failed items.
+Other modes return nonzero for failed items, but allow you to skip pending work.
+`manual` needs outside action and does not fail the command; refused sudo leaves root items `unknown`.
+JSON output is an array of stages with `stage`, `state`, and `items`; each item has `item`, `state`, and optional `detail`.
+An exit code alone does not prove that manual or unknown items are complete.
 
-Run as your normal user first.
-Root-only fixes report a command to rerun with sudo; do not run all fixes as root because user groups refuse root fixes.
-Groups run in the order below, even when named in another order:
+The catalog is:
 
-- `system` copies `system/`, enables the listed system units, and links the resolver stub; root fixes are required.
-- `packages` checks the base, AUR, and local package names; root fixes are required.
-- `home` links config, public SSH keys, desktop entries, and user units, creates user directories, and seeds fonts and app settings.
-- `secrets` checks encrypted files and decrypts missing non-staged targets.
-- `keys` checks LUKS FIDO2 and recovery-key enrollment; inspecting the header requires root and enrollment is a separate command.
-- `secureboot` checks key enrollment, signed boot files, and firmware enforcement, with root fixes for Setup Mode enrollment.
-- `vpn` checks imported NetworkManager connections and reports a manual `hyprd vpn install` step; it is an online group.
-- `repos` clones missing repositories over SSH; it is an online group.
-- `firefox` links the Firefox customization to the profile.
-- `binaries` builds missing commands but does not rebuild changed source or restart daemons.
-- `certs` provisions the local mkcert CA and leaf certificate; it is an online group.
-- `hardware` checks for no WLAN interface, a Bluetooth controller, and firmware load failures in the kernel log.
-- `extra` installs `packages/extra.lst` and enables Docker's socket without starting it; it is an online group.
-- `tailscale` checks and enables Tailscale SSH; it is an online group with root fixes.
-- `fwupd` refreshes firmware metadata and reports available updates; it is an online group and never flashes firmware.
+- `system` copies `system/`, enables preset-listed units without starting them, and links the resolver stub (root).
+- `packages` checks base, AUR, and local payload names and installs missing official packages (root).
+- `home` links config, public SSH keys, desktop entries, and user units, creates directories, and seeds fonts and app settings.
+- `extra` installs `packages/extra.lst` through yay and enables Docker's socket without starting it.
+- `secrets` decrypts missing non-staged targets.
+- `repos` clones missing repositories over GitHub SSH.
+- `firefox` links customization into the Developer Edition profile after `repos`.
+- `certs` provisions the mkcert CA and leaf certificate and verifies system and Firefox trust.
+- `vpn` decrypts missing connections' staged profiles and imports them through `hyprd vpn install`.
+- `tailscale` enables Tailscale SSH, with login if needed (root).
+- `keys` enrolls LUKS FIDO2 and a recovery key if missing; use `dctl keys luks` to add another token (root).
+- `secureboot` enrolls keys in Setup Mode or repairs signatures with enrolled keys (root).
 
 The mkcert CA private key is `rootCA-key.pem` in the CAROOT directory reported by `mkcert -CAROOT` and stays on disk after `mkcert -install`.
 
-`--offline` skips online groups when no groups are named, prints `Skipped (--offline): …` in text output, and rejects an explicitly named online group.
-Network-dependent repairs within other groups are blocked while offline.
-The system group enables only units listed in `system/etc/systemd/system-preset/10-dotfiles.preset`, without starting or restarting them.
+There is no offline flag; the installer selects only its offline stages.
+Connect Ethernet for online work, and launch Firefox once before `dctl setup firefox certs` if its profile is missing.
 User units and relative `.wants` links come from `config/systemd/user/`.
 
-The `packages` group checks base, AUR, and local packages; `extra` checks `extra.lst`, while `dctl update` reports drift across all lists.
-Repairs that install official packages, and extra-package installs, block when `/var/lib/pacman/sync/core.db` is missing and ask you to run `dctl update` as your user first.
+Missing AUR or local payload packages require `yay -S` or `makepkg -si` in `packages/<name>`; `setup packages` reports that manual action.
+If `/var/lib/pacman/sync/core.db` is missing, run `dctl update pacman` before package setup.
 
-The Secure Boot check IDs are `secureboot-keys`, `secureboot-signed`, and `secureboot-enforced`.
+The Secure Boot item IDs are `secureboot-keys`, `secureboot-signed`, and `secureboot-enforced`.
 The signed check verifies Limine and UKI signatures, rejects an embedded UKI command line, requires a `limine.conf` entry for each UKI, and checks that `rd.luks.name` and `root` refer to the opened LUKS mapping.
 It also checks the Limine settings and rejects a fallback `BOOTX64.EFI`.
-Key enrollment and firmware enforcement are separate: enrolled keys can pass while enforcement is blocked with `reboot; if Secure Boot is still off, enable it in the BIOS`.
-
-Doctor does not enroll or reset YubiKeys, regenerate identities, or flash firmware.
-For a missing VPN connection, decrypt its staged entry explicitly, then run `hyprd vpn install`; the importer deletes the staging file.
+Key enrollment and firmware enforcement are separate: enrolled keys can be done while enforcement needs a manual reboot or BIOS change.
+Setup does not provision YubiKey identities or flash firmware; use the [keys commands](#keys) and [firmware update step](#update).
 
 ## Secrets
 
@@ -168,7 +165,7 @@ Identify the lost key's LUKS slot manually before revoking it with `systemd-cryp
 ## Porkbun DNS
 
 `dctl porkbun` manages one explicit domain at a time through the [Porkbun v3 API](https://porkbun.com/llms/dns).
-It is Linux-only and separate from the `system` doctor group, which configures the machine's resolver.
+It is Linux-only and separate from the `system` setup stage, which configures the machine's resolver.
 
 ### Provision credentials first
 
@@ -258,28 +255,46 @@ The command never retries a mutation or rolls it back automatically, and API rea
 Run both commands as your normal user; they refuse root execution.
 
 ```sh
-dctl repos sync
-dctl repos update
+dctl setup repos
+dctl update repos
 ```
 
-`sync` reads `packages/repos.lst`, one `owner/name path` pair per line in clone order, and clones missing repositories over GitHub SSH.
+`setup repos` reads `packages/repos.lst`, one `owner/name path` pair per line in clone order, and clones missing repositories over GitHub SSH.
 `repo` must be a GitHub `owner/name`, and `path` must start with `~/` or `/`.
-The system overlay supplies pinned GitHub host keys in `system/etc/ssh/ssh_known_hosts`; sync does not scan or add host keys.
+The system overlay supplies pinned GitHub host keys in `system/etc/ssh/ssh_known_hosts`; setup does not scan or add host keys.
 
-`update` fast-forwards clean checkouts with configured upstreams.
+`update repos` fast-forwards clean checkouts with configured upstreams, but never pulls `~/dotfiles` or the `DOTFILES` checkout.
 It reports dirty, detached, ahead, diverged, absent, or upstream-less repositories without merging them.
 
 ## Update
 
 ```sh
 dctl update
+dctl update repos cli
+dctl update --all
 ```
 
-Run as your normal user; yay elevates the package transaction when needed.
-The command runs `yay -Syu`, then reports explicit installed packages missing from the lists, listed packages not installed, and unlisted orphans.
-It reads `packages/base.lst`, `aur.lst`, `extra.lst`, and local PKGBUILD names without rewriting them or removing packages.
-Run it before online package repairs on a fresh offline install to synchronize the official repository databases.
-Package lists remain hand-curated; there is no save flag.
+Run as your normal user; the zsh alias `update` runs `dctl update`.
+With no step names, each step shows its plan and asks `[Y/n]`; Enter runs it and `n` skips it.
+Named steps skip the per-step prompt and keep the order below.
+`--all` or global `--yes` skips prompts and passes `--noconfirm` to pacman/yay, but never flashes firmware.
+
+- `pacman` runs `sudo pacman -Syu`, then reports package-list drift without rewriting lists or removing packages.
+- `aur` runs `yay -Sua`.
+- `repos` fast-forwards the clean catalog checkouts, excluding dotfiles.
+- `cli` rebuilds changed dotfiles commands, updates proxy-installed Go tools, and runs `rustup update` if installed.
+- `firmware` refreshes fwupd metadata and lists updates, then asks default-no before flashing; `--all` only reports.
+
+The CLI step uses shared `internal/gobuild` settings and replaces binaries in `~/.local/bin/` only when their bytes differ.
+Hyprd owns its replacement through `hyprd rebuild`; a full lock, active OpenCode refresh job, or stopped daemon produces a reported skip.
+Ewwd and newtab restart only when replaced.
+Uncommitted changes under `cmds/` require an extra confirmation; `--all` skips the dotfiles build instead.
+Go tools in `GOBIN` or the first GOPATH's `bin` directory use `go install <package>@latest` only when build metadata has a module-proxy checksum; locally built tools are skipped.
+Individual tool or step failures do not stop later work, but the command returns nonzero for failures.
+
+Update never installs newly listed packages; rerun `dctl setup packages extra` and follow any manual AUR/local build instructions.
+The drift report lists unlisted explicit packages, listed-but-missing packages, and unlisted orphans across all package lists and local recipes.
+On a fresh offline install, run `dctl update pacman` first to synchronize official repository databases.
 
 ## ISO
 
@@ -295,7 +310,7 @@ sudo dctl iso build
 ```
 
 It builds the Go commands, resolves `packages/base.lst`, `aur.lst`, and local PKGBUILDs into an offline package repository, and fails on missing packages.
-`packages/extra.lst` is installed online by doctor and is excluded from the payload.
+`packages/extra.lst` is installed online by `dctl setup extra` and is excluded from the payload.
 The build still reads all three lists, so `extra.lst` must exist.
 AUR and local builds import recipe-shipped `keys/pgp/*.asc` into a per-build keyring and fail before building if a `validpgpkeys` fingerprint in `.SRCINFO` is absent from that keyring.
 Package archives are fetched with `ParallelDownloads = 5`.
@@ -319,9 +334,9 @@ dctl iso test /path/to/dotfiles-REV.iso
 
 The VM has no network interface and uses a 32 GiB virtual disk, Setup Mode firmware variables, and a `DCTLTEST` answers drive.
 The harness installs, unlocks LUKS, boots twice, and requires healthy system, packages, home, and all three Secure Boot checks, plus an active display manager.
-It runs root doctor groups as root and user groups as the installed user.
+It reads `setup --status --json` for `system packages secureboot` as root and `home` as `cullyn`.
 After a 20-second wait, it saves `greeter.png` for manual inspection; it does not verify the greeter's appearance or sign-in behavior.
-It writes `serial.log`, `timings.json`, `doctor.json`, and `greeter.png` under the printed `/var/tmp/dctl-iso-test-*` run directory.
+It writes `serial.log`, `timings.json`, `setup.json`, and `greeter.png` under the printed `/var/tmp/dctl-iso-test-*` run directory.
 It removes the disk and firmware variables by default; `--keep` retains them.
 
 Use `--dctl /path/to/dctl` and `--bundle /path/to/dotfiles.bundle` to test replacements without rebuilding the ISO.

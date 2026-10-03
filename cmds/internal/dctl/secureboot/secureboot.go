@@ -26,6 +26,7 @@ const (
 	Enforced = "secureboot-enforced"
 )
 
+// Checks names the stable setup items required by the installer and ISO test.
 var Checks = []string{Keys, Signed, Enforced}
 
 var settings = []string{"ENABLE_ENROLL_LIMINE_CONFIG=yes", "ENABLE_LIMINE_FALLBACK=no"}

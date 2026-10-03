@@ -8,29 +8,29 @@ Edits to linked `config/` files change what applications read; see [setup](./REA
 
 ## Layout
 
-| Path               | Holds                                                        | Reaches the system by                  |
-| ------------------ | ------------------------------------------------------------ | -------------------------------------- |
-| `config/`          | Application settings                                         | Home/Firefox doctor links              |
-| `cmds/`            | [Go commands](cmds/README.md)                                | Installer or targeted builds           |
-| `system/`          | Rootfs overlay                                               | `sudo dctl doctor --fix system` copies |
-| `packages/`        | Curated lists, PKGBUILDs, repo catalog                       | ISO and dctl setup                     |
-| `secrets/`         | Age ciphertext and manifest                                  | `dctl secrets decrypt`                 |
-| `iso/`             | Archiso profile                                              | `sudo dctl iso build`                  |
-| `share/`           | Fonts and assets                                             | Doctor or application references       |
-| `config/opencode/` | [Agents, skills, plugins](config/opencode/plugins/README.md) | Linked config; plugin restart          |
+| Path               | Holds                                                        | Reaches the system by           |
+| ------------------ | ------------------------------------------------------------ | ------------------------------- |
+| `config/`          | Application settings                                         | Home/Firefox setup links        |
+| `cmds/`            | [Go commands](cmds/README.md)                                | Installer or targeted builds    |
+| `system/`          | Rootfs overlay                                               | `dctl setup system` copies      |
+| `packages/`        | Curated lists, PKGBUILDs, repo catalog                       | ISO and dctl setup              |
+| `secrets/`         | Age ciphertext and manifest                                  | `dctl secrets decrypt`          |
+| `iso/`             | Archiso profile                                              | `sudo dctl iso build`           |
+| `share/`           | Fonts and assets                                             | Setup or application references |
+| `config/opencode/` | [Agents, skills, plugins](config/opencode/plugins/README.md) | Linked config; plugin restart   |
 
 User units and their `.wants` links live only in `config/systemd/user/`.
 Local `AGENTS.md` files cover `cmds/`, `config/hypr/`, `config/eww/`, and `packages/`.
 
 ## Commands
 
-| Command  | Role                              | Docs                               |
-| -------- | --------------------------------- | ---------------------------------- |
-| `dctl`   | Install, doctor, maintenance, ISO | [Guide](cmds/cmd/dctl/README.md)   |
-| `hyprd`  | Hyprland daemon and CLI           | [Guide](cmds/cmd/hyprd/README.md)  |
-| `ewwd`   | Widget signals and actions        | [Guide](cmds/cmd/ewwd/README.md)   |
-| `newtab` | Firefox new-tab server            | [Guide](cmds/cmd/newtab/README.md) |
-| `src`    | Upstream source cache             | [Source](cmds/internal/src/)       |
+| Command  | Role                        | Docs                               |
+| -------- | --------------------------- | ---------------------------------- |
+| `dctl`   | Install, setup, update, ISO | [Guide](cmds/cmd/dctl/README.md)   |
+| `hyprd`  | Hyprland daemon and CLI     | [Guide](cmds/cmd/hyprd/README.md)  |
+| `ewwd`   | Widget signals and actions  | [Guide](cmds/cmd/ewwd/README.md)   |
+| `newtab` | Firefox new-tab server      | [Guide](cmds/cmd/newtab/README.md) |
+| `src`    | Upstream source cache       | [Source](cmds/internal/src/)       |
 
 Hyprd and ewwd talk over `/tmp/<name>.sock`.
 
@@ -57,7 +57,7 @@ Hyprd and ewwd talk over `/tmp/<name>.sock`.
 
 ## Working here
 
-- Run doctor as the user and use sudo only for named root groups.
+- Run `dctl setup` and `dctl update` as the user; setup batches root stages in one sudo child.
 - Use Bash only for shell-shaped helpers with `#!/usr/bin/env bash` and `set -euo pipefail`; quote literal `#`, `^`, and `~` in sourced zsh files with `EXTENDED_GLOB`.
 - Run Python one-offs with `uv run --with <package> python <script>`.
 - Always include `config/nvim/lua/plugins/editor/harpoon.json` in a commit when it changed, without mention.

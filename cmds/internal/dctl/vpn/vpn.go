@@ -53,6 +53,7 @@ func Stage(u *ui.UI, r paths.Root, run execx.Runner) setup.Stage {
 					fresh = append(fresh, profile)
 				}
 			}
+			// Remove newly staged plaintext even after a failed import, but preserve pre-existing profiles.
 			defer func() {
 				for _, profile := range fresh {
 					if rerr := os.Remove(profile); rerr != nil && !errors.Is(rerr, fs.ErrNotExist) {

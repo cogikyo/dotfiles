@@ -23,8 +23,9 @@ Command details: [dctl](cmd/dctl/README.md), [hyprd](cmd/hyprd/README.md#rebuild
 
 - Keep hyprd verbs aligned across `cmd/hyprd/{main,daemon}.go` and `../config/hypr/binds.lua`.
 - Names in `config/ewwd.yaml` → `windows` must match `defwindow` names under `../config/eww/yuck/`.
-- `internal/dctl/binaries/` → `Names` drives ISO builds, installer placement, and doctor checks.
-- Register new doctor groups in `internal/dctl/cli/doctor.go`.
+- `internal/dctl/binaries/` → `Names` drives ISO builds, installer placement, and CLI updates.
+- Register setup stages in order in `internal/dctl/cli/setup.go`; root stages must not depend on user stages.
+- `internal/gobuild/` owns build flags and environment for CLI updates, hyprd rebuilds, and ISO builds.
 - Keep `internal/config/hyprd.go` → `ThreeBody` launch titles/session paths aligned with `../config/kitty/sessions/`.
 - Keep `config/hyprd.yaml` → `windows.{split,gaps_out}` fitted to Hyprland's gaps/ratios and Kitty's cell size.
 - `hyprd browser snapshot` writes tracked files under `internal/hyprd/browser/sessions/`.

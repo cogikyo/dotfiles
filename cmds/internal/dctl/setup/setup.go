@@ -10,6 +10,7 @@ import (
 	"dotfiles/cmds/internal/dctl/ui"
 )
 
+// Item checks without changing state; Fix must be safe to repeat even when Check succeeds.
 type Item struct {
 	Name  string
 	Check func(context.Context) error
@@ -59,6 +60,7 @@ type manual struct{ action string }
 
 func (m manual) Error() string { return m.action }
 
+// Manual reports required outside action without making the item a command failure.
 func Manual(format string, args ...any) error {
 	return manual{fmt.Sprintf(format, args...)}
 }
@@ -118,6 +120,7 @@ func Run(ctx context.Context, u *ui.UI, stages []Stage, mode Mode) ([]Report, er
 			return reports, err
 		}
 		if applied {
+			// An earlier stage can remove a manual prerequisite, such as repos before Firefox.
 			if reports[i] = s.evaluate(ctx); reports[i].State == Pending {
 				u.Row(level(Pending), headline(reports[i]))
 			}
@@ -273,6 +276,7 @@ func show(u *ui.UI, r Report) {
 	}
 }
 
+// Incomplete treats pending items as failures only in Status mode; manual and unknown items never fail it.
 func Incomplete(reports []Report, mode Mode) bool {
 	return slices.ContainsFunc(reports, func(r Report) bool {
 		return slices.ContainsFunc(r.Items, func(it Result) bool {
