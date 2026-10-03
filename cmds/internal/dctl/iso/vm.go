@@ -75,7 +75,7 @@ func Test(ctx context.Context, u *ui.UI, o TestOptions) error {
 }
 
 func (t *test) run(ctx context.Context, o TestOptions) error {
-	answers, _ := json.Marshal(Answers{User: "cullyn", Password: "dctltest", Host: "dctltest", Zone: "America/Los_Angeles", LUKS: luks, Serial: serial})
+	answers, _ := json.Marshal(Answers{Password: "dctltest", Host: "dctltest", Zone: "America/Los_Angeles", LUKS: luks, Serial: serial})
 	if err := os.WriteFile(t.file("answers.json"), answers, 0o600); err != nil {
 		return err
 	}

@@ -116,7 +116,7 @@ func (s *session) main(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	p := newPlan(d, a.User, a.Host, a.Zone)
+	p := newPlan(d, a.Host, a.Zone)
 	p.SecureBoot = prep.firmware.Setup
 	if !p.SecureBoot {
 		s.u.Warn("firmware is not in Secure Boot Setup Mode; installing without Secure Boot (later: dctl doctor --fix secureboot)")
@@ -294,19 +294,19 @@ func (s *session) install(ctx context.Context, p plan, a iso.Answers, pkgs []str
 		{"firstboot", cmds(p.firstboot())},
 		{"accounts", func(ctx context.Context) error { return s.accounts(ctx, a) }},
 		{"keyring", cmds([]cmd{{Args: chroot("pacman-key", "--init")}, {Args: chroot("pacman-key", "--populate", "archlinux")}})},
-		{"dotfiles", func(ctx context.Context) error { return s.dotfiles(ctx, a.User) }},
-		{"doctor", func(ctx context.Context) error { return s.doctor(ctx, a.User) }},
+		{"dotfiles", func(ctx context.Context) error { return s.dotfiles(ctx) }},
+		{"doctor", func(ctx context.Context) error { return s.doctor(ctx) }},
 		{"snapshots", cmds(p.snapshots())},
 		{"boot", cmds([]cmd{{Args: chroot("limine-install")}})},
 	}
 	if p.SecureBoot {
-		steps = append(steps, step{"secureboot", func(ctx context.Context) error { return s.secureboot(ctx, a.User) }})
+		steps = append(steps, step{"secureboot", func(ctx context.Context) error { return s.secureboot(ctx) }})
 	} else {
 		steps = append(steps, step{"kernel", cmds([]cmd{{Args: chroot("limine-update")}})})
 	}
 	steps = append(steps, step{"validate", func(ctx context.Context) error { return s.validate(ctx, p) }})
 	if s.testMounted {
-		steps = append(steps, step{"dctltest", func(ctx context.Context) error { return s.testDoctor(ctx, a.User) }})
+		steps = append(steps, step{"dctltest", func(ctx context.Context) error { return s.testDoctor(ctx) }})
 	}
 	for _, st := range steps {
 		s.u.Step("%s", st.name)
@@ -322,8 +322,8 @@ func (s *session) install(ctx context.Context, p plan, a iso.Answers, pkgs []str
 
 const testUnit = "dctltest-doctor.service"
 
-func (s *session) testDoctor(ctx context.Context, user string) error {
-	home := filepath.Join("/home", user)
+func (s *session) testDoctor(ctx context.Context) error {
+	home := filepath.Join("/home", login)
 	unit := fmt.Sprintf(`[Unit]
 Description=DCTLTEST post-boot doctor
 After=multi-user.target display-manager.service
@@ -340,7 +340,7 @@ StandardError=journal
 
 [Install]
 WantedBy=graphical.target
-`, home, filepath.Join(home, ".local", "bin", "dctl"), strings.Join(rootGroups, " "), user, strings.Join(homeGroups, " "), iso.Greeter, console)
+`, home, filepath.Join(home, ".local", "bin", "dctl"), strings.Join(rootGroups, " "), login, strings.Join(homeGroups, " "), iso.Greeter, console)
 	if err := os.WriteFile(s.path(target, "/etc/systemd/system", testUnit), []byte(unit), 0o644); err != nil {
 		return err
 	}
@@ -351,8 +351,8 @@ func chroot(args ...string) []string {
 	return append([]string{"arch-chroot", target}, args...)
 }
 
-func as(user string, args ...string) []string {
-	return chroot(append([]string{"runuser", "-u", user, "--"}, args...)...)
+func as(args ...string) []string {
+	return chroot(append([]string{"runuser", "-u", login, "--"}, args...)...)
 }
 
 func (s *session) mask() (func() error, error) {
@@ -419,8 +419,8 @@ func (s *session) accounts(ctx context.Context, a iso.Answers) error {
 		stdin string
 	}{
 		{args: chroot("locale-gen")},
-		{args: chroot("useradd", "-m", "-G", "wheel", "-s", "/usr/bin/zsh", a.User)},
-		{args: chroot("chpasswd"), stdin: a.User + ":" + a.Password + "\n"},
+		{args: chroot("useradd", "-m", "-G", "wheel", "-s", "/usr/bin/zsh", login)},
+		{args: chroot("chpasswd"), stdin: login + ":" + a.Password + "\n"},
 		{args: chroot("passwd", "-l", "root")},
 	} {
 		var stdin []byte
@@ -434,12 +434,12 @@ func (s *session) accounts(ctx context.Context, a iso.Answers) error {
 	return nil
 }
 
-func (s *session) dotfiles(ctx context.Context, user string) error {
+func (s *session) dotfiles(ctx context.Context) error {
 	if err := copyFile(s.path(s.bundle), s.path(target, staged), 0o644); err != nil {
 		return err
 	}
 	defer os.Remove(s.path(target, staged))
-	home := filepath.Join("/home", user)
+	home := filepath.Join("/home", login)
 	bin := s.path(target, home, ".local", "bin")
 	if err := os.MkdirAll(bin, 0o755); err != nil {
 		return err
@@ -455,9 +455,9 @@ func (s *session) dotfiles(ctx context.Context, user string) error {
 	}
 	repo := filepath.Join(home, "dotfiles")
 	for _, args := range [][]string{
-		chroot("chown", "-R", user+":", filepath.Join(home, ".local")),
-		as(user, "git", "clone", "--quiet", staged, repo),
-		as(user, "git", "-C", repo, "remote", "set-url", "origin", origin),
+		chroot("chown", "-R", login+":", filepath.Join(home, ".local")),
+		as("git", "clone", "--quiet", staged, repo),
+		as("git", "-C", repo, "remote", "set-url", "origin", origin),
 	} {
 		if err := s.sh.run(ctx, nil, args...); err != nil {
 			return err
@@ -480,22 +480,22 @@ func copyFile(src, dst string, mode os.FileMode) error {
 	return errors.Join(err, out.Close())
 }
 
-func dctl(user string, args ...string) []string {
-	home := filepath.Join("/home", user)
+func dctl(args ...string) []string {
+	home := filepath.Join("/home", login)
 	return append([]string{"env", "DOTFILES=" + filepath.Join(home, "dotfiles"), filepath.Join(home, ".local", "bin", "dctl")}, args...)
 }
 
-func (s *session) doctor(ctx context.Context, user string) error {
+func (s *session) doctor(ctx context.Context) error {
 	fix := []string{"doctor", "--fix", "--offline"}
-	s.u.Info("doctor groups: root %s; %s %s", strings.Join(rootGroups, ", "), user, strings.Join(homeGroups, ", "))
-	if err := s.sh.run(ctx, nil, chroot(dctl(user, slices.Concat(fix, rootGroups)...)...)...); err != nil {
+	s.u.Info("doctor groups: root %s; %s %s", strings.Join(rootGroups, ", "), login, strings.Join(homeGroups, ", "))
+	if err := s.sh.run(ctx, nil, chroot(dctl(slices.Concat(fix, rootGroups)...)...)...); err != nil {
 		return err
 	}
-	return s.sh.run(ctx, nil, as(user, dctl(user, slices.Concat(fix, homeGroups)...)...)...)
+	return s.sh.run(ctx, nil, as(dctl(slices.Concat(fix, homeGroups)...)...)...)
 }
 
-func (s *session) secureboot(ctx context.Context, user string) error {
-	out, err := s.sh.output(ctx, chroot(dctl(user, "--json", "doctor", "--fix", "--offline", "secureboot")...)...)
+func (s *session) secureboot(ctx context.Context) error {
+	out, err := s.sh.output(ctx, chroot(dctl("--json", "doctor", "--fix", "--offline", "secureboot")...)...)
 	var results []doctor.Result
 	if jerr := json.Unmarshal(out, &results); jerr != nil {
 		return errors.Join(err, jerr)

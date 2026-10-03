@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	defaultUser = "cullyn"
 	defaultZone = "America/Los_Angeles"
 
 	testLabel = "/dev/disk/by-label/" + iso.Label
@@ -32,9 +31,6 @@ const (
 func (s *session) form(context.Context) (iso.Answers, error) {
 	var a iso.Answers
 	var err error
-	if a.User, err = s.text("Username", defaultUser, username); err != nil {
-		return a, err
-	}
 	if a.Password, err = s.secret("Password"); err != nil {
 		return a, err
 	}
@@ -48,17 +44,7 @@ func (s *session) form(context.Context) (iso.Answers, error) {
 	return a, err
 }
 
-var (
-	userPattern = regexp.MustCompile(`^[a-z_][a-z0-9_-]{0,31}$`)
-	hostPattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
-)
-
-func username(v string) error {
-	if !userPattern.MatchString(v) || v == "root" {
-		return errors.New("want a lowercase POSIX name other than root")
-	}
-	return nil
-}
+var hostPattern = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
 
 func hostname(v string) error {
 	if !hostPattern.MatchString(v) {
@@ -71,9 +57,6 @@ func (s *session) valid(a iso.Answers) error {
 	var errs []error
 	if a.Password == "" || a.LUKS == "" || a.Serial == "" {
 		errs = append(errs, errors.New("password, luks, and disk_serial are required"))
-	}
-	if err := username(a.User); err != nil {
-		errs = append(errs, fmt.Errorf("user %q: %w", a.User, err))
 	}
 	if err := hostname(a.Host); err != nil {
 		errs = append(errs, fmt.Errorf("host %q: %w", a.Host, err))

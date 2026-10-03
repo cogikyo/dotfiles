@@ -10,6 +10,7 @@ import (
 const (
 	target = "/mnt"
 	mapper = "root"
+	login  = "cullyn"
 
 	espSize    = "+4G"
 	options    = "noatime,compress=zstd"
@@ -29,7 +30,6 @@ func (s subvolume) options() string { return options + ",subvol=/" + s.name }
 
 type plan struct {
 	Disk       disk
-	User       string
 	Host       string
 	Zone       string
 	LUKSID     string
@@ -38,8 +38,8 @@ type plan struct {
 	SecureBoot bool
 }
 
-func newPlan(d disk, user, host, zone string) plan {
-	return plan{Disk: d, User: user, Host: host, Zone: zone, LUKSID: uuid(), RootID: uuid(), ESPID: fatID()}
+func newPlan(d disk, host, zone string) plan {
+	return plan{Disk: d, Host: host, Zone: zone, LUKSID: uuid(), RootID: uuid(), ESPID: fatID()}
 }
 
 func uuid() string {

@@ -212,7 +212,7 @@ func setup(t *testing.T) (*session, *fake) {
 	f.mount("", func(string) bool { return false })
 	s := &session{u: ui.New(ui.Options{JSON: true, Yes: true}), sh: f, root: root, exe: filepath.Join(root, "usr", "local", "bin", "dctl")}
 	s.ask = func(context.Context) (iso.Answers, error) {
-		return iso.Answers{User: "ada", Password: "pw", Host: "lovelace", Zone: "America/Denver", LUKS: "luks"}, nil
+		return iso.Answers{Password: "pw", Host: "lovelace", Zone: "America/Denver", LUKS: "luks"}, nil
 	}
 	s.confirm = func(disk) error {
 		f.confirmed = len(f.calls)
@@ -252,8 +252,8 @@ func TestEdges(t *testing.T) {
 	}
 	f.before(t, "pacstrap", "umount /mnt/var/cache/pacman/pkg")
 	f.before(t, "arch-chroot /mnt useradd", "arch-chroot /mnt env DOTFILES=")
-	f.before(t, "arch-chroot /mnt runuser -u ada -- git clone", "arch-chroot /mnt env DOTFILES=")
-	secureboot := "arch-chroot /mnt env DOTFILES=/home/ada/dotfiles /home/ada/.local/bin/dctl --json doctor --fix --offline secureboot"
+	f.before(t, "arch-chroot /mnt runuser -u cullyn -- git clone", "arch-chroot /mnt env DOTFILES=")
+	secureboot := "arch-chroot /mnt env DOTFILES=/home/cullyn/dotfiles /home/cullyn/.local/bin/dctl --json doctor --fix --offline secureboot"
 	f.before(t, "arch-chroot /mnt limine-install", secureboot)
 	f.before(t, secureboot, "blkid")
 	f.before(t, "blkid", "umount -R /mnt")
@@ -371,7 +371,7 @@ func TestDCTLTEST(t *testing.T) {
 		put(t, filepath.Join(s.root, testMount, "answers.json"), []byte(body), 0o644)
 	}
 	valid := func(serial string) string {
-		return `{"user":"ada","password":"pw","host":"lovelace","zone":"America/Denver","luks":"luks","disk_serial":"` + serial + `"}`
+		return `{"password":"pw","host":"lovelace","zone":"America/Denver","luks":"luks","disk_serial":"` + serial + `"}`
 	}
 	t.Run("outside a VM", func(t *testing.T) {
 		s, f := setup(t)
@@ -383,7 +383,7 @@ func TestDCTLTEST(t *testing.T) {
 			t.Error("mounted the DCTLTEST drive outside a VM")
 		}
 	})
-	for name, body := range map[string]string{"serial mismatch": valid("NOT-THIS-DISK"), "malformed answers": `{"user":"ada","extra":1}`} {
+	for name, body := range map[string]string{"serial mismatch": valid("NOT-THIS-DISK"), "malformed answers": `{"extra":1}`} {
 		t.Run(name, func(t *testing.T) {
 			s, f := setup(t)
 			f.vm = true
@@ -504,8 +504,8 @@ func TestDoctorUnitOnlyInTestMode(t *testing.T) {
 			t.Fatalf("test install: unit %v, enabled %v", err, enabled)
 		}
 		for _, want := range []string{
-			"ExecStart=-/home/ada/.local/bin/dctl --json doctor --offline system packages secureboot\n",
-			"ExecStart=-/usr/bin/runuser -u ada -- /home/ada/.local/bin/dctl --json doctor --offline home binaries\n",
+			"ExecStart=-/home/cullyn/.local/bin/dctl --json doctor --offline system packages secureboot\n",
+			"ExecStart=-/usr/bin/runuser -u cullyn -- /home/cullyn/.local/bin/dctl --json doctor --offline home binaries\n",
 			`echo "` + iso.Greeter + `$$(systemctl is-active display-manager)"`,
 			"TTYPath=/dev/ttyS0\n",
 		} {

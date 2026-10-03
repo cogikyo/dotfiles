@@ -13,7 +13,6 @@ import (
 
 var testPlan = plan{
 	Disk:       disk{Path: "/dev/nvme0n1", Model: "WD_BLACK SN850X 2000GB", Serial: "24123A800123", Tran: "nvme", Size: 2000398934016, Sector: 512},
-	User:       "ada",
 	Host:       "lovelace",
 	Zone:       "America/Denver",
 	LUKSID:     "6f1c2a7e-3b4d-4e5f-8a9b-0c1d2e3f4a5b",
@@ -203,7 +202,7 @@ func value(args []string, name string) string {
 }
 
 func TestNew(t *testing.T) {
-	p := newPlan(disk{Path: "/dev/vda"}, "ada", "lovelace", "UTC")
+	p := newPlan(disk{Path: "/dev/vda"}, "lovelace", "UTC")
 	uuid := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$`)
 	if !uuid.MatchString(p.LUKSID) || !uuid.MatchString(p.RootID) || p.LUKSID == p.RootID {
 		t.Errorf("LUKS %s, root %s: want two distinct v4 UUIDs", p.LUKSID, p.RootID)
@@ -215,13 +214,11 @@ func TestNew(t *testing.T) {
 
 func TestValid(t *testing.T) {
 	s, _ := setup(t)
-	ok := iso.Answers{User: "ada", Password: "pw", Host: "lovelace", Zone: "America/Denver", LUKS: "luks", Serial: "24123A800123"}
+	ok := iso.Answers{Password: "pw", Host: "lovelace", Zone: "America/Denver", LUKS: "luks", Serial: "24123A800123"}
 	if err := s.valid(ok); err != nil {
 		t.Fatal(err)
 	}
 	for _, bad := range []func(*iso.Answers){
-		func(a *iso.Answers) { a.User = "root" },
-		func(a *iso.Answers) { a.User = "Ada" },
 		func(a *iso.Answers) { a.Host = "love lace" },
 		func(a *iso.Answers) { a.Host = "-lovelace" },
 		func(a *iso.Answers) { a.Zone = "Mars/Olympus" },
