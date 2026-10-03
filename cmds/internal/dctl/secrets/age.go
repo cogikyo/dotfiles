@@ -117,9 +117,13 @@ func Unwrap(wrapped []byte, phrase string) (*age.X25519Identity, error) {
 		return nil, err
 	}
 	defer clear(data)
-	id, err := age.ParseX25519Identity(strings.TrimSpace(string(data)))
-	if err != nil {
-		return nil, errors.New("identity.age does not hold an X25519 identity")
+	ids, err := age.ParseIdentities(bytes.NewReader(data))
+	if err != nil || len(ids) != 1 {
+		return nil, errors.New("identity.age must hold exactly one X25519 identity")
+	}
+	id, ok := ids[0].(*age.X25519Identity)
+	if !ok {
+		return nil, errors.New("identity.age must hold exactly one X25519 identity")
 	}
 	return id, nil
 }

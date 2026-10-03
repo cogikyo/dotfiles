@@ -40,7 +40,8 @@ func newFixture(t *testing.T, manifest string) fixture {
 	scrypt, err := age.NewScryptRecipient(phrase)
 	must(t, err)
 	scrypt.SetWorkFactor(10)
-	wrapped, err := Seal([]byte(f.wrapped.String()+"\n"), []age.Recipient{scrypt})
+	keygen := "# created: 2026-02-15T00:00:00Z\n# public key: " + f.wrapped.Recipient().String() + "\n" + f.wrapped.String() + "\n"
+	wrapped, err := Seal([]byte(keygen), []age.Recipient{scrypt})
 	must(t, err)
 	must(t, os.WriteFile(f.root.Secrets("identity.age"), wrapped, 0o644))
 	recipients := "# paper\n" + f.wrapped.Recipient().String() + "\n\n" + f.other.Recipient().String() + "\n"
