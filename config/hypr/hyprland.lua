@@ -270,12 +270,6 @@ hl.config({
 	cursor = {
 		no_hardware_cursors = true,
 	},
-	-- TEMP: diagnose post-upgrade color shift? not sure if needed
-	render = {
-		cm_enabled = false,
-		send_content_type = false,
-		cm_auto_hdr = 0,
-	},
 	master = {
 		allow_small_split = true,
 		special_scale_factor = 1,
