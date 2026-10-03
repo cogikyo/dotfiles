@@ -17,6 +17,7 @@ import (
 	"dotfiles/cmds/internal/dctl/packages"
 	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/dctl/ui"
+	"dotfiles/cmds/internal/gobuild"
 )
 
 type build struct {
@@ -103,8 +104,9 @@ func (b build) build(ctx context.Context) error {
 	}
 
 	b.u.Step("Building %s", strings.Join(bins.Names, ", "))
-	args := []string{"env", "GOENV=off", "GOFLAGS=", "GOWORK=off", "GOTOOLCHAIN=local", "CGO_ENABLED=0",
-		"go", "-C", filepath.Join(src, "cmds"), "build", "-trimpath", "-o", filepath.Join(air, Bin) + "/"}
+	args := slices.Concat([]string{"env", "GOENV=off", "GOTOOLCHAIN=local"}, gobuild.Env,
+		[]string{"go", "-C", filepath.Join(src, "cmds"), "build"}, gobuild.Flags)
+	args = append(args, "-o", filepath.Join(air, Bin)+"/")
 	for _, name := range bins.Names {
 		args = append(args, "./cmd/"+name)
 	}

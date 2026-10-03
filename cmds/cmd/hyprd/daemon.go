@@ -3,6 +3,7 @@ package main
 import (
 	"dotfiles/cmds/internal/config"
 	"dotfiles/cmds/internal/daemon"
+	"dotfiles/cmds/internal/gobuild"
 	"dotfiles/cmds/internal/hyprd/browser"
 	"dotfiles/cmds/internal/hyprd/hypr"
 	"dotfiles/cmds/internal/hyprd/kitty"
@@ -461,8 +462,10 @@ func (d *Daemon) handleRebuild() string {
 		return fmt.Sprintf("error: install dir: %v", err)
 	}
 
-	cmd := exec.Command("taskset", "-c", computeCPUs, "go", "build", "-o", tmpBin, "./cmd/hyprd")
+	args := append([]string{"-c", computeCPUs, "go", "build"}, gobuild.Flags...)
+	cmd := exec.Command("taskset", append(args, "-o", tmpBin, "./cmd/hyprd")...)
 	cmd.Dir = srcDir
+	cmd.Env = append(os.Environ(), gobuild.Env...)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		os.Remove(tmpBin)
 		return fmt.Sprintf("error: build failed: %v\n%s", err, out)
