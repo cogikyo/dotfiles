@@ -72,10 +72,20 @@ func pinSteps(ctx context.Context, run execx.Runner, serial string) ([]step, err
 	if fido["Always Require UV"] == "Off" {
 		steps = append(steps, step{"Turn on FIDO2 Always Require UV", ykman(serial, "fido", "config", "toggle-always-uv")})
 	}
-	return append(steps,
-		step{"Change PIV PIN", ykman(serial, "piv", "access", "change-pin")},
-		step{"Change PIV PUK", ykman(serial, "piv", "access", "change-puk")},
-	), nil
+	piv, err := run.Output(ctx, "", "ykman", ykman(serial, "piv", "info")...)
+	if err != nil {
+		return nil, err
+	}
+	if strings.Contains(piv, "WARNING: Using default PIN!") {
+		steps = append(steps, step{"Change PIV PIN", ykman(serial, "piv", "access", "change-pin")})
+	}
+	if strings.Contains(piv, "WARNING: Using default PUK!") {
+		steps = append(steps, step{"Change PIV PUK", ykman(serial, "piv", "access", "change-puk")})
+	}
+	if strings.Contains(piv, "WARNING: Using default Management key!") {
+		steps = append(steps, step{"Protect PIV management key with the PIN", ykman(serial, "piv", "access", "change-management-key", "--algorithm", "TDES", "--protect")})
+	}
+	return steps, nil
 }
 
 func enrollAge(ctx context.Context, u *ui.UI, run execx.Runner, serial string, rekey func(secrets.Edit) error) error {

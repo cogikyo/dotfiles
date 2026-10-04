@@ -105,13 +105,14 @@ func fileLines(t *testing.T, path string) []string {
 func quiet() *ui.UI { return ui.New(ui.Options{JSON: true, Yes: true}) }
 
 func device(k yubikey, fido string, generated bool) map[string][]string {
-	ids, list := []string{k.stub}, []string{k.recipient}
+	ids, list, piv := []string{k.stub}, []string{k.recipient}, "PIV version: 5.7.4\n"
 	if generated {
-		ids, list = []string{"", k.stub}, []string{"", k.recipient}
+		ids, list, piv = []string{"", k.stub}, []string{"", k.recipient}, factory
 	}
 	return map[string][]string{
 		"ykman list --serials":                               {k.serial},
 		"ykman --device " + k.serial + " fido info":          {fido},
+		"ykman --device " + k.serial + " piv info":           {piv},
 		"age-plugin-yubikey --identity --serial " + k.serial: ids,
 		"age-plugin-yubikey --list --serial " + k.serial:     list,
 	}
@@ -135,7 +136,11 @@ func swapper(t *testing.T, root paths.Root, log *[]string, fail *error) func(sec
 	}
 }
 
-const unset = "PIN: Not set\nAlways Require UV: Off\n"
+const (
+	unset   = "PIN: Not set\nAlways Require UV: Off\n"
+	factory = "PIV version: 5.7.4\nWARNING: Using default PIN!\nPIN tries remaining: 3/3\nWARNING: Using default PUK!\nPUK tries remaining: 3/3\nWARNING: Using default Management key!\nManagement key algorithm: AES192\n"
+	protect = "ykman --device 1234 piv access change-management-key --algorithm TDES --protect"
+)
 
 func TestEnrollOrder(t *testing.T) {
 	root := sandbox(t)
@@ -156,6 +161,7 @@ func TestEnrollOrder(t *testing.T) {
 		"ykman --device 1234 fido config toggle-always-uv",
 		"ykman --device 1234 piv access change-pin",
 		"ykman --device 1234 piv access change-puk",
+		protect,
 		"age-plugin-yubikey --generate --serial 1234 --pin-policy once --touch-policy cached",
 		"rekey",
 		keygen,
@@ -403,20 +409,24 @@ func TestForcedPinChange(t *testing.T) {
 		"Enterprise Attestation:       Disabled",
 		"NOTE: The FIDO PIN is disabled and must be changed before it can be used!",
 	}, "\n") + "\n"
-	f := &fake{t: t, out: map[string][]string{"ykman --device 1234 fido info": {info}}}
+	f := &fake{t: t, out: map[string][]string{
+		"ykman --device 1234 fido info": {info},
+		"ykman --device 1234 piv info":  {factory},
+	}}
 	steps, err := pinSteps(t.Context(), f, "1234")
 	if err != nil {
 		t.Fatal(err)
 	}
 	var got []string
 	for _, s := range steps {
-		got = append(got, strings.Join(s.args, " "))
+		got = append(got, "ykman "+strings.Join(s.args, " "))
 	}
 	want := []string{
-		"--device 1234 fido access change-pin",
-		"--device 1234 fido config toggle-always-uv",
-		"--device 1234 piv access change-pin",
-		"--device 1234 piv access change-puk",
+		"ykman --device 1234 fido access change-pin",
+		"ykman --device 1234 fido config toggle-always-uv",
+		"ykman --device 1234 piv access change-pin",
+		"ykman --device 1234 piv access change-puk",
+		protect,
 	}
 	if !slices.Equal(got, want) {
 		t.Fatalf("steps %v, want %v", got, want)
