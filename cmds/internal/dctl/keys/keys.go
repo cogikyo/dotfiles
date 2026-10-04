@@ -18,6 +18,7 @@ import (
 const (
 	application = "ssh:dctl-release"
 	forced      = "The FIDO PIN is disabled and must be changed before it can be used!"
+	defaultKey  = "010203040506070801020304050607080102030405060708"
 )
 
 type step struct {
@@ -83,7 +84,7 @@ func pinSteps(ctx context.Context, run execx.Runner, serial string) ([]step, err
 		steps = append(steps, step{"Change PIV PUK", ykman(serial, "piv", "access", "change-puk")})
 	}
 	if strings.Contains(piv, "WARNING: Using default Management key!") {
-		steps = append(steps, step{"Protect PIV management key with the PIN", ykman(serial, "piv", "access", "change-management-key", "--algorithm", "TDES", "--protect")})
+		steps = append(steps, step{"Protect PIV management key with the PIV PIN", ykman(serial, "piv", "access", "change-management-key", "--management-key", defaultKey, "--algorithm", "TDES", "--protect")})
 	}
 	return steps, nil
 }

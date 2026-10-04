@@ -139,7 +139,7 @@ func swapper(t *testing.T, root paths.Root, log *[]string, fail *error) func(sec
 const (
 	unset   = "PIN: Not set\nAlways Require UV: Off\n"
 	factory = "PIV version: 5.7.4\nWARNING: Using default PIN!\nPIN tries remaining: 3/3\nWARNING: Using default PUK!\nPUK tries remaining: 3/3\nWARNING: Using default Management key!\nManagement key algorithm: AES192\n"
-	protect = "ykman --device 1234 piv access change-management-key --algorithm TDES --protect"
+	protect = "ykman --device 1234 piv access change-management-key --management-key 010203040506070801020304050607080102030405060708 --algorithm TDES --protect"
 )
 
 func TestEnrollOrder(t *testing.T) {
