@@ -61,7 +61,7 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all bool) []Step {
 		},
 		{
 			Name: "firmware",
-			Plan: "fwupdmgr refresh and list updates; flash only after asking",
+			Plan: "device firmware (BIOS, SSD, USB) from LVFS via fwupd; flashes only after asking",
 			Run: func(ctx context.Context) error {
 				return firmware(ctx, u, run, all)
 			},
@@ -86,20 +86,22 @@ func Select(all []Step, names []string) ([]Step, error) {
 }
 
 func Run(ctx context.Context, u *ui.UI, steps []Step, ask bool) error {
-	var failed []string
+	var names, failed []string
+	for _, s := range steps {
+		names = append(names, s.Name)
+	}
+	u.Open("update %s", strings.Join(names, ", "))
 	for _, s := range steps {
 		if err := ctx.Err(); err != nil {
 			return err
 		}
-		u.Header("%s", s.Name)
-		u.Info("%s", s.Plan)
+		u.Section(s.Name, s.Plan)
 		if ask {
 			ok, err := u.Proceed(fmt.Sprintf("Run %s?", s.Name))
 			if err != nil {
 				return err
 			}
 			if !ok {
-				u.Dim("%s skipped", s.Name)
 				continue
 			}
 		}
@@ -107,7 +109,7 @@ func Run(ctx context.Context, u *ui.UI, steps []Step, ask bool) error {
 			if ctx.Err() != nil {
 				return ctx.Err()
 			}
-			u.Row(ui.Err, s.Name+": "+err.Error())
+			u.Row(ui.Err, err.Error())
 			failed = append(failed, s.Name)
 			continue
 		}
@@ -116,5 +118,6 @@ func Run(ctx context.Context, u *ui.UI, steps []Step, ask bool) error {
 	if len(failed) > 0 {
 		return errors.New("update failed: " + strings.Join(failed, ", "))
 	}
+	u.Close(ui.OK, "update done")
 	return nil
 }

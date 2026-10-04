@@ -40,7 +40,7 @@ func main() {
 		<-ctx.Done()
 		stop()
 	}()
-	u := ui.New(ui.Options{Context: ctx, JSON: root.JSON, Plain: root.Plain, Yes: root.Yes})
+	u := ui.New(ui.Options{Context: ctx, JSON: root.JSON, Plain: root.Plain, Yes: root.Yes, Nested: root.Nested})
 	kctx.BindTo(ctx, (*context.Context)(nil))
 	parser.FatalIfErrorf(kctx.BindSingletonProvider(paths.DiscoverRoot))
 	err = kctx.Run(u)

@@ -92,7 +92,7 @@ func Run(ctx context.Context, u *ui.UI, stages []Stage, mode Mode) ([]Report, er
 			if err := ctx.Err(); err != nil {
 				return reports, err
 			}
-			u.Step("%s", s.Name)
+			u.Header("%s", s.Name)
 			r := s.apply(ctx, true)
 			show(u, r)
 			reports = append(reports, r)
@@ -105,9 +105,9 @@ func Run(ctx context.Context, u *ui.UI, stages []Stage, mode Mode) ([]Report, er
 		}
 		r := s.evaluate(ctx)
 		if mode == Status || r.State != Pending {
-			show(u, r)
+			list(u, r)
 		} else {
-			u.Row(level(r.State), headline(r))
+			u.Node(level(r.State), headline(r))
 		}
 		reports = append(reports, r)
 	}
@@ -122,12 +122,13 @@ func Run(ctx context.Context, u *ui.UI, stages []Stage, mode Mode) ([]Report, er
 		if applied {
 			// An earlier stage can remove a manual prerequisite, such as repos before Firefox.
 			if reports[i] = s.evaluate(ctx); reports[i].State == Pending {
-				u.Row(level(Pending), headline(reports[i]))
+				u.Node(level(Pending), headline(reports[i]))
 			}
 		}
 		if reports[i].State != Pending {
 			continue
 		}
+		u.Header("%s", s.Name)
 		if mode == Ask {
 			ok, err := u.Proceed(fmt.Sprintf("Apply %s?", s.Name))
 			if err != nil {
@@ -137,7 +138,6 @@ func Run(ctx context.Context, u *ui.UI, stages []Stage, mode Mode) ([]Report, er
 				continue
 			}
 		}
-		u.Step("%s", s.Name)
 		reports[i] = s.apply(ctx, false)
 		applied = true
 		show(u, reports[i])
@@ -152,7 +152,7 @@ func Unreached(u *ui.UI, stages []Stage, detail string) []Report {
 		for _, it := range s.Items {
 			r.Items = append(r.Items, Result{Item: it.Name, State: Unknown, Detail: detail})
 		}
-		u.Row(level(Unknown), headline(r))
+		u.Node(level(Unknown), headline(r))
 		reports = append(reports, r)
 	}
 	if len(reports) > 0 {
@@ -267,8 +267,17 @@ func headline(r Report) string {
 	return line
 }
 
+func list(u *ui.UI, r Report) {
+	u.Node(level(r.State), headline(r))
+	details(u, r)
+}
+
 func show(u *ui.UI, r Report) {
 	u.Row(level(r.State), headline(r))
+	details(u, r)
+}
+
+func details(u *ui.UI, r Report) {
 	for _, it := range r.Items {
 		if it.State != Done {
 			u.Detail(fmt.Sprintf("%s (%s): %s", short(r, it.Item), it.State, it.Detail))

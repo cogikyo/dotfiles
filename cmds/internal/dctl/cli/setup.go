@@ -91,11 +91,10 @@ func (c *SetupCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	}
 	asRoot := os.Geteuid() == 0
 	if asRoot && len(user) > 0 {
-		var names []string
-		for _, s := range user {
-			names = append(names, s.Name)
-		}
-		return fmt.Errorf("refusing to run user stages as root (%s): run dctl setup as your user", strings.Join(names, ", "))
+		return fmt.Errorf("refusing to run user stages as root (%s): run dctl setup as your user", names(user))
+	}
+	if c.Batch == "" {
+		u.Open("setup %s", names(selected))
 	}
 
 	reports := []setup.Report{}
@@ -133,7 +132,21 @@ func (c *SetupCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if setup.Incomplete(reports, mode) {
 		errs = append(errs, errors.New("setup: items pending or failed; see above"))
 	}
-	return errors.Join(errs...)
+	if len(errs) > 0 {
+		return errors.Join(errs...)
+	}
+	if c.Batch == "" {
+		u.Close(ui.OK, "setup done")
+	}
+	return nil
+}
+
+func names(stages []setup.Stage) string {
+	out := make([]string, len(stages))
+	for i, s := range stages {
+		out[i] = s.Name
+	}
+	return strings.Join(out, ", ")
 }
 
 func (c *SetupCmd) mode(u *ui.UI) (setup.Mode, error) {
@@ -202,6 +215,9 @@ func globals(u *ui.UI) []string {
 	}
 	if u.Yes() {
 		flags = append(flags, "--yes")
+	}
+	if u.Tree() {
+		flags = append(flags, "--nested")
 	}
 	return flags
 }

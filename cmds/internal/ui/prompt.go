@@ -7,6 +7,7 @@ import (
 
 	"charm.land/bubbles/v2/textinput"
 	tea "charm.land/bubbletea/v2"
+	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/colorprofile"
 )
 
@@ -22,7 +23,7 @@ func (u *UI) confirm(question string, yes bool) (bool, error) {
 	if u.opts.Yes {
 		return true, nil
 	}
-	m := &confirm{question: question, yes: yes}
+	m := &confirm{lead: u.lead(), question: question, yes: yes, plain: u.opts.Plain}
 	if err := u.run(m, &m.canceled); err != nil {
 		return false, err
 	}
@@ -33,7 +34,7 @@ func (u *UI) Select(title string, options []string, initial int) (int, error) {
 	if len(options) == 0 {
 		return 0, errors.New("select: no options")
 	}
-	m := &choose{title: title, options: options, cursor: min(max(initial, 0), len(options)-1)}
+	m := &choose{lead: u.lead(), pad: u.pad(), title: title, options: options, cursor: min(max(initial, 0), len(options)-1)}
 	if err := u.run(m, &m.canceled); err != nil {
 		return 0, err
 	}
@@ -41,7 +42,7 @@ func (u *UI) Select(title string, options []string, initial int) (int, error) {
 }
 
 func (u *UI) Text(label, initial string) (string, error) {
-	m := newInput(label, false, !u.opts.Plain)
+	m := newInput(u.lead()+styleStep.Render(label), false, !u.opts.Plain)
 	m.field.SetValue(initial)
 	if err := u.run(m, &m.canceled); err != nil {
 		return "", err
@@ -50,7 +51,7 @@ func (u *UI) Text(label, initial string) (string, error) {
 }
 
 func (u *UI) Secret(label string) (string, error) {
-	m := newInput(label, true, !u.opts.Plain)
+	m := newInput(u.lead()+styleStep.Render(label), true, !u.opts.Plain)
 	if err := u.run(m, &m.canceled); err != nil {
 		return "", err
 	}
@@ -80,8 +81,8 @@ func cancelKey(msg tea.Msg) bool {
 }
 
 type confirm struct {
-	question       string
-	yes            bool
+	lead, question string
+	yes, plain     bool
 	done, canceled bool
 }
 
@@ -113,22 +114,34 @@ func (m *confirm) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *confirm) View() tea.View {
-	question := styleStep.Render(m.question)
-	if m.done || m.canceled {
-		answer := "no"
-		if m.yes && !m.canceled {
-			answer = "yes"
-		}
-		return tea.NewView(fmt.Sprintf("%s %s\n", question, answer))
+	question := m.lead + styleStep.Render(m.question)
+	switch {
+	case m.canceled:
+		return tea.NewView(question + " " + styleDim.Render("canceled") + "\n")
+	case m.done && m.yes:
+		return tea.NewView(question + " " + connector(OK).Render("yes") + "\n")
+	case m.done:
+		return tea.NewView(question + " " + styleDim.Render("no") + "\n")
 	}
-	no, yes := styleAccent.Render("> no"), styleDim.Render("  yes")
-	if m.yes {
-		no, yes = styleDim.Render("  no"), styleAccent.Render("> yes")
+	yes := toggle("Yes", m.yes, OK, m.plain)
+	no := toggle("No", !m.yes, Err, m.plain)
+	return tea.NewView(fmt.Sprintf("%s  %s %s ", question, yes, no))
+}
+
+// toggle marks the selection with brackets too, because plain output drops the pill colors.
+func toggle(label string, on bool, level Level, plain bool) string {
+	if plain && on {
+		return "[" + label + "]"
 	}
-	return tea.NewView(fmt.Sprintf("%s  %s  %s ", question, no, yes))
+	style := lipgloss.NewStyle().Padding(0, 1)
+	if on {
+		return style.Background(lipgloss.Color(pills[level].color)).Foreground(lipgloss.Color("0")).Bold(true).Render(label)
+	}
+	return style.Background(lipgloss.Color("8")).Foreground(lipgloss.Color("7")).Render(label)
 }
 
 type choose struct {
+	lead, pad      string
 	title          string
 	options        []string
 	cursor         int
@@ -159,7 +172,7 @@ func (m *choose) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *choose) View() tea.View {
-	title := styleStep.Render(m.title)
+	title := m.lead + styleStep.Render(m.title)
 	if m.done {
 		return tea.NewView(fmt.Sprintf("%s %s\n", title, m.options[m.cursor]))
 	}
@@ -170,10 +183,10 @@ func (m *choose) View() tea.View {
 	b.WriteString(title + "\n")
 	for i, option := range m.options {
 		if i == m.cursor {
-			b.WriteString("  " + styleAccent.Render("> "+option) + "\n")
+			b.WriteString(m.pad + "  " + styleAccent.Render("> "+option) + "\n")
 			continue
 		}
-		b.WriteString("    " + styleDim.Render(option) + "\n")
+		b.WriteString(m.pad + "    " + styleDim.Render(option) + "\n")
 	}
 	return tea.NewView(b.String())
 }
@@ -220,7 +233,7 @@ func (m *input) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m *input) View() tea.View {
-	label := styleStep.Render(m.label) + " "
+	label := m.label + " "
 	switch {
 	case m.done && !m.secret:
 		return tea.NewView(label + m.field.Value() + "\n")

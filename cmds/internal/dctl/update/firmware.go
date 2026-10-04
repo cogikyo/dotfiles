@@ -26,7 +26,7 @@ type fwupdError struct {
 
 func firmware(ctx context.Context, u *ui.UI, run execx.Runner, all bool) error {
 	if _, err := exec.LookPath("fwupdmgr"); err != nil {
-		return errors.New("fwupdmgr not found; install fwupd from base.lst")
+		return errors.New("fwupd is not installed; run `sudo pacman -S fwupd`")
 	}
 	if err := run.Run(ctx, "", "fwupdmgr", "refresh", "--no-remote-check"); err != nil {
 		if exit, ok := errors.AsType[*exec.ExitError](err); !ok || exit.ExitCode() != current {
@@ -42,7 +42,7 @@ func firmware(ctx context.Context, u *ui.UI, run execx.Runner, all bool) error {
 		return err
 	}
 	if !ok {
-		u.Warn("firmware skipped: no download remote is enabled, so no metadata; run fwupdmgr enable-remote lvfs")
+		u.Warn("firmware skipped: no download remote is enabled; run `fwupdmgr enable-remote lvfs`")
 		return nil
 	}
 	out, err = run.Output(ctx, "", "fwupdmgr", "get-updates", "--json")
@@ -57,7 +57,7 @@ func firmware(ctx context.Context, u *ui.UI, run execx.Runner, all bool) error {
 	u.Warn("firmware updates: %s", strings.Join(updates, ", "))
 	// Stop before Confirm because global --yes would accept the flash prompt.
 	if all {
-		u.Hint("--all never flashes firmware; run dctl update firmware to apply")
+		u.Hint("--all never flashes firmware; run `dctl update firmware` to apply")
 		return nil
 	}
 	ok, err = u.Confirm("Flash these firmware updates?")
