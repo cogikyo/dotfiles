@@ -1,0 +1,11 @@
+[Unit]
+Description=Clear clipboard and primary selection 15 minutes after each copy
+PartOf=hyprland-session.target
+
+[Service]
+ExecStart=%h/.config/systemd/user/clip-expire 900
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=hyprland-session.target
