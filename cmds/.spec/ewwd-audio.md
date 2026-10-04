@@ -16,7 +16,7 @@ Zero means zero for both source and sink, and either device may exceed unity onl
 Sink and source scroll actions apply the same configured relative step through WirePlumber's native relative operation.
 Each operation carries the target device's configured ceiling, performs no read-before-write, and lets the subsequent event establish displayed truth.
 Rapid independent actions accumulate without predicting or publishing synthetic volume.
-The action grammar consists of relative volume, toggle mute, and reset volume operations over `sink`, `source`, or the supported combined reset target.
+The action grammar consists of relative volume, toggle mute, cycle device, and reset volume operations over `sink`, `source`, or the supported combined reset target.
 An action addresses the current default device at execution time, rejects an unavailable target, and never mutates the published snapshot directly.
 
 Mute actions change mute state rather than writing volume zero, so unmute restores the previous level.
@@ -24,6 +24,12 @@ The widget derives muted glyphs and tooltips from explicit mute state rather tha
 
 The existing volume preset remains available through an action named for resetting volume rather than selecting a default device.
 Its sink, source, and combined targets apply the configured preset percentages.
+
+The speaker and microphone controls use left-click to toggle mute, middle-click to cycle devices, right-click to open `pulsemixer`, and scroll to adjust volume.
+Cycling uses stable node-name order, skips unavailable active ports and output-monitor sources, and leaves volume and mute unchanged.
+One eligible device already selected is a no-op.
+WirePlumber moves default-following streams when the default changes; explicitly routed streams keep their targets.
+Both mixer shortcuts open the default output tab because `pulsemixer` has no startup-tab option.
 
 Device display names prefer the PipeWire node description, then nickname, then stable node name.
 Configured aliases are keyed by stable node name and override that fallback chain.
@@ -101,8 +107,7 @@ Unknown battery is visually distinct from empty battery.
 Disconnect collapses battery detail immediately.
 Hover expansion uses the existing slide-and-fade motion, while glyph and color changes use the existing color transition without blinking or pulsing.
 
-The old terminal launch tied to the removed mixer is deleted unless it has a deliberate replacement.
-No unused click binding remains after the migration.
+The audio controls can open `pulsemixer` even when their default device is unavailable.
 
 ## Operational acceptance
 

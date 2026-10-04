@@ -34,6 +34,7 @@ Triggered by eww button clicks and scroll events.
 ```bash
 # Audio
 ewwd action audio toggle_mute <sink|source> # toggle mute
+ewwd action audio cycle_device <sink|source>
 ewwd action audio change_volume sink up   # adjust ±10
 ewwd action audio reset_volume both       # reset preset volumes
 ewwd action bluetooth toggle              # connect or disconnect headphones
@@ -58,6 +59,10 @@ ewwd action timer alarm start             # start alarm countdown
 ewwd action timer alarm reset             # stop and reset to +6 hours
 ewwd action timer alarm up <minutes>      # add minutes
 ```
+
+The speaker and microphone controls use left-click to toggle mute, middle-click to cycle devices, right-click to open `pulsemixer`, and scroll to adjust volume.
+Cycling skips disconnected ports and output monitors, and keeps each device's volume and mute state.
+In `pulsemixer`, F1 selects outputs and F2 selects inputs; both controls open its default output tab.
 
 ## Providers
 

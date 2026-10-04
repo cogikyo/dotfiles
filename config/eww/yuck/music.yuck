@@ -219,12 +219,12 @@
 (defwidget audio-control [content value name available muted icon-muted icon-on]
   (eventbox
     :class "audio-${content}"
-    :onclick {available ? "ewwd action audio reset_volume ${content}" : ""}
-    :onmiddleclick {available && content == "source" ? "${terminal} --title='terminalfloat' -e pulsemixer & disown" : ""}
-    :onrightclick {available ? "ewwd action audio toggle_mute ${content}" : ""}
+    :onclick {available ? "ewwd action audio toggle_mute ${content}" : ""}
+    :onmiddleclick {available ? "ewwd action audio cycle_device ${content}" : ""}
+    :onrightclick "${terminal} --title='terminalfloat' -e pulsemixer & disown"
     :onscroll {available ? "ewwd action audio change_volume ${content} {}" : ""}
-    :cursor {available ? "pointer" : "default"}
-    :tooltip "  ${available ? "󰳽 reset${content == "source" ? " · ǂ mixer" : ""} · 󰳾 mute · 󱕒 adjust" : "${content} unavailable"}  "
+    :cursor "pointer"
+    :tooltip "  ${available ? "󰳽 mute · ǂ next device · 󰳾 mixer · 󱕒 adjust" : "${content} unavailable · 󰳾 mixer"}  "
     (box
       :space-evenly false :spacing 9
       :class "tr-c audio-volume ${

@@ -216,6 +216,7 @@ Query/Subscribe (for eww):
 
 Actions (for eww buttons/scrolls):
   ewwd action audio toggle_mute <sink|source> Toggle device mute
+  ewwd action audio cycle_device <sink|source> Select next available device
   ewwd action audio change_volume sink up   Adjust ±10
   ewwd action audio reset_volume both        Reset preset volumes
   ewwd action bluetooth toggle               Toggle tracked headphones

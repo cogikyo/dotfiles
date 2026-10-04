@@ -3,10 +3,12 @@ package providers
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
 	"os/exec"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -266,7 +268,9 @@ func parseAudioVolume(output string) (percent int, muted bool, ok bool) {
 func audioCommand(ctx context.Context, name string, args ...string) (string, error) {
 	commandCtx, cancel := context.WithTimeout(ctx, audioCommandTimeout)
 	defer cancel()
-	out, err := exec.CommandContext(commandCtx, name, args...).Output()
+	cmd := exec.CommandContext(commandCtx, name, args...)
+	cmd.Env = append(cmd.Environ(), "LC_ALL=C")
+	out, err := cmd.Output()
 	return string(out), err
 }
 
@@ -378,7 +382,7 @@ func (a *Audio) HandleAction(args []string) (string, error) {
 
 func (a *Audio) execute(ctx context.Context, args []string) error {
 	if len(args) == 0 {
-		return errors.New("action required: change_volume, toggle_mute, or reset_volume")
+		return errors.New("action required: change_volume, toggle_mute, cycle_device, or reset_volume")
 	}
 
 	switch args[0] {
@@ -395,6 +399,11 @@ func (a *Audio) execute(ctx context.Context, args []string) error {
 			return err
 		}
 		return a.runAction(ctx, "set-mute", audioTarget(args[1]), "toggle")
+	case "cycle_device":
+		if len(args) != 2 {
+			return errors.New("cycle_device requires: sink or source")
+		}
+		return a.cycleDevice(ctx, args[1])
 	case "reset_volume":
 		if len(args) != 2 {
 			return errors.New("reset_volume requires: sink, source, or both")
@@ -403,6 +412,66 @@ func (a *Audio) execute(ctx context.Context, args []string) error {
 	default:
 		return fmt.Errorf("unknown audio action: %s", args[0])
 	}
+}
+
+func (a *Audio) cycleDevice(ctx context.Context, deviceType string) error {
+	if err := a.requireAvailable(deviceType); err != nil {
+		return err
+	}
+	output, err := audioCommand(ctx, "pactl", "--format=json", "list", deviceType+"s")
+	if err != nil {
+		return fmt.Errorf("list audio %ss: %w", deviceType, err)
+	}
+	type node struct {
+		Name       string            `json:"name"`
+		Properties map[string]string `json:"properties"`
+		ActivePort string            `json:"active_port"`
+		Ports      []struct {
+			Name         string `json:"name"`
+			Availability string `json:"availability"`
+		} `json:"ports"`
+	}
+	var nodes []node
+	if err := json.Unmarshal([]byte(output), &nodes); err != nil {
+		return fmt.Errorf("parse audio %ss: %w", deviceType, err)
+	}
+	mediaClass := "Audio/Sink"
+	if deviceType == "source" {
+		mediaClass = "Audio/Source"
+	}
+	nodes = slices.DeleteFunc(nodes, func(n node) bool {
+		if n.Properties["media.class"] != mediaClass || n.Properties["device.class"] == "monitor" {
+			return true
+		}
+		for _, port := range n.Ports {
+			if port.Name == n.ActivePort && port.Availability == "not available" {
+				return true
+			}
+		}
+		return false
+	})
+	if len(nodes) == 0 {
+		return fmt.Errorf("no available audio %ss", deviceType)
+	}
+	slices.SortFunc(nodes, func(a, b node) int { return strings.Compare(a.Name, b.Name) })
+	inspect, err := audioCommand(ctx, "wpctl", "inspect", audioTarget(deviceType))
+	if err != nil {
+		return fmt.Errorf("inspect default %s: %w", deviceType, err)
+	}
+	current, _, ok := parseAudioIdentity(inspect)
+	if !ok {
+		return fmt.Errorf("default %s has no node name", deviceType)
+	}
+	index := slices.IndexFunc(nodes, func(n node) bool { return n.Name == current })
+	next := nodes[(index+1)%len(nodes)]
+	if next.Name == current {
+		return nil
+	}
+	id, err := strconv.ParseUint(next.Properties["object.id"], 10, 32)
+	if err != nil || id == 0 {
+		return fmt.Errorf("audio %s %q has no valid PipeWire node ID", deviceType, next.Name)
+	}
+	return a.runAction(ctx, "set-default", strconv.FormatUint(id, 10))
 }
 
 func (a *Audio) changeVolume(ctx context.Context, deviceType, direction string) error {
