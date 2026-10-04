@@ -78,14 +78,17 @@
 <details open>
 <summary>💬 <b>Fonts</b></summary>
 
-- Sans Serif: [Albert Sans](https://fonts.google.com/specimen/Albert+Sans?query=Albert+Sans)
-- Monospace: [Iosevka Vagari](https://typeof.net/Iosevka/)
+- Sans Serif: [Satoshi](https://www.fontshare.com/fonts/satoshi)
+- Serif: [Sentient](https://www.fontshare.com/fonts/sentient)
+- Display: [Chillax](https://www.fontshare.com/fonts/chillax)
+- Monospace: [Iosevka Vagari](https://typeof.net/Iosevka/), hinted
 - Other:
   - [Nerd Font Symbols](https://github.com/ryanoasis/nerd-fonts)
   - [Noto Color Emoji](https://fonts.google.com/noto/specimen/Noto+Color+Emoji)
-  - [Lora (serif)](https://fonts.google.com/specimen/Lora),
-  - [Archivo (display)](https://fonts.google.com/specimen/Archivo),
-  - [Architects Daughter (handwritten)](https://fonts.google.com/specimen/Architects+Daughter)
+  - [Archivo (lock screen)](https://fonts.google.com/specimen/Archivo)
+  - [Albert Sans](https://fonts.google.com/specimen/Albert+Sans)
+  - [Lora](https://fonts.google.com/specimen/Lora)
+  - [Architects Daughter](https://fonts.google.com/specimen/Architects+Daughter)
 
 </details>
 

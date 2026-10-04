@@ -19,7 +19,7 @@
     separator_color = "frame"
     sort = "yes"
     layer = "top"
-    font = "Albert Sans 16"
+    font = "sans-serif 16"
     line_height = 2
     markup = "full"
     format = "<b>%a</b>: %s %b" # %a=appname, %s=summary, %b=body
