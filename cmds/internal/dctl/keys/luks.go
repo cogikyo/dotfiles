@@ -110,14 +110,13 @@ func Luks(ctx context.Context, u *ui.UI, run execx.Runner, sys string, confirm f
 		}
 	}
 	if enroll {
-		u.Step("FIDO2 token on %s", dev)
-		u.Note("enter the LUKS passphrase, then the FIDO2 PIN; touch the key when it blinks")
+		u.Section("FIDO2 token on "+dev, "enter the LUKS passphrase, then the FIDO2 PIN; touch the key when it blinks")
 		if err := run.Run(ctx, "", "systemd-cryptenroll", "--fido2-device=auto", "--fido2-with-client-pin=yes", "--fido2-with-user-presence=yes", dev); err != nil {
 			return err
 		}
 	}
 	if !h.Recovery {
-		u.Step("Recovery key on %s", dev)
+		u.Section("Recovery key on "+dev, "")
 		u.Warn("the recovery key prints once; write it down before continuing")
 		if err := run.Run(ctx, "", "systemd-cryptenroll", "--recovery-key", dev); err != nil {
 			return err

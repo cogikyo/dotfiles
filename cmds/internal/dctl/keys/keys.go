@@ -34,15 +34,14 @@ func Enroll(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, re
 	if err != nil {
 		return err
 	}
-	u.Step("yubikey %s", serial)
+	u.Open("keys enroll yubikey %s", serial)
 	u.Note("wait for each prompt before typing; keys typed early are dropped")
 	pins, err := pinSteps(ctx, run, serial)
 	if err != nil {
 		return err
 	}
 	for _, s := range pins {
-		u.Step("%s", s.label)
-		u.Note("%s", s.hint)
+		u.Section(s.label, s.hint)
 		if err := run.Run(ctx, "", "ykman", s.args...); err != nil {
 			return err
 		}
@@ -53,11 +52,12 @@ func Enroll(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, re
 	if err := enrollSigner(ctx, u, root, run, serial); err != nil {
 		return err
 	}
-	u.OK("yubikey %s enrolled", serial)
+	u.Section("PINs", "")
 	u.KV("FIDO2 PIN", "disk unlock at boot, release signing")
 	u.KV("PIV PIN", "age secrets")
 	u.KV("PUK", "unblocks a locked PIV PIN; keep it on paper")
-	u.Note("for disk unlock: sudo dctl keys luks")
+	u.Hint("for disk unlock: `sudo dctl keys luks`")
+	u.Close(ui.OK, "yubikey %s enrolled", serial)
 	return nil
 }
 
@@ -102,8 +102,7 @@ func enrollAge(ctx context.Context, u *ui.UI, run execx.Runner, serial string, r
 		return err
 	}
 	if len(keys) == 0 {
-		u.Step("Create age identity")
-		u.Note(`enter the PIV PIN (ignore "default is 123456"), then touch the key within 15 seconds`)
+		u.Section("Create age identity", `enter the PIV PIN (ignore "default is 123456"), then touch the key within 15 seconds`)
 		if err := run.Run(ctx, "", "age-plugin-yubikey", "--generate", "--serial", serial, "--pin-policy", "once", "--touch-policy", "cached"); err != nil {
 			return err
 		}
@@ -111,8 +110,7 @@ func enrollAge(ctx context.Context, u *ui.UI, run execx.Runner, serial string, r
 			return err
 		}
 	}
-	u.Step("Re-encrypt secrets for YubiKey %s", serial)
-	u.Note("opening the current secrets takes an enrolled YubiKey or the paper recovery phrase")
+	u.Section("Re-encrypt secrets", "opening the current secrets takes an enrolled YubiKey or the paper recovery phrase")
 	return rekey(func(l *secrets.Ledger) error {
 		have := secrets.Lines(l.Recipients)
 		i := slices.IndexFunc(keys, func(k Key) bool { return slices.Contains(have, k.Recipient) })
@@ -154,8 +152,7 @@ func enrollSigner(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runn
 		return err
 	}
 	defer os.RemoveAll(tmp)
-	u.Step("Configure release-signing key")
-	u.Note(`"PIN for authenticator" is the FIDO2 PIN; touch the key when it blinks`)
+	u.Section("Configure release-signing key", `"PIN for authenticator" is the FIDO2 PIN; touch the key when it blinks`)
 	if err := run.Run(ctx, tmp, "ssh-keygen", args...); err != nil {
 		return err
 	}
@@ -205,6 +202,7 @@ func Remove(u *ui.UI, root paths.Root, serial string, rekey func(secrets.Edit) e
 	if !stubbed && !signed {
 		return fmt.Errorf("yubikey %s is not enrolled", serial)
 	}
+	u.Open("keys remove yubikey %s", serial)
 	var errs []error
 	if signed {
 		if err := rewrite(root, func(data []byte) []byte {
@@ -229,13 +227,13 @@ func Remove(u *ui.UI, root paths.Root, serial string, rekey func(secrets.Edit) e
 		case errors.Is(err, secrets.ErrCommitted):
 			errs = append(errs, fmt.Errorf("yubikey %s removed from secrets: %w", serial, err))
 		case err != nil:
-			errs = append(errs, fmt.Errorf("yubikey %s still opens every secret; rerun dctl keys remove %s: %w", serial, serial, err))
+			errs = append(errs, fmt.Errorf("yubikey %s still opens every secret; rerun `dctl keys remove %s`: %w", serial, serial, err))
 		}
 	}
 	if err := errors.Join(errs...); err != nil {
 		return err
 	}
-	u.OK("yubikey %s removed; any LUKS FIDO2 token it made stays in the header", serial)
+	u.Close(ui.OK, "yubikey %s removed; any LUKS FIDO2 token it made stays in the header", serial)
 	return nil
 }
 
