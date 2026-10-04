@@ -162,7 +162,7 @@ func TestEnrollOrder(t *testing.T) {
 		"ykman --device 1234 piv access change-pin --pin 123456",
 		"ykman --device 1234 piv access change-puk --puk 12345678",
 		protect,
-		"age-plugin-yubikey --generate --serial 1234 --pin-policy once --touch-policy cached",
+		"age-plugin-yubikey --generate --serial 1234 --pin-policy once --touch-policy never",
 		"rekey",
 		keygen,
 	}
@@ -271,11 +271,11 @@ func TestLuksNeverWipes(t *testing.T) {
 		want   []string
 	}{
 		"fresh": {`{}`, []string{
-			"systemd-cryptenroll --fido2-device=auto --fido2-with-client-pin=yes --fido2-with-user-presence=yes /dev/nvme0n1p2",
+			"systemd-cryptenroll --fido2-device=auto --fido2-with-client-pin=yes --fido2-with-user-presence=no /dev/nvme0n1p2",
 			"systemd-cryptenroll --recovery-key /dev/nvme0n1p2",
 		}},
 		"second key": {`{"0":{"type":"systemd-fido2","keyslots":["1"]},"1":{"type":"systemd-recovery","keyslots":["2"]}}`, []string{
-			"systemd-cryptenroll --fido2-device=auto --fido2-with-client-pin=yes --fido2-with-user-presence=yes /dev/nvme0n1p2",
+			"systemd-cryptenroll --fido2-device=auto --fido2-with-client-pin=yes --fido2-with-user-presence=no /dev/nvme0n1p2",
 		}},
 	} {
 		f := &fake{t: t, out: map[string][]string{
@@ -306,7 +306,7 @@ func TestLuksRetryRecovery(t *testing.T) {
 	}
 	write(t, filepath.Join(dm, "dm", "name"), "root\n")
 	write(t, filepath.Join(dm, "dm", "uuid"), "CRYPT-LUKS2-0123-root\n")
-	fido := "systemd-cryptenroll --fido2-device=auto --fido2-with-client-pin=yes --fido2-with-user-presence=yes /dev/vda2"
+	fido := "systemd-cryptenroll --fido2-device=auto --fido2-with-client-pin=yes --fido2-with-user-presence=no /dev/vda2"
 	recovery := "systemd-cryptenroll --recovery-key /dev/vda2"
 	dump := "cryptsetup luksDump --dump-json-metadata /dev/vda2"
 	f := &fake{t: t, fail: map[string]error{recovery: errors.New("recovery failed")}, out: map[string][]string{

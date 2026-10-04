@@ -232,7 +232,7 @@ These checks require the Framework Desktop and real YubiKeys; the VM test does n
 
 - [ ] Manually confirm BIOS 3.06, Pluton enabled, and Setup Mode before installation.
 - [ ] Enable Secure Boot in the BIOS after key enrollment, reboot, and confirm all items are done with `dctl setup --status secureboot`.
-- [ ] Boot and unlock LUKS with each of the two YubiKeys separately, with PIN and touch.
+- [ ] Boot and unlock LUKS with each of the two YubiKeys separately, with the PIN and no touch.
 - [ ] Decrypt secrets with each YubiKey separately, without the other key or the age phrase.
 - [ ] Reject a wrong FIDO2 PIN and a wrong PIV PIN; cancel any age-phrase fallback and avoid repeated failures that can block the key.
 - [ ] Unlock LUKS with the recorded recovery key while both YubiKeys are removed.

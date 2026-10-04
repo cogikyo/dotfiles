@@ -154,7 +154,7 @@ Repeat enrollment for each key; there is no fixed A/B key count.
 `enroll` configures FIDO2 PIN/always-UV and PIV PIN/PUK, adds an age identity, rekeys all secrets, and creates a hardware release-signing key at `~/.ssh/id_ed25519_sk_<serial>`.
 If `ykman fido info` reports a forced PIN change, enrollment changes the FIDO2 PIN before enabling Always Require UV.
 It updates `share/allowed_signers` and the age metadata in the checkout.
-`keys luks` adds a FIDO2 token with PIN and touch, adds a recovery key if absent, and keeps the existing passphrase slot.
+`keys luks` adds a FIDO2 token that needs the PIN but no touch, adds a recovery key if absent, and keeps the existing passphrase slot.
 Write down the recovery key when shown.
 Unprivileged `status` can report enrollment, but reading LUKS header details requires sudo.
 

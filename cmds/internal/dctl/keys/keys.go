@@ -102,15 +102,15 @@ func enrollAge(ctx context.Context, u *ui.UI, run execx.Runner, serial string, r
 		return err
 	}
 	if len(keys) == 0 {
-		u.Section("Create age identity", `enter the PIV PIN (ignore "default is 123456"), then touch the key within 15 seconds`)
-		if err := run.Run(ctx, "", "age-plugin-yubikey", "--generate", "--serial", serial, "--pin-policy", "once", "--touch-policy", "cached"); err != nil {
+		u.Section("Create age identity", `enter the PIV PIN (ignore "default is 123456"); no touch needed`)
+		if err := run.Run(ctx, "", "age-plugin-yubikey", "--generate", "--serial", serial, "--pin-policy", "once", "--touch-policy", "never"); err != nil {
 			return err
 		}
 		if keys, err = onKey(ctx, run, serial); err != nil {
 			return err
 		}
 	}
-	u.Section("Re-encrypt secrets", "an enrolled YubiKey asks for its PIV PIN, then a touch within 15 seconds; if that fails, the paper recovery phrase works")
+	u.Section("Re-encrypt secrets", "an enrolled YubiKey asks for its PIV PIN; without one, the paper recovery phrase works")
 	return rekey(func(l *secrets.Ledger) error {
 		have := secrets.Lines(l.Recipients)
 		i := slices.IndexFunc(keys, func(k Key) bool { return slices.Contains(have, k.Recipient) })
