@@ -146,7 +146,7 @@ func TestEnrollOrder(t *testing.T) {
 	root := sandbox(t)
 	k := newKey(1234)
 	ssh := filepath.Join(root.Home, ".ssh", "id_ed25519_sk_1234")
-	keygen := "ssh-keygen -t ed25519-sk -O resident -O application=ssh:dctl-release -C yubikey-1234 -f id"
+	keygen := "ssh-keygen -t ed25519-sk -O resident -O application=ssh:dctl-release -C yubikey-1234 -f id -N "
 	f := &fake{t: t, out: device(k, unset, true)}
 	f.effects = map[string]func(string){keygen: func(dir string) {
 		write(t, filepath.Join(dir, "id"), "handle")
@@ -159,8 +159,8 @@ func TestEnrollOrder(t *testing.T) {
 	want := []string{
 		"ykman --device 1234 fido access change-pin",
 		"ykman --device 1234 fido config toggle-always-uv",
-		"ykman --device 1234 piv access change-pin",
-		"ykman --device 1234 piv access change-puk",
+		"ykman --device 1234 piv access change-pin --pin 123456",
+		"ykman --device 1234 piv access change-puk --puk 12345678",
 		protect,
 		"age-plugin-yubikey --generate --serial 1234 --pin-policy once --touch-policy cached",
 		"rekey",
@@ -370,12 +370,12 @@ func TestSignerHandleRecovered(t *testing.T) {
 				write(t, file+".pub", tc.local+"\n")
 			}
 		}
-		f := &fake{t: t, effects: map[string]func(string){"ssh-keygen -K": func(dir string) {
+		f := &fake{t: t, effects: map[string]func(string){"ssh-keygen -K -N ": func(dir string) {
 			write(t, filepath.Join(dir, "id_ed25519_sk_rk_dctl-release"), "handle")
 			write(t, filepath.Join(dir, "id_ed25519_sk_rk_dctl-release.pub"), tc.keyed+" comment\n")
 		}}}
 		err := enrollSigner(t.Context(), quiet(), root, f, "1234")
-		if !slices.Equal(f.log, []string{"ssh-keygen -K"}) {
+		if !slices.Equal(f.log, []string{"ssh-keygen -K -N "}) {
 			t.Errorf("%s: ran %v", name, f.log)
 		}
 		if name == "mismatch" {
@@ -424,8 +424,8 @@ func TestForcedPinChange(t *testing.T) {
 	want := []string{
 		"ykman --device 1234 fido access change-pin",
 		"ykman --device 1234 fido config toggle-always-uv",
-		"ykman --device 1234 piv access change-pin",
-		"ykman --device 1234 piv access change-puk",
+		"ykman --device 1234 piv access change-pin --pin 123456",
+		"ykman --device 1234 piv access change-puk --puk 12345678",
 		protect,
 	}
 	if !slices.Equal(got, want) {

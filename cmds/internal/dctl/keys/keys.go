@@ -22,8 +22,8 @@ const (
 )
 
 type step struct {
-	label string
-	args  []string
+	label, hint string
+	args        []string
 }
 
 func Enroll(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, rekey func(secrets.Edit) error) error {
@@ -35,12 +35,14 @@ func Enroll(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, re
 		return err
 	}
 	u.Step("yubikey %s", serial)
+	u.Note("wait for each prompt before typing; keys typed early are dropped")
 	pins, err := pinSteps(ctx, run, serial)
 	if err != nil {
 		return err
 	}
 	for _, s := range pins {
 		u.Step("%s", s.label)
+		u.Note("%s", s.hint)
 		if err := run.Run(ctx, "", "ykman", s.args...); err != nil {
 			return err
 		}
@@ -51,7 +53,11 @@ func Enroll(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, re
 	if err := enrollSigner(ctx, u, root, run, serial); err != nil {
 		return err
 	}
-	u.OK("yubikey %s enrolled; for disk unlock run: sudo dctl keys luks", serial)
+	u.OK("yubikey %s enrolled", serial)
+	u.KV("FIDO2 PIN", "disk unlock at boot, release signing")
+	u.KV("PIV PIN", "age secrets")
+	u.KV("PUK", "unblocks a locked PIV PIN; keep it on paper")
+	u.Note("for disk unlock: sudo dctl keys luks")
 	return nil
 }
 
@@ -61,30 +67,31 @@ func pinSteps(ctx context.Context, run execx.Runner, serial string) ([]step, err
 		return nil, err
 	}
 	fido := fields(out)
+	const fidoUse = "new FIDO2 PIN: unlocks the disk at boot and signs releases; 6–8 characters lets the PIV PIN match"
 	var steps []step
 	switch {
 	case fido["PIN"] == "Blocked":
 		return nil, fmt.Errorf("yubikey %s: the FIDO2 PIN is blocked", serial)
 	case fido["PIN"] == "Not set":
-		steps = append(steps, step{"Set FIDO2 PIN", ykman(serial, "fido", "access", "change-pin")})
+		steps = append(steps, step{"Set FIDO2 PIN", fidoUse, ykman(serial, "fido", "access", "change-pin")})
 	case fido["NOTE"] == forced:
-		steps = append(steps, step{"Change FIDO2 PIN", ykman(serial, "fido", "access", "change-pin")})
+		steps = append(steps, step{"Replace the factory FIDO2 PIN", "current: the factory PIN; " + fidoUse, ykman(serial, "fido", "access", "change-pin")})
 	}
 	if fido["Always Require UV"] == "Off" {
-		steps = append(steps, step{"Turn on FIDO2 Always Require UV", ykman(serial, "fido", "config", "toggle-always-uv")})
+		steps = append(steps, step{"Require the FIDO2 PIN for every use", "enter the FIDO2 PIN", ykman(serial, "fido", "config", "toggle-always-uv")})
 	}
 	piv, err := run.Output(ctx, "", "ykman", ykman(serial, "piv", "info")...)
 	if err != nil {
 		return nil, err
 	}
 	if strings.Contains(piv, "WARNING: Using default PIN!") {
-		steps = append(steps, step{"Change PIV PIN", ykman(serial, "piv", "access", "change-pin")})
+		steps = append(steps, step{"Set PIV PIN", "new PIV PIN: unlocks age secrets; 6–8 characters; reusing the FIDO2 PIN is fine", ykman(serial, "piv", "access", "change-pin", "--pin", "123456")})
 	}
 	if strings.Contains(piv, "WARNING: Using default PUK!") {
-		steps = append(steps, step{"Change PIV PUK", ykman(serial, "piv", "access", "change-puk")})
+		steps = append(steps, step{"Set PIV PUK", "new PUK: unblocks the PIV PIN after 3 wrong tries; 6–8 characters; write it on the phrase paper", ykman(serial, "piv", "access", "change-puk", "--puk", "12345678")})
 	}
 	if strings.Contains(piv, "WARNING: Using default Management key!") {
-		steps = append(steps, step{"Protect PIV management key with the PIV PIN", ykman(serial, "piv", "access", "change-management-key", "--management-key", defaultKey, "--algorithm", "TDES", "--protect")})
+		steps = append(steps, step{"Protect the PIV management key", "enter the PIV PIN", ykman(serial, "piv", "access", "change-management-key", "--management-key", defaultKey, "--algorithm", "TDES", "--protect")})
 	}
 	return steps, nil
 }
@@ -96,6 +103,7 @@ func enrollAge(ctx context.Context, u *ui.UI, run execx.Runner, serial string, r
 	}
 	if len(keys) == 0 {
 		u.Step("Create age identity")
+		u.Note(`enter the PIV PIN (ignore "default is 123456"), then touch the key within 15 seconds`)
 		if err := run.Run(ctx, "", "age-plugin-yubikey", "--generate", "--serial", serial, "--pin-policy", "once", "--touch-policy", "cached"); err != nil {
 			return err
 		}
@@ -104,6 +112,7 @@ func enrollAge(ctx context.Context, u *ui.UI, run execx.Runner, serial string, r
 		}
 	}
 	u.Step("Re-encrypt secrets for YubiKey %s", serial)
+	u.Note("opening the current secrets takes an enrolled YubiKey or the paper recovery phrase")
 	return rekey(func(l *secrets.Ledger) error {
 		have := secrets.Lines(l.Recipients)
 		i := slices.IndexFunc(keys, func(k Key) bool { return slices.Contains(have, k.Recipient) })
@@ -131,14 +140,14 @@ func enrollSigner(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runn
 	}
 	defer home.Close()
 	rel := filepath.Join(".ssh", "id_ed25519_sk_"+serial)
-	name, args := "id", []string{"-t", "ed25519-sk", "-O", "resident", "-O", "application=" + application, "-C", principal(serial), "-f", "id"}
+	name, args := "id", []string{"-t", "ed25519-sk", "-O", "resident", "-O", "application=" + application, "-C", principal(serial), "-f", "id", "-N", ""}
 	if i >= 0 {
 		pub, err := home.ReadFile(rel + ".pub")
 		if priv, perr := home.ReadFile(rel); err == nil && perr == nil && skKey(string(pub)) == skKey(signed[i]) {
 			clear(priv)
 			return nil
 		}
-		name, args = "id_ed25519_sk_rk_"+strings.TrimPrefix(application, "ssh:"), []string{"-K"}
+		name, args = "id_ed25519_sk_rk_"+strings.TrimPrefix(application, "ssh:"), []string{"-K", "-N", ""}
 	}
 	tmp, err := os.MkdirTemp("", "dctl-sk-")
 	if err != nil {
@@ -146,6 +155,7 @@ func enrollSigner(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runn
 	}
 	defer os.RemoveAll(tmp)
 	u.Step("Configure release-signing key")
+	u.Note(`"PIN for authenticator" is the FIDO2 PIN; touch the key when it blinks`)
 	if err := run.Run(ctx, tmp, "ssh-keygen", args...); err != nil {
 		return err
 	}

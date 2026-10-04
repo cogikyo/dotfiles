@@ -326,7 +326,7 @@ func rekey(u *ui.UI, root paths.Root, keys *Keys, recipients []age.Recipient, fi
 	if err := swap(root.Secrets(), staged); err != nil {
 		return err
 	}
-	u.OK("rekeyed %d to %d recipients", len(entries), len(recipients))
+	u.OK("re-encrypted %d secrets for %d recipients", len(entries), len(recipients))
 	return nil
 }
 
@@ -341,7 +341,7 @@ func seal(repo *Tree, e Entry, data []byte, recipients []age.Recipient) error {
 var errUnlisted = errors.New("the phrase unlocked identity.age, but its recipient is not in secrets/recipients")
 
 func VerifyPhrase(u *ui.UI, root paths.Root) error {
-	phrase, err := u.Secret("Age phrase:")
+	phrase, err := u.Secret("Recovery phrase (paper):")
 	if err != nil {
 		return err
 	}

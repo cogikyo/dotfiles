@@ -171,7 +171,7 @@ func (k *Keys) Open(ciphertext []byte) ([]byte, error) {
 			return nil, fmt.Errorf("%w: %w", k.stop, err)
 		}
 		k.u.Warn("%v", err)
-		k.u.Info("falling back to the age phrase")
+		k.u.Info("falling back to the recovery phrase")
 		k.plugins = nil
 	}
 	if len(k.ids) == 0 {
@@ -190,7 +190,7 @@ func (k *Keys) phrase() (*age.X25519Identity, error) {
 		return nil, err
 	}
 	for {
-		phrase, err := k.u.Secret("Age phrase:")
+		phrase, err := k.u.Secret("Recovery phrase (paper):")
 		if err != nil {
 			return nil, err
 		}
