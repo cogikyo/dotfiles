@@ -7,7 +7,6 @@ serifs = "sans"
 noCvSs = true
 exportGlyphNames = true
 noIosevkaPrefix = true
-hintingMode = "unhinted"
 
 [buildPlans.Vagari.variants]
 inherits = "ss05"
