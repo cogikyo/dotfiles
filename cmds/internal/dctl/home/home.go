@@ -20,7 +20,6 @@ import (
 var dirs = []string{"downloads", "documents", "media/screenshots", "media/recordings", "media/images", "media/gifs", "agents"}
 
 func Stage(r paths.Root, run execx.Runner) setup.Stage {
-	fonts := filepath.Join(r.Home, ".local", "share", "fonts")
 	sshDir := filepath.Join(r.Home, ".ssh")
 	keys := linkCheck("home-ssh-keys", r.Dotfiles, "", func() ([]link, error) {
 		pubs, err := filepath.Glob(r.Share("ssh", "*.pub"))
@@ -73,28 +72,6 @@ func Stage(r paths.Root, run execx.Runner) setup.Stage {
 		},
 		librepods(r),
 		{
-			Name: "home-fonts",
-			Check: func(context.Context) error {
-				if entries, err := os.ReadDir(fonts); err != nil || len(entries) == 0 {
-					return fmt.Errorf("%s missing or empty", fonts)
-				}
-				return nil
-			},
-			Fix: func(ctx context.Context) error {
-				archive := r.Share("fonts.tar.gz")
-				if _, err := os.Stat(archive); errors.Is(err, fs.ErrNotExist) {
-					return setup.Manual("font archive missing: %s", archive)
-				}
-				if err := os.MkdirAll(filepath.Dir(fonts), 0o755); err != nil {
-					return err
-				}
-				if err := run.Run(ctx, "", "tar", "-xzf", archive, "-C", filepath.Dir(fonts)); err != nil {
-					return err
-				}
-				return run.Run(ctx, "", "fc-cache", "-f")
-			},
-		},
-		{
 			Name: "home-shell",
 			Check: func(ctx context.Context) error {
 				entry, err := run.Output(ctx, "", "getent", "passwd", strconv.Itoa(os.Getuid()))
@@ -133,6 +110,7 @@ func links(r paths.Root) ([]link, error) {
 		link{r.Config(profile), filepath.Join(r.Home, ".config", profile)},
 		link{r.Config("zsh", "zshrc"), filepath.Join(r.Home, ".zshrc")},
 		link{r.Config("zsh", "zshenv"), filepath.Join(r.Home, ".zshenv")},
+		link{r.Share("fonts"), filepath.Join(r.Home, ".local", "share", "fonts")},
 	)
 	apps, err := filepath.Glob(r.Share("applications", "*.desktop"))
 	if err != nil {

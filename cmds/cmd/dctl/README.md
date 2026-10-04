@@ -69,7 +69,7 @@ The catalog is:
 
 - `system` copies `system/`, enables preset-listed units without starting them, and links the resolver stub (root).
 - `packages` checks base, AUR, and local payload names and installs missing official packages (root).
-- `home` links config, public SSH keys, desktop entries, and user units, creates directories, and seeds fonts and app settings.
+- `home` links config, fonts, public SSH keys, desktop entries, and user units, creates directories, and seeds app settings.
 - `extra` installs `packages/extra.lst` through yay and enables Docker's socket without starting it.
 - `secrets` decrypts missing non-staged targets.
 - `repos` clones missing repositories over GitHub SSH.

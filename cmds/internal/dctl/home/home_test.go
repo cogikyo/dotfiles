@@ -22,6 +22,7 @@ func sandbox(t *testing.T) paths.Root {
 		"config/obs-studio/basic/scenes/Costello.json",
 		"config/zsh/zshrc",
 		"config/zsh/zshenv",
+		"share/fonts/Vagari-Regular.ttf",
 	} {
 		write(t, filepath.Join(r.Dotfiles, rel), rel)
 	}
