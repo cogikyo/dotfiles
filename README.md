@@ -212,11 +212,12 @@ Reboot after enrollment; if Secure Boot is still off, enable it in the BIOS befo
 ## Maintenance
 
 Run `update` as the normal user for daily upgrades; the zsh alias runs `dctl update`.
-It asks default-yes for each step: pacman, AUR, repos, CLI tools, then firmware.
+It asks default-yes for each step: pacman, AUR, repos, dotfiles commands, Go tools, rustup, then firmware.
 
 ```sh
 update
-dctl update repos cli
+dctl update repos cmd
+dctl update --only dctl
 dctl setup repos
 ```
 

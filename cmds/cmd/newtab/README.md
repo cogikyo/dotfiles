@@ -34,10 +34,10 @@ The dctl ISO installs the binary into `~/.local/bin/`.
 For an attended source update, run as your normal user:
 
 ```sh
-dctl update cli
+dctl update --only newtab
 ```
 
-This rebuilds the dotfiles commands and restarts newtab only if its binary changed.
+This rebuilds newtab and restarts it only if its binary changed.
 The tracked user unit is `config/systemd/user/newtab.service` at the repo root.
 `dctl setup home` links the user unit directory and its `.wants` links without starting or restarting the service.
 

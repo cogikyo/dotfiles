@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os/exec"
 	"slices"
 	"strings"
 
@@ -20,7 +21,7 @@ type Step struct {
 	Run  func(context.Context) error
 }
 
-func Steps(u *ui.UI, root paths.Root, run execx.Runner, all bool) []Step {
+func Steps(u *ui.UI, root paths.Root, run execx.Runner, all bool, only []string) []Step {
 	noconfirm := func(args ...string) []string {
 		if all {
 			return append(args, "--noconfirm")
@@ -30,7 +31,7 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all bool) []Step {
 	return []Step{
 		{
 			Name: "pacman",
-			Plan: "sudo pacman -Syu, then report package-list drift",
+			Plan: "official repos via sudo pacman -Syu, then report package-list drift",
 			Run: func(ctx context.Context) error {
 				if err := run.Run(ctx, "", "sudo", noconfirm("pacman", "-Syu")...); err != nil {
 					return err
@@ -40,7 +41,7 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all bool) []Step {
 		},
 		{
 			Name: "aur",
-			Plan: "yay -Sua",
+			Plan: "AUR packages via yay -Sua",
 			Run: func(ctx context.Context) error {
 				return run.Run(ctx, "", "yay", noconfirm("-Sua")...)
 			},
@@ -53,10 +54,28 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all bool) []Step {
 			},
 		},
 		{
-			Name: "cli",
-			Plan: "rebuild changed dotfiles commands, go install GOPATH tools, rustup update",
+			Name: "cmd",
+			Plan: "dotfiles commands and packages/ PKGBUILDs, rebuilt when changed",
 			Run: func(ctx context.Context) error {
-				return cli(ctx, u, root, run, all)
+				return cmd(ctx, u, root, run, all, only)
+			},
+		},
+		{
+			Name: "go",
+			Plan: "go install @latest for module-proxy tools in GOBIN",
+			Run: func(ctx context.Context) error {
+				return tools(ctx, u, run)
+			},
+		},
+		{
+			Name: "rust",
+			Plan: "rustup update",
+			Run: func(ctx context.Context) error {
+				if _, err := exec.LookPath("rustup"); err != nil {
+					u.Dim("rustup is not installed")
+					return nil
+				}
+				return run.Run(ctx, "", "rustup", "update")
 			},
 		},
 		{

@@ -270,25 +270,30 @@ It reports dirty, detached, ahead, diverged, absent, or upstream-less repositori
 
 ```sh
 dctl update
-dctl update repos cli
+dctl update repos cmd
+dctl update --only dctl,hyprd
 dctl update --all
 ```
 
 Run as your normal user; the zsh alias `update` runs `dctl update`.
 With no step names, each step shows its plan and asks `[Y/n]`; Enter runs it and `n` skips it.
 Named steps skip the per-step prompt and keep the order below.
-`--all` or global `--yes` skips prompts and passes `--noconfirm` to pacman/yay, but never flashes firmware.
+`--all` or global `--yes` skips prompts and passes `--noconfirm` to pacman, yay, and makepkg, but never flashes firmware.
+`--only NAME,...` limits the `cmd` step to the named dotfiles commands or local recipes, and runs only that step when no steps are named.
 
-- `pacman` runs `sudo pacman -Syu`, then reports package-list drift without rewriting lists or removing packages.
+- `pacman` runs `sudo pacman -Syu` against the official repositories, then reports package-list drift without rewriting lists or removing packages.
 - `aur` runs `yay -Sua`.
 - `repos` fast-forwards the clean catalog checkouts, excluding dotfiles.
-- `cli` rebuilds changed dotfiles commands, updates proxy-installed Go tools, and runs `rustup update` if installed.
+- `cmd` rebuilds changed dotfiles commands and reinstalls `packages/<name>` recipes whose PKGBUILD version differs from the installed one.
+- `go` updates proxy-installed Go tools.
+- `rust` runs `rustup update` if rustup is installed.
 - `firmware` refreshes fwupd metadata and lists updates, then asks default-no before flashing; `--all` only reports.
 
-The CLI step uses shared `internal/gobuild` settings and replaces binaries in `~/.local/bin/` only when their bytes differ.
+The cmd step uses shared `internal/gobuild` settings and replaces binaries in `~/.local/bin/` only when their bytes differ.
 Hyprd owns its replacement through `hyprd rebuild`; a full lock, active OpenCode refresh job, or stopped daemon produces a reported skip.
 Ewwd and newtab restart only when replaced.
 Uncommitted changes under `cmds/` require an extra confirmation; `--all` skips the dotfiles build instead.
+Local recipes rebuild with `makepkg -sfi` only when installed; recipes that are not installed are skipped.
 Go tools in `GOBIN` or the first GOPATH's `bin` directory use `go install <package>@latest` only when build metadata has a module-proxy checksum; locally built tools are skipped.
 Individual tool or step failures do not stop later work, but the command returns nonzero for failures.
 

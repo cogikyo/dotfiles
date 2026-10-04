@@ -51,7 +51,7 @@ hyprd rebuild            # rebuild binary and hot-restart (preserves state)
 ### Rebuild
 
 `hyprd rebuild` builds from `~/dotfiles/cmds` or `$DOTFILES/cmds`, installs `~/.local/bin/hyprd`, saves runtime state, and restarts in place.
-It uses `internal/gobuild` settings shared with `dctl update cli` and ISO builds: `-trimpath -buildvcs=false`, `CGO_ENABLED=0`, empty `GOFLAGS`, and `GOWORK=off`.
+It uses `internal/gobuild` settings shared with `dctl update cmd` and ISO builds: `-trimpath -buildvcs=false`, `CGO_ENABLED=0`, empty `GOFLAGS`, and `GOWORK=off`.
 It refuses during a full lock or an active OpenCode refresh job.
 Use a scratch build for build-only checks; `hyprd rebuild` changes the running daemon.
 
