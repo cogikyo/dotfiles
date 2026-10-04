@@ -110,7 +110,7 @@ func enrollAge(ctx context.Context, u *ui.UI, run execx.Runner, serial string, r
 			return err
 		}
 	}
-	u.Section("Re-encrypt secrets", "opening the current secrets takes an enrolled YubiKey or the paper recovery phrase")
+	u.Section("Re-encrypt secrets", "an enrolled YubiKey asks for its PIV PIN, then a touch within 15 seconds; if that fails, the paper recovery phrase works")
 	return rekey(func(l *secrets.Ledger) error {
 		have := secrets.Lines(l.Recipients)
 		i := slices.IndexFunc(keys, func(k Key) bool { return slices.Contains(have, k.Recipient) })
@@ -138,14 +138,14 @@ func enrollSigner(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runn
 	}
 	defer home.Close()
 	rel := filepath.Join(".ssh", "id_ed25519_sk_"+serial)
-	name, args := "id", []string{"-t", "ed25519-sk", "-O", "resident", "-O", "application=" + application, "-C", principal(serial), "-f", "id", "-N", ""}
+	name, args := "id", []string{"-q", "-t", "ed25519-sk", "-O", "resident", "-O", "application=" + application, "-C", principal(serial), "-f", "id", "-N", ""}
 	if i >= 0 {
 		pub, err := home.ReadFile(rel + ".pub")
 		if priv, perr := home.ReadFile(rel); err == nil && perr == nil && skKey(string(pub)) == skKey(signed[i]) {
 			clear(priv)
 			return nil
 		}
-		name, args = "id_ed25519_sk_rk_"+strings.TrimPrefix(application, "ssh:"), []string{"-K", "-N", ""}
+		name, args = "id_ed25519_sk_rk_"+strings.TrimPrefix(application, "ssh:"), []string{"-q", "-K", "-N", ""}
 	}
 	tmp, err := os.MkdirTemp("", "dctl-sk-")
 	if err != nil {
