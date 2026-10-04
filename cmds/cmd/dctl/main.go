@@ -10,7 +10,7 @@ import (
 
 	"dotfiles/cmds/internal/dctl/cli"
 	"dotfiles/cmds/internal/dctl/paths"
-	"dotfiles/cmds/internal/dctl/ui"
+	"dotfiles/cmds/internal/ui"
 
 	"github.com/alecthomas/kong"
 )

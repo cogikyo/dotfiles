@@ -16,8 +16,8 @@ import (
 	"dotfiles/cmds/internal/dctl/execx"
 	"dotfiles/cmds/internal/dctl/packages"
 	"dotfiles/cmds/internal/dctl/paths"
-	"dotfiles/cmds/internal/dctl/ui"
 	"dotfiles/cmds/internal/gobuild"
+	"dotfiles/cmds/internal/ui"
 )
 
 type build struct {

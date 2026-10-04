@@ -10,7 +10,7 @@ import (
 	"dotfiles/cmds/internal/dctl/keys"
 	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/dctl/secrets"
-	"dotfiles/cmds/internal/dctl/ui"
+	"dotfiles/cmds/internal/ui"
 )
 
 type KeysCmd struct {

@@ -5,7 +5,7 @@ import (
 
 	"dotfiles/cmds/internal/dctl/iso"
 	"dotfiles/cmds/internal/dctl/paths"
-	"dotfiles/cmds/internal/dctl/ui"
+	"dotfiles/cmds/internal/ui"
 )
 
 type ISOCmd struct {

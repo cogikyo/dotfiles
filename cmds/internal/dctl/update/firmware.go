@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"dotfiles/cmds/internal/dctl/execx"
-	"dotfiles/cmds/internal/dctl/ui"
+	"dotfiles/cmds/internal/ui"
 )
 
 const (

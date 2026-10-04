@@ -25,8 +25,8 @@ import (
 	"dotfiles/cmds/internal/dctl/setup"
 	"dotfiles/cmds/internal/dctl/system"
 	"dotfiles/cmds/internal/dctl/tailscale"
-	"dotfiles/cmds/internal/dctl/ui"
 	"dotfiles/cmds/internal/dctl/vpn"
+	"dotfiles/cmds/internal/ui"
 )
 
 type SetupCmd struct {

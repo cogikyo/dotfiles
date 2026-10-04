@@ -17,7 +17,7 @@ import (
 	"dotfiles/cmds/internal/dctl/iso"
 	"dotfiles/cmds/internal/dctl/secureboot"
 	"dotfiles/cmds/internal/dctl/setup"
-	"dotfiles/cmds/internal/dctl/ui"
+	"dotfiles/cmds/internal/ui"
 )
 
 const (

@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"dotfiles/cmds/internal/dctl/ui"
+	"dotfiles/cmds/internal/ui"
 )
 
 type result struct {

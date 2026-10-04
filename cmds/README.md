@@ -62,7 +62,8 @@ cmds/
     ├── dctl/
     ├── ewwd/
     ├── hyprd/
-    └── src/
+    ├── src/
+    └── ui/             # terminal rows, trees, and prompts
 ```
 
 `hyprd` is further split into `browser/`, `notify/`, `session/`, `state/`, `windows/`, and `wm/` to keep concerns separated.

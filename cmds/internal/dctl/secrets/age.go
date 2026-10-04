@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"dotfiles/cmds/internal/dctl/paths"
-	"dotfiles/cmds/internal/dctl/ui"
+	"dotfiles/cmds/internal/ui"
 
 	"filippo.io/age"
 	"filippo.io/age/plugin"

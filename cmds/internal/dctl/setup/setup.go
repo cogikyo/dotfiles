@@ -7,7 +7,7 @@ import (
 	"slices"
 	"strings"
 
-	"dotfiles/cmds/internal/dctl/ui"
+	"dotfiles/cmds/internal/ui"
 )
 
 // Item checks without changing state; Fix must be safe to repeat even when Check succeeds.

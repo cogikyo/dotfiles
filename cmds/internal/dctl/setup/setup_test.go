@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"dotfiles/cmds/internal/dctl/ui"
+	"dotfiles/cmds/internal/ui"
 )
 
 type probe struct {

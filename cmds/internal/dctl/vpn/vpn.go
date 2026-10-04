@@ -19,7 +19,7 @@ import (
 	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/dctl/secrets"
 	"dotfiles/cmds/internal/dctl/setup"
-	"dotfiles/cmds/internal/dctl/ui"
+	"dotfiles/cmds/internal/ui"
 )
 
 func Stage(u *ui.UI, r paths.Root, run execx.Runner) setup.Stage {

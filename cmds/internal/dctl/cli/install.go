@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"dotfiles/cmds/internal/dctl/installer"
-	"dotfiles/cmds/internal/dctl/ui"
+	"dotfiles/cmds/internal/ui"
 )
 
 type InstallCmd struct{}
