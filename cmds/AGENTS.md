@@ -27,5 +27,5 @@ Command details: [dctl](cmd/dctl/README.md), [hyprd](cmd/hyprd/README.md#rebuild
 - Register setup stages in order in `internal/dctl/cli/setup.go`; root stages must not depend on user stages.
 - `internal/gobuild/` owns build flags and environment for CLI updates, hyprd rebuilds, and ISO builds.
 - Keep `internal/config/hyprd.go` → `ThreeBody` launch titles/session paths aligned with `../config/kitty/sessions/`.
-- Keep `config/hyprd.yaml` → `windows.{split,gaps_out}` fitted to Hyprland's gaps/ratios and Kitty's cell size.
+- Keep `config/hyprd.yaml` → `windows.{split,gaps_out,monocle}` fitted to Hyprland's gaps/ratios and Kitty's cell size.
 - `hyprd browser snapshot` writes tracked files under `internal/hyprd/browser/sessions/`.

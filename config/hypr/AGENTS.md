@@ -18,7 +18,7 @@ Hyprland config uses Lua `hl.*`, not `hyprland.conf`.
 - Lock/idle behavior belongs to the [hyprd lock controller](../../cmds/internal/hyprd/session/lock.go); these configs control appearance and triggers.
 
 Gaps and split ratios are fitted to Kitty's cell grid.
-Change `general.gaps_out` and `master.mfact` together with `windows.{split,gaps_out}` in `../../cmds/config/hyprd.yaml` and cell-size settings in `../kitty/kitty.conf`.
+Change `general.gaps_out`, `master.mfact`, and `floatSize` together with `windows.{split,gaps_out,monocle}` in `../../cmds/config/hyprd.yaml` and cell-size settings in `../kitty/kitty.conf`.
 
 ## Checking
 

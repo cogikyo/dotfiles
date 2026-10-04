@@ -65,7 +65,7 @@ hl.monitor({
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
 local dialogSize = "1660 980"
-local floatSize = "2882 1864"
+local floatSize = "2884 1876"
 
 hl.window_rule({
 	name = "spotify",
@@ -207,7 +207,7 @@ hl.window_rule({
 	match = { class = [[^(com\.gabm\.satty)$]] },
 	float = true,
 	size = floatSize,
-	move = "479 173",
+	move = "478 167",
 })
 
 hl.window_rule({
