@@ -69,7 +69,7 @@ func (s stick) refusal(isoSize int64) string {
 }
 
 func inspect(ctx context.Context, device string) (stick, error) {
-	out, err := execx.OSRunner{}.Output(ctx, "", "lsblk", "-J", "-b", "-o", "PATH,TYPE,SIZE,RO,RM,TRAN,MODEL,SERIAL,WWN,MOUNTPOINTS", device)
+	out, err := execx.OSRunner{}.Output(ctx, "", "lsblk", "-J", "-T", "-b", "-o", "PATH,TYPE,SIZE,RO,RM,TRAN,MODEL,SERIAL,WWN,MOUNTPOINTS", device)
 	if err != nil {
 		return stick{}, err
 	}
