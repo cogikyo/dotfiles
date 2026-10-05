@@ -167,7 +167,7 @@ func recipes(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, a
 			continue
 		}
 		u.Info("makepkg %s %s → %s", name, have, want)
-		args := []string{"-sfi"}
+		args := []string{"-sfiC"}
 		if all {
 			args = append(args, "--noconfirm")
 		}
