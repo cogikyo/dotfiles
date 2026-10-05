@@ -71,10 +71,11 @@ func New() (*Daemon, error) {
 		accentCtl: NewAccent(hyprClient),
 		restartCh: make(chan struct{}, 1),
 	}
+	d.config.Store(&cfg)
+	d.lockCtl.SetNotify(d.notify)
 	if err := d.lockCtl.Adopt(); err != nil {
 		return nil, fmt.Errorf("adopt lock: %w", err)
 	}
-	d.config.Store(&cfg)
 	d.opencode = opencodepkg.New(func(title, body string) {
 		notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load())
 		if err := notifier.Handle(notifypkg.NotifyRequest{
@@ -470,22 +471,30 @@ func (d *Daemon) handleRebuild() string {
 		os.Remove(tmpBin)
 		return fmt.Sprintf("error: build failed: %v\n%s", err, out)
 	}
-	if msg := d.rebuildBlocked(); msg != "" {
+	if !d.lockCtl.BeginRestart() {
+		os.Remove(tmpBin)
+		return "error: full lock active; unlock before rebuilding"
+	}
+	if msg := d.opencode.RebuildBlocked(); msg != "" {
+		d.lockCtl.CancelRestart()
 		os.Remove(tmpBin)
 		return "error: " + msg
 	}
 
 	stateData, err := d.state.JSON()
 	if err != nil {
+		d.lockCtl.CancelRestart()
 		os.Remove(tmpBin)
 		return fmt.Sprintf("error: state dump: %v", err)
 	}
 	if err := os.WriteFile(stateFile, stateData, 0600); err != nil {
+		d.lockCtl.CancelRestart()
 		os.Remove(tmpBin)
 		return fmt.Sprintf("error: state write: %v", err)
 	}
 
 	if err := os.Rename(tmpBin, binPath); err != nil {
+		d.lockCtl.CancelRestart()
 		os.Remove(tmpBin)
 		os.Remove(stateFile)
 		return fmt.Sprintf("error: install: %v", err)
@@ -556,17 +565,19 @@ func (d *Daemon) handleProject(arg string) string {
 
 func (d *Daemon) newInit() *session.Init {
 	init := session.NewInit(d.hypr, d.state)
-	init.SetNotify(func(app, urgency, title, body string) {
-		notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load())
-		notifier.Handle(notifypkg.NotifyRequest{
-			Source:  "send",
-			App:     app,
-			Urgency: urgency,
-			Summary: title,
-			Body:    body,
-		})
-	})
+	init.SetNotify(d.notify)
 	return init
+}
+
+func (d *Daemon) notify(app, urgency, title, body string) {
+	notifier := notifypkg.NewNotifier(d.hypr, d.state, d.config.Load())
+	notifier.Handle(notifypkg.NotifyRequest{
+		Source:  "send",
+		App:     app,
+		Urgency: urgency,
+		Summary: title,
+		Body:    body,
+	})
 }
 
 // watchConfig hot-reloads ~/dotfiles/cmds/config/hyprd.yaml on change.

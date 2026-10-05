@@ -39,14 +39,8 @@ ShellRoot {
             Qt.quit()
             return
         }
-        Quickshell.execDetached(["dunstctl", "set-paused", "false"])
         lock.locked = false
         done.start()
-    }
-
-    Component.onCompleted: {
-        if (locking)
-            Quickshell.execDetached(["dunstctl", "set-paused", "true"])
     }
 
     PamContext {
@@ -231,7 +225,7 @@ ShellRoot {
     WlSessionLock {
         id: lock
         locked: shell.locking
-        onSecureChanged: console.info("lock secure:", secure)
+        onSecureChanged: console.warn(secure ? "lock-secure: acquired" : "lock-secure: lost")
 
         WlSessionLockSurface {
             color: "black"

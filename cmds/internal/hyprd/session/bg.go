@@ -1,6 +1,7 @@
 package session
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -77,6 +78,37 @@ func (b *BG) isAlive() bool {
 	}
 	conn.Close()
 	return true
+}
+
+func (b *BG) SetPaused(paused bool) error {
+	if !b.cfg.Enabled {
+		return nil
+	}
+	conn, err := net.DialTimeout("unix", b.cfg.Socket, 200*time.Millisecond)
+	if err != nil {
+		return fmt.Errorf("connect mpvpaper: %w", err)
+	}
+	defer conn.Close()
+	if err := conn.SetDeadline(time.Now().Add(500 * time.Millisecond)); err != nil {
+		return fmt.Errorf("set mpvpaper deadline: %w", err)
+	}
+	if _, err := fmt.Fprintf(conn, "{\"command\":[\"set_property\",\"pause\",%t]}\n", paused); err != nil {
+		return fmt.Errorf("send pause: %w", err)
+	}
+	line, err := bufio.NewReader(conn).ReadBytes('\n')
+	if err != nil {
+		return fmt.Errorf("read pause reply: %w", err)
+	}
+	var reply struct {
+		Error string `json:"error"`
+	}
+	if err := json.Unmarshal(line, &reply); err != nil {
+		return fmt.Errorf("parse pause reply %q: %w", line, err)
+	}
+	if reply.Error != "" && reply.Error != "success" {
+		return fmt.Errorf("pause: %s", reply.Error)
+	}
+	return nil
 }
 
 func (b *BG) waitAlive() bool {

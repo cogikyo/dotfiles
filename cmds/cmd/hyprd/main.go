@@ -430,9 +430,7 @@ Sessions:
   hyprd layout <name> [all] Open session; "all" starts every agent TUI for this launch
 
 Lock:
-  hyprd lock pseudo      Privacy screen (visual blackout + submap, no authentication)
-  hyprd lock unlock      Exit privacy screen (alias: -u)
-  hyprd lock full        Full lock (wraps hyprlock with pre/post hooks)
+  hyprd lock full        Full lock (supervises the Quickshell lock with pre/post hooks)
   hyprd share            Toggle screen-share mode
   hyprd share on|off     Enter/exit screen-share mode explicitly
 

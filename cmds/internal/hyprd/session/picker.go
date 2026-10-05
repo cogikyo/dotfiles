@@ -238,7 +238,7 @@ func (p *Picker) confirm() (string, error) {
 		time.Sleep(200 * time.Millisecond)
 		exec.Command("eww", "close", "picker").Run()
 
-		if p.lock.active() {
+		if p.lock.Locked() {
 			fmt.Printf("hyprd picker: lock active; skipping %s on ws%d\n", name, ws)
 			return
 		}

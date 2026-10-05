@@ -1,8 +1,10 @@
 package session
 
 import (
+	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
@@ -20,7 +22,7 @@ import (
 
 const (
 	restoreRequest = "workspace = 1 }"
-	barrierRequest = `hl.dsp.submap("pseudolock")`
+	barrierRequest = `hl.dsp.submap("lockbarrier")`
 	resetRequest   = `hl.dsp.submap("reset")`
 )
 
@@ -41,6 +43,18 @@ func (f *fakeHypr) setLocked(locked bool) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.locked = locked
+}
+
+func (f *fakeHypr) secure(w io.Writer) {
+	f.setLocked(true)
+	fmt.Fprintln(w, "  WARN js: "+secureMarker)
+}
+
+func (f *fakeHypr) hold(w io.Writer, d time.Duration) error {
+	f.secure(w)
+	time.Sleep(d)
+	f.setLocked(false)
+	return nil
 }
 
 func (f *fakeHypr) count(substr string) int {
@@ -115,6 +129,7 @@ func newTestLock(t *testing.T) (*Lock, *fakeHypr) {
 	}
 	l := NewLock(client, state.NewState(&config.HyprConfig{}))
 	l.running = func() bool { return false }
+	l.stopForeign = func() {}
 	l.endSession = func() error {
 		t.Error("endSession called")
 		return nil
@@ -122,10 +137,19 @@ func newTestLock(t *testing.T) (*Lock, *fakeHypr) {
 	return l, fake
 }
 
-func TestHyprlockCommandHasNoGrace(t *testing.T) {
-	args := hyprlockCommand().Args
-	if !slices.Equal(args, []string{"hyprlock", "--grace", "0"}) {
-		t.Fatalf("hyprlock args = %q, want zero grace", args)
+func TestLockCommandRunsLockMode(t *testing.T) {
+	log := newLockLog(io.Discard)
+	cmd := lockCommand(context.Background(), log)
+	if !slices.Equal(cmd.Args, []string{"qs", "-c", "lock"}) {
+		t.Fatalf("lock args = %q, want qs -c lock", cmd.Args)
+	}
+	if cmd.Stdout != log || cmd.Stderr != log || cmd.WaitDelay <= 0 {
+		t.Error("lock output is not scanned on both streams with a bounded wait")
+	}
+	for _, kv := range []string{lockEnv, "QS_DISABLE_CRASH_HANDLER=1"} {
+		if !slices.Contains(cmd.Env, kv) {
+			t.Errorf("lock env lacks %s", kv)
+		}
 	}
 }
 
@@ -133,17 +157,22 @@ func TestFullLockRestoresOnceAfterCleanExit(t *testing.T) {
 	l, fake := newTestLock(t)
 	synctest.Test(t, func(t *testing.T) {
 		launches := 0
-		l.hyprlock = func() error {
+		l.launch = func(_ context.Context, w io.Writer) error {
 			launches++
+			fake.secure(w)
 			time.Sleep(time.Minute)
 			if !l.Locked() || fake.count(restoreRequest) != 0 {
-				t.Error("full lock released while hyprlock was running")
+				t.Error("full lock released while the lock client was running")
 			}
+			fake.setLocked(false)
 			return nil
 		}
 
 		if _, err := l.Full(); err != nil {
 			t.Fatal(err)
+		}
+		if got := l.readIntent(); got != intentPending {
+			t.Errorf("intent after Full = %q, want %q", got, intentPending)
 		}
 		time.Sleep(time.Hour)
 		synctest.Wait()
@@ -152,6 +181,69 @@ func TestFullLockRestoresOnceAfterCleanExit(t *testing.T) {
 			t.Errorf("launches = %d, restores = %d, locked = %v; want one launch, one restore, unlocked",
 				launches, fake.count(restoreRequest), l.Locked())
 		}
+		if got := l.readIntent(); got != "" {
+			t.Errorf("intent after release = %q, want cleared", got)
+		}
+	})
+}
+
+func TestFullLockRejectsCleanExitWithoutRelease(t *testing.T) {
+	l, fake := newTestLock(t)
+	synctest.Test(t, func(t *testing.T) {
+		launches := 0
+		l.launch = func(_ context.Context, w io.Writer) error {
+			launches++
+			switch launches {
+			case 1:
+				return nil
+			case 2:
+				fake.secure(w)
+				time.Sleep(time.Minute)
+				return nil
+			default:
+				return fake.hold(w, time.Minute)
+			}
+		}
+
+		if _, err := l.Full(); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(time.Hour)
+		synctest.Wait()
+
+		if launches != 3 || l.Locked() || fake.count(restoreRequest) != 1 {
+			t.Errorf("launches = %d, locked = %v, restores = %d; want relaunches after an exit without locking and an exit without unlocking, then one restore",
+				launches, l.Locked(), fake.count(restoreRequest))
+		}
+	})
+}
+
+func TestFullLockStopsClientThatNeverLocks(t *testing.T) {
+	l, fake := newTestLock(t)
+	synctest.Test(t, func(t *testing.T) {
+		var starts []time.Time
+		l.launch = func(ctx context.Context, w io.Writer) error {
+			starts = append(starts, time.Now())
+			if len(starts) > 1 {
+				return fake.hold(w, time.Minute)
+			}
+			<-ctx.Done()
+			return ctx.Err()
+		}
+
+		if _, err := l.Full(); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(time.Hour)
+		synctest.Wait()
+
+		if len(starts) != 2 || l.Locked() || fake.count(restoreRequest) != 1 {
+			t.Fatalf("launches = %d, locked = %v, restores = %d; want a relaunch after the stuck client, then one restore",
+				len(starts), l.Locked(), fake.count(restoreRequest))
+		}
+		if gap := starts[1].Sub(starts[0]); gap != lockWait {
+			t.Errorf("stuck client stopped after %v, want %v", gap, lockWait)
+		}
 	})
 }
 
@@ -159,9 +251,9 @@ func TestFullLockEndsSessionAfterQuickFailures(t *testing.T) {
 	l, fake := newTestLock(t)
 	synctest.Test(t, func(t *testing.T) {
 		launches, ends := 0, 0
-		l.hyprlock = func() error {
+		l.launch = func(_ context.Context, w io.Writer) error {
 			launches++
-			return errors.New("hyprlock crashed")
+			return errors.New("lock client crashed")
 		}
 		l.endSession = func() error {
 			ends++
@@ -183,18 +275,19 @@ func TestFullLockEndsSessionAfterQuickFailures(t *testing.T) {
 	})
 }
 
-func TestFullLockWaitsForForeignHyprlock(t *testing.T) {
+func TestFullLockWaitsForForeignLock(t *testing.T) {
 	l, fake := newTestLock(t)
 	synctest.Test(t, func(t *testing.T) {
 		launches := 0
 		foreignUntil := time.Now().Add(time.Minute)
 		l.running = func() bool { return time.Now().Before(foreignUntil) }
-		l.hyprlock = func() error {
+		l.stopForeign = func() { foreignUntil = time.Now() }
+		l.launch = func(_ context.Context, w io.Writer) error {
 			launches++
 			if l.running() {
-				return errors.New("session already locked")
+				t.Error("launched while a foreign lock client was running")
 			}
-			return nil
+			return fake.hold(w, time.Minute)
 		}
 
 		if _, err := l.Full(); err != nil {
@@ -203,8 +296,8 @@ func TestFullLockWaitsForForeignHyprlock(t *testing.T) {
 		time.Sleep(time.Hour)
 		synctest.Wait()
 
-		if launches != 2 || l.Locked() || fake.count(restoreRequest) != 1 {
-			t.Errorf("launches = %d, locked = %v, restores = %d; want a relaunch after the foreign hyprlock, then one restore",
+		if launches != 1 || l.Locked() || fake.count(restoreRequest) != 1 {
+			t.Errorf("launches = %d, locked = %v, restores = %d; want one launch after the foreign lock client, then one restore",
 				launches, l.Locked(), fake.count(restoreRequest))
 		}
 	})
@@ -216,15 +309,15 @@ func TestFullLockKeepsRelaunchingWhenSessionCannotEnd(t *testing.T) {
 		const failures = 7
 		var starts []time.Time
 		ends := 0
-		l.hyprlock = func() error {
+		l.launch = func(_ context.Context, w io.Writer) error {
 			starts = append(starts, time.Now())
 			if fake.count(restoreRequest) != 0 {
-				t.Error("restored before hyprlock exited cleanly")
+				t.Error("restored before the lock client exited cleanly")
 			}
 			if len(starts) > failures {
-				return nil
+				return fake.hold(w, time.Second)
 			}
-			return errors.New("hyprlock crashed")
+			return errors.New("lock client crashed")
 		}
 		l.endSession = func() error {
 			ends++
@@ -255,14 +348,15 @@ func TestFullLockRelaunchesSlowCrashWithSpacing(t *testing.T) {
 	l, fake := newTestLock(t)
 	synctest.Test(t, func(t *testing.T) {
 		var starts, exits []time.Time
-		l.hyprlock = func() error {
+		l.launch = func(_ context.Context, w io.Writer) error {
 			starts = append(starts, time.Now())
 			defer func() { exits = append(exits, time.Now()) }()
 			if len(starts) == 3 {
-				return nil
+				return fake.hold(w, time.Second)
 			}
+			fake.secure(w)
 			time.Sleep(time.Minute)
-			return errors.New("hyprlock crashed")
+			return errors.New("lock client crashed")
 		}
 
 		if _, err := l.Full(); err != nil {
@@ -286,17 +380,16 @@ func TestFullLockRelaunchesSlowCrashWithSpacing(t *testing.T) {
 	})
 }
 
-func TestConcurrentFullLockStartsOneHyprlock(t *testing.T) {
-	l, _ := newTestLock(t)
+func TestConcurrentFullLockStartsOneClient(t *testing.T) {
+	l, fake := newTestLock(t)
 	synctest.Test(t, func(t *testing.T) {
 		var mu sync.Mutex
 		launches, started := 0, 0
-		l.hyprlock = func() error {
+		l.launch = func(_ context.Context, w io.Writer) error {
 			mu.Lock()
 			launches++
 			mu.Unlock()
-			time.Sleep(time.Minute)
-			return nil
+			return fake.hold(w, time.Minute)
 		}
 
 		var wg sync.WaitGroup
@@ -318,22 +411,19 @@ func TestConcurrentFullLockStartsOneHyprlock(t *testing.T) {
 		synctest.Wait()
 
 		if launches != 1 || started != 1 {
-			t.Errorf("launches = %d, started = %d; want one hyprlock", launches, started)
+			t.Errorf("launches = %d, started = %d; want one lock client", launches, started)
 		}
 	})
 }
 
-func TestPrivacyToFullKeepsBarrierUntilLocked(t *testing.T) {
+func TestFullLockKeepsBarrierUntilLocked(t *testing.T) {
 	l, fake := newTestLock(t)
 	synctest.Test(t, func(t *testing.T) {
-		if _, err := l.Execute("pseudo"); err != nil {
-			t.Fatal(err)
-		}
 		var beforeLock, whileLocked int
-		l.hyprlock = func() error {
+		l.launch = func(_ context.Context, w io.Writer) error {
 			time.Sleep(time.Second)
 			beforeLock = fake.count(resetRequest)
-			fake.setLocked(true)
+			fake.secure(w)
 			time.Sleep(time.Minute)
 			whileLocked = fake.count(resetRequest)
 			fake.setLocked(false)
@@ -352,24 +442,24 @@ func TestPrivacyToFullKeepsBarrierUntilLocked(t *testing.T) {
 		if whileLocked != 1 {
 			t.Errorf("submap reset %d times while locked, want 1 after the lock was acquired", whileLocked)
 		}
-		if fake.count(barrierRequest) != 2 || l.Locked() || fake.count(restoreRequest) != 1 {
-			t.Errorf("barriers = %d, locked = %v, restores = %d; want pseudo and full barriers, then one restore",
+		if fake.count(barrierRequest) != 1 || l.Locked() || fake.count(restoreRequest) != 1 {
+			t.Errorf("barriers = %d, locked = %v, restores = %d; want one barrier, then one restore",
 				fake.count(barrierRequest), l.Locked(), fake.count(restoreRequest))
 		}
 	})
 }
 
-func TestHyprlockDyingBeforeLockKeepsBarrier(t *testing.T) {
+func TestLockDyingBeforeLockKeepsBarrier(t *testing.T) {
 	l, fake := newTestLock(t)
 	synctest.Test(t, func(t *testing.T) {
 		launches, ends := 0, 0
-		l.hyprlock = func() error {
+		l.launch = func(_ context.Context, w io.Writer) error {
 			launches++
 			if got := fake.count(barrierRequest); got != launches {
 				t.Errorf("launch %d started after %d barriers, want one per launch", launches, got)
 			}
 			time.Sleep(time.Second)
-			return errors.New("hyprlock crashed before acquiring the lock")
+			return errors.New("lock client crashed before acquiring the lock")
 		}
 		l.endSession = func() error {
 			ends++
@@ -396,11 +486,12 @@ func TestAdoptRelaunchesOnAbandonedLock(t *testing.T) {
 	fake.setLocked(true)
 	synctest.Test(t, func(t *testing.T) {
 		launches := 0
-		l.hyprlock = func() error {
+		l.launch = func(_ context.Context, w io.Writer) error {
 			launches++
 			if fake.count(barrierRequest) != 1 {
-				t.Error("hyprlock relaunched without the barrier")
+				t.Error("lock client relaunched without the barrier")
 			}
+			fmt.Fprintln(w, secureMarker)
 			time.Sleep(time.Minute)
 			fake.setLocked(false)
 			return nil
@@ -422,18 +513,317 @@ func TestAdoptRelaunchesOnAbandonedLock(t *testing.T) {
 	})
 }
 
-func TestBarrierFailureStillLaunchesHyprlock(t *testing.T) {
+func TestAdoptReleasesForeignUnlock(t *testing.T) {
+	for _, unlocks := range []bool{true, false} {
+		l, fake := newTestLock(t)
+		fake.setLocked(true)
+		synctest.Test(t, func(t *testing.T) {
+			foreignUntil := time.Now().Add(time.Minute)
+			l.running = func() bool { return time.Now().Before(foreignUntil) }
+			launches := 0
+			l.launch = func(_ context.Context, w io.Writer) error {
+				launches++
+				return fake.hold(w, time.Minute)
+			}
+
+			if err := l.Adopt(); err != nil {
+				t.Fatal(err)
+			}
+			if unlocks {
+				time.Sleep(30 * time.Second)
+				fake.setLocked(false)
+			}
+			time.Sleep(time.Hour)
+			synctest.Wait()
+
+			want := 1
+			if unlocks {
+				want = 0
+			}
+			if launches != want || l.Locked() || fake.count(restoreRequest) != 1 {
+				t.Errorf("unlocks = %v: launches = %d, locked = %v, restores = %d; want %d launches, then one restore",
+					unlocks, launches, l.Locked(), fake.count(restoreRequest), want)
+			}
+		})
+	}
+}
+
+func TestAdoptHonorsRecordedIntent(t *testing.T) {
+	for _, intent := range []string{intentPending, intentAcquired, "other"} {
+		l, fake := newTestLock(t)
+		if intent == "other" {
+			stale := filepath.Join(os.Getenv("XDG_RUNTIME_DIR"), "hyprd-lock-other")
+			if err := os.WriteFile(stale, []byte(intentPending), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		} else {
+			l.record(intent)
+		}
+		synctest.Test(t, func(t *testing.T) {
+			launches := 0
+			l.launch = func(_ context.Context, w io.Writer) error {
+				launches++
+				return fake.hold(w, time.Minute)
+			}
+
+			if err := l.Adopt(); err != nil {
+				t.Fatal(err)
+			}
+			if intent != "other" && !l.Locked() {
+				t.Errorf("intent %s: Adopt left the recorded lock unsupervised", intent)
+			}
+			time.Sleep(time.Hour)
+			synctest.Wait()
+
+			wantLaunches, wantRestores := 0, 0
+			switch intent {
+			case intentPending:
+				wantLaunches, wantRestores = 1, 1
+			case intentAcquired:
+				wantRestores = 1
+			}
+			if launches != wantLaunches || fake.count(restoreRequest) != wantRestores || l.Locked() || l.readIntent() != "" {
+				t.Errorf("intent %s: launches = %d, restores = %d, locked = %v, intent = %q; want %d launches and %d restores, then cleared",
+					intent, launches, fake.count(restoreRequest), l.Locked(), l.readIntent(), wantLaunches, wantRestores)
+			}
+		})
+	}
+}
+
+func TestRestartDefersLock(t *testing.T) {
+	l, fake := newTestLock(t)
+	synctest.Test(t, func(t *testing.T) {
+		launches := 0
+		l.launch = func(_ context.Context, w io.Writer) error {
+			launches++
+			return fake.hold(w, time.Minute)
+		}
+
+		if !l.BeginRestart() {
+			t.Fatal("BeginRestart refused without a lock")
+		}
+		out, err := l.Full()
+		if err != nil {
+			t.Fatal(err)
+		}
+		synctest.Wait()
+		if l.Locked() || launches != 0 || l.readIntent() != intentPending {
+			t.Errorf("%s: locked = %v, launches = %d, intent = %q; want a recorded intent and no launch during restart",
+				out, l.Locked(), launches, l.readIntent())
+		}
+
+		l.CancelRestart()
+		if !l.Locked() || l.BeginRestart() {
+			t.Error("canceled restart left the deferred lock unsupervised or allowed a new restart")
+		}
+		time.Sleep(time.Hour)
+		synctest.Wait()
+		if launches != 1 || l.Locked() || fake.count(restoreRequest) != 1 {
+			t.Errorf("launches = %d, locked = %v, restores = %d; want the deferred lock launched once, then one restore",
+				launches, l.Locked(), fake.count(restoreRequest))
+		}
+	})
+}
+
+func TestNeverAcquiredEndsSession(t *testing.T) {
+	l, _ := newTestLock(t)
+	synctest.Test(t, func(t *testing.T) {
+		launches, ends := 0, 0
+		l.launch = func(ctx context.Context, w io.Writer) error {
+			launches++
+			<-ctx.Done()
+			return ctx.Err()
+		}
+		l.endSession = func() error {
+			ends++
+			return nil
+		}
+
+		if _, err := l.Full(); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(time.Hour)
+		synctest.Wait()
+
+		if launches != quickExits || ends != 1 || !l.Locked() {
+			t.Errorf("launches = %d, ends = %d, locked = %v; want %d slow never-acquired launches, then one session end",
+				launches, ends, l.Locked(), quickExits)
+		}
+	})
+}
+
+func TestAdoptStopsForeignThatNeverLocks(t *testing.T) {
+	l, fake := newTestLock(t)
+	l.record(intentPending)
+	synctest.Test(t, func(t *testing.T) {
+		start := time.Now()
+		var stopped time.Time
+		l.running = func() bool { return stopped.IsZero() }
+		l.stopForeign = func() { stopped = time.Now() }
+		launches := 0
+		l.launch = func(_ context.Context, w io.Writer) error {
+			launches++
+			return fake.hold(w, time.Minute)
+		}
+
+		if err := l.Adopt(); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(time.Hour)
+		synctest.Wait()
+
+		if gap := stopped.Sub(start); gap < lockWait || gap > lockWait+lockPoll {
+			t.Errorf("foreign client stopped after %v, want about %v", gap, lockWait)
+		}
+		if launches != 1 || l.Locked() || fake.count(restoreRequest) != 1 {
+			t.Errorf("launches = %d, locked = %v, restores = %d; want our own lock launched once, then one restore",
+				launches, l.Locked(), fake.count(restoreRequest))
+		}
+	})
+}
+
+func TestWatchdogStopsHungClientAfterUnlock(t *testing.T) {
+	l, fake := newTestLock(t)
+	synctest.Test(t, func(t *testing.T) {
+		var unlocked, stopped time.Time
+		l.launch = func(ctx context.Context, w io.Writer) error {
+			fake.secure(w)
+			time.Sleep(time.Minute)
+			fake.setLocked(false)
+			unlocked = time.Now()
+			<-ctx.Done()
+			stopped = time.Now()
+			return ctx.Err()
+		}
+
+		if _, err := l.Full(); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(time.Hour)
+		synctest.Wait()
+
+		if gap := stopped.Sub(unlocked); gap < releaseGrace || gap > releasePoll+releaseGrace {
+			t.Errorf("hung client stopped %v after unlock, want between %v and %v", gap, releaseGrace, releasePoll+releaseGrace)
+		}
+		if l.Locked() || fake.count(restoreRequest) != 1 {
+			t.Errorf("locked = %v, restores = %d; want one restore after the hung client was stopped", l.Locked(), fake.count(restoreRequest))
+		}
+	})
+}
+
+func TestWatchdogIgnoresQueryErrors(t *testing.T) {
+	l, fake := newTestLock(t)
+	synctest.Test(t, func(t *testing.T) {
+		l.launch = func(ctx context.Context, w io.Writer) error {
+			fake.secure(w)
+			time.Sleep(time.Second)
+			fake.failing("j/locked")
+			fake.setLocked(false)
+			time.Sleep(time.Minute)
+			if ctx.Err() != nil {
+				t.Error("watchdog stopped the client on a failed query")
+			}
+			fake.failing("")
+			return nil
+		}
+
+		if _, err := l.Full(); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(time.Hour)
+		synctest.Wait()
+
+		if l.Locked() || fake.count(restoreRequest) != 1 {
+			t.Errorf("locked = %v, restores = %d; want one restore after the clean exit", l.Locked(), fake.count(restoreRequest))
+		}
+	})
+}
+
+func TestStaleLockedWithoutMarkerHitsDeadline(t *testing.T) {
+	l, fake := newTestLock(t)
+	fake.setLocked(true)
+	synctest.Test(t, func(t *testing.T) {
+		var starts []time.Time
+		l.launch = func(ctx context.Context, w io.Writer) error {
+			starts = append(starts, time.Now())
+			if len(starts) > 1 {
+				return fake.hold(w, time.Minute)
+			}
+			<-ctx.Done()
+			return ctx.Err()
+		}
+
+		if err := l.Adopt(); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(time.Hour)
+		synctest.Wait()
+
+		if len(starts) != 2 || l.Locked() || fake.count(restoreRequest) != 1 {
+			t.Fatalf("launches = %d, locked = %v, restores = %d; want a relaunch after the unmarked client, then one restore",
+				len(starts), l.Locked(), fake.count(restoreRequest))
+		}
+		if gap := starts[1].Sub(starts[0]); gap != lockWait {
+			t.Errorf("unmarked client stopped after %v despite stale j/locked, want %v", gap, lockWait)
+		}
+	})
+}
+
+func TestAbortMarkerForcesRelaunch(t *testing.T) {
+	l, fake := newTestLock(t)
+	synctest.Test(t, func(t *testing.T) {
+		launches := 0
+		l.launch = func(_ context.Context, w io.Writer) error {
+			launches++
+			if launches > 1 {
+				return fake.hold(w, time.Minute)
+			}
+			fake.secure(w)
+			time.Sleep(time.Minute)
+			fake.setLocked(false)
+			fmt.Fprintln(w, "  WARN: WlSessionLock.surface does not create a WlSessionLockSurface. "+abortMarker)
+			return nil
+		}
+
+		if _, err := l.Full(); err != nil {
+			t.Fatal(err)
+		}
+		time.Sleep(time.Hour)
+		synctest.Wait()
+
+		if launches != 2 || l.Locked() || fake.count(restoreRequest) != 1 {
+			t.Errorf("launches = %d, locked = %v, restores = %d; want a relaunch after the aborted lock, then one restore",
+				launches, l.Locked(), fake.count(restoreRequest))
+		}
+	})
+}
+
+func TestLockLogFindsMarkersAfterLongLines(t *testing.T) {
+	var out strings.Builder
+	log := newLockLog(&out)
+	long := strings.Repeat("x", 1<<20)
+	fmt.Fprintf(log, "%s\n%s", long, secureMarker[:5])
+	fmt.Fprintf(log, "%s\n%s %s\n", secureMarker[5:], long, abortMarker)
+	if !log.done(log.secure) || !log.done(log.abort) {
+		t.Errorf("secure = %v, abort = %v; want both markers found", log.done(log.secure), log.done(log.abort))
+	}
+	if out.Len() != 2*len(long)+len(secureMarker)+len(abortMarker)+4 {
+		t.Errorf("forwarded %d bytes, want every byte forwarded", out.Len())
+	}
+	if len(log.line) > logTail {
+		t.Errorf("buffered %d bytes, want at most %d", len(log.line), logTail)
+	}
+}
+
+func TestBarrierFailureStillLaunchesLock(t *testing.T) {
 	l, fake := newTestLock(t)
 	fake.failing(barrierRequest)
 	synctest.Test(t, func(t *testing.T) {
 		launches, beforeLock := 0, -1
-		l.hyprlock = func() error {
+		l.launch = func(_ context.Context, w io.Writer) error {
 			launches++
 			beforeLock = fake.count(resetRequest)
-			fake.setLocked(true)
-			time.Sleep(time.Minute)
-			fake.setLocked(false)
-			return nil
+			return fake.hold(w, time.Minute)
 		}
 
 		if _, err := l.Full(); err != nil {
@@ -455,8 +845,8 @@ func TestBarrierFailureStillLaunchesHyprlock(t *testing.T) {
 func TestAdoptFailsWhenLockQueryFails(t *testing.T) {
 	l, fake := newTestLock(t)
 	fake.failing("j/locked")
-	l.hyprlock = func() error {
-		t.Error("hyprlock launched without a lock state")
+	l.launch = func(_ context.Context, w io.Writer) error {
+		t.Error("lock client launched without a lock state")
 		return nil
 	}
 	if err := l.Adopt(); err == nil {
@@ -495,13 +885,13 @@ func TestPickerKeepsLockBarrierAndWorkspace(t *testing.T) {
 		}
 
 		confirm()
-		if _, err := l.Execute("pseudo"); err != nil {
-			t.Fatal(err)
-		}
+		l.mu.Lock()
+		l.inFull = true
+		l.mu.Unlock()
 		time.Sleep(time.Second)
 		synctest.Wait()
 		if resets, focuses := fake.count(resetRequest), fake.count(focusSelected); resets != 1 || focuses != 1 {
-			t.Errorf("confirm during pseudo lock: resets = %d, focuses = %d; want the barrier and blackout kept", resets, focuses)
+			t.Errorf("confirm during full lock: resets = %d, focuses = %d; want the barrier and blackout kept", resets, focuses)
 		}
 
 		reopen()
@@ -511,7 +901,7 @@ func TestPickerKeepsLockBarrierAndWorkspace(t *testing.T) {
 		time.Sleep(time.Second)
 		synctest.Wait()
 		if got := fake.count(resetRequest); got != 1 {
-			t.Errorf("close during pseudo lock: resets = %d, want the barrier kept", got)
+			t.Errorf("close during full lock: resets = %d, want the barrier kept", got)
 		}
 	})
 }

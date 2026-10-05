@@ -303,6 +303,9 @@ hl.config({
 		split_bias = 0,
 		precise_mouse_move = false,
 	},
+	misc = {
+		allow_session_lock_restore = true,
+	},
 })
 
 hl.animation({ leaf = "windows", enabled = true, speed = 2, bezier = "default", style = "popin" })
