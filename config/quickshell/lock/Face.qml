@@ -208,6 +208,7 @@ Rectangle {
         active: root.peach
         well: root.navy
         night: root.night
+        shade: root.shade
         face: root.face
     }
 

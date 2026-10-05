@@ -18,6 +18,7 @@ Item {
     property color active: "#f2a170"
     property color well: "#222536"
     property color night: "#0b0d1a"
+    property color shade: "#131626"
     property string face: "Adwaita Sans"
     property int skips: 0
 
@@ -366,41 +367,48 @@ Item {
         Column {
             id: words
             x: 72 * music.s
-            y: 80 * music.s
+            y: 44 * music.s
             width: parent.width - 144 * music.s
-            spacing: 4 * music.s
+            spacing: 6 * music.s
             layer.enabled: card.visible
             layer.effect: MultiEffect {
                 shadowEnabled: true
-                shadowColor: music.night
-                shadowOpacity: 0.85
-                shadowBlur: 0.6
-                blurMax: Math.round(16 * music.s)
-                shadowVerticalOffset: music.s
+                shadowColor: music.shade
+                shadowOpacity: 0.9
+                shadowBlur: 1
+                blurMax: Math.round(40 * music.s)
             }
 
-            Text {
-                    width: parent.width
+            Caption {
                 text: card.title
                 wrapMode: Text.WordWrap
                 maximumLineCount: 2
-                elide: Text.ElideRight
-                font.family: music.face
-                font.weight: Font.Medium
-                font.pixelSize: 26 * music.s
-                color: music.text
+                font.weight: Font.DemiBold
+                font.pixelSize: 34 * music.s
             }
 
-            Text {
-                width: parent.width
+            Caption {
                 text: card.artist
-                elide: Text.ElideRight
-                font.family: music.face
-                font.pixelSize: 19 * music.s
-                color: music.muted
+                font.weight: Font.Medium
+                font.pixelSize: 24 * music.s
             }
         }
 
+    }
+
+    component Caption: Text {
+        width: parent.width
+        elide: Text.ElideRight
+        font.family: music.face
+        color: music.accent
+        layer.enabled: visible
+        layer.effect: MultiEffect {
+            shadowEnabled: true
+            shadowColor: music.shade
+            shadowBlur: 0.25
+            blurMax: Math.round(8 * music.s)
+            shadowVerticalOffset: music.s
+        }
     }
 
     component Skip: Text {
@@ -563,7 +571,7 @@ Item {
                         text: String.fromCodePoint(music.playing ? 0xF03E4 : 0xF040A)
                         font.family: "Symbols Nerd Font"
                         font.pixelSize: 48 * music.s
-                        color: music.text
+                        color: music.active
                     }
                 }
 
