@@ -90,7 +90,7 @@ func (f *fake) run(_ context.Context, _ []byte, args ...string) error {
 		f.mount("", func(m string) bool { return m == last })
 	case args[0] == "mount" && strings.HasPrefix(last, target):
 		f.mount(last, func(m string) bool { return m == last })
-	case line == "arch-chroot /mnt limine-update":
+	case line == "arch-chroot -r /mnt limine-update":
 		f.kernel()
 	case slices.Contains(args, "init"):
 		put(f.t, filepath.Join(f.root, target, last, ".git", "HEAD"), nil, 0o644)
@@ -256,13 +256,13 @@ func TestEdges(t *testing.T) {
 		t.Errorf("consent at %d, recheck at %d, first mutation at %d", f.confirmed, f.confirmed+recheck, first)
 	}
 	f.before(t, "pacstrap", "umount /mnt/var/cache/pacman/pkg")
-	f.before(t, "arch-chroot /mnt useradd", "arch-chroot /mnt env DOTFILES=")
-	f.before(t, "arch-chroot /mnt runuser -u cullyn -- git -C /home/cullyn/dotfiles fetch", "arch-chroot /mnt env DOTFILES=")
-	secureboot := "arch-chroot /mnt env DOTFILES=/home/cullyn/dotfiles /home/cullyn/.local/bin/dctl --json setup secureboot"
-	f.before(t, "arch-chroot /mnt limine-install", secureboot)
+	f.before(t, "arch-chroot -r /mnt useradd", "arch-chroot -r /mnt env DOTFILES=")
+	f.before(t, "arch-chroot -r /mnt runuser -u cullyn -- git -C /home/cullyn/dotfiles fetch", "arch-chroot -r /mnt env DOTFILES=")
+	secureboot := "arch-chroot -r /mnt env DOTFILES=/home/cullyn/dotfiles /home/cullyn/.local/bin/dctl --json setup secureboot"
+	f.before(t, "arch-chroot -r /mnt limine-install", secureboot)
 	f.before(t, secureboot, "blkid")
 	f.before(t, "blkid", "umount -R /mnt")
-	if f.index("arch-chroot /mnt limine-update") >= 0 || f.index("arch-chroot /mnt sbctl") >= 0 {
+	if f.index("arch-chroot -r /mnt limine-update") >= 0 || f.index("arch-chroot -r /mnt sbctl") >= 0 {
 		t.Error("installer signed or built UKIs itself instead of through the secureboot stage")
 	}
 	f.before(t, "umount -R /mnt", "cryptsetup close root")
@@ -273,7 +273,7 @@ func TestEdges(t *testing.T) {
 }
 
 func TestFailureReleasesTarget(t *testing.T) {
-	for _, fail := range []string{"mount --bind", "pacstrap", "arch-chroot /mnt limine-install"} {
+	for _, fail := range []string{"mount --bind", "pacstrap", "arch-chroot -r /mnt limine-install"} {
 		t.Run(fail, func(t *testing.T) {
 			s, f := rig(t)
 			f.fail = fail
@@ -498,7 +498,7 @@ func TestSetupUnitOnlyInTestMode(t *testing.T) {
 		}
 		unit := filepath.Join(s.root, target, "etc/systemd/system", testUnit)
 		data, err := os.ReadFile(unit)
-		enabled := f.index("arch-chroot /mnt systemctl enable "+testUnit) >= 0
+		enabled := f.index("arch-chroot -r /mnt systemctl enable "+testUnit) >= 0
 		if !test {
 			if err == nil || enabled {
 				t.Errorf("hardware install wrote %s (enabled %v)", testUnit, enabled)
@@ -518,6 +518,6 @@ func TestSetupUnitOnlyInTestMode(t *testing.T) {
 				t.Errorf("unit lacks %q", want)
 			}
 		}
-		f.before(t, "arch-chroot /mnt systemctl enable "+testUnit, "umount -R /mnt")
+		f.before(t, "arch-chroot -r /mnt systemctl enable "+testUnit, "umount -R /mnt")
 	}
 }

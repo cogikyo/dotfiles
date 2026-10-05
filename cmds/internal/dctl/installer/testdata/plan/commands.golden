@@ -24,8 +24,8 @@ mount --mkdir -o noatime,fmask=0077,dmask=0077 /dev/nvme0n1p1 /mnt/boot
 # firstboot
 systemd-firstboot --root=/mnt --force --locale=en_US.UTF-8 --keymap=us --timezone=America/Denver --hostname=costello --setup-machine-id
 # snapshots
-arch-chroot /mnt snapper --no-dbus -c root create-config /
-arch-chroot /mnt snapper --no-dbus -c root set-config TIMELINE_LIMIT_HOURLY=5 TIMELINE_LIMIT_DAILY=7 TIMELINE_LIMIT_WEEKLY=0 TIMELINE_LIMIT_MONTHLY=0 TIMELINE_LIMIT_YEARLY=0
+arch-chroot -r /mnt snapper --no-dbus -c root create-config /
+arch-chroot -r /mnt snapper --no-dbus -c root set-config TIMELINE_LIMIT_HOURLY=5 TIMELINE_LIMIT_DAILY=7 TIMELINE_LIMIT_WEEKLY=0 TIMELINE_LIMIT_MONTHLY=0 TIMELINE_LIMIT_YEARLY=0
 btrfs subvolume delete /mnt/.snapshots
 mount --mkdir -o noatime,compress=zstd,subvol=/@snapshots /dev/mapper/root /mnt/.snapshots
 chmod 750 /mnt/.snapshots

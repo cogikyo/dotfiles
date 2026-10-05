@@ -108,10 +108,10 @@ func (p plan) firstboot() []cmd {
 func (p plan) snapshots() []cmd {
 	dir := filepath.Join(target, snapshots.path)
 	return []cmd{
-		run("arch-chroot", target, "snapper", "--no-dbus", "-c", "root", "create-config", "/"),
-		run("arch-chroot", target, "snapper", "--no-dbus", "-c", "root", "set-config",
+		run(chroot("snapper", "--no-dbus", "-c", "root", "create-config", "/")...),
+		run(chroot("snapper", "--no-dbus", "-c", "root", "set-config",
 			"TIMELINE_LIMIT_HOURLY=5", "TIMELINE_LIMIT_DAILY=7", "TIMELINE_LIMIT_WEEKLY=0",
-			"TIMELINE_LIMIT_MONTHLY=0", "TIMELINE_LIMIT_YEARLY=0"),
+			"TIMELINE_LIMIT_MONTHLY=0", "TIMELINE_LIMIT_YEARLY=0")...),
 		run("btrfs", "subvolume", "delete", dir),
 		run("mount", "--mkdir", "-o", snapshots.options(), "/dev/mapper/"+mapper, dir),
 		run("chmod", "750", dir),

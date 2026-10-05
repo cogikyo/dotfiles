@@ -349,7 +349,7 @@ WantedBy=graphical.target
 }
 
 func chroot(args ...string) []string {
-	return append([]string{"arch-chroot", target}, args...)
+	return append([]string{"arch-chroot", "-r", target}, args...)
 }
 
 func as(args ...string) []string {
