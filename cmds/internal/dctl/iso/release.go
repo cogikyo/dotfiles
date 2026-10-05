@@ -91,8 +91,12 @@ func Release(ctx context.Context, u *ui.UI, root paths.Root, iso, key string) er
 	if err := run.Run(ctx, "", "ssh-keygen", "-Y", "sign", "-f", key, "-n", "file", sums); err != nil {
 		return err
 	}
-	if _, err := signedSum(ctx, root.Share("allowed_signers"), iso); err != nil {
+	signed, err := signedSum(ctx, root.Share("allowed_signers"), iso)
+	if err != nil {
 		return err
+	}
+	if signed != hash {
+		return fmt.Errorf("%s changed while signing; its sha256 is not the one measured", sums)
 	}
 	u.OK("signature verifies against share/allowed_signers")
 
