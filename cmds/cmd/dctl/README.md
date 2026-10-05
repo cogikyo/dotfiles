@@ -340,8 +340,10 @@ Run without sudo on a host with KVM access, QEMU, dosfstools, mtools, and these 
 - `/usr/share/edk2/x64/OVMF_VARS.4m.fd`
 
 ```sh
-dctl iso test /path/to/dotfiles-REV.iso
+dctl iso test
 ```
+
+Test, release, and USB default to `iso/out/dotfiles-<revision>.iso` for HEAD; pass a path (or `--iso` for USB) to use another image.
 
 The VM has no network interface and uses a 32 GiB virtual disk, Setup Mode firmware variables, and a `DCTLTEST` answers drive.
 The harness installs, unlocks LUKS, boots twice, and requires healthy system, packages, home, and all three Secure Boot checks, plus an active display manager.
@@ -362,7 +364,7 @@ Run it as your normal user with authenticated `gh` and an enrolled hardware SSH 
 The checkout must be clean on `master`, HEAD must match `origin/master`, the ISO filename must match HEAD, and its size must be at most 2 GiB.
 
 ```sh
-dctl iso release /path/to/dotfiles-REV.iso
+dctl iso release
 ```
 
 The default signing key is the only `~/.ssh/id_ed25519_sk_*` private key present; use `--key /path/to/key` when several exist.
@@ -378,10 +380,11 @@ Keep the ISO, `<iso>.sha256`, and `<iso>.sha256.sig` together; an unsigned local
 The current signing command is `iso release`, which also publishes the ISO.
 
 ```sh
-sudo dctl iso usb /path/to/dotfiles-REV.iso /dev/sdX
+dctl iso usb /dev/sdX
+dctl iso usb --iso ~/Downloads/dotfiles-REV.iso /dev/sdX
 ```
 
-USB writing needs permission to open the raw disk, normally through sudo.
+It asks for sudo once to open the raw disk.
 The command verifies the signature against `share/allowed_signers`, checks the ISO hash, and requires you to type the device path.
 It refuses partitions, read-only or mounted disks, internal non-removable disks, disks smaller than the image, and targets without a serial or WWN.
 It rechecks the device identity after confirmation and hashes the bytes read from the ISO during writing; it does not read the disk back.

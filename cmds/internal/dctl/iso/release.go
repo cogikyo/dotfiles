@@ -102,7 +102,7 @@ func Release(ctx context.Context, u *ui.UI, root paths.Root, iso, key string) er
 
 	tag := "iso-" + time.Now().Format("2006.01.02") + "-" + rev[:12]
 	argv := []string{"release", "create", tag, "--target", rev, "--title", tag,
-		"--notes", fmt.Sprintf("Offline installer ISO built from %s. Write it with `dctl iso usb %s /dev/sdX`.", rev[:12], filepath.Base(iso)),
+		"--notes", fmt.Sprintf("Offline installer ISO built from %s. Write it with `dctl iso usb --iso %s /dev/sdX`.", rev[:12], filepath.Base(iso)),
 		iso, sums, sums + ".sig"}
 	u.Section("publish", tag)
 	u.Detail("`gh %s`", strings.Join(argv, " "))

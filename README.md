@@ -136,11 +136,10 @@ dctl iso build
 ```
 
 The result is `iso/out/dotfiles-<12-character-revision>.iso`, built from a Git bundle of the committed revision rather than the working tree.
-Set `ISO` to the downloaded or built image path:
+Test, release, and USB default to the ISO built from HEAD; pass a path to use another image.
 
 ```sh
-ISO=/path/to/dotfiles-REV.iso
-dctl iso test "$ISO"
+dctl iso test
 ```
 
 The test runs without sudo and needs QEMU, KVM access, OVMF Secure Boot firmware, dosfstools, and mtools.
@@ -149,7 +148,7 @@ It requires all three Secure Boot checks and an active display manager.
 After a 20-second wait, it saves `greeter.png` for manual inspection; it does not verify the greeter's appearance or sign-in behavior.
 See the [dctl guide](cmds/cmd/dctl/README.md#iso) for test overrides and release signing.
 A local build needs signed checksum files before the USB command accepts it.
-`dctl iso release "$ISO"` creates those files and publishes a public release; there is no signing-only dctl command.
+`dctl iso release` creates those files and publishes a public release; there is no signing-only dctl command.
 
 ### Write the USB
 
@@ -157,8 +156,10 @@ A local build needs signed checksum files before the USB command accepts it.
 Replace `/dev/sdX` with an unmounted removable disk, not a partition.
 
 ```sh
-sudo dctl iso usb "$ISO" /dev/sdX
+dctl iso usb /dev/sdX
 ```
+
+For a downloaded ISO, add `--iso /path/to/dotfiles-REV.iso`.
 
 The command verifies the signed checksum against `share/allowed_signers` and requires you to type the device path.
 It rejects mounted disks, internal non-removable disks, and disks without a serial or WWN.

@@ -16,6 +16,23 @@ import (
 
 const MaxSize int64 = 2 << 30
 
+func path(dotfiles, rev string) string {
+	return filepath.Join(dotfiles, "iso", "out", "dotfiles-"+rev[:12]+".iso")
+}
+
+// Current returns the ISO that dctl iso build wrote for HEAD.
+func Current(ctx context.Context, dotfiles string) (string, error) {
+	rev, err := execx.OSRunner{}.Output(ctx, dotfiles, "git", "rev-parse", "HEAD")
+	if err != nil {
+		return "", err
+	}
+	iso := path(dotfiles, rev)
+	if _, err := os.Stat(iso); err != nil {
+		return "", fmt.Errorf("no ISO for HEAD %s; run dctl iso build", rev[:12])
+	}
+	return iso, nil
+}
+
 func revision(ctx context.Context, run execx.Runner, dir string, as []string) (string, error) {
 	git := func(args ...string) (string, error) {
 		argv := append(slices.Clone(as), append([]string{"git", "-C", dir}, args...)...)

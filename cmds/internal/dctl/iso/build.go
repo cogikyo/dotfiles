@@ -136,7 +136,7 @@ func (b build) build(ctx context.Context) error {
 	if err := os.MkdirAll(b.out, 0o755); err != nil {
 		return err
 	}
-	iso := filepath.Join(b.out, "dotfiles-"+rev[:12]+".iso")
+	iso := path(b.repo, rev)
 	if err := os.Rename(built[0], iso); err != nil {
 		return err
 	}
