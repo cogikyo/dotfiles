@@ -48,7 +48,7 @@ func (f *fake) Output(_ context.Context, _ string, name string, args ...string) 
 		}
 		return f.rebuild, nil
 	}
-	if strings.HasPrefix(line, "systemctl --user restart ") {
+	if line == "ewwd status" || line == "ewwd open" || strings.HasPrefix(line, "systemctl --user restart ") {
 		return "", nil
 	}
 	return "", errors.New("unexpected " + line)
@@ -125,7 +125,7 @@ func TestCommands(t *testing.T) {
 			t.Errorf("%s = %q, %v", name, data, err)
 		}
 	}
-	for _, want := range []string{"hyprd rebuild", "systemctl --user restart ewwd.service", "systemctl --user restart newtab.service"} {
+	for _, want := range []string{"hyprd rebuild", "systemctl --user restart ewwd.service", "ewwd open", "systemctl --user restart newtab.service"} {
 		if !slices.Contains(f.calls, want) {
 			t.Errorf("calls %q lack %q", f.calls, want)
 		}

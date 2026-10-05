@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"dotfiles/cmds/internal/dctl/binaries"
 	"dotfiles/cmds/internal/dctl/execx"
@@ -106,6 +107,9 @@ func commands(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, 
 		if slices.Contains(services, name) {
 			_, err := run.Output(ctx, "", "systemctl", "--user", "restart", name+".service")
 			errs = append(errs, err)
+			if name == "ewwd" && err == nil {
+				errs = append(errs, reopen(ctx, u, run))
+			}
 		}
 	}
 	if changed == 0 {
@@ -121,6 +125,25 @@ func same(a, b string) bool {
 	}
 	y, err := os.ReadFile(b)
 	return err == nil && bytes.Equal(x, y)
+}
+
+func reopen(ctx context.Context, u *ui.UI, run execx.Runner) error {
+	deadline := time.Now().Add(2 * time.Second)
+	for {
+		_, err := run.Output(ctx, "", "ewwd", "status")
+		if err == nil {
+			break
+		}
+		if time.Now().After(deadline) {
+			return fmt.Errorf("ewwd not ready after restart: %w", err)
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	if _, err := run.Output(ctx, "", "ewwd", "open"); err != nil {
+		return fmt.Errorf("ewwd open: %w", err)
+	}
+	u.OK("reopened eww widgets")
+	return nil
 }
 
 func rebuild(ctx context.Context, u *ui.UI, run execx.Runner) error {
