@@ -111,7 +111,7 @@ type NotifyConfig struct {
 	Styles              map[string]VisualStyle `yaml:"styles"`                // named color themes for dunst hints
 	AgentEvents         map[string]AgentEvent  `yaml:"agent_events"`          // event class -> style + sound + timing
 	UrgencySounds       map[string]string      `yaml:"urgency_sounds"`        // urgency -> sound name (or "none")
-	AppSounds           map[string]string      `yaml:"app_sounds"`            // app name -> sound name; takes precedence over urgency
+	AppSounds           map[string]string      `yaml:"app_sounds"`            // app name, or "app/summary" for one sender -> sound name; takes precedence over urgency
 	ActionFocusApps     map[string]FocusTarget `yaml:"action_focus_apps"`     // dunst app name or desktop-entry -> window focused when its notification is activated
 	SilentApps          []string               `yaml:"silent_apps"`           // external app names that suppress sound entirely
 	KittySilentPatterns []string               `yaml:"kitty_silent_patterns"` // substrings in kitty notification content that suppress sound
