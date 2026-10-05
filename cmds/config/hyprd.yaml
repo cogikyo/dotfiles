@@ -316,7 +316,6 @@ notify:
     critical: gems
 
   app_sounds: # app-specific sounds override urgency-based sounds when both match.
-    # "app/summary" keys pick one sender, such as one Grok Bot bot, before the app key.
     timer: jackpot
     attention: discovery
     chat: reward

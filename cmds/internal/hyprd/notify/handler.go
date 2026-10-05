@@ -667,7 +667,7 @@ func (n *Notifier) soundForDunst(req NotifyRequest) string {
 	}
 
 	sound := n.lookupUrgencySound(req.Urgency)
-	if appSound, ok := n.lookupAppSound(app, req.Summary); ok {
+	if appSound, ok := n.lookupAppSound(app); ok {
 		sound = appSound
 	}
 	if sound == "" || sound == "none" {
@@ -744,12 +744,7 @@ func (n *Notifier) lookupUrgencySound(urgency string) string {
 	return n.cfg.Notify.UrgencySounds[strings.ToLower(urgency)]
 }
 
-func (n *Notifier) lookupAppSound(app, summary string) (string, bool) {
-	app = strings.ToLower(app)
-	sounds := n.cfg.Notify.AppSounds
-	if sound, ok := sounds[app+"/"+strings.ToLower(strings.TrimSpace(summary))]; ok {
-		return sound, true
-	}
-	sound, ok := sounds[app]
+func (n *Notifier) lookupAppSound(app string) (string, bool) {
+	sound, ok := n.cfg.Notify.AppSounds[strings.ToLower(app)]
 	return sound, ok
 }
