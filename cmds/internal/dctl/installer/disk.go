@@ -135,7 +135,7 @@ func scan(lsblk []byte, boot string) (survey, error) {
 	}
 	var owners []string
 	for _, b := range out.Devices {
-		if b.holds(boot) {
+		if b.Type != "loop" && b.holds(boot) {
 			owners = append(owners, b.Path)
 		}
 	}

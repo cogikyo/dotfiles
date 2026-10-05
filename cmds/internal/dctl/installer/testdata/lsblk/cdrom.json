@@ -1,0 +1,124 @@
+{
+   "blockdevices": [
+      {
+         "name": "loop0",
+         "path": "/dev/loop0",
+         "type": "loop",
+         "size": 1968136192,
+         "ro": true,
+         "rm": false,
+         "tran": null,
+         "model": null,
+         "serial": null,
+         "wwn": null,
+         "log-sec": 512,
+         "uuid": null,
+         "partuuid": null,
+         "label": null,
+         "mountpoints": [
+             "/run/archiso/airootfs"
+         ]
+      },{
+         "name": "loop1",
+         "path": "/dev/loop1",
+         "type": "loop",
+         "size": 2175993856,
+         "ro": false,
+         "rm": false,
+         "tran": null,
+         "model": null,
+         "serial": null,
+         "wwn": null,
+         "log-sec": 512,
+         "uuid": "2026-10-05-10-13-34-00",
+         "partuuid": null,
+         "label": "DOTFILES_202610",
+         "mountpoints": [],
+         "children": [
+            {
+               "name": "loop1p1",
+               "path": "/dev/loop1p1",
+               "type": "part",
+               "size": 2067924992,
+               "ro": false,
+               "rm": false,
+               "tran": null,
+               "model": null,
+               "serial": null,
+               "wwn": null,
+               "log-sec": 512,
+               "uuid": "2026-10-05-10-13-34-00",
+               "partuuid": "36323032-3031-4530-b131-303031333334",
+               "label": "DOTFILES_202610",
+               "mountpoints": []
+            },{
+               "name": "loop1p2",
+               "path": "/dev/loop1p2",
+               "type": "part",
+               "size": 108003328,
+               "ro": false,
+               "rm": false,
+               "tran": null,
+               "model": null,
+               "serial": null,
+               "wwn": null,
+               "log-sec": 512,
+               "uuid": "6AC3-784E",
+               "partuuid": "36323032-3031-4530-b132-303031333334",
+               "label": "ARCHISO_EFI",
+               "mountpoints": []
+            }
+         ]
+      },{
+         "name": "sr0",
+         "path": "/dev/sr0",
+         "type": "rom",
+         "size": 2175993856,
+         "ro": true,
+         "rm": true,
+         "tran": "sata",
+         "model": "QEMU DVD-ROM",
+         "serial": "QM00001",
+         "wwn": null,
+         "log-sec": 2048,
+         "uuid": "2026-10-05-10-13-34-00",
+         "partuuid": null,
+         "label": "DOTFILES_202610",
+         "mountpoints": [
+             "/run/archiso/bootmnt"
+         ]
+      },{
+         "name": "sr1",
+         "path": "/dev/sr1",
+         "type": "rom",
+         "size": 1073741312,
+         "ro": true,
+         "rm": true,
+         "tran": "sata",
+         "model": "QEMU DVD-ROM",
+         "serial": "QM00005",
+         "wwn": null,
+         "log-sec": 512,
+         "uuid": null,
+         "partuuid": null,
+         "label": null,
+         "mountpoints": []
+      },{
+         "name": "vda",
+         "path": "/dev/vda",
+         "type": "disk",
+         "size": 68719476736,
+         "ro": false,
+         "rm": false,
+         "tran": "virtio",
+         "model": null,
+         "serial": "DCTLTEST0",
+         "wwn": null,
+         "log-sec": 512,
+         "uuid": null,
+         "partuuid": null,
+         "label": null,
+         "mountpoints": []
+      }
+   ]
+}

@@ -55,6 +55,7 @@ func TestScan(t *testing.T) {
 		{"duplicate", "duplicate", "/dev/disk/by-uuid/2026-10-01-12-00-00-00", nil},
 		{"unmatched", "nvme", "/dev/disk/by-id/usb-SanDisk_Extreme_Pro-0:0-part1", nil},
 		{"sector4k", "sector4k", "/dev/sr0", []string{"", "/dev/vdb"}},
+		{"cdrom", "cdrom", "/dev/disk/by-uuid/2026-10-05-10-13-34-00", []string{"", "/dev/sr0", "/dev/loop1"}},
 		{"ambiguous", "ambiguous", "/dev/sda1", []string{"", "/dev/nvme1n1", "/dev/zram0"}},
 		{"mounted", "mounted", "/dev/sda1", []string{"", "/dev/nvme0n1", "/dev/sdb", "/dev/sdz"}},
 		{"small", "small", "/dev/disk/by-label/ARCH_202610", []string{"", "/dev/mmcblk0", "/dev/sdc", "/dev/sdd"}},
