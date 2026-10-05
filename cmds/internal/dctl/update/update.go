@@ -72,7 +72,7 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all bool, only []string)
 			Plan: "rustup update",
 			Run: func(ctx context.Context) error {
 				if _, err := exec.LookPath("rustup"); err != nil {
-					u.Dim("rustup is not installed")
+					u.Info("skipped: rustup is not installed")
 					return nil
 				}
 				return run.Run(ctx, "", "rustup", "update")
@@ -105,11 +105,7 @@ func Select(all []Step, names []string) ([]Step, error) {
 }
 
 func Run(ctx context.Context, u *ui.UI, steps []Step, ask bool) error {
-	var names, failed []string
-	for _, s := range steps {
-		names = append(names, s.Name)
-	}
-	u.Open("update %s", strings.Join(names, ", "))
+	var failed []string
 	for _, s := range steps {
 		if err := ctx.Err(); err != nil {
 			return err
@@ -127,6 +123,9 @@ func Run(ctx context.Context, u *ui.UI, steps []Step, ask bool) error {
 		if err := s.Run(ctx); err != nil {
 			if ctx.Err() != nil {
 				return ctx.Err()
+			}
+			if errors.Is(err, ui.ErrCanceled) {
+				return err
 			}
 			u.Row(ui.Err, err.Error())
 			failed = append(failed, s.Name)

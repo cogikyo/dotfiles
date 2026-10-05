@@ -80,7 +80,7 @@ func (b build) build(ctx context.Context) error {
 	}
 	src := filepath.Join(stage, "src")
 	bundle := filepath.Join(stage, "dotfiles.bundle")
-	b.u.Step("Bundling master")
+	b.u.Section("bundle", "master into the ISO source")
 	if err := b.user(ctx, "git", "-C", b.repo, "bundle", "create", bundle, "master"); err != nil {
 		return err
 	}
@@ -103,7 +103,7 @@ func (b build) build(ctx context.Context) error {
 		return err
 	}
 
-	b.u.Step("Building %s", strings.Join(bins.Names, ", "))
+	b.u.Section("build", strings.Join(bins.Names, ", "))
 	args := slices.Concat([]string{"env", "GOENV=off", "GOTOOLCHAIN=local"}, gobuild.Env,
 		[]string{"go", "-C", filepath.Join(src, "cmds"), "build"}, gobuild.Flags)
 	args = append(args, "-o", filepath.Join(air, Bin)+"/")
@@ -130,7 +130,7 @@ func (b build) build(ctx context.Context) error {
 		return err
 	}
 
-	b.u.Step("Running mkarchiso")
+	b.u.Section("mkarchiso", "")
 	staged := filepath.Join(b.work, "out")
 	if err := b.run.Run(ctx, "", "mkarchiso", "-v", "-w", filepath.Join(b.work, "mkarchiso"), "-o", staged, filepath.Join(src, "iso")); err != nil {
 		return err
@@ -162,7 +162,7 @@ func (b build) build(ctx context.Context) error {
 	if err := oversize(st.Size(), sizes); err != nil {
 		return fmt.Errorf("%s is kept for local use but cannot be released: %w", iso, err)
 	}
-	b.u.OK("ISO built; sign and publish with `dctl iso release %s`", iso)
+	b.u.Close(ui.OK, "ISO built; sign and publish with `dctl iso release %s`", iso)
 	return nil
 }
 
@@ -178,7 +178,7 @@ func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []s
 	if err := errors.Join(os.MkdirAll(chroot, 0o755), os.MkdirAll(built, 0o755), mkdir(srcdest, b.nobody)); err != nil {
 		return nil, nil, err
 	}
-	b.u.Step("Creating clean build chroot")
+	b.u.Section("chroot", "clean build chroot for local recipes")
 	if err := b.run.Run(ctx, "", "mkarchroot",
 		"-C", "/usr/share/devtools/pacman.conf.d/extra.conf",
 		"-M", "/usr/share/devtools/makepkg.conf.d/x86_64.conf",
@@ -227,7 +227,7 @@ func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []s
 		}
 	}
 	for _, name := range recipes {
-		b.u.Step("Building %s in the chroot as nobody", name)
+		b.u.Info("makepkg %s in the chroot as nobody", name)
 		dir := filepath.Join(b.recipes, name)
 		err := b.run.Run(ctx, "", "chown", "-R", b.nobody.Username+":", dir)
 		if err == nil {
@@ -247,7 +247,7 @@ func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []s
 		return nil, nil, err
 	}
 
-	b.u.Step("Resolving the offline closure")
+	b.u.Section("payload", "offline package closure")
 	resolve := filepath.Join(b.recipes, "resolve")
 	if err := os.MkdirAll(filepath.Join(resolve, "db"), 0o755); err != nil {
 		return nil, nil, err
@@ -286,7 +286,7 @@ Include = /etc/pacman.d/mirrorlist
 	if missing := unresolved(targets, closure); len(missing) > 0 {
 		return nil, nil, fmt.Errorf("not package names in the closure (group or provider?): %s", strings.Join(missing, " "))
 	}
-	b.u.Step("Fetching %d packages", len(closure))
+	b.u.Info("fetching %d packages", len(closure))
 	if err := b.run.Run(ctx, "", "pacman", slices.Concat(pacman, []string{"--cachedir", payload, "-Sw", "--noconfirm"}, targets)...); err != nil {
 		return nil, nil, err
 	}

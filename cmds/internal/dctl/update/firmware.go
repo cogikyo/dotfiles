@@ -57,7 +57,7 @@ func firmware(ctx context.Context, u *ui.UI, run execx.Runner, all bool) error {
 	u.Warn("firmware updates: %s", strings.Join(updates, ", "))
 	// Stop before Confirm because global --yes would accept the flash prompt.
 	if all {
-		u.Hint("--all never flashes firmware; run `dctl update firmware` to apply")
+		u.Detail("--all never flashes firmware; run `dctl update firmware` to apply")
 		return nil
 	}
 	ok, err = u.Confirm("Flash these firmware updates?")

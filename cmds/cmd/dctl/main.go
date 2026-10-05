@@ -40,17 +40,22 @@ func main() {
 		<-ctx.Done()
 		stop()
 	}()
-	u := ui.New(ui.Options{Context: ctx, JSON: root.JSON, Plain: root.Plain, Yes: root.Yes, Nested: root.Nested})
+	u := ui.New(ui.Options{Context: ctx, JSON: root.JSON, Plain: root.Plain, Yes: root.Yes})
 	kctx.BindTo(ctx, (*context.Context)(nil))
 	parser.FatalIfErrorf(kctx.BindSingletonProvider(paths.DiscoverRoot))
+	u.Open("%s", kctx.Selected().FullPath())
 	err = kctx.Run(u)
 	stop()
 	switch {
 	case errors.Is(err, context.Canceled):
 		u.Error("interrupted")
 		os.Exit(130)
+	case errors.Is(err, ui.ErrCanceled):
+		u.Close(ui.Warn, "canceled")
+		os.Exit(130)
 	case err != nil:
 		u.Error("%v", err)
 		os.Exit(1)
 	}
+	u.Close(ui.OK, "done")
 }

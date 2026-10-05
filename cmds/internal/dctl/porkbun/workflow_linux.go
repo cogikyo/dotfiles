@@ -203,7 +203,7 @@ func uncertain(u *ui.UI, r result, cause error) error {
 }
 
 func preview(u *ui.UI, r result) {
-	u.Header("Porkbun %s: domain %s", r.Action, r.Domain)
+	u.Section(r.Action, "domain "+r.Domain)
 	if r.Before == nil {
 		u.KV("current", "no record targeted; existing records remain unchanged")
 	} else {
@@ -242,7 +242,7 @@ func report(u *ui.UI, r result, err error) error {
 		u.Info("%s", evidence)
 	}
 	if r.Action == "list" {
-		u.Header("Porkbun records: %s", r.Domain)
+		u.Section("records", "domain "+r.Domain)
 		for _, record := range r.Records {
 			u.Info("%s", record.describe())
 		}
@@ -250,8 +250,12 @@ func report(u *ui.UI, r result, err error) error {
 	if r.After != nil {
 		u.KV("observed", r.After.describe())
 	}
-	if err == nil {
-		u.OK("%s: %s", r.Action, r.Outcome)
+	switch {
+	case err != nil:
+	case r.Outcome == "cancelled":
+		u.Close(ui.Warn, "%s: %s", r.Action, r.Outcome)
+	default:
+		u.Close(ui.OK, "%s: %s", r.Action, r.Outcome)
 	}
 	return err
 }

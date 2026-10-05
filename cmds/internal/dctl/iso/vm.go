@@ -58,12 +58,12 @@ func Test(ctx context.Context, u *ui.UI, o TestOptions) error {
 	t := &test{u: u, dir: dir, iso: o.ISO, setup: map[string][]setup.Report{}}
 	err = t.run(ctx, o)
 	if t.install != nil {
-		u.Header("Install phases")
+		u.Section("install phases", "")
 		for _, p := range t.install.Phases {
 			u.KV(p.Name, fmt.Sprintf("%.1fs", p.Seconds))
 		}
 	}
-	u.Header("Harness phases")
+	u.Section("harness phases", "")
 	for _, p := range t.times {
 		u.KV(p.Name, fmt.Sprintf("%.1fs", p.Seconds))
 	}
@@ -199,7 +199,7 @@ func (t *test) boot(ctx context.Context, v *vm, n string) error {
 }
 
 func (t *test) phase(ctx context.Context, v *vm, name string, limit time.Duration, do func(context.Context) error) error {
-	t.u.Step("%s", name)
+	t.u.Section(name, fmt.Sprintf("limit %s", limit))
 	pctx, cancel := context.WithTimeout(ctx, limit)
 	defer cancel()
 	start := time.Now()

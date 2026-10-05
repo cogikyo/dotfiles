@@ -46,21 +46,34 @@ func (secretsList) Run(u *ui.UI, root paths.Root) error {
 	if u.JSON() {
 		return u.Emit(statuses)
 	}
-	w := u.Writer()
-	fmt.Fprintf(w, "%-24s %-48s %-4s %s\n", "NAME", "TARGET", "MODE", "STATE")
+	off := 0
 	for _, s := range statuses {
-		state := string(s.State)
+		level, state := ui.OK, string(s.State)
 		switch {
 		case s.State == secrets.WrongMode:
-			state = fmt.Sprintf("mode %04o", s.Have)
+			level, state = ui.Warn, fmt.Sprintf("mode %04o", s.Have)
 		case s.Staged && s.State == secrets.Missing:
-			state = "staged"
+			level, state = ui.Info, "staged"
+		case s.State != secrets.OK:
+			level = ui.Warn
 		}
 		if !s.Sealed {
-			state += ", no ciphertext"
+			level, state = ui.Warn, state+", no ciphertext"
 		}
-		fmt.Fprintf(w, "%-24s %-48s %04o %s\n", s.Name, s.Path(), s.Mode, state)
+		if level == ui.Warn {
+			off++
+		}
+		note := fmt.Sprintf("%s %04o", s.Path(), s.Mode)
+		if s.State != secrets.OK || !s.Sealed {
+			note += ", " + state
+		}
+		u.Node(level, s.Name, note)
 	}
+	if off > 0 {
+		u.Close(ui.Warn, "%d of %d secrets need attention", off, len(statuses))
+		return nil
+	}
+	u.Close(ui.OK, "%d secrets", len(statuses))
 	return nil
 }
 

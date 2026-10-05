@@ -87,7 +87,7 @@ func Release(ctx context.Context, u *ui.UI, root paths.Root, iso, key string) er
 	if err := os.Remove(sums + ".sig"); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	u.Step("Signing %s; touch the security key", filepath.Base(sums))
+	u.Section("sign", filepath.Base(sums)+"; touch the security key")
 	if err := run.Run(ctx, "", "ssh-keygen", "-Y", "sign", "-f", key, "-n", "file", sums); err != nil {
 		return err
 	}
@@ -100,7 +100,8 @@ func Release(ctx context.Context, u *ui.UI, root paths.Root, iso, key string) er
 	argv := []string{"release", "create", tag, "--target", rev, "--title", tag,
 		"--notes", fmt.Sprintf("Offline installer ISO built from %s. Write it with `dctl iso usb %s /dev/sdX`.", rev[:12], filepath.Base(iso)),
 		iso, sums, sums + ".sig"}
-	u.Info("gh %s", strings.Join(argv, " "))
+	u.Section("publish", tag)
+	u.Detail("`gh %s`", strings.Join(argv, " "))
 	typed, err := u.Text("Type "+tag+" to publish this public release", "")
 	if err != nil {
 		return err
@@ -111,6 +112,6 @@ func Release(ctx context.Context, u *ui.UI, root paths.Root, iso, key string) er
 	if err := run.Run(ctx, root.Dotfiles, "gh", argv...); err != nil {
 		return err
 	}
-	u.OK("published %s", tag)
+	u.Close(ui.OK, "published %s", tag)
 	return nil
 }

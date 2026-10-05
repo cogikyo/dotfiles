@@ -39,12 +39,7 @@ func (keysLuks) Run(ctx context.Context, u *ui.UI) error {
 	if os.Geteuid() != 0 {
 		return errors.New("needs root: sudo dctl keys luks")
 	}
-	u.Open("keys luks")
-	if err := keys.Luks(ctx, u, execx.OSRunner{}, "/sys", u.Confirm); err != nil {
-		return err
-	}
-	u.Close(ui.OK, "keys luks done")
-	return nil
+	return keys.Luks(ctx, u, execx.OSRunner{}, "/sys", u.Confirm)
 }
 
 type keysRemove struct {
@@ -70,18 +65,27 @@ func (keysStatus) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if u.JSON() {
 		return u.Emit(r)
 	}
-	u.Open("keys status")
 	for _, e := range r.Enrolled {
-		u.Section("yubikey "+e.Serial, fmt.Sprintf("age recipient %s, release signer %s", yes(e.Recipient != ""), yes(e.Signer)))
+		level := ui.OK
+		if e.Recipient == "" || !e.Signer {
+			level = ui.Warn
+		}
+		u.Node(level, "yubikey "+e.Serial, fmt.Sprintf("age recipient %s, release signer %s", yes(e.Recipient != ""), yes(e.Signer)))
 	}
 	if r.Inserted != "" {
-		u.Section("inserted", "yubikey "+r.Inserted)
+		u.Node(ui.Info, "inserted", "yubikey "+r.Inserted)
+	} else {
+		u.Node(ui.Info, "inserted", r.Absent)
 	}
-	if r.Luks != nil {
-		u.Section(r.Luks.Device, fmt.Sprintf("%d FIDO2 tokens, recovery key %s", len(r.Luks.Fido2), yes(r.Luks.Recovery)))
-	}
-	for _, n := range r.Notes {
-		u.Dim("%s", n)
+	switch {
+	case r.Unread != "":
+		u.Node(ui.Warn, "luks", r.Unread)
+	case r.Luks != nil:
+		level := ui.OK
+		if len(r.Luks.Fido2) == 0 || !r.Luks.Recovery {
+			level = ui.Warn
+		}
+		u.Node(level, r.Luks.Device, fmt.Sprintf("%d FIDO2 tokens, recovery key %s", len(r.Luks.Fido2), yes(r.Luks.Recovery)))
 	}
 	if len(r.Enrolled) == 0 {
 		u.Close(ui.Warn, "no YubiKey enrolled")

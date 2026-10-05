@@ -93,10 +93,6 @@ func (c *SetupCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if asRoot && len(user) > 0 {
 		return fmt.Errorf("refusing to run user stages as root (%s): run dctl setup as your user", names(user))
 	}
-	if c.Batch == "" {
-		u.Open("setup %s", names(selected))
-	}
-
 	reports := []setup.Report{}
 	var batchErr error
 	switch {
@@ -111,6 +107,9 @@ func (c *SetupCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 		rs, err := elevate(ctx, u, root, elevated, mode)
 		if ctx.Err() != nil {
 			return ctx.Err()
+		}
+		if errors.Is(err, ui.ErrCanceled) {
+			return err
 		}
 		reports, batchErr = append(reports, rs...), err
 	}
@@ -135,9 +134,7 @@ func (c *SetupCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if len(errs) > 0 {
 		return errors.Join(errs...)
 	}
-	if c.Batch == "" {
-		u.Close(ui.OK, "setup done")
-	}
+	u.Close(ui.OK, "setup done")
 	return nil
 }
 
@@ -176,11 +173,14 @@ func elevate(ctx context.Context, u *ui.UI, root paths.Root, stages []setup.Stag
 	if err := validate.Run(); err != nil {
 		return setup.Unreached(u, stages, "sudo refused: "+err.Error()), nil
 	}
-	cmd := command(ctx, batch(exe, root.Dotfiles, globals(u), mode, stages)...)
+	cmd := command(ctx, batch(exe, root.Dotfiles, u.Env(), globals(u), mode, stages)...)
 	if !u.JSON() {
 		cmd.Stdout = os.Stdout
 		if err := cmd.Run(); err != nil {
-			if _, ok := errors.AsType[*exec.ExitError](err); ok {
+			if exit, ok := errors.AsType[*exec.ExitError](err); ok {
+				if exit.ExitCode() == 130 {
+					return nil, ui.ErrCanceled
+				}
 				return nil, errors.New("root stages incomplete; see above")
 			}
 			return nil, fmt.Errorf("root stages: %w", err)
@@ -216,14 +216,11 @@ func globals(u *ui.UI) []string {
 	if u.Yes() {
 		flags = append(flags, "--yes")
 	}
-	if u.Tree() {
-		flags = append(flags, "--nested")
-	}
 	return flags
 }
 
-func batch(exe, dotfiles string, flags []string, mode setup.Mode, stages []setup.Stage) []string {
-	argv := slices.Concat([]string{"sudo", "env", "DOTFILES=" + dotfiles, exe}, flags, []string{"setup", "--batch=" + string(mode)})
+func batch(exe, dotfiles string, env, flags []string, mode setup.Mode, stages []setup.Stage) []string {
+	argv := slices.Concat([]string{"sudo", "env", "DOTFILES=" + dotfiles}, env, []string{exe}, flags, []string{"setup", "--batch=" + string(mode)})
 	for _, s := range stages {
 		argv = append(argv, s.Name)
 	}

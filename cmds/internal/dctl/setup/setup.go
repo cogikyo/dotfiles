@@ -92,10 +92,13 @@ func Run(ctx context.Context, u *ui.UI, stages []Stage, mode Mode) ([]Report, er
 			if err := ctx.Err(); err != nil {
 				return reports, err
 			}
-			u.Header("%s", s.Name)
-			r := s.apply(ctx, true)
+			u.Section(s.Name, "")
+			r, err := s.apply(ctx, true)
 			show(u, r)
 			reports = append(reports, r)
+			if err != nil {
+				return reports, err
+			}
 		}
 		return reports, ctx.Err()
 	}
@@ -106,8 +109,6 @@ func Run(ctx context.Context, u *ui.UI, stages []Stage, mode Mode) ([]Report, er
 		r := s.evaluate(ctx)
 		if mode == Status || r.State != Pending {
 			list(u, r)
-		} else {
-			u.Node(level(r.State), headline(r))
 		}
 		reports = append(reports, r)
 	}
@@ -119,16 +120,18 @@ func Run(ctx context.Context, u *ui.UI, stages []Stage, mode Mode) ([]Report, er
 		if err := ctx.Err(); err != nil {
 			return reports, err
 		}
+		listed := reports[i].State != Pending
 		if applied {
 			// An earlier stage can remove a manual prerequisite, such as repos before Firefox.
-			if reports[i] = s.evaluate(ctx); reports[i].State == Pending {
-				u.Node(level(Pending), headline(reports[i]))
-			}
+			reports[i] = s.evaluate(ctx)
 		}
 		if reports[i].State != Pending {
+			if !listed {
+				list(u, reports[i])
+			}
 			continue
 		}
-		u.Header("%s", s.Name)
+		list(u, reports[i])
 		if mode == Ask {
 			ok, err := u.Proceed(fmt.Sprintf("Apply %s?", s.Name))
 			if err != nil {
@@ -138,9 +141,13 @@ func Run(ctx context.Context, u *ui.UI, stages []Stage, mode Mode) ([]Report, er
 				continue
 			}
 		}
-		reports[i] = s.apply(ctx, false)
+		var err error
+		reports[i], err = s.apply(ctx, false)
 		applied = true
 		show(u, reports[i])
+		if err != nil {
+			return reports, err
+		}
 	}
 	return reports, ctx.Err()
 }
@@ -152,11 +159,11 @@ func Unreached(u *ui.UI, stages []Stage, detail string) []Report {
 		for _, it := range s.Items {
 			r.Items = append(r.Items, Result{Item: it.Name, State: Unknown, Detail: detail})
 		}
-		u.Node(level(Unknown), headline(r))
+		u.Node(level(Unknown), headline(r), "")
 		reports = append(reports, r)
 	}
 	if len(reports) > 0 {
-		u.Detail(detail)
+		u.Detail("%s", detail)
 	}
 	return reports
 }
@@ -170,16 +177,23 @@ func (s Stage) evaluate(ctx context.Context) Report {
 	return r
 }
 
-func (s Stage) apply(ctx context.Context, force bool) Report {
+// apply stops at a canceled prompt and returns ui.ErrCanceled so the whole run ends.
+func (s Stage) apply(ctx context.Context, force bool) (Report, error) {
 	r := Report{Stage: s.Name}
+	var err error
 	for _, it := range s.Items {
 		if ctx.Err() != nil {
 			break
 		}
-		r.Items = append(r.Items, it.apply(ctx, force))
+		var res Result
+		res, err = it.apply(ctx, force)
+		r.Items = append(r.Items, res)
+		if err != nil {
+			break
+		}
 	}
 	r.State = worst(r.Items)
-	return r
+	return r, err
 }
 
 func (it Item) evaluate(ctx context.Context) Result {
@@ -199,10 +213,10 @@ func (it Item) evaluate(ctx context.Context) Result {
 	return r
 }
 
-func (it Item) apply(ctx context.Context, force bool) Result {
+func (it Item) apply(ctx context.Context, force bool) (Result, error) {
 	if !force {
 		if r := it.evaluate(ctx); r.State != Pending {
-			return r
+			return r, nil
 		}
 	}
 	if it.Fix != nil {
@@ -211,14 +225,17 @@ func (it Item) apply(ctx context.Context, force bool) Result {
 			if isManual(err) {
 				r.State = ManualState
 			}
-			return r
+			if errors.Is(err, ui.ErrCanceled) {
+				return r, err
+			}
+			return r, nil
 		}
 	}
 	r := it.evaluate(ctx)
 	if r.State == Pending {
 		r.State = Failed
 	}
-	return r
+	return r, nil
 }
 
 func isManual(err error) bool {
@@ -268,7 +285,7 @@ func headline(r Report) string {
 }
 
 func list(u *ui.UI, r Report) {
-	u.Node(level(r.State), headline(r))
+	u.Node(level(r.State), headline(r), "")
 	details(u, r)
 }
 
@@ -280,7 +297,7 @@ func show(u *ui.UI, r Report) {
 func details(u *ui.UI, r Report) {
 	for _, it := range r.Items {
 		if it.State != Done {
-			u.Detail(fmt.Sprintf("%s (%s): %s", short(r, it.Item), it.State, it.Detail))
+			u.Detail("%s (%s): %s", short(r, it.Item), it.State, it.Detail)
 		}
 	}
 }

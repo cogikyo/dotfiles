@@ -14,13 +14,14 @@ import (
 	"golang.org/x/term"
 )
 
+// nestEnv tells a dotfiles command started inside an open tree to continue it instead of opening its own.
+const nestEnv = "DOTFILES_TREE"
+
 type Options struct {
 	Context context.Context
 	JSON    bool
 	Plain   bool
 	Yes     bool
-	// Nested continues a tree that a parent process opened and will close.
-	Nested bool
 }
 
 type Level int
@@ -43,7 +44,9 @@ type UI struct {
 	stdout *os.File
 	out    io.Writer
 	err    io.Writer
-	tree   bool
+	glyph  glyphs
+	nested bool
+	open   bool
 }
 
 func New(opts Options) *UI {
@@ -53,14 +56,21 @@ func New(opts Options) *UI {
 		out.Profile = colorprofile.NoTTY
 		errw.Profile = colorprofile.NoTTY
 	}
-	return &UI{opts: opts, in: os.Stdin, stdout: os.Stdout, out: out, err: errw, tree: opts.Nested && !opts.JSON}
+	nested := os.Getenv(nestEnv) != "" && !opts.JSON
+	return &UI{opts: opts, in: os.Stdin, stdout: os.Stdout, out: out, err: errw, glyph: pick(), nested: nested, open: nested}
 }
 
-func (u *UI) JSON() bool        { return u.opts.JSON }
-func (u *UI) Yes() bool         { return u.opts.Yes }
-func (u *UI) Plain() bool       { return u.opts.Plain }
-func (u *UI) Tree() bool        { return u.tree }
-func (u *UI) Writer() io.Writer { return u.out }
+func (u *UI) JSON() bool  { return u.opts.JSON }
+func (u *UI) Yes() bool   { return u.opts.Yes }
+func (u *UI) Plain() bool { return u.opts.Plain }
+
+// Env carries the open tree into a child process whose environment is reset, such as under sudo.
+func (u *UI) Env() []string {
+	if !u.open {
+		return nil
+	}
+	return []string{nestEnv + "=1"}
+}
 
 func (u *UI) Can() bool {
 	return !u.opts.JSON && term.IsTerminal(int(u.in.Fd())) && term.IsTerminal(int(u.stdout.Fd()))
@@ -72,76 +82,62 @@ func (u *UI) Emit(v any) error {
 	return enc.Encode(v)
 }
 
-// Open starts a tree: later headers become branches and rows become their results until Close.
+// Open starts the tree that every later row hangs from; a nested process continues its parent's tree instead.
 func (u *UI) Open(format string, args ...any) {
-	if u.opts.JSON {
+	if u.opts.JSON || u.open {
 		return
 	}
-	u.tree = true
-	fmt.Fprintf(u.out, "%s %s %s\n", styleStep.Render("╭─"), pill(Info), inline(line(format, args)))
+	u.open = true
+	os.Setenv(nestEnv, "1")
+	fmt.Fprintf(u.out, "%s %s %s\n", styleStep.Render(u.glyph.open), pill(Info), inline(line(format, args)))
 }
 
+// Close ends an owned tree with a summary row; it does nothing once the tree is closed or when nested.
 func (u *UI) Close(level Level, format string, args ...any) {
 	u.close(u.out, level, line(format, args))
 }
 
 func (u *UI) close(w io.Writer, level Level, msg string) {
-	if u.opts.JSON || !u.tree {
+	if u.opts.JSON || !u.open || u.nested {
 		return
 	}
-	fmt.Fprintf(w, "%s %s %s\n", styleStep.Render("╰─"), pill(level), inline(msg))
-	u.tree = false
+	fmt.Fprintf(w, "%s %s %s\n", styleStep.Render(u.glyph.close), pill(level), inline(msg))
+	u.open = false
+	os.Unsetenv(nestEnv)
 }
 
-func (u *UI) Header(format string, args ...any) {
-	u.Section(line(format, args), "")
-}
-
-// Section heads a step; in a tree the note shares the branch row.
-func (u *UI) Section(title, note string) {
+// Node heads a branch, such as a step or an inspected item; the dim note shares its row.
+func (u *UI) Node(level Level, title, note string) {
 	if u.opts.JSON {
 		return
 	}
-	if !u.tree {
-		fmt.Fprintf(u.out, "\n%s\n\n", styleHeader.Render("--- "+title+" ---"))
-		if note != "" {
-			u.Note("%s", note)
-		}
-		return
-	}
+	msg := styleTarget.Render(inline(title))
 	if note != "" {
-		note = "  " + styleDim.Render(note)
+		msg += "  " + styleDim.Render(note)
 	}
-	u.Node(Info, styleTarget.Render(title)+note)
+	fmt.Fprintf(u.out, "%s %s %s\n", styleStep.Render(u.glyph.branch), pill(level), msg)
 }
 
-func (u *UI) Node(level Level, msg string) {
-	if u.opts.JSON {
-		return
-	}
-	if !u.tree {
-		u.Row(level, msg)
-		return
-	}
-	fmt.Fprintf(u.out, "%s %s %s\n", styleStep.Render("├─"), pill(level), inline(strings.TrimSpace(msg)))
-}
-
-func (u *UI) Step(format string, args ...any) {
-	if u.opts.JSON {
-		return
-	}
-	if u.tree {
-		u.Row(Info, line(format, args))
-		return
-	}
-	fmt.Fprintf(u.out, "  %s %s\n", styleStep.Render("==>"), inline(line(format, args)))
-}
+func (u *UI) Section(title, note string) { u.Node(Info, title, note) }
 
 func (u *UI) Info(format string, args ...any) { u.Row(Info, line(format, args)) }
 func (u *UI) OK(format string, args ...any)   { u.Row(OK, line(format, args)) }
 func (u *UI) Warn(format string, args ...any) { u.Row(Warn, line(format, args)) }
 
-// Error closes an owned tree with the failure; a nested tree reports it as a result row.
+// Row reports a result under the current branch.
+func (u *UI) Row(level Level, msg string) {
+	if u.opts.JSON {
+		return
+	}
+	u.row(u.out, level, msg)
+}
+
+func (u *UI) row(w io.Writer, level Level, msg string) {
+	c := connector(level)
+	fmt.Fprintf(w, "%s     %s %s %s\n", c.Render(u.glyph.stem), c.Render(u.glyph.arrow), pill(level), inline(strings.TrimSpace(msg)))
+}
+
+// Error closes an owned tree with the failure; a nested process reports it as a result row.
 func (u *UI) Error(format string, args ...any) {
 	msg := line(format, args)
 	switch {
@@ -152,87 +148,44 @@ func (u *UI) Error(format string, args ...any) {
 			Level   string `json:"level"`
 			Message string `json:"message"`
 		}{"error", msg})
-	case u.tree && u.opts.Nested:
-		u.row(u.err, Err, msg)
-	case u.tree:
+	case u.open && !u.nested:
 		u.close(u.err, Err, msg)
 	default:
-		fmt.Fprintf(u.err, "  %s  %s\n", pill(Err), inline(msg))
+		u.row(u.err, Err, msg)
 	}
 }
 
-func (u *UI) Row(level Level, msg string) {
+// Detail adds supporting lines under the current row.
+func (u *UI) Detail(format string, args ...any) {
 	if u.opts.JSON {
 		return
 	}
-	u.row(u.out, level, msg)
-}
-
-func (u *UI) row(w io.Writer, level Level, msg string) {
-	msg = inline(strings.TrimSpace(msg))
-	if !u.tree {
-		fmt.Fprintf(w, "  %s  %s\n", pill(level), msg)
-		return
-	}
-	c := connector(level)
-	fmt.Fprintf(w, "%s     %s %s %s\n", c.Render("│"), c.Render("╰─▶"), pill(level), msg)
-}
-
-func (u *UI) Dim(format string, args ...any) {
-	u.text(styleDim.Render(line(format, args)), "        ")
-}
-
-func (u *UI) Detail(text string) {
-	if u.opts.JSON {
-		return
-	}
-	marker := ""
-	if u.tree {
-		marker = styleDim.Render(">") + " "
-	}
-	for l := range strings.Lines(strings.TrimSpace(text)) {
-		u.text(marker+strings.TrimSuffix(l, "\n"), "        ")
+	for l := range strings.Lines(line(format, args)) {
+		fmt.Fprintf(u.out, "%s%s %s\n", u.pad(), styleDim.Render(">"), inline(strings.TrimRight(l, "\n")))
 	}
 }
 
-func (u *UI) Hint(format string, args ...any) {
-	u.text(inline(line(format, args)), "  ")
-}
-
-func (u *UI) Note(format string, args ...any) {
-	u.text(styleDim.Render(line(format, args)), "  ")
-}
-
+// KV is a detail with an aligned key.
 func (u *UI) KV(key string, value any) {
-	if u.tree {
-		u.text(fmt.Sprintf("%s %v", styleDim.Render(fmt.Sprintf("%-18s", key)), value), "")
-		return
-	}
-	u.text(fmt.Sprintf("%s %v", styleDim.Render(fmt.Sprintf("        %-18s", key)), value), "")
-}
-
-func (u *UI) text(s, indent string) {
-	if u.opts.JSON {
-		return
-	}
-	if u.tree {
-		indent = u.pad()
-	}
-	fmt.Fprintf(u.out, "%s%s\n", indent, s)
+	u.Detail("%s %v", styleDim.Render(fmt.Sprintf("%-18s", key)), value)
 }
 
 func (u *UI) lead() string {
-	if !u.tree {
-		return ""
-	}
-	return styleStep.Render("│") + "     " + styleStep.Render("╰─▶") + " "
+	return styleStep.Render(u.glyph.stem) + "     " + styleStep.Render(u.glyph.arrow) + " "
 }
 
 func (u *UI) pad() string {
-	if !u.tree {
-		return ""
+	return styleStep.Render(u.glyph.stem) + strings.Repeat(" ", 10)
+}
+
+type glyphs struct{ open, branch, stem, arrow, close string }
+
+// pick falls back to code page 437 glyphs on the Linux console, whose built-in font lacks arcs and ▶.
+func pick() glyphs {
+	if os.Getenv("TERM") == "linux" {
+		return glyphs{"┌─", "├─", "│", "└─►", "└─"}
 	}
-	return styleStep.Render("│") + strings.Repeat(" ", 10)
+	return glyphs{"╭─", "├─", "│", "╰─▶", "╰─"}
 }
 
 func line(format string, args []any) string {
@@ -287,7 +240,6 @@ func connector(level Level) lipgloss.Style {
 
 var (
 	styleStep    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("4"))
-	styleHeader  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("5"))
 	styleTarget  = lipgloss.NewStyle().Bold(true)
 	styleAccent  = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("3"))
 	styleCommand = lipgloss.NewStyle().Foreground(lipgloss.Color("6"))

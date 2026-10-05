@@ -111,7 +111,7 @@ func Update(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner) er
 	for _, r := range repos {
 		st, err := os.Stat(r.Dir(root.Home))
 		if err == nil && slices.ContainsFunc(checkouts, func(c os.FileInfo) bool { return os.SameFile(c, st) }) {
-			u.Dim("%s: skipped; update never pulls the dotfiles checkout", r.Repo)
+			u.Info("%s: skipped; update never pulls the dotfiles checkout", r.Repo)
 			continue
 		}
 		state, err := update(ctx, run, r.Dir(root.Home))

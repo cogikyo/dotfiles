@@ -131,11 +131,10 @@ func writeTargets(u *ui.UI, root paths.Root, keys *Keys, entries []Entry) error 
 		}
 	}
 	if len(changed) > 0 {
-		u.Warn("%d targets differ from the repo", len(changed))
+		u.Warn("%d targets differ from the repo; no plaintext backup is kept", len(changed))
 		for _, p := range changed {
-			u.Dim("%s", p.e.Path())
+			u.Detail("%s", p.e.Path())
 		}
-		u.Warn("No plaintext backup is kept.")
 		ok, err := u.Confirm(fmt.Sprintf("Overwrite these %d files?", len(changed)))
 		if err != nil {
 			return fmt.Errorf("confirm overwrite: %w", err)
@@ -151,7 +150,7 @@ func writeTargets(u *ui.UI, root paths.Root, keys *Keys, entries []Entry) error 
 			errs = append(errs, fmt.Errorf("%s: %w", p.e.Path(), err))
 			continue
 		}
-		u.Step("%s", p.e.Path())
+		u.Info("wrote %s", p.e.Path())
 	}
 	if len(errs) > 0 {
 		return errors.Join(errs...)
@@ -217,7 +216,7 @@ func sealTargets(u *ui.UI, root paths.Root, keys *Keys, recipients []age.Recipie
 			unchanged++
 		default:
 			sealed++
-			u.Step("%s <- %s", e.Name, e.Path())
+			u.Info("sealed %s ← %s", e.Name, e.Path())
 		}
 	}
 	if len(errs) > 0 {

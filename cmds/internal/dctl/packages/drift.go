@@ -51,11 +51,11 @@ func report(u *ui.UI, d Drift) {
 	} {
 		if len(row.names) > 0 {
 			u.Warn("%d %s", len(row.names), row.what)
-			u.Dim("%s", strings.Join(row.names, " "))
+			u.Detail("%s", strings.Join(row.names, " "))
 		}
 	}
 	if len(d.Orphans) > 0 {
-		u.Dim("remove with: yay -Rns %s", strings.Join(d.Orphans, " "))
+		u.Detail("remove with `yay -Rns %s`", strings.Join(d.Orphans, " "))
 	}
 }
 

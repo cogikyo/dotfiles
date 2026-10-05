@@ -119,7 +119,7 @@ func (s *session) main(ctx context.Context) (err error) {
 	p := newPlan(d, a.Zone)
 	p.SecureBoot = prep.firmware.Setup
 	if !p.SecureBoot {
-		s.u.Warn("firmware is not in Secure Boot Setup Mode; installing without Secure Boot (later: dctl setup secureboot)")
+		s.u.Warn("firmware is not in Secure Boot Setup Mode; installing without Secure Boot (later: `dctl setup secureboot`)")
 	}
 	if test == nil {
 		if err := s.confirm(p.Disk); err != nil {
@@ -144,11 +144,12 @@ func (s *session) main(ctx context.Context) (err error) {
 	if test != nil {
 		s.report(nil)
 	}
-	s.u.OK("Installed %s on %s in %s.", machine, p.Disk.Path, time.Since(start).Round(time.Second))
-	s.u.Info("After first login, run dctl setup.")
+	s.u.OK("installed %s on %s in %s", machine, p.Disk.Path, time.Since(start).Round(time.Second))
+	s.u.Detail("after first login, run `dctl setup`")
 	if test == nil {
-		if ok, err := s.u.Confirm("Reboot now?"); err != nil || !ok {
-			return nil
+		ok, err := s.u.Confirm("Reboot now?")
+		if err != nil || !ok {
+			return err
 		}
 	}
 	if err := s.unmountTest(context.WithoutCancel(ctx)); err != nil {
@@ -166,7 +167,7 @@ func choose(u *ui.UI, found survey, test *iso.Answers) (disk, error) {
 		return found.Candidates[i], nil
 	}
 	for _, r := range found.Refused {
-		u.Dim("skipping %s: %s", r.Disk.Path, r.Reason)
+		u.Info("skipping %s: %s", r.Disk.Path, r.Reason)
 	}
 	d, err := found.pick("")
 	if !errors.Is(err, errAmbiguous) {
@@ -184,14 +185,14 @@ func choose(u *ui.UI, found survey, test *iso.Answers) (disk, error) {
 }
 
 func (s *session) typed(d disk) error {
+	s.u.Section("erase", d.Path)
 	s.u.KV("model", d.Model)
 	s.u.KV("size", fmt.Sprintf("%.0f GB", float64(d.Size)/1e9))
 	s.u.KV("serial", d.Serial)
 	if d.WWN != "" {
 		s.u.KV("wwn", d.WWN)
 	}
-	s.u.Warn("Permanently erase %s and all its partitions.", d.Path)
-	s.u.Warn("All existing data on this disk will be lost.")
+	s.u.Warn("installing permanently erases %s and all its partitions and data", d.Path)
 	v, err := s.u.Text(fmt.Sprintf("Type %s to erase this disk:", d.Path), "")
 	if err != nil {
 		return err
@@ -309,7 +310,7 @@ func (s *session) install(ctx context.Context, p plan, a iso.Answers, pkgs []str
 		steps = append(steps, step{"dctltest", func(ctx context.Context) error { return s.testSetup(ctx) }})
 	}
 	for _, st := range steps {
-		s.u.Step("%s", st.name)
+		s.u.Section(st.name, "")
 		start := time.Now()
 		err := st.do(ctx)
 		s.times = append(s.times, iso.Phase{Name: st.name, Seconds: time.Since(start).Seconds()})

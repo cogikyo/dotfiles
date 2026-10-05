@@ -16,7 +16,7 @@ type shell interface {
 type host struct{ u *ui.UI }
 
 func (h host) run(ctx context.Context, stdin []byte, args ...string) error {
-	h.u.Dim("$ %s", strings.Join(args, " "))
+	h.u.Detail("$ %s", strings.Join(args, " "))
 	return execx.OSRunner{Group: true, Stdin: stdin}.Run(ctx, "", args[0], args[1:]...)
 }
 

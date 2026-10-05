@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"dotfiles/cmds/internal/dctl/iso"
+	"dotfiles/cmds/internal/ui"
 )
 
 const (
@@ -116,7 +117,6 @@ func (s *session) dctltest(ctx context.Context) (*iso.Answers, error) {
 		}
 		s.testMounted = true
 		if override := s.path(testMount, "dctl"); exists(override) {
-			s.u.Info("re-executing the DCTLTEST dctl")
 			err := s.reexec(override)
 			return nil, errors.Join(err, s.unmountTest(context.WithoutCancel(ctx)))
 		}
@@ -171,6 +171,8 @@ func (s *session) reexec(override string) error {
 	if err := os.Rename(tmp.Name(), dst); err != nil {
 		return err
 	}
+	// Closing clears the tree marker, so the replacement opens and owns its own tree.
+	s.u.Close(ui.Info, "re-executing the DCTLTEST dctl")
 	return fmt.Errorf("exec %s: %w", dst, execve(dst, os.Args, append(os.Environ(), testEnv+"=1")))
 }
 

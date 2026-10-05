@@ -29,3 +29,4 @@ Command details: [dctl](cmd/dctl/README.md), [hyprd](cmd/hyprd/README.md#rebuild
 - Keep `internal/config/hyprd.go` → `ThreeBody` launch titles/session paths aligned with `../config/kitty/sessions/`.
 - Keep `config/hyprd.yaml` → `windows.{split,gaps_out,monocle}` fitted to Hyprland's gaps/ratios and Kitty's cell size.
 - `hyprd browser snapshot` writes tracked files under `internal/hyprd/browser/sessions/`.
+- `internal/ui` marks an open output tree with `DOTFILES_TREE`; dotfiles commands started under it continue that tree, and `dctl setup` passes it through sudo.

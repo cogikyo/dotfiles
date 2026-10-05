@@ -177,6 +177,6 @@ func USB(ctx context.Context, u *ui.UI, root paths.Root, iso, device string) err
 	if err != nil {
 		return err
 	}
-	u.OK("wrote and verified %s on %s", iso, dev.Path)
+	u.Close(ui.OK, "wrote and verified %s on %s", iso, dev.Path)
 	return nil
 }

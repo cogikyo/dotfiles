@@ -32,10 +32,11 @@ func cmd(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, all b
 	if err != nil {
 		return err
 	}
-	return errors.Join(
-		commands(ctx, u, root, run, all, pick(binaries.Names, only)),
-		recipes(ctx, u, root, run, all, pick(lists.Local, only)),
-	)
+	err = commands(ctx, u, root, run, all, pick(binaries.Names, only))
+	if errors.Is(err, ui.ErrCanceled) {
+		return err
+	}
+	return errors.Join(err, recipes(ctx, u, root, run, all, pick(lists.Local, only)))
 }
 
 func pick(names, only []string) []string {
@@ -97,7 +98,7 @@ func commands(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, 
 			errs = append(errs, err)
 			continue
 		}
-		u.Step("replaced %s", dst)
+		u.OK("replaced %s", dst)
 		if slices.Contains(services, name) {
 			errs = append(errs, run.Run(ctx, "", "systemctl", "--user", "restart", name+".service"))
 		}
@@ -120,7 +121,7 @@ func same(a, b string) bool {
 func rebuild(ctx context.Context, u *ui.UI, run execx.Runner) error {
 	out, err := run.Output(ctx, "", "hyprd", "rebuild")
 	if err == nil {
-		u.Step("hyprd: %s", out)
+		u.OK("hyprd: %s", out)
 		return nil
 	}
 	if strings.Contains(err.Error(), "hyprd: daemon not running") || slices.ContainsFunc(refusals, func(r string) bool { return strings.HasPrefix(out, r) }) {
@@ -164,7 +165,7 @@ func recipes(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, a
 			current = append(current, name)
 			continue
 		}
-		u.Step("makepkg %s %s → %s", name, have, want)
+		u.Info("makepkg %s %s → %s", name, have, want)
 		args := []string{"-sfi"}
 		if all {
 			args = append(args, "--noconfirm")
@@ -177,7 +178,7 @@ func recipes(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, a
 		u.OK("local packages current: %s", strings.Join(current, ", "))
 	}
 	if len(absent) > 0 {
-		u.Dim("skipped, not installed: %s", strings.Join(absent, ", "))
+		u.Info("skipped, not installed: %s", strings.Join(absent, ", "))
 	}
 	return errors.Join(errs...)
 }
@@ -228,13 +229,13 @@ func tools(ctx context.Context, u *ui.UI, run execx.Runner) error {
 			local = append(local, e.Name())
 			continue
 		}
-		u.Step("go install %s@latest", info.Path)
+		u.Info("go install %s@latest", info.Path)
 		if err := run.Run(ctx, "", "go", "install", info.Path+"@latest"); err != nil {
 			errs = append(errs, fmt.Errorf("%s: %w", e.Name(), err))
 		}
 	}
 	if len(local) > 0 {
-		u.Dim("skipped, not installed from a module proxy: %s", strings.Join(local, ", "))
+		u.Info("skipped, not from a module proxy: %s", strings.Join(local, ", "))
 	}
 	return errors.Join(errs...)
 }

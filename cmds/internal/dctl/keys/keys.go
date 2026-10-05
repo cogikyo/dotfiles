@@ -34,8 +34,7 @@ func Enroll(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, re
 	if err != nil {
 		return err
 	}
-	u.Open("keys enroll yubikey %s", serial)
-	u.Note("wait for each prompt before typing; keys typed early are dropped")
+	u.Section("yubikey "+serial, "wait for each prompt before typing; keys typed early are dropped")
 	pins, err := pinSteps(ctx, run, serial)
 	if err != nil {
 		return err
@@ -56,7 +55,7 @@ func Enroll(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, re
 	u.KV("FIDO2 PIN", "disk unlock at boot, release signing")
 	u.KV("PIV PIN", "age secrets")
 	u.KV("PUK", "unblocks a locked PIV PIN; keep it on paper")
-	u.Hint("for disk unlock: `sudo dctl keys luks`")
+	u.Detail("for disk unlock, run `sudo dctl keys luks`")
 	u.Close(ui.OK, "yubikey %s enrolled", serial)
 	return nil
 }
@@ -202,7 +201,7 @@ func Remove(u *ui.UI, root paths.Root, serial string, rekey func(secrets.Edit) e
 	if !stubbed && !signed {
 		return fmt.Errorf("yubikey %s is not enrolled", serial)
 	}
-	u.Open("keys remove yubikey %s", serial)
+	u.Section("yubikey "+serial, "remove")
 	var errs []error
 	if signed {
 		if err := rewrite(root, func(data []byte) []byte {
@@ -246,7 +245,9 @@ type Report struct {
 	Enrolled []Enrolled `json:"enrolled"`
 	Inserted string     `json:"inserted,omitempty"`
 	Luks     *Header    `json:"luks,omitempty"`
-	Notes    []string   `json:"notes,omitempty"`
+	// Absent and Unread say why Inserted or Luks is empty.
+	Absent string `json:"absent,omitempty"`
+	Unread string `json:"unread,omitempty"`
 }
 
 func Status(ctx context.Context, root paths.Root, run execx.Runner, sys string) (Report, error) {
@@ -269,11 +270,11 @@ func Status(ctx context.Context, root paths.Root, run execx.Runner, sys string) 
 		}
 	}
 	if r.Inserted, err = inserted(ctx, run); err != nil {
-		r.Notes = append(r.Notes, err.Error())
+		r.Absent = err.Error()
 	}
 	h, err := luks(ctx, run, sys)
 	if err != nil {
-		r.Notes = append(r.Notes, err.Error())
+		r.Unread = err.Error()
 		return r, nil
 	}
 	r.Luks = &h

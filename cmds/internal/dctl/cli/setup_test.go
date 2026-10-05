@@ -52,7 +52,7 @@ func TestMode(t *testing.T) {
 
 func TestBatch(t *testing.T) {
 	stages := []setup.Stage{{Name: "system", Root: true}, {Name: "keys", Root: true}}
-	argv := batch("/home/cullyn/.local/bin/dctl", "/home/cullyn/dotfiles", globals(ui.New(ui.Options{JSON: true, Yes: true})), setup.All, stages)
+	argv := batch("/home/cullyn/.local/bin/dctl", "/home/cullyn/dotfiles", nil, globals(ui.New(ui.Options{JSON: true, Yes: true})), setup.All, stages)
 	want := []string{"sudo", "env", "DOTFILES=/home/cullyn/dotfiles", "/home/cullyn/.local/bin/dctl", "--json", "--yes", "setup", "--batch=all", "system", "keys"}
 	if !slices.Equal(argv, want) {
 		t.Fatalf("argv %q, want %q", argv, want)

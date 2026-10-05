@@ -12,13 +12,17 @@ import (
 
 func (u *UI) Spin(ctx context.Context, label string, work func(context.Context) error) error {
 	if !u.Can() || u.opts.Plain {
-		u.Step("%s", label)
+		u.Info("%s", label)
 		return work(ctx)
 	}
-	return spin(ctx, u.stdout, label, work)
+	if err := spin(ctx, u.stdout, u.lead(), label, work); err != nil {
+		return err
+	}
+	u.OK("%s", label)
+	return nil
 }
 
-func spin(parent context.Context, out io.Writer, label string, work func(context.Context) error) error {
+func spin(parent context.Context, out io.Writer, lead, label string, work func(context.Context) error) error {
 	ctx, cancel := context.WithCancel(parent)
 	defer cancel()
 	var err error
@@ -27,7 +31,7 @@ func spin(parent context.Context, out io.Writer, label string, work func(context
 		defer close(done)
 		err = work(ctx)
 	}()
-	m := &busy{label: label, done: done, spinner: spinner.New(spinner.WithSpinner(spinner.MiniDot), spinner.WithStyle(styleStep))}
+	m := &busy{lead: lead, label: label, done: done, spinner: spinner.New(spinner.WithSpinner(spinner.MiniDot), spinner.WithStyle(styleStep))}
 	_, runErr := tea.NewProgram(m, tea.WithContext(ctx), tea.WithInput(nil), tea.WithOutput(out)).Run()
 	cancel()
 	<-done
@@ -43,6 +47,7 @@ func spin(parent context.Context, out io.Writer, label string, work func(context
 type doneMsg struct{}
 
 type busy struct {
+	lead     string
 	label    string
 	done     <-chan struct{}
 	spinner  spinner.Model
@@ -70,5 +75,5 @@ func (m *busy) View() tea.View {
 	if m.finished {
 		return tea.NewView("")
 	}
-	return tea.NewView(fmt.Sprintf("  %s %s", m.spinner.View(), m.label))
+	return tea.NewView(fmt.Sprintf("%s%s %s", m.lead, m.spinner.View(), m.label))
 }
