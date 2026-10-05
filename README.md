@@ -56,7 +56,6 @@
 <details open>
 <summary>🍎 <b>Notable Applications</b></summary>
 
-- Image Editing: [gimp](https://www.gimp.org/)
 - Vector Graphics: [inkscape](https://inkscape.org/)
 - Music: [spotify](www.spotify.com) with [playerctl](https://github.com/altdesktop/playerctl)
 - Music Visualizer: [glava](https://github.com/jarcode-foss/glava)
@@ -94,17 +93,8 @@
 <details open>
 <summary>🧰 <b>Hardware</b></summary>
 
-- Keyboard: [Corne (Helidox) 42 key](https://keebmaker.com/products/corne-low-profile), with Kailh gChoc Light Blue (20g)
-  - ZMK firmware (for bluetooth version of keyboard): [cogikyo/zmk-config](https://github.com/cogikyo/zmk-config)
-
-  <details>
-  <summary>Custom Layout:</summary>
-  <br>
-  <img src="https://user-images.githubusercontent.com/59071534/232157490-bc96cdec-fa8c-4245-a9fe-76fd57a381af.png" alt="layer 1">
-  <img src="https://user-images.githubusercontent.com/59071534/232157618-c49b549f-6acf-4343-96d0-9f9932196b36.png" alt="layer 2">
-  <img src="https://user-images.githubusercontent.com/59071534/232157647-baabd17f-9cf7-43b1-9577-37eb7daa326d.png" alt="layer 3">
-  <img src="https://user-images.githubusercontent.com/59071534/232157666-a6fa76f4-43a2-414b-879d-26a200101e18.png" alt="layer 4">
-  </details>
+- Keyboard: [Svalboard](https://svalboard.com/), configured with [Vial](https://get.vial.today/)
+  - Keymap: [`share/keyboards/svalboard.vil`](share/keyboards/svalboard.vil), browsable with the [`keys` viewer](cmds/cmd/keys/README.md)
 
 ##### Misc Hardware
 
