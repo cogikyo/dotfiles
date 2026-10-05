@@ -33,6 +33,7 @@ const (
 
 	installPrefix = `{"dctltest":`
 	setupPrefix   = `[{"stage":`
+	prompt        = "Please enter passphrase for disk"
 )
 
 var required = slices.Concat([]string{"system", "packages", "home"}, secureboot.Checks)
@@ -140,15 +141,24 @@ func (t *test) run(ctx context.Context, o TestOptions) error {
 }
 
 func (t *test) boot(ctx context.Context, v *vm, n string) error {
-	var base int64
-	err := t.phase(ctx, v, "boot "+n, 3*time.Minute, func(ctx context.Context) (err error) {
-		base, err = v.quiet(ctx)
-		return err
+	err := t.phase(ctx, v, "boot "+n, 3*time.Minute, func(ctx context.Context) error {
+		return v.poll(ctx, time.Second, func() (bool, error) {
+			return bytes.Contains(t.serial(), []byte(prompt)), nil
+		})
 	})
 	if err != nil {
 		return err
 	}
 	err = t.phase(ctx, v, "unlock "+n, 2*time.Minute, func(ctx context.Context) error {
+		select {
+		case <-time.After(time.Second):
+		case <-ctx.Done():
+			return ctx.Err()
+		}
+		base, err := v.reads(ctx)
+		if err != nil {
+			return err
+		}
 		if err := v.typeLine(ctx, luks); err != nil {
 			return err
 		}
@@ -467,20 +477,4 @@ func (v *vm) reads(ctx context.Context) (int64, error) {
 		total += s.Stats.Read
 	}
 	return total, nil
-}
-
-func (v *vm) quiet(ctx context.Context) (int64, error) {
-	var last int64
-	var since time.Time
-	err := v.poll(ctx, time.Second, func() (bool, error) {
-		n, err := v.reads(ctx)
-		if n != last {
-			last, since = n, time.Now()
-		}
-		return n >= 8<<20 && time.Since(since) >= 5*time.Second, err
-	})
-	if err != nil {
-		return 0, fmt.Errorf("disk reads never settled at a passphrase prompt (%d bytes read): %w", last, err)
-	}
-	return last, nil
 }
