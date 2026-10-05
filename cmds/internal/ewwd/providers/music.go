@@ -48,6 +48,7 @@ type MusicState struct {
 	HasArt        bool   `json:"has_art"`
 	HasCanvas     bool   `json:"has_canvas"`
 	CanvasFrame   string `json:"canvas_frame"`
+	CanvasPath    string `json:"canvas_path"`
 }
 
 // Music serializes every snapshot mutation through Start's event loop.
@@ -250,9 +251,9 @@ func (owner *musicOwner) applyFollow(next followState) {
 	owner.duration = next.duration
 	state := musicState(next.status, next.volume, next.artist, next.album, next.title, progress)
 	state.HasArt = owner.last.HasArt
-	state.HasCanvas, state.CanvasFrame = owner.last.HasCanvas, owner.last.CanvasFrame
+	state.HasCanvas, state.CanvasFrame, state.CanvasPath = owner.last.HasCanvas, owner.last.CanvasFrame, owner.last.CanvasPath
 	if trackChanged {
-		state.HasCanvas, state.CanvasFrame = false, ""
+		state.HasCanvas, state.CanvasFrame, state.CanvasPath = false, "", ""
 	}
 	owner.last = state
 	owner.syncCanvas()
@@ -331,7 +332,7 @@ func (owner *musicOwner) clearVisuals() {
 	}
 	_ = os.Remove(albumArtPath)
 	owner.last.HasArt = false
-	owner.last.HasCanvas, owner.last.CanvasFrame = false, ""
+	owner.last.HasCanvas, owner.last.CanvasFrame, owner.last.CanvasPath = false, "", ""
 }
 
 func (owner *musicOwner) syncCanvas() {
@@ -408,18 +409,19 @@ func (owner *musicOwner) fetchCanvas(track string, revision uint64) {
 		if err != nil {
 			return
 		}
-		frames, err := owner.music.player.Prepare(ctx, data)
+		set, err := owner.music.player.Prepare(ctx, data)
 		if err != nil {
 			return
 		}
 		owner.music.send(ctx, func(current *musicOwner) {
 			if current.track != track || current.trackRevision != revision {
-				owner.music.player.Discard(frames)
+				owner.music.player.Discard(set)
 				return
 			}
-			current.music.player.SetFrames(frames)
+			current.music.player.Commit(set)
 			current.last.HasCanvas = true
 			current.last.CanvasFrame = current.music.player.CurrentFrame()
+			current.last.CanvasPath = set.video
 			current.syncCanvas()
 			current.publish(true)
 		})
