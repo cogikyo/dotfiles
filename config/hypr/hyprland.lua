@@ -210,6 +210,13 @@ hl.window_rule({
 	size = floatSize,
 	move = "478 167",
 })
+hl.window_rule({
+	name = "keymap",
+	match = { class = [[^(chrome-127\.0\.0\.1__-Default)$]] },
+	float = true,
+	size = floatSize,
+	move = "478 167",
+})
 
 hl.window_rule({
 	name = "guvcview",

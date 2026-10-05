@@ -92,6 +92,15 @@ super("End",   "Move workspace up",   "hyprd ws up")
 
 super("P", "App Launcher",    "hyprlauncher")
 super("H", "Layout Launcher", "hyprd picker open")
+super("M", "Keymap viewer", function()
+	for _, window in ipairs(hl.get_windows()) do
+		if window.class == "chrome-127.0.0.1__-Default" then
+			hl.dispatch(hl.dsp.window.close({ window = "address:" .. window.address }))
+			return
+		end
+	end
+	hl.dispatch(hl.dsp.exec_cmd("chromium --app=http://127.0.0.1:42070/"))
+end)
 
 hl.define_submap("picker", function()
 	bind("Left",   "Picker layout previous",  "hyprd picker left")
