@@ -236,7 +236,7 @@ hl.config({
 	general = {
 		border_size = 2,
 		gaps_in = 10,
-		gaps_out = { top = 85, right = 86, bottom = 27, left = 128 }, -- top, right, bottom, left — room for eww bar
+		gaps_out = { top = 85, right = 90, bottom = 27, left = 124 }, -- top, right, bottom, left — room for eww bar
 		col = {
 			active_border = "rgb(f2a170)",
 			inactive_border = "rgb(7492ef)",
@@ -274,7 +274,7 @@ hl.config({
 	master = {
 		allow_small_split = true,
 		special_scale_factor = 1,
-		mfact = 0.4942,
+		mfact = 0.4749,
 		new_status = "slave",
 		new_on_top = false,
 		new_on_active = "none",
