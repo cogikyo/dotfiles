@@ -170,6 +170,10 @@ func recipes(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, a
 		args := []string{"-sfiC"}
 		if all {
 			args = append(args, "--noconfirm")
+		} else if ok, err := u.Proceed(fmt.Sprintf("Rebuild %s now?", name)); err != nil {
+			return err
+		} else if !ok {
+			continue
 		}
 		if err := run.Run(ctx, dir, "makepkg", args...); err != nil {
 			errs = append(errs, fmt.Errorf("%s: %w", name, err))
