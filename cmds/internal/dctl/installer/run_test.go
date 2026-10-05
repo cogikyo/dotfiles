@@ -481,7 +481,7 @@ func TestSecureBootFailureFailsInstall(t *testing.T) {
 	}
 }
 
-func TestDoctorUnitOnlyInTestMode(t *testing.T) {
+func TestSetupUnitOnlyInTestMode(t *testing.T) {
 	for _, test := range []bool{false, true} {
 		s, f := rig(t)
 		s.testMounted = test
