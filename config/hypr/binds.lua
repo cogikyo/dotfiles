@@ -36,12 +36,8 @@ alt("R", "Browser", "hyprd three-body browser")
 alt("C", "Agents",  "hyprd three-body agents")
 alt("X", "Dismiss", "dunstctl close")
 
-alt("Escape",       "Toggle shadow",  "hyprd three-body shadow")
-alt("apostrophe",   "Toggle monocle", "hyprd monocle")
-alt("Comma",        "Cycle split",    "hyprd split")
-super("Period",     "Swap master",    "hyprd swap")
 super("Backspace",  "Toggle shadow",  "hyprd three-body shadow")
-super("Escape",     "Toggle shadow",  "hyprd three-body shadow")
+super("Period",     "Swap master",    "hyprd swap")
 super("apostrophe", "Toggle monocle", "hyprd monocle")
 super("Comma",      "Cycle split",    "hyprd split")
 
