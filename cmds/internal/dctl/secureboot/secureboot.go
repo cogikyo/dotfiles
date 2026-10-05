@@ -26,9 +26,6 @@ const (
 	Enforced = "secureboot-enforced"
 )
 
-// Checks names the stable setup items required by the installer and ISO test.
-var Checks = []string{Keys, Signed, Enforced}
-
 var settings = []string{"ENABLE_ENROLL_LIMINE_CONFIG=yes", "ENABLE_LIMINE_FALLBACK=no"}
 
 type Firmware struct {
@@ -142,7 +139,10 @@ func Stage(run execx.Runner, root string) setup.Stage {
 				if err := verify(ctx, run, root); err != nil {
 					return fmt.Errorf("%w; keys not enrolled", err)
 				}
-				return run.Run(ctx, "", "sbctl", "enroll-keys", "-m")
+				if err := run.Run(ctx, "", "sbctl", "enroll-keys"); err != nil {
+					return fmt.Errorf("%w; keys not enrolled: if sbctl refused over option ROMs or a missing TPM eventlog, do not add Microsoft keys (-m) or force it", err)
+				}
+				return nil
 			},
 		},
 		{

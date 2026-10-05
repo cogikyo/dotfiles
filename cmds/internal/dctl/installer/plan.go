@@ -30,12 +30,11 @@ var (
 func (s subvolume) options() string { return options + ",subvol=/" + s.name }
 
 type plan struct {
-	Disk       disk
-	Zone       string
-	LUKSID     string
-	RootID     string
-	ESPID      string
-	SecureBoot bool
+	Disk   disk
+	Zone   string
+	LUKSID string
+	RootID string
+	ESPID  string
 }
 
 func newPlan(d disk, zone string) plan {

@@ -14,11 +14,10 @@ import (
 )
 
 type prep struct {
-	wg       sync.WaitGroup
-	disks    survey
-	firmware secureboot.Firmware
-	targets  []string
-	errs     [4]error
+	wg      sync.WaitGroup
+	disks   survey
+	targets []string
+	errs    [4]error
 }
 
 func (s *session) prepare(ctx context.Context) *prep {
@@ -32,8 +31,9 @@ func (s *session) prepare(ctx context.Context) *prep {
 	})
 	p.wg.Go(func() { p.errs[1] = iso.VerifyPayload(ctx, s.path(iso.Payload)) })
 	p.wg.Go(func() {
-		p.firmware, p.errs[2] = secureboot.Read(s.path("/sys/firmware/efi"))
-		if p.errs[2] == nil && !p.firmware.UEFI {
+		var fw secureboot.Firmware
+		fw, p.errs[2] = secureboot.Read(s.path("/sys/firmware/efi"))
+		if p.errs[2] == nil && !fw.UEFI {
 			p.errs[2] = errors.New("not booted with UEFI; Limine is installed for UEFI only")
 		}
 	})

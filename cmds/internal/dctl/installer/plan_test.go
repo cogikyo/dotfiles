@@ -12,12 +12,11 @@ import (
 )
 
 var testPlan = plan{
-	Disk:       disk{Path: "/dev/nvme0n1", Model: "WD_BLACK SN850X 2000GB", Serial: "24123A800123", Tran: "nvme", Size: 2000398934016, Sector: 512},
-	Zone:       "America/Denver",
-	LUKSID:     "6f1c2a7e-3b4d-4e5f-8a9b-0c1d2e3f4a5b",
-	RootID:     "0d9e8f7a-6b5c-4d3e-9f2a-1b0c9d8e7f6a",
-	ESPID:      "5A3C-91E7",
-	SecureBoot: true,
+	Disk:   disk{Path: "/dev/nvme0n1", Model: "WD_BLACK SN850X 2000GB", Serial: "24123A800123", Tran: "nvme", Size: 2000398934016, Sector: 512},
+	Zone:   "America/Denver",
+	LUKSID: "6f1c2a7e-3b4d-4e5f-8a9b-0c1d2e3f4a5b",
+	RootID: "0d9e8f7a-6b5c-4d3e-9f2a-1b0c9d8e7f6a",
+	ESPID:  "5A3C-91E7",
 }
 
 func phases(p plan) []struct {

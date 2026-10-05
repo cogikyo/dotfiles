@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"dotfiles/cmds/internal/dctl/secureboot"
 	"dotfiles/cmds/internal/dctl/setup"
 )
 
@@ -124,21 +123,19 @@ func TestSerial(t *testing.T) {
 			stage("system", "system-files"),
 			stage("packages", "packages-installed"),
 			stage("home", "home-links"),
-			stage("secureboot", secureboot.Checks...),
 		}
 	}
 	if err := accept("1", append(healthy(), rs[1])); err != nil {
 		t.Fatalf("expected failures outside the required stages: %v", err)
 	}
-	for i, name := range secureboot.Checks {
-		missing := healthy()
-		missing[3].Items = slices.Delete(missing[3].Items, i, i+1)
+	for i, name := range required {
+		missing := slices.Delete(healthy(), i, i+1)
 		if err := accept("2", missing); err == nil || !strings.Contains(err.Error(), "no "+name) {
 			t.Fatalf("missing %s = %v", name, err)
 		}
 		bad := healthy()
-		bad[3].Items[i].State = setup.ManualState
-		if err := accept("2", bad); err == nil || !strings.Contains(err.Error(), name+" manual") {
+		bad[i].Items[0].State = setup.ManualState
+		if err := accept("2", bad); err == nil || !strings.Contains(err.Error(), bad[i].Items[0].Item+" manual") {
 			t.Fatalf("manual %s = %v", name, err)
 		}
 	}

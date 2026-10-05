@@ -7,7 +7,6 @@ import (
 	"debug/pe"
 	"encoding/binary"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -22,7 +21,6 @@ import (
 
 	"dotfiles/cmds/internal/dctl/binaries"
 	"dotfiles/cmds/internal/dctl/iso"
-	"dotfiles/cmds/internal/dctl/setup"
 	"dotfiles/cmds/internal/ui"
 )
 
@@ -33,7 +31,6 @@ type fake struct {
 	vm    bool
 	block bool
 	fail  string
-	sb    []setup.Result
 
 	mu        sync.Mutex
 	calls     [][]string
@@ -129,11 +126,6 @@ func (f *fake) output(ctx context.Context, args ...string) ([]byte, error) {
 		if slices.Contains(args, "list-heads") {
 			return []byte("f93061eab49b9e1cb6076f4b7615d9b5719c0d55 refs/heads/master\n"), nil
 		}
-		if args[len(args)-1] == "secureboot" {
-			f.kernel()
-			out, _ := json.Marshal([]setup.Report{{Stage: "secureboot", State: setup.ManualState, Items: f.sb}})
-			return out, errors.New("exit status 1")
-		}
 	}
 	return nil, errors.New("unexpected output command " + args[0])
 }
@@ -201,19 +193,14 @@ func rig(t *testing.T) (*session, *fake) {
 		put(t, filepath.Join(root, "usr", "local", "bin", name), []byte(name), 0o755)
 	}
 	put(t, filepath.Join(root, "proc", "cmdline"), []byte("archisobasedir=arch archisosearchuuid=2026-10-01-12-00-00-00 copytoram\n"), 0o444)
-	efivars := filepath.Join(root, "sys", "firmware", "efi", "efivars")
-	put(t, filepath.Join(efivars, "SetupMode-8be4df61-93ca-11d2-aa0d-00e098032b8c"), []byte{7, 0, 0, 0, 1}, 0o644)
-	put(t, filepath.Join(efivars, "SecureBoot-8be4df61-93ca-11d2-aa0d-00e098032b8c"), []byte{7, 0, 0, 0, 0}, 0o644)
 	put(t, filepath.Join(root, "usr", "share", "zoneinfo", "America", "Denver"), []byte("TZif"), 0o644)
-	if err := os.MkdirAll(filepath.Join(root, "mnt", "var", "tmp"), 0o755); err != nil {
-		t.Fatal(err)
+	for _, dir := range []string{filepath.Join(root, "sys", "firmware", "efi"), filepath.Join(root, "mnt", "var", "tmp")} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
 
-	f := &fake{t: t, root: root, lsblk: fixture(t, "nvme"), sb: []setup.Result{
-		{Item: "secureboot-keys", State: setup.Done},
-		{Item: "secureboot-signed", State: setup.Done},
-		{Item: "secureboot-enforced", State: setup.ManualState},
-	}}
+	f := &fake{t: t, root: root, lsblk: fixture(t, "nvme")}
 	f.mount("", func(string) bool { return false })
 	s := &session{u: ui.New(ui.Options{JSON: true, Yes: true}), sh: f, root: root, exe: filepath.Join(root, "usr", "local", "bin", "dctl")}
 	s.ask = func(context.Context) (iso.Answers, error) {
@@ -258,12 +245,12 @@ func TestEdges(t *testing.T) {
 	f.before(t, "pacstrap", "umount /mnt/var/cache/pacman/pkg")
 	f.before(t, "arch-chroot -r /mnt useradd", "arch-chroot -r /mnt env DOTFILES=")
 	f.before(t, "arch-chroot -r /mnt runuser -u cullyn -- git -C /home/cullyn/dotfiles fetch", "arch-chroot -r /mnt env DOTFILES=")
-	secureboot := "arch-chroot -r /mnt env DOTFILES=/home/cullyn/dotfiles /home/cullyn/.local/bin/dctl --json setup secureboot"
-	f.before(t, "arch-chroot -r /mnt limine-install", secureboot)
-	f.before(t, secureboot, "blkid")
+	f.before(t, "arch-chroot -r /mnt env DOTFILES=", "arch-chroot -r /mnt limine-update")
+	f.before(t, "arch-chroot -r /mnt limine-install", "arch-chroot -r /mnt limine-update")
+	f.before(t, "arch-chroot -r /mnt limine-update", "blkid")
 	f.before(t, "blkid", "umount -R /mnt")
-	if f.index("arch-chroot -r /mnt limine-update") >= 0 || f.index("arch-chroot -r /mnt sbctl") >= 0 {
-		t.Error("installer signed or built UKIs itself instead of through the secureboot stage")
+	if f.index("arch-chroot -r /mnt sbctl") >= 0 || slices.ContainsFunc(f.calls, func(c []string) bool { return slices.Contains(c, "secureboot") }) {
+		t.Error("installer touched Secure Boot; enrollment belongs to the installed system")
 	}
 	f.before(t, "umount -R /mnt", "cryptsetup close root")
 	f.before(t, "cryptsetup close root", "systemctl reboot")
@@ -453,37 +440,6 @@ func TestOverrideExecsTmpfsCopy(t *testing.T) {
 		t.Errorf("copy holds %q", data)
 	}
 	f.before(t, "mount -o ro", "umount "+testMount)
-}
-
-func TestSecureBootFailureFailsInstall(t *testing.T) {
-	for name, tt := range map[string]struct {
-		mutate func([]setup.Result) []setup.Result
-		want   string
-	}{
-		"unsigned": {func(rs []setup.Result) []setup.Result {
-			rs[1].State, rs[1].Detail = setup.Failed, "not signed by the sbctl db key"
-			return rs
-		}, "secureboot-signed: not signed"},
-		"enforcement failed": {func(rs []setup.Result) []setup.Result {
-			rs[2].State, rs[2].Detail = setup.Failed, "efivar SecureBoot: 3 bytes"
-			return rs
-		}, "secureboot-enforced: efivar"},
-		"keys missing":     {func(rs []setup.Result) []setup.Result { return rs[1:] }, "no secureboot-keys item"},
-		"signed missing":   {func(rs []setup.Result) []setup.Result { return slices.Delete(rs, 1, 2) }, "no secureboot-signed item"},
-		"enforced missing": {func(rs []setup.Result) []setup.Result { return rs[:2] }, "no secureboot-enforced item"},
-	} {
-		t.Run(name, func(t *testing.T) {
-			s, f := rig(t)
-			f.sb = tt.mutate(f.sb)
-			err := s.main(t.Context())
-			if err == nil || !strings.Contains(err.Error(), tt.want) || !errors.Is(err, errModified) {
-				t.Fatalf("main: %v, want %q and the modified-disk notice", err, tt.want)
-			}
-			if f.index("systemctl reboot") >= 0 {
-				t.Error("rebooted after a failed Secure Boot step")
-			}
-		})
-	}
 }
 
 func TestSetupUnitOnlyInTestMode(t *testing.T) {

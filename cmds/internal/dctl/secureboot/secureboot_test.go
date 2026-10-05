@@ -41,7 +41,7 @@ func (f *fake) Run(_ context.Context, _ string, name string, args ...string) err
 		if f.conf != "" {
 			put(f.t, filepath.Join(f.root, "boot", "limine.conf"), []byte(f.conf))
 		}
-	case "sbctl enroll-keys -m":
+	case "sbctl enroll-keys":
 		efivar(f.t, f.root, "SetupMode", 0)
 	}
 	return nil
@@ -141,7 +141,7 @@ func TestFixEnrolls(t *testing.T) {
 	if r := rs[Enforced]; r.State != setup.ManualState || !strings.Contains(r.Detail, "reboot") {
 		t.Errorf("before reboot %s = %+v, want manual on a reboot", Enforced, r)
 	}
-	order := []string{"sbctl create-keys", "limine-update", "sbctl verify", "sbctl enroll-keys -m"}
+	order := []string{"sbctl create-keys", "limine-update", "sbctl verify", "sbctl enroll-keys"}
 	at := -1
 	for _, c := range order {
 		i := slices.IndexFunc(f.calls, func(call string) bool { return strings.HasPrefix(call, c) })
@@ -198,7 +198,7 @@ func TestFixRefusesUnbootable(t *testing.T) {
 			if r := rs[Keys]; r.State != setup.Failed || !strings.Contains(r.Detail, tt.want) || !strings.Contains(r.Detail, "keys not enrolled") {
 				t.Errorf("%s = %+v, want a refused enrollment naming %q", Keys, r, tt.want)
 			}
-			if slices.Contains(f.calls, "sbctl enroll-keys -m") {
+			if slices.Contains(f.calls, "sbctl enroll-keys") {
 				t.Error("enrolled keys over an unbootable configuration")
 			}
 		})

@@ -15,8 +15,6 @@ import (
 
 	"dotfiles/cmds/internal/dctl/binaries"
 	"dotfiles/cmds/internal/dctl/iso"
-	"dotfiles/cmds/internal/dctl/secureboot"
-	"dotfiles/cmds/internal/dctl/setup"
 	"dotfiles/cmds/internal/ui"
 )
 
@@ -117,10 +115,6 @@ func (s *session) main(ctx context.Context) (err error) {
 		return err
 	}
 	p := newPlan(d, a.Zone)
-	p.SecureBoot = prep.firmware.Setup
-	if !p.SecureBoot {
-		s.u.Warn("firmware is not in Secure Boot Setup Mode; installing without Secure Boot (later: `dctl setup secureboot`)")
-	}
 	if test == nil {
 		if err := s.confirm(p.Disk); err != nil {
 			return err
@@ -145,7 +139,7 @@ func (s *session) main(ctx context.Context) (err error) {
 		s.report(nil)
 	}
 	s.u.OK("installed %s on %s in %s", machine, p.Disk.Path, time.Since(start).Round(time.Second))
-	s.u.Detail("after first login, run `dctl setup`")
+	s.u.Detail("after first login, run `dctl setup`; Secure Boot keys enroll later with `sudo dctl setup secureboot`")
 	if test == nil {
 		ok, err := s.u.Confirm("Reboot now?")
 		if err != nil || !ok {
@@ -299,13 +293,9 @@ func (s *session) install(ctx context.Context, p plan, a iso.Answers, pkgs []str
 		{"setup", func(ctx context.Context) error { return s.setup(ctx) }},
 		{"snapshots", cmds(p.snapshots())},
 		{"boot", cmds([]cmd{{Args: chroot("limine-install")}})},
+		{"kernel", cmds([]cmd{{Args: chroot("limine-update")}})},
+		{"validate", func(ctx context.Context) error { return s.validate(ctx, p) }},
 	}
-	if p.SecureBoot {
-		steps = append(steps, step{"secureboot", func(ctx context.Context) error { return s.secureboot(ctx) }})
-	} else {
-		steps = append(steps, step{"kernel", cmds([]cmd{{Args: chroot("limine-update")}})})
-	}
-	steps = append(steps, step{"validate", func(ctx context.Context) error { return s.validate(ctx, p) }})
 	if s.testMounted {
 		steps = append(steps, step{"dctltest", func(ctx context.Context) error { return s.testSetup(ctx) }})
 	}
@@ -514,30 +504,6 @@ func (s *session) setup(ctx context.Context) error {
 		return err
 	}
 	return s.sh.run(ctx, nil, as(dctl(slices.Concat([]string{"setup"}, userStages)...)...)...)
-}
-
-func (s *session) secureboot(ctx context.Context) error {
-	out, err := s.sh.output(ctx, chroot(dctl("--json", "setup", "secureboot")...)...)
-	var reports []setup.Report
-	if jerr := json.Unmarshal(out, &reports); jerr != nil {
-		return errors.Join(err, jerr)
-	}
-	var items []setup.Result
-	for _, r := range reports {
-		items = append(items, r.Items...)
-	}
-	var errs []error
-	for _, name := range secureboot.Checks {
-		i := slices.IndexFunc(items, func(r setup.Result) bool { return r.Item == name })
-		switch {
-		case i < 0:
-			errs = append(errs, fmt.Errorf("setup reported no %s item", name))
-		case items[i].State == setup.Done, name == secureboot.Enforced && items[i].State == setup.ManualState:
-		default:
-			errs = append(errs, fmt.Errorf("%s: %s", name, items[i].Detail))
-		}
-	}
-	return errors.Join(errs...)
 }
 
 var errModified = errors.New("The target disk has already been modified; installation is incomplete.")

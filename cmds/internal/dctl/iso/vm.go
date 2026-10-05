@@ -14,7 +14,6 @@ import (
 	"time"
 
 	"dotfiles/cmds/internal/dctl/execx"
-	"dotfiles/cmds/internal/dctl/secureboot"
 	"dotfiles/cmds/internal/dctl/setup"
 	"dotfiles/cmds/internal/ui"
 )
@@ -36,7 +35,7 @@ const (
 	prompt        = "Please enter passphrase for disk"
 )
 
-var required = slices.Concat([]string{"system", "packages", "home"}, secureboot.Checks)
+var required = []string{"system", "packages", "home"}
 
 type test struct {
 	u       *ui.UI
