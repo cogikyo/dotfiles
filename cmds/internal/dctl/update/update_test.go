@@ -24,6 +24,12 @@ type fake struct {
 
 func (f *fake) Run(_ context.Context, _ string, name string, args ...string) error {
 	f.calls = append(f.calls, strings.Join(append([]string{name}, args...), " "))
+	return nil
+}
+
+func (f *fake) Output(_ context.Context, _ string, name string, args ...string) (string, error) {
+	line := strings.Join(append([]string{name}, args...), " ")
+	f.calls = append(f.calls, line)
 	if name == "env" && slices.Contains(args, "build") {
 		out := args[slices.Index(args, "-o")+1]
 		for bin, data := range f.builds {
@@ -31,13 +37,8 @@ func (f *fake) Run(_ context.Context, _ string, name string, args ...string) err
 				f.t.Fatal(err)
 			}
 		}
+		return "", nil
 	}
-	return nil
-}
-
-func (f *fake) Output(_ context.Context, _ string, name string, args ...string) (string, error) {
-	line := strings.Join(append([]string{name}, args...), " ")
-	f.calls = append(f.calls, line)
 	switch line {
 	case "git status --porcelain --untracked-files=all -- cmds":
 		return f.dirty, nil

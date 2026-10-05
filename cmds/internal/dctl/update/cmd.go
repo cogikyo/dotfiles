@@ -78,7 +78,11 @@ func commands(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, 
 	for _, name := range names {
 		args = append(args, "./cmd/"+name)
 	}
-	if err := run.Run(ctx, filepath.Join(root.Dotfiles, "cmds"), "env", args...); err != nil {
+	err = u.Spin(ctx, "go build "+strings.Join(names, " "), func(ctx context.Context) error {
+		_, err := run.Output(ctx, filepath.Join(root.Dotfiles, "cmds"), "env", args...)
+		return err
+	})
+	if err != nil {
 		return err
 	}
 	var errs []error
@@ -234,8 +238,14 @@ func tools(ctx context.Context, u *ui.UI, run execx.Runner) error {
 			local = append(local, e.Name())
 			continue
 		}
-		u.Info("go install %s@latest", info.Path)
-		if err := run.Run(ctx, "", "go", "install", info.Path+"@latest"); err != nil {
+		err = u.Spin(ctx, "go install "+info.Path+"@latest", func(ctx context.Context) error {
+			_, err := run.Output(ctx, "", "go", "install", info.Path+"@latest")
+			return err
+		})
+		if errors.Is(err, ui.ErrCanceled) {
+			return err
+		}
+		if err != nil {
 			errs = append(errs, fmt.Errorf("%s: %w", e.Name(), err))
 		}
 	}
