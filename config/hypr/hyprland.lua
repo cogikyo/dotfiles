@@ -75,7 +75,7 @@ hl.window_rule({
 })
 hl.window_rule({ name = "discord-workspace", match = { class = "discord" }, workspace = "2 silent" })
 hl.window_rule({ name = "slack-workspace", match = { class = "slack" }, workspace = "2 silent" })
-hl.window_rule({ name = "grok-bot-workspace", match = { class = [[^(grok-bot|Grok Bot)$]] }, workspace = "2 silent" })
+hl.window_rule({ name = "grok-bot-workspace", match = { class = "grok-bot" }, workspace = "2 silent" })
 
 -- Keep document placement broad while applying popup geometry only to Zathura.
 hl.window_rule({ name = "libreoffice-workspace", match = { class = [[^libreoffice-.+$]] }, workspace = "3 silent" })

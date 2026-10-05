@@ -332,6 +332,7 @@ notify:
   # Repeated notifications for one target coalesce into the newest route.
   action_focus_apps:
     Slack: { workspace: 2, class: slack }
+    Grok Bot: { workspace: 2, class: grok-bot }
     Firefox: { workspace: 2, class: firefox-developer-edition }
     Firefox Developer Edition: { workspace: 2, class: firefox-developer-edition }
     firefox-developer-edition: { workspace: 2, class: firefox-developer-edition }
