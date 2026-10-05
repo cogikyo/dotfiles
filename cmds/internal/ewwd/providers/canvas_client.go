@@ -43,6 +43,7 @@ const (
 type spotifyToken struct {
 	AccessToken string `json:"accessToken"`
 	ExpiresMs   int64  `json:"accessTokenExpirationTimestampMs"`
+	ClientID    string `json:"clientId"`
 }
 
 // CanvasClient authenticates to Spotify's private Canvas endpoint and caches the web access token.
@@ -55,13 +56,27 @@ type CanvasClient struct {
 // NewCanvasClient returns nil when no sp_dc cookie can be resolved.
 func NewCanvasClient(spDc string) *CanvasClient {
 	if spDc == "" {
-		spDc = resolveSpDc(context.Background())
+		spDc = firefoxCookie(context.Background(), "sp_dc")
 	}
 	if spDc == "" {
 		fmt.Fprintln(os.Stderr, "ewwd: canvas disabled — no sp_dc cookie found (log into open.spotify.com in Firefox)")
 		return nil
 	}
 	return &CanvasClient{spDc: spDc}
+}
+
+func (c *CanvasClient) accessToken(ctx context.Context) (string, error) {
+	token, err := c.webToken(ctx)
+	return token.AccessToken, err
+}
+
+func (c *CanvasClient) webToken(ctx context.Context) (spotifyToken, error) {
+	if err := c.refreshToken(ctx); err != nil {
+		return spotifyToken{}, err
+	}
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	return c.token, nil
 }
 
 func (c *CanvasClient) refreshToken(ctx context.Context) error {
@@ -75,7 +90,7 @@ func (c *CanvasClient) refreshToken(ctx context.Context) error {
 	tok, err := c.fetchToken(ctx, c.spDc)
 	if err != nil {
 		// Cookie may have rotated; re-read from Firefox and retry once.
-		fresh := resolveSpDc(ctx)
+		fresh := firefoxCookie(ctx, "sp_dc")
 		if fresh == "" || fresh == c.spDc {
 			return err
 		}
@@ -158,8 +173,8 @@ func deobfuscateTOTPSecret() []byte {
 	return secret
 }
 
-// resolveSpDc reads the Spotify session cookie from Firefox's cookies.sqlite database.
-func resolveSpDc(ctx context.Context) string {
+// firefoxCookie reads a Spotify cookie from Firefox's cookies.sqlite database.
+func firefoxCookie(ctx context.Context, name string) string {
 	cookiesDB := findFirefoxCookiesDB()
 	if cookiesDB == "" {
 		return ""
@@ -169,7 +184,7 @@ func resolveSpDc(ctx context.Context) string {
 	defer cancel()
 	dsn := fmt.Sprintf("file:%s?mode=ro&immutable=1", cookiesDB)
 	out, err := exec.CommandContext(queryCtx, "sqlite3", dsn,
-		"SELECT value FROM moz_cookies WHERE host = '.spotify.com' AND name = 'sp_dc' LIMIT 1",
+		"SELECT value FROM moz_cookies WHERE host = '.spotify.com' AND name = '"+name+"' LIMIT 1",
 	).Output()
 	if err != nil {
 		return ""
@@ -243,7 +258,8 @@ func findFirefoxCookiesDB() string {
 
 // FetchCanvasURL returns the CDN URL for a track's Canvas MP4, or "" when none exists.
 func (c *CanvasClient) FetchCanvasURL(ctx context.Context, trackURI string) (string, error) {
-	if err := c.refreshToken(ctx); err != nil {
+	token, err := c.accessToken(ctx)
+	if err != nil {
 		return "", err
 	}
 
@@ -262,10 +278,6 @@ func (c *CanvasClient) FetchCanvasURL(ctx context.Context, trackURI string) (str
 	if err != nil {
 		return "", err
 	}
-
-	c.mu.Lock()
-	token := c.token.AccessToken
-	c.mu.Unlock()
 
 	req.Header.Set("Authorization", "Bearer "+token)
 	req.Header.Set("Content-Type", "application/x-protobuf")

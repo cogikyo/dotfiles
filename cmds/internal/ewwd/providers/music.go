@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strconv"
 	"strings"
 	"sync"
@@ -32,23 +33,31 @@ const (
 )
 
 type MusicState struct {
-	Status        string `json:"status"`
-	Playing       bool   `json:"playing"`
-	Volume        string `json:"volume"`
-	VolumePercent int    `json:"volume_percent"`
-	Artist        string `json:"artist"`
-	ArtistShort   string `json:"artist_short"`
-	Album         string `json:"album"`
-	AlbumShort    string `json:"album_short"`
-	Title         string `json:"title"`
-	TitleShort    string `json:"title_short"`
-	SingleTrack   bool   `json:"single_track"`
-	Progress      int    `json:"progress"`
-	ArtPath       string `json:"art_path"`
-	HasArt        bool   `json:"has_art"`
-	HasCanvas     bool   `json:"has_canvas"`
-	CanvasFrame   string `json:"canvas_frame"`
-	CanvasPath    string `json:"canvas_path"`
+	Status        string       `json:"status"`
+	Playing       bool         `json:"playing"`
+	Volume        string       `json:"volume"`
+	VolumePercent int          `json:"volume_percent"`
+	Artist        string       `json:"artist"`
+	ArtistShort   string       `json:"artist_short"`
+	Album         string       `json:"album"`
+	AlbumShort    string       `json:"album_short"`
+	Title         string       `json:"title"`
+	TitleShort    string       `json:"title_short"`
+	SingleTrack   bool         `json:"single_track"`
+	Progress      int          `json:"progress"`
+	ArtPath       string       `json:"art_path"`
+	HasArt        bool         `json:"has_art"`
+	HasCanvas     bool         `json:"has_canvas"`
+	CanvasFrame   string       `json:"canvas_frame"`
+	CanvasPath    string       `json:"canvas_path"`
+	Queue         []MusicTrack `json:"queue"`
+	History       []MusicTrack `json:"history"`
+}
+
+type MusicTrack struct {
+	Title  string `json:"title"`
+	Artist string `json:"artist"`
+	ArtURL string `json:"art_url"`
 }
 
 // Music serializes every snapshot mutation through Start's event loop.
@@ -80,6 +89,8 @@ type musicOwner struct {
 	seekRevision  uint64
 	seekPending   bool
 	pollPending   bool
+	history       []MusicTrack
+	queue         []MusicTrack
 }
 
 type followState struct {
@@ -134,9 +145,15 @@ func (m *Music) Start(ctx context.Context, notify func(data any)) error {
 		fmt.Fprintf(os.Stderr, "music: create album art directory: %v\n", err)
 	}
 
-	owner := musicOwner{music: m, last: stoppedMusicState()}
+	owner := musicOwner{music: m, last: stoppedMusicState(), history: []MusicTrack{}, queue: []MusicTrack{}}
 	owner.publish(true)
 	m.wg.Go(func() { m.follow(runCtx) })
+	if m.canvas != nil {
+		observer := newConnectObserver(m.canvas, func(history, queue []MusicTrack) {
+			m.send(runCtx, func(owner *musicOwner) { owner.applyConnect(history, queue) })
+		})
+		m.wg.Go(func() { observer.run(runCtx) })
+	}
 
 	ticker := time.NewTicker(musicPollInterval)
 	defer ticker.Stop()
@@ -252,12 +269,13 @@ func (owner *musicOwner) applyFollow(next followState) {
 	state := musicState(next.status, next.volume, next.artist, next.album, next.title, progress)
 	state.HasArt = owner.last.HasArt
 	state.HasCanvas, state.CanvasFrame, state.CanvasPath = owner.last.HasCanvas, owner.last.CanvasFrame, owner.last.CanvasPath
+	state.History, state.Queue = owner.history, owner.queue
 	if trackChanged {
 		state.HasCanvas, state.CanvasFrame, state.CanvasPath = false, "", ""
 	}
 	owner.last = state
 	owner.syncCanvas()
-	owner.publish(owner.last != previous)
+	owner.publish(!reflect.DeepEqual(owner.last, previous))
 
 	if trackChanged || artChanged {
 		owner.downloadArt(next.artURL)
@@ -279,7 +297,15 @@ func (owner *musicOwner) snapshotUnavailable() {
 	}
 	owner.duration = 0
 	owner.last = stoppedMusicState()
-	owner.publish(owner.last != previous)
+	owner.last.History, owner.last.Queue = owner.history, owner.queue
+	owner.publish(!reflect.DeepEqual(owner.last, previous))
+}
+
+func (owner *musicOwner) applyConnect(history, queue []MusicTrack) {
+	owner.history, owner.queue = history, queue
+	changed := !reflect.DeepEqual(owner.last.History, history) || !reflect.DeepEqual(owner.last.Queue, queue)
+	owner.last.History, owner.last.Queue = history, queue
+	owner.publish(changed)
 }
 
 func (owner *musicOwner) poll(ctx context.Context) {
@@ -507,6 +533,7 @@ func musicState(status, volume, artist, album, title string, progress int) Music
 		Artist: artist, ArtistShort: compactLabel(artist, shortInfoLimit),
 		Album: album, AlbumShort: compactLabel(album, shortInfoLimit), Title: title,
 		TitleShort: compactLabel(title, shortTitleLimit), SingleTrack: title == album, Progress: progress, ArtPath: albumArtPath,
+		Queue: []MusicTrack{}, History: []MusicTrack{},
 	}
 }
 
