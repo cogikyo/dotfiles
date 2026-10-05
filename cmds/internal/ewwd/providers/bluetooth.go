@@ -101,14 +101,16 @@ type Bluetooth struct {
 	stopped  chan struct{}
 	stopOnce sync.Once
 	notify   func(data any)
+	wear     func(address, state string)
 	last     BluetoothState
 	hasLast  bool
 }
 
-func NewBluetooth(state StateSetter, address string) Provider {
+func NewBluetooth(state StateSetter, address string, wear func(address, state string)) Provider {
 	return &Bluetooth{
 		state:    state,
 		address:  address,
+		wear:     wear,
 		requests: make(chan bluetoothRequest),
 		stop:     make(chan struct{}),
 		stopped:  make(chan struct{}),
@@ -170,6 +172,7 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 	var noiseDeadline *time.Timer
 	var noiseDeadlineC <-chan time.Time
 	var audio a2dpWatch
+	var wear string
 
 	clearNoise := func() {
 		noise = nil
@@ -200,7 +203,19 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 		librePodsCommands <- noise.launch(noiseToken, metadataRevision)
 	}
 	publish := func() {
-		b.publish(mergeBluetoothState(bluez, b.address, metadata, noise))
+		snapshot := mergeBluetoothState(bluez, b.address, metadata, noise)
+		b.publish(snapshot)
+		if !audio.connected {
+			if wear != "" {
+				wear = ""
+				b.wear(b.address, "")
+			}
+			return
+		}
+		if snapshot.WearState != "" && snapshot.WearState != wear {
+			wear = snapshot.WearState
+			b.wear(b.address, wear)
+		}
 	}
 	operate := func(action string) {
 		connect := bluez.Status != "connected" || action == "reconnect"

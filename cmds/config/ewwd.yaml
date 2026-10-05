@@ -17,6 +17,7 @@ audio:
   volume_step: 10
   default_sink_volume: 69
   default_source_volume: 100
+  fallback_sink: alsa_output.pci-0000_74_00.1.hdmi-stereo-extra1
   name_mappings:
     AirPodsHiRes: AirPods Max
     alsa_output.pci-0000_74_00.1.hdmi-stereo-extra1: LG TV

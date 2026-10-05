@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"os"
 	"os/exec"
 	"slices"
 	"strconv"
@@ -45,10 +46,29 @@ type pendingAudioAction struct {
 	target  string
 }
 
+type wearChange struct {
+	address string
+	state   string
+}
+
+type audioNode struct {
+	Name       string            `json:"name"`
+	Properties map[string]string `json:"properties"`
+	ActivePort string            `json:"active_port"`
+	Ports      []struct {
+		Name         string `json:"name"`
+		Availability string `json:"availability"`
+	} `json:"ports"`
+}
+
 type Audio struct {
 	state    StateSetter
 	config   config.AudioConfig
 	requests chan audioRequest
+	wearMu   sync.Mutex
+	wear     wearChange
+	wearSeq  uint64
+	wearSent chan struct{}
 	stop     chan struct{}
 	stopped  chan struct{}
 	stopOnce sync.Once
@@ -57,14 +77,36 @@ type Audio struct {
 	hasLast  bool
 }
 
-func NewAudio(state StateSetter, cfg config.AudioConfig) Provider {
+func NewAudio(state StateSetter, cfg config.AudioConfig) *Audio {
 	return &Audio{
 		state:    state,
 		config:   cfg,
 		requests: make(chan audioRequest),
+		wearSent: make(chan struct{}, 1),
 		stop:     make(chan struct{}),
 		stopped:  make(chan struct{}),
 	}
+}
+
+func (a *Audio) Wear(address, state string) {
+	a.wearMu.Lock()
+	if state == "" && a.wear.state != "worn" {
+		a.wearMu.Unlock()
+		return
+	}
+	a.wear = wearChange{address: address, state: state}
+	a.wearSeq++
+	a.wearMu.Unlock()
+	select {
+	case a.wearSent <- struct{}{}:
+	default:
+	}
+}
+
+func (a *Audio) latestWear() (wearChange, uint64) {
+	a.wearMu.Lock()
+	defer a.wearMu.Unlock()
+	return a.wear, a.wearSeq
 }
 
 func (a *Audio) Name() string { return "audio" }
@@ -86,6 +128,22 @@ func (a *Audio) Start(ctx context.Context, notify func(data any)) error {
 	var pending *pendingAudioAction
 	var actionTimer *time.Timer
 	var actionTimerC <-chan time.Time
+	var headphones string
+	var wearHandled uint64
+
+	followHeadphones := func() {
+		if headphones == "" {
+			return
+		}
+		found, err := a.setDefaultSink(ctx, func(name string) bool { return strings.HasPrefix(name, headphones) })
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "ewwd: audio: select headphones: %v\n", err)
+			return
+		}
+		if found {
+			headphones = ""
+		}
+	}
 
 	startNext := func() {
 		for pending == nil && len(queue) > 0 {
@@ -126,6 +184,7 @@ func (a *Audio) Start(ctx context.Context, notify func(data any)) error {
 		case connected := <-status:
 			if connected {
 				a.refresh(ctx)
+				followHeadphones()
 			} else {
 				a.publish(AudioState{})
 				finishPending(errors.New("audio event stream unavailable"))
@@ -150,12 +209,33 @@ func (a *Audio) Start(ctx context.Context, notify func(data any)) error {
 			if pending != nil && audioEventConfirms(pending.target, burstTargets) {
 				finishPending(nil)
 			}
+			if burstTargets["sink"] || burstTargets["server"] {
+				followHeadphones()
+			}
 			clear(burstTargets)
 		case <-actionTimerC:
 			actionTimerC = nil
 			a.refresh(ctx)
 			finishPending(nil)
+		case <-a.wearSent:
+			change, seq := a.latestWear()
+			if seq == wearHandled {
+				continue
+			}
+			wearHandled = seq
+			headphones = ""
+			switch change.state {
+			case "worn":
+				headphones = "bluez_output." + strings.ReplaceAll(strings.ToUpper(change.address), ":", "_") + "."
+				followHeadphones()
+			case "not_worn":
+				a.selectFallback(ctx)
+			}
 		case req := <-a.requests:
+			if slices.Equal(req.args, []string{"cycle_device", "sink"}) {
+				_, wearHandled = a.latestWear()
+				headphones = ""
+			}
 			queue = append(queue, req)
 			startNext()
 		}
@@ -418,28 +498,79 @@ func (a *Audio) cycleDevice(ctx context.Context, deviceType string) error {
 	if err := a.requireAvailable(deviceType); err != nil {
 		return err
 	}
+	nodes, err := listAudioNodes(ctx, deviceType)
+	if err != nil {
+		return err
+	}
+	if len(nodes) == 0 {
+		return fmt.Errorf("no available audio %ss", deviceType)
+	}
+	inspect, err := audioCommand(ctx, "wpctl", "inspect", audioTarget(deviceType))
+	if err != nil {
+		return fmt.Errorf("inspect default %s: %w", deviceType, err)
+	}
+	current, _, ok := parseAudioIdentity(inspect)
+	if !ok {
+		return fmt.Errorf("default %s has no node name", deviceType)
+	}
+	index := slices.IndexFunc(nodes, func(n audioNode) bool { return n.Name == current })
+	next := nodes[(index+1)%len(nodes)]
+	if next.Name == current {
+		return nil
+	}
+	return a.setDefault(ctx, deviceType, next)
+}
+
+func (a *Audio) selectFallback(ctx context.Context) {
+	name := a.config.FallbackSink
+	if name == "" {
+		fmt.Fprintln(os.Stderr, "ewwd: audio: headphones removed but audio.fallback_sink is unset")
+		return
+	}
+	found, err := a.setDefaultSink(ctx, func(candidate string) bool { return candidate == name })
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "ewwd: audio: select fallback sink: %v\n", err)
+		return
+	}
+	if !found {
+		fmt.Fprintf(os.Stderr, "ewwd: audio: fallback sink %q is not available\n", name)
+	}
+}
+
+func (a *Audio) setDefaultSink(ctx context.Context, match func(name string) bool) (bool, error) {
+	nodes, err := listAudioNodes(ctx, "sink")
+	if err != nil {
+		return false, err
+	}
+	index := slices.IndexFunc(nodes, func(n audioNode) bool { return match(n.Name) })
+	if index < 0 {
+		return false, nil
+	}
+	return true, a.setDefault(ctx, "sink", nodes[index])
+}
+
+func (a *Audio) setDefault(ctx context.Context, deviceType string, node audioNode) error {
+	id, err := strconv.ParseUint(node.Properties["object.id"], 10, 32)
+	if err != nil || id == 0 {
+		return fmt.Errorf("audio %s %q has no valid PipeWire node ID", deviceType, node.Name)
+	}
+	return a.runAction(ctx, "set-default", strconv.FormatUint(id, 10))
+}
+
+func listAudioNodes(ctx context.Context, deviceType string) ([]audioNode, error) {
 	output, err := audioCommand(ctx, "pactl", "--format=json", "list", deviceType+"s")
 	if err != nil {
-		return fmt.Errorf("list audio %ss: %w", deviceType, err)
+		return nil, fmt.Errorf("list audio %ss: %w", deviceType, err)
 	}
-	type node struct {
-		Name       string            `json:"name"`
-		Properties map[string]string `json:"properties"`
-		ActivePort string            `json:"active_port"`
-		Ports      []struct {
-			Name         string `json:"name"`
-			Availability string `json:"availability"`
-		} `json:"ports"`
-	}
-	var nodes []node
+	var nodes []audioNode
 	if err := json.Unmarshal([]byte(output), &nodes); err != nil {
-		return fmt.Errorf("parse audio %ss: %w", deviceType, err)
+		return nil, fmt.Errorf("parse audio %ss: %w", deviceType, err)
 	}
 	mediaClass := "Audio/Sink"
 	if deviceType == "source" {
 		mediaClass = "Audio/Source"
 	}
-	nodes = slices.DeleteFunc(nodes, func(n node) bool {
+	nodes = slices.DeleteFunc(nodes, func(n audioNode) bool {
 		if n.Properties["media.class"] != mediaClass || n.Properties["device.class"] == "monitor" {
 			return true
 		}
@@ -450,28 +581,8 @@ func (a *Audio) cycleDevice(ctx context.Context, deviceType string) error {
 		}
 		return false
 	})
-	if len(nodes) == 0 {
-		return fmt.Errorf("no available audio %ss", deviceType)
-	}
-	slices.SortFunc(nodes, func(a, b node) int { return strings.Compare(a.Name, b.Name) })
-	inspect, err := audioCommand(ctx, "wpctl", "inspect", audioTarget(deviceType))
-	if err != nil {
-		return fmt.Errorf("inspect default %s: %w", deviceType, err)
-	}
-	current, _, ok := parseAudioIdentity(inspect)
-	if !ok {
-		return fmt.Errorf("default %s has no node name", deviceType)
-	}
-	index := slices.IndexFunc(nodes, func(n node) bool { return n.Name == current })
-	next := nodes[(index+1)%len(nodes)]
-	if next.Name == current {
-		return nil
-	}
-	id, err := strconv.ParseUint(next.Properties["object.id"], 10, 32)
-	if err != nil || id == 0 {
-		return fmt.Errorf("audio %s %q has no valid PipeWire node ID", deviceType, next.Name)
-	}
-	return a.runAction(ctx, "set-default", strconv.FormatUint(id, 10))
+	slices.SortFunc(nodes, func(a, b audioNode) int { return strings.Compare(a.Name, b.Name) })
+	return nodes, nil
 }
 
 func (a *Audio) changeVolume(ctx context.Context, deviceType, direction string) error {
