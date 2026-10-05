@@ -281,8 +281,9 @@ Named steps skip the per-step prompt and keep the order below.
 `--all` or global `--yes` skips prompts and passes `--noconfirm` to pacman, yay, and makepkg, but never flashes firmware.
 `--only NAME,...` limits the `cmd` step to the named dotfiles commands or local recipes, and runs only that step when no steps are named.
 
-- `pacman` runs `sudo pacman -Syu` against the official repositories, then reports package-list drift without rewriting lists or removing packages.
+- `pacman` runs `sudo pacman -Syu` against the official repositories.
 - `aur` runs `yay -Sua`.
+- `packages` makes installed packages match `packages/*.lst`, as described below.
 - `repos` fast-forwards the clean catalog checkouts, excluding dotfiles.
 - `cmd` rebuilds changed dotfiles commands and reinstalls `packages/<name>` recipes whose PKGBUILD version differs from the installed one.
 - `go` updates proxy-installed Go tools.
@@ -297,10 +298,15 @@ Local recipes rebuild with `makepkg -sfiC` (clean `src/` first) only when instal
 Go tools in `GOBIN` or the first GOPATH's `bin` directory use `go install <package>@latest` only when build metadata has a module-proxy checksum; locally built tools are skipped.
 Individual tool or step failures do not stop later work, but the command returns nonzero for failures.
 
-Update never installs newly listed packages; rerun `dctl setup packages extra` and follow any manual AUR/local build instructions.
-The drift report lists unlisted explicit packages, listed-but-missing packages, listed packages installed as dependencies, and unlisted orphans across all package lists and local recipes.
-It then prints, without running them, the pacman commands that reconcile the system in order: mark listed packages explicit, demote unlisted packages that others require to dependencies, and remove the remaining unlisted packages and orphans.
-Run them in that order, because `-Rns` also removes dependencies that are not marked explicit.
+The package lists and local recipes are the source of truth for the `packages` step.
+It first marks listed dependencies explicit and demotes unlisted packages that others require to dependencies, without asking.
+Marking always runs before removal, so `-Rns` cannot remove a listed package.
+It then asks default-no to install listed packages that are missing; repo and AUR names go through `yay`, and local recipes print a `makepkg -si` instruction.
+Last, a checklist offers the unlisted explicit packages and unlisted orphans for removal, all checked.
+Checked packages go to `sudo pacman -Rns`, which shows its plan and asks again.
+Unchecked packages are added in sorted order to the `# official` or `# aur` section of `extra.lst` and marked explicit.
+Esc in the checklist changes nothing.
+`--all`, global `--yes`, or no terminal only marks, then reports the remaining drift; `--json` emits the drift and changes nothing.
 On a fresh offline install, run `dctl update pacman` first to synchronize official repository databases.
 
 ## ISO

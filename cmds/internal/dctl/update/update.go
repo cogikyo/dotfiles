@@ -31,12 +31,9 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all bool, only []string)
 	return []Step{
 		{
 			Name: "pacman",
-			Plan: "official repos via sudo pacman -Syu, then report package-list drift",
+			Plan: "official repos via sudo pacman -Syu",
 			Run: func(ctx context.Context) error {
-				if err := run.Run(ctx, "", "sudo", noconfirm("pacman", "-Syu")...); err != nil {
-					return err
-				}
-				return packages.Report(ctx, u, root.Packages(), run)
+				return run.Run(ctx, "", "sudo", noconfirm("pacman", "-Syu")...)
 			},
 		},
 		{
@@ -44,6 +41,13 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all bool, only []string)
 			Plan: "AUR packages via yay -Sua",
 			Run: func(ctx context.Context) error {
 				return run.Run(ctx, "", "yay", noconfirm("-Sua")...)
+			},
+		},
+		{
+			Name: "packages",
+			Plan: "make installed packages match packages/*.lst",
+			Run: func(ctx context.Context) error {
+				return packages.Reconcile(ctx, u, root.Packages(), run, all)
 			},
 		},
 		{

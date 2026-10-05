@@ -41,6 +41,20 @@ func (u *UI) Select(title string, options []string, initial int) (int, error) {
 	return m.cursor, nil
 }
 
+func (u *UI) Checklist(title string, options []string) ([]bool, error) {
+	if len(options) == 0 {
+		return nil, errors.New("checklist: no options")
+	}
+	m := &checklist{lead: u.lead(), pad: u.pad(), title: title, options: options, checked: make([]bool, len(options))}
+	for i := range m.checked {
+		m.checked[i] = true
+	}
+	if err := u.run(m, &m.canceled); err != nil {
+		return nil, err
+	}
+	return m.checked, nil
+}
+
 func (u *UI) Text(label, initial string) (string, error) {
 	m := newInput(u.lead()+styleStep.Render(label), false, !u.opts.Plain)
 	m.field.SetValue(initial)
@@ -187,6 +201,73 @@ func (m *choose) View() tea.View {
 			continue
 		}
 		b.WriteString(m.pad + "    " + styleDim.Render(option) + "\n")
+	}
+	return tea.NewView(b.String())
+}
+
+type checklist struct {
+	lead, pad      string
+	title          string
+	options        []string
+	checked        []bool
+	cursor         int
+	done, canceled bool
+}
+
+func (m *checklist) Init() tea.Cmd { return nil }
+
+func (m *checklist) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if cancelKey(msg) {
+		m.canceled = true
+		return m, tea.Quit
+	}
+	key, ok := msg.(tea.KeyPressMsg)
+	if !ok {
+		return m, nil
+	}
+	switch key.String() {
+	case "up", "k":
+		m.cursor = max(m.cursor-1, 0)
+	case "down", "j":
+		m.cursor = min(m.cursor+1, len(m.options)-1)
+	case "space":
+		m.checked[m.cursor] = !m.checked[m.cursor]
+	case "enter":
+		m.done = true
+		return m, tea.Quit
+	}
+	return m, nil
+}
+
+func (m *checklist) View() tea.View {
+	title := m.lead + styleStep.Render(m.title)
+	if m.canceled {
+		return tea.NewView(title + " " + styleDim.Render("canceled") + "\n")
+	}
+	if m.done {
+		n := 0
+		for _, on := range m.checked {
+			if on {
+				n++
+			}
+		}
+		return tea.NewView(fmt.Sprintf("%s %d of %d checked\n", title, n, len(m.options)))
+	}
+	var b strings.Builder
+	b.WriteString(title + "  " + styleDim.Render("space toggles, enter confirms") + "\n")
+	for i, option := range m.options {
+		box := "[ ] "
+		if m.checked[i] {
+			box = "[x] "
+		}
+		switch {
+		case i == m.cursor:
+			b.WriteString(m.pad + "  " + styleAccent.Render("> "+box+option) + "\n")
+		case m.checked[i]:
+			b.WriteString(m.pad + "    " + box + option + "\n")
+		default:
+			b.WriteString(m.pad + "    " + styleDim.Render(box+option) + "\n")
+		}
 	}
 	return tea.NewView(b.String())
 }

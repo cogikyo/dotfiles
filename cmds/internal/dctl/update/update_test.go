@@ -61,7 +61,7 @@ func TestSteps(t *testing.T) {
 	for _, s := range steps {
 		names = append(names, s.Name)
 	}
-	if want := []string{"pacman", "aur", "repos", "cmd", "go", "rust", "firmware"}; !slices.Equal(names, want) {
+	if want := []string{"pacman", "aur", "packages", "repos", "cmd", "go", "rust", "firmware"}; !slices.Equal(names, want) {
 		t.Fatalf("steps %v, want %v", names, want)
 	}
 	got, err := Select(steps, []string{"firmware", "aur"})

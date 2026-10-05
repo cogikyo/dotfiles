@@ -21,24 +21,13 @@ type Drift struct {
 	Required []string `json:"required"`
 }
 
-func Report(ctx context.Context, u *ui.UI, dir string, run execx.Runner) error {
-	l, err := Load(dir)
-	if err != nil {
-		return err
-	}
-	d, err := drift(ctx, run, l)
-	if err != nil {
-		return err
-	}
-	if u.JSON() {
-		return u.Emit(d)
-	}
-	report(u, d)
-	return nil
+func (d Drift) marked() Drift {
+	required := set(slices.Values(d.Required))
+	return Drift{Repo: absent(d.Repo, required), AUR: absent(d.AUR, required), Missing: d.Missing, Orphans: d.Orphans}
 }
 
 func report(u *ui.UI, d Drift) {
-	if len(d.Repo)+len(d.AUR)+len(d.Missing)+len(d.Orphans)+len(d.Implicit) == 0 {
+	if len(d.Repo)+len(d.AUR)+len(d.Missing)+len(d.Orphans) == 0 {
 		u.OK("package lists match the system")
 		return
 	}
@@ -49,7 +38,6 @@ func report(u *ui.UI, d Drift) {
 		{"explicit repo packages in no list (base.lst, extra.lst)", d.Repo},
 		{"explicit foreign packages in no list (aur.lst, packages/*/PKGBUILD)", d.AUR},
 		{"listed packages not installed", d.Missing},
-		{"listed packages installed as dependencies", d.Implicit},
 		{"unlisted orphans", d.Orphans},
 	} {
 		if len(row.names) > 0 {
@@ -57,45 +45,29 @@ func report(u *ui.UI, d Drift) {
 			u.Detail("%s", strings.Join(row.names, " "))
 		}
 	}
-	unlisted := slices.Concat(d.Repo, d.AUR)
-	remove := slices.Sorted(slices.Values(slices.Concat(absent(unlisted, set(slices.Values(d.Required))), d.Orphans)))
-	if len(d.Implicit)+len(d.Required)+len(remove) == 0 {
-		return
-	}
-	u.Info("reconcile in this order")
-	for _, fix := range []struct {
-		what, flags string
-		names       []string
-	}{
-		{"keep listed", "-D --asexplicit", d.Implicit},
-		{"demote unlisted but required", "-D --asdeps", d.Required},
-		{"remove unlisted", "-Rns", remove},
-	} {
-		if len(fix.names) > 0 {
-			u.Detail("%s: `sudo pacman %s %s`", fix.what, fix.flags, strings.Join(fix.names, " "))
-		}
-	}
+	u.Info("run `dctl update packages` interactively to install or remove them")
 }
 
 func drift(ctx context.Context, run execx.Runner, l Lists) (Drift, error) {
-	query := func(flags string) ([]string, error) {
-		out, err := run.Output(ctx, "", "pacman", flags)
-		if exit, ok := errors.AsType[*exec.ExitError](err); ok && exit.ExitCode() == 1 {
-			return nil, nil
-		}
-		return unique(strings.Fields(out)), err
-	}
 	have, herr := installed(ctx, run)
-	native, nerr := query("-Qqen")
-	foreign, ferr := query("-Qqem")
-	orphans, oerr := query("-Qqdt")
-	deps, derr := query("-Qqd")
-	leaves, lerr := query("-Qqett")
+	native, nerr := query(ctx, run, "-Qqen")
+	foreign, ferr := query(ctx, run, "-Qqem")
+	orphans, oerr := query(ctx, run, "-Qqdt")
+	deps, derr := query(ctx, run, "-Qqd")
+	leaves, lerr := query(ctx, run, "-Qqet")
 	if err := errors.Join(herr, nerr, ferr, oerr, derr, lerr); err != nil {
 		return Drift{}, err
 	}
 	listed := set(slices.Values(slices.Concat(l.Base, l.AUR, l.Extra, l.Local)))
 	return classify(listed, have, native, foreign, orphans, deps, leaves), nil
+}
+
+func query(ctx context.Context, run execx.Runner, flags string) ([]string, error) {
+	out, err := run.Output(ctx, "", "pacman", flags)
+	if exit, ok := errors.AsType[*exec.ExitError](err); ok && exit.ExitCode() == 1 {
+		return nil, nil
+	}
+	return unique(strings.Fields(out)), err
 }
 
 func classify(listed, have map[string]bool, native, foreign, orphans, deps, leaves []string) Drift {

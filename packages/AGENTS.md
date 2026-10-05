@@ -20,5 +20,5 @@ See the [dctl guide](../cmds/cmd/dctl/README.md) for package setup and ISO build
 - Name local recipe directories after the package; the loader uses directory names as package names.
 - Ship keys for `validpgpkeys` under `<pkg>/keys/pgp/*.asc`; ISO builds fail before building if a required fingerprint is absent from the build keyring.
 - ISO builds require the base, AUR, and extra lists, but only base, AUR, and local packages enter the offline payload.
-- `dctl update` reports drift without rewriting lists; use `dctl setup packages extra` for newly listed packages.
+- `dctl update packages` reconciles the system with the lists; packages kept from its removal checklist are inserted into `extra.lst` under `# official` or `# aur`.
 - A binary at `~/.local/bin/eww` shadows the packaged eww from `eww/`.
