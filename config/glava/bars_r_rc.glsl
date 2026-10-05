@@ -7,7 +7,7 @@
 #request setmaximized false
 #request setopacity "native"
 #request settitle "GLava"
-#request setgeometry 3740 260 100 1980
+#request setgeometry 3740 316 100 1924
 #request setbg 00000000
 
 /* X11 */
