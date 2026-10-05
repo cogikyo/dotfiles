@@ -13,10 +13,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -28,7 +30,7 @@ import (
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
 const (
-	defaultPort         = ":42069"
+	defaultAddr         = "127.0.0.1:42069"
 	defaultStaticDir    = "dotfiles/cmds/cmd/newtab"
 	defaultHistoryLimit = 15
 
@@ -52,7 +54,7 @@ var suggestClient = &http.Client{Timeout: 5 * time.Second}
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
 type newtabConfig struct {
-	Port         string
+	Addr         string
 	FirefoxDB    string
 	StaticDir    string
 	HistoryLimit int
@@ -164,7 +166,7 @@ type HistoryEntry struct {
 
 func main() {
 	cfg := newtabConfig{
-		Port:         defaultPort,
+		Addr:         defaultAddr,
 		StaticDir:    defaultStaticDir,
 		HistoryLimit: defaultHistoryLimit,
 		FirefoxDB:    resolveFirefoxDB(),
@@ -177,23 +179,34 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	mux.HandleFunc("/api/bookmarks", withCORS(handleBookmarks(cfg)))
-	mux.HandleFunc("/api/history", withCORS(handleHistory(cfg)))
-	mux.HandleFunc("/api/suggest", withCORS(handleSuggest))
+	mux.HandleFunc("/api/bookmarks", withJSON(handleBookmarks(cfg)))
+	mux.HandleFunc("/api/history", withJSON(handleHistory(cfg)))
+	mux.HandleFunc("/api/suggest", withJSON(handleSuggest))
 	mux.Handle("/", http.FileServer(http.Dir(staticPath(cfg))))
 
-	log.Printf("newtab-server listening on http://localhost%s", cfg.Port)
-	log.Fatal(http.ListenAndServe(cfg.Port, mux))
+	log.Printf("newtab-server listening on http://%s", cfg.Addr)
+	log.Fatal(http.ListenAndServe(cfg.Addr, withHost(cfg.Addr, mux)))
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮
 // │ middleware                                                                   │
 // ╰──────────────────────────────────────────────────────────────────────────────╯
 
-// withCORS wraps next with permissive CORS and a JSON content type.
-func withCORS(next http.HandlerFunc) http.HandlerFunc {
+func withHost(addr string, next http.Handler) http.Handler {
+	_, port, _ := net.SplitHostPort(addr)
+	hosts := []string{"localhost:" + port, "127.0.0.1:" + port}
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !slices.Contains(hosts, r.Host) {
+			http.Error(w, "misdirected request", http.StatusMisdirectedRequest)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
+// withJSON wraps next with a JSON content type.
+func withJSON(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Content-Type", "application/json")
 		next(w, r)
 	}

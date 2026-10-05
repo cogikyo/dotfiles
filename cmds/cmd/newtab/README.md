@@ -41,5 +41,5 @@ This rebuilds newtab and restarts it only if its binary changed.
 The tracked user unit is `config/systemd/user/newtab.service` at the repo root.
 `dctl setup home` links the user unit directory and its `.wants` links without starting or restarting the service.
 
-`newtab` listens on all interfaces at `:42069` and serves static files from `~/dotfiles/cmds/cmd/newtab/`.
+`newtab` listens on loopback at `127.0.0.1:42069`, rejects other `Host` headers, and serves static files from `~/dotfiles/cmds/cmd/newtab/`.
 Treat the bookmarks and history API as private; the server has no authentication.

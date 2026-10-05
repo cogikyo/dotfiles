@@ -113,15 +113,19 @@ function fuzzy(text, query) {
   return { score, pos };
 }
 
+function esc(text) {
+  return String(text).replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`);
+}
+
 function highlight(text, pos) {
-  if (!pos?.length) return text;
+  if (!pos?.length) return esc(text);
   let out = "",
     last = 0;
   for (const p of pos) {
-    out += text.slice(last, p) + `<span class="match">${text[p]}</span>`;
+    out += esc(text.slice(last, p)) + `<span class="match">${esc(text[p])}</span>`;
     last = p + 1;
   }
-  return out + text.slice(last);
+  return out + esc(text.slice(last));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -215,9 +219,15 @@ function renderToolbar() {
   const topRight = TOP_RIGHT_FOLDERS.filter((f) => folders.includes(f));
   const bottom = folders.filter((f) => !TOP_LEFT_FOLDERS.includes(f) && !TOP_RIGHT_FOLDERS.includes(f));
 
-  topLeftBar.innerHTML = topLeft.map((f, i) => `<button data-folder="${f}" style="--i:${i}">${f}</button>`).join("");
-  topRightBar.innerHTML = topRight.map((f, i) => `<button data-folder="${f}" style="--i:${i}">${f}</button>`).join("");
-  bottomBar.innerHTML = bottom.map((f, i) => `<button data-folder="${f}" style="--i:${i}">${f}</button>`).join("");
+  topLeftBar.innerHTML = topLeft
+    .map((f, i) => `<button data-folder="${esc(f)}" style="--i:${i}">${esc(f)}</button>`)
+    .join("");
+  topRightBar.innerHTML = topRight
+    .map((f, i) => `<button data-folder="${esc(f)}" style="--i:${i}">${esc(f)}</button>`)
+    .join("");
+  bottomBar.innerHTML = bottom
+    .map((f, i) => `<button data-folder="${esc(f)}" style="--i:${i}">${esc(f)}</button>`)
+    .join("");
 
   document.querySelectorAll(".toolbar button").forEach((btn) => {
     btn.addEventListener("click", () => toggleFolder(btn.dataset.folder));
@@ -274,7 +284,7 @@ function render(results, query) {
     lastType = r.type;
 
     const title = clean(r.title || "");
-    const display = r.pos ? highlight(title, r.pos) : title;
+    const display = r.pos ? highlight(title, r.pos) : esc(title);
     const typeClass =
       r.type === "bookmark" ? (r.keyword ? "type-bookmark-keyword" : "type-bookmark") : r.type ? `type-${r.type}` : "";
     const cls = ["suggestion", i === selected ? "selected" : "", r.exact ? "keyword-exact" : "", typeClass]
@@ -282,7 +292,7 @@ function render(results, query) {
       .join(" ");
 
     const meta = r.folder
-      ? `<span class="folder">${r.folder}</span>`
+      ? `<span class="folder">${esc(r.folder)}</span>`
       : r.type === "suggested"
       ? `<span class="folder">suggested</span>`
       : r.type === "history"
@@ -290,8 +300,8 @@ function render(results, query) {
       : `<span class="folder type-indicator">★</span>`;
 
     html += `
-      <div class="${cls}" data-idx="${i}" data-folder="${r.folder || ""}" style="--i:${i}">
-        <span class="title">${r.keyword ? `<span class="keyword">${r.keyword}</span>` : ""}${display}</span>
+      <div class="${cls}" data-idx="${i}" data-folder="${esc(r.folder || "")}" style="--i:${i}">
+        <span class="title">${r.keyword ? `<span class="keyword">${esc(r.keyword)}</span>` : ""}${display}</span>
         <span class="meta">${meta}</span>
       </div>`;
   });
@@ -301,7 +311,7 @@ function render(results, query) {
     const fallbackSelected = selected === fallbackIdx;
     html += `
       <div class="suggestion fallback ${fallbackSelected ? "selected" : ""}" data-idx="${fallbackIdx}">
-        <span class="title">${query}</span>
+        <span class="title">${esc(query)}</span>
         <span class="meta"><span class="folder">google</span></span>
       </div>`;
   }
@@ -344,7 +354,7 @@ function showLoading(label, url, folder) {
     loadingEl.dataset.type = label;
     delete loadingEl.dataset.folder;
   }
-  loadingText.innerHTML = `<span class="folder">${label}</span>${truncateUrl(url)}`;
+  loadingText.innerHTML = `<span class="folder">${esc(label)}</span>${esc(truncateUrl(url))}`;
 }
 
 function go(idx, results, query) {
