@@ -30,6 +30,7 @@ Local `AGENTS.md` files cover `cmds/`, `config/hypr/`, `config/eww/`, and `packa
 | `hyprd`  | Hyprland daemon and CLI     | [Guide](cmds/cmd/hyprd/README.md)  |
 | `ewwd`   | Widget signals and actions  | [Guide](cmds/cmd/ewwd/README.md)   |
 | `newtab` | Firefox new-tab server      | [Guide](cmds/cmd/newtab/README.md) |
+| `keys`   | Svalboard keymap viewer     | [Guide](cmds/cmd/keys/README.md)   |
 | `src`    | Upstream source cache       | [Source](cmds/internal/src/)       |
 
 Hyprd and ewwd talk over `/tmp/<name>.sock`.

@@ -1,7 +1,7 @@
 # cmds
 
 Go module `dotfiles/cmds`; see `go.mod` for the language version and the [workspace guide](./README.md) for architecture.
-Command details: [dctl](cmd/dctl/README.md), [hyprd](cmd/hyprd/README.md#rebuild), [ewwd](cmd/ewwd/README.md), and [newtab](cmd/newtab/README.md).
+Command details: [dctl](cmd/dctl/README.md), [hyprd](cmd/hyprd/README.md#rebuild), [ewwd](cmd/ewwd/README.md), [newtab](cmd/newtab/README.md), and [keys](cmd/keys/README.md).
 
 ## Layout
 
