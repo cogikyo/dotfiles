@@ -154,6 +154,9 @@ Usage has a TUI view and a read-only server tool.
 `usage/index.tsx` shows OpenAI, Anthropic, xAI, Cursor, and OpenCode headroom in the sidebar.
 `usage/tool.ts` exposes `usage_status`, a primary tool that reads the same local cache without refreshing providers.
 
+The Cursor adapter also reads Grok Bot usage from `DashboardService/GetSandUsageStatus` as a weekly `G` window with its reset time.
+Delegate policy ignores `G` because the Grok Bot pool limits no OpenCode model.
+
 Normal flow:
 
 - Cache files live under `${XDG_CACHE_HOME}/opencode/usage-sidebar/`, or `~/.cache/opencode/usage-sidebar/` without `XDG_CACHE_HOME`.

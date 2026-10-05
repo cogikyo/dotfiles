@@ -5,8 +5,10 @@ import { lenient } from "./types.ts";
 import type { ProviderAdapter, ProviderUsage, UsageWindow } from "./types.ts";
 
 const { id, label, staleAfterMS } = usageProviders.cursor;
-const USAGE_URL = "https://api2.cursor.sh/aiserver.v1.DashboardService/GetCurrentPeriodUsage";
+const DASHBOARD_URL = "https://api2.cursor.sh/aiserver.v1.DashboardService";
 const FETCH_TIMEOUT_MS = 15_000;
+
+export const GROK_BOT = "G";
 
 // ╭───────────────────────────────────────────────────────────────────────────────────────────────╮
 // │ Cursor usage                                                                                  │
@@ -14,11 +16,14 @@ const FETCH_TIMEOUT_MS = 15_000;
 
 // ├─ Provider adapter ────────────────────────────────────────────────────────────────────────────┤
 
-/** Loads Cursor plan usage; sub-1% values are percentages, not fractions, and reset times are epoch milliseconds. */
+/**
+ * Loads Cursor plan usage and the Grok Bot `G` window; sub-1% values are percentages, not fractions.
+ * Plan reset inputs are epoch milliseconds; `G` reset inputs are ISO timestamps.
+ */
 export const cursorUsage: ProviderAdapter = {
   id,
   label,
-  placeholders: ["C", "O"],
+  placeholders: ["C", "O", GROK_BOT],
   poll: {
     minFetchIntervalMS: 60_000,
     errorBackoffMS: 60_000,
@@ -33,7 +38,27 @@ async function load(): Promise<ProviderUsage> {
   const access = (await readAuth())?.cursor?.access;
   if (!access) return usage([], "no auth");
 
-  const response = await fetch(USAGE_URL, {
+  const [plan, grokBot] = await Promise.all([
+    dashboard("GetCurrentPeriodUsage", access),
+    dashboard("GetSandUsageStatus", access),
+  ]);
+  if (!plan.ok) return usage([], `${plan.status}`);
+
+  const payload = Payload.parse(await plan.json());
+  const cycleEnd = resetAt(payload.billingCycleEnd);
+  const grokBotUsage = grokBot.ok ? GrokBotPayload.parse(await grokBot.json()) : undefined;
+  const windows = [
+    usageWindow("C", payload.planUsage?.autoPercentUsed, cycleEnd),
+    usageWindow("O", payload.planUsage?.apiPercentUsed, cycleEnd),
+    usageWindow(GROK_BOT, grokBotUsage?.usagePercent, isoTime(grokBotUsage?.nextResetTimestampUtc)),
+  ].filter((window) => window !== undefined);
+
+  if (windows.length === 0) return usage([], "no windows");
+  return usage(windows);
+}
+
+function dashboard(method: string, access: string) {
+  return fetch(`${DASHBOARD_URL}/${method}`, {
     method: "POST",
     headers: {
       Authorization: `Bearer ${access}`,
@@ -44,17 +69,6 @@ async function load(): Promise<ProviderUsage> {
     body: "{}",
     signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
   });
-  if (!response.ok) return usage([], `${response.status}`);
-
-  const payload = Payload.parse(await response.json());
-  const cycleEnd = resetAt(payload.billingCycleEnd);
-  const windows = [
-    usageWindow("C", payload.planUsage?.autoPercentUsed, cycleEnd),
-    usageWindow("O", payload.planUsage?.apiPercentUsed, cycleEnd),
-  ].filter((window) => window !== undefined);
-
-  if (windows.length === 0) return usage([], "no windows");
-  return usage(windows);
 }
 
 function usage(windows: UsageWindow[], note?: string): ProviderUsage {
@@ -71,16 +85,21 @@ function cursorPercent(value: number | undefined) {
   return pct;
 }
 
-function usageWindow(windowLabel: string, percent: number | undefined, cycleEnd: string | undefined) {
+function usageWindow(windowLabel: string, percent: number | undefined, end: string | undefined) {
   const usedPercent = cursorPercent(percent);
   if (usedPercent === undefined) return undefined;
-  return { label: windowLabel, usedPercent, resetAt: cycleEnd };
+  return { label: windowLabel, usedPercent, resetAt: end };
 }
 
 function resetAt(value: number | string | undefined) {
   const ms = value === "" ? undefined : Number(value);
   if (ms === undefined || !Number.isFinite(ms)) return undefined;
   const date = new Date(ms);
+  return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
+}
+
+function isoTime(value: string | undefined) {
+  const date = new Date(value ?? "");
   return Number.isNaN(date.getTime()) ? undefined : date.toISOString();
 }
 
@@ -94,4 +113,9 @@ const Payload = z.object({
     }),
   ),
   billingCycleEnd: lenient(z.union([z.number(), z.string()])),
+});
+
+const GrokBotPayload = z.object({
+  usagePercent: lenient(z.number()),
+  nextResetTimestampUtc: lenient(z.string()),
 });

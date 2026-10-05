@@ -1,6 +1,7 @@
 import { claudeAccounts } from "../anthropic/accounts.ts";
 import { limitsModel } from "../usage/anthropic.ts";
 import { type CachedUsageWindow, inspectProviderCache } from "../usage/cache.ts";
+import { GROK_BOT } from "../usage/cursor.ts";
 import { usageProvider } from "../usage/providers.ts";
 import type { ModelRef } from "./args.ts";
 import type { DelegateConfig } from "./config.ts";
@@ -52,7 +53,9 @@ export async function readUsage({ providerID, modelID }: ModelRef): Promise<Usag
   const cache = await inspectProviderCache(providerID, provider.staleAfterMS);
   if (cache.issue) return ungated(`${providerID} usage cache is ${cache.issue}`);
   const claude = Object.values(claudeAccounts).some(({ id }) => id === providerID);
-  const windows = claude ? cache.windows.filter((window) => limitsModel(window.label, modelID)) : cache.windows;
+  const windows = claude
+    ? cache.windows.filter((window) => limitsModel(window.label, modelID))
+    : cache.windows.filter((window) => window.label !== GROK_BOT);
   if (!windows.length) return ungated(`${providerID} usage cache has no windows`);
 
   const notes: string[] = [];
