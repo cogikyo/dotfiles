@@ -12,7 +12,7 @@ dctl <command> --help
 
 - `--json` emits structured results where supported.
 - `--plain` disables colors and animation.
-- `--yes` (`-y`) accepts yes/no confirmations but leaves typed disk and release confirmations required.
+- `--yes` (`-y`) accepts yes/no confirmations, including release publishing, but leaves typed disk confirmations required.
 
 Bare `dctl` prints help.
 Streamed child output goes to stderr so JSON results can use stdout.
@@ -233,8 +233,7 @@ dctl iso release [path/to/dotfiles-REV.iso] [--key /path/to/key]
 The default key is `~/.ssh/id_ed25519_sk_<serial>` for the one inserted YubiKey; `--key` selects another key whose public key is trusted in `share/allowed_signers`.
 Signing bypasses the SSH agent and asks for the FIDO2 PIN, then touch.
 
-The command writes `<iso>.sha256` and `<iso>.sha256.sig`, verifies the signature, and requires the exact release tag before publishing.
-`--yes` does not skip this typed confirmation.
+The command writes `<iso>.sha256` and `<iso>.sha256.sig`, verifies the signature, and asks before publishing.
 The release tag is `iso-YYYY.MM.DD-<rev12>`, with the ISO and both checksum files as assets.
 
 ### USB

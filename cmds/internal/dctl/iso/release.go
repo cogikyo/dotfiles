@@ -94,12 +94,12 @@ func Release(ctx context.Context, u *ui.UI, root paths.Root, iso, key string) er
 		iso, sums, sums + ".sig"}
 	u.Section("publish", tag)
 	u.Detail("`gh %s`", strings.Join(argv, " "))
-	typed, err := u.Text("Type "+tag+" to publish this public release", "")
+	ok, err := u.Confirm("Publish " + tag + " as a public release?")
 	if err != nil {
 		return err
 	}
-	if typed != tag {
-		return errors.New("confirmation did not match; nothing published")
+	if !ok {
+		return errors.New("nothing published")
 	}
 	if err := run.Run(ctx, root.Dotfiles, "gh", argv...); err != nil {
 		return err
