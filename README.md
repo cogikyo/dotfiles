@@ -130,7 +130,6 @@ Keep all three files together and use a checkout with the trusted release keys i
 On an existing Arch host, use an installed dctl or build it as described in [`cmds/README.md`](cmds/README.md).
 The build needs a clean, committed `master`, network access, Go, `archiso`, `devtools`, Git, and pacman tooling on an Arch host.
 Root is required for makechrootpkg and mkarchiso.
-Complete the [SSH cutover](cmds/cmd/dctl/README.md#build) before building.
 
 ```sh
 sudo dctl iso build

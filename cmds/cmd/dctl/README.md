@@ -310,7 +310,6 @@ On a fresh offline install, run `dctl update pacman` first to synchronize offici
 Build on an Arch host with network access, Go, Git, `archiso`, `devtools`, and pacman tooling.
 Run through sudo from your normal account; makechrootpkg and mkarchiso need root.
 The build requires a clean, committed `master` and bundles its history instead of copying the working tree.
-SSH clients still use `ssh-agent.socket`; commit the switch to `gcr-ssh-agent` before an ISO build.
 
 ```sh
 sudo dctl iso build
