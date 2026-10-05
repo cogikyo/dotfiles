@@ -70,7 +70,7 @@ In `pulsemixer`, F1 selects outputs and F2 selects inputs; both controls open it
 | --------- | ------------------ | ------------------------------------------ |
 | audio     | WirePlumber        | default sink/source volume, mute, identity |
 | bluetooth | BlueZ D-Bus        | tracked headphone connection and battery   |
-| music     | D-Bus (Spotify)    | playback status, track info, album art     |
+| music     | Spotify            | playback, Canvas, history, queue           |
 | network   | /proc/net/dev      | upload/download speeds                     |
 | date      | time               | time, date, clockface icons, weeks alive   |
 | clock     | time               | wall-aligned hour, minute, second          |
@@ -81,6 +81,17 @@ In `pulsemixer`, F1 selects outputs and F2 selects inputs; both controls open it
 | timer     | internal           | countdown timer and alarm                  |
 
 Each provider implements the `providers.Provider` interface and runs in its own goroutine. Providers that support user interaction also implement `providers.ActionProvider`.
+
+### Music
+
+Playback state comes from Spotify through playerctl; a hidden Spotify Connect observer supplies the active device's history and queue without appearing as a player.
+Canvas and Connect access tokens use `sp_dc`, and Connect client tokens also need `sp_t` from Firefox; log into `open.spotify.com` in Firefox to refresh the cookies.
+
+- `canvas_path`: local MP4 path for the current track's Canvas, or an empty string when unavailable.
+- `history`: up to five previous tracks, newest first.
+- `queue`: up to five upcoming tracks in playback order.
+
+Each history or queue entry has `title`, `artist`, and `art_url` fields.
 
 ## Configuration
 
