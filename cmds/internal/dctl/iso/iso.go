@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 
 	"dotfiles/cmds/internal/dctl/execx"
 )
@@ -20,17 +21,27 @@ func path(dotfiles, rev string) string {
 	return filepath.Join(dotfiles, "iso", "out", "dotfiles-"+rev[:12]+".iso")
 }
 
-// Current returns the ISO that dctl iso build wrote for HEAD.
-func Current(ctx context.Context, dotfiles string) (string, error) {
-	rev, err := execx.OSRunner{}.Output(ctx, dotfiles, "git", "rev-parse", "HEAD")
+// Latest returns the most recently built ISO in iso/out.
+func Latest(dotfiles string) (string, error) {
+	found, err := filepath.Glob(filepath.Join(dotfiles, "iso", "out", "dotfiles-*.iso"))
 	if err != nil {
 		return "", err
 	}
-	iso := path(dotfiles, rev)
-	if _, err := os.Stat(iso); err != nil {
-		return "", fmt.Errorf("no ISO for HEAD %s; run dctl iso build", rev[:12])
+	var latest string
+	var built time.Time
+	for _, iso := range found {
+		st, err := os.Stat(iso)
+		if err != nil {
+			return "", err
+		}
+		if st.ModTime().After(built) {
+			latest, built = iso, st.ModTime()
+		}
 	}
-	return iso, nil
+	if latest == "" {
+		return "", errors.New("no ISO in iso/out; run dctl iso build")
+	}
+	return latest, nil
 }
 
 func revision(ctx context.Context, run execx.Runner, dir string, as []string) (string, error) {

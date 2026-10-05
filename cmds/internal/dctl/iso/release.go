@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -49,20 +50,21 @@ func Release(ctx context.Context, u *ui.UI, root paths.Root, iso, key string) er
 	if err := oversize(st.Size(), nil); err != nil {
 		return err
 	}
+	short := strings.TrimSuffix(strings.TrimPrefix(filepath.Base(iso), "dotfiles-"), ".iso")
+	if len(short) != 12 || strings.Trim(short, "0123456789abcdef") != "" {
+		return fmt.Errorf("%s is not named dotfiles-<rev12>.iso by dctl iso build", iso)
+	}
 	run := execx.OSRunner{Frame: u.Frame}
-	rev, err := revision(ctx, run, root.Dotfiles, nil)
+	rev, err := run.Output(ctx, root.Dotfiles, "git", "rev-parse", "--verify", "--quiet", short+"^{commit}")
+	if err != nil {
+		return fmt.Errorf("resolve the ISO revision %s: %w", short, err)
+	}
+	_, err = run.Output(ctx, root.Dotfiles, "git", "merge-base", "--is-ancestor", rev, "origin/master")
+	if exit, ok := errors.AsType[*exec.ExitError](err); ok && exit.ExitCode() == 1 {
+		return fmt.Errorf("%s was built from %s, which origin/master does not contain; push master first", iso, short)
+	}
 	if err != nil {
 		return err
-	}
-	if want := "dotfiles-" + rev[:12] + ".iso"; filepath.Base(iso) != want {
-		return fmt.Errorf("%s was not built from HEAD %s (expected %s)", iso, rev[:12], want)
-	}
-	pushed, err := run.Output(ctx, root.Dotfiles, "git", "rev-parse", "origin/master")
-	if err != nil {
-		return err
-	}
-	if pushed != rev {
-		return fmt.Errorf("HEAD %s is not origin/master; push master first", rev[:12])
 	}
 	key, err = signingKey(root.Home, key)
 	if err != nil {

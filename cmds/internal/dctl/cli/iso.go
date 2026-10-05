@@ -49,7 +49,7 @@ func asRoot(ctx context.Context, u *ui.UI, root paths.Root, args ...string) erro
 }
 
 type isoTest struct {
-	ISO    string `arg:"" optional:"" help:"ISO to test (default: the one built from HEAD)."`
+	ISO    string `arg:"" optional:"" help:"ISO to test (default: the newest built ISO)."`
 	Dctl   string `type:"existingfile" help:"dctl binary that replaces the ISO's."`
 	Bundle string `type:"existingfile" help:"git bundle that replaces the ISO's."`
 	Keep   bool   `help:"Keep the VM disk and firmware variables."`
@@ -58,16 +58,17 @@ type isoTest struct {
 func (c isoTest) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if c.ISO == "" {
 		var err error
-		if c.ISO, err = iso.Current(ctx, root.Dotfiles); err != nil {
+		if c.ISO, err = iso.Latest(root.Dotfiles); err != nil {
 			return err
 		}
+		u.KV("iso", c.ISO)
 	}
 	return iso.Test(ctx, u, iso.TestOptions(c))
 }
 
 type isoUSB struct {
 	Device string `arg:"" help:"Whole removable disk, e.g. /dev/sdX."`
-	ISO    string `help:"ISO with .sha256 and .sha256.sig beside it (default: the one built from HEAD)."`
+	ISO    string `help:"ISO with .sha256 and .sha256.sig beside it (default: the newest built ISO)."`
 }
 
 func (c isoUSB) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
@@ -79,24 +80,26 @@ func (c isoUSB) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	}
 	if c.ISO == "" {
 		var err error
-		if c.ISO, err = iso.Current(ctx, root.Dotfiles); err != nil {
+		if c.ISO, err = iso.Latest(root.Dotfiles); err != nil {
 			return err
 		}
+		u.KV("iso", c.ISO)
 	}
 	return asRoot(ctx, u, root, "iso", "usb", "--iso", c.ISO, c.Device)
 }
 
 type isoRelease struct {
-	ISO string `arg:"" optional:"" help:"ISO to release (default: the one built from HEAD)."`
+	ISO string `arg:"" optional:"" help:"ISO to release (default: the newest built ISO)."`
 	Key string `help:"Hardware SSH key that signs the checksum (default: the only ~/.ssh/id_ed25519_sk_* key); its public key must be in share/allowed_signers."`
 }
 
 func (c isoRelease) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if c.ISO == "" {
 		var err error
-		if c.ISO, err = iso.Current(ctx, root.Dotfiles); err != nil {
+		if c.ISO, err = iso.Latest(root.Dotfiles); err != nil {
 			return err
 		}
+		u.KV("iso", c.ISO)
 	}
 	return iso.Release(ctx, u, root, c.ISO, c.Key)
 }

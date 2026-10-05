@@ -177,7 +177,8 @@ Esc skips the current checklist; earlier package-reason changes remain, and skip
 
 ## ISO
 
-Test, release, and USB default to `iso/out/dotfiles-<rev12>.iso` for HEAD, where `rev12` is the first 12 revision characters.
+Build writes `iso/out/dotfiles-<rev12>.iso`, where `rev12` is the first 12 characters of the built revision.
+Test, release, and USB default to the newest of those images and print the one they chose.
 Test and release accept a positional image path; USB uses `--iso <path>`.
 
 ### Build
@@ -221,7 +222,8 @@ Run [manual hardware acceptance](#manual-hardware-acceptance) separately.
 > `dctl iso release` signs the checksum and publishes a public GitHub release.
 
 Run as your normal user with authenticated `gh` and an enrolled hardware SSH signing key.
-The checkout must be clean on `master`, HEAD must equal `origin/master`, the ISO filename revision must match HEAD, and the image must be at most 2 GiB.
+The ISO filename revision must be contained in `origin/master`, and the image must be at most 2 GiB.
+The revision may be older than HEAD, so later commits do not require a rebuild.
 Release checks the local `origin/master` ref and does not fetch or push it.
 
 ```sh
