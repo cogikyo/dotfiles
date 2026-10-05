@@ -129,14 +129,13 @@ Download the ISO, its `.sha256` file, and its `.sha256.sig` file from [GitHub Re
 Keep all three files together and use a checkout with the trusted release keys in `share/allowed_signers`.
 On an existing Arch host, use an installed dctl or build it as described in [`cmds/README.md`](cmds/README.md).
 The build needs a clean, committed `master`, network access, Go, `archiso`, `devtools`, Git, and pacman tooling on an Arch host.
-Root is required for makechrootpkg and mkarchiso.
+It asks for sudo once, because makechrootpkg and mkarchiso need root.
 
 ```sh
-sudo dctl iso build
+dctl iso build
 ```
 
 The result is `iso/out/dotfiles-<12-character-revision>.iso`, built from a Git bundle of the committed revision rather than the working tree.
-If sudo cannot find dctl, use its absolute path, such as `sudo "$HOME/.local/bin/dctl" iso build`.
 Set `ISO` to the downloaded or built image path:
 
 ```sh

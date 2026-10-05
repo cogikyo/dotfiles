@@ -314,11 +314,11 @@ On a fresh offline install, run `dctl update pacman` first to synchronize offici
 ### Build
 
 Build on an Arch host with network access, Go, Git, `archiso`, `devtools`, and pacman tooling.
-Run through sudo from your normal account; makechrootpkg and mkarchiso need root.
+Run it from your normal account; it asks for sudo once because makechrootpkg and mkarchiso need root.
 The build requires a clean, committed `master` and bundles its history instead of copying the working tree.
 
 ```sh
-sudo dctl iso build
+dctl iso build
 ```
 
 It builds the Go commands, resolves `packages/base.lst`, `aur.lst`, and local PKGBUILDs into an offline package repository, and fails on missing packages.
@@ -331,7 +331,6 @@ The payload contains `SHA256SUMS`; the installer verifies its listed files with 
 
 Output is `iso/out/dotfiles-<12-character-revision>.iso`.
 The build rejects images above the 2 GiB release limit; an oversized completed ISO is kept for local use but returns an error.
-If sudo cannot find dctl, invoke its absolute path, such as `sudo "$HOME/.local/bin/dctl" iso build`.
 
 ### Test
 

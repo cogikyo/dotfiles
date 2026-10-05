@@ -2,6 +2,10 @@ package cli
 
 import (
 	"context"
+	"errors"
+	"os"
+	"os/exec"
+	"slices"
 
 	"dotfiles/cmds/internal/dctl/iso"
 	"dotfiles/cmds/internal/dctl/paths"
@@ -9,7 +13,7 @@ import (
 )
 
 type ISOCmd struct {
-	Build   isoBuild   `cmd:"" help:"Build the offline installer ISO (sudo)."`
+	Build   isoBuild   `cmd:"" help:"Build the offline installer ISO; asks for sudo once."`
 	Test    isoTest    `cmd:"" help:"Install an ISO into a QEMU VM and check the installed system."`
 	USB     isoUSB     `cmd:"" name:"usb" help:"Verify a signed ISO and write it to a removable disk."`
 	Release isoRelease `cmd:"" help:"Sign an ISO and publish it as a GitHub release."`
@@ -18,7 +22,23 @@ type ISOCmd struct {
 type isoBuild struct{}
 
 func (isoBuild) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
-	return iso.Build(ctx, u, root)
+	if os.Geteuid() == 0 {
+		return iso.Build(ctx, u, root)
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	cmd := command(ctx, slices.Concat([]string{"sudo", "env", "DOTFILES=" + root.Dotfiles}, u.Env(), []string{exe}, globals(u), []string{"iso", "build"})...)
+	cmd.Stdout = os.Stdout
+	err = cmd.Run()
+	if exit, ok := errors.AsType[*exec.ExitError](err); ok {
+		if exit.ExitCode() == 130 {
+			return ui.ErrCanceled
+		}
+		return errors.New("ISO build failed; see above")
+	}
+	return err
 }
 
 type isoTest struct {

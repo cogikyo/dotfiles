@@ -35,7 +35,7 @@ type build struct {
 func Build(ctx context.Context, u *ui.UI, root paths.Root) error {
 	name := os.Getenv("SUDO_USER")
 	if os.Geteuid() != 0 || name == "" || name == "root" {
-		return errors.New("run as `sudo dctl iso build` from your user account")
+		return errors.New("run `dctl iso build` from your user account")
 	}
 	owner, err := user.Lookup(name)
 	if err != nil {
