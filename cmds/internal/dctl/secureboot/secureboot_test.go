@@ -50,7 +50,7 @@ func (f *fake) Run(_ context.Context, _ string, name string, args ...string) err
 func (f *fake) Output(_ context.Context, _ string, name string, args ...string) (string, error) {
 	f.calls = append(f.calls, strings.Join(append([]string{name}, args...), " "))
 	switch {
-	case name == "sbctl" && args[0] == "setup":
+	case name == "sbctl" && args[0] == "status":
 		return fmt.Sprintf(`{"installed": %t}`, f.keys), nil
 	case name == "sbctl" && args[0] == "verify":
 		signed := 1

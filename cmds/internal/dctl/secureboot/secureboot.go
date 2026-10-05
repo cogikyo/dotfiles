@@ -312,7 +312,7 @@ func Cmdline(uki string) (string, bool, error) {
 }
 
 func installed(ctx context.Context, run execx.Runner) (bool, error) {
-	out, err := run.Output(ctx, "", "sbctl", "setup", "--print-state", "--json")
+	out, err := run.Output(ctx, "", "sbctl", "status", "--json")
 	if err != nil {
 		return false, err
 	}
@@ -320,7 +320,7 @@ func installed(ctx context.Context, run execx.Runner) (bool, error) {
 		Installed bool `json:"installed"`
 	}
 	if err := json.Unmarshal([]byte(out), &state); err != nil {
-		return false, fmt.Errorf("sbctl setup --print-state: %w", err)
+		return false, fmt.Errorf("sbctl status: %w", err)
 	}
 	return state.Installed, nil
 }
