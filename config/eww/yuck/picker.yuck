@@ -1,5 +1,5 @@
 (defvar picker-visible false)
-(defvar picker-data '{"ws":4,"occupied":"","sessions":[],"count":0,"confirmed":false}')
+(defvar picker-data '{"ws":3,"occupied":"","sessions":[],"count":0,"confirmed":false}')
 
 (defwindow picker
   :monitor 0
@@ -60,10 +60,10 @@
         :halign "center"
         :space-evenly false
         :spacing 20
-        (picker-ws :icon "network"  :num 2)
-        (picker-ws :icon "learn"    :num 3)
-        (picker-ws :icon "dna"      :num 4)
-        (picker-ws :icon "dotfiles" :num 5)
+        (picker-ws :icon "network"  :num 1)
+        (picker-ws :icon "learn"    :num 2)
+        (picker-ws :icon "leadpier" :num 3)
+        (picker-ws :icon "dotfiles" :num 6)
       )
       (box
         :class "picker-sessions"

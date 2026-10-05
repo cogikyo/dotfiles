@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	coverWorkspace = 6
+	coverWorkspace = 7
 	barrierSubmap  = "lockbarrier"
 	lockEnv        = "LOCK_MODE=lock"
 	intentPending  = "pending"

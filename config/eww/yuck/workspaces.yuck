@@ -9,6 +9,7 @@
 (defvar ws-h3 false)
 (defvar ws-h4 false)
 (defvar ws-h5 false)
+(defvar ws-h6 false)
 
 (deflisten workspace-info
   :initial '{"current":5,"current_str":"5","occupied":[5],"occupied_str":"5"}'
@@ -37,18 +38,19 @@
 (defwidget workspaces []
   (eventbox
     :onhover "eww update hover=workspaces"
-    :onhoverlost "eww update hover='' ws-h1=false ws-h2=false ws-h3=false ws-h4=false ws-h5=false"
+    :onhoverlost "eww update hover='' ws-h1=false ws-h2=false ws-h3=false ws-h4=false ws-h5=false ws-h6=false"
     :onrightclick "hyprctl dispatch workspace previous"
     :tooltip "  󰮫 󰳾 previous workspace  "
     (box
       :class "tr-a workspacesbox ${hover == "workspaces" ? "workspacesbox-hover" : ""}"
       :halign "center" :space-evenly false :spacing 10
       :orientation "vertical"
-      (workspace :icon "music"    :num "1" :hover ws-h1 :desc " music")
-      (workspace :icon "network"  :num "2" :hover ws-h2 :desc "󰭹 chat")
-      (workspace :icon "learn"    :num "3" :hover ws-h3 :desc " secondary")
-      (workspace :icon "dna"      :num "4" :hover ws-h4 :desc " primary")
-      (workspace :icon "dotfiles" :num "5" :hover ws-h5 :desc " settings")
+      (workspace :icon "network"  :num "1" :hover ws-h1 :desc "󰭹 chat")
+      (workspace :icon "learn"    :num "2" :hover ws-h2 :desc " misc")
+      (workspace :icon "leadpier" :num "3" :hover ws-h3 :desc "󰢇 leadpier")
+      (workspace :icon "dna"      :num "4" :hover ws-h4 :desc "󰃖 work")
+      (workspace :icon "music"    :num "5" :hover ws-h5 :desc " music")
+      (workspace :icon "dotfiles" :num "6" :hover ws-h6 :desc " dotfiles")
     )
   )
 )

@@ -15,7 +15,7 @@ Read-only Svalboard keymap viewer with app bind overlays.
 
 ## Open
 
-Press `Super+M` to toggle the floating Chromium app, or open `http://127.0.0.1:42070/` in a browser.
+Press `Super+U` to toggle the floating Chromium app, or open `http://127.0.0.1:42070/` in a browser.
 The shortcut is in `config/hypr/binds.lua`; the `keymap` window rule is in `config/hypr/hyprland.lua`.
 The user unit is `config/systemd/user/keys.service`.
 

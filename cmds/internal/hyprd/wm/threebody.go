@@ -39,7 +39,7 @@ func (tb *ThreeBody) Execute(name string) (string, error) {
 		return "", fmt.Errorf("unknown three-body window: %s", name)
 	}
 	if tb.ignoreOnCurrentWorkspace(name) {
-		return fmt.Sprintf("ignored on workspace 1-2: %s", name), nil
+		return fmt.Sprintf("ignored on the chat and music workspaces: %s", name), nil
 	}
 	return tb.Focus(name, spec.Class, spec.Title, spec.Command)
 }
@@ -53,7 +53,7 @@ func ignoreBodyOnWorkspace(name string, wsID int) bool {
 	if name != "editor" && name != "agents" {
 		return false
 	}
-	return wsID >= 1 && wsID <= 2
+	return wsID == chatWorkspace || wsID == musicWorkspace
 }
 
 // WindowSpec is a flat view of a ThreeBody config entry for fallback iteration.
@@ -300,7 +300,7 @@ func (tb *ThreeBody) focusWithEnroll(wsID int, bodyName, class, title, launchCmd
 		}
 	}
 
-	if bodyName == "agents" && wsID >= 1 && wsID <= 2 {
+	if bodyName == "agents" && ignoreBodyOnWorkspace(bodyName, wsID) {
 		return fmt.Sprintf("not found: %s %s", class, title), nil
 	}
 

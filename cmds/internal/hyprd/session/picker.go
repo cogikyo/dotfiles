@@ -5,6 +5,7 @@ import (
 	"dotfiles/cmds/internal/hyprd/state"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os/exec"
 	"slices"
 	"sort"
@@ -22,11 +23,12 @@ type Picker struct {
 
 	mu        sync.Mutex
 	active    bool
-	ws        int              // workspace cursor (2–5)
+	ws        int              // workspace cursor, one of order
 	si        int              // session index within cache[ws]
 	selecting bool             // true once the user starts cycling session options
 	confirmed bool             // true during the brief green-flash after confirm
 	cache     map[int][]string // ws → sorted session names
+	order     []int            // workspaces with sessions, ascending
 }
 
 type pickerPayload struct {
@@ -82,9 +84,6 @@ func (p *Picker) open() (string, error) {
 	cfg := p.state.GetConfig()
 	p.cache = make(map[int][]string)
 	for name, s := range cfg.Sessions {
-		if s.Workspace == 1 {
-			continue
-		}
 		p.cache[s.Workspace] = append(p.cache[s.Workspace], name)
 	}
 	for ws, sessions := range p.cache {
@@ -98,10 +97,14 @@ func (p *Picker) open() (string, error) {
 		})
 		p.cache[ws] = sessions
 	}
+	p.order = slices.Sorted(maps.Keys(p.cache))
+	if len(p.order) == 0 {
+		return "", fmt.Errorf("picker: no sessions configured")
+	}
 
 	p.ws = p.state.GetWorkspace()
-	if p.ws < 2 || p.ws > 5 {
-		p.ws = 2
+	if !slices.Contains(p.order, p.ws) {
+		p.ws = p.order[0]
 	}
 	p.si = p.activeIndex(p.ws)
 	p.selecting = false
@@ -150,12 +153,8 @@ func (p *Picker) move(dws, dsi int) (string, error) {
 	}
 
 	if dws != 0 {
-		p.ws += dws
-		if p.ws < 2 {
-			p.ws = 5
-		} else if p.ws > 5 {
-			p.ws = 2
-		}
+		i := slices.Index(p.order, p.ws)
+		p.ws = p.order[wrapIndex(i+dws, len(p.order))]
 		p.selectFirst(p.ws)
 	}
 
@@ -180,7 +179,7 @@ func wrapIndex(i, n int) int {
 
 func (p *Picker) jumpWS(arg string) (string, error) {
 	ws, err := strconv.Atoi(strings.TrimSpace(arg))
-	if err != nil || ws < 2 || ws > 5 {
+	if err != nil {
 		return "", fmt.Errorf("invalid workspace: %s", arg)
 	}
 
@@ -189,6 +188,9 @@ func (p *Picker) jumpWS(arg string) (string, error) {
 
 	if !p.active {
 		return "picker: not open", nil
+	}
+	if _, ok := p.cache[ws]; !ok {
+		return "", fmt.Errorf("no sessions on workspace %d", ws)
 	}
 
 	p.ws = ws

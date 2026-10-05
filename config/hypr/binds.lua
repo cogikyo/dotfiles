@@ -20,11 +20,12 @@ end
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
 -- ├┤ move to workspace ├──────────────────────────────────────────────────────────┤
-alt("G", "Workspace 1 (music)",    "hyprd ws 1")
-alt("S", "Workspace 2 (chat)",     "hyprd ws 2")
-alt("E", "Workspace 3 (misc)",     "hyprd ws 3")
-alt("T", "Workspace 4 (primary)",  "hyprd ws 4")
-alt("D", "Workspace 5 (settings)", "hyprd ws 5")
+super("B", "Workspace 1 (chat)",     "hyprd ws 1")
+super("C", "Workspace 2 (misc)",     "hyprd ws 2")
+super("D", "Workspace 3 (leadpier)", "hyprd ws 3")
+super("H", "Workspace 4 (work)",     "hyprd ws 4")
+super("M", "Workspace 5 (music)",    "hyprd ws 5")
+super("K", "Workspace 6 (dotfiles)", "hyprd ws 6")
 
 super("equal",     "Focus right", hl.dsp.focus({ direction = "right" }))
 super("backslash", "Focus left",  hl.dsp.focus({ direction = "left" }))
@@ -64,7 +65,7 @@ super("L", "Agents tab 4", "hyprd tab agents:4")
 
 -- ├┤ core conrols ├───────────────────────────────────────────────────────────────┤
 super("X", "Close active window", hl.dsp.window.close())
-super("K", "Force kill window",  "hyprctl kill")
+super("SHIFT + X", "Force kill window", "hyprctl kill")
 super("F", "Toggle floating",    "hyprd float")
 super("V", "Screen share mode",   "hyprd share")
 super("F11", "Toggle full screen",  hl.dsp.window.fullscreen({ mode = "fullscreen", action = "toggle" }))
@@ -76,7 +77,7 @@ hl.bind("SUPER + mouse:274", hl.dsp.window.resize(), { mouse = true })
 super("minus",     "Focus left",  hl.dsp.focus({ direction = "left" }))
 super("slash",     "Focus right", hl.dsp.focus({ direction = "right" }))
 super("R",         "Focus up",    hl.dsp.focus({ direction = "up" }))
-super("C",         "Focus down",  hl.dsp.focus({ direction = "down" }))
+super("W",         "Focus down",  hl.dsp.focus({ direction = "down" }))
 
 -- ├┤ move windows ├───────────────────────────────────────────────────────────────┤
 super("Left",  "Move window left",    hl.dsp.window.move({ direction = "left" }))
@@ -91,8 +92,8 @@ super("End",   "Move workspace up",   "hyprd ws up")
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
 super("P", "App Launcher",    "hyprlauncher")
-super("H", "Layout Launcher", "hyprd picker open")
-super("M", "Keymap viewer", function()
+super("J", "Layout Launcher", "hyprd picker open")
+super("U", "Keymap viewer", function()
 	for _, window in ipairs(hl.get_windows()) do
 		if window.class == "chrome-127.0.0.1__-Default" then
 			hl.dispatch(hl.dsp.window.close({ window = "address:" .. window.address }))

@@ -235,14 +235,6 @@ func (c *Client) SetMasterFactor(mfact float64) error {
 	))
 }
 
-// SetWorkspaceAnim sets the workspaces animation style ("slide"|"slidevert").
-func (c *Client) SetWorkspaceAnim(style string) error {
-	return c.eval("SetWorkspaceAnim", fmt.Sprintf(
-		`hl.animation({ leaf = "workspaces", enabled = true, speed = 3, bezier = "default", style = %s })`,
-		luaQuote(style),
-	))
-}
-
 // AddFadeRule adds a dynamic window rule with animation = "fade".
 // initialTitle may be empty (class-only match).
 func (c *Client) AddFadeRule(class, initialTitle string) error {

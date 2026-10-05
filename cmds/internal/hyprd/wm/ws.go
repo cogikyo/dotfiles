@@ -10,8 +10,9 @@ import (
 )
 
 const (
-	minManagedWorkspace = 2
-	maxManagedWorkspace = 5
+	chatWorkspace  = 1
+	musicWorkspace = 5
+	lastWorkspace  = 6
 )
 
 // WS dispatches workspace switches (numeric) and window moves ("up"/"down") across managed workspaces.
@@ -25,8 +26,6 @@ func NewWS(h *hypr.Client, s *state.State) *WS {
 }
 
 // Execute accepts "up", "down", or a workspace ID.
-//
-// Switches across the 1↔5 boundary animate as `slidevert` to match the virtual row/column layout.
 func (w *WS) Execute(wsArg string) (string, error) {
 	switch wsArg {
 	case "up":
@@ -39,28 +38,9 @@ func (w *WS) Execute(wsArg string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("invalid workspace: %s", wsArg)
 	}
-
-	currentWS := 0
-	if activeWS, err := w.hypr.ActiveWorkspace(); err == nil {
-		currentWS = activeWS
-	}
-
-	anim := "slide"
-	if ws == 1 || ws == 5 || currentWS == 1 || currentWS == 5 {
-		anim = "slidevert"
-	}
-	if err := w.hypr.SetWorkspaceAnim(anim); err != nil {
-		return "", fmt.Errorf("set workspace anim %s: %w", anim, err)
-	}
-
 	if err := w.hypr.FocusWorkspace(ws); err != nil {
 		return "", err
 	}
-
-	if err := w.hypr.SetWorkspaceAnim("slide"); err != nil {
-		return "", fmt.Errorf("reset workspace anim: %w", err)
-	}
-
 	return fmt.Sprintf("ws %d", ws), nil
 }
 
@@ -74,7 +54,7 @@ func (w *WS) moveActiveWindow(delta int) (string, error) {
 	}
 
 	currentWS := win.Workspace.ID
-	targetWS := clampWorkspace(currentWS + delta)
+	targetWS := carryTarget(currentWS, delta)
 	if targetWS == currentWS {
 		return fmt.Sprintf("window already at ws %d bound", currentWS), nil
 	}
@@ -114,12 +94,13 @@ func (w *WS) normalizeWorkspaceState(wsID int) error {
 	return nil
 }
 
-func clampWorkspace(ws int) int {
-	if ws < minManagedWorkspace {
-		return minManagedWorkspace
+func carryTarget(ws, delta int) int {
+	next := ws + delta
+	if next == musicWorkspace {
+		next += delta
 	}
-	if ws > maxManagedWorkspace {
-		return maxManagedWorkspace
+	if next < 1 || next > lastWorkspace {
+		return ws
 	}
-	return ws
+	return next
 }

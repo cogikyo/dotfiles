@@ -71,19 +71,19 @@ local floatSize = "2884 1876"
 hl.window_rule({
 	name = "spotify",
 	match = { class = [[^([Ss]potify)$]] },
-	workspace = "1 silent",
+	workspace = "5 silent",
 	opacity = "0.75 override 0.75 override",
 })
-hl.window_rule({ name = "discord-workspace", match = { class = "discord" }, workspace = "2 silent" })
-hl.window_rule({ name = "slack-workspace", match = { class = "slack" }, workspace = "2 silent" })
-hl.window_rule({ name = "grok-bot-workspace", match = { class = "grok-bot" }, workspace = "2 silent" })
+hl.window_rule({ name = "discord-workspace", match = { class = "discord" }, workspace = "1 silent" })
+hl.window_rule({ name = "slack-workspace", match = { class = "slack" }, workspace = "1 silent" })
+hl.window_rule({ name = "grok-bot-workspace", match = { class = "grok-bot" }, workspace = "1 silent" })
 
 -- Keep document placement broad while applying popup geometry only to Zathura.
-hl.window_rule({ name = "libreoffice-workspace", match = { class = [[^libreoffice-.+$]] }, workspace = "3 silent" })
+hl.window_rule({ name = "libreoffice-workspace", match = { class = [[^libreoffice-.+$]] }, workspace = "2 silent" })
 hl.window_rule({
 	name = "zathura",
 	match = { class = [[^(org\.pwmt\.zathura)$]] },
-	workspace = "3 silent",
+	workspace = "2 silent",
 	float = true,
 	size = "1000 1475",
 	center = true,
@@ -101,7 +101,7 @@ hl.window_rule({
 		class = [[^(zoom)$]],
 		title = [[^(Zoom Workplace|Meeting)$]],
 	},
-	workspace = "2 silent",
+	workspace = "1 silent",
 })
 hl.window_rule({
 	name = "zoom-hidden-helper",

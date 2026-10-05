@@ -399,7 +399,7 @@ Window commands:
   hyprd split            Cycle split ratio (xs → default → lg)
   hyprd split -x|-l      Set specific split ratio
   hyprd ws <n>           Switch to workspace n, focus master
-  hyprd ws up|down       Move active window between workspaces 2..5
+  hyprd ws up|down       Move active window between workspaces 1..6, skipping music (5)
   hyprd focus <class> [title]  Focus window, unhide if hidden
   hyprd edit <file>      Focus workspace nvim and open file
   hyprd tab <editor|agents>:<index>   Focus profile window + select physical Kitty tab 0..4

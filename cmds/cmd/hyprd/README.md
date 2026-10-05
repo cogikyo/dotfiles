@@ -67,7 +67,7 @@ hyprd split default          # select the default ratio
 hyprd hide                   # move slave to special workspace
 hyprd swap                   # exchange master/slave positions
 hyprd ws <n>                 # switch workspace with its transition animation
-hyprd ws up|down             # move active window between workspaces 2..5
+hyprd ws up|down             # move active window between workspaces 1..6, skipping music (5)
 hyprd focus <class> [title]  # focus window by class, unhide if needed
 hyprd bg ensure|kill         # ensure the wallpaper process or stop it
 ```
@@ -135,7 +135,7 @@ Startup also relaunches a lock when the compositor is locked without a client, a
 `hyprd rebuild` refuses while supervision is active; a lock requested during its restart handoff is deferred to the restarted daemon.
 
 On the first launch, the desktop cover runs alongside supervision, with 2-second timeouts on cover helper commands.
-It saves the workspace, switches to workspace 6, pauses the background, dunst, and Spotify, stops GLava, and closes eww widgets.
+It saves the workspace, switches to the empty workspace 7, pauses the background, dunst, and Spotify, stops GLava, and closes eww widgets.
 Release restores the saved workspace, background, dunst, and widgets, restarts GLava and Spotify, and reconnects configured Bluetooth; playback resumes if music was playing before the lock.
 
 ### Browser
