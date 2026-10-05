@@ -1,0 +1,15 @@
+pkgname=catppuccin-macchiato-light-cursors
+pkgver=2.0.0
+pkgrel=1
+pkgdesc='Catppuccin Macchiato light cursors, XCursor and hyprcursor'
+arch=('any')
+url='https://github.com/catppuccin/cursors'
+license=('GPL-2.0-only')
+conflicts=('catppuccin-cursors-macchiato')
+source=("${pkgname}-${pkgver}.zip::${url}/releases/download/v${pkgver}/${pkgname}.zip")
+sha256sums=('a1d55b07dddfca4678cb300b5b75618de66d730cc22cedaba1ed6f2952a7db1c')
+
+package() {
+    install -d "$pkgdir/usr/share/icons"
+    cp -r --no-preserve=ownership "$pkgname" "$pkgdir/usr/share/icons/"
+}
