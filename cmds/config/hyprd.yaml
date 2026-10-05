@@ -77,7 +77,7 @@ sessions:
         - agents
 
   # ├─ workspace 3 ──────────────────────────────────────────────────────────────┤
-  3: # primary project workspaces
+  3: # personal projects
     content:
       project: content
       body:
@@ -96,6 +96,8 @@ sessions:
         - editor
         - agents
 
+  # ├─ workspace 4 ──────────────────────────────────────────────────────────────┤
+  4: # work
     leadpier:
       init: true
       project: LeadPier

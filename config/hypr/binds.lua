@@ -22,7 +22,7 @@ end
 -- ├┤ move to workspace ├──────────────────────────────────────────────────────────┤
 super("B", "Workspace 1 (chat)",     "hyprd ws 1")
 super("C", "Workspace 2 (misc)",     "hyprd ws 2")
-super("D", "Workspace 3 (leadpier)", "hyprd ws 3")
+super("D", "Workspace 3 (personal)", "hyprd ws 3")
 super("H", "Workspace 4 (work)",     "hyprd ws 4")
 super("M", "Workspace 5 (music)",    "hyprd ws 5")
 super("K", "Workspace 6 (dotfiles)", "hyprd ws 6")

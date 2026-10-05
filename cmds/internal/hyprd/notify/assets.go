@@ -6,8 +6,8 @@ const workspaceIconsDir = "~/dotfiles/config/eww/art/ws-icons"
 var workspaceIcons = map[int]string{
 	1: "network",
 	2: "learn",
-	3: "leadpier",
-	4: "dna",
+	3: "dna",
+	4: "leadpier",
 	5: "music",
 	6: "dotfiles",
 }

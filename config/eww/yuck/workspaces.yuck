@@ -47,8 +47,8 @@
       :orientation "vertical"
       (workspace :icon "network"  :num "1" :hover ws-h1 :desc "󰭹 chat")
       (workspace :icon "learn"    :num "2" :hover ws-h2 :desc " misc")
-      (workspace :icon "leadpier" :num "3" :hover ws-h3 :desc "󰢇 leadpier")
-      (workspace :icon "dna"      :num "4" :hover ws-h4 :desc "󰃖 work")
+      (workspace :icon "dna"      :num "3" :hover ws-h3 :desc "󰀄 personal")
+      (workspace :icon "leadpier" :num "4" :hover ws-h4 :desc "󰃖 work")
       (workspace :icon "music"    :num "5" :hover ws-h5 :desc " music")
       (workspace :icon "dotfiles" :num "6" :hover ws-h6 :desc " dotfiles")
     )
