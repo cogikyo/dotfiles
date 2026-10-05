@@ -129,7 +129,7 @@ func (d *Daemon) initProviders() {
 		providers.NewCycle(d.state, "cycle-6", 6*time.Second),
 		providers.NewAudio(d.state, cfg.Audio),
 		providers.NewBluetooth(d.state, d.config.Hypr.Bluetooth.Device),
-		providers.NewMusic(d.state, cfg.Music.SpDc),
+		providers.NewMusic(d.state, d.server.Subs.Notify, cfg.Music.SpDc),
 		providers.NewTimer(d.state, cfg.Timer),
 		providers.NewWeather(d.state, cfg.Weather),
 	}

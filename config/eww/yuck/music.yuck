@@ -16,7 +16,7 @@
     :tooltip "  ǂ search artist · 󰳾 music workspace  "
     (box
       :class "playerbox"
-      :style "margin-left: -5px; background-image: url('${pctl.playing && pctl.has_canvas ? pctl.canvas_frame : (pctl.has_art ? pctl.art_path : playerctl-img)}'); ${pctl.playing && pctl.has_canvas ? 'transition: none;' : ''}"
+      :style "margin-left: -5px; background-image: url('${canvas.frame != "" ? canvas.frame : (pctl.has_art ? pctl.art_path : playerctl-img)}'); ${canvas.frame != "" ? 'transition: none;' : ''}"
     )
   )
 )
@@ -35,8 +35,13 @@
 )
 
 (deflisten pctl
-  :initial '{ "status":"Paused", "playing":false, "volume":"1.0", "volume_percent":100, "artist":"", "artist_short":"", "album":"", "album_short":"", "title":"", "title_short":"", "single_track":false, "progress":0, "art_path":"/tmp/eww/album_art.png", "has_art":false, "has_canvas":false, "canvas_frame":"" }'
+  :initial '{ "status":"Paused", "playing":false, "volume":"1.0", "volume_percent":100, "artist":"", "artist_short":"", "album":"", "album_short":"", "title":"", "title_short":"", "single_track":false, "progress":0, "art_path":"/tmp/eww/album_art.png", "has_art":false, "has_canvas":false }'
   'ewwd subscribe music | jq --unbuffered -c ".data"'
+)
+
+(deflisten canvas
+  :initial '{"frame":""}'
+  'ewwd subscribe canvas | jq --unbuffered -c ".data"'
 )
 
 (defvar playerctl-img `/home/cullyn/.config/eww/art/player.png`)

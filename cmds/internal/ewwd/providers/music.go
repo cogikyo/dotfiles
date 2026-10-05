@@ -51,10 +51,13 @@ type MusicState struct {
 	ArtPath       string       `json:"art_path"`
 	HasArt        bool         `json:"has_art"`
 	HasCanvas     bool         `json:"has_canvas"`
-	CanvasFrame   string       `json:"canvas_frame"`
 	CanvasPath    string       `json:"canvas_path"`
 	Queue         []MusicTrack `json:"queue"`
 	History       []MusicTrack `json:"history"`
+}
+
+type CanvasState struct {
+	Frame string `json:"frame"`
 }
 
 type MusicTrack struct {
@@ -65,9 +68,10 @@ type MusicTrack struct {
 
 // Music serializes every snapshot mutation through Start's event loop.
 type Music struct {
-	state  StateSetter
-	canvas *CanvasClient
-	player *CanvasPlayer
+	state     StateSetter
+	broadcast func(topic string, data any)
+	canvas    *CanvasClient
+	player    *CanvasPlayer
 
 	events chan musicEvent
 	wg     sync.WaitGroup
@@ -85,6 +89,7 @@ type musicEvent func(*musicOwner)
 type musicOwner struct {
 	music         *Music
 	last          MusicState
+	frame         string
 	track         string
 	artURL        string
 	duration      float64
@@ -107,10 +112,11 @@ type positionTicket struct {
 	duration                    float64
 }
 
-func NewMusic(state StateSetter, spDc string) Provider {
+func NewMusic(state StateSetter, broadcast func(topic string, data any), spDc string) Provider {
 	m := &Music{
-		state:  state,
-		events: make(chan musicEvent, 64),
+		state:     state,
+		broadcast: broadcast,
+		events:    make(chan musicEvent, 64),
 	}
 	if client := NewCanvasClient(spDc); client != nil {
 		m.canvas = client
@@ -150,6 +156,7 @@ func (m *Music) Start(ctx context.Context, notify func(data any)) error {
 
 	owner := musicOwner{music: m, last: stoppedMusicState(), history: []MusicTrack{}, queue: []MusicTrack{}}
 	owner.publish(true)
+	owner.publishFrame("")
 	m.wg.Go(func() { m.follow(runCtx) })
 	if m.canvas != nil {
 		observer := newConnectObserver(m.canvas, func(history, queue []MusicTrack) {
@@ -271,10 +278,10 @@ func (owner *musicOwner) applyFollow(next followState) {
 	owner.duration = next.duration
 	state := musicState(next.status, next.volume, next.artist, next.album, next.title, progress)
 	state.HasArt = owner.last.HasArt
-	state.HasCanvas, state.CanvasFrame, state.CanvasPath = owner.last.HasCanvas, owner.last.CanvasFrame, owner.last.CanvasPath
+	state.HasCanvas, state.CanvasPath = owner.last.HasCanvas, owner.last.CanvasPath
 	state.History, state.Queue = owner.history, owner.queue
 	if trackChanged {
-		state.HasCanvas, state.CanvasFrame, state.CanvasPath = false, "", ""
+		state.HasCanvas, state.CanvasPath = false, ""
 	}
 	owner.last = state
 	owner.syncCanvas()
@@ -361,7 +368,10 @@ func (owner *musicOwner) clearVisuals() {
 	}
 	_ = os.Remove(albumArtPath)
 	owner.last.HasArt = false
-	owner.last.HasCanvas, owner.last.CanvasFrame, owner.last.CanvasPath = false, "", ""
+	owner.last.HasCanvas, owner.last.CanvasPath = false, ""
+	if owner.frame != "" {
+		owner.publishFrame("")
+	}
 }
 
 func (owner *musicOwner) syncCanvas() {
@@ -371,21 +381,30 @@ func (owner *musicOwner) syncCanvas() {
 	}
 	if !owner.last.Playing || !owner.last.HasCanvas || !player.HasFrames() {
 		player.Stop()
+		if owner.frame != "" {
+			owner.publishFrame("")
+		}
 		return
 	}
 	track, trackRevision := owner.track, owner.trackRevision
 	player.Play(func(frame string) {
 		owner.music.send(owner.music.runningContext(), func(current *musicOwner) {
-			if current.track != track || current.trackRevision != trackRevision || !current.last.HasCanvas {
+			if current.track != track || current.trackRevision != trackRevision || !current.last.HasCanvas || !current.last.Playing {
 				return
 			}
-			if current.last.CanvasFrame == frame {
+			if current.frame == frame {
 				return
 			}
-			current.last.CanvasFrame = frame
-			current.publish(true)
+			current.publishFrame(frame)
 		})
 	})
+}
+
+func (owner *musicOwner) publishFrame(frame string) {
+	owner.frame = frame
+	state := CanvasState{Frame: frame}
+	owner.music.state.Set("canvas", &state)
+	owner.music.broadcast("canvas", &state)
 }
 
 func (owner *musicOwner) publish(changed bool) {
@@ -456,10 +475,12 @@ func (owner *musicOwner) fetchCanvas(track string, revision uint64) {
 			}
 			current.music.player.Commit(set)
 			current.last.HasCanvas = true
-			current.last.CanvasFrame = current.music.player.CurrentFrame()
 			current.last.CanvasPath = set.video
 			current.syncCanvas()
 			current.publish(true)
+			if current.last.Playing {
+				current.publishFrame(current.music.player.CurrentFrame())
+			}
 		})
 		select {
 		case <-handled:

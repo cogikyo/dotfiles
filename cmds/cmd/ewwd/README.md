@@ -92,6 +92,7 @@ Canvas and Connect access tokens use `sp_dc`, and Connect client tokens also nee
 - `queue`: up to five upcoming tracks in playback order.
 
 Each history or queue entry has `title`, `artist`, and `art_url` fields.
+Canvas frames publish on a separate `canvas` topic as `{"frame": "<path>"}`, with an empty path when no Canvas plays, so frame ticks never republish `music`.
 
 ## Configuration
 
