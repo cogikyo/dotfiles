@@ -176,7 +176,8 @@ func trustInFirefox(ctx context.Context, run execx.Runner, root *x509.Certificat
 	}
 	db, name := "sql:"+profile, nickname(root)
 	_, _ = run.Output(ctx, "", "certutil", "-D", "-d", db, "-n", name)
-	return run.Run(ctx, "", "certutil", "-A", "-d", db, "-n", name, "-t", "C,,", "-i", path)
+	_, err := run.Output(ctx, "", "certutil", "-A", "-d", db, "-n", name, "-t", "C,,", "-i", path)
+	return err
 }
 
 func (l leaf) modes() error {

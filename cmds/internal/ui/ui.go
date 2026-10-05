@@ -170,6 +170,16 @@ func (u *UI) KV(key string, value any) {
 	u.Detail("%s %v", styleDim.Render(fmt.Sprintf("%-18s", key)), value)
 }
 
+// Frame rules off raw child output that the tree cannot indent; call the result when the child exits.
+func (u *UI) Frame() func() {
+	if !u.Can() {
+		return func() {}
+	}
+	rule := styleDim.Render(strings.Repeat("─", 40))
+	fmt.Fprintf(u.err, "\n%s\n", rule)
+	return func() { fmt.Fprintf(u.err, "%s\n\n", rule) }
+}
+
 func (u *UI) lead() string {
 	return styleStep.Render(u.glyph.stem) + "     " + styleStep.Render(u.glyph.arrow) + " "
 }

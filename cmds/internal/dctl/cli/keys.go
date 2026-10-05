@@ -29,7 +29,7 @@ func (keysEnroll) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 		return errUser
 	}
 	return secrets.Locked(root, func() error {
-		return keys.Enroll(ctx, u, root, execx.OSRunner{}, func(e secrets.Edit) error { return secrets.Rekey(u, root, e) })
+		return keys.Enroll(ctx, u, root, execx.OSRunner{Frame: u.Frame}, func(e secrets.Edit) error { return secrets.Rekey(u, root, e) })
 	})
 }
 
@@ -39,7 +39,7 @@ func (keysLuks) Run(ctx context.Context, u *ui.UI) error {
 	if os.Geteuid() != 0 {
 		return errors.New("needs root: sudo dctl keys luks")
 	}
-	return keys.Luks(ctx, u, execx.OSRunner{}, "/sys", u.Confirm)
+	return keys.Luks(ctx, u, execx.OSRunner{Frame: u.Frame}, "/sys", u.Confirm)
 }
 
 type keysRemove struct {

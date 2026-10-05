@@ -47,6 +47,9 @@ func (f *fake) Output(_ context.Context, _ string, name string, args ...string) 
 		}
 		return f.rebuild, nil
 	}
+	if strings.HasPrefix(line, "systemctl --user restart ") {
+		return "", nil
+	}
 	return "", errors.New("unexpected " + line)
 }
 

@@ -100,7 +100,8 @@ func commands(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, 
 		}
 		u.OK("replaced %s", dst)
 		if slices.Contains(services, name) {
-			errs = append(errs, run.Run(ctx, "", "systemctl", "--user", "restart", name+".service"))
+			_, err := run.Output(ctx, "", "systemctl", "--user", "restart", name+".service")
+			errs = append(errs, err)
 		}
 	}
 	if changed == 0 {

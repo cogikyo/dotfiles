@@ -55,7 +55,7 @@ Examples:
 
 // catalog orders stages within each privilege batch; root stages must not depend on user stages.
 func catalog(u *ui.UI, root paths.Root) []setup.Stage {
-	run := execx.OSRunner{}
+	run := execx.OSRunner{Frame: u.Frame}
 	return []setup.Stage{
 		system.Stage("/", root.System()),
 		packages.Stage(root.Packages(), run),

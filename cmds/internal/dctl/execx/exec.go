@@ -20,6 +20,8 @@ type Runner interface {
 type OSRunner struct {
 	Group bool
 	Stdin []byte
+	// Frame, when set, draws rules around streamed child output; it returns the closing call.
+	Frame func() func()
 }
 
 func Grouped(ctx context.Context, args []string) *exec.Cmd {
@@ -46,6 +48,9 @@ func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...stri
 	}
 	cmd.Stdout = os.Stderr
 	cmd.Stderr = os.Stderr
+	if r.Frame != nil {
+		defer r.Frame()()
+	}
 	return failed(Reap(ctx, cmd), name, args, "")
 }
 

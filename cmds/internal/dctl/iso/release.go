@@ -49,7 +49,7 @@ func Release(ctx context.Context, u *ui.UI, root paths.Root, iso, key string) er
 	if err := oversize(st.Size(), nil); err != nil {
 		return err
 	}
-	run := execx.OSRunner{}
+	run := execx.OSRunner{Frame: u.Frame}
 	rev, err := revision(ctx, run, root.Dotfiles, nil)
 	if err != nil {
 		return err

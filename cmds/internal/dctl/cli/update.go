@@ -37,7 +37,7 @@ func (c *UpdateCmd) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 		return err
 	}
 	all := c.All || u.Yes()
-	steps, err := update.Select(update.Steps(u, root, execx.OSRunner{}, all, c.Only), c.Steps)
+	steps, err := update.Select(update.Steps(u, root, execx.OSRunner{Frame: u.Frame}, all, c.Only), c.Steps)
 	if err != nil {
 		return err
 	}
