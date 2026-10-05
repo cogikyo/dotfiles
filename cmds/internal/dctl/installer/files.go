@@ -16,7 +16,6 @@ func (p plan) files() []file {
 	return []file{
 		{"etc/fstab", 0o644, p.fstab()},
 		{"etc/default/limine", 0o644, p.limine()},
-		{"etc/mkinitcpio.conf.d/dotfiles.conf", 0o644, "HOOKS=(base systemd autodetect microcode modconf kms keyboard sd-vconsole block sd-encrypt filesystems sd-btrfs-overlayfs fsck)\n"},
 		{"etc/locale.gen", 0o644, "en_US.UTF-8 UTF-8\n"},
 		{"etc/sudoers.d/wheel", 0o440, "%wheel ALL=(ALL:ALL) ALL\n"},
 	}

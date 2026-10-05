@@ -24,6 +24,7 @@ const (
 	Keys     = "secureboot-keys"
 	Signed   = "secureboot-signed"
 	Enforced = "secureboot-enforced"
+	TOTP     = "secureboot-totp"
 )
 
 var settings = []string{"ENABLE_ENROLL_LIMINE_CONFIG=yes", "ENABLE_LIMINE_FALLBACK=no"}
@@ -177,6 +178,10 @@ func Stage(run execx.Runner, root string) setup.Stage {
 				}
 				return setup.Manual("keys are enrolled but Secure Boot is not enforced yet: reboot; if Secure Boot is still off, enable it in the BIOS")
 			},
+		},
+		{
+			Name:  TOTP,
+			Check: func(ctx context.Context) error { return sealed(ctx, run, efi) },
 		},
 	}}
 }

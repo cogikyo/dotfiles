@@ -10,6 +10,7 @@ import (
 	"dotfiles/cmds/internal/dctl/keys"
 	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/dctl/secrets"
+	"dotfiles/cmds/internal/dctl/secureboot"
 	"dotfiles/cmds/internal/ui"
 )
 
@@ -18,6 +19,7 @@ type KeysCmd struct {
 	Luks   keysLuks   `cmd:"" help:"Add the inserted YubiKey and a recovery key to the root LUKS2 header (root)."`
 	Remove keysRemove `cmd:"" help:"Remove the age recipient and release signer, then rekey; LUKS tokens remain."`
 	Status keysStatus `cmd:"" help:"Show enrolled and inserted YubiKeys and LUKS tokens."`
+	Totp   keysTotp   `cmd:"" name:"totp" help:"Seal a new boot TOTP secret to the TPM and show it once (root, Secure Boot enforced)."`
 }
 
 var errUser = errors.New("run as your user, not root")
@@ -40,6 +42,15 @@ func (keysLuks) Run(ctx context.Context, u *ui.UI) error {
 		return errors.New("needs root: sudo dctl keys luks")
 	}
 	return keys.Luks(ctx, u, execx.OSRunner{Frame: u.Frame}, "/sys", u.Confirm)
+}
+
+type keysTotp struct{}
+
+func (keysTotp) Run(ctx context.Context, u *ui.UI) error {
+	if os.Geteuid() != 0 {
+		return errors.New("needs root: sudo dctl keys totp")
+	}
+	return secureboot.Seal(ctx, u, execx.OSRunner{Frame: u.Frame}, "/sys/firmware/efi")
 }
 
 type keysRemove struct {

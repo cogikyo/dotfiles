@@ -22,6 +22,7 @@ limine
 sbctl
 snap-pac
 snapper
+tpm2-totp
 
 # hardware
 bluez

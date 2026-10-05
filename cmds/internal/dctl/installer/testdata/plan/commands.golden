@@ -32,6 +32,5 @@ chmod 750 /mnt/.snapshots
 # files
 0644 etc/fstab
 0644 etc/default/limine
-0644 etc/mkinitcpio.conf.d/dotfiles.conf
 0644 etc/locale.gen
 0440 etc/sudoers.d/wheel

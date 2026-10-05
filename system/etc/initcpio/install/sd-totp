@@ -1,0 +1,57 @@
+#!/bin/bash
+
+build() {
+    local tcti=/usr/lib/libtss2-tcti-device.so.0
+
+    if ! type -P tpm2-totp >/dev/null || [[ ! -e $tcti ]]; then
+        warning 'sd-totp: tpm2-totp is not installed; this image shows NO boot TOTP'
+        return 0
+    fi
+
+    add_checked_modules '/drivers/char/tpm/'
+    map add_binary tpm2-totp "$tcti" bash sleep
+
+    printf '%s\n' \
+        '#!/usr/bin/bash' \
+        'for _ in {1..50}; do [[ -e /dev/tpmrm0 ]] && break; sleep 0.1; done' \
+        'shown=' \
+        'until systemctl --quiet is-active cryptsetup.target; do' \
+        '    step=$((EPOCHSECONDS / 30))' \
+        '    if [[ $step != "$shown" ]]; then' \
+        '        if ! code=$(tpm2-totp -T device:/dev/tpmrm0 show 2>/dev/null); then' \
+        '            printf "\n!!! NO BOOT TOTP: no TPM, no sealed secret, or the firmware or Secure Boot state changed !!!\n\n"' \
+        '            exit 0' \
+        '        fi' \
+        '        printf "\nBoot TOTP %s (%ss left)\n" "$code" "$((30 - EPOCHSECONDS % 30))"' \
+        '        shown=$step' \
+        '    fi' \
+        '    sleep 1' \
+        'done' |
+        add_file - /usr/bin/boot-totp 755
+
+    printf '%s\n' \
+        '[Unit]' \
+        'Description=Show the boot TOTP' \
+        'DefaultDependencies=no' \
+        'ConditionPathExists=/etc/initrd-release' \
+        'After=systemd-udev-trigger.service systemd-vconsole-setup.service systemd-pcrosseparator.service' \
+        'Conflicts=initrd-switch-root.target shutdown.target' \
+        'Before=initrd-switch-root.target shutdown.target' \
+        '' \
+        '[Service]' \
+        'ExecStart=/usr/bin/boot-totp' \
+        'StandardOutput=journal+console' \
+        'StandardError=journal' |
+        add_file - /usr/lib/systemd/system/boot-totp.service 644
+
+    add_symlink /etc/systemd/system/sysinit.target.wants/boot-totp.service /usr/lib/systemd/system/boot-totp.service
+}
+
+help() {
+    cat <<HELPEOF
+This hook shows the TOTP that tpm2-totp unseals from the TPM on the console
+while the initramfs waits to unlock the root volume, refreshed every 30 seconds.
+It prints one warning line instead when the TPM is absent or refuses to unseal.
+It never blocks boot. Seal a secret with: sudo dctl keys totp
+HELPEOF
+}

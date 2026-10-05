@@ -4,6 +4,7 @@ import (
 	"dotfiles/cmds/internal/dctl/iso"
 	"fmt"
 	"maps"
+	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -171,13 +172,17 @@ func TestAgreement(t *testing.T) {
 		t.Errorf("rootflags subvol %s, fstab / subvol %s", got, subvols["/"])
 	}
 
-	hooks := strings.Fields(strings.Trim(strings.TrimPrefix(strings.TrimSpace(files["etc/mkinitcpio.conf.d/dotfiles.conf"]), "HOOKS="), "()"))
+	conf, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "system", "etc", "mkinitcpio.conf.d", "dotfiles.conf"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	hooks := strings.Fields(strings.Trim(strings.TrimPrefix(strings.TrimSpace(string(conf)), "HOOKS="), "()"))
 	at := func(h string) int { return slices.Index(hooks, h) }
 	if at("systemd") < 0 || at("udev") >= 0 || at("encrypt") >= 0 || at("btrfs-overlayfs") >= 0 {
 		t.Errorf("HOOKS %v: want systemd hooks only", hooks)
 	}
-	if !(at("block") < at("sd-encrypt") && at("sd-encrypt") < at("filesystems") && at("filesystems") < at("sd-btrfs-overlayfs")) {
-		t.Errorf("HOOKS %v: want block < sd-encrypt < filesystems < sd-btrfs-overlayfs", hooks)
+	if !(at("block") < at("sd-totp") && at("sd-totp") < at("sd-encrypt") && at("sd-encrypt") < at("filesystems") && at("filesystems") < at("sd-btrfs-overlayfs")) {
+		t.Errorf("HOOKS %v: want block < sd-totp < sd-encrypt < filesystems < sd-btrfs-overlayfs", hooks)
 	}
 }
 
