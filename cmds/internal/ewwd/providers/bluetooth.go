@@ -18,9 +18,17 @@ const (
 	bluezService          = "org.bluez"
 	bluezDeviceInterface  = "org.bluez.Device1"
 	bluezBatteryInterface = "org.bluez.Battery1"
+	bluezTransport        = "org.bluez.MediaTransport1"
 	bluezOperationTimeout = 12 * time.Second
 	noiseOperationTimeout = 4 * time.Second
+	a2dpGrace             = 10 * time.Second
+	a2dpHeals             = 2
 )
+
+var a2dpUUIDs = []string{
+	"0000110a-0000-1000-8000-00805f9b34fb",
+	"0000110b-0000-1000-8000-00805f9b34fb",
+}
 
 type BluetoothState struct {
 	Status                string `json:"status"`
@@ -49,6 +57,7 @@ type bluetoothScan struct {
 	revision   uint64
 	path       dbus.ObjectPath
 	state      BluetoothState
+	a2dp       bool
 	err        error
 }
 
@@ -73,6 +82,15 @@ type noiseOperation struct {
 	sentRevision uint64
 	confirmed    bool
 	inFlight     bool
+}
+
+type a2dpWatch struct {
+	timer     *time.Timer
+	C         <-chan time.Time
+	connected bool
+	seen      bool
+	healing   bool
+	heals     int
 }
 
 type Bluetooth struct {
@@ -151,6 +169,7 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 	var metadataRevision uint64
 	var noiseDeadline *time.Timer
 	var noiseDeadlineC <-chan time.Time
+	var audio a2dpWatch
 
 	clearNoise := func() {
 		noise = nil
@@ -183,6 +202,31 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 	publish := func() {
 		b.publish(mergeBluetoothState(bluez, b.address, metadata, noise))
 	}
+	operate := func(action string) {
+		connect := bluez.Status != "connected" || action == "reconnect"
+		token++
+		pending = &bluetoothOperation{
+			token:     token,
+			connect:   connect,
+			reconnect: action == "reconnect" && bluez.Status == "connected",
+		}
+		if connect {
+			snapshot := bluez
+			snapshot.Status = "connecting"
+			snapshot.BatteryPresent = false
+			snapshot.BatteryPercent = 0
+			bluez = snapshot
+			clearNoise()
+			publish()
+		}
+		if deadline == nil {
+			deadline = time.NewTimer(bluezOperationTimeout)
+		} else {
+			deadline.Reset(bluezOperationTimeout)
+		}
+		deadlineC = deadline.C
+		go runBluetoothOperation(ctx, conn, owner, path, generation, *pending, results)
+	}
 
 	removeOwnerMatches := func() {
 		if signalOwner == "" {
@@ -212,6 +256,7 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 		path = ""
 		pending = nil
 		bluez = BluetoothState{Status: "unknown"}
+		audio.track(false)
 		clearNoise()
 		if deadline != nil {
 			deadline.Stop()
@@ -252,9 +297,13 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 				}
 				continue
 			}
+			if signal.Sender == owner && a2dpTransportAdded(signal, path) {
+				audio.saw()
+			}
 			if signal.Sender == owner && relevantBluezSignal(signal, path) {
 				bluezRevision++
 				if trackedBluezDisconnected(signal, path) {
+					audio.track(false)
 					snapshot := disconnectedBluetoothState(bluez)
 					if pending != nil && resolvedBluetoothOperation(*pending, snapshot) {
 						pending = nil
@@ -273,6 +322,10 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 			scanPending = false
 			if currentBluetoothScan(scan, generation, bluezRevision) && scan.err == nil {
 				path = scan.path
+				audio.track(scan.state.Status == "connected")
+				if scan.a2dp {
+					audio.saw()
+				}
 				snapshot := scan.state
 				if pending != nil {
 					if pending.reconnect && snapshot.Status == "disconnected" {
@@ -325,6 +378,21 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 			pending = nil
 			deadlineC = nil
 			startScan()
+		case <-audio.C:
+			audio.C = nil
+			if pending != nil || bluez.Status != "connected" {
+				audio.arm()
+				continue
+			}
+			if audio.heals >= a2dpHeals {
+				fmt.Fprintf(os.Stderr, "ewwd: bluetooth: connected without A2DP after %d reconnects; giving up until the link drops\n", a2dpHeals)
+				continue
+			}
+			audio.heals++
+			audio.healing = true
+			fmt.Fprintf(os.Stderr, "ewwd: bluetooth: connected without A2DP for %v; reconnecting (%d/%d)\n", a2dpGrace, audio.heals, a2dpHeals)
+			operate("reconnect")
+			audio.arm()
 		case update := <-librePodsUpdates:
 			metadata = update.state
 			metadataRevision++
@@ -396,30 +464,7 @@ func (b *Bluetooth) Start(ctx context.Context, notify func(data any)) error {
 				continue
 			}
 
-			action := req.args[0]
-			connect := bluez.Status != "connected" || action == "reconnect"
-			token++
-			pending = &bluetoothOperation{
-				token:     token,
-				connect:   connect,
-				reconnect: action == "reconnect" && bluez.Status == "connected",
-			}
-			if connect {
-				snapshot := bluez
-				snapshot.Status = "connecting"
-				snapshot.BatteryPresent = false
-				snapshot.BatteryPercent = 0
-				bluez = snapshot
-				clearNoise()
-				publish()
-			}
-			if deadline == nil {
-				deadline = time.NewTimer(bluezOperationTimeout)
-			} else {
-				deadline.Reset(bluezOperationTimeout)
-			}
-			deadlineC = deadline.C
-			go runBluetoothOperation(ctx, conn, owner, path, generation, *pending, results)
+			operate(req.args[0])
 			req.reply <- nil
 		}
 	}
@@ -586,6 +631,47 @@ func (n *noiseOperation) completed(err error) (clear, relaunch bool) {
 	return n.confirmed, false
 }
 
+func (w *a2dpWatch) track(connected bool) {
+	if connected == w.connected {
+		return
+	}
+	w.connected = connected
+	if connected {
+		w.healing = false
+		if !w.seen {
+			w.arm()
+		}
+		return
+	}
+	w.disarm()
+	w.seen = false
+	if !w.healing {
+		w.heals = 0
+	}
+}
+
+func (w *a2dpWatch) saw() {
+	w.seen = true
+	w.heals = 0
+	w.disarm()
+}
+
+func (w *a2dpWatch) arm() {
+	if w.timer == nil {
+		w.timer = time.NewTimer(a2dpGrace)
+	} else {
+		w.timer.Reset(a2dpGrace)
+	}
+	w.C = w.timer.C
+}
+
+func (w *a2dpWatch) disarm() {
+	if w.timer != nil {
+		w.timer.Stop()
+	}
+	w.C = nil
+}
+
 func bluezOwner(ctx context.Context, conn *dbus.Conn) string {
 	callCtx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
@@ -644,7 +730,7 @@ func relevantBluezSignal(signal *dbus.Signal, trackedPath dbus.ObjectPath) bool 
 			return false
 		}
 		interfaces, ok := signal.Body[1].(map[string]map[string]dbus.Variant)
-		return ok && (interfaces[bluezDeviceInterface] != nil || interfaces[bluezBatteryInterface] != nil)
+		return ok && (interfaces[bluezDeviceInterface] != nil || interfaces[bluezBatteryInterface] != nil || interfaces[bluezTransport] != nil)
 	case "org.freedesktop.DBus.ObjectManager.InterfacesRemoved":
 		if len(signal.Body) < 2 {
 			return false
@@ -654,7 +740,7 @@ func relevantBluezSignal(signal *dbus.Signal, trackedPath dbus.ObjectPath) bool 
 			return false
 		}
 		for _, iface := range interfaces {
-			if iface == bluezDeviceInterface || iface == bluezBatteryInterface {
+			if iface == bluezDeviceInterface || iface == bluezBatteryInterface || iface == bluezTransport {
 				return true
 			}
 		}
@@ -674,6 +760,29 @@ func trackedBluezDisconnected(signal *dbus.Signal, trackedPath dbus.ObjectPath) 
 	value, present := props["Connected"]
 	connected, connectedOK := value.Value().(bool)
 	return present && connectedOK && !connected
+}
+
+func a2dpTransportAdded(signal *dbus.Signal, devicePath dbus.ObjectPath) bool {
+	if signal.Name != "org.freedesktop.DBus.ObjectManager.InterfacesAdded" || len(signal.Body) < 2 {
+		return false
+	}
+	path, pathOK := signal.Body[0].(dbus.ObjectPath)
+	interfaces, interfacesOK := signal.Body[1].(map[string]map[string]dbus.Variant)
+	return pathOK && interfacesOK && belongsToDevice(path, devicePath) && a2dpTransport(interfaces)
+}
+
+func hasA2DPTransport(objects map[dbus.ObjectPath]map[string]map[string]dbus.Variant, devicePath dbus.ObjectPath) bool {
+	for path, interfaces := range objects {
+		if belongsToDevice(path, devicePath) && a2dpTransport(interfaces) {
+			return true
+		}
+	}
+	return false
+}
+
+func a2dpTransport(interfaces map[string]map[string]dbus.Variant) bool {
+	transport := interfaces[bluezTransport]
+	return transport != nil && slices.Contains(a2dpUUIDs, strings.ToLower(variantString(transport["UUID"])))
 }
 
 func disconnectedBluetoothState(state BluetoothState) BluetoothState {
@@ -696,6 +805,7 @@ func scanBluetooth(ctx context.Context, conn *dbus.Conn, owner, address string, 
 	result.err = conn.Object(owner, dbus.ObjectPath("/")).CallWithContext(callCtx, "org.freedesktop.DBus.ObjectManager.GetManagedObjects", 0).Store(&managed)
 	if result.err == nil {
 		result.path, result.state = bluetoothSnapshot(managed, address)
+		result.a2dp = hasA2DPTransport(managed, result.path)
 	}
 	select {
 	case results <- result:
