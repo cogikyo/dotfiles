@@ -30,3 +30,4 @@ Command details: [dctl](cmd/dctl/README.md), [hyprd](cmd/hyprd/README.md#rebuild
 - Keep `config/hyprd.yaml` → `windows.{split,gaps_out,monocle}` fitted to Hyprland's gaps/ratios and Kitty's cell size.
 - `hyprd browser snapshot` writes tracked files under `internal/hyprd/browser/sessions/`.
 - `internal/ui` marks an open output tree with `DOTFILES_TREE`; dotfiles commands started under it continue that tree, and `dctl setup` passes it through sudo.
+- `dctl update cmd` parses raw `hyprd rebuild` output, so hyprd socket verbs stay plain text; only `hyprd vpn` and `hyprd opencode now|recycle` render trees.

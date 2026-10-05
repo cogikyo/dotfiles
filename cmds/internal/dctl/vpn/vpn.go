@@ -65,7 +65,11 @@ func Stage(u *ui.UI, r paths.Root, run execx.Runner) setup.Stage {
 				return err
 			}
 			for _, name := range missing {
-				if err := run.Run(ctx, "", "hyprd", "vpn", "install", name); err != nil {
+				err := run.Run(ctx, "", "hyprd", "vpn", "install", name)
+				if exit, ok := errors.AsType[*exec.ExitError](err); ok && exit.ExitCode() == 130 {
+					return ui.ErrCanceled
+				}
+				if err != nil {
 					return err
 				}
 			}

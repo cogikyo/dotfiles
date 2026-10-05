@@ -2,11 +2,14 @@
 package main
 
 import (
+	"context"
 	"dotfiles/cmds/internal/daemon"
 	"dotfiles/cmds/internal/hyprd/cli"
 	notifypkg "dotfiles/cmds/internal/hyprd/notify"
 	opencodepkg "dotfiles/cmds/internal/hyprd/opencode"
+	"dotfiles/cmds/internal/ui"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -264,20 +267,26 @@ func cmdOpenCode() {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Println(response)
-	if daemonResponseFailed(response) {
-		os.Exit(1)
-	}
 	if os.Args[2] != "now" && os.Args[2] != "recycle" {
+		fmt.Println(response)
+		if daemonResponseFailed(response) {
+			os.Exit(1)
+		}
 		return
 	}
 
+	u := ui.New(ui.Options{Context: context.Background()})
+	u.Open("hyprd %s", command)
+	u.Trap()
 	fields := strings.Fields(response)
 	if len(fields) != 2 || fields[0] != "job" && fields[0] != "already" {
-		fmt.Fprintln(os.Stderr, "error: malformed opencode job response")
+		u.Error("unexpected opencode job response: %s", response)
 		os.Exit(1)
 	}
-	watchOpenCode(fields[1])
+	if err := watchOpenCode(u, fields[1]); err != nil {
+		u.Error("%v", err)
+		os.Exit(1)
+	}
 }
 
 func request(command string) (string, error) {
@@ -287,37 +296,38 @@ func request(command string) (string, error) {
 	return client.Send(command)
 }
 
-func watchOpenCode(id string) {
-	last := ""
+func watchOpenCode(u *ui.UI, id string) error {
+	last, phase := "", ""
 	for {
 		response, err := request("opencode status " + id)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: %v\n", err)
-			os.Exit(1)
+			return err
 		}
 		if daemonResponseFailed(response) {
-			fmt.Fprintln(os.Stderr, response)
-			os.Exit(1)
+			return errors.New(strings.TrimPrefix(response, "error: "))
 		}
 
 		var status opencodepkg.Status
 		if err := json.Unmarshal([]byte(response), &status); err != nil {
-			fmt.Fprintf(os.Stderr, "error: parse opencode status: %v\n", err)
-			os.Exit(1)
+			return fmt.Errorf("parse opencode status: %w", err)
 		}
 		line := status.State + "\x00" + status.Phase + "\x00" + status.Message
-		if line != last {
-			fmt.Printf("%s [%s] %s\n", id, status.Phase, status.Message)
-			last = line
+		switch {
+		case status.Phase != phase:
+			u.Node(ui.Info, status.Phase, status.Message)
+		case line != last:
+			u.Info("%s", status.Message)
 		}
+		last, phase = line, status.Phase
 		if status.Terminal() {
 			for _, detail := range status.Details {
-				fmt.Println("  " + detail)
+				u.Detail("%s", detail)
 			}
 			if status.State != "done" {
-				os.Exit(1)
+				return fmt.Errorf("job %s %s", id, status.State)
 			}
-			return
+			u.Close(ui.OK, "job %s done", id)
+			return nil
 		}
 		time.Sleep(500 * time.Millisecond)
 	}

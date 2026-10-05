@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/colorprofile"
@@ -63,6 +65,17 @@ func New(opts Options) *UI {
 func (u *UI) JSON() bool  { return u.opts.JSON }
 func (u *UI) Yes() bool   { return u.opts.Yes }
 func (u *UI) Plain() bool { return u.opts.Plain }
+
+// Trap closes the tree as interrupted on SIGINT or SIGTERM, for commands without a signal-aware context.
+func (u *UI) Trap() {
+	sig := make(chan os.Signal, 1)
+	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sig
+		u.Error("interrupted")
+		os.Exit(130)
+	}()
+}
 
 // Env carries the open tree into a child process whose environment is reset, such as under sudo.
 func (u *UI) Env() []string {

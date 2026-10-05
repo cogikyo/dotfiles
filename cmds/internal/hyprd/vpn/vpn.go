@@ -12,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/godbus/dbus/v5"
-	"golang.org/x/term"
 )
 
 const (
@@ -26,6 +25,8 @@ const (
 // VPN dispatches VPN subcommands against NetworkManager.
 type VPN struct {
 	config *config.VPNConfig
+	// Secret asks for a missing VPN secret; nil means no terminal can answer.
+	Secret func(label string) (string, error)
 }
 
 type connection struct {
@@ -316,7 +317,7 @@ func (v *VPN) install(conn connection, options installOptions) (string, error) {
 		lines = append(lines, "profile incomplete; using installed NetworkManager connection as base")
 	}
 
-	if err := ensureVPNSecrets(conn.Name, uuid, options.ResetSecrets); err != nil {
+	if err := v.ensureSecrets(conn.Name, uuid, options.ResetSecrets); err != nil {
 		return "", undo(err)
 	}
 	lines = append(lines, "VPN secrets stored in NetworkManager")
@@ -350,7 +351,7 @@ func readKeyfile(path string) (uuid string, complete bool, err error) {
 	return uuid, complete, nil
 }
 
-func ensureVPNSecrets(name, uuid string, reset bool) error {
+func (v *VPN) ensureSecrets(name, uuid string, reset bool) error {
 	bus, err := dbus.ConnectSystemBus()
 	if err != nil {
 		return fmt.Errorf("connect system bus: %w", err)
@@ -371,7 +372,7 @@ func ensureVPNSecrets(name, uuid string, reset bool) error {
 		if !reset && secrets[key] != "" {
 			continue
 		}
-		secret, err := promptSecret(name, key)
+		secret, err := v.prompt(name, key)
 		if err != nil {
 			return err
 		}
@@ -433,21 +434,18 @@ func storeVPNSecrets(obj dbus.BusObject, secrets map[string]string) error {
 	return nil
 }
 
-func promptSecret(name, key string) (string, error) {
-	fd := int(os.Stdin.Fd())
-	if !term.IsTerminal(fd) {
-		return "", fmt.Errorf("vpn secret %s missing for %s and stdin is not a terminal", key, name)
+func (v *VPN) prompt(name, key string) (string, error) {
+	if v.Secret == nil {
+		return "", fmt.Errorf("vpn secret %s missing for %s and no terminal can answer", key, name)
 	}
-	fmt.Fprintf(os.Stderr, "VPN %s for %s: ", key, name)
-	secret, err := term.ReadPassword(fd)
-	fmt.Fprintln(os.Stderr)
+	secret, err := v.Secret(fmt.Sprintf("VPN %s for %s:", key, name))
 	if err != nil {
 		return "", err
 	}
-	if len(secret) == 0 {
+	if secret == "" {
 		return "", fmt.Errorf("vpn secret %s for %s is empty", key, name)
 	}
-	return string(secret), nil
+	return secret, nil
 }
 
 func (v *VPN) installAll(options installOptions) (string, error) {
