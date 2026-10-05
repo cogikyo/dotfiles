@@ -138,14 +138,14 @@ func enrollSigner(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runn
 	}
 	defer home.Close()
 	rel := filepath.Join(".ssh", "id_ed25519_sk_"+serial)
-	name, args := "id", []string{"-q", "-t", "ed25519-sk", "-O", "resident", "-O", "application=" + application, "-C", principal(serial), "-f", "id", "-N", ""}
+	name, args := "id", []string{"-t", "ed25519-sk", "-O", "resident", "-O", "application=" + application, "-C", principal(serial), "-f", "id", "-N", ""}
 	if i >= 0 {
 		pub, err := home.ReadFile(rel + ".pub")
 		if priv, perr := home.ReadFile(rel); err == nil && perr == nil && skKey(string(pub)) == skKey(signed[i]) {
 			clear(priv)
 			return nil
 		}
-		name, args = "id_ed25519_sk_rk_"+strings.TrimPrefix(application, "ssh:"), []string{"-q", "-K", "-N", ""}
+		name, args = "id_ed25519_sk_rk_"+strings.TrimPrefix(application, "ssh:"), []string{"-K", "-N", ""}
 	}
 	tmp, err := os.MkdirTemp("", "dctl-sk-")
 	if err != nil {

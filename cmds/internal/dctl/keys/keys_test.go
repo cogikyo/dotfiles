@@ -146,7 +146,7 @@ func TestEnrollOrder(t *testing.T) {
 	root := sandbox(t)
 	k := newKey(1234)
 	ssh := filepath.Join(root.Home, ".ssh", "id_ed25519_sk_1234")
-	keygen := "ssh-keygen -q -t ed25519-sk -O resident -O application=ssh:dctl-release -C yubikey-1234 -f id -N "
+	keygen := "ssh-keygen -t ed25519-sk -O resident -O application=ssh:dctl-release -C yubikey-1234 -f id -N "
 	f := &fake{t: t, out: device(k, unset, true)}
 	f.effects = map[string]func(string){keygen: func(dir string) {
 		write(t, filepath.Join(dir, "id"), "handle")
@@ -370,12 +370,12 @@ func TestSignerHandleRecovered(t *testing.T) {
 				write(t, file+".pub", tc.local+"\n")
 			}
 		}
-		f := &fake{t: t, effects: map[string]func(string){"ssh-keygen -q -K -N ": func(dir string) {
+		f := &fake{t: t, effects: map[string]func(string){"ssh-keygen -K -N ": func(dir string) {
 			write(t, filepath.Join(dir, "id_ed25519_sk_rk_dctl-release"), "handle")
 			write(t, filepath.Join(dir, "id_ed25519_sk_rk_dctl-release.pub"), tc.keyed+" comment\n")
 		}}}
 		err := enrollSigner(t.Context(), quiet(), root, f, "1234")
-		if !slices.Equal(f.log, []string{"ssh-keygen -q -K -N "}) {
+		if !slices.Equal(f.log, []string{"ssh-keygen -K -N "}) {
 			t.Errorf("%s: ran %v", name, f.log)
 		}
 		if name == "mismatch" {
