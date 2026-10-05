@@ -230,8 +230,8 @@ Release checks the local `origin/master` ref and does not fetch or push it.
 dctl iso release [path/to/dotfiles-REV.iso] [--key /path/to/key]
 ```
 
-The default key is the only `~/.ssh/id_ed25519_sk_*` private key present; select `--key` when several exist, with its public key trusted in `share/allowed_signers`.
-Signing uses the enrolled YubiKey's FIDO2 PIN and touch.
+The default key is `~/.ssh/id_ed25519_sk_<serial>` for the one inserted YubiKey; `--key` selects another key whose public key is trusted in `share/allowed_signers`.
+Signing bypasses the SSH agent and asks for the FIDO2 PIN, then touch.
 
 The command writes `<iso>.sha256` and `<iso>.sha256.sig`, verifies the signature, and requires the exact release tag before publishing.
 `--yes` does not skip this typed confirmation.

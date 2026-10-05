@@ -78,7 +78,7 @@ func pair(stubs, recipients []string) []Key {
 	return out
 }
 
-func inserted(ctx context.Context, run execx.Runner) (string, error) {
+func Inserted(ctx context.Context, run execx.Runner) (string, error) {
 	out, err := run.Output(ctx, "", "ykman", "list", "--serials")
 	if err != nil {
 		return "", err

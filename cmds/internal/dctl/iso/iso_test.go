@@ -43,34 +43,6 @@ func TestTargets(t *testing.T) {
 	}
 }
 
-func TestSigningKey(t *testing.T) {
-	home := t.TempDir()
-	ssh := filepath.Join(home, ".ssh")
-	if err := os.Mkdir(ssh, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := signingKey(home, ""); err == nil || !strings.Contains(err.Error(), "dctl keys enroll") {
-		t.Fatalf("no keys: %v", err)
-	}
-	for _, f := range []string{"id_ed25519_sk_rk_a", "id_ed25519_sk_rk_a.pub", "id_ed25519"} {
-		if err := os.WriteFile(filepath.Join(ssh, f), nil, 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if key, err := signingKey(home, ""); err != nil || key != filepath.Join(ssh, "id_ed25519_sk_rk_a") {
-		t.Fatalf("one key: %q, %v", key, err)
-	}
-	if err := os.WriteFile(filepath.Join(ssh, "id_ed25519_sk_rk_b"), nil, 0o600); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := signingKey(home, ""); err == nil || !strings.Contains(err.Error(), "--key") {
-		t.Fatalf("two keys: %v", err)
-	}
-	if key, _ := signingKey(home, "~/.ssh/id_ed25519_sk_rk_b"); key != filepath.Join(ssh, "id_ed25519_sk_rk_b") {
-		t.Fatalf("flag: %q", key)
-	}
-}
-
 func TestCopySigned(t *testing.T) {
 	var dev bytes.Buffer
 	sum := sha256.Sum256([]byte("iso"))

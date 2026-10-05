@@ -90,7 +90,7 @@ func (c isoUSB) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 
 type isoRelease struct {
 	ISO string `arg:"" optional:"" help:"ISO to release (default: the newest built ISO)."`
-	Key string `help:"Hardware SSH key that signs the checksum (default: the only ~/.ssh/id_ed25519_sk_* key); its public key must be in share/allowed_signers."`
+	Key string `help:"Hardware SSH key that signs the checksum (default: ~/.ssh/id_ed25519_sk_<serial> of the inserted YubiKey); its public key must be in share/allowed_signers."`
 }
 
 func (c isoRelease) Run(ctx context.Context, u *ui.UI, root paths.Root) error {

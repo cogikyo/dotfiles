@@ -165,6 +165,7 @@ func TestEnrollOrder(t *testing.T) {
 		"age-plugin-yubikey --generate --serial 1234 --pin-policy once --touch-policy never",
 		"rekey",
 		keygen,
+		"ssh-keygen -p -O verify-required -P  -N  -f id",
 	}
 	if !slices.Equal(f.log, want) {
 		t.Fatalf("ran\n%s\nwant\n%s", strings.Join(f.log, "\n"), strings.Join(want, "\n"))
@@ -375,7 +376,7 @@ func TestSignerHandleRecovered(t *testing.T) {
 			write(t, filepath.Join(dir, "id_ed25519_sk_rk_dctl-release.pub"), tc.keyed+" comment\n")
 		}}}
 		err := enrollSigner(t.Context(), quiet(), root, f, "1234")
-		if !slices.Equal(f.log, []string{"ssh-keygen -K -N "}) {
+		if !slices.Equal(f.log, []string{"ssh-keygen -K -N ", "ssh-keygen -p -O verify-required -P  -N  -f id_ed25519_sk_rk_dctl-release"}) {
 			t.Errorf("%s: ran %v", name, f.log)
 		}
 		if name == "mismatch" {

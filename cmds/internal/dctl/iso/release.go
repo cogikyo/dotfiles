@@ -7,32 +7,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"strings"
 	"time"
 
 	"dotfiles/cmds/internal/dctl/execx"
+	"dotfiles/cmds/internal/dctl/keys"
 	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/ui"
 )
-
-func signingKey(home, flag string) (string, error) {
-	if flag != "" {
-		return paths.ExpandHome(home, flag), nil
-	}
-	found, err := filepath.Glob(filepath.Join(home, ".ssh", "id_ed25519_sk_*"))
-	if err != nil {
-		return "", err
-	}
-	found = slices.DeleteFunc(found, func(f string) bool { return strings.HasSuffix(f, ".pub") })
-	switch len(found) {
-	case 0:
-		return "", errors.New("no ~/.ssh/id_ed25519_sk_* key; enroll one with `dctl keys enroll`")
-	case 1:
-		return found[0], nil
-	}
-	return "", fmt.Errorf("several signing keys (%s); pick one with --key", strings.Join(found, ", "))
-}
 
 func Release(ctx context.Context, u *ui.UI, root paths.Root, iso, key string) error {
 	if os.Geteuid() == 0 {
@@ -66,13 +48,17 @@ func Release(ctx context.Context, u *ui.UI, root paths.Root, iso, key string) er
 	if err != nil {
 		return err
 	}
-	key, err = signingKey(root.Home, key)
-	if err != nil {
-		return err
+	if key == "" {
+		serial, err := keys.Inserted(ctx, run)
+		if err != nil {
+			return fmt.Errorf("%w; or pick the signing key with --key", err)
+		}
+		key = filepath.Join(root.Home, ".ssh", "id_ed25519_sk_"+serial)
 	}
+	key = paths.ExpandHome(root.Home, key)
 	pub, err := os.ReadFile(key + ".pub")
 	if err != nil {
-		return err
+		return fmt.Errorf("%w; enroll the YubiKey with `dctl keys enroll`", err)
 	}
 	if !strings.HasPrefix(string(pub), "sk-") {
 		return fmt.Errorf("%s is not a hardware (sk-) key", key)
@@ -89,8 +75,8 @@ func Release(ctx context.Context, u *ui.UI, root paths.Root, iso, key string) er
 	if err := os.Remove(sums + ".sig"); err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	u.Section("sign", filepath.Base(sums)+"; touch the security key")
-	if err := run.Run(ctx, "", "ssh-keygen", "-Y", "sign", "-f", key, "-n", "file", sums); err != nil {
+	u.Section("sign", filepath.Base(sums)+" with "+filepath.Base(key)+"; enter the FIDO2 PIN, then touch the key")
+	if err := run.Run(ctx, "", "env", "-u", "SSH_AUTH_SOCK", "ssh-keygen", "-Y", "sign", "-f", key, "-n", "file", sums); err != nil {
 		return err
 	}
 	signed, err := signedSum(ctx, root.Share("allowed_signers"), iso)

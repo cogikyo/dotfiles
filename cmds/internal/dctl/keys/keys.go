@@ -30,7 +30,7 @@ func Enroll(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, re
 	if err := secrets.Preflight(root); err != nil {
 		return err
 	}
-	serial, err := inserted(ctx, run)
+	serial, err := Inserted(ctx, run)
 	if err != nil {
 		return err
 	}
@@ -155,6 +155,9 @@ func enrollSigner(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runn
 	if err := run.Run(ctx, tmp, "ssh-keygen", args...); err != nil {
 		return err
 	}
+	if err := run.Run(ctx, tmp, "ssh-keygen", "-p", "-O", "verify-required", "-P", "", "-N", "", "-f", name); err != nil {
+		return err
+	}
 	pub, err := os.ReadFile(filepath.Join(tmp, name+".pub"))
 	if err != nil {
 		return fmt.Errorf("no %s key from ssh-keygen: %w", application, err)
@@ -269,7 +272,7 @@ func Status(ctx context.Context, root paths.Root, run execx.Runner, sys string) 
 			r.Enrolled = append(r.Enrolled, Enrolled{Key: Key{Serial: serial}, Signer: true})
 		}
 	}
-	if r.Inserted, err = inserted(ctx, run); err != nil {
+	if r.Inserted, err = Inserted(ctx, run); err != nil {
 		r.Absent = err.Error()
 	}
 	h, err := luks(ctx, run, sys)
