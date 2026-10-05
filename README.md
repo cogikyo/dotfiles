@@ -69,7 +69,7 @@
 <summary>🎨 <b>Design</b></summary>
 
 - Color Scheme: [vagari](https://github.com/cogikyo/vagari#palette) (work in progress)
-- Cursors: [catppuccin-macchiato-dark](https://github.com/catppuccin/cursors)
+- Cursors: [catppuccin-macchiato-light](https://github.com/catppuccin/cursors)
 - Icons: [Papirus-Dark](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme)
 
 </details>
@@ -119,122 +119,73 @@
 
 ## 🛠️ Installation
 
-The dctl UEFI ISO installs Arch and these dotfiles offline onto a whole disk.
-It uses LUKS2, btrfs, Snapper, Limine, and an SDDM video greeter before the Hyprland session.
-There is no stock-ISO installer, dual-boot flow, or hibernation setup.
+The dctl ISO installs Arch and these dotfiles offline onto the Framework Desktop, with LUKS2, btrfs, Snapper, Limine, and Secure Boot.
+The [dctl guide](cmds/cmd/dctl/README.md) explains each command in detail.
 
-### Get the ISO
+> [!CAUTION]
+> `dctl iso usb` erases the whole USB disk, and `dctl install` erases the whole target disk.
 
-Download the ISO, its `.sha256` file, and its `.sha256.sig` file from [GitHub Releases](https://github.com/cogikyo/dotfiles/releases/latest).
-Keep all three files together and use a checkout with the trusted release keys in `share/allowed_signers`.
-On an existing Arch host, use an installed dctl or build it as described in [`cmds/README.md`](cmds/README.md).
-The build needs a clean, committed `master`, network access, Go, `archiso`, `devtools`, Git, and pacman tooling on an Arch host.
-It asks for sudo once, because makechrootpkg and mkarchiso need root.
+### 1. Get the ISO
+
+Download the ISO with its `.sha256` and `.sha256.sig` files from [GitHub Releases](https://github.com/cogikyo/dotfiles/releases/latest), or build and publish one from an existing Arch machine:
 
 ```sh
 dctl iso build
-```
-
-The result is `iso/out/dotfiles-<12-character-revision>.iso`, built from a Git bundle of the committed revision rather than the working tree.
-Test, release, and USB default to the ISO built from HEAD; pass a path to use another image.
-
-```sh
 dctl iso test
+git push
+dctl iso release
 ```
 
-The test runs without sudo and needs QEMU, KVM access, OVMF Secure Boot firmware, dosfstools, and mtools.
-It installs without network access, unlocks and boots twice, checks setup status, and saves results and logs under `/var/tmp/dctl-iso-test-*`.
-It requires all three Secure Boot checks and an active display manager.
-After a 20-second wait, it saves `greeter.png` for manual inspection; it does not verify the greeter's appearance or sign-in behavior.
-See the [dctl guide](cmds/cmd/dctl/README.md#iso) for test overrides and release signing.
-A local build needs signed checksum files before the USB command accepts it.
-`dctl iso release` creates those files and publishes a public release; there is no signing-only dctl command.
+The build needs a clean, committed `master`, and the release signs the checksum with a YubiKey.
+See [ISO](cmds/cmd/dctl/README.md#iso) for requirements and test overrides.
 
-### Write the USB
-
-**This erases the whole USB disk.**
-Replace `/dev/sdX` with an unmounted removable disk, not a partition.
+### 2. Write the USB
 
 ```sh
 dctl iso usb /dev/sdX
 ```
 
-For a downloaded ISO, add `--iso /path/to/dotfiles-REV.iso`.
+Add `--iso /path/to/dotfiles-REV.iso` for a downloaded ISO.
+The command checks the signed checksum against `share/allowed_signers`, then asks you to type the device path.
 
-The command verifies the signed checksum against `share/allowed_signers` and requires you to type the device path.
-It rejects mounted disks, internal non-removable disks, and disks without a serial or WWN.
+### 3. Prepare the Framework
 
-### Boot and install
+Back up the internal disk.
+In the BIOS, install version 3.06, enable Pluton, and put Secure Boot in Setup Mode.
 
-Back up the target disk before installation.
-For manual hardware preparation, set the Framework BIOS to version 3.06 with Pluton enabled and Secure Boot in Setup Mode.
-The installer checks UEFI and Secure Boot state, but does not check the BIOS version or Pluton setting.
-Boot the USB in UEFI mode.
-The live environment starts this command as root on tty1:
+### 4. Install
 
-```sh
-dctl install
-```
+Boot the USB in UEFI mode; `dctl install` starts on tty1.
+Enter the login password for `cullyn`, the timezone, and the LUKS passphrase, then type the disk path to confirm.
+Without Setup Mode, the install continues without Secure Boot.
+Remove the USB when it asks to reboot.
 
-The user is `cullyn` and the hostname is `costello`.
-Enter the login password, accept or change the prefilled timezone, and enter the LUKS passphrase, then select the target disk if prompted.
-**Typing the disk path at the final confirmation erases the selected disk.**
-The installer refuses the boot disk, mounted disks, USB/removable targets, and targets without a serial or WWN.
-It installs the offline package payload, clones the bundled commit into a shallow `~/dotfiles`, and installs the prebuilt commands.
-If firmware is not in Setup Mode, installation continues without Secure Boot and reports the required follow-up.
+### 5. First login
 
-### First login
-
-Reboot, unlock LUKS with the passphrase, and log in through SDDM.
-Connect Ethernet for the online setup work.
-Run setup as the normal user; it asks default-yes for each pending stage and runs root stages in one sudo child.
+Unlock LUKS with the passphrase, log in through SDDM, and connect Ethernet.
+Insert a YubiKey, then run:
 
 ```sh
 dctl setup
 git -C ~/dotfiles fetch --unshallow
 ```
 
-To reapply one stage, use `dctl setup home` or another stage from the [dctl guide](cmds/cmd/dctl/README.md#setup).
-Launch Firefox once if setup reports a missing profile, then rerun `dctl setup firefox certs`.
-Enroll each YubiKey separately with only that key inserted:
+Setup asks before each stage and asks for sudo once.
+It installs `packages/extra.lst` online and asks for the YubiKey PIN to decrypt the SSH keys.
+When an SSH key is first used, the keyring asks for its passphrase; choose the option to unlock it automatically at login.
+If setup reports a missing Firefox profile, start Firefox once and run `dctl setup firefox certs`.
+
+### 6. YubiKeys and Secure Boot
+
+Enroll each YubiKey with only that key inserted, and record the LUKS recovery key when it is shown:
 
 ```sh
 dctl keys enroll
 sudo dctl keys luks
 ```
 
-Record the LUKS recovery key when it is shown; the original passphrase slot remains available.
-If Secure Boot enrollment was skipped, clear the firmware keys into Setup Mode, boot, and run `dctl setup secureboot`.
-Reboot after enrollment; if Secure Boot is still off, enable it in the BIOS before checking `dctl setup --status secureboot`.
+If the install skipped Secure Boot, put the firmware in Setup Mode, boot, and run `dctl setup secureboot`.
+Enable Secure Boot in the BIOS, reboot, and check `dctl setup --status secureboot`.
+Then work through the [hardware checklist](cmds/cmd/dctl/README.md#manual-hardware-acceptance).
 
-## Maintenance
-
-Run `update` as the normal user for daily upgrades; the zsh alias runs `dctl update`.
-It asks default-yes for each step: pacman, AUR, repos, dotfiles commands, Go tools, rustup, then firmware.
-
-```sh
-update
-dctl update repos cmd
-dctl update --only dctl
-dctl setup repos
-```
-
-Named update steps skip the per-step prompt; `--all` skips prompts, passes `--noconfirm` to pacman/yay, and never flashes firmware.
-Update never pulls `~/dotfiles`; manage that checkout by hand.
-It reports package-list drift without rewriting lists or removing packages; use `dctl setup packages extra` to install newly listed packages.
-See the [dctl guide](cmds/cmd/dctl/README.md) for secret recovery, recipient changes, and release publishing.
-
-## Manual hardware acceptance
-
-These checks require the Framework Desktop and real YubiKeys; the VM test does not prove them.
-
-- [ ] Manually confirm BIOS 3.06, Pluton enabled, and Setup Mode before installation.
-- [ ] Enable Secure Boot in the BIOS after key enrollment, reboot, and confirm all items are done with `dctl setup --status secureboot`.
-- [ ] Boot and unlock LUKS with each of the two YubiKeys separately, with the PIN and no touch.
-- [ ] Decrypt secrets with each YubiKey separately, without the other key or the age phrase.
-- [ ] Reject a wrong FIDO2 PIN and a wrong PIV PIN; cancel any age-phrase fallback and avoid repeated failures that can block the key.
-- [ ] Unlock LUKS with the recorded recovery key while both YubiKeys are removed.
-- [ ] Pass `dctl secrets verify-phrase` and rehearse secret recovery without a YubiKey.
-- [ ] Confirm `nmcli device status` shows no Wi-Fi interface.
-- [ ] Confirm `bluetoothctl list` shows a Bluetooth controller, then pair and use a device.
-- [ ] Confirm `journalctl -k -b` has no firmware load errors with `linux-firmware-{amd,amdgpu,mediatek,realtek}` installed.
+For daily upgrades, run `update`; see [Update](cmds/cmd/dctl/README.md#update).
