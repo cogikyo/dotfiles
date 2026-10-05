@@ -102,10 +102,10 @@
   }
 
   &-text {
-    font-family: $font-display;
+    font-family: Archivo, "Symbols Nerd Font", sans-serif;
     color: $blu-2;
     font-weight: 500;
-    font-size: 2.5em;
+    font-size: 2.8em;
     margin-top: 4px;
     transition: all 0.5s $ease-out-snap;
   }
