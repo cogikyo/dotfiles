@@ -21,7 +21,7 @@ const (
 	bluezTransport        = "org.bluez.MediaTransport1"
 	bluezOperationTimeout = 12 * time.Second
 	noiseOperationTimeout = 4 * time.Second
-	a2dpGrace             = 10 * time.Second
+	a2dpGrace             = 30 * time.Second
 	a2dpHeals             = 2
 )
 
