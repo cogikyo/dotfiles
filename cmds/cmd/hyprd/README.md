@@ -114,21 +114,29 @@ Save work before running it.
 ### Lock
 
 ```bash
-hyprd lock pseudo      # unauthenticated privacy screen: blackout, audio/notification pause, submap
-hyprd lock idle        # enter the same privacy screen for idle use
-hyprd lock unlock      # exit the privacy screen (alias: hyprd lock -u)
-hyprd lock full        # supervise hyprlock --grace 0
+hyprd lock full        # supervise the Quickshell session lock
 ```
 
-The privacy screen does not authenticate the user or secure the session.
-Super+Q enters it with `hyprd lock pseudo` and exits it with `hyprd lock unlock` through the `pseudolock` submap.
-Full lock restores the workspace only after hyprlock exits successfully and refuses manual unlock or `hyprd rebuild` while active.
-Before each hyprlock launch, it enters `pseudolock` and polls Hyprland's `j/locked` state every 50 ms before resetting the submap.
-If the compositor has not reported locked after 10 seconds, it logs the delay and keeps the submap until hyprlock exits successfully.
-It relaunches hyprlock after failure and attempts to end the session after three consecutive failures lasting less than three seconds each.
-At daemon startup, it waits for an existing hyprlock to exit before relaunching it, or relaunches immediately if the compositor is locked without hyprlock.
-When no hyprlock is running, failure to read the compositor's lock state prevents daemon startup.
-Unlock restores the saved workspace and calls `dispatchStartup` to restore glava, Spotify, and Bluetooth.
+`hyprd lock full` starts supervision asynchronously for `qs -c lock` with `LOCK_MODE=lock`; returning does not confirm that the session is locked.
+The UI lives in `config/quickshell/lock/` at the repo root, and Quickshell's stdout and stderr are forwarded to hyprd's stderr.
+Before each new launch, hyprd enters `lockbarrier` and keeps that submap until the launch emits `lock-secure: acquired`; a client that misses the 5-second deadline is stopped and retried.
+
+Failed launches that never acquire the lock or fail in less than 3 seconds count as strikes; an acquired launch that fails after at least 3 seconds resets the count.
+Three consecutive strikes trigger an attempt to end the session; if that fails, hyprd reports the error and continues retrying.
+
+After acquisition, normal release requires exit 0 and an unlocked compositor; an `Aborting lock.` line prevents release and triggers a retry.
+A watchdog checks for unlock every second and stops a client still alive 2 seconds after unlock is observed, allowing release without exit 0 unless an abort was logged.
+There is no manual unlock command.
+
+`$XDG_RUNTIME_DIR/hyprd-lock-$HYPRLAND_INSTANCE_SIGNATURE` preserves lock intent across daemon restarts; recording errors are logged.
+Startup resumes pending requests and supervises surviving Quickshell clients marked with `LOCK_MODE=lock`, releasing only when a prior acquisition was recorded or observed and the compositor is unlocked.
+An adopted client is stopped if, after 5 seconds, the compositor confirms it is still unlocked without a prior acquisition; failures trigger a relaunch.
+Startup also relaunches a lock when the compositor is locked without a client, and refuses to start if there is neither a client nor recorded intent and the lock state cannot be read.
+`hyprd rebuild` refuses while supervision is active; a lock requested during its restart handoff is deferred to the restarted daemon.
+
+On the first launch, the desktop cover runs alongside supervision, with 2-second timeouts on cover helper commands.
+It saves the workspace, switches to workspace 6, pauses the background, dunst, and Spotify, stops GLava, and closes eww widgets.
+Release restores the saved workspace, background, dunst, and widgets, restarts GLava and Spotify, and reconnects configured Bluetooth; playback resumes if music was playing before the lock.
 
 ### Browser
 

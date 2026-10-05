@@ -48,7 +48,7 @@ Hyprd and ewwd talk over `/tmp/<name>.sock`.
 - Three-body uses editor/agents/browser roles with a master, active slave, and shadow on `special:shadow`.
 - Monocle floats the focused window and parks tiled siblings on `special:mono<n>` until restored.
 - Split selects master-ratio presets; share mode changes gaps/ratios and suppresses notifications and widgets.
-- Pseudolock is an unauthenticated privacy screen; full lock supervises hyprlock and refuses manual unlock.
+- Full lock supervises the Quickshell lock with `qs -c lock` and has no manual unlock command.
 
 ## Hazards
 
