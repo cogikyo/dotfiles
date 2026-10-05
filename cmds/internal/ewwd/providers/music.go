@@ -16,6 +16,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
@@ -32,6 +33,8 @@ const (
 	followFormat        = `{{status}}` + followSeparator + `{{volume}}` + followSeparator + `{{artist}}` + followSeparator + `{{album}}` + followSeparator + `{{title}}` + followSeparator + `{{mpris:artUrl}}` + followSeparator + `{{mpris:trackid}}` + followSeparator + `{{mpris:length}}`
 )
 
+// MusicState combines Spotify's playerctl snapshot with local Canvas paths and the hidden Connect observer's history and queue.
+// CanvasPath is empty when no Canvas is current; history is newest first, and both lists contain at most five tracks.
 type MusicState struct {
 	Status        string       `json:"status"`
 	Playing       bool         `json:"playing"`
@@ -423,7 +426,8 @@ func (owner *musicOwner) downloadArt(url string) {
 }
 
 func (owner *musicOwner) fetchCanvas(track string, revision uint64) {
-	ctx, cancel := context.WithTimeout(owner.music.runningContext(), canvasTimeout)
+	runCtx := owner.music.runningContext()
+	ctx, cancel := context.WithTimeout(runCtx, canvasTimeout)
 	owner.music.wg.Go(func() {
 		defer cancel()
 		uri := strings.Replace(track, "/com/spotify/track/", "spotify:track:", 1)
@@ -439,7 +443,13 @@ func (owner *musicOwner) fetchCanvas(track string, revision uint64) {
 		if err != nil {
 			return
 		}
-		owner.music.send(ctx, func(current *musicOwner) {
+		var taken atomic.Bool
+		handled := make(chan struct{})
+		owner.music.send(runCtx, func(current *musicOwner) {
+			defer close(handled)
+			if !taken.CompareAndSwap(false, true) {
+				return
+			}
 			if current.track != track || current.trackRevision != revision {
 				owner.music.player.Discard(set)
 				return
@@ -451,6 +461,13 @@ func (owner *musicOwner) fetchCanvas(track string, revision uint64) {
 			current.syncCanvas()
 			current.publish(true)
 		})
+		select {
+		case <-handled:
+		case <-runCtx.Done():
+		}
+		if taken.CompareAndSwap(false, true) {
+			owner.music.player.Discard(set)
+		}
 	})
 }
 

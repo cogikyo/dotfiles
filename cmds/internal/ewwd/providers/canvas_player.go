@@ -1,6 +1,6 @@
 package providers
 
-// canvas_player.go converts Spotify Canvas MP4s into frames and cycles them for eww image widgets.
+// canvas_player.go retains each Canvas MP4 beside the frames cycled for eww image widgets.
 import (
 	"context"
 	"fmt"
@@ -30,7 +30,7 @@ func (s canvasSet) remove() {
 	}
 }
 
-// CanvasPlayer owns committed frame sets and the playback goroutine.
+// CanvasPlayer owns committed MP4s, their frame sets, and the playback goroutine.
 type CanvasPlayer struct {
 	set   canvasSet
 	stop  chan struct{}
@@ -40,7 +40,7 @@ type CanvasPlayer struct {
 
 func NewCanvasPlayer() *CanvasPlayer { return &CanvasPlayer{} }
 
-// Prepare renders a Canvas into an isolated directory without changing displayed frames.
+// Prepare retains a Canvas MP4 and renders its frames in an isolated directory without changing the committed set.
 func (p *CanvasPlayer) Prepare(ctx context.Context, data []byte) (canvasSet, error) {
 	if err := os.MkdirAll(canvasFrameDir, 0o755); err != nil {
 		return canvasSet{}, fmt.Errorf("canvas dir: %w", err)

@@ -13,25 +13,32 @@ import (
 	"net/http"
 	"net/url"
 	"sync"
+	"time"
 )
 
 const (
-	dealerMaxMessage = 16 << 20
-	opText           = 0x1
-	opClose          = 0x8
-	opPing           = 0x9
-	opPong           = 0xa
+	dealerMaxMessage   = 16 << 20
+	dealerMaxControl   = 125
+	dealerDialTimeout  = 15 * time.Second
+	dealerWriteTimeout = 5 * time.Second
+	opText             = 0x1
+	opClose            = 0x8
+	opPing             = 0x9
+	opPong             = 0xa
 )
 
 type dealerSocket struct {
-	conn   io.ReadWriteCloser
-	reader *bufio.Reader
-	write  sync.Mutex
-	close  sync.Once
+	conn    io.ReadWriteCloser
+	reader  *bufio.Reader
+	write   sync.Mutex
+	close   sync.Once
+	aborted sync.Once
 }
 
 func dialDealer(ctx context.Context, rawURL string) (*dealerSocket, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, rawURL, nil)
+	handshakeCtx, cancel := context.WithTimeout(ctx, dealerDialTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(handshakeCtx, http.MethodGet, rawURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -64,8 +71,12 @@ func dialDealer(ctx context.Context, rawURL string) (*dealerSocket, error) {
 func (s *dealerSocket) Close() {
 	s.close.Do(func() {
 		_ = s.send(opClose, binary.BigEndian.AppendUint16(nil, 1000))
-		_ = s.conn.Close()
+		s.Abort()
 	})
+}
+
+func (s *dealerSocket) Abort() {
+	s.aborted.Do(func() { _ = s.conn.Close() })
 }
 
 func (s *dealerSocket) WriteText(data []byte) error { return s.send(opText, data) }
@@ -86,6 +97,8 @@ func (s *dealerSocket) send(opcode byte, payload []byte) error {
 	for i, b := range payload {
 		frame = append(frame, b^mask[i%4])
 	}
+	deadline := time.AfterFunc(dealerWriteTimeout, s.Abort)
+	defer deadline.Stop()
 	s.write.Lock()
 	defer s.write.Unlock()
 	_, err := s.conn.Write(frame)
@@ -121,7 +134,8 @@ func (s *dealerSocket) ReadMessage() ([]byte, error) {
 				return nil, err
 			}
 		}
-		if size > dealerMaxMessage-uint64(len(message)) {
+		control := opcode&0x8 != 0
+		if control && size > dealerMaxControl || !control && size > dealerMaxMessage-uint64(len(message)) {
 			return nil, errors.New("dealer message too large")
 		}
 		payload := make([]byte, size)

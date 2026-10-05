@@ -1,11 +1,9 @@
 package providers
 
-// canvas_client.go fetches Spotify Canvas videos for tracks.
+// canvas_client.go shares Spotify web access tokens between Canvas and the hidden Connect observer.
 //
-// Auth flow: sp_dc cookie from Firefox plus Spotify's web-player TOTP yields an access token.
-// If Canvas stops working, refresh the cookie by logging into open.spotify.com in Firefox.
-//
-// Canvas flow: POST the protobuf request from canvas.proto to spclient, then download the returned MP4 CDN URL.
+// Firefox's sp_dc cookie and Spotify's web-player TOTP supply access tokens; the shared cookie reader also supplies sp_t for Connect client tokens.
+// Log into open.spotify.com in Firefox to refresh missing or expired cookies.
 
 import (
 	"bufio"
@@ -16,6 +14,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -38,6 +37,8 @@ const (
 	totpDigits    = 6
 	totpRaw       = `,7/*F("rLJ2oxaKL^f+E1xvP@N`
 	cookieTimeout = 3 * time.Second
+	tokenTimeout  = 10 * time.Second
+	tokenMinLife  = 30 * time.Second
 )
 
 type spotifyToken struct {
@@ -66,12 +67,12 @@ func NewCanvasClient(spDc string) *CanvasClient {
 }
 
 func (c *CanvasClient) accessToken(ctx context.Context) (string, error) {
-	token, err := c.webToken(ctx)
+	token, err := c.webToken(ctx, tokenMinLife)
 	return token.AccessToken, err
 }
 
-func (c *CanvasClient) webToken(ctx context.Context) (spotifyToken, error) {
-	if err := c.refreshToken(ctx); err != nil {
+func (c *CanvasClient) webToken(ctx context.Context, minLife time.Duration) (spotifyToken, error) {
+	if err := c.refreshToken(ctx, minLife); err != nil {
 		return spotifyToken{}, err
 	}
 	c.mu.Lock()
@@ -79,16 +80,19 @@ func (c *CanvasClient) webToken(ctx context.Context) (spotifyToken, error) {
 	return c.token, nil
 }
 
-func (c *CanvasClient) refreshToken(ctx context.Context) error {
+func (c *CanvasClient) refreshToken(ctx context.Context, minLife time.Duration) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.token.AccessToken != "" && time.Now().UnixMilli() < c.token.ExpiresMs-30_000 {
+	if c.token.AccessToken != "" && time.Now().UnixMilli() < c.token.ExpiresMs-minLife.Milliseconds() {
 		return nil
 	}
 
 	tok, err := c.fetchToken(ctx, c.spDc)
 	if err != nil {
+		if status, ok := errors.AsType[*spotifyStatusError](err); ok && status.blocked() && status.code != http.StatusUnauthorized {
+			return err
+		}
 		// Cookie may have rotated; re-read from Firefox and retry once.
 		fresh := firefoxCookie(ctx, "sp_dc")
 		if fresh == "" || fresh == c.spDc {
@@ -115,6 +119,8 @@ func (c *CanvasClient) fetchToken(ctx context.Context, spDc string) (spotifyToke
 	}
 	tokenURL := "https://open.spotify.com/api/token?" + params.Encode()
 
+	ctx, cancel := context.WithTimeout(ctx, tokenTimeout)
+	defer cancel()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, tokenURL, nil)
 	if err != nil {
 		return spotifyToken{}, err
@@ -128,7 +134,7 @@ func (c *CanvasClient) fetchToken(ctx context.Context, spDc string) (spotifyToke
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		return spotifyToken{}, fmt.Errorf("token fetch: status %d", resp.StatusCode)
+		return spotifyToken{}, newSpotifyStatusError("token fetch", resp)
 	}
 
 	var tok spotifyToken

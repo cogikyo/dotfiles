@@ -13,13 +13,13 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"math/big"
 	"net/http"
 	"net/url"
 	"os"
 	"regexp"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -41,6 +41,9 @@ const (
 	connectPongTimeout    = 10 * time.Second
 	connectRequestTimeout = 10 * time.Second
 	connectMaxBackoff     = 5 * time.Minute
+	connectMissBackoff    = 10 * time.Minute
+	connectMinSession     = 5 * time.Minute
+	connectTokenMargin    = time.Minute
 	hiddenMember          = `{"member_type":"CONNECT_STATE","device":{"device_info":{"capabilities":{"can_be_player":false,"hidden":true,"needs_full_player_state":true}}}}`
 	base62                = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
 )
@@ -51,6 +54,7 @@ type connectObserver struct {
 	canvas  *CanvasClient
 	device  string
 	tracks  map[string]MusicTrack
+	failed  map[string]time.Time
 	publish func(history, queue []MusicTrack)
 }
 
@@ -84,16 +88,15 @@ type coverImage struct {
 }
 
 type spotifyStatusError struct {
-	op         string
-	code       int
-	reason     string
-	retryAfter time.Duration
+	op     string
+	code   int
+	reason string
 }
 
 func newConnectObserver(canvas *CanvasClient, publish func(history, queue []MusicTrack)) *connectObserver {
 	var id [16]byte
 	_, _ = rand.Read(id[:])
-	return &connectObserver{canvas: canvas, device: "hobs_" + hex.EncodeToString(id[:]), tracks: map[string]MusicTrack{}, publish: publish}
+	return &connectObserver{canvas: canvas, device: "hobs_" + hex.EncodeToString(id[:]), tracks: map[string]MusicTrack{}, failed: map[string]time.Time{}, publish: publish}
 }
 
 func (o *connectObserver) run(ctx context.Context) {
@@ -107,22 +110,17 @@ func (o *connectObserver) run(ctx context.Context) {
 		if err != nil {
 			o.publish([]MusicTrack{}, []MusicTrack{})
 		}
-		status, isStatus := errors.AsType[*spotifyStatusError](err)
-		if isStatus && status.blocked() {
+		if status, ok := errors.AsType[*spotifyStatusError](err); ok && status.blocked() {
 			fmt.Fprintf(os.Stderr, "ewwd: music connect disabled until restart: %v\n", err)
 			return
 		}
 		if time.Since(started) > time.Minute {
 			backoff = time.Second
 		}
-		delay := backoff
-		if isStatus {
-			delay = max(delay, status.retryAfter)
-		}
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "ewwd: music connect: %v (retry in %s)\n", err, delay)
+			fmt.Fprintf(os.Stderr, "ewwd: music connect: %v (retry in %s)\n", err, backoff)
 		}
-		if !waitContext(ctx, delay) {
+		if !waitContext(ctx, backoff) {
 			return
 		}
 		backoff = min(backoff*2, connectMaxBackoff)
@@ -130,20 +128,20 @@ func (o *connectObserver) run(ctx context.Context) {
 }
 
 func (o *connectObserver) session(ctx context.Context) error {
-	token, err := o.canvas.webToken(ctx)
+	token, err := o.canvas.webToken(ctx, connectMinSession+connectTokenMargin)
 	if err != nil {
 		return err
 	}
-	auth := connectAuth{access: token.AccessToken}
-	if auth.client, err = o.clientToken(ctx, token.ClientID); err != nil {
-		return err
-	}
-	expiry := time.UnixMilli(token.ExpiresMs).Add(-time.Minute)
-	if floor := time.Now().Add(time.Minute); expiry.Before(floor) {
-		expiry = floor
+	expiry := time.UnixMilli(token.ExpiresMs).Add(-connectTokenMargin)
+	if time.Until(expiry) < connectMinSession {
+		return fmt.Errorf("access token expires in %s", time.Until(expiry).Round(time.Second))
 	}
 	sessionCtx, cancel := context.WithDeadline(ctx, expiry)
 	defer cancel()
+	auth := connectAuth{access: token.AccessToken}
+	if auth.client, err = o.clientToken(sessionCtx, token.ClientID); err != nil {
+		return err
+	}
 
 	socket, err := dialDealer(sessionCtx, connectDealerURL+url.QueryEscape(auth.access))
 	if err != nil {
@@ -153,12 +151,12 @@ func (o *connectObserver) session(ctx context.Context) error {
 	lastRead.Store(time.Now().UnixNano())
 	var pinger sync.WaitGroup
 	pinger.Go(func() { keepDealerAlive(sessionCtx, socket, &lastRead) })
-	stopClose := context.AfterFunc(sessionCtx, socket.Close)
+	stopAbort := context.AfterFunc(sessionCtx, socket.Abort)
 
 	connection := ""
 	defer func() {
 		cancel()
-		stopClose()
+		stopAbort()
 		pinger.Wait()
 		if connection != "" {
 			o.unregister(ctx, auth, connection)
@@ -185,12 +183,14 @@ func (o *connectObserver) session(ctx context.Context) error {
 			if id == "" {
 				continue
 			}
+			connection = id
 			cluster, err := o.register(sessionCtx, auth, id)
 			if err != nil {
 				return err
 			}
-			connection = id
-			o.apply(sessionCtx, auth, cluster)
+			if err := o.apply(sessionCtx, auth, cluster); err != nil {
+				return err
+			}
 		case strings.HasPrefix(msg.URI, "hm://connect-state/v1/cluster"):
 			payload, err := dealerPayload(msg)
 			if err != nil {
@@ -202,7 +202,9 @@ func (o *connectObserver) session(ctx context.Context) error {
 			if json.Unmarshal(payload, &update) != nil {
 				continue
 			}
-			o.apply(sessionCtx, auth, update.Cluster)
+			if err := o.apply(sessionCtx, auth, update.Cluster); err != nil {
+				return err
+			}
 		}
 	}
 }
@@ -217,11 +219,11 @@ func keepDealerAlive(ctx context.Context, socket *dealerSocket, lastRead *atomic
 		case <-ticker.C:
 		}
 		if time.Since(time.Unix(0, lastRead.Load())) > connectPingInterval+connectPongTimeout {
-			socket.Close()
+			socket.Abort()
 			return
 		}
 		if err := socket.WriteText([]byte(`{"type":"ping"}`)); err != nil {
-			socket.Close()
+			socket.Abort()
 			return
 		}
 	}
@@ -371,16 +373,19 @@ func (a connectAuth) apply(req *http.Request) {
 	req.Header.Set("App-Platform", "WebPlayer")
 }
 
-func (o *connectObserver) apply(ctx context.Context, auth connectAuth, cluster connectCluster) {
+func (o *connectObserver) apply(ctx context.Context, auth connectAuth, cluster connectCluster) error {
 	if cluster.ActiveDeviceID == "" {
 		o.publish([]MusicTrack{}, []MusicTrack{})
-		return
+		return nil
 	}
 	previous := slices.Clone(cluster.PlayerState.PrevTracks)
 	slices.Reverse(previous)
 	history, queue := playableTracks(previous), playableTracks(cluster.PlayerState.NextTracks)
-	o.hydrate(ctx, auth, slices.Concat(history, queue))
+	if err := o.hydrate(ctx, auth, slices.Concat(history, queue)); err != nil {
+		return err
+	}
 	o.publish(o.resolve(history), o.resolve(queue))
+	return nil
 }
 
 func playableTracks(entries []connectTrack) []connectTrack {
@@ -412,37 +417,46 @@ func (entry connectTrack) metadataTrack() MusicTrack {
 	return MusicTrack{Title: text("title"), Artist: text("artist_name"), ArtURL: art}
 }
 
-func (o *connectObserver) hydrate(ctx context.Context, auth connectAuth, entries []connectTrack) {
+func (o *connectObserver) hydrate(ctx context.Context, auth connectAuth, entries []connectTrack) error {
 	var missing []string
 	for _, entry := range entries {
 		track := entry.metadataTrack()
 		_, cached := o.tracks[entry.URI]
 		complete := track.Title != "" && track.Artist != "" && track.ArtURL != ""
-		if complete || cached || !strings.HasPrefix(entry.URI, "spotify:track:") || slices.Contains(missing, entry.URI) {
+		backingOff := time.Now().Before(o.failed[entry.URI])
+		if complete || cached || backingOff || !strings.HasPrefix(entry.URI, "spotify:track:") || slices.Contains(missing, entry.URI) {
 			continue
 		}
 		missing = append(missing, entry.URI)
 	}
 	if len(missing) == 0 {
-		return
+		return nil
 	}
 	if len(o.tracks)+len(missing) > connectCacheLimit {
 		clear(o.tracks)
 	}
+	now := time.Now()
+	maps.DeleteFunc(o.failed, func(_ string, until time.Time) bool { return !now.Before(until) })
 	var mu sync.Mutex
 	var wg sync.WaitGroup
+	var blocked error
 	for _, uri := range missing {
 		wg.Go(func() {
 			track, err := trackMetadata(ctx, auth, uri)
-			if err != nil {
-				return
-			}
 			mu.Lock()
-			o.tracks[uri] = track
-			mu.Unlock()
+			defer mu.Unlock()
+			switch status, isStatus := errors.AsType[*spotifyStatusError](err); {
+			case err == nil:
+				o.tracks[uri] = track
+			case isStatus && status.blocked():
+				blocked = cmp.Or(blocked, err)
+			case ctx.Err() == nil:
+				o.failed[uri] = time.Now().Add(connectMissBackoff)
+			}
 		})
 	}
 	wg.Wait()
+	return blocked
 }
 
 func (o *connectObserver) resolve(entries []connectTrack) []MusicTrack {
@@ -538,11 +552,7 @@ func newSpotifyStatusError(op string, resp *http.Response) *spotifyStatusError {
 		} `json:"error"`
 	}
 	_ = json.Unmarshal(raw, &body)
-	err := &spotifyStatusError{op: op, code: resp.StatusCode, reason: body.Error.Reason}
-	if seconds, parseErr := strconv.Atoi(resp.Header.Get("Retry-After")); parseErr == nil && seconds > 0 {
-		err.retryAfter = time.Duration(seconds) * time.Second
-	}
-	return err
+	return &spotifyStatusError{op: op, code: resp.StatusCode, reason: body.Error.Reason}
 }
 
 func (e *spotifyStatusError) Error() string {
@@ -553,12 +563,5 @@ func (e *spotifyStatusError) Error() string {
 }
 
 func (e *spotifyStatusError) blocked() bool {
-	switch e.code {
-	case http.StatusUnauthorized, http.StatusForbidden:
-		return true
-	case http.StatusTooManyRequests:
-		return e.reason == "QUOTA_EXCEEDED"
-	default:
-		return false
-	}
+	return e.code == http.StatusUnauthorized || e.code == http.StatusForbidden || e.code == http.StatusTooManyRequests
 }
