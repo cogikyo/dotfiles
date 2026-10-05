@@ -40,7 +40,5 @@ func (p plan) limine() string {
 		"ESP_PATH=" + esp,
 		"KERNEL_CMDLINE[default]=" + p.cmdline(),
 		"ENABLE_UKI=yes",
-		"SNAPPER_CONFIG_NAME=root",
-		"RESTORE_METHOD=replace",
 	}, "\n") + "\n"
 }

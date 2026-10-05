@@ -235,7 +235,6 @@ These checks require the Framework Desktop and real YubiKeys; the VM test does n
 - [ ] Reject a wrong FIDO2 PIN and a wrong PIV PIN; cancel any age-phrase fallback and avoid repeated failures that can block the key.
 - [ ] Unlock LUKS with the recorded recovery key while both YubiKeys are removed.
 - [ ] Pass `dctl secrets verify-phrase` and rehearse secret recovery without a YubiKey.
-- [ ] Boot a Limine snapshot entry, restore it, and confirm the restored system boots.
 - [ ] Confirm `nmcli device status` shows no Wi-Fi interface.
 - [ ] Confirm `bluetoothctl list` shows a Bluetooth controller, then pair and use a device.
 - [ ] Confirm `journalctl -k -b` has no firmware load errors with `linux-firmware-{amd,amdgpu,mediatek,realtek}` installed.
