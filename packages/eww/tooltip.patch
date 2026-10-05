@@ -1,0 +1,13 @@
+--- a/crates/eww/src/widgets/widget_definitions.rs
++++ b/crates/eww/src/widgets/widget_definitions.rs
+@@ -203,7 +203,9 @@
+         prop(active: as_bool = true) { gtk_widget.set_sensitive(active) },
+         // @prop tooltip - tooltip text (on hover)
+         prop(tooltip: as_string) {
+-            gtk_widget.set_tooltip_text(Some(&tooltip));
++            if gtk_widget.tooltip_text().as_deref().unwrap_or("") != tooltip {
++                gtk_widget.set_tooltip_text(Some(&tooltip));
++            }
+         },
+         // @prop visible - visibility of the widget
+         prop(visible: as_bool = true) {

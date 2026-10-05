@@ -1,7 +1,7 @@
 pkgname=eww
 pkgver=0.6.0.r91.g48f5aa8
-pkgrel=1
-pkgdesc='ElKowars wacky widgets, Wayland-only build with a 500ms EWW_CPU poll interval'
+pkgrel=2
+pkgdesc='ElKowars wacky widgets, Wayland-only build with a 500ms EWW_CPU poll interval and stable tooltips'
 arch=('x86_64')
 url='https://github.com/elkowar/eww'
 license=('MIT')
@@ -11,13 +11,16 @@ makedepends=('rust')
 options=('!debug')
 _commit=48f5aa8b379adf29da0b0bb9ca04164f65d8bdaa
 source=("${pkgname}-${_commit}.tar.gz::https://github.com/elkowar/eww/archive/${_commit}.tar.gz"
-        'poll-interval.patch')
+        'poll-interval.patch'
+        'tooltip.patch')
 sha256sums=('e319c60348a6b37d5c4c66634f843767d591e944b621c70f7ac19870f8dbc917'
-            'ddcbf2a5c3d707cd306b3b37f93c003499cf45d52b05c579cdbf59c747111eaa')
+            'ddcbf2a5c3d707cd306b3b37f93c003499cf45d52b05c579cdbf59c747111eaa'
+            'ddeb09fa59f1f55455ddfc44cca3ed5ef62f09fd344a0ef1e37a7517cedd585d')
 
 prepare() {
     cd "eww-${_commit}"
     patch -Np1 -i "$srcdir/poll-interval.patch"
+    patch -Np1 -i "$srcdir/tooltip.patch"
     cargo fetch --locked --target "$(rustc -vV | sed -n 's/host: //p')"
 }
 
