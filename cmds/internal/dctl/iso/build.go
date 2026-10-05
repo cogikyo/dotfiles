@@ -185,6 +185,10 @@ func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []s
 		filepath.Join(chroot, "root"), "base-devel"); err != nil {
 		return nil, nil, err
 	}
+	rule := fmt.Sprintf("#%s ALL = NOPASSWD: /usr/bin/pacman\n", b.nobody.Uid)
+	if err := os.WriteFile(filepath.Join(chroot, "root", "etc", "sudoers.d", "dctl-nobody"), []byte(rule), 0o440); err != nil {
+		return nil, nil, err
+	}
 	for _, name := range l.AUR {
 		dir := filepath.Join(b.recipes, name)
 		if err := b.run.Run(ctx, "", "git", "clone", "--quiet", "--depth", "1", "https://aur.archlinux.org/"+name+".git", dir); err != nil {
