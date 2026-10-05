@@ -180,7 +180,7 @@ The user is `cullyn` and the hostname is `costello`.
 Enter the login password, accept or change the prefilled timezone, and enter the LUKS passphrase, then select the target disk if prompted.
 **Typing the disk path at the final confirmation erases the selected disk.**
 The installer refuses the boot disk, mounted disks, USB/removable targets, and targets without a serial or WWN.
-It installs the offline package payload, clones the bundled history into `~/dotfiles`, and installs the prebuilt commands.
+It installs the offline package payload, clones the bundled commit into a shallow `~/dotfiles`, and installs the prebuilt commands.
 If firmware is not in Setup Mode, installation continues without Secure Boot and reports the required follow-up.
 
 ### First login
@@ -191,6 +191,7 @@ Run setup as the normal user; it asks default-yes for each pending stage and run
 
 ```sh
 dctl setup
+git -C ~/dotfiles fetch --unshallow
 ```
 
 To reapply one stage, use `dctl setup home` or another stage from the [dctl guide](cmds/cmd/dctl/README.md#setup).

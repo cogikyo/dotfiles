@@ -74,11 +74,8 @@ func (b build) build(ctx context.Context) error {
 	}
 	src := filepath.Join(stage, "src")
 	bundle := filepath.Join(stage, "dotfiles.bundle")
-	b.u.Section("bundle", "master into the ISO source")
-	if err := b.user(ctx, "git", "-C", b.repo, "bundle", "create", bundle, "master"); err != nil {
-		return err
-	}
-	if err := b.user(ctx, "git", "clone", "--quiet", bundle, src); err != nil {
+	b.u.Section("bundle", "master tip into the ISO source")
+	if err := b.user(ctx, "git", "clone", "--quiet", "--depth=1", "--branch=master", "file://"+b.repo, src); err != nil {
 		return err
 	}
 	head, err := b.run.Output(ctx, "", b.as[0], append(b.as[1:], "git", "-C", src, "rev-parse", "HEAD")...)
@@ -86,7 +83,10 @@ func (b build) build(ctx context.Context) error {
 		return err
 	}
 	if head != rev {
-		return fmt.Errorf("bundle clone HEAD %q is not %s", head, rev)
+		return fmt.Errorf("clone HEAD %q is not %s", head, rev)
+	}
+	if err := b.user(ctx, "git", "-C", src, "bundle", "create", bundle, "master"); err != nil {
+		return err
 	}
 	air := filepath.Join(src, "iso", "airootfs")
 	payload := filepath.Join(air, Payload)

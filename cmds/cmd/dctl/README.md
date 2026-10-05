@@ -32,7 +32,8 @@ The installer shows the target model, size, and serial, then requires you to typ
 It refuses the boot disk, mounted disks, USB/removable targets, and disks without a serial or WWN.
 
 Installation uses the bundled packages without network access and creates a 4 GiB ESP, LUKS2, and btrfs subvolumes.
-It configures Snapper and Limine, clones the Git bundle into `~/dotfiles`, and installs prebuilt commands into `~/.local/bin/`.
+It configures Snapper and Limine, clones the Git bundle into a shallow `~/dotfiles`, and installs prebuilt commands into `~/.local/bin/`.
+Run `git -C ~/dotfiles fetch --unshallow` once online to restore the history.
 It runs `setup system packages` as root in the chroot, then `setup home` as `cullyn`.
 When firmware is in Setup Mode, the installer runs `setup secureboot` to create keys if needed, configure Limine, rebuild and verify signed boot files, and enroll the keys.
 Otherwise, installation continues without Secure Boot and asks for a later `dctl setup secureboot` after the BIOS keys are cleared.
@@ -315,7 +316,7 @@ On a fresh offline install, run `dctl update pacman` first to synchronize offici
 
 Build on an Arch host with network access, Go, Git, `archiso`, `devtools`, and pacman tooling.
 Run it from your normal account; it asks for sudo once because makechrootpkg and mkarchiso need root.
-The build requires a clean, committed `master` and bundles its history instead of copying the working tree.
+The build requires a clean, committed `master` and bundles only its tip commit instead of copying the working tree.
 
 ```sh
 dctl iso build

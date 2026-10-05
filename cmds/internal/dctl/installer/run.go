@@ -455,10 +455,32 @@ func (s *session) dotfiles(ctx context.Context) error {
 		}
 	}
 	repo := filepath.Join(home, "dotfiles")
+	git := func(args ...string) []string { return as(append([]string{"git", "-C", repo}, args...)...) }
 	for _, args := range [][]string{
 		chroot("chown", "-R", login+":", filepath.Join(home, ".local")),
-		as("git", "clone", "--quiet", staged, repo),
-		as("git", "-C", repo, "remote", "set-url", "origin", origin),
+		as("git", "init", "--quiet", "--initial-branch=master", repo),
+	} {
+		if err := s.sh.run(ctx, nil, args...); err != nil {
+			return err
+		}
+	}
+	heads, err := s.sh.output(ctx, git("bundle", "list-heads", staged, "refs/heads/master")...)
+	if err != nil {
+		return err
+	}
+	tip, _, ok := strings.Cut(string(heads), " ")
+	if !ok {
+		return fmt.Errorf("%s has no master: %q", s.bundle, heads)
+	}
+	shallow := filepath.Join(repo, ".git", "shallow")
+	if err := os.WriteFile(s.path(target, shallow), []byte(tip+"\n"), 0o644); err != nil {
+		return err
+	}
+	for _, args := range [][]string{
+		chroot("chown", login+":", shallow),
+		git("remote", "add", "origin", origin),
+		git("fetch", "--quiet", staged, "master:refs/remotes/origin/master"),
+		git("switch", "--quiet", "--force-create", "master", "--track", "origin/master"),
 	} {
 		if err := s.sh.run(ctx, nil, args...); err != nil {
 			return err

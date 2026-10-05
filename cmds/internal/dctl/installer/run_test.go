@@ -92,6 +92,8 @@ func (f *fake) run(_ context.Context, _ []byte, args ...string) error {
 		f.mount(last, func(m string) bool { return m == last })
 	case line == "arch-chroot /mnt limine-update":
 		f.kernel()
+	case slices.Contains(args, "init"):
+		put(f.t, filepath.Join(f.root, target, last, ".git", "HEAD"), nil, 0o644)
 	}
 	return nil
 }
@@ -124,6 +126,9 @@ func (f *fake) output(ctx context.Context, args ...string) ([]byte, error) {
 	case "blkid":
 		return []byte(f.luksID() + "\n"), nil
 	case "arch-chroot":
+		if slices.Contains(args, "list-heads") {
+			return []byte("f93061eab49b9e1cb6076f4b7615d9b5719c0d55 refs/heads/master\n"), nil
+		}
 		if args[len(args)-1] == "secureboot" {
 			f.kernel()
 			out, _ := json.Marshal([]setup.Report{{Stage: "secureboot", State: setup.ManualState, Items: f.sb}})
@@ -252,7 +257,7 @@ func TestEdges(t *testing.T) {
 	}
 	f.before(t, "pacstrap", "umount /mnt/var/cache/pacman/pkg")
 	f.before(t, "arch-chroot /mnt useradd", "arch-chroot /mnt env DOTFILES=")
-	f.before(t, "arch-chroot /mnt runuser -u cullyn -- git clone", "arch-chroot /mnt env DOTFILES=")
+	f.before(t, "arch-chroot /mnt runuser -u cullyn -- git -C /home/cullyn/dotfiles fetch", "arch-chroot /mnt env DOTFILES=")
 	secureboot := "arch-chroot /mnt env DOTFILES=/home/cullyn/dotfiles /home/cullyn/.local/bin/dctl --json setup secureboot"
 	f.before(t, "arch-chroot /mnt limine-install", secureboot)
 	f.before(t, secureboot, "blkid")
