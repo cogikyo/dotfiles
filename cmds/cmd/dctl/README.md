@@ -301,7 +301,7 @@ Individual tool or step failures do not stop later work, but the command returns
 The package lists and local recipes are the source of truth for the `packages` step.
 It first marks listed dependencies explicit and demotes unlisted packages that others require to dependencies, without asking.
 Marking always runs before removal, so `-Rns` cannot remove a listed package.
-It then asks default-no to install listed packages that are missing; repo and AUR names go through `yay`, and local recipes print a `makepkg -si` instruction.
+It then lists missing listed packages in a checklist, all checked, and installs the checked ones; repo and AUR names go through `yay`, and local recipes print a `makepkg -si` instruction.
 Last, a checklist offers the unlisted explicit packages and unlisted orphans for removal, all checked.
 Checked packages go to `sudo pacman -Rns`, which shows its plan and asks again.
 Unchecked packages are added in sorted order to the `# official` or `# aur` section of `extra.lst` and marked explicit.

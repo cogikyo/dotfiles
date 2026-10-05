@@ -56,19 +56,26 @@ func fill(ctx context.Context, u *ui.UI, run execx.Runner, l Lists, missing []st
 	if len(missing) == 0 {
 		return nil
 	}
-	u.Warn("%d listed packages not installed", len(missing))
-	u.Detail("%s", strings.Join(missing, " "))
-	ok, err := u.Confirm(fmt.Sprintf("Install %d listed packages?", len(missing)))
-	if err != nil || !ok {
+	checked, err := u.Checklist(fmt.Sprintf("Install %d listed packages?", len(missing)), missing)
+	if errors.Is(err, ui.ErrCanceled) {
+		return nil
+	}
+	if err != nil {
 		return err
 	}
+	var picked []string
+	for i, name := range missing {
+		if checked[i] {
+			picked = append(picked, name)
+		}
+	}
 	local := set(slices.Values(l.Local))
-	if names := absent(missing, local); len(names) > 0 {
+	if names := absent(picked, local); len(names) > 0 {
 		if err := install(ctx, run, names); err != nil {
 			return err
 		}
 	}
-	if names := slices.DeleteFunc(slices.Clone(missing), func(name string) bool { return !local[name] }); len(names) > 0 {
+	if names := slices.DeleteFunc(picked, func(name string) bool { return !local[name] }); len(names) > 0 {
 		u.Warn("build local recipes with `makepkg -si` in packages/<name>: %s", strings.Join(names, " "))
 	}
 	return nil
