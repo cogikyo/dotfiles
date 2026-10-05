@@ -69,7 +69,6 @@
 <summary>🎨 <b>Design</b></summary>
 
 - Color Scheme: [vagari](https://github.com/cogikyo/vagari#palette) (work in progress)
-- GTK: [catppuccin macchiato (peach)](https://github.com/catppuccin/gtk)
 - Cursors: [catppuccin-macchiato-dark](https://github.com/catppuccin/cursors)
 - Icons: [Papirus-Dark](https://github.com/PapirusDevelopmentTeam/papirus-icon-theme)
 
