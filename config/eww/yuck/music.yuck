@@ -12,7 +12,7 @@
 (defwidget player []
   (eventbox
     :onmiddleclick "${browser} https://www.google.com/search?q='${pctl.artist}' & disown"
-    :onrightclick "hyprctl dispatch workspace 5 & disown"
+    :onrightclick "hyprctl dispatch workspace 6 & disown"
     :tooltip "  ǂ search artist · 󰳾 music workspace  "
     (box
       :class "playerbox"

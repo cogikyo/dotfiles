@@ -67,7 +67,7 @@ hyprd split default          # select the default ratio
 hyprd hide                   # move slave to special workspace
 hyprd swap                   # exchange master/slave positions
 hyprd ws <n>                 # switch workspace with its transition animation
-hyprd ws up|down             # move active window between workspaces 1..6, skipping music (5)
+hyprd ws up|down             # move active window between workspaces 1..6, skipping music (6)
 hyprd focus <class> [title]  # focus window by class, unhide if needed
 hyprd bg ensure|kill         # ensure the wallpaper process or stop it
 ```

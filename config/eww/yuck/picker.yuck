@@ -60,11 +60,11 @@
         :halign "center"
         :space-evenly false
         :spacing 20
-        (picker-ws :icon "network"  :num 1)
-        (picker-ws :icon "learn"    :num 2)
-        (picker-ws :icon "dna"      :num 3)
-        (picker-ws :icon "leadpier" :num 4)
-        (picker-ws :icon "dotfiles" :num 6)
+        (picker-ws :icon "learn"    :num 1)
+        (picker-ws :icon "network"  :num 2)
+        (picker-ws :icon "leadpier" :num 3)
+        (picker-ws :icon "dna"      :num 4)
+        (picker-ws :icon "dotfiles" :num 5)
       )
       (box
         :class "picker-sessions"
