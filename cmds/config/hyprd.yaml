@@ -21,8 +21,7 @@ sessions:
   # ├─ workspace 2 ──────────────────────────────────────────────────────────────┤
   2: # communication-focused sessions.
     slack:
-      command: slack
-      monocle: true
+      command: sh -c 'slack & exec gtk-launch grok-bot'
       init: true
 
     discord:
