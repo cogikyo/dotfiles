@@ -6,7 +6,8 @@ export GOPATH="$HOME/.go"
 export SSH_AUTH_SOCK="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/ssh-agent.socket"
 export GOPRIVATE="git.linecode.dev/*"
 
-export PAGER=nvimpager
+export PAGER=less
+export MANPAGER='nvim +Man!'
 export EDITOR=nvim
 export VISUAL=nvim
 export DOTS="$HOME/dotfiles"

@@ -112,7 +112,7 @@ function M.list(ctx)
 	end
 
 	return {
-		{ BashExec = "ouch list --tree -- " .. q(path) .. " | nvimpager" },
+		{ BashExec = "ouch list --tree -- " .. q(path) .. " | $PAGER" },
 		"PopMode",
 	}
 end

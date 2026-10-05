@@ -27,13 +27,13 @@ require("nuke").setup({
 	pager = "$PAGER",
 	smart_view = {
 		custom = {
-			{ extension = "zip", command = "ouch list {} | nvimpager" },
+			{ extension = "zip", command = "ouch list {} | $PAGER" },
 		},
 	},
 	open = {
 		run_executables = false,
 		custom = {
-			{ extension = "gz", command = "tar tf {} | nvimpager" },
+			{ extension = "gz", command = "tar tf {} | $PAGER" },
 			{ mime_regex = "text/.*", command = "${VISUAL:-${EDITOR:-nvim}} {}" },
 			{ mime_regex = "application/(json|x-sh|x-python|x-shellscript|xml|yaml)", command = "${VISUAL:-${EDITOR:-nvim}} {}" },
 			{ mime_regex = ".*", command = "xdg-open {}" },
