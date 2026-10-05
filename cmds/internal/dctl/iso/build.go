@@ -24,7 +24,6 @@ type build struct {
 	u       *ui.UI
 	run     execx.Runner
 	owner   *user.User
-	nobody  *user.User
 	as      []string
 	repo    string
 	work    string
@@ -41,19 +40,14 @@ func Build(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if err != nil {
 		return err
 	}
-	nobody, err := user.Lookup("nobody")
-	if err != nil {
-		return err
-	}
 	b := build{
-		u:      u,
-		run:    execx.OSRunner{Group: true},
-		owner:  owner,
-		nobody: nobody,
-		as:     []string{"runuser", "-u", owner.Username, "--", "env", "HOME=" + owner.HomeDir},
-		repo:   root.Dotfiles,
-		work:   filepath.Join(root.Dotfiles, "iso", "work"),
-		out:    filepath.Join(root.Dotfiles, "iso", "out"),
+		u:     u,
+		run:   execx.OSRunner{Group: true},
+		owner: owner,
+		as:    []string{"runuser", "-u", owner.Username, "--", "env", "HOME=" + owner.HomeDir},
+		repo:  root.Dotfiles,
+		work:  filepath.Join(root.Dotfiles, "iso", "work"),
+		out:   filepath.Join(root.Dotfiles, "iso", "out"),
 	}
 	if err := os.RemoveAll(b.work); err != nil {
 		return err
@@ -175,7 +169,7 @@ func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []s
 	chroot := filepath.Join(b.recipes, "chroot")
 	built := filepath.Join(b.recipes, "built")
 	srcdest := filepath.Join(b.recipes, "srcdest")
-	if err := errors.Join(os.MkdirAll(chroot, 0o755), os.MkdirAll(built, 0o755), mkdir(srcdest, b.nobody)); err != nil {
+	if err := errors.Join(os.MkdirAll(chroot, 0o755), os.MkdirAll(built, 0o755), mkdir(srcdest, b.owner)); err != nil {
 		return nil, nil, err
 	}
 	b.u.Section("chroot", "clean build chroot for local recipes")
@@ -183,10 +177,6 @@ func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []s
 		"-C", "/usr/share/devtools/pacman.conf.d/extra.conf",
 		"-M", "/usr/share/devtools/makepkg.conf.d/x86_64.conf",
 		filepath.Join(chroot, "root"), "base-devel"); err != nil {
-		return nil, nil, err
-	}
-	rule := fmt.Sprintf("#%s ALL = NOPASSWD: /usr/bin/pacman\n", b.nobody.Uid)
-	if err := os.WriteFile(filepath.Join(chroot, "root", "etc", "sudoers.d", "dctl-nobody"), []byte(rule), 0o440); err != nil {
 		return nil, nil, err
 	}
 	for _, name := range l.AUR {
@@ -205,10 +195,10 @@ func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []s
 	}
 	recipes := slices.Concat(l.AUR, l.Local)
 	gnupg := filepath.Join(b.recipes, "gnupg")
-	if err := errors.Join(os.Mkdir(gnupg, 0o700), mkdir(gnupg, b.nobody)); err != nil {
+	if err := errors.Join(os.Mkdir(gnupg, 0o700), mkdir(gnupg, b.owner)); err != nil {
 		return nil, nil, err
 	}
-	gpg := []string{"-u", b.nobody.Username, "--", "gpg", "--batch", "--homedir", gnupg}
+	gpg := []string{"-u", b.owner.Username, "--", "gpg", "--batch", "--homedir", gnupg}
 	for _, name := range recipes {
 		dir := filepath.Join(b.recipes, name)
 		keys, err := filepath.Glob(filepath.Join(dir, "keys", "pgp", "*.asc"))
@@ -231,13 +221,13 @@ func (b build) payload(ctx context.Context, lists, payload string) ([]sized, []s
 		}
 	}
 	for _, name := range recipes {
-		b.u.Info("makepkg %s in the chroot as nobody", name)
+		b.u.Info("makepkg %s in the chroot as %s", name, b.owner.Username)
 		dir := filepath.Join(b.recipes, name)
-		err := b.run.Run(ctx, "", "chown", "-R", b.nobody.Username+":", dir)
+		err := b.run.Run(ctx, "", "chown", "-R", b.owner.Username+":", dir)
 		if err == nil {
 			err = b.run.Run(ctx, dir, "env", "-i",
 				"PATH=/usr/local/sbin:/usr/local/bin:/usr/bin", "HOME=/root", "USER=root", "LANG=C.UTF-8", "TERM="+os.Getenv("TERM"), "PKGDEST="+built, "SRCDEST="+srcdest, "GNUPGHOME="+gnupg,
-				"makechrootpkg", "-c", "-U", b.nobody.Username, "-r", chroot)
+				"makechrootpkg", "-c", "-U", b.owner.Username, "-r", chroot)
 		}
 		if err := errors.Join(err, b.run.Run(ctx, "", "chown", "-R", "root:", dir)); err != nil {
 			return nil, nil, fmt.Errorf("build %s: %w", name, err)
