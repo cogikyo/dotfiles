@@ -26,34 +26,43 @@ func NewThreeBody(h *hypr.Client, s *state.State) *ThreeBody {
 
 var threeBodyOrder = []string{"editor", "agents", "browser"}
 
+var chatBodies = map[string]config.ThreeBodyWindow{
+	"editor": {Class: "slack", Command: "slack"},
+	"agents": {Class: "grok-bot", Command: "gtk-launch grok-bot"},
+}
+
 const threeBodyLaunchTTL = 5 * time.Second
 
 // Execute dispatches a three-body command by body name ("shadow", or a configured body like "editor"/"agents"/"browser").
 func (tb *ThreeBody) Execute(name string) (string, error) {
+	wsID, err := tb.hypr.ActiveWorkspace()
+	if err != nil {
+		return "", err
+	}
 	if name == "shadow" {
-		return tb.executeShadow()
+		return tb.executeShadow(wsID)
 	}
 
-	spec, ok := config.ThreeBody[name]
+	spec, ok := bodySpec(name, wsID)
 	if !ok {
 		return "", fmt.Errorf("unknown three-body window: %s", name)
 	}
-	if tb.ignoreOnCurrentWorkspace(name) {
-		return fmt.Sprintf("ignored on the chat and music workspaces: %s", name), nil
+	if ignoreBodyOnWorkspace(name, wsID) {
+		return fmt.Sprintf("ignored on the music workspace: %s", name), nil
 	}
-	return tb.Focus(name, spec.Class, spec.Title, spec.Command)
+	return tb.Focus(wsID, name, spec.Class, spec.Title, spec.Command)
 }
 
-func (tb *ThreeBody) ignoreOnCurrentWorkspace(name string) bool {
-	wsID, err := tb.hypr.ActiveWorkspace()
-	return err == nil && ignoreBodyOnWorkspace(name, wsID)
+func bodySpec(name string, wsID int) (config.ThreeBodyWindow, bool) {
+	if spec, ok := chatBodies[name]; ok && wsID == chatWorkspace {
+		return spec, true
+	}
+	spec, ok := config.ThreeBody[name]
+	return spec, ok
 }
 
 func ignoreBodyOnWorkspace(name string, wsID int) bool {
-	if name != "editor" && name != "agents" {
-		return false
-	}
-	return wsID == chatWorkspace || wsID == musicWorkspace
+	return wsID == musicWorkspace && (name == "editor" || name == "agents")
 }
 
 // WindowSpec is a flat view of a ThreeBody config entry for fallback iteration.
@@ -65,14 +74,14 @@ type WindowSpec struct {
 }
 
 // executeShadow builds fallbacks from threeBodyOrder and delegates to Swap.
-func (tb *ThreeBody) executeShadow() (string, error) {
+func (tb *ThreeBody) executeShadow(wsID int) (string, error) {
 	var fallbacks []WindowSpec
 	for _, name := range threeBodyOrder {
-		if w, ok := config.ThreeBody[name]; ok {
+		if w, ok := bodySpec(name, wsID); ok {
 			fallbacks = append(fallbacks, WindowSpec{Name: name, Class: w.Class, Title: w.Title, LaunchCmd: w.Command})
 		}
 	}
-	return tb.Swap(fallbacks)
+	return tb.Swap(wsID, fallbacks)
 }
 
 // RevealShadow swaps an address parked as a recorded three-body shadow into view.
@@ -116,12 +125,7 @@ func (tb *ThreeBody) RevealShadow(address string) (bool, error) {
 }
 
 // Swap rotates the hidden shadow into view, enrolling or launching a missing fallback as needed.
-func (tb *ThreeBody) Swap(fallbacks []WindowSpec) (string, error) {
-	wsID, err := tb.hypr.ActiveWorkspace()
-	if err != nil {
-		return "", err
-	}
-
+func (tb *ThreeBody) Swap(wsID int, fallbacks []WindowSpec) (string, error) {
 	tbState := tb.state.GetThreeBody(wsID)
 	if tbState != nil {
 		return tb.swap(tbState, wsID)
@@ -198,14 +202,9 @@ func (tb *ThreeBody) SwapMaster() (string, error) {
 }
 
 // Focus focuses a named body by class/title, enrolling or launching as needed.
-func (tb *ThreeBody) Focus(bodyName, class, title, launchCmd string) (string, error) {
+func (tb *ThreeBody) Focus(wsID int, bodyName, class, title, launchCmd string) (string, error) {
 	if class == "" {
 		return "", fmt.Errorf("class required")
-	}
-
-	wsID, err := tb.hypr.ActiveWorkspace()
-	if err != nil {
-		return "", err
 	}
 
 	clients, err := tb.hypr.Clients()
@@ -298,10 +297,6 @@ func (tb *ThreeBody) focusWithEnroll(wsID int, bodyName, class, title, launchCmd
 			_ = tb.hypr.FocusWindow(c.Address)
 			return fmt.Sprintf("focused (no three-body): %s", c.Address), nil
 		}
-	}
-
-	if bodyName == "agents" && ignoreBodyOnWorkspace(bodyName, wsID) {
-		return fmt.Sprintf("not found: %s %s", class, title), nil
 	}
 
 	if launchCmd != "" {
