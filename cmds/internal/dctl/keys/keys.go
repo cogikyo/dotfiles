@@ -54,7 +54,7 @@ func Enroll(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner, re
 	u.Section("PINs", "")
 	u.KV("FIDO2 PIN", "disk unlock at boot, release signing")
 	u.KV("PIV PIN", "age secrets")
-	u.KV("PUK", "unblocks a locked PIV PIN; keep it on paper")
+	u.KV("PUK", "unblocks a locked PIV PIN")
 	u.Detail("for disk unlock, run `sudo dctl keys luks`")
 	u.Close(ui.OK, "yubikey %s enrolled", serial)
 	return nil
@@ -66,7 +66,7 @@ func pinSteps(ctx context.Context, run execx.Runner, serial string) ([]step, err
 		return nil, err
 	}
 	fido := fields(out)
-	const fidoUse = "new FIDO2 PIN: unlocks the disk at boot and signs releases; 6–8 characters lets the PIV PIN match"
+	const fidoUse = "new FIDO2 PIN for boot unlock and release signing; 6–8 characters"
 	var steps []step
 	switch {
 	case fido["PIN"] == "Blocked":
@@ -84,10 +84,10 @@ func pinSteps(ctx context.Context, run execx.Runner, serial string) ([]step, err
 		return nil, err
 	}
 	if strings.Contains(piv, "WARNING: Using default PIN!") {
-		steps = append(steps, step{"Set PIV PIN", "new PIV PIN: unlocks age secrets; 6–8 characters; reusing the FIDO2 PIN is fine", ykman(serial, "piv", "access", "change-pin", "--pin", "123456")})
+		steps = append(steps, step{"Set PIV PIN", "new PIV PIN for age secrets; 6–8 characters, can match FIDO2", ykman(serial, "piv", "access", "change-pin", "--pin", "123456")})
 	}
 	if strings.Contains(piv, "WARNING: Using default PUK!") {
-		steps = append(steps, step{"Set PIV PUK", "new PUK: unblocks the PIV PIN after 3 wrong tries; 6–8 characters; write it on the phrase paper", ykman(serial, "piv", "access", "change-puk", "--puk", "12345678")})
+		steps = append(steps, step{"Set PIV PUK", "new PUK: unblocks the PIV PIN after 3 wrong tries; 6–8 characters", ykman(serial, "piv", "access", "change-puk", "--puk", "12345678")})
 	}
 	if strings.Contains(piv, "WARNING: Using default Management key!") {
 		steps = append(steps, step{"Protect the PIV management key", "enter the PIV PIN", ykman(serial, "piv", "access", "change-management-key", "--management-key", defaultKey, "--algorithm", "TDES", "--protect")})
@@ -109,7 +109,7 @@ func enrollAge(ctx context.Context, u *ui.UI, run execx.Runner, serial string, r
 			return err
 		}
 	}
-	u.Section("Re-encrypt secrets", "an enrolled YubiKey asks for its PIV PIN; without one, the paper recovery phrase works")
+	u.Section("Re-encrypt secrets", "PIV PIN of an enrolled YubiKey, or the recovery phrase")
 	return rekey(func(l *secrets.Ledger) error {
 		have := secrets.Lines(l.Recipients)
 		i := slices.IndexFunc(keys, func(k Key) bool { return slices.Contains(have, k.Recipient) })
