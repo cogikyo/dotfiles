@@ -2,7 +2,6 @@ enable NetworkManager.service
 enable bluetooth.service
 enable earlyoom.service
 enable fstrim.timer
-enable fwupd-refresh.timer
 enable nftables.service
 enable pcscd.socket
 enable sddm.service

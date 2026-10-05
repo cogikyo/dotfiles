@@ -17,9 +17,9 @@ import (
 )
 
 type UpdateCmd struct {
-	All   bool     `help:"Run every step without asking and pass --noconfirm to pacman, yay, and makepkg; never installs or removes drifted packages or flashes firmware."`
+	All   bool     `help:"Run every step without asking and pass --noconfirm to pacman, yay, and makepkg; never installs or removes drifted packages."`
 	Only  []string `placeholder:"NAME" help:"Limit the cmd step to these dotfiles commands or packages/ recipes; implies cmd."`
-	Steps []string `arg:"" optional:"" help:"Steps to run, without the per-step prompt: pacman, aur, packages, repos, cmd, go, rust, firmware (default: all, asking for each)."`
+	Steps []string `arg:"" optional:"" help:"Steps to run, without the per-step prompt: pacman, aur, packages, repos, cmd, go, rust (default: all, asking for each)."`
 }
 
 func (c *UpdateCmd) Help() string {

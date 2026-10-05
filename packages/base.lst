@@ -29,7 +29,6 @@ bluez-utils
 brightnessctl
 ddcutil
 earlyoom
-fwupd
 mesa
 nvtop
 tuned

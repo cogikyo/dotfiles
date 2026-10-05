@@ -62,11 +62,11 @@ func TestSteps(t *testing.T) {
 	for _, s := range steps {
 		names = append(names, s.Name)
 	}
-	if want := []string{"pacman", "aur", "packages", "repos", "cmd", "go", "rust", "firmware"}; !slices.Equal(names, want) {
+	if want := []string{"pacman", "aur", "packages", "repos", "cmd", "go", "rust"}; !slices.Equal(names, want) {
 		t.Fatalf("steps %v, want %v", names, want)
 	}
-	got, err := Select(steps, []string{"firmware", "aur"})
-	if err != nil || len(got) != 2 || got[0].Name != "aur" || got[1].Name != "firmware" {
+	got, err := Select(steps, []string{"rust", "aur"})
+	if err != nil || len(got) != 2 || got[0].Name != "aur" || got[1].Name != "rust" {
 		t.Fatalf("select %v %v", got, err)
 	}
 	if _, err := Select(steps, []string{"npm"}); err == nil {
@@ -166,24 +166,5 @@ func TestCommands(t *testing.T) {
 	}
 	if err := commands(t.Context(), quiet(), root, f, false, binaries.Names); !errors.Is(err, ui.ErrNoTTY) {
 		t.Errorf("dirty cmds without --all = %v, want a prompt", err)
-	}
-}
-
-func TestPending(t *testing.T) {
-	got, err := pending([]byte(`{"Devices":[{"Name":"BIOS","Releases":[{"Version":"3.07"}]},{"Name":"SSD","Releases":[]}]}`), nil)
-	if err != nil || !slices.Equal(got, []string{"BIOS 3.07"}) {
-		t.Fatalf("got %v, %v", got, err)
-	}
-}
-
-func TestDownload(t *testing.T) {
-	for in, want := range map[string]bool{
-		`{"Remotes":[{"Id":"lvfs","Kind":"download","Enabled":"false"},{"Id":"vendor","Kind":"local","Enabled":"true"}]}`: false,
-		`{"Remotes":[{"Id":"lvfs","Kind":"download","Enabled":"true"}]}`:                                                  true,
-		`{"Remotes":[{"Id":"lvfs","Kind":"download","Enabled":true}]}`:                                                    true,
-	} {
-		if got, err := download(in); err != nil || got != want {
-			t.Errorf("%s: %v %v, want %v", in, got, err, want)
-		}
 	}
 }

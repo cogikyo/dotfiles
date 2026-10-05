@@ -82,13 +82,6 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all bool, only []string)
 				return run.Run(ctx, "", "rustup", "update")
 			},
 		},
-		{
-			Name: "firmware",
-			Plan: "device firmware (BIOS, SSD, USB) from LVFS via fwupd; flashes only after asking",
-			Run: func(ctx context.Context) error {
-				return firmware(ctx, u, run, all)
-			},
-		},
 	}
 }
 
