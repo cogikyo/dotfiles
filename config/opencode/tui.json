@@ -23,7 +23,7 @@
     "enabled": true
   },
   "keybinds": {
-    "leader": "ctrl+.",
+    "leader": "ctrl+h",
     "command_list": "<leader>l",
     "tool_details": "ctrl+d",
     "session_parent": "up,ctrl+alt+up",
