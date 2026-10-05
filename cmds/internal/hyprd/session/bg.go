@@ -91,16 +91,12 @@ func (b *BG) waitAlive() bool {
 }
 
 func (b *BG) spawn() (string, error) {
-	v := &b.cfg.Wallpaper
 	display, err := b.resolveDisplay()
 	if err != nil {
 		return "", err
 	}
-	videoPath := config.ExpandPath(b.cfg.VideoPath)
-	fullPath := videoPath + "/" + v.File
-	opts := fmt.Sprintf("--loop --input-ipc-server=%s --brightness=%d --contrast=%d --saturation=%d --hue=%d",
-		b.cfg.Socket, v.Brightness, v.Contrast, v.Saturation, v.Hue)
-	cmd := exec.Command("taskset", "-c", backgroundCPUs, "mpvpaper", "-p", "-o", opts, display, fullPath)
+	opts := "--loop --hwdec=auto-safe --input-ipc-server=" + b.cfg.Socket
+	cmd := exec.Command("taskset", "-c", backgroundCPUs, "mpvpaper", "-p", "-o", opts, display, config.ExpandPath(b.cfg.Video))
 	if err := cmd.Start(); err != nil {
 		return "", fmt.Errorf("start mpvpaper: %w", err)
 	}

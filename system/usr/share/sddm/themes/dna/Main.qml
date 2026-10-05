@@ -47,7 +47,7 @@ Rectangle {
 
     MediaPlayer {
         id: player
-        source: "file:///usr/share/backgrounds/dotfiles/dna.mp4"
+        source: "file:///usr/share/backgrounds/dotfiles/dna.webm"
         loops: MediaPlayer.Infinite
         videoOutput: video
         Component.onCompleted: play()

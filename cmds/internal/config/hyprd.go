@@ -63,20 +63,10 @@ type BluetoothConfig struct {
 
 // BackgroundConfig controls the mpvpaper video wallpaper.
 type BackgroundConfig struct {
-	Enabled   bool      `yaml:"enabled"`
-	Display   string    `yaml:"display"`    // monitor name, or "auto" to use Hyprland's active output
-	VideoPath string    `yaml:"video_path"` // directory containing wallpaper videos
-	Socket    string    `yaml:"socket"`     // mpv IPC socket path
-	Wallpaper Wallpaper `yaml:"wallpaper"`
-}
-
-// Wallpaper selects a video file and tunes mpv visual properties.
-type Wallpaper struct {
-	File       string `yaml:"file"` // filename relative to VideoPath
-	Brightness int    `yaml:"brightness"`
-	Contrast   int    `yaml:"contrast"`
-	Saturation int    `yaml:"saturation"`
-	Hue        int    `yaml:"hue"`
+	Enabled bool   `yaml:"enabled"`
+	Display string `yaml:"display"` // monitor name, or "auto" to use Hyprland's active output
+	Video   string `yaml:"video"`   // wallpaper video path
+	Socket  string `yaml:"socket"`  // mpv IPC socket path
 }
 
 // ╭──────────────────────────────────────────────────────────────────────────────╮

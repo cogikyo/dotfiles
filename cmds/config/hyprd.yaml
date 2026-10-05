@@ -212,14 +212,8 @@ tabs:
 background:
   enabled: true
   display: "auto"
-  video_path: "/usr/share/backgrounds/dotfiles"
+  video: "/usr/share/backgrounds/dotfiles/dna.webm"
   socket: "/tmp/mpvpaper.sock"
-  wallpaper:
-    file: "dna.mp4"
-    brightness: 6
-    contrast: 9
-    saturation: -16
-    hue: -24
 
 # ╭───────────────────────────────────────────────────────────────────────────────╮
 # │ init                                                                          │
