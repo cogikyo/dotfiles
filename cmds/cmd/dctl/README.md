@@ -298,7 +298,9 @@ Go tools in `GOBIN` or the first GOPATH's `bin` directory use `go install <packa
 Individual tool or step failures do not stop later work, but the command returns nonzero for failures.
 
 Update never installs newly listed packages; rerun `dctl setup packages extra` and follow any manual AUR/local build instructions.
-The drift report lists unlisted explicit packages, listed-but-missing packages, and unlisted orphans across all package lists and local recipes.
+The drift report lists unlisted explicit packages, listed-but-missing packages, listed packages installed as dependencies, and unlisted orphans across all package lists and local recipes.
+It then prints, without running them, the pacman commands that reconcile the system in order: mark listed packages explicit, demote unlisted packages that others require to dependencies, and remove the remaining unlisted packages and orphans.
+Run them in that order, because `-Rns` also removes dependencies that are not marked explicit.
 On a fresh offline install, run `dctl update pacman` first to synchronize official repository databases.
 
 ## ISO

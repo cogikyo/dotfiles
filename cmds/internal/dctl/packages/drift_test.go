@@ -12,6 +12,8 @@ func TestClassify(t *testing.T) {
 		[]string{"base", "git", "htop"},
 		[]string{"eww", "slack-desktop", "yay"},
 		[]string{"git", "libfoo"},
+		[]string{"git", "glibc", "libfoo"},
+		[]string{"htop"},
 	)
 	for _, c := range []struct {
 		name      string
@@ -21,6 +23,8 @@ func TestClassify(t *testing.T) {
 		{"aur", d.AUR, []string{"slack-desktop"}},
 		{"missing", d.Missing, []string{"docker", "missing-base"}},
 		{"orphans", d.Orphans, []string{"libfoo"}},
+		{"implicit", d.Implicit, []string{"git"}},
+		{"required", d.Required, []string{"slack-desktop"}},
 	} {
 		if !slices.Equal(c.got, c.want) {
 			t.Errorf("%s = %v, want %v", c.name, c.got, c.want)
