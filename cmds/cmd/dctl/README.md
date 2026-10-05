@@ -291,7 +291,7 @@ Named steps skip the per-step prompt and keep the order below.
 
 The cmd step uses shared `internal/gobuild` settings and replaces binaries in `~/.local/bin/` only when their bytes differ.
 Hyprd owns its replacement through `hyprd rebuild`; a full lock, active OpenCode refresh job, or stopped daemon produces a reported skip.
-Ewwd and newtab restart only when replaced.
+Ewwd, newtab, and keys restart only when replaced.
 Uncommitted changes under `cmds/` require an extra confirmation; `--all` skips the dotfiles build instead.
 Local recipes rebuild with `makepkg -sfiC` (clean `src/` first) only when installed; recipes that are not installed are skipped.
 Go tools in `GOBIN` or the first GOPATH's `bin` directory use `go install <package>@latest` only when build metadata has a module-proxy checksum; locally built tools are skipped.

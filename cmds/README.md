@@ -40,33 +40,13 @@ Commands that depend on each other (e.g. hide needs to know about monocle) share
 - **[dctl](cmd/dctl/)** — Dotfiles control plane
 - **[ewwd](cmd/ewwd/)** — System utilities: audio, clock, computer, cycles, music, network, date, weather, timer
 - **[hyprd](cmd/hyprd/)** — Window management: monocle, split ratios, hide/show, swap, workspace nav, session layouts
+- **[keys](cmd/keys/)** — Svalboard keymap viewer: local HTTP server with app bind overlays; unrelated to `dctl keys`
 - **[newtab](cmd/newtab/)** — Firefox new tab page: local HTTP server with bookmarks, history, and suggestions
 - **[src](cmd/src/)** — Source inspection cache for upstream repos, Go modules, npm package repos, and Arch package sources
 
 ## Layout
 
 The module keeps command entrypoints under `cmd/`, shared packages under `internal/`, and runtime YAML config under `config/`.
-
-```text
-cmds/
-├── cmd/                # binary entrypoints
-│   ├── dctl/
-│   ├── ewwd/
-│   ├── hyprd/
-│   ├── newtab/
-│   └── src/
-├── config/             # runtime YAML config
-└── internal/           # shared and command-private packages
-    ├── config/         # typed config loader
-    ├── daemon/         # Unix socket helpers
-    ├── dctl/
-    ├── ewwd/
-    ├── hyprd/
-    ├── src/
-    └── ui/             # terminal rows, trees, and prompts
-```
-
-`hyprd` is further split into `browser/`, `notify/`, `session/`, `state/`, `windows/`, and `wm/` to keep concerns separated.
 
 ## Shared infrastructure
 
@@ -85,7 +65,7 @@ internal/daemon/
 ## Installation
 
 The dctl ISO installs prebuilt commands into `~/.local/bin/`.
-`dctl update cmd` builds from the working tree, replaces only changed commands, and restarts ewwd/newtab only when replaced.
+`dctl update cmd` builds from the working tree, replaces only changed commands, and restarts ewwd, newtab, and keys only when replaced.
 It uses `hyprd rebuild` for hyprd so the daemon owns its state-preserving restart and lock refusal.
 
 To build dctl on an existing machine, run from `cmds/` with Go 1.26.2 or later and an existing `~/.local/bin/` directory:
