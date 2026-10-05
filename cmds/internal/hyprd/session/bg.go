@@ -72,18 +72,17 @@ func (b *BG) ensure() (string, error) {
 }
 
 func (b *BG) isAlive() bool {
-	conn, err := net.DialTimeout("unix", b.cfg.Socket, 200*time.Millisecond)
-	if err != nil {
-		return false
-	}
-	conn.Close()
-	return true
+	return b.request(`["get_property","path"]`) == nil
 }
 
 func (b *BG) SetPaused(paused bool) error {
 	if !b.cfg.Enabled {
 		return nil
 	}
+	return b.request(fmt.Sprintf(`["set_property","pause",%t]`, paused))
+}
+
+func (b *BG) request(command string) error {
 	conn, err := net.DialTimeout("unix", b.cfg.Socket, 200*time.Millisecond)
 	if err != nil {
 		return fmt.Errorf("connect mpvpaper: %w", err)
@@ -92,23 +91,30 @@ func (b *BG) SetPaused(paused bool) error {
 	if err := conn.SetDeadline(time.Now().Add(500 * time.Millisecond)); err != nil {
 		return fmt.Errorf("set mpvpaper deadline: %w", err)
 	}
-	if _, err := fmt.Fprintf(conn, "{\"command\":[\"set_property\",\"pause\",%t]}\n", paused); err != nil {
-		return fmt.Errorf("send pause: %w", err)
+	if _, err := fmt.Fprintf(conn, "{\"command\":%s}\n", command); err != nil {
+		return fmt.Errorf("send %s: %w", command, err)
 	}
-	line, err := bufio.NewReader(conn).ReadBytes('\n')
-	if err != nil {
-		return fmt.Errorf("read pause reply: %w", err)
+	r := bufio.NewReader(conn)
+	for {
+		line, err := r.ReadBytes('\n')
+		if err != nil {
+			return fmt.Errorf("read %s reply: %w", command, err)
+		}
+		var reply struct {
+			Event string `json:"event"`
+			Error string `json:"error"`
+		}
+		if err := json.Unmarshal(line, &reply); err != nil {
+			return fmt.Errorf("parse %s reply %q: %w", command, line, err)
+		}
+		if reply.Event != "" {
+			continue
+		}
+		if reply.Error != "success" {
+			return fmt.Errorf("%s: %s", command, reply.Error)
+		}
+		return nil
 	}
-	var reply struct {
-		Error string `json:"error"`
-	}
-	if err := json.Unmarshal(line, &reply); err != nil {
-		return fmt.Errorf("parse pause reply %q: %w", line, err)
-	}
-	if reply.Error != "" && reply.Error != "success" {
-		return fmt.Errorf("pause: %s", reply.Error)
-	}
-	return nil
 }
 
 func (b *BG) waitAlive() bool {
@@ -139,9 +145,7 @@ func (b *BG) spawn() (string, error) {
 		_ = cmd.Wait()
 		return "", fmt.Errorf("set mpvpaper OOM priority: %w", err)
 	}
-	if err := cmd.Process.Release(); err != nil {
-		return "", fmt.Errorf("release mpvpaper: %w", err)
-	}
+	go cmd.Wait()
 	return display, nil
 }
 
@@ -178,9 +182,19 @@ func (b *BG) resolveDisplay() (string, error) {
 	return "", errNoActiveMonitors
 }
 
+// killAll escalates to SIGKILL because a wedged mpvpaper ignores SIGTERM.
 func (b *BG) killAll() {
-	exec.Command("pkill", "mpvpaper").Run()
-	// settle so a following spawn does not race socket teardown
+	exec.Command("pkill", "-x", "mpvpaper").Run()
+	deadline := time.Now().Add(time.Second)
+	for time.Now().Before(deadline) {
+		if exec.Command("pgrep", "-x", "-r", "R,S,D,T", "mpvpaper").Run() != nil {
+			// settle so a following spawn does not race socket teardown
+			time.Sleep(100 * time.Millisecond)
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	exec.Command("pkill", "-KILL", "-x", "mpvpaper").Run()
 	time.Sleep(100 * time.Millisecond)
 }
 
