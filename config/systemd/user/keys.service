@@ -1,0 +1,11 @@
+[Unit]
+Description=Svalboard keymap viewer HTTP server
+PartOf=hyprland-session.target
+
+[Service]
+ExecStart=%h/.local/bin/keys
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=hyprland-session.target

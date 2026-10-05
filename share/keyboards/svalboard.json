@@ -1,0 +1,387 @@
+{
+    "name": "Svalboard Vial Definition",
+    "author": "Morgan Venable",
+    "notes": "This is a Vial Keymap template for Svalboard",
+    "vendorId":"0x303A",
+    "productId":"0x4044",
+    "lighting": "none",
+    "matrix": {
+        "rows": 10,
+        "cols": 6
+    },
+    "customKeycodes": [
+      {"shortName": "Left\nDPI +",
+       "title": "Increase the DPI of the left pointing device.",
+       "name": "SV_LEFT_DPI_INC"
+      },
+      {"shortName": "Left\nDPI -",
+       "title": "Decrease the DPI of the left pointing device.",
+       "name": "SV_LEFT_DPI_DEC"
+      },
+      {"shortName": "Right\nDPI +",
+       "title": "Increase the DPI of the right pointing device.",
+       "name": "SV_RIGHT_DPI_INC"
+      },
+      {"shortName": "Right\nDPI -",
+       "title": "Decrease the DPI of the right pointing device.",
+       "name": "SV_RIGHT_DPI_DEC"
+      },
+      {
+        "shortName": "Scroll\nLeft\nToggle",
+        "title": "Toggle if the left pointer is scroll or pointer.",
+        "name": "SV_LEFT_SCROLL_TOGGLE"
+      },
+      {
+        "shortName": "Scroll\nRight\nToggle",
+        "title": "Toggle if the right pointer is scroll or pointer.",
+        "name": "SV_RIGHT_SCROLL_TOGGLE"
+      },
+      {
+        "shortName": "Fix\nDrift",
+        "title": "Reset the calibration of the pointing device",
+        "name": "SV_RECALIBRATE_POINTER"
+      },
+      {
+        "shortName": "Mouse\nKey\nTimer",
+        "title": "Cycle between various settings of the mouse keys timer.",
+        "name": "SV_MH_CHANGE_TIMEOUTS"
+      },
+      {
+        "shortName": "Caps\nWord\nToggle",
+        "title": "Toggle Caps Word.",
+        "name": "SV_CAPS_WORD"
+      },
+      {
+        "shortName": "Axis\nScroll\nLock",
+        "title": "Toggle Axis Scroll Lock.",
+        "name": "SV_AXIS_SCROLL_LOCK"
+      },
+      {
+        "shortName": "MO 23\n(45=67)",
+        "title": "Toggle layer 2 and 3, if 4 and 5 also active toggle 6 and 7",
+        "name": "SV_TOGGLE_23_67"
+      },
+      {
+        "shortName": "MO 45\n(23=67)",
+        "title": "Toggle layer 4 and 5, if 2 and 3 also active toggle 6 and 7",
+        "name": "SV_TOGGLE_45_67"
+      },
+      {
+        "shortName": "Sniper\n2x",
+        "title": "Slow the cursor 2x more.",
+        "name": "SV_SNIPER_2"
+      },
+      {
+        "shortName": "Sniper\n3x",
+        "title": "Slow the cursor 3x more.",
+        "name": "SV_SNIPER_3"
+      },
+      {
+        "shortName": "Sniper\n5x",
+        "title": "Slow the cursor 5x more.",
+        "name": "SV_SNIPER_5"
+      },
+      {
+	"shortName": "Scroll\nToggle\nHold",
+	"title": "Hold to toggle the scrolling mode of both pointers.",
+	"name": "SV_SCROLL_HOLD"
+      },
+      {
+	"shortName": "Scroll\nToggle",
+	"title": "Press to toggle the scrolling mode of both pointers.",
+	"name": "SV_SCROLL_TOGGLE"
+      },
+      {
+	"shortName": "Output\nStatus",
+	"title": "Output the current internal state of the keyboard.",
+	"name": "SV_OUTPUT_STATUS"
+      },
+      {
+        "shortName": "AutoMouse\nToggle",
+        "title": "Toggle Auto Mouse layer activation.",
+        "name": "SV_TOGGLE_AUTOMOUSE"
+      },
+      {
+	 "shortName": "Turbo\nScan",
+	 "title": "Change the scan mode of the keyboard.",
+	 "name": "SV_TURBO_SCAN"
+      }
+    ],
+    "layouts": {
+    "labels": [
+      "Normal",
+      [
+        "2S",
+        "No 2S",
+        "2S"
+      ]
+    ],
+      "keymap": [
+  [
+    {
+      "x": 3.5
+    },
+    "3,3",
+    {
+      "x": 2.5
+    },
+    "2,3",
+    {
+      "x": 9
+    },
+    "7,3",
+    {
+      "x": 2.5
+    },
+    "8,3"
+  ],
+  [
+    {
+      "x": 2.5
+    },
+    "3,4",
+    "3,2",
+    "3,1",
+    {
+      "x": 0.5
+    },
+    "2,4",
+    "2,2",
+    "2,1",
+    {
+      "x": 7
+    },
+    "7,4",
+    "7,2",
+    "7,1",
+    {
+      "x": 0.5
+    },
+    "8,4",
+    "8,2",
+    "8,1"
+  ],
+  [
+    {
+      "y": -0.5,
+      "x": 1
+    },
+    "4,3",
+    {
+      "x": 7.5
+    },
+    "1,3",
+    {
+      "x": 4
+    },
+    "6,3",
+    {
+      "x": 7.5
+    },
+    "9,3"
+  ],
+  [
+    {
+      "y": -0.5,
+      "x": 3.5
+    },
+    "3,0",
+    {
+      "x": 2.5
+    },
+    "2,0",
+    {
+      "x": 9
+    },
+    "7,0",
+    {
+      "x": 2.5
+    },
+    "8,0"
+  ],
+  [
+    {
+      "y": -0.5
+    },
+    "4,4",
+    "4,2",
+    "4,1",
+    {
+      "x": 5.5
+    },
+    "1,4",
+    "1,2",
+    "1,1",
+    {
+      "x": 2
+    },
+    "6,4",
+    "6,2",
+    "6,1",
+    {
+      "x": 5.5
+    },
+    "9,4",
+    "9,2",
+    "9,1"
+  ],
+  [
+    {
+      "y": -0.5,
+      "x": 3.5
+    },
+    "3,5\n\n\n1,1",
+    {
+      "x": -1,
+      "d": true
+    },
+    "\n\n\n1,0",
+    {
+      "x": 2.5
+    },
+    "2,5\n\n\n1,1",
+    {
+      "x": -1,
+      "d": true
+    },
+    "\n\n\n1,0",
+    {
+      "x": 9
+    },
+    "7,5\n\n\n1,1",
+    {
+      "x": -1,
+      "d": true
+    },
+    "\n\n\n1,0",
+    {
+      "x": 2.5
+    },
+    "8,5\n\n\n1,1",
+    {
+      "x": -1,
+      "d": true
+    },
+    "\n\n\n1,0"
+  ],
+  [
+    {
+      "y": -0.5,
+      "x": 1
+    },
+    "4,0",
+    {
+      "x": 7.5
+    },
+    "1,0",
+    {
+      "x": 4
+    },
+    "6,0",
+    {
+      "x": 7.5
+    },
+    "9,0"
+  ],
+  [
+    {
+      "x": 1
+    },
+    "4,5\n\n\n1,1",
+    {
+      "x": -1,
+      "d": true
+    },
+    "\n\n\n1,0",
+    {
+      "x": 7.5
+    },
+    "1,5\n\n\n1,1",
+    {
+      "x": -1,
+      "d": true
+    },
+    "\n\n\n1,0",
+    {
+      "x": 4
+    },
+    "6,5\n\n\n1,1",
+    {
+      "x": -1,
+      "d": true
+    },
+    "\n\n\n1,0",
+    {
+      "x": 7.5
+    },
+    "9,5\n\n\n1,1",
+    {
+      "x": -1,
+      "d": true
+    },
+    "\n\n\n1,0"
+  ],
+  [
+    {
+      "y": 0.5,
+      "x": 7.9,
+      "w": 1.5
+    },
+    "0,3",
+    {
+      "x": 0.09999999999999964
+    },
+    "0,5",
+    {
+      "x": 0.09999999999999964,
+      "w": 1.5
+    },
+    "0,1",
+    {
+      "x": 0.8000000000000007,
+      "w": 1.5
+    },
+    "5,1",
+    {
+      "x": 0.09999999999999964
+    },
+    "5,5",
+    {
+      "x": 0.09999999999999964,
+      "w": 1.5
+    },
+    "5,3"
+  ],
+  [
+    {
+      "x": 7.4,
+      "w": 2
+    },
+    "0,4",
+    {
+      "x": 0.09999999999999964
+    },
+    "0,2",
+    {
+      "x": 0.09999999999999964,
+      "w": 1.5
+    },
+    "0,0",
+    {
+      "x": 0.8000000000000007,
+      "w": 1.5
+    },
+    "5,0",
+    {
+      "x": 0.09999999999999964
+    },
+    "5,2",
+    {
+      "x": 0.09999999999999964,
+      "w": 2
+    },
+    "5,4"
+  ]
+]
+    }
+}

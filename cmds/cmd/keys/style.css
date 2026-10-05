@@ -1,0 +1,622 @@
+@font-face {
+  font-family: "Satoshi Variable";
+  src: url("/fonts/Satoshi-Variable.woff2") format("woff2");
+  font-weight: 300 900;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "Satoshi Variable";
+  src: url("/fonts/Satoshi-VariableItalic.woff2") format("woff2");
+  font-weight: 300 900;
+  font-style: italic;
+}
+
+:root {
+  --base: #222536;
+  --panel: #1e2133;
+  --raise: #282b48;
+  --border: #30345a;
+  --text: #aeb9f8;
+  --muted: #5a61aa;
+  --title: #6380ec;
+  --code: #90d1f5;
+  --active: #f8b486;
+  --info: #8aa4f3;
+  --link: #9db2f4;
+  --alt: #b29ae8;
+  --ok: #9fd883;
+  --warn: #f2a170;
+  --err: #f08898;
+  --tip: #f4ce88;
+  --complete: #50dec8;
+  --critical: #e887c3;
+  --blu-2: #7492ef;
+  --cyn-2: #38d2ba;
+  --grn-2: #85ba6d;
+  --prp-2: #a188df;
+  --pnk-2: #ea76c0;
+  --sky-1: #54b0e2;
+  --sky-4: #90d1f5;
+  --glu-3: #90a4c7;
+  --ui: "Satoshi Variable", "Symbols Nerd Font", sans-serif;
+  --display: "Chillax Variable", "Symbols Nerd Font", sans-serif;
+  --mono: Vagari, "Symbols Nerd Font", monospace;
+  --snap: cubic-bezier(0.25, 0.575, 0.565, 1.314);
+  --corner: 10px;
+  --corner-in: 6px;
+  --dim: color-mix(in srgb, var(--text) 45%, var(--muted));
+  --accent: var(--blu-2);
+  color-scheme: dark;
+}
+
+[data-app="keys"] { --accent: var(--blu-2); }
+[data-app="hyprland"] { --accent: var(--cyn-2); }
+[data-app="kitty"] { --accent: var(--pnk-2); }
+[data-app="nvim"] { --accent: var(--grn-2); }
+[data-app="opencode"] { --accent: var(--prp-2); }
+
+[data-layer] { --layer: var(--dim); }
+[data-layer="0"] { --layer: var(--text); }
+[data-layer="1"] { --layer: var(--sky-1); }
+[data-layer="2"] { --layer: var(--blu-2); }
+[data-layer="14"] { --layer: var(--glu-3); }
+[data-layer="15"] { --layer: var(--sky-4); }
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-size: 20px;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  background: var(--base);
+  color: var(--text);
+  font: 1rem/1.3 var(--ui);
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+
+header {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1rem 1.4rem 0;
+}
+
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.bar:not(.sub) {
+  justify-content: space-between;
+}
+
+.seg {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--corner);
+  background: var(--panel);
+}
+
+.seg:empty {
+  display: none;
+}
+
+.seg button,
+#scoped {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  height: 2.3rem;
+  padding: 0 1rem;
+  border: 1px solid transparent;
+  border-radius: var(--corner-in);
+  color: var(--idle, var(--dim));
+  font: 500 1rem var(--ui);
+  transition: all 0.25s var(--snap);
+}
+
+.seg button:hover,
+.seg button:focus-visible,
+#scoped:hover,
+#scoped:focus-visible {
+  border-color: var(--active);
+  color: var(--active);
+  outline: none;
+}
+
+.seg button.on {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--raise));
+  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.seg button.peek {
+  border-style: dashed;
+}
+
+.seg[data-kbd]::after,
+.seg button[data-kbd]::after,
+#crumbs::after {
+  content: attr(data-kbd);
+  position: absolute;
+  top: -1px;
+  right: 1.2rem;
+  transform: translateY(-50%);
+  padding: 0 0.35em;
+  background: var(--base);
+  font: 0.7rem/1 var(--mono);
+  color: var(--muted);
+  white-space: pre;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease-out;
+}
+
+.seg button[data-kbd]::after {
+  top: -6px;
+  right: 50%;
+  transform: translate(50%, -50%);
+}
+
+.seg:hover::after,
+.seg:hover button::after,
+#crumbs:hover::after {
+  opacity: 1;
+}
+
+#apps button {
+  font: 600 1.25rem var(--display);
+}
+
+#apps .icon {
+  font: 1.1em "Symbols Nerd Font";
+  color: var(--accent);
+  opacity: 0.7;
+}
+
+#apps button.on .icon {
+  opacity: 1;
+}
+
+#apps button.broken::after {
+  content: "!";
+  color: var(--err);
+  font: 0.8em var(--mono);
+}
+
+#layers button {
+  --accent: var(--layer);
+  --idle: color-mix(in srgb, var(--layer) 62%, var(--muted));
+  font: 500 1.1rem var(--display);
+}
+
+#scoped {
+  height: calc(2.3rem + 10px);
+  border: 1px dashed var(--border);
+  border-radius: var(--corner);
+  background: var(--panel);
+}
+
+#scoped[hidden] {
+  display: none;
+}
+
+#scoped.on {
+  border-color: var(--info);
+  color: var(--info);
+  background: color-mix(in srgb, var(--info) 10%, var(--panel));
+}
+
+.count {
+  font: 0.75rem var(--mono);
+  color: var(--muted);
+}
+
+.sub {
+  min-height: calc(2.3rem + 10px);
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+#crumbs {
+  position: relative;
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  font: 1rem var(--mono);
+}
+
+#crumbs:empty {
+  display: none;
+}
+
+#crumbs::after {
+  position: static;
+  transform: none;
+  margin-left: 0.4rem;
+  background: none;
+}
+
+#crumbs button {
+  padding: 0 0.3rem;
+  border-radius: var(--corner-in);
+  color: var(--dim);
+  transition: color 0.25s var(--snap);
+}
+
+#crumbs button:hover {
+  color: var(--active);
+}
+
+#crumbs button.on {
+  color: var(--accent);
+}
+
+#crumbs .sep {
+  color: var(--muted);
+}
+
+#status {
+  display: flex;
+  gap: 1rem;
+  min-width: 0;
+  overflow: hidden;
+}
+
+#status span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#status .note {
+  font-style: italic;
+}
+
+#status .error {
+  color: var(--err);
+}
+
+#stage {
+  flex: none;
+  display: flex;
+  justify-content: center;
+  margin: 0.6rem 1.4rem 0;
+}
+
+#below {
+  flex: 1;
+}
+
+#board {
+  position: relative;
+}
+
+.label {
+  position: absolute;
+  font: 600 calc(var(--u) * 0.16) / calc(var(--u) * 0.32) var(--display);
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.key {
+  position: absolute;
+  padding: calc(var(--u) * 0.035);
+  transition: transform 0.25s var(--snap);
+}
+
+.key > * {
+  pointer-events: none;
+}
+
+.key::before {
+  content: "";
+  position: absolute;
+  inset: calc(var(--u) * 0.035);
+  border: 1px solid var(--border);
+  border-radius: calc(var(--u) * 0.12);
+  background: var(--raise);
+  transition: all 0.25s var(--snap);
+}
+
+.key.round::before {
+  border-radius: 50%;
+}
+
+.key:hover::before {
+  border-color: var(--active);
+  box-shadow: 0 0 5px 1px color-mix(in srgb, var(--active) 42%, transparent);
+}
+
+.key.pressed {
+  transform: scale(0.93);
+}
+
+.key.pressed::before {
+  border-color: var(--active);
+  background: color-mix(in srgb, var(--active) 28%, var(--raise));
+}
+
+.cap {
+  position: absolute;
+  inset: calc(var(--u) * 0.06);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--mono);
+  color: var(--text);
+  line-height: 1.05;
+  transition: all 0.25s var(--snap);
+}
+
+.cap .main {
+  font-size: calc(var(--u) * 0.3);
+}
+
+.cap .main.long {
+  font-size: calc(var(--u) * 0.17);
+  text-align: center;
+  white-space: pre-line;
+}
+
+.cap .shift,
+.cap .mods,
+.cap .hold,
+.cap .double {
+  font-size: calc(var(--u) * 0.12);
+  color: var(--muted);
+}
+
+.cap .shift {
+  position: absolute;
+  top: 0;
+  left: calc(var(--u) * 0.06);
+}
+
+.cap .hold {
+  color: var(--tip);
+}
+
+.kind-layer .cap .main,
+.kind-layertap .cap .hold {
+  color: var(--layer);
+}
+
+.kind-none .cap,
+.inherited .cap {
+  opacity: 0.4;
+}
+
+.kind-user .cap .main,
+.kind-special .cap .main,
+.kind-macro .cap .main {
+  color: var(--code);
+}
+
+body[data-app="keys"] .key:not(.inherited) .cap .main {
+  color: var(--layer);
+}
+
+body[data-app="keys"] .inherited:not(:hover, .pressed)::before {
+  border-color: color-mix(in srgb, var(--border) 80%, transparent);
+  background: transparent;
+}
+
+body[data-app="keys"] .inherited .cap,
+body[data-app="keys"] .inherited .cap > * {
+  color: var(--muted);
+  opacity: 1;
+}
+
+.free .cap {
+  opacity: 0.32;
+}
+
+.bound .cap {
+  inset: auto calc(var(--u) * 0.1) calc(var(--u) * 0.07) auto;
+  flex-direction: row;
+  gap: 0.3em;
+  align-items: baseline;
+}
+
+.bound .cap .main,
+.bound .cap .main.long {
+  font-size: calc(var(--u) * 0.13);
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.bound .cap > :not(.main) {
+  display: none;
+}
+
+.bound::before {
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  background: color-mix(in srgb, var(--accent) 7%, var(--raise));
+  box-shadow: 0 0 5px 1px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.bound.builtin::before {
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+  background: var(--raise);
+  box-shadow: none;
+}
+
+.bound.multi::before {
+  box-shadow:
+    3px 3px 0 -1px var(--base),
+    3px 3px 0 0 color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.bound.scoped::before {
+  border-style: dashed;
+  background: var(--raise);
+  box-shadow: none;
+}
+
+.bound.dead::before {
+  border-color: color-mix(in srgb, var(--warn) 45%, transparent);
+  background: var(--raise);
+  box-shadow: none;
+}
+
+.group::before {
+  border-width: 1px 1px 3px 2px;
+  background: color-mix(in srgb, var(--accent) 16%, var(--raise));
+}
+
+.bound.bare .cap {
+  inset: calc(var(--u) * 0.06);
+  flex-direction: column;
+  align-items: center;
+}
+
+.bound.bare .cap .main {
+  font-size: calc(var(--u) * 0.3);
+  color: var(--accent);
+}
+
+.bound.bare .cap .main.long {
+  font-size: calc(var(--u) * 0.17);
+}
+
+.drills {
+  cursor: pointer;
+}
+
+.legend {
+  position: absolute;
+  inset: calc(var(--u) * 0.1) calc(var(--u) * 0.07) calc(var(--u) * 0.24);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-family: var(--mono);
+  font-weight: 500;
+  line-height: 1.15;
+  text-align: center;
+  white-space: nowrap;
+  color: var(--accent);
+}
+
+.builtin .legend {
+  color: color-mix(in srgb, var(--accent) 45%, var(--muted));
+}
+
+.scoped .legend {
+  color: var(--info);
+  font-style: italic;
+}
+
+.dead .legend {
+  color: var(--warn);
+  text-decoration: line-through;
+}
+
+.opens {
+  position: absolute;
+  left: calc(var(--u) * 0.11);
+  bottom: calc(var(--u) * 0.04);
+  font: 600 calc(var(--u) * 0.2) var(--display);
+  color: var(--accent);
+}
+
+.round .legend {
+  inset: calc(var(--u) * 0.16) calc(var(--u) * 0.11) calc(var(--u) * 0.26);
+}
+
+.round.bound:not(.bare) .cap {
+  inset: auto 0 calc(var(--u) * 0.1);
+  justify-content: center;
+}
+
+.round .opens {
+  left: calc(var(--u) * 0.17);
+  bottom: calc(var(--u) * 0.13);
+}
+
+#tip {
+  position: fixed;
+  z-index: 10;
+  max-width: 460px;
+  padding: 6px 12px;
+  border: 1px solid var(--active);
+  border-radius: var(--corner);
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.15s ease-out;
+}
+
+#tip.on {
+  opacity: 1;
+}
+
+#tip .row + .row {
+  margin-top: 4px;
+}
+
+#tip .name {
+  font: 0.95rem var(--mono);
+  color: var(--title);
+}
+
+#tip .about {
+  color: var(--text);
+  font-size: 0.9rem;
+}
+
+#tip .row {
+  color: var(--text);
+  font: 0.8rem var(--mono);
+}
+
+#tip .tag {
+  display: inline-block;
+  min-width: 6.5em;
+  margin-right: 8px;
+  color: var(--muted);
+}
+
+#tip .scope {
+  font: 0.75rem var(--mono);
+  color: var(--info);
+}
+
+#tip .shadow {
+  font: 0.75rem var(--mono);
+  color: var(--warn);
+}

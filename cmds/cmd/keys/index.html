@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>keys · svalboard</title>
+    <link rel="stylesheet" href="style.css" />
+    <script type="module" src="app.js"></script>
+  </head>
+  <body data-app="keys">
+    <header>
+      <div class="bar">
+        <nav id="apps" class="seg" aria-label="App" data-kbd="tab"></nav>
+        <nav id="layers" class="seg" aria-label="Layer"></nav>
+      </div>
+      <div class="bar sub">
+        <nav id="chips" class="seg" aria-label="Modifiers" data-kbd="[ ]  hold mod"></nav>
+        <button id="scoped" hidden></button>
+        <nav id="crumbs" aria-label="Prefix" data-kbd="esc"></nav>
+        <span id="status"></span>
+      </div>
+    </header>
+    <main id="stage"><div id="board"></div></main>
+    <section id="below"></section>
+    <div id="tip"></div>
+  </body>
+</html>

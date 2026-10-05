@@ -22,7 +22,7 @@ import (
 )
 
 var (
-	services = []string{"ewwd", "newtab"}
+	services = []string{"ewwd", "newtab", "keys"}
 	// refusals matches the text protocol returned by hyprd's rebuildBlocked.
 	refusals = []string{"error: full lock active", "error: opencode refresh job "}
 )
