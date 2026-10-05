@@ -73,6 +73,7 @@ pulsemixer
 wireplumber
 
 # desktop
+dunst
 grim
 hypridle
 hyprland

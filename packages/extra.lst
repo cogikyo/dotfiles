@@ -27,6 +27,7 @@ qemu-img
 qemu-system-x86
 qemu-ui-gtk
 rustup
+shellcheck
 spotify-launcher
 sqlc
 tailwindcss-language-server
