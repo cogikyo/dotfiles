@@ -25,6 +25,8 @@ x-scheme-handler/about=hyprd-browser.desktop
 x-scheme-handler/unknown=hyprd-browser.desktop
 x-scheme-handler/slack=slack.desktop
 x-scheme-handler/claude-cli=claude-code-url-handler.desktop
+x-scheme-handler/grokbot=grok-bot.desktop
+x-scheme-handler/sand=grok-bot.desktop
 
 [Added Associations]
 x-scheme-handler/http=hyprd-browser.desktop;firefox-developer-edition.desktop;
