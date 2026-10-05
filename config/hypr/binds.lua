@@ -27,7 +27,7 @@ alt("T", "Workspace 4 (primary)",  "hyprd ws 4")
 alt("D", "Workspace 5 (settings)", "hyprd ws 5")
 
 super("equal",     "Focus right", hl.dsp.focus({ direction = "right" }))
-super("backslash", "Focus up",    hl.dsp.focus({ direction = "left" }))
+super("backslash", "Focus left",  hl.dsp.focus({ direction = "left" }))
 
 -- ├┤ threebody layout ├───────────────────────────────────────────────────────────┤
 alt("A", "Editor",  "hyprd three-body editor")
@@ -38,7 +38,7 @@ alt("X", "Dismiss", "dunstctl close")
 alt("Escape",       "Toggle shadow",  "hyprd three-body shadow")
 alt("apostrophe",   "Toggle monocle", "hyprd monocle")
 alt("Comma",        "Cycle split",    "hyprd split")
-super("Period",     "Cycle split",    "hyprd swap")
+super("Period",     "Swap master",    "hyprd swap")
 super("Backspace",  "Toggle shadow",  "hyprd three-body shadow")
 super("Escape",     "Toggle shadow",  "hyprd three-body shadow")
 super("apostrophe", "Toggle monocle", "hyprd monocle")
