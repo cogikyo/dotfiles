@@ -322,6 +322,7 @@ notify:
     work: fruit
     wf-start: discovery
     wf-end: reward
+    grok bot: paprika
 
   # ├─ activation targets ───────────────────────────────────────────────────────┤
   # Keys match the dunst app name or desktop-entry; class is the live Hyprland class.
