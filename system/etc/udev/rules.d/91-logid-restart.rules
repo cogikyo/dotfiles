@@ -1,1 +1,0 @@
-ACTION=="add", SUBSYSTEM=="hid", KERNEL=="0005:046D:B034.*", TAG+="systemd", ENV{SYSTEMD_WANTS}="logid-restart.service"

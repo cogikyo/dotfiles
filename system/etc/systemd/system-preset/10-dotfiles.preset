@@ -4,7 +4,6 @@ enable earlyoom.service
 enable fstrim.timer
 enable fwupd-refresh.timer
 enable limine-snapper-sync.service
-enable logid.service
 enable nftables.service
 enable pcscd.socket
 enable sddm.service

@@ -110,7 +110,6 @@
 ##### Misc Hardware
 
 - Monitor: [SAMSUNG UR59 Series 32-Inch 4K UHD (3840x2160)](https://a.co/d/bZtUse0)
-- Mouse: [MX Master 3S](https://www.logitech.com/en-us/products/mice/mx-master-3s.910-006556.html)
 - Computer: Framework Desktop, AMD Strix Halo, Ethernet only
 - Microphone: [Shure SM57](https://www.amazon.com/gp/product/B0000AQRST)
   - Audio Interface: [Scaarlett Solo 3rd Gen](https://www.amazon.com/gp/product/B07QR6Z1JB)
