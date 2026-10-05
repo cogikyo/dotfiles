@@ -109,7 +109,8 @@
 
 ## 🛠️ Installation
 
-The dctl ISO installs Arch and these dotfiles offline onto the Framework Desktop, with LUKS2, btrfs, Snapper, Limine, and Secure Boot.
+The dctl ISO installs Arch and these dotfiles offline onto the Framework Desktop, with LUKS2, btrfs, Snapper, and Limine.
+Set up Secure Boot after the first login.
 The [dctl guide](cmds/cmd/dctl/README.md) explains each command in detail.
 
 > [!CAUTION]
@@ -140,14 +141,14 @@ The command checks the signed checksum against `share/allowed_signers`, then ask
 
 ### 3. Prepare the Framework
 
-Back up the internal disk.
-In the BIOS, install version 3.06, enable Pluton, and put Secure Boot in Setup Mode.
+Back up the internal disk if it has data.
+Press F2 to enter the BIOS, turn Secure Boot off without erasing its keys yet, and leave the TPM enabled.
+Save with F10.
 
 ### 4. Install
 
-Boot the USB in UEFI mode; `dctl install` starts on tty1.
+Press F12 and choose the USB in UEFI mode; `dctl install` starts on tty1.
 Enter the login password for `cullyn`, the timezone, and the LUKS passphrase, then type the disk path to confirm.
-Without Setup Mode, the install continues without Secure Boot.
 Remove the USB when it asks to reboot.
 
 ### 5. First login
@@ -165,17 +166,33 @@ It installs `packages/extra.lst` online and asks for the YubiKey PIN to decrypt 
 When an SSH key is first used, the keyring asks for its passphrase; choose the option to unlock it automatically at login.
 If setup reports a missing Firefox profile, start Firefox once and run `dctl setup firefox certs`.
 
-### 6. YubiKeys and Secure Boot
+### 6. YubiKeys, Secure Boot, and boot TOTP
 
-Enroll each YubiKey with only that key inserted, and record the LUKS recovery key when it is shown:
+Run both commands for each YubiKey, with only that key inserted:
 
 ```sh
 dctl keys enroll
 sudo dctl keys luks
 ```
 
-If the install skipped Secure Boot, put the firmware in Setup Mode, boot, and run `dctl setup secureboot`.
-Enable Secure Boot in the BIOS, reboot, and check `dctl setup --status secureboot`.
+Write the LUKS recovery key on paper when it is shown, and keep it away from the machine.
+
+1. Reboot, press F2, choose **Erase all Secure Boot Settings** to enter Setup Mode, and save with F10.
+2. Boot the installed system and run `sudo dctl setup secureboot`.
+3. If sbctl refuses over option ROMs or a missing TPM eventlog, stop; do not force enrollment.
+4. Press F2 on reboot, turn Secure Boot on, and save with F10.
+5. Boot and check `dctl setup --status secureboot`; `secureboot-totp` remains manual until the next step.
+
+From a plain TTY, seal the boot TOTP secret:
+
+```sh
+sudo dctl keys totp
+```
+
+Scan the QR code or type the `secret=` value from the `otpauth://` URL into your authenticator; the secret is shown only once.
+If you used a terminal emulator, clear its scrollback afterward.
+From then on, compare the boot code with the authenticator before entering the LUKS PIN or passphrase.
+An unexpected missing code or a wrong code means **do not unlock**; see the [expected missing-code cases](cmds/cmd/dctl/README.md#secure-boot).
 Then work through the [hardware checklist](cmds/cmd/dctl/README.md#manual-hardware-acceptance).
 
 For daily upgrades, run `update`; see [Update](cmds/cmd/dctl/README.md#update).

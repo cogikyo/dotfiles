@@ -37,9 +37,8 @@ It configures Snapper and Limine, installs prebuilt commands in `~/.local/bin/`,
 The ISO bundle contains only the `master` tip, and the installed `~/dotfiles` is shallow.
 Restore history once online with `git -C ~/dotfiles fetch --unshallow`, as shown in [Installation](../../../README.md#installation).
 
-In firmware Setup Mode, installation applies `setup secureboot` and requires its key and signature checks to be `done`.
-Enforcement may remain `manual` until a reboot or BIOS change.
-Outside Setup Mode, installation continues without Secure Boot and reports the required follow-up under [Secure Boot](#secure-boot).
+The installer always installs without Secure Boot, never enrolls keys, and does not need Setup Mode.
+Set up [Secure Boot](#secure-boot) after the first boot.
 
 A failure during the write/install phase reports that the disk has been modified and installation is incomplete; there is no automatic rollback.
 
@@ -106,15 +105,35 @@ Install missing AUR names with `yay -S` and local recipes with `makepkg -si` in 
 If `/var/lib/pacman/sync/core.db` is missing, run `dctl update pacman` as your user before installing newly listed packages.
 There is no offline flag; package selection belongs to [Update package reconciliation](#package-reconciliation).
 
+The mkinitcpio `HOOKS` live in the system overlay at `system/etc/mkinitcpio.conf.d/dotfiles.conf`, not in installer-generated files.
+After changing the HOOKS file or the `sd-totp` hook, run `sudo limine-update`; kernel updates and `dctl setup secureboot` also rebuild the images.
+
 ### Secure Boot
 
-The item IDs are `secureboot-keys`, `secureboot-signed`, and `secureboot-enforced`.
-In Setup Mode, setup creates sbctl keys if needed, configures Limine, rebuilds and verifies boot files, and enrolls keys with `sbctl enroll-keys -m`.
-If enrollment needs Setup Mode, follow the reported BIOS action and rerun `dctl setup secureboot`.
+The item IDs are `secureboot-keys`, `secureboot-signed`, `secureboot-enforced`, and `secureboot-totp`.
+In Setup Mode, setup creates sbctl keys if needed, configures Limine, rebuilds and verifies boot files, and runs `sbctl enroll-keys` to enroll only your own keys, without Microsoft keys.
+Leave the TPM enabled: sbctl refuses enrollment if its eventlog shows option ROMs or is missing.
+Dctl reports that refusal and never forces enrollment; stop rather than bypassing the check.
+If enrollment needs Setup Mode, follow the [installation steps](../../../README.md#6-yubikeys-secure-boot-and-boot-totp) and rerun `sudo dctl setup secureboot`.
 
 The signed check verifies Limine and UKI signatures, rejects an embedded UKI command line, and requires a Limine entry for each UKI.
 It checks the LUKS mapping named by `rd.luks.name` and `root`, requires config enrollment, and rejects fallback `BOOTX64.EFI`.
 Keys and signatures can be done while enforcement still needs a reboot or BIOS change; use the [manual hardware checklist](#manual-hardware-acceptance) to verify completion.
+
+`secureboot-totp` is status-only and reports `manual` until a secret unseals in the current boot state; run `sudo dctl keys totp` once Secure Boot is enforced.
+The command replaces any previous secret and seals a new one to the TPM's SHA256 PCRs 0 and 7: PCR 0 measures firmware, and PCR 7 measures Secure Boot state and keys.
+It prints a QR code and an `otpauth://` URL once; scan it or enter the URL's `secret=` value into the authenticator.
+The authenticator entry is labelled with the machine's hostname.
+The authenticator can be the VivoKey Apex Flex implant read by phone NFC, a YubiKey OATH slot, or a phone TOTP app.
+
+At each boot, `sd-totp` prints `Boot TOTP <code> (Ns left)` on the console every 30 seconds until LUKS is unlocked.
+No TPM, no sealed secret, or changed PCRs produce `!!! NO BOOT TOTP: … !!!`; boot continues and the hook never delays unlock.
+If image creation cannot find `tpm2-totp` or its device library, it warns and omits the hook, so no boot code or warning appears.
+The code is advisory: compare it with the authenticator before entering the PIN or passphrase.
+
+`NO BOOT TOTP` is expected only before the first `dctl keys totp` or immediately after a change you made yourself: a BIOS/firmware update, turning Secure Boot off or on, or re-enrolling keys.
+In those cases, unlock, restore Secure Boot enforcement if needed, run `sudo dctl keys totp`, and replace the authenticator entry.
+At any other time, a missing or wrong code means **do not unlock**; stop and investigate.
 
 ## Update
 
@@ -130,7 +149,7 @@ Named steps omit the per-step prompt and retain the order below.
 **Update never pulls `~/dotfiles` or the `DOTFILES` checkout**; manage that checkout yourself before rebuilding commands.
 
 `--all` or global `--yes` omits step and recipe prompts and passes `--noconfirm` to pacman, yay, and makepkg.
-It never installs or removes package-list drift and never flashes firmware.
+It never installs or removes package-list drift.
 `--only NAME,...` limits `cmd` to named dotfiles commands or local recipes and selects only `cmd` when no steps are named; explicit step names must include `cmd`.
 
 Steps run in this order:
@@ -142,7 +161,6 @@ Steps run in this order:
 5. `cmd`: build dotfiles commands and rebuild installed local recipes with different PKGBUILD versions.
 6. `go`: update module-proxy-installed Go tools with `go install <package>@latest`.
 7. `rust`: run `rustup update`, or skip if rustup is absent.
-8. `firmware`: refresh fwupd metadata, list updates, and ask default-no before flashing.
 
 Failures are reported and later steps continue, but the final result is nonzero if any step failed.
 Cancellation stops the run.
@@ -174,6 +192,19 @@ Selected removals go to `sudo pacman -Rns`, which asks again before removing the
 Unchecked removal entries are saved in sorted order under `# official` or `# aur` in `extra.lst` and marked explicit.
 Esc skips the current checklist; earlier package-reason changes remain, and skipping installation does not skip the later removal checklist.
 `--all`, global `--yes`, or no terminal only performs marking and reports remaining drift; `--json` emits drift without changing anything.
+
+## Firmware
+
+Firmware flashing is a manual operation outside dctl; update the BIOS only when needed.
+Reports of Framework Desktop BIOS 3.06 bricking machines are a reason to hold off.
+`fwupd` is not in the base package list.
+Follow the [expected missing-code rule](#secure-boot) when unlocking during this procedure.
+
+1. Install the tool with `sudo pacman -S fwupd`.
+2. Press F2 on reboot, turn Secure Boot off, and save with F10.
+3. Boot and run `fwupdmgr refresh` then `fwupdmgr update`, or use Framework's EFI USB updater.
+4. After the update, press F2, turn Secure Boot on, save with F10, and boot.
+5. Run `sudo dctl keys totp` to re-seal for the changed PCRs 0 and 7, and replace the old authenticator entry with the new secret.
 
 ## ISO
 
@@ -207,7 +238,8 @@ dctl iso test [path/to/image.iso] [--keep]
 ```
 
 The VM has no network interface and uses a 32 GiB disk, Setup Mode firmware variables, and a `DCTLTEST` answers drive.
-The harness installs, unlocks LUKS with a passphrase, boots twice, and requires `system`, `packages`, `home`, and all three Secure Boot checks to be done, plus an active display manager.
+The harness installs, unlocks LUKS with a passphrase, boots twice, and requires `system`, `packages`, and `home` to be done, plus an active display manager.
+It does not check Secure Boot.
 
 Results live in the printed `/var/tmp/dctl-iso-test-*` directory: `serial.log`, `timings.json`, `setup.json`, and, after a 20-second wait, `greeter.png`.
 Inspect the screenshot yourself; the test does not verify appearance or sign-in behavior.
@@ -301,6 +333,7 @@ Follow [Installation](../../../README.md#installation) for first enrollment with
 ```sh
 dctl keys enroll
 sudo dctl keys luks
+sudo dctl keys totp
 dctl keys status
 sudo dctl keys status
 dctl keys remove <serial>
@@ -313,6 +346,9 @@ Enrollment updates age metadata and `share/allowed_signers` in the checkout.
 `keys luks` requires root and adds a FIDO2 token with PIN but no touch, adds a recovery key if absent, and leaves the passphrase slot unchanged.
 It asks before adding another token when one already exists; record the recovery key when it prints.
 Unprivileged `status` reports enrollment, while LUKS header inspection needs sudo.
+
+`totp` seals the [boot TOTP secret](#secure-boot); it requires root and enforced Secure Boot.
+Use a plain TTY or clear terminal scrollback afterward so the enrollment secret does not remain visible.
 
 `remove` refuses root, removes the age recipient and release signer, and rekeys secrets, but leaves LUKS tokens intact.
 The LUKS header does not identify which YubiKey created a token.
@@ -397,8 +433,11 @@ The override does not change the home directory used for user targets; run user 
 
 These checks require the Framework Desktop and real YubiKeys; the VM test does not prove them.
 
-- [ ] Manually confirm BIOS 3.06, Pluton enabled, and Setup Mode before installation.
-- [ ] Enable Secure Boot in the BIOS after key enrollment, reboot, and confirm all items are done with `dctl setup --status secureboot`.
+- [ ] Before installation, confirm Secure Boot is off, its keys have not been erased, and the TPM is enabled.
+- [ ] After enrollment and TOTP sealing, confirm Secure Boot is enforced with only your own keys and all items are done in `dctl setup --status secureboot`.
+- [ ] Confirm Boot TOTP matches the authenticator across two reboots to check PCR 0 stability.
+- [ ] Confirm `NO BOOT TOTP` appears with Secure Boot off, then re-enable Secure Boot and follow the [re-sealing procedure](#secure-boot).
+- [ ] Confirm the TOTP hook never delays LUKS unlock.
 - [ ] Boot and unlock LUKS with each of the two YubiKeys separately, with the PIN and no touch.
 - [ ] Decrypt secrets with each YubiKey separately, without the other key or the age phrase.
 - [ ] Reject a wrong FIDO2 PIN and a wrong PIV PIN; cancel any age-phrase fallback and avoid repeated failures that can block the key.
