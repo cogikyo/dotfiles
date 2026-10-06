@@ -1,0 +1,11 @@
+--- a/linux-rust/src/media_controller.rs
++++ b/linux-rust/src/media_controller.rs
+@@ -245,7 +245,7 @@
+                     debug!("Set user_played_the_media to true as media was playing");
+                 }
+             }
+-        } else if new_all_out {
++        } else if new_all_out && !old_all_out {
+             debug!("Condition met: buds removed, pausing media");
+             self.pause().await;
+         }
