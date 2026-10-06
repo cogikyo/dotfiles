@@ -76,6 +76,10 @@
     frame_color = "#f34658"
     timeout = 8
 
+[collapse-backlog]
+    appname = "^(Grok Bot|Slack|Firefox.*)$"
+    set_stack_tag = "backlog"
+
 # Suppress agent status toasts from kitty — handled by agent hooks instead
 [kitty-opencode]
     appname = "kitty"
