@@ -61,7 +61,7 @@ func Run(ctx context.Context, u *ui.UI) error {
 		return err
 	}
 	s := &session{u: u, sh: host{u}, root: "/", exe: exe}
-	s.ask, s.confirm = s.form, s.typed
+	s.ask, s.confirm = s.form, s.consent
 	return s.main(ctx)
 }
 
@@ -163,22 +163,13 @@ func choose(u *ui.UI, found survey, test *iso.Answers) (disk, error) {
 	for _, r := range found.Refused {
 		u.Info("skipping %s: %s", r.Disk.Path, r.Reason)
 	}
-	d, err := found.pick("")
-	if !errors.Is(err, errAmbiguous) {
-		return d, err
-	}
-	labels := make([]string, len(found.Candidates))
-	for i, c := range found.Candidates {
-		labels[i] = fmt.Sprintf("%s  %s  %.0f GB  %s", c.Path, c.Model, float64(c.Size)/1e9, c.Serial)
-	}
-	i, err := u.Select("Install to which disk?", labels, 0)
-	if err != nil {
-		return disk{}, err
-	}
-	return found.Candidates[i], nil
+	return found.pick("")
 }
 
-func (s *session) typed(d disk) error {
+func (s *session) consent(d disk) error {
+	if s.u.Yes() {
+		return errors.New("--yes cannot consent to erasing a disk; run dctl install without it")
+	}
 	s.u.Section("erase", d.Path)
 	s.u.KV("model", d.Model)
 	s.u.KV("size", fmt.Sprintf("%.0f GB", float64(d.Size)/1e9))
@@ -187,12 +178,12 @@ func (s *session) typed(d disk) error {
 		s.u.KV("wwn", d.WWN)
 	}
 	s.u.Warn("installing permanently erases %s and all its partitions and data", d.Path)
-	v, err := s.u.Text(fmt.Sprintf("Type %s to erase this disk:", d.Path), "")
+	ok, err := s.u.Confirm(fmt.Sprintf("Erase %s (%s, %.0f GB) and install?", d.Path, d.Model, float64(d.Size)/1e9))
 	if err != nil {
 		return err
 	}
-	if v != d.Path {
-		return errors.New("confirmation did not match the disk; nothing was written")
+	if !ok {
+		return errors.New("declined; nothing was written")
 	}
 	return nil
 }

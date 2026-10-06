@@ -10,8 +10,6 @@ import (
 
 const minSize int64 = 32 << 30
 
-var errAmbiguous = errors.New("more than one installable disk")
-
 type disk struct {
 	Path   string
 	Model  string
@@ -180,17 +178,21 @@ func (s survey) pick(path string) (disk, error) {
 		}
 		return disk{}, fmt.Errorf("no disk %s", path)
 	}
-	switch len(s.Candidates) {
-	case 0:
+	if len(s.Candidates) == 0 {
 		return disk{}, errors.New("no installable disk")
-	case 1:
+	}
+	nvme := slices.DeleteFunc(slices.Clone(s.Candidates), func(d disk) bool { return d.Tran != "nvme" })
+	switch {
+	case len(s.Candidates) == 1:
 		return s.Candidates[0], nil
+	case len(nvme) == 1:
+		return nvme[0], nil
 	}
 	paths := make([]string, len(s.Candidates))
 	for i, d := range s.Candidates {
 		paths[i] = d.Path
 	}
-	return disk{}, fmt.Errorf("%w: %s", errAmbiguous, strings.Join(paths, ", "))
+	return disk{}, fmt.Errorf("more than one installable disk: %s", strings.Join(paths, ", "))
 }
 
 func (d disk) recheck(lsblk []byte, boot string) error {

@@ -5,7 +5,7 @@ import "dotfiles/cmds/internal/dctl/porkbun"
 type CLI struct {
 	JSON  bool `help:"Emit JSON results where supported."`
 	Plain bool `help:"Disable colors and animation."`
-	Yes   bool `short:"y" help:"Accept yes/no confirmations; typed disk confirmations remain required."`
+	Yes   bool `short:"y" help:"Accept yes/no confirmations; never confirms erasing a disk."`
 
 	Install InstallCmd  `cmd:"" help:"Erase a whole disk and install this machine from the dctl ISO (root, live environment only)."`
 	Setup   SetupCmd    `cmd:"" help:"Apply setup stages that are pending, or redo named stages."`

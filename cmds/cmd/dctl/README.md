@@ -12,7 +12,7 @@ dctl <command> --help
 
 - `--json` emits structured results where supported.
 - `--plain` disables colors and animation.
-- `--yes` (`-y`) accepts yes/no confirmations, including release publishing, but leaves typed disk confirmations required.
+- `--yes` (`-y`) accepts yes/no confirmations, including release publishing, but never confirms erasing a disk.
 
 Bare `dctl` prints help.
 Streamed child output goes to stderr so JSON results can use stdout.
@@ -28,7 +28,8 @@ The command requires root, UEFI, and the dctl live ISO with its payload; it refu
 The account is fixed to `cullyn` and the hostname to `costello`.
 
 The target must be an unmounted, writable, non-removable, non-USB disk of at least 32 GiB, with a serial or WWN and 512- or 4096-byte logical sectors; the boot disk is refused.
-The installer shows the model, size, and identity, requires the exact disk path as confirmation, and rechecks the target before writing.
+The installer picks the only such disk, or the only NVMe disk among several, and aborts when no single disk qualifies.
+It shows the path, model, size, and identity, asks a default-no yes/no question that `--yes` cannot answer, and rechecks the target before writing.
 
 Installation uses bundled packages without network access and creates a 4 GiB ESP, LUKS2, and btrfs.
 The subvolumes are `@` for `/`, `@home` for `/home`, `@log` for `/var/log`, `@pkg` for `/var/cache/pacman/pkg`, and `@snapshots` for `/.snapshots`.
