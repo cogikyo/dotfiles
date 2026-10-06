@@ -24,8 +24,6 @@ func NewThreeBody(h *hypr.Client, s *state.State) *ThreeBody {
 	return &ThreeBody{hypr: h, state: s}
 }
 
-var threeBodyOrder = []string{"editor", "agents", "browser"}
-
 var chatBodies = map[string]config.ThreeBodyWindow{
 	"editor": {Class: "slack", Command: "slack"},
 	"agents": {Class: "grok-bot", Command: "gtk-launch grok-bot"},
@@ -40,7 +38,7 @@ func (tb *ThreeBody) Execute(name string) (string, error) {
 		return "", err
 	}
 	if name == "shadow" {
-		return tb.executeShadow(wsID)
+		return tb.Swap(wsID)
 	}
 
 	spec, ok := bodySpec(name, wsID)
@@ -63,25 +61,6 @@ func bodySpec(name string, wsID int) (config.ThreeBodyWindow, bool) {
 
 func ignoreBodyOnWorkspace(name string, wsID int) bool {
 	return wsID == musicWorkspace && (name == "editor" || name == "agents")
-}
-
-// WindowSpec is a flat view of a ThreeBody config entry for fallback iteration.
-type WindowSpec struct {
-	Name      string
-	Class     string
-	Title     string
-	LaunchCmd string
-}
-
-// executeShadow builds fallbacks from threeBodyOrder and delegates to Swap.
-func (tb *ThreeBody) executeShadow(wsID int) (string, error) {
-	var fallbacks []WindowSpec
-	for _, name := range threeBodyOrder {
-		if w, ok := bodySpec(name, wsID); ok {
-			fallbacks = append(fallbacks, WindowSpec{Name: name, Class: w.Class, Title: w.Title, LaunchCmd: w.Command})
-		}
-	}
-	return tb.Swap(wsID, fallbacks)
 }
 
 // RevealShadow swaps an address parked as a recorded three-body shadow into view.
@@ -124,8 +103,8 @@ func (tb *ThreeBody) RevealShadow(address string) (bool, error) {
 	return false, nil
 }
 
-// Swap rotates the hidden shadow into view, enrolling or launching a missing fallback as needed.
-func (tb *ThreeBody) Swap(wsID int, fallbacks []WindowSpec) (string, error) {
+// Swap rotates the hidden shadow into view, enrolling three tiled windows when no three-body exists.
+func (tb *ThreeBody) Swap(wsID int) (string, error) {
 	tbState := tb.state.GetThreeBody(wsID)
 	if tbState != nil {
 		return tb.swap(tbState, wsID)
@@ -135,46 +114,19 @@ func (tb *ThreeBody) Swap(wsID int, fallbacks []WindowSpec) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if len(tiled) == 3 {
-		slaves := windows.GetSlaves(tiled)
-		if len(slaves) == 2 {
-			if err := tb.hideShadow(slaves[1].Address); err != nil {
-				return "", fmt.Errorf("hide shadow: %w", err)
-			}
-			if err := tb.setFadeRules(tiled[0], slaves[0], slaves[1]); err != nil {
-				return "", err
-			}
-			tb.state.SetThreeBody(wsID, &state.ThreeBodyState{Master: tiled[0].Address, Active: slaves[0].Address, Shadow: slaves[1].Address})
-			return fmt.Sprintf("enrolled: master=%s active=%s shadow=%s", tiled[0].Address, slaves[0].Address, slaves[1].Address), nil
-		}
+	slaves := windows.GetSlaves(tiled)
+	if len(tiled) != 3 || len(slaves) != 2 {
+		return "no three-body", nil
 	}
 
-	if len(fallbacks) == 0 {
-		return "no three-body active and no fallbacks provided", nil
+	if err := tb.hideShadow(slaves[1].Address); err != nil {
+		return "", fmt.Errorf("hide shadow: %w", err)
 	}
-
-	clients, err := tb.hypr.Clients()
-	if err != nil {
+	if err := tb.setFadeRules(tiled[0], slaves[0], slaves[1]); err != nil {
 		return "", err
 	}
-	for _, fb := range fallbacks {
-		if ignoreBodyOnWorkspace(fb.Name, wsID) {
-			continue
-		}
-		found := false
-		for i := range clients {
-			c := &clients[i]
-			if c.Workspace.ID == wsID && windows.MatchesTarget(c, fb.Class, fb.Title) {
-				tb.clearLaunch(wsID, fb.Name)
-				found = true
-				break
-			}
-		}
-		if !found && fb.LaunchCmd != "" {
-			return tb.launch(wsID, fb.Name, fb.LaunchCmd, fmt.Sprintf("launched missing: %s %s", fb.Class, fb.Title))
-		}
-	}
-	return "all fallback windows already present but not enough tiled", nil
+	tb.state.SetThreeBody(wsID, &state.ThreeBodyState{Master: tiled[0].Address, Active: slaves[0].Address, Shadow: slaves[1].Address})
+	return fmt.Sprintf("enrolled: master=%s active=%s shadow=%s", tiled[0].Address, slaves[0].Address, slaves[1].Address), nil
 }
 
 // SwapMaster promotes the shadow into the master slot; the old master becomes the new shadow.
