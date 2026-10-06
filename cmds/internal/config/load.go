@@ -97,9 +97,9 @@ func warnMissing(cfg *HyprConfig) {
 		presets SplitPresets
 	}{{"normal", split.Normal}, {"share", split.Share}} {
 		for _, preset := range []struct{ name, ratio string }{
-			{"xs", mode.presets.XS},
+			{"narrow", mode.presets.Narrow},
 			{"default", mode.presets.Default},
-			{"lg", mode.presets.LG},
+			{"wide", mode.presets.Wide},
 		} {
 			if f, err := strconv.ParseFloat(preset.ratio, 64); err != nil || f <= 0 || f >= 1 {
 				fmt.Fprintf(os.Stderr, "hyprd: warning: windows.split.%s.%s %q is not a ratio in (0, 1)\n", mode.name, preset.name, preset.ratio)

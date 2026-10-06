@@ -60,9 +60,8 @@ Use a scratch build for build-only checks; `hyprd rebuild` changes the running d
 ```bash
 hyprd monocle                # float focused window in place and park tiled siblings
 hyprd float                  # toggle floating, centered at monocle size
-hyprd split                  # cycle split ratio: xs → default → lg
-hyprd split -d               # cycle split ratio like bare hyprd split
-hyprd split -x|-l            # set xs or lg ratio
+hyprd split wide             # toggle between the wide and default ratios
+hyprd split narrow           # toggle between the narrow and default ratios
 hyprd split default          # select the default ratio
 hyprd hide                   # move slave to special workspace
 hyprd swap                   # exchange master/slave positions

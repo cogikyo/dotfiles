@@ -81,9 +81,9 @@ type SplitConfig struct {
 
 // SplitPresets defines named master-slave split ratios (stringified floats 0-1).
 type SplitPresets struct {
-	XS      string `yaml:"xs"`
+	Narrow  string `yaml:"narrow"`
 	Default string `yaml:"default"`
-	LG      string `yaml:"lg"`
+	Wide    string `yaml:"wide"`
 }
 
 // Ratio resolves preset for the share mode; unknown presets resolve to "default".
@@ -93,10 +93,10 @@ func (c SplitConfig) Ratio(preset string, share bool) (name, mfact string) {
 		p = c.Share
 	}
 	switch preset {
-	case "xs":
-		return preset, p.XS
-	case "lg":
-		return preset, p.LG
+	case "narrow":
+		return preset, p.Narrow
+	case "wide":
+		return preset, p.Wide
 	}
 	return "default", p.Default
 }

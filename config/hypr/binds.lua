@@ -36,10 +36,11 @@ alt("R", "Browser", "hyprd three-body browser")
 alt("C", "Agents",  "hyprd three-body agents")
 alt("X", "Dismiss", "dunstctl close")
 
-super("Backspace",  "Toggle shadow",  "hyprd three-body shadow")
-super("Period",     "Swap master",    "hyprd swap")
-super("Return",     "Toggle monocle", "hyprd monocle")
-super("Comma",      "Cycle split",    "hyprd split")
+super("Backspace",     "Toggle shadow",  "hyprd three-body shadow")
+super("Period",        "Swap master",    "hyprd swap")
+super("Return",        "Toggle monocle", "hyprd monocle")
+super("Comma",         "Split narrow",   "hyprd split narrow")
+super("SHIFT + Comma", "Split wide",     "hyprd split wide")
 
 -- ├┤ editor tab focus ├───────────────────────────────────────────────────────────┤
 super("A", "Editor tab 0", "hyprd tab editor:0")

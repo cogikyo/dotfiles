@@ -22,7 +22,7 @@ func NewSplit(h *hypr.Client, s *state.State) *Split {
 	return &Split{hypr: h, state: s}
 }
 
-// Execute applies or cycles the split ratio: "xs"/"-x", "lg"/"-l", "default", "reapply"/"-r", or cycle.
+// Execute toggles "wide" or "narrow" against "default", or applies "default" or "reapply"/"-r".
 func (s *Split) Execute(flag string) (string, error) {
 	win, err := s.hypr.ActiveWindow()
 	if err != nil {
@@ -34,10 +34,11 @@ func (s *Split) Execute(flag string) (string, error) {
 
 	current := s.state.GetSplitRatio()
 	switch flag {
-	case "xs", "-x":
-		return s.Apply("xs")
-	case "lg", "-l":
-		return s.Apply("lg")
+	case "wide", "narrow":
+		if current == flag {
+			return s.Apply("default")
+		}
+		return s.Apply(flag)
 	case "default":
 		return s.Apply("default")
 	case "reapply", "-r":
@@ -48,7 +49,7 @@ func (s *Split) Execute(flag string) (string, error) {
 		windows.CenterCursor(s.hypr)
 		return result, nil
 	default:
-		return s.cycle(current)
+		return "", fmt.Errorf("usage: split {wide|narrow|default|reapply}")
 	}
 }
 
@@ -103,17 +104,4 @@ func (s *Split) Refresh() error {
 	}
 	_, err = s.Apply(want.Preset)
 	return err
-}
-
-func (s *Split) cycle(current string) (string, error) {
-	var next string
-	switch current {
-	case "xs":
-		next = "default"
-	case "default":
-		next = "lg"
-	default:
-		next = "xs"
-	}
-	return s.Apply(next)
 }
