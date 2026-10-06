@@ -28,7 +28,6 @@ export const names = {
     "Move window up": { name: "Move ↑" },
     "Move workspace down": { name: "Carry ↓", about: "Carries the window to the previous workspace, skipping music, and follows it." },
     "Move workspace up": { name: "Carry ↑", about: "Carries the window to the next workspace, skipping music, and follows it." },
-    "Privacy screen": { name: "Privacy", about: "Pseudolock: blanks the screen and pauses audio and notifications without authentication; Super+Q exits." },
     "Screen share mode": { name: "Share", about: "Share mode: changes gaps and ratios for screen sharing and hides notifications and widgets." },
     "Screenshot + annotate": { name: "Markup", about: "Captures a region, opens it in satty to annotate, then copies it." },
     "Screenshot to clipboard": { name: "Capture", about: "Captures a selected region to the clipboard." },
