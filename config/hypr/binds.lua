@@ -157,7 +157,12 @@ super("Print", "Screenshot + annotate",   "hyprd screenshot annotate")
 -- ╰───────────────────────────────────────────────────────────────────────────────╯
 
 super("Z",         "Lock screen",    "hyprd lock full")
-super("SHIFT + Z", "Wake displays",  [[sh -c 'hyprctl dispatch dpms off; sleep 1; hyprctl dispatch dpms on']])
+super("SHIFT + Z", "Wake displays", function()
+	hl.dispatch(hl.dsp.dpms({ action = "off" }))
+	hl.timer(function()
+		hl.dispatch(hl.dsp.dpms({ action = "on" }))
+	end, { timeout = 1000, type = "oneshot" })
+end)
 
 hl.define_submap("lockbarrier", function()
 	hl.bind("catchall", hl.dsp.no_op())
