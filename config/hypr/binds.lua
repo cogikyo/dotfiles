@@ -38,7 +38,7 @@ alt("X", "Dismiss", "dunstctl close")
 
 super("Backspace",  "Toggle shadow",  "hyprd three-body shadow")
 super("Period",     "Swap master",    "hyprd swap")
-super("apostrophe", "Toggle monocle", "hyprd monocle")
+super("Return",     "Toggle monocle", "hyprd monocle")
 super("Comma",      "Cycle split",    "hyprd split")
 
 -- ├┤ editor tab focus ├───────────────────────────────────────────────────────────┤
