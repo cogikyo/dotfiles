@@ -163,6 +163,9 @@ func choose(u *ui.UI, found survey, test *iso.Answers) (disk, error) {
 	for _, r := range found.Refused {
 		u.Info("skipping %s: %s", r.Disk.Path, r.Reason)
 	}
+	for _, c := range found.Candidates {
+		u.Info("installable %s: %s, %.0f GB, %s", c.Path, c.Model, float64(c.Size)/1e9, c.Tran)
+	}
 	return found.pick("")
 }
 
