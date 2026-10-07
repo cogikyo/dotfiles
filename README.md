@@ -176,6 +176,8 @@ sudo dctl keys luks
 ```
 
 Write the LUKS recovery key on paper when it is shown, and keep it away from the machine.
+Insert the YubiKey before boot; unlock asks for `LUKS2 token PIN` without touch and falls back to the passphrase or recovery key on token errors.
+For an older install, enable this fallback with the [LUKS unlock instructions](cmds/cmd/dctl/README.md#luks-unlock).
 
 1. Reboot, press F2, choose **Erase all Secure Boot Settings** to enter Setup Mode, and save with F10.
 2. Boot the installed system and run `sudo dctl setup secureboot`.

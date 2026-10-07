@@ -22,7 +22,7 @@ func (p plan) files() []file {
 }
 
 func (p plan) cmdline() string {
-	return fmt.Sprintf("rd.luks.name=%[1]s=%[2]s rd.luks.options=%[1]s=fido2-device=auto root=/dev/mapper/%[2]s rootflags=subvol=/%[3]s rw", p.LUKSID, mapper, rootfs.name)
+	return fmt.Sprintf("rd.luks.name=%[1]s=%[2]s root=/dev/mapper/%[2]s rootflags=subvol=/%[3]s rw", p.LUKSID, mapper, rootfs.name)
 }
 
 func (p plan) fstab() string {

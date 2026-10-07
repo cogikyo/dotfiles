@@ -129,12 +129,23 @@ The authenticator can be the VivoKey Apex Flex implant read by phone NFC, a Yubi
 
 At each boot, `sd-totp` prints `Boot TOTP <code> (Ns left)` on the console every 30 seconds until LUKS is unlocked.
 No TPM, no sealed secret, or changed PCRs produce `!!! NO BOOT TOTP: … !!!`; boot continues and the hook never delays unlock.
+Inspect `tpm2-totp` errors with `journalctl -b -u boot-totp`.
 If image creation cannot find `tpm2-totp` or its device library, it warns and omits the hook, so no boot code or warning appears.
 The code is advisory: compare it with the authenticator before entering the PIN or passphrase.
 
 `NO BOOT TOTP` is expected only before the first `dctl keys totp` or immediately after a change you made yourself: a BIOS/firmware update, turning Secure Boot off or on, or re-enrolling keys.
 In those cases, unlock, restore Secure Boot enforcement if needed, run `sudo dctl keys totp`, and replace the authenticator entry.
 At any other time, a missing or wrong code means **do not unlock**; stop and investigate.
+
+The cause of `Early TPM SRK Setup failed` is not known.
+Dctl uses no systemd TPM feature, and `tpm2-totp` creates its own primary, so this unit failure does not block LUKS unlock.
+Do not clear the TPM or mask the unit to hide the error; inspect it with:
+
+```sh
+journalctl -b -o cat -u systemd-tpm2-setup-early
+systemd-analyze has-tpm2
+tpm2_getcap properties-variable # check inLockout and lockoutCounter
+```
 
 ## Update
 
@@ -374,6 +385,13 @@ Use a plain TTY or clear terminal scrollback afterward so the enrollment secret 
 The LUKS header does not identify which YubiKey created a token.
 Inspect it with `sudo dctl keys status` and identify the slot manually before revoking it with `systemd-cryptenroll --wipe-slot`; retain a tested passphrase or recovery key.
 
+### LUKS unlock
+
+Insert the YubiKey before boot; unlock does not wait for a key inserted later.
+Systemd-cryptsetup uses the LUKS2 token plugin and asks once for `LUKS2 token PIN`, with no touch for tokens enrolled by `dctl keys luks`.
+Any token error falls back to the passphrase or recovery-key prompt.
+New installs omit `rd.luks.options=<uuid>=fido2-device=auto`; on an existing install, remove that option from `/etc/default/limine` and run `sudo limine-update` to enable this fallback.
+
 ## Porkbun DNS
 
 `dctl porkbun` is Linux-only and manages one explicit domain at a time through the [Porkbun v3 API](https://porkbun.com/llms/dns).
@@ -458,7 +476,8 @@ These checks require the Framework Desktop and real YubiKeys; the VM test does n
 - [ ] Confirm Boot TOTP matches the authenticator across two reboots to check PCR 0 stability.
 - [ ] Confirm `NO BOOT TOTP` appears with Secure Boot off, then re-enable Secure Boot and follow the [re-sealing procedure](#secure-boot).
 - [ ] Confirm the TOTP hook never delays LUKS unlock.
-- [ ] Boot and unlock LUKS with each of the two YubiKeys separately, with the PIN and no touch.
+- [ ] Insert each YubiKey separately before boot and unlock LUKS with one `LUKS2 token PIN` prompt and no touch.
+- [ ] Confirm a token error falls back to the passphrase or recovery-key prompt without a locked emergency shell.
 - [ ] Decrypt secrets with each YubiKey separately, without the other key or the age phrase.
 - [ ] Reject a wrong FIDO2 PIN and a wrong PIV PIN; cancel any age-phrase fallback and avoid repeated failures that can block the key.
 - [ ] Unlock LUKS with the recorded recovery key while both YubiKeys are removed.

@@ -18,7 +18,7 @@ build() {
         'until systemctl --quiet is-active cryptsetup.target; do' \
         '    step=$((EPOCHSECONDS / 30))' \
         '    if [[ $step != "$shown" ]]; then' \
-        '        if ! code=$(tpm2-totp -T device:/dev/tpmrm0 show 2>/dev/null); then' \
+        '        if ! code=$(tpm2-totp -T device:/dev/tpmrm0 show); then' \
         '            printf "\n!!! NO BOOT TOTP: no TPM, no sealed secret, or the firmware or Secure Boot state changed !!!\n\n"' \
         '            exit 0' \
         '        fi' \

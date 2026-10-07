@@ -162,8 +162,8 @@ func TestAgreement(t *testing.T) {
 	if cmdline["rd.luks.name"] != p.LUKSID+"="+mapper {
 		t.Errorf("rd.luks.name=%s, want %s=%s", cmdline["rd.luks.name"], p.LUKSID, mapper)
 	}
-	if !strings.HasPrefix(cmdline["rd.luks.options"], p.LUKSID+"=") {
-		t.Errorf("rd.luks.options=%s does not name LUKS UUID %s", cmdline["rd.luks.options"], p.LUKSID)
+	if v, ok := cmdline["rd.luks.options"]; ok {
+		t.Errorf("rd.luks.options=%s forces the FIDO2 path, which skips the passphrase fallback on token errors", v)
 	}
 	if cmdline["root"] != "/dev/mapper/"+mapper {
 		t.Errorf("root=%s, want /dev/mapper/%s", cmdline["root"], mapper)
