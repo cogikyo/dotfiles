@@ -21,13 +21,19 @@ type ISOCmd struct {
 	Release isoRelease `cmd:"" help:"Sign an ISO and publish it as a GitHub release."`
 }
 
-type isoBuild struct{}
+type isoBuild struct {
+	Fresh bool `help:"Discard the build cache in /var/cache/dctl-iso first."`
+}
 
-func (isoBuild) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
+func (c isoBuild) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 	if os.Geteuid() == 0 {
-		return iso.Build(ctx, u, root)
+		return iso.Build(ctx, u, root, c.Fresh)
 	}
-	return asRoot(ctx, u, root, "iso", "build")
+	args := []string{"iso", "build"}
+	if c.Fresh {
+		args = append(args, "--fresh")
+	}
+	return asRoot(ctx, u, root, args...)
 }
 
 // asRoot reruns dctl with args through sudo, continuing this output tree.
@@ -50,9 +56,10 @@ func asRoot(ctx context.Context, u *ui.UI, root paths.Root, args ...string) erro
 
 type isoTest struct {
 	ISO    string `arg:"" optional:"" help:"ISO to test (default: the newest built ISO)."`
-	Dctl   string `type:"existingfile" help:"dctl binary that replaces the ISO's."`
-	Bundle string `type:"existingfile" help:"git bundle that replaces the ISO's."`
+	Dctl   string `type:"existingfile" xor:"dctl" help:"dctl binary that replaces the ISO's."`
+	Bundle string `type:"existingfile" xor:"bundle" help:"git bundle that replaces the ISO's."`
 	Keep   bool   `help:"Keep the VM disk and firmware variables."`
+	Head   bool   `xor:"dctl,bundle" help:"Replace the ISO's dctl with one built from this checkout and its bundle with HEAD as master."`
 }
 
 func (c isoTest) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
@@ -63,7 +70,7 @@ func (c isoTest) Run(ctx context.Context, u *ui.UI, root paths.Root) error {
 		}
 		u.KV("iso", c.ISO)
 	}
-	return iso.Test(ctx, u, iso.TestOptions(c))
+	return iso.Test(ctx, u, root, iso.TestOptions(c))
 }
 
 type isoUSB struct {

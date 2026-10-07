@@ -227,6 +227,18 @@ It builds the Go commands and resolves base, AUR, and local recipes into the off
 `extra.lst` must exist but is excluded from the payload; install its entries online with `dctl setup extra`.
 AUR/local builds use a per-build PGP keyring populated from recipe `keys/pgp/*.asc`; any declared `.SRCINFO` `validpgpkeys` fingerprint absent from that keyring stops the build before compilation.
 
+Builds reuse `/var/cache/dctl-iso/` for the build chroot, downloaded recipe sources, built recipe packages, and official package downloads.
+The cached chroot is refreshed on each build.
+Recipe package keys use the AUR repo commit or local recipe tree, plus the direct runtime dependency versions in the refreshed chroot's package databases.
+A recipe whose runtime dependencies name another recipe stops the build.
+
+Use `dctl iso build --fresh` to get new upstream code for `-git` AUR recipes such as `mpvpaper-git`, or to replace a broken cache.
+Valid cache entries are reused until the AUR repo or runtime dependency inputs change; upstream commits alone do not trigger a rebuild.
+`--fresh` wipes the cache, so the first build after a wipe is a full build.
+
+Concurrent builds are refused.
+The final timing summary shows stage and recipe times, including recipe cache hits and misses.
+
 The ISO includes `/opt/dctl/payload`, `/opt/dctl/targets`, `/opt/dctl/dotfiles.bundle`, and prebuilt commands in `/usr/local/bin`; installation verifies the payload checksums.
 A payload or image above 2 GiB fails the release-size check; an oversized completed image is retained for local use but the command returns an error.
 
@@ -237,6 +249,13 @@ Use a normal account with KVM access, QEMU, dosfstools, mtools, and both `/usr/s
 ```sh
 dctl iso test [path/to/image.iso] [--keep]
 ```
+
+Use `dctl iso test --head` for the fast installer/setup loop; it requires Go and Git.
+`--head` builds dctl from the checkout, including uncommitted code changes, and bundles the committed HEAD as `master`.
+Uncommitted changes do not enter the bundle.
+`--head` cannot be combined with `--dctl` or `--bundle`.
+
+Package-list or ISO-profile changes still require `dctl iso build`; the package payload and live environment come from the ISO.
 
 The VM has no network interface and uses a 32 GiB disk, Setup Mode firmware variables, and a `DCTLTEST` answers drive.
 The harness installs, unlocks LUKS with a passphrase, boots twice, and requires `system`, `packages`, and `home` to be done, plus an active display manager.

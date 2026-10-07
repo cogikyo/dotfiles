@@ -14,13 +14,14 @@ import (
 	"time"
 
 	"dotfiles/cmds/internal/dctl/execx"
+	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/dctl/setup"
 	"dotfiles/cmds/internal/ui"
 )
 
 type TestOptions struct {
 	ISO, Dctl, Bundle string
-	Keep              bool
+	Keep, Head        bool
 }
 
 const (
@@ -49,14 +50,19 @@ type test struct {
 
 func (t *test) file(name string) string { return filepath.Join(t.dir, name) }
 
-func Test(ctx context.Context, u *ui.UI, o TestOptions) error {
+func Test(ctx context.Context, u *ui.UI, root paths.Root, o TestOptions) error {
 	dir, err := os.MkdirTemp("/var/tmp", "dctl-iso-test-")
 	if err != nil {
 		return err
 	}
 	u.KV("run", dir)
 	t := &test{u: u, dir: dir, iso: o.ISO, setup: map[string][]setup.Report{}}
-	err = t.run(ctx, o)
+	if o.Head {
+		err = t.head(ctx, root.Dotfiles, &o)
+	}
+	if err == nil {
+		err = t.run(ctx, o)
+	}
 	if t.install != nil {
 		u.Section("install phases", "")
 		for _, p := range t.install.Phases {
@@ -72,6 +78,52 @@ func Test(ctx context.Context, u *ui.UI, o TestOptions) error {
 		errs = append(errs, os.Remove(t.file("disk.qcow2")), os.Remove(t.file("vars.fd")))
 	}
 	return errors.Join(slices.DeleteFunc(errs, func(e error) bool { return errors.Is(e, os.ErrNotExist) })...)
+}
+
+func (t *test) head(ctx context.Context, repo string, o *TestOptions) error {
+	t.u.Section("head", "dctl and bundle from "+repo)
+	git := func(args ...string) (string, error) {
+		return execx.OSRunner{}.Output(ctx, "", "git", append([]string{"-C", repo}, args...)...)
+	}
+	rev, err := git("rev-parse", "HEAD")
+	if err != nil {
+		return err
+	}
+	subject, err := git("log", "-1", "--format=%s", rev)
+	if err != nil {
+		return err
+	}
+	status, err := git("status", "--porcelain")
+	if err != nil {
+		return err
+	}
+
+	o.Dctl = t.file("dctl")
+	build := append(gocmd(filepath.Join(repo, "cmds")), "-o", o.Dctl, "./cmd/dctl")
+	if err := cmd(ctx, build[0], build[1:]...); err != nil {
+		return err
+	}
+	t.u.KV("dctl", "worktree, including uncommitted changes")
+
+	bare := t.file("head.git")
+	o.Bundle = t.file("dotfiles.bundle")
+	for _, args := range [][]string{
+		{"git", "init", "--quiet", "--bare", bare},
+		{"git", "-C", bare, "fetch", "--quiet", "--depth=1", "file://" + repo, rev + ":refs/heads/master"},
+		{"git", "-C", bare, "bundle", "create", "--quiet", o.Bundle, "master"},
+	} {
+		if err := cmd(ctx, args[0], args[1:]...); err != nil {
+			return err
+		}
+	}
+	if err := os.RemoveAll(bare); err != nil {
+		return err
+	}
+	t.u.KV("bundle", fmt.Sprintf("%s %s (as master; commits only)", rev[:12], subject))
+	if status != "" {
+		t.u.Warn("worktree has %d uncommitted changes; dctl is built from the worktree including them, the bundle holds only committed HEAD", len(strings.Split(status, "\n")))
+	}
+	return nil
 }
 
 func (t *test) run(ctx context.Context, o TestOptions) error {

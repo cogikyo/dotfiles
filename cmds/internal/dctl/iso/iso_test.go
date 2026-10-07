@@ -5,7 +5,9 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"io"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -16,11 +18,11 @@ import (
 )
 
 func TestClosure(t *testing.T) {
-	pkgs, err := parseResolved("glibc glibc-2.42-1-x86_64.pkg.tar.zst\neww eww-0.6-1-x86_64.pkg.tar.zst\n")
+	pkgs, err := parseResolved("core glibc glibc-2.42-1-x86_64.pkg.tar.zst\ndctl eww eww-0.6-1-x86_64.pkg.tar.zst\n")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if pkgs[1] != (resolved{"eww", "eww-0.6-1-x86_64.pkg.tar.zst"}) {
+	if pkgs[1] != (resolved{Repo, "eww", "eww-0.6-1-x86_64.pkg.tar.zst"}) {
 		t.Fatalf("parsed %+v", pkgs[1])
 	}
 	if got := unresolved([]string{"eww", "glibc", "jack"}, pkgs); !slices.Equal(got, []string{"jack"}) {
@@ -180,6 +182,66 @@ func TestValidPGPKeys(t *testing.T) {
 	want := []string{"948F158A4E76A27BF3D07532DF42C170B34DBA77", "2B4A53F4F4C6B3E5BBA2C1E1E1F8C1A1B1C1D1E1"}
 	if fprs, err := validpgpkeys(recipe); err != nil || !slices.Equal(fprs, want) {
 		t.Fatalf("got %v, %v", fprs, err)
+	}
+}
+
+func TestRecipeCache(t *testing.T) {
+	store := t.TempDir()
+	entry := filepath.Join(store, "eww", "new")
+	for _, dir := range []string{entry, filepath.Join(store, "eww", "old"), filepath.Join(store, "gone", "k")} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if _, err := cached(t.Context(), entry); !errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("entry without %s: %v", Sums, err)
+	}
+	pkg := filepath.Join(entry, "eww-1-1-x86_64.pkg.tar.zst")
+	if err := os.WriteFile(pkg, []byte("eww"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := writeSums(t.Context(), entry); err != nil {
+		t.Fatal(err)
+	}
+	if files, err := cached(t.Context(), entry); err != nil || !slices.Equal(files, []string{pkg}) {
+		t.Fatalf("complete entry: %v, %v", files, err)
+	}
+	if err := os.WriteFile(pkg, []byte("EWW"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := cached(t.Context(), entry); err == nil || errors.Is(err, fs.ErrNotExist) {
+		t.Fatalf("corrupt entry: %v", err)
+	}
+	if err := prune(store, map[string]string{"eww": "new"}); err != nil {
+		t.Fatal(err)
+	}
+	left, _ := filepath.Glob(filepath.Join(store, "*", "*"))
+	if !slices.Equal(left, []string{entry}) {
+		t.Fatalf("after prune: %v", left)
+	}
+
+	r := srcinfo("pkgbase = s\n\tdepends = gtk3>=3.24\n\tmakedepends = rust\npkgname = s\n\tprovides = s-bin=1\npkgname = s-cli\n\tdepends = glibc\n\tdepends_x86_64 = sh\n")
+	if !slices.Equal(r.pkgnames, []string{"s", "s-cli"}) || !slices.Equal(r.provides, []string{"s-bin"}) || !slices.Equal(r.depends, []string{"glibc", "gtk3>=3.24", "sh"}) {
+		t.Fatalf("srcinfo = %+v", r)
+	}
+	info := "installed = gtk3-1:3.24.52-1-x86_64\ninstalled = glibc-2.42-1-x86_64\n"
+	if !slices.Equal(r.global, []string{"gtk3>=3.24"}) {
+		t.Fatalf("global depends = %v", r.global)
+	}
+	if err := drift(map[string]pin{"gtk3": {"1:3.24.52-1", true}, "glibc": {"2.42-1", true}, "sh-only": {"1-1", false}}, info); err != nil {
+		t.Fatalf("matching chroot: %v", err)
+	}
+	for _, p := range []map[string]pin{{"gtk3": {"1:3.24.53-1", false}}, {"jq": {"1.8-1", true}}} {
+		if err := drift(p, info); err == nil {
+			t.Fatalf("drifted chroot %v passed", p)
+		}
+	}
+	key := fingerprint("abc", []string{"repo gtk3 1:3.24.52-1", "repo glibc 2.42-1"})
+	if key != fingerprint("abc", []string{"repo glibc 2.42-1", "repo gtk3 1:3.24.52-1"}) {
+		t.Fatal("key depends on dependency order")
+	}
+	if key == fingerprint("abc", []string{"repo gtk3 1:3.24.53-1", "repo glibc 2.42-1"}) {
+		t.Fatal("a dependency version change kept the key")
 	}
 }
 

@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"dotfiles/cmds/internal/dctl/execx"
+	"dotfiles/cmds/internal/gobuild"
 )
 
 const MaxSize int64 = 2 << 30
@@ -66,7 +67,12 @@ func revision(ctx context.Context, run execx.Runner, dir string, as []string) (s
 	return git("rev-parse", "HEAD")
 }
 
+func gocmd(dir string) []string {
+	return slices.Concat([]string{"env", "GOENV=off", "GOTOOLCHAIN=local"}, gobuild.Env, []string{"go", "-C", dir, "build"}, gobuild.Flags)
+}
+
 type resolved struct {
+	Repo string
 	Name string
 	File string
 }
@@ -78,10 +84,10 @@ func parseResolved(out string) ([]resolved, error) {
 		if len(f) == 0 {
 			continue
 		}
-		if len(f) != 2 {
+		if len(f) != 3 {
 			return nil, fmt.Errorf("pacman -Sp: unexpected line %q", strings.TrimSpace(line))
 		}
-		pkgs = append(pkgs, resolved{Name: f[0], File: f[1]})
+		pkgs = append(pkgs, resolved{Repo: f[0], Name: f[1], File: f[2]})
 	}
 	return pkgs, nil
 }
