@@ -30,7 +30,7 @@ func Stage(u *ui.UI, r paths.Root, run execx.Runner) setup.Stage {
 			if err != nil || len(missing) == 0 {
 				return err
 			}
-			return fmt.Errorf("not in NetworkManager: %s", strings.Join(missing, ", "))
+			return setup.Manual("skipped: %s not in NetworkManager; run `dctl setup vpn` to import it with its password and PSK", strings.Join(missing, ", "))
 		},
 		Fix: func(ctx context.Context) (err error) {
 			conns, missing, err := absent(ctx, r, run)

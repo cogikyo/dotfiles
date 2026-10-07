@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -18,8 +19,9 @@ type Runner interface {
 }
 
 type OSRunner struct {
-	Group bool
-	Stdin []byte
+	Group     bool
+	Interrupt bool
+	Stdin     []byte
 	// Frame, when set, draws rules around streamed child output; it returns the closing call.
 	Frame func() func()
 }
@@ -40,9 +42,19 @@ func Reap(ctx context.Context, cmd *exec.Cmd) error {
 	return err
 }
 
-// Run streams both child output streams to stderr so JSON results can use stdout.
+type logKey struct{}
+
+func Logged(ctx context.Context, w io.Writer) context.Context {
+	return context.WithValue(ctx, logKey{}, w)
+}
+
+// Run streams both child output streams to stderr so JSON results can use stdout, or to the writer set by Logged.
 func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...string) error {
 	cmd := r.command(ctx, dir, name, args)
+	if w, ok := ctx.Value(logKey{}).(io.Writer); ok {
+		cmd.Stdout, cmd.Stderr = w, w
+		return failed(cmd.Run(), name, args, "")
+	}
 	if cmd.Stdin == nil && !r.Group {
 		cmd.Stdin = os.Stdin
 	}
@@ -51,7 +63,7 @@ func (r OSRunner) Run(ctx context.Context, dir string, name string, args ...stri
 	if r.Frame != nil {
 		defer r.Frame()()
 	}
-	return failed(Reap(ctx, cmd), name, args, "")
+	return failed(r.wait(ctx, cmd), name, args, "")
 }
 
 // Output returns trimmed stdout even on failure; errors wrap the cause and include up to 20 trailing stderr lines.
@@ -60,13 +72,19 @@ func (r OSRunner) Output(ctx context.Context, dir string, name string, args ...s
 	cmd := r.command(ctx, dir, name, args)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	err := failed(Reap(ctx, cmd), name, args, stderr.String())
+	err := failed(r.wait(ctx, cmd), name, args, stderr.String())
 	return strings.TrimSpace(stdout.String()), err
 }
 
 func (r OSRunner) command(ctx context.Context, dir string, name string, args []string) *exec.Cmd {
 	cmd := exec.CommandContext(ctx, name, args...)
-	if r.Group {
+	switch {
+	case ctx.Value(logKey{}) != nil:
+		cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+		cmd.Cancel = func() error { return syscall.Kill(-cmd.Process.Pid, syscall.SIGINT) }
+	case r.Interrupt:
+		cmd.Cancel = func() error { return cmd.Process.Signal(syscall.SIGINT) }
+	case r.Group:
 		cmd = Grouped(ctx, append([]string{name}, args...))
 	}
 	cmd.Dir = dir
@@ -74,6 +92,13 @@ func (r OSRunner) command(ctx context.Context, dir string, name string, args []s
 		cmd.Stdin = bytes.NewReader(r.Stdin)
 	}
 	return cmd
+}
+
+func (r OSRunner) wait(ctx context.Context, cmd *exec.Cmd) error {
+	if r.Interrupt || ctx.Value(logKey{}) != nil {
+		return cmd.Run()
+	}
+	return Reap(ctx, cmd)
 }
 
 func failed(err error, name string, args []string, stderr string) error {

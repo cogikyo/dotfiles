@@ -17,7 +17,10 @@ import (
 	"dotfiles/cmds/internal/dctl/setup"
 )
 
-var dirs = []string{"downloads", "documents", "media/screenshots", "media/recordings", "media/images", "media/gifs", "agents"}
+var (
+	dirs  = []string{"downloads", "documents", "media/screenshots", "media/recordings", "media/images", "media/gifs", "agents"}
+	fonts = []string{"Vagari", "Symbols Nerd Font Mono"}
+)
 
 func Stage(r paths.Root, run execx.Runner) setup.Stage {
 	sshDir := filepath.Join(r.Home, ".ssh")
@@ -42,6 +45,25 @@ func Stage(r paths.Root, run execx.Runner) setup.Stage {
 	zoom := filepath.Join(r.Home, ".config", "zoomus.conf")
 	return setup.Stage{Name: "home", Items: slices.Concat(obs(r), []setup.Item{
 		linkCheck("home-links", r.Dotfiles, "", func() ([]link, error) { return links(r) }),
+		{
+			Name: "home-fonts",
+			Check: func(ctx context.Context) error {
+				var gone []string
+				for _, family := range fonts {
+					if _, err := run.Output(ctx, "", "fc-list", "-q", family); err != nil {
+						gone = append(gone, family)
+					}
+				}
+				if len(gone) > 0 {
+					return fmt.Errorf("kitty fonts do not resolve: %s", strings.Join(gone, ", "))
+				}
+				return nil
+			},
+			Fix: func(ctx context.Context) error {
+				_, err := run.Output(ctx, "", "fc-cache")
+				return err
+			},
+		},
 		keys,
 		{
 			Name: "home-dirs",

@@ -120,14 +120,6 @@ func TestLaterStageSeesEarlierApply(t *testing.T) {
 	}
 }
 
-func TestAskNeedsTerminal(t *testing.T) {
-	p := &probe{cures: true}
-	_, err := Run(context.Background(), quiet(false), []Stage{{Name: "a", Items: []Item{p.item("x")}}}, Ask)
-	if !errors.Is(err, ui.ErrNoTTY) || p.fixes != 0 {
-		t.Fatalf("err %v, fixes %d", err, p.fixes)
-	}
-}
-
 func TestSelect(t *testing.T) {
 	p := &probe{}
 	all := []Stage{{Name: "a", Items: []Item{p.item("x")}}, {Name: "b", Items: []Item{p.item("y")}}}
@@ -142,7 +134,7 @@ func TestSelect(t *testing.T) {
 
 func TestIncomplete(t *testing.T) {
 	reports := func(s State) []Report {
-		return []Report{{State: Done, Items: []Result{{State: Done}, {State: ManualState}, {State: Unknown}}}, {State: s, Items: []Result{{State: s}}}}
+		return []Report{{State: ManualState, Items: []Result{{State: Done}, {State: ManualState}}}, {State: s, Items: []Result{{State: s}}}}
 	}
 	for _, tc := range []struct {
 		state State
@@ -150,10 +142,13 @@ func TestIncomplete(t *testing.T) {
 		want  bool
 	}{
 		{Done, Status, false},
+		{Done, All, false},
 		{Pending, Status, true},
 		{Failed, Status, true},
-		{Pending, Ask, false},
-		{Pending, All, false},
+		{Unknown, Status, false},
+		{Pending, Ask, true},
+		{Unknown, Ask, true},
+		{Unknown, Force, true},
 		{Failed, Ask, true},
 		{Failed, Force, true},
 	} {

@@ -33,14 +33,22 @@ func Steps(u *ui.UI, root paths.Root, run execx.Runner, all bool, only []string)
 			Name: "pacman",
 			Plan: "official repos via sudo pacman -Syu",
 			Run: func(ctx context.Context) error {
-				return run.Run(ctx, "", "sudo", noconfirm("pacman", "-Syu")...)
+				return run.Run(ctx, "", "sudo", slices.Concat([]string{"pacman"}, packages.Upgrade(all))...)
 			},
 		},
 		{
 			Name: "aur",
-			Plan: "AUR packages via yay -Sua",
+			Plan: "AUR packages via yay -Sua, except packages/ recipes",
 			Run: func(ctx context.Context) error {
-				return run.Run(ctx, "", "yay", noconfirm("-Sua")...)
+				l, err := packages.Load(root.Packages())
+				if err != nil {
+					return err
+				}
+				args := []string{"-Sua"}
+				if len(l.Local) > 0 {
+					args = append(args, "--ignore", strings.Join(l.Local, ","))
+				}
+				return run.Run(ctx, "", "yay", noconfirm(args...)...)
 			},
 		},
 		{

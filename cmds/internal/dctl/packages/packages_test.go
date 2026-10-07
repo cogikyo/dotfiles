@@ -86,7 +86,7 @@ func TestMissing(t *testing.T) {
 	if err := Stage(dir, run).Items[0].Fix(context.Background()); err == nil || !strings.Contains(err.Error(), "limine-snapper-sync") {
 		t.Fatalf("fix err %v, want blocked on limine-snapper-sync", err)
 	}
-	if last := run.calls[len(run.calls)-1]; last != "pacman -S --needed --noconfirm mesa zsh" {
+	if last := run.calls[len(run.calls)-1]; last != "pacman -Syu --noconfirm --needed mesa zsh" {
 		t.Fatalf("fix ran %q", last)
 	}
 }
@@ -103,13 +103,14 @@ func TestExtraInstallsOfficialBeforeAUR(t *testing.T) {
 	}
 	var installs []string
 	for _, call := range run.calls {
-		if strings.HasPrefix(call, "yay ") {
+		if strings.HasPrefix(call, "yay ") || strings.HasPrefix(call, "sudo ") {
 			installs = append(installs, call)
 		}
 	}
 	want := []string{
-		"yay -S --needed --noconfirm --repo base-devel docker",
-		"yay -S --needed --noconfirm --aur lazydocker spotify",
+		"sudo -n pacman -Syu --noconfirm",
+		"yay -S --needed --noconfirm --sudoflags=-n --answerclean None --answerdiff None --answeredit None --repo base-devel docker",
+		"yay -S --needed --noconfirm --sudoflags=-n --answerclean None --answerdiff None --answeredit None --aur lazydocker spotify",
 	}
 	if !slices.Equal(installs, want) {
 		t.Fatalf("installs %q, want %q", installs, want)
@@ -120,12 +121,13 @@ func TestUnsynced(t *testing.T) {
 	useSync(t, false)
 	dir := lists(t, map[string]string{"base.lst": "zsh\n", "aur.lst": "", "extra.lst": "htop\n"})
 	run := &fake{}
-	for _, fix := range []func(context.Context) error{Stage(dir, run).Items[0].Fix, Extra(dir, run).Items[0].Fix} {
-		if err := fix(context.Background()); err == nil || !strings.Contains(err.Error(), "dctl update") {
-			t.Fatalf("fix err %v, want blocked on dctl update", err)
-		}
+	if err := install(context.Background(), run, []string{"htop"}); err == nil || !strings.Contains(err.Error(), "dctl update pacman") {
+		t.Fatalf("install err %v, want blocked on dctl update pacman", err)
 	}
-	if !slices.Equal(run.calls, []string{"pacman -Qq", "pacman -Qq"}) {
-		t.Fatalf("calls %q, want only pacman -Qq", run.calls)
+	if err := Stage(dir, run).Items[0].Fix(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if want := []string{"pacman -Qq", "pacman -Syu --noconfirm --needed zsh"}; !slices.Equal(run.calls, want) {
+		t.Fatalf("calls %q, want %q", run.calls, want)
 	}
 }

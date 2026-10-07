@@ -71,7 +71,7 @@ func fill(ctx context.Context, u *ui.UI, run execx.Runner, l Lists, missing []st
 	}
 	local := set(slices.Values(l.Local))
 	if names := absent(picked, local); len(names) > 0 {
-		if err := install(ctx, run, names); err != nil {
+		if err := install(ctx, run, names, "--sudoloop"); err != nil {
 			return err
 		}
 	}

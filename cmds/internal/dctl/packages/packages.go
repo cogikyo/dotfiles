@@ -72,8 +72,19 @@ func unique(names []string) []string {
 	return slices.Compact(out)
 }
 
+func Upgrade(noconfirm bool, names ...string) []string {
+	args := []string{"-Syu"}
+	if noconfirm {
+		args = append(args, "--noconfirm")
+	}
+	if len(names) > 0 {
+		args = append(append(args, "--needed"), names...)
+	}
+	return args
+}
+
 func Stage(dir string, run execx.Runner) setup.Stage {
-	return setup.Stage{Name: "packages", Root: true, Items: []setup.Item{{
+	return setup.Stage{Name: "packages", Root: true, Online: true, Items: []setup.Item{{
 		Name: "packages-installed",
 		Check: func(ctx context.Context) error {
 			official, other, err := missing(ctx, dir, run)
@@ -92,10 +103,7 @@ func Stage(dir string, run execx.Runner) setup.Stage {
 				return err
 			}
 			if len(official) > 0 {
-				if err := synced(); err != nil {
-					return err
-				}
-				if err := run.Run(ctx, "", "pacman", append([]string{"-S", "--needed", "--noconfirm"}, official...)...); err != nil {
+				if err := run.Run(ctx, "", "pacman", Upgrade(true, official...)...); err != nil {
 					return err
 				}
 			}
@@ -124,7 +132,7 @@ var coreDB = "/var/lib/pacman/sync/core.db"
 func synced() error {
 	_, err := os.Stat(coreDB)
 	if errors.Is(err, fs.ErrNotExist) {
-		return setup.Manual("no official sync databases (%s missing); run `dctl update` as your user first", coreDB)
+		return fmt.Errorf("no official sync databases (%s missing); run `dctl update pacman`", coreDB)
 	}
 	return err
 }

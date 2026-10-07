@@ -161,8 +161,10 @@ dctl setup
 git -C ~/dotfiles fetch --unshallow
 ```
 
-Setup asks before each stage and asks for sudo once.
-It installs `packages/extra.lst` online and asks for the YubiKey PIN to decrypt the SSH keys.
+Setup shows one plan, asks once to apply pending stages, and uses sudo for root work.
+It installs missing `packages/extra.lst` entries in the background and asks for the YubiKey PIN to decrypt the SSH keys.
+The first Ctrl+C stops new stages and waits for the background package work to finish; a second press sends SIGINT.
+Missing work VPN connections are deferred; import them later with `dctl setup vpn`.
 When an SSH key is first used, the keyring asks for its passphrase; choose the option to unlock it automatically at login.
 If setup reports a missing Firefox profile, start Firefox once and run `dctl setup firefox certs`.
 

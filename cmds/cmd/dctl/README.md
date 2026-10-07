@@ -67,44 +67,58 @@ dctl setup --all
 dctl --json setup --status
 ```
 
-Run as your normal user; selected root stages run first in one sudo child, then user stages run in your session.
+Run as your normal user; stages run in catalog order, regardless of the order of names on the command line.
+Consecutive root stages share one sudo child; user stages run in your session.
 User stages refuse root execution.
-Each batch keeps catalog order regardless of the order of names on the command line.
 
-- No names: check stages and ask `[Y/n]` for each pending stage; Enter applies it.
-- Named stages: reapply their items, including items that already look done.
-- `--all` or global `--yes`: apply pending stages without the stage prompt.
+- No names: show one plan and ask once before applying pending stages.
+- Named stages: reapply their items without a setup confirmation, including items that already look done.
+- `--all` or global `--yes`: show the plan and apply pending stages without asking.
 - `--status`: check without changing anything and return nonzero for pending or failed items.
 
-Applied items are checked again, and apply modes return nonzero for failures but permit skipped pending work.
-`manual` means outside action is needed, and refused sudo leaves root items `unknown`; neither state alone fails the status check, so inspect the items rather than only the exit code.
+Applied items are checked again.
+A successful apply run reports `setup complete`, or `setup complete with deferred` when only manual work remains.
+Failures report `setup failed`; unresolved pending or unknown items also fail an apply run.
+Sudo refusal marks root stages failed with `sudo refused; nothing applied as root`; a status-only run leaves them `unknown`.
+Manual and unknown items alone do not fail the status check, so inspect their details.
+Cancellation exits 130.
 JSON results are an array of stages with `stage`, `state`, and `items`; each item has `item`, `state`, and optional `detail`.
 
 ### Stages and prerequisites
 
-Root execution order is `system`, `packages`, `tailscale`, `keys`, `secureboot`.
-User execution order is `home`, `extra`, `secrets`, `repos`, `firefox`, `certs`, `vpn`.
+Catalog order is execution order:
 
 - `system` copies `system/`, enables preset-listed system units without starting them, and links the systemd-resolved stub (root).
-- `packages` checks base, AUR, and local payload names and installs missing official packages (root).
+- `tailscale` enables Tailscale SSH and logs in if needed (root, online).
+- `packages` checks base, AUR, and local payload names and installs missing official packages (root, online).
 - `home` links config, fonts, public SSH keys, desktop entries, and user units, creates directories, and seeds app settings.
-- `extra` installs missing `packages/extra.lst` entries online through yay and enables Docker's socket without starting it.
+- `extra` installs missing `packages/extra.lst` entries online in the background and enables Docker's socket without starting it.
 - `secrets` restores missing non-staged targets and corrects their modes.
-- `repos` clones missing catalog repositories over GitHub SSH.
+- `repos` clones missing catalog repositories over GitHub SSH (online).
 - `firefox` links customization into the Developer Edition profile and needs the CSS repository from `repos`.
 - `certs` provisions mkcert's CA and leaf certificate and checks system and Firefox trust.
-- `vpn` decrypts profiles for missing connections, imports them with `hyprd vpn install`, and removes newly staged plaintext even after failure.
-- `tailscale` enables Tailscale SSH and logs in if needed (root).
+- `vpn` defers missing connections unless named with `dctl setup vpn`, which decrypts and imports profiles and removes newly staged plaintext even after failure.
 - `keys` adds a LUKS FIDO2 token and recovery key if missing, but does not provision YubiKey identities (root).
 - `secureboot` enrolls keys in Setup Mode or repairs signatures using enrolled keys (root).
 
-Use Ethernet for online stages and launch Firefox Developer Edition once if `firefox` or `certs` reports a missing profile or NSS database.
+Setup checks Ethernet carrier and DNS for `archlinux.org`, `aur.archlinux.org`, and `github.com` once, just before the first pending online stage.
+If the check fails, it prints one action line, marks remaining pending online stages `failed` with `needs network`, and exits 1 after running offline stages such as `secrets`.
+Launch Firefox Developer Edition once if `firefox` or `certs` reports a missing profile or NSS database.
 After applying Firefox customization, restart Firefox.
 
-`setup packages` installs all missing official packages with `pacman -S --needed --noconfirm`; it has no package checklist.
+`setup packages` installs missing official packages with `pacman -Syu --noconfirm --needed`, so installation includes a full upgrade rather than a partial upgrade.
+It has no package checklist and does no upgrade when no official packages are missing.
 Install missing AUR names with `yay -S` and local recipes with `makepkg -si` in `packages/<name>`.
-If `/var/lib/pacman/sync/core.db` is missing, run `dctl update pacman` as your user before installing newly listed packages.
 There is no offline flag; package selection belongs to [Update package reconciliation](#package-reconciliation).
+
+When extra packages are missing, `extra` runs a full `pacman -Syu` before installing them through yay.
+It validates sudo before starting, keeps the credential active, and uses non-interactive sudo (`-n`) in the background.
+Output goes to `~/.local/state/dctl/extra.log`; failures show the last 20 log lines.
+Setup waits for `extra` before later root work, before `certs`, and at the end.
+The first Ctrl+C stops scheduling and waits for `extra` to finish safely; a second press sends SIGINT.
+Setup never sends SIGTERM or SIGKILL to pacman.
+
+The `home-fonts` item checks that `fc-list` finds Vagari and Symbols Nerd Font Mono and runs `fc-cache` if either is missing.
 
 The mkinitcpio `HOOKS` live in the system overlay at `system/etc/mkinitcpio.conf.d/dotfiles.conf`, not in installer-generated files.
 After changing the HOOKS file or the `sd-totp` hook, run `sudo limine-update`; kernel updates and `dctl setup secureboot` also rebuild the images.
@@ -167,7 +181,7 @@ It never installs or removes package-list drift.
 Steps run in this order:
 
 1. `pacman`: run `sudo pacman -Syu` for official repositories.
-2. `aur`: run `yay -Sua` for installed AUR packages.
+2. `aur`: run `yay -Sua --ignore <local recipe names>` for installed AUR packages, leaving local recipes to `cmd`.
 3. `packages`: reconcile installed packages with the lists and local recipes.
 4. `repos`: fast-forward eligible catalog checkouts, excluding dotfiles.
 5. `cmd`: build dotfiles commands and rebuild installed local recipes with different PKGBUILD versions.

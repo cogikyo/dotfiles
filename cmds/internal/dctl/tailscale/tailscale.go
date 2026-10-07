@@ -17,7 +17,7 @@ type state struct {
 }
 
 func Stage(run execx.Runner) setup.Stage {
-	return setup.Stage{Name: "tailscale", Root: true, Items: []setup.Item{{
+	return setup.Stage{Name: "tailscale", Root: true, Online: true, Items: []setup.Item{{
 		Name: "tailscale-ssh",
 		Check: func(ctx context.Context) error {
 			s, err := read(ctx, run)

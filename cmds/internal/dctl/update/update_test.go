@@ -75,13 +75,23 @@ func TestSteps(t *testing.T) {
 }
 
 func TestNoconfirm(t *testing.T) {
+	root := paths.Root{Dotfiles: t.TempDir()}
+	for _, rel := range []string{"base.lst", "aur.lst", "extra.lst", "eww/PKGBUILD", "yubikey-tools/PKGBUILD"} {
+		path := root.Packages(rel)
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, nil, 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
 	for _, all := range []bool{false, true} {
 		f := &fake{t: t}
-		steps, _ := Select(Steps(quiet(), paths.Root{}, f, all, nil), []string{"aur"})
+		steps, _ := Select(Steps(quiet(), root, f, all, nil), []string{"aur"})
 		if err := steps[0].Run(t.Context()); err != nil {
 			t.Fatal(err)
 		}
-		if want := map[bool]string{false: "yay -Sua", true: "yay -Sua --noconfirm"}[all]; f.calls[0] != want {
+		if want := map[bool]string{false: "yay -Sua --ignore eww,yubikey-tools", true: "yay -Sua --ignore eww,yubikey-tools --noconfirm"}[all]; f.calls[0] != want {
 			t.Errorf("all=%v: %q, want %q", all, f.calls[0], want)
 		}
 	}

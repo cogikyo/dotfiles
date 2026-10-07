@@ -3,6 +3,7 @@ package packages
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"dotfiles/cmds/internal/dctl/execx"
@@ -21,7 +22,7 @@ func Extra(dir string, run execx.Runner) setup.Stage {
 		}
 		return absent(l.Extra, have), nil
 	}
-	return setup.Stage{Name: "extra", Items: []setup.Item{
+	return setup.Stage{Name: "extra", Online: true, Background: true, Items: []setup.Item{
 		{
 			Name: "extra-installed",
 			Check: func(ctx context.Context) error {
@@ -36,7 +37,10 @@ func Extra(dir string, run execx.Runner) setup.Stage {
 				if err != nil || len(names) == 0 {
 					return err
 				}
-				return install(ctx, run, names)
+				if err := run.Run(ctx, "", "sudo", slices.Concat([]string{"-n", "pacman"}, Upgrade(true))...); err != nil {
+					return err
+				}
+				return install(ctx, run, names, "--sudoflags=-n")
 			},
 		},
 		{
@@ -54,13 +58,13 @@ func Extra(dir string, run execx.Runner) setup.Stage {
 				return fmt.Errorf("docker.socket is %s", state)
 			},
 			Fix: func(ctx context.Context) error {
-				return run.Run(ctx, "", "sudo", "systemctl", "enable", "docker.socket")
+				return run.Run(ctx, "", "sudo", "-n", "systemctl", "enable", "docker.socket")
 			},
 		},
 	}}
 }
 
-func install(ctx context.Context, run execx.Runner, names []string) error {
+func install(ctx context.Context, run execx.Runner, names []string, sudo ...string) error {
 	if err := synced(); err != nil {
 		return err
 	}
@@ -84,7 +88,7 @@ func install(ctx context.Context, run execx.Runner, names []string) error {
 		if len(step.names) == 0 {
 			continue
 		}
-		args := append([]string{"-S", "--needed", "--noconfirm", step.flag}, step.names...)
+		args := slices.Concat([]string{"-S", "--needed", "--noconfirm"}, sudo, []string{"--answerclean", "None", "--answerdiff", "None", "--answeredit", "None", step.flag}, step.names)
 		if err := run.Run(ctx, "", "yay", args...); err != nil {
 			return err
 		}

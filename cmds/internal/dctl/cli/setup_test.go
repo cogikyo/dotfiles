@@ -19,10 +19,10 @@ func TestCatalog(t *testing.T) {
 			root = append(root, s.Name)
 		}
 	}
-	if want := []string{"system", "packages", "home", "extra", "secrets", "repos", "firefox", "certs", "vpn", "tailscale", "keys", "secureboot"}; !slices.Equal(names, want) {
+	if want := []string{"system", "tailscale", "packages", "home", "extra", "secrets", "repos", "firefox", "certs", "vpn", "keys", "secureboot"}; !slices.Equal(names, want) {
 		t.Errorf("stages %v, want %v", names, want)
 	}
-	if want := []string{"system", "packages", "tailscale", "keys", "secureboot"}; !slices.Equal(root, want) {
+	if want := []string{"system", "tailscale", "packages", "keys", "secureboot"}; !slices.Equal(root, want) {
 		t.Errorf("root stages %v, want %v", root, want)
 	}
 }
@@ -52,8 +52,8 @@ func TestMode(t *testing.T) {
 
 func TestBatch(t *testing.T) {
 	stages := []setup.Stage{{Name: "system", Root: true}, {Name: "keys", Root: true}}
-	argv := batch("/home/cullyn/.local/bin/dctl", "/home/cullyn/dotfiles", nil, globals(ui.New(ui.Options{JSON: true, Yes: true})), setup.All, stages)
-	want := []string{"sudo", "env", "DOTFILES=/home/cullyn/dotfiles", "/home/cullyn/.local/bin/dctl", "--json", "--yes", "setup", "--batch=all", "system", "keys"}
+	argv := batch("/home/cullyn/.local/bin/dctl", "/home/cullyn/dotfiles", nil, globals(ui.New(ui.Options{JSON: true, Yes: true})), setup.All, "/tmp/dctl-setup-1.json", stages)
+	want := []string{"sudo", "env", "DOTFILES=/home/cullyn/dotfiles", "/home/cullyn/.local/bin/dctl", "--json", "--yes", "setup", "--batch=all", "--report=/tmp/dctl-setup-1.json", "system", "keys"}
 	if !slices.Equal(argv, want) {
 		t.Fatalf("argv %q, want %q", argv, want)
 	}
@@ -67,7 +67,7 @@ func TestBatch(t *testing.T) {
 		t.Fatal(err)
 	}
 	mode, err := c.Setup.mode(ui.New(ui.Options{}))
-	if ctx.Command() != "setup <stages>" || !c.JSON || !c.Yes || mode != setup.All || !slices.Equal(c.Setup.Stages, []string{"system", "keys"}) {
+	if ctx.Command() != "setup <stages>" || !c.JSON || !c.Yes || mode != setup.All || c.Setup.Report != "/tmp/dctl-setup-1.json" || !slices.Equal(c.Setup.Stages, []string{"system", "keys"}) {
 		t.Fatalf("child parsed %q: %+v, mode %s %v", ctx.Command(), c, mode, err)
 	}
 }

@@ -18,9 +18,12 @@ type Item struct {
 }
 
 type Stage struct {
-	Name  string
-	Root  bool
-	Items []Item
+	Name       string
+	Root       bool
+	Online     bool
+	Background bool
+	Sudo       bool
+	Items      []Item
 }
 
 type State string
@@ -87,64 +90,30 @@ func Select(all []Stage, names []string) ([]Stage, error) {
 
 func Run(ctx context.Context, u *ui.UI, stages []Stage, mode Mode) ([]Report, error) {
 	reports := make([]Report, 0, len(stages))
-	if mode == Force {
-		for _, s := range stages {
-			if err := ctx.Err(); err != nil {
-				return reports, err
-			}
-			u.Section(s.Name, "")
-			r, err := s.apply(ctx, true)
-			show(u, r)
-			reports = append(reports, r)
-			if err != nil {
-				return reports, err
-			}
-		}
-		return reports, ctx.Err()
-	}
 	for _, s := range stages {
 		if err := ctx.Err(); err != nil {
 			return reports, err
 		}
-		r := s.evaluate(ctx)
-		if mode == Status || r.State != Pending {
-			list(u, r)
-		}
-		reports = append(reports, r)
-	}
-	if mode == Status {
-		return reports, ctx.Err()
-	}
-	applied := false
-	for i, s := range stages {
-		if err := ctx.Err(); err != nil {
-			return reports, err
-		}
-		listed := reports[i].State != Pending
-		if applied {
-			// An earlier stage can remove a manual prerequisite, such as repos before Firefox.
-			reports[i] = s.evaluate(ctx)
-		}
-		if reports[i].State != Pending {
-			if !listed {
-				list(u, reports[i])
-			}
-			continue
-		}
-		list(u, reports[i])
-		if mode == Ask {
-			ok, err := u.Proceed(fmt.Sprintf("Apply %s?", s.Name))
+		if mode == Force {
+			r, err := s.Apply(ctx, true)
+			Show(u, r)
+			reports = append(reports, r)
 			if err != nil {
 				return reports, err
 			}
-			if !ok {
-				continue
-			}
+			continue
 		}
-		var err error
-		reports[i], err = s.apply(ctx, false)
-		applied = true
-		show(u, reports[i])
+		r := s.Evaluate(ctx)
+		if mode == Status || r.State != Pending {
+			if mode == Status {
+				Show(u, r)
+			}
+			reports = append(reports, r)
+			continue
+		}
+		r, err := s.Apply(ctx, false)
+		Show(u, r)
+		reports = append(reports, r)
 		if err != nil {
 			return reports, err
 		}
@@ -152,23 +121,21 @@ func Run(ctx context.Context, u *ui.UI, stages []Stage, mode Mode) ([]Report, er
 	return reports, ctx.Err()
 }
 
-func Unreached(u *ui.UI, stages []Stage, detail string) []Report {
+var ErrRefused = errors.New("sudo refused; nothing applied as root")
+
+func Unreached(stages []Stage, state State, detail string) []Report {
 	reports := make([]Report, 0, len(stages))
 	for _, s := range stages {
-		r := Report{Stage: s.Name, State: Unknown}
+		r := Report{Stage: s.Name, State: state}
 		for _, it := range s.Items {
-			r.Items = append(r.Items, Result{Item: it.Name, State: Unknown, Detail: detail})
+			r.Items = append(r.Items, Result{Item: it.Name, State: state, Detail: detail})
 		}
-		u.Node(level(Unknown), headline(r), "")
 		reports = append(reports, r)
-	}
-	if len(reports) > 0 {
-		u.Detail("%s", detail)
 	}
 	return reports
 }
 
-func (s Stage) evaluate(ctx context.Context) Report {
+func (s Stage) Evaluate(ctx context.Context) Report {
 	r := Report{Stage: s.Name}
 	for _, it := range s.Items {
 		r.Items = append(r.Items, it.evaluate(ctx))
@@ -177,19 +144,19 @@ func (s Stage) evaluate(ctx context.Context) Report {
 	return r
 }
 
-// apply stops at a canceled prompt and returns ui.ErrCanceled so the whole run ends.
-func (s Stage) apply(ctx context.Context, force bool) (Report, error) {
+// Apply stops at a canceled prompt or context and returns that error so the whole run ends.
+func (s Stage) Apply(ctx context.Context, force bool) (Report, error) {
 	r := Report{Stage: s.Name}
-	var err error
+	err := ctx.Err()
 	for _, it := range s.Items {
-		if ctx.Err() != nil {
+		if err != nil {
 			break
 		}
 		var res Result
 		res, err = it.apply(ctx, force)
 		r.Items = append(r.Items, res)
-		if err != nil {
-			break
+		if err == nil {
+			err = ctx.Err()
 		}
 	}
 	r.State = worst(r.Items)
@@ -270,31 +237,21 @@ func short(r Report, item string) string {
 	return strings.TrimPrefix(item, r.Stage+"-")
 }
 
-func headline(r Report) string {
-	line := fmt.Sprintf("%-10s %s", r.Stage, r.State)
+func summary(r Report) string {
 	var open []string
 	for _, it := range r.Items {
 		if it.State != Done {
 			open = append(open, short(r, it.Item))
 		}
 	}
-	if len(open) > 0 {
-		line += ": " + strings.Join(open, ", ")
+	if len(open) == 0 {
+		return string(r.State)
 	}
-	return line
+	return fmt.Sprintf("%s: %s", r.State, strings.Join(open, ", "))
 }
 
-func list(u *ui.UI, r Report) {
-	u.Node(level(r.State), headline(r), "")
-	details(u, r)
-}
-
-func show(u *ui.UI, r Report) {
-	u.Row(level(r.State), headline(r))
-	details(u, r)
-}
-
-func details(u *ui.UI, r Report) {
+func Show(u *ui.UI, r Report) {
+	u.Node(level(r.State), fmt.Sprintf("%-10s", r.Stage), summary(r))
 	for _, it := range r.Items {
 		if it.State != Done {
 			u.Detail("%s (%s): %s", short(r, it.Item), it.State, it.Detail)
@@ -302,11 +259,41 @@ func details(u *ui.UI, r Report) {
 	}
 }
 
-// Incomplete treats pending items as failures only in Status mode; manual and unknown items never fail it.
+func Outcome(reports []Report, mode Mode) (ui.Level, string) {
+	var failed, open, deferred []string
+	for _, r := range reports {
+		switch {
+		case r.State == Done:
+		case slices.ContainsFunc(r.Items, func(it Result) bool { return it.State == Failed }):
+			failed = append(failed, r.Stage)
+		case r.State == ManualState && mode != Status:
+			deferred = append(deferred, fmt.Sprintf("%s (%s)", r.Stage, r.State))
+		default:
+			open = append(open, fmt.Sprintf("%s (%s)", r.Stage, r.State))
+		}
+	}
+	switch {
+	case len(failed) > 0:
+		return ui.Err, "setup failed: " + strings.Join(failed, ", ")
+	case len(open) > 0:
+		return ui.Warn, "setup incomplete: " + strings.Join(open, ", ")
+	case len(deferred) > 0:
+		return ui.Warn, "setup complete with deferred: " + strings.Join(deferred, ", ")
+	}
+	return ui.OK, "setup complete"
+}
+
+// Incomplete fails on every item that is neither done nor manual, except unknown items in Status mode.
 func Incomplete(reports []Report, mode Mode) bool {
 	return slices.ContainsFunc(reports, func(r Report) bool {
 		return slices.ContainsFunc(r.Items, func(it Result) bool {
-			return it.State == Failed || mode == Status && it.State == Pending
+			switch it.State {
+			case Done, ManualState:
+				return false
+			case Unknown:
+				return mode != Status
+			}
+			return true
 		})
 	})
 }
