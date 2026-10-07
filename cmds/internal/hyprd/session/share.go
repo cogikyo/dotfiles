@@ -83,7 +83,7 @@ func (s *Share) exit() (string, error) {
 	return withSplitErr("share: off", splitErr), nil
 }
 
-// retuneSplit applies the global split preset for the new share mode.
+// retuneSplit applies the active workspace's split preset for the new share mode.
 func (s *Share) retuneSplit() error {
 	split := wm.NewSplit(s.hypr, s.state)
 	if err := split.Reseed(); err != nil {

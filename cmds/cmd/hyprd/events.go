@@ -135,6 +135,7 @@ func (e *EventLoop) handleEvent(line string) {
 			e.state.SetWorkspace(ws)
 			e.notifyWorkspace()
 			e.resetAccent()
+			e.reseedSplit()
 			e.refreshSplit()
 		}
 
@@ -144,6 +145,7 @@ func (e *EventLoop) handleEvent(line string) {
 				e.state.SetWorkspace(ws)
 				e.notifyWorkspace()
 				e.resetAccent()
+				e.reseedSplit()
 				e.refreshSplit()
 			}
 		}
@@ -162,6 +164,12 @@ func (e *EventLoop) handleEvent(line string) {
 	case "createworkspace", "destroyworkspace":
 		e.refreshClients()
 		e.notifyWorkspace()
+
+	case "destroyworkspacev2":
+		id, _, _ := strings.Cut(data, ",")
+		if ws, err := strconv.Atoi(id); err == nil {
+			e.state.ClearSplitMark(ws)
+		}
 
 	case "openwindow":
 		e.refreshClients()
@@ -194,14 +202,14 @@ func (e *EventLoop) applyAccent() {
 	}
 }
 
-// refreshSplit reapplies the global split preset when the active workspace's mark is stale.
+// refreshSplit reapplies the active workspace's split preset when its mark is stale.
 func (e *EventLoop) refreshSplit() {
 	if err := wm.NewSplit(e.hypr, e.state).Refresh(); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd split: %v\n", err)
 	}
 }
 
-// reseedSplit restores master.mfact after startup or a Hyprland config reload resets it.
+// reseedSplit points master.mfact at the active workspace's preset after startup, a focus change, or a config reload.
 func (e *EventLoop) reseedSplit() {
 	if err := wm.NewSplit(e.hypr, e.state).Reseed(); err != nil {
 		fmt.Fprintf(os.Stderr, "hyprd split: %v\n", err)

@@ -147,7 +147,7 @@ func (d *Daemon) sendInitialState(sub *daemon.Subscriber, topics []string) {
 	}
 
 	if sub.WantsTopic("split") {
-		sub.SendEvent("split", d.state.GetSplitRatio())
+		sub.SendEvent("split", wm.NewSplit(d.hypr, d.state).Preset())
 	}
 }
 
@@ -654,7 +654,7 @@ func (d *Daemon) query(topic string) (string, error) {
 		return string(jsonData), err
 
 	case "split":
-		return fmt.Sprintf(`"%s"`, d.state.GetSplitRatio()), nil
+		return fmt.Sprintf(`"%s"`, wm.NewSplit(d.hypr, d.state).Preset()), nil
 
 	case "three-body":
 		allTB := d.state.AllThreeBody()

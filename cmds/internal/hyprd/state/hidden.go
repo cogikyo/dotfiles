@@ -21,11 +21,10 @@ type MonocleWindow struct {
 
 // MonocleState holds the per-workspace monocle snapshot, optionally preserving a three-body layout for restore on exit.
 type MonocleState struct {
-	Focused         string          `json:"focused"`
-	Master          string          `json:"master"`
-	Windows         []MonocleWindow `json:"windows"`
-	SavedThreeBody  *ThreeBodyState `json:"saved_three_body,omitempty"`
-	SavedSplitRatio string          `json:"saved_split_ratio,omitempty"`
+	Focused        string          `json:"focused"`
+	Master         string          `json:"master"`
+	Windows        []MonocleWindow `json:"windows"`
+	SavedThreeBody *ThreeBodyState `json:"saved_three_body,omitempty"`
 }
 
 // GetHidden returns a deep copy of the hidden-window map.

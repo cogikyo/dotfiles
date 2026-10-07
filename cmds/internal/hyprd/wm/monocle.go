@@ -115,16 +115,15 @@ func (m *Monocle) activate() (string, error) {
 	windows.CenterCursor(m.hypr)
 
 	m.state.SetMonocle(wsID, &state.MonocleState{
-		Focused:         active.Address,
-		Master:          master,
-		Windows:         displaced,
-		SavedThreeBody:  savedTB,
-		SavedSplitRatio: m.state.GetSplitRatio(),
+		Focused:        active.Address,
+		Master:         master,
+		Windows:        displaced,
+		SavedThreeBody: savedTB,
 	})
 	return fmt.Sprintf("monocle: ws%d, %d windows hidden", wsID, len(displaced)), nil
 }
 
-// deactivate restores parked windows, master position, three-body state, and split ratio.
+// deactivate restores parked windows, master position, and three-body state.
 //
 // Restore set is recorded Windows union clients on special:mono{n}.
 // Orphan-only heal (nil receipt) yanks those clients back and skips unfloat/extras.
@@ -166,7 +165,6 @@ func (m *Monocle) deactivate(wsID int) (string, error) {
 		if ms.SavedThreeBody != nil {
 			m.restoreThreeBody(wsID, ms.SavedThreeBody)
 		}
-		_, _ = NewSplit(m.hypr, m.state).Apply(ms.SavedSplitRatio)
 		if ms.Focused != "" {
 			_ = m.hypr.FocusWindow(ms.Focused)
 		}
