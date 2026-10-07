@@ -19,6 +19,8 @@ import (
 	"dotfiles/cmds/internal/dctl/paths"
 	"dotfiles/cmds/internal/dctl/setup"
 	"dotfiles/cmds/internal/ui"
+
+	"golang.org/x/sys/unix"
 )
 
 type Repo struct {
@@ -76,11 +78,121 @@ var github = regexp.MustCompile(`^[A-Za-z0-9-]+/[A-Za-z0-9._-]+$`)
 
 func list(root paths.Root) string { return filepath.Join(root.Dotfiles, "packages", "repos.lst") }
 
-func clone(ctx context.Context, run execx.Runner, r Repo, dir string) error {
-	if err := os.MkdirAll(filepath.Dir(dir), 0o755); err != nil {
+type kind int
+
+const (
+	absent kind = iota
+	usable
+	broken
+)
+
+type checkout struct {
+	kind     kind
+	detached bool
+	reason   string
+}
+
+func inspect(ctx context.Context, run execx.Runner, dir, url string) (checkout, error) {
+	bad := func(format string, args ...any) (checkout, error) {
+		return checkout{kind: broken, reason: fmt.Sprintf(format, args...)}, nil
+	}
+	rejected := func(err error) (checkout, error) {
+		if exit(err) <= 0 {
+			return checkout{}, err
+		}
+		msg := err.Error()
+		if _, fatal, ok := strings.Cut(msg, "fatal: "); ok {
+			msg, _, _ = strings.Cut(fatal, "\n")
+		}
+		return bad("%s", msg)
+	}
+	if _, err := os.Lstat(dir); errors.Is(err, fs.ErrNotExist) {
+		return checkout{kind: absent}, nil
+	} else if err != nil {
+		return checkout{}, err
+	}
+	info, err := os.Stat(dir)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return bad("dangling symlink")
+	case err != nil:
+		return checkout{}, err
+	case !info.IsDir():
+		return bad("not a directory")
+	}
+	if _, err := os.Lstat(filepath.Join(dir, ".git")); errors.Is(err, fs.ErrNotExist) {
+		return bad("no .git")
+	} else if err != nil {
+		return checkout{}, err
+	}
+	real, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		return checkout{}, err
+	}
+	git := func(args ...string) (string, error) { return run.Output(ctx, dir, "git", args...) }
+	if top, err := git("rev-parse", "--show-toplevel"); err != nil {
+		return rejected(err)
+	} else if top != real {
+		return bad("not a git repository; git resolved %s", top)
+	}
+	origin, err := git("remote", "get-url", "origin")
+	switch {
+	case exit(err) == 2:
+		return bad("no origin remote")
+	case err != nil:
+		return rejected(err)
+	case origin != url:
+		return bad("origin is %s, want %s", origin, url)
+	}
+	if _, err := git("rev-parse", "--verify", "-q", "HEAD^{commit}"); exit(err) == 1 {
+		return bad("no HEAD commit")
+	} else if err != nil {
+		return rejected(err)
+	}
+	if _, err := git("symbolic-ref", "-q", "HEAD"); exit(err) == 1 {
+		return checkout{kind: usable, detached: true}, nil
+	} else if err != nil {
+		return rejected(err)
+	}
+	return checkout{kind: usable}, nil
+}
+
+func exit(err error) int {
+	if e, ok := errors.AsType[*exec.ExitError](err); ok {
+		return e.ExitCode()
+	}
+	return -1
+}
+
+func action(r Repo, reason string) string {
+	return fmt.Sprintf("%s (%s); move %s aside, then rerun `dctl setup repos`", Broken, reason, r.Path)
+}
+
+func clone(ctx context.Context, run execx.Runner, r Repo, dir string) (err error) {
+	parent := filepath.Dir(dir)
+	if err := os.MkdirAll(parent, 0o755); err != nil {
 		return err
 	}
-	return run.Run(ctx, "", "git", "clone", r.URL(), dir)
+	stage, err := os.MkdirTemp(parent, "."+filepath.Base(dir)+".clone-")
+	if err != nil {
+		return err
+	}
+	defer func() { err = errors.Join(err, os.RemoveAll(stage)) }()
+	work := filepath.Join(stage, filepath.Base(dir))
+	if err := run.Run(ctx, "", "git", "clone", r.URL(), work); err != nil {
+		return err
+	}
+	c, err := inspect(ctx, run, work, r.URL())
+	switch {
+	case err != nil:
+		return err
+	case c.kind != usable:
+		return fmt.Errorf("fresh clone is %s (%s)", Broken, c.reason)
+	}
+	if err := unix.Renameat2(unix.AT_FDCWD, work, unix.AT_FDCWD, dir, unix.RENAME_NOREPLACE); err != nil {
+		return &os.LinkError{Op: "rename", Old: work, New: dir, Err: err}
+	}
+	return nil
 }
 
 type State string
@@ -93,8 +205,36 @@ const (
 	Dirty     State = "uncommitted changes, not touched"
 	Detached  State = "detached HEAD, not touched"
 	Untracked State = "no upstream branch"
-	Absent    State = "not cloned; run dctl setup repos"
+	Skipped   State = "skipped; update never pulls the dotfiles checkout"
+	Absent    State = "not cloned"
+	Broken    State = "not a usable checkout"
+	Failed    State = "failed"
 )
+
+type result struct {
+	repo   string
+	state  State
+	detail string
+}
+
+func (r result) level() ui.Level {
+	switch r.state {
+	case Current, Forwarded:
+		return ui.OK
+	case Skipped:
+		return ui.Info
+	case Broken, Failed:
+		return ui.Err
+	}
+	return ui.Warn
+}
+
+func (r result) summary() string {
+	if r.detail != "" {
+		return r.detail
+	}
+	return string(r.state)
+}
 
 func Update(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner) error {
 	repos, err := Read(list(root))
@@ -107,79 +247,96 @@ func Update(ctx context.Context, u *ui.UI, root paths.Root, run execx.Runner) er
 			checkouts = append(checkouts, st)
 		}
 	}
-	var errs []error
+	var missing, failed []string
 	for _, r := range repos {
-		st, err := os.Stat(r.Dir(root.Home))
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		dir := r.Dir(root.Home)
+		res := result{repo: r.Repo}
+		st, err := os.Stat(dir)
 		if err == nil && slices.ContainsFunc(checkouts, func(c os.FileInfo) bool { return os.SameFile(c, st) }) {
-			u.Info("%s: skipped; update never pulls the dotfiles checkout", r.Repo)
+			res.state = Skipped
+		} else {
+			res.state, res.detail, err = update(ctx, run, dir, r.URL())
+			switch {
+			case err != nil:
+				res.state, res.detail = Failed, err.Error()
+			case res.state == Broken:
+				res.detail = action(r, res.detail)
+			}
+		}
+		switch res.state {
+		case Absent:
+			missing = append(missing, r.Repo)
 			continue
+		case Broken, Failed:
+			failed = append(failed, r.Repo)
 		}
-		state, err := update(ctx, run, r.Dir(root.Home))
-		switch {
-		case err != nil:
-			u.Row(ui.Err, r.Repo+": "+err.Error())
-			errs = append(errs, fmt.Errorf("%s: %w", r.Repo, err))
-		case state == Current || state == Forwarded:
-			u.OK("%s: %s", r.Repo, state)
-		default:
-			u.Warn("%s: %s", r.Repo, state)
-		}
+		u.Row(res.level(), res.repo+": "+res.summary())
 	}
-	return errors.Join(errs...)
+	if len(missing) > 0 {
+		u.Warn("%d %s → `dctl setup repos`", len(missing), Absent)
+	}
+	if len(failed) > 0 {
+		return fmt.Errorf("%d of %d repos failed: %s", len(failed), len(repos), strings.Join(failed, ", "))
+	}
+	return nil
 }
 
-func update(ctx context.Context, run execx.Runner, dir string) (State, error) {
-	if _, err := os.Stat(filepath.Join(dir, ".git")); err != nil {
-		return Absent, nil
+func update(ctx context.Context, run execx.Runner, dir, url string) (State, string, error) {
+	c, err := inspect(ctx, run, dir, url)
+	switch {
+	case err != nil:
+		return "", "", err
+	case c.kind == absent:
+		return Absent, "", nil
+	case c.kind == broken:
+		return Broken, c.reason, nil
+	case c.detached:
+		return Detached, "", nil
 	}
 	git := func(args ...string) (string, error) { return run.Output(ctx, dir, "git", args...) }
-	exited := func(err error, s State) (State, error) {
-		if exit, ok := errors.AsType[*exec.ExitError](err); ok && exit.ExitCode() == 1 {
-			return s, nil
-		}
-		return "", err
-	}
-	if _, err := git("symbolic-ref", "-q", "HEAD"); err != nil {
-		return exited(err, Detached)
-	}
 	status, err := git("status", "--porcelain", "--untracked-files=no")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	if status != "" {
-		return Dirty, nil
+		return Dirty, "", nil
 	}
-	if _, err := git("rev-parse", "--verify", "-q", "@{upstream}"); err != nil {
-		return exited(err, Untracked)
+	if _, err := git("rev-parse", "--verify", "-q", "@{upstream}"); exit(err) == 1 {
+		return Untracked, "", nil
+	} else if err != nil {
+		return "", "", err
 	}
 	if _, err := git("fetch", "--quiet"); err != nil {
-		return "", err
+		return "", "", err
 	}
 	counts, err := git("rev-list", "--left-right", "--count", "HEAD...@{upstream}")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	left, right, _ := strings.Cut(counts, "\t")
 	ahead, err := strconv.Atoi(left)
 	if err != nil {
-		return "", fmt.Errorf("parse rev-list counts %q: %w", counts, err)
+		return "", "", fmt.Errorf("parse rev-list counts %q: %w", counts, err)
 	}
 	behind, err := strconv.Atoi(right)
 	if err != nil {
-		return "", fmt.Errorf("parse rev-list counts %q: %w", counts, err)
+		return "", "", fmt.Errorf("parse rev-list counts %q: %w", counts, err)
 	}
 	switch {
 	case behind == 0 && ahead == 0:
-		return Current, nil
+		return Current, "", nil
 	case behind == 0:
-		return Ahead, nil
+		return Ahead, "", nil
 	case ahead > 0:
-		return Diverged, nil
+		return Diverged, "", nil
 	}
 	if _, err := git("merge", "--ff-only", "--quiet", "@{upstream}"); err != nil {
-		return "", err
+		return "", "", err
 	}
-	return Forwarded, nil
+	return Forwarded, "", nil
 }
 
 func Stage(root paths.Root, run execx.Runner) setup.Stage {
@@ -190,29 +347,28 @@ func Stage(root paths.Root, run execx.Runner) setup.Stage {
 			if err != nil {
 				return err
 			}
-			var problems []string
+			var missing, problems, moves []string
 			for _, r := range repos {
-				dir := r.Dir(root.Home)
-				if _, err := os.Lstat(dir); errors.Is(err, fs.ErrNotExist) {
-					problems = append(problems, fmt.Sprintf("%s: not cloned at %s", r.Repo, r.Path))
-					continue
-				}
-				if _, err := os.Stat(filepath.Join(dir, ".git")); err != nil {
-					problems = append(problems, fmt.Sprintf("%s: %s is not a git checkout", r.Repo, r.Path))
-					continue
-				}
-				origin, err := run.Output(ctx, dir, "git", "remote", "get-url", "origin")
+				c, err := inspect(ctx, run, r.Dir(root.Home), r.URL())
 				switch {
 				case err != nil:
-					problems = append(problems, fmt.Sprintf("%s: no origin remote", r.Repo))
-				case origin != r.URL():
-					problems = append(problems, fmt.Sprintf("%s: origin is %s, want %s", r.Repo, origin, r.URL()))
+					problems = append(problems, fmt.Sprintf("%s: %v", r.Repo, err))
+				case c.kind == absent:
+					missing = append(missing, r.Repo)
+				case c.kind == broken:
+					moves = append(moves, r.Repo+": "+action(r, c.reason))
 				}
 			}
-			if len(problems) == 0 {
-				return nil
+			if len(missing) > 0 {
+				problems = slices.Insert(problems, 0, fmt.Sprintf("%d %s: %s", len(missing), Absent, strings.Join(missing, ", ")))
 			}
-			return errors.New(strings.Join(problems, "; "))
+			switch {
+			case len(problems) > 0:
+				return errors.New(strings.Join(append(problems, moves...), "\n"))
+			case len(moves) > 0:
+				return setup.Manual("%s", strings.Join(moves, "\n"))
+			}
+			return nil
 		},
 		Fix: func(ctx context.Context) error {
 			repos, err := Read(list(root))
@@ -220,16 +376,34 @@ func Stage(root paths.Root, run execx.Runner) setup.Stage {
 				return err
 			}
 			var errs []error
+			var moves []string
 			for _, r := range repos {
-				dir := r.Dir(root.Home)
-				if _, err := os.Lstat(dir); !errors.Is(err, fs.ErrNotExist) {
-					continue
+				if err := ctx.Err(); err != nil {
+					return errors.Join(append(errs, err)...)
 				}
-				if err := clone(ctx, run, r, dir); err != nil {
+				dir := r.Dir(root.Home)
+				c, err := inspect(ctx, run, dir, r.URL())
+				switch {
+				case err != nil:
 					errs = append(errs, fmt.Errorf("%s: %w", r.Repo, err))
+				case c.kind == broken:
+					moves = append(moves, r.Repo+": "+action(r, c.reason))
+				case c.kind == absent:
+					if err := clone(ctx, run, r, dir); err != nil {
+						errs = append(errs, fmt.Errorf("%s: clone: %w", r.Repo, err))
+					}
 				}
 			}
-			return errors.Join(errs...)
+			switch {
+			case len(errs) > 0:
+				if len(moves) > 0 {
+					errs = append(errs, errors.New(strings.Join(moves, "\n")))
+				}
+				return errors.Join(errs...)
+			case len(moves) > 0:
+				return setup.Manual("%s", strings.Join(moves, "\n"))
+			}
+			return nil
 		},
 	}}}
 }

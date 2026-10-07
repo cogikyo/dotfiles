@@ -457,9 +457,12 @@ dctl update repos
 Run as your normal user; `setup repos` reads `packages/repos.lst` in clone order, with one `owner/name path` pair per line, and clones missing directories over GitHub SSH.
 The repository must be a GitHub `owner/name`, and the path must start with `~/` or `/`.
 Existing directories are not replaced, and setup checks their origin URLs.
+Clones use a hidden sibling directory and move into place only after success; failed clones leave no checkout or temporary clone.
+A broken checkout is manual work: move it aside, then rerun `dctl setup repos`.
 
 `update repos` fast-forwards branches with configured upstreams and no tracked changes; untracked files are not included in the dirty check.
-It skips both `~/dotfiles` and the `DOTFILES` checkout and reports dirty, detached, ahead, diverged, absent, or upstream-less repositories without merging them.
+It skips both `~/dotfiles` and the `DOTFILES` checkout and reports dirty, detached, ahead, diverged, or upstream-less repositories without merging them.
+Absent repositories produce one summary line directing you to `dctl setup repos`; broken checkouts are failures.
 
 ## Environment
 

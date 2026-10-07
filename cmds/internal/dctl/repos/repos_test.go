@@ -84,6 +84,7 @@ func TestUpdateFastForwardOnly(t *testing.T) {
 	commit(seed, "two")
 	git(seed, "push", "-q", "origin", "main")
 	upstream := git(seed, "rev-parse", "HEAD")
+	origin := git(clean, "remote", "get-url", "origin")
 
 	for _, tc := range []struct {
 		dir  string
@@ -96,7 +97,7 @@ func TestUpdateFastForwardOnly(t *testing.T) {
 		{diverged, Diverged, git(diverged, "rev-parse", "HEAD")},
 		{filepath.Join(tmp, "absent"), Absent, ""},
 	} {
-		got, err := update(ctx, execx.OSRunner{}, tc.dir)
+		got, _, err := update(ctx, execx.OSRunner{}, tc.dir, origin)
 		if err != nil {
 			t.Fatalf("%s: %v", filepath.Base(tc.dir), err)
 		}
