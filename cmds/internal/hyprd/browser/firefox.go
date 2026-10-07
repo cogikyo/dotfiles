@@ -263,13 +263,13 @@ func threeBodyFirefoxOpenTarget(clients []hypr.Window, workspaceID int, threeBod
 			continue
 		}
 		for _, client := range clients {
-			if client.Address == address && client.Workspace.ID == workspaceID && isFirefoxWindow(client) {
+			if client.Address == address && client.Workspace.ID == workspaceID && IsFirefoxWindow(client) {
 				return firefoxOpenTargetFromWindow(client, workspaceID, false)
 			}
 		}
 	}
 	for _, client := range clients {
-		if client.Address != threeBody.Shadow || client.Workspace.Name != windows.ShadowWorkspace || !isFirefoxWindow(client) {
+		if client.Address != threeBody.Shadow || client.Workspace.Name != windows.ShadowWorkspace || !IsFirefoxWindow(client) {
 			continue
 		}
 		return firefoxOpenTargetFromWindow(client, workspaceID, true)
@@ -280,7 +280,7 @@ func threeBodyFirefoxOpenTarget(clients []hypr.Window, workspaceID int, threeBod
 func visibleWorkspaceFirefoxWindow(clients []hypr.Window, workspaceID int) (hypr.Window, bool) {
 	best := hypr.Window{FocusHistoryID: int(^uint(0) >> 1)}
 	for _, client := range clients {
-		if client.Workspace.ID != workspaceID || !isFirefoxWindow(client) {
+		if client.Workspace.ID != workspaceID || !IsFirefoxWindow(client) {
 			continue
 		}
 		if client.FocusHistoryID < best.FocusHistoryID {
@@ -294,7 +294,7 @@ func firefoxOpenTargetFromWindow(window hypr.Window, workspaceID int, needsThree
 	return firefoxOpenTarget{Window: window, WorkspaceID: workspaceID, NeedsThreeBodySwap: needsThreeBodySwap}, true
 }
 
-func isFirefoxWindow(window hypr.Window) bool {
+func IsFirefoxWindow(window hypr.Window) bool {
 	return strings.Contains(strings.ToLower(window.Class), "firefox") || strings.Contains(strings.ToLower(window.InitialClass), "firefox")
 }
 

@@ -9,11 +9,22 @@ import (
 	"strings"
 
 	"dotfiles/cmds/internal/hyprd/hypr"
+	"dotfiles/cmds/internal/hyprd/state"
+	"dotfiles/cmds/internal/hyprd/windows"
 )
+
+type Editor struct {
+	hypr  *hypr.Client
+	state *state.State
+}
+
+func NewEditor(h *hypr.Client, s *state.State) *Editor {
+	return &Editor{hypr: h, state: s}
+}
 
 // Edit focuses a workspace nvim and opens file in it.
 // It prefers the editor Kitty window, then any Kitty pane running nvim.
-func (t *Selector) Edit(filePath string) (string, error) {
+func (t *Editor) Edit(filePath string) (string, error) {
 	abs, err := filepath.Abs(filePath)
 	if err != nil {
 		return "", fmt.Errorf("resolve path: %w", err)
@@ -49,7 +60,7 @@ func (t *Selector) Edit(filePath string) (string, error) {
 	return fmt.Sprintf("edit: %s", abs), nil
 }
 
-func (t *Selector) findNvim(wsID int, preferred *hypr.Window) (*hypr.Window, *Client, Pane, error) {
+func (t *Editor) findNvim(wsID int, preferred *hypr.Window) (*hypr.Window, *Client, Pane, error) {
 	if preferred != nil {
 		if client, pane, ok := nvimInWindow(preferred); ok {
 			return preferred, client, pane, nil
@@ -73,6 +84,45 @@ func (t *Selector) findNvim(wsID int, preferred *hypr.Window) (*hypr.Window, *Cl
 		}
 	}
 	return nil, nil, Pane{}, fmt.Errorf("no nvim on workspace %d", wsID)
+}
+
+func (t *Editor) findEditor(wsID int) (*hypr.Window, error) {
+	clients, err := t.hypr.Clients()
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range clients {
+		c := &clients[i]
+		if c.Workspace.ID == wsID && c.Class == "kitty" && c.InitialTitle == "editor" {
+			return c, nil
+		}
+	}
+
+	if shadow := shadowEditorForWorkspace(clients, t.state.GetThreeBody(wsID)); shadow != nil {
+		if err := t.hypr.MoveWindowToWorkspace(shadow.Address, strconv.Itoa(wsID), false); err != nil {
+			return nil, fmt.Errorf("move editor to workspace %d: %w", wsID, err)
+		}
+		return shadow, nil
+	}
+
+	return nil, nil
+}
+
+func shadowEditorForWorkspace(clients []hypr.Window, tb *state.ThreeBodyState) *hypr.Window {
+	if tb == nil || tb.Shadow == "" {
+		return nil
+	}
+
+	for i := range clients {
+		c := &clients[i]
+		if c.Address == tb.Shadow && strings.HasPrefix(c.Workspace.Name, windows.ShadowWorkspace) &&
+			c.Class == "kitty" && c.InitialTitle == "editor" {
+			return c
+		}
+	}
+
+	return nil
 }
 
 func nvimInWindow(win *hypr.Window) (*Client, Pane, bool) {

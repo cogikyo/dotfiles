@@ -222,7 +222,7 @@ func cmdEdit() {
 	sendCommand("edit " + strings.Join(os.Args[2:], " "))
 }
 func cmdTab() {
-	_ = requireArg("usage: hyprd tab <editor|agents>:<index 0..4>")
+	_ = requireArg("usage: hyprd tab <left|right>:<1..8> [group]")
 	sendCommand("tab " + strings.Join(os.Args[2:], " "))
 }
 func cmdThreeBody() {
@@ -403,7 +403,8 @@ Window commands:
   hyprd ws up|down       Move active window between workspaces 1..6, skipping music (6)
   hyprd focus <class> [title]  Focus window, unhide if hidden
   hyprd edit <file>      Focus workspace nvim and open file
-  hyprd tab <editor|agents>:<index>   Focus profile window + select physical Kitty tab 0..4
+  hyprd tab <left|right>:<n>         Focus left/right window + select tab n (Firefox skips closed groups)
+  hyprd tab <left|right>:<n> group   Open or close Firefox tab group n
   hyprd tabs init <profile> <pid>    Create tabs from profile (editor|agents|leadpier)
   hyprd tabs refresh <position|name|current|all> [pid] Refresh tab(s) in focused kitty by default
   hyprd tabs host <alias>            Move focused Kitty OS window between configured hosts

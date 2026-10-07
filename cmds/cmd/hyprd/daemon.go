@@ -237,15 +237,15 @@ func (d *Daemon) handleCommand(command string) string {
 		if strings.TrimSpace(arg) == "" {
 			return "error: file path required"
 		}
-		tab := kitty.NewSelector(d.hypr, d.state)
-		result, err := tab.Edit(strings.TrimSpace(arg))
+		editor := kitty.NewEditor(d.hypr, d.state)
+		result, err := editor.Edit(strings.TrimSpace(arg))
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
 		}
 		return result
 	case "tab":
-		tab := kitty.NewSelector(d.hypr, d.state)
-		result, err := tab.Execute(strings.TrimSpace(arg))
+		tab := wm.NewTab(d.hypr)
+		result, err := tab.Execute(arg)
 		if err != nil {
 			return fmt.Sprintf("error: %v", err)
 		}

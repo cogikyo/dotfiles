@@ -156,6 +156,13 @@ func (c *Client) CenterActive() error {
 	return c.eval("CenterActive", `hl.dispatch(hl.dsp.window.center())`)
 }
 
+func (c *Client) SendShortcut(mods, key, address string) error {
+	return c.eval("SendShortcut", fmt.Sprintf(
+		"hl.dispatch(hl.dsp.send_shortcut({ mods = %s, key = %s, window = %s }))",
+		luaQuote(mods), luaQuote(key), luaQuote(windowAddress(address)),
+	))
+}
+
 // CloseWindow closes the window at address.
 func (c *Client) CloseWindow(address string) error {
 	return c.eval("CloseWindow", fmt.Sprintf(

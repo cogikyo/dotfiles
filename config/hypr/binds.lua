@@ -42,19 +42,23 @@ super("Return",        "Toggle monocle", "hyprd monocle")
 super("Comma",         "Split narrow",   "hyprd split narrow")
 super("SHIFT + Comma", "Split wide",     "hyprd split wide")
 
--- ├┤ editor tab focus ├───────────────────────────────────────────────────────────┤
-super("A", "Editor tab 0", "hyprd tab editor:0")
-super("S", "Editor tab 1", "hyprd tab editor:1")
-super("E", "Editor tab 2", "hyprd tab editor:2")
-super("T", "Editor tab 3", "hyprd tab editor:3")
-super("G", "Editor tab 4", "hyprd tab editor:4")
+-- ├┤ left window tabs ├───────────────────────────────────────────────────────────┤
+super("A", "Left tab 1", "hyprd tab left:1")
+super("S", "Left tab 2", "hyprd tab left:2")
+super("E", "Left tab 3", "hyprd tab left:3")
+super("T", "Left tab 4", "hyprd tab left:4")
+super("G", "Left tab 5", "hyprd tab left:5")
 
--- ├┤ agents tab focus ├───────────────────────────────────────────────────────────┤
-super("Y", "Agents tab 0", "hyprd tab agents:0")
-super("N", "Agents tab 1", "hyprd tab agents:1")
-super("I", "Agents tab 2", "hyprd tab agents:2")
-super("O", "Agents tab 3", "hyprd tab agents:3")
-super("L", "Agents tab 4", "hyprd tab agents:4")
+-- ├┤ right window tabs ├──────────────────────────────────────────────────────────┤
+super("Y", "Right tab 1", "hyprd tab right:1")
+super("N", "Right tab 2", "hyprd tab right:2")
+super("I", "Right tab 3", "hyprd tab right:3")
+super("O", "Right tab 4", "hyprd tab right:4")
+super("L", "Right tab 5", "hyprd tab right:5")
+
+super("SHIFT + N", "Toggle right group 1", "hyprd tab right:1 group")
+super("SHIFT + I", "Toggle right group 2", "hyprd tab right:2 group")
+super("SHIFT + O", "Toggle right group 3", "hyprd tab right:3 group")
 
 -- ╭───────────────────────────────────────────────────────────────────────────────╮
 -- │ window management                                                             │

@@ -170,7 +170,7 @@ func (b *Browser) captureFirefoxPlacements(layoutTitles []string) ([]firefoxPlac
 func firefoxPlacements(clients []hypr.Window, layoutTitles ...string) []firefoxPlacement {
 	placements := make([]firefoxPlacement, 0, len(clients))
 	for _, client := range clients {
-		if !isFirefoxWindow(client) {
+		if !IsFirefoxWindow(client) {
 			continue
 		}
 		title := trimFirefoxTitle(client.Title)
@@ -258,7 +258,7 @@ func (b *Browser) restoreFirefoxPlacements(placements []firefoxPlacement, layout
 func firefoxWindowForPlacement(clients []hypr.Window, placement firefoxPlacement, usedAddresses map[string]struct{}) (hypr.Window, bool) {
 	for _, client := range clients {
 		title := trimFirefoxTitle(client.Title)
-		if !isFirefoxWindow(client) || !(title == "" && placement.title == "" || titlesMatch(title, placement.title)) {
+		if !IsFirefoxWindow(client) || !(title == "" && placement.title == "" || titlesMatch(title, placement.title)) {
 			continue
 		}
 		if _, used := usedAddresses[client.Address]; !used {
@@ -271,7 +271,7 @@ func firefoxWindowForPlacement(clients []hypr.Window, placement firefoxPlacement
 func lastFirefoxPlacementWindow(clients []hypr.Window, usedAddresses map[string]struct{}, layoutTitles ...string) (hypr.Window, bool) {
 	var candidate hypr.Window
 	for _, client := range clients {
-		if !isFirefoxWindow(client) || layoutTitleMatches(client.Title, layoutTitles) {
+		if !IsFirefoxWindow(client) || layoutTitleMatches(client.Title, layoutTitles) {
 			continue
 		}
 		if _, used := usedAddresses[client.Address]; used {

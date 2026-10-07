@@ -237,7 +237,7 @@ func layoutTitleMatches(windowTitle string, titles []string) bool {
 func layoutWindowForTitles(clients []hypr.Window, titles []string) (hypr.Window, bool) {
 	for _, title := range titles {
 		for _, client := range clients {
-			if isFirefoxWindow(client) && titlesMatch(trimFirefoxTitle(client.Title), title) {
+			if IsFirefoxWindow(client) && titlesMatch(trimFirefoxTitle(client.Title), title) {
 				return client, true
 			}
 		}
