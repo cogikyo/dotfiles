@@ -32,7 +32,7 @@ super("backslash", "Focus left",  hl.dsp.focus({ direction = "left" }))
 
 -- ├┤ threebody layout ├───────────────────────────────────────────────────────────┤
 alt("A", "Editor",  "hyprd three-body editor")
-alt("R", "Browser", "hyprd three-body browser")
+super("R", "Browser", "hyprd three-body browser")
 alt("C", "Agents",  "hyprd three-body agents")
 alt("X", "Dismiss", "dunstctl close")
 
@@ -73,8 +73,6 @@ hl.bind("SUPER + mouse:274", hl.dsp.window.resize(), { mouse = true })
 -- ├┤ move window focus ├──────────────────────────────────────────────────────────┤
 super("minus",     "Focus left",  hl.dsp.focus({ direction = "left" }))
 super("slash",     "Focus right", hl.dsp.focus({ direction = "right" }))
-super("R",         "Focus up",    hl.dsp.focus({ direction = "up" }))
-super("W",         "Focus down",  hl.dsp.focus({ direction = "down" }))
 
 -- ├┤ move windows ├───────────────────────────────────────────────────────────────┤
 super("Left",  "Move window left",    hl.dsp.window.move({ direction = "left" }))
